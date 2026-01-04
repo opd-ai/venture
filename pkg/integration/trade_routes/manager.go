@@ -12,6 +12,33 @@ import (
 )
 
 // RouteManager manages all active trade routes and caravan fleets.
+//
+// # Lifecycle and Cleanup
+//
+// RouteManager uses a goroutine-based update pattern where a background goroutine
+// periodically updates routes every 10 seconds. The goroutine is started by Start()
+// and terminated by closing stopChan via Stop(). This design provides graceful
+// shutdown control and allows the manager to clean up resources properly.
+//
+// Start() is idempotent - calling it multiple times will only start one background
+// goroutine. Stop() is also idempotent and safe to call multiple times.
+//
+// Callers MUST ensure Stop() is called when the manager is no longer needed,
+// ideally using defer immediately after Start():
+//
+//	rm := NewRouteManager("server-1", 12345)
+//	rm.Start()
+//	defer rm.Stop() // Ensures cleanup even if panic occurs
+//
+//	// Use the route manager...
+//	route, err := rm.CreateRoute("region-a", "region-b", 1000.0)
+//
+// Failure to call Stop() will result in a goroutine leak, as the background update
+// loop will continue running indefinitely. The ticker will also not be properly
+// cleaned up, leading to resource waste.
+//
+// Note: Once Stop() is called, the manager cannot be restarted. Create a new
+// RouteManager instance if you need to start fresh.
 type RouteManager struct {
 	mu              sync.RWMutex
 	routes          map[string]*TradeRoute       // RouteID -> Route
@@ -25,7 +52,9 @@ type RouteManager struct {
 	nextMissionID   int
 	rng             *rand.Rand
 	updateTicker    *time.Ticker
-	stopChan        chan struct{}
+	stopChan        chan struct{} // Closed by Stop() to signal goroutine termination
+	startOnce       sync.Once     // Ensures Start() is idempotent
+	stopOnce        sync.Once     // Ensures Stop() is idempotent
 }
 
 // NewRouteManager creates a new route manager instance.
@@ -46,26 +75,63 @@ func NewRouteManager(serverID string, seed int64) *RouteManager {
 }
 
 // Start begins the route update loop (update every 10 seconds).
+//
+// This method creates a ticker and starts a background goroutine that periodically
+// calls UpdateRoutes(). The goroutine will run until Stop() is called, which closes
+// stopChan to signal termination.
+//
+// Start is idempotent - calling it multiple times will only start one background
+// goroutine. This prevents goroutine leaks from accidental multiple Start() calls.
+//
+// Callers must ensure Stop() is called when the manager is no longer needed to
+// prevent goroutine and ticker resource leaks. See RouteManager documentation for
+// recommended usage patterns.
 func (rm *RouteManager) Start() {
-	rm.updateTicker = time.NewTicker(10 * time.Second)
-	go func() {
-		for {
-			select {
-			case <-rm.updateTicker.C:
-				rm.UpdateRoutes()
-			case <-rm.stopChan:
-				return
+	// Use sync.Once to ensure only one goroutine is started
+	rm.startOnce.Do(func() {
+		rm.updateTicker = time.NewTicker(10 * time.Second)
+		// Start background update loop.
+		// This goroutine MUST be terminated by calling Stop(), which closes stopChan.
+		// The select pattern ensures clean termination when stopChan is closed.
+		go func() {
+			for {
+				select {
+				case <-rm.updateTicker.C:
+					rm.UpdateRoutes()
+				case <-rm.stopChan:
+					return
+				}
 			}
-		}
-	}()
+		}()
+	})
 }
 
-// Stop halts the route update loop.
+// Stop halts the route update loop and cleans up resources.
+//
+// This method stops the ticker and closes stopChan to signal the background goroutine
+// to exit. Stop is idempotent and safe to call multiple times (subsequent calls do nothing
+// since stopChan is already closed).
+//
+// Callers should defer Stop() after Start() to ensure cleanup:
+//
+//	rm := NewRouteManager("server-1", 12345)
+//	rm.Start()
+//	defer rm.Stop() // Ensures cleanup even on panic
+//
+// Note: This method does not wait for the goroutine to exit (unlike some manager
+// implementations with WaitGroups). The goroutine will exit quickly once stopChan
+// is closed, as it's only performing periodic route updates.
+//
+// Once Stop() is called, the manager cannot be restarted. Create a new RouteManager
+// instance if you need to start fresh.
 func (rm *RouteManager) Stop() {
-	if rm.updateTicker != nil {
-		rm.updateTicker.Stop()
-	}
-	close(rm.stopChan)
+	// Use sync.Once to ensure cleanup happens exactly once
+	rm.stopOnce.Do(func() {
+		if rm.updateTicker != nil {
+			rm.updateTicker.Stop()
+		}
+		close(rm.stopChan)
+	})
 }
 
 // CreateRoute creates a new trade route with optimized cargo and path.

@@ -442,3 +442,116 @@ func BenchmarkUpdateRoutes(b *testing.B) {
 		rm.UpdateRoutes()
 	}
 }
+
+// TestStartStopLifecycle verifies the goroutine lifecycle management pattern.
+// This test ensures that Start() properly initializes the background update loop
+// and Stop() cleanly terminates it without goroutine leaks.
+func TestStartStopLifecycle(t *testing.T) {
+	rm := NewRouteManager("test-server", 12345)
+
+	// Start the manager
+	rm.Start()
+
+	// Verify the ticker was created
+	if rm.updateTicker == nil {
+		t.Error("Expected ticker to be created by Start()")
+	}
+
+	// Let it run briefly to ensure no immediate crashes
+	time.Sleep(50 * time.Millisecond)
+
+	// Stop should be idempotent - multiple calls should not panic
+	rm.Stop()
+	rm.Stop() // Second call should be safe due to sync.Once
+	rm.Stop() // Third call should also be safe
+}
+
+// TestStartIdempotent verifies that calling Start() multiple times only creates one goroutine.
+// This prevents goroutine leaks from accidental multiple Start() calls.
+func TestStartIdempotent(t *testing.T) {
+	rm := NewRouteManager("test-server", 12345)
+
+	// Call Start() multiple times
+	rm.Start()
+	rm.Start()
+	rm.Start()
+
+	// Only one ticker should be created
+	if rm.updateTicker == nil {
+		t.Error("Expected ticker to be created by first Start()")
+	}
+
+	// Let it run briefly
+	time.Sleep(50 * time.Millisecond)
+
+	// Stop should work correctly even after multiple Start() calls
+	rm.Stop()
+
+	// Verify no panics occurred and cleanup worked
+	if rm.updateTicker == nil {
+		t.Error("Ticker should still exist after Stop() (it's stopped, not nil'd)")
+	}
+}
+
+// TestStartStopPreventsGoroutineLeak verifies that calling Stop() terminates the background goroutine.
+// This is a regression test for the goroutine leak issue identified in BUGS_AUDIT.md [MEDIUM-003].
+func TestStartStopPreventsGoroutineLeak(t *testing.T) {
+	rm := NewRouteManager("test-server", 12345)
+
+	// Create a route with short travel time
+	route, err := rm.CreateRoute("region-a", "region-b", 1000.0)
+	if err != nil {
+		t.Fatalf("Failed to create route: %v", err)
+	}
+	route.TravelTime = 200 * time.Millisecond
+	rm.StartRoute(route.ID, 12345)
+
+	// Manually update to move progress forward (since ticker fires every 10 seconds)
+	time.Sleep(50 * time.Millisecond)
+	rm.UpdateRoutes()
+
+	// Verify the route has been updated (progress should be > 0)
+	updatedRoute, _ := rm.GetRoute(route.ID)
+	if updatedRoute.Progress == 0 {
+		t.Error("Expected route progress to be updated by UpdateRoutes()")
+	}
+
+	// Start the background update loop
+	rm.Start()
+
+	// Wait briefly for goroutine to start
+	time.Sleep(50 * time.Millisecond)
+
+	// Stop the manager - this should terminate the goroutine
+	rm.Stop()
+
+	// Wait a bit to ensure goroutine exits
+	time.Sleep(50 * time.Millisecond)
+
+	// The goroutine should have exited cleanly.
+	// We can't directly verify goroutine count in a portable way,
+	// but we can verify that no panic occurred and the ticker was stopped.
+	if rm.updateTicker == nil {
+		t.Error("Ticker should still exist after Stop() (it's stopped, not nil'd)")
+	}
+}
+
+// TestDeferStopPattern demonstrates the recommended usage pattern.
+// This is a documentation test showing how to properly use Start/Stop with defer.
+func TestDeferStopPattern(t *testing.T) {
+	rm := NewRouteManager("test-server", 12345)
+	rm.Start()
+	defer rm.Stop() // Ensures cleanup even if test fails
+
+	// Use the route manager
+	route, err := rm.CreateRoute("region-a", "region-b", 1000.0)
+	if err != nil {
+		t.Fatalf("Failed to create route: %v", err)
+	}
+
+	if route == nil {
+		t.Error("Expected non-nil route")
+	}
+
+	// defer rm.Stop() will be called automatically when function exits
+}

@@ -40,7 +40,8 @@ type Game struct {
 }
 
 // NewGame creates a new cache test game.
-func NewGame(cacheCapacity int) *Game {
+// seed parameter enables deterministic sprite generation for reproducible test runs.
+func NewGame(cacheCapacity int, seed int64) *Game {
 	return &Game{
 		cachedGen:      sprites.NewCachedGenerator(cacheCapacity),
 		configs:        make([]sprites.Config, 0, gridColumns*gridRows),
@@ -50,7 +51,7 @@ func NewGame(cacheCapacity int) *Game {
 		genres:         []string{"fantasy", "sci-fi", "horror", "cyberpunk", "post-apoc"},
 		genreIndex:     0,
 		showStats:      true,
-		rng:            rand.New(rand.NewSource(time.Now().UnixNano())),
+		rng:            rand.New(rand.NewSource(seed)),
 	}
 }
 
@@ -279,10 +280,11 @@ func (g *Game) Layout(outsideWidth, outsideHeight int) (int, int) {
 func main() {
 	// Parse command-line flags
 	cacheCapacity := flag.Int("capacity", 100, "Cache capacity (number of sprites)")
+	seed := flag.Int64("seed", 12345, "Random seed for deterministic generation (use different values for variety)")
 	flag.Parse()
 
 	// Create and run game
-	game := NewGame(*cacheCapacity)
+	game := NewGame(*cacheCapacity, *seed)
 
 	ebiten.SetWindowSize(screenWidth, screenHeight)
 	ebiten.SetWindowTitle("Sprite Cache Performance Test")
@@ -291,7 +293,10 @@ func main() {
 	logger := logrus.New()
 	logger.SetLevel(logrus.InfoLevel)
 
-	logger.WithField("capacity", *cacheCapacity).Info("starting cache test")
+	logger.WithFields(logrus.Fields{
+		"capacity": *cacheCapacity,
+		"seed":     *seed,
+	}).Info("starting cache test")
 	logger.Info("controls:")
 	logger.Info("  SPACE - Pause/Resume")
 	logger.Info("  C - Clear Cache")

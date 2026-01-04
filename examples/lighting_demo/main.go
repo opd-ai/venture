@@ -27,7 +27,6 @@ import (
 	"fmt"
 	"image/color"
 	"log"
-	"math/rand"
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
@@ -406,7 +405,6 @@ func clamp(val, min, max float64) float64 {
 
 func main() {
 	flag.Parse()
-	rand.Seed(42) // Fixed seed for consistent demo
 
 	ebiten.SetWindowSize(screenWidth, screenHeight)
 	ebiten.SetWindowTitle("Venture - Dynamic Lighting Demo")

@@ -717,9 +717,9 @@ func TestLoader_LoadFromFile_SandboxErrorFormatting(t *testing.T) {
 		Version: "1.0.0",
 		Type:    ModTypeRule,
 		Rules: map[string]interface{}{
-			"system.execute":   "rm -rf /",           // Disallowed rule name
-			"file.read":        "/etc/passwd",        // Disallowed rule name
-			"difficulty":       "<script>alert()</script>", // Injection attempt
+			"system.execute":   "rm -rf /",           // Disallowed API restriction
+			"file.read":        "/etc/passwd",        // Disallowed API restriction
+			"difficulty":       "<script>alert()</script>", // Code injection attempt
 		},
 	}
 

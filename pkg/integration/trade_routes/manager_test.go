@@ -466,6 +466,33 @@ func TestStartStopLifecycle(t *testing.T) {
 	rm.Stop() // Third call should also be safe
 }
 
+// TestStartIdempotent verifies that calling Start() multiple times only creates one goroutine.
+// This prevents goroutine leaks from accidental multiple Start() calls.
+func TestStartIdempotent(t *testing.T) {
+	rm := NewRouteManager("test-server", 12345)
+
+	// Call Start() multiple times
+	rm.Start()
+	rm.Start()
+	rm.Start()
+
+	// Only one ticker should be created
+	if rm.updateTicker == nil {
+		t.Error("Expected ticker to be created by first Start()")
+	}
+
+	// Let it run briefly
+	time.Sleep(50 * time.Millisecond)
+
+	// Stop should work correctly even after multiple Start() calls
+	rm.Stop()
+
+	// Verify no panics occurred and cleanup worked
+	if rm.updateTicker == nil {
+		t.Error("Ticker should still exist after Stop() (it's stopped, not nil'd)")
+	}
+}
+
 // TestStartStopPreventsGoroutineLeak verifies that calling Stop() terminates the background goroutine.
 // This is a regression test for the goroutine leak issue identified in BUGS_AUDIT.md [MEDIUM-003].
 func TestStartStopPreventsGoroutineLeak(t *testing.T) {

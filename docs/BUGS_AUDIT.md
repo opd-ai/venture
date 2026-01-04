@@ -70,8 +70,8 @@ rng: rand.New(rand.NewSource(time.Now().UnixNano()))
 **After:**
 ```go
 seed := flag.Int64("seed", 12345, "Random seed for deterministic generation")
-// ...
-rng: rand.New(rand.NewSource(seed))
+// seed is *int64 from flag.Int64; dereference when creating the source
+rng: rand.New(rand.NewSource(*seed))
 ```
 
 ### [HIGH-002] Deprecated rand.Seed Usage ✅ RESOLVED

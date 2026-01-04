@@ -48,7 +48,7 @@ for _, e := range result.Errors {
 
 **After:**
 ```go
-var errMsgs []string
+errMsgs := make([]string, 0, len(result.Errors))
 for _, e := range result.Errors {
     errMsgs = append(errMsgs, e.Error())
 }

@@ -163,10 +163,11 @@ func (l *Loader) SaveToFile(mod *Mod, path string) error {
 		// Validate mod content against sandbox rules
 		result := sandbox.ValidateMod(mod)
 		if !result.Valid {
-			errMsg := ""
+			errMsgs := make([]string, 0, len(result.Errors))
 			for _, e := range result.Errors {
-				errMsg += e.Error() + "; "
+				errMsgs = append(errMsgs, e.Error())
 			}
+			errMsg := strings.Join(errMsgs, "; ")
 			return &LoadError{ModID: mod.ID, Err: fmt.Errorf("sandbox validation failed: %s", errMsg)}
 		}
 	}

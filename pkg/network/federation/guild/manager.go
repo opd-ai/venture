@@ -469,10 +469,23 @@ func (m *Manager) SyncGuildState(guildID string) error {
 		Data:      guild,
 	}
 
-	// Broadcast to all federated servers
-	// Note: Actual network transmission would be handled by federation layer
-	// This method prepares the message for broadcast
-	_ = msg // TODO: integrate with federation transport layer for actual broadcast
+	// ARCHITECTURE NOTE: Guild message broadcast over federation network
+	// This method currently creates the guild sync message but does not broadcast it.
+	// Actual broadcast requires integration with the federation transport layer which
+	// handles authenticated connections and message routing between federated servers.
+	//
+	// Implementation roadmap:
+	// 1. Federation transport layer must provide a Broadcast(message) method
+	// 2. Manager should accept a FederationTransport dependency in constructor
+	// 3. Guild messages should be serialized and broadcast via the transport layer
+	// 4. Transport layer handles encryption, authentication, and reliable delivery
+	//
+	// Current behavior: The method prepares guild sync messages for broadcast but
+	// returns success without transmission. This allows guild state to be managed
+	// locally while the federation transport layer is being developed. When the
+	// transport layer is ready, this will be a one-line change to call
+	// m.transport.Broadcast(msg) instead of discarding it.
+	_ = msg // Guild message prepared but not yet broadcast
 
 	return nil
 }

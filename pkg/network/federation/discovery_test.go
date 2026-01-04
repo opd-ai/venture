@@ -42,7 +42,7 @@ func TestNewDiscoverySystem(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			ds, err := NewDiscoverySystem(tt.identity, tt.listenAddr)
+			ds, err := NewDiscoverySystem(tt.identity, tt.listenAddr, "localhost:8080")
 			if (err != nil) != tt.wantErr {
 				t.Errorf("NewDiscoverySystem() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -60,7 +60,7 @@ func TestDiscoverySystem_StartStop(t *testing.T) {
 		t.Fatalf("Failed to create identity: %v", err)
 	}
 
-	ds, err := NewDiscoverySystem(identity, ":0") // Random port
+	ds, err := NewDiscoverySystem(identity, ":0", "localhost:8080") // Random port
 	if err != nil {
 		t.Fatalf("Failed to create discovery system: %v", err)
 	}
@@ -112,7 +112,7 @@ func TestDiscoverySystem_ProcessPacket(t *testing.T) {
 		t.Fatalf("Failed to create identity: %v", err)
 	}
 
-	ds, err := NewDiscoverySystem(identity, ":0")
+	ds, err := NewDiscoverySystem(identity, ":0", "localhost:8080")
 	if err != nil {
 		t.Fatalf("Failed to create discovery system: %v", err)
 	}
@@ -162,7 +162,7 @@ func TestDiscoverySystem_IgnoreOwnPackets(t *testing.T) {
 		t.Fatalf("Failed to create identity: %v", err)
 	}
 
-	ds, err := NewDiscoverySystem(identity, ":0")
+	ds, err := NewDiscoverySystem(identity, ":0", "localhost:8080")
 	if err != nil {
 		t.Fatalf("Failed to create discovery system: %v", err)
 	}
@@ -200,7 +200,7 @@ func TestDiscoverySystem_TimestampValidation(t *testing.T) {
 		t.Fatalf("Failed to create identity: %v", err)
 	}
 
-	ds, err := NewDiscoverySystem(identity, ":0")
+	ds, err := NewDiscoverySystem(identity, ":0", "localhost:8080")
 	if err != nil {
 		t.Fatalf("Failed to create discovery system: %v", err)
 	}
@@ -276,7 +276,7 @@ func TestDiscoverySystem_GetPeers(t *testing.T) {
 		t.Fatalf("Failed to create identity: %v", err)
 	}
 
-	ds, err := NewDiscoverySystem(identity, ":0")
+	ds, err := NewDiscoverySystem(identity, ":0", "localhost:8080")
 	if err != nil {
 		t.Fatalf("Failed to create discovery system: %v", err)
 	}
@@ -321,7 +321,7 @@ func TestDiscoverySystem_GetPeer(t *testing.T) {
 		t.Fatalf("Failed to create identity: %v", err)
 	}
 
-	ds, err := NewDiscoverySystem(identity, ":0")
+	ds, err := NewDiscoverySystem(identity, ":0", "localhost:8080")
 	if err != nil {
 		t.Fatalf("Failed to create discovery system: %v", err)
 	}
@@ -362,7 +362,7 @@ func TestDiscoverySystem_AddManualPeer(t *testing.T) {
 		t.Fatalf("Failed to create identity: %v", err)
 	}
 
-	ds, err := NewDiscoverySystem(identity, ":0")
+	ds, err := NewDiscoverySystem(identity, ":0", "localhost:8080")
 	if err != nil {
 		t.Fatalf("Failed to create discovery system: %v", err)
 	}
@@ -435,7 +435,7 @@ func TestDiscoverySystem_RemovePeer(t *testing.T) {
 		t.Fatalf("Failed to create identity: %v", err)
 	}
 
-	ds, err := NewDiscoverySystem(identity, ":0")
+	ds, err := NewDiscoverySystem(identity, ":0", "localhost:8080")
 	if err != nil {
 		t.Fatalf("Failed to create discovery system: %v", err)
 	}
@@ -465,7 +465,7 @@ func TestDiscoverySystem_CleanupStalePeers(t *testing.T) {
 		t.Fatalf("Failed to create identity: %v", err)
 	}
 
-	ds, err := NewDiscoverySystem(identity, ":0")
+	ds, err := NewDiscoverySystem(identity, ":0", "localhost:8080")
 	if err != nil {
 		t.Fatalf("Failed to create discovery system: %v", err)
 	}
@@ -519,7 +519,7 @@ func TestDiscoverySystem_OnPeerDiscovered(t *testing.T) {
 		t.Fatalf("Failed to create identity: %v", err)
 	}
 
-	ds, err := NewDiscoverySystem(identity, ":0")
+	ds, err := NewDiscoverySystem(identity, ":0", "localhost:8080")
 	if err != nil {
 		t.Fatalf("Failed to create discovery system: %v", err)
 	}
@@ -547,7 +547,7 @@ func TestDiscoverySystem_OnPeerDiscovered(t *testing.T) {
 // Benchmark tests
 func BenchmarkDiscoverySystem_ProcessPacket(b *testing.B) {
 	identity, _ := NewServerIdentity("TestServer")
-	ds, _ := NewDiscoverySystem(identity, ":0")
+	ds, _ := NewDiscoverySystem(identity, ":0", "localhost:8080")
 
 	otherIdentity, _ := NewServerIdentity("OtherServer")
 	packet := DiscoveryPacket{
@@ -571,7 +571,7 @@ func BenchmarkDiscoverySystem_ProcessPacket(b *testing.B) {
 
 func BenchmarkDiscoverySystem_GetPeers(b *testing.B) {
 	identity, _ := NewServerIdentity("TestServer")
-	ds, _ := NewDiscoverySystem(identity, ":0")
+	ds, _ := NewDiscoverySystem(identity, ":0", "localhost:8080")
 
 	// Add 100 peers
 	for i := 0; i < 100; i++ {
@@ -597,7 +597,7 @@ func BenchmarkDiscoverySystem_GetPeers(b *testing.B) {
 
 func BenchmarkDiscoverySystem_AddManualPeer(b *testing.B) {
 	identity, _ := NewServerIdentity("TestServer")
-	ds, _ := NewDiscoverySystem(identity, ":0")
+	ds, _ := NewDiscoverySystem(identity, ":0", "localhost:8080")
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {

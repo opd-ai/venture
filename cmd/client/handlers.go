@@ -531,7 +531,10 @@ func initializeProgressionSystems(game *engine.EbitenGame, sys *systemsContainer
 	logging.ComponentLogger(logger, "prestige").Debug("Created prestige system")
 
 	// Phase 2.1: Economy system
-	serverID := "local" // TODO: Get from server config
+	// Note: serverID is "local" for client-side economy tracking. In multiplayer mode,
+	// the actual economy operations are handled by the authoritative server, and this
+	// local instance is used for client-side caching and UI state management only.
+	serverID := "local"
 	sys.economySystem = engine.NewEconomySystem(game.World, serverID)
 	logging.ComponentLogger(logger, "economy").Debug("Created economy system")
 

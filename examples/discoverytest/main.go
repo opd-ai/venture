@@ -64,7 +64,7 @@ func createServerIdentity(serverName string) *federation.ServerIdentity {
 
 func createDiscoverySystem(identity *federation.ServerIdentity, listenAddr string) *federation.DiscoverySystem {
 	fmt.Printf("Listen address: %s\n\n", listenAddr)
-	ds, err := federation.NewDiscoverySystem(identity, listenAddr)
+	ds, err := federation.NewDiscoverySystem(identity, listenAddr, "localhost:8080")
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error creating discovery system: %v\n", err)
 		os.Exit(1)

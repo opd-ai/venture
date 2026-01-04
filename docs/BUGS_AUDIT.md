@@ -1,12 +1,13 @@
 # Go Codebase Audit Report
 
 **Generated:** 2026-01-03  
+**Last Updated:** 2026-01-04  
 **Repository:** opd-ai/venture  
 **Auditor:** Automated Static Analysis
 
 ## Executive Summary
 - **Total issues found:** 28
-- **Critical:** 0 (1 resolved) | **High:** 1 (3 resolved) | **Medium:** 11 (1 resolved) | **Low:** 12
+- **Critical:** 0 (1 resolved) | **High:** 0 (5 resolved) | **Medium:** 10 (3 resolved) | **Low:** 12
 - **Files analyzed:** 926 non-test Go files
 - **Note:** Some issues were downgraded after verification (e.g., false positives, example code)
 
@@ -55,48 +56,48 @@ for _, e := range result.Errors {
 errMsg := strings.Join(errMsgs, "; ")
 ```
 
+### [HIGH-001] Non-Deterministic Random Usage in Examples ✅ RESOLVED
+**File:** examples/cachetest/main.go:53  
+**Severity:** Medium *(downgraded – example/demo code, not production)*  
+**Status:** ✅ Fixed on 2026-01-04  
+**Resolution:** Added `-seed` flag to cachetest example program with default value of 12345 for deterministic sprite generation. Modified `NewGame()` constructor to accept a seed parameter instead of using `time.Now().UnixNano()`. This enables reproducible test runs while still allowing users to specify different seeds for variety. Added seed to structured logging output for debugging. Updated function documentation to explain the seed parameter's purpose.
+
+**Before:**
+```go
+rng: rand.New(rand.NewSource(time.Now().UnixNano()))
+```
+
+**After:**
+```go
+seed := flag.Int64("seed", 12345, "Random seed for deterministic generation")
+// ...
+rng: rand.New(rand.NewSource(seed))
+```
+
+### [HIGH-002] Deprecated rand.Seed Usage ✅ RESOLVED
+**File:** examples/itemtest/main.go:310  
+**Severity:** Medium *(downgraded – example/demo code, not production)*  
+**Status:** ✅ Fixed on 2026-01-04  
+**Resolution:** Removed the deprecated `rand.Seed(time.Now().UnixNano())` call from the `init()` function. Verification showed that the global `rand` package was not actually used anywhere in the code – the itemtest program already uses an explicit seed passed via command-line flag. Removed the entire `init()` function and the unused `math/rand` import, simplifying the code and eliminating the deprecation warning.
+
+**Before:**
+```go
+func init() {
+    // Seed the default random source for any additional randomness
+    rand.Seed(time.Now().UnixNano())
+}
+```
+
+**After:**
+```go
+// init() function removed entirely - global rand not used
+```
+
 ---
 
 ## High-Priority Issues
 
-*Note: Items HIGH-001 and HIGH-002 were downgraded to Medium after review (example code, not production). HIGH-003 and HIGH-004 have been resolved. They are retained here for audit completeness.*
-
-### [HIGH-001] Non-Deterministic Random Usage in Examples
-**File:** examples/cachetest/main.go:176-177  
-**Severity:** Medium *(downgraded – example/demo code, not production)*  
-**Issue:** Using global `rand.Intn()` without proper seeding violates the project's deterministic generation requirement.  
-**Impact:** Cache behavior becomes non-reproducible, making debugging difficult and violating the core project principle of deterministic generation.  
-**Note:** This is in the examples/ directory and is lower priority than production code issues.  
-**Fix:** Use seeded `*rand.Rand` instance instead of global rand functions.
-
-```go
-// Current:
-if len(g.configs) > 0 && rand.Intn(2) == 0 {
-    return g.configs[rand.Intn(len(g.configs))]
-}
-
-// Fixed:
-rng := rand.New(rand.NewSource(seed))
-if len(g.configs) > 0 && rng.Intn(2) == 0 {
-    return g.configs[rng.Intn(len(g.configs))]
-}
-```
-
-### [HIGH-002] Deprecated rand.Seed Usage
-**File:** examples/itemtest/main.go:310  
-**Severity:** Medium *(downgraded – example/demo code, not production)*  
-**Issue:** Using deprecated `rand.Seed()` with `time.Now().UnixNano()` which is non-deterministic.  
-**Impact:** Violates project's deterministic generation requirement; behavior varies between runs.  
-**Note:** This is in the examples/ directory and is lower priority than production code issues.  
-**Fix:** Create a new `*rand.Rand` with explicit seed instead.
-
-```go
-// Current (line 310):
-rand.Seed(time.Now().UnixNano())
-
-// Fixed:
-rng := rand.New(rand.NewSource(explicitSeed))
-```
+*Note: HIGH-001 and HIGH-002 have been resolved (see Resolved Issues section). HIGH-003 and HIGH-004 have been resolved. This section is retained for audit completeness of remaining high-priority items.*
 
 ### [HIGH-003] Sync Error Return Silently Discarded ✅ RESOLVED (see Resolved Issues section above)
 **File:** pkg/network/desync.go:340  
@@ -406,8 +407,10 @@ Create tickets to track and resolve:
 1. ~~**pkg/integration/guild_housing/manager.go**~~ - ✅ Critical: ignored error returns (RESOLVED 2026-01-03)
 2. ~~**pkg/network/desync.go**~~ - ✅ High: discarded sync error (RESOLVED 2026-01-04)
 3. ~~**pkg/engine/render_system.go**~~ - ✅ High: silent panic recovery (RESOLVED 2026-01-04)
-4. **examples/cachetest/main.go** - Medium: non-deterministic random *(example/demo code – lower priority than production issues)*
-5. **examples/itemtest/main.go** - Medium: deprecated rand.Seed *(example/demo code – lower priority than production issues)*
+4. ~~**examples/cachetest/main.go**~~ - ✅ Medium: non-deterministic random (RESOLVED 2026-01-04)
+5. ~~**examples/itemtest/main.go**~~ - ✅ Medium: deprecated rand.Seed (RESOLVED 2026-01-04)
+
+**Note:** All high-priority files have been addressed. Remaining issues are medium and low priority.
 
 ---
 

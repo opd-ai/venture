@@ -3,7 +3,6 @@ package main
 import (
 	"flag"
 	"fmt"
-	"math/rand"
 	"os"
 	"strings"
 	"time"
@@ -303,9 +302,4 @@ func bar(percentage float64, maxWidth int) string {
 		}
 	}
 	return builder.String()
-}
-
-func init() {
-	// Seed the default random source for any additional randomness
-	rand.Seed(time.Now().UnixNano())
 }

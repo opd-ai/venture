@@ -76,7 +76,7 @@ func (l *Loader) LoadFromFile(path string) (*Mod, error) {
 		sandbox := NewSandbox()
 		result := sandbox.ValidateMod(&mod)
 		if !result.Valid {
-			var errMsgs []string
+			errMsgs := make([]string, 0, len(result.Errors))
 			for _, e := range result.Errors {
 				errMsgs = append(errMsgs, e.Error())
 			}

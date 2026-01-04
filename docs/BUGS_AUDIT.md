@@ -7,7 +7,7 @@
 
 ## Executive Summary
 - **Total issues found:** 28
-- **Critical:** 0 (1 resolved) | **High:** 0 (5 resolved) | **Medium:** 10 (3 resolved) | **Low:** 12
+- **Critical:** 0 (1 resolved) | **High:** 0 (5 resolved) | **Medium:** 9 (4 resolved) | **Low:** 12
 - **Files analyzed:** 926 non-test Go files
 - **Note:** Some issues were downgraded after verification (e.g., false positives, example code)
 
@@ -93,6 +93,39 @@ func init() {
 // init() function removed entirely - global rand not used
 ```
 
+### [MEDIUM-001] Error Wrapping Without Context ✅ RESOLVED
+**File:** Multiple locations (27 instances found)  
+**Severity:** Medium  
+**Status:** ✅ Fixed on 2026-01-04  
+**Resolution:** After comprehensive analysis of all 27 instances of `fmt.Errorf` with `%v`, identified 3 instances that actually wrap error variables and fixed them to use `%w` for proper error chain preservation. The remaining 24 instances correctly use `%v` as they format non-error values (integers, strings, custom types, slices).
+
+**Changes made:**
+1. `examples/mailboxuitest/main.go:136` - Changed `%v` to `%w` when wrapping `os.Create` error
+2. `examples/mailboxuitest/main.go:141` - Changed `%v` to `%w` when wrapping `png.Encode` error  
+3. `pkg/modding/loader.go:141` - Changed to use `%w` with `errors.Join(loadErrors...)` to properly wrap multiple errors from a slice
+
+**Before (loader.go):**
+```go
+if len(mods) == 0 && len(loadErrors) > 0 {
+    return nil, fmt.Errorf("failed to load any mods: %v", loadErrors)
+}
+```
+
+**After (loader.go):**
+```go
+if len(mods) == 0 && len(loadErrors) > 0 {
+    return nil, fmt.Errorf("failed to load any mods: %w", errors.Join(loadErrors...))
+}
+```
+
+**Testing:** Added `TestLoader_LoadAll_ErrorWrapping` test to verify error wrapping works correctly with `errors.Unwrap()`. All existing tests pass. Package coverage: 73.8% (exceeds 65% minimum).
+
+**Verification:** The remaining 24 instances correctly use `%v` because they format non-error types:
+- Formatting custom types (msg.Type, bookType, roomType, gameType, symbol, class, CurrentAct)
+- Formatting primitive values (integers, booleans, strings, floats, durations)
+- Formatting slices ([]string for missing dependencies, cycledMods, dependents)
+- Formatting interface{} values in requirement checks
+
 ---
 
 ## High-Priority Issues
@@ -129,23 +162,10 @@ sm.cancelFunc = cancel
 
 ## Medium-Priority Issues
 
-### [MEDIUM-001] Error Wrapping Without Context
-**File:** Multiple locations (26 instances found)  
+### [MEDIUM-001] Error Wrapping Without Context ✅ RESOLVED (see Resolved Issues section above)
+**File:** Multiple locations (27 instances found)  
 **Severity:** Medium  
-**Issue:** Using `fmt.Errorf` with `%v` instead of `%w` for error wrapping.  
-**Impact:** Error chain is broken; errors.Is() and errors.As() won't work for wrapped errors.  
-**Example Files:**
-- pkg/modding/loader.go:137
-- pkg/network/resilience/types.go:26, 32
-- pkg/network/trade/system.go:118
-
-```go
-// Current:
-return nil, fmt.Errorf("failed to load any mods: %v", loadErrors)
-
-// Fixed:
-return nil, fmt.Errorf("failed to load any mods: %w", loadErrors)
-```
+**Status:** ✅ Fixed on 2026-01-04
 
 ### [MEDIUM-002] Overly Broad Interfaces
 **File:** pkg/engine/interfaces.go  

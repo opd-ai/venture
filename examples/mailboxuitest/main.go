@@ -133,12 +133,12 @@ func saveOutputImage(output string, img *image.RGBA) error {
 
 	f, err := os.Create(output)
 	if err != nil {
-		return fmt.Errorf("Error creating output file: %v", err)
+		return fmt.Errorf("Error creating output file: %w", err)
 	}
 	defer f.Close()
 
 	if err := png.Encode(f, img); err != nil {
-		return fmt.Errorf("Error encoding PNG: %v", err)
+		return fmt.Errorf("Error encoding PNG: %w", err)
 	}
 
 	fmt.Printf("Mailbox UI saved to %s\n", output)

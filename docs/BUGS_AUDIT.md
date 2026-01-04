@@ -6,7 +6,7 @@
 
 ## Executive Summary
 - **Total issues found:** 28
-- **Critical:** 0 (1 resolved) | **High:** 1 (3 resolved) | **Medium:** 12 | **Low:** 12
+- **Critical:** 0 (1 resolved) | **High:** 1 (3 resolved) | **Medium:** 11 (1 resolved) | **Low:** 12
 - **Files analyzed:** 926 non-test Go files
 - **Note:** Some issues were downgraded after verification (e.g., false positives, example code)
 
@@ -31,6 +31,29 @@
 **Severity:** High  
 **Status:** ✅ Fixed on 2026-01-04  
 **Resolution:** Added logging for recovered panics in the `drawRect` function using structured logging with `logrus.Fields` including `component`, `function`, and `panic` context fields. The panic recovery now provides rich context to aid in debugging production issues. Added logrus import to the render_system.go file.
+
+### [MEDIUM-010] String Concatenation in Error Building ✅ RESOLVED
+**File:** pkg/modding/loader.go:79-83  
+**Severity:** Medium  
+**Status:** ✅ Fixed on 2026-01-04  
+**Resolution:** Replaced inefficient string concatenation using `+=` operator with `strings.Join()` for building error messages from multiple validation errors. The new implementation creates a slice of error messages and joins them, which is more efficient especially when there are many errors. Added test `TestLoader_LoadFromFile_SandboxErrorFormatting` to verify the error message formatting works correctly with multiple sandbox violations.
+
+**Before:**
+```go
+errMsg := ""
+for _, e := range result.Errors {
+    errMsg += e.Error() + "; "
+}
+```
+
+**After:**
+```go
+errMsgs := make([]string, 0, len(result.Errors))
+for _, e := range result.Errors {
+    errMsgs = append(errMsgs, e.Error())
+}
+errMsg := strings.Join(errMsgs, "; ")
+```
 
 ---
 
@@ -237,28 +260,6 @@ type Game struct {
 **Impact:** Timestamp comparisons may fail unexpectedly.  
 **Example:** pkg/network/client.go:425  
 **Fix:** Document 64-bit system requirement or use safer time handling.
-
-### [MEDIUM-010] String Concatenation in Error Building
-**File:** pkg/modding/loader.go:80-83  
-**Severity:** Medium  
-**Issue:** Building error string with `+=` in loop is inefficient.  
-**Impact:** Performance degradation with many errors.  
-**Fix:** Use `strings.Builder` or `strings.Join`.
-
-```go
-// Current:
-errMsg := ""
-for _, e := range result.Errors {
-    errMsg += e.Error() + "; "
-}
-
-// Fixed:
-var errMsgs []string
-for _, e := range result.Errors {
-    errMsgs = append(errMsgs, e.Error())
-}
-errMsg := strings.Join(errMsgs, "; ")
-```
 
 ---
 

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 )
@@ -704,4 +705,68 @@ func BenchmarkLoader_LoadFromFile(b *testing.B) {
 			b.Fatal(err)
 		}
 	}
+}
+
+func TestLoader_LoadFromFile_SandboxErrorFormatting(t *testing.T) {
+	// Create temporary directory for test mod
+	tmpDir := t.TempDir()
+
+	// Create a mod with multiple entries that should trigger sandbox violations
+	mod := Mod{
+		ID:      "test-mod",
+		Name:    "Test Mod",
+		Version: "1.0.0",
+		Type:    ModTypeRule,
+		Rules: map[string]interface{}{
+			"system.execute": "rm -rf /",                     // Rule name that violates allowed patterns
+			"file.read":      "/etc/passwd",                  // Another rule name outside allowed patterns
+			"difficulty":     "<script>alert()</script>", // String value with script tag
+		},
+	}
+
+	// Write mod to file
+	modPath := filepath.Join(tmpDir, "bad-mod.json")
+	data, err := json.Marshal(mod)
+	if err != nil {
+		t.Fatalf("Failed to marshal mod: %v", err)
+	}
+	if err := os.WriteFile(modPath, data, 0644); err != nil {
+		t.Fatalf("Failed to write mod file: %v", err)
+	}
+
+	// Create loader with sandbox enabled
+	config := DefaultConfig()
+	config.ModsDirectory = tmpDir
+	config.EnableSandbox = true
+	loader := NewLoaderWithConfig(config)
+
+	// Load the mod - should fail with formatted error message
+	_, err = loader.LoadFromFile(modPath)
+	if err == nil {
+		t.Fatal("Expected error due to sandbox violations")
+	}
+
+	// Verify error message contains multiple violations separated by semicolons
+	errMsg := err.Error()
+	if errMsg == "" {
+		t.Error("Error message should not be empty")
+	}
+
+	// Verify the error message contains semicolons (multiple errors are joined)
+	if !strings.Contains(errMsg, "; ") {
+		t.Error("Error message should contain '; ' separator for multiple violations")
+	}
+
+	// Count semicolons to verify multiple errors are present
+	semicolonCount := strings.Count(errMsg, "; ")
+	if semicolonCount < 2 {
+		t.Errorf("Expected at least 2 semicolons in error message (for 3+ violations), got %d", semicolonCount)
+	}
+
+	// Verify specific violation types are mentioned
+	if !strings.Contains(errMsg, "APIRestrictions") && !strings.Contains(errMsg, "rule name") {
+		t.Error("Error message should mention rule name violations")
+	}
+
+	t.Logf("Error message (validated): %s", errMsg)
 }

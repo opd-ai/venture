@@ -76,10 +76,11 @@ func (l *Loader) LoadFromFile(path string) (*Mod, error) {
 		sandbox := NewSandbox()
 		result := sandbox.ValidateMod(&mod)
 		if !result.Valid {
-			errMsg := ""
+			var errMsgs []string
 			for _, e := range result.Errors {
-				errMsg += e.Error() + "; "
+				errMsgs = append(errMsgs, e.Error())
 			}
+			errMsg := strings.Join(errMsgs, "; ")
 			return nil, &LoadError{ModID: mod.ID, Err: fmt.Errorf("sandbox validation failed: %s", errMsg)}
 		}
 	}

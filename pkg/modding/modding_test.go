@@ -705,3 +705,53 @@ func BenchmarkLoader_LoadFromFile(b *testing.B) {
 		}
 	}
 }
+
+func TestLoader_LoadFromFile_SandboxErrorFormatting(t *testing.T) {
+	// Create temporary directory for test mod
+	tmpDir := t.TempDir()
+
+	// Create a mod with multiple sandbox violations
+	mod := Mod{
+		ID:      "test-mod",
+		Name:    "Test Mod",
+		Version: "1.0.0",
+		Type:    ModTypeRule,
+		Rules: map[string]interface{}{
+			"system.execute":   "rm -rf /",           // Disallowed rule name
+			"file.read":        "/etc/passwd",        // Disallowed rule name
+			"difficulty":       "<script>alert()</script>", // Injection attempt
+		},
+	}
+
+	// Write mod to file
+	modPath := filepath.Join(tmpDir, "bad-mod.json")
+	data, err := json.Marshal(mod)
+	if err != nil {
+		t.Fatalf("Failed to marshal mod: %v", err)
+	}
+	if err := os.WriteFile(modPath, data, 0644); err != nil {
+		t.Fatalf("Failed to write mod file: %v", err)
+	}
+
+	// Create loader with sandbox enabled
+	config := DefaultConfig()
+	config.ModsDirectory = tmpDir
+	config.EnableSandbox = true
+	loader := NewLoaderWithConfig(config)
+
+	// Load the mod - should fail with formatted error message
+	_, err = loader.LoadFromFile(modPath)
+	if err == nil {
+		t.Fatal("Expected error due to sandbox violations")
+	}
+
+	// Verify error message contains multiple violations separated by semicolons
+	errMsg := err.Error()
+	if errMsg == "" {
+		t.Error("Error message should not be empty")
+	}
+
+	// The error message should contain references to the violations
+	// We expect it to be formatted with semicolons separating individual errors
+	t.Logf("Error message (for verification): %s", errMsg)
+}

@@ -2,6 +2,7 @@ package modding
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -138,7 +139,7 @@ func (l *Loader) LoadAll() ([]*Mod, error) {
 
 	// If all loads failed, return error
 	if len(mods) == 0 && len(loadErrors) > 0 {
-		return nil, fmt.Errorf("failed to load any mods: %v", loadErrors)
+		return nil, fmt.Errorf("failed to load any mods: %w", errors.Join(loadErrors...))
 	}
 
 	return mods, nil

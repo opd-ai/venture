@@ -2,6 +2,7 @@ package modding
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -769,4 +770,54 @@ func TestLoader_LoadFromFile_SandboxErrorFormatting(t *testing.T) {
 	}
 
 	t.Logf("Error message (validated): %s", errMsg)
+}
+
+// TestLoader_LoadAll_ErrorWrapping tests that errors are properly wrapped
+// when all mods fail to load, allowing errors.Is() and errors.As() to work.
+func TestLoader_LoadAll_ErrorWrapping(t *testing.T) {
+	// Create temporary directory
+	tmpDir := t.TempDir()
+
+	// Create invalid JSON files that will fail to load
+	invalidFiles := []struct {
+		name    string
+		content string
+	}{
+		{"invalid1.json", `{invalid json`},
+		{"invalid2.json", `{"ID": "test", "Name": "", "Version": "1.0.0"}`}, // Empty name
+		{"invalid3.json", `not json at all`},
+	}
+
+	for _, file := range invalidFiles {
+		path := filepath.Join(tmpDir, file.name)
+		if err := os.WriteFile(path, []byte(file.content), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	// Create loader
+	config := DefaultConfig()
+	config.ModsDirectory = tmpDir
+	config.EnableSandbox = false
+	loader := NewLoaderWithConfig(config)
+
+	// Test loading all - should fail with wrapped errors
+	_, err := loader.LoadAll()
+	if err == nil {
+		t.Fatal("Expected error when all mods fail to load")
+	}
+
+	// Verify the error message contains our context
+	if !strings.Contains(err.Error(), "failed to load any mods") {
+		t.Errorf("Error should contain context message, got: %v", err)
+	}
+
+	// Verify error wrapping works - the joined errors should be accessible
+	// This verifies that we're using %w with errors.Join() instead of %v
+	unwrapped := errors.Unwrap(err)
+	if unwrapped == nil {
+		t.Error("Error should be wrappable with errors.Unwrap()")
+	}
+
+	t.Logf("Error properly wrapped: %v", err)
 }

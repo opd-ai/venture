@@ -7,7 +7,7 @@
 
 ## Executive Summary
 - **Total issues found:** 28
-- **Critical:** 0 (1 resolved) | **High:** 0 (6 resolved) | **Medium:** 9 (6 resolved) | **Low:** 12
+- **Critical:** 0 (1 resolved) | **High:** 0 (5 resolved) | **Medium:** 9 (6 resolved) | **Low:** 12
 - **Files analyzed:** 926 non-test Go files
 - **Note:** Some issues were downgraded after verification (e.g., false positives, example code)
 - **All high-priority issues have been resolved as of 2026-01-04**
@@ -152,9 +152,9 @@ This is an intentional architectural pattern that provides graceful shutdown con
 **Status:** ✅ Verified as already complete on 2026-01-04  
 **Resolution:** Verification showed that all three exported types mentioned in the audit already have proper godoc comments:
 
-1. `examples/lighting_demo/main.go:48` - `Game` struct has comment: "Game implements ebiten.Game interface with lighting demonstration."
-2. `examples/loadtest/main.go:43` - `TestClient` struct has comment: "TestClient represents a single test client with its metrics."
-3. `examples/loadtest/main.go:59` - `LoadTestResults` struct has comment: "LoadTestResults aggregates results from all test clients."
+1. `examples/lighting_demo/main.go:49` - `Game` struct has comment: "Game implements ebiten.Game interface with lighting demonstration."
+2. `examples/loadtest/main.go:44` - `TestClient` struct has comment: "TestClient represents a single test client with its metrics."
+3. `examples/loadtest/main.go:60` - `LoadTestResults` struct has comment: "LoadTestResults aggregates results from all test clients."
 
 All exported types follow Go documentation conventions. This issue was already resolved in a previous update and is now marked as complete.
 

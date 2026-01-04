@@ -474,8 +474,12 @@ func (sm *ServerManager) convertToStateUpdate(entityState EntityState) *network.
 // goroutine, then waits (with a 5-second timeout) for all background work to complete.
 // Stop is idempotent and safe to call multiple times.
 //
-// Callers should defer Stop() immediately after Start() to ensure cleanup:
+// Callers should defer Stop() after successful Start() to ensure cleanup:
 //
+//	sm, err := NewServerManager(config, logger)
+//	if err != nil {
+//	    return err
+//	}
 //	if err := sm.Start(); err != nil {
 //	    return err
 //	}

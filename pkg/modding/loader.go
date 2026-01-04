@@ -81,6 +81,9 @@ func (l *Loader) LoadFromFile(path string) (*Mod, error) {
 				errMsgs = append(errMsgs, e.Error())
 			}
 			errMsg := strings.Join(errMsgs, "; ")
+			if len(errMsgs) > 0 {
+				errMsg += "; "
+			}
 			return nil, &LoadError{ModID: mod.ID, Err: fmt.Errorf("sandbox validation failed: %s", errMsg)}
 		}
 	}
@@ -168,6 +171,9 @@ func (l *Loader) SaveToFile(mod *Mod, path string) error {
 				errMsgs = append(errMsgs, e.Error())
 			}
 			errMsg := strings.Join(errMsgs, "; ")
+			if len(errMsgs) > 0 {
+				errMsg += "; "
+			}
 			return &LoadError{ModID: mod.ID, Err: fmt.Errorf("sandbox validation failed: %s", errMsg)}
 		}
 	}

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 )
@@ -710,16 +711,16 @@ func TestLoader_LoadFromFile_SandboxErrorFormatting(t *testing.T) {
 	// Create temporary directory for test mod
 	tmpDir := t.TempDir()
 
-	// Create a mod with multiple sandbox violations
+	// Create a mod with multiple entries that should trigger sandbox violations
 	mod := Mod{
 		ID:      "test-mod",
 		Name:    "Test Mod",
 		Version: "1.0.0",
 		Type:    ModTypeRule,
 		Rules: map[string]interface{}{
-			"system.execute":   "rm -rf /",           // Disallowed API restriction
-			"file.read":        "/etc/passwd",        // Disallowed API restriction
-			"difficulty":       "<script>alert()</script>", // Code injection attempt
+			"system.execute": "rm -rf /",                     // Rule name that violates allowed patterns
+			"file.read":      "/etc/passwd",                  // Another rule name outside allowed patterns
+			"difficulty":     "<script>alert()</script>", // String value with script tag
 		},
 	}
 
@@ -751,7 +752,21 @@ func TestLoader_LoadFromFile_SandboxErrorFormatting(t *testing.T) {
 		t.Error("Error message should not be empty")
 	}
 
-	// The error message should contain references to the violations
-	// We expect it to be formatted with semicolons separating individual errors
-	t.Logf("Error message (for verification): %s", errMsg)
+	// Verify the error message contains semicolons (multiple errors are joined)
+	if !strings.Contains(errMsg, "; ") {
+		t.Error("Error message should contain '; ' separator for multiple violations")
+	}
+
+	// Count semicolons to verify multiple errors are present
+	semicolonCount := strings.Count(errMsg, "; ")
+	if semicolonCount < 2 {
+		t.Errorf("Expected at least 2 semicolons in error message (for 3+ violations), got %d", semicolonCount)
+	}
+
+	// Verify specific violation types are mentioned
+	if !strings.Contains(errMsg, "APIRestrictions") && !strings.Contains(errMsg, "rule name") {
+		t.Error("Error message should mention rule name violations")
+	}
+
+	t.Logf("Error message (validated): %s", errMsg)
 }

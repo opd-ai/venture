@@ -35,6 +35,7 @@ type Game struct {
 	genres         []string
 	showStats      bool
 	logger         *logrus.Logger
+	rng            *rand.Rand
 }
 
 // NewGame creates a new cache test game.
@@ -48,6 +49,7 @@ func NewGame(cacheCapacity int) *Game {
 		genres:         []string{"fantasy", "sci-fi", "horror", "cyberpunk", "post-apoc"},
 		genreIndex:     0,
 		showStats:      true,
+		rng:            rand.New(rand.NewSource(time.Now().UnixNano())),
 	}
 }
 
@@ -173,8 +175,8 @@ func (g *Game) generateSprites() {
 
 // selectSpriteConfig chooses a random or cached sprite config.
 func (g *Game) selectSpriteConfig() sprites.Config {
-	if len(g.configs) > 0 && rand.Intn(2) == 0 {
-		return g.configs[rand.Intn(len(g.configs))]
+	if len(g.configs) > 0 && g.rng.Intn(2) == 0 {
+		return g.configs[g.rng.Intn(len(g.configs))]
 	}
 
 	config := g.generateRandomConfig()

@@ -26,9 +26,9 @@ func main() {
 	fmt.Println()
 
 	// Create discovery systems
-	ds1, _ := federation.NewDiscoverySystem(server1, ":18090")
-	ds2, _ := federation.NewDiscoverySystem(server2, ":18091")
-	ds3, _ := federation.NewDiscoverySystem(server3, ":18092")
+	ds1, _ := federation.NewDiscoverySystem(server1, ":18090", "localhost:8080")
+	ds2, _ := federation.NewDiscoverySystem(server2, ":18091", "localhost:8081")
+	ds3, _ := federation.NewDiscoverySystem(server3, ":18092", "localhost:8082")
 
 	// Set up discovery callbacks
 	ds1.OnPeerDiscovered(func(peer *federation.DiscoveredPeer) {

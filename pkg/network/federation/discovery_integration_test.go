@@ -19,12 +19,12 @@ func TestDiscoverySystem_Integration_LANDiscovery(t *testing.T) {
 		t.Fatalf("Failed to create server2 identity: %v", err)
 	}
 
-	ds1, err := NewDiscoverySystem(server1Identity, ":18090")
+	ds1, err := NewDiscoverySystem(server1Identity, ":18090", "localhost:8080")
 	if err != nil {
 		t.Fatalf("Failed to create discovery system 1: %v", err)
 	}
 
-	ds2, err := NewDiscoverySystem(server2Identity, ":18091")
+	ds2, err := NewDiscoverySystem(server2Identity, ":18091", "localhost:8080")
 	if err != nil {
 		t.Fatalf("Failed to create discovery system 2: %v", err)
 	}
@@ -71,7 +71,7 @@ func TestDiscoverySystem_Integration_ManualPeerManagement(t *testing.T) {
 		t.Fatalf("Failed to create identity: %v", err)
 	}
 
-	ds, err := NewDiscoverySystem(identity, ":0")
+	ds, err := NewDiscoverySystem(identity, ":0", "localhost:8080")
 	if err != nil {
 		t.Fatalf("Failed to create discovery system: %v", err)
 	}
@@ -168,7 +168,7 @@ func TestDiscoverySystem_Integration_StaleCleanup(t *testing.T) {
 		t.Fatalf("Failed to create identity: %v", err)
 	}
 
-	ds, err := NewDiscoverySystem(identity, ":0")
+	ds, err := NewDiscoverySystem(identity, ":0", "localhost:8080")
 	if err != nil {
 		t.Fatalf("Failed to create discovery system: %v", err)
 	}
@@ -206,7 +206,7 @@ func TestDiscoverySystem_Integration_HighVolumeDiscovery(t *testing.T) {
 		t.Fatalf("Failed to create identity: %v", err)
 	}
 
-	ds, err := NewDiscoverySystem(identity, ":0")
+	ds, err := NewDiscoverySystem(identity, ":0", "localhost:8080")
 	if err != nil {
 		t.Fatalf("Failed to create discovery system: %v", err)
 	}
@@ -253,7 +253,7 @@ func TestDiscoverySystem_Integration_ConcurrentAccess(t *testing.T) {
 		t.Fatalf("Failed to create identity: %v", err)
 	}
 
-	ds, err := NewDiscoverySystem(identity, ":0")
+	ds, err := NewDiscoverySystem(identity, ":0", "localhost:8080")
 	if err != nil {
 		t.Fatalf("Failed to create discovery system: %v", err)
 	}
@@ -313,7 +313,7 @@ func generateTestServerID(index int) string {
 // BenchmarkDiscoverySystem_Integration_HighVolume benchmarks high-volume peer management
 func BenchmarkDiscoverySystem_Integration_HighVolume(b *testing.B) {
 	identity, _ := NewServerIdentity("TestServer")
-	ds, _ := NewDiscoverySystem(identity, ":0")
+	ds, _ := NewDiscoverySystem(identity, ":0", "localhost:8080")
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {

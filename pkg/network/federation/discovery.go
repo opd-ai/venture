@@ -47,6 +47,7 @@ type DiscoverySystem struct {
 	identity         *ServerIdentity
 	listenAddr       string         // UDP listen address (e.g., ":8090")
 	broadcastAddr    string         // Broadcast address (e.g., "255.255.255.255:8090")
+	federationAddr   string         // TCP federation server address (e.g., "localhost:8080")
 	conn             net.PacketConn // UDP connection
 	knownPeers       map[string]*DiscoveredPeer
 	mu               sync.RWMutex
@@ -71,21 +72,29 @@ type DiscoveredPeer struct {
 }
 
 // NewDiscoverySystem creates a new discovery system
-func NewDiscoverySystem(identity *ServerIdentity, listenAddr string) (*DiscoverySystem, error) {
+// Parameters:
+//   - identity: Server identity for authentication and identification
+//   - listenAddr: UDP address for discovery broadcasts (empty uses default port)
+//   - federationAddr: TCP address where federation server listens (e.g., "localhost:8080")
+func NewDiscoverySystem(identity *ServerIdentity, listenAddr string, federationAddr string) (*DiscoverySystem, error) {
 	if identity == nil {
 		return nil, fmt.Errorf("identity cannot be nil")
 	}
 	if listenAddr == "" {
 		listenAddr = fmt.Sprintf(":%d", DiscoveryPort)
 	}
+	if federationAddr == "" {
+		federationAddr = "localhost:8080" // Default federation port
+	}
 
 	return &DiscoverySystem{
-		identity:      identity,
-		listenAddr:    listenAddr,
-		broadcastAddr: fmt.Sprintf("255.255.255.255:%d", DiscoveryPort),
-		knownPeers:    make(map[string]*DiscoveredPeer),
-		seenMessages:  make(map[string]int64),
-		stopChan:      make(chan struct{}),
+		identity:       identity,
+		listenAddr:     listenAddr,
+		broadcastAddr:  fmt.Sprintf("255.255.255.255:%d", DiscoveryPort),
+		federationAddr: federationAddr,
+		knownPeers:     make(map[string]*DiscoveredPeer),
+		seenMessages:   make(map[string]int64),
+		stopChan:       make(chan struct{}),
 	}, nil
 }
 
@@ -278,9 +287,7 @@ func (ds *DiscoverySystem) broadcastDiscovery() {
 
 // getLocalAddress returns the server's listening address for federation
 func (ds *DiscoverySystem) getLocalAddress() string {
-	// TODO: Get actual server listen address from config
-	// For now, return localhost with federation port
-	return "localhost:8080"
+	return ds.federationAddr
 }
 
 // cleanupLoop removes stale peers
@@ -416,9 +423,20 @@ func (ds *DiscoverySystem) PropagateGossip(targetPeer string) error {
 		})
 	}
 
-	// TODO: Send gossip message to target peer via TCP/TLS connection
-	// This requires the federation protocol connection to be established
-	// For now, return success (will be integrated with FederationProtocol)
+	// ARCHITECTURE NOTE: Gossip message transmission over TCP/TLS
+	// This method currently builds the gossip message but does not transmit it.
+	// Actual transmission requires integration with the FederationProtocol layer
+	// which handles TCP/TLS connections and message routing between federated servers.
+	//
+	// Implementation roadmap:
+	// 1. FederationProtocol must provide a SendGossip(peerID, message) method
+	// 2. This discovery system should accept a FederationProtocol dependency
+	// 3. The gossip message should be serialized and sent via the protocol layer
+	//
+	// Current behavior: The method prepares the gossip message but returns success
+	// without transmission. This allows the discovery system to track peers via
+	// LAN broadcasts while federation transport is being developed.
+	_ = servers // Gossip message prepared but not yet transmitted
 
 	return nil
 }

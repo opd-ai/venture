@@ -12,6 +12,7 @@ import (
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/vector"
 	"github.com/opd-ai/venture/pkg/rendering/particles"
+	"github.com/sirupsen/logrus"
 )
 
 // ImagePoolProvider abstracts image pool operations for memory efficiency.
@@ -1058,7 +1059,11 @@ func (r *EbitenRenderSystem) drawRect(x, y, width, height float64, col color.Col
 	// Defensive: Catch panics from vector drawing (can happen during initialization or threading issues)
 	defer func() {
 		if recovered := recover(); recovered != nil {
-			// Silently ignore - this can happen during Ebiten initialization
+			logrus.WithFields(logrus.Fields{
+				"component": "render_system",
+				"function":  "drawRect",
+				"panic":     recovered,
+			}).Warn("recovered from vector drawing panic")
 		}
 	}()
 

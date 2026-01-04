@@ -1059,7 +1059,11 @@ func (r *EbitenRenderSystem) drawRect(x, y, width, height float64, col color.Col
 	// Defensive: Catch panics from vector drawing (can happen during initialization or threading issues)
 	defer func() {
 		if recovered := recover(); recovered != nil {
-			logrus.WithField("panic", recovered).Warn("recovered from vector drawing panic in drawRect")
+			logrus.WithFields(logrus.Fields{
+				"component": "render_system",
+				"function":  "drawRect",
+				"panic":     recovered,
+			}).Warn("recovered from vector drawing panic")
 		}
 	}()
 

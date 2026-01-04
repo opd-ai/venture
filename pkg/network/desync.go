@@ -348,7 +348,10 @@ func (p *PeriodicSyncManager) Start() {
 			case <-p.ticker.C:
 				if p.syncFunc != nil {
 					if err := p.syncFunc(); err != nil {
-						p.logger.WithError(err).Warn("periodic sync failed")
+						p.logger.WithFields(logrus.Fields{
+							"system_name": "periodic_sync",
+							"error":       err.Error(),
+						}).Warn("periodic sync failed")
 					}
 					p.detector.MarkFullSync()
 				}

@@ -357,7 +357,7 @@ func TestPeriodicSyncManager_StartStop(t *testing.T) {
 	}
 }
 
-func TestPeriodicSyncManager_ErrorLogging(t *testing.T) {
+func TestPeriodicSyncManager_ContinuesOnError(t *testing.T) {
 	detector := NewDesyncDetector()
 	detector.SetFullSyncInterval(50 * time.Millisecond)
 
@@ -367,7 +367,7 @@ func TestPeriodicSyncManager_ErrorLogging(t *testing.T) {
 		mu.Lock()
 		syncCallCount++
 		mu.Unlock()
-		// Return an error to test logging
+		// Return an error to verify sync continues despite errors
 		return fmt.Errorf("test sync error")
 	}
 

@@ -24,13 +24,13 @@
 **File:** pkg/network/desync.go:340  
 **Severity:** High  
 **Status:** ✅ Fixed on 2026-01-04  
-**Resolution:** Added proper error handling and logging for sync failures. The `PeriodicSyncManager` now includes a logger field and logs sync errors with `p.logger.WithError(err).Warn("periodic sync failed")`. Updated `NewPeriodicSyncManager` constructor to accept an optional logger parameter (uses default logger if nil). Added test `TestPeriodicSyncManager_ErrorLogging` to verify error logging behavior.
+**Resolution:** Added proper error handling and logging for sync failures. The `PeriodicSyncManager` now includes a logger field and logs sync errors using structured logging with `logrus.Fields` including `system_name` and `error` context fields. Updated `NewPeriodicSyncManager` constructor to accept an optional logger parameter (uses default logger if nil). Added test `TestPeriodicSyncManager_ContinuesOnError` to verify sync continues despite errors.
 
 ### [HIGH-004] Silent Panic Recovery Without Logging ✅ RESOLVED
 **File:** pkg/engine/render_system.go:1058-1063  
 **Severity:** High  
 **Status:** ✅ Fixed on 2026-01-04  
-**Resolution:** Added logging for recovered panics in the `drawRect` function. The panic recovery now logs with `logrus.WithField("panic", recovered).Warn("recovered from vector drawing panic in drawRect")` to aid in debugging production issues. Added logrus import to the render_system.go file.
+**Resolution:** Added logging for recovered panics in the `drawRect` function using structured logging with `logrus.Fields` including `component`, `function`, and `panic` context fields. The panic recovery now provides rich context to aid in debugging production issues. Added logrus import to the render_system.go file.
 
 ---
 

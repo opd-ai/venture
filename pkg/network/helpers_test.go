@@ -138,10 +138,10 @@ func TestSequenceDifference(t *testing.T) {
 		{"normal difference", 200, 100, 100},
 		{"small difference", 10, 5, 5},
 		{"large difference", 1000000, 1000, 999000},
-		{"wrap-around difference", 10, 0xFFFFFFF0, 26},       // 10 - (max-15) = 26
-		{"wrap at UINT32_MAX", 0, 0xFFFFFFFF, 1},            // 0 - max = 1
-		{"wrap with larger gap", 100, 0xFFFFFF00, 356},      // 100 - (max-255) = 356
-		{"exactly one wrap", 0x00000000, 0xFFFFFFFF, 1},     // 0 - max = 1
+		{"wrap-around difference", 10, 0xFFFFFFF0, 26},  // 10 - (max-15) = 26
+		{"wrap at UINT32_MAX", 0, 0xFFFFFFFF, 1},        // 0 - max = 1
+		{"wrap with larger gap", 100, 0xFFFFFF00, 356},  // 100 - (max-255) = 356
+		{"exactly one wrap", 0x00000000, 0xFFFFFFFF, 1}, // 0 - max = 1
 		{"multiple values after wrap", 0x00001000, 0xFFFFF000, 0x00002000},
 	}
 

@@ -449,7 +449,7 @@ func (s *TCPServer) handleClientReceive(client *clientConnection) {
 	for {
 		// Hot path optimization: No done channel check here.
 		// Server shutdown closes all client connections, causing reads to fail and exit.
-		
+
 		msgLen, err := s.readMessageLength(client, buf)
 		if err != nil {
 			return

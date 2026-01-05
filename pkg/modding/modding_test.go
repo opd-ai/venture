@@ -719,8 +719,8 @@ func TestLoader_LoadFromFile_SandboxErrorFormatting(t *testing.T) {
 		Version: "1.0.0",
 		Type:    ModTypeRule,
 		Rules: map[string]interface{}{
-			"system.execute": "rm -rf /",                     // Rule name that violates allowed patterns
-			"file.read":      "/etc/passwd",                  // Another rule name outside allowed patterns
+			"system.execute": "rm -rf /",                 // Rule name that violates allowed patterns
+			"file.read":      "/etc/passwd",              // Another rule name outside allowed patterns
 			"difficulty":     "<script>alert()</script>", // String value with script tag
 		},
 	}

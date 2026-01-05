@@ -53,11 +53,11 @@ func TestNewBlueprint(t *testing.T) {
 
 func TestBlueprintAddRating(t *testing.T) {
 	tests := []struct {
-		name          string
-		ratings       []float64
-		wantAvg       float64
-		wantCount     int
-		expectError   bool
+		name        string
+		ratings     []float64
+		wantAvg     float64
+		wantCount   int
+		expectError bool
 	}{
 		{
 			name:        "single rating",
@@ -153,7 +153,7 @@ func TestBlueprintExportImport(t *testing.T) {
 	original.Description = "A beautiful test manor"
 	original.Tags = []string{"medieval", "manor", "large"}
 	original.AddRating(4.5)
-	original.AddRating(4.5)  // Average will be 4.5
+	original.AddRating(4.5) // Average will be 4.5
 	for i := 0; i < 10; i++ {
 		original.IncrementDownloads()
 	}

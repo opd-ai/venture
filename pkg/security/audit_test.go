@@ -4,10 +4,12 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/sirupsen/logrus"
 )
 
 func TestNewAuditor(t *testing.T) {
-	auditor := NewAuditor()
+	auditor := NewAuditor(nil)
 	if auditor == nil {
 		t.Fatal("NewAuditor returned nil")
 	}
@@ -17,7 +19,7 @@ func TestNewAuditor(t *testing.T) {
 }
 
 func TestRunFullAudit(t *testing.T) {
-	auditor := NewAuditor()
+	auditor := NewAuditor(nil)
 	results := auditor.RunFullAudit()
 
 	if results == nil {
@@ -185,7 +187,7 @@ func TestSeverity_String(t *testing.T) {
 }
 
 func TestFederationSecurityAudit(t *testing.T) {
-	auditor := NewAuditor()
+	auditor := NewAuditor(nil)
 	results := &AuditResults{Checks: make([]SecurityCheck, 0)}
 	auditor.auditFederationSecurity(results)
 
@@ -223,7 +225,7 @@ func TestFederationSecurityAudit(t *testing.T) {
 }
 
 func TestChatEncryptionAudit(t *testing.T) {
-	auditor := NewAuditor()
+	auditor := NewAuditor(nil)
 	results := &AuditResults{Checks: make([]SecurityCheck, 0)}
 	auditor.auditChatEncryption(results)
 
@@ -251,7 +253,7 @@ func TestChatEncryptionAudit(t *testing.T) {
 }
 
 func TestModSandboxAudit(t *testing.T) {
-	auditor := NewAuditor()
+	auditor := NewAuditor(nil)
 	results := &AuditResults{Checks: make([]SecurityCheck, 0)}
 	auditor.auditModSandbox(results)
 
@@ -280,7 +282,7 @@ func TestModSandboxAudit(t *testing.T) {
 }
 
 func TestInputValidationAudit(t *testing.T) {
-	auditor := NewAuditor()
+	auditor := NewAuditor(nil)
 	results := &AuditResults{Checks: make([]SecurityCheck, 0)}
 	auditor.auditInputValidation(results)
 
@@ -298,7 +300,7 @@ func TestInputValidationAudit(t *testing.T) {
 }
 
 func TestAntiCheatAudit(t *testing.T) {
-	auditor := NewAuditor()
+	auditor := NewAuditor(nil)
 	results := &AuditResults{Checks: make([]SecurityCheck, 0)}
 	auditor.auditAntiCheat(results)
 
@@ -323,7 +325,7 @@ func TestAntiCheatAudit(t *testing.T) {
 }
 
 func TestPrivacyAudit(t *testing.T) {
-	auditor := NewAuditor()
+	auditor := NewAuditor(nil)
 	results := &AuditResults{Checks: make([]SecurityCheck, 0)}
 	auditor.auditPrivacy(results)
 
@@ -395,7 +397,7 @@ func TestConstantTimeCompare(t *testing.T) {
 }
 
 func BenchmarkRunFullAudit(b *testing.B) {
-	auditor := NewAuditor()
+	auditor := NewAuditor(nil)
 	for i := 0; i < b.N; i++ {
 		_ = auditor.RunFullAudit()
 	}
@@ -412,5 +414,95 @@ func BenchmarkConstantTimeCompare(b *testing.B) {
 	b_data := []byte("this is a test string for comparison")
 	for i := 0; i < b.N; i++ {
 		_ = ConstantTimeCompare(a, b_data)
+	}
+}
+
+// TestNewAuditor_WithCustomLogger verifies that NewAuditor accepts a custom logger
+func TestNewAuditor_WithCustomLogger(t *testing.T) {
+	// Create a custom logger with specific settings
+	customLogger := logrus.New()
+	customLogger.SetLevel(logrus.ErrorLevel)
+	customLogger.SetFormatter(&logrus.JSONFormatter{})
+	
+	// Create auditor with custom logger
+	auditor := NewAuditor(customLogger)
+	
+	if auditor == nil {
+		t.Fatal("NewAuditor returned nil with custom logger")
+	}
+	
+	if auditor.logger != customLogger {
+		t.Error("Auditor should use the provided custom logger")
+	}
+	
+	// Run audit to ensure it works with custom logger
+	results := auditor.RunFullAudit()
+	
+	if results == nil {
+		t.Fatal("RunFullAudit returned nil with custom logger")
+	}
+	
+	if results.TotalChecks != 30 {
+		t.Errorf("Expected 30 checks with custom logger, got %d", results.TotalChecks)
+	}
+}
+
+// TestNewAuditor_WithNilLogger verifies that NewAuditor uses package logger when nil is passed
+func TestNewAuditor_WithNilLogger(t *testing.T) {
+	// Create auditor with nil logger (should use package-level logger)
+	auditor := NewAuditor(nil)
+	
+	if auditor == nil {
+		t.Fatal("NewAuditor returned nil with nil logger")
+	}
+	
+	if auditor.logger == nil {
+		t.Error("Auditor logger should not be nil (should use package logger)")
+	}
+	
+	// Run audit to ensure it works with package logger
+	results := auditor.RunFullAudit()
+	
+	if results == nil {
+		t.Fatal("RunFullAudit returned nil with package logger")
+	}
+	
+	if results.TotalChecks != 30 {
+		t.Errorf("Expected 30 checks with package logger, got %d", results.TotalChecks)
+	}
+}
+
+// TestLoggerConfiguration_EnvironmentVariable verifies LOG_LEVEL env var is respected
+func TestLoggerConfiguration_EnvironmentVariable(t *testing.T) {
+	// Note: This test verifies the init() function logic but cannot actually
+	// test environment variable changes since init() runs once per package.
+	// The init() function sets the package logger level based on LOG_LEVEL.
+	
+	// Verify that the package logger exists and has a valid level
+	if log == nil {
+		t.Fatal("Package logger should be initialized")
+	}
+	
+	// The actual level depends on the LOG_LEVEL environment variable
+	// Default should be Info if LOG_LEVEL is not set
+	level := log.GetLevel()
+	
+	validLevels := []logrus.Level{
+		logrus.DebugLevel,
+		logrus.InfoLevel,
+		logrus.WarnLevel,
+		logrus.ErrorLevel,
+	}
+	
+	found := false
+	for _, validLevel := range validLevels {
+		if level == validLevel {
+			found = true
+			break
+		}
+	}
+	
+	if !found {
+		t.Errorf("Package logger has invalid level: %v", level)
 	}
 }

@@ -50,7 +50,7 @@
 //
 // # Usage Example
 //
-//	auditor := security.NewAuditor()
+//	auditor := security.NewAuditor(nil)
 //	results := auditor.RunFullAudit()
 //
 //	if results.HasCritical() {

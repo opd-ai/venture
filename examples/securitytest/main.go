@@ -36,7 +36,7 @@ func main() {
 	flag.Parse()
 
 	// Run security audit
-	auditor := security.NewAuditor()
+	auditor := security.NewAuditor(nil)
 	results := auditor.RunFullAudit()
 
 	// Output results

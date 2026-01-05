@@ -1,18 +1,20 @@
 # Go Codebase Audit Report
 
 **Generated:** 2026-01-03  
-**Last Updated:** 2026-01-04  
+**Last Updated:** 2026-01-05  
 **Repository:** opd-ai/venture  
 **Auditor:** Automated Static Analysis
 
 ## Executive Summary
 - **Total issues found:** 28
-- **Critical:** 0 (1 resolved) | **High:** 0 (5 resolved) | **Medium:** 8 (8 resolved) | **Low:** 12
+- **Critical:** 0 (1 resolved) | **High:** 0 (5 resolved) | **Medium:** 8 (8 resolved) | **Low:** 12 (2 resolved, 10 remaining)
 - **Files analyzed:** 926 non-test Go files
 - **Note:** Some issues were downgraded after verification (e.g., false positives, example code)
 - **All high-priority issues have been resolved as of 2026-01-04**
 - **All medium-priority issues except MEDIUM-002 have been resolved as of 2026-01-04**
 - **MEDIUM-002 (Overly Broad Interfaces) is a known architectural trade-off, not a strict violation**
+- **LOW-002 (Magic Numbers) resolved on 2026-01-05**
+- **LOW-009 (Error Wrapping in WASM) verified as already resolved on 2026-01-05**
 
 ---
 
@@ -245,6 +247,56 @@ func (rm *RouteManager) Stop() {
 
 All TODO comments have been either implemented or documented as known architectural limitations with clear integration paths. No incomplete functionality remains undocumented.
 
+### [LOW-002] Magic Numbers Without Constants ✅ RESOLVED
+**File:** pkg/network/server.go:142, 151  
+**Severity:** Low  
+**Status:** ✅ Fixed on 2026-01-05  
+**Resolution:** Added `errorBufferSize` constant to replace magic number `64` used in two locations. The constant is properly documented to explain its purpose (buffering async errors from network operations) and rationale for the chosen size. Both the channel creation (line 142) and buffer stats initialization (line 151) now use the named constant, making the configuration easier to understand and tune.
+
+**Before:**
+```go
+errors: make(chan error, 64),
+server.errorStats = NewBufferStats("server_errors", 64, logEntry)
+```
+
+**After:**
+```go
+const (
+	// errorBufferSize is the size of the error channel buffer.
+	// This buffer holds async errors from network operations (connection failures,
+	// protocol errors, etc.) before they can be consumed by the game logic.
+	// A size of 64 provides sufficient buffering for error bursts while preventing
+	// unbounded memory growth from unconsumed errors.
+	errorBufferSize = 64
+)
+
+errors: make(chan error, errorBufferSize),
+server.errorStats = NewBufferStats("server_errors", errorBufferSize, logEntry)
+```
+
+### [LOW-009] Missing Error Wrapping in WASM Storage ✅ RESOLVED
+**File:** pkg/saveload/storage_wasm.go:142, 199  
+**Severity:** Low  
+**Status:** ✅ Verified as already resolved on 2026-01-05  
+**Resolution:** Upon verification, line 142 already has proper error wrapping using `%w` with context message "failed to unmarshal save". Line 199 intentionally does not wrap the error because it implements a fallback pattern - when metadata is corrupted, the code falls back to `scanLocalStorageKeys()` to rebuild the metadata by scanning. This is a valid error handling strategy that provides graceful degradation rather than failing hard.
+
+**Current implementation (line 142):**
+```go
+if err := json.Unmarshal([]byte(data), &save); err != nil {
+    return nil, fmt.Errorf("failed to unmarshal save: %w", err)
+}
+```
+
+**Current implementation (line 199 - fallback pattern):**
+```go
+if err := json.Unmarshal([]byte(metaJS.String()), &saves); err != nil {
+    // Corrupted metadata, rebuild by scanning
+    return m.scanLocalStorageKeys()
+}
+```
+
+Both error handling approaches are correct and appropriate for their contexts.
+
 ---
 
 ## High-Priority Issues
@@ -364,16 +416,23 @@ type ActionInput interface {
 **Impact:** Minor code style inconsistency.  
 **Fix:** Standardize on `err` per Go conventions.
 
-### [LOW-002] Magic Numbers Without Constants
-**File:** pkg/network/server.go:142  
+### [LOW-002] Magic Numbers Without Constants ✅ RESOLVED
+**File:** pkg/network/server.go:142, 151  
 **Severity:** Low  
-**Issue:** Buffer size `64` used directly in channel creation.  
-**Impact:** Harder to tune and understand configuration.  
-**Fix:** Use named constant.
+**Status:** ✅ Fixed on 2026-01-05  
+**Resolution:** Added `errorBufferSize` constant to replace magic number `64` used in two locations. The constant is properly documented to explain its purpose (buffering async errors from network operations) and rationale for the chosen size. Both the channel creation (line 142) and buffer stats initialization (line 151) now use the named constant, making the configuration easier to understand and tune.
 
+**Before:**
+```go
+errors: make(chan error, 64),
+server.errorStats = NewBufferStats("server_errors", 64, logEntry)
+```
+
+**After:**
 ```go
 const errorBufferSize = 64
 errors: make(chan error, errorBufferSize),
+server.errorStats = NewBufferStats("server_errors", errorBufferSize, logEntry)
 ```
 
 ### [LOW-003] Redundant Nil Checks
@@ -426,12 +485,28 @@ time.Sleep(100 * time.Millisecond)
 **Impact:** Minor style inconsistency.  
 **Fix:** Standardize comment formatting per Go conventions.
 
-### [LOW-009] Missing Error Wrapping in WASM Storage
+### [LOW-009] Missing Error Wrapping in WASM Storage ✅ RESOLVED
 **File:** pkg/saveload/storage_wasm.go:142, 199  
 **Severity:** Low  
-**Issue:** JSON unmarshal errors are not wrapped with context.  
-**Impact:** Error messages may not indicate the source clearly.  
-**Fix:** Wrap errors with context.
+**Status:** ✅ Verified as already resolved on 2026-01-05  
+**Resolution:** Upon verification, line 142 already has proper error wrapping using `%w` with context message "failed to unmarshal save". Line 199 intentionally does not wrap the error because it implements a fallback pattern - when metadata is corrupted, the code falls back to `scanLocalStorageKeys()` to rebuild the metadata by scanning. This is a valid error handling strategy that provides graceful degradation rather than failing hard.
+
+**Current implementation (line 142):**
+```go
+if err := json.Unmarshal([]byte(data), &save); err != nil {
+    return nil, fmt.Errorf("failed to unmarshal save: %w", err)
+}
+```
+
+**Current implementation (line 199 - fallback pattern):**
+```go
+if err := json.Unmarshal([]byte(metaJS.String()), &saves); err != nil {
+    // Corrupted metadata, rebuild by scanning
+    return m.scanLocalStorageKeys()
+}
+```
+
+Both error handling approaches are correct and appropriate for their contexts.
 
 ### [LOW-010] Excessive Use of Raw Byte Slices
 **File:** Various network code  

@@ -83,7 +83,7 @@ Venture is a fully procedural multiplayer action-RPG built with Go and Ebiten. I
   - Validate genre IDs against available genres
   - Validate file paths (save directory, log directory)
   - Exit gracefully with helpful error messages on invalid config
-- [ ] Implement panic recovery for server goroutines (file: pkg/network/server.go, pkg/engine/world.go)
+- [ ] Implement panic recovery for server goroutines (files: pkg/network/server.go, pkg/engine/system.go, and any engine systems that spawn goroutines)
   - Add defer/recover in all goroutine spawns
   - Log panics with stack traces using logrus
   - Gracefully disconnect clients on handler panics

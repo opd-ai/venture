@@ -3,6 +3,7 @@ package config
 import (
 	"fmt"
 	"os"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -117,6 +118,7 @@ func (v *Validator) GetAvailableGenres() []string {
 	for genre := range v.validGenres {
 		genres = append(genres, genre)
 	}
+	sort.Strings(genres)
 	return genres
 }
 

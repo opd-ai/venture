@@ -274,8 +274,8 @@ func createTestPlayer(world *engine.World, id string) *engine.Entity {
 	return player
 }
 
-func addQuestToPlayer(player *engine.Entity, quest *BuildingQuest) bool {
-	if player == nil || quest == nil {
+func addQuestToPlayer(player *engine.Entity, buildingQuest *BuildingQuest) bool {
+	if player == nil || buildingQuest == nil {
 		return false
 	}
 	
@@ -290,16 +290,16 @@ func addQuestToPlayer(player *engine.Entity, quest *BuildingQuest) bool {
 	// Note: Using TypeExplore as a generic type for testing purposes.
 	// In production, a dedicated TypeBuild or TypeConstruction would be more appropriate.
 	q := &quest.Quest{
-		ID:          quest.ID,
+		ID:          buildingQuest.ID,
 		Name:        "Building Quest",
 		Type:        quest.TypeExplore, // Using explore as a generic type
 		Description: "Build a house for your character",
-		Objectives:  make([]quest.Objective, len(quest.Objectives)),
+		Objectives:  make([]quest.Objective, len(buildingQuest.Objectives)),
 		Status:      quest.StatusActive,
 	}
 	
 	// Convert objectives
-	for i, objDesc := range quest.Objectives {
+	for i, objDesc := range buildingQuest.Objectives {
 		q.Objectives[i] = quest.Objective{
 			Description: objDesc,
 			Target:      "house",
@@ -489,8 +489,8 @@ func GenerateGuildQuest(seed int64, genre string, depth int) *GuildQuest {
 	return guildQuest
 }
 
-func UpdateBuildingQuestProgress(player *engine.Entity, quest *BuildingQuest, houseID string) error {
-	if player == nil || quest == nil {
+func UpdateBuildingQuestProgress(player *engine.Entity, buildingQuest *BuildingQuest, houseID string) error {
+	if player == nil || buildingQuest == nil {
 		return fmt.Errorf("invalid player or quest")
 	}
 	
@@ -505,7 +505,7 @@ func UpdateBuildingQuestProgress(player *engine.Entity, quest *BuildingQuest, ho
 	// Find the quest and update its progress
 	// For building quests, completing a house fulfills the first objective
 	for _, tracked := range questTracker.ActiveQuests {
-		if tracked.Quest.ID == quest.ID {
+		if tracked.Quest.ID == buildingQuest.ID {
 			if len(tracked.Quest.Objectives) > 0 {
 				// Mark first objective (build house) as complete
 				tracked.Quest.Objectives[0].Current = tracked.Quest.Objectives[0].Required

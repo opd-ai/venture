@@ -7,6 +7,8 @@ package main
 
 import (
 	"flag"
+	"fmt"
+	"os"
 
 	"github.com/opd-ai/venture/pkg/engine"
 	"github.com/opd-ai/venture/pkg/mobile"
@@ -19,6 +21,12 @@ var autoEnabledHostAndPlay bool
 
 func main() {
 	flag.Parse()
+
+	// Validate configuration before starting client
+	if err := validateClientConfiguration(); err != nil {
+		fmt.Fprintf(os.Stderr, "Configuration error: %v\n", err)
+		os.Exit(1)
+	}
 
 	logger, clientLogger := initializeLogger()
 

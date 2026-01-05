@@ -8,6 +8,7 @@ package main
 import (
 	"context"
 	"flag"
+	"fmt"
 	"image/color"
 	"os"
 	"sync"
@@ -15,6 +16,7 @@ import (
 
 	"github.com/opd-ai/venture/pkg/balance"
 	"github.com/opd-ai/venture/pkg/combat"
+	"github.com/opd-ai/venture/pkg/config"
 	"github.com/opd-ai/venture/pkg/engine"
 	"github.com/opd-ai/venture/pkg/logging"
 	"github.com/opd-ai/venture/pkg/migration"
@@ -72,6 +74,26 @@ var (
 
 func main() {
 	flag.Parse()
+
+	// Validate configuration before starting server
+	validator := config.NewValidator()
+	cfg := &config.Config{
+		Port:               *port,
+		MaxPlayers:         *maxPlayers,
+		ValidateMaxPlayers: true,
+		TickRate:           *tickRate,
+		ValidateTickRate:   true,
+		Genre:              *genreID,
+		ModsDir:            *modsDir,
+		CreateDirs:         true, // Auto-create mods directory if needed
+	}
+
+	if err := validator.ValidateAll(cfg); err != nil {
+		fmt.Fprintf(os.Stderr, "Configuration error: %v\n", err)
+		fmt.Fprintf(os.Stderr, "\nUsage: %s [options]\n", os.Args[0])
+		flag.PrintDefaults()
+		os.Exit(1)
+	}
 
 	logger := initializeLogger()
 	serverLogger := logger.WithFields(logrus.Fields{

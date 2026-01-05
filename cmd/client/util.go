@@ -13,6 +13,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/opd-ai/venture/pkg/config"
 	"github.com/opd-ai/venture/pkg/engine"
 	"github.com/opd-ai/venture/pkg/hostplay"
 	"github.com/opd-ai/venture/pkg/logging"
@@ -2595,4 +2596,30 @@ func parsePaletteOptions() (*palette.GenerationOptions, error) {
 	opts.MinColors = 12
 
 	return opts, nil
+}
+
+// validateClientConfiguration validates client configuration flags.
+// Returns an error if any configuration is invalid, with a helpful message.
+func validateClientConfiguration() error {
+	validator := config.NewValidator()
+
+	// Build configuration to validate
+	cfg := &config.Config{
+		Genre: *genreID,
+	}
+
+	// Validate host-and-play server configuration if enabled
+	if *hostAndPlay {
+		cfg.Port = fmt.Sprintf("%d", *serverPort)
+		cfg.MaxPlayers = *serverPlayers
+		cfg.ValidateMaxPlayers = true
+		cfg.TickRate = *serverTick
+		cfg.ValidateTickRate = true
+	}
+
+	if err := validator.ValidateAll(cfg); err != nil {
+		return fmt.Errorf("%w\n\nRun with -help to see all available options", err)
+	}
+
+	return nil
 }

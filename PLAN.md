@@ -68,11 +68,18 @@ Venture is a fully procedural multiplayer action-RPG built with Go and Ebiten. I
 **Goal:** Fix critical TODOs, establish baseline build health, and improve developer experience with proper dependency documentation.
 
 **Deliverables:**
-- [ ] Document build dependencies and setup (file: docs/GETTING_STARTED.md, docs/DEVELOPMENT.md)
-  - Document required X11 packages for Linux (libgl1-mesa-dev, libxcursor-dev, libxi-dev, libxinerama-dev, libxrandr-dev, libxxf86vm-dev, libasound2-dev, pkg-config)
-  - Add xvfb setup instructions for headless testing
-  - Provide platform-specific setup commands (Ubuntu/Debian, Fedora/RHEL, macOS, Windows)
-  - Add troubleshooting section for common build issues
+- [x] Document build dependencies and setup (file: docs/GETTING_STARTED.md, docs/DEVELOPMENT.md)
+  - ✅ Document required X11 packages for Linux (Ubuntu/Debian, Fedora/RHEL)
+  - ✅ Add xvfb setup instructions for headless testing
+  - ✅ Provide platform-specific setup commands (Ubuntu/Debian, Fedora/RHEL, macOS, Windows)
+  - ✅ Add troubleshooting section for common build issues
+- [x] Add configuration validation (file: cmd/server/main.go, cmd/client/main.go)
+  - ✅ Validate port range (1024-65535)
+  - ✅ Validate max-players (1-100)
+  - ✅ Validate tick-rate (1-60)
+  - ✅ Validate genre IDs against available genres
+  - ✅ Validate file paths (mods directory)
+  - ✅ Exit gracefully with helpful error messages on invalid config
 - [ ] Complete housing integration TODOs (file: pkg/world/housing/integration_test.go)
   - Implement proper house serialization (CreateHouse, SaveHouse, LoadHouse)
   - Fix overlapping house placement at (0,0) with spatial distribution

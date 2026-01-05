@@ -35,7 +35,7 @@ func demonstrateProtocol() {
 	binary.LittleEndian.PutUint64(posData[8:16], math.Float64bits(y))
 
 	update := &network.StateUpdate{
-		Timestamp:      uint64(time.Now().UnixNano()),
+		Timestamp:      network.NowTimestamp(),
 		EntityID:       42,
 		Priority:       200,
 		SequenceNumber: 100,
@@ -87,7 +87,7 @@ func demonstrateProtocol() {
 	fmt.Println("\nInput Command:")
 	cmd := &network.InputCommand{
 		PlayerID:       123,
-		Timestamp:      uint64(time.Now().UnixNano()),
+		Timestamp:      network.NowTimestamp(),
 		SequenceNumber: 50,
 		InputType:      "move",
 		Data:           []byte{1, 0}, // dx=1, dy=0
@@ -150,7 +150,7 @@ func demonstrateClientServer() {
 	// Simulate multiple entities updating
 	for i := 1; i <= 3; i++ {
 		update := &network.StateUpdate{
-			Timestamp: uint64(time.Now().UnixNano()),
+			Timestamp: network.NowTimestamp(),
 			EntityID:  uint64(i),
 			Priority:  128,
 			Components: []network.ComponentData{

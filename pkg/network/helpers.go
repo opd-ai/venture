@@ -1,5 +1,7 @@
 package network
 
+import "time"
+
 // NewStateUpdate creates a state update with the specified priority.
 func NewStateUpdate(entityID uint64, priority uint8) *StateUpdate {
 	return &StateUpdate{
@@ -91,4 +93,36 @@ func sequenceInRange(seq, ref, rangeVal uint32) bool {
 
 	// Check if either direction is within range
 	return forwardDiff <= rangeVal || backwardDiff <= rangeVal
+}
+
+// NowTimestamp returns the current time as a uint64 nanosecond timestamp
+// suitable for use in network protocol messages (StateUpdate, InputCommand).
+//
+// This function converts time.Now().UnixNano() (int64) to uint64 for network
+// transmission. The conversion is safe because:
+//  1. Current time is always after Unix epoch (1970), so UnixNano() is positive
+//  2. UnixNano() is valid for dates between 1678 and 2262
+//  3. Positive int64 values convert to identical uint64 values
+//
+// System Requirements:
+//  - 64-bit system (Go's time.Time.UnixNano() is undefined on 32-bit systems after 2038)
+//  - Current date between 1970-2262 (guaranteed for all practical use cases)
+//
+// The uint64 format is used in network protocol for:
+//  - Efficient binary serialization (8 bytes, little-endian)
+//  - Checksum computation in desync detection
+//  - Nanosecond precision for accurate timing and lag compensation
+//
+// Note: This timestamp is used for protocol-level timing and checksums.
+// For save/load functionality and time arithmetic, use time.Time instead.
+func NowTimestamp() uint64 {
+	nanos := time.Now().UnixNano()
+	
+	// Defensive check: ensure timestamp is positive (should always be true for current dates)
+	// If this ever panics, it indicates a system clock issue or date before 1970
+	if nanos < 0 {
+		panic("network: timestamp before Unix epoch - check system clock")
+	}
+	
+	return uint64(nanos)
 }

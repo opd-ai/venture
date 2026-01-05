@@ -170,7 +170,7 @@ func simulateServerLoop(server *Server, world *engine.World, serializer *network
 
 			// Create state update
 			update := &network.StateUpdate{
-				Timestamp: uint64(time.Now().UnixNano()),
+				Timestamp: network.NowTimestamp(),
 				EntityID:  entity.ID,
 				Priority:  128,
 				Components: []network.ComponentData{

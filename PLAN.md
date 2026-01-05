@@ -89,7 +89,7 @@ Venture is a fully procedural multiplayer action-RPG built with Go and Ebiten. I
   - Gracefully disconnect clients on handler panics
   - Add panic recovery middleware for network handlers
 - [ ] Audit and fix determinism issues (file: pkg/procgen/audit/determinism_test.go)
-  - Complete Phase 62.1 baseline hash comparisons
+  - Complete determinism baseline hash comparisons
   - Document any remaining non-deterministic generators
   - Fix time.Now() usage in procedural generation code
 

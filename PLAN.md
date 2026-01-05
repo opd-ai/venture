@@ -1,0 +1,406 @@
+# Production Readiness Plan
+
+## Current State Assessment
+
+### Purpose
+Venture is a fully procedural multiplayer action-RPG built with Go and Ebiten. It generates all content (graphics, audio, gameplay) at runtime with no external asset files, resulting in a single binary distribution. The game features deep procedural generation, ECS architecture, real-time action combat, and multiplayer co-op with high-latency support (200-5000ms for Tor/onion services).
+
+### Completed Features
+**Core Systems (V8.0 Complete):**
+- ✅ Entity-Component-System (ECS) architecture with 87 active packages
+- ✅ 100% procedural generation (terrain, items, monsters, quests, magic, skills)
+- ✅ Real-time multiplayer with authoritative server and client prediction
+- ✅ Cross-platform support (Linux, macOS, Windows, WebAssembly, iOS, Android)
+- ✅ Advanced graphics (1920×1080, 64×64 sprites, 8-frame animations, lighting, particles)
+- ✅ Player housing system with 4 plot sizes, 6 building types, 36 furniture types
+- ✅ Guild systems with multi-server support, territory control, guild warfare
+- ✅ Advanced physics (vehicles, fluids, destruction)
+- ✅ E2E encrypted chat, image sharing, secure trading
+- ✅ Federation support with WebRTC P2P and cross-server travel
+- ✅ Companion AI with learning, branching narratives, multi-classing
+- ✅ Server modding framework with JSON-based mods
+
+**Quality Metrics:**
+- ✅ 85.5% average test coverage (above 65% target)
+- ✅ 89 FPS with 2000 entities (48% above 60 FPS target)
+- ✅ 120MB memory usage (76% below 500MB budget)
+- ✅ 95.9% sprite cache hit rate
+- ✅ Comprehensive documentation (50+ docs)
+- ✅ CI/CD pipeline with automated builds and tests
+- ✅ Security audit infrastructure (pkg/security)
+
+### Gaps for Production
+
+**Critical Issues:**
+1. **Build Environment Documentation:** X11 dependencies required for all builds/tests (already handled in CI via xvfb, needs developer setup docs)
+2. **No Semantic Versioning:** Currently at "8.0.0 Production" but no formal versioning strategy
+3. **Incomplete Error Handling:** Some TODO placeholders remain in critical paths (housing integration, crafting, quests)
+4. **Missing Release Artifacts:** No official GitHub releases with binaries/checksums despite having release infrastructure
+
+**Stability Gaps:**
+1. **Graceful Degradation:** Limited fallback behavior when systems fail (e.g., federation, WebRTC)
+2. **Resource Cleanup:** Potential memory/connection leaks in long-running servers
+3. **Configuration Validation:** No validation of CLI flags or environment variables on startup
+4. **Panic Recovery:** No centralized panic recovery in server goroutines
+
+**Observability Gaps:**
+1. **Metrics Export:** No Prometheus/StatsD integration despite having performance monitoring
+2. **Distributed Tracing:** No correlation IDs for tracking requests across federated servers
+3. **Health Endpoints:** Basic health check exists but no detailed status/readiness endpoints
+4. **Alerting:** No integration with monitoring systems or alert definitions
+
+**Distribution Gaps:**
+1. **Official Releases:** No v1.0.0 tagged release with semantic versioning
+2. **Distribution Packages:** No .deb, .rpm, Homebrew, or Windows installer packages
+3. **Docker Registry:** Dockerfile exists but no official images on GHCR or Docker Hub
+4. **Dependency Pinning:** go.mod pins versions but no verification of security advisories
+
+**Documentation Gaps:**
+1. **API Stability Guarantees:** No documented API compatibility policy
+2. **Upgrade Guides:** No migration guides between versions
+3. **Runbooks:** No operational runbooks for common issues (high CPU, memory leaks, network issues)
+4. **Security Response:** Security policy exists but no incident response procedures
+
+---
+
+## Phase 1: Critical Fixes & Build Stability (Estimated: 3 days)
+
+**Goal:** Fix critical TODOs, establish baseline build health, and improve developer experience with proper dependency documentation.
+
+**Deliverables:**
+- [ ] Document build dependencies and setup (file: docs/GETTING_STARTED.md, docs/DEVELOPMENT.md)
+  - Document required X11 packages for Linux (libgl1-mesa-dev, libxcursor-dev, libxi-dev, libxinerama-dev, libxrandr-dev, libxxf86vm-dev, libasound2-dev, pkg-config)
+  - Add xvfb setup instructions for headless testing
+  - Provide platform-specific setup commands (Ubuntu/Debian, Fedora/RHEL, macOS, Windows)
+  - Add troubleshooting section for common build issues
+- [ ] Complete housing integration TODOs (file: pkg/world/housing/integration_test.go)
+  - Implement proper house serialization (CreateHouse, SaveHouse, LoadHouse)
+  - Fix overlapping house placement at (0,0) with spatial distribution
+  - Implement recipe generation for crafting integration
+  - Add quest generation and progress tracking for housing quests
+- [ ] Add configuration validation (file: cmd/server/main.go, cmd/client/main.go)
+  - Validate port range (1024-65535), max-players (1-100), tick-rate (1-60)
+  - Validate genre IDs against available genres
+  - Validate file paths (save directory, log directory)
+  - Exit gracefully with helpful error messages on invalid config
+- [ ] Implement panic recovery for server goroutines (file: pkg/network/server.go, pkg/engine/world.go)
+  - Add defer/recover in all goroutine spawns
+  - Log panics with stack traces using logrus
+  - Gracefully disconnect clients on handler panics
+  - Add panic recovery middleware for network handlers
+- [ ] Audit and fix determinism issues (file: pkg/procgen/audit/determinism_test.go)
+  - Complete Phase 62.1 baseline hash comparisons
+  - Document any remaining non-deterministic generators
+  - Fix time.Now() usage in procedural generation code
+
+**Success Criteria:**
+- All `go test ./pkg/...` passes without build failures (with X11 dependencies installed)
+- Developer setup guide validated on clean Ubuntu 22.04, macOS 13+, and Windows 11
+- Zero panics during 1-hour stress test (4 concurrent players)
+- All CLI flags validated with clear error messages
+- Determinism audit shows 100% reproducibility for same seed
+
+**Blocks:** Phase 2, Phase 3
+
+---
+
+## Phase 2: Stability & Error Handling (Estimated: 4 days)
+
+**Goal:** Implement comprehensive error handling, graceful degradation, and resource cleanup for production reliability.
+
+**Deliverables:**
+- [ ] Implement graceful degradation for federation (file: pkg/network/federation/*.go)
+  - Add circuit breaker pattern for failing remote servers
+  - Fallback to local-only mode when federation unavailable
+  - Retry logic with exponential backoff for transient failures
+  - Connection pool management with max lifetime and idle timeout
+- [ ] Add resource cleanup and leak prevention (file: pkg/network/server.go, pkg/world/persistence.go)
+  - Implement context-based cancellation for all long-running operations
+  - Add resource tracking (open files, goroutines, network connections)
+  - Periodic cleanup of abandoned client sessions
+  - Graceful shutdown with 30s timeout for in-flight requests
+- [ ] Implement comprehensive error wrapping (files: all packages)
+  - Wrap all errors with context using fmt.Errorf("%w", err)
+  - Add structured error types for common failures (NetworkError, ValidationError, etc.)
+  - Log errors with correlation IDs and relevant context
+  - Return user-friendly error messages to clients
+- [ ] Add input sanitization and validation (file: pkg/network/chat/chat.go, pkg/network/trade/trade.go)
+  - Validate all user inputs (chat messages, trade offers, item IDs)
+  - Prevent injection attacks (SQL-like, command injection in serialized data)
+  - Rate limiting per client (10 msg/s, documented in SECURITY.md)
+  - Implement content filtering for inappropriate chat messages
+- [ ] Implement database/save file corruption recovery (file: pkg/saveload/*.go)
+  - Add checksum validation for all save files
+  - Create backup copies before overwriting saves
+  - Implement recovery from corrupted data (fallback to last good save)
+  - Add save file versioning for future migrations
+
+**Success Criteria:**
+- Server remains stable during 24-hour test with simulated federation failures
+- Zero resource leaks (goroutines, file descriptors, memory) in 12-hour test
+- All errors include contextual information and correlation IDs
+- 100% of user inputs validated before processing
+- Save file corruption automatically recovered without data loss
+
+**Blocks:** Phase 3, Phase 4
+
+---
+
+## Phase 3: Testing & Observability (Estimated: 5 days)
+
+**Goal:** Achieve comprehensive test coverage, implement production monitoring, and establish observability standards.
+
+**Deliverables:**
+- [ ] Increase test coverage to 90%+ (files: all packages with <80% coverage)
+  - Add table-driven tests for all edge cases
+  - Add integration tests for critical paths (player join, combat, trading)
+  - Add chaos/fuzz tests for network protocols
+  - Add load tests for 10+ concurrent players
+  - Document testing strategy in docs/TESTING.md updates
+- [ ] Implement metrics export (file: pkg/engine/performance/metrics.go, new: pkg/observability/metrics.go)
+  - Add Prometheus endpoint at /metrics
+  - Export key metrics: FPS, entity count, memory usage, network traffic
+  - Add custom metrics: player count, active quests, trade volume
+  - Create example Grafana dashboards (new: docs/monitoring/grafana.json)
+- [ ] Add distributed tracing (new: pkg/observability/tracing.go)
+  - Generate correlation IDs for all client requests
+  - Propagate correlation IDs across federated servers
+  - Log all operations with correlation IDs
+  - Add trace context to error messages
+- [ ] Implement health/readiness endpoints (file: cmd/server/main.go)
+  - GET /health - basic liveness check (returns 200 if server running)
+  - GET /ready - readiness check (validates DB, federation connectivity)
+  - GET /status - detailed status (uptime, player count, resource usage)
+  - Add startup/shutdown lifecycle hooks
+- [ ] Create operational runbooks (new: docs/runbooks/*.md)
+  - High CPU usage troubleshooting (runbooks/high-cpu.md)
+  - Memory leak investigation (runbooks/memory-leak.md)
+  - Network connectivity issues (runbooks/network-issues.md)
+  - Save file corruption recovery (runbooks/save-corruption.md)
+  - Federation debugging (runbooks/federation-debug.md)
+
+**Success Criteria:**
+- Test coverage ≥90% across all packages
+- Prometheus metrics exported and visualized in Grafana
+- All client requests traceable across federated servers via correlation IDs
+- Health endpoints return accurate status in <100ms
+- Runbooks validated through manual testing of each scenario
+
+**Blocks:** Phase 4, Phase 5
+
+---
+
+## Phase 4: Performance & Optimization (Estimated: 4 days)
+
+**Goal:** Validate performance under expected load, optimize hot paths, and establish performance benchmarks.
+
+**Deliverables:**
+- [ ] Comprehensive performance benchmarking (files: all packages, add *_bench_test.go)
+  - Benchmark all procedural generators (target: <10ms per generation)
+  - Benchmark rendering pipeline (target: 60 FPS with 2000 entities)
+  - Benchmark network packet processing (target: 1000 packets/s)
+  - Benchmark save/load operations (target: <1s for full world save)
+  - Document benchmark results in docs/PERFORMANCE.md
+- [ ] Profile and optimize hot paths (using pprof on production workloads)
+  - Profile CPU usage during 4-player gameplay (identify top 10 functions)
+  - Profile memory allocations (reduce allocations in rendering loop)
+  - Optimize sprite caching (target: >98% cache hit rate)
+  - Optimize network serialization (reduce allocations, use buffer pools)
+- [ ] Load testing and capacity planning (new: scripts/load-test.sh)
+  - Simulate 10 concurrent players with realistic behavior
+  - Measure resource usage (CPU, memory, network) at different player counts
+  - Establish capacity limits (max players per server instance)
+  - Document results in docs/CAPACITY_PLANNING.md
+- [ ] Implement performance regression testing (file: .github/workflows/quality.yml)
+  - Add benchmark CI job that compares against baseline
+  - Fail CI if performance regresses >10% on key benchmarks
+  - Store benchmark history for trend analysis
+  - Alert on significant regressions
+- [ ] Optimize WebAssembly build size (file: Makefile, cmd/client/main.go)
+  - Use -ldflags="-s -w" to strip debug symbols
+  - Analyze and remove unused dependencies
+  - Implement lazy loading for non-critical systems
+  - Target: <10MB gzipped WASM bundle
+
+**Success Criteria:**
+- All benchmarks documented with baseline numbers
+- 60+ FPS maintained with 10 concurrent players
+- Memory usage <500MB per server instance with 4 players
+- Network bandwidth <100 KB/s per player
+- WASM bundle size <10MB gzipped
+- Performance regression tests integrated in CI
+
+**Blocks:** Phase 5
+
+---
+
+## Phase 5: Distribution & Documentation (Estimated: 5 days)
+
+**Goal:** Prepare official v1.0.0 release with semantic versioning, distribution packages, and production documentation.
+
+**Deliverables:**
+- [ ] Implement semantic versioning (file: pkg/version/version.go)
+  - Change version from "8.0.0" to "1.0.0" (fresh start for production)
+  - Document versioning policy (MAJOR.MINOR.PATCH)
+  - Add version command to CLI (--version flag)
+  - Tag v1.0.0 release in git
+- [ ] Create distribution packages (new: scripts/package-*.sh, .github/workflows/release.yml)
+  - Build .deb packages for Debian/Ubuntu (with systemd service)
+  - Build .rpm packages for RHEL/Fedora
+  - Create Homebrew formula (new: Formula/venture.rb)
+  - Build Windows installer with NSIS (with Start menu shortcuts)
+  - Create Docker images and push to GHCR (ghcr.io/opd-ai/venture-server:1.0.0)
+- [ ] Establish GitHub releases (file: .github/workflows/release.yml)
+  - Automate release builds for all platforms on git tags
+  - Generate SHA256SUMS.txt for all artifacts
+  - Sign binaries with GPG (optional but recommended)
+  - Create release notes from CHANGELOG.md
+  - Upload artifacts to GitHub Releases
+- [ ] Document API stability guarantees (new: docs/API_COMPATIBILITY.md)
+  - Define public API surface (network protocol, save format, config files)
+  - Commit to backward compatibility for MINOR/PATCH versions
+  - Document deprecation policy (2 MINOR versions notice)
+  - Provide migration guides for breaking changes
+- [ ] Create upgrade guides (new: docs/UPGRADE_GUIDE.md)
+  - Document upgrade process from development to v1.0.0
+  - Provide database/save file migration scripts
+  - List breaking changes and required actions
+  - Include rollback procedures
+- [ ] Security hardening review (files: pkg/security/*, docs/SECURITY.md)
+  - Run security audit using `gosec` and address findings
+  - Review dependency security advisories (GitHub Dependabot)
+  - Implement rate limiting on all public endpoints
+  - Add SECURITY.md incident response procedures
+  - Set up GitHub Security Advisories for vulnerability reporting
+- [ ] Production deployment guide (file: docs/PRODUCTION_DEPLOYMENT.md updates)
+  - Add systemd service examples for common distros
+  - Document reverse proxy setup (NGINX, Caddy)
+  - Add monitoring setup guide (Prometheus + Grafana)
+  - Document backup and disaster recovery procedures
+  - Add scaling recommendations (vertical vs horizontal)
+
+**Success Criteria:**
+- v1.0.0 tagged and released on GitHub with all artifacts
+- Packages installable on Ubuntu, Fedora, macOS (Homebrew), Windows
+- Docker image runs successfully with `docker run ghcr.io/opd-ai/venture-server:1.0.0`
+- API compatibility policy documented and agreed upon
+- Security audit passes with zero high-severity issues
+- Production deployment guide validated on clean Ubuntu 22.04 system
+
+**Blocks:** None (final phase)
+
+---
+
+## Release Checklist
+
+### Pre-Release Validation
+- [ ] All Phase 1-5 deliverables completed
+- [ ] All tests passing (`go test ./...`)
+- [ ] Test coverage ≥90% across all packages
+- [ ] No build failures on any platform (Linux, macOS, Windows, WASM)
+- [ ] Performance benchmarks meet or exceed targets
+- [ ] Security audit passes (gosec, dependency check)
+- [ ] All TODOs and FIXMEs resolved or documented
+- [ ] Documentation reviewed and up-to-date
+
+### Release Artifacts
+- [ ] Binaries built for all platforms (Linux amd64/arm64, macOS amd64/arm64, Windows amd64)
+- [ ] Distribution packages created (.deb, .rpm, Homebrew, Windows installer)
+- [ ] Docker images built and pushed to GHCR
+- [ ] WebAssembly build deployed to GitHub Pages
+- [ ] SHA256SUMS.txt generated and signed
+- [ ] Release notes prepared from CHANGELOG.md
+
+### Version Control
+- [ ] Version bumped to 1.0.0 in pkg/version/version.go
+- [ ] CHANGELOG.md updated with all changes since last release
+- [ ] Git tag created: `git tag -a v1.0.0 -m "Release v1.0.0"`
+- [ ] Tag pushed: `git push origin v1.0.0`
+
+### Documentation
+- [ ] README.md updated with v1.0.0 installation instructions
+- [ ] API_COMPATIBILITY.md published
+- [ ] UPGRADE_GUIDE.md published
+- [ ] Production deployment guide validated
+- [ ] All runbooks tested and validated
+
+### Communication
+- [ ] GitHub Release published with release notes
+- [ ] Docker Hub/GHCR listings updated
+- [ ] Package repository metadata updated (Homebrew, apt, yum)
+- [ ] Security contact information verified (SECURITY.md)
+
+### Post-Release Monitoring
+- [ ] Monitor GitHub Issues for v1.0.0 related bugs
+- [ ] Monitor CI/CD pipeline health
+- [ ] Check download metrics and user feedback
+- [ ] Prepare hotfix process for critical issues
+
+---
+
+## Effort Summary
+
+| Phase | Estimated Effort | Dependencies |
+|-------|-----------------|--------------|
+| Phase 1: Critical Fixes | 3 days | None |
+| Phase 2: Stability | 4 days | Phase 1 |
+| Phase 3: Observability | 5 days | Phase 1, 2 |
+| Phase 4: Performance | 4 days | Phase 2, 3 |
+| Phase 5: Distribution | 5 days | Phase 4 |
+| **Total** | **21 days** | Sequential |
+
+**Note:** Effort estimates assume one full-time developer. Phases can be parallelized with multiple contributors:
+- Phase 1 → Phase 2 → Phase 3 can run sequentially (12 days)
+- Phase 4 and parts of Phase 5 can start after Phase 2 completes
+- With 2 developers: ~14 days (Phase 3 + Phase 4 parallel after Phase 2)
+- With 3 developers: ~10 days (Phase 3, 4, 5 partially parallel)
+
+---
+
+## Success Metrics
+
+**Production Ready = All Complete:**
+1. ✅ Stable API with semantic versioning (v1.0.0)
+2. ✅ Comprehensive error handling with graceful degradation
+3. ✅ Production logging and observability (Prometheus, health endpoints, runbooks)
+4. ✅ Security hardening completed (audit passed, rate limiting, input validation)
+5. ✅ Performance validated under expected load (10+ players, 60 FPS, <500MB)
+6. ✅ Distribution-ready (packages for major platforms, Docker image, GitHub release)
+7. ✅ Documented for users and contributors (API docs, upgrade guides, runbooks)
+
+**Key Performance Indicators (KPIs):**
+- Zero critical bugs in production (P0 bugs = 0)
+- 99.9% uptime for dedicated servers
+- <1% crash rate across all platforms
+- <24h response time for security vulnerabilities
+- 100% of documented APIs backward compatible within major version
+
+---
+
+## Appendix: Risk Assessment
+
+### High Risk Items
+1. **Performance Regression** (Phase 4) - Optimization may introduce bugs
+   - Mitigation: Comprehensive benchmarking before/after, incremental changes
+2. **Breaking API Changes** (Phase 5) - Existing users may be affected
+   - Mitigation: Document all changes, provide migration tools, deprecation warnings
+3. **Housing System Integration** (Phase 1) - Multiple TODO placeholders in critical paths
+   - Mitigation: Thorough testing, incremental implementation, fallback to skip features if needed
+
+### Medium Risk Items
+1. **Test Coverage Goals** (Phase 3) - May uncover significant bugs requiring fixes
+   - Mitigation: Prioritize critical paths, fix bugs as discovered
+2. **Federation Stability** (Phase 2) - Complex distributed system with edge cases
+   - Mitigation: Thorough testing, circuit breakers, graceful degradation
+3. **Docker Image Size** (Phase 5) - Static Go binaries can be large
+   - Mitigation: Multi-stage builds, UPX compression if needed
+
+### Low Risk Items
+1. **Documentation** (Phase 5) - Time-consuming but low technical risk
+2. **Distribution Packaging** (Phase 5) - Well-established tooling available
+3. **Monitoring Setup** (Phase 3) - Standard Prometheus integration patterns
+4. **Build Dependencies** (Phase 1) - Already handled in CI with xvfb, just needs documentation
+
+---
+
+*This production readiness plan is a living document. Update as phases complete and new requirements emerge.*

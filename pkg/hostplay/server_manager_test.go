@@ -408,6 +408,12 @@ func TestServerManagerReadySynchronization(t *testing.T) {
 	// Log the elapsed time for diagnostic purposes
 	t.Logf("Start() completed in %v", elapsed)
 
+	// Verify that Start() completed faster than the old time.Sleep(100ms) approach.
+	// This ensures the channel-based synchronization is working and catches regressions.
+	if elapsed >= 100*time.Millisecond {
+		t.Errorf("Start() took %v, expected less than 100ms with channel synchronization", elapsed)
+	}
+
 	// The server should be fully ready since Start() waited for readyChan.
 	// We can verify this by checking that the server address is set.
 	if manager.Address() == "" {

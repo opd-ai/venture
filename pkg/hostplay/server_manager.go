@@ -231,11 +231,13 @@ func (sm *ServerManager) Start() error {
 	sm.wg.Add(1)
 	go sm.serverLoop(ctx)
 
-	sm.running = true
-
 	// Wait for server goroutine to signal it's fully initialized.
 	// This provides proper synchronization instead of arbitrary sleep delays.
 	<-sm.readyChan
+
+	// Set running flag after server is fully initialized to avoid race condition
+	// where IsRunning() could return true before the server is actually ready.
+	sm.running = true
 
 	sm.logger.WithFields(logrus.Fields{
 		"address":     sm.address,

@@ -45,6 +45,8 @@ func init() {
 	switch strings.ToLower(logLevel) {
 	case "debug":
 		log.SetLevel(logrus.DebugLevel)
+	case "info":
+		log.SetLevel(logrus.InfoLevel)
 	case "warn", "warning":
 		log.SetLevel(logrus.WarnLevel)
 	case "error":

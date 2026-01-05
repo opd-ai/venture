@@ -248,10 +248,10 @@ func (rm *RouteManager) Stop() {
 All TODO comments have been either implemented or documented as known architectural limitations with clear integration paths. No incomplete functionality remains undocumented.
 
 ### [LOW-002] Magic Numbers Without Constants ✅ RESOLVED
-**File:** pkg/network/server.go:142, 151  
+**File:** pkg/network/server.go:151, 160  
 **Severity:** Low  
 **Status:** ✅ Fixed on 2026-01-05  
-**Resolution:** Added `errorBufferSize` constant to replace magic number `64` used in two locations. The constant is properly documented to explain its purpose (buffering async errors from network operations) and rationale for the chosen size. Both the channel creation (line 142) and buffer stats initialization (line 151) now use the named constant, making the configuration easier to understand and tune.
+**Resolution:** Added `errorBufferSize` constant to replace magic number `64` used in two locations. The constant is properly documented to explain its purpose (buffering async errors from network operations) and rationale for the chosen size. Both the channel creation (line 151) and buffer stats initialization (line 160) now use the named constant, making the configuration easier to understand and tune.
 
 **Before:**
 ```go
@@ -417,10 +417,10 @@ type ActionInput interface {
 **Fix:** Standardize on `err` per Go conventions.
 
 ### [LOW-002] Magic Numbers Without Constants ✅ RESOLVED
-**File:** pkg/network/server.go:142, 151  
+**File:** pkg/network/server.go:151, 160  
 **Severity:** Low  
 **Status:** ✅ Fixed on 2026-01-05  
-**Resolution:** Added `errorBufferSize` constant to replace magic number `64` used in two locations. The constant is properly documented to explain its purpose (buffering async errors from network operations) and rationale for the chosen size. Both the channel creation (line 142) and buffer stats initialization (line 151) now use the named constant, making the configuration easier to understand and tune.
+**Resolution:** Added `errorBufferSize` constant to replace magic number `64` used in two locations. The constant is properly documented to explain its purpose (buffering async errors from network operations) and rationale for the chosen size. Both the channel creation (line 151) and buffer stats initialization (line 160) now use the named constant, making the configuration easier to understand and tune.
 
 **Before:**
 ```go

@@ -9,8 +9,22 @@ Welcome to Venture, a fully procedural multiplayer action-RPG! This guide will h
 **Prerequisites:**
 - Go 1.24.5 or later
 - Platform dependencies:
-  - **Linux:** `sudo apt-get install libc6-dev libgl1-mesa-dev libxcursor-dev libxi-dev libxinerama-dev libxrandr-dev libxxf86vm-dev libasound2-dev pkg-config libx11-dev`
-  - **macOS:** Xcode command line tools (`xcode-select --install`)
+  - **Linux (Ubuntu/Debian):** 
+    ```bash
+    sudo apt-get install libc6-dev libgl1-mesa-dev libxcursor-dev libxi-dev \
+                         libxinerama-dev libxrandr-dev libxxf86vm-dev libasound2-dev \
+                         pkg-config libx11-dev
+    ```
+  - **Linux (Fedora/RHEL):**
+    ```bash
+    sudo dnf install mesa-libGL-devel libXcursor-devel libXi-devel \
+                     libXinerama-devel libXrandr-devel libXxf86vm-devel \
+                     alsa-lib-devel pkgconfig libX11-devel
+    ```
+  - **macOS:** Xcode command line tools
+    ```bash
+    xcode-select --install
+    ```
   - **Windows:** No additional dependencies needed
 
 **Clone and Build:**
@@ -278,14 +292,119 @@ All V3.0 enhancements are **enabled by default** and optimized to maintain excel
 
 ## Troubleshooting
 
-**Game won't start:**
-- Linux: Install X11 libraries (see prerequisites)
-- macOS: Install Xcode command line tools
-- Windows: Verify Go installation
+### Build and Installation Issues
 
-**Performance issues:** Lower resolution, reduce settings
-**Connection issues:** Check server status and firewall
-**Crashes:** Check console for errors, report on GitHub
+**Game won't build on Linux:**
+```bash
+# Error: "cannot find package" or "undefined reference"
+# Solution: Install X11 development libraries
+sudo apt-get install libc6-dev libgl1-mesa-dev libxcursor-dev libxi-dev \
+                     libxinerama-dev libxrandr-dev libxxf86vm-dev libasound2-dev \
+                     pkg-config libx11-dev
+
+# Verify installation
+pkg-config --libs --cflags x11 gl
+```
+
+**Build fails with "missing display" on headless server:**
+```bash
+# Error: "cannot open display" or "DISPLAY environment variable missing"
+# Solution: Install and use Xvfb for virtual display
+sudo apt-get install xvfb
+xvfb-run go build ./cmd/client
+xvfb-run go test ./pkg/...
+```
+
+**macOS build fails:**
+```bash
+# Error: "xcrun: error: invalid active developer path"
+# Solution: Install/reinstall Xcode command line tools
+xcode-select --install
+
+# If that fails, reset the path
+sudo xcode-select --reset
+```
+
+**Windows build warnings:**
+```bash
+# Warning: "warning: could not load runtime/cgo"
+# Usually safe to ignore, but verify Go installation is complete
+go version  # Should show version without errors
+```
+
+### Runtime Issues
+
+**Game won't start:**
+- **Linux:** Ensure X11 libraries are installed (see prerequisites above)
+- **macOS:** Install Xcode command line tools (`xcode-select --install`)
+- **Windows:** Verify Go installation (`go version`)
+- **All platforms:** Check console output for specific error messages
+
+**Performance issues:**
+- Lower resolution with `-width 1280 -height 720`
+- Disable weather effects (run without `-weather` flag)
+- Reduce entity count (start with smaller world seed)
+- Check system meets minimum requirements (4GB RAM, integrated graphics)
+
+**Connection issues (Multiplayer):**
+- Verify server is running: `netstat -an | grep 8080` (Linux/macOS) or `netstat -an | findstr 8080` (Windows)
+- Check firewall rules allow port 8080
+- For LAN play, ensure both machines are on same network
+- Try explicit server address: `./venture-client --multiplayer --server 192.168.1.100:8080`
+- For localhost testing: `./venture-client --multiplayer --server localhost:8080`
+
+**Crashes or freezes:**
+- Check console for panic messages and stack traces
+- Run with verbose logging: `./venture-client -verbose`
+- Check available memory: `free -h` (Linux), Activity Monitor (macOS), Task Manager (Windows)
+- Report crashes on GitHub with console output and steps to reproduce
+
+### Test Failures
+
+**Tests fail with "cannot open display":**
+```bash
+# Tests should use stub implementations, but if you encounter display errors:
+xvfb-run go test ./pkg/...
+
+# Or set a virtual display
+export DISPLAY=:99
+Xvfb :99 -screen 0 1920x1080x24 &
+go test ./pkg/...
+```
+
+**Coverage collection fails:**
+```bash
+# Some tests might timeout, increase timeout
+go test -timeout 30s -cover ./pkg/...
+
+# Run specific package tests
+go test -v ./pkg/engine
+```
+
+### Platform-Specific Setup Validation
+
+**Verify your setup is correct:**
+
+```bash
+# All platforms: Check Go version
+go version  # Should be 1.24.5 or later
+
+# Linux: Verify X11 libraries
+pkg-config --libs --cflags x11 gl
+# Should output: -lX11 -lGL (or similar)
+
+# Linux: Test xvfb (if installed)
+xvfb-run -s "-screen 0 1920x1080x24" go version
+# Should output Go version without errors
+
+# macOS: Verify Xcode tools
+xcode-select -p
+# Should output: /Library/Developer/CommandLineTools (or similar)
+
+# All platforms: Test build
+go build -o /tmp/venture-test ./cmd/client
+# Should complete without errors
+```
 
 **For detailed troubleshooting, see [User Manual](USER_MANUAL.md) and [Development Guide](DEVELOPMENT.md).**
 

@@ -9,15 +9,73 @@
 - **Platform-specific dependencies:**
   - **Linux:** X11 development libraries
     ```bash
-    apt-get install libc6-dev libgl1-mesa-dev libxcursor-dev libxi-dev \
-                    libxinerama-dev libxrandr-dev libxxf86vm-dev libasound2-dev \
-                    pkg-config libx11-dev
+    # Ubuntu/Debian
+    sudo apt-get install libc6-dev libgl1-mesa-dev libxcursor-dev libxi-dev \
+                         libxinerama-dev libxrandr-dev libxxf86vm-dev libasound2-dev \
+                         pkg-config libx11-dev
+    
+    # Fedora/RHEL
+    sudo dnf install mesa-libGL-devel libXcursor-devel libXi-devel \
+                     libXinerama-devel libXrandr-devel libXxf86vm-devel \
+                     alsa-lib-devel pkgconfig libX11-devel
+    
+    # For headless testing (CI/servers)
+    sudo apt-get install xvfb  # Ubuntu/Debian
+    sudo dnf install xorg-x11-server-Xvfb  # Fedora/RHEL
     ```
   - **macOS:** Xcode command line tools
     ```bash
     xcode-select --install
     ```
   - **Windows:** No additional dependencies required
+
+### Headless Testing Setup
+
+For running tests in headless environments (CI, servers, Docker), use Xvfb (X virtual framebuffer):
+
+**Installation:**
+```bash
+# Ubuntu/Debian
+sudo apt-get install xvfb
+
+# Fedora/RHEL
+sudo dnf install xorg-x11-server-Xvfb
+```
+
+**Running Tests:**
+```bash
+# Run tests with virtual display
+xvfb-run -s "-screen 0 1920x1080x24" go test ./pkg/...
+
+# Run with specific test
+xvfb-run go test ./pkg/engine -v
+
+# Run client/server builds
+xvfb-run go build ./cmd/client
+xvfb-run go build ./cmd/server
+```
+
+**Docker Integration:**
+```dockerfile
+# Add to Dockerfile
+RUN apt-get update && apt-get install -y \
+    xvfb \
+    libgl1-mesa-dev \
+    libxcursor-dev \
+    # ... other X11 dependencies
+
+# Use in entrypoint
+ENTRYPOINT ["xvfb-run", "-s", "-screen 0 1920x1080x24"]
+```
+
+**GitHub Actions (already configured in .github/workflows/test.yml):**
+```yaml
+- name: Install build dependencies
+  run: sudo apt-get install libc6-dev libgl1-mesa-dev libxcursor-dev libxi-dev libxinerama-dev libxrandr-dev libxxf86vm-dev libasound2-dev pkg-config xvfb
+
+- name: Run tests
+  run: xvfb-run -s "-screen 0 1920x1080x24" go test -v ./pkg/...
+```
 
 ### Initial Setup
 

@@ -193,6 +193,8 @@ func (m *Manager) CreateHouse(ownerID string, buildingData interface{}, seed int
 	// Generate deterministic position based on seed
 	// This prevents all houses from spawning at (0,0)
 	// Use seed combined with current player plot count for unique positions
+	// Note: math/rand is appropriate here for deterministic procedural generation.
+	// The goal is reproducibility from the same seed, not cryptographic security.
 	rng := rand.New(rand.NewSource(seed + int64(len(m.playerPlots[ownerID]))))
 	
 	// Distribute houses in a grid pattern with some randomness

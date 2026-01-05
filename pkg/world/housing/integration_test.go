@@ -204,7 +204,8 @@ func TestPerformanceBenchmark(t *testing.T) {
 				t.Fatalf("Failed to generate building %d: %v", i, err)
 			}
 
-			_, err = hm.CreateHouse("player"+string(rune(i)), buildingData.(*building.Building), int64(i))
+			playerID := fmt.Sprintf("player%d", i)
+			_, err = hm.CreateHouse(playerID, buildingData.(*building.Building), int64(i))
 			if err != nil {
 				t.Fatalf("Failed to create house %d: %v", i, err)
 			}
@@ -286,6 +287,8 @@ func addQuestToPlayer(player *engine.Entity, quest *BuildingQuest) bool {
 	}
 	
 	// Convert BuildingQuest to quest.Quest
+	// Note: Using TypeExplore as a generic type for testing purposes.
+	// In production, a dedicated TypeBuild or TypeConstruction would be more appropriate.
 	q := &quest.Quest{
 		ID:          quest.ID,
 		Name:        "Building Quest",

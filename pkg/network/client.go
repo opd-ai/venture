@@ -129,10 +129,10 @@ type TCPClient struct {
 	mu sync.RWMutex
 
 	// Shutdown - done channel is protected by doneMu for safe closing
-	done     chan struct{}
-	doneMu   sync.Mutex // Guards closing of done channel
-	doneClosed bool     // Tracks if current done channel is closed
-	wg       sync.WaitGroup
+	done       chan struct{}
+	doneMu     sync.Mutex // Guards closing of done channel
+	doneClosed bool       // Tracks if current done channel is closed
+	wg         sync.WaitGroup
 
 	// Logger for network operations
 	logger *logrus.Entry
@@ -462,7 +462,7 @@ func (c *TCPClient) receiveLoop() {
 	for {
 		// Hot path optimization: No done channel check here.
 		// Disconnect() closes the connection, causing reads to fail and exit the loop.
-		
+
 		// Check if connection is valid before accessing it
 		// Note: This nil check is an early-exit optimization, not full race prevention.
 		// The connection may still be closed after this point; in that case,

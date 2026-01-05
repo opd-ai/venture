@@ -12,6 +12,15 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+const (
+	// errorBufferSize is the size of the error channel buffer.
+	// This buffer holds async errors from network operations (connection failures,
+	// protocol errors, etc.) before they can be consumed by the game logic.
+	// A size of 64 provides sufficient buffering for error bursts while preventing
+	// unbounded memory growth from unconsumed errors.
+	errorBufferSize = 64
+)
+
 // ServerConfig holds configuration for the network server.
 type ServerConfig struct {
 	Address      string        // Listen address (host:port)
@@ -139,7 +148,7 @@ func NewServerWithLogger(config ServerConfig, logger *logrus.Logger) *TCPServer 
 		inputCommands: make(chan *InputCommand, config.BufferSize*config.MaxPlayers),
 		playerJoins:   make(chan uint64, config.MaxPlayers),
 		playerLeaves:  make(chan uint64, config.MaxPlayers),
-		errors:        make(chan error, 64),
+		errors:        make(chan error, errorBufferSize),
 		done:          make(chan struct{}),
 		logger:        logEntry,
 	}
@@ -148,7 +157,7 @@ func NewServerWithLogger(config ServerConfig, logger *logrus.Logger) *TCPServer 
 	server.inputCommandStats = NewBufferStats("server_input_commands", config.BufferSize*config.MaxPlayers, logEntry)
 	server.playerJoinStats = NewBufferStats("server_player_joins", config.MaxPlayers, logEntry)
 	server.playerLeaveStats = NewBufferStats("server_player_leaves", config.MaxPlayers, logEntry)
-	server.errorStats = NewBufferStats("server_errors", 64, logEntry)
+	server.errorStats = NewBufferStats("server_errors", errorBufferSize, logEntry)
 
 	return server
 }
@@ -449,7 +458,7 @@ func (s *TCPServer) handleClientReceive(client *clientConnection) {
 	for {
 		// Hot path optimization: No done channel check here.
 		// Server shutdown closes all client connections, causing reads to fail and exit.
-		
+
 		msgLen, err := s.readMessageLength(client, buf)
 		if err != nil {
 			return

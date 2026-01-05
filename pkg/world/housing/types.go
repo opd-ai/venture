@@ -189,31 +189,31 @@ type Dimensions = Vector2
 
 // BuildingDefinition contains the parameters needed to procedurally generate a building.
 type BuildingDefinition struct {
-	Type   int    // BuildingType from pkg/procgen/building
-	Style  int    // ArchitecturalStyle from pkg/procgen/building
-	Width  int    // Building width in tiles
-	Height int    // Building height in tiles
-	Floors int    // Number of floors
-	Seed   int64  // Seed for deterministic generation
+	Type   int   // BuildingType from pkg/procgen/building
+	Style  int   // ArchitecturalStyle from pkg/procgen/building
+	Width  int   // Building width in tiles
+	Height int   // Building height in tiles
+	Floors int   // Number of floors
+	Seed   int64 // Seed for deterministic generation
 }
 
 // Blueprint represents a shareable building design with metadata.
 // Blueprint instances must not be copied after creation; always use pointers.
 // The embedded mutex makes copying unsafe and will cause go vet warnings.
 type Blueprint struct {
-	mu          sync.Mutex           // Protects mutable fields (rating, ratingCount, downloads)
-	ID          string               // Unique blueprint identifier
-	Name        string               // User-friendly name
-	Description string               // Detailed description
-	Author      string               // Player ID who created this blueprint
-	GenreID     string               // Genre (fantasy, scifi, horror, etc.)
-	Tags        []string             // Searchable tags (medieval, manor, etc.)
-	rating      float64              // Average rating (0.0-5.0) - protected by mu
-	ratingCount int                  // Number of ratings - protected by mu
-	downloads   int                  // Download count - protected by mu
-	CreatedAt   time.Time            // Creation timestamp
-	ModifiedAt  time.Time            // Last modification timestamp
-	BuildingDef *BuildingDefinition  // Building generation parameters
+	mu          sync.Mutex          // Protects mutable fields (rating, ratingCount, downloads)
+	ID          string              // Unique blueprint identifier
+	Name        string              // User-friendly name
+	Description string              // Detailed description
+	Author      string              // Player ID who created this blueprint
+	GenreID     string              // Genre (fantasy, scifi, horror, etc.)
+	Tags        []string            // Searchable tags (medieval, manor, etc.)
+	rating      float64             // Average rating (0.0-5.0) - protected by mu
+	ratingCount int                 // Number of ratings - protected by mu
+	downloads   int                 // Download count - protected by mu
+	CreatedAt   time.Time           // Creation timestamp
+	ModifiedAt  time.Time           // Last modification timestamp
+	BuildingDef *BuildingDefinition // Building generation parameters
 }
 
 // GetRating returns the current average rating.
@@ -252,25 +252,25 @@ func generateBlueprintID() string {
 // blueprintJSON is a helper struct for JSON marshaling/unmarshaling.
 // It exposes the private fields for serialization.
 type blueprintJSON struct {
-	ID          string               `json:"ID"`
-	Name        string               `json:"Name"`
-	Description string               `json:"Description"`
-	Author      string               `json:"Author"`
-	GenreID     string               `json:"GenreID"`
-	Tags        []string             `json:"Tags"`
-	Rating      float64              `json:"Rating"`
-	RatingCount int                  `json:"RatingCount"`
-	Downloads   int                  `json:"Downloads"`
-	CreatedAt   time.Time            `json:"CreatedAt"`
-	ModifiedAt  time.Time            `json:"ModifiedAt"`
-	BuildingDef *BuildingDefinition  `json:"BuildingDef"`
+	ID          string              `json:"ID"`
+	Name        string              `json:"Name"`
+	Description string              `json:"Description"`
+	Author      string              `json:"Author"`
+	GenreID     string              `json:"GenreID"`
+	Tags        []string            `json:"Tags"`
+	Rating      float64             `json:"Rating"`
+	RatingCount int                 `json:"RatingCount"`
+	Downloads   int                 `json:"Downloads"`
+	CreatedAt   time.Time           `json:"CreatedAt"`
+	ModifiedAt  time.Time           `json:"ModifiedAt"`
+	BuildingDef *BuildingDefinition `json:"BuildingDef"`
 }
 
 // MarshalJSON implements json.Marshaler for Blueprint.
 func (bp *Blueprint) MarshalJSON() ([]byte, error) {
 	bp.mu.Lock()
 	defer bp.mu.Unlock()
-	
+
 	helper := blueprintJSON{
 		ID:          bp.ID,
 		Name:        bp.Name,
@@ -294,7 +294,7 @@ func (bp *Blueprint) UnmarshalJSON(data []byte) error {
 	if err := json.Unmarshal(data, &helper); err != nil {
 		return err
 	}
-	
+
 	bp.ID = helper.ID
 	bp.Name = helper.Name
 	bp.Description = helper.Description
@@ -307,7 +307,7 @@ func (bp *Blueprint) UnmarshalJSON(data []byte) error {
 	bp.CreatedAt = helper.CreatedAt
 	bp.ModifiedAt = helper.ModifiedAt
 	bp.BuildingDef = helper.BuildingDef
-	
+
 	return nil
 }
 

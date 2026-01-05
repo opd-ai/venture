@@ -14,7 +14,7 @@ import (
 type SortField int
 
 const (
-	SortByRating   SortField = iota // Sort by rating
+	SortByRating    SortField = iota // Sort by rating
 	SortByDownloads                  // Sort by download count
 	SortByCreated                    // Sort by creation date
 	SortByModified                   // Sort by modification date

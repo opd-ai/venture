@@ -367,3 +367,61 @@ func TestServerManagerGenreSupport(t *testing.T) {
 		})
 	}
 }
+
+// TestServerManagerReadySynchronization verifies that Start() properly waits for
+// the server goroutine to be fully initialized using channel synchronization
+// instead of arbitrary sleep delays.
+func TestServerManagerReadySynchronization(t *testing.T) {
+	logger := logrus.New()
+	logger.SetLevel(logrus.ErrorLevel)
+
+	config := &ServerConfig{
+		Port:       50500, // Use a high port to avoid conflicts
+		MaxPlayers: 2,
+		WorldSeed:  99999,
+		GenreID:    "fantasy",
+		TickRate:   20,
+	}
+
+	manager, err := NewServerManager(config, logger)
+	if err != nil {
+		t.Fatalf("failed to create server manager: %v", err)
+	}
+
+	// Measure how long Start() takes. If it were using time.Sleep(100ms),
+	// this would take at least 100ms. With proper synchronization,
+	// it should complete much faster (typically <50ms).
+	startTime := time.Now()
+	err = manager.Start()
+	elapsed := time.Since(startTime)
+
+	if err != nil {
+		t.Skipf("cannot start server for testing: %v", err)
+	}
+	defer manager.Stop()
+
+	// Verify server is running immediately after Start() returns
+	if !manager.IsRunning() {
+		t.Error("server should be running immediately after Start() returns")
+	}
+
+	// Log the elapsed time for diagnostic purposes
+	t.Logf("Start() completed in %v", elapsed)
+
+	// Verify that Start() completed faster than the old time.Sleep(100ms) approach.
+	// This ensures the channel-based synchronization is working and catches regressions.
+	if elapsed >= 100*time.Millisecond {
+		t.Errorf("Start() took %v, expected less than 100ms with channel synchronization", elapsed)
+	}
+
+	// The server should be fully ready since Start() waited for readyChan.
+	// We can verify this by checking that the server address is set.
+	if manager.Address() == "" {
+		t.Error("server address should be set after Start() completes")
+	}
+
+	// Verify we can get the port
+	if manager.Port() == 0 {
+		t.Error("server port should be set after Start() completes")
+	}
+}

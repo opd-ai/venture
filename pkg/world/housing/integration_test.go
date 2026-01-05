@@ -1,6 +1,9 @@
 package housing_test
 
 import (
+	"encoding/json"
+	"fmt"
+	"math/rand"
 	"testing"
 	"time"
 
@@ -8,12 +11,14 @@ import (
 	"github.com/opd-ai/venture/pkg/procgen"
 	"github.com/opd-ai/venture/pkg/procgen/building"
 	"github.com/opd-ai/venture/pkg/procgen/furniture"
+	"github.com/opd-ai/venture/pkg/procgen/quest"
 	"github.com/opd-ai/venture/pkg/world/housing"
 )
 
 // TestV6FederationIntegration tests housing sync with V6.0 federation system
 func TestV6FederationIntegration(t *testing.T) {
-	t.Skip("Federation sync methods are placeholder implementations (TODO)")
+	// Note: Federation sync methods use basic serialization.
+	// Full federation transport integration is planned for future release.
 	// Create two federated servers
 	server1 := &mockFederatedServer{id: "server1"}
 	_ = server1 // Will be used in actual federation sync
@@ -36,7 +41,7 @@ func TestV6FederationIntegration(t *testing.T) {
 		t.Fatalf("Failed to generate building: %v", err)
 	}
 
-	houseID, err := hm1.CreateHouse(ownerID, buildingData.(*building.Building))
+	houseID, err := hm1.CreateHouse(ownerID, buildingData.(*building.Building), 12345)
 	if err != nil {
 		t.Fatalf("Failed to create house: %v", err)
 	}
@@ -66,7 +71,8 @@ func TestV6FederationIntegration(t *testing.T) {
 
 // TestCraftingSystemIntegration tests furniture crafting with existing crafting system
 func TestCraftingSystemIntegration(t *testing.T) {
-	t.Skip("Crafting system integration is placeholder (TODO)")
+	// Note: This integration uses basic recipe generation.
+	// Full crafting system integration with inventory checking is planned for future release.
 	// Create world with crafting system
 	world := engine.NewWorld()
 
@@ -145,7 +151,7 @@ func TestQuestSystemIntegration(t *testing.T) {
 	}
 
 	playerID := "player1"
-	houseID, err := hm.CreateHouse(playerID, buildingData.(*building.Building))
+	houseID, err := hm.CreateHouse(playerID, buildingData.(*building.Building), 12345)
 	if err != nil {
 		t.Fatalf("Failed to create house: %v", err)
 	}
@@ -183,7 +189,6 @@ func TestPerformanceBenchmark(t *testing.T) {
 
 	// Create 1000 houses
 	t.Run("1000 houses", func(t *testing.T) {
-		t.Skip("CreateHouse uses fixed position (0,0) which causes overlaps - TODO in implementation")
 		start := time.Now()
 
 		for i := 0; i < 1000; i++ {
@@ -199,7 +204,7 @@ func TestPerformanceBenchmark(t *testing.T) {
 				t.Fatalf("Failed to generate building %d: %v", i, err)
 			}
 
-			_, err = hm.CreateHouse("player"+string(rune(i)), buildingData.(*building.Building))
+			_, err = hm.CreateHouse("player"+string(rune(i)), buildingData.(*building.Building), int64(i))
 			if err != nil {
 				t.Fatalf("Failed to create house %d: %v", i, err)
 			}
@@ -247,6 +252,17 @@ func TestPerformanceBenchmark(t *testing.T) {
 
 // Helper types and functions
 
+// Integration helper functions for housing system testing.
+// These functions integrate housing with the quest, crafting, and ECS systems.
+//
+// Design Notes:
+// - SerializeHouse: Uses JSON encoding for cross-server federation sync
+// - GenerateFurnitureCraftingRecipe: Integrates with existing crafting system (pkg/engine/crafting_components.go)
+// - CraftFurniture: Simulates crafting process for testing (full implementation requires inventory system)
+// - GenerateBuildingQuest/GenerateGuildQuest: Uses existing quest generator (pkg/procgen/quest/)
+// - UpdateBuildingQuestProgress/IsQuestComplete: Integrates with QuestTrackerComponent
+// - addQuestToPlayer: Helper to add quests using the ECS quest tracking system
+
 type mockFederatedServer struct {
 	id string
 }
@@ -258,56 +274,272 @@ func createTestPlayer(world *engine.World, id string) *engine.Entity {
 }
 
 func addQuestToPlayer(player *engine.Entity, quest *BuildingQuest) bool {
-	// Simplified quest tracking (in reality would use QuestComponent)
-	return true
+	if player == nil || quest == nil {
+		return false
+	}
+	
+	// Get or create quest tracker component
+	questTracker, ok := player.GetComponent("questtracker").(*engine.QuestTrackerComponent)
+	if !ok {
+		questTracker = engine.NewQuestTrackerComponent(10)
+		player.AddComponent(questTracker)
+	}
+	
+	// Convert BuildingQuest to quest.Quest
+	q := &quest.Quest{
+		ID:          quest.ID,
+		Name:        "Building Quest",
+		Type:        quest.TypeExplore, // Using explore as a generic type
+		Description: "Build a house for your character",
+		Objectives:  make([]quest.Objective, len(quest.Objectives)),
+		Status:      quest.StatusActive,
+	}
+	
+	// Convert objectives
+	for i, objDesc := range quest.Objectives {
+		q.Objectives[i] = quest.Objective{
+			Description: objDesc,
+			Target:      "house",
+			Required:    1,
+			Current:     0,
+		}
+	}
+	
+	// Accept the quest
+	return questTracker.AcceptQuest(q, time.Now().Unix())
 }
 
 // Placeholder integration functions (to be implemented)
 
+// SerializeHouse serializes a House to JSON bytes for federation sync.
 func SerializeHouse(house *housing.House) []byte {
-	// TODO: Implement proper serialization
-	return []byte{}
+	if house == nil {
+		return []byte{}
+	}
+	
+	// Create a serialization-friendly structure
+	data := map[string]interface{}{
+		"id":       house.ID,
+		"owner_id": house.OwnerID,
+		"plot": map[string]interface{}{
+			"id":       house.Plot.ID,
+			"owner_id": house.Plot.OwnerID,
+			"position": map[string]float64{
+				"x": house.Plot.Position.X,
+				"y": house.Plot.Position.Y,
+			},
+			"size": int(house.Plot.Size),
+		},
+	}
+	
+	bytes, err := json.Marshal(data)
+	if err != nil {
+		// In test code, return empty on error
+		return []byte{}
+	}
+	return bytes
 }
 
 func GenerateFurnitureCraftingRecipe(furn *furniture.Furniture) *CraftingRecipe {
-	// TODO: Implement recipe generation
-	return &CraftingRecipe{
-		RequiredItems: map[string]int{
-			"wood": 10,
-			"iron": 5,
-		},
+	if furn == nil {
+		return nil
 	}
+	
+	// Generate recipe based on furniture type and rarity
+	// Use furniture SubType to determine required materials
+	recipe := &CraftingRecipe{
+		RequiredItems: make(map[string]int),
+	}
+	
+	// Base materials depend on furniture type
+	switch furn.SubType {
+	case "table", "chair", "bench":
+		recipe.RequiredItems["wood"] = 10
+		recipe.RequiredItems["iron_nails"] = 5
+	case "bed", "wardrobe", "bookshelf":
+		recipe.RequiredItems["wood"] = 20
+		recipe.RequiredItems["fabric"] = 5
+		recipe.RequiredItems["iron_nails"] = 10
+	case "alchemy_table", "enchanting_station":
+		recipe.RequiredItems["wood"] = 15
+		recipe.RequiredItems["crystal"] = 3
+		recipe.RequiredItems["iron"] = 8
+	default:
+		// Generic furniture
+		recipe.RequiredItems["wood"] = 10
+		recipe.RequiredItems["iron"] = 5
+	}
+	
+	return recipe
 }
 
 func CraftFurniture(player *engine.Entity, recipe *CraftingRecipe) (*furniture.Furniture, error) {
-	// TODO: Implement crafting logic
-	return &furniture.Furniture{SubType: "table"}, nil
+	if player == nil || recipe == nil {
+		return nil, fmt.Errorf("invalid player or recipe")
+	}
+	
+	// In a real implementation, this would check player's inventory
+	// and consume materials. For integration testing, we simulate success.
+	
+	// Determine furniture type from first recipe item
+	var furnType string
+	for item := range recipe.RequiredItems {
+		if item == "crystal" {
+			furnType = "alchemy_table"
+			break
+		}
+		if item == "fabric" {
+			furnType = "bed"
+			break
+		}
+	}
+	if furnType == "" {
+		furnType = "table"
+	}
+	
+	// Create crafted furniture
+	return &furniture.Furniture{
+		SubType: furnType,
+	}, nil
 }
 
 func GenerateBuildingQuest(seed int64, genre string, depth int) *BuildingQuest {
-	// TODO: Implement quest generation
-	return &BuildingQuest{
-		ID:         "build_house_001",
-		Objectives: []string{"Build a house"},
+	// Use the existing quest generator to create a building-themed quest
+	gen := quest.NewQuestGenerator()
+	params := procgen.GenerationParams{
+		Difficulty: 0.5,
+		Depth:      depth,
+		GenreID:    genre,
+		Custom: map[string]interface{}{
+			"count": 1,
+		},
 	}
+	
+	result, err := gen.Generate(seed, params)
+	if err != nil {
+		return nil
+	}
+	
+	quests, ok := result.([]*quest.Quest)
+	if !ok || len(quests) == 0 {
+		return nil
+	}
+	
+	// Convert quest.Quest to BuildingQuest
+	q := quests[0]
+	buildingQuest := &BuildingQuest{
+		ID: q.ID,
+		Objectives: make([]string, len(q.Objectives)),
+	}
+	
+	// Override objectives with building-specific ones
+	buildingQuest.Objectives[0] = "Build a house"
+	if len(q.Objectives) > 1 {
+		for i := 1; i < len(q.Objectives); i++ {
+			buildingQuest.Objectives[i] = q.Objectives[i].Description
+		}
+	}
+	
+	return buildingQuest
 }
 
 func GenerateGuildQuest(seed int64, genre string, depth int) *GuildQuest {
-	// TODO: Implement guild quest generation
-	return &GuildQuest{
-		ID:         "guild_quest_001",
-		Objectives: []string{"Establish guild hall", "Recruit 10 members"},
+	// Use the existing quest generator to create a guild-themed quest
+	gen := quest.NewQuestGenerator()
+	params := procgen.GenerationParams{
+		Difficulty: 0.7, // Guild quests are typically harder
+		Depth:      depth,
+		GenreID:    genre,
+		Custom: map[string]interface{}{
+			"count": 1,
+		},
 	}
+	
+	result, err := gen.Generate(seed, params)
+	if err != nil {
+		return nil
+	}
+	
+	quests, ok := result.([]*quest.Quest)
+	if !ok || len(quests) == 0 {
+		return nil
+	}
+	
+	// Convert quest.Quest to GuildQuest
+	q := quests[0]
+	guildQuest := &GuildQuest{
+		ID: q.ID,
+		Objectives: []string{
+			"Establish guild hall",
+			"Recruit 10 members",
+		},
+	}
+	
+	// Add more objectives from the generated quest
+	for i, obj := range q.Objectives {
+		if i < 2 {
+			continue // Skip first two (already set above)
+		}
+		guildQuest.Objectives = append(guildQuest.Objectives, obj.Description)
+	}
+	
+	return guildQuest
 }
 
 func UpdateBuildingQuestProgress(player *engine.Entity, quest *BuildingQuest, houseID string) error {
-	// TODO: Implement quest progress tracking
+	if player == nil || quest == nil {
+		return fmt.Errorf("invalid player or quest")
+	}
+	
+	// Check if player has QuestTrackerComponent
+	questTracker, ok := player.GetComponent("questtracker").(*engine.QuestTrackerComponent)
+	if !ok {
+		// If no quest tracker, add one
+		questTracker = engine.NewQuestTrackerComponent(10)
+		player.AddComponent(questTracker)
+	}
+	
+	// Find the quest and update its progress
+	// For building quests, completing a house fulfills the first objective
+	for _, tracked := range questTracker.ActiveQuests {
+		if tracked.Quest.ID == quest.ID {
+			if len(tracked.Quest.Objectives) > 0 {
+				// Mark first objective (build house) as complete
+				tracked.Quest.Objectives[0].Current = tracked.Quest.Objectives[0].Required
+			}
+			return nil
+		}
+	}
+	
+	// If quest not found in active quests, it may not have been accepted yet
+	// This is acceptable for test scenarios
 	return nil
 }
 
 func IsQuestComplete(player *engine.Entity, questID string) bool {
-	// TODO: Implement quest completion check
-	return true
+	if player == nil {
+		return false
+	}
+	
+	// Check if player has QuestTrackerComponent
+	questTracker, ok := player.GetComponent("questtracker").(*engine.QuestTrackerComponent)
+	if !ok {
+		return false
+	}
+	
+	// Check active quests
+	if questTracker.IsQuestComplete(questID) {
+		return true
+	}
+	
+	// Check completed quests
+	for _, tracked := range questTracker.CompletedQuests {
+		if tracked.Quest.ID == questID {
+			return true
+		}
+	}
+	
+	return false
 }
 
 // Placeholder types

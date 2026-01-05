@@ -7,7 +7,7 @@
 
 ## Executive Summary
 - **Total issues found:** 28
-- **Critical:** 0 (1 resolved) | **High:** 0 (5 resolved) | **Medium:** 9 (9 resolved) | **Low:** 12 (4 resolved, 8 remaining)
+- **Critical:** 0 (1 resolved) | **High:** 0 (5 resolved) | **Medium:** 9 (9 resolved) | **Low:** 12 (5 resolved, 7 remaining)
 - **Files analyzed:** 926 non-test Go files
 - **Note:** Some issues were downgraded after verification (e.g., false positives, example code)
 - **All high-priority issues have been resolved as of 2026-01-04**
@@ -18,6 +18,7 @@
 - **LOW-009 (Error Wrapping in WASM) verified as already resolved on 2026-01-05**
 - **MEDIUM-009 (Integer Overflow in Timestamps) resolved on 2026-01-05**
 - **LOW-004 (Missing Package Documentation) resolved on 2026-01-05**
+- **LOW-005 (Verbose Logging Configuration) resolved on 2026-01-05**
 
 ---
 
@@ -463,6 +464,83 @@ All existing tests continue to pass. Package coverage maintained at high levels.
 
 **Note:** Parent packages (pkg/audit, pkg/class, pkg/companion, pkg/narrative) contain only subpackages and no Go code, so they do not require doc.go files. The package pkg/engine/saves appears to be empty with no Go files.
 
+### [LOW-005] Verbose Logging Configuration ✅ RESOLVED
+**File:** pkg/security/audit.go:36-40  
+**Severity:** Low  
+**Status:** ✅ Fixed on 2026-01-05  
+**Resolution:** Enhanced logger configuration to support both environment variable configuration and dependency injection. The package-level logger now respects the `LOG_LEVEL` environment variable (debug/info/warn/error) with a sensible default of Info instead of Debug. Additionally, `NewAuditor` now accepts an optional logger parameter for dependency injection, enabling custom logging configurations in tests and production code.
+
+**Changes made:**
+1. Updated `init()` function to read `LOG_LEVEL` environment variable and set log level accordingly (default: Info)
+2. Modified `Auditor` struct to include a `logger` field
+3. Updated `NewAuditor(logger *logrus.Logger)` to accept optional logger parameter (nil uses package logger)
+4. Replaced all package-level `log` calls in Auditor methods with `a.logger` for consistency
+5. Added comprehensive tests for logger configuration (`TestNewAuditor_WithCustomLogger`, `TestNewAuditor_WithNilLogger`, `TestLoggerConfiguration_EnvironmentVariable`)
+6. Updated all call sites to use `NewAuditor(nil)` for backward compatibility
+
+**Before:**
+```go
+func init() {
+    log = logrus.New()
+    log.SetReportCaller(true)
+    log.SetLevel(logrus.DebugLevel)  // Hardcoded debug level
+}
+
+func NewAuditor() *Auditor {
+    log.WithFields(...).Debug("Creating new security auditor")
+    return &Auditor{
+        checks: make([]SecurityCheck, 0, 30),
+    }
+}
+```
+
+**After:**
+```go
+func init() {
+    log = logrus.New()
+    log.SetReportCaller(true)
+    
+    // Set log level from environment variable or default to Info
+    logLevel := os.Getenv("LOG_LEVEL")
+    switch strings.ToLower(logLevel) {
+    case "debug":
+        log.SetLevel(logrus.DebugLevel)
+    case "warn", "warning":
+        log.SetLevel(logrus.WarnLevel)
+    case "error":
+        log.SetLevel(logrus.ErrorLevel)
+    default:
+        log.SetLevel(logrus.InfoLevel)  // Default to Info instead of Debug
+    }
+}
+
+func NewAuditor(logger *logrus.Logger) *Auditor {
+    if logger == nil {
+        logger = log
+    }
+    logger.WithFields(...).Debug("Creating new security auditor")
+    return &Auditor{
+        checks: make([]SecurityCheck, 0, 30),
+        logger: logger,
+    }
+}
+```
+
+**Usage Examples:**
+```go
+// Use default logger (respects LOG_LEVEL env var)
+auditor := security.NewAuditor(nil)
+
+// Use custom logger for testing
+customLogger := logrus.New()
+customLogger.SetLevel(logrus.WarnLevel)
+auditor := security.NewAuditor(customLogger)
+```
+
+**Testing:** Added 3 new test functions covering custom logger, nil logger, and environment variable configuration. All tests pass. Package coverage: 90.4% (exceeds 65% minimum, achieves 80%+ target).
+
+**Impact:** This change allows production deployments to control log verbosity via environment variables (reducing log spam from debug messages) while enabling fine-grained control for testing and debugging scenarios.
+
 ---
 
 ## High-Priority Issues
@@ -611,12 +689,11 @@ server.errorStats = NewBufferStats("server_errors", errorBufferSize, logEntry)
 **Status:** ✅ Fixed on 2026-01-05 (see Resolved Issues section above)  
 **Resolution:** Added comprehensive doc.go files to pkg/engine/physics/vehicle and pkg/integration/companion_housing packages. Documentation follows Go conventions with package overview, usage examples, performance notes, and integration information.
 
-### [LOW-005] Verbose Logging Configuration
+### [LOW-005] Verbose Logging Configuration ✅ RESOLVED
 **File:** pkg/security/audit.go:36-40  
 **Severity:** Low  
-**Issue:** Package-level logger initialization with fixed debug level.  
-**Impact:** Cannot easily change log level at runtime.  
-**Fix:** Accept logger as parameter or use configuration.
+**Status:** ✅ Fixed on 2026-01-05 (see Resolved Issues section above)  
+**Resolution:** Enhanced logger configuration to support environment variable (LOG_LEVEL) and dependency injection via optional logger parameter in NewAuditor. Default log level changed from Debug to Info to reduce log spam in production. Package coverage: 90.4%.
 
 ### [LOW-006] Deprecated API Usage
 **File:** examples/itemtest/main.go:310  

@@ -900,7 +900,7 @@ func logUnknownInput(cmd *network.InputCommand, logger *logrus.Logger) {
 // Phase 2.4 (PLAN.md): Unconditional security package integration
 func runSecurityAudit(serverLogger *logrus.Entry) {
 	serverLogger.Info("running security audit at startup")
-	auditor := security.NewAuditor()
+	auditor := security.NewAuditor(nil)
 	results := auditor.RunFullAudit()
 
 	serverLogger.WithFields(logrus.Fields{

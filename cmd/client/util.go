@@ -2601,25 +2601,25 @@ func parsePaletteOptions() (*palette.GenerationOptions, error) {
 // validateClientConfiguration validates client configuration flags.
 // Returns an error if any configuration is invalid, with a helpful message.
 func validateClientConfiguration() error {
-validator := config.NewValidator()
+	validator := config.NewValidator()
 
-// Build configuration to validate
-cfg := &config.Config{
-Genre: *genreID,
-}
+	// Build configuration to validate
+	cfg := &config.Config{
+		Genre: *genreID,
+	}
 
-// Validate host-and-play server configuration if enabled
-if *hostAndPlay {
-cfg.Port = fmt.Sprintf("%d", *serverPort)
-cfg.MaxPlayers = *serverPlayers
-cfg.ValidateMaxPlayers = true
-cfg.TickRate = *serverTick
-cfg.ValidateTickRate = true
-}
+	// Validate host-and-play server configuration if enabled
+	if *hostAndPlay {
+		cfg.Port = fmt.Sprintf("%d", *serverPort)
+		cfg.MaxPlayers = *serverPlayers
+		cfg.ValidateMaxPlayers = true
+		cfg.TickRate = *serverTick
+		cfg.ValidateTickRate = true
+	}
 
-if err := validator.ValidateAll(cfg); err != nil {
-return fmt.Errorf("%w\n\nRun with -help to see all available options", err)
-}
+	if err := validator.ValidateAll(cfg); err != nil {
+		return fmt.Errorf("%w\n\nRun with -help to see all available options", err)
+	}
 
-return nil
+	return nil
 }

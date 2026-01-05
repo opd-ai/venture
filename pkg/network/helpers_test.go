@@ -2,6 +2,7 @@ package network
 
 import (
 	"testing"
+	"time"
 )
 
 func TestNewStateUpdate(t *testing.T) {
@@ -222,5 +223,115 @@ func TestSequenceWrapAroundScenario(t *testing.T) {
 	if !sequenceInRange(sequences[len(sequences)-1], sequences[0], 10) {
 		t.Errorf("Expected sequence %d to be within 10 of sequence %d",
 			sequences[len(sequences)-1], sequences[0])
+	}
+}
+
+// TestNowTimestamp tests the timestamp generation function
+func TestNowTimestamp(t *testing.T) {
+	// Get two timestamps
+	ts1 := NowTimestamp()
+	time.Sleep(1 * time.Millisecond) // Ensure some time passes
+	ts2 := NowTimestamp()
+
+	// Verify timestamps are non-zero (positive)
+	if ts1 == 0 {
+		t.Error("Expected non-zero timestamp")
+	}
+	if ts2 == 0 {
+		t.Error("Expected non-zero timestamp")
+	}
+
+	// Verify second timestamp is greater (time moves forward)
+	if ts2 <= ts1 {
+		t.Errorf("Expected ts2 (%d) > ts1 (%d)", ts2, ts1)
+	}
+
+	// Verify timestamps are in a reasonable range for current time
+	// Current time should be after 2020-01-01 (1577836800 seconds = 1577836800000000000 nanos)
+	minValidTimestamp := uint64(1577836800000000000)
+	if ts1 < minValidTimestamp {
+		t.Errorf("Timestamp %d is before 2020-01-01, indicates clock issue", ts1)
+	}
+
+	// Verify timestamps are in nanosecond precision
+	// Two calls separated by 1ms should differ by approximately 1 million nanoseconds
+	diff := ts2 - ts1
+	if diff == 0 {
+		t.Error("Expected timestamps to differ after 1ms sleep")
+	}
+	// Should be at least 500k nanos (0.5ms) but less than 10ms (accounting for system load)
+	if diff < 500000 || diff > 10000000 {
+		t.Logf("Warning: timestamp difference %d ns may indicate timing issue (expected ~1ms)", diff)
+	}
+}
+
+// TestNowTimestamp_Consistency tests that NowTimestamp is consistent with time.Now().UnixNano()
+func TestNowTimestamp_Consistency(t *testing.T) {
+	// Get both timestamp types simultaneously
+	now := time.Now()
+	ts := NowTimestamp()
+	nanos := now.UnixNano()
+
+	// They should be very close (within 1ms = 1,000,000 nanos)
+	// We convert nanos to uint64 to compare
+	if nanos < 0 {
+		t.Fatal("time.Now().UnixNano() returned negative value - system clock before 1970")
+	}
+
+	nanosUint := uint64(nanos)
+	var diff uint64
+	if ts > nanosUint {
+		diff = ts - nanosUint
+	} else {
+		diff = nanosUint - ts
+	}
+
+	// Should be within 10ms (10,000,000 nanos) to account for function call overhead
+	if diff > 10000000 {
+		t.Errorf("NowTimestamp() and time.Now().UnixNano() differ by %d ns (>10ms), expected close values", diff)
+	}
+}
+
+// TestNowTimestamp_MultipleCallsMonotonic tests that timestamps increase monotonically
+func TestNowTimestamp_MultipleCallsMonotonic(t *testing.T) {
+	const iterations = 100
+	timestamps := make([]uint64, iterations)
+
+	for i := 0; i < iterations; i++ {
+		timestamps[i] = NowTimestamp()
+	}
+
+	// Verify all timestamps are monotonically increasing (or equal due to fast execution)
+	for i := 1; i < iterations; i++ {
+		if timestamps[i] < timestamps[i-1] {
+			t.Errorf("Timestamp at index %d (%d) is less than previous (%d) - not monotonic",
+				i, timestamps[i], timestamps[i-1])
+		}
+	}
+
+	// Verify at least some timestamps differ (system clock is running)
+	allSame := true
+	for i := 1; i < iterations; i++ {
+		if timestamps[i] != timestamps[0] {
+			allSame = false
+			break
+		}
+	}
+	if allSame {
+		t.Error("All timestamps identical across 100 calls - clock may not be advancing")
+	}
+}
+
+// BenchmarkNowTimestamp benchmarks the timestamp generation performance
+func BenchmarkNowTimestamp(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		_ = NowTimestamp()
+	}
+}
+
+// BenchmarkTimeNowUnixNano benchmarks the raw time.Now().UnixNano() for comparison
+func BenchmarkTimeNowUnixNano(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		_ = uint64(time.Now().UnixNano())
 	}
 }

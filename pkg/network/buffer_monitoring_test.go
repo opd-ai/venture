@@ -2,7 +2,6 @@ package network
 
 import (
 	"testing"
-	"time"
 )
 
 func TestClient_BufferMonitoring(t *testing.T) {
@@ -66,7 +65,7 @@ func TestClient_StateUpdateMonitoring(t *testing.T) {
 	for i := 0; i < 10; i++ {
 		update := &StateUpdate{
 			SequenceNumber: uint32(i),
-			Timestamp:      uint64(time.Now().UnixNano()),
+			Timestamp:      NowTimestamp(),
 		}
 		select {
 		case client.stateUpdates <- update:

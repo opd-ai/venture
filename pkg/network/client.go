@@ -420,7 +420,7 @@ func (c *TCPClient) SendInput(inputType string, data []byte) error {
 
 	cmd := &InputCommand{
 		PlayerID:       c.playerID,
-		Timestamp:      uint64(time.Now().UnixNano()),
+		Timestamp:      NowTimestamp(),
 		SequenceNumber: c.inputSeq,
 		InputType:      inputType,
 		Data:           data,

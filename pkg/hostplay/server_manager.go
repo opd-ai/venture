@@ -408,7 +408,7 @@ func (sm *ServerManager) broadcastEntityStates(snapshot *WorldState) {
 // convertToStateUpdate converts a WorldState EntityState to a network StateUpdate.
 func (sm *ServerManager) convertToStateUpdate(entityState EntityState) *network.StateUpdate {
 	update := &network.StateUpdate{
-		Timestamp: uint64(time.Now().UnixNano()),
+		Timestamp: network.NowTimestamp(),
 		EntityID:  entityState.ID,
 		Priority:  network.PriorityNormal,
 	}

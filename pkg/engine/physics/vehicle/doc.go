@@ -33,7 +33,7 @@
 //
 // Simulates dynamic weight distribution during vehicle maneuvers:
 //
-//	wt := &vehicle.WeightTransferComponent{
+//	weightTransfer := &vehicle.WeightTransferComponent{
 //		FrontWeightRatio: 0.55,  // 55% weight on front axle at rest
 //		WheelCount:       4,
 //	}

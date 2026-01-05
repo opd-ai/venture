@@ -222,6 +222,6 @@
 //
 // For more information:
 //   - Companion AI: pkg/companion/learning/doc.go
-//   - Housing System: pkg/world/housing/doc.go (if exists)
+//   - Housing System: pkg/world/housing/doc.go
 //   - Integration Systems: docs/INTEGRATION.md
 package companion_housing

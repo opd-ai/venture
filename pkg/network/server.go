@@ -9,6 +9,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/opd-ai/venture/pkg/recovery"
 	"github.com/sirupsen/logrus"
 )
 
@@ -303,6 +304,7 @@ func (s *TCPServer) ReceiveError() <-chan error {
 // acceptLoop accepts incoming client connections.
 func (s *TCPServer) acceptLoop() {
 	defer s.wg.Done()
+	defer recovery.RecoverPanic(s.logger, "accept loop", nil)()
 
 	for {
 		conn, err := s.listener.Accept()
@@ -453,6 +455,10 @@ func (s *TCPServer) startClientHandlers(client *clientConnection) {
 func (s *TCPServer) handleClientReceive(client *clientConnection) {
 	defer s.wg.Done()
 	defer s.disconnectClient(client.playerID)
+	defer recovery.RecoverPanic(s.logger, "client receive handler", func() {
+		// Cleanup: ensure client is disconnected on panic
+		s.disconnectClient(client.playerID)
+	})()
 
 	buf := make([]byte, 4096)
 	for {
@@ -539,6 +545,7 @@ func (s *TCPServer) sendCommandToGameLogic(cmd *InputCommand) {
 // Pops updates from the priority queue, sending higher priority updates first.
 func (s *TCPServer) handleClientSend(client *clientConnection) {
 	defer s.wg.Done()
+	defer recovery.RecoverPanic(s.logger, "client send handler", nil)()
 
 	for {
 		select {

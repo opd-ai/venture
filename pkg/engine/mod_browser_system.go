@@ -11,6 +11,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/opd-ai/venture/pkg/recovery"
 	"github.com/sirupsen/logrus"
 )
 
@@ -143,6 +144,11 @@ func (s *ModBrowserSystem) processDownloads(comp *ModBrowserComponent) {
 
 // downloadMod handles the async download of a mod.
 func (s *ModBrowserSystem) downloadMod(comp *ModBrowserComponent, modID string) {
+	defer recovery.RecoverPanicWithLogger("mod_browser", "download mod", func() {
+		// Cleanup: mark download as failed on panic
+		comp.SetDownloadStatus(modID, "failed", "unexpected error during download")
+	})()
+	
 	s.mu.RLock()
 	repo := s.repository
 	installCb := s.installCallback

@@ -4,6 +4,8 @@ import (
 	"container/list"
 	"sync"
 	"time"
+
+	"github.com/opd-ai/venture/pkg/recovery"
 )
 
 // CacheManager handles resource caching with LRU eviction
@@ -261,6 +263,8 @@ func (bl *BackgroundLoader) Queue(request *LoadRequest) {
 
 // worker processes load requests
 func (bl *BackgroundLoader) worker() {
+	defer recovery.RecoverPanicWithLogger("background_loader", "worker goroutine", nil)()
+	
 	for {
 		select {
 		case request := <-bl.workChan:

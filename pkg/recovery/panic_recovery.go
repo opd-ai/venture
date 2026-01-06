@@ -1,5 +1,5 @@
-// Package engine provides panic recovery utilities for production stability.
-package engine
+// Package recovery provides panic recovery utilities for production stability.
+package recovery
 
 import (
 	"fmt"

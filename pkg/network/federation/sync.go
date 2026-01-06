@@ -3,6 +3,8 @@ package federation
 import (
 	"sync"
 	"time"
+
+	"github.com/opd-ai/venture/pkg/recovery"
 )
 
 // ServerInfo represents metadata about a federated server
@@ -318,6 +320,7 @@ func (sm *SyncManager) Stop() {
 // syncLoop performs periodic sync tasks
 func (sm *SyncManager) syncLoop() {
 	defer sm.wg.Done()
+	defer recovery.RecoverPanicWithLogger("federation_sync", "sync loop", nil)()
 
 	heartbeatTicker := time.NewTicker(sm.heartbeatInterval)
 	marketTicker := time.NewTicker(sm.marketSyncInterval)

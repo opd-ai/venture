@@ -6,6 +6,8 @@ import (
 	"net"
 	"sync"
 	"time"
+
+	"github.com/opd-ai/venture/pkg/recovery"
 )
 
 const (
@@ -166,6 +168,8 @@ func (ds *DiscoverySystem) Stop() error {
 
 // receiveLoop listens for incoming discovery packets
 func (ds *DiscoverySystem) receiveLoop() {
+	defer recovery.RecoverPanicWithLogger("federation_discovery", "receive loop", nil)()
+	
 	buf := make([]byte, 4096)
 
 	for {
@@ -230,7 +234,10 @@ func (ds *DiscoverySystem) processPacket(data []byte, addr net.Addr) {
 
 		// Trigger callback if set
 		if ds.onPeerDiscovered != nil {
-			go ds.onPeerDiscovered(peer)
+			go func(p *DiscoveredPeer) {
+				defer recovery.RecoverPanicWithLogger("federation_discovery", "peer discovered callback", nil)()
+				ds.onPeerDiscovered(p)
+			}(peer)
 		}
 	} else {
 		// Update existing peer
@@ -246,6 +253,8 @@ func (ds *DiscoverySystem) processPacket(data []byte, addr net.Addr) {
 
 // broadcastLoop sends periodic discovery broadcasts
 func (ds *DiscoverySystem) broadcastLoop() {
+	defer recovery.RecoverPanicWithLogger("federation_discovery", "broadcast loop", nil)()
+	
 	// Send initial broadcast immediately
 	ds.broadcastDiscovery()
 
@@ -292,6 +301,8 @@ func (ds *DiscoverySystem) getLocalAddress() string {
 
 // cleanupLoop removes stale peers
 func (ds *DiscoverySystem) cleanupLoop() {
+	defer recovery.RecoverPanicWithLogger("federation_discovery", "cleanup loop", nil)()
+	
 	for {
 		select {
 		case <-ds.stopChan:
@@ -378,7 +389,10 @@ func (ds *DiscoverySystem) AddManualPeer(serverID, serverName, address, version 
 
 	// Trigger callback if set
 	if ds.onPeerDiscovered != nil {
-		go ds.onPeerDiscovered(peer)
+		go func(p *DiscoveredPeer) {
+			defer recovery.RecoverPanicWithLogger("federation_discovery", "manual peer discovered callback", nil)()
+			ds.onPeerDiscovered(p)
+		}(peer)
 	}
 
 	return nil

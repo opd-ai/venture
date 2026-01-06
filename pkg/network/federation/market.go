@@ -5,6 +5,8 @@ import (
 	"math"
 	"sync"
 	"time"
+
+	"github.com/opd-ai/venture/pkg/recovery"
 )
 
 // FederatedMarket manages cross-server item trading and pricing.
@@ -90,6 +92,7 @@ func NewFederatedMarket() *FederatedMarket {
 func (m *FederatedMarket) Start() {
 	m.updateTicker = time.NewTicker(60 * time.Second)
 	go func() {
+		defer recovery.RecoverPanicWithLogger("federation_market", "update loop", nil)()
 		for {
 			select {
 			case <-m.updateTicker.C:

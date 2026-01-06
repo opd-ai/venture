@@ -9,6 +9,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/opd-ai/venture/pkg/recovery"
 )
 
 // TrustLevel represents the trust relationship with a peer server
@@ -295,6 +297,8 @@ func (hm *HandshakeManager) ProcessHandshake(h *FederationHandshake) error {
 
 // cleanupNonces removes expired nonces from memory
 func (hm *HandshakeManager) cleanupNonces() {
+	defer recovery.RecoverPanicWithLogger("federation_handshake", "cleanup nonces", nil)()
+	
 	hm.mu.Lock()
 	defer hm.mu.Unlock()
 

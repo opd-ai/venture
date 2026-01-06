@@ -264,7 +264,7 @@ func (bl *BackgroundLoader) Queue(request *LoadRequest) {
 // worker processes load requests
 func (bl *BackgroundLoader) worker() {
 	defer recovery.RecoverPanicWithLogger("background_loader", "worker goroutine", nil)()
-	
+
 	for {
 		select {
 		case request := <-bl.workChan:

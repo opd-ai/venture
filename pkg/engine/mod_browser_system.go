@@ -148,7 +148,7 @@ func (s *ModBrowserSystem) downloadMod(comp *ModBrowserComponent, modID string) 
 		// Cleanup: mark download as failed on panic
 		comp.SetDownloadStatus(modID, "failed", "unexpected error during download")
 	})()
-	
+
 	s.mu.RLock()
 	repo := s.repository
 	installCb := s.installCallback

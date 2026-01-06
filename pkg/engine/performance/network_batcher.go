@@ -93,7 +93,7 @@ func (nb *NetworkBatcher) QueueMessage(msgType string, data []byte, playerID str
 // runBatchLoop processes batches on a timer
 func (nb *NetworkBatcher) runBatchLoop() {
 	defer recovery.RecoverPanicWithLogger("network_batcher", "batch loop", nil)()
-	
+
 	for {
 		select {
 		case <-nb.ticker.C:

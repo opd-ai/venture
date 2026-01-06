@@ -455,10 +455,7 @@ func (s *TCPServer) startClientHandlers(client *clientConnection) {
 func (s *TCPServer) handleClientReceive(client *clientConnection) {
 	defer s.wg.Done()
 	defer s.disconnectClient(client.playerID)
-	defer recovery.RecoverPanic(s.logger, "client receive handler", func() {
-		// Cleanup: ensure client is disconnected on panic
-		s.disconnectClient(client.playerID)
-	})()
+	defer recovery.RecoverPanic(s.logger, "client receive handler", nil)()
 
 	buf := make([]byte, 4096)
 	for {

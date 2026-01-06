@@ -88,7 +88,7 @@ func LogPanicAndCleanup(logger *logrus.Entry, context string, panicValue interfa
 // Example usage:
 //
 //	go func() {
-//	    defer RecoverPanic(logger, "worker goroutine", nil)
+//	    defer RecoverPanic(logger, "worker goroutine", nil)()
 //	    // goroutine work...
 //	}()
 //
@@ -97,7 +97,7 @@ func LogPanicAndCleanup(logger *logrus.Entry, context string, panicValue interfa
 //	go func() {
 //	    defer RecoverPanic(logger, "client handler", func() {
 //	        disconnectClient(clientID)
-//	    })
+//	    })()
 //	    // handle client...
 //	}()
 func RecoverPanic(logger *logrus.Entry, context string, cleanup func()) func() {
@@ -114,11 +114,10 @@ func RecoverPanic(logger *logrus.Entry, context string, cleanup func()) func() {
 // Example usage:
 //
 //	go func() {
-//	    defer RecoverPanicWithLogger("network_server", "accept loop", nil)
+//	    defer RecoverPanicWithLogger("network_server", "accept loop", nil)()
 //	    // goroutine work...
 //	}()
 func RecoverPanicWithLogger(component string, context string, cleanup func()) func() {
 	logger := logrus.WithField("component", component)
 	return RecoverPanic(logger, context, cleanup)
 }
-

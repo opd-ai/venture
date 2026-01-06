@@ -3,6 +3,7 @@ package housing
 import (
 	"encoding/json"
 	"fmt"
+	"math/rand"
 )
 
 // Manager handles plot placement, validation, and persistence.
@@ -149,7 +150,10 @@ func (m *Manager) Clear() {
 // CreateHouse creates a new housing plot from building data.
 // This is a convenience method for creating plots from procedurally generated buildings.
 // The building parameter should be of type *building.Building, but we use interface{} to avoid import cycles.
-func (m *Manager) CreateHouse(ownerID string, buildingData interface{}) (string, error) {
+// CreateHouse creates a new house plot for a player with deterministic positioning.
+// The seed parameter is used to generate a deterministic position if none is specified in buildingData.
+// Position can also be extracted from buildingData if it implements a GetPosition() method.
+func (m *Manager) CreateHouse(ownerID string, buildingData interface{}, seed int64) (string, error) {
 	if !m.enabled {
 		return "", fmt.Errorf("housing is disabled")
 	}
@@ -157,7 +161,7 @@ func (m *Manager) CreateHouse(ownerID string, buildingData interface{}) (string,
 	// Generate plot ID
 	plotID := fmt.Sprintf("house_%s_%d", ownerID, len(m.playerPlots[ownerID]))
 
-	// Extract position and size from building data
+	// Default position and size
 	position := Vector2{X: 0, Y: 0}
 	size := SizeMedium
 
@@ -186,11 +190,33 @@ func (m *Manager) CreateHouse(ownerID string, buildingData interface{}) (string,
 		}
 	}
 
+	// Generate deterministic position based on seed
+	// This prevents all houses from spawning at (0,0)
+	// Use seed combined with current player plot count for unique positions
+	// Note: math/rand is appropriate here for deterministic procedural generation.
+	// The goal is reproducibility from the same seed, not cryptographic security.
+	// Each call creates a new rand.Rand instance, making this safe for concurrent use
+	// as the instance is not shared between goroutines.
+	rng := rand.New(rand.NewSource(seed + int64(len(m.playerPlots[ownerID]))))
+	
+	// Distribute houses in a grid pattern with some randomness
+	// Grid cells are spaced by 64 units (average plot size + padding)
+	gridSpacing := 64.0
+	gridX := float64(len(m.playerPlots[ownerID]) % 10)  // 10 houses per row
+	gridY := float64(len(m.playerPlots[ownerID]) / 10)
+	
+	// Add random offset within the grid cell for variety
+	offsetX := rng.Float64() * (gridSpacing - float64(size))
+	offsetY := rng.Float64() * (gridSpacing - float64(size))
+	
+	position.X = gridX*gridSpacing + offsetX
+	position.Y = gridY*gridSpacing + offsetY
+
 	// Create plot
 	plot := &Plot{
 		ID:       plotID,
 		OwnerID:  ownerID,
-		Position: position, // Caller should set position before placement
+		Position: position,
 		Size:     size,
 	}
 

@@ -80,16 +80,11 @@ Venture is a fully procedural multiplayer action-RPG built with Go and Ebiten. I
   - ✅ Validate genre IDs against available genres
   - ✅ Validate file paths (mods directory)
   - ✅ Exit gracefully with helpful error messages on invalid config
-- [ ] Complete housing integration TODOs (file: pkg/world/housing/integration_test.go)
-  - Implement proper house serialization (CreateHouse, SaveHouse, LoadHouse)
-  - Fix overlapping house placement at (0,0) with spatial distribution
-  - Implement recipe generation for crafting integration
-  - Add quest generation and progress tracking for housing quests
-- [ ] Add configuration validation (file: cmd/server/main.go, cmd/client/main.go)
-  - Validate port range (1024-65535), max-players (1-100), tick-rate (1-60)
-  - Validate genre IDs against available genres
-  - Validate file paths (save directory, log directory)
-  - Exit gracefully with helpful error messages on invalid config
+- [x] Complete housing integration TODOs (file: pkg/world/housing/integration_test.go)
+  - ✅ Implement proper house serialization (SerializeHouse with JSON encoding)
+  - ✅ Fix overlapping house placement at (0,0) with spatial distribution using seed-based grid positioning
+  - ✅ Implement recipe generation for crafting integration (GenerateFurnitureCraftingRecipe)
+  - ✅ Add quest generation and progress tracking for housing quests (GenerateBuildingQuest, UpdateBuildingQuestProgress, IsQuestComplete)
 - [ ] Implement panic recovery for server goroutines (files: pkg/network/server.go, pkg/engine/system.go, and any engine systems that spawn goroutines)
   - Add defer/recover in all goroutine spawns
   - Log panics with stack traces using logrus

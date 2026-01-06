@@ -484,12 +484,12 @@ func UpdateBuildingQuestProgress(player *engine.Entity, buildingQuest *BuildingQ
 		questTracker = engine.NewQuestTrackerComponent(10)
 		player.AddComponent(questTracker)
 	} else {
-		questTracker, ok = comp.(*engine.QuestTrackerComponent)
+		existingTracker, ok := comp.(*engine.QuestTrackerComponent)
 		if !ok {
-			// If component is wrong type, add new one
-			questTracker = engine.NewQuestTrackerComponent(10)
-			player.AddComponent(questTracker)
+			// If component is wrong type, surface an error instead of adding a duplicate
+			return fmt.Errorf("questtracker component has unexpected type %T", comp)
 		}
+		questTracker = existingTracker
 	}
 
 	// Find the quest and update its progress

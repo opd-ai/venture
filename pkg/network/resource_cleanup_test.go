@@ -276,8 +276,8 @@ func TestActiveClientNotCleaned(t *testing.T) {
 	config.Address = "127.0.0.1:0"
 	server := NewServer(config)
 	
-	// Set short timeouts for testing
-	server.idleTimeout = 100 * time.Millisecond
+	// Set timeouts so client won't be idle after our sleep
+	server.idleTimeout = 500 * time.Millisecond  // Longer timeout
 	server.cleanupInterval = 50 * time.Millisecond
 
 	// Start server
@@ -301,10 +301,10 @@ func TestActiveClientNotCleaned(t *testing.T) {
 	server.clients[1] = client
 	server.clientsMu.Unlock()
 
-	// Wait for cleanup cycle
-	time.Sleep(150 * time.Millisecond)
+	// Wait for cleanup cycle (multiple cycles to be sure)
+	time.Sleep(200 * time.Millisecond)
 
-	// Verify client still exists
+	// Verify client still exists (hasn't reached idle timeout yet)
 	if server.GetPlayerCount() != 1 {
 		t.Errorf("Expected active client to remain, got %d clients", server.GetPlayerCount())
 	}

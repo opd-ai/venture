@@ -288,18 +288,23 @@ func addQuestToPlayer(player *engine.Entity, buildingQuest *BuildingQuest) bool 
 
 	// Get or create quest tracker component
 	comp, ok := player.GetComponent("questtracker")
+	var questTracker *engine.QuestTrackerComponent
 	if !ok {
-		questTracker := engine.NewQuestTrackerComponent(10)
-		player.AddComponent(questTracker)
-		comp, ok = player.GetComponent("questtracker")
-		if !ok {
-			return false
-		}
-	}
-	questTracker, ok := comp.(*engine.QuestTrackerComponent)
-	if !ok {
+		// No existing component: create and add a new tracker
 		questTracker = engine.NewQuestTrackerComponent(10)
 		player.AddComponent(questTracker)
+	} else {
+		// Existing component: ensure it is the correct type
+		var typeOK bool
+		questTracker, typeOK = comp.(*engine.QuestTrackerComponent)
+		if !typeOK {
+			// Wrong type: create and add a fresh tracker
+			questTracker = engine.NewQuestTrackerComponent(10)
+			player.AddComponent(questTracker)
+		}
+	}
+	if questTracker == nil {
+		return false
 	}
 
 	// Convert BuildingQuest to quest.Quest

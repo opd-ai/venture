@@ -13,12 +13,15 @@ import (
 
 // FederationProtocol handles server-to-server communication
 type FederationProtocol struct {
-	serverID    string
-	peers       map[string]*PeerServer
-	connections map[string]net.Conn
-	mu          sync.RWMutex
-	identity    *ServerIdentity
-	handshake   *HandshakeManager
+	serverID       string
+	peers          map[string]*PeerServer
+	connections    map[string]net.Conn
+	mu             sync.RWMutex
+	identity       *ServerIdentity
+	handshake      *HandshakeManager
+	connectionPool *ConnectionPool
+	health         *FederationHealth
+	retryStrategy  *RetryStrategy
 }
 
 // PeerServer represents a connected peer server
@@ -34,58 +37,90 @@ type PeerServer struct {
 // NewFederationProtocol creates a new federation protocol handler
 func NewFederationProtocol(serverID string, identity *ServerIdentity) *FederationProtocol {
 	return &FederationProtocol{
-		serverID:    serverID,
-		peers:       make(map[string]*PeerServer),
-		connections: make(map[string]net.Conn),
-		identity:    identity,
-		handshake:   NewHandshakeManager(identity),
+		serverID:       serverID,
+		peers:          make(map[string]*PeerServer),
+		connections:    make(map[string]net.Conn),
+		identity:       identity,
+		handshake:      NewHandshakeManager(identity),
+		connectionPool: NewConnectionPool(DefaultConnectionConfig()),
+		health:         NewFederationHealth(),
+		retryStrategy:  NewRetryStrategy(DefaultRetryConfig()),
 	}
 }
 
-// Connect establishes connection to a peer server
+// Connect establishes connection to a peer server with retry logic and circuit breaker
 func (f *FederationProtocol) Connect(peerAddress string) error {
+	// Check if federation is in local-only mode
+	if f.health.IsLocalOnly() {
+		return fmt.Errorf("federation is in local-only mode, cannot connect to remote servers")
+	}
+
+	f.mu.Lock()
+	if _, exists := f.connections[peerAddress]; exists {
+		f.mu.Unlock()
+		return fmt.Errorf("already connected to %s", peerAddress)
+	}
+	f.mu.Unlock()
+
+	// Use retry strategy with circuit breaker for connection attempt
+	var conn net.Conn
+	var handshakeResponse FederationHandshake
+	err := f.retryStrategy.Execute(func() error {
+		var dialErr error
+		conn, dialErr = net.DialTimeout("tcp", peerAddress, 10*time.Second)
+		if dialErr != nil {
+			f.health.RecordFailure()
+			return dialErr
+		}
+
+		handshakeMsg, err := f.identity.CreateHandshake("6.0.0", []string{"travel", "trade", "post"}, TrustVerified)
+		if err != nil {
+			conn.Close()
+			f.health.RecordFailure()
+			return fmt.Errorf("failed to create handshake: %w", err)
+		}
+
+		encoder := json.NewEncoder(conn)
+		if err := encoder.Encode(handshakeMsg); err != nil {
+			conn.Close()
+			f.health.RecordFailure()
+			return fmt.Errorf("failed to send handshake: %w", err)
+		}
+
+		decoder := json.NewDecoder(conn)
+		if err := decoder.Decode(&handshakeResponse); err != nil {
+			conn.Close()
+			f.health.RecordFailure()
+			return fmt.Errorf("failed to receive handshake response: %w", err)
+		}
+
+		if err := f.handshake.ProcessHandshake(&handshakeResponse); err != nil {
+			conn.Close()
+			f.health.RecordFailure()
+			return fmt.Errorf("invalid handshake response: %w", err)
+		}
+
+		return nil
+	}, IsNetworkError)
+
+	if err != nil {
+		return fmt.Errorf("failed to connect to %s after retries: %w", peerAddress, err)
+	}
+
+	// Connection successful, record success and add to pool
+	f.health.RecordSuccess()
+
 	f.mu.Lock()
 	defer f.mu.Unlock()
 
-	if _, exists := f.connections[peerAddress]; exists {
-		return fmt.Errorf("already connected to %s", peerAddress)
-	}
-
-	conn, err := net.DialTimeout("tcp", peerAddress, 10*time.Second)
-	if err != nil {
-		return fmt.Errorf("failed to connect to %s: %w", peerAddress, err)
-	}
-
-	handshakeMsg, err := f.identity.CreateHandshake("6.0.0", []string{"travel", "trade", "post"}, TrustVerified)
-	if err != nil {
-		conn.Close()
-		return fmt.Errorf("failed to create handshake: %w", err)
-	}
-
-	encoder := json.NewEncoder(conn)
-	if err := encoder.Encode(handshakeMsg); err != nil {
-		conn.Close()
-		return fmt.Errorf("failed to send handshake: %w", err)
-	}
-
-	decoder := json.NewDecoder(conn)
-	var response FederationHandshake
-	if err := decoder.Decode(&response); err != nil {
-		conn.Close()
-		return fmt.Errorf("failed to receive handshake response: %w", err)
-	}
-
-	if err := f.handshake.ProcessHandshake(&response); err != nil {
-		conn.Close()
-		return fmt.Errorf("invalid handshake response: %w", err)
-	}
-
 	f.connections[peerAddress] = conn
-	f.peers[response.ServerID] = &PeerServer{
-		ID:            response.ServerID,
-		Name:          response.ServerName,
+	f.connectionPool.Add(handshakeResponse.ServerID, peerAddress, conn)
+
+	f.peers[handshakeResponse.ServerID] = &PeerServer{
+		ID:            handshakeResponse.ServerID,
+		Name:          handshakeResponse.ServerName,
 		Address:       peerAddress,
-		TrustLevel:    response.TrustLevel.String(),
+		TrustLevel:    handshakeResponse.TrustLevel.String(),
 		Connected:     true,
 		LastHeartbeat: time.Now().Unix(),
 	}
@@ -336,6 +371,38 @@ func (f *FederationProtocol) ReceiveGuildUpdate(msg *GuildUpdateMessage) error {
 	if len(msg.GuildData) == 0 {
 		return fmt.Errorf("missing guild data")
 	}
+
+	return nil
+}
+
+// GetHealth returns the current federation health tracker
+func (f *FederationProtocol) GetHealth() *FederationHealth {
+	return f.health
+}
+
+// GetConnectionPool returns the connection pool
+func (f *FederationProtocol) GetConnectionPool() *ConnectionPool {
+	return f.connectionPool
+}
+
+// Close closes all connections and cleans up resources
+func (f *FederationProtocol) Close() error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+
+	// Close all direct connections
+	for addr, conn := range f.connections {
+		conn.Close()
+		delete(f.connections, addr)
+	}
+
+	// Close connection pool
+	if f.connectionPool != nil {
+		f.connectionPool.Close()
+	}
+
+	// Clear peers
+	f.peers = make(map[string]*PeerServer)
 
 	return nil
 }

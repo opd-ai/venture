@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"math/rand"
+	"strconv"
 	"testing"
 	"time"
 
@@ -13,6 +14,12 @@ import (
 	"github.com/opd-ai/venture/pkg/procgen/furniture"
 	"github.com/opd-ai/venture/pkg/procgen/quest"
 	"github.com/opd-ai/venture/pkg/world/housing"
+)
+
+// Guild quest objective constants
+const (
+	guildQuestEstablishHall = "Establish guild hall"
+	guildQuestRecruitMembers = "Recruit 10 members"
 )
 
 // TestV6FederationIntegration tests housing sync with V6.0 federation system
@@ -204,7 +211,8 @@ func TestPerformanceBenchmark(t *testing.T) {
 				t.Fatalf("Failed to generate building %d: %v", i, err)
 			}
 
-			playerID := fmt.Sprintf("player%d", i)
+			// Use strconv.Itoa for better performance in tight loops
+			playerID := "player" + strconv.Itoa(i)
 			_, err = hm.CreateHouse(playerID, buildingData.(*building.Building), int64(i))
 			if err != nil {
 				t.Fatalf("Failed to create house %d: %v", i, err)
@@ -481,8 +489,8 @@ func GenerateGuildQuest(seed int64, genre string, depth int) *GuildQuest {
 	guildQuest := &GuildQuest{
 		ID: q.ID,
 		Objectives: []string{
-			"Establish guild hall",
-			"Recruit 10 members",
+			guildQuestEstablishHall,
+			guildQuestRecruitMembers,
 		},
 	}
 	

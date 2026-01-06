@@ -318,8 +318,7 @@ func (s *TCPServer) cleanupLoop() {
 	for {
 		select {
 		case <-s.ctx.Done():
-			return
-		case <-s.done:
+			// Server context cancelled, exit cleanup loop
 			return
 		case <-ticker.C:
 			s.cleanupIdleClients()
@@ -485,7 +484,8 @@ func (s *TCPServer) acceptLoop() {
 // handleAcceptError processes errors from the accept loop and returns true if the loop should exit.
 func (s *TCPServer) handleAcceptError(err error) bool {
 	select {
-	case <-s.done:
+	case <-s.ctx.Done():
+		// Server context cancelled, exit accept loop
 		return true
 	default:
 		s.errors <- fmt.Errorf("accept error: %w", err)

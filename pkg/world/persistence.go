@@ -65,6 +65,7 @@ type WorldPersistence struct {
 	timeSinceLastSave float64
 	maxBackups        int                   // Number of backups to keep (default: 3)
 	lastSaveState     *PersistentWorldState // For incremental saves
+	bgCtx             context.Context       // Background context for legacy methods
 }
 
 // NewWorldPersistence creates a new world persistence manager
@@ -73,6 +74,7 @@ func NewWorldPersistence(savePath string) *WorldPersistence {
 		SavePath:         savePath,
 		AutoSaveInterval: 300.0, // 5 minutes
 		maxBackups:       3,
+		bgCtx:            context.Background(), // Reusable background context for legacy methods
 	}
 }
 
@@ -91,7 +93,7 @@ func (w *WorldPersistence) Update(deltaTime float64) bool {
 // SaveWorld saves the world state to disk with backup rotation and incremental saves.
 // Supports context-based cancellation for long-running operations.
 func (w *WorldPersistence) SaveWorld(state *PersistentWorldState) error {
-	return w.SaveWorldWithContext(context.Background(), state)
+	return w.SaveWorldWithContext(w.bgCtx, state)
 }
 
 // SaveWorldWithContext saves the world state to disk with context support.
@@ -182,7 +184,7 @@ func (w *WorldPersistence) SaveWorldWithContext(ctx context.Context, state *Pers
 // SaveIncremental saves only modified chunks since last save.
 // Supports context-based cancellation.
 func (w *WorldPersistence) SaveIncremental(state *PersistentWorldState) error {
-	return w.SaveIncrementalWithContext(context.Background(), state)
+	return w.SaveIncrementalWithContext(w.bgCtx, state)
 }
 
 // SaveIncrementalWithContext saves only modified chunks with context support.
@@ -295,7 +297,7 @@ func copyFile(src, dst string) error {
 // LoadWorld loads the world state from disk.
 // Attempts to load from main save file, falls back to backups on error.
 func (w *WorldPersistence) LoadWorld(seed int64) (*PersistentWorldState, error) {
-	return w.LoadWorldWithContext(context.Background(), seed)
+	return w.LoadWorldWithContext(w.bgCtx, seed)
 }
 
 // LoadWorldWithContext loads the world state from disk with context support.
@@ -329,7 +331,7 @@ func (w *WorldPersistence) LoadWorldWithContext(ctx context.Context, seed int64)
 
 // loadFromPath loads state from a specific file path (legacy, no context).
 func (w *WorldPersistence) loadFromPath(path string, seed int64) (*PersistentWorldState, error) {
-	return w.loadFromPathWithContext(context.Background(), path, seed)
+	return w.loadFromPathWithContext(w.bgCtx, path, seed)
 }
 
 // loadFromPathWithContext loads state from a specific file path with context support.

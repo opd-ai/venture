@@ -23,9 +23,12 @@ type RetryConfig struct {
 	Multiplier float64
 	// Jitter adds randomness to prevent thundering herd (0.0-1.0)
 	Jitter float64
+	// Seed is the random seed for jitter (0 = use time-based seed for production)
+	Seed int64
 }
 
 // DefaultRetryConfig returns a retry configuration with sensible defaults
+// Uses time-based seed (Seed=0) for production use
 func DefaultRetryConfig() RetryConfig {
 	return RetryConfig{
 		MaxRetries:   3,
@@ -33,6 +36,7 @@ func DefaultRetryConfig() RetryConfig {
 		MaxDelay:     30 * time.Second,
 		Multiplier:   2.0,
 		Jitter:       0.1, // 10% jitter
+		Seed:         0,   // 0 = use time-based seed for production
 	}
 }
 
@@ -50,11 +54,19 @@ type RetryStrategy struct {
 }
 
 // NewRetryStrategy creates a new retry strategy with the given configuration
+// If config.Seed is 0, uses time-based seed for production (non-deterministic).
+// For testing or deterministic behavior, provide a non-zero seed value.
 func NewRetryStrategy(config RetryConfig) *RetryStrategy {
+	seed := config.Seed
+	if seed == 0 {
+		// Production: use time-based seed for true randomness
+		seed = time.Now().UnixNano()
+	}
+	// Testing/deterministic: use provided seed
+	
 	return &RetryStrategy{
 		config: config,
-		// Use time-based seed for jitter randomness (not cryptographic use)
-		rng:    rand.New(rand.NewSource(time.Now().UnixNano())),
+		rng:    rand.New(rand.NewSource(seed)),
 		logger: logrus.WithFields(logrus.Fields{
 			"component": "retry_strategy",
 		}),

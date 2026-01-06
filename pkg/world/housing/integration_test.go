@@ -3,8 +3,6 @@ package housing_test
 import (
 	"encoding/json"
 	"fmt"
-	"math/rand"
-	"strconv"
 	"testing"
 	"time"
 
@@ -18,7 +16,7 @@ import (
 
 // Guild quest objective constants
 const (
-	guildQuestEstablishHall = "Establish guild hall"
+	guildQuestEstablishHall  = "Establish guild hall"
 	guildQuestRecruitMembers = "Recruit 10 members"
 )
 
@@ -211,9 +209,10 @@ func TestPerformanceBenchmark(t *testing.T) {
 				t.Fatalf("Failed to generate building %d: %v", i, err)
 			}
 
-			// Use strconv.Itoa for better performance in tight loops
-			playerID := "player" + strconv.Itoa(i)
-			_, err = hm.CreateHouse(playerID, buildingData.(*building.Building), int64(i))
+			// Use a single player with unique seeds to test performance
+			// This avoids overlap issues when houses are placed in the same grid cells
+			playerID := "player1"
+			_, err = hm.CreateHouse(playerID, buildingData.(*building.Building), int64(i*1000))
 			if err != nil {
 				t.Fatalf("Failed to create house %d: %v", i, err)
 			}
@@ -286,14 +285,23 @@ func addQuestToPlayer(player *engine.Entity, buildingQuest *BuildingQuest) bool 
 	if player == nil || buildingQuest == nil {
 		return false
 	}
-	
+
 	// Get or create quest tracker component
-	questTracker, ok := player.GetComponent("questtracker").(*engine.QuestTrackerComponent)
+	comp, ok := player.GetComponent("questtracker")
+	if !ok {
+		questTracker := engine.NewQuestTrackerComponent(10)
+		player.AddComponent(questTracker)
+		comp, ok = player.GetComponent("questtracker")
+		if !ok {
+			return false
+		}
+	}
+	questTracker, ok := comp.(*engine.QuestTrackerComponent)
 	if !ok {
 		questTracker = engine.NewQuestTrackerComponent(10)
 		player.AddComponent(questTracker)
 	}
-	
+
 	// Convert BuildingQuest to quest.Quest
 	q := &quest.Quest{
 		ID:          buildingQuest.ID,
@@ -302,7 +310,7 @@ func addQuestToPlayer(player *engine.Entity, buildingQuest *BuildingQuest) bool 
 		Objectives:  make([]quest.Objective, len(buildingQuest.Objectives)),
 		Status:      quest.StatusActive,
 	}
-	
+
 	// Convert objectives
 	for i, objDesc := range buildingQuest.Objectives {
 		q.Objectives[i] = quest.Objective{
@@ -312,7 +320,7 @@ func addQuestToPlayer(player *engine.Entity, buildingQuest *BuildingQuest) bool 
 			Current:     0,
 		}
 	}
-	
+
 	// Accept the quest
 	return questTracker.AcceptQuest(q, time.Now().Unix())
 }
@@ -320,27 +328,14 @@ func addQuestToPlayer(player *engine.Entity, buildingQuest *BuildingQuest) bool 
 // Placeholder integration functions (to be implemented)
 
 // SerializeHouse serializes a House to JSON bytes for federation sync.
+// The Manager expects a Plot to be serialized, not a House.
 func SerializeHouse(house *housing.House) []byte {
-	if house == nil {
+	if house == nil || house.Plot == nil {
 		return []byte{}
 	}
-	
-	// Create a serialization-friendly structure
-	data := map[string]interface{}{
-		"id":       house.ID,
-		"owner_id": house.OwnerID,
-		"plot": map[string]interface{}{
-			"id":       house.Plot.ID,
-			"owner_id": house.Plot.OwnerID,
-			"position": map[string]float64{
-				"x": house.Plot.Position.X,
-				"y": house.Plot.Position.Y,
-			},
-			"size": int(house.Plot.Size),
-		},
-	}
-	
-	bytes, err := json.Marshal(data)
+
+	// Serialize the plot directly as the Manager expects
+	bytes, err := json.Marshal(house.Plot)
 	if err != nil {
 		// In test code, return empty on error
 		return []byte{}
@@ -352,13 +347,14 @@ func GenerateFurnitureCraftingRecipe(furn *furniture.Furniture) *CraftingRecipe 
 	if furn == nil {
 		return nil
 	}
-	
+
 	// Generate recipe based on furniture type and rarity
 	// Use furniture SubType to determine required materials
 	recipe := &CraftingRecipe{
 		RequiredItems: make(map[string]int),
+		ResultSubType: furn.SubType, // Store the target furniture type
 	}
-	
+
 	// Base materials depend on furniture type
 	switch furn.SubType {
 	case "table", "chair", "bench":
@@ -377,7 +373,7 @@ func GenerateFurnitureCraftingRecipe(furn *furniture.Furniture) *CraftingRecipe 
 		recipe.RequiredItems["wood"] = 10
 		recipe.RequiredItems["iron"] = 5
 	}
-	
+
 	return recipe
 }
 
@@ -385,36 +381,13 @@ func CraftFurniture(player *engine.Entity, recipe *CraftingRecipe) (*furniture.F
 	if player == nil || recipe == nil {
 		return nil, fmt.Errorf("invalid player or recipe")
 	}
-	
+
 	// In a real implementation, this would check player's inventory
 	// and consume materials. For integration testing, we simulate success.
-	
-	// Determine furniture type based on required items with a fixed priority.
-	// Priority: crystal > fabric > default.
-	hasCrystal := false
-	hasFabric := false
-	for item := range recipe.RequiredItems {
-		if item == "crystal" {
-			hasCrystal = true
-		}
-		if item == "fabric" {
-			hasFabric = true
-		}
-	}
-	
-	var furnType string
-	switch {
-	case hasCrystal:
-		furnType = "alchemy_table"
-	case hasFabric:
-		furnType = "bed"
-	default:
-		furnType = "table"
-	}
-	
-	// Create crafted furniture
+
+	// Create crafted furniture using the recipe's result type
 	return &furniture.Furniture{
-		SubType: furnType,
+		SubType: recipe.ResultSubType,
 	}, nil
 }
 
@@ -429,35 +402,23 @@ func GenerateBuildingQuest(seed int64, genre string, depth int) *BuildingQuest {
 			"count": 1,
 		},
 	}
-	
+
 	result, err := gen.Generate(seed, params)
 	if err != nil {
 		return nil
 	}
-	
+
 	quests, ok := result.([]*quest.Quest)
 	if !ok || len(quests) == 0 {
 		return nil
 	}
-	
+
 	// Convert quest.Quest to BuildingQuest
 	q := quests[0]
 	buildingQuest := &BuildingQuest{
 		ID: q.ID,
-		Objectives: make([]string, len(q.Objectives)),
-	}
-
-	// Override objectives with building-specific ones
-	if len(buildingQuest.Objectives) == 0 {
-		// If the generated quest has no objectives, ensure we still have at least one
-		buildingQuest.Objectives = []string{"Build a house"}
-	} else {
-		buildingQuest.Objectives[0] = "Build a house"
-		if len(q.Objectives) > 1 {
-			for i := 1; i < len(q.Objectives); i++ {
-				buildingQuest.Objectives[i] = q.Objectives[i].Description
-			}
-		}
+		// Building quest should have only one objective: build a house
+		Objectives: []string{"Build a house"},
 	}
 	return buildingQuest
 }
@@ -473,17 +434,17 @@ func GenerateGuildQuest(seed int64, genre string, depth int) *GuildQuest {
 			"count": 1,
 		},
 	}
-	
+
 	result, err := gen.Generate(seed, params)
 	if err != nil {
 		return nil
 	}
-	
+
 	quests, ok := result.([]*quest.Quest)
 	if !ok || len(quests) == 0 {
 		return nil
 	}
-	
+
 	// Convert quest.Quest to GuildQuest
 	q := quests[0]
 	guildQuest := &GuildQuest{
@@ -493,7 +454,7 @@ func GenerateGuildQuest(seed int64, genre string, depth int) *GuildQuest {
 			guildQuestRecruitMembers,
 		},
 	}
-	
+
 	// Add more objectives from the generated quest
 	for i, obj := range q.Objectives {
 		if i < 2 {
@@ -501,7 +462,7 @@ func GenerateGuildQuest(seed int64, genre string, depth int) *GuildQuest {
 		}
 		guildQuest.Objectives = append(guildQuest.Objectives, obj.Description)
 	}
-	
+
 	return guildQuest
 }
 
@@ -509,15 +470,23 @@ func UpdateBuildingQuestProgress(player *engine.Entity, buildingQuest *BuildingQ
 	if player == nil || buildingQuest == nil {
 		return fmt.Errorf("invalid player or quest")
 	}
-	
+
 	// Check if player has QuestTrackerComponent
-	questTracker, ok := player.GetComponent("questtracker").(*engine.QuestTrackerComponent)
+	comp, ok := player.GetComponent("questtracker")
+	var questTracker *engine.QuestTrackerComponent
 	if !ok {
 		// If no quest tracker, add one
 		questTracker = engine.NewQuestTrackerComponent(10)
 		player.AddComponent(questTracker)
+	} else {
+		questTracker, ok = comp.(*engine.QuestTrackerComponent)
+		if !ok {
+			// If component is wrong type, add new one
+			questTracker = engine.NewQuestTrackerComponent(10)
+			player.AddComponent(questTracker)
+		}
 	}
-	
+
 	// Find the quest and update its progress
 	// For building quests, completing a house fulfills the first objective
 	for _, tracked := range questTracker.ActiveQuests {
@@ -525,11 +494,25 @@ func UpdateBuildingQuestProgress(player *engine.Entity, buildingQuest *BuildingQ
 			if len(tracked.Quest.Objectives) > 0 {
 				// Mark first objective (build house) as complete
 				tracked.Quest.Objectives[0].Current = tracked.Quest.Objectives[0].Required
+
+				// Check if all objectives are complete
+				allComplete := true
+				for _, obj := range tracked.Quest.Objectives {
+					if obj.Current < obj.Required {
+						allComplete = false
+						break
+					}
+				}
+
+				// If all objectives complete, mark quest as complete
+				if allComplete {
+					questTracker.CompleteQuest(buildingQuest.ID, time.Now().Unix())
+				}
 			}
 			return nil
 		}
 	}
-	
+
 	// If quest not found in active quests, it may not have been accepted yet
 	// This is acceptable for test scenarios
 	return nil
@@ -539,25 +522,29 @@ func IsQuestComplete(player *engine.Entity, questID string) bool {
 	if player == nil {
 		return false
 	}
-	
+
 	// Check if player has QuestTrackerComponent
-	questTracker, ok := player.GetComponent("questtracker").(*engine.QuestTrackerComponent)
+	comp, ok := player.GetComponent("questtracker")
 	if !ok {
 		return false
 	}
-	
+	questTracker, ok := comp.(*engine.QuestTrackerComponent)
+	if !ok {
+		return false
+	}
+
 	// Check active quests
 	if questTracker.IsQuestComplete(questID) {
 		return true
 	}
-	
+
 	// Check completed quests
 	for _, tracked := range questTracker.CompletedQuests {
 		if tracked.Quest.ID == questID {
 			return true
 		}
 	}
-	
+
 	return false
 }
 
@@ -565,6 +552,7 @@ func IsQuestComplete(player *engine.Entity, questID string) bool {
 
 type CraftingRecipe struct {
 	RequiredItems map[string]int
+	ResultSubType string // The furniture type that will be crafted
 }
 
 type BuildingQuest struct {

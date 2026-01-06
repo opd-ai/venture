@@ -96,11 +96,11 @@ func TestSaveWorldContextTimeout(t *testing.T) {
 	}
 
 	// Create context with very short timeout
-	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Nanosecond)
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Millisecond)
 	defer cancel()
 	
 	// Wait for timeout
-	time.Sleep(2 * time.Millisecond)
+	time.Sleep(20 * time.Millisecond)
 
 	// Save might succeed (if fast enough) or fail with timeout
 	err := wp.SaveWorldWithContext(ctx, state)

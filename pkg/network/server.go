@@ -117,7 +117,6 @@ type TCPServer struct {
 	wg   sync.WaitGroup
 
 	// Resource tracking
-	activeGoroutines   int32 // Atomic counter for active goroutines
 	idleTimeout        time.Duration
 	cleanupInterval    time.Duration
 	shutdownTimeout    time.Duration

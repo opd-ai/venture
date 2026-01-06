@@ -103,21 +103,18 @@ func TestServerShutdownTimeout(t *testing.T) {
 	config := DefaultServerConfig()
 	config.Address = "127.0.0.1:0"
 	server := NewServer(config)
-	
-	// Set very short shutdown timeout for testing
-	server.shutdownTimeout = 1 * time.Nanosecond
 
 	// Start server
 	if err := server.Start(); err != nil {
 		t.Fatalf("Failed to start server: %v", err)
 	}
 
-	// This should timeout (though goroutines might still finish fast)
-	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Nanosecond)
+	// Create context with very short timeout
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Millisecond)
 	defer cancel()
 	
-	// Give the context time to expire
-	time.Sleep(2 * time.Millisecond)
+	// Wait for timeout to expire
+	time.Sleep(20 * time.Millisecond)
 	
 	err := server.StopWithContext(ctx)
 	// We expect either success (if goroutines finished fast) or timeout error

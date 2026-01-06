@@ -64,7 +64,6 @@ type ConnectionPool struct {
 	logger          *logrus.Entry
 	cleanupTicker   *time.Ticker
 	stopCleanup     chan struct{}
-	retryStrategy   *RetryStrategy
 }
 
 // NewConnectionPool creates a new connection pool with the given configuration
@@ -76,7 +75,6 @@ func NewConnectionPool(config ConnectionConfig) *ConnectionPool {
 			"component": "connection_pool",
 		}),
 		stopCleanup:   make(chan struct{}),
-		retryStrategy: NewRetryStrategy(DefaultRetryConfig()),
 	}
 	
 	// Start background cleanup goroutine

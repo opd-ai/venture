@@ -7,6 +7,15 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+const (
+	// DefaultFailureThresholdDegraded is failures needed to enter degraded mode
+	DefaultFailureThresholdDegraded = 10
+	// DefaultFailureThresholdLocalOnly is failures needed to enter local-only mode
+	DefaultFailureThresholdLocalOnly = 20
+	// DefaultAvailabilityThreshold is minimum server availability ratio (0.0-1.0)
+	DefaultAvailabilityThreshold = 0.5
+)
+
 // FederationMode represents the operating mode of the federation system
 type FederationMode int
 
@@ -143,7 +152,7 @@ func (fh *FederationHealth) UpdateServerCounts(available, total int) {
 			fh.mode = FederationModeLocalOnly
 			fh.logger.Warn("No federation servers available, switching to local-only mode")
 		}
-	} else if availabilityRatio < 0.5 {
+	} else if availabilityRatio < DefaultAvailabilityThreshold {
 		// Less than 50% available, switch to degraded
 		if fh.mode != FederationModeDegraded && fh.mode != FederationModeLocalOnly {
 			fh.mode = FederationModeDegraded
@@ -174,12 +183,12 @@ func (fh *FederationHealth) RecordFailure() {
 	fh.consecutiveFailures++
 	
 	// If we have too many consecutive failures, degrade or go local-only
-	if fh.consecutiveFailures >= 10 && fh.mode == FederationModeEnabled {
+	if fh.consecutiveFailures >= DefaultFailureThresholdDegraded && fh.mode == FederationModeEnabled {
 		fh.mode = FederationModeDegraded
 		fh.logger.WithFields(logrus.Fields{
 			"consecutive_failures": fh.consecutiveFailures,
 		}).Warn("Too many consecutive failures, switching to degraded mode")
-	} else if fh.consecutiveFailures >= 20 && fh.mode == FederationModeDegraded {
+	} else if fh.consecutiveFailures >= DefaultFailureThresholdLocalOnly && fh.mode == FederationModeDegraded {
 		fh.mode = FederationModeLocalOnly
 		fh.logger.WithFields(logrus.Fields{
 			"consecutive_failures": fh.consecutiveFailures,

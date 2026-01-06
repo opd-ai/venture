@@ -11,6 +11,18 @@ import (
 	"github.com/opd-ai/venture/pkg/engine"
 )
 
+const (
+	// DefaultConnectionTimeout is the timeout for establishing TCP connections
+	DefaultConnectionTimeout = 10 * time.Second
+	// DefaultProtocolVersion is the current federation protocol version
+	DefaultProtocolVersion = "6.0.0"
+)
+
+var (
+	// DefaultProtocolFeatures lists the features supported by this server
+	DefaultProtocolFeatures = []string{"travel", "trade", "post"}
+)
+
 // FederationProtocol handles server-to-server communication
 type FederationProtocol struct {
 	serverID       string
@@ -67,13 +79,13 @@ func (f *FederationProtocol) Connect(peerAddress string) error {
 	var handshakeResponse FederationHandshake
 	err := f.retryStrategy.Execute(func() error {
 		var dialErr error
-		conn, dialErr = net.DialTimeout("tcp", peerAddress, 10*time.Second)
+		conn, dialErr = net.DialTimeout("tcp", peerAddress, DefaultConnectionTimeout)
 		if dialErr != nil {
 			f.health.RecordFailure()
 			return dialErr
 		}
 
-		handshakeMsg, err := f.identity.CreateHandshake("6.0.0", []string{"travel", "trade", "post"}, TrustVerified)
+		handshakeMsg, err := f.identity.CreateHandshake(DefaultProtocolVersion, DefaultProtocolFeatures, TrustVerified)
 		if err != nil {
 			conn.Close()
 			f.health.RecordFailure()

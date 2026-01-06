@@ -53,6 +53,7 @@ type RetryStrategy struct {
 func NewRetryStrategy(config RetryConfig) *RetryStrategy {
 	return &RetryStrategy{
 		config: config,
+		// Use time-based seed for jitter randomness (not cryptographic use)
 		rng:    rand.New(rand.NewSource(time.Now().UnixNano())),
 		logger: logrus.WithFields(logrus.Fields{
 			"component": "retry_strategy",

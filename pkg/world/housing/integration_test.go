@@ -434,15 +434,19 @@ func GenerateBuildingQuest(seed int64, genre string, depth int) *BuildingQuest {
 		ID: q.ID,
 		Objectives: make([]string, len(q.Objectives)),
 	}
-	
+
 	// Override objectives with building-specific ones
-	buildingQuest.Objectives[0] = "Build a house"
-	if len(q.Objectives) > 1 {
-		for i := 1; i < len(q.Objectives); i++ {
-			buildingQuest.Objectives[i] = q.Objectives[i].Description
+	if len(buildingQuest.Objectives) == 0 {
+		// If the generated quest has no objectives, ensure we still have at least one
+		buildingQuest.Objectives = []string{"Build a house"}
+	} else {
+		buildingQuest.Objectives[0] = "Build a house"
+		if len(q.Objectives) > 1 {
+			for i := 1; i < len(q.Objectives); i++ {
+				buildingQuest.Objectives[i] = q.Objectives[i].Description
+			}
 		}
 	}
-	
 	return buildingQuest
 }
 

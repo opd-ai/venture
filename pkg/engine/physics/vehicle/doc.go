@@ -82,7 +82,7 @@
 // EnhancedVehicleSystem integrates all components for complete vehicle simulation:
 //
 //	system := vehicle.NewEnhancedVehicleSystem()
-//	
+//
 //	// Update vehicle physics each frame
 //	state := vehicle.VehicleState{
 //		PositionX:  100.0,
@@ -91,7 +91,7 @@
 //		VelocityY:  0.0,
 //		IsGrounded: true,
 //	}
-//	
+//
 //	newState := system.UpdateVehiclePhysics(
 //		suspension,
 //		weightTransfer,
@@ -126,24 +126,24 @@
 //
 //	// Create vehicle entity
 //	vehicle := world.CreateEntity()
-//	
+//
 //	// Add position and physics components
 //	vehicle.AddComponent(&engine.PositionComponent{X: 100, Y: 50})
 //	vehicle.AddComponent(&engine.VelocityComponent{VX: 0, VY: 0})
-//	
+//
 //	// Add vehicle-specific physics
 //	suspension := vehicle.NewSuspensionComponent(4)
 //	suspension.SpringStiffness = 50000.0
 //	suspension.DamperStrength = 3000.0
 //	vehicle.AddComponent(suspension)
-//	
+//
 //	vehicle.AddComponent(&vehicle.WeightTransferComponent{
 //		FrontWeightRatio: 0.55,
 //		WheelCount:       4,
 //	})
-//	
+//
 //	vehicle.AddComponent(vehicle.NewCollisionResponseComponent(1000.0))
-//	
+//
 //	vehicle.AddComponent(&vehicle.TerrainDeformationComponent{
 //		TrackDepth:    0.05,
 //		TrackWidth:    0.3,

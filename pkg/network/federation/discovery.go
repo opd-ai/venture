@@ -76,7 +76,7 @@ type DiscoveredPeer struct {
 //   - identity: Server identity for authentication and identification
 //   - listenAddr: UDP address for discovery broadcasts (empty uses default port)
 //   - federationAddr: TCP address where federation server listens (e.g., "localhost:8080")
-func NewDiscoverySystem(identity *ServerIdentity, listenAddr string, federationAddr string) (*DiscoverySystem, error) {
+func NewDiscoverySystem(identity *ServerIdentity, listenAddr, federationAddr string) (*DiscoverySystem, error) {
 	if identity == nil {
 		return nil, fmt.Errorf("identity cannot be nil")
 	}

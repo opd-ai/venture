@@ -97,7 +97,7 @@ func (v *Validator) ValidateDirectory(path string, create bool) error {
 	if err != nil {
 		if os.IsNotExist(err) && create {
 			// Attempt to create directory
-			if err := os.MkdirAll(path, 0755); err != nil {
+			if err := os.MkdirAll(path, 0o755); err != nil {
 				return fmt.Errorf("failed to create directory %s: %w", path, err)
 			}
 			return nil
@@ -172,14 +172,14 @@ func (v *Validator) ValidateAll(cfg *Config) error {
 
 // Config holds configuration values to validate.
 type Config struct {
-	Port                string
-	MaxPlayers          int
-	ValidateMaxPlayers  bool // Whether to validate MaxPlayers field
-	TickRate            int
-	ValidateTickRate    bool // Whether to validate TickRate field
-	Genre               string
-	SaveDir             string
-	LogDir              string
-	ModsDir             string
-	CreateDirs          bool // Whether to create missing directories
+	Port               string
+	MaxPlayers         int
+	ValidateMaxPlayers bool // Whether to validate MaxPlayers field
+	TickRate           int
+	ValidateTickRate   bool // Whether to validate TickRate field
+	Genre              string
+	SaveDir            string
+	LogDir             string
+	ModsDir            string
+	CreateDirs         bool // Whether to create missing directories
 }

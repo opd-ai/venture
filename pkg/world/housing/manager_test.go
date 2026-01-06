@@ -251,22 +251,22 @@ func BenchmarkGetPlotsInArea(b *testing.B) {
 // TestCreateHouse tests the CreateHouse method with seed-based positioning
 func TestCreateHouse(t *testing.T) {
 	m := NewManager()
-	
+
 	// Test basic house creation
 	houseID, err := m.CreateHouse("player1", nil, 12345)
 	if err != nil {
 		t.Fatalf("CreateHouse() error = %v, want nil", err)
 	}
-	
+
 	if houseID == "" {
 		t.Error("CreateHouse() returned empty house ID")
 	}
-	
+
 	// Verify house was added to manager
 	if m.PlotCount() != 1 {
 		t.Errorf("PlotCount() = %v, want 1", m.PlotCount())
 	}
-	
+
 	// Verify GetHouse returns the created house
 	house := m.GetHouse(houseID)
 	if house == nil {
@@ -280,7 +280,7 @@ func TestCreateHouse(t *testing.T) {
 // TestCreateHouseMultiple tests creating multiple houses with different seeds
 func TestCreateHouseMultiple(t *testing.T) {
 	m := NewManager()
-	
+
 	// Create 5 houses for the same player with different seeds
 	positions := make(map[string]Vector2)
 	for i := 0; i < 5; i++ {
@@ -288,20 +288,20 @@ func TestCreateHouseMultiple(t *testing.T) {
 		if err != nil {
 			t.Fatalf("CreateHouse(%d) error = %v, want nil", i, err)
 		}
-		
+
 		house := m.GetHouse(houseID)
 		if house == nil {
 			t.Fatalf("GetHouse(%s) returned nil", houseID)
 		}
-		
+
 		positions[houseID] = house.Plot.Position
 	}
-	
+
 	// Verify all houses have different positions (no overlaps at 0,0)
 	if len(positions) != 5 {
 		t.Errorf("Expected 5 unique positions, got %d", len(positions))
 	}
-	
+
 	// Verify at least one house is not at (0,0)
 	foundNonZero := false
 	for _, pos := range positions {
@@ -310,7 +310,7 @@ func TestCreateHouseMultiple(t *testing.T) {
 			break
 		}
 	}
-	
+
 	if !foundNonZero {
 		t.Error("All houses positioned at (0,0), spatial distribution not working")
 	}
@@ -319,7 +319,7 @@ func TestCreateHouseMultiple(t *testing.T) {
 // TestCreateHouseDeterministic tests that same seed produces same position
 func TestCreateHouseDeterministic(t *testing.T) {
 	const seed = int64(42)
-	
+
 	// Create house in first manager
 	m1 := NewManager()
 	houseID1, err := m1.CreateHouse("player1", nil, seed)
@@ -327,7 +327,7 @@ func TestCreateHouseDeterministic(t *testing.T) {
 		t.Fatalf("CreateHouse() error = %v, want nil", err)
 	}
 	house1 := m1.GetHouse(houseID1)
-	
+
 	// Create house in second manager with same seed
 	m2 := NewManager()
 	houseID2, err := m2.CreateHouse("player1", nil, seed)
@@ -335,11 +335,11 @@ func TestCreateHouseDeterministic(t *testing.T) {
 		t.Fatalf("CreateHouse() error = %v, want nil", err)
 	}
 	house2 := m2.GetHouse(houseID2)
-	
+
 	// Positions should be identical
-	if house1.Plot.Position.X != house2.Plot.Position.X || 
-	   house1.Plot.Position.Y != house2.Plot.Position.Y {
-		t.Errorf("Position mismatch: (%v,%v) != (%v,%v)", 
+	if house1.Plot.Position.X != house2.Plot.Position.X ||
+		house1.Plot.Position.Y != house2.Plot.Position.Y {
+		t.Errorf("Position mismatch: (%v,%v) != (%v,%v)",
 			house1.Plot.Position.X, house1.Plot.Position.Y,
 			house2.Plot.Position.X, house2.Plot.Position.Y)
 	}
@@ -349,10 +349,9 @@ func TestCreateHouseDeterministic(t *testing.T) {
 func TestCreateHouseDisabled(t *testing.T) {
 	m := NewManager()
 	m.SetEnabled(false)
-	
+
 	_, err := m.CreateHouse("player1", nil, 12345)
 	if err == nil {
 		t.Error("CreateHouse() with disabled manager should return error")
 	}
 }
-

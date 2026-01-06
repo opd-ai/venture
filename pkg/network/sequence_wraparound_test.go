@@ -362,7 +362,6 @@ func TestLagCompensator_WrapAroundValidateHit(t *testing.T) {
 	// Validate hit at the first snapshot's position (compensating for 300ms latency)
 	hitPos := Position{X: 112, Y: 100} // Close to target's old position
 	valid, err := lc.ValidateHit(1, 2, hitPos, 300*time.Millisecond, 5.0)
-
 	if err != nil {
 		t.Errorf("ValidateHit returned error: %v", err)
 	}

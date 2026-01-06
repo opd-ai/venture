@@ -37,7 +37,7 @@ var log *logrus.Logger
 func init() {
 	log = logrus.New()
 	log.SetReportCaller(true)
-	
+
 	// Set log level from environment variable or default to Info
 	// Respects LOG_LEVEL environment variable (debug, info, warn, error)
 	// This allows runtime configuration without hardcoding debug level

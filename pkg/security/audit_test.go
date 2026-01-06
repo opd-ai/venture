@@ -423,25 +423,25 @@ func TestNewAuditor_WithCustomLogger(t *testing.T) {
 	customLogger := logrus.New()
 	customLogger.SetLevel(logrus.ErrorLevel)
 	customLogger.SetFormatter(&logrus.JSONFormatter{})
-	
+
 	// Create auditor with custom logger
 	auditor := NewAuditor(customLogger)
-	
+
 	if auditor == nil {
 		t.Fatal("NewAuditor returned nil with custom logger")
 	}
-	
+
 	if auditor.logger != customLogger {
 		t.Error("Auditor should use the provided custom logger")
 	}
-	
+
 	// Run audit to ensure it works with custom logger
 	results := auditor.RunFullAudit()
-	
+
 	if results == nil {
 		t.Fatal("RunFullAudit returned nil with custom logger")
 	}
-	
+
 	if results.TotalChecks != 30 {
 		t.Errorf("Expected 30 checks with custom logger, got %d", results.TotalChecks)
 	}
@@ -451,22 +451,22 @@ func TestNewAuditor_WithCustomLogger(t *testing.T) {
 func TestNewAuditor_WithNilLogger(t *testing.T) {
 	// Create auditor with nil logger (should use package-level logger)
 	auditor := NewAuditor(nil)
-	
+
 	if auditor == nil {
 		t.Fatal("NewAuditor returned nil with nil logger")
 	}
-	
+
 	if auditor.logger == nil {
 		t.Error("Auditor logger should not be nil (should use package logger)")
 	}
-	
+
 	// Run audit to ensure it works with package logger
 	results := auditor.RunFullAudit()
-	
+
 	if results == nil {
 		t.Fatal("RunFullAudit returned nil with package logger")
 	}
-	
+
 	if results.TotalChecks != 30 {
 		t.Errorf("Expected 30 checks with package logger, got %d", results.TotalChecks)
 	}
@@ -477,23 +477,23 @@ func TestLoggerConfiguration_EnvironmentVariable(t *testing.T) {
 	// Note: This test verifies the init() function logic but cannot actually
 	// test environment variable changes since init() runs once per package.
 	// The init() function sets the package logger level based on LOG_LEVEL.
-	
+
 	// Verify that the package logger exists and has a valid level
 	if log == nil {
 		t.Fatal("Package logger should be initialized")
 	}
-	
+
 	// The actual level depends on the LOG_LEVEL environment variable
 	// Default should be Info if LOG_LEVEL is not set
 	level := log.GetLevel()
-	
+
 	validLevels := []logrus.Level{
 		logrus.DebugLevel,
 		logrus.InfoLevel,
 		logrus.WarnLevel,
 		logrus.ErrorLevel,
 	}
-	
+
 	found := false
 	for _, validLevel := range validLevels {
 		if level == validLevel {
@@ -501,7 +501,7 @@ func TestLoggerConfiguration_EnvironmentVariable(t *testing.T) {
 			break
 		}
 	}
-	
+
 	if !found {
 		t.Errorf("Package logger has invalid level: %v", level)
 	}

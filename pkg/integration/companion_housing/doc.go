@@ -37,16 +37,16 @@
 // Thread-safe manager for all companion-housing interactions:
 //
 //	manager := companion_housing.NewPetHomeManager()
-//	
+//
 //	// Register furniture
 //	manager.AddBedding(houseID, furnitureID, companion_housing.BeddingQualityHigh)
 //	manager.AddTrainingArea(houseID, furnitureID, companion_housing.TrainingTypeCombat)
 //	manager.AddStorageChest(houseID, furnitureID, 50) // 50 slot capacity
-//	
+//
 //	// Assign companion
 //	manager.AssignCompanionToHouse(companionID, houseID)
 //	manager.AssignCompanionToBed(companionID, beddingID)
-//	
+//
 //	// Calculate bonuses
 //	loyaltyBonus := manager.GetLoyaltyBonus(companionID)
 //	xpMultiplier := manager.GetTrainingBonus(companionID)
@@ -129,33 +129,33 @@
 //
 //	// Initialize manager
 //	manager := companion_housing.NewPetHomeManager()
-//	
+//
 //	// Set up player house with companion furniture
 //	houseID := "house_123"
 //	manager.AddBedding(houseID, "bed_001", companion_housing.BeddingQualityHigh)
 //	manager.AddTrainingArea(houseID, "train_001", companion_housing.TrainingTypeCombat)
 //	manager.AddStorageChest(houseID, "chest_001", 50)
-//	
+//
 //	// Assign companion to house
 //	companionID := uint64(42)
 //	manager.AssignCompanionToHouse(companionID, houseID)
 //	manager.AssignCompanionToBed(companionID, "bed_001")
 //	manager.GrantStorageAccess(companionID, "chest_001")
-//	
+//
 //	// Start training session
 //	manager.StartTrainingSession(companionID, "train_001")
-//	
+//
 //	// Calculate bonuses during gameplay
 //	loyaltyBonus := manager.GetLoyaltyBonus(companionID)
 //	xpMultiplier := manager.GetTrainingBonus(companionID)
-//	
+//
 //	// Apply bonuses to companion
 //	companion.Loyalty += loyaltyBonus * deltaTime
 //	companion.XP = earnedXP * xpMultiplier
-//	
+//
 //	// Record rest when companion uses bed
 //	manager.RecordRest(companionID)
-//	
+//
 //	// End training session
 //	manager.EndTrainingSession(companionID)
 //
@@ -169,7 +169,7 @@
 //	companion.AddComponent(&companion_housing.CompanionHousingComponent{
 //		CompanionID: companion.ID,
 //	})
-//	
+//
 //	// Update component from manager state
 //	if comp, ok := companion.GetComponent("companion_housing"); ok {
 //		housingComp := comp.(*companion_housing.CompanionHousingComponent)

@@ -198,17 +198,17 @@ func (m *Manager) CreateHouse(ownerID string, buildingData interface{}, seed int
 	// Each call creates a new rand.Rand instance, making this safe for concurrent use
 	// as the instance is not shared between goroutines.
 	rng := rand.New(rand.NewSource(seed + int64(len(m.playerPlots[ownerID]))))
-	
+
 	// Distribute houses in a grid pattern with some randomness
 	// Grid cells are spaced by 64 units (average plot size + padding)
 	gridSpacing := 64.0
-	gridX := float64(len(m.playerPlots[ownerID]) % 10)  // 10 houses per row
+	gridX := float64(len(m.playerPlots[ownerID]) % 10) // 10 houses per row
 	gridY := float64(len(m.playerPlots[ownerID]) / 10)
-	
+
 	// Add random offset within the grid cell for variety
 	offsetX := rng.Float64() * (gridSpacing - float64(size))
 	offsetY := rng.Float64() * (gridSpacing - float64(size))
-	
+
 	position.X = gridX*gridSpacing + offsetX
 	position.Y = gridY*gridSpacing + offsetY
 

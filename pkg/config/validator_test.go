@@ -127,13 +127,13 @@ func TestValidator_ValidateDirectory(t *testing.T) {
 	// Create a temporary directory for testing
 	tmpDir := t.TempDir()
 	existingDir := filepath.Join(tmpDir, "existing")
-	if err := os.MkdirAll(existingDir, 0755); err != nil {
+	if err := os.MkdirAll(existingDir, 0o755); err != nil {
 		t.Fatalf("Failed to create test directory: %v", err)
 	}
 
 	// Create a file (not a directory) for testing
 	notADir := filepath.Join(tmpDir, "file.txt")
-	if err := os.WriteFile(notADir, []byte("test"), 0644); err != nil {
+	if err := os.WriteFile(notADir, []byte("test"), 0o644); err != nil {
 		t.Fatalf("Failed to create test file: %v", err)
 	}
 

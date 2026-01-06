@@ -731,7 +731,7 @@ func TestLoader_LoadFromFile_SandboxErrorFormatting(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to marshal mod: %v", err)
 	}
-	if err := os.WriteFile(modPath, data, 0644); err != nil {
+	if err := os.WriteFile(modPath, data, 0o644); err != nil {
 		t.Fatalf("Failed to write mod file: %v", err)
 	}
 

@@ -82,6 +82,11 @@ func NewCircuitBreaker(config CircuitBreakerConfig) *CircuitBreaker {
 
 // Call executes the given function if the circuit breaker allows it
 // Returns an error if the circuit is open or if the function fails
+//
+// Note: The circuit breaker lock is released between beforeRequest() and afterRequest()
+// to avoid holding the lock during the potentially long-running fn() execution.
+// This means the circuit state may change between the check and the result recording,
+// which is acceptable as it only affects edge cases and maintains better performance.
 func (cb *CircuitBreaker) Call(fn func() error) error {
 	if !cb.beforeRequest() {
 		return fmt.Errorf("circuit breaker is open")

@@ -64,6 +64,7 @@ type ConnectionPool struct {
 	logger          *logrus.Entry
 	cleanupTicker   *time.Ticker
 	stopCleanup     chan struct{}
+	cleanupWg       sync.WaitGroup
 }
 
 // NewConnectionPool creates a new connection pool with the given configuration
@@ -206,7 +207,9 @@ func (cp *ConnectionPool) Stats() map[string]interface{} {
 func (cp *ConnectionPool) startCleanup() {
 	cp.cleanupTicker = time.NewTicker(cp.config.CleanupInterval)
 	
+	cp.cleanupWg.Add(1)
 	go func() {
+		defer cp.cleanupWg.Done()
 		for {
 			select {
 			case <-cp.cleanupTicker.C:
@@ -247,12 +250,13 @@ func (cp *ConnectionPool) cleanup() {
 
 // Close closes all connections and stops the cleanup goroutine
 func (cp *ConnectionPool) Close() error {
+	// Stop cleanup goroutine and wait for it to exit
+	close(cp.stopCleanup)
+	cp.cleanupWg.Wait()
+	
 	cp.mu.Lock()
 	defer cp.mu.Unlock()
-	
-	// Stop cleanup goroutine
-	close(cp.stopCleanup)
-	
+
 	// Close all connections
 	for serverID, conn := range cp.connections {
 		cp.logger.WithFields(logrus.Fields{
@@ -260,10 +264,10 @@ func (cp *ConnectionPool) Close() error {
 		}).Debug("Closing connection during pool shutdown")
 		conn.Conn.Close()
 	}
-	
+
 	// Clear the map
 	cp.connections = make(map[string]*PooledConnection)
-	
+
 	cp.logger.Info("Connection pool closed")
 	return nil
 }

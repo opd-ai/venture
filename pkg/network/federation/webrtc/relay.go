@@ -7,6 +7,8 @@ import (
 	"net"
 	"sync"
 	"time"
+
+	"github.com/opd-ai/venture/pkg/recovery"
 )
 
 var (
@@ -222,7 +224,10 @@ func NewRelayManager(strategy SelectionStrategy) *RelayManager {
 	}
 
 	// Start health check loop
-	go rm.healthCheckLoop()
+	go func() {
+		defer recovery.RecoverPanicWithLogger("webrtc_relay", "health check loop", nil)()
+		rm.healthCheckLoop()
+	}()
 
 	return rm
 }
@@ -407,7 +412,10 @@ func (rm *RelayManager) performHealthChecks() {
 	rm.mu.RUnlock()
 
 	for _, node := range nodes {
-		go rm.checkRelayHealth(node)
+		go func(n *RelayNode) {
+			defer recovery.RecoverPanicWithLogger("webrtc_relay", "check relay health", nil)()
+			rm.checkRelayHealth(n)
+		}(node)
 	}
 }
 

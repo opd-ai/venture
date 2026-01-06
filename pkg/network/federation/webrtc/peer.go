@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"sync"
 	"time"
+
+	"github.com/opd-ai/venture/pkg/recovery"
 )
 
 var (
@@ -78,7 +80,10 @@ func (p *Peer) Connect(remotePeerID string) error {
 	defer cancel()
 
 	// Simulate connection establishment
-	go p.simulateConnection(ctx)
+	go func(ctx context.Context) {
+		defer recovery.RecoverPanicWithLogger("webrtc_peer", "simulate connection", nil)()
+		p.simulateConnection(ctx)
+	}(ctx)
 
 	// Wait for connection or timeout
 	for {
@@ -129,7 +134,10 @@ func (p *Peer) simulateConnection(ctx context.Context) {
 	p.stateChangeChan <- StateConnected
 
 	// Start message processing
-	go p.processMessages()
+	go func() {
+		defer recovery.RecoverPanicWithLogger("webrtc_peer", "process messages", nil)()
+		p.processMessages()
+	}()
 }
 
 // processMessages handles sending and receiving messages on the data channel.

@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"sync"
 	"time"
+
+	"github.com/opd-ai/venture/pkg/recovery"
 )
 
 var (
@@ -56,7 +58,10 @@ func (s *SignalingClient) Connect() error {
 
 	// In production, this would establish WebSocket connection
 	// For testing, we simulate the connection
-	go s.processMessages()
+	go func() {
+		defer recovery.RecoverPanicWithLogger("webrtc_signaling", "process messages", nil)()
+		s.processMessages()
+	}()
 
 	return nil
 }
@@ -280,7 +285,10 @@ func NewSignalingServer(address string) *SignalingServer {
 func (s *SignalingServer) Start() error {
 	// In production, this would start HTTP/WebSocket server
 	// For testing, we simulate server operations
-	go s.run()
+	go func() {
+		defer recovery.RecoverPanicWithLogger("webrtc_signaling_server", "run loop", nil)()
+		s.run()
+	}()
 	return nil
 }
 

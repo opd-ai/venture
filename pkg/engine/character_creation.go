@@ -19,6 +19,7 @@ import (
 	"github.com/hajimehoshi/ebiten/v2/vector"
 	"github.com/opd-ai/venture/pkg/mobile"
 	"github.com/opd-ai/venture/pkg/procgen"
+	"github.com/opd-ai/venture/pkg/recovery"
 	"golang.org/x/image/draw"
 	"golang.org/x/image/font/basicfont"
 )
@@ -866,6 +867,7 @@ func (cc *EbitenCharacterCreation) checkPortraitBrowseButton(mouseX, mouseY, but
 	if mouseX >= buttonX && mouseX <= buttonX+buttonW &&
 		mouseY >= buttonY && mouseY <= buttonY+buttonH {
 		go func() {
+			defer recovery.RecoverPanicWithLogger("character_creation", "portrait dialog", nil)()
 			filename, err := OpenPortraitDialog()
 			if err != nil {
 				cc.errorMsg = fmt.Sprintf("Dialog error: %v", err)
@@ -904,6 +906,7 @@ func (cc *EbitenCharacterCreation) checkPortraitBackButton(mouseX, mouseY, butto
 func (cc *EbitenCharacterCreation) handlePortraitKeyboardShortcuts() bool {
 	if inpututil.IsKeyJustPressed(ebiten.KeySpace) || inpututil.IsKeyJustPressed(ebiten.KeyB) {
 		go func() {
+			defer recovery.RecoverPanicWithLogger("character_creation", "portrait keyboard shortcut", nil)()
 			filename, err := OpenPortraitDialog()
 			if err != nil {
 				cc.errorMsg = fmt.Sprintf("Dialog error: %v", err)

@@ -2,8 +2,10 @@ package world
 
 import (
 	"compress/gzip"
+	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"sort"
@@ -86,8 +88,15 @@ func (w *WorldPersistence) Update(deltaTime float64) bool {
 	return false
 }
 
-// SaveWorld saves the world state to disk with backup rotation and incremental saves
+// SaveWorld saves the world state to disk with backup rotation and incremental saves.
+// Supports context-based cancellation for long-running operations.
 func (w *WorldPersistence) SaveWorld(state *PersistentWorldState) error {
+	return w.SaveWorldWithContext(context.Background(), state)
+}
+
+// SaveWorldWithContext saves the world state to disk with context support.
+// The context can be used to cancel long-running save operations.
+func (w *WorldPersistence) SaveWorldWithContext(ctx context.Context, state *PersistentWorldState) error {
 	// Update timestamp
 	state.Timestamp = time.Now().UnixMilli()
 
@@ -107,31 +116,61 @@ func (w *WorldPersistence) SaveWorld(state *PersistentWorldState) error {
 	if err != nil {
 		return fmt.Errorf("failed to create temp file: %w", err)
 	}
-	defer f.Close()
+	
+	// Ensure cleanup on error
+	var saveErr error
+	defer func() {
+		f.Close()
+		if saveErr != nil {
+			// Remove temp file on error
+			os.Remove(tempPath)
+		}
+	}()
+
+	// Check context before expensive operations
+	select {
+	case <-ctx.Done():
+		saveErr = fmt.Errorf("save cancelled: %w", ctx.Err())
+		return saveErr
+	default:
+	}
 
 	// Compress with gzip
 	gz := gzip.NewWriter(f)
-	defer gz.Close()
-
+	
 	// Encode to JSON
 	encoder := json.NewEncoder(gz)
 	if err := encoder.Encode(state); err != nil {
-		return fmt.Errorf("failed to encode state: %w", err)
+		saveErr = fmt.Errorf("failed to encode state: %w", err)
+		gz.Close()
+		return saveErr
+	}
+
+	// Check context before finalizing
+	select {
+	case <-ctx.Done():
+		saveErr = fmt.Errorf("save cancelled before finalize: %w", ctx.Err())
+		gz.Close()
+		return saveErr
+	default:
 	}
 
 	// Flush gzip writer
 	if err := gz.Close(); err != nil {
-		return fmt.Errorf("failed to flush gzip: %w", err)
+		saveErr = fmt.Errorf("failed to flush gzip: %w", err)
+		return saveErr
 	}
 
 	// Close file
 	if err := f.Close(); err != nil {
-		return fmt.Errorf("failed to close temp file: %w", err)
+		saveErr = fmt.Errorf("failed to close temp file: %w", err)
+		return saveErr
 	}
 
 	// Atomic rename
 	if err := os.Rename(tempPath, w.SavePath); err != nil {
-		return fmt.Errorf("failed to rename temp file: %w", err)
+		saveErr = fmt.Errorf("failed to rename temp file: %w", err)
+		return saveErr
 	}
 
 	// Store reference for incremental saves
@@ -140,11 +179,17 @@ func (w *WorldPersistence) SaveWorld(state *PersistentWorldState) error {
 	return nil
 }
 
-// SaveIncremental saves only modified chunks since last save
+// SaveIncremental saves only modified chunks since last save.
+// Supports context-based cancellation.
 func (w *WorldPersistence) SaveIncremental(state *PersistentWorldState) error {
+	return w.SaveIncrementalWithContext(context.Background(), state)
+}
+
+// SaveIncrementalWithContext saves only modified chunks with context support.
+func (w *WorldPersistence) SaveIncrementalWithContext(ctx context.Context, state *PersistentWorldState) error {
 	if w.lastSaveState == nil {
 		// No previous save, do full save
-		return w.SaveWorld(state)
+		return w.SaveWorldWithContext(ctx, state)
 	}
 
 	// Create incremental state with only modified chunks
@@ -168,10 +213,10 @@ func (w *WorldPersistence) SaveIncremental(state *PersistentWorldState) error {
 	modifiedCount := len(incrementalState.ChunkData)
 	totalCount := len(state.ChunkData)
 	if totalCount > 0 && float64(modifiedCount)/float64(totalCount) > 0.5 {
-		return w.SaveWorld(state)
+		return w.SaveWorldWithContext(ctx, state)
 	}
 
-	return w.SaveWorld(incrementalState)
+	return w.SaveWorldWithContext(ctx, incrementalState)
 }
 
 // rotateBackups keeps the last maxBackups save files
@@ -208,26 +253,70 @@ func (w *WorldPersistence) rotateBackups() error {
 	return nil
 }
 
-// copyFile copies a file from src to dst
+// copyFile copies a file from src to dst with proper error handling.
+// Uses io.Copy to handle partial reads/writes and large files efficiently.
 func copyFile(src, dst string) error {
-	data, err := os.ReadFile(src)
+	srcFile, err := os.Open(src)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to open source: %w", err)
 	}
-	return os.WriteFile(dst, data, 0o644)
+	defer srcFile.Close()
+
+	dstFile, err := os.Create(dst)
+	if err != nil {
+		return fmt.Errorf("failed to create destination: %w", err)
+	}
+	
+	// Ensure cleanup on error
+	var copyErr error
+	defer func() {
+		dstFile.Close()
+		if copyErr != nil {
+			// Remove incomplete destination file on error
+			os.Remove(dst)
+		}
+	}()
+
+	// Copy with proper handling of partial writes
+	if _, err := io.Copy(dstFile, srcFile); err != nil {
+		copyErr = fmt.Errorf("failed to copy data: %w", err)
+		return copyErr
+	}
+
+	// Sync to ensure data is written to disk
+	if err := dstFile.Sync(); err != nil {
+		copyErr = fmt.Errorf("failed to sync destination: %w", err)
+		return copyErr
+	}
+
+	return nil
 }
 
-// LoadWorld loads the world state from disk
+// LoadWorld loads the world state from disk.
+// Attempts to load from main save file, falls back to backups on error.
 func (w *WorldPersistence) LoadWorld(seed int64) (*PersistentWorldState, error) {
-	state, err := w.loadFromPath(w.SavePath, seed)
+	return w.LoadWorldWithContext(context.Background(), seed)
+}
+
+// LoadWorldWithContext loads the world state from disk with context support.
+// The context can be used to cancel long-running load operations.
+func (w *WorldPersistence) LoadWorldWithContext(ctx context.Context, seed int64) (*PersistentWorldState, error) {
+	state, err := w.loadFromPathWithContext(ctx, w.SavePath, seed)
 	if err == nil {
 		return state, nil
 	}
 
 	// Try backups if main save fails
 	for i := 1; i <= w.maxBackups; i++ {
+		// Check context before trying next backup
+		select {
+		case <-ctx.Done():
+			return nil, fmt.Errorf("load cancelled: %w", ctx.Err())
+		default:
+		}
+
 		backupPath := fmt.Sprintf("%s.%d", w.SavePath, i)
-		state, backupErr := w.loadFromPath(backupPath, seed)
+		state, backupErr := w.loadFromPathWithContext(ctx, backupPath, seed)
 		if backupErr == nil {
 			// Successfully loaded from backup
 			return state, nil
@@ -238,8 +327,20 @@ func (w *WorldPersistence) LoadWorld(seed int64) (*PersistentWorldState, error) 
 	return nil, err
 }
 
-// loadFromPath loads state from a specific file path
+// loadFromPath loads state from a specific file path (legacy, no context).
 func (w *WorldPersistence) loadFromPath(path string, seed int64) (*PersistentWorldState, error) {
+	return w.loadFromPathWithContext(context.Background(), path, seed)
+}
+
+// loadFromPathWithContext loads state from a specific file path with context support.
+func (w *WorldPersistence) loadFromPathWithContext(ctx context.Context, path string, seed int64) (*PersistentWorldState, error) {
+	// Check context before opening file
+	select {
+	case <-ctx.Done():
+		return nil, fmt.Errorf("load cancelled: %w", ctx.Err())
+	default:
+	}
+
 	f, err := os.Open(path)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -264,6 +365,13 @@ func (w *WorldPersistence) loadFromPath(path string, seed int64) (*PersistentWor
 		return nil, fmt.Errorf("failed to create gzip reader: %w", err)
 	}
 	defer gz.Close()
+
+	// Check context before expensive decode
+	select {
+	case <-ctx.Done():
+		return nil, fmt.Errorf("load cancelled before decode: %w", ctx.Err())
+	default:
+	}
 
 	// Decode JSON
 	var state PersistentWorldState

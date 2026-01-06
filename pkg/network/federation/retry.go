@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math"
 	"math/rand"
+	"strings"
 	"time"
 
 	"github.com/sirupsen/logrus"
@@ -139,7 +140,7 @@ func IsNetworkError(err error) bool {
 	}
 
 	// Check error message for common network error patterns
-	errMsg := err.Error()
+	errMsg := strings.ToLower(err.Error())
 	networkPatterns := []string{
 		"connection refused",
 		"connection reset",
@@ -151,36 +152,10 @@ func IsNetworkError(err error) bool {
 	}
 
 	for _, pattern := range networkPatterns {
-		if containsString(errMsg, pattern) {
+		if strings.Contains(errMsg, pattern) {
 			return true
 		}
 	}
 
-	return false
-}
-
-// containsString checks if a string contains a substring (case-insensitive)
-func containsString(s, substr string) bool {
-	return len(s) >= len(substr) && (s == substr || 
-		(len(s) > len(substr) && findSubstring(s, substr)))
-}
-
-// findSubstring performs a case-insensitive substring search
-func findSubstring(s, substr string) bool {
-	for i := 0; i <= len(s)-len(substr); i++ {
-		match := true
-		for j := 0; j < len(substr); j++ {
-			c1 := s[i+j]
-			c2 := substr[j]
-			// Simple case-insensitive comparison
-			if c1 != c2 && (c1|32) != (c2|32) {
-				match = false
-				break
-			}
-		}
-		if match {
-			return true
-		}
-	}
 	return false
 }

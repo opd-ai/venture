@@ -381,19 +381,26 @@ func CraftFurniture(player *engine.Entity, recipe *CraftingRecipe) (*furniture.F
 	// In a real implementation, this would check player's inventory
 	// and consume materials. For integration testing, we simulate success.
 	
-	// Determine furniture type from first recipe item
-	var furnType string
+	// Determine furniture type based on required items with a fixed priority.
+	// Priority: crystal > fabric > default.
+	hasCrystal := false
+	hasFabric := false
 	for item := range recipe.RequiredItems {
 		if item == "crystal" {
-			furnType = "alchemy_table"
-			break
+			hasCrystal = true
 		}
 		if item == "fabric" {
-			furnType = "bed"
-			break
+			hasFabric = true
 		}
 	}
-	if furnType == "" {
+	
+	var furnType string
+	switch {
+	case hasCrystal:
+		furnType = "alchemy_table"
+	case hasFabric:
+		furnType = "bed"
+	default:
 		furnType = "table"
 	}
 	

@@ -287,12 +287,9 @@ func addQuestToPlayer(player *engine.Entity, buildingQuest *BuildingQuest) bool 
 	}
 	
 	// Convert BuildingQuest to quest.Quest
-	// Note: Using TypeExplore as a generic type for testing purposes.
-	// In production, a dedicated TypeBuild or TypeConstruction would be more appropriate.
 	q := &quest.Quest{
 		ID:          buildingQuest.ID,
 		Name:        "Building Quest",
-		Type:        quest.TypeExplore, // Using explore as a generic type
 		Description: "Build a house for your character",
 		Objectives:  make([]quest.Objective, len(buildingQuest.Objectives)),
 		Status:      quest.StatusActive,

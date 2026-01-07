@@ -313,6 +313,9 @@ type World struct {
 
 	// Logger for ECS operations
 	logger *logrus.Entry
+
+	// Mutex for thread-safe access to entities and metrics
+	mu sync.RWMutex
 }
 
 // NewWorld creates a new game world.
@@ -625,4 +628,47 @@ func (w *World) GetSystems() []System {
 // GetLogger returns the world's logger entry.
 func (w *World) GetLogger() *logrus.Entry {
 	return w.logger
+}
+
+// GetEntityCount returns the total number of entities in the world.
+// Thread-safe for concurrent access from metrics HTTP handler.
+func (w *World) GetEntityCount() int {
+	w.mu.RLock()
+	defer w.mu.RUnlock()
+	return len(w.entities)
+}
+
+// GetActiveQuestCount returns the number of entities with active quest components.
+// This provides a metric for game progression and player engagement.
+// Thread-safe for concurrent access from metrics HTTP handler.
+func (w *World) GetActiveQuestCount() int {
+	w.mu.RLock()
+	defer w.mu.RUnlock()
+	
+	count := 0
+	for _, entity := range w.entities {
+		if entity.HasComponent("quest") {
+			count++
+		}
+	}
+	return count
+}
+
+// GetTradeVolume returns the total number of completed trades.
+// This metric tracks economic activity in the game world.
+// Thread-safe for concurrent access from metrics HTTP handler.
+func (w *World) GetTradeVolume() uint64 {
+	w.mu.RLock()
+	defer w.mu.RUnlock()
+	
+	// Sum up trade counters from all entities with trade components
+	var total uint64
+	for _, entity := range w.entities {
+		if comp, ok := entity.GetComponent("trade"); ok {
+			if tradeComp, ok := comp.(*TradeComponent); ok && tradeComp != nil {
+				total += tradeComp.CompletedTrades
+			}
+		}
+	}
+	return total
 }

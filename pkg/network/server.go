@@ -125,6 +125,13 @@ type TCPServer struct {
 	stateSeq uint32
 	stateMu  sync.Mutex
 
+	// Metrics tracking
+	metricsMu       sync.RWMutex
+	totalBytesSent  uint64
+	totalBytesRecv  uint64
+	totalPacketsSent uint64
+	totalPacketsRecv uint64
+
 	// Logger for network operations
 	logger *logrus.Entry
 }
@@ -653,12 +660,15 @@ func (s *TCPServer) readMessageLength(client *clientConnection, buf []byte) (uin
 }
 
 func (s *TCPServer) readMessageData(client *clientConnection, buf []byte, msgLen uint32) error {
-	if _, err := client.conn.Read(buf[:msgLen]); err != nil {
+	n, err := client.conn.Read(buf[:msgLen])
+	if err != nil {
 		if s.IsRunning() && client.isConnected() {
 			s.errors <- fmt.Errorf("player %d read data error: %w", client.playerID, err)
 		}
 		return err
 	}
+	// Record bytes received for metrics
+	s.recordBytesReceived(uint64(n))
 	return nil
 }
 
@@ -759,12 +769,15 @@ func (s *TCPServer) createLengthPrefix(length int) []byte {
 
 // writeToClient writes data to a client connection with error handling.
 func (s *TCPServer) writeToClient(client *clientConnection, data []byte) bool {
-	if _, err := client.conn.Write(data); err != nil {
+	n, err := client.conn.Write(data)
+	if err != nil {
 		if s.IsRunning() && client.isConnected() {
 			s.errors <- fmt.Errorf("player %d write error: %w", client.playerID, err)
 		}
 		return false
 	}
+	// Record bytes sent for metrics
+	s.recordBytesSent(uint64(n))
 	return true
 }
 
@@ -880,6 +893,55 @@ func (s *TCPServer) GetBufferStats() map[string]BufferSnapshot {
 	s.clientsMu.RUnlock()
 
 	return stats
+}
+
+// GetConnectedClients returns the number of currently connected clients.
+func (s *TCPServer) GetConnectedClients() int {
+	return s.GetPlayerCount()
+}
+
+// GetTotalBytesSent returns the total number of bytes sent to all clients.
+func (s *TCPServer) GetTotalBytesSent() uint64 {
+	s.metricsMu.RLock()
+	defer s.metricsMu.RUnlock()
+	return s.totalBytesSent
+}
+
+// GetTotalBytesReceived returns the total number of bytes received from all clients.
+func (s *TCPServer) GetTotalBytesReceived() uint64 {
+	s.metricsMu.RLock()
+	defer s.metricsMu.RUnlock()
+	return s.totalBytesRecv
+}
+
+// GetPacketsSent returns the total number of packets sent to all clients.
+func (s *TCPServer) GetPacketsSent() uint64 {
+	s.metricsMu.RLock()
+	defer s.metricsMu.RUnlock()
+	return s.totalPacketsSent
+}
+
+// GetPacketsReceived returns the total number of packets received from all clients.
+func (s *TCPServer) GetPacketsReceived() uint64 {
+	s.metricsMu.RLock()
+	defer s.metricsMu.RUnlock()
+	return s.totalPacketsRecv
+}
+
+// recordBytesSent increments the total bytes sent counter.
+func (s *TCPServer) recordBytesSent(bytes uint64) {
+	s.metricsMu.Lock()
+	defer s.metricsMu.Unlock()
+	s.totalBytesSent += bytes
+	s.totalPacketsSent++
+}
+
+// recordBytesReceived increments the total bytes received counter.
+func (s *TCPServer) recordBytesReceived(bytes uint64) {
+	s.metricsMu.Lock()
+	defer s.metricsMu.Unlock()
+	s.totalBytesRecv += bytes
+	s.totalPacketsRecv++
 }
 
 // Compile-time interface check

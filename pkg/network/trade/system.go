@@ -470,6 +470,14 @@ func (s *TradeSystem) finalizeTradeSuccess(proposerID, recipientID uint64, propo
 	s.recordTrade(proposerTradeComp, recipientID, true)
 	s.recordTrade(recipientTradeComp, proposerID, true)
 
+	// Increment completed trades counter for metrics
+	if proposerTradeComp != nil {
+		proposerTradeComp.CompletedTrades++
+	}
+	if recipientTradeComp != nil {
+		recipientTradeComp.CompletedTrades++
+	}
+
 	s.clearTrade(proposerID)
 	s.clearTrade(recipientID)
 }

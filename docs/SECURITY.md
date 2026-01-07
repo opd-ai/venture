@@ -53,8 +53,11 @@ This document outlines the security model, threat mitigation strategies, and vul
 **T1: Input Injection**
 - **Attack:** Malicious input via keyboard/mouse/chat (SQL injection, XSS equivalent)
 - **Impact:** Code execution, data corruption, denial of service
-- **Likelihood:** Medium (requires exploitable parsing bug)
-- **Mitigation:** Input sanitization, bounds checking, no eval() or similar constructs
+- **Likelihood:** Low (comprehensive input validation implemented)
+- **Mitigation:** Input sanitization (pkg/validation), bounds checking, no eval() or similar constructs
+  - Chat: HTML/control character removal, profanity filtering, length limits (1-500 chars)
+  - Trade: Item ID format validation, duplicate detection, count limits (max 100 items)
+  - Rate limiting: 10 requests/second per client to prevent spam
 
 **T2: Memory Manipulation (Cheating)**
 - **Attack:** External tools modify game memory (health, gold, XP)
@@ -73,8 +76,11 @@ This document outlines the security model, threat mitigation strategies, and vul
 **T4: Denial of Service (DoS)**
 - **Attack:** Flood server with requests, exhaust resources
 - **Impact:** Server crash, unavailability for legitimate players
-- **Likelihood:** Medium (multiplayer servers are targets)
-- **Mitigation:** Rate limiting (10 msg/s per player), connection throttling, IP bans
+- **Likelihood:** Low (rate limiting implemented)
+- **Mitigation:** Rate limiting (10 msg/s per player via pkg/validation.RateLimiter), connection throttling, IP bans
+  - Chat: 10 messages/second per player
+  - Trade: 10 trade proposals/second per player
+  - Automatic client tracking with 10-minute timeout for inactive clients
 
 **T5: Unauthorized Access**
 - **Attack:** Exploit authentication bypass, privilege escalation
@@ -122,14 +128,39 @@ This document outlines the security model, threat mitigation strategies, and vul
 
 ### Input Validation
 
-**All Inputs Validated:**
+**All Inputs Validated (pkg/validation):**
+
+The `pkg/validation` package provides comprehensive input sanitization and validation for all user inputs. All network-facing systems integrate validation before processing user data.
+
+**Chat Message Validation:**
 ```go
-// Example: Chat message validation
-func validateChatMessage(msg string) error {
-    if len(msg) > 500 { return errors.New("message too long") }
-    if containsNullBytes(msg) { return errors.New("invalid characters") }
-    if len(strings.TrimSpace(msg)) == 0 { return errors.New("empty message") }
-    return nil
+// Chat messages are validated for:
+// - Length: 1-500 characters (Unicode-aware)
+// - Content: Profanity filtering
+// - Safety: HTML/control character removal
+validator := validation.NewChatValidator()
+sanitized, err := validator.ValidateAndSanitize(message)
+if err != nil {
+    return fmt.Errorf("message validation failed: %w", err)
+}
+```
+
+**Chat Sanitization:**
+- HTML tags removed (prevents XSS-like attacks in UI rendering)
+- Control characters stripped (prevents terminal injection)
+- Whitespace normalized (collapses multiple spaces)
+- Profanity filtered (configurable word list)
+
+**Trade Request Validation:**
+```go
+// Trade item IDs validated for:
+// - Format: Alphanumeric, hyphens, underscores, equals (base64 compatible)
+// - Length: 1-128 characters
+// - Duplicates: Rejected
+// - Count: Maximum 100 items per trade
+validator := validation.NewTradeValidator()
+if err := validator.ValidateTradeRequest(offeredItems, requestedItems); err != nil {
+    return fmt.Errorf("trade validation failed: %w", err)
 }
 ```
 
@@ -137,26 +168,45 @@ func validateChatMessage(msg string) error {
 - All array/slice access: `if idx < 0 || idx >= len(arr) { return error }`
 - All numeric inputs: `if value < MIN || value > MAX { return error }`
 
-**Sanitization:**
-- Chat messages: Strip control characters, limit length
+**Additional Sanitization:**
 - Player names: Alphanumeric + spaces only, 3-20 characters
 - File paths: Reject `../` and absolute paths
 
 ### Rate Limiting
 
-**Per-Player Limits:**
-- Chat: 1 msg/3s (global), 1 msg/1s (local), 1 msg/0.5s (party)
+**Per-Player Limits (pkg/validation.RateLimiter):**
+
+Token bucket rate limiting implemented with thread-safe concurrent access. All network-facing systems enforce rate limits to prevent spam and DoS attacks.
+
+**Current Limits:**
+- Chat messages: 10 msg/second (pkg/network/chat)
+- Trade proposals: 10 requests/second (pkg/network/trade)
 - Images: 1 upload/60s
-- Trades: 5 proposals/minute
 - Server transfers: 10/minute (per server)
+
+**Implementation:**
+```go
+// Rate limiter with 10 requests per second
+limiter := validation.NewRateLimiter(10, time.Second)
+if !limiter.Allow(clientID) {
+    return fmt.Errorf("rate limit exceeded")
+}
+```
+
+**Features:**
+- Token bucket algorithm (sliding window)
+- Per-client tracking with automatic cleanup
+- Thread-safe concurrent access
+- Configurable rate and time window
 
 **Per-IP Limits:**
 - Connection attempts: 10/minute
 - Failed logins: 5/10 minutes (temporary ban)
 
 **Enforcement:**
-- Token bucket algorithm (configurable burst)
-- Exponential backoff for violations (30s → 60s → 120s → 600s max)
+- Requests exceeding limit return error immediately
+- Client statistics tracked for monitoring
+- Automatic cleanup of inactive clients (10 minute timeout)
 
 ### Encryption
 

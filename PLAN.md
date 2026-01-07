@@ -163,11 +163,17 @@ All Phase 1 deliverables completed successfully:
   - ✅ Documentation in docs/ERROR_HANDLING.md
   - ✅ Working example in examples/error_handling_demo.go
   - ✅ Framework ready for incremental adoption across codebase
-- [ ] Add input sanitization and validation (file: pkg/network/chat/chat.go, pkg/network/trade/trade.go)
-  - Validate all user inputs (chat messages, trade offers, item IDs)
-  - Prevent injection attacks (SQL-like, command injection in serialized data)
-  - Rate limiting per client (10 msg/s, documented in SECURITY.md)
-  - Implement content filtering for inappropriate chat messages
+- [x] Add input sanitization and validation (files: pkg/validation/*.go, pkg/network/chat/system.go, pkg/network/trade/system.go)
+  - ✅ Validate all user inputs (chat messages, trade offers, item IDs)
+  - ✅ Prevent injection attacks (HTML/control character removal, format validation)
+  - ✅ Rate limiting per client (10 msg/s via pkg/validation.RateLimiter, documented in SECURITY.md)
+  - ✅ Implement content filtering for inappropriate chat messages (profanity filtering)
+  - ✅ Created comprehensive validation package (98.4% test coverage)
+  - ✅ ChatValidator: Length (1-500 chars), profanity filtering, HTML/control char removal
+  - ✅ TradeValidator: Item ID format (alphanumeric+_-=), length (1-128), duplicate detection, count limits (max 100)
+  - ✅ RateLimiter: Token bucket per-client rate limiting with automatic cleanup
+  - ✅ Integration tests pass (chat: 88.5% coverage, trade: 71.0% coverage)
+  - ✅ Updated SECURITY.md with validation details
 - [ ] Implement database/save file corruption recovery (file: pkg/saveload/*.go)
   - Add checksum validation for all save files
   - Create backup copies before overwriting saves

@@ -1,6 +1,7 @@
 package observability
 
 import (
+	"fmt"
 	"io"
 	"net/http"
 	"strings"
@@ -396,3 +397,281 @@ func TestConcurrentAccess(t *testing.T) {
 		<-done
 	}
 }
+
+// Mock readiness checker for testing
+
+type mockReadinessChecker struct {
+	name string
+	err  error
+}
+
+func (m *mockReadinessChecker) Check() (string, error) {
+	return m.name, m.err
+}
+
+func TestRegisterReadinessChecker(t *testing.T) {
+	exporter := NewMetricsExporter(":29090")
+	checker := &mockReadinessChecker{name: "test", err: nil}
+	
+	exporter.RegisterReadinessChecker(checker)
+	
+	if len(exporter.readinessCheckers) != 1 {
+		t.Errorf("Expected 1 readiness checker, got %d", len(exporter.readinessCheckers))
+	}
+	if exporter.readinessCheckers[0] != checker {
+		t.Error("Readiness checker not registered correctly")
+	}
+}
+
+func TestReadyEndpointAllChecksPass(t *testing.T) {
+	exporter := NewMetricsExporter(":29091")
+	
+	// Register checkers that pass
+	exporter.RegisterReadinessChecker(&mockReadinessChecker{name: "database", err: nil})
+	exporter.RegisterReadinessChecker(&mockReadinessChecker{name: "federation", err: nil})
+	
+	if err := exporter.Start(); err != nil {
+		t.Fatalf("Failed to start exporter: %v", err)
+	}
+	defer exporter.Stop()
+	
+	time.Sleep(100 * time.Millisecond)
+	
+	resp, err := http.Get("http://localhost:29091/ready")
+	if err != nil {
+		t.Fatalf("Failed to GET /ready: %v", err)
+	}
+	defer resp.Body.Close()
+	
+	if resp.StatusCode != http.StatusOK {
+		t.Errorf("Expected status 200, got %d", resp.StatusCode)
+	}
+	
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		t.Fatalf("Failed to read response body: %v", err)
+	}
+	
+	output := string(body)
+	if !strings.Contains(output, `"status":"ready"`) {
+		t.Errorf("Expected ready status in output, got: %s", output)
+	}
+}
+
+func TestReadyEndpointCheckFails(t *testing.T) {
+	exporter := NewMetricsExporter(":29092")
+	
+	// Register checkers with one that fails
+	exporter.RegisterReadinessChecker(&mockReadinessChecker{name: "database", err: nil})
+	exporter.RegisterReadinessChecker(&mockReadinessChecker{name: "federation", err: fmt.Errorf("connection timeout")})
+	
+	if err := exporter.Start(); err != nil {
+		t.Fatalf("Failed to start exporter: %v", err)
+	}
+	defer exporter.Stop()
+	
+	time.Sleep(100 * time.Millisecond)
+	
+	resp, err := http.Get("http://localhost:29092/ready")
+	if err != nil {
+		t.Fatalf("Failed to GET /ready: %v", err)
+	}
+	defer resp.Body.Close()
+	
+	if resp.StatusCode != http.StatusServiceUnavailable {
+		t.Errorf("Expected status 503, got %d", resp.StatusCode)
+	}
+	
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		t.Fatalf("Failed to read response body: %v", err)
+	}
+	
+	output := string(body)
+	if !strings.Contains(output, `"status":"not_ready"`) {
+		t.Errorf("Expected not_ready status in output, got: %s", output)
+	}
+	if !strings.Contains(output, "federation") {
+		t.Errorf("Expected federation in failed checks, got: %s", output)
+	}
+	if !strings.Contains(output, "connection timeout") {
+		t.Errorf("Expected error message in output, got: %s", output)
+	}
+}
+
+func TestReadyEndpointNoCheckers(t *testing.T) {
+	exporter := NewMetricsExporter(":29093")
+	
+	// Don't register any checkers
+	if err := exporter.Start(); err != nil {
+		t.Fatalf("Failed to start exporter: %v", err)
+	}
+	defer exporter.Stop()
+	
+	time.Sleep(100 * time.Millisecond)
+	
+	resp, err := http.Get("http://localhost:29093/ready")
+	if err != nil {
+		t.Fatalf("Failed to GET /ready: %v", err)
+	}
+	defer resp.Body.Close()
+	
+	// Should be ready if no checks are registered
+	if resp.StatusCode != http.StatusOK {
+		t.Errorf("Expected status 200, got %d", resp.StatusCode)
+	}
+	
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		t.Fatalf("Failed to read response body: %v", err)
+	}
+	
+	output := string(body)
+	if !strings.Contains(output, `"status":"ready"`) {
+		t.Errorf("Expected ready status in output, got: %s", output)
+	}
+}
+
+func TestStatusEndpoint(t *testing.T) {
+	exporter := NewMetricsExporter(":29094")
+	
+	// Register mock sources
+	exporter.RegisterPerformanceMonitor(&mockPerformanceMonitor{
+		fps:       60.0,
+		frameTime: 16.67,
+		memoryMB:  120,
+	})
+	exporter.RegisterNetworkServer(&mockNetworkServer{
+		clients:       4,
+		bytesSent:     102400,
+		bytesReceived: 204800,
+		packetsSent:   1000,
+		packetsRecv:   2000,
+	})
+	exporter.RegisterWorld(&mockWorld{
+		entityCount: 2000,
+		questCount:  15,
+		tradeVolume: 10000,
+	})
+	
+	if err := exporter.Start(); err != nil {
+		t.Fatalf("Failed to start exporter: %v", err)
+	}
+	defer exporter.Stop()
+	
+	time.Sleep(100 * time.Millisecond)
+	
+	resp, err := http.Get("http://localhost:29094/status")
+	if err != nil {
+		t.Fatalf("Failed to GET /status: %v", err)
+	}
+	defer resp.Body.Close()
+	
+	if resp.StatusCode != http.StatusOK {
+		t.Errorf("Expected status 200, got %d", resp.StatusCode)
+	}
+	
+	contentType := resp.Header.Get("Content-Type")
+	if contentType != "application/json" {
+		t.Errorf("Expected Content-Type application/json, got %s", contentType)
+	}
+	
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		t.Fatalf("Failed to read response body: %v", err)
+	}
+	
+	output := string(body)
+	
+	// Verify JSON structure and key fields
+	tests := []struct {
+		name  string
+		field string
+	}{
+		{"status", `"status":"ok"`},
+		{"uptime", `"uptime_seconds"`},
+		{"started_at", `"started_at"`},
+		{"fps", `"fps":60.00`},
+		{"frame_time", `"frame_time_ms":16.67`},
+		{"memory", `"memory_mb":120`},
+		{"connected_players", `"connected_players":4`},
+		{"bytes_sent", `"bytes_sent":102400`},
+		{"bytes_received", `"bytes_received":204800`},
+		{"entity_count", `"entity_count":2000`},
+		{"active_quests", `"active_quests":15`},
+		{"trade_volume", `"trade_volume":10000`},
+		{"goroutines", `"goroutines"`},
+		{"heap_alloc", `"heap_alloc_bytes"`},
+		{"gc_runs", `"gc_runs"`},
+	}
+	
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if !strings.Contains(output, tt.field) {
+				t.Errorf("Expected field %q in status output, not found. Output: %s", tt.field, output)
+			}
+		})
+	}
+}
+
+func TestStatusEndpointNoSources(t *testing.T) {
+	exporter := NewMetricsExporter(":29095")
+	
+	if err := exporter.Start(); err != nil {
+		t.Fatalf("Failed to start exporter: %v", err)
+	}
+	defer exporter.Stop()
+	
+	time.Sleep(100 * time.Millisecond)
+	
+	resp, err := http.Get("http://localhost:29095/status")
+	if err != nil {
+		t.Fatalf("Failed to GET /status: %v", err)
+	}
+	defer resp.Body.Close()
+	
+	if resp.StatusCode != http.StatusOK {
+		t.Errorf("Expected status 200, got %d", resp.StatusCode)
+	}
+	
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		t.Fatalf("Failed to read response body: %v", err)
+	}
+	
+	output := string(body)
+	
+	// Should still have basic fields even without sources
+	if !strings.Contains(output, `"status":"ok"`) {
+		t.Error("Expected status ok even without sources")
+	}
+	if !strings.Contains(output, `"uptime_seconds"`) {
+		t.Error("Expected uptime even without sources")
+	}
+	if !strings.Contains(output, `"runtime"`) {
+		t.Error("Expected runtime metrics even without sources")
+	}
+}
+
+func TestReadyEndpointContentType(t *testing.T) {
+	exporter := NewMetricsExporter(":29096")
+	
+	if err := exporter.Start(); err != nil {
+		t.Fatalf("Failed to start exporter: %v", err)
+	}
+	defer exporter.Stop()
+	
+	time.Sleep(100 * time.Millisecond)
+	
+	resp, err := http.Get("http://localhost:29096/ready")
+	if err != nil {
+		t.Fatalf("Failed to GET /ready: %v", err)
+	}
+	defer resp.Body.Close()
+	
+	contentType := resp.Header.Get("Content-Type")
+	if contentType != "application/json" {
+		t.Errorf("Expected Content-Type application/json, got %s", contentType)
+	}
+}
+

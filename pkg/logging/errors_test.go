@@ -42,8 +42,7 @@ func TestErrorLogger(t *testing.T) {
 			wantFields: []string{
 				"error_type",
 				"retryable",
-				"host",
-				"port",
+				"error_context",
 			},
 		},
 	}
@@ -128,7 +127,7 @@ func TestErrorLogger_JSONOutput(t *testing.T) {
 	}
 
 	// Verify fields are present
-	expectedFields := []string{"error_type", "correlation_id", "host", "port", "retryable"}
+	expectedFields := []string{"error_type", "correlation_id", "error_context", "retryable"}
 	for _, field := range expectedFields {
 		if _, exists := logEntry[field]; !exists {
 			t.Errorf("JSON output missing field %s", field)
@@ -142,8 +141,18 @@ func TestErrorLogger_JSONOutput(t *testing.T) {
 	if logEntry["correlation_id"] != "test-correlation-123" {
 		t.Errorf("correlation_id = %v, want test-correlation-123", logEntry["correlation_id"])
 	}
-	if logEntry["host"] != "example.com" {
-		t.Errorf("host = %v, want example.com", logEntry["host"])
+	
+	// Verify context is nested
+	errorContext, ok := logEntry["error_context"].(map[string]interface{})
+	if !ok {
+		t.Fatalf("error_context is not a map: %T", logEntry["error_context"])
+	}
+	if errorContext["host"] != "example.com" {
+		t.Errorf("error_context.host = %v, want example.com", errorContext["host"])
+	}
+	// Port is a float64 in JSON
+	if port, ok := errorContext["port"].(float64); !ok || port != 8080 {
+		t.Errorf("error_context.port = %v, want 8080", errorContext["port"])
 	}
 }
 

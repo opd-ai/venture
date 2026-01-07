@@ -21,9 +21,9 @@ func ErrorLogger(logger *logrus.Logger, err error) *logrus.Entry {
 			fields["correlation_id"] = ventureErr.CorrelationID
 		}
 
-		// Add error context as individual fields
-		for key, value := range ventureErr.Context {
-			fields[key] = value
+		// Add error context as a nested object to avoid field name collisions
+		if len(ventureErr.Context) > 0 {
+			fields["error_context"] = ventureErr.Context
 		}
 	}
 
@@ -31,7 +31,7 @@ func ErrorLogger(logger *logrus.Logger, err error) *logrus.Entry {
 }
 
 // LogError logs an error with full context extraction.
-// Uses Info level for retryable errors, Error level for non-retryable.
+// Uses Warn level for retryable errors, Error level for non-retryable.
 func LogError(logger *logrus.Logger, err error, message string) {
 	entry := ErrorLogger(logger, err)
 

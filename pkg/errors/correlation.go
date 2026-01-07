@@ -2,6 +2,7 @@ package errors
 
 import (
 	"context"
+	"fmt"
 	"sync/atomic"
 
 	"github.com/google/uuid"
@@ -35,7 +36,7 @@ func NewSequentialCorrelationID() string {
 // formatSequentialID formats a counter into a correlation ID string.
 func formatSequentialID(counter uint64) string {
 	// Format as "seq-0000000001" for readability and sortability
-	return uuid.NewString()[:8] + "-seq" // Use first 8 chars of UUID + seq suffix for uniqueness
+	return fmt.Sprintf("seq-%010d", counter)
 }
 
 // WithCorrelationID returns a new context with the given correlation ID.
@@ -61,31 +62,27 @@ func GetOrCreateCorrelationID(ctx context.Context) string {
 	return NewCorrelationID()
 }
 
-// WrapWithContext wraps an error with a correlation ID from context.
-// If the error is already a VentureError with a correlation ID, it's returned as-is.
-// Otherwise, creates a new VentureError with the correlation ID from context.
+// WrapWithContext wraps an error with a new VentureError that includes a correlation ID.
+// If the wrapped error is already a VentureError with a correlation ID, that ID is preserved.
+// Otherwise, the correlation ID is taken from the context if available.
+// Always creates a new error layer so errType and message are honored.
 func WrapWithContext(ctx context.Context, err error, errType ErrorType, message string) *VentureError {
 	if err == nil {
 		return nil
 	}
 
-	// Check if error is already a VentureError
-	if ventureErr, ok := AsVentureError(err); ok {
-		// If it already has a correlation ID, return it
-		if ventureErr.CorrelationID != "" {
-			return ventureErr
-		}
-		// Add correlation ID from context
-		if id := GetCorrelationID(ctx); id != "" {
-			ventureErr.CorrelationID = id
-		}
-		return ventureErr
+	// Prefer an existing correlation ID from the wrapped error, if present.
+	var correlationID string
+	if innerVentureErr, ok := AsVentureError(err); ok && innerVentureErr.CorrelationID != "" {
+		correlationID = innerVentureErr.CorrelationID
+	} else {
+		correlationID = GetCorrelationID(ctx)
 	}
 
-	// Create new VentureError with correlation ID from context
+	// Always create a new VentureError layer so errType and message are honored.
 	ventureErr := Wrap(err, errType, message)
-	if id := GetCorrelationID(ctx); id != "" {
-		ventureErr.CorrelationID = id
+	if correlationID != "" {
+		ventureErr.CorrelationID = correlationID
 	}
 	return ventureErr
 }

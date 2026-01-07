@@ -139,6 +139,19 @@ func TestWrapWithContext(t *testing.T) {
 		if ventureErr.CorrelationID != existingID {
 			t.Errorf("CorrelationID = %s, want %s (should preserve existing)", ventureErr.CorrelationID, existingID)
 		}
+		
+		// Should create a new wrapper with the specified type and message
+		if ventureErr.Type != ErrorTypeTimeout {
+			t.Errorf("Type = %v, want %v", ventureErr.Type, ErrorTypeTimeout)
+		}
+		if ventureErr.Message != "wrapped" {
+			t.Errorf("Message = %s, want wrapped", ventureErr.Message)
+		}
+		
+		// Should preserve error chain
+		if !errors.Is(ventureErr, baseErr) {
+			t.Error("Error chain should be preserved")
+		}
 	})
 
 	t.Run("VentureError without correlation ID", func(t *testing.T) {
@@ -152,6 +165,19 @@ func TestWrapWithContext(t *testing.T) {
 		// Should add correlation ID from context
 		if ventureErr.CorrelationID != testID {
 			t.Errorf("CorrelationID = %s, want %s", ventureErr.CorrelationID, testID)
+		}
+		
+		// Should create a new wrapper with the specified type and message
+		if ventureErr.Type != ErrorTypeTimeout {
+			t.Errorf("Type = %v, want %v", ventureErr.Type, ErrorTypeTimeout)
+		}
+		if ventureErr.Message != "wrapped" {
+			t.Errorf("Message = %s, want wrapped", ventureErr.Message)
+		}
+		
+		// Should preserve error chain
+		if !errors.Is(ventureErr, baseErr) {
+			t.Error("Error chain should be preserved")
 		}
 	})
 }

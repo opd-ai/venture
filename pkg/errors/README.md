@@ -81,7 +81,7 @@ err := errors.Network("connection failed").
     WithContext("host", "example.com")
 
 logging.LogError(logger, err, "operation failed")
-// Automatically logs: error_type, correlation_id, host, retryable
+// Automatically logs: error_type, correlation_id, error_context={host:...}, retryable
 ```
 
 ### With Context

@@ -94,7 +94,7 @@ err := errors.Network("connection failed").
 
 // Automatic extraction of error fields for logging
 logging.ErrorLogger(logger, err).Error("network operation failed")
-// Output includes: error_type=Network, correlation_id=req-123, host=game-server.example.com, port=8080
+// Output includes: error_type=Network, correlation_id=req-123, error_context={host:game-server.example.com, port:8080}
 
 // Or use convenience function
 logging.LogError(logger, err, "network operation failed")

@@ -1,0 +1,294 @@
+package validation
+
+import (
+	"strings"
+	"testing"
+)
+
+func TestChatValidator_ValidateMessage(t *testing.T) {
+	validator := NewChatValidator()
+
+	tests := []struct {
+		name    string
+		message string
+		wantErr bool
+		errMsg  string
+	}{
+		{
+			name:    "valid message",
+			message: "Hello world!",
+			wantErr: false,
+		},
+		{
+			name:    "empty message",
+			message: "",
+			wantErr: true,
+			errMsg:  "cannot be empty",
+		},
+		{
+			name:    "whitespace only",
+			message: "   ",
+			wantErr: true,
+			errMsg:  "cannot be empty",
+		},
+		{
+			name:    "message too long",
+			message: strings.Repeat("a", MaxChatMessageLength+1),
+			wantErr: true,
+			errMsg:  "too long",
+		},
+		{
+			name:    "max length message",
+			message: strings.Repeat("a", MaxChatMessageLength),
+			wantErr: false,
+		},
+		{
+			name:    "profanity detected",
+			message: "This contains badword1 which is filtered",
+			wantErr: true,
+			errMsg:  "inappropriate content",
+		},
+		{
+			name:    "profanity case insensitive",
+			message: "This contains BADWORD1 which is filtered",
+			wantErr: true,
+			errMsg:  "inappropriate content",
+		},
+		{
+			name:    "unicode message",
+			message: "Hello 世界! 🎮",
+			wantErr: false,
+		},
+		{
+			name:    "long unicode message",
+			message: strings.Repeat("世", MaxChatMessageLength),
+			wantErr: false,
+		},
+		{
+			name:    "too long unicode message",
+			message: strings.Repeat("世", MaxChatMessageLength+1),
+			wantErr: true,
+			errMsg:  "too long",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := validator.ValidateMessage(tt.message)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("ValidateMessage() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if err != nil && tt.errMsg != "" && !strings.Contains(err.Error(), tt.errMsg) {
+				t.Errorf("ValidateMessage() error = %v, want error containing %q", err, tt.errMsg)
+			}
+		})
+	}
+}
+
+func TestChatValidator_SanitizeMessage(t *testing.T) {
+	validator := NewChatValidator()
+
+	tests := []struct {
+		name     string
+		message  string
+		expected string
+	}{
+		{
+			name:     "no sanitization needed",
+			message:  "Hello world!",
+			expected: "Hello world!",
+		},
+		{
+			name:     "remove HTML tags",
+			message:  "Hello <script>alert('xss')</script> world",
+			expected: "Hello alert('xss') world",
+		},
+		{
+			name:     "remove control characters",
+			message:  "Hello\x00\x01world",
+			expected: "Helloworld",
+		},
+		{
+			name:     "normalize whitespace",
+			message:  "Hello    world   !",
+			expected: "Hello world !",
+		},
+		{
+			name:     "trim whitespace",
+			message:  "  Hello world  ",
+			expected: "Hello world",
+		},
+		{
+			name:     "multiple HTML tags",
+			message:  "<b>Bold</b> <i>Italic</i> <u>Underline</u>",
+			expected: "Bold Italic Underline",
+		},
+		{
+			name:     "nested HTML tags",
+			message:  "<div><span>Test</span></div>",
+			expected: "Test",
+		},
+		{
+			name:     "control chars and HTML",
+			message:  "<script>\x00\x1F</script>Clean text",
+			expected: "Clean text",
+		},
+		{
+			name:     "unicode preserved",
+			message:  "Hello 世界! 🎮",
+			expected: "Hello 世界! 🎮",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := validator.SanitizeMessage(tt.message)
+			if result != tt.expected {
+				t.Errorf("SanitizeMessage() = %q, want %q", result, tt.expected)
+			}
+		})
+	}
+}
+
+func TestChatValidator_ValidateAndSanitize(t *testing.T) {
+	validator := NewChatValidator()
+
+	tests := []struct {
+		name     string
+		message  string
+		wantErr  bool
+		expected string
+	}{
+		{
+			name:     "valid message sanitized",
+			message:  "  Hello world!  ",
+			wantErr:  false,
+			expected: "Hello world!",
+		},
+		{
+			name:     "HTML removed and validated",
+			message:  "<b>Hello</b> world",
+			wantErr:  false,
+			expected: "Hello world",
+		},
+		{
+			name:    "empty after sanitization",
+			message: "<div></div>",
+			wantErr: true,
+		},
+		{
+			name:    "too long after sanitization",
+			message: strings.Repeat("a", MaxChatMessageLength+10),
+			wantErr: true,
+		},
+		{
+			name:    "profanity after sanitization",
+			message: "  badword1  ",
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result, err := validator.ValidateAndSanitize(tt.message)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("ValidateAndSanitize() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !tt.wantErr && result != tt.expected {
+				t.Errorf("ValidateAndSanitize() = %q, want %q", result, tt.expected)
+			}
+		})
+	}
+}
+
+func TestChatValidator_containsProfanity(t *testing.T) {
+	validator := NewChatValidator()
+
+	tests := []struct {
+		name    string
+		message string
+		want    bool
+	}{
+		{
+			name:    "no profanity",
+			message: "Hello world",
+			want:    false,
+		},
+		{
+			name:    "profanity exact match",
+			message: "badword1",
+			want:    true,
+		},
+		{
+			name:    "profanity in sentence",
+			message: "This is badword1 in text",
+			want:    true,
+		},
+		{
+			name:    "profanity case insensitive",
+			message: "BADWORD1",
+			want:    true,
+		},
+		{
+			name:    "profanity with punctuation",
+			message: "badword1!",
+			want:    true,
+		},
+		{
+			name:    "profanity embedded in word",
+			message: "mybadword1here",
+			want:    true,
+		},
+		{
+			name:    "multiple profanity",
+			message: "badword1 and badword2",
+			want:    true,
+		},
+		{
+			name:    "clean text similar to profanity",
+			message: "goodword1",
+			want:    false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := validator.containsProfanity(tt.message)
+			if result != tt.want {
+				t.Errorf("containsProfanity() = %v, want %v", result, tt.want)
+			}
+		})
+	}
+}
+
+func BenchmarkChatValidator_ValidateMessage(b *testing.B) {
+	validator := NewChatValidator()
+	message := "Hello world! This is a typical chat message."
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_ = validator.ValidateMessage(message)
+	}
+}
+
+func BenchmarkChatValidator_SanitizeMessage(b *testing.B) {
+	validator := NewChatValidator()
+	message := "<b>Hello</b> <i>world</i>! This is a message with HTML."
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_ = validator.SanitizeMessage(message)
+	}
+}
+
+func BenchmarkChatValidator_ValidateAndSanitize(b *testing.B) {
+	validator := NewChatValidator()
+	message := "  <b>Hello</b> world!  "
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_, _ = validator.ValidateAndSanitize(message)
+	}
+}

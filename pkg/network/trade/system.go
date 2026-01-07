@@ -56,6 +56,13 @@ const (
 	ReasonConcurrent TradeFailureReason = "item in another trade"
 	ReasonDisconnect TradeFailureReason = "player disconnected"
 	ReasonRarity     TradeFailureReason = "rarity exceeds trust level"
+
+	// TradeRateLimit is the maximum number of trade requests per player per second
+	// This prevents spam and DoS attacks while allowing normal trading
+	TradeRateLimit = 10
+
+	// TradeRateLimitWindow is the time window for trade rate limiting
+	TradeRateLimitWindow = time.Second
 )
 
 // TradeSystem manages item trading with two-phase commit protocol and input validation
@@ -70,7 +77,7 @@ func NewTradeSystem(world *engine.World) *TradeSystem {
 	return &TradeSystem{
 		world:     world,
 		validator: validation.NewTradeValidator(),
-		limiter:   validation.NewRateLimiter(10, time.Second), // 10 trade requests/second per player
+		limiter:   validation.NewRateLimiter(TradeRateLimit, TradeRateLimitWindow),
 	}
 }
 

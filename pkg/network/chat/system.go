@@ -11,6 +11,15 @@ import (
 	"github.com/opd-ai/venture/pkg/validation"
 )
 
+const (
+	// ChatRateLimit is the maximum number of messages per player per second
+	// This prevents spam and DoS attacks while allowing normal chat flow
+	ChatRateLimit = 10
+
+	// ChatRateLimitWindow is the time window for rate limiting
+	ChatRateLimitWindow = time.Second
+)
+
 // ChatSystem manages chat messages and channels with validation and rate limiting
 type ChatSystem struct {
 	world     *engine.World
@@ -23,7 +32,7 @@ func NewChatSystem(world *engine.World) *ChatSystem {
 	return &ChatSystem{
 		world:     world,
 		validator: validation.NewChatValidator(),
-		limiter:   validation.NewRateLimiter(10, time.Second), // 10 messages/second per player
+		limiter:   validation.NewRateLimiter(ChatRateLimit, ChatRateLimitWindow),
 	}
 }
 

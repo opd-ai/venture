@@ -148,10 +148,3 @@ func buildProfanityList() map[string]bool {
 	}
 	return list
 }
-
-// AllowURLs configures whether URLs are allowed in messages
-// By default, URLs are allowed. Call with false to strip them.
-func (v *ChatValidator) AllowURLs(allow bool) {
-	// This is a placeholder for URL filtering configuration
-	// Implementation would modify SanitizeMessage behavior
-}

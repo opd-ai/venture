@@ -26,7 +26,8 @@ type TradeValidator struct {
 func NewTradeValidator() *TradeValidator {
 	return &TradeValidator{
 		// Allow alphanumeric, hyphens, underscores, and equals (base64 format)
-		itemIDPattern: regexp.MustCompile(`^[a-zA-Z0-9_\-=]+$`),
+		// Hyphen placed at end of character class for clarity
+		itemIDPattern: regexp.MustCompile(`^[a-zA-Z0-9_=-]+$`),
 	}
 }
 

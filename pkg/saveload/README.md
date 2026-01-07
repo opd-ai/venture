@@ -18,6 +18,10 @@ The save/load system allows players to save their progress and resume gameplay l
 - **Version Tracking**: Save format versioning with automatic migration
 - **Security**: Save name validation prevents path traversal attacks
 - **Error Handling**: Comprehensive validation and error messages
+- **Corruption Recovery**: Automatic backup creation and checksum validation (NEW)
+- **Data Integrity**: SHA256 checksums detect corrupted save files (NEW)
+- **Automatic Backups**: Previous save version preserved before overwriting (NEW)
+- **Smart Recovery**: Automatic restoration from backup on corruption detection (NEW)
 
 ## Usage
 
@@ -144,6 +148,97 @@ if err != nil {
 
 fmt.Printf("Player Level: %d\n", metadata.PlayerLevel)
 fmt.Printf("File Size: %d bytes\n", metadata.FileSize)
+```
+
+## Corruption Recovery (Production Ready)
+
+### Saving with Automatic Backup and Checksum
+
+For production use, it's recommended to use `SaveGameWithBackup` instead of `SaveGame`. This method:
+- Creates a backup of the existing save before overwriting (`.bak` file)
+- Generates a SHA256 checksum for integrity verification (`.sha256` file)
+- Automatically restores the backup if the save operation fails
+
+```go
+// Save with automatic backup and checksum (RECOMMENDED)
+err = manager.SaveGameWithBackup("savegame", save)
+if err != nil {
+    log.Fatal(err)
+}
+// Files created:
+// - savegame.sav (current save)
+// - savegame.sav.bak (previous version)
+// - savegame.sav.sha256 (checksum)
+```
+
+### Loading with Automatic Recovery
+
+Use `LoadGameWithRecovery` to enable automatic corruption detection and recovery:
+
+```go
+// Load with automatic recovery (RECOMMENDED)
+save, err := manager.LoadGameWithRecovery("savegame")
+if err != nil {
+    log.Fatal(err)
+}
+// Recovery process:
+// 1. Validates checksum
+// 2. If corrupted, automatically restores from .bak file
+// 3. If backup is also corrupted, returns error
+// 4. Logs all recovery attempts
+```
+
+### Manual Backup Management
+
+```go
+// Check if backup exists
+if manager.BackupExists("savegame") {
+    fmt.Println("Backup available")
+}
+
+// Get backup file path
+backupPath := manager.GetBackupPath("savegame")
+fmt.Println("Backup location:", backupPath)
+
+// List all saves with backups
+backups, err := manager.ListBackups()
+for _, name := range backups {
+    fmt.Println("Backup for:", name)
+}
+
+// Cleanup old backups and checksums (optional)
+err = manager.CleanupBackups("savegame")
+// Removes .bak and .sha256 files, keeps .sav
+```
+
+### Recovery Workflow
+
+When corruption is detected:
+
+1. **Checksum Mismatch**: LoadGameWithRecovery detects corrupted file via checksum
+2. **Automatic Recovery**: Attempts to restore from `.bak` file
+3. **Validation**: Verifies backup is valid before restoring
+4. **Logging**: All recovery attempts logged with structured fields
+5. **Fallback**: If recovery fails, returns detailed error
+
+```go
+// Example with explicit error handling
+save, err := manager.LoadGameWithRecovery("savegame")
+if err != nil {
+    if strings.Contains(err.Error(), "no valid backup") {
+        // Both save and backup are corrupted
+        log.Println("Cannot recover - save file lost")
+        // Offer user to start new game
+    } else if strings.Contains(err.Error(), "not found") {
+        // Save doesn't exist
+        log.Println("No save file found")
+    } else {
+        // Other errors
+        log.Printf("Load error: %v", err)
+    }
+    return
+}
+// Save loaded successfully (possibly after recovery)
 ```
 
 ## Save File Format
@@ -335,7 +430,7 @@ go test -tags test ./pkg/saveload -v
 go test -tags test ./pkg/saveload -cover
 ```
 
-**Test Coverage**: 84.4% of statements
+**Test Coverage**: 73.8% of statements
 
 ## Future Enhancements
 
@@ -346,18 +441,22 @@ Potential improvements for future versions:
 3. **Cloud Saves**: Sync saves across devices via cloud storage
 4. **Auto-save**: Periodic automatic saves every N minutes
 5. **Save Slots**: Multiple named save slots per player
-6. **Backup**: Automatic backup of previous save before overwriting
+6. ~~**Backup**: Automatic backup of previous save before overwriting~~ ✅ IMPLEMENTED
 7. **Statistics**: Track playtime, death count, achievements in save metadata
 
 ## File Structure
 
 ```
 ./saves/
-├── quicksave.sav       # Quick save slot
-├── autosave.sav        # Auto-save slot
-├── save1.sav           # Manual save #1
-├── save2.sav           # Manual save #2
-└── checkpoint.sav      # Checkpoint save
+├── quicksave.sav           # Quick save slot
+├── quicksave.sav.bak       # Backup of previous version (NEW)
+├── quicksave.sav.sha256    # Checksum for integrity verification (NEW)
+├── autosave.sav            # Auto-save slot
+├── autosave.sav.bak        # Auto-save backup (NEW)
+├── autosave.sav.sha256     # Auto-save checksum (NEW)
+├── save1.sav               # Manual save #1
+├── save2.sav               # Manual save #2
+└── checkpoint.sav          # Checkpoint save
 ```
 
 ## API Reference
@@ -373,13 +472,24 @@ Potential improvements for future versions:
 
 ### SaveManager Methods
 
+**Basic Operations:**
 - **`NewSaveManager(dir string) (*SaveManager, error)`**: Create manager
-- **`SaveGame(name string, save *GameSave) error`**: Save game state
-- **`LoadGame(name string) (*GameSave, error)`**: Load game state
+- **`SaveGame(name string, save *GameSave) error`**: Save game state (basic)
+- **`LoadGame(name string) (*GameSave, error)`**: Load game state (basic)
 - **`DeleteSave(name string) error`**: Delete save file
 - **`ListSaves() ([]*SaveMetadata, error)`**: List all saves
 - **`GetSaveMetadata(name string) (*SaveMetadata, error)`**: Get save info
 - **`SaveExists(name string) bool`**: Check if save exists
+
+**Production-Ready Operations (RECOMMENDED):**
+- **`SaveGameWithBackup(name string, save *GameSave) error`**: Save with automatic backup and checksum
+- **`LoadGameWithRecovery(name string) (*GameSave, error)`**: Load with corruption detection and recovery
+
+**Backup Management:**
+- **`BackupExists(name string) bool`**: Check if backup exists for save
+- **`GetBackupPath(name string) string`**: Get path to backup file
+- **`ListBackups() ([]string, error)`**: List all saves with backups
+- **`CleanupBackups(name string) error`**: Remove backup and checksum files
 
 ### Helper Functions
 
@@ -475,11 +585,24 @@ func main() {
 
 If a save file becomes corrupted:
 
-1. Try loading with detailed error: `save, err := manager.LoadGame("name")`
-2. Examine error message for JSON parsing issues
-3. Open `.sav` file in text editor to inspect JSON
-4. If manually edited, validate JSON syntax
-5. Restore from backup if available
+**Automatic Recovery (Recommended):**
+1. Use `LoadGameWithRecovery("name")` - automatically detects and fixes corruption
+2. Check logs for recovery status and details
+3. If recovery succeeds, save is restored from `.bak` file
+4. If both save and backup are corrupted, error is returned
+
+**Manual Recovery:**
+1. Check if backup exists: `manager.BackupExists("name")`
+2. Manually copy `.bak` file to `.sav` if needed
+3. Try loading with detailed error: `save, err := manager.LoadGame("name")`
+4. Examine error message for JSON parsing issues
+5. Open `.sav` file in text editor to inspect JSON
+6. If manually edited, validate JSON syntax
+
+**Prevention:**
+- Always use `SaveGameWithBackup()` in production
+- Keep checksum files (`.sha256`) for integrity verification
+- Don't manually edit save files unless necessary
 
 ### Large Save Files
 

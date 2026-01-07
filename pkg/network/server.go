@@ -4,6 +4,7 @@
 package network
 
 import (
+	"context"
 	"fmt"
 	"net"
 	"sync"
@@ -69,6 +70,19 @@ func HighLatencyServerConfig() ServerConfig {
 
 // TCPServer handles server-side networking for multiplayer over TCP.
 // Implements ServerConnection interface.
+//
+// Resource Management:
+// The server implements comprehensive resource tracking and cleanup to prevent leaks:
+// - Context-based cancellation for all long-running operations
+// - Graceful shutdown with configurable timeout (default 30s)
+// - Periodic cleanup of idle client connections
+// - Resource tracking (active connections, goroutines)
+// - Automatic cleanup of abandoned sessions
+//
+// Lifecycle:
+// 1. Start() - Begins accepting connections and starts cleanup goroutine
+// 2. Operations - Handles clients with context-aware operations
+// 3. Stop() or StopWithContext() - Gracefully shuts down with timeout
 type TCPServer struct {
 	config   ServerConfig
 	protocol Protocol
@@ -94,9 +108,18 @@ type TCPServer struct {
 	playerLeaveStats  *BufferStats
 	errorStats        *BufferStats
 
+	// Context and cancellation
+	ctx    context.Context
+	cancel context.CancelFunc
+
 	// Shutdown
 	done chan struct{}
 	wg   sync.WaitGroup
+
+	// Resource tracking
+	idleTimeout        time.Duration
+	cleanupInterval    time.Duration
+	shutdownTimeout    time.Duration
 
 	// State tracking
 	stateSeq uint32
@@ -141,6 +164,9 @@ func NewServerWithLogger(config ServerConfig, logger *logrus.Logger) *TCPServer 
 		})
 	}
 
+	// Create context for server lifecycle
+	ctx, cancel := context.WithCancel(context.Background())
+
 	server := &TCPServer{
 		config:        config,
 		protocol:      NewBinaryProtocol(),
@@ -150,8 +176,14 @@ func NewServerWithLogger(config ServerConfig, logger *logrus.Logger) *TCPServer 
 		playerJoins:   make(chan uint64, config.MaxPlayers),
 		playerLeaves:  make(chan uint64, config.MaxPlayers),
 		errors:        make(chan error, errorBufferSize),
+		ctx:           ctx,
+		cancel:        cancel,
 		done:          make(chan struct{}),
 		logger:        logEntry,
+		// Resource management defaults
+		idleTimeout:     5 * time.Minute,  // Disconnect clients idle for 5 minutes
+		cleanupInterval: 30 * time.Second, // Check for idle clients every 30 seconds
+		shutdownTimeout: 30 * time.Second, // Wait up to 30 seconds for graceful shutdown
 	}
 
 	// Initialize buffer monitoring
@@ -164,6 +196,7 @@ func NewServerWithLogger(config ServerConfig, logger *logrus.Logger) *TCPServer 
 }
 
 // Start begins listening for client connections.
+// Starts the accept loop and periodic cleanup of idle connections.
 func (s *TCPServer) Start() error {
 	s.clientsMu.Lock()
 	defer s.clientsMu.Unlock()
@@ -184,13 +217,34 @@ func (s *TCPServer) Start() error {
 	s.clientsMu.Unlock()
 	s.wg.Add(1)
 	go s.acceptLoop()
+	
+	// Start cleanup goroutine for idle connection management
+	s.wg.Add(1)
+	go s.cleanupLoop()
 	s.clientsMu.Lock()
+
+	if s.logger != nil {
+		s.logger.WithFields(logrus.Fields{
+			"idle_timeout":     s.idleTimeout,
+			"cleanup_interval": s.cleanupInterval,
+		}).Debug("started idle connection cleanup")
+	}
 
 	return nil
 }
 
-// Stop stops the server and closes all connections.
+// Stop stops the server and closes all connections with default timeout.
+// Uses the configured shutdownTimeout (default 30s) for graceful shutdown.
 func (s *TCPServer) Stop() error {
+	ctx, cancel := context.WithTimeout(context.Background(), s.shutdownTimeout)
+	defer cancel()
+	return s.StopWithContext(ctx)
+}
+
+// StopWithContext stops the server with a custom context for shutdown timeout control.
+// Returns an error if shutdown doesn't complete within the context deadline.
+// All client connections are closed immediately, but goroutines are given time to cleanup.
+func (s *TCPServer) StopWithContext(ctx context.Context) error {
 	s.clientsMu.Lock()
 
 	if !s.running {
@@ -199,6 +253,9 @@ func (s *TCPServer) Stop() error {
 	}
 
 	s.running = false
+	
+	// Cancel server context to signal all operations
+	s.cancel()
 	close(s.done)
 
 	// Close listener
@@ -207,15 +264,38 @@ func (s *TCPServer) Stop() error {
 	}
 
 	// Disconnect all clients
+	clientCount := len(s.clients)
 	for _, client := range s.clients {
 		client.disconnect()
 	}
 	s.clientsMu.Unlock()
 
-	// Wait for goroutines
-	s.wg.Wait()
+	if s.logger != nil {
+		s.logger.WithFields(logrus.Fields{
+			"client_count": clientCount,
+			"timeout":      s.shutdownTimeout,
+		}).Info("shutting down server, waiting for goroutines")
+	}
 
-	return nil
+	// Wait for goroutines with timeout
+	done := make(chan struct{})
+	go func() {
+		s.wg.Wait()
+		close(done)
+	}()
+
+	select {
+	case <-done:
+		if s.logger != nil {
+			s.logger.Info("server shutdown complete")
+		}
+		return nil
+	case <-ctx.Done():
+		if s.logger != nil {
+			s.logger.Warn("server shutdown timed out, some goroutines may still be running")
+		}
+		return fmt.Errorf("shutdown timeout: %w", ctx.Err())
+	}
 }
 
 // IsRunning returns whether the server is running.
@@ -223,6 +303,75 @@ func (s *TCPServer) IsRunning() bool {
 	s.clientsMu.RLock()
 	defer s.clientsMu.RUnlock()
 	return s.running
+}
+
+// cleanupLoop periodically checks for and disconnects idle clients.
+// This prevents resource leaks from abandoned connections.
+func (s *TCPServer) cleanupLoop() {
+	defer s.wg.Done()
+	defer recovery.RecoverPanic(s.logger, "cleanup loop", nil)()
+
+	ticker := time.NewTicker(s.cleanupInterval)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-s.ctx.Done():
+			// Server context cancelled, exit cleanup loop
+			return
+		case <-ticker.C:
+			s.cleanupIdleClients()
+		}
+	}
+}
+
+// cleanupIdleClients disconnects clients that have been idle beyond the timeout.
+func (s *TCPServer) cleanupIdleClients() {
+	now := time.Now()
+	var idleClients []uint64
+
+	// Find idle clients
+	s.clientsMu.RLock()
+	for playerID, client := range s.clients {
+		client.mu.RLock()
+		lastActive := client.lastActive
+		client.mu.RUnlock()
+
+		if now.Sub(lastActive) > s.idleTimeout {
+			idleClients = append(idleClients, playerID)
+		}
+	}
+	s.clientsMu.RUnlock()
+
+	// Disconnect idle clients
+	if len(idleClients) > 0 {
+		if s.logger != nil {
+			s.logger.WithFields(logrus.Fields{
+				"count":        len(idleClients),
+				"idle_timeout": s.idleTimeout,
+			}).Info("disconnecting idle clients")
+		}
+
+		for _, playerID := range idleClients {
+			s.disconnectClient(playerID)
+		}
+	}
+}
+
+// GetResourceStats returns current resource usage statistics.
+// Useful for monitoring and detecting resource leaks.
+func (s *TCPServer) GetResourceStats() map[string]interface{} {
+	s.clientsMu.RLock()
+	clientCount := len(s.clients)
+	s.clientsMu.RUnlock()
+
+	return map[string]interface{}{
+		"active_connections": clientCount,
+		"max_players":        s.config.MaxPlayers,
+		"idle_timeout":       s.idleTimeout.String(),
+		"cleanup_interval":   s.cleanupInterval.String(),
+		"shutdown_timeout":   s.shutdownTimeout.String(),
+	}
 }
 
 // GetPlayerCount returns the number of connected players.
@@ -334,7 +483,8 @@ func (s *TCPServer) acceptLoop() {
 // handleAcceptError processes errors from the accept loop and returns true if the loop should exit.
 func (s *TCPServer) handleAcceptError(err error) bool {
 	select {
-	case <-s.done:
+	case <-s.ctx.Done():
+		// Server context cancelled, exit accept loop
 		return true
 	default:
 		s.errors <- fmt.Errorf("accept error: %w", err)

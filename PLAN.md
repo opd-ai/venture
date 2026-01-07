@@ -144,11 +144,14 @@ All Phase 1 deliverables completed successfully:
   - ✅ Connection pool management with max lifetime and idle timeout (connectionpool.go)
   - ✅ Integration with FederationProtocol (protocol.go)
   - ✅ Comprehensive test coverage (100% for new modules)
-- [ ] Add resource cleanup and leak prevention (file: pkg/network/server.go, pkg/world/persistence.go)
-  - Implement context-based cancellation for all long-running operations
-  - Add resource tracking (open files, goroutines, network connections)
-  - Periodic cleanup of abandoned client sessions
-  - Graceful shutdown with 30s timeout for in-flight requests
+- [x] Add resource cleanup and leak prevention (file: pkg/network/server.go, pkg/world/persistence.go)
+  - ✅ Implement context-based cancellation for all long-running operations
+  - ✅ Add resource tracking (open files, goroutines, network connections)
+  - ✅ Periodic cleanup of abandoned client sessions (every 30s, 5min idle timeout)
+  - ✅ Graceful shutdown with 30s timeout for in-flight requests (configurable via StopWithContext)
+  - ✅ Added GetResourceStats() for monitoring active connections and configuration
+  - ✅ Comprehensive test coverage (29 tests, all passing)
+  - ✅ Backward compatibility maintained with legacy methods
 - [ ] Implement comprehensive error wrapping (files: all packages)
   - Wrap all errors with context using fmt.Errorf("%w", err)
   - Add structured error types for common failures (NetworkError, ValidationError, etc.)

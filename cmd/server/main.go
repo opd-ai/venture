@@ -23,6 +23,7 @@ import (
 	"github.com/opd-ai/venture/pkg/modding"
 	"github.com/opd-ai/venture/pkg/network"
 	"github.com/opd-ai/venture/pkg/network/resilience"
+	"github.com/opd-ai/venture/pkg/observability"
 	"github.com/opd-ai/venture/pkg/procgen"
 	itemgen "github.com/opd-ai/venture/pkg/procgen/item"
 	"github.com/opd-ai/venture/pkg/procgen/terrain"
@@ -64,6 +65,10 @@ var (
 	// Phase 6.3 (PLAN.md): Modding system integration
 	enableMods = flag.Bool("enable-mods", false, "Enable mod system with sandbox security")
 	modsDir    = flag.String("mods-dir", "mods", "Directory to load mods from")
+
+	// Phase 3 (PLAN.md): Metrics export for production monitoring
+	metricsPort = flag.String("metrics-port", "9090", "Port for Prometheus metrics HTTP endpoint")
+	enableMetrics = flag.Bool("enable-metrics", false, "Enable Prometheus metrics export at /metrics endpoint")
 
 	// V9.0 integration managers for server-authoritative validation
 	// These are initialized in createGameWorld() and used by systems for validation
@@ -158,6 +163,12 @@ func main() {
 
 	server, snapshotManager, lagCompensator := initializeNetworkSystems(logger)
 
+	// Phase 3 (PLAN.md): Initialize Prometheus metrics exporter if enabled
+	var metricsExporter *observability.MetricsExporter
+	if *enableMetrics {
+		metricsExporter = initializeMetricsExporter(logger, world, server)
+	}
+
 	// Start network server
 	if err := server.Start(); err != nil {
 		serverLogger.WithError(err).Fatal("failed to start network server")
@@ -174,6 +185,13 @@ func main() {
 	// Handle server shutdown gracefully
 	defer func() {
 		serverLogger.Info("shutting down server")
+		if metricsExporter != nil {
+			if err := metricsExporter.Stop(); err != nil {
+				serverLogger.WithError(err).Error("error stopping metrics exporter")
+			} else {
+				serverLogger.Info("metrics exporter stopped")
+			}
+		}
 		if stabilityMon != nil {
 			stabilityMon.Stop()
 			serverLogger.Info("stability monitor stopped")
@@ -1272,4 +1290,47 @@ func initializeModSystem(serverLogger *logrus.Entry) *modding.Manager {
 	}).Info("mod system initialized")
 
 	return manager
+}
+
+// initializeMetricsExporter sets up the Prometheus metrics HTTP endpoint.
+// Phase 3 (PLAN.md): Metrics export for production monitoring
+func initializeMetricsExporter(logger *logrus.Logger, world *engine.World, server *network.TCPServer) *observability.MetricsExporter {
+	metricsLogger := logger.WithFields(logrus.Fields{"component": "metrics"})
+	
+	addr := ":" + *metricsPort
+	exporter := observability.NewMetricsExporterWithLogger(addr, logger)
+	
+	// Find and register performance monitoring system from world
+	var perfMon *engine.PerformanceMonitoringSystem
+	for _, system := range world.GetSystems() {
+		if pms, ok := system.(*engine.PerformanceMonitoringSystem); ok {
+			perfMon = pms
+			break
+		}
+	}
+	
+	// If no performance monitoring system exists, create one
+	if perfMon == nil {
+		metricsLogger.Info("creating performance monitoring system for metrics")
+		perfMon = engine.NewPerformanceMonitoringSystem()
+		world.AddSystem(perfMon)
+	}
+	
+	// Register metrics sources
+	exporter.RegisterPerformanceMonitor(perfMon)
+	exporter.RegisterNetworkServer(server)
+	exporter.RegisterWorld(world)
+	
+	// Start metrics HTTP server
+	if err := exporter.Start(); err != nil {
+		metricsLogger.WithError(err).Error("failed to start metrics exporter")
+		return nil
+	}
+	
+	metricsLogger.WithFields(logrus.Fields{
+		"port":     *metricsPort,
+		"endpoint": "/metrics",
+	}).Info("Prometheus metrics exporter started")
+	
+	return exporter
 }

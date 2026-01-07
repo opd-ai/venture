@@ -112,10 +112,10 @@ func TestServerShutdownTimeout(t *testing.T) {
 	// Create context with very short timeout
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Millisecond)
 	defer cancel()
-	
+
 	// Wait for timeout to expire
 	time.Sleep(20 * time.Millisecond)
-	
+
 	err := server.StopWithContext(ctx)
 	// We expect either success (if goroutines finished fast) or timeout error
 	if err != nil && err != context.DeadlineExceeded {
@@ -131,7 +131,7 @@ func TestServerCleanupInterval(t *testing.T) {
 	config := DefaultServerConfig()
 	config.Address = "127.0.0.1:0"
 	server := NewServer(config)
-	
+
 	// Set short cleanup interval for testing
 	server.cleanupInterval = 100 * time.Millisecond
 	server.idleTimeout = 50 * time.Millisecond
@@ -227,7 +227,7 @@ func TestIdleClientCleanup(t *testing.T) {
 	config := DefaultServerConfig()
 	config.Address = "127.0.0.1:0"
 	server := NewServer(config)
-	
+
 	// Set short timeouts for testing
 	server.idleTimeout = 100 * time.Millisecond
 	server.cleanupInterval = 50 * time.Millisecond
@@ -272,9 +272,9 @@ func TestActiveClientNotCleaned(t *testing.T) {
 	config := DefaultServerConfig()
 	config.Address = "127.0.0.1:0"
 	server := NewServer(config)
-	
+
 	// Set timeouts so client won't be idle after our sleep
-	server.idleTimeout = 500 * time.Millisecond  // Longer timeout
+	server.idleTimeout = 500 * time.Millisecond // Longer timeout
 	server.cleanupInterval = 50 * time.Millisecond
 
 	// Start server

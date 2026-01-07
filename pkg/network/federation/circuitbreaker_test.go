@@ -21,10 +21,10 @@ func TestNewCircuitBreaker(t *testing.T) {
 
 func TestCircuitBreakerStateTransitions(t *testing.T) {
 	tests := []struct {
-		name           string
-		config         CircuitBreakerConfig
-		operations     []bool // true = success, false = failure
-		expectedState  CircuitState
+		name          string
+		config        CircuitBreakerConfig
+		operations    []bool // true = success, false = failure
+		expectedState CircuitState
 	}{
 		{
 			name: "closed_to_open_after_failures",

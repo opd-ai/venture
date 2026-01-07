@@ -141,7 +141,7 @@ func TestErrorLogger_JSONOutput(t *testing.T) {
 	if logEntry["correlation_id"] != "test-correlation-123" {
 		t.Errorf("correlation_id = %v, want test-correlation-123", logEntry["correlation_id"])
 	}
-	
+
 	// Verify context is nested
 	errorContext, ok := logEntry["error_context"].(map[string]interface{})
 	if !ok {

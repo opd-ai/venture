@@ -59,14 +59,14 @@ func DefaultCircuitBreakerConfig() CircuitBreakerConfig {
 
 // CircuitBreaker implements the circuit breaker pattern for remote server connections
 type CircuitBreaker struct {
-	mu                  sync.RWMutex
-	state               CircuitState
-	config              CircuitBreakerConfig
-	consecutiveFailures int
+	mu                   sync.RWMutex
+	state                CircuitState
+	config               CircuitBreakerConfig
+	consecutiveFailures  int
 	consecutiveSuccesses int
-	lastFailureTime     time.Time
-	halfOpenRequests    int
-	logger              *logrus.Entry
+	lastFailureTime      time.Time
+	halfOpenRequests     int
+	logger               *logrus.Entry
 }
 
 // NewCircuitBreaker creates a new circuit breaker with the given configuration
@@ -177,9 +177,9 @@ func (cb *CircuitBreaker) transitionTo(newState CircuitState) {
 	}
 
 	cb.logger.WithFields(logrus.Fields{
-		"old_state":            oldState.String(),
-		"new_state":            newState.String(),
-		"consecutive_failures": cb.consecutiveFailures,
+		"old_state":             oldState.String(),
+		"new_state":             newState.String(),
+		"consecutive_failures":  cb.consecutiveFailures,
 		"consecutive_successes": cb.consecutiveSuccesses,
 	}).Info("Circuit breaker state transition")
 }
@@ -209,10 +209,10 @@ func (cb *CircuitBreaker) Stats() map[string]interface{} {
 	defer cb.mu.RUnlock()
 
 	return map[string]interface{}{
-		"state":                cb.state.String(),
-		"consecutive_failures": cb.consecutiveFailures,
+		"state":                 cb.state.String(),
+		"consecutive_failures":  cb.consecutiveFailures,
 		"consecutive_successes": cb.consecutiveSuccesses,
-		"last_failure_time":    cb.lastFailureTime,
-		"half_open_requests":   cb.halfOpenRequests,
+		"last_failure_time":     cb.lastFailureTime,
+		"half_open_requests":    cb.halfOpenRequests,
 	}
 }

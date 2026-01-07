@@ -118,7 +118,7 @@ func (w *WorldPersistence) SaveWorldWithContext(ctx context.Context, state *Pers
 	if err != nil {
 		return fmt.Errorf("failed to create temp file: %w", err)
 	}
-	
+
 	// Ensure cleanup on error
 	var saveErr error
 	defer func() {
@@ -139,7 +139,7 @@ func (w *WorldPersistence) SaveWorldWithContext(ctx context.Context, state *Pers
 
 	// Compress with gzip
 	gz := gzip.NewWriter(f)
-	
+
 	// Encode to JSON
 	encoder := json.NewEncoder(gz)
 	if err := encoder.Encode(state); err != nil {
@@ -268,7 +268,7 @@ func copyFile(src, dst string) error {
 	if err != nil {
 		return fmt.Errorf("failed to create destination: %w", err)
 	}
-	
+
 	// Ensure cleanup on error
 	var copyErr error
 	defer func() {

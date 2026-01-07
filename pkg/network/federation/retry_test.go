@@ -232,25 +232,24 @@ func TestRetryStrategyDeterministicJitter(t *testing.T) {
 		InitialDelay: 100 * time.Millisecond,
 		MaxDelay:     1 * time.Second,
 		Multiplier:   2.0,
-		Jitter:       0.5, // 50% jitter
+		Jitter:       0.5,   // 50% jitter
 		Seed:         12345, // Fixed seed for deterministic behavior
 	}
-	
+
 	// Create two retry strategies with the same seed
 	rs1 := NewRetryStrategy(config)
 	rs2 := NewRetryStrategy(config)
-	
+
 	// Calculate delays multiple times and verify they match
 	for i := 1; i <= 5; i++ {
 		delay1 := rs1.calculateDelay(i)
 		delay2 := rs2.calculateDelay(i)
-		
+
 		if delay1 != delay2 {
 			t.Errorf("Attempt %d: Delays should be identical with same seed, got %v and %v", i, delay1, delay2)
 		}
 	}
 }
-
 
 func TestIsNetworkError(t *testing.T) {
 	tests := []struct {

@@ -278,10 +278,10 @@ func TestAsVentureError(t *testing.T) {
 
 func TestHelperFunctions(t *testing.T) {
 	tests := []struct {
-		name       string
-		createErr  func() *VentureError
-		wantType   ErrorType
-		retryable  bool
+		name      string
+		createErr func() *VentureError
+		wantType  ErrorType
+		retryable bool
 	}{
 		{"Network", func() *VentureError { return Network("test") }, ErrorTypeNetwork, true},
 		{"Validation", func() *VentureError { return Validation("test") }, ErrorTypeValidation, false},

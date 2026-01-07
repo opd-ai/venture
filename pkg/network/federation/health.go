@@ -44,12 +44,12 @@ func (m FederationMode) String() string {
 
 // FederationHealth tracks the health and availability of the federation system
 type FederationHealth struct {
-	mu                 sync.RWMutex
-	mode               FederationMode
-	availableServers   int
-	totalServers       int
+	mu                  sync.RWMutex
+	mode                FederationMode
+	availableServers    int
+	totalServers        int
 	consecutiveFailures int
-	logger             *logrus.Entry
+	logger              *logrus.Entry
 }
 
 // NewFederationHealth creates a new federation health tracker
@@ -88,7 +88,7 @@ func (fh *FederationHealth) IsLocalOnly() bool {
 func (fh *FederationHealth) SetLocalOnly() {
 	fh.mu.Lock()
 	defer fh.mu.Unlock()
-	
+
 	if fh.mode != FederationModeLocalOnly {
 		oldMode := fh.mode
 		fh.mode = FederationModeLocalOnly
@@ -103,7 +103,7 @@ func (fh *FederationHealth) SetLocalOnly() {
 func (fh *FederationHealth) SetEnabled() {
 	fh.mu.Lock()
 	defer fh.mu.Unlock()
-	
+
 	if fh.mode != FederationModeEnabled {
 		oldMode := fh.mode
 		fh.mode = FederationModeEnabled
@@ -119,7 +119,7 @@ func (fh *FederationHealth) SetEnabled() {
 func (fh *FederationHealth) SetDegraded() {
 	fh.mu.Lock()
 	defer fh.mu.Unlock()
-	
+
 	if fh.mode != FederationModeDegraded {
 		oldMode := fh.mode
 		fh.mode = FederationModeDegraded
@@ -134,18 +134,18 @@ func (fh *FederationHealth) SetDegraded() {
 func (fh *FederationHealth) UpdateServerCounts(available, total int) {
 	fh.mu.Lock()
 	defer fh.mu.Unlock()
-	
+
 	fh.availableServers = available
 	fh.totalServers = total
-	
+
 	// Auto-adjust mode based on server availability
 	if total == 0 {
 		// No servers configured, stay in current mode
 		return
 	}
-	
+
 	availabilityRatio := float64(available) / float64(total)
-	
+
 	if availabilityRatio == 0 {
 		// No servers available, switch to local-only
 		if fh.mode != FederationModeLocalOnly {
@@ -179,9 +179,9 @@ func (fh *FederationHealth) UpdateServerCounts(available, total int) {
 func (fh *FederationHealth) RecordFailure() {
 	fh.mu.Lock()
 	defer fh.mu.Unlock()
-	
+
 	fh.consecutiveFailures++
-	
+
 	// If we have too many consecutive failures, degrade or go local-only
 	if fh.consecutiveFailures >= DefaultFailureThresholdDegraded && fh.mode == FederationModeEnabled {
 		fh.mode = FederationModeDegraded
@@ -200,7 +200,7 @@ func (fh *FederationHealth) RecordFailure() {
 func (fh *FederationHealth) RecordSuccess() {
 	fh.mu.Lock()
 	defer fh.mu.Unlock()
-	
+
 	fh.consecutiveFailures = 0
 }
 
@@ -208,7 +208,7 @@ func (fh *FederationHealth) RecordSuccess() {
 func (fh *FederationHealth) Stats() map[string]interface{} {
 	fh.mu.RLock()
 	defer fh.mu.RUnlock()
-	
+
 	return map[string]interface{}{
 		"mode":                 fh.mode.String(),
 		"available_servers":    fh.availableServers,

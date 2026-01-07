@@ -65,7 +65,7 @@ func (s *ChatSystem) SendMessage(senderID uint64, channel engine.ChatChannel, co
 		ID:        msgID,
 		SenderID:  senderID,
 		Channel:   channel,
-		Content:   sanitized, // Use sanitized content
+		Content:   sanitized,  // Use sanitized content
 		Timestamp: time.Now(), // Use current timestamp for message creation
 		Encrypted: nil,        // E2E encryption available in pkg/network/chat.go
 	}

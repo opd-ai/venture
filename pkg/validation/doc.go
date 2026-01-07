@@ -45,22 +45,22 @@
 // # Integration
 //
 // Validation should be applied at system boundaries before processing:
-//  - Chat system: Validate all SendMessage calls
-//  - Trade system: Validate ProposeTrade parameters
-//  - Network layer: Rate limit all incoming requests
+//   - Chat system: Validate all SendMessage calls
+//   - Trade system: Validate ProposeTrade parameters
+//   - Network layer: Rate limit all incoming requests
 //
 // # Performance
 //
 // All validation operations are designed for low latency:
-//  - Chat validation: <1ms per message (regex-based)
-//  - Item ID validation: <0.1ms per ID (format checking)
-//  - Rate limiting: <0.01ms per check (map lookup)
+//   - Chat validation: <1ms per message (regex-based)
+//   - Item ID validation: <0.1ms per ID (format checking)
+//   - Rate limiting: <0.01ms per check (map lookup)
 //
 // # Testing
 //
 // Comprehensive test coverage validates all security properties:
-//  - Injection attack prevention
-//  - Content filtering accuracy
-//  - Rate limiter effectiveness
-//  - Edge case handling (empty inputs, Unicode, etc.)
+//   - Injection attack prevention
+//   - Content filtering accuracy
+//   - Rate limiter effectiveness
+//   - Edge case handling (empty inputs, Unicode, etc.)
 package validation

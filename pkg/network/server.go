@@ -660,12 +660,15 @@ func (s *TCPServer) readMessageLength(client *clientConnection, buf []byte) (uin
 }
 
 func (s *TCPServer) readMessageData(client *clientConnection, buf []byte, msgLen uint32) error {
-	if _, err := client.conn.Read(buf[:msgLen]); err != nil {
+	n, err := client.conn.Read(buf[:msgLen])
+	if err != nil {
 		if s.IsRunning() && client.isConnected() {
 			s.errors <- fmt.Errorf("player %d read data error: %w", client.playerID, err)
 		}
 		return err
 	}
+	// Record bytes received for metrics
+	s.recordBytesReceived(uint64(n))
 	return nil
 }
 
@@ -766,12 +769,15 @@ func (s *TCPServer) createLengthPrefix(length int) []byte {
 
 // writeToClient writes data to a client connection with error handling.
 func (s *TCPServer) writeToClient(client *clientConnection, data []byte) bool {
-	if _, err := client.conn.Write(data); err != nil {
+	n, err := client.conn.Write(data)
+	if err != nil {
 		if s.IsRunning() && client.isConnected() {
 			s.errors <- fmt.Errorf("player %d write error: %w", client.playerID, err)
 		}
 		return false
 	}
+	// Record bytes sent for metrics
+	s.recordBytesSent(uint64(n))
 	return true
 }
 

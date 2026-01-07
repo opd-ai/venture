@@ -16,19 +16,19 @@ const (
 	MaxItemIDLength = 128
 )
 
+var (
+	// itemIDPattern validates item ID format (alphanumeric + hyphens/underscores/equals)
+	// Compiled once at package initialization for performance
+	// Hyphen placed at end of character class for clarity
+	itemIDPattern = regexp.MustCompile(`^[a-zA-Z0-9_=-]+$`)
+)
+
 // TradeValidator validates trade-related inputs
-type TradeValidator struct {
-	// itemIDPattern validates item ID format (alphanumeric + hyphens/underscores)
-	itemIDPattern *regexp.Regexp
-}
+type TradeValidator struct{}
 
 // NewTradeValidator creates a new trade validator
 func NewTradeValidator() *TradeValidator {
-	return &TradeValidator{
-		// Allow alphanumeric, hyphens, underscores, and equals (base64 format)
-		// Hyphen placed at end of character class for clarity
-		itemIDPattern: regexp.MustCompile(`^[a-zA-Z0-9_=-]+$`),
-	}
+	return &TradeValidator{}
 }
 
 // ValidateItemIDs validates a list of item IDs
@@ -74,7 +74,7 @@ func (v *TradeValidator) ValidateItemID(id string) error {
 	}
 
 	// Check format (alphanumeric + allowed special chars)
-	if !v.itemIDPattern.MatchString(id) {
+	if !itemIDPattern.MatchString(id) {
 		return fmt.Errorf("item ID contains invalid characters (allowed: a-z, A-Z, 0-9, -, _, =)")
 	}
 

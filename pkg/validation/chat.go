@@ -15,28 +15,30 @@ const (
 	MinChatMessageLength = 1
 )
 
+var (
+	// htmlTagPattern matches HTML-like tags for removal
+	// Compiled once at package initialization for performance
+	htmlTagPattern = regexp.MustCompile(`<[^>]*>`)
+
+	// controlCharPattern matches control characters for removal
+	// Compiled once at package initialization for performance
+	controlCharPattern = regexp.MustCompile(`[\x00-\x1F\x7F]`)
+
+	// urlPattern matches URLs for optional filtering
+	// Compiled once at package initialization for performance
+	urlPattern = regexp.MustCompile(`https?://[^\s]+`)
+)
+
 // ChatValidator validates and sanitizes chat messages
 type ChatValidator struct {
 	// profanityList contains words to filter out
 	profanityList map[string]bool
-
-	// htmlTagPattern matches HTML-like tags for removal
-	htmlTagPattern *regexp.Regexp
-
-	// controlCharPattern matches control characters for removal
-	controlCharPattern *regexp.Regexp
-
-	// urlPattern matches URLs for optional filtering
-	urlPattern *regexp.Regexp
 }
 
 // NewChatValidator creates a new chat validator with default settings
 func NewChatValidator() *ChatValidator {
 	return &ChatValidator{
-		profanityList:      buildProfanityList(),
-		htmlTagPattern:     regexp.MustCompile(`<[^>]*>`),
-		controlCharPattern: regexp.MustCompile(`[\x00-\x1F\x7F]`),
-		urlPattern:         regexp.MustCompile(`https?://[^\s]+`),
+		profanityList: buildProfanityList(),
 	}
 }
 
@@ -73,10 +75,10 @@ func (v *ChatValidator) ValidateMessage(message string) error {
 // This should be called before storing or broadcasting a message
 func (v *ChatValidator) SanitizeMessage(message string) string {
 	// Remove HTML tags (prevent XSS-like attacks in UI rendering)
-	sanitized := v.htmlTagPattern.ReplaceAllString(message, "")
+	sanitized := htmlTagPattern.ReplaceAllString(message, "")
 
 	// Remove control characters (prevent terminal injection)
-	sanitized = v.controlCharPattern.ReplaceAllString(sanitized, "")
+	sanitized = controlCharPattern.ReplaceAllString(sanitized, "")
 
 	// Normalize whitespace (collapse multiple spaces)
 	sanitized = strings.Join(strings.Fields(sanitized), " ")
@@ -130,16 +132,30 @@ func (v *ChatValidator) containsProfanity(message string) bool {
 	return false
 }
 
-// buildProfanityList creates a map of words to filter
-// In production, this would be loaded from a configuration file or database
+// buildProfanityList creates a map of words to filter.
+//
+// NOTE: This implementation is intentionally minimal and is provided only as an
+// example. It MUST NOT be used as-is in production. Real deployments are
+// expected to:
+//   - Load a comprehensive, locale-appropriate profanity list from configuration
+//     (for example: a JSON/YAML file, database table, or other config source).
+//   - Keep the list outside of the binary so that it can be updated without
+//     recompiling.
+//   - Potentially maintain multiple lists per language/region and merge them
+//     according to server configuration or shard settings.
+//
+// The returned map is used as a fast lookup structure by containsProfanity; the
+// exact mechanism for loading the underlying words (file, DB, etc.) should be
+// implemented by caller code that replaces this stub.
 func buildProfanityList() map[string]bool {
-	// Basic profanity list for demonstration
-	// Production systems should use a comprehensive, configurable list
+	// Basic, non-exhaustive profanity list for demonstration purposes only.
+	// This stub is intentionally small and generic; production systems should
+	// inject a real list via configuration rather than relying on these values.
 	words := []string{
 		"badword1",
 		"badword2",
 		"offensive",
-		// Add more words as needed
+		// Example: extend or replace with configured values loaded at startup.
 	}
 
 	list := make(map[string]bool, len(words))

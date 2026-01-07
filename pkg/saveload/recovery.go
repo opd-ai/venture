@@ -130,7 +130,7 @@ func (m *SaveManager) recoverFromBackup(name string) (bool, error) {
 
 	// Check if backup exists
 	if _, err := os.Stat(backupPath); os.IsNotExist(err) {
-		m.logWarn("no backup found for recovery", fmt.Errorf("backup not found"), logrus.Fields{
+		m.logWarn("no backup found for recovery", nil, logrus.Fields{
 			"name": name,
 		})
 		return false, nil
@@ -259,7 +259,7 @@ func (m *SaveManager) LoadGameWithRecovery(name string) (*GameSave, error) {
 		m.logWarn("checksum validation error", err, logrus.Fields{"name": name})
 		// Continue with load attempt despite checksum error
 	} else if !valid {
-		m.logWarn("checksum validation failed, save may be corrupted", fmt.Errorf("checksum mismatch"), logrus.Fields{
+		m.logWarn("checksum validation failed, save may be corrupted", nil, logrus.Fields{
 			"name": name,
 		})
 		// Attempt recovery from backup

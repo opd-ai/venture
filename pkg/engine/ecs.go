@@ -626,3 +626,35 @@ func (w *World) GetSystems() []System {
 func (w *World) GetLogger() *logrus.Entry {
 	return w.logger
 }
+
+// GetEntityCount returns the total number of entities in the world.
+func (w *World) GetEntityCount() int {
+	return len(w.entities)
+}
+
+// GetActiveQuestCount returns the number of entities with active quest components.
+// This provides a metric for game progression and player engagement.
+func (w *World) GetActiveQuestCount() int {
+	count := 0
+	for _, entity := range w.entities {
+		if entity.HasComponent("quest") {
+			count++
+		}
+	}
+	return count
+}
+
+// GetTradeVolume returns the total number of completed trades.
+// This metric tracks economic activity in the game world.
+func (w *World) GetTradeVolume() uint64 {
+	// Sum up trade counters from all entities with trade components
+	var total uint64
+	for _, entity := range w.entities {
+		if comp, ok := entity.GetComponent("trade"); ok {
+			if tradeComp, ok := comp.(*TradeComponent); ok && tradeComp != nil {
+				total += tradeComp.CompletedTrades
+			}
+		}
+	}
+	return total
+}

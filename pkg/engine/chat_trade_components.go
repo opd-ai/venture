@@ -273,9 +273,10 @@ type TradeRecord struct {
 
 // TradeComponent tracks trading state
 type TradeComponent struct {
-	ActiveTrade  *TradeProposal
-	TradeHistory []TradeRecord
-	TrustScore   float64 // 0.0-1.0, affects trade limits
+	ActiveTrade     *TradeProposal
+	TradeHistory    []TradeRecord
+	TrustScore      float64 // 0.0-1.0, affects trade limits
+	CompletedTrades uint64  // Total number of completed trades (for metrics)
 }
 
 // Type returns the component type

@@ -2,6 +2,7 @@ package observability
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"runtime"
@@ -22,6 +23,9 @@ type MetricsExporter struct {
 	perfMonitor   PerformanceMonitor
 	networkServer NetworkServer
 	world         World
+
+	// Readiness checkers
+	readinessCheckers []ReadinessChecker
 
 	// Internal state
 	startTime time.Time
@@ -48,6 +52,61 @@ type World interface {
 	GetEntityCount() int
 	GetActiveQuestCount() int
 	GetTradeVolume() uint64
+}
+
+// ReadinessChecker provides readiness check functionality.
+// Implement this interface to add custom readiness checks.
+type ReadinessChecker interface {
+	// Check returns an error if the component is not ready, nil otherwise.
+	// The component name is used for logging and status reporting.
+	Check() (componentName string, err error)
+}
+
+// readyResponse represents the JSON response for the /ready endpoint.
+type readyResponse struct {
+	Status       string   `json:"status"`
+	FailedChecks []string `json:"failed_checks,omitempty"`
+}
+
+// statusResponse represents the JSON response for the /status endpoint.
+type statusResponse struct {
+	Status      string              `json:"status"`
+	UptimeSeconds float64             `json:"uptime_seconds"`
+	StartedAt   string              `json:"started_at"`
+	Performance *performanceMetrics `json:"performance,omitempty"`
+	Network     *networkMetrics     `json:"network,omitempty"`
+	GameState   *gameStateMetrics   `json:"game_state,omitempty"`
+	Runtime     runtimeMetrics      `json:"runtime"`
+}
+
+// performanceMetrics represents performance-related metrics.
+type performanceMetrics struct {
+	FPS         float64 `json:"fps"`
+	FrameTimeMs float64 `json:"frame_time_ms"`
+	MemoryMB    uint64  `json:"memory_mb"`
+}
+
+// networkMetrics represents network-related metrics.
+type networkMetrics struct {
+	ConnectedPlayers int    `json:"connected_players"`
+	BytesSent        uint64 `json:"bytes_sent"`
+	BytesReceived    uint64 `json:"bytes_received"`
+	PacketsSent      uint64 `json:"packets_sent"`
+	PacketsReceived  uint64 `json:"packets_received"`
+}
+
+// gameStateMetrics represents game state metrics.
+type gameStateMetrics struct {
+	EntityCount int    `json:"entity_count"`
+	ActiveQuests int    `json:"active_quests"`
+	TradeVolume uint64 `json:"trade_volume"`
+}
+
+// runtimeMetrics represents Go runtime metrics.
+type runtimeMetrics struct {
+	Goroutines    int    `json:"goroutines"`
+	HeapAllocBytes uint64 `json:"heap_alloc_bytes"`
+	GCRuns        uint32 `json:"gc_runs"`
 }
 
 // NewMetricsExporter creates a new metrics exporter listening on the given address.
@@ -86,6 +145,14 @@ func (m *MetricsExporter) RegisterWorld(w World) {
 	m.world = w
 }
 
+// RegisterReadinessChecker registers a readiness checker for the /ready endpoint.
+// Multiple checkers can be registered and all will be executed during readiness checks.
+func (m *MetricsExporter) RegisterReadinessChecker(checker ReadinessChecker) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.readinessCheckers = append(m.readinessCheckers, checker)
+}
+
 // Start begins serving metrics on the configured HTTP endpoint.
 func (m *MetricsExporter) Start() error {
 	m.mu.Lock()
@@ -98,6 +165,8 @@ func (m *MetricsExporter) Start() error {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/metrics", m.handleMetrics)
 	mux.HandleFunc("/health", m.handleHealth)
+	mux.HandleFunc("/ready", m.handleReady)
+	mux.HandleFunc("/status", m.handleStatus)
 
 	m.server = &http.Server{
 		Addr:         m.addr,
@@ -249,3 +318,109 @@ func (m *MetricsExporter) handleHealth(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	fmt.Fprintf(w, "OK\n")
 }
+
+// handleReady serves a readiness check endpoint.
+// Returns 200 OK if all registered readiness checks pass, 503 Service Unavailable otherwise.
+func (m *MetricsExporter) handleReady(w http.ResponseWriter, r *http.Request) {
+	m.mu.RLock()
+	checkers := m.readinessCheckers
+	m.mu.RUnlock()
+
+	w.Header().Set("Content-Type", "application/json")
+
+	// Execute all readiness checks
+	var failedChecks []string
+	for _, checker := range checkers {
+		componentName, err := checker.Check()
+		if err != nil {
+			failedChecks = append(failedChecks, fmt.Sprintf("%s: %v", componentName, err))
+			m.logger.WithError(err).WithField("component", componentName).Warn("Readiness check failed")
+		}
+	}
+
+	// Build response
+	var response readyResponse
+	if len(failedChecks) > 0 {
+		response = readyResponse{
+			Status:       "not_ready",
+			FailedChecks: failedChecks,
+		}
+		w.WriteHeader(http.StatusServiceUnavailable)
+	} else {
+		response = readyResponse{
+			Status: "ready",
+		}
+		w.WriteHeader(http.StatusOK)
+	}
+
+	// Encode response as JSON
+	encoder := json.NewEncoder(w)
+	if err := encoder.Encode(response); err != nil {
+		m.logger.WithError(err).Error("Failed to encode readiness response")
+	}
+}
+
+// handleStatus serves a detailed status endpoint with operational metrics.
+// Returns comprehensive server status including uptime, player count, and resource usage.
+func (m *MetricsExporter) handleStatus(w http.ResponseWriter, r *http.Request) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
+	w.Header().Set("Content-Type", "application/json")
+
+	// Calculate uptime
+	uptime := time.Since(m.startTime)
+
+	// Gather runtime metrics
+	var memStats runtime.MemStats
+	runtime.ReadMemStats(&memStats)
+
+	// Build response
+	response := statusResponse{
+		Status:        "ok",
+		UptimeSeconds: uptime.Seconds(),
+		StartedAt:     m.startTime.Format(time.RFC3339),
+		Runtime: runtimeMetrics{
+			Goroutines:     runtime.NumGoroutine(),
+			HeapAllocBytes: memStats.HeapAlloc,
+			GCRuns:         memStats.NumGC,
+		},
+	}
+
+	// Add performance metrics if available
+	if m.perfMonitor != nil {
+		response.Performance = &performanceMetrics{
+			FPS:         m.perfMonitor.GetFPS(),
+			FrameTimeMs: m.perfMonitor.GetFrameTime(),
+			MemoryMB:    m.perfMonitor.GetMemoryUsageMB(),
+		}
+	}
+
+	// Add network metrics if available
+	if m.networkServer != nil {
+		response.Network = &networkMetrics{
+			ConnectedPlayers: m.networkServer.GetConnectedClients(),
+			BytesSent:        m.networkServer.GetTotalBytesSent(),
+			BytesReceived:    m.networkServer.GetTotalBytesReceived(),
+			PacketsSent:      m.networkServer.GetPacketsSent(),
+			PacketsReceived:  m.networkServer.GetPacketsReceived(),
+		}
+	}
+
+	// Add game state metrics if available
+	if m.world != nil {
+		response.GameState = &gameStateMetrics{
+			EntityCount:  m.world.GetEntityCount(),
+			ActiveQuests: m.world.GetActiveQuestCount(),
+			TradeVolume:  m.world.GetTradeVolume(),
+		}
+	}
+
+	// Encode response as JSON
+	w.WriteHeader(http.StatusOK)
+	encoder := json.NewEncoder(w)
+	if err := encoder.Encode(response); err != nil {
+		m.logger.WithError(err).Error("Failed to encode status response")
+	}
+}
+

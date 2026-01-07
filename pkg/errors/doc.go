@@ -96,17 +96,17 @@ The package fully supports Go 1.13+ error wrapping:
 
 	baseErr := fmt.Errorf("io error")
 	networkErr := errors.NetworkWrap(baseErr, "connection failed")
-	
+
 	// Check error types
 	if errors.Is(networkErr, errors.ErrorTypeNetwork) {
 		// Handle network error
 	}
-	
+
 	// Extract VentureError
 	if ventureErr, ok := errors.AsVentureError(networkErr); ok {
 		log.WithFields(ventureErr.Context).Error(ventureErr.Message)
 	}
-	
+
 	// Check wrapped error
 	if errors.Is(networkErr, baseErr) {
 		// Original error is in the chain
@@ -135,24 +135,24 @@ Errors integrate with the logging package (pkg/logging) for structured logging:
 # Best Practices
 
 1. Always wrap errors with context:
-   - Use Wrap/Wrapf for existing errors
-   - Add relevant context with WithContext
-   - Include correlation IDs in request handlers
+  - Use Wrap/Wrapf for existing errors
+  - Add relevant context with WithContext
+  - Include correlation IDs in request handlers
 
 2. Choose appropriate error types:
-   - Use specific types (Network, Validation) over Unknown
-   - Match the error type to the root cause
+  - Use specific types (Network, Validation) over Unknown
+  - Match the error type to the root cause
 
 3. Provide user-friendly messages:
-   - Set UserMessage for errors shown to end users
-   - Keep technical details in Message for logs
+  - Set UserMessage for errors shown to end users
+  - Keep technical details in Message for logs
 
 4. Preserve error chains:
-   - Use Wrap instead of creating new errors
-   - Enables errors.Is and errors.As checks
+  - Use Wrap instead of creating new errors
+  - Enables errors.Is and errors.As checks
 
 5. Log errors with correlation IDs:
-   - Always include correlation ID in logs
-   - Enables tracing across distributed system
+  - Always include correlation ID in logs
+  - Enables tracing across distributed system
 */
 package errors

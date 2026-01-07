@@ -63,7 +63,7 @@ func NewRetryStrategy(config RetryConfig) *RetryStrategy {
 		seed = time.Now().UnixNano()
 	}
 	// Testing/deterministic: use provided seed
-	
+
 	return &RetryStrategy{
 		config: config,
 		rng:    rand.New(rand.NewSource(seed)),
@@ -133,7 +133,7 @@ func (r *RetryStrategy) calculateDelay(attempt int) time.Duration {
 	// Add jitter: delay * (1 ± jitter)
 	if r.config.Jitter > 0 {
 		jitterRange := delay * r.config.Jitter
-		jitter := (r.rng.Float64() * 2 - 1) * jitterRange // Random value in [-jitterRange, +jitterRange]
+		jitter := (r.rng.Float64()*2 - 1) * jitterRange // Random value in [-jitterRange, +jitterRange]
 		delay += jitter
 	}
 

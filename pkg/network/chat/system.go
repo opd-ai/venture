@@ -8,16 +8,32 @@ import (
 	"time"
 
 	"github.com/opd-ai/venture/pkg/engine"
+	"github.com/opd-ai/venture/pkg/validation"
 )
 
-// ChatSystem manages chat messages and channels
+const (
+	// ChatRateLimit is the maximum number of messages per player per second
+	// This prevents spam and DoS attacks while allowing normal chat flow
+	ChatRateLimit = 10
+
+	// ChatRateLimitWindow is the time window for rate limiting
+	ChatRateLimitWindow = time.Second
+)
+
+// ChatSystem manages chat messages and channels with validation and rate limiting
 type ChatSystem struct {
-	world *engine.World
+	world     *engine.World
+	validator *validation.ChatValidator
+	limiter   *validation.RateLimiter
 }
 
-// NewChatSystem creates a new chat system
+// NewChatSystem creates a new chat system with validation and rate limiting
 func NewChatSystem(world *engine.World) *ChatSystem {
-	return &ChatSystem{world: world}
+	return &ChatSystem{
+		world:     world,
+		validator: validation.NewChatValidator(),
+		limiter:   validation.NewRateLimiter(ChatRateLimit, ChatRateLimitWindow),
+	}
 }
 
 // Update processes chat message delivery
@@ -25,20 +41,31 @@ func (s *ChatSystem) Update(deltaTime float64) {
 	// Chat is event-driven, not time-based
 }
 
-// SendMessage sends a chat message
+// SendMessage sends a chat message with validation and rate limiting
 func (s *ChatSystem) SendMessage(senderID uint64, channel engine.ChatChannel, content string) error {
+	// Check rate limit
+	if !s.limiter.Allow(senderID) {
+		return fmt.Errorf("rate limit exceeded (maximum 10 messages per second)")
+	}
+
+	// Validate and sanitize message
+	sanitized, err := s.validator.ValidateAndSanitize(content)
+	if err != nil {
+		return fmt.Errorf("message validation failed: %w", err)
+	}
+
 	// Generate message ID
 	msgID, err := generateMessageID()
 	if err != nil {
 		return fmt.Errorf("failed to generate message ID: %w", err)
 	}
 
-	// Create message
+	// Create message with sanitized content
 	message := engine.ChatMessage{
 		ID:        msgID,
 		SenderID:  senderID,
 		Channel:   channel,
-		Content:   content,
+		Content:   sanitized,  // Use sanitized content
 		Timestamp: time.Now(), // Use current timestamp for message creation
 		Encrypted: nil,        // E2E encryption available in pkg/network/chat.go
 	}

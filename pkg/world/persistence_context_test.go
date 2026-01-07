@@ -15,11 +15,11 @@ func TestSaveWorldWithContext(t *testing.T) {
 
 	wp := NewWorldPersistence(savePath)
 	state := &PersistentWorldState{
-		Version:   CurrentSchemaVersion,
-		WorldSeed: 12345,
-		ChunkData: make(map[string]*Chunk),
-		Entities:  []*EntityState{},
-		WorldEvents: []WorldEvent{},
+		Version:        CurrentSchemaVersion,
+		WorldSeed:      12345,
+		ChunkData:      make(map[string]*Chunk),
+		Entities:       []*EntityState{},
+		WorldEvents:    []WorldEvent{},
 		ModifiedChunks: make(map[string]bool),
 	}
 
@@ -41,17 +41,17 @@ func TestSaveWorldContextCancellation(t *testing.T) {
 	savePath := filepath.Join(tmpDir, "test.save")
 
 	wp := NewWorldPersistence(savePath)
-	
+
 	// Create a large state to make save take longer
 	state := &PersistentWorldState{
-		Version:   CurrentSchemaVersion,
-		WorldSeed: 12345,
-		ChunkData: make(map[string]*Chunk),
-		Entities:  make([]*EntityState, 10000), // Large dataset
-		WorldEvents: []WorldEvent{},
+		Version:        CurrentSchemaVersion,
+		WorldSeed:      12345,
+		ChunkData:      make(map[string]*Chunk),
+		Entities:       make([]*EntityState, 10000), // Large dataset
+		WorldEvents:    []WorldEvent{},
 		ModifiedChunks: make(map[string]bool),
 	}
-	
+
 	// Fill with dummy data
 	for i := range state.Entities {
 		state.Entities[i] = &EntityState{
@@ -87,18 +87,18 @@ func TestSaveWorldContextTimeout(t *testing.T) {
 
 	wp := NewWorldPersistence(savePath)
 	state := &PersistentWorldState{
-		Version:   CurrentSchemaVersion,
-		WorldSeed: 12345,
-		ChunkData: make(map[string]*Chunk),
-		Entities:  []*EntityState{},
-		WorldEvents: []WorldEvent{},
+		Version:        CurrentSchemaVersion,
+		WorldSeed:      12345,
+		ChunkData:      make(map[string]*Chunk),
+		Entities:       []*EntityState{},
+		WorldEvents:    []WorldEvent{},
 		ModifiedChunks: make(map[string]bool),
 	}
 
 	// Create context with very short timeout
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Millisecond)
 	defer cancel()
-	
+
 	// Wait for timeout
 	time.Sleep(20 * time.Millisecond)
 
@@ -118,16 +118,16 @@ func TestLoadWorldWithContext(t *testing.T) {
 	savePath := filepath.Join(tmpDir, "test.save")
 
 	wp := NewWorldPersistence(savePath)
-	
+
 	// First save a state
 	originalState := &PersistentWorldState{
 		Version:   CurrentSchemaVersion,
 		WorldSeed: 12345,
 		ChunkData: make(map[string]*Chunk),
-		Entities:  []*EntityState{
+		Entities: []*EntityState{
 			{ID: 1, TypeName: "Monster", Components: make(map[string]interface{})},
 		},
-		WorldEvents: []WorldEvent{},
+		WorldEvents:    []WorldEvent{},
 		ModifiedChunks: make(map[string]bool),
 	}
 
@@ -158,17 +158,17 @@ func TestLoadWorldContextCancellation(t *testing.T) {
 	savePath := filepath.Join(tmpDir, "test.save")
 
 	wp := NewWorldPersistence(savePath)
-	
+
 	// Create a large state file
 	state := &PersistentWorldState{
-		Version:   CurrentSchemaVersion,
-		WorldSeed: 12345,
-		ChunkData: make(map[string]*Chunk),
-		Entities:  make([]*EntityState, 5000),
-		WorldEvents: []WorldEvent{},
+		Version:        CurrentSchemaVersion,
+		WorldSeed:      12345,
+		ChunkData:      make(map[string]*Chunk),
+		Entities:       make([]*EntityState, 5000),
+		WorldEvents:    []WorldEvent{},
 		ModifiedChunks: make(map[string]bool),
 	}
-	
+
 	for i := range state.Entities {
 		state.Entities[i] = &EntityState{
 			ID:       uint64(i),
@@ -200,14 +200,14 @@ func TestLoadWorldBackupRecovery(t *testing.T) {
 	savePath := filepath.Join(tmpDir, "test.save")
 
 	wp := NewWorldPersistence(savePath)
-	
+
 	// Save initial state
 	state := &PersistentWorldState{
-		Version:   CurrentSchemaVersion,
-		WorldSeed: 12345,
-		ChunkData: make(map[string]*Chunk),
-		Entities:  []*EntityState{},
-		WorldEvents: []WorldEvent{},
+		Version:        CurrentSchemaVersion,
+		WorldSeed:      12345,
+		ChunkData:      make(map[string]*Chunk),
+		Entities:       []*EntityState{},
+		WorldEvents:    []WorldEvent{},
 		ModifiedChunks: make(map[string]bool),
 	}
 
@@ -239,7 +239,7 @@ func TestSaveIncrementalWithContext(t *testing.T) {
 	savePath := filepath.Join(tmpDir, "test.save")
 
 	wp := NewWorldPersistence(savePath)
-	
+
 	// Initial full save
 	state := &PersistentWorldState{
 		Version:   CurrentSchemaVersion,
@@ -247,8 +247,8 @@ func TestSaveIncrementalWithContext(t *testing.T) {
 		ChunkData: map[string]*Chunk{
 			"0,0": {X: 0, Y: 0, Modifications: []TerrainMod{}},
 		},
-		Entities:  []*EntityState{},
-		WorldEvents: []WorldEvent{},
+		Entities:       []*EntityState{},
+		WorldEvents:    []WorldEvent{},
 		ModifiedChunks: map[string]bool{"0,0": true},
 	}
 
@@ -274,7 +274,7 @@ func TestSaveIncrementalWithContext(t *testing.T) {
 // TestCopyFileErrorHandling verifies improved copyFile error handling.
 func TestCopyFileErrorHandling(t *testing.T) {
 	tmpDir := t.TempDir()
-	
+
 	// Test successful copy
 	srcPath := filepath.Join(tmpDir, "source.txt")
 	dstPath := filepath.Join(tmpDir, "dest.txt")
@@ -318,7 +318,7 @@ func TestLoadWorldNonExistent(t *testing.T) {
 	savePath := filepath.Join(tmpDir, "nonexistent.save")
 
 	wp := NewWorldPersistence(savePath)
-	
+
 	ctx := context.Background()
 	state, err := wp.LoadWorldWithContext(ctx, 12345)
 	if err != nil {
@@ -346,11 +346,11 @@ func TestBackwardCompatibility(t *testing.T) {
 
 	wp := NewWorldPersistence(savePath)
 	state := &PersistentWorldState{
-		Version:   CurrentSchemaVersion,
-		WorldSeed: 12345,
-		ChunkData: make(map[string]*Chunk),
-		Entities:  []*EntityState{},
-		WorldEvents: []WorldEvent{},
+		Version:        CurrentSchemaVersion,
+		WorldSeed:      12345,
+		ChunkData:      make(map[string]*Chunk),
+		Entities:       []*EntityState{},
+		WorldEvents:    []WorldEvent{},
 		ModifiedChunks: make(map[string]bool),
 	}
 

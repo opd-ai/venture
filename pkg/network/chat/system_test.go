@@ -1,6 +1,7 @@
 package chat
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/opd-ai/venture/pkg/engine"
@@ -109,7 +110,8 @@ func TestSendMessage(t *testing.T) {
 			},
 			channel: engine.ChatGlobal,
 			content: "",
-			wantErr: false,
+			wantErr: true, // Empty messages are now rejected by validation
+			errMsg:  "message validation failed: message cannot be empty",
 		},
 		{
 			name: "long message",
@@ -162,8 +164,8 @@ func TestSendMessage(t *testing.T) {
 			if tt.wantErr && tt.errMsg != "" {
 				if err == nil {
 					t.Errorf("expected error containing %q, got nil", tt.errMsg)
-				} else if err.Error() != tt.errMsg {
-					t.Errorf("error message = %q, want %q", err.Error(), tt.errMsg)
+				} else if !strings.Contains(err.Error(), tt.errMsg) {
+					t.Errorf("error message = %q, want to contain %q", err.Error(), tt.errMsg)
 				}
 			}
 

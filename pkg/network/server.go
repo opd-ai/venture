@@ -117,9 +117,9 @@ type TCPServer struct {
 	wg   sync.WaitGroup
 
 	// Resource tracking
-	idleTimeout        time.Duration
-	cleanupInterval    time.Duration
-	shutdownTimeout    time.Duration
+	idleTimeout     time.Duration
+	cleanupInterval time.Duration
+	shutdownTimeout time.Duration
 
 	// State tracking
 	stateSeq uint32
@@ -217,7 +217,7 @@ func (s *TCPServer) Start() error {
 	s.clientsMu.Unlock()
 	s.wg.Add(1)
 	go s.acceptLoop()
-	
+
 	// Start cleanup goroutine for idle connection management
 	s.wg.Add(1)
 	go s.cleanupLoop()
@@ -253,7 +253,7 @@ func (s *TCPServer) StopWithContext(ctx context.Context) error {
 	}
 
 	s.running = false
-	
+
 	// Cancel server context to signal all operations
 	s.cancel()
 	close(s.done)

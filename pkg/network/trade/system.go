@@ -9,6 +9,7 @@ import (
 
 	"github.com/opd-ai/venture/pkg/engine"
 	"github.com/opd-ai/venture/pkg/procgen/item"
+	"github.com/opd-ai/venture/pkg/validation"
 )
 
 const (
@@ -55,16 +56,29 @@ const (
 	ReasonConcurrent TradeFailureReason = "item in another trade"
 	ReasonDisconnect TradeFailureReason = "player disconnected"
 	ReasonRarity     TradeFailureReason = "rarity exceeds trust level"
+
+	// TradeRateLimit is the maximum number of trade requests per player per second
+	// This prevents spam and DoS attacks while allowing normal trading
+	TradeRateLimit = 10
+
+	// TradeRateLimitWindow is the time window for trade rate limiting
+	TradeRateLimitWindow = time.Second
 )
 
-// TradeSystem manages item trading with two-phase commit protocol
+// TradeSystem manages item trading with two-phase commit protocol and input validation
 type TradeSystem struct {
-	world *engine.World
+	world     *engine.World
+	validator *validation.TradeValidator
+	limiter   *validation.RateLimiter
 }
 
-// NewTradeSystem creates a new trade system
+// NewTradeSystem creates a new trade system with validation and rate limiting
 func NewTradeSystem(world *engine.World) *TradeSystem {
-	return &TradeSystem{world: world}
+	return &TradeSystem{
+		world:     world,
+		validator: validation.NewTradeValidator(),
+		limiter:   validation.NewRateLimiter(TradeRateLimit, TradeRateLimitWindow),
+	}
 }
 
 // Update processes active trades (check timeouts, proximity)
@@ -103,10 +117,20 @@ func (s *TradeSystem) Update(deltaTime float64) {
 	}
 }
 
-// ProposeTrade proposes a trade between two players with validation
+// ProposeTrade proposes a trade between two players with validation and rate limiting
 func (s *TradeSystem) ProposeTrade(proposerID, recipientID uint64, offeredItemIDs, requestedItemIDs []string) error {
 	if s.world == nil {
 		return fmt.Errorf("world is nil")
+	}
+
+	// Check rate limit
+	if !s.limiter.Allow(proposerID) {
+		return fmt.Errorf("rate limit exceeded (maximum 10 trade requests per second)")
+	}
+
+	// Validate item IDs format before processing
+	if err := s.validator.ValidateTradeRequest(offeredItemIDs, requestedItemIDs); err != nil {
+		return fmt.Errorf("trade validation failed: %w", err)
 	}
 
 	proposer, recipient, err := s.getTradeEntities(proposerID, recipientID)

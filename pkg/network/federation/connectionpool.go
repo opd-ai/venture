@@ -31,56 +31,56 @@ func DefaultConnectionConfig() ConnectionConfig {
 
 // PooledConnection represents a connection in the pool with metadata
 type PooledConnection struct {
-	Conn         net.Conn
-	ServerID     string
-	Address      string
-	CreatedAt    time.Time
-	LastUsedAt   time.Time
+	Conn           net.Conn
+	ServerID       string
+	Address        string
+	CreatedAt      time.Time
+	LastUsedAt     time.Time
 	circuitBreaker *CircuitBreaker
 }
 
 // IsStale checks if the connection should be closed based on idle time or lifetime
 func (pc *PooledConnection) IsStale(config ConnectionConfig) bool {
 	now := time.Now()
-	
+
 	// Check if connection exceeded max lifetime
 	if now.Sub(pc.CreatedAt) > config.MaxLifetime {
 		return true
 	}
-	
+
 	// Check if connection has been idle too long
 	if now.Sub(pc.LastUsedAt) > config.MaxIdleTime {
 		return true
 	}
-	
+
 	return false
 }
 
 // ConnectionPool manages a pool of connections to remote servers
 type ConnectionPool struct {
-	mu              sync.RWMutex
-	connections     map[string]*PooledConnection // serverID -> connection
-	config          ConnectionConfig
-	logger          *logrus.Entry
-	cleanupTicker   *time.Ticker
-	stopCleanup     chan struct{}
-	cleanupWg       sync.WaitGroup
+	mu            sync.RWMutex
+	connections   map[string]*PooledConnection // serverID -> connection
+	config        ConnectionConfig
+	logger        *logrus.Entry
+	cleanupTicker *time.Ticker
+	stopCleanup   chan struct{}
+	cleanupWg     sync.WaitGroup
 }
 
 // NewConnectionPool creates a new connection pool with the given configuration
 func NewConnectionPool(config ConnectionConfig) *ConnectionPool {
 	pool := &ConnectionPool{
-		connections:   make(map[string]*PooledConnection),
-		config:        config,
+		connections: make(map[string]*PooledConnection),
+		config:      config,
 		logger: logrus.WithFields(logrus.Fields{
 			"component": "connection_pool",
 		}),
-		stopCleanup:   make(chan struct{}),
+		stopCleanup: make(chan struct{}),
 	}
-	
+
 	// Start background cleanup goroutine
 	pool.startCleanup()
-	
+
 	return pool
 }
 
@@ -88,7 +88,7 @@ func NewConnectionPool(config ConnectionConfig) *ConnectionPool {
 func (cp *ConnectionPool) Get(serverID, address string) (net.Conn, error) {
 	cp.mu.Lock()
 	defer cp.mu.Unlock()
-	
+
 	// Check if we have a valid connection
 	if conn, exists := cp.connections[serverID]; exists {
 		// Check if connection is stale
@@ -109,13 +109,13 @@ func (cp *ConnectionPool) Get(serverID, address string) (net.Conn, error) {
 			return conn.Conn, nil
 		}
 	}
-	
+
 	// No valid connection exists, create a new one
 	cp.logger.WithFields(logrus.Fields{
 		"server_id": serverID,
 		"address":   address,
 	}).Debug("Creating new connection")
-	
+
 	return nil, fmt.Errorf("connection not found in pool")
 }
 
@@ -123,7 +123,7 @@ func (cp *ConnectionPool) Get(serverID, address string) (net.Conn, error) {
 func (cp *ConnectionPool) Add(serverID, address string, conn net.Conn) error {
 	cp.mu.Lock()
 	defer cp.mu.Unlock()
-	
+
 	// Close existing connection if present
 	if existing, exists := cp.connections[serverID]; exists {
 		cp.logger.WithFields(logrus.Fields{
@@ -132,7 +132,7 @@ func (cp *ConnectionPool) Add(serverID, address string, conn net.Conn) error {
 		}).Debug("Replacing existing connection in pool")
 		existing.Conn.Close()
 	}
-	
+
 	now := time.Now()
 	pooledConn := &PooledConnection{
 		Conn:           conn,
@@ -142,14 +142,14 @@ func (cp *ConnectionPool) Add(serverID, address string, conn net.Conn) error {
 		LastUsedAt:     now,
 		circuitBreaker: NewCircuitBreaker(DefaultCircuitBreakerConfig()),
 	}
-	
+
 	cp.connections[serverID] = pooledConn
-	
+
 	cp.logger.WithFields(logrus.Fields{
 		"server_id": serverID,
 		"address":   address,
 	}).Info("Added connection to pool")
-	
+
 	return nil
 }
 
@@ -157,7 +157,7 @@ func (cp *ConnectionPool) Add(serverID, address string, conn net.Conn) error {
 func (cp *ConnectionPool) Remove(serverID string) error {
 	cp.mu.Lock()
 	defer cp.mu.Unlock()
-	
+
 	if conn, exists := cp.connections[serverID]; exists {
 		conn.Conn.Close()
 		delete(cp.connections, serverID)
@@ -166,7 +166,7 @@ func (cp *ConnectionPool) Remove(serverID string) error {
 		}).Info("Removed connection from pool")
 		return nil
 	}
-	
+
 	return fmt.Errorf("connection not found for server %s", serverID)
 }
 
@@ -174,11 +174,11 @@ func (cp *ConnectionPool) Remove(serverID string) error {
 func (cp *ConnectionPool) GetCircuitBreaker(serverID string) (*CircuitBreaker, bool) {
 	cp.mu.RLock()
 	defer cp.mu.RUnlock()
-	
+
 	if conn, exists := cp.connections[serverID]; exists {
 		return conn.circuitBreaker, true
 	}
-	
+
 	return nil, false
 }
 
@@ -186,19 +186,19 @@ func (cp *ConnectionPool) GetCircuitBreaker(serverID string) (*CircuitBreaker, b
 func (cp *ConnectionPool) Stats() map[string]interface{} {
 	cp.mu.RLock()
 	defer cp.mu.RUnlock()
-	
+
 	totalConnections := len(cp.connections)
 	staleCount := 0
-	
+
 	for _, conn := range cp.connections {
 		if conn.IsStale(cp.config) {
 			staleCount++
 		}
 	}
-	
+
 	return map[string]interface{}{
-		"total_connections": totalConnections,
-		"stale_connections": staleCount,
+		"total_connections":  totalConnections,
+		"stale_connections":  staleCount,
 		"active_connections": totalConnections - staleCount,
 	}
 }
@@ -206,7 +206,7 @@ func (cp *ConnectionPool) Stats() map[string]interface{} {
 // startCleanup starts the background cleanup goroutine
 func (cp *ConnectionPool) startCleanup() {
 	cp.cleanupTicker = time.NewTicker(cp.config.CleanupInterval)
-	
+
 	cp.cleanupWg.Add(1)
 	go func() {
 		defer cp.cleanupWg.Done()
@@ -226,7 +226,7 @@ func (cp *ConnectionPool) startCleanup() {
 func (cp *ConnectionPool) cleanup() {
 	cp.mu.Lock()
 	defer cp.mu.Unlock()
-	
+
 	removedCount := 0
 	for serverID, conn := range cp.connections {
 		if conn.IsStale(cp.config) {
@@ -240,7 +240,7 @@ func (cp *ConnectionPool) cleanup() {
 			removedCount++
 		}
 	}
-	
+
 	if removedCount > 0 {
 		cp.logger.WithFields(logrus.Fields{
 			"removed_count": removedCount,
@@ -253,7 +253,7 @@ func (cp *ConnectionPool) Close() error {
 	// Stop cleanup goroutine and wait for it to exit
 	close(cp.stopCleanup)
 	cp.cleanupWg.Wait()
-	
+
 	cp.mu.Lock()
 	defer cp.mu.Unlock()
 

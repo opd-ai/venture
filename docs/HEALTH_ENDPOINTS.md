@@ -64,6 +64,8 @@ $ curl http://localhost:9090/ready
 Register custom readiness checkers using the `ReadinessChecker` interface:
 
 ```go
+import "database/sql"
+
 type ReadinessChecker interface {
     Check() (componentName string, err error)
 }

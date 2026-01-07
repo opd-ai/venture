@@ -2,6 +2,7 @@ package observability
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"runtime"
@@ -59,6 +60,53 @@ type ReadinessChecker interface {
 	// Check returns an error if the component is not ready, nil otherwise.
 	// The component name is used for logging and status reporting.
 	Check() (componentName string, err error)
+}
+
+// readyResponse represents the JSON response for the /ready endpoint.
+type readyResponse struct {
+	Status       string   `json:"status"`
+	FailedChecks []string `json:"failed_checks,omitempty"`
+}
+
+// statusResponse represents the JSON response for the /status endpoint.
+type statusResponse struct {
+	Status      string              `json:"status"`
+	UptimeSeconds float64             `json:"uptime_seconds"`
+	StartedAt   string              `json:"started_at"`
+	Performance *performanceMetrics `json:"performance,omitempty"`
+	Network     *networkMetrics     `json:"network,omitempty"`
+	GameState   *gameStateMetrics   `json:"game_state,omitempty"`
+	Runtime     runtimeMetrics      `json:"runtime"`
+}
+
+// performanceMetrics represents performance-related metrics.
+type performanceMetrics struct {
+	FPS         float64 `json:"fps"`
+	FrameTimeMs float64 `json:"frame_time_ms"`
+	MemoryMB    uint64  `json:"memory_mb"`
+}
+
+// networkMetrics represents network-related metrics.
+type networkMetrics struct {
+	ConnectedPlayers int    `json:"connected_players"`
+	BytesSent        uint64 `json:"bytes_sent"`
+	BytesReceived    uint64 `json:"bytes_received"`
+	PacketsSent      uint64 `json:"packets_sent"`
+	PacketsReceived  uint64 `json:"packets_received"`
+}
+
+// gameStateMetrics represents game state metrics.
+type gameStateMetrics struct {
+	EntityCount int    `json:"entity_count"`
+	ActiveQuests int    `json:"active_quests"`
+	TradeVolume uint64 `json:"trade_volume"`
+}
+
+// runtimeMetrics represents Go runtime metrics.
+type runtimeMetrics struct {
+	Goroutines    int    `json:"goroutines"`
+	HeapAllocBytes uint64 `json:"heap_alloc_bytes"`
+	GCRuns        uint32 `json:"gc_runs"`
 }
 
 // NewMetricsExporter creates a new metrics exporter listening on the given address.
@@ -290,22 +338,25 @@ func (m *MetricsExporter) handleReady(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// Return status based on checks
+	// Build response
+	var response readyResponse
 	if len(failedChecks) > 0 {
-		w.WriteHeader(http.StatusServiceUnavailable)
-		fmt.Fprintf(w, `{"status":"not_ready","failed_checks":[`)
-		for i, check := range failedChecks {
-			if i > 0 {
-				fmt.Fprintf(w, ",")
-			}
-			fmt.Fprintf(w, `"%s"`, check)
+		response = readyResponse{
+			Status:       "not_ready",
+			FailedChecks: failedChecks,
 		}
-		fmt.Fprintf(w, `]}`)
-		fmt.Fprintf(w, "\n")
+		w.WriteHeader(http.StatusServiceUnavailable)
 	} else {
+		response = readyResponse{
+			Status: "ready",
+		}
 		w.WriteHeader(http.StatusOK)
-		fmt.Fprintf(w, `{"status":"ready"}`)
-		fmt.Fprintf(w, "\n")
+	}
+
+	// Encode response as JSON
+	encoder := json.NewEncoder(w)
+	if err := encoder.Encode(response); err != nil {
+		m.logger.WithError(err).Error("Failed to encode readiness response")
 	}
 }
 
@@ -316,7 +367,6 @@ func (m *MetricsExporter) handleStatus(w http.ResponseWriter, r *http.Request) {
 	defer m.mu.RUnlock()
 
 	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
 
 	// Calculate uptime
 	uptime := time.Since(m.startTime)
@@ -325,47 +375,52 @@ func (m *MetricsExporter) handleStatus(w http.ResponseWriter, r *http.Request) {
 	var memStats runtime.MemStats
 	runtime.ReadMemStats(&memStats)
 
-	fmt.Fprintf(w, `{"status":"ok",`)
-	fmt.Fprintf(w, `"uptime_seconds":%.2f,`, uptime.Seconds())
-	fmt.Fprintf(w, `"started_at":"%s",`, m.startTime.Format(time.RFC3339))
+	// Build response
+	response := statusResponse{
+		Status:        "ok",
+		UptimeSeconds: uptime.Seconds(),
+		StartedAt:     m.startTime.Format(time.RFC3339),
+		Runtime: runtimeMetrics{
+			Goroutines:     runtime.NumGoroutine(),
+			HeapAllocBytes: memStats.HeapAlloc,
+			GCRuns:         memStats.NumGC,
+		},
+	}
 
-	// Performance metrics
+	// Add performance metrics if available
 	if m.perfMonitor != nil {
-		fmt.Fprintf(w, `"performance":{`)
-		fmt.Fprintf(w, `"fps":%.2f,`, m.perfMonitor.GetFPS())
-		fmt.Fprintf(w, `"frame_time_ms":%.2f,`, m.perfMonitor.GetFrameTime())
-		fmt.Fprintf(w, `"memory_mb":%d`, m.perfMonitor.GetMemoryUsageMB())
-		fmt.Fprintf(w, `},`)
+		response.Performance = &performanceMetrics{
+			FPS:         m.perfMonitor.GetFPS(),
+			FrameTimeMs: m.perfMonitor.GetFrameTime(),
+			MemoryMB:    m.perfMonitor.GetMemoryUsageMB(),
+		}
 	}
 
-	// Network metrics
+	// Add network metrics if available
 	if m.networkServer != nil {
-		fmt.Fprintf(w, `"network":{`)
-		fmt.Fprintf(w, `"connected_players":%d,`, m.networkServer.GetConnectedClients())
-		fmt.Fprintf(w, `"bytes_sent":%d,`, m.networkServer.GetTotalBytesSent())
-		fmt.Fprintf(w, `"bytes_received":%d,`, m.networkServer.GetTotalBytesReceived())
-		fmt.Fprintf(w, `"packets_sent":%d,`, m.networkServer.GetPacketsSent())
-		fmt.Fprintf(w, `"packets_received":%d`, m.networkServer.GetPacketsReceived())
-		fmt.Fprintf(w, `},`)
+		response.Network = &networkMetrics{
+			ConnectedPlayers: m.networkServer.GetConnectedClients(),
+			BytesSent:        m.networkServer.GetTotalBytesSent(),
+			BytesReceived:    m.networkServer.GetTotalBytesReceived(),
+			PacketsSent:      m.networkServer.GetPacketsSent(),
+			PacketsReceived:  m.networkServer.GetPacketsReceived(),
+		}
 	}
 
-	// Game state metrics
+	// Add game state metrics if available
 	if m.world != nil {
-		fmt.Fprintf(w, `"game_state":{`)
-		fmt.Fprintf(w, `"entity_count":%d,`, m.world.GetEntityCount())
-		fmt.Fprintf(w, `"active_quests":%d,`, m.world.GetActiveQuestCount())
-		fmt.Fprintf(w, `"trade_volume":%d`, m.world.GetTradeVolume())
-		fmt.Fprintf(w, `},`)
+		response.GameState = &gameStateMetrics{
+			EntityCount:  m.world.GetEntityCount(),
+			ActiveQuests: m.world.GetActiveQuestCount(),
+			TradeVolume:  m.world.GetTradeVolume(),
+		}
 	}
 
-	// Runtime metrics
-	fmt.Fprintf(w, `"runtime":{`)
-	fmt.Fprintf(w, `"goroutines":%d,`, runtime.NumGoroutine())
-	fmt.Fprintf(w, `"heap_alloc_bytes":%d,`, memStats.HeapAlloc)
-	fmt.Fprintf(w, `"gc_runs":%d`, memStats.NumGC)
-	fmt.Fprintf(w, `}`)
-
-	fmt.Fprintf(w, `}`)
-	fmt.Fprintf(w, "\n")
+	// Encode response as JSON
+	w.WriteHeader(http.StatusOK)
+	encoder := json.NewEncoder(w)
+	if err := encoder.Encode(response); err != nil {
+		m.logger.WithError(err).Error("Failed to encode status response")
+	}
 }
 

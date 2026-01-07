@@ -591,7 +591,7 @@ func TestStatusEndpoint(t *testing.T) {
 		{"status", `"status":"ok"`},
 		{"uptime", `"uptime_seconds"`},
 		{"started_at", `"started_at"`},
-		{"fps", `"fps":60.00`},
+		{"fps", `"fps":60`},
 		{"frame_time", `"frame_time_ms":16.67`},
 		{"memory", `"memory_mb":120`},
 		{"connected_players", `"connected_players":4`},

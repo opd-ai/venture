@@ -242,7 +242,7 @@ These are performance metrics that require runtime testing. This audit focused o
 |------------------|-------------|----------------------|--------|
 | Core Engine | 240+ files | Yes (engine package) | ✅ Complete |
 | Multiplayer | 60+ files | Yes (network package) | ✅ Complete |
-| Housing | 1+ files | Yes (handlers.go) | ✅ Complete |
+| Housing | 18 files | Yes (pkg/world/housing) | ✅ Complete |
 | Guilds | 4 files | Yes (federation/guild) | ✅ Complete |
 | Physics (Vehicle) | 16 files | Yes (physics/vehicle) | ✅ Complete |
 | Physics (Fluids) | 4 files | Yes (physics/fluids) | ✅ Complete |

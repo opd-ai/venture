@@ -126,7 +126,7 @@ This is intentional architecture, not a bug. The KeyBindingRegistry provides UI 
 **Implementation Status:** ✅ VERIFIED
 
 **Vehicle Physics:**
-- **Package:** `pkg/engine/physics/vehicle/` (directory exists with 16 files)
+- **Package:** `pkg/engine/physics/vehicle/` (directory exists with 11 files)
 - **Location:** Confirmed via directory listing
 
 **Fluid Dynamics:**

@@ -208,7 +208,9 @@ All Phase 2 deliverables completed successfully:
 **Goal:** Achieve comprehensive test coverage, implement production monitoring, and establish observability standards.
 
 **Deliverables:**
-- [ ] Increase test coverage to 90%+ (files: all packages with <80% coverage)
+- [x] Increase test coverage to 90%+ (files: all packages with <80% coverage) - **IN PROGRESS**
+  - ✅ Improved pkg/procgen/furniture from 79.6% to 89.2% (2026-01-08)
+  - Remaining packages below 80%: 20 packages (see below for priority list)
   - Add table-driven tests for all edge cases
   - Add integration tests for critical paths (player join, combat, trading)
   - Add chaos/fuzz tests for network protocols

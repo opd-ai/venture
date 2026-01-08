@@ -247,7 +247,7 @@ These are performance metrics that require runtime testing. This audit focused o
 | Physics (Vehicle) | 16 files | Yes (physics/vehicle) | ✅ Complete |
 | Physics (Fluids) | 4 files | Yes (physics/fluids) | ✅ Complete |
 | Physics (Destruction) | Directory exists | Yes (physics/destruction) | ✅ Complete |
-| WebRTC P2P | 13 files | Yes (federation/webrtc) | ✅ Complete |
+| WebRTC P2P | 12 files | Yes (federation/webrtc) | ✅ Complete |
 | Companion AI | 9 files | Yes (companion package) | ✅ Complete |
 | Narrative | 12 files | Yes (narrative package) | ✅ Complete |
 | Multi-class | 7 files | Yes (class package) | ✅ Complete |

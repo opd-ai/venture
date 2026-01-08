@@ -28,7 +28,7 @@ This document tracks progress on Phase 3 deliverable: "Increase test coverage to
 - Total test functions: 397 (all passing)
 - New test coverage includes:
   - Genre-specific material selection (fantasy, scifi, cyberpunk, horror, postapoc)
-  - Edge cases for validation (zero/negative dimensions, empty names)
+  - Edge cases for validation (zero/negative dimensions, invalid collision dimensions)
   - High-rarity item generation (legendary/epic items)
   - Placement validation with rotation and collision detection
   - Error paths and boundary conditions

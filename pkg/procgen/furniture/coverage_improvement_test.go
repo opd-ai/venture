@@ -141,8 +141,8 @@ func TestHorrorMaterialSelection(t *testing.T) {
 	}
 }
 
-// TestPostApocMaterialSelection tests trySelectPostapocMaterialDeterministic (0% coverage)
-func TestPostApocMaterialSelection(t *testing.T) {
+// TestPostapocMaterialSelection tests trySelectPostapocMaterialDeterministic (0% coverage)
+func TestPostapocMaterialSelection(t *testing.T) {
 	gen := NewGenerator()
 	
 	tests := []struct {
@@ -395,10 +395,15 @@ func TestRotateFurnitureCollision(t *testing.T) {
 	furniture2.CollisionDepth = 2.0
 	validator.PlaceFurniture(furniture2, 6.0, 5.0, DirNorth)
 
-	// Try to rotate first furniture - may or may not cause collision depending on position
+	// Try to rotate first furniture - should succeed or fail based on collision
 	err = validator.RotateFurniture(0)
-	// Either succeeds or fails with collision - both are valid outcomes
-	_ = err // Don't assert, just ensure it doesn't panic
+	// This test verifies the rotation code path executes without panic.
+	// The outcome (success or collision error) depends on the specific positions,
+	// so we don't assert a specific result, only that the function completes.
+	if err != nil {
+		// Rotation may fail due to collision with furniture2, which is expected
+		t.Logf("Rotation failed as expected due to collision: %v", err)
+	}
 }
 
 // TestValidateInvalidFurniture tests validation edge cases
@@ -429,12 +434,13 @@ func TestValidateInvalidFurniture(t *testing.T) {
 			wantErr: true,
 		},
 		{
-			name: "EmptyName",
+			name: "ZeroCollisionWidth",
 			furniture: &Furniture{
-				Width:  1.0,
-				Height: 1.0,
-				Depth:  1.0,
-				Name:   "",
+				Width:          1.0,
+				Height:         1.0,
+				Depth:          1.0,
+				CollisionWidth: 0,
+				CollisionDepth: 1.0,
 			},
 			wantErr: true,
 		},

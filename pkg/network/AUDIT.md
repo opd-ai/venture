@@ -15,7 +15,7 @@ This audit followed a dependency-based analysis approach:
 
 Files were analyzed in ascending level order to establish baseline correctness before examining integration.
 
-**Test Coverage:** 82.6% (per README claim - not independently verified due to build environment X11 dependencies)
+**Test Coverage:** 82.6% (per README claim - not independently verified; the package's transitive dependency chain includes Ebiten game engine via pkg/audio and other packages, which requires X11/graphics libraries unavailable in this headless audit environment)
 
 ---
 
@@ -125,9 +125,10 @@ func (sm *SnapshotManager) GetSnapshotAtSequence(seq uint32) *WorldSnapshot {
 **Implementation Status:** ✅ VERIFIED
 - **Location:** `lag_compensation.go` lines 1-318
 - **LagCompensator** with configurable min/max compensation
-- `DefaultLagCompensationConfig()`: 10ms-500ms
-- `HighLatencyLagCompensationConfig()`: 10ms-5000ms
+- `DefaultLagCompensationConfig()`: 10ms min, 500ms max (for standard internet play)
+- `HighLatencyLagCompensationConfig()`: 10ms min, 5000ms max (matches README's documented range for Tor)
 - `ValidateHit()` for server-side hit validation with rewind
+- The documented "10ms-5000ms" range is supported via `HighLatencyLagCompensationConfig()`
 
 ### 5. Delta Compression ✅
 
@@ -270,7 +271,7 @@ func (sm *SnapshotManager) GetSnapshotAtSequence(seq uint32) *WorldSnapshot {
 | ~80 bytes per update | Yes (header analysis) | ✅ Verified |
 | 82.6% test coverage | No (requires test run) | ⚠️ Not verified |
 
-**Note:** Performance claims require runtime benchmarks which cannot be executed due to X11 dependencies in the build environment.
+**Note:** Performance claims require runtime benchmarks. The network package has transitive dependencies on packages like pkg/audio that import the Ebiten game engine, which requires X11/graphics libraries on Linux. These dependencies prevent test/benchmark execution in headless environments. The benchmarks can be verified in a full desktop environment with graphics support.
 
 ---
 

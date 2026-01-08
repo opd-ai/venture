@@ -22,7 +22,7 @@ Files were analyzed in ascending level order to establish baseline correctness b
 
 ## AUDIT SUMMARY
 
-~~~~
+```
 Total Findings: 0 CRITICAL BUG, 3 FUNCTIONAL MISMATCH, 5 MISSING FEATURE, 2 EDGE CASE BUG, 0 PERFORMANCE ISSUE
 
 Category Breakdown:
@@ -31,7 +31,7 @@ Category Breakdown:
 - MISSING FEATURE:      5 (documented functionality not implemented)
 - EDGE CASE BUG:        2 (fails under specific conditions)
 - PERFORMANCE ISSUE:    0 (significant inefficiency)
-~~~~
+```
 
 **Overall Assessment:** ⚠️ NEEDS ATTENTION - WASM platform has significant feature parity gaps with desktop implementation
 
@@ -41,7 +41,7 @@ Category Breakdown:
 
 ### MISSING FEATURE: WASM Implementation Missing Backup/Recovery Methods
 
-~~~~
+```
 **File:** storage_wasm.go (entire file)
 **Severity:** High
 **Description:** The WASM implementation of SaveManager does not implement any of the production-recommended backup and recovery methods documented in the README.
@@ -81,13 +81,13 @@ func (m *SaveManager) GetSaveMetadata(name string) (*SaveMetadata, error)
 // - ListBackups
 // - CleanupBackups
 ```
-~~~~
+```
 
 ---
 
 ### MISSING FEATURE: WASM Implementation Missing SaveExists Method
 
-~~~~
+```
 **File:** storage_wasm.go (entire file)
 **Severity:** Medium
 **Description:** The WASM SaveManager does not implement the `SaveExists()` method that is available in the desktop implementation and documented in the README.
@@ -121,13 +121,13 @@ func (m *SaveManager) SaveExists(name string) bool {
 
 // storage_wasm.go - NOT implemented
 ```
-~~~~
+```
 
 ---
 
 ### MISSING FEATURE: WASM Implementation Missing Logger/Migrator Constructors
 
-~~~~
+```
 **File:** storage_wasm.go (entire file)
 **Severity:** Medium
 **Description:** The WASM SaveManager does not implement `NewSaveManagerWithLogger()`, `NewSaveManagerWithMigrator()`, or `SetMigrator()` methods.
@@ -149,13 +149,13 @@ func (m *SaveManager) SetMigrator(migrator Migrator)
 **Reproduction:**
 1. Build for WASM with code using `NewSaveManagerWithLogger()`
 2. Compilation fails
-~~~~
+```
 
 ---
 
 ### EDGE CASE BUG: WASM updateMetadata Panics on Nil PlayerState/WorldState
 
-~~~~
+```
 **File:** storage_wasm.go:241-275
 **Severity:** High
 **Description:** The `updateMetadata()` function accesses `save.PlayerState.Level`, `save.WorldState.GenreID`, and `save.WorldState.GameTime` without nil checks, causing a panic if either is nil.
@@ -206,13 +206,13 @@ if save.WorldState != nil {
     metadata.GameTime = save.WorldState.GameTime
 }
 ```
-~~~~
+```
 
 ---
 
 ### MISSING FEATURE: WASM LoadGame Skips Validation and Migration
 
-~~~~
+```
 **File:** storage_wasm.go:122-148
 **Severity:** Medium
 **Description:** The WASM `LoadGame()` function does not validate save names, check required fields, verify version compatibility, or perform migration - all of which the desktop version does.
@@ -264,13 +264,13 @@ func (m *SaveManager) LoadGame(name string) (*GameSave, error) {
     return save, nil
 }
 ```
-~~~~
+```
 
 ---
 
 ### EDGE CASE BUG: LoadGameWithRecovery Triggers Recovery for Valid Saves Without Checksum
 
-~~~~
+```
 **File:** recovery.go:256-276
 **Severity:** Medium
 **Description:** `LoadGameWithRecovery()` treats "no checksum file exists" the same as "checksum mismatch", triggering unnecessary recovery attempts for valid saves created with `SaveGame()` instead of `SaveGameWithBackup()`.
@@ -319,13 +319,13 @@ func (m *SaveManager) validateChecksum(name string) (valid bool, hasChecksum boo
     // Return (true, true, nil) when checksum matches
 }
 ```
-~~~~
+```
 
 ---
 
 ### FUNCTIONAL MISMATCH: README Documentation Contradicts Itself on Migration
 
-~~~~
+```
 **File:** README.md (lines 9, 18, 353-355) vs migrator.go
 **Severity:** Low
 **Description:** The README contains contradictory statements about version migration support.
@@ -346,13 +346,13 @@ func (m *DefaultMigrator) SupportedVersions() []string {
     return []string{"0.9.0", "0.9.1", "0.9.2", "0.9.3"}
 }
 ```
-~~~~
+```
 
 ---
 
 ### FUNCTIONAL MISMATCH: README Save Format Example Doesn't Match Implementation
 
-~~~~
+```
 **File:** README.md:264-266 vs types.go:53-59
 **Severity:** Medium
 **Description:** The JSON save format example in the README does not match the actual implementation.
@@ -378,13 +378,13 @@ EquippedItems EquipmentData `json:"equipped_items"`
 **Impact:** Developers following the documentation will create incompatible save files or code.
 
 **Reproduction:** Compare generated JSON from actual saves with README examples.
-~~~~
+```
 
 ---
 
 ### FUNCTIONAL MISMATCH: Test Coverage Claim Outdated
 
-~~~~
+```
 **File:** README.md:433
 **Severity:** Low
 **Description:** The README claims test coverage of 73.8%, but actual coverage is 84.8%.
@@ -393,7 +393,7 @@ EquippedItems EquipmentData `json:"equipped_items"`
 **Actual (go test -cover):** "coverage: 84.8% of statements"
 
 **Impact:** Minor - documentation underreports quality metrics.
-~~~~
+```
 
 ---
 

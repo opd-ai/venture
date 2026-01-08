@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"sync"
 	"testing"
 	"time"
 )
@@ -381,20 +382,27 @@ func TestMonitor_SetFPSProvider(t *testing.T) {
 		t.Errorf("expected custom FPS 45.5, got %.2f", customFPS)
 	}
 
-	// Test that it's thread-safe by setting it concurrently
-	done := make(chan bool)
-	go func() {
-		anotherProvider := &mockFPSProvider{fps: 30.0}
-		monitor.SetFPSProvider(anotherProvider)
-		done <- true
-	}()
-
-	<-done
-
-	// Provider should have been updated
+	// Test thread-safety by calling SetFPSProvider concurrently
+	// The race detector will catch any data races if the mutex isn't working
+	var wg sync.WaitGroup
+	numGoroutines := 10
+	wg.Add(numGoroutines)
+	
+	for i := 0; i < numGoroutines; i++ {
+		go func(fps float64) {
+			defer wg.Done()
+			provider := &mockFPSProvider{fps: fps}
+			monitor.SetFPSProvider(provider)
+		}(float64(i) + 10.0) // Use different FPS values: 10.0, 11.0, ..., 19.0
+	}
+	
+	wg.Wait()
+	
+	// After all concurrent calls complete, verify we can still get a valid FPS
+	// The exact value doesn't matter, but it should be one of the values we set
 	finalFPS := monitor.fpsProvider.CurrentFPS()
-	if finalFPS != 30.0 {
-		t.Errorf("expected final FPS 30.0, got %.2f", finalFPS)
+	if finalFPS < 10.0 || finalFPS >= 20.0 {
+		t.Errorf("expected final FPS in range [10.0, 20.0), got %.2f", finalFPS)
 	}
 }
 

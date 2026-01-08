@@ -2,6 +2,7 @@ package patterns
 
 import (
 	"fmt"
+	"image"
 	"image/color"
 	"testing"
 )
@@ -482,5 +483,234 @@ func BenchmarkGenerator_Generate_64x64(b *testing.B) {
 		if err != nil {
 			b.Fatal(err)
 		}
+	}
+}
+
+// Test validation functions
+func TestGenerator_Validate_ValidImage(t *testing.T) {
+	gen := NewGenerator()
+
+	// Create a valid test image with color variation
+	config := TextureConfig{
+		Texture:     TextureStone,
+		Width:       16,
+		Height:      16,
+		GenreID:     "fantasy",
+		Seed:        12345,
+		Color1:      color.RGBA{R: 80, G: 60, B: 40, A: 255},
+		Color2:      color.RGBA{R: 140, G: 120, B: 100, A: 255},
+		DetailLevel: 0.5,
+		Scale:       0.1,
+	}
+
+	img, err := gen.Generate(config)
+	if err != nil {
+		t.Fatalf("Generate() error = %v", err)
+	}
+
+	// Validate should pass for properly generated image
+	err = gen.Validate(img)
+	if err != nil {
+		t.Errorf("Validate() error = %v, want nil for valid image", err)
+	}
+}
+
+func TestGenerator_Validate_InvalidDimensions(t *testing.T) {
+	gen := NewGenerator()
+
+	tests := []struct {
+		name   string
+		width  int
+		height int
+	}{
+		{"zero width", 0, 16},
+		{"zero height", 16, 0},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			img := image.NewRGBA(image.Rect(0, 0, tt.width, tt.height))
+			err := gen.Validate(img)
+			if err == nil {
+				t.Error("Validate() should return error for invalid dimensions")
+			}
+		})
+	}
+}
+
+func TestGenerator_Validate_MonochromeImage(t *testing.T) {
+	gen := NewGenerator()
+
+	// Create a monochrome image (all pixels the same color)
+	img := image.NewRGBA(image.Rect(0, 0, 16, 16))
+	monoColor := color.RGBA{R: 100, G: 100, B: 100, A: 255}
+	for y := 0; y < 16; y++ {
+		for x := 0; x < 16; x++ {
+			img.Set(x, y, monoColor)
+		}
+	}
+
+	err := gen.Validate(img)
+	if err == nil {
+		t.Error("Validate() should return error for monochrome image (no color variation)")
+	}
+}
+
+func TestGenerator_CalculateAverageColor(t *testing.T) {
+	gen := NewGenerator()
+
+	// Create test image with known colors
+	img := image.NewRGBA(image.Rect(0, 0, 8, 8))
+	testColor := color.RGBA{R: 100, G: 150, B: 200, A: 255}
+	for y := 0; y < 8; y++ {
+		for x := 0; x < 8; x++ {
+			img.Set(x, y, testColor)
+		}
+	}
+
+	avgR, avgG, avgB, err := gen.calculateAverageColor(img, img.Bounds())
+	if err != nil {
+		t.Fatalf("calculateAverageColor() error = %v", err)
+	}
+
+	// Should be close to the test color (allowing for sampling)
+	if avgR < 95 || avgR > 105 {
+		t.Errorf("avgR = %d, want ~100", avgR)
+	}
+	if avgG < 145 || avgG > 155 {
+		t.Errorf("avgG = %d, want ~150", avgG)
+	}
+	if avgB < 195 || avgB > 205 {
+		t.Errorf("avgB = %d, want ~200", avgB)
+	}
+}
+
+func TestGenerator_CalculateAverageColor_SmallImage(t *testing.T) {
+	gen := NewGenerator()
+
+	// Test with 1x1 image
+	img := image.NewRGBA(image.Rect(0, 0, 1, 1))
+	img.Set(0, 0, color.RGBA{R: 50, G: 100, B: 150, A: 255})
+
+	avgR, avgG, avgB, err := gen.calculateAverageColor(img, img.Bounds())
+	if err != nil {
+		t.Fatalf("calculateAverageColor() error = %v", err)
+	}
+
+	if avgR != 50 || avgG != 100 || avgB != 150 {
+		t.Errorf("Average color = (%d, %d, %d), want (50, 100, 150)", avgR, avgG, avgB)
+	}
+}
+
+func TestGenerator_CheckColorVariation_Sufficient(t *testing.T) {
+	gen := NewGenerator()
+
+	// Create image with color variation
+	img := image.NewRGBA(image.Rect(0, 0, 16, 16))
+	for y := 0; y < 16; y++ {
+		for x := 0; x < 16; x++ {
+			// Vary the color based on position
+			c := color.RGBA{
+				R: uint8(100 + x*5),
+				G: uint8(100 + y*5),
+				B: 100,
+				A: 255,
+			}
+			img.Set(x, y, c)
+		}
+	}
+
+	// Calculate average
+	avgR, avgG, avgB, err := gen.calculateAverageColor(img, img.Bounds())
+	if err != nil {
+		t.Fatalf("calculateAverageColor() error = %v", err)
+	}
+
+	// Check variation - should pass
+	err = gen.checkColorVariation(img, img.Bounds(), avgR, avgG, avgB)
+	if err != nil {
+		t.Errorf("checkColorVariation() error = %v, want nil for varied image", err)
+	}
+}
+
+func TestGenerator_CheckColorVariation_Insufficient(t *testing.T) {
+	gen := NewGenerator()
+
+	// Create image with minimal variation
+	img := image.NewRGBA(image.Rect(0, 0, 16, 16))
+	monoColor := color.RGBA{R: 100, G: 100, B: 100, A: 255}
+	for y := 0; y < 16; y++ {
+		for x := 0; x < 16; x++ {
+			img.Set(x, y, monoColor)
+		}
+	}
+
+	avgR, avgG, avgB := uint8(100), uint8(100), uint8(100)
+
+	// Check variation - should fail
+	err := gen.checkColorVariation(img, img.Bounds(), avgR, avgG, avgB)
+	if err == nil {
+		t.Error("checkColorVariation() should return error for monochrome image")
+	}
+}
+
+func TestGenerator_ValidateImageBasics_InvalidImage(t *testing.T) {
+	gen := NewGenerator()
+
+	tests := []struct {
+		name   string
+		width  int
+		height int
+	}{
+		{"zero width and height", 0, 0},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			img := image.NewRGBA(image.Rect(0, 0, tt.width, tt.height))
+			err := gen.validateImageBasics(img)
+			if err == nil {
+				t.Error("validateImageBasics() should return error for invalid dimensions")
+			}
+		})
+	}
+}
+
+func TestGenerator_AddVariation_EdgeColors(t *testing.T) {
+	gen := NewGenerator()
+
+	// Test with edge case colors (black and white)
+	tests := []struct {
+		name  string
+		color color.RGBA
+	}{
+		{"black", color.RGBA{R: 0, G: 0, B: 0, A: 255}},
+		{"white", color.RGBA{R: 255, G: 255, B: 255, A: 255}},
+		{"mixed", color.RGBA{R: 0, G: 128, B: 255, A: 255}},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			config := TextureConfig{
+				Texture:     TextureStone,
+				Width:       8,
+				Height:      8,
+				GenreID:     "fantasy",
+				Seed:        12345,
+				Color1:      tt.color,
+				Color2:      tt.color,
+				DetailLevel: 0.5,
+				Scale:       0.1,
+			}
+
+			// Generate should handle edge colors without panic
+			img, err := gen.Generate(config)
+			if err != nil {
+				t.Fatalf("Generate() with edge color error = %v", err)
+			}
+			if img == nil {
+				t.Fatal("Generate() returned nil image")
+			}
+		})
 	}
 }

@@ -250,7 +250,7 @@ These are performance metrics that require runtime testing. This audit focused o
 | WebRTC P2P | 13 files | Yes (federation/webrtc) | ✅ Complete |
 | Companion AI | 9 files | Yes (companion package) | ✅ Complete |
 | Narrative | 12 files | Yes (narrative package) | ✅ Complete |
-| Multi-class | 9 files | Yes (class package) | ✅ Complete |
+| Multi-class | 7 files | Yes (class package) | ✅ Complete |
 | Talents | 1+ files | Yes | ✅ Complete |
 | Modding | 14 files | Yes (modding package) | ✅ Complete |
 | WASM/Mobile | Build tags + directories | Yes | ✅ Complete |

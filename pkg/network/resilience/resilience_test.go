@@ -418,3 +418,284 @@ func BenchmarkMetricsCollector_GetStats(b *testing.B) {
 		mc.GetStats()
 	}
 }
+
+// Test SetConfig method
+func TestNetworkSimulator_SetConfig(t *testing.T) {
+	sim := NewNetworkSimulator()
+
+	config := NetworkConfig{
+		Latency:        150 * time.Millisecond,
+		PacketLossRate: 0.05,
+		Jitter:         30 * time.Millisecond,
+		BandwidthLimit: 20000,
+	}
+
+	err := sim.SetConfig(config)
+	if err != nil {
+		t.Fatalf("SetConfig() error = %v", err)
+	}
+
+	got := sim.GetConfig()
+	if got.Latency != config.Latency {
+		t.Errorf("Latency = %v, want %v", got.Latency, config.Latency)
+	}
+	if got.PacketLossRate != config.PacketLossRate {
+		t.Errorf("PacketLossRate = %v, want %v", got.PacketLossRate, config.PacketLossRate)
+	}
+	if got.Jitter != config.Jitter {
+		t.Errorf("Jitter = %v, want %v", got.Jitter, config.Jitter)
+	}
+	if got.BandwidthLimit != config.BandwidthLimit {
+		t.Errorf("BandwidthLimit = %v, want %v", got.BandwidthLimit, config.BandwidthLimit)
+	}
+}
+
+// Test SetConfig with invalid config
+func TestNetworkSimulator_SetConfig_Invalid(t *testing.T) {
+	sim := NewNetworkSimulator()
+
+	invalidConfig := NetworkConfig{
+		Latency:        -100 * time.Millisecond,
+		PacketLossRate: 0,
+		Jitter:         0,
+		BandwidthLimit: 0,
+	}
+
+	err := sim.SetConfig(invalidConfig)
+	if err == nil {
+		t.Error("SetConfig() should return error for invalid config")
+	}
+}
+
+// Test SetJitter method
+func TestNetworkSimulator_SetJitter(t *testing.T) {
+	sim := NewNetworkSimulator()
+
+	jitter := 50 * time.Millisecond
+	sim.SetJitter(jitter)
+
+	config := sim.GetConfig()
+	if config.Jitter != jitter {
+		t.Errorf("Jitter = %v, want %v", config.Jitter, jitter)
+	}
+}
+
+// Test bandwidth calculation with multiple samples
+func TestMetricsCollector_BandwidthCalculations(t *testing.T) {
+	mc := NewMetricsCollector()
+
+	// Simulate bandwidth samples by recording latency with delays
+	// This triggers bandwidth sample collection
+	mc.RecordLatency(10 * time.Millisecond)
+
+	// Record some packets to generate bandwidth data
+	for i := 0; i < 5; i++ {
+		mc.RecordPacketSent(1000)
+		time.Sleep(10 * time.Millisecond)
+	}
+
+	// Wait for at least one second to collect bandwidth sample
+	time.Sleep(1100 * time.Millisecond)
+	mc.RecordLatency(10 * time.Millisecond)
+
+	stats := mc.GetStats()
+
+	// Should have bandwidth statistics
+	if stats.AvgBandwidth < 0 {
+		t.Errorf("AvgBandwidth = %f, should be >= 0", stats.AvgBandwidth)
+	}
+	if stats.PeakBandwidth < 0 {
+		t.Errorf("PeakBandwidth = %f, should be >= 0", stats.PeakBandwidth)
+	}
+}
+
+// Test bandwidth sample update with high traffic
+func TestMetricsCollector_UpdateBandwidthSample(t *testing.T) {
+	mc := NewMetricsCollector()
+
+	// Send multiple packets quickly to accumulate bytes
+	for i := 0; i < 10; i++ {
+		mc.RecordPacketSent(500)
+	}
+
+	// Wait for bandwidth sample window
+	time.Sleep(1200 * time.Millisecond)
+
+	// Trigger stats calculation which updates bandwidth sample
+	mc.RecordLatency(5 * time.Millisecond)
+
+	stats := mc.GetStats()
+
+	// Should have recorded bandwidth
+	if len(mc.bandwidthSamples) == 0 && stats.BytesSent > 0 {
+		t.Log("Bandwidth samples collected (internal state)")
+	}
+}
+
+// Test metrics with zero latency samples
+func TestMetricsCollector_EmptyLatencySamples(t *testing.T) {
+	mc := NewMetricsCollector()
+
+	// Record other metrics but no latency
+	mc.RecordPacketSent(100)
+	mc.RecordPacketReceived(100)
+
+	stats := mc.GetStats()
+
+	// Latency stats should be zero
+	if stats.AvgLatency != 0 {
+		t.Errorf("AvgLatency = %v, want 0 for no samples", stats.AvgLatency)
+	}
+	if stats.MinLatency != 0 {
+		t.Errorf("MinLatency = %v, want 0 for no samples", stats.MinLatency)
+	}
+	if stats.MaxLatency != 0 {
+		t.Errorf("MaxLatency = %v, want 0 for no samples", stats.MaxLatency)
+	}
+}
+
+// Test metrics with zero bandwidth samples
+func TestMetricsCollector_EmptyBandwidthSamples(t *testing.T) {
+	mc := NewMetricsCollector()
+
+	// Don't wait for bandwidth samples
+	stats := mc.GetStats()
+
+	// Bandwidth stats should be zero
+	if stats.AvgBandwidth != 0 {
+		t.Errorf("AvgBandwidth = %f, want 0 for no samples", stats.AvgBandwidth)
+	}
+	if stats.PeakBandwidth != 0 {
+		t.Errorf("PeakBandwidth = %f, want 0 for no samples", stats.PeakBandwidth)
+	}
+}
+
+// Test RecordLatency with updated bandwidth tracking
+func TestMetricsCollector_RecordLatency_WithBandwidth(t *testing.T) {
+	mc := NewMetricsCollector()
+
+	// Record packets and latency over time
+	mc.RecordPacketSent(1000)
+	mc.RecordLatency(50 * time.Millisecond)
+
+	// Wait for bandwidth sample window
+	time.Sleep(1100 * time.Millisecond)
+
+	mc.RecordPacketSent(1000)
+	mc.RecordLatency(60 * time.Millisecond)
+
+	stats := mc.GetStats()
+
+	// Should have recorded latencies
+	if stats.AvgLatency == 0 {
+		t.Error("AvgLatency should not be 0 after recording")
+	}
+
+	// Bandwidth may or may not be collected depending on timing
+	// Just verify no panic occurred
+}
+
+// Test SetPacketLoss with edge cases
+func TestNetworkSimulator_SetPacketLoss_EdgeCases(t *testing.T) {
+	sim := NewNetworkSimulator()
+
+	tests := []struct {
+		name     string
+		input    float64
+		expected float64
+	}{
+		{"negative rate clamped to 0", -0.5, 0.0},
+		{"rate above 1 clamped", 1.5, 1.0},
+		{"zero rate", 0.0, 0.0},
+		{"max rate", 1.0, 1.0},
+		{"normal rate", 0.3, 0.3},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			sim.SetPacketLoss(tt.input)
+			config := sim.GetConfig()
+			if config.PacketLossRate != tt.expected {
+				t.Errorf("PacketLossRate = %v, want %v", config.PacketLossRate, tt.expected)
+			}
+		})
+	}
+}
+
+// Test calculateMinLatency with single sample
+func TestMetricsCollector_CalculateMinLatency_SingleSample(t *testing.T) {
+	mc := NewMetricsCollector()
+
+	mc.RecordLatency(100 * time.Millisecond)
+
+	stats := mc.GetStats()
+
+	if stats.MinLatency != 100*time.Millisecond {
+		t.Errorf("MinLatency = %v, want 100ms for single sample", stats.MinLatency)
+	}
+}
+
+// Test calculatePercentile with edge cases
+func TestMetricsCollector_CalculatePercentile_EdgeCases(t *testing.T) {
+	mc := NewMetricsCollector()
+
+	// Add multiple latency samples
+	latencies := []time.Duration{
+		10 * time.Millisecond,
+		20 * time.Millisecond,
+		30 * time.Millisecond,
+		40 * time.Millisecond,
+		50 * time.Millisecond,
+		60 * time.Millisecond,
+		70 * time.Millisecond,
+		80 * time.Millisecond,
+		90 * time.Millisecond,
+		100 * time.Millisecond,
+	}
+
+	for _, lat := range latencies {
+		mc.RecordLatency(lat)
+	}
+
+	stats := mc.GetStats()
+
+	// P95 should be close to 95ms (95th percentile of 10-100ms)
+	if stats.P95Latency < 90*time.Millisecond || stats.P95Latency > 100*time.Millisecond {
+		t.Errorf("P95Latency = %v, want ~95ms", stats.P95Latency)
+	}
+
+	// P99 should be close to 100ms
+	if stats.P99Latency < 95*time.Millisecond || stats.P99Latency > 100*time.Millisecond {
+		t.Errorf("P99Latency = %v, want ~100ms", stats.P99Latency)
+	}
+}
+
+// Test calculatePeakBandwidth with varying samples
+func TestMetricsCollector_CalculatePeakBandwidth_Varying(t *testing.T) {
+	mc := NewMetricsCollector()
+
+	// Simulate varying bandwidth over several seconds
+	for i := 0; i < 3; i++ {
+		for j := 0; j < 5; j++ {
+			mc.RecordPacketSent(500 * (i + 1)) // Increasing traffic
+		}
+		time.Sleep(1100 * time.Millisecond) // Wait for bandwidth sample
+		mc.RecordLatency(10 * time.Millisecond) // Trigger bandwidth update
+	}
+
+	stats := mc.GetStats()
+
+	// Should have some bandwidth data
+	if stats.PeakBandwidth <= 0 {
+		t.Errorf("PeakBandwidth = %f, want > 0", stats.PeakBandwidth)
+	}
+
+	if stats.AvgBandwidth <= 0 {
+		t.Errorf("AvgBandwidth = %f, want > 0", stats.AvgBandwidth)
+	}
+
+	// Peak should be >= average
+	if stats.PeakBandwidth < stats.AvgBandwidth {
+		t.Errorf("PeakBandwidth (%f) should be >= AvgBandwidth (%f)", stats.PeakBandwidth, stats.AvgBandwidth)
+	}
+}

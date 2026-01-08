@@ -423,3 +423,340 @@ func BenchmarkAdapter_PerformSync(b *testing.B) {
 		adapter.performSync()
 	}
 }
+
+// Test battery mode adjustment with running adapter
+func TestAdapter_AdjustSyncInterval_Running(t *testing.T) {
+	adapter := NewAdapter(DefaultConfig())
+
+	// Start the adapter
+	if err := adapter.Start(); err != nil {
+		t.Fatalf("Start() failed: %v", err)
+	}
+	defer adapter.Stop()
+
+	// Wait a bit for sync loop to start
+	time.Sleep(50 * time.Millisecond)
+
+	tests := []struct {
+		name        string
+		batteryMode BatteryMode
+	}{
+		{"normal mode", BatteryModeNormal},
+		{"low mode", BatteryModeLow},
+		{"critical mode", BatteryModeCritical},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Update battery which triggers interval adjustment
+			switch tt.batteryMode {
+			case BatteryModeNormal:
+				adapter.UpdateBatteryLevel(0.8)
+			case BatteryModeLow:
+				adapter.UpdateBatteryLevel(0.3)
+			case BatteryModeCritical:
+				adapter.UpdateBatteryLevel(0.05)
+			}
+
+			// Verify state was updated
+			if got := adapter.state.GetBatteryMode(); got != tt.batteryMode {
+				t.Errorf("BatteryMode = %v, want %v", got, tt.batteryMode)
+			}
+		})
+	}
+}
+
+// Test battery mode adjustment when not running
+func TestAdapter_AdjustSyncInterval_NotRunning(t *testing.T) {
+	adapter := NewAdapter(DefaultConfig())
+
+	// Don't start the adapter
+	// Update battery should still work but won't adjust interval
+	adapter.UpdateBatteryLevel(0.3)
+
+	if got := adapter.state.GetBatteryMode(); got != BatteryModeLow {
+		t.Errorf("BatteryMode = %v, want %v", got, BatteryModeLow)
+	}
+}
+
+// Test performSync with various battery modes
+func TestAdapter_PerformSync_BatteryModes(t *testing.T) {
+	tests := []struct {
+		name         string
+		batteryLevel float64
+		batteryMode  BatteryMode
+	}{
+		{"normal battery", 0.8, BatteryModeNormal},
+		{"low battery", 0.3, BatteryModeLow},
+		{"critical battery", 0.05, BatteryModeCritical},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			adapter := NewAdapter(DefaultConfig())
+
+			syncCount := 0
+			adapter.RegisterSyncHandler(func(ctx context.Context) error {
+				syncCount++
+				return nil
+			})
+
+			adapter.state.SetBatteryLevel(tt.batteryLevel)
+			adapter.state.SetBatteryMode(tt.batteryMode)
+
+			adapter.performSync()
+
+			if syncCount != 1 {
+				t.Errorf("syncCount = %d, want 1", syncCount)
+			}
+		})
+	}
+}
+
+// Test performSync with paused state
+func TestAdapter_PerformSync_Paused(t *testing.T) {
+	adapter := NewAdapter(DefaultConfig())
+
+	syncCount := 0
+	adapter.RegisterSyncHandler(func(ctx context.Context) error {
+		syncCount++
+		return nil
+	})
+
+	// Pause sync
+	adapter.PauseSync()
+
+	// Attempt sync while paused
+	adapter.performSync()
+
+	// Note: performSync doesn't check paused status in the implementation
+	// It sets status to Active and executes the handler regardless
+	// The paused status is only checked in the sync loop
+	if syncCount != 1 {
+		t.Errorf("syncCount = %d, want 1 (performSync executes even when paused)", syncCount)
+	}
+
+	// Status should be changed from Paused to Idle after sync
+	if adapter.state.GetSyncStatus() != SyncStatusIdle {
+		t.Errorf("status = %v, want %v after sync", adapter.state.GetSyncStatus(), SyncStatusIdle)
+	}
+}
+
+// Test getSyncTimeout with different battery modes
+func TestAdapter_GetSyncTimeout_BatteryModes(t *testing.T) {
+	tests := []struct {
+		name        string
+		batteryMode BatteryMode
+		multiplier  float64
+		expected    time.Duration
+	}{
+		{"normal with default multiplier", BatteryModeNormal, 1.0, 30 * time.Second},
+		{"normal with 2x multiplier", BatteryModeNormal, 2.0, 60 * time.Second},
+		{"low with default multiplier", BatteryModeLow, 1.0, 30 * time.Second},
+		{"critical with default multiplier", BatteryModeCritical, 1.0, 15 * time.Second},
+		{"critical with 2x multiplier", BatteryModeCritical, 2.0, 30 * time.Second},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			config := DefaultConfig()
+			config.TimeoutMultiplier = tt.multiplier
+			adapter := NewAdapter(config)
+			adapter.state.SetBatteryMode(tt.batteryMode)
+
+			timeout := adapter.getSyncTimeout()
+
+			if timeout != tt.expected {
+				t.Errorf("timeout = %v, want %v", timeout, tt.expected)
+			}
+		})
+	}
+}
+
+// Test performSync with handler error
+func TestAdapter_PerformSync_HandlerError(t *testing.T) {
+	adapter := NewAdapter(DefaultConfig())
+
+	expectedErr := context.DeadlineExceeded
+	adapter.RegisterSyncHandler(func(ctx context.Context) error {
+		return expectedErr
+	})
+
+	// Perform sync with handler that returns error
+	adapter.performSync()
+
+	// Should set error status
+	if adapter.state.GetSyncStatus() != SyncStatusError {
+		t.Errorf("status = %v, want %v after error", adapter.state.GetSyncStatus(), SyncStatusError)
+	}
+
+	// Check that error was recorded via state
+	// Note: GetStats returns (bytesSent, bytesReceived, syncCount, backgroundCount)
+	// Errors are tracked separately via SyncErrors field
+	_, _, syncCount, _ := adapter.state.GetStats()
+	
+	// Sync count should not increase on error
+	if syncCount != 0 {
+		t.Errorf("syncCount = %d, want 0 (no successful sync)", syncCount)
+	}
+}
+
+// Test performSync records bytes transferred
+func TestAdapter_PerformSync_BytesTracking(t *testing.T) {
+	adapter := NewAdapter(DefaultConfig())
+
+	adapter.RegisterSyncHandler(func(ctx context.Context) error {
+		// Simulate successful sync with data transfer
+		return nil
+	})
+
+	adapter.performSync()
+
+	// Note: GetStats returns (bytesSent, bytesReceived, syncCount, backgroundCount)
+	bytesSent, bytesReceived, syncCount, _ := adapter.state.GetStats()
+	
+	if syncCount != 1 {
+		t.Errorf("syncCount = %d, want 1", syncCount)
+	}
+
+	// RecordSyncSuccess is called with (1024, 2048) in the implementation
+	if bytesSent != 1024 {
+		t.Errorf("bytesSent = %d, want 1024", bytesSent)
+	}
+	if bytesReceived != 2048 {
+		t.Errorf("bytesReceived = %d, want 2048", bytesReceived)
+	}
+
+	// Verify state is idle after successful sync
+	if adapter.state.GetSyncStatus() != SyncStatusIdle {
+		t.Errorf("status = %v, want %v after sync", adapter.state.GetSyncStatus(), SyncStatusIdle)
+	}
+}
+
+// Test sync loop executes periodically
+func TestAdapter_SyncLoop_Periodic(t *testing.T) {
+	config := DefaultConfig()
+	config.SyncInterval = 100 * time.Millisecond // Short interval for testing
+	adapter := NewAdapter(config)
+
+	syncCount := 0
+	var mu sync.Mutex
+
+	adapter.RegisterSyncHandler(func(ctx context.Context) error {
+		mu.Lock()
+		syncCount++
+		mu.Unlock()
+		return nil
+	})
+
+	// Start adapter (starts sync loop)
+	if err := adapter.Start(); err != nil {
+		t.Fatalf("Start() failed: %v", err)
+	}
+
+	// Wait for at least 2 syncs to occur
+	time.Sleep(350 * time.Millisecond)
+
+	// Stop adapter
+	if err := adapter.Stop(); err != nil {
+		t.Fatalf("Stop() failed: %v", err)
+	}
+
+	mu.Lock()
+	count := syncCount
+	mu.Unlock()
+
+	// Should have at least 2 syncs (possibly 3 depending on timing)
+	if count < 2 {
+		t.Errorf("syncCount = %d, want at least 2 (periodic sync)", count)
+	}
+}
+
+// Test sync loop respects context cancellation
+func TestAdapter_SyncLoop_ContextCancellation(t *testing.T) {
+	adapter := NewAdapter(DefaultConfig())
+
+	syncCount := 0
+	var mu sync.Mutex
+
+	adapter.RegisterSyncHandler(func(ctx context.Context) error {
+		mu.Lock()
+		syncCount++
+		mu.Unlock()
+		return nil
+	})
+
+	// Start and quickly stop
+	if err := adapter.Start(); err != nil {
+		t.Fatalf("Start() failed: %v", err)
+	}
+
+	time.Sleep(50 * time.Millisecond)
+
+	if err := adapter.Stop(); err != nil {
+		t.Fatalf("Stop() failed: %v", err)
+	}
+
+	// Get final count
+	mu.Lock()
+	finalCount := syncCount
+	mu.Unlock()
+
+	// Wait a bit more
+	time.Sleep(200 * time.Millisecond)
+
+	// Count should not increase after stop
+	mu.Lock()
+	laterCount := syncCount
+	mu.Unlock()
+
+	if laterCount != finalCount {
+		t.Errorf("sync continued after stop: initial=%d, later=%d", finalCount, laterCount)
+	}
+}
+
+// Test sync loop with battery mode changes during operation
+func TestAdapter_SyncLoop_BatteryModeChanges(t *testing.T) {
+	config := DefaultConfig()
+	config.SyncInterval = 100 * time.Millisecond
+	adapter := NewAdapter(config)
+
+	syncCount := 0
+	var mu sync.Mutex
+
+	adapter.RegisterSyncHandler(func(ctx context.Context) error {
+		mu.Lock()
+		syncCount++
+		mu.Unlock()
+		return nil
+	})
+
+	if err := adapter.Start(); err != nil {
+		t.Fatalf("Start() failed: %v", err)
+	}
+	defer adapter.Stop()
+
+	// Wait for initial sync
+	time.Sleep(200 * time.Millisecond)
+	
+	// Change battery modes during operation
+	adapter.UpdateBatteryLevel(0.3) // Switch to low battery
+	time.Sleep(200 * time.Millisecond)
+	
+	adapter.UpdateBatteryLevel(0.05) // Switch to critical
+	time.Sleep(200 * time.Millisecond)
+
+	mu.Lock()
+	count := syncCount
+	mu.Unlock()
+
+	// Should have at least 1 sync (possibly more depending on timing)
+	if count < 1 {
+		t.Errorf("syncCount = %d, want at least 1", count)
+	}
+
+	// Verify final battery mode
+	if adapter.state.GetBatteryMode() != BatteryModeCritical {
+		t.Errorf("BatteryMode = %v, want %v", adapter.state.GetBatteryMode(), BatteryModeCritical)
+	}
+}

@@ -45,11 +45,12 @@ func TestGenerateWithVariousDepths(t *testing.T) {
 	tests := []struct {
 		name  string
 		depth int
+		seed  int64
 	}{
-		{"Depth1", 1},
-		{"Depth10", 10},
-		{"Depth50", 50},
-		{"Depth100", 100},
+		{"Depth1", 1, 70001},
+		{"Depth10", 10, 70010},
+		{"Depth50", 50, 70050},
+		{"Depth100", 100, 70100},
 	}
 	
 	for _, tt := range tests {
@@ -61,12 +62,16 @@ func TestGenerateWithVariousDepths(t *testing.T) {
 				Custom:     map[string]interface{}{}, // No SubType
 			}
 
-			result, err := gen.Generate(int64(70000+tt.depth), params)
+			result, err := gen.Generate(tt.seed, params)
 			if err != nil {
 				t.Fatalf("Generate(depth=%d) error = %v", tt.depth, err)
 			}
 
-			furniture := result.(*Furniture)
+			furniture, ok := result.(*Furniture)
+			if !ok {
+				t.Fatalf("Generate() returned non-Furniture type: %T", result)
+			}
+			
 			if furniture.SubType == "" {
 				t.Errorf("Generate(depth=%d) did not assign SubType", tt.depth)
 			}
@@ -108,7 +113,10 @@ func TestHorrorMaterialSelection(t *testing.T) {
 					t.Fatalf("Generate() error = %v", err)
 				}
 
-				furniture := result.(*Furniture)
+				furniture, ok := result.(*Furniture)
+				if !ok {
+					t.Fatalf("Generate() returned non-Furniture type: %T", result)
+				}
 				foundMaterials[furniture.Material] = true
 			}
 
@@ -167,7 +175,10 @@ func TestPostApocMaterialSelection(t *testing.T) {
 					t.Fatalf("Generate() error = %v", err)
 				}
 
-				furniture := result.(*Furniture)
+				furniture, ok := result.(*Furniture)
+				if !ok {
+					t.Fatalf("Generate() returned non-Furniture type: %T", result)
+				}
 				foundMaterials[furniture.Material] = true
 			}
 
@@ -214,7 +225,10 @@ func TestScifiMaterialSelection(t *testing.T) {
 			t.Fatalf("Generate() error = %v", err)
 		}
 
-		furniture := result.(*Furniture)
+		furniture, ok := result.(*Furniture)
+		if !ok {
+			t.Fatalf("Generate() returned non-Furniture type: %T", result)
+		}
 		foundMaterials[furniture.Material] = true
 	}
 
@@ -242,7 +256,10 @@ func TestCyberpunkMaterialSelection(t *testing.T) {
 		t.Fatalf("Generate() error = %v", err)
 	}
 
-	furniture := result.(*Furniture)
+	furniture, ok := result.(*Furniture)
+	if !ok {
+		t.Fatalf("Generate() returned non-Furniture type: %T", result)
+	}
 	// Should generate successfully with cyberpunk genre
 	if furniture.Material == 0 {
 		t.Error("Cyberpunk genre did not assign material")
@@ -262,8 +279,16 @@ func TestFindValidPlacementNoSpace(t *testing.T) {
 	}
 
 	// Create large furniture that won't fit
-	result, _ := gen.Generate(75000, params)
-	largeFurniture := result.(*Furniture)
+	result, err := gen.Generate(75000, params)
+	if err != nil {
+		t.Fatalf("Generate() error = %v", err)
+	}
+	
+	largeFurniture, ok := result.(*Furniture)
+	if !ok {
+		t.Fatalf("Generate() returned non-Furniture type: %T", result)
+	}
+	
 	largeFurniture.CollisionWidth = 5.0  // Larger than room
 	largeFurniture.CollisionDepth = 5.0
 
@@ -285,16 +310,31 @@ func TestFindValidPlacementWithRotation(t *testing.T) {
 		Custom:     map[string]interface{}{"SubType": "Bench"},
 	}
 
-	result, _ := gen.Generate(76000, params)
-	furniture := result.(*Furniture)
+	result, err := gen.Generate(76000, params)
+	if err != nil {
+		t.Fatalf("Generate() error = %v", err)
+	}
+	
+	furniture, ok := result.(*Furniture)
+	if !ok {
+		t.Fatalf("Generate() returned non-Furniture type: %T", result)
+	}
 
 	// Set asymmetric dimensions to test rotation
 	furniture.CollisionWidth = 4.0
 	furniture.CollisionDepth = 1.0
 
 	// Fill room strategically to force rotation
-	blocker, _ := gen.Generate(76001, params)
-	blockerFurn := blocker.(*Furniture)
+	blocker, err := gen.Generate(76001, params)
+	if err != nil {
+		t.Fatalf("Generate() blocker error = %v", err)
+	}
+	
+	blockerFurn, ok := blocker.(*Furniture)
+	if !ok {
+		t.Fatalf("Generate() blocker returned non-Furniture type: %T", blocker)
+	}
+	
 	blockerFurn.CollisionWidth = 9.0
 	blockerFurn.CollisionDepth = 1.0
 	
@@ -432,7 +472,10 @@ func TestGenerateHighRarityItems(t *testing.T) {
 			t.Fatalf("Generate() error = %v", err)
 		}
 
-		furniture := result.(*Furniture)
+		furniture, ok := result.(*Furniture)
+		if !ok {
+			t.Fatalf("Generate() returned non-Furniture type: %T", result)
+		}
 		foundRarities[furniture.Rarity] = true
 	}
 

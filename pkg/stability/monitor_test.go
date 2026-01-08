@@ -2,6 +2,8 @@ package stability
 
 import (
 	"context"
+	"encoding/json"
+	"os"
 	"testing"
 	"time"
 )
@@ -304,5 +306,225 @@ func BenchmarkMonitor_GenerateReport(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		monitor.generateReport(start, end)
+	}
+}
+
+// TestMonitor_NewMonitor_DefaultValues tests that NewMonitor properly applies defaults
+// for zero-value config fields.
+func TestMonitor_NewMonitor_DefaultValues(t *testing.T) {
+	// Create config with zero values
+	config := Config{}
+
+	monitor := NewMonitor(config)
+	if monitor == nil {
+		t.Fatal("expected monitor instance, got nil")
+	}
+
+	// Verify defaults were applied
+	if monitor.config.CheckInterval != 30*time.Second {
+		t.Errorf("expected default check interval 30s, got %v", monitor.config.CheckInterval)
+	}
+	if monitor.config.MemoryLimit != 500*1024*1024 {
+		t.Errorf("expected default memory limit 500MB, got %d", monitor.config.MemoryLimit)
+	}
+	if monitor.config.MinFPS != 60.0 {
+		t.Errorf("expected default min FPS 60, got %.2f", monitor.config.MinFPS)
+	}
+	if monitor.config.MemoryLeakThreshold != 1024.0 {
+		t.Errorf("expected default memory leak threshold 1024 bytes/s, got %.2f", monitor.config.MemoryLeakThreshold)
+	}
+
+	// Verify fpsProvider was set to default
+	if monitor.fpsProvider == nil {
+		t.Error("expected default FPS provider to be set")
+	}
+	fps := monitor.fpsProvider.CurrentFPS()
+	if fps != 60.0 {
+		t.Errorf("expected default FPS provider to return 60.0, got %.2f", fps)
+	}
+}
+
+// mockFPSProvider is a test implementation of FPSProvider.
+type mockFPSProvider struct {
+	fps float64
+}
+
+func (m *mockFPSProvider) CurrentFPS() float64 {
+	return m.fps
+}
+
+// TestMonitor_SetFPSProvider tests the SetFPSProvider method.
+func TestMonitor_SetFPSProvider(t *testing.T) {
+	config := Config{
+		Duration:      1 * time.Second,
+		CheckInterval: 100 * time.Millisecond,
+		MemoryLimit:   500 * 1024 * 1024,
+		MinFPS:        60.0,
+	}
+
+	monitor := NewMonitor(config)
+
+	// Verify default provider
+	defaultFPS := monitor.fpsProvider.CurrentFPS()
+	if defaultFPS != 60.0 {
+		t.Errorf("expected default FPS 60.0, got %.2f", defaultFPS)
+	}
+
+	// Set custom provider
+	mockProvider := &mockFPSProvider{fps: 45.5}
+	monitor.SetFPSProvider(mockProvider)
+
+	// Verify custom provider is used
+	customFPS := monitor.fpsProvider.CurrentFPS()
+	if customFPS != 45.5 {
+		t.Errorf("expected custom FPS 45.5, got %.2f", customFPS)
+	}
+
+	// Test that it's thread-safe by setting it concurrently
+	done := make(chan bool)
+	go func() {
+		anotherProvider := &mockFPSProvider{fps: 30.0}
+		monitor.SetFPSProvider(anotherProvider)
+		done <- true
+	}()
+
+	<-done
+
+	// Provider should have been updated
+	finalFPS := monitor.fpsProvider.CurrentFPS()
+	if finalFPS != 30.0 {
+		t.Errorf("expected final FPS 30.0, got %.2f", finalFPS)
+	}
+}
+
+// TestMonitor_WriteReport_Stdout tests writing report to stdout.
+func TestMonitor_WriteReport_Stdout(t *testing.T) {
+	config := Config{
+		Duration:      1 * time.Second,
+		CheckInterval: 100 * time.Millisecond,
+		MemoryLimit:   500 * 1024 * 1024,
+		MinFPS:        60.0,
+		ReportPath:    "", // Empty means stdout
+	}
+
+	monitor := NewMonitor(config)
+	report := &Report{
+		StartTime:   time.Now(),
+		EndTime:     time.Now().Add(1 * time.Second),
+		TotalUptime: 1 * time.Second,
+		Checks:      10,
+		Passed:      true,
+	}
+
+	// Writing to stdout should succeed
+	err := monitor.WriteReport(report)
+	if err != nil {
+		t.Errorf("unexpected error writing to stdout: %v", err)
+	}
+}
+
+// TestMonitor_WriteReport_StdoutDash tests writing report to stdout using "-".
+func TestMonitor_WriteReport_StdoutDash(t *testing.T) {
+	config := Config{
+		Duration:      1 * time.Second,
+		CheckInterval: 100 * time.Millisecond,
+		MemoryLimit:   500 * 1024 * 1024,
+		MinFPS:        60.0,
+		ReportPath:    "-", // Dash means stdout
+	}
+
+	monitor := NewMonitor(config)
+	report := &Report{
+		StartTime:   time.Now(),
+		EndTime:     time.Now().Add(1 * time.Second),
+		TotalUptime: 1 * time.Second,
+		Checks:      10,
+		Passed:      true,
+	}
+
+	// Writing to stdout should succeed
+	err := monitor.WriteReport(report)
+	if err != nil {
+		t.Errorf("unexpected error writing to stdout: %v", err)
+	}
+}
+
+// TestMonitor_WriteReport_File tests writing report to a file.
+func TestMonitor_WriteReport_File(t *testing.T) {
+	// Create temp file path
+	tmpFile := "/tmp/test_stability_report.json"
+	defer os.Remove(tmpFile)
+
+	config := Config{
+		Duration:      1 * time.Second,
+		CheckInterval: 100 * time.Millisecond,
+		MemoryLimit:   500 * 1024 * 1024,
+		MinFPS:        60.0,
+		ReportPath:    tmpFile,
+	}
+
+	monitor := NewMonitor(config)
+	report := &Report{
+		StartTime:   time.Now(),
+		EndTime:     time.Now().Add(1 * time.Second),
+		TotalUptime: 1 * time.Second,
+		Checks:      10,
+		Passed:      true,
+		AvgFPS:      59.5,
+		PeakMemory:  100 * 1024 * 1024,
+	}
+
+	// Write report to file
+	err := monitor.WriteReport(report)
+	if err != nil {
+		t.Fatalf("unexpected error writing to file: %v", err)
+	}
+
+	// Verify file exists and contains valid JSON
+	data, err := os.ReadFile(tmpFile)
+	if err != nil {
+		t.Fatalf("failed to read report file: %v", err)
+	}
+
+	var readReport Report
+	if err := json.Unmarshal(data, &readReport); err != nil {
+		t.Fatalf("failed to unmarshal report: %v", err)
+	}
+
+	// Verify key fields
+	if readReport.Checks != 10 {
+		t.Errorf("expected 10 checks, got %d", readReport.Checks)
+	}
+	if !readReport.Passed {
+		t.Error("expected report to be passed")
+	}
+	if readReport.AvgFPS != 59.5 {
+		t.Errorf("expected avg FPS 59.5, got %.2f", readReport.AvgFPS)
+	}
+}
+
+// TestMonitor_WriteReport_InvalidPath tests error handling for invalid file paths.
+func TestMonitor_WriteReport_InvalidPath(t *testing.T) {
+	config := Config{
+		Duration:      1 * time.Second,
+		CheckInterval: 100 * time.Millisecond,
+		MemoryLimit:   500 * 1024 * 1024,
+		MinFPS:        60.0,
+		ReportPath:    "/invalid/path/that/does/not/exist/report.json",
+	}
+
+	monitor := NewMonitor(config)
+	report := &Report{
+		StartTime:   time.Now(),
+		EndTime:     time.Now().Add(1 * time.Second),
+		TotalUptime: 1 * time.Second,
+		Checks:      10,
+		Passed:      true,
+	}
+
+	// Writing to invalid path should fail
+	err := monitor.WriteReport(report)
+	if err == nil {
+		t.Error("expected error writing to invalid path")
 	}
 }

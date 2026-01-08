@@ -506,12 +506,17 @@ func TestMonitor_WriteReport_File(t *testing.T) {
 
 // TestMonitor_WriteReport_InvalidPath tests error handling for invalid file paths.
 func TestMonitor_WriteReport_InvalidPath(t *testing.T) {
+	// Use a path that doesn't exist in a nonexistent directory
+	// This is more portable than hardcoded /invalid/path
+	tmpDir := t.TempDir()
+	invalidPath := filepath.Join(tmpDir, "nonexistent", "subdir", "report.json")
+
 	config := Config{
 		Duration:      1 * time.Second,
 		CheckInterval: 100 * time.Millisecond,
 		MemoryLimit:   500 * 1024 * 1024,
 		MinFPS:        60.0,
-		ReportPath:    "/invalid/path/that/does/not/exist/report.json",
+		ReportPath:    invalidPath,
 	}
 
 	monitor := NewMonitor(config)
@@ -523,7 +528,7 @@ func TestMonitor_WriteReport_InvalidPath(t *testing.T) {
 		Passed:      true,
 	}
 
-	// Writing to invalid path should fail
+	// Writing to invalid path should fail (directory doesn't exist)
 	err := monitor.WriteReport(report)
 	if err == nil {
 		t.Error("expected error writing to invalid path")

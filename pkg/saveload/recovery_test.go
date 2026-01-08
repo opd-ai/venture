@@ -287,7 +287,7 @@ func TestSaveManager_ListBackups(t *testing.T) {
 	saveNames := []string{"list_test_1", "list_test_2", "list_test_3"}
 	for _, name := range saveNames {
 		save := NewGameSave()
-		
+
 		// First save
 		err = manager.SaveGameWithBackup(name, save)
 		if err != nil {

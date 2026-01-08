@@ -786,8 +786,8 @@ func TestBackgroundLoaderEdgeCases(t *testing.T) {
 
 		queueSize := bl.GetQueueSize()
 		// Queue size should be 0 when not running
-		if queueSize != 1 { // Actually gets added to queue
-			t.Logf("Queue size when not running: %d", queueSize)
+		if queueSize != 0 {
+			t.Errorf("expected queue size 0 when loader is not running, got %d", queueSize)
 		}
 	})
 

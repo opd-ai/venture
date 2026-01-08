@@ -211,7 +211,7 @@ All Phase 2 deliverables completed successfully:
 - [x] Increase test coverage to 90%+ (files: all packages with <80% coverage) - **IN PROGRESS**
   - ✅ Improved pkg/procgen/furniture from 79.6% to 89.2% (2026-01-08)
   - ✅ Improved pkg/engine/performance from 65.6% to 94.6% (2026-01-08)
-  - Remaining packages below 80%: 6 packages
+  - Remaining packages below 80%: 7 packages
     - pkg/narrative/branching 70.1%
     - pkg/modding 73.8%
     - pkg/saveload 73.8%

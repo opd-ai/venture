@@ -84,7 +84,7 @@ func main() {
 	}
 
 	fmt.Printf("✓ Recovery successful!\n")
-	fmt.Printf("  Restored from backup: Level %d, XP %d\n", 
+	fmt.Printf("  Restored from backup: Level %d, XP %d\n",
 		recovered.PlayerState.Level, recovered.PlayerState.Experience)
 	fmt.Printf("  Note: Backup contained the previous version (Level 10)\n\n")
 

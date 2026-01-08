@@ -839,10 +839,10 @@ func TestNewLoader(t *testing.T) {
 // TestLoader_GetModPath tests the mod path generation
 func TestLoader_GetModPath(t *testing.T) {
 	tests := []struct {
-		name      string
-		modsDir   string
-		modID     string
-		wantPath  string
+		name     string
+		modsDir  string
+		modID    string
+		wantPath string
 	}{
 		{
 			name:     "default directory",
@@ -869,7 +869,7 @@ func TestLoader_GetModPath(t *testing.T) {
 			config := DefaultConfig()
 			config.ModsDirectory = tt.modsDir
 			loader := NewLoaderWithConfig(config)
-			
+
 			gotPath := loader.GetModPath(tt.modID)
 			if gotPath != tt.wantPath {
 				t.Errorf("GetModPath(%s) = %v, want %v", tt.modID, gotPath, tt.wantPath)

@@ -387,7 +387,7 @@ func TestMonitor_SetFPSProvider(t *testing.T) {
 	var wg sync.WaitGroup
 	numGoroutines := 10
 	wg.Add(numGoroutines)
-	
+
 	for i := 0; i < numGoroutines; i++ {
 		go func(fps float64) {
 			defer wg.Done()
@@ -395,9 +395,9 @@ func TestMonitor_SetFPSProvider(t *testing.T) {
 			monitor.SetFPSProvider(provider)
 		}(float64(i) + 10.0) // Use different FPS values: 10.0, 11.0, ..., 19.0
 	}
-	
+
 	wg.Wait()
-	
+
 	// After all concurrent calls complete, verify we can still get a valid FPS
 	// The exact value doesn't matter, but it should be one of the values we set
 	finalFPS := monitor.fpsProvider.CurrentFPS()

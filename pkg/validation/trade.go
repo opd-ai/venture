@@ -16,12 +16,10 @@ const (
 	MaxItemIDLength = 128
 )
 
-var (
-	// itemIDPattern validates item ID format (alphanumeric + hyphens/underscores/equals)
-	// Compiled once at package initialization for performance
-	// Hyphen placed at end of character class for clarity
-	itemIDPattern = regexp.MustCompile(`^[a-zA-Z0-9_=-]+$`)
-)
+// itemIDPattern validates item ID format (alphanumeric + hyphens/underscores/equals)
+// Compiled once at package initialization for performance
+// Hyphen placed at end of character class for clarity
+var itemIDPattern = regexp.MustCompile(`^[a-zA-Z0-9_=-]+$`)
 
 // TradeValidator validates trade-related inputs
 type TradeValidator struct{}

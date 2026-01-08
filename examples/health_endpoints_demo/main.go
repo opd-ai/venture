@@ -33,9 +33,9 @@ func (m *MockReadinessChecker) Check() (string, error) {
 // MockPerformanceMonitor provides fake performance metrics.
 type MockPerformanceMonitor struct{}
 
-func (m *MockPerformanceMonitor) GetFPS() float64            { return 60.0 }
-func (m *MockPerformanceMonitor) GetFrameTime() float64     { return 16.67 }
-func (m *MockPerformanceMonitor) GetMemoryUsageMB() uint64  { return 120 }
+func (m *MockPerformanceMonitor) GetFPS() float64          { return 60.0 }
+func (m *MockPerformanceMonitor) GetFrameTime() float64    { return 16.67 }
+func (m *MockPerformanceMonitor) GetMemoryUsageMB() uint64 { return 120 }
 
 // MockNetworkServer provides fake network metrics.
 type MockNetworkServer struct {

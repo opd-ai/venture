@@ -594,7 +594,7 @@ func TestAdapter_PerformSync_HandlerError(t *testing.T) {
 	// Note: GetStats returns (bytesSent, bytesReceived, syncCount, backgroundCount)
 	// Errors are tracked separately via SyncErrors field
 	_, _, syncCount, _ := adapter.state.GetStats()
-	
+
 	// Sync count should not increase on error
 	if syncCount != 0 {
 		t.Errorf("syncCount = %d, want 0 (no successful sync)", syncCount)
@@ -614,7 +614,7 @@ func TestAdapter_PerformSync_BytesTracking(t *testing.T) {
 
 	// Note: GetStats returns (bytesSent, bytesReceived, syncCount, backgroundCount)
 	bytesSent, bytesReceived, syncCount, _ := adapter.state.GetStats()
-	
+
 	if syncCount != 1 {
 		t.Errorf("syncCount = %d, want 1", syncCount)
 	}
@@ -738,11 +738,11 @@ func TestAdapter_SyncLoop_BatteryModeChanges(t *testing.T) {
 
 	// Wait for initial sync
 	time.Sleep(200 * time.Millisecond)
-	
+
 	// Change battery modes during operation
 	adapter.UpdateBatteryLevel(0.3) // Switch to low battery
 	time.Sleep(200 * time.Millisecond)
-	
+
 	adapter.UpdateBatteryLevel(0.05) // Switch to critical
 	time.Sleep(200 * time.Millisecond)
 

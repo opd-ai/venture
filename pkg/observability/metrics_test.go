@@ -19,9 +19,9 @@ type mockPerformanceMonitor struct {
 	memoryMB  uint64
 }
 
-func (m *mockPerformanceMonitor) GetFPS() float64            { return m.fps }
-func (m *mockPerformanceMonitor) GetFrameTime() float64     { return m.frameTime }
-func (m *mockPerformanceMonitor) GetMemoryUsageMB() uint64  { return m.memoryMB }
+func (m *mockPerformanceMonitor) GetFPS() float64          { return m.fps }
+func (m *mockPerformanceMonitor) GetFrameTime() float64    { return m.frameTime }
+func (m *mockPerformanceMonitor) GetMemoryUsageMB() uint64 { return m.memoryMB }
 
 type mockNetworkServer struct {
 	clients       int
@@ -43,23 +43,23 @@ type mockWorld struct {
 	tradeVolume uint64
 }
 
-func (m *mockWorld) GetEntityCount() int       { return m.entityCount }
-func (m *mockWorld) GetActiveQuestCount() int  { return m.questCount }
-func (m *mockWorld) GetTradeVolume() uint64    { return m.tradeVolume }
+func (m *mockWorld) GetEntityCount() int      { return m.entityCount }
+func (m *mockWorld) GetActiveQuestCount() int { return m.questCount }
+func (m *mockWorld) GetTradeVolume() uint64   { return m.tradeVolume }
 
 // Tests
 
 func TestNewMetricsExporter(t *testing.T) {
 	exporter := NewMetricsExporter(":9090")
-	
+
 	if exporter == nil {
 		t.Fatal("Expected non-nil exporter")
 	}
-	
+
 	if exporter.addr != ":9090" {
 		t.Errorf("Expected address :9090, got %s", exporter.addr)
 	}
-	
+
 	if exporter.logger == nil {
 		t.Error("Expected non-nil logger")
 	}
@@ -68,13 +68,13 @@ func TestNewMetricsExporter(t *testing.T) {
 func TestNewMetricsExporterWithLogger(t *testing.T) {
 	logger := logrus.New()
 	logger.SetLevel(logrus.DebugLevel)
-	
+
 	exporter := NewMetricsExporterWithLogger(":9091", logger)
-	
+
 	if exporter == nil {
 		t.Fatal("Expected non-nil exporter")
 	}
-	
+
 	if exporter.logger != logger {
 		t.Error("Expected custom logger to be set")
 	}
@@ -83,9 +83,9 @@ func TestNewMetricsExporterWithLogger(t *testing.T) {
 func TestRegisterPerformanceMonitor(t *testing.T) {
 	exporter := NewMetricsExporter(":9092")
 	mock := &mockPerformanceMonitor{fps: 60.0, frameTime: 16.67, memoryMB: 100}
-	
+
 	exporter.RegisterPerformanceMonitor(mock)
-	
+
 	if exporter.perfMonitor != mock {
 		t.Error("Performance monitor not registered")
 	}
@@ -94,9 +94,9 @@ func TestRegisterPerformanceMonitor(t *testing.T) {
 func TestRegisterNetworkServer(t *testing.T) {
 	exporter := NewMetricsExporter(":9093")
 	mock := &mockNetworkServer{clients: 4, bytesSent: 1024, bytesReceived: 2048}
-	
+
 	exporter.RegisterNetworkServer(mock)
-	
+
 	if exporter.networkServer != mock {
 		t.Error("Network server not registered")
 	}
@@ -105,9 +105,9 @@ func TestRegisterNetworkServer(t *testing.T) {
 func TestRegisterWorld(t *testing.T) {
 	exporter := NewMetricsExporter(":9094")
 	mock := &mockWorld{entityCount: 1000, questCount: 10, tradeVolume: 5000}
-	
+
 	exporter.RegisterWorld(mock)
-	
+
 	if exporter.world != mock {
 		t.Error("World not registered")
 	}
@@ -115,15 +115,15 @@ func TestRegisterWorld(t *testing.T) {
 
 func TestStartStop(t *testing.T) {
 	exporter := NewMetricsExporter(":19090")
-	
+
 	// Start server
 	if err := exporter.Start(); err != nil {
 		t.Fatalf("Failed to start exporter: %v", err)
 	}
-	
+
 	// Give server time to start
 	time.Sleep(100 * time.Millisecond)
-	
+
 	// Stop server
 	if err := exporter.Stop(); err != nil {
 		t.Fatalf("Failed to stop exporter: %v", err)
@@ -132,14 +132,14 @@ func TestStartStop(t *testing.T) {
 
 func TestStartAlreadyStarted(t *testing.T) {
 	exporter := NewMetricsExporter(":19091")
-	
+
 	if err := exporter.Start(); err != nil {
 		t.Fatalf("Failed to start exporter: %v", err)
 	}
 	defer exporter.Stop()
-	
+
 	time.Sleep(100 * time.Millisecond)
-	
+
 	// Try to start again
 	err := exporter.Start()
 	if err == nil {
@@ -152,7 +152,7 @@ func TestStartAlreadyStarted(t *testing.T) {
 
 func TestStopNotStarted(t *testing.T) {
 	exporter := NewMetricsExporter(":19092")
-	
+
 	// Stop without starting should not error
 	if err := exporter.Stop(); err != nil {
 		t.Errorf("Unexpected error when stopping not-started exporter: %v", err)
@@ -161,7 +161,7 @@ func TestStopNotStarted(t *testing.T) {
 
 func TestMetricsEndpoint(t *testing.T) {
 	exporter := NewMetricsExporter(":19093")
-	
+
 	// Register mock sources
 	exporter.RegisterPerformanceMonitor(&mockPerformanceMonitor{
 		fps:       60.0,
@@ -180,33 +180,33 @@ func TestMetricsEndpoint(t *testing.T) {
 		questCount:  15,
 		tradeVolume: 10000,
 	})
-	
+
 	if err := exporter.Start(); err != nil {
 		t.Fatalf("Failed to start exporter: %v", err)
 	}
 	defer exporter.Stop()
-	
+
 	time.Sleep(100 * time.Millisecond)
-	
+
 	// Make request to metrics endpoint
 	resp, err := http.Get("http://localhost:19093/metrics")
 	if err != nil {
 		t.Fatalf("Failed to GET /metrics: %v", err)
 	}
 	defer resp.Body.Close()
-	
+
 	if resp.StatusCode != http.StatusOK {
 		t.Errorf("Expected status 200, got %d", resp.StatusCode)
 	}
-	
+
 	// Read body
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		t.Fatalf("Failed to read response body: %v", err)
 	}
-	
+
 	output := string(body)
-	
+
 	// Verify metrics are present
 	tests := []struct {
 		name   string
@@ -228,7 +228,7 @@ func TestMetricsEndpoint(t *testing.T) {
 		{"heap", "venture_go_heap_alloc_bytes"},
 		{"gc", "venture_go_gc_runs_total"},
 	}
-	
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			if !strings.Contains(output, tt.metric) {
@@ -236,7 +236,7 @@ func TestMetricsEndpoint(t *testing.T) {
 			}
 		})
 	}
-	
+
 	// Verify Prometheus format
 	if !strings.Contains(output, "# HELP") {
 		t.Error("Expected Prometheus HELP comments")
@@ -248,32 +248,32 @@ func TestMetricsEndpoint(t *testing.T) {
 
 func TestMetricsEndpointNoSources(t *testing.T) {
 	exporter := NewMetricsExporter(":19094")
-	
+
 	if err := exporter.Start(); err != nil {
 		t.Fatalf("Failed to start exporter: %v", err)
 	}
 	defer exporter.Stop()
-	
+
 	time.Sleep(100 * time.Millisecond)
-	
+
 	// Make request without registered sources
 	resp, err := http.Get("http://localhost:19094/metrics")
 	if err != nil {
 		t.Fatalf("Failed to GET /metrics: %v", err)
 	}
 	defer resp.Body.Close()
-	
+
 	if resp.StatusCode != http.StatusOK {
 		t.Errorf("Expected status 200, got %d", resp.StatusCode)
 	}
-	
+
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		t.Fatalf("Failed to read response body: %v", err)
 	}
-	
+
 	output := string(body)
-	
+
 	// Should still have uptime and runtime metrics
 	if !strings.Contains(output, "venture_uptime_seconds") {
 		t.Error("Expected uptime metric even without sources")
@@ -285,29 +285,29 @@ func TestMetricsEndpointNoSources(t *testing.T) {
 
 func TestHealthEndpoint(t *testing.T) {
 	exporter := NewMetricsExporter(":19095")
-	
+
 	if err := exporter.Start(); err != nil {
 		t.Fatalf("Failed to start exporter: %v", err)
 	}
 	defer exporter.Stop()
-	
+
 	time.Sleep(100 * time.Millisecond)
-	
+
 	resp, err := http.Get("http://localhost:19095/health")
 	if err != nil {
 		t.Fatalf("Failed to GET /health: %v", err)
 	}
 	defer resp.Body.Close()
-	
+
 	if resp.StatusCode != http.StatusOK {
 		t.Errorf("Expected status 200, got %d", resp.StatusCode)
 	}
-	
+
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		t.Fatalf("Failed to read response body: %v", err)
 	}
-	
+
 	if string(body) != "OK\n" {
 		t.Errorf("Expected 'OK', got %q", string(body))
 	}
@@ -315,18 +315,18 @@ func TestHealthEndpoint(t *testing.T) {
 
 func TestStopWithTimeout(t *testing.T) {
 	exporter := NewMetricsExporter(":19096")
-	
+
 	if err := exporter.Start(); err != nil {
 		t.Fatalf("Failed to start exporter: %v", err)
 	}
-	
+
 	time.Sleep(100 * time.Millisecond)
-	
+
 	// Stop with custom timeout
 	if err := exporter.StopWithTimeout(5 * time.Second); err != nil {
 		t.Fatalf("Failed to stop exporter: %v", err)
 	}
-	
+
 	// Verify server is stopped
 	_, err := http.Get("http://localhost:19096/metrics")
 	if err == nil {
@@ -336,23 +336,23 @@ func TestStopWithTimeout(t *testing.T) {
 
 func TestContentType(t *testing.T) {
 	exporter := NewMetricsExporter(":19097")
-	
+
 	if err := exporter.Start(); err != nil {
 		t.Fatalf("Failed to start exporter: %v", err)
 	}
 	defer exporter.Stop()
-	
+
 	time.Sleep(100 * time.Millisecond)
-	
+
 	resp, err := http.Get("http://localhost:19097/metrics")
 	if err != nil {
 		t.Fatalf("Failed to GET /metrics: %v", err)
 	}
 	defer resp.Body.Close()
-	
+
 	contentType := resp.Header.Get("Content-Type")
 	expectedType := "text/plain; version=0.0.4; charset=utf-8"
-	
+
 	if contentType != expectedType {
 		t.Errorf("Expected Content-Type %q, got %q", expectedType, contentType)
 	}
@@ -360,17 +360,17 @@ func TestContentType(t *testing.T) {
 
 func TestConcurrentAccess(t *testing.T) {
 	exporter := NewMetricsExporter(":19098")
-	
+
 	mock := &mockPerformanceMonitor{fps: 60.0, frameTime: 16.67, memoryMB: 100}
 	exporter.RegisterPerformanceMonitor(mock)
-	
+
 	if err := exporter.Start(); err != nil {
 		t.Fatalf("Failed to start exporter: %v", err)
 	}
 	defer exporter.Stop()
-	
+
 	time.Sleep(100 * time.Millisecond)
-	
+
 	// Make concurrent requests
 	done := make(chan bool, 10)
 	for i := 0; i < 10; i++ {
@@ -382,7 +382,7 @@ func TestConcurrentAccess(t *testing.T) {
 				return
 			}
 			resp.Body.Close()
-			
+
 			if resp.StatusCode != http.StatusOK {
 				t.Errorf("Expected status 200, got %d", resp.StatusCode)
 				done <- false
@@ -391,7 +391,7 @@ func TestConcurrentAccess(t *testing.T) {
 			done <- true
 		}()
 	}
-	
+
 	// Wait for all requests
 	for i := 0; i < 10; i++ {
 		<-done
@@ -412,9 +412,9 @@ func (m *mockReadinessChecker) Check() (string, error) {
 func TestRegisterReadinessChecker(t *testing.T) {
 	exporter := NewMetricsExporter(":29090")
 	checker := &mockReadinessChecker{name: "test", err: nil}
-	
+
 	exporter.RegisterReadinessChecker(checker)
-	
+
 	if len(exporter.readinessCheckers) != 1 {
 		t.Errorf("Expected 1 readiness checker, got %d", len(exporter.readinessCheckers))
 	}
@@ -425,33 +425,33 @@ func TestRegisterReadinessChecker(t *testing.T) {
 
 func TestReadyEndpointAllChecksPass(t *testing.T) {
 	exporter := NewMetricsExporter(":29091")
-	
+
 	// Register checkers that pass
 	exporter.RegisterReadinessChecker(&mockReadinessChecker{name: "database", err: nil})
 	exporter.RegisterReadinessChecker(&mockReadinessChecker{name: "federation", err: nil})
-	
+
 	if err := exporter.Start(); err != nil {
 		t.Fatalf("Failed to start exporter: %v", err)
 	}
 	defer exporter.Stop()
-	
+
 	time.Sleep(100 * time.Millisecond)
-	
+
 	resp, err := http.Get("http://localhost:29091/ready")
 	if err != nil {
 		t.Fatalf("Failed to GET /ready: %v", err)
 	}
 	defer resp.Body.Close()
-	
+
 	if resp.StatusCode != http.StatusOK {
 		t.Errorf("Expected status 200, got %d", resp.StatusCode)
 	}
-	
+
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		t.Fatalf("Failed to read response body: %v", err)
 	}
-	
+
 	output := string(body)
 	if !strings.Contains(output, `"status":"ready"`) {
 		t.Errorf("Expected ready status in output, got: %s", output)
@@ -460,33 +460,33 @@ func TestReadyEndpointAllChecksPass(t *testing.T) {
 
 func TestReadyEndpointCheckFails(t *testing.T) {
 	exporter := NewMetricsExporter(":29092")
-	
+
 	// Register checkers with one that fails
 	exporter.RegisterReadinessChecker(&mockReadinessChecker{name: "database", err: nil})
 	exporter.RegisterReadinessChecker(&mockReadinessChecker{name: "federation", err: fmt.Errorf("connection timeout")})
-	
+
 	if err := exporter.Start(); err != nil {
 		t.Fatalf("Failed to start exporter: %v", err)
 	}
 	defer exporter.Stop()
-	
+
 	time.Sleep(100 * time.Millisecond)
-	
+
 	resp, err := http.Get("http://localhost:29092/ready")
 	if err != nil {
 		t.Fatalf("Failed to GET /ready: %v", err)
 	}
 	defer resp.Body.Close()
-	
+
 	if resp.StatusCode != http.StatusServiceUnavailable {
 		t.Errorf("Expected status 503, got %d", resp.StatusCode)
 	}
-	
+
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		t.Fatalf("Failed to read response body: %v", err)
 	}
-	
+
 	output := string(body)
 	if !strings.Contains(output, `"status":"not_ready"`) {
 		t.Errorf("Expected not_ready status in output, got: %s", output)
@@ -501,31 +501,31 @@ func TestReadyEndpointCheckFails(t *testing.T) {
 
 func TestReadyEndpointNoCheckers(t *testing.T) {
 	exporter := NewMetricsExporter(":29093")
-	
+
 	// Don't register any checkers
 	if err := exporter.Start(); err != nil {
 		t.Fatalf("Failed to start exporter: %v", err)
 	}
 	defer exporter.Stop()
-	
+
 	time.Sleep(100 * time.Millisecond)
-	
+
 	resp, err := http.Get("http://localhost:29093/ready")
 	if err != nil {
 		t.Fatalf("Failed to GET /ready: %v", err)
 	}
 	defer resp.Body.Close()
-	
+
 	// Should be ready if no checks are registered
 	if resp.StatusCode != http.StatusOK {
 		t.Errorf("Expected status 200, got %d", resp.StatusCode)
 	}
-	
+
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		t.Fatalf("Failed to read response body: %v", err)
 	}
-	
+
 	output := string(body)
 	if !strings.Contains(output, `"status":"ready"`) {
 		t.Errorf("Expected ready status in output, got: %s", output)
@@ -534,7 +534,7 @@ func TestReadyEndpointNoCheckers(t *testing.T) {
 
 func TestStatusEndpoint(t *testing.T) {
 	exporter := NewMetricsExporter(":29094")
-	
+
 	// Register mock sources
 	exporter.RegisterPerformanceMonitor(&mockPerformanceMonitor{
 		fps:       60.0,
@@ -553,36 +553,36 @@ func TestStatusEndpoint(t *testing.T) {
 		questCount:  15,
 		tradeVolume: 10000,
 	})
-	
+
 	if err := exporter.Start(); err != nil {
 		t.Fatalf("Failed to start exporter: %v", err)
 	}
 	defer exporter.Stop()
-	
+
 	time.Sleep(100 * time.Millisecond)
-	
+
 	resp, err := http.Get("http://localhost:29094/status")
 	if err != nil {
 		t.Fatalf("Failed to GET /status: %v", err)
 	}
 	defer resp.Body.Close()
-	
+
 	if resp.StatusCode != http.StatusOK {
 		t.Errorf("Expected status 200, got %d", resp.StatusCode)
 	}
-	
+
 	contentType := resp.Header.Get("Content-Type")
 	if contentType != "application/json" {
 		t.Errorf("Expected Content-Type application/json, got %s", contentType)
 	}
-	
+
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		t.Fatalf("Failed to read response body: %v", err)
 	}
-	
+
 	output := string(body)
-	
+
 	// Verify JSON structure and key fields
 	tests := []struct {
 		name  string
@@ -604,7 +604,7 @@ func TestStatusEndpoint(t *testing.T) {
 		{"heap_alloc", `"heap_alloc_bytes"`},
 		{"gc_runs", `"gc_runs"`},
 	}
-	
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			if !strings.Contains(output, tt.field) {
@@ -616,31 +616,31 @@ func TestStatusEndpoint(t *testing.T) {
 
 func TestStatusEndpointNoSources(t *testing.T) {
 	exporter := NewMetricsExporter(":29095")
-	
+
 	if err := exporter.Start(); err != nil {
 		t.Fatalf("Failed to start exporter: %v", err)
 	}
 	defer exporter.Stop()
-	
+
 	time.Sleep(100 * time.Millisecond)
-	
+
 	resp, err := http.Get("http://localhost:29095/status")
 	if err != nil {
 		t.Fatalf("Failed to GET /status: %v", err)
 	}
 	defer resp.Body.Close()
-	
+
 	if resp.StatusCode != http.StatusOK {
 		t.Errorf("Expected status 200, got %d", resp.StatusCode)
 	}
-	
+
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		t.Fatalf("Failed to read response body: %v", err)
 	}
-	
+
 	output := string(body)
-	
+
 	// Should still have basic fields even without sources
 	if !strings.Contains(output, `"status":"ok"`) {
 		t.Error("Expected status ok even without sources")
@@ -655,23 +655,22 @@ func TestStatusEndpointNoSources(t *testing.T) {
 
 func TestReadyEndpointContentType(t *testing.T) {
 	exporter := NewMetricsExporter(":29096")
-	
+
 	if err := exporter.Start(); err != nil {
 		t.Fatalf("Failed to start exporter: %v", err)
 	}
 	defer exporter.Stop()
-	
+
 	time.Sleep(100 * time.Millisecond)
-	
+
 	resp, err := http.Get("http://localhost:29096/ready")
 	if err != nil {
 		t.Fatalf("Failed to GET /ready: %v", err)
 	}
 	defer resp.Body.Close()
-	
+
 	contentType := resp.Header.Get("Content-Type")
 	if contentType != "application/json" {
 		t.Errorf("Expected Content-Type application/json, got %s", contentType)
 	}
 }
-

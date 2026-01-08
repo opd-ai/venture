@@ -70,13 +70,13 @@ type readyResponse struct {
 
 // statusResponse represents the JSON response for the /status endpoint.
 type statusResponse struct {
-	Status      string              `json:"status"`
+	Status        string              `json:"status"`
 	UptimeSeconds float64             `json:"uptime_seconds"`
-	StartedAt   string              `json:"started_at"`
-	Performance *performanceMetrics `json:"performance,omitempty"`
-	Network     *networkMetrics     `json:"network,omitempty"`
-	GameState   *gameStateMetrics   `json:"game_state,omitempty"`
-	Runtime     runtimeMetrics      `json:"runtime"`
+	StartedAt     string              `json:"started_at"`
+	Performance   *performanceMetrics `json:"performance,omitempty"`
+	Network       *networkMetrics     `json:"network,omitempty"`
+	GameState     *gameStateMetrics   `json:"game_state,omitempty"`
+	Runtime       runtimeMetrics      `json:"runtime"`
 }
 
 // performanceMetrics represents performance-related metrics.
@@ -97,16 +97,16 @@ type networkMetrics struct {
 
 // gameStateMetrics represents game state metrics.
 type gameStateMetrics struct {
-	EntityCount int    `json:"entity_count"`
+	EntityCount  int    `json:"entity_count"`
 	ActiveQuests int    `json:"active_quests"`
-	TradeVolume uint64 `json:"trade_volume"`
+	TradeVolume  uint64 `json:"trade_volume"`
 }
 
 // runtimeMetrics represents Go runtime metrics.
 type runtimeMetrics struct {
-	Goroutines    int    `json:"goroutines"`
+	Goroutines     int    `json:"goroutines"`
 	HeapAllocBytes uint64 `json:"heap_alloc_bytes"`
-	GCRuns        uint32 `json:"gc_runs"`
+	GCRuns         uint32 `json:"gc_runs"`
 }
 
 // NewMetricsExporter creates a new metrics exporter listening on the given address.
@@ -423,4 +423,3 @@ func (m *MetricsExporter) handleStatus(w http.ResponseWriter, r *http.Request) {
 		m.logger.WithError(err).Error("Failed to encode status response")
 	}
 }
-

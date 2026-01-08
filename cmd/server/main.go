@@ -67,7 +67,7 @@ var (
 	modsDir    = flag.String("mods-dir", "mods", "Directory to load mods from")
 
 	// Phase 3 (PLAN.md): Metrics export for production monitoring
-	metricsPort = flag.String("metrics-port", "9090", "Port for Prometheus metrics HTTP endpoint")
+	metricsPort   = flag.String("metrics-port", "9090", "Port for Prometheus metrics HTTP endpoint")
 	enableMetrics = flag.Bool("enable-metrics", false, "Enable Prometheus metrics export at /metrics endpoint")
 
 	// V9.0 integration managers for server-authoritative validation
@@ -1296,10 +1296,10 @@ func initializeModSystem(serverLogger *logrus.Entry) *modding.Manager {
 // Phase 3 (PLAN.md): Metrics export for production monitoring
 func initializeMetricsExporter(logger *logrus.Logger, world *engine.World, server *network.TCPServer) *observability.MetricsExporter {
 	metricsLogger := logger.WithFields(logrus.Fields{"component": "metrics"})
-	
+
 	addr := ":" + *metricsPort
 	exporter := observability.NewMetricsExporterWithLogger(addr, logger)
-	
+
 	// Find and register performance monitoring system from world
 	var perfMon *engine.PerformanceMonitoringSystem
 	for _, system := range world.GetSystems() {
@@ -1308,29 +1308,29 @@ func initializeMetricsExporter(logger *logrus.Logger, world *engine.World, serve
 			break
 		}
 	}
-	
+
 	// If no performance monitoring system exists, create one
 	if perfMon == nil {
 		metricsLogger.Info("creating performance monitoring system for metrics")
 		perfMon = engine.NewPerformanceMonitoringSystem()
 		world.AddSystem(perfMon)
 	}
-	
+
 	// Register metrics sources
 	exporter.RegisterPerformanceMonitor(perfMon)
 	exporter.RegisterNetworkServer(server)
 	exporter.RegisterWorld(world)
-	
+
 	// Start metrics HTTP server
 	if err := exporter.Start(); err != nil {
 		metricsLogger.WithError(err).Error("failed to start metrics exporter")
 		return nil
 	}
-	
+
 	metricsLogger.WithFields(logrus.Fields{
 		"port":     *metricsPort,
 		"endpoint": "/metrics",
 	}).Info("Prometheus metrics exporter started")
-	
+
 	return exporter
 }

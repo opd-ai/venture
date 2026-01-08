@@ -126,9 +126,9 @@ type TCPServer struct {
 	stateMu  sync.Mutex
 
 	// Metrics tracking
-	metricsMu       sync.RWMutex
-	totalBytesSent  uint64
-	totalBytesRecv  uint64
+	metricsMu        sync.RWMutex
+	totalBytesSent   uint64
+	totalBytesRecv   uint64
 	totalPacketsSent uint64
 	totalPacketsRecv uint64
 

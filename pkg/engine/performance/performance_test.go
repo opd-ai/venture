@@ -810,9 +810,9 @@ func TestBackgroundLoaderEdgeCases(t *testing.T) {
 		bl.Start()
 		defer bl.Stop()
 
-		bl.PreloadRaid("raid1", nil)        // Should not panic with nil callback
-		bl.PreloadGuildHall("hall1", nil)   // Should not panic with nil callback
-		time.Sleep(200 * time.Millisecond)  // Let workers process
+		bl.PreloadRaid("raid1", nil)       // Should not panic with nil callback
+		bl.PreloadGuildHall("hall1", nil)  // Should not panic with nil callback
+		time.Sleep(200 * time.Millisecond) // Let workers process
 	})
 }
 

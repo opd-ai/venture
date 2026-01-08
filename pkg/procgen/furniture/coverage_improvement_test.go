@@ -41,7 +41,7 @@ func TestGenerateWithoutSubType(t *testing.T) {
 // TestGenerateWithVariousDepths tests chooseRandomSubType at different depths
 func TestGenerateWithVariousDepths(t *testing.T) {
 	gen := NewGenerator()
-	
+
 	tests := []struct {
 		name  string
 		depth int
@@ -52,7 +52,7 @@ func TestGenerateWithVariousDepths(t *testing.T) {
 		{"Depth50", 50, 70050},
 		{"Depth100", 100, 70100},
 	}
-	
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			params := procgen.GenerationParams{
@@ -71,7 +71,7 @@ func TestGenerateWithVariousDepths(t *testing.T) {
 			if !ok {
 				t.Fatalf("Generate() returned non-Furniture type: %T", result)
 			}
-			
+
 			if furniture.SubType == "" {
 				t.Errorf("Generate(depth=%d) did not assign SubType", tt.depth)
 			}
@@ -82,7 +82,7 @@ func TestGenerateWithVariousDepths(t *testing.T) {
 // TestHorrorMaterialSelection tests trySelectHorrorMaterialDeterministic (0% coverage)
 func TestHorrorMaterialSelection(t *testing.T) {
 	gen := NewGenerator()
-	
+
 	tests := []struct {
 		name     string
 		subType  string
@@ -97,7 +97,7 @@ func TestHorrorMaterialSelection(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			// Generate multiple items to test horror material selection
 			foundMaterials := make(map[MaterialType]bool)
-			
+
 			for i := 0; i < 20; i++ {
 				params := procgen.GenerationParams{
 					Difficulty: 0.3,
@@ -144,7 +144,7 @@ func TestHorrorMaterialSelection(t *testing.T) {
 // TestPostapocMaterialSelection tests trySelectPostapocMaterialDeterministic (0% coverage)
 func TestPostapocMaterialSelection(t *testing.T) {
 	gen := NewGenerator()
-	
+
 	tests := []struct {
 		name     string
 		subType  string
@@ -159,7 +159,7 @@ func TestPostapocMaterialSelection(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			// Generate multiple items to test post-apocalyptic material selection
 			foundMaterials := make(map[MaterialType]bool)
-			
+
 			for i := 0; i < 20; i++ {
 				params := procgen.GenerationParams{
 					Difficulty: 0.3,
@@ -209,7 +209,7 @@ func TestScifiMaterialSelection(t *testing.T) {
 
 	// Generate multiple sci-fi items to test material selection
 	foundMaterials := make(map[MaterialType]bool)
-	
+
 	for i := 0; i < 30; i++ {
 		params := procgen.GenerationParams{
 			Difficulty: 0.3,
@@ -283,13 +283,13 @@ func TestFindValidPlacementNoSpace(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Generate() error = %v", err)
 	}
-	
+
 	largeFurniture, ok := result.(*Furniture)
 	if !ok {
 		t.Fatalf("Generate() returned non-Furniture type: %T", result)
 	}
-	
-	largeFurniture.CollisionWidth = 5.0  // Larger than room
+
+	largeFurniture.CollisionWidth = 5.0 // Larger than room
 	largeFurniture.CollisionDepth = 5.0
 
 	x, y, dir, ok := validator.FindValidPlacement(largeFurniture, DirNorth)
@@ -314,7 +314,7 @@ func TestFindValidPlacementWithRotation(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Generate() error = %v", err)
 	}
-	
+
 	furniture, ok := result.(*Furniture)
 	if !ok {
 		t.Fatalf("Generate() returned non-Furniture type: %T", result)
@@ -329,15 +329,15 @@ func TestFindValidPlacementWithRotation(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Generate() blocker error = %v", err)
 	}
-	
+
 	blockerFurn, ok := blocker.(*Furniture)
 	if !ok {
 		t.Fatalf("Generate() blocker returned non-Furniture type: %T", blocker)
 	}
-	
+
 	blockerFurn.CollisionWidth = 9.0
 	blockerFurn.CollisionDepth = 1.0
-	
+
 	validator.PlaceFurniture(blockerFurn, 0.0, 0.0, DirNorth)
 
 	// Should still find placement, possibly with rotation
@@ -370,12 +370,12 @@ func TestRotateFurnitureCollision(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Generate() furniture1 error = %v", err)
 	}
-	
+
 	furniture1, ok := result1.(*Furniture)
 	if !ok {
 		t.Fatalf("Generate() furniture1 returned non-Furniture type: %T", result1)
 	}
-	
+
 	furniture1.CollisionWidth = 4.0
 	furniture1.CollisionDepth = 1.0
 	validator.PlaceFurniture(furniture1, 5.0, 5.0, DirNorth)
@@ -385,12 +385,12 @@ func TestRotateFurnitureCollision(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Generate() furniture2 error = %v", err)
 	}
-	
+
 	furniture2, ok := result2.(*Furniture)
 	if !ok {
 		t.Fatalf("Generate() furniture2 returned non-Furniture type: %T", result2)
 	}
-	
+
 	furniture2.CollisionWidth = 2.0
 	furniture2.CollisionDepth = 2.0
 	validator.PlaceFurniture(furniture2, 6.0, 5.0, DirNorth)
@@ -411,9 +411,9 @@ func TestValidateInvalidFurniture(t *testing.T) {
 	gen := NewGenerator()
 
 	tests := []struct {
-		name     string
+		name      string
 		furniture *Furniture
-		wantErr  bool
+		wantErr   bool
 	}{
 		{
 			name: "ZeroDimensions",
@@ -478,11 +478,11 @@ func TestGenerateHighRarityItems(t *testing.T) {
 
 	// Use high difficulty and depth to increase legendary chances
 	foundRarities := make(map[RarityTier]bool)
-	
+
 	for i := 0; i < 50; i++ {
 		params := procgen.GenerationParams{
-			Difficulty: 1.0,    // Maximum difficulty
-			Depth:      100,    // High depth
+			Difficulty: 1.0, // Maximum difficulty
+			Depth:      100, // High depth
 			GenreID:    "fantasy",
 			Custom: map[string]interface{}{
 				"SubType": "Throne", // High-value furniture

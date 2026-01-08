@@ -18,10 +18,8 @@ const (
 	DefaultProtocolVersion = "6.0.0"
 )
 
-var (
-	// DefaultProtocolFeatures lists the features supported by this server
-	DefaultProtocolFeatures = []string{"travel", "trade", "post"}
-)
+// DefaultProtocolFeatures lists the features supported by this server
+var DefaultProtocolFeatures = []string{"travel", "trade", "post"}
 
 // FederationProtocol handles server-to-server communication
 type FederationProtocol struct {
@@ -114,7 +112,6 @@ func (f *FederationProtocol) Connect(peerAddress string) error {
 
 		return nil
 	}, IsNetworkError)
-
 	if err != nil {
 		return fmt.Errorf("failed to connect to %s after retries: %w", peerAddress, err)
 	}

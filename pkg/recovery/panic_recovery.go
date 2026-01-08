@@ -117,7 +117,7 @@ func RecoverPanic(logger *logrus.Entry, context string, cleanup func()) func() {
 //	    defer RecoverPanicWithLogger("network_server", "accept loop", nil)()
 //	    // goroutine work...
 //	}()
-func RecoverPanicWithLogger(component string, context string, cleanup func()) func() {
+func RecoverPanicWithLogger(component, context string, cleanup func()) func() {
 	logger := logrus.WithField("component", component)
 	return RecoverPanic(logger, context, cleanup)
 }

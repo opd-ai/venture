@@ -644,7 +644,7 @@ func (w *World) GetEntityCount() int {
 func (w *World) GetActiveQuestCount() int {
 	w.mu.RLock()
 	defer w.mu.RUnlock()
-	
+
 	count := 0
 	for _, entity := range w.entities {
 		if entity.HasComponent("quest") {
@@ -660,7 +660,7 @@ func (w *World) GetActiveQuestCount() int {
 func (w *World) GetTradeVolume() uint64 {
 	w.mu.RLock()
 	defer w.mu.RUnlock()
-	
+
 	// Sum up trade counters from all entities with trade components
 	var total uint64
 	for _, entity := range w.entities {

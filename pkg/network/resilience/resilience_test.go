@@ -679,7 +679,7 @@ func TestMetricsCollector_CalculatePeakBandwidth_Varying(t *testing.T) {
 		for j := 0; j < 5; j++ {
 			mc.RecordPacketSent(500 * (i + 1)) // Increasing traffic
 		}
-		time.Sleep(1100 * time.Millisecond) // Wait for bandwidth sample
+		time.Sleep(1100 * time.Millisecond)     // Wait for bandwidth sample
 		mc.RecordLatency(10 * time.Millisecond) // Trigger bandwidth update
 	}
 

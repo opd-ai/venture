@@ -556,3 +556,194 @@ func BenchmarkDataToAnimationState(b *testing.B) {
 		_, _, _, _ = DataToAnimationState(data)
 	}
 }
+
+// TestParseWeaponType tests weapon type parsing with all cases.
+func TestParseWeaponType(t *testing.T) {
+	tests := []struct {
+		input string
+		want  item.WeaponType
+	}{
+		{"sword", item.WeaponSword},
+		{"axe", item.WeaponAxe},
+		{"bow", item.WeaponBow},
+		{"staff", item.WeaponStaff},
+		{"dagger", item.WeaponDagger},
+		{"spear", item.WeaponSpear},
+		{"invalid", item.WeaponSword},  // Default fallback
+		{"", item.WeaponSword},          // Empty string fallback
+		{"SWORD", item.WeaponSword},     // Case sensitivity test (should fallback)
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.input, func(t *testing.T) {
+			got := parseWeaponType(tt.input)
+			if got != tt.want {
+				t.Errorf("parseWeaponType(%q) = %v, want %v", tt.input, got, tt.want)
+			}
+		})
+	}
+}
+
+// TestParseArmorType tests armor type parsing with all cases.
+func TestParseArmorType(t *testing.T) {
+	tests := []struct {
+		input string
+		want  item.ArmorType
+	}{
+		{"helmet", item.ArmorHelmet},
+		{"chest", item.ArmorChest},
+		{"legs", item.ArmorLegs},
+		{"boots", item.ArmorBoots},
+		{"gloves", item.ArmorGloves},
+		{"shield", item.ArmorShield},
+		{"invalid", item.ArmorChest},    // Default fallback
+		{"", item.ArmorChest},            // Empty string fallback
+		{"HELMET", item.ArmorChest},      // Case sensitivity test (should fallback)
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.input, func(t *testing.T) {
+			got := parseArmorType(tt.input)
+			if got != tt.want {
+				t.Errorf("parseArmorType(%q) = %v, want %v", tt.input, got, tt.want)
+			}
+		})
+	}
+}
+
+// TestParseConsumableType tests consumable type parsing with all cases.
+func TestParseConsumableType(t *testing.T) {
+	tests := []struct {
+		input string
+		want  item.ConsumableType
+	}{
+		{"potion", item.ConsumablePotion},
+		{"scroll", item.ConsumableScroll},
+		{"food", item.ConsumableFood},
+		{"bomb", item.ConsumableBomb},
+		{"invalid", item.ConsumablePotion},  // Default fallback
+		{"", item.ConsumablePotion},          // Empty string fallback
+		{"POTION", item.ConsumablePotion},    // Case sensitivity test (should fallback)
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.input, func(t *testing.T) {
+			got := parseConsumableType(tt.input)
+			if got != tt.want {
+				t.Errorf("parseConsumableType(%q) = %v, want %v", tt.input, got, tt.want)
+			}
+		})
+	}
+}
+
+// TestParseSpellType tests spell type parsing with all cases.
+func TestParseSpellType(t *testing.T) {
+	tests := []struct {
+		input string
+		want  magic.SpellType
+	}{
+		{"offensive", magic.TypeOffensive},
+		{"defensive", magic.TypeDefensive},
+		{"utility", magic.TypeUtility},
+		{"healing", magic.TypeHealing},
+		{"buff", magic.TypeBuff},
+		{"debuff", magic.TypeDebuff},
+		{"summon", magic.TypeSummon},
+		{"invalid", magic.TypeOffensive},  // Default fallback
+		{"", magic.TypeOffensive},          // Empty string fallback
+		{"OFFENSIVE", magic.TypeOffensive}, // Case sensitivity test (should fallback)
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.input, func(t *testing.T) {
+			got := parseSpellType(tt.input)
+			if got != tt.want {
+				t.Errorf("parseSpellType(%q) = %v, want %v", tt.input, got, tt.want)
+			}
+		})
+	}
+}
+
+// TestParseElementType tests element type parsing with all cases.
+func TestParseElementType(t *testing.T) {
+	tests := []struct {
+		input string
+		want  magic.ElementType
+	}{
+		{"none", magic.ElementNone},
+		{"fire", magic.ElementFire},
+		{"ice", magic.ElementIce},
+		{"lightning", magic.ElementLightning},
+		{"earth", magic.ElementEarth},
+		{"wind", magic.ElementWind},
+		{"light", magic.ElementLight},
+		{"dark", magic.ElementDark},
+		{"arcane", magic.ElementArcane},
+		{"invalid", magic.ElementNone},    // Default fallback
+		{"", magic.ElementNone},            // Empty string fallback
+		{"FIRE", magic.ElementNone},        // Case sensitivity test (should fallback)
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.input, func(t *testing.T) {
+			got := parseElementType(tt.input)
+			if got != tt.want {
+				t.Errorf("parseElementType(%q) = %v, want %v", tt.input, got, tt.want)
+			}
+		})
+	}
+}
+
+// TestParseTargetType tests target type parsing with all cases.
+func TestParseTargetType(t *testing.T) {
+	tests := []struct {
+		input string
+		want  magic.TargetType
+	}{
+		{"self", magic.TargetSelf},
+		{"single", magic.TargetSingle},
+		{"area", magic.TargetArea},
+		{"cone", magic.TargetCone},
+		{"line", magic.TargetLine},
+		{"all_allies", magic.TargetAllAllies},
+		{"all_enemies", magic.TargetAllEnemies},
+		{"invalid", magic.TargetSingle},    // Default fallback
+		{"", magic.TargetSingle},            // Empty string fallback
+		{"SELF", magic.TargetSingle},        // Case sensitivity test (should fallback)
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.input, func(t *testing.T) {
+			got := parseTargetType(tt.input)
+			if got != tt.want {
+				t.Errorf("parseTargetType(%q) = %v, want %v", tt.input, got, tt.want)
+			}
+		})
+	}
+}
+
+// TestParseMagicRarity tests magic rarity parsing with all cases.
+func TestParseMagicRarity(t *testing.T) {
+	tests := []struct {
+		input string
+		want  magic.Rarity
+	}{
+		{"common", magic.RarityCommon},
+		{"uncommon", magic.RarityUncommon},
+		{"rare", magic.RarityRare},
+		{"epic", magic.RarityEpic},
+		{"legendary", magic.RarityLegendary},
+		{"invalid", magic.RarityCommon},    // Default fallback
+		{"", magic.RarityCommon},            // Empty string fallback
+		{"COMMON", magic.RarityCommon},      // Case sensitivity test (should fallback)
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.input, func(t *testing.T) {
+			got := parseMagicRarity(tt.input)
+			if got != tt.want {
+				t.Errorf("parseMagicRarity(%q) = %v, want %v", tt.input, got, tt.want)
+			}
+		})
+	}
+}

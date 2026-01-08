@@ -167,7 +167,7 @@ This is intentional architecture, not a bug. The KeyBindingRegistry provides UI 
 **Implementation Status:** ✅ VERIFIED
 
 **Companion AI:**
-- **Package:** `pkg/companion/` (9 files found)
+- **Package:** `pkg/companion/learning/` (6 files found)
 - **System:** `cmd/client/handlers.go` CompanionInventorySystem
 
 **Branching Narratives:**

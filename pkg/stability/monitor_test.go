@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"os"
+	"path/filepath"
 	"testing"
 	"time"
 )
@@ -453,7 +454,7 @@ func TestMonitor_WriteReport_StdoutDash(t *testing.T) {
 func TestMonitor_WriteReport_File(t *testing.T) {
 	// Create temp directory for test
 	tmpDir := t.TempDir()
-	tmpFile := tmpDir + "/test_stability_report.json"
+	tmpFile := filepath.Join(tmpDir, "test_stability_report.json")
 
 	config := Config{
 		Duration:      1 * time.Second,

@@ -451,9 +451,9 @@ func TestMonitor_WriteReport_StdoutDash(t *testing.T) {
 
 // TestMonitor_WriteReport_File tests writing report to a file.
 func TestMonitor_WriteReport_File(t *testing.T) {
-	// Create temp file path
-	tmpFile := "/tmp/test_stability_report.json"
-	defer os.Remove(tmpFile)
+	// Create temp directory for test
+	tmpDir := t.TempDir()
+	tmpFile := tmpDir + "/test_stability_report.json"
 
 	config := Config{
 		Duration:      1 * time.Second,

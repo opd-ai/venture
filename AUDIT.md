@@ -108,7 +108,7 @@ This is intentional architecture, not a bug. The KeyBindingRegistry provides UI 
 **Implementation Status:** ✅ VERIFIED
 
 **Housing:**
-- **Package:** `pkg/world/housing/` (1 file found)
+- **Package:** `pkg/world/housing/` (18 files found)
 - **Integration:** `cmd/client/handlers.go` lines 860-963 (Phase 49.1, 55.1, 55.2, 55.3)
 - **Systems:** Guild housing manager initialized (line 963)
 - **Verification Method:** File existence + integration code review

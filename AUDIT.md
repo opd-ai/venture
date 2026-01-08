@@ -175,7 +175,7 @@ This is intentional architecture, not a bug. The KeyBindingRegistry provides UI 
 - **Integration:** Multiple story/narrative generators found
 
 **Multi-classing:**
-- **Package:** `pkg/class/` (9 files found)
+- **Package:** `pkg/class/advanced/` (7 files found)
 - **README Claim:** "Multi-class at level 20, prestige classes at level 30"
 
 **Talent Trees:**

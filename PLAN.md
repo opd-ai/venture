@@ -212,8 +212,8 @@ All Phase 2 deliverables completed successfully:
   - ✅ Improved pkg/procgen/furniture from 79.6% to 89.2% (2026-01-08)
   - ✅ Improved pkg/engine/performance from 65.6% to 94.6% (2026-01-08)
   - ✅ Improved pkg/narrative/branching from 70.1% to 90.4% (2026-01-08)
-  - Remaining packages below 80%: 6 packages
-    - pkg/modding 73.8%
+  - ✅ Improved pkg/modding from 73.8% to 89.4% (2026-01-08)
+  - Remaining packages below 80%: 5 packages
     - pkg/saveload 73.8%
     - pkg/rendering/patterns 75.6%
     - pkg/network/resilience 76.2%

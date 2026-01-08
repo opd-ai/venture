@@ -821,3 +821,782 @@ func TestLoader_LoadAll_ErrorWrapping(t *testing.T) {
 
 	t.Logf("Error properly wrapped: %v", err)
 }
+
+// TestNewLoader tests the default loader constructor
+func TestNewLoader(t *testing.T) {
+	loader := NewLoader()
+	if loader == nil {
+		t.Fatal("NewLoader() returned nil")
+	}
+	if loader.config.ModsDirectory != "mods" {
+		t.Errorf("Default ModsDirectory = %v, want 'mods'", loader.config.ModsDirectory)
+	}
+	if !loader.config.EnableSandbox {
+		t.Error("Default EnableSandbox should be true")
+	}
+}
+
+// TestLoader_GetModPath tests the mod path generation
+func TestLoader_GetModPath(t *testing.T) {
+	tests := []struct {
+		name      string
+		modsDir   string
+		modID     string
+		wantPath  string
+	}{
+		{
+			name:     "default directory",
+			modsDir:  "mods",
+			modID:    "test-mod",
+			wantPath: "mods/test-mod.json",
+		},
+		{
+			name:     "custom directory",
+			modsDir:  "/tmp/custom",
+			modID:    "my-mod",
+			wantPath: "/tmp/custom/my-mod.json",
+		},
+		{
+			name:     "mod with dashes",
+			modsDir:  "mods",
+			modID:    "cool-mod-v2",
+			wantPath: "mods/cool-mod-v2.json",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			config := DefaultConfig()
+			config.ModsDirectory = tt.modsDir
+			loader := NewLoaderWithConfig(config)
+			
+			gotPath := loader.GetModPath(tt.modID)
+			if gotPath != tt.wantPath {
+				t.Errorf("GetModPath(%s) = %v, want %v", tt.modID, gotPath, tt.wantPath)
+			}
+		})
+	}
+}
+
+// TestManager_ListMods tests listing all loaded mods
+func TestManager_ListMods(t *testing.T) {
+	manager := NewManager()
+
+	// Initially empty
+	mods := manager.ListMods()
+	if len(mods) != 0 {
+		t.Errorf("Initial ListMods() returned %d mods, want 0", len(mods))
+	}
+
+	// Add some mods
+	testMods := []*Mod{
+		{
+			ID:      "mod1",
+			Name:    "Mod 1",
+			Version: "1.0.0",
+			Type:    ModTypeRule,
+			Enabled: true,
+		},
+		{
+			ID:      "mod2",
+			Name:    "Mod 2",
+			Version: "1.0.0",
+			Type:    ModTypeGenerator,
+			Enabled: false,
+		},
+		{
+			ID:      "mod3",
+			Name:    "Mod 3",
+			Version: "1.0.0",
+			Type:    ModTypeEvent,
+			Enabled: true,
+		},
+	}
+
+	for _, mod := range testMods {
+		if err := manager.AddMod(mod); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	// List all mods
+	mods = manager.ListMods()
+	if len(mods) != len(testMods) {
+		t.Errorf("ListMods() returned %d mods, want %d", len(mods), len(testMods))
+	}
+
+	// Verify all mods are present
+	modIDs := make(map[string]bool)
+	for _, mod := range mods {
+		modIDs[mod.ID] = true
+	}
+
+	for _, expected := range testMods {
+		if !modIDs[expected.ID] {
+			t.Errorf("Mod %s not found in ListMods() result", expected.ID)
+		}
+	}
+}
+
+// TestManager_EnableMod tests enabling a mod
+func TestManager_EnableMod(t *testing.T) {
+	manager := NewManager()
+
+	mod := &Mod{
+		ID:      "test-mod",
+		Name:    "Test Mod",
+		Version: "1.0.0",
+		Type:    ModTypeRule,
+		Enabled: false, // Start disabled
+	}
+
+	if err := manager.AddMod(mod); err != nil {
+		t.Fatal(err)
+	}
+
+	// Enable the mod
+	if err := manager.EnableMod("test-mod"); err != nil {
+		t.Fatalf("EnableMod() error = %v", err)
+	}
+
+	// Verify it's enabled
+	loadedMod, exists := manager.GetMod("test-mod")
+	if !exists {
+		t.Fatal("Mod not found after enabling")
+	}
+
+	if !loadedMod.Enabled {
+		t.Error("Mod should be enabled after EnableMod()")
+	}
+}
+
+// TestManager_EnableMod_NotFound tests enabling a non-existent mod
+func TestManager_EnableMod_NotFound(t *testing.T) {
+	manager := NewManager()
+
+	err := manager.EnableMod("nonexistent")
+	if err == nil {
+		t.Error("Expected error when enabling non-existent mod")
+	}
+
+	if !strings.Contains(err.Error(), "not found") {
+		t.Errorf("Error message should mention 'not found', got: %v", err)
+	}
+}
+
+// TestManager_DisableMod tests disabling a mod
+func TestManager_DisableMod(t *testing.T) {
+	manager := NewManager()
+
+	mod := &Mod{
+		ID:      "test-mod",
+		Name:    "Test Mod",
+		Version: "1.0.0",
+		Type:    ModTypeRule,
+		Enabled: true, // Start enabled
+	}
+
+	if err := manager.AddMod(mod); err != nil {
+		t.Fatal(err)
+	}
+
+	// Disable the mod
+	if err := manager.DisableMod("test-mod"); err != nil {
+		t.Fatalf("DisableMod() error = %v", err)
+	}
+
+	// Verify it's disabled
+	loadedMod, exists := manager.GetMod("test-mod")
+	if !exists {
+		t.Fatal("Mod not found after disabling")
+	}
+
+	if loadedMod.Enabled {
+		t.Error("Mod should be disabled after DisableMod()")
+	}
+}
+
+// TestManager_DisableMod_NotFound tests disabling a non-existent mod
+func TestManager_DisableMod_NotFound(t *testing.T) {
+	manager := NewManager()
+
+	err := manager.DisableMod("nonexistent")
+	if err == nil {
+		t.Error("Expected error when disabling non-existent mod")
+	}
+
+	if !strings.Contains(err.Error(), "not found") {
+		t.Errorf("Error message should mention 'not found', got: %v", err)
+	}
+}
+
+// TestManager_GetRuleChangeLog tests retrieving rule change history
+func TestManager_GetRuleChangeLog(t *testing.T) {
+	manager := NewManager()
+
+	// Initially empty
+	log := manager.GetRuleChangeLog()
+	if len(log) != 0 {
+		t.Errorf("Initial GetRuleChangeLog() returned %d entries, want 0", len(log))
+	}
+
+	// Add a mod with rules
+	mod := &Mod{
+		ID:      "test-mod",
+		Name:    "Test Mod",
+		Version: "1.0.0",
+		Type:    ModTypeRule,
+		Rules: map[string]interface{}{
+			"difficulty": 2.0,
+			"permadeath": true,
+		},
+		Enabled: true,
+	}
+
+	if err := manager.AddMod(mod); err != nil {
+		t.Fatal(err)
+	}
+
+	// Apply rules to generate log entries
+	if err := manager.ApplyRules(); err != nil {
+		t.Fatal(err)
+	}
+
+	// Check log
+	log = manager.GetRuleChangeLog()
+	if len(log) == 0 {
+		t.Error("GetRuleChangeLog() should contain entries after ApplyRules()")
+	}
+
+	// Verify log entries contain expected data
+	foundDifficulty := false
+	foundPermadeath := false
+	for _, entry := range log {
+		if entry.ModID != "test-mod" {
+			t.Errorf("Log entry ModID = %v, want 'test-mod'", entry.ModID)
+		}
+		if entry.RuleName == "difficulty" {
+			foundDifficulty = true
+			if entry.NewValue != 2.0 {
+				t.Errorf("Difficulty NewValue = %v, want 2.0", entry.NewValue)
+			}
+		}
+		if entry.RuleName == "permadeath" {
+			foundPermadeath = true
+			if entry.NewValue != true {
+				t.Errorf("Permadeath NewValue = %v, want true", entry.NewValue)
+			}
+		}
+		if entry.AppliedAt.IsZero() {
+			t.Error("Log entry AppliedAt should be set")
+		}
+	}
+
+	if !foundDifficulty {
+		t.Error("Log should contain difficulty rule")
+	}
+	if !foundPermadeath {
+		t.Error("Log should contain permadeath rule")
+	}
+}
+
+// TestLoadError_Error tests the LoadError error message
+func TestLoadError_Error(t *testing.T) {
+	tests := []struct {
+		name     string
+		modID    string
+		err      error
+		wantText string
+	}{
+		{
+			name:     "basic error",
+			modID:    "test-mod",
+			err:      fmt.Errorf("file not found"),
+			wantText: "failed to load mod test-mod: file not found",
+		},
+		{
+			name:     "validation error",
+			modID:    "bad-mod",
+			err:      fmt.Errorf("invalid JSON"),
+			wantText: "failed to load mod bad-mod: invalid JSON",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			loadErr := &LoadError{
+				ModID: tt.modID,
+				Err:   tt.err,
+			}
+
+			gotMsg := loadErr.Error()
+			if gotMsg != tt.wantText {
+				t.Errorf("Error() = %q, want %q", gotMsg, tt.wantText)
+			}
+		})
+	}
+}
+
+// TestValidationError_Error tests the ValidationError error message
+func TestValidationError_Error(t *testing.T) {
+	tests := []struct {
+		name     string
+		modID    string
+		field    string
+		reason   string
+		wantText string
+	}{
+		{
+			name:     "empty name field",
+			modID:    "test-mod",
+			field:    "Name",
+			reason:   "cannot be empty",
+			wantText: "validation failed for mod test-mod (field Name): cannot be empty",
+		},
+		{
+			name:     "invalid type",
+			modID:    "bad-mod",
+			field:    "Type",
+			reason:   "unsupported type",
+			wantText: "validation failed for mod bad-mod (field Type): unsupported type",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			valErr := &ValidationError{
+				ModID:  tt.modID,
+				Field:  tt.field,
+				Reason: tt.reason,
+			}
+
+			gotMsg := valErr.Error()
+			if gotMsg != tt.wantText {
+				t.Errorf("Error() = %q, want %q", gotMsg, tt.wantText)
+			}
+		})
+	}
+}
+
+// TestLoader_SaveToFile_InvalidMod tests saving an invalid mod
+func TestLoader_SaveToFile_InvalidMod(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	config := DefaultConfig()
+	config.ModsDirectory = tmpDir
+	config.EnableSandbox = false
+	loader := NewLoaderWithConfig(config)
+
+	// Try to save a mod with empty ID (invalid)
+	invalidMod := &Mod{
+		ID:      "", // Invalid: empty ID
+		Name:    "Test Mod",
+		Version: "1.0.0",
+	}
+
+	modPath := filepath.Join(tmpDir, "invalid.json")
+	err := loader.SaveToFile(invalidMod, modPath)
+	if err == nil {
+		t.Error("Expected error when saving invalid mod")
+	}
+
+	// Verify the file was not created
+	if _, statErr := os.Stat(modPath); !os.IsNotExist(statErr) {
+		t.Error("Invalid mod file should not be created")
+	}
+}
+
+// TestLoader_SaveToFile_SandboxViolation tests saving with sandbox enabled
+func TestLoader_SaveToFile_SandboxViolation(t *testing.T) {
+	config := DefaultConfig()
+	config.ModsDirectory = "/tmp/mods"
+	config.EnableSandbox = true
+	loader := NewLoaderWithConfig(config)
+
+	mod := &Mod{
+		ID:      "test-mod",
+		Name:    "Test Mod",
+		Version: "1.0.0",
+		Type:    ModTypeRule,
+		Enabled: true,
+	}
+
+	// Try to save outside mods directory
+	err := loader.SaveToFile(mod, "/etc/passwd")
+	if err == nil {
+		t.Error("Expected sandbox violation error")
+	}
+}
+
+// TestManager_RemoveMod_NotFound tests removing a non-existent mod
+func TestManager_RemoveMod_NotFound(t *testing.T) {
+	manager := NewManager()
+
+	err := manager.RemoveMod("nonexistent")
+	if err == nil {
+		t.Error("Expected error when removing non-existent mod")
+	}
+
+	if !strings.Contains(err.Error(), "not found") {
+		t.Errorf("Error message should mention 'not found', got: %v", err)
+	}
+}
+
+// TestManager_RemoveMod_EventHandlerCleanup tests that event handlers are cleaned up
+func TestManager_RemoveMod_EventHandlerCleanup(t *testing.T) {
+	manager := NewManager()
+
+	handlerCalled := false
+	handler := func(event Event) error {
+		handlerCalled = true
+		return nil
+	}
+
+	mod := &Mod{
+		ID:      "test-mod",
+		Name:    "Test Mod",
+		Version: "1.0.0",
+		Type:    ModTypeEvent,
+		EventHandlers: map[string]EventHandler{
+			"test_event": handler,
+		},
+		Enabled: true,
+	}
+
+	if err := manager.AddMod(mod); err != nil {
+		t.Fatal(err)
+	}
+
+	// Trigger event to verify handler works
+	event := Event{Type: "test_event", Timestamp: time.Now()}
+	if err := manager.TriggerEvent(event); err != nil {
+		t.Fatal(err)
+	}
+
+	if !handlerCalled {
+		t.Error("Handler should be called before removal")
+	}
+
+	// Remove mod
+	if err := manager.RemoveMod("test-mod"); err != nil {
+		t.Fatal(err)
+	}
+
+	// Reset flag and try triggering again
+	handlerCalled = false
+	if err := manager.TriggerEvent(event); err != nil {
+		t.Fatal(err)
+	}
+
+	if handlerCalled {
+		t.Error("Handler should not be called after mod removal")
+	}
+}
+
+// TestManager_GetRuleFloat64_TypeConversions tests type conversion scenarios
+func TestManager_GetRuleFloat64_TypeConversions(t *testing.T) {
+	tests := []struct {
+		name         string
+		ruleValue    interface{}
+		defaultValue float64
+		want         float64
+	}{
+		{
+			name:         "float64 value",
+			ruleValue:    2.5,
+			defaultValue: 1.0,
+			want:         2.5,
+		},
+		{
+			name:         "float32 value",
+			ruleValue:    float32(3.5),
+			defaultValue: 1.0,
+			want:         3.5,
+		},
+		{
+			name:         "int value",
+			ruleValue:    42,
+			defaultValue: 1.0,
+			want:         42.0,
+		},
+		{
+			name:         "int64 value",
+			ruleValue:    int64(100),
+			defaultValue: 1.0,
+			want:         100.0,
+		},
+		{
+			name:         "string value (unsupported)",
+			ruleValue:    "not a number",
+			defaultValue: 1.0,
+			want:         1.0, // Should return default
+		},
+		{
+			name:         "bool value (unsupported)",
+			ruleValue:    true,
+			defaultValue: 5.0,
+			want:         5.0, // Should return default
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			manager := NewManager()
+
+			mod := &Mod{
+				ID:      "test-mod",
+				Name:    "Test Mod",
+				Version: "1.0.0",
+				Type:    ModTypeRule,
+				Rules: map[string]interface{}{
+					"test_rule": tt.ruleValue,
+				},
+				Enabled: true,
+			}
+
+			if err := manager.AddMod(mod); err != nil {
+				t.Fatal(err)
+			}
+
+			if err := manager.ApplyRules(); err != nil {
+				t.Fatal(err)
+			}
+
+			got := manager.GetRuleFloat64("test_rule", tt.defaultValue)
+			if got != tt.want {
+				t.Errorf("GetRuleFloat64() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+// TestManager_GetRuleBool_InvalidType tests bool conversion with invalid types
+func TestManager_GetRuleBool_InvalidType(t *testing.T) {
+	manager := NewManager()
+
+	mod := &Mod{
+		ID:      "test-mod",
+		Name:    "Test Mod",
+		Version: "1.0.0",
+		Type:    ModTypeRule,
+		Rules: map[string]interface{}{
+			"string_rule": "not a bool",
+			"number_rule": 42,
+		},
+		Enabled: true,
+	}
+
+	if err := manager.AddMod(mod); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := manager.ApplyRules(); err != nil {
+		t.Fatal(err)
+	}
+
+	// String value should return default
+	if val := manager.GetRuleBool("string_rule", false); val != false {
+		t.Errorf("GetRuleBool with string should return default, got %v", val)
+	}
+
+	// Number value should return default
+	if val := manager.GetRuleBool("number_rule", true); val != true {
+		t.Errorf("GetRuleBool with number should return default, got %v", val)
+	}
+}
+
+// TestManager_TriggerEvent_NoHandlers tests triggering an event with no handlers
+func TestManager_TriggerEvent_NoHandlers(t *testing.T) {
+	manager := NewManager()
+
+	event := Event{
+		Type:      "unhandled_event",
+		Data:      map[string]interface{}{},
+		Timestamp: time.Now(),
+	}
+
+	// Should not error when no handlers exist
+	if err := manager.TriggerEvent(event); err != nil {
+		t.Errorf("TriggerEvent() with no handlers should not error, got: %v", err)
+	}
+}
+
+// TestManager_TriggerEvent_HandlerError tests triggering an event where handler returns error
+func TestManager_TriggerEvent_HandlerError(t *testing.T) {
+	manager := NewManager()
+
+	expectedErr := fmt.Errorf("handler failed")
+	handler := func(event Event) error {
+		return expectedErr
+	}
+
+	mod := &Mod{
+		ID:      "test-mod",
+		Name:    "Test Mod",
+		Version: "1.0.0",
+		Type:    ModTypeEvent,
+		EventHandlers: map[string]EventHandler{
+			"error_event": handler,
+		},
+		Enabled: true,
+	}
+
+	if err := manager.AddMod(mod); err != nil {
+		t.Fatal(err)
+	}
+
+	event := Event{
+		Type:      "error_event",
+		Timestamp: time.Now(),
+	}
+
+	err := manager.TriggerEvent(event)
+	if err == nil {
+		t.Error("Expected error from handler")
+	}
+
+	if !strings.Contains(err.Error(), "event handler failed") {
+		t.Errorf("Error should mention handler failure, got: %v", err)
+	}
+}
+
+// TestLoader_LoadAll_MaxModsLimit tests that LoadAll respects the MaxMods limit
+func TestLoader_LoadAll_MaxModsLimit(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	// Create 5 mod files
+	for i := 1; i <= 5; i++ {
+		mod := Mod{
+			ID:      fmt.Sprintf("mod%d", i),
+			Name:    fmt.Sprintf("Mod %d", i),
+			Version: "1.0.0",
+			Type:    ModTypeRule,
+			Enabled: true,
+		}
+
+		data, err := json.Marshal(mod)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		path := filepath.Join(tmpDir, fmt.Sprintf("mod%d.json", i))
+		if err := os.WriteFile(path, data, 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	// Set max mods to 3
+	config := DefaultConfig()
+	config.ModsDirectory = tmpDir
+	config.EnableSandbox = false
+	config.MaxMods = 3
+	loader := NewLoaderWithConfig(config)
+
+	// Load all - should only load 3
+	mods, err := loader.LoadAll()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if len(mods) != 3 {
+		t.Errorf("LoadAll() with MaxMods=3 loaded %d mods, want 3", len(mods))
+	}
+}
+
+// TestLoader_LoadAll_NonExistentDirectory tests LoadAll with non-existent directory
+func TestLoader_LoadAll_NonExistentDirectory(t *testing.T) {
+	tmpDir := filepath.Join(t.TempDir(), "nonexistent")
+
+	config := DefaultConfig()
+	config.ModsDirectory = tmpDir
+	config.EnableSandbox = false
+	loader := NewLoaderWithConfig(config)
+
+	// Should create directory and return empty list
+	mods, err := loader.LoadAll()
+	if err != nil {
+		t.Fatalf("LoadAll() should create directory, got error: %v", err)
+	}
+
+	if len(mods) != 0 {
+		t.Errorf("LoadAll() with new directory should return 0 mods, got %d", len(mods))
+	}
+
+	// Verify directory was created
+	if _, statErr := os.Stat(tmpDir); os.IsNotExist(statErr) {
+		t.Error("LoadAll() should create mods directory if it doesn't exist")
+	}
+}
+
+// TestLoader_LoadFromFile_LargeFile tests loading a file that exceeds size limit
+func TestLoader_LoadFromFile_LargeFile(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	// Create a large description string to make file > 1MB
+	// Avoid using many rules as they'll fail sandbox validation
+	largeDescription := strings.Repeat("This is a very long description. ", 50000)
+
+	mod := Mod{
+		ID:          "large-mod",
+		Name:        "Large Mod",
+		Version:     "1.0.0",
+		Description: largeDescription,
+		Type:        ModTypeRule,
+		Rules:       map[string]interface{}{"difficulty": 1.0},
+		Enabled:     true,
+	}
+
+	modPath := filepath.Join(tmpDir, "large.json")
+	data, err := json.Marshal(mod)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Verify it's actually > 1MB
+	if len(data) <= 1024*1024 {
+		t.Fatalf("Test data is not large enough: %d bytes", len(data))
+	}
+
+	if err := os.WriteFile(modPath, data, 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	// Try to load with sandbox enabled (1MB limit)
+	config := DefaultConfig()
+	config.ModsDirectory = tmpDir
+	config.EnableSandbox = true
+	loader := NewLoaderWithConfig(config)
+
+	_, err = loader.LoadFromFile(modPath)
+	if err == nil {
+		t.Error("Expected error for large file with sandbox enabled")
+	}
+
+	if !strings.Contains(err.Error(), "1MB") {
+		t.Errorf("Error should mention size limit, got: %v", err)
+	}
+}
+
+// TestLoader_LoadFromFile_InvalidJSON tests loading a file with invalid JSON
+func TestLoader_LoadFromFile_InvalidJSON(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	modPath := filepath.Join(tmpDir, "invalid.json")
+	if err := os.WriteFile(modPath, []byte("{invalid json"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	config := DefaultConfig()
+	config.ModsDirectory = tmpDir
+	config.EnableSandbox = false
+	loader := NewLoaderWithConfig(config)
+
+	_, err := loader.LoadFromFile(modPath)
+	if err == nil {
+		t.Error("Expected error for invalid JSON")
+	}
+
+	if !strings.Contains(err.Error(), "invalid JSON") {
+		t.Errorf("Error should mention invalid JSON, got: %v", err)
+	}
+}

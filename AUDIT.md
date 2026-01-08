@@ -244,7 +244,7 @@ These are performance metrics that require runtime testing. This audit focused o
 | Multiplayer | 60+ files | Yes (network package) | ✅ Complete |
 | Housing | 18 files | Yes (pkg/world/housing) | ✅ Complete |
 | Guilds | 4 files | Yes (federation/guild) | ✅ Complete |
-| Physics (Vehicle) | 16 files | Yes (physics/vehicle) | ✅ Complete |
+| Physics (Vehicle) | 11 files | Yes (physics/vehicle) | ✅ Complete |
 | Physics (Fluids) | 4 files | Yes (physics/fluids) | ✅ Complete |
 | Physics (Destruction) | Directory exists | Yes (physics/destruction) | ✅ Complete |
 | WebRTC P2P | 12 files | Yes (federation/webrtc) | ✅ Complete |

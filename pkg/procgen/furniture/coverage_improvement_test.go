@@ -366,21 +366,37 @@ func TestRotateFurnitureCollision(t *testing.T) {
 	}
 
 	// Place asymmetric furniture
-	result1, _ := gen.Generate(77000, params)
-	furniture1 := result1.(*Furniture)
+	result1, err := gen.Generate(77000, params)
+	if err != nil {
+		t.Fatalf("Generate() furniture1 error = %v", err)
+	}
+	
+	furniture1, ok := result1.(*Furniture)
+	if !ok {
+		t.Fatalf("Generate() furniture1 returned non-Furniture type: %T", result1)
+	}
+	
 	furniture1.CollisionWidth = 4.0
 	furniture1.CollisionDepth = 1.0
 	validator.PlaceFurniture(furniture1, 5.0, 5.0, DirNorth)
 
 	// Place blocker nearby that would collide if first is rotated
-	result2, _ := gen.Generate(77001, params)
-	furniture2 := result2.(*Furniture)
+	result2, err := gen.Generate(77001, params)
+	if err != nil {
+		t.Fatalf("Generate() furniture2 error = %v", err)
+	}
+	
+	furniture2, ok := result2.(*Furniture)
+	if !ok {
+		t.Fatalf("Generate() furniture2 returned non-Furniture type: %T", result2)
+	}
+	
 	furniture2.CollisionWidth = 2.0
 	furniture2.CollisionDepth = 2.0
 	validator.PlaceFurniture(furniture2, 6.0, 5.0, DirNorth)
 
 	// Try to rotate first furniture - may or may not cause collision depending on position
-	err := validator.RotateFurniture(0)
+	err = validator.RotateFurniture(0)
 	// Either succeeds or fails with collision - both are valid outcomes
 	_ = err // Don't assert, just ensure it doesn't panic
 }

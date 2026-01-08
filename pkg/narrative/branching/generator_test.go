@@ -334,6 +334,141 @@ func TestNarrativeComponentType(t *testing.T) {
 	}
 }
 
+func TestEnsureStoryEnding(t *testing.T) {
+	tests := []struct {
+		name           string
+		setupArc       func() *StoryArc
+		initialEndings []string
+		wantEndings    int
+	}{
+		{
+			name: "no endings - should add one",
+			setupArc: func() *StoryArc {
+				arc := &StoryArc{
+					ID:          "test_arc",
+					GenreID:     "fantasy",
+					StartNodeID: "start",
+					Nodes: map[string]*StoryNode{
+						"start": {
+							ID:         "start",
+							Type:       NodeTypeStart,
+							NextNodeID: "",
+						},
+						"event1": {
+							ID:         "event1",
+							Type:       NodeTypeEvent,
+							NextNodeID: "",
+						},
+					},
+					Endings: make(map[string]EndingType),
+				}
+				return arc
+			},
+			initialEndings: []string{},
+			wantEndings:    1,
+		},
+		{
+			name: "has endings - should not add",
+			setupArc: func() *StoryArc {
+				arc := &StoryArc{
+					ID:          "test_arc",
+					GenreID:     "fantasy",
+					StartNodeID: "start",
+					Nodes: map[string]*StoryNode{
+						"start": {
+							ID:   "start",
+							Type: NodeTypeStart,
+						},
+						"ending1": {
+							ID:   "ending1",
+							Type: NodeTypeEnding,
+						},
+					},
+					Endings: map[string]EndingType{
+						"ending1": EndingTypeHeroic,
+					},
+				}
+				return arc
+			},
+			initialEndings: []string{"ending1"},
+			wantEndings:    1,
+		},
+		{
+			name: "orphan nodes should link to new ending",
+			setupArc: func() *StoryArc {
+				arc := &StoryArc{
+					ID:          "test_arc",
+					GenreID:     "fantasy",
+					StartNodeID: "start",
+					Nodes: map[string]*StoryNode{
+						"start": {
+							ID:         "start",
+							Type:       NodeTypeStart,
+							NextNodeID: "",
+						},
+						"orphan1": {
+							ID:         "orphan1",
+							Type:       NodeTypeEvent,
+							NextNodeID: "",
+							Choices:    []Choice{},
+						},
+						"orphan2": {
+							ID:         "orphan2",
+							Type:       NodeTypeChoice,
+							NextNodeID: "",
+							Choices:    []Choice{},
+						},
+					},
+					Endings: make(map[string]EndingType),
+				}
+				return arc
+			},
+			initialEndings: []string{},
+			wantEndings:    1,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			gen := NewGenerator()
+			arc := tt.setupArc()
+			rng := newRNG(12345)
+
+			gen.ensureStoryEnding(arc, rng, tt.initialEndings)
+
+			// Verify ending count
+			if len(arc.Endings) != tt.wantEndings {
+				t.Errorf("Ending count = %d, want %d", len(arc.Endings), tt.wantEndings)
+			}
+
+			// If no initial endings, verify new ending was created
+			if len(tt.initialEndings) == 0 {
+				// Find the new ending node
+				var endingFound bool
+				for nodeID, node := range arc.Nodes {
+					if node.Type == NodeTypeEnding {
+						endingFound = true
+						if _, exists := arc.Endings[nodeID]; !exists {
+							t.Errorf("Ending node %s not registered in arc.Endings", nodeID)
+						}
+					}
+				}
+
+				if !endingFound {
+					t.Error("No ending node found after ensureStoryEnding")
+				}
+
+				// Verify orphan nodes are now connected
+				for nodeID, node := range arc.Nodes {
+					if node.Type != NodeTypeEnding && node.NextNodeID == "" && len(node.Choices) == 0 {
+						t.Errorf("Node %s is still orphaned (no next node or choices)", nodeID)
+					}
+				}
+			}
+		})
+	}
+}
+
 // Benchmarks
 
 func BenchmarkGenerate(b *testing.B) {

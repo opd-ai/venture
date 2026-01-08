@@ -421,6 +421,581 @@ func TestManagerGetArcNonExistent(t *testing.T) {
 	}
 }
 
+func TestManagerCheckConsequences(t *testing.T) {
+	manager := NewManager()
+	gen := NewGenerator()
+
+	result, _ := gen.Generate(12345, procgen.GenerationParams{
+		Difficulty: 0.5,
+		Depth:      5,
+		GenreID:    "fantasy",
+	})
+
+	arc := result.(*StoryArc)
+	manager.RegisterArc(arc)
+	manager.StartArc("player1", arc.ID)
+
+	// Register a consequence
+	consequence := &Consequence{
+		ID:          "test_consequence",
+		Description: "Test consequence",
+		TriggerConditions: map[string]interface{}{
+			"completed_quest": true,
+			"gold":            100,
+		},
+		Effects: map[string]interface{}{
+			"reward_received": true,
+			"bonus_gold":      50,
+		},
+	}
+	manager.RegisterConsequence(consequence)
+
+	// Set up progress with trigger conditions met (exact match required)
+	progress, _ := manager.GetProgress("player1", arc.ID)
+	progress.Variables["completed_quest"] = true
+	progress.Variables["gold"] = 100 // Must match exactly for evaluateConditions
+
+	// Check consequences
+	triggered := manager.CheckConsequences("player1", arc.ID)
+
+	if len(triggered) != 1 {
+		t.Fatalf("Expected 1 triggered consequence, got %d", len(triggered))
+	}
+
+	if triggered[0] != "test_consequence" {
+		t.Errorf("Expected consequence ID 'test_consequence', got %s", triggered[0])
+	}
+
+	// Verify effects were applied
+	if progress.Variables["reward_received"] != true {
+		t.Error("Effect 'reward_received' was not applied")
+	}
+
+	if progress.Variables["bonus_gold"] != 50 {
+		t.Errorf("Effect 'bonus_gold' = %v, want 50", progress.Variables["bonus_gold"])
+	}
+
+	// Verify consequence is tracked as triggered
+	triggeredList := toStringSlice(progress.Variables["triggered_consequences"])
+	if len(triggeredList) != 1 || triggeredList[0] != "test_consequence" {
+		t.Error("Consequence was not tracked as triggered")
+	}
+
+	// Check again - should not trigger twice
+	triggered = manager.CheckConsequences("player1", arc.ID)
+	if len(triggered) != 0 {
+		t.Errorf("Consequence should not trigger twice, got %d triggers", len(triggered))
+	}
+}
+
+func TestManagerCheckConsequencesNoMatch(t *testing.T) {
+	manager := NewManager()
+	gen := NewGenerator()
+
+	result, _ := gen.Generate(12345, procgen.GenerationParams{
+		Difficulty: 0.5,
+		Depth:      5,
+		GenreID:    "fantasy",
+	})
+
+	arc := result.(*StoryArc)
+	manager.RegisterArc(arc)
+	manager.StartArc("player1", arc.ID)
+
+	// Register a consequence with conditions that won't be met
+	consequence := &Consequence{
+		ID:          "unmet_consequence",
+		Description: "Unmet consequence",
+		TriggerConditions: map[string]interface{}{
+			"rare_item": true,
+		},
+		Effects: map[string]interface{}{
+			"achievement": true,
+		},
+	}
+	manager.RegisterConsequence(consequence)
+
+	// Check consequences without meeting conditions
+	triggered := manager.CheckConsequences("player1", arc.ID)
+
+	if len(triggered) != 0 {
+		t.Errorf("Expected 0 triggered consequences, got %d", len(triggered))
+	}
+}
+
+func TestManagerCheckConsequencesInvalidPlayer(t *testing.T) {
+	manager := NewManager()
+
+	// Check consequences for non-existent player
+	triggered := manager.CheckConsequences("nonexistent", "arc123")
+
+	if triggered != nil {
+		t.Error("CheckConsequences should return nil for non-existent player")
+	}
+}
+
+func TestEvaluateConditions(t *testing.T) {
+	manager := NewManager()
+
+	tests := []struct {
+		name       string
+		variables  map[string]interface{}
+		conditions map[string]interface{}
+		want       bool
+	}{
+		{
+			name:       "empty conditions",
+			variables:  map[string]interface{}{},
+			conditions: map[string]interface{}{},
+			want:       true,
+		},
+		{
+			name: "int condition met",
+			variables: map[string]interface{}{
+				"level": 10,
+			},
+			conditions: map[string]interface{}{
+				"level": 10,
+			},
+			want: true,
+		},
+		{
+			name: "int condition not met",
+			variables: map[string]interface{}{
+				"level": 5,
+			},
+			conditions: map[string]interface{}{
+				"level": 10,
+			},
+			want: false,
+		},
+		{
+			name: "float64 condition met",
+			variables: map[string]interface{}{
+				"score": 99.5,
+			},
+			conditions: map[string]interface{}{
+				"score": 99.5,
+			},
+			want: true,
+		},
+		{
+			name: "float64 condition not met",
+			variables: map[string]interface{}{
+				"score": 50.0,
+			},
+			conditions: map[string]interface{}{
+				"score": 99.5,
+			},
+			want: false,
+		},
+		{
+			name: "bool condition met",
+			variables: map[string]interface{}{
+				"hasKey": true,
+			},
+			conditions: map[string]interface{}{
+				"hasKey": true,
+			},
+			want: true,
+		},
+		{
+			name: "bool condition not met",
+			variables: map[string]interface{}{
+				"hasKey": false,
+			},
+			conditions: map[string]interface{}{
+				"hasKey": true,
+			},
+			want: false,
+		},
+		{
+			name: "string condition met",
+			variables: map[string]interface{}{
+				"faction": "alliance",
+			},
+			conditions: map[string]interface{}{
+				"faction": "alliance",
+			},
+			want: true,
+		},
+		{
+			name: "string condition not met",
+			variables: map[string]interface{}{
+				"faction": "horde",
+			},
+			conditions: map[string]interface{}{
+				"faction": "alliance",
+			},
+			want: false,
+		},
+		{
+			name: "missing variable",
+			variables: map[string]interface{}{
+				"gold": 100,
+			},
+			conditions: map[string]interface{}{
+				"silver": 50,
+			},
+			want: false,
+		},
+		{
+			name: "multiple conditions all met",
+			variables: map[string]interface{}{
+				"level":  10,
+				"hasKey": true,
+				"gold":   100,
+			},
+			conditions: map[string]interface{}{
+				"level":  10,
+				"hasKey": true,
+				"gold":   100,
+			},
+			want: true,
+		},
+		{
+			name: "multiple conditions one not met",
+			variables: map[string]interface{}{
+				"level":  10,
+				"hasKey": false,
+				"gold":   100,
+			},
+			conditions: map[string]interface{}{
+				"level":  10,
+				"hasKey": true,
+				"gold":   100,
+			},
+			want: false,
+		},
+		{
+			name: "int as float64 (JSON unmarshaling)",
+			variables: map[string]interface{}{
+				"count": 5.0, // JSON unmarshals ints as float64
+			},
+			conditions: map[string]interface{}{
+				"count": 5,
+			},
+			want: true,
+		},
+		{
+			name: "float64 as int (JSON unmarshaling)",
+			variables: map[string]interface{}{
+				"count": 5,
+			},
+			conditions: map[string]interface{}{
+				"count": 5.0,
+			},
+			want: true,
+		},
+		{
+			name: "type mismatch",
+			variables: map[string]interface{}{
+				"value": "string",
+			},
+			conditions: map[string]interface{}{
+				"value": 123,
+			},
+			want: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			progress := &PlayerProgress{
+				Variables: tt.variables,
+			}
+
+			got := manager.evaluateConditions(progress, tt.conditions)
+			if got != tt.want {
+				t.Errorf("evaluateConditions() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestToStringSlice(t *testing.T) {
+	tests := []struct {
+		name  string
+		input interface{}
+		want  []string
+	}{
+		{
+			name:  "nil input",
+			input: nil,
+			want:  nil,
+		},
+		{
+			name:  "direct []string",
+			input: []string{"a", "b", "c"},
+			want:  []string{"a", "b", "c"},
+		},
+		{
+			name:  "empty []string",
+			input: []string{},
+			want:  []string{},
+		},
+		{
+			name:  "[]interface{} with strings",
+			input: []interface{}{"x", "y", "z"},
+			want:  []string{"x", "y", "z"},
+		},
+		{
+			name:  "empty []interface{}",
+			input: []interface{}{},
+			want:  []string{},
+		},
+		{
+			name:  "[]interface{} with mixed types",
+			input: []interface{}{"a", 123, "b", true, "c"},
+			want:  []string{"a", "b", "c"}, // non-strings are skipped
+		},
+		{
+			name:  "wrong type - int",
+			input: 123,
+			want:  nil,
+		},
+		{
+			name:  "wrong type - string",
+			input: "not a slice",
+			want:  nil,
+		},
+		{
+			name:  "wrong type - map",
+			input: map[string]string{"key": "value"},
+			want:  nil,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := toStringSlice(tt.input)
+
+			if tt.want == nil {
+				if got != nil {
+					t.Errorf("toStringSlice() = %v, want nil", got)
+				}
+				return
+			}
+
+			if len(got) != len(tt.want) {
+				t.Errorf("toStringSlice() length = %d, want %d", len(got), len(tt.want))
+				return
+			}
+
+			for i := range got {
+				if got[i] != tt.want[i] {
+					t.Errorf("toStringSlice()[%d] = %s, want %s", i, got[i], tt.want[i])
+				}
+			}
+		})
+	}
+}
+
+func TestApplyFactionChanges(t *testing.T) {
+	const epsilon = 1e-9 // For floating-point comparison
+
+	tests := []struct {
+		name     string
+		initial  map[string]float64
+		changes  map[string]float64
+		expected map[string]float64
+	}{
+		{
+			name:    "new faction positive change",
+			initial: map[string]float64{},
+			changes: map[string]float64{
+				"alliance": 0.5,
+			},
+			expected: map[string]float64{
+				"alliance": 0.5,
+			},
+		},
+		{
+			name: "existing faction increase",
+			initial: map[string]float64{
+				"alliance": 0.3,
+			},
+			changes: map[string]float64{
+				"alliance": 0.4,
+			},
+			expected: map[string]float64{
+				"alliance": 0.7,
+			},
+		},
+		{
+			name: "existing faction decrease",
+			initial: map[string]float64{
+				"horde": 0.5,
+			},
+			changes: map[string]float64{
+				"horde": -0.3,
+			},
+			expected: map[string]float64{
+				"horde": 0.2,
+			},
+		},
+		{
+			name: "clamp to max (1.0)",
+			initial: map[string]float64{
+				"guild": 0.8,
+			},
+			changes: map[string]float64{
+				"guild": 0.5,
+			},
+			expected: map[string]float64{
+				"guild": 1.0,
+			},
+		},
+		{
+			name: "clamp to min (-1.0)",
+			initial: map[string]float64{
+				"enemy": -0.7,
+			},
+			changes: map[string]float64{
+				"enemy": -0.5,
+			},
+			expected: map[string]float64{
+				"enemy": -1.0,
+			},
+		},
+		{
+			name: "multiple factions",
+			initial: map[string]float64{
+				"alliance": 0.2,
+				"horde":    -0.3,
+			},
+			changes: map[string]float64{
+				"alliance": 0.3,
+				"horde":    0.1,
+				"neutral":  0.5,
+			},
+			expected: map[string]float64{
+				"alliance": 0.5,
+				"horde":    -0.2,
+				"neutral":  0.5,
+			},
+		},
+		{
+			name:     "empty changes",
+			initial:  map[string]float64{"test": 0.5},
+			changes:  map[string]float64{},
+			expected: map[string]float64{"test": 0.5},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			progress := &PlayerProgress{
+				Faction: make(map[string]float64),
+			}
+
+			// Set initial values
+			for faction, value := range tt.initial {
+				progress.Faction[faction] = value
+			}
+
+			// Apply changes
+			applyFactionChanges(progress, tt.changes)
+
+			// Verify expected values
+			for faction, expectedValue := range tt.expected {
+				actualValue, exists := progress.Faction[faction]
+				if !exists {
+					t.Errorf("Faction %s not found in result", faction)
+					continue
+				}
+
+				// Use epsilon comparison for floating-point values
+				diff := actualValue - expectedValue
+				if diff < 0 {
+					diff = -diff
+				}
+				if diff > epsilon {
+					t.Errorf("Faction %s = %.10f, want %.10f (diff: %.10e)", faction, actualValue, expectedValue, diff)
+				}
+			}
+
+			// Verify no extra factions
+			if len(progress.Faction) != len(tt.expected) {
+				t.Errorf("Faction count = %d, want %d", len(progress.Faction), len(tt.expected))
+			}
+		})
+	}
+}
+
+func TestCheckRequirementsEdgeCases(t *testing.T) {
+	manager := NewManager()
+
+	tests := []struct {
+		name         string
+		variables    map[string]interface{}
+		requirements map[string]interface{}
+		wantErr      bool
+	}{
+		{
+			name:         "float64 requirement with int variable",
+			variables:    map[string]interface{}{"score": 100},
+			requirements: map[string]interface{}{"score": 90.5},
+			wantErr:      false,
+		},
+		{
+			name:         "int requirement with float64 variable",
+			variables:    map[string]interface{}{"level": 10.0},
+			requirements: map[string]interface{}{"level": 5},
+			wantErr:      false,
+		},
+		{
+			name:         "string requirement met",
+			variables:    map[string]interface{}{"faction": "alliance"},
+			requirements: map[string]interface{}{"faction": "alliance"},
+			wantErr:      false,
+		},
+		{
+			name:         "string requirement not met",
+			variables:    map[string]interface{}{"faction": "horde"},
+			requirements: map[string]interface{}{"faction": "alliance"},
+			wantErr:      true,
+		},
+		{
+			name:         "float64 requirement not met (int variable)",
+			variables:    map[string]interface{}{"score": 50},
+			requirements: map[string]interface{}{"score": 90.5},
+			wantErr:      true,
+		},
+		{
+			name:         "int requirement not met (float64 variable)",
+			variables:    map[string]interface{}{"level": 3.0},
+			requirements: map[string]interface{}{"level": 5},
+			wantErr:      true,
+		},
+		{
+			name:         "type mismatch - int expected, string provided",
+			variables:    map[string]interface{}{"value": "not a number"},
+			requirements: map[string]interface{}{"value": 10},
+			wantErr:      true,
+		},
+		{
+			name:         "type mismatch - float64 expected, string provided",
+			variables:    map[string]interface{}{"value": "not a number"},
+			requirements: map[string]interface{}{"value": 10.5},
+			wantErr:      true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			progress := &PlayerProgress{
+				Variables: tt.variables,
+			}
+
+			err := manager.checkRequirements(progress, tt.requirements)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("checkRequirements() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
 // Benchmarks
 
 func BenchmarkStartArc(b *testing.B) {

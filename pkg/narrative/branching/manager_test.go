@@ -1,6 +1,7 @@
 package branching
 
 import (
+	"math"
 	"testing"
 
 	"github.com/opd-ai/venture/pkg/procgen"
@@ -450,10 +451,10 @@ func TestManagerCheckConsequences(t *testing.T) {
 	}
 	manager.RegisterConsequence(consequence)
 
-	// Set up progress with trigger conditions met (exact match required)
+	// Set up progress with trigger conditions met (exact match for values, type coercion supported)
 	progress, _ := manager.GetProgress("player1", arc.ID)
 	progress.Variables["completed_quest"] = true
-	progress.Variables["gold"] = 100 // Must match exactly for evaluateConditions
+	progress.Variables["gold"] = 100
 
 	// Check consequences
 	triggered := manager.CheckConsequences("player1", arc.ID)
@@ -745,7 +746,7 @@ func TestToStringSlice(t *testing.T) {
 			want:  []string{},
 		},
 		{
-			name:  "[]interface{} with mixed types",
+			name:  "[]interface{} filters non-string elements",
 			input: []interface{}{"a", 123, "b", true, "c"},
 			want:  []string{"a", "b", "c"}, // non-strings are skipped
 		},
@@ -906,10 +907,7 @@ func TestApplyFactionChanges(t *testing.T) {
 				}
 
 				// Use epsilon comparison for floating-point values
-				diff := actualValue - expectedValue
-				if diff < 0 {
-					diff = -diff
-				}
+				diff := math.Abs(actualValue - expectedValue)
 				if diff > epsilon {
 					t.Errorf("Faction %s = %.10f, want %.10f (diff: %.10e)", faction, actualValue, expectedValue, diff)
 				}

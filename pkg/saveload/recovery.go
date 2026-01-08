@@ -35,7 +35,7 @@ func checksumFile(filepath string) (string, error) {
 // Returns the backup file path or error.
 func (m *SaveManager) createBackup(name string) (string, error) {
 	sourcePath := m.getFilePath(name)
-	
+
 	// Check if source file exists
 	if _, err := os.Stat(sourcePath); os.IsNotExist(err) {
 		// No file to backup, not an error
@@ -285,7 +285,7 @@ func (m *SaveManager) LoadGameWithRecovery(name string) (*GameSave, error) {
 	if err != nil {
 		// Load failed, try recovery
 		m.logError("failed to parse save, attempting recovery", err, logrus.Fields{"name": name})
-		
+
 		recovered, recErr := m.recoverFromBackup(name)
 		if recErr != nil {
 			return nil, fmt.Errorf("failed to recover from backup: %w", recErr)

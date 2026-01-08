@@ -569,9 +569,9 @@ func TestParseWeaponType(t *testing.T) {
 		{"staff", item.WeaponStaff},
 		{"dagger", item.WeaponDagger},
 		{"spear", item.WeaponSpear},
-		{"invalid", item.WeaponSword},  // Default fallback
-		{"", item.WeaponSword},          // Empty string fallback
-		{"SWORD", item.WeaponSword},     // Case sensitivity test (should fallback)
+		{"invalid", item.WeaponSword}, // Default fallback
+		{"", item.WeaponSword},        // Empty string fallback
+		{"SWORD", item.WeaponSword},   // Case sensitivity test (should fallback)
 	}
 
 	for _, tt := range tests {
@@ -596,9 +596,9 @@ func TestParseArmorType(t *testing.T) {
 		{"boots", item.ArmorBoots},
 		{"gloves", item.ArmorGloves},
 		{"shield", item.ArmorShield},
-		{"invalid", item.ArmorChest},    // Default fallback
-		{"", item.ArmorChest},            // Empty string fallback
-		{"HELMET", item.ArmorChest},      // Case sensitivity test (should fallback)
+		{"invalid", item.ArmorChest}, // Default fallback
+		{"", item.ArmorChest},        // Empty string fallback
+		{"HELMET", item.ArmorChest},  // Case sensitivity test (should fallback)
 	}
 
 	for _, tt := range tests {
@@ -621,9 +621,9 @@ func TestParseConsumableType(t *testing.T) {
 		{"scroll", item.ConsumableScroll},
 		{"food", item.ConsumableFood},
 		{"bomb", item.ConsumableBomb},
-		{"invalid", item.ConsumablePotion},  // Default fallback
-		{"", item.ConsumablePotion},          // Empty string fallback
-		{"POTION", item.ConsumablePotion},    // Case sensitivity test (should fallback)
+		{"invalid", item.ConsumablePotion}, // Default fallback
+		{"", item.ConsumablePotion},        // Empty string fallback
+		{"POTION", item.ConsumablePotion},  // Case sensitivity test (should fallback)
 	}
 
 	for _, tt := range tests {
@@ -649,7 +649,7 @@ func TestParseSpellType(t *testing.T) {
 		{"buff", magic.TypeBuff},
 		{"debuff", magic.TypeDebuff},
 		{"summon", magic.TypeSummon},
-		{"invalid", magic.TypeOffensive},  // Default fallback
+		{"invalid", magic.TypeOffensive},   // Default fallback
 		{"", magic.TypeOffensive},          // Empty string fallback
 		{"OFFENSIVE", magic.TypeOffensive}, // Case sensitivity test (should fallback)
 	}
@@ -679,9 +679,9 @@ func TestParseElementType(t *testing.T) {
 		{"light", magic.ElementLight},
 		{"dark", magic.ElementDark},
 		{"arcane", magic.ElementArcane},
-		{"invalid", magic.ElementNone},    // Default fallback
-		{"", magic.ElementNone},            // Empty string fallback
-		{"FIRE", magic.ElementNone},        // Case sensitivity test (should fallback)
+		{"invalid", magic.ElementNone}, // Default fallback
+		{"", magic.ElementNone},        // Empty string fallback
+		{"FIRE", magic.ElementNone},    // Case sensitivity test (should fallback)
 	}
 
 	for _, tt := range tests {
@@ -707,9 +707,9 @@ func TestParseTargetType(t *testing.T) {
 		{"line", magic.TargetLine},
 		{"all_allies", magic.TargetAllAllies},
 		{"all_enemies", magic.TargetAllEnemies},
-		{"invalid", magic.TargetSingle},    // Default fallback
-		{"", magic.TargetSingle},            // Empty string fallback
-		{"SELF", magic.TargetSingle},        // Case sensitivity test (should fallback)
+		{"invalid", magic.TargetSingle}, // Default fallback
+		{"", magic.TargetSingle},        // Empty string fallback
+		{"SELF", magic.TargetSingle},    // Case sensitivity test (should fallback)
 	}
 
 	for _, tt := range tests {
@@ -733,9 +733,9 @@ func TestParseMagicRarity(t *testing.T) {
 		{"rare", magic.RarityRare},
 		{"epic", magic.RarityEpic},
 		{"legendary", magic.RarityLegendary},
-		{"invalid", magic.RarityCommon},    // Default fallback
-		{"", magic.RarityCommon},            // Empty string fallback
-		{"COMMON", magic.RarityCommon},      // Case sensitivity test (should fallback)
+		{"invalid", magic.RarityCommon}, // Default fallback
+		{"", magic.RarityCommon},        // Empty string fallback
+		{"COMMON", magic.RarityCommon},  // Case sensitivity test (should fallback)
 	}
 
 	for _, tt := range tests {

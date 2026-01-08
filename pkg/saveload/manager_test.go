@@ -9,7 +9,6 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-
 // TestSaveManager_NewSaveManager tests creating a new save manager.
 func TestSaveManager_NewSaveManager(t *testing.T) {
 	// Create temporary directory for tests
@@ -963,7 +962,7 @@ func TestSaveManager_GetSaveMetadataEdgeCases(t *testing.T) {
 	save := NewGameSave()
 	save.PlayerState.Level = 42
 	save.WorldState.GenreID = "fantasy"
-	
+
 	err = manager.SaveGame("metadata_test", save)
 	if err != nil {
 		t.Fatalf("SaveGame failed: %v", err)
@@ -1025,7 +1024,7 @@ func TestSaveManager_SaveExistsEdgeCases(t *testing.T) {
 // TestSaveManager_NewSaveManagerWithMigratorEdgeCases tests NewSaveManagerWithMigrator edge cases.
 func TestSaveManager_NewSaveManagerWithMigratorEdgeCases(t *testing.T) {
 	tmpDir := t.TempDir()
-	
+
 	// Test with nil logger and nil migrator
 	manager, err := NewSaveManagerWithMigrator(tmpDir, nil, nil)
 	if err != nil {
@@ -1034,7 +1033,7 @@ func TestSaveManager_NewSaveManagerWithMigratorEdgeCases(t *testing.T) {
 	if manager == nil {
 		t.Fatal("NewSaveManagerWithMigrator returned nil manager")
 	}
-	
+
 	// Test with custom logger and migrator
 	logger := logrus.New()
 	migrator := NewDefaultMigrator()
@@ -1045,7 +1044,7 @@ func TestSaveManager_NewSaveManagerWithMigratorEdgeCases(t *testing.T) {
 	if manager2 == nil {
 		t.Fatal("NewSaveManagerWithMigrator returned nil manager")
 	}
-	
+
 	// Verify we can save with the custom manager
 	save := NewGameSave()
 	err = manager2.SaveGame("custom_test", save)
@@ -1061,26 +1060,26 @@ func TestSaveManager_LoadGameEdgeCases(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewSaveManager failed: %v", err)
 	}
-	
+
 	// Test loading from empty/corrupt file
 	emptyFile := manager.getFilePath("empty")
 	err = os.WriteFile(emptyFile, []byte(""), 0o644)
 	if err != nil {
 		t.Fatalf("Failed to create empty file: %v", err)
 	}
-	
+
 	_, err = manager.LoadGame("empty")
 	if err == nil {
 		t.Error("LoadGame should fail for empty file")
 	}
-	
+
 	// Test loading with invalid JSON
 	invalidFile := manager.getFilePath("invalid")
 	err = os.WriteFile(invalidFile, []byte("{invalid json"), 0o644)
 	if err != nil {
 		t.Fatalf("Failed to create invalid JSON file: %v", err)
 	}
-	
+
 	_, err = manager.LoadGame("invalid")
 	if err == nil {
 		t.Error("LoadGame should fail for invalid JSON")
@@ -1094,32 +1093,32 @@ func TestSaveManager_SaveGameEdgeCases(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewSaveManager failed: %v", err)
 	}
-	
+
 	// Test saving with invalid name
 	save := NewGameSave()
 	err = manager.SaveGame("invalid/name", save)
 	if err == nil {
 		t.Error("SaveGame should fail for name with path separator")
 	}
-	
+
 	// Test saving with empty name
 	err = manager.SaveGame("", save)
 	if err == nil {
 		t.Error("SaveGame should fail for empty name")
 	}
-	
+
 	// Test overwriting existing save
 	err = manager.SaveGame("overwrite_test", save)
 	if err != nil {
 		t.Fatalf("First SaveGame failed: %v", err)
 	}
-	
+
 	save.PlayerState.Level = 99
 	err = manager.SaveGame("overwrite_test", save)
 	if err != nil {
 		t.Fatalf("Second SaveGame (overwrite) failed: %v", err)
 	}
-	
+
 	// Verify the save was overwritten
 	loaded, err := manager.LoadGame("overwrite_test")
 	if err != nil {
@@ -1137,20 +1136,20 @@ func TestSaveManager_SetMigratorEdgeCases(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewSaveManager failed: %v", err)
 	}
-	
+
 	// Initially no migrator
 	if manager.migrator != nil {
 		t.Error("Manager should have nil migrator initially")
 	}
-	
+
 	// Set a migrator
 	migrator := NewDefaultMigrator()
 	manager.SetMigrator(migrator)
-	
+
 	if manager.migrator == nil {
 		t.Error("SetMigrator failed to set migrator")
 	}
-	
+
 	// Set nil migrator (should work)
 	manager.SetMigrator(nil)
 	if manager.migrator != nil {
@@ -1161,16 +1160,16 @@ func TestSaveManager_SetMigratorEdgeCases(t *testing.T) {
 // TestSaveManager_RegisterHookEdgeCases tests RegisterHook functionality.
 func TestSaveManager_RegisterHookEdgeCases(t *testing.T) {
 	migrator := NewDefaultMigrator()
-	
+
 	// Test registering a hook
 	hookCalled := false
 	testHook := func(save *GameSave, sourceVersion, targetVersion string) error {
 		hookCalled = true
 		return nil
 	}
-	
+
 	migrator.RegisterHook("0.9.0", testHook)
-	
+
 	// Migrate a save to trigger the hook
 	save := &GameSave{
 		Version: "0.9.0",
@@ -1181,12 +1180,12 @@ func TestSaveManager_RegisterHookEdgeCases(t *testing.T) {
 			Seed: 123,
 		},
 	}
-	
+
 	_, err := migrator.Migrate(save, "0.9.0")
 	if err != nil {
 		t.Fatalf("Migrate failed: %v", err)
 	}
-	
+
 	if !hookCalled {
 		t.Error("Migration hook was not called")
 	}
@@ -1199,7 +1198,7 @@ func TestSaveManager_ListSavesWithMixedFiles(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewSaveManager failed: %v", err)
 	}
-	
+
 	// Create valid saves
 	for i := 0; i < 3; i++ {
 		save := NewGameSave()
@@ -1209,26 +1208,26 @@ func TestSaveManager_ListSavesWithMixedFiles(t *testing.T) {
 			t.Fatalf("SaveGame failed: %v", err)
 		}
 	}
-	
+
 	// Create non-save files in the directory (should be ignored)
 	extraFile := filepath.Join(tmpDir, "readme.txt")
 	err = os.WriteFile(extraFile, []byte("test"), 0o644)
 	if err != nil {
 		t.Fatalf("Failed to create extra file: %v", err)
 	}
-	
+
 	dotFile := filepath.Join(tmpDir, ".hidden")
 	err = os.WriteFile(dotFile, []byte("hidden"), 0o644)
 	if err != nil {
 		t.Fatalf("Failed to create dot file: %v", err)
 	}
-	
+
 	// List saves should only return .sav files
 	saves, err := manager.ListSaves()
 	if err != nil {
 		t.Fatalf("ListSaves failed: %v", err)
 	}
-	
+
 	if len(saves) != 3 {
 		t.Errorf("Expected 3 saves, got %d", len(saves))
 	}
@@ -1241,32 +1240,32 @@ func TestSaveManager_DeleteSaveWithBackup(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewSaveManager failed: %v", err)
 	}
-	
+
 	// Create save with backup
 	save := NewGameSave()
 	err = manager.SaveGameWithBackup("backup_delete_test", save)
 	if err != nil {
 		t.Fatalf("SaveGameWithBackup failed: %v", err)
 	}
-	
+
 	// Update to create backup
 	save.PlayerState.Level = 20
 	err = manager.SaveGameWithBackup("backup_delete_test", save)
 	if err != nil {
 		t.Fatalf("Second SaveGameWithBackup failed: %v", err)
 	}
-	
+
 	// Verify backup exists
 	if !manager.BackupExists("backup_delete_test") {
 		t.Error("Backup should exist before deletion")
 	}
-	
+
 	// Delete the save
 	err = manager.DeleteSave("backup_delete_test")
 	if err != nil {
 		t.Fatalf("DeleteSave failed: %v", err)
 	}
-	
+
 	// Verify both save and backup are gone
 	if manager.SaveExists("backup_delete_test") {
 		t.Error("Save should not exist after deletion")

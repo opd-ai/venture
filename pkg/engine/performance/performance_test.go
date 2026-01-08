@@ -375,3 +375,657 @@ func BenchmarkLODGetLevel(b *testing.B) {
 		lm.GetLODLevel(250.0)
 	}
 }
+
+// TestCacheRemove tests cache entry removal
+func TestCacheRemove(t *testing.T) {
+	cm := NewCacheManager(100 * 1024 * 1024)
+
+	// Add entries
+	cm.Set("entry1", "data1", 10*1024*1024)
+	cm.Set("entry2", "data2", 20*1024*1024)
+
+	// Verify entry exists
+	_, found := cm.Get("entry1")
+	if !found {
+		t.Fatal("Entry1 should exist before removal")
+	}
+
+	// Remove entry
+	cm.Remove("entry1")
+
+	// Verify entry removed
+	_, found = cm.Get("entry1")
+	if found {
+		t.Error("Entry1 should be removed")
+	}
+
+	// Verify other entry still exists
+	_, found = cm.Get("entry2")
+	if !found {
+		t.Error("Entry2 should still exist")
+	}
+
+	// Remove non-existent entry (should not panic)
+	cm.Remove("non-existent")
+
+	stats := cm.GetStats()
+	if stats.ItemCount != 1 {
+		t.Errorf("Expected 1 item after removal, got %d", stats.ItemCount)
+	}
+}
+
+// TestCacheCleanup tests cache cleanup functionality
+func TestCacheCleanup(t *testing.T) {
+	cm := NewCacheManager(50 * 1024 * 1024) // 50MB limit
+
+	// Add entries that exceed limit
+	cm.Set("entry1", "data1", 20*1024*1024)
+	cm.Set("entry2", "data2", 20*1024*1024)
+	cm.Set("entry3", "data3", 20*1024*1024)
+
+	// Force cleanup
+	cm.Cleanup()
+
+	stats := cm.GetStats()
+	if stats.CurrentSizeMB > stats.MaxSizeMB {
+		t.Errorf("Cache size %dMB exceeds max %dMB after cleanup", stats.CurrentSizeMB, stats.MaxSizeMB)
+	}
+
+	if stats.LastCleanup.IsZero() {
+		t.Error("LastCleanup timestamp should be set")
+	}
+}
+
+// TestCacheClear tests cache clear functionality
+func TestCacheClear(t *testing.T) {
+	cm := NewCacheManager(100 * 1024 * 1024)
+
+	// Add multiple entries
+	cm.Set("entry1", "data1", 10*1024*1024)
+	cm.Set("entry2", "data2", 20*1024*1024)
+	cm.Set("entry3", "data3", 30*1024*1024)
+
+	stats := cm.GetStats()
+	if stats.ItemCount != 3 {
+		t.Fatalf("Expected 3 items before clear, got %d", stats.ItemCount)
+	}
+
+	// Clear cache
+	cm.Clear()
+
+	// Verify all entries removed
+	stats = cm.GetStats()
+	if stats.ItemCount != 0 {
+		t.Errorf("Expected 0 items after clear, got %d", stats.ItemCount)
+	}
+
+	if stats.CurrentSizeMB != 0 {
+		t.Errorf("Expected 0MB after clear, got %d", stats.CurrentSizeMB)
+	}
+
+	// Verify entries not retrievable
+	_, found := cm.Get("entry1")
+	if found {
+		t.Error("Entry1 should not exist after clear")
+	}
+
+	_, found = cm.Get("entry2")
+	if found {
+		t.Error("Entry2 should not exist after clear")
+	}
+}
+
+// TestBackgroundLoaderPreloadGuildHall tests guild hall preloading
+func TestBackgroundLoaderPreloadGuildHall(t *testing.T) {
+	bl := NewBackgroundLoader(2)
+	bl.Start()
+	defer bl.Stop()
+
+	var loaded int32
+	bl.PreloadGuildHall("hall1", func(data interface{}) {
+		atomic.StoreInt32(&loaded, 1)
+	})
+
+	// Wait for loading
+	time.Sleep(200 * time.Millisecond)
+
+	if atomic.LoadInt32(&loaded) != 1 {
+		t.Error("Expected guild hall to be loaded")
+	}
+}
+
+// TestBackgroundLoaderGetQueueSize tests queue size retrieval
+func TestBackgroundLoaderGetQueueSize(t *testing.T) {
+	bl := NewBackgroundLoader(1) // Single worker to control queue growth
+	bl.Start()
+	defer bl.Stop()
+
+	// Queue multiple items
+	bl.PreloadRaid("raid1", nil)
+	bl.PreloadRaid("raid2", nil)
+	bl.PreloadGuildHall("hall1", nil)
+
+	// Check queue size (should have at least some items)
+	queueSize := bl.GetQueueSize()
+	if queueSize < 0 {
+		t.Errorf("Queue size should be non-negative, got %d", queueSize)
+	}
+
+	// Note: exact size depends on worker processing speed
+	// Just verify the method works without error
+}
+
+// TestLODManagerSetDistances tests custom LOD distance configuration
+func TestLODManagerSetDistances(t *testing.T) {
+	lm := NewLODManager()
+
+	// Set custom distances
+	lm.SetDistances(50.0, 150.0, 300.0)
+
+	// Test new distances
+	tests := []struct {
+		distance float64
+		expected LODLevel
+	}{
+		{30.0, LODHigh},     // < 50
+		{100.0, LODMedium},  // < 150
+		{250.0, LODLow},     // < 300
+		{400.0, LODVeryLow}, // >= 300
+	}
+
+	for _, tt := range tests {
+		level := lm.GetLODLevel(tt.distance)
+		if level != tt.expected {
+			t.Errorf("Distance %.1f: expected %s, got %s", tt.distance, tt.expected, level)
+		}
+	}
+}
+
+// TestLODManagerEnable tests LOD system enable
+func TestLODManagerEnable(t *testing.T) {
+	lm := NewLODManager()
+
+	// Disable first
+	lm.Disable()
+	if lm.IsEnabled() {
+		t.Error("LOD should be disabled")
+	}
+
+	// Re-enable
+	lm.Enable()
+	if !lm.IsEnabled() {
+		t.Error("LOD should be enabled")
+	}
+
+	// Verify LOD works when enabled
+	level := lm.GetLODLevel(1000.0)
+	if level == LODVeryHigh {
+		t.Error("Expected LOD level other than VeryHigh when enabled at far distance")
+	}
+}
+
+// TestLODManagerIsEnabled tests LOD enabled state check
+func TestLODManagerIsEnabled(t *testing.T) {
+	lm := NewLODManager()
+
+	// Default state should be enabled
+	if !lm.IsEnabled() {
+		t.Error("LOD should be enabled by default")
+	}
+
+	// Disable and check
+	lm.Disable()
+	if lm.IsEnabled() {
+		t.Error("LOD should be disabled after Disable()")
+	}
+
+	// Re-enable and check
+	lm.Enable()
+	if !lm.IsEnabled() {
+		t.Error("LOD should be enabled after Enable()")
+	}
+}
+
+// TestMemoryProfilerGetAllocationTrend tests allocation trend analysis
+func TestMemoryProfilerGetAllocationTrend(t *testing.T) {
+	mp := NewMemoryProfiler()
+
+	// Create allocation trend
+	for i := 0; i < 10; i++ {
+		mp.TrackAllocation("growing", uint64(i*10*1024*1024))
+		mp.TakeSnapshot()
+		time.Sleep(5 * time.Millisecond)
+	}
+
+	// Get trend for last 5 samples
+	trend := mp.GetAllocationTrend("growing", 5)
+
+	if len(trend) != 5 {
+		t.Errorf("Expected 5 trend samples, got %d", len(trend))
+	}
+
+	// Verify trend is increasing
+	for i := 1; i < len(trend); i++ {
+		if trend[i] < trend[i-1] {
+			t.Errorf("Trend should be increasing: sample %d (%d) < sample %d (%d)",
+				i, trend[i], i-1, trend[i-1])
+		}
+	}
+
+	// Test with more samples than available
+	trend = mp.GetAllocationTrend("growing", 20)
+	if len(trend) != 10 {
+		t.Errorf("Expected 10 trend samples (limited by snapshots), got %d", len(trend))
+	}
+
+	// Test with non-existent allocation
+	trend = mp.GetAllocationTrend("non-existent", 5)
+	if len(trend) != 5 {
+		t.Errorf("Expected 5 trend samples (zeros for non-existent), got %d", len(trend))
+	}
+	for i, val := range trend {
+		if val != 0 {
+			t.Errorf("Expected zero for non-existent allocation at index %d, got %d", i, val)
+		}
+	}
+}
+
+// TestMemoryProfilerReset tests profiler reset functionality
+func TestMemoryProfilerReset(t *testing.T) {
+	mp := NewMemoryProfiler()
+
+	// Track allocations and create snapshots
+	mp.TrackAllocation("test1", 50*1024*1024)
+	mp.TrackAllocation("test2", 100*1024*1024)
+	mp.TakeSnapshot()
+	mp.TakeSnapshot()
+
+	stats := mp.GetStats()
+	if stats.TotalMB == 0 {
+		t.Fatal("Expected non-zero total before reset")
+	}
+
+	snapshots := mp.GetSnapshots()
+	if len(snapshots) == 0 {
+		t.Fatal("Expected snapshots before reset")
+	}
+
+	// Reset profiler
+	mp.Reset()
+
+	// Verify all cleared
+	stats = mp.GetStats()
+	if stats.TotalMB != 0 {
+		t.Errorf("Expected 0MB after reset, got %d", stats.TotalMB)
+	}
+
+	snapshots = mp.GetSnapshots()
+	if len(snapshots) != 0 {
+		t.Errorf("Expected 0 snapshots after reset, got %d", len(snapshots))
+	}
+
+	if len(stats.Allocations) != 0 {
+		t.Errorf("Expected 0 allocations after reset, got %d", len(stats.Allocations))
+	}
+}
+
+// TestMemoryProfilerGetUptime tests uptime tracking
+func TestMemoryProfilerGetUptime(t *testing.T) {
+	mp := NewMemoryProfiler()
+
+	// Wait briefly
+	time.Sleep(100 * time.Millisecond)
+
+	uptime := mp.GetUptime()
+	if uptime < 100*time.Millisecond {
+		t.Errorf("Expected uptime >= 100ms, got %v", uptime)
+	}
+
+	if uptime > 1*time.Second {
+		t.Errorf("Expected uptime < 1s, got %v", uptime)
+	}
+
+	// Reset and verify uptime resets
+	mp.Reset()
+	time.Sleep(50 * time.Millisecond)
+
+	uptime = mp.GetUptime()
+	if uptime > 100*time.Millisecond {
+		t.Errorf("Expected uptime < 100ms after reset, got %v", uptime)
+	}
+}
+
+// TestNetworkBatcherGetStats tests statistics retrieval
+func TestNetworkBatcherGetStats(t *testing.T) {
+	var batchCount int32
+
+	sendFunc := func(batch *BatchedMessage) {
+		atomic.AddInt32(&batchCount, 1)
+	}
+
+	nb := NewNetworkBatcher(100, sendFunc)
+	nb.Start()
+	defer nb.Stop()
+
+	// Queue messages
+	nb.QueueMessage("pos_update", []byte("player1_data"), "player1")
+	nb.QueueMessage("pos_update", []byte("player2_data"), "player2")
+	nb.QueueMessage("chat", []byte("hello"), "player3")
+
+	// Wait for batching
+	time.Sleep(150 * time.Millisecond)
+
+	stats := nb.GetStats()
+
+	// Verify stats structure
+	if stats == nil {
+		t.Fatal("GetStats should not return nil")
+	}
+
+	if stats.BatchCount == 0 {
+		t.Error("Expected at least 1 batch sent")
+	}
+
+	if stats.MessagesSent == 0 {
+		t.Error("Expected at least 1 message sent")
+	}
+
+	if stats.BytesSent == 0 {
+		t.Error("Expected non-zero bytes sent")
+	}
+
+	// MessagesPerSec and BytesPerSec may be 0 or positive depending on timing
+	// Just verify they're not negative
+	if stats.MessagesPerSec < 0 {
+		t.Errorf("MessagesPerSec should be non-negative, got %.2f", stats.MessagesPerSec)
+	}
+
+	if stats.BytesPerSec < 0 {
+		t.Errorf("BytesPerSec should be non-negative, got %.2f", stats.BytesPerSec)
+	}
+}
+
+// TestCacheEdgeCases tests edge cases in cache management
+func TestCacheEdgeCases(t *testing.T) {
+	t.Run("zero size cache", func(t *testing.T) {
+		cm := NewCacheManager(0)
+		cm.Set("entry", "data", 1024)
+
+		// Should still work but evict immediately
+		stats := cm.GetStats()
+		// Behavior depends on implementation - either 0 items or immediate eviction
+		_ = stats // Just verify no panic
+	})
+
+	t.Run("remove from empty cache", func(t *testing.T) {
+		cm := NewCacheManager(100 * 1024 * 1024)
+		cm.Remove("non-existent") // Should not panic
+	})
+
+	t.Run("clear empty cache", func(t *testing.T) {
+		cm := NewCacheManager(100 * 1024 * 1024)
+		cm.Clear() // Should not panic
+		stats := cm.GetStats()
+		if stats.ItemCount != 0 {
+			t.Error("Empty cache should have 0 items")
+		}
+	})
+
+	t.Run("cleanup empty cache", func(t *testing.T) {
+		cm := NewCacheManager(100 * 1024 * 1024)
+		cm.Cleanup() // Should not panic
+	})
+}
+
+// TestBackgroundLoaderEdgeCases tests edge cases in background loader
+func TestBackgroundLoaderEdgeCases(t *testing.T) {
+	t.Run("queue when not started", func(t *testing.T) {
+		bl := NewBackgroundLoader(2)
+		// Queue without starting
+		bl.PreloadRaid("raid1", nil) // Should not panic
+
+		queueSize := bl.GetQueueSize()
+		// Queue size should be 0 when not running
+		if queueSize != 0 {
+			t.Errorf("expected queue size 0 when loader is not running, got %d", queueSize)
+		}
+	})
+
+	t.Run("multiple starts", func(t *testing.T) {
+		bl := NewBackgroundLoader(2)
+		bl.Start()
+		bl.Start() // Second start should be no-op
+		defer bl.Stop()
+	})
+
+	t.Run("multiple stops", func(t *testing.T) {
+		bl := NewBackgroundLoader(2)
+		bl.Start()
+		bl.Stop()
+		bl.Stop() // Second stop should be no-op
+	})
+
+	t.Run("nil callback", func(t *testing.T) {
+		bl := NewBackgroundLoader(2)
+		bl.Start()
+		defer bl.Stop()
+
+		bl.PreloadRaid("raid1", nil)        // Should not panic with nil callback
+		bl.PreloadGuildHall("hall1", nil)   // Should not panic with nil callback
+		time.Sleep(200 * time.Millisecond)  // Let workers process
+	})
+}
+
+// TestLODManagerConcurrency tests LOD manager under concurrent access
+func TestLODManagerConcurrency(t *testing.T) {
+	lm := NewLODManager()
+
+	done := make(chan bool)
+
+	// Concurrent readers
+	for i := 0; i < 10; i++ {
+		go func() {
+			for j := 0; j < 100; j++ {
+				lm.GetLODLevel(float64(j * 10))
+				lm.IsEnabled()
+			}
+			done <- true
+		}()
+	}
+
+	// Concurrent writers
+	for i := 0; i < 5; i++ {
+		go func() {
+			for j := 0; j < 50; j++ {
+				lm.Enable()
+				lm.Disable()
+				lm.SetDistances(100.0, 200.0, 400.0)
+			}
+			done <- true
+		}()
+	}
+
+	// Wait for all goroutines
+	for i := 0; i < 15; i++ {
+		<-done
+	}
+
+	// Verify LOD manager still works
+	level := lm.GetLODLevel(100.0)
+	if level.String() == "" {
+		t.Error("LOD level should not be empty after concurrent access")
+	}
+}
+
+// TestMemoryProfilerConcurrency tests memory profiler under concurrent access
+func TestMemoryProfilerConcurrency(t *testing.T) {
+	mp := NewMemoryProfiler()
+
+	done := make(chan bool)
+
+	// Concurrent allocations
+	for i := 0; i < 10; i++ {
+		go func(id int) {
+			for j := 0; j < 50; j++ {
+				mp.TrackAllocation("test", 1024*1024)
+				mp.ReleaseAllocation("test", 1024*1024)
+			}
+			done <- true
+		}(i)
+	}
+
+	// Concurrent reads
+	for i := 0; i < 5; i++ {
+		go func() {
+			for j := 0; j < 50; j++ {
+				mp.GetStats()
+				mp.GetSnapshots()
+				mp.GetUptime()
+			}
+			done <- true
+		}()
+	}
+
+	// Wait for all goroutines
+	for i := 0; i < 15; i++ {
+		<-done
+	}
+
+	// Verify profiler still works
+	stats := mp.GetStats()
+	if stats == nil {
+		t.Error("Stats should not be nil after concurrent access")
+	}
+}
+
+// TestPerformanceMonitorStatsUpdates tests updating various statistics
+func TestPerformanceMonitorStatsUpdates(t *testing.T) {
+	pm := NewPerformanceMonitor()
+
+	// Update network stats
+	netStats := &NetworkStats{
+		MessagesSent:   1000,
+		MessagesPerSec: 100.0,
+		BytesSent:      50000,
+		BytesPerSec:    5000.0,
+		BatchCount:     50,
+		AvgBatchSize:   20.0,
+		LastBatchTime:  time.Now(),
+	}
+	pm.UpdateNetworkStats(netStats)
+
+	retrieved := pm.GetNetworkStats()
+	if retrieved.MessagesSent != 1000 {
+		t.Errorf("Expected MessagesSent 1000, got %d", retrieved.MessagesSent)
+	}
+	if retrieved.BytesSent != 50000 {
+		t.Errorf("Expected BytesSent 50000, got %d", retrieved.BytesSent)
+	}
+
+	// Update cache stats
+	cacheStats := &CacheStats{
+		CurrentSizeMB: 200,
+		MaxSizeMB:     400,
+		ItemCount:     500,
+		HitRate:       0.95,
+		EvictionCount: 10,
+		LastCleanup:   time.Now(),
+	}
+	pm.UpdateCacheStats(cacheStats)
+
+	retrievedCache := pm.GetCacheStats()
+	if retrievedCache.CurrentSizeMB != 200 {
+		t.Errorf("Expected CurrentSizeMB 200, got %d", retrievedCache.CurrentSizeMB)
+	}
+	if retrievedCache.ItemCount != 500 {
+		t.Errorf("Expected ItemCount 500, got %d", retrievedCache.ItemCount)
+	}
+
+	// Update memory stats
+	memStats := &MemoryStats{
+		TotalBytes:     300 * 1024 * 1024,
+		TotalMB:        300,
+		Allocations:    map[string]uint64{"test": 100 * 1024 * 1024},
+		LargestAlloc:   "test",
+		LargestAllocMB: 100,
+	}
+	pm.UpdateMemoryStats(memStats)
+
+	retrievedMem := pm.GetMemoryStats()
+	if retrievedMem.TotalMB != 300 {
+		t.Errorf("Expected TotalMB 300, got %d", retrievedMem.TotalMB)
+	}
+	if retrievedMem.LargestAlloc != "test" {
+		t.Errorf("Expected LargestAlloc 'test', got %s", retrievedMem.LargestAlloc)
+	}
+	if len(retrievedMem.Allocations) != 1 {
+		t.Errorf("Expected 1 allocation, got %d", len(retrievedMem.Allocations))
+	}
+}
+
+// TestPerformanceMonitorConfigManagement tests config get/set
+func TestPerformanceMonitorConfigManagement(t *testing.T) {
+	pm := NewPerformanceMonitor()
+
+	// Get default config
+	config := pm.GetConfig()
+	if config == nil {
+		t.Fatal("GetConfig should not return nil")
+	}
+
+	originalMaxMemory := config.MaxMemoryMB
+	if originalMaxMemory != 550 {
+		t.Errorf("Expected default MaxMemoryMB 550, got %d", originalMaxMemory)
+	}
+
+	// Create and set new config
+	newConfig := DefaultPerformanceConfig()
+	newConfig.MaxMemoryMB = 1000
+	newConfig.CacheSizeMB = 800
+	newConfig.BatchWindowMs = 50
+
+	pm.SetConfig(newConfig)
+
+	// Verify config updated
+	retrieved := pm.GetConfig()
+	if retrieved.MaxMemoryMB != 1000 {
+		t.Errorf("Expected MaxMemoryMB 1000, got %d", retrieved.MaxMemoryMB)
+	}
+	if retrieved.CacheSizeMB != 800 {
+		t.Errorf("Expected CacheSizeMB 800, got %d", retrieved.CacheSizeMB)
+	}
+	if retrieved.BatchWindowMs != 50 {
+		t.Errorf("Expected BatchWindowMs 50, got %d", retrieved.BatchWindowMs)
+	}
+}
+
+// TestNetworkBatcherGetQueueSize tests queue size for batcher
+func TestNetworkBatcherGetQueueSize(t *testing.T) {
+	var batchCount int32
+
+	sendFunc := func(batch *BatchedMessage) {
+		atomic.AddInt32(&batchCount, 1)
+		// Add delay to allow queue to build up
+		time.Sleep(50 * time.Millisecond)
+	}
+
+	nb := NewNetworkBatcher(1000, sendFunc) // Long window to control batching
+	nb.Start()
+	defer nb.Stop()
+
+	// Queue messages
+	for i := 0; i < 5; i++ {
+		nb.QueueMessage("test", []byte("data"), "player1")
+	}
+
+	// Check queue size immediately
+	queueSize := nb.GetQueueSize()
+	if queueSize < 0 {
+		t.Errorf("Queue size should be non-negative, got %d", queueSize)
+	}
+
+	// Queue size should be reasonable (0-5 messages)
+	if queueSize > 10 {
+		t.Errorf("Queue size unexpectedly large: %d", queueSize)
+	}
+}

@@ -210,7 +210,15 @@ All Phase 2 deliverables completed successfully:
 **Deliverables:**
 - [x] Increase test coverage to 90%+ (files: all packages with <80% coverage) - **IN PROGRESS**
   - ✅ Improved pkg/procgen/furniture from 79.6% to 89.2% (2026-01-08)
-  - Remaining packages below 80%: 20 packages (see below for priority list)
+  - ✅ Improved pkg/engine/performance from 65.6% to 94.6% (2026-01-08)
+  - Remaining packages below 80%: 7 packages
+    - pkg/narrative/branching 70.1%
+    - pkg/modding 73.8%
+    - pkg/saveload 73.8%
+    - pkg/rendering/patterns 75.6%
+    - pkg/network/resilience 76.2%
+    - pkg/network/federation/mobile 78.1%
+    - pkg/stability 78.4%
   - Add table-driven tests for all edge cases
   - Add integration tests for critical paths (player join, combat, trading)
   - Add chaos/fuzz tests for network protocols

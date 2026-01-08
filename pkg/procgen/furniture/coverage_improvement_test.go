@@ -42,24 +42,33 @@ func TestGenerateWithoutSubType(t *testing.T) {
 func TestGenerateWithVariousDepths(t *testing.T) {
 	gen := NewGenerator()
 	
-	depths := []int{1, 10, 50, 100}
-	for _, depth := range depths {
-		t.Run(string(rune('0'+depth/10)), func(t *testing.T) {
+	tests := []struct {
+		name  string
+		depth int
+	}{
+		{"Depth1", 1},
+		{"Depth10", 10},
+		{"Depth50", 50},
+		{"Depth100", 100},
+	}
+	
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
 			params := procgen.GenerationParams{
 				Difficulty: 0.5,
-				Depth:      depth,
+				Depth:      tt.depth,
 				GenreID:    "fantasy",
 				Custom:     map[string]interface{}{}, // No SubType
 			}
 
-			result, err := gen.Generate(int64(70000+depth), params)
+			result, err := gen.Generate(int64(70000+tt.depth), params)
 			if err != nil {
-				t.Fatalf("Generate(depth=%d) error = %v", depth, err)
+				t.Fatalf("Generate(depth=%d) error = %v", tt.depth, err)
 			}
 
 			furniture := result.(*Furniture)
 			if furniture.SubType == "" {
-				t.Errorf("Generate(depth=%d) did not assign SubType", depth)
+				t.Errorf("Generate(depth=%d) did not assign SubType", tt.depth)
 			}
 		})
 	}

@@ -1115,6 +1115,9 @@ func (g *EbitenGame) drawLitScene(screen *ebiten.Image) {
 
 	// Apply lighting to cached buffer (Performance Audit fix: reuse litBuffer)
 	if g.litBuffer == nil || g.litBuffer.Bounds().Dx() != g.ScreenWidth || g.litBuffer.Bounds().Dy() != g.ScreenHeight {
+		if g.litBuffer != nil {
+			g.litBuffer.Dispose()
+		}
 		g.litBuffer = ebiten.NewImage(g.ScreenWidth, g.ScreenHeight)
 	}
 	g.litBuffer.Clear()
@@ -1244,6 +1247,8 @@ func (g *EbitenGame) drawPhaseUIOverlays(screen *ebiten.Image) {
 // drawMailboxUI renders the mailbox interface if open and loads mail data from player entity.
 func (g *EbitenGame) drawMailboxUI(screen *ebiten.Image) {
 	if g.MailboxUI == nil || !g.MailboxUI.IsOpen() {
+		// Clean up cached image when mailbox is closed to free GPU memory
+		g.clearMailboxCache()
 		return
 	}
 
@@ -1269,6 +1274,16 @@ func (g *EbitenGame) drawMailboxUI(screen *ebiten.Image) {
 
 	if g.cachedMailboxImage != nil {
 		screen.DrawImage(g.cachedMailboxImage, nil)
+	}
+}
+
+// clearMailboxCache disposes the cached mailbox image to free GPU resources.
+// Called when the mailbox UI is closed or during cleanup.
+func (g *EbitenGame) clearMailboxCache() {
+	if g.cachedMailboxImage != nil {
+		g.cachedMailboxImage.Dispose()
+		g.cachedMailboxImage = nil
+		g.lastMailboxRenderState = ""
 	}
 }
 

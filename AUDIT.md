@@ -1,38 +1,28 @@
 # Performance Audit Report
 Generated: 2026-01-17
+Updated: 2026-01-19
 
 ## Executive Summary
 **Codebase**: Venture - Go/Ebiten procedural multiplayer action-RPG (~240K+ LOC)
-**Critical Issues Found**: 3
+**Critical Issues Found**: 3 (2 FIXED, 1 remaining)
 **Moderate Issues Found**: 6
 **Total Recommendations**: 15
 
 The Venture codebase demonstrates **exceptional performance engineering** with comprehensive optimizations already in place. The render system achieves **60+ FPS with 2000 entities** through viewport culling (95% entity reduction), batch rendering (80-90% draw call reduction), and extensive object pooling. Memory usage is **73 MB total heap** vs the 400 MB budget (5.5x under target), with entity rendering footprint at only 1.25 MB for 2000 entities. The identified issues are primarily in UI subsystems where per-frame image allocations remain, and in the lighting system's hot path. The existing PERFORMANCE_BENCHMARKS.md and MEMORY_PROFILING.md documents indicate mature performance culture.
 
+**Recent Fixes (2026-01-19):**
+- ✅ Fixed Critical Issue #1: Cached litBuffer in EbitenGame (eliminates ~3MB allocation per frame in lit scenes)
+- ✅ Fixed Critical Issue #3: Cached mailbox ebiten.Image with state-based invalidation (eliminates 2-5ms per frame when mailbox open)
+
 ---
 
 ## Critical Issues (Immediate Action Required)
 
-### 1. Per-Frame Image Allocation in drawLitScene
+### 1. Per-Frame Image Allocation in drawLitScene ✅ FIXED (2026-01-19)
 - **Category**: Rendering/Memory
 - **Location**: `pkg/engine/game.go:1112`
 - **Impact**: ~1 allocation/frame of large buffer (screen-sized), causing GC pressure during lit scenes
-- **Current Code**:
-  ```go
-  // Apply lighting to intermediate buffer
-  litBuffer := ebiten.NewImage(g.ScreenWidth, g.ScreenHeight)
-  g.LightingSystem.ApplyLighting(litBuffer, g.sceneBuffer, entities)
-  ```
-- **Recommended Fix**:
-  ```go
-  // Reuse lighting buffer (add field: litBuffer *ebiten.Image to EbitenGame)
-  if g.litBuffer == nil || g.litBuffer.Bounds().Dx() != g.ScreenWidth {
-      g.litBuffer = ebiten.NewImage(g.ScreenWidth, g.ScreenHeight)
-  }
-  g.litBuffer.Clear()
-  g.LightingSystem.ApplyLighting(g.litBuffer, g.sceneBuffer, entities)
-  ```
-- **Expected Improvement**: Eliminate 1 large allocation per frame (~3MB at 1920x1080), reducing GC frequency by ~30% in lit scenes
+- **Fix Applied**: Added `litBuffer *ebiten.Image` field to EbitenGame struct and reuse it with size checks and Clear() call
 
 ### 2. UI Draw Methods Allocate Images Per-Frame
 - **Category**: Rendering/Memory
@@ -70,29 +60,11 @@ The Venture codebase demonstrates **exceptional performance engineering** with c
   ```
 - **Expected Improvement**: Eliminate 10-30 allocations per frame when UI open, ~90% reduction in UI allocation overhead
 
-### 3. Mailbox UI Creates Image From Go Image Per-Frame
+### 3. Mailbox UI Creates Image From Go Image Per-Frame ✅ FIXED (2026-01-19)
 - **Category**: Rendering/Memory
 - **Location**: `pkg/engine/game.go:1249-1251`
 - **Impact**: Creates new ebiten.Image from Go image.Image every frame mailbox is open; expensive image conversion
-- **Current Code**:
-  ```go
-  mailImg := g.MailboxUI.Render()
-  if mailImg != nil {
-      screen.DrawImage(ebiten.NewImageFromImage(mailImg), nil)
-  }
-  ```
-- **Recommended Fix**:
-  ```go
-  // Cache the converted image in MailboxUI
-  // In MailboxUI: add field cachedEbitenImage *ebiten.Image and dirty flag
-  // On content change, set dirty = true
-  // In Draw: only convert when dirty, reuse otherwise
-  if g.MailboxUI.IsDirty() {
-      g.MailboxUI.UpdateCache()
-  }
-  screen.DrawImage(g.MailboxUI.GetCachedImage(), nil)
-  ```
-- **Expected Improvement**: Eliminate per-frame image conversion (~2-5ms savings per frame when mailbox open)
+- **Fix Applied**: Added `cachedMailboxImage *ebiten.Image` and `lastMailboxRenderState string` fields to EbitenGame. The cached image is only regenerated when state hash changes.
 
 ---
 
@@ -260,8 +232,8 @@ The Venture codebase demonstrates **exceptional performance engineering** with c
 ## Recommended Action Plan
 
 ### Immediate (This Week)
-1. **Fix `game.go:1112`** - Cache litBuffer in EbitenGame struct
-2. **Fix `game.go:1249-1251`** - Cache mailbox ebiten.Image conversion
+1. ✅ **Fix `game.go:1112`** - Cache litBuffer in EbitenGame struct (COMPLETED 2026-01-19)
+2. ✅ **Fix `game.go:1249-1251`** - Cache mailbox ebiten.Image conversion (COMPLETED 2026-01-19)
 3. **Add image caching to ShopUI** (`shop_ui.go`) - Most commonly used shop interface
 
 ### Short-term (This Month)

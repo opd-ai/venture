@@ -524,3 +524,171 @@ func BenchmarkNavigationOperations(b *testing.B) {
 		ui.CloseMessageDetail()
 	}
 }
+
+func TestGetStateHash(t *testing.T) {
+	ui := NewMailboxUI(0, 0, 600, 400, "fantasy")
+
+	// Test that initial hash is consistent
+	hash1 := ui.GetStateHash()
+	hash2 := ui.GetStateHash()
+	if hash1 != hash2 {
+		t.Errorf("Same state produced different hashes: %q vs %q", hash1, hash2)
+	}
+
+	// Test that ViewMode change produces different hash
+	originalHash := ui.GetStateHash()
+	ui.ViewMode = ViewCompose
+	newHash := ui.GetStateHash()
+	if originalHash == newHash {
+		t.Error("ViewMode change did not produce different hash")
+	}
+	ui.ViewMode = ViewInbox
+
+	// Test that SelectedInboxIndex change produces different hash
+	originalHash = ui.GetStateHash()
+	ui.SelectedInboxIndex = 5
+	newHash = ui.GetStateHash()
+	if originalHash == newHash {
+		t.Error("SelectedInboxIndex change did not produce different hash")
+	}
+	ui.SelectedInboxIndex = 0
+
+	// Test that ComposeRecipient change produces different hash
+	originalHash = ui.GetStateHash()
+	ui.ComposeRecipient = "player123"
+	newHash = ui.GetStateHash()
+	if originalHash == newHash {
+		t.Error("ComposeRecipient change did not produce different hash")
+	}
+	ui.ComposeRecipient = ""
+
+	// Test that ComposeSubject change produces different hash
+	originalHash = ui.GetStateHash()
+	ui.ComposeSubject = "Hello World"
+	newHash = ui.GetStateHash()
+	if originalHash == newHash {
+		t.Error("ComposeSubject change did not produce different hash")
+	}
+	ui.ComposeSubject = ""
+
+	// Test that ComposeBody change produces different hash
+	originalHash = ui.GetStateHash()
+	ui.ComposeBody = "This is a test message"
+	newHash = ui.GetStateHash()
+	if originalHash == newHash {
+		t.Error("ComposeBody change did not produce different hash")
+	}
+	ui.ComposeBody = ""
+
+	// Test that ComposeAttachments change produces different hash
+	originalHash = ui.GetStateHash()
+	ui.ComposeAttachments = []uint64{1, 2, 3}
+	newHash = ui.GetStateHash()
+	if originalHash == newHash {
+		t.Error("ComposeAttachments change did not produce different hash")
+	}
+	ui.ComposeAttachments = nil
+
+	// Test that InboxMessages change produces different hash
+	originalHash = ui.GetStateHash()
+	ui.InboxMessages = []MailEntry{
+		{ID: "msg1", Status: MailStatusDelivered, IsUnread: true, DeliveredAt: 12345},
+	}
+	newHash = ui.GetStateHash()
+	if originalHash == newHash {
+		t.Error("InboxMessages change did not produce different hash")
+	}
+
+	// Test that message status change produces different hash
+	originalHash = ui.GetStateHash()
+	ui.InboxMessages[0].Status = MailStatusFailed
+	newHash = ui.GetStateHash()
+	if originalHash == newHash {
+		t.Error("Message status change did not produce different hash")
+	}
+
+	// Test that IsUnread change produces different hash
+	originalHash = ui.GetStateHash()
+	ui.InboxMessages[0].IsUnread = false
+	newHash = ui.GetStateHash()
+	if originalHash == newHash {
+		t.Error("Message IsUnread change did not produce different hash")
+	}
+}
+
+func TestGetStateHashWithLongContent(t *testing.T) {
+	ui := NewMailboxUI(0, 0, 600, 400, "fantasy")
+
+	// Test with long strings to verify capacity estimation works
+	longRecipient := "player_with_very_long_identifier_name_1234567890"
+	longSubject := "This is a very long subject line that contains a lot of text and should test the capacity estimation properly"
+	longBody := "Lorem ipsum dolor sit amet, consectetur adipiscing elit. " +
+		"Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. " +
+		"Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris."
+
+	ui.ComposeRecipient = longRecipient
+	ui.ComposeSubject = longSubject
+	ui.ComposeBody = longBody
+
+	// Should not panic and should be consistent
+	hash1 := ui.GetStateHash()
+	hash2 := ui.GetStateHash()
+	if hash1 != hash2 {
+		t.Error("Long content produced inconsistent hashes")
+	}
+
+	// Verify the long content is reflected in the hash
+	if len(hash1) < len(longRecipient)+len(longSubject)+len(longBody) {
+		t.Error("Hash appears to not include all content")
+	}
+}
+
+func TestGetStateHashOutboxMessages(t *testing.T) {
+	ui := NewMailboxUI(0, 0, 600, 400, "fantasy")
+
+	// Test that OutboxMessages change produces different hash
+	originalHash := ui.GetStateHash()
+	ui.OutboxMessages = []MailEntry{
+		{ID: "out1", Status: MailStatusInTransit, SentAt: 67890},
+	}
+	newHash := ui.GetStateHash()
+	if originalHash == newHash {
+		t.Error("OutboxMessages change did not produce different hash")
+	}
+
+	// Test that outbox message status change produces different hash
+	originalHash = ui.GetStateHash()
+	ui.OutboxMessages[0].Status = MailStatusDelivered
+	newHash = ui.GetStateHash()
+	if originalHash == newHash {
+		t.Error("Outbox message status change did not produce different hash")
+	}
+}
+
+func BenchmarkGetStateHash(b *testing.B) {
+	ui := NewMailboxUI(0, 0, 600, 400, "fantasy")
+	ui.ComposeRecipient = "player123"
+	ui.ComposeSubject = "Test Subject"
+	ui.ComposeBody = "This is a test message body"
+	ui.ComposeAttachments = []uint64{1, 2, 3}
+
+	now := time.Now().Unix()
+	for i := 0; i < 10; i++ {
+		ui.InboxMessages = append(ui.InboxMessages, MailEntry{
+			ID:          fmt.Sprintf("msg%d", i),
+			Status:      MailStatusDelivered,
+			IsUnread:    i%2 == 0,
+			DeliveredAt: now - int64(i*100),
+		})
+		ui.OutboxMessages = append(ui.OutboxMessages, MailEntry{
+			ID:     fmt.Sprintf("out%d", i),
+			Status: MailStatusInTransit,
+			SentAt: now - int64(i*50),
+		})
+	}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_ = ui.GetStateHash()
+	}
+}

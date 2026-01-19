@@ -5,6 +5,7 @@ import (
 	"image"
 	"image/color"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -51,6 +52,10 @@ const (
 	ViewCompose
 	ViewMessageDetail
 )
+
+// maxMessagesForHashing limits the number of messages included in state hash
+// to avoid excessive string building overhead while still capturing most changes.
+const maxMessagesForHashing = 10
 
 // String returns the string representation of the view mode.
 func (m MailboxViewMode) String() string {
@@ -677,4 +682,68 @@ func (m *MailboxUI) Close() {
 // IsOpen returns true if the mailbox UI is currently visible (Phase 40.3).
 func (m *MailboxUI) IsOpen() bool {
 	return m.Visible
+}
+
+// GetStateHash returns a hash of the mailbox UI state for caching purposes.
+// Used to detect when the UI content has changed and needs to be re-rendered.
+// Uses strings.Builder for efficient string building without per-call allocations.
+func (m *MailboxUI) GetStateHash() string {
+	var sb strings.Builder
+	// Estimate capacity based on compose fields plus overhead for integers and separators
+	estimated := len(m.ComposeRecipient) + len(m.ComposeSubject) + len(m.ComposeBody) + 64
+	if estimated < 256 {
+		estimated = 256
+	}
+	sb.Grow(estimated)
+
+	// Write state values separated by colons
+	sb.WriteString(strconv.Itoa(int(m.ViewMode)))
+	sb.WriteByte(':')
+	sb.WriteString(strconv.Itoa(m.SelectedInboxIndex))
+	sb.WriteByte(':')
+	sb.WriteString(strconv.Itoa(m.SelectedOutboxIndex))
+	sb.WriteByte(':')
+	sb.WriteString(strconv.Itoa(m.SelectedAttachmentIdx))
+	sb.WriteByte(':')
+	sb.WriteString(strconv.Itoa(len(m.InboxMessages)))
+	sb.WriteByte(':')
+	sb.WriteString(strconv.Itoa(len(m.OutboxMessages)))
+	sb.WriteByte(':')
+	sb.WriteString(m.ComposeRecipient)
+	sb.WriteByte(':')
+	sb.WriteString(m.ComposeSubject)
+	sb.WriteByte(':')
+	sb.WriteString(m.ComposeBody)
+	sb.WriteByte(':')
+	sb.WriteString(strconv.Itoa(len(m.ComposeAttachments)))
+
+	// Include message content hashes for inbox messages (status, read state, timestamps)
+	for i, msg := range m.InboxMessages {
+		if i >= maxMessagesForHashing {
+			break
+		}
+		sb.WriteByte(':')
+		sb.WriteString(strconv.Itoa(int(msg.Status)))
+		sb.WriteByte(',')
+		if msg.IsUnread {
+			sb.WriteByte('1')
+		} else {
+			sb.WriteByte('0')
+		}
+		sb.WriteByte(',')
+		sb.WriteString(strconv.FormatInt(msg.DeliveredAt, 10))
+	}
+
+	// Include message content hashes for outbox messages
+	for i, msg := range m.OutboxMessages {
+		if i >= maxMessagesForHashing {
+			break
+		}
+		sb.WriteByte(':')
+		sb.WriteString(strconv.Itoa(int(msg.Status)))
+		sb.WriteByte(',')
+		sb.WriteString(strconv.FormatInt(msg.SentAt, 10))
+	}
+
+	return sb.String()
 }

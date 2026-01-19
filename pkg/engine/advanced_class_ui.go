@@ -25,6 +25,10 @@ type AdvancedClassUI struct {
 	currentPlayerID  string
 	scrollOffset     int
 	confirmRespec    bool
+
+	// PERF: Cached panel images to avoid per-frame allocations (Critical Issue #2)
+	// panelCache stores cached panels by size key (width << 16 | height)
+	panelCache map[uint32]*ebiten.Image
 }
 
 // NewAdvancedClassUI creates a new advanced class UI
@@ -35,6 +39,7 @@ func NewAdvancedClassUI(world *World, system *AdvancedClassSystem, screenWidth, 
 		screenWidth:      screenWidth,
 		screenHeight:     screenHeight,
 		selectedCategory: advanced.CategoryOffensive,
+		panelCache:       make(map[uint32]*ebiten.Image),
 	}
 }
 
@@ -451,9 +456,24 @@ func (ui *AdvancedClassUI) drawHelpText(screen *ebiten.Image) {
 }
 
 // drawPanel draws a colored panel
+// PERF: Uses cached images to avoid per-frame allocations (Critical Issue #2)
 func (ui *AdvancedClassUI) drawPanel(screen *ebiten.Image, x, y, width, height int, col color.Color) {
-	img := ebiten.NewImage(width, height)
+	// Create composite key from width and height (supports sizes up to 65535)
+	key := uint32(width)<<16 | uint32(height)
+
+	// Get or create cached panel
+	img, exists := ui.panelCache[key]
+	if !exists || img.Bounds().Dx() != width || img.Bounds().Dy() != height {
+		if exists && img != nil {
+			img.Dispose()
+		}
+		img = ebiten.NewImage(width, height)
+		ui.panelCache[key] = img
+	}
+
+	// Fill with color (fast operation, no allocation)
 	img.Fill(col)
+
 	op := &ebiten.DrawImageOptions{}
 	op.GeoM.Translate(float64(x), float64(y))
 	screen.DrawImage(img, op)

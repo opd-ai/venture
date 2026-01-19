@@ -160,9 +160,9 @@ func TestSaveManager_ChecksumValidation(t *testing.T) {
 	}
 
 	// Validate checksum (should be valid)
-	valid, err := manager.validateChecksum("checksum_test")
-	if err != nil {
-		t.Fatalf("validateChecksum failed: %v", err)
+	valid, hasChecksum := manager.validateChecksum("checksum_test")
+	if !hasChecksum {
+		t.Fatalf("validateChecksum should report checksum exists")
 	}
 	if !valid {
 		t.Error("Checksum should be valid")
@@ -175,12 +175,51 @@ func TestSaveManager_ChecksumValidation(t *testing.T) {
 	os.WriteFile(savePath, data, 0o644)
 
 	// Validate checksum (should be invalid)
-	valid, err = manager.validateChecksum("checksum_test")
-	if err != nil {
-		t.Fatalf("validateChecksum failed: %v", err)
+	valid, hasChecksum = manager.validateChecksum("checksum_test")
+	if !hasChecksum {
+		t.Fatalf("validateChecksum should report checksum exists")
 	}
 	if valid {
 		t.Error("Checksum should be invalid after corruption")
+	}
+}
+
+// TestSaveManager_LoadWithoutChecksum tests that loading a save without checksum
+// doesn't trigger unnecessary recovery attempts (edge case bug fix).
+func TestSaveManager_LoadWithoutChecksum(t *testing.T) {
+	tmpDir := t.TempDir()
+	manager, err := NewSaveManager(tmpDir)
+	if err != nil {
+		t.Fatalf("NewSaveManager failed: %v", err)
+	}
+
+	// Create save WITHOUT checksum (using SaveGame, not SaveGameWithBackup)
+	save := NewGameSave()
+	save.PlayerState.Level = 42
+
+	err = manager.SaveGame("no_checksum_test", save)
+	if err != nil {
+		t.Fatalf("SaveGame failed: %v", err)
+	}
+
+	// Verify no checksum file exists
+	valid, hasChecksum := manager.validateChecksum("no_checksum_test")
+	if hasChecksum {
+		t.Error("Save created with SaveGame should not have a checksum")
+	}
+	if valid {
+		t.Error("No checksum should mean not valid")
+	}
+
+	// Load with recovery - should succeed without triggering recovery
+	loaded, err := manager.LoadGameWithRecovery("no_checksum_test")
+	if err != nil {
+		t.Fatalf("LoadGameWithRecovery failed for valid save without checksum: %v", err)
+	}
+
+	// Verify correct data loaded
+	if loaded.PlayerState.Level != 42 {
+		t.Errorf("Expected Level 42, got %d", loaded.PlayerState.Level)
 	}
 }
 

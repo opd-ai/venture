@@ -71,31 +71,37 @@ func (m *SaveManager) createBackup(name string) (string, error) {
 }
 
 // validateChecksum validates a save file's checksum.
-// Returns true if checksum file exists and matches, false otherwise.
-func (m *SaveManager) validateChecksum(name string) (bool, error) {
+// Returns (valid, hasChecksum) where:
+//   - valid is true if checksum exists and matches
+//   - hasChecksum is true if a checksum file exists (regardless of match)
+//
+// This allows callers to distinguish between "no checksum" and "checksum mismatch".
+func (m *SaveManager) validateChecksum(name string) (bool, bool) {
 	savePath := m.getFilePath(name)
 	checksumPath := savePath + ".sha256"
 
 	// Check if checksum file exists
 	if _, err := os.Stat(checksumPath); os.IsNotExist(err) {
-		// No checksum file, cannot validate
-		return false, nil
+		// No checksum file - not an error, just no checksum available
+		return false, false
 	}
 
 	// Read stored checksum
 	storedChecksum, err := os.ReadFile(checksumPath)
 	if err != nil {
-		return false, fmt.Errorf("failed to read checksum file: %w", err)
+		m.logWarn("failed to read checksum file", err, logrus.Fields{"name": name})
+		return false, true // Has checksum file but can't read it - treat as mismatch
 	}
 
 	// Compute current checksum
 	currentChecksum, err := checksumFile(savePath)
 	if err != nil {
-		return false, err
+		m.logWarn("failed to compute checksum", err, logrus.Fields{"name": name})
+		return false, true // Has checksum file but can't compute - treat as mismatch
 	}
 
 	// Compare checksums
-	return strings.TrimSpace(string(storedChecksum)) == currentChecksum, nil
+	return strings.TrimSpace(string(storedChecksum)) == currentChecksum, true
 }
 
 // saveChecksum computes and saves checksum for a save file.
@@ -254,11 +260,8 @@ func (m *SaveManager) LoadGameWithRecovery(name string) (*GameSave, error) {
 	}
 
 	// Validate checksum if available
-	valid, err := m.validateChecksum(name)
-	if err != nil {
-		m.logWarn("checksum validation error", err, logrus.Fields{"name": name})
-		// Continue with load attempt despite checksum error
-	} else if !valid {
+	valid, hasChecksum := m.validateChecksum(name)
+	if hasChecksum && !valid {
 		m.logWarn("checksum validation failed, save may be corrupted", nil, logrus.Fields{
 			"name": name,
 		})

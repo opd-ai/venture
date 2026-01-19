@@ -411,3 +411,332 @@ func (m *SaveManager) validateSave(save *GameSave) error {
 
 	return nil
 }
+
+// SaveGameWithBackup saves the game state with automatic backup and checksum.
+// This is the recommended method for production use on WASM.
+// Backups are stored in localStorage with a .bak suffix on the key.
+func (m *SaveManager) SaveGameWithBackup(name string, save *GameSave) error {
+	if save == nil {
+		return fmt.Errorf("save cannot be nil")
+	}
+
+	if err := m.validateSaveName(name); err != nil {
+		js.Global().Get("console").Call("warn", fmt.Sprintf("[Venture] Invalid save name: %s - %v", name, err))
+		return err
+	}
+
+	// Create backup of existing save before overwriting
+	if m.SaveExists(name) {
+		if err := m.createBackup(name); err != nil {
+			js.Global().Get("console").Call("warn", fmt.Sprintf("[Venture] Failed to create backup: %v", err))
+			// Continue with save anyway, backup failure shouldn't block saving
+		}
+	}
+
+	// Perform the save
+	save.Version = SaveVersion
+	save.Timestamp = time.Now()
+
+	data, err := json.Marshal(save)
+	if err != nil {
+		return fmt.Errorf("failed to marshal save: %w", err)
+	}
+
+	if len(data) > maxLocalStorageSize {
+		return fmt.Errorf("save data too large: %d bytes exceeds localStorage limit of %d bytes", len(data), maxLocalStorageSize)
+	}
+
+	if m.useInMemory {
+		m.memoryStore[name] = save
+		m.memoryStore[name+".sha256"] = &GameSave{Version: m.computeChecksum(data)}
+		js.Global().Get("console").Call("log", fmt.Sprintf("[Venture] Saved with backup to memory: %s (%d bytes)", name, len(data)))
+		return nil
+	}
+
+	// Save to localStorage
+	key := localStoragePrefix + name
+	defer func() {
+		if r := recover(); r != nil {
+			js.Global().Get("console").Call("error", fmt.Sprintf("[Venture] localStorage.setItem failed: %v", r))
+			m.useInMemory = true
+			m.memoryStore[name] = save
+		}
+	}()
+
+	m.localStorage.Call("setItem", key, string(data))
+
+	// Save checksum
+	checksum := m.computeChecksum(data)
+	m.localStorage.Call("setItem", key+".sha256", checksum)
+
+	// Update metadata
+	m.updateMetadata(name, save)
+
+	js.Global().Get("console").Call("log", fmt.Sprintf("[Venture] Saved with backup to localStorage: %s (%d bytes)", name, len(data)))
+	return nil
+}
+
+// LoadGameWithRecovery loads the game state with corruption detection and recovery.
+// This is the recommended method for production use on WASM.
+func (m *SaveManager) LoadGameWithRecovery(name string) (*GameSave, error) {
+	if err := m.validateSaveName(name); err != nil {
+		js.Global().Get("console").Call("warn", fmt.Sprintf("[Venture] Invalid save name: %s - %v", name, err))
+		return nil, err
+	}
+
+	if !m.SaveExists(name) {
+		return nil, fmt.Errorf("save file not found: %s", name)
+	}
+
+	// Validate checksum if available
+	valid, hasChecksum := m.validateChecksum(name)
+	if hasChecksum && !valid {
+		js.Global().Get("console").Call("warn", fmt.Sprintf("[Venture] Checksum validation failed for %s, attempting recovery", name))
+		recovered, err := m.recoverFromBackup(name)
+		if err != nil {
+			return nil, fmt.Errorf("failed to recover from backup: %w", err)
+		}
+		if !recovered {
+			js.Global().Get("console").Call("warn", "[Venture] Recovery failed, attempting to load corrupted file")
+		}
+	}
+
+	// Attempt to load save
+	save, err := m.LoadGame(name)
+	if err != nil {
+		// Load failed, try recovery
+		js.Global().Get("console").Call("error", fmt.Sprintf("[Venture] Failed to load save, attempting recovery: %v", err))
+
+		recovered, recErr := m.recoverFromBackup(name)
+		if recErr != nil {
+			return nil, fmt.Errorf("failed to recover from backup: %w", recErr)
+		}
+		if !recovered {
+			return nil, fmt.Errorf("save corrupted and no valid backup available: %w", err)
+		}
+
+		// Retry load after recovery
+		save, err = m.LoadGame(name)
+		if err != nil {
+			return nil, fmt.Errorf("failed to load after recovery: %w", err)
+		}
+
+		js.Global().Get("console").Call("log", fmt.Sprintf("[Venture] Successfully recovered save: %s", name))
+	}
+
+	return save, nil
+}
+
+// BackupExists checks if a backup exists for a save.
+func (m *SaveManager) BackupExists(name string) bool {
+	if err := m.validateSaveName(name); err != nil {
+		return false
+	}
+
+	if m.useInMemory {
+		_, ok := m.memoryStore[name+".bak"]
+		return ok
+	}
+
+	key := localStoragePrefix + name + ".bak"
+	dataJS := m.localStorage.Call("getItem", key)
+	return !dataJS.IsNull()
+}
+
+// GetBackupPath returns a string identifier for the backup.
+// On WASM, this returns the localStorage key (not a file path).
+func (m *SaveManager) GetBackupPath(name string) string {
+	return localStoragePrefix + name + ".bak"
+}
+
+// ListBackups returns names of all saves that have backups.
+func (m *SaveManager) ListBackups() ([]string, error) {
+	var backups []string
+
+	if m.useInMemory {
+		for key := range m.memoryStore {
+			if strings.HasSuffix(key, ".bak") {
+				backups = append(backups, strings.TrimSuffix(key, ".bak"))
+			}
+		}
+		return backups, nil
+	}
+
+	length := m.localStorage.Get("length").Int()
+	for i := 0; i < length; i++ {
+		key := m.localStorage.Call("key", i).String()
+		if strings.HasPrefix(key, localStoragePrefix) && strings.HasSuffix(key, ".bak") {
+			// Extract save name from key
+			name := key[len(localStoragePrefix) : len(key)-4] // Remove prefix and .bak suffix
+			backups = append(backups, name)
+		}
+	}
+
+	return backups, nil
+}
+
+// CleanupBackups removes backup and checksum files for a save.
+func (m *SaveManager) CleanupBackups(name string) error {
+	if err := m.validateSaveName(name); err != nil {
+		return err
+	}
+
+	if m.useInMemory {
+		delete(m.memoryStore, name+".bak")
+		delete(m.memoryStore, name+".sha256")
+		js.Global().Get("console").Call("log", fmt.Sprintf("[Venture] Cleaned up backups from memory: %s", name))
+		return nil
+	}
+
+	// Remove backup
+	backupKey := localStoragePrefix + name + ".bak"
+	m.localStorage.Call("removeItem", backupKey)
+
+	// Remove checksum
+	checksumKey := localStoragePrefix + name + ".sha256"
+	m.localStorage.Call("removeItem", checksumKey)
+
+	js.Global().Get("console").Call("log", fmt.Sprintf("[Venture] Cleaned up backups from localStorage: %s", name))
+	return nil
+}
+
+// createBackup creates a backup of an existing save in localStorage.
+func (m *SaveManager) createBackup(name string) error {
+	if m.useInMemory {
+		if save, ok := m.memoryStore[name]; ok {
+			m.memoryStore[name+".bak"] = save
+		}
+		return nil
+	}
+
+	key := localStoragePrefix + name
+	dataJS := m.localStorage.Call("getItem", key)
+	if dataJS.IsNull() {
+		return nil // No save to backup
+	}
+
+	// Copy save data to backup key
+	backupKey := key + ".bak"
+	m.localStorage.Call("setItem", backupKey, dataJS.String())
+
+	js.Global().Get("console").Call("log", fmt.Sprintf("[Venture] Created backup: %s", name))
+	return nil
+}
+
+// validateChecksum validates a save's checksum.
+// Returns (valid, hasChecksum) where hasChecksum indicates if a checksum exists.
+func (m *SaveManager) validateChecksum(name string) (bool, bool) {
+	var storedChecksum, currentData string
+
+	if m.useInMemory {
+		checksumSave, ok := m.memoryStore[name+".sha256"]
+		if !ok {
+			return false, false // No checksum
+		}
+		storedChecksum = checksumSave.Version
+
+		save, ok := m.memoryStore[name]
+		if !ok {
+			return false, true // Has checksum but no save
+		}
+		data, err := json.Marshal(save)
+		if err != nil {
+			return false, true
+		}
+		currentData = string(data)
+	} else {
+		checksumKey := localStoragePrefix + name + ".sha256"
+		checksumJS := m.localStorage.Call("getItem", checksumKey)
+		if checksumJS.IsNull() {
+			return false, false // No checksum
+		}
+		storedChecksum = checksumJS.String()
+
+		key := localStoragePrefix + name
+		dataJS := m.localStorage.Call("getItem", key)
+		if dataJS.IsNull() {
+			return false, true // Has checksum but no save
+		}
+		currentData = dataJS.String()
+	}
+
+	currentChecksum := m.computeChecksum([]byte(currentData))
+	return storedChecksum == currentChecksum, true
+}
+
+// recoverFromBackup attempts to recover a corrupted save from its backup.
+// Returns true if recovery was successful.
+func (m *SaveManager) recoverFromBackup(name string) (bool, error) {
+	if !m.BackupExists(name) {
+		js.Global().Get("console").Call("warn", fmt.Sprintf("[Venture] No backup found for recovery: %s", name))
+		return false, nil
+	}
+
+	js.Global().Get("console").Call("log", fmt.Sprintf("[Venture] Attempting recovery from backup: %s", name))
+
+	if m.useInMemory {
+		backup, ok := m.memoryStore[name+".bak"]
+		if !ok {
+			return false, nil
+		}
+
+		// Validate backup
+		if err := m.validateSave(backup); err != nil {
+			js.Global().Get("console").Call("warn", fmt.Sprintf("[Venture] Backup is also corrupted: %s - %v", name, err))
+			return false, nil
+		}
+
+		// Restore from backup
+		m.memoryStore[name] = backup
+
+		// Update checksum
+		data, _ := json.Marshal(backup)
+		m.memoryStore[name+".sha256"] = &GameSave{Version: m.computeChecksum(data)}
+
+		js.Global().Get("console").Call("log", fmt.Sprintf("[Venture] Successfully recovered from backup: %s", name))
+		return true, nil
+	}
+
+	// Load backup data
+	backupKey := localStoragePrefix + name + ".bak"
+	backupDataJS := m.localStorage.Call("getItem", backupKey)
+	if backupDataJS.IsNull() {
+		return false, nil
+	}
+	backupData := backupDataJS.String()
+
+	// Validate backup by parsing it
+	var backup GameSave
+	if err := json.Unmarshal([]byte(backupData), &backup); err != nil {
+		js.Global().Get("console").Call("warn", fmt.Sprintf("[Venture] Backup is corrupted (parse error): %s - %v", name, err))
+		return false, nil
+	}
+
+	if err := m.validateSave(&backup); err != nil {
+		js.Global().Get("console").Call("warn", fmt.Sprintf("[Venture] Backup is corrupted (validation error): %s - %v", name, err))
+		return false, nil
+	}
+
+	// Restore from backup
+	saveKey := localStoragePrefix + name
+	m.localStorage.Call("setItem", saveKey, backupData)
+
+	// Update checksum
+	checksum := m.computeChecksum([]byte(backupData))
+	m.localStorage.Call("setItem", saveKey+".sha256", checksum)
+
+	js.Global().Get("console").Call("log", fmt.Sprintf("[Venture] Successfully recovered from backup: %s", name))
+	return true, nil
+}
+
+// computeChecksum computes a simple checksum for data.
+// Uses a simple hash since crypto/sha256 may have WASM compatibility issues.
+func (m *SaveManager) computeChecksum(data []byte) string {
+	// Use FNV-1a hash for simplicity and WASM compatibility
+	var hash uint64 = 14695981039346656037 // FNV offset basis
+	for _, b := range data {
+		hash ^= uint64(b)
+		hash *= 1099511628211 // FNV prime
+	}
+	return fmt.Sprintf("%016x", hash)
+}

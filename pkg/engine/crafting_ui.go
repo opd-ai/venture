@@ -9,6 +9,7 @@ import (
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
 	"github.com/hajimehoshi/ebiten/v2/text"
+	"github.com/hajimehoshi/ebiten/v2/vector"
 	"github.com/opd-ai/venture/pkg/mobile"
 	"golang.org/x/image/font/basicfont"
 )
@@ -60,6 +61,12 @@ type CraftingUI struct {
 	touchHandler *mobile.TouchInputHandler
 	closeButton  *mobile.TouchButton
 	craftButton  *mobile.TouchButton
+
+	// PERF: Cached images to avoid per-frame allocations (Critical Issue #2)
+	cachedOverlay    *ebiten.Image // Semi-transparent background overlay
+	cachedWindowBg   *ebiten.Image // Window background
+	lastWindowWidth  int           // Track window size for cache invalidation
+	lastWindowHeight int           // Track window size for cache invalidation
 }
 
 // NewCraftingUI creates a new crafting UI.
@@ -585,11 +592,17 @@ func (ui *CraftingUI) getPlayerCraftingComponents() (*craftingComponents, bool) 
 
 // drawWindowBackground draws the semi-transparent overlay and window background.
 // Returns the window X and Y coordinates.
+// PERF: Uses cached images to avoid per-frame allocations.
 func (ui *CraftingUI) drawWindowBackground(img *ebiten.Image) (int, int) {
-	// Draw semi-transparent overlay
-	overlay := ebiten.NewImage(ui.screenWidth, ui.screenHeight)
-	overlay.Fill(color.RGBA{0, 0, 0, 200})
-	img.DrawImage(overlay, nil)
+	// PERF: Reuse cached overlay image, only fill on creation/resize
+	if ui.cachedOverlay == nil || ui.cachedOverlay.Bounds().Dx() != ui.screenWidth || ui.cachedOverlay.Bounds().Dy() != ui.screenHeight {
+		if ui.cachedOverlay != nil {
+			ui.cachedOverlay.Dispose()
+		}
+		ui.cachedOverlay = ebiten.NewImage(ui.screenWidth, ui.screenHeight)
+		ui.cachedOverlay.Fill(color.RGBA{0, 0, 0, 200})
+	}
+	img.DrawImage(ui.cachedOverlay, nil)
 
 	// Calculate window position
 	windowWidth := 800
@@ -597,12 +610,19 @@ func (ui *CraftingUI) drawWindowBackground(img *ebiten.Image) (int, int) {
 	windowX := (ui.screenWidth - windowWidth) / 2
 	windowY := (ui.screenHeight - windowHeight) / 2
 
-	// Draw window background
-	windowBg := ebiten.NewImage(windowWidth, windowHeight)
-	windowBg.Fill(color.RGBA{30, 30, 40, 255})
+	// PERF: Reuse cached window background image, only fill on creation/resize
+	if ui.cachedWindowBg == nil || ui.lastWindowWidth != windowWidth || ui.lastWindowHeight != windowHeight {
+		if ui.cachedWindowBg != nil {
+			ui.cachedWindowBg.Dispose()
+		}
+		ui.cachedWindowBg = ebiten.NewImage(windowWidth, windowHeight)
+		ui.cachedWindowBg.Fill(color.RGBA{30, 30, 40, 255})
+		ui.lastWindowWidth = windowWidth
+		ui.lastWindowHeight = windowHeight
+	}
 	opts := &ebiten.DrawImageOptions{}
 	opts.GeoM.Translate(float64(windowX), float64(windowY))
-	img.DrawImage(windowBg, opts)
+	img.DrawImage(ui.cachedWindowBg, opts)
 
 	return windowX, windowY
 }
@@ -772,6 +792,7 @@ func (ui *CraftingUI) drawEmptyRecipeListMessage(img *ebiten.Image, windowX, win
 }
 
 // drawRecipeItem draws a single recipe item in the list.
+// PERF: Uses vector.DrawFilledRect for allocation-free rectangle drawing.
 func (ui *CraftingUI) drawRecipeItem(img *ebiten.Image, recipe *Recipe, recipeIndex int, components *craftingComponents, windowX, itemY, windowWidth int) {
 	itemX := windowX + ui.padding
 
@@ -779,11 +800,8 @@ func (ui *CraftingUI) drawRecipeItem(img *ebiten.Image, recipe *Recipe, recipeIn
 	isCraftable := ui.canCraftRecipe(recipe)
 	itemColor := ui.getRecipeItemColor(recipeIndex, isCraftable)
 
-	itemBg := ebiten.NewImage(windowWidth-ui.padding*2, ui.listItemHeight-5)
-	itemBg.Fill(itemColor)
-	itemOpts := &ebiten.DrawImageOptions{}
-	itemOpts.GeoM.Translate(float64(itemX), float64(itemY))
-	img.DrawImage(itemBg, itemOpts)
+	// PERF: Use vector drawing instead of creating new images per item
+	vector.DrawFilledRect(img, float32(itemX), float32(itemY), float32(windowWidth-ui.padding*2), float32(ui.listItemHeight-5), itemColor, true)
 
 	// Draw recipe details
 	ui.drawRecipeItemDetails(img, recipe, components, itemX, itemY)

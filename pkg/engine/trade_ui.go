@@ -7,6 +7,7 @@ import (
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
+	"github.com/hajimehoshi/ebiten/v2/vector"
 	"github.com/opd-ai/venture/pkg/mobile"
 	"github.com/opd-ai/venture/pkg/procgen/item"
 )
@@ -108,6 +109,9 @@ type TradeUI struct {
 	cancelButton       *mobile.TouchButton
 	confirmOfferButton *mobile.TouchButton
 	partnerButtons     []*mobile.TouchButton
+
+	// PERF: Cached images to avoid per-frame allocations (Critical Issue #2)
+	cachedOverlay *ebiten.Image // Semi-transparent background overlay
 }
 
 // NewTradeUI creates a new trade UI.
@@ -274,15 +278,21 @@ func (ui *TradeUI) Update(deltaTime float64) {
 }
 
 // Draw renders the trade UI.
+// PERF: Uses cached overlay image to avoid per-frame allocations.
 func (ui *TradeUI) Draw(screen *ebiten.Image) {
 	if !ui.visible {
 		return
 	}
 
-	// Draw semi-transparent background
-	overlayImg := ebiten.NewImage(ui.screenWidth, ui.screenHeight)
-	overlayImg.Fill(color.RGBA{0, 0, 0, 200})
-	screen.DrawImage(overlayImg, nil)
+	// PERF: Reuse cached overlay image, only fill on creation/resize
+	if ui.cachedOverlay == nil || ui.cachedOverlay.Bounds().Dx() != ui.screenWidth || ui.cachedOverlay.Bounds().Dy() != ui.screenHeight {
+		if ui.cachedOverlay != nil {
+			ui.cachedOverlay.Dispose()
+		}
+		ui.cachedOverlay = ebiten.NewImage(ui.screenWidth, ui.screenHeight)
+		ui.cachedOverlay.Fill(color.RGBA{0, 0, 0, 200})
+	}
+	screen.DrawImage(ui.cachedOverlay, nil)
 
 	// Draw UI based on state
 	switch ui.state {
@@ -328,12 +338,8 @@ func (ui *TradeUI) drawPartnerSelection(screen *ebiten.Image) {
 			bgColor = color.RGBA{100, 100, 150, 255}
 		}
 
-		// Draw partner slot background
-		slotImg := ebiten.NewImage(400, 50)
-		slotImg.Fill(bgColor)
-		op := &ebiten.DrawImageOptions{}
-		op.GeoM.Translate(float64(x), float64(y))
-		screen.DrawImage(slotImg, op)
+		// PERF: Use vector drawing instead of creating new images per partner
+		vector.DrawFilledRect(screen, float32(x), float32(y), 400, 50, bgColor, true)
 
 		// Get partner info
 		partnerName := ui.getEntityName(partner)
@@ -447,25 +453,16 @@ func (ui *TradeUI) drawItemGrid(screen *ebiten.Image, items []*item.Item, startY
 			bgColor = color.RGBA{80, 80, 80, 255}
 		}
 
-		slotImg := ebiten.NewImage(ui.slotSize-4, ui.slotSize-4)
-		slotImg.Fill(bgColor)
-		op := &ebiten.DrawImageOptions{}
-		op.GeoM.Translate(float64(x+2), float64(y+2))
-		screen.DrawImage(slotImg, op)
+		// PERF: Use vector drawing instead of creating new images per slot
+		vector.DrawFilledRect(screen, float32(x+2), float32(y+2), float32(ui.slotSize-4), float32(ui.slotSize-4), bgColor, true)
 
 		// Draw cursor border if focused
 		if isCursor {
 			borderColor := color.RGBA{200, 200, 255, 255}
 			// Top border
-			borderImg := ebiten.NewImage(ui.slotSize-4, 2)
-			borderImg.Fill(borderColor)
-			opBorder := &ebiten.DrawImageOptions{}
-			opBorder.GeoM.Translate(float64(x+2), float64(y+2))
-			screen.DrawImage(borderImg, opBorder)
+			vector.DrawFilledRect(screen, float32(x+2), float32(y+2), float32(ui.slotSize-4), 2, borderColor, true)
 			// Bottom border
-			opBorder2 := &ebiten.DrawImageOptions{}
-			opBorder2.GeoM.Translate(float64(x+2), float64(y+ui.slotSize-6))
-			screen.DrawImage(borderImg, opBorder2)
+			vector.DrawFilledRect(screen, float32(x+2), float32(y+ui.slotSize-6), float32(ui.slotSize-4), 2, borderColor, true)
 		}
 
 		// Draw item info
@@ -478,11 +475,7 @@ func (ui *TradeUI) drawItemGrid(screen *ebiten.Image, items []*item.Item, startY
 
 		// Draw rarity indicator
 		rarityColor := ui.getRarityColor(itm.Rarity)
-		rarityImg := ebiten.NewImage(ui.slotSize-8, 3)
-		rarityImg.Fill(rarityColor)
-		opRarity := &ebiten.DrawImageOptions{}
-		opRarity.GeoM.Translate(float64(x+4), float64(y+ui.slotSize-8))
-		screen.DrawImage(rarityImg, opRarity)
+		vector.DrawFilledRect(screen, float32(x+4), float32(y+ui.slotSize-8), float32(ui.slotSize-8), 3, rarityColor, true)
 	}
 }
 

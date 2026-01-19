@@ -8,6 +8,7 @@ import (
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
+	"github.com/hajimehoshi/ebiten/v2/vector"
 	"github.com/opd-ai/venture/pkg/mobile"
 	"github.com/opd-ai/venture/pkg/procgen/quest"
 	"golang.org/x/image/font/basicfont"
@@ -43,6 +44,15 @@ type EbitenQuestUI struct {
 	closeButton     *mobile.TouchButton
 	activeTabButton *mobile.TouchButton
 	doneTabButton   *mobile.TouchButton
+
+	// PERF: Cached images to avoid per-frame allocations (Critical Issue #2)
+	cachedOverlay       *ebiten.Image // Semi-transparent background overlay
+	cachedWindowBg      *ebiten.Image // Window background
+	cachedBarBg         *ebiten.Image // Progress bar background
+	cachedScrollbarBg   *ebiten.Image // Scrollbar background
+	lastWindowWidth     int           // Track window size for cache invalidation
+	lastWindowHeight    int           // Track window size for cache invalidation
+	lastScrollbarHeight int           // Track scrollbar height for cache invalidation
 }
 
 // NewQuestUI creates a new quest UI.
@@ -372,19 +382,34 @@ func (ui *EbitenQuestUI) getQuestTracker() (*QuestTrackerComponent, bool) {
 
 // drawWindowBackground renders the semi-transparent overlay and window background.
 // Returns the window x and y coordinates.
+// PERF: Uses cached images to avoid per-frame allocations.
 func (ui *EbitenQuestUI) drawWindowBackground(img *ebiten.Image, windowWidth, windowHeight int) (int, int) {
-	overlay := ebiten.NewImage(ui.screenWidth, ui.screenHeight)
-	overlay.Fill(color.RGBA{0, 0, 0, 180})
-	img.DrawImage(overlay, nil)
+	// PERF: Reuse cached overlay image, only fill on creation/resize
+	if ui.cachedOverlay == nil || ui.cachedOverlay.Bounds().Dx() != ui.screenWidth || ui.cachedOverlay.Bounds().Dy() != ui.screenHeight {
+		if ui.cachedOverlay != nil {
+			ui.cachedOverlay.Dispose()
+		}
+		ui.cachedOverlay = ebiten.NewImage(ui.screenWidth, ui.screenHeight)
+		ui.cachedOverlay.Fill(color.RGBA{0, 0, 0, 180})
+	}
+	img.DrawImage(ui.cachedOverlay, nil)
 
 	windowX := (ui.screenWidth - windowWidth) / 2
 	windowY := (ui.screenHeight - windowHeight) / 2
 
-	windowBg := ebiten.NewImage(windowWidth, windowHeight)
-	windowBg.Fill(color.RGBA{40, 40, 50, 255})
+	// PERF: Reuse cached window background image, only fill on creation/resize
+	if ui.cachedWindowBg == nil || ui.lastWindowWidth != windowWidth || ui.lastWindowHeight != windowHeight {
+		if ui.cachedWindowBg != nil {
+			ui.cachedWindowBg.Dispose()
+		}
+		ui.cachedWindowBg = ebiten.NewImage(windowWidth, windowHeight)
+		ui.cachedWindowBg.Fill(color.RGBA{40, 40, 50, 255})
+		ui.lastWindowWidth = windowWidth
+		ui.lastWindowHeight = windowHeight
+	}
 	opts := &ebiten.DrawImageOptions{}
 	opts.GeoM.Translate(float64(windowX), float64(windowY))
-	img.DrawImage(windowBg, opts)
+	img.DrawImage(ui.cachedWindowBg, opts)
 
 	return windowX, windowY
 }
@@ -398,6 +423,7 @@ func (ui *EbitenQuestUI) drawHeader(img *ebiten.Image, windowX, windowY, windowW
 
 // drawTabs renders the Active and Completed tabs.
 // Returns the y coordinate of the bottom of the tabs.
+// PERF: Uses vector.DrawFilledRect for allocation-free rectangle drawing.
 func (ui *EbitenQuestUI) drawTabs(img *ebiten.Image, windowX, windowY int) int {
 	tabY := windowY + 40
 	tabs := []string{"Active", "Completed"}
@@ -408,11 +434,8 @@ func (ui *EbitenQuestUI) drawTabs(img *ebiten.Image, windowX, windowY int) int {
 			tabColor = color.RGBA{80, 80, 100, 255}
 		}
 
-		tabBg := ebiten.NewImage(90, 30)
-		tabBg.Fill(tabColor)
-		tabOpts := &ebiten.DrawImageOptions{}
-		tabOpts.GeoM.Translate(float64(tabX), float64(tabY))
-		img.DrawImage(tabBg, tabOpts)
+		// PERF: Use vector drawing instead of creating new images per tab
+		vector.DrawFilledRect(img, float32(tabX), float32(tabY), 90, 30, tabColor, true)
 
 		ebitenutil.DebugPrintAt(img, tabName, tabX+10, tabY+10)
 	}
@@ -508,6 +531,7 @@ func (ui *EbitenQuestUI) drawObjectiveText(img *ebiten.Image, obj quest.Objectiv
 }
 
 // drawProgressBar renders a progress bar for a quest objective.
+// PERF: Uses vector.DrawFilledRect for allocation-free rectangle drawing.
 func (ui *EbitenQuestUI) drawProgressBar(img *ebiten.Image, obj quest.Objective, windowX, y, contentStartY, contentMaxY int) {
 	barWidth := 200
 	barHeight := 8
@@ -518,22 +542,17 @@ func (ui *EbitenQuestUI) drawProgressBar(img *ebiten.Image, obj quest.Objective,
 		return
 	}
 
-	barBg := ebiten.NewImage(barWidth, barHeight)
-	barBg.Fill(color.RGBA{60, 60, 70, 255})
-	barOpts := &ebiten.DrawImageOptions{}
-	barOpts.GeoM.Translate(float64(barX), float64(barY))
-	img.DrawImage(barBg, barOpts)
+	// PERF: Use vector drawing instead of creating new images
+	vector.DrawFilledRect(img, float32(barX), float32(barY), float32(barWidth), float32(barHeight), color.RGBA{60, 60, 70, 255}, true)
 
 	progressPct := obj.Progress()
 	if progressPct > 0 {
 		progressWidth := int(float64(barWidth) * progressPct)
-		barFill := ebiten.NewImage(progressWidth, barHeight)
 		fillColor := color.RGBA{80, 180, 80, 255}
 		if obj.IsComplete() {
 			fillColor = color.RGBA{100, 220, 100, 255}
 		}
-		barFill.Fill(fillColor)
-		img.DrawImage(barFill, barOpts)
+		vector.DrawFilledRect(img, float32(barX), float32(barY), float32(progressWidth), float32(barHeight), fillColor, true)
 	}
 }
 
@@ -555,6 +574,7 @@ func (ui *EbitenQuestUI) updateMaxScroll(totalContentHeight, contentHeight int) 
 }
 
 // drawScrollbar renders the scrollbar if content exceeds visible area.
+// PERF: Uses vector.DrawFilledRect for allocation-free rectangle drawing.
 func (ui *EbitenQuestUI) drawScrollbar(img *ebiten.Image, windowX, windowWidth, contentStartY, contentHeight, totalContentHeight int) {
 	if ui.maxScroll <= 0 {
 		return
@@ -564,19 +584,12 @@ func (ui *EbitenQuestUI) drawScrollbar(img *ebiten.Image, windowX, windowWidth, 
 	scrollbarY := contentStartY
 	scrollbarHeight := contentHeight
 
-	scrollbarBg := ebiten.NewImage(10, scrollbarHeight)
-	scrollbarBg.Fill(color.RGBA{60, 60, 70, 255})
-	scrollbarOpts := &ebiten.DrawImageOptions{}
-	scrollbarOpts.GeoM.Translate(float64(scrollbarX), float64(scrollbarY))
-	img.DrawImage(scrollbarBg, scrollbarOpts)
+	// PERF: Use vector drawing instead of creating new images
+	vector.DrawFilledRect(img, float32(scrollbarX), float32(scrollbarY), 10, float32(scrollbarHeight), color.RGBA{60, 60, 70, 255}, true)
 
 	handleHeight := max(20, (contentHeight*contentHeight)/totalContentHeight)
 	handleY := scrollbarY + (ui.scrollOffset*scrollbarHeight)/totalContentHeight
-	scrollbarHandle := ebiten.NewImage(10, handleHeight)
-	scrollbarHandle.Fill(color.RGBA{150, 150, 170, 255})
-	handleOpts := &ebiten.DrawImageOptions{}
-	handleOpts.GeoM.Translate(float64(scrollbarX), float64(handleY))
-	img.DrawImage(scrollbarHandle, handleOpts)
+	vector.DrawFilledRect(img, float32(scrollbarX), float32(handleY), 10, float32(handleHeight), color.RGBA{150, 150, 170, 255}, true)
 
 	scrollHint := "↑↓/Wheel: Scroll"
 	ebitenutil.DebugPrintAt(img, scrollHint, windowX+windowWidth-140, contentStartY-20)

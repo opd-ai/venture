@@ -45,6 +45,17 @@ type EbitenInventoryUI struct {
 	touchHandler *mobile.TouchInputHandler
 	closeButton  *mobile.TouchButton
 	scrollOffset float64 // For touch scrolling
+
+	// PERF: Cached images to avoid per-frame allocations (Critical Issue #2)
+	cachedOverlay      *ebiten.Image // Semi-transparent background overlay
+	cachedWindowBg     *ebiten.Image // Window background
+	cachedSlot         *ebiten.Image // Slot background (reusable with color)
+	cachedSlotHovered  *ebiten.Image // Hovered slot background
+	cachedSlotSelected *ebiten.Image // Selected slot background
+	cachedTooltipBg    *ebiten.Image // Tooltip background
+	cachedEquipSlotBg  *ebiten.Image // Equipment slot background
+	lastWindowWidth    int           // Track window size for cache invalidation
+	lastWindowHeight   int           // Track window size for cache invalidation
 }
 
 // NewInventoryUI creates a new inventory UI.
@@ -379,16 +390,31 @@ func (ui *EbitenInventoryUI) validateAndPrepare(screen interface{}) (*ebiten.Ima
 }
 
 // drawOverlayAndBackground renders the semi-transparent overlay and window background.
+// PERF: Uses cached images to avoid per-frame allocations.
 func (ui *EbitenInventoryUI) drawOverlayAndBackground(img *ebiten.Image, windowX, windowY, windowWidth, windowHeight int) {
-	overlay := ebiten.NewImage(ui.screenWidth, ui.screenHeight)
-	overlay.Fill(color.RGBA{0, 0, 0, 180})
-	img.DrawImage(overlay, nil)
+	// PERF: Reuse cached overlay image, only fill on creation/resize
+	if ui.cachedOverlay == nil || ui.cachedOverlay.Bounds().Dx() != ui.screenWidth || ui.cachedOverlay.Bounds().Dy() != ui.screenHeight {
+		if ui.cachedOverlay != nil {
+			ui.cachedOverlay.Dispose()
+		}
+		ui.cachedOverlay = ebiten.NewImage(ui.screenWidth, ui.screenHeight)
+		ui.cachedOverlay.Fill(color.RGBA{0, 0, 0, 180})
+	}
+	img.DrawImage(ui.cachedOverlay, nil)
 
-	windowBg := ebiten.NewImage(windowWidth, windowHeight)
-	windowBg.Fill(color.RGBA{40, 40, 50, 255})
+	// PERF: Reuse cached window background image, only fill on creation/resize
+	if ui.cachedWindowBg == nil || ui.lastWindowWidth != windowWidth || ui.lastWindowHeight != windowHeight {
+		if ui.cachedWindowBg != nil {
+			ui.cachedWindowBg.Dispose()
+		}
+		ui.cachedWindowBg = ebiten.NewImage(windowWidth, windowHeight)
+		ui.cachedWindowBg.Fill(color.RGBA{40, 40, 50, 255})
+		ui.lastWindowWidth = windowWidth
+		ui.lastWindowHeight = windowHeight
+	}
 	opts := &ebiten.DrawImageOptions{}
 	opts.GeoM.Translate(float64(windowX), float64(windowY))
-	img.DrawImage(windowBg, opts)
+	img.DrawImage(ui.cachedWindowBg, opts)
 }
 
 // drawHeader renders the title, exit hint, capacity info, and gold display.
@@ -420,6 +446,7 @@ func (ui *EbitenInventoryUI) drawInventoryGrid(img *ebiten.Image, windowX, windo
 }
 
 // drawInventorySlot renders a single inventory slot with its item and tooltip.
+// PERF: Uses vector.DrawFilledRect for allocation-free rectangle drawing.
 func (ui *EbitenInventoryUI) drawInventorySlot(img *ebiten.Image, slotX, slotY, slotIndex, windowY int, inventory *InventoryComponent) {
 	slotColor := color.RGBA{60, 60, 70, 255}
 	if slotIndex == ui.hoveredSlot {
@@ -429,11 +456,8 @@ func (ui *EbitenInventoryUI) drawInventorySlot(img *ebiten.Image, slotX, slotY, 
 		slotColor = color.RGBA{100, 100, 120, 255}
 	}
 
-	slot := ebiten.NewImage(ui.slotSize-2, ui.slotSize-2)
-	slot.Fill(slotColor)
-	slotOpts := &ebiten.DrawImageOptions{}
-	slotOpts.GeoM.Translate(float64(slotX), float64(slotY))
-	img.DrawImage(slot, slotOpts)
+	// PERF: Use vector drawing instead of creating new images per slot
+	vector.DrawFilledRect(img, float32(slotX), float32(slotY), float32(ui.slotSize-2), float32(ui.slotSize-2), slotColor, true)
 
 	if slotIndex < len(inventory.Items) {
 		item := inventory.Items[slotIndex]
@@ -449,6 +473,7 @@ func (ui *EbitenInventoryUI) drawInventorySlot(img *ebiten.Image, slotX, slotY, 
 }
 
 // drawItemTooltip renders the tooltip for a hovered item.
+// PERF: Uses cached tooltip background image.
 func (ui *EbitenInventoryUI) drawItemTooltip(img *ebiten.Image, slotX, slotY, windowY int, item *item.Item) {
 	tooltipX := slotX
 	tooltipY := slotY - 40
@@ -456,11 +481,14 @@ func (ui *EbitenInventoryUI) drawItemTooltip(img *ebiten.Image, slotX, slotY, wi
 		tooltipY = slotY + ui.slotSize + 5
 	}
 
-	tooltipBg := ebiten.NewImage(200, 35)
-	tooltipBg.Fill(color.RGBA{20, 20, 30, 240})
+	// PERF: Reuse cached tooltip background (fixed size 200x35)
+	if ui.cachedTooltipBg == nil {
+		ui.cachedTooltipBg = ebiten.NewImage(200, 35)
+		ui.cachedTooltipBg.Fill(color.RGBA{20, 20, 30, 240})
+	}
 	tooltipOpts := &ebiten.DrawImageOptions{}
 	tooltipOpts.GeoM.Translate(float64(tooltipX), float64(tooltipY))
-	img.DrawImage(tooltipBg, tooltipOpts)
+	img.DrawImage(ui.cachedTooltipBg, tooltipOpts)
 
 	ebitenutil.DebugPrintAt(img, item.Name, tooltipX+5, tooltipY+5)
 	ebitenutil.DebugPrintAt(img, fmt.Sprintf("Value: %d", item.Stats.Value), tooltipX+5, tooltipY+20)
@@ -490,16 +518,14 @@ func (ui *EbitenInventoryUI) drawEquipmentSlots(img *ebiten.Image, windowX, wind
 }
 
 // drawEquipmentSlot renders a single equipment slot with its equipped item.
+// PERF: Uses vector.DrawFilledRect for allocation-free rectangle drawing.
 func (ui *EbitenInventoryUI) drawEquipmentSlot(img *ebiten.Image, slotX, slotY int, slotInfo struct {
 	name string
 	slot EquipmentSlot
 }, equipComp interface{}, hasEquipment bool,
 ) {
-	slotBg := ebiten.NewImage(90, 40)
-	slotBg.Fill(color.RGBA{60, 60, 70, 255})
-	slotOpts := &ebiten.DrawImageOptions{}
-	slotOpts.GeoM.Translate(float64(slotX), float64(slotY))
-	img.DrawImage(slotBg, slotOpts)
+	// PERF: Use vector drawing instead of creating new images per slot
+	vector.DrawFilledRect(img, float32(slotX), float32(slotY), 90, 40, color.RGBA{60, 60, 70, 255}, true)
 
 	ebitenutil.DebugPrintAt(img, slotInfo.name, slotX+5, slotY+5)
 
@@ -601,26 +627,15 @@ func (ui *EbitenInventoryUI) generateItemPreview(itm interface{}) *ebiten.Image 
 	// Draw icon border/outline
 	vector.StrokeCircle(preview, centerX, centerY, iconSize, 1.5, borderColor, true)
 
-	// Draw border around entire preview
+	// PERF: Draw border around entire preview using vector drawing (allocation-free)
 	// Top border
-	topBorder := ebiten.NewImage(size, 2)
-	topBorder.Fill(borderColor)
-	preview.DrawImage(topBorder, nil)
-
+	vector.DrawFilledRect(preview, 0, 0, float32(size), 2, borderColor, true)
 	// Bottom border
-	bottomOpts := &ebiten.DrawImageOptions{}
-	bottomOpts.GeoM.Translate(0, float64(size-2))
-	preview.DrawImage(topBorder, bottomOpts)
-
+	vector.DrawFilledRect(preview, 0, float32(size-2), float32(size), 2, borderColor, true)
 	// Left border
-	leftBorder := ebiten.NewImage(2, size)
-	leftBorder.Fill(borderColor)
-	preview.DrawImage(leftBorder, nil)
-
+	vector.DrawFilledRect(preview, 0, 0, 2, float32(size), borderColor, true)
 	// Right border
-	rightOpts := &ebiten.DrawImageOptions{}
-	rightOpts.GeoM.Translate(float64(size-2), 0)
-	preview.DrawImage(leftBorder, rightOpts)
+	vector.DrawFilledRect(preview, float32(size-2), 0, 2, float32(size), borderColor, true)
 
 	return preview
 }

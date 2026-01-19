@@ -234,7 +234,10 @@ The Venture codebase demonstrates **exceptional performance engineering** with c
 ### Immediate (This Week)
 1. ✅ **Fix `game.go:1112`** - Cache litBuffer in EbitenGame struct (COMPLETED 2026-01-19)
 2. ✅ **Fix `game.go:1249-1251`** - Cache mailbox ebiten.Image conversion (COMPLETED 2026-01-19)
-3. **Add image caching to ShopUI** (`shop_ui.go`) - Most commonly used shop interface
+3. ✅ **Add image caching to ShopUI** (`shop_ui.go`) - Most commonly used shop interface (COMPLETED 2026-01-19)
+   - Added `cachedOverlay`, `cachedWindowBg`, `cachedSlot`, `cachedTooltipBg` fields
+   - Updated `drawWindowBackground`, `drawItemSlot`, `drawTooltip` methods to reuse cached images
+   - Added size invalidation logic for dynamic dimensions
 
 ### Short-term (This Month)
 1. Apply UI image caching pattern to remaining UIs:

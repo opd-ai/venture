@@ -7,6 +7,7 @@ import (
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
+	"github.com/hajimehoshi/ebiten/v2/vector"
 	"github.com/opd-ai/venture/pkg/mobile"
 	"github.com/opd-ai/venture/pkg/procgen/item"
 )
@@ -74,6 +75,13 @@ type ShopUI struct {
 	sellTabButton *mobile.TouchButton
 	buyButton     *mobile.TouchButton
 	sellButton    *mobile.TouchButton
+
+	// PERF: Cached images to avoid per-frame allocations (Critical Issue #2)
+	cachedOverlay    *ebiten.Image // Semi-transparent background overlay
+	cachedWindowBg   *ebiten.Image // Window background
+	cachedTooltipBg  *ebiten.Image // Tooltip background
+	lastWindowWidth  int           // Track window size for cache invalidation
+	lastWindowHeight int           // Track window size for cache invalidation
 }
 
 // NewShopUI creates a new shop UI.
@@ -176,7 +184,7 @@ func (ui *ShopUI) Open(merchantEntity *Entity) {
 	ui.transactionMessageTime = 0
 }
 
-// Close hides the shop UI and cleans up state.
+// Close hides the shop UI and releases any cached GPU resources.
 func (ui *ShopUI) Close() {
 	ui.visible = false
 	ui.merchantEntity = nil
@@ -184,6 +192,27 @@ func (ui *ShopUI) Close() {
 	ui.hoveredSlot = -1
 	ui.lastTransactionMessage = ""
 	ui.transactionMessageTime = 0
+	// PERF: Free GPU resources when UI is closed
+	ui.clearImageCache()
+}
+
+// clearImageCache disposes all cached images and resets cache-related state.
+func (ui *ShopUI) clearImageCache() {
+	if ui.cachedOverlay != nil {
+		ui.cachedOverlay.Dispose()
+		ui.cachedOverlay = nil
+	}
+	if ui.cachedWindowBg != nil {
+		ui.cachedWindowBg.Dispose()
+		ui.cachedWindowBg = nil
+	}
+	if ui.cachedTooltipBg != nil {
+		ui.cachedTooltipBg.Dispose()
+		ui.cachedTooltipBg = nil
+	}
+	// Reset last known window dimensions so cache can be safely recreated
+	ui.lastWindowWidth = 0
+	ui.lastWindowHeight = 0
 }
 
 // IsVisible returns whether the shop is currently shown.
@@ -532,21 +561,36 @@ func (ui *ShopUI) getComponents() (*InventoryComponent, *MerchantComponent, bool
 
 // drawWindowBackground renders the semi-transparent overlay and window background.
 // Returns the window position (x, y) and width for use in subsequent rendering.
+// PERF: Uses cached images to avoid per-frame allocations.
 func (ui *ShopUI) drawWindowBackground(img *ebiten.Image) (int, int, int) {
-	overlay := ebiten.NewImage(ui.screenWidth, ui.screenHeight)
-	overlay.Fill(color.RGBA{0, 0, 0, 200})
-	img.DrawImage(overlay, nil)
+	// PERF: Reuse cached overlay image, only fill on creation/resize
+	if ui.cachedOverlay == nil || ui.cachedOverlay.Bounds().Dx() != ui.screenWidth || ui.cachedOverlay.Bounds().Dy() != ui.screenHeight {
+		if ui.cachedOverlay != nil {
+			ui.cachedOverlay.Dispose()
+		}
+		ui.cachedOverlay = ebiten.NewImage(ui.screenWidth, ui.screenHeight)
+		ui.cachedOverlay.Fill(color.RGBA{0, 0, 0, 200})
+	}
+	img.DrawImage(ui.cachedOverlay, nil)
 
 	windowWidth := ui.gridCols*ui.slotSize + ui.padding*2
 	windowHeight := ui.gridRows*ui.slotSize + ui.padding*2 + 150
 	windowX := (ui.screenWidth - windowWidth) / 2
 	windowY := (ui.screenHeight - windowHeight) / 2
 
-	windowBg := ebiten.NewImage(windowWidth, windowHeight)
-	windowBg.Fill(color.RGBA{30, 30, 40, 255})
+	// PERF: Reuse cached window background image, only fill on creation/resize
+	if ui.cachedWindowBg == nil || ui.lastWindowWidth != windowWidth || ui.lastWindowHeight != windowHeight {
+		if ui.cachedWindowBg != nil {
+			ui.cachedWindowBg.Dispose()
+		}
+		ui.cachedWindowBg = ebiten.NewImage(windowWidth, windowHeight)
+		ui.cachedWindowBg.Fill(color.RGBA{30, 30, 40, 255})
+		ui.lastWindowWidth = windowWidth
+		ui.lastWindowHeight = windowHeight
+	}
 	opts := &ebiten.DrawImageOptions{}
 	opts.GeoM.Translate(float64(windowX), float64(windowY))
-	img.DrawImage(windowBg, opts)
+	img.DrawImage(ui.cachedWindowBg, opts)
 
 	return windowX, windowY, windowWidth
 }
@@ -610,14 +654,13 @@ func (ui *ShopUI) drawItemGrid(img *ebiten.Image, currentInventory []*item.Item,
 
 // drawItemSlot renders a single inventory slot including background, item, price, and tooltip.
 // Applies color-coding based on affordability and hover/selection states.
+// PERF: Uses vector.DrawFilledRect which is allocation-free (slot colors vary per-frame).
 func (ui *ShopUI) drawItemSlot(img *ebiten.Image, slotIndex, slotX, slotY int, currentInventory []*item.Item, merchant *MerchantComponent, playerInv *InventoryComponent, windowY int) {
 	slotColor := ui.calculateSlotColor(slotIndex, currentInventory, merchant, playerInv)
 
-	slot := ebiten.NewImage(ui.slotSize-4, ui.slotSize-4)
-	slot.Fill(slotColor)
-	slotOpts := &ebiten.DrawImageOptions{}
-	slotOpts.GeoM.Translate(float64(slotX), float64(slotY))
-	img.DrawImage(slot, slotOpts)
+	// PERF: Use allocation-free vector drawing for slot backgrounds
+	slotImgSize := ui.slotSize - 4
+	vector.DrawFilledRect(img, float32(slotX), float32(slotY), float32(slotImgSize), float32(slotImgSize), slotColor, false)
 
 	if slotIndex < len(currentInventory) {
 		itm := currentInventory[slotIndex]
@@ -708,6 +751,7 @@ func (ui *ShopUI) drawItemContent(img *ebiten.Image, itm *item.Item, merchant *M
 
 // drawTooltip renders a detailed tooltip showing item name, value, and purchase/sell price.
 // Displays affordability indicators in buy mode and adjusts position to stay within window bounds.
+// PERF: Uses cached tooltip background to avoid per-frame allocations.
 func (ui *ShopUI) drawTooltip(img *ebiten.Image, itm *item.Item, price int, playerInv *InventoryComponent, slotX, slotY, windowY int) {
 	tooltipX := slotX
 	tooltipY := slotY - 60
@@ -715,11 +759,15 @@ func (ui *ShopUI) drawTooltip(img *ebiten.Image, itm *item.Item, price int, play
 		tooltipY = slotY + ui.slotSize + 5
 	}
 
-	tooltipBg := ebiten.NewImage(220, 50)
-	tooltipBg.Fill(color.RGBA{20, 20, 30, 250})
+	// PERF: Reuse cached tooltip background image, only fill on creation
+	tooltipWidth, tooltipHeight := 220, 50
+	if ui.cachedTooltipBg == nil {
+		ui.cachedTooltipBg = ebiten.NewImage(tooltipWidth, tooltipHeight)
+		ui.cachedTooltipBg.Fill(color.RGBA{20, 20, 30, 250})
+	}
 	tooltipOpts := &ebiten.DrawImageOptions{}
 	tooltipOpts.GeoM.Translate(float64(tooltipX), float64(tooltipY))
-	img.DrawImage(tooltipBg, tooltipOpts)
+	img.DrawImage(ui.cachedTooltipBg, tooltipOpts)
 
 	ebitenutil.DebugPrintAt(img, itm.Name, tooltipX+5, tooltipY+5)
 	ebitenutil.DebugPrintAt(img, fmt.Sprintf("Value: %d", itm.Stats.Value), tooltipX+5, tooltipY+20)

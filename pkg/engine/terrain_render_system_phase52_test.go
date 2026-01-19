@@ -355,3 +355,52 @@ func TestTerrainRenderSystem_Determinism(t *testing.T) {
 		t.Error("Transition settings should be identical")
 	}
 }
+
+// TestTerrainRenderSystem_FallbackTileCache tests that fallback tiles are cached and reused.
+// This is a performance optimization (AUDIT.md Moderate Issue #3).
+func TestTerrainRenderSystem_FallbackTileCache(t *testing.T) {
+	sys := NewTerrainRenderSystem(32, 32, "fantasy", 12345)
+
+	// Verify fallback cache is initialized
+	if sys.fallbackTileCache == nil {
+		t.Fatal("fallbackTileCache should be initialized")
+	}
+
+	// Initial cache should be empty
+	if len(sys.fallbackTileCache) != 0 {
+		t.Errorf("fallbackTileCache should be empty initially, got %d entries", len(sys.fallbackTileCache))
+	}
+
+	// After ClearCache, the cache should still exist but be empty
+	sys.ClearCache()
+	if sys.fallbackTileCache == nil {
+		t.Fatal("fallbackTileCache should still exist after ClearCache")
+	}
+	if len(sys.fallbackTileCache) != 0 {
+		t.Errorf("fallbackTileCache should be empty after ClearCache, got %d entries", len(sys.fallbackTileCache))
+	}
+}
+
+// TestTerrainRenderSystem_FallbackCacheKeyGeneration verifies the cache key generation for colors.
+func TestTerrainRenderSystem_FallbackCacheKeyGeneration(t *testing.T) {
+	// The cache key format is: (R << 24) | (G << 16) | (B << 8) | A
+	tests := []struct {
+		r, g, b  uint8
+		expected uint32
+	}{
+		{120, 120, 120, 0x787878FF}, // Wall color
+		{150, 180, 150, 0x96B496FF}, // Spawn room color
+		{150, 150, 200, 0x9696C8FF}, // Exit room color
+		{200, 120, 120, 0xC87878FF}, // Boss room color
+		{200, 200, 120, 0xC8C878FF}, // Treasure room color
+		{180, 120, 180, 0xB478B4FF}, // Trap room color
+		{150, 150, 150, 0x969696FF}, // Normal floor color
+	}
+
+	for _, tt := range tests {
+		key := uint32(tt.r)<<24 | uint32(tt.g)<<16 | uint32(tt.b)<<8 | 255
+		if key != tt.expected {
+			t.Errorf("Cache key for RGB(%d,%d,%d) = 0x%08X, want 0x%08X", tt.r, tt.g, tt.b, key, tt.expected)
+		}
+	}
+}

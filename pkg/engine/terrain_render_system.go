@@ -28,6 +28,7 @@ type TerrainRenderSystem struct {
 	enableEnhancedWalls bool                     // Enable anti-aliased walls
 	cameraX             float64                  // Camera X for parallax
 	cameraY             float64                  // Camera Y for parallax
+	fallbackTileCache   map[uint32]*ebiten.Image // PERF: Cache fallback tiles by RGBA color (Issue #3)
 }
 
 // NewTerrainRenderSystem creates a new terrain rendering system.
@@ -42,6 +43,7 @@ func NewTerrainRenderSystem(tileWidth, tileHeight int, genreID string, seed int6
 		enableTransitions:   true,  // Enable by default for smooth terrain
 		enableParallax:      false, // Disable by default (performance)
 		enableEnhancedWalls: true,  // Enable by default for better visuals
+		fallbackTileCache:   make(map[uint32]*ebiten.Image),
 	}
 }
 
@@ -265,6 +267,7 @@ func (t *TerrainRenderSystem) getTileImage(tileType tiles.TileType, tileX, tileY
 }
 
 // drawFallbackTile draws a colored rectangle when tile generation fails.
+// PERF: Uses cached fallback images to avoid per-draw allocations (Moderate Issue #3).
 func (t *TerrainRenderSystem) drawFallbackTile(screen *ebiten.Image, camera *CameraSystem, tileX, tileY int, tileType terrain.TileType) {
 	// Calculate world position
 	worldX := float64(tileX * t.tileWidth)
@@ -272,9 +275,6 @@ func (t *TerrainRenderSystem) drawFallbackTile(screen *ebiten.Image, camera *Cam
 
 	// Convert to screen coordinates
 	screenX, screenY := camera.WorldToScreen(worldX, worldY)
-
-	// Create a small fallback image
-	fallbackImg := ebiten.NewImage(t.tileWidth, t.tileHeight)
 
 	// Color based on tile type and room type - make colors brighter for visibility
 	var r, g, b uint8
@@ -298,7 +298,16 @@ func (t *TerrainRenderSystem) drawFallbackTile(screen *ebiten.Image, camera *Cam
 			r, g, b = 150, 150, 150 // Brighter gray for normal floors
 		}
 	}
-	fallbackImg.Fill(color.RGBA{R: uint8(r), G: uint8(g), B: uint8(b), A: 255})
+
+	// PERF: Use composite key (RGBA as uint32) to cache fallback tiles
+	cacheKey := uint32(r)<<24 | uint32(g)<<16 | uint32(b)<<8 | 255
+	fallbackImg, ok := t.fallbackTileCache[cacheKey]
+	if !ok {
+		// Create and cache the fallback image
+		fallbackImg = ebiten.NewImage(t.tileWidth, t.tileHeight)
+		fallbackImg.Fill(color.RGBA{R: r, G: g, B: b, A: 255})
+		t.fallbackTileCache[cacheKey] = fallbackImg
+	}
 
 	opts := &ebiten.DrawImageOptions{}
 	opts.GeoM.Translate(screenX, screenY)
@@ -363,6 +372,8 @@ func (t *TerrainRenderSystem) GetCacheStats() (hits, misses uint64, hitRate floa
 func (t *TerrainRenderSystem) ClearCache() {
 	t.tileCache.Clear()
 	t.tileImages = make(map[string]*ebiten.Image)
+	// PERF: Also clear fallback tile cache when main cache is cleared
+	t.fallbackTileCache = make(map[uint32]*ebiten.Image)
 }
 
 // getWallNeighbors returns which neighboring tiles are walls for enhanced wall rendering.

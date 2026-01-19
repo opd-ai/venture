@@ -6,8 +6,6 @@ Package `saveload` provides persistent game state management through file-based 
 
 The save/load system allows players to save their progress and resume gameplay later. It uses JSON format for human-readable save files.
 
-**NOTE**: Pre-version 1.0, this system supports ONLY the latest save format. No backward compatibility or migration is provided.
-
 ## Features
 
 - **Player State Persistence**: Position, health, stats, level, experience, inventory, and equipment
@@ -15,7 +13,7 @@ The save/load system allows players to save their progress and resume gameplay l
 - **Game Settings**: Screen resolution, fullscreen mode, vsync, audio volumes, key bindings
 - **Save File Management**: Create, read, update, delete save files
 - **Metadata Support**: Browse saves without loading full state (quick save list)
-- **Version Tracking**: Save format versioning with automatic migration
+- **Version Tracking**: Save format versioning with migration support for versions 0.9.0-1.0.0
 - **Security**: Save name validation prevents path traversal attacks
 - **Error Handling**: Comprehensive validation and error messages
 - **Corruption Recovery**: Automatic backup creation and checksum validation (NEW)
@@ -261,9 +259,32 @@ Save files use JSON format with `.sav` extension:
     "defense": 30.0,
     "magic_power": 40.0,
     "speed": 100.0,
-    "inventory_items": [1001, 1002, 1003],
-    "equipped_weapon": 2001,
-    "equipped_armor": 2002
+    "items": [
+      {
+        "id": "sword_001",
+        "name": "Iron Sword",
+        "type": "weapon",
+        "rarity": "common",
+        "seed": 12345,
+        "damage": 10,
+        "value": 50,
+        "weight": 2.5
+      }
+    ],
+    "equipped_items": {
+      "weapon": {
+        "id": "sword_001",
+        "name": "Iron Sword",
+        "type": "weapon",
+        "rarity": "common",
+        "seed": 12345,
+        "damage": 10,
+        "value": 50,
+        "weight": 2.5
+      },
+      "armor": null,
+      "accessory": null
+    }
   },
   "world": {
     "seed": 67890,
@@ -348,13 +369,14 @@ Save files are created with permissions `0644` (readable by all, writable by own
 
 ## Version Tracking
 
-The save format uses semantic versioning (currently `1.0.0`). 
+The save format uses semantic versioning (currently `1.0.0`). The migration system in `migrator.go` supports automatic migration from versions 0.9.0, 0.9.1, 0.9.2, and 0.9.3 to the current version.
 
-**OBSOLETE CODE REMOVED**: Version migration system
-**Replaced by**: Single version support (pre-1.0 policy)
-**Removed**: Migration functions, compatibility tests, legacy format handling
+When loading a save file:
+1. The version is checked against the current `SaveVersion`
+2. If older, the `DefaultMigrator` applies necessary transformations
+3. Save files are upgraded in-place after successful migration
 
-Pre-version 1.0, only the latest save format is supported. Save files from older versions will NOT load.
+Custom migrators can be provided via `NewSaveManagerWithMigrator()` for specialized migration needs.
 
 ## Performance
 
@@ -430,7 +452,7 @@ go test -tags test ./pkg/saveload -v
 go test -tags test ./pkg/saveload -cover
 ```
 
-**Test Coverage**: 73.8% of statements
+**Test Coverage**: 84.4% of statements
 
 ## Future Enhancements
 

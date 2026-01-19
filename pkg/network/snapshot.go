@@ -107,6 +107,12 @@ func (sm *SnapshotManager) GetSnapshotAtSequence(seq uint32) *WorldSnapshot {
 	sm.mu.RLock()
 	defer sm.mu.RUnlock()
 
+	return sm.getSnapshotAtSequenceUnlocked(seq)
+}
+
+// getSnapshotAtSequenceUnlocked retrieves a snapshot by sequence number without locking.
+// Caller must hold at least a read lock on sm.mu.
+func (sm *SnapshotManager) getSnapshotAtSequenceUnlocked(seq uint32) *WorldSnapshot {
 	if sm.currentIndex < 0 {
 		return nil
 	}
@@ -304,8 +310,9 @@ func (sm *SnapshotManager) CreateDelta(fromSeq, toSeq uint32) *SnapshotDelta {
 	sm.mu.RLock()
 	defer sm.mu.RUnlock()
 
-	from := sm.GetSnapshotAtSequence(fromSeq)
-	to := sm.GetSnapshotAtSequence(toSeq)
+	// Use unlocked version to avoid recursive RLock which can block under writer contention
+	from := sm.getSnapshotAtSequenceUnlocked(fromSeq)
+	to := sm.getSnapshotAtSequenceUnlocked(toSeq)
 
 	if from == nil || to == nil {
 		return nil

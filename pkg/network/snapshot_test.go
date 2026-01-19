@@ -840,3 +840,64 @@ func BenchmarkSnapshotManager_DeltaWithHighEpsilon(b *testing.B) {
 		sm.CreateDelta(1, 2)
 	}
 }
+
+// TestSnapshotManager_CreateDeltaConcurrentContention tests that CreateDelta
+// does not block under writer contention (regression test for recursive RLock issue).
+func TestSnapshotManager_CreateDeltaConcurrentContention(t *testing.T) {
+	sm := NewSnapshotManager(100)
+
+	// Add initial snapshots
+	sm.AddSnapshot(WorldSnapshot{
+		Timestamp: time.Now(),
+		Sequence:  1,
+		Entities: map[uint64]EntitySnapshot{
+			1: {EntityID: 1, Position: Position{X: 0, Y: 0}},
+		},
+	})
+	sm.AddSnapshot(WorldSnapshot{
+		Timestamp: time.Now(),
+		Sequence:  2,
+		Entities: map[uint64]EntitySnapshot{
+			1: {EntityID: 1, Position: Position{X: 10, Y: 10}},
+		},
+	})
+
+	const iterations = 1000
+	done := make(chan struct{})
+
+	// Writer goroutines adding snapshots rapidly
+	go func() {
+		defer func() { done <- struct{}{} }()
+		for i := uint32(3); i < iterations; i++ {
+			sm.AddSnapshot(WorldSnapshot{
+				Timestamp: time.Now(),
+				Sequence:  i,
+				Entities: map[uint64]EntitySnapshot{
+					1: {EntityID: 1, Position: Position{X: float64(i), Y: float64(i)}},
+				},
+			})
+			time.Sleep(time.Microsecond) // Give readers a chance
+		}
+	}()
+
+	// Reader goroutines calling CreateDelta
+	for j := 0; j < 3; j++ {
+		go func() {
+			defer func() { done <- struct{}{} }()
+			for i := 0; i < iterations/2; i++ {
+				sm.CreateDelta(1, 2) // Should not block/deadlock
+			}
+		}()
+	}
+
+	// Wait for all goroutines with timeout
+	timeout := time.After(5 * time.Second)
+	for i := 0; i < 4; i++ {
+		select {
+		case <-done:
+			// OK
+		case <-timeout:
+			t.Fatal("Test timed out - possible deadlock in CreateDelta")
+		}
+	}
+}

@@ -5,6 +5,7 @@ import (
 	"image"
 	"image/color"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -677,4 +678,33 @@ func (m *MailboxUI) Close() {
 // IsOpen returns true if the mailbox UI is currently visible (Phase 40.3).
 func (m *MailboxUI) IsOpen() bool {
 	return m.Visible
+}
+
+// GetStateHash returns a hash of the mailbox UI state for caching purposes.
+// Used to detect when the UI content has changed and needs to be re-rendered.
+// Uses strings.Builder for efficient string building without per-call allocations.
+func (m *MailboxUI) GetStateHash() string {
+	var sb strings.Builder
+	sb.Grow(64) // Pre-allocate reasonable capacity
+
+	// Write state values separated by colons
+	sb.WriteString(strconv.Itoa(int(m.ViewMode)))
+	sb.WriteByte(':')
+	sb.WriteString(strconv.Itoa(m.SelectedInboxIndex))
+	sb.WriteByte(':')
+	sb.WriteString(strconv.Itoa(m.SelectedOutboxIndex))
+	sb.WriteByte(':')
+	sb.WriteString(strconv.Itoa(m.SelectedAttachmentIdx))
+	sb.WriteByte(':')
+	sb.WriteString(strconv.Itoa(len(m.InboxMessages)))
+	sb.WriteByte(':')
+	sb.WriteString(strconv.Itoa(len(m.OutboxMessages)))
+	sb.WriteByte(':')
+	sb.WriteString(m.ComposeRecipient)
+	sb.WriteByte(':')
+	sb.WriteString(m.ComposeSubject)
+	sb.WriteByte(':')
+	sb.WriteString(m.ComposeBody)
+
+	return sb.String()
 }

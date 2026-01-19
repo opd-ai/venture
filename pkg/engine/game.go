@@ -46,6 +46,7 @@ type EbitenGame struct {
 	LightingSystem      *LightingSystem       // Dynamic lighting system (Phase 5.1)
 	PostProcessor       *PostProcessorAdapter // Post-processing effects (Phase 5.3)
 	sceneBuffer         *ebiten.Image         // Reusable buffer for lighting/post-processing
+	litBuffer           *ebiten.Image         // Cached buffer for lighting effects (Performance Audit fix)
 	HUDSystem           *EbitenHUDSystem
 	TutorialSystem      *EbitenTutorialSystem
 	HelpSystem          *EbitenHelpSystem
@@ -61,6 +62,10 @@ type EbitenGame struct {
 	CraftingUI  *CraftingUI // Crafting and recipe UI
 	MailboxUI   *MailboxUI  // Mail system UI (Phase 40.3)
 	TradeUI     *TradeUI    // Player-to-player trading UI (Phase 3.3)
+
+	// Cached mailbox UI image (Performance Audit fix: avoid per-frame image conversion)
+	cachedMailboxImage     *ebiten.Image
+	lastMailboxRenderState string // Hash of mailbox state to detect changes
 
 	// INTEGRATION FIX [Category B]: V8.0 UI systems
 	// Gap: V8 systems (housing, gallery) fully implemented but no UI fields
@@ -1108,14 +1113,17 @@ func (g *EbitenGame) drawLitScene(screen *ebiten.Image) {
 
 	entities := g.World.GetEntities()
 
-	// Apply lighting to intermediate buffer
-	litBuffer := ebiten.NewImage(g.ScreenWidth, g.ScreenHeight)
-	g.LightingSystem.ApplyLighting(litBuffer, g.sceneBuffer, entities)
+	// Apply lighting to cached buffer (Performance Audit fix: reuse litBuffer)
+	if g.litBuffer == nil || g.litBuffer.Bounds().Dx() != g.ScreenWidth || g.litBuffer.Bounds().Dy() != g.ScreenHeight {
+		g.litBuffer = ebiten.NewImage(g.ScreenWidth, g.ScreenHeight)
+	}
+	g.litBuffer.Clear()
+	g.LightingSystem.ApplyLighting(g.litBuffer, g.sceneBuffer, entities)
 
 	// Apply post-processing if enabled (Phase 5.3)
-	finalImage := litBuffer
+	finalImage := g.litBuffer
 	if g.PostProcessor != nil && g.PostProcessor.IsEnabled() {
-		finalImage = g.PostProcessor.Apply(litBuffer)
+		finalImage = g.PostProcessor.Apply(g.litBuffer)
 	}
 
 	// Draw final image to screen
@@ -1245,9 +1253,22 @@ func (g *EbitenGame) drawMailboxUI(screen *ebiten.Image) {
 		}
 	}
 
-	mailImg := g.MailboxUI.Render()
-	if mailImg != nil {
-		screen.DrawImage(ebiten.NewImageFromImage(mailImg), nil)
+	// Performance Audit fix: cache the ebiten.Image conversion
+	currentState := g.MailboxUI.GetStateHash()
+	if g.cachedMailboxImage == nil || g.lastMailboxRenderState != currentState {
+		mailImg := g.MailboxUI.Render()
+		if mailImg != nil {
+			// Dispose old image to free GPU resources
+			if g.cachedMailboxImage != nil {
+				g.cachedMailboxImage.Dispose()
+			}
+			g.cachedMailboxImage = ebiten.NewImageFromImage(mailImg)
+			g.lastMailboxRenderState = currentState
+		}
+	}
+
+	if g.cachedMailboxImage != nil {
+		screen.DrawImage(g.cachedMailboxImage, nil)
 	}
 }
 

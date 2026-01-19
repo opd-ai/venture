@@ -7,6 +7,7 @@ import (
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
+	"github.com/hajimehoshi/ebiten/v2/vector"
 	"github.com/opd-ai/venture/pkg/mobile"
 	"github.com/opd-ai/venture/pkg/procgen/item"
 )
@@ -78,7 +79,6 @@ type ShopUI struct {
 	// PERF: Cached images to avoid per-frame allocations (Critical Issue #2)
 	cachedOverlay    *ebiten.Image // Semi-transparent background overlay
 	cachedWindowBg   *ebiten.Image // Window background
-	cachedSlot       *ebiten.Image // Reusable slot image
 	cachedTooltipBg  *ebiten.Image // Tooltip background
 	lastWindowWidth  int           // Track window size for cache invalidation
 	lastWindowHeight int           // Track window size for cache invalidation
@@ -184,7 +184,7 @@ func (ui *ShopUI) Open(merchantEntity *Entity) {
 	ui.transactionMessageTime = 0
 }
 
-// Close hides the shop UI and cleans up state.
+// Close hides the shop UI and releases any cached GPU resources.
 func (ui *ShopUI) Close() {
 	ui.visible = false
 	ui.merchantEntity = nil
@@ -192,6 +192,27 @@ func (ui *ShopUI) Close() {
 	ui.hoveredSlot = -1
 	ui.lastTransactionMessage = ""
 	ui.transactionMessageTime = 0
+	// PERF: Free GPU resources when UI is closed
+	ui.clearImageCache()
+}
+
+// clearImageCache disposes all cached images and resets cache-related state.
+func (ui *ShopUI) clearImageCache() {
+	if ui.cachedOverlay != nil {
+		ui.cachedOverlay.Dispose()
+		ui.cachedOverlay = nil
+	}
+	if ui.cachedWindowBg != nil {
+		ui.cachedWindowBg.Dispose()
+		ui.cachedWindowBg = nil
+	}
+	if ui.cachedTooltipBg != nil {
+		ui.cachedTooltipBg.Dispose()
+		ui.cachedTooltipBg = nil
+	}
+	// Reset last known window dimensions so cache can be safely recreated
+	ui.lastWindowWidth = 0
+	ui.lastWindowHeight = 0
 }
 
 // IsVisible returns whether the shop is currently shown.
@@ -544,6 +565,9 @@ func (ui *ShopUI) getComponents() (*InventoryComponent, *MerchantComponent, bool
 func (ui *ShopUI) drawWindowBackground(img *ebiten.Image) (int, int, int) {
 	// PERF: Reuse cached overlay image, only fill on creation/resize
 	if ui.cachedOverlay == nil || ui.cachedOverlay.Bounds().Dx() != ui.screenWidth || ui.cachedOverlay.Bounds().Dy() != ui.screenHeight {
+		if ui.cachedOverlay != nil {
+			ui.cachedOverlay.Dispose()
+		}
 		ui.cachedOverlay = ebiten.NewImage(ui.screenWidth, ui.screenHeight)
 		ui.cachedOverlay.Fill(color.RGBA{0, 0, 0, 200})
 	}
@@ -556,6 +580,9 @@ func (ui *ShopUI) drawWindowBackground(img *ebiten.Image) (int, int, int) {
 
 	// PERF: Reuse cached window background image, only fill on creation/resize
 	if ui.cachedWindowBg == nil || ui.lastWindowWidth != windowWidth || ui.lastWindowHeight != windowHeight {
+		if ui.cachedWindowBg != nil {
+			ui.cachedWindowBg.Dispose()
+		}
 		ui.cachedWindowBg = ebiten.NewImage(windowWidth, windowHeight)
 		ui.cachedWindowBg.Fill(color.RGBA{30, 30, 40, 255})
 		ui.lastWindowWidth = windowWidth
@@ -627,19 +654,13 @@ func (ui *ShopUI) drawItemGrid(img *ebiten.Image, currentInventory []*item.Item,
 
 // drawItemSlot renders a single inventory slot including background, item, price, and tooltip.
 // Applies color-coding based on affordability and hover/selection states.
-// PERF: Uses cached slot image to avoid per-frame allocations.
+// PERF: Uses vector.DrawFilledRect which is allocation-free (slot colors vary per-frame).
 func (ui *ShopUI) drawItemSlot(img *ebiten.Image, slotIndex, slotX, slotY int, currentInventory []*item.Item, merchant *MerchantComponent, playerInv *InventoryComponent, windowY int) {
 	slotColor := ui.calculateSlotColor(slotIndex, currentInventory, merchant, playerInv)
 
-	// PERF: Reuse cached slot image
+	// PERF: Use allocation-free vector drawing for slot backgrounds
 	slotImgSize := ui.slotSize - 4
-	if ui.cachedSlot == nil || ui.cachedSlot.Bounds().Dx() != slotImgSize {
-		ui.cachedSlot = ebiten.NewImage(slotImgSize, slotImgSize)
-	}
-	ui.cachedSlot.Fill(slotColor)
-	slotOpts := &ebiten.DrawImageOptions{}
-	slotOpts.GeoM.Translate(float64(slotX), float64(slotY))
-	img.DrawImage(ui.cachedSlot, slotOpts)
+	vector.DrawFilledRect(img, float32(slotX), float32(slotY), float32(slotImgSize), float32(slotImgSize), slotColor, false)
 
 	if slotIndex < len(currentInventory) {
 		itm := currentInventory[slotIndex]

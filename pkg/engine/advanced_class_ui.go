@@ -7,6 +7,7 @@ import (
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
 	"github.com/hajimehoshi/ebiten/v2/text"
+	"github.com/hajimehoshi/ebiten/v2/vector"
 	"github.com/opd-ai/venture/pkg/class/advanced"
 	"golang.org/x/image/font/basicfont"
 )
@@ -25,10 +26,6 @@ type AdvancedClassUI struct {
 	currentPlayerID  string
 	scrollOffset     int
 	confirmRespec    bool
-
-	// PERF: Cached panel images to avoid per-frame allocations (Critical Issue #2)
-	// panelCache stores cached panels by size key (width << 16 | height)
-	panelCache map[uint32]*ebiten.Image
 }
 
 // NewAdvancedClassUI creates a new advanced class UI
@@ -39,7 +36,6 @@ func NewAdvancedClassUI(world *World, system *AdvancedClassSystem, screenWidth, 
 		screenWidth:      screenWidth,
 		screenHeight:     screenHeight,
 		selectedCategory: advanced.CategoryOffensive,
-		panelCache:       make(map[uint32]*ebiten.Image),
 	}
 }
 
@@ -456,27 +452,12 @@ func (ui *AdvancedClassUI) drawHelpText(screen *ebiten.Image) {
 }
 
 // drawPanel draws a colored panel
-// PERF: Uses cached images to avoid per-frame allocations (Critical Issue #2)
+// PERF: Uses vector.DrawFilledRect which is allocation-free (Critical Issue #2)
 func (ui *AdvancedClassUI) drawPanel(screen *ebiten.Image, x, y, width, height int, col color.Color) {
-	// Create composite key from width and height (supports sizes up to 65535)
-	key := uint32(width)<<16 | uint32(height)
-
-	// Get or create cached panel
-	img, exists := ui.panelCache[key]
-	if !exists || img.Bounds().Dx() != width || img.Bounds().Dy() != height {
-		if exists && img != nil {
-			img.Dispose()
-		}
-		img = ebiten.NewImage(width, height)
-		ui.panelCache[key] = img
-	}
-
-	// Fill with color (fast operation, no allocation)
-	img.Fill(col)
-
-	op := &ebiten.DrawImageOptions{}
-	op.GeoM.Translate(float64(x), float64(y))
-	screen.DrawImage(img, op)
+	// vector.DrawFilledRect draws a filled rectangle without allocating memory
+	r, g, b, a := col.RGBA()
+	vector.DrawFilledRect(screen, float32(x), float32(y), float32(width), float32(height),
+		color.RGBA{uint8(r >> 8), uint8(g >> 8), uint8(b >> 8), uint8(a >> 8)}, false)
 }
 
 // getPlayerEntity finds the player entity

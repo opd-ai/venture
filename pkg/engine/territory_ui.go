@@ -68,6 +68,15 @@ func (tui *TerritoryUI) Hide() {
 	tui.visible = false
 }
 
+// Dispose releases cached resources to prevent GPU memory leaks.
+// Call this when the UI is no longer needed.
+func (tui *TerritoryUI) Dispose() {
+	if tui.cachedOverlay != nil {
+		tui.cachedOverlay.Dispose()
+		tui.cachedOverlay = nil
+	}
+}
+
 // Update processes input for the territory UI.
 func (tui *TerritoryUI) Update() error {
 	if !tui.visible {

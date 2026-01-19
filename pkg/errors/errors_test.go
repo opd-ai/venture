@@ -291,6 +291,10 @@ func TestHelperFunctions(t *testing.T) {
 		{"Generation", func() *VentureError { return Generation("test") }, ErrorTypeGeneration, false},
 		{"Database", func() *VentureError { return Database("test") }, ErrorTypeDatabase, true},
 		{"RateLimit", func() *VentureError { return RateLimit("test") }, ErrorTypeRateLimit, true},
+		{"FileSystem", func() *VentureError { return FileSystem("test") }, ErrorTypeFileSystem, false},
+		{"Authentication", func() *VentureError { return Authentication("test") }, ErrorTypeAuthentication, false},
+		{"Concurrency", func() *VentureError { return Concurrency("test") }, ErrorTypeConcurrency, false},
+		{"Resource", func() *VentureError { return Resource("test") }, ErrorTypeResource, true},
 	}
 
 	for _, tt := range tests {
@@ -326,6 +330,10 @@ func TestWrapHelperFunctions(t *testing.T) {
 		{"GenerationWrap", func() *VentureError { return GenerationWrap(baseErr, "wrapped") }, ErrorTypeGeneration, false},
 		{"DatabaseWrap", func() *VentureError { return DatabaseWrap(baseErr, "wrapped") }, ErrorTypeDatabase, true},
 		{"RateLimitWrap", func() *VentureError { return RateLimitWrap(baseErr, "wrapped") }, ErrorTypeRateLimit, true},
+		{"FileSystemWrap", func() *VentureError { return FileSystemWrap(baseErr, "wrapped") }, ErrorTypeFileSystem, false},
+		{"AuthenticationWrap", func() *VentureError { return AuthenticationWrap(baseErr, "wrapped") }, ErrorTypeAuthentication, false},
+		{"ConcurrencyWrap", func() *VentureError { return ConcurrencyWrap(baseErr, "wrapped") }, ErrorTypeConcurrency, false},
+		{"ResourceWrap", func() *VentureError { return ResourceWrap(baseErr, "wrapped") }, ErrorTypeResource, true},
 	}
 
 	for _, tt := range tests {
@@ -358,6 +366,10 @@ func TestWrapHelperFunctions_NilError(t *testing.T) {
 		GenerationWrap,
 		DatabaseWrap,
 		RateLimitWrap,
+		FileSystemWrap,
+		AuthenticationWrap,
+		ConcurrencyWrap,
+		ResourceWrap,
 	}
 
 	for i, wrapFunc := range wrapFuncs {

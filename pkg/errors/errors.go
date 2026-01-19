@@ -394,3 +394,99 @@ func RateLimitWrap(err error, message string) *VentureError {
 		Retryable: true,
 	}
 }
+
+// FileSystem creates a file system error.
+func FileSystem(message string) *VentureError {
+	return &VentureError{
+		Type:      ErrorTypeFileSystem,
+		Message:   message,
+		Context:   make(map[string]interface{}),
+		Retryable: false, // File errors usually require manual intervention
+	}
+}
+
+// FileSystemWrap wraps an error as a file system error.
+func FileSystemWrap(err error, message string) *VentureError {
+	if err == nil {
+		return nil
+	}
+	return &VentureError{
+		Type:      ErrorTypeFileSystem,
+		Message:   message,
+		Err:       err,
+		Context:   make(map[string]interface{}),
+		Retryable: false,
+	}
+}
+
+// Authentication creates an authentication error.
+func Authentication(message string) *VentureError {
+	return &VentureError{
+		Type:      ErrorTypeAuthentication,
+		Message:   message,
+		Context:   make(map[string]interface{}),
+		Retryable: false, // Auth errors require new credentials
+	}
+}
+
+// AuthenticationWrap wraps an error as an authentication error.
+func AuthenticationWrap(err error, message string) *VentureError {
+	if err == nil {
+		return nil
+	}
+	return &VentureError{
+		Type:      ErrorTypeAuthentication,
+		Message:   message,
+		Err:       err,
+		Context:   make(map[string]interface{}),
+		Retryable: false,
+	}
+}
+
+// Concurrency creates a concurrency error.
+func Concurrency(message string) *VentureError {
+	return &VentureError{
+		Type:      ErrorTypeConcurrency,
+		Message:   message,
+		Context:   make(map[string]interface{}),
+		Retryable: false, // Concurrency errors usually indicate bugs
+	}
+}
+
+// ConcurrencyWrap wraps an error as a concurrency error.
+func ConcurrencyWrap(err error, message string) *VentureError {
+	if err == nil {
+		return nil
+	}
+	return &VentureError{
+		Type:      ErrorTypeConcurrency,
+		Message:   message,
+		Err:       err,
+		Context:   make(map[string]interface{}),
+		Retryable: false,
+	}
+}
+
+// Resource creates a resource exhaustion error.
+func Resource(message string) *VentureError {
+	return &VentureError{
+		Type:      ErrorTypeResource,
+		Message:   message,
+		Context:   make(map[string]interface{}),
+		Retryable: true, // Resource exhaustion may be transient
+	}
+}
+
+// ResourceWrap wraps an error as a resource exhaustion error.
+func ResourceWrap(err error, message string) *VentureError {
+	if err == nil {
+		return nil
+	}
+	return &VentureError{
+		Type:      ErrorTypeResource,
+		Message:   message,
+		Err:       err,
+		Context:   make(map[string]interface{}),
+		Retryable: true,
+	}
+}

@@ -7,6 +7,7 @@ import (
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
 	"github.com/hajimehoshi/ebiten/v2/text"
+	"github.com/hajimehoshi/ebiten/v2/vector"
 	"github.com/opd-ai/venture/pkg/class/advanced"
 	"golang.org/x/image/font/basicfont"
 )
@@ -451,12 +452,12 @@ func (ui *AdvancedClassUI) drawHelpText(screen *ebiten.Image) {
 }
 
 // drawPanel draws a colored panel
+// PERF: Uses vector.DrawFilledRect which is allocation-free (Critical Issue #2)
 func (ui *AdvancedClassUI) drawPanel(screen *ebiten.Image, x, y, width, height int, col color.Color) {
-	img := ebiten.NewImage(width, height)
-	img.Fill(col)
-	op := &ebiten.DrawImageOptions{}
-	op.GeoM.Translate(float64(x), float64(y))
-	screen.DrawImage(img, op)
+	// vector.DrawFilledRect draws a filled rectangle without allocating memory
+	r, g, b, a := col.RGBA()
+	vector.DrawFilledRect(screen, float32(x), float32(y), float32(width), float32(height),
+		color.RGBA{uint8(r >> 8), uint8(g >> 8), uint8(b >> 8), uint8(a >> 8)}, false)
 }
 
 // getPlayerEntity finds the player entity

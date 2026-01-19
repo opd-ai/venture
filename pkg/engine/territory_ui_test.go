@@ -317,3 +317,21 @@ func TestTerritoryUI_Update(t *testing.T) {
 		t.Errorf("Update() error when visible: %v", err)
 	}
 }
+
+func TestTerritoryUI_Dispose(t *testing.T) {
+	manager := territory.NewManager()
+	sys := NewTerritorySystem(manager, nil)
+	ui := NewTerritoryUI(sys, 800, 600)
+
+	// Dispose before any cached resources
+	ui.Dispose()
+	if ui.cachedOverlay != nil {
+		t.Error("cachedOverlay should be nil after Dispose")
+	}
+
+	// Dispose is safe to call multiple times
+	ui.Dispose()
+	if ui.cachedOverlay != nil {
+		t.Error("cachedOverlay should remain nil after second Dispose")
+	}
+}

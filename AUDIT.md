@@ -245,8 +245,8 @@ The Venture codebase demonstrates **exceptional performance engineering** with c
    - `quest_ui.go`
    - `crafting_ui.go`
    - `trade_ui.go`
-   - `territory_ui.go`
-   - `advanced_class_ui.go`
+   - ✅ `territory_ui.go` (COMPLETED 2026-01-19)
+   - ✅ `advanced_class_ui.go` (COMPLETED 2026-01-19)
 2. Convert shadow system cache key to integer composite key
 3. Add sprite pooling for entity spawning
 

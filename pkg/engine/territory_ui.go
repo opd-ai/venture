@@ -22,6 +22,9 @@ type TerritoryUI struct {
 	selectedTerritory *territory.Territory
 	scrollOffset      int
 	touchHandler      *mobile.TouchInputHandler
+
+	// PERF: Cached images to avoid per-frame allocations (Critical Issue #2)
+	cachedOverlay *ebiten.Image // Semi-transparent background overlay
 }
 
 // NewTerritoryUI creates a new territory UI.
@@ -63,6 +66,15 @@ func (tui *TerritoryUI) Show() {
 // Hide hides the UI.
 func (tui *TerritoryUI) Hide() {
 	tui.visible = false
+}
+
+// Dispose releases cached resources to prevent GPU memory leaks.
+// Call this when the UI is no longer needed.
+func (tui *TerritoryUI) Dispose() {
+	if tui.cachedOverlay != nil {
+		tui.cachedOverlay.Dispose()
+		tui.cachedOverlay = nil
+	}
 }
 
 // Update processes input for the territory UI.
@@ -136,9 +148,15 @@ func (tui *TerritoryUI) Draw(screen *ebiten.Image) {
 }
 
 func (tui *TerritoryUI) drawBackground(screen *ebiten.Image) {
-	bg := ebiten.NewImage(tui.screenWidth, tui.screenHeight)
-	bg.Fill(color.RGBA{0, 0, 0, 200})
-	screen.DrawImage(bg, nil)
+	// PERF: Reuse cached overlay image, only fill on creation/resize
+	if tui.cachedOverlay == nil || tui.cachedOverlay.Bounds().Dx() != tui.screenWidth || tui.cachedOverlay.Bounds().Dy() != tui.screenHeight {
+		if tui.cachedOverlay != nil {
+			tui.cachedOverlay.Dispose()
+		}
+		tui.cachedOverlay = ebiten.NewImage(tui.screenWidth, tui.screenHeight)
+		tui.cachedOverlay.Fill(color.RGBA{0, 0, 0, 200})
+	}
+	screen.DrawImage(tui.cachedOverlay, nil)
 }
 
 func (tui *TerritoryUI) drawHeader(screen *ebiten.Image) int {

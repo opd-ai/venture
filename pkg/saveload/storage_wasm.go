@@ -76,6 +76,12 @@ func (m *SaveManager) SaveGame(name string, save *GameSave) error {
 		return fmt.Errorf("save cannot be nil")
 	}
 
+	// Validate save name for security (path traversal prevention)
+	if err := m.validateSaveName(name); err != nil {
+		js.Global().Get("console").Call("warn", fmt.Sprintf("[Venture] Invalid save name: %s - %v", name, err))
+		return err
+	}
+
 	save.Version = SaveVersion
 	save.Timestamp = time.Now()
 
@@ -121,31 +127,46 @@ func (m *SaveManager) SaveGame(name string, save *GameSave) error {
 // LoadGame loads the game state from browser localStorage.
 // Compatible with SaveManager.LoadGame API.
 func (m *SaveManager) LoadGame(name string) (*GameSave, error) {
+	// Validate save name for security (path traversal prevention)
+	if err := m.validateSaveName(name); err != nil {
+		js.Global().Get("console").Call("warn", fmt.Sprintf("[Venture] Invalid save name: %s - %v", name, err))
+		return nil, err
+	}
+
+	var save *GameSave
+
 	if m.useInMemory {
 		// Load from in-memory fallback
-		save, ok := m.memoryStore[name]
+		s, ok := m.memoryStore[name]
 		if !ok {
 			return nil, fmt.Errorf("save not found: %s", name)
 		}
+		save = s
 		js.Global().Get("console").Call("log", fmt.Sprintf("[Venture] Loaded from memory: %s", name))
-		return save, nil
+	} else {
+		// Load from localStorage
+		key := localStoragePrefix + name
+		dataJS := m.localStorage.Call("getItem", key)
+		if dataJS.IsNull() {
+			return nil, fmt.Errorf("save not found: %s", name)
+		}
+
+		data := dataJS.String()
+		var s GameSave
+		if err := json.Unmarshal([]byte(data), &s); err != nil {
+			return nil, fmt.Errorf("failed to unmarshal save: %w", err)
+		}
+		save = &s
+		js.Global().Get("console").Call("log", fmt.Sprintf("[Venture] Loaded from localStorage: %s", name))
 	}
 
-	// Load from localStorage
-	key := localStoragePrefix + name
-	dataJS := m.localStorage.Call("getItem", key)
-	if dataJS.IsNull() {
-		return nil, fmt.Errorf("save not found: %s", name)
+	// Validate and check version compatibility
+	if err := m.validateSave(save); err != nil {
+		js.Global().Get("console").Call("warn", fmt.Sprintf("[Venture] Save validation failed: %s - %v", name, err))
+		return nil, fmt.Errorf("failed to validate save: %w", err)
 	}
 
-	data := dataJS.String()
-	var save GameSave
-	if err := json.Unmarshal([]byte(data), &save); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal save: %w", err)
-	}
-
-	js.Global().Get("console").Call("log", fmt.Sprintf("[Venture] Loaded from localStorage: %s", name))
-	return &save, nil
+	return save, nil
 }
 
 // DeleteSave removes a save from browser localStorage.
@@ -353,6 +374,39 @@ func (m *SaveManager) validateSaveName(name string) error {
 	// Check for special characters
 	if strings.ContainsAny(name, "<>:\"|?*") {
 		return fmt.Errorf("save name contains invalid characters")
+	}
+
+	return nil
+}
+
+// validateSave validates a loaded save file for version compatibility and required fields.
+// This mirrors the desktop validateAndMigrate() behavior.
+// Note: WASM does not support migration, so incompatible versions are rejected.
+func (m *SaveManager) validateSave(save *GameSave) error {
+	if save == nil {
+		return fmt.Errorf("save cannot be nil")
+	}
+
+	// Check version exists
+	if save.Version == "" {
+		return fmt.Errorf("save file has no version")
+	}
+
+	// Check version compatibility
+	// WASM does not support migration, so only current version is accepted
+	if save.Version != SaveVersion {
+		return fmt.Errorf("save file version %s is not supported (current version: %s) - migration not available on WASM", save.Version, SaveVersion)
+	}
+
+	// Validate required fields
+	if save.PlayerState == nil {
+		return fmt.Errorf("save file missing player state")
+	}
+	if save.WorldState == nil {
+		return fmt.Errorf("save file missing world state")
+	}
+	if save.Settings == nil {
+		return fmt.Errorf("save file missing settings")
 	}
 
 	return nil

@@ -28,7 +28,7 @@ Total Findings: 0 CRITICAL BUG, 3 FUNCTIONAL MISMATCH, 4 MISSING FEATURE, 1 EDGE
 Category Breakdown:
 - CRITICAL BUG:         0 (causes crashes, data corruption, or incorrect behavior)
 - FUNCTIONAL MISMATCH:  3 (implementation differs from documentation)
-- MISSING FEATURE:      4 (documented functionality not implemented) [1 FIXED: SaveExists]
+- MISSING FEATURE:      4 (documented functionality not implemented) [2 FIXED: SaveExists, LoadGame validation]
 - EDGE CASE BUG:        1 (fails under specific conditions) [1 FIXED: updateMetadata nil panic]
 - PERFORMANCE ISSUE:    0 (significant inefficiency)
 ```
@@ -199,58 +199,41 @@ func (m *SaveManager) updateMetadata(name string, save *GameSave) {
 
 ---
 
-### MISSING FEATURE: WASM LoadGame Skips Validation and Migration
+### ✅ FIXED: WASM LoadGame Now Includes Validation
 
 ```
-**File:** storage_wasm.go:122-148
+**File:** storage_wasm.go
 **Severity:** Medium
-**Description:** The WASM `LoadGame()` function does not validate save names, check required fields, verify version compatibility, or perform migration - all of which the desktop version does.
+**Status:** FIXED (2026-01-19)
 
-**Expected Behavior (per manager.go:117-147):**
-1. Validate save name for security
-2. Unmarshal JSON data
-3. Call `validateAndMigrate()` to check version and required fields
-4. Return validated save
+**Fix Applied:**
+- Added `validateSaveName()` call at start of `LoadGame()` for security (path traversal prevention)
+- Added `validateSave()` method that mirrors desktop `validateAndMigrate()` behavior
+- Validates version exists and matches current SaveVersion
+- Validates required fields (PlayerState, WorldState, Settings) are present
+- Added `validateSaveName()` call to `SaveGame()` for consistency
+- Note: WASM rejects incompatible versions since migration is not available on browser platform
 
-**Actual Behavior:** WASM version only unmarshals JSON and returns it without any validation.
-
-**Impact:**
-- Security: Path traversal attacks may be possible
-- Stability: Missing required fields (PlayerState, WorldState, Settings) not detected
-- Compatibility: Version mismatches not handled, old saves not migrated
-
-**Reproduction:**
-1. Create a save file in localStorage with incompatible version
-2. Call `manager.LoadGame("name")`
-3. Returns invalid save instead of error
-
-**Code Reference:**
+**Code Added:**
 ```go
-// storage_wasm.go:122-148 (WASM - missing validation)
+// LoadGame now validates save name and calls validateSave()
 func (m *SaveManager) LoadGame(name string) (*GameSave, error) {
-    // No validateSaveName() call
-    
-    key := localStoragePrefix + name
-    dataJS := m.localStorage.Call("getItem", key)
-    // ...
-    var save GameSave
-    if err := json.Unmarshal([]byte(data), &save); err != nil {
-        return nil, fmt.Errorf("failed to unmarshal save: %w", err)
-    }
-    // No validateAndMigrate() call
-    return &save, nil
-}
-
-// manager.go:117-147 (Desktop - correct validation)
-func (m *SaveManager) LoadGame(name string) (*GameSave, error) {
-    if err := m.validateSaveName(name); err != nil {  // Security check
+    if err := m.validateSaveName(name); err != nil {
         return nil, err
     }
-    // ...
-    if err := m.validateAndMigrate(save); err != nil {  // Version/field check
-        return nil, fmt.Errorf("failed to validate/migrate save: %w", err)
+    // ... load from localStorage or memory ...
+    if err := m.validateSave(save); err != nil {
+        return nil, fmt.Errorf("failed to validate save: %w", err)
     }
     return save, nil
+}
+
+// validateSave validates version compatibility and required fields
+func (m *SaveManager) validateSave(save *GameSave) error {
+    if save.Version != SaveVersion {
+        return fmt.Errorf("save file version %s is not supported - migration not available on WASM", ...)
+    }
+    // Check PlayerState, WorldState, Settings are non-nil
 }
 ```
 ```
@@ -413,7 +396,7 @@ EquippedItems EquipmentData `json:"equipped_items"`
 
 2. ~~**Add nil checks to WASM updateMetadata()**~~ - ✅ FIXED (2026-01-19)
 
-3. **Add validation to WASM LoadGame()** - Implement `validateAndMigrate()` for WASM platform parity. Note: `validateSaveName()` now implemented.
+3. ~~**Add validation to WASM LoadGame()**~~ - ✅ FIXED (2026-01-19) - Implemented `validateSave()` for version and field validation, added `validateSaveName()` calls to both `LoadGame()` and `SaveGame()`.
 
 ### Medium Priority
 

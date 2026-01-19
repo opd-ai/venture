@@ -66,14 +66,17 @@
     
     // After - remove timestamp entirely, use only conversationID
     ```
+  - **Note:** The code comment in `markov.go` describes this as "controlled non-determinism", indicating the behavior may be intentional. This conflicts with the project's strict determinism guideline. Team should decide if dialog generation is exempt from determinism requirements and update documentation/rules accordingly.
 
-### 4. time.Now() Usage in Legendary Quest Progress Tracker
+### 4. time.Now() Usage in Legendary Quest Progress Tracker (Runtime State)
 
 - **[pkg/procgen/legendary/types.go:L511-620](pkg/procgen/legendary/types.go#L511)**
-  - **Issue:** Uses `time.Now()` 10+ times in quest tracking, creating state that can't be deterministically reproduced
+  - **Issue:** Uses `time.Now()` 10+ times in quest tracking for progress timestamps
   - **Debug:** `grep -c "time.Now" pkg/procgen/legendary/types.go`
-  - **Impact:** Quest completion times become non-deterministic
-  - **Fix:** Pass game clock/timestamp as parameter or use deterministic game time
+  - **Classification:** **Runtime State Tracking** (different from procedural generation determinism)
+  - **Impact:** Quest completion times use real-time timestamps. This does not affect deterministic content generation (same seed = same content), but makes save state non-reproducible if exact timing matters for testing.
+  - **Note:** This is likely acceptable behavior for runtime progress tracking. The project's determinism guideline focuses on generation (same seed = same output), not runtime state. Consider whether this is an exception or if a game clock abstraction is preferred for testing.
+  - **Optional Fix:** If deterministic save state is required for testing, pass game clock/timestamp as parameter
 
 ### 5. Panic in Library Code
 
@@ -168,7 +171,7 @@ The ECS pattern requires components to be pure data structures with only `Type()
 
 **1,421 component methods found beyond Type()/Serialize()/Deserialize()**
 
-While many are accessor methods (which are acceptable in Go), approximately 50-100 contain actual business logic that should be in systems.
+While many are simple accessor methods, the project's strict ECS guidelines prohibit all methods beyond Type()/Serialize()/Deserialize(); approximately 50–100 of these methods also contain actual business logic that should be in systems.
 
 ---
 
@@ -509,7 +512,7 @@ grep -rn "\.\(\*net\.\(UDP\|TCP\)" pkg/
 
 | Category | Count |
 |----------|-------|
-| **Critical** | 5 |
+| **Critical** | 6 |
 | **Architecture Violations** | 5 major components (~50-100 methods) |
 | **Performance** | 0 blocking issues |
 | **Memory** | 0 blocking issues |

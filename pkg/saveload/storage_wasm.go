@@ -12,6 +12,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"sort"
+	"strings"
 	"syscall/js"
 	"time"
 )
@@ -241,32 +242,32 @@ func (m *SaveManager) GetSaveMetadata(name string) (*SaveMetadata, error) {
 func (m *SaveManager) updateMetadata(name string, save *GameSave) {
 	saves, _ := m.ListSaves()
 
+	// Build metadata entry with nil-safe field access
+	metadata := &SaveMetadata{
+		Name:      name,
+		Timestamp: save.Timestamp,
+		Version:   save.Version,
+	}
+	if save.PlayerState != nil {
+		metadata.PlayerLevel = save.PlayerState.Level
+	}
+	if save.WorldState != nil {
+		metadata.GenreID = save.WorldState.GenreID
+		metadata.GameTime = save.WorldState.GameTime
+	}
+
 	// Update or add metadata entry
 	found := false
 	for i, s := range saves {
 		if s.Name == name {
-			saves[i] = &SaveMetadata{
-				Name:        name,
-				Timestamp:   save.Timestamp,
-				Version:     save.Version,
-				PlayerLevel: save.PlayerState.Level,
-				GenreID:     save.WorldState.GenreID,
-				GameTime:    save.WorldState.GameTime,
-			}
+			saves[i] = metadata
 			found = true
 			break
 		}
 	}
 
 	if !found {
-		saves = append(saves, &SaveMetadata{
-			Name:        name,
-			Timestamp:   save.Timestamp,
-			Version:     save.Version,
-			PlayerLevel: save.PlayerState.Level,
-			GenreID:     save.WorldState.GenreID,
-			GameTime:    save.WorldState.GameTime,
-		})
+		saves = append(saves, metadata)
 	}
 
 	// Save updated metadata
@@ -318,4 +319,41 @@ func (m *SaveManager) scanLocalStorageKeys() ([]*SaveMetadata, error) {
 	})
 
 	return saves, nil
+}
+
+// SaveExists checks if a save file exists.
+// Compatible with SaveManager.SaveExists API.
+func (m *SaveManager) SaveExists(name string) bool {
+	if err := m.validateSaveName(name); err != nil {
+		return false
+	}
+
+	if m.useInMemory {
+		_, ok := m.memoryStore[name]
+		return ok
+	}
+
+	key := localStoragePrefix + name
+	dataJS := m.localStorage.Call("getItem", key)
+	return !dataJS.IsNull()
+}
+
+// validateSaveName validates that a save name is acceptable.
+// This mirrors the desktop implementation for security.
+func (m *SaveManager) validateSaveName(name string) error {
+	if name == "" {
+		return fmt.Errorf("save name cannot be empty")
+	}
+
+	// Check for path separators (security check)
+	if strings.ContainsAny(name, "/\\") {
+		return fmt.Errorf("save name cannot contain path separators")
+	}
+
+	// Check for special characters
+	if strings.ContainsAny(name, "<>:\"|?*") {
+		return fmt.Errorf("save name contains invalid characters")
+	}
+
+	return nil
 }

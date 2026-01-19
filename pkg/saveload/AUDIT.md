@@ -23,13 +23,13 @@ Files were analyzed in ascending level order to establish baseline correctness b
 ## AUDIT SUMMARY
 
 ```
-Total Findings: 0 CRITICAL BUG, 3 FUNCTIONAL MISMATCH, 5 MISSING FEATURE, 2 EDGE CASE BUG, 0 PERFORMANCE ISSUE
+Total Findings: 0 CRITICAL BUG, 3 FUNCTIONAL MISMATCH, 4 MISSING FEATURE, 1 EDGE CASE BUG, 0 PERFORMANCE ISSUE
 
 Category Breakdown:
 - CRITICAL BUG:         0 (causes crashes, data corruption, or incorrect behavior)
 - FUNCTIONAL MISMATCH:  3 (implementation differs from documentation)
-- MISSING FEATURE:      5 (documented functionality not implemented)
-- EDGE CASE BUG:        2 (fails under specific conditions)
+- MISSING FEATURE:      4 (documented functionality not implemented) [1 FIXED: SaveExists]
+- EDGE CASE BUG:        1 (fails under specific conditions) [1 FIXED: updateMetadata nil panic]
 - PERFORMANCE ISSUE:    0 (significant inefficiency)
 ```
 
@@ -85,41 +85,37 @@ func (m *SaveManager) GetSaveMetadata(name string) (*SaveMetadata, error)
 
 ---
 
-### MISSING FEATURE: WASM Implementation Missing SaveExists Method
+### ✅ FIXED: WASM Implementation Missing SaveExists Method
 
 ```
-**File:** storage_wasm.go (entire file)
+**File:** storage_wasm.go
 **Severity:** Medium
-**Description:** The WASM SaveManager does not implement the `SaveExists()` method that is available in the desktop implementation and documented in the README.
+**Status:** FIXED (2026-01-19)
 
-**Expected Behavior (per README section "Checking If Save Exists"):**
+**Fix Applied:**
+- Added `SaveExists(name string) bool` method to WASM SaveManager
+- Added `validateSaveName(name string) error` method for security validation
+- Method checks localStorage (or in-memory store) for save existence
+- Mirrors desktop implementation pattern with path/character validation
+
+**Code Added:**
 ```go
-if manager.SaveExists("autosave") {
-    fmt.Println("Autosave found!")
-}
-```
-
-**Actual Behavior:** Method not implemented in WASM. Code calling this method on WASM will not compile.
-
-**Impact:** Browser users cannot check if a save exists before loading. Common game patterns like "Continue" button visibility cannot work properly.
-
-**Reproduction:**
-1. Build for WASM with code calling `manager.SaveExists("name")`
-2. Compilation fails
-
-**Code Reference:**
-```go
-// manager.go:261 (desktop) - implemented
 func (m *SaveManager) SaveExists(name string) bool {
     if err := m.validateSaveName(name); err != nil {
         return false
     }
-    filename := m.getFilePath(name)
-    _, err := os.Stat(filename)
-    return err == nil
+    if m.useInMemory {
+        _, ok := m.memoryStore[name]
+        return ok
+    }
+    key := localStoragePrefix + name
+    dataJS := m.localStorage.Call("getItem", key)
+    return !dataJS.IsNull()
 }
 
-// storage_wasm.go - NOT implemented
+func (m *SaveManager) validateSaveName(name string) error {
+    // Validates name is non-empty and contains no path separators or special chars
+}
 ```
 ```
 
@@ -153,57 +149,50 @@ func (m *SaveManager) SetMigrator(migrator Migrator)
 
 ---
 
-### EDGE CASE BUG: WASM updateMetadata Panics on Nil PlayerState/WorldState
+### ✅ FIXED: WASM updateMetadata Panics on Nil PlayerState/WorldState
 
 ```
-**File:** storage_wasm.go:241-275
+**File:** storage_wasm.go
 **Severity:** High
-**Description:** The `updateMetadata()` function accesses `save.PlayerState.Level`, `save.WorldState.GenreID`, and `save.WorldState.GameTime` without nil checks, causing a panic if either is nil.
+**Status:** FIXED (2026-01-19)
 
-**Expected Behavior:** Function should safely handle saves with nil PlayerState or WorldState.
+**Fix Applied:**
+- Refactored `updateMetadata()` to build metadata with nil-safe field access
+- Now mirrors the pattern used in `GetSaveMetadata()` which correctly handles nil states
+- Consolidated metadata creation to single point with nil checks
 
-**Actual Behavior:** Nil pointer dereference panic occurs.
-
-**Impact:** Saving a game with incomplete data crashes the browser tab.
-
-**Reproduction:**
-1. Create a save with nil PlayerState: `save := &GameSave{WorldState: &WorldState{}}`
-2. Call `manager.SaveGame("test", save)`
-3. Panic: `runtime error: invalid memory address or nil pointer dereference`
-
-**Code Reference:**
+**Code Fixed:**
 ```go
-// storage_wasm.go:241-275
 func (m *SaveManager) updateMetadata(name string, save *GameSave) {
     saves, _ := m.ListSaves()
-    
+
+    // Build metadata entry with nil-safe field access
+    metadata := &SaveMetadata{
+        Name:      name,
+        Timestamp: save.Timestamp,
+        Version:   save.Version,
+    }
+    if save.PlayerState != nil {
+        metadata.PlayerLevel = save.PlayerState.Level
+    }
+    if save.WorldState != nil {
+        metadata.GenreID = save.WorldState.GenreID
+        metadata.GameTime = save.WorldState.GameTime
+    }
+
+    // Update or add metadata entry
     found := false
     for i, s := range saves {
         if s.Name == name {
-            saves[i] = &SaveMetadata{
-                Name:        name,
-                Timestamp:   save.Timestamp,
-                Version:     save.Version,
-                PlayerLevel: save.PlayerState.Level,    // PANIC if PlayerState is nil
-                GenreID:     save.WorldState.GenreID,   // PANIC if WorldState is nil
-                GameTime:    save.WorldState.GameTime,  // PANIC if WorldState is nil
-            }
-            // ...
+            saves[i] = metadata
+            found = true
+            break
         }
     }
-    // Same issue in the !found branch at lines 266-268
-}
-```
-
-**Contrast with GetSaveMetadata (correctly handles nil):**
-```go
-// storage_wasm.go:228-235 - correctly checks for nil
-if save.PlayerState != nil {
-    metadata.PlayerLevel = save.PlayerState.Level
-}
-if save.WorldState != nil {
-    metadata.GenreID = save.WorldState.GenreID
-    metadata.GameTime = save.WorldState.GameTime
+    if !found {
+        saves = append(saves, metadata)
+    }
+    // ...
 }
 ```
 ```
@@ -422,15 +411,15 @@ EquippedItems EquipmentData `json:"equipped_items"`
 
 1. **Implement WASM backup/recovery methods** - Even if localStorage doesn't support file backups, implement stub methods that return appropriate errors or use IndexedDB for backup storage.
 
-2. **Add nil checks to WASM updateMetadata()** - Copy the nil-checking pattern from `GetSaveMetadata()`.
+2. ~~**Add nil checks to WASM updateMetadata()**~~ - ✅ FIXED (2026-01-19)
 
-3. **Add validation to WASM LoadGame()** - Implement `validateSaveName()` and `validateAndMigrate()` for WASM platform parity.
+3. **Add validation to WASM LoadGame()** - Implement `validateAndMigrate()` for WASM platform parity. Note: `validateSaveName()` now implemented.
 
 ### Medium Priority
 
 4. **Fix LoadGameWithRecovery checksum logic** - Distinguish between "no checksum file" and "checksum mismatch".
 
-5. **Implement WASM SaveExists()** - Required for common game patterns.
+5. ~~**Implement WASM SaveExists()**~~ - ✅ FIXED (2026-01-19)
 
 6. **Update README save format example** - Correct field names and types to match implementation.
 

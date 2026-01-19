@@ -1350,23 +1350,38 @@ func (s *AnimationSystem) TransitionState(entity *Entity, newState AnimationStat
 // Format: "sprite:type:seed:genre:width:height:complexity:variation:customHash"
 // The customHash includes sprite-affecting Custom field values: entityType,
 // facing, hasWeapon, hasShield, isBoss, bossScale, useAerial, and genre.
+// Optimized: Uses strings.Builder instead of fmt.Sprintf to avoid allocations.
 func (s *AnimationSystem) generateSpriteCacheKey(config sprites.Config) cache.CacheKey {
 	// Build a deterministic string from relevant Custom fields that affect sprite appearance
 	customKey := s.buildCustomFieldsKey(config.Custom, config.GenreID)
 
 	// Include all relevant config fields that affect sprite generation
 	// Type is included to prevent cache collisions between different sprite categories
-	keyStr := fmt.Sprintf("sprite:%s:%d:%s:%d:%d:%.2f:%d:%s",
-		config.Type.String(),
-		config.Seed,
-		config.GenreID,
-		config.Width,
-		config.Height,
-		config.Complexity,
-		config.Variation,
-		customKey,
-	)
-	return cache.CacheKey(keyStr)
+	// Pre-allocate approximate capacity: "sprite:" + type(~10) + seed(~20) + genre(~10)
+	// + width/height(~8) + complexity(~6) + variation(~4) + customKey + separators
+	var b strings.Builder
+	b.Grow(80 + len(customKey))
+
+	b.WriteString("sprite:")
+	b.WriteString(config.Type.String())
+	b.WriteByte(':')
+	b.Write(strconv.AppendInt(nil, config.Seed, 10))
+	b.WriteByte(':')
+	b.WriteString(config.GenreID)
+	b.WriteByte(':')
+	b.Write(strconv.AppendInt(nil, int64(config.Width), 10))
+	b.WriteByte(':')
+	b.Write(strconv.AppendInt(nil, int64(config.Height), 10))
+	b.WriteByte(':')
+	// Format complexity as fixed-point with 2 decimal places (e.g., 0.75 -> "75")
+	// This avoids float formatting overhead while maintaining precision
+	b.Write(strconv.AppendInt(nil, int64(config.Complexity*100), 10))
+	b.WriteByte(':')
+	b.Write(strconv.AppendInt(nil, int64(config.Variation), 10))
+	b.WriteByte(':')
+	b.WriteString(customKey)
+
+	return cache.CacheKey(b.String())
 }
 
 // buildCustomFieldsKey creates a deterministic key string from Custom field values
@@ -1404,8 +1419,9 @@ func (s *AnimationSystem) buildCustomFieldsKey(custom map[string]interface{}, co
 	if isBoss, ok := custom["isBoss"].(bool); ok && isBoss {
 		parts = append(parts, "boss:1")
 		// Include bossScale only for boss entities (meaningless otherwise)
+		// Optimized: Use fixed-point representation instead of fmt.Sprintf
 		if bossScale, ok := custom["bossScale"].(float64); ok {
-			parts = append(parts, fmt.Sprintf("bs:%.1f", bossScale))
+			parts = append(parts, "bs:"+strconv.FormatInt(int64(bossScale*10), 10))
 		}
 	}
 

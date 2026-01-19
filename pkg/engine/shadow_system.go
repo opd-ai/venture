@@ -11,7 +11,6 @@
 package engine
 
 import (
-	"fmt"
 	"image/color"
 	"math"
 
@@ -41,8 +40,8 @@ type ShadowSystem struct {
 	casterBuffer []shadowCaster
 
 	// Image cache to avoid per-frame allocations for shadow/AO images
-	// Key format: "WxH" (width x height)
-	imageCache map[string]*ebiten.Image
+	// Key format: composite integer (width << 16 | height) for faster lookup
+	imageCache map[uint32]*ebiten.Image
 
 	// Configuration
 	enabled       bool
@@ -77,7 +76,7 @@ func NewShadowSystemWithLogger(world *World, logger *logrus.Logger) *ShadowSyste
 		maxShadows:    100,
 		renderQuality: 1.0,
 		casterBuffer:  make([]shadowCaster, 0, 100), // Pre-allocate for typical max shadows (values, not pointers)
-		imageCache:    make(map[string]*ebiten.Image),
+		imageCache:    make(map[uint32]*ebiten.Image),
 	}
 }
 
@@ -116,8 +115,12 @@ func (s *ShadowSystem) SetViewport(cameraX, cameraY float64, width, height int) 
 
 // getCachedImage returns a cached image of the given size, creating one if needed.
 // This avoids per-frame allocations for shadow and AO images.
+// Optimized: Uses composite integer key (width<<16|height) instead of fmt.Sprintf
+// to eliminate string allocation per cache lookup.
 func (s *ShadowSystem) getCachedImage(width, height int) *ebiten.Image {
-	key := fmt.Sprintf("%dx%d", width, height)
+	// Composite key: upper 16 bits = width, lower 16 bits = height
+	// Supports dimensions up to 65535, which is sufficient for any realistic viewport
+	key := uint32(width)<<16 | uint32(height)
 	if img, ok := s.imageCache[key]; ok {
 		img.Clear()
 		return img

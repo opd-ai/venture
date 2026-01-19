@@ -5,7 +5,7 @@ Updated: 2026-01-19
 ## Executive Summary
 **Codebase**: Venture - Go/Ebiten procedural multiplayer action-RPG (~240K+ LOC)
 **Critical Issues Found**: 3 (3 FIXED, 0 remaining)
-**Moderate Issues Found**: 6 (1 FIXED, 5 remaining)
+**Moderate Issues Found**: 6 (3 FIXED, 3 remaining)
 **Total Recommendations**: 15
 
 The Venture codebase demonstrates **exceptional performance engineering** with comprehensive optimizations already in place. The render system achieves **60+ FPS with 2000 entities** through viewport culling (95% entity reduction), batch rendering (80-90% draw call reduction), and extensive object pooling. Memory usage is **73 MB total heap** vs the 400 MB budget (5.5x under target), with entity rendering footprint at only 1.25 MB for 2000 entities. The identified issues are primarily in UI subsystems where per-frame image allocations remain, and in the lighting system's hot path. The existing PERFORMANCE_BENCHMARKS.md and MEMORY_PROFILING.md documents indicate mature performance culture.
@@ -14,6 +14,8 @@ The Venture codebase demonstrates **exceptional performance engineering** with c
 - ✅ Fixed Critical Issue #1: Cached litBuffer in EbitenGame (eliminates ~3MB allocation per frame in lit scenes)
 - ✅ Fixed Critical Issue #2: Applied UI image caching pattern to all UI files (inventory_ui.go, quest_ui.go, crafting_ui.go, trade_ui.go, territory_ui.go, advanced_class_ui.go, shop_ui.go) - eliminates 10-30 allocations per frame when UI open
 - ✅ Fixed Critical Issue #3: Cached mailbox ebiten.Image with state-based invalidation (eliminates 2-5ms per frame when mailbox open)
+- ✅ Fixed Moderate Issue #1: Animation system generateSpriteCacheKey uses strings.Builder instead of fmt.Sprintf (4-5x faster key generation)
+- ✅ Fixed Moderate Issue #2: Shadow system image cache uses composite integer key instead of fmt.Sprintf (eliminates string allocation per cache lookup)
 
 ---
 
@@ -42,29 +44,19 @@ The Venture codebase demonstrates **exceptional performance engineering** with c
 
 ## Moderate Issues (Performance Improvements)
 
-### 1. Animation System generateFrameKey Uses fmt.Sprintf
+### 1. Animation System generateFrameKey Uses fmt.Sprintf ✅ FIXED (2026-01-19)
 - **Category**: Update Loop/Allocations
 - **Location**: `pkg/engine/animation_system.go:1359`
 - **Impact**: String allocation per animation frame key generation; affects entities with animations
-- **Current Code**:
-  ```go
-  keyStr := fmt.Sprintf("sprite:%s:%d:%s:%d:%d:%.2f:%d:%s",
-      spriteTemplate, seed, entityType, depth, variant, scale, entityID, genreID)
-  ```
-- **Note**: Line 1258 comment indicates awareness ("Optimized: Uses strconv.AppendInt instead of fmt.Sprintf for 4.3x speedup") but this location still uses fmt.Sprintf
-- **Recommended Fix**: Use strings.Builder or pre-allocated buffer with strconv.Append* functions
-- **Expected Improvement**: 4-5x faster key generation, ~1-2µs saved per key
+- **Fix Applied**: Replaced fmt.Sprintf with strings.Builder and strconv.AppendInt for 4-5x faster key generation
+- **Additional Fix**: Also optimized bossScale formatting in buildCustomFieldsKey to use strconv.FormatInt
 
-### 2. ShadowSystem Image Cache Uses fmt.Sprintf Keys
+### 2. ShadowSystem Image Cache Uses fmt.Sprintf Keys ✅ FIXED (2026-01-19)
 - **Category**: Rendering/Allocations
 - **Location**: `pkg/engine/shadow_system.go:120`
 - **Impact**: String allocation for each shadow image cache lookup
-- **Current Code**:
-  ```go
-  key := fmt.Sprintf("%dx%d", width, height)
-  ```
-- **Recommended Fix**: Use composite integer key `(width << 16) | height` or pre-compute common sizes
-- **Expected Improvement**: Eliminate string allocation per shadow cache lookup
+- **Fix Applied**: Changed map from `map[string]*ebiten.Image` to `map[uint32]*ebiten.Image` using composite integer key `(width << 16) | height`
+- **Improvement Achieved**: Eliminates string allocation per shadow cache lookup
 
 ### 3. TerrainRenderSystem Creates Fallback Image Per-Draw
 - **Category**: Rendering/Memory

@@ -620,7 +620,7 @@ npcEntity.AddComponent(npcAnim)
 playerEntity := world.CreateEntity()
 playerEntity.AddComponent(&PositionComponent{X: 100, Y: 0})
 playerEntity.AddComponent(&EbitenSprite{Width: 32, Height: 32, Visible: true})
-playerEntity.AddComponent(&InputComponent{}) // This makes it a player
+playerEntity.AddComponent(NewStubInput()) // This makes it a player
 playerAnim := NewAnimationComponent(2)
 playerAnim.Dirty = true
 playerAnim.CurrentState = AnimationStateIdle

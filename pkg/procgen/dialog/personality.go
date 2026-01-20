@@ -287,29 +287,3 @@ func (p *Personality) String() string {
 		p.Type, p.Friendliness, p.Verbosity, p.Formality, p.Humor, p.Knowledge)
 }
 
-// clamp restricts a value to the range [min, max].
-func clamp(value, min, max float64) float64 {
-	if value < min {
-		return min
-	}
-	if value > max {
-		return max
-	}
-	return value
-}
-
-// max returns the larger of two integers.
-func max(a, b int) int {
-	if a > b {
-		return a
-	}
-	return b
-}
-
-// min returns the smaller of two integers.
-func min(a, b int) int {
-	if a < b {
-		return a
-	}
-	return b
-}

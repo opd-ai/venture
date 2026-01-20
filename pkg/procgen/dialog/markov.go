@@ -5,7 +5,6 @@ import (
 	"encoding/binary"
 	"fmt"
 	"math/rand"
-	"sort"
 	"strings"
 )
 
@@ -269,79 +268,6 @@ func (m *MarkovGenerator) selectNextWord(candidates []string, rng *rand.Rand, te
 	return selectWeightedWord(candidates, rng, temperature)
 }
 
-// selectMostFrequentWord returns the most frequently occurring word in candidates.
-func selectMostFrequentWord(candidates []string) string {
-	freq := make(map[string]int)
-	maxFreq := 0
-	mostCommon := candidates[0]
-
-	for _, word := range candidates {
-		freq[word]++
-		if freq[word] > maxFreq {
-			maxFreq = freq[word]
-			mostCommon = word
-		}
-	}
-	return mostCommon
-}
-
-// selectWeightedWord selects a word using temperature-adjusted weighted randomness.
-func selectWeightedWord(candidates []string, rng *rand.Rand, temperature float64) string {
-	freq := buildFrequencyMap(candidates)
-	sortedWords := sortWords(freq)
-	weights, totalWeight := calculateTemperatureWeights(freq, sortedWords, temperature)
-
-	r := rng.Float64() * totalWeight
-	cumulative := 0.0
-
-	for i, weight := range weights {
-		cumulative += weight
-		if r <= cumulative {
-			return sortedWords[i]
-		}
-	}
-
-	return sortedWords[len(sortedWords)-1]
-}
-
-// buildFrequencyMap creates a frequency map from word candidates.
-func buildFrequencyMap(candidates []string) map[string]float64 {
-	freq := make(map[string]float64)
-	for _, word := range candidates {
-		freq[word]++
-	}
-	return freq
-}
-
-// sortWords returns sorted keys from frequency map for deterministic iteration.
-func sortWords(freq map[string]float64) []string {
-	sortedWords := make([]string, 0, len(freq))
-	for word := range freq {
-		sortedWords = append(sortedWords, word)
-	}
-	sort.Strings(sortedWords)
-	return sortedWords
-}
-
-// calculateTemperatureWeights applies temperature scaling to word frequencies.
-func calculateTemperatureWeights(freq map[string]float64, sortedWords []string, temperature float64) ([]float64, float64) {
-	weights := make([]float64, 0, len(freq))
-	totalWeight := 0.0
-
-	for _, word := range sortedWords {
-		count := freq[word]
-		weight := 1.0
-		if temperature > 0 {
-			weight = count / temperature
-		}
-
-		weights = append(weights, weight)
-		totalWeight += weight
-	}
-
-	return weights, totalWeight
-}
-
 // deriveRuntimeSeed creates a deterministic seed from player input and conversation ID.
 //
 // This ensures reproducible dialog generation (same seed + input = same output):
@@ -374,24 +300,6 @@ func (m *MarkovGenerator) deriveRuntimeSeed(playerInput, conversationID string) 
 // makePrefix creates a space-separated prefix string from words.
 func (m *MarkovGenerator) makePrefix(words []string) string {
 	return strings.Join(words, " ")
-}
-
-// tokenize splits a sentence into words.
-//
-// Preserves punctuation attached to words (e.g., "Hello!" -> ["Hello!"])
-// Normalizes whitespace and removes empty tokens.
-func tokenize(text string) []string {
-	// Split on whitespace
-	rawTokens := strings.Fields(text)
-
-	tokens := make([]string, 0, len(rawTokens))
-	for _, token := range rawTokens {
-		if token != "" {
-			tokens = append(tokens, token)
-		}
-	}
-
-	return tokens
 }
 
 // GetChainSize returns the number of prefixes in the trained chain.

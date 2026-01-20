@@ -22,9 +22,9 @@
 //	// bonus = 0.1 per day (vs 0.05 without housing)
 package companion_housing
 
-import (
-	"time"
-)
+// Shared type definitions for the companion_housing package.
+// This file contains BeddingQuality and TrainingAreaType enumerations used
+// throughout the package for categorizing furniture and determining bonuses.
 
 // BeddingQuality represents the quality of companion bedding furniture.
 // Higher quality provides larger loyalty bonuses.
@@ -84,68 +84,3 @@ func (t TrainingAreaType) XPMultiplier() float64 {
 	}
 }
 
-// CompanionBedding represents a companion rest location in a house.
-type CompanionBedding struct {
-	FurnitureID  string         // Unique furniture identifier
-	HouseID      string         // Owner house identifier
-	CompanionID  uint64         // Companion entity ID (0 if unassigned)
-	Quality      BeddingQuality // Bedding quality tier
-	LastRestTime time.Time      // Last time companion rested here
-}
-
-// LoyaltyBonus calculates daily loyalty gain for this bedding quality.
-// Base loyalty gain (no housing) is 0.05/day.
-// With housing: 0.05-0.2/day based on bedding quality.
-func (b *CompanionBedding) LoyaltyBonus() float64 {
-	return float64(b.Quality) * 0.1
-}
-
-// TrainingArea represents a skill training location in a house.
-type TrainingArea struct {
-	FurnitureID    string               // Unique furniture identifier
-	HouseID        string               // Owner house identifier
-	Type           TrainingAreaType     // Training area specialization
-	ActiveSessions map[uint64]time.Time // Companion ID → session start time
-}
-
-// XPBonus calculates the XP multiplier for training in this area.
-// Default companion skill XP is 1.0x, training areas provide 1.25x-1.5x.
-func (t *TrainingArea) XPBonus() float64 {
-	return t.Type.XPMultiplier()
-}
-
-// StorageChest represents shared inventory accessible by companions.
-type StorageChest struct {
-	FurnitureID    string   // Unique furniture identifier
-	HouseID        string   // Owner house identifier
-	Capacity       int      // Total slot count (50-100 typical)
-	SharedWithPets bool     // If true, companions can deposit/withdraw
-	Items          []string // Item IDs stored in chest
-}
-
-// AddItem adds an item to the chest if space available.
-// Returns false if chest is full.
-func (s *StorageChest) AddItem(itemID string) bool {
-	if len(s.Items) >= s.Capacity {
-		return false
-	}
-	s.Items = append(s.Items, itemID)
-	return true
-}
-
-// RemoveItem removes an item from the chest if present.
-// Returns false if item not found.
-func (s *StorageChest) RemoveItem(itemID string) bool {
-	for i, id := range s.Items {
-		if id == itemID {
-			s.Items = append(s.Items[:i], s.Items[i+1:]...)
-			return true
-		}
-	}
-	return false
-}
-
-// AvailableSlots returns number of empty slots in chest.
-func (s *StorageChest) AvailableSlots() int {
-	return s.Capacity - len(s.Items)
-}

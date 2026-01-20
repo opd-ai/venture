@@ -408,9 +408,13 @@ func TestConfirmPrediction(t *testing.T) {
 		ProjectileType: "arrow",
 	}
 
-	confirmed := sync.ConfirmPrediction(predictionID, serverProjectileID, serverMsg)
+	confirmed, mispredicted := sync.ConfirmPrediction(predictionID, serverProjectileID, serverMsg)
 	if !confirmed {
 		t.Error("Prediction should be confirmed")
+	}
+	// Slight difference (1 pixel) is within tolerance, so should not be mispredicted
+	if mispredicted {
+		t.Error("Prediction should not be mispredicted for minor position difference")
 	}
 
 	// Verify prediction removed and server projectile added
@@ -439,9 +443,94 @@ func TestConfirmPrediction_NotFound(t *testing.T) {
 	sync := NewProjectileNetworkSync()
 
 	// Try to confirm non-existent prediction
-	confirmed := sync.ConfirmPrediction(9999, 1000, ProjectileSpawnMessage{})
+	confirmed, mispredicted := sync.ConfirmPrediction(9999, 1000, ProjectileSpawnMessage{})
 	if confirmed {
 		t.Error("Confirmation should fail for non-existent prediction")
+	}
+	if mispredicted {
+		t.Error("Misprediction should be false for non-existent prediction")
+	}
+}
+
+// TestConfirmPrediction_Misprediction verifies misprediction detection.
+func TestConfirmPrediction_Misprediction(t *testing.T) {
+	sync := NewProjectileNetworkSync()
+
+	// Client predicts projectile at one position
+	predictionID := uint64(9999)
+	predictedMsg := ProjectileSpawnMessage{
+		ProjectileID:   predictionID,
+		OwnerID:        100,
+		PositionX:      50.0,
+		PositionY:      50.0,
+		VelocityX:      300.0,
+		VelocityY:      0.0,
+		ProjectileType: "arrow",
+	}
+	sync.PredictProjectile(predictionID, predictedMsg)
+
+	// Server confirms with significantly different position (> 10 pixel tolerance)
+	serverProjectileID := uint64(1000)
+	serverMsg := ProjectileSpawnMessage{
+		ProjectileID:   serverProjectileID,
+		OwnerID:        100,
+		PositionX:      70.0, // 20 pixels off - beyond tolerance
+		PositionY:      50.0,
+		VelocityX:      300.0,
+		VelocityY:      0.0,
+		ProjectileType: "arrow",
+	}
+
+	confirmed, mispredicted := sync.ConfirmPrediction(predictionID, serverProjectileID, serverMsg)
+	if !confirmed {
+		t.Error("Prediction should be confirmed")
+	}
+	if !mispredicted {
+		t.Error("Prediction should be mispredicted for large position difference")
+	}
+
+	// Verify misprediction count in stats
+	stats := sync.GetStats()
+	if stats.MispredictionCount != 1 {
+		t.Errorf("Expected misprediction count 1, got %d", stats.MispredictionCount)
+	}
+}
+
+// TestConfirmPrediction_VelocityMisprediction verifies velocity misprediction detection.
+func TestConfirmPrediction_VelocityMisprediction(t *testing.T) {
+	sync := NewProjectileNetworkSync()
+
+	// Client predicts projectile
+	predictionID := uint64(9999)
+	predictedMsg := ProjectileSpawnMessage{
+		ProjectileID:   predictionID,
+		OwnerID:        100,
+		PositionX:      50.0,
+		PositionY:      50.0,
+		VelocityX:      300.0,
+		VelocityY:      0.0,
+		ProjectileType: "arrow",
+	}
+	sync.PredictProjectile(predictionID, predictedMsg)
+
+	// Server confirms with significantly different velocity (> 50 px/s tolerance)
+	serverProjectileID := uint64(1000)
+	serverMsg := ProjectileSpawnMessage{
+		ProjectileID:   serverProjectileID,
+		OwnerID:        100,
+		PositionX:      50.0,
+		PositionY:      50.0,
+		VelocityX:      400.0, // 100 px/s off - beyond tolerance
+		VelocityY:      0.0,
+		ProjectileType: "arrow",
+	}
+
+	confirmed, mispredicted := sync.ConfirmPrediction(predictionID, serverProjectileID, serverMsg)
+	if !confirmed {
+		t.Error("Prediction should be confirmed")
+	}
+	if !mispredicted {
+		t.Error("Prediction should be mispredicted for large velocity difference")
 	}
 }
 

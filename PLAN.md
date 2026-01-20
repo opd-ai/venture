@@ -376,11 +376,11 @@ All Phase 4 deliverables completed successfully:
   - ✅ Documented deprecation policy (2 MINOR versions notice before removal)
   - ✅ Documented version checking via CLI and programmatic access
   - ✅ Added compatibility matrix for client/server version combinations
-- [ ] Create upgrade guides (new: docs/UPGRADE_GUIDE.md)
-  - Document upgrade process from development to v1.0.0
-  - Provide database/save file migration scripts
-  - List breaking changes and required actions
-  - Include rollback procedures
+- [x] Create upgrade guides (new: docs/UPGRADE_GUIDE.md)
+  - ✅ Document upgrade process from development to v1.0.0
+  - ✅ Document database/save file migration (automatic migration for v0.9.x)
+  - ✅ List breaking changes and required actions (none for v1.0.0)
+  - ✅ Include rollback procedures (binary, save files, configuration)
 - [ ] Security hardening review (files: pkg/security/*, docs/SECURITY.md)
   - Run security audit using `gosec` and address findings
   - Review dependency security advisories (GitHub Dependabot)

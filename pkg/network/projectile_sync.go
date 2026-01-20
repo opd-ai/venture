@@ -34,6 +34,10 @@ type ProjectileNetworkSync struct {
 	// projectileHistory stores recent projectile states for lag compensation
 	// Map: projectile ID -> []timestamped state snapshots
 	projectileHistory map[uint64][]ProjectileSnapshot
+
+	// mispredictionCount tracks how many predictions had position/velocity errors
+	// beyond tolerance thresholds. Useful for diagnostics and network quality monitoring.
+	mispredictionCount uint64
 }
 
 // ProjectileSnapshot represents a projectile's state at a specific time.
@@ -343,35 +347,41 @@ func (s *ProjectileNetworkSync) PredictProjectile(predictionID uint64, msg Proje
 // ConfirmPrediction confirms a client-predicted projectile with server ID.
 // Client-side only. Called when server's ProjectileSpawnMessage arrives.
 //
-// Returns true if a matching prediction was found and removed.
-func (s *ProjectileNetworkSync) ConfirmPrediction(predictionID, serverProjectileID uint64, serverMsg ProjectileSpawnMessage) bool {
+// Returns:
+// - confirmed: true if a matching prediction was found and removed
+// - mispredicted: true if server position/velocity differed beyond tolerance
+//
+// When mispredicted is true, the caller should apply correction to the local
+// projectile (e.g., snap to server position or interpolate toward it).
+func (s *ProjectileNetworkSync) ConfirmPrediction(predictionID, serverProjectileID uint64, serverMsg ProjectileSpawnMessage) (confirmed bool, mispredicted bool) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	if predictedMsg, exists := s.predictedProjectiles[predictionID]; exists {
-		delete(s.predictedProjectiles, predictionID)
-		s.confirmedProjectiles[serverProjectileID] = serverMsg
-
-		// Check for misprediction: if spawn position/velocity differs significantly, correction needed
-		// Tolerances chosen based on typical network jitter (10-50ms @ 300-600 px/s projectile speeds)
-		const positionTolerance = 10.0 // pixels (allows ~15-30ms prediction error)
-		const velocityTolerance = 50.0 // pixels per second (allows minor aim corrections)
-		dx := serverMsg.PositionX - predictedMsg.PositionX
-		dy := serverMsg.PositionY - predictedMsg.PositionY
-		dvx := serverMsg.VelocityX - predictedMsg.VelocityX
-		dvy := serverMsg.VelocityY - predictedMsg.VelocityY
-
-		mispredicted := (dx*dx+dy*dy > positionTolerance*positionTolerance) ||
-			(dvx*dvx+dvy*dvy > velocityTolerance*velocityTolerance)
-
-		// Return true to indicate successful confirmation
-		// Caller can check misprediction by comparing messages if needed
-		_ = mispredicted // For now, just detect; future: trigger correction
-
-		return true
+	predictedMsg, exists := s.predictedProjectiles[predictionID]
+	if !exists {
+		return false, false
 	}
 
-	return false
+	delete(s.predictedProjectiles, predictionID)
+	s.confirmedProjectiles[serverProjectileID] = serverMsg
+
+	// Check for misprediction: if spawn position/velocity differs significantly, correction needed
+	// Tolerances chosen based on typical network jitter (10-50ms @ 300-600 px/s projectile speeds)
+	const positionTolerance = 10.0 // pixels (allows ~15-30ms prediction error)
+	const velocityTolerance = 50.0 // pixels per second (allows minor aim corrections)
+	dx := serverMsg.PositionX - predictedMsg.PositionX
+	dy := serverMsg.PositionY - predictedMsg.PositionY
+	dvx := serverMsg.VelocityX - predictedMsg.VelocityX
+	dvy := serverMsg.VelocityY - predictedMsg.VelocityY
+
+	mispredicted = (dx*dx+dy*dy > positionTolerance*positionTolerance) ||
+		(dvx*dvx+dvy*dvy > velocityTolerance*velocityTolerance)
+
+	if mispredicted {
+		s.mispredictionCount++
+	}
+
+	return true, mispredicted
 }
 
 // GetConfirmedProjectile retrieves a confirmed projectile's spawn message.
@@ -408,6 +418,7 @@ func (s *ProjectileNetworkSync) GetStats() ProjectileSyncStats {
 		HistoryEntries:       len(s.projectileHistory),
 		TotalSnapshots:       totalSnapshots,
 		ServerTime:           s.serverTime,
+		MispredictionCount:   s.mispredictionCount,
 	}
 }
 
@@ -418,6 +429,7 @@ type ProjectileSyncStats struct {
 	HistoryEntries       int     // Number of projectiles with history
 	TotalSnapshots       int     // Total history snapshots across all projectiles
 	ServerTime           float64 // Current server time
+	MispredictionCount   uint64  // Total mispredictions detected (position/velocity beyond tolerance)
 }
 
 // CleanupTask starts a background goroutine that periodically cleans up old history.

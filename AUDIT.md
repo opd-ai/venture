@@ -367,13 +367,11 @@ All 100+ example packages in `examples/` have 0% coverage, which is expected as 
 - **Modern Go:** Consider migrating to `any` type alias
 - **Status:** Low priority cosmetic change
 
-### 3. go.vet Issue Detected
+### ~~3. go.vet Issue Detected~~ ✅ FIXED (2026-01-20)
 
 - **[examples/](examples/)** - main redeclared
-  ```
-  error_handling_demo.go:15:6: main redeclared in this block
-  ```
-  - **Fix:** Move to separate package or rename
+  - **Resolution:** Moved `error_handling_demo.go` and `corruption_recovery_demo.go` to separate subdirectories (`examples/error_handling_demo/main.go` and `examples/corruption_recovery_demo/main.go`). Removed `examples/doc.go` which was declaring `package main` in the root. Fixed `NowTimestamp()` calls in `examples/network_demo/main.go` and `examples/multiplayer_demo/main.go` to handle the new `(uint64, error)` return signature. Removed obsolete AUDIT.md files from example subdirectories.
+  - **Verification:** `go vet ./examples/...`
 
 ---
 
@@ -448,9 +446,10 @@ grep -rn "\.\(\*net\.\(UDP\|TCP\)" pkg/
 | **Logging** | 6 instances (6 fixed ✅) |
 | **Concurrency** | 0 blocking issues |
 | **Testing** | All measured packages ≥65% |
+| **Additional Issues** | 1 go.vet issue (1 fixed ✅) |
 
 **Packages Analyzed:** 102/102 in pkg/ (100%)  
 **Total Go Files Examined:** 1,616  
 **Lines of Code:** 587,782  
 
-**Top Priority:** All critical, short-term architecture, logging, and error handling items have been fixed. Continue addressing remaining medium-term technical debt items (interface{} migration, generator determinism tests).
+**Top Priority:** All critical, short-term architecture, logging, error handling, and go.vet items have been fixed. Only medium-term technical debt items remain (interface{} migration, generator determinism tests).

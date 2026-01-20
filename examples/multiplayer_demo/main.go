@@ -169,8 +169,12 @@ func simulateServerLoop(server *Server, world *engine.World, serializer *network
 			position := pos.(*engine.PositionComponent)
 
 			// Create state update
+			timestamp, err := network.NowTimestamp()
+			if err != nil {
+				continue
+			}
 			update := &network.StateUpdate{
-				Timestamp: network.NowTimestamp(),
+				Timestamp: timestamp,
 				EntityID:  entity.ID,
 				Priority:  128,
 				Components: []network.ComponentData{

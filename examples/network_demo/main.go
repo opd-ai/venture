@@ -33,8 +33,14 @@ func demonstrateProtocol() {
 	binary.LittleEndian.PutUint64(posData[0:8], math.Float64bits(x))
 	binary.LittleEndian.PutUint64(posData[8:16], math.Float64bits(y))
 
+	timestamp, err := network.NowTimestamp()
+	if err != nil {
+		fmt.Printf("Failed to get timestamp: %v\n", err)
+		return
+	}
+
 	update := &network.StateUpdate{
-		Timestamp:      network.NowTimestamp(),
+		Timestamp:      timestamp,
 		EntityID:       42,
 		Priority:       200,
 		SequenceNumber: 100,
@@ -84,9 +90,14 @@ func demonstrateProtocol() {
 
 	// Input command
 	fmt.Println("\nInput Command:")
+	cmdTimestamp, err := network.NowTimestamp()
+	if err != nil {
+		fmt.Printf("❌ Timestamp failed: %v\n", err)
+		return
+	}
 	cmd := &network.InputCommand{
 		PlayerID:       123,
-		Timestamp:      network.NowTimestamp(),
+		Timestamp:      cmdTimestamp,
 		SequenceNumber: 50,
 		InputType:      "move",
 		Data:           []byte{1, 0}, // dx=1, dy=0
@@ -148,8 +159,13 @@ func demonstrateClientServer() {
 
 	// Simulate multiple entities updating
 	for i := 1; i <= 3; i++ {
+		broadcastTimestamp, err := network.NowTimestamp()
+		if err != nil {
+			fmt.Printf("❌ Timestamp failed: %v\n", err)
+			continue
+		}
 		update := &network.StateUpdate{
-			Timestamp: network.NowTimestamp(),
+			Timestamp: broadcastTimestamp,
 			EntityID:  uint64(i),
 			Priority:  128,
 			Components: []network.ComponentData{

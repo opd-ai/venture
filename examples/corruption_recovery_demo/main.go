@@ -30,7 +30,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	fmt.Println("=== Save File Corruption Recovery Demo ===\n")
+	fmt.Println("=== Save File Corruption Recovery Demo ===")
 
 	// Step 1: Create and save initial game state
 	fmt.Println("Step 1: Creating initial save...")

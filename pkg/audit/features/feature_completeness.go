@@ -16,22 +16,6 @@ import (
 	"time"
 )
 
-// FeatureCategory represents a category of features
-type FeatureCategory string
-
-const (
-	CategoryCore     FeatureCategory = "Core Gameplay"
-	CategoryAdvanced FeatureCategory = "Advanced Systems"
-	CategoryVehicles FeatureCategory = "Vehicles"
-	CategorySocial   FeatureCategory = "Social"
-	CategoryHousing  FeatureCategory = "Housing"
-	CategoryGuilds   FeatureCategory = "Guilds"
-	CategoryCombat   FeatureCategory = "Combat"
-	CategoryEconomy  FeatureCategory = "Economy"
-	CategoryContent  FeatureCategory = "Content"
-	CategoryMeta     FeatureCategory = "Meta-Game"
-)
-
 // Feature represents a single game feature
 type Feature struct {
 	ID          string

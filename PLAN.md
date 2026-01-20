@@ -304,11 +304,12 @@ All Phase 3 deliverables completed successfully:
   - ✅ Profile memory allocations (reduce allocations in rendering loop) - documented in pkg/engine/MEMORY_PROFILING.md
   - ✅ Optimize sprite caching (target: >98% cache hit rate) - implemented PredictiveCacheWarmer in pkg/rendering/cache/predictive_warmer.go
   - ✅ Optimize network serialization (reduce allocations, use buffer pools) - verified in pkg/network/buffer_pool.go, 15M+ packets/s
-- [ ] Load testing and capacity planning (new: scripts/load-test.sh)
-  - Simulate 10 concurrent players with realistic behavior
-  - Measure resource usage (CPU, memory, network) at different player counts
-  - Establish capacity limits (max players per server instance)
-  - Document results in docs/CAPACITY_PLANNING.md
+- [x] Load testing and capacity planning (new: scripts/load-test.sh)
+  - ✅ Created scripts/load-test.sh wrapper for examples/loadtest tool
+  - ✅ Script monitors CPU, memory, and network during test
+  - ✅ Generates capacity reports in docs/capacity/
+  - ✅ Created docs/CAPACITY_PLANNING.md with capacity limits and recommendations
+  - ✅ Documented scaling strategies (vertical and horizontal/federation)
 - [ ] Implement performance regression testing (file: .github/workflows/quality.yml)
   - Add benchmark CI job that compares against baseline
   - Fail CI if performance regresses >10% on key benchmarks

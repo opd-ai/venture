@@ -65,23 +65,12 @@
 
 The ECS pattern requires components to be pure data structures with only `Type() string` method. The following components violate this pattern by containing business logic:
 
-### 1. CompanionHousingComponent Has Multiple Methods
+### ~~1. CompanionHousingComponent Has Multiple Methods~~ ✅ FIXED (2026-01-20)
 
-- **[pkg/integration/companion_housing/component.go:L25-66](pkg/integration/companion_housing/component.go#L25)**
-  - **Methods Found:** 
-    - `IsInHouse()` (L25)
-    - `HasBedding()` (L30)
-    - `IsTraining()` (L35)
-    - `HasSharedStorage()` (L40)
-    - `DaysSinceRest()` (L46) - **Also uses time.Since()**
-    - `UpdateFromManager()` (L56) - **Has mutation logic**
-  - **Fix:** Move all methods to `CompanionHousingSystem.Update()`:
-    ```go
-    // In CompanionHousingSystem
-    func (s *CompanionHousingSystem) isInHouse(c *CompanionHousingComponent) bool {
-        return c.OwnerHouseID != ""
-    }
-    ```
+- **[pkg/integration/companion_housing/component.go](pkg/integration/companion_housing/component.go)**
+  - **Resolution:** Created `CompanionHousingSystem` in new file `companion_housing_system.go`. Moved all component methods (`IsInHouse()`, `HasBedding()`, `IsTraining()`, `HasSharedStorage()`, `DaysSinceRest()`, `UpdateFromManager()`) to the system. Fixed `DaysSinceRest()` to accept `now time.Time` parameter for deterministic testing instead of using `time.Since()`. Component now only has `Type() string` method following strict ECS pattern. Added comprehensive tests in `companion_housing_system_test.go` with determinism validation.
+  - **Verification:** `go test -v ./pkg/integration/companion_housing/...`
+  - **Coverage:** 93.3%
 
 ### 2. HousingCraftingComponent Has Methods
 
@@ -424,7 +413,7 @@ All 100+ example packages in `examples/` have 0% coverage, which is expected as 
 
 ### Short Term (Architecture)
 
-1. Refactor `CompanionHousingComponent` methods to system
+1. ~~Refactor `CompanionHousingComponent` methods to system~~ ✅ FIXED (2026-01-20)
 2. Refactor `VoiceAudioComponent` methods to system
 3. Refactor `FishingSpotComponent` methods to system
 4. Add `io.LimitReader` for network message parsing
@@ -469,8 +458,8 @@ grep -rn "\.\(\*net\.\(UDP\|TCP\)" pkg/
 
 | Category | Count |
 |----------|-------|
-| **Critical** | 5 (4 fixed) |
-| **Architecture Violations** | 5 major components (~50-100 methods) |
+| **Critical** | 5 (5 fixed ✅) |
+| **Architecture Violations** | 5 major components (1 fixed, 4 remaining) |
 | **Performance** | 0 blocking issues |
 | **Memory** | 0 blocking issues |
 | **Network** | 1 (LimitReader recommendation) |
@@ -483,4 +472,4 @@ grep -rn "\.\(\*net\.\(UDP\|TCP\)" pkg/
 **Total Go Files Examined:** 1,616  
 **Lines of Code:** 587,782  
 
-**Top Priority:** Refactor ECS component methods to systems - architecture violations prevent clean separation of data and logic.
+**Top Priority:** Refactor remaining ECS component methods to systems - architecture violations prevent clean separation of data and logic.

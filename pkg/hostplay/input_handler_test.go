@@ -237,3 +237,216 @@ func TestInputHandler_ProcessInputRaw(t *testing.T) {
 	handler.ProcessInputRaw(uint64(999), "move", rawData)
 	// Should not crash, just log warning
 }
+
+// TestInputHandler_ProcessItemUse tests the processItemUse function
+func TestInputHandler_ProcessItemUse(t *testing.T) {
+	world := engine.NewWorld()
+	logger := logrus.NewEntry(logrus.New())
+	handler := NewInputHandler(world, logger)
+
+	entity := world.CreateEntity()
+	playerID := uint64(1)
+	handler.RegisterPlayer(playerID, entity)
+
+	// Test with valid slot
+	data := map[string]interface{}{
+		"slot": float64(0),
+	}
+	handler.ProcessInput(playerID, "use_item", data)
+	// Test passes if no panic occurs
+
+	// Test with different slot
+	data["slot"] = float64(5)
+	handler.ProcessInput(playerID, "use_item", data)
+	// Test passes if no panic occurs
+
+	// Test with missing slot (should be skipped gracefully)
+	emptyData := map[string]interface{}{}
+	handler.ProcessInput(playerID, "use_item", emptyData)
+	// Test passes if no panic occurs
+
+	// Test with invalid slot type (should be skipped gracefully)
+	invalidData := map[string]interface{}{
+		"slot": "not a number",
+	}
+	handler.ProcessInput(playerID, "use_item", invalidData)
+	// Test passes if no panic occurs
+}
+
+// TestInputHandler_ProcessInteraction tests the processInteraction function
+func TestInputHandler_ProcessInteraction(t *testing.T) {
+	world := engine.NewWorld()
+	logger := logrus.NewEntry(logrus.New())
+	handler := NewInputHandler(world, logger)
+
+	entity := world.CreateEntity()
+	playerID := uint64(1)
+	handler.RegisterPlayer(playerID, entity)
+
+	// Test with empty data
+	data := map[string]interface{}{}
+	handler.ProcessInput(playerID, "interact", data)
+	// Test passes if no panic occurs
+
+	// Test with some data
+	data["target_id"] = float64(123)
+	handler.ProcessInput(playerID, "interact", data)
+	// Test passes if no panic occurs
+}
+
+// TestInputHandler_UnknownInputType tests handling of unknown input types
+func TestInputHandler_UnknownInputType(t *testing.T) {
+	world := engine.NewWorld()
+	logger := logrus.NewEntry(logrus.New())
+	handler := NewInputHandler(world, logger)
+
+	entity := world.CreateEntity()
+	playerID := uint64(1)
+	handler.RegisterPlayer(playerID, entity)
+
+	// Test with various unknown types
+	unknownTypes := []string{"jump", "crouch", "roll", "special", "", "invalid_action"}
+	for _, inputType := range unknownTypes {
+		t.Run(inputType, func(t *testing.T) {
+			data := map[string]interface{}{}
+			handler.ProcessInput(playerID, inputType, data)
+			// Test passes if no panic occurs
+		})
+	}
+}
+
+// TestInputHandler_MovementEntityWithoutVelocity tests movement on entity without velocity
+func TestInputHandler_MovementEntityWithoutVelocity(t *testing.T) {
+	world := engine.NewWorld()
+	logger := logrus.NewEntry(logrus.New())
+	handler := NewInputHandler(world, logger)
+
+	entity := world.CreateEntity()
+	// Intentionally not adding velocity component
+	playerID := uint64(1)
+	handler.RegisterPlayer(playerID, entity)
+
+	data := map[string]interface{}{
+		"dx": 1.0,
+		"dy": 0.0,
+	}
+	handler.ProcessInput(playerID, "move", data)
+	// Test passes if no panic occurs
+}
+
+// TestInputHandler_AttackEntityWithoutAim tests attack on entity without aim component
+func TestInputHandler_AttackEntityWithoutAim(t *testing.T) {
+	world := engine.NewWorld()
+	logger := logrus.NewEntry(logrus.New())
+	handler := NewInputHandler(world, logger)
+
+	entity := world.CreateEntity()
+	// Intentionally not adding aim component
+	playerID := uint64(1)
+	handler.RegisterPlayer(playerID, entity)
+
+	data := map[string]interface{}{
+		"angle": 1.57,
+	}
+	handler.ProcessInput(playerID, "attack", data)
+	// Test passes if no panic occurs
+}
+
+// TestInputHandler_AttackWithMissingAngle tests attack without angle in data
+func TestInputHandler_AttackWithMissingAngle(t *testing.T) {
+	world := engine.NewWorld()
+	logger := logrus.NewEntry(logrus.New())
+	handler := NewInputHandler(world, logger)
+
+	entity := world.CreateEntity()
+	aim := &engine.AimComponent{AimAngle: 0.5}
+	entity.AddComponent(aim)
+	playerID := uint64(1)
+	handler.RegisterPlayer(playerID, entity)
+
+	// Attack without angle should not change aim
+	data := map[string]interface{}{}
+	handler.ProcessInput(playerID, "attack", data)
+
+	if aim.AimAngle != 0.5 {
+		t.Errorf("AimAngle changed from %f when no angle provided", 0.5)
+	}
+}
+
+// TestInputHandler_MovementNormalization tests that movement is properly normalized
+func TestInputHandler_MovementNormalization(t *testing.T) {
+	world := engine.NewWorld()
+	logger := logrus.NewEntry(logrus.New())
+	handler := NewInputHandler(world, logger)
+
+	entity := world.CreateEntity()
+	velocity := &engine.VelocityComponent{VX: 0, VY: 0}
+	entity.AddComponent(velocity)
+	playerID := uint64(1)
+	handler.RegisterPlayer(playerID, entity)
+
+	// Test diagonal movement (should be normalized)
+	data := map[string]interface{}{
+		"dx": 1.0,
+		"dy": 1.0,
+	}
+	handler.ProcessInput(playerID, "move", data)
+
+	// Velocity magnitude should equal moveSpeed (200.0)
+	magnitude := velocity.VX*velocity.VX + velocity.VY*velocity.VY
+	expectedMagnitudeSq := handler.moveSpeed * handler.moveSpeed
+	tolerance := 0.01
+
+	if magnitude < expectedMagnitudeSq-tolerance || magnitude > expectedMagnitudeSq+tolerance {
+		t.Errorf("magnitude squared = %f, want %f (tolerance %f)",
+			magnitude, expectedMagnitudeSq, tolerance)
+	}
+}
+
+// TestInputHandler_MovementDirections tests all cardinal and diagonal directions
+func TestInputHandler_MovementDirections(t *testing.T) {
+	directions := []struct {
+		name string
+		dx   float64
+		dy   float64
+	}{
+		{"right", 1.0, 0.0},
+		{"left", -1.0, 0.0},
+		{"up", 0.0, -1.0},
+		{"down", 0.0, 1.0},
+		{"up-right", 1.0, -1.0},
+		{"up-left", -1.0, -1.0},
+		{"down-right", 1.0, 1.0},
+		{"down-left", -1.0, 1.0},
+	}
+
+	for _, dir := range directions {
+		t.Run(dir.name, func(t *testing.T) {
+			world := engine.NewWorld()
+			logger := logrus.NewEntry(logrus.New())
+			handler := NewInputHandler(world, logger)
+
+			entity := world.CreateEntity()
+			velocity := &engine.VelocityComponent{VX: 0, VY: 0}
+			entity.AddComponent(velocity)
+			handler.RegisterPlayer(1, entity)
+
+			data := map[string]interface{}{"dx": dir.dx, "dy": dir.dy}
+			handler.ProcessInput(1, "move", data)
+
+			// Verify direction is correct (sign matches input)
+			if dir.dx > 0 && velocity.VX <= 0 {
+				t.Error("expected positive VX")
+			}
+			if dir.dx < 0 && velocity.VX >= 0 {
+				t.Error("expected negative VX")
+			}
+			if dir.dy > 0 && velocity.VY <= 0 {
+				t.Error("expected positive VY")
+			}
+			if dir.dy < 0 && velocity.VY >= 0 {
+				t.Error("expected negative VY")
+			}
+		})
+	}
+}

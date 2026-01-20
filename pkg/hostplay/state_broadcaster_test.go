@@ -269,3 +269,172 @@ func TestStateBroadcaster_EntityWithoutPosition(t *testing.T) {
 		t.Errorf("len(Entities) = %d, want 0 (entity without position)", len(snapshot.Entities))
 	}
 }
+
+// TestStateBroadcaster_SetPriorityRadius tests the SetPriorityRadius function
+func TestStateBroadcaster_SetPriorityRadius(t *testing.T) {
+	world := engine.NewWorld()
+	logger := logrus.NewEntry(logrus.New())
+	broadcaster := NewStateBroadcaster(world, 20, logger)
+
+	// Check default value
+	if broadcaster.priorityRadius != 1000.0 {
+		t.Errorf("default priorityRadius = %f, want 1000.0", broadcaster.priorityRadius)
+	}
+
+	// Set new value
+	broadcaster.SetPriorityRadius(500.0)
+	if broadcaster.priorityRadius != 500.0 {
+		t.Errorf("priorityRadius = %f, want 500.0", broadcaster.priorityRadius)
+	}
+
+	// Set another value
+	broadcaster.SetPriorityRadius(2000.0)
+	if broadcaster.priorityRadius != 2000.0 {
+		t.Errorf("priorityRadius = %f, want 2000.0", broadcaster.priorityRadius)
+	}
+}
+
+// TestStateBroadcaster_CreateDeltaSnapshot tests the CreateDeltaSnapshot function
+func TestStateBroadcaster_CreateDeltaSnapshot(t *testing.T) {
+	world := engine.NewWorld()
+	logger := logrus.NewEntry(logrus.New())
+	broadcaster := NewStateBroadcaster(world, 20, logger)
+
+	// Create test entities
+	entity1 := world.CreateEntity()
+	entity1.AddComponent(&engine.PositionComponent{X: 100, Y: 200})
+	entity2 := world.CreateEntity()
+	entity2.AddComponent(&engine.PositionComponent{X: 300, Y: 400})
+	world.Update(0)
+
+	// Create first snapshot
+	previousSnapshot, err := broadcaster.CreateSnapshot()
+	if err != nil {
+		t.Fatalf("CreateSnapshot() error = %v", err)
+	}
+
+	// Wait for broadcast interval to reset
+	time.Sleep(60 * time.Millisecond)
+
+	// Create delta snapshot (currently just returns full snapshot)
+	deltaSnapshot, err := broadcaster.CreateDeltaSnapshot(previousSnapshot)
+	if err != nil {
+		t.Fatalf("CreateDeltaSnapshot() error = %v", err)
+	}
+
+	if deltaSnapshot == nil {
+		t.Fatal("deltaSnapshot is nil")
+	}
+
+	// Delta snapshot should have same entities as full snapshot (current implementation)
+	if len(deltaSnapshot.Entities) != len(previousSnapshot.Entities) {
+		t.Errorf("delta len(Entities) = %d, want %d",
+			len(deltaSnapshot.Entities), len(previousSnapshot.Entities))
+	}
+}
+
+// TestStateBroadcaster_CreateDeltaSnapshotNilPrevious tests CreateDeltaSnapshot with nil previous
+func TestStateBroadcaster_CreateDeltaSnapshotNilPrevious(t *testing.T) {
+	world := engine.NewWorld()
+	logger := logrus.NewEntry(logrus.New())
+	broadcaster := NewStateBroadcaster(world, 20, logger)
+
+	entity := world.CreateEntity()
+	entity.AddComponent(&engine.PositionComponent{X: 100, Y: 200})
+	world.Update(0)
+
+	// Call with nil previous (should still work)
+	deltaSnapshot, err := broadcaster.CreateDeltaSnapshot(nil)
+	if err != nil {
+		t.Fatalf("CreateDeltaSnapshot() error = %v", err)
+	}
+
+	if deltaSnapshot == nil {
+		t.Fatal("deltaSnapshot is nil")
+	}
+
+	if len(deltaSnapshot.Entities) != 1 {
+		t.Errorf("len(Entities) = %d, want 1", len(deltaSnapshot.Entities))
+	}
+}
+
+// TestStateBroadcaster_BroadcastRateBoundary tests boundary conditions for SetBroadcastRate
+func TestStateBroadcaster_BroadcastRateBoundary(t *testing.T) {
+	world := engine.NewWorld()
+	logger := logrus.NewEntry(logrus.New())
+	broadcaster := NewStateBroadcaster(world, 20, logger)
+
+	tests := []struct {
+		name         string
+		rate         int
+		expectedRate int
+	}{
+		{"valid low", 1, 1},
+		{"valid mid", 30, 30},
+		{"valid high", 60, 60},
+		{"invalid zero", 0, 30},           // Should retain previous (30)
+		{"invalid negative", -1, 30},      // Should retain previous
+		{"invalid too high", 61, 30},      // Should retain previous
+		{"valid boundary", 60, 60},        // Max valid
+		{"invalid over boundary", 100, 60}, // Should retain previous (60)
+	}
+
+	currentRate := 20
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			broadcaster.SetBroadcastRate(tt.rate)
+			newRate := broadcaster.GetBroadcastRate()
+
+			// For invalid rates, check that it didn't change from expected
+			if tt.rate <= 0 || tt.rate > 60 {
+				if newRate != currentRate {
+					t.Errorf("rate changed to %d for invalid input %d, expected to stay at %d",
+						newRate, tt.rate, currentRate)
+				}
+			} else {
+				if newRate != tt.rate {
+					t.Errorf("rate = %d, want %d", newRate, tt.rate)
+				}
+				currentRate = tt.rate // Update for next iteration
+			}
+		})
+	}
+}
+
+// TestStateBroadcaster_HighFrequencyBroadcast tests broadcast at max rate
+func TestStateBroadcaster_HighFrequencyBroadcast(t *testing.T) {
+	world := engine.NewWorld()
+	logger := logrus.NewEntry(logrus.New())
+	broadcaster := NewStateBroadcaster(world, 60, logger) // 60 Hz = ~16ms interval
+
+	entity := world.CreateEntity()
+	entity.AddComponent(&engine.PositionComponent{X: 100, Y: 200})
+	world.Update(0)
+
+	// First broadcast should succeed
+	_, shouldBroadcast, err := broadcaster.Broadcast()
+	if err != nil {
+		t.Fatalf("Broadcast() error = %v", err)
+	}
+	if !shouldBroadcast {
+		t.Error("first broadcast should succeed")
+	}
+
+	// Immediate second should be skipped
+	_, shouldBroadcast, _ = broadcaster.Broadcast()
+	if shouldBroadcast {
+		t.Error("immediate second broadcast should be skipped")
+	}
+
+	// Wait for interval
+	time.Sleep(20 * time.Millisecond)
+
+	// Now broadcast should succeed
+	_, shouldBroadcast, err = broadcaster.Broadcast()
+	if err != nil {
+		t.Fatalf("Broadcast() error = %v", err)
+	}
+	if !shouldBroadcast {
+		t.Error("broadcast after interval should succeed")
+	}
+}

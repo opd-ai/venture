@@ -348,3 +348,110 @@ func TestFindTargetAction(t *testing.T) {
 		t.Errorf("Expected Failure when no enemies in range, got %v", status)
 	}
 }
+
+// TestWanderDeterminism verifies that wander behavior is deterministic with same seed.
+func TestWanderDeterminism(t *testing.T) {
+	const seed int64 = 12345
+	speed := 100.0
+
+	// Run wander twice with same seed, collect results
+	run := func(s int64) (float64, float64, float64) {
+		entity := NewEntity(1)
+		entity.AddComponent(&VelocityComponent{VX: 0, VY: 0})
+		bb := NewBlackboardWithSeed(s)
+
+		action := NewWanderAction(speed)
+		action.Tick(entity, bb, 0.016)
+
+		dx, _ := bb.GetFloat64("wanderDX")
+		dy, _ := bb.GetFloat64("wanderDY")
+		wanderTime, _ := bb.GetFloat64("wanderTime")
+		return dx, dy, wanderTime
+	}
+
+	// First run
+	dx1, dy1, wt1 := run(seed)
+
+	// Second run with same seed
+	dx2, dy2, wt2 := run(seed)
+
+	// Verify determinism
+	if dx1 != dx2 || dy1 != dy2 || wt1 != wt2 {
+		t.Errorf("Wander not deterministic: run1(%v, %v, %v) != run2(%v, %v, %v)",
+			dx1, dy1, wt1, dx2, dy2, wt2)
+	}
+
+	// Verify different seed produces different results
+	dx3, dy3, wt3 := run(seed + 1)
+	if dx1 == dx3 && dy1 == dy3 && wt1 == wt3 {
+		t.Error("Different seeds should produce different wander values")
+	}
+}
+
+// TestFleeRandomDirectionDeterminism verifies flee picks deterministic random direction.
+func TestFleeRandomDirectionDeterminism(t *testing.T) {
+	const seed int64 = 42
+	speed := 100.0
+
+	// Run flee with very close positions (triggers random direction)
+	run := func(s int64) (float64, float64) {
+		entity := NewEntity(1)
+		entity.AddComponent(&PositionComponent{X: 100, Y: 100})
+		entity.AddComponent(&VelocityComponent{VX: 0, VY: 0})
+
+		target := NewEntity(2)
+		target.AddComponent(&PositionComponent{X: 100.5, Y: 100.5}) // Very close
+
+		bb := NewBlackboardWithSeed(s)
+		bb.Set("target", target)
+
+		action := NewFleeFromTargetAction(speed)
+		action.Tick(entity, bb, 0.016)
+
+		velComp, _ := entity.GetComponent("velocity")
+		vel := velComp.(*VelocityComponent)
+		return vel.VX, vel.VY
+	}
+
+	// First run
+	vx1, vy1 := run(seed)
+
+	// Second run with same seed
+	vx2, vy2 := run(seed)
+
+	// Verify determinism
+	if vx1 != vx2 || vy1 != vy2 {
+		t.Errorf("Flee not deterministic: run1(%v, %v) != run2(%v, %v)", vx1, vy1, vx2, vy2)
+	}
+
+	// Verify different seed produces different results
+	vx3, vy3 := run(seed + 1)
+	if vx1 == vx3 && vy1 == vy3 {
+		t.Error("Different seeds should produce different flee directions")
+	}
+}
+
+// TestBlackboardRNG tests the blackboard RNG accessor methods.
+func TestBlackboardRNG(t *testing.T) {
+	// Test NewBlackboard has default RNG
+	bb := NewBlackboard()
+	rng := bb.GetRNG()
+	if rng == nil {
+		t.Fatal("Expected default RNG to be non-nil")
+	}
+
+	// Test NewBlackboardWithSeed
+	bb2 := NewBlackboardWithSeed(12345)
+	rng2 := bb2.GetRNG()
+	if rng2 == nil {
+		t.Fatal("Expected seeded RNG to be non-nil")
+	}
+
+	// Verify determinism of seeded blackboard
+	bb3 := NewBlackboardWithSeed(12345)
+	val2 := bb2.GetRNG().Float64()
+	val3 := bb3.GetRNG().Float64()
+	if val2 != val3 {
+		t.Errorf("Same seed should produce same values: %v != %v", val2, val3)
+	}
+}

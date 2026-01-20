@@ -23,26 +23,11 @@
 
 ## Critical (Fix Now)
 
-### 1. Non-Deterministic Random Usage in Behavior Tree
+### ~~1. Non-Deterministic Random Usage in Behavior Tree~~ ✅ FIXED (2026-01-19)
 
-- **[behavior_tree_actions.go:L344-345](pkg/engine/behavior_tree_actions.go#L344)**
-  - **Issue:** Uses global `rand.Float64()` instead of seeded RNG, causing non-deterministic AI behavior
-  - **Debug:** `grep -n "rand\.[IF]" pkg/engine/behavior_tree_actions.go`
-  - **Expected:** Same seed produces identical AI decisions
-  - **Actual:** AI behavior varies between runs with same seed
-  - **Fix:** Pass seeded `*rand.Rand` to behavior tree actions:
-    ```go
-    // Before
-    dx = (rand.Float64() - 0.5) * 2
-    
-    // After
-    dx = (rng.Float64() - 0.5) * 2  // where rng := rand.New(rand.NewSource(seed))
-    ```
-
-- **[behavior_tree_actions.go:L376-382](pkg/engine/behavior_tree_actions.go#L376)**
-  - **Issue:** `NewWanderAction` uses global rand for angle and wander time
-  - **Debug:** `go test -v ./pkg/engine -run TestWanderDeterminism` (add this test)
-  - **Fix:** Accept seeded RNG in action constructor
+- **[behavior_tree_actions.go](pkg/engine/behavior_tree_actions.go)**
+  - **Resolution:** Added `GetRNG()` method to `Blackboard` struct that returns a seeded `*rand.Rand`. Added `NewBlackboardWithSeed(seed int64)` constructor. Updated `NewFleeFromTargetAction` and `NewWanderAction` to use `blackboard.GetRNG()` instead of global `rand`. Added determinism tests: `TestWanderDeterminism`, `TestFleeRandomDirectionDeterminism`, `TestBlackboardRNG`.
+  - **Verification:** `go test -v ./pkg/engine -run "TestWanderDeterminism|TestFleeRandomDirectionDeterminism|TestBlackboardRNG"`
 
 ### 2. Non-Deterministic Random in Objective Tracker
 
@@ -512,7 +497,7 @@ grep -rn "\.\(\*net\.\(UDP\|TCP\)" pkg/
 
 | Category | Count |
 |----------|-------|
-| **Critical** | 6 |
+| **Critical** | 5 (1 fixed) |
 | **Architecture Violations** | 5 major components (~50-100 methods) |
 | **Performance** | 0 blocking issues |
 | **Memory** | 0 blocking issues |
@@ -526,4 +511,4 @@ grep -rn "\.\(\*net\.\(UDP\|TCP\)" pkg/
 **Total Go Files Examined:** 1,616  
 **Lines of Code:** 587,782  
 
-**Top Priority:** Fix non-deterministic random usage in `behavior_tree_actions.go` - this directly affects gameplay reproducibility and can cause issues with multiplayer synchronization.
+**Top Priority:** Fix non-deterministic random usage in `objective_tracker_system.go` - this affects quest objective generation reproducibility.

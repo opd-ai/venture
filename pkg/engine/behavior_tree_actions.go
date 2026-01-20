@@ -5,7 +5,6 @@ package engine
 import (
 	"fmt"
 	"math"
-	"math/rand"
 )
 
 // ActionNode is a leaf node that performs an action.
@@ -340,9 +339,10 @@ func NewFleeFromTargetAction(speed float64) *ActionNode {
 		distance := math.Sqrt(dx*dx + dy*dy)
 
 		if distance < 1.0 {
-			// Pick random direction if too close
-			dx = (rand.Float64() - 0.5) * 2
-			dy = (rand.Float64() - 0.5) * 2
+			// Pick random direction if too close using seeded RNG
+			rng := blackboard.GetRNG()
+			dx = (rng.Float64() - 0.5) * 2
+			dy = (rng.Float64() - 0.5) * 2
 			distance = 1.0
 		}
 
@@ -372,14 +372,15 @@ func NewWanderAction(speed float64) *ActionNode {
 		// Check if we have a wander target
 		hasWanderTarget, ok := blackboard.GetBool("hasWanderTarget")
 		if !ok || !hasWanderTarget {
-			// Pick random direction
-			angle := rand.Float64() * 2 * math.Pi
+			// Pick random direction using seeded RNG
+			rng := blackboard.GetRNG()
+			angle := rng.Float64() * 2 * math.Pi
 			dx := math.Cos(angle) * speed * 0.5 // Wander slower
 			dy := math.Sin(angle) * speed * 0.5
 
 			blackboard.Set("wanderDX", dx)
 			blackboard.Set("wanderDY", dy)
-			blackboard.Set("wanderTime", 2.0+rand.Float64()*3.0) // Wander for 2-5 seconds
+			blackboard.Set("wanderTime", 2.0+rng.Float64()*3.0) // Wander for 2-5 seconds
 			blackboard.Set("hasWanderTarget", true)
 		}
 

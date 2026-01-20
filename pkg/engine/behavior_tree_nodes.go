@@ -4,6 +4,7 @@ package engine
 
 import (
 	"fmt"
+	"math/rand"
 )
 
 // NodeStatus represents the result of a behavior tree node execution.
@@ -46,13 +47,37 @@ type BehaviorNode interface {
 // It stores key-value pairs that nodes can read and write to share information.
 type Blackboard struct {
 	data map[string]interface{}
+	rng  *rand.Rand
 }
 
-// NewBlackboard creates a new empty blackboard.
+// NewBlackboard creates a new empty blackboard with a default RNG.
+// For deterministic behavior, use NewBlackboardWithSeed instead.
 func NewBlackboard() *Blackboard {
 	return &Blackboard{
 		data: make(map[string]interface{}),
+		rng:  rand.New(rand.NewSource(0)),
 	}
+}
+
+// NewBlackboardWithSeed creates a new blackboard with a seeded RNG.
+// Using the same seed ensures deterministic AI behavior.
+func NewBlackboardWithSeed(seed int64) *Blackboard {
+	return &Blackboard{
+		data: make(map[string]interface{}),
+		rng:  rand.New(rand.NewSource(seed)),
+	}
+}
+
+// GetRNG returns the seeded random number generator for deterministic behavior.
+// All randomness in behavior tree actions should use this RNG.
+func (b *Blackboard) GetRNG() *rand.Rand {
+	return b.rng
+}
+
+// SetRNG sets the random number generator for this blackboard.
+// This allows updating the seed for different scenarios.
+func (b *Blackboard) SetRNG(rng *rand.Rand) {
+	b.rng = rng
 }
 
 // Set stores a value in the blackboard.

@@ -207,11 +207,9 @@ While many are simple accessor methods, the project's strict ECS guidelines proh
   ```
   - **Status:** Technical debt, tracked with comment
 
-- **[pkg/saveload/recovery.go:L224](pkg/saveload/recovery.go#L224)**
-  ```go
-  _ = m.writeSaveFile(name, backupData)
-  ```
-  - **Risk:** Failed backup writes silently ignored
+- ~~**[pkg/saveload/recovery.go:L224](pkg/saveload/recovery.go#L224)**~~ ✅ FIXED (2026-01-20)
+  - **Resolution:** Changed silently ignored error to log a warning via `logWarn()` when backup restoration fails. Now logs `"backup restoration also failed"` with name and backup path context.
+  - **Verification:** `go test -v ./pkg/saveload/... -run "TestSaveManager_SaveGameWithBackup"`
 
 ### 2. Error Variable Shadowing (Potential)
 
@@ -405,7 +403,8 @@ All 100+ example packages in `examples/` have 0% coverage, which is expected as 
    - **Resolution:** Added structured logging fields to 6 log statements in `courier_system.go`, `pvp_rating_system.go`, and `spell_casting.go`. All log statements now include contextual fields (`system_name`, `winner_id`/`loser_id`, or `component_type`).
 2. Consider migrating `interface{}` to `any`
 3. Add determinism tests for all generators
-4. Handle ignored errors in `saveload/recovery.go`
+4. ~~Handle ignored errors in `saveload/recovery.go`~~ ✅ FIXED (2026-01-20)
+   - **Resolution:** Changed silently ignored backup restoration error to log a warning with context fields.
 
 ---
 
@@ -445,7 +444,7 @@ grep -rn "\.\(\*net\.\(UDP\|TCP\)" pkg/
 | **Performance** | 0 blocking issues |
 | **Memory** | 0 blocking issues |
 | **Network** | 0 blocking issues (1 fixed ✅) |
-| **Error Handling** | 3 |
+| **Error Handling** | 2 (1 fixed ✅) |
 | **Logging** | 6 instances (6 fixed ✅) |
 | **Concurrency** | 0 blocking issues |
 | **Testing** | All measured packages ≥65% |
@@ -454,4 +453,4 @@ grep -rn "\.\(\*net\.\(UDP\|TCP\)" pkg/
 **Total Go Files Examined:** 1,616  
 **Lines of Code:** 587,782  
 
-**Top Priority:** All critical, short-term architecture, and logging items have been fixed. Continue addressing remaining medium-term technical debt items (interface{} migration, generator determinism tests, error handling in saveload/recovery).
+**Top Priority:** All critical, short-term architecture, logging, and error handling items have been fixed. Continue addressing remaining medium-term technical debt items (interface{} migration, generator determinism tests).

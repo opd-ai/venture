@@ -221,7 +221,12 @@ func (m *SaveManager) SaveGameWithBackup(name string, save *GameSave) error {
 			})
 			// Attempt to restore backup (best effort)
 			if backupData, readErr := os.ReadFile(backupPath); readErr == nil {
-				_ = m.writeSaveFile(name, backupData)
+				if restoreErr := m.writeSaveFile(name, backupData); restoreErr != nil {
+					m.logWarn("backup restoration also failed", restoreErr, logrus.Fields{
+						"name":   name,
+						"backup": backupPath,
+					})
+				}
 			}
 		}
 		return err

@@ -50,7 +50,11 @@ func TestCityStateComponent_Type(t *testing.T) {
 	}
 }
 
-func TestCityStateComponent_UpdateState(t *testing.T) {
+func TestCityEvolutionSystem_UpdateCityState(t *testing.T) {
+	world := NewWorld()
+	clock := NewSimulationClock(12345)
+	sys := NewCityEvolutionSystem(world, clock)
+
 	tests := []struct {
 		name       string
 		prosperity float64
@@ -71,18 +75,22 @@ func TestCityStateComponent_UpdateState(t *testing.T) {
 			c := NewCityStateComponent("test", "Test", 0)
 			c.Prosperity = tt.prosperity
 
-			changed := c.UpdateState()
+			changed := sys.UpdateCityState(c)
 			if c.State != tt.wantState {
-				t.Errorf("UpdateState() state = %v, want %v", c.State, tt.wantState)
+				t.Errorf("UpdateCityState() state = %v, want %v", c.State, tt.wantState)
 			}
 			if changed != tt.wantChange {
-				t.Errorf("UpdateState() changed = %v, want %v", changed, tt.wantChange)
+				t.Errorf("UpdateCityState() changed = %v, want %v", changed, tt.wantChange)
 			}
 		})
 	}
 }
 
-func TestCityStateComponent_GetProsperityTier(t *testing.T) {
+func TestCityEvolutionSystem_GetProsperityTier(t *testing.T) {
+	world := NewWorld()
+	clock := NewSimulationClock(12345)
+	sys := NewCityEvolutionSystem(world, clock)
+
 	tests := []struct {
 		state CityState
 		want  string
@@ -97,14 +105,18 @@ func TestCityStateComponent_GetProsperityTier(t *testing.T) {
 			c := NewCityStateComponent("test", "Test", 0)
 			c.State = tt.state
 
-			if got := c.GetProsperityTier(); got != tt.want {
+			if got := sys.GetProsperityTier(c); got != tt.want {
 				t.Errorf("GetProsperityTier() = %v, want %v", got, tt.want)
 			}
 		})
 	}
 }
 
-func TestCityStateComponent_GetPopulationRatio(t *testing.T) {
+func TestCityEvolutionSystem_GetPopulationRatio(t *testing.T) {
+	world := NewWorld()
+	clock := NewSimulationClock(12345)
+	sys := NewCityEvolutionSystem(world, clock)
+
 	tests := []struct {
 		name          string
 		population    int
@@ -123,7 +135,7 @@ func TestCityStateComponent_GetPopulationRatio(t *testing.T) {
 			c.Population = tt.population
 			c.MaxPopulation = tt.maxPopulation
 
-			got := c.GetPopulationRatio()
+			got := sys.GetPopulationRatio(c)
 			if got != tt.want {
 				t.Errorf("GetPopulationRatio() = %v, want %v", got, tt.want)
 			}
@@ -131,7 +143,11 @@ func TestCityStateComponent_GetPopulationRatio(t *testing.T) {
 	}
 }
 
-func TestCityStateComponent_CanGrowPopulation(t *testing.T) {
+func TestCityEvolutionSystem_CanGrowPopulation(t *testing.T) {
+	world := NewWorld()
+	clock := NewSimulationClock(12345)
+	sys := NewCityEvolutionSystem(world, clock)
+
 	tests := []struct {
 		name          string
 		population    int
@@ -152,14 +168,18 @@ func TestCityStateComponent_CanGrowPopulation(t *testing.T) {
 			c.MaxPopulation = tt.maxPopulation
 			c.Prosperity = tt.prosperity
 
-			if got := c.CanGrowPopulation(); got != tt.want {
+			if got := sys.CanGrowPopulation(c); got != tt.want {
 				t.Errorf("CanGrowPopulation() = %v, want %v", got, tt.want)
 			}
 		})
 	}
 }
 
-func TestCityStateComponent_IsOvercrowded(t *testing.T) {
+func TestCityEvolutionSystem_IsOvercrowded(t *testing.T) {
+	world := NewWorld()
+	clock := NewSimulationClock(12345)
+	sys := NewCityEvolutionSystem(world, clock)
+
 	tests := []struct {
 		name          string
 		population    int
@@ -178,10 +198,33 @@ func TestCityStateComponent_IsOvercrowded(t *testing.T) {
 			c.Population = tt.population
 			c.MaxPopulation = tt.maxPopulation
 
-			if got := c.IsOvercrowded(); got != tt.want {
+			if got := sys.IsOvercrowded(c); got != tt.want {
 				t.Errorf("IsOvercrowded() = %v, want %v", got, tt.want)
 			}
 		})
+	}
+}
+
+func TestCityEvolutionSystem_NilHandling(t *testing.T) {
+	world := NewWorld()
+	clock := NewSimulationClock(12345)
+	sys := NewCityEvolutionSystem(world, clock)
+
+	// Test nil handling for all system methods
+	if sys.UpdateCityState(nil) {
+		t.Error("UpdateCityState(nil) should return false")
+	}
+	if sys.GetProsperityTier(nil) != "Unknown" {
+		t.Errorf("GetProsperityTier(nil) = %v, want Unknown", sys.GetProsperityTier(nil))
+	}
+	if sys.GetPopulationRatio(nil) != 0.0 {
+		t.Errorf("GetPopulationRatio(nil) = %v, want 0.0", sys.GetPopulationRatio(nil))
+	}
+	if sys.CanGrowPopulation(nil) {
+		t.Error("CanGrowPopulation(nil) should return false")
+	}
+	if sys.IsOvercrowded(nil) {
+		t.Error("IsOvercrowded(nil) should return false")
 	}
 }
 

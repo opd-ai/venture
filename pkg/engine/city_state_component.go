@@ -73,52 +73,6 @@ func (c *CityStateComponent) Type() string {
 	return "city_state"
 }
 
-// UpdateState recalculates the city state based on prosperity.
-// Returns true if state changed.
-func (c *CityStateComponent) UpdateState() bool {
-	oldState := c.State
-
-	if c.Prosperity < 0.3 {
-		c.State = CityStateStruggling
-	} else if c.Prosperity >= 0.7 {
-		c.State = CityStateThriving
-	} else {
-		c.State = CityStateStable
-	}
-
-	return c.State != oldState
-}
-
-// GetProsperityTier returns a human-readable prosperity description.
-func (c *CityStateComponent) GetProsperityTier() string {
-	switch c.State {
-	case CityStateStruggling:
-		return "Struggling"
-	case CityStateThriving:
-		return "Thriving"
-	default:
-		return "Stable"
-	}
-}
-
-// GetPopulationRatio returns population as a fraction of max capacity.
-func (c *CityStateComponent) GetPopulationRatio() float64 {
-	if c.MaxPopulation <= 0 {
-		return 0.0
-	}
-	return float64(c.Population) / float64(c.MaxPopulation)
-}
-
-// CanGrowPopulation returns true if the city can support more inhabitants.
-func (c *CityStateComponent) CanGrowPopulation() bool {
-	return c.Population < c.MaxPopulation && c.Prosperity >= 0.3
-}
-
-// IsOvercrowded returns true if population exceeds comfortable capacity.
-func (c *CityStateComponent) IsOvercrowded() bool {
-	return c.GetPopulationRatio() > 0.9
-}
-
 // Serialize encodes the component to bytes for persistence.
 func (c *CityStateComponent) Serialize() ([]byte, error) {
 	logrus.WithFields(logrus.Fields{

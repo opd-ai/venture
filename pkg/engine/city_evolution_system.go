@@ -72,7 +72,7 @@ func (s *CityEvolutionSystem) processCity(entity *Entity, deltaTime float64) {
 	s.applyNaturalEvolution(cityState, deltaTime)
 
 	// Update state based on new prosperity
-	if cityState.UpdateState() {
+	if s.UpdateCityState(cityState) {
 		s.logger.WithFields(logrus.Fields{
 			"city_id":   cityState.CityID,
 			"city_name": cityState.CityName,
@@ -144,7 +144,7 @@ func (s *CityEvolutionSystem) applyNaturalEvolution(cityState *CityStateComponen
 	switch cityState.State {
 	case CityStateThriving:
 		// Thriving cities attract population and maintain prosperity
-		if cityState.CanGrowPopulation() {
+		if s.CanGrowPopulation(cityState) {
 			cityState.Population++
 		}
 		// Slight prosperity maintenance cost
@@ -185,6 +185,44 @@ func clampFloat(value, min, max float64) float64 {
 		return max
 	}
 	return value
+}
+
+// updateCityStateFromProsperity recalculates the city state based on prosperity.
+// This is a standalone helper function for use in contexts without a system instance.
+// Returns true if state changed.
+func updateCityStateFromProsperity(cityState *CityStateComponent) bool {
+	if cityState == nil {
+		return false
+	}
+	oldState := cityState.State
+
+	if cityState.Prosperity < 0.3 {
+		cityState.State = CityStateStruggling
+	} else if cityState.Prosperity >= 0.7 {
+		cityState.State = CityStateThriving
+	} else {
+		cityState.State = CityStateStable
+	}
+
+	return cityState.State != oldState
+}
+
+// getCityPopulationRatio returns population as a fraction of max capacity.
+// This is a standalone helper function for use in contexts without a system instance.
+func getCityPopulationRatio(cityState *CityStateComponent) float64 {
+	if cityState == nil || cityState.MaxPopulation <= 0 {
+		return 0.0
+	}
+	return float64(cityState.Population) / float64(cityState.MaxPopulation)
+}
+
+// canCityGrowPopulation returns true if the city can support more inhabitants.
+// This is a standalone helper function for use in contexts without a system instance.
+func canCityGrowPopulation(cityState *CityStateComponent) bool {
+	if cityState == nil {
+		return false
+	}
+	return cityState.Population < cityState.MaxPopulation && cityState.Prosperity >= 0.3
 }
 
 // TriggerTradeEvent creates a trade completion trigger for a city.
@@ -273,7 +311,7 @@ func GenerateCity(world *World, cityID, cityName string, seed int64, x, y float6
 	cityState.Population = 50 + rng.Intn(100)          // 50-150
 	cityState.MaxPopulation = 150 + rng.Intn(100)      // 150-250
 	cityState.ResourceStockpile = 50.0 + rng.Float64()*100.0
-	cityState.UpdateState()
+	updateCityStateFromProsperity(cityState)
 
 	entity.AddComponent(cityState)
 	entity.AddComponent(NewCityEvolutionTriggersComponent(cityID))
@@ -319,4 +357,40 @@ func (s *CityEvolutionSystem) GetCitiesInState(state CityState) []*Entity {
 		}
 	}
 	return result
+}
+
+// UpdateCityState recalculates the city state based on prosperity.
+// Returns true if state changed.
+func (s *CityEvolutionSystem) UpdateCityState(cityState *CityStateComponent) bool {
+	return updateCityStateFromProsperity(cityState)
+}
+
+// GetProsperityTier returns a human-readable prosperity description.
+func (s *CityEvolutionSystem) GetProsperityTier(cityState *CityStateComponent) string {
+	if cityState == nil {
+		return "Unknown"
+	}
+	switch cityState.State {
+	case CityStateStruggling:
+		return "Struggling"
+	case CityStateThriving:
+		return "Thriving"
+	default:
+		return "Stable"
+	}
+}
+
+// GetPopulationRatio returns population as a fraction of max capacity.
+func (s *CityEvolutionSystem) GetPopulationRatio(cityState *CityStateComponent) float64 {
+	return getCityPopulationRatio(cityState)
+}
+
+// CanGrowPopulation returns true if the city can support more inhabitants.
+func (s *CityEvolutionSystem) CanGrowPopulation(cityState *CityStateComponent) bool {
+	return canCityGrowPopulation(cityState)
+}
+
+// IsOvercrowded returns true if population exceeds comfortable capacity.
+func (s *CityEvolutionSystem) IsOvercrowded(cityState *CityStateComponent) bool {
+	return s.GetPopulationRatio(cityState) > 0.9
 }

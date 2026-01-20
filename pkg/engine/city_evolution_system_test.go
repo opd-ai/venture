@@ -72,7 +72,7 @@ func TestCityEvolutionSystem_Update_StateTransition(t *testing.T) {
 	entity := world.CreateEntity()
 	cityState := NewCityStateComponent("city_1", "Test City", 12345)
 	cityState.Prosperity = 0.69 // Just below thriving (0.70 threshold)
-	cityState.UpdateState()
+	sys.UpdateCityState(cityState)
 	entity.AddComponent(cityState)
 
 	triggers := NewCityEvolutionTriggersComponent("city_1")
@@ -395,17 +395,17 @@ func TestCityEvolutionSystem_GetCitiesInState(t *testing.T) {
 	city1 := GenerateCity(world, "city_1", "Struggling", 1, 0, 0)
 	city1State, _ := city1.GetComponent("city_state")
 	city1State.(*CityStateComponent).Prosperity = 0.1
-	city1State.(*CityStateComponent).UpdateState()
+	sys.UpdateCityState(city1State.(*CityStateComponent))
 
 	city2 := GenerateCity(world, "city_2", "Thriving", 2, 100, 0)
 	city2State, _ := city2.GetComponent("city_state")
 	city2State.(*CityStateComponent).Prosperity = 0.9
-	city2State.(*CityStateComponent).UpdateState()
+	sys.UpdateCityState(city2State.(*CityStateComponent))
 
 	city3 := GenerateCity(world, "city_3", "Also Thriving", 3, 200, 0)
 	city3State, _ := city3.GetComponent("city_state")
 	city3State.(*CityStateComponent).Prosperity = 0.8
-	city3State.(*CityStateComponent).UpdateState()
+	sys.UpdateCityState(city3State.(*CityStateComponent))
 
 	// Get struggling cities
 	struggling := sys.GetCitiesInState(CityStateStruggling)

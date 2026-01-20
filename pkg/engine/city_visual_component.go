@@ -86,7 +86,7 @@ func (c *CityVisualComponent) UpdateFromCityState(cityState *CityStateComponent)
 	prosperity := cityState.Prosperity
 	infrastructure := cityState.Infrastructure
 	defense := cityState.Defense
-	populationRatio := cityState.GetPopulationRatio()
+	populationRatio := getCityPopulationRatio(cityState)
 
 	// Determine visual style from state
 	switch cityState.State {

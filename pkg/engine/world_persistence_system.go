@@ -241,7 +241,7 @@ func (s *WorldPersistenceSystem) applyTimeProgressionToCity(
 	}
 
 	// Update state based on new prosperity
-	stateChanged := cityState.UpdateState()
+	stateChanged := updateCityStateFromProsperity(cityState)
 
 	// Record significant changes as events
 	if stateChanged {

@@ -92,15 +92,12 @@ The ECS pattern requires components to be pure data structures with only `Type()
   - **Resolution:** Moved all state-mutating methods from `FishingSpotComponent` to `FishingSystem`. Methods moved include: `AddFishType()`, `RemoveFishType()`, `GetFishTypes()`, `GetSpawnWeight()`, `CanFish()`, `AddFisher()`, `RemoveFisher()`, `GetCurrentFishers()`, `UpdateCooldown()`, `SetCooldown()`. Component now only has `Type()`, `Serialize()`, `Deserialize()` methods following strict ECS pattern. Added new system methods prefixed with `Spot*` (e.g., `SpotAddFishType()`, `SpotCanFish()`). Updated all call sites in `fishing_system.go` and tests. Added comprehensive tests for new system methods: `TestFishingSystem_SpotAddRemoveFishType`, `TestFishingSystem_SpotFisherManagement`, `TestFishingSystem_SpotCanFish`, `TestFishingSystem_SpotCooldownUpdate`.
   - **Verification:** `go test -v ./pkg/engine -run "TestFishingSystem_Spot|TestFishingSpotComponent"`
 
-### 5. CityStateComponent Has Complex Logic
+### 5. CityStateComponent Has Complex Logic ✅ FIXED (2026-01-20)
 
 - **[pkg/engine/city_state_component.go:L78-118](pkg/engine/city_state_component.go#L78)**
-  - **Methods:**
-    - `UpdateState()` - Contains state transition logic
-    - `GetProsperityTier()` - Classification logic
-    - `GetPopulationRatio()` - Calculation
-    - `CanGrowPopulation()`, `IsOvercrowded()`
-  - **Fix:** Move to `CityEvolutionSystem`
+  - **Resolution:** Moved all 5 component methods (`UpdateState()`, `GetProsperityTier()`, `GetPopulationRatio()`, `CanGrowPopulation()`, `IsOvercrowded()`) to `CityEvolutionSystem`. Added standalone helper functions (`updateCityStateFromProsperity()`, `getCityPopulationRatio()`, `canCityGrowPopulation()`) for use in contexts without a system instance (e.g., `GenerateCity()`, `city_visual_component.go`). System methods delegate to helpers for consistency. Component now only has `Type()`, `Serialize()`, `Deserialize()` methods following strict ECS pattern. Updated all call sites in `city_evolution_system.go`, `world_persistence_system.go`, `city_visual_component.go`, and tests. Added `TestCityEvolutionSystem_NilHandling` test for nil safety.
+  - **Verification:** `go test -v ./pkg/engine -run "CityState|CityEvolution"`
+  - **Coverage:** All tests pass
 
 ### Total ECS Violations Detected
 
@@ -406,7 +403,8 @@ All 100+ example packages in `examples/` have 0% coverage, which is expected as 
 2. ~~Refactor `HousingCraftingComponent` methods to system~~ ✅ FIXED (2026-01-20)
 3. ~~Refactor `VoiceAudioComponent` methods to system~~ ✅ FIXED (2026-01-20)
 4. ~~Refactor `FishingSpotComponent` methods to system~~ ✅ FIXED (2026-01-20)
-5. Add `io.LimitReader` for network message parsing
+5. ~~Refactor `CityStateComponent` methods to system~~ ✅ FIXED (2026-01-20)
+6. Add `io.LimitReader` for network message parsing
 
 ### Medium Term (Technical Debt)
 
@@ -449,7 +447,7 @@ grep -rn "\.\(\*net\.\(UDP\|TCP\)" pkg/
 | Category | Count |
 |----------|-------|
 | **Critical** | 5 (5 fixed ✅) |
-| **Architecture Violations** | 5 major components (4 fixed, 1 remaining) |
+| **Architecture Violations** | 5 major components (5 fixed ✅) |
 | **Performance** | 0 blocking issues |
 | **Memory** | 0 blocking issues |
 | **Network** | 1 (LimitReader recommendation) |
@@ -462,4 +460,4 @@ grep -rn "\.\(\*net\.\(UDP\|TCP\)" pkg/
 **Total Go Files Examined:** 1,616  
 **Lines of Code:** 587,782  
 
-**Top Priority:** Refactor remaining ECS component methods to systems (CityStateComponent) - architecture violations prevent clean separation of data and logic.
+**Top Priority:** All critical ECS architecture violations for major components have been fixed. Continue addressing remaining medium-term technical debt items (logging context, interface{} migration, generator determinism tests, error handling in saveload/recovery).

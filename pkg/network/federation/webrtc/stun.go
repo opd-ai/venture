@@ -1,19 +1,14 @@
+// Package webrtc STUN client implementation.
+// This file implements STUN (Session Traversal Utilities for NAT) protocol client
+// for public IP discovery and NAT type detection.
 package webrtc
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"net"
 	"sync"
 	"time"
-)
-
-var (
-	// ErrSTUNTimeout indicates STUN request timed out.
-	ErrSTUNTimeout = errors.New("STUN request timeout")
-	// ErrSTUNServerUnreachable indicates STUN server is unreachable.
-	ErrSTUNServerUnreachable = errors.New("STUN server unreachable")
 )
 
 // STUNClient handles STUN protocol for NAT traversal.
@@ -59,21 +54,6 @@ type STUNResponse struct {
 
 // NATType represents the type of NAT detected.
 type NATType int
-
-const (
-	// NATTypeUnknown indicates NAT type could not be determined.
-	NATTypeUnknown NATType = iota
-	// NATTypeNone indicates no NAT (direct internet connection).
-	NATTypeNone
-	// NATTypeFullCone allows any external host to send packets.
-	NATTypeFullCone
-	// NATTypeRestrictedCone allows packets from hosts we've sent to.
-	NATTypeRestrictedCone
-	// NATTypePortRestrictedCone requires matching port and IP.
-	NATTypePortRestrictedCone
-	// NATTypeSymmetric uses different mappings for different destinations.
-	NATTypeSymmetric
-)
 
 // String returns the string representation of NATType.
 func (t NATType) String() string {

@@ -1,23 +1,16 @@
+// Package webrtc TURN relay management.
+// This file manages a pool of TURN relay servers with health checking,
+// load balancing, and multiple selection strategies for optimal relay selection.
 package webrtc
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"net"
 	"sync"
 	"time"
 
 	"github.com/opd-ai/venture/pkg/recovery"
-)
-
-var (
-	// ErrNoRelayAvailable indicates no TURN relay is available.
-	ErrNoRelayAvailable = errors.New("no relay available")
-	// ErrRelayTimeout indicates relay connection timed out.
-	ErrRelayTimeout = errors.New("relay connection timeout")
-	// ErrRelayFull indicates the relay has reached capacity.
-	ErrRelayFull = errors.New("relay at full capacity")
 )
 
 // RelayNode represents a single TURN relay server.
@@ -184,17 +177,6 @@ type RelayManager struct {
 
 // SelectionStrategy defines how relays are selected.
 type SelectionStrategy int
-
-const (
-	// StrategyLowestLatency selects relay with lowest latency.
-	StrategyLowestLatency SelectionStrategy = iota
-	// StrategyHighestBandwidth selects relay with highest bandwidth.
-	StrategyHighestBandwidth
-	// StrategyLowestUtilization selects relay with most available capacity.
-	StrategyLowestUtilization
-	// StrategyRoundRobin rotates through available relays.
-	StrategyRoundRobin
-)
 
 // String returns the string representation of SelectionStrategy.
 func (s SelectionStrategy) String() string {

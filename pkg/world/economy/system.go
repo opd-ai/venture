@@ -5,17 +5,6 @@ import (
 	"time"
 )
 
-// World is the minimal interface for ECS world operations needed by the economy system.
-type World interface {
-	GetEntities() []Entity
-}
-
-// Entity is the minimal interface for ECS entities needed by the economy system.
-type Entity interface {
-	HasComponent(componentType string) bool
-	GetComponent(componentType string) (interface{}, bool)
-}
-
 // System is an ECS system that manages the federated marketplace.
 // It handles marketplace cleanup, price trend updates, and entity-based transactions.
 type System struct {

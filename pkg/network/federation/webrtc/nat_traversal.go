@@ -1,3 +1,6 @@
+// Package webrtc NAT traversal coordination.
+// This file coordinates NAT traversal using multiple methods (Direct, STUN, TURN)
+// and manages TURN relay connections for symmetric NAT scenarios.
 package webrtc
 
 import (
@@ -6,13 +9,6 @@ import (
 	"fmt"
 	"sync"
 	"time"
-)
-
-var (
-	// ErrNATTraversalFailed indicates NAT traversal failed.
-	ErrNATTraversalFailed = errors.New("NAT traversal failed")
-	// ErrAllMethodsFailed indicates all traversal methods failed.
-	ErrAllMethodsFailed = errors.New("all NAT traversal methods failed")
 )
 
 // NATTraversal coordinates STUN/TURN for establishing P2P connections.
@@ -62,17 +58,6 @@ type TraversalResult struct {
 
 // TraversalMethod represents the NAT traversal method used.
 type TraversalMethod int
-
-const (
-	// MethodDirect indicates direct P2P connection (no NAT).
-	MethodDirect TraversalMethod = iota
-	// MethodSTUN indicates STUN-assisted connection.
-	MethodSTUN
-	// MethodTURN indicates TURN relay connection.
-	MethodTURN
-	// MethodFailed indicates all methods failed.
-	MethodFailed
-)
 
 // String returns the string representation of TraversalMethod.
 func (m TraversalMethod) String() string {

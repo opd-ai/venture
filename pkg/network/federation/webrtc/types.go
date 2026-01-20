@@ -1,3 +1,6 @@
+// Package webrtc core types and data structures.
+// This file defines all core types, structs, and configurations used throughout
+// the webrtc package, including peer connection state, SDP structures, and statistics.
 package webrtc
 
 import (
@@ -7,21 +10,6 @@ import (
 
 // ConnectionState represents the current state of a WebRTC peer connection.
 type ConnectionState int
-
-const (
-	// StateNew indicates the connection has been created but not started.
-	StateNew ConnectionState = iota
-	// StateConnecting indicates ICE/DTLS negotiation in progress.
-	StateConnecting
-	// StateConnected indicates the P2P connection is established and ready.
-	StateConnected
-	// StateDisconnected indicates the connection was lost but may reconnect.
-	StateDisconnected
-	// StateFailed indicates the connection failed permanently.
-	StateFailed
-	// StateClosed indicates the connection was closed deliberately.
-	StateClosed
-)
 
 // String returns the string representation of ConnectionState.
 func (s ConnectionState) String() string {
@@ -45,15 +33,6 @@ func (s ConnectionState) String() string {
 
 // ICECandidateType represents the type of ICE candidate.
 type ICECandidateType int
-
-const (
-	// CandidateHost indicates a local network address.
-	CandidateHost ICECandidateType = iota
-	// CandidateServerReflexive indicates a public IP from STUN.
-	CandidateServerReflexive
-	// CandidateRelay indicates a TURN relay address.
-	CandidateRelay
-)
 
 // String returns the string representation of ICECandidateType.
 func (t ICECandidateType) String() string {

@@ -1,21 +1,16 @@
+// Package webrtc signaling coordination.
+// This file implements WebSocket-based signaling for WebRTC connection establishment,
+// including both client (peer) and server (relay) components for SDP/ICE exchange.
 package webrtc
 
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"sync"
 	"time"
 
 	"github.com/opd-ai/venture/pkg/recovery"
-)
-
-var (
-	// ErrSignalingNotConnected indicates the signaling connection is not active.
-	ErrSignalingNotConnected = errors.New("signaling not connected")
-	// ErrPeerNotFound indicates the remote peer was not found.
-	ErrPeerNotFound = errors.New("peer not found")
 )
 
 // SignalingClient manages WebSocket connection to signaling server.

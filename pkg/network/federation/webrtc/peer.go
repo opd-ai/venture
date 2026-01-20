@@ -1,30 +1,16 @@
+// Package webrtc peer connection implementation.
+// This file implements individual WebRTC peer connections with connection
+// establishment, state management, and message send/receive operations.
+// Note: This is a stub implementation for testing; real WebRTC integration
+// requires github.com/pion/webrtc/v3.
 package webrtc
 
 import (
 	"context"
-	"errors"
 	"fmt"
-	"sync"
 	"time"
 
 	"github.com/opd-ai/venture/pkg/recovery"
-)
-
-var (
-	// ErrNotConnected indicates the peer is not connected.
-	ErrNotConnected = errors.New("peer not connected")
-	// ErrConnectionClosed indicates the connection was closed.
-	ErrConnectionClosed = errors.New("connection closed")
-	// ErrConnectionFailed indicates the connection failed.
-	ErrConnectionFailed = errors.New("connection failed")
-	// ErrSignalingFailed indicates signaling failed.
-	ErrSignalingFailed = errors.New("signaling failed")
-	// ErrICETimeout indicates ICE negotiation timed out.
-	ErrICETimeout = errors.New("ICE negotiation timeout")
-	// ErrMessageTooLarge indicates a message exceeds MaxMessageSize.
-	ErrMessageTooLarge = errors.New("message too large")
-	// ErrInvalidSDP indicates invalid SDP offer/answer.
-	ErrInvalidSDP = errors.New("invalid SDP")
 )
 
 // NewPeer creates a new WebRTC federation peer with the given ID and configuration.
@@ -245,118 +231,6 @@ func (p *Peer) Close() error {
 	// Only close closeChan if processMessages goroutine is running
 	if wasConnected {
 		close(p.closeChan)
-	}
-	return nil
-}
-
-// Manager manages multiple WebRTC peer connections.
-type Manager struct {
-	mu     sync.RWMutex
-	peers  map[string]*Peer
-	config *Config
-}
-
-// NewManager creates a new peer connection manager.
-func NewManager(config *Config) *Manager {
-	if config == nil {
-		config = DefaultConfig()
-	}
-	return &Manager{
-		peers:  make(map[string]*Peer),
-		config: config,
-	}
-}
-
-// CreatePeer creates a new peer with the given ID.
-func (m *Manager) CreatePeer(id string) (*Peer, error) {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-
-	if _, exists := m.peers[id]; exists {
-		return nil, fmt.Errorf("peer %s already exists", id)
-	}
-
-	peer, err := NewPeer(id, m.config)
-	if err != nil {
-		return nil, err
-	}
-
-	m.peers[id] = peer
-	return peer, nil
-}
-
-// GetPeer retrieves a peer by ID.
-func (m *Manager) GetPeer(id string) (*Peer, bool) {
-	m.mu.RLock()
-	defer m.mu.RUnlock()
-	peer, ok := m.peers[id]
-	return peer, ok
-}
-
-// RemovePeer removes and closes a peer connection.
-func (m *Manager) RemovePeer(id string) error {
-	m.mu.Lock()
-	peer, exists := m.peers[id]
-	if exists {
-		delete(m.peers, id)
-	}
-	m.mu.Unlock()
-
-	if exists {
-		return peer.Close()
-	}
-	return fmt.Errorf("peer %s not found", id)
-}
-
-// GetMetrics returns aggregated metrics for all peer connections.
-func (m *Manager) GetMetrics() ConnectionMetrics {
-	m.mu.RLock()
-	defer m.mu.RUnlock()
-
-	metrics := ConnectionMetrics{}
-	var totalRTT time.Duration
-	var activeCount int
-	var turnCount int
-
-	for _, peer := range m.peers {
-		stats := peer.GetStats()
-		metrics.TotalConnections++
-		if stats.State == StateConnected {
-			metrics.ActiveConnections++
-			activeCount++
-			totalRTT += stats.RTT
-			if stats.UsingTURN {
-				turnCount++
-			}
-		} else if stats.State == StateFailed {
-			metrics.FailedConnections++
-		}
-		metrics.TotalBytesSent += stats.BytesSent
-		metrics.TotalBytesReceived += stats.BytesReceived
-	}
-
-	if activeCount > 0 {
-		metrics.AverageRTT = totalRTT / time.Duration(activeCount)
-		metrics.TURNUsageRate = float64(turnCount) / float64(activeCount) * 100.0
-	}
-
-	return metrics
-}
-
-// CloseAll closes all peer connections.
-func (m *Manager) CloseAll() error {
-	m.mu.Lock()
-	peers := make([]*Peer, 0, len(m.peers))
-	for _, peer := range m.peers {
-		peers = append(peers, peer)
-	}
-	m.peers = make(map[string]*Peer)
-	m.mu.Unlock()
-
-	for _, peer := range peers {
-		if err := peer.Close(); err != nil {
-			return err
-		}
 	}
 	return nil
 }

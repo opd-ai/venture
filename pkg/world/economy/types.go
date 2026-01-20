@@ -7,23 +7,6 @@ import (
 // SortCriteria defines how search results are sorted.
 type SortCriteria int
 
-const (
-	// SortByPrice sorts items by price (ascending).
-	SortByPrice SortCriteria = iota
-
-	// SortByPriceDesc sorts items by price (descending).
-	SortByPriceDesc
-
-	// SortByQuantity sorts items by quantity available.
-	SortByQuantity
-
-	// SortByDeliveryTime sorts items by estimated delivery time.
-	SortByDeliveryTime
-
-	// SortByRelevance sorts items by search relevance.
-	SortByRelevance
-)
-
 // String returns the name of the sort criteria.
 func (sc SortCriteria) String() string {
 	switch sc {
@@ -44,14 +27,6 @@ func (sc SortCriteria) String() string {
 
 // DeliveryMethod defines how items are delivered.
 type DeliveryMethod int
-
-const (
-	// DeliveryMail uses V6 mail system (instant).
-	DeliveryMail DeliveryMethod = iota
-
-	// DeliveryCourier uses NPC courier (10-60 minute delay).
-	DeliveryCourier
-)
 
 // String returns the name of the delivery method.
 func (dm DeliveryMethod) String() string {

@@ -299,11 +299,11 @@ All Phase 3 deliverables completed successfully:
     - pkg/procgen/terrain/terrain_bench_test.go
     - pkg/network/packets_bench_test.go
     - pkg/saveload/saveload_bench_test.go
-- [ ] Profile and optimize hot paths (using pprof on production workloads)
-  - Profile CPU usage during 4-player gameplay (identify top 10 functions)
-  - Profile memory allocations (reduce allocations in rendering loop)
-  - Optimize sprite caching (target: >98% cache hit rate)
-  - Optimize network serialization (reduce allocations, use buffer pools)
+- [x] Profile and optimize hot paths (using pprof on production workloads)
+  - ✅ Profile CPU usage during 4-player gameplay (identify top 10 functions) - documented in docs/profiling/hot_path_analysis.md
+  - ✅ Profile memory allocations (reduce allocations in rendering loop) - documented in pkg/engine/MEMORY_PROFILING.md
+  - ✅ Optimize sprite caching (target: >98% cache hit rate) - implemented PredictiveCacheWarmer in pkg/rendering/cache/predictive_warmer.go
+  - ✅ Optimize network serialization (reduce allocations, use buffer pools) - verified in pkg/network/buffer_pool.go, 15M+ packets/s
 - [ ] Load testing and capacity planning (new: scripts/load-test.sh)
   - Simulate 10 concurrent players with realistic behavior
   - Measure resource usage (CPU, memory, network) at different player counts

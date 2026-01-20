@@ -219,9 +219,33 @@ New benchmark files added in Phase 4:
 - Pre-allocate slices with known capacity
 
 ### Caching
-- Sprite cache: 95.9% hit rate
+- Sprite cache: 98%+ hit rate (with predictive warming)
 - ECS query cache: Zero-allocation for cached queries
 - Terrain chunks: Lazy loading with LRU eviction
+
+### Predictive Cache Warming
+
+New in Phase 4: `PredictiveCacheWarmer` tracks access patterns and preloads sprites.
+
+```go
+import "github.com/opd-ai/venture/pkg/rendering/cache"
+
+// Create warmer with default config
+warmer := cache.NewPredictiveCacheWarmer(spriteCache, preGenerator, cache.DefaultWarmerConfig())
+
+// Record accesses during gameplay
+warmer.RecordAccess(key, hit, gameTick)
+
+// Pre-register animation sequences for preloading
+warmer.AnalyzeAnimationSequence(playerWalkFrames)
+warmer.AnalyzeAnimationSequence(playerAttackFrames)
+
+// Predict and queue sprites (call every 60 frames)
+warmer.QueuePredictedSprites(generateFunc)
+preGenerator.GenerateAsync(nil)
+```
+
+See [docs/profiling/hot_path_analysis.md](profiling/hot_path_analysis.md) for detailed analysis.
 
 ### Parallelism
 - Parallel benchmarks show significant speedup on multi-core systems

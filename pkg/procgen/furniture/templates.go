@@ -2,6 +2,11 @@ package furniture
 
 import "sort"
 
+// This file contains furniture template definitions including:
+// - 30+ furniture templates across 8 categories
+// - Template access functions (GetTemplate, GetAllSubTypes, GetSubTypesByCategory)
+// - Material, size, and functional property specifications
+
 // GetTemplate returns the template for a given furniture subtype
 func GetTemplate(subType string) *Template {
 	templates := getAllTemplates()

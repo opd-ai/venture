@@ -2,6 +2,11 @@ package furniture
 
 import "image/color"
 
+// This file contains all type definitions for the furniture package including:
+// - Enums: FurnitureType, MaterialType, RarityTier, Direction
+// - Structs: Furniture (generated items), Template (generation blueprints)
+// - All enum String() and helper methods
+
 // FurnitureType represents categories of furniture
 type FurnitureType int
 

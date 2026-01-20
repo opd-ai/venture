@@ -5,6 +5,13 @@ import (
 	"math"
 )
 
+// This file contains furniture placement validation logic including:
+// - PlacementValidator for room-based placement validation
+// - PlacedFurniture for tracking positioned furniture
+// - Collision detection with AABB (Axis-Aligned Bounding Box)
+// - Automatic placement finding
+// - Rotation support (4-way and 8-way)
+
 // PlacementValidator validates furniture placement in rooms
 type PlacementValidator struct {
 	// Room dimensions in tiles

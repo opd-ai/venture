@@ -41,7 +41,7 @@
   - **Resolution:** Removed `time.Now().UnixNano()` from `deriveRuntimeSeed()`. The function now creates a deterministic seed from only base seed, player input, and conversation ID. Updated function documentation to reflect the deterministic behavior. Removed unused `time` import. Added new test `TestGenerateDeterminismWithSameInputs` to verify `Generate()` produces consistent output for same inputs.
   - **Verification:** `go test -v ./pkg/procgen/dialog -run "TestGenerateDeterminism"`
 
-### 4. time.Now() Usage in Legendary Quest Progress Tracker (Runtime State)
+### ~~4. time.Now() Usage in Legendary Quest Progress Tracker (Runtime State)~~
 
 - **[pkg/procgen/legendary/types.go:L511-620](pkg/procgen/legendary/types.go#L511)**
   - **Issue:** Uses `time.Now()` 10+ times in quest tracking for progress timestamps
@@ -51,27 +51,11 @@
   - **Note:** This is likely acceptable behavior for runtime progress tracking. The project's determinism guideline focuses on generation (same seed = same output), not runtime state. Consider whether this is an exception or if a game clock abstraction is preferred for testing.
   - **Optional Fix:** If deterministic save state is required for testing, pass game clock/timestamp as parameter
 
-### 5. Panic in Library Code
+### ~~5. Panic in Library Code~~ ✅ FIXED (2026-01-20)
 
 - **[pkg/network/helpers.go:L124](pkg/network/helpers.go#L124)**
-  - **Issue:** `panic("network: timestamp before Unix epoch - check system clock")` in library code
-  - **Debug:** This will crash the game if system clock is misconfigured
-  - **Fix:** Return error instead of panicking:
-    ```go
-    // Before
-    if nanos < 0 {
-        panic("network: timestamp before Unix epoch")
-    }
-    
-    // After
-    func NowTimestamp() (uint64, error) {
-        nanos := time.Now().UnixNano()
-        if nanos < 0 {
-            return 0, fmt.Errorf("network: timestamp before Unix epoch")
-        }
-        return uint64(nanos), nil
-    }
-    ```
+  - **Resolution:** Replaced `panic()` with proper error return. Changed `NowTimestamp()` signature from `func NowTimestamp() uint64` to `func NowTimestamp() (uint64, error)`. Added sentinel error `ErrSystemClockInvalid`. Updated all call sites (`client.go`, test files) to handle the error. Added `TestErrSystemClockInvalid` test for the sentinel error.
+  - **Verification:** `go test -v ./pkg/network -run "TestNowTimestamp|TestErrSystemClockInvalid"`
 
 ---
 
@@ -436,7 +420,7 @@ All 100+ example packages in `examples/` have 0% coverage, which is expected as 
 1. ~~Fix non-deterministic `rand` usage in `behavior_tree_actions.go`~~ ✅
 2. ~~Fix non-deterministic `rand` usage in `objective_tracker_system.go`~~ ✅
 3. ~~Remove `time.Now()` from `markov.go` seed generation~~ ✅
-4. Convert panic to error return in `network/helpers.go`
+4. ~~Convert panic to error return in `network/helpers.go`~~ ✅
 
 ### Short Term (Architecture)
 
@@ -485,7 +469,7 @@ grep -rn "\.\(\*net\.\(UDP\|TCP\)" pkg/
 
 | Category | Count |
 |----------|-------|
-| **Critical** | 5 (3 fixed) |
+| **Critical** | 5 (4 fixed) |
 | **Architecture Violations** | 5 major components (~50-100 methods) |
 | **Performance** | 0 blocking issues |
 | **Memory** | 0 blocking issues |
@@ -499,4 +483,4 @@ grep -rn "\.\(\*net\.\(UDP\|TCP\)" pkg/
 **Total Go Files Examined:** 1,616  
 **Lines of Code:** 587,782  
 
-**Top Priority:** Convert panic to error return in `network/helpers.go` - library code should not panic.
+**Top Priority:** Refactor ECS component methods to systems - architecture violations prevent clean separation of data and logic.

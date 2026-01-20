@@ -63,9 +63,13 @@ func TestClient_StateUpdateMonitoring(t *testing.T) {
 
 	// Simulate receiving state updates (fill the channel)
 	for i := 0; i < 10; i++ {
+		ts, err := NowTimestamp()
+		if err != nil {
+			t.Fatalf("NowTimestamp failed: %v", err)
+		}
 		update := &StateUpdate{
 			SequenceNumber: uint32(i),
-			Timestamp:      NowTimestamp(),
+			Timestamp:      ts,
 		}
 		select {
 		case client.stateUpdates <- update:

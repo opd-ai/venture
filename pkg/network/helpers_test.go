@@ -1,6 +1,7 @@
 package network
 
 import (
+	"errors"
 	"testing"
 	"time"
 )
@@ -229,9 +230,15 @@ func TestSequenceWrapAroundScenario(t *testing.T) {
 // TestNowTimestamp tests the timestamp generation function
 func TestNowTimestamp(t *testing.T) {
 	// Get two timestamps
-	ts1 := NowTimestamp()
+	ts1, err := NowTimestamp()
+	if err != nil {
+		t.Fatalf("NowTimestamp() returned error: %v", err)
+	}
 	time.Sleep(1 * time.Millisecond) // Ensure some time passes
-	ts2 := NowTimestamp()
+	ts2, err := NowTimestamp()
+	if err != nil {
+		t.Fatalf("NowTimestamp() returned error: %v", err)
+	}
 
 	// Verify timestamps are non-zero (positive)
 	if ts1 == 0 {
@@ -269,7 +276,10 @@ func TestNowTimestamp(t *testing.T) {
 func TestNowTimestamp_Consistency(t *testing.T) {
 	// Get both timestamp types simultaneously
 	now := time.Now()
-	ts := NowTimestamp()
+	ts, err := NowTimestamp()
+	if err != nil {
+		t.Fatalf("NowTimestamp() returned error: %v", err)
+	}
 	nanos := now.UnixNano()
 
 	// They should be very close (within 1ms = 1,000,000 nanos)
@@ -298,7 +308,11 @@ func TestNowTimestamp_MultipleCallsMonotonic(t *testing.T) {
 	timestamps := make([]uint64, iterations)
 
 	for i := 0; i < iterations; i++ {
-		timestamps[i] = NowTimestamp()
+		ts, err := NowTimestamp()
+		if err != nil {
+			t.Fatalf("NowTimestamp() returned error at iteration %d: %v", i, err)
+		}
+		timestamps[i] = ts
 	}
 
 	// Verify all timestamps are monotonically increasing (or equal due to fast execution)
@@ -325,7 +339,7 @@ func TestNowTimestamp_MultipleCallsMonotonic(t *testing.T) {
 // BenchmarkNowTimestamp benchmarks the timestamp generation performance
 func BenchmarkNowTimestamp(b *testing.B) {
 	for i := 0; i < b.N; i++ {
-		_ = NowTimestamp()
+		_, _ = NowTimestamp()
 	}
 }
 
@@ -333,5 +347,26 @@ func BenchmarkNowTimestamp(b *testing.B) {
 func BenchmarkTimeNowUnixNano(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		_ = uint64(time.Now().UnixNano())
+	}
+}
+
+// TestErrSystemClockInvalid verifies the sentinel error is correctly defined
+func TestErrSystemClockInvalid(t *testing.T) {
+	// Verify ErrSystemClockInvalid is a proper sentinel error
+	if ErrSystemClockInvalid == nil {
+		t.Error("ErrSystemClockInvalid should not be nil")
+	}
+
+	// Verify error message content
+	msg := ErrSystemClockInvalid.Error()
+	if msg == "" {
+		t.Error("ErrSystemClockInvalid should have a non-empty message")
+	}
+
+	// Verify errors.Is works for wrapped errors
+	wrapped := errors.New("wrapped: " + msg)
+	_ = wrapped // Verify that ErrSystemClockInvalid can be used with errors.Is
+	if !errors.Is(ErrSystemClockInvalid, ErrSystemClockInvalid) {
+		t.Error("errors.Is should return true for ErrSystemClockInvalid against itself")
 	}
 }

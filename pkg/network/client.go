@@ -416,11 +416,16 @@ func (c *TCPClient) SendInput(inputType string, data []byte) error {
 		return fmt.Errorf("not connected")
 	}
 
+	timestamp, err := NowTimestamp()
+	if err != nil {
+		return fmt.Errorf("cannot create input command: %w", err)
+	}
+
 	c.mu.Lock()
 
 	cmd := &InputCommand{
 		PlayerID:       c.playerID,
-		Timestamp:      NowTimestamp(),
+		Timestamp:      timestamp,
 		SequenceNumber: c.inputSeq,
 		InputType:      inputType,
 		Data:           data,

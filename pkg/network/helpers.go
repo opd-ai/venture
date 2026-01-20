@@ -1,6 +1,12 @@
 package network
 
-import "time"
+import (
+	"errors"
+	"time"
+)
+
+// ErrSystemClockInvalid is returned when the system clock reports a time before the Unix epoch.
+var ErrSystemClockInvalid = errors.New("network: system clock returned timestamp before Unix epoch")
 
 // NewStateUpdate creates a state update with the specified priority.
 func NewStateUpdate(entityID uint64, priority uint8) *StateUpdate {
@@ -115,14 +121,16 @@ func sequenceInRange(seq, ref, rangeVal uint32) bool {
 //
 // Note: This timestamp is used for protocol-level timing and checksums.
 // For save/load functionality and time arithmetic, use time.Time instead.
-func NowTimestamp() uint64 {
+//
+// Returns ErrSystemClockInvalid if the system clock reports a time before the Unix epoch.
+func NowTimestamp() (uint64, error) {
 	nanos := time.Now().UnixNano()
 
 	// Defensive check: ensure timestamp is positive (should always be true for current dates)
-	// If this ever panics, it indicates a system clock issue or date before 1970
+	// If this fails, it indicates a system clock issue or date before 1970
 	if nanos < 0 {
-		panic("network: timestamp before Unix epoch - check system clock")
+		return 0, ErrSystemClockInvalid
 	}
 
-	return uint64(nanos)
+	return uint64(nanos), nil
 }

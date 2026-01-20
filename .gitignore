@@ -67,6 +67,9 @@ go.work.sum
 *.backup
 *.gz
 /*.md
+!README.md
+!SECURITY.md
+!PLAN.md
 /*.log
 /*.txt
 .DS_Store

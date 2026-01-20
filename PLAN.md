@@ -381,12 +381,12 @@ All Phase 4 deliverables completed successfully:
   - ✅ Document database/save file migration (automatic migration for v0.9.x)
   - ✅ List breaking changes and required actions (none for v1.0.0)
   - ✅ Include rollback procedures (binary, save files, configuration)
-- [ ] Security hardening review (files: pkg/security/*, docs/SECURITY.md)
-  - Run security audit using `gosec` and address findings
-  - Review dependency security advisories (GitHub Dependabot)
-  - Implement rate limiting on all public endpoints
-  - Add SECURITY.md incident response procedures
-  - Set up GitHub Security Advisories for vulnerability reporting
+- [x] Security hardening review (files: pkg/security/*, docs/SECURITY.md)
+  - ✅ Run security audit using `gosec` and address findings (0 critical issues, all findings reviewed)
+  - ✅ Review dependency security advisories (GitHub Dependabot enabled via .github/dependabot.yml)
+  - ✅ Implement rate limiting on all public endpoints (already in place - pkg/validation)
+  - ✅ Add SECURITY.md incident response procedures (5-phase workflow, templates, contacts)
+  - ✅ Set up GitHub Security Advisories for vulnerability reporting (SECURITY.md in root)
 - [ ] Production deployment guide (file: docs/PRODUCTION_DEPLOYMENT.md updates)
   - Add systemd service examples for common distros
   - Document reverse proxy setup (NGINX, Caddy)

@@ -330,3 +330,78 @@ type ColorModulation struct {
 	// -1.0 = very cool (blue), +1.0 = very warm (orange)
 	TemperatureShift float64
 }
+
+// GradientType defines the type of gradient to generate.
+// Originally from: gradient.go
+type GradientType int
+
+const (
+	// GradientLinear creates a linear gradient from start to end
+	GradientLinear GradientType = iota
+	// GradientRadial creates a radial gradient from center outward
+	GradientRadial
+	// GradientAngular creates an angular gradient rotating around center
+	GradientAngular
+	// GradientDiamond creates a diamond-shaped gradient
+	GradientDiamond
+	// GradientSpiral creates a spiral gradient
+	GradientSpiral
+	// GradientConic creates a conic gradient (like a color wheel)
+	GradientConic
+)
+
+// String returns the string representation of GradientType.
+func (g GradientType) String() string {
+	switch g {
+	case GradientLinear:
+		return "Linear"
+	case GradientRadial:
+		return "Radial"
+	case GradientAngular:
+		return "Angular"
+	case GradientDiamond:
+		return "Diamond"
+	case GradientSpiral:
+		return "Spiral"
+	case GradientConic:
+		return "Conic"
+	default:
+		return "Unknown"
+	}
+}
+
+// GradientConfig defines parameters for gradient generation.
+// Originally from: gradient.go
+type GradientConfig struct {
+	// Type of gradient
+	Type GradientType
+	// Colors to interpolate (minimum 2)
+	Colors []color.Color
+	// Angle for linear/angular gradients (in degrees, 0-360)
+	Angle float64
+	// Center point for radial/angular gradients (0.0-1.0 normalized)
+	CenterX, CenterY float64
+	// Radius for radial gradients (0.0-1.0 normalized)
+	Radius float64
+	// Rotation speed for spiral gradients
+	SpiralRotations float64
+	// Whether to reverse the gradient direction
+	Reverse bool
+	// Smoothness factor for interpolation (0.0-1.0, default 0.5)
+	Smoothness float64
+}
+
+// DefaultGradientConfig returns default gradient configuration.
+func DefaultGradientConfig() GradientConfig {
+	return GradientConfig{
+		Type:            GradientLinear,
+		Colors:          []color.Color{color.Black, color.White},
+		Angle:           0.0,
+		CenterX:         0.5,
+		CenterY:         0.5,
+		Radius:          0.5,
+		SpiralRotations: 2.0,
+		Reverse:         false,
+		Smoothness:      0.5,
+	}
+}

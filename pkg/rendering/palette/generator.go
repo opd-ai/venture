@@ -271,80 +271,11 @@ func (g *Generator) generateFromScheme(scheme ColorScheme, rng *rand.Rand, opts 
 
 // hslToColor converts HSL color space to RGB color.
 // h: 0-360, s: 0-1, l: 0-1
+// Uses shared utility function hslToRGB from utils.go
 func hslToColor(h, s, l float64) color.Color {
-	h = math.Mod(h, 360) / 360
-
-	var r, g, b float64
-
-	if s == 0 {
-		r, g, b = l, l, l
-	} else {
-		var q float64
-		if l < 0.5 {
-			q = l * (1 + s)
-		} else {
-			q = l + s - l*s
-		}
-		p := 2*l - q
-
-		r = hueToRGB(p, q, h+1.0/3.0)
-		g = hueToRGB(p, q, h)
-		b = hueToRGB(p, q, h-1.0/3.0)
-	}
-
-	return color.RGBA{
-		R: uint8(clamp(r*255, 0, 255)),
-		G: uint8(clamp(g*255, 0, 255)),
-		B: uint8(clamp(b*255, 0, 255)),
-		A: 255,
-	}
-}
-
-// hueToRGB is a helper function for HSL to RGB conversion.
-func hueToRGB(p, q, t float64) float64 {
-	if t < 0 {
-		t++
-	}
-	if t > 1 {
-		t--
-	}
-	if t < 1.0/6.0 {
-		return p + (q-p)*6*t
-	}
-	if t < 1.0/2.0 {
-		return q
-	}
-	if t < 2.0/3.0 {
-		return p + (q-p)*(2.0/3.0-t)*6
-	}
-	return p
-}
-
-// clamp restricts a value to a given range.
-func clamp(value, min, max float64) float64 {
-	if value < min {
-		return min
-	}
-	if value > max {
-		return max
-	}
-	return value
-}
-
-// max returns the maximum of two integers.
-func max(a, b int) int {
-	if a > b {
-		return a
-	}
-	return b
-}
-
-// min returns the minimum of two integers.
-func min(a, b int) int {
-	if a < b {
-		return a
-	}
-	return b
+	h = math.Mod(h, 360)
+	r, g, b := hslToRGB(h, s, l)
+	return color.RGBA{R: r, G: g, B: b, A: 255}
 }
 
 // getHarmonyHues returns hues based on harmony type.

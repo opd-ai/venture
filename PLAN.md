@@ -357,18 +357,19 @@ All Phase 4 deliverables completed successfully:
   - ✅ Added Major/Minor/Patch constants and BuildInfo()/ShortVersion()/PrintVersion() functions
   - ✅ Added comprehensive tests in pkg/version/version_test.go
   - Note: Git tag `v1.0.0` should be created at release time with `git tag -a v1.0.0 -m "Release v1.0.0"`
-- [ ] Create distribution packages (new: scripts/package-*.sh, .github/workflows/release.yml)
-  - Build .deb packages for Debian/Ubuntu (with systemd service)
-  - Build .rpm packages for RHEL/Fedora
-  - Create Homebrew formula (new: Formula/venture.rb)
-  - Build Windows installer with NSIS (with Start menu shortcuts)
-  - Create Docker images and push to GHCR (ghcr.io/opd-ai/venture-server:1.0.0)
-- [ ] Establish GitHub releases (file: .github/workflows/release.yml)
-  - Automate release builds for all platforms on git tags
-  - Generate SHA256SUMS.txt for all artifacts
-  - Sign binaries with GPG (optional but recommended)
-  - Create release notes from CHANGELOG.md
-  - Upload artifacts to GitHub Releases
+- [x] Create distribution packages (new: scripts/package-*.sh, .github/workflows/release.yml)
+  - ✅ Build .deb packages for Debian/Ubuntu (scripts/package-deb.sh with systemd service)
+  - ✅ Build .rpm packages for RHEL/Fedora (scripts/package-rpm.sh with spec file)
+  - ✅ Create Homebrew formula (Formula/venture.rb)
+  - ✅ Build Windows installer with NSIS (scripts/package-windows.sh with Start menu shortcuts)
+  - ✅ Create Docker images (scripts/package-docker.sh, pushes to ghcr.io/opd-ai/venture-server)
+  - ✅ Created supporting scripts: build-all-platforms.sh, package-release.sh, generate-checksums.sh, sign-binaries.sh
+- [x] Establish GitHub releases (file: .github/workflows/release.yml)
+  - ✅ Automate release builds for all platforms on git tags (existing workflow supports v* tags)
+  - ✅ Generate SHA256SUMS.txt for all artifacts (scripts/generate-checksums.sh)
+  - ✅ Sign binaries with GPG (scripts/sign-binaries.sh)
+  - ✅ Create release notes from git history (release.yml generates changelog)
+  - ✅ Upload artifacts to GitHub Releases (softprops/action-gh-release@v2)
 - [x] Document API stability guarantees (new: docs/API_COMPATIBILITY.md)
   - ✅ Defined public API surface (network protocol, save format, config files, CLI flags, mod API)
   - ✅ Committed to backward compatibility for MINOR/PATCH versions

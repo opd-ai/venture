@@ -220,6 +220,117 @@ These scripts are designed to work in CI/CD environments:
 
 ---
 
+## Distribution Packaging
+
+Scripts for creating platform-specific distribution packages.
+
+### package-deb.sh
+
+Build Debian/Ubuntu packages with systemd service integration.
+
+**Usage:**
+```bash
+./scripts/package-deb.sh [version] [arch]
+
+# Examples
+./scripts/package-deb.sh 1.0.0 amd64
+./scripts/package-deb.sh 1.0.0 arm64
+```
+
+**Output:** `dist/deb/venture_<version>_<arch>.deb`
+
+**Features:**
+- Systemd service file (`venture-server.service`)
+- Post-install/pre-remove scripts
+- Dependency declarations (libgl, libx*, libasound2)
+- Security-hardened service configuration
+
+### package-rpm.sh
+
+Build RHEL/Fedora RPM packages with systemd service integration.
+
+**Usage:**
+```bash
+./scripts/package-rpm.sh [version] [arch]
+
+# Examples
+./scripts/package-rpm.sh 1.0.0 amd64
+./scripts/package-rpm.sh 1.0.0 arm64
+```
+
+**Output:** `dist/rpm/venture-<version>-1.<arch>.rpm`
+
+**Features:**
+- RPM spec file with macros
+- Systemd integration via macros
+- Automatic user creation (venture user)
+- Dependency declarations
+
+### package-windows.sh
+
+Build Windows NSIS installer with Start menu shortcuts.
+
+**Usage:**
+```bash
+./scripts/package-windows.sh [version]
+
+# Example
+./scripts/package-windows.sh 1.0.0
+```
+
+**Output:** `dist/windows/venture-<version>-setup.exe`
+
+**Features:**
+- Start menu shortcuts for client/server
+- Desktop shortcut
+- Add/Remove Programs integration
+- PATH environment variable option
+- Uninstaller
+
+**Prerequisites:** NSIS (`apt install nsis`)
+
+### package-docker.sh
+
+Build and push Docker images to GitHub Container Registry.
+
+**Usage:**
+```bash
+./scripts/package-docker.sh [version] [registry]
+
+# Examples
+./scripts/package-docker.sh 1.0.0 ghcr.io/opd-ai
+./scripts/package-docker.sh 1.0.0
+```
+
+**Output:** Docker image `ghcr.io/opd-ai/venture-server:<version>`
+
+**Features:**
+- Multi-stage build for minimal image size
+- Non-root user for security
+- Volume mount for save data
+- Exposed ports (7777/tcp, 7777/udp)
+
+### Formula/venture.rb
+
+Homebrew formula for macOS and Linux.
+
+**Usage:**
+```bash
+# Install from tap
+brew tap opd-ai/tap
+brew install venture
+
+# Or direct install
+brew install opd-ai/tap/venture
+```
+
+**Features:**
+- Multi-architecture support (amd64, arm64)
+- Service integration (`brew services start venture`)
+- Auto-start on boot option
+
+---
+
 ## Phase 66.1: Build & Deployment Automation
 
 Comprehensive release automation system for building, packaging, and deploying Venture across all supported platforms.

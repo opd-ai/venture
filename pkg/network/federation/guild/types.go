@@ -1,49 +1,23 @@
-package guild
-
-import "time"
-
+// Guild data structures and domain models.
+//
+// This file defines the core data structures for the guild system:
+// - Member: Individual guild member with rank and join timestamps
+// - TreasuryTransaction: Audit log for treasury operations
+// - Emblem: Visual guild identity (colors, shape, symbol)
+// - Guild: Complete guild state including members, treasury, permissions
+// - GuildMessage: Federation protocol message envelope
+// - Message payload types: MemberJoinData, MemberLeaveData, TerritoryChangeData
+//
+// All structures are JSON-serializable for network transmission and persistence.
+// Constants (Rank, Permission, MessageType) have been moved to constants.go.
+//
 // INTEGRATION FIX [Category G]: Guild Federation Types
 // Gap: Guild federation types missing (ROADMAP_V8.md Phase 50.1)
 // Fix: Created complete type system for cross-server guild management
 // Roadmap: ROADMAP_V8.md Phase 50.1
+package guild
 
-// Rank represents a guild member's rank
-type Rank string
-
-const (
-	// RankRecruit is the entry-level rank
-	RankRecruit Rank = "Recruit"
-	// RankMember is the standard member rank
-	RankMember Rank = "Member"
-	// RankOfficer is the officer rank with elevated permissions
-	RankOfficer Rank = "Officer"
-	// RankLeader is the guild leader rank with full permissions
-	RankLeader Rank = "Leader"
-)
-
-// Permission represents a guild permission type
-type Permission string
-
-const (
-	// PermissionInvite allows inviting new members
-	PermissionInvite Permission = "invite"
-	// PermissionKick allows removing members
-	PermissionKick Permission = "kick"
-	// PermissionPromote allows promoting members
-	PermissionPromote Permission = "promote"
-	// PermissionDemote allows demoting members
-	PermissionDemote Permission = "demote"
-	// PermissionWithdraw allows withdrawing from guild treasury
-	PermissionWithdraw Permission = "withdraw"
-	// PermissionDeposit allows depositing to guild treasury
-	PermissionDeposit Permission = "deposit"
-	// PermissionEditMOTD allows editing message of the day
-	PermissionEditMOTD Permission = "edit_motd"
-	// PermissionManageBank allows managing guild bank items
-	PermissionManageBank Permission = "manage_bank"
-	// PermissionDeclareWar allows declaring wars on other guilds
-	PermissionDeclareWar Permission = "declare_war"
-)
+import "time"
 
 // Member represents a guild member
 type Member struct {
@@ -118,21 +92,8 @@ func (g *Guild) GetMember(playerID string) *Member {
 	return nil
 }
 
-// MessageType represents the type of guild federation message
-type MessageType string
-
-const (
-	// MsgTypeGuildSync synchronizes full guild state
-	MsgTypeGuildSync MessageType = "guild_sync"
-	// MsgTypeMemberJoin notifies of a new member joining
-	MsgTypeMemberJoin MessageType = "member_join"
-	// MsgTypeMemberLeave notifies of a member leaving
-	MsgTypeMemberLeave MessageType = "member_leave"
-	// MsgTypeTerritoryChange notifies of territory control change
-	MsgTypeTerritoryChange MessageType = "territory_change"
-)
-
 // GuildMessage represents a cross-server guild synchronization message
+// Originally located in types.go, federation message types kept together
 type GuildMessage struct {
 	Type      MessageType `json:"type"`
 	GuildID   string      `json:"guild_id"`

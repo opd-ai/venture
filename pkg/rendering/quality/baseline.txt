@@ -1,0 +1,142 @@
+=== RUN   TestQualitySettingsComponent_Type
+--- PASS: TestQualitySettingsComponent_Type (0.00s)
+=== RUN   TestNewQualitySettingsComponent
+--- PASS: TestNewQualitySettingsComponent (0.00s)
+=== RUN   TestWithSpriteDetail
+=== RUN   TestWithSpriteDetail/#00
+=== RUN   TestWithSpriteDetail/#01
+=== RUN   TestWithSpriteDetail/#02
+=== RUN   TestWithSpriteDetail/#03
+=== RUN   TestWithSpriteDetail/#04
+--- PASS: TestWithSpriteDetail (0.00s)
+    --- PASS: TestWithSpriteDetail/#00 (0.00s)
+    --- PASS: TestWithSpriteDetail/#01 (0.00s)
+    --- PASS: TestWithSpriteDetail/#02 (0.00s)
+    --- PASS: TestWithSpriteDetail/#03 (0.00s)
+    --- PASS: TestWithSpriteDetail/#04 (0.00s)
+=== RUN   TestWithParticleMultiplier
+=== RUN   TestWithParticleMultiplier/#00
+=== RUN   TestWithParticleMultiplier/#01
+=== RUN   TestWithParticleMultiplier/#02
+=== RUN   TestWithParticleMultiplier/#03
+=== RUN   TestWithParticleMultiplier/#04
+--- PASS: TestWithParticleMultiplier (0.00s)
+    --- PASS: TestWithParticleMultiplier/#00 (0.00s)
+    --- PASS: TestWithParticleMultiplier/#01 (0.00s)
+    --- PASS: TestWithParticleMultiplier/#02 (0.00s)
+    --- PASS: TestWithParticleMultiplier/#03 (0.00s)
+    --- PASS: TestWithParticleMultiplier/#04 (0.00s)
+=== RUN   TestWithoutEffects
+--- PASS: TestWithoutEffects (0.00s)
+=== RUN   TestQualitySettingsComponent_UseCases
+=== RUN   TestQualitySettingsComponent_UseCases/background_entity_with_reduced_detail
+=== RUN   TestQualitySettingsComponent_UseCases/important_entity_with_no_effects_disabled
+=== RUN   TestQualitySettingsComponent_UseCases/distant_entity_with_no_effects
+=== RUN   TestQualitySettingsComponent_UseCases/particle-heavy_entity_with_reduced_particles
+--- PASS: TestQualitySettingsComponent_UseCases (0.00s)
+    --- PASS: TestQualitySettingsComponent_UseCases/background_entity_with_reduced_detail (0.00s)
+    --- PASS: TestQualitySettingsComponent_UseCases/important_entity_with_no_effects_disabled (0.00s)
+    --- PASS: TestQualitySettingsComponent_UseCases/distant_entity_with_no_effects (0.00s)
+    --- PASS: TestQualitySettingsComponent_UseCases/particle-heavy_entity_with_reduced_particles (0.00s)
+=== RUN   TestQualitySettingsComponent_Integration
+--- PASS: TestQualitySettingsComponent_Integration (0.00s)
+=== RUN   TestNewPerformanceMonitor
+--- PASS: TestNewPerformanceMonitor (0.00s)
+=== RUN   TestPerformanceMonitor_RecordFrame
+--- PASS: TestPerformanceMonitor_RecordFrame (0.00s)
+=== RUN   TestPerformanceMonitor_GetAverageFPS
+--- PASS: TestPerformanceMonitor_GetAverageFPS (0.00s)
+=== RUN   TestPerformanceMonitor_GetRecommendedQuality
+--- PASS: TestPerformanceMonitor_GetRecommendedQuality (0.00s)
+=== RUN   TestPerformanceMonitor_Reset
+--- PASS: TestPerformanceMonitor_Reset (0.00s)
+=== RUN   TestPerformanceMonitor_GetStats
+--- PASS: TestPerformanceMonitor_GetStats (0.00s)
+=== RUN   TestNewAutoAdjuster
+--- PASS: TestNewAutoAdjuster (0.00s)
+=== RUN   TestAutoAdjuster_SetEnabled
+--- PASS: TestAutoAdjuster_SetEnabled (0.00s)
+=== RUN   TestAutoAdjuster_Update
+--- PASS: TestAutoAdjuster_Update (0.00s)
+=== RUN   TestAutoAdjuster_SetOnChange
+--- PASS: TestAutoAdjuster_SetOnChange (0.00s)
+=== RUN   TestAutoAdjuster_SetManualQuality
+--- PASS: TestAutoAdjuster_SetManualQuality (0.00s)
+=== RUN   TestAutoAdjuster_DisabledNoChange
+--- PASS: TestAutoAdjuster_DisabledNoChange (0.00s)
+=== RUN   TestPerformanceMonitor_CircularBuffer
+--- PASS: TestPerformanceMonitor_CircularBuffer (0.00s)
+=== RUN   TestPerformanceMonitor_VeryFastFrames
+--- PASS: TestPerformanceMonitor_VeryFastFrames (0.00s)
+=== RUN   TestPerformanceMonitor_AdjustmentDelay
+--- PASS: TestPerformanceMonitor_AdjustmentDelay (0.16s)
+=== RUN   TestQualityLevel_String
+=== RUN   TestQualityLevel_String/Low
+=== RUN   TestQualityLevel_String/Medium
+=== RUN   TestQualityLevel_String/High
+=== RUN   TestQualityLevel_String/Unknown
+--- PASS: TestQualityLevel_String (0.00s)
+    --- PASS: TestQualityLevel_String/Low (0.00s)
+    --- PASS: TestQualityLevel_String/Medium (0.00s)
+    --- PASS: TestQualityLevel_String/High (0.00s)
+    --- PASS: TestQualityLevel_String/Unknown (0.00s)
+=== RUN   TestLowQualityConfig
+--- PASS: TestLowQualityConfig (0.00s)
+=== RUN   TestMediumQualityConfig
+--- PASS: TestMediumQualityConfig (0.00s)
+=== RUN   TestHighQualityConfig
+--- PASS: TestHighQualityConfig (0.00s)
+=== RUN   TestConfig_Validate
+=== RUN   TestConfig_Validate/valid_low_quality
+=== RUN   TestConfig_Validate/valid_medium_quality
+=== RUN   TestConfig_Validate/valid_high_quality
+=== RUN   TestConfig_Validate/invalid_sprite_detail_-_too_low
+=== RUN   TestConfig_Validate/invalid_sprite_detail_-_too_high
+=== RUN   TestConfig_Validate/invalid_AA_quality_-_too_low
+=== RUN   TestConfig_Validate/invalid_AA_quality_-_too_high
+=== RUN   TestConfig_Validate/invalid_tile_layer_count_-_too_low
+=== RUN   TestConfig_Validate/invalid_tile_layer_count_-_too_high
+=== RUN   TestConfig_Validate/invalid_particle_multiplier_-_negative
+=== RUN   TestConfig_Validate/invalid_decoration_density_-_too_high
+=== RUN   TestConfig_Validate/invalid_shadow_sample_count_-_too_low
+=== RUN   TestConfig_Validate/invalid_max_particles_-_negative
+=== RUN   TestConfig_Validate/invalid_cache_size_-_negative
+=== RUN   TestConfig_Validate/invalid_particle_LOD_distance_-_negative
+--- PASS: TestConfig_Validate (0.00s)
+    --- PASS: TestConfig_Validate/valid_low_quality (0.00s)
+    --- PASS: TestConfig_Validate/valid_medium_quality (0.00s)
+    --- PASS: TestConfig_Validate/valid_high_quality (0.00s)
+    --- PASS: TestConfig_Validate/invalid_sprite_detail_-_too_low (0.00s)
+    --- PASS: TestConfig_Validate/invalid_sprite_detail_-_too_high (0.00s)
+    --- PASS: TestConfig_Validate/invalid_AA_quality_-_too_low (0.00s)
+    --- PASS: TestConfig_Validate/invalid_AA_quality_-_too_high (0.00s)
+    --- PASS: TestConfig_Validate/invalid_tile_layer_count_-_too_low (0.00s)
+    --- PASS: TestConfig_Validate/invalid_tile_layer_count_-_too_high (0.00s)
+    --- PASS: TestConfig_Validate/invalid_particle_multiplier_-_negative (0.00s)
+    --- PASS: TestConfig_Validate/invalid_decoration_density_-_too_high (0.00s)
+    --- PASS: TestConfig_Validate/invalid_shadow_sample_count_-_too_low (0.00s)
+    --- PASS: TestConfig_Validate/invalid_max_particles_-_negative (0.00s)
+    --- PASS: TestConfig_Validate/invalid_cache_size_-_negative (0.00s)
+    --- PASS: TestConfig_Validate/invalid_particle_LOD_distance_-_negative (0.00s)
+=== RUN   TestConfig_ApplyLevel
+=== RUN   TestConfig_ApplyLevel/Low
+=== RUN   TestConfig_ApplyLevel/Medium
+=== RUN   TestConfig_ApplyLevel/High
+--- PASS: TestConfig_ApplyLevel (0.00s)
+    --- PASS: TestConfig_ApplyLevel/Low (0.00s)
+    --- PASS: TestConfig_ApplyLevel/Medium (0.00s)
+    --- PASS: TestConfig_ApplyLevel/High (0.00s)
+=== RUN   TestDefaultConfig
+--- PASS: TestDefaultConfig (0.00s)
+=== RUN   TestQualityProgression
+--- PASS: TestQualityProgression (0.00s)
+=== RUN   TestPerformanceOptimizations
+=== RUN   TestPerformanceOptimizations/Low
+=== RUN   TestPerformanceOptimizations/Medium
+=== RUN   TestPerformanceOptimizations/High
+--- PASS: TestPerformanceOptimizations (0.00s)
+    --- PASS: TestPerformanceOptimizations/Low (0.00s)
+    --- PASS: TestPerformanceOptimizations/Medium (0.00s)
+    --- PASS: TestPerformanceOptimizations/High (0.00s)
+PASS
+ok  	github.com/opd-ai/venture/pkg/rendering/quality	(cached)

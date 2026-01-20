@@ -1,3 +1,5 @@
+// Package quality provides visual quality tier management for Venture.
+// This file defines the QualitySettingsComponent for per-entity quality overrides.
 package quality
 
 // QualitySettingsComponent is an ECS component that allows per-entity

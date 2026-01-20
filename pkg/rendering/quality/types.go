@@ -41,6 +41,16 @@ func (q QualityLevel) String() string {
 	}
 }
 
+// PerformanceStats contains detailed performance metrics.
+// Originally from: monitor.go
+type PerformanceStats struct {
+	AverageFPS     float64
+	MinFPS         float64
+	MaxFPS         float64
+	CurrentQuality QualityLevel
+	SampleCount    int
+}
+
 // Config contains granular quality settings for all rendering features.
 // Each feature can be independently toggled to create custom quality profiles.
 type Config struct {

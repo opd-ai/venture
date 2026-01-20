@@ -1,13 +1,8 @@
 package choice_consequences
 
-import "time"
-
-// AlignmentShift represents changes to a player's moral alignment from a choice.
-type AlignmentShift struct {
-	GoodEvil      float64 // -1.0 (evil) to +1.0 (good)
-	LawChaos      float64 // -1.0 (chaotic) to +1.0 (lawful)
-	HonorDishonor float64 // -1.0 (dishonorable) to +1.0 (honorable)
-}
+// types.go defines the core domain types for choice tracking and consequences.
+// This includes player choices, NPC relationships, content locks, quest branches,
+// companion reactions, and the ECS component for integrating with the game engine.
 
 // PlayerChoice represents a single decision made by a player.
 type PlayerChoice struct {
@@ -103,24 +98,6 @@ type ClassSpecificQuest struct {
 	Prerequisites []string              // Previous choices required
 }
 
-// AlignmentRequirement specifies alignment ranges needed for content access.
-type AlignmentRequirement struct {
-	MinGoodEvil      float64 // Minimum good/evil alignment
-	MaxGoodEvil      float64 // Maximum good/evil alignment
-	MinLawChaos      float64 // Minimum law/chaos alignment
-	MaxLawChaos      float64 // Maximum law/chaos alignment
-	MinHonorDishonor float64 // Minimum honor/dishonor alignment
-	MaxHonorDishonor float64 // Maximum honor/dishonor alignment
-}
-
-// PlayerAlignment tracks a player's cumulative moral alignment.
-type PlayerAlignment struct {
-	GoodEvil      float64 // -1.0 (pure evil) to +1.0 (pure good)
-	LawChaos      float64 // -1.0 (pure chaos) to +1.0 (pure law)
-	HonorDishonor float64 // -1.0 (dishonorable) to +1.0 (honorable)
-	UpdatedAt     int64   // Last alignment change timestamp
-}
-
 // CompanionReaction represents how a companion reacts to player choices.
 type CompanionReaction struct {
 	CompanionID    string  // Companion identifier
@@ -144,52 +121,4 @@ type ChoiceTrackerComponent struct {
 // Type returns the component type identifier.
 func (c ChoiceTrackerComponent) Type() string {
 	return "choice_tracker"
-}
-
-// ChecksAlignment checks if player's alignment meets requirements.
-func (pa *PlayerAlignment) ChecksAlignment(req *AlignmentRequirement) bool {
-	if req == nil {
-		return true
-	}
-
-	if pa.GoodEvil < req.MinGoodEvil || pa.GoodEvil > req.MaxGoodEvil {
-		return false
-	}
-	if pa.LawChaos < req.MinLawChaos || pa.LawChaos > req.MaxLawChaos {
-		return false
-	}
-	if pa.HonorDishonor < req.MinHonorDishonor || pa.HonorDishonor > req.MaxHonorDishonor {
-		return false
-	}
-
-	return true
-}
-
-// ApplyShift applies an alignment shift to the player's alignment.
-func (pa *PlayerAlignment) ApplyShift(shift *AlignmentShift) {
-	if shift == nil {
-		return
-	}
-
-	pa.GoodEvil += shift.GoodEvil
-	pa.LawChaos += shift.LawChaos
-	pa.HonorDishonor += shift.HonorDishonor
-
-	// Clamp values to [-1.0, 1.0]
-	pa.GoodEvil = clamp(pa.GoodEvil, -1.0, 1.0)
-	pa.LawChaos = clamp(pa.LawChaos, -1.0, 1.0)
-	pa.HonorDishonor = clamp(pa.HonorDishonor, -1.0, 1.0)
-
-	pa.UpdatedAt = time.Now().Unix()
-}
-
-// clamp restricts a value to a min/max range.
-func clamp(value, min, max float64) float64 {
-	if value < min {
-		return min
-	}
-	if value > max {
-		return max
-	}
-	return value
 }

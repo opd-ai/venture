@@ -1,75 +1,10 @@
+// Package branching provides branching narrative type definitions.
+// This file defines narrative data structures and components.
+// Enum types moved to: enums.go
 package branching
 
 import (
 	"time"
-)
-
-// NodeType represents the type of narrative node
-type NodeType int
-
-const (
-	NodeTypeStart NodeType = iota
-	NodeTypeChoice
-	NodeTypeEvent
-	NodeTypeConsequence
-	NodeTypeEnding
-)
-
-func (n NodeType) String() string {
-	switch n {
-	case NodeTypeStart:
-		return "Start"
-	case NodeTypeChoice:
-		return "Choice"
-	case NodeTypeEvent:
-		return "Event"
-	case NodeTypeConsequence:
-		return "Consequence"
-	case NodeTypeEnding:
-		return "Ending"
-	default:
-		return "Unknown"
-	}
-}
-
-// EndingType represents the type of story ending
-type EndingType int
-
-const (
-	EndingTypeHeroic EndingType = iota
-	EndingTypeTragic
-	EndingTypeNeutral
-	EndingTypeMystery
-	EndingTypeTriumph
-	EndingTypeBetrayal
-)
-
-func (e EndingType) String() string {
-	switch e {
-	case EndingTypeHeroic:
-		return "Heroic"
-	case EndingTypeTragic:
-		return "Tragic"
-	case EndingTypeNeutral:
-		return "Neutral"
-	case EndingTypeMystery:
-		return "Mystery"
-	case EndingTypeTriumph:
-		return "Triumph"
-	case EndingTypeBetrayal:
-		return "Betrayal"
-	default:
-		return "Unknown"
-	}
-}
-
-// AlignmentAxis represents moral alignment axes
-type AlignmentAxis string
-
-const (
-	AlignmentGoodEvil      AlignmentAxis = "good_evil"
-	AlignmentLawChaos      AlignmentAxis = "law_chaos"
-	AlignmentHonorDishonor AlignmentAxis = "honor_dishonor"
 )
 
 // Choice represents a player choice in the narrative

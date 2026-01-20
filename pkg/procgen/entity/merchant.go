@@ -1,6 +1,7 @@
 // Package entity provides procedural merchant generation.
 // This file implements merchant-specific entity generation, inventory stocking,
 // and spawn location logic for both fixed and nomadic merchants.
+// MerchantType enum has been moved to: enums.go
 package entity
 
 import (
@@ -10,28 +11,6 @@ import (
 	"github.com/opd-ai/venture/pkg/procgen"
 	"github.com/opd-ai/venture/pkg/procgen/item"
 )
-
-// MerchantType represents the behavior pattern of a merchant NPC.
-type MerchantType int
-
-const (
-	// MerchantFixed represents stationary shopkeepers in settlements
-	MerchantFixed MerchantType = iota
-	// MerchantNomadic represents wandering merchants that spawn periodically
-	MerchantNomadic
-)
-
-// String returns the string representation of a merchant type.
-func (m MerchantType) String() string {
-	switch m {
-	case MerchantFixed:
-		return "fixed"
-	case MerchantNomadic:
-		return "nomadic"
-	default:
-		return "unknown"
-	}
-}
 
 // MerchantData holds merchant-specific generation data that will be
 // converted to engine components at runtime.

@@ -345,7 +345,7 @@ func (fs *FishingSystem) updateFishingSpots(entities []*Entity, deltaTime float6
 		}
 
 		// Process cooldown
-		spotComp.UpdateCooldown(deltaTime)
+		fs.SpotUpdateCooldown(spotComp, deltaTime)
 	}
 }
 
@@ -665,8 +665,8 @@ func (fs *FishingSystem) completeCatch(fisher *Entity, fishComp *FishingComponen
 	if spotEntity, ok := fs.fishingSpots[spotID]; ok {
 		if comp, ok := spotEntity.GetComponent("fishing_spot"); ok {
 			if spotComp, ok := comp.(*FishingSpotComponent); ok {
-				spotComp.SetCooldown(fs.SpotCooldown)
-				spotComp.RemoveFisher()
+				fs.SpotSetCooldown(spotComp, fs.SpotCooldown)
+				fs.SpotRemoveFisher(spotComp)
 			}
 		}
 	}
@@ -720,7 +720,7 @@ func (fs *FishingSystem) StartFishing(fisher *Entity, spotID uint64) bool {
 	}
 
 	// Validate can fish
-	if !spotComp.CanFish() {
+	if !fs.SpotCanFish(spotComp) {
 		return false
 	}
 
@@ -737,7 +737,7 @@ func (fs *FishingSystem) StartFishing(fisher *Entity, spotID uint64) bool {
 	fishComp.UseBait()
 
 	// Add fisher to spot
-	if !spotComp.AddFisher() {
+	if !fs.SpotAddFisher(spotComp) {
 		return false
 	}
 
@@ -834,7 +834,7 @@ func (fs *FishingSystem) CancelFishing(fisher *Entity) {
 	if spotEntity, ok := fs.fishingSpots[spotID]; ok {
 		if spotCompRaw, ok := spotEntity.GetComponent("fishing_spot"); ok {
 			if spotComp, ok := spotCompRaw.(*FishingSpotComponent); ok {
-				spotComp.RemoveFisher()
+				fs.SpotRemoveFisher(spotComp)
 			}
 		}
 	}
@@ -949,7 +949,7 @@ func (fs *FishingSystem) GenerateFishingSpot(seed int64, waterType WaterType, de
 
 		// Add some randomness
 		spawnWeight := baseWeight * (0.8 + rng.Float64()*0.4)
-		spot.AddFishType(id, spawnWeight)
+		fs.SpotAddFishType(spot, id, spawnWeight)
 	}
 	fs.mu.RUnlock()
 
@@ -979,4 +979,94 @@ func (fs *FishingSystem) GetFishTypeCount() int {
 	fs.mu.RLock()
 	defer fs.mu.RUnlock()
 	return len(fs.fishTypes)
+}
+
+// --- FishingSpot Component Helpers (ECS Pattern) ---
+// These methods operate on FishingSpotComponent data following ECS pattern
+// where systems contain all logic and components are pure data.
+
+// SpotAddFishType adds a fish type to a fishing spot's population.
+func (fs *FishingSystem) SpotAddFishType(spot *FishingSpotComponent, fishTypeID string, spawnWeight float64) {
+	spot.mu.Lock()
+	defer spot.mu.Unlock()
+	spot.FishPopulation[fishTypeID] = spawnWeight
+}
+
+// SpotRemoveFishType removes a fish type from a fishing spot.
+func (fs *FishingSystem) SpotRemoveFishType(spot *FishingSpotComponent, fishTypeID string) {
+	spot.mu.Lock()
+	defer spot.mu.Unlock()
+	delete(spot.FishPopulation, fishTypeID)
+}
+
+// SpotGetFishTypes returns all fish type IDs at a fishing spot.
+func (fs *FishingSystem) SpotGetFishTypes(spot *FishingSpotComponent) []string {
+	spot.mu.RLock()
+	defer spot.mu.RUnlock()
+	types := make([]string, 0, len(spot.FishPopulation))
+	for id := range spot.FishPopulation {
+		types = append(types, id)
+	}
+	return types
+}
+
+// SpotGetSpawnWeight returns the spawn weight for a fish type at a fishing spot.
+func (fs *FishingSystem) SpotGetSpawnWeight(spot *FishingSpotComponent, fishTypeID string) float64 {
+	spot.mu.RLock()
+	defer spot.mu.RUnlock()
+	return spot.FishPopulation[fishTypeID]
+}
+
+// SpotCanFish checks if another fisher can use a fishing spot.
+func (fs *FishingSystem) SpotCanFish(spot *FishingSpotComponent) bool {
+	spot.mu.RLock()
+	defer spot.mu.RUnlock()
+	return spot.IsActive && spot.CurrentFishers < spot.MaxConcurrentFishers && spot.CooldownTimer <= 0
+}
+
+// SpotAddFisher increments the current fisher count at a fishing spot.
+// Returns false if spot is at capacity.
+func (fs *FishingSystem) SpotAddFisher(spot *FishingSpotComponent) bool {
+	spot.mu.Lock()
+	defer spot.mu.Unlock()
+	if spot.CurrentFishers >= spot.MaxConcurrentFishers {
+		return false
+	}
+	spot.CurrentFishers++
+	return true
+}
+
+// SpotRemoveFisher decrements the current fisher count at a fishing spot.
+func (fs *FishingSystem) SpotRemoveFisher(spot *FishingSpotComponent) {
+	spot.mu.Lock()
+	defer spot.mu.Unlock()
+	if spot.CurrentFishers > 0 {
+		spot.CurrentFishers--
+	}
+}
+
+// SpotGetCurrentFishers returns the current fisher count at a fishing spot.
+func (fs *FishingSystem) SpotGetCurrentFishers(spot *FishingSpotComponent) int {
+	spot.mu.RLock()
+	defer spot.mu.RUnlock()
+	return spot.CurrentFishers
+}
+
+// SpotUpdateCooldown processes cooldown timer for a fishing spot.
+func (fs *FishingSystem) SpotUpdateCooldown(spot *FishingSpotComponent, deltaTime float64) {
+	spot.mu.Lock()
+	defer spot.mu.Unlock()
+	if spot.CooldownTimer > 0 {
+		spot.CooldownTimer -= deltaTime
+		if spot.CooldownTimer < 0 {
+			spot.CooldownTimer = 0
+		}
+	}
+}
+
+// SpotSetCooldown sets the cooldown timer for a fishing spot.
+func (fs *FishingSystem) SpotSetCooldown(spot *FishingSpotComponent, seconds float64) {
+	spot.mu.Lock()
+	defer spot.mu.Unlock()
+	spot.CooldownTimer = seconds
 }

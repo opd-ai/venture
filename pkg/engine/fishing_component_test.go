@@ -73,91 +73,99 @@ func TestNewFishingSpotComponent(t *testing.T) {
 }
 
 func TestFishingSpotComponent_FishPopulation(t *testing.T) {
+	world := NewWorld()
+	fs := NewFishingSystem(world)
 	spot := NewFishingSpotComponent(WaterTypeFreshwater, DepthMedium, "lake")
 
 	// Add fish types
-	spot.AddFishType("bass", 10.0)
-	spot.AddFishType("trout", 8.0)
-	spot.AddFishType("pike", 2.0)
+	fs.SpotAddFishType(spot, "bass", 10.0)
+	fs.SpotAddFishType(spot, "trout", 8.0)
+	fs.SpotAddFishType(spot, "pike", 2.0)
 
 	// Check fish types
-	types := spot.GetFishTypes()
+	types := fs.SpotGetFishTypes(spot)
 	if len(types) != 3 {
 		t.Errorf("expected 3 fish types, got %d", len(types))
 	}
 
 	// Check spawn weights
-	if spot.GetSpawnWeight("bass") != 10.0 {
-		t.Errorf("expected bass weight 10.0, got %f", spot.GetSpawnWeight("bass"))
+	if fs.SpotGetSpawnWeight(spot, "bass") != 10.0 {
+		t.Errorf("expected bass weight 10.0, got %f", fs.SpotGetSpawnWeight(spot, "bass"))
 	}
 
 	// Remove a fish type
-	spot.RemoveFishType("pike")
-	types = spot.GetFishTypes()
+	fs.SpotRemoveFishType(spot, "pike")
+	types = fs.SpotGetFishTypes(spot)
 	if len(types) != 2 {
 		t.Errorf("expected 2 fish types after removal, got %d", len(types))
 	}
 }
 
 func TestFishingSpotComponent_CanFish(t *testing.T) {
+	world := NewWorld()
+	fs := NewFishingSystem(world)
 	spot := NewFishingSpotComponent(WaterTypeFreshwater, DepthShallow, "river")
 	spot.MaxConcurrentFishers = 2
 
 	// Should be able to fish initially
-	if !spot.CanFish() {
+	if !fs.SpotCanFish(spot) {
 		t.Error("should be able to fish when spot is empty")
 	}
 
 	// Add fishers
-	if !spot.AddFisher() {
+	if !fs.SpotAddFisher(spot) {
 		t.Error("should be able to add first fisher")
 	}
-	if !spot.AddFisher() {
+	if !fs.SpotAddFisher(spot) {
 		t.Error("should be able to add second fisher")
 	}
 
 	// Should be at capacity
-	if spot.AddFisher() {
+	if fs.SpotAddFisher(spot) {
 		t.Error("should not be able to add third fisher at capacity")
 	}
-	if spot.CanFish() {
+	if fs.SpotCanFish(spot) {
 		t.Error("should not be able to fish when at capacity")
 	}
 
 	// Remove a fisher
-	spot.RemoveFisher()
-	if !spot.CanFish() {
+	fs.SpotRemoveFisher(spot)
+	if !fs.SpotCanFish(spot) {
 		t.Error("should be able to fish after fisher leaves")
 	}
 }
 
 func TestFishingSpotComponent_Cooldown(t *testing.T) {
+	world := NewWorld()
+	fs := NewFishingSystem(world)
 	spot := NewFishingSpotComponent(WaterTypeSaltwater, DepthDeep, "ocean")
 
 	// Set cooldown
-	spot.SetCooldown(5.0)
+	fs.SpotSetCooldown(spot, 5.0)
 
 	// Should not be able to fish during cooldown
-	if spot.CanFish() {
+	if fs.SpotCanFish(spot) {
 		t.Error("should not be able to fish during cooldown")
 	}
 
 	// Update cooldown partially
-	spot.UpdateCooldown(3.0)
-	if spot.CanFish() {
+	fs.SpotUpdateCooldown(spot, 3.0)
+	if fs.SpotCanFish(spot) {
 		t.Error("should still be on cooldown")
 	}
 
 	// Complete cooldown
-	spot.UpdateCooldown(3.0)
-	if !spot.CanFish() {
+	fs.SpotUpdateCooldown(spot, 3.0)
+	if !fs.SpotCanFish(spot) {
 		t.Error("should be able to fish after cooldown")
 	}
 }
 
 func TestFishingSpotComponent_Serialize(t *testing.T) {
+	world := NewWorld()
+	fs := NewFishingSystem(world)
 	spot := NewFishingSpotComponent(WaterTypeMagical, DepthMedium, "enchanted")
-	spot.AddFishType("moonfish", 5.0)
+	fs.SpotAddFishType(spot, "moonfish", 5.0)
 	spot.RareFishBonus = 1.5
 
 	// Serialize

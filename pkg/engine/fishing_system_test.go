@@ -178,7 +178,7 @@ func TestFishingSystem_GenerateFishingSpot(t *testing.T) {
 			}
 
 			// Should have fish population
-			fishTypes := fishSpot.GetFishTypes()
+			fishTypes := fs.SpotGetFishTypes(fishSpot)
 			if len(fishTypes) == 0 {
 				t.Error("fishing spot should have fish population")
 			}
@@ -386,8 +386,8 @@ func TestFishingSystem_CancelFishing(t *testing.T) {
 	// Spot should have fisher removed
 	spotCompRaw, _ := spot.GetComponent("fishing_spot")
 	spotComp := spotCompRaw.(*FishingSpotComponent)
-	if spotComp.GetCurrentFishers() != 0 {
-		t.Errorf("expected 0 fishers after cancel, got %d", spotComp.GetCurrentFishers())
+	if fs.SpotGetCurrentFishers(spotComp) != 0 {
+		t.Errorf("expected 0 fishers after cancel, got %d", fs.SpotGetCurrentFishers(spotComp))
 	}
 }
 
@@ -475,7 +475,7 @@ func TestFishingSystem_Update_SpotCooldown(t *testing.T) {
 	spot := fs.GenerateFishingSpot(12345, WaterTypeFreshwater, DepthShallow, "lake", 0, 0)
 	spotCompRaw, _ := spot.GetComponent("fishing_spot")
 	spotComp := spotCompRaw.(*FishingSpotComponent)
-	spotComp.SetCooldown(2.0)
+	fs.SpotSetCooldown(spotComp, 2.0)
 
 	// Update should process cooldown
 	fs.Update([]*Entity{spot}, 1.0)
@@ -629,8 +629,8 @@ func TestFishingSystem_SelectFish_SkillFilter(t *testing.T) {
 	})
 
 	spot := NewFishingSpotComponent(WaterTypeFreshwater, DepthShallow, "lake")
-	spot.AddFishType("high_skill_fish", 10.0)
-	spot.AddFishType("bass", 10.0)
+	fs.SpotAddFishType(spot, "high_skill_fish", 10.0)
+	fs.SpotAddFishType(spot, "bass", 10.0)
 
 	fishComp := NewFishingComponent()
 	fishComp.FishingSkill = 10 // Low skill
@@ -687,10 +687,10 @@ func BenchmarkFishingSystem_SelectFish(b *testing.B) {
 	fs := NewFishingSystem(world)
 
 	spot := NewFishingSpotComponent(WaterTypeFreshwater, DepthMedium, "lake")
-	spot.AddFishType("bass", 10.0)
-	spot.AddFishType("trout", 8.0)
-	spot.AddFishType("catfish", 5.0)
-	spot.AddFishType("pike", 2.0)
+	fs.SpotAddFishType(spot, "bass", 10.0)
+	fs.SpotAddFishType(spot, "trout", 8.0)
+	fs.SpotAddFishType(spot, "catfish", 5.0)
+	fs.SpotAddFishType(spot, "pike", 2.0)
 
 	fishComp := NewFishingComponent()
 	fishComp.FishingSkill = 50
@@ -850,5 +850,145 @@ func TestFishingSystem_PositionString(t *testing.T) {
 	str := pos.String()
 	if str == "" {
 		t.Error("position string should not be empty")
+	}
+}
+
+// --- Tests for FishingSpot System Methods (ECS Pattern) ---
+
+func TestFishingSystem_SpotAddRemoveFishType(t *testing.T) {
+	world := NewWorld()
+	fs := NewFishingSystem(world)
+	spot := NewFishingSpotComponent(WaterTypeFreshwater, DepthMedium, "lake")
+
+	// Add fish types
+	fs.SpotAddFishType(spot, "bass", 10.0)
+	fs.SpotAddFishType(spot, "trout", 5.0)
+
+	types := fs.SpotGetFishTypes(spot)
+	if len(types) != 2 {
+		t.Errorf("expected 2 fish types, got %d", len(types))
+	}
+
+	// Verify weights
+	if w := fs.SpotGetSpawnWeight(spot, "bass"); w != 10.0 {
+		t.Errorf("expected bass weight 10.0, got %f", w)
+	}
+	if w := fs.SpotGetSpawnWeight(spot, "trout"); w != 5.0 {
+		t.Errorf("expected trout weight 5.0, got %f", w)
+	}
+
+	// Remove a fish type
+	fs.SpotRemoveFishType(spot, "bass")
+	types = fs.SpotGetFishTypes(spot)
+	if len(types) != 1 {
+		t.Errorf("expected 1 fish type after removal, got %d", len(types))
+	}
+	if w := fs.SpotGetSpawnWeight(spot, "bass"); w != 0 {
+		t.Errorf("expected bass weight 0 after removal, got %f", w)
+	}
+}
+
+func TestFishingSystem_SpotFisherManagement(t *testing.T) {
+	world := NewWorld()
+	fs := NewFishingSystem(world)
+	spot := NewFishingSpotComponent(WaterTypeSaltwater, DepthDeep, "ocean")
+	spot.MaxConcurrentFishers = 2
+
+	// Initially should have 0 fishers
+	if fs.SpotGetCurrentFishers(spot) != 0 {
+		t.Errorf("expected 0 fishers, got %d", fs.SpotGetCurrentFishers(spot))
+	}
+
+	// Add first fisher
+	if !fs.SpotAddFisher(spot) {
+		t.Error("should be able to add first fisher")
+	}
+	if fs.SpotGetCurrentFishers(spot) != 1 {
+		t.Errorf("expected 1 fisher, got %d", fs.SpotGetCurrentFishers(spot))
+	}
+
+	// Add second fisher (at capacity)
+	if !fs.SpotAddFisher(spot) {
+		t.Error("should be able to add second fisher")
+	}
+
+	// Third fisher should fail
+	if fs.SpotAddFisher(spot) {
+		t.Error("should not be able to add third fisher at capacity")
+	}
+
+	// Remove a fisher
+	fs.SpotRemoveFisher(spot)
+	if fs.SpotGetCurrentFishers(spot) != 1 {
+		t.Errorf("expected 1 fisher after removal, got %d", fs.SpotGetCurrentFishers(spot))
+	}
+
+	// Remove another (underflow protection)
+	fs.SpotRemoveFisher(spot)
+	fs.SpotRemoveFisher(spot) // Should not go below 0
+	if fs.SpotGetCurrentFishers(spot) != 0 {
+		t.Errorf("expected 0 fishers (not negative), got %d", fs.SpotGetCurrentFishers(spot))
+	}
+}
+
+func TestFishingSystem_SpotCanFish(t *testing.T) {
+	world := NewWorld()
+	fs := NewFishingSystem(world)
+	spot := NewFishingSpotComponent(WaterTypeMagical, DepthMedium, "enchanted")
+	spot.MaxConcurrentFishers = 1
+
+	// Should be able to fish initially
+	if !fs.SpotCanFish(spot) {
+		t.Error("should be able to fish when spot is empty and active")
+	}
+
+	// Test inactive spot
+	spot.IsActive = false
+	if fs.SpotCanFish(spot) {
+		t.Error("should not be able to fish when spot is inactive")
+	}
+	spot.IsActive = true
+
+	// Test at capacity
+	fs.SpotAddFisher(spot)
+	if fs.SpotCanFish(spot) {
+		t.Error("should not be able to fish when at capacity")
+	}
+	fs.SpotRemoveFisher(spot)
+
+	// Test on cooldown
+	fs.SpotSetCooldown(spot, 5.0)
+	if fs.SpotCanFish(spot) {
+		t.Error("should not be able to fish during cooldown")
+	}
+}
+
+func TestFishingSystem_SpotCooldownUpdate(t *testing.T) {
+	world := NewWorld()
+	fs := NewFishingSystem(world)
+	spot := NewFishingSpotComponent(WaterTypeFreshwater, DepthShallow, "pond")
+
+	// Set cooldown
+	fs.SpotSetCooldown(spot, 3.0)
+	if spot.CooldownTimer != 3.0 {
+		t.Errorf("expected cooldown 3.0, got %f", spot.CooldownTimer)
+	}
+
+	// Update partially
+	fs.SpotUpdateCooldown(spot, 1.5)
+	if spot.CooldownTimer != 1.5 {
+		t.Errorf("expected cooldown 1.5, got %f", spot.CooldownTimer)
+	}
+
+	// Complete cooldown
+	fs.SpotUpdateCooldown(spot, 2.0)
+	if spot.CooldownTimer != 0 {
+		t.Errorf("expected cooldown 0 (clamped), got %f", spot.CooldownTimer)
+	}
+
+	// No change when already at 0
+	fs.SpotUpdateCooldown(spot, 1.0)
+	if spot.CooldownTimer != 0 {
+		t.Errorf("cooldown should stay at 0, got %f", spot.CooldownTimer)
 	}
 }

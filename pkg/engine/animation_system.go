@@ -241,7 +241,11 @@ func (s *AnimationSystem) SetMaxCacheSize(maxSize int) {
 // This prevents startup lag by spreading sprite generation over multiple frames.
 // Default is 8. Set to 0 for unlimited (may cause lag with many entities).
 // Recommended values: 4-16 depending on hardware and entity count.
+// Negative values are clamped to 0 (unlimited).
 func (s *AnimationSystem) SetMaxRegenPerFrame(maxRegen int) {
+	if maxRegen < 0 {
+		maxRegen = 0
+	}
 	s.maxRegenPerFrame = maxRegen
 	if s.logger != nil {
 		s.logger.WithFields(logrus.Fields{

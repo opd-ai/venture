@@ -36,7 +36,7 @@ Generated during reorganization on: 2026-01-20
 6. Added configuration methods: `SetMaxRegenPerFrame()`, `GetMaxRegenPerFrame()`
 
 **Performance Impact:**
-- Before: 100+ sprites × 4 frames = 400+ sprite generations on frame 1 (~500ms freeze)
+- Before: 100+ entities requiring sprite regeneration on frame 1 (~500ms freeze)
 - After: 8 sprites/frame × 60 FPS = progressive loading over 12 frames (~200ms, no freeze)
 - Target 60 FPS maintained from frame 1
 

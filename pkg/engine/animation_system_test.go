@@ -503,144 +503,144 @@ func TestAnimationSystem_SetMaxCacheSize(t *testing.T) {
 
 // TestAnimationSystem_SetMaxRegenPerFrame tests per-frame regeneration limit configuration.
 func TestAnimationSystem_SetMaxRegenPerFrame(t *testing.T) {
-spriteGen := sprites.NewGenerator()
-sys := NewAnimationSystem(spriteGen)
+	spriteGen := sprites.NewGenerator()
+	sys := NewAnimationSystem(spriteGen)
 
-// Verify default limit (8)
-if sys.maxRegenPerFrame != 8 {
-t.Errorf("Expected default maxRegenPerFrame 8, got %d", sys.maxRegenPerFrame)
-}
+	// Verify default limit (8)
+	if sys.maxRegenPerFrame != 8 {
+		t.Errorf("Expected default maxRegenPerFrame 8, got %d", sys.maxRegenPerFrame)
+	}
 
-// Test GetMaxRegenPerFrame
-if sys.GetMaxRegenPerFrame() != 8 {
-t.Errorf("Expected GetMaxRegenPerFrame() to return 8, got %d", sys.GetMaxRegenPerFrame())
-}
+	// Test GetMaxRegenPerFrame
+	if sys.GetMaxRegenPerFrame() != 8 {
+		t.Errorf("Expected GetMaxRegenPerFrame() to return 8, got %d", sys.GetMaxRegenPerFrame())
+	}
 
-// Test setting custom limit
-sys.SetMaxRegenPerFrame(16)
-if sys.maxRegenPerFrame != 16 {
-t.Errorf("Expected maxRegenPerFrame 16, got %d", sys.maxRegenPerFrame)
-}
+	// Test setting custom limit
+	sys.SetMaxRegenPerFrame(16)
+	if sys.maxRegenPerFrame != 16 {
+		t.Errorf("Expected maxRegenPerFrame 16, got %d", sys.maxRegenPerFrame)
+	}
 
-// Test disabling limit (0 = unlimited)
-sys.SetMaxRegenPerFrame(0)
-if sys.maxRegenPerFrame != 0 {
-t.Errorf("Expected maxRegenPerFrame 0, got %d", sys.maxRegenPerFrame)
-}
+	// Test disabling limit (0 = unlimited)
+	sys.SetMaxRegenPerFrame(0)
+	if sys.maxRegenPerFrame != 0 {
+		t.Errorf("Expected maxRegenPerFrame 0, got %d", sys.maxRegenPerFrame)
+	}
 }
 
 // TestAnimationSystem_RegenLimitEnforced tests that regeneration limit is enforced.
 func TestAnimationSystem_RegenLimitEnforced(t *testing.T) {
-spriteGen := sprites.NewGenerator()
-sys := NewAnimationSystem(spriteGen)
+	spriteGen := sprites.NewGenerator()
+	sys := NewAnimationSystem(spriteGen)
 
-// Set a low limit for testing
-sys.SetMaxRegenPerFrame(2)
+	// Set a low limit for testing
+	sys.SetMaxRegenPerFrame(2)
 
-// Create a world with test entities
-world := NewWorld()
+	// Create a world with test entities
+	world := NewWorld()
 
-// Create 5 entities, all with dirty animation components
-entities := make([]*Entity, 5)
-for i := 0; i < 5; i++ {
-entity := world.CreateEntity()
-entity.AddComponent(&PositionComponent{X: float64(i * 100), Y: 0})
-entity.AddComponent(&EbitenSprite{Width: 32, Height: 32, Visible: true})
-animComp := NewAnimationComponent(int64(i))
-animComp.Dirty = true
-animComp.CurrentState = AnimationStateIdle
-entity.AddComponent(animComp)
-entities[i] = entity
-}
+	// Create 5 entities, all with dirty animation components
+	entities := make([]*Entity, 5)
+	for i := 0; i < 5; i++ {
+		entity := world.CreateEntity()
+		entity.AddComponent(&PositionComponent{X: float64(i * 100), Y: 0})
+		entity.AddComponent(&EbitenSprite{Width: 32, Height: 32, Visible: true})
+		animComp := NewAnimationComponent(int64(i))
+		animComp.Dirty = true
+		animComp.CurrentState = AnimationStateIdle
+		entity.AddComponent(animComp)
+		entities[i] = entity
+	}
 
-// Run one Update cycle
-err := sys.Update(entities, 0.016)
-if err != nil {
-t.Fatalf("Update failed: %v", err)
-}
+	// Run one Update cycle
+	err := sys.Update(entities, 0.016)
+	if err != nil {
+		t.Fatalf("Update failed: %v", err)
+	}
 
-// Check stats - should have completed 2 and deferred 3
-stats := sys.GetStats()
-if stats.CompletedRegen != 2 {
-t.Errorf("Expected 2 completed regenerations, got %d", stats.CompletedRegen)
-}
-if stats.DeferredRegen != 3 {
-t.Errorf("Expected 3 deferred regenerations, got %d", stats.DeferredRegen)
-}
+	// Check stats - should have completed 2 and deferred 3
+	stats := sys.GetStats()
+	if stats.CompletedRegen != 2 {
+		t.Errorf("Expected 2 completed regenerations, got %d", stats.CompletedRegen)
+	}
+	if stats.DeferredRegen != 3 {
+		t.Errorf("Expected 3 deferred regenerations, got %d", stats.DeferredRegen)
+	}
 
-// Run another Update cycle
-err = sys.Update(entities, 0.016)
-if err != nil {
-t.Fatalf("Update failed: %v", err)
-}
+	// Run another Update cycle
+	err = sys.Update(entities, 0.016)
+	if err != nil {
+		t.Fatalf("Update failed: %v", err)
+	}
 
-// Now 2 more should be completed and 1 deferred
-stats = sys.GetStats()
-if stats.CompletedRegen != 2 {
-t.Errorf("Expected 2 completed regenerations in second frame, got %d", stats.CompletedRegen)
-}
-if stats.DeferredRegen != 1 {
-t.Errorf("Expected 1 deferred regeneration in second frame, got %d", stats.DeferredRegen)
-}
+	// Now 2 more should be completed and 1 deferred
+	stats = sys.GetStats()
+	if stats.CompletedRegen != 2 {
+		t.Errorf("Expected 2 completed regenerations in second frame, got %d", stats.CompletedRegen)
+	}
+	if stats.DeferredRegen != 1 {
+		t.Errorf("Expected 1 deferred regeneration in second frame, got %d", stats.DeferredRegen)
+	}
 
-// Third Update should complete the last one
-err = sys.Update(entities, 0.016)
-if err != nil {
-t.Fatalf("Update failed: %v", err)
-}
+	// Third Update should complete the last one
+	err = sys.Update(entities, 0.016)
+	if err != nil {
+		t.Fatalf("Update failed: %v", err)
+	}
 
-stats = sys.GetStats()
-if stats.CompletedRegen != 1 {
-t.Errorf("Expected 1 completed regeneration in third frame, got %d", stats.CompletedRegen)
-}
-if stats.DeferredRegen != 0 {
-t.Errorf("Expected 0 deferred regenerations in third frame, got %d", stats.DeferredRegen)
-}
+	stats = sys.GetStats()
+	if stats.CompletedRegen != 1 {
+		t.Errorf("Expected 1 completed regeneration in third frame, got %d", stats.CompletedRegen)
+	}
+	if stats.DeferredRegen != 0 {
+		t.Errorf("Expected 0 deferred regenerations in third frame, got %d", stats.DeferredRegen)
+	}
 }
 
 // TestAnimationSystem_PlayerBypassesRegenLimit tests that player entity always regenerates.
 func TestAnimationSystem_PlayerBypassesRegenLimit(t *testing.T) {
-spriteGen := sprites.NewGenerator()
-sys := NewAnimationSystem(spriteGen)
+	spriteGen := sprites.NewGenerator()
+	sys := NewAnimationSystem(spriteGen)
 
-// Set limit to 0 (no NPC regeneration allowed)
-sys.SetMaxRegenPerFrame(1)
+	// Set limit to 1 (only one NPC regeneration allowed; player bypasses limit)
+	sys.SetMaxRegenPerFrame(1)
 
-world := NewWorld()
+	world := NewWorld()
 
-// Create entities: 1 NPC, 1 player (with input component)
-npcEntity := world.CreateEntity()
-npcEntity.AddComponent(&PositionComponent{X: 0, Y: 0})
-npcEntity.AddComponent(&EbitenSprite{Width: 32, Height: 32, Visible: true})
-npcAnim := NewAnimationComponent(1)
-npcAnim.Dirty = true
-npcAnim.CurrentState = AnimationStateIdle
-npcEntity.AddComponent(npcAnim)
+	// Create entities: 1 NPC, 1 player (with input component)
+	npcEntity := world.CreateEntity()
+	npcEntity.AddComponent(&PositionComponent{X: 0, Y: 0})
+	npcEntity.AddComponent(&EbitenSprite{Width: 32, Height: 32, Visible: true})
+	npcAnim := NewAnimationComponent(1)
+	npcAnim.Dirty = true
+	npcAnim.CurrentState = AnimationStateIdle
+	npcEntity.AddComponent(npcAnim)
 
-playerEntity := world.CreateEntity()
-playerEntity.AddComponent(&PositionComponent{X: 100, Y: 0})
-playerEntity.AddComponent(&EbitenSprite{Width: 32, Height: 32, Visible: true})
-playerEntity.AddComponent(NewStubInput()) // This makes it a player
-playerAnim := NewAnimationComponent(2)
-playerAnim.Dirty = true
-playerAnim.CurrentState = AnimationStateIdle
-playerEntity.AddComponent(playerAnim)
+	playerEntity := world.CreateEntity()
+	playerEntity.AddComponent(&PositionComponent{X: 100, Y: 0})
+	playerEntity.AddComponent(&EbitenSprite{Width: 32, Height: 32, Visible: true})
+	playerEntity.AddComponent(NewStubInput()) // This makes it a player
+	playerAnim := NewAnimationComponent(2)
+	playerAnim.Dirty = true
+	playerAnim.CurrentState = AnimationStateIdle
+	playerEntity.AddComponent(playerAnim)
 
-entities := []*Entity{npcEntity, playerEntity}
+	entities := []*Entity{npcEntity, playerEntity}
 
-// Run Update - both should regenerate (NPC uses budget, player bypasses)
-err := sys.Update(entities, 0.016)
-if err != nil {
-t.Fatalf("Update failed: %v", err)
-}
+	// Run Update - both should regenerate (NPC uses budget, player bypasses)
+	err := sys.Update(entities, 0.016)
+	if err != nil {
+		t.Fatalf("Update failed: %v", err)
+	}
 
-// Player should always regenerate regardless of limit
-if playerAnim.Dirty {
-t.Error("Player animation should have regenerated (Dirty should be false)")
-}
+	// Player should always regenerate regardless of limit
+	if playerAnim.Dirty {
+		t.Error("Player animation should have regenerated (Dirty should be false)")
+	}
 
-// NPC should have regenerated (used the 1 slot budget)
-if npcAnim.Dirty {
-t.Error("NPC animation should have regenerated (Dirty should be false)")
-}
+	// NPC should have regenerated (used the 1 slot budget)
+	if npcAnim.Dirty {
+		t.Error("NPC animation should have regenerated (Dirty should be false)")
+	}
 }

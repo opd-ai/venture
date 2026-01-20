@@ -25,7 +25,7 @@ Generated during reorganization on: 2026-01-20
 - `pkg/engine/animation_system.go:528-559` - `regenerateFramesIfDirty()` processes all dirty entities
 
 **Impact:**
-- 100+ entities × 4 animation frames × sprite generation = massive first-frame lag
+- 100+ entities requiring sprite regeneration on frame 1 = massive first-frame lag
 - Violated 60 FPS target (frame 1 could take 500ms+ with many entities)
 - User-perceptible delay immediately when gameplay begins
 

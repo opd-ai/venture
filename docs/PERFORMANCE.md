@@ -268,3 +268,29 @@ See [docs/profiling/hot_path_analysis.md](profiling/hot_path_analysis.md) for de
    - Binary protocol (currently using minimal binary)
    - Connection pooling (already implemented)
    - Batched updates (already implemented in performance batcher)
+
+## WebAssembly Build Size
+
+| Metric | Value | Target | Status |
+|--------|-------|--------|--------|
+| Raw WASM bundle | 32 MB | N/A | - |
+| Gzipped WASM bundle | 6.9 MB | <10 MB | ✅ PASS |
+| wasm_exec.js (raw) | 17 KB | N/A | - |
+| wasm_exec.js (gzipped) | 4 KB | N/A | - |
+| **Total gzipped** | **6.9 MB** | <10 MB | ✅ PASS |
+
+**Build Command:**
+```bash
+GOOS=js GOARCH=wasm go build -ldflags="-s -w" -o build/wasm/venture.wasm ./cmd/client
+```
+
+**Optimizations Applied:**
+- `-s` flag: Omits symbol table and debug information
+- `-w` flag: Omits DWARF symbol table
+- Dependencies verified with `go mod tidy` (no unused dependencies)
+- All code compiled, no lazy loading required (already under target)
+
+**Deployment Notes:**
+- Servers should enable gzip/brotli compression for `.wasm` files
+- See `docs/PLAY-WASM.md` for browser compatibility and deployment details
+- See `.github/workflows/pages.yml` for GitHub Pages deployment workflow

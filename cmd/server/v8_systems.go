@@ -20,6 +20,7 @@ import (
 // Gap: V8.0 systems fully implemented but never initialized on server
 // Fix: Created v8_systems.go for server-side V8.0 system initialization
 // Roadmap: ROADMAP_V8.md (Phase 49-51)
+// Note: fluidSimulatorWrapper moved to system_wrappers.go
 
 // initializeV8SystemsServer initializes Version 8.0 systems on the server.
 // Server-side systems include: housing infrastructure, trust/reputation tracking,
@@ -100,13 +101,4 @@ func initializeV8SystemsServer(world *engine.World, seed int64, logger *logrus.L
 	if logger.GetLevel() >= logrus.DebugLevel {
 		serverLogger.Info("V8.0 systems initialized (guild federation, housing, trust, reputation, fluid dynamics, vehicle physics, building/furniture)")
 	}
-}
-
-// fluidSimulatorWrapper adapts FluidSimulator to the System interface for server.
-type fluidSimulatorWrapper struct {
-	system *fluids.Simulator
-}
-
-func (w *fluidSimulatorWrapper) Update(entities []*engine.Entity, deltaTime float64) {
-	w.system.Update(deltaTime)
 }

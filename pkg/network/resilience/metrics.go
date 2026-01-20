@@ -1,3 +1,6 @@
+// Package resilience metrics implements network performance metrics collection
+// including latency tracking, bandwidth monitoring, packet statistics, and
+// gameplay metrics (mispredictions, desyncs, reconnections).
 package resilience
 
 import (

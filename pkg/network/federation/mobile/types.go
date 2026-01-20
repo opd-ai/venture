@@ -1,3 +1,6 @@
+// Package mobile types defines all data structures, constants, and interfaces
+// for mobile federation including Platform, BatteryMode, SyncStatus, Config,
+// State, SyncHandler, and BackgroundTask.
 package mobile
 
 import (

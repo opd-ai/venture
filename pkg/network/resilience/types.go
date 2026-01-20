@@ -1,3 +1,6 @@
+// Package resilience types defines all data structures for network resilience
+// testing including NetworkConfig, NetworkStats, TestScenario, ScenarioResult,
+// Packet, and pre-defined test scenarios for various latency conditions.
 package resilience
 
 import (

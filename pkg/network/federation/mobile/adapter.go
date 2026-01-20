@@ -1,3 +1,6 @@
+// Package mobile adapter implements battery-aware mobile federation management.
+// This file contains the Adapter type and all its methods for coordinating
+// mobile device federation with dynamic sync intervals based on battery level.
 package mobile
 
 import (

@@ -1,3 +1,6 @@
+// Package resilience simulator implements network impairment simulation
+// for testing including latency injection, packet loss, jitter simulation,
+// and bandwidth limiting with delayed packet delivery queues.
 package resilience
 
 import (

@@ -63,6 +63,9 @@ var (
 	metricsPort   = flag.String("metrics-port", "9090", "Port for Prometheus metrics HTTP endpoint")
 	enableMetrics = flag.Bool("enable-metrics", false, "Enable Prometheus metrics export at /metrics endpoint")
 
+	// Version flag
+	showVersion = flag.Bool("version", false, "Print version information and exit")
+
 	// V9.0 integration managers for server-authoritative validation
 	// These are initialized in createGameWorld() and used by systems for validation
 	v9StationManager      interface{}
@@ -72,6 +75,12 @@ var (
 
 func main() {
 	flag.Parse()
+
+	// Handle --version flag
+	if *showVersion {
+		version.PrintVersion()
+		os.Exit(0)
+	}
 
 	// Validate configuration before starting server
 	validator := config.NewValidator()

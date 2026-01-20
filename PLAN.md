@@ -350,11 +350,13 @@ All Phase 4 deliverables completed successfully:
 **Goal:** Prepare official v1.0.0 release with semantic versioning, distribution packages, and production documentation.
 
 **Deliverables:**
-- [ ] Implement semantic versioning (file: pkg/version/version.go)
-  - Change version from "8.0.0" to "1.0.0" (fresh start for production)
-  - Document versioning policy (MAJOR.MINOR.PATCH)
-  - Add version command to CLI (--version flag)
-  - Tag v1.0.0 release in git
+- [x] Implement semantic versioning (file: pkg/version/version.go)
+  - ✅ Changed version from "8.0.0" to "1.0.0" (fresh start for production)
+  - ✅ Documented versioning policy (MAJOR.MINOR.PATCH) in pkg/version/version.go comments
+  - ✅ Added version command to CLI (--version flag) in cmd/client/main.go and cmd/server/main.go
+  - ✅ Added Major/Minor/Patch constants and BuildInfo()/ShortVersion()/PrintVersion() functions
+  - ✅ Added comprehensive tests in pkg/version/version_test.go
+  - Note: Git tag `v1.0.0` should be created at release time with `git tag -a v1.0.0 -m "Release v1.0.0"`
 - [ ] Create distribution packages (new: scripts/package-*.sh, .github/workflows/release.yml)
   - Build .deb packages for Debian/Ubuntu (with systemd service)
   - Build .rpm packages for RHEL/Fedora
@@ -367,11 +369,12 @@ All Phase 4 deliverables completed successfully:
   - Sign binaries with GPG (optional but recommended)
   - Create release notes from CHANGELOG.md
   - Upload artifacts to GitHub Releases
-- [ ] Document API stability guarantees (new: docs/API_COMPATIBILITY.md)
-  - Define public API surface (network protocol, save format, config files)
-  - Commit to backward compatibility for MINOR/PATCH versions
-  - Document deprecation policy (2 MINOR versions notice)
-  - Provide migration guides for breaking changes
+- [x] Document API stability guarantees (new: docs/API_COMPATIBILITY.md)
+  - ✅ Defined public API surface (network protocol, save format, config files, CLI flags, mod API)
+  - ✅ Committed to backward compatibility for MINOR/PATCH versions
+  - ✅ Documented deprecation policy (2 MINOR versions notice before removal)
+  - ✅ Documented version checking via CLI and programmatic access
+  - ✅ Added compatibility matrix for client/server version combinations
 - [ ] Create upgrade guides (new: docs/UPGRADE_GUIDE.md)
   - Document upgrade process from development to v1.0.0
   - Provide database/save file migration scripts

@@ -13,6 +13,7 @@ import (
 	"github.com/opd-ai/venture/pkg/engine"
 	"github.com/opd-ai/venture/pkg/mobile"
 	"github.com/opd-ai/venture/pkg/procgen/terrain"
+	"github.com/opd-ai/venture/pkg/version"
 	"github.com/sirupsen/logrus"
 )
 
@@ -21,6 +22,12 @@ var autoEnabledHostAndPlay bool
 
 func main() {
 	flag.Parse()
+
+	// Handle --version flag
+	if *showVersion {
+		version.PrintVersion()
+		os.Exit(0)
+	}
 
 	// Validate configuration before starting client
 	if err := validateClientConfiguration(); err != nil {

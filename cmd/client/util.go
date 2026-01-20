@@ -367,6 +367,7 @@ var (
 	serverPlayers = flag.Int("max-players", 4, "Maximum players for --host-and-play mode")
 	serverTick    = flag.Int("tick-rate", 20, "Server tick rate for --host-and-play mode (updates per second)")
 	noTutorial    = flag.Bool("no-tutorial", false, "Disable tutorial for experienced players")
+	showVersion   = flag.Bool("version", false, "Print version information and exit")
 )
 
 // initializeLogger creates and configures the logger based on environment variables and flags.

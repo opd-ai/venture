@@ -35,16 +35,23 @@ type AnimationSystem struct {
 	distanceCloseThresh float64        // Distance threshold for full animation (default: 200px)
 	distanceMidThresh   float64        // Distance threshold for half rate (default: 400px)
 	stats               AnimationStats // Performance statistics
+
+	// Performance fix: Per-frame regeneration limit to prevent startup lag
+	// When many entities need sprite regeneration, this spreads the work across frames
+	maxRegenPerFrame int // Maximum sprite regenerations per frame (0 = unlimited)
+	regenCount       int // Current regeneration count this frame
 }
 
 // AnimationStats holds performance statistics for the animation system.
 type AnimationStats struct {
-	TotalEntities    int // Total entities processed
-	AnimatedEntities int // Entities with active animations
-	CulledByViewport int // Entities culled by viewport check
-	FullRateEntities int // Entities animated at full rate (close)
-	HalfRateEntities int // Entities animated at half rate (mid distance)
-	StaticEntities   int // Entities rendered as static (far distance)
+	TotalEntities     int // Total entities processed
+	AnimatedEntities  int // Entities with active animations
+	CulledByViewport  int // Entities culled by viewport check
+	FullRateEntities  int // Entities animated at full rate (close)
+	HalfRateEntities  int // Entities animated at half rate (mid distance)
+	StaticEntities    int // Entities rendered as static (far distance)
+	DeferredRegen     int // Entities with deferred regeneration (hit per-frame limit)
+	CompletedRegen    int // Entities that completed regeneration this frame
 }
 
 // NewAnimationSystem creates a new animation system.
@@ -65,6 +72,7 @@ func NewAnimationSystemWithLogger(spriteGenerator *sprites.Generator, logger *lo
 			"distance_lod_enabled":  true,
 			"close_threshold":       200.0,
 			"mid_threshold":         400.0,
+			"max_regen_per_frame":   8,
 		}).Debug("initializing animation system")
 	}
 
@@ -79,6 +87,10 @@ func NewAnimationSystemWithLogger(spriteGenerator *sprites.Generator, logger *lo
 		enableDistanceLOD:   true,  // Enabled by default for performance
 		distanceCloseThresh: 200.0, // Full animation within 200px
 		distanceMidThresh:   400.0, // Half rate 200-400px, static beyond
+		// Performance fix: Limit sprite regenerations per frame to prevent startup lag
+		// With 8 regenerations per frame at 60 FPS, 100 entities regenerate in ~12 frames (~200ms)
+		// This eliminates the immediate lag while maintaining smooth gameplay
+		maxRegenPerFrame: 8,
 	}
 }
 
@@ -225,6 +237,24 @@ func (s *AnimationSystem) SetMaxCacheSize(maxSize int) {
 	}
 }
 
+// SetMaxRegenPerFrame sets the maximum sprite regenerations allowed per frame.
+// This prevents startup lag by spreading sprite generation over multiple frames.
+// Default is 8. Set to 0 for unlimited (may cause lag with many entities).
+// Recommended values: 4-16 depending on hardware and entity count.
+func (s *AnimationSystem) SetMaxRegenPerFrame(maxRegen int) {
+	s.maxRegenPerFrame = maxRegen
+	if s.logger != nil {
+		s.logger.WithFields(logrus.Fields{
+			"max_regen_per_frame": maxRegen,
+		}).Debug("max regeneration per frame updated")
+	}
+}
+
+// GetMaxRegenPerFrame returns the current per-frame regeneration limit.
+func (s *AnimationSystem) GetMaxRegenPerFrame() int {
+	return s.maxRegenPerFrame
+}
+
 // GetStats returns current animation performance statistics.
 // Useful for monitoring and debugging performance.
 func (s *AnimationSystem) GetStats() AnimationStats {
@@ -236,6 +266,8 @@ func (s *AnimationSystem) GetStats() AnimationStats {
 			"full_rate":         s.stats.FullRateEntities,
 			"half_rate":         s.stats.HalfRateEntities,
 			"static":            s.stats.StaticEntities,
+			"deferred_regen":    s.stats.DeferredRegen,
+			"completed_regen":   s.stats.CompletedRegen,
 		}).Debug("retrieving animation stats")
 	}
 	return s.stats
@@ -275,6 +307,8 @@ func (s *AnimationSystem) Update(entities []*Entity, deltaTime float64) error {
 			"full_rate":         s.stats.FullRateEntities,
 			"half_rate":         s.stats.HalfRateEntities,
 			"static":            s.stats.StaticEntities,
+			"deferred_regen":    s.stats.DeferredRegen,
+			"completed_regen":   s.stats.CompletedRegen,
 		}).Debug("animation system update completed")
 	}
 
@@ -291,6 +325,8 @@ func (s *AnimationSystem) resetStatistics(entityCount int) {
 	s.stats = AnimationStats{
 		TotalEntities: entityCount,
 	}
+	// Reset per-frame regeneration counter
+	s.regenCount = 0
 }
 
 // getPlayerPosition retrieves the current player position for distance calculations.
@@ -492,9 +528,26 @@ func (s *AnimationSystem) applyDistanceLOD(animComp *AnimationComponent, pos *Po
 }
 
 // regenerateFramesIfDirty regenerates animation frames if component state changed.
+// Respects per-frame regeneration limit to prevent startup lag.
 func (s *AnimationSystem) regenerateFramesIfDirty(entity *Entity, animComp *AnimationComponent, spriteComp *EbitenSprite) error {
 	if !animComp.Dirty {
 		return nil
+	}
+
+	// Performance fix: Check if we've hit the per-frame regeneration limit
+	// Always allow player entity regeneration (entities with "input" component)
+	isPlayer := entity.HasComponent("input")
+	if s.maxRegenPerFrame > 0 && s.regenCount >= s.maxRegenPerFrame && !isPlayer {
+		// Defer regeneration to next frame to prevent lag
+		s.stats.DeferredRegen++
+		if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
+			s.logger.WithFields(logrus.Fields{
+				"entity_id":    entity.ID,
+				"regen_count":  s.regenCount,
+				"max_per_frame": s.maxRegenPerFrame,
+			}).Debug("deferring sprite regeneration to next frame")
+		}
+		return nil // Leave Dirty=true so it regenerates next frame
 	}
 
 	if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
@@ -519,6 +572,8 @@ func (s *AnimationSystem) regenerateFramesIfDirty(entity *Entity, animComp *Anim
 	}
 
 	animComp.Dirty = false
+	s.regenCount++
+	s.stats.CompletedRegen++
 	s.logGenerationResult(entity, animComp)
 
 	return nil

@@ -618,31 +618,4 @@ func sampleNeighborhood(img *image.RGBA, x, y, width, height int) *color.RGBA {
 	}
 }
 
-// Helper functions
-
-// smoothstep provides smooth Hermite interpolation between 0 and 1.
-func smoothstep(t float64) float64 {
-	t = math.Max(0, math.Min(1, t))
-	return t * t * (3 - 2*t)
-}
-
-// lerp performs linear interpolation between a and b.
-func lerp(a, b, t float64) float64 {
-	return a + (b-a)*t
-}
-
-// blendColors blends two colors with the given blend factor (0.0-1.0).
-// blend=0 returns c1, blend=1 returns c2.
-func blendColors(c1, c2 color.Color, blend float64) color.Color {
-	r1, g1, b1, a1 := c1.RGBA()
-	r2, g2, b2, a2 := c2.RGBA()
-
-	return color.RGBA{
-		R: uint8(lerp(float64(r1>>8), float64(r2>>8), blend)),
-		G: uint8(lerp(float64(g1>>8), float64(g2>>8), blend)),
-		B: uint8(lerp(float64(b1>>8), float64(b2>>8), blend)),
-		A: uint8(lerp(float64(a1>>8), float64(a2>>8), blend)),
-	}
-}
-
-// Note: min and max helper functions are defined in phase11_rendering.go
+// Note: Helper functions (smoothstep, lerp, blendColors, min, max) have been relocated to utils.go

@@ -338,18 +338,4 @@ func (g *Generator) generatePit(img *image.RGBA, pal *palette.Palette, rng *rand
 	}
 }
 
-// Helper functions
-
-func min(a, b int) int {
-	if a < b {
-		return a
-	}
-	return b
-}
-
-func max(a, b int) int {
-	if a > b {
-		return a
-	}
-	return b
-}
+// Note: Helper functions (min, max) have been relocated to utils.go

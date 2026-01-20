@@ -8,21 +8,6 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-// VRHeadsetAdapter abstracts VR headset hardware for head tracking.
-type VRHeadsetAdapter interface {
-	// IsConnected returns true if headset is available
-	IsConnected() bool
-
-	// GetHeadOrientation returns pitch, yaw, roll in radians
-	GetHeadOrientation() (pitch, yaw, roll float64)
-
-	// GetHeadPosition returns head position offset in meters
-	GetHeadPosition() (x, y, z float64)
-
-	// GetIPD returns interpupillary distance in millimeters
-	GetIPD() float64
-}
-
 // MockHeadset provides a test implementation of VRHeadsetAdapter.
 type MockHeadset struct {
 	mu        sync.RWMutex

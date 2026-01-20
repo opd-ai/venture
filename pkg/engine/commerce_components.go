@@ -243,14 +243,6 @@ func (d *DialogComponent) Deactivate() {
 	d.Options = d.Options[:0]
 }
 
-// DialogProvider generates dialog content for NPCs.
-// This interface enables extensibility for branching dialogs, quest dialogs,
-// and dynamic content based on game state.
-type DialogProvider interface {
-	// GetDialog returns the current dialog text and available options.
-	GetDialog() (text string, options []DialogOption)
-}
-
 // MerchantDialogProvider implements DialogProvider for merchant NPCs.
 // Provides simple buy/sell/leave options.
 type MerchantDialogProvider struct {
@@ -284,19 +276,6 @@ func (m *MerchantDialogProvider) GetDialog() (string, []DialogOption) {
 	}
 
 	return text, options
-}
-
-// TransactionValidator validates commerce transactions.
-// This interface enables server-authoritative validation in multiplayer
-// and extensibility for reputation systems, barter, and trade quests.
-type TransactionValidator interface {
-	// CanBuyItem checks if player can purchase an item from merchant.
-	// Returns true and empty string if valid, false and error message if invalid.
-	CanBuyItem(playerGold, itemPrice int, playerInventoryFull bool) (bool, string)
-
-	// CanSellItem checks if player can sell an item to merchant.
-	// Returns true and empty string if valid, false and error message if invalid.
-	CanSellItem(merchantGold, itemPrice int, merchantInventoryFull bool) (bool, string)
 }
 
 // DefaultTransactionValidator implements basic gold and inventory checks.

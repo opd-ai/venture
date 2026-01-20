@@ -10,12 +10,6 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-// QuestGeneratorInterface defines the interface for quest generation.
-// This allows for dependency injection and testing.
-type QuestGeneratorInterface interface {
-	Generate(seed int64, params procgen.GenerationParams) (interface{}, error)
-}
-
 // DiscoverySystem handles player interaction with story fragments.
 // It detects when players are near fragments, handles discovery events,
 // awards XP, and tracks series completion.

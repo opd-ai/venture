@@ -9,11 +9,6 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-// FederationBroadcaster defines the interface for broadcasting guild updates
-type FederationBroadcaster interface {
-	BroadcastGuildUpdate(guildID string, guildData []byte) error
-}
-
 // GuildSystem manages guild operations and cross-server synchronization
 type GuildSystem struct {
 	world      *World

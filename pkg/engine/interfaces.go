@@ -12,6 +12,10 @@ package engine
 
 import (
 	"image/color"
+	"time"
+
+	"github.com/hajimehoshi/ebiten/v2"
+	"github.com/opd-ai/venture/pkg/procgen"
 )
 
 // Component represents a data container attached to an Entity.
@@ -398,4 +402,179 @@ type HousingUIProvider interface {
 
 	// Toggle switches the housing UI visibility
 	Toggle()
+}
+
+// BehaviorNode is the interface that all behavior tree nodes must implement.
+// Originally from: behavior_tree_nodes.go
+type BehaviorNode interface {
+	// Tick executes the node logic and returns the result status.
+	Tick(entity *Entity, blackboard *Blackboard, deltaTime float64) NodeStatus
+	// Reset resets the node state for fresh execution.
+	Reset()
+	// String returns a string representation of the node for debugging.
+	String() string
+}
+
+// Synthesizer defines the interface for audio synthesis engines.
+// This allows AudioManagerSystem to use different synthesis implementations.
+// Originally from: audio_manager.go
+type Synthesizer interface {
+	GetSampleRate() int
+	GetSeed() int64
+}
+
+// DialogProvider generates dialog content for NPCs.
+// This interface enables extensibility for branching dialogs, quest dialogs,
+// and dynamic content based on game state.
+// Originally from: commerce_components.go
+type DialogProvider interface {
+	// GetDialog returns the current dialog text and available options.
+	GetDialog() (text string, options []DialogOption)
+}
+
+// TransactionValidator validates commerce transactions.
+// This interface enables server-authoritative validation in multiplayer
+// and extensibility for reputation systems, barter, and trade quests.
+// Originally from: commerce_components.go
+type TransactionValidator interface {
+	// CanBuyItem checks if player can purchase an item from merchant.
+	// Returns true and empty string if valid, false and error message if invalid.
+	CanBuyItem(playerGold, itemPrice int, playerInventoryFull bool) (bool, string)
+
+	// CanSellItem checks if player can sell an item to merchant.
+	// Returns true and empty string if valid, false and error message if invalid.
+	CanSellItem(merchantGold, itemPrice int, merchantInventoryFull bool) (bool, string)
+}
+
+// QuestGeneratorInterface defines the interface for quest generation.
+// This allows for dependency injection and testing.
+// Originally from: discovery_system.go
+type QuestGeneratorInterface interface {
+	Generate(seed int64, params procgen.GenerationParams) (interface{}, error)
+}
+
+// ComponentSerializer defines the interface for components that can be serialized.
+// Originally from: entity_persistence.go
+type ComponentSerializer interface {
+	Serialize() ([]byte, error)
+	Deserialize(data []byte) error
+}
+
+// GameClock provides time tracking for game simulation.
+// Supports both deterministic (simulation-based) and real-time clocks.
+// Originally from: game_clock.go
+type GameClock interface {
+	Now() time.Time
+	Advance(deltaTime float64)
+	Reset(startTime time.Time)
+}
+
+// FederationBroadcaster defines the interface for broadcasting guild updates.
+// Originally from: guild_system.go
+type FederationBroadcaster interface {
+	BroadcastGuildUpdate(guildID string, guildData []byte) error
+}
+
+// VRHeadsetAdapter abstracts VR headset hardware for head tracking.
+// Originally from: head_tracking_system.go
+type VRHeadsetAdapter interface {
+	// IsConnected returns true if headset is available
+	IsConnected() bool
+
+	// GetHeadOrientation returns pitch, yaw, roll in radians
+	GetHeadOrientation() (pitch, yaw, roll float64)
+
+	// GetHeadPosition returns head position offset in meters
+	GetHeadPosition() (x, y, z float64)
+
+	// GetIPD returns interpupillary distance in millimeters
+	GetIPD() float64
+}
+
+// FileWatcher defines the interface for watching mod file changes.
+// This allows for mock implementations in testing.
+// Originally from: hot_reload_system.go
+type FileWatcher interface {
+	// GetFileHash returns the hash of a mod's files.
+	GetFileHash(modID string) (string, error)
+
+	// GetModData returns the mod data for reloading.
+	GetModData(modID string) ([]byte, error)
+
+	// GetModVersion returns the version of a mod.
+	GetModVersion(modID string) (string, error)
+}
+
+// StateMigrationHandler handles state migration during reload.
+// Originally from: hot_reload_system.go
+type StateMigrationHandler interface {
+	// SaveState saves the current mod state before reload.
+	SaveState(modID string) (map[string]any, map[string]any, error)
+
+	// RestoreState restores mod state after reload.
+	RestoreState(modID string, scripts, variables map[string]any) error
+}
+
+// NetworkClient is an interface for getting network stats.
+// This allows the HUD to display network status without depending on concrete implementation.
+// Originally from: hud_system.go
+type NetworkClient interface {
+	GetLatency() time.Duration
+	IsConnected() bool
+}
+
+// ModRepository defines the interface for fetching mods from a repository.
+// This allows for mock implementations in testing and different backends.
+// Originally from: mod_browser_system.go
+type ModRepository interface {
+	// FetchMods retrieves available mods from the repository.
+	FetchMods() ([]ModListing, error)
+
+	// DownloadMod downloads a mod by ID. Returns mod data on success.
+	DownloadMod(modID string, progressCallback func(downloaded, total int64)) ([]byte, error)
+
+	// GetModDetails retrieves detailed information for a specific mod.
+	GetModDetails(modID string) (*ModListing, error)
+}
+
+// ImagePoolProvider abstracts image pool operations for memory efficiency.
+// Implementations provide pooled image allocation and recycling.
+// Originally from: render_system.go
+type ImagePoolProvider interface {
+	GetImage(width, height int) *ebiten.Image
+	PutImage(img *ebiten.Image)
+}
+
+// ParallelRendererProvider abstracts parallel rendering capabilities.
+// Implementations distribute rendering tasks across worker goroutines.
+// Originally from: render_system.go
+type ParallelRendererProvider interface {
+	Start()
+	Stop()
+	IsRunning() bool
+}
+
+// VRControllerAdapter abstracts VR controller hardware.
+// Originally from: vr_controller_system.go
+type VRControllerAdapter interface {
+	// IsConnected returns true if controller is available
+	IsConnected(hand string) bool
+
+	// GetTrigger returns trigger value 0.0-1.0
+	GetTrigger(hand string) float64
+
+	// GetGrip returns grip value 0.0-1.0
+	GetGrip(hand string) float64
+
+	// GetThumbstick returns thumbstick X,Y values
+	GetThumbstick(hand string) (x, y float64)
+
+	// IsThumbstickPressed returns thumbstick click state
+	IsThumbstickPressed(hand string) bool
+
+	// GetButton returns button pressed state
+	GetButton(hand, button string) bool
+
+	// SetHaptic triggers haptic feedback
+	SetHaptic(hand string, intensity, duration float64)
 }

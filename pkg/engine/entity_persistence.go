@@ -8,12 +8,6 @@ import (
 	"fmt"
 )
 
-// ComponentSerializer defines the interface for components that can be serialized
-type ComponentSerializer interface {
-	Serialize() ([]byte, error)
-	Deserialize(data []byte) error
-}
-
 // EntityLifecycleTracker tracks entity spawning, modification, and death
 type EntityLifecycleTracker struct {
 	spawned  map[uint64]bool // Entities spawned this session

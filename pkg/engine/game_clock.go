@@ -5,14 +5,6 @@ import (
 	"time"
 )
 
-// GameClock provides time tracking for game simulation.
-// Supports both deterministic (simulation-based) and real-time clocks.
-type GameClock interface {
-	Now() time.Time
-	Advance(deltaTime float64)
-	Reset(startTime time.Time)
-}
-
 // SimulationClock provides deterministic time for reproducible gameplay.
 // Time only advances when explicitly advanced via Advance().
 type SimulationClock struct {

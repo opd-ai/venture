@@ -32,19 +32,6 @@ type HotReloadSystem struct {
 	mu sync.RWMutex
 }
 
-// FileWatcher defines the interface for watching mod file changes.
-// This allows for mock implementations in testing.
-type FileWatcher interface {
-	// GetFileHash returns the hash of a mod's files.
-	GetFileHash(modID string) (string, error)
-
-	// GetModData returns the mod data for reloading.
-	GetModData(modID string) ([]byte, error)
-
-	// GetModVersion returns the version of a mod.
-	GetModVersion(modID string) (string, error)
-}
-
 // ModReloadCallback is called to reload a mod with new data.
 type ModReloadCallback func(modID string, modData []byte) error
 
@@ -53,15 +40,6 @@ type ModRollbackCallback func(modID string, state *ModState) error
 
 // ModHashCallback is called to compute hash for mod files.
 type ModHashCallback func(modID string) (string, error)
-
-// StateMigrationHandler handles state migration during reload.
-type StateMigrationHandler interface {
-	// SaveState saves the current mod state before reload.
-	SaveState(modID string) (map[string]any, map[string]any, error)
-
-	// RestoreState restores mod state after reload.
-	RestoreState(modID string, scripts, variables map[string]any) error
-}
 
 // NewHotReloadSystem creates a new hot reload system.
 func NewHotReloadSystem(world *World) *HotReloadSystem {

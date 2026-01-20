@@ -395,13 +395,6 @@ func (am *AudioManager) GenerateTrack(duration float64) *audio.AudioSample {
 	return am.applyVolumeToTrack(track, am.musicVolume)
 }
 
-// Synthesizer defines the interface for audio synthesis engines.
-// This allows AudioManagerSystem to use different synthesis implementations.
-type Synthesizer interface {
-	GetSampleRate() int
-	GetSeed() int64
-}
-
 // AudioManagerSystem is an ECS system that updates audio state based on game context.
 type AudioManagerSystem struct {
 	audioManager      *AudioManager

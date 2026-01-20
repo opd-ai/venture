@@ -88,3 +88,19 @@ type ServerConnection interface {
 	// ReceiveError returns a channel for receiving errors
 	ReceiveError() <-chan error
 }
+
+// KeepAliveConn is an interface for connections that support TCP keepalive.
+// Using an interface instead of *net.TCPConn enhances testability.
+// Originally from: client.go
+type KeepAliveConn interface {
+	SetKeepAlive(keepalive bool) error
+	SetKeepAlivePeriod(d time.Duration) error
+}
+
+// DesyncRecoveryStrategy defines how to recover from different desync types.
+// Originally from: desync.go
+type DesyncRecoveryStrategy interface {
+	// Recover attempts to restore correct state after desync.
+	// Returns error if recovery fails.
+	Recover(event DesyncEvent) error
+}

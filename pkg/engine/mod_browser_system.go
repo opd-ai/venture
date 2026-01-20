@@ -27,19 +27,6 @@ type ModBrowserSystem struct {
 	mu sync.RWMutex
 }
 
-// ModRepository defines the interface for fetching mods from a repository.
-// This allows for mock implementations in testing and different backends.
-type ModRepository interface {
-	// FetchMods retrieves available mods from the repository.
-	FetchMods() ([]ModListing, error)
-
-	// DownloadMod downloads a mod by ID. Returns mod data on success.
-	DownloadMod(modID string, progressCallback func(downloaded, total int64)) ([]byte, error)
-
-	// GetModDetails retrieves detailed information for a specific mod.
-	GetModDetails(modID string) (*ModListing, error)
-}
-
 // ModInstallCallback is called when a mod is installed.
 type ModInstallCallback func(modID string, modData []byte) error
 

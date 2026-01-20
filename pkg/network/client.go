@@ -13,13 +13,6 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-// KeepAliveConn is an interface for connections that support TCP keepalive.
-// Using an interface instead of *net.TCPConn enhances testability.
-type KeepAliveConn interface {
-	SetKeepAlive(keepalive bool) error
-	SetKeepAlivePeriod(d time.Duration) error
-}
-
 // ClientConfig holds configuration for the network client.
 type ClientConfig struct {
 	ServerAddress     string        // Server address (host:port)

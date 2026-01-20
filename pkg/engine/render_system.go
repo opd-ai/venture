@@ -15,21 +15,6 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-// ImagePoolProvider abstracts image pool operations for memory efficiency.
-// Implementations provide pooled image allocation and recycling.
-type ImagePoolProvider interface {
-	GetImage(width, height int) *ebiten.Image
-	PutImage(img *ebiten.Image)
-}
-
-// ParallelRendererProvider abstracts parallel rendering capabilities.
-// Implementations distribute rendering tasks across worker goroutines.
-type ParallelRendererProvider interface {
-	Start()
-	Stop()
-	IsRunning() bool
-}
-
 // EbitenSprite holds visual representation data for an entity (Ebiten implementation).
 // Implements SpriteProvider interface.
 type EbitenSprite struct {

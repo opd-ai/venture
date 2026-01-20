@@ -260,13 +260,6 @@ func (d *DesyncDetector) ClearEvents() {
 	d.events = make([]DesyncEvent, 0, 100)
 }
 
-// DesyncRecoveryStrategy defines how to recover from different desync types.
-type DesyncRecoveryStrategy interface {
-	// Recover attempts to restore correct state after desync.
-	// Returns error if recovery fails.
-	Recover(event DesyncEvent) error
-}
-
 // RollbackRecovery implements client rollback to server state.
 type RollbackRecovery struct {
 	serverState func(entityID uint64) ([]ComponentData, error)

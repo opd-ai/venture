@@ -4,20 +4,12 @@ package engine
 import (
 	"fmt"
 	"image/color"
-	"time"
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/text"
 	"github.com/hajimehoshi/ebiten/v2/vector"
 	"golang.org/x/image/font/basicfont"
 )
-
-// NetworkClient is an interface for getting network stats.
-// This allows the HUD to display network status without depending on concrete implementation.
-type NetworkClient interface {
-	GetLatency() time.Duration
-	IsConnected() bool
-}
 
 // HUDSystem renders the heads-up display (health bars, stats, etc).
 type EbitenHUDSystem struct {

@@ -8,30 +8,6 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-// VRControllerAdapter abstracts VR controller hardware.
-type VRControllerAdapter interface {
-	// IsConnected returns true if controller is available
-	IsConnected(hand string) bool
-
-	// GetTrigger returns trigger value 0.0-1.0
-	GetTrigger(hand string) float64
-
-	// GetGrip returns grip value 0.0-1.0
-	GetGrip(hand string) float64
-
-	// GetThumbstick returns thumbstick X,Y values
-	GetThumbstick(hand string) (x, y float64)
-
-	// IsThumbstickPressed returns thumbstick click state
-	IsThumbstickPressed(hand string) bool
-
-	// GetButton returns button pressed state
-	GetButton(hand, button string) bool
-
-	// SetHaptic triggers haptic feedback
-	SetHaptic(hand string, intensity, duration float64)
-}
-
 // MockController provides a test implementation of VRControllerAdapter.
 type MockController struct {
 	mu sync.RWMutex

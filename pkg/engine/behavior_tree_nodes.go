@@ -33,16 +33,6 @@ func (s NodeStatus) String() string {
 	}
 }
 
-// BehaviorNode is the interface that all behavior tree nodes must implement.
-type BehaviorNode interface {
-	// Tick executes the node logic and returns the result status.
-	Tick(entity *Entity, blackboard *Blackboard, deltaTime float64) NodeStatus
-	// Reset resets the node state for fresh execution.
-	Reset()
-	// String returns a string representation of the node for debugging.
-	String() string
-}
-
 // Blackboard is a shared data structure for behavior tree state.
 // It stores key-value pairs that nodes can read and write to share information.
 type Blackboard struct {

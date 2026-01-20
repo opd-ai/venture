@@ -43,7 +43,7 @@ jobs:
           libx11-dev xvfb
 
     - name: Initialize CodeQL
-      uses: github/codeql-action/init@v3
+      uses: github/codeql-action/init@v4
       with:
         languages: ${{ matrix.language }}
         queries: security-extended,security-and-quality
@@ -58,7 +58,7 @@ jobs:
         xvfb-run -s "-screen 0 1920x1080x24" go build -v ./cmd/server
 
     - name: Perform CodeQL Analysis
-      uses: github/codeql-action/analyze@v3
+      uses: github/codeql-action/analyze@v4
       with:
         category: "/language:${{ matrix.language }}"
         upload: true

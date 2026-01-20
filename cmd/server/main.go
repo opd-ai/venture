@@ -9,6 +9,7 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"math"
 	"os"
 	"sync"
 	"time"
@@ -539,8 +540,10 @@ func runGameLoop(world *engine.World, server *network.TCPServer, snapshotManager
 			snapshotManager.AddSnapshot(snapshot)
 			lagCompensator.RecordSnapshot(snapshot)
 
-			stateUpdate := convertSnapshotToStateUpdate(snapshot)
-			server.BroadcastStateUpdate(stateUpdate)
+			stateUpdates := convertSnapshotToStateUpdates(snapshot)
+			for _, update := range stateUpdates {
+				server.BroadcastStateUpdate(update)
+			}
 
 			if logger.GetLevel() >= logrus.DebugLevel && int(now.Unix())%10 == 0 {
 				playerCount := server.GetPlayerCount()
@@ -619,15 +622,70 @@ func buildWorldSnapshot(world *engine.World, timestamp time.Time) network.WorldS
 	return snapshot
 }
 
-// convertSnapshotToStateUpdate converts a WorldSnapshot to a StateUpdate for broadcasting
-func convertSnapshotToStateUpdate(snapshot network.WorldSnapshot) *network.StateUpdate {
-	// For now, create a simple state update
-	// In a full implementation, this would serialize component data efficiently
-	update := &network.StateUpdate{
-		Timestamp: uint64(snapshot.Timestamp.UnixNano() / 1000000), // milliseconds
-		Priority:  network.PriorityNormal,                          // Normal priority for regular updates
+// convertSnapshotToStateUpdates converts a WorldSnapshot to StateUpdates for broadcasting.
+// Returns one StateUpdate per entity with full component data.
+func convertSnapshotToStateUpdates(snapshot network.WorldSnapshot) []*network.StateUpdate {
+	updates := make([]*network.StateUpdate, 0, len(snapshot.Entities))
+	timestampMs := uint64(snapshot.Timestamp.UnixNano() / 1000000)
+
+	for entityID, entitySnap := range snapshot.Entities {
+		// Build ComponentData slice from serialized components
+		components := make([]network.ComponentData, 0, len(entitySnap.Components)+2)
+
+		// Add position as a component (always present since we build snapshots from entities with position)
+		posData := serializePosition(entitySnap.Position)
+		components = append(components, network.ComponentData{Type: "position", Data: posData})
+
+		// Add velocity as a component
+		velData := serializeVelocity(entitySnap.Velocity)
+		components = append(components, network.ComponentData{Type: "velocity", Data: velData})
+
+		// Add all other serialized components
+		for compType, compData := range entitySnap.Components {
+			components = append(components, network.ComponentData{Type: compType, Data: compData})
+		}
+
+		update := &network.StateUpdate{
+			Timestamp:  timestampMs,
+			EntityID:   entityID,
+			Components: components,
+			Priority:   network.PriorityNormal,
+		}
+		updates = append(updates, update)
 	}
-	return update
+
+	return updates
+}
+
+// serializePosition serializes a network.Position to bytes for network transmission.
+func serializePosition(pos network.Position) []byte {
+	// Simple binary encoding: 8 bytes for X + 8 bytes for Y = 16 bytes
+	data := make([]byte, 16)
+	putFloat64(data[0:8], pos.X)
+	putFloat64(data[8:16], pos.Y)
+	return data
+}
+
+// serializeVelocity serializes a network.Velocity to bytes for network transmission.
+func serializeVelocity(vel network.Velocity) []byte {
+	// Simple binary encoding: 8 bytes for VX + 8 bytes for VY = 16 bytes
+	data := make([]byte, 16)
+	putFloat64(data[0:8], vel.VX)
+	putFloat64(data[8:16], vel.VY)
+	return data
+}
+
+// putFloat64 encodes a float64 to bytes using little-endian IEEE 754 format.
+func putFloat64(b []byte, v float64) {
+	bits := math.Float64bits(v)
+	b[0] = byte(bits)
+	b[1] = byte(bits >> 8)
+	b[2] = byte(bits >> 16)
+	b[3] = byte(bits >> 24)
+	b[4] = byte(bits >> 32)
+	b[5] = byte(bits >> 40)
+	b[6] = byte(bits >> 48)
+	b[7] = byte(bits >> 56)
 }
 
 // startStabilityMonitoring initializes and starts the stability monitor for production validation.

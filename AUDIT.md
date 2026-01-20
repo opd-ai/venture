@@ -72,14 +72,12 @@ The ECS pattern requires components to be pure data structures with only `Type()
   - **Verification:** `go test -v ./pkg/integration/companion_housing/...`
   - **Coverage:** 93.3%
 
-### 2. HousingCraftingComponent Has Methods
+### ~~2. HousingCraftingComponent Has Methods~~ ✅ FIXED (2026-01-20)
 
-- **[pkg/integration/housing_crafting/component.go:L19-40](pkg/integration/housing_crafting/component.go#L19)**
-  - **Methods Found:**
-    - `GetCraftingBonus()` (L19)
-    - `GetSkillBonus()` (L27)
-    - `HasRecipe()` (L35)
-  - **Fix:** Move to system layer
+- **[pkg/integration/housing_crafting/component.go](pkg/integration/housing_crafting/component.go)**
+  - **Resolution:** Created `HousingCraftingSystem` in new file `housing_crafting_system.go`. Moved all component methods (`GetCraftingBonus()`, `GetSkillBonus()`, `HasRecipe()`) to the system. Added `SyncFromStation()` method to update component from StationManager. Component now only has `Type() string` method following strict ECS pattern. Added comprehensive tests in `housing_crafting_system_test.go` with table-driven tests.
+  - **Verification:** `go test -v ./pkg/integration/housing_crafting/...`
+  - **Coverage:** 99.4%
 
 ### 3. VoiceAudioComponent Has 15+ Methods
 
@@ -414,9 +412,10 @@ All 100+ example packages in `examples/` have 0% coverage, which is expected as 
 ### Short Term (Architecture)
 
 1. ~~Refactor `CompanionHousingComponent` methods to system~~ ✅ FIXED (2026-01-20)
-2. Refactor `VoiceAudioComponent` methods to system
-3. Refactor `FishingSpotComponent` methods to system
-4. Add `io.LimitReader` for network message parsing
+2. ~~Refactor `HousingCraftingComponent` methods to system~~ ✅ FIXED (2026-01-20)
+3. Refactor `VoiceAudioComponent` methods to system
+4. Refactor `FishingSpotComponent` methods to system
+5. Add `io.LimitReader` for network message parsing
 
 ### Medium Term (Technical Debt)
 
@@ -459,7 +458,7 @@ grep -rn "\.\(\*net\.\(UDP\|TCP\)" pkg/
 | Category | Count |
 |----------|-------|
 | **Critical** | 5 (5 fixed ✅) |
-| **Architecture Violations** | 5 major components (1 fixed, 4 remaining) |
+| **Architecture Violations** | 5 major components (2 fixed, 3 remaining) |
 | **Performance** | 0 blocking issues |
 | **Memory** | 0 blocking issues |
 | **Network** | 1 (LimitReader recommendation) |

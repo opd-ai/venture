@@ -50,7 +50,7 @@ func (s *VoiceAudioSystem) Update(entities []*Entity, deltaTime float64) {
 		}
 
 		// Update cooldown
-		audio.UpdateCooldown(deltaTime)
+		s.updateCooldown(audio, deltaTime)
 
 		// Process transmission state
 		s.processTransmission(entity, audio, deltaTime)
@@ -63,7 +63,7 @@ func (s *VoiceAudioSystem) Update(entities []*Entity, deltaTime float64) {
 // processTransmission manages the transmission state based on audio input.
 func (s *VoiceAudioSystem) processTransmission(entity *Entity, audio *VoiceAudioComponent, deltaTime float64) {
 	entityID := entityIDToString(entity.ID)
-	shouldTransmit := audio.ShouldTransmit()
+	shouldTransmit := s.shouldTransmit(audio)
 
 	if audio.InputMode == VoiceInputVoiceActivity {
 		// Handle voice activity with hold timer
@@ -71,7 +71,7 @@ func (s *VoiceAudioSystem) processTransmission(entity *Entity, audio *VoiceAudio
 			// Voice detected, transmit and reset hold timer
 			s.holdTimers[entityID] = s.voiceActivityHoldTime
 			if !audio.IsTransmitting {
-				audio.StartTransmitting()
+				s.startTransmitting(audio)
 				log.WithFields(log.Fields{
 					"entity_id":   entityID,
 					"input_level": audio.NormalizedInputLevel,
@@ -84,7 +84,7 @@ func (s *VoiceAudioSystem) processTransmission(entity *Entity, audio *VoiceAudio
 				// Hold period expired, stop transmitting
 				delete(s.holdTimers, entityID)
 				if audio.IsTransmitting {
-					audio.StopTransmitting(s.defaultTransmitCooldown)
+					s.stopTransmitting(audio, s.defaultTransmitCooldown)
 					log.WithFields(log.Fields{
 						"entity_id": entityID,
 					}).Debug("Voice activity ended, stopping transmission")
@@ -92,17 +92,17 @@ func (s *VoiceAudioSystem) processTransmission(entity *Entity, audio *VoiceAudio
 			}
 		} else if audio.IsTransmitting {
 			// No voice and no hold timer, stop
-			audio.StopTransmitting(s.defaultTransmitCooldown)
+			s.stopTransmitting(audio, s.defaultTransmitCooldown)
 		}
 	} else {
 		// Push-to-talk mode - simpler logic
 		if shouldTransmit && !audio.IsTransmitting {
-			audio.StartTransmitting()
+			s.startTransmitting(audio)
 			log.WithFields(log.Fields{
 				"entity_id": entityID,
 			}).Debug("Push-to-talk activated")
 		} else if !shouldTransmit && audio.IsTransmitting {
-			audio.StopTransmitting(s.defaultTransmitCooldown)
+			s.stopTransmitting(audio, s.defaultTransmitCooldown)
 			log.WithFields(log.Fields{
 				"entity_id": entityID,
 			}).Debug("Push-to-talk released")
@@ -144,7 +144,7 @@ func (s *VoiceAudioSystem) SimulateInput(entity *Entity, level float64) error {
 		return ErrNoAudioComponent
 	}
 
-	audio.UpdateInputLevel(level)
+	s.updateInputLevel(audio, level)
 	return nil
 }
 
@@ -163,7 +163,7 @@ func (s *VoiceAudioSystem) SetPushToTalk(entity *Entity, active bool) error {
 		return ErrNoAudioComponent
 	}
 
-	audio.SetPushToTalk(active)
+	audio.PushToTalkActive = active
 	return nil
 }
 
@@ -182,7 +182,7 @@ func (s *VoiceAudioSystem) SetInputMode(entity *Entity, mode VoiceInputMode) err
 		return ErrNoAudioComponent
 	}
 
-	audio.SetInputMode(mode)
+	audio.InputMode = mode
 
 	log.WithFields(log.Fields{
 		"entity_id":  entityIDToString(entity.ID),
@@ -207,7 +207,26 @@ func (s *VoiceAudioSystem) SetVoiceThreshold(entity *Entity, threshold float64) 
 		return ErrNoAudioComponent
 	}
 
-	audio.SetVoiceThreshold(threshold)
+	audio.VoiceThreshold = clampVoiceFloat(threshold, 0.0, 1.0)
+	return nil
+}
+
+// SetNoiseGateLevel sets the noise gate threshold for an entity.
+func (s *VoiceAudioSystem) SetNoiseGateLevel(entity *Entity, level float64) error {
+	if entity == nil {
+		return ErrNilEntity
+	}
+
+	comp, ok := entity.GetComponent("voice_audio")
+	if !ok {
+		return ErrNoAudioComponent
+	}
+	audio, ok := comp.(*VoiceAudioComponent)
+	if !ok {
+		return ErrNoAudioComponent
+	}
+
+	audio.NoiseGateLevel = clampVoiceFloat(level, 0.0, 1.0)
 	return nil
 }
 
@@ -226,7 +245,7 @@ func (s *VoiceAudioSystem) SetOutputVolume(entity *Entity, volume float64) error
 		return ErrNoAudioComponent
 	}
 
-	audio.SetOutputVolume(volume)
+	audio.OutputVolume = clampVoiceFloat(volume, 0.0, 1.0)
 	return nil
 }
 
@@ -245,7 +264,26 @@ func (s *VoiceAudioSystem) SetInputGain(entity *Entity, gain float64) error {
 		return ErrNoAudioComponent
 	}
 
-	audio.SetInputGain(gain)
+	audio.InputGain = clampVoiceFloat(gain, 0.0, 2.0)
+	return nil
+}
+
+// SetPushToTalkKey sets the push-to-talk key binding for an entity.
+func (s *VoiceAudioSystem) SetPushToTalkKey(entity *Entity, key string) error {
+	if entity == nil {
+		return ErrNilEntity
+	}
+
+	comp, ok := entity.GetComponent("voice_audio")
+	if !ok {
+		return ErrNoAudioComponent
+	}
+	audio, ok := comp.(*VoiceAudioComponent)
+	if !ok {
+		return ErrNoAudioComponent
+	}
+
+	audio.PushToTalkKey = key
 	return nil
 }
 
@@ -283,6 +321,140 @@ func (s *VoiceAudioSystem) GetInputLevel(entity *Entity) float64 {
 	}
 
 	return audio.NormalizedInputLevel
+}
+
+// GetEffectiveOutputLevel calculates the output level for received audio.
+func (s *VoiceAudioSystem) GetEffectiveOutputLevel(entity *Entity, inputLevel float64) float64 {
+	if entity == nil {
+		return 0
+	}
+
+	comp, ok := entity.GetComponent("voice_audio")
+	if !ok {
+		return 0
+	}
+	audio, ok := comp.(*VoiceAudioComponent)
+	if !ok {
+		return 0
+	}
+
+	return clampVoiceFloat(inputLevel*audio.OutputVolume, 0.0, 1.0)
+}
+
+// IsConfigured returns true if the entity's voice audio component has valid configuration.
+func (s *VoiceAudioSystem) IsConfigured(entity *Entity) bool {
+	if entity == nil {
+		return false
+	}
+
+	comp, ok := entity.GetComponent("voice_audio")
+	if !ok {
+		return false
+	}
+	audio, ok := comp.(*VoiceAudioComponent)
+	if !ok {
+		return false
+	}
+
+	return audio.VoiceThreshold >= 0 && audio.VoiceThreshold <= 1.0 &&
+		audio.NoiseGateLevel >= 0 && audio.NoiseGateLevel <= 1.0 &&
+		audio.OutputVolume >= 0 && audio.OutputVolume <= 1.0 &&
+		audio.InputGain >= 0 && audio.InputGain <= 2.0
+}
+
+// StartTransmitting begins voice transmission for an entity.
+func (s *VoiceAudioSystem) StartTransmitting(entity *Entity) bool {
+	if entity == nil {
+		return false
+	}
+
+	comp, ok := entity.GetComponent("voice_audio")
+	if !ok {
+		return false
+	}
+	audio, ok := comp.(*VoiceAudioComponent)
+	if !ok {
+		return false
+	}
+
+	return s.startTransmitting(audio)
+}
+
+// StopTransmitting ends voice transmission for an entity with optional cooldown.
+func (s *VoiceAudioSystem) StopTransmitting(entity *Entity, cooldown float64) bool {
+	if entity == nil {
+		return false
+	}
+
+	comp, ok := entity.GetComponent("voice_audio")
+	if !ok {
+		return false
+	}
+	audio, ok := comp.(*VoiceAudioComponent)
+	if !ok {
+		return false
+	}
+
+	return s.stopTransmitting(audio, cooldown)
+}
+
+// Internal logic functions that operate directly on component data.
+
+// updateInputLevel updates the current input audio level.
+func (s *VoiceAudioSystem) updateInputLevel(audio *VoiceAudioComponent, level float64) {
+	audio.CurrentInputLevel = clampVoiceFloat(level, 0.0, 1.0)
+	audio.NormalizedInputLevel = clampVoiceFloat(level*audio.InputGain, 0.0, 1.0)
+
+	// Check noise gate
+	audio.NoiseGateOpen = audio.NormalizedInputLevel > audio.NoiseGateLevel
+
+	// Check voice activity
+	audio.VoiceActivityDetected = audio.NoiseGateOpen && audio.NormalizedInputLevel > audio.VoiceThreshold
+}
+
+// shouldTransmit returns true if audio should be transmitted based on mode and state.
+func (s *VoiceAudioSystem) shouldTransmit(audio *VoiceAudioComponent) bool {
+	if audio.TransmitCooldown > 0 {
+		return audio.IsTransmitting // Maintain current state during cooldown
+	}
+
+	switch audio.InputMode {
+	case VoiceInputPushToTalk:
+		return audio.PushToTalkActive && audio.NoiseGateOpen
+	case VoiceInputVoiceActivity:
+		return audio.VoiceActivityDetected
+	default:
+		return false
+	}
+}
+
+// startTransmitting begins voice transmission.
+func (s *VoiceAudioSystem) startTransmitting(audio *VoiceAudioComponent) bool {
+	if audio.IsTransmitting {
+		return false
+	}
+	audio.IsTransmitting = true
+	return true
+}
+
+// stopTransmitting ends voice transmission with optional cooldown.
+func (s *VoiceAudioSystem) stopTransmitting(audio *VoiceAudioComponent, cooldown float64) bool {
+	if !audio.IsTransmitting {
+		return false
+	}
+	audio.IsTransmitting = false
+	audio.TransmitCooldown = cooldown
+	return true
+}
+
+// updateCooldown decreases the transmit cooldown by delta time.
+func (s *VoiceAudioSystem) updateCooldown(audio *VoiceAudioComponent, deltaTime float64) {
+	if audio.TransmitCooldown > 0 {
+		audio.TransmitCooldown -= deltaTime
+		if audio.TransmitCooldown < 0 {
+			audio.TransmitCooldown = 0
+		}
+	}
 }
 
 // Error types for voice audio operations.

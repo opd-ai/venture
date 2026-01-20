@@ -87,228 +87,276 @@ func TestClampVoiceFloat(t *testing.T) {
 	}
 }
 
-func TestVoiceAudioComponent_SetMethods(t *testing.T) {
-	c := NewVoiceAudioComponent()
+func TestVoiceAudioSystem_SetMethods(t *testing.T) {
+	world := NewWorld()
+	system := NewVoiceAudioSystem(world)
 
-	c.SetInputMode(VoiceInputVoiceActivity)
-	if c.InputMode != VoiceInputVoiceActivity {
-		t.Errorf("expected InputMode voice_activity, got %s", c.InputMode)
+	entity := world.CreateEntity()
+	entity.AddComponent(NewVoiceAudioComponent())
+
+	comp, _ := entity.GetComponent("voice_audio")
+	audio := comp.(*VoiceAudioComponent)
+
+	system.SetInputMode(entity, VoiceInputVoiceActivity)
+	if audio.InputMode != VoiceInputVoiceActivity {
+		t.Errorf("expected InputMode voice_activity, got %s", audio.InputMode)
 	}
 
-	c.SetPushToTalkKey("T")
-	if c.PushToTalkKey != "T" {
-		t.Errorf("expected PushToTalkKey 'T', got '%s'", c.PushToTalkKey)
+	system.SetPushToTalkKey(entity, "T")
+	if audio.PushToTalkKey != "T" {
+		t.Errorf("expected PushToTalkKey 'T', got '%s'", audio.PushToTalkKey)
 	}
 
-	c.SetVoiceThreshold(0.3)
-	if c.VoiceThreshold != 0.3 {
-		t.Errorf("expected VoiceThreshold 0.3, got %f", c.VoiceThreshold)
+	system.SetVoiceThreshold(entity, 0.3)
+	if audio.VoiceThreshold != 0.3 {
+		t.Errorf("expected VoiceThreshold 0.3, got %f", audio.VoiceThreshold)
 	}
 
-	c.SetVoiceThreshold(2.0) // Should be clamped
-	if c.VoiceThreshold != 1.0 {
-		t.Errorf("expected VoiceThreshold 1.0 (clamped), got %f", c.VoiceThreshold)
+	system.SetVoiceThreshold(entity, 2.0) // Should be clamped
+	if audio.VoiceThreshold != 1.0 {
+		t.Errorf("expected VoiceThreshold 1.0 (clamped), got %f", audio.VoiceThreshold)
 	}
 
-	c.SetNoiseGateLevel(0.1)
-	if c.NoiseGateLevel != 0.1 {
-		t.Errorf("expected NoiseGateLevel 0.1, got %f", c.NoiseGateLevel)
+	system.SetNoiseGateLevel(entity, 0.1)
+	if audio.NoiseGateLevel != 0.1 {
+		t.Errorf("expected NoiseGateLevel 0.1, got %f", audio.NoiseGateLevel)
 	}
 
-	c.SetOutputVolume(0.5)
-	if c.OutputVolume != 0.5 {
-		t.Errorf("expected OutputVolume 0.5, got %f", c.OutputVolume)
+	system.SetOutputVolume(entity, 0.5)
+	if audio.OutputVolume != 0.5 {
+		t.Errorf("expected OutputVolume 0.5, got %f", audio.OutputVolume)
 	}
 
-	c.SetInputGain(1.5)
-	if c.InputGain != 1.5 {
-		t.Errorf("expected InputGain 1.5, got %f", c.InputGain)
+	system.SetInputGain(entity, 1.5)
+	if audio.InputGain != 1.5 {
+		t.Errorf("expected InputGain 1.5, got %f", audio.InputGain)
 	}
 
-	c.SetInputGain(3.0) // Should be clamped to 2.0
-	if c.InputGain != 2.0 {
-		t.Errorf("expected InputGain 2.0 (clamped), got %f", c.InputGain)
+	system.SetInputGain(entity, 3.0) // Should be clamped to 2.0
+	if audio.InputGain != 2.0 {
+		t.Errorf("expected InputGain 2.0 (clamped), got %f", audio.InputGain)
 	}
 }
 
-func TestVoiceAudioComponent_UpdateInputLevel(t *testing.T) {
-	c := NewVoiceAudioComponent()
-	c.SetVoiceThreshold(0.2)
-	c.SetNoiseGateLevel(0.1)
-	c.SetInputGain(1.0)
+func TestVoiceAudioSystem_UpdateInputLevel(t *testing.T) {
+	world := NewWorld()
+	system := NewVoiceAudioSystem(world)
+
+	entity := world.CreateEntity()
+	entity.AddComponent(NewVoiceAudioComponent())
+
+	comp, _ := entity.GetComponent("voice_audio")
+	audio := comp.(*VoiceAudioComponent)
+
+	system.SetVoiceThreshold(entity, 0.2)
+	system.SetNoiseGateLevel(entity, 0.1)
+	system.SetInputGain(entity, 1.0)
 
 	// Level below noise gate
-	c.UpdateInputLevel(0.05)
-	if c.NoiseGateOpen {
+	system.SimulateInput(entity, 0.05)
+	if audio.NoiseGateOpen {
 		t.Error("expected NoiseGateOpen to be false for level below gate")
 	}
-	if c.VoiceActivityDetected {
+	if audio.VoiceActivityDetected {
 		t.Error("expected VoiceActivityDetected to be false")
 	}
 
 	// Level above noise gate but below voice threshold
-	c.UpdateInputLevel(0.15)
-	if !c.NoiseGateOpen {
+	system.SimulateInput(entity, 0.15)
+	if !audio.NoiseGateOpen {
 		t.Error("expected NoiseGateOpen to be true")
 	}
-	if c.VoiceActivityDetected {
+	if audio.VoiceActivityDetected {
 		t.Error("expected VoiceActivityDetected to be false (below threshold)")
 	}
 
 	// Level above voice threshold
-	c.UpdateInputLevel(0.5)
-	if !c.NoiseGateOpen {
+	system.SimulateInput(entity, 0.5)
+	if !audio.NoiseGateOpen {
 		t.Error("expected NoiseGateOpen to be true")
 	}
-	if !c.VoiceActivityDetected {
+	if !audio.VoiceActivityDetected {
 		t.Error("expected VoiceActivityDetected to be true")
 	}
 
 	// Test input gain effect
-	c.SetInputGain(2.0)
-	c.UpdateInputLevel(0.3)
-	if c.NormalizedInputLevel != 0.6 {
-		t.Errorf("expected NormalizedInputLevel 0.6, got %f", c.NormalizedInputLevel)
+	system.SetInputGain(entity, 2.0)
+	system.SimulateInput(entity, 0.3)
+	if audio.NormalizedInputLevel != 0.6 {
+		t.Errorf("expected NormalizedInputLevel 0.6, got %f", audio.NormalizedInputLevel)
 	}
 
 	// Test clamping on high input
-	c.UpdateInputLevel(0.8) // 0.8 * 2.0 = 1.6, should clamp to 1.0
-	if c.NormalizedInputLevel != 1.0 {
-		t.Errorf("expected NormalizedInputLevel 1.0 (clamped), got %f", c.NormalizedInputLevel)
+	system.SimulateInput(entity, 0.8) // 0.8 * 2.0 = 1.6, should clamp to 1.0
+	if audio.NormalizedInputLevel != 1.0 {
+		t.Errorf("expected NormalizedInputLevel 1.0 (clamped), got %f", audio.NormalizedInputLevel)
 	}
 }
 
-func TestVoiceAudioComponent_ShouldTransmit_PushToTalk(t *testing.T) {
-	c := NewVoiceAudioComponent()
-	c.SetInputMode(VoiceInputPushToTalk)
-	c.SetNoiseGateLevel(0.1)
+func TestVoiceAudioSystem_ShouldTransmit_PushToTalk(t *testing.T) {
+	world := NewWorld()
+	system := NewVoiceAudioSystem(world)
+
+	entity := world.CreateEntity()
+	audio := NewVoiceAudioComponent()
+	entity.AddComponent(audio)
+
+	system.SetInputMode(entity, VoiceInputPushToTalk)
+	system.SetNoiseGateLevel(entity, 0.1)
 
 	// Not pressing PTT, should not transmit
-	c.UpdateInputLevel(0.5)
-	if c.ShouldTransmit() {
-		t.Error("expected ShouldTransmit false when PTT not active")
+	system.SimulateInput(entity, 0.5)
+	if system.shouldTransmit(audio) {
+		t.Error("expected shouldTransmit false when PTT not active")
 	}
 
 	// Pressing PTT but below noise gate
-	c.SetPushToTalk(true)
-	c.UpdateInputLevel(0.05)
-	if c.ShouldTransmit() {
-		t.Error("expected ShouldTransmit false when below noise gate")
+	system.SetPushToTalk(entity, true)
+	system.SimulateInput(entity, 0.05)
+	if system.shouldTransmit(audio) {
+		t.Error("expected shouldTransmit false when below noise gate")
 	}
 
 	// Pressing PTT and above noise gate
-	c.UpdateInputLevel(0.5)
-	if !c.ShouldTransmit() {
-		t.Error("expected ShouldTransmit true when PTT active and above gate")
+	system.SimulateInput(entity, 0.5)
+	if !system.shouldTransmit(audio) {
+		t.Error("expected shouldTransmit true when PTT active and above gate")
 	}
 
 	// Release PTT
-	c.SetPushToTalk(false)
-	if c.ShouldTransmit() {
-		t.Error("expected ShouldTransmit false when PTT released")
+	system.SetPushToTalk(entity, false)
+	if system.shouldTransmit(audio) {
+		t.Error("expected shouldTransmit false when PTT released")
 	}
 }
 
-func TestVoiceAudioComponent_ShouldTransmit_VoiceActivity(t *testing.T) {
-	c := NewVoiceActivityComponent(0.2)
-	c.SetNoiseGateLevel(0.1)
+func TestVoiceAudioSystem_ShouldTransmit_VoiceActivity(t *testing.T) {
+	world := NewWorld()
+	system := NewVoiceAudioSystem(world)
+
+	entity := world.CreateEntity()
+	audio := NewVoiceActivityComponent(0.2)
+	entity.AddComponent(audio)
+
+	system.SetNoiseGateLevel(entity, 0.1)
 
 	// Below threshold
-	c.UpdateInputLevel(0.15)
-	if c.ShouldTransmit() {
-		t.Error("expected ShouldTransmit false when below threshold")
+	system.SimulateInput(entity, 0.15)
+	if system.shouldTransmit(audio) {
+		t.Error("expected shouldTransmit false when below threshold")
 	}
 
 	// Above threshold
-	c.UpdateInputLevel(0.5)
-	if !c.ShouldTransmit() {
-		t.Error("expected ShouldTransmit true when above threshold")
+	system.SimulateInput(entity, 0.5)
+	if !system.shouldTransmit(audio) {
+		t.Error("expected shouldTransmit true when above threshold")
 	}
 }
 
-func TestVoiceAudioComponent_ShouldTransmit_Cooldown(t *testing.T) {
-	c := NewVoiceAudioComponent()
-	c.SetInputMode(VoiceInputPushToTalk)
-	c.SetNoiseGateLevel(0.1)
+func TestVoiceAudioSystem_ShouldTransmit_Cooldown(t *testing.T) {
+	world := NewWorld()
+	system := NewVoiceAudioSystem(world)
+
+	entity := world.CreateEntity()
+	audio := NewVoiceAudioComponent()
+	entity.AddComponent(audio)
+
+	system.SetInputMode(entity, VoiceInputPushToTalk)
+	system.SetNoiseGateLevel(entity, 0.1)
 
 	// Start transmitting
-	c.SetPushToTalk(true)
-	c.UpdateInputLevel(0.5)
-	c.StartTransmitting()
+	system.SetPushToTalk(entity, true)
+	system.SimulateInput(entity, 0.5)
+	system.StartTransmitting(entity)
 
 	// Stop with cooldown
-	c.StopTransmitting(0.5)
+	system.StopTransmitting(entity, 0.5)
 
 	// During cooldown, should maintain false state (not transmitting)
-	c.SetPushToTalk(true)
-	c.UpdateInputLevel(0.5)
-	if c.ShouldTransmit() {
-		t.Error("expected ShouldTransmit to return current state during cooldown")
+	system.SetPushToTalk(entity, true)
+	system.SimulateInput(entity, 0.5)
+	if system.shouldTransmit(audio) {
+		t.Error("expected shouldTransmit to return current state during cooldown")
 	}
 
 	// After cooldown expires
-	c.UpdateCooldown(0.6)
-	if !c.ShouldTransmit() {
-		t.Error("expected ShouldTransmit true after cooldown expires")
+	system.updateCooldown(audio, 0.6)
+	if !system.shouldTransmit(audio) {
+		t.Error("expected shouldTransmit true after cooldown expires")
 	}
 }
 
-func TestVoiceAudioComponent_TransmitState(t *testing.T) {
-	c := NewVoiceAudioComponent()
+func TestVoiceAudioSystem_TransmitState(t *testing.T) {
+	world := NewWorld()
+	system := NewVoiceAudioSystem(world)
+
+	entity := world.CreateEntity()
+	audio := NewVoiceAudioComponent()
+	entity.AddComponent(audio)
 
 	// Start transmitting
-	if !c.StartTransmitting() {
+	if !system.StartTransmitting(entity) {
 		t.Error("expected StartTransmitting to return true on first call")
 	}
-	if !c.IsTransmitting {
+	if !audio.IsTransmitting {
 		t.Error("expected IsTransmitting to be true")
 	}
 
 	// Start again (already transmitting)
-	if c.StartTransmitting() {
+	if system.StartTransmitting(entity) {
 		t.Error("expected StartTransmitting to return false when already transmitting")
 	}
 
 	// Stop transmitting
-	if !c.StopTransmitting(0.2) {
+	if !system.StopTransmitting(entity, 0.2) {
 		t.Error("expected StopTransmitting to return true")
 	}
-	if c.IsTransmitting {
+	if audio.IsTransmitting {
 		t.Error("expected IsTransmitting to be false")
 	}
-	if c.TransmitCooldown != 0.2 {
-		t.Errorf("expected TransmitCooldown 0.2, got %f", c.TransmitCooldown)
+	if audio.TransmitCooldown != 0.2 {
+		t.Errorf("expected TransmitCooldown 0.2, got %f", audio.TransmitCooldown)
 	}
 
 	// Stop again (not transmitting)
-	if c.StopTransmitting(0.1) {
+	if system.StopTransmitting(entity, 0.1) {
 		t.Error("expected StopTransmitting to return false when not transmitting")
 	}
 }
 
-func TestVoiceAudioComponent_UpdateCooldown(t *testing.T) {
-	c := NewVoiceAudioComponent()
-	c.TransmitCooldown = 0.5
+func TestVoiceAudioSystem_UpdateCooldown(t *testing.T) {
+	world := NewWorld()
+	system := NewVoiceAudioSystem(world)
 
-	c.UpdateCooldown(0.2)
-	if c.TransmitCooldown != 0.3 {
-		t.Errorf("expected TransmitCooldown 0.3, got %f", c.TransmitCooldown)
+	entity := world.CreateEntity()
+	audio := NewVoiceAudioComponent()
+	entity.AddComponent(audio)
+
+	audio.TransmitCooldown = 0.5
+
+	system.updateCooldown(audio, 0.2)
+	if audio.TransmitCooldown != 0.3 {
+		t.Errorf("expected TransmitCooldown 0.3, got %f", audio.TransmitCooldown)
 	}
 
-	c.UpdateCooldown(0.5) // Should clamp to 0
-	if c.TransmitCooldown != 0 {
-		t.Errorf("expected TransmitCooldown 0, got %f", c.TransmitCooldown)
+	system.updateCooldown(audio, 0.5) // Should clamp to 0
+	if audio.TransmitCooldown != 0 {
+		t.Errorf("expected TransmitCooldown 0, got %f", audio.TransmitCooldown)
 	}
 
 	// No cooldown, should remain 0
-	c.UpdateCooldown(0.1)
-	if c.TransmitCooldown != 0 {
-		t.Errorf("expected TransmitCooldown 0, got %f", c.TransmitCooldown)
+	system.updateCooldown(audio, 0.1)
+	if audio.TransmitCooldown != 0 {
+		t.Errorf("expected TransmitCooldown 0, got %f", audio.TransmitCooldown)
 	}
 }
 
-func TestVoiceAudioComponent_GetEffectiveOutputLevel(t *testing.T) {
-	c := NewVoiceAudioComponent()
+func TestVoiceAudioSystem_GetEffectiveOutputLevel(t *testing.T) {
+	world := NewWorld()
+	system := NewVoiceAudioSystem(world)
+
+	entity := world.CreateEntity()
+	entity.AddComponent(NewVoiceAudioComponent())
 
 	tests := []struct {
 		name       string
@@ -324,8 +372,8 @@ func TestVoiceAudioComponent_GetEffectiveOutputLevel(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			c.SetOutputVolume(tt.volume)
-			result := c.GetEffectiveOutputLevel(tt.inputLevel)
+			system.SetOutputVolume(entity, tt.volume)
+			result := system.GetEffectiveOutputLevel(entity, tt.inputLevel)
 			if result != tt.expected {
 				t.Errorf("expected %f, got %f", tt.expected, result)
 			}
@@ -333,36 +381,43 @@ func TestVoiceAudioComponent_GetEffectiveOutputLevel(t *testing.T) {
 	}
 }
 
-func TestVoiceAudioComponent_IsConfigured(t *testing.T) {
-	c := NewVoiceAudioComponent()
+func TestVoiceAudioSystem_IsConfigured(t *testing.T) {
+	world := NewWorld()
+	system := NewVoiceAudioSystem(world)
 
-	if !c.IsConfigured() {
+	entity := world.CreateEntity()
+	entity.AddComponent(NewVoiceAudioComponent())
+
+	comp, _ := entity.GetComponent("voice_audio")
+	audio := comp.(*VoiceAudioComponent)
+
+	if !system.IsConfigured(entity) {
 		t.Error("expected default component to be configured")
 	}
 
 	// Test invalid configurations
-	c.VoiceThreshold = -0.1
-	if c.IsConfigured() {
+	audio.VoiceThreshold = -0.1
+	if system.IsConfigured(entity) {
 		t.Error("expected IsConfigured false for negative VoiceThreshold")
 	}
-	c.VoiceThreshold = 0.1
+	audio.VoiceThreshold = 0.1
 
-	c.VoiceThreshold = 1.5
-	if c.IsConfigured() {
+	audio.VoiceThreshold = 1.5
+	if system.IsConfigured(entity) {
 		t.Error("expected IsConfigured false for VoiceThreshold > 1.0")
 	}
-	c.VoiceThreshold = 0.1
+	audio.VoiceThreshold = 0.1
 
-	c.InputGain = 2.5
-	if c.IsConfigured() {
+	audio.InputGain = 2.5
+	if system.IsConfigured(entity) {
 		t.Error("expected IsConfigured false for InputGain > 2.0")
 	}
 }
 
 func TestVoiceAudioComponent_Serialize(t *testing.T) {
 	c := NewVoiceAudioComponent()
-	c.SetInputMode(VoiceInputVoiceActivity)
-	c.SetVoiceThreshold(0.3)
+	c.InputMode = VoiceInputVoiceActivity
+	c.VoiceThreshold = 0.3
 	c.IsTransmitting = true
 
 	data, err := c.Serialize()
@@ -387,14 +442,112 @@ func TestVoiceAudioComponent_Serialize(t *testing.T) {
 	}
 }
 
-func TestVoiceAudioComponent_InvalidInputMode(t *testing.T) {
-	c := NewVoiceAudioComponent()
-	c.InputMode = "invalid"
+func TestVoiceAudioSystem_InvalidInputMode(t *testing.T) {
+	world := NewWorld()
+	system := NewVoiceAudioSystem(world)
 
-	// ShouldTransmit should return false for unknown mode
-	c.UpdateInputLevel(0.5)
-	c.SetPushToTalk(true)
-	if c.ShouldTransmit() {
-		t.Error("expected ShouldTransmit false for invalid input mode")
+	entity := world.CreateEntity()
+	audio := NewVoiceAudioComponent()
+	audio.InputMode = "invalid"
+	entity.AddComponent(audio)
+
+	// shouldTransmit should return false for unknown mode
+	system.SimulateInput(entity, 0.5)
+	system.SetPushToTalk(entity, true)
+	if system.shouldTransmit(audio) {
+		t.Error("expected shouldTransmit false for invalid input mode")
+	}
+}
+
+func TestVoiceAudioSystem_SetNoiseGateLevel(t *testing.T) {
+	world := NewWorld()
+	system := NewVoiceAudioSystem(world)
+
+	entity := world.CreateEntity()
+	entity.AddComponent(NewVoiceAudioComponent())
+
+	comp, _ := entity.GetComponent("voice_audio")
+	audio := comp.(*VoiceAudioComponent)
+
+	err := system.SetNoiseGateLevel(entity, 0.15)
+	if err != nil {
+		t.Fatalf("SetNoiseGateLevel failed: %v", err)
+	}
+	if audio.NoiseGateLevel != 0.15 {
+		t.Errorf("expected NoiseGateLevel 0.15, got %f", audio.NoiseGateLevel)
+	}
+
+	// Test clamping
+	system.SetNoiseGateLevel(entity, 2.0)
+	if audio.NoiseGateLevel != 1.0 {
+		t.Errorf("expected NoiseGateLevel 1.0 (clamped), got %f", audio.NoiseGateLevel)
+	}
+}
+
+func TestVoiceAudioSystem_SetPushToTalkKey(t *testing.T) {
+	world := NewWorld()
+	system := NewVoiceAudioSystem(world)
+
+	entity := world.CreateEntity()
+	entity.AddComponent(NewVoiceAudioComponent())
+
+	comp, _ := entity.GetComponent("voice_audio")
+	audio := comp.(*VoiceAudioComponent)
+
+	err := system.SetPushToTalkKey(entity, "G")
+	if err != nil {
+		t.Fatalf("SetPushToTalkKey failed: %v", err)
+	}
+	if audio.PushToTalkKey != "G" {
+		t.Errorf("expected PushToTalkKey 'G', got '%s'", audio.PushToTalkKey)
+	}
+}
+
+func TestVoiceAudioSystem_NilEntityMethods(t *testing.T) {
+	world := NewWorld()
+	system := NewVoiceAudioSystem(world)
+
+	if err := system.SetNoiseGateLevel(nil, 0.1); err != ErrNilEntity {
+		t.Errorf("SetNoiseGateLevel nil: expected ErrNilEntity, got %v", err)
+	}
+	if err := system.SetPushToTalkKey(nil, "T"); err != ErrNilEntity {
+		t.Errorf("SetPushToTalkKey nil: expected ErrNilEntity, got %v", err)
+	}
+	if system.IsConfigured(nil) {
+		t.Error("expected IsConfigured to return false for nil entity")
+	}
+	if system.GetEffectiveOutputLevel(nil, 0.5) != 0 {
+		t.Error("expected GetEffectiveOutputLevel to return 0 for nil entity")
+	}
+	if system.StartTransmitting(nil) {
+		t.Error("expected StartTransmitting to return false for nil entity")
+	}
+	if system.StopTransmitting(nil, 0.1) {
+		t.Error("expected StopTransmitting to return false for nil entity")
+	}
+}
+
+func TestVoiceAudioSystem_NoComponentMethods(t *testing.T) {
+	world := NewWorld()
+	system := NewVoiceAudioSystem(world)
+	entity := world.CreateEntity()
+
+	if err := system.SetNoiseGateLevel(entity, 0.1); err != ErrNoAudioComponent {
+		t.Errorf("SetNoiseGateLevel no component: expected ErrNoAudioComponent, got %v", err)
+	}
+	if err := system.SetPushToTalkKey(entity, "T"); err != ErrNoAudioComponent {
+		t.Errorf("SetPushToTalkKey no component: expected ErrNoAudioComponent, got %v", err)
+	}
+	if system.IsConfigured(entity) {
+		t.Error("expected IsConfigured to return false for entity without component")
+	}
+	if system.GetEffectiveOutputLevel(entity, 0.5) != 0 {
+		t.Error("expected GetEffectiveOutputLevel to return 0 for entity without component")
+	}
+	if system.StartTransmitting(entity) {
+		t.Error("expected StartTransmitting to return false for entity without component")
+	}
+	if system.StopTransmitting(entity, 0.1) {
+		t.Error("expected StopTransmitting to return false for entity without component")
 	}
 }

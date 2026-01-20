@@ -184,9 +184,7 @@ func TestVoiceAudioSystem_IsTransmitting(t *testing.T) {
 		t.Error("expected IsTransmitting to be false initially")
 	}
 
-	comp, _ := entity.GetComponent("voice_audio")
-	audio := comp.(*VoiceAudioComponent)
-	audio.StartTransmitting()
+	system.StartTransmitting(entity)
 
 	if !system.IsTransmitting(entity) {
 		t.Error("expected IsTransmitting to be true after starting")
@@ -224,29 +222,30 @@ func TestVoiceAudioSystem_Update_PushToTalk(t *testing.T) {
 
 	entity := world.CreateEntity()
 	audio := NewVoiceAudioComponent()
-	audio.SetInputMode(VoiceInputPushToTalk)
-	audio.SetNoiseGateLevel(0.1)
 	entity.AddComponent(audio)
+
+	system.SetInputMode(entity, VoiceInputPushToTalk)
+	system.SetNoiseGateLevel(entity, 0.1)
 
 	entities := []*Entity{entity}
 
 	// Not pressing PTT
-	audio.UpdateInputLevel(0.5)
+	system.SimulateInput(entity, 0.5)
 	system.Update(entities, 0.016)
 	if audio.IsTransmitting {
 		t.Error("expected not transmitting without PTT")
 	}
 
 	// Press PTT
-	audio.SetPushToTalk(true)
-	audio.UpdateInputLevel(0.5)
+	system.SetPushToTalk(entity, true)
+	system.SimulateInput(entity, 0.5)
 	system.Update(entities, 0.016)
 	if !audio.IsTransmitting {
 		t.Error("expected transmitting with PTT active")
 	}
 
 	// Release PTT
-	audio.SetPushToTalk(false)
+	system.SetPushToTalk(entity, false)
 	system.Update(entities, 0.016)
 	if audio.IsTransmitting {
 		t.Error("expected not transmitting after PTT release")
@@ -260,27 +259,28 @@ func TestVoiceAudioSystem_Update_VoiceActivity(t *testing.T) {
 
 	entity := world.CreateEntity()
 	audio := NewVoiceActivityComponent(0.2)
-	audio.SetNoiseGateLevel(0.1)
 	entity.AddComponent(audio)
+
+	system.SetNoiseGateLevel(entity, 0.1)
 
 	entities := []*Entity{entity}
 
 	// Below threshold
-	audio.UpdateInputLevel(0.15)
+	system.SimulateInput(entity, 0.15)
 	system.Update(entities, 0.016)
 	if audio.IsTransmitting {
 		t.Error("expected not transmitting below threshold")
 	}
 
 	// Above threshold
-	audio.UpdateInputLevel(0.5)
+	system.SimulateInput(entity, 0.5)
 	system.Update(entities, 0.016)
 	if !audio.IsTransmitting {
 		t.Error("expected transmitting above threshold")
 	}
 
 	// Drop voice but still in hold period
-	audio.UpdateInputLevel(0.05)
+	system.SimulateInput(entity, 0.05)
 	system.Update(entities, 0.05)
 	if !audio.IsTransmitting {
 		t.Error("expected still transmitting during hold period")
@@ -299,9 +299,10 @@ func TestVoiceAudioSystem_Update_SyncWithVoiceChannel(t *testing.T) {
 
 	entity := world.CreateEntity()
 	audio := NewVoiceAudioComponent()
-	audio.SetInputMode(VoiceInputPushToTalk)
-	audio.SetNoiseGateLevel(0.1)
 	entity.AddComponent(audio)
+
+	audioSystem.SetInputMode(entity, VoiceInputPushToTalk)
+	audioSystem.SetNoiseGateLevel(entity, 0.1)
 
 	vc := NewVoiceChannelComponent("test", VoiceChannelParty)
 	entity.AddComponent(vc)
@@ -309,8 +310,8 @@ func TestVoiceAudioSystem_Update_SyncWithVoiceChannel(t *testing.T) {
 	entities := []*Entity{entity}
 
 	// Start transmitting
-	audio.SetPushToTalk(true)
-	audio.UpdateInputLevel(0.5)
+	audioSystem.SetPushToTalk(entity, true)
+	audioSystem.SimulateInput(entity, 0.5)
 	audioSystem.Update(entities, 0.016)
 
 	// Voice channel should be updated
@@ -319,7 +320,7 @@ func TestVoiceAudioSystem_Update_SyncWithVoiceChannel(t *testing.T) {
 	}
 
 	// Stop transmitting
-	audio.SetPushToTalk(false)
+	audioSystem.SetPushToTalk(entity, false)
 	audioSystem.Update(entities, 0.016)
 
 	if vc.IsSpeaking {

@@ -5,32 +5,7 @@ import (
 )
 
 // Platform represents a mobile platform.
-type Platform int
-
-const (
-	// PlatformUnknown represents an unknown or desktop platform.
-	PlatformUnknown Platform = iota
-	// PlatformIOS represents iOS (iPhone, iPad).
-	PlatformIOS
-	// PlatformAndroid represents Android.
-	PlatformAndroid
-	// PlatformWASM represents WebAssembly/browser (js/wasm).
-	PlatformWASM
-)
-
-// String returns the string representation of the platform.
-func (p Platform) String() string {
-	switch p {
-	case PlatformIOS:
-		return "iOS"
-	case PlatformAndroid:
-		return "Android"
-	case PlatformWASM:
-		return "WASM"
-	default:
-		return "Unknown"
-	}
-}
+// Platform type moved to types.go
 
 // GetPlatform detects the current platform.
 func GetPlatform() Platform {
@@ -145,28 +120,7 @@ func SupportsSystemGestures() bool {
 }
 
 // Orientation represents screen orientation.
-type Orientation int
-
-const (
-	// OrientationUnknown represents an unknown orientation.
-	OrientationUnknown Orientation = iota
-	// OrientationPortrait represents portrait orientation (height > width).
-	OrientationPortrait
-	// OrientationLandscape represents landscape orientation (width > height).
-	OrientationLandscape
-)
-
-// String returns the string representation of the orientation.
-func (o Orientation) String() string {
-	switch o {
-	case OrientationPortrait:
-		return "Portrait"
-	case OrientationLandscape:
-		return "Landscape"
-	default:
-		return "Unknown"
-	}
-}
+// Orientation type moved to types.go
 
 // GetOrientation determines screen orientation based on dimensions.
 func GetOrientation(width, height int) Orientation {
@@ -179,16 +133,7 @@ func GetOrientation(width, height int) Orientation {
 }
 
 // HapticFeedback represents haptic feedback intensity.
-type HapticFeedback int
-
-const (
-	// HapticLight represents light haptic feedback.
-	HapticLight HapticFeedback = iota
-	// HapticMedium represents medium haptic feedback.
-	HapticMedium
-	// HapticHeavy represents heavy haptic feedback.
-	HapticHeavy
-)
+// HapticFeedback type moved to types.go
 
 // TriggerHaptic triggers haptic feedback on mobile devices.
 // Platform-specific implementations should be provided via build tags:
@@ -210,71 +155,9 @@ func triggerHapticImpl(feedback HapticFeedback) {
 
 // Platform parity fix: System interruption and lifecycle management
 
-// AppLifecycleState represents the application lifecycle state.
-// Platform parity fix: Critical for handling system interruptions on mobile
-type AppLifecycleState int
-
-const (
-	// AppStateActive indicates app is in foreground and interactive
-	AppStateActive AppLifecycleState = iota
-	// AppStateInactive indicates app is in foreground but not interactive
-	// Platform parity fix: iOS - during interruptions (calls, notifications)
-	AppStateInactive
-	// AppStateBackground indicates app is in background
-	// Platform parity fix: Android - app minimized, iOS - home button pressed
-	AppStateBackground
-	// AppStateTerminating indicates app is about to be terminated
-	// Platform parity fix: Allows saving state before forced shutdown
-	AppStateTerminating
-)
-
-// String returns human-readable app state name.
-func (s AppLifecycleState) String() string {
-	switch s {
-	case AppStateActive:
-		return "Active"
-	case AppStateInactive:
-		return "Inactive"
-	case AppStateBackground:
-		return "Background"
-	case AppStateTerminating:
-		return "Terminating"
-	default:
-		return "Unknown"
-	}
-}
-
-// SystemInterruptionType represents types of system interruptions.
+// AppLifecycleState type moved to types.go
 // Platform parity fix: Different handling needed for different interruption types
-type SystemInterruptionType int
-
-const (
-	// InterruptionCall indicates incoming phone call
-	InterruptionCall SystemInterruptionType = iota
-	// InterruptionNotification indicates system notification
-	InterruptionNotification
-	// InterruptionLowMemory indicates low memory warning
-	// Platform parity fix: Should trigger cache clearing on mobile
-	InterruptionLowMemory
-	// InterruptionAudioRoute indicates audio route change (headphones unplugged)
-	InterruptionAudioRoute
-)
-
-// String returns human-readable interruption type name.
-func (t SystemInterruptionType) String() string {
-	switch t {
-	case InterruptionCall:
-		return "Call"
-	case InterruptionNotification:
-		return "Notification"
-	case InterruptionLowMemory:
-		return "LowMemory"
-	case InterruptionAudioRoute:
-		return "AudioRoute"
-	default:
-		return "Unknown"
-	}
-}
+// SystemInterruptionType type moved to types.go
 
 // AppLifecycleHandler manages application lifecycle events.
 // Platform parity fix: Centralizes platform-specific lifecycle handling
@@ -344,53 +227,7 @@ func (h *AppLifecycleHandler) IsBackground() bool {
 
 // WASMSecurityRestriction represents browser security limitations in WASM.
 // Platform parity fix: Documents and provides detection for WASM-specific constraints
-type WASMSecurityRestriction int
-
-const (
-	// RestrictionClipboard - WASM cannot access clipboard without user gesture
-	// Platform parity fix: navigator.clipboard requires user interaction (click/tap)
-	RestrictionClipboard WASMSecurityRestriction = iota
-
-	// RestrictionFullscreen - WASM fullscreen requires user gesture
-	// Platform parity fix: element.requestFullscreen() must be in event handler
-	RestrictionFullscreen
-
-	// RestrictionAutoplay - WASM cannot autoplay audio without user interaction
-	// Platform parity fix: Browser autoplay policies require user gesture for audio
-	RestrictionAutoplay
-
-	// RestrictionPointerLock - WASM pointer lock requires user gesture
-	// Platform parity fix: element.requestPointerLock() must be in event handler
-	RestrictionPointerLock
-
-	// RestrictionLocalStorage - WASM localStorage may be blocked in private mode
-	// Platform parity fix: Safari private browsing blocks localStorage
-	RestrictionLocalStorage
-
-	// RestrictionWebGL - WASM WebGL context may fail on some devices
-	// Platform parity fix: Mobile browsers may have limited WebGL support
-	RestrictionWebGL
-)
-
-// String returns human-readable restriction name.
-func (r WASMSecurityRestriction) String() string {
-	switch r {
-	case RestrictionClipboard:
-		return "Clipboard"
-	case RestrictionFullscreen:
-		return "Fullscreen"
-	case RestrictionAutoplay:
-		return "Autoplay"
-	case RestrictionPointerLock:
-		return "PointerLock"
-	case RestrictionLocalStorage:
-		return "LocalStorage"
-	case RestrictionWebGL:
-		return "WebGL"
-	default:
-		return "Unknown"
-	}
-}
+// WASMSecurityRestriction type moved to types.go
 
 // GetWASMRestrictionMessage returns a user-friendly message for a WASM restriction.
 // Platform parity fix: Provides clear guidance when browser blocks functionality

@@ -9,68 +9,7 @@ import (
 
 // TouchState represents the lifecycle state of a touch event.
 // Platform parity fix: Explicit state tracking for consistent event ordering across platforms
-type TouchState int
-
-// FocusState represents the focus state of the UI.
-// Platform parity fix: Track focus/blur states for input filtering
-type FocusState int
-
-const (
-	// FocusStateNormal indicates normal input processing
-	FocusStateNormal FocusState = iota
-	// FocusStateBlurred indicates UI has lost focus (tab backgrounded on web, app minimized on mobile)
-	// Platform parity fix: Critical for preserving state during interruptions
-	FocusStateBlurred
-	// FocusStateFocused indicates UI has explicit focus (text input active on mobile/web)
-	// Platform parity fix: Used to prevent game input when keyboard is active
-	FocusStateFocused
-)
-
-// String returns human-readable focus state name.
-func (fs FocusState) String() string {
-	switch fs {
-	case FocusStateNormal:
-		return "Normal"
-	case FocusStateBlurred:
-		return "Blurred"
-	case FocusStateFocused:
-		return "Focused"
-	default:
-		return "Unknown"
-	}
-}
-
-const (
-	// TouchStateStarted indicates touch just began this frame
-	TouchStateStarted TouchState = iota
-	// TouchStateMoved indicates touch is active and moving
-	TouchStateMoved
-	// TouchStateStationary indicates touch is active but not moving
-	TouchStateStationary
-	// TouchStateEnded indicates touch ended normally this frame
-	TouchStateEnded
-	// TouchStateCancelled indicates touch was interrupted (system event, app backgrounded)
-	// Platform parity fix: Critical for mobile - handles calls, notifications, app switching
-	TouchStateCancelled
-)
-
-// String returns human-readable touch state name.
-func (ts TouchState) String() string {
-	switch ts {
-	case TouchStateStarted:
-		return "Started"
-	case TouchStateMoved:
-		return "Moved"
-	case TouchStateStationary:
-		return "Stationary"
-	case TouchStateEnded:
-		return "Ended"
-	case TouchStateCancelled:
-		return "Cancelled"
-	default:
-		return "Unknown"
-	}
-}
+// TouchState and FocusState types moved to types.go
 
 // Touch represents a single touch point.
 // Platform parity fix: Enhanced touch state tracking for event ordering consistency

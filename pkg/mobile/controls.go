@@ -785,49 +785,7 @@ func (l *VirtualControlsLayout) Resize(screenWidth, screenHeight int) {
 
 // Platform parity fix: Cancel/undo gesture patterns for consistent UX
 
-// CancelGesture represents a cancel/undo gesture pattern.
-// Platform parity fix: Standardizes cancel actions across mouse/touch/keyboard
-type CancelGesture int
-
-const (
-	// GestureTwoFingerTap - Two fingers tap simultaneously (touch)
-	// Platform parity fix: Equivalent to Ctrl+Z or right-click cancel
-	GestureTwoFingerTap CancelGesture = iota
-
-	// GestureSwipeDown - Quick downward swipe (touch)
-	// Platform parity fix: Common mobile pattern for dismiss/close
-	GestureSwipeDown
-
-	// GestureEdgeSwipe - Swipe from screen edge (touch)
-	// Platform parity fix: iOS/Android back gesture equivalent
-	GestureEdgeSwipe
-
-	// GestureEscape - Escape key press (keyboard)
-	// Platform parity fix: Standard desktop cancel
-	GestureEscape
-
-	// GestureRightClick - Right mouse button (mouse)
-	// Platform parity fix: Standard desktop context menu/cancel
-	GestureRightClick
-)
-
-// String returns human-readable gesture name.
-func (g CancelGesture) String() string {
-	switch g {
-	case GestureTwoFingerTap:
-		return "TwoFingerTap"
-	case GestureSwipeDown:
-		return "SwipeDown"
-	case GestureEdgeSwipe:
-		return "EdgeSwipe"
-	case GestureEscape:
-		return "Escape"
-	case GestureRightClick:
-		return "RightClick"
-	default:
-		return "Unknown"
-	}
-}
+// CancelGesture type moved to types.go
 
 // SelectionState tracks selection state across input methods.
 // Platform parity fix: Unified selection/deselection for mouse/touch/keyboard

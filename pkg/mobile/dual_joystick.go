@@ -145,12 +145,7 @@ func (l *DualJoystickLayout) SetVisible(visible bool) {
 }
 
 // JoystickType defines the purpose of a virtual joystick.
-type JoystickType int
-
-const (
-	JoystickTypeMovement JoystickType = iota // Left joystick for WASD movement
-	JoystickTypeAim                          // Right joystick for mouse aim
-)
+// JoystickType type moved to types.go
 
 // VirtualJoystick represents a single virtual joystick with analog input.
 // Supports both floating and fixed joystick modes:

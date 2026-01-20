@@ -29,12 +29,11 @@
   - **Resolution:** Added `GetRNG()` method to `Blackboard` struct that returns a seeded `*rand.Rand`. Added `NewBlackboardWithSeed(seed int64)` constructor. Updated `NewFleeFromTargetAction` and `NewWanderAction` to use `blackboard.GetRNG()` instead of global `rand`. Added determinism tests: `TestWanderDeterminism`, `TestFleeRandomDirectionDeterminism`, `TestBlackboardRNG`.
   - **Verification:** `go test -v ./pkg/engine -run "TestWanderDeterminism|TestFleeRandomDirectionDeterminism|TestBlackboardRNG"`
 
-### 2. Non-Deterministic Random in Objective Tracker
+### ~~2. Non-Deterministic Random in Objective Tracker~~ ✅ FIXED (2026-01-20)
 
 - **[objective_tracker_system.go:L916](pkg/engine/objective_tracker_system.go#L916)**
-  - **Issue:** `rand.Intn(len(itemTypes))` uses global random state
-  - **Debug:** `grep -n "rand\.[IF]" pkg/engine/objective_tracker_system.go`
-  - **Fix:** Use seeded RNG from World or pass as parameter
+  - **Resolution:** Modified `inferItemTypeFromName` to accept a `seed int64` parameter. Updated the fallback case to use `rand.New(rand.NewSource(seed))` instead of global `rand.Intn`. Updated the call site to pass the existing `itemSeed` (derived from `qst.Seed + int64(i)*100`). Added determinism tests: `TestInferItemTypeFromNameDeterminism`, `TestInferItemTypeFromNameKeywords`.
+  - **Verification:** `go test -v ./pkg/engine -run "TestInferItemTypeFromName"`
 
 ### 3. Non-Deterministic Generation in Markov Dialog
 

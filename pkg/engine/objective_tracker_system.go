@@ -778,8 +778,8 @@ func (s *ObjectiveTrackerSystem) awardQuestItems(entity *Entity, qst *quest.Ques
 		// Create generation seed from quest seed and item index
 		itemSeed := qst.Seed + int64(i)*100
 
-		// Determine item type from name
-		itemType := s.inferItemTypeFromName(itemName)
+		// Determine item type from name (using seed for deterministic fallback)
+		itemType := s.inferItemTypeFromName(itemName, itemSeed)
 
 		log.WithFields(log.Fields{
 			"system_name": "objective_tracker",
@@ -861,7 +861,8 @@ func (s *ObjectiveTrackerSystem) awardQuestItems(entity *Entity, qst *quest.Ques
 
 // inferItemTypeFromName attempts to determine item type from the item name string.
 // Quest item names are descriptive (e.g., "healing potion", "iron sword", "leather armor").
-func (s *ObjectiveTrackerSystem) inferItemTypeFromName(itemName string) string {
+// The seed parameter ensures deterministic fallback selection when no keyword matches.
+func (s *ObjectiveTrackerSystem) inferItemTypeFromName(itemName string, seed int64) string {
 	log.WithFields(log.Fields{
 		"system_name": "objective_tracker",
 		"item_name":   itemName,
@@ -911,9 +912,10 @@ func (s *ObjectiveTrackerSystem) inferItemTypeFromName(itemName string) string {
 		}
 	}
 
-	// Default to random item type
+	// Default to deterministic item type selection based on seed
 	itemTypes := []string{"weapon", "armor", "consumable"}
-	selectedType := itemTypes[rand.Intn(len(itemTypes))]
+	rng := rand.New(rand.NewSource(seed))
+	selectedType := itemTypes[rng.Intn(len(itemTypes))]
 
 	log.WithFields(log.Fields{
 		"system_name": "objective_tracker",

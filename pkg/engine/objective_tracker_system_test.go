@@ -678,3 +678,80 @@ func TestObjectiveTrackerSystem_Integration(t *testing.T) {
 		t.Errorf("Gold = %d, want 50", inv.Gold)
 	}
 }
+
+// TestInferItemTypeFromNameDeterminism verifies that inferItemTypeFromName
+// produces deterministic results when using the fallback path (no keyword matches).
+func TestInferItemTypeFromNameDeterminism(t *testing.T) {
+	sys := NewObjectiveTrackerSystem()
+
+	// Test that same seed produces same result
+	testCases := []struct {
+		name     string
+		itemName string
+		seed     int64
+	}{
+		{"unknown_item_seed_42", "mysterious artifact", 42},
+		{"unknown_item_seed_12345", "ancient relic", 12345},
+		{"unknown_item_seed_999", "strange object", 999},
+		{"unknown_item_seed_0", "unusual thing", 0},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			// Generate result multiple times with same seed
+			result1 := sys.inferItemTypeFromName(tc.itemName, tc.seed)
+			result2 := sys.inferItemTypeFromName(tc.itemName, tc.seed)
+			result3 := sys.inferItemTypeFromName(tc.itemName, tc.seed)
+
+			// All results should be identical
+			if result1 != result2 || result2 != result3 {
+				t.Errorf("Non-deterministic results for seed %d: got %q, %q, %q",
+					tc.seed, result1, result2, result3)
+			}
+
+			// Result should be a valid item type
+			validTypes := map[string]bool{"weapon": true, "armor": true, "consumable": true}
+			if !validTypes[result1] {
+				t.Errorf("Invalid item type %q for seed %d", result1, tc.seed)
+			}
+		})
+	}
+}
+
+// TestInferItemTypeFromNameKeywords verifies that keyword matching still works
+// and takes precedence over the seeded fallback.
+func TestInferItemTypeFromNameKeywords(t *testing.T) {
+	sys := NewObjectiveTrackerSystem()
+
+	testCases := []struct {
+		itemName     string
+		expectedType string
+	}{
+		// Weapon keywords
+		{"iron sword", "weapon"},
+		{"battle axe", "weapon"},
+		{"longbow", "weapon"},
+		{"magic staff", "weapon"},
+		// Armor keywords
+		{"steel armor", "armor"},
+		{"iron helmet", "armor"},
+		{"leather boots", "armor"},
+		{"round shield", "armor"},
+		// Consumable keywords
+		{"healing potion", "consumable"},
+		{"fire elixir", "consumable"},
+		{"magic scroll", "consumable"},
+		{"bread food", "consumable"},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.itemName, func(t *testing.T) {
+			// Seed shouldn't matter when keyword matches
+			result := sys.inferItemTypeFromName(tc.itemName, 12345)
+			if result != tc.expectedType {
+				t.Errorf("inferItemTypeFromName(%q) = %q, want %q",
+					tc.itemName, result, tc.expectedType)
+			}
+		})
+	}
+}

@@ -58,7 +58,32 @@ Run tests with coverage:
 go test -v -cover ./pkg/errors/...
 ```
 
-Current coverage: **93.7%**
+Current coverage: **94.4%**
+
+## Package Structure
+
+After reorganization (2026-01-20), the package is organized for maximum navigability:
+
+```
+pkg/errors/
+├── constants.go        - ErrorType constant definitions (13 error types)
+├── types.go           - ErrorType type and String() method
+├── errors.go          - VentureError struct and core functions
+├── helpers.go         - Type-specific helper functions (24 functions)
+├── correlation.go     - Correlation ID support for distributed tracing
+├── doc.go             - Comprehensive package documentation
+├── AUDIT.md           - Implementation audit and quality metrics
+├── README.md          - This file
+├── errors_test.go     - Core error functionality tests
+└── correlation_test.go - Correlation ID tests
+```
+
+**File Organization Principles:**
+- **constants.go**: All error type constants in one place
+- **types.go**: ErrorType definition and methods
+- **errors.go**: VentureError struct, New/Wrap/Wrapf core functions
+- **helpers.go**: Convenience functions (Network, NetworkWrap, Validation, etc.)
+- **correlation.go**: Context integration and correlation ID management
 
 ## Documentation
 

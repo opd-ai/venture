@@ -1,3 +1,13 @@
+// File: types.go
+// Purpose: Core type definitions and Building methods
+//
+// This file defines all data structures used in building generation:
+// - Enum type declarations (BuildingType, ArchitecturalStyle, RoomType, etc.)
+// - Structural types (Room, Door, Window, Building)
+// - Building methods for validation and navigation
+// - Helper functions for style selection and validation
+//
+// Constants for these enums are defined in constants.go.
 package building
 
 import (
@@ -7,15 +17,6 @@ import (
 
 // BuildingType represents different building types
 type BuildingType int
-
-const (
-	TypeHouse BuildingType = iota
-	TypeWorkshop
-	TypeStorage
-	TypeTower
-	TypeManor
-	TypeGuildHall
-)
 
 // String returns the string representation of BuildingType
 func (t BuildingType) String() string {
@@ -39,43 +40,6 @@ func (t BuildingType) String() string {
 
 // ArchitecturalStyle represents different building styles per genre
 type ArchitecturalStyle int
-
-const (
-	// Fantasy styles
-	StyleMedieval ArchitecturalStyle = iota
-	StyleElven
-	StyleDwarven
-	StyleWizardTower
-	StyleVillage
-
-	// Sci-Fi styles
-	StyleModular
-	StyleBrutalist
-	StyleOrganic
-	StyleGeometric
-	StyleCrystalline
-
-	// Horror styles
-	StyleGothic
-	StyleDecayed
-	StyleAsylum
-	StyleMansion
-	StyleCrypt
-
-	// Cyberpunk styles
-	StyleNeon
-	StyleIndustrial
-	StyleCorporate
-	StyleUnderground
-	StyleMegastructure
-
-	// Post-Apocalyptic styles
-	StyleSalvage
-	StyleBunker
-	StyleRuins
-	StyleFortified
-	StyleScrapyard
-)
 
 // String returns the string representation of ArchitecturalStyle
 func (s ArchitecturalStyle) String() string {
@@ -139,17 +103,6 @@ type Room struct {
 // RoomType represents different room types
 type RoomType int
 
-const (
-	RoomEntrance RoomType = iota
-	RoomLiving
-	RoomBedroom
-	RoomStorage
-	RoomWorkshop
-	RoomKitchen
-	RoomHallway
-	RoomTower
-)
-
 // String returns the string representation of RoomType
 func (r RoomType) String() string {
 	switch r {
@@ -184,13 +137,6 @@ type Door struct {
 // DoorType represents different door types
 type DoorType int
 
-const (
-	DoorWooden DoorType = iota
-	DoorMetal
-	DoorGlass
-	DoorSecret
-)
-
 // String returns the string representation of DoorType
 func (d DoorType) String() string {
 	switch d {
@@ -217,13 +163,6 @@ type Window struct {
 // WindowType represents different window types
 type WindowType int
 
-const (
-	WindowSmall WindowType = iota
-	WindowLarge
-	WindowStained
-	WindowBroken
-)
-
 // String returns the string representation of WindowType
 func (w WindowType) String() string {
 	switch w {
@@ -242,14 +181,6 @@ func (w WindowType) String() string {
 
 // RoofType represents different roof types
 type RoofType int
-
-const (
-	RoofFlat RoofType = iota
-	RoofGabled
-	RoofHipped
-	RoofDomed
-	RoofSpire
-)
 
 // String returns the string representation of RoofType
 func (r RoofType) String() string {

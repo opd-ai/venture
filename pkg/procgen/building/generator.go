@@ -1,3 +1,14 @@
+// File: generator.go
+// Purpose: Building generation implementation
+//
+// This file implements the procgen.Generator interface for procedural building
+// generation. It contains:
+// - Generator struct implementing the interface
+// - Generate and Validate methods
+// - Layout generation algorithms for each building type (House, Workshop, Storage, Tower, Manor, GuildHall)
+// - Helper methods for dimensions, floor plans, roofs, and windows
+//
+// All generation is deterministic using seed-based RNG.
 package building
 
 import (

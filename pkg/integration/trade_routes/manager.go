@@ -1,3 +1,15 @@
+// File: manager.go
+// Purpose: RouteManager implementation for trade route management
+//
+// This file implements the core trade route management logic:
+// - RouteManager: Central manager for all trade routes
+// - Route lifecycle: Creation, activation, progress tracking, completion
+// - Bandit encounter system: Spawning, combat resolution, outcomes
+// - Escort missions: Player protection quests with rewards
+// - Route optimization: Danger zones, profit margins, travel time
+// - Caravan creation: Integration with vehicle generator
+//
+// All route updates run on a background goroutine (1-second tick rate).
 package trade_routes
 
 import (

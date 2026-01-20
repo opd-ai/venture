@@ -1,3 +1,15 @@
+// File: types.go
+// Purpose: Core type definitions for automated trade routes
+//
+// This file defines all data structures used in the trade route system:
+// - TradeRoute: Main route structure with cargo, progress, and status
+// - CargoItem, RouteOptimization, DangerZone: Supporting route types
+// - BanditEncounter: Combat encounters on routes
+// - EscortMission: Player protection missions
+// - GuildSponsorship: Guild funding for market manipulation
+// - Enum type declarations (RouteStatus, EncounterOutcome, MissionStatus)
+//
+// Constants for these enums are defined in constants.go.
 // Package trade_routes implements automated AI merchant caravan systems for cross-server trading.
 //
 // Phase 57.3: Automated Trade Routes
@@ -78,26 +90,6 @@ type TradeRoute struct {
 
 // RouteStatus represents the current state of a trade route.
 type RouteStatus int
-
-const (
-	// StatusPlanning indicates route is being calculated
-	StatusPlanning RouteStatus = iota
-
-	// StatusActive indicates caravan is traveling
-	StatusActive
-
-	// StatusUnderAttack indicates bandits are engaging
-	StatusUnderAttack
-
-	// StatusCompleted indicates successful arrival
-	StatusCompleted
-
-	// StatusFailed indicates route failed (attacked, vehicle destroyed)
-	StatusFailed
-
-	// StatusCancelled indicates route was manually cancelled
-	StatusCancelled
-)
 
 // String returns the string representation of route status.
 func (s RouteStatus) String() string {
@@ -224,23 +216,6 @@ type BanditEncounter struct {
 // EncounterOutcome represents the result of a bandit attack.
 type EncounterOutcome int
 
-const (
-	// OutcomePending indicates combat is ongoing
-	OutcomePending EncounterOutcome = iota
-
-	// OutcomeDefended indicates successful defense
-	OutcomeDefended
-
-	// OutcomeCompromised indicates partial cargo loss
-	OutcomeCompromised
-
-	// OutcomeDestroyed indicates total caravan loss
-	OutcomeDestroyed
-
-	// OutcomeEvaded indicates successful escape
-	OutcomeEvaded
-)
-
 // String returns the string representation of encounter outcome.
 func (o EncounterOutcome) String() string {
 	switch o {
@@ -288,23 +263,6 @@ type EscortMission struct {
 
 // MissionStatus represents the state of an escort mission.
 type MissionStatus int
-
-const (
-	// MissionAvailable indicates mission can be accepted
-	MissionAvailable MissionStatus = iota
-
-	// MissionActive indicates player is escorting
-	MissionActive
-
-	// MissionCompleted indicates successful completion
-	MissionCompleted
-
-	// MissionFailed indicates route failed
-	MissionFailed
-
-	// MissionAbandoned indicates player cancelled
-	MissionAbandoned
-)
 
 // String returns the string representation of mission status.
 func (s MissionStatus) String() string {

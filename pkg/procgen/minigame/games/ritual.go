@@ -1,3 +1,6 @@
+// RitualGame implements spell pattern drawing for fantasy/horror genres.
+// This file contains the RitualGame implementation where players must
+// accurately draw procedurally-generated symbols to complete a ritual.
 package games
 
 import (

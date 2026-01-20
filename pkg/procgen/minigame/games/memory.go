@@ -1,3 +1,6 @@
+// MemoryGame implements card pair matching and sequence repetition games.
+// This file contains the MemoryGame implementation where players must
+// match pairs within a limited number of attempts.
 package games
 
 import (

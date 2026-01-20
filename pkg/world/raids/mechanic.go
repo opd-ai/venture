@@ -1,3 +1,6 @@
+// MechanicGenerator generates procedural boss mechanics (summons, debuffs, AoE).
+// This file creates diverse boss abilities that scale with raid tier and
+// provide varied encounter mechanics.
 package raids
 
 import (

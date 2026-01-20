@@ -1,3 +1,6 @@
+// Generator generates procedural raid dungeons with bosses, mechanics, and loot.
+// This file implements the procgen.Generator interface for creating complete
+// raid instances with terrain, rooms, and encounters.
 package raids
 
 import (

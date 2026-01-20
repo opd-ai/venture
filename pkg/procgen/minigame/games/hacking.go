@@ -1,3 +1,6 @@
+// HackingGame implements terminal/console code-breaking puzzles for sci-fi themes.
+// This file contains the HackingGame implementation where players must
+// deduce an alphanumeric code using feedback hints.
 package games
 
 import (

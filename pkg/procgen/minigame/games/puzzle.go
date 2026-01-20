@@ -1,3 +1,6 @@
+// PuzzleGame implements sliding tile and pattern matching puzzles.
+// This file contains the PuzzleGame implementation where players must
+// rearrange a shuffled grid to match the solution pattern.
 package games
 
 import (

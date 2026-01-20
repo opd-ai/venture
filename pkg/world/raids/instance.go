@@ -1,3 +1,6 @@
+// InstanceManager manages active raid instances with timeout and cleanup.
+// This file provides instance lifecycle management, ensuring groups have
+// isolated dungeon instances that expire after 4 hours.
 package raids
 
 import (

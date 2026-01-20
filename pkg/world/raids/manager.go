@@ -1,3 +1,6 @@
+// Manager provides a unified interface for raid generation, instances, and lockouts.
+// This file coordinates between Generator, InstanceManager, and LockoutManager
+// to provide a single entry point for all raid operations.
 package raids
 
 import (

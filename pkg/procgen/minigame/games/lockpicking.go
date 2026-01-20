@@ -1,3 +1,6 @@
+// LockPickingGame implements timing-based lock-picking challenges.
+// This file contains the LockPickingGame implementation where players must
+// align pins within timing windows to successfully pick a lock.
 package games
 
 import (

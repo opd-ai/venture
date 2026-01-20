@@ -1,3 +1,6 @@
+// DiceGame implements custom dice game with betting mechanics.
+// This file contains the DiceGame implementation where players compete
+// against an AI opponent by rolling multiple dice per round.
 package games
 
 import (

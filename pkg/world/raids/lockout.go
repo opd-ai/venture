@@ -1,3 +1,6 @@
+// LockoutManager manages raid lockouts for players with 7-day reset periods.
+// This file tracks which players have completed which raid tiers and when
+// they can participate again.
 package raids
 
 import (

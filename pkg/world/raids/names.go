@@ -1,3 +1,6 @@
+// BossNameGenerator generates procedural raid and boss names based on genre.
+// This file creates thematically appropriate names for raids and bosses using
+// genre-specific prefixes, suffixes, and title templates.
 package raids
 
 import (

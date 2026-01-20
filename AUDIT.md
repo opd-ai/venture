@@ -35,22 +35,11 @@
   - **Resolution:** Modified `inferItemTypeFromName` to accept a `seed int64` parameter. Updated the fallback case to use `rand.New(rand.NewSource(seed))` instead of global `rand.Intn`. Updated the call site to pass the existing `itemSeed` (derived from `qst.Seed + int64(i)*100`). Added determinism tests: `TestInferItemTypeFromNameDeterminism`, `TestInferItemTypeFromNameKeywords`.
   - **Verification:** `go test -v ./pkg/engine -run "TestInferItemTypeFromName"`
 
-### 3. Non-Deterministic Generation in Markov Dialog
+### ~~3. Non-Deterministic Generation in Markov Dialog~~ ✅ FIXED (2026-01-20)
 
 - **[pkg/procgen/dialog/markov.go:L370](pkg/procgen/dialog/markov.go#L370)**
-  - **Issue:** Uses `time.Now().UnixNano()` for seed generation, breaking determinism
-  - **Debug:** Run same conversation twice, compare dialog outputs
-  - **Expected:** Same conversationID should produce identical dialog
-  - **Actual:** Different results each run due to timestamp-based seeding
-  - **Fix:** Remove time.Now() and use only conversationID for hashing:
-    ```go
-    // Before
-    timestamp := time.Now().UnixNano()
-    binary.Write(h, binary.LittleEndian, timestamp)
-    
-    // After - remove timestamp entirely, use only conversationID
-    ```
-  - **Note:** The code comment in `markov.go` describes this as "controlled non-determinism", indicating the behavior may be intentional. This conflicts with the project's strict determinism guideline. Team should decide if dialog generation is exempt from determinism requirements and update documentation/rules accordingly.
+  - **Resolution:** Removed `time.Now().UnixNano()` from `deriveRuntimeSeed()`. The function now creates a deterministic seed from only base seed, player input, and conversation ID. Updated function documentation to reflect the deterministic behavior. Removed unused `time` import. Added new test `TestGenerateDeterminismWithSameInputs` to verify `Generate()` produces consistent output for same inputs.
+  - **Verification:** `go test -v ./pkg/procgen/dialog -run "TestGenerateDeterminism"`
 
 ### 4. time.Now() Usage in Legendary Quest Progress Tracker (Runtime State)
 
@@ -444,9 +433,9 @@ All 100+ example packages in `examples/` have 0% coverage, which is expected as 
 
 ### Immediate (Critical)
 
-1. Fix non-deterministic `rand` usage in `behavior_tree_actions.go`
-2. Fix non-deterministic `rand` usage in `objective_tracker_system.go`
-3. Remove `time.Now()` from `markov.go` seed generation
+1. ~~Fix non-deterministic `rand` usage in `behavior_tree_actions.go`~~ ✅
+2. ~~Fix non-deterministic `rand` usage in `objective_tracker_system.go`~~ ✅
+3. ~~Remove `time.Now()` from `markov.go` seed generation~~ ✅
 4. Convert panic to error return in `network/helpers.go`
 
 ### Short Term (Architecture)
@@ -496,7 +485,7 @@ grep -rn "\.\(\*net\.\(UDP\|TCP\)" pkg/
 
 | Category | Count |
 |----------|-------|
-| **Critical** | 5 (1 fixed) |
+| **Critical** | 5 (3 fixed) |
 | **Architecture Violations** | 5 major components (~50-100 methods) |
 | **Performance** | 0 blocking issues |
 | **Memory** | 0 blocking issues |
@@ -510,4 +499,4 @@ grep -rn "\.\(\*net\.\(UDP\|TCP\)" pkg/
 **Total Go Files Examined:** 1,616  
 **Lines of Code:** 587,782  
 
-**Top Priority:** Fix non-deterministic random usage in `objective_tracker_system.go` - this affects quest objective generation reproducibility.
+**Top Priority:** Convert panic to error return in `network/helpers.go` - library code should not panic.

@@ -7,7 +7,6 @@ import (
 	"math/rand"
 	"sort"
 	"strings"
-	"time"
 )
 
 // MarkovOrder defines the n-gram size for the Markov chain.
@@ -343,17 +342,16 @@ func calculateTemperatureWeights(freq map[string]float64, sortedWords []string, 
 	return weights, totalWeight
 }
 
-// deriveRuntimeSeed creates a seed from player input, conversation ID, and timestamp.
+// deriveRuntimeSeed creates a deterministic seed from player input and conversation ID.
 //
-// This introduces controlled non-determinism:
-//   - Same conversation with same input at different times = different responses
+// This ensures reproducible dialog generation (same seed + input = same output):
 //   - Different conversations with same input = different responses
+//   - Same conversation with same input = same response
 //
 // The hash combines:
 //  1. Base seed (world consistency)
 //  2. Player input (context)
 //  3. Conversation ID (thread uniqueness)
-//  4. Timestamp (temporal variation)
 func (m *MarkovGenerator) deriveRuntimeSeed(playerInput, conversationID string) int64 {
 	h := sha256.New()
 
@@ -365,10 +363,6 @@ func (m *MarkovGenerator) deriveRuntimeSeed(playerInput, conversationID string) 
 
 	// Write conversation ID
 	h.Write([]byte(conversationID))
-
-	// Write timestamp (source of non-determinism)
-	timestamp := time.Now().UnixNano()
-	binary.Write(h, binary.LittleEndian, timestamp)
 
 	// Extract int64 from hash
 	hash := h.Sum(nil)

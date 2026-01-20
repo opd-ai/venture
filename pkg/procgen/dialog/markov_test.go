@@ -129,7 +129,45 @@ func TestGenerateDeterministic(t *testing.T) {
 	}
 }
 
-// TestGenerateVariation verifies non-deterministic variation.
+// TestGenerateDeterminismWithSameInputs verifies Generate is deterministic for same inputs.
+// This tests that deriveRuntimeSeed produces reproducible results without time.Now().
+func TestGenerateDeterminismWithSameInputs(t *testing.T) {
+	corpus := GetFantasyCorpus()
+
+	// Create two generators with same seed
+	gen1 := NewMarkovGenerator(12345, "fantasy", Order2)
+	gen1.TrainFromCorpus(corpus.Sentences)
+
+	gen2 := NewMarkovGenerator(12345, "fantasy", Order2)
+	gen2.TrainFromCorpus(corpus.Sentences)
+
+	params := GenerateParams{
+		PlayerInput:    "Tell me about the quest",
+		ConversationID: "conv-abc-123",
+		MaxWords:       25,
+		MinWords:       8,
+		Temperature:    0.7,
+	}
+
+	// Call Generate multiple times - should be consistent
+	result1a := gen1.Generate(params)
+	result1b := gen1.Generate(params)
+	result2 := gen2.Generate(params)
+
+	if result1a == "" {
+		t.Fatal("Generate returned empty string")
+	}
+
+	if result1a != result1b {
+		t.Errorf("same generator, same params should produce same output:\n  call1: %s\n  call2: %s", result1a, result1b)
+	}
+
+	if result1a != result2 {
+		t.Errorf("different generators with same seed/params should produce same output:\n  gen1: %s\n  gen2: %s", result1a, result2)
+	}
+}
+
+// TestGenerateVariation verifies variation with different inputs.
 func TestGenerateVariation(t *testing.T) {
 	corpus := GetFantasyCorpus()
 	gen := NewMarkovGenerator(12345, "fantasy", Order2)

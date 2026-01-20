@@ -1,3 +1,6 @@
+// Package qol - types.go
+// This file contains all type definitions, constants, and helper functions for QoL features.
+
 package qol
 
 import (

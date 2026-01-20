@@ -1,3 +1,6 @@
+// Package fluids - types.go
+// This file contains all type definitions, constants, and helper functions for fluid simulation.
+
 package fluids
 
 import (

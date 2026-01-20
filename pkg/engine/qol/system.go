@@ -1,3 +1,6 @@
+// Package qol - system.go
+// This file contains the unified Manager that coordinates all QoL subsystems.
+
 package qol
 
 import (

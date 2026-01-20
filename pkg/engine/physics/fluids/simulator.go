@@ -1,3 +1,6 @@
+// Package fluids - simulator.go
+// This file contains the Simulator implementation for grid-based fluid dynamics simulation.
+
 package fluids
 
 import (

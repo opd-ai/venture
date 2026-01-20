@@ -1,3 +1,9 @@
+// validator.go implements configuration validation logic.
+// This file contains the Validator type and all validation methods
+// for server and client configuration parameters. It validates ports,
+// player limits, tick rates, genres, and directory paths.
+//
+// Package config provides configuration validation utilities.
 package config
 
 import (
@@ -170,16 +176,3 @@ func (v *Validator) ValidateAll(cfg *Config) error {
 	return nil
 }
 
-// Config holds configuration values to validate.
-type Config struct {
-	Port               string
-	MaxPlayers         int
-	ValidateMaxPlayers bool // Whether to validate MaxPlayers field
-	TickRate           int
-	ValidateTickRate   bool // Whether to validate TickRate field
-	Genre              string
-	SaveDir            string
-	LogDir             string
-	ModsDir            string
-	CreateDirs         bool // Whether to create missing directories
-}

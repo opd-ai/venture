@@ -1,0 +1,1281 @@
+=== RUN   TestChunkCompressionSystem_New
+--- PASS: TestChunkCompressionSystem_New (0.00s)
+=== RUN   TestChunkCompressionSystem_CompressUniform
+--- PASS: TestChunkCompressionSystem_CompressUniform (0.00s)
+=== RUN   TestChunkCompressionSystem_CompressVaried
+--- PASS: TestChunkCompressionSystem_CompressVaried (0.00s)
+=== RUN   TestChunkCompressionSystem_RoundTrip
+--- PASS: TestChunkCompressionSystem_RoundTrip (0.00s)
+=== RUN   TestChunkCompressionSystem_EmptyChunk
+--- PASS: TestChunkCompressionSystem_EmptyChunk (0.00s)
+=== RUN   TestChunkCompressionSystem_DecompressEmpty
+--- PASS: TestChunkCompressionSystem_DecompressEmpty (0.00s)
+=== RUN   TestChunkCompressionSystem_EstimateRatio
+=== RUN   TestChunkCompressionSystem_EstimateRatio/uniform_terrain
+=== RUN   TestChunkCompressionSystem_EstimateRatio/varied_terrain
+=== RUN   TestChunkCompressionSystem_EstimateRatio/pattern_terrain
+--- PASS: TestChunkCompressionSystem_EstimateRatio (0.00s)
+    --- PASS: TestChunkCompressionSystem_EstimateRatio/uniform_terrain (0.00s)
+    --- PASS: TestChunkCompressionSystem_EstimateRatio/varied_terrain (0.00s)
+    --- PASS: TestChunkCompressionSystem_EstimateRatio/pattern_terrain (0.00s)
+=== RUN   TestChunkCompressionSystem_GetMemorySize
+--- PASS: TestChunkCompressionSystem_GetMemorySize (0.00s)
+=== RUN   TestChunkCompressionSystem_MemorySizeTarget
+--- PASS: TestChunkCompressionSystem_MemorySizeTarget (0.00s)
+=== RUN   TestChunkCompressionSystem_MultipleRuns
+--- PASS: TestChunkCompressionSystem_MultipleRuns (0.00s)
+=== RUN   TestChunkLoaderSystem_New
+--- PASS: TestChunkLoaderSystem_New (0.00s)
+=== RUN   TestChunkLoaderSystem_SetLoadRadius
+--- PASS: TestChunkLoaderSystem_SetLoadRadius (0.00s)
+=== RUN   TestChunkLoaderSystem_Update
+--- PASS: TestChunkLoaderSystem_Update (0.00s)
+=== RUN   TestChunkLoaderSystem_MultiplePlayersLoading
+--- PASS: TestChunkLoaderSystem_MultiplePlayersLoading (0.00s)
+=== RUN   TestChunkLoaderSystem_Unloading
+--- PASS: TestChunkLoaderSystem_Unloading (0.00s)
+=== RUN   TestChunkLoaderSystem_GetChunk
+--- PASS: TestChunkLoaderSystem_GetChunk (0.00s)
+=== RUN   TestChunkLoaderSystem_LoadTime
+--- PASS: TestChunkLoaderSystem_LoadTime (0.00s)
+=== RUN   TestChunkCoordsToID
+--- PASS: TestChunkCoordsToID (0.00s)
+=== RUN   TestChunkModificationSystem_New
+--- PASS: TestChunkModificationSystem_New (0.00s)
+=== RUN   TestChunkModificationSystem_ModifyTerrain
+--- PASS: TestChunkModificationSystem_ModifyTerrain (0.00s)
+=== RUN   TestChunkModificationSystem_ModifyMultipleTiles
+--- PASS: TestChunkModificationSystem_ModifyMultipleTiles (0.00s)
+=== RUN   TestChunkModificationSystem_AddModification
+--- PASS: TestChunkModificationSystem_AddModification (0.00s)
+=== RUN   TestChunkModificationSystem_MultipleModifications
+--- PASS: TestChunkModificationSystem_MultipleModifications (0.00s)
+=== RUN   TestChunkModificationSystem_GetModifiedChunks
+--- PASS: TestChunkModificationSystem_GetModifiedChunks (0.00s)
+=== RUN   TestChunkModificationSystem_ClearDirtyFlags
+--- PASS: TestChunkModificationSystem_ClearDirtyFlags (0.00s)
+=== RUN   TestChunkModificationSystem_GetModificationCount
+--- PASS: TestChunkModificationSystem_GetModificationCount (0.00s)
+=== RUN   TestChunkModificationSystem_HasModifications
+--- PASS: TestChunkModificationSystem_HasModifications (0.00s)
+=== RUN   TestChunkModificationSystem_NegativeCoordinates
+    chunk_modification_test.go:279: Dirty chunk: 0,0
+--- PASS: TestChunkModificationSystem_NegativeCoordinates (0.00s)
+=== RUN   TestEventType_String
+=== RUN   TestEventType_String/tournament
+=== RUN   TestEventType_String/server_vs_server
+=== RUN   TestEventType_String/world_threat
+=== RUN   TestEventType_String/seasonal_challenge
+=== RUN   TestEventType_String/economic_crisis
+=== RUN   TestEventType_String/unknown
+--- PASS: TestEventType_String (0.00s)
+    --- PASS: TestEventType_String/tournament (0.00s)
+    --- PASS: TestEventType_String/server_vs_server (0.00s)
+    --- PASS: TestEventType_String/world_threat (0.00s)
+    --- PASS: TestEventType_String/seasonal_challenge (0.00s)
+    --- PASS: TestEventType_String/economic_crisis (0.00s)
+    --- PASS: TestEventType_String/unknown (0.00s)
+=== RUN   TestNewEventManager
+--- PASS: TestNewEventManager (0.00s)
+=== RUN   TestCreateTournament
+--- PASS: TestCreateTournament (0.00s)
+=== RUN   TestCreateServerVsServer
+--- PASS: TestCreateServerVsServer (0.00s)
+=== RUN   TestCreateWorldThreat
+--- PASS: TestCreateWorldThreat (0.00s)
+=== RUN   TestCreateSeasonalChallenge
+--- PASS: TestCreateSeasonalChallenge (0.00s)
+=== RUN   TestCreateEconomicCrisis
+--- PASS: TestCreateEconomicCrisis (0.00s)
+=== RUN   TestRegisterParticipant
+--- PASS: TestRegisterParticipant (0.00s)
+=== RUN   TestRegisterParticipant_Duplicate
+--- PASS: TestRegisterParticipant_Duplicate (0.00s)
+=== RUN   TestRegisterParticipant_NonExistent
+--- PASS: TestRegisterParticipant_NonExistent (0.00s)
+=== RUN   TestRegisterParticipant_Inactive
+--- PASS: TestRegisterParticipant_Inactive (0.00s)
+=== RUN   TestUpdateProgress
+--- PASS: TestUpdateProgress (0.00s)
+=== RUN   TestUpdateProgress_MultipleUpdates
+--- PASS: TestUpdateProgress_MultipleUpdates (0.00s)
+=== RUN   TestUpdateProgress_Unregistered
+--- PASS: TestUpdateProgress_Unregistered (0.00s)
+=== RUN   TestCheckCompletion_WorldThreat
+--- PASS: TestCheckCompletion_WorldThreat (0.00s)
+=== RUN   TestCheckCompletion_ServerVsServer
+--- PASS: TestCheckCompletion_ServerVsServer (0.00s)
+=== RUN   TestCheckCompletion_Expired
+--- PASS: TestCheckCompletion_Expired (0.01s)
+=== RUN   TestGetActiveEvents
+--- PASS: TestGetActiveEvents (0.00s)
+=== RUN   TestGetEventsByType
+--- PASS: TestGetEventsByType (0.00s)
+=== RUN   TestGetEvent
+--- PASS: TestGetEvent (0.00s)
+=== RUN   TestGetEvent_NonExistent
+--- PASS: TestGetEvent_NonExistent (0.00s)
+=== RUN   TestEventManager_Update
+--- PASS: TestEventManager_Update (0.01s)
+=== RUN   TestGetEventCount
+--- PASS: TestGetEventCount (0.00s)
+=== RUN   TestGetActiveEventCount
+--- PASS: TestGetActiveEventCount (0.00s)
+=== RUN   TestCancelEvent
+--- PASS: TestCancelEvent (0.00s)
+=== RUN   TestCancelEvent_NonExistent
+--- PASS: TestCancelEvent_NonExistent (0.00s)
+=== RUN   TestDeterministicWorldThreat
+--- PASS: TestDeterministicWorldThreat (0.00s)
+=== RUN   TestMultipleServersProgress
+--- PASS: TestMultipleServersProgress (0.00s)
+=== RUN   TestCheckCompletion_Tournament
+--- PASS: TestCheckCompletion_Tournament (0.00s)
+=== RUN   TestCheckCompletion_SeasonalChallenge
+--- PASS: TestCheckCompletion_SeasonalChallenge (0.00s)
+=== RUN   TestCheckCompletion_NonExistent
+--- PASS: TestCheckCompletion_NonExistent (0.00s)
+=== RUN   TestSaveWorldWithContext
+--- PASS: TestSaveWorldWithContext (0.00s)
+=== RUN   TestSaveWorldContextCancellation
+--- PASS: TestSaveWorldContextCancellation (0.01s)
+=== RUN   TestSaveWorldContextTimeout
+--- PASS: TestSaveWorldContextTimeout (0.02s)
+=== RUN   TestLoadWorldWithContext
+--- PASS: TestLoadWorldWithContext (0.00s)
+=== RUN   TestLoadWorldContextCancellation
+--- PASS: TestLoadWorldContextCancellation (0.01s)
+=== RUN   TestLoadWorldBackupRecovery
+--- PASS: TestLoadWorldBackupRecovery (0.00s)
+=== RUN   TestSaveIncrementalWithContext
+--- PASS: TestSaveIncrementalWithContext (0.00s)
+=== RUN   TestCopyFileErrorHandling
+--- PASS: TestCopyFileErrorHandling (0.00s)
+=== RUN   TestLoadWorldNonExistent
+--- PASS: TestLoadWorldNonExistent (0.00s)
+=== RUN   TestBackwardCompatibility
+--- PASS: TestBackwardCompatibility (0.00s)
+=== RUN   TestNewWorldPersistence
+--- PASS: TestNewWorldPersistence (0.00s)
+=== RUN   TestSaveLoadRoundTrip
+--- PASS: TestSaveLoadRoundTrip (0.00s)
+=== RUN   TestLoadNonExistentFile
+--- PASS: TestLoadNonExistentFile (0.00s)
+=== RUN   TestBackupRotation
+--- PASS: TestBackupRotation (0.01s)
+=== RUN   TestBackupRotationMultiple
+--- PASS: TestBackupRotationMultiple (0.05s)
+=== RUN   TestIncrementalSave
+--- PASS: TestIncrementalSave (0.00s)
+=== RUN   TestIncrementalSaveFallback
+--- PASS: TestIncrementalSaveFallback (0.00s)
+=== RUN   TestCleanupBackups
+--- PASS: TestCleanupBackups (0.04s)
+=== RUN   TestListBackups
+--- PASS: TestListBackups (0.03s)
+=== RUN   TestUpdate
+--- PASS: TestUpdate (0.00s)
+=== RUN   TestNewRankingManager
+--- PASS: TestNewRankingManager (0.00s)
+=== RUN   TestRegisterServer
+--- PASS: TestRegisterServer (0.00s)
+=== RUN   TestUpdatePopulation
+--- PASS: TestUpdatePopulation (0.00s)
+=== RUN   TestUpdateEconomicPower
+--- PASS: TestUpdateEconomicPower (0.00s)
+=== RUN   TestUpdateMilitaryStrength
+--- PASS: TestUpdateMilitaryStrength (0.00s)
+=== RUN   TestUpdateDiplomaticInfluence
+--- PASS: TestUpdateDiplomaticInfluence (0.00s)
+=== RUN   TestGetLeaderboardPopulation
+--- PASS: TestGetLeaderboardPopulation (0.00s)
+=== RUN   TestGetLeaderboardEconomic
+--- PASS: TestGetLeaderboardEconomic (0.00s)
+=== RUN   TestGetLeaderboardMilitary
+--- PASS: TestGetLeaderboardMilitary (0.00s)
+=== RUN   TestGetLeaderboardDiplomatic
+--- PASS: TestGetLeaderboardDiplomatic (0.00s)
+=== RUN   TestGetLeaderboardOverall
+--- PASS: TestGetLeaderboardOverall (0.00s)
+=== RUN   TestGetLeaderboardLimit
+--- PASS: TestGetLeaderboardLimit (0.00s)
+=== RUN   TestGetTopServer
+--- PASS: TestGetTopServer (0.00s)
+=== RUN   TestGetTopServerEmpty
+--- PASS: TestGetTopServerEmpty (0.00s)
+=== RUN   TestGetServerPosition
+--- PASS: TestGetServerPosition (0.00s)
+=== RUN   TestGetServerPositionNotFound
+--- PASS: TestGetServerPositionNotFound (0.00s)
+=== RUN   TestRemoveServer
+--- PASS: TestRemoveServer (0.00s)
+=== RUN   TestLeaderboardTypeString
+=== RUN   TestLeaderboardTypeString/Population
+=== RUN   TestLeaderboardTypeString/Economic_Power
+=== RUN   TestLeaderboardTypeString/Military_Strength
+=== RUN   TestLeaderboardTypeString/Diplomatic_Influence
+=== RUN   TestLeaderboardTypeString/Overall_Score
+=== RUN   TestLeaderboardTypeString/Unknown
+--- PASS: TestLeaderboardTypeString (0.00s)
+    --- PASS: TestLeaderboardTypeString/Population (0.00s)
+    --- PASS: TestLeaderboardTypeString/Economic_Power (0.00s)
+    --- PASS: TestLeaderboardTypeString/Military_Strength (0.00s)
+    --- PASS: TestLeaderboardTypeString/Diplomatic_Influence (0.00s)
+    --- PASS: TestLeaderboardTypeString/Overall_Score (0.00s)
+    --- PASS: TestLeaderboardTypeString/Unknown (0.00s)
+=== RUN   TestConcurrentUpdates
+--- PASS: TestConcurrentUpdates (0.00s)
+=== RUN   TestNewMap
+=== RUN   TestNewMap/small_map
+=== RUN   TestNewMap/rectangular_map
+=== RUN   TestNewMap/large_map
+=== RUN   TestNewMap/single_tile
+--- PASS: TestNewMap (0.00s)
+    --- PASS: TestNewMap/small_map (0.00s)
+    --- PASS: TestNewMap/rectangular_map (0.00s)
+    --- PASS: TestNewMap/large_map (0.00s)
+    --- PASS: TestNewMap/single_tile (0.00s)
+=== RUN   TestGetTile
+=== RUN   TestGetTile/top_left_corner
+=== RUN   TestGetTile/bottom_right_corner
+=== RUN   TestGetTile/middle_tile
+=== RUN   TestGetTile/negative_x
+=== RUN   TestGetTile/negative_y
+=== RUN   TestGetTile/out_of_bounds_x
+=== RUN   TestGetTile/out_of_bounds_y
+=== RUN   TestGetTile/both_negative
+=== RUN   TestGetTile/both_out_of_bounds
+--- PASS: TestGetTile (0.00s)
+    --- PASS: TestGetTile/top_left_corner (0.00s)
+    --- PASS: TestGetTile/bottom_right_corner (0.00s)
+    --- PASS: TestGetTile/middle_tile (0.00s)
+    --- PASS: TestGetTile/negative_x (0.00s)
+    --- PASS: TestGetTile/negative_y (0.00s)
+    --- PASS: TestGetTile/out_of_bounds_x (0.00s)
+    --- PASS: TestGetTile/out_of_bounds_y (0.00s)
+    --- PASS: TestGetTile/both_negative (0.00s)
+    --- PASS: TestGetTile/both_out_of_bounds (0.00s)
+=== RUN   TestSetTile
+=== RUN   TestSetTile/set_wall
+=== RUN   TestSetTile/set_floor
+=== RUN   TestSetTile/set_door
+=== RUN   TestSetTile/set_water
+=== RUN   TestSetTile/negative_x
+=== RUN   TestSetTile/negative_y
+=== RUN   TestSetTile/out_of_bounds_x
+=== RUN   TestSetTile/out_of_bounds_y
+--- PASS: TestSetTile (0.00s)
+    --- PASS: TestSetTile/set_wall (0.00s)
+    --- PASS: TestSetTile/set_floor (0.00s)
+    --- PASS: TestSetTile/set_door (0.00s)
+    --- PASS: TestSetTile/set_water (0.00s)
+    --- PASS: TestSetTile/negative_x (0.00s)
+    --- PASS: TestSetTile/negative_y (0.00s)
+    --- PASS: TestSetTile/out_of_bounds_x (0.00s)
+    --- PASS: TestSetTile/out_of_bounds_y (0.00s)
+=== RUN   TestIsWalkable
+=== RUN   TestIsWalkable/empty_tile_default
+=== RUN   TestIsWalkable/floor_tile
+=== RUN   TestIsWalkable/wall_tile
+=== RUN   TestIsWalkable/door_tile
+=== RUN   TestIsWalkable/water_tile
+=== RUN   TestIsWalkable/out_of_bounds_negative
+=== RUN   TestIsWalkable/out_of_bounds_positive
+=== RUN   TestIsWalkable/out_of_bounds_x
+=== RUN   TestIsWalkable/out_of_bounds_y
+--- PASS: TestIsWalkable (0.00s)
+    --- PASS: TestIsWalkable/empty_tile_default (0.00s)
+    --- PASS: TestIsWalkable/floor_tile (0.00s)
+    --- PASS: TestIsWalkable/wall_tile (0.00s)
+    --- PASS: TestIsWalkable/door_tile (0.00s)
+    --- PASS: TestIsWalkable/water_tile (0.00s)
+    --- PASS: TestIsWalkable/out_of_bounds_negative (0.00s)
+    --- PASS: TestIsWalkable/out_of_bounds_positive (0.00s)
+    --- PASS: TestIsWalkable/out_of_bounds_x (0.00s)
+    --- PASS: TestIsWalkable/out_of_bounds_y (0.00s)
+=== RUN   TestNewWorldState
+--- PASS: TestNewWorldState (0.00s)
+=== RUN   TestWorldState_MapAssignment
+--- PASS: TestWorldState_MapAssignment (0.00s)
+=== RUN   TestWorldState_PlayerIDs
+--- PASS: TestWorldState_PlayerIDs (0.00s)
+=== RUN   TestWorldState_CustomState
+=== RUN   TestWorldState_CustomState/key_level
+=== RUN   TestWorldState_CustomState/key_name
+=== RUN   TestWorldState_CustomState/key_active
+=== RUN   TestWorldState_CustomState/key_score
+--- PASS: TestWorldState_CustomState (0.00s)
+    --- PASS: TestWorldState_CustomState/key_level (0.00s)
+    --- PASS: TestWorldState_CustomState/key_name (0.00s)
+    --- PASS: TestWorldState_CustomState/key_active (0.00s)
+    --- PASS: TestWorldState_CustomState/key_score (0.00s)
+=== RUN   TestWorldState_TimeProgression
+--- PASS: TestWorldState_TimeProgression (0.00s)
+=== RUN   TestTileType_Constants
+--- PASS: TestTileType_Constants (0.00s)
+=== RUN   TestMap_Genre
+--- PASS: TestMap_Genre (0.00s)
+=== RUN   TestMap_EdgeCases
+=== RUN   TestMap_EdgeCases/zero_dimensions
+=== RUN   TestMap_EdgeCases/large_map
+--- PASS: TestMap_EdgeCases (0.02s)
+    --- PASS: TestMap_EdgeCases/zero_dimensions (0.00s)
+    --- PASS: TestMap_EdgeCases/large_map (0.02s)
+=== RUN   TestNewTerritoryManager
+--- PASS: TestNewTerritoryManager (0.00s)
+=== RUN   TestCreateBorderZone
+--- PASS: TestCreateBorderZone (0.00s)
+=== RUN   TestGetZone
+=== RUN   TestGetZone/existing_zone
+=== RUN   TestGetZone/non-existent_zone
+--- PASS: TestGetZone (0.00s)
+    --- PASS: TestGetZone/existing_zone (0.00s)
+    --- PASS: TestGetZone/non-existent_zone (0.00s)
+=== RUN   TestUpdateControlPoint
+--- PASS: TestUpdateControlPoint (0.00s)
+=== RUN   TestUpdateControlPointWithDefenders
+--- PASS: TestUpdateControlPointWithDefenders (0.00s)
+=== RUN   TestUpdateControlPointCompletion
+--- PASS: TestUpdateControlPointCompletion (0.00s)
+=== RUN   TestUpdateControlPointInvalidIndex
+--- PASS: TestUpdateControlPointInvalidIndex (0.00s)
+=== RUN   TestIsPlayerInCaptureRange
+=== RUN   TestIsPlayerInCaptureRange/in_range
+=== RUN   TestIsPlayerInCaptureRange/at_edge
+=== RUN   TestIsPlayerInCaptureRange/out_of_range
+=== RUN   TestIsPlayerInCaptureRange/close_diagonal
+--- PASS: TestIsPlayerInCaptureRange (0.00s)
+    --- PASS: TestIsPlayerInCaptureRange/in_range (0.00s)
+    --- PASS: TestIsPlayerInCaptureRange/at_edge (0.00s)
+    --- PASS: TestIsPlayerInCaptureRange/out_of_range (0.00s)
+    --- PASS: TestIsPlayerInCaptureRange/close_diagonal (0.00s)
+=== RUN   TestGetControlledZones
+--- PASS: TestGetControlledZones (0.00s)
+=== RUN   TestGetContestedZones
+--- PASS: TestGetContestedZones (0.00s)
+=== RUN   TestGetResourceBonus
+--- PASS: TestGetResourceBonus (0.00s)
+=== RUN   TestResetControlPoint
+--- PASS: TestResetControlPoint (0.00s)
+=== RUN   TestGetAllZones
+--- PASS: TestGetAllZones (0.00s)
+PASS
+ok  	github.com/opd-ai/venture/pkg/world	0.251s
+=== RUN   TestNewGuildBankManager
+--- PASS: TestNewGuildBankManager (0.00s)
+=== RUN   TestCreateVault
+=== RUN   TestCreateVault/valid_vault
+=== RUN   TestCreateVault/min_interest_rate
+=== RUN   TestCreateVault/max_interest_rate
+=== RUN   TestCreateVault/interest_too_low
+=== RUN   TestCreateVault/interest_too_high
+=== RUN   TestCreateVault/duplicate_guild
+--- PASS: TestCreateVault (0.00s)
+    --- PASS: TestCreateVault/valid_vault (0.00s)
+    --- PASS: TestCreateVault/min_interest_rate (0.00s)
+    --- PASS: TestCreateVault/max_interest_rate (0.00s)
+    --- PASS: TestCreateVault/interest_too_low (0.00s)
+    --- PASS: TestCreateVault/interest_too_high (0.00s)
+    --- PASS: TestCreateVault/duplicate_guild (0.00s)
+=== RUN   TestGetVault
+--- PASS: TestGetVault (0.00s)
+=== RUN   TestDepositGold
+=== RUN   TestDepositGold/valid_deposit
+=== RUN   TestDepositGold/another_deposit
+=== RUN   TestDepositGold/zero_amount
+=== RUN   TestDepositGold/negative_amount
+=== RUN   TestDepositGold/invalid_guild
+--- PASS: TestDepositGold (0.00s)
+    --- PASS: TestDepositGold/valid_deposit (0.00s)
+    --- PASS: TestDepositGold/another_deposit (0.00s)
+    --- PASS: TestDepositGold/zero_amount (0.00s)
+    --- PASS: TestDepositGold/negative_amount (0.00s)
+    --- PASS: TestDepositGold/invalid_guild (0.00s)
+=== RUN   TestWithdrawGold
+=== RUN   TestWithdrawGold/valid_withdrawal
+=== RUN   TestWithdrawGold/another_withdrawal
+=== RUN   TestWithdrawGold/zero_amount
+=== RUN   TestWithdrawGold/negative_amount
+=== RUN   TestWithdrawGold/insufficient_funds
+=== RUN   TestWithdrawGold/invalid_guild
+--- PASS: TestWithdrawGold (0.00s)
+    --- PASS: TestWithdrawGold/valid_withdrawal (0.00s)
+    --- PASS: TestWithdrawGold/another_withdrawal (0.00s)
+    --- PASS: TestWithdrawGold/zero_amount (0.00s)
+    --- PASS: TestWithdrawGold/negative_amount (0.00s)
+    --- PASS: TestWithdrawGold/insufficient_funds (0.00s)
+    --- PASS: TestWithdrawGold/invalid_guild (0.00s)
+=== RUN   TestWithdrawalLimits
+--- PASS: TestWithdrawalLimits (0.00s)
+=== RUN   TestDepositItem
+=== RUN   TestDepositItem/valid_deposit
+=== RUN   TestDepositItem/add_to_existing
+=== RUN   TestDepositItem/new_item
+=== RUN   TestDepositItem/zero_quantity
+=== RUN   TestDepositItem/negative_quantity
+=== RUN   TestDepositItem/invalid_guild
+--- PASS: TestDepositItem (0.00s)
+    --- PASS: TestDepositItem/valid_deposit (0.00s)
+    --- PASS: TestDepositItem/add_to_existing (0.00s)
+    --- PASS: TestDepositItem/new_item (0.00s)
+    --- PASS: TestDepositItem/zero_quantity (0.00s)
+    --- PASS: TestDepositItem/negative_quantity (0.00s)
+    --- PASS: TestDepositItem/invalid_guild (0.00s)
+=== RUN   TestWithdrawItem
+=== RUN   TestWithdrawItem/valid_withdrawal
+=== RUN   TestWithdrawItem/another_withdrawal
+=== RUN   TestWithdrawItem/zero_quantity
+=== RUN   TestWithdrawItem/negative_quantity
+=== RUN   TestWithdrawItem/insufficient_quantity
+=== RUN   TestWithdrawItem/non-existent_item
+=== RUN   TestWithdrawItem/invalid_guild
+--- PASS: TestWithdrawItem (0.00s)
+    --- PASS: TestWithdrawItem/valid_withdrawal (0.00s)
+    --- PASS: TestWithdrawItem/another_withdrawal (0.00s)
+    --- PASS: TestWithdrawItem/zero_quantity (0.00s)
+    --- PASS: TestWithdrawItem/negative_quantity (0.00s)
+    --- PASS: TestWithdrawItem/insufficient_quantity (0.00s)
+    --- PASS: TestWithdrawItem/non-existent_item (0.00s)
+    --- PASS: TestWithdrawItem/invalid_guild (0.00s)
+=== RUN   TestWithdrawItemRemoval
+--- PASS: TestWithdrawItemRemoval (0.00s)
+=== RUN   TestCalculateInterest
+--- PASS: TestCalculateInterest (0.00s)
+=== RUN   TestCalculateInterestNoOp
+--- PASS: TestCalculateInterestNoOp (0.00s)
+=== RUN   TestSetWithdrawalLimit
+=== RUN   TestSetWithdrawalLimit/valid_limit
+=== RUN   TestSetWithdrawalLimit/zero_limit
+=== RUN   TestSetWithdrawalLimit/high_limit
+=== RUN   TestSetWithdrawalLimit/negative_limit
+=== RUN   TestSetWithdrawalLimit/invalid_guild
+--- PASS: TestSetWithdrawalLimit (0.00s)
+    --- PASS: TestSetWithdrawalLimit/valid_limit (0.00s)
+    --- PASS: TestSetWithdrawalLimit/zero_limit (0.00s)
+    --- PASS: TestSetWithdrawalLimit/high_limit (0.00s)
+    --- PASS: TestSetWithdrawalLimit/negative_limit (0.00s)
+    --- PASS: TestSetWithdrawalLimit/invalid_guild (0.00s)
+=== RUN   TestGetAuditLog
+=== RUN   TestGetAuditLog/get_all
+=== RUN   TestGetAuditLog/get_last_5
+=== RUN   TestGetAuditLog/get_more_than_available
+=== RUN   TestGetAuditLog/get_with_zero_limit
+=== RUN   TestGetAuditLog/invalid_guild
+--- PASS: TestGetAuditLog (0.00s)
+    --- PASS: TestGetAuditLog/get_all (0.00s)
+    --- PASS: TestGetAuditLog/get_last_5 (0.00s)
+    --- PASS: TestGetAuditLog/get_more_than_available (0.00s)
+    --- PASS: TestGetAuditLog/get_with_zero_limit (0.00s)
+    --- PASS: TestGetAuditLog/invalid_guild (0.00s)
+=== RUN   TestAuditLogEviction
+--- PASS: TestAuditLogEviction (0.00s)
+=== RUN   TestUpdateSyncTime
+--- PASS: TestUpdateSyncTime (0.01s)
+=== RUN   TestSaveLoad
+--- PASS: TestSaveLoad (0.00s)
+=== RUN   TestVaultCapacity
+--- PASS: TestVaultCapacity (0.01s)
+=== RUN   TestNewFederatedMarketplace
+--- PASS: TestNewFederatedMarketplace (0.00s)
+=== RUN   TestFederatedMarketplace_CreateListing
+=== RUN   TestFederatedMarketplace_CreateListing/Valid_listing
+=== RUN   TestFederatedMarketplace_CreateListing/Missing_item_ID
+=== RUN   TestFederatedMarketplace_CreateListing/Missing_seller_ID
+=== RUN   TestFederatedMarketplace_CreateListing/Invalid_price_(zero)
+=== RUN   TestFederatedMarketplace_CreateListing/Invalid_price_(negative)
+=== RUN   TestFederatedMarketplace_CreateListing/Invalid_quantity_(zero)
+=== RUN   TestFederatedMarketplace_CreateListing/Invalid_quantity_(negative)
+--- PASS: TestFederatedMarketplace_CreateListing (0.00s)
+    --- PASS: TestFederatedMarketplace_CreateListing/Valid_listing (0.00s)
+    --- PASS: TestFederatedMarketplace_CreateListing/Missing_item_ID (0.00s)
+    --- PASS: TestFederatedMarketplace_CreateListing/Missing_seller_ID (0.00s)
+    --- PASS: TestFederatedMarketplace_CreateListing/Invalid_price_(zero) (0.00s)
+    --- PASS: TestFederatedMarketplace_CreateListing/Invalid_price_(negative) (0.00s)
+    --- PASS: TestFederatedMarketplace_CreateListing/Invalid_quantity_(zero) (0.00s)
+    --- PASS: TestFederatedMarketplace_CreateListing/Invalid_quantity_(negative) (0.00s)
+=== RUN   TestFederatedMarketplace_GetListing
+--- PASS: TestFederatedMarketplace_GetListing (0.00s)
+=== RUN   TestFederatedMarketplace_RemoveListing
+--- PASS: TestFederatedMarketplace_RemoveListing (0.00s)
+=== RUN   TestFederatedMarketplace_SearchItems
+=== RUN   TestFederatedMarketplace_SearchItems/Search_all_items
+=== RUN   TestFederatedMarketplace_SearchItems/Search_by_type_(weapon)
+=== RUN   TestFederatedMarketplace_SearchItems/Search_by_type_(armor)
+=== RUN   TestFederatedMarketplace_SearchItems/Search_by_price_range
+=== RUN   TestFederatedMarketplace_SearchItems/Search_by_seller
+=== RUN   TestFederatedMarketplace_SearchItems/Search_with_limit
+=== RUN   TestFederatedMarketplace_SearchItems/No_results
+--- PASS: TestFederatedMarketplace_SearchItems (0.00s)
+    --- PASS: TestFederatedMarketplace_SearchItems/Search_all_items (0.00s)
+    --- PASS: TestFederatedMarketplace_SearchItems/Search_by_type_(weapon) (0.00s)
+    --- PASS: TestFederatedMarketplace_SearchItems/Search_by_type_(armor) (0.00s)
+    --- PASS: TestFederatedMarketplace_SearchItems/Search_by_price_range (0.00s)
+    --- PASS: TestFederatedMarketplace_SearchItems/Search_by_seller (0.00s)
+    --- PASS: TestFederatedMarketplace_SearchItems/Search_with_limit (0.00s)
+    --- PASS: TestFederatedMarketplace_SearchItems/No_results (0.00s)
+=== RUN   TestFederatedMarketplace_PurchaseItem
+--- PASS: TestFederatedMarketplace_PurchaseItem (0.00s)
+=== RUN   TestFederatedMarketplace_CleanupExpiredListings
+--- PASS: TestFederatedMarketplace_CleanupExpiredListings (0.00s)
+=== RUN   TestFederatedMarketplace_UpdateRemoteCache
+--- PASS: TestFederatedMarketplace_UpdateRemoteCache (0.00s)
+=== RUN   TestFederatedMarketplace_GetStats
+--- PASS: TestFederatedMarketplace_GetStats (0.00s)
+=== RUN   TestNewPricingEngine
+--- PASS: TestNewPricingEngine (0.00s)
+=== RUN   TestPricingEngine_RecordListing
+--- PASS: TestPricingEngine_RecordListing (0.00s)
+=== RUN   TestPricingEngine_RecordTransaction
+--- PASS: TestPricingEngine_RecordTransaction (0.00s)
+=== RUN   TestPricingEngine_GetTrend
+--- PASS: TestPricingEngine_GetTrend (0.00s)
+=== RUN   TestPricingEngine_GetAllTrends
+--- PASS: TestPricingEngine_GetAllTrends (0.00s)
+=== RUN   TestPricingEngine_ResetTrends
+--- PASS: TestPricingEngine_ResetTrends (0.00s)
+=== RUN   TestNewSystem
+--- PASS: TestNewSystem (0.00s)
+=== RUN   TestNewSystemWithServerID
+--- PASS: TestNewSystemWithServerID (0.00s)
+=== RUN   TestSystem_Update
+--- PASS: TestSystem_Update (0.00s)
+=== RUN   TestSystem_CreateListing
+--- PASS: TestSystem_CreateListing (0.00s)
+=== RUN   TestSystem_SearchItems
+--- PASS: TestSystem_SearchItems (0.00s)
+=== RUN   TestSystem_PurchaseItem
+--- PASS: TestSystem_PurchaseItem (0.00s)
+=== RUN   TestSystem_GetPriceTrend
+--- PASS: TestSystem_GetPriceTrend (0.00s)
+=== RUN   TestSystem_GetStats
+--- PASS: TestSystem_GetStats (0.00s)
+=== RUN   TestSystem_GetMarketplace
+--- PASS: TestSystem_GetMarketplace (0.00s)
+=== RUN   TestSystem_ConcurrentAccess
+--- PASS: TestSystem_ConcurrentAccess (0.00s)
+=== RUN   TestSystem_CleanupInterval
+--- PASS: TestSystem_CleanupInterval (0.00s)
+=== RUN   TestSortCriteria_String
+=== RUN   TestSortCriteria_String/SortByPrice
+=== RUN   TestSortCriteria_String/SortByPriceDesc
+=== RUN   TestSortCriteria_String/SortByQuantity
+=== RUN   TestSortCriteria_String/SortByDeliveryTime
+=== RUN   TestSortCriteria_String/SortByRelevance
+=== RUN   TestSortCriteria_String/Unknown
+--- PASS: TestSortCriteria_String (0.00s)
+    --- PASS: TestSortCriteria_String/SortByPrice (0.00s)
+    --- PASS: TestSortCriteria_String/SortByPriceDesc (0.00s)
+    --- PASS: TestSortCriteria_String/SortByQuantity (0.00s)
+    --- PASS: TestSortCriteria_String/SortByDeliveryTime (0.00s)
+    --- PASS: TestSortCriteria_String/SortByRelevance (0.00s)
+    --- PASS: TestSortCriteria_String/Unknown (0.00s)
+=== RUN   TestDeliveryMethod_String
+=== RUN   TestDeliveryMethod_String/DeliveryMail
+=== RUN   TestDeliveryMethod_String/DeliveryCourier
+=== RUN   TestDeliveryMethod_String/Unknown
+--- PASS: TestDeliveryMethod_String (0.00s)
+    --- PASS: TestDeliveryMethod_String/DeliveryMail (0.00s)
+    --- PASS: TestDeliveryMethod_String/DeliveryCourier (0.00s)
+    --- PASS: TestDeliveryMethod_String/Unknown (0.00s)
+=== RUN   TestCalculateTransactionFee
+=== RUN   TestCalculateTransactionFee/Local_transaction_(0_hops)
+=== RUN   TestCalculateTransactionFee/1_hop
+=== RUN   TestCalculateTransactionFee/2_hops
+=== RUN   TestCalculateTransactionFee/3_hops
+=== RUN   TestCalculateTransactionFee/4_hops
+=== RUN   TestCalculateTransactionFee/5_hops_(capped_at_15%)
+=== RUN   TestCalculateTransactionFee/10_hops_(capped_at_15%)
+=== RUN   TestCalculateTransactionFee/High_price_with_hops
+=== RUN   TestCalculateTransactionFee/Small_price
+--- PASS: TestCalculateTransactionFee (0.00s)
+    --- PASS: TestCalculateTransactionFee/Local_transaction_(0_hops) (0.00s)
+    --- PASS: TestCalculateTransactionFee/1_hop (0.00s)
+    --- PASS: TestCalculateTransactionFee/2_hops (0.00s)
+    --- PASS: TestCalculateTransactionFee/3_hops (0.00s)
+    --- PASS: TestCalculateTransactionFee/4_hops (0.00s)
+    --- PASS: TestCalculateTransactionFee/5_hops_(capped_at_15%) (0.00s)
+    --- PASS: TestCalculateTransactionFee/10_hops_(capped_at_15%) (0.00s)
+    --- PASS: TestCalculateTransactionFee/High_price_with_hops (0.00s)
+    --- PASS: TestCalculateTransactionFee/Small_price (0.00s)
+=== RUN   TestListing_IsExpired
+=== RUN   TestListing_IsExpired/Not_expired
+=== RUN   TestListing_IsExpired/Expired
+=== RUN   TestListing_IsExpired/Just_expired
+=== RUN   TestListing_IsExpired/Future_expiration
+--- PASS: TestListing_IsExpired (0.00s)
+    --- PASS: TestListing_IsExpired/Not_expired (0.00s)
+    --- PASS: TestListing_IsExpired/Expired (0.00s)
+    --- PASS: TestListing_IsExpired/Just_expired (0.00s)
+    --- PASS: TestListing_IsExpired/Future_expiration (0.00s)
+=== RUN   TestListing_GetDeliveryTime
+=== RUN   TestListing_GetDeliveryTime/Mail_delivery
+=== RUN   TestListing_GetDeliveryTime/Mail_with_hops_(still_instant)
+=== RUN   TestListing_GetDeliveryTime/Courier_0_hops
+=== RUN   TestListing_GetDeliveryTime/Courier_1_hop
+=== RUN   TestListing_GetDeliveryTime/Courier_2_hops
+=== RUN   TestListing_GetDeliveryTime/Courier_5_hops
+=== RUN   TestListing_GetDeliveryTime/Courier_10_hops_(capped)
+--- PASS: TestListing_GetDeliveryTime (0.00s)
+    --- PASS: TestListing_GetDeliveryTime/Mail_delivery (0.00s)
+    --- PASS: TestListing_GetDeliveryTime/Mail_with_hops_(still_instant) (0.00s)
+    --- PASS: TestListing_GetDeliveryTime/Courier_0_hops (0.00s)
+    --- PASS: TestListing_GetDeliveryTime/Courier_1_hop (0.00s)
+    --- PASS: TestListing_GetDeliveryTime/Courier_2_hops (0.00s)
+    --- PASS: TestListing_GetDeliveryTime/Courier_5_hops (0.00s)
+    --- PASS: TestListing_GetDeliveryTime/Courier_10_hops_(capped) (0.00s)
+=== RUN   TestListing_GetTotalCost
+=== RUN   TestListing_GetTotalCost/Single_item,_no_hops
+=== RUN   TestListing_GetTotalCost/Single_item,_1_hop
+=== RUN   TestListing_GetTotalCost/Multiple_items,_no_hops
+=== RUN   TestListing_GetTotalCost/Multiple_items,_2_hops
+=== RUN   TestListing_GetTotalCost/High_value,_3_hops
+=== RUN   TestListing_GetTotalCost/Max_fee_cap
+--- PASS: TestListing_GetTotalCost (0.00s)
+    --- PASS: TestListing_GetTotalCost/Single_item,_no_hops (0.00s)
+    --- PASS: TestListing_GetTotalCost/Single_item,_1_hop (0.00s)
+    --- PASS: TestListing_GetTotalCost/Multiple_items,_no_hops (0.00s)
+    --- PASS: TestListing_GetTotalCost/Multiple_items,_2_hops (0.00s)
+    --- PASS: TestListing_GetTotalCost/High_value,_3_hops (0.00s)
+    --- PASS: TestListing_GetTotalCost/Max_fee_cap (0.00s)
+PASS
+ok  	github.com/opd-ai/venture/pkg/world/economy	0.025s
+=== RUN   TestAPIMatchesDocumentation
+    api_test.go:81: API matches documentation successfully
+--- PASS: TestAPIMatchesDocumentation (0.00s)
+=== RUN   TestDocumentedFilterOptions
+=== RUN   TestDocumentedFilterOptions/filter_by_author
+=== RUN   TestDocumentedFilterOptions/filter_by_min_rating
+=== RUN   TestDocumentedFilterOptions/filter_by_tags
+=== RUN   TestDocumentedFilterOptions/combined_filters
+--- PASS: TestDocumentedFilterOptions (0.00s)
+    --- PASS: TestDocumentedFilterOptions/filter_by_author (0.00s)
+    --- PASS: TestDocumentedFilterOptions/filter_by_min_rating (0.00s)
+    --- PASS: TestDocumentedFilterOptions/filter_by_tags (0.00s)
+    --- PASS: TestDocumentedFilterOptions/combined_filters (0.00s)
+=== RUN   TestDocumentedSortFields
+=== RUN   TestDocumentedSortFields/sort_by_rating_descending
+=== RUN   TestDocumentedSortFields/sort_by_rating_ascending
+=== RUN   TestDocumentedSortFields/sort_by_downloads_descending
+=== RUN   TestDocumentedSortFields/sort_by_name_ascending
+--- PASS: TestDocumentedSortFields (0.00s)
+    --- PASS: TestDocumentedSortFields/sort_by_rating_descending (0.00s)
+    --- PASS: TestDocumentedSortFields/sort_by_rating_ascending (0.00s)
+    --- PASS: TestDocumentedSortFields/sort_by_downloads_descending (0.00s)
+    --- PASS: TestDocumentedSortFields/sort_by_name_ascending (0.00s)
+=== RUN   TestNewBlueprint
+--- PASS: TestNewBlueprint (0.00s)
+=== RUN   TestBlueprintAddRating
+=== RUN   TestBlueprintAddRating/single_rating
+=== RUN   TestBlueprintAddRating/multiple_ratings
+=== RUN   TestBlueprintAddRating/rating_too_high
+=== RUN   TestBlueprintAddRating/rating_too_low
+--- PASS: TestBlueprintAddRating (0.00s)
+    --- PASS: TestBlueprintAddRating/single_rating (0.00s)
+    --- PASS: TestBlueprintAddRating/multiple_ratings (0.00s)
+    --- PASS: TestBlueprintAddRating/rating_too_high (0.00s)
+    --- PASS: TestBlueprintAddRating/rating_too_low (0.00s)
+=== RUN   TestBlueprintIncrementDownloads
+--- PASS: TestBlueprintIncrementDownloads (0.00s)
+=== RUN   TestBlueprintExportImport
+--- PASS: TestBlueprintExportImport (0.00s)
+=== RUN   TestImportBlueprintInvalidFile
+=== RUN   TestImportBlueprintInvalidFile/nonexistent_file
+=== RUN   TestImportBlueprintInvalidFile/invalid_gzip
+--- PASS: TestImportBlueprintInvalidFile (0.00s)
+    --- PASS: TestImportBlueprintInvalidFile/nonexistent_file (0.00s)
+    --- PASS: TestImportBlueprintInvalidFile/invalid_gzip (0.00s)
+=== RUN   TestNewBlueprintLibrary
+--- PASS: TestNewBlueprintLibrary (0.00s)
+=== RUN   TestBlueprintLibraryAdd
+--- PASS: TestBlueprintLibraryAdd (0.00s)
+=== RUN   TestBlueprintLibraryGet
+--- PASS: TestBlueprintLibraryGet (0.00s)
+=== RUN   TestBlueprintLibraryRemove
+--- PASS: TestBlueprintLibraryRemove (0.00s)
+=== RUN   TestBlueprintLibraryList
+--- PASS: TestBlueprintLibraryList (0.00s)
+=== RUN   TestBlueprintLibraryFilter
+=== RUN   TestBlueprintLibraryFilter/no_filters
+=== RUN   TestBlueprintLibraryFilter/filter_by_author
+=== RUN   TestBlueprintLibraryFilter/filter_by_genre
+=== RUN   TestBlueprintLibraryFilter/filter_by_tag
+=== RUN   TestBlueprintLibraryFilter/filter_by_multiple_tags
+=== RUN   TestBlueprintLibraryFilter/filter_by_min_rating
+=== RUN   TestBlueprintLibraryFilter/filter_by_max_rating
+=== RUN   TestBlueprintLibraryFilter/filter_by_size_range
+=== RUN   TestBlueprintLibraryFilter/combined_filters
+=== RUN   TestBlueprintLibraryFilter/no_matches
+--- PASS: TestBlueprintLibraryFilter (0.00s)
+    --- PASS: TestBlueprintLibraryFilter/no_filters (0.00s)
+    --- PASS: TestBlueprintLibraryFilter/filter_by_author (0.00s)
+    --- PASS: TestBlueprintLibraryFilter/filter_by_genre (0.00s)
+    --- PASS: TestBlueprintLibraryFilter/filter_by_tag (0.00s)
+    --- PASS: TestBlueprintLibraryFilter/filter_by_multiple_tags (0.00s)
+    --- PASS: TestBlueprintLibraryFilter/filter_by_min_rating (0.00s)
+    --- PASS: TestBlueprintLibraryFilter/filter_by_max_rating (0.00s)
+    --- PASS: TestBlueprintLibraryFilter/filter_by_size_range (0.00s)
+    --- PASS: TestBlueprintLibraryFilter/combined_filters (0.00s)
+    --- PASS: TestBlueprintLibraryFilter/no_matches (0.00s)
+=== RUN   TestBlueprintLibrarySort
+=== RUN   TestBlueprintLibrarySort/by_rating_ascending
+=== RUN   TestBlueprintLibrarySort/by_rating_descending
+=== RUN   TestBlueprintLibrarySort/by_downloads_ascending
+=== RUN   TestBlueprintLibrarySort/by_downloads_descending
+=== RUN   TestBlueprintLibrarySort/by_name_ascending
+=== RUN   TestBlueprintLibrarySort/by_name_descending
+=== RUN   TestBlueprintLibrarySort/by_created_ascending
+=== RUN   TestBlueprintLibrarySort/by_modified_descending
+--- PASS: TestBlueprintLibrarySort (0.00s)
+    --- PASS: TestBlueprintLibrarySort/by_rating_ascending (0.00s)
+    --- PASS: TestBlueprintLibrarySort/by_rating_descending (0.00s)
+    --- PASS: TestBlueprintLibrarySort/by_downloads_ascending (0.00s)
+    --- PASS: TestBlueprintLibrarySort/by_downloads_descending (0.00s)
+    --- PASS: TestBlueprintLibrarySort/by_name_ascending (0.00s)
+    --- PASS: TestBlueprintLibrarySort/by_name_descending (0.00s)
+    --- PASS: TestBlueprintLibrarySort/by_created_ascending (0.00s)
+    --- PASS: TestBlueprintLibrarySort/by_modified_descending (0.00s)
+=== RUN   TestBlueprintLibraryConcurrency
+--- PASS: TestBlueprintLibraryConcurrency (0.00s)
+=== RUN   TestContainsAllTags
+=== RUN   TestContainsAllTags/all_tags_present
+=== RUN   TestContainsAllTags/missing_tag
+=== RUN   TestContainsAllTags/case_insensitive
+=== RUN   TestContainsAllTags/empty_required
+=== RUN   TestContainsAllTags/empty_blueprint_tags
+--- PASS: TestContainsAllTags (0.00s)
+    --- PASS: TestContainsAllTags/all_tags_present (0.00s)
+    --- PASS: TestContainsAllTags/missing_tag (0.00s)
+    --- PASS: TestContainsAllTags/case_insensitive (0.00s)
+    --- PASS: TestContainsAllTags/empty_required (0.00s)
+    --- PASS: TestContainsAllTags/empty_blueprint_tags (0.00s)
+=== RUN   TestGuildHallCreation
+=== RUN   TestGuildHallCreation/small_1_floor
+=== RUN   TestGuildHallCreation/medium_3_floors
+=== RUN   TestGuildHallCreation/large_5_floors
+=== RUN   TestGuildHallCreation/invalid_0_floors
+=== RUN   TestGuildHallCreation/invalid_6_floors
+--- PASS: TestGuildHallCreation (0.00s)
+    --- PASS: TestGuildHallCreation/small_1_floor (0.00s)
+    --- PASS: TestGuildHallCreation/medium_3_floors (0.00s)
+    --- PASS: TestGuildHallCreation/large_5_floors (0.00s)
+    --- PASS: TestGuildHallCreation/invalid_0_floors (0.00s)
+    --- PASS: TestGuildHallCreation/invalid_6_floors (0.00s)
+=== RUN   TestGuildHallMaterialContribution
+--- PASS: TestGuildHallMaterialContribution (0.00s)
+=== RUN   TestGuildHallPhaseAdvancement
+--- PASS: TestGuildHallPhaseAdvancement (0.00s)
+=== RUN   TestGuildHallProgress
+--- PASS: TestGuildHallProgress (0.00s)
+=== RUN   TestGuildHallMaterialProgress
+--- PASS: TestGuildHallMaterialProgress (0.00s)
+=== RUN   TestGuildHallContributors
+--- PASS: TestGuildHallContributors (0.00s)
+=== RUN   TestGuildHallBounds
+=== RUN   TestGuildHallBounds/small_at_origin
+=== RUN   TestGuildHallBounds/medium_offset
+--- PASS: TestGuildHallBounds (0.00s)
+    --- PASS: TestGuildHallBounds/small_at_origin (0.00s)
+    --- PASS: TestGuildHallBounds/medium_offset (0.00s)
+=== RUN   TestGuildHallManagerCreate
+--- PASS: TestGuildHallManagerCreate (0.00s)
+=== RUN   TestGuildHallManagerContribution
+--- PASS: TestGuildHallManagerContribution (0.00s)
+=== RUN   TestGuildHallManagerGetAll
+--- PASS: TestGuildHallManagerGetAll (0.00s)
+=== RUN   TestGuildHallManagerAreaQuery
+--- PASS: TestGuildHallManagerAreaQuery (0.00s)
+=== RUN   TestGuildHallManagerRemove
+--- PASS: TestGuildHallManagerRemove (0.00s)
+=== RUN   TestGuildHallManagerStats
+--- PASS: TestGuildHallManagerStats (0.00s)
+=== RUN   TestGuildHallManagerSaveLoad
+--- PASS: TestGuildHallManagerSaveLoad (0.00s)
+=== RUN   TestGuildHallManagerValidation
+--- PASS: TestGuildHallManagerValidation (0.00s)
+=== RUN   TestNewManager
+--- PASS: TestNewManager (0.00s)
+=== RUN   TestManagerSetEnabled
+--- PASS: TestManagerSetEnabled (0.00s)
+=== RUN   TestPlacePlot
+--- PASS: TestPlacePlot (0.00s)
+=== RUN   TestPlacePlotDisabled
+--- PASS: TestPlacePlotDisabled (0.00s)
+=== RUN   TestPlacePlotNil
+--- PASS: TestPlacePlotNil (0.00s)
+=== RUN   TestPlacePlotNoOwner
+--- PASS: TestPlacePlotNoOwner (0.00s)
+=== RUN   TestPlacePlotOverlap
+--- PASS: TestPlacePlotOverlap (0.00s)
+=== RUN   TestRemovePlot
+--- PASS: TestRemovePlot (0.00s)
+=== RUN   TestRemovePlotNotFound
+--- PASS: TestRemovePlotNotFound (0.00s)
+=== RUN   TestGetPlayerPlots
+--- PASS: TestGetPlayerPlots (0.00s)
+=== RUN   TestGetPlotsInArea
+--- PASS: TestGetPlotsInArea (0.00s)
+=== RUN   TestGetAllPlots
+--- PASS: TestGetAllPlots (0.00s)
+=== RUN   TestClear
+--- PASS: TestClear (0.00s)
+=== RUN   TestCreateHouse
+--- PASS: TestCreateHouse (0.00s)
+=== RUN   TestCreateHouseMultiple
+--- PASS: TestCreateHouseMultiple (0.00s)
+=== RUN   TestCreateHouseDeterministic
+--- PASS: TestCreateHouseDeterministic (0.00s)
+=== RUN   TestCreateHouseDisabled
+--- PASS: TestCreateHouseDisabled (0.00s)
+=== RUN   TestSaveAndLoad
+--- PASS: TestSaveAndLoad (0.00s)
+=== RUN   TestLoadNonexistentFile
+--- PASS: TestLoadNonexistentFile (0.00s)
+=== RUN   TestSaveInvalidPath
+--- PASS: TestSaveInvalidPath (0.00s)
+=== RUN   TestSavePlayerData
+--- PASS: TestSavePlayerData (0.00s)
+=== RUN   TestSaveEmptyManager
+--- PASS: TestSaveEmptyManager (0.00s)
+=== RUN   TestSavePreservesPermissions
+--- PASS: TestSavePreservesPermissions (0.00s)
+=== RUN   TestSpatialGridInsertAndQuery
+--- PASS: TestSpatialGridInsertAndQuery (0.00s)
+=== RUN   TestSpatialGridRemove
+--- PASS: TestSpatialGridRemove (0.00s)
+=== RUN   TestSpatialGridMultipleCells
+=== RUN   TestSpatialGridMultipleCells/center
+=== RUN   TestSpatialGridMultipleCells/edge
+=== RUN   TestSpatialGridMultipleCells/far_away
+--- PASS: TestSpatialGridMultipleCells (0.00s)
+    --- PASS: TestSpatialGridMultipleCells/center (0.00s)
+    --- PASS: TestSpatialGridMultipleCells/edge (0.00s)
+    --- PASS: TestSpatialGridMultipleCells/far_away (0.00s)
+=== RUN   TestSpatialGridNegativeCoordinates
+--- PASS: TestSpatialGridNegativeCoordinates (0.00s)
+=== RUN   TestSpatialGridDuplicatePrevention
+--- PASS: TestSpatialGridDuplicatePrevention (0.00s)
+=== RUN   TestBuildingSizeString
+=== RUN   TestBuildingSizeString/Small
+=== RUN   TestBuildingSizeString/Medium
+=== RUN   TestBuildingSizeString/Large
+=== RUN   TestBuildingSizeString/Estate
+=== RUN   TestBuildingSizeString/Unknown
+--- PASS: TestBuildingSizeString (0.00s)
+    --- PASS: TestBuildingSizeString/Small (0.00s)
+    --- PASS: TestBuildingSizeString/Medium (0.00s)
+    --- PASS: TestBuildingSizeString/Large (0.00s)
+    --- PASS: TestBuildingSizeString/Estate (0.00s)
+    --- PASS: TestBuildingSizeString/Unknown (0.00s)
+=== RUN   TestBuildingSizeTiles
+=== RUN   TestBuildingSizeTiles/Small
+=== RUN   TestBuildingSizeTiles/Medium
+=== RUN   TestBuildingSizeTiles/Large
+=== RUN   TestBuildingSizeTiles/Estate
+--- PASS: TestBuildingSizeTiles (0.00s)
+    --- PASS: TestBuildingSizeTiles/Small (0.00s)
+    --- PASS: TestBuildingSizeTiles/Medium (0.00s)
+    --- PASS: TestBuildingSizeTiles/Large (0.00s)
+    --- PASS: TestBuildingSizeTiles/Estate (0.00s)
+=== RUN   TestBuildingSizeSquareUnits
+=== RUN   TestBuildingSizeSquareUnits/Small
+=== RUN   TestBuildingSizeSquareUnits/Medium
+=== RUN   TestBuildingSizeSquareUnits/Large
+=== RUN   TestBuildingSizeSquareUnits/Estate
+--- PASS: TestBuildingSizeSquareUnits (0.00s)
+    --- PASS: TestBuildingSizeSquareUnits/Small (0.00s)
+    --- PASS: TestBuildingSizeSquareUnits/Medium (0.00s)
+    --- PASS: TestBuildingSizeSquareUnits/Large (0.00s)
+    --- PASS: TestBuildingSizeSquareUnits/Estate (0.00s)
+=== RUN   TestPermissionLevelString
+=== RUN   TestPermissionLevelString/None
+=== RUN   TestPermissionLevelString/Visit
+=== RUN   TestPermissionLevelString/Friend
+=== RUN   TestPermissionLevelString/CoOwner
+=== RUN   TestPermissionLevelString/Unknown
+--- PASS: TestPermissionLevelString (0.00s)
+    --- PASS: TestPermissionLevelString/None (0.00s)
+    --- PASS: TestPermissionLevelString/Visit (0.00s)
+    --- PASS: TestPermissionLevelString/Friend (0.00s)
+    --- PASS: TestPermissionLevelString/CoOwner (0.00s)
+    --- PASS: TestPermissionLevelString/Unknown (0.00s)
+=== RUN   TestPermissionSet
+--- PASS: TestPermissionSet (0.00s)
+=== RUN   TestNewPlot
+--- PASS: TestNewPlot (0.00s)
+=== RUN   TestPlotBounds
+--- PASS: TestPlotBounds (0.00s)
+=== RUN   TestPlotContains
+=== RUN   TestPlotContains/center
+=== RUN   TestPlotContains/inside
+=== RUN   TestPlotContains/edge
+=== RUN   TestPlotContains/outside
+=== RUN   TestPlotContains/negative_outside
+--- PASS: TestPlotContains (0.00s)
+    --- PASS: TestPlotContains/center (0.00s)
+    --- PASS: TestPlotContains/inside (0.00s)
+    --- PASS: TestPlotContains/edge (0.00s)
+    --- PASS: TestPlotContains/outside (0.00s)
+    --- PASS: TestPlotContains/negative_outside (0.00s)
+=== RUN   TestPlotOverlaps
+=== RUN   TestPlotOverlaps/same_position
+=== RUN   TestPlotOverlaps/adjacent
+=== RUN   TestPlotOverlaps/overlap
+=== RUN   TestPlotOverlaps/far_away
+--- PASS: TestPlotOverlaps (0.00s)
+    --- PASS: TestPlotOverlaps/same_position (0.00s)
+    --- PASS: TestPlotOverlaps/adjacent (0.00s)
+    --- PASS: TestPlotOverlaps/overlap (0.00s)
+    --- PASS: TestPlotOverlaps/far_away (0.00s)
+=== RUN   TestHousingComponent
+--- PASS: TestHousingComponent (0.00s)
+=== RUN   TestPlotColor
+--- PASS: TestPlotColor (0.00s)
+=== RUN   TestV6FederationIntegration
+--- PASS: TestV6FederationIntegration (0.00s)
+=== RUN   TestCraftingSystemIntegration
+--- PASS: TestCraftingSystemIntegration (0.00s)
+=== RUN   TestQuestSystemIntegration
+--- PASS: TestQuestSystemIntegration (0.00s)
+=== RUN   TestPerformanceBenchmark
+=== RUN   TestPerformanceBenchmark/1000_houses
+    integration_test.go:223: Created 1000 houses in 20.073294ms (avg 20.073µs per house)
+=== RUN   TestPerformanceBenchmark/10000_furniture_items
+    integration_test.go:253: Generated 10000 furniture items in 220.456028ms (avg 22.045µs per item)
+--- PASS: TestPerformanceBenchmark (0.24s)
+    --- PASS: TestPerformanceBenchmark/1000_houses (0.02s)
+    --- PASS: TestPerformanceBenchmark/10000_furniture_items (0.22s)
+PASS
+ok  	github.com/opd-ai/venture/pkg/world/housing	(cached)
+=== RUN   TestGenerator_Generate
+=== RUN   TestGenerator_Generate/normal_tier_raid
+=== RUN   TestGenerator_Generate/heroic_tier_raid
+=== RUN   TestGenerator_Generate/mythic_tier_raid
+=== RUN   TestGenerator_Generate/invalid_difficulty
+=== RUN   TestGenerator_Generate/invalid_depth
+--- PASS: TestGenerator_Generate (0.00s)
+    --- PASS: TestGenerator_Generate/normal_tier_raid (0.00s)
+    --- PASS: TestGenerator_Generate/heroic_tier_raid (0.00s)
+    --- PASS: TestGenerator_Generate/mythic_tier_raid (0.00s)
+    --- PASS: TestGenerator_Generate/invalid_difficulty (0.00s)
+    --- PASS: TestGenerator_Generate/invalid_depth (0.00s)
+=== RUN   TestGenerator_Validate
+=== RUN   TestGenerator_Validate/valid_raid
+=== RUN   TestGenerator_Validate/invalid_type
+--- PASS: TestGenerator_Validate (0.00s)
+    --- PASS: TestGenerator_Validate/valid_raid (0.00s)
+    --- PASS: TestGenerator_Validate/invalid_type (0.00s)
+=== RUN   TestGenerator_Determinism
+--- PASS: TestGenerator_Determinism (0.00s)
+=== RUN   TestRaidTier_Methods
+=== RUN   TestRaidTier_Methods/Normal
+=== RUN   TestRaidTier_Methods/Heroic
+=== RUN   TestRaidTier_Methods/Mythic
+=== RUN   TestRaidTier_Methods/Legendary
+=== RUN   TestRaidTier_Methods/Nightmare
+--- PASS: TestRaidTier_Methods (0.00s)
+    --- PASS: TestRaidTier_Methods/Normal (0.00s)
+    --- PASS: TestRaidTier_Methods/Heroic (0.00s)
+    --- PASS: TestRaidTier_Methods/Mythic (0.00s)
+    --- PASS: TestRaidTier_Methods/Legendary (0.00s)
+    --- PASS: TestRaidTier_Methods/Nightmare (0.00s)
+=== RUN   TestMechanicType_String
+=== RUN   TestMechanicType_String/Summon
+=== RUN   TestMechanicType_String/GroundEffect
+=== RUN   TestMechanicType_String/Debuff
+=== RUN   TestMechanicType_String/Buff
+=== RUN   TestMechanicType_String/Channeled
+=== RUN   TestMechanicType_String/Instant
+=== RUN   TestMechanicType_String/Periodic
+--- PASS: TestMechanicType_String (0.00s)
+    --- PASS: TestMechanicType_String/Summon (0.00s)
+    --- PASS: TestMechanicType_String/GroundEffect (0.00s)
+    --- PASS: TestMechanicType_String/Debuff (0.00s)
+    --- PASS: TestMechanicType_String/Buff (0.00s)
+    --- PASS: TestMechanicType_String/Channeled (0.00s)
+    --- PASS: TestMechanicType_String/Instant (0.00s)
+    --- PASS: TestMechanicType_String/Periodic (0.00s)
+=== RUN   TestRoomType_String
+=== RUN   TestRoomType_String/Entrance
+=== RUN   TestRoomType_String/Boss
+=== RUN   TestRoomType_String/Trash
+=== RUN   TestRoomType_String/Treasure
+=== RUN   TestRoomType_String/Puzzle
+=== RUN   TestRoomType_String/Rest
+--- PASS: TestRoomType_String (0.00s)
+    --- PASS: TestRoomType_String/Entrance (0.00s)
+    --- PASS: TestRoomType_String/Boss (0.00s)
+    --- PASS: TestRoomType_String/Trash (0.00s)
+    --- PASS: TestRoomType_String/Treasure (0.00s)
+    --- PASS: TestRoomType_String/Puzzle (0.00s)
+    --- PASS: TestRoomType_String/Rest (0.00s)
+=== RUN   TestHashString
+=== RUN   TestHashString/#00
+=== RUN   TestHashString/a
+=== RUN   TestHashString/test
+--- PASS: TestHashString (0.00s)
+    --- PASS: TestHashString/#00 (0.00s)
+    --- PASS: TestHashString/a (0.00s)
+    --- PASS: TestHashString/test (0.00s)
+=== RUN   TestInstanceManager_CreateInstance
+=== RUN   TestInstanceManager_CreateInstance/valid_instance
+=== RUN   TestInstanceManager_CreateInstance/insufficient_players
+=== RUN   TestInstanceManager_CreateInstance/too_many_players
+--- PASS: TestInstanceManager_CreateInstance (0.00s)
+    --- PASS: TestInstanceManager_CreateInstance/valid_instance (0.00s)
+    --- PASS: TestInstanceManager_CreateInstance/insufficient_players (0.00s)
+    --- PASS: TestInstanceManager_CreateInstance/too_many_players (0.00s)
+=== RUN   TestInstanceManager_GetInstance
+=== RUN   TestInstanceManager_GetInstance/existing_instance
+=== RUN   TestInstanceManager_GetInstance/non-existent_instance
+--- PASS: TestInstanceManager_GetInstance (0.00s)
+    --- PASS: TestInstanceManager_GetInstance/existing_instance (0.00s)
+    --- PASS: TestInstanceManager_GetInstance/non-existent_instance (0.00s)
+=== RUN   TestInstanceManager_GetGroupInstance
+=== RUN   TestInstanceManager_GetGroupInstance/find_group_instance
+=== RUN   TestInstanceManager_GetGroupInstance/wrong_tier
+--- PASS: TestInstanceManager_GetGroupInstance (0.00s)
+    --- PASS: TestInstanceManager_GetGroupInstance/find_group_instance (0.00s)
+    --- PASS: TestInstanceManager_GetGroupInstance/wrong_tier (0.00s)
+=== RUN   TestInstanceManager_CompleteInstance
+=== RUN   TestInstanceManager_CompleteInstance/complete_valid_instance
+=== RUN   TestInstanceManager_CompleteInstance/complete_non-existent
+=== RUN   TestInstanceManager_CompleteInstance/already_completed
+--- PASS: TestInstanceManager_CompleteInstance (0.00s)
+    --- PASS: TestInstanceManager_CompleteInstance/complete_valid_instance (0.00s)
+    --- PASS: TestInstanceManager_CompleteInstance/complete_non-existent (0.00s)
+    --- PASS: TestInstanceManager_CompleteInstance/already_completed (0.00s)
+=== RUN   TestInstanceManager_RemoveInstance
+--- PASS: TestInstanceManager_RemoveInstance (0.00s)
+=== RUN   TestInstanceManager_CleanupExpired
+--- PASS: TestInstanceManager_CleanupExpired (0.02s)
+=== RUN   TestInstanceManager_GetActiveInstanceCount
+--- PASS: TestInstanceManager_GetActiveInstanceCount (0.00s)
+=== RUN   TestInstanceManager_GetGroupInstances
+--- PASS: TestInstanceManager_GetGroupInstances (0.00s)
+=== RUN   TestLockoutManager_IsLockedOut
+--- PASS: TestLockoutManager_IsLockedOut (0.00s)
+=== RUN   TestLockoutManager_RecordClear
+--- PASS: TestLockoutManager_RecordClear (0.00s)
+=== RUN   TestLockoutManager_GetLockout
+--- PASS: TestLockoutManager_GetLockout (0.00s)
+=== RUN   TestLockoutManager_TimeUntilReset
+--- PASS: TestLockoutManager_TimeUntilReset (0.00s)
+=== RUN   TestLockoutManager_ClearLockout
+--- PASS: TestLockoutManager_ClearLockout (0.00s)
+=== RUN   TestLockoutManager_ClearAllLockouts
+--- PASS: TestLockoutManager_ClearAllLockouts (0.00s)
+=== RUN   TestLockoutManager_ResetExpiredLockouts
+--- PASS: TestLockoutManager_ResetExpiredLockouts (0.02s)
+=== RUN   TestLockoutManager_GetPlayerLockouts
+--- PASS: TestLockoutManager_GetPlayerLockouts (0.00s)
+=== RUN   TestLockoutManager_GetActiveLockoutCount
+--- PASS: TestLockoutManager_GetActiveLockoutCount (0.00s)
+=== RUN   TestLockoutManager_Concurrency
+--- PASS: TestLockoutManager_Concurrency (0.00s)
+=== RUN   TestNewManager
+--- PASS: TestNewManager (0.00s)
+=== RUN   TestManager_GenerateRaid
+=== RUN   TestManager_GenerateRaid/normal_tier
+=== RUN   TestManager_GenerateRaid/heroic_tier
+=== RUN   TestManager_GenerateRaid/mythic_tier
+=== RUN   TestManager_GenerateRaid/invalid_depth
+--- PASS: TestManager_GenerateRaid (0.00s)
+    --- PASS: TestManager_GenerateRaid/normal_tier (0.00s)
+    --- PASS: TestManager_GenerateRaid/heroic_tier (0.00s)
+    --- PASS: TestManager_GenerateRaid/mythic_tier (0.00s)
+    --- PASS: TestManager_GenerateRaid/invalid_depth (0.00s)
+=== RUN   TestManager_CreateInstance
+=== RUN   TestManager_CreateInstance/valid_normal_raid
+=== RUN   TestManager_CreateInstance/valid_heroic_raid
+=== RUN   TestManager_CreateInstance/insufficient_players
+=== RUN   TestManager_CreateInstance/too_many_players
+--- PASS: TestManager_CreateInstance (0.00s)
+    --- PASS: TestManager_CreateInstance/valid_normal_raid (0.00s)
+    --- PASS: TestManager_CreateInstance/valid_heroic_raid (0.00s)
+    --- PASS: TestManager_CreateInstance/insufficient_players (0.00s)
+    --- PASS: TestManager_CreateInstance/too_many_players (0.00s)
+=== RUN   TestManager_CompleteRaid
+--- PASS: TestManager_CompleteRaid (0.00s)
+=== RUN   TestManager_CanParticipate
+--- PASS: TestManager_CanParticipate (0.00s)
+=== RUN   TestManager_GetPlayerLockouts
+--- PASS: TestManager_GetPlayerLockouts (0.00s)
+=== RUN   TestManager_CleanupExpired
+    manager_test.go:332: Cleaned up 1 instances and 5 lockouts
+--- PASS: TestManager_CleanupExpired (0.15s)
+=== RUN   TestManager_GetGroupInstance
+--- PASS: TestManager_GetGroupInstance (0.00s)
+=== RUN   TestManager_ConcurrentAccess
+--- PASS: TestManager_ConcurrentAccess (0.00s)
+PASS
+ok  	github.com/opd-ai/venture/pkg/world/raids	0.205s
+=== RUN   TestNewManager
+--- PASS: TestNewManager (0.00s)
+=== RUN   TestCreateTerritory
+--- PASS: TestCreateTerritory (0.00s)
+=== RUN   TestCreateTerritory_Duplicate
+--- PASS: TestCreateTerritory_Duplicate (0.00s)
+=== RUN   TestGetTerritory
+=== RUN   TestGetTerritory/existing_territory
+=== RUN   TestGetTerritory/non-existent_territory
+--- PASS: TestGetTerritory (0.00s)
+    --- PASS: TestGetTerritory/existing_territory (0.00s)
+    --- PASS: TestGetTerritory/non-existent_territory (0.00s)
+=== RUN   TestAssignOwner
+--- PASS: TestAssignOwner (0.00s)
+=== RUN   TestAssignOwner_NonExistent
+--- PASS: TestAssignOwner_NonExistent (0.00s)
+=== RUN   TestUpdateCaptureProgress_Attackers
+--- PASS: TestUpdateCaptureProgress_Attackers (0.00s)
+=== RUN   TestUpdateCaptureProgress_Defenders
+--- PASS: TestUpdateCaptureProgress_Defenders (0.00s)
+=== RUN   TestUpdateCaptureProgress_Completion
+--- PASS: TestUpdateCaptureProgress_Completion (0.00s)
+=== RUN   TestUpdateCaptureProgress_NoAttackingGuild
+--- PASS: TestUpdateCaptureProgress_NoAttackingGuild (0.00s)
+=== RUN   TestBuildDefensiveStructure_Wall
+--- PASS: TestBuildDefensiveStructure_Wall (0.00s)
+=== RUN   TestBuildDefensiveStructure_Tower
+--- PASS: TestBuildDefensiveStructure_Tower (0.00s)
+=== RUN   TestBuildDefensiveStructure_Guard
+--- PASS: TestBuildDefensiveStructure_Guard (0.00s)
+=== RUN   TestBuildDefensiveStructure_Unowned
+--- PASS: TestBuildDefensiveStructure_Unowned (0.00s)
+=== RUN   TestDamageStructure
+--- PASS: TestDamageStructure (0.00s)
+=== RUN   TestDamageStructure_Destruction
+--- PASS: TestDamageStructure_Destruction (0.00s)
+=== RUN   TestDeclareWar
+--- PASS: TestDeclareWar (0.00s)
+=== RUN   TestDeclareWar_SelfWar
+--- PASS: TestDeclareWar_SelfWar (0.00s)
+=== RUN   TestDeclareWar_Duplicate
+--- PASS: TestDeclareWar_Duplicate (0.00s)
+=== RUN   TestEndWar
+--- PASS: TestEndWar (0.00s)
+=== RUN   TestIsAtWar
+--- PASS: TestIsAtWar (0.00s)
+=== RUN   TestGetGuildTerritories
+--- PASS: TestGetGuildTerritories (0.00s)
+=== RUN   TestGetResourceBonus
+--- PASS: TestGetResourceBonus (0.00s)
+=== RUN   TestGetXPBonus
+--- PASS: TestGetXPBonus (0.00s)
+=== RUN   TestGetContestedTerritories
+--- PASS: TestGetContestedTerritories (0.00s)
+=== RUN   TestGetAllTerritories
+--- PASS: TestGetAllTerritories (0.00s)
+=== RUN   TestGetActiveWars
+--- PASS: TestGetActiveWars (0.00s)
+=== RUN   TestGetGuildWars
+--- PASS: TestGetGuildWars (0.00s)
+=== RUN   TestSiegePhaseString
+=== RUN   TestSiegePhaseString/Preparation
+=== RUN   TestSiegePhaseString/Assault
+=== RUN   TestSiegePhaseString/Resolution
+=== RUN   TestSiegePhaseString/Ended
+=== RUN   TestSiegePhaseString/Unknown
+--- PASS: TestSiegePhaseString (0.00s)
+    --- PASS: TestSiegePhaseString/Preparation (0.00s)
+    --- PASS: TestSiegePhaseString/Assault (0.00s)
+    --- PASS: TestSiegePhaseString/Resolution (0.00s)
+    --- PASS: TestSiegePhaseString/Ended (0.00s)
+    --- PASS: TestSiegePhaseString/Unknown (0.00s)
+=== RUN   TestVictoryConditionString
+=== RUN   TestVictoryConditionString/Captured_All_Points
+=== RUN   TestVictoryConditionString/Guild_Hall_Destroyed
+=== RUN   TestVictoryConditionString/Defense_Held
+=== RUN   TestVictoryConditionString/Surrender
+=== RUN   TestVictoryConditionString/Unknown
+--- PASS: TestVictoryConditionString (0.00s)
+    --- PASS: TestVictoryConditionString/Captured_All_Points (0.00s)
+    --- PASS: TestVictoryConditionString/Guild_Hall_Destroyed (0.00s)
+    --- PASS: TestVictoryConditionString/Defense_Held (0.00s)
+    --- PASS: TestVictoryConditionString/Surrender (0.00s)
+    --- PASS: TestVictoryConditionString/Unknown (0.00s)
+=== RUN   TestNewSiege
+--- PASS: TestNewSiege (0.00s)
+=== RUN   TestSiegeJoinAndParticipants
+--- PASS: TestSiegeJoinAndParticipants (0.00s)
+=== RUN   TestSiegeParticipantCap
+--- PASS: TestSiegeParticipantCap (0.00s)
+=== RUN   TestSiegeReinforcements
+--- PASS: TestSiegeReinforcements (0.00s)
+=== RUN   TestSiegeReinforcementsCap
+--- PASS: TestSiegeReinforcementsCap (0.00s)
+=== RUN   TestSiegePhaseAdvancement
+--- PASS: TestSiegePhaseAdvancement (0.00s)
+=== RUN   TestSiegeCaptureControlPoint
+--- PASS: TestSiegeCaptureControlPoint (0.00s)
+=== RUN   TestSiegeDamageGuildHall
+--- PASS: TestSiegeDamageGuildHall (0.00s)
+=== RUN   TestSiegeDistributeLoot
+--- PASS: TestSiegeDistributeLoot (0.00s)
+=== RUN   TestSiegeManagerCreate
+--- PASS: TestSiegeManagerCreate (0.00s)
+=== RUN   TestSiegeManagerGetSiege
+--- PASS: TestSiegeManagerGetSiege (0.00s)
+=== RUN   TestSiegeManagerGetActiveSieges
+--- PASS: TestSiegeManagerGetActiveSieges (0.00s)
+=== RUN   TestSiegeManagerGetSiegeForTerritory
+--- PASS: TestSiegeManagerGetSiegeForTerritory (0.00s)
+=== RUN   TestSiegeManagerUpdate
+--- PASS: TestSiegeManagerUpdate (0.00s)
+=== RUN   TestGenerateDefensiveStructures
+--- PASS: TestGenerateDefensiveStructures (0.00s)
+=== RUN   TestGenerateDefensiveStructuresDeterminism
+--- PASS: TestGenerateDefensiveStructuresDeterminism (0.00s)
+=== RUN   TestGenerateDefensiveStructuresCount
+--- PASS: TestGenerateDefensiveStructuresCount (0.00s)
+=== RUN   TestTerritoryStatus_String
+=== RUN   TestTerritoryStatus_String/Neutral
+=== RUN   TestTerritoryStatus_String/Owned
+=== RUN   TestTerritoryStatus_String/Contested
+=== RUN   TestTerritoryStatus_String/Unknown
+--- PASS: TestTerritoryStatus_String (0.00s)
+    --- PASS: TestTerritoryStatus_String/Neutral (0.00s)
+    --- PASS: TestTerritoryStatus_String/Owned (0.00s)
+    --- PASS: TestTerritoryStatus_String/Contested (0.00s)
+    --- PASS: TestTerritoryStatus_String/Unknown (0.00s)
+=== RUN   TestStructureType_String
+=== RUN   TestStructureType_String/Wall
+=== RUN   TestStructureType_String/Tower
+=== RUN   TestStructureType_String/Guard
+=== RUN   TestStructureType_String/Unknown
+--- PASS: TestStructureType_String (0.00s)
+    --- PASS: TestStructureType_String/Wall (0.00s)
+    --- PASS: TestStructureType_String/Tower (0.00s)
+    --- PASS: TestStructureType_String/Guard (0.00s)
+    --- PASS: TestStructureType_String/Unknown (0.00s)
+=== RUN   TestConstants
+=== RUN   TestConstants/TerritoryChunkSize
+=== RUN   TestConstants/BaseCaptureTime
+=== RUN   TestConstants/DefenderTimeBonus
+=== RUN   TestConstants/BaseResourceBonus
+=== RUN   TestConstants/BaseXPBonus
+=== RUN   TestConstants/WarDeclarationCost
+=== RUN   TestConstants/PeaceDeclarationCost
+=== RUN   TestConstants/WarDurationDays
+=== RUN   TestConstants/WallBaseHP
+=== RUN   TestConstants/TowerBaseHP
+=== RUN   TestConstants/GuardBaseHP
+=== RUN   TestConstants/TowerDamage
+=== RUN   TestConstants/GuardLevel
+--- PASS: TestConstants (0.00s)
+    --- PASS: TestConstants/TerritoryChunkSize (0.00s)
+    --- PASS: TestConstants/BaseCaptureTime (0.00s)
+    --- PASS: TestConstants/DefenderTimeBonus (0.00s)
+    --- PASS: TestConstants/BaseResourceBonus (0.00s)
+    --- PASS: TestConstants/BaseXPBonus (0.00s)
+    --- PASS: TestConstants/WarDeclarationCost (0.00s)
+    --- PASS: TestConstants/PeaceDeclarationCost (0.00s)
+    --- PASS: TestConstants/WarDurationDays (0.00s)
+    --- PASS: TestConstants/WallBaseHP (0.00s)
+    --- PASS: TestConstants/TowerBaseHP (0.00s)
+    --- PASS: TestConstants/GuardBaseHP (0.00s)
+    --- PASS: TestConstants/TowerDamage (0.00s)
+    --- PASS: TestConstants/GuardLevel (0.00s)
+=== RUN   TestTerritoryCoords
+--- PASS: TestTerritoryCoords (0.00s)
+PASS
+ok  	github.com/opd-ai/venture/pkg/world/territory	0.005s

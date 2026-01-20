@@ -1,18 +1,11 @@
 // Package postprocess provides post-processing effects for rendered scenes.
+// Code relocated from: chromatic_aberration.go (constants moved to constants.go)
 package postprocess
 
 import (
 	"image"
 	"image/color"
 	"math"
-)
-
-const (
-	// chromaticAberrationScale is the base scaling factor for chromatic aberration effect
-	chromaticAberrationScale = 5.0
-
-	// prismaticAberrationScale is the scaling factor for prismatic aberration effect
-	prismaticAberrationScale = 8.0
 )
 
 // ApplyChromaticAberration applies chromatic aberration effect that separates color channels.

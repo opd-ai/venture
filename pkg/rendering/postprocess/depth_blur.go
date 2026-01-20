@@ -1,15 +1,11 @@
 // Package postprocess provides post-processing effects for rendered scenes.
+// Code relocated from: depth_blur.go (constants moved to constants.go)
 package postprocess
 
 import (
 	"image"
 	"image/color"
 	"math"
-)
-
-const (
-	// maxBlurRadiusPixels is the maximum blur radius in pixels for depth blur
-	maxBlurRadiusPixels = 10.0
 )
 
 // ApplyDepthBlur applies depth-of-field blur to an image based on a depth map.

@@ -1,0 +1,626 @@
+=== RUN   TestEnvironmentType_String
+=== RUN   TestEnvironmentType_String/dungeon
+=== RUN   TestEnvironmentType_String/cave
+=== RUN   TestEnvironmentType_String/forest
+=== RUN   TestEnvironmentType_String/desert
+=== RUN   TestEnvironmentType_String/snow
+=== RUN   TestEnvironmentType_String/swamp
+=== RUN   TestEnvironmentType_String/lava
+=== RUN   TestEnvironmentType_String/city
+=== RUN   TestEnvironmentType_String/laboratory
+=== RUN   TestEnvironmentType_String/ruins
+=== RUN   TestEnvironmentType_String/unknown
+--- PASS: TestEnvironmentType_String (0.00s)
+    --- PASS: TestEnvironmentType_String/dungeon (0.00s)
+    --- PASS: TestEnvironmentType_String/cave (0.00s)
+    --- PASS: TestEnvironmentType_String/forest (0.00s)
+    --- PASS: TestEnvironmentType_String/desert (0.00s)
+    --- PASS: TestEnvironmentType_String/snow (0.00s)
+    --- PASS: TestEnvironmentType_String/swamp (0.00s)
+    --- PASS: TestEnvironmentType_String/lava (0.00s)
+    --- PASS: TestEnvironmentType_String/city (0.00s)
+    --- PASS: TestEnvironmentType_String/laboratory (0.00s)
+    --- PASS: TestEnvironmentType_String/ruins (0.00s)
+    --- PASS: TestEnvironmentType_String/unknown (0.00s)
+=== RUN   TestDefaultAmbienceConfig
+--- PASS: TestDefaultAmbienceConfig (0.00s)
+=== RUN   TestAmbienceConfig_Validate
+=== RUN   TestAmbienceConfig_Validate/valid_config
+=== RUN   TestAmbienceConfig_Validate/invalid_width
+=== RUN   TestAmbienceConfig_Validate/invalid_height
+=== RUN   TestAmbienceConfig_Validate/empty_genreID
+=== RUN   TestAmbienceConfig_Validate/negative_density
+=== RUN   TestAmbienceConfig_Validate/density_too_high
+--- PASS: TestAmbienceConfig_Validate (0.00s)
+    --- PASS: TestAmbienceConfig_Validate/valid_config (0.00s)
+    --- PASS: TestAmbienceConfig_Validate/invalid_width (0.00s)
+    --- PASS: TestAmbienceConfig_Validate/invalid_height (0.00s)
+    --- PASS: TestAmbienceConfig_Validate/empty_genreID (0.00s)
+    --- PASS: TestAmbienceConfig_Validate/negative_density (0.00s)
+    --- PASS: TestAmbienceConfig_Validate/density_too_high (0.00s)
+=== RUN   TestAmbienceConfig_GetParticleCount
+=== RUN   TestAmbienceConfig_GetParticleCount/standard_area_with_medium_density
+=== RUN   TestAmbienceConfig_GetParticleCount/standard_area_with_high_density
+=== RUN   TestAmbienceConfig_GetParticleCount/standard_area_with_low_density
+=== RUN   TestAmbienceConfig_GetParticleCount/large_area
+=== RUN   TestAmbienceConfig_GetParticleCount/small_area
+--- PASS: TestAmbienceConfig_GetParticleCount (0.00s)
+    --- PASS: TestAmbienceConfig_GetParticleCount/standard_area_with_medium_density (0.00s)
+    --- PASS: TestAmbienceConfig_GetParticleCount/standard_area_with_high_density (0.00s)
+    --- PASS: TestAmbienceConfig_GetParticleCount/standard_area_with_low_density (0.00s)
+    --- PASS: TestAmbienceConfig_GetParticleCount/large_area (0.00s)
+    --- PASS: TestAmbienceConfig_GetParticleCount/small_area (0.00s)
+=== RUN   TestGenerateAmbience_AllEnvironments
+=== RUN   TestGenerateAmbience_AllEnvironments/Dungeon
+=== RUN   TestGenerateAmbience_AllEnvironments/Cave
+=== RUN   TestGenerateAmbience_AllEnvironments/Forest
+=== RUN   TestGenerateAmbience_AllEnvironments/Desert
+=== RUN   TestGenerateAmbience_AllEnvironments/Snow
+=== RUN   TestGenerateAmbience_AllEnvironments/Swamp
+=== RUN   TestGenerateAmbience_AllEnvironments/Lava
+=== RUN   TestGenerateAmbience_AllEnvironments/City
+=== RUN   TestGenerateAmbience_AllEnvironments/Laboratory
+=== RUN   TestGenerateAmbience_AllEnvironments/Ruins
+--- PASS: TestGenerateAmbience_AllEnvironments (0.00s)
+    --- PASS: TestGenerateAmbience_AllEnvironments/Dungeon (0.00s)
+    --- PASS: TestGenerateAmbience_AllEnvironments/Cave (0.00s)
+    --- PASS: TestGenerateAmbience_AllEnvironments/Forest (0.00s)
+    --- PASS: TestGenerateAmbience_AllEnvironments/Desert (0.00s)
+    --- PASS: TestGenerateAmbience_AllEnvironments/Snow (0.00s)
+    --- PASS: TestGenerateAmbience_AllEnvironments/Swamp (0.00s)
+    --- PASS: TestGenerateAmbience_AllEnvironments/Lava (0.00s)
+    --- PASS: TestGenerateAmbience_AllEnvironments/City (0.00s)
+    --- PASS: TestGenerateAmbience_AllEnvironments/Laboratory (0.00s)
+    --- PASS: TestGenerateAmbience_AllEnvironments/Ruins (0.00s)
+=== RUN   TestGenerateAmbience_Deterministic
+--- PASS: TestGenerateAmbience_Deterministic (0.00s)
+=== RUN   TestGenerateAmbience_InvalidConfig
+--- PASS: TestGenerateAmbience_InvalidConfig (0.00s)
+=== RUN   TestAmbienceSystem_Update
+--- PASS: TestAmbienceSystem_Update (0.00s)
+=== RUN   TestAmbienceSystem_Update_ParticleRespawn
+--- PASS: TestAmbienceSystem_Update_ParticleRespawn (0.00s)
+=== RUN   TestAmbienceSystem_EnvironmentBehaviors
+--- PASS: TestAmbienceSystem_EnvironmentBehaviors (0.00s)
+=== RUN   TestEnvironmentBehaviorHelpers
+=== RUN   TestEnvironmentBehaviorHelpers/applyDriftBehavior
+=== RUN   TestEnvironmentBehaviorHelpers/applySineWaveBehavior
+=== RUN   TestEnvironmentBehaviorHelpers/applyGustBehavior
+=== RUN   TestEnvironmentBehaviorHelpers/applySnowDriftBehavior
+=== RUN   TestEnvironmentBehaviorHelpers/applyFloatBehavior
+=== RUN   TestEnvironmentBehaviorHelpers/applyRiseBehavior
+=== RUN   TestEnvironmentBehaviorHelpers/applyTumbleBehavior
+=== RUN   TestEnvironmentBehaviorHelpers/applyOrbitBehavior
+=== RUN   TestEnvironmentBehaviorHelpers/applyFadeBehavior
+--- PASS: TestEnvironmentBehaviorHelpers (0.00s)
+    --- PASS: TestEnvironmentBehaviorHelpers/applyDriftBehavior (0.00s)
+    --- PASS: TestEnvironmentBehaviorHelpers/applySineWaveBehavior (0.00s)
+    --- PASS: TestEnvironmentBehaviorHelpers/applyGustBehavior (0.00s)
+    --- PASS: TestEnvironmentBehaviorHelpers/applySnowDriftBehavior (0.00s)
+    --- PASS: TestEnvironmentBehaviorHelpers/applyFloatBehavior (0.00s)
+    --- PASS: TestEnvironmentBehaviorHelpers/applyRiseBehavior (0.00s)
+    --- PASS: TestEnvironmentBehaviorHelpers/applyTumbleBehavior (0.00s)
+    --- PASS: TestEnvironmentBehaviorHelpers/applyOrbitBehavior (0.00s)
+    --- PASS: TestEnvironmentBehaviorHelpers/applyFadeBehavior (0.00s)
+=== RUN   TestGetEnvironmentVelocity
+=== RUN   TestGetEnvironmentVelocity/Dungeon
+=== RUN   TestGetEnvironmentVelocity/Cave
+=== RUN   TestGetEnvironmentVelocity/Forest
+=== RUN   TestGetEnvironmentVelocity/Desert
+=== RUN   TestGetEnvironmentVelocity/Snow
+=== RUN   TestGetEnvironmentVelocity/Swamp
+=== RUN   TestGetEnvironmentVelocity/Lava
+=== RUN   TestGetEnvironmentVelocity/City
+=== RUN   TestGetEnvironmentVelocity/Laboratory
+=== RUN   TestGetEnvironmentVelocity/Ruins
+--- PASS: TestGetEnvironmentVelocity (0.00s)
+    --- PASS: TestGetEnvironmentVelocity/Dungeon (0.00s)
+    --- PASS: TestGetEnvironmentVelocity/Cave (0.00s)
+    --- PASS: TestGetEnvironmentVelocity/Forest (0.00s)
+    --- PASS: TestGetEnvironmentVelocity/Desert (0.00s)
+    --- PASS: TestGetEnvironmentVelocity/Snow (0.00s)
+    --- PASS: TestGetEnvironmentVelocity/Swamp (0.00s)
+    --- PASS: TestGetEnvironmentVelocity/Lava (0.00s)
+    --- PASS: TestGetEnvironmentVelocity/City (0.00s)
+    --- PASS: TestGetEnvironmentVelocity/Laboratory (0.00s)
+    --- PASS: TestGetEnvironmentVelocity/Ruins (0.00s)
+=== RUN   TestGetEnvironmentLifetime
+=== RUN   TestGetEnvironmentLifetime/Dungeon
+=== RUN   TestGetEnvironmentLifetime/Cave
+=== RUN   TestGetEnvironmentLifetime/Forest
+=== RUN   TestGetEnvironmentLifetime/Desert
+=== RUN   TestGetEnvironmentLifetime/Snow
+=== RUN   TestGetEnvironmentLifetime/Swamp
+=== RUN   TestGetEnvironmentLifetime/Lava
+=== RUN   TestGetEnvironmentLifetime/City
+=== RUN   TestGetEnvironmentLifetime/Laboratory
+=== RUN   TestGetEnvironmentLifetime/Ruins
+--- PASS: TestGetEnvironmentLifetime (0.00s)
+    --- PASS: TestGetEnvironmentLifetime/Dungeon (0.00s)
+    --- PASS: TestGetEnvironmentLifetime/Cave (0.00s)
+    --- PASS: TestGetEnvironmentLifetime/Forest (0.00s)
+    --- PASS: TestGetEnvironmentLifetime/Desert (0.00s)
+    --- PASS: TestGetEnvironmentLifetime/Snow (0.00s)
+    --- PASS: TestGetEnvironmentLifetime/Swamp (0.00s)
+    --- PASS: TestGetEnvironmentLifetime/Lava (0.00s)
+    --- PASS: TestGetEnvironmentLifetime/City (0.00s)
+    --- PASS: TestGetEnvironmentLifetime/Laboratory (0.00s)
+    --- PASS: TestGetEnvironmentLifetime/Ruins (0.00s)
+=== RUN   TestParticleBehavior_Has
+=== RUN   TestParticleBehavior_Has/gravity_has_gravity
+=== RUN   TestParticleBehavior_Has/gravity_doesn't_have_air_resistance
+=== RUN   TestParticleBehavior_Has/combined_flags_has_both
+=== RUN   TestParticleBehavior_Has/combined_flags_has_both_(second)
+=== RUN   TestParticleBehavior_Has/all_behaviors_has_bounce
+--- PASS: TestParticleBehavior_Has (0.00s)
+    --- PASS: TestParticleBehavior_Has/gravity_has_gravity (0.00s)
+    --- PASS: TestParticleBehavior_Has/gravity_doesn't_have_air_resistance (0.00s)
+    --- PASS: TestParticleBehavior_Has/combined_flags_has_both (0.00s)
+    --- PASS: TestParticleBehavior_Has/combined_flags_has_both_(second) (0.00s)
+    --- PASS: TestParticleBehavior_Has/all_behaviors_has_bounce (0.00s)
+=== RUN   TestDefaultPhysicsConfig
+--- PASS: TestDefaultPhysicsConfig (0.00s)
+=== RUN   TestApplyPhysics_Gravity
+--- PASS: TestApplyPhysics_Gravity (0.00s)
+=== RUN   TestApplyPhysics_AirResistance
+--- PASS: TestApplyPhysics_AirResistance (0.00s)
+=== RUN   TestApplyPhysics_Bounce
+=== RUN   TestApplyPhysics_Bounce/bounce_at_ground
+=== RUN   TestApplyPhysics_Bounce/no_bounce_above_ground
+=== RUN   TestApplyPhysics_Bounce/bounce_with_high_damping
+--- PASS: TestApplyPhysics_Bounce (0.00s)
+    --- PASS: TestApplyPhysics_Bounce/bounce_at_ground (0.00s)
+    --- PASS: TestApplyPhysics_Bounce/no_bounce_above_ground (0.00s)
+    --- PASS: TestApplyPhysics_Bounce/bounce_with_high_damping (0.00s)
+=== RUN   TestApplyPhysics_Rising
+--- PASS: TestApplyPhysics_Rising (0.00s)
+=== RUN   TestApplyPhysics_Attract
+--- PASS: TestApplyPhysics_Attract (0.00s)
+=== RUN   TestApplyPhysics_CombinedBehaviors
+--- PASS: TestApplyPhysics_CombinedBehaviors (0.00s)
+=== RUN   TestDefaultTrailConfig
+--- PASS: TestDefaultTrailConfig (0.00s)
+=== RUN   TestUpdateTrail_AddPoints
+--- PASS: TestUpdateTrail_AddPoints (0.00s)
+=== RUN   TestUpdateTrail_MaxLength
+--- PASS: TestUpdateTrail_MaxLength (0.00s)
+=== RUN   TestUpdateTrail_Fading
+--- PASS: TestUpdateTrail_Fading (0.00s)
+=== RUN   TestUpdateTrail_RemoveDead
+--- PASS: TestUpdateTrail_RemoveDead (0.00s)
+=== RUN   TestParticleType_String
+=== RUN   TestParticleType_String/Spark
+=== RUN   TestParticleType_String/Smoke
+=== RUN   TestParticleType_String/Magic
+=== RUN   TestParticleType_String/Flame
+=== RUN   TestParticleType_String/Blood
+=== RUN   TestParticleType_String/Dust
+=== RUN   TestParticleType_String/Unknown
+--- PASS: TestParticleType_String (0.00s)
+    --- PASS: TestParticleType_String/Spark (0.00s)
+    --- PASS: TestParticleType_String/Smoke (0.00s)
+    --- PASS: TestParticleType_String/Magic (0.00s)
+    --- PASS: TestParticleType_String/Flame (0.00s)
+    --- PASS: TestParticleType_String/Blood (0.00s)
+    --- PASS: TestParticleType_String/Dust (0.00s)
+    --- PASS: TestParticleType_String/Unknown (0.00s)
+=== RUN   TestDefaultConfig
+--- PASS: TestDefaultConfig (0.00s)
+=== RUN   TestConfig_Validate
+=== RUN   TestConfig_Validate/Valid_config
+=== RUN   TestConfig_Validate/Zero_count
+=== RUN   TestConfig_Validate/Negative_count
+=== RUN   TestConfig_Validate/Count_too_large
+=== RUN   TestConfig_Validate/Empty_GenreID
+=== RUN   TestConfig_Validate/Zero_duration
+=== RUN   TestConfig_Validate/Negative_duration
+=== RUN   TestConfig_Validate/Zero_minSize
+=== RUN   TestConfig_Validate/MaxSize_less_than_MinSize
+--- PASS: TestConfig_Validate (0.00s)
+    --- PASS: TestConfig_Validate/Valid_config (0.00s)
+    --- PASS: TestConfig_Validate/Zero_count (0.00s)
+    --- PASS: TestConfig_Validate/Negative_count (0.00s)
+    --- PASS: TestConfig_Validate/Count_too_large (0.00s)
+    --- PASS: TestConfig_Validate/Empty_GenreID (0.00s)
+    --- PASS: TestConfig_Validate/Zero_duration (0.00s)
+    --- PASS: TestConfig_Validate/Negative_duration (0.00s)
+    --- PASS: TestConfig_Validate/Zero_minSize (0.00s)
+    --- PASS: TestConfig_Validate/MaxSize_less_than_MinSize (0.00s)
+=== RUN   TestGenerator_Generate
+=== RUN   TestGenerator_Generate/Generate_spark_particles
+=== RUN   TestGenerator_Generate/Generate_smoke_particles
+=== RUN   TestGenerator_Generate/Generate_magic_particles
+=== RUN   TestGenerator_Generate/Generate_flame_particles
+=== RUN   TestGenerator_Generate/Generate_blood_particles
+=== RUN   TestGenerator_Generate/Generate_dust_particles
+=== RUN   TestGenerator_Generate/Invalid_config_-_zero_count
+--- PASS: TestGenerator_Generate (0.00s)
+    --- PASS: TestGenerator_Generate/Generate_spark_particles (0.00s)
+    --- PASS: TestGenerator_Generate/Generate_smoke_particles (0.00s)
+    --- PASS: TestGenerator_Generate/Generate_magic_particles (0.00s)
+    --- PASS: TestGenerator_Generate/Generate_flame_particles (0.00s)
+    --- PASS: TestGenerator_Generate/Generate_blood_particles (0.00s)
+    --- PASS: TestGenerator_Generate/Generate_dust_particles (0.00s)
+    --- PASS: TestGenerator_Generate/Invalid_config_-_zero_count (0.00s)
+=== RUN   TestGenerator_Determinism
+--- PASS: TestGenerator_Determinism (0.00s)
+=== RUN   TestGenerator_DifferentSeeds
+--- PASS: TestGenerator_DifferentSeeds (0.00s)
+=== RUN   TestParticleSystem_Update
+--- PASS: TestParticleSystem_Update (0.00s)
+=== RUN   TestParticleSystem_IsAlive
+--- PASS: TestParticleSystem_IsAlive (0.00s)
+=== RUN   TestParticleSystem_GetAliveParticles
+--- PASS: TestParticleSystem_GetAliveParticles (0.00s)
+=== RUN   TestGenerator_Validate
+=== RUN   TestGenerator_Validate/Valid_particle_system
+=== RUN   TestGenerator_Validate/Nil_system
+=== RUN   TestGenerator_Validate/Wrong_type
+=== RUN   TestGenerator_Validate/No_particles
+=== RUN   TestGenerator_Validate/Invalid_particle_size
+=== RUN   TestGenerator_Validate/Invalid_particle_initial_life
+=== RUN   TestGenerator_Validate/Invalid_particle_life
+--- PASS: TestGenerator_Validate (0.00s)
+    --- PASS: TestGenerator_Validate/Valid_particle_system (0.00s)
+    --- PASS: TestGenerator_Validate/Nil_system (0.00s)
+    --- PASS: TestGenerator_Validate/Wrong_type (0.00s)
+    --- PASS: TestGenerator_Validate/No_particles (0.00s)
+    --- PASS: TestGenerator_Validate/Invalid_particle_size (0.00s)
+    --- PASS: TestGenerator_Validate/Invalid_particle_initial_life (0.00s)
+    --- PASS: TestGenerator_Validate/Invalid_particle_life (0.00s)
+=== RUN   TestGenerator_AllGenres
+=== RUN   TestGenerator_AllGenres/fantasy
+=== RUN   TestGenerator_AllGenres/scifi
+=== RUN   TestGenerator_AllGenres/horror
+=== RUN   TestGenerator_AllGenres/cyberpunk
+=== RUN   TestGenerator_AllGenres/postapoc
+--- PASS: TestGenerator_AllGenres (0.00s)
+    --- PASS: TestGenerator_AllGenres/fantasy (0.00s)
+    --- PASS: TestGenerator_AllGenres/scifi (0.00s)
+    --- PASS: TestGenerator_AllGenres/horror (0.00s)
+    --- PASS: TestGenerator_AllGenres/cyberpunk (0.00s)
+    --- PASS: TestGenerator_AllGenres/postapoc (0.00s)
+=== RUN   TestZLayerAssignment
+=== RUN   TestZLayerAssignment/Smoke_AboveEntity
+=== RUN   TestZLayerAssignment/Magic_AboveEntity
+=== RUN   TestZLayerAssignment/Flame_AboveEntity
+=== RUN   TestZLayerAssignment/Sparkle_AboveEntity
+=== RUN   TestZLayerAssignment/Ember_SkyLevel
+=== RUN   TestZLayerAssignment/SmokePlume_SkyLevel
+=== RUN   TestZLayerAssignment/Blood_GroundLevel
+=== RUN   TestZLayerAssignment/Dust_GroundLevel
+=== RUN   TestZLayerAssignment/Debris_GroundLevel
+=== RUN   TestZLayerAssignment/Spark_EntityLevel
+--- PASS: TestZLayerAssignment (0.00s)
+    --- PASS: TestZLayerAssignment/Smoke_AboveEntity (0.00s)
+    --- PASS: TestZLayerAssignment/Magic_AboveEntity (0.00s)
+    --- PASS: TestZLayerAssignment/Flame_AboveEntity (0.00s)
+    --- PASS: TestZLayerAssignment/Sparkle_AboveEntity (0.00s)
+    --- PASS: TestZLayerAssignment/Ember_SkyLevel (0.00s)
+    --- PASS: TestZLayerAssignment/SmokePlume_SkyLevel (0.00s)
+    --- PASS: TestZLayerAssignment/Blood_GroundLevel (0.00s)
+    --- PASS: TestZLayerAssignment/Dust_GroundLevel (0.00s)
+    --- PASS: TestZLayerAssignment/Debris_GroundLevel (0.00s)
+    --- PASS: TestZLayerAssignment/Spark_EntityLevel (0.00s)
+=== RUN   TestInitialSizeTracking
+=== RUN   TestInitialSizeTracking/spark
+=== RUN   TestInitialSizeTracking/smoke
+=== RUN   TestInitialSizeTracking/magic
+=== RUN   TestInitialSizeTracking/flame
+=== RUN   TestInitialSizeTracking/blood
+=== RUN   TestInitialSizeTracking/dust
+=== RUN   TestInitialSizeTracking/ember
+=== RUN   TestInitialSizeTracking/sparkle
+=== RUN   TestInitialSizeTracking/smoke_plume
+=== RUN   TestInitialSizeTracking/debris
+--- PASS: TestInitialSizeTracking (0.00s)
+    --- PASS: TestInitialSizeTracking/spark (0.00s)
+    --- PASS: TestInitialSizeTracking/smoke (0.00s)
+    --- PASS: TestInitialSizeTracking/magic (0.00s)
+    --- PASS: TestInitialSizeTracking/flame (0.00s)
+    --- PASS: TestInitialSizeTracking/blood (0.00s)
+    --- PASS: TestInitialSizeTracking/dust (0.00s)
+    --- PASS: TestInitialSizeTracking/ember (0.00s)
+    --- PASS: TestInitialSizeTracking/sparkle (0.00s)
+    --- PASS: TestInitialSizeTracking/smoke_plume (0.00s)
+    --- PASS: TestInitialSizeTracking/debris (0.00s)
+=== RUN   TestSizeScalingBehaviors
+=== RUN   TestSizeScalingBehaviors/ShrinkOnRise
+=== RUN   TestSizeScalingBehaviors/GrowOnFall
+=== RUN   TestSizeScalingBehaviors/NoScalingWhenStationary
+--- PASS: TestSizeScalingBehaviors (0.00s)
+    --- PASS: TestSizeScalingBehaviors/ShrinkOnRise (0.00s)
+    --- PASS: TestSizeScalingBehaviors/GrowOnFall (0.00s)
+    --- PASS: TestSizeScalingBehaviors/NoScalingWhenStationary (0.00s)
+=== RUN   TestZLayerConstants
+--- PASS: TestZLayerConstants (0.00s)
+=== RUN   TestDefaultLODConfig
+--- PASS: TestDefaultLODConfig (0.00s)
+=== RUN   TestDefaultViewportCullingConfig
+--- PASS: TestDefaultViewportCullingConfig (0.00s)
+=== RUN   TestApplyViewportCulling
+--- PASS: TestApplyViewportCulling (0.00s)
+=== RUN   TestApplyViewportCulling_WithMargin
+--- PASS: TestApplyViewportCulling_WithMargin (0.00s)
+=== RUN   TestApplyViewportCulling_Disabled
+--- PASS: TestApplyViewportCulling_Disabled (0.00s)
+=== RUN   TestApplyDistanceLOD
+--- PASS: TestApplyDistanceLOD (0.00s)
+=== RUN   TestApplyDistanceLOD_Disabled
+--- PASS: TestApplyDistanceLOD_Disabled (0.00s)
+=== RUN   TestEnforceLODLimit
+--- PASS: TestEnforceLODLimit (0.00s)
+=== RUN   TestEnforceLODLimit_NoLimit
+--- PASS: TestEnforceLODLimit_NoLimit (0.00s)
+=== RUN   TestCalculateLODStats
+--- PASS: TestCalculateLODStats (0.00s)
+=== RUN   TestNewParticleTypes_String
+=== RUN   TestNewParticleTypes_String/ember
+=== RUN   TestNewParticleTypes_String/sparkle
+=== RUN   TestNewParticleTypes_String/smoke_plume
+=== RUN   TestNewParticleTypes_String/debris
+=== RUN   TestNewParticleTypes_String/existing_spark
+=== RUN   TestNewParticleTypes_String/existing_magic
+--- PASS: TestNewParticleTypes_String (0.00s)
+    --- PASS: TestNewParticleTypes_String/ember (0.00s)
+    --- PASS: TestNewParticleTypes_String/sparkle (0.00s)
+    --- PASS: TestNewParticleTypes_String/smoke_plume (0.00s)
+    --- PASS: TestNewParticleTypes_String/debris (0.00s)
+    --- PASS: TestNewParticleTypes_String/existing_spark (0.00s)
+    --- PASS: TestNewParticleTypes_String/existing_magic (0.00s)
+=== RUN   TestGenerateEmbers
+--- PASS: TestGenerateEmbers (0.00s)
+=== RUN   TestGenerateSparkles
+--- PASS: TestGenerateSparkles (0.00s)
+=== RUN   TestGenerateSmokePlume
+--- PASS: TestGenerateSmokePlume (0.00s)
+=== RUN   TestGenerateDebris
+--- PASS: TestGenerateDebris (0.00s)
+=== RUN   TestNewParticleTypes_Determinism
+=== RUN   TestNewParticleTypes_Determinism/ember
+=== RUN   TestNewParticleTypes_Determinism/sparkle
+=== RUN   TestNewParticleTypes_Determinism/smoke_plume
+=== RUN   TestNewParticleTypes_Determinism/debris
+--- PASS: TestNewParticleTypes_Determinism (0.00s)
+    --- PASS: TestNewParticleTypes_Determinism/ember (0.00s)
+    --- PASS: TestNewParticleTypes_Determinism/sparkle (0.00s)
+    --- PASS: TestNewParticleTypes_Determinism/smoke_plume (0.00s)
+    --- PASS: TestNewParticleTypes_Determinism/debris (0.00s)
+=== RUN   TestParticleUpdate_WithBehaviors
+--- PASS: TestParticleUpdate_WithBehaviors (0.00s)
+=== RUN   TestPhysicsType_String
+=== RUN   TestPhysicsType_String/None
+=== RUN   TestPhysicsType_String/Fluid
+=== RUN   TestPhysicsType_String/Fire
+=== RUN   TestPhysicsType_String/Smoke
+=== RUN   TestPhysicsType_String/Debris
+=== RUN   TestPhysicsType_String/Unknown
+--- PASS: TestPhysicsType_String (0.00s)
+    --- PASS: TestPhysicsType_String/None (0.00s)
+    --- PASS: TestPhysicsType_String/Fluid (0.00s)
+    --- PASS: TestPhysicsType_String/Fire (0.00s)
+    --- PASS: TestPhysicsType_String/Smoke (0.00s)
+    --- PASS: TestPhysicsType_String/Debris (0.00s)
+    --- PASS: TestPhysicsType_String/Unknown (0.00s)
+=== RUN   TestDefaultSPHConfig
+--- PASS: TestDefaultSPHConfig (0.00s)
+=== RUN   TestDefaultFireConfig
+--- PASS: TestDefaultFireConfig (0.00s)
+=== RUN   TestDefaultSmokeConfig
+--- PASS: TestDefaultSmokeConfig (0.00s)
+=== RUN   TestDefaultDebrisConfig
+--- PASS: TestDefaultDebrisConfig (0.00s)
+=== RUN   TestSpatialHash_CreateAndClear
+--- PASS: TestSpatialHash_CreateAndClear (0.00s)
+=== RUN   TestSpatialHash_InsertAndQuery
+--- PASS: TestSpatialHash_InsertAndQuery (0.00s)
+=== RUN   TestSpatialHash_GetNeighbors
+--- PASS: TestSpatialHash_GetNeighbors (0.00s)
+=== RUN   TestPoly6Kernel
+--- PASS: TestPoly6Kernel (0.00s)
+=== RUN   TestSpikyKernelGradient
+--- PASS: TestSpikyKernelGradient (0.00s)
+=== RUN   TestViscosityKernelLaplacian
+--- PASS: TestViscosityKernelLaplacian (0.00s)
+=== RUN   TestUpdateSPH_EmptyParticles
+--- PASS: TestUpdateSPH_EmptyParticles (0.00s)
+=== RUN   TestUpdateSPH_SingleParticle
+--- PASS: TestUpdateSPH_SingleParticle (0.00s)
+=== RUN   TestUpdateSPH_TwoParticles
+--- PASS: TestUpdateSPH_TwoParticles (0.00s)
+=== RUN   TestUpdateFire_EmptyParticles
+--- PASS: TestUpdateFire_EmptyParticles (0.00s)
+=== RUN   TestUpdateFire_HeatDissipation
+--- PASS: TestUpdateFire_HeatDissipation (0.00s)
+=== RUN   TestUpdateFire_Ignition
+--- PASS: TestUpdateFire_Ignition (0.00s)
+=== RUN   TestUpdateFire_FuelConsumption
+--- PASS: TestUpdateFire_FuelConsumption (0.00s)
+=== RUN   TestUpdateFire_Buoyancy
+--- PASS: TestUpdateFire_Buoyancy (0.00s)
+=== RUN   TestUpdateSmoke_EmptyParticles
+--- PASS: TestUpdateSmoke_EmptyParticles (0.00s)
+=== RUN   TestUpdateSmoke_Turbulence
+--- PASS: TestUpdateSmoke_Turbulence (0.00s)
+=== RUN   TestUpdateSmoke_Rising
+--- PASS: TestUpdateSmoke_Rising (0.00s)
+=== RUN   TestUpdateSmoke_Expansion
+--- PASS: TestUpdateSmoke_Expansion (0.00s)
+=== RUN   TestUpdateSmoke_Dissipation
+--- PASS: TestUpdateSmoke_Dissipation (0.00s)
+=== RUN   TestUpdateDebris_EmptyParticles
+--- PASS: TestUpdateDebris_EmptyParticles (0.00s)
+=== RUN   TestUpdateDebris_GroundCollision
+--- PASS: TestUpdateDebris_GroundCollision (0.00s)
+=== RUN   TestUpdateDebris_ParticleCollision
+--- PASS: TestUpdateDebris_ParticleCollision (0.00s)
+=== RUN   TestUpdateDebris_RotationDamping
+--- PASS: TestUpdateDebris_RotationDamping (0.00s)
+=== RUN   TestUpdateDebris_Rotation
+--- PASS: TestUpdateDebris_Rotation (0.00s)
+=== RUN   TestNewParticleSystem_UsesPool
+    pool_test.go:27: Pool successfully reused object at address 824637647104
+--- PASS: TestNewParticleSystem_UsesPool (0.00s)
+=== RUN   TestNewParticleSystem_InitializesCorrectly
+--- PASS: TestNewParticleSystem_InitializesCorrectly (0.00s)
+=== RUN   TestReleaseParticleSystem_ClearsState
+--- PASS: TestReleaseParticleSystem_ClearsState (0.00s)
+=== RUN   TestReleaseParticleSystem_NilSafe
+--- PASS: TestReleaseParticleSystem_NilSafe (0.00s)
+=== RUN   TestParticleSystem_CapacityReuse
+--- PASS: TestParticleSystem_CapacityReuse (0.00s)
+=== RUN   TestAcquireParticleSlice_UsesPool
+    pool_test.go:152: Pool successfully reused slice at address 824637264552
+--- PASS: TestAcquireParticleSlice_UsesPool (0.00s)
+=== RUN   TestAcquireParticleSlice_AppendWorks
+--- PASS: TestAcquireParticleSlice_AppendWorks (0.00s)
+=== RUN   TestReleaseParticleSlice_NilSafe
+--- PASS: TestReleaseParticleSlice_NilSafe (0.00s)
+=== RUN   TestParticlePoolStats_Tracking
+--- PASS: TestParticlePoolStats_Tracking (0.00s)
+=== RUN   TestParticlePool_NoMemoryLeaks
+--- PASS: TestParticlePool_NoMemoryLeaks (0.00s)
+=== RUN   TestParticlePool_ConcurrentAccess
+--- PASS: TestParticlePool_ConcurrentAccess (0.00s)
+=== RUN   TestWeatherType_String
+=== RUN   TestWeatherType_String/rain
+=== RUN   TestWeatherType_String/snow
+=== RUN   TestWeatherType_String/fog
+=== RUN   TestWeatherType_String/dust
+=== RUN   TestWeatherType_String/ash
+=== RUN   TestWeatherType_String/neon_rain
+=== RUN   TestWeatherType_String/smog
+=== RUN   TestWeatherType_String/radiation
+=== RUN   TestWeatherType_String/sandstorm
+=== RUN   TestWeatherType_String/blood_rain
+=== RUN   TestWeatherType_String/unknown
+--- PASS: TestWeatherType_String (0.00s)
+    --- PASS: TestWeatherType_String/rain (0.00s)
+    --- PASS: TestWeatherType_String/snow (0.00s)
+    --- PASS: TestWeatherType_String/fog (0.00s)
+    --- PASS: TestWeatherType_String/dust (0.00s)
+    --- PASS: TestWeatherType_String/ash (0.00s)
+    --- PASS: TestWeatherType_String/neon_rain (0.00s)
+    --- PASS: TestWeatherType_String/smog (0.00s)
+    --- PASS: TestWeatherType_String/radiation (0.00s)
+    --- PASS: TestWeatherType_String/sandstorm (0.00s)
+    --- PASS: TestWeatherType_String/blood_rain (0.00s)
+    --- PASS: TestWeatherType_String/unknown (0.00s)
+=== RUN   TestWeatherIntensity_String
+=== RUN   TestWeatherIntensity_String/light
+=== RUN   TestWeatherIntensity_String/medium
+=== RUN   TestWeatherIntensity_String/heavy
+=== RUN   TestWeatherIntensity_String/extreme
+=== RUN   TestWeatherIntensity_String/unknown
+--- PASS: TestWeatherIntensity_String (0.00s)
+    --- PASS: TestWeatherIntensity_String/light (0.00s)
+    --- PASS: TestWeatherIntensity_String/medium (0.00s)
+    --- PASS: TestWeatherIntensity_String/heavy (0.00s)
+    --- PASS: TestWeatherIntensity_String/extreme (0.00s)
+    --- PASS: TestWeatherIntensity_String/unknown (0.00s)
+=== RUN   TestDefaultWeatherConfig
+--- PASS: TestDefaultWeatherConfig (0.00s)
+=== RUN   TestWeatherConfig_Validate
+=== RUN   TestWeatherConfig_Validate/valid_config
+=== RUN   TestWeatherConfig_Validate/zero_width
+=== RUN   TestWeatherConfig_Validate/zero_height
+=== RUN   TestWeatherConfig_Validate/empty_genre
+--- PASS: TestWeatherConfig_Validate (0.00s)
+    --- PASS: TestWeatherConfig_Validate/valid_config (0.00s)
+    --- PASS: TestWeatherConfig_Validate/zero_width (0.00s)
+    --- PASS: TestWeatherConfig_Validate/zero_height (0.00s)
+    --- PASS: TestWeatherConfig_Validate/empty_genre (0.00s)
+=== RUN   TestWeatherConfig_GetParticleCount
+=== RUN   TestWeatherConfig_GetParticleCount/light_intensity
+=== RUN   TestWeatherConfig_GetParticleCount/medium_intensity
+=== RUN   TestWeatherConfig_GetParticleCount/heavy_intensity
+=== RUN   TestWeatherConfig_GetParticleCount/small_area
+--- PASS: TestWeatherConfig_GetParticleCount (0.00s)
+    --- PASS: TestWeatherConfig_GetParticleCount/light_intensity (0.00s)
+    --- PASS: TestWeatherConfig_GetParticleCount/medium_intensity (0.00s)
+    --- PASS: TestWeatherConfig_GetParticleCount/heavy_intensity (0.00s)
+    --- PASS: TestWeatherConfig_GetParticleCount/small_area (0.00s)
+=== RUN   TestGenerateWeather
+--- PASS: TestGenerateWeather (0.00s)
+=== RUN   TestGenerateWeather_AllTypes
+=== RUN   TestGenerateWeather_AllTypes/Rain
+=== RUN   TestGenerateWeather_AllTypes/Snow
+=== RUN   TestGenerateWeather_AllTypes/Fog
+=== RUN   TestGenerateWeather_AllTypes/Dust
+=== RUN   TestGenerateWeather_AllTypes/Ash
+=== RUN   TestGenerateWeather_AllTypes/NeonRain
+=== RUN   TestGenerateWeather_AllTypes/Smog
+=== RUN   TestGenerateWeather_AllTypes/Radiation
+=== RUN   TestGenerateWeather_AllTypes/Sandstorm
+=== RUN   TestGenerateWeather_AllTypes/BloodRain
+--- PASS: TestGenerateWeather_AllTypes (0.00s)
+    --- PASS: TestGenerateWeather_AllTypes/Rain (0.00s)
+    --- PASS: TestGenerateWeather_AllTypes/Snow (0.00s)
+    --- PASS: TestGenerateWeather_AllTypes/Fog (0.00s)
+    --- PASS: TestGenerateWeather_AllTypes/Dust (0.00s)
+    --- PASS: TestGenerateWeather_AllTypes/Ash (0.00s)
+    --- PASS: TestGenerateWeather_AllTypes/NeonRain (0.00s)
+    --- PASS: TestGenerateWeather_AllTypes/Smog (0.00s)
+    --- PASS: TestGenerateWeather_AllTypes/Radiation (0.00s)
+    --- PASS: TestGenerateWeather_AllTypes/Sandstorm (0.00s)
+    --- PASS: TestGenerateWeather_AllTypes/BloodRain (0.00s)
+=== RUN   TestGenerateWeather_InvalidConfig
+--- PASS: TestGenerateWeather_InvalidConfig (0.00s)
+=== RUN   TestGenerateWeather_Determinism
+--- PASS: TestGenerateWeather_Determinism (0.00s)
+=== RUN   TestWeatherSystem_Update
+--- PASS: TestWeatherSystem_Update (0.00s)
+=== RUN   TestWeatherSystem_Update_Wrapping
+--- PASS: TestWeatherSystem_Update_Wrapping (0.00s)
+=== RUN   TestGetGenreWeather
+=== RUN   TestGetGenreWeather/fantasy
+=== RUN   TestGetGenreWeather/scifi
+=== RUN   TestGetGenreWeather/horror
+=== RUN   TestGetGenreWeather/cyberpunk
+=== RUN   TestGetGenreWeather/postapoc
+=== RUN   TestGetGenreWeather/unknown
+--- PASS: TestGetGenreWeather (0.00s)
+    --- PASS: TestGetGenreWeather/fantasy (0.00s)
+    --- PASS: TestGetGenreWeather/scifi (0.00s)
+    --- PASS: TestGetGenreWeather/horror (0.00s)
+    --- PASS: TestGetGenreWeather/cyberpunk (0.00s)
+    --- PASS: TestGetGenreWeather/postapoc (0.00s)
+    --- PASS: TestGetGenreWeather/unknown (0.00s)
+=== RUN   TestWeatherSystem_MultipleUpdates
+--- PASS: TestWeatherSystem_MultipleUpdates (0.00s)
+=== RUN   TestWeatherSystem_Wind
+--- PASS: TestWeatherSystem_Wind (0.00s)
+=== RUN   TestWeatherEffect_NewWeatherEffect
+--- PASS: TestWeatherEffect_NewWeatherEffect (0.00s)
+=== RUN   TestWeatherSystem_VisibilityModifier
+=== RUN   TestWeatherSystem_VisibilityModifier/fog_light
+=== RUN   TestWeatherSystem_VisibilityModifier/fog_heavy
+=== RUN   TestWeatherSystem_VisibilityModifier/sandstorm_medium
+=== RUN   TestWeatherSystem_VisibilityModifier/sandstorm_extreme
+=== RUN   TestWeatherSystem_VisibilityModifier/rain_medium
+=== RUN   TestWeatherSystem_VisibilityModifier/blood_rain_heavy
+--- PASS: TestWeatherSystem_VisibilityModifier (0.00s)
+    --- PASS: TestWeatherSystem_VisibilityModifier/fog_light (0.00s)
+    --- PASS: TestWeatherSystem_VisibilityModifier/fog_heavy (0.00s)
+    --- PASS: TestWeatherSystem_VisibilityModifier/sandstorm_medium (0.00s)
+    --- PASS: TestWeatherSystem_VisibilityModifier/sandstorm_extreme (0.00s)
+    --- PASS: TestWeatherSystem_VisibilityModifier/rain_medium (0.00s)
+    --- PASS: TestWeatherSystem_VisibilityModifier/blood_rain_heavy (0.00s)
+=== RUN   TestWeatherSystem_RainAccumulation
+--- PASS: TestWeatherSystem_RainAccumulation (0.03s)
+=== RUN   TestWeatherSystem_SnowAccumulation
+--- PASS: TestWeatherSystem_SnowAccumulation (0.05s)
+=== RUN   TestWeatherSystem_GetPuddleLevel
+--- PASS: TestWeatherSystem_GetPuddleLevel (0.00s)
+=== RUN   TestWeatherSystem_GetSnowLevel
+--- PASS: TestWeatherSystem_GetSnowLevel (0.00s)
+=== RUN   TestGetGenreWeather_UpdatedGenres
+=== RUN   TestGetGenreWeather_UpdatedGenres/horror_includes_blood_rain
+=== RUN   TestGetGenreWeather_UpdatedGenres/postapoc_includes_sandstorm
+--- PASS: TestGetGenreWeather_UpdatedGenres (0.00s)
+    --- PASS: TestGetGenreWeather_UpdatedGenres/horror_includes_blood_rain (0.00s)
+    --- PASS: TestGetGenreWeather_UpdatedGenres/postapoc_includes_sandstorm (0.00s)
+=== RUN   TestWeatherSystem_HighParticleCount
+--- PASS: TestWeatherSystem_HighParticleCount (0.01s)
+PASS
+ok  	github.com/opd-ai/venture/pkg/rendering/particles	0.104s

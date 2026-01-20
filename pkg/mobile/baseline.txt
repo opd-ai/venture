@@ -1,0 +1,492 @@
+=== RUN   TestMobileMenu_UpdateWithVisibleMenu
+--- PASS: TestMobileMenu_UpdateWithVisibleMenu (0.00s)
+=== RUN   TestMobileMenu_UpdateScrolling
+--- PASS: TestMobileMenu_UpdateScrolling (0.00s)
+=== RUN   TestMobileHUD_UpdateOrientation
+--- PASS: TestMobileHUD_UpdateOrientation (0.00s)
+=== RUN   TestMobileHUD_UpdateOrientationNoChange
+--- PASS: TestMobileHUD_UpdateOrientationNoChange (0.00s)
+=== RUN   TestVirtualControlsLayout_UpdateActive
+--- PASS: TestVirtualControlsLayout_UpdateActive (0.00s)
+=== RUN   TestMobileMenu_UpdateHiddenNoProcessing
+--- PASS: TestMobileMenu_UpdateHiddenNoProcessing (0.00s)
+=== RUN   TestProgressBar_MultipleSetValue
+--- PASS: TestProgressBar_MultipleSetValue (0.00s)
+=== RUN   TestNotificationWidget_MultipleShows
+--- PASS: TestNotificationWidget_MultipleShows (0.00s)
+=== RUN   TestVirtualDPad_MultipleActivations
+--- PASS: TestVirtualDPad_MultipleActivations (0.00s)
+=== RUN   TestVirtualButton_MultiplePress
+--- PASS: TestVirtualButton_MultiplePress (0.00s)
+=== RUN   TestNewVirtualDPad
+--- PASS: TestNewVirtualDPad (0.00s)
+=== RUN   TestVirtualDPad_GetDirection
+--- PASS: TestVirtualDPad_GetDirection (0.00s)
+=== RUN   TestVirtualDPad_IsActive
+--- PASS: TestVirtualDPad_IsActive (0.00s)
+=== RUN   TestVirtualDPad_Update
+--- PASS: TestVirtualDPad_Update (0.00s)
+=== RUN   TestVirtualDPad_UpdateTouchRelease
+--- PASS: TestVirtualDPad_UpdateTouchRelease (0.00s)
+=== RUN   TestVirtualDPad_UpdateOutsideArea
+--- PASS: TestVirtualDPad_UpdateOutsideArea (0.00s)
+=== RUN   TestNewVirtualButton
+--- PASS: TestNewVirtualButton (0.00s)
+=== RUN   TestVirtualButton_IsPressed
+--- PASS: TestVirtualButton_IsPressed (0.00s)
+=== RUN   TestVirtualButton_IsActive
+--- PASS: TestVirtualButton_IsActive (0.00s)
+=== RUN   TestVirtualButton_Update
+--- PASS: TestVirtualButton_Update (0.00s)
+=== RUN   TestVirtualButton_UpdatePress
+--- PASS: TestVirtualButton_UpdatePress (0.00s)
+=== RUN   TestVirtualButton_UpdateOutsideArea
+--- PASS: TestVirtualButton_UpdateOutsideArea (0.00s)
+=== RUN   TestNewVirtualControlsLayout
+--- PASS: TestNewVirtualControlsLayout (0.00s)
+=== RUN   TestVirtualControlsLayout_GetMovementInput
+--- PASS: TestVirtualControlsLayout_GetMovementInput (0.00s)
+=== RUN   TestVirtualControlsLayout_IsActionPressed
+--- PASS: TestVirtualControlsLayout_IsActionPressed (0.00s)
+=== RUN   TestVirtualControlsLayout_IsSecondaryPressed
+--- PASS: TestVirtualControlsLayout_IsSecondaryPressed (0.00s)
+=== RUN   TestVirtualControlsLayout_IsMenuPressed
+--- PASS: TestVirtualControlsLayout_IsMenuPressed (0.00s)
+=== RUN   TestVirtualControlsLayout_SetVisible
+--- PASS: TestVirtualControlsLayout_SetVisible (0.00s)
+=== RUN   TestVirtualControlsLayout_UpdateHidden
+--- PASS: TestVirtualControlsLayout_UpdateHidden (0.00s)
+=== RUN   TestVirtualDPad_DirectionNormalization
+--- PASS: TestVirtualDPad_DirectionNormalization (0.00s)
+=== RUN   TestVirtualDPad_DeadZone
+--- PASS: TestVirtualDPad_DeadZone (0.00s)
+=== RUN   TestTriggerHaptic
+--- PASS: TestTriggerHaptic (0.06s)
+=== RUN   TestVirtualDPadHapticIntegration
+--- PASS: TestVirtualDPadHapticIntegration (0.00s)
+=== RUN   TestVirtualButtonHapticIntegration
+--- PASS: TestVirtualButtonHapticIntegration (0.00s)
+=== RUN   TestNewVirtualControlsLayout_ExtendedControls
+--- PASS: TestNewVirtualControlsLayout_ExtendedControls (0.00s)
+=== RUN   TestVirtualControlsLayout_IsInventoryPressed
+--- PASS: TestVirtualControlsLayout_IsInventoryPressed (0.00s)
+=== RUN   TestVirtualControlsLayout_IsTargetPressed
+--- PASS: TestVirtualControlsLayout_IsTargetPressed (0.00s)
+=== RUN   TestVirtualControlsLayout_IsInteractPressed
+--- PASS: TestVirtualControlsLayout_IsInteractPressed (0.00s)
+=== RUN   TestVirtualControlsLayout_IsSpellPressed
+--- PASS: TestVirtualControlsLayout_IsSpellPressed (0.00s)
+=== RUN   TestVirtualControlsLayout_SetSpellButtonsVisible
+--- PASS: TestVirtualControlsLayout_SetSpellButtonsVisible (0.00s)
+=== RUN   TestVirtualControlsLayout_Resize
+--- PASS: TestVirtualControlsLayout_Resize (0.00s)
+=== RUN   TestNewVirtualControlsLayout_UIShortcuts
+--- PASS: TestNewVirtualControlsLayout_UIShortcuts (0.00s)
+=== RUN   TestVirtualControlsLayout_IsCharacterPressed
+--- PASS: TestVirtualControlsLayout_IsCharacterPressed (0.00s)
+=== RUN   TestVirtualControlsLayout_IsSkillsPressed
+--- PASS: TestVirtualControlsLayout_IsSkillsPressed (0.00s)
+=== RUN   TestVirtualControlsLayout_IsQuestLogPressed
+--- PASS: TestVirtualControlsLayout_IsQuestLogPressed (0.00s)
+=== RUN   TestVirtualControlsLayout_IsMapPressed
+--- PASS: TestVirtualControlsLayout_IsMapPressed (0.00s)
+=== RUN   TestVirtualControlsLayout_SetUIShortcutsVisible
+--- PASS: TestVirtualControlsLayout_SetUIShortcutsVisible (0.00s)
+=== RUN   TestVirtualControlsLayout_Resize_UIShortcuts
+--- PASS: TestVirtualControlsLayout_Resize_UIShortcuts (0.00s)
+=== RUN   TestNewDualJoystickLayout
+=== RUN   TestNewDualJoystickLayout/standard_mobile_screen
+=== RUN   TestNewDualJoystickLayout/small_mobile_screen
+=== RUN   TestNewDualJoystickLayout/tablet_screen
+--- PASS: TestNewDualJoystickLayout (0.00s)
+    --- PASS: TestNewDualJoystickLayout/standard_mobile_screen (0.00s)
+    --- PASS: TestNewDualJoystickLayout/small_mobile_screen (0.00s)
+    --- PASS: TestNewDualJoystickLayout/tablet_screen (0.00s)
+=== RUN   TestVirtualJoystickCreation
+=== RUN   TestVirtualJoystickCreation/movement_joystick
+=== RUN   TestVirtualJoystickCreation/aim_joystick
+--- PASS: TestVirtualJoystickCreation (0.00s)
+    --- PASS: TestVirtualJoystickCreation/movement_joystick (0.00s)
+    --- PASS: TestVirtualJoystickCreation/aim_joystick (0.00s)
+=== RUN   TestVirtualJoystickDirection
+=== RUN   TestVirtualJoystickDirection/right_direction
+=== RUN   TestVirtualJoystickDirection/down_direction
+=== RUN   TestVirtualJoystickDirection/left_direction
+=== RUN   TestVirtualJoystickDirection/up_direction
+=== RUN   TestVirtualJoystickDirection/diagonal_up-right
+=== RUN   TestVirtualJoystickDirection/half_magnitude
+=== RUN   TestVirtualJoystickDirection/dead_zone_-_no_input
+--- PASS: TestVirtualJoystickDirection (0.00s)
+    --- PASS: TestVirtualJoystickDirection/right_direction (0.00s)
+    --- PASS: TestVirtualJoystickDirection/down_direction (0.00s)
+    --- PASS: TestVirtualJoystickDirection/left_direction (0.00s)
+    --- PASS: TestVirtualJoystickDirection/up_direction (0.00s)
+    --- PASS: TestVirtualJoystickDirection/diagonal_up-right (0.00s)
+    --- PASS: TestVirtualJoystickDirection/half_magnitude (0.00s)
+    --- PASS: TestVirtualJoystickDirection/dead_zone_-_no_input (0.00s)
+=== RUN   TestVirtualJoystickAngle
+=== RUN   TestVirtualJoystickAngle/right_(0°)
+=== RUN   TestVirtualJoystickAngle/down_(90°)
+=== RUN   TestVirtualJoystickAngle/left_(180°)
+=== RUN   TestVirtualJoystickAngle/up_(270°)
+=== RUN   TestVirtualJoystickAngle/diagonal_down-right_(45°)
+--- PASS: TestVirtualJoystickAngle (0.00s)
+    --- PASS: TestVirtualJoystickAngle/right_(0°) (0.00s)
+    --- PASS: TestVirtualJoystickAngle/down_(90°) (0.00s)
+    --- PASS: TestVirtualJoystickAngle/left_(180°) (0.00s)
+    --- PASS: TestVirtualJoystickAngle/up_(270°) (0.00s)
+    --- PASS: TestVirtualJoystickAngle/diagonal_down-right_(45°) (0.00s)
+=== RUN   TestDualJoystickIndependence
+--- PASS: TestDualJoystickIndependence (0.00s)
+=== RUN   TestDualJoystickLayout_SetVisible
+--- PASS: TestDualJoystickLayout_SetVisible (0.00s)
+=== RUN   TestDualJoystickLayout_ActionButtons
+--- PASS: TestDualJoystickLayout_ActionButtons (0.00s)
+=== RUN   TestVirtualJoystickTouchCapture
+=== RUN   TestVirtualJoystickTouchCapture/touch_at_center
+=== RUN   TestVirtualJoystickTouchCapture/touch_within_radius
+=== RUN   TestVirtualJoystickTouchCapture/touch_within_1.5x_radius
+=== RUN   TestVirtualJoystickTouchCapture/touch_beyond_capture_area
+--- PASS: TestVirtualJoystickTouchCapture (0.00s)
+    --- PASS: TestVirtualJoystickTouchCapture/touch_at_center (0.00s)
+    --- PASS: TestVirtualJoystickTouchCapture/touch_within_radius (0.00s)
+    --- PASS: TestVirtualJoystickTouchCapture/touch_within_1.5x_radius (0.00s)
+    --- PASS: TestVirtualJoystickTouchCapture/touch_beyond_capture_area (0.00s)
+=== RUN   TestVirtualJoystickMaintainsAimDirection
+--- PASS: TestVirtualJoystickMaintainsAimDirection (0.00s)
+=== RUN   TestVirtualJoystickHapticIntegration
+--- PASS: TestVirtualJoystickHapticIntegration (0.00s)
+=== RUN   TestWASMPlatformDetection
+    integration_test.go:12: WASM Platform Detection:
+    integration_test.go:13: - GOOS=js detected as PlatformWASM
+    integration_test.go:14: - IsTouchCapable() returns true for WASM
+    integration_test.go:15: - IsMobilePlatform() returns false for WASM
+    integration_test.go:16: - IsWASM() returns true for WASM
+--- PASS: TestWASMPlatformDetection (0.00s)
+=== RUN   TestTouchInputArchitecture
+    integration_test.go:29: Touch Input Architecture:
+    integration_test.go:30: 
+    integration_test.go:31: 1. Platform Detection (pkg/mobile/platform.go):
+    integration_test.go:32:    - GetPlatform() returns PlatformWASM for GOOS=js
+    integration_test.go:33:    - IsTouchCapable() returns true
+    integration_test.go:34: 
+    integration_test.go:35: 2. InputSystem Initialization (pkg/engine/input_system.go):
+    integration_test.go:36:    - useTouchInput = mobile.IsTouchCapable() // true for WASM
+    integration_test.go:37:    - mobileEnabled = mobile.IsMobilePlatform() // false for WASM
+    integration_test.go:38:    - touchHandler = mobile.NewTouchInputHandler()
+    integration_test.go:39: 
+    integration_test.go:40: 3. Touch Event Processing (TouchInputHandler.Update):
+    integration_test.go:41:    - Reads ebiten.TouchIDs() for active touch points
+    integration_test.go:42:    - Calls ebiten.TouchPosition(id) for coordinates
+    integration_test.go:43:    - Tracks touch start/end for gesture detection
+    integration_test.go:44: 
+    integration_test.go:45: 4. Auto-Detection (input_system.go:392-397):
+    integration_test.go:46:    - if len(ebiten.TouchIDs()) > 0 { useTouchInput = true }
+    integration_test.go:47:    - Seamlessly switches from keyboard/mouse to touch
+    integration_test.go:48: 
+    integration_test.go:49: 5. Browser Integration (build/wasm/game.html):
+    integration_test.go:50:    - Viewport meta tags prevent unwanted zoom
+    integration_test.go:51:    - touch-action: none prevents scroll interference
+    integration_test.go:52:    - JavaScript prevents default touch behaviors
+--- PASS: TestTouchInputArchitecture (0.00s)
+=== RUN   TestTouchInputFlow
+    integration_test.go:57: WASM Touch Input Flow:
+    integration_test.go:58: 
+    integration_test.go:59: 1. Browser loads game.html
+    integration_test.go:60:    - Viewport configured for touch: maximum-scale=1.0, user-scalable=no
+    integration_test.go:61:    - CSS touch-action: none prevents default gestures
+    integration_test.go:62:    - JS event handlers prevent zoom, scroll, pull-to-refresh
+    integration_test.go:63: 
+    integration_test.go:64: 2. WASM binary initializes
+    integration_test.go:65:    - Platform detection: PlatformWASM
+    integration_test.go:66:    - InputSystem.useTouchInput = true
+    integration_test.go:67:    - TouchInputHandler ready to process touch events
+    integration_test.go:68: 
+    integration_test.go:69: 3. User touches screen
+    integration_test.go:70:    - Browser fires touch events
+    integration_test.go:71:    - Ebiten captures via TouchIDs() and TouchPosition()
+    integration_test.go:72:    - TouchInputHandler.Update() processes touches
+    integration_test.go:73: 
+    integration_test.go:74: 4. Gesture detection
+    integration_test.go:75:    - GestureDetector analyzes touch patterns
+    integration_test.go:76:    - Tap: quick touch within max distance
+    integration_test.go:77:    - Swipe: movement beyond min distance
+    integration_test.go:78:    - Pinch: two-finger distance change
+    integration_test.go:79: 
+    integration_test.go:80: 5. Game response
+    integration_test.go:81:    - InputSystem provides touch data via InputProvider
+    integration_test.go:82:    - Game systems read input and respond
+    integration_test.go:83:    - Virtual controls optional (disabled by default on WASM)
+--- PASS: TestTouchInputFlow (0.00s)
+=== RUN   TestTouchGestureTypes
+    integration_test.go:88: Supported Touch Gestures:
+    integration_test.go:89: 
+    integration_test.go:90: 1. Tap
+    integration_test.go:91:    - Quick touch and release
+    integration_test.go:92:    - Movement < 20px (tapMaxDistance)
+    integration_test.go:93:    - Use: Select, attack, interact
+    integration_test.go:94: 
+    integration_test.go:95: 2. Double Tap
+    integration_test.go:96:    - Two taps within 300ms (doubleTapWindow)
+    integration_test.go:97:    - Use: Special actions, zoom
+    integration_test.go:98: 
+    integration_test.go:99: 3. Long Press
+    integration_test.go:100:    - Touch held for 500ms+ (longPressThreshold)
+    integration_test.go:101:    - Movement < 20px
+    integration_test.go:102:    - Use: Context menu, info display
+    integration_test.go:103: 
+    integration_test.go:104: 4. Swipe
+    integration_test.go:105:    - Movement > 50px (swipeMinDistance)
+    integration_test.go:106:    - Returns direction (radians) and distance
+    integration_test.go:107:    - Use: Navigation, quick actions
+    integration_test.go:108: 
+    integration_test.go:109: 5. Pinch/Zoom
+    integration_test.go:110:    - Two-finger gesture
+    integration_test.go:111:    - Returns scale factor (1.0 = no change)
+    integration_test.go:112:    - Use: Camera zoom, map scale
+--- PASS: TestTouchGestureTypes (0.00s)
+=== RUN   TestVirtualControlsConfiguration
+    integration_test.go:117: Virtual Controls Configuration:
+    integration_test.go:118: 
+    integration_test.go:119: Components:
+    integration_test.go:120: - VirtualDPad: Directional movement (bottom left)
+    integration_test.go:121: - ActionButton: Primary action (bottom right)
+    integration_test.go:122: - SecondaryButton: Secondary action (right side)
+    integration_test.go:123: - MenuButton: Pause/menu (top right)
+    integration_test.go:124: 
+    integration_test.go:125: Layout (based on screen size):
+    integration_test.go:126: - D-pad size: 15% of screen height
+    integration_test.go:127: - Button size: 8% of screen height
+    integration_test.go:128: - Margins: 5% of screen height
+    integration_test.go:129: 
+    integration_test.go:130: WASM Behavior:
+    integration_test.go:131: - Virtual controls NOT shown by default
+    integration_test.go:132: - Touch input works without virtual controls
+    integration_test.go:133: - Can be enabled via SetMobileEnabled(true)
+    integration_test.go:134: - Useful for pure touch devices without keyboard
+--- PASS: TestVirtualControlsConfiguration (0.00s)
+=== RUN   TestHTMLConfiguration
+    integration_test.go:139: HTML/CSS Configuration (build/wasm/game.html):
+    integration_test.go:140: 
+    integration_test.go:141: Viewport Meta Tags:
+    integration_test.go:142: - width=device-width: Match device width
+    integration_test.go:143: - initial-scale=1.0: No initial zoom
+    integration_test.go:144: - maximum-scale=1.0: Prevent pinch zoom
+    integration_test.go:145: - user-scalable=no: Disable zoom gestures
+    integration_test.go:146: - viewport-fit=cover: Full screen on notched devices
+    integration_test.go:147: 
+    integration_test.go:148: Web App Meta Tags:
+    integration_test.go:149: - apple-mobile-web-app-capable: iOS standalone mode
+    integration_test.go:150: - mobile-web-app-capable: Android standalone mode
+    integration_test.go:151: 
+    integration_test.go:152: CSS Touch Handling:
+    integration_test.go:153: - touch-action: none: Disable all default touch behaviors
+    integration_test.go:154: - user-select: none: Prevent text selection
+    integration_test.go:155: - overflow: hidden: Prevent scrolling
+    integration_test.go:156: 
+    integration_test.go:157: JavaScript Event Prevention:
+    integration_test.go:158: - touchstart: Prevent zoom and refresh
+    integration_test.go:159: - touchmove: Prevent scrolling
+    integration_test.go:160: - touchend: Prevent delayed click events
+    integration_test.go:161: - contextmenu: Prevent long-press menu
+    integration_test.go:162: - Double-tap zoom prevention via timing check
+--- PASS: TestHTMLConfiguration (0.00s)
+=== RUN   TestInputSystemIntegration
+    integration_test.go:167: InputSystem Touch Integration:
+    integration_test.go:168: 
+    integration_test.go:169: Initialization (NewInputSystem):
+    integration_test.go:170: - touchHandler: Always created
+    integration_test.go:171: - mobileEnabled: Only true for iOS/Android
+    integration_test.go:172: - useTouchInput: True for iOS/Android/WASM
+    integration_test.go:173: 
+    integration_test.go:174: Runtime Auto-Detection:
+    integration_test.go:175: - if mobileEnabled && len(ebiten.TouchIDs()) > 0:
+    integration_test.go:176:     useTouchInput = true
+    integration_test.go:177: - Enables seamless fallback to keyboard on tablets
+    integration_test.go:178: 
+    integration_test.go:179: Touch Input Processing (processInput):
+    integration_test.go:180: - if useTouchInput && virtualControls != nil:
+    integration_test.go:181:     - Read virtual control input
+    integration_test.go:182:     - Update movement from D-pad
+    integration_test.go:183:     - Check button presses
+    integration_test.go:184: - else:
+    integration_test.go:185:     - Process keyboard/mouse input
+    integration_test.go:186: 
+    integration_test.go:187: Virtual Controls Rendering (DrawVirtualControls):
+    integration_test.go:188: - Only drawn if mobileEnabled && virtualControls != nil
+    integration_test.go:189: - WASM doesn't show controls unless manually enabled
+--- PASS: TestInputSystemIntegration (0.00s)
+=== RUN   TestShowHideKeyboard
+--- PASS: TestShowHideKeyboard (0.00s)
+=== RUN   TestIsKeyboardSupported
+--- PASS: TestIsKeyboardSupported (0.00s)
+=== RUN   TestGetBackButtonKey
+    keyboard_test.go:45: GetBackButtonKey() = Escape (ESC)
+--- PASS: TestGetBackButtonKey (0.00s)
+=== RUN   TestGetBackButtonName
+    keyboard_test.go:63: GetBackButtonName() on non-Android = "ESC"
+--- PASS: TestGetBackButtonName (0.00s)
+=== RUN   TestIsBackButtonPressed
+    keyboard_test.go:74: IsBackButtonPressed() = false (key not pressed)
+--- PASS: TestIsBackButtonPressed (0.00s)
+=== RUN   TestIsBackButtonDown
+    keyboard_test.go:85: IsBackButtonDown() = false (key not held)
+--- PASS: TestIsBackButtonDown (0.00s)
+=== RUN   TestTriggerHapticPublic
+--- PASS: TestTriggerHapticPublic (0.00s)
+=== RUN   TestHapticFeedback
+--- PASS: TestHapticFeedback (0.00s)
+=== RUN   TestGetPlatform
+--- PASS: TestGetPlatform (0.00s)
+=== RUN   TestPlatformString
+=== RUN   TestPlatformString/iOS
+=== RUN   TestPlatformString/Android
+=== RUN   TestPlatformString/WASM
+=== RUN   TestPlatformString/Unknown
+--- PASS: TestPlatformString (0.00s)
+    --- PASS: TestPlatformString/iOS (0.00s)
+    --- PASS: TestPlatformString/Android (0.00s)
+    --- PASS: TestPlatformString/WASM (0.00s)
+    --- PASS: TestPlatformString/Unknown (0.00s)
+=== RUN   TestIsMobilePlatform
+--- PASS: TestIsMobilePlatform (0.00s)
+=== RUN   TestIsTouchCapable
+--- PASS: TestIsTouchCapable (0.00s)
+=== RUN   TestIsWASM
+--- PASS: TestIsWASM (0.00s)
+=== RUN   TestIsIOS
+--- PASS: TestIsIOS (0.00s)
+=== RUN   TestIsAndroid
+--- PASS: TestIsAndroid (0.00s)
+=== RUN   TestGetOrientation
+=== RUN   TestGetOrientation/Landscape
+=== RUN   TestGetOrientation/Portrait
+=== RUN   TestGetOrientation/Square
+--- PASS: TestGetOrientation (0.00s)
+    --- PASS: TestGetOrientation/Landscape (0.00s)
+    --- PASS: TestGetOrientation/Portrait (0.00s)
+    --- PASS: TestGetOrientation/Square (0.00s)
+=== RUN   TestOrientationString
+=== RUN   TestOrientationString/Portrait
+=== RUN   TestOrientationString/Landscape
+=== RUN   TestOrientationString/Unknown
+--- PASS: TestOrientationString (0.00s)
+    --- PASS: TestOrientationString/Portrait (0.00s)
+    --- PASS: TestOrientationString/Landscape (0.00s)
+    --- PASS: TestOrientationString/Unknown (0.00s)
+=== RUN   TestTouch
+--- PASS: TestTouch (0.00s)
+=== RUN   TestTouch_Inactive
+--- PASS: TestTouch_Inactive (0.00s)
+=== RUN   TestNewTouchInputHandler
+--- PASS: TestNewTouchInputHandler (0.00s)
+=== RUN   TestTouchInputHandler_GetTouchCount
+--- PASS: TestTouchInputHandler_GetTouchCount (0.00s)
+=== RUN   TestTouchInputHandler_GetActiveTouches
+--- PASS: TestTouchInputHandler_GetActiveTouches (0.00s)
+=== RUN   TestTouchInputHandler_EmptyTouches
+--- PASS: TestTouchInputHandler_EmptyTouches (0.00s)
+=== RUN   TestTouchInputHandler_IsTapping
+--- PASS: TestTouchInputHandler_IsTapping (0.00s)
+=== RUN   TestTouchInputHandler_GetTapPosition
+--- PASS: TestTouchInputHandler_GetTapPosition (0.00s)
+=== RUN   TestTouchInputHandler_IsDoubleTap
+--- PASS: TestTouchInputHandler_IsDoubleTap (0.00s)
+=== RUN   TestTouchInputHandler_IsLongPress
+--- PASS: TestTouchInputHandler_IsLongPress (0.00s)
+=== RUN   TestTouchInputHandler_GetSwipe
+--- PASS: TestTouchInputHandler_GetSwipe (0.00s)
+=== RUN   TestTouchInputHandler_GetPinch
+--- PASS: TestTouchInputHandler_GetPinch (0.00s)
+=== RUN   TestNewGestureDetector
+--- PASS: TestNewGestureDetector (0.00s)
+=== RUN   TestGestureDetector_IsTap
+--- PASS: TestGestureDetector_IsTap (0.00s)
+=== RUN   TestGestureDetector_GetTapPosition
+--- PASS: TestGestureDetector_GetTapPosition (0.00s)
+=== RUN   TestGestureDetector_IsDoubleTap
+--- PASS: TestGestureDetector_IsDoubleTap (0.00s)
+=== RUN   TestGestureDetector_IsLongPress
+--- PASS: TestGestureDetector_IsLongPress (0.00s)
+=== RUN   TestGestureDetector_GetLongPressPosition
+--- PASS: TestGestureDetector_GetLongPressPosition (0.00s)
+=== RUN   TestGestureDetector_GetSwipe
+--- PASS: TestGestureDetector_GetSwipe (0.00s)
+=== RUN   TestGestureDetector_GetPinchScale
+--- PASS: TestGestureDetector_GetPinchScale (0.00s)
+=== RUN   TestGestureDetector_IsPinching
+--- PASS: TestGestureDetector_IsPinching (0.00s)
+=== RUN   TestGestureDetector_Update
+--- PASS: TestGestureDetector_Update (0.00s)
+=== RUN   TestGestureDetector_UpdateMultipleTimes
+--- PASS: TestGestureDetector_UpdateMultipleTimes (0.00s)
+=== RUN   TestGestureDetector_UpdateWithMultipleTouches
+--- PASS: TestGestureDetector_UpdateWithMultipleTouches (0.00s)
+=== RUN   TestGestureDetector_UpdateWithInactiveTouches
+--- PASS: TestGestureDetector_UpdateWithInactiveTouches (0.00s)
+=== RUN   TestNewMobileMenu
+--- PASS: TestNewMobileMenu (0.00s)
+=== RUN   TestMobileMenu_AddItem
+--- PASS: TestMobileMenu_AddItem (0.00s)
+=== RUN   TestMobileMenu_AddMultipleItems
+--- PASS: TestMobileMenu_AddMultipleItems (0.00s)
+=== RUN   TestMobileMenu_ShowHide
+--- PASS: TestMobileMenu_ShowHide (0.00s)
+=== RUN   TestMobileMenu_Toggle
+--- PASS: TestMobileMenu_Toggle (0.00s)
+=== RUN   TestMobileMenu_IsVisible
+--- PASS: TestMobileMenu_IsVisible (0.00s)
+=== RUN   TestMobileMenu_UpdateHidden
+--- PASS: TestMobileMenu_UpdateHidden (0.00s)
+=== RUN   TestNewMobileHUD
+--- PASS: TestNewMobileHUD (0.00s)
+=== RUN   TestNewMobileHUD_Portrait
+--- PASS: TestNewMobileHUD_Portrait (0.00s)
+=== RUN   TestMobileHUD_SetHealth
+--- PASS: TestMobileHUD_SetHealth (0.00s)
+=== RUN   TestMobileHUD_SetMana
+--- PASS: TestMobileHUD_SetMana (0.00s)
+=== RUN   TestMobileHUD_SetExperience
+--- PASS: TestMobileHUD_SetExperience (0.00s)
+=== RUN   TestMobileHUD_ShowNotification
+--- PASS: TestMobileHUD_ShowNotification (0.00s)
+=== RUN   TestMobileHUD_Update
+--- PASS: TestMobileHUD_Update (0.00s)
+=== RUN   TestMobileHUD_UpdateHidden
+--- PASS: TestMobileHUD_UpdateHidden (0.00s)
+=== RUN   TestNewProgressBar
+--- PASS: TestNewProgressBar (0.00s)
+=== RUN   TestProgressBar_SetValue
+--- PASS: TestProgressBar_SetValue (0.00s)
+=== RUN   TestProgressBar_SetValueBounds
+--- PASS: TestProgressBar_SetValueBounds (0.00s)
+=== RUN   TestProgressBar_ValueRange
+=== RUN   TestProgressBar_ValueRange/50%
+=== RUN   TestProgressBar_ValueRange/0%
+=== RUN   TestProgressBar_ValueRange/100%
+=== RUN   TestProgressBar_ValueRange/75%
+=== RUN   TestProgressBar_ValueRange/25%
+--- PASS: TestProgressBar_ValueRange (0.00s)
+    --- PASS: TestProgressBar_ValueRange/50% (0.00s)
+    --- PASS: TestProgressBar_ValueRange/0% (0.00s)
+    --- PASS: TestProgressBar_ValueRange/100% (0.00s)
+    --- PASS: TestProgressBar_ValueRange/75% (0.00s)
+    --- PASS: TestProgressBar_ValueRange/25% (0.00s)
+=== RUN   TestNewMinimapWidget
+--- PASS: TestNewMinimapWidget (0.00s)
+=== RUN   TestMinimapWidget_SetPlayerPosition
+--- PASS: TestMinimapWidget_SetPlayerPosition (0.00s)
+=== RUN   TestNewNotificationWidget
+--- PASS: TestNewNotificationWidget (0.00s)
+=== RUN   TestNotificationWidget_Show
+--- PASS: TestNotificationWidget_Show (0.00s)
+=== RUN   TestNotificationWidget_Update
+--- PASS: TestNotificationWidget_Update (0.00s)
+=== RUN   TestNotificationWidget_UpdateExpire
+--- PASS: TestNotificationWidget_UpdateExpire (0.00s)
+=== RUN   TestNotificationWidget_UpdateInactive
+--- PASS: TestNotificationWidget_UpdateInactive (0.00s)
+=== RUN   TestMenuItem
+--- PASS: TestMenuItem (0.00s)
+PASS
+ok  	github.com/opd-ai/venture/pkg/mobile	0.096s

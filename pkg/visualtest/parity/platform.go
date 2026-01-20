@@ -1,21 +1,9 @@
+// Code relocated from: original platform.go (Platform type and constants moved to constants.go)
 package parity
 
 import (
 	"runtime"
 	"strings"
-)
-
-// Platform represents a target deployment platform
-type Platform string
-
-const (
-	PlatformLinux   Platform = "linux"
-	PlatformMacOS   Platform = "darwin"
-	PlatformWindows Platform = "windows"
-	PlatformWASM    Platform = "wasm"
-	PlatformIOS     Platform = "ios"
-	PlatformAndroid Platform = "android"
-	PlatformUnknown Platform = "unknown"
 )
 
 // String returns the human-readable platform name

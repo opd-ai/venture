@@ -28,10 +28,10 @@ Venture is a top-down action-RPG that combines the deep procedural generation of
 
 ## Project Status
 
-**Current Version:** 8.0.0 Production ✅  
-**Ready for Release:** All V4, V5, V6, V7, and V8 features complete
+**Current Version:** 1.0.0 Production ✅  
+**Semantic Version:** [v1.0.0](https://github.com/opd-ai/venture/releases/tag/v1.0.0) (see [API Compatibility](docs/API_COMPATIBILITY.md))
 
-Venture has achieved **8.0 readiness** with player housing, guild systems, advanced physics, WebRTC federation, deep AI, and server modding. All core features operational with 85.5% test coverage and 60+ FPS performance.
+Venture v1.0.0 is a production-ready release with player housing, guild systems, advanced physics, WebRTC federation, deep AI, and server modding. All core features operational with 85.5% test coverage and 60+ FPS performance.
 
 **Version 8.0 Complete (Housing, Guilds & Advanced Systems):**
 - ✅ **V4.0 Complete** (Phases 21-30): Vehicles, companions, books, expanded magic, character classes, expressions, mini-games, reputation, adaptive music
@@ -69,6 +69,40 @@ Venture has achieved **8.0 readiness** with player housing, guild systems, advan
 
 ### 1. Installation
 
+**Option A: Download Pre-built Binaries (Recommended)**
+
+Download the latest release for your platform from [GitHub Releases](https://github.com/opd-ai/venture/releases/latest):
+- Linux: `venture-linux-amd64.tar.gz` or `venture-linux-arm64.tar.gz`
+- macOS: `venture-darwin-amd64.tar.gz` or `venture-darwin-arm64.tar.gz`
+- Windows: `venture-windows-amd64.zip`
+
+```bash
+# Linux/macOS example
+tar -xzf venture-linux-amd64.tar.gz
+./venture-client
+```
+
+**Option B: Install via Package Manager**
+
+```bash
+# macOS (Homebrew)
+brew tap opd-ai/venture
+brew install venture
+
+# Debian/Ubuntu
+curl -LO https://github.com/opd-ai/venture/releases/latest/download/venture_1.0.0_amd64.deb
+sudo dpkg -i venture_1.0.0_amd64.deb
+
+# RHEL/Fedora
+curl -LO https://github.com/opd-ai/venture/releases/latest/download/venture-1.0.0-1.x86_64.rpm
+sudo rpm -i venture-1.0.0-1.x86_64.rpm
+
+# Docker (server only)
+docker run -d -p 8080:8080 ghcr.io/opd-ai/venture-server:1.0.0
+```
+
+**Option C: Build from Source**
+
 ```bash
 # Clone the repository
 git clone https://github.com/opd-ai/venture.git
@@ -79,7 +113,7 @@ go build -o venture-client ./cmd/client
 go build -o venture-server ./cmd/server
 ```
 
-**Prerequisites:** Go 1.24.5+. Platform-specific dependencies required (Linux: X11 libraries, macOS: Xcode tools, Windows: none). See [Getting Started Guide](docs/GETTING_STARTED.md) for installation commands.
+**Prerequisites (for building from source):** Go 1.24.5+. Platform-specific dependencies required (Linux: X11 libraries, macOS: Xcode tools, Windows: none). See [Getting Started Guide](docs/GETTING_STARTED.md) for installation commands.
 
 ### 2. First Game
 

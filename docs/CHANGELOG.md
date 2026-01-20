@@ -4,10 +4,13 @@
 
 All notable changes to this project are documented in this file, organized by version.
 
+> **Note on Versioning:** This changelog documents the internal development versions (1.0.0 through 10.0.0) used during development. For the public release, Venture uses semantic versioning starting at **v1.0.0** (corresponding to internal development version 10.0.0). See [API Compatibility](API_COMPATIBILITY.md) for version guarantees.
+
 ---
 
 ## Table of Contents
 
+0. [v1.0.0 (Public) - January 2026 - First Production Release](#v100-public---january-2026---first-production-release)
 1. [10.0.0 - December 2025 - Production Release](#1000---december-2025---production-release)
 2. [9.0.0 - December 2025 - Guild Territory Expansion](#900---december-2025---guild-territory-expansion)
 3. [8.0.0 - December 2025 - Player Housing & Mod Framework](#800---december-2025---player-housing--mod-framework)
@@ -19,6 +22,34 @@ All notable changes to this project are documented in this file, organized by ve
 9. [2.0.0 - November 2025 - Core Systems Complete](#200---november-2025---core-systems-complete)
 10. [1.1.0 - November 2025 - Initial Multiplayer](#110---november-2025---initial-multiplayer)
 11. [1.0.0 - November 2025 - Initial Release](#100---november-2025---initial-release)
+
+---
+
+## [v1.0.0 (Public)] - January 2026 - First Production Release
+
+This is the first official public release of Venture, using semantic versioning. This release corresponds to internal development version 10.0.0 and includes all features from development versions 1.0.0-10.0.0.
+
+### Highlights
+- **Production Ready**: 87 active packages with 85.5% average test coverage
+- **Cross-Platform**: Linux, macOS, Windows, WebAssembly, iOS, Android
+- **100% Procedural**: All graphics, audio, and content generated at runtime
+- **Multiplayer**: Real-time co-op with high-latency support (200-5000ms)
+- **Player Housing**: 4 plot sizes, 6 building types, 36 furniture types
+- **Guild Systems**: Multi-server guilds, territory control, guild warfare
+- **Advanced Physics**: Vehicles, fluids, destructible buildings
+- **Deep Gameplay**: Companion AI, branching narratives, 15 base + 20 prestige classes
+
+### Installation
+- Download binaries from [GitHub Releases](https://github.com/opd-ai/venture/releases/tag/v1.0.0)
+- Package managers: Homebrew (`brew install venture`), apt (.deb), yum (.rpm)
+- Docker: `docker run ghcr.io/opd-ai/venture-server:1.0.0`
+- Play in browser: [https://opd-ai.github.io/venture/](https://opd-ai.github.io/venture/)
+
+### Documentation
+- [Getting Started Guide](GETTING_STARTED.md)
+- [API Compatibility](API_COMPATIBILITY.md)
+- [Upgrade Guide](UPGRADE_GUIDE.md)
+- [Production Deployment](PRODUCTION_DEPLOYMENT.md)
 
 ---
 

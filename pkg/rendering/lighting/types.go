@@ -46,6 +46,16 @@ const (
 	FalloffInverseSquare
 )
 
+const (
+	// CornerDetectionThreshold is the minimum depth difference to consider a neighbor significant
+	// Originally from: ambient_occlusion.go
+	CornerDetectionThreshold = 0.1
+
+	// MinNeighborsForCorner is the minimum number of higher neighbors to detect a corner
+	// Originally from: ambient_occlusion.go
+	MinNeighborsForCorner = 5
+)
+
 // String returns the string representation of a falloff type.
 func (f FalloffType) String() string {
 	switch f {

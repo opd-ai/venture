@@ -14,22 +14,6 @@ import (
 	"time"
 )
 
-// MaxImagesPerPlayer is the maximum number of images per player
-const MaxImagesPerPlayer = 100
-
-// MaxImageSizeBytes is the maximum size per image (500KB)
-const MaxImageSizeBytes = 500 * 1024
-
-// ImageFormat represents supported image formats
-type ImageFormat string
-
-const (
-	// ImageFormatPNG is the PNG format
-	ImageFormatPNG ImageFormat = "png"
-	// ImageFormatJPEG is the JPEG format
-	ImageFormatJPEG ImageFormat = "jpeg"
-)
-
 // StoredImage represents a single image with metadata
 type StoredImage struct {
 	ID        string      `json:"id"`

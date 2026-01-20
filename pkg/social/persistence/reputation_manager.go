@@ -10,20 +10,6 @@ import (
 	"time"
 )
 
-// ReputationCategory represents different types of reputation
-type ReputationCategory string
-
-const (
-	// ReputationTrade is reputation from trading activities
-	ReputationTrade ReputationCategory = "trade"
-	// ReputationCombat is reputation from combat/PvP activities
-	ReputationCombat ReputationCategory = "combat"
-	// ReputationSocial is reputation from social interactions
-	ReputationSocial ReputationCategory = "social"
-	// ReputationQuest is reputation from quest completions
-	ReputationQuest ReputationCategory = "quest"
-)
-
 // ReputationScore tracks a player's reputation in a specific category
 type ReputationScore struct {
 	Category   ReputationCategory

@@ -4,19 +4,19 @@ import (
 	"time"
 )
 
+// Type Definitions
+// This file consolidates all type definitions for the persistence package
+
+// ImageFormat represents supported image formats
+// Originally from: image_gallery.go
+type ImageFormat string
+
+// ReputationCategory represents different types of reputation
+// Originally from: reputation_manager.go
+type ReputationCategory string
+
 // TrustLevel represents a tier of trust between players
 type TrustLevel int
-
-const (
-	// TrustLevelStranger is the lowest trust level (0.0-0.3)
-	TrustLevelStranger TrustLevel = iota
-	// TrustLevelAcquaintance is basic familiarity (0.3-0.6)
-	TrustLevelAcquaintance
-	// TrustLevelFriend is established friendship (0.6-0.8)
-	TrustLevelFriend
-	// TrustLevelTrusted is highest trust (0.8-1.0)
-	TrustLevelTrusted
-)
 
 // String returns the human-readable name of a TrustLevel
 func (t TrustLevel) String() string {
@@ -89,12 +89,3 @@ func CanTradeRarity(level TrustLevel, rarity string) bool {
 
 	return itemLevel <= maxLevel
 }
-
-const (
-	// DecayRatePerDay is the trust decay rate (0.01 per day)
-	DecayRatePerDay = 0.01
-	// MinTrustScore is the minimum trust value
-	MinTrustScore = 0.0
-	// MaxTrustScore is the maximum trust value
-	MaxTrustScore = 1.0
-)

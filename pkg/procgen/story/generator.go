@@ -8,18 +8,6 @@ import (
 	"github.com/opd-ai/venture/pkg/procgen"
 )
 
-// FragmentType represents different types of story fragments
-type FragmentType int
-
-const (
-	FragmentNote FragmentType = iota
-	FragmentCarving
-	FragmentCorpse
-	FragmentRelic
-	FragmentGraffiti
-	FragmentBlood
-)
-
 // String returns the string representation of FragmentType
 func (f FragmentType) String() string {
 	switch f {
@@ -49,12 +37,6 @@ type StoryFragment struct {
 	SeriesID      string // Related fragments share series ID
 	SequenceNum   int    // Order within series (0-based)
 	SpritePattern string // Visual representation pattern for rendering
-}
-
-// Vector2 represents a 2D position
-type Vector2 struct {
-	X float64
-	Y float64
 }
 
 // StorySequence represents a complete story told through fragments

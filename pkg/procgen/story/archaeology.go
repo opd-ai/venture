@@ -7,18 +7,6 @@ import (
 	"github.com/opd-ai/venture/pkg/procgen"
 )
 
-// ArtifactType categorizes archaeological finds
-type ArtifactType int
-
-const (
-	ArtifactMagical ArtifactType = iota // Fantasy: magical items, enchantments
-	ArtifactTech                        // Sci-Fi: alien/ancient technology
-	ArtifactRitual                      // Horror: cursed objects, ritual items
-	ArtifactData                        // Cyberpunk: data crystals, memory chips
-	ArtifactPreWar                      // Post-Apocalyptic: pre-fall artifacts
-	ArtifactRelic                       // Generic: historical relics
-)
-
 // String returns the string representation of ArtifactType
 func (a ArtifactType) String() string {
 	switch a {

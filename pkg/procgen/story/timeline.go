@@ -19,20 +19,6 @@ type HistoricalEvent struct {
 	Location    string  // Where it happened
 }
 
-// EventType categorizes historical events
-type EventType int
-
-const (
-	EventFoundation  EventType = iota // Founding of civilizations/factions
-	EventWar                          // Conflicts and battles
-	EventDiscovery                    // Scientific/magical discoveries
-	EventCatastrophe                  // Disasters and calamities
-	EventRenaissance                  // Cultural/technological advances
-	EventCollapse                     // Fall of civilizations
-	EventContact                      // First contact with new species/factions
-	EventRitual                       // Major magical/religious ceremonies
-)
-
 // String returns the string representation of EventType
 func (e EventType) String() string {
 	switch e {

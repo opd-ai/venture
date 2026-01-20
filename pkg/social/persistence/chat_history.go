@@ -9,12 +9,6 @@ import (
 	"time"
 )
 
-// MaxMessagesPerPlayer is the maximum chat history size per player
-const MaxMessagesPerPlayer = 1000
-
-// MaxMessageAge is the maximum age for messages (30 days)
-const MaxMessageAge = 30 * 24 * time.Hour
-
 // Message represents a single chat message
 type Message struct {
 	ID        string    `json:"id"`

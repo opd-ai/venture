@@ -1,6 +1,6 @@
 // Package patterns provides procedural texture pattern generation.
-// This file implements texture generators for tile rendering with
-// various material types and genre-specific styles.
+// This file implements the Generator struct and its texture generation methods.
+// Code relocated from: original generator.go (types moved to types.go)
 package patterns
 
 import (
@@ -12,36 +12,6 @@ import (
 
 	"github.com/sirupsen/logrus"
 )
-
-// TextureType represents different material texture types.
-type TextureType int
-
-const (
-	// TextureStone represents stone/rock texture
-	TextureStone TextureType = iota
-	// TextureWood represents wood grain texture
-	TextureWood
-	// TextureMetal represents metallic texture
-	TextureMetal
-	// TextureOrganic represents organic/biological texture
-	TextureOrganic
-)
-
-// String returns the string representation of a texture type.
-func (t TextureType) String() string {
-	switch t {
-	case TextureStone:
-		return "stone"
-	case TextureWood:
-		return "wood"
-	case TextureMetal:
-		return "metal"
-	case TextureOrganic:
-		return "organic"
-	default:
-		return "unknown"
-	}
-}
 
 // Generator creates procedural texture patterns.
 type Generator struct {
@@ -64,32 +34,6 @@ func NewGeneratorWithLogger(logger *logrus.Logger) *Generator {
 	return &Generator{
 		logger: logEntry,
 	}
-}
-
-// TextureConfig contains parameters for texture generation.
-type TextureConfig struct {
-	// Texture type (stone, wood, metal, organic)
-	Texture TextureType
-
-	// Dimensions in pixels
-	Width  int
-	Height int
-
-	// GenreID for style selection
-	GenreID string
-
-	// Seed for deterministic generation
-	Seed int64
-
-	// Base colors
-	Color1 color.Color
-	Color2 color.Color
-
-	// Detail level (0.0-1.0, higher = more detail)
-	DetailLevel float64
-
-	// Scale factor for noise (higher = larger features)
-	Scale float64
 }
 
 // Generate creates a texture pattern image from the configuration.

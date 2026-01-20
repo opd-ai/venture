@@ -173,6 +173,15 @@ type SkillTemplate struct {
 	MaxLevelRange     [2]int // min, max level
 }
 
+// SkillTreeTemplate defines a template for generating a complete skill tree.
+// Originally from: templates.go
+type SkillTreeTemplate struct {
+	Name           string
+	Description    string
+	Category       SkillCategory
+	SkillTemplates []SkillTemplate
+}
+
 // IsUnlocked checks if a skill can be unlocked given current state.
 func (s *Skill) IsUnlocked(playerLevel, skillPoints int, learnedSkills map[string]bool, attributes map[string]int) bool {
 	// Check player level

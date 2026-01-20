@@ -1,15 +1,7 @@
 // Package skills provides skill tree templates.
-// This file defines skill tree templates used by the skill generator
-// to create structured progression systems.
+// This file defines genre-specific skill tree template data used by the skill generator
+// to create structured progression systems. Type definitions have been moved to types.go.
 package skills
-
-// SkillTreeTemplate defines a template for generating a complete skill tree.
-type SkillTreeTemplate struct {
-	Name           string
-	Description    string
-	Category       SkillCategory
-	SkillTemplates []SkillTemplate
-}
 
 // GetFantasyTreeTemplates returns skill tree templates for fantasy genre.
 func GetFantasyTreeTemplates() []SkillTreeTemplate {

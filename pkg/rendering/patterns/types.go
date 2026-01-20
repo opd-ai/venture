@@ -1,9 +1,42 @@
-// Package patterns provides pattern type definitions and configuration.
+// Package patterns provides type definitions and configuration for pattern generation.
+// This file contains all type definitions including enums (PatternType, TextureType)
+// and configuration structs (Config, TextureConfig) for both pattern and texture generation.
 package patterns
 
 import (
 	"image/color"
 )
+
+// TextureType represents different material texture types.
+// Originally from: generator.go
+type TextureType int
+
+const (
+	// TextureStone represents stone/rock texture
+	TextureStone TextureType = iota
+	// TextureWood represents wood grain texture
+	TextureWood
+	// TextureMetal represents metallic texture
+	TextureMetal
+	// TextureOrganic represents organic/biological texture
+	TextureOrganic
+)
+
+// String returns the string representation of a texture type.
+func (t TextureType) String() string {
+	switch t {
+	case TextureStone:
+		return "stone"
+	case TextureWood:
+		return "wood"
+	case TextureMetal:
+		return "metal"
+	case TextureOrganic:
+		return "organic"
+	default:
+		return "unknown"
+	}
+}
 
 // PatternType represents different pattern primitives.
 type PatternType int
@@ -79,4 +112,31 @@ func DefaultConfig() Config {
 		Opacity:   0.5,
 		BlendMode: "overlay",
 	}
+}
+
+// TextureConfig contains parameters for texture generation.
+// Originally from: generator.go
+type TextureConfig struct {
+	// Texture type (stone, wood, metal, organic)
+	Texture TextureType
+
+	// Dimensions in pixels
+	Width  int
+	Height int
+
+	// GenreID for style selection
+	GenreID string
+
+	// Seed for deterministic generation
+	Seed int64
+
+	// Base colors
+	Color1 color.Color
+	Color2 color.Color
+
+	// Detail level (0.0-1.0, higher = more detail)
+	DetailLevel float64
+
+	// Scale factor for noise (higher = larger features)
+	Scale float64
 }

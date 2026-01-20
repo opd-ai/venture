@@ -1,0 +1,48 @@
+=== RUN   TestFeatureValidation
+=== RUN   TestFeatureValidation/fully_valid_feature
+=== RUN   TestFeatureValidation/not_accessible
+=== RUN   TestFeatureValidation/incomplete_tutorial
+=== RUN   TestFeatureValidation/insufficient_integration
+=== RUN   TestFeatureValidation/not_implemented
+=== RUN   TestFeatureValidation/not_functional
+=== RUN   TestFeatureValidation/multiple_issues
+--- PASS: TestFeatureValidation (0.00s)
+    --- PASS: TestFeatureValidation/fully_valid_feature (0.00s)
+    --- PASS: TestFeatureValidation/not_accessible (0.00s)
+    --- PASS: TestFeatureValidation/incomplete_tutorial (0.00s)
+    --- PASS: TestFeatureValidation/insufficient_integration (0.00s)
+    --- PASS: TestFeatureValidation/not_implemented (0.00s)
+    --- PASS: TestFeatureValidation/not_functional (0.00s)
+    --- PASS: TestFeatureValidation/multiple_issues (0.00s)
+=== RUN   TestFeatureRegistry
+--- PASS: TestFeatureRegistry (0.00s)
+=== RUN   TestValidationReport
+--- PASS: TestValidationReport (0.00s)
+=== RUN   TestDefaultRegistry
+    feature_completeness_test.go:328: Total features: 68
+    feature_completeness_test.go:329: Passed: 68
+    feature_completeness_test.go:330: Failed: 0
+    feature_completeness_test.go:331: Pass rate: 100.00%
+    feature_completeness_test.go:348: Category Vehicles: 3 features (100.0% pass rate)
+    feature_completeness_test.go:348: Category Social: 7 features (100.0% pass rate)
+    feature_completeness_test.go:348: Category Meta-Game: 12 features (100.0% pass rate)
+    feature_completeness_test.go:348: Category Core Gameplay: 20 features (100.0% pass rate)
+    feature_completeness_test.go:348: Category Guilds: 5 features (100.0% pass rate)
+    feature_completeness_test.go:348: Category Combat: 4 features (100.0% pass rate)
+    feature_completeness_test.go:348: Category Economy: 4 features (100.0% pass rate)
+    feature_completeness_test.go:348: Category Content: 1 features (100.0% pass rate)
+    feature_completeness_test.go:348: Category Housing: 5 features (100.0% pass rate)
+    feature_completeness_test.go:348: Category Advanced Systems: 7 features (100.0% pass rate)
+--- PASS: TestDefaultRegistry (0.00s)
+=== RUN   TestCategoryPassRate
+=== RUN   TestCategoryPassRate/all_passed
+=== RUN   TestCategoryPassRate/half_passed
+=== RUN   TestCategoryPassRate/none_passed
+=== RUN   TestCategoryPassRate/empty_category
+--- PASS: TestCategoryPassRate (0.00s)
+    --- PASS: TestCategoryPassRate/all_passed (0.00s)
+    --- PASS: TestCategoryPassRate/half_passed (0.00s)
+    --- PASS: TestCategoryPassRate/none_passed (0.00s)
+    --- PASS: TestCategoryPassRate/empty_category (0.00s)
+PASS
+ok  	github.com/opd-ai/venture/pkg/audit/features	0.002s

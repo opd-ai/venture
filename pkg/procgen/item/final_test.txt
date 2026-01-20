@@ -1,0 +1,109 @@
+=== RUN   TestItem_CanBeUsedByClass
+=== RUN   TestItem_CanBeUsedByClass/no_restrictions_-_any_class
+=== RUN   TestItem_CanBeUsedByClass/no_restrictions_-_mage
+=== RUN   TestItem_CanBeUsedByClass/warrior_only_-_warrior_checks
+=== RUN   TestItem_CanBeUsedByClass/warrior_only_-_mage_checks
+=== RUN   TestItem_CanBeUsedByClass/multiple_classes_-_warrior_allowed
+=== RUN   TestItem_CanBeUsedByClass/multiple_classes_-_rogue_allowed
+=== RUN   TestItem_CanBeUsedByClass/multiple_classes_-_mage_not_allowed
+=== RUN   TestItem_CanBeUsedByClass/caster_classes_-_mage_allowed
+=== RUN   TestItem_CanBeUsedByClass/caster_classes_-_warrior_not_allowed
+=== RUN   TestItem_CanBeUsedByClass/single_class_-_exact_match
+=== RUN   TestItem_CanBeUsedByClass/single_class_-_no_match
+--- PASS: TestItem_CanBeUsedByClass (0.00s)
+    --- PASS: TestItem_CanBeUsedByClass/no_restrictions_-_any_class (0.00s)
+    --- PASS: TestItem_CanBeUsedByClass/no_restrictions_-_mage (0.00s)
+    --- PASS: TestItem_CanBeUsedByClass/warrior_only_-_warrior_checks (0.00s)
+    --- PASS: TestItem_CanBeUsedByClass/warrior_only_-_mage_checks (0.00s)
+    --- PASS: TestItem_CanBeUsedByClass/multiple_classes_-_warrior_allowed (0.00s)
+    --- PASS: TestItem_CanBeUsedByClass/multiple_classes_-_rogue_allowed (0.00s)
+    --- PASS: TestItem_CanBeUsedByClass/multiple_classes_-_mage_not_allowed (0.00s)
+    --- PASS: TestItem_CanBeUsedByClass/caster_classes_-_mage_allowed (0.00s)
+    --- PASS: TestItem_CanBeUsedByClass/caster_classes_-_warrior_not_allowed (0.00s)
+    --- PASS: TestItem_CanBeUsedByClass/single_class_-_exact_match (0.00s)
+    --- PASS: TestItem_CanBeUsedByClass/single_class_-_no_match (0.00s)
+=== RUN   TestItem_ClassRestrictions_AllClasses
+=== RUN   TestItem_ClassRestrictions_AllClasses/warrior
+=== RUN   TestItem_ClassRestrictions_AllClasses/mage
+=== RUN   TestItem_ClassRestrictions_AllClasses/rogue
+=== RUN   TestItem_ClassRestrictions_AllClasses/ranger
+=== RUN   TestItem_ClassRestrictions_AllClasses/cleric
+=== RUN   TestItem_ClassRestrictions_AllClasses/necromancer
+--- PASS: TestItem_ClassRestrictions_AllClasses (0.00s)
+    --- PASS: TestItem_ClassRestrictions_AllClasses/warrior (0.00s)
+    --- PASS: TestItem_ClassRestrictions_AllClasses/mage (0.00s)
+    --- PASS: TestItem_ClassRestrictions_AllClasses/rogue (0.00s)
+    --- PASS: TestItem_ClassRestrictions_AllClasses/ranger (0.00s)
+    --- PASS: TestItem_ClassRestrictions_AllClasses/cleric (0.00s)
+    --- PASS: TestItem_ClassRestrictions_AllClasses/necromancer (0.00s)
+=== RUN   TestItemDescriptionDeterminism
+    determinism_test.go:80: ✓ Successfully verified determinism for 10 items
+--- PASS: TestItemDescriptionDeterminism (0.00s)
+=== RUN   TestItemDescriptionDeterminismAcrossGenres
+    determinism_test.go:122: ✓ Genre fantasy: Descriptions are deterministic
+    determinism_test.go:122: ✓ Genre scifi: Descriptions are deterministic
+    determinism_test.go:122: ✓ Genre horror: Descriptions are deterministic
+    determinism_test.go:122: ✓ Genre cyberpunk: Descriptions are deterministic
+    determinism_test.go:122: ✓ Genre postapoc: Descriptions are deterministic
+--- PASS: TestItemDescriptionDeterminismAcrossGenres (0.00s)
+=== RUN   TestItemDescriptionVariety
+    determinism_test.go:166: ✓ Found 6 unique descriptions across 50 seeds
+    determinism_test.go:168:   7x: This weapon has seen many battles.
+    determinism_test.go:168:   1x: Legends speak of this item's power.
+    determinism_test.go:168:   1x: Few have wielded such a treasure.
+    determinism_test.go:168:   13x: A reliable tool for any warrior.
+    determinism_test.go:168:   15x: A finely crafted weapon.
+    determinism_test.go:168:   13x: The blade gleams with deadly intent.
+--- PASS: TestItemDescriptionVariety (0.00s)
+=== RUN   TestNewItemGenerator
+--- PASS: TestNewItemGenerator (0.00s)
+=== RUN   TestItemGeneration
+--- PASS: TestItemGeneration (0.00s)
+=== RUN   TestItemGenerationDeterministic
+--- PASS: TestItemGenerationDeterministic (0.00s)
+=== RUN   TestItemGenerationSciFi
+--- PASS: TestItemGenerationSciFi (0.00s)
+=== RUN   TestItemValidation
+--- PASS: TestItemValidation (0.00s)
+=== RUN   TestItemTypes
+--- PASS: TestItemTypes (0.00s)
+=== RUN   TestWeaponTypes
+--- PASS: TestWeaponTypes (0.00s)
+=== RUN   TestArmorTypes
+--- PASS: TestArmorTypes (0.00s)
+=== RUN   TestConsumableTypes
+--- PASS: TestConsumableTypes (0.00s)
+=== RUN   TestRarity
+--- PASS: TestRarity (0.00s)
+=== RUN   TestItemIsEquippable
+--- PASS: TestItemIsEquippable (0.00s)
+=== RUN   TestItemIsConsumable
+--- PASS: TestItemIsConsumable (0.00s)
+=== RUN   TestItemGetValue
+=== RUN   TestItemGetValue/full_durability
+=== RUN   TestItemGetValue/half_durability
+=== RUN   TestItemGetValue/no_durability_system
+=== RUN   TestItemGetValue/quarter_durability
+--- PASS: TestItemGetValue (0.00s)
+    --- PASS: TestItemGetValue/full_durability (0.00s)
+    --- PASS: TestItemGetValue/half_durability (0.00s)
+    --- PASS: TestItemGetValue/no_durability_system (0.00s)
+    --- PASS: TestItemGetValue/quarter_durability (0.00s)
+=== RUN   TestGetFantasyWeaponTemplates
+--- PASS: TestGetFantasyWeaponTemplates (0.00s)
+=== RUN   TestGetFantasyArmorTemplates
+--- PASS: TestGetFantasyArmorTemplates (0.00s)
+=== RUN   TestGetFantasyConsumableTemplates
+--- PASS: TestGetFantasyConsumableTemplates (0.00s)
+=== RUN   TestGetSciFiWeaponTemplates
+--- PASS: TestGetSciFiWeaponTemplates (0.00s)
+=== RUN   TestGetSciFiArmorTemplates
+--- PASS: TestGetSciFiArmorTemplates (0.00s)
+=== RUN   TestItemLevelScaling
+--- PASS: TestItemLevelScaling (0.00s)
+=== RUN   TestItemTypeFiltering
+--- PASS: TestItemTypeFiltering (0.00s)
+=== RUN   TestRarityDistribution
+--- PASS: TestRarityDistribution (0.00s)
+PASS
+ok  	github.com/opd-ai/venture/pkg/procgen/item	(cached)

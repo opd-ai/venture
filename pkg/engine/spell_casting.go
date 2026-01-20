@@ -2847,11 +2847,15 @@ func LoadPlayerSpells(player *Entity, seed int64, genreID string, depth int) err
 		}
 		player.AddComponent(slots)
 		componentCreated = true
-		log.Debug("Created new spell_slots component")
+		log.WithFields(logrus.Fields{
+			"component_type": "spell_slots",
+		}).Debug("Created new spell_slots component")
 	} else {
 		slotsComp, _ := player.GetComponent("spell_slots")
 		slots = slotsComp.(*SpellSlotComponent)
-		log.Debug("Using existing spell_slots component")
+		log.WithFields(logrus.Fields{
+			"component_type": "spell_slots",
+		}).Debug("Using existing spell_slots component")
 	}
 
 	// Equip spells to slots

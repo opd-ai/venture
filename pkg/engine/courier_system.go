@@ -29,7 +29,9 @@ func NewCourierSystem(world *World, mailSystem *MailSystem) *CourierSystem {
 		travelSpeed: 2.0,
 	}
 
-	log.Debug("Courier system initialized successfully")
+	log.WithFields(log.Fields{
+		"system_name": "courier",
+	}).Debug("Courier system initialized successfully")
 	return system
 }
 

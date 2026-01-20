@@ -110,7 +110,10 @@ func (s *PvPRatingSystem) RecordMatchResult(winner, loser *Entity, matchTime tim
 	loserComp, ok2 := loser.GetComponent("pvp_rating")
 
 	if !ok1 || !ok2 || winnerComp == nil || loserComp == nil {
-		log.Error("Missing PvP rating component")
+		log.WithFields(log.Fields{
+			"winner_id": winner.ID,
+			"loser_id":  loser.ID,
+		}).Error("Missing PvP rating component")
 		return 0, 0, ErrMissingComponent
 	}
 
@@ -118,7 +121,10 @@ func (s *PvPRatingSystem) RecordMatchResult(winner, loser *Entity, matchTime tim
 	loserRating, ok2 := loserComp.(*PvPRatingComponent)
 
 	if !ok1 || !ok2 {
-		log.Error("Invalid PvP rating component type")
+		log.WithFields(log.Fields{
+			"winner_id": winner.ID,
+			"loser_id":  loser.ID,
+		}).Error("Invalid PvP rating component type")
 		return 0, 0, ErrInvalidComponent
 	}
 

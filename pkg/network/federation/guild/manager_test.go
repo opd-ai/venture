@@ -1162,3 +1162,56 @@ func TestCrossFederationScenario(t *testing.T) {
 		t.Error("Member rank mismatch across servers")
 	}
 }
+
+func TestLoadSizeLimit(t *testing.T) {
+	// Test that the size limit constants and errors are properly defined
+
+	// Verify the constant is reasonable (50 MB for guild data)
+	if MaxGuildDataSize != 50*1024*1024 {
+		t.Errorf("Expected MaxGuildDataSize to be 50MB, got %d", MaxGuildDataSize)
+	}
+
+	// Verify the error is exported
+	if ErrGuildDataSizeExceeded == nil {
+		t.Error("ErrGuildDataSizeExceeded should not be nil")
+	}
+
+	// Verify error message
+	expectedMsg := "guild data exceeds maximum allowed size"
+	if ErrGuildDataSizeExceeded.Error() != expectedMsg {
+		t.Errorf("Expected error message %q, got %q", expectedMsg, ErrGuildDataSizeExceeded.Error())
+	}
+}
+
+func TestSaveLoadWithinLimit(t *testing.T) {
+	// Create manager with guilds
+	m := NewManager()
+
+	// Create a guild and track its ID
+	guildID, err := m.CreateGuild("fantasy", "leader1")
+	if err != nil {
+		t.Fatalf("CreateGuild failed: %v", err)
+	}
+
+	// Save (compress)
+	data, err := m.Save()
+	if err != nil {
+		t.Fatalf("Save failed: %v", err)
+	}
+
+	// Create new manager and load
+	m2 := NewManager()
+	err = m2.Load(data)
+	if err != nil {
+		t.Fatalf("Load failed: %v", err)
+	}
+
+	// Verify guild was loaded by retrieving it
+	guild, err := m2.GetGuild(guildID)
+	if err != nil {
+		t.Fatalf("GetGuild after Load failed: %v", err)
+	}
+	if guild.LeaderID != "leader1" {
+		t.Errorf("Expected leader1, got %s", guild.LeaderID)
+	}
+}

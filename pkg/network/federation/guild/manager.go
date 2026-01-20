@@ -4,13 +4,23 @@ import (
 	"bytes"
 	"compress/gzip"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"io"
 	"math/rand"
 	"sync"
 	"time"
 
 	"github.com/google/uuid"
 )
+
+// MaxGuildDataSize is the maximum allowed size for decompressed guild data.
+// This protects against decompression bomb attacks. Set to 50MB to accommodate
+// large guild databases while preventing memory exhaustion.
+const MaxGuildDataSize = 50 * 1024 * 1024 // 50 MB
+
+// ErrGuildDataSizeExceeded indicates the decompressed guild data exceeds MaxGuildDataSize.
+var ErrGuildDataSizeExceeded = errors.New("guild data exceeds maximum allowed size")
 
 // INTEGRATION FIX [Category G]: Guild Federation Manager
 // Gap: Guild manager missing for cross-server guild coordination (ROADMAP_V8.md Phase 50.1)
@@ -338,7 +348,8 @@ func (m *Manager) Save() ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-// Load deserializes guilds from gzip-compressed JSON
+// Load deserializes guilds from gzip-compressed JSON.
+// Returns ErrGuildDataSizeExceeded if the decompressed data exceeds MaxGuildDataSize.
 func (m *Manager) Load(data []byte) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -349,9 +360,19 @@ func (m *Manager) Load(data []byte) error {
 	}
 	defer gz.Close()
 
+	// Use LimitReader to protect against decompression bombs.
+	// Read up to MaxGuildDataSize + 1 to detect if limit is exceeded.
+	limitedReader := io.LimitReader(gz, MaxGuildDataSize+1)
+
 	var buf bytes.Buffer
-	if _, err := buf.ReadFrom(gz); err != nil {
+	n, err := buf.ReadFrom(limitedReader)
+	if err != nil {
 		return fmt.Errorf("failed to read: %w", err)
+	}
+
+	// If we read exactly MaxGuildDataSize+1, the data exceeded the limit
+	if n > MaxGuildDataSize {
+		return ErrGuildDataSizeExceeded
 	}
 
 	guilds := make(map[string]*Guild)

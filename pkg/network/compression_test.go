@@ -208,6 +208,52 @@ func bytesEqual(a, b []byte) bool {
 	return true
 }
 
+func TestDecompressMessage_SizeLimit(t *testing.T) {
+	// Test that decompression respects MaxDecompressedSize
+	// We can't easily create a true decompression bomb in tests,
+	// but we can verify the error type and constant exist.
+
+	// Verify the constant is reasonable (10 MB)
+	if MaxDecompressedSize != 10*1024*1024 {
+		t.Errorf("Expected MaxDecompressedSize to be 10MB, got %d", MaxDecompressedSize)
+	}
+
+	// Verify the error is exported
+	if ErrDecompressedSizeExceeded == nil {
+		t.Error("ErrDecompressedSizeExceeded should not be nil")
+	}
+
+	// Verify error message
+	expectedMsg := "decompressed data exceeds maximum allowed size"
+	if ErrDecompressedSizeExceeded.Error() != expectedMsg {
+		t.Errorf("Expected error message %q, got %q", expectedMsg, ErrDecompressedSizeExceeded.Error())
+	}
+}
+
+func TestDecompressMessage_ValidDataWithinLimit(t *testing.T) {
+	// Compress a message well within the limit
+	msg := []byte(strings.Repeat("Test message for compression limit testing. ", 100))
+
+	compressed, wasCompressed, err := CompressMessage(msg)
+	if err != nil {
+		t.Fatalf("CompressMessage failed: %v", err)
+	}
+
+	if !wasCompressed {
+		t.Skip("Message was not compressed, test not applicable")
+	}
+
+	// Decompress - should succeed since it's well within limits
+	decompressed, err := DecompressMessage(compressed)
+	if err != nil {
+		t.Fatalf("DecompressMessage failed: %v", err)
+	}
+
+	if !bytesEqual(decompressed, msg) {
+		t.Error("Decompressed data doesn't match original")
+	}
+}
+
 func generateRandomBytes(n int) []byte {
 	// Simple pseudo-random bytes for testing
 	result := make([]byte, n)

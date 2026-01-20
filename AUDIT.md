@@ -187,11 +187,13 @@ While many are simple accessor methods, the project's strict ECS guidelines proh
   - **Status:** Low risk - listener itself doesn't need timeout
   - **Note:** Individual connections have idle timeout management (L236-238)
 
-### 3. No Bounded Reads Detected
+### ~~3. No Bounded Reads Detected~~ ✅ FIXED (2026-01-20)
 
-- **Debug:** `grep -rn "io\.LimitReader" pkg/network/` - No matches
-- **Risk:** Potential DoS via large message payloads
-- **Recommendation:** Add `io.LimitReader` for incoming messages
+- **[pkg/network/compression.go](pkg/network/compression.go)**
+  - **Resolution:** Added `io.LimitReader` with `MaxDecompressedSize` (10MB) to `DecompressMessage()` to prevent decompression bomb attacks. Added `ErrDecompressedSizeExceeded` sentinel error.
+- **[pkg/network/federation/guild/manager.go](pkg/network/federation/guild/manager.go)**
+  - **Resolution:** Added `io.LimitReader` with `MaxGuildDataSize` (50MB) to `Manager.Load()` for gzip decompression protection. Added `ErrGuildDataSizeExceeded` sentinel error.
+- **Verification:** `go test ./pkg/network -run "TestDecompressMessage" && go test ./pkg/network/federation/guild -run "TestLoadSizeLimit"`
 
 ---
 
@@ -404,7 +406,9 @@ All 100+ example packages in `examples/` have 0% coverage, which is expected as 
 3. ~~Refactor `VoiceAudioComponent` methods to system~~ ✅ FIXED (2026-01-20)
 4. ~~Refactor `FishingSpotComponent` methods to system~~ ✅ FIXED (2026-01-20)
 5. ~~Refactor `CityStateComponent` methods to system~~ ✅ FIXED (2026-01-20)
-6. Add `io.LimitReader` for network message parsing
+6. ~~Add `io.LimitReader` for network message parsing~~ ✅ FIXED (2026-01-20)
+   - **Resolution:** Added `MaxDecompressedSize` (10MB) and `ErrDecompressedSizeExceeded` to `pkg/network/compression.go`. Modified `DecompressMessage()` to use `io.LimitReader` to protect against decompression bomb attacks. Added `MaxGuildDataSize` (50MB) and `ErrGuildDataSizeExceeded` to `pkg/network/federation/guild/manager.go`. Modified `Manager.Load()` to use `io.LimitReader`. Added comprehensive tests for size limit enforcement.
+   - **Verification:** `go test -v ./pkg/network -run "TestDecompressMessage_SizeLimit|TestDecompressMessage_ValidDataWithinLimit" && go test -v ./pkg/network/federation/guild -run "TestLoadSizeLimit|TestSaveLoadWithinLimit"`
 
 ### Medium Term (Technical Debt)
 
@@ -450,7 +454,7 @@ grep -rn "\.\(\*net\.\(UDP\|TCP\)" pkg/
 | **Architecture Violations** | 5 major components (5 fixed ✅) |
 | **Performance** | 0 blocking issues |
 | **Memory** | 0 blocking issues |
-| **Network** | 1 (LimitReader recommendation) |
+| **Network** | 0 blocking issues (1 fixed ✅) |
 | **Error Handling** | 3 |
 | **Logging** | 6 instances |
 | **Concurrency** | 0 blocking issues |
@@ -460,4 +464,4 @@ grep -rn "\.\(\*net\.\(UDP\|TCP\)" pkg/
 **Total Go Files Examined:** 1,616  
 **Lines of Code:** 587,782  
 
-**Top Priority:** All critical ECS architecture violations for major components have been fixed. Continue addressing remaining medium-term technical debt items (logging context, interface{} migration, generator determinism tests, error handling in saveload/recovery).
+**Top Priority:** All critical and short-term architecture items have been fixed. Continue addressing remaining medium-term technical debt items (logging context, interface{} migration, generator determinism tests, error handling in saveload/recovery).

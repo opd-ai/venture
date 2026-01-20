@@ -1,3 +1,16 @@
+// Package main implements a multi-client load testing tool for the Venture multiplayer server.
+//
+// This load test tool simulates multiple concurrent clients connecting to a Venture server
+// with varying network latencies (50ms to 5000ms) to test connection stability, throughput,
+// and resilience under realistic network conditions.
+//
+// Architecture:
+//   - TestClient: Represents a single simulated client with metrics tracking
+//   - mockTestClient: Simulates network behavior without actual server connection
+//   - LoadTestResults: Aggregates metrics from all clients for final reporting
+//
+// The tool supports command-line configuration and provides real-time progress updates
+// during test execution, followed by a detailed report with success criteria validation.
 package main
 
 // Multi-client load testing tool for Venture multiplayer server.
@@ -282,7 +295,10 @@ func runTestClient(ctx context.Context, tc *TestClient) {
 }
 
 // mockTestClient simulates a network client for load testing.
-// This doesn't actually connect to the server but simulates the behavior.
+//
+// This mock implementation simulates network behavior without requiring an actual
+// server connection, enabling isolated load testing of client-side behavior.
+// It simulates latency-dependent failure rates and connection stability.
 type mockTestClient struct {
 	id            int
 	targetLatency time.Duration
@@ -291,7 +307,14 @@ type mockTestClient struct {
 	failureRate   float64 // Probability of simulated failure per update
 }
 
-// Connect simulates connecting to the server.
+// Connect simulates establishing a connection to the server.
+//
+// Behavior:
+//   - Introduces connection delay proportional to target latency
+//   - Simulates 5% connection failure rate for high-latency clients (>1000ms)
+//   - Initializes failure rate based on target latency
+//
+// Returns error if connection simulation fails.
 func (m *mockTestClient) Connect() error {
 	// Initialize RNG with client-specific seed
 	m.rng = rand.New(rand.NewSource(time.Now().UnixNano() + int64(m.id)))
@@ -313,12 +336,21 @@ func (m *mockTestClient) Connect() error {
 	return nil
 }
 
-// Disconnect simulates disconnecting from the server.
+// Disconnect simulates cleanly disconnecting from the server.
+//
+// Marks the client as disconnected, preventing further message sending.
 func (m *mockTestClient) Disconnect() {
 	m.connected = false
 }
 
-// SendUpdate simulates sending an update to the server.
+// SendUpdate simulates sending a game state update to the server.
+//
+// Behavior:
+//   - Returns error if client is not connected
+//   - Simulates network delay (latency/100)
+//   - Simulates random connection failures based on latency-dependent failure rate
+//
+// Returns error if send fails or connection is lost.
 func (m *mockTestClient) SendUpdate() error {
 	if !m.connected {
 		return fmt.Errorf("not connected")
@@ -336,7 +368,11 @@ func (m *mockTestClient) SendUpdate() error {
 	return nil
 }
 
-// Reconnect simulates reconnecting to the server.
+// Reconnect simulates attempting to reconnect to the server after connection loss.
+//
+// Waits 1 second before attempting reconnection, then calls Connect().
+//
+// Returns error if reconnection fails.
 func (m *mockTestClient) Reconnect() error {
 	// Wait before attempting reconnection
 	time.Sleep(time.Second)

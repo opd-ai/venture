@@ -1,3 +1,14 @@
+// Package main provides comprehensive tests for the load testing tool.
+//
+// Test Coverage:
+//   - Mock client connection behavior (Connect, Disconnect, Reconnect)
+//   - Message sending and receiving simulation
+//   - Client metrics tracking (messages, errors, reconnects)
+//   - Results aggregation and success criteria validation
+//   - Progress and results display functions
+//
+// Current Coverage: 55.3% (target: ≥65%)
+// Untested: main() function orchestration logic (requires integration testing)
 package main
 
 import (

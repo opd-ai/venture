@@ -1,3 +1,18 @@
+// Package main implements a comprehensive test tool for the world_events integration package.
+//
+// This test tool validates all major features of the world events system including:
+//   - Basic event generation (demo mode)
+//   - Faction response simulation (faction mode)
+//   - Economic event generation (economic mode)
+//   - Weather disaster simulation (weather mode)
+//   - Cross-server event propagation (propagate mode)
+//   - Event chain generation (chain mode)
+//   - Comprehensive testing (all mode)
+//
+// Usage:
+//   worldeventstest -mode=demo -seed=12345 -verbose
+//
+// Available modes: demo, faction, economic, weather, propagate, chain, all
 package main
 
 import (
@@ -40,6 +55,10 @@ func main() {
 	}
 }
 
+// runDemoMode tests basic event generation with multiple trigger types.
+//
+// Generates events for guild war, trade volume, and weather changes to validate
+// the core event generation functionality.
 func runDemoMode(seed int64, verbose bool) {
 	// BUG FIX: Phase 0 - go vet error: fmt.Println arg list ends with redundant newline
 	// Resolution: Removed \n from fmt.Println (adds newline automatically)
@@ -97,6 +116,10 @@ func runDemoMode(seed int64, verbose bool) {
 	displayStats(stats)
 }
 
+// runFactionMode tests faction response generation for various world events.
+//
+// Simulates how different factions (merchants, guards, nobles) respond to
+// guild wars, market crashes, and invasions.
 func runFactionMode(seed int64, verbose bool) {
 	// BUG FIX: Phase 0 - go vet error: fmt.Println arg list ends with redundant newline
 	// Resolution: Removed \n from fmt.Println (adds newline automatically)
@@ -125,6 +148,10 @@ func runFactionMode(seed int64, verbose bool) {
 	}
 }
 
+// runEconomicMode tests economic event generation with varying severities.
+//
+// Generates economic events for different item types (iron ore, gold, food)
+// to validate price modifiers, supply changes, and affected zones.
 func runEconomicMode(seed int64, verbose bool) {
 	// BUG FIX: Phase 0 - go vet error: fmt.Println arg list ends with redundant newline
 	// Resolution: Removed \n from fmt.Println (adds newline automatically)
@@ -159,6 +186,10 @@ func runEconomicMode(seed int64, verbose bool) {
 	}
 }
 
+// runWeatherMode tests weather disaster generation across severity levels.
+//
+// Generates weather disasters at different locations with varying severities
+// to validate disaster types, intensities, radii, and damage calculations.
 func runWeatherMode(seed int64, verbose bool) {
 	// BUG FIX: Phase 0 - go vet error: fmt.Println arg list ends with redundant newline
 	// Resolution: Removed \n from fmt.Println (adds newline automatically)
@@ -188,6 +219,10 @@ func runWeatherMode(seed int64, verbose bool) {
 	}
 }
 
+// runPropagateMode tests cross-server event propagation.
+//
+// Generates an event on one server and propagates it to multiple target servers
+// with configured delays to validate federation event distribution.
 func runPropagateMode(seed int64, verbose bool) {
 	// BUG FIX: Phase 0 - go vet error: fmt.Println arg list ends with redundant newline
 	// Resolution: Removed \n from fmt.Println (adds newline automatically)
@@ -224,6 +259,10 @@ func runPropagateMode(seed int64, verbose bool) {
 	}
 }
 
+// runChainMode tests event chain generation with configured probabilities.
+//
+// Generates an initial event and validates that chain events are properly
+// created and linked based on the configured chain probability (100% for testing).
 func runChainMode(seed int64, verbose bool) {
 	// BUG FIX: Phase 0 - go vet error: fmt.Println arg list ends with redundant newline
 	// Resolution: Removed \n from fmt.Println (adds newline automatically)
@@ -272,6 +311,10 @@ func runChainMode(seed int64, verbose bool) {
 	}
 }
 
+// runAllModes executes all test modes sequentially.
+//
+// Runs demo, faction, economic, weather, propagate, and chain modes in order
+// for comprehensive validation of all world events features.
 func runAllModes(seed int64, verbose bool) {
 	modes := []struct {
 		name string
@@ -292,6 +335,10 @@ func runAllModes(seed int64, verbose bool) {
 	fmt.Println(strings.Repeat("═", 60))
 }
 
+// displayEvent formats and prints a world event to stdout.
+//
+// Shows event ID, type, trigger, severity, title, description, location,
+// timing, and impacts. Includes detailed impact breakdown when verbose is true.
 func displayEvent(event *world_events.WorldEvent, verbose bool) {
 	fmt.Printf("  ID: %s\n", event.ID)
 	fmt.Printf("  Type: %s | Trigger: %s | Severity: %d\n", event.Type, event.Trigger, event.Severity)
@@ -310,6 +357,10 @@ func displayEvent(event *world_events.WorldEvent, verbose bool) {
 	}
 }
 
+// displayStats formats and prints event manager statistics to stdout.
+//
+// Shows active events count, event chains count, total generated, and
+// a breakdown of events by type.
 func displayStats(stats map[string]interface{}) {
 	fmt.Println("=== Manager Statistics ===")
 	fmt.Printf("Active Events: %d\n", stats["active_events"])

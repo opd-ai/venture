@@ -1,0 +1,39 @@
+{
+  "version": "1.0.0",
+  "description": "Performance benchmark baselines for regression detection. All times in nanoseconds.",
+  "threshold_percent": 10,
+  "benchmarks": {
+    "BenchmarkItemGenerator": {
+      "max_ns_per_op": 20000,
+      "package": "pkg/procgen/item"
+    },
+    "BenchmarkSpellGenerator": {
+      "max_ns_per_op": 50000,
+      "package": "pkg/procgen/magic"
+    },
+    "BenchmarkQuestGenerator": {
+      "max_ns_per_op": 25000,
+      "package": "pkg/procgen/quest"
+    },
+    "BenchmarkBSPGen": {
+      "max_ns_per_op": 35000,
+      "package": "pkg/procgen/terrain"
+    },
+    "BenchmarkSaveGameLarge": {
+      "max_ns_per_op": 5000000,
+      "package": "pkg/saveload"
+    },
+    "BenchmarkLoadGameLarge": {
+      "max_ns_per_op": 8000000,
+      "package": "pkg/saveload"
+    },
+    "BenchmarkChatPacketSerialize": {
+      "max_ns_per_op": 500,
+      "package": "pkg/network"
+    },
+    "BenchmarkTradeProposalSerialize": {
+      "max_ns_per_op": 1000,
+      "package": "pkg/network"
+    }
+  }
+}

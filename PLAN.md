@@ -310,13 +310,14 @@ All Phase 3 deliverables completed successfully:
   - ✅ Generates capacity reports in docs/capacity/
   - ✅ Created docs/CAPACITY_PLANNING.md with capacity limits and recommendations
   - ✅ Documented scaling strategies (vertical and horizontal/federation)
-- [ ] Implement performance regression testing (file: .github/workflows/quality.yml)
-  - Add benchmark CI job that compares against baseline
-  - Fail CI if performance regresses >10% on key benchmarks
-  - Store benchmark history for trend analysis
-  - Alert on significant regressions
+- [x] Implement performance regression testing (file: .github/workflows/quality.yml)
+  - ✅ Add benchmark CI job that compares against baseline (scripts/benchmark-baseline.json)
+  - ✅ Fail CI if performance regresses >10% on key benchmarks (scripts/benchmark-regression.sh)
+  - ✅ Store benchmark history for trend analysis (artifact upload with 30-day retention)
+  - ✅ Alert on significant regressions (CI failure on threshold breach)
+  - Added 8 key benchmarks: Item/Spell/Quest generators, BSP terrain, Save/Load, Network packets
 - [ ] Optimize WebAssembly build size (file: Makefile, cmd/client/main.go)
-  - Use -ldflags="-s -w" to strip debug symbols
+  - ✅ Use -ldflags="-s -w" to strip debug symbols (already implemented)
   - Analyze and remove unused dependencies
   - Implement lazy loading for non-critical systems
   - Target: <10MB gzipped WASM bundle

@@ -164,3 +164,34 @@ jobs:
 
       - name: Run UX Validation
         run: timeout 60 ./build/venture-server --ux-validate || true
+
+  benchmark-regression:
+    name: Performance Regression Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install build dependencies
+        run: sudo apt-get update && sudo apt-get install -y libc6-dev libgl1-mesa-dev libxcursor-dev libxi-dev libxinerama-dev libxrandr-dev libxxf86vm-dev libasound2-dev pkg-config jq bc
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24.x'
+          cache: true
+
+      - name: Download dependencies
+        run: go mod download
+
+      - name: Run Benchmark Regression Tests
+        run: ./scripts/benchmark-regression.sh
+
+      - name: Upload benchmark results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: benchmark-results
+          path: build/benchmark-results.txt
+          retention-days: 30

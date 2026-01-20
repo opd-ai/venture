@@ -5,28 +5,6 @@ import (
 	"math"
 )
 
-// Wheel represents a single wheel with suspension physics.
-type Wheel struct {
-	// Position relative to vehicle center (local coordinates)
-	LocalX float64
-	LocalY float64
-
-	// Suspension parameters
-	RestLength      float64 // Natural length of suspension spring (pixels)
-	Compression     float64 // Current compression amount (0.0 = fully extended, 1.0 = fully compressed)
-	CompressionRate float64 // Rate of compression change
-
-	// Spring-damper model parameters
-	SpringStiffness float64 // Spring constant (N/m equivalent)
-	DamperStrength  float64 // Damping coefficient
-
-	// Load on this wheel (affected by weight transfer)
-	Load float64 // Force in newtons (approximated)
-
-	// Contact with terrain
-	IsGrounded bool
-}
-
 // SuspensionComponent manages vehicle suspension system with spring-damper model.
 type SuspensionComponent struct {
 	// Wheels attached to vehicle

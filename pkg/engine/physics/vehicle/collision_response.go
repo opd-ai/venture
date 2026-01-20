@@ -41,15 +41,6 @@ func NewCollisionResponseComponent(mass float64) *CollisionResponseComponent {
 	}
 }
 
-// ImpactResult contains the results of processing a collision.
-type ImpactResult struct {
-	DamageDealt       float64 // Damage to vehicle durability
-	VelocityReduction float64 // How much velocity was lost
-	BounceVelocityX   float64 // Velocity after bounce
-	BounceVelocityY   float64
-	IntegrityLoss     float64 // Reduction in structural integrity
-}
-
 // ProcessCollision calculates damage and response from a collision.
 // velocityX, velocityY: vehicle velocity before impact
 // normalX, normalY: surface normal at collision point (unit vector)

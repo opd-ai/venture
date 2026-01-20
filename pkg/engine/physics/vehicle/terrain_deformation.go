@@ -6,47 +6,6 @@ import (
 	"math/rand"
 )
 
-// TerrainType identifies different terrain surfaces for deformation.
-type TerrainType int
-
-const (
-	TerrainHard  TerrainType = iota // Stone, concrete - no deformation
-	TerrainFirm                     // Packed dirt - minimal deformation
-	TerrainSoft                     // Mud, sand - significant deformation
-	TerrainSnow                     // Snow - deep tracks
-	TerrainWater                    // Water - no permanent tracks
-)
-
-// String returns the string representation of terrain type.
-func (t TerrainType) String() string {
-	switch t {
-	case TerrainHard:
-		return "Hard"
-	case TerrainFirm:
-		return "Firm"
-	case TerrainSoft:
-		return "Soft"
-	case TerrainSnow:
-		return "Snow"
-	case TerrainWater:
-		return "Water"
-	default:
-		return "Unknown"
-	}
-}
-
-// TrackMark represents a single tire track deformation in terrain.
-type TrackMark struct {
-	X           float64 // World position
-	Y           float64
-	Angle       float64     // Track orientation (radians)
-	Depth       float64     // Deformation depth (0.0 = none, 1.0 = max)
-	Width       float64     // Track width (pixels)
-	Age         float64     // Time since creation (seconds)
-	TerrainType TerrainType // Terrain surface type
-	FadeTime    float64     // Time to fade completely (seconds)
-}
-
 // TerrainDeformationComponent manages tire tracks and terrain deformation.
 type TerrainDeformationComponent struct {
 	// Track marks left by vehicle

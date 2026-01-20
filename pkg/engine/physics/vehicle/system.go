@@ -18,21 +18,6 @@ func NewEnhancedVehicleSystem() *EnhancedVehicleSystem {
 	}
 }
 
-// VehicleState contains current vehicle dynamics for physics calculations.
-type VehicleState struct {
-	PositionX     float64
-	PositionY     float64
-	VelocityX     float64
-	VelocityY     float64
-	Rotation      float64 // Radians
-	AngularVel    float64 // Radians/s
-	Speed         float64 // Magnitude of velocity
-	Acceleration  float64
-	IsGrounded    bool
-	TerrainHeight []float64 // Height at each wheel position
-	TerrainTypes  []TerrainType
-}
-
 // UpdateVehiclePhysics performs a complete physics update for a vehicle.
 // This integrates suspension, weight transfer, and collision response.
 func (evs *EnhancedVehicleSystem) UpdateVehiclePhysics(

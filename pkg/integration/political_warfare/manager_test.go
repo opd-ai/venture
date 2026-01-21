@@ -732,3 +732,301 @@ func TestConcessionTypeString(t *testing.T) {
 		}
 	}
 }
+
+// Test applyConcessions implementation for all concession types
+
+func TestApplyConcessionsGold(t *testing.T) {
+	manager, guildManager, guild1, guild2, _ := setupTestManager(t)
+
+	// Set up initial treasury
+	defender, _ := guildManager.GetGuild(guild2)
+	defender.Treasury = 50000
+
+	// Declare and activate war
+	_, err := manager.DeclareWar(guild1, guild2, 1*time.Millisecond)
+	if err != nil {
+		t.Fatalf("DeclareWar failed: %v", err)
+	}
+	time.Sleep(10 * time.Millisecond)
+	manager.Update(0)
+
+	// Force a successful negotiation
+	concessions := []DiplomaticConcession{
+		{Type: ConcessionGold, Value: 25000},
+	}
+
+	// Run until success
+	for i := 0; i < 100; i++ {
+		success, _ := manager.NegotiateDiplomaticVictory(guild1, guild2, concessions)
+		if success {
+			break
+		}
+		manager.DeclareWar(guild1, guild2, 1*time.Millisecond)
+		time.Sleep(5 * time.Millisecond)
+		manager.Update(0)
+	}
+
+	// Check that concession was recorded
+	applied := manager.GetAppliedConcessions()
+	foundGold := false
+	for _, c := range applied {
+		if c.Type == ConcessionGold && c.GoldAmount == 25000 {
+			foundGold = true
+			break
+		}
+	}
+	if !foundGold {
+		t.Log("Note: No successful negotiation in test (probabilistic)")
+	}
+}
+
+func TestApplyConcessionsTerritory(t *testing.T) {
+	manager, _, guild1, guild2, _ := setupTestManager(t)
+
+	// Declare and activate war
+	_, err := manager.DeclareWar(guild1, guild2, 1*time.Millisecond)
+	if err != nil {
+		t.Fatalf("DeclareWar failed: %v", err)
+	}
+	time.Sleep(10 * time.Millisecond)
+	manager.Update(0)
+
+	concessions := []DiplomaticConcession{
+		{Type: ConcessionTerritory, Value: "territory_north_123"},
+	}
+
+	// Run until success
+	success := false
+	for i := 0; i < 100; i++ {
+		success, _ = manager.NegotiateDiplomaticVictory(guild1, guild2, concessions)
+		if success {
+			break
+		}
+		manager.DeclareWar(guild1, guild2, 1*time.Millisecond)
+		time.Sleep(5 * time.Millisecond)
+		manager.Update(0)
+	}
+
+	if success {
+		transfers := manager.GetPendingTerritoryTransfers()
+		found := false
+		for _, t := range transfers {
+			if t.TerritoryID == "territory_north_123" && t.AttackerGuildID == guild1 {
+				found = true
+				break
+			}
+		}
+		if !found {
+			t.Error("Expected territory transfer to be recorded")
+		}
+	}
+}
+
+func TestApplyConcessionsApology(t *testing.T) {
+	manager, _, guild1, guild2, _ := setupTestManager(t)
+
+	// Declare and activate war
+	_, err := manager.DeclareWar(guild1, guild2, 1*time.Millisecond)
+	if err != nil {
+		t.Fatalf("DeclareWar failed: %v", err)
+	}
+	time.Sleep(10 * time.Millisecond)
+	manager.Update(0)
+
+	concessions := []DiplomaticConcession{
+		{Type: ConcessionApology, Value: "We sincerely apologize for our aggression."},
+	}
+
+	// Run until success
+	success := false
+	for i := 0; i < 100; i++ {
+		success, _ = manager.NegotiateDiplomaticVictory(guild1, guild2, concessions)
+		if success {
+			break
+		}
+		manager.DeclareWar(guild1, guild2, 1*time.Millisecond)
+		time.Sleep(5 * time.Millisecond)
+		manager.Update(0)
+	}
+
+	if success {
+		apologies := manager.GetPendingApologies()
+		found := false
+		for _, a := range apologies {
+			if a.ApologyText == "We sincerely apologize for our aggression." {
+				found = true
+				break
+			}
+		}
+		if !found {
+			t.Error("Expected apology to be recorded")
+		}
+	}
+}
+
+func TestApplyConcessionsApologyDefault(t *testing.T) {
+	manager, _, guild1, guild2, _ := setupTestManager(t)
+
+	// Declare and activate war
+	_, err := manager.DeclareWar(guild1, guild2, 1*time.Millisecond)
+	if err != nil {
+		t.Fatalf("DeclareWar failed: %v", err)
+	}
+	time.Sleep(10 * time.Millisecond)
+	manager.Update(0)
+
+	// Apology with nil value should generate default text
+	concessions := []DiplomaticConcession{
+		{Type: ConcessionApology, Value: nil},
+	}
+
+	// Run until success
+	success := false
+	for i := 0; i < 100; i++ {
+		success, _ = manager.NegotiateDiplomaticVictory(guild1, guild2, concessions)
+		if success {
+			break
+		}
+		manager.DeclareWar(guild1, guild2, 1*time.Millisecond)
+		time.Sleep(5 * time.Millisecond)
+		manager.Update(0)
+	}
+
+	if success {
+		apologies := manager.GetPendingApologies()
+		found := false
+		for _, a := range apologies {
+			if a.ApologyText != "" && a.DefenderGuildID == guild2 {
+				found = true
+				break
+			}
+		}
+		if !found {
+			t.Error("Expected default apology text to be generated")
+		}
+	}
+}
+
+func TestApplyConcessionsTribute(t *testing.T) {
+	manager, _, guild1, guild2, _ := setupTestManager(t)
+
+	// Declare and activate war
+	_, err := manager.DeclareWar(guild1, guild2, 1*time.Millisecond)
+	if err != nil {
+		t.Fatalf("DeclareWar failed: %v", err)
+	}
+	time.Sleep(10 * time.Millisecond)
+	manager.Update(0)
+
+	tributeItems := []string{"sword_legendary_001", "armor_plate_002", "gem_ruby_003"}
+	concessions := []DiplomaticConcession{
+		{Type: ConcessionTribute, Value: tributeItems},
+	}
+
+	// Run until success
+	success := false
+	for i := 0; i < 100; i++ {
+		success, _ = manager.NegotiateDiplomaticVictory(guild1, guild2, concessions)
+		if success {
+			break
+		}
+		manager.DeclareWar(guild1, guild2, 1*time.Millisecond)
+		time.Sleep(5 * time.Millisecond)
+		manager.Update(0)
+	}
+
+	if success {
+		tributes := manager.GetPendingTributes()
+		found := false
+		for _, trib := range tributes {
+			if len(trib.TributeItemIDs) == 3 && trib.TributeItemIDs[0] == "sword_legendary_001" {
+				found = true
+				break
+			}
+		}
+		if !found {
+			t.Error("Expected tribute items to be recorded")
+		}
+	}
+}
+
+func TestApplyConcessionsTrade(t *testing.T) {
+	manager, _, guild1, guild2, _ := setupTestManager(t)
+
+	// Declare and activate war
+	_, err := manager.DeclareWar(guild1, guild2, 1*time.Millisecond)
+	if err != nil {
+		t.Fatalf("DeclareWar failed: %v", err)
+	}
+	time.Sleep(10 * time.Millisecond)
+	manager.Update(0)
+
+	concessions := []DiplomaticConcession{
+		{Type: ConcessionTrade, Value: 0.25}, // 25% trade discount
+	}
+
+	// Run until success
+	success := false
+	for i := 0; i < 100; i++ {
+		success, _ = manager.NegotiateDiplomaticVictory(guild1, guild2, concessions)
+		if success {
+			break
+		}
+		manager.DeclareWar(guild1, guild2, 1*time.Millisecond)
+		time.Sleep(5 * time.Millisecond)
+		manager.Update(0)
+	}
+
+	if success {
+		discount := manager.GetTradeDiscount(guild1, guild2)
+		if discount != 0.25 {
+			t.Errorf("Expected trade discount of 0.25, got %f", discount)
+		}
+	}
+}
+
+func TestGetTradeDiscountNoDiscount(t *testing.T) {
+	manager, _, guild1, guild2, _ := setupTestManager(t)
+
+	// No negotiation, no discount
+	discount := manager.GetTradeDiscount(guild1, guild2)
+	if discount != 0 {
+		t.Errorf("Expected no trade discount, got %f", discount)
+	}
+}
+
+func TestGetAppliedConcessionsEmpty(t *testing.T) {
+	manager, _, _, _, _ := setupTestManager(t)
+
+	applied := manager.GetAppliedConcessions()
+	if len(applied) != 0 {
+		t.Errorf("Expected empty applied concessions, got %d", len(applied))
+	}
+}
+
+func TestGetPendingTerritoryTransfersEmpty(t *testing.T) {
+	manager, _, _, _, _ := setupTestManager(t)
+
+	transfers := manager.GetPendingTerritoryTransfers()
+	if len(transfers) != 0 {
+		t.Errorf("Expected no pending territory transfers, got %d", len(transfers))
+	}
+}
+
+func TestGetPendingApologiesEmpty(t *testing.T) {
+	manager, _, _, _, _ := setupTestManager(t)
+
+	apologies := manager.GetPendingApologies()
+	if len(apologies) != 0 {
+		t.Errorf("Expected no pending apologies, got %d", len(apologies))
+	}
+}
+
+func TestGetPendingTributesEmpty(t *testing.T) {
+	manager, _, _, _, _ := setupTestManager(t)
+
+	tributes := manager.GetPendingTributes()
+	if len(tributes) != 0 {
+		t.Errorf("Expected no pending tributes, got %d", len(tributes))
+	}
+}

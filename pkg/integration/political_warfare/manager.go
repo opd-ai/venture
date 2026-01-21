@@ -12,16 +12,17 @@ import (
 
 // Manager coordinates political warfare between guilds
 type Manager struct {
-	world         *engine.World
-	guildManager  *guild.Manager
-	wars          map[string]*WarDeclaration // Key: attackerID_defenderID
-	treaties      map[string]*PeaceTreaty    // Key: guildID1_guildID2 (sorted)
-	embargoes     map[string]*TradeEmbargo   // Key: imposingID_targetID
-	allianceCalls map[string]*AllianceCall   // Key: callingID_targetID
-	penalties     []ReputationPenalty
-	rng           *rand.Rand
-	seed          int64
-	mu            sync.RWMutex
+	world              *engine.World
+	guildManager       *guild.Manager
+	wars               map[string]*WarDeclaration // Key: attackerID_defenderID
+	treaties           map[string]*PeaceTreaty    // Key: guildID1_guildID2 (sorted)
+	embargoes          map[string]*TradeEmbargo   // Key: imposingID_targetID
+	allianceCalls      map[string]*AllianceCall   // Key: callingID_targetID
+	penalties          []ReputationPenalty
+	appliedConcessions []AppliedConcession // Track all applied concessions
+	rng                *rand.Rand
+	seed               int64
+	mu                 sync.RWMutex
 }
 
 // NewManager creates a new political warfare manager with deterministic RNG
@@ -31,15 +32,16 @@ func NewManager(world *engine.World, guildManager *guild.Manager) *Manager {
 	// This ensures same guild configurations produce same political outcomes
 	seed := int64(12345) // Default seed, can be derived from game world seed in future
 	return &Manager{
-		world:         world,
-		guildManager:  guildManager,
-		wars:          make(map[string]*WarDeclaration),
-		treaties:      make(map[string]*PeaceTreaty),
-		embargoes:     make(map[string]*TradeEmbargo),
-		allianceCalls: make(map[string]*AllianceCall),
-		penalties:     make([]ReputationPenalty, 0),
-		rng:           rand.New(rand.NewSource(seed)),
-		seed:          seed,
+		world:              world,
+		guildManager:       guildManager,
+		wars:               make(map[string]*WarDeclaration),
+		treaties:           make(map[string]*PeaceTreaty),
+		embargoes:          make(map[string]*TradeEmbargo),
+		allianceCalls:      make(map[string]*AllianceCall),
+		penalties:          make([]ReputationPenalty, 0),
+		appliedConcessions: make([]AppliedConcession, 0),
+		rng:                rand.New(rand.NewSource(seed)),
+		seed:               seed,
 	}
 }
 
@@ -405,7 +407,15 @@ func (m *Manager) calculateConcessionValue(concessions []DiplomaticConcession, d
 }
 
 func (m *Manager) applyConcessions(attackerGuildID, defenderGuildID string, concessions []DiplomaticConcession, defenderGuild *guild.Guild) {
+	now := time.Now()
 	for _, concession := range concessions {
+		applied := AppliedConcession{
+			Type:            concession.Type,
+			AttackerGuildID: attackerGuildID,
+			DefenderGuildID: defenderGuildID,
+			AppliedAt:       now,
+		}
+
 		switch concession.Type {
 		case ConcessionGold:
 			if goldAmount, ok := concession.Value.(int); ok {
@@ -414,10 +424,123 @@ func (m *Manager) applyConcessions(attackerGuildID, defenderGuildID string, conc
 				if attackerGuild, err := m.guildManager.GetGuild(attackerGuildID); err == nil {
 					attackerGuild.Treasury += goldAmount
 				}
+				applied.GoldAmount = goldAmount
 			}
-			// Other concession types would be implemented similarly
+
+		case ConcessionTerritory:
+			if territoryID, ok := concession.Value.(string); ok && territoryID != "" {
+				// Record territory transfer for external system to process
+				// Territory system integration: query GetPendingTerritoryTransfers()
+				// to get territories that should be transferred
+				applied.TerritoryID = territoryID
+			}
+
+		case ConcessionApology:
+			if apologyText, ok := concession.Value.(string); ok && apologyText != "" {
+				// Record public apology for broadcast
+				// Messaging system integration: query GetPendingApologies()
+				// to get apologies that should be broadcast to all players
+				applied.ApologyText = apologyText
+			} else {
+				// Default apology text if none provided
+				applied.ApologyText = fmt.Sprintf("Guild %s publicly apologizes to guild %s for the conflict.",
+					defenderGuildID, attackerGuildID)
+			}
+
+		case ConcessionTribute:
+			if itemIDs, ok := concession.Value.([]string); ok && len(itemIDs) > 0 {
+				// Record item tribute for transfer
+				// Inventory system integration: query GetPendingTributes()
+				// to get items that should be transferred from defender to attacker
+				applied.TributeItemIDs = itemIDs
+			}
+
+		case ConcessionTrade:
+			if discount, ok := concession.Value.(float64); ok && discount > 0 {
+				// Record trade discount for future transactions
+				// Trade system integration: call GetTradeDiscount(attackerID, defenderID)
+				// to check if a discount applies to transactions between these guilds
+				applied.TradeDiscountPct = discount
+				applied.TradeDiscountEnds = now.Add(TradeDiscountDuration)
+			}
+		}
+
+		m.appliedConcessions = append(m.appliedConcessions, applied)
+	}
+}
+
+// GetAppliedConcessions returns all applied concessions
+func (m *Manager) GetAppliedConcessions() []AppliedConcession {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
+	result := make([]AppliedConcession, len(m.appliedConcessions))
+	copy(result, m.appliedConcessions)
+	return result
+}
+
+// GetTradeDiscount returns the current trade discount percentage that the
+// attacker guild receives when trading with the defender guild.
+// Returns 0 if no active discount exists.
+func (m *Manager) GetTradeDiscount(attackerGuildID, defenderGuildID string) float64 {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
+	now := time.Now()
+	for _, c := range m.appliedConcessions {
+		if c.Type == ConcessionTrade &&
+			c.AttackerGuildID == attackerGuildID &&
+			c.DefenderGuildID == defenderGuildID &&
+			(c.TradeDiscountEnds.IsZero() || c.TradeDiscountEnds.After(now)) {
+			return c.TradeDiscountPct
 		}
 	}
+	return 0
+}
+
+// GetPendingTerritoryTransfers returns territory IDs pending transfer from
+// diplomatic victories. External territory system should process these.
+func (m *Manager) GetPendingTerritoryTransfers() []AppliedConcession {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
+	var result []AppliedConcession
+	for _, c := range m.appliedConcessions {
+		if c.Type == ConcessionTerritory && c.TerritoryID != "" {
+			result = append(result, c)
+		}
+	}
+	return result
+}
+
+// GetPendingApologies returns public apologies pending broadcast.
+// External messaging system should broadcast these to all players.
+func (m *Manager) GetPendingApologies() []AppliedConcession {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
+	var result []AppliedConcession
+	for _, c := range m.appliedConcessions {
+		if c.Type == ConcessionApology && c.ApologyText != "" {
+			result = append(result, c)
+		}
+	}
+	return result
+}
+
+// GetPendingTributes returns item tributes pending transfer.
+// External inventory system should transfer these items.
+func (m *Manager) GetPendingTributes() []AppliedConcession {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
+	var result []AppliedConcession
+	for _, c := range m.appliedConcessions {
+		if c.Type == ConcessionTribute && len(c.TributeItemIDs) > 0 {
+			result = append(result, c)
+		}
+	}
+	return result
 }
 
 // GetActiveWars returns all active wars

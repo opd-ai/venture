@@ -98,3 +98,20 @@ func (vt VictoryType) String() string {
 func (ct ConcessionType) String() string {
 	return string(ct)
 }
+
+// AppliedConcession records a concession that has been applied
+type AppliedConcession struct {
+	Type              ConcessionType `json:"type"`
+	AttackerGuildID   string         `json:"attacker_guild_id"`
+	DefenderGuildID   string         `json:"defender_guild_id"`
+	AppliedAt         time.Time      `json:"applied_at"`
+	TerritoryID       string         `json:"territory_id,omitempty"`       // For ConcessionTerritory
+	ApologyText       string         `json:"apology_text,omitempty"`       // For ConcessionApology
+	TributeItemIDs    []string       `json:"tribute_item_ids,omitempty"`   // For ConcessionTribute
+	TradeDiscountPct  float64        `json:"trade_discount_pct,omitempty"` // For ConcessionTrade
+	TradeDiscountEnds time.Time      `json:"trade_discount_ends,omitempty"`
+	GoldAmount        int            `json:"gold_amount,omitempty"` // For ConcessionGold
+}
+
+// TradeDiscountDuration is how long trade discount concessions last
+const TradeDiscountDuration = 30 * 24 * time.Hour // 30 days

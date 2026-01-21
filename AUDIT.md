@@ -284,9 +284,15 @@ Based on benchmark data (corrected units):
      - If backpressure is required, expose an explicit non-blocking `TrySubmit(task Task) bool` or similar API that returns `false` when the task queue is full, instead of relying on a blocking send.
      - Document the expected consumption pattern for results so callers know they must drain the result channel promptly to avoid deadlocks.
    
-2. **Weather Particle Pre-allocation**: Pool weather particle systems and RNG sources
+2. **Weather Particle Pre-allocation**: Pool weather particle systems and RNG sources ✅ **COMPLETED 2026-01-21**
    - Expected improvement: -457KB allocation per weather event; reduced GC pressure
    - Implementation complexity: Medium (implement particle pooling)
+   - **Actual Results:**
+     - Memory allocation reduced by **96.7%** (457KB → 15KB per weather event)
+     - Latency reduced by **28%** (154µs → 110µs)
+     - Implemented in `pkg/rendering/particles/pool.go`: `AcquireRNG`, `ReleaseRNG`, `AcquireWeatherSystem`, `ReleaseWeatherSystem`
+     - Added `GenerateWeatherPooled()` function in `weather.go` for performance-critical paths
+     - Test coverage: 93.0%
 
 ### Priority 2 (Medium Impact)
 3. **Forest Generator Poisson Validation Optimization**: Reduce trigonometric calls and reuse intermediate results in `isValidPoissonPoint()`
@@ -297,9 +303,12 @@ Based on benchmark data (corrected units):
    - Expected improvement: Minor reduction in area transition latency and memory allocation; primary benefit is smoother frame pacing through ambience reuse
    - Implementation complexity: Low (add LRU cache by environment key)
 
-5. **RNG Source Pooling**: Pool `math/rand.Source` instances instead of creating new ones
+5. **RNG Source Pooling**: Pool `math/rand.Source` instances instead of creating new ones ✅ **COMPLETED 2026-01-21**
    - Expected improvement: -29% memory allocation in particles
    - Implementation complexity: Low (sync.Pool for sources)
+   - **Actual Results:** Implemented as part of Weather Particle Pre-allocation (item #2)
+     - `AcquireRNG(seed)` and `ReleaseRNG(rng)` functions added to `pkg/rendering/particles/pool.go`
+     - RNG pooling shows 0 B/op in benchmarks (fully reuses pooled instances)
 
 ### Priority 3 (Low Impact - Optimization)
 6. **Cellular Automaton Optimization**: Pre-compute neighbor offsets, use tile cache

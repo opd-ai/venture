@@ -3,7 +3,10 @@
 // from frequent particle system allocation/deallocation.
 package particles
 
-import "sync"
+import (
+	"math/rand"
+	"sync"
+)
 
 // particleSystemPool provides reusable ParticleSystem instances.
 // Using sync.Pool reduces allocation pressure during particle-heavy effects
@@ -155,4 +158,90 @@ func ResetParticlePoolStats() {
 	particlePoolStatsLock.Lock()
 	defer particlePoolStatsLock.Unlock()
 	particlePoolStats = ParticlePoolStats{}
+}
+
+// rngSourcePool provides reusable *rand.Rand instances.
+// This reduces allocations from math/rand.newSource which accounts for
+// ~29% of memory allocation in particle generation (per AUDIT.md).
+var rngSourcePool = sync.Pool{
+	New: func() interface{} {
+		return rand.New(rand.NewSource(0))
+	},
+}
+
+// AcquireRNG gets a seeded random number generator from the pool.
+// The RNG is seeded with the provided seed for deterministic generation.
+//
+// IMPORTANT: Call ReleaseRNG when done to return to pool.
+func AcquireRNG(seed int64) *rand.Rand {
+	rng, ok := rngSourcePool.Get().(*rand.Rand)
+	if !ok {
+		return rand.New(rand.NewSource(seed))
+	}
+	rng.Seed(seed)
+	return rng
+}
+
+// ReleaseRNG returns a random number generator to the pool.
+// After calling, the RNG should not be used as it may be reused elsewhere.
+func ReleaseRNG(rng *rand.Rand) {
+	if rng == nil {
+		return
+	}
+	rngSourcePool.Put(rng)
+}
+
+// weatherSystemPool provides reusable WeatherSystem instances.
+// Weather generation allocates ~457KB per event; pooling reduces GC pressure.
+var weatherSystemPool = sync.Pool{
+	New: func() interface{} {
+		return &WeatherSystem{
+			Particles: make([]Particle, 0, 2400), // Pre-allocate for typical weather
+			Effects:   NewWeatherEffect(),
+		}
+	},
+}
+
+// AcquireWeatherSystem gets a WeatherSystem from the pool.
+// The system is reset and ready for configuration.
+//
+// IMPORTANT: Call ReleaseWeatherSystem when done.
+func AcquireWeatherSystem() *WeatherSystem {
+	ws, ok := weatherSystemPool.Get().(*WeatherSystem)
+	if !ok {
+		return &WeatherSystem{
+			Particles: make([]Particle, 0, 2400),
+			Effects:   NewWeatherEffect(),
+		}
+	}
+	// Reset state
+	ws.Particles = ws.Particles[:0]
+	ws.ElapsedTime = 0
+	if ws.Effects == nil {
+		ws.Effects = NewWeatherEffect()
+	} else {
+		// Clear maps
+		for k := range ws.Effects.Puddles {
+			delete(ws.Effects.Puddles, k)
+		}
+		for k := range ws.Effects.SnowLevel {
+			delete(ws.Effects.SnowLevel, k)
+		}
+		ws.Effects.VisibilityModifier = 1.0
+		ws.Effects.WindDriftX = 0
+		ws.Effects.WindDriftY = 0
+	}
+	return ws
+}
+
+// ReleaseWeatherSystem returns a WeatherSystem to the pool.
+// After calling, the system should not be used.
+func ReleaseWeatherSystem(ws *WeatherSystem) {
+	if ws == nil {
+		return
+	}
+	// Keep the particle slice capacity, just reset length
+	ws.Particles = ws.Particles[:0]
+	ws.rng = nil // Don't keep reference to RNG
+	weatherSystemPool.Put(ws)
 }

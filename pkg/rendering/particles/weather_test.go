@@ -923,3 +923,270 @@ func BenchmarkWeatherSystem_Update_HighCount(b *testing.B) {
 		ws.Update(0.016)
 	}
 }
+
+// TestGenerateWeatherPooled tests pooled weather generation.
+func TestGenerateWeatherPooled(t *testing.T) {
+	config := WeatherConfig{
+		Type:      WeatherRain,
+		Intensity: IntensityMedium,
+		Width:     800,
+		Height:    600,
+		GenreID:   "fantasy",
+		Seed:      12345,
+	}
+
+	ws, err := GenerateWeatherPooled(config)
+	if err != nil {
+		t.Fatalf("GenerateWeatherPooled failed: %v", err)
+	}
+
+	if ws == nil {
+		t.Fatal("GenerateWeatherPooled returned nil")
+	}
+
+	if len(ws.Particles) == 0 {
+		t.Error("GenerateWeatherPooled created no particles")
+	}
+
+	// Verify particles are within bounds
+	for i, p := range ws.Particles {
+		if p.X < 0 || p.X > float64(config.Width) {
+			t.Errorf("Particle %d X position out of bounds: %v", i, p.X)
+		}
+		if p.Y < 0 || p.Y > float64(config.Height) {
+			t.Errorf("Particle %d Y position out of bounds: %v", i, p.Y)
+		}
+	}
+
+	// Release back to pool
+	ReleaseWeatherSystem(ws)
+}
+
+// TestGenerateWeatherPooled_Determinism tests pooled generation is deterministic.
+func TestGenerateWeatherPooled_Determinism(t *testing.T) {
+	config := WeatherConfig{
+		Type:      WeatherRain,
+		Intensity: IntensityMedium,
+		Width:     800,
+		Height:    600,
+		GenreID:   "fantasy",
+		Seed:      12345,
+	}
+
+	ws1, err1 := GenerateWeatherPooled(config)
+	if err1 != nil {
+		t.Fatalf("First generation failed: %v", err1)
+	}
+	defer ReleaseWeatherSystem(ws1)
+
+	// Get another system with same seed
+	ws2, err2 := GenerateWeatherPooled(config)
+	if err2 != nil {
+		t.Fatalf("Second generation failed: %v", err2)
+	}
+	defer ReleaseWeatherSystem(ws2)
+
+	if len(ws1.Particles) != len(ws2.Particles) {
+		t.Errorf("Particle counts differ: %d vs %d", len(ws1.Particles), len(ws2.Particles))
+	}
+
+	// Check that particles match
+	for i := 0; i < min(len(ws1.Particles), len(ws2.Particles)); i++ {
+		p1 := ws1.Particles[i]
+		p2 := ws2.Particles[i]
+
+		if p1.X != p2.X || p1.Y != p2.Y {
+			t.Errorf("Particle %d position differs: (%v,%v) vs (%v,%v)", i, p1.X, p1.Y, p2.X, p2.Y)
+		}
+	}
+}
+
+// TestGenerateWeatherPooled_AllTypes tests pooled generation for all weather types.
+func TestGenerateWeatherPooled_AllTypes(t *testing.T) {
+	weatherTypes := []WeatherType{
+		WeatherRain, WeatherSnow, WeatherFog, WeatherDust, WeatherAsh,
+		WeatherNeonRain, WeatherSmog, WeatherRadiation, WeatherSandstorm, WeatherBloodRain,
+	}
+
+	for _, wt := range weatherTypes {
+		t.Run(wt.String(), func(t *testing.T) {
+			config := WeatherConfig{
+				Type:      wt,
+				Intensity: IntensityMedium,
+				Width:     800,
+				Height:    600,
+				GenreID:   "fantasy",
+				Seed:      12345,
+			}
+
+			ws, err := GenerateWeatherPooled(config)
+			if err != nil {
+				t.Errorf("GenerateWeatherPooled(%v) failed: %v", wt, err)
+				return
+			}
+			if ws == nil {
+				t.Errorf("GenerateWeatherPooled(%v) returned nil", wt)
+				return
+			}
+			if len(ws.Particles) == 0 {
+				t.Errorf("GenerateWeatherPooled(%v) created no particles", wt)
+			}
+			ReleaseWeatherSystem(ws)
+		})
+	}
+}
+
+// TestGenerateWeatherPooled_InvalidConfig tests error handling with pooled version.
+func TestGenerateWeatherPooled_InvalidConfig(t *testing.T) {
+	config := WeatherConfig{
+		Type:      WeatherRain,
+		Intensity: IntensityMedium,
+		Width:     0, // Invalid
+		Height:    600,
+		GenreID:   "fantasy",
+	}
+
+	ws, err := GenerateWeatherPooled(config)
+	if err == nil {
+		t.Error("GenerateWeatherPooled accepted invalid config")
+	}
+	if ws != nil {
+		ReleaseWeatherSystem(ws)
+		t.Error("GenerateWeatherPooled returned non-nil with error")
+	}
+}
+
+// TestRNGPooling tests RNG acquire/release cycle.
+func TestRNGPooling(t *testing.T) {
+	seed := int64(12345)
+
+	// Acquire RNG
+	rng := AcquireRNG(seed)
+	if rng == nil {
+		t.Fatal("AcquireRNG returned nil")
+	}
+
+	// Generate some values
+	val1 := rng.Intn(1000)
+	val2 := rng.Intn(1000)
+
+	// Release
+	ReleaseRNG(rng)
+
+	// Acquire again with same seed - should be deterministic
+	rng2 := AcquireRNG(seed)
+	if rng2 == nil {
+		t.Fatal("Second AcquireRNG returned nil")
+	}
+
+	val3 := rng2.Intn(1000)
+	val4 := rng2.Intn(1000)
+
+	// Values should match since seed is same
+	if val1 != val3 || val2 != val4 {
+		t.Errorf("RNG not deterministic: got (%d,%d), want (%d,%d)", val3, val4, val1, val2)
+	}
+
+	ReleaseRNG(rng2)
+}
+
+// TestRNGPooling_NilRelease tests releasing nil RNG is safe.
+func TestRNGPooling_NilRelease(t *testing.T) {
+	// Should not panic
+	ReleaseRNG(nil)
+}
+
+// TestWeatherSystemPooling tests weather system acquire/release cycle.
+func TestWeatherSystemPooling(t *testing.T) {
+	// Acquire
+	ws := AcquireWeatherSystem()
+	if ws == nil {
+		t.Fatal("AcquireWeatherSystem returned nil")
+	}
+
+	// Should be in clean state
+	if len(ws.Particles) != 0 {
+		t.Errorf("Particles not empty: len=%d", len(ws.Particles))
+	}
+	if ws.ElapsedTime != 0 {
+		t.Errorf("ElapsedTime not zero: %v", ws.ElapsedTime)
+	}
+	if ws.Effects == nil {
+		t.Error("Effects is nil")
+	}
+
+	// Release
+	ReleaseWeatherSystem(ws)
+
+	// Acquire again
+	ws2 := AcquireWeatherSystem()
+	if ws2 == nil {
+		t.Fatal("Second AcquireWeatherSystem returned nil")
+	}
+
+	// Should still be clean
+	if len(ws2.Particles) != 0 {
+		t.Errorf("Second acquire: Particles not empty: len=%d", len(ws2.Particles))
+	}
+
+	ReleaseWeatherSystem(ws2)
+}
+
+// TestWeatherSystemPooling_NilRelease tests releasing nil system is safe.
+func TestWeatherSystemPooling_NilRelease(t *testing.T) {
+	// Should not panic
+	ReleaseWeatherSystem(nil)
+}
+
+// BenchmarkGenerateWeatherPooled benchmarks pooled weather generation.
+func BenchmarkGenerateWeatherPooled(b *testing.B) {
+	config := WeatherConfig{
+		Type:      WeatherRain,
+		Intensity: IntensityMedium,
+		Width:     800,
+		Height:    600,
+		GenreID:   "fantasy",
+		Seed:      12345,
+	}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		ws, _ := GenerateWeatherPooled(config)
+		ReleaseWeatherSystem(ws)
+	}
+}
+
+// BenchmarkGenerateWeatherPooled_AllTypes benchmarks pooled generation of all types.
+func BenchmarkGenerateWeatherPooled_AllTypes(b *testing.B) {
+	weatherTypes := []WeatherType{
+		WeatherRain, WeatherSnow, WeatherFog, WeatherDust,
+		WeatherAsh, WeatherNeonRain, WeatherSmog, WeatherRadiation,
+		WeatherSandstorm, WeatherBloodRain,
+	}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		for _, wt := range weatherTypes {
+			config := WeatherConfig{
+				Type:      wt,
+				Intensity: IntensityMedium,
+				Width:     800,
+				Height:    600,
+				GenreID:   "fantasy",
+				Seed:      12345,
+			}
+			ws, _ := GenerateWeatherPooled(config)
+			ReleaseWeatherSystem(ws)
+		}
+	}
+}
+
+// BenchmarkAcquireRNG benchmarks RNG pool performance.
+func BenchmarkAcquireRNG(b *testing.B) {
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		rng := AcquireRNG(int64(i))
+		_ = rng.Intn(100)
+		ReleaseRNG(rng)
+	}
+}

@@ -739,3 +739,353 @@ func BenchmarkGenerateAmbience_AllEnvironments(b *testing.B) {
 		})
 	}
 }
+
+// Tests for cached ambience generation
+
+func TestGenerateAmbienceCached(t *testing.T) {
+	// Clear cache before test
+	ClearAmbienceCache()
+
+	config := AmbienceConfig{
+		Type:    EnvironmentForest,
+		Width:   800,
+		Height:  600,
+		GenreID: "fantasy",
+		Seed:    12345,
+		Density: 0.5,
+		Custom:  make(map[string]interface{}),
+	}
+
+	// First call should miss cache
+	system1, err := GenerateAmbienceCached(config)
+	if err != nil {
+		t.Fatalf("GenerateAmbienceCached() error = %v", err)
+	}
+	if system1 == nil {
+		t.Fatal("expected non-nil system")
+	}
+
+	hits, misses, size := GetAmbienceCacheStats()
+	if hits != 0 || misses != 1 {
+		t.Errorf("expected 0 hits, 1 miss; got %d hits, %d misses", hits, misses)
+	}
+	if size != 1 {
+		t.Errorf("expected cache size 1, got %d", size)
+	}
+
+	// Second call should hit cache
+	system2, err := GenerateAmbienceCached(config)
+	if err != nil {
+		t.Fatalf("GenerateAmbienceCached() second call error = %v", err)
+	}
+	if system2 == nil {
+		t.Fatal("expected non-nil system on cache hit")
+	}
+
+	hits, misses, _ = GetAmbienceCacheStats()
+	if hits != 1 || misses != 1 {
+		t.Errorf("expected 1 hit, 1 miss; got %d hits, %d misses", hits, misses)
+	}
+
+	// Systems should be independent (cloned)
+	system1.ElapsedTime = 100.0
+	if system2.ElapsedTime == system1.ElapsedTime {
+		t.Error("cached systems should be independent clones")
+	}
+}
+
+func TestGenerateAmbienceCached_DifferentConfigs(t *testing.T) {
+	ClearAmbienceCache()
+
+	configs := []AmbienceConfig{
+		{Type: EnvironmentForest, Width: 800, Height: 600, GenreID: "fantasy", Seed: 1, Density: 0.5, Custom: make(map[string]interface{})},
+		{Type: EnvironmentCave, Width: 800, Height: 600, GenreID: "fantasy", Seed: 1, Density: 0.5, Custom: make(map[string]interface{})},
+		{Type: EnvironmentForest, Width: 1024, Height: 768, GenreID: "fantasy", Seed: 1, Density: 0.5, Custom: make(map[string]interface{})},
+		{Type: EnvironmentForest, Width: 800, Height: 600, GenreID: "scifi", Seed: 1, Density: 0.5, Custom: make(map[string]interface{})},
+	}
+
+	for _, config := range configs {
+		_, err := GenerateAmbienceCached(config)
+		if err != nil {
+			t.Fatalf("GenerateAmbienceCached() error = %v", err)
+		}
+	}
+
+	_, _, size := GetAmbienceCacheStats()
+	if size != len(configs) {
+		t.Errorf("expected cache size %d, got %d", len(configs), size)
+	}
+}
+
+func TestGenerateAmbienceCached_InvalidConfig(t *testing.T) {
+	config := AmbienceConfig{
+		Type:    EnvironmentDungeon,
+		Width:   0, // invalid
+		Height:  600,
+		GenreID: "fantasy",
+		Seed:    12345,
+		Density: 0.5,
+	}
+
+	_, err := GenerateAmbienceCached(config)
+	if err == nil {
+		t.Error("expected error for invalid config, got nil")
+	}
+}
+
+func TestGenerateAmbiencePooled(t *testing.T) {
+	config := AmbienceConfig{
+		Type:    EnvironmentDungeon,
+		Width:   800,
+		Height:  600,
+		GenreID: "fantasy",
+		Seed:    12345,
+		Density: 0.5,
+		Custom:  make(map[string]interface{}),
+	}
+
+	system, err := GenerateAmbiencePooled(config)
+	if err != nil {
+		t.Fatalf("GenerateAmbiencePooled() error = %v", err)
+	}
+	if system == nil {
+		t.Fatal("expected non-nil system")
+	}
+
+	if len(system.Particles) == 0 {
+		t.Error("expected particles to be generated")
+	}
+
+	// Verify particles have valid properties
+	for i, p := range system.Particles {
+		if p.X < 0 || p.X > float64(config.Width) {
+			t.Errorf("particle %d has invalid X position: %f", i, p.X)
+		}
+		if p.Y < 0 || p.Y > float64(config.Height) {
+			t.Errorf("particle %d has invalid Y position: %f", i, p.Y)
+		}
+		if p.Size <= 0 {
+			t.Errorf("particle %d has invalid size: %f", i, p.Size)
+		}
+		if p.Life <= 0 {
+			t.Errorf("particle %d has invalid lifetime: %f", i, p.Life)
+		}
+	}
+
+	// Release should not panic
+	ReleaseAmbienceSystem(system)
+}
+
+func TestGenerateAmbiencePooled_Deterministic(t *testing.T) {
+	config := AmbienceConfig{
+		Type:    EnvironmentForest,
+		Width:   800,
+		Height:  600,
+		GenreID: "fantasy",
+		Seed:    99999,
+		Density: 0.5,
+		Custom:  make(map[string]interface{}),
+	}
+
+	system1, err1 := GenerateAmbiencePooled(config)
+	if err1 != nil {
+		t.Fatalf("first GenerateAmbiencePooled() error = %v", err1)
+	}
+	defer ReleaseAmbienceSystem(system1)
+
+	system2, err2 := GenerateAmbiencePooled(config)
+	if err2 != nil {
+		t.Fatalf("second GenerateAmbiencePooled() error = %v", err2)
+	}
+	defer ReleaseAmbienceSystem(system2)
+
+	if len(system1.Particles) != len(system2.Particles) {
+		t.Errorf("particle count mismatch: %d vs %d", len(system1.Particles), len(system2.Particles))
+	}
+
+	// Compare first few particles for determinism
+	compareCount := 5
+	if len(system1.Particles) < compareCount {
+		compareCount = len(system1.Particles)
+	}
+
+	for i := 0; i < compareCount; i++ {
+		p1 := system1.Particles[i]
+		p2 := system2.Particles[i]
+
+		if math.Abs(p1.X-p2.X) > 0.001 {
+			t.Errorf("particle %d X mismatch: %f vs %f", i, p1.X, p2.X)
+		}
+		if math.Abs(p1.Y-p2.Y) > 0.001 {
+			t.Errorf("particle %d Y mismatch: %f vs %f", i, p1.Y, p2.Y)
+		}
+	}
+}
+
+func TestCloneAmbienceSystem(t *testing.T) {
+	config := AmbienceConfig{
+		Type:    EnvironmentSwamp,
+		Width:   800,
+		Height:  600,
+		GenreID: "fantasy",
+		Seed:    12345,
+		Density: 0.5,
+		Custom:  make(map[string]interface{}),
+	}
+	config.Custom["test_key"] = "test_value"
+
+	original, err := GenerateAmbience(config)
+	if err != nil {
+		t.Fatalf("GenerateAmbience() error = %v", err)
+	}
+
+	clone := cloneAmbienceSystem(original)
+	if clone == nil {
+		t.Fatal("expected non-nil clone")
+	}
+
+	// Verify clone is independent
+	if &original.Particles[0] == &clone.Particles[0] {
+		t.Error("clone should have separate particle slice")
+	}
+
+	// Verify config was copied
+	if clone.Config.Type != original.Config.Type {
+		t.Errorf("config type mismatch: %v vs %v", clone.Config.Type, original.Config.Type)
+	}
+
+	// Verify custom map was deep copied
+	clone.Config.Custom["new_key"] = "new_value"
+	if _, ok := original.Config.Custom["new_key"]; ok {
+		t.Error("modifying clone's Custom should not affect original")
+	}
+
+	// Verify particle values were copied
+	if len(clone.Particles) != len(original.Particles) {
+		t.Errorf("particle count mismatch: %d vs %d", len(clone.Particles), len(original.Particles))
+	}
+	for i := 0; i < len(original.Particles); i++ {
+		if clone.Particles[i].X != original.Particles[i].X {
+			t.Errorf("particle %d X mismatch", i)
+		}
+	}
+
+	ReleaseAmbienceSystem(clone)
+}
+
+func TestCloneAmbienceSystem_Nil(t *testing.T) {
+	clone := cloneAmbienceSystem(nil)
+	if clone != nil {
+		t.Error("cloning nil should return nil")
+	}
+}
+
+func TestAcquireReleaseAmbienceSystem(t *testing.T) {
+	// Acquire a system
+	system := AcquireAmbienceSystem()
+	if system == nil {
+		t.Fatal("expected non-nil system from pool")
+	}
+	if len(system.Particles) != 0 {
+		t.Errorf("acquired system should have empty particles, got %d", len(system.Particles))
+	}
+
+	// Release should not panic
+	ReleaseAmbienceSystem(system)
+
+	// Release nil should not panic
+	ReleaseAmbienceSystem(nil)
+}
+
+func TestClearAmbienceCache(t *testing.T) {
+	ClearAmbienceCache()
+
+	config := AmbienceConfig{
+		Type:    EnvironmentCity,
+		Width:   800,
+		Height:  600,
+		GenreID: "fantasy",
+		Seed:    12345,
+		Density: 0.5,
+		Custom:  make(map[string]interface{}),
+	}
+
+	_, _ = GenerateAmbienceCached(config)
+	_, _, size := GetAmbienceCacheStats()
+	if size != 1 {
+		t.Errorf("expected cache size 1, got %d", size)
+	}
+
+	ClearAmbienceCache()
+	hits, misses, size := GetAmbienceCacheStats()
+	if size != 0 || hits != 0 || misses != 0 {
+		t.Errorf("expected cleared cache, got size=%d, hits=%d, misses=%d", size, hits, misses)
+	}
+}
+
+// Benchmarks for cached/pooled ambience
+
+func BenchmarkGenerateAmbienceCached_Miss(b *testing.B) {
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		ClearAmbienceCache()
+		config := AmbienceConfig{
+			Type:    EnvironmentForest,
+			Width:   800,
+			Height:  600,
+			GenreID: "fantasy",
+			Seed:    int64(i), // Different seed = cache miss
+			Density: 0.5,
+			Custom:  make(map[string]interface{}),
+		}
+		_, err := GenerateAmbienceCached(config)
+		if err != nil {
+			b.Fatalf("GenerateAmbienceCached() error = %v", err)
+		}
+	}
+}
+
+func BenchmarkGenerateAmbienceCached_Hit(b *testing.B) {
+	ClearAmbienceCache()
+	config := AmbienceConfig{
+		Type:    EnvironmentForest,
+		Width:   800,
+		Height:  600,
+		GenreID: "fantasy",
+		Seed:    12345,
+		Density: 0.5,
+		Custom:  make(map[string]interface{}),
+	}
+
+	// Warm up cache
+	_, _ = GenerateAmbienceCached(config)
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_, err := GenerateAmbienceCached(config)
+		if err != nil {
+			b.Fatalf("GenerateAmbienceCached() error = %v", err)
+		}
+	}
+}
+
+func BenchmarkGenerateAmbiencePooled(b *testing.B) {
+	config := AmbienceConfig{
+		Type:    EnvironmentForest,
+		Width:   800,
+		Height:  600,
+		GenreID: "fantasy",
+		Seed:    12345,
+		Density: 0.5,
+		Custom:  make(map[string]interface{}),
+	}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		system, err := GenerateAmbiencePooled(config)
+		if err != nil {
+			b.Fatalf("GenerateAmbiencePooled() error = %v", err)
+		}
+		ReleaseAmbienceSystem(system)
+	}
+}

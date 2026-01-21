@@ -6,6 +6,7 @@ package particles
 import (
 	"math/rand"
 	"sync"
+	"time"
 )
 
 // particleSystemPool provides reusable ParticleSystem instances.
@@ -244,4 +245,178 @@ func ReleaseWeatherSystem(ws *WeatherSystem) {
 	ws.Particles = ws.Particles[:0]
 	ws.rng = nil // Don't keep reference to RNG
 	weatherSystemPool.Put(ws)
+}
+
+// ambienceSystemPool provides reusable AmbienceSystem instances.
+// Ambience generation allocates ~12.6KB per event; pooling reduces GC pressure.
+var ambienceSystemPool = sync.Pool{
+	New: func() interface{} {
+		return &AmbienceSystem{
+			Particles: make([]Particle, 0, 100), // Pre-allocate for typical ambience
+		}
+	},
+}
+
+// AcquireAmbienceSystem gets an AmbienceSystem from the pool.
+// The system is reset and ready for configuration.
+//
+// IMPORTANT: Call ReleaseAmbienceSystem when done.
+func AcquireAmbienceSystem() *AmbienceSystem {
+	as, ok := ambienceSystemPool.Get().(*AmbienceSystem)
+	if !ok {
+		return &AmbienceSystem{
+			Particles: make([]Particle, 0, 100),
+		}
+	}
+	// Reset state
+	as.Particles = as.Particles[:0]
+	as.ElapsedTime = 0
+	as.respawnCounter = 0
+	as.rng = nil
+	return as
+}
+
+// ReleaseAmbienceSystem returns an AmbienceSystem to the pool.
+// After calling, the system should not be used.
+func ReleaseAmbienceSystem(as *AmbienceSystem) {
+	if as == nil {
+		return
+	}
+	// Keep the particle slice capacity, just reset length
+	as.Particles = as.Particles[:0]
+	as.rng = nil
+	ambienceSystemPool.Put(as)
+}
+
+// ambienceCacheEntry stores a cached ambience system with metadata.
+type ambienceCacheEntry struct {
+	system    *AmbienceSystem
+	lastUsed  int64 // Unix nano timestamp
+	accessCnt uint64
+}
+
+// ambienceCache provides an LRU cache for ambience systems by environment type.
+// This reduces allocation during area transitions by reusing previously generated ambience.
+type ambienceCache struct {
+	mu       sync.RWMutex
+	entries  map[ambienceCacheKey]*ambienceCacheEntry
+	maxSize  int
+	hitCount uint64
+	missCount uint64
+}
+
+// ambienceCacheKey identifies a unique ambience configuration.
+type ambienceCacheKey struct {
+	Type    EnvironmentType
+	Width   int
+	Height  int
+	Seed    int64
+	GenreID string
+}
+
+// globalAmbienceCache is the singleton cache instance.
+var globalAmbienceCache = &ambienceCache{
+	entries: make(map[ambienceCacheKey]*ambienceCacheEntry),
+	maxSize: 16, // Cache up to 16 different ambience configurations
+}
+
+// makeAmbienceCacheKey creates a cache key from an AmbienceConfig.
+func makeAmbienceCacheKey(config AmbienceConfig) ambienceCacheKey {
+	return ambienceCacheKey{
+		Type:    config.Type,
+		Width:   config.Width,
+		Height:  config.Height,
+		Seed:    config.Seed,
+		GenreID: config.GenreID,
+	}
+}
+
+// get retrieves a cached ambience system, returning nil if not found.
+func (c *ambienceCache) get(key ambienceCacheKey) *AmbienceSystem {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	entry, ok := c.entries[key]
+	if !ok {
+		c.missCount++
+		return nil
+	}
+
+	c.hitCount++
+	entry.lastUsed = nanoTime()
+	entry.accessCnt++
+	return entry.system
+}
+
+// put stores an ambience system in the cache, evicting LRU entries if necessary.
+func (c *ambienceCache) put(key ambienceCacheKey, system *AmbienceSystem) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	// Evict oldest entry if at capacity
+	if len(c.entries) >= c.maxSize {
+		c.evictOldest()
+	}
+
+	c.entries[key] = &ambienceCacheEntry{
+		system:   system,
+		lastUsed: nanoTime(),
+		accessCnt: 1,
+	}
+}
+
+// evictOldest removes the least recently used entry.
+// Caller must hold the lock.
+func (c *ambienceCache) evictOldest() {
+	var oldestKey ambienceCacheKey
+	var oldestTime int64 = 1<<63 - 1 // max int64
+
+	for k, v := range c.entries {
+		if v.lastUsed < oldestTime {
+			oldestTime = v.lastUsed
+			oldestKey = k
+		}
+	}
+
+	delete(c.entries, oldestKey)
+}
+
+// nanoTime returns current time in nanoseconds for LRU ordering.
+func nanoTime() int64 {
+	return time.Now().UnixNano()
+}
+
+// Stats returns cache hit/miss statistics.
+func (c *ambienceCache) Stats() (hits, misses uint64) {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	return c.hitCount, c.missCount
+}
+
+// Clear removes all entries from the cache.
+func (c *ambienceCache) Clear() {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.entries = make(map[ambienceCacheKey]*ambienceCacheEntry)
+	c.hitCount = 0
+	c.missCount = 0
+}
+
+// Size returns the number of cached entries.
+func (c *ambienceCache) Size() int {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	return len(c.entries)
+}
+
+// GetAmbienceCacheStats returns hit rate statistics for the global cache.
+func GetAmbienceCacheStats() (hits, misses uint64, size int) {
+	hits, misses = globalAmbienceCache.Stats()
+	size = globalAmbienceCache.Size()
+	return
+}
+
+// ClearAmbienceCache clears the global ambience cache.
+func ClearAmbienceCache() {
+	globalAmbienceCache.Clear()
 }

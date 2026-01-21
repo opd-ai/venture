@@ -208,15 +208,15 @@ BenchmarkLoad-4  909   1319896 ns/op  498497 B/op  5027 allocs/op
 **By Severity:**
 - High (significant but correctable): 2 issues (Forest generation CPU time, Composite terrain memory)
 - Medium (noticeable impact): 2 issues (Weather allocation pattern ✅, System initialization)
-- Low (minor optimization): 5 issues (Cellular terrain, LOD enforcement, SPH simulation, Debris particles, Ambience particles)
-- Fixed: 2 issues (WorkerPool deadlock ✅, RNG source pooling ✅)
+- Low (minor optimization): 4 issues (Cellular terrain, LOD enforcement, SPH simulation, Debris particles)
+- Fixed: 3 issues (WorkerPool deadlock ✅, RNG source pooling ✅, Ambience particles ✅)
 
 **By Type:**
 - Algorithmic inefficiency: 2 issues (Poisson validation trigonometry, SPH neighbor search)
-- Unnecessary allocations: 3 issues (Weather particles ✅, Ambience particles, Debris particles)
+- Unnecessary allocations: 2 issues (Weather particles ✅, Debris particles)
 - Blocking I/O: 1 issue (Guild save)
 - Initialization overhead: 2 issues (System init, Composite terrain chain)
-- Fixed: 2 issues (WorkerPool deadlock ✅, RNG pooling ✅)
+- Fixed: 3 issues (WorkerPool deadlock ✅, RNG pooling ✅, Ambience particles ✅)
 
 ---
 
@@ -298,9 +298,16 @@ Based on benchmark data (corrected units):
    - Expected improvement: -50% terrain generation time (21% CPU → ~10%)
    - Implementation complexity: Medium (optimize math operations and reduce validation calls)
 
-4. **Ambience Particle Caching**: Cache generated ambience per environment type
+4. **Ambience Particle Caching**: Cache generated ambience per environment type ✅ **COMPLETED 2026-01-21**
    - Expected improvement: Minor reduction in area transition latency and memory allocation; primary benefit is smoother frame pacing through ambience reuse
    - Implementation complexity: Low (add LRU cache by environment key)
+   - **Actual Results:**
+     - Memory allocation reduced by **56%** for pooled generation (12,596 → 5,591 B/op)
+     - Implemented LRU cache with 16 entry capacity in `pkg/rendering/particles/pool.go`
+     - Added `GenerateAmbienceCached()` for cache-first generation with automatic cloning
+     - Added `GenerateAmbiencePooled()` for low-allocation generation using pooled resources
+     - Added `AcquireAmbienceSystem()` and `ReleaseAmbienceSystem()` for manual pool management
+     - Test coverage: 91.8%
 
 5. **RNG Source Pooling**: Pool `math/rand.Source` instances instead of creating new ones ✅ **COMPLETED 2026-01-21**
    - Expected improvement: -29% memory allocation in particles

@@ -98,6 +98,8 @@ func (g *SkillTreeGenerator) selectTemplates(genreID string) ([]SkillTreeTemplat
 		templates = GetSciFiTreeTemplates()
 	case "horror":
 		templates = GetHorrorTreeTemplates()
+	case "cyberpunk":
+		templates = GetCyberpunkTreeTemplates()
 	case "fantasy":
 		fallthrough
 	default:
@@ -118,7 +120,7 @@ func (g *SkillTreeGenerator) selectTemplates(genreID string) ([]SkillTreeTemplat
 // Empty or unknown genres default to "fantasy".
 func normalizeGenre(genreID string) string {
 	switch genreID {
-	case "scifi", "fantasy", "horror":
+	case "scifi", "fantasy", "horror", "cyberpunk":
 		return genreID
 	default:
 		return "fantasy"

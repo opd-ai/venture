@@ -541,6 +541,313 @@ func GetHorrorTreeTemplates() []SkillTreeTemplate {
 	}
 }
 
+// GetCyberpunkTreeTemplates returns skill tree templates for cyberpunk genre.
+// Archetypes include Netrunner, Street Samurai, Technomancer, and Corporate Infiltrator.
+func GetCyberpunkTreeTemplates() []SkillTreeTemplate {
+	return []SkillTreeTemplate{
+		{
+			Name:        "Netrunner",
+			Description: "Master hacker and digital warfare specialist",
+			Category:    CategoryMagic,
+			SkillTemplates: []SkillTemplate{
+				// Hacking passives
+				{
+					BaseType:          TypePassive,
+					BaseCategory:      CategoryMagic,
+					NamePrefixes:      []string{"Neural", "ICE", "Daemon", "Protocol"},
+					NameSuffixes:      []string{"Interface", "Mastery", "Optimization", "Bypass"},
+					DescriptionFormat: "Enhances %s hacking capabilities",
+					EffectTypes:       []string{"hack_damage", "breach_speed", "firewall_bypass"},
+					ValueRanges: map[string][2]float64{
+						"hack_damage":     {0.06, 0.18},
+						"breach_speed":    {0.08, 0.20},
+						"firewall_bypass": {0.05, 0.15},
+					},
+					Tags:          []string{"magic", "passive", "hacking"},
+					TierRange:     [2]int{0, 4},
+					MaxLevelRange: [2]int{3, 5},
+				},
+				// Active hacking skills
+				{
+					BaseType:          TypeActive,
+					BaseCategory:      CategoryMagic,
+					NamePrefixes:      []string{"System", "Neural", "Data", "Memory"},
+					NameSuffixes:      []string{"Crash", "Spike", "Wipe", "Overload"},
+					DescriptionFormat: "Execute %s against enemy systems",
+					EffectTypes:       []string{"hack_damage", "disable_duration", "spread_chance"},
+					ValueRanges: map[string][2]float64{
+						"hack_damage":      {0.60, 1.60},
+						"disable_duration": {2.0, 6.0},
+						"spread_chance":    {0.15, 0.40},
+					},
+					Tags:          []string{"magic", "active", "offensive"},
+					TierRange:     [2]int{1, 5},
+					MaxLevelRange: [2]int{1, 3},
+				},
+				// Defensive hacking
+				{
+					BaseType:          TypePassive,
+					BaseCategory:      CategoryDefense,
+					NamePrefixes:      []string{"Firewall", "Encryption", "Counter", "Trace"},
+					NameSuffixes:      []string{"Matrix", "Protocol", "Defense", "Shield"},
+					DescriptionFormat: "Protects against %s cyber attacks",
+					EffectTypes:       []string{"hack_resistance", "trace_immunity", "data_integrity"},
+					ValueRanges: map[string][2]float64{
+						"hack_resistance": {0.10, 0.25},
+						"trace_immunity":  {0.08, 0.20},
+						"data_integrity":  {0.06, 0.15},
+					},
+					Tags:          []string{"defense", "passive", "security"},
+					TierRange:     [2]int{0, 4},
+					MaxLevelRange: [2]int{3, 5},
+				},
+				// Ultimate
+				{
+					BaseType:          TypeUltimate,
+					BaseCategory:      CategoryMagic,
+					NamePrefixes:      []string{"Blackout", "Total", "Grid", "Network"},
+					NameSuffixes:      []string{"Protocol", "Collapse", "Shutdown", "Apocalypse"},
+					DescriptionFormat: "Unleash %s to devastate all connected systems",
+					EffectTypes:       []string{"hack_damage", "aoe_disable", "system_corruption"},
+					ValueRanges: map[string][2]float64{
+						"hack_damage":       {2.50, 5.00},
+						"aoe_disable":       {5.0, 12.0},
+						"system_corruption": {0.40, 0.80},
+					},
+					Tags:          []string{"ultimate", "magic", "aoe"},
+					TierRange:     [2]int{6, 6},
+					MaxLevelRange: [2]int{1, 1},
+				},
+			},
+		},
+		{
+			Name:        "Street Samurai",
+			Description: "Cybernetically enhanced close combat specialist",
+			Category:    CategoryCombat,
+			SkillTemplates: []SkillTemplate{
+				// Combat passives
+				{
+					BaseType:          TypePassive,
+					BaseCategory:      CategoryCombat,
+					NamePrefixes:      []string{"Wired", "Chrome", "Cyber", "Reflex"},
+					NameSuffixes:      []string{"Reflexes", "Enhancement", "Boost", "Augmentation"},
+					DescriptionFormat: "Enhances %s through cybernetic upgrades",
+					EffectTypes:       []string{"attack_speed", "crit_chance", "reaction_time"},
+					ValueRanges: map[string][2]float64{
+						"attack_speed":  {0.08, 0.20},
+						"crit_chance":   {0.05, 0.15},
+						"reaction_time": {0.06, 0.16},
+					},
+					Tags:          []string{"combat", "passive", "cybernetic"},
+					TierRange:     [2]int{0, 4},
+					MaxLevelRange: [2]int{3, 5},
+				},
+				// Active combat skills
+				{
+					BaseType:          TypeActive,
+					BaseCategory:      CategoryCombat,
+					NamePrefixes:      []string{"Mantis", "Mono", "Vibro", "Plasma"},
+					NameSuffixes:      []string{"Blade Strike", "Wire Slice", "Edge Combo", "Claw Assault"},
+					DescriptionFormat: "Execute %s with cybernetic weapons",
+					EffectTypes:       []string{"damage", "bleed_chance", "armor_pierce"},
+					ValueRanges: map[string][2]float64{
+						"damage":       {0.70, 1.80},
+						"bleed_chance": {0.20, 0.50},
+						"armor_pierce": {0.15, 0.40},
+					},
+					Tags:          []string{"combat", "active", "melee"},
+					TierRange:     [2]int{1, 5},
+					MaxLevelRange: [2]int{1, 3},
+				},
+				// Defensive augmentations
+				{
+					BaseType:          TypePassive,
+					BaseCategory:      CategoryDefense,
+					NamePrefixes:      []string{"Subdermal", "Titanium", "Nano", "Reinforced"},
+					NameSuffixes:      []string{"Armor", "Plating", "Weave", "Skeleton"},
+					DescriptionFormat: "Provides %s cybernetic protection",
+					EffectTypes:       []string{"armor", "damage_reduction", "health_boost"},
+					ValueRanges: map[string][2]float64{
+						"armor":            {0.08, 0.20},
+						"damage_reduction": {0.05, 0.15},
+						"health_boost":     {0.10, 0.25},
+					},
+					Tags:          []string{"defense", "passive", "augmentation"},
+					TierRange:     [2]int{0, 4},
+					MaxLevelRange: [2]int{3, 5},
+				},
+				// Ultimate
+				{
+					BaseType:          TypeUltimate,
+					BaseCategory:      CategoryCombat,
+					NamePrefixes:      []string{"Sandevistan", "Kerenzikov", "Berserk", "Combat"},
+					NameSuffixes:      []string{"Overdrive", "Protocol", "Mode", "Surge"},
+					DescriptionFormat: "Activate %s for superhuman combat speed",
+					EffectTypes:       []string{"time_dilation", "damage_boost", "attack_speed"},
+					ValueRanges: map[string][2]float64{
+						"time_dilation": {0.50, 1.00},
+						"damage_boost":  {1.50, 3.00},
+						"attack_speed":  {1.00, 2.00},
+					},
+					Tags:          []string{"ultimate", "combat", "burst"},
+					TierRange:     [2]int{6, 6},
+					MaxLevelRange: [2]int{1, 1},
+				},
+			},
+		},
+		{
+			Name:        "Technomancer",
+			Description: "Controller of drones, robots, and smart technology",
+			Category:    CategoryUtility,
+			SkillTemplates: []SkillTemplate{
+				// Drone control passives
+				{
+					BaseType:          TypePassive,
+					BaseCategory:      CategoryUtility,
+					NamePrefixes:      []string{"Drone", "Bot", "AI", "Smart"},
+					NameSuffixes:      []string{"Link", "Control", "Mastery", "Network"},
+					DescriptionFormat: "Improves %s and autonomous systems",
+					EffectTypes:       []string{"drone_damage", "drone_count", "control_range"},
+					ValueRanges: map[string][2]float64{
+						"drone_damage":  {0.08, 0.20},
+						"drone_count":   {0.5, 1.5},
+						"control_range": {0.10, 0.30},
+					},
+					Tags:          []string{"utility", "passive", "drone"},
+					TierRange:     [2]int{0, 4},
+					MaxLevelRange: [2]int{3, 5},
+				},
+				// Active drone deployment
+				{
+					BaseType:          TypeActive,
+					BaseCategory:      CategoryUtility,
+					NamePrefixes:      []string{"Attack", "Recon", "Medical", "Shield"},
+					NameSuffixes:      []string{"Drone", "Bot", "Unit", "Swarm"},
+					DescriptionFormat: "Deploy %s to assist in combat",
+					EffectTypes:       []string{"drone_damage", "drone_health", "special_ability"},
+					ValueRanges: map[string][2]float64{
+						"drone_damage":   {0.50, 1.30},
+						"drone_health":   {0.60, 1.40},
+						"special_ability": {0.20, 0.50},
+					},
+					Tags:          []string{"utility", "active", "summon"},
+					TierRange:     [2]int{1, 5},
+					MaxLevelRange: [2]int{1, 3},
+				},
+				// Tech crafting
+				{
+					BaseType:          TypePassive,
+					BaseCategory:      CategoryCrafting,
+					NamePrefixes:      []string{"Advanced", "Nano", "Smart", "Modular"},
+					NameSuffixes:      []string{"Engineering", "Fabrication", "Assembly", "Design"},
+					DescriptionFormat: "Enhances %s crafting abilities",
+					EffectTypes:       []string{"craft_speed", "component_efficiency", "upgrade_bonus"},
+					ValueRanges: map[string][2]float64{
+						"craft_speed":          {0.10, 0.25},
+						"component_efficiency": {0.08, 0.20},
+						"upgrade_bonus":        {0.05, 0.15},
+					},
+					Tags:          []string{"crafting", "passive", "tech"},
+					TierRange:     [2]int{0, 4},
+					MaxLevelRange: [2]int{3, 5},
+				},
+				// Ultimate
+				{
+					BaseType:          TypeUltimate,
+					BaseCategory:      CategoryUtility,
+					NamePrefixes:      []string{"Mech", "Titan", "Warbot", "Assault"},
+					NameSuffixes:      []string{"Deployment", "Summon", "Protocol", "Override"},
+					DescriptionFormat: "Deploy %s for overwhelming firepower",
+					EffectTypes:       []string{"mech_damage", "mech_armor", "mech_duration"},
+					ValueRanges: map[string][2]float64{
+						"mech_damage":   {2.00, 4.00},
+						"mech_armor":    {1.00, 2.00},
+						"mech_duration": {15.0, 30.0},
+					},
+					Tags:          []string{"ultimate", "utility", "summon"},
+					TierRange:     [2]int{6, 6},
+					MaxLevelRange: [2]int{1, 1},
+				},
+			},
+		},
+		{
+			Name:        "Corporate Infiltrator",
+			Description: "Master of deception, social engineering, and covert ops",
+			Category:    CategoryUtility,
+			SkillTemplates: []SkillTemplate{
+				// Stealth passives
+				{
+					BaseType:          TypePassive,
+					BaseCategory:      CategoryUtility,
+					NamePrefixes:      []string{"Optical", "Sound", "Thermal", "Signature"},
+					NameSuffixes:      []string{"Camo", "Dampening", "Masking", "Suppression"},
+					DescriptionFormat: "Improves %s and infiltration",
+					EffectTypes:       []string{"stealth_bonus", "detection_reduction", "move_speed"},
+					ValueRanges: map[string][2]float64{
+						"stealth_bonus":       {0.10, 0.25},
+						"detection_reduction": {0.08, 0.20},
+						"move_speed":          {0.05, 0.12},
+					},
+					Tags:          []string{"utility", "passive", "stealth"},
+					TierRange:     [2]int{0, 4},
+					MaxLevelRange: [2]int{3, 5},
+				},
+				// Active infiltration skills
+				{
+					BaseType:          TypeActive,
+					BaseCategory:      CategoryCombat,
+					NamePrefixes:      []string{"Silent", "Precision", "Lethal", "Executive"},
+					NameSuffixes:      []string{"Takedown", "Elimination", "Strike", "Neutralization"},
+					DescriptionFormat: "Execute %s from stealth",
+					EffectTypes:       []string{"stealth_damage", "instant_kill_chance", "silence_duration"},
+					ValueRanges: map[string][2]float64{
+						"stealth_damage":     {1.00, 2.50},
+						"instant_kill_chance": {0.10, 0.30},
+						"silence_duration":  {3.0, 8.0},
+					},
+					Tags:          []string{"combat", "active", "assassination"},
+					TierRange:     [2]int{1, 5},
+					MaxLevelRange: [2]int{1, 3},
+				},
+				// Social engineering
+				{
+					BaseType:          TypePassive,
+					BaseCategory:      CategorySocial,
+					NamePrefixes:      []string{"Corporate", "Street", "Black Market", "Elite"},
+					NameSuffixes:      []string{"Connections", "Access", "Contacts", "Network"},
+					DescriptionFormat: "Grants %s social advantages",
+					EffectTypes:       []string{"bribe_discount", "intel_bonus", "reputation_gain"},
+					ValueRanges: map[string][2]float64{
+						"bribe_discount":  {0.10, 0.30},
+						"intel_bonus":     {0.08, 0.20},
+						"reputation_gain": {0.10, 0.25},
+					},
+					Tags:          []string{"social", "passive", "influence"},
+					TierRange:     [2]int{0, 4},
+					MaxLevelRange: [2]int{3, 5},
+				},
+				// Ultimate
+				{
+					BaseType:          TypeUltimate,
+					BaseCategory:      CategoryUtility,
+					NamePrefixes:      []string{"Ghost", "Phantom", "Shadow", "Specter"},
+					NameSuffixes:      []string{"Protocol", "Mode", "Strike", "Operation"},
+					DescriptionFormat: "Activate %s for perfect infiltration",
+					EffectTypes:       []string{"invisibility_duration", "damage_bonus", "escape_chance"},
+					ValueRanges: map[string][2]float64{
+						"invisibility_duration": {8.0, 15.0},
+						"damage_bonus":          {2.00, 4.00},
+						"escape_chance":         {0.50, 1.00},
+					},
+					Tags:          []string{"ultimate", "utility", "stealth"},
+					TierRange:     [2]int{6, 6},
+					MaxLevelRange: [2]int{1, 1},
+				},
+			},
+		},
+	}
+}
+
 // GetSciFiTreeTemplates returns skill tree templates for sci-fi genre.
 func GetSciFiTreeTemplates() []SkillTreeTemplate {
 	return []SkillTreeTemplate{

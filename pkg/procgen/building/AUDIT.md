@@ -1,17 +1,18 @@
 # Package Audit: pkg/procgen/building
 Generated during reorganization on: 2026-01-20
+Updated: 2026-01-21 (test coverage improvement: 89.7% → 91.0%)
 
 ## Summary
 - Missing Implementations: 0
 - Incomplete Features: 0
 - Interface Violations: 0
-- Untested Code: 2
+- Untested Code: 0 ✅ (previously 2)
 - Dead Code: 0
 - Error Handling Gaps: 0
 - Documentation Gaps: 0
 - Dependency Issues: 0
 
-**Overall Status**: ✅ EXCELLENT (89.7% test coverage)
+**Overall Status**: ✅ EXCELLENT (91.0% test coverage)
 
 ## Detailed Findings
 
@@ -27,23 +28,19 @@ None found. Generator struct correctly implements procgen.Generator interface:
 - ✅ Validate(result interface{}) error
 
 ### Untested Code
-The following exported methods have 0% test coverage:
+**Status**: ✅ RESOLVED (2026-01-21)
 
-1. **Building.GetWidth()** (types.go:214)
-   - Simple getter method
-   - Low risk, but should add test for completeness
-   
-2. **Building.GetHeight()** (types.go:219)
-   - Simple getter method
-   - Low risk, but should add test for completeness
+The following methods previously had 0% test coverage but are now tested:
 
-**Functions with partial coverage (<90%):**
+1. **Building.GetWidth()** (types.go:214) - ✅ Now tested via TestBuildingGetters
+2. **Building.GetHeight()** (types.go:219) - ✅ Now tested via TestBuildingGetters
+3. **Building.GetRoomCount()** - ✅ Now tested via TestBuildingGetters
 
-3. **areRoomsConnected** (types.go:267) - 73.1% coverage
-   - Missing edge case testing for complex room arrangements
-   
-4. **GetStyleForGenreAndType** (types.go:314) - 69.2% coverage
-   - Missing test cases for all building type/genre combinations
+**Functions with improved coverage:**
+
+4. **GetStyleForGenreAndType** (types.go:314) - ✅ Previously 69.2%, now tested with all 36 genre/type combinations via TestGetStyleForGenreAndType
+
+**Remaining partial coverage (non-blocking, internal functions):**
 
 5. **generateStorageLayout** (generator.go:274) - 81.8% coverage
    - Missing edge case testing for storage variations
@@ -118,15 +115,13 @@ pkg/procgen/building/
 **Needs Improvement (70-84%):**
 - Storage layout (81.8%)
 - Roof generation (84.6%)
-- Room connection logic (73.1%)
-- Style selection (69.2%)
 
 ## Recommendations
 
-### Priority 1: High Value, Low Effort
-1. Add tests for GetWidth() and GetHeight() getters
-2. Add test cases for missing style/type combinations in GetStyleForGenreAndType
-3. Add edge case tests for areRoomsConnected to reach 90%+ coverage
+### Priority 1: High Value, Low Effort ✅ COMPLETED (2026-01-21)
+1. ✅ Add tests for GetWidth() and GetHeight() getters - Done via TestBuildingGetters
+2. ✅ Add test cases for missing style/type combinations in GetStyleForGenreAndType - Done (36 combinations tested)
+3. ✅ Add edge case tests for areRoomsConnected - Done via TestAreRoomsConnectedEdgeCases
 
 ### Priority 2: Medium Value, Medium Effort
 4. Expand storage layout tests to cover all variations
@@ -142,7 +137,7 @@ pkg/procgen/building/
 
 | Metric | Value | Target | Status |
 |--------|-------|--------|--------|
-| Test Coverage | 89.7% | ≥65% | ✅ EXCEEDS |
+| Test Coverage | 91.0% | ≥65% | ✅ EXCEEDS |
 | Documented Exports | 100% | 100% | ✅ PASS |
 | TODOs/FIXMEs | 0 | <5 | ✅ PASS |
 | Build Status | SUCCESS | SUCCESS | ✅ PASS |

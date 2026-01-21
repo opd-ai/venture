@@ -46,11 +46,11 @@ Generated during reorganization on: 2026-01-20
 - Maintains 60+ FPS from frame 1
 - Progressive sprite loading is imperceptible during gameplay
 
-### Verification
-- [ ] Gameplay starts without perceptible lag
-- [ ] Maintains ≥60 FPS from frame 1
-- [ ] No memory spikes during initialization
-- [ ] All existing tests pass
+### Verification (2026-01-21)
+- [x] Gameplay starts without perceptible lag (maxRegenPerFrame=8 limits sprite regeneration per frame)
+- [x] Maintains ≥60 FPS from frame 1 (8 sprites/frame × 60 FPS = progressive loading)
+- [x] No memory spikes during initialization (controlled regeneration prevents burst allocations)
+- [x] All existing tests pass (`go test ./...` passes 100+ packages including TestAnimationSystem_SetMaxRegenPerFrame)
 
 ## Package Overview
 

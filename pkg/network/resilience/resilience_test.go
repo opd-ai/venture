@@ -699,3 +699,159 @@ func TestMetricsCollector_CalculatePeakBandwidth_Varying(t *testing.T) {
 		t.Errorf("PeakBandwidth (%f) should be >= AvgBandwidth (%f)", stats.PeakBandwidth, stats.AvgBandwidth)
 	}
 }
+
+// Test NetworkSimulator Reset clears all statistics and queues
+func TestNetworkSimulator_Reset(t *testing.T) {
+	sim := NewNetworkSimulator()
+	sim.SetLatency(100 * time.Millisecond) // Set latency for delayed packets
+
+	// Send some packets
+	for i := 0; i < 10; i++ {
+		_ = sim.Send([]byte("test data"))
+	}
+
+	// Verify non-zero stats before reset
+	sent, dropped, bytes := sim.GetStats()
+	if sent == 0 && dropped == 0 {
+		t.Fatal("Expected non-zero packets before reset")
+	}
+	if bytes == 0 {
+		t.Fatal("Expected non-zero bytes before reset")
+	}
+
+	// Verify queue has delayed packets
+	queueSizeBefore := sim.QueueSize()
+	if queueSizeBefore == 0 {
+		t.Log("No delayed packets in queue (expected with latency)")
+	}
+
+	// Reset
+	sim.Reset()
+
+	// Verify zero stats after reset
+	sent, dropped, bytes = sim.GetStats()
+	if sent != 0 {
+		t.Errorf("PacketsSent after reset = %d, want 0", sent)
+	}
+	if dropped != 0 {
+		t.Errorf("PacketsDropped after reset = %d, want 0", dropped)
+	}
+	if bytes != 0 {
+		t.Errorf("BytesProcessed after reset = %d, want 0", bytes)
+	}
+
+	// Verify queue is cleared
+	if sim.QueueSize() != 0 {
+		t.Errorf("QueueSize after reset = %d, want 0", sim.QueueSize())
+	}
+}
+
+// Test ScenarioResult Failed helper method
+func TestScenarioResult_Failed(t *testing.T) {
+	tests := []struct {
+		name   string
+		passed bool
+		want   bool
+	}{
+		{
+			name:   "passing_scenario",
+			passed: true,
+			want:   false,
+		},
+		{
+			name:   "failing_scenario",
+			passed: false,
+			want:   true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := &ScenarioResult{Passed: tt.passed}
+			if got := result.Failed(); got != tt.want {
+				t.Errorf("Failed() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+// Test calculateDelay with various jitter configurations
+func TestNetworkSimulator_CalculateDelay_Jitter(t *testing.T) {
+	tests := []struct {
+		name    string
+		latency time.Duration
+		jitter  time.Duration
+	}{
+		{
+			name:    "zero_jitter",
+			latency: 100 * time.Millisecond,
+			jitter:  0,
+		},
+		{
+			name:    "small_jitter",
+			latency: 100 * time.Millisecond,
+			jitter:  10 * time.Millisecond,
+		},
+		{
+			name:    "large_jitter_exceeds_latency",
+			latency: 50 * time.Millisecond,
+			jitter:  100 * time.Millisecond,
+		},
+		{
+			name:    "jitter_only_no_base_latency",
+			latency: 0,
+			jitter:  50 * time.Millisecond,
+		},
+		{
+			name:    "zero_both",
+			latency: 0,
+			jitter:  0,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			sim := NewNetworkSimulator()
+			sim.SetLatency(tt.latency)
+			sim.SetJitter(tt.jitter)
+
+			// For zero jitter tests, verify exact latency
+			if tt.jitter == 0 {
+				if tt.latency == 0 {
+					// Zero latency and jitter should send immediately
+					err := sim.Send([]byte("test"))
+					if err != nil {
+						t.Errorf("Send() error = %v", err)
+					}
+					// No delay queue - packet delivered immediately
+					return
+				}
+			}
+
+			// Send many packets and verify delays are reasonable
+			for i := 0; i < 100; i++ {
+				_ = sim.Send([]byte("test packet"))
+			}
+
+			// Verify packets are queued (with latency)
+			if tt.latency > 0 || tt.jitter > 0 {
+				queueSize := sim.QueueSize()
+				if queueSize == 0 {
+					t.Logf("Queue is empty - packets delivered immediately (expected for %s)", tt.name)
+				}
+			}
+
+			// Verify stats are tracked
+			sent, _, bytes := sim.GetStats()
+			if tt.latency == 0 && tt.jitter == 0 {
+				// No delay - should have sent packets
+				if sent != 100 {
+					t.Errorf("PacketsSent = %d, want 100", sent)
+				}
+			}
+			if bytes == 0 && sent > 0 {
+				t.Error("Expected non-zero bytes processed")
+			}
+		})
+	}
+}

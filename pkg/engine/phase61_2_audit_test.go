@@ -474,8 +474,10 @@ func TestPhase61_2_ExamplesValidation(t *testing.T) {
 	examplesDir := filepath.Join(repoRoot, "examples")
 
 	// Check that examples directory exists
+	// Note: examples/ directory was removed in audit commit 1651a6e1 (2026-01-20)
+	// Example code has been consolidated; skip this test if directory doesn't exist
 	if _, err := os.Stat(examplesDir); os.IsNotExist(err) {
-		t.Fatalf("examples/ directory not found at %s", examplesDir)
+		t.Skip("examples/ directory not present (removed in audit 1651a6e1)")
 	}
 
 	// List all example directories

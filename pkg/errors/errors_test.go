@@ -100,6 +100,28 @@ func TestVentureError_WithContext(t *testing.T) {
 	}
 }
 
+func TestVentureError_WithContext_NilMap(t *testing.T) {
+	// Create error with nil Context to test initialization path
+	err := &VentureError{
+		Type:    ErrorTypeNetwork,
+		Message: "test error",
+		// Context is nil
+	}
+	if err.Context != nil {
+		t.Fatal("precondition failed: Context should be nil")
+	}
+
+	// WithContext should initialize the map
+	err.WithContext("key", "value")
+
+	if err.Context == nil {
+		t.Error("Context should be initialized after WithContext")
+	}
+	if err.Context["key"] != "value" {
+		t.Errorf("Context[key] = %v, want value", err.Context["key"])
+	}
+}
+
 func TestVentureError_WithCorrelationID(t *testing.T) {
 	err := New(ErrorTypeNetwork, "test error")
 	err.WithCorrelationID("test-correlation-id")
@@ -147,6 +169,86 @@ func TestVentureError_GetUserMessage(t *testing.T) {
 				Message: "technical details",
 			},
 			wantContain: "timed out",
+		},
+		{
+			name: "configuration default",
+			err: &VentureError{
+				Type:    ErrorTypeConfiguration,
+				Message: "technical details",
+			},
+			wantContain: "Configuration error",
+		},
+		{
+			name: "generation default",
+			err: &VentureError{
+				Type:    ErrorTypeGeneration,
+				Message: "technical details",
+			},
+			wantContain: "generate content",
+		},
+		{
+			name: "rate limit default",
+			err: &VentureError{
+				Type:    ErrorTypeRateLimit,
+				Message: "technical details",
+			},
+			wantContain: "Too many requests",
+		},
+		{
+			name: "authentication default",
+			err: &VentureError{
+				Type:    ErrorTypeAuthentication,
+				Message: "technical details",
+			},
+			wantContain: "Authentication failed",
+		},
+		{
+			name: "resource default",
+			err: &VentureError{
+				Type:    ErrorTypeResource,
+				Message: "technical details",
+			},
+			wantContain: "resources exhausted",
+		},
+		{
+			name: "file system default",
+			err: &VentureError{
+				Type:    ErrorTypeFileSystem,
+				Message: "technical details",
+			},
+			wantContain: "error occurred",
+		},
+		{
+			name: "database default",
+			err: &VentureError{
+				Type:    ErrorTypeDatabase,
+				Message: "technical details",
+			},
+			wantContain: "error occurred",
+		},
+		{
+			name: "serialization default",
+			err: &VentureError{
+				Type:    ErrorTypeSerialization,
+				Message: "technical details",
+			},
+			wantContain: "error occurred",
+		},
+		{
+			name: "concurrency default",
+			err: &VentureError{
+				Type:    ErrorTypeConcurrency,
+				Message: "technical details",
+			},
+			wantContain: "error occurred",
+		},
+		{
+			name: "unknown default",
+			err: &VentureError{
+				Type:    ErrorTypeUnknown,
+				Message: "technical details",
+			},
+			wantContain: "error occurred",
 		},
 	}
 

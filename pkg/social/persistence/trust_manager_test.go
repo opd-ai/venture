@@ -462,3 +462,213 @@ func BenchmarkSave(b *testing.B) {
 		}
 	}
 }
+
+// Automatic Decay Tests
+
+func TestStartAutomaticDecay(t *testing.T) {
+	tm := NewTrustManager()
+
+	// Test successful start
+	err := tm.StartAutomaticDecay(100 * time.Millisecond)
+	if err != nil {
+		t.Fatalf("Failed to start automatic decay: %v", err)
+	}
+
+	if !tm.IsAutomaticDecayRunning() {
+		t.Error("Expected automatic decay to be running")
+	}
+
+	// Test that starting again fails
+	err = tm.StartAutomaticDecay(100 * time.Millisecond)
+	if err == nil {
+		t.Error("Expected error when starting already running decay")
+	}
+
+	// Clean up
+	tm.StopAutomaticDecay()
+}
+
+func TestStopAutomaticDecay(t *testing.T) {
+	tm := NewTrustManager()
+
+	// Test stopping when not running
+	stopped := tm.StopAutomaticDecay()
+	if stopped {
+		t.Error("Expected StopAutomaticDecay to return false when not running")
+	}
+
+	// Start and then stop
+	err := tm.StartAutomaticDecay(100 * time.Millisecond)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	stopped = tm.StopAutomaticDecay()
+	if !stopped {
+		t.Error("Expected StopAutomaticDecay to return true")
+	}
+
+	if tm.IsAutomaticDecayRunning() {
+		t.Error("Expected automatic decay to not be running after stop")
+	}
+
+	// Test stopping again
+	stopped = tm.StopAutomaticDecay()
+	if stopped {
+		t.Error("Expected StopAutomaticDecay to return false when already stopped")
+	}
+}
+
+func TestStartAutomaticDecayInvalidInterval(t *testing.T) {
+	tm := NewTrustManager()
+
+	// Test zero interval
+	err := tm.StartAutomaticDecay(0)
+	if err == nil {
+		t.Error("Expected error for zero interval")
+	}
+
+	// Test negative interval
+	err = tm.StartAutomaticDecay(-1 * time.Second)
+	if err == nil {
+		t.Error("Expected error for negative interval")
+	}
+}
+
+func TestAutomaticDecayAppliesDecay(t *testing.T) {
+	tm := NewTrustManager()
+	baseTime := time.Now()
+
+	// Create a record that's old enough to decay
+	oldTime := baseTime.Add(-10 * 24 * time.Hour) // 10 days ago
+	tm.UpdateTrust("alice", "bob", 0.3, oldTime)
+
+	initialTrust := tm.GetTrust("alice", "bob")
+	if initialTrust != 0.8 { // 0.5 + 0.3
+		t.Fatalf("Expected initial trust 0.8, got %f", initialTrust)
+	}
+
+	// Start automatic decay with a short interval
+	err := tm.StartAutomaticDecay(50 * time.Millisecond)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Wait for at least one decay cycle
+	time.Sleep(150 * time.Millisecond)
+
+	// Stop decay
+	tm.StopAutomaticDecay()
+
+	// Verify that decay was applied
+	finalTrust := tm.GetTrust("alice", "bob")
+	if finalTrust >= initialTrust {
+		t.Errorf("Expected trust to decay from %f, but got %f", initialTrust, finalTrust)
+	}
+}
+
+func TestIsAutomaticDecayRunning(t *testing.T) {
+	tm := NewTrustManager()
+
+	// Initially not running
+	if tm.IsAutomaticDecayRunning() {
+		t.Error("Expected automatic decay to not be running initially")
+	}
+
+	// Start it
+	err := tm.StartAutomaticDecay(100 * time.Millisecond)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if !tm.IsAutomaticDecayRunning() {
+		t.Error("Expected automatic decay to be running after start")
+	}
+
+	// Stop it
+	tm.StopAutomaticDecay()
+
+	if tm.IsAutomaticDecayRunning() {
+		t.Error("Expected automatic decay to not be running after stop")
+	}
+}
+
+func TestAutomaticDecayMultipleRecords(t *testing.T) {
+	tm := NewTrustManager()
+	baseTime := time.Now()
+
+	// Create multiple records with different ages
+	tm.UpdateTrust("alice", "bob", 0.3, baseTime.Add(-10*24*time.Hour))    // 10 days old
+	tm.UpdateTrust("alice", "charlie", 0.3, baseTime.Add(-5*24*time.Hour)) // 5 days old
+	tm.UpdateTrust("alice", "david", 0.3, baseTime)                        // Fresh
+
+	// Start automatic decay
+	err := tm.StartAutomaticDecay(50 * time.Millisecond)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Wait for decay
+	time.Sleep(150 * time.Millisecond)
+
+	// Stop decay
+	tm.StopAutomaticDecay()
+
+	// Verify old records decayed
+	trustBob := tm.GetTrust("alice", "bob")
+	trustCharlie := tm.GetTrust("alice", "charlie")
+	trustDavid := tm.GetTrust("alice", "david")
+
+	// Bob should have decayed most (oldest)
+	if trustBob >= 0.8 {
+		t.Errorf("Expected bob's trust to decay, got %f", trustBob)
+	}
+
+	// Charlie should have decayed less than Bob
+	if trustCharlie >= 0.8 || trustCharlie <= trustBob {
+		t.Errorf("Expected charlie's trust (%f) to be between bob (%f) and fresh", trustCharlie, trustBob)
+	}
+
+	// David should not have decayed (too fresh)
+	if trustDavid != 0.8 {
+		t.Errorf("Expected david's trust to remain 0.8, got %f", trustDavid)
+	}
+}
+
+func TestAutomaticDecayConcurrentSafe(t *testing.T) {
+	tm := NewTrustManager()
+	now := time.Now()
+
+	// Start automatic decay
+	err := tm.StartAutomaticDecay(10 * time.Millisecond)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Run concurrent operations while decay is running
+	done := make(chan bool)
+	for i := 0; i < 5; i++ {
+		go func(id int) {
+			for j := 0; j < 50; j++ {
+				tm.UpdateTrust("player_a", "player_b", 0.01, now)
+				_ = tm.GetTrust("player_a", "player_b")
+				_ = tm.GetRecordCount()
+			}
+			done <- true
+		}(i)
+	}
+
+	// Wait for goroutines
+	for i := 0; i < 5; i++ {
+		<-done
+	}
+
+	// Stop decay
+	tm.StopAutomaticDecay()
+
+	// Verify manager is still functional
+	trust := tm.GetTrust("player_a", "player_b")
+	if trust < 0.0 || trust > 1.0 {
+		t.Errorf("Trust out of range: %f", trust)
+	}
+}

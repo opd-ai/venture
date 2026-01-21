@@ -26,6 +26,14 @@
 // Trust scores decay over time at a rate of 0.01 per day of inactivity.
 // This encourages active social engagement and prevents stale relationships.
 //
+// Decay can be applied automatically using StartAutomaticDecay():
+//
+//	manager := persistence.NewTrustManager()
+//	manager.StartAutomaticDecay(1 * time.Hour) // Check decay every hour
+//	defer manager.StopAutomaticDecay()
+//
+// Alternatively, call ApplyDecay() manually at your preferred interval.
+//
 // # Chat History
 //
 // Chat history maintains the last 1000 messages per player with automatic

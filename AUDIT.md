@@ -2,10 +2,11 @@
 **Date:** 2026-01-21T03:33:55Z  
 **Commit:** 7b0cd84ef386540dcedebac24e85f003fa652ed2  
 **Auditor:** Claude (BotBot prompt engineer)
+**Last Updated:** 2026-01-21T16:36:00Z
 
 ## Summary
-- **Total Gaps:** 8
-- **Critical:** 0 | **Moderate:** 3 | **Minor:** 5
+- **Total Gaps:** 8 (1 resolved)
+- **Critical:** 0 | **Moderate:** 2 (1 resolved) | **Minor:** 5
 - **Primary Areas:** WebRTC Federation (stub implementation), Class System (minor count discrepancy), Housing Documentation
 
 ---
@@ -202,39 +203,30 @@ if floors < 1 || floors > 5 {
 
 ---
 
-### [#7] Trust Score Decay - Manual vs Automatic
+### [#7] Trust Score Decay - Manual vs Automatic ✅ RESOLVED
 
 **Severity:** Moderate
+
+**Status:** RESOLVED (2026-01-21)
 
 **Documentation Claim:**
 > "Trust scores with decay" (README.md:L46)
 
 **Implementation:** `pkg/social/persistence/trust_manager.go`
 
-**Expected:** Automatic trust score decay over time.
+**Resolution:** Added automatic trust decay scheduling with the following methods:
+- `StartAutomaticDecay(interval time.Duration)` - Starts background goroutine that applies decay at regular intervals
+- `StopAutomaticDecay()` - Stops the background decay processing
+- `IsAutomaticDecayRunning()` - Returns whether automatic decay is currently active
 
-**Actual:** Trust decay requires manual `ApplyDecay()` calls rather than automatic background processing.
-
-**Gap:** The trust decay system is implemented but requires explicit invocation. Per the internal AUDIT.md: "Add automatic background decay processing instead of requiring manual `ApplyDecay()` calls." This creates a subtle gap where trust scores may not decay as expected without proper system scheduling.
-
-**Evidence:**
-```go
-// From pkg/social/persistence/doc.go
-// Trust scores decay over time at a rate of 0.01 per day of inactivity.
-
-// From pkg/social/persistence/AUDIT.md
-// 3. **Trust decay scheduling** - Add automatic background decay processing
-//    instead of requiring manual `ApplyDecay()` calls
-```
-
-**Impact:** Trust scores only decay when explicitly triggered by game logic. Applications must ensure `ApplyDecay()` is called periodically for the documented behavior to occur.
-
-**Reproduction:**
+**Usage:**
 ```go
 tm := persistence.NewTrustManager()
-tm.SetTrust("player1", "player2", 0.8)
-// Without calling tm.ApplyDecay(), trust remains at 0.8 indefinitely
+tm.StartAutomaticDecay(1 * time.Hour) // Check decay every hour
+defer tm.StopAutomaticDecay()
 ```
+
+**Tests Added:** 7 new tests covering start/stop, invalid intervals, concurrent safety, and decay application.
 
 ---
 
@@ -278,10 +270,7 @@ const (
    - Implement ICE candidate gathering and exchange
    - Replace simulated data channels with real WebRTC data channels
 
-2. **Implement Automatic Trust Decay** - Add a background scheduler or integrate decay logic into the game loop to ensure trust scores decay automatically as documented. Implementation approach:
-   - Add a `StartAutomaticDecay()` method to TrustManager that runs decay in a background goroutine
-   - Call decay logic on a configurable interval (e.g., once per hour checks all trusts)
-   - Integrate with the game's existing system update loop or use `time.Ticker`
+2. ~~**Implement Automatic Trust Decay**~~ ✅ COMPLETED - Added `StartAutomaticDecay()`, `StopAutomaticDecay()`, and `IsAutomaticDecayRunning()` methods to TrustManager.
 
 3. **Add WebRTC Integration Tests** - Create integration tests that verify real browser-to-browser connections work correctly once WebRTC is implemented, ensuring the federation feature meets production requirements.
 

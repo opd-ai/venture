@@ -14,6 +14,12 @@ import (
 type TrustManager struct {
 	mu      sync.RWMutex
 	records map[string]*TrustRecord // key: "playerA:playerB" (sorted)
+
+	// Automatic decay scheduling
+	decayMu       sync.Mutex
+	decayTicker   *time.Ticker
+	decayStopChan chan struct{}
+	decayRunning  bool
 }
 
 // NewTrustManager creates a new TrustManager
@@ -217,4 +223,62 @@ func (tm *TrustManager) Clear() {
 	tm.mu.Lock()
 	defer tm.mu.Unlock()
 	tm.records = make(map[string]*TrustRecord)
+}
+
+// StartAutomaticDecay begins automatic trust score decay in a background goroutine.
+// The interval parameter controls how often decay is applied (e.g., 1*time.Hour).
+// Call StopAutomaticDecay() to stop the background processing.
+func (tm *TrustManager) StartAutomaticDecay(interval time.Duration) error {
+	tm.decayMu.Lock()
+	defer tm.decayMu.Unlock()
+
+	if tm.decayRunning {
+		return fmt.Errorf("automatic decay already running")
+	}
+
+	if interval <= 0 {
+		return fmt.Errorf("interval must be positive")
+	}
+
+	tm.decayTicker = time.NewTicker(interval)
+	tm.decayStopChan = make(chan struct{})
+	tm.decayRunning = true
+
+	go tm.runDecayLoop()
+	return nil
+}
+
+// StopAutomaticDecay stops the background decay processing.
+// Returns true if decay was running and was stopped, false if it was not running.
+func (tm *TrustManager) StopAutomaticDecay() bool {
+	tm.decayMu.Lock()
+	defer tm.decayMu.Unlock()
+
+	if !tm.decayRunning {
+		return false
+	}
+
+	close(tm.decayStopChan)
+	tm.decayTicker.Stop()
+	tm.decayRunning = false
+	return true
+}
+
+// IsAutomaticDecayRunning returns whether automatic decay is currently active.
+func (tm *TrustManager) IsAutomaticDecayRunning() bool {
+	tm.decayMu.Lock()
+	defer tm.decayMu.Unlock()
+	return tm.decayRunning
+}
+
+// runDecayLoop is the background goroutine that applies decay at regular intervals.
+func (tm *TrustManager) runDecayLoop() {
+	for {
+		select {
+		case <-tm.decayStopChan:
+			return
+		case <-tm.decayTicker.C:
+			tm.ApplyDecay(time.Now())
+		}
+	}
 }

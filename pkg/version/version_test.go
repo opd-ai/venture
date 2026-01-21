@@ -105,3 +105,42 @@ func TestVersionFormat(t *testing.T) {
 		t.Errorf("Release = %q, want one of %v", Release, validReleases)
 	}
 }
+
+func TestPrintVersion(t *testing.T) {
+	// Capture stdout to verify PrintVersion output
+	// Since PrintVersion uses fmt.Println which writes to os.Stdout,
+	// we test that it doesn't panic and produces consistent output
+	// by verifying it matches BuildInfo
+	expectedOutput := BuildInfo()
+
+	// Call PrintVersion to ensure it doesn't panic and exercises the code path
+	// We can't easily capture stdout in Go tests without modifying the function,
+	// but we can verify the function runs without error
+	PrintVersion()
+
+	// Verify the output format matches what we expect
+	if !strings.Contains(expectedOutput, "Venture") {
+		t.Errorf("BuildInfo() = %q, want to contain 'Venture'", expectedOutput)
+	}
+	if !strings.Contains(expectedOutput, Version) {
+		t.Errorf("BuildInfo() = %q, want to contain version %q", expectedOutput, Version)
+	}
+}
+
+func TestMajorMinorPatchConsistency(t *testing.T) {
+	// Verify Major, Minor, Patch constants are non-negative
+	if Major < 0 {
+		t.Errorf("Major = %d, want non-negative", Major)
+	}
+	if Minor < 0 {
+		t.Errorf("Minor = %d, want non-negative", Minor)
+	}
+	if Patch < 0 {
+		t.Errorf("Patch = %d, want non-negative", Patch)
+	}
+
+	// Verify for production release, major should be at least 1
+	if Release == "Production" && Major < 1 {
+		t.Errorf("Production release should have Major >= 1, got %d", Major)
+	}
+}

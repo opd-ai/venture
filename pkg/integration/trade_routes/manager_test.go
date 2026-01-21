@@ -555,3 +555,311 @@ func TestDeferStopPattern(t *testing.T) {
 
 	// defer rm.Stop() will be called automatically when function exits
 }
+
+// TestSpawnBanditEncounter tests bandit encounter creation.
+func TestSpawnBanditEncounter(t *testing.T) {
+rm := NewRouteManager("test-server", 12345)
+
+// Create an active route
+route, err := rm.CreateRoute("region-a", "region-b", 1000.0)
+if err != nil {
+t.Fatalf("Failed to create route: %v", err)
+}
+route.Status = StatusActive
+route.DangerLevel = 0.5
+route.Progress = 0.3
+
+// Spawn a bandit encounter
+now := time.Now()
+rm.spawnBanditEncounter(route, now)
+
+// Verify encounter was created
+if len(rm.encounters) != 1 {
+t.Fatalf("Expected 1 encounter, got %d", len(rm.encounters))
+}
+
+// Get the encounter
+var encounter *BanditEncounter
+for _, e := range rm.encounters {
+encounter = e
+break
+}
+
+// Verify encounter properties
+if encounter.RouteID != route.ID {
+t.Errorf("Expected route ID '%s', got '%s'", route.ID, encounter.RouteID)
+}
+
+if encounter.BanditCount < 3 || encounter.BanditCount > 10 {
+t.Errorf("Expected 3-10 bandits, got %d", encounter.BanditCount)
+}
+
+if encounter.BanditStrength < 0.3 || encounter.BanditStrength > 0.7 {
+t.Errorf("Expected bandit strength 0.3-0.7, got %.2f", encounter.BanditStrength)
+}
+
+if encounter.Outcome != OutcomePending {
+t.Errorf("Expected outcome Pending, got %s", encounter.Outcome)
+}
+
+// Verify route was updated
+if route.Status != StatusUnderAttack {
+t.Errorf("Expected route status UnderAttack, got %s", route.Status)
+}
+
+if route.BanditAttacks != 1 {
+t.Errorf("Expected 1 bandit attack, got %d", route.BanditAttacks)
+}
+}
+
+// TestUpdateEncounterDefended tests encounter resolution when defense wins.
+func TestUpdateEncounterDefended(t *testing.T) {
+rm := NewRouteManager("test-server", 12345)
+
+// Create route with escorts for strong defense
+route, err := rm.CreateRoute("region-a", "region-b", 1000.0)
+if err != nil {
+t.Fatalf("Failed to create route: %v", err)
+}
+route.Status = StatusActive
+route.EscortPlayers = []uint64{100, 200, 300} // 3 escorts = stronger defense
+
+// Spawn encounter with weak bandits
+now := time.Now()
+rm.spawnBanditEncounter(route, now)
+
+var encounter *BanditEncounter
+for _, e := range rm.encounters {
+encounter = e
+break
+}
+
+// Override strengths to ensure defense wins
+encounter.DefenseStrength = 0.9
+encounter.BanditStrength = 0.3
+encounter.Duration = 0 // Instant resolution
+
+// Update encounter (should resolve immediately)
+rm.updateEncounter(encounter, now.Add(time.Second))
+
+// Verify defended outcome
+if encounter.Outcome != OutcomeDefended {
+t.Errorf("Expected outcome Defended, got %s", encounter.Outcome)
+}
+
+// Verify route status returned to active
+if route.Status != StatusActive {
+t.Errorf("Expected route status Active, got %s", route.Status)
+}
+
+// Verify player rewards were assigned
+if len(encounter.PlayerRewards) != 3 {
+t.Errorf("Expected 3 player rewards, got %d", len(encounter.PlayerRewards))
+}
+}
+
+// TestUpdateEncounterCompromised tests partial cargo loss.
+func TestUpdateEncounterCompromised(t *testing.T) {
+rm := NewRouteManager("test-server", 12345)
+
+// Create route with cargo
+route, err := rm.CreateRoute("region-a", "region-b", 1000.0)
+if err != nil {
+t.Fatalf("Failed to create route: %v", err)
+}
+route.Status = StatusActive
+originalCargoCount := len(route.Cargo)
+originalQuantities := make([]int, len(route.Cargo))
+for i, c := range route.Cargo {
+originalQuantities[i] = c.Quantity
+}
+
+// Spawn encounter
+now := time.Now()
+rm.spawnBanditEncounter(route, now)
+
+var encounter *BanditEncounter
+for _, e := range rm.encounters {
+encounter = e
+break
+}
+
+// Set strengths for compromised outcome (defense 0.7-1.0 of bandit strength)
+encounter.DefenseStrength = 0.55
+encounter.BanditStrength = 0.7
+encounter.Duration = 0
+
+// Update encounter
+rm.updateEncounter(encounter, now.Add(time.Second))
+
+// Verify compromised outcome
+if encounter.Outcome != OutcomeCompromised {
+t.Errorf("Expected outcome Compromised, got %s", encounter.Outcome)
+}
+
+// Verify some cargo was lost
+if len(encounter.LostCargo) == 0 {
+t.Error("Expected some cargo to be lost in compromised encounter")
+}
+
+// Verify route still has cargo (partial loss, not total)
+totalRemaining := 0
+for _, c := range route.Cargo {
+totalRemaining += c.Quantity
+}
+if totalRemaining == 0 {
+t.Error("Expected some cargo to remain after compromised encounter")
+}
+
+// Verify cargo count is same (items reduced, not removed)
+if len(route.Cargo) != originalCargoCount {
+t.Errorf("Expected same number of cargo items %d, got %d", originalCargoCount, len(route.Cargo))
+}
+
+// Verify route status returned to active
+if route.Status != StatusActive {
+t.Errorf("Expected route status Active, got %s", route.Status)
+}
+}
+
+// TestUpdateEncounterDestroyed tests total cargo loss.
+func TestUpdateEncounterDestroyed(t *testing.T) {
+rm := NewRouteManager("test-server", 12345)
+
+// Create route with cargo
+route, err := rm.CreateRoute("region-a", "region-b", 1000.0)
+if err != nil {
+t.Fatalf("Failed to create route: %v", err)
+}
+route.Status = StatusActive
+originalCargo := make([]CargoItem, len(route.Cargo))
+copy(originalCargo, route.Cargo)
+
+// Spawn encounter
+now := time.Now()
+rm.spawnBanditEncounter(route, now)
+
+var encounter *BanditEncounter
+for _, e := range rm.encounters {
+encounter = e
+break
+}
+
+// Set strengths for destroyed outcome (defense < 0.7 of bandit strength)
+encounter.DefenseStrength = 0.2
+encounter.BanditStrength = 0.8
+encounter.Duration = 0
+
+// Update encounter
+rm.updateEncounter(encounter, now.Add(time.Second))
+
+// Verify destroyed outcome
+if encounter.Outcome != OutcomeDestroyed {
+t.Errorf("Expected outcome Destroyed, got %s", encounter.Outcome)
+}
+
+// Verify all cargo was lost
+if len(encounter.LostCargo) != len(originalCargo) {
+t.Errorf("Expected all %d cargo items lost, got %d", len(originalCargo), len(encounter.LostCargo))
+}
+
+// Verify route has no cargo
+if len(route.Cargo) != 0 {
+t.Errorf("Expected no cargo remaining, got %d items", len(route.Cargo))
+}
+
+// Verify route status is failed
+if route.Status != StatusFailed {
+t.Errorf("Expected route status Failed, got %s", route.Status)
+}
+}
+
+// TestUpdateEncounterOngoing tests that ongoing encounters are not resolved.
+func TestUpdateEncounterOngoing(t *testing.T) {
+rm := NewRouteManager("test-server", 12345)
+
+// Create route
+route, err := rm.CreateRoute("region-a", "region-b", 1000.0)
+if err != nil {
+t.Fatalf("Failed to create route: %v", err)
+}
+route.Status = StatusActive
+
+// Spawn encounter
+now := time.Now()
+rm.spawnBanditEncounter(route, now)
+
+var encounter *BanditEncounter
+for _, e := range rm.encounters {
+encounter = e
+break
+}
+
+// Ensure encounter has remaining time
+encounter.Duration = 60 * time.Second
+
+// Update encounter (should not resolve yet)
+rm.updateEncounter(encounter, now.Add(time.Second))
+
+// Verify encounter is still pending
+if encounter.Outcome != OutcomePending {
+t.Errorf("Expected outcome Pending for ongoing encounter, got %s", encounter.Outcome)
+}
+}
+
+// TestResolveEncounterRouteNotFound tests resolution when route doesn't exist.
+func TestResolveEncounterRouteNotFound(t *testing.T) {
+rm := NewRouteManager("test-server", 12345)
+
+// Create orphan encounter (route doesn't exist)
+encounter := &BanditEncounter{
+ID:              "orphan-1",
+RouteID:         "non-existent-route",
+BanditStrength:  0.5,
+DefenseStrength: 0.3,
+Outcome:         OutcomePending,
+PlayerRewards:   make(map[uint64]float64),
+}
+
+// These should not panic when route doesn't exist
+rm.resolveDefendedEncounter(encounter)
+rm.resolveCompromisedEncounter(encounter)
+rm.resolveDestroyedEncounter(encounter)
+
+// Verify no rewards were assigned (route didn't exist)
+if len(encounter.PlayerRewards) != 0 {
+t.Errorf("Expected no player rewards for orphan encounter, got %d", len(encounter.PlayerRewards))
+}
+}
+
+// TestGetRouteByCaravan tests retrieving routes by caravan ID.
+func TestGetRouteByCaravan(t *testing.T) {
+rm := NewRouteManager("test-server", 12345)
+
+// Create and start a route
+route, err := rm.CreateRoute("region-a", "region-b", 1000.0)
+if err != nil {
+t.Fatalf("Failed to create route: %v", err)
+}
+
+caravanID := uint64(9999)
+err = rm.StartRoute(route.ID, caravanID)
+if err != nil {
+t.Fatalf("Failed to start route: %v", err)
+}
+
+// Test successful lookup
+foundRoute, err := rm.GetRouteByCaravan(caravanID)
+if err != nil {
+t.Fatalf("Unexpected error: %v", err)
+}
+if foundRoute.ID != route.ID {
+t.Errorf("Expected route ID '%s', got '%s'", route.ID, foundRoute.ID)
+}
+
+// Test not found
+_, err = rm.GetRouteByCaravan(123456)
+if err == nil {
+t.Error("Expected error for non-existent caravan")
+}
+}

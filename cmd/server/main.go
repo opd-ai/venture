@@ -77,13 +77,47 @@ var (
 func main() {
 	flag.Parse()
 
-	// Handle --version flag
 	if *showVersion {
 		version.PrintVersion()
 		os.Exit(0)
 	}
 
-	// Validate configuration before starting server
+	validateConfiguration()
+
+	logger := initializeLogger()
+	serverLogger := logger.WithFields(logrus.Fields{
+		"component": "server",
+		"seed":      *seed,
+		"genre":     *genreID,
+	})
+
+	logServerStartup(serverLogger)
+	runStartupValidations(serverLogger)
+
+	modManager, stabilityMon, networkSim, metricsCollector := initializeOptionalSystems(serverLogger)
+	_ = modManager
+
+	world := createGameWorld(logger)
+	generatedTerrain := generateWorldTerrain(logger, serverLogger)
+	spawnV4Entities(world, generatedTerrain, logger)
+
+	server, snapshotManager, lagCompensator := initializeNetworkSystems(logger)
+
+	var metricsExporter *observability.MetricsExporter
+	if *enableMetrics {
+		metricsExporter = initializeMetricsExporter(logger, world, server)
+	}
+
+	startNetworkServer(server, serverLogger)
+	logServerReady(serverLogger, world)
+
+	defer shutdownServer(serverLogger, metricsExporter, stabilityMon, metricsCollector, networkSim, server)
+
+	executeGameLoop(world, server, snapshotManager, lagCompensator, logger, serverLogger)
+}
+
+// validateConfiguration validates server configuration before startup.
+func validateConfiguration() {
 	validator := config.NewValidator()
 	cfg := &config.Config{
 		Port:               *port,
@@ -93,7 +127,7 @@ func main() {
 		ValidateTickRate:   true,
 		Genre:              *genreID,
 		ModsDir:            *modsDir,
-		CreateDirs:         true, // Auto-create mods directory if needed
+		CreateDirs:         true,
 	}
 
 	if err := validator.ValidateAll(cfg); err != nil {
@@ -102,14 +136,10 @@ func main() {
 		flag.PrintDefaults()
 		os.Exit(1)
 	}
+}
 
-	logger := initializeLogger()
-	serverLogger := logger.WithFields(logrus.Fields{
-		"component": "server",
-		"seed":      *seed,
-		"genre":     *genreID,
-	})
-
+// logServerStartup logs the initial server startup information.
+func logServerStartup(serverLogger *logrus.Entry) {
 	serverLogger.Infof("Starting Venture Game Server %s", version.FullVersion)
 	serverLogger.WithFields(logrus.Fields{
 		"port":          *port,
@@ -119,64 +149,57 @@ func main() {
 		"genre":         *genreID,
 		"aerialSprites": *aerialSprites,
 	}).Info("server configuration")
+}
 
-	// Phase 2 (PLAN.md): Run security audit if enabled
+// runStartupValidations executes all enabled validation checks at startup.
+func runStartupValidations(serverLogger *logrus.Entry) {
 	if *securityAudit {
 		runSecurityAudit(serverLogger)
 	}
 
-	// Phase 6.1 (PLAN.md): Run balance validation if enabled
 	if *balanceValidate {
 		runBalanceValidation(serverLogger)
 	}
 
-	// Phase 6.2 (PLAN.md): Run migration validation if enabled
 	if *migrationValidate {
 		runMigrationValidation(serverLogger)
 	}
 
-	// Phase 6.4 (PLAN.md): Run UX journey validation if enabled
 	if *uxValidate {
 		runUXValidation(serverLogger)
 	}
+}
 
-	// Phase 6.3 (PLAN.md): Initialize mod system if enabled
+// initializeOptionalSystems initializes optional server systems based on configuration.
+func initializeOptionalSystems(serverLogger *logrus.Entry) (*modding.Manager, *stability.Monitor, *resilience.NetworkSimulator, *resilience.MetricsCollector) {
 	var modManager *modding.Manager
 	if *enableMods {
 		modManager = initializeModSystem(serverLogger)
 	}
-	_ = modManager // Available for future game rule integration
 
-	// Phase 2 (PLAN.md): Start stability monitoring if enabled
 	var stabilityMon *stability.Monitor
 	if *stabilityMonitor {
 		stabilityMon = startStabilityMonitoring(serverLogger)
 	}
 
-	// Phase 4.1 (PLAN.md): Initialize network resilience testing
 	var networkSim *resilience.NetworkSimulator
 	var metricsCollector *resilience.MetricsCollector
 	if *simulateNetwork != "" || *resilienceMetrics {
 		networkSim, metricsCollector = initializeResilienceTesting(serverLogger)
 	}
 
-	world := createGameWorld(logger)
-	generatedTerrain := generateWorldTerrain(logger, serverLogger)
-	spawnV4Entities(world, generatedTerrain, logger)
+	return modManager, stabilityMon, networkSim, metricsCollector
+}
 
-	server, snapshotManager, lagCompensator := initializeNetworkSystems(logger)
-
-	// Phase 3 (PLAN.md): Initialize Prometheus metrics exporter if enabled
-	var metricsExporter *observability.MetricsExporter
-	if *enableMetrics {
-		metricsExporter = initializeMetricsExporter(logger, world, server)
-	}
-
-	// Start network server
+// startNetworkServer starts the network server and handles startup errors.
+func startNetworkServer(server *network.TCPServer, serverLogger *logrus.Entry) {
 	if err := server.Start(); err != nil {
 		serverLogger.WithError(err).Fatal("failed to start network server")
 	}
+}
 
+// logServerReady logs that the server is ready to accept connections.
+func logServerReady(serverLogger *logrus.Entry, world *engine.World) {
 	serverLogger.Info("server initialized successfully")
 	serverLogger.WithFields(logrus.Fields{
 		"port":        *port,
@@ -184,49 +207,72 @@ func main() {
 		"updateRate":  *tickRate,
 		"entityCount": len(world.GetEntities()),
 	}).Info("server listening")
+}
 
-	// Handle server shutdown gracefully
-	defer func() {
-		serverLogger.Info("shutting down server")
-		if metricsExporter != nil {
-			if err := metricsExporter.Stop(); err != nil {
-				serverLogger.WithError(err).Error("error stopping metrics exporter")
-			} else {
-				serverLogger.Info("metrics exporter stopped")
-			}
-		}
-		if stabilityMon != nil {
-			stabilityMon.Stop()
-			serverLogger.Info("stability monitor stopped")
-		}
-		// Phase 4.1 (PLAN.md): Log resilience metrics on shutdown
-		if metricsCollector != nil {
-			stats := metricsCollector.GetStats()
-			serverLogger.WithFields(logrus.Fields{
-				"avg_latency":      stats.AvgLatency.String(),
-				"packets_sent":     stats.PacketsSent,
-				"packets_dropped":  stats.PacketsDropped,
-				"packet_loss_rate": stats.PacketLossRate,
-				"mispredictions":   stats.MispredictionCount,
-				"desyncs":          stats.DesyncCount,
-				"duration":         stats.Duration.String(),
-			}).Info("network resilience metrics summary")
-		}
-		if networkSim != nil {
-			sent, dropped, bytes := networkSim.GetStats()
-			serverLogger.WithFields(logrus.Fields{
-				"packets_sent":    sent,
-				"packets_dropped": dropped,
-				"bytes_processed": bytes,
-			}).Info("network simulation stats")
-		}
-		if err := server.Stop(); err != nil {
-			serverLogger.WithError(err).Error("error stopping server")
-		}
-	}()
+// shutdownServer performs graceful shutdown of all server components.
+func shutdownServer(serverLogger *logrus.Entry, metricsExporter *observability.MetricsExporter, stabilityMon *stability.Monitor, metricsCollector *resilience.MetricsCollector, networkSim *resilience.NetworkSimulator, server *network.TCPServer) {
+	serverLogger.Info("shutting down server")
 
-	// Run authoritative game loop
-	tickDuration := time.Duration(1000000000 / *tickRate) // nanoseconds per tick
+	shutdownMetricsExporter(metricsExporter, serverLogger)
+	shutdownStabilityMonitor(stabilityMon, serverLogger)
+	logResilienceMetrics(metricsCollector, serverLogger)
+	logNetworkSimulationStats(networkSim, serverLogger)
+
+	if err := server.Stop(); err != nil {
+		serverLogger.WithError(err).Error("error stopping server")
+	}
+}
+
+// shutdownMetricsExporter stops the metrics exporter if it is running.
+func shutdownMetricsExporter(metricsExporter *observability.MetricsExporter, serverLogger *logrus.Entry) {
+	if metricsExporter != nil {
+		if err := metricsExporter.Stop(); err != nil {
+			serverLogger.WithError(err).Error("error stopping metrics exporter")
+		} else {
+			serverLogger.Info("metrics exporter stopped")
+		}
+	}
+}
+
+// shutdownStabilityMonitor stops the stability monitor if it is running.
+func shutdownStabilityMonitor(stabilityMon *stability.Monitor, serverLogger *logrus.Entry) {
+	if stabilityMon != nil {
+		stabilityMon.Stop()
+		serverLogger.Info("stability monitor stopped")
+	}
+}
+
+// logResilienceMetrics logs network resilience metrics summary if available.
+func logResilienceMetrics(metricsCollector *resilience.MetricsCollector, serverLogger *logrus.Entry) {
+	if metricsCollector != nil {
+		stats := metricsCollector.GetStats()
+		serverLogger.WithFields(logrus.Fields{
+			"avg_latency":      stats.AvgLatency.String(),
+			"packets_sent":     stats.PacketsSent,
+			"packets_dropped":  stats.PacketsDropped,
+			"packet_loss_rate": stats.PacketLossRate,
+			"mispredictions":   stats.MispredictionCount,
+			"desyncs":          stats.DesyncCount,
+			"duration":         stats.Duration.String(),
+		}).Info("network resilience metrics summary")
+	}
+}
+
+// logNetworkSimulationStats logs network simulation statistics if available.
+func logNetworkSimulationStats(networkSim *resilience.NetworkSimulator, serverLogger *logrus.Entry) {
+	if networkSim != nil {
+		sent, dropped, bytes := networkSim.GetStats()
+		serverLogger.WithFields(logrus.Fields{
+			"packets_sent":    sent,
+			"packets_dropped": dropped,
+			"bytes_processed": bytes,
+		}).Info("network simulation stats")
+	}
+}
+
+// executeGameLoop sets up and runs the main server game loop.
+func executeGameLoop(world *engine.World, server *network.TCPServer, snapshotManager *network.SnapshotManager, lagCompensator *network.LagCompensator, logger *logrus.Logger, serverLogger *logrus.Entry) {
+	tickDuration := time.Duration(1000000000 / *tickRate)
 	ticker := time.NewTicker(tickDuration)
 	defer ticker.Stop()
 
@@ -235,7 +281,7 @@ func main() {
 	serverLogger.WithField("tickRate", *tickRate).Info("starting authoritative game loop")
 
 	startErrorHandler(server, logger)
-	startPlayerManagementHandlers(server, world, generatedTerrain, logger)
+	startPlayerManagementHandlers(server, world, nil, logger)
 
 	runGameLoop(world, server, snapshotManager, lagCompensator, ticker, logger, serverLogger, &lastUpdate)
 }

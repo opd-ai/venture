@@ -427,11 +427,35 @@ func (fs *FishingSystem) selectFish(spot *FishingSpotComponent, fishComp *Fishin
 	timeOfDay := fs.CurrentTimeOfDay()
 	weather := fs.CurrentWeather()
 
-	// Build weighted list of eligible fish
-	type weightedFish struct {
-		fish   *FishType
-		weight float64
+	eligibleFish := fs.buildEligibleFishList(spot, baitType, skillLevel, castDistance, timeOfDay, weather)
+	if len(eligibleFish.fish) == 0 || eligibleFish.totalWeight <= 0 {
+		return nil, 0
 	}
+
+	selected := fs.selectRandomFish(eligibleFish)
+	if selected == nil {
+		selected = eligibleFish.fish[0].fish
+	}
+
+	fishWeight := fs.calculateFishWeight(selected, skillLevel)
+
+	return selected, fishWeight
+}
+
+// weightedFish represents a fish type with its selection weight.
+type weightedFish struct {
+	fish   *FishType
+	weight float64
+}
+
+// eligibleFishList holds the weighted fish eligible for selection.
+type eligibleFishList struct {
+	fish        []weightedFish
+	totalWeight float64
+}
+
+// buildEligibleFishList constructs the list of fish eligible for catching based on conditions.
+func (fs *FishingSystem) buildEligibleFishList(spot *FishingSpotComponent, baitType string, skillLevel int, castDistance float64, timeOfDay TimeOfDay, weather string) eligibleFishList {
 	eligible := make([]weightedFish, 0)
 	totalWeight := 0.0
 
@@ -441,66 +465,11 @@ func (fs *FishingSystem) selectFish(spot *FishingSpotComponent, fishComp *Fishin
 			continue
 		}
 
-		// Check skill requirement
-		if skillLevel < fish.MinSkill {
+		if !fs.isFishEligible(fish, spot, baitType, skillLevel, castDistance, weather) {
 			continue
 		}
 
-		// Check depth (cast distance affects accessible depth)
-		accessibleDepth := DepthLevel(int(castDistance * 3))
-		if fish.MinDepth > accessibleDepth {
-			continue
-		}
-
-		// Check water type
-		waterMatch := false
-		for _, wt := range fish.WaterTypes {
-			if wt == spot.WaterType {
-				waterMatch = true
-				break
-			}
-		}
-		if !waterMatch {
-			continue
-		}
-
-		// Check bait requirement
-		if fish.RequiredBait != "" && fish.RequiredBait != baitType {
-			continue
-		}
-
-		// Check weather
-		if fish.WeatherCondition != "" && fish.WeatherCondition != weather {
-			continue
-		}
-
-		// Calculate effective weight with modifiers
-		effectiveWeight := spawnWeight
-
-		// Time of day bonus
-		if fish.BestTime == timeOfDay || fish.BestTime == TimeAny {
-			effectiveWeight *= 1.5
-		}
-
-		// Rarity modifier with rare fish bonus
-		switch fish.Rarity {
-		case FishRarityCommon:
-			effectiveWeight *= 1.0
-		case FishRarityUncommon:
-			effectiveWeight *= 0.5
-		case FishRarityRare:
-			effectiveWeight *= 0.2 * spot.RareFishBonus
-		case FishRarityEpic:
-			effectiveWeight *= 0.05 * spot.RareFishBonus
-		case FishRarityLegendary:
-			effectiveWeight *= 0.01 * spot.RareFishBonus
-		}
-
-		// Skill bonus for rarer fish
-		if fish.Rarity != FishRarityCommon {
-			skillBonus := 1.0 + float64(skillLevel-fish.MinSkill)*0.02
-			effectiveWeight *= skillBonus
-		}
+		effectiveWeight := fs.calculateEffectiveWeight(fish, spot, spawnWeight, skillLevel, timeOfDay)
 
 		if effectiveWeight > 0 {
 			eligible = append(eligible, weightedFish{fish: fish, weight: effectiveWeight})
@@ -508,39 +477,111 @@ func (fs *FishingSystem) selectFish(spot *FishingSpotComponent, fishComp *Fishin
 		}
 	}
 
-	if len(eligible) == 0 || totalWeight <= 0 {
-		return nil, 0
+	return eligibleFishList{fish: eligible, totalWeight: totalWeight}
+}
+
+// isFishEligible checks if a fish meets all requirements for catching.
+func (fs *FishingSystem) isFishEligible(fish *FishType, spot *FishingSpotComponent, baitType string, skillLevel int, castDistance float64, weather string) bool {
+	if skillLevel < fish.MinSkill {
+		return false
 	}
 
-	// Use deterministic random based on current time for reproducible tests
+	accessibleDepth := DepthLevel(int(castDistance * 3))
+	if fish.MinDepth > accessibleDepth {
+		return false
+	}
+
+	if !fs.checkWaterTypeMatch(fish, spot.WaterType) {
+		return false
+	}
+
+	if fish.RequiredBait != "" && fish.RequiredBait != baitType {
+		return false
+	}
+
+	if fish.WeatherCondition != "" && fish.WeatherCondition != weather {
+		return false
+	}
+
+	return true
+}
+
+// checkWaterTypeMatch verifies if the fish can live in the spot's water type.
+func (fs *FishingSystem) checkWaterTypeMatch(fish *FishType, spotWaterType WaterType) bool {
+	for _, wt := range fish.WaterTypes {
+		if wt == spotWaterType {
+			return true
+		}
+	}
+	return false
+}
+
+// calculateEffectiveWeight computes the fish selection weight with all modifiers applied.
+func (fs *FishingSystem) calculateEffectiveWeight(fish *FishType, spot *FishingSpotComponent, spawnWeight float64, skillLevel int, timeOfDay TimeOfDay) float64 {
+	effectiveWeight := spawnWeight
+
+	if fish.BestTime == timeOfDay || fish.BestTime == TimeAny {
+		effectiveWeight *= 1.5
+	}
+
+	effectiveWeight *= fs.getRarityMultiplier(fish.Rarity, spot.RareFishBonus)
+
+	if fish.Rarity != FishRarityCommon {
+		skillBonus := 1.0 + float64(skillLevel-fish.MinSkill)*0.02
+		effectiveWeight *= skillBonus
+	}
+
+	return effectiveWeight
+}
+
+// getRarityMultiplier returns the weight multiplier based on fish rarity.
+func (fs *FishingSystem) getRarityMultiplier(rarity FishRarity, rareFishBonus float64) float64 {
+	switch rarity {
+	case FishRarityCommon:
+		return 1.0
+	case FishRarityUncommon:
+		return 0.5
+	case FishRarityRare:
+		return 0.2 * rareFishBonus
+	case FishRarityEpic:
+		return 0.05 * rareFishBonus
+	case FishRarityLegendary:
+		return 0.01 * rareFishBonus
+	default:
+		return 1.0
+	}
+}
+
+// selectRandomFish performs weighted random selection from eligible fish.
+func (fs *FishingSystem) selectRandomFish(eligible eligibleFishList) *FishType {
 	seed := time.Now().UnixNano()
 	rng := rand.New(rand.NewSource(seed))
 
-	// Weighted random selection
-	roll := rng.Float64() * totalWeight
+	roll := rng.Float64() * eligible.totalWeight
 	cumulative := 0.0
-	var selected *FishType
-	for _, wf := range eligible {
+
+	for _, wf := range eligible.fish {
 		cumulative += wf.weight
 		if roll <= cumulative {
-			selected = wf.fish
-			break
+			return wf.fish
 		}
 	}
 
-	if selected == nil {
-		selected = eligible[0].fish
-	}
+	return nil
+}
 
-	// Calculate weight for this catch
-	weightRange := selected.MaxWeight - selected.BaseWeight
-	fishWeight := selected.BaseWeight + rng.Float64()*weightRange
+// calculateFishWeight determines the weight of the caught fish with skill bonuses.
+func (fs *FishingSystem) calculateFishWeight(fish *FishType, skillLevel int) float64 {
+	seed := time.Now().UnixNano()
+	rng := rand.New(rand.NewSource(seed))
 
-	// Skill can increase weight
+	weightRange := fish.MaxWeight - fish.BaseWeight
+	fishWeight := fish.BaseWeight + rng.Float64()*weightRange
+
 	skillWeightBonus := 1.0 + float64(skillLevel)*0.005
 	fishWeight *= skillWeightBonus
 
-	return selected, fishWeight
+	return fishWeight
 }
 
 // processBite handles the bite window phase.

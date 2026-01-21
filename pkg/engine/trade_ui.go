@@ -589,67 +589,98 @@ func (ui *TradeUI) handlePartnerSelectionInput() {
 
 // handleItemSelectionInput handles keyboard input for item selection.
 func (ui *TradeUI) handleItemSelectionInput() {
-	// Get item count for current panel
 	itemCount := ui.getItemCountForPanel(ui.focusedPanel)
 	if itemCount == 0 {
-		itemCount = 1 // Prevent division by zero
+		itemCount = 1
 	}
 
-	// Arrow key navigation within grid
+	ui.handleNavigationKeys()
+	ui.handlePanelSwitch()
+	ui.handleItemSelection(itemCount)
+	ui.handleConfirmCancel()
+}
+
+// handleNavigationKeys processes arrow key navigation within the item grid.
+func (ui *TradeUI) handleNavigationKeys() {
 	if inpututil.IsKeyJustPressed(ebiten.KeyLeft) {
-		ui.cursorCol--
-		if ui.cursorCol < 0 {
-			ui.cursorCol = ui.gridCols - 1
-			ui.cursorRow--
-			if ui.cursorRow < 0 {
-				ui.cursorRow = ui.gridRows - 1
-			}
-		}
+		ui.navigateLeft()
 	}
 	if inpututil.IsKeyJustPressed(ebiten.KeyRight) {
-		ui.cursorCol++
-		if ui.cursorCol >= ui.gridCols {
-			ui.cursorCol = 0
-			ui.cursorRow++
-			if ui.cursorRow >= ui.gridRows {
-				ui.cursorRow = 0
-			}
-		}
+		ui.navigateRight()
 	}
 	if inpututil.IsKeyJustPressed(ebiten.KeyUp) {
+		ui.navigateUp()
+	}
+	if inpututil.IsKeyJustPressed(ebiten.KeyDown) {
+		ui.navigateDown()
+	}
+}
+
+// navigateLeft moves the cursor left in the grid with wrapping.
+func (ui *TradeUI) navigateLeft() {
+	ui.cursorCol--
+	if ui.cursorCol < 0 {
+		ui.cursorCol = ui.gridCols - 1
 		ui.cursorRow--
 		if ui.cursorRow < 0 {
 			ui.cursorRow = ui.gridRows - 1
 		}
 	}
-	if inpututil.IsKeyJustPressed(ebiten.KeyDown) {
+}
+
+// navigateRight moves the cursor right in the grid with wrapping.
+func (ui *TradeUI) navigateRight() {
+	ui.cursorCol++
+	if ui.cursorCol >= ui.gridCols {
+		ui.cursorCol = 0
 		ui.cursorRow++
 		if ui.cursorRow >= ui.gridRows {
 			ui.cursorRow = 0
 		}
 	}
+}
 
-	// Tab to switch between offer/request panels
+// navigateUp moves the cursor up in the grid with wrapping.
+func (ui *TradeUI) navigateUp() {
+	ui.cursorRow--
+	if ui.cursorRow < 0 {
+		ui.cursorRow = ui.gridRows - 1
+	}
+}
+
+// navigateDown moves the cursor down in the grid with wrapping.
+func (ui *TradeUI) navigateDown() {
+	ui.cursorRow++
+	if ui.cursorRow >= ui.gridRows {
+		ui.cursorRow = 0
+	}
+}
+
+// handlePanelSwitch processes Tab key to switch between offer and request panels.
+func (ui *TradeUI) handlePanelSwitch() {
 	if inpututil.IsKeyJustPressed(ebiten.KeyTab) {
-		ui.focusedPanel = 1 - ui.focusedPanel // Toggle between 0 and 1
+		ui.focusedPanel = 1 - ui.focusedPanel
 		ui.cursorRow = 0
 		ui.cursorCol = 0
 	}
+}
 
-	// Space to toggle item selection
+// handleItemSelection processes Space key to toggle item selection.
+func (ui *TradeUI) handleItemSelection(itemCount int) {
 	if inpututil.IsKeyJustPressed(ebiten.KeySpace) {
 		slotIndex := ui.cursorRow*ui.gridCols + ui.cursorCol
 		if slotIndex < itemCount {
 			ui.toggleSlotSelection(ui.focusedPanel, slotIndex)
 		}
 	}
+}
 
-	// Enter to confirm selection
+// handleConfirmCancel processes Enter and Escape keys for confirmation and cancellation.
+func (ui *TradeUI) handleConfirmCancel() {
 	if inpututil.IsKeyJustPressed(ebiten.KeyEnter) {
 		ui.confirmItemSelection()
 	}
 
-	// Escape to cancel
 	if inpututil.IsKeyJustPressed(ebiten.KeyEscape) {
 		ui.cancelTrade()
 	}

@@ -46,70 +46,147 @@ func NewEntity(id uint64) *Entity {
 // AddComponent adds a component to this entity.
 func (e *Entity) AddComponent(c Component) {
 	e.Components[c.Type()] = c
+	e.updateComponentCache(c)
+}
 
-	// Update fast-path cache for hot components
-	// Type assertions here are safe because we control the type based on c.Type()
+// updateComponentCache updates the fast-path cache for hot components.
+func (e *Entity) updateComponentCache(c Component) {
 	switch c.Type() {
 	case "position":
-		if pos, ok := c.(*PositionComponent); ok {
-			e.position = pos
-		}
+		e.cachePosition(c)
 	case "velocity":
-		if vel, ok := c.(*VelocityComponent); ok {
-			e.velocity = vel
-		}
+		e.cacheVelocity(c)
 	case "health":
-		if health, ok := c.(*HealthComponent); ok {
-			e.health = health
-		}
+		e.cacheHealth(c)
 	case "collider":
-		if collider, ok := c.(*ColliderComponent); ok {
-			e.collider = collider
-		}
+		e.cacheCollider(c)
 	case "inventory":
-		if inv, ok := c.(*InventoryComponent); ok {
-			e.inventory = inv
-		}
+		e.cacheInventory(c)
 	case "stats":
-		if stats, ok := c.(*StatsComponent); ok {
-			e.stats = stats
-		}
+		e.cacheStats(c)
 	case "animation":
-		if anim, ok := c.(*AnimationComponent); ok {
-			e.animation = anim
-		}
+		e.cacheAnimation(c)
 	case "attack":
-		if atk, ok := c.(*AttackComponent); ok {
-			e.attack = atk
-		}
+		e.cacheAttack(c)
 	case "experience":
-		if exp, ok := c.(*ExperienceComponent); ok {
-			e.experience = exp
-		}
+		e.cacheExperience(c)
 	case "sprite":
-		if sprite, ok := c.(*EbitenSprite); ok {
-			e.sprite = sprite
-		}
+		e.cacheSprite(c)
 	case "rotation":
-		if rot, ok := c.(*RotationComponent); ok {
-			e.rotation = rot
-		}
+		e.cacheRotation(c)
 	case "visual_feedback":
-		if vf, ok := c.(*VisualFeedbackComponent); ok {
-			e.visualFeedback = vf
-		}
+		e.cacheVisualFeedback(c)
 	case "layer":
-		if layer, ok := c.(*LayerComponent); ok {
-			e.layer = layer
-		}
+		e.cacheLayer(c)
 	case "team":
-		if team, ok := c.(*TeamComponent); ok {
-			e.team = team
-		}
+		e.cacheTeam(c)
 	case "particle_emitter":
-		if emitter, ok := c.(*ParticleEmitterComponent); ok {
-			e.particleEmitter = emitter
-		}
+		e.cacheParticleEmitter(c)
+	}
+}
+
+// cachePosition updates the position component cache.
+func (e *Entity) cachePosition(c Component) {
+	if pos, ok := c.(*PositionComponent); ok {
+		e.position = pos
+	}
+}
+
+// cacheVelocity updates the velocity component cache.
+func (e *Entity) cacheVelocity(c Component) {
+	if vel, ok := c.(*VelocityComponent); ok {
+		e.velocity = vel
+	}
+}
+
+// cacheHealth updates the health component cache.
+func (e *Entity) cacheHealth(c Component) {
+	if health, ok := c.(*HealthComponent); ok {
+		e.health = health
+	}
+}
+
+// cacheCollider updates the collider component cache.
+func (e *Entity) cacheCollider(c Component) {
+	if collider, ok := c.(*ColliderComponent); ok {
+		e.collider = collider
+	}
+}
+
+// cacheInventory updates the inventory component cache.
+func (e *Entity) cacheInventory(c Component) {
+	if inv, ok := c.(*InventoryComponent); ok {
+		e.inventory = inv
+	}
+}
+
+// cacheStats updates the stats component cache.
+func (e *Entity) cacheStats(c Component) {
+	if stats, ok := c.(*StatsComponent); ok {
+		e.stats = stats
+	}
+}
+
+// cacheAnimation updates the animation component cache.
+func (e *Entity) cacheAnimation(c Component) {
+	if anim, ok := c.(*AnimationComponent); ok {
+		e.animation = anim
+	}
+}
+
+// cacheAttack updates the attack component cache.
+func (e *Entity) cacheAttack(c Component) {
+	if atk, ok := c.(*AttackComponent); ok {
+		e.attack = atk
+	}
+}
+
+// cacheExperience updates the experience component cache.
+func (e *Entity) cacheExperience(c Component) {
+	if exp, ok := c.(*ExperienceComponent); ok {
+		e.experience = exp
+	}
+}
+
+// cacheSprite updates the sprite component cache.
+func (e *Entity) cacheSprite(c Component) {
+	if sprite, ok := c.(*EbitenSprite); ok {
+		e.sprite = sprite
+	}
+}
+
+// cacheRotation updates the rotation component cache.
+func (e *Entity) cacheRotation(c Component) {
+	if rot, ok := c.(*RotationComponent); ok {
+		e.rotation = rot
+	}
+}
+
+// cacheVisualFeedback updates the visual feedback component cache.
+func (e *Entity) cacheVisualFeedback(c Component) {
+	if vf, ok := c.(*VisualFeedbackComponent); ok {
+		e.visualFeedback = vf
+	}
+}
+
+// cacheLayer updates the layer component cache.
+func (e *Entity) cacheLayer(c Component) {
+	if layer, ok := c.(*LayerComponent); ok {
+		e.layer = layer
+	}
+}
+
+// cacheTeam updates the team component cache.
+func (e *Entity) cacheTeam(c Component) {
+	if team, ok := c.(*TeamComponent); ok {
+		e.team = team
+	}
+}
+
+// cacheParticleEmitter updates the particle emitter component cache.
+func (e *Entity) cacheParticleEmitter(c Component) {
+	if emitter, ok := c.(*ParticleEmitterComponent); ok {
+		e.particleEmitter = emitter
 	}
 }
 

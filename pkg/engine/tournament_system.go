@@ -84,21 +84,7 @@ func (s *TournamentSystem) CreateTournament(def TournamentDefinition, startTime 
 
 // RegisterPlayer registers a player for a tournament.
 func (s *TournamentSystem) RegisterPlayer(entity *Entity, tournamentID string) bool {
-	// Find the tournament
-	var tournament *TournamentInstance
-	for _, t := range s.scheduledTournaments {
-		if t.InstanceID == tournamentID {
-			tournament = t
-			break
-		}
-	}
-
-	if tournament == nil {
-		if t, exists := s.activeTournaments[tournamentID]; exists {
-			tournament = t
-		}
-	}
-
+	tournament := s.findTournamentByID(tournamentID)
 	if tournament == nil {
 		log.WithFields(log.Fields{
 			"system_name":   "tournament",
@@ -108,7 +94,49 @@ func (s *TournamentSystem) RegisterPlayer(entity *Entity, tournamentID string) b
 		return false
 	}
 
-	// Check phase
+	if !s.validateRegistrationPhase(tournament, tournamentID) {
+		return false
+	}
+
+	if !s.checkTournamentCapacity(tournament, tournamentID) {
+		return false
+	}
+
+	if s.isPlayerAlreadyRegistered(tournament, entity.ID) {
+		return false
+	}
+
+	if !s.validateRatingRequirement(tournament, entity, tournamentID) {
+		return false
+	}
+
+	tc, ok := s.getTournamentComponent(entity)
+	if !ok {
+		return false
+	}
+
+	s.registerPlayerInTournament(tournament, entity, tournamentID, tc)
+
+	return true
+}
+
+// findTournamentByID searches for a tournament in scheduled and active lists.
+func (s *TournamentSystem) findTournamentByID(tournamentID string) *TournamentInstance {
+	for _, t := range s.scheduledTournaments {
+		if t.InstanceID == tournamentID {
+			return t
+		}
+	}
+
+	if t, exists := s.activeTournaments[tournamentID]; exists {
+		return t
+	}
+
+	return nil
+}
+
+// validateRegistrationPhase checks if the tournament is in registration phase.
+func (s *TournamentSystem) validateRegistrationPhase(tournament *TournamentInstance, tournamentID string) bool {
 	if tournament.Phase != TournamentPhaseRegistration {
 		log.WithFields(log.Fields{
 			"system_name":   "tournament",
@@ -118,8 +146,11 @@ func (s *TournamentSystem) RegisterPlayer(entity *Entity, tournamentID string) b
 		}).Debug("Cannot register player")
 		return false
 	}
+	return true
+}
 
-	// Check max participants
+// checkTournamentCapacity verifies the tournament has not reached max participants.
+func (s *TournamentSystem) checkTournamentCapacity(tournament *TournamentInstance, tournamentID string) bool {
 	if len(tournament.Participants) >= tournament.Definition.MaxParticipants {
 		log.WithFields(log.Fields{
 			"system_name":   "tournament",
@@ -128,52 +159,67 @@ func (s *TournamentSystem) RegisterPlayer(entity *Entity, tournamentID string) b
 		}).Debug("Cannot register player")
 		return false
 	}
+	return true
+}
 
-	// Check if already registered
+// isPlayerAlreadyRegistered checks if the player is already in the tournament.
+func (s *TournamentSystem) isPlayerAlreadyRegistered(tournament *TournamentInstance, entityID uint64) bool {
 	for _, p := range tournament.Participants {
-		if p == entity.ID {
-			return false
+		if p == entityID {
+			return true
 		}
 	}
+	return false
+}
 
-	// Check rating requirement
-	if tournament.Definition.RatingRequirement > 0 {
-		if pvpComp, ok := entity.GetComponent("pvp_rating"); ok {
-			if pvpRating, ok := pvpComp.(*PvPRatingComponent); ok {
-				if pvpRating.Rating < tournament.Definition.RatingRequirement {
-					log.WithFields(log.Fields{
-						"system_name":   "tournament",
-						"tournament_id": tournamentID,
-						"rating":        pvpRating.Rating,
-						"required":      tournament.Definition.RatingRequirement,
-						"reason":        "rating_too_low",
-					}).Debug("Cannot register player")
-					return false
-				}
-			}
-		}
+// validateRatingRequirement checks if the player meets the rating requirement.
+func (s *TournamentSystem) validateRatingRequirement(tournament *TournamentInstance, entity *Entity, tournamentID string) bool {
+	if tournament.Definition.RatingRequirement <= 0 {
+		return true
 	}
 
-	// Update tournament component
+	pvpComp, ok := entity.GetComponent("pvp_rating")
+	if !ok {
+		return true
+	}
+
+	pvpRating, ok := pvpComp.(*PvPRatingComponent)
+	if !ok {
+		return true
+	}
+
+	if pvpRating.Rating < tournament.Definition.RatingRequirement {
+		log.WithFields(log.Fields{
+			"system_name":   "tournament",
+			"tournament_id": tournamentID,
+			"rating":        pvpRating.Rating,
+			"required":      tournament.Definition.RatingRequirement,
+			"reason":        "rating_too_low",
+		}).Debug("Cannot register player")
+		return false
+	}
+
+	return true
+}
+
+// getTournamentComponent retrieves and validates the tournament component from an entity.
+func (s *TournamentSystem) getTournamentComponent(entity *Entity) (*TournamentComponent, bool) {
 	tournComp, ok := entity.GetComponent("tournament")
 	if !ok {
-		return false
+		return nil, false
 	}
 	tc, ok := tournComp.(*TournamentComponent)
 	if !ok {
-		return false
+		return nil, false
 	}
+	return tc, true
+}
 
-	// Register
+// registerPlayerInTournament performs the actual registration and seeding.
+func (s *TournamentSystem) registerPlayerInTournament(tournament *TournamentInstance, entity *Entity, tournamentID string, tc *TournamentComponent) {
 	tournament.Participants = append(tournament.Participants, entity.ID)
 
-	// Seed based on rating or registration order
-	seed := len(tournament.Participants)
-	if pvpComp, ok := entity.GetComponent("pvp_rating"); ok {
-		if pvpRating, ok := pvpComp.(*PvPRatingComponent); ok {
-			seed = pvpRating.Rating
-		}
-	}
+	seed := s.calculatePlayerSeed(tournament, entity)
 	tournament.Seeds[entity.ID] = seed
 
 	tc.EnterTournament(tournamentID, seed)
@@ -184,8 +230,17 @@ func (s *TournamentSystem) RegisterPlayer(entity *Entity, tournamentID string) b
 		"entityID":      entity.ID,
 		"participants":  len(tournament.Participants),
 	}).Info("Player registered for tournament")
+}
 
-	return true
+// calculatePlayerSeed determines the seed value for a player based on rating or registration order.
+func (s *TournamentSystem) calculatePlayerSeed(tournament *TournamentInstance, entity *Entity) int {
+	seed := len(tournament.Participants)
+	if pvpComp, ok := entity.GetComponent("pvp_rating"); ok {
+		if pvpRating, ok := pvpComp.(*PvPRatingComponent); ok {
+			seed = pvpRating.Rating
+		}
+	}
+	return seed
 }
 
 // UnregisterPlayer removes a player from a tournament.

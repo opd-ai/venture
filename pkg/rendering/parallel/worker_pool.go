@@ -124,6 +124,9 @@ func (p *WorkerPool) Stop() {
 
 // Submit adds a task to the worker pool for processing.
 // Returns false if the pool is not running.
+// WARNING: Submit blocks if the task queue is full and results are not being
+// drained. Use TrySubmit for non-blocking submission or ensure a goroutine
+// is draining Results() concurrently to avoid deadlock.
 func (p *WorkerPool) Submit(task Task) bool {
 	p.mu.RLock()
 	defer p.mu.RUnlock()
@@ -134,6 +137,25 @@ func (p *WorkerPool) Submit(task Task) bool {
 
 	p.tasks <- task
 	return true
+}
+
+// TrySubmit attempts to add a task to the worker pool without blocking.
+// Returns false if the pool is not running or if the task queue is full.
+// This is useful when you want to avoid blocking on a full queue.
+func (p *WorkerPool) TrySubmit(task Task) bool {
+	p.mu.RLock()
+	defer p.mu.RUnlock()
+
+	if !p.running {
+		return false
+	}
+
+	select {
+	case p.tasks <- task:
+		return true
+	default:
+		return false
+	}
 }
 
 // Results returns a channel that receives completed task results.

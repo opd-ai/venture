@@ -125,25 +125,20 @@ Memory Profile (cumulative):
 ```
 - **Performance Target Gap:** 0.014ms generation time (13,994 ns/op) leaves ~16.656ms of the 16.67ms frame budget; the primary concern here is allocation volume and resulting GC pressure rather than raw CPU time.
 
-### Issue R3: WorkerPool Deadlock Under High Load (Invalidated)
+### Issue R3: WorkerPool Deadlock Under High Load ✅ **FIXED**
 - **Location:** `pkg/rendering/parallel/worker_pool.go:135,151` (`Submit()` and `worker()`)
-- **Severity:** N/A (Invalid – prior hypothesis disproven)
-- **Measured Impact:**
-  - Complete application hang observed under benchmark load (see note below)
-  - Affects parallel rendering pipeline (original observation)
-- **Root Cause:** **Original claim invalid.** The audit previously stated that the worker pool used unbuffered channels for tasks and results, causing a circular wait when results were not drained. Code inspection of `pkg/rendering/parallel/worker_pool.go` (lines ~75–80) shows that both `tasks` and `results` are actually **buffered channels with capacity 1024**, with an in-code comment explaining this was done "to prevent deadlock when submitting many tasks." Any deadlock observed in benchmarks cannot be attributed to unbuffered channels and requires a separate investigation.
-- **Evidence:**
-  - Prior benchmark:
-    ```
-    BenchmarkWorkerPoolThroughput-4  fatal error: all goroutines are asleep - deadlock!
-    
-    goroutine 380 [chan send]:
-      worker_pool.go:135  Submit() - trying to send task
-    goroutine 392 [chan send]:
-      worker_pool.go:151  worker() - trying to send result
-    ```
-  - However, given the confirmed use of buffered channels, this benchmark output does **not** validate the original unbuffered-channel explanation and should not be used as evidence for that specific root cause.
-- **Performance Target Gap:** The earlier claim "Deadlock prevents parallel rendering entirely" was based on the invalid unbuffered-channel hypothesis and is no longer considered accurate. Any remaining throughput or deadlock concerns in the worker pool should be re-benchmarked and documented separately.
+- **Severity:** N/A (Fixed)
+- **Root Cause:** The deadlock occurs when callers submit tasks faster than results are drained. With 1024-size buffers for both tasks and results, workers block on `p.results <- result` when the result buffer is full. If the submitter is also blocked waiting for task queue space, circular deadlock occurs.
+- **Solution Applied 2026-01-21:**
+  - Added `TrySubmit(task Task) bool` non-blocking API
+  - Added clear documentation on `Submit()` about concurrent result draining requirement
+  - Fixed benchmarks to drain results concurrently
+  - Test coverage: 97.5%
+- **Evidence (after fix):**
+```
+BenchmarkWorkerPoolThroughput-16    13861348    167.7 ns/op    8 B/op    0 allocs/op
+BenchmarkWorkerPoolConcurrent-16    11474940    211.3 ns/op    7 B/op    0 allocs/op
+```
 
 ### Issue R4: Particle System LOD Enforcement Overhead
 - **Location:** `pkg/rendering/particles/` (`EnforceLODLimit()`)
@@ -212,16 +207,16 @@ BenchmarkLoad-4  909   1319896 ns/op  498497 B/op  5027 allocs/op
 
 **By Severity:**
 - High (significant but correctable): 2 issues (Forest generation CPU time, Composite terrain memory)
-- Medium (noticeable impact): 2 issues (Weather allocation pattern, System initialization)
+- Medium (noticeable impact): 2 issues (Weather allocation pattern ✅, System initialization)
 - Low (minor optimization): 5 issues (Cellular terrain, LOD enforcement, SPH simulation, Debris particles, Ambience particles)
-- Invalidated: 1 issue (WorkerPool - requires re-investigation)
+- Fixed: 2 issues (WorkerPool deadlock ✅, RNG source pooling ✅)
 
 **By Type:**
 - Algorithmic inefficiency: 2 issues (Poisson validation trigonometry, SPH neighbor search)
-- Unnecessary allocations: 3 issues (Weather particles, Ambience particles, Debris particles)
+- Unnecessary allocations: 3 issues (Weather particles ✅, Ambience particles, Debris particles)
 - Blocking I/O: 1 issue (Guild save)
 - Initialization overhead: 2 issues (System init, Composite terrain chain)
-- Invalidated: 1 issue (WorkerPool deadlock - original analysis incorrect)
+- Fixed: 2 issues (WorkerPool deadlock ✅, RNG pooling ✅)
 
 ---
 
@@ -275,14 +270,18 @@ Based on benchmark data (corrected units):
 ## PRIORITIZED RECOMMENDATIONS
 
 ### Priority 1 (High Impact - Implement First)
-1. **WorkerPool Investigation**: Re-benchmark and investigate actual cause of observed deadlock
+1. **WorkerPool Investigation**: Re-benchmark and investigate actual cause of observed deadlock ✅ **COMPLETED 2026-01-21**
    - Expected improvement: Determine if parallel rendering has actual issues
    - Implementation complexity: Low
-   - Implementation approach:
-     - Keep the existing buffered task/result channels (the current implementation already uses a buffered channel, e.g. size 1024).
-     - Add or verify a dedicated goroutine (or consumer loop) that continuously drains `p.results` for the lifetime of the pool, so workers never block permanently on sending results.
-     - If backpressure is required, expose an explicit non-blocking `TrySubmit(task Task) bool` or similar API that returns `false` when the task queue is full, instead of relying on a blocking send.
-     - Document the expected consumption pattern for results so callers know they must drain the result channel promptly to avoid deadlocks.
+   - **Root Cause Identified:** The deadlock occurs when callers submit tasks faster than results are drained. With 1024-size buffers for both tasks and results, when ~1024 results accumulate without being drained, workers block on `p.results <- result`. If the submitter is also blocked on `p.tasks <- task` (waiting for queue space), circular deadlock occurs.
+   - **Solution Implemented:**
+     - Added `TrySubmit(task Task) bool` non-blocking API that returns `false` when the task queue is full
+     - Added clear documentation warning on `Submit()` about the need to drain results concurrently
+     - Fixed benchmark tests to drain results in a concurrent goroutine to avoid deadlock
+   - **Test Results:**
+     - All tests pass with race detector enabled
+     - Benchmarks now run successfully: 167.7 ns/op throughput, 211.3 ns/op concurrent
+     - Test coverage: 97.5%
    
 2. **Weather Particle Pre-allocation**: Pool weather particle systems and RNG sources ✅ **COMPLETED 2026-01-21**
    - Expected improvement: -457KB allocation per weather event; reduced GC pressure

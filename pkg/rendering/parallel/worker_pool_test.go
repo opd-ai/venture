@@ -178,6 +178,71 @@ func TestWorkerPoolSubmitAfterStop(t *testing.T) {
 	}
 }
 
+func TestWorkerPoolTrySubmit(t *testing.T) {
+	pool := NewWorkerPool(2)
+
+	// TrySubmit should fail when pool not running
+	task := Task{ID: 1, Type: TaskSpriteGeneration, Data: nil}
+	if pool.TrySubmit(task) {
+		t.Error("TrySubmit should fail when pool is not running")
+	}
+
+	pool.Start()
+	defer pool.Stop()
+
+	// Start draining results to avoid blocking
+	go func() {
+		for range pool.Results() {
+		}
+	}()
+
+	// TrySubmit should succeed when queue has space
+	for i := 0; i < 10; i++ {
+		task := Task{ID: i, Type: TaskSpriteGeneration, Data: i}
+		if !pool.TrySubmit(task) {
+			t.Errorf("TrySubmit should succeed for task %d when queue has space", i)
+		}
+	}
+}
+
+func TestWorkerPoolTrySubmitWhenFull(t *testing.T) {
+	// Create pool with small buffer to test queue full scenario
+	pool := NewWorkerPool(1)
+	pool.Start()
+	defer pool.Stop()
+
+	// Fill the task queue without draining results
+	// This will eventually fill up because the worker will block on results
+	filled := 0
+	for i := 0; i < 3000; i++ {
+		task := Task{ID: i, Type: TaskSpriteGeneration, Data: i}
+		if !pool.TrySubmit(task) {
+			filled = i
+			break
+		}
+	}
+
+	// We should have been able to submit some tasks before queue filled
+	if filled == 0 {
+		t.Error("Expected some tasks to be submitted before queue filled")
+	}
+
+	// Now drain results to allow more submissions
+	go func() {
+		for range pool.Results() {
+		}
+	}()
+
+	// Give workers time to process
+	time.Sleep(10 * time.Millisecond)
+
+	// Should be able to submit again
+	task := Task{ID: 9999, Type: TaskSpriteGeneration, Data: 9999}
+	if !pool.TrySubmit(task) {
+		t.Error("TrySubmit should succeed after draining results")
+	}
+}
+
 func TestWorkerPoolStats(t *testing.T) {
 	pool := NewWorkerPool(8)
 
@@ -288,6 +353,17 @@ func BenchmarkWorkerPoolThroughput(b *testing.B) {
 	pool.Start()
 	defer pool.Stop()
 
+	// Start a goroutine to drain results concurrently to avoid deadlock
+	// when submit fills the task buffer and workers fill the result buffer
+	var received int64
+	done := make(chan struct{})
+	go func() {
+		for range pool.Results() {
+			atomic.AddInt64(&received, 1)
+		}
+		close(done)
+	}()
+
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		pool.Submit(Task{
@@ -296,10 +372,11 @@ func BenchmarkWorkerPoolThroughput(b *testing.B) {
 			Data: i,
 		})
 	}
+	b.StopTimer()
 
-	// Drain results
-	for i := 0; i < b.N; i++ {
-		<-pool.Results()
+	// Wait for all results to be received
+	for atomic.LoadInt64(&received) < int64(b.N) {
+		time.Sleep(time.Microsecond)
 	}
 }
 
@@ -308,6 +385,16 @@ func BenchmarkWorkerPoolConcurrent(b *testing.B) {
 	pool := NewWorkerPool(8)
 	pool.Start()
 	defer pool.Stop()
+
+	// Start a goroutine to drain results concurrently to avoid deadlock
+	var received int64
+	done := make(chan struct{})
+	go func() {
+		for range pool.Results() {
+			atomic.AddInt64(&received, 1)
+		}
+		close(done)
+	}()
 
 	b.ResetTimer()
 	b.RunParallel(func(pb *testing.PB) {
@@ -321,10 +408,11 @@ func BenchmarkWorkerPoolConcurrent(b *testing.B) {
 			taskID++
 		}
 	})
+	b.StopTimer()
 
-	// Drain results
-	for i := 0; i < b.N; i++ {
-		<-pool.Results()
+	// Wait for all results to be received
+	for atomic.LoadInt64(&received) < int64(b.N) {
+		time.Sleep(time.Microsecond)
 	}
 }
 

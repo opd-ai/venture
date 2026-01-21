@@ -296,3 +296,102 @@ func TestNewValidator(t *testing.T) {
 		t.Errorf("NewValidator() initialized with %d genres, want 5", len(validator.validGenres))
 	}
 }
+
+// TestValidator_ValidateDirectory_MkdirAllFailure tests the os.MkdirAll failure path.
+func TestValidator_ValidateDirectory_MkdirAllFailure(t *testing.T) {
+	validator := NewValidator()
+
+	// Create a read-only parent directory to cause MkdirAll to fail
+	// This ensures os.Stat returns "not exists" but MkdirAll fails with "permission denied"
+	tmpDir := t.TempDir()
+	readOnlyDir := filepath.Join(tmpDir, "readonly")
+	if err := os.MkdirAll(readOnlyDir, 0o755); err != nil {
+		t.Fatalf("Failed to create test directory: %v", err)
+	}
+	if err := os.Chmod(readOnlyDir, 0o555); err != nil {
+		t.Fatalf("Failed to make directory read-only: %v", err)
+	}
+	// Restore permissions after test for cleanup
+	defer os.Chmod(readOnlyDir, 0o755)
+
+	// Try to create a subdirectory under the read-only directory
+	invalidPath := filepath.Join(readOnlyDir, "subdir")
+	err := validator.ValidateDirectory(invalidPath, true)
+	if err == nil {
+		t.Error("ValidateDirectory() expected error when MkdirAll fails, got nil")
+	}
+}
+
+// TestValidator_ValidateAll_LogDir tests the LogDir validation path.
+func TestValidator_ValidateAll_LogDir(t *testing.T) {
+	validator := NewValidator()
+
+	tests := []struct {
+		name    string
+		config  *Config
+		wantErr bool
+	}{
+		{
+			name: "invalid log directory",
+			config: &Config{
+				LogDir:     "/nonexistent/invalid/logdir",
+				CreateDirs: false,
+			},
+			wantErr: true,
+		},
+		{
+			name: "valid log directory",
+			config: &Config{
+				LogDir:     t.TempDir(),
+				CreateDirs: false,
+			},
+			wantErr: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := validator.ValidateAll(tt.config)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("ValidateAll() with LogDir error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+// TestValidator_ValidateAll_ModsDir tests the ModsDir validation path.
+func TestValidator_ValidateAll_ModsDir(t *testing.T) {
+	validator := NewValidator()
+
+	tests := []struct {
+		name    string
+		config  *Config
+		wantErr bool
+	}{
+		{
+			name: "invalid mods directory",
+			config: &Config{
+				ModsDir:    "/nonexistent/invalid/modsdir",
+				CreateDirs: false,
+			},
+			wantErr: true,
+		},
+		{
+			name: "valid mods directory",
+			config: &Config{
+				ModsDir:    t.TempDir(),
+				CreateDirs: false,
+			},
+			wantErr: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := validator.ValidateAll(tt.config)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("ValidateAll() with ModsDir error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}

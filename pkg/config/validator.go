@@ -175,4 +175,3 @@ func (v *Validator) ValidateAll(cfg *Config) error {
 
 	return nil
 }
-

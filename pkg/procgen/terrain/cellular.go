@@ -11,6 +11,14 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+// neighborOffsets contains pre-computed neighbor coordinate offsets for
+// the 8 surrounding cells. Using pre-computed offsets avoids nested loop overhead.
+var neighborOffsets = [8][2]int{
+	{-1, -1}, {0, -1}, {1, -1},
+	{-1, 0}, {1, 0},
+	{-1, 1}, {0, 1}, {1, 1},
+}
+
 // CellularGenerator generates cave-like terrain using cellular automata.
 // It starts with random noise and applies rules to create organic structures.
 type CellularGenerator struct {
@@ -147,29 +155,40 @@ func (g *CellularGenerator) initializeNoise(terrain *Terrain, rng *rand.Rand) {
 }
 
 // simulateStep performs one iteration of the cellular automata rules.
+// Uses direct tile access without bounds checking for interior cells.
 func (g *CellularGenerator) simulateStep(terrain *Terrain) {
-	// Create a copy of the current state
-	newTiles := make([][]TileType, terrain.Height)
+	width := terrain.Width
+	height := terrain.Height
+	tiles := terrain.Tiles
+
+	// Create a copy of the current state using a single allocation
+	newTiles := make([][]TileType, height)
 	for y := range newTiles {
-		newTiles[y] = make([]TileType, terrain.Width)
-		copy(newTiles[y], terrain.Tiles[y])
+		newTiles[y] = make([]TileType, width)
+		copy(newTiles[y], tiles[y])
 	}
 
-	// Apply rules to each cell
-	for y := 1; y < terrain.Height-1; y++ {
-		for x := 1; x < terrain.Width-1; x++ {
-			neighbors := g.countWallNeighbors(terrain, x, y)
+	// Apply rules to each interior cell (edges stay as walls)
+	for y := 1; y < height-1; y++ {
+		row := tiles[y]
+		rowAbove := tiles[y-1]
+		rowBelow := tiles[y+1]
+		newRow := newTiles[y]
+
+		for x := 1; x < width-1; x++ {
+			// Count wall neighbors using direct array access (no bounds checks needed)
+			neighbors := g.countWallNeighborsFast(row, rowAbove, rowBelow, x)
 
 			// Apply birth/death rules
-			if terrain.GetTile(x, y) == TileWall {
+			if row[x] == TileWall {
 				// Death rule: become floor if too few neighbors
 				if neighbors < g.deathLimit {
-					newTiles[y][x] = TileFloor
+					newRow[x] = TileFloor
 				}
 			} else {
 				// Birth rule: become wall if enough neighbors
 				if neighbors > g.birthLimit {
-					newTiles[y][x] = TileWall
+					newRow[x] = TileWall
 				}
 			}
 		}
@@ -180,17 +199,55 @@ func (g *CellularGenerator) simulateStep(terrain *Terrain) {
 }
 
 // countWallNeighbors counts the number of wall tiles in the 8 surrounding cells.
+// Uses pre-computed neighbor offsets to avoid nested loop overhead.
 func (g *CellularGenerator) countWallNeighbors(terrain *Terrain, x, y int) int {
 	count := 0
-	for dy := -1; dy <= 1; dy++ {
-		for dx := -1; dx <= 1; dx++ {
-			if dx == 0 && dy == 0 {
-				continue
-			}
-			if terrain.GetTile(x+dx, y+dy) == TileWall {
+	tiles := terrain.Tiles
+	for _, offset := range neighborOffsets {
+		nx, ny := x+offset[0], y+offset[1]
+		if nx >= 0 && nx < terrain.Width && ny >= 0 && ny < terrain.Height {
+			if tiles[ny][nx] == TileWall {
 				count++
 			}
+		} else {
+			// Out of bounds counts as wall
+			count++
 		}
+	}
+	return count
+}
+
+// countWallNeighborsFast counts wall neighbors using direct row references.
+// This avoids bounds checking for interior cells where neighbors are guaranteed to exist.
+// row is the current row, rowAbove and rowBelow are the adjacent rows.
+func (g *CellularGenerator) countWallNeighborsFast(row, rowAbove, rowBelow []TileType, x int) int {
+	count := 0
+	// Check row above: x-1, x, x+1
+	if rowAbove[x-1] == TileWall {
+		count++
+	}
+	if rowAbove[x] == TileWall {
+		count++
+	}
+	if rowAbove[x+1] == TileWall {
+		count++
+	}
+	// Check current row: x-1, x+1 (skip center)
+	if row[x-1] == TileWall {
+		count++
+	}
+	if row[x+1] == TileWall {
+		count++
+	}
+	// Check row below: x-1, x, x+1
+	if rowBelow[x-1] == TileWall {
+		count++
+	}
+	if rowBelow[x] == TileWall {
+		count++
+	}
+	if rowBelow[x+1] == TileWall {
+		count++
 	}
 	return count
 }

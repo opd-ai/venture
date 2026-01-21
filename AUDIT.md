@@ -208,15 +208,15 @@ BenchmarkLoad-4  909   1319896 ns/op  498497 B/op  5027 allocs/op
 **By Severity:**
 - High (significant but correctable): 1 issue (Composite terrain memory)
 - Medium (noticeable impact): 1 issue (System initialization)
-- Low (minor optimization): 4 issues (Cellular terrain, LOD enforcement, SPH simulation, Debris particles)
-- Fixed: 5 issues (WorkerPool deadlock ✅, RNG source pooling ✅, Ambience particles ✅, Weather allocation ✅, Poisson validation ✅)
+- Low (minor optimization): 3 issues (LOD enforcement, SPH simulation, Debris particles)
+- Fixed: 6 issues (WorkerPool deadlock ✅, RNG source pooling ✅, Ambience particles ✅, Weather allocation ✅, Poisson validation ✅, Cellular automaton ✅)
 
 **By Type:**
 - Algorithmic inefficiency: 1 issue (SPH neighbor search)
 - Unnecessary allocations: 1 issue (Debris particles)
 - Blocking I/O: 1 issue (Guild save)
 - Initialization overhead: 2 issues (System init, Composite terrain chain)
-- Fixed: 5 issues (WorkerPool deadlock ✅, RNG pooling ✅, Ambience particles ✅, Weather particles ✅, Poisson trigonometry ✅)
+- Fixed: 6 issues (WorkerPool deadlock ✅, RNG pooling ✅, Ambience particles ✅, Weather particles ✅, Poisson trigonometry ✅, Cellular automaton ✅)
 
 ---
 
@@ -327,9 +327,19 @@ Based on benchmark data (corrected units):
      - RNG pooling shows 0 B/op in benchmarks (fully reuses pooled instances)
 
 ### Priority 3 (Low Impact - Optimization)
-6. **Cellular Automaton Optimization**: Pre-compute neighbor offsets, use tile cache
+6. **Cellular Automaton Optimization**: Pre-compute neighbor offsets, use tile cache ✅ **COMPLETED 2026-01-21**
    - Expected improvement: Minor reduction in cellular generation time
    - Implementation complexity: Medium
+   - **Actual Results:**
+     - BenchmarkCellularGen: **33% faster** (584µs → 390µs)
+     - BenchmarkCellularGenLarge: **33% faster** (6,734µs → 4,508µs)
+     - countWallNeighborsFast: **3.7x faster** (13.12ns → 3.57ns)
+   - **Solution Implemented:**
+     - Added pre-computed `neighborOffsets` array to avoid nested loop overhead
+     - Added `countWallNeighborsFast()` with direct row slice references for interior cells
+     - Optimized `simulateStep()` to cache row slices and avoid bounds checking
+     - Added comprehensive test coverage in `cellular_test.go`
+   - Test coverage: 93.2%
    
 7. **LOD Enforcement Sampling**: Check subset of particles per frame instead of all
    - Expected improvement: Smooths ~0.5ms worst-case LOD check into smaller per-frame slices (micro-optimization, reduces jitter)

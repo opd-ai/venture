@@ -70,6 +70,7 @@ go.work.sum
 !README.md
 !SECURITY.md
 !PLAN.md
+!AUDIT.md
 /*.log
 /*.txt
 .DS_Store

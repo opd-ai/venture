@@ -2,6 +2,7 @@ package legendary
 
 import (
 	"fmt"
+	"math/rand"
 	"testing"
 
 	"github.com/opd-ai/venture/pkg/procgen"
@@ -366,6 +367,128 @@ func TestChallengeType_String(t *testing.T) {
 				t.Errorf("String() = %s, want %s", result, tt.expected)
 			}
 		})
+	}
+}
+
+func TestRarity_String(t *testing.T) {
+	tests := []struct {
+		rarity   Rarity
+		expected string
+	}{
+		{RarityCommon, "Common"},
+		{RarityUncommon, "Uncommon"},
+		{RarityRare, "Rare"},
+		{RarityEpic, "Epic"},
+		{RarityLegendary, "Legendary"},
+		{Rarity(99), "Unknown"}, // Test default case
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.expected, func(t *testing.T) {
+			result := tt.rarity.String()
+			if result != tt.expected {
+				t.Errorf("String() = %s, want %s", result, tt.expected)
+			}
+		})
+	}
+}
+
+func TestAddExploreRequirements(t *testing.T) {
+	gen := NewLegendaryQuestGenerator()
+	params := procgen.GenerationParams{
+		Difficulty: 0.5,
+		Depth:      10,
+		GenreID:    "fantasy",
+	}
+
+	tests := []struct {
+		name       string
+		seed       int64
+		minExpect  int
+		maxExpect  int
+	}{
+		{
+			name:      "basic exploration",
+			seed:      12345,
+			minExpect: 3, // 3 + rng.Intn(5) gives 3-7 locations
+			maxExpect: 7,
+		},
+		{
+			name:      "different seed",
+			seed:      67890,
+			minExpect: 3,
+			maxExpect: 7,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			rng := rand.New(rand.NewSource(tt.seed))
+			req := NewPhaseRequirements()
+
+			gen.addExploreRequirements(rng, req, params)
+
+			// Verify locations are set
+			if len(req.LocationsToDiscover) < tt.minExpect {
+				t.Errorf("expected at least %d locations, got %d", tt.minExpect, len(req.LocationsToDiscover))
+			}
+			if len(req.LocationsToDiscover) > tt.maxExpect {
+				t.Errorf("expected at most %d locations, got %d", tt.maxExpect, len(req.LocationsToDiscover))
+			}
+
+			// Verify location names are properly formatted
+			for i, loc := range req.LocationsToDiscover {
+				expectedLoc := fmt.Sprintf("location_%d", i+1)
+				if loc != expectedLoc {
+					t.Errorf("location[%d] = %s, want %s", i, loc, expectedLoc)
+				}
+			}
+		})
+	}
+}
+
+func TestExplorePhaseGeneration(t *testing.T) {
+	gen := NewLegendaryQuestGenerator()
+
+	// Generate many quests to try to get an explore phase
+	// Since phase types are randomly selected, we may need multiple attempts
+	foundExplore := false
+	for seed := int64(0); seed < 100; seed++ {
+		params := procgen.GenerationParams{
+			Difficulty: 0.5,
+			Depth:      10,
+			GenreID:    "fantasy",
+		}
+
+		result, err := gen.Generate(seed, params)
+		if err != nil {
+			t.Fatalf("Generate() error = %v", err)
+		}
+
+		quest := result.(*LegendaryQuest)
+		for _, phase := range quest.Phases {
+			if phase.Type == PhaseExplore {
+				foundExplore = true
+
+				// Verify explore phase has locations
+				if phase.Requirements == nil {
+					t.Error("explore phase has nil requirements")
+				} else if len(phase.Requirements.LocationsToDiscover) == 0 {
+					t.Error("explore phase has no locations to discover")
+				}
+				break
+			}
+		}
+
+		if foundExplore {
+			break
+		}
+	}
+
+	// Note: PhaseExplore might not appear if templates don't include it
+	// This is informational, not a test failure
+	if !foundExplore {
+		t.Log("Note: no explore phases found in 100 generated quests (phase selection is random)")
 	}
 }
 

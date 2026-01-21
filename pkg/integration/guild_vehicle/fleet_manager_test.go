@@ -1,6 +1,7 @@
 package guild_vehicle
 
 import (
+	"compress/gzip"
 	"os"
 	"sync"
 	"testing"
@@ -322,6 +323,90 @@ func TestFleetManager_GetAllFleets(t *testing.T) {
 	}
 }
 
+func TestFleetManager_GetAllFleets_EmptyManager(t *testing.T) {
+	// Test edge case: empty fleet manager
+	manager := NewFleetManager()
+
+	fleets := manager.GetAllFleets("any_guild")
+	// Go convention: nil slice is equivalent to empty slice for range/len operations
+	if len(fleets) != 0 {
+		t.Errorf("GetAllFleets() on empty manager = %v fleets, want 0", len(fleets))
+	}
+}
+
+func TestFleetManager_GetAllFleets_MultipleGuildsWithVehicles(t *testing.T) {
+	// Test edge case: multiple guilds with vehicles and shared access
+	manager := NewFleetManager()
+
+	// Create fleets for multiple guilds with vehicles
+	manager.CreateFleet("guildA", "fleet1", "commanderA")
+	manager.CreateFleet("guildA", "fleet2", "commanderA2")
+	manager.CreateFleet("guildB", "fleet1", "commanderB")
+	manager.CreateFleet("guildC", "fleet1", "commanderC")
+
+	// Add vehicles to each fleet
+	manager.AddVehicleWithType("guildA", 1, "fleet1", SiegeCatapult, 500)
+	manager.AddVehicleWithType("guildA", 2, "fleet1", SiegeBatteringRam, 300)
+	manager.AddVehicleWithType("guildA", 3, "fleet2", SiegeNone, 100)
+	manager.AddVehicleWithType("guildB", 4, "fleet1", SiegeTower, 400)
+	manager.AddVehicleWithType("guildC", 5, "fleet1", SiegeNone, 100)
+
+	// Grant access to some vehicles
+	manager.GrantAccess("guildA", 1, "player1")
+	manager.GrantAccess("guildA", 1, "player2")
+	manager.GrantAccess("guildB", 4, "player3")
+
+	// Set formations
+	manager.SetFormation("guildA", "fleet1", FormationWedge)
+	manager.SetFormation("guildB", "fleet1", FormationCircle)
+
+	// Test getting all fleets for each guild
+	tests := []struct {
+		guildID       string
+		expectedCount int
+	}{
+		{"guildA", 2},
+		{"guildB", 1},
+		{"guildC", 1},
+		{"guildD", 0}, // non-existent guild
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.guildID, func(t *testing.T) {
+			fleets := manager.GetAllFleets(tc.guildID)
+			if len(fleets) != tc.expectedCount {
+				t.Errorf("GetAllFleets(%s) = %d fleets, want %d", tc.guildID, len(fleets), tc.expectedCount)
+			}
+
+			// Verify returned fleets are copies (modification doesn't affect manager)
+			for _, fleet := range fleets {
+				originalFormation := fleet.Formation
+				fleet.Formation = FormationNone // Attempt to modify returned copy
+
+				// Get fleet again and verify it wasn't modified
+				if tc.expectedCount > 0 {
+					refetch := manager.GetAllFleets(tc.guildID)
+					for _, f := range refetch {
+						if f.FleetID == fleet.FleetID && f.Formation == FormationNone && originalFormation != FormationNone {
+							t.Errorf("GetAllFleets() should return copies, not originals")
+						}
+					}
+				}
+			}
+		})
+	}
+
+	// Verify vehicle data is correctly copied
+	guildAFleets := manager.GetAllFleets("guildA")
+	totalVehicles := 0
+	for _, fleet := range guildAFleets {
+		totalVehicles += len(fleet.Vehicles)
+	}
+	if totalVehicles != 3 {
+		t.Errorf("guildA total vehicles = %d, want 3", totalVehicles)
+	}
+}
+
 func TestFleetManager_GetVehicleFleetID(t *testing.T) {
 	manager := NewFleetManager()
 	manager.AddVehicle("guild1", 1, "fleet1")
@@ -384,6 +469,58 @@ func TestFleetManager_SaveLoad(t *testing.T) {
 	err = manager2.Load("nonexistent.json.gz")
 	if err == nil {
 		t.Error("expected error when loading non-existent file")
+	}
+}
+
+func TestFleetManager_Save_InvalidPath(t *testing.T) {
+	manager := NewFleetManager()
+	manager.CreateFleet("guild1", "fleet1", "player1")
+
+	// Test saving to invalid path (directory doesn't exist)
+	err := manager.Save("/nonexistent/path/fleets.json.gz")
+	if err == nil {
+		t.Error("expected error when saving to invalid path")
+	}
+}
+
+func TestFleetManager_Load_InvalidGzip(t *testing.T) {
+	// Create a non-gzip file
+	filename := "test_invalid_gzip.json.gz"
+	defer os.Remove(filename)
+
+	// Write non-gzip content
+	err := os.WriteFile(filename, []byte("not gzip content"), 0644)
+	if err != nil {
+		t.Fatalf("failed to create test file: %v", err)
+	}
+
+	manager := NewFleetManager()
+	err = manager.Load(filename)
+	if err == nil {
+		t.Error("expected error when loading invalid gzip file")
+	}
+}
+
+func TestFleetManager_Load_InvalidJSON(t *testing.T) {
+	// Create a valid gzip file with invalid JSON
+	filename := "test_invalid_json.json.gz"
+	defer os.Remove(filename)
+
+	// Create gzip file with invalid JSON
+	file, err := os.Create(filename)
+	if err != nil {
+		t.Fatalf("failed to create test file: %v", err)
+	}
+
+	gzWriter := gzip.NewWriter(file)
+	gzWriter.Write([]byte("{invalid json content"))
+	gzWriter.Close()
+	file.Close()
+
+	manager := NewFleetManager()
+	err = manager.Load(filename)
+	if err == nil {
+		t.Error("expected error when loading invalid JSON from gzip file")
 	}
 }
 

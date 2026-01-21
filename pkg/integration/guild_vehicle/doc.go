@@ -56,13 +56,34 @@
 //	cost := manager.CalculateMaintenanceCost(guildID, "primary_siege")
 //	// Deduct from guild treasury
 //
-// # Integration
+// # Integration Status
 //
-// This package integrates with:
-//   - pkg/network/federation/guild: Guild management and permissions
-//   - pkg/engine: VehicleComponent and VehicleCombatComponent
-//   - pkg/engine/physics/vehicle: Enhanced vehicle physics
-//   - pkg/world/territory: Territory control for siege mechanics
+// This package provides standalone fleet management functionality. The following
+// integrations are planned for future development:
 //
-// All operations are thread-safe and support deterministic seed-based generation.
+// PLANNED (not yet implemented):
+//   - pkg/network/federation/guild: Guild membership validation and permissions
+//   - pkg/engine: VehicleComponent and VehicleCombatComponent synchronization
+//   - pkg/engine/physics/vehicle: Formation-based physics behavior
+//   - pkg/world/territory: Siege damage application to territory structures
+//
+// IMPLEMENTED:
+//   - Thread-safe fleet and vehicle management
+//   - Formation bonus calculations
+//   - Siege engine type definitions with damage multipliers
+//   - Maintenance cost calculations
+//   - Gzip-compressed persistence (save/load)
+//   - Access control for shared vehicle access
+//
+// # Thread Safety
+//
+// All operations are thread-safe using sync.RWMutex. Concurrent reads and writes
+// to fleet data are safe.
+//
+// # Persistence
+//
+// Fleet data can be saved and loaded using gzip-compressed JSON:
+//
+//	err := manager.Save("fleets.json.gz")
+//	err = manager.Load("fleets.json.gz")
 package guild_vehicle

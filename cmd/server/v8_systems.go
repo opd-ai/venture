@@ -6,13 +6,8 @@ package main
 import (
 	"github.com/opd-ai/venture/pkg/engine"
 	"github.com/opd-ai/venture/pkg/engine/physics/fluids"
-	"github.com/opd-ai/venture/pkg/engine/physics/vehicle"
 	"github.com/opd-ai/venture/pkg/network/federation"
 	"github.com/opd-ai/venture/pkg/network/federation/guild"
-	"github.com/opd-ai/venture/pkg/procgen/building"
-	"github.com/opd-ai/venture/pkg/procgen/furniture"
-	"github.com/opd-ai/venture/pkg/social/persistence"
-	"github.com/opd-ai/venture/pkg/world/housing"
 	"github.com/sirupsen/logrus"
 )
 
@@ -29,17 +24,13 @@ import (
 func initializeV8SystemsServer(world *engine.World, seed int64, logger *logrus.Logger) {
 	serverLogger := logger.WithField("component", "v8_systems")
 
-	// Phase 49.1: Housing Core Infrastructure
-	// Note: Housing manager is a utility, not an ECS system
-	housingManager := housing.NewManager()
-	_ = housingManager // Used by housing-related entity spawning
-
-	// Phase 49.2: Persistent Trust & Reputation System
-	// Note: Trust and reputation managers are utilities for cross-server state
-	trustManager := persistence.NewTrustManager()
-	reputationManager := persistence.NewReputationManager()
-	_ = trustManager
-	_ = reputationManager
+	// Phase 49.1-49.2: Housing, Trust & Reputation Infrastructure
+	// NOTE: These managers are initialized client-side only (cmd/client/handlers.go).
+	// Server-side initialization deferred until server-authoritative validation is needed.
+	// When implementing server validation:
+	// - housing.NewManager() for housing plot validation
+	// - persistence.NewTrustManager() for trust score validation
+	// - persistence.NewReputationManager() for reputation validation
 
 	// Phase 49.3 & 49.4: Chat History and Image Gallery are per-player
 	// Created when player entities spawn, not as global systems
@@ -59,9 +50,10 @@ func initializeV8SystemsServer(world *engine.World, seed int64, logger *logrus.L
 	_ = federationProtocol // Available for future cross-server features
 
 	// Phase 50.3: Enhanced Vehicle Physics
-	// Note: EnhancedVehicleSystem is a helper for vehicle movement, not standalone system
-	enhancedVehicleSys := vehicle.NewEnhancedVehicleSystem()
-	_ = enhancedVehicleSys // Used by VehicleMovementSystem
+	// NOTE: EnhancedVehicleSystem is client-side only (handles visual physics).
+	// Server uses basic physics for authoritative position updates.
+	// When implementing server-side vehicle physics validation:
+	// - vehicle.NewEnhancedVehicleSystem() for advanced vehicle movement
 
 	// Phase 50.4: Fluid Dynamics & Swimming
 	// FluidSimulator is the only V8 component that runs as a system
@@ -78,25 +70,19 @@ func initializeV8SystemsServer(world *engine.World, seed int64, logger *logrus.L
 	fluidSimulator := fluids.NewSimulator(fluidConfig)
 	world.AddSystem(&fluidSimulatorWrapper{system: fluidSimulator})
 
-	// Phase 50.4: Swimming and flooding managers (utilities used by entity systems)
-	buoyancyCalculator := fluids.NewBuoyancyCalculator(fluidConfig.Gravity)
-	swimmingManager := fluids.NewSwimmingManager(fluidConfig.Gravity)
-	floodingManager := fluids.NewFloodingManager(fluidSimulator)
-	_ = buoyancyCalculator
-	_ = swimmingManager
-	_ = floodingManager
+	// Phase 50.4: Swimming and flooding managers
+	// NOTE: These utilities are used by entity systems on the client side.
+	// Server uses simplified physics. Add when implementing:
+	// - fluids.NewBuoyancyCalculator(gravity) for buoyancy validation
+	// - fluids.NewSwimmingManager(gravity) for swim speed validation
+	// - fluids.NewFloodingManager(simulator) for flood damage validation
 
-	// Phase 51.1: Procedural Building Generation (generator, not system)
-	buildingGenerator := building.NewGenerator()
-	_ = buildingGenerator // Used during world/structure spawning
-
-	// Phase 51.2: Guild Hall Construction (manager, not system)
-	guildHallManager := housing.NewGuildHallManager()
-	_ = guildHallManager // Used for guild structure creation
-
-	// Phase 51.3: Furniture Generation & Placement (generator, not system)
-	furnitureGenerator := furniture.NewGenerator()
-	_ = furnitureGenerator // Used during building interior generation
+	// Phase 51.1-51.3: Building, Guild Hall, and Furniture Generation
+	// NOTE: These generators are used during world/structure spawning on client side.
+	// Server uses pre-generated terrain data. Add when implementing server-side generation:
+	// - building.NewGenerator() for procedural buildings
+	// - housing.NewGuildHallManager() for guild hall structures
+	// - furniture.NewGenerator() for interior furniture
 
 	if logger.GetLevel() >= logrus.DebugLevel {
 		serverLogger.Info("V8.0 systems initialized (guild federation, housing, trust, reputation, fluid dynamics, vehicle physics, building/furniture)")

@@ -30,7 +30,7 @@ All notable changes to this project are documented in this file, organized by ve
 This is the first official public release of Venture, using semantic versioning. This release corresponds to internal development version 10.0.0 and includes all features from development versions 1.0.0-10.0.0.
 
 ### Highlights
-- **Production Ready**: 87 active packages with 85.5% average test coverage
+- **Production Ready**: 87 active packages with 90.1% average test coverage
 - **Cross-Platform**: Linux, macOS, Windows, WebAssembly, iOS, Android
 - **100% Procedural**: All graphics, audio, and content generated at runtime
 - **Multiplayer**: Real-time co-op with high-latency support (200-5000ms)

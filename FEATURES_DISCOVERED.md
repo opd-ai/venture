@@ -6,9 +6,10 @@
 
 ## Quick Reference
 
-**Total Features:** 35
+**Total Features:** 37
 - **Enabled by Default:** 18 - Automatically active with highest quality settings
-- **Opt-in:** 11 - Advanced features activated via code or system registration
+- **Production-Ready Opt-in:** 7 - Safe features requiring manual activation
+- **Experimental:** 6 - VR, voice, and hot-reload systems (use with caution)
 - **Developer Only:** 6 - Debug/profiling tools (Makefile targets)
 
 > **Note:** As of the latest update, all production-ready features are now **enabled by default** with optimal settings for the best gameplay experience. The following features are automatically active:

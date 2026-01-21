@@ -116,9 +116,9 @@ postprocessPreset = flag.String("postprocess-preset", "", "Post-processing prese
 ```
 
 **Configuration Options:**
-- `--palette-harmony` - Color harmony type: complementary, analogous, triadic, tetradic, split-complementary, monochromatic
-- `--palette-mood` - Visual mood: normal, bright, dark, saturated, muted, vibrant, pastel, tense, calm, victorious, melancholic, energetic, mystical, ominous, serene, aggressive, playful, somber, ethereal, dangerous, peaceful, chaotic, regal, desolate
-- `--palette-rarity` - Palette intensity: common, uncommon, rare, epic, legendary
+- `--palette-harmony` - Color harmony type (default: complementary): complementary, analogous, triadic, tetradic, split-complementary, monochromatic
+- `--palette-mood` - Visual mood (default: normal): normal, bright, dark, saturated, muted, vibrant, pastel, tense, calm, victorious, melancholic, energetic, mystical, ominous, serene, aggressive, playful, somber, ethereal, dangerous, peaceful, chaotic, regal, desolate
+- `--palette-rarity` - Palette intensity (default: common): common, uncommon, rare, epic, legendary
 
 **Impact:**
 - **Performance:** Negligible
@@ -411,12 +411,12 @@ LOG_FORMAT=json ./venture-server
 ./venture-server --simulate-network medium
 ```
 
-**Simulation Profiles:**
-- `low` - 200ms latency, 1% packet loss
-- `medium` - 500ms latency, 5% packet loss
-- `high` - 1000ms latency, 10% packet loss
-- `very-high` - 2000ms latency, 20% packet loss
-- `extreme` - 5000ms latency, 20% packet loss (Tor/onion)
+**Simulation Profiles (from `pkg/network/resilience/types.go`):**
+- `low` - 200ms latency, 1% packet loss (from LowLatencyScenario)
+- `medium` - 500ms latency, 5% packet loss (from MediumLatencyScenario)
+- `high` - 1000ms latency, 10% packet loss (from HighLatencyScenario)
+- `very-high` - 2000ms latency, 20% packet loss (from VeryHighLatencyScenario)
+- `extreme` - 5000ms latency, 20% packet loss (from ExtremeLatencyScenario)
 
 **Evidence:**
 ```go
@@ -444,11 +444,11 @@ simulateNetwork = flag.String("simulate-network", "", "Simulate network conditio
 ./venture-server --stability-monitor
 ```
 
-**Monitors:**
-- Memory usage (against 500MB limit)
-- FPS (against 60 FPS minimum)
+**Monitors (from `pkg/stability/monitor.go:31-42` DefaultConfig):**
+- Memory usage (against 500MB limit - MemoryLimit: 500 * 1024 * 1024)
+- FPS (against 60 FPS minimum - MinFPS: 60.0)
 - Goroutine count
-- Memory leak detection (growth rate analysis)
+- Memory leak detection (growth rate analysis - MemoryLeakThreshold: 1024.0 bytes/s)
 
 **Impact:**
 - **Performance:** +2% CPU overhead
@@ -530,7 +530,7 @@ make balance-validate
 make migration-validate
 ```
 
-**Tests Migrations From:**
+**Tests Migrations From (from `pkg/migration/validator.go:39-42`):**
 - 0.9.0 → 1.0.0
 - 0.9.1 → 1.0.0
 - 0.9.2 → 1.0.0
@@ -737,7 +737,7 @@ make docs
 2. Custom Port - `--port 9000`
 3. Max Players - `--max-players 8`
 4. Tick Rate - `--tick-rate 30`
-5. High Latency Mode - `--high-latency`
+5. High Latency Mode - `--high-latency` (server only)
 6. Network Simulation - `--simulate-network medium`
 
 **Performance & Debugging:**

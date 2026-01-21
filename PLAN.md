@@ -429,7 +429,7 @@ All Phase 5 deliverables completed successfully:
 - [x] No build failures on any platform (Linux, macOS, Windows, WASM) - verified 2026-01-21 (Linux and WASM tested)
 - [x] Performance benchmarks meet or exceed targets - verified 2026-01-21 (generators <1ms, save/load <10ms)
 - [x] Security audit passes (gosec, dependency check) - verified 2026-01-21 (0 high-severity production issues; test infra only)
-- [x] All TODOs and FIXMEs resolved or documented - only 1 non-critical TODO remains (inventory_system.go:817 wrapper migration)
+- [x] All TODOs and FIXMEs resolved or documented - ✅ All resolved 2026-01-21 (deprecated mapSpellEffectID wrapper removed)
 - [x] Documentation reviewed and up-to-date
 
 ### Release Artifacts

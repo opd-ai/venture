@@ -938,39 +938,44 @@ func TestInventorySystem_SetSpellEffectSystem(t *testing.T) {
 	}
 }
 
-// TestInventorySystem_MapSpellEffectID tests the spell effect ID mapping.
-func TestInventorySystem_MapSpellEffectID(t *testing.T) {
+// TestInventorySystem_MapSpellEffectIDWithTarget tests the spell effect ID mapping with target types.
+func TestInventorySystem_MapSpellEffectIDWithTarget(t *testing.T) {
 	world := NewWorld()
 	system := NewInventorySystem(world)
 
 	tests := []struct {
-		spellID  string
-		expected EffectType
+		spellID        string
+		expectedEffect EffectType
+		expectedTarget TargetType
 	}{
-		{"fireball", EffectElementalFusion},
-		{"lightning", EffectElementalFusion},
-		{"ice", EffectElementalFusion},
-		{"protection", EffectMetamagic},
-		{"shield", EffectMetamagic},
-		{"teleportation", EffectTeleportation},
-		{"blink", EffectTeleportation},
-		{"haste", EffectTimeManipulation},
-		{"slow", EffectTimeManipulation},
-		{"levitation", EffectGravityControl},
-		{"heal", EffectLifeDrain},
-		{"summon", EffectSummoning},
-		{"invisibility", EffectIllusion},
-		{"wall", EffectTerrainManipulation},
-		{"transmute", EffectTransmutation},
-		{"unknown_spell", EffectElementalFusion}, // Default
+		{"fireball", EffectElementalFusion, TargetArea},
+		{"lightning", EffectElementalFusion, TargetArea},
+		{"ice", EffectElementalFusion, TargetArea},
+		{"protection", EffectMetamagic, TargetSelf},
+		{"shield", EffectMetamagic, TargetSelf},
+		{"teleportation", EffectTeleportation, TargetSelf},
+		{"blink", EffectTeleportation, TargetSelf},
+		{"haste", EffectTimeManipulation, TargetSelf},
+		{"slow", EffectTimeManipulation, TargetSelf},
+		{"levitation", EffectGravityControl, TargetSelf},
+		{"heal", EffectLifeDrain, TargetSelf},
+		{"summon", EffectSummoning, TargetArea},
+		{"invisibility", EffectIllusion, TargetSelf},
+		{"wall", EffectTerrainManipulation, TargetTerrain},
+		{"transmute", EffectTransmutation, TargetTerrain},
+		{"unknown_spell", EffectElementalFusion, TargetArea}, // Default
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.spellID, func(t *testing.T) {
-			result := system.mapSpellEffectID(tt.spellID)
-			if result != tt.expected {
-				t.Errorf("mapSpellEffectID(%s) = %v, want %v",
-					tt.spellID, result, tt.expected)
+			effectType, targetType := system.mapSpellEffectIDWithTarget(tt.spellID)
+			if effectType != tt.expectedEffect {
+				t.Errorf("mapSpellEffectIDWithTarget(%s) effectType = %v, want %v",
+					tt.spellID, effectType, tt.expectedEffect)
+			}
+			if targetType != tt.expectedTarget {
+				t.Errorf("mapSpellEffectIDWithTarget(%s) targetType = %v, want %v",
+					tt.spellID, targetType, tt.expectedTarget)
 			}
 		})
 	}
@@ -1090,46 +1095,6 @@ func TestInventorySystem_UseScrollWithCustomTargetType(t *testing.T) {
 	// Verify custom radius
 	if effect.Radius != 100.0 {
 		t.Errorf("Effect radius = %v, want 100.0", effect.Radius)
-	}
-}
-
-// TestInventorySystem_MapSpellEffectIDWithTarget tests the spell effect ID to target type mapping.
-func TestInventorySystem_MapSpellEffectIDWithTarget(t *testing.T) {
-	world := NewWorld()
-	system := NewInventorySystem(world)
-
-	tests := []struct {
-		spellID        string
-		expectedEffect EffectType
-		expectedTarget TargetType
-	}{
-		{"fireball", EffectElementalFusion, TargetArea},
-		{"lightning", EffectElementalFusion, TargetArea},
-		{"ice", EffectElementalFusion, TargetArea},
-		{"protection", EffectMetamagic, TargetSelf},
-		{"shield", EffectMetamagic, TargetSelf},
-		{"teleportation", EffectTeleportation, TargetSelf},
-		{"haste", EffectTimeManipulation, TargetSelf},
-		{"heal", EffectLifeDrain, TargetSelf},
-		{"summon", EffectSummoning, TargetArea},
-		{"invisibility", EffectIllusion, TargetSelf},
-		{"wall", EffectTerrainManipulation, TargetTerrain},
-		{"transmute", EffectTransmutation, TargetTerrain},
-		{"unknown", EffectElementalFusion, TargetArea}, // Default
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.spellID, func(t *testing.T) {
-			effectType, targetType := system.mapSpellEffectIDWithTarget(tt.spellID)
-			if effectType != tt.expectedEffect {
-				t.Errorf("mapSpellEffectIDWithTarget(%s) effect = %v, want %v",
-					tt.spellID, effectType, tt.expectedEffect)
-			}
-			if targetType != tt.expectedTarget {
-				t.Errorf("mapSpellEffectIDWithTarget(%s) target = %v, want %v",
-					tt.spellID, targetType, tt.expectedTarget)
-			}
-		})
 	}
 }
 

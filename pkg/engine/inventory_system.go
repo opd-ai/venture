@@ -812,14 +812,7 @@ func (s *InventorySystem) parseTargetType(targetTypeStr string, defaultType Targ
 	}
 }
 
-// mapSpellEffectID converts a spell effect ID string to an EffectType.
-// Deprecated: Use mapSpellEffectIDWithTarget for full targeting support.
-// TODO: Remove this wrapper once all callers migrate to mapSpellEffectIDWithTarget.
-// Currently retained for backward compatibility with existing tests.
-func (s *InventorySystem) mapSpellEffectID(spellID string) EffectType {
-	effectType, _ := s.mapSpellEffectIDWithTarget(spellID)
-	return effectType
-}
+
 
 // calculateScrollMagnitude determines the spell effect magnitude based on item properties.
 func (s *InventorySystem) calculateScrollMagnitude(itm *item.Item) float64 {

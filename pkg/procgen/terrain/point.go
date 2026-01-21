@@ -21,6 +21,14 @@ func (p Point) Distance(other Point) float64 {
 	return math.Sqrt(dx*dx + dy*dy)
 }
 
+// DistanceSquared calculates the squared Euclidean distance between two points.
+// This avoids the expensive sqrt operation when only comparing distances.
+func (p Point) DistanceSquared(other Point) float64 {
+	dx := float64(p.X - other.X)
+	dy := float64(p.Y - other.Y)
+	return dx*dx + dy*dy
+}
+
 // ManhattanDistance calculates the Manhattan (taxicab) distance between two points.
 func (p Point) ManhattanDistance(other Point) int {
 	dx := p.X - other.X

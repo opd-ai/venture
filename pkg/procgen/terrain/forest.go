@@ -309,12 +309,25 @@ func (g *ForestGenerator) tryGenerateNewPoints(point Point, points *[]Point, act
 }
 
 // generateCandidatePoint generates a random point in the annulus around a point.
+// Uses rejection sampling with cartesian offsets to avoid expensive trigonometric calls.
 func (g *ForestGenerator) generateCandidatePoint(point Point, minDist float64, rng *rand.Rand) Point {
-	angle := rng.Float64() * 2.0 * math.Pi
-	radius := minDist * (1.0 + rng.Float64())
-	return Point{
-		X: point.X + int(radius*math.Cos(angle)),
-		Y: point.Y + int(radius*math.Sin(angle)),
+	// Use rejection sampling instead of polar coordinates to avoid cos/sin
+	// Generate random offset in [-2*minDist, 2*minDist] range
+	maxRange := minDist * 2.0
+	for {
+		dx := (rng.Float64()*2.0 - 1.0) * maxRange
+		dy := (rng.Float64()*2.0 - 1.0) * maxRange
+		distSq := dx*dx + dy*dy
+		minDistSq := minDist * minDist
+		maxDistSq := maxRange * maxRange
+
+		// Check if point is in the annulus [minDist, 2*minDist]
+		if distSq >= minDistSq && distSq <= maxDistSq {
+			return Point{
+				X: point.X + int(dx),
+				Y: point.Y + int(dy),
+			}
+		}
 	}
 }
 
@@ -344,12 +357,16 @@ func (g *ForestGenerator) isValidAndAddPoint(newPoint Point, points *[]Point, ac
 }
 
 // isValidPoissonPoint checks if a point is valid for Poisson disc sampling.
+// Uses squared distance comparison to avoid expensive sqrt operations.
 func (g *ForestGenerator) isValidPoissonPoint(point Point, points []Point, grid [][]int,
 	cellSize, minDist float64, width, height int,
 ) bool {
 	// Get grid cell
 	gridX := int(float64(point.X) / cellSize)
 	gridY := int(float64(point.Y) / cellSize)
+
+	// Pre-compute squared minimum distance for comparison
+	minDistSq := minDist * minDist
 
 	// Check neighboring cells
 	for dy := -2; dy <= 2; dy++ {
@@ -360,8 +377,9 @@ func (g *ForestGenerator) isValidPoissonPoint(point Point, points []Point, grid 
 			if checkY >= 0 && checkY < len(grid) && checkX >= 0 && checkX < len(grid[0]) {
 				if grid[checkY][checkX] != -1 {
 					neighbor := points[grid[checkY][checkX]]
-					dist := point.Distance(neighbor)
-					if dist < minDist {
+					// Use squared distance to avoid sqrt
+					distSq := point.DistanceSquared(neighbor)
+					if distSq < minDistSq {
 						return false
 					}
 				}

@@ -37,6 +37,36 @@ func TestPoint_Distance(t *testing.T) {
 	}
 }
 
+// TestPoint_DistanceSquared tests squared distance calculation for performance-critical paths.
+func TestPoint_DistanceSquared(t *testing.T) {
+	tests := []struct {
+		name     string
+		p1, p2   Point
+		expected float64
+	}{
+		{"Same point", Point{0, 0}, Point{0, 0}, 0.0},
+		{"Horizontal distance", Point{0, 0}, Point{3, 0}, 9.0},
+		{"Vertical distance", Point{0, 0}, Point{0, 4}, 16.0},
+		{"Diagonal distance 3-4-5", Point{0, 0}, Point{3, 4}, 25.0},
+		{"Negative coordinates", Point{-1, -1}, Point{2, 3}, 25.0},
+		{"Large distance", Point{0, 0}, Point{100, 100}, 20000.0},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := tt.p1.DistanceSquared(tt.p2)
+			if math.Abs(result-tt.expected) > 0.001 {
+				t.Errorf("DistanceSquared(%v, %v) = %v, want %v", tt.p1, tt.p2, result, tt.expected)
+			}
+			// Verify consistency with Distance
+			dist := tt.p1.Distance(tt.p2)
+			if math.Abs(result-dist*dist) > 0.001 {
+				t.Errorf("DistanceSquared != Distance^2: %v != %v", result, dist*dist)
+			}
+		})
+	}
+}
+
 // TestPoint_ManhattanDistance tests Manhattan distance calculation.
 func TestPoint_ManhattanDistance(t *testing.T) {
 	tests := []struct {

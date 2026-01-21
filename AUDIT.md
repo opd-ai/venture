@@ -206,17 +206,17 @@ BenchmarkLoad-4  909   1319896 ns/op  498497 B/op  5027 allocs/op
 ## ISSUE CATEGORIZATION
 
 **By Severity:**
-- High (significant but correctable): 2 issues (Forest generation CPU time, Composite terrain memory)
-- Medium (noticeable impact): 2 issues (Weather allocation pattern ✅, System initialization)
+- High (significant but correctable): 1 issue (Composite terrain memory)
+- Medium (noticeable impact): 1 issue (System initialization)
 - Low (minor optimization): 4 issues (Cellular terrain, LOD enforcement, SPH simulation, Debris particles)
-- Fixed: 3 issues (WorkerPool deadlock ✅, RNG source pooling ✅, Ambience particles ✅)
+- Fixed: 5 issues (WorkerPool deadlock ✅, RNG source pooling ✅, Ambience particles ✅, Weather allocation ✅, Poisson validation ✅)
 
 **By Type:**
-- Algorithmic inefficiency: 2 issues (Poisson validation trigonometry, SPH neighbor search)
-- Unnecessary allocations: 2 issues (Weather particles ✅, Debris particles)
+- Algorithmic inefficiency: 1 issue (SPH neighbor search)
+- Unnecessary allocations: 1 issue (Debris particles)
 - Blocking I/O: 1 issue (Guild save)
 - Initialization overhead: 2 issues (System init, Composite terrain chain)
-- Fixed: 3 issues (WorkerPool deadlock ✅, RNG pooling ✅, Ambience particles ✅)
+- Fixed: 5 issues (WorkerPool deadlock ✅, RNG pooling ✅, Ambience particles ✅, Weather particles ✅, Poisson trigonometry ✅)
 
 ---
 
@@ -294,9 +294,19 @@ Based on benchmark data (corrected units):
      - Test coverage: 93.0%
 
 ### Priority 2 (Medium Impact)
-3. **Forest Generator Poisson Validation Optimization**: Reduce trigonometric calls and reuse intermediate results in `isValidPoissonPoint()`
+3. **Forest Generator Poisson Validation Optimization**: Reduce trigonometric calls and reuse intermediate results in `isValidPoissonPoint()` ✅ **COMPLETED 2026-01-21**
    - Expected improvement: -50% terrain generation time (21% CPU → ~10%)
    - Implementation complexity: Medium (optimize math operations and reduce validation calls)
+   - **Actual Results:**
+     - Poisson disc sampling: **19.5% faster** (974µs → 784µs)
+     - Forest Small: **21.2% faster** (789µs → 622µs)
+     - Forest Medium: **20.7% faster** (2620µs → 2079µs)
+     - Forest Large: **20.0% faster** (9856µs → 7889µs)
+   - **Solution Implemented:**
+     - Replaced trigonometric `cos(angle)`/`sin(angle)` in `generateCandidatePoint()` with rejection sampling using cartesian offsets
+     - Added `Point.DistanceSquared()` method to avoid expensive `sqrt()` operations
+     - Updated `isValidPoissonPoint()` to use squared distance comparisons
+   - Test coverage: 93.1%
 
 4. **Ambience Particle Caching**: Cache generated ambience per environment type ✅ **COMPLETED 2026-01-21**
    - Expected improvement: Minor reduction in area transition latency and memory allocation; primary benefit is smoother frame pacing through ambience reuse

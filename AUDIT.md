@@ -284,3 +284,78 @@ const (
    - Integrate with the game's existing system update loop or use `time.Ticker`
 
 3. **Add WebRTC Integration Tests** - Create integration tests that verify real browser-to-browser connections work correctly once WebRTC is implemented, ensuring the federation feature meets production requirements.
+
+---
+
+## Hidden Feature Enablement
+
+> **Note:** As of the latest update, most features are now **enabled by default** with optimal settings. See [FEATURES_DISCOVERED.md](FEATURES_DISCOVERED.md) for detailed documentation.
+
+### Production-Ready Features (Now Enabled by Default)
+
+| Feature | Default | Disable With | Purpose |
+|---------|---------|--------------|---------|
+| Performance Profiling | ✅ Enabled | `--profile=false` | Frame time tracking for performance diagnosis |
+| Post-Processing (Cinematic) | ✅ Enabled | `--postprocess-preset=""` | Cinematic visual effects with enhanced color grading |
+| Color Grading | ✅ Enabled | `--postprocess-color-grading=false` | Saturation (1.1), contrast (1.05), brightness (0.02) |
+| Vignette Effect | ✅ Enabled | `--postprocess-vignette=false` | Cinematic vignette (0.6 intensity, 0.4 softness) |
+| Chromatic Aberration | ✅ Enabled | `--postprocess-chromatic=false` | Subtle lens effect (0.3 intensity) |
+| Palette Enhancement | ✅ Triadic/Vibrant/Epic | `--palette-harmony=complementary` | Enhanced procedural color generation |
+| Server Modding | ✅ Enabled | `--enable-mods=false` | JSON-based server mods (difficulty, PvP, spawn rates) |
+| Prometheus Metrics | ✅ Enabled | `--enable-metrics=false` | Export server metrics on port 9090 |
+| Resilience Metrics | ✅ Enabled | `--resilience-metrics=false` | Network performance diagnostics |
+| Verbose Logging | ✅ Enabled | `--verbose=false` | Detailed debug output |
+| Security Audit | ✅ Enabled | `--security-audit=false` | Startup security vulnerability scan |
+| Stability Monitoring | ✅ Enabled | `--stability-monitor=false` | Production validation monitoring |
+| Max Players | ✅ 8 players | `--max-players <count>` | Increased from 4 to 8 default |
+| Tick Rate | ✅ 30/sec | `--tick-rate <rate>` | Increased from 20 to 30 for smoother gameplay |
+| Weather Intensity | ✅ Heavy | `--weather-intensity <level>` | Enhanced atmospheric effects |
+
+### Opt-in Validation Features
+
+| Feature | Activation | Status |
+|---------|-----------|--------|
+| Network Simulation | `--simulate-network <level>` | Test latency/packet loss scenarios (low/medium/high/extreme) |
+| Balance Validation | `--balance-validate` | Combat/economic balance verification (one-time) |
+| Migration Validation | `--migration-validate` | Save file migration testing (0.9.x → 1.0.0) |
+| UX Validation | `--ux-validate` | Gameplay flow validation (one-time) |
+
+### Developer Tools (8)
+
+| Tool | Command | Purpose |
+|------|---------|---------|
+| Feature Audit | `make feature-audit` | Verify feature completeness |
+| Visual Regression | `make visual-regression` | Compare rendered output to baselines |
+| Parity Tests | `make parity-test` | Cross-platform rendering verification |
+| CPU Profiling | `make profile-cpu` | Generate `cpu.prof` for pprof analysis |
+| Memory Profiling | `make profile-mem` | Generate `mem.prof` for allocation analysis |
+| Race Detection | `make test-race` | Run tests with Go race detector |
+| Coverage Reports | `make test-coverage` | Generate `coverage.html` report |
+| Documentation | `make docs` | Start godoc server at :6060 |
+
+### Included Mods (in `mods/` directory)
+
+| Mod File | Status | Effect |
+|----------|--------|--------|
+| `custom-spawns.json` | Enabled | Custom entity spawn rate multipliers |
+| `hardcore-mode.json` | Enabled | Permadeath + 2x difficulty |
+| `pvp-zones.json` | Disabled | PvP in 20% of world zones |
+
+### Environment Variables
+
+| Variable | Values | Purpose |
+|----------|--------|---------|
+| `LOG_LEVEL` | debug, info, warn, error | Logging verbosity |
+| `LOG_FORMAT` | json, text | Log output format |
+
+### Quick Start Scripts
+
+**Enhanced Client:**
+```bash
+./venture-client --postprocess-preset cinematic --palette-mood vibrant --profile
+```
+
+**Production Server:**
+```bash
+./venture-server --enable-metrics --resilience-metrics --enable-mods --verbose
+```

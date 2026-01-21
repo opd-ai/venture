@@ -159,9 +159,13 @@ func TestGetPresetByGenre(t *testing.T) {
 	}{
 		{"fantasy", "fantasy", "Fantasy"},
 		{"sci-fi", "scifi", "Sci-Fi"},
+		{"sci-fi-hyphen", "sci-fi", "Sci-Fi"},
 		{"horror", "horror", "Horror"},
 		{"cyberpunk", "cyberpunk", "Cyberpunk"},
 		{"post-apocalyptic", "postapoc", "Post-Apocalyptic"},
+		{"post-apocalyptic-full", "post-apocalyptic", "Post-Apocalyptic"},
+		{"cinematic", "cinematic", "Cinematic"},
+		{"neutral", "neutral", "Neutral"},
 		{"unknown", "unknown", "Neutral"},
 		{"empty", "", "Neutral"},
 	}

@@ -9,6 +9,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"sync"
 
 	"github.com/opd-ai/venture/pkg/engine"
 	"github.com/opd-ai/venture/pkg/mobile"
@@ -96,55 +97,73 @@ func main() {
 }
 
 // setupAllGameSystems initializes and registers all game systems.
+// Uses parallel initialization for independent system groups to reduce startup time.
 func setupAllGameSystems(game *engine.EbitenGame, logger *logrus.Logger, clientLogger *logrus.Entry) *systemsContainer {
 	sys := initializeCoreSystems(game, logger, clientLogger)
 
-	initializeVirtualControls(sys.inputSystem, clientLogger)
-	initializeGenerators(sys)
-	initializeObjectiveSystem(sys, logger)
+	// Phase 1: Independent early initialization (parallel)
+	var wg1 sync.WaitGroup
+	wg1.Add(3)
+	go func() {
+		defer wg1.Done()
+		initializeVirtualControls(sys.inputSystem, clientLogger)
+	}()
+	go func() {
+		defer wg1.Done()
+		initializeGenerators(sys)
+	}()
+	go func() {
+		defer wg1.Done()
+		initializeObjectiveSystem(sys, logger)
+	}()
+	wg1.Wait()
 
 	configureDeathCallback(sys, game, logger)
 
+	// Phase 2: Progression, audio, and combat systems (sequential - depend on generators)
 	initializeProgressionSystems(game, sys, logger)
 	initializeAudioSystem(game, sys, clientLogger)
 	initializeCombatSystems(game, sys)
 
 	tutorialSystem, helpSystem := initializeTutorialAndHelp(sys.inputSystem, game.CameraSystem)
 
-	// CRITICAL: Initialize environmental systems BEFORE registering them
-	initializeEnvironmentalSystems(game, sys, clientLogger)
-
-	// CRITICAL: Initialize V4.0 systems (Phase 21-27) BEFORE registering them
-	initializeV4Systems(game, sys, clientLogger)
-
-	// CRITICAL: Initialize V5.0 systems (social, chat, mail) BEFORE registering them
-	initializeV5Systems(game, sys, clientLogger)
-
-	// CRITICAL: Initialize V6.0 systems (federation, persistent worlds) BEFORE registering them
-	initializeV6Systems(game, sys, clientLogger)
-
-	// INTEGRATION FIX [Category A]: Initialize V8.0 systems (housing, physics, social persistence)
-	// Gap: V8.0 features fully implemented but never initialized in game client
-	// Fix: Added V8.0 system initialization call before registration
-	// Roadmap: ROADMAP_V8.md (Phase 49-51)
-	initializeV8Systems(game, sys, clientLogger)
-
-	// INTEGRATION FIX [Category A]: Initialize V7.0 systems (display, viewport)
-	// Gap: V7.0 features fully implemented but never initialized in game client
-	// Fix: Added V7.0 system initialization call for display and viewport optimization
-	// Roadmap: ROADMAP_V7.md (Phase 43-44)
-	initializeV7Systems(game, sys, clientLogger)
-
-	// INTEGRATION FIX [Category A]: Initialize V9.0 integration managers
-	// Gap: V9.0 integration packages fully implemented but never initialized
-	// Fix: Added V9.0 manager initialization call for housing/companion/guild integration
-	// Roadmap: ROADMAP_V9.md (Phase 55.1-55.3)
-	initializeV9Systems(game, sys, clientLogger)
-
-	// V19.0: Priority 1 Dormant Package Integration (ROADMAP_V19.md)
-	// Integrates entity generation, dialog generation, legendary items, economy,
-	// choice consequences, guild vehicles, and world events
-	initializeV19Systems(game, sys, clientLogger)
+	// Phase 3: Version systems (parallel - independent of each other)
+	// These systems write to separate fields in systemsContainer, making them safe to parallelize
+	var wg2 sync.WaitGroup
+	wg2.Add(8)
+	go func() {
+		defer wg2.Done()
+		initializeEnvironmentalSystems(game, sys, clientLogger)
+	}()
+	go func() {
+		defer wg2.Done()
+		initializeV4Systems(game, sys, clientLogger)
+	}()
+	go func() {
+		defer wg2.Done()
+		initializeV5Systems(game, sys, clientLogger)
+	}()
+	go func() {
+		defer wg2.Done()
+		initializeV6Systems(game, sys, clientLogger)
+	}()
+	go func() {
+		defer wg2.Done()
+		initializeV7Systems(game, sys, clientLogger)
+	}()
+	go func() {
+		defer wg2.Done()
+		initializeV8Systems(game, sys, clientLogger)
+	}()
+	go func() {
+		defer wg2.Done()
+		initializeV9Systems(game, sys, clientLogger)
+	}()
+	go func() {
+		defer wg2.Done()
+		initializeV19Systems(game, sys, clientLogger)
+	}()
+	wg2.Wait()
 
 	// Phase 3.2: Initialize Guild Federation (PLAN.md)
 	// Cross-server guild management with synchronization
@@ -162,7 +181,7 @@ func setupAllGameSystems(game *engine.EbitenGame, logger *logrus.Logger, clientL
 	configureSystemConnections(game, sys)
 
 	if *verbose {
-		clientLogger.Info("systems initialized")
+		clientLogger.Info("systems initialized (parallel mode)")
 	}
 
 	return sys

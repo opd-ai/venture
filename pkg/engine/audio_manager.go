@@ -47,7 +47,7 @@ func NewAudioManager(sampleRate int, seed int64) *AudioManager {
 		sfxEnabled:       true,
 		adaptiveComposer: music.NewAdaptiveComposer(sampleRate, seed),
 		motifGenerator:   music.NewMotifGenerator(sampleRate, seed),
-		useAdaptive:      false, // Disabled by default for compatibility
+		useAdaptive:      true, // Enabled by default for immersive soundtrack experience
 		motifCache:       make(map[string]*music.Motif),
 	}
 }

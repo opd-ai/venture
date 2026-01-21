@@ -170,7 +170,8 @@ func initializeCoreComponents(world *World, screenWidth, screenHeight int, logge
 	frameTimeTracker := NewFrameTimeTracker(1000)
 
 	lightingConfig := NewLightingConfig()
-	lightingConfig.Enabled = false
+	// Lighting enabled by default for immersive experience (V3.0 feature)
+	// LightingConfig already defaults to Enabled=true in NewLightingConfig()
 	lightingSystem := NewLightingSystemWithLogger(world, lightingConfig, logger)
 
 	return &coreComponents{

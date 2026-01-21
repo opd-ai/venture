@@ -1,6 +1,7 @@
 package particles
 
 import (
+	"fmt"
 	"math"
 	"math/rand"
 	"testing"
@@ -644,6 +645,174 @@ func BenchmarkUpdateDebris(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		UpdateDebris(particles, config, deltaTime, 100)
+	}
+}
+
+func TestUpdateDebrisPooled_EmptyParticles(t *testing.T) {
+	var particles []PhysicsParticle
+	config := DefaultDebrisConfig()
+	ctx := AcquireDebrisContext()
+	defer ReleaseDebrisContext(ctx)
+
+	// Should not panic
+	UpdateDebrisPooled(particles, config, 0.016, 0, ctx)
+}
+
+func TestUpdateDebrisPooled_NilContext(t *testing.T) {
+	particles := []PhysicsParticle{
+		{Particle: Particle{X: 0, Y: 0}},
+	}
+	config := DefaultDebrisConfig()
+
+	// Should not panic with nil context
+	UpdateDebrisPooled(particles, config, 0.016, 0, nil)
+}
+
+func TestUpdateDebrisPooled_GroundCollision(t *testing.T) {
+	groundY := 100.0
+	particles := []PhysicsParticle{
+		{
+			Particle: Particle{X: 0, Y: 110, VX: 5, VY: 10},
+		},
+	}
+	config := DefaultDebrisConfig()
+	config.Restitution = 0.5
+
+	ctx := AcquireDebrisContext()
+	defer ReleaseDebrisContext(ctx)
+
+	UpdateDebrisPooled(particles, config, 0.016, groundY, ctx)
+
+	// Should bounce at ground
+	if particles[0].Y != groundY {
+		t.Errorf("Particle should be at ground Y=%f, got %f", groundY, particles[0].Y)
+	}
+	// Velocity should be reversed and reduced by restitution
+	if particles[0].VY >= 0 {
+		t.Errorf("Particle should bounce with negative VY, got %f", particles[0].VY)
+	}
+}
+
+func TestUpdateDebrisPooled_ParticleCollision(t *testing.T) {
+	particles := []PhysicsParticle{
+		{Particle: Particle{X: 0, Y: 0, VX: 10, VY: 0}},
+		{Particle: Particle{X: 5, Y: 0, VX: -10, VY: 0}},
+	}
+	config := DefaultDebrisConfig()
+	config.CollisionRadius = 5.0
+	config.Restitution = 0.8
+
+	initialVX0 := particles[0].VX
+	initialVX1 := particles[1].VX
+
+	ctx := AcquireDebrisContext()
+	defer ReleaseDebrisContext(ctx)
+
+	UpdateDebrisPooled(particles, config, 0.016, -100, ctx)
+
+	// Velocities should change after collision
+	vx0Changed := particles[0].VX != initialVX0
+	vx1Changed := particles[1].VX != initialVX1
+
+	if !vx0Changed && !vx1Changed {
+		t.Error("Particles should have collided and changed velocities")
+	}
+}
+
+func TestUpdateDebrisPooled_ContextReuse(t *testing.T) {
+	particles := make([]PhysicsParticle, 50)
+	for i := range particles {
+		particles[i] = PhysicsParticle{
+			Particle: Particle{
+				X:  float64(i%10) * 10,
+				Y:  float64(i/10) * 10,
+				VX: 1.0,
+				VY: 1.0,
+			},
+		}
+	}
+	config := DefaultDebrisConfig()
+
+	ctx := AcquireDebrisContext()
+	defer ReleaseDebrisContext(ctx)
+
+	// Run multiple updates with same context
+	for i := 0; i < 10; i++ {
+		UpdateDebrisPooled(particles, config, 0.016, 100, ctx)
+	}
+
+	// Verify particles updated (simple movement check)
+	anyMoved := false
+	for _, p := range particles {
+		if p.Rotation != 0 || p.LastCollision > 0 {
+			anyMoved = true
+			break
+		}
+	}
+	if !anyMoved {
+		t.Error("Particles should have been updated over multiple frames")
+	}
+}
+
+func TestAcquireDebrisContext_ReturnsValid(t *testing.T) {
+	ctx := AcquireDebrisContext()
+	if ctx == nil {
+		t.Fatal("AcquireDebrisContext returned nil")
+	}
+	if ctx.SpatialHash == nil {
+		t.Error("SpatialHash should not be nil")
+	}
+	if ctx.candidateBuffer == nil {
+		t.Error("candidateBuffer should not be nil")
+	}
+	if ctx.neighborsBuffer == nil {
+		t.Error("neighborsBuffer should not be nil")
+	}
+	ReleaseDebrisContext(ctx)
+}
+
+func TestReleaseDebrisContext_NilSafe(t *testing.T) {
+	// Should not panic
+	ReleaseDebrisContext(nil)
+}
+
+func TestDebrisContext_PoolReuse(t *testing.T) {
+	// Get, release, get again - should reuse
+	ctx1 := AcquireDebrisContext()
+	addr1 := fmt.Sprintf("%p", ctx1)
+	ReleaseDebrisContext(ctx1)
+
+	ctx2 := AcquireDebrisContext()
+	addr2 := fmt.Sprintf("%p", ctx2)
+	ReleaseDebrisContext(ctx2)
+
+	// Pool may reuse the same address (not guaranteed but likely)
+	t.Logf("First context: %s, Second context: %s", addr1, addr2)
+}
+
+func BenchmarkUpdateDebrisPooled(b *testing.B) {
+	particles := make([]PhysicsParticle, 200)
+	for i := range particles {
+		particles[i] = PhysicsParticle{
+			Particle: Particle{
+				X:  float64(i%20) * 10,
+				Y:  float64(i/20) * 10,
+				VX: float64(i%10) - 5,
+				VY: float64(i/10) - 5,
+			},
+			AngularVelocity: 1.0,
+		}
+	}
+	config := DefaultDebrisConfig()
+	deltaTime := 0.016
+
+	ctx := AcquireDebrisContext()
+	defer ReleaseDebrisContext(ctx)
+
+	b.ResetTimer()
+	b.ReportAllocs()
+	for i := 0; i < b.N; i++ {
+		UpdateDebrisPooled(particles, config, deltaTime, 100, ctx)
 	}
 }
 

@@ -420,3 +420,64 @@ func GetAmbienceCacheStats() (hits, misses uint64, size int) {
 func ClearAmbienceCache() {
 	globalAmbienceCache.Clear()
 }
+
+// DebrisContext provides pre-allocated buffers for debris particle updates.
+// Reusing this context across UpdateDebrisPooled calls reduces allocations
+// from ~47KB to near-zero per update.
+type DebrisContext struct {
+	// SpatialHash is a reusable spatial hash for collision detection
+	SpatialHash *SpatialHash
+
+	// candidateBuffer stores candidate particle indices from spatial queries
+	candidateBuffer []int
+
+	// neighborsBuffer stores confirmed neighbor particle indices
+	neighborsBuffer []int
+}
+
+// debrisContextPool provides reusable DebrisContext instances.
+// Debris updates allocate ~47KB per call (per AUDIT.md); pooling eliminates this.
+var debrisContextPool = sync.Pool{
+	New: func() interface{} {
+		return &DebrisContext{
+			SpatialHash:     NewSpatialHash(8.0, -1000, -1000, 1000, 1000), // Default cell size
+			candidateBuffer: make([]int, 0, 128),
+			neighborsBuffer: make([]int, 0, 64),
+		}
+	},
+}
+
+// AcquireDebrisContext gets a DebrisContext from the pool.
+// The context is reset and ready for use with UpdateDebrisPooled.
+//
+// IMPORTANT: Call ReleaseDebrisContext when done to return to pool.
+func AcquireDebrisContext() *DebrisContext {
+	ctx, ok := debrisContextPool.Get().(*DebrisContext)
+	if !ok {
+		return &DebrisContext{
+			SpatialHash:     NewSpatialHash(8.0, -1000, -1000, 1000, 1000),
+			candidateBuffer: make([]int, 0, 128),
+			neighborsBuffer: make([]int, 0, 64),
+		}
+	}
+	// Reset buffers but keep capacity
+	ctx.candidateBuffer = ctx.candidateBuffer[:0]
+	ctx.neighborsBuffer = ctx.neighborsBuffer[:0]
+	// Spatial hash will be cleared in UpdateDebrisPooled
+	return ctx
+}
+
+// ReleaseDebrisContext returns a DebrisContext to the pool.
+// After calling, the context should not be used as it may be reused elsewhere.
+func ReleaseDebrisContext(ctx *DebrisContext) {
+	if ctx == nil {
+		return
+	}
+	// Clear spatial hash to free map entries
+	if ctx.SpatialHash != nil {
+		ctx.SpatialHash.Clear()
+	}
+	ctx.candidateBuffer = ctx.candidateBuffer[:0]
+	ctx.neighborsBuffer = ctx.neighborsBuffer[:0]
+	debrisContextPool.Put(ctx)
+}

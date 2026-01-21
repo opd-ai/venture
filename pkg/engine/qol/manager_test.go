@@ -507,6 +507,117 @@ func TestRecipeTracker_UntrackRecipe(t *testing.T) {
 	}
 }
 
+func TestRecipeTracker_GetTrackedRecipes(t *testing.T) {
+	tracker := NewRecipeTracker()
+
+	t.Run("unknown player returns empty slice", func(t *testing.T) {
+		recipes := tracker.GetTrackedRecipes(999)
+		if recipes == nil {
+			t.Error("Expected non-nil empty slice, got nil")
+		}
+		if len(recipes) != 0 {
+			t.Errorf("Expected empty slice for unknown player, got %d items", len(recipes))
+		}
+	})
+
+	t.Run("multiple recipes tracked", func(t *testing.T) {
+		info1 := &RecipeTrackingInfo{
+			RecipeID:      "iron_sword",
+			RecipeName:    "Iron Sword",
+			RequiredMats:  map[string]int{"iron": 3},
+			AvailableMats: map[string]int{"iron": 5},
+		}
+		info2 := &RecipeTrackingInfo{
+			RecipeID:      "steel_axe",
+			RecipeName:    "Steel Axe",
+			RequiredMats:  map[string]int{"steel": 2, "wood": 1},
+			AvailableMats: map[string]int{"steel": 4, "wood": 3},
+		}
+		info3 := &RecipeTrackingInfo{
+			RecipeID:      "leather_armor",
+			RecipeName:    "Leather Armor",
+			RequiredMats:  map[string]int{"leather": 5},
+			AvailableMats: map[string]int{"leather": 3},
+		}
+
+		tracker.TrackRecipe(2, info1)
+		tracker.TrackRecipe(2, info2)
+		tracker.TrackRecipe(2, info3)
+
+		recipes := tracker.GetTrackedRecipes(2)
+		if len(recipes) != 3 {
+			t.Errorf("Expected 3 tracked recipes, got %d", len(recipes))
+		}
+
+		recipeIDs := make(map[string]bool)
+		for _, r := range recipes {
+			recipeIDs[r.RecipeID] = true
+		}
+		if !recipeIDs["iron_sword"] || !recipeIDs["steel_axe"] || !recipeIDs["leather_armor"] {
+			t.Error("Not all tracked recipes returned")
+		}
+	})
+}
+
+func TestStorageSorter_GetPreset(t *testing.T) {
+	sorter := NewStorageSorter()
+
+	t.Run("default presets exist", func(t *testing.T) {
+		defaultPreset := sorter.GetPreset("default")
+		if defaultPreset == nil {
+			t.Error("Expected 'default' preset to exist")
+		}
+		if defaultPreset.Name != "Default" {
+			t.Errorf("Default preset name = %q, want %q", defaultPreset.Name, "Default")
+		}
+		if defaultPreset.PrimaryCriteria != SortByType {
+			t.Error("Default preset primary criteria should be SortByType")
+		}
+
+		rarityPreset := sorter.GetPreset("rarity")
+		if rarityPreset == nil {
+			t.Error("Expected 'rarity' preset to exist")
+		}
+		if !rarityPreset.Descending {
+			t.Error("Rarity preset should have Descending=true")
+		}
+
+		valuePreset := sorter.GetPreset("value")
+		if valuePreset == nil {
+			t.Error("Expected 'value' preset to exist")
+		}
+	})
+
+	t.Run("non-existent preset returns nil", func(t *testing.T) {
+		preset := sorter.GetPreset("nonexistent")
+		if preset != nil {
+			t.Error("Expected nil for non-existent preset")
+		}
+	})
+
+	t.Run("custom preset retrieval", func(t *testing.T) {
+		customPreset := &StorageSortPreset{
+			Name:              "my_preset",
+			PrimaryCriteria:   SortByQuantity,
+			SecondaryCriteria: SortByRarity,
+			Descending:        true,
+			GroupByType:       false,
+		}
+		sorter.AddPreset(customPreset)
+
+		retrieved := sorter.GetPreset("my_preset")
+		if retrieved == nil {
+			t.Error("Expected custom preset to be retrievable")
+		}
+		if retrieved.PrimaryCriteria != SortByQuantity {
+			t.Error("Custom preset primary criteria mismatch")
+		}
+		if !retrieved.Descending {
+			t.Error("Custom preset Descending should be true")
+		}
+	})
+}
+
 // Benchmarks
 
 func BenchmarkAutoLootManager_ShouldCollect(b *testing.B) {

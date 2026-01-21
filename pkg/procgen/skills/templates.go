@@ -848,6 +848,313 @@ func GetCyberpunkTreeTemplates() []SkillTreeTemplate {
 	}
 }
 
+// GetPostApocalypticTreeTemplates returns skill tree templates for post-apocalyptic genre.
+// Archetypes include Scavenger, Raider, Survivor, and Mutant.
+func GetPostApocalypticTreeTemplates() []SkillTreeTemplate {
+	return []SkillTreeTemplate{
+		{
+			Name:        "Scavenger",
+			Description: "Expert in finding resources and crafting improvised equipment",
+			Category:    CategoryUtility,
+			SkillTemplates: []SkillTemplate{
+				// Resource finding passives
+				{
+					BaseType:          TypePassive,
+					BaseCategory:      CategoryUtility,
+					NamePrefixes:      []string{"Keen", "Trained", "Wasteland", "Salvage"},
+					NameSuffixes:      []string{"Eye", "Instinct", "Sense", "Expertise"},
+					DescriptionFormat: "Improves %s resource discovery",
+					EffectTypes:       []string{"loot_chance", "resource_find", "detection_range"},
+					ValueRanges: map[string][2]float64{
+						"loot_chance":     {0.08, 0.20},
+						"resource_find":   {0.10, 0.25},
+						"detection_range": {0.06, 0.15},
+					},
+					Tags:          []string{"utility", "passive", "scavenging"},
+					TierRange:     [2]int{0, 4},
+					MaxLevelRange: [2]int{3, 5},
+				},
+				// Active scavenging skills
+				{
+					BaseType:          TypeActive,
+					BaseCategory:      CategoryUtility,
+					NamePrefixes:      []string{"Quick", "Deep", "Thorough", "Expert"},
+					NameSuffixes:      []string{"Search", "Salvage", "Scrounge", "Excavation"},
+					DescriptionFormat: "Perform %s to find extra resources",
+					EffectTypes:       []string{"bonus_loot", "rare_find_chance", "speed_bonus"},
+					ValueRanges: map[string][2]float64{
+						"bonus_loot":       {0.30, 0.80},
+						"rare_find_chance": {0.10, 0.30},
+						"speed_bonus":      {0.15, 0.40},
+					},
+					Tags:          []string{"utility", "active", "loot"},
+					TierRange:     [2]int{1, 5},
+					MaxLevelRange: [2]int{1, 3},
+				},
+				// Crafting skills
+				{
+					BaseType:          TypePassive,
+					BaseCategory:      CategoryCrafting,
+					NamePrefixes:      []string{"Improvised", "Jury-Rigged", "Makeshift", "Cobbled"},
+					NameSuffixes:      []string{"Engineering", "Crafting", "Assembly", "Fabrication"},
+					DescriptionFormat: "Enhances %s improvised crafting",
+					EffectTypes:       []string{"craft_speed", "material_efficiency", "repair_bonus"},
+					ValueRanges: map[string][2]float64{
+						"craft_speed":         {0.10, 0.25},
+						"material_efficiency": {0.15, 0.35},
+						"repair_bonus":        {0.12, 0.28},
+					},
+					Tags:          []string{"crafting", "passive", "improvisation"},
+					TierRange:     [2]int{0, 4},
+					MaxLevelRange: [2]int{3, 5},
+				},
+				// Ultimate
+				{
+					BaseType:          TypeUltimate,
+					BaseCategory:      CategoryUtility,
+					NamePrefixes:      []string{"Master", "Legendary", "Ultimate", "Supreme"},
+					NameSuffixes:      []string{"Scavenger", "Salvager", "Finder", "Collector"},
+					DescriptionFormat: "Activate %s for incredible resource discovery",
+					EffectTypes:       []string{"guaranteed_rare", "loot_multiplier", "area_reveal"},
+					ValueRanges: map[string][2]float64{
+						"guaranteed_rare": {1.00, 3.00},
+						"loot_multiplier": {2.00, 4.00},
+						"area_reveal":     {0.50, 1.00},
+					},
+					Tags:          []string{"ultimate", "utility", "loot"},
+					TierRange:     [2]int{6, 6},
+					MaxLevelRange: [2]int{1, 1},
+				},
+			},
+		},
+		{
+			Name:        "Raider",
+			Description: "Aggressive combatant focused on intimidation and quick strikes",
+			Category:    CategoryCombat,
+			SkillTemplates: []SkillTemplate{
+				// Aggression passives
+				{
+					BaseType:          TypePassive,
+					BaseCategory:      CategoryCombat,
+					NamePrefixes:      []string{"Brutal", "Savage", "Vicious", "Relentless"},
+					NameSuffixes:      []string{"Assault", "Aggression", "Fury", "Onslaught"},
+					DescriptionFormat: "Enhances %s offensive capabilities",
+					EffectTypes:       []string{"damage", "crit_chance", "attack_speed"},
+					ValueRanges: map[string][2]float64{
+						"damage":       {0.08, 0.20},
+						"crit_chance":  {0.05, 0.14},
+						"attack_speed": {0.06, 0.15},
+					},
+					Tags:          []string{"combat", "passive", "aggression"},
+					TierRange:     [2]int{0, 4},
+					MaxLevelRange: [2]int{3, 5},
+				},
+				// Active combat skills
+				{
+					BaseType:          TypeActive,
+					BaseCategory:      CategoryCombat,
+					NamePrefixes:      []string{"Charge", "Ambush", "Raid", "Blitz"},
+					NameSuffixes:      []string{"Attack", "Strike", "Assault", "Rush"},
+					DescriptionFormat: "Execute %s for devastating damage",
+					EffectTypes:       []string{"damage", "stun_chance", "fear_chance"},
+					ValueRanges: map[string][2]float64{
+						"damage":      {0.70, 1.80},
+						"stun_chance": {0.15, 0.40},
+						"fear_chance": {0.10, 0.30},
+					},
+					Tags:          []string{"combat", "active", "burst"},
+					TierRange:     [2]int{1, 5},
+					MaxLevelRange: [2]int{1, 3},
+				},
+				// Intimidation skills
+				{
+					BaseType:          TypePassive,
+					BaseCategory:      CategorySocial,
+					NamePrefixes:      []string{"Fearsome", "Terrifying", "Menacing", "Dreadful"},
+					NameSuffixes:      []string{"Presence", "Reputation", "Aura", "Visage"},
+					DescriptionFormat: "Grants %s intimidation bonuses",
+					EffectTypes:       []string{"fear_aura", "enemy_damage_reduction", "barter_bonus"},
+					ValueRanges: map[string][2]float64{
+						"fear_aura":              {0.10, 0.25},
+						"enemy_damage_reduction": {0.05, 0.15},
+						"barter_bonus":           {0.08, 0.20},
+					},
+					Tags:          []string{"social", "passive", "intimidation"},
+					TierRange:     [2]int{0, 4},
+					MaxLevelRange: [2]int{3, 5},
+				},
+				// Ultimate
+				{
+					BaseType:          TypeUltimate,
+					BaseCategory:      CategoryCombat,
+					NamePrefixes:      []string{"Warlord's", "Marauder's", "Berserker's", "Devastator's"},
+					NameSuffixes:      []string{"Rampage", "Fury", "Massacre", "Carnage"},
+					DescriptionFormat: "Unleash %s for overwhelming destruction",
+					EffectTypes:       []string{"damage", "fear_aoe", "lifesteal"},
+					ValueRanges: map[string][2]float64{
+						"damage":    {2.50, 5.00},
+						"fear_aoe":  {0.60, 1.00},
+						"lifesteal": {0.30, 0.60},
+					},
+					Tags:          []string{"ultimate", "combat", "burst"},
+					TierRange:     [2]int{6, 6},
+					MaxLevelRange: [2]int{1, 1},
+				},
+			},
+		},
+		{
+			Name:        "Survivor",
+			Description: "Master of endurance, adaptation, and environmental resistance",
+			Category:    CategoryDefense,
+			SkillTemplates: []SkillTemplate{
+				// Endurance passives
+				{
+					BaseType:          TypePassive,
+					BaseCategory:      CategoryDefense,
+					NamePrefixes:      []string{"Hardened", "Weathered", "Resilient", "Tough"},
+					NameSuffixes:      []string{"Constitution", "Endurance", "Fortitude", "Resolve"},
+					DescriptionFormat: "Improves %s survival capabilities",
+					EffectTypes:       []string{"max_health", "health_regen", "damage_reduction"},
+					ValueRanges: map[string][2]float64{
+						"max_health":       {0.10, 0.25},
+						"health_regen":     {0.08, 0.18},
+						"damage_reduction": {0.05, 0.14},
+					},
+					Tags:          []string{"defense", "passive", "survival"},
+					TierRange:     [2]int{0, 4},
+					MaxLevelRange: [2]int{3, 5},
+				},
+				// Active survival skills
+				{
+					BaseType:          TypeActive,
+					BaseCategory:      CategoryDefense,
+					NamePrefixes:      []string{"Emergency", "Desperate", "Last Stand", "Second Wind"},
+					NameSuffixes:      []string{"Recovery", "Heal", "Surge", "Revival"},
+					DescriptionFormat: "Activate %s for emergency healing",
+					EffectTypes:       []string{"instant_heal", "heal_over_time", "damage_immunity"},
+					ValueRanges: map[string][2]float64{
+						"instant_heal":    {0.20, 0.50},
+						"heal_over_time":  {0.15, 0.40},
+						"damage_immunity": {2.0, 5.0},
+					},
+					Tags:          []string{"defense", "active", "healing"},
+					TierRange:     [2]int{1, 5},
+					MaxLevelRange: [2]int{1, 3},
+				},
+				// Environmental resistance
+				{
+					BaseType:          TypePassive,
+					BaseCategory:      CategoryDefense,
+					NamePrefixes:      []string{"Radiation", "Toxin", "Heat", "Cold"},
+					NameSuffixes:      []string{"Resistance", "Immunity", "Adaptation", "Tolerance"},
+					DescriptionFormat: "Grants %s environmental protection",
+					EffectTypes:       []string{"radiation_resist", "poison_resist", "elemental_resist"},
+					ValueRanges: map[string][2]float64{
+						"radiation_resist": {0.15, 0.40},
+						"poison_resist":    {0.12, 0.35},
+						"elemental_resist": {0.10, 0.28},
+					},
+					Tags:          []string{"defense", "passive", "resistance"},
+					TierRange:     [2]int{0, 4},
+					MaxLevelRange: [2]int{3, 5},
+				},
+				// Ultimate
+				{
+					BaseType:          TypeUltimate,
+					BaseCategory:      CategoryDefense,
+					NamePrefixes:      []string{"Undying", "Immortal", "Unkillable", "Invincible"},
+					NameSuffixes:      []string{"Will", "Spirit", "Determination", "Resolve"},
+					DescriptionFormat: "Activate %s for near-immortality",
+					EffectTypes:       []string{"damage_immunity_duration", "full_heal", "buff_all_stats"},
+					ValueRanges: map[string][2]float64{
+						"damage_immunity_duration": {5.0, 10.0},
+						"full_heal":                {1.00, 1.00},
+						"buff_all_stats":           {0.30, 0.60},
+					},
+					Tags:          []string{"ultimate", "defense", "survival"},
+					TierRange:     [2]int{6, 6},
+					MaxLevelRange: [2]int{1, 1},
+				},
+			},
+		},
+		{
+			Name:        "Mutant",
+			Description: "Radiation-altered being with unnatural powers and resilience",
+			Category:    CategoryMagic,
+			SkillTemplates: []SkillTemplate{
+				// Mutation passives
+				{
+					BaseType:          TypePassive,
+					BaseCategory:      CategoryMagic,
+					NamePrefixes:      []string{"Unstable", "Evolved", "Mutated", "Altered"},
+					NameSuffixes:      []string{"Genes", "DNA", "Cells", "Biology"},
+					DescriptionFormat: "Enhances %s mutant abilities",
+					EffectTypes:       []string{"mutation_power", "regeneration", "radiation_absorb"},
+					ValueRanges: map[string][2]float64{
+						"mutation_power":   {0.08, 0.20},
+						"regeneration":     {0.10, 0.25},
+						"radiation_absorb": {0.12, 0.30},
+					},
+					Tags:          []string{"magic", "passive", "mutation"},
+					TierRange:     [2]int{0, 4},
+					MaxLevelRange: [2]int{3, 5},
+				},
+				// Active mutation powers
+				{
+					BaseType:          TypeActive,
+					BaseCategory:      CategoryMagic,
+					NamePrefixes:      []string{"Radioactive", "Toxic", "Corrosive", "Necrotic"},
+					NameSuffixes:      []string{"Blast", "Wave", "Pulse", "Eruption"},
+					DescriptionFormat: "Unleash %s at enemies",
+					EffectTypes:       []string{"radiation_damage", "poison_damage", "debuff_chance"},
+					ValueRanges: map[string][2]float64{
+						"radiation_damage": {0.60, 1.60},
+						"poison_damage":    {0.40, 1.00},
+						"debuff_chance":    {0.20, 0.50},
+					},
+					Tags:          []string{"magic", "active", "radiation"},
+					TierRange:     [2]int{1, 5},
+					MaxLevelRange: [2]int{1, 3},
+				},
+				// Physical mutations
+				{
+					BaseType:          TypePassive,
+					BaseCategory:      CategoryCombat,
+					NamePrefixes:      []string{"Clawed", "Armored", "Enhanced", "Monstrous"},
+					NameSuffixes:      []string{"Limbs", "Hide", "Physique", "Form"},
+					DescriptionFormat: "Grants %s physical enhancements",
+					EffectTypes:       []string{"melee_damage", "natural_armor", "strength_bonus"},
+					ValueRanges: map[string][2]float64{
+						"melee_damage":   {0.10, 0.25},
+						"natural_armor":  {0.08, 0.20},
+						"strength_bonus": {0.06, 0.16},
+					},
+					Tags:          []string{"combat", "passive", "physical"},
+					TierRange:     [2]int{0, 4},
+					MaxLevelRange: [2]int{3, 5},
+				},
+				// Ultimate
+				{
+					BaseType:          TypeUltimate,
+					BaseCategory:      CategoryMagic,
+					NamePrefixes:      []string{"Meltdown", "Unstable", "Critical", "Nuclear"},
+					NameSuffixes:      []string{"Form", "Transformation", "Evolution", "Apotheosis"},
+					DescriptionFormat: "Trigger %s for devastating power",
+					EffectTypes:       []string{"radiation_aoe", "mutation_buff", "terror_aura"},
+					ValueRanges: map[string][2]float64{
+						"radiation_aoe": {2.50, 5.00},
+						"mutation_buff": {0.50, 1.00},
+						"terror_aura":   {0.60, 1.00},
+					},
+					Tags:          []string{"ultimate", "magic", "transformation"},
+					TierRange:     [2]int{6, 6},
+					MaxLevelRange: [2]int{1, 1},
+				},
+			},
+		},
+	}
+}
+
 // GetSciFiTreeTemplates returns skill tree templates for sci-fi genre.
 func GetSciFiTreeTemplates() []SkillTreeTemplate {
 	return []SkillTreeTemplate{

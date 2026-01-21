@@ -795,3 +795,78 @@ func TestSkillTreeGenerationCyberpunk(t *testing.T) {
 		t.Errorf("Validation failed for cyberpunk trees: %v", err)
 	}
 }
+
+func TestGetPostApocalypticTemplates(t *testing.T) {
+	templates := GetPostApocalypticTreeTemplates()
+	if len(templates) == 0 {
+		t.Fatal("GetPostApocalypticTreeTemplates() returned empty slice")
+	}
+
+	expectedTrees := []string{"Scavenger", "Raider", "Survivor", "Mutant"}
+	if len(templates) != len(expectedTrees) {
+		t.Errorf("Expected %d trees, got %d", len(expectedTrees), len(templates))
+	}
+
+	for i, expected := range expectedTrees {
+		if i >= len(templates) {
+			break
+		}
+		if templates[i].Name != expected {
+			t.Errorf("Tree %d: expected name %s, got %s", i, expected, templates[i].Name)
+		}
+
+		// Verify each tree has 4 skill templates (passive, active, passive/defense, ultimate)
+		if len(templates[i].SkillTemplates) != 4 {
+			t.Errorf("Tree %s: expected 4 skill templates, got %d", expected, len(templates[i].SkillTemplates))
+		}
+	}
+}
+
+func TestSkillTreeGenerationPostApocalyptic(t *testing.T) {
+	gen := NewSkillTreeGenerator()
+	params := procgen.GenerationParams{
+		Depth:      5,
+		Difficulty: 0.5,
+		GenreID:    "postapocalyptic",
+		Custom: map[string]interface{}{
+			"count": 4,
+		},
+	}
+
+	result, err := gen.Generate(12345, params)
+	if err != nil {
+		t.Fatalf("Generate for postapocalyptic failed: %v", err)
+	}
+
+	trees, ok := result.([]*SkillTree)
+	if !ok {
+		t.Fatalf("Expected []*SkillTree, got %T", result)
+	}
+
+	if len(trees) != 4 {
+		t.Errorf("Expected 4 trees, got %d", len(trees))
+	}
+
+	// Verify postapocalyptic genre is set
+	for i, tree := range trees {
+		if tree.Genre != "postapocalyptic" {
+			t.Errorf("Tree %d has wrong genre: %s, expected postapocalyptic", i, tree.Genre)
+		}
+	}
+
+	// Verify determinism - same seed should produce same trees
+	result2, _ := gen.Generate(12345, params)
+	trees2 := result2.([]*SkillTree)
+
+	for i := range trees {
+		if trees[i].Name != trees2[i].Name {
+			t.Errorf("Determinism failed: tree %d has different names %s vs %s",
+				i, trees[i].Name, trees2[i].Name)
+		}
+	}
+
+	// Validate generated trees
+	if err := gen.Validate(trees); err != nil {
+		t.Errorf("Validation failed for postapocalyptic trees: %v", err)
+	}
+}

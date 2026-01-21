@@ -289,37 +289,36 @@ const (
 
 ## Hidden Feature Enablement
 
-The following undocumented features have been discovered in the codebase but are not enabled by default. See [FEATURES_DISCOVERED.md](FEATURES_DISCOVERED.md) for detailed activation instructions.
+> **Note:** As of the latest update, most features are now **enabled by default** with optimal settings. See [FEATURES_DISCOVERED.md](FEATURES_DISCOVERED.md) for detailed documentation.
 
-### Production-Ready Features (14)
+### Production-Ready Features (Now Enabled by Default)
 
-| Feature | Activation | Purpose |
-|---------|-----------|---------|
-| Performance Profiling | `--profile` | Frame time tracking for performance diagnosis |
-| Post-Processing Presets | `--postprocess-preset <preset>` | Cinematic visual effects (fantasy, sci-fi, horror, cyberpunk, cinematic) |
-| Color Grading | `--postprocess-color-grading` | Saturation, contrast, brightness controls |
-| Palette Customization | `--palette-harmony <type>` | Color harmony and mood controls for procedural generation |
-| Skip Tutorial | `--no-tutorial` | Bypass tutorial for experienced players |
-| Server Modding | `--enable-mods --mods-dir mods` | JSON-based server mods (difficulty, PvP, spawn rates) |
-| Prometheus Metrics | `--enable-metrics --metrics-port 9090` | Export server metrics for Grafana/monitoring |
-| Resilience Metrics | `--resilience-metrics` | Network performance diagnostics |
-| Aerial Sprites | `--aerial-sprites=false` | Toggle top-down sprite perspective |
-| LAN Hosting | `--host-lan` | Bind to 0.0.0.0 for LAN multiplayer |
-| Custom Port | `--port <port>` | Specify server port (auto-fallback on conflict) |
-| Max Players | `--max-players <count>` | Set player limit (default: 4) |
-| Tick Rate | `--tick-rate <rate>` | Server update rate (default: 20/sec) |
-| Verbose Logging | `--verbose` or `LOG_LEVEL=debug` | Detailed debug output |
+| Feature | Default | Disable With | Purpose |
+|---------|---------|--------------|---------|
+| Performance Profiling | ✅ Enabled | `--profile=false` | Frame time tracking for performance diagnosis |
+| Post-Processing (Cinematic) | ✅ Enabled | `--postprocess-preset=""` | Cinematic visual effects with enhanced color grading |
+| Color Grading | ✅ Enabled | `--postprocess-color-grading=false` | Saturation (1.1), contrast (1.05), brightness (0.02) |
+| Vignette Effect | ✅ Enabled | `--postprocess-vignette=false` | Cinematic vignette (0.6 intensity, 0.4 softness) |
+| Chromatic Aberration | ✅ Enabled | `--postprocess-chromatic=false` | Subtle lens effect (0.3 intensity) |
+| Palette Enhancement | ✅ Triadic/Vibrant/Epic | `--palette-harmony=complementary` | Enhanced procedural color generation |
+| Server Modding | ✅ Enabled | `--enable-mods=false` | JSON-based server mods (difficulty, PvP, spawn rates) |
+| Prometheus Metrics | ✅ Enabled | `--enable-metrics=false` | Export server metrics on port 9090 |
+| Resilience Metrics | ✅ Enabled | `--resilience-metrics=false` | Network performance diagnostics |
+| Verbose Logging | ✅ Enabled | `--verbose=false` | Detailed debug output |
+| Security Audit | ✅ Enabled | `--security-audit=false` | Startup security vulnerability scan |
+| Stability Monitoring | ✅ Enabled | `--stability-monitor=false` | Production validation monitoring |
+| Max Players | ✅ 8 players | `--max-players <count>` | Increased from 4 to 8 default |
+| Tick Rate | ✅ 30/sec | `--tick-rate <rate>` | Increased from 20 to 30 for smoother gameplay |
+| Weather Intensity | ✅ Heavy | `--weather-intensity <level>` | Enhanced atmospheric effects |
 
-### Experimental Features (6)
+### Opt-in Validation Features
 
 | Feature | Activation | Status |
 |---------|-----------|--------|
 | Network Simulation | `--simulate-network <level>` | Test latency/packet loss scenarios (low/medium/high/extreme) |
-| Stability Monitoring | `--stability-monitor` | 72-hour production validation (500MB memory, 60 FPS thresholds) |
-| Security Audit | `--security-audit` | Startup security vulnerability scan |
-| Balance Validation | `--balance-validate` | Combat/economic balance verification |
+| Balance Validation | `--balance-validate` | Combat/economic balance verification (one-time) |
 | Migration Validation | `--migration-validate` | Save file migration testing (0.9.x → 1.0.0) |
-| UX Validation | `--ux-validate` | Gameplay flow validation |
+| UX Validation | `--ux-validate` | Gameplay flow validation (one-time) |
 
 ### Developer Tools (8)
 

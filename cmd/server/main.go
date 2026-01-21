@@ -31,21 +31,21 @@ import (
 
 var (
 	port          = flag.String("port", "8080", "Server port")
-	maxPlayers    = flag.Int("max-players", 4, "Maximum number of players")
+	maxPlayers    = flag.Int("max-players", 8, "Maximum number of players")
 	seed          = flag.Int64("seed", 12345, "World generation seed")
 	genreID       = flag.String("genre", "fantasy", "Genre ID for world generation")
-	tickRate      = flag.Int("tick-rate", 20, "Server update rate (updates per second)")
-	verbose       = flag.Bool("verbose", false, "Enable verbose logging")
+	tickRate      = flag.Int("tick-rate", 30, "Server update rate (updates per second)")
+	verbose       = flag.Bool("verbose", true, "Enable verbose logging")
 	aerialSprites = flag.Bool("aerial-sprites", true, "Enable aerial-view perspective sprites for top-down gameplay")
 	highLatency   = flag.Bool("high-latency", false, "Use high-latency configuration optimized for Tor/onion services (200-5000ms latency)")
 
-	// Phase 2 (PLAN.md): Security and stability integration
-	securityAudit    = flag.Bool("security-audit", false, "Run security audit at startup and log results")
-	stabilityMonitor = flag.Bool("stability-monitor", false, "Enable stability monitoring for production validation")
+	// Phase 2 (PLAN.md): Security and stability integration (enabled by default for production readiness)
+	securityAudit    = flag.Bool("security-audit", true, "Run security audit at startup and log results")
+	stabilityMonitor = flag.Bool("stability-monitor", true, "Enable stability monitoring for production validation")
 
 	// Phase 4.1 (PLAN.md): Network resilience testing
 	simulateNetwork   = flag.String("simulate-network", "", "Simulate network conditions for testing: low, medium, high, very-high, extreme")
-	resilienceMetrics = flag.Bool("resilience-metrics", false, "Enable network resilience metrics collection")
+	resilienceMetrics = flag.Bool("resilience-metrics", true, "Enable network resilience metrics collection")
 
 	// Phase 6.1 (PLAN.md): Balance validation integration
 	balanceValidate = flag.Bool("balance-validate", false, "Run combat and economic balance validation at startup")
@@ -56,13 +56,13 @@ var (
 	// Phase 6.4 (PLAN.md): UX journey validation integration
 	uxValidate = flag.Bool("ux-validate", false, "Run user experience journey validation at startup")
 
-	// Phase 6.3 (PLAN.md): Modding system integration
-	enableMods = flag.Bool("enable-mods", false, "Enable mod system with sandbox security")
+	// Phase 6.3 (PLAN.md): Modding system integration (enabled by default)
+	enableMods = flag.Bool("enable-mods", true, "Enable mod system with sandbox security")
 	modsDir    = flag.String("mods-dir", "mods", "Directory to load mods from")
 
-	// Phase 3 (PLAN.md): Metrics export for production monitoring
+	// Phase 3 (PLAN.md): Metrics export for production monitoring (enabled by default)
 	metricsPort   = flag.String("metrics-port", "9090", "Port for Prometheus metrics HTTP endpoint")
-	enableMetrics = flag.Bool("enable-metrics", false, "Enable Prometheus metrics export at /metrics endpoint")
+	enableMetrics = flag.Bool("enable-metrics", true, "Enable Prometheus metrics export at /metrics endpoint")
 
 	// Version flag
 	showVersion = flag.Bool("version", false, "Print version information and exit")

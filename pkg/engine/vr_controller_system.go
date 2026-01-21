@@ -183,7 +183,7 @@ func NewVRControllerSystem(world *World) *VRControllerSystem {
 
 	return &VRControllerSystem{
 		world:          world,
-		enabled:        false,
+		enabled:        true, // Enabled by default with graceful degradation when no VR controllers
 		attackButton:   ButtonTrigger,
 		interactButton: ButtonA,
 	}

@@ -115,8 +115,8 @@ func TestNewVRControllerSystem(t *testing.T) {
 		t.Fatal("NewVRControllerSystem returned nil")
 	}
 
-	if sys.IsEnabled() {
-		t.Error("Expected disabled by default")
+	if !sys.IsEnabled() {
+		t.Error("Expected enabled by default")
 	}
 }
 
@@ -213,7 +213,7 @@ func TestVRControllerSystem_Update_FromAdapter(t *testing.T) {
 func TestVRControllerSystem_Update_Disabled(t *testing.T) {
 	world := &World{}
 	sys := NewVRControllerSystem(world)
-	// System disabled
+	sys.SetEnabled(false) // Explicitly disable for this test
 
 	mock := NewMockController()
 	mock.SetTrigger(ControllerRight, 0.7)

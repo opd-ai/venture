@@ -57,7 +57,7 @@ func NewStereoscopicSystem(world *World) *StereoscopicSystem {
 	return &StereoscopicSystem{
 		world:       world,
 		renderPhase: RenderPhaseIdle,
-		enabled:     false,
+		enabled:     true, // Enabled by default with graceful degradation when no VR hardware
 	}
 }
 

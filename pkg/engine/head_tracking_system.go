@@ -124,7 +124,7 @@ func NewHeadTrackingSystem(world *World) *HeadTrackingSystem {
 
 	return &HeadTrackingSystem{
 		world:            world,
-		enabled:          false,
+		enabled:          true, // Enabled by default with graceful degradation (mouse fallback)
 		useMouseFallback: true,
 		mouseSensitivity: 0.003,
 	}

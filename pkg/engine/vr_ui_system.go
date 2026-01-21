@@ -45,7 +45,7 @@ func NewVRUISystem(world *World) *VRUISystem {
 
 	return &VRUISystem{
 		world:   world,
-		enabled: false,
+		enabled: true, // Enabled by default with graceful degradation when no VR hardware
 	}
 }
 

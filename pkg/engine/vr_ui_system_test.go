@@ -13,8 +13,8 @@ func TestNewVRUISystem(t *testing.T) {
 		t.Fatal("NewVRUISystem returned nil")
 	}
 
-	if sys.IsEnabled() {
-		t.Error("Expected disabled by default")
+	if !sys.IsEnabled() {
+		t.Error("Expected enabled by default")
 	}
 
 	if sys.IsMenuOpen() {
@@ -59,7 +59,7 @@ func TestVRUISystem_SetHandTracking(t *testing.T) {
 func TestVRUISystem_Update_Disabled(t *testing.T) {
 	world := &World{}
 	sys := NewVRUISystem(world)
-	// System disabled
+	sys.SetEnabled(false) // Explicitly disable for this test
 
 	entity := NewEntity(1)
 	ui := NewVRUIComponent()
@@ -73,7 +73,7 @@ func TestVRUISystem_Update_Disabled(t *testing.T) {
 func TestVRUISystem_Update_Enabled(t *testing.T) {
 	world := &World{}
 	sys := NewVRUISystem(world)
-	sys.SetEnabled(true)
+	// System is enabled by default
 
 	entity := NewEntity(1)
 	ui := NewVRUIComponent()

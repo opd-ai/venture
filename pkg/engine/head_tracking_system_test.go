@@ -86,8 +86,8 @@ func TestNewHeadTrackingSystem(t *testing.T) {
 		t.Fatal("NewHeadTrackingSystem returned nil")
 	}
 
-	if sys.IsEnabled() {
-		t.Error("Expected disabled by default")
+	if !sys.IsEnabled() {
+		t.Error("Expected enabled by default")
 	}
 
 	if !sys.IsUseMouseFallback() {
@@ -193,7 +193,7 @@ func TestHeadTrackingSystem_Update_FromHeadset(t *testing.T) {
 func TestHeadTrackingSystem_Update_Disabled(t *testing.T) {
 	world := &World{}
 	sys := NewHeadTrackingSystem(world)
-	// System disabled
+	sys.SetEnabled(false) // Explicitly disable for this test
 
 	mock := NewMockHeadset()
 	mock.SetHeadOrientation(0.5, 1.0, 0.2)

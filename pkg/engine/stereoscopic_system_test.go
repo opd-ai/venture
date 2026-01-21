@@ -12,8 +12,8 @@ func TestNewStereoscopicSystem(t *testing.T) {
 		t.Fatal("NewStereoscopicSystem returned nil")
 	}
 
-	if sys.IsEnabled() {
-		t.Error("Expected system to be disabled by default")
+	if !sys.IsEnabled() {
+		t.Error("Expected system to be enabled by default")
 	}
 
 	if sys.GetRenderPhase() != RenderPhaseIdle {
@@ -43,6 +43,7 @@ func TestStereoscopicSystem_SetEnabled(t *testing.T) {
 func TestStereoscopicSystem_Update_Disabled(t *testing.T) {
 	world := &World{}
 	sys := NewStereoscopicSystem(world)
+	sys.SetEnabled(false) // Explicitly disable for this test
 
 	// Create entity with stereoscopic component
 	entity := NewEntity(1)
@@ -61,7 +62,7 @@ func TestStereoscopicSystem_Update_Disabled(t *testing.T) {
 func TestStereoscopicSystem_Update_Enabled(t *testing.T) {
 	world := &World{}
 	sys := NewStereoscopicSystem(world)
-	sys.SetEnabled(true)
+	// System is enabled by default
 
 	// Create entity with stereoscopic component
 	entity := NewEntity(1)

@@ -503,18 +503,33 @@ func (l *VirtualControlsLayout) Update() {
 		return
 	}
 
+	touches := l.collectActiveTouches()
+	l.updateCoreControls(touches)
+	l.updateExtendedControls(touches)
+	l.updateUIShortcuts(touches)
+	l.updateSpellButtons(touches)
+}
+
+// collectActiveTouches retrieves and maps all active touches from the touch handler.
+func (l *VirtualControlsLayout) collectActiveTouches() map[ebiten.TouchID]*Touch {
 	l.touchHandler.Update()
 	touches := make(map[ebiten.TouchID]*Touch)
 	for _, touch := range l.touchHandler.GetActiveTouches() {
 		touches[touch.ID] = touch
 	}
+	return touches
+}
 
+// updateCoreControls updates the primary D-pad and action buttons.
+func (l *VirtualControlsLayout) updateCoreControls(touches map[ebiten.TouchID]*Touch) {
 	l.DPad.Update(touches)
 	l.ActionButton.Update(touches)
 	l.SecondaryButton.Update(touches)
 	l.MenuButton.Update(touches)
+}
 
-	// Platform parity fix: Update extended controls
+// updateExtendedControls updates the inventory, target, and interact buttons.
+func (l *VirtualControlsLayout) updateExtendedControls(touches map[ebiten.TouchID]*Touch) {
 	if l.InventoryButton != nil {
 		l.InventoryButton.Update(touches)
 	}
@@ -524,29 +539,35 @@ func (l *VirtualControlsLayout) Update() {
 	if l.InteractButton != nil {
 		l.InteractButton.Update(touches)
 	}
+}
 
-	// Platform parity fix: Update UI shortcut buttons
-	if l.ShowUIShortcuts {
-		if l.CharacterButton != nil {
-			l.CharacterButton.Update(touches)
-		}
-		if l.SkillsButton != nil {
-			l.SkillsButton.Update(touches)
-		}
-		if l.QuestLogButton != nil {
-			l.QuestLogButton.Update(touches)
-		}
-		if l.MapButton != nil {
-			l.MapButton.Update(touches)
-		}
+// updateUIShortcuts updates the character, skills, quest, and map shortcut buttons.
+func (l *VirtualControlsLayout) updateUIShortcuts(touches map[ebiten.TouchID]*Touch) {
+	if !l.ShowUIShortcuts {
+		return
 	}
+	if l.CharacterButton != nil {
+		l.CharacterButton.Update(touches)
+	}
+	if l.SkillsButton != nil {
+		l.SkillsButton.Update(touches)
+	}
+	if l.QuestLogButton != nil {
+		l.QuestLogButton.Update(touches)
+	}
+	if l.MapButton != nil {
+		l.MapButton.Update(touches)
+	}
+}
 
-	// Update spell buttons
-	if l.ShowSpellButtons {
-		for _, btn := range l.SpellButtons {
-			if btn != nil {
-				btn.Update(touches)
-			}
+// updateSpellButtons updates all spell casting buttons.
+func (l *VirtualControlsLayout) updateSpellButtons(touches map[ebiten.TouchID]*Touch) {
+	if !l.ShowSpellButtons {
+		return
+	}
+	for _, btn := range l.SpellButtons {
+		if btn != nil {
+			btn.Update(touches)
 		}
 	}
 }
@@ -558,12 +579,22 @@ func (l *VirtualControlsLayout) Draw(screen *ebiten.Image) {
 		return
 	}
 
+	l.drawCoreControls(screen)
+	l.drawExtendedControls(screen)
+	l.drawUIShortcuts(screen)
+	l.drawSpellButtons(screen)
+}
+
+// drawCoreControls renders the primary D-pad and action buttons.
+func (l *VirtualControlsLayout) drawCoreControls(screen *ebiten.Image) {
 	l.DPad.Draw(screen)
 	l.ActionButton.Draw(screen)
 	l.SecondaryButton.Draw(screen)
 	l.MenuButton.Draw(screen)
+}
 
-	// Platform parity fix: Draw extended controls
+// drawExtendedControls renders the inventory, target, and interact buttons.
+func (l *VirtualControlsLayout) drawExtendedControls(screen *ebiten.Image) {
 	if l.InventoryButton != nil {
 		l.InventoryButton.Draw(screen)
 	}
@@ -573,29 +604,35 @@ func (l *VirtualControlsLayout) Draw(screen *ebiten.Image) {
 	if l.InteractButton != nil {
 		l.InteractButton.Draw(screen)
 	}
+}
 
-	// Platform parity fix: Draw UI shortcut buttons
-	if l.ShowUIShortcuts {
-		if l.CharacterButton != nil {
-			l.CharacterButton.Draw(screen)
-		}
-		if l.SkillsButton != nil {
-			l.SkillsButton.Draw(screen)
-		}
-		if l.QuestLogButton != nil {
-			l.QuestLogButton.Draw(screen)
-		}
-		if l.MapButton != nil {
-			l.MapButton.Draw(screen)
-		}
+// drawUIShortcuts renders the character, skills, quest, and map shortcut buttons.
+func (l *VirtualControlsLayout) drawUIShortcuts(screen *ebiten.Image) {
+	if !l.ShowUIShortcuts {
+		return
 	}
+	if l.CharacterButton != nil {
+		l.CharacterButton.Draw(screen)
+	}
+	if l.SkillsButton != nil {
+		l.SkillsButton.Draw(screen)
+	}
+	if l.QuestLogButton != nil {
+		l.QuestLogButton.Draw(screen)
+	}
+	if l.MapButton != nil {
+		l.MapButton.Draw(screen)
+	}
+}
 
-	// Draw spell buttons
-	if l.ShowSpellButtons {
-		for _, btn := range l.SpellButtons {
-			if btn != nil {
-				btn.Draw(screen)
-			}
+// drawSpellButtons renders all spell casting buttons.
+func (l *VirtualControlsLayout) drawSpellButtons(screen *ebiten.Image) {
+	if !l.ShowSpellButtons {
+		return
+	}
+	for _, btn := range l.SpellButtons {
+		if btn != nil {
+			btn.Draw(screen)
 		}
 	}
 }

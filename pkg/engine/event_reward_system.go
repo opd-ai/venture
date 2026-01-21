@@ -131,52 +131,77 @@ func (s *EventRewardSystem) checkAchievementCompletion(
 ) bool {
 	switch ach.Requirement {
 	case "participate":
-		return rewardComp.TotalEventsParticipated >= ach.RequiredAmount
-
+		return s.checkParticipationRequirement(rewardComp, ach)
 	case "complete_quests":
-		if questComp == nil {
-			return false
-		}
-		completed := 0
-		for _, q := range questComp.CompletedQuests {
-			if q.Definition.EventID == eventID {
-				completed++
-			}
-		}
-		return completed >= ach.RequiredAmount
-
+		return s.checkQuestCompletionRequirement(questComp, ach, eventID)
 	case "earn_currency":
-		return rewardComp.GetCurrency(eventID) >= ach.RequiredAmount
-
+		return s.checkCurrencyRequirement(rewardComp, ach, eventID)
 	case "defeat_boss":
-		if questComp == nil {
-			return false
-		}
-		for _, q := range questComp.CompletedQuests {
-			if q.Definition.EventID == eventID && q.Definition.QuestType == EventQuestBoss {
-				return true
-			}
-		}
-		return false
-
+		return s.checkBossDefeatRequirement(questComp, eventID)
 	case "explore_location":
-		if questComp == nil {
-			return false
-		}
-		for _, q := range questComp.CompletedQuests {
-			if q.Definition.EventID == eventID && q.Definition.QuestType == EventQuestExploration {
-				return true
-			}
-		}
-		return false
-
+		return s.checkExplorationRequirement(questComp, eventID)
 	default:
-		progress := rewardComp.GetAchievementProgress(ach.ID)
-		if progress != nil {
-			return progress.Completed
-		}
+		return s.checkCustomAchievementProgress(rewardComp, ach)
+	}
+}
+
+// checkParticipationRequirement checks if participation requirement is met.
+func (s *EventRewardSystem) checkParticipationRequirement(rewardComp *EventRewardComponent, ach EventAchievementDef) bool {
+	return rewardComp.TotalEventsParticipated >= ach.RequiredAmount
+}
+
+// checkQuestCompletionRequirement checks if quest completion requirement is met.
+func (s *EventRewardSystem) checkQuestCompletionRequirement(questComp *EventQuestComponent, ach EventAchievementDef, eventID string) bool {
+	if questComp == nil {
 		return false
 	}
+	completed := 0
+	for _, q := range questComp.CompletedQuests {
+		if q.Definition.EventID == eventID {
+			completed++
+		}
+	}
+	return completed >= ach.RequiredAmount
+}
+
+// checkCurrencyRequirement checks if currency earning requirement is met.
+func (s *EventRewardSystem) checkCurrencyRequirement(rewardComp *EventRewardComponent, ach EventAchievementDef, eventID string) bool {
+	return rewardComp.GetCurrency(eventID) >= ach.RequiredAmount
+}
+
+// checkBossDefeatRequirement checks if boss defeat requirement is met.
+func (s *EventRewardSystem) checkBossDefeatRequirement(questComp *EventQuestComponent, eventID string) bool {
+	if questComp == nil {
+		return false
+	}
+	for _, q := range questComp.CompletedQuests {
+		if q.Definition.EventID == eventID && q.Definition.QuestType == EventQuestBoss {
+			return true
+		}
+	}
+	return false
+}
+
+// checkExplorationRequirement checks if exploration requirement is met.
+func (s *EventRewardSystem) checkExplorationRequirement(questComp *EventQuestComponent, eventID string) bool {
+	if questComp == nil {
+		return false
+	}
+	for _, q := range questComp.CompletedQuests {
+		if q.Definition.EventID == eventID && q.Definition.QuestType == EventQuestExploration {
+			return true
+		}
+	}
+	return false
+}
+
+// checkCustomAchievementProgress checks custom achievement progress.
+func (s *EventRewardSystem) checkCustomAchievementProgress(rewardComp *EventRewardComponent, ach EventAchievementDef) bool {
+	progress := rewardComp.GetAchievementProgress(ach.ID)
+	if progress != nil {
+		return progress.Completed
+	}
+	return false
 }
 
 // grantQuestReward grants rewards for completing an event quest.

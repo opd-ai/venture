@@ -258,62 +258,17 @@ func (m *SaveManager) LoadGameWithRecovery(name string) (*GameSave, error) {
 		return nil, err
 	}
 
-	// Check if file exists
-	savePath := m.getFilePath(name)
-	if _, err := os.Stat(savePath); os.IsNotExist(err) {
-		return nil, fmt.Errorf("save file not found: %s", name)
-	}
-
-	// Validate checksum if available
-	valid, hasChecksum := m.validateChecksum(name)
-	if hasChecksum && !valid {
-		m.logWarn("checksum validation failed, save may be corrupted", nil, logrus.Fields{
-			"name": name,
-		})
-		// Attempt recovery from backup
-		recovered, recErr := m.recoverFromBackup(name)
-		if recErr != nil {
-			return nil, fmt.Errorf("failed to recover from backup: %w", recErr)
-		}
-		if !recovered {
-			// Continue with corrupted file load attempt
-			m.logWarn("recovery failed, attempting to load corrupted file", nil, logrus.Fields{
-				"name": name,
-			})
-		}
-	}
-
-	// Attempt to load save
-	data, err := m.readSaveFile(name)
-	if err != nil {
+	if err := m.verifySaveFileExists(name); err != nil {
 		return nil, err
 	}
 
-	save, err := m.unmarshalSave(data, name)
+	if err := m.handleChecksumValidation(name); err != nil {
+		return nil, err
+	}
+
+	save, err := m.loadAndParseSave(name)
 	if err != nil {
-		// Load failed, try recovery
-		m.logError("failed to parse save, attempting recovery", err, logrus.Fields{"name": name})
-
-		recovered, recErr := m.recoverFromBackup(name)
-		if recErr != nil {
-			return nil, fmt.Errorf("failed to recover from backup: %w", recErr)
-		}
-		if !recovered {
-			return nil, fmt.Errorf("save corrupted and no valid backup available: %w", err)
-		}
-
-		// Retry load after recovery
-		data, err = m.readSaveFile(name)
-		if err != nil {
-			return nil, fmt.Errorf("failed to load after recovery: %w", err)
-		}
-
-		save, err = m.unmarshalSave(data, name)
-		if err != nil {
-			return nil, fmt.Errorf("failed to parse after recovery: %w", err)
-		}
-
-		m.logInfo("successfully loaded after recovery", logrus.Fields{"name": name})
+		return nil, err
 	}
 
 	if err := m.validateAndMigrate(save); err != nil {
@@ -327,6 +282,74 @@ func (m *SaveManager) LoadGameWithRecovery(name string) (*GameSave, error) {
 		"timestamp": save.Timestamp,
 	})
 
+	return save, nil
+}
+
+// verifySaveFileExists checks if the save file exists before attempting to load.
+func (m *SaveManager) verifySaveFileExists(name string) error {
+	savePath := m.getFilePath(name)
+	if _, err := os.Stat(savePath); os.IsNotExist(err) {
+		return fmt.Errorf("save file not found: %s", name)
+	}
+	return nil
+}
+
+// handleChecksumValidation validates checksum and attempts recovery if corrupted.
+func (m *SaveManager) handleChecksumValidation(name string) error {
+	valid, hasChecksum := m.validateChecksum(name)
+	if !hasChecksum || valid {
+		return nil
+	}
+
+	m.logWarn("checksum validation failed, save may be corrupted", nil, logrus.Fields{"name": name})
+	recovered, recErr := m.recoverFromBackup(name)
+	if recErr != nil {
+		return fmt.Errorf("failed to recover from backup: %w", recErr)
+	}
+	if !recovered {
+		m.logWarn("recovery failed, attempting to load corrupted file", nil, logrus.Fields{"name": name})
+	}
+	return nil
+}
+
+// loadAndParseSave loads save data and attempts recovery if parsing fails.
+func (m *SaveManager) loadAndParseSave(name string) (*GameSave, error) {
+	data, err := m.readSaveFile(name)
+	if err != nil {
+		return nil, err
+	}
+
+	save, err := m.unmarshalSave(data, name)
+	if err != nil {
+		return m.recoverAndRetryLoad(name, err)
+	}
+
+	return save, nil
+}
+
+// recoverAndRetryLoad attempts recovery from backup and retries save loading.
+func (m *SaveManager) recoverAndRetryLoad(name string, originalErr error) (*GameSave, error) {
+	m.logError("failed to parse save, attempting recovery", originalErr, logrus.Fields{"name": name})
+
+	recovered, recErr := m.recoverFromBackup(name)
+	if recErr != nil {
+		return nil, fmt.Errorf("failed to recover from backup: %w", recErr)
+	}
+	if !recovered {
+		return nil, fmt.Errorf("save corrupted and no valid backup available: %w", originalErr)
+	}
+
+	data, err := m.readSaveFile(name)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load after recovery: %w", err)
+	}
+
+	save, err := m.unmarshalSave(data, name)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse after recovery: %w", err)
+	}
+
+	m.logInfo("successfully loaded after recovery", logrus.Fields{"name": name})
 	return save, nil
 }
 

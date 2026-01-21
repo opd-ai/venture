@@ -499,78 +499,94 @@ func (g *Generator) applyWallShadow(img *image.RGBA, pal *palette.Palette, confi
 // (visible top surface reflecting light) to simulate 3D wall projection.
 func (g *Generator) applyWallHeightEdges(img *image.RGBA, pal *palette.Palette, config EnhancedWallConfig) {
 	bounds := img.Bounds()
-	height := bounds.Dy()
+	edgeThickness := g.calculateEdgeThickness(bounds.Dy())
 
-	// Edge thickness scales with tile size (4px for 64x64 tiles)
+	g.applyTopEdgeShading(img, bounds, edgeThickness, config)
+	g.applyBottomEdgeShading(img, bounds, edgeThickness, config)
+	g.applyWallSideEdges(img, config, edgeThickness)
+}
+
+// calculateEdgeThickness calculates edge thickness based on tile height.
+func (g *Generator) calculateEdgeThickness(height int) int {
 	edgeThickness := height / 16
 	if edgeThickness < 2 {
 		edgeThickness = 2
 	}
+	return edgeThickness
+}
 
-	// Apply top edge (darker - represents the player-facing wall face casting shadow)
-	// This is visible when looking down at the wall from above
+// applyTopEdgeShading applies darkening to the top edge of the wall.
+func (g *Generator) applyTopEdgeShading(img *image.RGBA, bounds image.Rectangle, edgeThickness int, config EnhancedWallConfig) {
 	for t := 0; t < edgeThickness; t++ {
 		y := bounds.Min.Y + t
 		if y >= bounds.Max.Y {
 			continue
 		}
 
-		// Darken factor decreases as we move down from the very top
 		darkenFactor := 0.6 + 0.4*float64(t)/float64(edgeThickness)
-
-		for x := bounds.Min.X; x < bounds.Max.X; x++ {
-			// Skip corners if they're adjacent to walls (they're handled by corner blending)
-			if t < edgeThickness/2 {
-				if (config.Neighbors.West && x < bounds.Min.X+edgeThickness) ||
-					(config.Neighbors.East && x >= bounds.Max.X-edgeThickness) {
-					continue
-				}
-			}
-
-			existing := img.At(x, y)
-			r, gr, b, a := existing.RGBA()
-
-			newR := uint8(float64(r>>8) * darkenFactor)
-			newG := uint8(float64(gr>>8) * darkenFactor)
-			newB := uint8(float64(b>>8) * darkenFactor)
-
-			img.Set(x, y, color.RGBA{R: newR, G: newG, B: newB, A: uint8(a >> 8)})
-		}
+		g.applyHorizontalEdgeRow(img, bounds, y, t, edgeThickness, darkenFactor, config, true)
 	}
+}
 
-	// Apply bottom edge (lighter - represents the top surface of the wall visible from above)
-	// This simulates light hitting the top of the wall
+// applyBottomEdgeShading applies lightening to the bottom edge of the wall.
+func (g *Generator) applyBottomEdgeShading(img *image.RGBA, bounds image.Rectangle, edgeThickness int, config EnhancedWallConfig) {
 	for t := 0; t < edgeThickness; t++ {
 		y := bounds.Max.Y - 1 - t
 		if y < bounds.Min.Y {
 			continue
 		}
 
-		// Lighten factor decreases as we move up from the very bottom
 		lightenFactor := 1.15 + 0.1*float64(edgeThickness-1-t)/float64(edgeThickness)
+		g.applyHorizontalEdgeRow(img, bounds, y, t, edgeThickness, lightenFactor, config, false)
+	}
+}
 
-		for x := bounds.Min.X; x < bounds.Max.X; x++ {
-			// Skip corners if they're adjacent to walls
-			if t < edgeThickness/2 {
-				if (config.Neighbors.West && x < bounds.Min.X+edgeThickness) ||
-					(config.Neighbors.East && x >= bounds.Max.X-edgeThickness) {
-					continue
-				}
-			}
+// applyHorizontalEdgeRow applies shading to a horizontal row of pixels.
+func (g *Generator) applyHorizontalEdgeRow(img *image.RGBA, bounds image.Rectangle, y, t, edgeThickness int, factor float64, config EnhancedWallConfig, isDarkening bool) {
+	for x := bounds.Min.X; x < bounds.Max.X; x++ {
+		if g.shouldSkipCorner(x, t, edgeThickness, bounds, config) {
+			continue
+		}
 
-			existing := img.At(x, y)
-			r, gr, b, a := existing.RGBA()
-
-			newR := uint8(math.Min(255, float64(r>>8)*lightenFactor))
-			newG := uint8(math.Min(255, float64(gr>>8)*lightenFactor))
-			newB := uint8(math.Min(255, float64(b>>8)*lightenFactor))
-
-			img.Set(x, y, color.RGBA{R: newR, G: newG, B: newB, A: uint8(a >> 8)})
+		if isDarkening {
+			g.darkenPixel(img, x, y, factor)
+		} else {
+			g.lightenPixel(img, x, y, factor)
 		}
 	}
+}
 
-	// Apply left and right edge shading for complete 3D effect
-	g.applyWallSideEdges(img, config, edgeThickness)
+// shouldSkipCorner determines if a corner pixel should be skipped.
+func (g *Generator) shouldSkipCorner(x, t, edgeThickness int, bounds image.Rectangle, config EnhancedWallConfig) bool {
+	if t >= edgeThickness/2 {
+		return false
+	}
+	return (config.Neighbors.West && x < bounds.Min.X+edgeThickness) ||
+		(config.Neighbors.East && x >= bounds.Max.X-edgeThickness)
+}
+
+// darkenPixel darkens a pixel by the given factor.
+func (g *Generator) darkenPixel(img *image.RGBA, x, y int, factor float64) {
+	existing := img.At(x, y)
+	r, gr, b, a := existing.RGBA()
+
+	newR := uint8(float64(r>>8) * factor)
+	newG := uint8(float64(gr>>8) * factor)
+	newB := uint8(float64(b>>8) * factor)
+
+	img.Set(x, y, color.RGBA{R: newR, G: newG, B: newB, A: uint8(a >> 8)})
+}
+
+// lightenPixel lightens a pixel by the given factor.
+func (g *Generator) lightenPixel(img *image.RGBA, x, y int, factor float64) {
+	existing := img.At(x, y)
+	r, gr, b, a := existing.RGBA()
+
+	newR := uint8(math.Min(255, float64(r>>8)*factor))
+	newG := uint8(math.Min(255, float64(gr>>8)*factor))
+	newB := uint8(math.Min(255, float64(b>>8)*factor))
+
+	img.Set(x, y, color.RGBA{R: newR, G: newG, B: newB, A: uint8(a >> 8)})
 }
 
 // applyWallSideEdges adds left/right edge shading for walls.

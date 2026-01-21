@@ -94,52 +94,54 @@ func (s *AlignmentSystem) GetAlignment(entityID uint64) Alignment {
 func (s *AlignmentSystem) GetAlignmentDescription(entityID uint64) string {
 	alignment := s.GetAlignment(entityID)
 
-	// Thresholds for axis classification
-	const neutralThreshold = 0.2 // Below this is "neutral"
-	const strongThreshold = 0.6  // Above this is "strong" (Lawful/Chaotic/Good/Evil)
+	const neutralThreshold = 0.2
+	const strongThreshold = 0.6
 
-	// Determine law axis description
-	var lawDesc string
-	if alignment.LawAxis > strongThreshold {
-		lawDesc = "Lawful"
-	} else if alignment.LawAxis < -strongThreshold {
-		lawDesc = "Chaotic"
-	} else if alignment.LawAxis >= neutralThreshold {
-		lawDesc = "Slightly Lawful"
-	} else if alignment.LawAxis <= -neutralThreshold {
-		lawDesc = "Slightly Chaotic"
-	} else {
-		lawDesc = "Neutral"
+	lawDesc := s.classifyLawAxis(alignment.LawAxis, neutralThreshold, strongThreshold)
+	goodDesc := s.classifyGoodAxis(alignment.GoodAxis, neutralThreshold, strongThreshold)
+
+	return s.formatAlignmentDescription(lawDesc, goodDesc)
+}
+
+// classifyLawAxis classifies the law/chaos axis value into a descriptive string.
+func (s *AlignmentSystem) classifyLawAxis(value, neutralThreshold, strongThreshold float64) string {
+	if value > strongThreshold {
+		return "Lawful"
+	} else if value < -strongThreshold {
+		return "Chaotic"
+	} else if value >= neutralThreshold {
+		return "Slightly Lawful"
+	} else if value <= -neutralThreshold {
+		return "Slightly Chaotic"
 	}
+	return "Neutral"
+}
 
-	// Determine good axis description
-	var goodDesc string
-	if alignment.GoodAxis > strongThreshold {
-		goodDesc = "Good"
-	} else if alignment.GoodAxis < -strongThreshold {
-		goodDesc = "Evil"
-	} else if alignment.GoodAxis >= neutralThreshold {
-		goodDesc = "Slightly Good"
-	} else if alignment.GoodAxis <= -neutralThreshold {
-		goodDesc = "Slightly Evil"
-	} else {
-		goodDesc = "Neutral"
+// classifyGoodAxis classifies the good/evil axis value into a descriptive string.
+func (s *AlignmentSystem) classifyGoodAxis(value, neutralThreshold, strongThreshold float64) string {
+	if value > strongThreshold {
+		return "Good"
+	} else if value < -strongThreshold {
+		return "Evil"
+	} else if value >= neutralThreshold {
+		return "Slightly Good"
+	} else if value <= -neutralThreshold {
+		return "Slightly Evil"
 	}
+	return "Neutral"
+}
 
-	// Handle True Neutral case
+// formatAlignmentDescription combines law and good axis descriptions into final alignment string.
+func (s *AlignmentSystem) formatAlignmentDescription(lawDesc, goodDesc string) string {
 	if lawDesc == "Neutral" && goodDesc == "Neutral" {
 		return "True Neutral"
 	}
-
-	// Handle single-axis neutrality
 	if lawDesc == "Neutral" {
 		return goodDesc
 	}
 	if goodDesc == "Neutral" {
 		return lawDesc
 	}
-
-	// Combine both axes
 	return lawDesc + " " + goodDesc
 }
 

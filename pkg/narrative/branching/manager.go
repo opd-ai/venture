@@ -362,108 +362,146 @@ func (m *Manager) advanceToNode(progress *PlayerProgress, arc *StoryArc, nextNod
 
 func (m *Manager) checkRequirements(progress *PlayerProgress, requirements map[string]interface{}) error {
 	for key, required := range requirements {
-		actual, exists := progress.Variables[key]
-		if !exists {
-			return fmt.Errorf("requirement %s not met: variable not found", key)
-		}
-
-		// Type-specific comparison
-		switch req := required.(type) {
-		case int:
-			// Handle both int and float64 for JSON unmarshaling compatibility
-			switch act := actual.(type) {
-			case int:
-				if act < req {
-					return fmt.Errorf("requirement %s not met: need %d, have %d", key, req, act)
-				}
-			case float64:
-				if int(act) < req {
-					return fmt.Errorf("requirement %s not met: need %d, have %v", key, req, actual)
-				}
-			default:
-				return fmt.Errorf("requirement %s not met: type mismatch", key)
-			}
-		case float64:
-			// Handle both float64 and int for JSON unmarshaling compatibility
-			switch act := actual.(type) {
-			case float64:
-				if act < req {
-					return fmt.Errorf("requirement %s not met: need %f, have %f", key, req, act)
-				}
-			case int:
-				if float64(act) < req {
-					return fmt.Errorf("requirement %s not met: need %f, have %v", key, req, actual)
-				}
-			default:
-				return fmt.Errorf("requirement %s not met: type mismatch", key)
-			}
-		case bool:
-			act, ok := actual.(bool)
-			if !ok || act != req {
-				return fmt.Errorf("requirement %s not met: need %v, have %v", key, req, actual)
-			}
-		case string:
-			act, ok := actual.(string)
-			if !ok || act != req {
-				return fmt.Errorf("requirement %s not met: need %s, have %v", key, req, actual)
-			}
+		if err := m.checkSingleRequirement(progress, key, required); err != nil {
+			return err
 		}
 	}
+	return nil
+}
 
+// checkSingleRequirement validates a single requirement against player progress.
+func (m *Manager) checkSingleRequirement(progress *PlayerProgress, key string, required interface{}) error {
+	actual, exists := progress.Variables[key]
+	if !exists {
+		return fmt.Errorf("requirement %s not met: variable not found", key)
+	}
+
+	switch req := required.(type) {
+	case int:
+		return m.checkIntRequirement(key, req, actual)
+	case float64:
+		return m.checkFloatRequirement(key, req, actual)
+	case bool:
+		return m.checkBoolRequirement(key, req, actual)
+	case string:
+		return m.checkStringRequirement(key, req, actual)
+	}
+	return nil
+}
+
+// checkIntRequirement validates an integer requirement.
+func (m *Manager) checkIntRequirement(key string, required int, actual interface{}) error {
+	switch act := actual.(type) {
+	case int:
+		if act < required {
+			return fmt.Errorf("requirement %s not met: need %d, have %d", key, required, act)
+		}
+	case float64:
+		if int(act) < required {
+			return fmt.Errorf("requirement %s not met: need %d, have %v", key, required, actual)
+		}
+	default:
+		return fmt.Errorf("requirement %s not met: type mismatch", key)
+	}
+	return nil
+}
+
+// checkFloatRequirement validates a float requirement.
+func (m *Manager) checkFloatRequirement(key string, required float64, actual interface{}) error {
+	switch act := actual.(type) {
+	case float64:
+		if act < required {
+			return fmt.Errorf("requirement %s not met: need %f, have %f", key, required, act)
+		}
+	case int:
+		if float64(act) < required {
+			return fmt.Errorf("requirement %s not met: need %f, have %v", key, required, actual)
+		}
+	default:
+		return fmt.Errorf("requirement %s not met: type mismatch", key)
+	}
+	return nil
+}
+
+// checkBoolRequirement validates a boolean requirement.
+func (m *Manager) checkBoolRequirement(key string, required bool, actual interface{}) error {
+	act, ok := actual.(bool)
+	if !ok || act != required {
+		return fmt.Errorf("requirement %s not met: need %v, have %v", key, required, actual)
+	}
+	return nil
+}
+
+// checkStringRequirement validates a string requirement.
+func (m *Manager) checkStringRequirement(key string, required string, actual interface{}) error {
+	act, ok := actual.(string)
+	if !ok || act != required {
+		return fmt.Errorf("requirement %s not met: need %s, have %v", key, required, actual)
+	}
 	return nil
 }
 
 func (m *Manager) evaluateConditions(progress *PlayerProgress, conditions map[string]interface{}) bool {
 	for key, expected := range conditions {
-		actual, exists := progress.Variables[key]
-		if !exists {
+		if !m.evaluateSingleCondition(progress, key, expected) {
 			return false
 		}
+	}
+	return true
+}
 
-		// Type-specific comparison with JSON type coercion support
-		switch exp := expected.(type) {
-		case int:
-			// Handle both int and float64 (from JSON unmarshaling)
-			switch act := actual.(type) {
-			case int:
-				if act != exp {
-					return false
-				}
-			case float64:
-				if int(act) != exp {
-					return false
-				}
-			default:
-				return false
-			}
-		case float64:
-			// Handle both float64 and int for JSON unmarshaling compatibility
-			switch act := actual.(type) {
-			case float64:
-				if act != exp {
-					return false
-				}
-			case int:
-				if float64(act) != exp {
-					return false
-				}
-			default:
-				return false
-			}
-		case bool:
-			act, ok := actual.(bool)
-			if !ok || act != exp {
-				return false
-			}
-		case string:
-			act, ok := actual.(string)
-			if !ok || act != exp {
-				return false
-			}
-		}
+// evaluateSingleCondition evaluates a single condition against player progress.
+func (m *Manager) evaluateSingleCondition(progress *PlayerProgress, key string, expected interface{}) bool {
+	actual, exists := progress.Variables[key]
+	if !exists {
+		return false
 	}
 
-	return true
+	switch exp := expected.(type) {
+	case int:
+		return m.evaluateIntCondition(exp, actual)
+	case float64:
+		return m.evaluateFloatCondition(exp, actual)
+	case bool:
+		return m.evaluateBoolCondition(exp, actual)
+	case string:
+		return m.evaluateStringCondition(exp, actual)
+	}
+	return false
+}
+
+// evaluateIntCondition evaluates an integer condition.
+func (m *Manager) evaluateIntCondition(expected int, actual interface{}) bool {
+	switch act := actual.(type) {
+	case int:
+		return act == expected
+	case float64:
+		return int(act) == expected
+	}
+	return false
+}
+
+// evaluateFloatCondition evaluates a float condition.
+func (m *Manager) evaluateFloatCondition(expected float64, actual interface{}) bool {
+	switch act := actual.(type) {
+	case float64:
+		return act == expected
+	case int:
+		return float64(act) == expected
+	}
+	return false
+}
+
+// evaluateBoolCondition evaluates a boolean condition.
+func (m *Manager) evaluateBoolCondition(expected bool, actual interface{}) bool {
+	act, ok := actual.(bool)
+	return ok && act == expected
+}
+
+// evaluateStringCondition evaluates a string condition.
+func (m *Manager) evaluateStringCondition(expected string, actual interface{}) bool {
+	act, ok := actual.(string)
+	return ok && act == expected
 }
 
 // toStringSlice safely converts interface{} to []string, handling both

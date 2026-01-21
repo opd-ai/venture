@@ -394,68 +394,104 @@ func (s *TradeSystem) resolveAndValidateItems(proposerInv, recipientInv *engine.
 // executeItemTransfer performs the atomic item transfer between participants.
 // Tracks removed items so they can be properly restored on rollback.
 func (s *TradeSystem) executeItemTransfer(proposerInv, recipientInv *engine.InventoryComponent, offeredItems, requestedItems []*item.Item, proposal *engine.TradeProposal) error {
-	// Track items removed during transfer for proper rollback
-	var removedFromProposer []*item.Item
-	var removedFromRecipient []*item.Item
-	var addedToRecipient []*item.Item
-	var addedToProposer []*item.Item
+	tracker := newTransferTracker()
+	rollback := tracker.createRollbackFunc(proposerInv, recipientInv)
 
-	// Helper to restore items on failure
-	rollback := func() {
-		// Restore items removed from proposer
-		for _, itm := range removedFromProposer {
+	if err := s.removeOfferedItems(proposerInv, offeredItems, tracker, rollback); err != nil {
+		return err
+	}
+
+	if err := s.removeRequestedItems(recipientInv, requestedItems, tracker, rollback); err != nil {
+		return err
+	}
+
+	if err := s.addOfferedItems(recipientInv, offeredItems, tracker, rollback); err != nil {
+		return err
+	}
+
+	if err := s.addRequestedItems(proposerInv, requestedItems, tracker, rollback); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// transferTracker tracks items moved during trade transfer for rollback capability.
+type transferTracker struct {
+	removedFromProposer []*item.Item
+	removedFromRecipient []*item.Item
+	addedToRecipient []*item.Item
+	addedToProposer []*item.Item
+}
+
+// newTransferTracker creates a new transfer tracker.
+func newTransferTracker() *transferTracker {
+	return &transferTracker{}
+}
+
+// createRollbackFunc creates a rollback function to restore items on failure.
+func (t *transferTracker) createRollbackFunc(proposerInv, recipientInv *engine.InventoryComponent) func() {
+	return func() {
+		for _, itm := range t.removedFromProposer {
 			proposerInv.AddItem(itm)
 		}
-		// Restore items removed from recipient
-		for _, itm := range removedFromRecipient {
+		for _, itm := range t.removedFromRecipient {
 			recipientInv.AddItem(itm)
 		}
-		// Remove items added to recipient (reverse of add)
-		for _, itm := range addedToRecipient {
+		for _, itm := range t.addedToRecipient {
 			recipientInv.RemoveItemByReference(itm)
 		}
-		// Remove items added to proposer (reverse of add)
-		for _, itm := range addedToProposer {
+		for _, itm := range t.addedToProposer {
 			proposerInv.RemoveItemByReference(itm)
 		}
 	}
+}
 
-	// Phase 1: Remove offered items from proposer
+// removeOfferedItems removes offered items from proposer inventory.
+func (s *TradeSystem) removeOfferedItems(proposerInv *engine.InventoryComponent, offeredItems []*item.Item, tracker *transferTracker, rollback func()) error {
 	for _, itm := range offeredItems {
 		if !proposerInv.RemoveItemByReference(itm) {
 			rollback()
 			return fmt.Errorf("%s: failed to remove item from proposer", ReasonOwnership)
 		}
-		removedFromProposer = append(removedFromProposer, itm)
+		tracker.removedFromProposer = append(tracker.removedFromProposer, itm)
 	}
+	return nil
+}
 
-	// Phase 2: Remove requested items from recipient
+// removeRequestedItems removes requested items from recipient inventory.
+func (s *TradeSystem) removeRequestedItems(recipientInv *engine.InventoryComponent, requestedItems []*item.Item, tracker *transferTracker, rollback func()) error {
 	for _, itm := range requestedItems {
 		if !recipientInv.RemoveItemByReference(itm) {
 			rollback()
 			return fmt.Errorf("%s: failed to remove item from recipient", ReasonOwnership)
 		}
-		removedFromRecipient = append(removedFromRecipient, itm)
+		tracker.removedFromRecipient = append(tracker.removedFromRecipient, itm)
 	}
+	return nil
+}
 
-	// Phase 3: Add offered items to recipient
+// addOfferedItems adds offered items to recipient inventory.
+func (s *TradeSystem) addOfferedItems(recipientInv *engine.InventoryComponent, offeredItems []*item.Item, tracker *transferTracker, rollback func()) error {
 	for _, itm := range offeredItems {
 		if !recipientInv.AddItem(itm) {
 			rollback()
 			return fmt.Errorf("%s: failed to add item to recipient", ReasonInventory)
 		}
-		addedToRecipient = append(addedToRecipient, itm)
+		tracker.addedToRecipient = append(tracker.addedToRecipient, itm)
 	}
+	return nil
+}
 
-	// Phase 4: Add requested items to proposer
+// addRequestedItems adds requested items to proposer inventory.
+func (s *TradeSystem) addRequestedItems(proposerInv *engine.InventoryComponent, requestedItems []*item.Item, tracker *transferTracker, rollback func()) error {
 	for _, itm := range requestedItems {
 		if !proposerInv.AddItem(itm) {
 			rollback()
 			return fmt.Errorf("%s: failed to add item to proposer", ReasonInventory)
 		}
-		addedToProposer = append(addedToProposer, itm)
+		tracker.addedToProposer = append(tracker.addedToProposer, itm)
 	}
-
 	return nil
 }
 

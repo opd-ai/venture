@@ -181,7 +181,7 @@ func (w *WorldPersistence) writeWorldData(ctx context.Context, tempPath string, 
 func (w *WorldPersistence) checkContextCancellation(ctx context.Context) error {
 	select {
 	case <-ctx.Done():
-		return fmt.Errorf("save cancelled: %w", ctx.Err())
+		return fmt.Errorf("operation cancelled: %w", ctx.Err())
 	default:
 		return nil
 	}
@@ -350,67 +350,80 @@ func (w *WorldPersistence) loadFromPath(path string, seed int64) (*PersistentWor
 
 // loadFromPathWithContext loads state from a specific file path with context support.
 func (w *WorldPersistence) loadFromPathWithContext(ctx context.Context, path string, seed int64) (*PersistentWorldState, error) {
-	// Check context before opening file
-	select {
-	case <-ctx.Done():
-		return nil, fmt.Errorf("load cancelled: %w", ctx.Err())
-	default:
+	if err := w.checkContextCancellation(ctx); err != nil {
+		return nil, err
 	}
 
+	state, err := w.openAndDecodeState(ctx, path, seed)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := w.validateStateVersion(state); err != nil {
+		return nil, err
+	}
+
+	return state, nil
+}
+
+// openAndDecodeState opens the save file and decodes the world state.
+func (w *WorldPersistence) openAndDecodeState(ctx context.Context, path string, seed int64) (*PersistentWorldState, error) {
 	f, err := os.Open(path)
 	if err != nil {
-		if os.IsNotExist(err) {
-			// No save file, create new state
-			return &PersistentWorldState{
-				Version:        CurrentSchemaVersion,
-				WorldSeed:      seed,
-				ChunkData:      make(map[string]*Chunk),
-				Entities:       []*EntityState{},
-				WorldEvents:    []WorldEvent{},
-				Timestamp:      0,
-				ModifiedChunks: make(map[string]bool),
-			}, nil
-		}
-		return nil, fmt.Errorf("failed to open save file: %w", err)
+		return w.handleOpenError(err, seed)
 	}
 	defer f.Close()
 
-	// Decompress with gzip
 	gz, err := gzip.NewReader(f)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create gzip reader: %w", err)
 	}
 	defer gz.Close()
 
-	// Check context before expensive decode
-	select {
-	case <-ctx.Done():
-		return nil, fmt.Errorf("load cancelled before decode: %w", ctx.Err())
-	default:
+	if err := w.checkContextCancellation(ctx); err != nil {
+		return nil, err
 	}
 
-	// Decode JSON
+	return w.decodeState(gz)
+}
+
+// handleOpenError handles file open errors and creates new state if file doesn't exist.
+func (w *WorldPersistence) handleOpenError(err error, seed int64) (*PersistentWorldState, error) {
+	if os.IsNotExist(err) {
+		return &PersistentWorldState{
+			Version:        CurrentSchemaVersion,
+			WorldSeed:      seed,
+			ChunkData:      make(map[string]*Chunk),
+			Entities:       []*EntityState{},
+			WorldEvents:    []WorldEvent{},
+			Timestamp:      0,
+			ModifiedChunks: make(map[string]bool),
+		}, nil
+	}
+	return nil, fmt.Errorf("failed to open save file: %w", err)
+}
+
+// decodeState decodes JSON state from a gzip reader.
+func (w *WorldPersistence) decodeState(gz *gzip.Reader) (*PersistentWorldState, error) {
 	var state PersistentWorldState
 	decoder := json.NewDecoder(gz)
 	if err := decoder.Decode(&state); err != nil {
 		return nil, fmt.Errorf("failed to decode state: %w", err)
 	}
 
-	// Initialize transient fields
 	if state.ModifiedChunks == nil {
 		state.ModifiedChunks = make(map[string]bool)
 	}
 
-	// OBSOLETE CODE REMOVED: Save format migration (migrateState function)
-	// Replaced by: Pre-1.0 policy - only latest save format supported, no backward compatibility
-	// Removed: migrateState() function and all migration logic
-	// Roadmap: ROADMAP_V6.md Phase 37 - persistence without legacy support
-	// PRE-1.0: Only CurrentSchemaVersion is supported
-	if state.Version != CurrentSchemaVersion {
-		return nil, fmt.Errorf("incompatible save version %d (expected %d) - no migration support before v1.0", state.Version, CurrentSchemaVersion)
-	}
-
 	return &state, nil
+}
+
+// validateStateVersion validates that the loaded state version matches current schema.
+func (w *WorldPersistence) validateStateVersion(state *PersistentWorldState) error {
+	if state.Version != CurrentSchemaVersion {
+		return fmt.Errorf("incompatible save version %d (expected %d) - no migration support before v1.0", state.Version, CurrentSchemaVersion)
+	}
+	return nil
 }
 
 // CleanupBackups removes backup files

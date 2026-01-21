@@ -186,6 +186,36 @@ func (g *CompositeGenerator) Generate(seed int64, params procgen.GenerationParam
 	return terrain, nil
 }
 
+// GenerateCached generates terrain with caching support.
+// Uses the default terrain cache to store and retrieve terrains by seed/params.
+// Returns cached terrain if available (near-instant), otherwise generates and caches.
+func (g *CompositeGenerator) GenerateCached(seed int64, params procgen.GenerationParams) (*Terrain, error) {
+	// Check cache first
+	if cached := GetCached(seed, params); cached != nil {
+		if g.logger != nil && g.logger.Logger.GetLevel() >= logrus.DebugLevel {
+			g.logger.WithFields(logrus.Fields{
+				"seed":    seed,
+				"genreID": params.GenreID,
+				"cached":  true,
+			}).Debug("returning cached terrain")
+		}
+		return cached, nil
+	}
+
+	// Generate new terrain
+	result, err := g.Generate(seed, params)
+	if err != nil {
+		return nil, err
+	}
+
+	terrain := result.(*Terrain)
+
+	// Store in cache
+	PutCached(seed, params, terrain)
+
+	return terrain, nil
+}
+
 // selectGenerators chooses which generators to use based on genre and count.
 func (g *CompositeGenerator) selectGenerators(genreID string, count int, rng *rand.Rand) []string {
 	// Define genre preferences for generator selection

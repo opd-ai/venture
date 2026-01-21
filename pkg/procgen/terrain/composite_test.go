@@ -361,3 +361,97 @@ func BenchmarkCompositeGenerator_Large(b *testing.B) {
 		}
 	}
 }
+
+func TestCompositeGenerator_GenerateCached(t *testing.T) {
+	// Reset cache for clean test
+	DefaultCache = NewTerrainCache(16, "")
+
+	gen := NewCompositeGenerator()
+	seed := int64(12345)
+	params := procgen.GenerationParams{
+		Difficulty: 0.5,
+		Depth:      1,
+		GenreID:    "fantasy",
+		Custom: map[string]interface{}{
+			"width":  80,
+			"height": 60,
+		},
+	}
+
+	// First generation (cache miss)
+	statsBefore := DefaultCache.Stats()
+	terrain1, err := gen.GenerateCached(seed, params)
+	if err != nil {
+		t.Fatalf("First cached generation failed: %v", err)
+	}
+	if terrain1 == nil {
+		t.Fatal("First generation returned nil")
+	}
+
+	statsAfter := DefaultCache.Stats()
+	if statsAfter.MissCount != statsBefore.MissCount+1 {
+		t.Error("Expected cache miss on first generation")
+	}
+
+	// Second generation (cache hit)
+	statsBefore = DefaultCache.Stats()
+	terrain2, err := gen.GenerateCached(seed, params)
+	if err != nil {
+		t.Fatalf("Second cached generation failed: %v", err)
+	}
+	if terrain2 == nil {
+		t.Fatal("Second generation returned nil")
+	}
+
+	statsAfter = DefaultCache.Stats()
+	if statsAfter.HitCount != statsBefore.HitCount+1 {
+		t.Error("Expected cache hit on second generation")
+	}
+
+	// Verify terrains are identical
+	if terrain1.Width != terrain2.Width || terrain1.Height != terrain2.Height {
+		t.Errorf("Dimensions differ: %dx%d vs %dx%d",
+			terrain1.Width, terrain1.Height, terrain2.Width, terrain2.Height)
+	}
+
+	// Verify every tile matches (cached terrain should be exact copy)
+	for y := 0; y < terrain1.Height; y++ {
+		for x := 0; x < terrain1.Width; x++ {
+			if terrain1.GetTile(x, y) != terrain2.GetTile(x, y) {
+				t.Errorf("Tiles differ at (%d,%d): %v vs %v",
+					x, y, terrain1.GetTile(x, y), terrain2.GetTile(x, y))
+			}
+		}
+	}
+}
+
+func BenchmarkCompositeGenerator_Cached(b *testing.B) {
+	// Use memory-only cache for benchmark
+	DefaultCache = NewTerrainCache(100, "")
+
+	gen := NewCompositeGenerator()
+	params := procgen.GenerationParams{
+		Difficulty: 0.5,
+		Depth:      3,
+		GenreID:    "fantasy",
+		Custom: map[string]interface{}{
+			"width":      100,
+			"height":     80,
+			"biomeCount": 3,
+		},
+	}
+
+	// Pre-populate cache with terrains
+	for i := int64(0); i < 50; i++ {
+		gen.GenerateCached(i, params)
+	}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		seed := int64(i % 50) // Use cached seeds
+		_, err := gen.GenerateCached(seed, params)
+		if err != nil {
+			b.Fatal(err)
+		}
+	}
+}

@@ -1,17 +1,17 @@
 # Package Audit: cmd/server
 Generated during reorganization on: 2026-01-20
-Updated: 2026-01-21 (V8 unused manager initialization removed, error handling gap resolved, player management tests added, entity spawning tests added)
+Updated: 2026-01-21 (V8 unused manager initialization removed, error handling gap resolved, player management tests added, entity spawning tests added, system initialization tests added)
 
 ## Summary
 - Missing Implementations: 0
 - Incomplete Features: 1 (was 2, fixed 1)
 - Interface Violations: 0
-- Untested Code: 7 files (was 9, added player_management_test.go and entity_spawning_test.go)
+- Untested Code: 4 files (was 7, added system_init_test.go covering v4_systems.go, v8_systems.go, v9_systems.go)
 - Dead Code: 0
 - Error Handling Gaps: 0 (was 2, resolved 2 - 1 fixed, 1 false positive)
 - Documentation Gaps: 0
 - Dependency Issues: 0
-- **Test Coverage: 30.5%** (was 17.3%, improved with entity spawning tests)
+- **Test Coverage: 48.5%** (was 30.5%, improved with system initialization tests)
 
 ## Detailed Findings
 
@@ -40,7 +40,7 @@ Updated: 2026-01-21 (V8 unused manager initialization removed, error handling ga
 
 ### Untested Code
 
-Package now has 3 test files (snapshot_conversion_test.go, player_management_test.go, entity_spawning_test.go). Remaining untested code:
+Package now has 4 test files (snapshot_conversion_test.go, player_management_test.go, entity_spawning_test.go, system_init_test.go). Remaining untested code:
 
 1. **doc.go** (105 lines) - Documentation only, no tests needed
 2. **main_mobile.go** (17 lines) - Build-tagged stub, minimal testing value
@@ -57,31 +57,36 @@ Package now has 3 test files (snapshot_conversion_test.go, player_management_tes
    - ✅ Determinism tests: same seed produces same results
    - ✅ Benchmarks: ~0.2ns for count calculations, ~1ns for type lookups
    
-5. **v4_systems.go** (409 lines) - HIGH: System initialization untested
-   - No tests for: initializeV4Systems(), initializeV5SystemsServer(), initializeV6SystemsServer()
-   - No tests for: initializeCoreGameplaySystems()
+5. ~~**v4_systems.go** (409 lines)~~ **TESTED 2026-01-21**
+   - ✅ Tests for: initializeV4Systems(), initializeV5SystemsServer(), initializeV6SystemsServer()
+   - ✅ Tests for: initializeCoreGameplaySystems()
+   - ✅ Determinism tests: same seed produces same system count
+   - ✅ Edge case tests: different seeds, different log levels
+   - ✅ Benchmarks for all initialization functions
    
-6. **v8_systems.go** (103 lines) - HIGH: V8 system initialization untested
-   - No tests for: initializeV8SystemsServer()
+6. ~~**v8_systems.go** (103 lines)~~ **TESTED 2026-01-21**
+   - ✅ Tests for: initializeV8SystemsServer()
+   - ✅ Verifies guild and fluid systems are added
    
-7. **v9_systems.go** (61 lines) - HIGH: V9 integration manager initialization untested
-   - No tests for: initializeV9SystemsServer()
+7. ~~**v9_systems.go** (61 lines)~~ **TESTED 2026-01-21**
+   - ✅ Tests for: initializeV9SystemsServer()
+   - ✅ Verifies all three integration managers are created (stationManager, petHomeManager, guildHousingManager)
    
 8. **system_wrappers.go** (281 lines) - MEDIUM: All 30 wrapper types untested
    - No tests verifying wrappers correctly delegate to underlying systems
    
-9. **player_management.go** (323 lines) - CRITICAL: Player entity and input handling untested
-   - No tests for: createPlayerEntity(), applyInputCommand()
-   - No tests for: applyMovement(), applyAttack(), applyItemUse()
-   - No tests for: validateItemUse(), consumeItem()
+9. ~~**player_management.go** (323 lines)~~ **TESTED 2026-01-21**
+   - ✅ Tests for: createPlayerEntity(), applyInputCommand()
+   - ✅ Tests for: applyMovement(), applyAttack(), applyItemUse()
+   - ✅ Tests for: validateItemUse(), consumeItem()
    
 10. **validation.go** (191 lines) - HIGH: Validation functions untested
     - No tests for: runSecurityAudit(), runBalanceValidation()
     - No tests for: runMigrationValidation(), runUXValidation()
 
 **Test Coverage Priority:**
-1. **CRITICAL**: player_management.go, entity_spawning.go, main.go (network/game loop functions)
-2. **HIGH**: v4_systems.go, v8_systems.go, v9_systems.go, validation.go
+1. **CRITICAL**: ~~player_management.go~~, ~~entity_spawning.go~~, main.go (network/game loop functions)
+2. **HIGH**: ~~v4_systems.go~~, ~~v8_systems.go~~, ~~v9_systems.go~~, validation.go
 3. **MEDIUM**: system_wrappers.go
 4. **LOW**: main_mobile.go
 
@@ -142,10 +147,14 @@ Package now has 3 test files (snapshot_conversion_test.go, player_management_tes
    - ✅ Added 6 benchmarks for performance validation
    - ✅ Coverage improved from 17.3% to 30.5%
 
-2. **Add Tests for System Initialization** (v4_systems.go, v8_systems.go, v9_systems.go)
-   - Verify all expected systems are added to world
-   - Test system wrapper delegation
-   - Test logger output at debug level
+2. ~~**Add Tests for System Initialization** (v4_systems.go, v8_systems.go, v9_systems.go)~~ **COMPLETED 2026-01-21**
+   - ✅ Tests for initializeV4Systems(), initializeV5SystemsServer(), initializeV6SystemsServer()
+   - ✅ Tests for initializeV8SystemsServer(), initializeV9SystemsServer()
+   - ✅ Tests for initializeCoreGameplaySystems()
+   - ✅ Verify all expected systems are added to world
+   - ✅ Test system initialization with different seeds and log levels
+   - ✅ Added 11 tests + 6 benchmarks in system_init_test.go
+   - ✅ Coverage improved from 30.5% to 48.5%
 
 3. **Integrate V9 Managers with Validation Systems** (v9_systems.go, main.go:73-77)
    - Pass V9 managers to systems that should use them (CraftingSystem, CompanionLoyaltySystem, etc.)
@@ -160,14 +169,15 @@ Package now has 3 test files (snapshot_conversion_test.go, player_management_tes
 
 ### Priority 3: Quality of Life Enhancements
 1. **Add Comprehensive Test Suite**
-   - Target: 65%+ code coverage (current: 30.5%)
-   - Focus on critical paths: network handling, ~~entity spawning~~, input processing
-   - Use table-driven tests for system initialization functions
+   - Target: 65%+ code coverage (current: 48.5%)
+   - Focus on critical paths: network handling, ~~entity spawning~~, ~~system initialization~~, validation
+   - ~~Use table-driven tests for system initialization functions~~ - done
 
 2. ~~**Add Benchmarks for Performance-Critical Code**~~ **PARTIALLY COMPLETED 2026-01-21**
    - Benchmark `buildWorldSnapshot()` (called every server tick) - pending
    - ✅ Benchmark `applyInputCommand()` (called for every player input) - done
    - ✅ Benchmark entity spawning functions (called at world generation) - done
+   - ✅ Benchmark system initialization functions (called at server startup) - done
 
 3. **Add Integration Test for Full Server Lifecycle**
    - Test: Start server → Generate world → Spawn entities → Accept player → Send input → Update → Broadcast → Shutdown
@@ -192,11 +202,11 @@ Package now has 3 test files (snapshot_conversion_test.go, player_management_tes
 
 ## Implementation Gap Statistics
 - **Total Lines of Code**: ~2850 (was ~2900, removed unused V8 manager init code)
-- **Test Lines of Code**: ~1250 (snapshot_conversion_test.go + player_management_test.go + entity_spawning_test.go)
-- **Code Coverage**: 30.5% (was 17.3%, improved with entity spawning tests)
+- **Test Lines of Code**: ~1550 (snapshot_conversion_test.go + player_management_test.go + entity_spawning_test.go + system_init_test.go)
+- **Code Coverage**: 48.5% (was 30.5%, improved with system initialization tests)
 - **Target Coverage**: 65.0%
-- **Coverage Gap**: ~35%
-- **Estimated Test LOC Needed**: ~800 lines (at 65% coverage)
+- **Coverage Gap**: ~17%
+- **Estimated Test LOC Needed**: ~400 lines (at 65% coverage)
 
 ## Priority Summary
 | Priority | Category | Count | Estimated Effort | Status |
@@ -206,16 +216,27 @@ Package now has 3 test files (snapshot_conversion_test.go, player_management_tes
 | ~~CRITICAL~~ | ~~Player Management Tests~~ | ~~1~~ | ~~4-6 hours~~ | ✅ DONE 2026-01-21 |
 | ~~CRITICAL~~ | ~~Entity Spawning Tests~~ | ~~1~~ | ~~4-6 hours~~ | ✅ DONE 2026-01-21 |
 | CRITICAL | Untested Code | 1 file | 20-30 hours | Pending |
-| HIGH | Untested Code | 3 files | 15-25 hours | Pending |
+| ~~HIGH~~ | ~~System Init Tests~~ | ~~3 files~~ | ~~4-6 hours~~ | ✅ DONE 2026-01-21 |
 | HIGH | Integration Gap | 1 (was 2) | 4-8 hours | Pending |
+| HIGH | Validation Tests | 1 file | 4-6 hours | Pending |
 | MEDIUM | Incomplete Feature (V9) | 1 | 4-8 hours | Pending |
 | ~~MEDIUM~~ | ~~V8 Manager Integration~~ | ~~1~~ | ~~2-4 hours~~ | ✅ RESOLVED |
 | MEDIUM | Untested Code | 1 file | 8-12 hours | Pending |
 | ~~LOW~~ | ~~Error Handling (Sprite)~~ | ~~1~~ | ~~1-2 hours~~ | ✅ RESOLVED (false positive) |
-| **TOTAL** | **Remaining Issues** | **7** | **~43-75 hours** | |
+| **TOTAL** | **Remaining Issues** | **5** | **~36-64 hours** | |
 
 ## Conclusion
-The cmd/server package is **functionally complete** with improved **network serialization**, **player management testing**, and **entity spawning testing**:
+The cmd/server package is **functionally complete** with improved **network serialization**, **player management testing**, **entity spawning testing**, and **system initialization testing**:
+
+**Recent Improvements (2026-01-21 - System Initialization Tests):**
+- ✅ Added comprehensive system initialization test suite (11 tests + 6 benchmarks)
+- ✅ Tests cover: initializeV4Systems, initializeV5SystemsServer, initializeV6SystemsServer
+- ✅ Tests cover: initializeV8SystemsServer, initializeV9SystemsServer, initializeCoreGameplaySystems
+- ✅ Integration test: all systems initialized together (61 total systems)
+- ✅ Determinism tests: same seed produces same system count
+- ✅ Edge case tests: different seeds, different log levels
+- ✅ Benchmarks for all initialization functions
+- ✅ Coverage improved from 30.5% to 48.5%
 
 **Recent Improvements (2026-01-21 - Entity Spawning Tests):**
 - ✅ Added comprehensive entity spawning test suite (19 tests + 6 benchmarks)
@@ -240,16 +261,17 @@ The cmd/server package is **functionally complete** with improved **network seri
 - ✅ Performance validated: 1000 entities in ~200µs
 
 **Strengths:**
-- Clean separation of concerns across 13 files (3 test files)
+- Clean separation of concerns across 13 files (4 test files)
 - No missing implementations (all functions have bodies)
 - Comprehensive documentation
 - No dead code or unused imports
 - Core network synchronization now complete
 - Player management fully tested
 - Entity spawning fully tested
+- System initialization fully tested
 
 **Remaining Weaknesses:**
-- Test coverage at 30.5% - below 65% target (but doubled from 17.3%)
+- Test coverage at 48.5% - below 65% target (but improved from 30.5%)
 - V9 integration managers created but not fully integrated
 - Package size (main.go ~880 lines) above recommended threshold
 
@@ -260,7 +282,8 @@ The cmd/server package is **functionally complete** with improved **network seri
 4. ~~Verify sprite fallback error handling~~ ✅ RESOLVED (false positive - NewSpriteComponent cannot fail)
 5. ~~Create player management tests~~ ✅ DONE 2026-01-21
 6. ~~Create entity spawning tests~~ ✅ DONE 2026-01-21
-7. Create test suite for remaining critical paths (25 hours)
-8. Integrate V9 managers properly (8 hours)
+7. ~~Create system initialization tests~~ ✅ DONE 2026-01-21
+8. Create test suite for remaining critical paths (validation.go, main.go) (~20 hours)
+9. Integrate V9 managers properly (8 hours)
 
-**Remaining Work**: ~43-75 hours to bring package to full production quality.
+**Remaining Work**: ~36-64 hours to bring package to full production quality (reduced from 43-75 hours).

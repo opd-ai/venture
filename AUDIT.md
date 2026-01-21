@@ -271,8 +271,16 @@ const (
 
 ## Recommendations
 
-1. **Update README.md regarding WebRTC Federation** - Add a note indicating WebRTC is currently stub implementation pending real integration. Users should know that browser-to-browser P2P uses simulated behavior until pion/webrtc/v3 is integrated.
+1. **Implement Real WebRTC Federation** - Replace stub implementation in `pkg/network/federation/webrtc/` with actual WebRTC functionality using `github.com/pion/webrtc/v3`. Key implementation tasks:
+   - Add pion/webrtc/v3 dependency to go.mod
+   - Implement real PeerConnection creation in `peer.go:Connect()`
+   - Implement SDP offer/answer exchange via signaling server
+   - Implement ICE candidate gathering and exchange
+   - Replace simulated data channels with real WebRTC data channels
 
-2. **Implement Automatic Trust Decay** - Add a background scheduler or integrate decay logic into the game loop to ensure trust scores decay automatically as documented, rather than requiring manual `ApplyDecay()` calls.
+2. **Implement Automatic Trust Decay** - Add a background scheduler or integrate decay logic into the game loop to ensure trust scores decay automatically as documented. Implementation approach:
+   - Add a `StartAutomaticDecay()` method to TrustManager that runs decay in a background goroutine
+   - Call decay logic on a configurable interval (e.g., once per hour checks all trusts)
+   - Integrate with the game's existing system update loop or use `time.Ticker`
 
-3. **Consider documenting stub status in feature matrix** - Add a status column to major features indicating "Stable", "Stub", or "Beta" to set appropriate user expectations for newer features like WebRTC federation.
+3. **Add WebRTC Integration Tests** - Create integration tests that verify real browser-to-browser connections work correctly once WebRTC is implemented, ensuring the federation feature meets production requirements.

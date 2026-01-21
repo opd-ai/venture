@@ -81,7 +81,7 @@ The following 52 documented elements were verified as accurate:
 
 | Element | README Value | go.mod Value | Status |
 |---------|-------------|--------------|--------|
-| Go Version | 1.24.5+ | 1.24.5 | ✅ |
+| Go Version | 1.24.5+ (minimum) | 1.24.5 (used) | ✅ |
 | Ebiten | v2.9.3 | v2.9.3 | ✅ |
 | Logrus | v1.9.3 | v1.9.3 | ✅ |
 | google/uuid | v1.6.0 | v1.6.0 | ✅ |

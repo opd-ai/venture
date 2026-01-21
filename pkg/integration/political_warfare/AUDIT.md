@@ -1,17 +1,18 @@
 # Package Audit: political_warfare
 Generated during reorganization on: 2026-01-20
+Updated: 2026-01-21 (Embargo expiration implemented, doc.go example fixed)
 
 ## Summary
-- Missing Implementations: 2
+- Missing Implementations: 1 (was 2, fixed 1)
 - Incomplete Features: 3
 - Interface Violations: 0
 - Untested Code: 0
 - Dead Code: 0
 - Error Handling Gaps: 0
-- Documentation Gaps: 1
+- Documentation Gaps: 0 (was 1, fixed)
 - Dependency Issues: 0
 
-**Total Implementation Gaps: 6**
+**Total Implementation Gaps: 4** (was 6, fixed 2)
 
 ## Detailed Findings
 
@@ -44,28 +45,15 @@ func (m *Manager) applyConcessions(...) {
   - `ConcessionTrade`: Apply trade discount for attacker in future transactions
 - **Recommendation**: Implement all concession type handlers
 
-**2. Embargo expiration not implemented**
-- **Location**: `manager.go:320-339 (Update method)`
-- **Issue**: Update method expires peace treaties but not embargoes
-- **Current Code**:
-```go
-func (m *Manager) Update(deltaTime float64) {
-    // ... activates wars
-    // ... expires treaties
-    // No embargo expiration logic
-}
-```
-- **Type Definition**: `TradeEmbargo` has `ExpiresAt time.Time` field (types.go:45)
-- **Impact**: Medium - Embargoes never expire automatically, must be manually removed
-- **Recommendation**: Add embargo expiration check similar to treaty expiration:
-```go
-// Expire embargoes
-for _, embargo := range m.embargoes {
-    if embargo.Active && !embargo.ExpiresAt.IsZero() && now.After(embargo.ExpiresAt) {
-        embargo.Active = false
-    }
-}
-```
+~~**2. Embargo expiration not implemented**~~ ✅ **COMPLETED 2026-01-21**
+- **Resolution**: Added embargo expiration logic to `Update()` method
+- **Changes Made**:
+  - Added embargo expiration loop in `manager.go:Update()` that checks `ExpiresAt` field
+  - Embargoes with non-zero `ExpiresAt` now automatically expire when that time passes
+  - Embargoes with zero `ExpiresAt` (default) remain active indefinitely
+- **Tests Added**:
+  - `TestUpdateExpiresEmbargoes` - Verifies embargoes with set ExpiresAt are deactivated
+  - `TestUpdateDoesNotExpireEmbargoWithZeroTime` - Verifies embargoes without ExpiresAt remain active
 
 ### Incomplete Features
 
@@ -169,16 +157,12 @@ None found. All error paths are properly handled:
 
 ### Documentation Gaps
 
-**1. Doc.go example doesn't match actual API**
-- **Location**: `doc.go:23`
-- **Issue**: Documentation example shows 3 parameters, actual function takes 2
-- **Doc Example**: `manager := political_warfare.NewManager(world, guildManager, marketManager)`
-- **Actual Signature**: `func NewManager(world *engine.World, guildManager *guild.Manager) *Manager`
-- **Impact**: Low - Confusing for developers reading documentation
-- **Recommendation**: Update doc.go line 23:
-```go
-manager := political_warfare.NewManager(world, guildManager)
-```
+### Documentation Gaps
+
+~~**1. Doc.go example doesn't match actual API**~~ ✅ **COMPLETED 2026-01-21**
+- **Resolution**: Updated doc.go line 23 to match actual signature
+- **Changed from**: `manager := political_warfare.NewManager(world, guildManager, marketManager)`
+- **Changed to**: `manager := political_warfare.NewManager(world, guildManager)`
 
 ### Dependency Issues
 None found.
@@ -240,36 +224,9 @@ func (m *Manager) applyConcessions(attackerGuildID, defenderGuildID string, conc
 
 ### Priority 2: Medium Impact
 
-**2. Implement embargo expiration**
-```go
-func (m *Manager) Update(deltaTime float64) {
-    m.mu.Lock()
-    defer m.mu.Unlock()
-
-    now := time.Now()
-
-    // Activate wars after preparation period
-    for _, war := range m.wars {
-        if !war.Active && !war.Ended && now.After(war.PreparationEnds) {
-            war.Active = true
-        }
-    }
-
-    // Expire peace treaties
-    for _, treaty := range m.treaties {
-        if treaty.Active && now.After(treaty.ExpiresAt) {
-            treaty.Active = false
-        }
-    }
-
-    // ADD: Expire embargoes
-    for _, embargo := range m.embargoes {
-        if embargo.Active && !embargo.ExpiresAt.IsZero() && now.After(embargo.ExpiresAt) {
-            embargo.Active = false
-        }
-    }
-}
-```
+~~**2. Implement embargo expiration**~~ ✅ **COMPLETED 2026-01-21**
+- **Resolution**: Added embargo expiration logic to `Update()` method in manager.go
+- **Tests Added**: `TestUpdateExpiresEmbargoes`, `TestUpdateDoesNotExpireEmbargoWithZeroTime`
 
 **3. Use world seed instead of hardcoded seed**
 ```go
@@ -300,8 +257,8 @@ const (
 )
 ```
 
-**6. Fix documentation example**
-Update `doc.go:23` to match actual signature.
+~~**6. Fix documentation example**~~ ✅ **COMPLETED 2026-01-21**
+- **Resolution**: Updated doc.go line 23 to match actual signature
 
 ### Priority 4: Optimization Opportunities
 
@@ -348,6 +305,7 @@ This package is part of Phase 56.3 (Political Warfare Integration) and integrate
 
 **Integration Readiness**: 60% complete
 - Core warfare mechanics fully implemented ✅
+- Embargo expiration now implemented ✅
 - Economic integration partial (gold only) ⚠️
 - Awaiting 4 system integrations for full feature set
 
@@ -357,7 +315,7 @@ The `political_warfare` package is in very good condition with 95.1% test covera
 
 **Critical** (blocking full functionality):
 - Incomplete concession application (only gold implemented)
-- Missing embargo expiration logic
+- ~~Missing embargo expiration logic~~ ✅ FIXED 2026-01-21
 
 **Important** (affects determinism/integration):
 - Hardcoded seed instead of world seed
@@ -365,9 +323,14 @@ The `political_warfare` package is in very good condition with 95.1% test covera
 
 **Minor** (code quality):
 - Magic numbers in concession calculations
-- Documentation example mismatch
+- ~~Documentation example mismatch~~ ✅ FIXED 2026-01-21
 
-The package has a solid foundation with proper thread safety, good test coverage, and clean separation of concerns. Completing the missing concession types and embargo expiration would bring it to full production readiness. The faction integration can be deferred until the faction system is available.
+The package has a solid foundation with proper thread safety, good test coverage, and clean separation of concerns. Completing the missing concession types would bring it to full production readiness. The faction integration can be deferred until the faction system is available.
+
+**Recent Improvements (2026-01-21):**
+- ✅ Implemented embargo expiration in Update() method
+- ✅ Fixed doc.go example to match actual API signature
+- ✅ Added 2 new tests for embargo expiration behavior
 
 **Reorganization Assessment**: Package structure is optimal. No file reorganization needed.
 - `types.go` - All type definitions ✅

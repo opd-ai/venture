@@ -632,6 +632,67 @@ func TestUpdateExpiresTreaties(t *testing.T) {
 	}
 }
 
+func TestUpdateExpiresEmbargoes(t *testing.T) {
+	manager, _, guild1, guild2, _ := setupTestManager(t)
+
+	// Impose embargo
+	embargo, err := manager.ImposeEmbargo(guild1, guild2, 0.5)
+	if err != nil {
+		t.Fatalf("ImposeEmbargo failed: %v", err)
+	}
+
+	if !embargo.Active {
+		t.Error("Embargo should be active initially")
+	}
+
+	// Set expiration in the past to simulate expiration
+	embargo.ExpiresAt = time.Now().Add(-100 * time.Millisecond)
+
+	// Run update to expire embargo
+	manager.Update(0)
+
+	if embargo.Active {
+		t.Error("Embargo should be expired after ExpiresAt")
+	}
+
+	embargoes := manager.GetActiveEmbargoes()
+	if len(embargoes) != 0 {
+		t.Errorf("Expected 0 active embargoes after expiration, got %d", len(embargoes))
+	}
+}
+
+func TestUpdateDoesNotExpireEmbargoWithZeroTime(t *testing.T) {
+	manager, _, guild1, guild2, _ := setupTestManager(t)
+
+	// Impose embargo without expiration (default zero time)
+	embargo, err := manager.ImposeEmbargo(guild1, guild2, 0.5)
+	if err != nil {
+		t.Fatalf("ImposeEmbargo failed: %v", err)
+	}
+
+	if !embargo.Active {
+		t.Error("Embargo should be active initially")
+	}
+
+	// Verify ExpiresAt is zero (no expiration set)
+	if !embargo.ExpiresAt.IsZero() {
+		t.Error("Embargo ExpiresAt should be zero by default")
+	}
+
+	// Run update multiple times - embargo should remain active
+	manager.Update(0)
+	manager.Update(0)
+
+	if !embargo.Active {
+		t.Error("Embargo with zero ExpiresAt should remain active indefinitely")
+	}
+
+	embargoes := manager.GetActiveEmbargoes()
+	if len(embargoes) != 1 {
+		t.Errorf("Expected 1 active embargo (no expiration), got %d", len(embargoes))
+	}
+}
+
 // Test String() methods for types
 
 func TestVictoryTypeString(t *testing.T) {

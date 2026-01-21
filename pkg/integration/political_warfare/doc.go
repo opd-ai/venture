@@ -20,7 +20,7 @@
 // Example Usage:
 //
 //	// Create political warfare manager
-//	manager := political_warfare.NewManager(world, guildManager, marketManager)
+//	manager := political_warfare.NewManager(world, guildManager)
 //
 //	// Declare war with preparation period
 //	war, err := manager.DeclareWar("guild1", "guild2", 24*time.Hour)

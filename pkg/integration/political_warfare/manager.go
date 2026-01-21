@@ -336,6 +336,13 @@ func (m *Manager) Update(deltaTime float64) {
 			treaty.Active = false
 		}
 	}
+
+	// Expire trade embargoes
+	for _, embargo := range m.embargoes {
+		if embargo.Active && !embargo.ExpiresAt.IsZero() && now.After(embargo.ExpiresAt) {
+			embargo.Active = false
+		}
+	}
 }
 
 // Private helper methods

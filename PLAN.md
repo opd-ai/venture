@@ -16,7 +16,7 @@ Venture is a fully procedural multiplayer action-RPG built with Go and Ebiten. I
 - ✅ Guild systems with multi-server support, territory control, guild warfare
 - ✅ Advanced physics (vehicles, fluids, destruction)
 - ✅ E2E encrypted chat, image sharing, secure trading
-- ✅ Federation support with WebRTC P2P and cross-server travel
+- ✅ Federation support with TCP/UDP and cross-server travel (WebRTC stub API ready)
 - ✅ Companion AI with learning, branching narratives, multi-classing
 - ✅ Server modding framework with JSON-based mods
 

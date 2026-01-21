@@ -14,7 +14,7 @@ Venture is a top-down action-RPG that combines the deep procedural generation of
 - 🏠 **V8.0 Housing & Guilds** - Player housing, multi-server guilds, territory control, blueprint sharing
 - 🔬 **V8.0 Advanced Physics** - Vehicle suspension, fluid dynamics, swimming, destructible buildings
 - 🤝 **V8.0 Social Persistence** - Trust scores, chat history, image galleries, reputation tracking
-- 🌐 **V8.0 Federation+** - WebRTC P2P servers, mobile federation, NAT traversal, mod framework
+- 🌐 **V8.0 Federation+** - Mobile federation, NAT traversal, mod framework, WebRTC API (stub, TCP/UDP fallback)
 - 🧠 **V8.0 Deep Gameplay** - Companion AI learning, branching narratives, multi-classing, talent trees
 - 🖥️ **V7.0 Visual Fidelity** - 1920×1080 display, 64×64 sprites, 8-frame animations, anti-aliased walls, pixel-perfect collision
 - 🌍 **V6.0 Federation** - Persistent worlds, cross-server travel, federated marketplace, political systems
@@ -31,21 +31,21 @@ Venture is a top-down action-RPG that combines the deep procedural generation of
 **Current Version:** 1.0.0 Production ✅  
 **Semantic Version:** [v1.0.0](https://github.com/opd-ai/venture/releases/tag/v1.0.0) (see [API Compatibility](docs/API_COMPATIBILITY.md))
 
-Venture v1.0.0 is a production-ready release with player housing, guild systems, advanced physics, WebRTC federation, deep AI, and server modding. All core features operational with 90.1% test coverage and 60+ FPS performance.
+Venture v1.0.0 is a production-ready release with player housing, guild systems, advanced physics, federation, deep AI, and server modding. All core features operational with 90.1% test coverage and 60+ FPS performance.
 
 **Version 8.0 Complete (Housing, Guilds & Advanced Systems):**
 - ✅ **V4.0 Complete** (Phases 21-30): Vehicles, companions, books, expanded magic, character classes, expressions, mini-games, reputation, adaptive music
 - ✅ **V5.0 Complete** (Phases 31-36): E2E encrypted chat, dynamic NPC dialog, image sharing, secure item trading, multi-party conversations
 - ✅ **V6.0 Complete** (Phases 37-42): Persistent worlds, server federation, cross-server travel, political & trade networks, territory control
 - ✅ **V7.0 Complete** (Phases 43-48): 1920×1080 display, 64×64 sprites, 8-frame animations, anti-aliased walls, pixel-perfect collision
-- ✅ **V8.0 Complete** (Phases 49-54): Player housing, guilds, territory warfare, vehicle physics, fluid dynamics, destructible buildings, WebRTC P2P, mobile federation, companion AI learning, branching narratives, multi-classing, server mods, blueprint sharing
+- ✅ **V8.0 Complete** (Phases 49-54): Player housing, guilds, territory warfare, vehicle physics, fluid dynamics, destructible buildings, mobile federation, companion AI learning, branching narratives, multi-classing, server mods, blueprint sharing, WebRTC stub (TCP/UDP active)
 
 **Key V8.0 Features:**
 - 🏠 **Player Housing**: 4 plot sizes, procedural buildings (6 types × 25 styles), furniture (36 types), blueprint sharing
 - 🛡️ **Guild Systems**: Multi-server guilds, guild halls (1-5 floors), territory control, guild warfare, shared treasury
 - 🤝 **Social Persistence**: Trust scores with decay, chat history (1000 messages), image galleries (100 images), reputation tracking
 - 🔬 **Advanced Physics**: Vehicle suspension, weight transfer, tire tracks, fluid dynamics, swimming, destructible buildings
-- 🌐 **Federation Extensions**: WebRTC browser-to-browser P2P, mobile federation, battery optimization, NAT traversal
+- 🌐 **Federation Extensions**: Mobile federation, battery optimization, NAT traversal, WebRTC API (stub mode with TCP/UDP fallback)
 - 🧠 **Deep Gameplay**: Companion AI with 24-skill trees & personality evolution, branching narratives with 6 endings, multi-classing (15 base + 20 prestige), talent trees (120 talents)
 - 🎮 **Server Modding**: JSON-based mods, blueprint sharing, zero-asset constraint maintained
 - ⚡ **Performance**: 60 FPS maintained, <500MB memory, <150MB per player persistence

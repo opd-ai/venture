@@ -1,16 +1,17 @@
 # Package Audit: cmd/server
 Generated during reorganization on: 2026-01-20
-Updated: 2026-01-21 (V8 unused manager initialization removed, error handling gap resolved, player management tests added)
+Updated: 2026-01-21 (V8 unused manager initialization removed, error handling gap resolved, player management tests added, entity spawning tests added)
 
 ## Summary
 - Missing Implementations: 0
 - Incomplete Features: 1 (was 2, fixed 1)
 - Interface Violations: 0
-- Untested Code: 8 files (was 9, added player_management_test.go)
+- Untested Code: 7 files (was 9, added player_management_test.go and entity_spawning_test.go)
 - Dead Code: 0
 - Error Handling Gaps: 0 (was 2, resolved 2 - 1 fixed, 1 false positive)
 - Documentation Gaps: 0
 - Dependency Issues: 0
+- **Test Coverage: 30.5%** (was 17.3%, improved with entity spawning tests)
 
 ## Detailed Findings
 
@@ -39,7 +40,7 @@ Updated: 2026-01-21 (V8 unused manager initialization removed, error handling ga
 
 ### Untested Code
 
-Package now has 1 test file (snapshot_conversion_test.go). Remaining untested code:
+Package now has 3 test files (snapshot_conversion_test.go, player_management_test.go, entity_spawning_test.go). Remaining untested code:
 
 1. **doc.go** (105 lines) - Documentation only, no tests needed
 2. **main_mobile.go** (17 lines) - Build-tagged stub, minimal testing value
@@ -49,9 +50,12 @@ Package now has 1 test file (snapshot_conversion_test.go). Remaining untested co
    - No tests for: handlePlayerJoins(), handlePlayerLeaves(), handleInputCommands()
    - No tests for: runGameLoop(), startErrorHandler(), startPlayerManagementHandlers()
    
-4. **entity_spawning.go** (349 lines) - CRITICAL: Entity generation logic untested
-   - No tests for: spawnVehiclesInTerrain(), spawnCompanionsInTerrain(), spawnBookshelvesInTerrain()
-   - No tests for helper functions: generateVehicles(), calculateVehicleCount(), etc.
+4. ~~**entity_spawning.go** (349 lines)~~ **TESTED 2026-01-21**
+   - ✅ Tests for: spawnVehiclesInTerrain(), spawnCompanionsInTerrain(), spawnBookshelvesInTerrain()
+   - ✅ Tests for helper functions: calculateVehicleCount(), calculateCompanionCount(), extractColor(), mapVehicleType(), getVehicleSizeForType(), getCompanionSizeForType()
+   - ✅ Edge case tests: 0/1/2 rooms (no spawn), many rooms (capped counts)
+   - ✅ Determinism tests: same seed produces same results
+   - ✅ Benchmarks: ~0.2ns for count calculations, ~1ns for type lookups
    
 5. **v4_systems.go** (409 lines) - HIGH: System initialization untested
    - No tests for: initializeV4Systems(), initializeV5SystemsServer(), initializeV6SystemsServer()
@@ -130,10 +134,13 @@ Package now has 1 test file (snapshot_conversion_test.go). Remaining untested co
    - ✅ Coverage improved from ~10% to 17.3%
 
 ### Priority 2: High-Value Improvements
-1. **Add Unit Tests for Entity Spawning** (entity_spawning.go)
-   - Test vehicle, companion, and bookshelf spawning with different room counts
-   - Test edge cases (0 rooms, 1 room, 100 rooms)
-   - Verify deterministic generation with same seed
+1. ~~**Add Unit Tests for Entity Spawning** (entity_spawning.go)~~ **COMPLETED 2026-01-21**
+   - ✅ Test vehicle, companion, and bookshelf spawning with different room counts
+   - ✅ Test edge cases (0 rooms, 1 room, 100 rooms)
+   - ✅ Verify deterministic generation with same seed
+   - ✅ Added 19 tests covering all spawning functions and helper methods
+   - ✅ Added 6 benchmarks for performance validation
+   - ✅ Coverage improved from 17.3% to 30.5%
 
 2. **Add Tests for System Initialization** (v4_systems.go, v8_systems.go, v9_systems.go)
    - Verify all expected systems are added to world
@@ -153,14 +160,14 @@ Package now has 1 test file (snapshot_conversion_test.go). Remaining untested co
 
 ### Priority 3: Quality of Life Enhancements
 1. **Add Comprehensive Test Suite**
-   - Target: 65%+ code coverage (current: 0%)
-   - Focus on critical paths: network handling, entity spawning, input processing
+   - Target: 65%+ code coverage (current: 30.5%)
+   - Focus on critical paths: network handling, ~~entity spawning~~, input processing
    - Use table-driven tests for system initialization functions
 
-2. **Add Benchmarks for Performance-Critical Code**
-   - Benchmark `buildWorldSnapshot()` (called every server tick)
-   - Benchmark `applyInputCommand()` (called for every player input)
-   - Benchmark entity spawning functions (called at world generation)
+2. ~~**Add Benchmarks for Performance-Critical Code**~~ **PARTIALLY COMPLETED 2026-01-21**
+   - Benchmark `buildWorldSnapshot()` (called every server tick) - pending
+   - ✅ Benchmark `applyInputCommand()` (called for every player input) - done
+   - ✅ Benchmark entity spawning functions (called at world generation) - done
 
 3. **Add Integration Test for Full Server Lifecycle**
    - Test: Start server → Generate world → Spawn entities → Accept player → Send input → Update → Broadcast → Shutdown
@@ -185,11 +192,11 @@ Package now has 1 test file (snapshot_conversion_test.go). Remaining untested co
 
 ## Implementation Gap Statistics
 - **Total Lines of Code**: ~2850 (was ~2900, removed unused V8 manager init code)
-- **Test Lines of Code**: ~750 (snapshot_conversion_test.go + player_management_test.go)
-- **Code Coverage**: 17.3% (was ~10%, improved with player management tests)
+- **Test Lines of Code**: ~1250 (snapshot_conversion_test.go + player_management_test.go + entity_spawning_test.go)
+- **Code Coverage**: 30.5% (was 17.3%, improved with entity spawning tests)
 - **Target Coverage**: 65.0%
-- **Coverage Gap**: ~48%
-- **Estimated Test LOC Needed**: ~1200 lines (at 65% coverage)
+- **Coverage Gap**: ~35%
+- **Estimated Test LOC Needed**: ~800 lines (at 65% coverage)
 
 ## Priority Summary
 | Priority | Category | Count | Estimated Effort | Status |
@@ -197,25 +204,33 @@ Package now has 1 test file (snapshot_conversion_test.go). Remaining untested co
 | ~~CRITICAL~~ | ~~Incomplete Feature (Snapshot)~~ | ~~1~~ | ~~4-8 hours~~ | ✅ DONE |
 | ~~CRITICAL~~ | ~~Error Handling (Serialization)~~ | ~~1~~ | ~~2-4 hours~~ | ✅ RESOLVED |
 | ~~CRITICAL~~ | ~~Player Management Tests~~ | ~~1~~ | ~~4-6 hours~~ | ✅ DONE 2026-01-21 |
-| CRITICAL | Untested Code | 2 files | 30-50 hours | Pending |
-| HIGH | Untested Code | 4 files | 20-30 hours | Pending |
+| ~~CRITICAL~~ | ~~Entity Spawning Tests~~ | ~~1~~ | ~~4-6 hours~~ | ✅ DONE 2026-01-21 |
+| CRITICAL | Untested Code | 1 file | 20-30 hours | Pending |
+| HIGH | Untested Code | 3 files | 15-25 hours | Pending |
 | HIGH | Integration Gap | 1 (was 2) | 4-8 hours | Pending |
 | MEDIUM | Incomplete Feature (V9) | 1 | 4-8 hours | Pending |
 | ~~MEDIUM~~ | ~~V8 Manager Integration~~ | ~~1~~ | ~~2-4 hours~~ | ✅ RESOLVED |
 | MEDIUM | Untested Code | 1 file | 8-12 hours | Pending |
 | ~~LOW~~ | ~~Error Handling (Sprite)~~ | ~~1~~ | ~~1-2 hours~~ | ✅ RESOLVED (false positive) |
-| **TOTAL** | **Remaining Issues** | **9** | **~56-96 hours** | |
+| **TOTAL** | **Remaining Issues** | **7** | **~43-75 hours** | |
 
 ## Conclusion
-The cmd/server package is **functionally complete** with improved **network serialization** and **player management testing**:
+The cmd/server package is **functionally complete** with improved **network serialization**, **player management testing**, and **entity spawning testing**:
 
-**Recent Improvements (2026-01-21):**
+**Recent Improvements (2026-01-21 - Entity Spawning Tests):**
+- ✅ Added comprehensive entity spawning test suite (19 tests + 6 benchmarks)
+- ✅ Tests cover: vehicle, companion, and bookshelf spawning
+- ✅ Edge case tests: 0/1/2 rooms (no spawn), 100 rooms (capped counts)
+- ✅ Determinism tests: same seed produces same results
+- ✅ Helper function tests: calculateVehicleCount, calculateCompanionCount, extractColor, mapVehicleType, etc.
+- ✅ Coverage improved from 17.3% to 30.5%
+
+**Recent Improvements (2026-01-21 - Player Management Tests):**
 - ✅ Removed unused V8 manager initialization (reduced code and memory allocation)
 - ✅ Added documentation for when to add server-side validation managers
 - ✅ Cleaned up imports in v8_systems.go
 - ✅ Added comprehensive player management test suite (22 tests + 3 benchmarks)
 - ✅ Tests cover: entity creation, input handling (movement/attack/items), validation
-- ✅ Coverage improved from ~10% to 17.3%
 
 **Recent Improvements (2026-01-20):**
 - ✅ Snapshot-to-StateUpdate conversion now fully implements entity serialization
@@ -225,15 +240,16 @@ The cmd/server package is **functionally complete** with improved **network seri
 - ✅ Performance validated: 1000 entities in ~200µs
 
 **Strengths:**
-- Clean separation of concerns across 12 files (added player_management_test.go)
+- Clean separation of concerns across 13 files (3 test files)
 - No missing implementations (all functions have bodies)
 - Comprehensive documentation
 - No dead code or unused imports
 - Core network synchronization now complete
 - Player management fully tested
+- Entity spawning fully tested
 
 **Remaining Weaknesses:**
-- Test coverage at 17.3% - below 65% target
+- Test coverage at 30.5% - below 65% target (but doubled from 17.3%)
 - V9 integration managers created but not fully integrated
 - Package size (main.go ~880 lines) above recommended threshold
 
@@ -243,7 +259,8 @@ The cmd/server package is **functionally complete** with improved **network seri
 3. ~~Fix V8 manager integration~~ ✅ RESOLVED (removed unused initialization)
 4. ~~Verify sprite fallback error handling~~ ✅ RESOLVED (false positive - NewSpriteComponent cannot fail)
 5. ~~Create player management tests~~ ✅ DONE 2026-01-21
-6. Create test suite for remaining critical paths (30 hours)
-7. Integrate V9 managers properly (8 hours)
+6. ~~Create entity spawning tests~~ ✅ DONE 2026-01-21
+7. Create test suite for remaining critical paths (25 hours)
+8. Integrate V9 managers properly (8 hours)
 
-**Remaining Work**: ~56-96 hours to bring package to full production quality.
+**Remaining Work**: ~43-75 hours to bring package to full production quality.

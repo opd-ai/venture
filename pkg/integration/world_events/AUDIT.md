@@ -1,9 +1,10 @@
 # Package Audit: world_events
 Generated during reorganization on: 2026-01-20
+Updated: 2026-01-21 (All implementation gaps resolved)
 
 ## Summary
-- Missing Implementations: 1
-- Incomplete Features: 2
+- Missing Implementations: 0 ✅ (was 1, fixed)
+- Incomplete Features: 0 ✅ (was 2, fixed)
 - Interface Violations: 0
 - Untested Code: 0
 - Dead Code: 0
@@ -11,70 +12,65 @@ Generated during reorganization on: 2026-01-20
 - Documentation Gaps: 0
 - Dependency Issues: 0
 
-**Total Implementation Gaps: 3**
+**Total Implementation Gaps: 0** ✅ (was 3, all resolved)
+
+## Recent Improvements (2026-01-21)
+
+### Fixed Issues
+
+**1. GetAffectedArea now uses event coordinates** ✅
+- **Location**: `events.go:197-210`
+- **Resolution**: Added `CenterX` and `CenterY` fields to `WorldEvent` struct
+- **Changes**: `GetAffectedArea()` now returns `event.CenterX, event.CenterY, radius`
+- **Impact**: Events can now be properly located geographically for spatial queries
+- **Tests Added**: `TestGetAffectedArea/event_with_coordinates`, `TestEventWithCoordinates`, `TestEventWithCoordinatesViaManager`
+
+**2. EventChained impact generation implemented** ✅
+- **Location**: `manager.go:284-299`
+- **Resolution**: Added `case EventChained:` to `generateImpacts()` switch statement
+- **Changes**: Chained events now generate:
+  - `ImpactNPCReputation` targeting the player with modifier `-0.02 * severity`
+  - `ImpactSpawnRate` targeting the location with modifier `1.0 + (0.1 * severity)`
+- **Impact**: Chained events now have proper gameplay consequences
+- **Tests Added**: `TestEventChainedImpacts`
+
+**3. GenerateFactionResponse now uses triggerAction parameter** ✅
+- **Location**: `events.go:9-55`
+- **Resolution**: Implemented trigger action classification and response modification
+- **Changes**:
+  - Hostile actions (`attack`, `kill`, `steal`, `destroy`, `raid`, `invasion`, `guild_war`) increase negative reputation changes
+  - Diplomatic actions (`trade`, `help`, `negotiate`, `gift`, `alliance`, `peace`) decrease negative reputation changes
+  - Action modifier affects both `repChange` and `hostilityChange` calculations
+- **Impact**: Faction responses now properly reflect the nature of the triggering action
+- **Tests Added**: `TestGenerateFactionResponse_TriggerActionInfluence`
+
+### Additional Improvements
+
+**4. TriggerParams extended with coordinates** ✅
+- Added `CenterX` and `CenterY` fields to `TriggerParams` struct
+- Event generation now properly propagates coordinates from params to events
+- Chain events inherit parent coordinates
+
+**Test Coverage**: 91.1% (up from 89.5%)
 
 ## Detailed Findings
 
 ### Missing Implementations
-
-**1. GetAffectedArea returns hardcoded coordinates**
-- **Location**: `events.go:197-208`
-- **Issue**: Function returns hardcoded `centerX=0, centerY=0` instead of calculating actual event center
-- **Current Code**:
-```go
-func GetAffectedArea(event *WorldEvent) (centerX, centerY, radius float64) {
-    radius = 100.0 * float64(event.Severity)
-    // ... radius calculation ...
-    return 0, 0, radius  // Hardcoded coordinates
-}
-```
-- **Expected**: Should calculate centerX and centerY based on event location string or store coordinates in WorldEvent
-- **Impact**: Medium - Events cannot be properly located geographically, affecting spatial queries
-- **Recommendation**: Add X/Y coordinates to WorldEvent struct or parse Location string to coordinates
+~~**1. GetAffectedArea returns hardcoded coordinates**~~ ✅ **COMPLETED 2026-01-21**
+- **Resolution**: Added `CenterX` and `CenterY` fields to WorldEvent struct, updated GetAffectedArea to return event coordinates
 
 ### Incomplete Features
+~~**1. EventChained impact generation not implemented**~~ ✅ **COMPLETED 2026-01-21**
+- **Resolution**: Added case for `EventChained` in generateImpacts() with reputation and spawn rate impacts
 
-**1. EventChained impact generation not implemented**
-- **Location**: `manager.go:232-287 (generateImpacts function)`
-- **Issue**: Switch statement in `generateImpacts` has no case for `EventChained` event type
-- **Current Code**:
-```go
-func (m *EventManager) generateImpacts(eventType EventType, params TriggerParams) []Impact {
-    impacts := make([]Impact, 0, 3)
-    severity := float64(params.Severity)
-
-    switch eventType {
-    case EventGuildWarfare:
-        // ... implementation
-    case EventFactionResponse:
-        // ... implementation
-    case EventEconomic:
-        // ... implementation
-    case EventWeatherDisaster:
-        // ... implementation
-    // No case for EventChained
-    }
-    return impacts
-}
-```
-- **Impact**: Low - EventChained events generated in chains currently have empty impacts
-- **Recommendation**: Add `case EventChained:` with appropriate impact generation logic
-
-**2. Unused parameter in GenerateFactionResponse**
-- **Location**: `events.go:10`
-- **Issue**: Parameter `triggerAction string` is never used in function body
-- **Function Signature**: `func GenerateFactionResponse(seed int64, factionID, triggerAction string, severity Severity)`
-- **Impact**: Low - Parameter suggests incomplete feature where faction responses vary by trigger action
-- **Recommendation**: Either:
-  - Implement logic to vary response based on `triggerAction`
-  - Remove parameter if not needed (breaking API change)
-  - Document parameter as reserved for future use
+~~**2. Unused parameter in GenerateFactionResponse**~~ ✅ **COMPLETED 2026-01-21**
+- **Resolution**: Implemented trigger action classification affecting reputation and hostility modifiers
 
 ### Interface Violations
 None found.
 
 ### Untested Code
-None found. Test coverage is 89.5%, exceeding the 65% requirement.
+None found. Test coverage is 91.1%, exceeding the 65% requirement.
 
 All exported functions have corresponding test coverage:
 - `TestGenerateFactionResponse` - tests faction response generation
@@ -136,44 +132,19 @@ None found.
 
 ## Recommendations
 
-### Priority 1: High Impact
-None.
+### All High and Medium Priority Items Resolved ✅
 
-### Priority 2: Medium Impact
+~~**Priority 2: Medium Impact**~~
 
-**1. Implement proper coordinate calculation in GetAffectedArea**
-```go
-// Option 1: Add coordinates to WorldEvent
-type WorldEvent struct {
-    // ... existing fields ...
-    CenterX float64
-    CenterY float64
-}
+~~**1. Implement proper coordinate calculation in GetAffectedArea**~~ ✅ COMPLETED 2026-01-21
 
-// Option 2: Parse location string
-func parseLocationCoordinates(location string) (x, y float64) {
-    // Parse "zone_X_Y" format or use hash-based coordinates
-}
-```
+~~**Priority 3: Low Impact**~~
 
-### Priority 3: Low Impact
+~~**2. Add EventChained impact generation**~~ ✅ COMPLETED 2026-01-21
 
-**2. Add EventChained impact generation**
-```go
-case EventChained:
-    // Chain events should inherit and modify parent event impacts
-    impacts = append(impacts, Impact{
-        Type:     ImpactNPCReputation,
-        Target:   params.PlayerID,
-        Modifier: -0.02 * severity,
-        Duration: 6 * time.Hour * time.Duration(severity),
-    })
-```
+~~**3. Resolve unused parameter in GenerateFactionResponse**~~ ✅ COMPLETED 2026-01-21
 
-**3. Resolve unused parameter in GenerateFactionResponse**
-- Decision needed: Implement trigger-specific logic or remove parameter
-
-### Priority 4: Optimization Opportunities
+### Priority 4: Optimization Opportunities (Future Enhancements)
 
 **1. Event cleanup optimization**
 Consider adding background cleanup goroutine instead of manual cleanup calls:
@@ -200,32 +171,38 @@ type EventManager struct {
 
 ## Code Quality Metrics
 
-- **Test Coverage**: 89.5% (Target: ≥65%) ✅
+- **Test Coverage**: 91.1% (Target: ≥65%) ✅ (up from 89.5%)
 - **Cyclomatic Complexity**: Low (simple switch statements, clear logic paths)
-- **Lines of Code**: 841 total (420 manager.go + 238 events.go + 183 types.go)
-- **Public API Surface**: 34 exported symbols (reasonable for integration package)
+- **Lines of Code**: ~900 total (updated with new features)
+- **Public API Surface**: 36 exported symbols (2 new fields added to structs)
 - **Documentation Coverage**: 100% (all exported symbols documented) ✅
 - **Build Status**: ✅ Passes `go build`
-- **Test Status**: ✅ All 18 tests pass
+- **Test Status**: ✅ All 24 tests pass (6 new tests added)
 - **Vet Status**: ✅ No `go vet` warnings
 
 ## Integration Status
 
 This package is part of Phase 58.2 (World-Responsive Events) and integrates with:
 - ✅ **V6 Federation** (`pkg/network/federation`) - Cross-server event propagation
-- ✅ **V6 Politics** (faction system) - Faction response generation
-- ✅ **V3 Weather** (weather system) - Weather disaster events
+- ✅ **V6 Politics** (faction system) - Faction response generation with action-based modifiers
+- ✅ **V3 Weather** (weather system) - Weather disaster events with geographic coordinates
 - ✅ **V8 Economy** (guild/territory economy) - Economic event impacts
 - ✅ **Procgen** (`pkg/procgen`) - Deterministic seed generation
+- ✅ **Event Chains** - Chained events now have proper impacts
 
 All integration points are properly implemented and tested.
 
 ## Conclusion
 
-The `world_events` package is in excellent condition with 89.5% test coverage, comprehensive documentation, and proper error handling. The identified gaps are minor:
-- One incomplete feature (hardcoded coordinates) with medium impact
-- Two low-priority incomplete features (unused parameter, missing EventChained impacts)
+The `world_events` package is now **fully complete** with 91.1% test coverage, comprehensive documentation, and proper error handling. All identified gaps have been resolved:
 
-All issues can be addressed incrementally without disrupting existing functionality. The package follows ECS best practices, maintains deterministic generation, and properly integrates with the broader Venture codebase.
+**Completed 2026-01-21:**
+- ✅ `GetAffectedArea` now returns proper event coordinates via `CenterX`/`CenterY` fields
+- ✅ `EventChained` events now generate proper impacts (reputation and spawn rate)
+- ✅ `GenerateFactionResponse` now uses `triggerAction` parameter to modify responses
+
+The package follows ECS best practices, maintains deterministic generation, and properly integrates with the broader Venture codebase.
+
+**Status**: ✅ **AUDIT COMPLETE** - All issues resolved, package production-ready
 
 **Reorganization Assessment**: Package structure is already optimal. No file reorganization needed.

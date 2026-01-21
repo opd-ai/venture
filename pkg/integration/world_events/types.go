@@ -65,6 +65,10 @@ type WorldEvent struct {
 	Impacts     []Impact
 	ChainEvents []string
 	Permanent   bool
+	// CenterX is the X coordinate of the event's center location.
+	CenterX float64
+	// CenterY is the Y coordinate of the event's center location.
+	CenterY float64
 }
 
 // Impact represents a specific effect of an event.
@@ -140,6 +144,10 @@ type TriggerParams struct {
 	PlayerID    string
 	ChoiceID    string
 	Metadata    map[string]interface{}
+	// CenterX is the X coordinate for the event's center location.
+	CenterX float64
+	// CenterY is the Y coordinate for the event's center location.
+	CenterY float64
 }
 
 // Validate checks if trigger parameters are valid.

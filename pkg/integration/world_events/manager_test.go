@@ -449,6 +449,106 @@ func TestEventUpdate(t *testing.T) {
 	}
 }
 
+func TestEventChainedImpacts(t *testing.T) {
+	// Verify that EventChained events now generate proper impacts
+	manager := NewEventManagerWithConfig(12345, EventManagerConfig{
+		MaxActiveEvents:      50,
+		EventFrequency:       2.0,
+		ChainProbability:     1.0, // Force chain generation
+		CrossServerPropDelay: 30 * time.Second,
+		ResponseTimeMin:      0 * time.Millisecond,
+		ResponseTimeMax:      0 * time.Millisecond,
+	})
+
+	params := TriggerParams{
+		TriggerType: TriggerPlayerChoice,
+		Severity:    SeverityMajor,
+		Location:    "zone_1",
+		ServerID:    "server_1",
+		PlayerID:    "player_123",
+	}
+	event, err := manager.GenerateEvent(TriggerPlayerChoice, params)
+	if err != nil {
+		t.Fatalf("failed to generate event: %v", err)
+	}
+
+	// TriggerPlayerChoice generates EventChained type
+	if event.Type != EventChained {
+		t.Errorf("expected EventChained type, got %s", event.Type)
+	}
+
+	// EventChained should now have impacts
+	if len(event.Impacts) == 0 {
+		t.Error("expected EventChained to have impacts, got none")
+	}
+
+	// Verify impacts are properly generated
+	hasReputationImpact := false
+	hasSpawnRateImpact := false
+	for _, impact := range event.Impacts {
+		if impact.Type == ImpactNPCReputation {
+			hasReputationImpact = true
+			if impact.Target != "player_123" {
+				t.Errorf("expected reputation impact target 'player_123', got '%s'", impact.Target)
+			}
+		}
+		if impact.Type == ImpactSpawnRate {
+			hasSpawnRateImpact = true
+			if impact.Target != "zone_1" {
+				t.Errorf("expected spawn rate impact target 'zone_1', got '%s'", impact.Target)
+			}
+		}
+	}
+
+	if !hasReputationImpact {
+		t.Error("expected reputation impact for chained event")
+	}
+	if !hasSpawnRateImpact {
+		t.Error("expected spawn rate impact for chained event")
+	}
+}
+
+func TestEventWithCoordinatesViaManager(t *testing.T) {
+	manager := NewEventManagerWithConfig(12345, EventManagerConfig{
+		MaxActiveEvents:      50,
+		EventFrequency:       2.0,
+		ChainProbability:     0.0,
+		CrossServerPropDelay: 30 * time.Second,
+		ResponseTimeMin:      0 * time.Millisecond,
+		ResponseTimeMax:      0 * time.Millisecond,
+	})
+
+	params := TriggerParams{
+		TriggerType: TriggerWeatherChange,
+		Severity:    SeverityMajor,
+		Location:    "zone_1",
+		ServerID:    "server_1",
+		CenterX:     150.5,
+		CenterY:     275.3,
+	}
+	event, err := manager.GenerateEvent(TriggerWeatherChange, params)
+	if err != nil {
+		t.Fatalf("failed to generate event: %v", err)
+	}
+
+	// Verify coordinates are properly stored in the event
+	if event.CenterX != 150.5 {
+		t.Errorf("expected CenterX 150.5, got %f", event.CenterX)
+	}
+	if event.CenterY != 275.3 {
+		t.Errorf("expected CenterY 275.3, got %f", event.CenterY)
+	}
+
+	// Verify GetAffectedArea returns the coordinates
+	centerX, centerY, _ := GetAffectedArea(event)
+	if centerX != 150.5 {
+		t.Errorf("expected centerX 150.5 from GetAffectedArea, got %f", centerX)
+	}
+	if centerY != 275.3 {
+		t.Errorf("expected centerY 275.3 from GetAffectedArea, got %f", centerY)
+	}
+}
+
 func BenchmarkGenerateEvent(b *testing.B) {
 	manager := NewEventManager(12345)
 	params := TriggerParams{

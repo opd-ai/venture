@@ -7,12 +7,39 @@ import (
 )
 
 // GenerateFactionResponse creates a faction's reaction to player actions.
+// The triggerAction parameter influences the type of response generated:
+// hostile actions (e.g., "attack", "kill", "steal") increase negative responses,
+// while diplomatic actions (e.g., "trade", "help", "negotiate") increase positive responses.
 func GenerateFactionResponse(seed int64, factionID, triggerAction string, severity Severity) *FactionResponse {
 	rng := rand.New(rand.NewSource(seed))
+
+	// Determine base reaction based on trigger action
+	actionModifier := 0.0
+	isHostileAction := false
+	isDiplomaticAction := false
+
+	// Classify the trigger action
+	switch triggerAction {
+	case "attack", "kill", "steal", "destroy", "raid", "invasion", "guild_war":
+		isHostileAction = true
+		actionModifier = 0.2 // Increases negative response
+	case "trade", "help", "negotiate", "gift", "alliance", "peace":
+		isDiplomaticAction = true
+		actionModifier = -0.2 // Decreases negative response
+	}
 
 	repChange := -0.05 * float64(severity)
 	hostilityChange := 0.1 * float64(severity)
 	tradeBonus := 0.0
+
+	// Apply action modifier to reputation and hostility
+	if isHostileAction {
+		repChange -= actionModifier * float64(severity)
+		hostilityChange += actionModifier * float64(severity)
+	} else if isDiplomaticAction {
+		repChange -= actionModifier * float64(severity) // Subtracting negative = adding
+		hostilityChange += actionModifier * float64(severity)
+	}
 
 	if rng.Float64() < 0.2 {
 		repChange = -repChange
@@ -194,6 +221,7 @@ func ShouldSpawnEvent(lastEventTime time.Time, frequency float64) bool {
 }
 
 // GetAffectedArea calculates the geographical area affected by an event.
+// Returns the event's center coordinates and the radius of effect.
 func GetAffectedArea(event *WorldEvent) (centerX, centerY, radius float64) {
 	radius = 100.0 * float64(event.Severity)
 
@@ -204,7 +232,7 @@ func GetAffectedArea(event *WorldEvent) (centerX, centerY, radius float64) {
 		}
 	}
 
-	return 0, 0, radius
+	return event.CenterX, event.CenterY, radius
 }
 
 // MergeEventImpacts combines impacts from multiple concurrent events.

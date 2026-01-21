@@ -89,6 +89,8 @@ func (m *EventManager) GenerateEvent(trigger TriggerType, params TriggerParams) 
 		Impacts:     m.generateImpacts(eventType, params),
 		ChainEvents: []string{},
 		Permanent:   false,
+		CenterX:     params.CenterX,
+		CenterY:     params.CenterY,
 	}
 
 	event.Title, event.Description = m.generateText(event, params)
@@ -281,6 +283,25 @@ func (m *EventManager) generateImpacts(eventType EventType, params TriggerParams
 			Modifier: -0.1 * severity,
 			Duration: 0,
 		})
+
+	case EventChained:
+		// Chained events inherit characteristics from their parent event
+		// and add narrative/reputation impacts
+		impacts = append(impacts, Impact{
+			Type:     ImpactNPCReputation,
+			Target:   params.PlayerID,
+			Modifier: -0.02 * severity,
+			Duration: 6 * time.Hour * time.Duration(severity),
+		})
+		// Chained events can also affect spawn rates in the area
+		if params.Location != "" {
+			impacts = append(impacts, Impact{
+				Type:     ImpactSpawnRate,
+				Target:   params.Location,
+				Modifier: 1.0 + (0.1 * severity),
+				Duration: 1 * time.Hour * time.Duration(severity),
+			})
+		}
 	}
 
 	return impacts
@@ -391,6 +412,8 @@ func (m *EventManager) generateChainEvents(eventID string, params TriggerParams)
 			ItemType:    params.ItemType,
 			PlayerID:    params.PlayerID,
 			ChoiceID:    eventID,
+			CenterX:     params.CenterX,
+			CenterY:     params.CenterY,
 		}
 
 		followUpEvent := &WorldEvent{
@@ -405,6 +428,8 @@ func (m *EventManager) generateChainEvents(eventID string, params TriggerParams)
 			Impacts:     m.generateImpacts(EventChained, followUpParams),
 			ChainEvents: []string{},
 			Permanent:   false,
+			CenterX:     params.CenterX,
+			CenterY:     params.CenterY,
 		}
 
 		followUpEvent.Title, followUpEvent.Description = m.generateText(followUpEvent, followUpParams)

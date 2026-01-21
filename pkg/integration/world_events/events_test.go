@@ -340,6 +340,8 @@ func TestGetAffectedArea(t *testing.T) {
 		event       *WorldEvent
 		minRadius   float64
 		expectBonus bool
+		wantCenterX float64
+		wantCenterY float64
 	}{
 		{
 			name: "minor event",
@@ -349,6 +351,8 @@ func TestGetAffectedArea(t *testing.T) {
 			},
 			minRadius:   100.0,
 			expectBonus: false,
+			wantCenterX: 0,
+			wantCenterY: 0,
 		},
 		{
 			name: "weather event with bonus",
@@ -360,6 +364,8 @@ func TestGetAffectedArea(t *testing.T) {
 			},
 			minRadius:   300.0,
 			expectBonus: true,
+			wantCenterX: 0,
+			wantCenterY: 0,
 		},
 		{
 			name: "terrain event with bonus",
@@ -371,12 +377,27 @@ func TestGetAffectedArea(t *testing.T) {
 			},
 			minRadius:   200.0,
 			expectBonus: true,
+			wantCenterX: 0,
+			wantCenterY: 0,
+		},
+		{
+			name: "event with coordinates",
+			event: &WorldEvent{
+				Severity: SeverityMajor,
+				CenterX:  150.5,
+				CenterY:  275.3,
+				Impacts:  []Impact{},
+			},
+			minRadius:   300.0,
+			expectBonus: false,
+			wantCenterX: 150.5,
+			wantCenterY: 275.3,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, _, radius := GetAffectedArea(tt.event)
+			centerX, centerY, radius := GetAffectedArea(tt.event)
 
 			if radius < tt.minRadius {
 				t.Errorf("expected radius >= %f, got %f", tt.minRadius, radius)
@@ -389,6 +410,14 @@ func TestGetAffectedArea(t *testing.T) {
 
 			if radius != expectedRadius {
 				t.Errorf("expected radius %f, got %f", expectedRadius, radius)
+			}
+
+			if centerX != tt.wantCenterX {
+				t.Errorf("expected centerX %f, got %f", tt.wantCenterX, centerX)
+			}
+
+			if centerY != tt.wantCenterY {
+				t.Errorf("expected centerY %f, got %f", tt.wantCenterY, centerY)
 			}
 		})
 	}
@@ -494,5 +523,114 @@ func BenchmarkMergeEventImpacts(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		_ = MergeEventImpacts(events)
+	}
+}
+
+func TestGenerateFactionResponse_TriggerActionInfluence(t *testing.T) {
+	tests := []struct {
+		name           string
+		seed           int64
+		factionID      string
+		triggerAction  string
+		severity       Severity
+		expectHostile  bool
+	}{
+		{
+			name:           "hostile action - attack",
+			seed:           12345,
+			factionID:      "faction_a",
+			triggerAction:  "attack",
+			severity:       SeverityMajor,
+			expectHostile:  true,
+		},
+		{
+			name:           "hostile action - guild_war",
+			seed:           12345,
+			factionID:      "faction_a",
+			triggerAction:  "guild_war",
+			severity:       SeverityMajor,
+			expectHostile:  true,
+		},
+		{
+			name:           "diplomatic action - trade",
+			seed:           12345,
+			factionID:      "faction_b",
+			triggerAction:  "trade",
+			severity:       SeverityMajor,
+			expectHostile:  false,
+		},
+		{
+			name:           "diplomatic action - peace",
+			seed:           12345,
+			factionID:      "faction_b",
+			triggerAction:  "peace",
+			severity:       SeverityMajor,
+			expectHostile:  false,
+		},
+		{
+			name:           "neutral action",
+			seed:           12345,
+			factionID:      "faction_c",
+			triggerAction:  "unknown_action",
+			severity:       SeverityMajor,
+			expectHostile:  false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			response := GenerateFactionResponse(tt.seed, tt.factionID, tt.triggerAction, tt.severity)
+
+			if response.FactionID != tt.factionID {
+				t.Errorf("expected faction %s, got %s", tt.factionID, response.FactionID)
+			}
+
+			// Hostile actions should generally produce more negative reputation changes
+			// (unless the 20% chance positive reversal triggers)
+			if response.ResponseType == "" {
+				t.Error("expected non-empty response type")
+			}
+
+			if response.Message == "" {
+				t.Error("expected non-empty message")
+			}
+
+			// Verify determinism
+			response2 := GenerateFactionResponse(tt.seed, tt.factionID, tt.triggerAction, tt.severity)
+			if response.ResponseType != response2.ResponseType {
+				t.Error("expected deterministic response type")
+			}
+			if response.ReputationChange != response2.ReputationChange {
+				t.Error("expected deterministic reputation change")
+			}
+		})
+	}
+}
+
+func TestEventWithCoordinates(t *testing.T) {
+	event := &WorldEvent{
+		ID:       "test_event",
+		Type:     EventWeatherDisaster,
+		Severity: SeverityMajor,
+		CenterX:  100.5,
+		CenterY:  200.5,
+		Impacts: []Impact{
+			{Type: ImpactWeather},
+		},
+	}
+
+	centerX, centerY, radius := GetAffectedArea(event)
+
+	if centerX != 100.5 {
+		t.Errorf("expected centerX 100.5, got %f", centerX)
+	}
+	if centerY != 200.5 {
+		t.Errorf("expected centerY 200.5, got %f", centerY)
+	}
+
+	// Major severity (3) * 100 * 1.5 (weather bonus) = 450
+	expectedRadius := 450.0
+	if radius != expectedRadius {
+		t.Errorf("expected radius %f, got %f", expectedRadius, radius)
 	}
 }

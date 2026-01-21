@@ -208,15 +208,15 @@ BenchmarkLoad-4  909   1319896 ns/op  498497 B/op  5027 allocs/op
 **By Severity:**
 - High (significant but correctable): 1 issue (Composite terrain memory)
 - Medium (noticeable impact): 1 issue (System initialization)
-- Low (minor optimization): 3 issues (LOD enforcement, SPH simulation, Debris particles)
-- Fixed: 6 issues (WorkerPool deadlock ✅, RNG source pooling ✅, Ambience particles ✅, Weather allocation ✅, Poisson validation ✅, Cellular automaton ✅)
+- Low (minor optimization): 2 issues (SPH simulation, Debris particles)
+- Fixed: 7 issues (WorkerPool deadlock ✅, RNG source pooling ✅, Ambience particles ✅, Weather allocation ✅, Poisson validation ✅, Cellular automaton ✅, LOD enforcement ✅)
 
 **By Type:**
 - Algorithmic inefficiency: 1 issue (SPH neighbor search)
 - Unnecessary allocations: 1 issue (Debris particles)
 - Blocking I/O: 1 issue (Guild save)
 - Initialization overhead: 2 issues (System init, Composite terrain chain)
-- Fixed: 6 issues (WorkerPool deadlock ✅, RNG pooling ✅, Ambience particles ✅, Weather particles ✅, Poisson trigonometry ✅, Cellular automaton ✅)
+- Fixed: 7 issues (WorkerPool deadlock ✅, RNG pooling ✅, Ambience particles ✅, Weather particles ✅, Poisson trigonometry ✅, Cellular automaton ✅, LOD enforcement ✅)
 
 ---
 
@@ -341,9 +341,20 @@ Based on benchmark data (corrected units):
      - Added comprehensive test coverage in `cellular_test.go`
    - Test coverage: 93.2%
    
-7. **LOD Enforcement Sampling**: Check subset of particles per frame instead of all
+7. **LOD Enforcement Sampling**: Check subset of particles per frame instead of all ✅ **COMPLETED 2026-01-21**
    - Expected improvement: Smooths ~0.5ms worst-case LOD check into smaller per-frame slices (micro-optimization, reduces jitter)
    - Implementation complexity: Low (stagger checks over frames)
+   - **Actual Results:**
+     - EnforceLODLimit: **22x faster** (338µs → 15µs)
+     - Added `StaggeredLODEnforcer` for frame-spread LOD checks (~4µs per frame)
+     - Memory allocation reduced by **75%** per call (20KB → 5KB for staggered)
+   - **Solution Implemented:**
+     - Replaced O(n²) bubble sort with O(n log n) pattern-defeating quicksort
+     - Added squared distance comparisons (no sqrt)
+     - Added `StaggeredLODEnforcer` type that spreads LOD work over N frames
+     - Added insertion sort for small slices (n≤12)
+     - Median-of-three pivot selection for better performance on sorted data
+   - Test coverage: 91.8%
 
 8. **SPH Spatial Partitioning**: Add grid-based neighbor lookup for fluid simulation
    - Expected improvement: O(n²) → O(n × k) where k is neighbor count

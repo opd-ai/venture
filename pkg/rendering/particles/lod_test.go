@@ -311,3 +311,173 @@ func BenchmarkEnforceLODLimit(b *testing.B) {
 		EnforceLODLimit(particles, renderIndices, 0, 0, 500)
 	}
 }
+
+func TestNewStaggeredLODEnforcer(t *testing.T) {
+	enforcer := NewStaggeredLODEnforcer(4, 500)
+
+	if enforcer.staggerFrames != 4 {
+		t.Errorf("staggerFrames = %d, want 4", enforcer.staggerFrames)
+	}
+	if enforcer.maxParticles != 500 {
+		t.Errorf("maxParticles = %d, want 500", enforcer.maxParticles)
+	}
+}
+
+func TestNewStaggeredLODEnforcer_Defaults(t *testing.T) {
+	// Zero values should use defaults
+	enforcer := NewStaggeredLODEnforcer(0, 0)
+
+	if enforcer.staggerFrames != 1 {
+		t.Errorf("staggerFrames = %d, want 1 (min)", enforcer.staggerFrames)
+	}
+	if enforcer.maxParticles != 1000 {
+		t.Errorf("maxParticles = %d, want 1000 (default)", enforcer.maxParticles)
+	}
+}
+
+func TestStaggeredLODEnforcer_UnderLimit(t *testing.T) {
+	enforcer := NewStaggeredLODEnforcer(4, 100)
+	particles := make([]Particle, 50)
+	for i := range particles {
+		particles[i] = Particle{X: float64(i), Y: 0}
+	}
+	indices := make([]int, 50)
+	for i := range indices {
+		indices[i] = i
+	}
+
+	result := enforcer.Update(particles, indices, 0, 0)
+	if len(result) != 50 {
+		t.Errorf("result length = %d, want 50 (all under limit)", len(result))
+	}
+}
+
+func TestStaggeredLODEnforcer_OverLimit(t *testing.T) {
+	enforcer := NewStaggeredLODEnforcer(4, 100)
+	particles := make([]Particle, 200)
+	for i := range particles {
+		particles[i] = Particle{X: float64(i * 10), Y: 0}
+	}
+	indices := make([]int, 200)
+	for i := range indices {
+		indices[i] = i
+	}
+
+	// First frame should return initial slice as fallback
+	result := enforcer.Update(particles, indices, 0, 0)
+	if len(result) != 100 {
+		t.Errorf("first frame result length = %d, want 100", len(result))
+	}
+
+	// Run through remaining frames to complete cycle
+	for i := 0; i < 3; i++ {
+		result = enforcer.Update(particles, indices, 0, 0)
+	}
+
+	// After full cycle, should have sorted result with closest particles
+	if len(result) != 100 {
+		t.Errorf("result length = %d, want 100", len(result))
+	}
+}
+
+func TestStaggeredLODEnforcer_CycleProgress(t *testing.T) {
+	enforcer := NewStaggeredLODEnforcer(4, 100)
+	particles := make([]Particle, 200)
+	indices := make([]int, 200)
+	for i := range indices {
+		indices[i] = i
+	}
+
+	// Check initial progress
+	current, total := enforcer.GetCycleProgress()
+	if total != 4 {
+		t.Errorf("total = %d, want 4", total)
+	}
+	if current != 0 {
+		t.Errorf("initial current = %d, want 0", current)
+	}
+
+	// After one update
+	enforcer.Update(particles, indices, 0, 0)
+	current, _ = enforcer.GetCycleProgress()
+	if current != 1 {
+		t.Errorf("after 1 update current = %d, want 1", current)
+	}
+
+	// After 4 updates (complete cycle)
+	for i := 0; i < 3; i++ {
+		enforcer.Update(particles, indices, 0, 0)
+	}
+	current, _ = enforcer.GetCycleProgress()
+	if current != 0 {
+		t.Errorf("after cycle current = %d, want 0 (reset)", current)
+	}
+}
+
+func TestStaggeredLODEnforcer_Reset(t *testing.T) {
+	enforcer := NewStaggeredLODEnforcer(4, 100)
+	particles := make([]Particle, 200)
+	indices := make([]int, 200)
+	for i := range indices {
+		indices[i] = i
+	}
+
+	// Run a few frames
+	enforcer.Update(particles, indices, 0, 0)
+	enforcer.Update(particles, indices, 0, 0)
+
+	// Reset
+	enforcer.Reset()
+
+	current, _ := enforcer.GetCycleProgress()
+	if current != 0 {
+		t.Errorf("current after reset = %d, want 0", current)
+	}
+}
+
+func TestStaggeredLODEnforcer_SetMaxParticles(t *testing.T) {
+	enforcer := NewStaggeredLODEnforcer(4, 100)
+	enforcer.SetMaxParticles(200)
+
+	if enforcer.maxParticles != 200 {
+		t.Errorf("maxParticles = %d, want 200", enforcer.maxParticles)
+	}
+
+	// Invalid value should be ignored
+	enforcer.SetMaxParticles(0)
+	if enforcer.maxParticles != 200 {
+		t.Errorf("maxParticles after invalid = %d, want 200 (unchanged)", enforcer.maxParticles)
+	}
+}
+
+func TestStaggeredLODEnforcer_SetStaggerFrames(t *testing.T) {
+	enforcer := NewStaggeredLODEnforcer(4, 100)
+	enforcer.SetStaggerFrames(8)
+
+	if enforcer.staggerFrames != 8 {
+		t.Errorf("staggerFrames = %d, want 8", enforcer.staggerFrames)
+	}
+
+	// Invalid value should be ignored
+	enforcer.SetStaggerFrames(0)
+	if enforcer.staggerFrames != 8 {
+		t.Errorf("staggerFrames after invalid = %d, want 8 (unchanged)", enforcer.staggerFrames)
+	}
+}
+
+func BenchmarkStaggeredLODEnforcer(b *testing.B) {
+	enforcer := NewStaggeredLODEnforcer(4, 500)
+	particles := make([]Particle, 1000)
+	for i := range particles {
+		particles[i] = Particle{X: float64(i), Y: 0}
+	}
+	indices := make([]int, 1000)
+	for i := range indices {
+		indices[i] = i
+	}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		enforcer.Update(particles, indices, 0, 0)
+	}
+}

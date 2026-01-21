@@ -234,6 +234,313 @@ func GetFantasyTreeTemplates() []SkillTreeTemplate {
 	}
 }
 
+// GetHorrorTreeTemplates returns skill tree templates for horror genre.
+// Archetypes include Necromancer, Blood Mage, Monster Hunter, and Cultist.
+func GetHorrorTreeTemplates() []SkillTreeTemplate {
+	return []SkillTreeTemplate{
+		{
+			Name:        "Necromancer",
+			Description: "Master of death and undead summoning",
+			Category:    CategoryMagic,
+			SkillTemplates: []SkillTemplate{
+				// Dark magic passives
+				{
+					BaseType:          TypePassive,
+					BaseCategory:      CategoryMagic,
+					NamePrefixes:      []string{"Dark", "Death", "Grave", "Corpse"},
+					NameSuffixes:      []string{"Affinity", "Mastery", "Attunement", "Knowledge"},
+					DescriptionFormat: "Enhances %s and necromantic power",
+					EffectTypes:       []string{"dark_damage", "summon_health", "soul_harvest"},
+					ValueRanges: map[string][2]float64{
+						"dark_damage":  {0.06, 0.18},
+						"summon_health": {0.10, 0.25},
+						"soul_harvest": {0.05, 0.12},
+					},
+					Tags:          []string{"magic", "passive", "dark"},
+					TierRange:     [2]int{0, 4},
+					MaxLevelRange: [2]int{3, 5},
+				},
+				// Summoning active skills
+				{
+					BaseType:          TypeActive,
+					BaseCategory:      CategoryMagic,
+					NamePrefixes:      []string{"Raise", "Summon", "Animate", "Call"},
+					NameSuffixes:      []string{"Undead", "Skeleton", "Ghoul", "Zombie"},
+					DescriptionFormat: "Conjure %s to fight for you",
+					EffectTypes:       []string{"summon_count", "summon_damage", "summon_duration"},
+					ValueRanges: map[string][2]float64{
+						"summon_count":    {1.00, 3.00},
+						"summon_damage":   {0.40, 1.00},
+						"summon_duration": {15.0, 45.0},
+					},
+					Tags:          []string{"magic", "active", "summon"},
+					TierRange:     [2]int{1, 5},
+					MaxLevelRange: [2]int{1, 3},
+				},
+				// Life drain skills
+				{
+					BaseType:          TypePassive,
+					BaseCategory:      CategoryDefense,
+					NamePrefixes:      []string{"Soul", "Life", "Vitality", "Essence"},
+					NameSuffixes:      []string{"Siphon", "Drain", "Leech", "Absorption"},
+					DescriptionFormat: "Steals %s from enemies",
+					EffectTypes:       []string{"lifesteal", "mana_steal", "health_regen"},
+					ValueRanges: map[string][2]float64{
+						"lifesteal":   {0.05, 0.15},
+						"mana_steal":  {0.03, 0.10},
+						"health_regen": {0.08, 0.18},
+					},
+					Tags:          []string{"defense", "passive", "drain"},
+					TierRange:     [2]int{0, 4},
+					MaxLevelRange: [2]int{3, 5},
+				},
+				// Ultimate
+				{
+					BaseType:          TypeUltimate,
+					BaseCategory:      CategoryMagic,
+					NamePrefixes:      []string{"Army of", "Legion of", "Horde of", "Plague of"},
+					NameSuffixes:      []string{"Darkness", "the Dead", "Undeath", "Shadows"},
+					DescriptionFormat: "Raise %s to overwhelm enemies",
+					EffectTypes:       []string{"summon_count", "dark_damage", "fear_chance"},
+					ValueRanges: map[string][2]float64{
+						"summon_count": {5.00, 10.00},
+						"dark_damage":  {2.00, 4.00},
+						"fear_chance":  {0.30, 0.60},
+					},
+					Tags:          []string{"ultimate", "magic", "summon"},
+					TierRange:     [2]int{6, 6},
+					MaxLevelRange: [2]int{1, 1},
+				},
+			},
+		},
+		{
+			Name:        "Blood Mage",
+			Description: "Wielder of forbidden blood magic and sacrifice",
+			Category:    CategoryMagic,
+			SkillTemplates: []SkillTemplate{
+				// Blood magic passives
+				{
+					BaseType:          TypePassive,
+					BaseCategory:      CategoryMagic,
+					NamePrefixes:      []string{"Crimson", "Blood", "Sanguine", "Vital"},
+					NameSuffixes:      []string{"Mastery", "Rites", "Binding", "Focus"},
+					DescriptionFormat: "Enhances %s power through blood",
+					EffectTypes:       []string{"blood_damage", "health_cost_reduction", "spell_power"},
+					ValueRanges: map[string][2]float64{
+						"blood_damage":          {0.08, 0.22},
+						"health_cost_reduction": {0.05, 0.15},
+						"spell_power":           {0.06, 0.14},
+					},
+					Tags:          []string{"magic", "passive", "blood"},
+					TierRange:     [2]int{0, 4},
+					MaxLevelRange: [2]int{3, 5},
+				},
+				// Blood sacrifice active skills
+				{
+					BaseType:          TypeActive,
+					BaseCategory:      CategoryCombat,
+					NamePrefixes:      []string{"Blood", "Crimson", "Hemorrhage", "Exsanguinate"},
+					NameSuffixes:      []string{"Bolt", "Strike", "Rupture", "Cascade"},
+					DescriptionFormat: "Sacrifice health to unleash %s",
+					EffectTypes:       []string{"blood_damage", "bleed_chance", "health_cost"},
+					ValueRanges: map[string][2]float64{
+						"blood_damage": {0.80, 2.00},
+						"bleed_chance": {0.30, 0.60},
+						"health_cost":  {0.05, 0.15},
+					},
+					Tags:          []string{"combat", "active", "sacrifice"},
+					TierRange:     [2]int{1, 5},
+					MaxLevelRange: [2]int{1, 3},
+				},
+				// Self-sustain through blood
+				{
+					BaseType:          TypePassive,
+					BaseCategory:      CategoryDefense,
+					NamePrefixes:      []string{"Transfusion", "Bloodwell", "Vitae", "Regenerative"},
+					NameSuffixes:      []string{"", "Reserve", "Pool", "Flow"},
+					DescriptionFormat: "Recover through %s",
+					EffectTypes:       []string{"lifesteal", "max_health", "health_on_kill"},
+					ValueRanges: map[string][2]float64{
+						"lifesteal":      {0.08, 0.20},
+						"max_health":     {0.10, 0.25},
+						"health_on_kill": {0.05, 0.12},
+					},
+					Tags:          []string{"defense", "passive", "sustain"},
+					TierRange:     [2]int{0, 4},
+					MaxLevelRange: [2]int{3, 5},
+				},
+				// Ultimate
+				{
+					BaseType:          TypeUltimate,
+					BaseCategory:      CategoryMagic,
+					NamePrefixes:      []string{"Sanguine", "Blood", "Crimson", "Vital"},
+					NameSuffixes:      []string{"Apocalypse", "Storm", "Tempest", "Offering"},
+					DescriptionFormat: "Unleash %s for devastating damage",
+					EffectTypes:       []string{"blood_damage", "lifesteal", "aoe_radius"},
+					ValueRanges: map[string][2]float64{
+						"blood_damage": {3.00, 6.00},
+						"lifesteal":    {0.40, 0.80},
+						"aoe_radius":   {0.50, 1.00},
+					},
+					Tags:          []string{"ultimate", "magic", "burst"},
+					TierRange:     [2]int{6, 6},
+					MaxLevelRange: [2]int{1, 1},
+				},
+			},
+		},
+		{
+			Name:        "Monster Hunter",
+			Description: "Specialist in tracking and slaying supernatural creatures",
+			Category:    CategoryCombat,
+			SkillTemplates: []SkillTemplate{
+				// Tracking passives
+				{
+					BaseType:          TypePassive,
+					BaseCategory:      CategoryUtility,
+					NamePrefixes:      []string{"Beast", "Monster", "Creature", "Prey"},
+					NameSuffixes:      []string{"Tracker", "Sense", "Detection", "Knowledge"},
+					DescriptionFormat: "Improves %s against supernatural foes",
+					EffectTypes:       []string{"detection_range", "crit_vs_monsters", "damage_vs_monsters"},
+					ValueRanges: map[string][2]float64{
+						"detection_range":   {0.10, 0.30},
+						"crit_vs_monsters":  {0.05, 0.15},
+						"damage_vs_monsters": {0.08, 0.20},
+					},
+					Tags:          []string{"utility", "passive", "tracking"},
+					TierRange:     [2]int{0, 4},
+					MaxLevelRange: [2]int{3, 5},
+				},
+				// Combat active skills
+				{
+					BaseType:          TypeActive,
+					BaseCategory:      CategoryCombat,
+					NamePrefixes:      []string{"Silver", "Holy", "Blessed", "Consecrated"},
+					NameSuffixes:      []string{"Strike", "Blade", "Arrow", "Bolt"},
+					DescriptionFormat: "Attack with %s for bonus damage",
+					EffectTypes:       []string{"holy_damage", "stun_chance", "weakness_exploit"},
+					ValueRanges: map[string][2]float64{
+						"holy_damage":      {0.60, 1.40},
+						"stun_chance":      {0.15, 0.35},
+						"weakness_exploit": {0.20, 0.50},
+					},
+					Tags:          []string{"combat", "active", "holy"},
+					TierRange:     [2]int{1, 5},
+					MaxLevelRange: [2]int{1, 3},
+				},
+				// Preparation skills
+				{
+					BaseType:          TypePassive,
+					BaseCategory:      CategoryDefense,
+					NamePrefixes:      []string{"Warded", "Protected", "Resistant", "Hardened"},
+					NameSuffixes:      []string{"Mind", "Soul", "Body", "Spirit"},
+					DescriptionFormat: "Grants %s against supernatural attacks",
+					EffectTypes:       []string{"fear_resistance", "curse_resistance", "dark_resistance"},
+					ValueRanges: map[string][2]float64{
+						"fear_resistance":  {0.15, 0.40},
+						"curse_resistance": {0.10, 0.30},
+						"dark_resistance":  {0.10, 0.25},
+					},
+					Tags:          []string{"defense", "passive", "resistance"},
+					TierRange:     [2]int{0, 4},
+					MaxLevelRange: [2]int{3, 5},
+				},
+				// Ultimate
+				{
+					BaseType:          TypeUltimate,
+					BaseCategory:      CategoryCombat,
+					NamePrefixes:      []string{"Purge", "Exorcism", "Banishment", "Annihilation"},
+					NameSuffixes:      []string{"Protocol", "Rite", "Ritual", "Strike"},
+					DescriptionFormat: "Execute %s to devastate supernatural foes",
+					EffectTypes:       []string{"holy_damage", "instant_kill_chance", "aoe_radius"},
+					ValueRanges: map[string][2]float64{
+						"holy_damage":        {2.50, 5.00},
+						"instant_kill_chance": {0.10, 0.25},
+						"aoe_radius":         {0.40, 0.80},
+					},
+					Tags:          []string{"ultimate", "combat", "execution"},
+					TierRange:     [2]int{6, 6},
+					MaxLevelRange: [2]int{1, 1},
+				},
+			},
+		},
+		{
+			Name:        "Cultist",
+			Description: "Channeler of eldritch powers and cosmic horror",
+			Category:    CategoryMagic,
+			SkillTemplates: []SkillTemplate{
+				// Eldritch passives
+				{
+					BaseType:          TypePassive,
+					BaseCategory:      CategoryMagic,
+					NamePrefixes:      []string{"Eldritch", "Cosmic", "Void", "Abyssal"},
+					NameSuffixes:      []string{"Knowledge", "Insight", "Whispers", "Attunement"},
+					DescriptionFormat: "Deepens %s connection to the beyond",
+					EffectTypes:       []string{"void_damage", "madness_resistance", "spell_power"},
+					ValueRanges: map[string][2]float64{
+						"void_damage":       {0.08, 0.20},
+						"madness_resistance": {0.10, 0.25},
+						"spell_power":       {0.06, 0.14},
+					},
+					Tags:          []string{"magic", "passive", "eldritch"},
+					TierRange:     [2]int{0, 4},
+					MaxLevelRange: [2]int{3, 5},
+				},
+				// Madness active skills
+				{
+					BaseType:          TypeActive,
+					BaseCategory:      CategoryMagic,
+					NamePrefixes:      []string{"Mind", "Sanity", "Reality", "Perception"},
+					NameSuffixes:      []string{"Shatter", "Break", "Rend", "Twist"},
+					DescriptionFormat: "Inflict %s on enemies",
+					EffectTypes:       []string{"madness_damage", "confusion_chance", "fear_chance"},
+					ValueRanges: map[string][2]float64{
+						"madness_damage":  {0.50, 1.30},
+						"confusion_chance": {0.20, 0.45},
+						"fear_chance":     {0.15, 0.35},
+					},
+					Tags:          []string{"magic", "active", "control"},
+					TierRange:     [2]int{1, 5},
+					MaxLevelRange: [2]int{1, 3},
+				},
+				// Tentacle/corruption skills
+				{
+					BaseType:          TypePassive,
+					BaseCategory:      CategoryDefense,
+					NamePrefixes:      []string{"Otherworldly", "Aberrant", "Twisted", "Corrupted"},
+					NameSuffixes:      []string{"Form", "Flesh", "Body", "Vessel"},
+					DescriptionFormat: "Transform into %s for protection",
+					EffectTypes:       []string{"damage_reduction", "tentacle_counter", "regeneration"},
+					ValueRanges: map[string][2]float64{
+						"damage_reduction": {0.08, 0.18},
+						"tentacle_counter": {0.10, 0.25},
+						"regeneration":     {0.05, 0.12},
+					},
+					Tags:          []string{"defense", "passive", "transform"},
+					TierRange:     [2]int{0, 4},
+					MaxLevelRange: [2]int{3, 5},
+				},
+				// Ultimate
+				{
+					BaseType:          TypeUltimate,
+					BaseCategory:      CategoryMagic,
+					NamePrefixes:      []string{"Call of", "Gate to", "Avatar of", "Manifestation of"},
+					NameSuffixes:      []string{"Cthulhu", "the Void", "Madness", "the Beyond"},
+					DescriptionFormat: "Invoke %s to devastate all",
+					EffectTypes:       []string{"void_damage", "madness_aoe", "summon_horror"},
+					ValueRanges: map[string][2]float64{
+						"void_damage":   {2.50, 5.50},
+						"madness_aoe":   {0.60, 1.00},
+						"summon_horror": {1.00, 2.00},
+					},
+					Tags:          []string{"ultimate", "magic", "eldritch"},
+					TierRange:     [2]int{6, 6},
+					MaxLevelRange: [2]int{1, 1},
+				},
+			},
+		},
+	}
+}
+
 // GetSciFiTreeTemplates returns skill tree templates for sci-fi genre.
 func GetSciFiTreeTemplates() []SkillTreeTemplate {
 	return []SkillTreeTemplate{

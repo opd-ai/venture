@@ -655,63 +655,109 @@ func (fs *FishingSystem) getReelInput(entity *Entity) float64 {
 
 // completeCatch finalizes a successful catch.
 func (fs *FishingSystem) completeCatch(fisher *Entity, fishComp *FishingComponent) {
-	// Get spot for location
-	spotID := fishComp.GetTargetSpotID()
-	location := "unknown"
-	if spotEntity, ok := fs.fishingSpots[spotID]; ok {
-		if posComp, ok := spotEntity.GetComponent("position"); ok {
-			if pos, ok := posComp.(*PositionComponent); ok {
-				location = pos.String()
-			}
-		}
-	}
-
-	// Complete the catch
+	location := fs.getSpotLocation(fishComp.GetTargetSpotID())
 	caught := fishComp.CompleteCatch(location, time.Now().Unix())
 	if caught == nil {
 		return
 	}
 
-	// Calculate XP based on fish rarity and difficulty
+	xpGained := fs.calculateCatchXP(caught)
+	fs.handleXPGain(fisher, fishComp, xpGained)
+	fs.applySpotCooldown(fishComp.GetTargetSpotID())
+	fs.logCatch(fisher, caught, xpGained, fishComp)
+	fs.triggerCatchCallback(fisher, caught)
+}
+
+// getSpotLocation retrieves the location string for a fishing spot.
+func (fs *FishingSystem) getSpotLocation(spotID uint64) string {
+	spotEntity, ok := fs.fishingSpots[spotID]
+	if !ok {
+		return "unknown"
+	}
+
+	posComp, ok := spotEntity.GetComponent("position")
+	if !ok {
+		return "unknown"
+	}
+
+	pos, ok := posComp.(*PositionComponent)
+	if !ok {
+		return "unknown"
+	}
+
+	return pos.String()
+}
+
+// calculateCatchXP calculates XP reward based on fish rarity and difficulty.
+func (fs *FishingSystem) calculateCatchXP(caught *CaughtFish) int {
 	fishType := fs.fishTypes[caught.FishTypeID]
 	xpGained := fs.XPPerCatch
-	if fishType != nil {
-		switch fishType.Rarity {
-		case FishRarityUncommon:
-			xpGained = int(float64(xpGained) * 1.5)
-		case FishRarityRare:
-			xpGained *= 2
-		case FishRarityEpic:
-			xpGained *= 3
-		case FishRarityLegendary:
-			xpGained *= 5
-		}
-		xpGained = int(float64(xpGained) * (1.0 + fishType.Difficulty))
+
+	if fishType == nil {
+		return xpGained
 	}
 
-	// Grant XP
-	if fishComp.AddXP(xpGained) {
-		newLevel := fishComp.GetSkillLevel()
-		log.WithFields(log.Fields{
-			"entity_id": fisher.ID,
-			"new_level": newLevel,
-		}).Info("Fishing skill leveled up")
+	xpGained = fs.applyRarityMultiplier(xpGained, fishType.Rarity)
+	xpGained = int(float64(xpGained) * (1.0 + fishType.Difficulty))
+	return xpGained
+}
 
-		if fs.OnLevelUpCallback != nil {
-			fs.OnLevelUpCallback(fisher, newLevel)
-		}
+// applyRarityMultiplier applies XP multiplier based on fish rarity.
+func (fs *FishingSystem) applyRarityMultiplier(xp int, rarity FishRarity) int {
+	switch rarity {
+	case FishRarityUncommon:
+		return int(float64(xp) * 1.5)
+	case FishRarityRare:
+		return xp * 2
+	case FishRarityEpic:
+		return xp * 3
+	case FishRarityLegendary:
+		return xp * 5
+	default:
+		return xp
+	}
+}
+
+// handleXPGain adds XP and handles level up.
+func (fs *FishingSystem) handleXPGain(fisher *Entity, fishComp *FishingComponent, xpGained int) {
+	if !fishComp.AddXP(xpGained) {
+		return
 	}
 
-	// Set spot cooldown
-	if spotEntity, ok := fs.fishingSpots[spotID]; ok {
-		if comp, ok := spotEntity.GetComponent("fishing_spot"); ok {
-			if spotComp, ok := comp.(*FishingSpotComponent); ok {
-				fs.SpotSetCooldown(spotComp, fs.SpotCooldown)
-				fs.SpotRemoveFisher(spotComp)
-			}
-		}
+	newLevel := fishComp.GetSkillLevel()
+	log.WithFields(log.Fields{
+		"entity_id": fisher.ID,
+		"new_level": newLevel,
+	}).Info("Fishing skill leveled up")
+
+	if fs.OnLevelUpCallback != nil {
+		fs.OnLevelUpCallback(fisher, newLevel)
+	}
+}
+
+// applySpotCooldown sets cooldown on the fishing spot after a catch.
+func (fs *FishingSystem) applySpotCooldown(spotID uint64) {
+	spotEntity, ok := fs.fishingSpots[spotID]
+	if !ok {
+		return
 	}
 
+	comp, ok := spotEntity.GetComponent("fishing_spot")
+	if !ok {
+		return
+	}
+
+	spotComp, ok := comp.(*FishingSpotComponent)
+	if !ok {
+		return
+	}
+
+	fs.SpotSetCooldown(spotComp, fs.SpotCooldown)
+	fs.SpotRemoveFisher(spotComp)
+}
+
+// logCatch logs the successful catch details.
+func (fs *FishingSystem) logCatch(fisher *Entity, caught *CaughtFish, xpGained int, fishComp *FishingComponent) {
 	log.WithFields(log.Fields{
 		"entity_id":   fisher.ID,
 		"fish_type":   caught.FishTypeID,
@@ -720,7 +766,10 @@ func (fs *FishingSystem) completeCatch(fisher *Entity, fishComp *FishingComponen
 		"xp_gained":   xpGained,
 		"skill_level": fishComp.GetSkillLevel(),
 	}).Debug("Fish caught")
+}
 
+// triggerCatchCallback invokes the catch callback if configured.
+func (fs *FishingSystem) triggerCatchCallback(fisher *Entity, caught *CaughtFish) {
 	if fs.OnCatchCallback != nil {
 		fs.OnCatchCallback(fisher, caught)
 	}

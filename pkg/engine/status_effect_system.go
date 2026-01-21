@@ -266,87 +266,134 @@ func (s *StatusEffectSystem) applyPeriodicEffect(entity *Entity, effect *StatusE
 
 // removeEffectModifiers removes stat modifications when effect expires.
 func (s *StatusEffectSystem) removeEffectModifiers(entity *Entity, effect *StatusEffectComponent) {
+	s.logModifierRemoval(entity, effect)
+
+	stats := s.getStatsComponent(entity, effect)
+	if stats == nil {
+		return
+	}
+
+	s.removeStatModifier(entity, stats, effect)
+}
+
+// logModifierRemoval logs the start of modifier removal.
+func (s *StatusEffectSystem) logModifierRemoval(entity *Entity, effect *StatusEffectComponent) {
+	if s.logger == nil {
+		return
+	}
+	s.logger.WithFields(logrus.Fields{
+		"entity_id":   entity.ID,
+		"effect_type": effect.EffectType,
+		"magnitude":   effect.Magnitude,
+	}).Debug("Removing effect modifiers from entity")
+}
+
+// getStatsComponent retrieves and validates the stats component.
+func (s *StatusEffectSystem) getStatsComponent(entity *Entity, effect *StatusEffectComponent) *StatsComponent {
+	statsComp, hasStats := entity.GetComponent("stats")
+	if !hasStats {
+		s.logMissingStats(entity, effect)
+		return nil
+	}
+
+	stats, ok := statsComp.(*StatsComponent)
+	if !ok {
+		s.logInvalidStats(entity)
+		return nil
+	}
+
+	return stats
+}
+
+// logMissingStats logs when entity has no stats component.
+func (s *StatusEffectSystem) logMissingStats(entity *Entity, effect *StatusEffectComponent) {
+	if s.logger == nil {
+		return
+	}
+	s.logger.WithFields(logrus.Fields{
+		"entity_id":   entity.ID,
+		"effect_type": effect.EffectType,
+	}).Debug("Entity has no stats component, skipping modifier removal")
+}
+
+// logInvalidStats logs stats component type assertion failure.
+func (s *StatusEffectSystem) logInvalidStats(entity *Entity) {
+	if s.logger == nil {
+		return
+	}
+	s.logger.WithFields(logrus.Fields{
+		"entity_id":      entity.ID,
+		"component_type": "stats",
+	}).Warn("Failed to type assert stats component")
+}
+
+// removeStatModifier removes the stat modifier based on effect type.
+func (s *StatusEffectSystem) removeStatModifier(entity *Entity, stats *StatsComponent, effect *StatusEffectComponent) {
+	switch effect.EffectType {
+	case "strength":
+		s.removeStrengthModifier(entity, stats, effect)
+	case "weakness":
+		s.removeWeaknessModifier(entity, stats, effect)
+	case "fortify":
+		s.removeFortifyModifier(entity, stats, effect)
+	case "vulnerability":
+		s.removeVulnerabilityModifier(entity, stats, effect)
+	}
+}
+
+// removeStrengthModifier removes attack boost from strength effect.
+func (s *StatusEffectSystem) removeStrengthModifier(entity *Entity, stats *StatsComponent, effect *StatusEffectComponent) {
+	oldAttack := stats.Attack
+	stats.Attack /= (1.0 + effect.Magnitude)
+	if s.logger != nil {
+		s.logger.WithFields(logrus.Fields{
+			"entity_id":  entity.ID,
+			"old_attack": oldAttack,
+			"new_attack": stats.Attack,
+		}).Debug("Removed strength effect modifier")
+	}
+}
+
+// removeWeaknessModifier removes attack penalty from weakness effect.
+func (s *StatusEffectSystem) removeWeaknessModifier(entity *Entity, stats *StatsComponent, effect *StatusEffectComponent) {
+	oldAttack := stats.Attack
+	if effect.Magnitude > 0 {
+		stats.Attack /= effect.Magnitude
+	}
+	if s.logger != nil {
+		s.logger.WithFields(logrus.Fields{
+			"entity_id":  entity.ID,
+			"old_attack": oldAttack,
+			"new_attack": stats.Attack,
+		}).Debug("Removed weakness effect modifier")
+	}
+}
+
+// removeFortifyModifier removes defense boost from fortify effect.
+func (s *StatusEffectSystem) removeFortifyModifier(entity *Entity, stats *StatsComponent, effect *StatusEffectComponent) {
+	oldDefense := stats.Defense
+	stats.Defense /= (1.0 + effect.Magnitude)
 	if s.logger != nil {
 		s.logger.WithFields(logrus.Fields{
 			"entity_id":   entity.ID,
-			"effect_type": effect.EffectType,
-			"magnitude":   effect.Magnitude,
-		}).Debug("Removing effect modifiers from entity")
+			"old_defense": oldDefense,
+			"new_defense": stats.Defense,
+		}).Debug("Removed fortify effect modifier")
 	}
+}
 
-	statsComp, hasStats := entity.GetComponent("stats")
-	if !hasStats {
-		if s.logger != nil {
-			s.logger.WithFields(logrus.Fields{
-				"entity_id":   entity.ID,
-				"effect_type": effect.EffectType,
-			}).Debug("Entity has no stats component, skipping modifier removal")
-		}
-		return
+// removeVulnerabilityModifier removes defense penalty from vulnerability effect.
+func (s *StatusEffectSystem) removeVulnerabilityModifier(entity *Entity, stats *StatsComponent, effect *StatusEffectComponent) {
+	oldDefense := stats.Defense
+	if effect.Magnitude > 0 {
+		stats.Defense /= effect.Magnitude
 	}
-	stats, ok := statsComp.(*StatsComponent)
-	if !ok {
-		if s.logger != nil {
-			s.logger.WithFields(logrus.Fields{
-				"entity_id":      entity.ID,
-				"component_type": "stats",
-			}).Warn("Failed to type assert stats component")
-		}
-		return
-	}
-
-	switch effect.EffectType {
-	case "strength":
-		oldAttack := stats.Attack
-		// Remove attack boost
-		stats.Attack /= (1.0 + effect.Magnitude)
-		if s.logger != nil {
-			s.logger.WithFields(logrus.Fields{
-				"entity_id":  entity.ID,
-				"old_attack": oldAttack,
-				"new_attack": stats.Attack,
-			}).Debug("Removed strength effect modifier")
-		}
-
-	case "weakness":
-		oldAttack := stats.Attack
-		// Remove attack penalty (guard against division by zero)
-		if effect.Magnitude > 0 {
-			stats.Attack /= effect.Magnitude
-		}
-		if s.logger != nil {
-			s.logger.WithFields(logrus.Fields{
-				"entity_id":  entity.ID,
-				"old_attack": oldAttack,
-				"new_attack": stats.Attack,
-			}).Debug("Removed weakness effect modifier")
-		}
-
-	case "fortify":
-		oldDefense := stats.Defense
-		// Remove defense boost
-		stats.Defense /= (1.0 + effect.Magnitude)
-		if s.logger != nil {
-			s.logger.WithFields(logrus.Fields{
-				"entity_id":   entity.ID,
-				"old_defense": oldDefense,
-				"new_defense": stats.Defense,
-			}).Debug("Removed fortify effect modifier")
-		}
-
-	case "vulnerability":
-		oldDefense := stats.Defense
-		// Remove defense penalty (guard against division by zero)
-		if effect.Magnitude > 0 {
-			stats.Defense /= effect.Magnitude
-		}
-		if s.logger != nil {
-			s.logger.WithFields(logrus.Fields{
-				"entity_id":   entity.ID,
-				"old_defense": oldDefense,
-				"new_defense": stats.Defense,
-			}).Debug("Removed vulnerability effect modifier")
-		}
+	if s.logger != nil {
+		s.logger.WithFields(logrus.Fields{
+			"entity_id":   entity.ID,
+			"old_defense": oldDefense,
+			"new_defense": stats.Defense,
+		}).Debug("Removed vulnerability effect modifier")
 	}
 }
 

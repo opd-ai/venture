@@ -381,82 +381,130 @@ func (s *ModCompatibilitySystem) CalculateLoadOrder(comp *ModCompatibilityCompon
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
-	// Build dependency graph
+	graph, inDegree := s.buildDependencyGraph(modIDs)
+	result, err := s.performTopologicalSort(graph, inDegree, modIDs)
+	if err != nil {
+		return nil, err
+	}
+
+	comp.SetLoadOrder(result)
+	s.logLoadOrder(result)
+	return result, nil
+}
+
+// buildDependencyGraph constructs the dependency graph and in-degree map for mods.
+func (s *ModCompatibilitySystem) buildDependencyGraph(modIDs []string) (map[string][]string, map[string]int) {
 	graph := make(map[string][]string)
 	inDegree := make(map[string]int)
 
+	s.initializeGraphNodes(modIDs, graph, inDegree)
+	s.addDependencyEdges(modIDs, graph, inDegree)
+
+	return graph, inDegree
+}
+
+// initializeGraphNodes creates empty graph nodes for all mods.
+func (s *ModCompatibilitySystem) initializeGraphNodes(modIDs []string, graph map[string][]string, inDegree map[string]int) {
 	for _, modID := range modIDs {
 		graph[modID] = []string{}
 		inDegree[modID] = 0
 	}
+}
 
-	// Add edges for dependencies
+// addDependencyEdges adds edges to the graph based on mod dependencies.
+func (s *ModCompatibilitySystem) addDependencyEdges(modIDs []string, graph map[string][]string, inDegree map[string]int) {
 	for _, modID := range modIDs {
 		metadata, exists := s.modMetadata[modID]
 		if !exists {
 			continue
 		}
 
-		for _, depID := range metadata.Dependencies {
-			// Only add edge if dependency is in our mod list
-			if _, inList := inDegree[depID]; inList {
-				graph[depID] = append(graph[depID], modID)
-				inDegree[modID]++
-			}
+		s.processDependencies(metadata, modID, graph, inDegree)
+	}
+}
+
+// processDependencies adds edges for each dependency of a mod.
+func (s *ModCompatibilitySystem) processDependencies(metadata *ModMetadata, modID string, graph map[string][]string, inDegree map[string]int) {
+	for _, depID := range metadata.Dependencies {
+		if _, inList := inDegree[depID]; inList {
+			graph[depID] = append(graph[depID], modID)
+			inDegree[modID]++
 		}
 	}
+}
 
-	// Topological sort (Kahn's algorithm)
+// performTopologicalSort executes Kahn's algorithm for topological sorting.
+func (s *ModCompatibilitySystem) performTopologicalSort(graph map[string][]string, inDegree map[string]int, modIDs []string) ([]string, error) {
+	queue := s.initializeQueue(inDegree)
+	result := s.processQueue(queue, graph, inDegree)
+
+	if err := s.detectCycles(result, modIDs, inDegree); err != nil {
+		return nil, err
+	}
+
+	return result, nil
+}
+
+// initializeQueue creates the initial queue with mods that have no dependencies.
+func (s *ModCompatibilitySystem) initializeQueue(inDegree map[string]int) []string {
 	var queue []string
 	for modID, degree := range inDegree {
 		if degree == 0 {
 			queue = append(queue, modID)
 		}
 	}
-
-	// Sort queue for deterministic ordering
 	sort.Strings(queue)
+	return queue
+}
 
+// processQueue processes the queue to build the load order.
+func (s *ModCompatibilitySystem) processQueue(queue []string, graph map[string][]string, inDegree map[string]int) []string {
 	var result []string
 	for len(queue) > 0 {
-		// Take first (alphabetically first for determinism)
 		modID := queue[0]
 		queue = queue[1:]
 		result = append(result, modID)
+		queue = s.updateDependents(modID, graph, inDegree, queue)
+	}
+	return result
+}
 
-		// Process dependents
-		dependents := graph[modID]
-		sort.Strings(dependents) // Deterministic
-		for _, depID := range dependents {
-			inDegree[depID]--
-			if inDegree[depID] == 0 {
-				queue = append(queue, depID)
-				sort.Strings(queue)
-			}
+// updateDependents updates in-degrees for dependents and adds them to queue if ready.
+func (s *ModCompatibilitySystem) updateDependents(modID string, graph map[string][]string, inDegree map[string]int, queue []string) []string {
+	dependents := graph[modID]
+	sort.Strings(dependents)
+	for _, depID := range dependents {
+		inDegree[depID]--
+		if inDegree[depID] == 0 {
+			queue = append(queue, depID)
+			sort.Strings(queue)
 		}
 	}
+	return queue
+}
 
-	// Check for cycles
-	if len(result) != len(modIDs) {
-		// Find mods that couldn't be sorted (cycle)
-		var cycledMods []string
-		for modID, degree := range inDegree {
-			if degree > 0 {
-				cycledMods = append(cycledMods, modID)
-			}
-		}
-		return nil, fmt.Errorf("circular dependency detected involving: %v", cycledMods)
+// detectCycles checks if there are circular dependencies.
+func (s *ModCompatibilitySystem) detectCycles(result []string, modIDs []string, inDegree map[string]int) error {
+	if len(result) == len(modIDs) {
+		return nil
 	}
 
-	comp.SetLoadOrder(result)
+	var cycledMods []string
+	for modID, degree := range inDegree {
+		if degree > 0 {
+			cycledMods = append(cycledMods, modID)
+		}
+	}
+	return fmt.Errorf("circular dependency detected involving: %v", cycledMods)
+}
 
+// logLoadOrder logs the calculated load order.
+func (s *ModCompatibilitySystem) logLoadOrder(result []string) {
 	log.WithFields(log.Fields{
 		"system_name": "mod_compatibility",
 		"mods":        len(result),
 		"order":       result,
 	}).Debug("Calculated load order")
-
-	return result, nil
 }
 
 // GetRecommendedResolutions returns suggested fixes for conflicts.

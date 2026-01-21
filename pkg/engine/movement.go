@@ -61,101 +61,135 @@ func (s *MovementSystem) SetSpatialPartition(spatialPartition *SpatialPartitionS
 
 // Update applies velocity to position for all entities with both components.
 func (s *MovementSystem) Update(entities []*Entity, deltaTime float64) {
-	// Check log level once at start to avoid per-entity allocation overhead
-	debugEnabled := log.GetLevel() >= log.DebugLevel
-
-	if debugEnabled {
-		log.WithFields(log.Fields{
-			"system_name":  "movement",
-			"entity_count": len(entities),
-			"delta_time":   deltaTime,
-		}).Debug("Movement system update started")
-	}
-
+	debugEnabled := s.logUpdateStart(len(entities), deltaTime)
 	s.entitiesMoved = false
 
 	for _, entity := range entities {
-		// Skip dead entities - they cannot move (Priority 1.2)
-		if entity.HasComponent("dead") {
-			if debugEnabled {
-				log.WithFields(log.Fields{
-					"entity_id": entity.ID,
-					"reason":    "dead",
-				}).Debug("Skipping dead entity")
-			}
+		if s.shouldSkipEntity(entity, debugEnabled) {
 			continue
 		}
 
-		// Get required components using typed getters (10x faster than map lookup + type assertion)
-		pos := entity.GetPosition()
-		vel := entity.GetVelocity()
+		pos, vel := s.getMovementComponents(entity)
 		if pos == nil || vel == nil {
 			continue
 		}
 
-		// Apply speed limit if configured
-		speedLimited := s.applySpeedLimit(vel)
-		if speedLimited && debugEnabled {
-			log.WithFields(log.Fields{
-				"entity_id": entity.ID,
-				"max_speed": s.MaxSpeed,
-			}).Debug("Speed limit applied")
-		}
-
-		// Calculate new position
-		newX := pos.X + vel.VX*deltaTime
-		newY := pos.Y + vel.VY*deltaTime
-
-		if debugEnabled {
-			log.WithFields(log.Fields{
-				"entity_id": entity.ID,
-				"old_x":     pos.X,
-				"old_y":     pos.Y,
-				"new_x":     newX,
-				"new_y":     newY,
-				"vel_x":     vel.VX,
-				"vel_y":     vel.VY,
-			}).Debug("Calculating new position")
-		}
-
-		// Validate position with collision checking and wall sliding
-		newX, newY = s.calculateValidPosition(entity, pos, vel, newX, newY, entities)
-
-		// Update position and track movement
-		oldX, oldY := pos.X, pos.Y
-		pos.X = newX
-		pos.Y = newY
-
-		if pos.X != oldX || pos.Y != oldY {
-			s.entitiesMoved = true
-
-			if debugEnabled {
-				log.WithFields(log.Fields{
-					"entity_id": entity.ID,
-					"from_x":    oldX,
-					"from_y":    oldY,
-					"to_x":      pos.X,
-					"to_y":      pos.Y,
-				}).Debug("Entity moved")
-			}
-
-			// Check for layer transitions via ramps
-			if s.collisionSystem != nil && entity.HasComponent("collider") {
-				s.checkLayerTransition(entity, pos)
-			}
-		}
-
-		// Apply bounds constraints
-		s.applyBoundsConstraints(entity, pos, vel)
-
-		// Apply friction to slow down entities
-		s.applyFriction(entity, vel, deltaTime)
-
-		// Update animation state based on movement
-		s.updateAnimationState(entity, vel)
+		s.processEntityMovement(entity, pos, vel, deltaTime, debugEnabled, entities)
 	}
 
-	// Mark spatial partition as dirty if any entities moved
+	s.finalizeUpdate(debugEnabled)
+}
+
+// logUpdateStart logs the movement system start and returns debug state.
+func (s *MovementSystem) logUpdateStart(entityCount int, deltaTime float64) bool {
+	debugEnabled := log.GetLevel() >= log.DebugLevel
+	if debugEnabled {
+		log.WithFields(log.Fields{
+			"system_name":  "movement",
+			"entity_count": entityCount,
+			"delta_time":   deltaTime,
+		}).Debug("Movement system update started")
+	}
+	return debugEnabled
+}
+
+// shouldSkipEntity checks if an entity should be skipped during movement processing.
+func (s *MovementSystem) shouldSkipEntity(entity *Entity, debugEnabled bool) bool {
+	if !entity.HasComponent("dead") {
+		return false
+	}
+	if debugEnabled {
+		log.WithFields(log.Fields{
+			"entity_id": entity.ID,
+			"reason":    "dead",
+		}).Debug("Skipping dead entity")
+	}
+	return true
+}
+
+// getMovementComponents retrieves position and velocity components from entity.
+func (s *MovementSystem) getMovementComponents(entity *Entity) (*PositionComponent, *VelocityComponent) {
+	return entity.GetPosition(), entity.GetVelocity()
+}
+
+// processEntityMovement handles the complete movement logic for a single entity.
+func (s *MovementSystem) processEntityMovement(entity *Entity, pos *PositionComponent, vel *VelocityComponent, deltaTime float64, debugEnabled bool, entities []*Entity) {
+	s.applySpeedLimitWithLogging(entity, vel, debugEnabled)
+	newX, newY := s.calculateNewPosition(entity, pos, vel, deltaTime, debugEnabled)
+	moved := s.validateAndUpdatePosition(entity, pos, vel, newX, newY, debugEnabled, entities)
+	s.handlePostMovement(entity, pos, vel, deltaTime, moved)
+}
+
+// applySpeedLimitWithLogging applies speed limit and logs if needed.
+func (s *MovementSystem) applySpeedLimitWithLogging(entity *Entity, vel *VelocityComponent, debugEnabled bool) {
+	if s.applySpeedLimit(vel) && debugEnabled {
+		log.WithFields(log.Fields{
+			"entity_id": entity.ID,
+			"max_speed": s.MaxSpeed,
+		}).Debug("Speed limit applied")
+	}
+}
+
+// calculateNewPosition computes the target position based on velocity.
+func (s *MovementSystem) calculateNewPosition(entity *Entity, pos *PositionComponent, vel *VelocityComponent, deltaTime float64, debugEnabled bool) (float64, float64) {
+	newX := pos.X + vel.VX*deltaTime
+	newY := pos.Y + vel.VY*deltaTime
+
+	if debugEnabled {
+		log.WithFields(log.Fields{
+			"entity_id": entity.ID,
+			"old_x":     pos.X,
+			"old_y":     pos.Y,
+			"new_x":     newX,
+			"new_y":     newY,
+			"vel_x":     vel.VX,
+			"vel_y":     vel.VY,
+		}).Debug("Calculating new position")
+	}
+
+	return newX, newY
+}
+
+// validateAndUpdatePosition validates and applies the new position, returning true if entity moved.
+func (s *MovementSystem) validateAndUpdatePosition(entity *Entity, pos *PositionComponent, vel *VelocityComponent, newX, newY float64, debugEnabled bool, entities []*Entity) bool {
+	newX, newY = s.calculateValidPosition(entity, pos, vel, newX, newY, entities)
+	oldX, oldY := pos.X, pos.Y
+	pos.X = newX
+	pos.Y = newY
+
+	if pos.X == oldX && pos.Y == oldY {
+		return false
+	}
+
+	s.entitiesMoved = true
+	s.logMovement(entity, oldX, oldY, pos.X, pos.Y, debugEnabled)
+	s.checkLayerTransition(entity, pos)
+	return true
+}
+
+// logMovement logs entity movement if debug is enabled.
+func (s *MovementSystem) logMovement(entity *Entity, fromX, fromY, toX, toY float64, debugEnabled bool) {
+	if !debugEnabled {
+		return
+	}
+	log.WithFields(log.Fields{
+		"entity_id": entity.ID,
+		"from_x":    fromX,
+		"from_y":    fromY,
+		"to_x":      toX,
+		"to_y":      toY,
+	}).Debug("Entity moved")
+}
+
+// handlePostMovement applies bounds, friction, and animation updates after movement.
+func (s *MovementSystem) handlePostMovement(entity *Entity, pos *PositionComponent, vel *VelocityComponent, deltaTime float64, moved bool) {
+	s.applyBoundsConstraints(entity, pos, vel)
+	s.applyFriction(entity, vel, deltaTime)
+	s.updateAnimationState(entity, vel)
+}
+
+// finalizeUpdate marks spatial partition dirty and logs completion.
+func (s *MovementSystem) finalizeUpdate(debugEnabled bool) {
 	if s.entitiesMoved && s.spatialPartition != nil {
 		if debugEnabled {
 			log.WithFields(log.Fields{
@@ -436,9 +470,26 @@ func (s *MovementSystem) applyFriction(entity *Entity, vel *VelocityComponent, d
 // updateAnimationState updates entity animation based on velocity and movement state.
 // Handles idle/walk/run state transitions and facing direction updates.
 func (s *MovementSystem) updateAnimationState(entity *Entity, vel *VelocityComponent) {
+	anim := s.getAnimationComponent(entity)
+	if anim == nil || s.shouldPreserveAnimationState(anim) {
+		return
+	}
+
+	debugEnabled := log.GetLevel() >= log.DebugLevel
+	speed := s.calculateSpeed(vel)
+
+	if speed > 0.1 {
+		s.handleMovingState(entity, anim, vel, speed, debugEnabled)
+	} else {
+		s.handleIdleState(entity, anim, debugEnabled)
+	}
+}
+
+// getAnimationComponent retrieves and validates the animation component.
+func (s *MovementSystem) getAnimationComponent(entity *Entity) *AnimationComponent {
 	animComp, hasAnim := entity.GetComponent("animation")
 	if !hasAnim {
-		return
+		return nil
 	}
 
 	anim, ok := animComp.(*AnimationComponent)
@@ -447,68 +498,84 @@ func (s *MovementSystem) updateAnimationState(entity *Entity, vel *VelocityCompo
 			"entity_id":      entity.ID,
 			"component_type": "animation",
 		}).Warn("Invalid animation component type")
-		return
+		return nil
 	}
+	return anim
+}
 
-	// DON'T override attack/hit/death/cast animations - let them finish
-	if anim.CurrentState == AnimationStateAttack ||
+// shouldPreserveAnimationState checks if current animation should not be interrupted.
+func (s *MovementSystem) shouldPreserveAnimationState(anim *AnimationComponent) bool {
+	return anim.CurrentState == AnimationStateAttack ||
 		anim.CurrentState == AnimationStateHit ||
 		anim.CurrentState == AnimationStateDeath ||
-		anim.CurrentState == AnimationStateCast {
+		anim.CurrentState == AnimationStateCast
+}
+
+// calculateSpeed computes the magnitude of velocity vector.
+func (s *MovementSystem) calculateSpeed(vel *VelocityComponent) float64 {
+	return math.Sqrt(vel.VX*vel.VX + vel.VY*vel.VY)
+}
+
+// handleMovingState updates animation for moving entities (walk/run).
+func (s *MovementSystem) handleMovingState(entity *Entity, anim *AnimationComponent, vel *VelocityComponent, speed float64, debugEnabled bool) {
+	if s.shouldRun(speed) {
+		s.transitionToRun(entity, anim, speed, debugEnabled)
+	} else {
+		s.transitionToWalk(entity, anim, speed, debugEnabled)
+	}
+
+	if !entity.HasComponent("rotation") {
+		s.updateFacingDirection(anim, vel)
+	}
+}
+
+// shouldRun determines if entity should be running based on speed.
+func (s *MovementSystem) shouldRun(speed float64) bool {
+	return speed > s.MaxSpeed*0.7 && s.MaxSpeed > 0
+}
+
+// transitionToRun changes animation to run state if needed.
+func (s *MovementSystem) transitionToRun(entity *Entity, anim *AnimationComponent, speed float64, debugEnabled bool) {
+	if anim.CurrentState == AnimationStateRun {
 		return
 	}
-
-	// Check log level once for this function
-	debugEnabled := log.GetLevel() >= log.DebugLevel
-
-	speed := math.Sqrt(vel.VX*vel.VX + vel.VY*vel.VY)
-
-	if speed > 0.1 {
-		// Moving - determine if walking or running
-		if speed > s.MaxSpeed*0.7 && s.MaxSpeed > 0 {
-			// Fast movement - running
-			if anim.CurrentState != AnimationStateRun {
-				if debugEnabled {
-					log.WithFields(log.Fields{
-						"entity_id":       entity.ID,
-						"animation_state": "run",
-						"speed":           speed,
-					}).Debug("Animation state changed to run")
-				}
-				anim.SetState(AnimationStateRun)
-			}
-		} else {
-			// Normal movement - walking
-			if anim.CurrentState != AnimationStateWalk {
-				if debugEnabled {
-					log.WithFields(log.Fields{
-						"entity_id":       entity.ID,
-						"animation_state": "walk",
-						"speed":           speed,
-					}).Debug("Animation state changed to walk")
-				}
-				anim.SetState(AnimationStateWalk)
-			}
-		}
-
-		// Phase 10.1: Only update facing direction from velocity if entity doesn't have rotation component
-		// Entities with RotationComponent use 360° rotation from aim input instead of 4-directional velocity-based facing
-		if !entity.HasComponent("rotation") {
-			s.updateFacingDirection(anim, vel)
-		}
-	} else {
-		// Not moving - idle (only if currently in a movement state)
-		if anim.CurrentState == AnimationStateWalk || anim.CurrentState == AnimationStateRun {
-			if debugEnabled {
-				log.WithFields(log.Fields{
-					"entity_id":       entity.ID,
-					"animation_state": "idle",
-				}).Debug("Animation state changed to idle")
-			}
-			anim.SetState(AnimationStateIdle)
-		}
-		// When idle, preserve facing direction (don't reset)
+	if debugEnabled {
+		log.WithFields(log.Fields{
+			"entity_id":       entity.ID,
+			"animation_state": "run",
+			"speed":           speed,
+		}).Debug("Animation state changed to run")
 	}
+	anim.SetState(AnimationStateRun)
+}
+
+// transitionToWalk changes animation to walk state if needed.
+func (s *MovementSystem) transitionToWalk(entity *Entity, anim *AnimationComponent, speed float64, debugEnabled bool) {
+	if anim.CurrentState == AnimationStateWalk {
+		return
+	}
+	if debugEnabled {
+		log.WithFields(log.Fields{
+			"entity_id":       entity.ID,
+			"animation_state": "walk",
+			"speed":           speed,
+		}).Debug("Animation state changed to walk")
+	}
+	anim.SetState(AnimationStateWalk)
+}
+
+// handleIdleState updates animation for idle entities.
+func (s *MovementSystem) handleIdleState(entity *Entity, anim *AnimationComponent, debugEnabled bool) {
+	if anim.CurrentState != AnimationStateWalk && anim.CurrentState != AnimationStateRun {
+		return
+	}
+	if debugEnabled {
+		log.WithFields(log.Fields{
+			"entity_id":       entity.ID,
+			"animation_state": "idle",
+		}).Debug("Animation state changed to idle")
+	}
+	anim.SetState(AnimationStateIdle)
 }
 
 // updateFacingDirection updates animation facing based on velocity direction.

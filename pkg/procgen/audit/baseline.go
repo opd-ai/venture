@@ -1,0 +1,95 @@
+// Package audit provides comprehensive validation tests for procedural generators.
+//
+// This file contains version stability baseline hashes for Phase 62.1 requirements.
+// Baseline hashes are SHA256 hashes of JSON-serialized generator output for a fixed seed.
+// If a generator's output changes (breaking change), the test will fail.
+//
+// Baseline Update Process:
+// 1. When a breaking change is intentional, regenerate baselines using GenerateBaseline test
+// 2. Update the baselineHashes map with new hashes
+// 3. Document the reason for the change in CHANGELOG.md
+package audit
+
+import (
+	"encoding/hex"
+	"encoding/json"
+	"os"
+	"path/filepath"
+)
+
+// BaselineVersion is the version these baseline hashes were generated from.
+const BaselineVersion = "1.0.0"
+
+// BaselineSeed is the seed used to generate baseline hashes.
+const BaselineSeed int64 = 99999
+
+// baselineHashPrefixes contains the first 8 bytes of SHA256 hashes for each generator.
+// Full hashes are stored in baseline_hashes.json for complete validation.
+// These prefixes are used for quick validation without file I/O.
+var baselineHashPrefixes = map[string]string{
+	"BookGenerator":      "7e632693e8468f7d",
+	"BuildingGenerator":  "00e9ff14a9fe39ff",
+	"CompanionGenerator": "4dda1e3a6cd24740",
+	"EntityGenerator":    "f0302eb430a7d0cd",
+	"FurnitureGenerator": "325d3cce6085ef17",
+	"ItemGenerator":      "87bebd0146d19d2f",
+	"LegendaryGenerator": "bc3b12fd01179b64",
+	"MagicGenerator":     "67956a60c3646731",
+	"QuestGenerator":     "0235ef4b824e6040",
+	"RecipeGenerator":    "9d26ef8df104edf4",
+	"SkillGenerator":     "cef103c9c0f578e7",
+	"StationGenerator":   "d347e682d1bc9100",
+	"VehicleGenerator":   "202dac42c53e9d2a",
+}
+
+// GetBaselinePrefix returns the baseline hash prefix for a generator.
+// Returns empty string if generator is not in baseline.
+func GetBaselinePrefix(generatorName string) string {
+	return baselineHashPrefixes[generatorName]
+}
+
+// HashMatchesBaseline checks if a hash matches the baseline prefix.
+// Returns true if the first 8 bytes match, false otherwise.
+func HashMatchesBaseline(generatorName string, hash [32]byte) bool {
+	baseline, exists := baselineHashPrefixes[generatorName]
+	if !exists {
+		return false
+	}
+	hashPrefix := hex.EncodeToString(hash[:8])
+	return hashPrefix == baseline
+}
+
+// BaselineHashFile is the filename for full baseline hashes.
+const BaselineHashFile = "baseline_hashes.json"
+
+// BaselineHashes represents the full baseline data stored in JSON.
+type BaselineHashes struct {
+	Version    string            `json:"version"`
+	Seed       int64             `json:"seed"`
+	Generators map[string]string `json:"generators"`
+}
+
+// LoadBaselineHashes loads full baseline hashes from the JSON file.
+// Returns nil if file doesn't exist or can't be parsed.
+func LoadBaselineHashes(baseDir string) (*BaselineHashes, error) {
+	path := filepath.Join(baseDir, BaselineHashFile)
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+	var hashes BaselineHashes
+	if err := json.Unmarshal(data, &hashes); err != nil {
+		return nil, err
+	}
+	return &hashes, nil
+}
+
+// SaveBaselineHashes saves full baseline hashes to the JSON file.
+func SaveBaselineHashes(baseDir string, hashes *BaselineHashes) error {
+	path := filepath.Join(baseDir, BaselineHashFile)
+	data, err := json.MarshalIndent(hashes, "", "  ")
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(path, data, 0644)
+}

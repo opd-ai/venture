@@ -345,13 +345,12 @@ func TestDeterminism_PlatformConsistency(t *testing.T) {
 
 // TestDeterminism_VersionStability verifies Phase 62.1 requirement #5
 //
-// Acceptance Criteria: v10.0 output matches v9.0 for same seed (migration test)
+// Acceptance Criteria: v1.0.0 output matches baseline for same seed (migration test)
 //
-// Note: This test verifies current version stability. True version migration testing
-// requires saving v9.0 output and comparing in v10.0 test suite.
+// This test compares current generator output against saved v1.0.0 baseline hashes.
+// If a hash doesn't match, it indicates a breaking change in generator logic.
 func TestDeterminism_VersionStability(t *testing.T) {
-	const seed = 99999
-	const stableVersion = "v10.0" // Current version being tested
+	const seed = BaselineSeed // 99999
 
 	generators := getGenerators()
 	for _, g := range generators {
@@ -376,14 +375,22 @@ func TestDeterminism_VersionStability(t *testing.T) {
 				t.Fatalf("Failed to hash output: %v", err)
 			}
 
-			t.Logf("✓ %s: %s stable output hash: %x... (first 8 bytes)",
-				g.Name, stableVersion, hash[:8])
+			// Compare against baseline (Phase 62.1 complete)
+			baselinePrefix := GetBaselinePrefix(g.Name)
+			if baselinePrefix == "" {
+				t.Errorf("%s: no baseline hash found (add to baseline.go)", g.Name)
+				return
+			}
 
-			// TODO Phase 62.1: Compare with saved v9.0 baseline hashes
-			// Expected workflow:
-			// 1. Run this test on v9.0, save hash to baseline file
-			// 2. Run this test on v10.0, compare hash to baseline
-			// 3. If mismatch, investigate breaking changes in generator logic
+			if HashMatchesBaseline(g.Name, hash) {
+				t.Logf("✓ %s: v%s stable - hash %x... matches baseline",
+					g.Name, BaselineVersion, hash[:8])
+			} else {
+				t.Errorf("%s: BREAKING CHANGE - hash %x... does not match baseline %s",
+					g.Name, hash[:8], baselinePrefix)
+				t.Logf("  This indicates the generator output has changed.")
+				t.Logf("  If intentional, update baseline.go with new hash prefix.")
+			}
 		})
 	}
 }

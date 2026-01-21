@@ -99,48 +99,58 @@ func (w *WorldPersistence) SaveWorld(state *PersistentWorldState) error {
 // SaveWorldWithContext saves the world state to disk with context support.
 // The context can be used to cancel long-running save operations.
 func (w *WorldPersistence) SaveWorldWithContext(ctx context.Context, state *PersistentWorldState) error {
-	// Update timestamp
 	state.Timestamp = time.Now().UnixMilli()
 
-	// Rotate backups before saving
 	if err := w.rotateBackups(); err != nil {
 		return fmt.Errorf("failed to rotate backups: %w", err)
 	}
 
-	// Ensure save directory exists
+	if err := w.prepareSaveDirectory(); err != nil {
+		return err
+	}
+
+	tempPath := w.SavePath + ".tmp"
+	if err := w.writeWorldData(ctx, tempPath, state); err != nil {
+		return err
+	}
+
+	if err := w.atomicReplace(tempPath); err != nil {
+		return err
+	}
+
+	w.lastSaveState = state
+	return nil
+}
+
+// prepareSaveDirectory ensures the save directory exists.
+func (w *WorldPersistence) prepareSaveDirectory() error {
 	if err := os.MkdirAll(filepath.Dir(w.SavePath), 0o755); err != nil {
 		return fmt.Errorf("failed to create save directory: %w", err)
 	}
+	return nil
+}
 
-	// Create temp file for atomic write
-	tempPath := w.SavePath + ".tmp"
+// writeWorldData writes compressed world state to temporary file.
+func (w *WorldPersistence) writeWorldData(ctx context.Context, tempPath string, state *PersistentWorldState) error {
 	f, err := os.Create(tempPath)
 	if err != nil {
 		return fmt.Errorf("failed to create temp file: %w", err)
 	}
 
-	// Ensure cleanup on error
 	var saveErr error
 	defer func() {
 		f.Close()
 		if saveErr != nil {
-			// Remove temp file on error
 			os.Remove(tempPath)
 		}
 	}()
 
-	// Check context before expensive operations
-	select {
-	case <-ctx.Done():
-		saveErr = fmt.Errorf("save cancelled: %w", ctx.Err())
+	if err := w.checkContextCancellation(ctx); err != nil {
+		saveErr = err
 		return saveErr
-	default:
 	}
 
-	// Compress with gzip
 	gz := gzip.NewWriter(f)
-
-	// Encode to JSON
 	encoder := json.NewEncoder(gz)
 	if err := encoder.Encode(state); err != nil {
 		saveErr = fmt.Errorf("failed to encode state: %w", err)
@@ -148,36 +158,40 @@ func (w *WorldPersistence) SaveWorldWithContext(ctx context.Context, state *Pers
 		return saveErr
 	}
 
-	// Check context before finalizing
-	select {
-	case <-ctx.Done():
-		saveErr = fmt.Errorf("save cancelled before finalize: %w", ctx.Err())
+	if err := w.checkContextCancellation(ctx); err != nil {
+		saveErr = fmt.Errorf("save cancelled before finalize: %w", err)
 		gz.Close()
 		return saveErr
-	default:
 	}
 
-	// Flush gzip writer
 	if err := gz.Close(); err != nil {
 		saveErr = fmt.Errorf("failed to flush gzip: %w", err)
 		return saveErr
 	}
 
-	// Close file
 	if err := f.Close(); err != nil {
 		saveErr = fmt.Errorf("failed to close temp file: %w", err)
 		return saveErr
 	}
 
-	// Atomic rename
-	if err := os.Rename(tempPath, w.SavePath); err != nil {
-		saveErr = fmt.Errorf("failed to rename temp file: %w", err)
-		return saveErr
+	return nil
+}
+
+// checkContextCancellation checks if context is cancelled.
+func (w *WorldPersistence) checkContextCancellation(ctx context.Context) error {
+	select {
+	case <-ctx.Done():
+		return fmt.Errorf("save cancelled: %w", ctx.Err())
+	default:
+		return nil
 	}
+}
 
-	// Store reference for incremental saves
-	w.lastSaveState = state
-
+// atomicReplace performs atomic rename of temp file to final save path.
+func (w *WorldPersistence) atomicReplace(tempPath string) error {
+	if err := os.Rename(tempPath, w.SavePath); err != nil {
+		return fmt.Errorf("failed to rename temp file: %w", err)
+	}
 	return nil
 }
 

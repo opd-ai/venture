@@ -131,6 +131,17 @@ func (v *Validator) GetAvailableGenres() []string {
 // ValidateAll performs validation on all common server/client configuration.
 // Returns the first validation error encountered, or nil if all valid.
 func (v *Validator) ValidateAll(cfg *Config) error {
+	if err := v.validateServerSettings(cfg); err != nil {
+		return err
+	}
+	if err := v.validateDirectories(cfg); err != nil {
+		return err
+	}
+	return nil
+}
+
+// validateServerSettings validates port, max players, tick rate, and genre.
+func (v *Validator) validateServerSettings(cfg *Config) error {
 	if cfg.Port != "" {
 		if err := v.ValidatePort(cfg.Port); err != nil {
 			return err
@@ -155,6 +166,11 @@ func (v *Validator) ValidateAll(cfg *Config) error {
 		}
 	}
 
+	return nil
+}
+
+// validateDirectories validates save, log, and mods directories.
+func (v *Validator) validateDirectories(cfg *Config) error {
 	if cfg.SaveDir != "" {
 		if err := v.ValidateDirectory(cfg.SaveDir, cfg.CreateDirs); err != nil {
 			return fmt.Errorf("save directory: %w", err)

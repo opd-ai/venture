@@ -277,66 +277,84 @@ func (c *TCPClient) ConnectWithRetry(reconnectConfig ReconnectConfig) error {
 	delay := reconnectConfig.InitialDelay
 
 	for {
-		// Attempt connection
 		err := c.Connect()
 		if err == nil {
-			// Success
-			if c.logger != nil && attempt > 0 {
-				c.logger.WithField("attempts", attempt+1).Info("connected successfully after retries")
-			}
+			c.logSuccessfulConnection(attempt)
 			return nil
 		}
 
-		// Check if we should retry
 		attempt++
-		if reconnectConfig.MaxRetries > 0 && attempt >= reconnectConfig.MaxRetries {
-			if c.logger != nil {
-				c.logger.WithError(err).WithField("attempts", attempt).Error("exhausted all reconnection attempts")
-			}
-			return fmt.Errorf("failed to connect after %d attempts: %w", attempt, err)
+		if err := c.checkMaxRetries(reconnectConfig, attempt, err); err != nil {
+			return err
 		}
 
-		// Log retry attempt
-		if c.logger != nil {
-			c.logger.WithError(err).WithFields(logrus.Fields{
-				"attempt": attempt,
-				"delay":   delay,
-			}).Warn("connection failed, retrying")
+		c.logRetryAttempt(err, attempt, delay)
+
+		if err := c.waitForRetry(delay); err != nil {
+			return err
 		}
 
-		// Wait before retry with graceful cancellation support.
-		// The done channel is closed by Disconnect() to signal shutdown.
-		// We use a non-blocking check first to detect immediate cancellation,
-		// then use select with timeout for the actual wait.
-		select {
-		case <-c.done:
-			// Client is shutting down, exit gracefully
-			if c.logger != nil {
-				c.logger.Info("reconnection cancelled - client disconnected")
-			}
-			return fmt.Errorf("reconnection cancelled")
-		default:
-			// Not cancelled yet, proceed to wait
-		}
-
-		// Wait with cancellation support using the done channel
-		select {
-		case <-c.done:
-			// Client is shutting down, exit gracefully
-			if c.logger != nil {
-				c.logger.Info("reconnection cancelled during shutdown")
-			}
-			return fmt.Errorf("reconnection cancelled")
-		case <-time.After(delay):
-			// Delay completed, continue to next retry
-		}
-
-		// Calculate next delay with exponential backoff
-		delay = time.Duration(float64(delay) * reconnectConfig.BackoffFactor)
-		if delay > reconnectConfig.MaxDelay {
-			delay = reconnectConfig.MaxDelay
-		}
+		delay = c.calculateNextDelay(delay, reconnectConfig)
 	}
+}
+
+// logSuccessfulConnection logs when a connection succeeds after retries.
+func (c *TCPClient) logSuccessfulConnection(attempt int) {
+	if c.logger != nil && attempt > 0 {
+		c.logger.WithField("attempts", attempt+1).Info("connected successfully after retries")
+	}
+}
+
+// checkMaxRetries verifies if maximum retry attempts have been reached.
+func (c *TCPClient) checkMaxRetries(config ReconnectConfig, attempt int, err error) error {
+	if config.MaxRetries > 0 && attempt >= config.MaxRetries {
+		if c.logger != nil {
+			c.logger.WithError(err).WithField("attempts", attempt).Error("exhausted all reconnection attempts")
+		}
+		return fmt.Errorf("failed to connect after %d attempts: %w", attempt, err)
+	}
+	return nil
+}
+
+// logRetryAttempt logs connection failure and retry information.
+func (c *TCPClient) logRetryAttempt(err error, attempt int, delay time.Duration) {
+	if c.logger != nil {
+		c.logger.WithError(err).WithFields(logrus.Fields{
+			"attempt": attempt,
+			"delay":   delay,
+		}).Warn("connection failed, retrying")
+	}
+}
+
+// waitForRetry waits before the next retry with cancellation support.
+func (c *TCPClient) waitForRetry(delay time.Duration) error {
+	select {
+	case <-c.done:
+		if c.logger != nil {
+			c.logger.Info("reconnection cancelled - client disconnected")
+		}
+		return fmt.Errorf("reconnection cancelled")
+	default:
+	}
+
+	select {
+	case <-c.done:
+		if c.logger != nil {
+			c.logger.Info("reconnection cancelled during shutdown")
+		}
+		return fmt.Errorf("reconnection cancelled")
+	case <-time.After(delay):
+		return nil
+	}
+}
+
+// calculateNextDelay computes the next retry delay using exponential backoff.
+func (c *TCPClient) calculateNextDelay(currentDelay time.Duration, config ReconnectConfig) time.Duration {
+	nextDelay := time.Duration(float64(currentDelay) * config.BackoffFactor)
+	if nextDelay > config.MaxDelay {
+		return config.MaxDelay
+	}
+	return nextDelay
 }
 
 // Disconnect closes the connection to the server.

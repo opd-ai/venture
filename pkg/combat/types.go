@@ -155,7 +155,29 @@ func (d *Damage) Validate() error {
 //   - Evasion must be between 0.0 and 1.0
 //   - All resistances must be between -1.0 (weakness) and 1.0 (immunity)
 func (s *Stats) Validate() error {
-	// Health validation
+	if err := s.validateHealth(); err != nil {
+		return err
+	}
+	if err := s.validateMana(); err != nil {
+		return err
+	}
+	if err := s.validateOffensiveStats(); err != nil {
+		return err
+	}
+	if err := s.validateDefensiveStats(); err != nil {
+		return err
+	}
+	if err := s.validateCriticalStats(); err != nil {
+		return err
+	}
+	if err := s.validateResistances(); err != nil {
+		return err
+	}
+	return nil
+}
+
+// validateHealth checks if HP and MaxHP are valid.
+func (s *Stats) validateHealth() error {
 	if s.HP < 0 {
 		return fmt.Errorf("%w: got %f", ErrNegativeHP, s.HP)
 	}
@@ -165,8 +187,11 @@ func (s *Stats) Validate() error {
 	if s.HP > s.MaxHP {
 		return fmt.Errorf("%w: HP=%f, MaxHP=%f", ErrHPExceedsMax, s.HP, s.MaxHP)
 	}
+	return nil
+}
 
-	// Mana validation
+// validateMana checks if Mana and MaxMana are valid.
+func (s *Stats) validateMana() error {
 	if s.Mana < 0 {
 		return fmt.Errorf("%w: got %f", ErrNegativeMana, s.Mana)
 	}
@@ -176,49 +201,55 @@ func (s *Stats) Validate() error {
 	if s.MaxMana > 0 && s.Mana > s.MaxMana {
 		return fmt.Errorf("%w: Mana=%f, MaxMana=%f", ErrManaExceedsMax, s.Mana, s.MaxMana)
 	}
+	return nil
+}
 
-	// Offensive stat validation
+// validateOffensiveStats checks if Attack and MagicPower are valid.
+func (s *Stats) validateOffensiveStats() error {
 	if s.Attack < 0 {
 		return fmt.Errorf("%w: got %f", ErrNegativeAttack, s.Attack)
 	}
 	if s.MagicPower < 0 {
 		return errors.New("MagicPower cannot be negative")
 	}
+	if s.Speed < 0 {
+		return fmt.Errorf("%w: got %f", ErrNegativeSpeed, s.Speed)
+	}
+	return nil
+}
 
-	// Defensive stat validation
+// validateDefensiveStats checks if Defense, MagicDefense, and Evasion are valid.
+func (s *Stats) validateDefensiveStats() error {
 	if s.Defense < 0 {
 		return fmt.Errorf("%w: got %f", ErrNegativeDefense, s.Defense)
 	}
 	if s.MagicDefense < 0 {
 		return errors.New("MagicDefense cannot be negative")
 	}
-
-	// Movement validation
-	if s.Speed < 0 {
-		return fmt.Errorf("%w: got %f", ErrNegativeSpeed, s.Speed)
-	}
-
-	// Critical hit validation
-	if s.CritChance < 0 || s.CritChance > 1.0 {
-		return fmt.Errorf("%w: got %f", ErrInvalidCritChance, s.CritChance)
-	}
-	// CritDamage of 0 is allowed (means not set), but if set must be >= 1.0
-	if s.CritDamage != 0 && s.CritDamage < 1.0 {
-		return fmt.Errorf("%w: got %f", ErrInvalidCritDamage, s.CritDamage)
-	}
-
-	// Evasion validation
 	if s.Evasion < 0 || s.Evasion > 1.0 {
 		return fmt.Errorf("%w: got %f", ErrInvalidEvasion, s.Evasion)
 	}
+	return nil
+}
 
-	// Resistance validation
+// validateCriticalStats checks if CritChance and CritDamage are valid.
+func (s *Stats) validateCriticalStats() error {
+	if s.CritChance < 0 || s.CritChance > 1.0 {
+		return fmt.Errorf("%w: got %f", ErrInvalidCritChance, s.CritChance)
+	}
+	if s.CritDamage != 0 && s.CritDamage < 1.0 {
+		return fmt.Errorf("%w: got %f", ErrInvalidCritDamage, s.CritDamage)
+	}
+	return nil
+}
+
+// validateResistances checks if all resistance values are within valid range.
+func (s *Stats) validateResistances() error {
 	for damageType, resistance := range s.Resistances {
 		if resistance < -1.0 || resistance > 1.0 {
 			return fmt.Errorf("%w: %v resistance is %f", ErrInvalidResistance, damageType, resistance)
 		}
 	}
-
 	return nil
 }
 

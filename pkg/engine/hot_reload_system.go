@@ -183,27 +183,67 @@ func (s *HotReloadSystem) processAutoReloads(comp *HotReloadComponent) {
 
 // ReloadMod reloads a mod with updated files.
 func (s *HotReloadSystem) ReloadMod(comp *HotReloadComponent, modID string) error {
-	if comp == nil {
-		return fmt.Errorf("hot reload component is nil")
-	}
-
-	if !comp.IsWatching(modID) {
-		return fmt.Errorf("mod %s is not being watched", modID)
+	if err := s.validateReloadRequest(comp, modID); err != nil {
+		return err
 	}
 
 	startTime := time.Now()
-	oldMod, _ := comp.GetWatchedMod(modID)
-	oldVersion := ""
-	if oldMod != nil {
-		oldVersion = oldMod.Version
+	oldVersion := s.getOldModVersion(comp, modID)
+	s.logReloadStart(modID, oldVersion)
+
+	s.saveStateForRollback(comp, modID, oldVersion)
+
+	watcher, reloadCb, err := s.getReloadDependencies()
+	if err != nil {
+		return s.recordReloadFailure(comp, modID, oldVersion, startTime, err.Error())
 	}
 
+	modData, newVersion, newHash, err := s.fetchModData(watcher, modID)
+	if err != nil {
+		return s.recordReloadFailure(comp, modID, oldVersion, startTime, err.Error())
+	}
+
+	if err := s.performReload(comp, modID, oldVersion, startTime, reloadCb, modData); err != nil {
+		return err
+	}
+
+	s.restoreModState(comp, modID)
+	s.recordReloadSuccess(comp, modID, oldVersion, newVersion, newHash, startTime)
+	s.logReloadSuccess(modID, newVersion, time.Since(startTime).Milliseconds())
+
+	return nil
+}
+
+// validateReloadRequest checks if the reload request is valid.
+func (s *HotReloadSystem) validateReloadRequest(comp *HotReloadComponent, modID string) error {
+	if comp == nil {
+		return fmt.Errorf("hot reload component is nil")
+	}
+	if !comp.IsWatching(modID) {
+		return fmt.Errorf("mod %s is not being watched", modID)
+	}
+	return nil
+}
+
+// getOldModVersion retrieves the current version of the mod.
+func (s *HotReloadSystem) getOldModVersion(comp *HotReloadComponent, modID string) string {
+	oldMod, _ := comp.GetWatchedMod(modID)
+	if oldMod != nil {
+		return oldMod.Version
+	}
+	return ""
+}
+
+// logReloadStart logs the beginning of mod reload.
+func (s *HotReloadSystem) logReloadStart(modID, oldVersion string) {
 	logrus.WithFields(logrus.Fields{
 		"mod_id":      modID,
 		"old_version": oldVersion,
 	}).Info("hot reload: starting mod reload")
+}
 
-	// Save state for rollback
+// saveStateForRollback saves current mod state for potential rollback.
+func (s *HotReloadSystem) saveStateForRollback(comp *HotReloadComponent, modID, oldVersion string) {
 	s.mu.RLock()
 	migrationHandler := s.migrationHandler
 	s.mu.RUnlock()
@@ -218,20 +258,26 @@ func (s *HotReloadSystem) ReloadMod(comp *HotReloadComponent, modID string) erro
 			comp.SaveStateForRollback(modID, oldVersion, scripts, variables)
 		}
 	}
+}
 
-	// Get new mod data
+// getReloadDependencies retrieves file watcher and reload callback.
+func (s *HotReloadSystem) getReloadDependencies() (FileWatcher, ModReloadCallback, error) {
 	s.mu.RLock()
 	watcher := s.fileWatcher
 	reloadCb := s.reloadCallback
 	s.mu.RUnlock()
 
 	if watcher == nil || reloadCb == nil {
-		return s.recordReloadFailure(comp, modID, oldVersion, startTime, "no file watcher or reload callback configured")
+		return nil, nil, fmt.Errorf("no file watcher or reload callback configured")
 	}
+	return watcher, reloadCb, nil
+}
 
+// fetchModData retrieves new mod data, version, and hash.
+func (s *HotReloadSystem) fetchModData(watcher FileWatcher, modID string) ([]byte, string, string, error) {
 	modData, err := watcher.GetModData(modID)
 	if err != nil {
-		return s.recordReloadFailure(comp, modID, oldVersion, startTime, fmt.Sprintf("failed to get mod data: %v", err))
+		return nil, "", "", fmt.Errorf("failed to get mod data: %v", err)
 	}
 
 	newVersion, err := watcher.GetModVersion(modID)
@@ -240,25 +286,33 @@ func (s *HotReloadSystem) ReloadMod(comp *HotReloadComponent, modID string) erro
 	}
 
 	newHash, _ := watcher.GetFileHash(modID)
+	return modData, newVersion, newHash, nil
+}
 
-	// Perform reload
-	err = reloadCb(modID, modData)
+// performReload executes the reload and handles rollback on failure.
+func (s *HotReloadSystem) performReload(comp *HotReloadComponent, modID, oldVersion string, startTime time.Time, reloadCb ModReloadCallback, modData []byte) error {
+	err := reloadCb(modID, modData)
 	if err != nil {
-		// Attempt rollback
 		rollbackErr := s.RollbackMod(comp, modID)
 		if rollbackErr != nil {
 			logrus.WithFields(logrus.Fields{
 				"mod_id": modID,
 			}).WithError(rollbackErr).Error("hot reload: rollback also failed")
 		}
-
 		return s.recordReloadFailure(comp, modID, oldVersion, startTime, fmt.Sprintf("reload failed: %v", err))
 	}
+	return nil
+}
 
-	// Restore state if migration handler available
+// restoreModState restores saved state after successful reload.
+func (s *HotReloadSystem) restoreModState(comp *HotReloadComponent, modID string) {
+	s.mu.RLock()
+	migrationHandler := s.migrationHandler
+	s.mu.RUnlock()
+
 	if migrationHandler != nil {
 		if state, exists := comp.GetRollbackState(modID); exists {
-			err = migrationHandler.RestoreState(modID, state.Scripts, state.Variables)
+			err := migrationHandler.RestoreState(modID, state.Scripts, state.Variables)
 			if err != nil {
 				logrus.WithFields(logrus.Fields{
 					"mod_id": modID,
@@ -266,8 +320,10 @@ func (s *HotReloadSystem) ReloadMod(comp *HotReloadComponent, modID string) erro
 			}
 		}
 	}
+}
 
-	// Record success
+// recordReloadSuccess records successful reload with updated metadata.
+func (s *HotReloadSystem) recordReloadSuccess(comp *HotReloadComponent, modID, oldVersion, newVersion, newHash string, startTime time.Time) {
 	duration := time.Since(startTime).Milliseconds()
 	comp.AddReloadEntry(ReloadEntry{
 		ModID:       modID,
@@ -280,20 +336,18 @@ func (s *HotReloadSystem) ReloadMod(comp *HotReloadComponent, modID string) erro
 		StateChange: "reloaded",
 	})
 
-	// Update mod version in watched state
 	comp.UpdateModVersion(modID, newVersion, newHash)
 	comp.ClearPendingUpdate(modID)
-
-	// Clear rollback data on successful reload
 	comp.ClearRollbackState(modID)
+}
 
+// logReloadSuccess logs successful mod reload completion.
+func (s *HotReloadSystem) logReloadSuccess(modID, newVersion string, durationMs int64) {
 	logrus.WithFields(logrus.Fields{
 		"mod_id":      modID,
 		"new_version": newVersion,
-		"duration_ms": duration,
+		"duration_ms": durationMs,
 	}).Info("hot reload: mod reloaded successfully")
-
-	return nil
 }
 
 // recordReloadFailure records a failed reload attempt.

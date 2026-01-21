@@ -294,37 +294,49 @@ func (s *TournamentSystem) RecordMatchResult(tournamentID, matchID string, winne
 		return false
 	}
 
-	// Find and update the match
-	var match *BracketMatch
-	for i := range tournament.Bracket {
-		if tournament.Bracket[i].MatchID == matchID {
-			match = &tournament.Bracket[i]
-			break
-		}
-	}
-
-	if match == nil {
-		// Check losers bracket
-		for i := range tournament.LosersBracket {
-			if tournament.LosersBracket[i].MatchID == matchID {
-				match = &tournament.LosersBracket[i]
-				break
-			}
-		}
-	}
-
+	match := s.findMatch(tournament, matchID)
 	if match == nil || match.Completed {
 		return false
 	}
 
+	s.updateMatchResults(match, winnerID, loserID)
+	s.updatePlayerComponents(tournament, winnerID, loserID, match)
+	s.advanceWinner(tournament, match)
+	s.logMatchResult(tournamentID, matchID, winnerID, loserID)
+	s.checkTournamentComplete(tournament)
+
+	return true
+}
+
+// findMatch searches for a match in both main and losers brackets.
+func (s *TournamentSystem) findMatch(tournament *TournamentInstance, matchID string) *BracketMatch {
+	for i := range tournament.Bracket {
+		if tournament.Bracket[i].MatchID == matchID {
+			return &tournament.Bracket[i]
+		}
+	}
+
+	for i := range tournament.LosersBracket {
+		if tournament.LosersBracket[i].MatchID == matchID {
+			return &tournament.LosersBracket[i]
+		}
+	}
+
+	return nil
+}
+
+// updateMatchResults records the winner and loser for a completed match.
+func (s *TournamentSystem) updateMatchResults(match *BracketMatch, winnerID, loserID uint64) {
 	match.WinnerID = winnerID
 	match.LoserID = loserID
 	match.Completed = true
 	match.CompletedAt = time.Now()
+}
 
+// updatePlayerComponents updates tournament components for winner and loser.
+func (s *TournamentSystem) updatePlayerComponents(tournament *TournamentInstance, winnerID, loserID uint64, match *BracketMatch) {
 	isDoubleElim := tournament.Definition.Format == TournamentFormatDoubleElim
 
-	// Update player components
 	if winner, ok := s.world.GetEntity(winnerID); ok {
 		if tc, ok := winner.GetComponent("tournament"); ok {
 			if tournComp, ok := tc.(*TournamentComponent); ok {
@@ -338,17 +350,16 @@ func (s *TournamentSystem) RecordMatchResult(tournamentID, matchID string, winne
 			if tournComp, ok := tc.(*TournamentComponent); ok {
 				tournComp.RecordLoss(isDoubleElim)
 
-				// Move to losers bracket if double elim and first loss
 				if isDoubleElim && tournComp.LossesInTournament == 1 {
 					s.moveToLosersBracket(tournament, loserID, match.Round)
 				}
 			}
 		}
 	}
+}
 
-	// Advance winner to next match
-	s.advanceWinner(tournament, match)
-
+// logMatchResult logs the tournament match result.
+func (s *TournamentSystem) logMatchResult(tournamentID, matchID string, winnerID, loserID uint64) {
 	log.WithFields(log.Fields{
 		"system_name":   "tournament",
 		"tournament_id": tournamentID,
@@ -356,11 +367,6 @@ func (s *TournamentSystem) RecordMatchResult(tournamentID, matchID string, winne
 		"winner":        winnerID,
 		"loser":         loserID,
 	}).Info("Recorded tournament match result")
-
-	// Check if tournament is complete
-	s.checkTournamentComplete(tournament)
-
-	return true
 }
 
 // GetActiveTournaments returns all active tournaments.

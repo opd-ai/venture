@@ -275,6 +275,7 @@ All Phase 3 deliverables completed successfully:
 - pkg/modding: 89.4%
 - pkg/stability: 95.5%
 - pkg/saveload: 84.8%
+- pkg/integration/narrative_world: 91.7% (↑14.0%, 2026-01-21)
 
 **Blocks:** Phase 4, Phase 5
 

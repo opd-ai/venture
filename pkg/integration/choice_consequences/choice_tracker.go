@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"strings"
 	"sync"
 	"time"
 )
@@ -208,6 +209,19 @@ func (ct *ChoiceTracker) updateNPCRelationship(state *PlayerState, npcID string,
 	rel.LastUpdate = time.Now().Unix()
 }
 
+// lockTypePrefixes maps consequence prefixes to their LockType values.
+var lockTypePrefixes = []struct {
+	prefix   string
+	lockType LockType
+}{
+	{"lock_quest_", LockTypeQuest},
+	{"lock_npc_", LockTypeNPC},
+	{"lock_area_", LockTypeArea},
+	{"lock_dialogue_", LockTypeDialogue},
+	{"lock_reward_", LockTypeReward},
+	{"lock_companion_", LockTypeCompanion},
+}
+
 // applyConsequence applies a consequence to lock content.
 func (ct *ChoiceTracker) applyConsequence(state *PlayerState, choiceID, consequence string) {
 	// Parse consequence ID to determine lock type and content
@@ -215,15 +229,12 @@ func (ct *ChoiceTracker) applyConsequence(state *PlayerState, choiceID, conseque
 	lockType := LockTypeQuest
 	contentID := consequence
 
-	if len(consequence) > 11 && consequence[:11] == "lock_quest_" {
-		lockType = LockTypeQuest
-		contentID = consequence[11:]
-	} else if len(consequence) > 9 && consequence[:9] == "lock_npc_" {
-		lockType = LockTypeNPC
-		contentID = consequence[9:]
-	} else if len(consequence) > 10 && consequence[:10] == "lock_area_" {
-		lockType = LockTypeArea
-		contentID = consequence[10:]
+	for _, ltp := range lockTypePrefixes {
+		if strings.HasPrefix(consequence, ltp.prefix) {
+			lockType = ltp.lockType
+			contentID = consequence[len(ltp.prefix):]
+			break
+		}
 	}
 
 	lock := &ContentLock{

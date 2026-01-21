@@ -322,6 +322,99 @@ func TestIsContentAvailable(t *testing.T) {
 	}
 }
 
+// TestAllLockTypes verifies that all 6 LockType values are correctly parsed.
+func TestAllLockTypes(t *testing.T) {
+	tests := []struct {
+		name         string
+		consequence  string
+		wantLockType LockType
+		wantContent  string
+	}{
+		{
+			name:         "lock_quest prefix",
+			consequence:  "lock_quest_main_story",
+			wantLockType: LockTypeQuest,
+			wantContent:  "main_story",
+		},
+		{
+			name:         "lock_npc prefix",
+			consequence:  "lock_npc_merchant_john",
+			wantLockType: LockTypeNPC,
+			wantContent:  "merchant_john",
+		},
+		{
+			name:         "lock_area prefix",
+			consequence:  "lock_area_dark_forest",
+			wantLockType: LockTypeArea,
+			wantContent:  "dark_forest",
+		},
+		{
+			name:         "lock_dialogue prefix",
+			consequence:  "lock_dialogue_peaceful_option",
+			wantLockType: LockTypeDialogue,
+			wantContent:  "peaceful_option",
+		},
+		{
+			name:         "lock_reward prefix",
+			consequence:  "lock_reward_legendary_sword",
+			wantLockType: LockTypeReward,
+			wantContent:  "legendary_sword",
+		},
+		{
+			name:         "lock_companion prefix",
+			consequence:  "lock_companion_aria_knight",
+			wantLockType: LockTypeCompanion,
+			wantContent:  "aria_knight",
+		},
+		{
+			name:         "unknown prefix defaults to quest",
+			consequence:  "some_unknown_consequence",
+			wantLockType: LockTypeQuest,
+			wantContent:  "some_unknown_consequence",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tracker := NewChoiceTracker()
+			playerID := "test_player"
+
+			choice := &PlayerChoice{
+				ChoiceID:     "test_choice",
+				StoryNodeID:  "test_node",
+				Timestamp:    time.Now().Unix(),
+				Irreversible: true,
+				Consequences: []string{tt.consequence},
+			}
+
+			tracker.RecordChoice(playerID, choice)
+
+			// Verify content is locked with correct type
+			if tracker.IsContentAvailable(playerID, tt.wantContent) {
+				t.Errorf("Expected content %q to be locked", tt.wantContent)
+			}
+
+			// Access internal state to verify lock type
+			tracker.mu.RLock()
+			defer tracker.mu.RUnlock()
+
+			state := tracker.players[playerID]
+			if state == nil {
+				t.Fatal("Player state not found")
+			}
+
+			lock, ok := state.ContentLocks[tt.wantContent]
+			if !ok {
+				t.Fatalf("Content lock for %q not found", tt.wantContent)
+			}
+
+			if lock.LockType != tt.wantLockType {
+				t.Errorf("LockType = %v, want %v", lock.LockType, tt.wantLockType)
+			}
+		})
+	}
+}
+
 func TestGetNPCAttitude(t *testing.T) {
 	tracker := NewChoiceTracker()
 	playerID := "player_1"

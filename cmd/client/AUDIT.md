@@ -196,22 +196,23 @@ No circular dependencies, missing imports, or unused imports detected. Import or
 
 ## Structural Issues
 
-### Issue 1: handlers.go is too large (3043 lines)
+### Issue 1: handlers.go is large (2864 lines) - PARTIALLY RESOLVED
 
-**Problem:**
-Single file contains:
+**Status: ✅ PHASE 1 COMPLETE (2026-01-21)** - System wrappers extracted
+
+**Progress:**
+- ✅ Created `system_wrappers.go` (504 lines) with all 46 wrapper types consolidated
+- handlers.go reduced from 3043 → 2864 lines (179 lines removed)
+- util.go reduced from 2626 → 2336 lines (290 lines removed)
+
+**Remaining Work (lower priority):**
+Single file still contains:
 - systemsContainer struct (142 fields)
-- 15 system wrapper types
 - 80+ initialization functions across V4-V19 versions
 - Entity spawning helpers
 - UI integration functions
 
-**Impact:**
-- Difficult to navigate and locate specific initialization code
-- Unclear responsibility boundaries
-- Changes to one version's systems require editing a 3000+ line file
-
-**Recommended Fix:**
+**Recommended Future Split (not urgent):**
 Split into version-specific initialization files:
 ```
 handlers.go (keep)         -> systemsContainer struct + registration logic (~300 lines)
@@ -224,23 +225,28 @@ system_init_v8.go (new)    -> V8.0 systems (housing, physics) (~300 lines)
 system_init_v9.go (new)    -> V9.0 systems (integration managers) (~200 lines)
 system_init_v19.go (new)   -> V19.0 systems (dormant packages) (~200 lines)
 system_init_phase3.go (new) -> Phase 3 systems (guild federation) (~100 lines)
-system_wrappers.go (new)   -> All 46 wrapper types (~800 lines)
+system_wrappers.go ✅      -> All 46 wrapper types (DONE - 504 lines)
 entity_spawning.go (new)   -> All entity spawn functions (~500 lines)
 ui_integration.go (new)    -> All UI setup functions (~400 lines)
 ```
 
 **Benefits:**
-- Each file under 800 lines (max: system_wrappers.go with 46 simple types)
+- Each file under 800 lines (max: system_wrappers.go now 504 lines)
 - Clear separation of concerns by feature version
 - Easy to locate initialization code for specific systems
 - Reduces merge conflicts when multiple people work on different versions
 - Maintains all existing functionality (zero behavior changes)
 
-### Issue 2: util.go is too large and unfocused (2625 lines)
+### Issue 2: util.go is large (2336 lines) - PARTIALLY RESOLVED
 
-**Problem:**
-Single file contains:
-- 26 system wrapper types
+**Status: ✅ PHASE 1 COMPLETE (2026-01-21)** - System wrappers extracted
+
+**Progress:**
+- ✅ Moved 32 wrapper types to `system_wrappers.go`
+- util.go reduced from 2626 → 2336 lines (290 lines removed)
+
+**Remaining Work (lower priority):**
+Single file still contains:
 - 60+ utility functions with varied responsibilities:
   * Flag declarations
   * Logger initialization
@@ -255,7 +261,7 @@ Single file contains:
 - Difficult to find specific functionality
 - Mixes configuration (flags) with business logic (spawning)
 
-**Recommended Fix:**
+**Recommended Future Split (not urgent):**
 Split by responsibility:
 ```
 util.go (keep)           -> Generic pure utility functions (~200 lines)
@@ -267,38 +273,34 @@ item_generation.go (new)  -> Item and loot generation (~300 lines)
 network_init.go (new)    -> Network and logger initialization (~200 lines)
 ```
 
-Move 26 wrapper types to system_wrappers.go (see Issue 1 fix).
-
 **Benefits:**
 - Each file has a single clear purpose
 - Easy to locate configuration vs business logic vs serialization
 - Flag declarations separated from usage
 - Utility functions can be truly generic and reusable
-- Reduces file size from 2625 to max ~400 lines per file
+- Reduces file size from 2336 to max ~400 lines per file
 
 ## Recommendations
 
-### Priority 1: Structural Reorganization (High Impact, Low Risk)
+### Priority 1: Structural Reorganization (High Impact, Low Risk) - PHASE 1 COMPLETE ✅
 
-**Estimated Effort:** 4-6 hours
-**Risk:** Very Low (code movement only, no logic changes)
-**Benefit:** Significant improvement in code navigability and maintainability
+**Status: ✅ Step 1 Complete (2026-01-21)**
+- Created `system_wrappers.go` with all 46 wrapper types
+- handlers.go reduced by 179 lines (3043 → 2864)
+- util.go reduced by 290 lines (2626 → 2336)
+- All tests pass, build succeeds
 
-**Steps:**
-1. Create system_wrappers.go with all 46 wrapper types from handlers.go and util.go
+**Remaining Steps (lower priority):**
 2. Create system_init_*.go files for each version (V4-V19, Phase 3, Core)
 3. Create entity_spawning.go with all spawn* functions
 4. Create ui_integration.go with all UI setup functions
 5. Create config.go with flag declarations and validateClientConfiguration
 6. Split util.go into focused helper files
-7. Run tests after each file creation to ensure no regressions
-8. Update imports in files that reference moved code
-9. Delete moved code from handlers.go and util.go
 
-**Validation:**
-- All tests continue to pass: `go test ./...`
-- Build succeeds: `go build ./cmd/client`
-- Integration tests pass: `xvfb-run -a go test ./cmd/client`
+**Validation Completed:**
+- ✅ All tests continue to pass: `go test ./cmd/client/...`
+- ✅ Build succeeds: `go build ./cmd/client`
+- ✅ Integration tests pass
 
 ### Priority 2: Documentation Enhancement (Medium Impact, Low Effort)
 
@@ -307,7 +309,7 @@ Move 26 wrapper types to system_wrappers.go (see Issue 1 fix).
 **Benefit:** Better navigation and understanding
 
 **Steps:**
-1. Add file-level comments to newly created files explaining their purpose
+1. Add file-level comments to newly created files explaining their purpose ✅ (system_wrappers.go has comprehensive header)
 2. Update doc.go to reference the new file structure
 3. Add section headers in systemsContainer struct to group fields by version
 4. No code changes required
@@ -327,8 +329,13 @@ Move 26 wrapper types to system_wrappers.go (see Issue 1 fix).
 
 ## Conclusion
 
-The cmd/client package is functionally complete with no missing implementations or critical gaps. The main issue is structural organization - two files (handlers.go, util.go) have grown to 3043 and 2625 lines respectively due to continuous feature addition across multiple versions (V4-V19).
+The cmd/client package is functionally complete with no missing implementations or critical gaps. Structural organization has been improved with the extraction of 46 system wrappers into `system_wrappers.go` (2026-01-21).
 
-**Recommended Action:** Proceed with Priority 1 reorganization to split these files into focused, version-specific modules. This is a low-risk refactoring that significantly improves code navigability without changing any behavior.
+**Current File Sizes:**
+- handlers.go: 2864 lines (down from 3043)
+- util.go: 2336 lines (down from 2626)
+- system_wrappers.go: 504 lines (new)
+
+**Next Steps:** Continue with optional Priority 1 steps (version-specific initialization files, entity_spawning.go, etc.) when time permits. These are low-risk, incremental improvements.
 
 **Test Validation:** Continue using integration tests for initialization flows. Do not attempt to increase unit test coverage for Ebiten-dependent initialization code.

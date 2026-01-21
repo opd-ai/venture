@@ -236,20 +236,24 @@ func CinematicPreset() Preset {
 }
 
 // GetPresetByGenre returns the appropriate preset for a genre ID.
-// Supports: "fantasy", "scifi", "horror", "cyberpunk", "postapoc".
+// Supports: "fantasy", "scifi", "horror", "cyberpunk", "postapoc", "cinematic", "neutral".
 // Returns NeutralPreset() if genre is not recognized.
 func GetPresetByGenre(genreID string) Preset {
 	switch genreID {
 	case "fantasy":
 		return FantasyPreset()
-	case "scifi":
+	case "scifi", "sci-fi":
 		return SciFiPreset()
 	case "horror":
 		return HorrorPreset()
 	case "cyberpunk":
 		return CyberpunkPreset()
-	case "postapoc":
+	case "postapoc", "post-apocalyptic":
 		return PostApocalypticPreset()
+	case "cinematic":
+		return CinematicPreset()
+	case "neutral":
+		return NeutralPreset()
 	default:
 		return NeutralPreset()
 	}

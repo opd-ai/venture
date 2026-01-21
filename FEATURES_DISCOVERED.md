@@ -7,8 +7,8 @@
 ## Quick Reference
 
 **Total Features:** 28
-- **Enabled by Default:** 20 - Automatically active with highest quality settings
-- **Opt-in:** 2 - Validation tools that run once on demand
+- **Enabled by Default:** 18 - Automatically active with highest quality settings
+- **Opt-in:** 4 - Validation tools that run once on demand
 - **Developer Only:** 6 - Debug/profiling tools (Makefile targets)
 
 > **Note:** As of the latest update, all production-ready features are now **enabled by default** with optimal settings for the best gameplay experience. The following features are automatically active:

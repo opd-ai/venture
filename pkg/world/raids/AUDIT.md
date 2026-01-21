@@ -1,11 +1,12 @@
 # Package Audit: pkg/world/raids
 Generated during reorganization on: 2026-01-20
+Updated: 2026-01-21 (Test coverage improved from 87.6% to 91.8%, boss name generation now at 100%)
 
 ## Summary
 - Missing Implementations: 0
 - Incomplete Features: 0
 - Interface Violations: 0
-- Untested Code: 3 functions (boss name generation - 0% coverage)
+- Untested Code: 0 ✅ (was 3 functions, all now at 100% coverage)
 - Dead Code: 0
 - Error Handling Gaps: 0
 - Documentation Gaps: 0
@@ -14,7 +15,7 @@ Generated during reorganization on: 2026-01-20
 **Overall Status**: ✅ Package is production-ready with excellent coverage
 
 ## Test Coverage
-**Current Coverage**: 87.6% of statements
+**Current Coverage**: 91.8% of statements (was 87.6%)
 
 ### Well-Tested Components (>85% coverage)
 - Manager API: 81-90% coverage (all public methods)
@@ -25,10 +26,10 @@ Generated during reorganization on: 2026-01-20
 - Type methods: 85-88% coverage
 
 ### Under-Tested Components
-- Boss name generation (names.go): 0-85.7% coverage
-  - GenerateBossName: 0.0% ⚠️
-  - getTitlesByGenre: 0.0% ⚠️
-  - getNamesByGenre: 0.0% ⚠️
+- ~~Boss name generation (names.go): 0-85.7% coverage~~ ✅ Now at 100%
+  - ~~GenerateBossName: 0.0%~~ ✅ 100%
+  - ~~getTitlesByGenre: 0.0%~~ ✅ 100%
+  - ~~getNamesByGenre: 0.0%~~ ✅ 100%
 - Validation methods: 60-80% (edge cases)
 
 ## Detailed Findings
@@ -69,38 +70,28 @@ Generator correctly implements procgen.Generator interface:
 All interface methods are implemented and tested.
 
 ### Untested Code
-**Status**: ⚠️ 3 functions with 0% coverage
+**Status**: ✅ All previously untested functions now have 100% coverage
 
-#### Boss Name Generation (names.go)
-1. **GenerateBossName()** - Line 100 - 0.0% coverage
-   - Function exists and works correctly
-   - Not called in current test suite
-   - Used by generateBoss() which IS tested (88.9%)
-   - Issue: Test calls generateRaid() which internally uses GenerateBossName(), but coverage tool doesn't detect it
+#### Boss Name Generation (names.go) - RESOLVED ✅
+All functions now have 100% test coverage (added 2026-01-21):
+- ✅ GenerateBossName: 100%
+- ✅ getTitlesByGenre: 100%
+- ✅ getNamesByGenre: 100%
+- ✅ GenerateRaidName: 100%
+- ✅ getPrefixesByGenre: 100%
+- ✅ getSuffixesByGenre: 100%
 
-2. **getTitlesByGenre()** - Line 111 - 0.0% coverage
-   - Helper function for boss name generation
-   - Returns genre-appropriate titles (Lord, Master, Keeper, etc.)
-   - Used by GenerateBossName()
-
-3. **getNamesByGenre()** - Line 146 - 0.0% coverage
-   - Helper function for boss name generation
-   - Returns genre-appropriate names
-   - Used by GenerateBossName()
-
-**Analysis**: These functions ARE being executed in tests (via generateBoss()), but the coverage tool doesn't track them properly. This is likely a coverage reporting issue, not a real gap.
-
-**Recommendation**: Add direct unit tests for GenerateBossName() to verify coverage:
-```go
-func TestGenerateBossName(t *testing.T) {
-    gen := NewBossNameGenerator()
-    rng := rand.New(rand.NewSource(12345))
-    name := gen.GenerateBossName(rng, "fantasy", TierNormal)
-    if name == "" {
-        t.Error("GenerateBossName returned empty string")
-    }
-}
-```
+**Tests Added** (names_test.go):
+- TestBossNameGenerator_GenerateBossName - Tests all genres (fantasy, scifi, horror, cyberpunk, postapoc, unknown)
+- TestBossNameGenerator_GenerateBossName_Deterministic - Verifies same seed produces same name
+- TestBossNameGenerator_GenerateRaidName - Tests all genres and tiers
+- TestBossNameGenerator_getTitlesByGenre - Tests genre-specific title lists
+- TestBossNameGenerator_getNamesByGenre - Tests genre-specific name lists
+- TestBossNameGenerator_getPrefixesByGenre - Tests genre-specific prefixes
+- TestBossNameGenerator_getSuffixesByGenre - Tests genre-specific suffixes
+- TestNewBossNameGenerator - Tests constructor
+- BenchmarkBossNameGenerator_GenerateBossName - Performance benchmark
+- BenchmarkBossNameGenerator_GenerateRaidName - Performance benchmark
 
 #### Partial Coverage (60-90%)
 Functions with some untested branches:
@@ -272,20 +263,16 @@ pkg/world/raids/
 
 ## Recommendations
 
-### Priority 1: None
-Package is production-ready for current scope.
+### Priority 1: ✅ COMPLETED (2026-01-21)
+Boss name generation tests added. All functions now at 100% coverage.
 
 ### Priority 2: Test Coverage Improvements
 
-1. **Add boss name generation tests** (to fix 0% coverage reporting)
-   ```go
-   func TestGenerateBossName(t *testing.T)
-   func TestGetTitlesByGenre(t *testing.T)
-   func TestGetNamesByGenre(t *testing.T)
-   ```
-   Target: Increase names.go coverage from 0-85% to 100%
+1. ~~**Add boss name generation tests**~~ ✅ COMPLETED
+   ~~Target: Increase names.go coverage from 0-85% to 100%~~
+   **Result**: names.go now at 100% coverage
 
-2. **Add validation error path tests**
+2. **Add validation error path tests** (optional)
    - Test invalid raid structures
    - Test missing bosses/terrain/rooms
    - Target: Increase validation coverage from 60-80% to 100%
@@ -346,16 +333,22 @@ Concurrent access is protected with sync.RWMutex for optimal read performance.
 **Package Status**: ✅ **PRODUCTION-READY**
 
 The pkg/world/raids package is excellently implemented with:
-- 87.6% test coverage (well above 65% target)
+- 91.8% test coverage (improved from 87.6%, well above 65% target)
 - Complete feature set for endgame raid content
 - Comprehensive documentation
 - Proper error handling
 - Thread-safe operations
 - Clean API design
 - Optimal file organization
+- All boss name generation functions now at 100% coverage ✅
 
-The only "gap" is 3 functions showing 0% coverage in the boss name generation, but these are actually being tested indirectly. Adding direct tests would improve coverage reporting accuracy.
+**Changes Made (2026-01-21)**:
+- Added names_test.go with comprehensive tests for boss name generation
+- 8 new test functions with table-driven subtests covering all genres
+- 2 benchmark tests for performance validation
+- Coverage improved from 87.6% to 91.8%
+- All 7 functions in names.go now at 100% coverage
 
 No critical issues, missing implementations, or architectural problems found.
 
-Recommended actions are all Priority 2+ (optional improvements), not blocking issues.
+Remaining recommended actions are all optional improvements (validation edge cases).

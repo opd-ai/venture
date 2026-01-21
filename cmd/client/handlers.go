@@ -385,6 +385,12 @@ type systemsContainer struct {
 	choiceTracker     *choice_consequences.ChoiceTracker // Persistent choice tracking and consequences
 	guildFleetManager *guild_vehicle.FleetManager        // Guild vehicle fleet management
 	worldEventManager *world_events.EventManager         // World-responsive event generation
+
+	// Voice Systems (PLAN.md Phase 1)
+	// Gap: Voice systems implemented in pkg/engine but never initialized or registered
+	// Fix: Added voice channel and spatial voice systems for multiplayer voice chat
+	voiceChannelSystem *engine.VoiceChannelSystem // Voice channel lifecycle and participant synchronization
+	spatialVoiceSystem *engine.SpatialVoiceSystem // Distance-based volume and stereo panning for voice
 }
 
 // initializeCoreSystems creates and initializes all core game systems.
@@ -590,6 +596,13 @@ func initializeAudioSystem(game *engine.EbitenGame, sys *systemsContainer, clien
 	sys.musicTriggerSystem = engine.NewMusicTriggerSystem(game.World, sys.audioManager)
 	sys.positionalAudioSystem = engine.NewPositionalAudioSystem(game.World)
 	sys.reverbSystem = engine.NewReverbSystemWithLogger(game.World, *seed+seedOffsetReverb, clientLogger.Logger)
+
+	// Voice Systems (PLAN.md Phase 1)
+	// Voice channel system manages voice channel lifecycle and participant synchronization
+	sys.voiceChannelSystem = engine.NewVoiceChannelSystem(game.World)
+	// Spatial voice system calculates distance-based volume and stereo panning
+	sys.spatialVoiceSystem = engine.NewSpatialVoiceSystem(game.World)
+	clientLogger.Debug("voice systems initialized (voice channels, spatial audio)")
 
 	if *verbose {
 		clientLogger.Info("adaptive music composition enabled with motif system, music triggers, positional audio, and reverb")
@@ -1266,6 +1279,11 @@ func registerAllSystems(game *engine.EbitenGame, sys *systemsContainer) {
 
 	// Phase 14: Quality System
 	game.World.AddSystem(&qualitySystemWrapper{system: sys.qualitySystem})
+
+	// Voice Systems (PLAN.md Phase 1)
+	// Voice systems enable multiplayer voice chat with spatial audio
+	game.World.AddSystem(sys.voiceChannelSystem)
+	game.World.AddSystem(sys.spatialVoiceSystem)
 
 	// Phase 33-36: Trade, Terrain, and Merchant Systems
 	game.World.AddSystem(&tradeSystemWrapper{system: sys.tradeSystem})

@@ -284,3 +284,79 @@ const (
    - Integrate with the game's existing system update loop or use `time.Ticker`
 
 3. **Add WebRTC Integration Tests** - Create integration tests that verify real browser-to-browser connections work correctly once WebRTC is implemented, ensuring the federation feature meets production requirements.
+
+---
+
+## Hidden Feature Enablement
+
+The following undocumented features have been discovered in the codebase but are not enabled by default. See [FEATURES_DISCOVERED.md](FEATURES_DISCOVERED.md) for detailed activation instructions.
+
+### Production-Ready Features (14)
+
+| Feature | Activation | Purpose |
+|---------|-----------|---------|
+| Performance Profiling | `--profile` | Frame time tracking for performance diagnosis |
+| Post-Processing Presets | `--postprocess-preset <preset>` | Cinematic visual effects (fantasy, sci-fi, horror, cyberpunk, cinematic) |
+| Color Grading | `--postprocess-color-grading` | Saturation, contrast, brightness controls |
+| Palette Customization | `--palette-harmony <type>` | Color harmony and mood controls for procedural generation |
+| Skip Tutorial | `--no-tutorial` | Bypass tutorial for experienced players |
+| Server Modding | `--enable-mods --mods-dir mods` | JSON-based server mods (difficulty, PvP, spawn rates) |
+| Prometheus Metrics | `--enable-metrics --metrics-port 9090` | Export server metrics for Grafana/monitoring |
+| Resilience Metrics | `--resilience-metrics` | Network performance diagnostics |
+| Aerial Sprites | `--aerial-sprites=false` | Toggle top-down sprite perspective |
+| LAN Hosting | `--host-lan` | Bind to 0.0.0.0 for LAN multiplayer |
+| Custom Port | `--port <port>` | Specify server port (auto-fallback on conflict) |
+| Max Players | `--max-players <count>` | Set player limit (default: 4) |
+| Tick Rate | `--tick-rate <rate>` | Server update rate (default: 20/sec) |
+| Verbose Logging | `--verbose` or `LOG_LEVEL=debug` | Detailed debug output |
+
+### Experimental Features (6)
+
+| Feature | Activation | Status |
+|---------|-----------|--------|
+| Network Simulation | `--simulate-network <level>` | Test latency/packet loss scenarios (low/medium/high/extreme) |
+| Stability Monitoring | `--stability-monitor` | 72-hour production validation (500MB memory, 60 FPS thresholds) |
+| Security Audit | `--security-audit` | Startup security vulnerability scan |
+| Balance Validation | `--balance-validate` | Combat/economic balance verification |
+| Migration Validation | `--migration-validate` | Save file migration testing (0.9.x → 1.0.0) |
+| UX Validation | `--ux-validate` | Gameplay flow validation |
+
+### Developer Tools (8)
+
+| Tool | Command | Purpose |
+|------|---------|---------|
+| Feature Audit | `make feature-audit` | Verify feature completeness |
+| Visual Regression | `make visual-regression` | Compare rendered output to baselines |
+| Parity Tests | `make parity-test` | Cross-platform rendering verification |
+| CPU Profiling | `make profile-cpu` | Generate `cpu.prof` for pprof analysis |
+| Memory Profiling | `make profile-mem` | Generate `mem.prof` for allocation analysis |
+| Race Detection | `make test-race` | Run tests with Go race detector |
+| Coverage Reports | `make test-coverage` | Generate `coverage.html` report |
+| Documentation | `make docs` | Start godoc server at :6060 |
+
+### Included Mods (in `mods/` directory)
+
+| Mod File | Status | Effect |
+|----------|--------|--------|
+| `custom-spawns.json` | Enabled | Custom entity spawn rate multipliers |
+| `hardcore-mode.json` | Enabled | Permadeath + 2x difficulty |
+| `pvp-zones.json` | Disabled | PvP in 20% of world zones |
+
+### Environment Variables
+
+| Variable | Values | Purpose |
+|----------|--------|---------|
+| `LOG_LEVEL` | debug, info, warn, error | Logging verbosity |
+| `LOG_FORMAT` | json, text | Log output format |
+
+### Quick Start Scripts
+
+**Enhanced Client:**
+```bash
+./venture-client --postprocess-preset cinematic --palette-mood vibrant --profile
+```
+
+**Production Server:**
+```bash
+./venture-server --enable-metrics --resilience-metrics --enable-mods --verbose
+```

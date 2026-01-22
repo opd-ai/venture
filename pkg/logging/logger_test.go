@@ -286,3 +286,78 @@ func TestJSONFormatter(t *testing.T) {
 		t.Errorf("expected JSON output to contain system field, got: %s", output)
 	}
 }
+
+func TestPerformanceLogger(t *testing.T) {
+	logger := NewLogger(DefaultConfig())
+	entry := PerformanceLogger(logger, "render_frame")
+
+	if entry == nil {
+		t.Fatal("expected non-nil entry")
+	}
+	if entry.Data["operation"] != "render_frame" {
+		t.Errorf("expected operation=render_frame, got %v", entry.Data["operation"])
+	}
+}
+
+func TestCombatLogger(t *testing.T) {
+	logger := NewLogger(DefaultConfig())
+	entry := CombatLogger(logger, 100, 200)
+
+	if entry == nil {
+		t.Fatal("expected non-nil entry")
+	}
+	if entry.Data["attackerID"] != 100 {
+		t.Errorf("expected attackerID=100, got %v", entry.Data["attackerID"])
+	}
+	if entry.Data["targetID"] != 200 {
+		t.Errorf("expected targetID=200, got %v", entry.Data["targetID"])
+	}
+}
+
+func TestSaveLoadLogger(t *testing.T) {
+	logger := NewLogger(DefaultConfig())
+	entry := SaveLoadLogger(logger, "save", "/path/to/save.json")
+
+	if entry == nil {
+		t.Fatal("expected non-nil entry")
+	}
+	if entry.Data["operation"] != "save" {
+		t.Errorf("expected operation=save, got %v", entry.Data["operation"])
+	}
+	if entry.Data["path"] != "/path/to/save.json" {
+		t.Errorf("expected path=/path/to/save.json, got %v", entry.Data["path"])
+	}
+}
+
+func TestTestUtilityLogger(t *testing.T) {
+	// Save and restore LOG_LEVEL env to avoid test interference
+	originalLevel := os.Getenv("LOG_LEVEL")
+	defer os.Setenv("LOG_LEVEL", originalLevel)
+	os.Unsetenv("LOG_LEVEL")
+
+	logger := TestUtilityLogger("test_utility")
+
+	if logger == nil {
+		t.Fatal("expected non-nil logger")
+	}
+	// TestUtilityLogger uses InfoLevel by default
+	if logger.GetLevel() != logrus.InfoLevel {
+		t.Errorf("expected level %v, got %v", logrus.InfoLevel, logger.GetLevel())
+	}
+}
+
+func TestTestUtilityLogger_WithEnvOverride(t *testing.T) {
+	// Test that LOG_LEVEL environment variable overrides the default
+	originalLevel := os.Getenv("LOG_LEVEL")
+	defer os.Setenv("LOG_LEVEL", originalLevel)
+
+	os.Setenv("LOG_LEVEL", "debug")
+	logger := TestUtilityLogger("debug_utility")
+
+	if logger == nil {
+		t.Fatal("expected non-nil logger")
+	}
+	if logger.GetLevel() != logrus.DebugLevel {
+		t.Errorf("expected level %v, got %v", logrus.DebugLevel, logger.GetLevel())
+	}
+}

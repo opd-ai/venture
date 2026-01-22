@@ -3,6 +3,7 @@ package logging
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"strings"
 	"testing"
 
@@ -80,6 +81,12 @@ func TestLogError(t *testing.T) {
 			name:      "non-retryable error uses error level",
 			err:       errors.Validation("invalid input"),
 			message:   "validation failed",
+			wantLevel: logrus.ErrorLevel,
+		},
+		{
+			name:      "standard go error uses error level",
+			err:       fmt.Errorf("standard go error"),
+			message:   "generic error",
 			wantLevel: logrus.ErrorLevel,
 		},
 	}

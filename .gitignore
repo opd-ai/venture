@@ -72,6 +72,7 @@ go.work.sum
 !PLAN.md
 !AUDIT.md
 !FEATURES_DISCOVERED.md
+!ROADMAP.md
 /*.log
 /*.txt
 .DS_Store

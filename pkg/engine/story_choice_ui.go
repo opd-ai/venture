@@ -149,31 +149,72 @@ func (ui *StoryChoiceUI) HandleInput() bool {
 		return false
 	}
 
-	// Handle touch/mouse input for choice selection
-	if IsTouchOrMouseJustPressed() {
-		mouseX, mouseY, _ := GetTouchOrMousePosition()
-		// Calculate choice area position to match Draw() layout
-		panelWidth := float64(ui.screenWidth) * 0.8
-		panelXFloat := (float64(ui.screenWidth) - panelWidth) / 2
-		titleX := int(panelXFloat) + 20
-
-		panelYFloat := float64(ui.screenHeight) * 0.2
-		titleY := int(panelYFloat) + 20
-		choiceStartY := titleY + 30 + 40
-
-		for i := range ui.pendingChoices {
-			choiceY := choiceStartY + i*30
-			// Check if within choice bounds (approximate hit area)
-			if mouseX >= titleX && mouseX <= titleX+int(panelWidth)-40 &&
-				mouseY >= choiceY-12 && mouseY <= choiceY+12 {
-				ui.selectedChoice = i
-				ui.confirmCurrentChoice()
-				return true
-			}
-		}
+	if ui.handleTouchInput() {
+		return true
 	}
 
-	// Navigate choices - Platform parity fix: Use edge-triggered detection
+	if ui.handleNavigationInput() {
+		return true
+	}
+
+	if ui.handleConfirmInput() {
+		return true
+	}
+
+	if ui.handleCancelInput() {
+		return true
+	}
+
+	return false
+}
+
+// handleTouchInput processes touch/mouse input for direct choice selection.
+func (ui *StoryChoiceUI) handleTouchInput() bool {
+	if !IsTouchOrMouseJustPressed() {
+		return false
+	}
+
+	mouseX, mouseY, _ := GetTouchOrMousePosition()
+	choiceBounds := ui.calculateChoiceBounds()
+
+	for i := range ui.pendingChoices {
+		choiceY := choiceBounds.startY + i*30
+		if mouseX >= choiceBounds.x && mouseX <= choiceBounds.x+choiceBounds.width &&
+			mouseY >= choiceY-12 && mouseY <= choiceY+12 {
+			ui.selectedChoice = i
+			ui.confirmCurrentChoice()
+			return true
+		}
+	}
+	return false
+}
+
+// choiceBounds holds the calculated bounds for choice rendering areas.
+type choiceBounds struct {
+	x      int
+	width  int
+	startY int
+}
+
+// calculateChoiceBounds computes the rendering boundaries for choices.
+func (ui *StoryChoiceUI) calculateChoiceBounds() choiceBounds {
+	panelWidth := float64(ui.screenWidth) * 0.8
+	panelXFloat := (float64(ui.screenWidth) - panelWidth) / 2
+	titleX := int(panelXFloat) + 20
+
+	panelYFloat := float64(ui.screenHeight) * 0.2
+	titleY := int(panelYFloat) + 20
+	choiceStartY := titleY + 30 + 40
+
+	return choiceBounds{
+		x:      titleX,
+		width:  int(panelWidth) - 40,
+		startY: choiceStartY,
+	}
+}
+
+// handleNavigationInput processes up/down arrow keys for choice navigation.
+func (ui *StoryChoiceUI) handleNavigationInput() bool {
 	if inpututil.IsKeyJustPressed(ebiten.KeyArrowUp) || inpututil.IsKeyJustPressed(ebiten.KeyW) {
 		ui.selectedChoice--
 		if ui.selectedChoice < 0 {
@@ -190,19 +231,24 @@ func (ui *StoryChoiceUI) HandleInput() bool {
 		return true
 	}
 
-	// Confirm choice - Platform parity fix: Use edge-triggered detection
+	return false
+}
+
+// handleConfirmInput processes confirmation keys (Enter, Space).
+func (ui *StoryChoiceUI) handleConfirmInput() bool {
 	if inpututil.IsKeyJustPressed(ebiten.KeyEnter) || inpututil.IsKeyJustPressed(ebiten.KeySpace) {
 		ui.confirmCurrentChoice()
 		return true
 	}
+	return false
+}
 
-	// Cancel (hide UI without making choice - player can come back later)
-	// Platform parity fix: Use edge-triggered detection
+// handleCancelInput processes cancel key (Escape) to hide UI.
+func (ui *StoryChoiceUI) handleCancelInput() bool {
 	if inpututil.IsKeyJustPressed(ebiten.KeyEscape) {
 		ui.visible = false
 		return true
 	}
-
 	return false
 }
 

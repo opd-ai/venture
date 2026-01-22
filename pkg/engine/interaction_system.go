@@ -53,7 +53,26 @@ func (s *InteractionSystem) SetMiniGameSystem(miniGameSystem *MiniGameSystem) {
 // Update checks for interaction key presses and processes player interactions.
 // INPUT CONFLICT FIX: Now checks if interaction input is allowed before processing.
 func (s *InteractionSystem) Update(entities []*Entity, deltaTime float64) {
-	// Update context action cooldowns for all entities
+	s.updateContextActionCooldowns(deltaTime)
+
+	if !s.isInteractionAllowed() {
+		return
+	}
+
+	if !inpututil.IsKeyJustPressed(ebiten.KeyF) {
+		return
+	}
+
+	player, playerPos := s.getPlayerAndPosition()
+	if player == nil || playerPos == nil {
+		return
+	}
+
+	s.tryInteractions(player, playerPos)
+}
+
+// updateContextActionCooldowns updates cooldown timers for all context actions.
+func (s *InteractionSystem) updateContextActionCooldowns(deltaTime float64) {
 	contextActions := s.world.GetEntitiesWith("contextAction")
 	for _, entity := range contextActions {
 		if comp, ok := entity.GetComponent("contextAction"); ok {
@@ -62,53 +81,41 @@ func (s *InteractionSystem) Update(entities []*Entity, deltaTime float64) {
 			}
 		}
 	}
+}
 
-	// INPUT CONFLICT FIX: Check if interaction input is allowed based on current game state
-	if s.inputSystem != nil && !s.inputSystem.IsInteractionAllowed() {
-		return
-	}
+// isInteractionAllowed checks if interaction input is allowed in current game state.
+func (s *InteractionSystem) isInteractionAllowed() bool {
+	return s.inputSystem == nil || s.inputSystem.IsInteractionAllowed()
+}
 
-	// Check if F key was just pressed
-	// Note: Touch interaction is handled via virtual controls interact button (InputSystem callback)
-	interactionPressed := inpututil.IsKeyJustPressed(ebiten.KeyF)
-
-	if !interactionPressed {
-		return
-	}
-
-	// Get player entity
+// getPlayerAndPosition retrieves the player entity and its position component.
+func (s *InteractionSystem) getPlayerAndPosition() (*Entity, *PositionComponent) {
 	players := s.world.GetEntitiesWith("player")
 	if len(players) == 0 {
-		return
+		return nil, nil
 	}
 	player := players[0]
 
-	// Get player position
 	playerPosComp, ok := player.GetComponent("position")
 	if !ok {
-		return
+		return nil, nil
 	}
 	playerPos, ok := playerPosComp.(*PositionComponent)
 	if !ok {
-		return
+		return nil, nil
 	}
 
-	// Priority order for interactions:
-	// 1. Context actions (doors, levers, etc.)
-	// 2. Carriable objects (pickup)
-	// 3. Puzzle elements
+	return player, playerPos
+}
 
-	// Try context actions first
+// tryInteractions attempts interactions in priority order.
+func (s *InteractionSystem) tryInteractions(player *Entity, playerPos *PositionComponent) {
 	if s.tryContextActions(player, playerPos) {
 		return
 	}
-
-	// Try carriable object pickup
 	if s.tryCarriablePickup(player, playerPos) {
 		return
 	}
-
-	// Fall back to puzzle element interactions
 	s.tryPuzzleInteraction(player, playerPos)
 }
 

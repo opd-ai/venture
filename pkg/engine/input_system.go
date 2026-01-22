@@ -506,42 +506,58 @@ func (s *InputSystem) updateMousePosition() {
 // updateTouchInput processes touch handler and virtual controls updates.
 // Platform parity fix: Now handles all extended virtual control buttons.
 func (s *InputSystem) updateTouchInput() {
-	if s.useTouchInput && s.touchHandler != nil {
-		s.touchHandler.Update()
+	if !s.useTouchInput || s.touchHandler == nil {
+		return
+	}
 
-		if s.virtualControls != nil {
-			s.virtualControls.Update()
+	s.touchHandler.Update()
 
-			// Handle menu button
-			if s.virtualControls.IsMenuPressed() && s.onMenuToggle != nil {
-				s.onMenuToggle()
-			}
+	if s.virtualControls != nil {
+		s.virtualControls.Update()
+		s.handleVirtualControlCallbacks()
+	}
+}
 
-			// Platform parity fix: Handle extended virtual control buttons
-			if s.virtualControls.IsInventoryPressed() && s.onInventoryOpen != nil {
-				s.onInventoryOpen()
-			}
-			if s.virtualControls.IsTargetPressed() && s.onCycleTargets != nil {
-				s.onCycleTargets()
-			}
-			if s.virtualControls.IsInteractPressed() && s.onInteract != nil {
-				s.onInteract()
-			}
+// handleVirtualControlCallbacks processes all virtual control button presses.
+func (s *InputSystem) handleVirtualControlCallbacks() {
+	s.handleCoreControlCallbacks()
+	s.handleExtendedControlCallbacks()
+	s.handleUIShortcutCallbacks()
+}
 
-			// Platform parity fix: Handle UI shortcut buttons for complete menu accessibility
-			if s.virtualControls.IsCharacterPressed() && s.onCharacterOpen != nil {
-				s.onCharacterOpen()
-			}
-			if s.virtualControls.IsSkillsPressed() && s.onSkillsOpen != nil {
-				s.onSkillsOpen()
-			}
-			if s.virtualControls.IsQuestLogPressed() && s.onQuestsOpen != nil {
-				s.onQuestsOpen()
-			}
-			if s.virtualControls.IsMapPressed() && s.onMapOpen != nil {
-				s.onMapOpen()
-			}
-		}
+// handleCoreControlCallbacks processes menu button presses.
+func (s *InputSystem) handleCoreControlCallbacks() {
+	if s.virtualControls.IsMenuPressed() && s.onMenuToggle != nil {
+		s.onMenuToggle()
+	}
+}
+
+// handleExtendedControlCallbacks processes inventory, target, and interact buttons.
+func (s *InputSystem) handleExtendedControlCallbacks() {
+	if s.virtualControls.IsInventoryPressed() && s.onInventoryOpen != nil {
+		s.onInventoryOpen()
+	}
+	if s.virtualControls.IsTargetPressed() && s.onCycleTargets != nil {
+		s.onCycleTargets()
+	}
+	if s.virtualControls.IsInteractPressed() && s.onInteract != nil {
+		s.onInteract()
+	}
+}
+
+// handleUIShortcutCallbacks processes character, skills, quest log, and map buttons.
+func (s *InputSystem) handleUIShortcutCallbacks() {
+	if s.virtualControls.IsCharacterPressed() && s.onCharacterOpen != nil {
+		s.onCharacterOpen()
+	}
+	if s.virtualControls.IsSkillsPressed() && s.onSkillsOpen != nil {
+		s.onSkillsOpen()
+	}
+	if s.virtualControls.IsQuestLogPressed() && s.onQuestsOpen != nil {
+		s.onQuestsOpen()
+	}
+	if s.virtualControls.IsMapPressed() && s.onMapOpen != nil {
+		s.onMapOpen()
 	}
 }
 

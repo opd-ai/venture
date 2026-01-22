@@ -170,69 +170,88 @@ func (s *ShadowSystem) RenderShadows(screen *ebiten.Image, lightX, lightY, light
 // collectShadowCasters finds all entities that should cast shadows from this light.
 // Returns a slice of shadow caster values (not pointers) to avoid per-caster heap allocations.
 func (s *ShadowSystem) collectShadowCasters(lightX, lightY, lightRadius float64) []shadowCaster {
-	// Reuse caster buffer to reduce per-frame allocations
 	s.casterBuffer = s.casterBuffer[:0]
 
-	// Ensure capacity for maxShadows
 	if cap(s.casterBuffer) < s.maxShadows {
 		s.casterBuffer = make([]shadowCaster, 0, s.maxShadows)
 	}
 
 	entities := s.world.GetEntities()
 	for _, entity := range entities {
-		// Get shadow component
-		shadowComp, hasShadow := entity.GetComponent("shadow")
-		if !hasShadow {
-			continue
-		}
-		shadow, ok := shadowComp.(*ShadowComponent)
-		if !ok || !shadow.Enabled || !shadow.CastsShadow {
-			continue
-		}
-
-		// Get position component
-		posComp, hasPos := entity.GetComponent("position")
-		if !hasPos {
-			continue
-		}
-		pos, ok := posComp.(*PositionComponent)
-		if !ok {
-			continue
-		}
-
-		// Distance check: skip if outside light radius
-		dx := pos.X - lightX
-		dy := pos.Y - lightY
-		dist := math.Sqrt(dx*dx + dy*dy)
-		if dist > lightRadius+shadow.Radius {
-			continue
-		}
-
-		// Viewport culling
-		if s.viewportSet {
-			if pos.X+shadow.Radius < s.cameraX ||
-				pos.X-shadow.Radius > s.cameraX+float64(s.viewportW) ||
-				pos.Y+shadow.Radius < s.cameraY ||
-				pos.Y-shadow.Radius > s.cameraY+float64(s.viewportH) {
-				continue
+		if caster := s.evaluateShadowCaster(entity, lightX, lightY, lightRadius); caster != nil {
+			s.casterBuffer = append(s.casterBuffer, *caster)
+			if len(s.casterBuffer) >= s.maxShadows {
+				break
 			}
-		}
-
-		// Append value (not pointer) to avoid heap allocation per caster
-		s.casterBuffer = append(s.casterBuffer, shadowCaster{
-			shadow:   shadow,
-			position: pos,
-			x:        pos.X,
-			y:        pos.Y,
-		})
-
-		// Limit shadows
-		if len(s.casterBuffer) >= s.maxShadows {
-			break
 		}
 	}
 
 	return s.casterBuffer
+}
+
+// evaluateShadowCaster checks if an entity should cast a shadow and returns caster data.
+func (s *ShadowSystem) evaluateShadowCaster(entity *Entity, lightX, lightY, lightRadius float64) *shadowCaster {
+	shadow, pos := s.getShadowComponents(entity)
+	if shadow == nil || pos == nil {
+		return nil
+	}
+
+	if !s.isWithinLightRange(pos, shadow, lightX, lightY, lightRadius) {
+		return nil
+	}
+
+	if s.isOutsideViewport(pos, shadow) {
+		return nil
+	}
+
+	return &shadowCaster{
+		shadow:   shadow,
+		position: pos,
+		x:        pos.X,
+		y:        pos.Y,
+	}
+}
+
+// getShadowComponents retrieves and validates shadow and position components.
+func (s *ShadowSystem) getShadowComponents(entity *Entity) (*ShadowComponent, *PositionComponent) {
+	shadowComp, hasShadow := entity.GetComponent("shadow")
+	if !hasShadow {
+		return nil, nil
+	}
+	shadow, ok := shadowComp.(*ShadowComponent)
+	if !ok || !shadow.Enabled || !shadow.CastsShadow {
+		return nil, nil
+	}
+
+	posComp, hasPos := entity.GetComponent("position")
+	if !hasPos {
+		return nil, nil
+	}
+	pos, ok := posComp.(*PositionComponent)
+	if !ok {
+		return nil, nil
+	}
+
+	return shadow, pos
+}
+
+// isWithinLightRange checks if entity is within the light's influence radius.
+func (s *ShadowSystem) isWithinLightRange(pos *PositionComponent, shadow *ShadowComponent, lightX, lightY, lightRadius float64) bool {
+	dx := pos.X - lightX
+	dy := pos.Y - lightY
+	dist := math.Sqrt(dx*dx + dy*dy)
+	return dist <= lightRadius+shadow.Radius
+}
+
+// isOutsideViewport checks if entity is outside the viewport (for culling).
+func (s *ShadowSystem) isOutsideViewport(pos *PositionComponent, shadow *ShadowComponent) bool {
+	if !s.viewportSet {
+		return false
+	}
+	return pos.X+shadow.Radius < s.cameraX ||
+		pos.X-shadow.Radius > s.cameraX+float64(s.viewportW) ||
+		pos.Y+shadow.Radius < s.cameraY ||
+		pos.Y-shadow.Radius > s.cameraY+float64(s.viewportH)
 }
 
 // renderShadowForEntity renders shadow for a single entity.

@@ -31,65 +31,95 @@ func NewLoaderWithConfig(config ModConfig) *Loader {
 
 // LoadFromFile loads a single mod from a JSON file.
 func (l *Loader) LoadFromFile(path string) (*Mod, error) {
-	// Validate path is within mods directory if sandboxing enabled
-	if l.config.EnableSandbox {
-		sandbox := NewSandboxWithConfig(SandboxConfig{
-			ModsDirectory: l.config.ModsDirectory,
-		})
-		if err := sandbox.ValidatePath(path); err != nil {
-			return nil, &LoadError{
-				ModID: path,
-				Err:   err,
-			}
-		}
+	if err := l.validateSandboxPath(path); err != nil {
+		return nil, &LoadError{ModID: path, Err: err}
 	}
 
-	// Read file
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return nil, &LoadError{ModID: path, Err: err}
 	}
 
-	// Check file size limit
+	if err := l.validateFileSize(path, data); err != nil {
+		return nil, err
+	}
+
+	mod, err := l.parseModJSON(path, data)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := l.validateModContent(mod); err != nil {
+		return nil, err
+	}
+
+	return mod, nil
+}
+
+// validateSandboxPath checks if the path is within the allowed mods directory.
+func (l *Loader) validateSandboxPath(path string) error {
+	if !l.config.EnableSandbox {
+		return nil
+	}
+	sandbox := NewSandboxWithConfig(SandboxConfig{
+		ModsDirectory: l.config.ModsDirectory,
+	})
+	return sandbox.ValidatePath(path)
+}
+
+// validateFileSize checks if the mod file exceeds the size limit.
+func (l *Loader) validateFileSize(path string, data []byte) error {
 	if l.config.EnableSandbox && len(data) > 1024*1024 {
-		return nil, &LoadError{
+		return &LoadError{
 			ModID: path,
 			Err:   fmt.Errorf("mod file exceeds 1MB size limit"),
 		}
 	}
+	return nil
+}
 
-	// Parse JSON
+// parseModJSON unmarshals JSON data into a Mod structure.
+func (l *Loader) parseModJSON(path string, data []byte) (*Mod, error) {
 	var mod Mod
 	if err := json.Unmarshal(data, &mod); err != nil {
 		return nil, &LoadError{ModID: path, Err: fmt.Errorf("invalid JSON: %w", err)}
 	}
 
-	// Set load timestamp
 	mod.LoadedAt = time.Now()
 
-	// Validate mod structure
 	if err := mod.Validate(); err != nil {
 		return nil, &LoadError{ModID: mod.ID, Err: err}
 	}
 
-	// Validate mod content against sandbox rules
-	if l.config.EnableSandbox {
-		sandbox := NewSandbox()
-		result := sandbox.ValidateMod(&mod)
-		if !result.Valid {
-			errMsgs := make([]string, 0, len(result.Errors))
-			for _, e := range result.Errors {
-				errMsgs = append(errMsgs, e.Error())
-			}
-			errMsg := strings.Join(errMsgs, "; ")
-			if len(errMsgs) > 0 {
-				errMsg += "; "
-			}
-			return nil, &LoadError{ModID: mod.ID, Err: fmt.Errorf("sandbox validation failed: %s", errMsg)}
-		}
+	return &mod, nil
+}
+
+// validateModContent validates the mod against sandbox security rules.
+func (l *Loader) validateModContent(mod *Mod) error {
+	if !l.config.EnableSandbox {
+		return nil
 	}
 
-	return &mod, nil
+	sandbox := NewSandbox()
+	result := sandbox.ValidateMod(mod)
+	if !result.Valid {
+		errMsgs := buildSandboxErrorMessages(result.Errors)
+		return &LoadError{ModID: mod.ID, Err: fmt.Errorf("sandbox validation failed: %s", errMsgs)}
+	}
+	return nil
+}
+
+// buildSandboxErrorMessages concatenates SandboxError messages.
+func buildSandboxErrorMessages(errors []SandboxError) string {
+	errMsgs := make([]string, 0, len(errors))
+	for _, e := range errors {
+		errMsgs = append(errMsgs, e.Error())
+	}
+	errMsg := strings.Join(errMsgs, "; ")
+	if len(errMsgs) > 0 {
+		errMsg += "; "
+	}
+	return errMsg
 }
 
 // LoadAll loads all mods from the mods directory.

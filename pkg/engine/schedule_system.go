@@ -37,76 +37,101 @@ func (s *ScheduleSystem) Update(entities []*Entity, deltaTime float64) {
 		return
 	}
 
-	currentTime := s.clock.Now()
-	currentHour := currentTime.Hour()
+	currentHour := s.clock.Now().Hour()
 
 	for _, entity := range entities {
-		if !entity.HasComponent("schedule") {
-			continue
+		s.updateScheduledEntity(entity, currentHour, deltaTime)
+	}
+}
+
+// updateScheduledEntity updates a single entity's schedule and movement.
+func (s *ScheduleSystem) updateScheduledEntity(entity *Entity, currentHour int, deltaTime float64) {
+	schedule, activity, pos := s.getScheduleComponents(entity, currentHour)
+	if schedule == nil || activity == nil || pos == nil {
+		return
+	}
+
+	distance := calculateDistance(activity.LocationX, activity.LocationY, pos.X, pos.Y)
+
+	if s.handleArrival(entity, schedule, distance) {
+		return
+	}
+
+	s.moveTowardsActivity(entity, schedule, activity, pos, distance, deltaTime, currentHour)
+}
+
+// getScheduleComponents retrieves and validates schedule, activity, and position components.
+func (s *ScheduleSystem) getScheduleComponents(entity *Entity, currentHour int) (*ScheduleComponent, *Activity, *PositionComponent) {
+	if !entity.HasComponent("schedule") {
+		return nil, nil, nil
+	}
+
+	schedComp, ok := entity.GetComponent("schedule")
+	if !ok || schedComp == nil {
+		return nil, nil, nil
+	}
+	schedule := schedComp.(*ScheduleComponent)
+
+	schedule.UpdateActivityIndex(currentHour)
+	activity := schedule.GetCurrentActivity()
+	if activity == nil {
+		return nil, nil, nil
+	}
+
+	posComp, ok := entity.GetComponent("position")
+	if !ok || posComp == nil {
+		return nil, nil, nil
+	}
+	pos := posComp.(*PositionComponent)
+
+	return schedule, activity, pos
+}
+
+// calculateDistance computes the Euclidean distance between two points.
+func calculateDistance(x1, y1, x2, y2 float64) float64 {
+	dx := x1 - x2
+	dy := y1 - y2
+	return math.Sqrt(dx*dx + dy*dy)
+}
+
+// handleArrival checks if entity has arrived and stops movement if so.
+func (s *ScheduleSystem) handleArrival(entity *Entity, schedule *ScheduleComponent, distance float64) bool {
+	const arrivalThreshold = 5.0
+	if distance < arrivalThreshold {
+		schedule.IsMoving = false
+		if velComp, ok := entity.GetComponent("velocity"); ok && velComp != nil {
+			vel := velComp.(*VelocityComponent)
+			vel.VX = 0
+			vel.VY = 0
 		}
+		return true
+	}
+	return false
+}
 
-		schedComp, ok := entity.GetComponent("schedule")
-		if !ok || schedComp == nil {
-			continue
-		}
-		schedule := schedComp.(*ScheduleComponent)
+// moveTowardsActivity moves the entity toward its scheduled activity location.
+func (s *ScheduleSystem) moveTowardsActivity(entity *Entity, schedule *ScheduleComponent, activity *Activity, pos *PositionComponent, distance, deltaTime float64, currentHour int) {
+	schedule.IsMoving = true
+	moveDistance := schedule.MovementSpeed * deltaTime
+	if moveDistance > distance {
+		moveDistance = distance
+	}
 
-		// Update current activity based on time
-		schedule.UpdateActivityIndex(currentHour)
-
-		// Get current activity
-		activity := schedule.GetCurrentActivity()
-		if activity == nil {
-			continue
-		}
-
-		// Get position component
-		posComp, ok := entity.GetComponent("position")
-		if !ok || posComp == nil {
-			continue
-		}
-		pos := posComp.(*PositionComponent)
-
-		// Calculate distance to target location
+	if distance > 0 {
 		dx := activity.LocationX - pos.X
 		dy := activity.LocationY - pos.Y
-		distance := math.Sqrt(dx*dx + dy*dy)
-
-		// If we're already at the location, stop moving
-		const arrivalThreshold = 5.0
-		if distance < arrivalThreshold {
-			schedule.IsMoving = false
-			// Clear velocity if present
-			if velComp, ok := entity.GetComponent("velocity"); ok && velComp != nil {
-				vel := velComp.(*VelocityComponent)
-				vel.VX = 0
-				vel.VY = 0
-			}
-			continue
-		}
-
-		// Move toward target location
-		schedule.IsMoving = true
-		moveDistance := schedule.MovementSpeed * deltaTime
-		if moveDistance > distance {
-			moveDistance = distance
-		}
-
-		// Normalize direction and apply movement
-		if distance > 0 {
-			pos.X += (dx / distance) * moveDistance
-			pos.Y += (dy / distance) * moveDistance
-		}
-
-		logrus.WithFields(logrus.Fields{
-			"system_name":  "schedule",
-			"entity_id":    entity.ID,
-			"activity":     activity.ActivityType,
-			"location":     activity.LocationName,
-			"distance":     distance,
-			"current_hour": currentHour,
-		}).Trace("NPC moving to scheduled location")
+		pos.X += (dx / distance) * moveDistance
+		pos.Y += (dy / distance) * moveDistance
 	}
+
+	logrus.WithFields(logrus.Fields{
+		"system_name":  "schedule",
+		"entity_id":    entity.ID,
+		"activity":     activity.ActivityType,
+		"location":     activity.LocationName,
+		"distance":     distance,
+		"current_hour": currentHour,
+	}).Trace("NPC moving to scheduled location")
 }
 
 // GenerateDefaultSchedule creates a deterministic daily schedule for an NPC.

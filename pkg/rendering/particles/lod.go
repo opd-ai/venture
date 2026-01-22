@@ -227,22 +227,49 @@ func sortByDistance(distances []particleDistance) {
 func pdqsortDistances(distances []particleDistance) {
 	n := len(distances)
 	if n <= 12 {
-		// Insertion sort for small slices
-		for i := 1; i < n; i++ {
-			key := distances[i]
-			j := i - 1
-			for j >= 0 && distances[j].distSq > key.distSq {
-				distances[j+1] = distances[j]
-				j--
-			}
-			distances[j+1] = key
-		}
+		insertionSortDistances(distances)
 		return
 	}
 
-	// Median-of-three pivot selection for better pivot choice
+	_, pivotIdx := partitionDistances(distances)
+	recursiveSortPartitions(distances, pivotIdx)
+}
+
+// insertionSortDistances sorts small slices using insertion sort algorithm.
+func insertionSortDistances(distances []particleDistance) {
+	for i := 1; i < len(distances); i++ {
+		key := distances[i]
+		j := i - 1
+		for j >= 0 && distances[j].distSq > key.distSq {
+			distances[j+1] = distances[j]
+			j--
+		}
+		distances[j+1] = key
+	}
+}
+
+// partitionDistances partitions the slice around a median-of-three pivot.
+func partitionDistances(distances []particleDistance) (float64, int) {
+	n := len(distances)
+	selectMedianPivot(distances, n)
+	pivot := distances[n-1].distSq
+
+	i := -1
+	for j := 0; j < n-1; j++ {
+		if distances[j].distSq <= pivot {
+			i++
+			distances[i], distances[j] = distances[j], distances[i]
+		}
+	}
+	distances[i+1], distances[n-1] = distances[n-1], distances[i+1]
+	return pivot, i + 1
+}
+
+// selectMedianPivot chooses a pivot using median-of-three strategy.
+func selectMedianPivot(distances []particleDistance, n int) {
 	lo, hi := 0, n-1
 	mid := n / 2
+
 	if distances[mid].distSq < distances[lo].distSq {
 		distances[lo], distances[mid] = distances[mid], distances[lo]
 	}
@@ -252,25 +279,16 @@ func pdqsortDistances(distances []particleDistance) {
 	if distances[mid].distSq < distances[hi].distSq {
 		distances[mid], distances[hi] = distances[hi], distances[mid]
 	}
-	pivot := distances[hi].distSq
+}
 
-	// Partition
-	i := lo - 1
-	for j := lo; j < hi; j++ {
-		if distances[j].distSq <= pivot {
-			i++
-			distances[i], distances[j] = distances[j], distances[i]
-		}
+// recursiveSortPartitions sorts the left and right partitions recursively.
+func recursiveSortPartitions(distances []particleDistance, pivotIdx int) {
+	n := len(distances)
+	if pivotIdx > 0 {
+		pdqsortDistances(distances[0:pivotIdx])
 	}
-	distances[i+1], distances[hi] = distances[hi], distances[i+1]
-	pivotIdx := i + 1
-
-	// Recursively sort partitions
-	if pivotIdx > lo {
-		pdqsortDistances(distances[lo:pivotIdx])
-	}
-	if pivotIdx+1 < hi {
-		pdqsortDistances(distances[pivotIdx+1 : hi+1])
+	if pivotIdx+1 < n {
+		pdqsortDistances(distances[pivotIdx+1 : n])
 	}
 }
 

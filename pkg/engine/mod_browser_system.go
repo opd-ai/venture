@@ -310,58 +310,74 @@ func (s *ModBrowserSystem) GetRecommendedMods(comp *ModBrowserComponent, limit i
 		return nil
 	}
 
-	// Get installed mod categories
-	installedCategories := make(map[string]int)
+	installedCategories := collectInstalledCategories(comp)
+	scored := scoreAvailableMods(comp, installedCategories)
+	sortModsByScore(scored)
+	return selectTopMods(scored, limit)
+}
+
+// collectInstalledCategories builds a map of category counts from installed mods.
+func collectInstalledCategories(comp *ModBrowserComponent) map[string]int {
+	categories := make(map[string]int)
 	for _, installedID := range comp.GetInstalledMods() {
 		if mod, found := comp.GetMod(installedID); found {
 			for _, cat := range mod.Categories {
-				installedCategories[cat]++
+				categories[cat]++
 			}
 		}
 	}
+	return categories
+}
 
-	// Score available mods
-	type scoredMod struct {
-		mod   ModListing
-		score float64
-	}
-
+// scoreAvailableMods calculates recommendation scores for available mods.
+func scoreAvailableMods(comp *ModBrowserComponent, installedCategories map[string]int) []scoredMod {
 	var scored []scoredMod
 	for _, mod := range comp.AvailableMods {
-		// Skip installed mods
 		if comp.IsInstalled(mod.ID) {
 			continue
 		}
-
-		// Calculate score based on rating and category match
-		score := mod.Rating
-
-		// Boost score for matching categories
-		for _, cat := range mod.Categories {
-			if count, ok := installedCategories[cat]; ok {
-				score += float64(count) * 0.5
-			}
-		}
-
-		// Boost featured mods
-		if mod.Featured {
-			score += 1.0
-		}
-
+		score := calculateModScore(mod, installedCategories)
 		scored = append(scored, scoredMod{mod: mod, score: score})
 	}
+	return scored
+}
 
-	// Sort by score descending
+// scoredMod pairs a mod with its recommendation score.
+type scoredMod struct {
+	mod   ModListing
+	score float64
+}
+
+// calculateModScore computes a score based on rating, categories, and featured status.
+func calculateModScore(mod ModListing, installedCategories map[string]int) float64 {
+	score := mod.Rating
+
+	for _, cat := range mod.Categories {
+		if count, ok := installedCategories[cat]; ok {
+			score += float64(count) * 0.5
+		}
+	}
+
+	if mod.Featured {
+		score += 1.0
+	}
+
+	return score
+}
+
+// sortModsByScore sorts scored mods in descending order by score.
+func sortModsByScore(scored []scoredMod) {
 	sort.Slice(scored, func(i, j int) bool {
 		return scored[i].score > scored[j].score
 	})
+}
 
-	// Return top N
+// selectTopMods returns the top N mods from the scored list.
+func selectTopMods(scored []scoredMod, limit int) []ModListing {
 	result := make([]ModListing, 0, limit)
 	for i := 0; i < len(scored) && i < limit; i++ {
 		result = append(result, scored[i].mod)
 	}
-
 	return result
 }
 

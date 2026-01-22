@@ -109,41 +109,46 @@ func (s *NGPlusDifficultySystem) processEntity(entity *Entity) {
 // applyDifficultyScaling applies NG+ difficulty modifiers to an entity.
 func (s *NGPlusDifficultySystem) applyDifficultyScaling(entity *Entity) {
 	if s.currentNGPlusCycle <= 0 {
-		return // No scaling needed for first playthrough
+		return
 	}
 
-	// Check if already scaled
-	if existingComp, ok := entity.GetComponent("ngplus_difficulty"); ok {
-		if dc, ok := existingComp.(*NGPlusDifficultyComponent); ok {
-			if dc.IsScaled {
-				return // Already scaled, skip
-			}
-		}
+	diffComp := s.getOrCreateDifficultyComponent(entity)
+	if diffComp == nil || diffComp.IsScaled {
+		return
 	}
 
-	// Create or get difficulty component
-	var diffComp *NGPlusDifficultyComponent
-	if existingComp, ok := entity.GetComponent("ngplus_difficulty"); ok {
-		if dc, ok := existingComp.(*NGPlusDifficultyComponent); ok {
-			diffComp = dc
-		}
-	}
-	if diffComp == nil {
-		diffComp = NewNGPlusDifficultyComponent()
-		entity.AddComponent(diffComp)
-	}
-
-	// Apply scaling based on current NG+ cycle
 	diffComp.ApplyScalingForCycle(s.currentNGPlusCycle)
 
-	// Check if this is a boss (has boss_tag component or has BossBehavior)
 	if s.isBossEntity(entity) {
 		diffComp.ApplyBossEnhancements(s.currentNGPlusCycle)
 	}
 
-	// Scale the actual stats
 	s.scaleEntityStats(entity, diffComp)
+	s.logDifficultyScaling(entity, diffComp)
 
+	if s.onEnemyScaled != nil {
+		s.onEnemyScaled(entity.ID, s.currentNGPlusCycle)
+	}
+}
+
+// getOrCreateDifficultyComponent retrieves or creates a difficulty component for the entity.
+func (s *NGPlusDifficultySystem) getOrCreateDifficultyComponent(entity *Entity) *NGPlusDifficultyComponent {
+	if existingComp, ok := entity.GetComponent("ngplus_difficulty"); ok {
+		if dc, ok := existingComp.(*NGPlusDifficultyComponent); ok {
+			if dc.IsScaled {
+				return nil
+			}
+			return dc
+		}
+	}
+
+	diffComp := NewNGPlusDifficultyComponent()
+	entity.AddComponent(diffComp)
+	return diffComp
+}
+
+// logDifficultyScaling logs the applied difficulty scaling for debugging.
+func (s *NGPlusDifficultySystem) logDifficultyScaling(entity *Entity, diffComp *NGPlusDifficultyComponent) {
 	if s.logger != nil {
 		s.logger.WithFields(logrus.Fields{
 			"entity_id":         entity.ID,
@@ -151,11 +156,6 @@ func (s *NGPlusDifficultySystem) applyDifficultyScaling(entity *Entity) {
 			"health_multiplier": diffComp.GetHealthMultiplier(),
 			"damage_multiplier": diffComp.GetDamageMultiplier(),
 		}).Debug("Applied NG+ difficulty scaling")
-	}
-
-	// Notify callback
-	if s.onEnemyScaled != nil {
-		s.onEnemyScaled(entity.ID, s.currentNGPlusCycle)
 	}
 }
 

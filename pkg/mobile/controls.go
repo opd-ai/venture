@@ -734,88 +734,113 @@ func (l *VirtualControlsLayout) Resize(screenWidth, screenHeight int) {
 	l.screenWidth = screenWidth
 	l.screenHeight = screenHeight
 
-	// Recalculate positions
-	dpadSize := float64(screenHeight) * 0.15
-	buttonSize := float64(screenHeight) * 0.08
-	smallButtonSize := float64(screenHeight) * 0.06
-	margin := float64(screenHeight) * 0.05
+	sizes := calculateControlSizes(screenHeight)
+	l.resizeCoreControls(screenWidth, screenHeight, sizes)
+	l.resizeExtendedControls(sizes)
+	l.resizeUIShortcutButtons(sizes)
+	l.resizeSpellButtons(screenWidth, sizes)
+}
 
-	// D-pad on bottom left
-	l.DPad.X = margin + dpadSize
-	l.DPad.Y = float64(screenHeight) - margin - dpadSize
-	l.DPad.Radius = dpadSize
+// calculateControlSizes computes the size dimensions for all control elements.
+func calculateControlSizes(screenHeight int) controlSizes {
+	return controlSizes{
+		dpadSize:        float64(screenHeight) * 0.15,
+		buttonSize:      float64(screenHeight) * 0.08,
+		smallButtonSize: float64(screenHeight) * 0.06,
+		margin:          float64(screenHeight) * 0.05,
+	}
+}
 
-	// Action buttons on bottom right
-	l.ActionButton.X = float64(screenWidth) - margin - buttonSize*2.5
-	l.ActionButton.Y = float64(screenHeight) - margin - buttonSize
-	l.ActionButton.Radius = buttonSize
+// controlSizes holds the calculated size dimensions for controls.
+type controlSizes struct {
+	dpadSize        float64
+	buttonSize      float64
+	smallButtonSize float64
+	margin          float64
+}
 
-	l.SecondaryButton.X = float64(screenWidth) - margin - buttonSize
-	l.SecondaryButton.Y = float64(screenHeight) - margin - buttonSize*2.5
-	l.SecondaryButton.Radius = buttonSize
+// resizeCoreControls repositions the D-pad and primary action buttons.
+func (l *VirtualControlsLayout) resizeCoreControls(screenWidth, screenHeight int, sizes controlSizes) {
+	l.DPad.X = sizes.margin + sizes.dpadSize
+	l.DPad.Y = float64(screenHeight) - sizes.margin - sizes.dpadSize
+	l.DPad.Radius = sizes.dpadSize
 
-	// Menu button on top right
-	l.MenuButton.X = float64(screenWidth) - margin - buttonSize
-	l.MenuButton.Y = margin + buttonSize
-	l.MenuButton.Radius = buttonSize * 0.7
+	l.ActionButton.X = float64(screenWidth) - sizes.margin - sizes.buttonSize*2.5
+	l.ActionButton.Y = float64(screenHeight) - sizes.margin - sizes.buttonSize
+	l.ActionButton.Radius = sizes.buttonSize
 
-	// Update extended controls positions
+	l.SecondaryButton.X = float64(screenWidth) - sizes.margin - sizes.buttonSize
+	l.SecondaryButton.Y = float64(screenHeight) - sizes.margin - sizes.buttonSize*2.5
+	l.SecondaryButton.Radius = sizes.buttonSize
+
+	l.MenuButton.X = float64(screenWidth) - sizes.margin - sizes.buttonSize
+	l.MenuButton.Y = sizes.margin + sizes.buttonSize
+	l.MenuButton.Radius = sizes.buttonSize * 0.7
+}
+
+// resizeExtendedControls repositions the inventory, target, and interact buttons.
+func (l *VirtualControlsLayout) resizeExtendedControls(sizes controlSizes) {
 	if l.InventoryButton != nil {
-		l.InventoryButton.X = l.MenuButton.X - buttonSize*1.3
+		l.InventoryButton.X = l.MenuButton.X - sizes.buttonSize*1.3
 		l.InventoryButton.Y = l.MenuButton.Y
-		l.InventoryButton.Radius = buttonSize * 0.7
+		l.InventoryButton.Radius = sizes.buttonSize * 0.7
 	}
 
 	if l.TargetButton != nil {
 		l.TargetButton.X = l.DPad.X
-		l.TargetButton.Y = l.DPad.Y - dpadSize - smallButtonSize - margin*0.5
-		l.TargetButton.Radius = smallButtonSize
+		l.TargetButton.Y = l.DPad.Y - sizes.dpadSize - sizes.smallButtonSize - sizes.margin*0.5
+		l.TargetButton.Radius = sizes.smallButtonSize
 	}
 
 	if l.InteractButton != nil {
-		l.InteractButton.X = l.ActionButton.X - buttonSize*1.5
+		l.InteractButton.X = l.ActionButton.X - sizes.buttonSize*1.5
 		l.InteractButton.Y = l.ActionButton.Y
-		l.InteractButton.Radius = smallButtonSize
+		l.InteractButton.Radius = sizes.smallButtonSize
 	}
+}
 
-	// Platform parity fix: Update UI shortcut buttons positions
-	// Use incremental positioning pattern (same as NewVirtualControlsLayout) for maintainability
-	uiButtonY := margin + buttonSize*0.7
-	uiButtonSpacing := smallButtonSize * 1.3
-	characterX := margin + smallButtonSize
+// resizeUIShortcutButtons repositions the character, skills, quest, and map buttons.
+func (l *VirtualControlsLayout) resizeUIShortcutButtons(sizes controlSizes) {
+	uiButtonY := sizes.margin + sizes.buttonSize*0.7
+	uiButtonSpacing := sizes.smallButtonSize * 1.3
+	characterX := sizes.margin + sizes.smallButtonSize
 	skillsX := characterX + uiButtonSpacing
 	questLogX := skillsX + uiButtonSpacing
 	mapX := questLogX + uiButtonSpacing
+
 	if l.CharacterButton != nil {
 		l.CharacterButton.X = characterX
 		l.CharacterButton.Y = uiButtonY
-		l.CharacterButton.Radius = smallButtonSize
+		l.CharacterButton.Radius = sizes.smallButtonSize
 	}
 	if l.SkillsButton != nil {
 		l.SkillsButton.X = skillsX
 		l.SkillsButton.Y = uiButtonY
-		l.SkillsButton.Radius = smallButtonSize
+		l.SkillsButton.Radius = sizes.smallButtonSize
 	}
 	if l.QuestLogButton != nil {
 		l.QuestLogButton.X = questLogX
 		l.QuestLogButton.Y = uiButtonY
-		l.QuestLogButton.Radius = smallButtonSize
+		l.QuestLogButton.Radius = sizes.smallButtonSize
 	}
 	if l.MapButton != nil {
 		l.MapButton.X = mapX
 		l.MapButton.Y = uiButtonY
-		l.MapButton.Radius = smallButtonSize
+		l.MapButton.Radius = sizes.smallButtonSize
 	}
+}
 
-	// Update spell buttons positions
-	if l.SpellButtons != nil {
-		spellButtonY := l.ActionButton.Y - buttonSize*1.8
-		for i := range l.SpellButtons {
-			if l.SpellButtons[i] != nil {
-				l.SpellButtons[i].X = float64(screenWidth)/2 - smallButtonSize*3 + float64(i)*smallButtonSize*1.3
-				l.SpellButtons[i].Y = spellButtonY
-				l.SpellButtons[i].Radius = smallButtonSize
-			}
+// resizeSpellButtons repositions all spell casting buttons.
+func (l *VirtualControlsLayout) resizeSpellButtons(screenWidth int, sizes controlSizes) {
+	if l.SpellButtons == nil {
+		return
+	}
+	spellButtonY := l.ActionButton.Y - sizes.buttonSize*1.8
+	for i := range l.SpellButtons {
+		if l.SpellButtons[i] != nil {
+			l.SpellButtons[i].X = float64(screenWidth)/2 - sizes.smallButtonSize*3 + float64(i)*sizes.smallButtonSize*1.3
+			l.SpellButtons[i].Y = spellButtonY
+			l.SpellButtons[i].Radius = sizes.smallButtonSize
 		}
 	}
 }

@@ -38,10 +38,14 @@
 //	sys := destruction.NewSystem(config)
 //
 //	// Register a building
-//	sys.RegisterBuilding("house1", 16, 16, 2, destruction.MaterialWood)
+//	if err := sys.RegisterBuilding("house1", 16, 16, 2, destruction.MaterialWood); err != nil {
+//	    log.Fatalf("failed to register building: %v", err)
+//	}
 //
 //	// Apply damage (explosion at x=8, y=8, radius=5.0, amount=0.6)
-//	sys.ApplyDamage("house1", 8, 8, 0, 0.6, 5.0)
+//	if err := sys.ApplyDamage("house1", 8, 8, 0, 0.6, 5.0); err != nil {
+//	    log.Printf("failed to apply damage: %v", err)
+//	}
 //
 //	// Update system each frame
 //	for {

@@ -3,6 +3,8 @@ package destruction
 import (
 	"image/color"
 	"math"
+
+	log "github.com/sirupsen/logrus"
 )
 
 // IntegrityState represents the structural integrity state of a building
@@ -190,6 +192,12 @@ func GetMaterialProperties(material MaterialType) MaterialProperties {
 			Flammable:  false,
 		}
 	default:
+		// Log warning for unknown material type to help catch bugs
+		log.WithFields(log.Fields{
+			"material":      int(material),
+			"component":     "destruction",
+			"function":      "GetMaterialProperties",
+		}).Warn("Unknown material type, using default properties")
 		return MaterialProperties{
 			Density:    0.5,
 			Bounciness: 0.3,

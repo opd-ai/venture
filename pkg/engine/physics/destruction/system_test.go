@@ -254,15 +254,28 @@ func TestSystem_RegisterBuilding(t *testing.T) {
 		height   int
 		floors   int
 		material MaterialType
+		wantErr  bool
 	}{
-		{"small_house", "house1", 8, 8, 1, MaterialWood},
-		{"large_manor", "manor1", 24, 24, 3, MaterialStone},
-		{"tower", "tower1", 6, 16, 5, MaterialBrick},
+		{"small_house", "house1", 8, 8, 1, MaterialWood, false},
+		{"large_manor", "manor1", 24, 24, 3, MaterialStone, false},
+		{"tower", "tower1", 6, 16, 5, MaterialBrick, false},
+		{"empty_id", "", 8, 8, 1, MaterialWood, true},
+		{"zero_width", "invalid1", 0, 8, 1, MaterialWood, true},
+		{"negative_height", "invalid2", 8, -1, 1, MaterialWood, true},
+		{"zero_floors", "invalid3", 8, 8, 0, MaterialWood, true},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			sys.RegisterBuilding(tt.id, tt.width, tt.height, tt.floors, tt.material)
+			err := sys.RegisterBuilding(tt.id, tt.width, tt.height, tt.floors, tt.material)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("RegisterBuilding() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+
+			if tt.wantErr {
+				return
+			}
 
 			integrity, err := sys.GetIntegrity(tt.id)
 			if err != nil {
@@ -298,7 +311,7 @@ func TestSystem_RegisterBuilding(t *testing.T) {
 
 func TestSystem_ApplyDamage(t *testing.T) {
 	sys := NewSystem(nil)
-	sys.RegisterBuilding("building1", 10, 10, 1, MaterialStone)
+	_ = sys.RegisterBuilding("building1", 10, 10, 1, MaterialStone)
 
 	tests := []struct {
 		name         string
@@ -357,9 +370,9 @@ func TestSystem_ApplyDamage(t *testing.T) {
 
 func TestSystem_Update(t *testing.T) {
 	sys := NewSystem(nil)
-	sys.RegisterBuilding("building1", 10, 10, 1, MaterialWood)
+	_ = sys.RegisterBuilding("building1", 10, 10, 1, MaterialWood)
 
-	sys.ApplyDamage("building1", 5, 5, 0, 0.3, 5.0)
+	_ = sys.ApplyDamage("building1", 5, 5, 0, 0.3, 5.0)
 
 	initialHealth := 0.0
 	if integrity, _ := sys.GetIntegrity("building1"); integrity != nil {
@@ -384,9 +397,9 @@ func TestSystem_UpdateZeroDelta(t *testing.T) {
 
 func TestSystem_Collapse(t *testing.T) {
 	sys := NewSystem(nil)
-	sys.RegisterBuilding("fragile", 8, 8, 1, MaterialGlass)
+	_ = sys.RegisterBuilding("fragile", 8, 8, 1, MaterialGlass)
 
-	sys.ApplyDamage("fragile", 4, 4, 0, 0.95, 15.0)
+	_ = sys.ApplyDamage("fragile", 4, 4, 0, 0.95, 15.0)
 
 	for i := 0; i < 100; i++ {
 		sys.Update(0.1)
@@ -405,32 +418,55 @@ func TestSystem_Collapse(t *testing.T) {
 
 func TestSystem_RemoveBuilding(t *testing.T) {
 	sys := NewSystem(nil)
-	sys.RegisterBuilding("temp", 8, 8, 1, MaterialWood)
+	_ = sys.RegisterBuilding("temp", 8, 8, 1, MaterialWood)
 
 	_, err := sys.GetIntegrity("temp")
 	if err != nil {
 		t.Fatal("Building should exist")
 	}
 
-	sys.RemoveBuilding("temp")
+	err = sys.RemoveBuilding("temp")
+	if err != nil {
+		t.Errorf("RemoveBuilding() unexpected error = %v", err)
+	}
 
 	_, err = sys.GetIntegrity("temp")
 	if err == nil {
 		t.Error("Building should not exist after removal")
+	}
+
+	// Test removing nonexistent building
+	err = sys.RemoveBuilding("nonexistent")
+	if err == nil {
+		t.Error("RemoveBuilding() should return error for nonexistent building")
 	}
 }
 
 func TestSystem_SpawnFallingObject(t *testing.T) {
 	sys := NewSystem(nil)
 
-	sys.SpawnFallingObject(100, 100, 200, MaterialStone, 16, 16)
+	err := sys.SpawnFallingObject(100, 100, 200, MaterialStone, 16, 16)
+	if err != nil {
+		t.Errorf("SpawnFallingObject() unexpected error = %v", err)
+	}
 
 	if sys.GetFallingObjectCount() != 1 {
 		t.Errorf("Falling object count = %v, want 1", sys.GetFallingObjectCount())
 	}
 
-	for i := 0; i < sys.config.MaxFallingObjects+10; i++ {
-		sys.SpawnFallingObject(float64(i), float64(i), 100, MaterialWood, 8, 8)
+	// Fill up to the limit
+	for i := 1; i < sys.config.MaxFallingObjects; i++ {
+		_ = sys.SpawnFallingObject(float64(i), float64(i), 100, MaterialWood, 8, 8)
+	}
+
+	if sys.GetFallingObjectCount() != sys.config.MaxFallingObjects {
+		t.Errorf("Falling object count = %v, want %v", sys.GetFallingObjectCount(), sys.config.MaxFallingObjects)
+	}
+
+	// Try to exceed the limit - should return error
+	err = sys.SpawnFallingObject(999, 999, 100, MaterialWood, 8, 8)
+	if err == nil {
+		t.Error("SpawnFallingObject() should return error when limit reached")
 	}
 
 	if sys.GetFallingObjectCount() > sys.config.MaxFallingObjects {
@@ -441,7 +477,7 @@ func TestSystem_SpawnFallingObject(t *testing.T) {
 
 func TestSystem_FallingObjectPhysics(t *testing.T) {
 	sys := NewSystem(nil)
-	sys.SpawnFallingObject(100, 100, 200, MaterialStone, 16, 16)
+	_ = sys.SpawnFallingObject(100, 100, 200, MaterialStone, 16, 16)
 
 	objs := sys.GetFallingObjects()
 	if len(objs) == 0 {
@@ -475,8 +511,8 @@ func TestSystem_DebrisPhysics(t *testing.T) {
 	cfg.DebrisLifetime = 1.0
 	sys := NewSystem(cfg)
 
-	sys.RegisterBuilding("test", 8, 8, 1, MaterialWood)
-	sys.ApplyDamage("test", 4, 4, 0, 1.0, 10.0)
+	_ = sys.RegisterBuilding("test", 8, 8, 1, MaterialWood)
+	_ = sys.ApplyDamage("test", 4, 4, 0, 1.0, 10.0)
 
 	for i := 0; i < 100; i++ {
 		sys.Update(0.1)
@@ -499,12 +535,12 @@ func TestSystem_DebrisPhysics(t *testing.T) {
 
 func BenchmarkSystem_Update(b *testing.B) {
 	sys := NewSystem(nil)
-	sys.RegisterBuilding("bench1", 10, 10, 1, MaterialStone)
-	sys.RegisterBuilding("bench2", 16, 16, 2, MaterialWood)
-	sys.RegisterBuilding("bench3", 24, 24, 3, MaterialBrick)
+	_ = sys.RegisterBuilding("bench1", 10, 10, 1, MaterialStone)
+	_ = sys.RegisterBuilding("bench2", 16, 16, 2, MaterialWood)
+	_ = sys.RegisterBuilding("bench3", 24, 24, 3, MaterialBrick)
 
-	sys.ApplyDamage("bench1", 5, 5, 0, 0.3, 3.0)
-	sys.ApplyDamage("bench2", 8, 8, 0, 0.4, 4.0)
+	_ = sys.ApplyDamage("bench1", 5, 5, 0, 0.3, 3.0)
+	_ = sys.ApplyDamage("bench2", 8, 8, 0, 0.4, 4.0)
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
@@ -514,11 +550,11 @@ func BenchmarkSystem_Update(b *testing.B) {
 
 func BenchmarkSystem_ApplyDamage(b *testing.B) {
 	sys := NewSystem(nil)
-	sys.RegisterBuilding("bench", 20, 20, 2, MaterialStone)
+	_ = sys.RegisterBuilding("bench", 20, 20, 2, MaterialStone)
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		sys.ApplyDamage("bench", 10, 10, 0, 0.1, 2.0)
+		_ = sys.ApplyDamage("bench", 10, 10, 0, 0.1, 2.0)
 	}
 }
 
@@ -527,6 +563,6 @@ func BenchmarkSystem_RegisterBuilding(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		sys.RegisterBuilding("bench", 16, 16, 2, MaterialStone)
+		_ = sys.RegisterBuilding("bench", 16, 16, 2, MaterialStone)
 	}
 }

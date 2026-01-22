@@ -52,8 +52,16 @@ func (s *System) Update(deltaTime float64) {
 	}
 }
 
-// RegisterBuilding adds a building to the integrity tracking system
-func (s *System) RegisterBuilding(buildingID string, width, height, floors int, material MaterialType) {
+// RegisterBuilding adds a building to the integrity tracking system.
+// Returns an error if buildingID is empty or dimensions are invalid (non-positive).
+func (s *System) RegisterBuilding(buildingID string, width, height, floors int, material MaterialType) error {
+	if buildingID == "" {
+		return fmt.Errorf("buildingID cannot be empty")
+	}
+	if width <= 0 || height <= 0 || floors <= 0 {
+		return fmt.Errorf("invalid building dimensions: width=%d height=%d floors=%d", width, height, floors)
+	}
+
 	supports := s.generateSupports(width, height, floors, material)
 
 	totalHealth := float64(len(supports)) * 100.0
@@ -68,6 +76,7 @@ func (s *System) RegisterBuilding(buildingID string, width, height, floors int, 
 		CollapseRisk:   0.0,
 		LastDamageTime: 0,
 	}
+	return nil
 }
 
 // ApplyDamage applies damage to a building at a specific location
@@ -120,9 +129,14 @@ func (s *System) GetIntegrity(buildingID string) (*StructuralIntegrity, error) {
 	return integrity, nil
 }
 
-// RemoveBuilding removes a building from tracking
-func (s *System) RemoveBuilding(buildingID string) {
+// RemoveBuilding removes a building from tracking.
+// Returns an error if the building does not exist.
+func (s *System) RemoveBuilding(buildingID string) error {
+	if _, exists := s.buildings[buildingID]; !exists {
+		return fmt.Errorf("building not found: %s", buildingID)
+	}
 	delete(s.buildings, buildingID)
+	return nil
 }
 
 // GetDebrisCount returns the number of active debris particles
@@ -431,10 +445,12 @@ func (s *System) updateFallingObjects(deltaTime float64) {
 	s.fallingObjects, s.fallingBuffer = s.fallingBuffer, s.fallingObjects
 }
 
-// SpawnFallingObject adds a falling object to the simulation
-func (s *System) SpawnFallingObject(x, y, z float64, material MaterialType, width, height float64) {
+// SpawnFallingObject adds a falling object to the simulation.
+// Returns an error if the maximum number of falling objects has been reached.
+func (s *System) SpawnFallingObject(x, y, z float64, material MaterialType, width, height float64) error {
 	if len(s.fallingObjects) >= s.config.MaxFallingObjects {
-		return
+		return fmt.Errorf("cannot spawn falling object: limit reached (%d/%d)",
+			len(s.fallingObjects), s.config.MaxFallingObjects)
 	}
 
 	obj := &FallingObject{
@@ -456,4 +472,5 @@ func (s *System) SpawnFallingObject(x, y, z float64, material MaterialType, widt
 	}
 
 	s.fallingObjects = append(s.fallingObjects, obj)
+	return nil
 }

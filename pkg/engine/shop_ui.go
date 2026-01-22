@@ -513,7 +513,7 @@ func (ui *ShopUI) isDrawable() bool {
 }
 
 // drawShopWindow renders the main shop window and contents.
-func (ui *ShopUI) drawShopWindow(img *ebiten.Image, playerInv *InventoryComponent, merchant *ShopkeeperComponent) {
+func (ui *ShopUI) drawShopWindow(img *ebiten.Image, playerInv *InventoryComponent, merchant *MerchantComponent) {
 	windowX, windowY, windowWidth := ui.drawWindowBackground(img)
 	ui.drawHeader(img, playerInv, merchant, windowX, windowY, windowWidth)
 	ui.drawModeInstructions(img, windowX, windowY)

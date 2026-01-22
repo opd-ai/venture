@@ -1171,7 +1171,7 @@ func (ui *CraftingUI) hasRequiredMaterials(recipe *Recipe, inventory *InventoryC
 }
 
 // hasMaterial checks if inventory contains sufficient quantity of a material.
-func (ui *CraftingUI) hasMaterial(mat RecipeMaterial, inventory *InventoryComponent) bool {
+func (ui *CraftingUI) hasMaterial(mat MaterialRequirement, inventory *InventoryComponent) bool {
 	hasQuantity := 0
 	for _, item := range inventory.Items {
 		if item != nil && item.Name == mat.ItemName {

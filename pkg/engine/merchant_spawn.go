@@ -61,7 +61,7 @@ func SpawnMerchantFromData(world *World, merchantData *procgenEntity.MerchantDat
 	merchantAnim.FrameTime = 0.2 // Slower animation for NPCs
 	merchantAnim.Loop = true
 	merchantAnim.Playing = true
-	merchantAnim.FrameCount = 4
+	merchantAnim.FrameCount = 8 // V7.0: 8-frame animations
 	merchant.AddComponent(merchantAnim)
 
 	// Add collider (merchants are solid NPCs) - Phase 45: 64×64 collider

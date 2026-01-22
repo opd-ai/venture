@@ -1911,7 +1911,7 @@ func createPlayerEntity(game *engine.EbitenGame, playerX, playerY float64, anima
 	playerAnim.FrameTime = 0.15
 	playerAnim.Loop = true
 	playerAnim.Playing = true
-	playerAnim.FrameCount = 4
+	playerAnim.FrameCount = 8 // V7.0: 8-frame animations
 	playerAnim.Dirty = true
 	player.AddComponent(playerAnim)
 

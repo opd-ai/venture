@@ -177,7 +177,7 @@ func createCompanionEntity(world *World, companionData CompanionSpawnData, x, y 
 	animComp.FrameTime = 0.2 // Standard NPC animation speed
 	animComp.Loop = true
 	animComp.Playing = true
-	animComp.FrameCount = 4
+	animComp.FrameCount = 8 // V7.0: 8-frame animations
 	entity.AddComponent(animComp)
 
 	// Add collider

@@ -221,7 +221,7 @@ func NewAnimationComponent(seed int64) *AnimationComponent {
 		Loop:            true,
 		Playing:         true,
 		Seed:            seed,
-		FrameCount:      4, // Default 4 frames per animation
+		FrameCount:      8, // V7.0: 8-frame animations for smoother visuals
 		Dirty:           true,
 		Facing:          DirDown, // Default facing down (toward viewer)
 	}

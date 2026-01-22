@@ -171,7 +171,7 @@ func initializeGame() {
 	playerAnim.FrameTime = 0.15
 	playerAnim.Loop = true
 	playerAnim.Playing = true
-	playerAnim.FrameCount = 4
+	playerAnim.FrameCount = 8 // V7.0: 8-frame animations
 	playerEntity.AddComponent(playerAnim)
 
 	// Add equipment visual component

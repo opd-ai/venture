@@ -211,7 +211,7 @@ func addVisualComponents(enemy *Entity, genEntity *entity.Entity, seed int64) fl
 	enemyAnim.FrameTime = 0.2
 	enemyAnim.Loop = true
 	enemyAnim.Playing = true
-	enemyAnim.FrameCount = 4
+	enemyAnim.FrameCount = 8 // V7.0: 8-frame animations
 	enemyAnim.Dirty = true
 	enemy.AddComponent(enemyAnim)
 
@@ -404,8 +404,8 @@ func SpawnEnemyFromTemplate(world *World, genEntity *entity.Entity, x, y float64
 	enemyAnim.FrameTime = 0.2
 	enemyAnim.Loop = true
 	enemyAnim.Playing = true
-	enemyAnim.FrameCount = 4
-	enemyAnim.Dirty = true // CRITICAL: Mark dirty to trigger initial frame generation
+	enemyAnim.FrameCount = 8 // V7.0: 8-frame animations
+	enemyAnim.Dirty = true   // CRITICAL: Mark dirty to trigger initial frame generation
 	enemy.AddComponent(enemyAnim)
 
 	// Visual feedback (Phase 10)

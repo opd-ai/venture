@@ -21,7 +21,7 @@ const (
 	// Animation
 	animationCacheSize = 300  // max cached animation sequences (WASM optimization)
 	playerFrameTime    = 0.15 // seconds per animation frame (~6.7 FPS)
-	playerFrameCount   = 4    // frames per animation sequence
+	playerFrameCount   = 8    // frames per animation sequence (V7.0: 8-frame animations)
 
 	// Sprite cache (Phase 1.2)
 	spriteCacheMaxSize = 400 * 1024 * 1024 // 400MB limit for sprite cache

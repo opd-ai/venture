@@ -454,7 +454,7 @@ func calculateHazardPosition(room *terrain.Room, rng *rand.Rand, tileSize, paddi
 }
 
 // addHazardComponents attaches sprite, collider, and hazard components to entity.
-func addHazardComponents(entity *engine.Entity, envObj *environment.EnvironmentObject, subType environment.SubType) {
+func addHazardComponents(entity *engine.Entity, envObj *environment.EnvironmentalObject, subType environment.SubType) {
 	sprite := &engine.EbitenSprite{
 		Image:   nil,
 		Width:   float64(envObj.Width),

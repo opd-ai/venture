@@ -707,6 +707,19 @@ func (m *Manager) initializeTalentTrees() {
 
 	m.talentTrees[ClassRogue] = createRogueTalentTree()
 	m.talentTrees[ClassCleric] = createClericTalentTree()
+
+	// Extended talent trees for remaining base classes
+	m.talentTrees[ClassBerserker] = createBerserkerTalentTree()
+	m.talentTrees[ClassPaladin] = createPaladinTalentTree()
+	m.talentTrees[ClassKnight] = createKnightTalentTree()
+	m.talentTrees[ClassAssassin] = createAssassinTalentTree()
+	m.talentTrees[ClassRanger] = createRangerTalentTree()
+	m.talentTrees[ClassNinja] = createNinjaTalentTree()
+	m.talentTrees[ClassElementalist] = createElementalistTalentTree()
+	m.talentTrees[ClassNecromancer] = createNecromancerTalentTree()
+	m.talentTrees[ClassEnchanter] = createEnchanterTalentTree()
+	m.talentTrees[ClassBard] = createBardTalentTree()
+	m.talentTrees[ClassDruid] = createDruidTalentTree()
 }
 
 func createRogueTalentTree() *TalentTree {

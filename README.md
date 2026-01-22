@@ -46,7 +46,7 @@ Venture v1.0.0 is a production-ready release with player housing, guild systems,
 - 🤝 **Social Persistence**: Trust scores with decay, chat history (1000 messages), image galleries (100 images), reputation tracking
 - 🔬 **Advanced Physics**: Vehicle suspension, weight transfer, tire tracks, fluid dynamics, swimming, destructible buildings
 - 🌐 **Federation Extensions**: Mobile federation, battery optimization, NAT traversal, WebRTC API (stub mode with TCP/UDP fallback)
-- 🧠 **Deep Gameplay**: Companion AI with 24-skill trees & personality evolution, branching narratives with 6 endings, multi-classing (15 base + 20 prestige), talent trees (120 talents)
+- 🧠 **Deep Gameplay**: Companion AI with 24-skill trees & personality evolution, branching narratives with 6 endings, multi-classing (15 base + 20 prestige), talent trees (450 talents)
 - 🎮 **Server Modding**: JSON-based mods, blueprint sharing, zero-asset constraint maintained
 - ⚡ **Performance**: 60 FPS maintained, <500MB memory, <150MB per player persistence
 

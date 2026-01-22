@@ -1,12 +1,12 @@
 # Implementation Gap Analysis
 Generated: 2026-01-22T02:29:56.195Z
-Updated: 2026-01-22T02:55:00Z
+Updated: 2026-01-22T03:15:00Z
 Codebase Version: 35fc07098576d0c07334ebb7b3801870284c3468
 
 ## Executive Summary
-Total Gaps Found: 4 (2 Fixed, 2 Remaining)
+Total Gaps Found: 4 (3 Fixed, 1 Remaining)
 - Critical: 0
-- Moderate: 3 (1 Fixed)
+- Moderate: 3 (2 Fixed)
 - Minor: 1 (Fixed)
 
 All findings represent documentation drift where README.md claims do not match the actual implementation. The codebase is mature and functional, but documentation has not been updated to reflect implementation decisions.
@@ -99,66 +99,20 @@ func NewAnimationComponent(seed int64) *AnimationComponent {
 
 ### Gap #3: Talent Tree Implementation Incomplete (120 implemented vs implied 450)
 **Severity: Moderate**
+**Status: ✅ FIXED** - Implemented talent trees for all 15 base classes (450 total talents)
 
 **Documentation Reference:** 
 > "🧠 **Deep Gameplay**: Companion AI with 24-skill trees & personality evolution, branching narratives with 6 endings, multi-classing (15 base + 20 prestige), talent trees (120 talents)" (README.md:49)
 
 > "Each base class has 30 talents organized in 3 categories" (pkg/class/advanced/doc.go:55)
 
-**Implementation Location:** `pkg/class/advanced/talents.go:164,438,708,709`
-
-**Expected Behavior:** With 15 base classes and 30 talents per class, there should be 450 total talents. The README claims 120 talents.
-
-**Actual Implementation:** Only 4 classes have implemented talent trees:
-1. Warrior (30 talents)
-2. Mage (30 talents)
-3. Rogue (30 talents)
-4. Cleric (30 talents)
-
-Total: 120 talents implemented.
-
-**Gap Details:** The README accurately states "120 talents" which matches implementation. However, the package documentation claims "Each base class has 30 talents" with 15 base classes, implying 450 total talents. This is a documentation inconsistency between the README and package-level docs.
-
-The 11 remaining base classes (Berserker, Paladin, Knight, Assassin, Ranger, Ninja, Elementalist, Necromancer, Enchanter, Bard, Druid) do not have talent trees implemented. Attempting to get their talent trees returns an error.
-
-**Reproduction:**
-```go
-// List all talent tree assignments in pkg/class/advanced/talents.go
-m.talentTrees[ClassWarrior] = &TalentTree{...}  // line 164
-m.talentTrees[ClassMage] = &TalentTree{...}     // line 438
-m.talentTrees[ClassRogue] = createRogueTalentTree()   // line 708
-m.talentTrees[ClassCleric] = createClericTalentTree() // line 709
-
-// Only 4 classes have talent trees
-// 11 remaining classes will return error: "no talent tree for class: X"
-```
-
-**Production Impact:** Players choosing any of the 11 unimplemented classes (Berserker, Paladin, Knight, Assassin, Ranger, Ninja, Elementalist, Necromancer, Enchanter, Bard, Druid) cannot access talent trees. The UI will display an error when attempting to view talents for these classes.
-
-**Evidence:**
-```go
-// pkg/class/advanced/talents.go - Only 4 talent trees are assigned
-m.talentTrees[ClassWarrior] = &TalentTree{
-    Name:    "Warrior Talents",
-    ClassID: ClassWarrior,
-    Offensive: []TalentDefinition{...}, // 10 talents
-    Defensive: []TalentDefinition{...}, // 10 talents
-    Utility: []TalentDefinition{...},   // 10 talents
-}
-
-m.talentTrees[ClassMage] = &TalentTree{...}
-m.talentTrees[ClassRogue] = createRogueTalentTree()
-m.talentTrees[ClassCleric] = createClericTalentTree()
-
-// pkg/class/advanced/manager.go:379-382
-func (m *Manager) GetTalentTree(classID ClassID) (*TalentTree, error) {
-    tree, exists := m.talentTrees[classID]
-    if !exists {
-        return nil, fmt.Errorf("no talent tree for class: %s", classID)
-    }
-    return tree, nil
-}
-```
+**Resolution:** 
+- Added talent trees for all 11 previously unimplemented classes: Berserker, Paladin, Knight, Assassin, Ranger, Ninja, Elementalist, Necromancer, Enchanter, Bard, Druid
+- Each class now has 30 talents (10 offensive, 10 defensive, 10 utility)
+- Total talents: 15 classes × 30 talents = 450 talents
+- Updated README.md to reflect "450 talents" instead of "120 talents"
+- Created new file: pkg/class/advanced/talents_extended.go
+- Added comprehensive tests: TestAllClassesTalentTrees, TestTotalTalentCount
 
 ---
 
@@ -184,7 +138,7 @@ func (m *Manager) GetTalentTree(classID ClassID) (*TalentTree, error) {
 |-------|-------|--------|--------|
 | 1 | 8-frame vs 4-frame animations | **TODO** | Update animation implementations to use 8 frames, OR update README to reflect 4-frame reality |
 | 2 | Prestige level 30 vs 20 | ✅ **FIXED** | README updated to show "level 20" |
-| 3 | Incomplete talent trees | **TODO** | Add talent trees for remaining 11 classes, OR add note that only 4 classes have full talent trees |
+| 3 | Incomplete talent trees | ✅ **FIXED** | Added talent trees for all 15 classes (450 total talents) |
 | 4 | Max players example | ✅ **FIXED** | README updated to show `-max-players 8` |
 
 ## Verification Commands

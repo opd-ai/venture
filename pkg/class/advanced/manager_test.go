@@ -414,3 +414,72 @@ func BenchmarkRespecTalents(b *testing.B) {
 		m.RespecTalents("player1", 10000)
 	}
 }
+
+// TestAllClassesTalentTrees verifies all 15 base classes have complete talent trees
+func TestAllClassesTalentTrees(t *testing.T) {
+	m := NewManager()
+
+	allClasses := []ClassID{
+		ClassWarrior, ClassBerserker, ClassPaladin, ClassKnight,
+		ClassRogue, ClassAssassin, ClassRanger, ClassNinja,
+		ClassMage, ClassElementalist, ClassNecromancer, ClassEnchanter,
+		ClassCleric, ClassBard, ClassDruid,
+	}
+
+	for _, classID := range allClasses {
+		t.Run(string(classID), func(t *testing.T) {
+			tree, err := m.GetTalentTree(classID)
+			if err != nil {
+				t.Fatalf("GetTalentTree(%s) error = %v", classID, err)
+			}
+			if tree == nil {
+				t.Fatalf("GetTalentTree(%s) returned nil", classID)
+			}
+
+			// Each class should have 30 talents total (10 per category)
+			if len(tree.Offensive) != 10 {
+				t.Errorf("%s Offensive talents = %d, want 10", classID, len(tree.Offensive))
+			}
+			if len(tree.Defensive) != 10 {
+				t.Errorf("%s Defensive talents = %d, want 10", classID, len(tree.Defensive))
+			}
+			if len(tree.Utility) != 10 {
+				t.Errorf("%s Utility talents = %d, want 10", classID, len(tree.Utility))
+			}
+
+			// Verify tree name and class ID are set correctly
+			if tree.ClassID != classID {
+				t.Errorf("%s tree.ClassID = %s, want %s", classID, tree.ClassID, classID)
+			}
+			if tree.Name == "" {
+				t.Errorf("%s tree.Name is empty", classID)
+			}
+		})
+	}
+}
+
+// TestTotalTalentCount verifies we have the documented 450 talents (15 classes * 30 talents)
+func TestTotalTalentCount(t *testing.T) {
+	m := NewManager()
+
+	allClasses := []ClassID{
+		ClassWarrior, ClassBerserker, ClassPaladin, ClassKnight,
+		ClassRogue, ClassAssassin, ClassRanger, ClassNinja,
+		ClassMage, ClassElementalist, ClassNecromancer, ClassEnchanter,
+		ClassCleric, ClassBard, ClassDruid,
+	}
+
+	totalTalents := 0
+	for _, classID := range allClasses {
+		tree, err := m.GetTalentTree(classID)
+		if err != nil {
+			t.Fatalf("GetTalentTree(%s) error = %v", classID, err)
+		}
+		totalTalents += len(tree.Offensive) + len(tree.Defensive) + len(tree.Utility)
+	}
+
+	expectedTotal := 15 * 30 // 15 classes * 30 talents each
+	if totalTalents != expectedTotal {
+		t.Errorf("Total talents = %d, want %d", totalTalents, expectedTotal)
+	}
+}

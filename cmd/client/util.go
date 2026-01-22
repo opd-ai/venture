@@ -473,13 +473,13 @@ func spawnEnvironmentalHazards(world *engine.World, terrain *terrain.Terrain, se
 			worldX := float64(tileX * tileSize)
 			worldY := float64(tileY * tileSize)
 
-			// Generate environmental object
+			// Generate environmental object (Phase 45: 64×64 default sprites)
 			config := environment.Config{
 				SubType: subType,
 				GenreID: genreID,
 				Seed:    seed + int64(i*1000+j),
-				Width:   28, // Standard sprite size
-				Height:  28,
+				Width:   64, // Phase 45 standard sprite size
+				Height:  64,
 			}
 
 			envObj, err := envGen.Generate(config)

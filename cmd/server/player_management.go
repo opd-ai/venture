@@ -44,14 +44,16 @@ func createPlayerEntity(world *engine.World, terrain *terrain.Terrain, playerID 
 		Synced:   true,
 	})
 
-	// Add sprite for rendering (28x28 to fit through 32px corridors)
+	// Add sprite for rendering (Phase 45: 64×64 enhanced sprites)
 	var playerSprite *engine.EbitenSprite
+	const playerSpriteSize = 64  // Phase 45 standard sprite size
+	const playerColliderOff = -32 // Center offset (64/2 = 32)
 	if useAerialSprites {
 		// Generate procedural directional sprites with aerial-view perspective
 		spriteGen := sprites.NewGenerator()
 		config := sprites.Config{
-			Width:   28,
-			Height:  28,
+			Width:   playerSpriteSize,
+			Height:  playerSpriteSize,
 			Seed:    seed + int64(playerID), // Unique seed per player
 			GenreID: genreID,
 			Type:    sprites.SpriteEntity,
@@ -64,14 +66,14 @@ func createPlayerEntity(world *engine.World, terrain *terrain.Terrain, playerID 
 		directionalSprites, err := spriteGen.GenerateDirectionalSprites(config)
 		if err != nil {
 			logger.WithError(err).Warn("failed to generate directional sprites, using fallback")
-			playerSprite = engine.NewSpriteComponent(28, 28, color.RGBA{100, 150, 255, 255})
+			playerSprite = engine.NewSpriteComponent(playerSpriteSize, playerSpriteSize, color.RGBA{100, 150, 255, 255})
 		} else {
 			// Create sprite component with initial down-facing direction
 			// directionalSprites is map[int]*ebiten.Image with keys 0-3
 			playerSprite = &engine.EbitenSprite{
 				Image:             directionalSprites[int(engine.DirDown)],
-				Width:             28,
-				Height:            28,
+				Width:             playerSpriteSize,
+				Height:            playerSpriteSize,
 				Visible:           true,
 				Layer:             10,
 				CurrentDirection:  int(engine.DirDown),
@@ -86,7 +88,7 @@ func createPlayerEntity(world *engine.World, terrain *terrain.Terrain, playerID 
 		}
 	} else {
 		// Use simple colored sprite for side-view
-		playerSprite = engine.NewSpriteComponent(28, 28, color.RGBA{100, 150, 255, 255})
+		playerSprite = engine.NewSpriteComponent(playerSpriteSize, playerSpriteSize, color.RGBA{100, 150, 255, 255})
 	}
 
 	playerSprite.Layer = 10 // Draw players on top
@@ -123,15 +125,15 @@ func createPlayerEntity(world *engine.World, terrain *terrain.Terrain, playerID 
 		Cooldown:   0.5,
 	})
 
-	// Add collision for player (28x28 to fit through 32px corridors)
+	// Add collision for player (Phase 45: 64×64 collider)
 	entity.AddComponent(&engine.ColliderComponent{
-		Width:     28,
-		Height:    28,
+		Width:     playerSpriteSize,
+		Height:    playerSpriteSize,
 		Solid:     true,
 		IsTrigger: false,
 		Layer:     1,
-		OffsetX:   -14, // Center the collider (28/2 = 14)
-		OffsetY:   -14,
+		OffsetX:   playerColliderOff, // Center the collider (64/2 = 32)
+		OffsetY:   playerColliderOff,
 	})
 
 	if logger.GetLevel() >= logrus.DebugLevel {

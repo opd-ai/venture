@@ -43,11 +43,13 @@ func SpawnMerchantFromData(world *World, merchantData *procgenEntity.MerchantDat
 	// Add team component (neutral team)
 	merchant.AddComponent(&TeamComponent{TeamID: 0})
 
-	// Add sprite (distinct from player/enemies)
+	// Add sprite (distinct from player/enemies) - Phase 45: 64×64 enhanced sprites
+	const merchantSpriteSize = 64  // Phase 45 standard sprite size
+	const merchantColliderOff = -32 // Center offset (64/2 = 32)
 	merchantSprite := &EbitenSprite{
-		Image:   ebiten.NewImage(28, 28),
-		Width:   28,
-		Height:  28,
+		Image:   ebiten.NewImage(merchantSpriteSize, merchantSpriteSize),
+		Width:   merchantSpriteSize,
+		Height:  merchantSpriteSize,
 		Visible: true,
 		Layer:   10, // Same layer as player
 	}
@@ -62,15 +64,15 @@ func SpawnMerchantFromData(world *World, merchantData *procgenEntity.MerchantDat
 	merchantAnim.FrameCount = 4
 	merchant.AddComponent(merchantAnim)
 
-	// Add collider (merchants are solid NPCs)
+	// Add collider (merchants are solid NPCs) - Phase 45: 64×64 collider
 	merchant.AddComponent(&ColliderComponent{
-		Width:     28,
-		Height:    28,
+		Width:     merchantSpriteSize,
+		Height:    merchantSpriteSize,
 		Solid:     true,
 		IsTrigger: false,
 		Layer:     1,
-		OffsetX:   -14,
-		OffsetY:   -14,
+		OffsetX:   merchantColliderOff,
+		OffsetY:   merchantColliderOff,
 	})
 
 	// Convert MerchantType from procgen to engine

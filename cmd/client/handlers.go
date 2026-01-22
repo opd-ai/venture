@@ -1895,11 +1895,11 @@ func createPlayerEntity(game *engine.EbitenGame, playerX, playerY float64, anima
 	player.AddComponent(engine.NewRotationComponent(0, 3.0)) // Start facing right
 	player.AddComponent(engine.NewAimComponent(0))           // Start aiming right
 
-	// Add animated sprite
+	// Add animated sprite (Phase 45: 64×64 enhanced sprites)
 	playerSprite := &engine.EbitenSprite{
 		Image:   nil, // Will be created by animation system
-		Width:   28,
-		Height:  28,
+		Width:   playerSpriteWidth,
+		Height:  playerSpriteHeight,
 		Visible: true,
 		Layer:   10,
 	}
@@ -1931,8 +1931,8 @@ func createPlayerEntity(game *engine.EbitenGame, playerX, playerY float64, anima
 	layerComp.CurrentLayer = 0
 	player.AddComponent(&layerComp)
 
-	// Add shadow component
-	playerShadow := engine.NewShadowComponent(28)
+	// Add shadow component (Phase 45: shadow matches 64×64 sprite)
+	playerShadow := engine.NewShadowComponent(playerSpriteWidth)
 	playerShadow.CastsShadow = true
 	playerShadow.ShadowType = engine.ShadowTypeSoft
 	player.AddComponent(playerShadow)
@@ -2035,15 +2035,15 @@ func addPlayerComponents(player *engine.Entity, logger *logrus.Logger, clientLog
 		Cooldown:   0.5,
 	})
 
-	// Add collision
+	// Add collision (Phase 45: collider matches 64×64 sprite)
 	player.AddComponent(&engine.ColliderComponent{
-		Width:     28,
-		Height:    28,
+		Width:     playerSpriteWidth,
+		Height:    playerSpriteHeight,
 		Solid:     true,
 		IsTrigger: false,
 		Layer:     1,
-		OffsetX:   -14,
-		OffsetY:   -14,
+		OffsetX:   playerColliderOffset,
+		OffsetY:   playerColliderOffset,
 	})
 
 	// Add visual feedback

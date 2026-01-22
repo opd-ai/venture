@@ -11,9 +11,9 @@ const (
 
 	// Tile and sprite dimensions
 	tileSize             = 32  // standard tile size used throughout the engine
-	playerSpriteWidth    = 28  // player sprite width in pixels
-	playerSpriteHeight   = 28  // player sprite height in pixels
-	playerColliderOffset = -14 // center offset for collider (28/2 = 14)
+	playerSpriteWidth    = 64  // player sprite width in pixels (Phase 45 enhanced)
+	playerSpriteHeight   = 64  // player sprite height in pixels (Phase 45 enhanced)
+	playerColliderOffset = -32 // center offset for collider (64/2 = 32)
 
 	// Audio
 	audioSampleRate = 44100 // 44.1kHz sample rate for audio synthesis

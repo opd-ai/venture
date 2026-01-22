@@ -514,27 +514,11 @@ func (s *DiscoverySystem) unlockStoryQuests(player *Entity, seriesID string) {
 		"series_id":   seriesID,
 	}).Debug("Checking for quest unlocks from completed series")
 
-	questTrackerComp, ok := player.GetComponent("questtracker")
-	if !ok {
-		log.WithFields(log.Fields{
-			"system_name":    "discovery",
-			"player_id":      player.ID,
-			"component_type": "questtracker",
-		}).Debug("Player missing quest tracker component, skipping quest unlock")
-		return // Player doesn't have quest tracker
-	}
-
-	questTracker, ok := questTrackerComp.(*QuestTrackerComponent)
-	if !ok {
-		log.WithFields(log.Fields{
-			"system_name":    "discovery",
-			"player_id":      player.ID,
-			"component_type": "questtracker",
-		}).Error("Invalid quest tracker component type")
+	questTracker := s.validateQuestTracker(player)
+	if questTracker == nil {
 		return
 	}
 
-	// Check if quest generator is configured
 	if s.questGenerator == nil {
 		log.WithFields(log.Fields{
 			"system_name": "discovery",
@@ -544,13 +528,41 @@ func (s *DiscoverySystem) unlockStoryQuests(player *Entity, seriesID string) {
 		return
 	}
 
-	// Generate quest ID based on series ID
-	questID := fmt.Sprintf("story-%s", seriesID)
+	s.registerNewQuestForSeries(player, questTracker, seriesID)
+	unlockedCount := s.unlockSeriesQuests(player, questTracker, seriesID)
+	s.logUnlockResults(player, seriesID, unlockedCount)
+}
 
-	// Check if this series already has a registered quest
+// validateQuestTracker retrieves and validates the quest tracker component from the player.
+func (s *DiscoverySystem) validateQuestTracker(player *Entity) *QuestTrackerComponent {
+	questTrackerComp, ok := player.GetComponent("questtracker")
+	if !ok {
+		log.WithFields(log.Fields{
+			"system_name":    "discovery",
+			"player_id":      player.ID,
+			"component_type": "questtracker",
+		}).Debug("Player missing quest tracker component, skipping quest unlock")
+		return nil
+	}
+
+	questTracker, ok := questTrackerComp.(*QuestTrackerComponent)
+	if !ok {
+		log.WithFields(log.Fields{
+			"system_name":    "discovery",
+			"player_id":      player.ID,
+			"component_type": "questtracker",
+		}).Error("Invalid quest tracker component type")
+		return nil
+	}
+
+	return questTracker
+}
+
+// registerNewQuestForSeries registers a new quest ID for the series if one doesn't exist.
+func (s *DiscoverySystem) registerNewQuestForSeries(player *Entity, questTracker *QuestTrackerComponent, seriesID string) {
+	questID := fmt.Sprintf("story-%s", seriesID)
 	questIDs, exists := questTracker.StoryUnlockedQuests[seriesID]
 	if !exists || len(questIDs) == 0 {
-		// Register a new quest for this series
 		questTracker.RegisterStoryQuest(seriesID, questID)
 		log.WithFields(log.Fields{
 			"system_name": "discovery",
@@ -559,78 +571,87 @@ func (s *DiscoverySystem) unlockStoryQuests(player *Entity, seriesID string) {
 			"quest_id":    questID,
 		}).Debug("Registered new story quest for series")
 	}
+}
 
-	// Unlock quests for this series using a quest generator callback
-	unlockedCount := questTracker.UnlockStoryQuests(seriesID, func(qID string) *quest.Quest {
-		log.WithFields(log.Fields{
-			"system_name": "discovery",
-			"player_id":   player.ID,
-			"series_id":   seriesID,
-			"quest_id":    qID,
-		}).Debug("Generating story quest")
-
-		// Generate quest using the quest generator
-		// Use series-specific seed based on the base seed and series ID hash
-		// This ensures deterministic generation: same seriesID always produces same quest
-		questSeed := s.seed ^ hashSeriesID(seriesID)
-
-		// Set up generation parameters
-		params := procgen.GenerationParams{
-			Difficulty: 0.5, // Medium difficulty for story quests
-			Depth:      1,   // Story quests are depth 1
-			GenreID:    s.genreID,
-			Custom: map[string]interface{}{
-				"count":      1,         // Generate one quest
-				"quest_type": "explore", // Story quests are exploration quests
-				"series_id":  seriesID,  // Include series ID for context
-			},
-		}
-
-		// Generate quest
-		result, err := s.questGenerator.Generate(questSeed, params)
-		if err != nil {
-			log.WithFields(log.Fields{
-				"system_name": "discovery",
-				"player_id":   player.ID,
-				"series_id":   seriesID,
-				"quest_id":    qID,
-				"error":       err.Error(),
-			}).Error("Failed to generate story quest")
-			return nil
-		}
-
-		// Extract quest from result
-		quests, ok := result.([]*quest.Quest)
-		if !ok || len(quests) == 0 {
-			log.WithFields(log.Fields{
-				"system_name": "discovery",
-				"player_id":   player.ID,
-				"series_id":   seriesID,
-				"quest_id":    qID,
-			}).Warn("Quest generator returned invalid result")
-			return nil
-		}
-
-		// Return the first generated quest with the correct ID.
-		// Copy the quest before mutating to avoid affecting any cached/reused instances
-		// that may be held by the quest generator.
-		generatedQuest := quests[0]
-		customQuest := *generatedQuest
-		customQuest.ID = qID // Override with our quest ID
-		customQuest.Name = fmt.Sprintf("Investigate: %s", seriesID)
-		customQuest.Description = fmt.Sprintf("Having completed the story fragments, you feel compelled to investigate the location related to '%s'.", seriesID)
-
-		log.WithFields(log.Fields{
-			"system_name": "discovery",
-			"player_id":   player.ID,
-			"series_id":   seriesID,
-			"quest_id":    qID,
-			"quest_name":  customQuest.Name,
-		}).Info("Story quest generated successfully")
-
-		return &customQuest
+// unlockSeriesQuests unlocks quests for the series using the quest generator callback.
+func (s *DiscoverySystem) unlockSeriesQuests(player *Entity, questTracker *QuestTrackerComponent, seriesID string) int {
+	return questTracker.UnlockStoryQuests(seriesID, func(qID string) *quest.Quest {
+		return s.generateStoryQuest(player, seriesID, qID)
 	})
+}
 
+// generateStoryQuest generates a single story quest using the procgen system.
+func (s *DiscoverySystem) generateStoryQuest(player *Entity, seriesID, qID string) *quest.Quest {
+	log.WithFields(log.Fields{
+		"system_name": "discovery",
+		"player_id":   player.ID,
+		"series_id":   seriesID,
+		"quest_id":    qID,
+	}).Debug("Generating story quest")
+
+	questSeed := s.seed ^ hashSeriesID(seriesID)
+	params := s.buildQuestGenerationParams(seriesID)
+
+	result, err := s.questGenerator.Generate(questSeed, params)
+	if err != nil {
+		log.WithFields(log.Fields{
+			"system_name": "discovery",
+			"player_id":   player.ID,
+			"series_id":   seriesID,
+			"quest_id":    qID,
+			"error":       err.Error(),
+		}).Error("Failed to generate story quest")
+		return nil
+	}
+
+	return s.extractAndCustomizeQuest(player, seriesID, qID, result)
+}
+
+// buildQuestGenerationParams creates the generation parameters for story quests.
+func (s *DiscoverySystem) buildQuestGenerationParams(seriesID string) procgen.GenerationParams {
+	return procgen.GenerationParams{
+		Difficulty: 0.5,
+		Depth:      1,
+		GenreID:    s.genreID,
+		Custom: map[string]interface{}{
+			"count":      1,
+			"quest_type": "explore",
+			"series_id":  seriesID,
+		},
+	}
+}
+
+// extractAndCustomizeQuest extracts the quest from generation result and customizes it.
+func (s *DiscoverySystem) extractAndCustomizeQuest(player *Entity, seriesID, qID string, result interface{}) *quest.Quest {
+	quests, ok := result.([]*quest.Quest)
+	if !ok || len(quests) == 0 {
+		log.WithFields(log.Fields{
+			"system_name": "discovery",
+			"player_id":   player.ID,
+			"series_id":   seriesID,
+			"quest_id":    qID,
+		}).Warn("Quest generator returned invalid result")
+		return nil
+	}
+
+	customQuest := *quests[0]
+	customQuest.ID = qID
+	customQuest.Name = fmt.Sprintf("Investigate: %s", seriesID)
+	customQuest.Description = fmt.Sprintf("Having completed the story fragments, you feel compelled to investigate the location related to '%s'.", seriesID)
+
+	log.WithFields(log.Fields{
+		"system_name": "discovery",
+		"player_id":   player.ID,
+		"series_id":   seriesID,
+		"quest_id":    qID,
+		"quest_name":  customQuest.Name,
+	}).Info("Story quest generated successfully")
+
+	return &customQuest
+}
+
+// logUnlockResults logs the results of the quest unlock attempt.
+func (s *DiscoverySystem) logUnlockResults(player *Entity, seriesID string, unlockedCount int) {
 	if unlockedCount > 0 {
 		log.WithFields(log.Fields{
 			"system_name":    "discovery",

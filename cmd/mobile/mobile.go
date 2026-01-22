@@ -43,7 +43,7 @@ func init() {
 // initializeGame initializes the game for mobile platforms.
 func initializeGame() {
 	if gameInstance != nil {
-		return // Already initialized
+		return
 	}
 
 	logger.WithFields(logrus.Fields{
@@ -51,11 +51,21 @@ func initializeGame() {
 		"genre": genreID,
 	}).Info("initializing mobile game with Version 2.0 systems")
 
-	// Create the game instance with mobile-friendly dimensions
-	// Portrait mode: 720x1280 (9:16 aspect ratio)
+	initializeGameInstance()
+	generatedTerrain := initializeTerrainAndSystems()
+	spawnEnemiesInWorld(generatedTerrain)
+	createAndConfigurePlayer(generatedTerrain)
+	finalizeGameSetup()
+
+	logger.Info("mobile game fully initialized with all Version 2.0 systems")
+
+	mobile.SetGame(gameInstance)
+}
+
+// initializeGameInstance creates the game instance and initializes all game systems.
+func initializeGameInstance() {
 	gameInstance = engine.NewEbitenGameWithLogger(720, 1280, logger)
 
-	// Initialize all game systems using shared initialization
 	config := engine.DefaultSystemInitConfig(worldSeed, genreID, logger)
 	config.EnableVerboseLogging = true
 
@@ -67,8 +77,10 @@ func initializeGame() {
 	}
 
 	logger.WithField("systemCount", 43).Info("game systems initialized successfully")
+}
 
-	// Generate initial world terrain
+// initializeTerrainAndSystems generates terrain and configures terrain-dependent systems.
+func initializeTerrainAndSystems() *terrain.Terrain {
 	logger.Info("generating procedural terrain")
 
 	terrainGen := terrain.NewBSPGeneratorWithLogger(logger)
@@ -77,7 +89,7 @@ func initializeGame() {
 		Depth:      1,
 		GenreID:    genreID,
 		Custom: map[string]interface{}{
-			"width":  60, // Smaller for mobile
+			"width":  60,
 			"height": 40,
 		},
 	}
@@ -85,7 +97,7 @@ func initializeGame() {
 	terrainResult, err := terrainGen.Generate(worldSeed, params)
 	if err != nil {
 		logger.WithError(err).Fatal("failed to generate terrain")
-		return
+		return nil
 	}
 
 	generatedTerrain := terrainResult.(*terrain.Terrain)
@@ -95,27 +107,31 @@ func initializeGame() {
 		"roomCount": len(generatedTerrain.Rooms),
 	}).Info("terrain generated")
 
-	// Initialize terrain rendering system
+	setupTerrainSystems(generatedTerrain)
+	return generatedTerrain
+}
+
+// setupTerrainSystems initializes terrain rendering, collision, and spatial partition systems.
+func setupTerrainSystems(generatedTerrain *terrain.Terrain) {
 	terrainRenderSystem := engine.NewTerrainRenderSystem(32, 32, genreID, worldSeed)
 	terrainRenderSystem.SetTerrain(generatedTerrain)
 	gameInstance.TerrainRenderSystem = terrainRenderSystem
 
-	// Initialize terrain collision checking
 	terrainChecker := engine.NewTerrainCollisionChecker(32, 32)
 	terrainChecker.SetTerrain(generatedTerrain)
 
-	// Connect terrain checker to collision and projectile systems
 	systemsInitResult.CollisionSystem.SetTerrainChecker(terrainChecker)
 	systemsInitResult.ProjectileSystem.SetTerrainChecker(terrainChecker)
 
-	// Initialize spatial partition system (system #44)
 	worldWidth := float64(generatedTerrain.Width) * 32.0
 	worldHeight := float64(generatedTerrain.Height) * 32.0
 	engine.InitializeSpatialPartitionSystem(gameInstance, worldWidth, worldHeight, true, true, logger)
 
 	logger.Info("all 44 systems initialized")
+}
 
-	// Spawn enemies in terrain
+// spawnEnemiesInWorld spawns enemies in the generated terrain.
+func spawnEnemiesInWorld(generatedTerrain *terrain.Terrain) {
 	enemyParams := procgen.GenerationParams{
 		Difficulty: 0.5,
 		Depth:      1,
@@ -128,37 +144,50 @@ func initializeGame() {
 	} else {
 		logger.WithField("enemyCount", enemyCount).Info("spawned enemies")
 	}
+}
 
-	// Create player entity
+// createAndConfigurePlayer creates the player entity and adds all necessary components.
+func createAndConfigurePlayer(generatedTerrain *terrain.Terrain) {
 	playerEntity = gameInstance.World.CreateEntity()
 
-	// Calculate player spawn position from first room
-	var playerX, playerY float64
+	playerX, playerY := calculatePlayerSpawnPosition(generatedTerrain)
+
+	addBasicPlayerComponents(playerX, playerY)
+	addVisualPlayerComponents()
+	configurePlayerSystems()
+	addPlayerStatsAndInventory()
+	loadPlayerAbilities()
+	addPlayerCombatComponents()
+}
+
+// calculatePlayerSpawnPosition determines the player's starting position.
+func calculatePlayerSpawnPosition(generatedTerrain *terrain.Terrain) (float64, float64) {
 	if len(generatedTerrain.Rooms) > 0 {
 		firstRoom := generatedTerrain.Rooms[0]
 		cx, cy := firstRoom.Center()
-		playerX = float64(cx * 32)
-		playerY = float64(cy * 32)
-	} else {
-		playerX, playerY = 400, 300
+		return float64(cx * 32), float64(cy * 32)
 	}
+	return 400, 300
+}
 
-	// Add player components
+// addBasicPlayerComponents adds core components to the player entity.
+func addBasicPlayerComponents(playerX, playerY float64) {
 	playerEntity.AddComponent(&engine.PositionComponent{X: playerX, Y: playerY})
 	playerEntity.AddComponent(&engine.VelocityComponent{VX: 0, VY: 0})
 	playerEntity.AddComponent(&engine.HealthComponent{Current: 100, Max: 100})
 	playerEntity.AddComponent(&engine.TeamComponent{TeamID: 1})
 	playerEntity.AddComponent(&engine.EbitenInput{})
-
-	// Phase 10.1: Add rotation and aim components
 	playerEntity.AddComponent(engine.NewRotationComponent(0, 3.0))
 	playerEntity.AddComponent(engine.NewAimComponent(0))
+}
 
-	// Add sprite and animation (Phase 45: 64×64 enhanced sprites)
-	const playerSpriteSize = 64  // Phase 45 standard sprite size
-	const playerColliderOff = -32 // Center offset (64/2 = 32)
+// addVisualPlayerComponents adds sprite, animation, camera, and visual effect components.
+func addVisualPlayerComponents() {
+	const playerSpriteSize = 64
+	const playerColliderOff = -32
+
 	playerSprite := &engine.EbitenSprite{
-		Image:   nil, // Will be generated by animation system
+		Image:   nil,
 		Width:   playerSpriteSize,
 		Height:  playerSpriteSize,
 		Visible: true,
@@ -171,99 +200,27 @@ func initializeGame() {
 	playerAnim.FrameTime = 0.15
 	playerAnim.Loop = true
 	playerAnim.Playing = true
-	playerAnim.FrameCount = 8 // V7.0: 8-frame animations
+	playerAnim.FrameCount = 8
 	playerEntity.AddComponent(playerAnim)
 
-	// Add equipment visual component
-	equipmentVisualComp := engine.NewEquipmentVisualComponent()
-	playerEntity.AddComponent(equipmentVisualComp)
+	playerEntity.AddComponent(engine.NewEquipmentVisualComponent())
 
-	// Add camera
 	camera := engine.NewCameraComponent()
 	camera.Smoothing = 0.1
 	playerEntity.AddComponent(camera)
 
-	// Phase 10.3: Add screen shake and hit-stop
 	playerEntity.AddComponent(engine.NewScreenShakeComponent())
 	playerEntity.AddComponent(engine.NewHitStopComponent())
 
-	// Phase 11.1: Add layer component
 	layerComp := engine.NewLayerComponent()
 	layerComp.CurrentLayer = 0
 	playerEntity.AddComponent(&layerComp)
 
-	// Phase 14: Add shadow (Phase 45: shadow matches 64×64 sprite)
 	playerShadow := engine.NewShadowComponent(playerSpriteSize)
 	playerShadow.CastsShadow = true
 	playerShadow.ShadowType = engine.ShadowTypeSoft
 	playerEntity.AddComponent(playerShadow)
 
-	// Set player as active camera
-	gameInstance.CameraSystem.SetActiveCamera(playerEntity)
-
-	// Configure animation system
-	systemsInitResult.AnimationSystem.SetCameraSystem(gameInstance.CameraSystem)
-	systemsInitResult.AnimationSystem.SetPlayerEntity(playerEntity)
-
-	// Set player for HUD and UI
-	gameInstance.HUDSystem.SetPlayerEntity(playerEntity)
-	gameInstance.SetPlayerEntity(playerEntity)
-
-	// Add player stats
-	playerStats := engine.NewStatsComponent()
-	playerStats.Attack = 10
-	playerStats.Defense = 5
-	playerStats.CritChance = 0.05
-	playerStats.CritDamage = 1.5
-	playerStats.Evasion = 0.05
-	playerEntity.AddComponent(playerStats)
-
-	// Add player experience
-	playerExp := engine.NewExperienceComponent()
-	playerEntity.AddComponent(playerExp)
-
-	// Add player inventory
-	playerInventory := engine.NewInventoryComponent(20, 100.0)
-	playerInventory.Gold = 100
-	playerEntity.AddComponent(playerInventory)
-
-	// Add player equipment
-	playerEquipment := engine.NewEquipmentComponent()
-	playerEntity.AddComponent(playerEquipment)
-
-	// Add mana
-	playerMana := &engine.ManaComponent{
-		Current: 100,
-		Max:     100,
-		Regen:   5.0,
-	}
-	playerEntity.AddComponent(playerMana)
-
-	// Load spells
-	err = engine.LoadPlayerSpells(playerEntity, worldSeed, genreID, 1)
-	if err != nil {
-		logger.WithError(err).Warn("failed to load player spells")
-	}
-
-	// Load skill tree
-	err = engine.LoadPlayerSkillTree(playerEntity, worldSeed, genreID, 0)
-	if err != nil {
-		logger.WithError(err).Warn("failed to load skill tree")
-	}
-
-	// Add quest tracker
-	questTracker := engine.NewQuestTrackerComponent(5)
-	playerEntity.AddComponent(questTracker)
-
-	// Add attack capability
-	playerEntity.AddComponent(&engine.AttackComponent{
-		Damage:     15,
-		DamageType: 1, // Physical
-		Range:      50,
-		Cooldown:   0.5,
-	})
-
-	// Add collision (Phase 45: collider matches 64×64 sprite)
 	playerEntity.AddComponent(&engine.ColliderComponent{
 		Width:     playerSpriteSize,
 		Height:    playerSpriteSize,
@@ -274,27 +231,80 @@ func initializeGame() {
 		OffsetY:   playerColliderOff,
 	})
 
-	// Add visual feedback
 	playerEntity.AddComponent(engine.NewVisualFeedbackComponent())
+}
 
-	// Add adaptive soundtrack component for dynamic music (Phase 29)
-	playerEntity.AddComponent(engine.NewAdaptiveSoundtrackComponent(genreID))
+// configurePlayerSystems configures camera, animation, and HUD systems for the player.
+func configurePlayerSystems() {
+	gameInstance.CameraSystem.SetActiveCamera(playerEntity)
+	systemsInitResult.AnimationSystem.SetCameraSystem(gameInstance.CameraSystem)
+	systemsInitResult.AnimationSystem.SetPlayerEntity(playerEntity)
+	gameInstance.HUDSystem.SetPlayerEntity(playerEntity)
+	gameInstance.SetPlayerEntity(playerEntity)
+}
 
-	// Add starter items
+// addPlayerStatsAndInventory adds stats, experience, inventory, equipment, and mana.
+func addPlayerStatsAndInventory() {
+	playerStats := engine.NewStatsComponent()
+	playerStats.Attack = 10
+	playerStats.Defense = 5
+	playerStats.CritChance = 0.05
+	playerStats.CritDamage = 1.5
+	playerStats.Evasion = 0.05
+	playerEntity.AddComponent(playerStats)
+
+	playerEntity.AddComponent(engine.NewExperienceComponent())
+
+	playerInventory := engine.NewInventoryComponent(20, 100.0)
+	playerInventory.Gold = 100
+	playerEntity.AddComponent(playerInventory)
+
+	playerEntity.AddComponent(engine.NewEquipmentComponent())
+
+	playerMana := &engine.ManaComponent{
+		Current: 100,
+		Max:     100,
+		Regen:   5.0,
+	}
+	playerEntity.AddComponent(playerMana)
+
 	addStarterItems(playerInventory, worldSeed, genreID)
+}
 
-	// Setup audio
+// loadPlayerAbilities loads spells and skill trees for the player.
+func loadPlayerAbilities() {
+	err := engine.LoadPlayerSpells(playerEntity, worldSeed, genreID, 1)
+	if err != nil {
+		logger.WithError(err).Warn("failed to load player spells")
+	}
+
+	err = engine.LoadPlayerSkillTree(playerEntity, worldSeed, genreID, 0)
+	if err != nil {
+		logger.WithError(err).Warn("failed to load skill tree")
+	}
+}
+
+// addPlayerCombatComponents adds quest tracking, attack, and soundtrack components.
+func addPlayerCombatComponents() {
+	playerEntity.AddComponent(engine.NewQuestTrackerComponent(5))
+
+	playerEntity.AddComponent(&engine.AttackComponent{
+		Damage:     15,
+		DamageType: 1,
+		Range:      50,
+		Cooldown:   0.5,
+	})
+
+	playerEntity.AddComponent(engine.NewAdaptiveSoundtrackComponent(genreID))
+}
+
+// finalizeGameSetup starts background music and processes initial entity additions.
+func finalizeGameSetup() {
 	if err := systemsInitResult.AudioManager.PlayMusic(genreID, "exploration"); err != nil {
 		logger.WithError(err).Warn("failed to start background music")
 	}
 
-	// Process initial entity additions
 	gameInstance.World.Update(0)
-
-	logger.Info("mobile game fully initialized with all Version 2.0 systems")
-
-	// Register the game with ebitenmobile
-	mobile.SetGame(gameInstance)
 }
 
 // addStarterItems generates and adds starting items to the player's inventory.

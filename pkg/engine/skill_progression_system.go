@@ -82,44 +82,68 @@ func (s *SkillProgressionSystem) applySkillBonuses(entity *Entity) {
 		"component_type": "skill_tree",
 	}).Debug("Applying skill bonuses to entity")
 
+	treeComp := s.validateSkillTreeComponent(entity)
+	if treeComp == nil {
+		return
+	}
+
+	stats := s.validateStatsComponent(entity)
+	if stats == nil {
+		return
+	}
+
+	bonuses := s.calculateSkillBonuses(entity, treeComp)
+	s.applyBonusesToStats(entity, stats, bonuses)
+}
+
+// validateSkillTreeComponent retrieves and validates the skill tree component.
+func (s *SkillProgressionSystem) validateSkillTreeComponent(entity *Entity) *SkillTreeComponent {
 	comp, ok := entity.GetComponent("skill_tree")
 	if !ok {
 		log.WithFields(log.Fields{
 			"entity_id":      entity.ID,
 			"component_type": "skill_tree",
 		}).Debug("Entity missing skill_tree component")
-		return
+		return nil
 	}
-	// Type assert with safety check
+
 	treeComp, ok := comp.(*SkillTreeComponent)
 	if !ok {
 		log.WithFields(log.Fields{
 			"entity_id":      entity.ID,
 			"component_type": "skill_tree",
 		}).Error("Failed to type assert skill_tree component")
-		return
+		return nil
 	}
 
-	// Get stats component
+	return treeComp
+}
+
+// validateStatsComponent retrieves and validates the stats component.
+func (s *SkillProgressionSystem) validateStatsComponent(entity *Entity) *StatsComponent {
 	statsComp, ok := entity.GetComponent("stats")
 	if !ok {
 		log.WithFields(log.Fields{
 			"entity_id":      entity.ID,
 			"component_type": "stats",
 		}).Debug("Entity missing stats component, no stats to modify")
-		return // No stats to modify
+		return nil
 	}
-	// Type assert with safety check
+
 	stats, ok := statsComp.(*StatsComponent)
 	if !ok {
 		log.WithFields(log.Fields{
 			"entity_id":      entity.ID,
 			"component_type": "stats",
 		}).Error("Failed to type assert stats component")
-		return
+		return nil
 	}
 
-	// Reset bonus stats (we'll recalculate from scratch)
+	return stats
+}
+
+// calculateSkillBonuses calculates total bonuses from all learned skills.
+func (s *SkillProgressionSystem) calculateSkillBonuses(entity *Entity, treeComp *SkillTreeComponent) *SkillBonuses {
 	bonuses := &SkillBonuses{
 		DamageBonus:       0,
 		DefenseBonus:      0,
@@ -137,42 +161,14 @@ func (s *SkillProgressionSystem) applySkillBonuses(entity *Entity) {
 		"learned_skills": len(treeComp.LearnedSkills),
 	}).Debug("Starting bonus calculation from learned skills")
 
-	// Accumulate bonuses from all learned skills
 	skillsProcessed := 0
 	effectsApplied := 0
 	for skillID := range treeComp.LearnedSkills {
-		skill := treeComp.Tree.GetSkillByID(skillID)
-		if skill == nil {
-			log.WithFields(log.Fields{
-				"entity_id": entity.ID,
-				"skill_id":  skillID,
-			}).Warn("Learned skill not found in tree")
-			continue
+		effects := s.processLearnedSkill(entity, treeComp, skillID, bonuses)
+		if effects > 0 {
+			skillsProcessed++
+			effectsApplied += effects
 		}
-
-		// Get skill level for scaling
-		skillLevel := treeComp.GetSkillLevel(skillID)
-		if skillLevel == 0 {
-			log.WithFields(log.Fields{
-				"entity_id": entity.ID,
-				"skill_id":  skillID,
-			}).Debug("Skill has zero level, skipping")
-			continue
-		}
-
-		log.WithFields(log.Fields{
-			"entity_id":    entity.ID,
-			"skill_id":     skillID,
-			"skill_level":  skillLevel,
-			"effect_count": len(skill.Effects),
-		}).Debug("Processing skill effects")
-
-		// Apply each effect
-		for _, effect := range skill.Effects {
-			s.applyEffect(bonuses, effect, float64(skillLevel))
-			effectsApplied++
-		}
-		skillsProcessed++
 	}
 
 	log.WithFields(log.Fields{
@@ -184,8 +180,41 @@ func (s *SkillProgressionSystem) applySkillBonuses(entity *Entity) {
 		"health_bonus":     bonuses.HealthBonus,
 	}).Debug("Completed bonus calculation")
 
-	// Apply accumulated bonuses to stats
-	s.applyBonusesToStats(entity, stats, bonuses)
+	return bonuses
+}
+
+// processLearnedSkill processes effects from a single learned skill and returns the number of effects applied.
+func (s *SkillProgressionSystem) processLearnedSkill(entity *Entity, treeComp *SkillTreeComponent, skillID string, bonuses *SkillBonuses) int {
+	skill := treeComp.Tree.GetSkillByID(skillID)
+	if skill == nil {
+		log.WithFields(log.Fields{
+			"entity_id": entity.ID,
+			"skill_id":  skillID,
+		}).Warn("Learned skill not found in tree")
+		return 0
+	}
+
+	skillLevel := treeComp.GetSkillLevel(skillID)
+	if skillLevel == 0 {
+		log.WithFields(log.Fields{
+			"entity_id": entity.ID,
+			"skill_id":  skillID,
+		}).Debug("Skill has zero level, skipping")
+		return 0
+	}
+
+	log.WithFields(log.Fields{
+		"entity_id":    entity.ID,
+		"skill_id":     skillID,
+		"skill_level":  skillLevel,
+		"effect_count": len(skill.Effects),
+	}).Debug("Processing skill effects")
+
+	for _, effect := range skill.Effects {
+		s.applyEffect(bonuses, effect, float64(skillLevel))
+	}
+
+	return len(skill.Effects)
 }
 
 // applyEffect adds a single effect to the bonus accumulator.

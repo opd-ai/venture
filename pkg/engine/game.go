@@ -567,44 +567,72 @@ func (g *EbitenGame) handleMultiplayerMenuJoin() {
 
 // handleMultiplayerMenuHost handles the Host Game selection from multiplayer menu.
 func (g *EbitenGame) handleMultiplayerMenuHost() {
+	g.logHostSelected()
+	g.pendingServerAddress = "localhost:8080"
+
+	if err := g.transitionToGameplayFromHost(); err != nil {
+		return
+	}
+
+	g.hideMultiplayerMenu()
+
+	if err := g.connectToHostedServer(); err != nil {
+		g.revertToMultiplayerMenu()
+		return
+	}
+
+	g.logHostConnection()
+}
+
+// logHostSelected logs host game selection.
+func (g *EbitenGame) logHostSelected() {
 	if g.logger != nil {
 		g.logger.Info("host game selected - menu-driven host deferred")
 	}
+}
 
-	// Note: --host-and-play CLI flag is the primary way to host games.
-	// Menu-driven host would duplicate that functionality.
-	// For now, automatically connect to localhost:8080 (assuming user started server separately).
-	// Future enhancement: integrate pkg/hostplay to start server from menu.
-	g.pendingServerAddress = "localhost:8080"
-
-	// Transition to gameplay
+// transitionToGameplayFromHost transitions from menu to gameplay state.
+func (g *EbitenGame) transitionToGameplayFromHost() error {
 	if err := g.StateManager.TransitionTo(AppStateGameplay); err != nil {
 		if g.logger != nil {
 			g.logger.WithError(err).Error("failed to transition to gameplay")
 		}
-		return
+		return err
 	}
+	return nil
+}
 
-	// Hide multiplayer menu
+// hideMultiplayerMenu hides the multiplayer menu UI.
+func (g *EbitenGame) hideMultiplayerMenu() {
 	if g.MultiplayerMenu != nil {
 		g.MultiplayerMenu.Hide()
 	}
+}
 
-	// Call multiplayer connect callback if set
-	if g.onMultiplayerConnect != nil {
-		if err := g.onMultiplayerConnect(g.pendingServerAddress); err != nil {
-			if g.logger != nil {
-				g.logger.WithError(err).Error("failed to connect to hosted server")
-			}
-			// Transition back to multiplayer menu on error
-			_ = g.StateManager.TransitionTo(AppStateMultiPlayerMenu)
-			if g.MultiplayerMenu != nil {
-				g.MultiplayerMenu.Show()
-			}
-			return
-		}
+// connectToHostedServer attempts connection to the hosted server.
+func (g *EbitenGame) connectToHostedServer() error {
+	if g.onMultiplayerConnect == nil {
+		return nil
 	}
+	if err := g.onMultiplayerConnect(g.pendingServerAddress); err != nil {
+		if g.logger != nil {
+			g.logger.WithError(err).Error("failed to connect to hosted server")
+		}
+		return err
+	}
+	return nil
+}
 
+// revertToMultiplayerMenu transitions back to multiplayer menu on connection failure.
+func (g *EbitenGame) revertToMultiplayerMenu() {
+	_ = g.StateManager.TransitionTo(AppStateMultiPlayerMenu)
+	if g.MultiplayerMenu != nil {
+		g.MultiplayerMenu.Show()
+	}
+}
+
+// logHostConnection logs successful connection to hosted server.
+func (g *EbitenGame) logHostConnection() {
 	if g.logger != nil {
 		g.logger.WithField("address", g.pendingServerAddress).Info("connected to hosted server")
 	}
@@ -632,40 +660,72 @@ func (g *EbitenGame) handleMultiplayerMenuBack() {
 
 // handleServerAddressConnect handles connecting to the entered server address.
 func (g *EbitenGame) handleServerAddressConnect(address string) {
+	g.logServerConnection(address)
+	g.pendingServerAddress = address
+
+	if err := g.transitionToGameplayFromServer(); err != nil {
+		return
+	}
+
+	g.hideServerAddressInput()
+
+	if err := g.connectToServer(address); err != nil {
+		g.revertToServerAddressInput()
+		return
+	}
+
+	g.logSuccessfulConnection(address)
+}
+
+// logServerConnection logs the connection attempt to server.
+func (g *EbitenGame) logServerConnection(address string) {
 	if g.logger != nil {
 		g.logger.WithField("address", address).Info("connecting to server")
 	}
+}
 
-	g.pendingServerAddress = address
-
-	// Transition to gameplay
+// transitionToGameplayFromServer transitions from server input to gameplay state.
+func (g *EbitenGame) transitionToGameplayFromServer() error {
 	if err := g.StateManager.TransitionTo(AppStateGameplay); err != nil {
 		if g.logger != nil {
 			g.logger.WithError(err).Error("failed to transition to gameplay")
 		}
-		return
+		return err
 	}
+	return nil
+}
 
-	// Hide server address input
+// hideServerAddressInput hides the server address input UI.
+func (g *EbitenGame) hideServerAddressInput() {
 	if g.ServerAddressInput != nil {
 		g.ServerAddressInput.Hide()
 	}
+}
 
-	// Call multiplayer connect callback if set
-	if g.onMultiplayerConnect != nil {
-		if err := g.onMultiplayerConnect(address); err != nil {
-			if g.logger != nil {
-				g.logger.WithError(err).Error("failed to connect to server")
-			}
-			// Transition back to server address input on error
-			_ = g.StateManager.TransitionTo(AppStateServerAddressInput)
-			if g.ServerAddressInput != nil {
-				g.ServerAddressInput.Show()
-			}
-			return
-		}
+// connectToServer attempts connection to the specified server address.
+func (g *EbitenGame) connectToServer(address string) error {
+	if g.onMultiplayerConnect == nil {
+		return nil
 	}
+	if err := g.onMultiplayerConnect(address); err != nil {
+		if g.logger != nil {
+			g.logger.WithError(err).Error("failed to connect to server")
+		}
+		return err
+	}
+	return nil
+}
 
+// revertToServerAddressInput transitions back to server input on connection failure.
+func (g *EbitenGame) revertToServerAddressInput() {
+	_ = g.StateManager.TransitionTo(AppStateServerAddressInput)
+	if g.ServerAddressInput != nil {
+		g.ServerAddressInput.Show()
+	}
+}
+
+// logSuccessfulConnection logs successful connection to server.
+func (g *EbitenGame) logSuccessfulConnection(address string) {
 	if g.logger != nil {
 		g.logger.WithField("address", address).Info("connected to server")
 	}

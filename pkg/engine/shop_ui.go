@@ -494,11 +494,7 @@ func (ui *ShopUI) attemptSell() {
 // Displays merchant/player inventory grid, prices, gold, and transaction feedback.
 func (ui *ShopUI) Draw(screen interface{}) {
 	img, ok := screen.(*ebiten.Image)
-	if !ok {
-		return
-	}
-
-	if !ui.visible || ui.playerEntity == nil || ui.merchantEntity == nil {
+	if !ok || !ui.isDrawable() {
 		return
 	}
 
@@ -507,6 +503,17 @@ func (ui *ShopUI) Draw(screen interface{}) {
 		return
 	}
 
+	ui.drawShopWindow(img, playerInv, merchant)
+	ui.drawTouchControls(img)
+}
+
+// isDrawable checks if the shop UI is ready to be drawn.
+func (ui *ShopUI) isDrawable() bool {
+	return ui.visible && ui.playerEntity != nil && ui.merchantEntity != nil
+}
+
+// drawShopWindow renders the main shop window and contents.
+func (ui *ShopUI) drawShopWindow(img *ebiten.Image, playerInv *InventoryComponent, merchant *ShopkeeperComponent) {
 	windowX, windowY, windowWidth := ui.drawWindowBackground(img)
 	ui.drawHeader(img, playerInv, merchant, windowX, windowY, windowWidth)
 	ui.drawModeInstructions(img, windowX, windowY)
@@ -516,8 +523,16 @@ func (ui *ShopUI) Draw(screen interface{}) {
 	ui.drawItemGrid(img, currentInventory, merchant, playerInv, windowX, windowY, gridStartY)
 
 	ui.errorState.DrawError(img)
+}
 
-	// Draw touch buttons
+// drawTouchControls renders touch control buttons for mobile interface.
+func (ui *ShopUI) drawTouchControls(img *ebiten.Image) {
+	ui.drawStaticButtons(img)
+	ui.drawContextualActionButton(img)
+}
+
+// drawStaticButtons renders always-visible touch buttons.
+func (ui *ShopUI) drawStaticButtons(img *ebiten.Image) {
 	if ui.closeButton != nil {
 		ui.closeButton.Draw(img)
 	}
@@ -527,14 +542,17 @@ func (ui *ShopUI) Draw(screen interface{}) {
 	if ui.sellTabButton != nil {
 		ui.sellTabButton.Draw(img)
 	}
+}
 
-	// Draw action button only when item is selected
-	if ui.selectedSlot >= 0 {
-		if ui.mode == ShopModeBuy && ui.buyButton != nil {
-			ui.buyButton.Draw(img)
-		} else if ui.mode == ShopModeSell && ui.sellButton != nil {
-			ui.sellButton.Draw(img)
-		}
+// drawContextualActionButton renders buy/sell button when item is selected.
+func (ui *ShopUI) drawContextualActionButton(img *ebiten.Image) {
+	if ui.selectedSlot < 0 {
+		return
+	}
+	if ui.mode == ShopModeBuy && ui.buyButton != nil {
+		ui.buyButton.Draw(img)
+	} else if ui.mode == ShopModeSell && ui.sellButton != nil {
+		ui.sellButton.Draw(img)
 	}
 }
 

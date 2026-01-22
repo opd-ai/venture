@@ -98,39 +98,47 @@ func NewBaseStatsFromEntity(entity *Entity) *BaseStatsComponent {
 // ApplyToEntity applies base stats back to an entity (resetting to unmodified values).
 // This should be called before applying skill bonuses to ensure clean calculations.
 func (b *BaseStatsComponent) ApplyToEntity(entity *Entity) {
-	// Apply base attack
+	b.applyBaseAttack(entity)
+	b.applyBaseDefenseAndMagic(entity)
+	b.applyBaseMaxHealth(entity)
+	b.applyBaseManaRegen(entity)
+}
+
+// applyBaseAttack applies base attack damage to entity's attack component.
+func (b *BaseStatsComponent) applyBaseAttack(entity *Entity) {
 	if attackComp, ok := entity.GetComponent("attack"); ok {
 		if attack, ok := attackComp.(*AttackComponent); ok {
 			attack.Damage = b.BaseAttack
 		}
 	}
+}
 
-	// Apply base defense and magic power
+// applyBaseDefenseAndMagic applies base defense and magic power to stats component.
+func (b *BaseStatsComponent) applyBaseDefenseAndMagic(entity *Entity) {
 	if statsComp, ok := entity.GetComponent("stats"); ok {
 		if stats, ok := statsComp.(*StatsComponent); ok {
 			stats.Defense = b.BaseDefense
 			stats.MagicPower = b.BaseMagicPower
 		}
 	}
+}
 
-	// Apply base max health
+// applyBaseMaxHealth applies base max health while preserving current health percentage.
+func (b *BaseStatsComponent) applyBaseMaxHealth(entity *Entity) {
 	if healthComp, ok := entity.GetComponent("health"); ok {
 		if health, ok := healthComp.(*HealthComponent); ok {
-			// Store current health percentage
 			healthPercent := health.Current / health.Max
-
-			// Update max health
 			health.Max = b.BaseMaxHealth
-
-			// Restore health percentage
 			health.Current = health.Max * healthPercent
 			if health.Current < 1 && healthPercent > 0 {
-				health.Current = 1 // Ensure at least 1 HP if was alive
+				health.Current = 1
 			}
 		}
 	}
+}
 
-	// Apply base mana regen
+// applyBaseManaRegen applies base mana regeneration rate to mana component.
+func (b *BaseStatsComponent) applyBaseManaRegen(entity *Entity) {
 	if manaComp, ok := entity.GetComponent("mana"); ok {
 		if mana, ok := manaComp.(*ManaComponent); ok {
 			mana.Regen = b.BaseManaRegen

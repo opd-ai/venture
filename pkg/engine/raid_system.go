@@ -272,40 +272,63 @@ func (s *RaidSystem) updateBossPhases() {
 	entities := s.world.GetEntitiesWith("raid_boss", "health")
 
 	for _, entity := range entities {
-		bossCompRaw, ok := entity.GetComponent("raid_boss")
-		if !ok {
+		bossComp, healthComp := s.getBossComponents(entity)
+		if bossComp == nil || healthComp == nil {
 			continue
 		}
-		bossComp := bossCompRaw.(*RaidBossComponent)
-
-		healthCompRaw, ok := entity.GetComponent("health")
-		if !ok {
-			continue
-		}
-		healthComp := healthCompRaw.(*HealthComponent)
 
 		healthPercent := healthComp.Current / healthComp.Max
+		s.checkPhaseTransitions(entity, bossComp, healthPercent)
+	}
+}
 
-		// Check for phase transition
-		for _, phase := range bossComp.Phases {
-			if phase.Number > bossComp.CurrentPhase && healthPercent <= phase.HealthThresh {
-				// Transition to new phase
-				bossComp.CurrentPhase = phase.Number
-				bossComp.PhaseEntered = true
+// getBossComponents retrieves boss and health components from entity.
+func (s *RaidSystem) getBossComponents(entity *Entity) (*RaidBossComponent, *HealthComponent) {
+	bossCompRaw, ok := entity.GetComponent("raid_boss")
+	if !ok {
+		return nil, nil
+	}
+	healthCompRaw, ok := entity.GetComponent("health")
+	if !ok {
+		return nil, nil
+	}
+	return bossCompRaw.(*RaidBossComponent), healthCompRaw.(*HealthComponent)
+}
 
-				// Spawn adds for this phase
-				if phase.AddSpawns > 0 {
-					posCompRaw, ok := entity.GetComponent("position")
-					if ok {
-						posComp := posCompRaw.(*PositionComponent)
-						for i := 0; i < phase.AddSpawns; i++ {
-							offset := float64(i * 50)
-							s.spawnBossAdd(posComp.X+offset, posComp.Y, 100)
-						}
-					}
-				}
-			}
+// checkPhaseTransitions triggers boss phase transitions based on health thresholds.
+func (s *RaidSystem) checkPhaseTransitions(entity *Entity, bossComp *RaidBossComponent, healthPercent float64) {
+	for _, phase := range bossComp.Phases {
+		if s.shouldTransitionToPhase(phase, bossComp, healthPercent) {
+			s.transitionBossToPhase(entity, bossComp, phase)
 		}
+	}
+}
+
+// shouldTransitionToPhase determines if boss should transition to a new phase.
+func (s *RaidSystem) shouldTransitionToPhase(phase raids.BossPhase, bossComp *RaidBossComponent, healthPercent float64) bool {
+	return phase.Number > bossComp.CurrentPhase && healthPercent <= phase.HealthThresh
+}
+
+// transitionBossToPhase executes the transition to a new boss phase.
+func (s *RaidSystem) transitionBossToPhase(entity *Entity, bossComp *RaidBossComponent, phase raids.BossPhase) {
+	bossComp.CurrentPhase = phase.Number
+	bossComp.PhaseEntered = true
+
+	if phase.AddSpawns > 0 {
+		s.spawnPhaseAdds(entity, phase.AddSpawns)
+	}
+}
+
+// spawnPhaseAdds spawns additional enemies when boss enters new phase.
+func (s *RaidSystem) spawnPhaseAdds(entity *Entity, addCount int) {
+	posCompRaw, ok := entity.GetComponent("position")
+	if !ok {
+		return
+	}
+	posComp := posCompRaw.(*PositionComponent)
+	for i := 0; i < addCount; i++ {
+		offset := float64(i * 50)
+		s.spawnBossAdd(posComp.X+offset, posComp.Y, 100)
 	}
 }
 

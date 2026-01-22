@@ -117,45 +117,62 @@ func (s *VoiceChannelSystem) updateSpeakingTimeouts(entities []*Entity, deltaTim
 
 // syncParticipants synchronizes participant lists between entities and channels.
 func (s *VoiceChannelSystem) syncParticipants(entities []*Entity) {
-	// Build map of entity ID to voice component for quick lookup
+	entityVoice := s.buildVoiceComponentMap(entities)
+	channelEntities := s.groupEntitiesByChannel(entityVoice)
+	s.updateParticipantLists(entityVoice, channelEntities)
+}
+
+// buildVoiceComponentMap creates a map of entity IDs to their voice components.
+func (s *VoiceChannelSystem) buildVoiceComponentMap(entities []*Entity) map[string]*VoiceChannelComponent {
 	entityVoice := make(map[string]*VoiceChannelComponent)
 	for _, entity := range entities {
-		if !entity.HasComponent("voice_channel") {
-			continue
-		}
-		comp, ok := entity.GetComponent("voice_channel")
-		if !ok {
-			continue
-		}
-		vc, ok := comp.(*VoiceChannelComponent)
-		if !ok {
-			continue
-		}
-		if vc.IsInChannel() {
+		if vc := s.extractVoiceComponent(entity); vc != nil && vc.IsInChannel() {
 			entityVoice[entityIDToString(entity.ID)] = vc
 		}
 	}
+	return entityVoice
+}
 
-	// Group entities by channel
+// extractVoiceComponent safely retrieves the voice channel component from entity.
+func (s *VoiceChannelSystem) extractVoiceComponent(entity *Entity) *VoiceChannelComponent {
+	if !entity.HasComponent("voice_channel") {
+		return nil
+	}
+	comp, ok := entity.GetComponent("voice_channel")
+	if !ok {
+		return nil
+	}
+	vc, ok := comp.(*VoiceChannelComponent)
+	if !ok {
+		return nil
+	}
+	return vc
+}
+
+// groupEntitiesByChannel organizes entity IDs by their voice channel.
+func (s *VoiceChannelSystem) groupEntitiesByChannel(entityVoice map[string]*VoiceChannelComponent) map[string][]string {
 	channelEntities := make(map[string][]string)
 	for entityID, vc := range entityVoice {
 		channelEntities[vc.ChannelID] = append(channelEntities[vc.ChannelID], entityID)
 	}
+	return channelEntities
+}
 
-	// Update each entity's participant list
+// updateParticipantLists rebuilds each entity's participant list.
+func (s *VoiceChannelSystem) updateParticipantLists(entityVoice map[string]*VoiceChannelComponent, channelEntities map[string][]string) {
 	for entityID, vc := range entityVoice {
 		participants := channelEntities[vc.ChannelID]
+		vc.Participants = s.buildParticipantList(entityID, participants, entityVoice)
+	}
+}
 
-		// Clear current participants and rebuild
-		vc.Participants = make([]VoiceParticipant, 0, len(participants)-1)
-
-		for _, otherID := range participants {
-			if otherID == entityID {
-				continue // Don't include self in participants list
-			}
-
+// buildParticipantList creates the participant list for an entity excluding itself.
+func (s *VoiceChannelSystem) buildParticipantList(entityID string, participants []string, entityVoice map[string]*VoiceChannelComponent) []VoiceParticipant {
+	list := make([]VoiceParticipant, 0, len(participants)-1)
+	for _, otherID := range participants {
+		if otherID != entityID {
 			otherVC := entityVoice[otherID]
-			vc.Participants = append(vc.Participants, VoiceParticipant{
+			list = append(list, VoiceParticipant{
 				EntityID:   otherID,
 				IsMuted:    otherVC.IsServerMuted,
 				IsDeafened: otherVC.IsServerDeafened,
@@ -164,6 +181,7 @@ func (s *VoiceChannelSystem) syncParticipants(entities []*Entity) {
 			})
 		}
 	}
+	return list
 }
 
 // cleanupEmptyChannels removes channels with no participants.

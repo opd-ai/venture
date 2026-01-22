@@ -103,37 +103,56 @@ func (m *Manager) SetPrestigeClass(playerID string, prestigeID PrestigeClassID) 
 
 // checkPrestigeRequirements verifies if a player meets prestige class requirements
 func (m *Manager) checkPrestigeRequirements(player *AdvancedClassComponent, req PrestigeRequirements) error {
+	if err := m.validateLevelRequirement(player, req); err != nil {
+		return err
+	}
+	if err := m.validatePrimaryClassRequirement(player, req); err != nil {
+		return err
+	}
+	if err := m.validateSecondaryClassRequirement(player, req); err != nil {
+		return err
+	}
+	return nil
+}
+
+// validateLevelRequirement checks if player meets minimum level requirement.
+func (m *Manager) validateLevelRequirement(player *AdvancedClassComponent, req PrestigeRequirements) error {
 	if player.Level < req.MinLevel {
 		return fmt.Errorf("level %d required, have %d", req.MinLevel, player.Level)
 	}
-
-	if len(req.RequiredPrimary) > 0 {
-		found := false
-		for _, reqClass := range req.RequiredPrimary {
-			if player.PrimaryClass == reqClass {
-				found = true
-				break
-			}
-		}
-		if !found {
-			return fmt.Errorf("requires one of primary classes: %v", req.RequiredPrimary)
-		}
-	}
-
-	if len(req.RequiredSecondary) > 0 && player.SecondaryClass != "" {
-		found := false
-		for _, reqClass := range req.RequiredSecondary {
-			if player.SecondaryClass == reqClass {
-				found = true
-				break
-			}
-		}
-		if !found {
-			return fmt.Errorf("requires one of secondary classes: %v", req.RequiredSecondary)
-		}
-	}
-
 	return nil
+}
+
+// validatePrimaryClassRequirement checks if player has a required primary class.
+func (m *Manager) validatePrimaryClassRequirement(player *AdvancedClassComponent, req PrestigeRequirements) error {
+	if len(req.RequiredPrimary) == 0 {
+		return nil
+	}
+	if m.hasMatchingClass(player.PrimaryClass, req.RequiredPrimary) {
+		return nil
+	}
+	return fmt.Errorf("requires one of primary classes: %v", req.RequiredPrimary)
+}
+
+// validateSecondaryClassRequirement checks if player has a required secondary class.
+func (m *Manager) validateSecondaryClassRequirement(player *AdvancedClassComponent, req PrestigeRequirements) error {
+	if len(req.RequiredSecondary) == 0 || player.SecondaryClass == "" {
+		return nil
+	}
+	if m.hasMatchingClass(player.SecondaryClass, req.RequiredSecondary) {
+		return nil
+	}
+	return fmt.Errorf("requires one of secondary classes: %v", req.RequiredSecondary)
+}
+
+// hasMatchingClass checks if a class matches any in the required list.
+func (m *Manager) hasMatchingClass(playerClass ClassID, requiredClasses []ClassID) bool {
+	for _, reqClass := range requiredClasses {
+		if playerClass == reqClass {
+			return true
+		}
+	}
+	return false
 }
 
 // AllocateTalent adds a point to a talent

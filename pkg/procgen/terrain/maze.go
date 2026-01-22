@@ -145,55 +145,58 @@ func (g *MazeGenerator) enhanceMazeWithFeatures(terrain *Terrain, rng *rand.Rand
 
 // carvePassages recursively carves passages through the maze using backtracking.
 func (g *MazeGenerator) carvePassages(x, y int, terrain *Terrain, rng *rand.Rand) {
-	// Mark current cell as floor
 	terrain.SetTile(x, y, TileFloor)
 
-	// Define directions: North, East, South, West
-	directions := []struct{ dx, dy int }{
-		{0, -2}, // North
-		{2, 0},  // East
-		{0, 2},  // South
-		{-2, 0}, // West
-	}
+	directions := g.shuffleMazeDirections(rng)
 
-	// Shuffle directions for randomness
-	for i := len(directions) - 1; i > 0; i-- {
-		j := rng.Intn(i + 1)
-		directions[i], directions[j] = directions[j], directions[i]
-	}
-
-	// Try each direction
 	for _, dir := range directions {
 		nx := x + dir.dx
 		ny := y + dir.dy
 
-		// Check if new position is valid and unvisited
-		if nx > 0 && nx < terrain.Width-1 && ny > 0 && ny < terrain.Height-1 {
-			if terrain.GetTile(nx, ny) == TileWall {
-				// Carve the wall between current and next cell
-				wallX := x + dir.dx/2
-				wallY := y + dir.dy/2
-				terrain.SetTile(wallX, wallY, TileCorridor)
-
-				// If corridor width is 2, carve adjacent tile
-				if g.corridorWidth == 2 {
-					if dir.dx != 0 {
-						// Horizontal movement - carve tile above or below
-						if wallY > 0 {
-							terrain.SetTile(wallX, wallY-1, TileCorridor)
-						}
-					} else {
-						// Vertical movement - carve tile left or right
-						if wallX > 0 {
-							terrain.SetTile(wallX-1, wallY, TileCorridor)
-						}
-					}
-				}
-
-				// Recursively carve from new position
-				g.carvePassages(nx, ny, terrain, rng)
-			}
+		if g.isValidUnvisitedCell(nx, ny, terrain) {
+			g.carveCorridorWall(x, y, dir, terrain)
+			g.carvePassages(nx, ny, terrain, rng)
 		}
+	}
+}
+
+// shuffleMazeDirections returns randomized cardinal directions for maze carving.
+func (g *MazeGenerator) shuffleMazeDirections(rng *rand.Rand) []struct{ dx, dy int } {
+	directions := []struct{ dx, dy int }{
+		{0, -2}, {2, 0}, {0, 2}, {-2, 0},
+	}
+	for i := len(directions) - 1; i > 0; i-- {
+		j := rng.Intn(i + 1)
+		directions[i], directions[j] = directions[j], directions[i]
+	}
+	return directions
+}
+
+// isValidUnvisitedCell checks if coordinates are valid and unvisited wall tiles.
+func (g *MazeGenerator) isValidUnvisitedCell(x, y int, terrain *Terrain) bool {
+	if x <= 0 || x >= terrain.Width-1 || y <= 0 || y >= terrain.Height-1 {
+		return false
+	}
+	return terrain.GetTile(x, y) == TileWall
+}
+
+// carveCorridorWall carves the wall between current position and next cell.
+func (g *MazeGenerator) carveCorridorWall(x, y int, dir struct{ dx, dy int }, terrain *Terrain) {
+	wallX := x + dir.dx/2
+	wallY := y + dir.dy/2
+	terrain.SetTile(wallX, wallY, TileCorridor)
+
+	if g.corridorWidth == 2 {
+		g.carveAdjacentCorridorTile(wallX, wallY, dir, terrain)
+	}
+}
+
+// carveAdjacentCorridorTile carves an additional tile for wide corridors.
+func (g *MazeGenerator) carveAdjacentCorridorTile(wallX, wallY int, dir struct{ dx, dy int }, terrain *Terrain) {
+	if dir.dx != 0 && wallY > 0 {
+		terrain.SetTile(wallX, wallY-1, TileCorridor)
+	} else if dir.dy != 0 && wallX > 0 {
+		terrain.SetTile(wallX-1, wallY, TileCorridor)
 	}
 }
 

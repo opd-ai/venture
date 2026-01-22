@@ -1136,40 +1136,57 @@ func (ui *CraftingUI) matchesCategory(recipe *Recipe) bool {
 
 // canCraftRecipe checks if player has materials to craft recipe.
 func (ui *CraftingUI) canCraftRecipe(recipe *Recipe) bool {
-	if ui.playerEntity == nil {
+	inventory := ui.getPlayerInventory()
+	if inventory == nil {
 		return false
 	}
 
+	return ui.hasRequiredMaterials(recipe, inventory) && ui.hasRequiredGold(recipe, inventory)
+}
+
+// getPlayerInventory retrieves the player's inventory component.
+func (ui *CraftingUI) getPlayerInventory() *InventoryComponent {
+	if ui.playerEntity == nil {
+		return nil
+	}
 	invComp, hasInv := ui.playerEntity.GetComponent("inventory")
 	if !hasInv {
-		return false
+		return nil
 	}
 	inventory, ok := invComp.(*InventoryComponent)
 	if !ok {
-		return false
+		return nil
 	}
+	return inventory
+}
 
-	// Check if player has all required materials
+// hasRequiredMaterials checks if inventory contains all required materials.
+func (ui *CraftingUI) hasRequiredMaterials(recipe *Recipe, inventory *InventoryComponent) bool {
 	for _, mat := range recipe.Materials {
-		hasQuantity := 0
-		for _, item := range inventory.Items {
-			if item != nil && item.Name == mat.ItemName {
-				hasQuantity++
-			}
-		}
-		if hasQuantity < mat.Quantity {
-			return false // Missing required material
-		}
-	}
-
-	// Check gold requirement
-	if recipe.GoldCost > 0 {
-		if inventory.Gold < recipe.GoldCost {
+		if !ui.hasMaterial(mat, inventory) {
 			return false
 		}
 	}
-
 	return true
+}
+
+// hasMaterial checks if inventory contains sufficient quantity of a material.
+func (ui *CraftingUI) hasMaterial(mat RecipeMaterial, inventory *InventoryComponent) bool {
+	hasQuantity := 0
+	for _, item := range inventory.Items {
+		if item != nil && item.Name == mat.ItemName {
+			hasQuantity++
+		}
+	}
+	return hasQuantity >= mat.Quantity
+}
+
+// hasRequiredGold checks if inventory has sufficient gold for recipe.
+func (ui *CraftingUI) hasRequiredGold(recipe *Recipe, inventory *InventoryComponent) bool {
+	if recipe.GoldCost <= 0 {
+		return true
+	}
+	return inventory.Gold >= recipe.GoldCost
 }
 
 // sortRecipes sorts recipes in place based on current sort mode.

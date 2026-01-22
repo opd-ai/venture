@@ -1237,43 +1237,59 @@ func (cc *EbitenCharacterCreation) Draw(screen *ebiten.Image) {
 
 // drawTouchButtons renders the appropriate touch buttons for current step
 func (cc *EbitenCharacterCreation) drawTouchButtons(screen *ebiten.Image) {
-	// Ensure Next button has correct label for current step
-	// Set label RIGHT before drawing to prevent it from being cleared
-	if cc.nextButton != nil {
-		if cc.currentStep == stepConfirmation {
-			cc.nextButton.Label = "Done"
-		} else {
-			cc.nextButton.Label = "Next"
-		}
-		// Immediately draw after setting label
-		cc.nextButton.Draw(screen)
-	}
+	cc.drawNextButton(screen)
+	cc.drawStepSpecificButtons(screen)
+}
 
-	// Draw other buttons based on step
+// drawNextButton renders the Next/Done button with appropriate label.
+func (cc *EbitenCharacterCreation) drawNextButton(screen *ebiten.Image) {
+	if cc.nextButton == nil {
+		return
+	}
+	if cc.currentStep == stepConfirmation {
+		cc.nextButton.Label = "Done"
+	} else {
+		cc.nextButton.Label = "Next"
+	}
+	cc.nextButton.Draw(screen)
+}
+
+// drawStepSpecificButtons renders buttons specific to the current creation step.
+func (cc *EbitenCharacterCreation) drawStepSpecificButtons(screen *ebiten.Image) {
 	switch cc.currentStep {
 	case stepNameInput:
-		// Draw preset name buttons (WASM/mobile fallback)
-		for _, btn := range cc.presetNameButtons {
-			if btn != nil {
-				btn.Draw(screen)
-			}
-		}
+		cc.drawPresetNameButtons(screen)
 	case stepClassSelection:
-		if cc.backButton != nil {
-			cc.backButton.Draw(screen)
-		}
+		cc.drawBackButton(screen)
 	case stepPortraitSelection:
-		if cc.skipButton != nil {
-			cc.skipButton.Draw(screen)
-		}
-		if cc.backButton != nil {
-			cc.backButton.Draw(screen)
-		}
+		cc.drawSkipAndBackButtons(screen)
 	case stepConfirmation:
-		if cc.backButton != nil {
-			cc.backButton.Draw(screen)
+		cc.drawBackButton(screen)
+	}
+}
+
+// drawPresetNameButtons renders preset name selection buttons for mobile.
+func (cc *EbitenCharacterCreation) drawPresetNameButtons(screen *ebiten.Image) {
+	for _, btn := range cc.presetNameButtons {
+		if btn != nil {
+			btn.Draw(screen)
 		}
 	}
+}
+
+// drawBackButton renders the back navigation button.
+func (cc *EbitenCharacterCreation) drawBackButton(screen *ebiten.Image) {
+	if cc.backButton != nil {
+		cc.backButton.Draw(screen)
+	}
+}
+
+// drawSkipAndBackButtons renders both skip and back buttons.
+func (cc *EbitenCharacterCreation) drawSkipAndBackButtons(screen *ebiten.Image) {
+	if cc.skipButton != nil {
+		cc.skipButton.Draw(screen)
+	}
+	cc.drawBackButton(screen)
 }
 
 // drawNameInput renders the name input screen

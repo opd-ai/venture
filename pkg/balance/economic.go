@@ -95,39 +95,72 @@ func (v *EconomicValidator) validateLootValue(ctx context.Context, result *Valid
 }
 
 func (v *EconomicValidator) validateCraftingProfit(ctx context.Context, result *ValidationResult) error {
+	profits := v.simulateRecipeProfits(ctx)
+	if profits == nil {
+		return ctx.Err()
+	}
+
+	avgProfit := v.calculateAverageProfit(profits)
+	result.Metrics["crafting_profit_margin"] = avgProfit
+
+	return v.validateProfitThresholds(avgProfit, result)
+}
+
+// simulateRecipeProfits generates profit margins for recipe samples.
+func (v *EconomicValidator) simulateRecipeProfits(ctx context.Context) []float64 {
 	profits := make([]float64, 0)
 	rng := rand.New(rand.NewSource(v.config.Seed + 1))
 
-	for i := 0; i < 100; i++ { // Sample 100 recipes
+	for i := 0; i < 100; i++ {
 		select {
 		case <-ctx.Done():
-			return ctx.Err()
+			return nil
 		default:
 		}
 
-		// Simulate recipe: 2-3 ingredients, output 1-2 items
-		ingredientCount := 2 + rng.Intn(2)
-		materialCost := 0
-		for j := 0; j < ingredientCount; j++ {
-			itemValue := 10 + rng.Intn(40) // 10-50 gold per ingredient
-			materialCost += itemValue
-		}
-
-		outputValue := int(float64(materialCost) * (1.0 + 0.15 + rng.Float64()*0.15)) // 15-30% profit
-
-		if materialCost > 0 {
-			profit := (float64(outputValue) - float64(materialCost)) / float64(materialCost)
+		profit := v.calculateRecipeProfit(rng)
+		if profit >= 0 {
 			profits = append(profits, profit)
 		}
 	}
 
-	avgProfit := 0.0
-	for _, p := range profits {
-		avgProfit += p
-	}
-	avgProfit /= float64(len(profits))
-	result.Metrics["crafting_profit_margin"] = avgProfit
+	return profits
+}
 
+// calculateRecipeProfit simulates profit margin for a single recipe.
+func (v *EconomicValidator) calculateRecipeProfit(rng *rand.Rand) float64 {
+	ingredientCount := 2 + rng.Intn(2)
+	materialCost := 0
+
+	for j := 0; j < ingredientCount; j++ {
+		itemValue := 10 + rng.Intn(40)
+		materialCost += itemValue
+	}
+
+	if materialCost == 0 {
+		return -1
+	}
+
+	profitMargin := 0.15 + rng.Float64()*0.15
+	outputValue := int(float64(materialCost) * (1.0 + profitMargin))
+	return (float64(outputValue) - float64(materialCost)) / float64(materialCost)
+}
+
+// calculateAverageProfit computes mean profit margin.
+func (v *EconomicValidator) calculateAverageProfit(profits []float64) float64 {
+	if len(profits) == 0 {
+		return 0
+	}
+
+	sum := 0.0
+	for _, p := range profits {
+		sum += p
+	}
+	return sum / float64(len(profits))
+}
+
+// validateProfitThresholds checks if profit margins meet economic balance criteria.
+func (v *EconomicValidator) validateProfitThresholds(avgProfit float64, result *ValidationResult) error {
 	minThreshold := v.config.GetThreshold("crafting_profit_min")
 	maxThreshold := v.config.GetThreshold("crafting_profit_max")
 

@@ -695,23 +695,42 @@ func (s *InventorySystem) Update(entities []*Entity, deltaTime float64) {
 // applyScrollSpellEffect applies a spell effect from a scroll consumable.
 // Gap A2: Consumable Spell Effect Activation - scrolls trigger spell effects when used.
 func (s *InventorySystem) applyScrollSpellEffect(entity *Entity, itm *item.Item) {
-	// Skip if no spell effect system is available
+	if !s.validateScrollEffectSystem(itm) {
+		return
+	}
+
+	targetX, targetY := s.extractTargetPosition(entity)
+	effectType, defaultTargetType := s.mapSpellEffectIDWithTarget(itm.SpellEffectID)
+	magnitude := s.calculateScrollMagnitude(itm)
+	duration := s.determineScrollDuration(itm)
+	targetType := s.parseTargetType(itm.SpellTargetType, defaultTargetType)
+	radius := s.determineScrollRadius(itm, targetType)
+
+	s.executeScrollSpellEffect(entity, effectType, magnitude, duration, targetType, targetX, targetY, radius)
+	s.logScrollEffectApplied(itm, effectType, targetType, magnitude, duration, radius)
+}
+
+// validateScrollEffectSystem checks if the spell effect system is available and the scroll has a spell ID.
+func (s *InventorySystem) validateScrollEffectSystem(itm *item.Item) bool {
 	if s.spellEffectSystem == nil {
 		if s.logger != nil {
 			s.logger.WithField("item", itm.Name).Debug("no spell effect system available for scroll")
 		}
-		return
+		return false
 	}
 
-	// Skip if scroll has no spell effect ID
 	if itm.SpellEffectID == "" {
 		if s.logger != nil {
 			s.logger.WithField("item", itm.Name).Debug("scroll has no spell effect ID")
 		}
-		return
+		return false
 	}
 
-	// Get entity position for targeting
+	return true
+}
+
+// extractTargetPosition retrieves the position coordinates from an entity.
+func (s *InventorySystem) extractTargetPosition(entity *Entity) (float64, float64) {
 	var targetX, targetY float64
 	if posComp, hasPos := entity.GetComponent("position"); hasPos {
 		if pos, ok := posComp.(*PositionComponent); ok && pos != nil {
@@ -719,41 +738,45 @@ func (s *InventorySystem) applyScrollSpellEffect(entity *Entity, itm *item.Item)
 			targetY = pos.Y
 		}
 	}
+	return targetX, targetY
+}
 
-	// Map spell effect ID to effect type and get default target type
-	effectType, defaultTargetType := s.mapSpellEffectIDWithTarget(itm.SpellEffectID)
-
-	// Calculate magnitude based on item value/rarity
-	magnitude := s.calculateScrollMagnitude(itm)
-
-	// Determine duration: use item's SpellDuration if set, otherwise use default
-	duration := itm.SpellDuration
-	if duration <= 0 {
-		duration = DefaultScrollEffectDuration
+// determineScrollDuration calculates the effect duration for a scroll.
+func (s *InventorySystem) determineScrollDuration(itm *item.Item) float64 {
+	if itm.SpellDuration > 0 {
+		return itm.SpellDuration
 	}
+	return DefaultScrollEffectDuration
+}
 
-	// Determine target type: use item's SpellTargetType if set, otherwise use spell-based default
-	targetType := s.parseTargetType(itm.SpellTargetType, defaultTargetType)
-
-	// Determine radius: use item's SpellRadius if set, otherwise use default for area spells
-	radius := itm.SpellRadius
-	if radius <= 0 && targetType == TargetArea {
-		radius = DefaultScrollEffectRadius
+// determineScrollRadius calculates the effect radius for area spells.
+func (s *InventorySystem) determineScrollRadius(itm *item.Item, targetType TargetType) float64 {
+	if itm.SpellRadius > 0 {
+		return itm.SpellRadius
 	}
+	if targetType == TargetArea {
+		return DefaultScrollEffectRadius
+	}
+	return 0
+}
 
-	// Apply the spell effect to the entity
+// executeScrollSpellEffect applies the spell effect to the target entity.
+func (s *InventorySystem) executeScrollSpellEffect(entity *Entity, effectType EffectType, magnitude, duration float64, targetType TargetType, targetX, targetY, radius float64) {
 	s.spellEffectSystem.ApplySpellEffect(
 		entity,
 		effectType,
 		magnitude,
 		duration,
 		targetType,
-		entity.ID, // Caster is the user
+		entity.ID,
 		targetX,
 		targetY,
 		radius,
 	)
+}
 
+// logScrollEffectApplied logs the scroll spell effect application.
+func (s *InventorySystem) logScrollEffectApplied(itm *item.Item, effectType EffectType, targetType TargetType, magnitude, duration, radius float64) {
 	if s.logger != nil {
 		s.logger.WithFields(logrus.Fields{
 			"item":        itm.Name,

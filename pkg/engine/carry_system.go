@@ -219,70 +219,78 @@ func (s *CarrySystem) DropObject(playerID uint64) {
 // ThrowObject throws the carried object in the player's aim direction.
 func (s *CarrySystem) ThrowObject(playerID uint64, aimX, aimY float64) {
 	objectID, carrying := s.carriedObjects[playerID]
-	if !carrying {
+	if !carrying || s.world == nil {
 		return
 	}
 
-	if s.world == nil {
+	object, carriable := s.getObjectAndCarriable(playerID, objectID)
+	if object == nil || carriable == nil {
 		return
 	}
 
-	// Get object entity
+	throwVel := s.calculateThrowVelocity(carriable)
+	aimX, aimY = s.normalizeAimDirection(aimX, aimY)
+	s.applyThrowVelocity(object, aimX, aimY, throwVel)
+	s.finalizeThrow(playerID, objectID, carriable, aimX, aimY, throwVel)
+}
+
+// getObjectAndCarriable retrieves the object entity and its carriable component.
+func (s *CarrySystem) getObjectAndCarriable(playerID, objectID uint64) (*Entity, *CarriableComponent) {
 	object, ok := s.world.GetEntity(objectID)
 	if !ok || object == nil {
 		delete(s.carriedObjects, playerID)
-		return
+		return nil, nil
 	}
 
-	// Get carriable component
 	carrComp, ok := object.GetComponent("carriable")
 	if !ok {
-		return
+		return nil, nil
 	}
+
 	carriable, ok := carrComp.(*CarriableComponent)
 	if !ok {
-		return
+		return nil, nil
 	}
 
-	// Calculate throw velocity based on weight
-	baseVelocity := 300.0 // pixels per second
-	throwVel := baseVelocity * carriable.ThrowVelocityMultiplier
+	return object, carriable
+}
 
-	// Normalize aim direction
+// calculateThrowVelocity computes the throw velocity based on object weight.
+func (s *CarrySystem) calculateThrowVelocity(carriable *CarriableComponent) float64 {
+	baseVelocity := 300.0
+	return baseVelocity * carriable.ThrowVelocityMultiplier
+}
+
+// normalizeAimDirection normalizes the aim direction vector.
+func (s *CarrySystem) normalizeAimDirection(aimX, aimY float64) (float64, float64) {
 	aimLen := math.Sqrt(aimX*aimX + aimY*aimY)
 	if aimLen > 0 {
-		aimX /= aimLen
-		aimY /= aimLen
-	} else {
-		// Default to right if no aim direction
-		aimX = 1.0
-		aimY = 0.0
+		return aimX / aimLen, aimY / aimLen
 	}
+	return 1.0, 0.0
+}
 
-	// Set velocity
+// applyThrowVelocity sets the velocity component on the thrown object.
+func (s *CarrySystem) applyThrowVelocity(object *Entity, aimX, aimY, throwVel float64) {
+	velocityX := aimX * throwVel
+	velocityY := aimY * throwVel
+
 	if velComp, ok := object.GetComponent("velocity"); ok {
-		vel, ok := velComp.(*VelocityComponent)
-		if !ok {
-			// Add velocity component if type assertion fails
-			velComp := &VelocityComponent{
-				VX: aimX * throwVel,
-				VY: aimY * throwVel,
-			}
-			object.AddComponent(velComp)
+		if vel, ok := velComp.(*VelocityComponent); ok {
+			vel.VX = velocityX
+			vel.VY = velocityY
 			return
 		}
-		vel.VX = aimX * throwVel
-		vel.VY = aimY * throwVel
-	} else {
-		// Add velocity component if not present
-		velComp := &VelocityComponent{
-			VX: aimX * throwVel,
-			VY: aimY * throwVel,
-		}
-		object.AddComponent(velComp)
 	}
 
-	// Mark as not carried
+	object.AddComponent(&VelocityComponent{
+		VX: velocityX,
+		VY: velocityY,
+	})
+}
+
+// finalizeThrow completes the throw operation by dropping the object and logging.
+func (s *CarrySystem) finalizeThrow(playerID, objectID uint64, carriable *CarriableComponent, aimX, aimY, throwVel float64) {
 	carriable.Drop()
 	delete(s.carriedObjects, playerID)
 
@@ -343,51 +351,70 @@ func (s *CarrySystem) FindNearbyCarriableObject(x, y, maxDistance float64) (uint
 		return 0, 0
 	}
 
+	closestID, closestDist := s.searchNearestCarriable(x, y, maxDistance)
+	if closestID != 0 {
+		return closestID, closestDist
+	}
+	return 0, 0
+}
+
+// searchNearestCarriable searches for the nearest carriable object within range.
+func (s *CarrySystem) searchNearestCarriable(x, y, maxDistance float64) (uint64, float64) {
 	var closestID uint64
 	closestDist := maxDistance + 1.0
 
-	// Find all carriable objects
 	entities := s.world.GetEntitiesWith("carriable")
 	for _, entity := range entities {
-		// Get carriable component
-		carrComp, ok := entity.GetComponent("carriable")
-		if !ok {
-			continue
-		}
-		carriable, ok := carrComp.(*CarriableComponent)
-		if !ok {
+		carriable, pos := s.validateCarriableEntity(entity)
+		if carriable == nil || pos == nil {
 			continue
 		}
 
-		// Skip if already carried or not pickupable
-		if carriable.IsCarried || !carriable.CanPickUp {
+		if s.shouldSkipCarriable(carriable) {
 			continue
 		}
 
-		// Get position
-		posComp, ok := entity.GetComponent("position")
-		if !ok {
-			continue
-		}
-		pos, ok := posComp.(*PositionComponent)
-		if !ok {
-			continue
-		}
-
-		// Calculate distance
-		dx := pos.X - x
-		dy := pos.Y - y
-		dist := math.Sqrt(dx*dx + dy*dy)
-
-		// Check if closer than current closest
+		dist := s.calculateDistance(x, y, pos.X, pos.Y)
 		if dist < closestDist {
 			closestID = entity.ID
 			closestDist = dist
 		}
 	}
 
-	if closestID != 0 {
-		return closestID, closestDist
+	return closestID, closestDist
+}
+
+// validateCarriableEntity validates and extracts carriable and position components.
+func (s *CarrySystem) validateCarriableEntity(entity *Entity) (*CarriableComponent, *PositionComponent) {
+	carrComp, ok := entity.GetComponent("carriable")
+	if !ok {
+		return nil, nil
 	}
-	return 0, 0
+	carriable, ok := carrComp.(*CarriableComponent)
+	if !ok {
+		return nil, nil
+	}
+
+	posComp, ok := entity.GetComponent("position")
+	if !ok {
+		return nil, nil
+	}
+	pos, ok := posComp.(*PositionComponent)
+	if !ok {
+		return nil, nil
+	}
+
+	return carriable, pos
+}
+
+// shouldSkipCarriable checks if a carriable object should be excluded from search.
+func (s *CarrySystem) shouldSkipCarriable(carriable *CarriableComponent) bool {
+	return carriable.IsCarried || !carriable.CanPickUp
+}
+
+// calculateDistance computes Euclidean distance between two points.
+func (s *CarrySystem) calculateDistance(x1, y1, x2, y2 float64) float64 {
+	dx := x2 - x1
+	dy := y2 - y1
+	return math.Sqrt(dx*dx + dy*dy)
 }

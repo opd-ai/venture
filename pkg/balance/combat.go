@@ -222,26 +222,39 @@ func (v *CombatValidator) calculateDamage(attack, defense float64, rng *rand.Ran
 
 // validateWeaponBalance checks that all weapon types are viable.
 func (v *CombatValidator) validateWeaponBalance(ctx context.Context, result *ValidationResult) error {
-	// Weapon types from V2.0 Phase 8
 	weaponTypes := []string{"Sword", "Axe", "Bow", "Staff", "Dagger", "Spear"}
+	usage := v.simulateWeaponUsage(ctx, weaponTypes, result.SimulationCount)
+	if usage == nil {
+		return ctx.Err()
+	}
+
+	minUsage, maxUsage := v.calculateUsageRange(weaponTypes, usage, result)
+	return v.validateUsageThresholds(minUsage, maxUsage, result)
+}
+
+// simulateWeaponUsage simulates weapon selection distribution.
+func (v *CombatValidator) simulateWeaponUsage(ctx context.Context, weaponTypes []string, simCount int) map[string]int {
 	usage := make(map[string]int)
 	rng := rand.New(rand.NewSource(v.config.Seed + 1))
 
-	// Simulate weapon distribution (simplified - equal distribution for now)
-	for i := 0; i < result.SimulationCount; i++ {
+	for i := 0; i < simCount; i++ {
 		select {
 		case <-ctx.Done():
-			return ctx.Err()
+			return nil
 		default:
 		}
 
-		// Randomly select weapon type with slight variance
 		weaponIndex := rng.Intn(len(weaponTypes))
 		usage[weaponTypes[weaponIndex]]++
 	}
 
-	// Calculate usage percentages
+	return usage
+}
+
+// calculateUsageRange calculates min/max usage rates and stores metrics.
+func (v *CombatValidator) calculateUsageRange(weaponTypes []string, usage map[string]int, result *ValidationResult) (float64, float64) {
 	minUsage, maxUsage := 1.0, 0.0
+
 	for _, weaponType := range weaponTypes {
 		usageRate := float64(usage[weaponType]) / float64(result.SimulationCount)
 		result.Metrics[fmt.Sprintf("weapon_usage_%s", weaponType)] = usageRate
@@ -254,7 +267,11 @@ func (v *CombatValidator) validateWeaponBalance(ctx context.Context, result *Val
 		}
 	}
 
-	// Check acceptance criteria
+	return minUsage, maxUsage
+}
+
+// validateUsageThresholds checks if usage rates meet balance criteria.
+func (v *CombatValidator) validateUsageThresholds(minUsage, maxUsage float64, result *ValidationResult) error {
 	minThreshold := v.config.GetThreshold("weapon_usage_min")
 	maxThreshold := v.config.GetThreshold("weapon_usage_max")
 

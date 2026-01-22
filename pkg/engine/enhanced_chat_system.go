@@ -84,23 +84,50 @@ func (ecs *EnhancedChatSystem) simpleEncrypt(plaintext string) []byte {
 // SendMessage sends an encrypted chat message from a player.
 // Validates permissions, applies rate limiting, encrypts content, and stores in history.
 func (ecs *EnhancedChatSystem) SendMessage(senderID uint64, channel ChatChannel, content string, recipientID uint64) error {
-	// Get sender's chat component for validation
+	sender, chatComp, err := ecs.validateSender(senderID, channel, recipientID)
+	if err != nil {
+		return err
+	}
+
+	msgID := ecs.generateMessageID()
+	encryptedPayload := ecs.encryptMessage(msgID, content)
+	chatComp.RecordMessageSent(channel)
+
+	msg := ecs.createChatMessage(msgID, senderID, sender, recipientID, channel, content, encryptedPayload)
+	chatComp.AddMessage(msg)
+
+	ecs.persistMessage(senderID, recipientID, channel, content, msg)
+	ecs.deliverMessage(msg, sender, chatComp)
+
+	return nil
+}
+
+// validateSender validates the sender entity and chat component for message sending.
+func (ecs *EnhancedChatSystem) validateSender(senderID uint64, channel ChatChannel, recipientID uint64) (*Entity, *ChatComponent, error) {
 	sender, exists := ecs.world.GetEntity(senderID)
 	if !exists {
-		return fmt.Errorf("sender entity not found")
+		return nil, nil, fmt.Errorf("sender entity not found")
 	}
 
 	chatCompRaw, exists := sender.GetComponent("chat")
 	if !exists {
-		return fmt.Errorf("sender has no chat component")
+		return nil, nil, fmt.Errorf("sender has no chat component")
 	}
 
 	chatComp, ok := chatCompRaw.(*ChatComponent)
 	if !ok {
-		return fmt.Errorf("invalid chat component type")
+		return nil, nil, fmt.Errorf("invalid chat component type")
 	}
 
-	// Validate sender can send to channel
+	if err := ecs.validateChannelPermissions(chatComp, channel, recipientID); err != nil {
+		return nil, nil, err
+	}
+
+	return sender, chatComp, nil
+}
+
+// validateChannelPermissions checks if the sender can send to the channel.
+func (ecs *EnhancedChatSystem) validateChannelPermissions(chatComp *ChatComponent, channel ChatChannel, recipientID uint64) error {
 	if !chatComp.CanSendMessage(channel) {
 		if chatComp.IsMuted() {
 			return fmt.Errorf("sender is muted")
@@ -108,63 +135,59 @@ func (ecs *EnhancedChatSystem) SendMessage(senderID uint64, channel ChatChannel,
 		return fmt.Errorf("rate limit exceeded for channel %s", channel.String())
 	}
 
-	// Validate channel subscription
 	if !chatComp.IsChannelActive(channel) {
 		return fmt.Errorf("not subscribed to channel %s", channel.String())
 	}
 
-	// Validate recipient for whispers
 	if channel == ChatWhisper && recipientID == 0 {
 		return fmt.Errorf("whisper requires recipient ID")
 	}
 
-	// Generate message ID
-	msgID := ecs.generateMessageID()
+	return nil
+}
 
-	// Encrypt message (simulated)
+// encryptMessage encrypts the message content and stores it.
+func (ecs *EnhancedChatSystem) encryptMessage(msgID, content string) []byte {
 	encryptedPayload := ecs.simpleEncrypt(content)
 	ecs.encryptedMsgs[msgID] = encryptedPayload
+	return encryptedPayload
+}
 
-	// Update sender's rate limit state
-	chatComp.RecordMessageSent(channel)
-
-	// Create message for local history
-	msg := ChatMessage{
+// createChatMessage constructs a ChatMessage struct with all required fields.
+func (ecs *EnhancedChatSystem) createChatMessage(msgID string, senderID uint64, sender *Entity, recipientID uint64, channel ChatChannel, content string, encrypted []byte) ChatMessage {
+	return ChatMessage{
 		ID:          msgID,
 		SenderID:    senderID,
 		SenderName:  ecs.getSenderName(sender),
 		RecipientID: recipientID,
 		Channel:     channel,
 		Content:     content,
-		Encrypted:   encryptedPayload,
+		Encrypted:   encrypted,
 		Timestamp:   time.Now(),
 		Delivered:   false,
 		Failed:      false,
 	}
+}
 
-	// Add to sender's component history
-	chatComp.AddMessage(msg)
-
-	// Add to persistent history
-	if hist, exists := ecs.history[senderID]; exists {
-		persistMsg := &persistence.Message{
-			ID:        msg.ID,
-			Sender:    msg.SenderName,
-			Recipient: fmt.Sprintf("%d", recipientID),
-			Channel:   channel.String(),
-			Content:   content,
-			Timestamp: msg.Timestamp,
-		}
-		if err := hist.AddMessage(persistMsg); err != nil {
-			// Log error but don't fail send
-			fmt.Printf("failed to persist message: %v\n", err)
-		}
+// persistMessage adds the message to persistent storage if available.
+func (ecs *EnhancedChatSystem) persistMessage(senderID, recipientID uint64, channel ChatChannel, content string, msg ChatMessage) {
+	hist, exists := ecs.history[senderID]
+	if !exists {
+		return
 	}
 
-	// Deliver to recipients based on channel
-	ecs.deliverMessage(msg, sender, chatComp)
+	persistMsg := &persistence.Message{
+		ID:        msg.ID,
+		Sender:    msg.SenderName,
+		Recipient: fmt.Sprintf("%d", recipientID),
+		Channel:   channel.String(),
+		Content:   content,
+		Timestamp: msg.Timestamp,
+	}
 
-	return nil
+	if err := hist.AddMessage(persistMsg); err != nil {
+		fmt.Printf("failed to persist message: %v\n", err)
+	}
 }
 
 // deliverMessage delivers a message to appropriate recipients based on channel.

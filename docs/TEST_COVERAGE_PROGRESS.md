@@ -33,7 +33,39 @@ This document tracks progress on Phase 3 deliverable: "Increase test coverage to
   - Placement validation with rotation and collision detection
   - Error paths and boundary conditions
 
-## Packages Below 80% Coverage (20 remaining)
+### 2026-01-22: pkg/procgen/book
+- **Before:** 73.7%
+- **After:** 98.9%
+- **Improvement:** +25.2 percentage points
+- **Status:** ✅ Exceeds 90% target
+
+#### Changes Made
+- Created `coverage_improvement_test.go` with 21 new test functions
+- Added table-driven tests following Go best practices
+- Covered previously untested functions:
+  - `generateQuestTitle`: All genres (25% → 100%)
+  - `generateRecipeTitle`: All genres (25% → 100%)
+  - `generateHistoricalTitle`: All genres (40% → 100%)
+  - `getVolumeNumber`: Helper function (0% → 100%)
+  - `getSeriesName`: Helper function (0% → 100%)
+  - `loadQuestGrammar`: All genre branches (45.5% → 100%)
+  - `loadRecipeGrammar`: All genre branches (24.1% → 100%)
+  - `loadHistoryGrammar`: All genre branches (50% → 100%)
+  - `setRecipeID`: Auto-generation path (66.7% → 100%)
+  - `setSkillBonus`: Custom bonus and edge cases (61.5% → 100%)
+  - `pickRandom`: Empty slice edge case (66.7% → 100%)
+
+#### Test Coverage Details
+- New test coverage includes:
+  - Quest/recipe/history book generation for all 6 genres
+  - Recipe book generation without custom recipe_id
+  - Historical book generation without custom location
+  - Skill book bonus with custom values and edge cases
+  - Unsupported book type error handling
+  - Content too long validation
+  - Benchmarks for quest, recipe, and history book generation
+
+## Packages Below 80% Coverage (19 remaining)
 
 ### Priority 1: Critical Low Coverage (<70%)
 1. **pkg/mobile** - 42.6%
@@ -88,33 +120,28 @@ This document tracks progress on Phase 3 deliverable: "Increase test coverage to
     - Impact: Critical (multiplayer foundation)
     - Complexity: High (protocols, reliability)
 
-11. **pkg/procgen/book** - 73.7%
-    - Platform: Book generation
-    - Impact: Low (flavor content)
-    - Complexity: Low (text generation)
-
-12. **pkg/modding** - 73.8%
+11. **pkg/modding** - 73.8%
     - Platform: Mod loading system
     - Impact: Medium (extensibility)
     - Complexity: Medium (JSON parsing, validation)
 
-13. **pkg/saveload** - 73.8%
+12. **pkg/saveload** - 73.8%
     - Platform: Save/load functionality
     - Impact: Critical (persistence)
     - Complexity: Medium (serialization, versioning)
 
 ### Priority 3: Near Target (75-80%)
-14. **pkg/procgen/companion** - 75.0%
+13. **pkg/procgen/companion** - 75.0%
     - Platform: Companion generation
     - Impact: Medium (gameplay feature)
     - Complexity: Medium (AI, stats)
 
-15. **pkg/rendering/patterns** - 75.6%
+14. **pkg/rendering/patterns** - 75.6%
     - Platform: Pattern rendering
     - Impact: Low (visual variety)
     - Complexity: Low (procedural patterns)
 
-16. **pkg/network/resilience** - 76.2%
+15. **pkg/network/resilience** - 76.2%
     - Platform: Network resilience
     - Impact: High (stability)
     - Complexity: Medium (retry, circuit breaker)

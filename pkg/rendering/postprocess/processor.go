@@ -232,60 +232,78 @@ func boxBlur(img *image.RGBA, radius int) *image.RGBA {
 	}
 
 	bounds := img.Bounds()
-	result := image.NewRGBA(bounds)
+	temp := applyHorizontalBlur(img, bounds, radius)
+	return applyVerticalBlur(temp, bounds, radius)
+}
 
-	// Horizontal pass
+// applyHorizontalBlur performs horizontal blur pass on image.
+func applyHorizontalBlur(img *image.RGBA, bounds image.Rectangle, radius int) *image.RGBA {
 	temp := image.NewRGBA(bounds)
 	for y := bounds.Min.Y; y < bounds.Max.Y; y++ {
 		for x := bounds.Min.X; x < bounds.Max.X; x++ {
-			var r, g, b, a, count float64
+			avgColor := calculateHorizontalAverage(img, bounds, x, y, radius)
+			temp.Set(x, y, avgColor)
+		}
+	}
+	return temp
+}
 
-			for dx := -radius; dx <= radius; dx++ {
-				sx := x + dx
-				if sx >= bounds.Min.X && sx < bounds.Max.X {
-					c := img.RGBAAt(sx, y)
-					r += float64(c.R)
-					g += float64(c.G)
-					b += float64(c.B)
-					a += float64(c.A)
-					count++
-				}
-			}
+// calculateHorizontalAverage computes average color in horizontal direction.
+func calculateHorizontalAverage(img *image.RGBA, bounds image.Rectangle, x, y, radius int) color.RGBA {
+	var r, g, b, a, count float64
 
-			temp.Set(x, y, color.RGBA{
-				R: clampUint8(r / count),
-				G: clampUint8(g / count),
-				B: clampUint8(b / count),
-				A: clampUint8(a / count),
-			})
+	for dx := -radius; dx <= radius; dx++ {
+		sx := x + dx
+		if sx >= bounds.Min.X && sx < bounds.Max.X {
+			c := img.RGBAAt(sx, y)
+			r += float64(c.R)
+			g += float64(c.G)
+			b += float64(c.B)
+			a += float64(c.A)
+			count++
 		}
 	}
 
-	// Vertical pass
+	return color.RGBA{
+		R: clampUint8(r / count),
+		G: clampUint8(g / count),
+		B: clampUint8(b / count),
+		A: clampUint8(a / count),
+	}
+}
+
+// applyVerticalBlur performs vertical blur pass on image.
+func applyVerticalBlur(temp *image.RGBA, bounds image.Rectangle, radius int) *image.RGBA {
+	result := image.NewRGBA(bounds)
 	for y := bounds.Min.Y; y < bounds.Max.Y; y++ {
 		for x := bounds.Min.X; x < bounds.Max.X; x++ {
-			var r, g, b, a, count float64
+			avgColor := calculateVerticalAverage(temp, bounds, x, y, radius)
+			result.Set(x, y, avgColor)
+		}
+	}
+	return result
+}
 
-			for dy := -radius; dy <= radius; dy++ {
-				sy := y + dy
-				if sy >= bounds.Min.Y && sy < bounds.Max.Y {
-					c := temp.RGBAAt(x, sy)
-					r += float64(c.R)
-					g += float64(c.G)
-					b += float64(c.B)
-					a += float64(c.A)
-					count++
-				}
-			}
+// calculateVerticalAverage computes average color in vertical direction.
+func calculateVerticalAverage(img *image.RGBA, bounds image.Rectangle, x, y, radius int) color.RGBA {
+	var r, g, b, a, count float64
 
-			result.Set(x, y, color.RGBA{
-				R: clampUint8(r / count),
-				G: clampUint8(g / count),
-				B: clampUint8(b / count),
-				A: clampUint8(a / count),
-			})
+	for dy := -radius; dy <= radius; dy++ {
+		sy := y + dy
+		if sy >= bounds.Min.Y && sy < bounds.Max.Y {
+			c := img.RGBAAt(x, sy)
+			r += float64(c.R)
+			g += float64(c.G)
+			b += float64(c.B)
+			a += float64(c.A)
+			count++
 		}
 	}
 
-	return result
+	return color.RGBA{
+		R: clampUint8(r / count),
+		G: clampUint8(g / count),
+		B: clampUint8(b / count),
+		A: clampUint8(a / count),
+	}
 }

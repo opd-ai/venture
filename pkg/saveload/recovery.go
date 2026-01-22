@@ -187,6 +187,27 @@ func (m *SaveManager) recoverFromBackup(name string) (bool, error) {
 func (m *SaveManager) SaveGameWithBackup(name string, save *GameSave) error {
 	m.logDebug("saving game with backup", logrus.Fields{"name": name})
 
+	if err := m.validateSaveRequest(name, save); err != nil {
+		return err
+	}
+
+	backupPath, err := m.attemptBackupCreation(name)
+	if err != nil {
+		m.logWarn("failed to create backup", err, logrus.Fields{"name": name})
+	}
+
+	if err := m.performSaveOperation(name, save); err != nil {
+		m.restoreBackupIfPossible(name, backupPath, err)
+		return err
+	}
+
+	m.saveChecksumBestEffort(name)
+	m.logSaveSuccess(name, save)
+	return nil
+}
+
+// validateSaveRequest validates the save name and data.
+func (m *SaveManager) validateSaveRequest(name string, save *GameSave) error {
 	if save == nil {
 		return fmt.Errorf("save cannot be nil")
 	}
@@ -196,14 +217,17 @@ func (m *SaveManager) SaveGameWithBackup(name string, save *GameSave) error {
 		return err
 	}
 
-	// Create backup before overwriting (if file exists)
-	backupPath, err := m.createBackup(name)
-	if err != nil {
-		m.logWarn("failed to create backup", err, logrus.Fields{"name": name})
-		// Continue with save anyway, backup failure shouldn't block saving
-	}
+	return nil
+}
 
-	// Perform the save
+// attemptBackupCreation creates a backup file, returning its path.
+func (m *SaveManager) attemptBackupCreation(name string) (string, error) {
+	backupPath, err := m.createBackup(name)
+	return backupPath, err
+}
+
+// performSaveOperation marshals and writes save data to disk.
+func (m *SaveManager) performSaveOperation(name string, save *GameSave) error {
 	save.Version = SaveVersion
 	save.Timestamp = time.Now()
 
@@ -212,40 +236,48 @@ func (m *SaveManager) SaveGameWithBackup(name string, save *GameSave) error {
 		return err
 	}
 
-	if err := m.writeSaveFile(name, data); err != nil {
-		// If save failed and we have a backup, restore it
-		if backupPath != "" {
-			m.logWarn("save failed, restoring backup", err, logrus.Fields{
-				"name":   name,
-				"backup": backupPath,
-			})
-			// Attempt to restore backup (best effort)
-			if backupData, readErr := os.ReadFile(backupPath); readErr == nil {
-				if restoreErr := m.writeSaveFile(name, backupData); restoreErr != nil {
-					m.logWarn("backup restoration also failed", restoreErr, logrus.Fields{
-						"name":   name,
-						"backup": backupPath,
-					})
-				}
-			}
-		}
-		return err
+	return m.writeSaveFile(name, data)
+}
+
+// restoreBackupIfPossible attempts to restore backup after failed save.
+func (m *SaveManager) restoreBackupIfPossible(name, backupPath string, originalErr error) {
+	if backupPath == "" {
+		return
 	}
 
-	// Save checksum
+	m.logWarn("save failed, restoring backup", originalErr, logrus.Fields{
+		"name":   name,
+		"backup": backupPath,
+	})
+
+	backupData, readErr := os.ReadFile(backupPath)
+	if readErr != nil {
+		return
+	}
+
+	if restoreErr := m.writeSaveFile(name, backupData); restoreErr != nil {
+		m.logWarn("backup restoration also failed", restoreErr, logrus.Fields{
+			"name":   name,
+			"backup": backupPath,
+		})
+	}
+}
+
+// saveChecksumBestEffort saves checksum without failing on error.
+func (m *SaveManager) saveChecksumBestEffort(name string) {
 	if err := m.saveChecksum(name); err != nil {
 		m.logWarn("failed to save checksum", err, logrus.Fields{"name": name})
-		// Not critical, continue
 	}
+}
 
+// logSaveSuccess logs successful save completion.
+func (m *SaveManager) logSaveSuccess(name string, save *GameSave) {
+	data, _ := m.marshalSave(save, name)
 	m.logInfo("game saved successfully with backup", logrus.Fields{
 		"name":      name,
 		"size":      len(data),
 		"timestamp": save.Timestamp,
-		"backup":    backupPath != "",
 	})
-
-	return nil
 }
 
 // LoadGameWithRecovery loads the game state with automatic corruption detection and recovery.

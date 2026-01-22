@@ -1116,41 +1116,55 @@ func (g *Generator) drawMoss(img *image.RGBA, width, height int, base, accent co
 }
 
 func (g *Generator) drawGraffiti(img *image.RGBA, width, height int, base, accent color.Color, rng *rand.Rand) {
-	// Draw random graffiti marks/tags
 	numMarks := 3 + rng.Intn(5)
 	for i := 0; i < numMarks; i++ {
-		// Random line or shape
 		if rng.Float64() < 0.5 {
-			// Draw line
-			x1 := rng.Intn(width)
-			y1 := rng.Intn(height)
-			x2 := x1 + rng.Intn(width/2) - width/4
-			y2 := y1 + rng.Intn(height/2) - height/4
-			if rng.Float64() < 0.5 {
-				g.drawLine(img, x1, y1, x2, y2, base)
-			} else {
-				g.drawLine(img, x1, y1, x2, y2, accent)
-			}
+			g.drawGraffitiLine(img, width, height, base, accent, rng)
 		} else {
-			// Draw circle/blob
-			cx := rng.Intn(width)
-			cy := rng.Intn(height)
-			radius := 3 + rng.Intn(6)
-			for dy := -radius; dy <= radius; dy++ {
-				for dx := -radius; dx <= radius; dx++ {
-					if dx*dx+dy*dy <= radius*radius {
-						px := cx + dx
-						py := cy + dy
-						if px >= 0 && px < width && py >= 0 && py < height {
-							if rng.Float64() < 0.5 {
-								img.Set(px, py, base)
-							} else {
-								img.Set(px, py, accent)
-							}
-						}
-					}
-				}
+			g.drawGraffitiBlob(img, width, height, base, accent, rng)
+		}
+	}
+}
+
+// drawGraffitiLine draws a random line mark on the graffiti.
+func (g *Generator) drawGraffitiLine(img *image.RGBA, width, height int, base, accent color.Color, rng *rand.Rand) {
+	x1 := rng.Intn(width)
+	y1 := rng.Intn(height)
+	x2 := x1 + rng.Intn(width/2) - width/4
+	y2 := y1 + rng.Intn(height/2) - height/4
+	
+	lineColor := base
+	if rng.Float64() >= 0.5 {
+		lineColor = accent
+	}
+	
+	g.drawLine(img, x1, y1, x2, y2, lineColor)
+}
+
+// drawGraffitiBlob draws a circular blob mark on the graffiti.
+func (g *Generator) drawGraffitiBlob(img *image.RGBA, width, height int, base, accent color.Color, rng *rand.Rand) {
+	cx := rng.Intn(width)
+	cy := rng.Intn(height)
+	radius := 3 + rng.Intn(6)
+	
+	for dy := -radius; dy <= radius; dy++ {
+		for dx := -radius; dx <= radius; dx++ {
+			if dx*dx+dy*dy > radius*radius {
+				continue
 			}
+			
+			px := cx + dx
+			py := cy + dy
+			
+			if px < 0 || px >= width || py < 0 || py >= height {
+				continue
+			}
+			
+			pixelColor := base
+			if rng.Float64() >= 0.5 {
+				pixelColor = accent
+			}
+			img.Set(px, py, pixelColor)
 		}
 	}
 }

@@ -42,60 +42,17 @@ func AnalyzeSilhouette(sprite *ebiten.Image) SilhouetteAnalysis {
 	}
 
 	bounds := sprite.Bounds()
-	width, height := bounds.Dx(), bounds.Dy()
-	totalPixels := width * height
+	totalPixels := bounds.Dx() * bounds.Dy()
 
 	if totalPixels == 0 {
 		return SilhouetteAnalysis{TotalPixels: totalPixels}
 	}
 
-	// Count opaque pixels and perimeter
-	opaquePixels := 0
-	perimeterPixels := 0
-	edgeContrast := 0.0
-
-	for y := 0; y < height; y++ {
-		for x := 0; x < width; x++ {
-			_, _, _, a := sprite.At(x, y).RGBA()
-			alpha := float64(a) / 65535.0
-
-			if alpha > 0.5 { // Semi-transparent threshold
-				opaquePixels++
-
-				// Check if on perimeter (has transparent neighbor)
-				if isOnPerimeter(sprite, x, y) {
-					perimeterPixels++
-					// Measure edge contrast
-					contrast := measureEdgeContrast(sprite, x, y)
-					edgeContrast += contrast
-				}
-			}
-		}
-	}
-
-	// Calculate metrics
-	coverage := float64(opaquePixels) / float64(totalPixels)
-
-	var compactness float64
-	if perimeterPixels > 0 && opaquePixels > 0 {
-		// Compactness: 4π * area / perimeter^2
-		// Circle = 1.0, irregular shapes < 1.0
-		area := float64(opaquePixels)
-		perimeter := float64(perimeterPixels)
-		compactness = (4.0 * math.Pi * area) / (perimeter * perimeter)
-		if compactness > 1.0 {
-			compactness = 1.0
-		}
-	}
-
-	var edgeClarity float64
-	if perimeterPixels > 0 {
-		edgeClarity = edgeContrast / float64(perimeterPixels)
-	}
-
-	// Overall score: weighted combination
-	// 40% coverage, 30% compactness, 30% edge clarity
-	overallScore := (0.4 * coverage) + (0.3 * compactness) + (0.3 * edgeClarity)
+	opaquePixels, perimeterPixels, edgeContrast := countPixelsAndContrast(sprite, bounds)
+	coverage := calculateCoverage(opaquePixels, totalPixels)
+	compactness := calculateCompactness(opaquePixels, perimeterPixels)
+	edgeClarity := calculateEdgeClarity(edgeContrast, perimeterPixels)
+	overallScore := calculateOverallScore(coverage, compactness, edgeClarity)
 
 	return SilhouetteAnalysis{
 		Compactness:     compactness,
@@ -106,6 +63,66 @@ func AnalyzeSilhouette(sprite *ebiten.Image) SilhouetteAnalysis {
 		PerimeterPixels: perimeterPixels,
 		TotalPixels:     totalPixels,
 	}
+}
+
+// countPixelsAndContrast counts opaque and perimeter pixels and measures edge contrast.
+func countPixelsAndContrast(sprite *ebiten.Image, bounds image.Rectangle) (int, int, float64) {
+	opaquePixels := 0
+	perimeterPixels := 0
+	edgeContrast := 0.0
+
+	for y := 0; y < bounds.Dy(); y++ {
+		for x := 0; x < bounds.Dx(); x++ {
+			_, _, _, a := sprite.At(x, y).RGBA()
+			alpha := float64(a) / 65535.0
+
+			if alpha > 0.5 {
+				opaquePixels++
+
+				if isOnPerimeter(sprite, x, y) {
+					perimeterPixels++
+					contrast := measureEdgeContrast(sprite, x, y)
+					edgeContrast += contrast
+				}
+			}
+		}
+	}
+
+	return opaquePixels, perimeterPixels, edgeContrast
+}
+
+// calculateCoverage computes percentage of sprite canvas used.
+func calculateCoverage(opaquePixels, totalPixels int) float64 {
+	return float64(opaquePixels) / float64(totalPixels)
+}
+
+// calculateCompactness computes shape compactness metric.
+func calculateCompactness(opaquePixels, perimeterPixels int) float64 {
+	if perimeterPixels == 0 || opaquePixels == 0 {
+		return 0.0
+	}
+
+	area := float64(opaquePixels)
+	perimeter := float64(perimeterPixels)
+	compactness := (4.0 * math.Pi * area) / (perimeter * perimeter)
+
+	if compactness > 1.0 {
+		return 1.0
+	}
+	return compactness
+}
+
+// calculateEdgeClarity computes average edge distinctness.
+func calculateEdgeClarity(edgeContrast float64, perimeterPixels int) float64 {
+	if perimeterPixels == 0 {
+		return 0.0
+	}
+	return edgeContrast / float64(perimeterPixels)
+}
+
+// calculateOverallScore combines all metrics into weighted overall score.
+func calculateOverallScore(coverage, compactness, edgeClarity float64) float64 {
+	return (0.4 * coverage) + (0.3 * compactness) + (0.3 * edgeClarity)
 }
 
 // isOnPerimeter checks if a pixel is on the sprite's edge (has transparent neighbor).

@@ -317,65 +317,75 @@ func PlaceStairsInRoom(terrain *Terrain, roomType RoomType, up, down bool, rng *
 // PlaceStairsSymmetric places stairs in opposite corners or edges of the terrain.
 // Creates visual balance and encourages full exploration of the level.
 func PlaceStairsSymmetric(terrain *Terrain, up, down bool, rng *rand.Rand) error {
-	// Define corner regions (each 1/4 of the map)
+	cornerTiles := collectCornerTiles(terrain)
+	available := findAvailableCorners(cornerTiles)
+
+	if len(available) < 2 {
+		return fmt.Errorf("insufficient walkable corners for symmetric stairs")
+	}
+
+	if up {
+		available = placeStairsInCorner(terrain, cornerTiles, available, rng, true)
+	}
+
+	if down && len(available) > 0 {
+		placeStairsInCorner(terrain, cornerTiles, available, rng, false)
+	}
+
+	return nil
+}
+
+// collectCornerTiles finds walkable tiles in each corner quadrant.
+func collectCornerTiles(terrain *Terrain) [][]Point {
 	quarterWidth := terrain.Width / 4
 	quarterHeight := terrain.Height / 4
 
-	corners := []struct {
-		x, y, w, h int
-	}{
-		{0, 0, quarterWidth, quarterHeight},                                                         // Top-left
-		{terrain.Width - quarterWidth, 0, quarterWidth, quarterHeight},                              // Top-right
-		{0, terrain.Height - quarterHeight, quarterWidth, quarterHeight},                            // Bottom-left
-		{terrain.Width - quarterWidth, terrain.Height - quarterHeight, quarterWidth, quarterHeight}, // Bottom-right
+	corners := []struct{ x, y, w, h int }{
+		{0, 0, quarterWidth, quarterHeight},
+		{terrain.Width - quarterWidth, 0, quarterWidth, quarterHeight},
+		{0, terrain.Height - quarterHeight, quarterWidth, quarterHeight},
+		{terrain.Width - quarterWidth, terrain.Height - quarterHeight, quarterWidth, quarterHeight},
 	}
 
-	// Find walkable tiles in each corner
 	cornerTiles := make([][]Point, 4)
 	for i, corner := range corners {
-		tiles := make([]Point, 0, 20)
-		for y := corner.y; y < corner.y+corner.h && y < terrain.Height; y++ {
-			for x := corner.x; x < corner.x+corner.w && x < terrain.Width; x++ {
-				if terrain.GetTile(x, y) == TileFloor && terrain.IsWalkable(x, y) {
-					tiles = append(tiles, Point{X: x, Y: y})
-				}
-			}
-		}
-		cornerTiles[i] = tiles
+		cornerTiles[i] = findWalkableTilesInRegion(terrain, corner.x, corner.y, corner.w, corner.h)
 	}
 
-	// Find corners with available tiles
+	return cornerTiles
+}
+
+// findWalkableTilesInRegion finds all walkable floor tiles in a region.
+func findWalkableTilesInRegion(terrain *Terrain, x, y, w, h int) []Point {
+	tiles := make([]Point, 0, 20)
+	for ty := y; ty < y+h && ty < terrain.Height; ty++ {
+		for tx := x; tx < x+w && tx < terrain.Width; tx++ {
+			if terrain.GetTile(tx, ty) == TileFloor && terrain.IsWalkable(tx, ty) {
+				tiles = append(tiles, Point{X: tx, Y: ty})
+			}
+		}
+	}
+	return tiles
+}
+
+// findAvailableCorners identifies corner indices with walkable tiles.
+func findAvailableCorners(cornerTiles [][]Point) []int {
 	available := make([]int, 0, 4)
 	for i, tiles := range cornerTiles {
 		if len(tiles) > 0 {
 			available = append(available, i)
 		}
 	}
+	return available
+}
 
-	if len(available) < 2 {
-		return fmt.Errorf("insufficient walkable corners for symmetric stairs")
-	}
-
-	// Place stairs up in one corner
-	if up {
-		corner1 := available[rng.Intn(len(available))]
-		tiles := cornerTiles[corner1]
-		pos := tiles[rng.Intn(len(tiles))]
-		terrain.AddStairs(pos.X, pos.Y, true)
-
-		// Remove this corner from available
-		available = removeElement(available, corner1)
-	}
-
-	// Place stairs down in opposite corner
-	if down && len(available) > 0 {
-		corner2 := available[rng.Intn(len(available))]
-		tiles := cornerTiles[corner2]
-		pos := tiles[rng.Intn(len(tiles))]
-		terrain.AddStairs(pos.X, pos.Y, false)
-	}
-
-	return nil
+// placeStairsInCorner places stairs in a random corner from available list.
+func placeStairsInCorner(terrain *Terrain, cornerTiles [][]Point, available []int, rng *rand.Rand, isUp bool) []int {
+	corner := available[rng.Intn(len(available))]
+	tiles := cornerTiles[corner]
+	pos := tiles[rng.Intn(len(tiles))]
+	terrain.AddStairs(pos.X, pos.Y, isUp)
+	return removeElement(available, corner)
 }
 
 // removeElement removes the first occurrence of val from slice.

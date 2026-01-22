@@ -754,6 +754,59 @@ func (s *ObjectiveTrackerSystem) awardSkillPointsReward(entity *Entity, qst *que
 }
 
 // awardQuestItems generates and awards items from quest rewards.
+// extractEntityGenre retrieves the genre ID from entity's genre component.
+func extractEntityGenre(entity *Entity) string {
+	genreID := "fantasy"
+	if genreComp, hasGenre := entity.GetComponent("genre"); hasGenre {
+		if genre, ok := genreComp.(*GenreComponent); ok {
+			genreID = genre.GetPrimaryGenre()
+		}
+	}
+	return genreID
+}
+
+// createItemGenerationParams creates generation parameters for quest item rewards.
+func createItemGenerationParams(qst *quest.Quest, genreID, itemType string) procgen.GenerationParams {
+	return procgen.GenerationParams{
+		Difficulty: float64(qst.Difficulty) / 5.0,
+		Depth:      qst.RequiredLevel,
+		GenreID:    genreID,
+		Custom: map[string]interface{}{
+			"count": 1,
+			"type":  itemType,
+		},
+	}
+}
+
+// generateQuestItem generates a single quest item using the item generator.
+func (s *ObjectiveTrackerSystem) generateQuestItem(itemSeed int64, params procgen.GenerationParams, itemName string, questID string, entityID uint64, itemIndex int) *item.Item {
+	result, err := s.itemGenerator.Generate(itemSeed, params)
+	if err != nil {
+		log.WithFields(log.Fields{
+			"system_name": "objective_tracker",
+			"entity_id":   entityID,
+			"quest_id":    questID,
+			"item_index":  itemIndex,
+			"item_name":   itemName,
+			"error":       err.Error(),
+		}).Error("Failed to generate quest item reward")
+		return nil
+	}
+
+	items, ok := result.([]*item.Item)
+	if !ok || len(items) == 0 {
+		log.WithFields(log.Fields{
+			"system_name": "objective_tracker",
+			"entity_id":   entityID,
+			"quest_id":    questID,
+			"item_index":  itemIndex,
+		}).Warn("Item generation returned invalid or empty result")
+		return nil
+	}
+
+	return items[0]
+}
+
 func (s *ObjectiveTrackerSystem) awardQuestItems(entity *Entity, qst *quest.Quest) {
 	log.WithFields(log.Fields{
 		"system_name": "objective_tracker",
@@ -769,7 +822,7 @@ func (s *ObjectiveTrackerSystem) awardQuestItems(entity *Entity, qst *quest.Ques
 			"entity_id":   entity.ID,
 			"quest_id":    qst.ID,
 		}).Warn("Entity has no inventory component for item rewards")
-		return // No inventory to receive items
+		return
 	}
 	inv, ok := invComp.(*InventoryComponent)
 	if !ok {
@@ -782,13 +835,7 @@ func (s *ObjectiveTrackerSystem) awardQuestItems(entity *Entity, qst *quest.Ques
 		return
 	}
 
-	// Get genre for item generation
-	genreID := "fantasy" // Default genre
-	if genreComp, hasGenre := entity.GetComponent("genre"); hasGenre {
-		if genre, ok := genreComp.(*GenreComponent); ok {
-			genreID = genre.GetPrimaryGenre()
-		}
-	}
+	genreID := extractEntityGenre(entity)
 
 	log.WithFields(log.Fields{
 		"system_name": "objective_tracker",
@@ -799,12 +846,8 @@ func (s *ObjectiveTrackerSystem) awardQuestItems(entity *Entity, qst *quest.Ques
 
 	itemsAwarded := 0
 
-	// Generate items based on quest reward item names
 	for i, itemName := range qst.Reward.Items {
-		// Create generation seed from quest seed and item index
 		itemSeed := qst.Seed + int64(i)*100
-
-		// Determine item type from name (using seed for deterministic fallback)
 		itemType := s.inferItemTypeFromName(itemName, itemSeed)
 
 		log.WithFields(log.Fields{
@@ -817,44 +860,12 @@ func (s *ObjectiveTrackerSystem) awardQuestItems(entity *Entity, qst *quest.Ques
 			"seed":        itemSeed,
 		}).Debug("Generating quest item reward")
 
-		// Set up generation parameters
-		params := procgen.GenerationParams{
-			Difficulty: float64(qst.Difficulty) / 5.0, // Convert difficulty to 0-1 range
-			Depth:      qst.RequiredLevel,
-			GenreID:    genreID,
-			Custom: map[string]interface{}{
-				"count": 1,
-				"type":  itemType,
-			},
-		}
-
-		// Generate item
-		result, err := s.itemGenerator.Generate(itemSeed, params)
-		if err != nil {
-			log.WithFields(log.Fields{
-				"system_name": "objective_tracker",
-				"entity_id":   entity.ID,
-				"quest_id":    qst.ID,
-				"item_index":  i,
-				"item_name":   itemName,
-				"error":       err.Error(),
-			}).Error("Failed to generate quest item reward")
-			continue // Skip items that fail to generate
-		}
-
-		items, ok := result.([]*item.Item)
-		if !ok || len(items) == 0 {
-			log.WithFields(log.Fields{
-				"system_name": "objective_tracker",
-				"entity_id":   entity.ID,
-				"quest_id":    qst.ID,
-				"item_index":  i,
-			}).Warn("Item generation returned invalid or empty result")
+		params := createItemGenerationParams(qst, genreID, itemType)
+		generatedItem := s.generateQuestItem(itemSeed, params, itemName, qst.ID, entity.ID, i)
+		if generatedItem == nil {
 			continue
 		}
 
-		// Add item to inventory
-		generatedItem := items[0]
 		if inv.CanAddItem(generatedItem) {
 			log.WithFields(log.Fields{
 				"system_name": "objective_tracker",

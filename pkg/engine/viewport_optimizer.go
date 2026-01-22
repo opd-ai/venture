@@ -160,6 +160,55 @@ func (v *ViewportOptimizer) FrustumCull(entityX, entityY, entityWidth, entityHei
 
 // OptimizeVisibleSet filters entities to visible set using spatial partition.
 // This is the main optimization entry point.
+// calculateCoreViewportBounds calculates the core viewport bounds without margin.
+func (v *ViewportOptimizer) calculateCoreViewportBounds(camera *CameraComponent, screenWidth, screenHeight int) Bounds {
+	return Bounds{
+		X:      camera.X - float64(screenWidth)/(2*camera.Zoom),
+		Y:      camera.Y - float64(screenHeight)/(2*camera.Zoom),
+		Width:  float64(screenWidth) / camera.Zoom,
+		Height: float64(screenHeight) / camera.Zoom,
+	}
+}
+
+// getEntitySpriteSize retrieves entity sprite dimensions, defaulting to 32x32.
+func getEntitySpriteSize(entity *Entity) (width, height float64) {
+	width, height = 32.0, 32.0
+	if spriteComp, ok := entity.GetComponent("sprite"); ok {
+		if sprite, ok := spriteComp.(interface{ GetSize() (float64, float64) }); ok {
+			width, height = sprite.GetSize()
+		}
+	}
+	return width, height
+}
+
+// countOffScreenEntities counts entities in margin area outside core viewport.
+func (v *ViewportOptimizer) countOffScreenEntities(visible []*Entity, coreViewportBounds Bounds) int {
+	count := 0
+	for _, entity := range visible {
+		posComp, ok := entity.GetComponent("position")
+		if !ok {
+			continue
+		}
+		pos, ok := posComp.(*PositionComponent)
+		if !ok {
+			continue
+		}
+
+		width, height := getEntitySpriteSize(entity)
+		entityBounds := Bounds{
+			X:      pos.X - width/2,
+			Y:      pos.Y - height/2,
+			Width:  width,
+			Height: height,
+		}
+
+		if !entityBounds.Intersects(coreViewportBounds) {
+			count++
+		}
+	}
+	return count
+}
+
 func (v *ViewportOptimizer) OptimizeVisibleSet(
 	camera *CameraComponent,
 	screenWidth, screenHeight int,
@@ -177,22 +226,17 @@ func (v *ViewportOptimizer) OptimizeVisibleSet(
 		"spatial_enabled": spatialPartition != nil,
 	}).Debug("Starting visible set optimization")
 
-	// Reset stats
-	v.stats = ViewportStats{
-		TotalEntities: len(allEntities),
-	}
+	v.stats = ViewportStats{TotalEntities: len(allEntities)}
 
 	if camera == nil || spatialPartition == nil {
 		v.logger.WithFields(logrus.Fields{
 			"camera_nil":            camera == nil,
 			"spatial_partition_nil": spatialPartition == nil,
 		}).Warn("Camera or spatial partition not available, returning all entities")
-
 		v.stats.VisibleEntities = len(allEntities)
 		return allEntities
 	}
 
-	// Calculate viewport bounds
 	viewportBounds := v.calculateViewportBoundsUnlocked(
 		camera.X, camera.Y,
 		float64(screenWidth), float64(screenHeight),
@@ -206,14 +250,12 @@ func (v *ViewportOptimizer) OptimizeVisibleSet(
 		"viewport_bounds": viewportBounds,
 	}).Debug("Viewport bounds calculated for optimization")
 
-	// Query spatial partition
 	visible := spatialPartition.QueryBounds(viewportBounds)
 
 	v.logger.WithFields(logrus.Fields{
 		"spatial_query_results": len(visible),
 	}).Debug("Spatial partition query completed")
 
-	// Always include player entities (input component)
 	playerEntities := v.extractPlayerEntities(allEntities, visible)
 	if len(playerEntities) > 0 {
 		visible = append(visible, playerEntities...)
@@ -222,52 +264,15 @@ func (v *ViewportOptimizer) OptimizeVisibleSet(
 		}).Debug("Added player entities to visible set")
 	}
 
-	// Update stats
 	v.stats.VisibleEntities = len(visible)
 	v.stats.CulledEntities = v.stats.TotalEntities - v.stats.VisibleEntities
 
-	// Count off-screen entities (within margin but not in core viewport)
-	coreViewportBounds := Bounds{
-		X:      camera.X - float64(screenWidth)/(2*camera.Zoom),
-		Y:      camera.Y - float64(screenHeight)/(2*camera.Zoom),
-		Width:  float64(screenWidth) / camera.Zoom,
-		Height: float64(screenHeight) / camera.Zoom,
-	}
-
+	coreViewportBounds := v.calculateCoreViewportBounds(camera, screenWidth, screenHeight)
 	v.logger.WithFields(logrus.Fields{
 		"core_viewport_bounds": coreViewportBounds,
 	}).Debug("Calculating off-screen rendered count")
 
-	for _, entity := range visible {
-		posComp, ok := entity.GetComponent("position")
-		if !ok {
-			continue
-		}
-		pos, ok := posComp.(*PositionComponent)
-		if !ok {
-			continue
-		}
-
-		// Get sprite size
-		width, height := 32.0, 32.0
-		if spriteComp, ok := entity.GetComponent("sprite"); ok {
-			if sprite, ok := spriteComp.(interface{ GetSize() (float64, float64) }); ok {
-				width, height = sprite.GetSize()
-			}
-		}
-
-		// Check if entity is in margin (not in core viewport)
-		entityBounds := Bounds{
-			X:      pos.X - width/2,
-			Y:      pos.Y - height/2,
-			Width:  width,
-			Height: height,
-		}
-
-		if !entityBounds.Intersects(coreViewportBounds) {
-			v.stats.OffScreenRendered++
-		}
-	}
+	v.stats.OffScreenRendered = v.countOffScreenEntities(visible, coreViewportBounds)
 
 	v.logger.WithFields(logrus.Fields{
 		"total_entities":       v.stats.TotalEntities,

@@ -440,45 +440,81 @@ func spawnWeather(world *engine.World, screenWidth, screenHeight int, seed int64
 	return weatherEntity
 }
 
+// calculateHazardPosition determines spawn coordinates within a room with padding.
+func calculateHazardPosition(room *terrain.Room, rng *rand.Rand, tileSize, padding int) (worldX, worldY float64, valid bool) {
+	if room.Width <= padding*2 || room.Height <= padding*2 {
+		return 0, 0, false
+	}
+
+	tileX := room.X + padding + rng.Intn(room.Width-padding*2)
+	tileY := room.Y + padding + rng.Intn(room.Height-padding*2)
+	worldX = float64(tileX * tileSize)
+	worldY = float64(tileY * tileSize)
+	return worldX, worldY, true
+}
+
+// addHazardComponents attaches sprite, collider, and hazard components to entity.
+func addHazardComponents(entity *engine.Entity, envObj *environment.EnvironmentObject, subType environment.SubType) {
+	sprite := &engine.EbitenSprite{
+		Image:   nil,
+		Width:   float64(envObj.Width),
+		Height:  float64(envObj.Height),
+		Visible: true,
+		Layer:   3,
+	}
+	entity.AddComponent(sprite)
+
+	if envObj.Collidable {
+		entity.AddComponent(&engine.ColliderComponent{
+			Width:     float64(envObj.Width),
+			Height:    float64(envObj.Height),
+			Solid:     true,
+			IsTrigger: false,
+			Layer:     2,
+			OffsetX:   -float64(envObj.Width) / 2,
+			OffsetY:   -float64(envObj.Height) / 2,
+		})
+	}
+
+	if envObj.Harmful && envObj.Damage > 0 {
+		hazardType := determineHazardType(subType)
+		entity.AddComponent(&engine.HazardComponent{
+			HazardType:      hazardType,
+			Duration:        0,
+			DamagePerSecond: float64(envObj.Damage),
+		})
+	}
+}
+
 // spawnEnvironmentalHazards spawns procedural environmental hazards (fire pits, acid pools, spike traps, etc.).
 // Phase 3.4: Environment & Legendary Items
 func spawnEnvironmentalHazards(world *engine.World, terrain *terrain.Terrain, seed int64, genreID string, logger *logrus.Entry) int {
 	rng := rand.New(rand.NewSource(seed))
 	hazardCount := 0
 	const tileSize = 32
+	const padding = 2
 	envGen := environment.NewGenerator()
 
-	// Spawn 1-3 hazards per room (excluding entrance room)
 	for i, room := range terrain.Rooms {
-		// Skip entrance room (index 0) - keep it safe for player spawn
 		if i == 0 {
 			continue
 		}
 
-		// Determine number of hazards for this room (1-3)
 		numHazards := 1 + rng.Intn(3)
 
 		for j := 0; j < numHazards; j++ {
-			// Select random hazard subtype based on genre
 			subType := selectHazardSubType(genreID, rng)
 
-			// Find random position within room (avoid edges)
-			padding := 2 // Tiles of padding from room edges
-			if room.Width <= padding*2 || room.Height <= padding*2 {
-				continue // Room too small for hazards
+			worldX, worldY, valid := calculateHazardPosition(room, rng, tileSize, padding)
+			if !valid {
+				continue
 			}
 
-			tileX := room.X + padding + rng.Intn(room.Width-padding*2)
-			tileY := room.Y + padding + rng.Intn(room.Height-padding*2)
-			worldX := float64(tileX * tileSize)
-			worldY := float64(tileY * tileSize)
-
-			// Generate environmental object (Phase 45: 64×64 default sprites)
 			config := environment.Config{
 				SubType: subType,
 				GenreID: genreID,
 				Seed:    seed + int64(i*1000+j),
-				Width:   64, // Phase 45 standard sprite size
+				Width:   64,
 				Height:  64,
 			}
 
@@ -490,43 +526,9 @@ func spawnEnvironmentalHazards(world *engine.World, terrain *terrain.Terrain, se
 				continue
 			}
 
-			// Create entity in world
 			hazardEntity := world.CreateEntity()
 			hazardEntity.AddComponent(&engine.PositionComponent{X: worldX, Y: worldY})
-
-			// Add sprite component (note: image conversion will be handled by rendering system)
-			sprite := &engine.EbitenSprite{
-				Image:   nil, // Will be converted from envObj.Sprite by rendering system
-				Width:   float64(envObj.Width),
-				Height:  float64(envObj.Height),
-				Visible: true,
-				Layer:   3, // Below player but above ground
-			}
-			hazardEntity.AddComponent(sprite)
-
-			// Add collision if hazard is collidable
-			if envObj.Collidable {
-				hazardEntity.AddComponent(&engine.ColliderComponent{
-					Width:     float64(envObj.Width),
-					Height:    float64(envObj.Height),
-					Solid:     true,
-					IsTrigger: false,
-					Layer:     2,
-					OffsetX:   -float64(envObj.Width) / 2,
-					OffsetY:   -float64(envObj.Height) / 2,
-				})
-			}
-
-			// Add hazard component if hazard is harmful
-			if envObj.Harmful && envObj.Damage > 0 {
-				hazardType := determineHazardType(subType)
-				hazardEntity.AddComponent(&engine.HazardComponent{
-					HazardType:      hazardType,
-					Duration:        0, // Permanent hazard
-					DamagePerSecond: float64(envObj.Damage),
-				})
-			}
-
+			addHazardComponents(hazardEntity, envObj, subType)
 			hazardCount++
 		}
 	}
@@ -1704,23 +1706,80 @@ func loadGameSave(player *engine.Entity, gameSave *saveload.GameSave, game *engi
 	}
 }
 
+// convertVehicleType converts vehicle.VehicleType to engine.VehicleType.
+func convertVehicleType(vType vehicle.VehicleType) engine.VehicleType {
+	switch vType {
+	case vehicle.TypeMount:
+		return engine.VehicleMount
+	case vehicle.TypeCart:
+		return engine.VehicleCart
+	case vehicle.TypeBoat:
+		return engine.VehicleBoat
+	case vehicle.TypeGlider:
+		return engine.VehicleGlider
+	case vehicle.TypeMech:
+		return engine.VehicleMech
+	default:
+		return engine.VehicleMount
+	}
+}
+
+// convertColorToRGBA converts a uint32 color value to color.RGBA.
+func convertColorToRGBA(colorValue uint32) color.RGBA {
+	r := uint8((colorValue >> 16) & 0xFF)
+	g := uint8((colorValue >> 8) & 0xFF)
+	b := uint8(colorValue & 0xFF)
+	return color.RGBA{R: r, G: g, B: b, A: 255}
+}
+
+// calculateVehicleSizing determines sprite size and collider dimensions based on vehicle type.
+func calculateVehicleSizing(vType vehicle.VehicleType) (size int, colliderSize float64) {
+	switch vType {
+	case vehicle.TypeMount:
+		return 32, 28.0
+	case vehicle.TypeCart:
+		return 40, 36.0
+	case vehicle.TypeBoat:
+		return 48, 44.0
+	case vehicle.TypeGlider:
+		return 36, 32.0
+	case vehicle.TypeMech:
+		return 44, 40.0
+	default:
+		return 32, 28.0
+	}
+}
+
+// createVehicleSpawnData converts a vehicle instance to spawn data.
+func createVehicleSpawnData(v *vehicle.Vehicle) engine.VehicleSpawnData {
+	engineType := convertVehicleType(v.VehicleType)
+	colorRGBA := convertColorToRGBA(v.Color)
+	size, colliderSize := calculateVehicleSizing(v.VehicleType)
+
+	return engine.VehicleSpawnData{
+		Name:         v.Name,
+		VehicleType:  engineType,
+		Components:   v.ToComponents(),
+		Color:        colorRGBA,
+		Size:         size,
+		ColliderSize: colliderSize,
+	}
+}
+
 // spawnVehicles generates and spawns vehicles in terrain rooms (V4.0).
 func spawnVehicles(world *engine.World, terrainMap *terrain.Terrain, seed int64, params procgen.GenerationParams, logger *logrus.Entry) (int, error) {
-	// Import vehicle generator
 	vehicleGen := vehicle.NewVehicleGenerator()
 
-	// Determine number of vehicles based on room count (2-5 vehicles per level)
 	roomCount := len(terrainMap.Rooms)
 	if roomCount < 2 {
-		return 0, nil // Need at least 2 rooms (entrance + 1 other)
+		return 0, nil
 	}
 
-	vehicleCount := 2 + (roomCount-2)/4 // Start with 2, +1 per 4 additional rooms
+	vehicleCount := 2 + (roomCount-2)/4
 	if vehicleCount > 5 {
-		vehicleCount = 5 // Cap at 5 vehicles
+		vehicleCount = 5
 	}
 
-	// Generate vehicles
 	vehicleResult, err := vehicleGen.Generate(seed, params)
 	if err != nil {
 		return 0, fmt.Errorf("failed to generate vehicles: %w", err)
@@ -1731,70 +1790,15 @@ func spawnVehicles(world *engine.World, terrainMap *terrain.Terrain, seed int64,
 		return 0, fmt.Errorf("vehicle generator returned invalid result")
 	}
 
-	// Limit to vehicleCount
 	if len(vehicles) > vehicleCount {
 		vehicles = vehicles[:vehicleCount]
 	}
 
-	// Convert vehicles to VehicleSpawnData
 	vehicleSpawnData := make([]engine.VehicleSpawnData, len(vehicles))
 	for i, v := range vehicles {
-		// Convert vehicle.VehicleType to engine.VehicleType
-		var engineType engine.VehicleType
-		switch v.VehicleType {
-		case vehicle.TypeMount:
-			engineType = engine.VehicleMount
-		case vehicle.TypeCart:
-			engineType = engine.VehicleCart
-		case vehicle.TypeBoat:
-			engineType = engine.VehicleBoat
-		case vehicle.TypeGlider:
-			engineType = engine.VehicleGlider
-		case vehicle.TypeMech:
-			engineType = engine.VehicleMech
-		}
-
-		// Convert uint32 color to color.RGBA
-		r := uint8((v.Color >> 16) & 0xFF)
-		g := uint8((v.Color >> 8) & 0xFF)
-		b := uint8(v.Color & 0xFF)
-		colorRGBA := color.RGBA{R: r, G: g, B: b, A: 255}
-
-		// Determine sprite size based on vehicle type
-		var size int
-		var colliderSize float64
-		switch v.VehicleType {
-		case vehicle.TypeMount:
-			size = 32
-			colliderSize = 28.0
-		case vehicle.TypeCart:
-			size = 40
-			colliderSize = 36.0
-		case vehicle.TypeBoat:
-			size = 48
-			colliderSize = 44.0
-		case vehicle.TypeGlider:
-			size = 36
-			colliderSize = 32.0
-		case vehicle.TypeMech:
-			size = 44
-			colliderSize = 40.0
-		default:
-			size = 32
-			colliderSize = 28.0
-		}
-
-		vehicleSpawnData[i] = engine.VehicleSpawnData{
-			Name:         v.Name,
-			VehicleType:  engineType,
-			Components:   v.ToComponents(), // Generate components from vehicle
-			Color:        colorRGBA,
-			Size:         size,
-			ColliderSize: colliderSize,
-		}
+		vehicleSpawnData[i] = createVehicleSpawnData(v)
 	}
 
-	// Spawn vehicles in terrain
 	spawned, err := engine.SpawnVehiclesInTerrain(world, terrainMap, vehicleSpawnData, seed)
 	if err != nil {
 		return 0, fmt.Errorf("failed to spawn vehicles in terrain: %w", err)
@@ -1809,26 +1813,69 @@ func spawnVehicles(world *engine.World, terrainMap *terrain.Terrain, seed int64,
 	return spawned, nil
 }
 
+// calculateCompanionSizing determines sprite size and collider dimensions based on companion type.
+func calculateCompanionSizing(compType engine.CompanionType) (size int, colliderSize float64) {
+	switch compType {
+	case engine.CompanionTypePet:
+		return 24, 20.0
+	case engine.CompanionTypeSummon:
+		return 28, 24.0
+	case engine.CompanionTypeHireling:
+		return 28, 24.0
+	case engine.CompanionTypeElemental:
+		return 32, 28.0
+	case engine.CompanionTypeUndead:
+		return 30, 26.0
+	case engine.CompanionTypeRobot:
+		return 30, 26.0
+	case engine.CompanionTypeSpirit:
+		return 26, 22.0
+	case engine.CompanionTypeInsect:
+		return 22, 18.0
+	default:
+		return 28, 24.0
+	}
+}
+
+// createCompanionSpawnData converts a companion instance to spawn data.
+func createCompanionSpawnData(comp *companion.Companion, companionSeed int64, genreID string) engine.CompanionSpawnData {
+	companionColor := generateCompanionColor(comp.Type, genreID, companionSeed)
+	size, colliderSize := calculateCompanionSizing(comp.Type)
+
+	return engine.CompanionSpawnData{
+		Name:          comp.Name,
+		CompanionType: comp.Type,
+		Level:         comp.Level,
+		Attack:        comp.Attack,
+		Defense:       comp.Defense,
+		Speed:         comp.Speed,
+		HP:            comp.HP,
+		MaxHP:         comp.MaxHP,
+		Loyalty:       comp.Loyalty,
+		Commands:      comp.Commands,
+		Color:         companionColor,
+		Size:          size,
+		ColliderSize:  colliderSize,
+	}
+}
+
 // spawnCompanions generates and spawns companions in terrain rooms (V4.0).
 func spawnCompanions(world *engine.World, terrainMap *terrain.Terrain, seed int64, params procgen.GenerationParams, logger *logrus.Entry) (int, error) {
-	// Import companion generator
 	companionGen := companion.NewGenerator()
 
-	// Determine number of companions based on room count (1-3 companions per level)
 	roomCount := len(terrainMap.Rooms)
 	if roomCount < 2 {
-		return 0, nil // Need at least 2 rooms (entrance + 1 other)
+		return 0, nil
 	}
 
-	companionCount := 1 + (roomCount-2)/5 // Start with 1, +1 per 5 additional rooms
+	companionCount := 1 + (roomCount-2)/5
 	if companionCount > 3 {
-		companionCount = 3 // Cap at 3 companions
+		companionCount = 3
 	}
 
-	// Generate companions
 	companionSpawnData := make([]engine.CompanionSpawnData, 0, companionCount)
 	for i := 0; i < companionCount; i++ {
-		companionSeed := seed + int64(i*1000) // Unique seed per companion
+		companionSeed := seed + int64(i*1000)
 
 		companionResult, err := companionGen.Generate(companionSeed, params)
 		if err != nil {
@@ -1842,65 +1889,14 @@ func spawnCompanions(world *engine.World, terrainMap *terrain.Terrain, seed int6
 			continue
 		}
 
-		// Convert companion.Type (engine.CompanionType) to spawn data
-		// Generate color based on companion type and genre
-		companionColor := generateCompanionColor(comp.Type, params.GenreID, companionSeed)
-
-		// Determine sprite size based on companion type
-		var size int
-		var colliderSize float64
-		switch comp.Type {
-		case engine.CompanionTypePet:
-			size = 24
-			colliderSize = 20.0
-		case engine.CompanionTypeSummon:
-			size = 28
-			colliderSize = 24.0
-		case engine.CompanionTypeHireling:
-			size = 28
-			colliderSize = 24.0
-		case engine.CompanionTypeElemental:
-			size = 32
-			colliderSize = 28.0
-		case engine.CompanionTypeUndead:
-			size = 30
-			colliderSize = 26.0
-		case engine.CompanionTypeRobot:
-			size = 30
-			colliderSize = 26.0
-		case engine.CompanionTypeSpirit:
-			size = 26
-			colliderSize = 22.0
-		case engine.CompanionTypeInsect:
-			size = 22
-			colliderSize = 18.0
-		default:
-			size = 28
-			colliderSize = 24.0
-		}
-
-		companionSpawnData = append(companionSpawnData, engine.CompanionSpawnData{
-			Name:          comp.Name,
-			CompanionType: comp.Type,
-			Level:         comp.Level,
-			Attack:        comp.Attack,
-			Defense:       comp.Defense,
-			Speed:         comp.Speed,
-			HP:            comp.HP,
-			MaxHP:         comp.MaxHP,
-			Loyalty:       comp.Loyalty,
-			Commands:      comp.Commands,
-			Color:         companionColor,
-			Size:          size,
-			ColliderSize:  colliderSize,
-		})
+		spawnData := createCompanionSpawnData(comp, companionSeed, params.GenreID)
+		companionSpawnData = append(companionSpawnData, spawnData)
 	}
 
 	if len(companionSpawnData) == 0 {
-		return 0, nil // No companions generated
+		return 0, nil
 	}
 
-	// Spawn companions in terrain
 	spawned, err := engine.SpawnCompanionsInTerrain(world, terrainMap, companionSpawnData, seed)
 	if err != nil {
 		return 0, fmt.Errorf("failed to spawn companions in terrain: %w", err)

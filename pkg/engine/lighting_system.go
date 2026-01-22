@@ -883,72 +883,135 @@ func (s *LightingSystem) findAmbientIntensity(entities []*Entity) float64 {
 
 // calculateLightContribution computes light contribution from a single entity.
 func (s *LightingSystem) calculateLightContribution(entity *Entity, x, y float64) (float64, bool) {
+	s.logCalculationStart(entity.ID, x, y)
+
+	light := s.getLightComponent(entity)
+	if light == nil {
+		return 0, false
+	}
+
+	pos := s.getPositionComponent(entity)
+	if pos == nil {
+		return 0, false
+	}
+
+	dist := calculateLightDistance(x, y, pos.X, pos.Y)
+
+	if !s.isWithinRange(entity.ID, dist, light.Radius) {
+		return 0, false
+	}
+
+	intensity := s.computeIntensity(light, dist)
+	s.logCalculationResult(entity.ID, dist, light.Radius, intensity)
+
+	return intensity, true
+}
+
+// logCalculationStart logs the beginning of light contribution calculation.
+func (s *LightingSystem) logCalculationStart(entityID uint64, x, y float64) {
 	if s.logger != nil {
 		s.logger.WithFields(logrus.Fields{
-			"entity_id": entity.ID,
+			"entity_id": entityID,
 			"target_x":  x,
 			"target_y":  y,
 		}).Debug("Calculating light contribution")
 	}
+}
 
+// getLightComponent retrieves and validates the light component.
+func (s *LightingSystem) getLightComponent(entity *Entity) *LightComponent {
 	lightComp, hasLight := entity.GetComponent("light")
 	if !hasLight {
-		return 0, false
+		return nil
 	}
 
 	light, ok := lightComp.(*LightComponent)
 	if !ok || !light.Enabled {
-		if s.logger != nil {
-			s.logger.WithFields(logrus.Fields{
-				"entity_id": entity.ID,
-				"enabled":   light.Enabled,
-			}).Debug("Light component disabled or invalid")
-		}
-		return 0, false
+		s.logDisabledLight(entity.ID, light)
+		return nil
 	}
 
+	return light
+}
+
+// logDisabledLight logs when a light component is disabled or invalid.
+func (s *LightingSystem) logDisabledLight(entityID uint64, light *LightComponent) {
+	if s.logger != nil && light != nil {
+		s.logger.WithFields(logrus.Fields{
+			"entity_id": entityID,
+			"enabled":   light.Enabled,
+		}).Debug("Light component disabled or invalid")
+	}
+}
+
+// getPositionComponent retrieves and validates the position component.
+func (s *LightingSystem) getPositionComponent(entity *Entity) *PositionComponent {
 	posComp, hasPos := entity.GetComponent("position")
 	if !hasPos {
-		if s.logger != nil {
-			s.logger.WithField("entity_id", entity.ID).Warn("Light entity missing position component")
-		}
-		return 0, false
+		s.logMissingPosition(entity.ID)
+		return nil
 	}
 
 	pos, ok := posComp.(*PositionComponent)
 	if !ok {
-		return 0, false
+		return nil
 	}
 
-	dx := x - pos.X
-	dy := y - pos.Y
-	dist := math.Sqrt(dx*dx + dy*dy)
+	return pos
+}
 
-	if dist > light.Radius {
-		if s.logger != nil {
-			s.logger.WithFields(logrus.Fields{
-				"entity_id": entity.ID,
-				"distance":  dist,
-				"radius":    light.Radius,
-			}).Debug("Light out of range")
-		}
-		return 0, false
+// logMissingPosition logs when a light entity lacks a position component.
+func (s *LightingSystem) logMissingPosition(entityID uint64) {
+	if s.logger != nil {
+		s.logger.WithField("entity_id", entityID).Warn("Light entity missing position component")
 	}
+}
 
-	falloff := s.calculateFalloff(dist, light.Radius, light.Falloff)
-	intensity := light.GetCurrentIntensity() * falloff
+// calculateLightDistance computes the Euclidean distance between two points.
+func calculateLightDistance(x1, y1, x2, y2 float64) float64 {
+	dx := x1 - x2
+	dy := y1 - y2
+	return math.Sqrt(dx*dx + dy*dy)
+}
 
+// isWithinRange checks if the distance is within the light radius.
+func (s *LightingSystem) isWithinRange(entityID uint64, dist, radius float64) bool {
+	if dist > radius {
+		s.logOutOfRange(entityID, dist, radius)
+		return false
+	}
+	return true
+}
+
+// logOutOfRange logs when a light is out of range.
+func (s *LightingSystem) logOutOfRange(entityID uint64, dist, radius float64) {
 	if s.logger != nil {
 		s.logger.WithFields(logrus.Fields{
-			"entity_id": entity.ID,
+			"entity_id": entityID,
+			"distance":  dist,
+			"radius":    radius,
+		}).Debug("Light out of range")
+	}
+}
+
+// computeIntensity calculates the final light intensity with falloff.
+func (s *LightingSystem) computeIntensity(light *LightComponent, dist float64) float64 {
+	falloff := s.calculateFalloff(dist, light.Radius, light.Falloff)
+	return light.GetCurrentIntensity() * falloff
+}
+
+// logCalculationResult logs the final light contribution calculation.
+func (s *LightingSystem) logCalculationResult(entityID uint64, dist, radius, intensity float64) {
+	if s.logger != nil {
+		falloff := intensity / (intensity + 1) // Approximate falloff for logging
+		s.logger.WithFields(logrus.Fields{
+			"entity_id": entityID,
 			"distance":  dist,
 			"falloff":   falloff,
 			"intensity": intensity,
-			"radius":    light.Radius,
+			"radius":    radius,
 		}).Debug("Light contribution calculated")
 	}
-
-	return intensity, true
 }
 
 // CalculateLightIntensityAt calculates the total light intensity at a point.

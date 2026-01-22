@@ -393,70 +393,94 @@ func (c *TournamentComponent) Deserialize(data []byte) error {
 // GenerateSingleElimBracket generates a single elimination bracket.
 // Deterministic given the same seed and participants.
 func GenerateSingleElimBracket(seed int64, participants []uint64) []BracketMatch {
-	rng := rand.New(rand.NewSource(seed))
-	n := len(participants)
-	if n < 2 {
+	if len(participants) < 2 {
 		return nil
 	}
 
-	// Shuffle participants for seeding variety
+	rng := rand.New(rand.NewSource(seed))
+	shuffled := shuffleParticipants(rng, participants)
+	rounds := calculateRounds(len(participants))
+	bracketSize := calculateBracketSize(len(participants))
+	slots := createBracketSlots(shuffled, bracketSize)
+
+	return generateBracketMatches(seed, slots, rounds, bracketSize)
+}
+
+// shuffleParticipants creates a shuffled copy of participants for seeding variety.
+func shuffleParticipants(rng *rand.Rand, participants []uint64) []uint64 {
+	n := len(participants)
 	shuffled := make([]uint64, n)
 	copy(shuffled, participants)
 	rng.Shuffle(n, func(i, j int) {
 		shuffled[i], shuffled[j] = shuffled[j], shuffled[i]
 	})
+	return shuffled
+}
 
-	// Calculate number of rounds needed
+// calculateRounds computes the number of rounds needed for n participants.
+func calculateRounds(n int) int {
 	rounds := 0
 	for pow := 1; pow < n; pow *= 2 {
 		rounds++
 	}
+	return rounds
+}
 
-	// Pad to nearest power of 2 with byes
+// calculateBracketSize pads to the nearest power of 2 for bracket structure.
+func calculateBracketSize(n int) int {
 	bracketSize := 1
 	for bracketSize < n {
 		bracketSize *= 2
 	}
+	return bracketSize
+}
 
-	// Place participants (byes are 0)
+// createBracketSlots places participants into bracket slots (byes are 0).
+func createBracketSlots(shuffled []uint64, bracketSize int) []uint64 {
 	slots := make([]uint64, bracketSize)
-	for i := 0; i < n; i++ {
-		slots[i] = shuffled[i]
-	}
+	copy(slots, shuffled)
+	return slots
+}
 
-	// Generate first round matches
+// generateBracketMatches creates all bracket matches across all rounds.
+func generateBracketMatches(seed int64, slots []uint64, rounds, bracketSize int) []BracketMatch {
 	var bracket []BracketMatch
-	matchID := 0
 	for round := 1; round <= rounds; round++ {
 		matchesInRound := bracketSize / (1 << round)
 		for pos := 0; pos < matchesInRound; pos++ {
-			match := BracketMatch{
-				MatchID:  generateMatchID(seed, round, pos),
-				Round:    round,
-				Position: pos,
-			}
-
-			if round == 1 {
-				// First round: assign from slots
-				match.Player1ID = slots[pos*2]
-				match.Player2ID = slots[pos*2+1]
-
-				// Handle byes
-				if match.Player1ID == 0 && match.Player2ID != 0 {
-					match.WinnerID = match.Player2ID
-					match.Completed = true
-				} else if match.Player2ID == 0 && match.Player1ID != 0 {
-					match.WinnerID = match.Player1ID
-					match.Completed = true
-				}
-			}
-
+			match := createBracketMatch(seed, round, pos, slots)
 			bracket = append(bracket, match)
-			matchID++
 		}
 	}
-
 	return bracket
+}
+
+// createBracketMatch creates a single bracket match with bye handling.
+func createBracketMatch(seed int64, round, pos int, slots []uint64) BracketMatch {
+	match := BracketMatch{
+		MatchID:  generateMatchID(seed, round, pos),
+		Round:    round,
+		Position: pos,
+	}
+
+	if round == 1 {
+		match.Player1ID = slots[pos*2]
+		match.Player2ID = slots[pos*2+1]
+		assignByeWinner(&match)
+	}
+
+	return match
+}
+
+// assignByeWinner handles automatic wins for bye matches.
+func assignByeWinner(match *BracketMatch) {
+	if match.Player1ID == 0 && match.Player2ID != 0 {
+		match.WinnerID = match.Player2ID
+		match.Completed = true
+	} else if match.Player2ID == 0 && match.Player1ID != 0 {
+		match.WinnerID = match.Player1ID
+		match.Completed = true
+	}
 }
 
 // GenerateDoubleElimBracket generates a double elimination bracket.

@@ -36,67 +36,91 @@ type CompanionSpawnData struct {
 // Note: This function expects companion generation to be done externally to avoid import cycles.
 // Call this from cmd/client with companions generated via companiongen.NewGenerator().
 func SpawnCompanionsInTerrain(world *World, terr *terrain.Terrain, companions []CompanionSpawnData, seed int64) (int, error) {
-	if len(terr.Rooms) < 2 {
-		return 0, fmt.Errorf("insufficient rooms for companion spawning (need at least 2, got %d)", len(terr.Rooms))
+	if err := validateTerrainRooms(terr); err != nil {
+		return 0, err
 	}
 
 	if len(companions) == 0 {
 		return 0, nil
 	}
 
-	// Create RNG for room selection
 	rng := rand.New(rand.NewSource(seed + 6000))
-
-	// Select larger rooms for companion placement (settlement-like rooms)
-	// Filter rooms with area >= 35 tiles (minimum 7x5 or 5x7)
-	settlementRooms := make([]*terrain.Room, 0)
-	for i := 1; i < len(terr.Rooms); i++ { // Skip first room (player spawn)
-		room := terr.Rooms[i]
-		area := room.Width * room.Height
-		if area >= 35 {
-			settlementRooms = append(settlementRooms, room)
-		}
-	}
-
-	// If no large rooms, fall back to any non-spawn rooms
-	if len(settlementRooms) == 0 {
-		for i := 1; i < len(terr.Rooms); i++ {
-			settlementRooms = append(settlementRooms, terr.Rooms[i])
-		}
-	}
+	settlementRooms := selectSettlementRooms(terr, rng)
 
 	if len(settlementRooms) == 0 {
 		return 0, fmt.Errorf("no available rooms for companion spawning")
 	}
 
-	// Shuffle rooms
+	return spawnCompanionsInRooms(world, settlementRooms, companions, seed, rng), nil
+}
+
+// validateTerrainRooms checks if terrain has sufficient rooms for spawning.
+func validateTerrainRooms(terr *terrain.Terrain) error {
+	if len(terr.Rooms) < 2 {
+		return fmt.Errorf("insufficient rooms for companion spawning (need at least 2, got %d)", len(terr.Rooms))
+	}
+	return nil
+}
+
+// selectSettlementRooms finds and shuffles suitable rooms for companion placement.
+func selectSettlementRooms(terr *terrain.Terrain, rng *rand.Rand) []*terrain.Room {
+	settlementRooms := filterLargeRooms(terr)
+
+	if len(settlementRooms) == 0 {
+		settlementRooms = collectNonSpawnRooms(terr)
+	}
+
 	rng.Shuffle(len(settlementRooms), func(i, j int) {
 		settlementRooms[i], settlementRooms[j] = settlementRooms[j], settlementRooms[i]
 	})
 
+	return settlementRooms
+}
+
+// filterLargeRooms selects rooms with area >= 35 tiles for settlement placement.
+func filterLargeRooms(terr *terrain.Terrain) []*terrain.Room {
+	settlementRooms := make([]*terrain.Room, 0)
+	for i := 1; i < len(terr.Rooms); i++ {
+		room := terr.Rooms[i]
+		if room.Width*room.Height >= 35 {
+			settlementRooms = append(settlementRooms, room)
+		}
+	}
+	return settlementRooms
+}
+
+// collectNonSpawnRooms gathers all non-spawn rooms as fallback.
+func collectNonSpawnRooms(terr *terrain.Terrain) []*terrain.Room {
+	rooms := make([]*terrain.Room, 0)
+	for i := 1; i < len(terr.Rooms); i++ {
+		rooms = append(rooms, terr.Rooms[i])
+	}
+	return rooms
+}
+
+// spawnCompanionsInRooms creates companion entities in selected rooms.
+func spawnCompanionsInRooms(world *World, rooms []*terrain.Room, companions []CompanionSpawnData, seed int64, rng *rand.Rand) int {
 	spawned := 0
 	for i, companionData := range companions {
-		if i >= len(settlementRooms) {
-			break // No more rooms available
+		if i >= len(rooms) {
+			break
 		}
 
-		room := settlementRooms[i]
-		cx, cy := room.Center()
-
-		// Add some randomness to position within room
-		offsetX := rng.Float64()*30 - 15 // -15 to +15
-		offsetY := rng.Float64()*30 - 15
-		spawnX := float64(cx*32) + offsetX // 32 = tile size
-		spawnY := float64(cy*32) + offsetY
-
-		// Create companion entity
+		spawnX, spawnY := calculateCompanionSpawnPosition(rooms[i], rng)
 		entity := createCompanionEntity(world, companionData, spawnX, spawnY, seed, "fantasy")
 		if entity != nil {
 			spawned++
 		}
 	}
+	return spawned
+}
 
-	return spawned, nil
+// calculateCompanionSpawnPosition computes a randomized spawn position within a room.
+func calculateCompanionSpawnPosition(room *terrain.Room, rng *rand.Rand) (float64, float64) {
+	cx, cy := room.Center()
+	offsetX := rng.Float64()*30 - 15
+	offsetY := rng.Float64()*30 - 15
+	return float64(cx*32) + offsetX, float64(cy*32) + offsetY
 }
 
 // createCompanionEntity creates a companion entity with the provided data.

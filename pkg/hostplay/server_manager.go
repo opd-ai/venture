@@ -407,11 +407,7 @@ func (sm *ServerManager) broadcastEntityStates(snapshot *WorldState) {
 
 // convertToStateUpdate converts a WorldState EntityState to a network StateUpdate.
 func (sm *ServerManager) convertToStateUpdate(entityState EntityState) *network.StateUpdate {
-	timestamp, err := network.NowTimestamp()
-	if err != nil {
-		// Log warning and use zero timestamp (will be corrected by receiver)
-		timestamp = 0
-	}
+	timestamp := sm.getTimestamp()
 
 	update := &network.StateUpdate{
 		Timestamp: timestamp,
@@ -419,71 +415,100 @@ func (sm *ServerManager) convertToStateUpdate(entityState EntityState) *network.
 		Priority:  network.PriorityNormal,
 	}
 
-	// Add position component
-	if entityState.Position != nil {
-		posComp := &engine.PositionComponent{
-			X: entityState.Position.X,
-			Y: entityState.Position.Y,
-		}
-		posData, err := json.Marshal(posComp)
-		if err == nil {
-			update.Components = append(update.Components, network.ComponentData{
-				Type: "position",
-				Data: posData,
-			})
-		}
-	}
+	sm.addPositionComponent(update, entityState.Position)
+	sm.addVelocityComponent(update, entityState.Velocity)
+	sm.addHealthComponent(update, entityState.Health)
+	sm.addRotationComponent(update, entityState.Rotation)
 
-	// Add velocity component
-	if entityState.Velocity != nil {
-		velComp := &engine.VelocityComponent{
-			VX: entityState.Velocity.VX,
-			VY: entityState.Velocity.VY,
-		}
-		velData, err := json.Marshal(velComp)
-		if err == nil {
-			update.Components = append(update.Components, network.ComponentData{
-				Type: "velocity",
-				Data: velData,
-			})
-		}
-	}
-
-	// Add health component
-	if entityState.Health != nil {
-		healthComp := &engine.HealthComponent{
-			Current: entityState.Health.Current,
-			Max:     entityState.Health.Max,
-		}
-		healthData, err := json.Marshal(healthComp)
-		if err == nil {
-			update.Components = append(update.Components, network.ComponentData{
-				Type: "health",
-				Data: healthData,
-			})
-		}
-	}
-
-	// Add rotation component
-	if entityState.Rotation != nil {
-		rotComp := &engine.RotationComponent{
-			Angle: entityState.Rotation.Angle,
-		}
-		rotData, err := json.Marshal(rotComp)
-		if err == nil {
-			update.Components = append(update.Components, network.ComponentData{
-				Type: "rotation",
-				Data: rotData,
-			})
-		}
-	}
-
-	// Only send if we have components
 	if len(update.Components) == 0 {
 		return nil
 	}
 
 	return update
+}
+
+// getTimestamp retrieves the current network timestamp.
+func (sm *ServerManager) getTimestamp() uint64 {
+	timestamp, err := network.NowTimestamp()
+	if err != nil {
+		return 0
+	}
+	return timestamp
+}
+
+// addPositionComponent adds a position component to the state update if present.
+func (sm *ServerManager) addPositionComponent(update *network.StateUpdate, position *PositionState) {
+	if position == nil {
+		return
+	}
+
+	posComp := &engine.PositionComponent{
+		X: position.X,
+		Y: position.Y,
+	}
+	posData, err := json.Marshal(posComp)
+	if err == nil {
+		update.Components = append(update.Components, network.ComponentData{
+			Type: "position",
+			Data: posData,
+		})
+	}
+}
+
+// addVelocityComponent adds a velocity component to the state update if present.
+func (sm *ServerManager) addVelocityComponent(update *network.StateUpdate, velocity *VelocityState) {
+	if velocity == nil {
+		return
+	}
+
+	velComp := &engine.VelocityComponent{
+		VX: velocity.VX,
+		VY: velocity.VY,
+	}
+	velData, err := json.Marshal(velComp)
+	if err == nil {
+		update.Components = append(update.Components, network.ComponentData{
+			Type: "velocity",
+			Data: velData,
+		})
+	}
+}
+
+// addHealthComponent adds a health component to the state update if present.
+func (sm *ServerManager) addHealthComponent(update *network.StateUpdate, health *HealthState) {
+	if health == nil {
+		return
+	}
+
+	healthComp := &engine.HealthComponent{
+		Current: health.Current,
+		Max:     health.Max,
+	}
+	healthData, err := json.Marshal(healthComp)
+	if err == nil {
+		update.Components = append(update.Components, network.ComponentData{
+			Type: "health",
+			Data: healthData,
+		})
+	}
+}
+
+// addRotationComponent adds a rotation component to the state update if present.
+func (sm *ServerManager) addRotationComponent(update *network.StateUpdate, rotation *RotationState) {
+	if rotation == nil {
+		return
+	}
+
+	rotComp := &engine.RotationComponent{
+		Angle: rotation.Angle,
+	}
+	rotData, err := json.Marshal(rotComp)
+	if err == nil {
+		update.Components = append(update.Components, network.ComponentData{
+			Type: "rotation",
+			Data: rotData,
+		})
+	}
 }
 
 // Stop gracefully stops the server and waits for the goroutine to exit.

@@ -915,92 +915,138 @@ func (ms *EbitenMenuSystem) Draw(screen interface{}) {
 		}
 		return
 	}
-	if ms.menuEntity == nil {
+
+	menuComp := ms.getActiveMenuComponent()
+	if menuComp == nil {
 		return
+	}
+
+	ms.drawMenuOverlay(img)
+	menuX, menuY := ms.drawMenuBackground(img)
+	ms.drawMenuTitle(img, menuComp, menuX, menuY)
+	ms.drawConfirmMessage(img, menuComp, menuX, menuY)
+	ms.drawMenuItems(img, menuComp, menuX, menuY)
+	ms.drawErrorMessage(img, menuComp, menuX, menuY)
+	ms.drawControlsHint(img, menuX, menuY)
+}
+
+// getActiveMenuComponent retrieves the active menu component if present.
+func (ms *EbitenMenuSystem) getActiveMenuComponent() *MenuComponent {
+	if ms.menuEntity == nil {
+		return nil
 	}
 
 	menu, ok := ms.menuEntity.GetComponent("menu")
 	if !ok {
-		return
+		return nil
 	}
 
-	// Type assert with safety check
 	menuComp, ok := menu.(*MenuComponent)
 	if !ok || !menuComp.Active {
-		return
+		return nil
 	}
 
-	// Draw semi-transparent overlay
+	return menuComp
+}
+
+// drawMenuOverlay draws the semi-transparent background overlay.
+func (ms *EbitenMenuSystem) drawMenuOverlay(img *ebiten.Image) {
 	overlay := ebiten.NewImage(ms.screenWidth, ms.screenHeight)
 	overlay.Fill(color.RGBA{0, 0, 0, 180})
 	img.DrawImage(overlay, nil)
 	img.DrawImage(overlay, nil)
+}
 
-	// Calculate menu position (centered)
+// drawMenuBackground draws the menu background box and returns its position.
+func (ms *EbitenMenuSystem) drawMenuBackground(img *ebiten.Image) (int, int) {
 	menuWidth := 400
 	menuHeight := 300
 	menuX := (ms.screenWidth - menuWidth) / 2
 	menuY := (ms.screenHeight - menuHeight) / 2
 
-	// Draw menu background
 	menuBg := ebiten.NewImage(menuWidth, menuHeight)
 	menuBg.Fill(color.RGBA{40, 40, 50, 255})
 	opts := &ebiten.DrawImageOptions{}
 	opts.GeoM.Translate(float64(menuX), float64(menuY))
 	img.DrawImage(menuBg, opts)
 
-	// Draw menu title
-	var title string
-	switch menuComp.CurrentMenu {
-	case MenuTypeMain:
-		title = "GAME MENU"
-	case MenuTypeSave:
-		title = "SAVE GAME"
-	case MenuTypeLoad:
-		title = "LOAD GAME"
-	case MenuTypeConfirm:
-		title = "CONFIRM"
-	}
+	return menuX, menuY
+}
 
+// drawMenuTitle draws the menu title based on the current menu type.
+func (ms *EbitenMenuSystem) drawMenuTitle(img *ebiten.Image, menuComp *MenuComponent, menuX, menuY int) {
+	title := getMenuTitle(menuComp.CurrentMenu)
 	ebitenutil.DebugPrintAt(img, title, menuX+10, menuY+10)
+}
 
-	// Draw confirmation message if present
+// getMenuTitle returns the title string for a given menu type.
+func getMenuTitle(menuType MenuType) string {
+	switch menuType {
+	case MenuTypeMain:
+		return "GAME MENU"
+	case MenuTypeSave:
+		return "SAVE GAME"
+	case MenuTypeLoad:
+		return "LOAD GAME"
+	case MenuTypeConfirm:
+		return "CONFIRM"
+	default:
+		return ""
+	}
+}
+
+// drawConfirmMessage draws the confirmation message if present.
+func (ms *EbitenMenuSystem) drawConfirmMessage(img *ebiten.Image, menuComp *MenuComponent, menuX, menuY int) {
 	if menuComp.CurrentMenu == MenuTypeConfirm && menuComp.ConfirmMessage != "" {
 		ebitenutil.DebugPrintAt(img, menuComp.ConfirmMessage, menuX+10, menuY+40)
 	}
+}
 
-	// Draw menu items
+// drawMenuItems draws all menu items with selection highlighting.
+func (ms *EbitenMenuSystem) drawMenuItems(img *ebiten.Image, menuComp *MenuComponent, menuX, menuY int) {
 	itemY := menuY + 70
 	for i, item := range menuComp.Items {
-		// Highlight selected item
-		isSelected := i == menuComp.SelectedIndex
-
-		if isSelected {
-			// Draw selection background
-			selectionBg := ebiten.NewImage(menuWidth-20, 20)
-			selectionBg.Fill(color.RGBA{80, 80, 100, 200})
-			bgOpts := &ebiten.DrawImageOptions{}
-			bgOpts.GeoM.Translate(float64(menuX+10), float64(itemY))
-			img.DrawImage(selectionBg, bgOpts)
-
-			// Draw selection indicator
-			ebitenutil.DebugPrintAt(img, ">", menuX+10, itemY)
+		if i == menuComp.SelectedIndex {
+			itemY = ms.drawSelectedItem(img, item, menuX, itemY)
+		} else {
+			itemY = ms.drawUnselectedItem(img, item, menuX, itemY)
 		}
-
-		// Draw item label (offset for selection indicator)
-		// Note: Disabled items should appear grayed out, but ebitenutil doesn't support color
-		ebitenutil.DebugPrintAt(img, item.Label, menuX+30, itemY)
-
-		itemY += 25
 	}
+}
 
-	// Draw error message if present
+// drawSelectedItem draws a menu item with selection highlighting.
+func (ms *EbitenMenuSystem) drawSelectedItem(img *ebiten.Image, item MenuItem, menuX, itemY int) int {
+	menuWidth := 400
+	selectionBg := ebiten.NewImage(menuWidth-20, 20)
+	selectionBg.Fill(color.RGBA{80, 80, 100, 200})
+	bgOpts := &ebiten.DrawImageOptions{}
+	bgOpts.GeoM.Translate(float64(menuX+10), float64(itemY))
+	img.DrawImage(selectionBg, bgOpts)
+
+	ebitenutil.DebugPrintAt(img, ">", menuX+10, itemY)
+	ebitenutil.DebugPrintAt(img, item.Label, menuX+30, itemY)
+
+	return itemY + 25
+}
+
+// drawUnselectedItem draws a menu item without selection highlighting.
+func (ms *EbitenMenuSystem) drawUnselectedItem(img *ebiten.Image, item MenuItem, menuX, itemY int) int {
+	ebitenutil.DebugPrintAt(img, item.Label, menuX+30, itemY)
+	return itemY + 25
+}
+
+// drawErrorMessage draws the error message if present.
+func (ms *EbitenMenuSystem) drawErrorMessage(img *ebiten.Image, menuComp *MenuComponent, menuX, menuY int) {
 	if menuComp.ErrorMessage != "" {
+		menuHeight := 300
 		errorY := menuY + menuHeight - 30
 		ebitenutil.DebugPrintAt(img, menuComp.ErrorMessage, menuX+10, errorY)
 	}
+}
 
-	// Draw controls hint
+// drawControlsHint draws the controls hint at the bottom of the menu.
+func (ms *EbitenMenuSystem) drawControlsHint(img *ebiten.Image, menuX, menuY int) {
+	menuHeight := 300
 	controlsY := menuY + menuHeight - 10
 	ebitenutil.DebugPrintAt(img, "WASD/Arrows: Navigate | Enter/Click: Select | ESC: Back", menuX+10, controlsY)
 }

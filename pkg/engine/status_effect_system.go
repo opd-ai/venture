@@ -451,87 +451,130 @@ func (s *StatusEffectSystem) ApplyStatusEffect(entity *Entity, effectType string
 
 // applyEffectModifiers applies stat modifications when effect is added.
 func (s *StatusEffectSystem) applyEffectModifiers(entity *Entity, effect *StatusEffectComponent) {
-	if s.logger != nil {
-		s.logger.WithFields(logrus.Fields{
-			"entity_id":   entity.ID,
-			"effect_type": effect.EffectType,
-			"magnitude":   effect.Magnitude,
-		}).Debug("Applying effect modifiers to entity")
-	}
+	s.logEffectApplication(entity.ID, effect)
 
-	statsComp, hasStats := entity.GetComponent("stats")
-	if !hasStats {
-		if s.logger != nil {
-			s.logger.WithFields(logrus.Fields{
-				"entity_id":   entity.ID,
-				"effect_type": effect.EffectType,
-			}).Debug("Entity has no stats component, skipping modifier application")
-		}
-		return
-	}
-	stats, ok := statsComp.(*StatsComponent)
-	if !ok {
-		if s.logger != nil {
-			s.logger.WithFields(logrus.Fields{
-				"entity_id":      entity.ID,
-				"component_type": "stats",
-			}).Warn("Failed to type assert stats component")
-		}
+	stats := s.getAndValidateStatsComponent(entity, effect.EffectType)
+	if stats == nil {
 		return
 	}
 
 	switch effect.EffectType {
 	case "strength":
-		oldAttack := stats.Attack
-		// Attack boost (magnitude is percentage: 0.3 = +30%)
-		stats.Attack *= (1.0 + effect.Magnitude)
-		if s.logger != nil {
-			s.logger.WithFields(logrus.Fields{
-				"entity_id":  entity.ID,
-				"old_attack": oldAttack,
-				"new_attack": stats.Attack,
-				"boost_pct":  effect.Magnitude * 100,
-			}).Debug("Applied strength effect modifier")
-		}
-
+		s.applyStrengthEffect(entity.ID, stats, effect.Magnitude)
 	case "weakness":
-		oldAttack := stats.Attack
-		// Attack penalty (magnitude is fraction: 0.7 = 70% attack)
-		stats.Attack *= effect.Magnitude
-		if s.logger != nil {
-			s.logger.WithFields(logrus.Fields{
-				"entity_id":   entity.ID,
-				"old_attack":  oldAttack,
-				"new_attack":  stats.Attack,
-				"penalty_pct": (1.0 - effect.Magnitude) * 100,
-			}).Debug("Applied weakness effect modifier")
-		}
-
+		s.applyWeaknessEffect(entity.ID, stats, effect.Magnitude)
 	case "fortify":
-		oldDefense := stats.Defense
-		// Defense boost
-		stats.Defense *= (1.0 + effect.Magnitude)
-		if s.logger != nil {
-			s.logger.WithFields(logrus.Fields{
-				"entity_id":   entity.ID,
-				"old_defense": oldDefense,
-				"new_defense": stats.Defense,
-				"boost_pct":   effect.Magnitude * 100,
-			}).Debug("Applied fortify effect modifier")
-		}
-
+		s.applyFortifyEffect(entity.ID, stats, effect.Magnitude)
 	case "vulnerability":
-		oldDefense := stats.Defense
-		// Defense penalty
-		stats.Defense *= effect.Magnitude
-		if s.logger != nil {
-			s.logger.WithFields(logrus.Fields{
-				"entity_id":   entity.ID,
-				"old_defense": oldDefense,
-				"new_defense": stats.Defense,
-				"penalty_pct": (1.0 - effect.Magnitude) * 100,
-			}).Debug("Applied vulnerability effect modifier")
-		}
+		s.applyVulnerabilityEffect(entity.ID, stats, effect.Magnitude)
+	}
+}
+
+// logEffectApplication logs the start of effect modifier application.
+func (s *StatusEffectSystem) logEffectApplication(entityID uint64, effect *StatusEffectComponent) {
+	if s.logger != nil {
+		s.logger.WithFields(logrus.Fields{
+			"entity_id":   entityID,
+			"effect_type": effect.EffectType,
+			"magnitude":   effect.Magnitude,
+		}).Debug("Applying effect modifiers to entity")
+	}
+}
+
+// getAndValidateStatsComponent retrieves and validates the stats component.
+func (s *StatusEffectSystem) getAndValidateStatsComponent(entity *Entity, effectType string) *StatsComponent {
+	statsComp, hasStats := entity.GetComponent("stats")
+	if !hasStats {
+		s.logMissingStatsComponent(entity.ID, effectType)
+		return nil
+	}
+
+	stats, ok := statsComp.(*StatsComponent)
+	if !ok {
+		s.logStatsTypeAssertionFailed(entity.ID)
+		return nil
+	}
+
+	return stats
+}
+
+// logMissingStatsComponent logs when an entity lacks a stats component.
+func (s *StatusEffectSystem) logMissingStatsComponent(entityID uint64, effectType string) {
+	if s.logger != nil {
+		s.logger.WithFields(logrus.Fields{
+			"entity_id":   entityID,
+			"effect_type": effectType,
+		}).Debug("Entity has no stats component, skipping modifier application")
+	}
+}
+
+// logStatsTypeAssertionFailed logs when stats component type assertion fails.
+func (s *StatusEffectSystem) logStatsTypeAssertionFailed(entityID uint64) {
+	if s.logger != nil {
+		s.logger.WithFields(logrus.Fields{
+			"entity_id":      entityID,
+			"component_type": "stats",
+		}).Warn("Failed to type assert stats component")
+	}
+}
+
+// applyStrengthEffect applies an attack boost modifier.
+func (s *StatusEffectSystem) applyStrengthEffect(entityID uint64, stats *StatsComponent, magnitude float64) {
+	oldAttack := stats.Attack
+	stats.Attack *= (1.0 + magnitude)
+
+	if s.logger != nil {
+		s.logger.WithFields(logrus.Fields{
+			"entity_id":  entityID,
+			"old_attack": oldAttack,
+			"new_attack": stats.Attack,
+			"boost_pct":  magnitude * 100,
+		}).Debug("Applied strength effect modifier")
+	}
+}
+
+// applyWeaknessEffect applies an attack penalty modifier.
+func (s *StatusEffectSystem) applyWeaknessEffect(entityID uint64, stats *StatsComponent, magnitude float64) {
+	oldAttack := stats.Attack
+	stats.Attack *= magnitude
+
+	if s.logger != nil {
+		s.logger.WithFields(logrus.Fields{
+			"entity_id":   entityID,
+			"old_attack":  oldAttack,
+			"new_attack":  stats.Attack,
+			"penalty_pct": (1.0 - magnitude) * 100,
+		}).Debug("Applied weakness effect modifier")
+	}
+}
+
+// applyFortifyEffect applies a defense boost modifier.
+func (s *StatusEffectSystem) applyFortifyEffect(entityID uint64, stats *StatsComponent, magnitude float64) {
+	oldDefense := stats.Defense
+	stats.Defense *= (1.0 + magnitude)
+
+	if s.logger != nil {
+		s.logger.WithFields(logrus.Fields{
+			"entity_id":   entityID,
+			"old_defense": oldDefense,
+			"new_defense": stats.Defense,
+			"boost_pct":   magnitude * 100,
+		}).Debug("Applied fortify effect modifier")
+	}
+}
+
+// applyVulnerabilityEffect applies a defense penalty modifier.
+func (s *StatusEffectSystem) applyVulnerabilityEffect(entityID uint64, stats *StatsComponent, magnitude float64) {
+	oldDefense := stats.Defense
+	stats.Defense *= magnitude
+
+	if s.logger != nil {
+		s.logger.WithFields(logrus.Fields{
+			"entity_id":   entityID,
+			"old_defense": oldDefense,
+			"new_defense": stats.Defense,
+			"penalty_pct": (1.0 - magnitude) * 100,
+		}).Debug("Applied vulnerability effect modifier")
 	}
 }
 

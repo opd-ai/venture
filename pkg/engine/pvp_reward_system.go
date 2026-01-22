@@ -327,67 +327,90 @@ func (s *PvPRewardSystem) PurchaseFromVendor(entity *Entity, vendorItemID string
 		return false
 	}
 
-	ratingComp := s.getPvPRatingComponent(entity)
-
-	// Find vendor item
-	var vendorItem *PvPVendorItem
-	var itemIndex int
-	for i := range s.vendorItems {
-		if s.vendorItems[i].ID == vendorItemID {
-			vendorItem = &s.vendorItems[i]
-			itemIndex = i
-			break
-		}
-	}
-
+	vendorItem, itemIndex := s.findVendorItem(vendorItemID)
 	if vendorItem == nil {
-		log.WithFields(log.Fields{
-			"system_name":    "pvp_reward",
-			"entity_id":      entity.ID,
-			"vendor_item_id": vendorItemID,
-		}).Debug("Vendor item not found")
+		s.logVendorItemNotFound(entity.ID, vendorItemID)
 		return false
 	}
 
-	// Check rank requirement
-	if vendorItem.RankRequirement != "" && ratingComp != nil {
-		if getTierIndex(ratingComp.RankTier) < getTierIndex(vendorItem.RankRequirement) {
-			log.WithFields(log.Fields{
-				"system_name":    "pvp_reward",
-				"vendor_item_id": vendorItemID,
-				"required_rank":  vendorItem.RankRequirement,
-				"current_rank":   ratingComp.RankTier,
-			}).Debug("Rank requirement not met")
-			return false
-		}
+	if !s.validatePurchaseRequirements(entity, vendorItem) {
+		return false
 	}
 
-	// Check stock
+	if !rewardComp.SpendHonor(vendorItem.HonorCost) {
+		s.logInsufficientHonor(entity.ID, vendorItem.HonorCost, rewardComp.GetHonor())
+		return false
+	}
+
+	s.decreaseStock(itemIndex, vendorItem)
+	s.grantVendorReward(entity, rewardComp, vendorItem, vendorItemID)
+	s.logPurchaseSuccess(entity.ID, vendorItemID, vendorItem.HonorCost)
+
+	return true
+}
+
+// findVendorItem locates a vendor item by ID and returns it with its index.
+func (s *PvPRewardSystem) findVendorItem(vendorItemID string) (*PvPVendorItem, int) {
+	for i := range s.vendorItems {
+		if s.vendorItems[i].ID == vendorItemID {
+			return &s.vendorItems[i], i
+		}
+	}
+	return nil, -1
+}
+
+// validatePurchaseRequirements checks rank and stock requirements.
+func (s *PvPRewardSystem) validatePurchaseRequirements(entity *Entity, vendorItem *PvPVendorItem) bool {
+	if !s.checkRankRequirement(entity, vendorItem) {
+		return false
+	}
+	return s.checkStock(vendorItem)
+}
+
+// checkRankRequirement validates the player meets the rank requirement.
+func (s *PvPRewardSystem) checkRankRequirement(entity *Entity, vendorItem *PvPVendorItem) bool {
+	if vendorItem.RankRequirement == "" {
+		return true
+	}
+
+	ratingComp := s.getPvPRatingComponent(entity)
+	if ratingComp == nil {
+		return true
+	}
+
+	if getTierIndex(ratingComp.RankTier) < getTierIndex(vendorItem.RankRequirement) {
+		log.WithFields(log.Fields{
+			"system_name":    "pvp_reward",
+			"vendor_item_id": vendorItem.ID,
+			"required_rank":  vendorItem.RankRequirement,
+			"current_rank":   ratingComp.RankTier,
+		}).Debug("Rank requirement not met")
+		return false
+	}
+	return true
+}
+
+// checkStock validates the item is in stock.
+func (s *PvPRewardSystem) checkStock(vendorItem *PvPVendorItem) bool {
 	if vendorItem.Stock == 0 {
 		log.WithFields(log.Fields{
 			"system_name":    "pvp_reward",
-			"vendor_item_id": vendorItemID,
+			"vendor_item_id": vendorItem.ID,
 		}).Debug("Vendor item out of stock")
 		return false
 	}
+	return true
+}
 
-	// Check honor
-	if !rewardComp.SpendHonor(vendorItem.HonorCost) {
-		log.WithFields(log.Fields{
-			"system_name": "pvp_reward",
-			"entity_id":   entity.ID,
-			"cost":        vendorItem.HonorCost,
-			"available":   rewardComp.GetHonor(),
-		}).Debug("Insufficient honor for vendor purchase")
-		return false
-	}
-
-	// Decrease stock if limited
+// decreaseStock reduces the stock count for limited items.
+func (s *PvPRewardSystem) decreaseStock(itemIndex int, vendorItem *PvPVendorItem) {
 	if vendorItem.Stock > 0 {
 		s.vendorItems[itemIndex].Stock--
 	}
+}
 
-	// Grant reward
+// grantVendorReward creates and grants the purchased reward to the player.
+func (s *PvPRewardSystem) grantVendorReward(entity *Entity, rewardComp *PvPRewardComponent, vendorItem *PvPVendorItem, vendorItemID string) {
 	reward := PvPReward{
 		ID:          vendorItemID + "_purchased",
 		Type:        vendorItem.Type,
@@ -398,8 +421,13 @@ func (s *PvPRewardSystem) PurchaseFromVendor(entity *Entity, vendorItemID string
 		Rarity:      vendorItem.Rarity,
 	}
 
-	// Handle type-specific grants
-	switch vendorItem.Type {
+	applyRewardByType(rewardComp, vendorItem.Type, vendorItemID)
+	rewardComp.AddReward(reward)
+}
+
+// applyRewardByType applies type-specific reward grants.
+func applyRewardByType(rewardComp *PvPRewardComponent, rewardType PvPRewardType, vendorItemID string) {
+	switch rewardType {
 	case PvPRewardTitle:
 		rewardComp.AddTitle(vendorItemID)
 	case PvPRewardMount:
@@ -407,17 +435,35 @@ func (s *PvPRewardSystem) PurchaseFromVendor(entity *Entity, vendorItemID string
 	case PvPRewardCosmetic:
 		rewardComp.AddCosmetic(vendorItemID)
 	}
+}
 
-	rewardComp.AddReward(reward)
-
+// logVendorItemNotFound logs when a vendor item is not found.
+func (s *PvPRewardSystem) logVendorItemNotFound(entityID uint64, vendorItemID string) {
 	log.WithFields(log.Fields{
 		"system_name":    "pvp_reward",
-		"entity_id":      entity.ID,
+		"entity_id":      entityID,
 		"vendor_item_id": vendorItemID,
-		"cost":           vendorItem.HonorCost,
-	}).Info("Vendor purchase successful")
+	}).Debug("Vendor item not found")
+}
 
-	return true
+// logInsufficientHonor logs when the player has insufficient honor.
+func (s *PvPRewardSystem) logInsufficientHonor(entityID uint64, cost, available int) {
+	log.WithFields(log.Fields{
+		"system_name": "pvp_reward",
+		"entity_id":   entityID,
+		"cost":        cost,
+		"available":   available,
+	}).Debug("Insufficient honor for vendor purchase")
+}
+
+// logPurchaseSuccess logs a successful vendor purchase.
+func (s *PvPRewardSystem) logPurchaseSuccess(entityID uint64, vendorItemID string, cost int) {
+	log.WithFields(log.Fields{
+		"system_name":    "pvp_reward",
+		"entity_id":      entityID,
+		"vendor_item_id": vendorItemID,
+		"cost":           cost,
+	}).Info("Vendor purchase successful")
 }
 
 // GetVendorInventory returns all available vendor items.

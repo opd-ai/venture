@@ -162,66 +162,100 @@ const (
 
 // executeTerrainManipulation creates, modifies, or destroys terrain.
 func (s *SpellEffectSystem) executeTerrainManipulation(effect *SpellEffectComponent) {
-	// Only execute once (on first frame). ElapsedTime is already incremented
-	// by Update() before executeEffect() is called, so we check for > one frame.
 	if effect.ElapsedTime > OneFrameTime {
 		return
 	}
 
-	// Check if terrain modification system is available
+	if !s.hasTerrainModificationSystem() {
+		return
+	}
+
+	modifierType := TerrainModifierType(effect.TerrainModifier)
+	s.applyTerrainModification(effect, modifierType)
+}
+
+// hasTerrainModificationSystem checks if terrain modification is available.
+func (s *SpellEffectSystem) hasTerrainModificationSystem() bool {
 	if s.terrainModificationSystem == nil {
 		if s.logger != nil {
 			s.logger.Debug("Terrain manipulation skipped: no terrain modification system")
 		}
-		return
+		return false
 	}
+	return true
+}
 
-	// Determine terrain modification type from TerrainModifier
-	modifierType := TerrainModifierType(effect.TerrainModifier)
-
-	// Apply terrain modification based on type
+// applyTerrainModification applies the terrain change based on modifier type.
+func (s *SpellEffectSystem) applyTerrainModification(effect *SpellEffectComponent, modifierType TerrainModifierType) {
 	switch modifierType {
 	case TerrainModifierCreateWall:
-		// Create wall(s) at target location
-		if effect.Radius > 0 {
-			s.terrainModificationSystem.SetTilesInArea(
-				effect.TargetX, effect.TargetY, effect.Radius, terrain.TileWall)
-		} else {
-			s.terrainModificationSystem.SetTileAtWorldPosition(
-				effect.TargetX, effect.TargetY, terrain.TileWall)
-		}
+		s.createWallModification(effect)
 	case TerrainModifierDigTunnel:
-		// Dig through walls by applying massive damage
-		damage := TunnelDefaultDamage
-		if effect.Magnitude > 0 {
-			damage = effect.Magnitude * TunnelMagnitudeMultiplier
-		}
-		if effect.Radius > 0 {
-			s.terrainModificationSystem.DamageTilesInArea(
-				effect.TargetX, effect.TargetY, effect.Radius, damage)
-		} else {
-			s.terrainModificationSystem.DamageTileAtWorldPosition(
-				effect.TargetX, effect.TargetY, damage)
-		}
+		s.createTunnelModification(effect)
 	case TerrainModifierCreatePit:
-		// Create pit(s) at target location
-		if effect.Radius > 0 {
-			s.terrainModificationSystem.SetTilesInArea(
-				effect.TargetX, effect.TargetY, effect.Radius, terrain.TilePit)
-		} else {
-			s.terrainModificationSystem.SetTileAtWorldPosition(
-				effect.TargetX, effect.TargetY, terrain.TilePit)
-		}
+		s.createPitModification(effect)
 	default:
-		// Unknown modifier type, log warning
-		if s.logger != nil {
-			s.logger.WithFields(logrus.Fields{
-				"modifier_type": effect.TerrainModifier,
-			}).Warn("Unknown terrain modifier type")
-		}
+		s.logUnknownModifierType(modifierType)
 		return
 	}
 
+	s.logTerrainManipulation(effect, modifierType)
+}
+
+// createWallModification creates wall tiles at the target location.
+func (s *SpellEffectSystem) createWallModification(effect *SpellEffectComponent) {
+	if effect.Radius > 0 {
+		s.terrainModificationSystem.SetTilesInArea(
+			effect.TargetX, effect.TargetY, effect.Radius, terrain.TileWall)
+	} else {
+		s.terrainModificationSystem.SetTileAtWorldPosition(
+			effect.TargetX, effect.TargetY, terrain.TileWall)
+	}
+}
+
+// createTunnelModification digs through walls by applying damage.
+func (s *SpellEffectSystem) createTunnelModification(effect *SpellEffectComponent) {
+	damage := calculateTunnelDamage(effect.Magnitude)
+
+	if effect.Radius > 0 {
+		s.terrainModificationSystem.DamageTilesInArea(
+			effect.TargetX, effect.TargetY, effect.Radius, damage)
+	} else {
+		s.terrainModificationSystem.DamageTileAtWorldPosition(
+			effect.TargetX, effect.TargetY, damage)
+	}
+}
+
+// calculateTunnelDamage computes the damage amount for tunnel creation.
+func calculateTunnelDamage(magnitude float64) float64 {
+	if magnitude > 0 {
+		return magnitude * TunnelMagnitudeMultiplier
+	}
+	return TunnelDefaultDamage
+}
+
+// createPitModification creates pit tiles at the target location.
+func (s *SpellEffectSystem) createPitModification(effect *SpellEffectComponent) {
+	if effect.Radius > 0 {
+		s.terrainModificationSystem.SetTilesInArea(
+			effect.TargetX, effect.TargetY, effect.Radius, terrain.TilePit)
+	} else {
+		s.terrainModificationSystem.SetTileAtWorldPosition(
+			effect.TargetX, effect.TargetY, terrain.TilePit)
+	}
+}
+
+// logUnknownModifierType logs a warning for unknown terrain modifier types.
+func (s *SpellEffectSystem) logUnknownModifierType(modifierType TerrainModifierType) {
+	if s.logger != nil {
+		s.logger.WithFields(logrus.Fields{
+			"modifier_type": modifierType,
+		}).Warn("Unknown terrain modifier type")
+	}
+}
+
+// logTerrainManipulation logs successful terrain manipulation execution.
+func (s *SpellEffectSystem) logTerrainManipulation(effect *SpellEffectComponent, modifierType TerrainModifierType) {
 	if s.logger != nil {
 		s.logger.WithFields(logrus.Fields{
 			"x":             effect.TargetX,

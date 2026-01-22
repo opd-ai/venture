@@ -63,50 +63,65 @@ func (s *VoiceAudioSystem) Update(entities []*Entity, deltaTime float64) {
 // processTransmission manages the transmission state based on audio input.
 func (s *VoiceAudioSystem) processTransmission(entity *Entity, audio *VoiceAudioComponent, deltaTime float64) {
 	entityID := entityIDToString(entity.ID)
-	shouldTransmit := s.shouldTransmit(audio)
 
 	if audio.InputMode == VoiceInputVoiceActivity {
-		// Handle voice activity with hold timer
-		if audio.VoiceActivityDetected {
-			// Voice detected, transmit and reset hold timer
-			s.holdTimers[entityID] = s.voiceActivityHoldTime
-			if !audio.IsTransmitting {
-				s.startTransmitting(audio)
-				log.WithFields(log.Fields{
-					"entity_id":   entityID,
-					"input_level": audio.NormalizedInputLevel,
-				}).Debug("Voice activity detected, starting transmission")
-			}
-		} else if timer, exists := s.holdTimers[entityID]; exists && timer > 0 {
-			// Voice dropped but in hold period
-			s.holdTimers[entityID] = timer - deltaTime
-			if s.holdTimers[entityID] <= 0 {
-				// Hold period expired, stop transmitting
-				delete(s.holdTimers, entityID)
-				if audio.IsTransmitting {
-					s.stopTransmitting(audio, s.defaultTransmitCooldown)
-					log.WithFields(log.Fields{
-						"entity_id": entityID,
-					}).Debug("Voice activity ended, stopping transmission")
-				}
-			}
-		} else if audio.IsTransmitting {
-			// No voice and no hold timer, stop
-			s.stopTransmitting(audio, s.defaultTransmitCooldown)
-		}
+		s.processVoiceActivity(entityID, audio, deltaTime)
 	} else {
-		// Push-to-talk mode - simpler logic
-		if shouldTransmit && !audio.IsTransmitting {
-			s.startTransmitting(audio)
-			log.WithFields(log.Fields{
-				"entity_id": entityID,
-			}).Debug("Push-to-talk activated")
-		} else if !shouldTransmit && audio.IsTransmitting {
+		s.processPushToTalk(entityID, audio)
+	}
+}
+
+// processVoiceActivity handles voice activity detection with hold timer.
+func (s *VoiceAudioSystem) processVoiceActivity(entityID string, audio *VoiceAudioComponent, deltaTime float64) {
+	if audio.VoiceActivityDetected {
+		s.handleVoiceDetected(entityID, audio)
+	} else if timer, exists := s.holdTimers[entityID]; exists && timer > 0 {
+		s.handleHoldPeriod(entityID, audio, deltaTime)
+	} else if audio.IsTransmitting {
+		s.stopTransmitting(audio, s.defaultTransmitCooldown)
+	}
+}
+
+// handleVoiceDetected starts transmission and resets the hold timer.
+func (s *VoiceAudioSystem) handleVoiceDetected(entityID string, audio *VoiceAudioComponent) {
+	s.holdTimers[entityID] = s.voiceActivityHoldTime
+	if !audio.IsTransmitting {
+		s.startTransmitting(audio)
+		log.WithFields(log.Fields{
+			"entity_id":   entityID,
+			"input_level": audio.NormalizedInputLevel,
+		}).Debug("Voice activity detected, starting transmission")
+	}
+}
+
+// handleHoldPeriod manages the countdown timer after voice drops.
+func (s *VoiceAudioSystem) handleHoldPeriod(entityID string, audio *VoiceAudioComponent, deltaTime float64) {
+	s.holdTimers[entityID] -= deltaTime
+	if s.holdTimers[entityID] <= 0 {
+		delete(s.holdTimers, entityID)
+		if audio.IsTransmitting {
 			s.stopTransmitting(audio, s.defaultTransmitCooldown)
 			log.WithFields(log.Fields{
 				"entity_id": entityID,
-			}).Debug("Push-to-talk released")
+			}).Debug("Voice activity ended, stopping transmission")
 		}
+	}
+}
+
+// processPushToTalk handles push-to-talk mode transmission toggling.
+func (s *VoiceAudioSystem) processPushToTalk(entityID string, audio *VoiceAudioComponent) {
+	shouldTransmit := s.shouldTransmit(audio)
+
+	if shouldTransmit && !audio.IsTransmitting {
+		s.startTransmitting(audio)
+		log.WithFields(log.Fields{
+			"entity_id": entityID,
+		}).Debug("Push-to-talk activated")
+	} else if !shouldTransmit && audio.IsTransmitting {
+		s.stopTransmitting(audio, s.defaultTransmitCooldown)
+		log.WithFields(log.Fields{
+			"entity_id": entityID,
+		}).Debug("Push-to-talk released")
 	}
 }
 

@@ -838,57 +838,119 @@ func (s *CraftingSystem) validateMaterialRemoval(entityID uint64, recipe *Recipe
 // validateAndReserveStation checks if station is valid and marks it as in-use.
 // Returns (bonusSuccessChance, craftTimeMultiplier, error).
 func (s *CraftingSystem) validateAndReserveStation(stationID uint64, recipeType RecipeType) (float64, float64, error) {
+	s.logValidationStart(stationID, recipeType)
+
+	station, err := s.getStationEntity(stationID)
+	if err != nil {
+		return 0, 1.0, err
+	}
+
+	stationComp, err := s.validateStationComponent(station, stationID)
+	if err != nil {
+		return 0, 1.0, err
+	}
+
+	if err := s.validateStationType(stationComp, recipeType, stationID); err != nil {
+		return 0, 1.0, err
+	}
+
+	if err := s.validateStationAvailability(stationComp, stationID); err != nil {
+		return 0, 1.0, err
+	}
+
+	s.reserveStation(stationComp, stationID)
+	return stationComp.BonusSuccessChance, stationComp.CraftTimeMultiplier, nil
+}
+
+// logValidationStart logs the beginning of station validation.
+func (s *CraftingSystem) logValidationStart(stationID uint64, recipeType RecipeType) {
 	if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
 		s.logger.WithFields(logrus.Fields{
 			"station_id":  stationID,
 			"recipe_type": recipeType.String(),
 		}).Debug("validating and reserving station")
 	}
+}
 
+// getStationEntity retrieves the station entity by ID.
+func (s *CraftingSystem) getStationEntity(stationID uint64) (*Entity, error) {
 	station, ok := s.world.GetEntity(stationID)
 	if !ok {
-		if s.logger != nil {
-			s.logger.WithFields(logrus.Fields{
-				"station_id": stationID,
-			}).Warn("station entity not found")
-		}
-		return 0, 1.0, fmt.Errorf("station not found")
+		s.logStationNotFound(stationID)
+		return nil, fmt.Errorf("station not found")
 	}
+	return station, nil
+}
 
+// logStationNotFound logs when a station entity is not found.
+func (s *CraftingSystem) logStationNotFound(stationID uint64) {
+	if s.logger != nil {
+		s.logger.WithFields(logrus.Fields{
+			"station_id": stationID,
+		}).Warn("station entity not found")
+	}
+}
+
+// validateStationComponent retrieves and validates the crafting station component.
+func (s *CraftingSystem) validateStationComponent(station *Entity, stationID uint64) (*CraftingStationComponent, error) {
 	stationComp, err := s.getCraftingStationComponent(station)
 	if err != nil {
-		if s.logger != nil {
-			s.logger.WithFields(logrus.Fields{
-				"station_id": stationID,
-				"error":      err.Error(),
-			}).Warn("failed to get crafting station component")
-		}
-		return 0, 1.0, err
+		s.logComponentError(stationID, err)
+		return nil, err
 	}
+	return stationComp, nil
+}
 
-	// Check station type matches recipe
+// logComponentError logs failures in getting the crafting station component.
+func (s *CraftingSystem) logComponentError(stationID uint64, err error) {
+	if s.logger != nil {
+		s.logger.WithFields(logrus.Fields{
+			"station_id": stationID,
+			"error":      err.Error(),
+		}).Warn("failed to get crafting station component")
+	}
+}
+
+// validateStationType checks if the station type matches the recipe type.
+func (s *CraftingSystem) validateStationType(stationComp *CraftingStationComponent, recipeType RecipeType, stationID uint64) error {
 	if stationComp.StationType != recipeType {
-		if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
-			s.logger.WithFields(logrus.Fields{
-				"station_id":   stationID,
-				"station_type": stationComp.StationType.String(),
-				"recipe_type":  recipeType.String(),
-			}).Debug("station type mismatch")
-		}
-		return 0, 1.0, fmt.Errorf("wrong station type: need %s station", recipeType.String())
+		s.logTypeMismatch(stationID, stationComp.StationType, recipeType)
+		return fmt.Errorf("wrong station type: need %s station", recipeType.String())
 	}
+	return nil
+}
 
-	// Check availability
+// logTypeMismatch logs when station type doesn't match recipe requirements.
+func (s *CraftingSystem) logTypeMismatch(stationID uint64, stationType, recipeType RecipeType) {
+	if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
+		s.logger.WithFields(logrus.Fields{
+			"station_id":   stationID,
+			"station_type": stationType.String(),
+			"recipe_type":  recipeType.String(),
+		}).Debug("station type mismatch")
+	}
+}
+
+// validateStationAvailability checks if the station is available for use.
+func (s *CraftingSystem) validateStationAvailability(stationComp *CraftingStationComponent, stationID uint64) error {
 	if !stationComp.Available {
-		if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
-			s.logger.WithFields(logrus.Fields{
-				"station_id": stationID,
-			}).Debug("station already in use")
-		}
-		return 0, 1.0, fmt.Errorf("station in use")
+		s.logStationInUse(stationID)
+		return fmt.Errorf("station in use")
 	}
+	return nil
+}
 
-	// Reserve station
+// logStationInUse logs when a station is already in use.
+func (s *CraftingSystem) logStationInUse(stationID uint64) {
+	if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
+		s.logger.WithFields(logrus.Fields{
+			"station_id": stationID,
+		}).Debug("station already in use")
+	}
+}
+
+// reserveStation marks the station as reserved and logs the operation.
+func (s *CraftingSystem) reserveStation(stationComp *CraftingStationComponent, stationID uint64) {
 	stationComp.Available = false
 
 	if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
@@ -898,8 +960,6 @@ func (s *CraftingSystem) validateAndReserveStation(stationID uint64, recipeType 
 			"time_multiplier": stationComp.CraftTimeMultiplier,
 		}).Debug("station reserved successfully")
 	}
-
-	return stationComp.BonusSuccessChance, stationComp.CraftTimeMultiplier, nil
 }
 
 // releaseStation marks a station as available.

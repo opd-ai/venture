@@ -328,3 +328,271 @@ func BenchmarkShouldLearnNewSkill(b *testing.B) {
 		_ = ShouldLearnNewSkill(comp, "Basic Attack")
 	}
 }
+
+// === Edge case tests for improved coverage ===
+
+// TestRecordSkillUse_NilComponent tests RecordSkillUse with nil component.
+func TestRecordSkillUse_NilComponent(t *testing.T) {
+	// Should not panic with nil component
+	RecordSkillUse(nil, "Basic Attack")
+}
+
+// TestRecordSkillUse_NilLastSkillUse tests RecordSkillUse with nil map.
+func TestRecordSkillUse_NilLastSkillUse(t *testing.T) {
+	comp := &CompanionLearningComponent{
+		LastSkillUse: nil,
+	}
+	// Should not panic with nil LastSkillUse map
+	RecordSkillUse(comp, "Basic Attack")
+}
+
+// TestGetPersonalityInfluence_NilComponent tests with nil component.
+func TestGetPersonalityInfluence_NilComponent(t *testing.T) {
+	influence := GetPersonalityInfluence(nil, TraitBrave)
+	if influence != 0.5 {
+		t.Errorf("expected default 0.5 for nil component, got %f", influence)
+	}
+}
+
+// TestGetPersonalityInfluence_NilPersonality tests with nil personality.
+func TestGetPersonalityInfluence_NilPersonality(t *testing.T) {
+	comp := &CompanionLearningComponent{
+		Personality: nil,
+	}
+	influence := GetPersonalityInfluence(comp, TraitBrave)
+	if influence != 0.5 {
+		t.Errorf("expected default 0.5 for nil personality, got %f", influence)
+	}
+}
+
+// TestGetPersonalityInfluence_MissingTrait tests with trait not in map.
+func TestGetPersonalityInfluence_MissingTrait(t *testing.T) {
+	manager := NewManager()
+	comp := manager.AddCompanion("test", 1.0)
+
+	// Remove the trait from the map to test missing trait case
+	delete(comp.Personality.Traits, TraitPractical)
+
+	influence := GetPersonalityInfluence(comp, TraitPractical)
+	if influence != 0.5 {
+		t.Errorf("expected default 0.5 for missing trait, got %f", influence)
+	}
+}
+
+// TestIsSkillMaxed_NilComponent tests with nil component.
+func TestIsSkillMaxed_NilComponent(t *testing.T) {
+	result := IsSkillMaxed(nil, "Basic Attack")
+	if result {
+		t.Error("expected false for nil component")
+	}
+}
+
+// TestIsSkillMaxed_NilSkillTree tests with nil skill tree.
+func TestIsSkillMaxed_NilSkillTree(t *testing.T) {
+	comp := &CompanionLearningComponent{
+		SkillTree: nil,
+	}
+	result := IsSkillMaxed(comp, "Basic Attack")
+	if result {
+		t.Error("expected false for nil skill tree")
+	}
+}
+
+// TestIsSkillMaxed_NonexistentSkill tests with skill not in tree.
+func TestIsSkillMaxed_NonexistentSkill(t *testing.T) {
+	manager := NewManager()
+	comp := manager.AddCompanion("test", 1.0)
+
+	result := IsSkillMaxed(comp, "NonexistentSkill")
+	if result {
+		t.Error("expected false for non-existent skill")
+	}
+}
+
+// TestGetSkillBonus_NilComponent tests with nil component.
+func TestGetSkillBonus_NilComponent(t *testing.T) {
+	bonus := GetSkillBonus(nil, "Basic Attack")
+	if bonus != 1.0 {
+		t.Errorf("expected default 1.0 for nil component, got %f", bonus)
+	}
+}
+
+// TestGetSkillBonus_NilSkillTree tests with nil skill tree.
+func TestGetSkillBonus_NilSkillTree(t *testing.T) {
+	comp := &CompanionLearningComponent{
+		SkillTree: nil,
+	}
+	bonus := GetSkillBonus(comp, "Basic Attack")
+	if bonus != 1.0 {
+		t.Errorf("expected default 1.0 for nil skill tree, got %f", bonus)
+	}
+}
+
+// TestGetTotalSkillPoints_NilComponent tests with nil component.
+func TestGetTotalSkillPoints_NilComponent(t *testing.T) {
+	total := GetTotalSkillPoints(nil)
+	if total != 0 {
+		t.Errorf("expected 0 for nil component, got %d", total)
+	}
+}
+
+// TestGetTotalSkillPoints_NilSkillTree tests with nil skill tree.
+func TestGetTotalSkillPoints_NilSkillTree(t *testing.T) {
+	comp := &CompanionLearningComponent{
+		SkillTree: nil,
+	}
+	total := GetTotalSkillPoints(comp)
+	if total != 0 {
+		t.Errorf("expected 0 for nil skill tree, got %d", total)
+	}
+}
+
+// TestGetSkillsByType_NilComponent tests with nil component.
+func TestGetSkillsByType_NilComponent(t *testing.T) {
+	skills := GetSkillsByType(nil, SkillCombat)
+	if skills != nil {
+		t.Error("expected nil for nil component")
+	}
+}
+
+// TestGetSkillsByType_NilSkillTree tests with nil skill tree.
+func TestGetSkillsByType_NilSkillTree(t *testing.T) {
+	comp := &CompanionLearningComponent{
+		SkillTree: nil,
+	}
+	skills := GetSkillsByType(comp, SkillCombat)
+	if skills != nil {
+		t.Error("expected nil for nil skill tree")
+	}
+}
+
+// TestGetMemorySummary_NilComponent tests with nil component.
+func TestGetMemorySummary_NilComponent(t *testing.T) {
+	summary := GetMemorySummary(nil)
+	expected := "No companion data"
+	if summary != expected {
+		t.Errorf("expected %q, got %q", expected, summary)
+	}
+}
+
+// TestGetMemorySummary_NilMemory tests with nil memory.
+func TestGetMemorySummary_NilMemory(t *testing.T) {
+	comp := &CompanionLearningComponent{
+		Memory: nil,
+	}
+	summary := GetMemorySummary(comp)
+	expected := "No companion data"
+	if summary != expected {
+		t.Errorf("expected %q, got %q", expected, summary)
+	}
+}
+
+// TestCalculateLearningProgress_NilComponent tests with nil component.
+func TestCalculateLearningProgress_NilComponent(t *testing.T) {
+	progress := CalculateLearningProgress(nil)
+	if progress != 0.0 {
+		t.Errorf("expected 0.0 for nil component, got %f", progress)
+	}
+}
+
+// TestCalculateLearningProgress_NilSkillTree tests with nil skill tree.
+func TestCalculateLearningProgress_NilSkillTree(t *testing.T) {
+	comp := &CompanionLearningComponent{
+		SkillTree: nil,
+	}
+	progress := CalculateLearningProgress(comp)
+	if progress != 0.0 {
+		t.Errorf("expected 0.0 for nil skill tree, got %f", progress)
+	}
+}
+
+// TestShouldLearnNewSkill_NilComponent tests with nil component.
+func TestShouldLearnNewSkill_NilComponent(t *testing.T) {
+	result := ShouldLearnNewSkill(nil, "Basic Attack")
+	if result {
+		t.Error("expected false for nil component")
+	}
+}
+
+// TestShouldLearnNewSkill_NilSkillTree tests with nil skill tree.
+func TestShouldLearnNewSkill_NilSkillTree(t *testing.T) {
+	comp := &CompanionLearningComponent{
+		SkillTree:   nil,
+		Personality: NewPersonalityEvolution(),
+	}
+	result := ShouldLearnNewSkill(comp, "Basic Attack")
+	if result {
+		t.Error("expected false for nil skill tree")
+	}
+}
+
+// TestShouldLearnNewSkill_NilPersonality tests with nil personality.
+func TestShouldLearnNewSkill_NilPersonality(t *testing.T) {
+	manager := NewManager()
+	comp := manager.AddCompanion("test", 1.0)
+	comp.Personality = nil
+	comp.SkillTree.AvailablePoints = 5
+
+	result := ShouldLearnNewSkill(comp, "Basic Attack")
+	if result {
+		t.Error("expected false for nil personality")
+	}
+}
+
+// TestShouldLearnNewSkill_SkillNotInTree tests with non-existent skill.
+func TestShouldLearnNewSkill_SkillNotInTree(t *testing.T) {
+	manager := NewManager()
+	comp := manager.AddCompanion("test", 1.0)
+	comp.SkillTree.AvailablePoints = 5
+	comp.Personality.Traits[TraitAggressive] = 0.9
+
+	// Try to learn a skill that doesn't exist
+	result := ShouldLearnNewSkill(comp, "NonexistentSkill")
+	if result {
+		t.Error("expected false for non-existent skill")
+	}
+}
+
+// TestShouldLearnNewSkill_AllSkillTypes tests different skill type branches.
+func TestShouldLearnNewSkill_AllSkillTypes(t *testing.T) {
+	tests := []struct {
+		name      string
+		skillName string
+		skillType SkillType
+		trait     PersonalityTrait
+		expected  bool
+	}{
+		{"Combat/Aggressive", "Basic Attack", SkillCombat, TraitAggressive, true},
+		{"Combat/Brave", "Basic Attack", SkillCombat, TraitBrave, true},
+		{"Defense/Cautious", "Block", SkillDefense, TraitCautious, true},
+		{"Defense/Pacifist", "Block", SkillDefense, TraitPacifist, true},
+		{"Social/Outgoing", "Persuasion", SkillSocial, TraitOutgoing, true},
+		{"Social/Loyal", "Persuasion", SkillSocial, TraitLoyal, true},
+		{"Utility/Curious", "Gather", SkillUtility, TraitCurious, true},
+		{"Utility/Practical", "Gather", SkillUtility, TraitPractical, true},
+		{"Stealth/Independent", "Sneak", SkillStealth, TraitIndependent, true},
+		{"Healing/Pacifist", "First Aid", SkillHealing, TraitPacifist, true},
+		{"Magic/Curious", "Mana Control", SkillMagic, TraitCurious, true},
+		{"Crafting/Practical", "Apprentice Smith", SkillCrafting, TraitPractical, true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			manager := NewManager()
+			comp := manager.AddCompanion("test", 1.0)
+			comp.SkillTree.AvailablePoints = 10
+
+			// Set the dominant trait
+			for trait := range comp.Personality.Traits {
+				comp.Personality.Traits[trait] = 0.1
+			}
+			comp.Personality.Traits[tt.trait] = 0.9
+
+			result := ShouldLearnNewSkill(comp, tt.skillName)
+			if result != tt.expected {
+				t.Errorf("ShouldLearnNewSkill(%q) with trait %s = %v, want %v",
+					tt.skillName, tt.trait.String(), result, tt.expected)
+			}
+		})
+	}
+}

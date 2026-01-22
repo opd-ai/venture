@@ -173,3 +173,181 @@ func TestValidateParams(t *testing.T) {
 		})
 	}
 }
+
+func TestValidateDimensions(t *testing.T) {
+	tests := []struct {
+		name                                           string
+		width, height, minWidth, minHeight, maxWidth, maxHeight int
+		wantErr                                        bool
+		errContains                                    string
+	}{
+		{
+			name:      "valid dimensions at min",
+			width:     10,
+			height:    10,
+			minWidth:  10,
+			minHeight: 10,
+			maxWidth:  100,
+			maxHeight: 100,
+			wantErr:   false,
+		},
+		{
+			name:      "valid dimensions at max",
+			width:     100,
+			height:    100,
+			minWidth:  10,
+			minHeight: 10,
+			maxWidth:  100,
+			maxHeight: 100,
+			wantErr:   false,
+		},
+		{
+			name:      "valid dimensions in middle",
+			width:     50,
+			height:    50,
+			minWidth:  10,
+			minHeight: 10,
+			maxWidth:  100,
+			maxHeight: 100,
+			wantErr:   false,
+		},
+		{
+			name:        "zero width",
+			width:       0,
+			height:      50,
+			minWidth:    10,
+			minHeight:   10,
+			maxWidth:    100,
+			maxHeight:   100,
+			wantErr:     true,
+			errContains: "must be positive",
+		},
+		{
+			name:        "zero height",
+			width:       50,
+			height:      0,
+			minWidth:    10,
+			minHeight:   10,
+			maxWidth:    100,
+			maxHeight:   100,
+			wantErr:     true,
+			errContains: "must be positive",
+		},
+		{
+			name:        "negative width",
+			width:       -10,
+			height:      50,
+			minWidth:    10,
+			minHeight:   10,
+			maxWidth:    100,
+			maxHeight:   100,
+			wantErr:     true,
+			errContains: "must be positive",
+		},
+		{
+			name:        "negative height",
+			width:       50,
+			height:      -10,
+			minWidth:    10,
+			minHeight:   10,
+			maxWidth:    100,
+			maxHeight:   100,
+			wantErr:     true,
+			errContains: "must be positive",
+		},
+		{
+			name:        "width below minimum",
+			width:       5,
+			height:      50,
+			minWidth:    10,
+			minHeight:   10,
+			maxWidth:    100,
+			maxHeight:   100,
+			wantErr:     true,
+			errContains: "too small",
+		},
+		{
+			name:        "height below minimum",
+			width:       50,
+			height:      5,
+			minWidth:    10,
+			minHeight:   10,
+			maxWidth:    100,
+			maxHeight:   100,
+			wantErr:     true,
+			errContains: "too small",
+		},
+		{
+			name:        "width above maximum",
+			width:       150,
+			height:      50,
+			minWidth:    10,
+			minHeight:   10,
+			maxWidth:    100,
+			maxHeight:   100,
+			wantErr:     true,
+			errContains: "too large",
+		},
+		{
+			name:        "height above maximum",
+			width:       50,
+			height:      150,
+			minWidth:    10,
+			minHeight:   10,
+			maxWidth:    100,
+			maxHeight:   100,
+			wantErr:     true,
+			errContains: "too large",
+		},
+		{
+			name:        "both dimensions below minimum",
+			width:       5,
+			height:      5,
+			minWidth:    10,
+			minHeight:   10,
+			maxWidth:    100,
+			maxHeight:   100,
+			wantErr:     true,
+			errContains: "too small",
+		},
+		{
+			name:        "both dimensions above maximum",
+			width:       150,
+			height:      150,
+			minWidth:    10,
+			minHeight:   10,
+			maxWidth:    100,
+			maxHeight:   100,
+			wantErr:     true,
+			errContains: "too large",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := ValidateDimensions(tt.width, tt.height, tt.minWidth, tt.minHeight, tt.maxWidth, tt.maxHeight)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("ValidateDimensions() error = %v, wantErr %v", err, tt.wantErr)
+			}
+			if tt.wantErr && err != nil && tt.errContains != "" {
+				if !containsString(err.Error(), tt.errContains) {
+					t.Errorf("ValidateDimensions() error = %v, want error containing %q", err, tt.errContains)
+				}
+			}
+		})
+	}
+}
+
+// containsString checks if s contains substr (helper for error message validation)
+func containsString(s, substr string) bool {
+	return len(s) >= len(substr) && (s == substr || len(s) > 0 && containsSubstring(s, substr))
+}
+
+func containsSubstring(s, substr string) bool {
+	for i := 0; i <= len(s)-len(substr); i++ {
+		if s[i:i+len(substr)] == substr {
+			return true
+		}
+	}
+	return false
+}

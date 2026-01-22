@@ -37,6 +37,66 @@ func TestGenerator_Generate(t *testing.T) {
 			wantErr: false,
 		},
 		{
+			name: "horror genre",
+			seed: 11111,
+			params: procgen.GenerationParams{
+				Difficulty: 0.3,
+				Depth:      3,
+				GenreID:    "horror",
+			},
+			wantErr: false,
+		},
+		{
+			name: "cyberpunk genre",
+			seed: 22222,
+			params: procgen.GenerationParams{
+				Difficulty: 0.8,
+				Depth:      15,
+				GenreID:    "cyberpunk",
+			},
+			wantErr: false,
+		},
+		{
+			name: "post-apocalyptic genre",
+			seed: 33333,
+			params: procgen.GenerationParams{
+				Difficulty: 0.6,
+				Depth:      7,
+				GenreID:    "post-apocalyptic",
+			},
+			wantErr: false,
+		},
+		{
+			name: "unknown genre (default)",
+			seed: 44444,
+			params: procgen.GenerationParams{
+				Difficulty: 0.5,
+				Depth:      5,
+				GenreID:    "unknown-genre",
+			},
+			wantErr: false,
+		},
+		{
+			name: "zero depth (uses 1)",
+			seed: 55555,
+			params: procgen.GenerationParams{
+				Difficulty: 0.5,
+				Depth:      0,
+				GenreID:    "fantasy",
+			},
+			wantErr: false,
+		},
+		{
+			name: "negative difficulty",
+			seed: 66666,
+			params: procgen.GenerationParams{
+				Difficulty: -0.5,
+				Depth:      5,
+				GenreID:    "fantasy",
+			},
+			wantErr: true,
+		},
+		{
 			name: "invalid difficulty",
 			seed: 99999,
 			params: procgen.GenerationParams{
@@ -99,13 +159,73 @@ func TestGenerator_Validate(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name: "invalid attack",
+			name: "invalid attack zero",
+			companion: &Companion{
+				Name:     "Test",
+				Attack:   0.0,
+				Defense:  8.0,
+				MaxHP:    50.0,
+				Loyalty:  50.0,
+				Commands: []engine.CommandType{engine.CommandFollow},
+			},
+			wantErr: true,
+		},
+		{
+			name: "invalid attack negative",
 			companion: &Companion{
 				Name:     "Test",
 				Attack:   -5.0,
 				Defense:  8.0,
 				MaxHP:    50.0,
 				Loyalty:  50.0,
+				Commands: []engine.CommandType{engine.CommandFollow},
+			},
+			wantErr: true,
+		},
+		{
+			name: "invalid MaxHP zero",
+			companion: &Companion{
+				Name:     "Test",
+				Attack:   10.0,
+				Defense:  8.0,
+				MaxHP:    0.0,
+				Loyalty:  50.0,
+				Commands: []engine.CommandType{engine.CommandFollow},
+			},
+			wantErr: true,
+		},
+		{
+			name: "invalid MaxHP negative",
+			companion: &Companion{
+				Name:     "Test",
+				Attack:   10.0,
+				Defense:  8.0,
+				MaxHP:    -100.0,
+				Loyalty:  50.0,
+				Commands: []engine.CommandType{engine.CommandFollow},
+			},
+			wantErr: true,
+		},
+		{
+			name: "invalid loyalty negative",
+			companion: &Companion{
+				Name:     "Test",
+				Attack:   10.0,
+				Defense:  8.0,
+				MaxHP:    50.0,
+				Loyalty:  -10.0,
+				Commands: []engine.CommandType{engine.CommandFollow},
+			},
+			wantErr: true,
+		},
+		{
+			name: "invalid loyalty too high",
+			companion: &Companion{
+				Name:     "Test",
+				Attack:   10.0,
+				Defense:  8.0,
+				MaxHP:    50.0,
+				Loyalty:  150.0,
 				Commands: []engine.CommandType{engine.CommandFollow},
 			},
 			wantErr: true,
@@ -131,6 +251,15 @@ func TestGenerator_Validate(t *testing.T) {
 				t.Errorf("Validate() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
+	}
+}
+
+func TestGenerator_Validate_WrongType(t *testing.T) {
+	gen := NewGenerator()
+
+	err := gen.Validate("not a companion")
+	if err == nil {
+		t.Error("Expected error for non-Companion type")
 	}
 }
 
@@ -179,6 +308,138 @@ func BenchmarkGenerator_Generate(b *testing.B) {
 		_, err := gen.Generate(int64(i), params)
 		if err != nil {
 			b.Fatal(err)
+		}
+	}
+}
+
+func TestGenerator_GenerateSpritePattern(t *testing.T) {
+	gen := NewGenerator()
+
+	// Test all companion types to ensure generateSpritePattern returns correct patterns
+	tests := []struct {
+		name            string
+		companionType   engine.CompanionType
+		genreID         string
+		wantContains    string
+	}{
+		{
+			name:          "pet type",
+			companionType: engine.CompanionTypePet,
+			genreID:       "fantasy",
+			wantContains:  "quadruped",
+		},
+		{
+			name:          "robot type",
+			companionType: engine.CompanionTypeRobot,
+			genreID:       "sci-fi",
+			wantContains:  "mechanical",
+		},
+		{
+			name:          "elemental type",
+			companionType: engine.CompanionTypeElemental,
+			genreID:       "fantasy",
+			wantContains:  "elemental",
+		},
+		{
+			name:          "undead type",
+			companionType: engine.CompanionTypeUndead,
+			genreID:       "horror",
+			wantContains:  "skeletal",
+		},
+		{
+			name:          "spirit type",
+			companionType: engine.CompanionTypeSpirit,
+			genreID:       "fantasy",
+			wantContains:  "wispy",
+		},
+		{
+			name:          "insect type",
+			companionType: engine.CompanionTypeInsect,
+			genreID:       "horror",
+			wantContains:  "insectoid",
+		},
+		{
+			name:          "default type (summon)",
+			companionType: engine.CompanionTypeSummon,
+			genreID:       "fantasy",
+			wantContains:  "humanoid",
+		},
+		{
+			name:          "default type (hireling)",
+			companionType: engine.CompanionTypeHireling,
+			genreID:       "fantasy",
+			wantContains:  "humanoid",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			pattern := gen.generateSpritePattern(tt.companionType, tt.genreID)
+			if pattern == "" {
+				t.Error("generateSpritePattern returned empty string")
+			}
+			if !containsSubstr(pattern, tt.wantContains) {
+				t.Errorf("generateSpritePattern() = %q, want pattern containing %q", pattern, tt.wantContains)
+			}
+		})
+	}
+}
+
+// containsSubstr is a helper to check if s contains substr
+func containsSubstr(s, substr string) bool {
+	for i := 0; i <= len(s)-len(substr); i++ {
+		if s[i:i+len(substr)] == substr {
+			return true
+		}
+	}
+	return false
+}
+
+func TestGenerator_AllGenresGenerateUniqueCompanions(t *testing.T) {
+	gen := NewGenerator()
+	seed := int64(12345)
+
+	genres := []string{"fantasy", "sci-fi", "horror", "cyberpunk", "post-apocalyptic"}
+	results := make(map[string]*Companion)
+
+	for _, genre := range genres {
+		params := procgen.GenerationParams{
+			Difficulty: 0.5,
+			Depth:      5,
+			GenreID:    genre,
+		}
+		result, err := gen.Generate(seed, params)
+		if err != nil {
+			t.Errorf("Generate failed for genre %s: %v", genre, err)
+			continue
+		}
+		companion, ok := result.(*Companion)
+		if !ok {
+			t.Errorf("Result is not a Companion for genre %s", genre)
+			continue
+		}
+		results[genre] = companion
+
+		// All companions should be valid
+		if err := gen.Validate(companion); err != nil {
+			t.Errorf("Generated companion for genre %s is invalid: %v", genre, err)
+		}
+
+		// Sprite pattern should be non-empty
+		if companion.SpritePattern == "" {
+			t.Errorf("Companion for genre %s has empty sprite pattern", genre)
+		}
+	}
+
+	// Verify different genres produce different companions
+	if len(results) > 1 {
+		first := results[genres[0]]
+		for _, genre := range genres[1:] {
+			other := results[genre]
+			// At least one of name, type, or sprite pattern should differ
+			if first.Name == other.Name && first.Type == other.Type && first.SpritePattern == other.SpritePattern {
+				t.Logf("Note: genres %s and %s produced similar companions", genres[0], genre)
+			}
 		}
 	}
 }

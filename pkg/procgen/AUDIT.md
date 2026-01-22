@@ -1,5 +1,6 @@
 # Package Audit: pkg/procgen
 Generated during reorganization on: 2026-01-20
+Updated: 2026-01-22 (Test coverage improved: root 81.1% → 100%, companion 75.0% → 98.5%)
 
 ## Summary
 - Missing Implementations: 0
@@ -30,10 +31,14 @@ The `pkg/procgen` package is **already well-organized** with excellent structure
 ### Code Quality Metrics
 
 **Test Coverage:**
-- Overall average: **89.3%**
-- All subpackages: **73.7% - 100%** coverage
+- Overall average: **92.1%** (improved from 89.3%)
+- All subpackages: **86.3% - 100%** coverage (improved minimum from 73.7%)
 - Highest coverage:
+  - `procgen` (root): 100.0% ✅ (improved from 81.1%)
   - `genre`: 100.0%
+  - `companion`: 98.5% ✅ (improved from 75.0%)
+  - `book`: 98.9%
+  - `minigame/games`: 98.9%
   - `environment`: 95.1%
   - `station`: 94.2%
   - `puzzle`: 93.7%

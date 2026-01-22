@@ -115,11 +115,11 @@ Venture is a mature Go codebase with strong production readiness fundamentals al
 **Priority:** High  
 **Packages Needing Tests:**
 - `pkg/engine/physics` - Parent package (doc.go only), sub-packages are fully tested (81.4%-95.1%)
-- Packages with coverage < 85%: `pkg/procgen` (81.1%)
+- ~~Packages with coverage < 85%: `pkg/procgen` (81.1%)~~ ✅ DONE
 
 **Acceptance Criteria:**
 - [x] Add test file for `pkg/engine/physics` with ≥80% coverage - N/A (parent package has no testable code; sub-packages tested: destruction 81.4%, fluids 95.1%, vehicle 94.1%)
-- [ ] Increase `pkg/procgen` coverage to ≥85%
+- [x] Increase `pkg/procgen` coverage to ≥85% - ✅ DONE (2026-01-22: pkg/procgen root 81.1% → 100%, pkg/procgen/companion 75.0% → 98.5%)
 - [x] Increase `pkg/logging` coverage to ≥85% - ✅ DONE (2026-01-22: 82.7% → 100.0%)
 - [x] All tests pass in CI environment - ✅ Verified
 

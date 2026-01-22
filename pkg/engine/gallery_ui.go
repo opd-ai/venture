@@ -103,57 +103,84 @@ func (g *GalleryUI) Update() bool {
 		return false
 	}
 
-	// INTEGRATION FIX [Category B]: V8.0 Gallery UI Input Handling
-	// Gap: No input handling for image navigation
-	// Fix: Added keyboard controls for browsing gallery images
-	// Roadmap: ROADMAP_V8.md Phase 49.4
-	// BUG FIX: Phase 2 - GalleryUI ESC key using IsKeyPressed instead of IsKeyJustPressed
-	// Resolution: Changed to inpututil.IsKeyJustPressed to prevent repeated close on held key
+	if g.handleEscapeKey() {
+		return true
+	}
+
+	if g.handleTouchInput() {
+		return true
+	}
+
+	g.updateTotalImages()
+	g.handleKeyboardNavigation()
+
+	return true
+}
+
+// handleEscapeKey processes escape key input to close the gallery.
+func (g *GalleryUI) handleEscapeKey() bool {
 	if inpututil.IsKeyJustPressed(ebiten.KeyEscape) {
 		g.Hide()
 		return true
 	}
+	return false
+}
 
-	// Platform parity fix: Handle touch/mouse input for navigation
-	if IsTouchOrMouseJustPressed() {
-		mouseX, mouseY, _ := GetTouchOrMousePosition()
-		// Check if touch/click is in left half (previous) or right half (next)
-		midX := g.X + g.Width/2
-		if mouseY >= g.Y && mouseY <= g.Y+g.Height {
-			// Close button area (top right corner)
-			closeX := g.X + g.Width - galleryCloseButtonWidth - galleryCloseButtonMargin
-			closeY := g.Y + galleryCloseButtonMargin
-			if mouseX >= closeX && mouseX <= closeX+galleryCloseButtonWidth &&
-				mouseY >= closeY && mouseY <= closeY+galleryCloseButtonHeight {
-				g.Hide()
-				return true
-			}
-			// Left side for previous, right side for next
-			if mouseX >= g.X && mouseX < midX {
-				g.PreviousImage()
-			} else if mouseX >= midX && mouseX <= g.X+g.Width {
-				g.NextImage()
-			}
-		}
+// handleTouchInput processes touch and mouse input for navigation and closing.
+func (g *GalleryUI) handleTouchInput() bool {
+	if !IsTouchOrMouseJustPressed() {
+		return false
 	}
 
-	// Update total images from gallery
+	mouseX, mouseY, _ := GetTouchOrMousePosition()
+	if mouseY < g.Y || mouseY > g.Y+g.Height {
+		return false
+	}
+
+	if g.isCloseButtonClicked(mouseX, mouseY) {
+		g.Hide()
+		return true
+	}
+
+	g.handleImageNavigation(mouseX)
+	return false
+}
+
+// isCloseButtonClicked checks if the close button area was clicked.
+func (g *GalleryUI) isCloseButtonClicked(mouseX, mouseY int) bool {
+	closeX := g.X + g.Width - galleryCloseButtonWidth - galleryCloseButtonMargin
+	closeY := g.Y + galleryCloseButtonMargin
+
+	return mouseX >= closeX && mouseX <= closeX+galleryCloseButtonWidth &&
+		mouseY >= closeY && mouseY <= closeY+galleryCloseButtonHeight
+}
+
+// handleImageNavigation processes left/right screen navigation for images.
+func (g *GalleryUI) handleImageNavigation(mouseX int) {
+	midX := g.X + g.Width/2
+
+	if mouseX >= g.X && mouseX < midX {
+		g.PreviousImage()
+	} else if mouseX >= midX && mouseX <= g.X+g.Width {
+		g.NextImage()
+	}
+}
+
+// updateTotalImages refreshes the total image count from the gallery.
+func (g *GalleryUI) updateTotalImages() {
 	if g.gallery != nil {
 		g.TotalImages = g.gallery.GetImageCount()
 	}
+}
 
-	// BUG FIX: Phase 2 - GalleryUI navigation keys using IsKeyPressed causing rapid scrolling
-	// Resolution: Changed to IsKeyJustPressed for single-step navigation on key press
-	// Navigate images
+// handleKeyboardNavigation processes arrow key and WASD navigation.
+func (g *GalleryUI) handleKeyboardNavigation() {
 	if inpututil.IsKeyJustPressed(ebiten.KeyRight) || inpututil.IsKeyJustPressed(ebiten.KeyD) {
 		g.NextImage()
 	}
 	if inpututil.IsKeyJustPressed(ebiten.KeyLeft) || inpututil.IsKeyJustPressed(ebiten.KeyA) {
 		g.PreviousImage()
 	}
-
-	// Consume input when UI is visible
-	return true
 }
 
 // Draw renders the gallery UI to the screen.

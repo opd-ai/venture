@@ -78,73 +78,100 @@ func (s *ChallengeSystem) SetStreakCallback(cb func(entityID uint64, streakType 
 func (s *ChallengeSystem) Update(entities []*Entity, deltaTime float64) {
 	currentTime := time.Now()
 
-	// Throttle updates
-	if currentTime.Sub(s.lastUpdateTime).Seconds() < s.updateIntervalSeconds {
+	if !s.shouldUpdate(currentTime) {
 		return
 	}
 	s.lastUpdateTime = currentTime
 
 	for _, entity := range entities {
-		if !entity.HasComponent("daily_challenge") {
+		comp := s.getChallengeComponent(entity)
+		if comp == nil {
 			continue
 		}
 
-		compRaw, ok := entity.GetComponent("daily_challenge")
-		if !ok {
-			continue
-		}
-		comp, ok := compRaw.(*DailyChallengeComponent)
-		if !ok {
-			continue
-		}
+		s.handleDailyReset(entity, comp, currentTime)
+		s.handleWeeklyReset(entity, comp, currentTime)
+		s.initializeMissingChallenges(comp, currentTime)
+	}
+}
 
-		// Check for daily reset
-		dailyReset := comp.CheckDailyReset(currentTime)
-		if dailyReset {
-			s.logger.WithFields(logrus.Fields{
-				"entityID":     entity.ID,
-				"daily_streak": comp.GetDailyStreak(),
-			}).Debug("Daily challenges reset")
+// shouldUpdate checks if enough time has passed since the last update.
+func (s *ChallengeSystem) shouldUpdate(currentTime time.Time) bool {
+	return currentTime.Sub(s.lastUpdateTime).Seconds() >= s.updateIntervalSeconds
+}
 
-			// Generate new daily challenges
-			dailyChallenges := comp.GenerateDailyChallenges(currentTime)
-			comp.SetActiveChallenges(dailyChallenges, comp.GetActiveWeeklyChallenges())
+// getChallengeComponent retrieves and validates the daily challenge component from an entity.
+func (s *ChallengeSystem) getChallengeComponent(entity *Entity) *DailyChallengeComponent {
+	if !entity.HasComponent("daily_challenge") {
+		return nil
+	}
 
-			s.mu.RLock()
-			if s.onStreakChanged != nil {
-				s.onStreakChanged(entity.ID, ChallengeTypeDaily, comp.GetDailyStreak())
-			}
-			s.mu.RUnlock()
-		}
+	compRaw, ok := entity.GetComponent("daily_challenge")
+	if !ok {
+		return nil
+	}
 
-		// Check for weekly reset
-		weeklyReset := comp.CheckWeeklyReset(currentTime)
-		if weeklyReset {
-			s.logger.WithFields(logrus.Fields{
-				"entityID":      entity.ID,
-				"weekly_streak": comp.GetWeeklyStreak(),
-			}).Debug("Weekly challenges reset")
+	comp, ok := compRaw.(*DailyChallengeComponent)
+	if !ok {
+		return nil
+	}
 
-			// Generate new weekly challenges
-			weeklyChallenges := comp.GenerateWeeklyChallenges(currentTime)
-			comp.SetActiveChallenges(comp.GetActiveDailyChallenges(), weeklyChallenges)
+	return comp
+}
 
-			s.mu.RLock()
-			if s.onStreakChanged != nil {
-				s.onStreakChanged(entity.ID, ChallengeTypeWeekly, comp.GetWeeklyStreak())
-			}
-			s.mu.RUnlock()
-		}
+// handleDailyReset processes daily challenge resets and generates new challenges.
+func (s *ChallengeSystem) handleDailyReset(entity *Entity, comp *DailyChallengeComponent, currentTime time.Time) {
+	if !comp.CheckDailyReset(currentTime) {
+		return
+	}
 
-		// Initialize challenges if needed
-		if len(comp.GetActiveDailyChallenges()) == 0 {
-			dailyChallenges := comp.GenerateDailyChallenges(currentTime)
-			comp.SetActiveChallenges(dailyChallenges, comp.GetActiveWeeklyChallenges())
-		}
-		if len(comp.GetActiveWeeklyChallenges()) == 0 {
-			weeklyChallenges := comp.GenerateWeeklyChallenges(currentTime)
-			comp.SetActiveChallenges(comp.GetActiveDailyChallenges(), weeklyChallenges)
-		}
+	s.logger.WithFields(logrus.Fields{
+		"entityID":     entity.ID,
+		"daily_streak": comp.GetDailyStreak(),
+	}).Debug("Daily challenges reset")
+
+	dailyChallenges := comp.GenerateDailyChallenges(currentTime)
+	comp.SetActiveChallenges(dailyChallenges, comp.GetActiveWeeklyChallenges())
+
+	s.notifyStreakChanged(entity.ID, ChallengeTypeDaily, comp.GetDailyStreak())
+}
+
+// handleWeeklyReset processes weekly challenge resets and generates new challenges.
+func (s *ChallengeSystem) handleWeeklyReset(entity *Entity, comp *DailyChallengeComponent, currentTime time.Time) {
+	if !comp.CheckWeeklyReset(currentTime) {
+		return
+	}
+
+	s.logger.WithFields(logrus.Fields{
+		"entityID":      entity.ID,
+		"weekly_streak": comp.GetWeeklyStreak(),
+	}).Debug("Weekly challenges reset")
+
+	weeklyChallenges := comp.GenerateWeeklyChallenges(currentTime)
+	comp.SetActiveChallenges(comp.GetActiveDailyChallenges(), weeklyChallenges)
+
+	s.notifyStreakChanged(entity.ID, ChallengeTypeWeekly, comp.GetWeeklyStreak())
+}
+
+// notifyStreakChanged invokes the streak callback if set.
+func (s *ChallengeSystem) notifyStreakChanged(entityID uint64, streakType ChallengeType, streak int) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	if s.onStreakChanged != nil {
+		s.onStreakChanged(entityID, streakType, streak)
+	}
+}
+
+// initializeMissingChallenges generates challenges if they are missing.
+func (s *ChallengeSystem) initializeMissingChallenges(comp *DailyChallengeComponent, currentTime time.Time) {
+	if len(comp.GetActiveDailyChallenges()) == 0 {
+		dailyChallenges := comp.GenerateDailyChallenges(currentTime)
+		comp.SetActiveChallenges(dailyChallenges, comp.GetActiveWeeklyChallenges())
+	}
+	if len(comp.GetActiveWeeklyChallenges()) == 0 {
+		weeklyChallenges := comp.GenerateWeeklyChallenges(currentTime)
+		comp.SetActiveChallenges(comp.GetActiveDailyChallenges(), weeklyChallenges)
 	}
 }
 

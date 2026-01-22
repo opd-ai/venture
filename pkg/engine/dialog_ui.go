@@ -126,46 +126,80 @@ func (ui *DialogUI) Update() error {
 		return nil
 	}
 
-	// Handle touch/mouse input for option selection
-	if IsTouchOrMouseJustPressed() {
-		mouseX, mouseY, _ := GetTouchOrMousePosition()
-		// Check if touch/click is within options area
-		optionY := ui.screenHeight - 250 + 120
-		panelX := ui.screenWidth/2 - 300
-		for i := range ui.playerOptions {
-			optY := optionY + i*25
-			// Check if within option bounds (approximate hit area)
-			if mouseX >= panelX && mouseX <= panelX+580 &&
-				mouseY >= optY-12 && mouseY <= optY+12 {
-				ui.selectedOption = i
-				return ui.handleOptionSelect()
-			}
-		}
+	if err := ui.handleTouchInput(); err != nil {
+		return err
 	}
 
-	// Keyboard navigation - Platform parity fix: Use edge-triggered detection
-	if inpututil.IsKeyJustPressed(ebiten.KeyDown) || inpututil.IsKeyJustPressed(ebiten.KeyS) {
-		if len(ui.playerOptions) > 0 {
-			ui.selectedOption = (ui.selectedOption + 1) % len(ui.playerOptions)
-		}
-	}
-	if inpututil.IsKeyJustPressed(ebiten.KeyUp) || inpututil.IsKeyJustPressed(ebiten.KeyW) {
-		if len(ui.playerOptions) > 0 {
-			ui.selectedOption = (ui.selectedOption - 1 + len(ui.playerOptions)) % len(ui.playerOptions)
-		}
+	ui.handleKeyboardNavigation()
+
+	if err := ui.handleSelectionKeys(); err != nil {
+		return err
 	}
 
-	// Select option - Platform parity fix: Use edge-triggered detection
-	if inpututil.IsKeyJustPressed(ebiten.KeyEnter) || inpututil.IsKeyJustPressed(ebiten.KeySpace) {
-		return ui.handleOptionSelect()
-	}
+	return ui.handleEscapeKey()
+}
 
-	// Close dialog - Platform parity fix: Use edge-triggered detection
-	if inpututil.IsKeyJustPressed(ebiten.KeyEscape) {
-		ui.Hide()
+// handleTouchInput processes touch and mouse input for option selection.
+func (ui *DialogUI) handleTouchInput() error {
+	if !IsTouchOrMouseJustPressed() {
 		return nil
 	}
 
+	mouseX, mouseY, _ := GetTouchOrMousePosition()
+	selectedIdx := ui.findSelectedOption(mouseX, mouseY)
+
+	if selectedIdx >= 0 {
+		ui.selectedOption = selectedIdx
+		return ui.handleOptionSelect()
+	}
+
+	return nil
+}
+
+// findSelectedOption returns the index of the option at the given coordinates, or -1 if none.
+func (ui *DialogUI) findSelectedOption(mouseX, mouseY int) int {
+	optionY := ui.screenHeight - 250 + 120
+	panelX := ui.screenWidth/2 - 300
+
+	for i := range ui.playerOptions {
+		optY := optionY + i*25
+		if mouseX >= panelX && mouseX <= panelX+580 &&
+			mouseY >= optY-12 && mouseY <= optY+12 {
+			return i
+		}
+	}
+
+	return -1
+}
+
+// handleKeyboardNavigation processes arrow key and WASD navigation for option selection.
+func (ui *DialogUI) handleKeyboardNavigation() {
+	if len(ui.playerOptions) == 0 {
+		return
+	}
+
+	if inpututil.IsKeyJustPressed(ebiten.KeyDown) || inpututil.IsKeyJustPressed(ebiten.KeyS) {
+		ui.selectedOption = (ui.selectedOption + 1) % len(ui.playerOptions)
+	}
+
+	if inpututil.IsKeyJustPressed(ebiten.KeyUp) || inpututil.IsKeyJustPressed(ebiten.KeyW) {
+		ui.selectedOption = (ui.selectedOption - 1 + len(ui.playerOptions)) % len(ui.playerOptions)
+	}
+}
+
+// handleSelectionKeys processes Enter and Space keys for option selection.
+func (ui *DialogUI) handleSelectionKeys() error {
+	if inpututil.IsKeyJustPressed(ebiten.KeyEnter) || inpututil.IsKeyJustPressed(ebiten.KeySpace) {
+		return ui.handleOptionSelect()
+	}
+	return nil
+}
+
+// handleEscapeKey processes Escape key to close the dialog.
+func (ui *DialogUI) handleEscapeKey() error {
+	if inpututil.IsKeyJustPressed(ebiten.KeyEscape) {
+		ui.Hide()
+	}
 	return nil
 }
 

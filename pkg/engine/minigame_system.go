@@ -321,47 +321,76 @@ func (s *MiniGameSystem) awardReward(entityID uint64, reward *Reward) {
 		return
 	}
 
-	// Award gold
-	if invCompRaw, ok := entity.GetComponent("inventory"); ok {
-		invComp := invCompRaw.(*InventoryComponent)
-		invComp.Gold += reward.Gold
+	s.awardGold(entity, reward.Gold)
+	s.awardXP(entity, reward.XP)
+	s.awardItems(entity, reward.Items)
+}
+
+// awardGold adds gold to the player's inventory.
+func (s *MiniGameSystem) awardGold(entity *Entity, gold int) {
+	invCompRaw, ok := entity.GetComponent("inventory")
+	if !ok {
+		return
 	}
 
-	// Award XP
-	if expCompRaw, ok := entity.GetComponent("experience"); ok {
-		expComp := expCompRaw.(*ExperienceComponent)
-		expComp.CurrentXP += int(reward.XP)
+	invComp := invCompRaw.(*InventoryComponent)
+	invComp.Gold += gold
+}
+
+// awardXP adds experience points to the player.
+func (s *MiniGameSystem) awardXP(entity *Entity, xp float64) {
+	expCompRaw, ok := entity.GetComponent("experience")
+	if !ok {
+		return
 	}
 
-	// Award items - Phase 27.3 Integration
-	// Iterate through reward item entity IDs, get the item from each entity,
-	// and add it to the player's inventory. Items that cannot be added due to
-	// inventory limits remain as world entities for pickup later.
-	if len(reward.Items) > 0 {
-		invCompRaw, hasInv := entity.GetComponent("inventory")
-		if hasInv {
-			invComp := invCompRaw.(*InventoryComponent)
-			for _, itemEntityID := range reward.Items {
-				itemEntity, exists := s.world.GetEntity(itemEntityID)
-				if !exists || itemEntity == nil {
-					continue
-				}
-				itemCompRaw, hasItem := itemEntity.GetComponent("item")
-				if !hasItem {
-					continue
-				}
-				itemComp, ok := itemCompRaw.(*ItemComponent)
-				if !ok || itemComp.Item == nil {
-					continue
-				}
-				// Add the item to player inventory; if inventory is full,
-				// the item remains as a world entity for later pickup
-				if !invComp.AddItem(itemComp.Item) {
-					// Item could not be added (inventory full by count or weight).
-					// The item entity remains in the world for the player to pick up later.
-					continue
-				}
-			}
-		}
+	expComp := expCompRaw.(*ExperienceComponent)
+	expComp.CurrentXP += int(xp)
+}
+
+// awardItems adds reward items to the player's inventory or leaves them in the world.
+func (s *MiniGameSystem) awardItems(entity *Entity, itemEntityIDs []uint64) {
+	if len(itemEntityIDs) == 0 {
+		return
 	}
+
+	invCompRaw, ok := entity.GetComponent("inventory")
+	if !ok {
+		return
+	}
+
+	invComp := invCompRaw.(*InventoryComponent)
+	for _, itemEntityID := range itemEntityIDs {
+		s.addItemToInventory(invComp, itemEntityID)
+	}
+}
+
+// addItemToInventory attempts to add a single item to the inventory.
+func (s *MiniGameSystem) addItemToInventory(invComp *InventoryComponent, itemEntityID uint64) {
+	itemComp := s.getItemComponent(itemEntityID)
+	if itemComp == nil || itemComp.Item == nil {
+		return
+	}
+
+	invComp.AddItem(itemComp.Item)
+}
+
+// getItemComponent retrieves the item component from an item entity.
+func (s *MiniGameSystem) getItemComponent(itemEntityID uint64) *ItemComponent {
+	itemEntity, exists := s.world.GetEntity(itemEntityID)
+	if !exists || itemEntity == nil {
+		return nil
+	}
+
+	itemCompRaw, ok := itemEntity.GetComponent("item")
+	if !ok {
+		return nil
+	}
+
+	itemComp, ok := itemCompRaw.(*ItemComponent)
+	if !ok {
+		return nil
+	}
+
+	return itemComp
 }

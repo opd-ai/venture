@@ -465,58 +465,94 @@ func (c *DailyChallengeComponent) ClaimReward(challengeID string) *ChallengeRewa
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
-	// Find challenge
-	var challenge *Challenge
-	for _, ch := range c.ActiveDailyChallenges {
-		if ch.ID == challengeID {
-			challenge = ch
-			break
-		}
-	}
-	if challenge == nil {
-		for _, ch := range c.ActiveWeeklyChallenges {
-			if ch.ID == challengeID {
-				challenge = ch
-				break
-			}
-		}
-	}
-
-	if challenge == nil || !challenge.IsCompleted || challenge.IsRewardClaimed {
+	challenge := c.findChallengeByID(challengeID)
+	if !c.canClaimReward(challenge) {
 		return nil
 	}
 
-	// Apply streak bonus
-	var streakBonus float64 = 1.0
-	if challenge.Type == ChallengeTypeDaily && c.DailyStreak > 0 {
-		// +10% per streak day, max 100%
-		bonus := float64(c.DailyStreak) * 0.1
-		if bonus > 1.0 {
-			bonus = 1.0
+	streakBonus := c.calculateStreakBonus(challenge)
+	reward := c.buildReward(challenge, streakBonus)
+
+	c.markRewardClaimed(challenge, &reward)
+
+	return &reward
+}
+
+// findChallengeByID searches for a challenge by ID in both daily and weekly lists.
+func (c *DailyChallengeComponent) findChallengeByID(challengeID string) *Challenge {
+	for _, ch := range c.ActiveDailyChallenges {
+		if ch.ID == challengeID {
+			return ch
 		}
-		streakBonus += bonus
-	} else if challenge.Type == ChallengeTypeWeekly && c.WeeklyStreak > 0 {
-		// +25% per streak week, max 100%
-		bonus := float64(c.WeeklyStreak) * 0.25
-		if bonus > 1.0 {
-			bonus = 1.0
-		}
-		streakBonus += bonus
 	}
 
-	reward := ChallengeReward{
+	for _, ch := range c.ActiveWeeklyChallenges {
+		if ch.ID == challengeID {
+			return ch
+		}
+	}
+
+	return nil
+}
+
+// canClaimReward checks if a challenge reward can be claimed.
+func (c *DailyChallengeComponent) canClaimReward(challenge *Challenge) bool {
+	return challenge != nil && challenge.IsCompleted && !challenge.IsRewardClaimed
+}
+
+// calculateStreakBonus determines the bonus multiplier based on streak.
+func (c *DailyChallengeComponent) calculateStreakBonus(challenge *Challenge) float64 {
+	if challenge.Type == ChallengeTypeDaily {
+		return c.calculateDailyStreakBonus()
+	}
+	if challenge.Type == ChallengeTypeWeekly {
+		return c.calculateWeeklyStreakBonus()
+	}
+	return 1.0
+}
+
+// calculateDailyStreakBonus computes the daily streak bonus (10% per day, max 100%).
+func (c *DailyChallengeComponent) calculateDailyStreakBonus() float64 {
+	if c.DailyStreak <= 0 {
+		return 1.0
+	}
+
+	bonus := float64(c.DailyStreak) * 0.1
+	if bonus > 1.0 {
+		bonus = 1.0
+	}
+	return 1.0 + bonus
+}
+
+// calculateWeeklyStreakBonus computes the weekly streak bonus (25% per week, max 100%).
+func (c *DailyChallengeComponent) calculateWeeklyStreakBonus() float64 {
+	if c.WeeklyStreak <= 0 {
+		return 1.0
+	}
+
+	bonus := float64(c.WeeklyStreak) * 0.25
+	if bonus > 1.0 {
+		bonus = 1.0
+	}
+	return 1.0 + bonus
+}
+
+// buildReward constructs the final reward with bonuses applied.
+func (c *DailyChallengeComponent) buildReward(challenge *Challenge, streakBonus float64) ChallengeReward {
+	return ChallengeReward{
 		XP:              int(float64(challenge.Reward.XP) * streakBonus),
 		Gold:            int(float64(challenge.Reward.Gold) * streakBonus),
 		ItemID:          challenge.Reward.ItemID,
 		BonusMultiplier: streakBonus,
 	}
+}
 
+// markRewardClaimed updates the challenge and component statistics after claiming.
+func (c *DailyChallengeComponent) markRewardClaimed(challenge *Challenge, reward *ChallengeReward) {
 	challenge.IsRewardClaimed = true
 	c.TotalChallengesCompleted++
 	c.TotalXPEarned += reward.XP
 	c.TotalGoldEarned += reward.Gold
-
-	return &reward
 }
 
 // RerollChallenge rerolls a daily challenge if rerolls are available.

@@ -970,81 +970,115 @@ func (fs *FishingSystem) GetNearbyFishingSpots(x, y, maxRange float64) []*Entity
 func (fs *FishingSystem) GenerateFishingSpot(seed int64, waterType WaterType, depthLevel DepthLevel, biome string, x, y float64) *Entity {
 	rng := rand.New(rand.NewSource(seed))
 
-	// Get next entity ID
+	entity := fs.createFishingSpotEntity(x, y)
+	spot := fs.createAndConfigureSpot(waterType, depthLevel, biome, rng)
+	fs.populateSpotWithFish(spot, waterType, depthLevel, biome, rng)
+
+	entity.AddComponent(spot)
+	fs.logFishingSpotCreation(entity, waterType, depthLevel, biome, seed, spot)
+
+	return entity
+}
+
+// createFishingSpotEntity creates a new entity with position for a fishing spot.
+func (fs *FishingSystem) createFishingSpotEntity(x, y float64) *Entity {
 	fs.mu.Lock()
 	entityID := fs.nextEntityID
 	fs.nextEntityID++
 	fs.mu.Unlock()
 
 	entity := NewEntity(entityID)
-
-	// Position
 	entity.AddComponent(&PositionComponent{X: x, Y: y})
 
-	// Fishing spot
+	return entity
+}
+
+// createAndConfigureSpot creates a fishing spot component with randomized properties.
+func (fs *FishingSystem) createAndConfigureSpot(waterType WaterType, depthLevel DepthLevel, biome string, rng *rand.Rand) *FishingSpotComponent {
 	spot := NewFishingSpotComponent(waterType, depthLevel, biome)
+	spot.MaxConcurrentFishers = 3 + rng.Intn(5)
+	spot.RareFishBonus = 0.8 + rng.Float64()*0.4
+	return spot
+}
 
-	// Randomize properties
-	spot.MaxConcurrentFishers = 3 + rng.Intn(5)  // 3-7 fishers
-	spot.RareFishBonus = 0.8 + rng.Float64()*0.4 // 0.8-1.2
-
-	// Populate with fish based on water type and depth
+// populateSpotWithFish adds fish types to the spot based on water type, depth, and biome.
+func (fs *FishingSystem) populateSpotWithFish(spot *FishingSpotComponent, waterType WaterType, depthLevel DepthLevel, biome string, rng *rand.Rand) {
 	fs.mu.RLock()
+	defer fs.mu.RUnlock()
+
 	for id, fishType := range fs.fishTypes {
-		// Check water type match
-		waterMatch := false
-		for _, wt := range fishType.WaterTypes {
-			if wt == waterType {
-				waterMatch = true
-				break
-			}
-		}
-		if !waterMatch {
+		if !fs.isFishCompatible(fishType, waterType, depthLevel, biome) {
 			continue
 		}
 
-		// Check depth
-		if fishType.MinDepth > depthLevel {
-			continue
-		}
-
-		// Check biome if specified
-		if len(fishType.BiomeTypes) > 0 {
-			biomeMatch := false
-			for _, bt := range fishType.BiomeTypes {
-				if bt == biome {
-					biomeMatch = true
-					break
-				}
-			}
-			if !biomeMatch {
-				continue
-			}
-		}
-
-		// Add to population with weighted spawn rate
-		baseWeight := 1.0
-		switch fishType.Rarity {
-		case FishRarityCommon:
-			baseWeight = 10.0
-		case FishRarityUncommon:
-			baseWeight = 5.0
-		case FishRarityRare:
-			baseWeight = 2.0
-		case FishRarityEpic:
-			baseWeight = 0.5
-		case FishRarityLegendary:
-			baseWeight = 0.1
-		}
-
-		// Add some randomness
-		spawnWeight := baseWeight * (0.8 + rng.Float64()*0.4)
+		spawnWeight := fs.calculateSpawnWeight(fishType, rng)
 		fs.SpotAddFishType(spot, id, spawnWeight)
 	}
-	fs.mu.RUnlock()
+}
 
-	entity.AddComponent(spot)
+// isFishCompatible checks if a fish type matches the spot's environment.
+func (fs *FishingSystem) isFishCompatible(fishType *FishType, waterType WaterType, depthLevel DepthLevel, biome string) bool {
+	if !fs.matchesWaterType(fishType, waterType) {
+		return false
+	}
 
+	if fishType.MinDepth > depthLevel {
+		return false
+	}
+
+	return fs.matchesBiome(fishType, biome)
+}
+
+// matchesWaterType checks if the fish type is compatible with the water type.
+func (fs *FishingSystem) matchesWaterType(fishType *FishType, waterType WaterType) bool {
+	for _, wt := range fishType.WaterTypes {
+		if wt == waterType {
+			return true
+		}
+	}
+	return false
+}
+
+// matchesBiome checks if the fish type is compatible with the biome.
+func (fs *FishingSystem) matchesBiome(fishType *FishType, biome string) bool {
+	if len(fishType.BiomeTypes) == 0 {
+		return true
+	}
+
+	for _, bt := range fishType.BiomeTypes {
+		if bt == biome {
+			return true
+		}
+	}
+	return false
+}
+
+// calculateSpawnWeight determines the spawn weight for a fish based on rarity.
+func (fs *FishingSystem) calculateSpawnWeight(fishType *FishType, rng *rand.Rand) float64 {
+	baseWeight := fs.getBaseWeightForRarity(fishType.Rarity)
+	return baseWeight * (0.8 + rng.Float64()*0.4)
+}
+
+// getBaseWeightForRarity returns the base spawn weight for a fish rarity tier.
+func (fs *FishingSystem) getBaseWeightForRarity(rarity FishRarity) float64 {
+	switch rarity {
+	case FishRarityCommon:
+		return 10.0
+	case FishRarityUncommon:
+		return 5.0
+	case FishRarityRare:
+		return 2.0
+	case FishRarityEpic:
+		return 0.5
+	case FishRarityLegendary:
+		return 0.1
+	default:
+		return 1.0
+	}
+}
+
+// logFishingSpotCreation logs the creation of a fishing spot with debug information.
+func (fs *FishingSystem) logFishingSpotCreation(entity *Entity, waterType WaterType, depthLevel DepthLevel, biome string, seed int64, spot *FishingSpotComponent) {
 	log.WithFields(log.Fields{
 		"entity_id":   entity.ID,
 		"water_type":  waterType,
@@ -1053,8 +1087,6 @@ func (fs *FishingSystem) GenerateFishingSpot(seed int64, waterType WaterType, de
 		"seed":        seed,
 		"fish_count":  len(spot.FishPopulation),
 	}).Debug("Generated fishing spot")
-
-	return entity
 }
 
 // GetFishingSpotCount returns the count of tracked fishing spots.

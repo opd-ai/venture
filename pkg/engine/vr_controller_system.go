@@ -269,69 +269,107 @@ func (s *VRControllerSystem) updateFromAdapter(ctrl *VRControllerComponent, adap
 
 // processActions checks for input events and triggers callbacks.
 func (s *VRControllerSystem) processActions(ctrl *VRControllerComponent) {
-	s.mu.RLock()
-	attackCb := s.attackCallback
-	interactCb := s.interactCallback
-	menuCb := s.menuCallback
-	movementCb := s.movementCallback
-	turnCb := s.turnCallback
-	attackBtn := s.attackButton
-	interactBtn := s.interactButton
-	s.mu.RUnlock()
-
+	callbacks := s.getCallbacks()
 	hand := ctrl.GetHand()
 
-	// Check attack button (default: trigger)
-	if attackCb != nil {
-		var justPressed bool
-		switch attackBtn {
-		case ButtonTrigger:
-			justPressed = ctrl.IsTriggerJustPressed()
-		case ButtonA:
-			justPressed = ctrl.IsButtonAJustPressed()
-		case ButtonB:
-			justPressed = ctrl.IsButtonBJustPressed()
-		}
-		if justPressed {
-			attackCb(hand)
-		}
+	s.processAttackButton(ctrl, callbacks, hand)
+	s.processInteractButton(ctrl, callbacks, hand)
+	s.processMenuButton(ctrl, callbacks, hand)
+	s.processMovement(ctrl, callbacks, hand)
+	s.processTurn(ctrl, callbacks, hand)
+}
+
+// callbackSet holds all controller callbacks for action processing.
+type callbackSet struct {
+	attack      func(string)
+	interact    func(string)
+	menu        func(string)
+	movement    func(float64, float64)
+	turn        func(float64)
+	attackBtn   string
+	interactBtn string
+}
+
+// getCallbacks retrieves all callbacks and button mappings from the system.
+func (s *VRControllerSystem) getCallbacks() callbackSet {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	return callbackSet{
+		attack:      s.attackCallback,
+		interact:    s.interactCallback,
+		menu:        s.menuCallback,
+		movement:    s.movementCallback,
+		turn:        s.turnCallback,
+		attackBtn:   s.attackButton,
+		interactBtn: s.interactButton,
+	}
+}
+
+// processAttackButton checks and triggers the attack button callback.
+func (s *VRControllerSystem) processAttackButton(ctrl *VRControllerComponent, cb callbackSet, hand string) {
+	if cb.attack == nil {
+		return
 	}
 
-	// Check interact button (default: A)
-	if interactCb != nil {
-		var justPressed bool
-		switch interactBtn {
-		case ButtonA:
-			justPressed = ctrl.IsButtonAJustPressed()
-		case ButtonB:
-			justPressed = ctrl.IsButtonBJustPressed()
-		case ButtonTrigger:
-			justPressed = ctrl.IsTriggerJustPressed()
-		}
-		if justPressed {
-			interactCb(hand)
-		}
+	if s.isButtonPressed(ctrl, cb.attackBtn) {
+		cb.attack(hand)
+	}
+}
+
+// processInteractButton checks and triggers the interact button callback.
+func (s *VRControllerSystem) processInteractButton(ctrl *VRControllerComponent, cb callbackSet, hand string) {
+	if cb.interact == nil {
+		return
 	}
 
-	// Check menu button
-	if menuCb != nil && ctrl.IsMenuButtonJustPressed() {
-		menuCb(hand)
+	if s.isButtonPressed(ctrl, cb.interactBtn) {
+		cb.interact(hand)
+	}
+}
+
+// isButtonPressed checks if a specific button was just pressed.
+func (s *VRControllerSystem) isButtonPressed(ctrl *VRControllerComponent, btn string) bool {
+	switch btn {
+	case ButtonTrigger:
+		return ctrl.IsTriggerJustPressed()
+	case ButtonA:
+		return ctrl.IsButtonAJustPressed()
+	case ButtonB:
+		return ctrl.IsButtonBJustPressed()
+	default:
+		return false
+	}
+}
+
+// processMenuButton checks and triggers the menu button callback.
+func (s *VRControllerSystem) processMenuButton(ctrl *VRControllerComponent, cb callbackSet, hand string) {
+	if cb.menu != nil && ctrl.IsMenuButtonJustPressed() {
+		cb.menu(hand)
+	}
+}
+
+// processMovement handles left thumbstick movement input.
+func (s *VRControllerSystem) processMovement(ctrl *VRControllerComponent, cb callbackSet, hand string) {
+	if cb.movement == nil || hand != ControllerLeft {
+		return
 	}
 
-	// Movement from left thumbstick
-	if movementCb != nil && hand == ControllerLeft {
-		x, y := ctrl.GetThumbstick()
-		if x != 0 || y != 0 {
-			movementCb(x, y)
-		}
+	x, y := ctrl.GetThumbstick()
+	if x != 0 || y != 0 {
+		cb.movement(x, y)
+	}
+}
+
+// processTurn handles right thumbstick turning input.
+func (s *VRControllerSystem) processTurn(ctrl *VRControllerComponent, cb callbackSet, hand string) {
+	if cb.turn == nil || hand != ControllerRight {
+		return
 	}
 
-	// Turn from right thumbstick
-	if turnCb != nil && hand == ControllerRight {
-		x, _ := ctrl.GetThumbstick()
-		if x != 0 {
-			turnCb(x)
-		}
+	x, _ := ctrl.GetThumbstick()
+	if x != 0 {
+		cb.turn(x)
 	}
 }
 

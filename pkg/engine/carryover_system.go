@@ -126,34 +126,61 @@ func (s *CarryOverSystem) countPlayerSkills(entity *Entity) int {
 
 // populatePermanentUnlocks adds cosmetics and achievements to carry-over.
 func (s *CarryOverSystem) populatePermanentUnlocks(entity *Entity, carry *CarryOverComponent) {
-	// Get cosmetics from player customization
-	if cosmeticComp, ok := entity.GetComponent("cosmetic"); ok {
-		if customization, ok := cosmeticComp.(*CosmeticComponent); ok {
-			for _, cosmeticID := range customization.UnlockedCosmetics {
-				carry.AddCosmetic(cosmeticID)
-			}
-		}
+	s.transferCosmetics(entity, carry)
+	s.transferExtendedAchievements(entity, carry)
+	s.transferBasicAchievements(entity, carry)
+}
+
+// transferCosmetics extracts and adds unlocked cosmetics to the carry-over component.
+func (s *CarryOverSystem) transferCosmetics(entity *Entity, carry *CarryOverComponent) {
+	cosmeticComp, ok := entity.GetComponent("cosmetic")
+	if !ok {
+		return
 	}
 
-	// Get achievements from extended achievement component
-	if achieveComp, ok := entity.GetComponent("extended_achievement"); ok {
-		if extAchieve, ok := achieveComp.(*ExtendedAchievementComponent); ok {
-			for achieveID, entry := range extAchieve.Achievements {
-				if entry.CurrentTier > AchievementTierNone {
-					carry.AddAchievement(achieveID)
-				}
-			}
-		}
+	customization, ok := cosmeticComp.(*CosmeticComponent)
+	if !ok {
+		return
 	}
 
-	// Also check basic achievement component
-	if achieveComp, ok := entity.GetComponent("achievement"); ok {
-		if achieve, ok := achieveComp.(*AchievementComponent); ok {
-			// Use GetUnlockedIDs helper for carry-over compatibility
-			for _, achieveID := range achieve.GetUnlockedIDs() {
-				carry.AddAchievement(achieveID)
-			}
+	for _, cosmeticID := range customization.UnlockedCosmetics {
+		carry.AddCosmetic(cosmeticID)
+	}
+}
+
+// transferExtendedAchievements extracts and adds tiered achievements to the carry-over component.
+func (s *CarryOverSystem) transferExtendedAchievements(entity *Entity, carry *CarryOverComponent) {
+	achieveComp, ok := entity.GetComponent("extended_achievement")
+	if !ok {
+		return
+	}
+
+	extAchieve, ok := achieveComp.(*ExtendedAchievementComponent)
+	if !ok {
+		return
+	}
+
+	for achieveID, entry := range extAchieve.Achievements {
+		if entry.CurrentTier > AchievementTierNone {
+			carry.AddAchievement(achieveID)
 		}
+	}
+}
+
+// transferBasicAchievements extracts and adds basic achievements to the carry-over component.
+func (s *CarryOverSystem) transferBasicAchievements(entity *Entity, carry *CarryOverComponent) {
+	achieveComp, ok := entity.GetComponent("achievement")
+	if !ok {
+		return
+	}
+
+	achieve, ok := achieveComp.(*AchievementComponent)
+	if !ok {
+		return
+	}
+
+	for _, achieveID := range achieve.GetUnlockedIDs() {
+		carry.AddAchievement(achieveID)
 	}
 }
 

@@ -1,5 +1,6 @@
 # Package Audit: pkg/network/federation
 Generated during reorganization on: 2026-01-20
+Updated: 2026-01-22 (Circuit breaker metrics enhancement)
 
 ## Summary
 - Missing Implementations: 0
@@ -11,7 +12,30 @@ Generated during reorganization on: 2026-01-20
 - Documentation Gaps: 0
 - Dependency Issues: 0
 
-**Overall Score: 87.3% main package, 86.7% guild, 82.4% mobile, 83.8% webrtc - Excellent**
+**Overall Score: 87.7% main package, 86.7% guild, 82.4% mobile, 83.8% webrtc - Excellent**
+
+## Recent Enhancements
+
+### Circuit Breaker Metrics (2026-01-22)
+Added comprehensive metrics tracking to CircuitBreaker for Prometheus-style monitoring:
+
+**New Types:**
+- `CircuitBreakerMetrics` struct with 14 fields for detailed observability
+
+**New Metrics Tracked:**
+- State transition counts (closed→open, open→half-open, half-open→closed, half-open→open)
+- Call counters (total calls, successes, failures, rejected)
+- Time spent in each state (nanosecond precision)
+- Current state info (state, last transition time, consecutive counts)
+
+**New Methods:**
+- `Metrics() CircuitBreakerMetrics` - Returns comprehensive metrics snapshot
+- `ResetMetrics()` - Resets all counters while preserving state
+
+**Test Coverage:**
+- 5 new test functions added
+- Circuit breaker functions at 100% coverage (except beforeRequest at 88.9%)
+- All 619+ tests pass
 
 ## Detailed Findings
 

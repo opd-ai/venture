@@ -174,9 +174,9 @@ func (s *Service) CallExternal(ctx context.Context, req Request) (Response, erro
 **Location:** `pkg/network`
 
 **Acceptance Criteria:**
-- [ ] Circuit breaker implemented for federation connections
-- [ ] Configurable failure threshold and recovery time
-- [ ] Metrics for circuit breaker state transitions
+- [x] Circuit breaker implemented for federation connections (pkg/network/federation/circuitbreaker.go)
+- [x] Configurable failure threshold and recovery time (CircuitBreakerConfig struct)
+- [x] Metrics for circuit breaker state transitions (CircuitBreakerMetrics struct + Metrics() method - added 2026-01-22)
 
 **Implementation Pattern:**
 ```go
@@ -341,7 +341,7 @@ func (s *Server) Shutdown(ctx context.Context) error {
 
 ### Reliability Requirements
 - [x] Comprehensive error handling with context (pkg/errors)
-- [ ] Circuit breakers for external dependencies (RECOMMENDED)
+- [x] Circuit breakers for external dependencies (pkg/network/federation/circuitbreaker.go - with metrics)
 - [x] Appropriate timeout configurations (high-latency support)
 - [x] Graceful shutdown and resource cleanup (pkg/recovery)
 
@@ -407,7 +407,7 @@ func (s *Server) Shutdown(ctx context.Context) error {
 - [x] Structured logging throughout application
 - [x] Health endpoints respond in <100ms
 - [x] Graceful degradation under load
-- [ ] All critical paths have circuit breakers
+- [x] All critical paths have circuit breakers (pkg/network/federation with full metrics)
 - [x] Documentation for all public APIs
 
 ---

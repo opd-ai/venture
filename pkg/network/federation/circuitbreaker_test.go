@@ -276,3 +276,185 @@ func TestDefaultCircuitBreakerConfig(t *testing.T) {
 		t.Error("HalfOpenMaxRequests should be positive")
 	}
 }
+
+func TestCircuitBreakerMetrics(t *testing.T) {
+	config := CircuitBreakerConfig{
+		FailureThreshold:    2,
+		SuccessThreshold:    2,
+		OpenTimeout:         100 * time.Millisecond,
+		HalfOpenMaxRequests: 3,
+	}
+	cb := NewCircuitBreaker(config)
+
+	// Initial metrics should be zero (except current state)
+	metrics := cb.Metrics()
+	if metrics.CurrentState != "Closed" {
+		t.Errorf("Expected initial state Closed, got %s", metrics.CurrentState)
+	}
+	if metrics.TotalCalls != 0 {
+		t.Errorf("Expected 0 total calls, got %d", metrics.TotalCalls)
+	}
+
+	// Make some successful calls
+	cb.Call(func() error { return nil })
+	cb.Call(func() error { return nil })
+
+	metrics = cb.Metrics()
+	if metrics.TotalCalls != 2 {
+		t.Errorf("Expected 2 total calls, got %d", metrics.TotalCalls)
+	}
+	if metrics.TotalSuccesses != 2 {
+		t.Errorf("Expected 2 successes, got %d", metrics.TotalSuccesses)
+	}
+	if metrics.TotalFailures != 0 {
+		t.Errorf("Expected 0 failures, got %d", metrics.TotalFailures)
+	}
+
+	// Trigger failures to open circuit
+	cb.Call(func() error { return errors.New("failure 1") })
+	cb.Call(func() error { return errors.New("failure 2") })
+
+	metrics = cb.Metrics()
+	if metrics.TotalFailures != 2 {
+		t.Errorf("Expected 2 failures, got %d", metrics.TotalFailures)
+	}
+	if metrics.ClosedToOpenTransitions != 1 {
+		t.Errorf("Expected 1 closed->open transition, got %d", metrics.ClosedToOpenTransitions)
+	}
+	if metrics.CurrentState != "Open" {
+		t.Errorf("Expected state Open, got %s", metrics.CurrentState)
+	}
+
+	// Try to call while open (should be rejected)
+	cb.Call(func() error { return nil })
+
+	metrics = cb.Metrics()
+	if metrics.TotalRejected != 1 {
+		t.Errorf("Expected 1 rejected call, got %d", metrics.TotalRejected)
+	}
+}
+
+func TestCircuitBreakerMetricsTransitionCounts(t *testing.T) {
+	config := CircuitBreakerConfig{
+		FailureThreshold:    2,
+		SuccessThreshold:    2,
+		OpenTimeout:         50 * time.Millisecond,
+		HalfOpenMaxRequests: 3,
+	}
+	cb := NewCircuitBreaker(config)
+
+	// Closed -> Open
+	cb.Call(func() error { return errors.New("fail") })
+	cb.Call(func() error { return errors.New("fail") })
+
+	// Wait for half-open transition
+	time.Sleep(60 * time.Millisecond)
+
+	// Open -> HalfOpen (triggered by next call)
+	cb.Call(func() error { return nil })
+
+	metrics := cb.Metrics()
+	if metrics.OpenToHalfOpenTransitions != 1 {
+		t.Errorf("Expected 1 open->half-open transition, got %d", metrics.OpenToHalfOpenTransitions)
+	}
+
+	// HalfOpen -> Closed
+	cb.Call(func() error { return nil })
+
+	metrics = cb.Metrics()
+	if metrics.HalfOpenToClosedTransitions != 1 {
+		t.Errorf("Expected 1 half-open->closed transition, got %d", metrics.HalfOpenToClosedTransitions)
+	}
+}
+
+func TestCircuitBreakerMetricsHalfOpenToOpen(t *testing.T) {
+	config := CircuitBreakerConfig{
+		FailureThreshold:    2,
+		SuccessThreshold:    2,
+		OpenTimeout:         50 * time.Millisecond,
+		HalfOpenMaxRequests: 3,
+	}
+	cb := NewCircuitBreaker(config)
+
+	// Closed -> Open
+	cb.Call(func() error { return errors.New("fail") })
+	cb.Call(func() error { return errors.New("fail") })
+
+	// Wait for half-open
+	time.Sleep(60 * time.Millisecond)
+
+	// Trigger half-open with success
+	cb.Call(func() error { return nil })
+
+	// Fail in half-open state to go back to open
+	cb.Call(func() error { return errors.New("fail in half-open") })
+
+	metrics := cb.Metrics()
+	if metrics.HalfOpenToOpenTransitions != 1 {
+		t.Errorf("Expected 1 half-open->open transition, got %d", metrics.HalfOpenToOpenTransitions)
+	}
+}
+
+func TestCircuitBreakerMetricsTimeTracking(t *testing.T) {
+	config := CircuitBreakerConfig{
+		FailureThreshold:    2,
+		SuccessThreshold:    2,
+		OpenTimeout:         50 * time.Millisecond,
+		HalfOpenMaxRequests: 3,
+	}
+	cb := NewCircuitBreaker(config)
+
+	// Spend some time in closed state
+	time.Sleep(20 * time.Millisecond)
+
+	metrics := cb.Metrics()
+	if metrics.TimeInClosedNs < 15*time.Millisecond.Nanoseconds() {
+		t.Errorf("Expected at least 15ms in closed state, got %dns", metrics.TimeInClosedNs)
+	}
+
+	// Transition to open
+	cb.Call(func() error { return errors.New("fail") })
+	cb.Call(func() error { return errors.New("fail") })
+
+	// Spend time in open state
+	time.Sleep(20 * time.Millisecond)
+
+	metrics = cb.Metrics()
+	if metrics.TimeInOpenNs < 15*time.Millisecond.Nanoseconds() {
+		t.Errorf("Expected at least 15ms in open state, got %dns", metrics.TimeInOpenNs)
+	}
+}
+
+func TestCircuitBreakerResetMetrics(t *testing.T) {
+	config := DefaultCircuitBreakerConfig()
+	cb := NewCircuitBreaker(config)
+
+	// Make some calls
+	cb.Call(func() error { return nil })
+	cb.Call(func() error { return nil })
+	cb.Call(func() error { return errors.New("fail") })
+
+	metrics := cb.Metrics()
+	if metrics.TotalCalls != 3 {
+		t.Errorf("Expected 3 total calls before reset, got %d", metrics.TotalCalls)
+	}
+
+	// Reset metrics
+	cb.ResetMetrics()
+
+	metrics = cb.Metrics()
+	if metrics.TotalCalls != 0 {
+		t.Errorf("Expected 0 total calls after reset, got %d", metrics.TotalCalls)
+	}
+	if metrics.TotalSuccesses != 0 {
+		t.Errorf("Expected 0 successes after reset, got %d", metrics.TotalSuccesses)
+	}
+	if metrics.TotalFailures != 0 {
+		t.Errorf("Expected 0 failures after reset, got %d", metrics.TotalFailures)
+	}
+
+	// State should be preserved
+	if metrics.CurrentState != "Closed" {
+		t.Errorf("Expected state Closed after metrics reset, got %s", metrics.CurrentState)
+	}
+}

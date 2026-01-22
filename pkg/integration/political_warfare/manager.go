@@ -26,11 +26,16 @@ type Manager struct {
 }
 
 // NewManager creates a new political warfare manager with deterministic RNG
-// Uses guild manager hash as seed for reproducible political calculations
+// using the default seed. For deterministic results tied to world generation,
+// use NewManagerWithSeed instead.
 func NewManager(world *engine.World, guildManager *guild.Manager) *Manager {
-	// Use deterministic seed based on guild manager state
-	// This ensures same guild configurations produce same political outcomes
-	seed := int64(12345) // Default seed, can be derived from game world seed in future
+	return NewManagerWithSeed(world, guildManager, DefaultSeed)
+}
+
+// NewManagerWithSeed creates a new political warfare manager with a specific seed.
+// Use the world seed to ensure political calculations are reproducible
+// across game sessions with the same world.
+func NewManagerWithSeed(world *engine.World, guildManager *guild.Manager, seed int64) *Manager {
 	return &Manager{
 		world:              world,
 		guildManager:       guildManager,
@@ -386,19 +391,19 @@ func (m *Manager) calculateConcessionValue(concessions []DiplomaticConcession, d
 		switch concession.Type {
 		case ConcessionGold:
 			if goldAmount, ok := concession.Value.(int); ok {
-				totalValue += float64(goldAmount) / 10000.0 // Normalize to 10k gold = 1.0
+				totalValue += float64(goldAmount) / GoldValueNormalizer
 			}
 		case ConcessionTerritory:
-			totalValue += 2.0 // Territory worth ~20k gold equivalent
+			totalValue += TerritoryValueEquivalent
 		case ConcessionApology:
-			totalValue += 0.1 // Apology adds small value
+			totalValue += ApologyValue
 		case ConcessionTribute:
 			if items, ok := concession.Value.([]string); ok {
-				totalValue += float64(len(items)) * 0.5 // Each item ~5k gold
+				totalValue += float64(len(items)) * ItemValueEquivalent
 			}
 		case ConcessionTrade:
 			if discount, ok := concession.Value.(float64); ok {
-				totalValue += discount * 0.5 // Discount adds value
+				totalValue += discount * TradeDiscountMultiplier
 			}
 		}
 	}

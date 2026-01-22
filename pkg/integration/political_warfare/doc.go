@@ -19,8 +19,11 @@
 //
 // Example Usage:
 //
-//	// Create political warfare manager
+//	// Create political warfare manager with default seed
 //	manager := political_warfare.NewManager(world, guildManager)
+//
+//	// Or create with world seed for deterministic behavior
+//	manager := political_warfare.NewManagerWithSeed(world, guildManager, worldSeed)
 //
 //	// Declare war with preparation period
 //	war, err := manager.DeclareWar("guild1", "guild2", 24*time.Hour)

@@ -115,3 +115,32 @@ type AppliedConcession struct {
 
 // TradeDiscountDuration is how long trade discount concessions last
 const TradeDiscountDuration = 30 * 24 * time.Hour // 30 days
+
+// Concession value calculation constants.
+// These are used in calculateConcessionValue() to normalize different
+// concession types to a common value scale for diplomatic victory calculations.
+const (
+	// GoldValueNormalizer normalizes gold amounts to concession value.
+	// 10,000 gold = 1.0 concession value.
+	GoldValueNormalizer = 10000.0
+
+	// TerritoryValueEquivalent is the concession value of one territory.
+	// Equivalent to approximately 20,000 gold.
+	TerritoryValueEquivalent = 2.0
+
+	// ApologyValue is the concession value of a public apology.
+	// Small symbolic value representing reputation damage.
+	ApologyValue = 0.1
+
+	// ItemValueEquivalent is the concession value per tribute item.
+	// Each item is worth approximately 5,000 gold equivalent.
+	ItemValueEquivalent = 0.5
+
+	// TradeDiscountMultiplier converts discount percentage to concession value.
+	// A 10% discount adds 0.05 concession value (10 * 0.5 / 100 = 0.05).
+	TradeDiscountMultiplier = 0.5
+
+	// DefaultSeed is the fallback seed when no world seed is provided.
+	// Used for deterministic political calculations.
+	DefaultSeed = int64(12345)
+)

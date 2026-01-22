@@ -1,10 +1,10 @@
 # Package Audit: political_warfare
 Generated during reorganization on: 2026-01-20
-Updated: 2026-01-21 (Embargo expiration implemented, doc.go example fixed, applyConcessions fully implemented)
+Updated: 2026-01-22 (Seed parameter added, magic numbers extracted to constants)
 
 ## Summary
 - Missing Implementations: 0 (was 1, fixed 1)
-- Incomplete Features: 3
+- Incomplete Features: 1 ✅ (was 3, fixed 2)
 - Interface Violations: 0
 - Untested Code: 0
 - Dead Code: 0
@@ -12,7 +12,7 @@ Updated: 2026-01-21 (Embargo expiration implemented, doc.go example fixed, apply
 - Documentation Gaps: 0 (was 1, fixed)
 - Dependency Issues: 0
 
-**Total Implementation Gaps: 3** (was 6, fixed 3)
+**Total Implementation Gaps: 1** (was 6, fixed 5)
 
 ## Detailed Findings
 
@@ -61,19 +61,18 @@ Updated: 2026-01-21 (Embargo expiration implemented, doc.go example fixed, apply
 
 ### Incomplete Features
 
-**1. Hardcoded seed instead of world seed**
-- **Location**: `manager.go:32`
-- **Issue**: Manager uses hardcoded seed `12345` instead of world seed
-- **Current Code**:
-```go
-seed := int64(12345) // Default seed, can be derived from game world seed in future
-```
-- **Impact**: Medium - Political events not deterministic based on world seed
-- **Expected**: Use world seed for reproducible political calculations
-- **Recommendation**:
-```go
-seed := world.GetSeed() // Or pass seed as parameter to NewManager
-```
+~~**1. Hardcoded seed instead of world seed**~~ ✅ **COMPLETED 2026-01-22**
+- **Resolution**: Added `NewManagerWithSeed()` constructor that accepts a seed parameter
+- **Changes Made**:
+  - Added `NewManagerWithSeed(world, guildManager, seed)` constructor
+  - `NewManager()` now calls `NewManagerWithSeed()` with `DefaultSeed` constant
+  - Added `DefaultSeed` constant (12345) in types.go for transparency
+  - Callers can now pass world seed for deterministic political calculations
+- **New API**:
+  - `NewManagerWithSeed(world, guildManager, seed)` - Create manager with specific seed
+- **Tests Added**:
+  - `TestNewManagerWithSeed` - Verifies seed determinism
+  - `TestNewManagerUsesDefaultSeed` - Verifies default seed behavior
 
 **2. Faction reputation system not integrated**
 - **Location**: `manager.go:357-371 (applyReputationPenaltyInternal)`
@@ -92,34 +91,28 @@ m.penalties = append(m.penalties, penaltyRecord)
 - **Expected**: Integrate with faction system to modify NPC faction standings
 - **Recommendation**: Add faction system integration when available, or document as future work
 
-**3. calculateConcessionValue uses magic numbers**
-- **Location**: `manager.go:373-398`
-- **Issue**: Concession values use undocumented magic numbers (10000, 2.0, 0.1, 0.5)
-- **Current Code**:
-```go
-totalValue += float64(goldAmount) / 10000.0 // Normalize to 10k gold = 1.0
-totalValue += 2.0 // Territory worth ~20k gold equivalent
-totalValue += 0.1 // Apology adds small value
-```
-- **Impact**: Low - Values work but are not configurable or documented
-- **Recommendation**: Extract to constants with documentation:
-```go
-const (
-    GoldValueNormalizer = 10000.0 // 10k gold = 1.0 concession value
-    TerritoryValueEquivalent = 2.0 // ~20k gold
-    ApologyValue = 0.1
-    ItemValueEquivalent = 0.5 // ~5k gold per item
-    TradeDiscountMultiplier = 0.5
-)
-```
+~~**3. calculateConcessionValue uses magic numbers**~~ ✅ **COMPLETED 2026-01-22**
+- **Resolution**: Extracted all magic numbers to documented constants in types.go
+- **Changes Made**:
+  - Added `GoldValueNormalizer = 10000.0` - 10k gold = 1.0 concession value
+  - Added `TerritoryValueEquivalent = 2.0` - Territory worth ~20k gold
+  - Added `ApologyValue = 0.1` - Public apology symbolic value
+  - Added `ItemValueEquivalent = 0.5` - Each tribute item ~5k gold
+  - Added `TradeDiscountMultiplier = 0.5` - Discount percentage to value conversion
+  - Updated `calculateConcessionValue()` to use these constants
+- **Tests Added**:
+  - `TestConcessionValueConstants` - Verifies constants have expected values
 
 ### Interface Violations
 None found.
 
 ### Untested Code
-None found. Test coverage is 95.1%, exceeding the 65% requirement.
+None found. Test coverage is 96.2%, exceeding the 65% requirement.
 
 **Test Coverage Summary**:
+- `TestNewManagerWithSeed` - Seed determinism ✅ NEW
+- `TestNewManagerUsesDefaultSeed` - Default seed behavior ✅ NEW
+- `TestConcessionValueConstants` - Constant values ✅ NEW
 - `TestDeclareWar` - War declaration validation
 - `TestDeclareWarInvalidGuild` - Error handling
 - `TestDeclareWarAlreadyAtWar` - Duplicate war prevention
@@ -291,26 +284,32 @@ The `political_warfare` package is in excellent condition with 96.2% test covera
 - ~~Missing embargo expiration logic~~ ✅ FIXED 2026-01-21
 
 **Important** (affects determinism/integration):
-- Hardcoded seed instead of world seed
-- Faction reputation not integrated
+- ~~Hardcoded seed instead of world seed~~ ✅ FIXED 2026-01-22 (NewManagerWithSeed added)
+- Faction reputation not integrated (planned for future integration)
 
 **Minor** (code quality):
-- Magic numbers in concession calculations
+- ~~Magic numbers in concession calculations~~ ✅ FIXED 2026-01-22 (constants extracted)
 - ~~Documentation example mismatch~~ ✅ FIXED 2026-01-21
 
 The package now has a complete concession system with external query methods for territory transfers, apologies, tributes, and trade discounts. External systems (territory, messaging, inventory, trade) can query these pending concessions and apply them.
 
-**Recent Improvements (2026-01-21):**
+**Recent Improvements (2026-01-22):**
+- ✅ Added `NewManagerWithSeed()` constructor for deterministic political calculations
+- ✅ Added `DefaultSeed` constant (12345) for transparency
+- ✅ Extracted magic numbers to documented constants: `GoldValueNormalizer`, `TerritoryValueEquivalent`, `ApologyValue`, `ItemValueEquivalent`, `TradeDiscountMultiplier`
+- ✅ Added 3 new tests for seed and constant behavior (total 51 tests)
+- ✅ Updated doc.go to document new API
+
+**Previous Improvements (2026-01-21):**
 - ✅ Implemented all 5 concession types (gold, territory, apology, tribute, trade)
 - ✅ Added `AppliedConcession` type for tracking concession details
 - ✅ Added getter methods: `GetAppliedConcessions()`, `GetTradeDiscount()`, `GetPendingTerritoryTransfers()`, `GetPendingApologies()`, `GetPendingTributes()`
-- ✅ Added 12 new tests for concession types (total 48 tests)
-- ✅ Test coverage improved from 95.1% to 96.2%
+- ✅ Added 12 new tests for concession types
 - ✅ Implemented embargo expiration in Update() method
 - ✅ Fixed doc.go example to match actual API signature
 
 **Reorganization Assessment**: Package structure is optimal. No file reorganization needed.
-- `types.go` - All type definitions (including new `AppliedConcession`) ✅
+- `types.go` - All type definitions and constants ✅
 - `manager.go` - Business logic ✅
 - `system.go` - ECS integration wrapper ✅
 - `doc.go` - Package documentation ✅

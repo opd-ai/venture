@@ -33,6 +33,67 @@ func setupTestManager(t *testing.T) (*Manager, *guild.Manager, string, string, s
 	return manager, guildManager, guildID1, guildID2, guildID3
 }
 
+// Test NewManagerWithSeed uses provided seed deterministically
+func TestNewManagerWithSeed(t *testing.T) {
+	world := engine.NewWorld()
+	guildManager := guild.NewManager()
+
+	// Create two managers with same seed
+	seed := int64(99999)
+	manager1 := NewManagerWithSeed(world, guildManager, seed)
+	manager2 := NewManagerWithSeed(world, guildManager, seed)
+
+	// Verify seeds are stored correctly
+	if manager1.seed != seed {
+		t.Errorf("Expected seed %d, got %d", seed, manager1.seed)
+	}
+	if manager2.seed != seed {
+		t.Errorf("Expected seed %d, got %d", seed, manager2.seed)
+	}
+
+	// Verify both managers produce same random sequence
+	val1 := manager1.rng.Float64()
+	val2 := manager2.rng.Float64()
+	if val1 != val2 {
+		t.Errorf("Managers with same seed should produce same random values: got %f vs %f", val1, val2)
+	}
+}
+
+// Test NewManager uses DefaultSeed
+func TestNewManagerUsesDefaultSeed(t *testing.T) {
+	world := engine.NewWorld()
+	guildManager := guild.NewManager()
+
+	manager := NewManager(world, guildManager)
+
+	if manager.seed != DefaultSeed {
+		t.Errorf("Expected default seed %d, got %d", DefaultSeed, manager.seed)
+	}
+}
+
+// Test concession value constants are used correctly
+func TestConcessionValueConstants(t *testing.T) {
+	// Verify constants have expected values
+	if GoldValueNormalizer != 10000.0 {
+		t.Errorf("GoldValueNormalizer should be 10000.0, got %f", GoldValueNormalizer)
+	}
+	if TerritoryValueEquivalent != 2.0 {
+		t.Errorf("TerritoryValueEquivalent should be 2.0, got %f", TerritoryValueEquivalent)
+	}
+	if ApologyValue != 0.1 {
+		t.Errorf("ApologyValue should be 0.1, got %f", ApologyValue)
+	}
+	if ItemValueEquivalent != 0.5 {
+		t.Errorf("ItemValueEquivalent should be 0.5, got %f", ItemValueEquivalent)
+	}
+	if TradeDiscountMultiplier != 0.5 {
+		t.Errorf("TradeDiscountMultiplier should be 0.5, got %f", TradeDiscountMultiplier)
+	}
+	if DefaultSeed != 12345 {
+		t.Errorf("DefaultSeed should be 12345, got %d", DefaultSeed)
+	}
+}
+
 // Test war declaration
 
 func TestDeclareWar(t *testing.T) {

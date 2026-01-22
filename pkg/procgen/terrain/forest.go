@@ -138,28 +138,68 @@ func (g *ForestGenerator) logGenerationComplete(terrain *Terrain, clearings []*R
 }
 
 // createClearings creates circular or elliptical open areas in the forest.
+// calculateClearingDimensions generates random dimensions for a clearing
+func calculateClearingDimensions(rng *rand.Rand) (width, height int) {
+	width = 8 + rng.Intn(10)
+	height = 8 + rng.Intn(10)
+	return width, height
+}
+
+// validateTerrainSize checks if terrain is large enough for a clearing of given dimensions
+func validateTerrainSize(terrain *Terrain, width, height int) (maxX, maxY int, valid bool) {
+	maxX = terrain.Width - width - 4
+	maxY = terrain.Height - height - 4
+	if maxX <= 0 || maxY <= 0 {
+		return 0, 0, false
+	}
+	return maxX, maxY, true
+}
+
+// checkClearingOverlap determines if a clearing overlaps with any existing clearings
+func checkClearingOverlap(clearing *Room, existingClearings []*Room) bool {
+	for _, existing := range existingClearings {
+		if clearing.Overlaps(existing) {
+			return true
+		}
+	}
+	return false
+}
+
+// createEllipticalClearing fills a clearing area with floor tiles in an elliptical shape
+func createEllipticalClearing(terrain *Terrain, clearing *Room) {
+	cx, cy := clearing.Center()
+	radiusX := float64(clearing.Width) / 2.0
+	radiusY := float64(clearing.Height) / 2.0
+
+	for dy := 0; dy < clearing.Height; dy++ {
+		for dx := 0; dx < clearing.Width; dx++ {
+			px := clearing.X + dx
+			py := clearing.Y + dy
+
+			normX := (float64(px) - float64(cx)) / radiusX
+			normY := (float64(py) - float64(cy)) / radiusY
+			if normX*normX+normY*normY <= 1.0 {
+				terrain.SetTile(px, py, TileFloor)
+			}
+		}
+	}
+}
+
 func (g *ForestGenerator) createClearings(terrain *Terrain, rng *rand.Rand) []*Room {
 	clearings := make([]*Room, 0)
-	attempts := g.clearingCount * 5 // Allow multiple attempts per clearing
+	attempts := g.clearingCount * 5
 
 	for i := 0; i < attempts && len(clearings) < g.clearingCount; i++ {
-		// Random position and size
-		width := 8 + rng.Intn(10)  // 8-17 tiles wide
-		height := 8 + rng.Intn(10) // 8-17 tiles tall
+		width, height := calculateClearingDimensions(rng)
 
-		// BUG FIX: Phase 1 - Forest clearing panic with small terrain/regions
-		// Resolution: Guard against negative/zero range in Intn() when terrain is too small for clearing
-		// This occurs in composite generation when biome regions are smaller than clearing size
-		maxX := terrain.Width - width - 4
-		maxY := terrain.Height - height - 4
-		if maxX <= 0 || maxY <= 0 {
-			continue // Skip this clearing if terrain is too small
+		maxX, maxY, valid := validateTerrainSize(terrain, width, height)
+		if !valid {
+			continue
 		}
 
 		x := 2 + rng.Intn(maxX)
 		y := 2 + rng.Intn(maxY)
 
-		// Create clearing
 		clearing := &Room{
 			X:      x,
 			Y:      y,
@@ -168,37 +208,12 @@ func (g *ForestGenerator) createClearings(terrain *Terrain, rng *rand.Rand) []*R
 			Type:   RoomNormal,
 		}
 
-		// Check for overlap with existing clearings
-		overlaps := false
-		for _, existing := range clearings {
-			if clearing.Overlaps(existing) {
-				overlaps = true
-				break
-			}
+		if checkClearingOverlap(clearing, clearings) {
+			continue
 		}
 
-		if !overlaps {
-			// Create elliptical clearing
-			cx, cy := clearing.Center()
-			radiusX := float64(width) / 2.0
-			radiusY := float64(height) / 2.0
-
-			for dy := 0; dy < height; dy++ {
-				for dx := 0; dx < width; dx++ {
-					px := x + dx
-					py := y + dy
-
-					// Check if point is inside ellipse
-					normX := (float64(px) - float64(cx)) / radiusX
-					normY := (float64(py) - float64(cy)) / radiusY
-					if normX*normX+normY*normY <= 1.0 {
-						terrain.SetTile(px, py, TileFloor)
-					}
-				}
-			}
-
-			clearings = append(clearings, clearing)
-		}
+		createEllipticalClearing(terrain, clearing)
+		clearings = append(clearings, clearing)
 	}
 
 	terrain.Rooms = clearings

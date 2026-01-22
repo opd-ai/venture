@@ -1766,90 +1766,120 @@ func wrapText(text string, maxChars int) []string {
 
 // ApplyClassStats applies class-based stats to a player entity
 // This should be called after entity creation but before gameplay starts
-func ApplyClassStats(player *Entity, class CharacterClass) error {
+// classComponents holds the player's core stat components for class configuration
+type classComponents struct {
+	health *HealthComponent
+	mana   *ManaComponent
+	stats  *StatsComponent
+	attack *AttackComponent
+}
+
+// extractPlayerComponents retrieves and validates all required components from a player entity
+func extractPlayerComponents(player *Entity) (*classComponents, error) {
 	if player == nil {
-		return fmt.Errorf("player entity is nil")
+		return nil, fmt.Errorf("player entity is nil")
 	}
 
-	// Get components
 	healthComp, hasHealth := player.GetComponent("health")
 	if !hasHealth {
-		return fmt.Errorf("player missing health component")
+		return nil, fmt.Errorf("player missing health component")
 	}
 
 	manaComp, hasMana := player.GetComponent("mana")
 	if !hasMana {
-		return fmt.Errorf("player missing mana component")
+		return nil, fmt.Errorf("player missing mana component")
 	}
 
 	statsComp, hasStats := player.GetComponent("stats")
 	if !hasStats {
-		return fmt.Errorf("player missing stats component")
+		return nil, fmt.Errorf("player missing stats component")
 	}
 
 	attackComp, hasAttack := player.GetComponent("attack")
 	if !hasAttack {
-		return fmt.Errorf("player missing attack component")
+		return nil, fmt.Errorf("player missing attack component")
 	}
 
 	health, ok := healthComp.(*HealthComponent)
 	if !ok {
-		return fmt.Errorf("health component has wrong type")
+		return nil, fmt.Errorf("health component has wrong type")
 	}
 	mana, ok := manaComp.(*ManaComponent)
 	if !ok {
-		return fmt.Errorf("mana component has wrong type")
+		return nil, fmt.Errorf("mana component has wrong type")
 	}
 	stats, ok := statsComp.(*StatsComponent)
 	if !ok {
-		return fmt.Errorf("stats component has wrong type")
+		return nil, fmt.Errorf("stats component has wrong type")
 	}
 	attack, ok := attackComp.(*AttackComponent)
 	if !ok {
-		return fmt.Errorf("attack component has wrong type")
+		return nil, fmt.Errorf("attack component has wrong type")
 	}
 
-	// Apply class-specific stats
+	return &classComponents{
+		health: health,
+		mana:   mana,
+		stats:  stats,
+		attack: attack,
+	}, nil
+}
+
+// applyWarriorStats configures a player entity with warrior class statistics
+func applyWarriorStats(comps *classComponents) {
+	comps.health.Max = 150
+	comps.health.Current = 150
+	comps.mana.Max = 50
+	comps.mana.Current = 50
+	comps.stats.Attack = 12
+	comps.stats.Defense = 8
+	comps.attack.Damage = 20
+	comps.stats.CritChance = 0.05
+	comps.stats.CritDamage = 2.0
+}
+
+// applyMageStats configures a player entity with mage class statistics
+func applyMageStats(comps *classComponents) {
+	comps.health.Max = 80
+	comps.health.Current = 80
+	comps.mana.Max = 150
+	comps.mana.Current = 150
+	comps.mana.Regen = 8.0
+	comps.stats.Attack = 6
+	comps.stats.Defense = 3
+	comps.attack.Damage = 10
+	comps.stats.CritChance = 0.10
+	comps.stats.CritDamage = 1.8
+}
+
+// applyRogueStats configures a player entity with rogue class statistics
+func applyRogueStats(comps *classComponents) {
+	comps.health.Max = 100
+	comps.health.Current = 100
+	comps.mana.Max = 80
+	comps.mana.Current = 80
+	comps.stats.Attack = 10
+	comps.stats.Defense = 5
+	comps.attack.Damage = 15
+	comps.attack.Cooldown = 0.3
+	comps.stats.CritChance = 0.15
+	comps.stats.CritDamage = 2.5
+	comps.stats.Evasion = 0.15
+}
+
+func ApplyClassStats(player *Entity, class CharacterClass) error {
+	comps, err := extractPlayerComponents(player)
+	if err != nil {
+		return err
+	}
+
 	switch class {
 	case ClassWarrior:
-		health.Max = 150
-		health.Current = 150
-		mana.Max = 50
-		mana.Current = 50
-		stats.Attack = 12
-		stats.Defense = 8
-		attack.Damage = 20
-		// Warriors get bonus crit damage
-		stats.CritChance = 0.05
-		stats.CritDamage = 2.0
-
+		applyWarriorStats(comps)
 	case ClassMage:
-		health.Max = 80
-		health.Current = 80
-		mana.Max = 150
-		mana.Current = 150
-		mana.Regen = 8.0 // Faster mana regen
-		stats.Attack = 6
-		stats.Defense = 3
-		attack.Damage = 10
-		// Mages get bonus spell power (reflected in mana)
-		stats.CritChance = 0.10 // Higher spell crit
-		stats.CritDamage = 1.8
-
+		applyMageStats(comps)
 	case ClassRogue:
-		health.Max = 100
-		health.Current = 100
-		mana.Max = 80
-		mana.Current = 80
-		stats.Attack = 10
-		stats.Defense = 5
-		attack.Damage = 15
-		attack.Cooldown = 0.3 // Faster attacks
-		// Rogues get high crit and evasion
-		stats.CritChance = 0.15
-		stats.CritDamage = 2.5
-		stats.Evasion = 0.15
-
+		applyRogueStats(comps)
 	default:
 		return fmt.Errorf("unknown character class: %v", class)
 	}

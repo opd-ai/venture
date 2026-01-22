@@ -229,33 +229,32 @@ func (c *DailyChallengeComponent) Type() string {
 	return "daily_challenge"
 }
 
-// GenerateDailyChallenges generates 5 daily challenges for the given date.
-// Uses deterministic generation: same date + baseSeed = same challenges.
-func (c *DailyChallengeComponent) GenerateDailyChallenges(date time.Time) []*Challenge {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-
-	// Create date-based seed for determinism
+// createDateSeed generates a deterministic seed from a date
+func createDateSeed(baseSeed int64, date time.Time) int64 {
 	dateSeed := int64(date.Year())*10000 + int64(date.YearDay())
-	rng := rand.New(rand.NewSource(c.BaseSeed + dateSeed))
+	return baseSeed + dateSeed
+}
 
-	definitions := DefaultDailyChallengeDefinitions()
+// shuffleChallengeDefinitions performs Fisher-Yates shuffle on challenge definitions
+func shuffleChallengeDefinitions(definitions []ChallengeDefinition, rng *rand.Rand) []ChallengeDefinition {
 	shuffled := make([]ChallengeDefinition, len(definitions))
 	copy(shuffled, definitions)
 
-	// Fisher-Yates shuffle
 	for i := len(shuffled) - 1; i > 0; i-- {
 		j := rng.Intn(i + 1)
 		shuffled[i], shuffled[j] = shuffled[j], shuffled[i]
 	}
 
-	// Generate 5 challenges from different categories
-	challenges := make([]*Challenge, 0, 5)
+	return shuffled
+}
+
+// selectChallengesByCategory selects one challenge from each category until limit reached
+func (c *DailyChallengeComponent) selectChallengesByCategory(shuffled []ChallengeDefinition, date time.Time, rng *rand.Rand, limit int) ([]*Challenge, map[ChallengeCategory]bool) {
+	challenges := make([]*Challenge, 0, limit)
 	usedCategories := make(map[ChallengeCategory]bool)
 
-	// First pass: one from each category
 	for _, def := range shuffled {
-		if len(challenges) >= 5 {
+		if len(challenges) >= limit {
 			break
 		}
 		if usedCategories[def.Category] {
@@ -266,12 +265,15 @@ func (c *DailyChallengeComponent) GenerateDailyChallenges(date time.Time) []*Cha
 		usedCategories[def.Category] = true
 	}
 
-	// Second pass: fill remaining slots
+	return challenges, usedCategories
+}
+
+// fillRemainingChallenges fills remaining challenge slots with unused definitions
+func (c *DailyChallengeComponent) fillRemainingChallenges(shuffled []ChallengeDefinition, challenges []*Challenge, date time.Time, rng *rand.Rand, limit int) []*Challenge {
 	for _, def := range shuffled {
-		if len(challenges) >= 5 {
+		if len(challenges) >= limit {
 			break
 		}
-		// Check if this definition is already used
 		alreadyUsed := false
 		for _, ch := range challenges {
 			if ch.DefinitionID == def.ID {
@@ -284,6 +286,23 @@ func (c *DailyChallengeComponent) GenerateDailyChallenges(date time.Time) []*Cha
 			challenges = append(challenges, challenge)
 		}
 	}
+	return challenges
+}
+
+// GenerateDailyChallenges generates 5 daily challenges for the given date.
+// Uses deterministic generation: same date + baseSeed = same challenges.
+func (c *DailyChallengeComponent) GenerateDailyChallenges(date time.Time) []*Challenge {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	seed := createDateSeed(c.BaseSeed, date)
+	rng := rand.New(rand.NewSource(seed))
+
+	definitions := DefaultDailyChallengeDefinitions()
+	shuffled := shuffleChallengeDefinitions(definitions, rng)
+
+	challenges, _ := c.selectChallengesByCategory(shuffled, date, rng, 5)
+	challenges = c.fillRemainingChallenges(shuffled, challenges, date, rng, 5)
 
 	return challenges
 }

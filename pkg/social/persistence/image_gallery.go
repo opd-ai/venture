@@ -47,22 +47,14 @@ func NewImageGallery(playerID string) *ImageGallery {
 }
 
 // AddImage adds a new image to the gallery
-func (g *ImageGallery) AddImage(img image.Image, title string, format ImageFormat, tags []string) (*StoredImage, error) {
-	if img == nil {
-		return nil, fmt.Errorf("image cannot be nil")
-	}
-
-	g.mu.Lock()
-	defer g.mu.Unlock()
-
-	// Encode image to bytes
+// encodeImageToBytes encodes an image to bytes in the specified format
+func encodeImageToBytes(img image.Image, format ImageFormat) ([]byte, error) {
 	var buf bytes.Buffer
 	var err error
 	switch format {
 	case ImageFormatPNG:
 		err = png.Encode(&buf, img)
 	case ImageFormatJPEG:
-		// Use quality 85 for good compression/quality balance
 		err = jpeg.Encode(&buf, img, &jpeg.Options{Quality: 85})
 	default:
 		return nil, fmt.Errorf("unsupported image format: %s", format)
@@ -70,47 +62,43 @@ func (g *ImageGallery) AddImage(img image.Image, title string, format ImageForma
 	if err != nil {
 		return nil, fmt.Errorf("failed to encode image: %w", err)
 	}
+	return buf.Bytes(), nil
+}
 
-	imageData := buf.Bytes()
-	sizeBytes := len(imageData)
-
-	// Check size limit
-	if sizeBytes > MaxImageSizeBytes {
-		return nil, fmt.Errorf("image size %d bytes exceeds maximum %d bytes", sizeBytes, MaxImageSizeBytes)
-	}
-
-	// Calculate hash for deduplication
-	hash := fmt.Sprintf("%x", sha256.Sum256(imageData))
-
-	// Check for duplicate
+// findDuplicateImage checks if an image with the same hash already exists
+func (g *ImageGallery) findDuplicateImage(hash string) *StoredImage {
 	for _, existing := range g.Images {
 		if existing.Hash == hash {
-			return existing, nil // Return existing image
+			return existing
 		}
 	}
+	return nil
+}
 
-	// Check if we need to evict (LRU)
-	if len(g.Images) >= MaxImagesPerPlayer {
-		// Remove oldest image
+// evictOldestImage removes the oldest image from the gallery
+func (g *ImageGallery) evictOldestImage() {
+	if len(g.Images) > 0 {
 		removed := g.Images[0]
 		g.Images = g.Images[1:]
 		g.TotalBytes -= removed.SizeBytes
 	}
+}
 
-	// Check if adding this image would exceed total storage limit
+// evictImagesToFitSize removes images until there is space for the new image
+func (g *ImageGallery) evictImagesToFitSize(newImageSize int) {
 	maxTotalBytes := MaxImagesPerPlayer * MaxImageSizeBytes
-	if g.TotalBytes+sizeBytes > maxTotalBytes {
-		// Need to remove more images
-		for g.TotalBytes+sizeBytes > maxTotalBytes && len(g.Images) > 0 {
-			removed := g.Images[0]
-			g.Images = g.Images[1:]
-			g.TotalBytes -= removed.SizeBytes
-		}
+	for g.TotalBytes+newImageSize > maxTotalBytes && len(g.Images) > 0 {
+		g.evictOldestImage()
 	}
+}
 
-	// Create stored image
+// createStoredImage creates a new StoredImage record
+func (g *ImageGallery) createStoredImage(img image.Image, title string, imageData []byte, format ImageFormat, tags []string) *StoredImage {
 	bounds := img.Bounds()
-	stored := &StoredImage{
+	hash := fmt.Sprintf("%x", sha256.Sum256(imageData))
+	sizeBytes := len(imageData)
+
+	return &StoredImage{
 		ID:        fmt.Sprintf("%s-%d", g.PlayerID, time.Now().UnixNano()),
 		OwnerID:   g.PlayerID,
 		Title:     title,
@@ -123,6 +111,39 @@ func (g *ImageGallery) AddImage(img image.Image, title string, format ImageForma
 		Timestamp: time.Now(),
 		Tags:      tags,
 	}
+}
+
+func (g *ImageGallery) AddImage(img image.Image, title string, format ImageFormat, tags []string) (*StoredImage, error) {
+	if img == nil {
+		return nil, fmt.Errorf("image cannot be nil")
+	}
+
+	g.mu.Lock()
+	defer g.mu.Unlock()
+
+	imageData, err := encodeImageToBytes(img, format)
+	if err != nil {
+		return nil, err
+	}
+
+	sizeBytes := len(imageData)
+	if sizeBytes > MaxImageSizeBytes {
+		return nil, fmt.Errorf("image size %d bytes exceeds maximum %d bytes", sizeBytes, MaxImageSizeBytes)
+	}
+
+	hash := fmt.Sprintf("%x", sha256.Sum256(imageData))
+
+	if duplicate := g.findDuplicateImage(hash); duplicate != nil {
+		return duplicate, nil
+	}
+
+	if len(g.Images) >= MaxImagesPerPlayer {
+		g.evictOldestImage()
+	}
+
+	g.evictImagesToFitSize(sizeBytes)
+
+	stored := g.createStoredImage(img, title, imageData, format, tags)
 
 	g.Images = append(g.Images, stored)
 	g.TotalBytes += sizeBytes

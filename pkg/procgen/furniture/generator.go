@@ -23,96 +23,71 @@ func NewGenerator() *Generator {
 }
 
 // Generate creates a furniture item with deterministic seed-based generation
-func (gen *Generator) Generate(seed int64, params procgen.GenerationParams) (interface{}, error) {
-	rng := rand.New(rand.NewSource(seed))
-
-	// Extract custom parameters
-	subType := ""
-	if st, ok := params.Custom["SubType"].(string); ok {
-		subType = st
+// resolveSubType determines the furniture subtype from params or random selection
+func (gen *Generator) resolveSubType(rng *rand.Rand, params procgen.GenerationParams) string {
+	if st, ok := params.Custom["SubType"].(string); ok && st != "" {
+		return st
 	}
+	return gen.chooseRandomSubType(rng, params)
+}
 
-	// If no subtype specified, choose random based on depth/difficulty
-	if subType == "" {
-		subType = gen.chooseRandomSubType(rng, params)
-	}
+// generateDimensions creates width, height, depth dimensions with rarity scaling
+func generateDimensions(rng *rand.Rand, tmpl *Template, rarity RarityTier) (width, height, depth float64) {
+	width = tmpl.MinWidth + rng.Float64()*(tmpl.MaxWidth-tmpl.MinWidth)
+	height = tmpl.MinHeight + rng.Float64()*(tmpl.MaxHeight-tmpl.MinHeight)
+	depth = tmpl.MinDepth + rng.Float64()*(tmpl.MaxDepth-tmpl.MinDepth)
 
-	// Get template
-	tmpl := GetTemplate(subType)
-	if tmpl == nil {
-		return nil, fmt.Errorf("unknown furniture subtype: %s", subType)
-	}
-
-	// Determine rarity based on difficulty and depth
-	rarity := gen.determineRarity(rng, params)
-
-	// Select material
-	material := gen.selectMaterial(rng, tmpl, params.GenreID, rarity)
-
-	// Generate dimensions within template ranges
-	width := tmpl.MinWidth + rng.Float64()*(tmpl.MaxWidth-tmpl.MinWidth)
-	height := tmpl.MinHeight + rng.Float64()*(tmpl.MaxHeight-tmpl.MinHeight)
-	depth := tmpl.MinDepth + rng.Float64()*(tmpl.MaxDepth-tmpl.MinDepth)
-
-	// Scale dimensions slightly with rarity
 	rarityScale := 1.0 + (float64(rarity) * 0.1)
 	width *= rarityScale
 	height *= rarityScale
 	depth *= rarityScale
 
-	// Generate name
-	name := gen.generateName(rng, material, rarity, tmpl, params.GenreID)
+	return width, height, depth
+}
 
-	// Generate colors based on material and genre
-	primaryColor := gen.getMaterialColor(rng, material, params.GenreID)
-	secondaryColor := gen.getSecondaryColor(rng, primaryColor)
-
-	// Calculate detail level
-	detailLevel := tmpl.DetailComplexity * rarity.DetailMultiplier()
-
-	// Calculate collision box (same as dimensions for most furniture)
-	collisionWidth := width
-	collisionDepth := depth
-
-	// Some furniture types have smaller collision boxes (walkable items)
-	if tmpl.Walkable {
+// calculateCollisionBox determines collision dimensions based on walkability
+func calculateCollisionBox(width, depth float64, walkable bool) (collisionWidth, collisionDepth float64) {
+	collisionWidth = width
+	collisionDepth = depth
+	if walkable {
 		collisionWidth *= 0.5
 		collisionDepth *= 0.5
 	}
+	return collisionWidth, collisionDepth
+}
 
-	// Calculate capacity if storage furniture
-	capacity := tmpl.BaseCapacity
-	if capacity > 0 {
-		// Scale capacity with rarity
-		capacity = int(float64(capacity) * rarity.DetailMultiplier())
+// calculateCapacity determines storage capacity with rarity scaling
+func calculateCapacity(baseCapacity int, rarity RarityTier) int {
+	if baseCapacity <= 0 {
+		return 0
 	}
+	return int(float64(baseCapacity) * rarity.DetailMultiplier())
+}
 
-	// Calculate light intensity if lighting furniture
-	lightIntensity := tmpl.BaseLightLevel
-	if lightIntensity > 0 {
-		// Add slight variation
-		lightIntensity += (rng.Float64()*0.2 - 0.1)
-		if lightIntensity < 0 {
-			lightIntensity = 0
-		}
-		if lightIntensity > 1.0 {
-			lightIntensity = 1.0
-		}
+// calculateLightIntensity determines light intensity with random variation
+func calculateLightIntensity(rng *rand.Rand, baseLightLevel float64) float64 {
+	if baseLightLevel <= 0 {
+		return 0
 	}
+	intensity := baseLightLevel + (rng.Float64()*0.2 - 0.1)
+	if intensity < 0 {
+		return 0
+	}
+	if intensity > 1.0 {
+		return 1.0
+	}
+	return intensity
+}
 
-	// Generate ID
-	id := fmt.Sprintf("furniture_%d", seed)
-
-	// Generate description
-	description := gen.generateDescription(tmpl, material, rarity, params.GenreID)
-
+// buildFurniture constructs a Furniture object from all generated components
+func buildFurniture(seed int64, tmpl *Template, material MaterialType, rarity RarityTier, genreID string, name, description string, width, height, depth float64, primaryColor, secondaryColor color.RGBA, detailLevel float64, collisionWidth, collisionDepth float64, capacity int, lightIntensity float64) *Furniture {
 	furniture := &Furniture{
-		ID:          id,
+		ID:          fmt.Sprintf("furniture_%d", seed),
 		Type:        tmpl.Type,
 		SubType:     tmpl.SubType,
 		Material:    material,
 		Rarity:      rarity,
-		GenreID:     params.GenreID,
+		GenreID:     genreID,
 		Name:        name,
 		Description: description,
 
@@ -124,7 +99,7 @@ func (gen *Generator) Generate(seed int64, params procgen.GenerationParams) (int
 		SecondaryColor: secondaryColor,
 		DetailLevel:    detailLevel,
 
-		Direction:      DirNorth, // Default, can be rotated later
+		Direction:      DirNorth,
 		Walkable:       tmpl.Walkable,
 		CollisionWidth: collisionWidth,
 		CollisionDepth: collisionDepth,
@@ -134,10 +109,40 @@ func (gen *Generator) Generate(seed int64, params procgen.GenerationParams) (int
 		LightIntensity: lightIntensity,
 	}
 
-	// Set crafting type for crafting furniture
 	if tmpl.Type == TypeCrafting {
 		furniture.CraftingType = tmpl.SubType
 	}
+
+	return furniture
+}
+
+func (gen *Generator) Generate(seed int64, params procgen.GenerationParams) (interface{}, error) {
+	rng := rand.New(rand.NewSource(seed))
+
+	subType := gen.resolveSubType(rng, params)
+
+	tmpl := GetTemplate(subType)
+	if tmpl == nil {
+		return nil, fmt.Errorf("unknown furniture subtype: %s", subType)
+	}
+
+	rarity := gen.determineRarity(rng, params)
+	material := gen.selectMaterial(rng, tmpl, params.GenreID, rarity)
+
+	width, height, depth := generateDimensions(rng, tmpl, rarity)
+
+	name := gen.generateName(rng, material, rarity, tmpl, params.GenreID)
+	primaryColor := gen.getMaterialColor(rng, material, params.GenreID)
+	secondaryColor := gen.getSecondaryColor(rng, primaryColor)
+
+	detailLevel := tmpl.DetailComplexity * rarity.DetailMultiplier()
+	collisionWidth, collisionDepth := calculateCollisionBox(width, depth, tmpl.Walkable)
+	capacity := calculateCapacity(tmpl.BaseCapacity, rarity)
+	lightIntensity := calculateLightIntensity(rng, tmpl.BaseLightLevel)
+
+	description := gen.generateDescription(tmpl, material, rarity, params.GenreID)
+
+	furniture := buildFurniture(seed, tmpl, material, rarity, params.GenreID, name, description, width, height, depth, primaryColor, secondaryColor, detailLevel, collisionWidth, collisionDepth, capacity, lightIntensity)
 
 	return furniture, nil
 }

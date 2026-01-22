@@ -49,37 +49,44 @@ func (s *System) Update(entities []*engine.Entity, deltaTime float64) {
 }
 
 // checkCompanionConflict detects personality conflicts between companions.
-func (s *System) checkCompanionConflict(entity1, entity2 *engine.Entity) {
+// getCompanionComponents retrieves and validates companion components from two entities
+func (s *System) getCompanionComponents(entity1, entity2 *engine.Entity) (*engine.CompanionComponent, *engine.CompanionComponent, bool) {
 	comp1, ok1 := entity1.GetComponent("companion")
 	comp2, ok2 := entity2.GetComponent("companion")
 	if !ok1 || !ok2 {
-		return
+		return nil, nil, false
 	}
 
 	companionComp1, ok1 := comp1.(*engine.CompanionComponent)
 	companionComp2, ok2 := comp2.(*engine.CompanionComponent)
 	if !ok1 || !ok2 {
-		return
+		return nil, nil, false
 	}
 
-	// Get personality evolution if available
-	var personality1, personality2 *learning.PersonalityEvolution
-	if entity1.HasComponent("companion_learning") {
-		if comp, ok := entity1.GetComponent("companion_learning"); ok {
-			if learningComp, ok := comp.(*learning.CompanionLearningComponent); ok {
-				personality1 = learningComp.Personality
-			}
-		}
-	}
-	if entity2.HasComponent("companion_learning") {
-		if comp, ok := entity2.GetComponent("companion_learning"); ok {
-			if learningComp, ok := comp.(*learning.CompanionLearningComponent); ok {
-				personality2 = learningComp.Personality
-			}
-		}
+	return companionComp1, companionComp2, true
+}
+
+// getPersonalityEvolution retrieves personality evolution component from an entity
+func getPersonalityEvolution(entity *engine.Entity) *learning.PersonalityEvolution {
+	if !entity.HasComponent("companion_learning") {
+		return nil
 	}
 
-	// Check for conflict
+	comp, ok := entity.GetComponent("companion_learning")
+	if !ok {
+		return nil
+	}
+
+	learningComp, ok := comp.(*learning.CompanionLearningComponent)
+	if !ok {
+		return nil
+	}
+
+	return learningComp.Personality
+}
+
+// handleConflictDetection checks for conflicts and records memory events if conflicts exist
+func (s *System) handleConflictDetection(entity1, entity2 *engine.Entity, companionComp1, companionComp2 *engine.CompanionComponent, personality1, personality2 *learning.PersonalityEvolution) {
 	conflict, exists := s.manager.CheckConflict(
 		companionComp1, companionComp2,
 		entity1.ID, entity2.ID,
@@ -94,12 +101,23 @@ func (s *System) checkCompanionConflict(entity1, entity2 *engine.Entity) {
 			"severity":      conflict.Severity,
 		}).Debug("Companion conflict detected")
 
-		// Record memory event for both companions
 		s.manager.RecordMemory(entity1.ID, EventTypeConflict,
 			"Personality clash with companion")
 		s.manager.RecordMemory(entity2.ID, EventTypeConflict,
 			"Personality clash with companion")
 	}
+}
+
+func (s *System) checkCompanionConflict(entity1, entity2 *engine.Entity) {
+	companionComp1, companionComp2, ok := s.getCompanionComponents(entity1, entity2)
+	if !ok {
+		return
+	}
+
+	personality1 := getPersonalityEvolution(entity1)
+	personality2 := getPersonalityEvolution(entity2)
+
+	s.handleConflictDetection(entity1, entity2, companionComp1, companionComp2, personality1, personality2)
 }
 
 // updateCompanionQuests checks if companions are eligible for personal quests.

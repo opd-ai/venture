@@ -47,7 +47,8 @@ func (g *Generator) GetPaletteGenerator() *palette.Generator {
 }
 
 // Generate creates a sprite from the configuration.
-func (g *Generator) Generate(config Config) (*ebiten.Image, error) {
+// logGenerationStart logs the start of sprite generation at debug level
+func (g *Generator) logGenerationStart(config Config) {
 	if g.logger != nil && g.logger.Logger.GetLevel() >= logrus.DebugLevel {
 		g.logger.WithFields(logrus.Fields{
 			"type":       config.Type,
@@ -58,49 +59,60 @@ func (g *Generator) Generate(config Config) (*ebiten.Image, error) {
 			"complexity": config.Complexity,
 		}).Debug("generating sprite")
 	}
+}
 
-	// Generate palette if not provided
-	if config.Palette == nil {
-		var pal *palette.Palette
-		var err error
-		if config.PaletteOptions != nil {
-			// Use advanced palette options (Phase 5.4)
-			pal, err = g.paletteGen.GenerateWithOptions(config.GenreID, config.Seed, *config.PaletteOptions)
-		} else {
-			// Use default palette generation
-			pal, err = g.paletteGen.Generate(config.GenreID, config.Seed)
-		}
-		if err != nil {
-			if g.logger != nil {
-				g.logger.WithError(err).Error("palette generation failed")
-			}
-			return nil, err
-		}
-		config.Palette = pal
+// ensurePalette generates a palette for the config if not already provided
+func (g *Generator) ensurePalette(config *Config) error {
+	if config.Palette != nil {
+		return nil
 	}
 
-	// Create seed generator for consistent random values
+	var pal *palette.Palette
+	var err error
+	if config.PaletteOptions != nil {
+		pal, err = g.paletteGen.GenerateWithOptions(config.GenreID, config.Seed, *config.PaletteOptions)
+	} else {
+		pal, err = g.paletteGen.Generate(config.GenreID, config.Seed)
+	}
+	if err != nil {
+		if g.logger != nil {
+			g.logger.WithError(err).Error("palette generation failed")
+		}
+		return err
+	}
+	config.Palette = pal
+	return nil
+}
+
+// generateByType creates a sprite image based on the configured sprite type
+func (g *Generator) generateByType(config Config, rng *rand.Rand) (*ebiten.Image, error) {
+	switch config.Type {
+	case SpriteEntity:
+		return g.generateEntity(config, rng)
+	case SpriteItem:
+		return g.generateItem(config, rng)
+	case SpriteTile:
+		return g.generateTile(config, rng)
+	case SpriteParticle:
+		return g.generateParticle(config, rng)
+	case SpriteUI:
+		return g.generateUI(config, rng)
+	default:
+		return g.generateEntity(config, rng)
+	}
+}
+
+func (g *Generator) Generate(config Config) (*ebiten.Image, error) {
+	g.logGenerationStart(config)
+
+	if err := g.ensurePalette(&config); err != nil {
+		return nil, err
+	}
+
 	seedGen := procgen.NewSeedGenerator(config.Seed)
 	rng := rand.New(rand.NewSource(seedGen.GetSeed("sprite", config.Variation)))
 
-	// Generate sprite based on type
-	var img *ebiten.Image
-	var err error
-	switch config.Type {
-	case SpriteEntity:
-		img, err = g.generateEntity(config, rng)
-	case SpriteItem:
-		img, err = g.generateItem(config, rng)
-	case SpriteTile:
-		img, err = g.generateTile(config, rng)
-	case SpriteParticle:
-		img, err = g.generateParticle(config, rng)
-	case SpriteUI:
-		img, err = g.generateUI(config, rng)
-	default:
-		img, err = g.generateEntity(config, rng)
-	}
-
+	img, err := g.generateByType(config, rng)
 	if err != nil {
 		if g.logger != nil {
 			g.logger.WithError(err).WithField("type", config.Type).Error("sprite generation failed")

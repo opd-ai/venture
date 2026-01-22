@@ -302,23 +302,8 @@ func (s *ObjectiveTrackerSystem) OnUIOpened(entity *Entity, uiName string) {
 }
 
 // OnTileExplored should be called by movement system when player enters new tile.
-func (s *ObjectiveTrackerSystem) OnTileExplored(explorer *Entity, x, y int) {
-	log.WithFields(log.Fields{
-		"system_name": "objective_tracker",
-		"entity_id":   explorer.ID,
-		"tile_x":      x,
-		"tile_y":      y,
-	}).Debug("Processing tile exploration event")
-
-	if !explorer.HasComponent("questtracker") {
-		log.WithFields(log.Fields{
-			"system_name": "objective_tracker",
-			"entity_id":   explorer.ID,
-		}).Debug("Explorer has no quest tracker component")
-		return
-	}
-
-	// Track unique tiles
+// initializeTileTracking initializes exploration tracking for an entity if not already present
+func (s *ObjectiveTrackerSystem) initializeTileTracking(explorer *Entity) {
 	if s.exploredTiles[explorer.ID] == nil {
 		s.exploredTiles[explorer.ID] = make(map[string]bool)
 		log.WithFields(log.Fields{
@@ -326,34 +311,31 @@ func (s *ObjectiveTrackerSystem) OnTileExplored(explorer *Entity, x, y int) {
 			"entity_id":   explorer.ID,
 		}).Debug("Initialized exploration tracking for entity")
 	}
+}
 
-	tileKey := tileKeyFromCoords(x, y)
+// recordTileExploration marks a tile as explored and returns whether it was newly explored
+func (s *ObjectiveTrackerSystem) recordTileExploration(explorer *Entity, tileKey string) bool {
 	if s.exploredTiles[explorer.ID][tileKey] {
 		log.WithFields(log.Fields{
 			"system_name": "objective_tracker",
 			"entity_id":   explorer.ID,
 			"tile_key":    tileKey,
 		}).Debug("Tile already explored")
-		return // Already explored
+		return false
 	}
 	s.exploredTiles[explorer.ID][tileKey] = true
+	return true
+}
 
-	totalExplored := len(s.exploredTiles[explorer.ID])
-
-	log.WithFields(log.Fields{
-		"system_name":    "objective_tracker",
-		"entity_id":      explorer.ID,
-		"tile_key":       tileKey,
-		"total_explored": totalExplored,
-	}).Debug("New tile explored")
-
+// getQuestTracker retrieves and validates the quest tracker component from an entity
+func (s *ObjectiveTrackerSystem) getQuestTracker(explorer *Entity) (*QuestTrackerComponent, bool) {
 	comp, ok := explorer.GetComponent("questtracker")
 	if !ok {
 		log.WithFields(log.Fields{
 			"system_name": "objective_tracker",
 			"entity_id":   explorer.ID,
 		}).Warn("Failed to retrieve quest tracker component")
-		return
+		return nil, false
 	}
 	tracker, ok := comp.(*QuestTrackerComponent)
 	if !ok {
@@ -362,19 +344,21 @@ func (s *ObjectiveTrackerSystem) OnTileExplored(explorer *Entity, x, y int) {
 			"entity_id":      explorer.ID,
 			"component_type": fmt.Sprintf("%T", comp),
 		}).Error("Quest tracker component has invalid type")
-		return
+		return nil, false
 	}
+	return tracker, true
+}
 
+// updateExploreObjectives updates all exploration-related quest objectives for an entity
+func (s *ObjectiveTrackerSystem) updateExploreObjectives(explorer *Entity, tracker *QuestTrackerComponent, totalExplored int) int {
 	objectivesUpdated := 0
 
-	// Update explore objectives
 	for _, tracked := range tracker.ActiveQuests {
 		if tracked.Quest.Type != quest.TypeExplore {
 			continue
 		}
 
 		for i, obj := range tracked.Quest.Objectives {
-			// Exploration objectives count unique tiles
 			if strings.Contains(strings.ToLower(obj.Target), "tile") ||
 				strings.Contains(strings.ToLower(obj.Target), "dungeon") ||
 				strings.Contains(strings.ToLower(obj.Target), "explore") {
@@ -392,6 +376,48 @@ func (s *ObjectiveTrackerSystem) OnTileExplored(explorer *Entity, x, y int) {
 			}
 		}
 	}
+
+	return objectivesUpdated
+}
+
+func (s *ObjectiveTrackerSystem) OnTileExplored(explorer *Entity, x, y int) {
+	log.WithFields(log.Fields{
+		"system_name": "objective_tracker",
+		"entity_id":   explorer.ID,
+		"tile_x":      x,
+		"tile_y":      y,
+	}).Debug("Processing tile exploration event")
+
+	if !explorer.HasComponent("questtracker") {
+		log.WithFields(log.Fields{
+			"system_name": "objective_tracker",
+			"entity_id":   explorer.ID,
+		}).Debug("Explorer has no quest tracker component")
+		return
+	}
+
+	s.initializeTileTracking(explorer)
+
+	tileKey := tileKeyFromCoords(x, y)
+	if !s.recordTileExploration(explorer, tileKey) {
+		return
+	}
+
+	totalExplored := len(s.exploredTiles[explorer.ID])
+
+	log.WithFields(log.Fields{
+		"system_name":    "objective_tracker",
+		"entity_id":      explorer.ID,
+		"tile_key":       tileKey,
+		"total_explored": totalExplored,
+	}).Debug("New tile explored")
+
+	tracker, ok := s.getQuestTracker(explorer)
+	if !ok {
+		return
+	}
+
+	objectivesUpdated := s.updateExploreObjectives(explorer, tracker, totalExplored)
 
 	log.WithFields(log.Fields{
 		"system_name":        "objective_tracker",

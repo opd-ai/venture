@@ -47,67 +47,93 @@ func NewLifetimeSystemWithLogger(world *World, logger *logrus.Logger) *LifetimeS
 }
 
 // Update processes all entities with LifetimeComponent and despawns expired ones.
-func (s *LifetimeSystem) Update(entities []*Entity, deltaTime float64) {
+// logUpdateStart logs the beginning of a lifetime system update cycle
+func (s *LifetimeSystem) logUpdateStart(entityCount int, deltaTime float64) {
 	if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
 		s.logger.WithFields(logrus.Fields{
-			"entity_count": len(entities),
+			"entity_count": entityCount,
 			"delta_time":   deltaTime,
 		}).Debug("LifetimeSystem update started")
 	}
+}
 
-	expiredCount := 0
-	for _, entity := range entities {
-		lifetimeComp, hasLifetime := entity.GetComponent("lifetime")
-		if !hasLifetime {
-			continue
-		}
-
-		lifetime, ok := lifetimeComp.(*LifetimeComponent)
-		if !ok {
-			if s.logger != nil {
-				s.logger.WithFields(logrus.Fields{
-					"entity_id":      entity.ID,
-					"component_type": "lifetime",
-				}).Warn("failed to cast lifetime component to LifetimeComponent")
-			}
-			continue
-		}
-
-		previousElapsed := lifetime.Elapsed
-		lifetime.Elapsed += deltaTime
-
-		if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
-			s.logger.WithFields(logrus.Fields{
-				"entity_id":        entity.ID,
-				"elapsed":          lifetime.Elapsed,
-				"duration":         lifetime.Duration,
-				"remaining":        lifetime.Duration - lifetime.Elapsed,
-				"previous_elapsed": previousElapsed,
-				"delta_time":       deltaTime,
-			}).Debug("updated entity lifetime")
-		}
-
-		// Check if lifetime expired
-		if lifetime.Elapsed >= lifetime.Duration {
-			// Despawn the entity
-			s.world.RemoveEntity(entity.ID)
-			expiredCount++
-
-			if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
-				s.logger.WithFields(logrus.Fields{
-					"entity_id": entity.ID,
-					"duration":  lifetime.Duration,
-					"elapsed":   lifetime.Elapsed,
-				}).Debug("entity lifetime expired, despawned")
-			}
-		}
-	}
-
+// logLifetimeUpdate logs the lifetime progression for a specific entity
+func (s *LifetimeSystem) logLifetimeUpdate(entity *Entity, lifetime *LifetimeComponent, previousElapsed, deltaTime float64) {
 	if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
 		s.logger.WithFields(logrus.Fields{
-			"processed_count": len(entities),
+			"entity_id":        entity.ID,
+			"elapsed":          lifetime.Elapsed,
+			"duration":         lifetime.Duration,
+			"remaining":        lifetime.Duration - lifetime.Elapsed,
+			"previous_elapsed": previousElapsed,
+			"delta_time":       deltaTime,
+		}).Debug("updated entity lifetime")
+	}
+}
+
+// logEntityExpired logs when an entity's lifetime has expired and it is despawned
+func (s *LifetimeSystem) logEntityExpired(entity *Entity, lifetime *LifetimeComponent) {
+	if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
+		s.logger.WithFields(logrus.Fields{
+			"entity_id": entity.ID,
+			"duration":  lifetime.Duration,
+			"elapsed":   lifetime.Elapsed,
+		}).Debug("entity lifetime expired, despawned")
+	}
+}
+
+// logUpdateComplete logs the completion of a lifetime system update cycle
+func (s *LifetimeSystem) logUpdateComplete(processedCount, expiredCount int, deltaTime float64) {
+	if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
+		s.logger.WithFields(logrus.Fields{
+			"processed_count": processedCount,
 			"expired_count":   expiredCount,
 			"delta_time":      deltaTime,
 		}).Debug("LifetimeSystem update completed")
 	}
+}
+
+// processEntityLifetime updates lifetime for a single entity and returns true if expired
+func (s *LifetimeSystem) processEntityLifetime(entity *Entity, deltaTime float64) bool {
+	lifetimeComp, hasLifetime := entity.GetComponent("lifetime")
+	if !hasLifetime {
+		return false
+	}
+
+	lifetime, ok := lifetimeComp.(*LifetimeComponent)
+	if !ok {
+		if s.logger != nil {
+			s.logger.WithFields(logrus.Fields{
+				"entity_id":      entity.ID,
+				"component_type": "lifetime",
+			}).Warn("failed to cast lifetime component to LifetimeComponent")
+		}
+		return false
+	}
+
+	previousElapsed := lifetime.Elapsed
+	lifetime.Elapsed += deltaTime
+
+	s.logLifetimeUpdate(entity, lifetime, previousElapsed, deltaTime)
+
+	if lifetime.Elapsed >= lifetime.Duration {
+		s.world.RemoveEntity(entity.ID)
+		s.logEntityExpired(entity, lifetime)
+		return true
+	}
+
+	return false
+}
+
+func (s *LifetimeSystem) Update(entities []*Entity, deltaTime float64) {
+	s.logUpdateStart(len(entities), deltaTime)
+
+	expiredCount := 0
+	for _, entity := range entities {
+		if s.processEntityLifetime(entity, deltaTime) {
+			expiredCount++
+		}
+	}
+
+	s.logUpdateComplete(len(entities), expiredCount, deltaTime)
 }

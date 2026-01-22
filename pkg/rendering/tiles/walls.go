@@ -549,7 +549,7 @@ func (g *Generator) applyHorizontalEdgeRow(img *image.RGBA, bounds image.Rectang
 		}
 
 		if isDarkening {
-			g.darkenPixel(img, x, y, factor)
+			g.darkenPixelSimple(img, x, y, factor)
 		} else {
 			g.lightenPixel(img, x, y, factor)
 		}
@@ -565,8 +565,9 @@ func (g *Generator) shouldSkipCorner(x, t, edgeThickness int, bounds image.Recta
 		(config.Neighbors.East && x >= bounds.Max.X-edgeThickness)
 }
 
-// darkenPixel darkens a pixel by the given factor.
-func (g *Generator) darkenPixel(img *image.RGBA, x, y int, factor float64) {
+// darkenPixelSimple darkens a pixel by the given factor.
+// This is a simple version used for wall edge effects that doesn't use AO.
+func (g *Generator) darkenPixelSimple(img *image.RGBA, x, y int, factor float64) {
 	existing := img.At(x, y)
 	r, gr, b, a := existing.RGBA()
 

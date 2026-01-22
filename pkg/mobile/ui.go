@@ -824,12 +824,21 @@ func (b *TouchButton) enforceMinimumDimensions() {
 // determineBackgroundColor selects the appropriate background color based on button state.
 func (b *TouchButton) determineBackgroundColor() color.RGBA {
 	if !b.Enabled {
-		return b.DisabledColor
+		if rgba, ok := b.DisabledColor.(color.RGBA); ok {
+			return rgba
+		}
+		return color.RGBA{30, 30, 40, 255} // fallback
 	}
 	if b.pressed {
-		return b.PressedColor
+		if rgba, ok := b.PressedColor.(color.RGBA); ok {
+			return rgba
+		}
+		return color.RGBA{80, 120, 200, 255} // fallback
 	}
-	return b.BackgroundColor
+	if rgba, ok := b.BackgroundColor.(color.RGBA); ok {
+		return rgba
+	}
+	return color.RGBA{50, 50, 70, 255} // fallback
 }
 
 // drawButtonGraphics renders the button's background and border.

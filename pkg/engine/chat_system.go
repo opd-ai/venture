@@ -135,12 +135,7 @@ func (cs *ChatSystem) deliverToAll(msg ChatMessage, senderID uint64) {
 
 // deliverToLocal delivers a message to entities within range.
 func (cs *ChatSystem) deliverToLocal(msg ChatMessage, sender *Entity, senderChat *ChatComponent) {
-	senderPos, exists := sender.GetComponent("position")
-	if !exists {
-		return // Cannot deliver local message without position
-	}
-
-	senderPosComp, ok := senderPos.(*PositionComponent)
+	senderPosComp, ok := cs.getSenderPosition(sender)
 	if !ok {
 		return
 	}
@@ -153,46 +148,86 @@ func (cs *ChatSystem) deliverToLocal(msg ChatMessage, sender *Entity, senderChat
 			continue
 		}
 
-		chatComp, exists := entity.GetComponent("chat")
-		if !exists {
+		chat := cs.getLocalChatRecipient(entity)
+		if chat == nil {
 			continue
 		}
 
-		chat, ok := chatComp.(*ChatComponent)
-		if !ok || !chat.IsChannelActive(ChatLocal) {
+		recipientPosComp := cs.getRecipientPosition(entity)
+		if recipientPosComp == nil {
 			continue
 		}
 
-		// Check range
-		recipientPos, exists := entity.GetComponent("position")
-		if !exists {
-			continue
-		}
-
-		recipientPosComp, ok := recipientPos.(*PositionComponent)
-		if !ok {
-			continue
-		}
-
-		// Unlimited range for walkie-talkie
-		if radius < 0 {
-			deliveredMsg := msg
-			deliveredMsg.Delivered = true
-			chat.AddMessage(deliveredMsg)
-			continue
-		}
-
-		// Calculate distance
-		dx := senderPosComp.X - recipientPosComp.X
-		dy := senderPosComp.Y - recipientPosComp.Y
-		distSquared := dx*dx + dy*dy
-
-		if distSquared <= radiusSquared {
-			deliveredMsg := msg
-			deliveredMsg.Delivered = true
-			chat.AddMessage(deliveredMsg)
+		if cs.isWithinChatRange(senderPosComp, recipientPosComp, radius, radiusSquared) {
+			cs.deliverMessageToChat(msg, chat)
 		}
 	}
+}
+
+// getSenderPosition retrieves and validates the sender's position component.
+func (cs *ChatSystem) getSenderPosition(sender *Entity) (*PositionComponent, bool) {
+	senderPos, exists := sender.GetComponent("position")
+	if !exists {
+		return nil, false
+	}
+
+	senderPosComp, ok := senderPos.(*PositionComponent)
+	if !ok {
+		return nil, false
+	}
+
+	return senderPosComp, true
+}
+
+// getLocalChatRecipient retrieves a valid chat component for local delivery.
+func (cs *ChatSystem) getLocalChatRecipient(entity *Entity) *ChatComponent {
+	chatComp, exists := entity.GetComponent("chat")
+	if !exists {
+		return nil
+	}
+
+	chat, ok := chatComp.(*ChatComponent)
+	if !ok || !chat.IsChannelActive(ChatLocal) {
+		return nil
+	}
+
+	return chat
+}
+
+// getRecipientPosition retrieves and validates the recipient's position component.
+func (cs *ChatSystem) getRecipientPosition(entity *Entity) *PositionComponent {
+	recipientPos, exists := entity.GetComponent("position")
+	if !exists {
+		return nil
+	}
+
+	recipientPosComp, ok := recipientPos.(*PositionComponent)
+	if !ok {
+		return nil
+	}
+
+	return recipientPosComp
+}
+
+// isWithinChatRange checks if recipient is within chat range of sender.
+func (cs *ChatSystem) isWithinChatRange(senderPos, recipientPos *PositionComponent, radius, radiusSquared float64) bool {
+	// Unlimited range for walkie-talkie
+	if radius < 0 {
+		return true
+	}
+
+	dx := senderPos.X - recipientPos.X
+	dy := senderPos.Y - recipientPos.Y
+	distSquared := dx*dx + dy*dy
+
+	return distSquared <= radiusSquared
+}
+
+// deliverMessageToChat delivers a message to a chat component.
+func (cs *ChatSystem) deliverMessageToChat(msg ChatMessage, chat *ChatComponent) {
+	deliveredMsg := msg
+	deliveredMsg.Delivered = true
+	chat.AddMessage(deliveredMsg)
 }
 
 // deliverToParty delivers a message to party members.

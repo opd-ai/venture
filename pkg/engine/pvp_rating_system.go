@@ -51,56 +51,81 @@ func (s *PvPRatingSystem) Update(entities []*Entity, deltaTime float64) {
 // processRatingDecay applies rating decay to inactive players.
 func (s *PvPRatingSystem) processRatingDecay(entities []*Entity, now time.Time) {
 	for _, entity := range entities {
-		if !entity.HasComponent("pvp_rating") {
+		rating := s.getPvPRatingComponent(entity)
+		if rating == nil {
 			continue
 		}
 
-		comp, ok := entity.GetComponent("pvp_rating")
-		if !ok {
-			continue
-		}
-		rating, ok := comp.(*PvPRatingComponent)
-		if !ok {
+		if !s.shouldApplyDecay(rating, now) {
 			continue
 		}
 
-		// Only apply decay to players above Silver and inactive for decayDays
-		if rating.RankTier == RankBronze || rating.RankTier == RankSilver {
-			continue
-		}
-
-		if rating.LastMatch.IsZero() {
-			continue
-		}
-
-		daysSinceMatch := int(now.Sub(rating.LastMatch).Hours() / 24)
-		if daysSinceMatch < s.decayDays {
-			continue
-		}
-
-		// Apply decay
-		decayPeriods := (daysSinceMatch - s.decayDays) / 7
-		if decayPeriods < 1 {
-			decayPeriods = 1
-		}
-
-		newRating := rating.Rating - (s.decayAmount * decayPeriods)
-		if newRating < RankThreshold[RankSilver] {
-			newRating = RankThreshold[RankSilver]
-		}
-
-		if newRating != rating.Rating {
-			log.WithFields(log.Fields{
-				"entityID":      entity.ID,
-				"old_rating":    rating.Rating,
-				"new_rating":    newRating,
-				"days_inactive": daysSinceMatch,
-			}).Debug("Applied rating decay")
-
-			rating.Rating = newRating
-			s.updateRankFromRating(rating)
-		}
+		s.applyRatingDecay(entity, rating, now)
 	}
+}
+
+// getPvPRatingComponent retrieves and validates the PvP rating component.
+func (s *PvPRatingSystem) getPvPRatingComponent(entity *Entity) *PvPRatingComponent {
+	if !entity.HasComponent("pvp_rating") {
+		return nil
+	}
+
+	comp, ok := entity.GetComponent("pvp_rating")
+	if !ok {
+		return nil
+	}
+
+	rating, ok := comp.(*PvPRatingComponent)
+	if !ok {
+		return nil
+	}
+
+	return rating
+}
+
+// shouldApplyDecay checks if rating decay should be applied to the rating.
+func (s *PvPRatingSystem) shouldApplyDecay(rating *PvPRatingComponent, now time.Time) bool {
+	if rating.RankTier == RankBronze || rating.RankTier == RankSilver {
+		return false
+	}
+
+	if rating.LastMatch.IsZero() {
+		return false
+	}
+
+	daysSinceMatch := int(now.Sub(rating.LastMatch).Hours() / 24)
+	return daysSinceMatch >= s.decayDays
+}
+
+// applyRatingDecay calculates and applies rating decay with logging.
+func (s *PvPRatingSystem) applyRatingDecay(entity *Entity, rating *PvPRatingComponent, now time.Time) {
+	daysSinceMatch := int(now.Sub(rating.LastMatch).Hours() / 24)
+
+	decayPeriods := (daysSinceMatch - s.decayDays) / 7
+	if decayPeriods < 1 {
+		decayPeriods = 1
+	}
+
+	newRating := rating.Rating - (s.decayAmount * decayPeriods)
+	if newRating < RankThreshold[RankSilver] {
+		newRating = RankThreshold[RankSilver]
+	}
+
+	if newRating != rating.Rating {
+		s.logRatingDecay(entity.ID, rating.Rating, newRating, daysSinceMatch)
+		rating.Rating = newRating
+		s.updateRankFromRating(rating)
+	}
+}
+
+// logRatingDecay logs the application of rating decay.
+func (s *PvPRatingSystem) logRatingDecay(entityID uint64, oldRating, newRating, daysInactive int) {
+	log.WithFields(log.Fields{
+		"entityID":      entityID,
+		"old_rating":    oldRating,
+		"new_rating":    newRating,
+		"days_inactive": daysInactive,
+	}).Debug("Applied rating decay")
 }
 
 // RecordMatchResult updates ratings for winner and loser after a match.

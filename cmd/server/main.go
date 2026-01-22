@@ -402,7 +402,18 @@ func generateWorldTerrain(logger *logrus.Logger, serverLogger *logrus.Entry) *te
 // spawnV4Entities spawns vehicles, companions, and bookshelves in the terrain.
 func spawnV4Entities(world *engine.World, generatedTerrain *terrain.Terrain, logger *logrus.Logger) {
 	v4Logger := logging.GeneratorLogger(logger, "v4-spawning", *seed, *genreID)
-	params := procgen.GenerationParams{
+	params := createGenerationParams()
+
+	spawnEnemies(world, generatedTerrain, params, v4Logger)
+	spawnMerchants(world, generatedTerrain, params, v4Logger)
+	spawnVehicles(world, generatedTerrain, params, logger, v4Logger)
+	spawnCompanions(world, generatedTerrain, params, logger, v4Logger)
+	spawnBookshelves(world, generatedTerrain, params, logger, v4Logger)
+}
+
+// createGenerationParams creates standard generation parameters for entity spawning.
+func createGenerationParams() procgen.GenerationParams {
+	return procgen.GenerationParams{
 		Difficulty: 0.5,
 		Depth:      1,
 		GenreID:    *genreID,
@@ -411,16 +422,20 @@ func spawnV4Entities(world *engine.World, generatedTerrain *terrain.Terrain, log
 			"height": 100,
 		},
 	}
+}
 
-	// Spawn enemies using entity generator
+// spawnEnemies spawns enemy entities in the terrain.
+func spawnEnemies(world *engine.World, generatedTerrain *terrain.Terrain, params procgen.GenerationParams, v4Logger *logrus.Entry) {
 	enemyCount, err := engine.SpawnEnemiesInTerrain(world, generatedTerrain, *seed, params)
 	if err != nil {
 		v4Logger.WithError(err).Warn("failed to spawn enemies")
 	} else if enemyCount > 0 {
 		v4Logger.WithField("count", enemyCount).Info("enemies spawned")
 	}
+}
 
-	// Spawn merchants using entity generator
+// spawnMerchants spawns merchant entities in the terrain.
+func spawnMerchants(world *engine.World, generatedTerrain *terrain.Terrain, params procgen.GenerationParams, v4Logger *logrus.Entry) {
 	merchantCount := 2
 	merchantSpawned, err := engine.SpawnMerchantsInTerrain(world, generatedTerrain, *seed, params, merchantCount)
 	if err != nil {
@@ -428,21 +443,30 @@ func spawnV4Entities(world *engine.World, generatedTerrain *terrain.Terrain, log
 	} else if merchantSpawned > 0 {
 		v4Logger.WithField("count", merchantSpawned).Info("merchants spawned")
 	}
+}
 
+// spawnVehicles spawns vehicle entities in the terrain.
+func spawnVehicles(world *engine.World, generatedTerrain *terrain.Terrain, params procgen.GenerationParams, logger *logrus.Logger, v4Logger *logrus.Entry) {
 	vehicleCount, err := spawnVehiclesInTerrain(world, generatedTerrain, *seed, params, logger)
 	if err != nil {
 		v4Logger.WithError(err).Warn("failed to spawn vehicles")
 	} else if vehicleCount > 0 {
 		v4Logger.WithField("count", vehicleCount).Info("vehicles spawned")
 	}
+}
 
+// spawnCompanions spawns companion entities in the terrain.
+func spawnCompanions(world *engine.World, generatedTerrain *terrain.Terrain, params procgen.GenerationParams, logger *logrus.Logger, v4Logger *logrus.Entry) {
 	companionCount, err := spawnCompanionsInTerrain(world, generatedTerrain, *seed, params, logger)
 	if err != nil {
 		v4Logger.WithError(err).Warn("failed to spawn companions")
 	} else if companionCount > 0 {
 		v4Logger.WithField("count", companionCount).Info("companions spawned")
 	}
+}
 
+// spawnBookshelves spawns bookshelf entities in the terrain.
+func spawnBookshelves(world *engine.World, generatedTerrain *terrain.Terrain, params procgen.GenerationParams, logger *logrus.Logger, v4Logger *logrus.Entry) {
 	bookshelfCount, err := spawnBookshelvesInTerrain(world, generatedTerrain, *seed, params, logger)
 	if err != nil {
 		v4Logger.WithError(err).Warn("failed to spawn bookshelves")

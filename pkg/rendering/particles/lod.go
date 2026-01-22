@@ -346,22 +346,36 @@ func NewStaggeredLODEnforcer(staggerFrames, maxParticles int) *StaggeredLODEnfor
 func (s *StaggeredLODEnforcer) Update(particles []Particle, renderIndices []int, cameraX, cameraY float64) []int {
 	n := len(renderIndices)
 
-	// If within limit, return all immediately
 	if n <= s.maxParticles {
-		s.cachedResult = renderIndices
-		s.currentFrame = 0
-		return renderIndices
+		return s.handleWithinLimit(renderIndices)
 	}
 
-	// On first frame of cycle, initialize distance cache
+	s.initializeDistanceCache(renderIndices, n)
+	s.updateDistancesForCurrentFrame(particles, renderIndices, n, cameraX, cameraY)
+	s.advanceFrameCounter()
+
+	return s.getCachedResult(renderIndices, n)
+}
+
+// handleWithinLimit handles the case when particles are within the limit.
+func (s *StaggeredLODEnforcer) handleWithinLimit(renderIndices []int) []int {
+	s.cachedResult = renderIndices
+	s.currentFrame = 0
+	return renderIndices
+}
+
+// initializeDistanceCache initializes the distance cache on first frame or size change.
+func (s *StaggeredLODEnforcer) initializeDistanceCache(renderIndices []int, n int) {
 	if s.currentFrame == 0 || len(s.cachedDistances) != n {
 		s.cachedDistances = make([]particleDistance, n)
 		for i, idx := range renderIndices {
 			s.cachedDistances[i] = particleDistance{index: idx, distSq: -1}
 		}
 	}
+}
 
-	// Calculate distances for this frame's slice of particles
+// updateDistancesForCurrentFrame calculates distances for the current frame's slice.
+func (s *StaggeredLODEnforcer) updateDistancesForCurrentFrame(particles []Particle, renderIndices []int, n int, cameraX, cameraY float64) {
 	sliceStart := (s.currentFrame * n) / s.staggerFrames
 	sliceEnd := ((s.currentFrame + 1) * n) / s.staggerFrames
 	if sliceEnd > n {
@@ -377,11 +391,12 @@ func (s *StaggeredLODEnforcer) Update(particles []Particle, renderIndices []int,
 			s.cachedDistances[i] = particleDistance{index: idx, distSq: dx*dx + dy*dy}
 		}
 	}
+}
 
-	// Advance frame counter
+// advanceFrameCounter advances the frame counter and sorts distances when cycle completes.
+func (s *StaggeredLODEnforcer) advanceFrameCounter() {
 	s.currentFrame++
 	if s.currentFrame >= s.staggerFrames {
-		// Complete cycle - sort and produce final result
 		sortByDistance(s.cachedDistances)
 
 		s.cachedResult = make([]int, s.maxParticles)
@@ -390,10 +405,11 @@ func (s *StaggeredLODEnforcer) Update(particles []Particle, renderIndices []int,
 		}
 		s.currentFrame = 0
 	}
+}
 
-	// Return cached result (may be stale, but smooth frame pacing)
+// getCachedResult returns the cached result or fallback if first cycle not complete.
+func (s *StaggeredLODEnforcer) getCachedResult(renderIndices []int, n int) []int {
 	if s.cachedResult == nil {
-		// First cycle not complete yet - return first N indices as fallback
 		if n <= s.maxParticles {
 			return renderIndices
 		}

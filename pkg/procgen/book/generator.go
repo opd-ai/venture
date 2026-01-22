@@ -93,6 +93,23 @@ func (g *Generator) Validate(result interface{}) error {
 		return fmt.Errorf("result is not an *engine.BookComponent")
 	}
 
+	if err := g.validateBookFields(book); err != nil {
+		return err
+	}
+
+	if err := g.validateContentLength(book); err != nil {
+		return err
+	}
+
+	if err := g.validateBookType(book); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// validateBookFields validates basic book fields are not empty.
+func (g *Generator) validateBookFields(book *engine.BookComponent) error {
 	if book.Title == "" {
 		return fmt.Errorf("book has empty title")
 	}
@@ -102,14 +119,17 @@ func (g *Generator) Validate(result interface{}) error {
 	if len(book.Content) == 0 {
 		return fmt.Errorf("book has no content pages")
 	}
+	return nil
+}
 
-	// Validate content length (330-2000 words, allowing for natural RNG variability)
-	// Target is 500+ words, but RNG can produce 330-700 depending on seed
+// validateContentLength validates book content is within acceptable word count range.
+func (g *Generator) validateContentLength(book *engine.BookComponent) error {
 	totalWords := 0
 	for _, page := range book.Content {
 		words := strings.Fields(page)
 		totalWords += len(words)
 	}
+
 	if totalWords < 330 {
 		return fmt.Errorf("book content too short: %d words (minimum 330)", totalWords)
 	}
@@ -117,7 +137,11 @@ func (g *Generator) Validate(result interface{}) error {
 		return fmt.Errorf("book content too long: %d words (maximum 2000)", totalWords)
 	}
 
-	// Type-specific validation
+	return nil
+}
+
+// validateBookType validates type-specific book requirements.
+func (g *Generator) validateBookType(book *engine.BookComponent) error {
 	switch book.BookType {
 	case engine.BookTypeSkill:
 		if len(book.SkillBonus) == 0 {
@@ -128,7 +152,6 @@ func (g *Generator) Validate(result interface{}) error {
 			return fmt.Errorf("recipe book has no recipe ID")
 		}
 	}
-
 	return nil
 }
 

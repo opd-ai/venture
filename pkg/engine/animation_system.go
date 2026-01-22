@@ -1453,52 +1453,79 @@ func (s *AnimationSystem) buildCustomFieldsKey(custom map[string]interface{}, co
 		return ""
 	}
 
-	// Extract relevant sprite-affecting fields in a deterministic order
+	parts := s.extractCustomFieldParts(custom, configGenreID)
+
+	if len(parts) == 0 {
+		return ""
+	}
+
+	return strings.Join(parts, "|")
+}
+
+// extractCustomFieldParts extracts sprite-affecting fields in deterministic order.
+func (s *AnimationSystem) extractCustomFieldParts(custom map[string]interface{}, configGenreID string) []string {
 	var parts []string
 
-	// Entity type (humanoid, boss, monster, etc.)
+	parts = s.appendEntityType(parts, custom)
+	parts = s.appendFacing(parts, custom)
+	parts = s.appendEquipmentFlags(parts, custom)
+	parts = s.appendBossConfiguration(parts, custom)
+	parts = s.appendAerialFlag(parts, custom)
+	parts = s.appendGenreIfDifferent(parts, custom, configGenreID)
+
+	return parts
+}
+
+// appendEntityType appends entity type to parts if present.
+func (s *AnimationSystem) appendEntityType(parts []string, custom map[string]interface{}) []string {
 	if entityType, ok := custom["entityType"].(string); ok {
 		parts = append(parts, "et:"+entityType)
 	}
+	return parts
+}
 
-	// Facing direction
+// appendFacing appends facing direction to parts if present.
+func (s *AnimationSystem) appendFacing(parts []string, custom map[string]interface{}) []string {
 	if facing, ok := custom["facing"].(string); ok {
 		parts = append(parts, "f:"+facing)
 	}
+	return parts
+}
 
-	// Equipment flags
+// appendEquipmentFlags appends weapon and shield flags to parts if present.
+func (s *AnimationSystem) appendEquipmentFlags(parts []string, custom map[string]interface{}) []string {
 	if hasWeapon, ok := custom["hasWeapon"].(bool); ok && hasWeapon {
 		parts = append(parts, "w:1")
 	}
 	if hasShield, ok := custom["hasShield"].(bool); ok && hasShield {
 		parts = append(parts, "s:1")
 	}
+	return parts
+}
 
-	// Boss configuration - bossScale is only relevant when isBoss is true
+// appendBossConfiguration appends boss flag and scale to parts if present.
+func (s *AnimationSystem) appendBossConfiguration(parts []string, custom map[string]interface{}) []string {
 	if isBoss, ok := custom["isBoss"].(bool); ok && isBoss {
 		parts = append(parts, "boss:1")
-		// Include bossScale only for boss entities (meaningless otherwise)
-		// Optimized: Use fixed-point representation instead of fmt.Sprintf
 		if bossScale, ok := custom["bossScale"].(float64); ok {
 			parts = append(parts, "bs:"+strconv.FormatInt(int64(bossScale*10), 10))
 		}
 	}
+	return parts
+}
 
-	// Aerial sprite flag
+// appendAerialFlag appends aerial sprite flag to parts if present.
+func (s *AnimationSystem) appendAerialFlag(parts []string, custom map[string]interface{}) []string {
 	if useAerial, ok := custom["useAerial"].(bool); ok && useAerial {
 		parts = append(parts, "a:1")
 	}
+	return parts
+}
 
-	// Genre from custom field - only include if different from config.GenreID
-	// to avoid redundant information in the cache key
+// appendGenreIfDifferent appends genre to parts if different from config genre.
+func (s *AnimationSystem) appendGenreIfDifferent(parts []string, custom map[string]interface{}, configGenreID string) []string {
 	if genre, ok := custom["genre"].(string); ok && genre != configGenreID {
 		parts = append(parts, "g:"+genre)
 	}
-
-	if len(parts) == 0 {
-		return ""
-	}
-
-	// Join with pipe separator for readability in debug logs
-	return strings.Join(parts, "|")
+	return parts
 }

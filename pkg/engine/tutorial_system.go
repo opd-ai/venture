@@ -267,58 +267,85 @@ func (ts *EbitenTutorialSystem) Update(entities []*Entity, deltaTime float64) {
 		return
 	}
 
-	// Update touch handler
+	ts.updateInputHandlers()
+
+	if ts.handleEscapeKey() {
+		return
+	}
+
+	world := ts.createTemporaryWorld(entities)
+	ts.updateNotificationTTL(deltaTime)
+	ts.checkStepCompletion(world)
+}
+
+// updateInputHandlers updates all input handlers for the tutorial.
+func (ts *EbitenTutorialSystem) updateInputHandlers() {
 	if ts.touchHandler != nil {
 		ts.touchHandler.Update()
 	}
-
-	// Update touch buttons
 	if ts.nextButton != nil {
 		ts.nextButton.Update()
 	}
 	if ts.skipButton != nil {
 		ts.skipButton.Update()
 	}
+}
 
-	// BUG FIX: Phase 2 - Tutorial ESC key not handled
-	// Resolution: Added ESC key check to hide tutorial UI (dual-exit pattern)
-	// Players can now press ESC to hide the tutorial overlay while keeping progression enabled
+// handleEscapeKey checks for ESC key press to hide tutorial UI.
+func (ts *EbitenTutorialSystem) handleEscapeKey() bool {
 	if ts.ShowUI && inpututil.IsKeyJustPressed(ebiten.KeyEscape) {
 		ts.HideTutorialUI()
-		return
+		return true
 	}
+	return false
+}
 
-	// Create temporary world for condition checking
+// createTemporaryWorld creates a temporary world for condition checking.
+func (ts *EbitenTutorialSystem) createTemporaryWorld(entities []*Entity) *World {
 	world := &World{entities: make(map[uint64]*Entity), entityListDirty: true}
 	for _, entity := range entities {
 		world.entities[entity.ID] = entity
 	}
+	return world
+}
 
-	// Update notification TTL
+// updateNotificationTTL updates and clears expired notification messages.
+func (ts *EbitenTutorialSystem) updateNotificationTTL(deltaTime float64) {
 	if ts.NotificationTTL > 0 {
 		ts.NotificationTTL -= deltaTime
 		if ts.NotificationTTL <= 0 {
 			ts.NotificationMsg = ""
 		}
 	}
+}
 
-	// Check current step completion
+// checkStepCompletion checks if the current step is completed and advances tutorial.
+func (ts *EbitenTutorialSystem) checkStepCompletion(world *World) {
 	currentStep := &ts.Steps[ts.CurrentStepIdx]
 	if !currentStep.Completed && currentStep.Condition(world) {
 		currentStep.Completed = true
 		ts.CurrentStepIdx++
 
-		// Show notification for completing step
 		if ts.CurrentStepIdx < len(ts.Steps) {
-			nextStep := &ts.Steps[ts.CurrentStepIdx]
-			ts.NotificationMsg = fmt.Sprintf("✓ %s Complete! Next: %s", currentStep.Title, nextStep.Title)
-			ts.NotificationTTL = 3.0 // Show for 3 seconds
+			ts.showNextStepNotification(currentStep)
 		} else {
-			ts.NotificationMsg = "Tutorial Complete! You're ready to adventure!"
-			ts.NotificationTTL = 5.0
-			ts.Enabled = false // Disable tutorial after completion
+			ts.showCompletionNotification()
 		}
 	}
+}
+
+// showNextStepNotification displays notification for advancing to next step.
+func (ts *EbitenTutorialSystem) showNextStepNotification(completedStep *TutorialStep) {
+	nextStep := &ts.Steps[ts.CurrentStepIdx]
+	ts.NotificationMsg = fmt.Sprintf("✓ %s Complete! Next: %s", completedStep.Title, nextStep.Title)
+	ts.NotificationTTL = 3.0
+}
+
+// showCompletionNotification displays tutorial completion notification.
+func (ts *EbitenTutorialSystem) showCompletionNotification() {
+	ts.NotificationMsg = "Tutorial Complete! You're ready to adventure!"
+	ts.NotificationTTL = 5.0
+	ts.Enabled = false
 }
 
 // GetCurrentStep returns the current tutorial step, or nil if complete

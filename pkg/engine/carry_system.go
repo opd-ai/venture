@@ -112,57 +112,90 @@ func (s *CarrySystem) TryPickup(playerID, objectID uint64) bool {
 		return false
 	}
 
-	// Check if player is already carrying something
+	if s.isPlayerCarrying(playerID) {
+		return false
+	}
+
+	carriable, ok := s.getCarriableComponent(objectID)
+	if !ok {
+		return false
+	}
+
+	if !s.canPickupObject(carriable) {
+		return false
+	}
+
+	s.executePickup(playerID, objectID, carriable)
+	s.logPickupSuccess(playerID, objectID)
+
+	return true
+}
+
+// isPlayerCarrying checks if the player is already carrying an object.
+func (s *CarrySystem) isPlayerCarrying(playerID uint64) bool {
 	if _, carrying := s.carriedObjects[playerID]; carrying {
 		if s.logger != nil {
 			s.logger.WithField("playerID", playerID).Debug("player already carrying object")
 		}
-		return false
+		return true
 	}
+	return false
+}
 
-	// Get object entity
+// getCarriableComponent retrieves and validates the carriable component from an object.
+func (s *CarrySystem) getCarriableComponent(objectID uint64) (*CarriableComponent, bool) {
 	object, ok := s.world.GetEntity(objectID)
 	if !ok || object == nil {
-		return false
+		return nil, false
 	}
 
-	// Get carriable component
 	carrComp, ok := object.GetComponent("carriable")
 	if !ok {
-		return false
+		return nil, false
 	}
+
 	carriable, ok := carrComp.(*CarriableComponent)
 	if !ok {
-		return false
+		return nil, false
 	}
 
-	// Check if object can be picked up
-	if !carriable.CanPickUp || carriable.IsCarried {
-		return false
-	}
+	return carriable, true
+}
 
-	// Pickup object
+// canPickupObject checks if the object is eligible for pickup.
+func (s *CarrySystem) canPickupObject(carriable *CarriableComponent) bool {
+	return carriable.CanPickUp && !carriable.IsCarried
+}
+
+// executePickup performs the pickup operation and clears object velocity.
+func (s *CarrySystem) executePickup(playerID, objectID uint64, carriable *CarriableComponent) {
 	carriable.Pickup(playerID)
 	s.carriedObjects[playerID] = objectID
 
-	// Remove velocity if object was moving
-	if velComp, ok := object.GetComponent("velocity"); ok {
-		vel, ok := velComp.(*VelocityComponent)
-		if !ok {
-			return true // Object picked up, velocity just won't be zeroed
-		}
-		vel.VX = 0
-		vel.VY = 0
+	object, ok := s.world.GetEntity(objectID)
+	if ok && object != nil {
+		s.clearObjectVelocity(object)
 	}
+}
 
+// clearObjectVelocity removes velocity from the picked-up object.
+func (s *CarrySystem) clearObjectVelocity(object *Entity) {
+	if velComp, ok := object.GetComponent("velocity"); ok {
+		if vel, ok := velComp.(*VelocityComponent); ok {
+			vel.VX = 0
+			vel.VY = 0
+		}
+	}
+}
+
+// logPickupSuccess logs successful object pickup.
+func (s *CarrySystem) logPickupSuccess(playerID, objectID uint64) {
 	if s.logger != nil {
 		s.logger.WithFields(logrus.Fields{
 			"playerID": playerID,
 			"objectID": objectID,
 		}).Debug("object picked up")
 	}
-
-	return true
 }
 
 // DropObject drops the object the player is carrying.

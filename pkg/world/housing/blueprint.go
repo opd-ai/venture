@@ -110,44 +110,83 @@ func (bl *BlueprintLibrary) Filter(opts FilterOptions) []*Blueprint {
 
 // matchesFilter checks if a blueprint matches the filter options.
 func matchesFilter(bp *Blueprint, opts FilterOptions) bool {
-	// Author filter (exact match, case-insensitive)
+	if !matchesAuthorFilter(bp, opts) {
+		return false
+	}
+
+	if !matchesGenreFilter(bp, opts) {
+		return false
+	}
+
+	if !matchesTagsFilter(bp, opts) {
+		return false
+	}
+
+	if !matchesRatingFilter(bp, opts) {
+		return false
+	}
+
+	if !matchesSizeFilter(bp, opts) {
+		return false
+	}
+
+	return true
+}
+
+// matchesAuthorFilter checks if blueprint matches author filter.
+func matchesAuthorFilter(bp *Blueprint, opts FilterOptions) bool {
 	if opts.Author != "" && !strings.EqualFold(bp.Author, opts.Author) {
 		return false
 	}
+	return true
+}
 
-	// Genre filter (exact match, case-insensitive)
+// matchesGenreFilter checks if blueprint matches genre filter.
+func matchesGenreFilter(bp *Blueprint, opts FilterOptions) bool {
 	if opts.GenreID != "" && !strings.EqualFold(bp.GenreID, opts.GenreID) {
 		return false
 	}
+	return true
+}
 
-	// Tags filter (must contain all tags)
+// matchesTagsFilter checks if blueprint contains all required tags.
+func matchesTagsFilter(bp *Blueprint, opts FilterOptions) bool {
 	if len(opts.Tags) > 0 {
 		if !containsAllTags(bp.Tags, opts.Tags) {
 			return false
 		}
 	}
+	return true
+}
 
-	// Rating filter
-	if opts.MinRating > 0 && bp.GetRating() < opts.MinRating {
+// matchesRatingFilter checks if blueprint rating is within specified range.
+func matchesRatingFilter(bp *Blueprint, opts FilterOptions) bool {
+	rating := bp.GetRating()
+	if opts.MinRating > 0 && rating < opts.MinRating {
 		return false
 	}
-	if opts.MaxRating > 0 && bp.GetRating() > opts.MaxRating {
+	if opts.MaxRating > 0 && rating > opts.MaxRating {
 		return false
 	}
+	return true
+}
 
-	// Size filter (based on building definition)
-	if bp.BuildingDef != nil {
-		maxDim := bp.BuildingDef.Width
-		if bp.BuildingDef.Height > maxDim {
-			maxDim = bp.BuildingDef.Height
-		}
+// matchesSizeFilter checks if blueprint size is within specified range.
+func matchesSizeFilter(bp *Blueprint, opts FilterOptions) bool {
+	if bp.BuildingDef == nil {
+		return true
+	}
 
-		if opts.MinSize > 0 && maxDim < opts.MinSize {
-			return false
-		}
-		if opts.MaxSize > 0 && maxDim > opts.MaxSize {
-			return false
-		}
+	maxDim := bp.BuildingDef.Width
+	if bp.BuildingDef.Height > maxDim {
+		maxDim = bp.BuildingDef.Height
+	}
+
+	if opts.MinSize > 0 && maxDim < opts.MinSize {
+		return false
+	}
+	if opts.MaxSize > 0 && maxDim > opts.MaxSize {
+		return false
 	}
 
 	return true

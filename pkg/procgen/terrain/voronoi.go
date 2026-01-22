@@ -230,45 +230,71 @@ func (vd *VoronoiDiagram) GetRegionBounds(regionID int) (minX, minY, maxX, maxY 
 // ExpandBoundaryZone expands the boundary tiles by the specified radius.
 // This creates a transition zone around region boundaries.
 func ExpandBoundaryZone(boundaries []Point, radius, width, height int) []Point {
-	zone := make(map[Point]bool)
+	zone := initializeZoneWithBoundaries(boundaries)
+	expandZoneByRadius(zone, radius, width, height)
+	return convertZoneToSlice(zone)
+}
 
-	// Add original boundaries
+// initializeZoneWithBoundaries creates a zone map with initial boundary points.
+func initializeZoneWithBoundaries(boundaries []Point) map[Point]bool {
+	zone := make(map[Point]bool)
 	for _, p := range boundaries {
 		zone[p] = true
 	}
+	return zone
+}
 
-	// Expand by radius
+// expandZoneByRadius iteratively expands the zone by adding neighbors.
+func expandZoneByRadius(zone map[Point]bool, radius, width, height int) {
 	for r := 0; r < radius; r++ {
-		toAdd := make([]Point, 0)
+		toAdd := collectNewNeighbors(zone, width, height)
+		addPointsToZone(zone, toAdd)
+	}
+}
 
-		for point := range zone {
-			// Add 4-connected neighbors
-			neighbors := []Point{
-				{X: point.X - 1, Y: point.Y},
-				{X: point.X + 1, Y: point.Y},
-				{X: point.X, Y: point.Y - 1},
-				{X: point.X, Y: point.Y + 1},
+// collectNewNeighbors finds all valid neighbors to add in this expansion iteration.
+func collectNewNeighbors(zone map[Point]bool, width, height int) []Point {
+	toAdd := make([]Point, 0)
+	
+	for point := range zone {
+		neighbors := get4ConnectedNeighbors(point)
+		for _, n := range neighbors {
+			if isValidNewPoint(n, zone, width, height) {
+				toAdd = append(toAdd, n)
 			}
-
-			for _, n := range neighbors {
-				if n.X >= 0 && n.X < width && n.Y >= 0 && n.Y < height {
-					if !zone[n] {
-						toAdd = append(toAdd, n)
-					}
-				}
-			}
-		}
-
-		for _, p := range toAdd {
-			zone[p] = true
 		}
 	}
+	
+	return toAdd
+}
 
-	// Convert map to slice
+// get4ConnectedNeighbors returns the four orthogonal neighbors of a point.
+func get4ConnectedNeighbors(point Point) []Point {
+	return []Point{
+		{X: point.X - 1, Y: point.Y},
+		{X: point.X + 1, Y: point.Y},
+		{X: point.X, Y: point.Y - 1},
+		{X: point.X, Y: point.Y + 1},
+	}
+}
+
+// isValidNewPoint checks if a point is within bounds and not already in zone.
+func isValidNewPoint(p Point, zone map[Point]bool, width, height int) bool {
+	return p.X >= 0 && p.X < width && p.Y >= 0 && p.Y < height && !zone[p]
+}
+
+// addPointsToZone adds all points from the slice to the zone map.
+func addPointsToZone(zone map[Point]bool, points []Point) {
+	for _, p := range points {
+		zone[p] = true
+	}
+}
+
+// convertZoneToSlice converts the zone map to a point slice.
+func convertZoneToSlice(zone map[Point]bool) []Point {
 	result := make([]Point, 0, len(zone))
 	for p := range zone {
 		result = append(result, p)
 	}
-
 	return result
 }

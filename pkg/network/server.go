@@ -794,29 +794,51 @@ func (s *TCPServer) requeueIfMoreUpdates(client *clientConnection, batchCount in
 
 // disconnectClient removes a client from the server.
 func (s *TCPServer) disconnectClient(playerID uint64) {
+	client := s.removeClient(playerID)
+	if client != nil {
+		s.notifyPlayerLeave(playerID)
+	}
+}
+
+// removeClient removes a client from the server's client map.
+func (s *TCPServer) removeClient(playerID uint64) *clientConnection {
 	s.clientsMu.Lock()
+	defer s.clientsMu.Unlock()
+	
 	client, exists := s.clients[playerID]
 	if exists {
 		client.disconnect()
 		delete(s.clients, playerID)
+		return client
 	}
-	s.clientsMu.Unlock()
+	return nil
+}
 
-	// Notify game logic of player leave
-	if exists {
-		select {
-		case s.playerLeaves <- playerID:
-			s.playerLeaveStats.RecordSend()
-		case <-s.done:
-		default:
-			s.playerLeaveStats.RecordDrop()
-			select {
-			case s.errors <- fmt.Errorf("player leave channel full, dropped event for player %d", playerID):
-				s.errorStats.RecordSend()
-			default:
-				s.errorStats.RecordDrop()
-			}
-		}
+// notifyPlayerLeave sends player leave notification to game logic.
+func (s *TCPServer) notifyPlayerLeave(playerID uint64) {
+	select {
+	case s.playerLeaves <- playerID:
+		s.playerLeaveStats.RecordSend()
+	case <-s.done:
+	default:
+		s.handlePlayerLeaveChannelFull(playerID)
+	}
+}
+
+// handlePlayerLeaveChannelFull handles the case when player leave channel is full.
+func (s *TCPServer) handlePlayerLeaveChannelFull(playerID uint64) {
+	s.playerLeaveStats.RecordDrop()
+	s.reportPlayerLeaveError(playerID)
+}
+
+// reportPlayerLeaveError attempts to report a player leave event drop error.
+func (s *TCPServer) reportPlayerLeaveError(playerID uint64) {
+	err := fmt.Errorf("player leave channel full, dropped event for player %d", playerID)
+	select {
+	case s.errors <- err:
+		s.errorStats.RecordSend()
+	default:
+		s.errorStats.RecordDrop()
 	}
 }
 

@@ -805,58 +805,67 @@ func (b *TouchButton) Draw(screen *ebiten.Image) {
 		return
 	}
 
-	// BUG FIX: Phase 1.2 - Enforce minimum dimensions for touch targets
-	// Resolution: Validate button dimensions meet 44pt minimum (iOS/Android guidelines)
-	// Platform: Mobile (Android/iOS)
+	b.enforceMinimumDimensions()
+	bgColor := b.determineBackgroundColor()
+	b.drawButtonGraphics(screen, bgColor)
+	b.drawButtonLabel(screen)
+}
+
+// enforceMinimumDimensions ensures button meets touch target guidelines (44pt minimum).
+func (b *TouchButton) enforceMinimumDimensions() {
 	if b.Width < 44 {
 		b.Width = 44
 	}
 	if b.Height < 44 {
 		b.Height = 44
 	}
+}
 
-	// Determine button color
-	bgColor := b.BackgroundColor
+// determineBackgroundColor selects the appropriate background color based on button state.
+func (b *TouchButton) determineBackgroundColor() color.RGBA {
 	if !b.Enabled {
-		bgColor = b.DisabledColor
-	} else if b.pressed {
-		bgColor = b.PressedColor
+		return b.DisabledColor
 	}
+	if b.pressed {
+		return b.PressedColor
+	}
+	return b.BackgroundColor
+}
 
-	// Draw button background
+// drawButtonGraphics renders the button's background and border.
+func (b *TouchButton) drawButtonGraphics(screen *ebiten.Image, bgColor color.RGBA) {
 	vector.DrawFilledRect(screen, float32(b.X), float32(b.Y), float32(b.Width), float32(b.Height), bgColor, true)
-
-	// Draw border
 	vector.StrokeRect(screen, float32(b.X), float32(b.Y), float32(b.Width), float32(b.Height), 2, b.BorderColor, true)
+}
 
-	// Draw label text (centered)
-	displayText := b.Label
-	if b.Icon != "" && b.Label != "" {
-		displayText = b.Icon + " " + b.Label
-	} else if b.Icon != "" {
-		displayText = b.Icon
-	}
-
-	// BUG FIX: Phase 1.2 - Remove debug rendering code
-	// Resolution: Use proper text color, remove debug markers
-	// Platform: All
+// drawButtonLabel renders the button's centered text or icon label.
+func (b *TouchButton) drawButtonLabel(screen *ebiten.Image) {
+	displayText := b.getDisplayText()
 	if displayText == "" {
-		return // Nothing to render
+		return
 	}
-
-	// Calculate text position (centered)
-	// basicfont.Face7x13 is approximately 7 pixels wide per character
-	textWidth := len(displayText) * 7
-
-	// Center horizontally
-	textX := int(b.X + (b.Width-float64(textWidth))/2)
-
-	// Center vertically - text.Draw Y is the baseline
-	// For 7x13 font in a 44px button, center is around Y + 28
-	textY := int(b.Y + b.Height/2 + 5)
-
-	// Use configured text color (not debug color)
+	
+	textX, textY := b.calculateTextPosition(displayText)
 	text.Draw(screen, displayText, basicfont.Face7x13, textX, textY, b.TextColor)
+}
+
+// getDisplayText returns the text to display (icon + label or just one).
+func (b *TouchButton) getDisplayText() string {
+	if b.Icon != "" && b.Label != "" {
+		return b.Icon + " " + b.Label
+	}
+	if b.Icon != "" {
+		return b.Icon
+	}
+	return b.Label
+}
+
+// calculateTextPosition computes centered text position within button.
+func (b *TouchButton) calculateTextPosition(displayText string) (int, int) {
+	textWidth := len(displayText) * 7 // basicfont.Face7x13 is ~7px per char
+	textX := int(b.X + (b.Width-float64(textWidth))/2)
+	textY := int(b.Y + b.Height/2 + 5) // Center vertically with baseline adjustment
+	return textX, textY
 }
 
 // SetPosition sets the button position.

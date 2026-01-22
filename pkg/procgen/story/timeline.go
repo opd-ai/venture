@@ -575,7 +575,26 @@ func (g *TimelineGenerator) calculateConsistency(events []HistoricalEvent, eras 
 		return 0.5
 	}
 
-	// Check that events are distributed across eras
+	if !g.allErasHaveEvents(events, eras) {
+		return 0.5
+	}
+
+	foundationCount, collapseCount := g.countCriticalEvents(events)
+	if foundationCount == 0 || collapseCount == 0 {
+		return 0.6
+	}
+
+	return g.calculateScore(foundationCount, collapseCount, len(events))
+}
+
+// allErasHaveEvents verifies that all eras have at least one event.
+func (g *TimelineGenerator) allErasHaveEvents(events []HistoricalEvent, eras []Era) bool {
+	eventsPerEra := g.mapEventsToEras(events, eras)
+	return len(eventsPerEra) >= len(eras)
+}
+
+// mapEventsToEras distributes events across their respective eras.
+func (g *TimelineGenerator) mapEventsToEras(events []HistoricalEvent, eras []Era) map[string]int {
 	eventsPerEra := make(map[string]int)
 	for _, event := range events {
 		for _, era := range eras {
@@ -585,13 +604,11 @@ func (g *TimelineGenerator) calculateConsistency(events []HistoricalEvent, eras 
 			}
 		}
 	}
+	return eventsPerEra
+}
 
-	// All eras should have events
-	if len(eventsPerEra) < len(eras) {
-		return 0.5 // Some eras missing events
-	}
-
-	// Check for logical event progression
+// countCriticalEvents counts foundation and collapse events for consistency check.
+func (g *TimelineGenerator) countCriticalEvents(events []HistoricalEvent) (int, int) {
 	foundationCount := 0
 	collapseCount := 0
 	for _, event := range events {
@@ -601,14 +618,13 @@ func (g *TimelineGenerator) calculateConsistency(events []HistoricalEvent, eras 
 			collapseCount++
 		}
 	}
+	return foundationCount, collapseCount
+}
 
-	// Should have some foundations and collapses
-	if foundationCount == 0 || collapseCount == 0 {
-		return 0.6
-	}
-
-	// Good consistency
-	return 0.7 + float64(foundationCount+collapseCount)/float64(len(events))*0.3
+// calculateScore computes the final consistency score based on critical events.
+func (g *TimelineGenerator) calculateScore(foundationCount, collapseCount, totalEvents int) float64 {
+	criticalRatio := float64(foundationCount+collapseCount) / float64(totalEvents)
+	return 0.7 + criticalRatio*0.3
 }
 
 // GetEventsInPeriod returns all events within a time range

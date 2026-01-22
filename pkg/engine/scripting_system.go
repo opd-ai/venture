@@ -426,46 +426,83 @@ func (e *ExpressionEvaluator) evaluateComparison(expr string, vars map[string]an
 
 // evaluateArithmetic handles arithmetic operators.
 func (e *ExpressionEvaluator) evaluateArithmetic(expr string, vars map[string]any) (any, bool, error) {
-	// Handle operators in order of precedence (low to high)
 	for _, op := range []string{"+", "-", "*", "/", "%"} {
-		idx := strings.LastIndex(expr, op)
-		if idx > 0 && idx < len(expr)-1 {
-			left, err := e.Evaluate(expr[:idx], vars)
-			if err != nil {
-				continue
-			}
-			right, err := e.Evaluate(expr[idx+1:], vars)
-			if err != nil {
-				continue
-			}
-
-			leftNum, lok := toFloat64(left)
-			rightNum, rok := toFloat64(right)
-
-			if lok && rok {
-				switch op {
-				case "+":
-					return leftNum + rightNum, true, nil
-				case "-":
-					return leftNum - rightNum, true, nil
-				case "*":
-					return leftNum * rightNum, true, nil
-				case "/":
-					if rightNum == 0 {
-						return nil, true, fmt.Errorf("division by zero")
-					}
-					return leftNum / rightNum, true, nil
-				case "%":
-					if rightNum == 0 {
-						return nil, true, fmt.Errorf("modulo by zero")
-					}
-					return math.Mod(leftNum, rightNum), true, nil
-				}
-			}
+		if result, handled, err := e.tryOperator(expr, op, vars); handled {
+			return result, true, err
 		}
 	}
-
 	return nil, false, nil
+}
+
+// tryOperator attempts to evaluate expression with the specified operator.
+func (e *ExpressionEvaluator) tryOperator(expr, op string, vars map[string]any) (any, bool, error) {
+	idx := strings.LastIndex(expr, op)
+	if idx <= 0 || idx >= len(expr)-1 {
+		return nil, false, nil
+	}
+	
+	left, right, err := e.evaluateBothSides(expr, idx, vars)
+	if err != nil {
+		return nil, false, nil // Try next operator
+	}
+	
+	return e.applyOperator(left, right, op)
+}
+
+// evaluateBothSides evaluates left and right sides of an operator.
+func (e *ExpressionEvaluator) evaluateBothSides(expr string, idx int, vars map[string]any) (any, any, error) {
+	left, err := e.Evaluate(expr[:idx], vars)
+	if err != nil {
+		return nil, nil, err
+	}
+	
+	right, err := e.Evaluate(expr[idx+1:], vars)
+	if err != nil {
+		return nil, nil, err
+	}
+	
+	return left, right, nil
+}
+
+// applyOperator performs the arithmetic operation on two operands.
+func (e *ExpressionEvaluator) applyOperator(left, right any, op string) (any, bool, error) {
+	leftNum, lok := toFloat64(left)
+	rightNum, rok := toFloat64(right)
+	
+	if !lok || !rok {
+		return nil, false, nil
+	}
+	
+	switch op {
+	case "+":
+		return leftNum + rightNum, true, nil
+	case "-":
+		return leftNum - rightNum, true, nil
+	case "*":
+		return leftNum * rightNum, true, nil
+	case "/":
+		return e.safeDivide(leftNum, rightNum)
+	case "%":
+		return e.safeModulo(leftNum, rightNum)
+	}
+	
+	return nil, false, nil
+}
+
+// safeDivide performs division with zero-check.
+func (e *ExpressionEvaluator) safeDivide(left, right float64) (any, bool, error) {
+	if right == 0 {
+		return nil, true, fmt.Errorf("division by zero")
+	}
+	return left / right, true, nil
+}
+
+// safeModulo performs modulo with zero-check.
+func (e *ExpressionEvaluator) safeModulo(left, right float64) (any, bool, error) {
+	if right == 0 {
+		return nil, true, fmt.Errorf("modulo by zero")
+	}
+	return math.Mod(left, right), true, nil
 }
 
 // toFloat64 converts a value to float64 if possible.

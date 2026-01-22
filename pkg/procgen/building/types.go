@@ -275,48 +275,59 @@ func (b *Building) IsNavigable() bool {
 
 // areRoomsConnected checks if two rooms share a door
 func (b *Building) areRoomsConnected(r1, r2 Room) bool {
-	// Rooms are connected if they share a wall and have a door on that wall
-	// Check if rooms share a wall
-	shareWall := false
-	var doorX, doorY int
-
-	// Check horizontal adjacency
-	if r1.Y == r2.Y && r1.Height == r2.Height {
-		if r1.X+r1.Width == r2.X {
-			shareWall = true
-			doorX = r1.X + r1.Width
-			doorY = r1.Y + r1.Height/2
-		} else if r2.X+r2.Width == r1.X {
-			shareWall = true
-			doorX = r2.X + r2.Width
-			doorY = r2.Y + r2.Height/2
-		}
-	}
-
-	// Check vertical adjacency
-	if r1.X == r2.X && r1.Width == r2.Width {
-		if r1.Y+r1.Height == r2.Y {
-			shareWall = true
-			doorX = r1.X + r1.Width/2
-			doorY = r1.Y + r1.Height
-		} else if r2.Y+r2.Height == r1.Y {
-			shareWall = true
-			doorX = r2.X + r2.Width/2
-			doorY = r2.Y + r2.Height
-		}
-	}
-
+	doorX, doorY, shareWall := b.findSharedWall(r1, r2)
 	if !shareWall {
 		return false
 	}
+	return b.hasDoorAt(doorX, doorY)
+}
 
-	// Check if there's a door at the shared wall
+// findSharedWall checks if two rooms share a wall and returns the door position.
+func (b *Building) findSharedWall(r1, r2 Room) (int, int, bool) {
+	if doorX, doorY, found := b.checkHorizontalAdjacency(r1, r2); found {
+		return doorX, doorY, true
+	}
+	if doorX, doorY, found := b.checkVerticalAdjacency(r1, r2); found {
+		return doorX, doorY, true
+	}
+	return 0, 0, false
+}
+
+// checkHorizontalAdjacency checks if rooms are adjacent horizontally.
+func (b *Building) checkHorizontalAdjacency(r1, r2 Room) (int, int, bool) {
+	if r1.Y != r2.Y || r1.Height != r2.Height {
+		return 0, 0, false
+	}
+	if r1.X+r1.Width == r2.X {
+		return r1.X + r1.Width, r1.Y + r1.Height/2, true
+	}
+	if r2.X+r2.Width == r1.X {
+		return r2.X + r2.Width, r2.Y + r2.Height/2, true
+	}
+	return 0, 0, false
+}
+
+// checkVerticalAdjacency checks if rooms are adjacent vertically.
+func (b *Building) checkVerticalAdjacency(r1, r2 Room) (int, int, bool) {
+	if r1.X != r2.X || r1.Width != r2.Width {
+		return 0, 0, false
+	}
+	if r1.Y+r1.Height == r2.Y {
+		return r1.X + r1.Width/2, r1.Y + r1.Height, true
+	}
+	if r2.Y+r2.Height == r1.Y {
+		return r2.X + r2.Width/2, r2.Y + r2.Height, true
+	}
+	return 0, 0, false
+}
+
+// hasDoorAt checks if there's a door at the specified position.
+func (b *Building) hasDoorAt(x, y int) bool {
 	for _, door := range b.Doors {
-		if door.X == doorX && door.Y == doorY {
+		if door.X == x && door.Y == y {
 			return true
 		}
 	}
-
 	return false
 }
 

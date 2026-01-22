@@ -209,63 +209,88 @@ func (g *Generator) applyForegroundEffects(img *image.RGBA, config ParallaxConfi
 // applyAmbientOcclusion generates and applies ambient occlusion to tile corners/edges.
 // AO darkens concave corners and edges for depth perception.
 func (g *Generator) applyAmbientOcclusion(img *image.RGBA, config ParallaxConfig) {
-	bounds := img.Bounds()
-	width := bounds.Dx()
-	height := bounds.Dy()
+	aoMap := g.computeAOMap(img, config)
+	g.applyAOToImage(img, aoMap, config)
+}
 
-	// Create AO map using edge detection
+// computeAOMap creates an ambient occlusion map using edge detection.
+func (g *Generator) computeAOMap(img *image.RGBA, config ParallaxConfig) [][]float64 {
+	bounds := img.Bounds()
+	width, height := bounds.Dx(), bounds.Dy()
+	
 	aoMap := make([][]float64, height)
 	for y := 0; y < height; y++ {
 		aoMap[y] = make([]float64, width)
 		for x := 0; x < width; x++ {
-			// Sample 3x3 neighborhood
-			occlusionSum := 0.0
-			sampleCount := 0
-
-			for dy := -1; dy <= 1; dy++ {
-				for dx := -1; dx <= 1; dx++ {
-					nx, ny := x+dx, y+dy
-					if nx < 0 || nx >= width || ny < 0 || ny >= height {
-						// Edge of tile counts as occluded
-						occlusionSum += 1.0
-						sampleCount++
-						continue
-					}
-
-					// Check if neighbor is darker (implies geometry)
-					c1 := img.RGBAAt(x, y)
-					c2 := img.RGBAAt(nx, ny)
-
-					brightness1 := float64(c1.R+c1.G+c1.B) / 3.0
-					brightness2 := float64(c2.R+c2.G+c2.B) / 3.0
-
-					if brightness2 < brightness1*0.7 {
-						occlusionSum += 1.0
-					}
-					sampleCount++
-				}
-			}
-
-			// Average occlusion
-			aoMap[y][x] = occlusionSum / float64(sampleCount)
+			aoMap[y][x] = g.calculatePixelOcclusion(img, x, y, width, height)
 		}
 	}
+	return aoMap
+}
 
-	// Apply AO to image
+// calculatePixelOcclusion computes occlusion for a single pixel by sampling neighbors.
+func (g *Generator) calculatePixelOcclusion(img *image.RGBA, x, y, width, height int) float64 {
+	occlusionSum := 0.0
+	sampleCount := 0
+	
+	for dy := -1; dy <= 1; dy++ {
+		for dx := -1; dx <= 1; dx++ {
+			occ, samples := g.sampleNeighborOcclusion(img, x, y, dx, dy, width, height)
+			occlusionSum += occ
+			sampleCount += samples
+		}
+	}
+	
+	return occlusionSum / float64(sampleCount)
+}
+
+// sampleNeighborOcclusion samples a single neighbor for occlusion contribution.
+func (g *Generator) sampleNeighborOcclusion(img *image.RGBA, x, y, dx, dy, width, height int) (float64, int) {
+	nx, ny := x+dx, y+dy
+	
+	if nx < 0 || nx >= width || ny < 0 || ny >= height {
+		return 1.0, 1 // Edge counts as occluded
+	}
+	
+	if g.isNeighborDarker(img, x, y, nx, ny) {
+		return 1.0, 1
+	}
+	return 0.0, 1
+}
+
+// isNeighborDarker checks if neighbor pixel is significantly darker than current.
+func (g *Generator) isNeighborDarker(img *image.RGBA, x, y, nx, ny int) bool {
+	c1 := img.RGBAAt(x, y)
+	c2 := img.RGBAAt(nx, ny)
+	
+	brightness1 := float64(c1.R+c1.G+c1.B) / 3.0
+	brightness2 := float64(c2.R+c2.G+c2.B) / 3.0
+	
+	return brightness2 < brightness1*0.7
+}
+
+// applyAOToImage applies the computed AO map to darken the image.
+func (g *Generator) applyAOToImage(img *image.RGBA, aoMap [][]float64, config ParallaxConfig) {
+	bounds := img.Bounds()
+	width, height := bounds.Dx(), bounds.Dy()
+	
 	for y := 0; y < height; y++ {
 		for x := 0; x < width; x++ {
-			c := img.RGBAAt(x, y)
-
-			// Darken based on AO intensity
-			aoFactor := 1.0 - (aoMap[y][x] * config.AOIntensity * 0.3)
-
-			r := uint8(float64(c.R) * aoFactor)
-			g := uint8(float64(c.G) * aoFactor)
-			b := uint8(float64(c.B) * aoFactor)
-
-			img.SetRGBA(x, y, color.RGBA{r, g, b, c.A})
+			g.darkenPixel(img, x, y, aoMap[y][x], config.AOIntensity)
 		}
 	}
+}
+
+// darkenPixel darkens a single pixel based on AO factor.
+func (g *Generator) darkenPixel(img *image.RGBA, x, y int, aoValue, aoIntensity float64) {
+	c := img.RGBAAt(x, y)
+	aoFactor := 1.0 - (aoValue * aoIntensity * 0.3)
+	
+	r := uint8(float64(c.R) * aoFactor)
+	gr := uint8(float64(c.G) * aoFactor)
+	b := uint8(float64(c.B) * aoFactor)
+	
+	img.SetRGBA(x, y, color.RGBA{r, gr, b, c.A})
 }
 
 // applyHeightShadows generates height-based shadows for 3D depth effect.

@@ -286,44 +286,42 @@ func (g *Generator) addDetailLayer(img *image.RGBA, config TextureConfig, rng *r
 
 	for y := 0; y < config.Height; y++ {
 		for x := 0; x < config.Width; x++ {
-			// High-frequency noise for fine detail
-			detail := g.perlinNoise(float64(x)*config.Scale*8, float64(y)*config.Scale*8, rng)
-			detail *= config.DetailLevel * 0.15 // Subtle detail overlay
-
-			// Get current pixel
-			c := img.RGBAAt(x, y)
-			r := float64(c.R)
-			g := float64(c.G)
-			b := float64(c.B)
-
-			// Apply detail
-			r += detail * 255
-			g += detail * 255
-			b += detail * 255
-
-			// Clamp values
-			if r < 0 {
-				r = 0
-			}
-			if r > 255 {
-				r = 255
-			}
-			if g < 0 {
-				g = 0
-			}
-			if g > 255 {
-				g = 255
-			}
-			if b < 0 {
-				b = 0
-			}
-			if b > 255 {
-				b = 255
-			}
-
-			img.SetRGBA(x, y, color.RGBA{R: uint8(r), G: uint8(g), B: uint8(b), A: c.A})
+			g.applyDetailToPixel(img, x, y, config, rng)
 		}
 	}
+}
+
+// applyDetailToPixel applies high-frequency noise detail to a single pixel.
+func (g *Generator) applyDetailToPixel(img *image.RGBA, x, y int, config TextureConfig, rng *rand.Rand) {
+	detail := g.calculatePixelDetail(x, y, config, rng)
+	c := img.RGBAAt(x, y)
+	r, gr, b := g.applyDetailToChannels(c, detail)
+	img.SetRGBA(x, y, color.RGBA{R: uint8(r), G: uint8(gr), B: uint8(b), A: c.A})
+}
+
+// calculatePixelDetail computes the detail value for a pixel using high-frequency noise.
+func (g *Generator) calculatePixelDetail(x, y int, config TextureConfig, rng *rand.Rand) float64 {
+	detail := g.perlinNoise(float64(x)*config.Scale*8, float64(y)*config.Scale*8, rng)
+	return detail * config.DetailLevel * 0.15
+}
+
+// applyDetailToChannels applies detail to RGB channels and clamps values to 0-255.
+func (g *Generator) applyDetailToChannels(c color.RGBA, detail float64) (float64, float64, float64) {
+	r := g.clampChannel(float64(c.R) + detail*255)
+	gr := g.clampChannel(float64(c.G) + detail*255)
+	b := g.clampChannel(float64(c.B) + detail*255)
+	return r, gr, b
+}
+
+// clampChannel ensures a color channel value stays within 0-255 range.
+func (g *Generator) clampChannel(value float64) float64 {
+	if value < 0 {
+		return 0
+	}
+	if value > 255 {
+		return 255
+	}
+	return value
 }
 
 // addVariation adds per-pixel variation to prevent repetitive patterns.

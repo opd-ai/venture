@@ -181,44 +181,63 @@ func applyResultLimit(listings []*Listing, limit int) []*Listing {
 
 // matchesQuery checks if a listing matches the search query.
 func (fm *FederatedMarketplace) matchesQuery(listing *Listing, query ItemQuery) bool {
-	// Type filter
+	return fm.matchesType(listing, query) &&
+		fm.matchesName(listing, query) &&
+		fm.matchesPriceRange(listing, query) &&
+		fm.matchesServer(listing, query) &&
+		fm.matchesSeller(listing, query)
+}
+
+// matchesType checks if listing matches the item type filter.
+func (fm *FederatedMarketplace) matchesType(listing *Listing, query ItemQuery) bool {
 	if query.ItemType != "" && listing.ItemType != query.ItemType {
 		return false
 	}
+	return true
+}
 
-	// Name filter (case-insensitive substring match)
-	if query.ItemName != "" {
-		// Simple contains check (could be enhanced with fuzzy matching)
-		nameMatch := false
-		for i := 0; i < len(listing.ItemName)-len(query.ItemName)+1; i++ {
-			if listing.ItemName[i:i+len(query.ItemName)] == query.ItemName {
-				nameMatch = true
-				break
-			}
-		}
-		if !nameMatch {
-			return false
+// matchesName checks if listing name contains the query string.
+func (fm *FederatedMarketplace) matchesName(listing *Listing, query ItemQuery) bool {
+	if query.ItemName == "" {
+		return true
+	}
+	return fm.substringMatch(listing.ItemName, query.ItemName)
+}
+
+// substringMatch performs case-sensitive substring matching.
+func (fm *FederatedMarketplace) substringMatch(text, pattern string) bool {
+	for i := 0; i <= len(text)-len(pattern); i++ {
+		if text[i:i+len(pattern)] == pattern {
+			return true
 		}
 	}
+	return false
+}
 
-	// Price range filter
+// matchesPriceRange checks if listing price is within the query range.
+func (fm *FederatedMarketplace) matchesPriceRange(listing *Listing, query ItemQuery) bool {
 	if query.MinPrice > 0 && listing.Price < query.MinPrice {
 		return false
 	}
 	if query.MaxPrice > 0 && listing.Price > query.MaxPrice {
 		return false
 	}
+	return true
+}
 
-	// Server filter
+// matchesServer checks if listing matches the server ID filter.
+func (fm *FederatedMarketplace) matchesServer(listing *Listing, query ItemQuery) bool {
 	if query.ServerID != "" && listing.ServerID != query.ServerID {
 		return false
 	}
+	return true
+}
 
-	// Seller filter
+// matchesSeller checks if listing matches the seller ID filter.
+func (fm *FederatedMarketplace) matchesSeller(listing *Listing, query ItemQuery) bool {
 	if query.SellerID != "" && listing.SellerID != query.SellerID {
 		return false
 	}
-
 	return true
 }
 

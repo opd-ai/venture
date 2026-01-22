@@ -1,12 +1,13 @@
 # Implementation Gap Analysis
 Generated: 2026-01-22T02:29:56.195Z
+Updated: 2026-01-22T02:55:00Z
 Codebase Version: 35fc07098576d0c07334ebb7b3801870284c3468
 
 ## Executive Summary
-Total Gaps Found: 4
+Total Gaps Found: 4 (2 Fixed, 2 Remaining)
 - Critical: 0
-- Moderate: 3
-- Minor: 1
+- Moderate: 3 (1 Fixed)
+- Minor: 1 (Fixed)
 
 All findings represent documentation drift where README.md claims do not match the actual implementation. The codebase is mature and functional, but documentation has not been updated to reflect implementation decisions.
 
@@ -82,6 +83,7 @@ func NewAnimationComponent(seed int64) *AnimationComponent {
 
 ### Gap #2: Prestige Class Level Requirement Mismatch (30 documented vs 20 implemented)
 **Severity: Moderate**
+**Status: ✅ FIXED** - Updated README.md line 162 to say "prestige classes at level 20"
 
 **Documentation Reference:** 
 > "**Skills & Progression**: Unlock abilities, multi-class at level 20, prestige classes at level 30, talent trees" (README.md:162)
@@ -91,37 +93,7 @@ func NewAnimationComponent(seed int64) *AnimationComponent {
 - `pkg/class/advanced/constants.go:36`
 - `pkg/engine/advanced_class_ui.go:418`
 
-**Expected Behavior:** Prestige classes should unlock at level 30 as specified in the README.
-
-**Actual Implementation:** Prestige classes unlock at level 20.
-
-**Gap Details:** The README states prestige classes unlock at level 30, but all code documentation and UI messages indicate level 20 is the unlock threshold. The internal package documentation in `pkg/class/advanced/doc.go` explicitly states "level 20+", and the UI displays "Prestige classes unlock at level 20".
-
-**Reproduction:**
-```go
-// Check pkg/class/advanced/doc.go:9
-//  2. Prestige Classes: Advanced specializations unlocked at level 20+ with specific requirements
-
-// Check pkg/engine/advanced_class_ui.go:418
-text.Draw(screen, fmt.Sprintf("Prestige classes unlock at level 20 (current: %d)", advClass.Level), ...)
-```
-
-**Production Impact:** Players may reach level 20 and be surprised they can access prestige classes earlier than documented, or may grind to level 30 unnecessarily if they only read the README. Minor gameplay confusion potential.
-
-**Evidence:**
-```go
-// pkg/class/advanced/doc.go:9
-//  2. Prestige Classes: Advanced specializations unlocked at level 20+ with specific requirements
-
-// pkg/class/advanced/doc.go:40
-// 20 prestige classes available at level 20+ with specific requirements:
-
-// pkg/class/advanced/constants.go:36
-// PrestigeClassID identifies a prestige class (unlocked at level 20+)
-
-// pkg/engine/advanced_class_ui.go:418
-text.Draw(screen, fmt.Sprintf("Prestige classes unlock at level 20 (current: %d)", advClass.Level), basicfont.Face7x13, 70, y, color.RGBA{150, 150, 150, 255})
-```
+**Resolution:** README.md was updated to match the implementation (level 20).
 
 ---
 
@@ -192,6 +164,7 @@ func (m *Manager) GetTalentTree(classID ClassID) (*TalentTree, error) {
 
 ### Gap #4: Default Max Players Inconsistency (4 in README example vs 8 default)
 **Severity: Minor**
+**Status: ✅ FIXED** - Updated README.md example to show `-max-players 8`
 
 **Documentation Reference:** 
 > "```bash
@@ -201,42 +174,18 @@ func (m *Manager) GetTalentTree(classID ClassID) (*TalentTree, error) {
 
 **Implementation Location:** `cmd/server/main.go:34`
 
-**Expected Behavior:** The README example suggests 4 as a typical max-players value.
-
-**Actual Implementation:** Default max-players is 8, not 4.
-
-**Gap Details:** The README shows `-max-players 4` in the example, but the actual default is 8. This is not a functional issue, just a documentation example that doesn't match the default behavior. The hostplay package correctly uses 4 as its default (for localhost servers), creating an inconsistency between dedicated server mode and host-and-play mode.
-
-**Reproduction:**
-```bash
-# Run server without specifying max-players
-./venture-server -port 8080
-# Server logs will show maxPlayers: 8, not 4
-```
-
-**Production Impact:** None functionally. Users who run the server without flags will get 8 player capacity instead of 4. The example in README appears to be intentionally conservative.
-
-**Evidence:**
-```go
-// cmd/server/main.go:34
-maxPlayers = flag.Int("max-players", 8, "Maximum number of players")
-
-// pkg/hostplay/server_manager.go:98-99 (for comparison)
-if config.MaxPlayers == 0 {
-    config.MaxPlayers = 4
-}
-```
+**Resolution:** README.md example was updated to show `-max-players 8` to match the default.
 
 ---
 
 ## Summary of Recommended Actions
 
-| Gap # | Issue | Recommended Fix |
-|-------|-------|-----------------|
-| 1 | 8-frame vs 4-frame animations | Update animation implementations to use 8 frames, OR update README to reflect 4-frame reality |
-| 2 | Prestige level 30 vs 20 | Update README line 162 from "level 30" to "level 20" |
-| 3 | Incomplete talent trees | Add talent trees for remaining 11 classes, OR add note that only 4 classes have full talent trees |
-| 4 | Max players example | Consider updating README example to show default value of 8, or add note about defaults |
+| Gap # | Issue | Status | Action |
+|-------|-------|--------|--------|
+| 1 | 8-frame vs 4-frame animations | **TODO** | Update animation implementations to use 8 frames, OR update README to reflect 4-frame reality |
+| 2 | Prestige level 30 vs 20 | ✅ **FIXED** | README updated to show "level 20" |
+| 3 | Incomplete talent trees | **TODO** | Add talent trees for remaining 11 classes, OR add note that only 4 classes have full talent trees |
+| 4 | Max players example | ✅ **FIXED** | README updated to show `-max-players 8` |
 
 ## Verification Commands
 

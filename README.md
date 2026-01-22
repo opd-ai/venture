@@ -159,7 +159,7 @@ go build -o venture-server ./cmd/server
 **Gameplay Systems:**
 - **Crafting (R key)**: Brew potions, enchant equipment, and create magic items from gathered materials
 - **Commerce (F key)**: Trade with merchants, sell loot, and purchase equipment in settlements
-- **Skills & Progression**: Unlock abilities, multi-class at level 20, prestige classes at level 30, talent trees
+- **Skills & Progression**: Unlock abilities, multi-class at level 20, prestige classes at level 20, talent trees
 
 ### 3. Multiplayer
 
@@ -186,7 +186,7 @@ go build -o venture-server ./cmd/server
 #### Dedicated Server (Advanced)
 ```bash
 # Start a dedicated server (no graphics, 24/7 hosting)
-./venture-server -port 8080 -max-players 4
+./venture-server -port 8080 -max-players 8
 
 # Connect clients
 ./venture-client --multiplayer --server <server-address>:8080

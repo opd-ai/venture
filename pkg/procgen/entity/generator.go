@@ -143,36 +143,50 @@ func (g *EntityGenerator) generateName(template EntityTemplate, rng *rand.Rand) 
 
 // determineRarity calculates the rarity based on type and depth.
 func (g *EntityGenerator) determineRarity(entityType EntityType, depth int, rng *rand.Rand) Rarity {
-	// Bosses are always at least rare
 	if entityType == TypeBoss {
-		rarityRoll := rng.Float64()
-		if rarityRoll < 0.5 {
-			return RarityRare
-		} else if rarityRoll < 0.85 {
-			return RarityEpic
-		}
-		return RarityLegendary
+		return determineBossRarity(rng)
 	}
-
-	// Minions are mostly common
 	if entityType == TypeMinion {
-		if rng.Float64() < 0.9 {
-			return RarityCommon
-		}
+		return determineMinionRarity(rng)
+	}
+	return determineDepthBasedRarity(depth, rng)
+}
+
+// determineBossRarity returns rarity for boss entities (always rare or better).
+func determineBossRarity(rng *rand.Rand) Rarity {
+	roll := rng.Float64()
+	if roll < 0.5 {
+		return RarityRare
+	}
+	if roll < 0.85 {
+		return RarityEpic
+	}
+	return RarityLegendary
+}
+
+// determineMinionRarity returns rarity for minion entities (mostly common).
+func determineMinionRarity(rng *rand.Rand) Rarity {
+	if rng.Float64() < 0.9 {
+		return RarityCommon
+	}
+	return RarityUncommon
+}
+
+// determineDepthBasedRarity calculates rarity for regular entities with depth scaling.
+func determineDepthBasedRarity(depth int, rng *rand.Rand) Rarity {
+	roll := rng.Float64()
+	depthBonus := float64(depth) * 0.02
+
+	if roll < 0.6-depthBonus {
+		return RarityCommon
+	}
+	if roll < 0.85-depthBonus {
 		return RarityUncommon
 	}
-
-	// Regular monsters and NPCs - rarity increases with depth
-	rarityRoll := rng.Float64()
-	depthBonus := float64(depth) * 0.02 // 2% per depth level
-
-	if rarityRoll < 0.6-depthBonus {
-		return RarityCommon
-	} else if rarityRoll < 0.85-depthBonus {
-		return RarityUncommon
-	} else if rarityRoll < 0.95-depthBonus {
+	if roll < 0.95-depthBonus {
 		return RarityRare
-	} else if rarityRoll < 0.99-depthBonus {
+	}
+	if roll < 0.99-depthBonus {
 		return RarityEpic
 	}
 	return RarityLegendary

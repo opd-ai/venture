@@ -236,44 +236,77 @@ func (tb *TooltipBuilder) Build() *Tooltip {
 // FormatTooltip generates a formatted tooltip string
 func FormatTooltip(t *Tooltip) string {
 	result := fmt.Sprintf("=== %s ===\n", t.Title)
-
-	if t.Rarity != "" {
-		result += fmt.Sprintf("Rarity: %s\n", t.Rarity)
-	}
-
-	if len(t.Description) > 0 {
-		result += "\n"
-		for _, desc := range t.Description {
-			result += fmt.Sprintf("%s\n", desc)
-		}
-	}
-
-	if len(t.Stats) > 0 {
-		result += "\nStats:\n"
-		for name, value := range t.Stats {
-			result += fmt.Sprintf("  %s: %v\n", name, value)
-		}
-	}
-
-	if len(t.Bonuses) > 0 {
-		result += "\nBonuses:\n"
-		for _, bonus := range t.Bonuses {
-			result += fmt.Sprintf("  + %s\n", bonus)
-		}
-	}
-
-	if len(t.Requirements) > 0 {
-		result += "\nRequirements:\n"
-		for _, req := range t.Requirements {
-			result += fmt.Sprintf("  - %s\n", req)
-		}
-	}
-
-	if t.Cost > 0 {
-		result += fmt.Sprintf("\nCost: %d gold\n", t.Cost)
-	}
-
+	result += formatRarity(t)
+	result += formatDescription(t)
+	result += formatStats(t)
+	result += formatBonuses(t)
+	result += formatRequirements(t)
+	result += formatCost(t)
 	return result
+}
+
+// formatRarity appends rarity information to tooltip string.
+func formatRarity(t *Tooltip) string {
+	if t.Rarity != "" {
+		return fmt.Sprintf("Rarity: %s\n", t.Rarity)
+	}
+	return ""
+}
+
+// formatDescription appends description lines to tooltip string.
+func formatDescription(t *Tooltip) string {
+	if len(t.Description) == 0 {
+		return ""
+	}
+	result := "\n"
+	for _, desc := range t.Description {
+		result += fmt.Sprintf("%s\n", desc)
+	}
+	return result
+}
+
+// formatStats appends stat information to tooltip string.
+func formatStats(t *Tooltip) string {
+	if len(t.Stats) == 0 {
+		return ""
+	}
+	result := "\nStats:\n"
+	for name, value := range t.Stats {
+		result += fmt.Sprintf("  %s: %v\n", name, value)
+	}
+	return result
+}
+
+// formatBonuses appends bonus information to tooltip string.
+func formatBonuses(t *Tooltip) string {
+	if len(t.Bonuses) == 0 {
+		return ""
+	}
+	result := "\nBonuses:\n"
+	for _, bonus := range t.Bonuses {
+		result += fmt.Sprintf("  + %s\n", bonus)
+	}
+	return result
+}
+
+// formatRequirements appends requirements to tooltip string.
+func formatRequirements(t *Tooltip) string {
+	if len(t.Requirements) == 0 {
+		return ""
+	}
+	result := "\nRequirements:\n"
+	for _, req := range t.Requirements {
+		result += fmt.Sprintf("  - %s\n", req)
+	}
+	return result
+}
+
+// formatCost appends cost information to tooltip string.
+func formatCost(t *Tooltip) string {
+	if t.Cost > 0 {
+		return fmt.Sprintf("\nCost: %d gold\n", t.Cost)
+	}
+	return ""
 }
 
 // CreateItemTooltip creates a tooltip for an item with integration bonuses

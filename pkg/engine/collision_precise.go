@@ -210,82 +210,92 @@ func (p *PreciseColliderComponent) IntersectsCircle(x1, y1 float64, other *Preci
 // IntersectsRoundedRect checks intersection with rounded rectangle.
 // Uses hybrid approach: AABB for core, circles for corners.
 func (p *PreciseColliderComponent) IntersectsRoundedRect(x1, y1 float64, other *PreciseColliderComponent, x2, y2 float64) bool {
-	// OPTIMIZATION: Check log level before allocating Fields map to avoid per-call allocations
 	debugEnabled := collisionLog.GetLevel() >= logrus.DebugLevel
-	if debugEnabled {
-		collisionLog.WithFields(logrus.Fields{
-			"operation":      "intersects_rounded_rect",
-			"component_type": "precise_collider",
-			"pos1_x":         x1,
-			"pos1_y":         y1,
-			"pos2_x":         x2,
-			"pos2_y":         y2,
-			"corner_radius1": p.CornerRadius,
-			"corner_radius2": other.CornerRadius,
-		}).Debug("Checking rounded rectangle intersection")
-	}
+	logIntersectionStart(debugEnabled, x1, y1, x2, y2, p.CornerRadius, other.CornerRadius)
 
-	// First check core AABB (excluding corner radius)
-	coreMinX1 := x1 + p.OffsetX + p.CornerRadius
-	coreMinY1 := y1 + p.OffsetY + p.CornerRadius
-	coreMaxX1 := x1 + p.OffsetX + p.Width - p.CornerRadius
-	coreMaxY1 := y1 + p.OffsetY + p.Height - p.CornerRadius
+	coreMin1, coreMax1 := computeCoreBounds(x1, y1, p.OffsetX, p.OffsetY, p.Width, p.Height, p.CornerRadius)
+	coreMin2, coreMax2 := computeCoreBounds(x2, y2, other.OffsetX, other.OffsetY, other.Width, other.Height, other.CornerRadius)
 
-	coreMinX2 := x2 + other.OffsetX + other.CornerRadius
-	coreMinY2 := y2 + other.OffsetY + other.CornerRadius
-	coreMaxX2 := x2 + other.OffsetX + other.Width - other.CornerRadius
-	coreMaxY2 := y2 + other.OffsetY + other.Height - other.CornerRadius
-
-	epsilon := CollisionPrecision / 2.0
-
-	// Check if AABBs overlap
-	if !(coreMaxX1 <= coreMinX2+epsilon ||
-		coreMaxX2 <= coreMinX1+epsilon ||
-		coreMaxY1 <= coreMinY2+epsilon ||
-		coreMaxY2 <= coreMinY1+epsilon) {
-		if debugEnabled {
-			collisionLog.WithFields(logrus.Fields{
-				"result": true,
-				"reason": "core_aabb_overlap",
-			}).Debug("Rounded rectangle intersection: AABB cores overlap")
-		}
+	if checkCoreAABBOverlap(coreMin1, coreMax1, coreMin2, coreMax2, debugEnabled) {
 		return true
 	}
 
-	// Check corner circles if AABBs don't overlap
+	return checkCornerCircleCollision(p, x1, y1, other, x2, y2, debugEnabled)
+}
+
+// logIntersectionStart logs the start of rounded rectangle intersection check.
+func logIntersectionStart(debugEnabled bool, x1, y1, x2, y2, radius1, radius2 float64) {
+	if debugEnabled {
+		collisionLog.WithFields(logrus.Fields{
+			"operation": "intersects_rounded_rect", "component_type": "precise_collider",
+			"pos1_x": x1, "pos1_y": y1, "pos2_x": x2, "pos2_y": y2,
+			"corner_radius1": radius1, "corner_radius2": radius2,
+		}).Debug("Checking rounded rectangle intersection")
+	}
+}
+
+// computeCoreBounds calculates the core AABB bounds excluding corner radius.
+func computeCoreBounds(x, y, offsetX, offsetY, width, height, cornerRadius float64) ([2]float64, [2]float64) {
+	minX := x + offsetX + cornerRadius
+	minY := y + offsetY + cornerRadius
+	maxX := x + offsetX + width - cornerRadius
+	maxY := y + offsetY + height - cornerRadius
+	return [2]float64{minX, minY}, [2]float64{maxX, maxY}
+}
+
+// checkCoreAABBOverlap checks if core AABBs of two rounded rectangles overlap.
+func checkCoreAABBOverlap(min1, max1, min2, max2 [2]float64, debugEnabled bool) bool {
+	epsilon := CollisionPrecision / 2.0
+	overlaps := !(max1[0] <= min2[0]+epsilon || max2[0] <= min1[0]+epsilon ||
+		max1[1] <= min2[1]+epsilon || max2[1] <= min1[1]+epsilon)
+
+	if overlaps && debugEnabled {
+		collisionLog.WithFields(logrus.Fields{"result": true, "reason": "core_aabb_overlap"}).
+			Debug("Rounded rectangle intersection: AABB cores overlap")
+	}
+	return overlaps
+}
+
+// checkCornerCircleCollision checks if corner circles of two rounded rectangles collide.
+func checkCornerCircleCollision(p *PreciseColliderComponent, x1, y1 float64, other *PreciseColliderComponent, x2, y2 float64, debugEnabled bool) bool {
 	if debugEnabled {
 		collisionLog.Debug("Checking corner circles for rounded rectangle intersection")
 	}
+
 	corners1 := p.getCornerPositions(x1, y1)
 	corners2 := other.getCornerPositions(x2, y2)
+	radiusSum := p.CornerRadius + other.CornerRadius
 
 	for i, c1 := range corners1 {
 		for j, c2 := range corners2 {
-			dx := c2[0] - c1[0]
-			dy := c2[1] - c1[1]
-			distSq := dx*dx + dy*dy
-			radiusSum := p.CornerRadius + other.CornerRadius
-			if distSq <= radiusSum*radiusSum+CollisionPrecision {
-				if debugEnabled {
-					collisionLog.WithFields(logrus.Fields{
-						"result":      true,
-						"reason":      "corner_collision",
-						"corner1_idx": i,
-						"corner2_idx": j,
-						"distance_sq": distSq,
-					}).Debug("Rounded rectangle intersection: corners collide")
-				}
+			if circlesIntersect(c1, c2, radiusSum, debugEnabled, i, j) {
 				return true
 			}
 		}
 	}
 
 	if debugEnabled {
-		collisionLog.WithFields(logrus.Fields{
-			"result": false,
-		}).Debug("Rounded rectangle intersection check completed: no collision")
+		collisionLog.WithFields(logrus.Fields{"result": false}).
+			Debug("Rounded rectangle intersection check completed: no collision")
 	}
+	return false
+}
 
+// circlesIntersect checks if two circles intersect based on distance.
+func circlesIntersect(c1, c2 [2]float64, radiusSum float64, debugEnabled bool, i, j int) bool {
+	dx := c2[0] - c1[0]
+	dy := c2[1] - c1[1]
+	distSq := dx*dx + dy*dy
+
+	if distSq <= radiusSum*radiusSum+CollisionPrecision {
+		if debugEnabled {
+			collisionLog.WithFields(logrus.Fields{
+				"result": true, "reason": "corner_collision",
+				"corner1_idx": i, "corner2_idx": j, "distance_sq": distSq,
+			}).Debug("Rounded rectangle intersection: corners collide")
+		}
+		return true
+	}
 	return false
 }
 

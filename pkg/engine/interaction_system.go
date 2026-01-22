@@ -608,51 +608,77 @@ func (s *InteractionSystem) handleReadAction(player, entity *Entity) {
 // INTEGRATION FIX [Category F] Gap F3: Bookshelf Key Requirement
 // Locked bookshelves now require the player to have the correct key item in their inventory.
 func (s *InteractionSystem) handleBookshelfRead(player, bookshelfEntity *Entity, bookshelf *BookshelfComponent) {
-	// Check if bookshelf is locked
-	if bookshelf.IsLocked {
-		// Check if bookshelf requires a key
-		if bookshelf.RequiresKey && bookshelf.KeyItemID != "" {
-			// Check if player has the required key
-			if !s.playerHasItemByID(player, bookshelf.KeyItemID) {
-				if s.logger != nil {
-					s.logger.WithFields(logrus.Fields{
-						"bookshelfID": bookshelfEntity.ID,
-						"playerID":    player.ID,
-						"requiredKey": bookshelf.KeyItemID,
-					}).Info("player attempted to access locked bookshelf without key")
-				}
-				// Player doesn't have the key - bookshelf remains locked
-				return
-			}
-
-			// Player has the key - unlock the bookshelf
-			bookshelf.IsLocked = false
-			if s.logger != nil {
-				s.logger.WithFields(logrus.Fields{
-					"bookshelfID": bookshelfEntity.ID,
-					"playerID":    player.ID,
-					"keyItemID":   bookshelf.KeyItemID,
-				}).Info("player unlocked bookshelf with key")
-			}
-		} else {
-			// Bookshelf is locked but no key is required (should not happen in normal gameplay)
-			if s.logger != nil {
-				s.logger.WithField("bookshelfID", bookshelfEntity.ID).Debug("bookshelf is locked but no key configured")
-			}
-			return
-		}
-	}
-
-	// Check if bookshelf is empty
-	if bookshelf.IsEmpty() {
-		if s.logger != nil {
-			s.logger.WithField("bookshelfID", bookshelfEntity.ID).Debug("bookshelf is empty")
-		}
+	if !s.tryUnlockBookshelf(player, bookshelfEntity, bookshelf) {
 		return
 	}
 
-	// For now, just log that the player can browse the bookshelf
-	// A full implementation would open a BookshelfUI showing available books
+	if bookshelf.IsEmpty() {
+		s.logBookshelfEmpty(bookshelfEntity)
+		return
+	}
+
+	s.logBookshelfBrowsing(player, bookshelfEntity, bookshelf)
+}
+
+// tryUnlockBookshelf attempts to unlock a locked bookshelf if player has the key.
+func (s *InteractionSystem) tryUnlockBookshelf(player, bookshelfEntity *Entity, bookshelf *BookshelfComponent) bool {
+	if !bookshelf.IsLocked {
+		return true
+	}
+
+	if !bookshelf.RequiresKey || bookshelf.KeyItemID == "" {
+		s.logBookshelfLockedNoKey(bookshelfEntity)
+		return false
+	}
+
+	if !s.playerHasItemByID(player, bookshelf.KeyItemID) {
+		s.logBookshelfAccessDenied(player, bookshelfEntity, bookshelf.KeyItemID)
+		return false
+	}
+
+	bookshelf.IsLocked = false
+	s.logBookshelfUnlocked(player, bookshelfEntity, bookshelf.KeyItemID)
+	return true
+}
+
+// logBookshelfAccessDenied logs when player tries to access locked bookshelf without key.
+func (s *InteractionSystem) logBookshelfAccessDenied(player, bookshelfEntity *Entity, keyItemID string) {
+	if s.logger != nil {
+		s.logger.WithFields(logrus.Fields{
+			"bookshelfID": bookshelfEntity.ID,
+			"playerID":    player.ID,
+			"requiredKey": keyItemID,
+		}).Info("player attempted to access locked bookshelf without key")
+	}
+}
+
+// logBookshelfUnlocked logs when player successfully unlocks a bookshelf.
+func (s *InteractionSystem) logBookshelfUnlocked(player, bookshelfEntity *Entity, keyItemID string) {
+	if s.logger != nil {
+		s.logger.WithFields(logrus.Fields{
+			"bookshelfID": bookshelfEntity.ID,
+			"playerID":    player.ID,
+			"keyItemID":   keyItemID,
+		}).Info("player unlocked bookshelf with key")
+	}
+}
+
+// logBookshelfLockedNoKey logs when bookshelf is locked but has no key configured.
+func (s *InteractionSystem) logBookshelfLockedNoKey(bookshelfEntity *Entity) {
+	if s.logger != nil {
+		s.logger.WithField("bookshelfID", bookshelfEntity.ID).Debug("bookshelf is locked but no key configured")
+	}
+}
+
+// logBookshelfEmpty logs when bookshelf is empty.
+func (s *InteractionSystem) logBookshelfEmpty(bookshelfEntity *Entity) {
+	if s.logger != nil {
+		s.logger.WithField("bookshelfID", bookshelfEntity.ID).Debug("bookshelf is empty")
+	}
+}
+
+// logBookshelfBrowsing logs when player browses bookshelf contents.
+func (s *InteractionSystem) logBookshelfBrowsing(player, bookshelfEntity *Entity, bookshelf *BookshelfComponent) {
 	if s.logger != nil {
 		s.logger.WithFields(logrus.Fields{
 			"playerID":    player.ID,

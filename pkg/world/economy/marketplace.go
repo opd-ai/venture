@@ -116,43 +116,67 @@ func (fm *FederatedMarketplace) SearchItems(query ItemQuery) ([]*Listing, error)
 	fm.mu.RLock()
 	defer fm.mu.RUnlock()
 
-	results := make([]*Listing, 0)
+	results := fm.collectMatchingListings(query)
+	validResults := filterExpiredListings(results)
+	fm.sortListings(validResults, query.SortBy)
+	return applyResultLimit(validResults, query.Limit), nil
+}
 
-	// Search local listings
+// collectMatchingListings gathers all listings matching the search query.
+func (fm *FederatedMarketplace) collectMatchingListings(query ItemQuery) []*Listing {
+	results := fm.searchLocalListings(query)
+	if fm.shouldSearchRemote(query) {
+		results = append(results, fm.searchRemoteListings(query)...)
+	}
+	return results
+}
+
+// searchLocalListings searches listings on the local server.
+func (fm *FederatedMarketplace) searchLocalListings(query ItemQuery) []*Listing {
+	var results []*Listing
 	for _, listing := range fm.localListings {
 		if fm.matchesQuery(listing, query) {
 			results = append(results, listing)
 		}
 	}
+	return results
+}
 
-	// Search remote cache (if query doesn't specify local server only)
-	if query.ServerID == "" || query.ServerID != fm.localServerID {
-		for _, remoteListings := range fm.remoteCache {
-			for _, listing := range remoteListings {
-				if fm.matchesQuery(listing, query) {
-					results = append(results, listing)
-				}
+// shouldSearchRemote determines if remote cache should be searched.
+func (fm *FederatedMarketplace) shouldSearchRemote(query ItemQuery) bool {
+	return query.ServerID == "" || query.ServerID != fm.localServerID
+}
+
+// searchRemoteListings searches cached remote listings.
+func (fm *FederatedMarketplace) searchRemoteListings(query ItemQuery) []*Listing {
+	var results []*Listing
+	for _, remoteListings := range fm.remoteCache {
+		for _, listing := range remoteListings {
+			if fm.matchesQuery(listing, query) {
+				results = append(results, listing)
 			}
 		}
 	}
+	return results
+}
 
-	// Remove expired listings
+// filterExpiredListings removes expired listings from results.
+func filterExpiredListings(listings []*Listing) []*Listing {
 	validResults := make([]*Listing, 0)
-	for _, listing := range results {
+	for _, listing := range listings {
 		if !listing.IsExpired() {
 			validResults = append(validResults, listing)
 		}
 	}
+	return validResults
+}
 
-	// Sort results
-	fm.sortListings(validResults, query.SortBy)
-
-	// Apply limit
-	if query.Limit > 0 && len(validResults) > query.Limit {
-		validResults = validResults[:query.Limit]
+// applyResultLimit limits the number of results returned.
+func applyResultLimit(listings []*Listing, limit int) []*Listing {
+	if limit > 0 && len(listings) > limit {
+		return listings[:limit]
 	}
-
-	return validResults, nil
+	return listings
 }
 
 // matchesQuery checks if a listing matches the search query.

@@ -215,57 +215,76 @@ func (m *MobileMenu) Draw(screen *ebiten.Image) {
 		return
 	}
 
-	// Draw background
-	vector.DrawFilledRect(screen, float32(m.X), float32(m.Y), float32(m.Width), float32(m.Height), m.BackgroundColor, true)
+	m.drawBackground(screen)
+	m.drawMenuItems(screen)
+}
 
-	// Draw menu items
+// drawBackground renders the menu background.
+func (m *MobileMenu) drawBackground(screen *ebiten.Image) {
+	vector.DrawFilledRect(screen, float32(m.X), float32(m.Y), float32(m.Width), float32(m.Height), m.BackgroundColor, true)
+}
+
+// drawMenuItems renders all visible menu items.
+func (m *MobileMenu) drawMenuItems(screen *ebiten.Image) {
 	itemHeight := m.Height / float64(len(m.Items))
 	for i, item := range m.Items {
 		itemY := m.Y + float64(i)*itemHeight + m.scrollOffset
-
-		// Skip items outside visible area
-		if itemY+itemHeight < m.Y || itemY > m.Y+m.Height {
+		if !m.isItemVisible(itemY, itemHeight) {
 			continue
 		}
-
-		itemColor := m.ItemColor
-		if i == m.SelectedIndex {
-			itemColor = m.SelectedColor
-		} else if i == m.pressedItemIndex {
-			// Platform parity fix: Show pressed state for active touch (hover alternative)
-			itemColor = color.RGBA{80, 120, 200, 255}
-		} else if i == m.longPressItem {
-			// Platform parity fix: Show long-press active state for context menu
-			itemColor = color.RGBA{150, 100, 200, 255}
-		}
-		if !item.Enabled {
-			itemColor = color.RGBA{30, 30, 40, 255}
-		}
-
-		// Draw item background
-		vector.DrawFilledRect(screen, float32(m.X+5), float32(itemY+2), float32(m.Width-10), float32(itemHeight-4), itemColor, true)
-
-		// Draw item text
-		if item.Label != "" {
-			textColor := color.RGBA{255, 255, 255, 255}
-			if !item.Enabled {
-				textColor = color.RGBA{100, 100, 100, 255}
-			}
-
-			// Calculate text position (left-aligned with padding)
-			textX := int(m.X) + 15
-			textY := int(itemY+itemHeight/2) + 6 // Center vertically
-
-			// Draw the text
-			d := &font.Drawer{
-				Dst:  screen,
-				Src:  &image.Uniform{textColor},
-				Face: basicfont.Face7x13,
-				Dot:  fixed.P(textX, textY),
-			}
-			d.DrawString(item.Label)
-		}
+		m.drawMenuItem(screen, i, item, itemY, itemHeight)
 	}
+}
+
+// isItemVisible checks if menu item is within visible area.
+func (m *MobileMenu) isItemVisible(itemY, itemHeight float64) bool {
+	return !(itemY+itemHeight < m.Y || itemY > m.Y+m.Height)
+}
+
+// drawMenuItem renders a single menu item with background and text.
+func (m *MobileMenu) drawMenuItem(screen *ebiten.Image, index int, item MenuItem, itemY, itemHeight float64) {
+	itemColor := m.getItemColor(index, item)
+	vector.DrawFilledRect(screen, float32(m.X+5), float32(itemY+2), float32(m.Width-10), float32(itemHeight-4), itemColor, true)
+
+	if item.Label != "" {
+		m.drawItemText(screen, item, itemY, itemHeight)
+	}
+}
+
+// getItemColor determines the color for a menu item based on its state.
+func (m *MobileMenu) getItemColor(index int, item MenuItem) color.Color {
+	if !item.Enabled {
+		return color.RGBA{30, 30, 40, 255}
+	}
+	if index == m.SelectedIndex {
+		return m.SelectedColor
+	}
+	if index == m.pressedItemIndex {
+		return color.RGBA{80, 120, 200, 255}
+	}
+	if index == m.longPressItem {
+		return color.RGBA{150, 100, 200, 255}
+	}
+	return m.ItemColor
+}
+
+// drawItemText renders the text label for a menu item.
+func (m *MobileMenu) drawItemText(screen *ebiten.Image, item MenuItem, itemY, itemHeight float64) {
+	textColor := color.RGBA{255, 255, 255, 255}
+	if !item.Enabled {
+		textColor = color.RGBA{100, 100, 100, 255}
+	}
+
+	textX := int(m.X) + 15
+	textY := int(itemY+itemHeight/2) + 6
+
+	d := &font.Drawer{
+		Dst:  screen,
+		Src:  &image.Uniform{textColor},
+		Face: basicfont.Face7x13,
+		Dot:  fixed.P(textX, textY),
+	}
+	d.DrawString(item.Label)
 }
 
 // Show displays the menu.

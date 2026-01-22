@@ -304,39 +304,64 @@ func (s *PvPRatingSystem) GetPlayerRank(entity *Entity) string {
 
 // GetLeaderboard returns the top N players sorted by rating.
 func (s *PvPRatingSystem) GetLeaderboard(entities []*Entity, limit int) []*Entity {
+	rankedEntities := collectRankedEntities(entities)
+	sortEntitiesByRating(rankedEntities)
+	return applyLeaderboardLimit(rankedEntities, limit)
+}
+
+// collectRankedEntities gathers all entities with completed placement ratings.
+func collectRankedEntities(entities []*Entity) []*Entity {
 	var rankedEntities []*Entity
-
 	for _, entity := range entities {
-		if entity.HasComponent("pvp_rating") {
-			comp, ok := entity.GetComponent("pvp_rating")
-			if !ok {
-				continue
-			}
-			if rating, ok := comp.(*PvPRatingComponent); ok {
-				if rating.IsPlacementComplete() {
-					rankedEntities = append(rankedEntities, entity)
-				}
-			}
+		if rating := getPlacedRatingComponent(entity); rating != nil {
+			rankedEntities = append(rankedEntities, entity)
 		}
-	}
-
-	// Sort by rating descending
-	for i := 0; i < len(rankedEntities)-1; i++ {
-		for j := i + 1; j < len(rankedEntities); j++ {
-			compI, _ := rankedEntities[i].GetComponent("pvp_rating")
-			compJ, _ := rankedEntities[j].GetComponent("pvp_rating")
-			ratingI := compI.(*PvPRatingComponent)
-			ratingJ := compJ.(*PvPRatingComponent)
-			if ratingJ.Rating > ratingI.Rating {
-				rankedEntities[i], rankedEntities[j] = rankedEntities[j], rankedEntities[i]
-			}
-		}
-	}
-
-	if limit > 0 && limit < len(rankedEntities) {
-		return rankedEntities[:limit]
 	}
 	return rankedEntities
+}
+
+// getPlacedRatingComponent retrieves PvP rating component if placement is complete.
+func getPlacedRatingComponent(entity *Entity) *PvPRatingComponent {
+	if !entity.HasComponent("pvp_rating") {
+		return nil
+	}
+	comp, ok := entity.GetComponent("pvp_rating")
+	if !ok {
+		return nil
+	}
+	rating, ok := comp.(*PvPRatingComponent)
+	if !ok || !rating.IsPlacementComplete() {
+		return nil
+	}
+	return rating
+}
+
+// sortEntitiesByRating sorts entities by PvP rating in descending order.
+func sortEntitiesByRating(entities []*Entity) {
+	for i := 0; i < len(entities)-1; i++ {
+		for j := i + 1; j < len(entities); j++ {
+			if shouldSwapEntities(entities[i], entities[j]) {
+				entities[i], entities[j] = entities[j], entities[i]
+			}
+		}
+	}
+}
+
+// shouldSwapEntities checks if two entities should be swapped based on rating.
+func shouldSwapEntities(entityI, entityJ *Entity) bool {
+	compI, _ := entityI.GetComponent("pvp_rating")
+	compJ, _ := entityJ.GetComponent("pvp_rating")
+	ratingI := compI.(*PvPRatingComponent)
+	ratingJ := compJ.(*PvPRatingComponent)
+	return ratingJ.Rating > ratingI.Rating
+}
+
+// applyLeaderboardLimit returns limited leaderboard results if limit is specified.
+func applyLeaderboardLimit(entities []*Entity, limit int) []*Entity {
+	if limit > 0 && limit < len(entities) {
+		return entities[:limit]
+	}
+	return entities
 }
 
 // ErrMissingComponent indicates a required component is missing.

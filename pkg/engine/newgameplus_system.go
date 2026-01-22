@@ -64,38 +64,33 @@ func (s *NewGamePlusSystem) Update(entities []*Entity, deltaTime float64) {
 // checkMilestoneUnlocks checks if the player has reached any milestones
 // that unlock permanent bonuses.
 func (s *NewGamePlusSystem) checkMilestoneUnlocks(entity *Entity, ngp *NewGamePlusComponent) {
-	// Milestone: First NG+ completion
-	if ngp.Cycle >= 1 && !ngp.HasBonus("ng_veteran") {
-		if ngp.UnlockBonus("ng_veteran") {
-			s.notifyBonusUnlock("ng_veteran")
-		}
-	}
+	s.checkCycleMilestones(ngp)
+	s.checkPlaytimeMilestone(ngp)
+	s.checkStatMilestones(ngp)
+}
 
-	// Milestone: NG+5 - Seasoned Adventurer
-	if ngp.Cycle >= 5 && !ngp.HasBonus("seasoned_adventurer") {
-		if ngp.UnlockBonus("seasoned_adventurer") {
-			s.notifyBonusUnlock("seasoned_adventurer")
-		}
-	}
+// checkCycleMilestones checks cycle-based milestone unlocks for NG+ bonuses.
+func (s *NewGamePlusSystem) checkCycleMilestones(ngp *NewGamePlusComponent) {
+	s.tryUnlockBonus(ngp, "ng_veteran", ngp.Cycle >= 1)
+	s.tryUnlockBonus(ngp, "seasoned_adventurer", ngp.Cycle >= 5)
+	s.tryUnlockBonus(ngp, "legend_reborn", ngp.Cycle >= 10)
+}
 
-	// Milestone: NG+10 - Legend Reborn
-	if ngp.Cycle >= 10 && !ngp.HasBonus("legend_reborn") {
-		if ngp.UnlockBonus("legend_reborn") {
-			s.notifyBonusUnlock("legend_reborn")
-		}
-	}
+// checkPlaytimeMilestone checks playtime-based milestone unlocks for NG+ bonuses.
+func (s *NewGamePlusSystem) checkPlaytimeMilestone(ngp *NewGamePlusComponent) {
+	s.tryUnlockBonus(ngp, "dedicated_player", ngp.TotalPlaytime >= 360000)
+}
 
-	// Milestone: 100 hours total playtime
-	if ngp.TotalPlaytime >= 360000 && !ngp.HasBonus("dedicated_player") {
-		if ngp.UnlockBonus("dedicated_player") {
-			s.notifyBonusUnlock("dedicated_player")
-		}
-	}
+// checkStatMilestones checks stat-based milestone unlocks for NG+ bonuses.
+func (s *NewGamePlusSystem) checkStatMilestones(ngp *NewGamePlusComponent) {
+	s.tryUnlockBonus(ngp, "master_slayer", ngp.GetLegacyStat("enemies_killed") >= 10000)
+}
 
-	// Milestone: 10,000 enemies killed across all playthroughs
-	if ngp.GetLegacyStat("enemies_killed") >= 10000 && !ngp.HasBonus("master_slayer") {
-		if ngp.UnlockBonus("master_slayer") {
-			s.notifyBonusUnlock("master_slayer")
+// tryUnlockBonus attempts to unlock a bonus if the condition is met and bonus is not already unlocked.
+func (s *NewGamePlusSystem) tryUnlockBonus(ngp *NewGamePlusComponent, bonusID string, conditionMet bool) {
+	if conditionMet && !ngp.HasBonus(bonusID) {
+		if ngp.UnlockBonus(bonusID) {
+			s.notifyBonusUnlock(bonusID)
 		}
 	}
 }

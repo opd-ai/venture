@@ -563,49 +563,63 @@ func (g *Generator) generateRoof(buildingType BuildingType, style ArchitecturalS
 
 // placeWindows adds windows to exterior walls
 func (g *Generator) placeWindows(building *Building, rng *rand.Rand) {
-	windowCount := (building.Width + building.Height) / 4
-	if windowCount > 20 {
-		windowCount = 20
-	}
+	windowCount := calculateWindowCount(building)
 
 	for i := 0; i < windowCount; i++ {
-		// Random exterior wall position
-		var x, y int
-		if rng.Intn(2) == 0 {
-			// Horizontal wall
-			x = rng.Intn(building.Width)
-			if rng.Intn(2) == 0 {
-				y = 0 // Top wall
-			} else {
-				y = building.Height - 1 // Bottom wall
-			}
-		} else {
-			// Vertical wall
-			y = rng.Intn(building.Height)
-			if rng.Intn(2) == 0 {
-				x = 0 // Left wall
-			} else {
-				x = building.Width - 1 // Right wall
-			}
-		}
-
-		// Determine window type based on genre and style
-		windowType := WindowSmall
-		if building.Style == StyleGothic || building.Style == StyleMansion {
-			windowType = WindowStained
-		} else if building.Style == StyleDecayed || building.Style == StyleRuins {
-			if rng.Float64() < 0.3 {
-				windowType = WindowBroken
-			}
-		} else if rng.Float64() < 0.3 {
-			windowType = WindowLarge
-		}
-
-		window := Window{
-			X:    x,
-			Y:    y,
-			Type: windowType,
-		}
-		building.Windows = append(building.Windows, window)
+		x, y := selectWallPosition(building, rng)
+		windowType := determineWindowType(building, rng)
+		building.Windows = append(building.Windows, Window{X: x, Y: y, Type: windowType})
 	}
+}
+
+// calculateWindowCount determines appropriate number of windows for building.
+func calculateWindowCount(building *Building) int {
+	count := (building.Width + building.Height) / 4
+	if count > 20 {
+		return 20
+	}
+	return count
+}
+
+// selectWallPosition selects a random position on an exterior wall.
+func selectWallPosition(building *Building, rng *rand.Rand) (int, int) {
+	if rng.Intn(2) == 0 {
+		return selectHorizontalWallPosition(building, rng)
+	}
+	return selectVerticalWallPosition(building, rng)
+}
+
+// selectHorizontalWallPosition picks a position on top or bottom wall.
+func selectHorizontalWallPosition(building *Building, rng *rand.Rand) (int, int) {
+	x := rng.Intn(building.Width)
+	y := 0
+	if rng.Intn(2) == 1 {
+		y = building.Height - 1
+	}
+	return x, y
+}
+
+// selectVerticalWallPosition picks a position on left or right wall.
+func selectVerticalWallPosition(building *Building, rng *rand.Rand) (int, int) {
+	y := rng.Intn(building.Height)
+	x := 0
+	if rng.Intn(2) == 1 {
+		x = building.Width - 1
+	}
+	return x, y
+}
+
+// determineWindowType selects window type based on building style and genre.
+func determineWindowType(building *Building, rng *rand.Rand) WindowType {
+	if building.Style == StyleGothic || building.Style == StyleMansion {
+		return WindowStained
+	}
+	if building.Style == StyleDecayed || building.Style == StyleRuins {
+		if rng.Float64() < 0.3 {
+			return WindowBroken
+		}
+	} else if rng.Float64() < 0.3 {
+		return WindowLarge
+	}
+	return WindowSmall
 }

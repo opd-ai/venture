@@ -67,11 +67,8 @@ var (
 	// Version flag
 	showVersion = flag.Bool("version", false, "Print version information and exit")
 
-	// V9.0 integration managers for server-authoritative validation
-	// These are initialized in createGameWorld() and used by systems for validation
-	v9StationManager      interface{}
-	v9PetHomeManager      interface{}
-	v9GuildHousingManager interface{}
+	// Version flag
+	// (moved to this block for consistency)
 )
 
 func main() {
@@ -354,9 +351,10 @@ func createGameWorld(logger *logrus.Logger) *engine.World {
 
 	// INTEGRATION FIX [Category A]: V9.0 Server Integration Manager Initialization
 	// Gap: V9.0 integration managers were client-only, allowing XP/loyalty/permission exploits
-	// Fix: Added V9.0 manager initialization for server-authoritative validation
+	// Fix: Added V9.0 manager initialization and V9ValidationService for server-authoritative validation
 	// Roadmap: ROADMAP_V9.md (Phase 55.1-55.3)
-	v9StationManager, v9PetHomeManager, v9GuildHousingManager = initializeV9SystemsServer(logger)
+	stationMgr, petHomeMgr, guildHousingMgr := initializeV9SystemsServer(logger)
+	v9ValidationService = NewV9ValidationService(stationMgr, petHomeMgr, guildHousingMgr, logger)
 
 	if logger.GetLevel() >= logrus.DebugLevel {
 		worldLogger.Debug("game systems initialized")

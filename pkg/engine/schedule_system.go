@@ -51,7 +51,7 @@ func (s *ScheduleSystem) updateScheduledEntity(entity *Entity, currentHour int, 
 		return
 	}
 
-	distance := calculateDistance(activity.LocationX, activity.LocationY, pos.X, pos.Y)
+	distance := scheduleCalculateDistance(activity.LocationX, activity.LocationY, pos.X, pos.Y)
 
 	if s.handleArrival(entity, schedule, distance) {
 		return
@@ -61,7 +61,7 @@ func (s *ScheduleSystem) updateScheduledEntity(entity *Entity, currentHour int, 
 }
 
 // getScheduleComponents retrieves and validates schedule, activity, and position components.
-func (s *ScheduleSystem) getScheduleComponents(entity *Entity, currentHour int) (*ScheduleComponent, *Activity, *PositionComponent) {
+func (s *ScheduleSystem) getScheduleComponents(entity *Entity, currentHour int) (*ScheduleComponent, *ScheduledActivity, *PositionComponent) {
 	if !entity.HasComponent("schedule") {
 		return nil, nil, nil
 	}
@@ -87,8 +87,8 @@ func (s *ScheduleSystem) getScheduleComponents(entity *Entity, currentHour int) 
 	return schedule, activity, pos
 }
 
-// calculateDistance computes the Euclidean distance between two points.
-func calculateDistance(x1, y1, x2, y2 float64) float64 {
+// scheduleCalculateDistance computes the Euclidean distance between two points.
+func scheduleCalculateDistance(x1, y1, x2, y2 float64) float64 {
 	dx := x1 - x2
 	dy := y1 - y2
 	return math.Sqrt(dx*dx + dy*dy)
@@ -110,7 +110,7 @@ func (s *ScheduleSystem) handleArrival(entity *Entity, schedule *ScheduleCompone
 }
 
 // moveTowardsActivity moves the entity toward its scheduled activity location.
-func (s *ScheduleSystem) moveTowardsActivity(entity *Entity, schedule *ScheduleComponent, activity *Activity, pos *PositionComponent, distance, deltaTime float64, currentHour int) {
+func (s *ScheduleSystem) moveTowardsActivity(entity *Entity, schedule *ScheduleComponent, activity *ScheduledActivity, pos *PositionComponent, distance, deltaTime float64, currentHour int) {
 	schedule.IsMoving = true
 	moveDistance := schedule.MovementSpeed * deltaTime
 	if moveDistance > distance {

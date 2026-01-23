@@ -346,4 +346,3 @@ func TestTerrainDeformationComponent_GetVisibleTracks_BufferReuse(t *testing.T) 
 		t.Errorf("fourth call: expected 0 visible tracks, got %d", len(visible4))
 	}
 }
-

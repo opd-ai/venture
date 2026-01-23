@@ -8,11 +8,11 @@ Updated: 2026-01-22 (Test coverage improved from 84.7% to 92.7%)
 - Interface Violations: 0
 - Untested Code: 0 ✅ (was 9, all coverage gaps fixed)
 - Dead Code: 0
-- Error Handling Gaps: 1
+- Error Handling Gaps: 0 ✅ (was 1, resolved via documentation)
 - Documentation Gaps: 0
 - Dependency Issues: 0
 
-**Total Gaps Found: 1** (was 10)
+**Total Gaps Found: 0** ✅ (was 10, all resolved)
 
 ## Test Coverage Improvements (2026-01-22)
 
@@ -112,22 +112,37 @@ None found. All functions are either:
 - Called by ECS system (Update methods)
 - Helper functions with clear purpose
 
-### Error Handling Gaps
+### Error Handling Gaps - ALL RESOLVED ✅
 
-1. **manager.go:43 - AddCompanion() clamps invalid learning rate**
-   - Location: Line 43-81
-   - Issue: Invalid learning rate (<=0) is logged but silently clamped to 1.0
-   - Current Behavior: Warns and uses default value
-   - Impact: Low - defensive programming, but may hide bugs in caller
-   - Recommendation: Consider returning error for invalid input OR document this clamping behavior as intended API design
-   - Code:
+1. **manager.go:42-101 - AddCompanion() learning rate clamping behavior** ✅ **DOCUMENTED 2026-01-23**
+   - Location: manager.go:42-101 (updated line numbers after documentation expansion)
+   - Status: **RESOLVED via comprehensive documentation**
+   - Resolution: Added detailed godoc documentation explaining the intentional "fail-soft" behavior
+   - Documentation now covers:
+     - Parameter descriptions and expected ranges (0.5-2.0, default 1.0)
+     - Fail-soft behavior for invalid learning rates (<=0 → clamped to 1.0)
+     - Design rationale explaining why clamping is preferred over error returns
+     - Thread safety guarantees
+   - Impact: API behavior is now explicitly documented, making the clamping behavior a documented feature rather than an ambiguous implementation detail
+   - Tests: Existing `TestAddCompanionDefaultLearningRate` validates the clamping behavior
+   - Coverage: Maintained at 92.7%
+   - Code (unchanged, behavior documented):
      ```go
      if learningRate <= 0 {
-         log.Warn("Invalid learning rate provided, using default")
+         log.WithFields(logrus.Fields{
+             "companion_id":          companionID,
+             "invalid_learning_rate": learningRate,
+             "default_learning_rate": 1.0,
+         }).Warn("Invalid learning rate provided, using default")
          learningRate = 1.0
      }
      ```
-   - Note: This may be intentional "fail-soft" behavior to prevent crashes
+   - Design Decision: The fail-soft approach was chosen because:
+     1. Prevents system crashes from invalid input
+     2. Prioritizes game stability over strict validation
+     3. Companions can always learn at a reasonable rate
+     4. Better user experience (game continues functioning vs. rejection)
+     5. Consistent with game design philosophy of graceful degradation
 
 ### Documentation Gaps
 None found. All exported types, functions, and methods have proper godoc comments.

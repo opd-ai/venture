@@ -6,7 +6,7 @@
 
 ## Executive Summary
 
-The performance audit identified **7 distinct issues** across startup and runtime categories. ~~Startup performance is significantly impacted by procedural terrain generation (12-50ms for composite terrains) and parallel system initialization overhead. Runtime performance is generally well-optimized with ECS query caching and component accessor caching providing ~93x faster access, though specific bottlenecks remain in fluid physics updates (652ms/update), large terrain cellular automata (5.3ms), and periodic GC pressure from sprite cache evictions.~~ **UPDATE (2026-01-23):** Critical fluid physics issue (R1) has been resolved through double-buffering implementation, achieving 100% allocation reduction per update. The primary gap from the 500ms startup target is terrain generation (~40%) and system initialization (~30%), while 60 FPS is achievable under normal gameplay ~~but degrades during large-scale procedural generation or fluid physics updates~~ **and now maintains stability during fluid physics simulation** (GC pressure eliminated).
+The performance audit identified **7 distinct issues** across startup and runtime categories. ~~Startup performance is significantly impacted by procedural terrain generation (12-50ms for composite terrains) and parallel system initialization overhead. Runtime performance is generally well-optimized with ECS query caching and component accessor caching providing ~93x faster access, though specific bottlenecks remain in fluid physics updates (652µs/update), large terrain cellular automata (5.3ms), and periodic GC pressure from sprite cache evictions.~~ **UPDATE (2026-01-23):** Critical fluid physics issue (R1) has been resolved through double-buffering implementation, achieving 100% allocation reduction per update. The primary gap from the 500ms startup target is terrain generation (~40%) and system initialization (~30%), while 60 FPS is achievable under normal gameplay ~~but degrades during large-scale procedural generation or fluid physics updates~~ **and now maintains stability during fluid physics simulation** (GC pressure eliminated).
 
 ---
 
@@ -95,7 +95,7 @@ The performance audit identified **7 distinct issues** across startup and runtim
 - **Location:** `pkg/engine/physics/fluids/*.go` (`Simulator.Update()`)
 - **Severity:** ~~Critical~~ **FIXED**
 - **Original Impact:**
-  - Frame time increase: +652ms per update when active
+  - Frame time increase: +652µs per update when active
   - FPS degradation: 60 FPS → ~1.5 FPS during fluid simulation
   - Memory growth: 412KB allocated per update
   - Frequency: Every frame when fluids are active
@@ -182,7 +182,7 @@ The performance audit identified **7 distinct issues** across startup and runtim
 ### CPU Profile Summary
 Top functions by execution time (from benchmarks):
 1. `CellularGenerator.Generate()` - 5.3s for large terrains
-2. `Simulator.Update()` (fluids) - 652ms per update
+2. `Simulator.Update()` (fluids) - 652µs per update
 3. `ForestGenerator.Generate()` - 11ms for large terrains
 4. `CompositeGenerator.Generate()` - 12.8ms for large terrains
 5. `MazeGenerator.Generate()` - 1.8ms for large terrains
@@ -206,7 +206,7 @@ Top allocation sources:
 ### Frame Timing Analysis
 Based on FrameTimeTracker implementation (`pkg/engine/frame_time_tracker.go`):
 - Min frame time: ~0.3ms (idle frame, minimal entities)
-- Max frame time: 652ms (during fluid simulation)
+- Max frame time: 652µs (during fluid simulation)
 - Average frame time: ~8-12ms (typical gameplay)
 - 95th percentile: ~15-18ms (estimated)
 - Frames > 16.67ms: 5-15% (during procedural generation or physics)
@@ -220,7 +220,7 @@ Based on FrameTimeTracker implementation (`pkg/engine/frame_time_tracker.go`):
 | AISystem | 0.12ms | 0.7% | ~44B (attack alloc) |
 | ParticleSystem | 0.5-2ms | 3-12% | Variable |
 | RenderSystem | 2-5ms | 12-30% | ~0 (batched) |
-| FluidSimulator | 652ms | 3900%+ | 412KB |
+| FluidSimulator | 652µs | ~4% | 412KB |
 | AnimationSystem | 1-16ms | 6-96% | Variable |
 
 ---

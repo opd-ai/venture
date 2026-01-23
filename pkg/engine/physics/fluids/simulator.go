@@ -20,11 +20,16 @@ type Simulator struct {
 
 // NewSimulator creates a new fluid simulator
 func NewSimulator(config SimulationConfig) *Simulator {
-	grid := NewGrid(config.GridWidth, config.GridHeight)
-	
 	// Pre-allocate two buffers for double-buffering to avoid allocations during updates
 	bufferA := allocateGrid(config.GridWidth, config.GridHeight)
 	bufferB := allocateGrid(config.GridWidth, config.GridHeight)
+	
+	// Reuse bufferA as the initial grid to avoid a third allocation
+	grid := &Grid{
+		Width:  config.GridWidth,
+		Height: config.GridHeight,
+		Cells:  bufferA,
+	}
 	
 	return &Simulator{
 		config:        config,

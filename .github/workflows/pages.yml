@@ -32,11 +32,12 @@ jobs:
 
       - name: Build WebAssembly binary
         run: |
+          mkdir -p build/wasm
           GOOS=js GOARCH=wasm go build -ldflags="-s -w" -o build/wasm/venture.wasm ./cmd/client
 
       - name: Copy wasm_exec.js runtime
         run: |
-          cp "$(go env GOROOT)/misc/wasm/wasm_exec.js" build/wasm/ || curl -sSL -o build/wasm/wasm_exec.js "https://raw.githubusercontent.com/golang/go/master/misc/wasm/wasm_exec.js"
+          cp "$(go env GOROOT)/lib/wasm/wasm_exec.js" build/wasm/ 2>/dev/null || cp "$(go env GOROOT)/misc/wasm/wasm_exec.js" build/wasm/ 2>/dev/null || curl -sSL -o build/wasm/wasm_exec.js "https://raw.githubusercontent.com/golang/go/master/misc/wasm/wasm_exec.js"
 
       - name: Setup Pages
         uses: actions/configure-pages@v4

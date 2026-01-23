@@ -1456,9 +1456,10 @@ func startPerformanceMonitoring(game *engine.EbitenGame, clientLogger *logrus.En
 	}()
 }
 
-// generateWorldTerrain creates and validates procedural terrain.
+// generateWorldTerrain creates and validates procedural terrain using async loading.
+// This reduces startup blocking time by running generation in a background goroutine.
 func generateWorldTerrain(logger *logrus.Logger, clientLogger *logrus.Entry) *terrain.Terrain {
-	clientLogger.Info("generating procedural terrain")
+	clientLogger.Info("starting async terrain generation")
 
 	terrainGen := terrain.NewBSPGeneratorWithLogger(logger)
 	params := procgen.GenerationParams{
@@ -1472,17 +1473,36 @@ func generateWorldTerrain(logger *logrus.Logger, clientLogger *logrus.Entry) *te
 		},
 	}
 
-	terrainResult, err := terrainGen.Generate(*seed, params)
+	// Use async loader to generate terrain in background
+	loader := terrain.NewAsyncLoader(logger)
+	loader.StartGeneration(terrainGen, *seed, params)
+
+	// Poll progress until complete (simple progress logging)
+	lastProgress := 0.0
+	for !loader.IsDone() {
+		progress, err := loader.GetProgress()
+		if err != nil {
+			clientLogger.WithError(err).Fatal("terrain generation failed")
+		}
+
+		// Log progress updates at 25% intervals
+		if progress-lastProgress >= 0.25 {
+			clientLogger.WithField("progress", int(progress*100)).Info("terrain generation progress")
+			lastProgress = progress
+		}
+	}
+
+	// Wait for final result
+	generatedTerrain, err := loader.Wait()
 	if err != nil {
 		clientLogger.WithError(err).Fatal("failed to generate terrain")
 	}
 
-	generatedTerrain := terrainResult.(*terrain.Terrain)
 	clientLogger.WithFields(logrus.Fields{
 		"width":     generatedTerrain.Width,
 		"height":    generatedTerrain.Height,
 		"roomCount": len(generatedTerrain.Rooms),
-	}).Info("terrain generated")
+	}).Info("terrain generated successfully")
 
 	return generatedTerrain
 }

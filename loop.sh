@@ -1,6 +1,6 @@
 #! /usr/bin/env sh
 
-for true; do
+while true; do
 	auditor.sh
 	devloop.sh
 	checkin.sh

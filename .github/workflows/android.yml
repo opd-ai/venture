@@ -47,6 +47,11 @@ jobs:
       - name: Install NDK
         run: sdkmanager "ndk;${{ env.NDK_VERSION }}"
       
+      - name: Set NDK environment variable
+        run: |
+          echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk/${{ env.NDK_VERSION }}" >> $GITHUB_ENV
+          echo "Android NDK installed at: $ANDROID_HOME/ndk/${{ env.NDK_VERSION }}"
+      
       - name: Install ImageMagick
         run: sudo apt-get update && sudo apt-get install -y imagemagick
       

@@ -835,8 +835,6 @@ func (s *InventorySystem) parseTargetType(targetTypeStr string, defaultType Targ
 	}
 }
 
-
-
 // calculateScrollMagnitude determines the spell effect magnitude based on item properties.
 func (s *InventorySystem) calculateScrollMagnitude(itm *item.Item) float64 {
 	// Base magnitude from item value

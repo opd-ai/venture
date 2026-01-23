@@ -24,8 +24,8 @@ type PredictiveCacheWarmer struct {
 	patterns  map[CacheKey]*AccessPattern
 
 	// Configuration
-	windowSize    int // Number of accesses to track
-	hotThreshold  int // Accesses in window to be considered "hot"
+	windowSize     int // Number of accesses to track
+	hotThreshold   int // Accesses in window to be considered "hot"
 	maxPredictions int // Maximum predictions per warmup cycle
 }
 
@@ -183,12 +183,12 @@ func (w *PredictiveCacheWarmer) PredictNext() []CacheKey {
 
 // WarmerStats contains predictive warmer statistics.
 type WarmerStats struct {
-	AccessLogSize    int
-	PatternCount     int
-	HotSpriteCount   int
-	PredictionCount  int
-	WindowHitRate    float64 // Hit rate within sliding window
-	WindowMissRate   float64 // Miss rate within sliding window
+	AccessLogSize   int
+	PatternCount    int
+	HotSpriteCount  int
+	PredictionCount int
+	WindowHitRate   float64 // Hit rate within sliding window
+	WindowMissRate  float64 // Miss rate within sliding window
 }
 
 // Stats returns current warmer statistics.

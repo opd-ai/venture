@@ -768,7 +768,7 @@ func GenerateAmbienceCached(config AmbienceConfig) (*AmbienceSystem, error) {
 	}
 
 	key := makeAmbienceCacheKey(config)
-	
+
 	// Try cache first
 	if cached := globalAmbienceCache.get(key); cached != nil {
 		// Clone the cached system to prevent state interference
@@ -796,7 +796,7 @@ func cloneAmbienceSystem(src *AmbienceSystem) *AmbienceSystem {
 
 	// Get a system from the pool
 	dst := AcquireAmbienceSystem()
-	
+
 	// Copy config
 	dst.Config = src.Config
 	dst.Config.Custom = make(map[string]interface{})

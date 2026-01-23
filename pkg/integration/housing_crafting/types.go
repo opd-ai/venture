@@ -84,7 +84,3 @@ func (qt QualityTier) Multiplier() float64 {
 		return 1.0
 	}
 }
-
-
-
-

@@ -440,12 +440,12 @@ func (e *ExpressionEvaluator) tryOperator(expr, op string, vars map[string]any) 
 	if idx <= 0 || idx >= len(expr)-1 {
 		return nil, false, nil
 	}
-	
+
 	left, right, err := e.evaluateBothSides(expr, idx, vars)
 	if err != nil {
 		return nil, false, nil // Try next operator
 	}
-	
+
 	return e.applyOperator(left, right, op)
 }
 
@@ -455,12 +455,12 @@ func (e *ExpressionEvaluator) evaluateBothSides(expr string, idx int, vars map[s
 	if err != nil {
 		return nil, nil, err
 	}
-	
+
 	right, err := e.Evaluate(expr[idx+1:], vars)
 	if err != nil {
 		return nil, nil, err
 	}
-	
+
 	return left, right, nil
 }
 
@@ -468,11 +468,11 @@ func (e *ExpressionEvaluator) evaluateBothSides(expr string, idx int, vars map[s
 func (e *ExpressionEvaluator) applyOperator(left, right any, op string) (any, bool, error) {
 	leftNum, lok := toFloat64(left)
 	rightNum, rok := toFloat64(right)
-	
+
 	if !lok || !rok {
 		return nil, false, nil
 	}
-	
+
 	switch op {
 	case "+":
 		return leftNum + rightNum, true, nil
@@ -485,7 +485,7 @@ func (e *ExpressionEvaluator) applyOperator(left, right any, op string) (any, bo
 	case "%":
 		return e.safeModulo(leftNum, rightNum)
 	}
-	
+
 	return nil, false, nil
 }
 

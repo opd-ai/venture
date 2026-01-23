@@ -123,4 +123,3 @@ func (i *Item) CanBeUsedByClass(className string) bool {
 
 	return false
 }
-

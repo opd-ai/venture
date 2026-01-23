@@ -176,10 +176,10 @@ func TestValidateParams(t *testing.T) {
 
 func TestValidateDimensions(t *testing.T) {
 	tests := []struct {
-		name                                           string
+		name                                                    string
 		width, height, minWidth, minHeight, maxWidth, maxHeight int
-		wantErr                                        bool
-		errContains                                    string
+		wantErr                                                 bool
+		errContains                                             string
 	}{
 		{
 			name:      "valid dimensions at min",

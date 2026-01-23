@@ -316,7 +316,7 @@ func TestValidator_LoadSaveFile_RealFile(t *testing.T) {
 	// Create a valid save file
 	validSavePath := tmpDir + "/save_0.9.0.json"
 	validSaveContent := `{"version":"0.9.0","player":{"name":"Test","level":5},"world":{"seed":42}}`
-	if err := os.WriteFile(validSavePath, []byte(validSaveContent), 0644); err != nil {
+	if err := os.WriteFile(validSavePath, []byte(validSaveContent), 0o644); err != nil {
 		t.Fatalf("failed to write test file: %v", err)
 	}
 
@@ -345,7 +345,7 @@ func TestValidator_LoadSaveFile_InvalidJSON(t *testing.T) {
 
 	// Create an invalid JSON file
 	invalidPath := tmpDir + "/save_invalid.json"
-	if err := os.WriteFile(invalidPath, []byte(`{not valid json`), 0644); err != nil {
+	if err := os.WriteFile(invalidPath, []byte(`{not valid json`), 0o644); err != nil {
 		t.Fatalf("failed to write test file: %v", err)
 	}
 
@@ -369,7 +369,7 @@ func TestValidator_LoadSaveFile_ReadError(t *testing.T) {
 
 	// Create a directory with the save file name (can't read a directory as a file)
 	dirPath := tmpDir + "/save_dir.json"
-	if err := os.MkdirAll(dirPath, 0755); err != nil {
+	if err := os.MkdirAll(dirPath, 0o755); err != nil {
 		t.Fatalf("failed to create directory: %v", err)
 	}
 
@@ -414,7 +414,7 @@ func TestValidator_ValidateMigration_ValidationFailed(t *testing.T) {
 	// Create a save file that will fail validation (missing world field)
 	incompleteSavePath := tmpDir + "/save_0.9.0.json"
 	incompleteContent := `{"version":"0.9.0","player":{"name":"Test"}}`
-	if err := os.WriteFile(incompleteSavePath, []byte(incompleteContent), 0644); err != nil {
+	if err := os.WriteFile(incompleteSavePath, []byte(incompleteContent), 0o644); err != nil {
 		t.Fatalf("failed to write test file: %v", err)
 	}
 
@@ -439,7 +439,7 @@ func TestValidator_ValidateMigration_InvalidPlayerType(t *testing.T) {
 	// Create a save file where player is a string instead of an object
 	invalidSavePath := tmpDir + "/save_0.9.0.json"
 	invalidContent := `{"version":"0.9.0","player":"invalid_string","world":{"seed":42}}`
-	if err := os.WriteFile(invalidSavePath, []byte(invalidContent), 0644); err != nil {
+	if err := os.WriteFile(invalidSavePath, []byte(invalidContent), 0o644); err != nil {
 		t.Fatalf("failed to write test file: %v", err)
 	}
 
@@ -624,7 +624,7 @@ func TestValidator_ValidateMigration_LoadError(t *testing.T) {
 
 	// Create an invalid JSON save file to trigger JSON parse error
 	invalidJSONPath := tmpDir + "/save_0.9.0.json"
-	if err := os.WriteFile(invalidJSONPath, []byte(`{invalid json`), 0644); err != nil {
+	if err := os.WriteFile(invalidJSONPath, []byte(`{invalid json`), 0o644); err != nil {
 		t.Fatalf("failed to write test file: %v", err)
 	}
 

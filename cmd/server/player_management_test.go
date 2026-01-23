@@ -160,11 +160,11 @@ func TestCreatePlayerEntity_UniqueSeeds(t *testing.T) {
 // TestApplyInputCommand_Movement tests movement input processing
 func TestApplyInputCommand_Movement(t *testing.T) {
 	tests := []struct {
-		name    string
-		dataX   int8
-		dataY   int8
-		wantVX  float64
-		wantVY  float64
+		name   string
+		dataX  int8
+		dataY  int8
+		wantVX float64
+		wantVY float64
 	}{
 		{"move right", 127, 0, 100.0, 0.0},
 		{"move left", -127, 0, -100.0, 0.0},

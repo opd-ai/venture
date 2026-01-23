@@ -5,7 +5,6 @@ package sfx
 // This file contains utility functions for audio processing and math operations.
 // These helpers support pitch shifting and other audio transformations.
 
-
 // pitchRatioFromSemitones converts semitone shift to frequency ratio.
 // 12 semitones = one octave = 2x frequency.
 func pitchRatioFromSemitones(semitones float64) float64 {

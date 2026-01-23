@@ -80,7 +80,7 @@ func calculateLightIntensity(rng *rand.Rand, baseLightLevel float64) float64 {
 }
 
 // buildFurniture constructs a Furniture object from all generated components
-func buildFurniture(seed int64, tmpl *Template, material MaterialType, rarity RarityTier, genreID string, name, description string, width, height, depth float64, primaryColor, secondaryColor color.RGBA, detailLevel float64, collisionWidth, collisionDepth float64, capacity int, lightIntensity float64) *Furniture {
+func buildFurniture(seed int64, tmpl *Template, material MaterialType, rarity RarityTier, genreID, name, description string, width, height, depth float64, primaryColor, secondaryColor color.RGBA, detailLevel, collisionWidth, collisionDepth float64, capacity int, lightIntensity float64) *Furniture {
 	furniture := &Furniture{
 		ID:          fmt.Sprintf("furniture_%d", seed),
 		Type:        tmpl.Type,

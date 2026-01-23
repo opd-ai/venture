@@ -607,12 +607,12 @@ func calculateAvgInt(values []int) float64 {
 // and upgrade slot components in addition to the base vehicle component.
 func TestVehicle_ToComponents(t *testing.T) {
 	tests := []struct {
-		name            string
-		vehicle         *Vehicle
-		expectedCount   int
-		hasCombat       bool
-		hasWeapon       bool
-		expectedTypes   []string
+		name          string
+		vehicle       *Vehicle
+		expectedCount int
+		hasCombat     bool
+		hasWeapon     bool
+		expectedTypes []string
 	}{
 		{
 			name: "basic vehicle without combat",

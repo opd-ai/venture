@@ -44,7 +44,7 @@ func SpawnMerchantFromData(world *World, merchantData *procgenEntity.MerchantDat
 	merchant.AddComponent(&TeamComponent{TeamID: 0})
 
 	// Add sprite (distinct from player/enemies) - Phase 45: 64×64 enhanced sprites
-	const merchantSpriteSize = 64  // Phase 45 standard sprite size
+	const merchantSpriteSize = 64   // Phase 45 standard sprite size
 	const merchantColliderOff = -32 // Center offset (64/2 = 32)
 	merchantSprite := &EbitenSprite{
 		Image:   ebiten.NewImage(merchantSpriteSize, merchantSpriteSize),

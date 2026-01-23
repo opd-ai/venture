@@ -267,11 +267,11 @@ func TestMobileMenu_StopScrollingInternal(t *testing.T) {
 // TestMobileMenu_SnapToValidRange tests snapping to valid scroll range.
 func TestMobileMenu_SnapToValidRange(t *testing.T) {
 	tests := []struct {
-		name         string
-		offset       float64
-		maxScroll    float64
-		wantOffset   float64
-		description  string
+		name        string
+		offset      float64
+		maxScroll   float64
+		wantOffset  float64
+		description string
 	}{
 		{
 			name:        "above_top",
@@ -396,5 +396,3 @@ func TestMinimapWidget_GetTileColorForType(t *testing.T) {
 		})
 	}
 }
-
-

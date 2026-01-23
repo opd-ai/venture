@@ -81,11 +81,11 @@ func (v *V9ValidationService) ValidateCraftingBonus(playerID, recipeID string, c
 	if claimedBonus > serverBonus {
 		if v.logger != nil {
 			v.logger.WithFields(logrus.Fields{
-				"playerID":    playerID,
-				"recipeID":    recipeID,
+				"playerID":     playerID,
+				"recipeID":     recipeID,
 				"claimedBonus": claimedBonus,
-				"serverBonus": serverBonus,
-				"action":      "crafting_bonus_rejected",
+				"serverBonus":  serverBonus,
+				"action":       "crafting_bonus_rejected",
 			}).Warn("Client claimed crafting bonus exceeds server-validated bonus")
 		}
 		return serverBonus, false
@@ -118,11 +118,11 @@ func (v *V9ValidationService) ValidateSkillTrainingBonus(playerID, skillName str
 	if claimedBonus > serverBonus {
 		if v.logger != nil {
 			v.logger.WithFields(logrus.Fields{
-				"playerID":    playerID,
-				"skillName":   skillName,
+				"playerID":     playerID,
+				"skillName":    skillName,
 				"claimedBonus": claimedBonus,
-				"serverBonus": serverBonus,
-				"action":      "skill_training_bonus_rejected",
+				"serverBonus":  serverBonus,
+				"action":       "skill_training_bonus_rejected",
 			}).Warn("Client claimed skill training bonus exceeds server-validated bonus")
 		}
 		return serverBonus, false
@@ -155,11 +155,11 @@ func (v *V9ValidationService) ValidateLoyaltyBonus(companionID uint64, houseID s
 	if claimedBonus > serverBonus {
 		if v.logger != nil {
 			v.logger.WithFields(logrus.Fields{
-				"companionID": companionID,
-				"houseID":     houseID,
+				"companionID":  companionID,
+				"houseID":      houseID,
 				"claimedBonus": claimedBonus,
-				"serverBonus": serverBonus,
-				"action":      "loyalty_bonus_rejected",
+				"serverBonus":  serverBonus,
+				"action":       "loyalty_bonus_rejected",
 			}).Warn("Client claimed loyalty bonus exceeds server-validated bonus")
 		}
 		return serverBonus, false
@@ -191,11 +191,11 @@ func (v *V9ValidationService) ValidateTrainingBonus(companionID uint64, houseID 
 	if claimedBonus > serverBonus {
 		if v.logger != nil {
 			v.logger.WithFields(logrus.Fields{
-				"companionID": companionID,
-				"houseID":     houseID,
+				"companionID":  companionID,
+				"houseID":      houseID,
 				"claimedBonus": claimedBonus,
-				"serverBonus": serverBonus,
-				"action":      "training_bonus_rejected",
+				"serverBonus":  serverBonus,
+				"action":       "training_bonus_rejected",
 			}).Warn("Client claimed training bonus exceeds server-validated bonus")
 		}
 		return serverBonus, false

@@ -484,7 +484,7 @@ func (s *ModCompatibilitySystem) updateDependents(modID string, graph map[string
 }
 
 // detectCycles checks if there are circular dependencies.
-func (s *ModCompatibilitySystem) detectCycles(result []string, modIDs []string, inDegree map[string]int) error {
+func (s *ModCompatibilitySystem) detectCycles(result, modIDs []string, inDegree map[string]int) error {
 	if len(result) == len(modIDs) {
 		return nil
 	}

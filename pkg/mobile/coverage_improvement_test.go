@@ -52,11 +52,11 @@ func TestInputRateLimiter_SetCooldown(t *testing.T) {
 // TestInputRateLimiter_CanExecute tests execution permission checking.
 func TestInputRateLimiter_CanExecute(t *testing.T) {
 	tests := []struct {
-		name           string
-		setupFunc      func(*InputRateLimiter)
-		actionID       string
-		want           bool
-		description    string
+		name        string
+		setupFunc   func(*InputRateLimiter)
+		actionID    string
+		want        bool
+		description string
 	}{
 		{
 			name:        "first_execution_always_allowed",
@@ -256,14 +256,14 @@ func TestNewSelectionState(t *testing.T) {
 // TestSelectionState_Select tests item selection.
 func TestSelectionState_Select(t *testing.T) {
 	tests := []struct {
-		name                  string
-		multiSelect           bool
-		isMultiSelectGesture  bool
-		selectFirst           int
-		selectSecond          int
-		wantFirstSelected     bool
-		wantSecondSelected    bool
-		wantLastSelected      int
+		name                 string
+		multiSelect          bool
+		isMultiSelectGesture bool
+		selectFirst          int
+		selectSecond         int
+		wantFirstSelected    bool
+		wantSecondSelected   bool
+		wantLastSelected     int
 	}{
 		{
 			name:                 "single_select_replaces",
@@ -737,7 +737,7 @@ func TestInputAcceleration(t *testing.T) {
 			got := InputAcceleration(tt.current, tt.target, tt.acceleration, tt.maxSpeed)
 
 			if math.Abs(got-tt.wantNear) > tt.epsilon {
-				t.Errorf("InputAcceleration(%.2f, %.2f, %.2f, %.2f) = %.3f, want near %.3f", 
+				t.Errorf("InputAcceleration(%.2f, %.2f, %.2f, %.2f) = %.3f, want near %.3f",
 					tt.current, tt.target, tt.acceleration, tt.maxSpeed, got, tt.wantNear)
 			}
 		})
@@ -751,7 +751,7 @@ func TestInputAcceleration(t *testing.T) {
 // TestGetWASMRestrictionMessage tests WASM restriction messages.
 func TestGetWASMRestrictionMessage(t *testing.T) {
 	tests := []struct {
-		restriction WASMSecurityRestriction
+		restriction  WASMSecurityRestriction
 		wantNonEmpty bool
 	}{
 		{RestrictionClipboard, true},
@@ -1132,12 +1132,12 @@ func TestTouchDelta(t *testing.T) {
 // TestTouchDistance tests touch distance calculation.
 func TestTouchDistance(t *testing.T) {
 	tests := []struct {
-		name   string
-		startX int
-		startY int
-		x      int
-		y      int
-		want   float64
+		name    string
+		startX  int
+		startY  int
+		x       int
+		y       int
+		want    float64
 		epsilon float64
 	}{
 		{"no_movement", 100, 100, 100, 100, 0, 0.001},

@@ -853,7 +853,7 @@ func (b *TouchButton) drawButtonLabel(screen *ebiten.Image) {
 	if displayText == "" {
 		return
 	}
-	
+
 	textX, textY := b.calculateTextPosition(displayText)
 	text.Draw(screen, displayText, basicfont.Face7x13, textX, textY, b.TextColor)
 }

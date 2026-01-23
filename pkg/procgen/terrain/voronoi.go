@@ -255,7 +255,7 @@ func expandZoneByRadius(zone map[Point]bool, radius, width, height int) {
 // collectNewNeighbors finds all valid neighbors to add in this expansion iteration.
 func collectNewNeighbors(zone map[Point]bool, width, height int) []Point {
 	toAdd := make([]Point, 0)
-	
+
 	for point := range zone {
 		neighbors := get4ConnectedNeighbors(point)
 		for _, n := range neighbors {
@@ -264,7 +264,7 @@ func collectNewNeighbors(zone map[Point]bool, width, height int) []Point {
 			}
 		}
 	}
-	
+
 	return toAdd
 }
 

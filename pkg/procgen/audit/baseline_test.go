@@ -9,10 +9,10 @@ import (
 
 func TestGetBaselinePrefix(t *testing.T) {
 	tests := []struct {
-		name     string
-		generator string
+		name       string
+		generator  string
 		wantPrefix string
-		wantEmpty bool
+		wantEmpty  bool
 	}{
 		{
 			name:       "EntityGenerator exists",

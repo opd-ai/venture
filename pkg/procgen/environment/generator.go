@@ -1132,12 +1132,12 @@ func (g *Generator) drawGraffitiLine(img *image.RGBA, width, height int, base, a
 	y1 := rng.Intn(height)
 	x2 := x1 + rng.Intn(width/2) - width/4
 	y2 := y1 + rng.Intn(height/2) - height/4
-	
+
 	lineColor := base
 	if rng.Float64() >= 0.5 {
 		lineColor = accent
 	}
-	
+
 	g.drawLine(img, x1, y1, x2, y2, lineColor)
 }
 
@@ -1146,20 +1146,20 @@ func (g *Generator) drawGraffitiBlob(img *image.RGBA, width, height int, base, a
 	cx := rng.Intn(width)
 	cy := rng.Intn(height)
 	radius := 3 + rng.Intn(6)
-	
+
 	for dy := -radius; dy <= radius; dy++ {
 		for dx := -radius; dx <= radius; dx++ {
 			if dx*dx+dy*dy > radius*radius {
 				continue
 			}
-			
+
 			px := cx + dx
 			py := cy + dy
-			
+
 			if px < 0 || px >= width || py < 0 || py >= height {
 				continue
 			}
-			
+
 			pixelColor := base
 			if rng.Float64() >= 0.5 {
 				pixelColor = accent

@@ -317,10 +317,10 @@ func TestGenerator_GenerateSpritePattern(t *testing.T) {
 
 	// Test all companion types to ensure generateSpritePattern returns correct patterns
 	tests := []struct {
-		name            string
-		companionType   engine.CompanionType
-		genreID         string
-		wantContains    string
+		name          string
+		companionType engine.CompanionType
+		genreID       string
+		wantContains  string
 	}{
 		{
 			name:          "pet type",

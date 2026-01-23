@@ -298,10 +298,10 @@ type ambienceCacheEntry struct {
 // ambienceCache provides an LRU cache for ambience systems by environment type.
 // This reduces allocation during area transitions by reusing previously generated ambience.
 type ambienceCache struct {
-	mu       sync.RWMutex
-	entries  map[ambienceCacheKey]*ambienceCacheEntry
-	maxSize  int
-	hitCount uint64
+	mu        sync.RWMutex
+	entries   map[ambienceCacheKey]*ambienceCacheEntry
+	maxSize   int
+	hitCount  uint64
 	missCount uint64
 }
 
@@ -359,8 +359,8 @@ func (c *ambienceCache) put(key ambienceCacheKey, system *AmbienceSystem) {
 	}
 
 	c.entries[key] = &ambienceCacheEntry{
-		system:   system,
-		lastUsed: nanoTime(),
+		system:    system,
+		lastUsed:  nanoTime(),
 		accessCnt: 1,
 	}
 }
@@ -413,7 +413,7 @@ func (c *ambienceCache) Size() int {
 func GetAmbienceCacheStats() (hits, misses uint64, size int) {
 	hits, misses = globalAmbienceCache.Stats()
 	size = globalAmbienceCache.Size()
-	return
+	return hits, misses, size
 }
 
 // ClearAmbienceCache clears the global ambience cache.

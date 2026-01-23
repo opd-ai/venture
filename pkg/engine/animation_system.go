@@ -44,14 +44,14 @@ type AnimationSystem struct {
 
 // AnimationStats holds performance statistics for the animation system.
 type AnimationStats struct {
-	TotalEntities     int // Total entities processed
-	AnimatedEntities  int // Entities with active animations
-	CulledByViewport  int // Entities culled by viewport check
-	FullRateEntities  int // Entities animated at full rate (close)
-	HalfRateEntities  int // Entities animated at half rate (mid distance)
-	StaticEntities    int // Entities rendered as static (far distance)
-	DeferredRegen     int // Entities with deferred regeneration (hit per-frame limit)
-	CompletedRegen    int // Entities that completed regeneration this frame
+	TotalEntities    int // Total entities processed
+	AnimatedEntities int // Entities with active animations
+	CulledByViewport int // Entities culled by viewport check
+	FullRateEntities int // Entities animated at full rate (close)
+	HalfRateEntities int // Entities animated at half rate (mid distance)
+	StaticEntities   int // Entities rendered as static (far distance)
+	DeferredRegen    int // Entities with deferred regeneration (hit per-frame limit)
+	CompletedRegen   int // Entities that completed regeneration this frame
 }
 
 // NewAnimationSystem creates a new animation system.
@@ -546,8 +546,8 @@ func (s *AnimationSystem) regenerateFramesIfDirty(entity *Entity, animComp *Anim
 		s.stats.DeferredRegen++
 		if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
 			s.logger.WithFields(logrus.Fields{
-				"entity_id":    entity.ID,
-				"regen_count":  s.regenCount,
+				"entity_id":     entity.ID,
+				"regen_count":   s.regenCount,
 				"max_per_frame": s.maxRegenPerFrame,
 			}).Debug("deferring sprite regeneration to next frame")
 		}

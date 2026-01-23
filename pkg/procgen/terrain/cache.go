@@ -20,14 +20,14 @@ import (
 // TerrainCache provides caching for generated terrain with disk persistence.
 // It uses a combination of in-memory LRU cache and disk storage for fast restarts.
 type TerrainCache struct {
-	mu           sync.RWMutex
-	memoryCache  map[string]*cachedTerrain // key -> terrain
-	accessOrder  []string                  // LRU tracking
-	maxMemory    int                       // max entries in memory
-	cacheDir     string                    // disk cache directory
-	enabled      bool                      // cache enabled flag
-	hitCount     int64                     // cache hits
-	missCount    int64                     // cache misses
+	mu          sync.RWMutex
+	memoryCache map[string]*cachedTerrain // key -> terrain
+	accessOrder []string                  // LRU tracking
+	maxMemory   int                       // max entries in memory
+	cacheDir    string                    // disk cache directory
+	enabled     bool                      // cache enabled flag
+	hitCount    int64                     // cache hits
+	missCount   int64                     // cache misses
 }
 
 // cachedTerrain wraps a Terrain with metadata for caching.
@@ -73,7 +73,7 @@ func NewTerrainCache(maxMemory int, cacheDir string) *TerrainCache {
 
 	// Create cache directory if disk caching is enabled
 	if cacheDir != "" {
-		if err := os.MkdirAll(cacheDir, 0750); err != nil {
+		if err := os.MkdirAll(cacheDir, 0o750); err != nil {
 			// Disable disk caching if directory creation fails
 			cache.cacheDir = ""
 		}
@@ -446,7 +446,7 @@ func (c *TerrainCache) Clear(includeDisk bool) {
 
 	if includeDisk && c.cacheDir != "" {
 		os.RemoveAll(c.cacheDir)
-		os.MkdirAll(c.cacheDir, 0750)
+		os.MkdirAll(c.cacheDir, 0o750)
 	}
 }
 

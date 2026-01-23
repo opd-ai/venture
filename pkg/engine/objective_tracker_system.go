@@ -779,7 +779,7 @@ func createItemGenerationParams(qst *quest.Quest, genreID, itemType string) proc
 }
 
 // generateQuestItem generates a single quest item using the item generator.
-func (s *ObjectiveTrackerSystem) generateQuestItem(itemSeed int64, params procgen.GenerationParams, itemName string, questID string, entityID uint64, itemIndex int) *item.Item {
+func (s *ObjectiveTrackerSystem) generateQuestItem(itemSeed int64, params procgen.GenerationParams, itemName, questID string, entityID uint64, itemIndex int) *item.Item {
 	result, err := s.itemGenerator.Generate(itemSeed, params)
 	if err != nil {
 		log.WithFields(log.Fields{

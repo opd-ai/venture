@@ -418,10 +418,10 @@ func (s *TradeSystem) executeItemTransfer(proposerInv, recipientInv *engine.Inve
 
 // transferTracker tracks items moved during trade transfer for rollback capability.
 type transferTracker struct {
-	removedFromProposer []*item.Item
+	removedFromProposer  []*item.Item
 	removedFromRecipient []*item.Item
-	addedToRecipient []*item.Item
-	addedToProposer []*item.Item
+	addedToRecipient     []*item.Item
+	addedToProposer      []*item.Item
 }
 
 // newTransferTracker creates a new transfer tracker.

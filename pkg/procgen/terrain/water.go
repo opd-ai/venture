@@ -136,7 +136,7 @@ func validateRiverWidth(width int) int {
 // expandPathToRiver converts path points into river tiles with varying depth.
 func expandPathToRiver(pathPoints []Point, width int, terrain *Terrain, feature *WaterFeature) {
 	placed := make(map[Point]bool)
-	
+
 	for _, point := range pathPoints {
 		expandPointToWater(point, width, terrain, feature, placed)
 	}
@@ -154,30 +154,30 @@ func expandPointToWater(center Point, width int, terrain *Terrain, feature *Wate
 // tryPlaceWaterTile attempts to place a water tile at the offset position.
 func tryPlaceWaterTile(center Point, dx, dy, width int, terrain *Terrain, feature *WaterFeature, placed map[Point]bool) {
 	x, y := center.X+dx, center.Y+dy
-	
+
 	if !terrain.IsInBounds(x, y) || placed[Point{x, y}] {
 		return
 	}
-	
+
 	if !canPlaceWater(terrain, x, y) {
 		return
 	}
-	
+
 	placeWaterByDistance(x, y, dx, dy, width, terrain, feature, placed)
 }
 
 // canPlaceWater checks if water can be placed at the given coordinates.
 func canPlaceWater(terrain *Terrain, x, y int) bool {
 	tile := terrain.GetTile(x, y)
-	return tile != TileWall && tile != TileDoor && 
-	       tile != TileStairsUp && tile != TileStairsDown
+	return tile != TileWall && tile != TileDoor &&
+		tile != TileStairsUp && tile != TileStairsDown
 }
 
 // placeWaterByDistance places deep or shallow water based on distance from center.
 func placeWaterByDistance(x, y, dx, dy, width int, terrain *Terrain, feature *WaterFeature, placed map[Point]bool) {
 	dist := math.Sqrt(float64(dx*dx + dy*dy))
 	p := Point{x, y}
-	
+
 	if width > 2 && dist <= float64(width)*0.5 {
 		placeWaterTile(x, y, TileWaterDeep, p, terrain, feature, placed)
 	} else if dist <= float64(width) {

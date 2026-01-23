@@ -217,7 +217,7 @@ func (g *Generator) applyAmbientOcclusion(img *image.RGBA, config ParallaxConfig
 func (g *Generator) computeAOMap(img *image.RGBA, config ParallaxConfig) [][]float64 {
 	bounds := img.Bounds()
 	width, height := bounds.Dx(), bounds.Dy()
-	
+
 	aoMap := make([][]float64, height)
 	for y := 0; y < height; y++ {
 		aoMap[y] = make([]float64, width)
@@ -232,7 +232,7 @@ func (g *Generator) computeAOMap(img *image.RGBA, config ParallaxConfig) [][]flo
 func (g *Generator) calculatePixelOcclusion(img *image.RGBA, x, y, width, height int) float64 {
 	occlusionSum := 0.0
 	sampleCount := 0
-	
+
 	for dy := -1; dy <= 1; dy++ {
 		for dx := -1; dx <= 1; dx++ {
 			occ, samples := g.sampleNeighborOcclusion(img, x, y, dx, dy, width, height)
@@ -240,18 +240,18 @@ func (g *Generator) calculatePixelOcclusion(img *image.RGBA, x, y, width, height
 			sampleCount += samples
 		}
 	}
-	
+
 	return occlusionSum / float64(sampleCount)
 }
 
 // sampleNeighborOcclusion samples a single neighbor for occlusion contribution.
 func (g *Generator) sampleNeighborOcclusion(img *image.RGBA, x, y, dx, dy, width, height int) (float64, int) {
 	nx, ny := x+dx, y+dy
-	
+
 	if nx < 0 || nx >= width || ny < 0 || ny >= height {
 		return 1.0, 1 // Edge counts as occluded
 	}
-	
+
 	if g.isNeighborDarker(img, x, y, nx, ny) {
 		return 1.0, 1
 	}
@@ -262,10 +262,10 @@ func (g *Generator) sampleNeighborOcclusion(img *image.RGBA, x, y, dx, dy, width
 func (g *Generator) isNeighborDarker(img *image.RGBA, x, y, nx, ny int) bool {
 	c1 := img.RGBAAt(x, y)
 	c2 := img.RGBAAt(nx, ny)
-	
+
 	brightness1 := float64(c1.R+c1.G+c1.B) / 3.0
 	brightness2 := float64(c2.R+c2.G+c2.B) / 3.0
-	
+
 	return brightness2 < brightness1*0.7
 }
 
@@ -273,7 +273,7 @@ func (g *Generator) isNeighborDarker(img *image.RGBA, x, y, nx, ny int) bool {
 func (g *Generator) applyAOToImage(img *image.RGBA, aoMap [][]float64, config ParallaxConfig) {
 	bounds := img.Bounds()
 	width, height := bounds.Dx(), bounds.Dy()
-	
+
 	for y := 0; y < height; y++ {
 		for x := 0; x < width; x++ {
 			g.darkenPixel(img, x, y, aoMap[y][x], config.AOIntensity)
@@ -285,11 +285,11 @@ func (g *Generator) applyAOToImage(img *image.RGBA, aoMap [][]float64, config Pa
 func (g *Generator) darkenPixel(img *image.RGBA, x, y int, aoValue, aoIntensity float64) {
 	c := img.RGBAAt(x, y)
 	aoFactor := 1.0 - (aoValue * aoIntensity * 0.3)
-	
+
 	r := uint8(float64(c.R) * aoFactor)
 	gr := uint8(float64(c.G) * aoFactor)
 	b := uint8(float64(c.B) * aoFactor)
-	
+
 	img.SetRGBA(x, y, color.RGBA{r, gr, b, c.A})
 }
 

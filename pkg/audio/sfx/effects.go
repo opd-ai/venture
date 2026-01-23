@@ -6,7 +6,6 @@ package sfx
 // Each method creates a unique sound effect with appropriate waveforms,
 // envelopes, and audio processing to match the effect type.
 
-
 import (
 	"math/rand"
 

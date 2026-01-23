@@ -194,9 +194,9 @@ func GetMaterialProperties(material MaterialType) MaterialProperties {
 	default:
 		// Log warning for unknown material type to help catch bugs
 		log.WithFields(log.Fields{
-			"material":      int(material),
-			"component":     "destruction",
-			"function":      "GetMaterialProperties",
+			"material":  int(material),
+			"component": "destruction",
+			"function":  "GetMaterialProperties",
 		}).Warn("Unknown material type, using default properties")
 		return MaterialProperties{
 			Density:    0.5,

@@ -204,7 +204,6 @@ func TestSpawnVehiclesInTerrain_TooFewRooms(t *testing.T) {
 			params := procgen.GenerationParams{Difficulty: 0.5}
 
 			spawned, err := spawnVehiclesInTerrain(world, terrainMap, 12345, params, logger)
-
 			if err != nil {
 				t.Errorf("Unexpected error: %v", err)
 			}
@@ -233,7 +232,6 @@ func TestSpawnCompanionsInTerrain_TooFewRooms(t *testing.T) {
 			params := procgen.GenerationParams{Difficulty: 0.5}
 
 			spawned, err := spawnCompanionsInTerrain(world, terrainMap, 12345, params, logger)
-
 			if err != nil {
 				t.Errorf("Unexpected error: %v", err)
 			}
@@ -263,7 +261,6 @@ func TestSpawnBookshelvesInTerrain_TooFewRooms(t *testing.T) {
 			params := procgen.GenerationParams{Difficulty: 0.5}
 
 			spawned, err := spawnBookshelvesInTerrain(world, terrainMap, 12345, params, logger)
-
 			if err != nil {
 				t.Errorf("Unexpected error: %v", err)
 			}
@@ -360,7 +357,6 @@ func TestSpawnVehiclesInTerrain_SuccessfulSpawn(t *testing.T) {
 	params := procgen.GenerationParams{Difficulty: 0.5}
 
 	spawned, err := spawnVehiclesInTerrain(world, terrainMap, 12345, params, logger)
-
 	if err != nil {
 		t.Fatalf("Unexpected error: %v", err)
 	}
@@ -377,7 +373,6 @@ func TestSpawnCompanionsInTerrain_SuccessfulSpawn(t *testing.T) {
 	params := procgen.GenerationParams{Difficulty: 0.5}
 
 	spawned, err := spawnCompanionsInTerrain(world, terrainMap, 12345, params, logger)
-
 	if err != nil {
 		t.Fatalf("Unexpected error: %v", err)
 	}
@@ -394,7 +389,6 @@ func TestSpawnBookshelvesInTerrain_SuccessfulSpawn(t *testing.T) {
 	params := procgen.GenerationParams{Difficulty: 0.5}
 
 	spawned, err := spawnBookshelvesInTerrain(world, terrainMap, 12345, params, logger)
-
 	if err != nil {
 		t.Fatalf("Unexpected error: %v", err)
 	}
@@ -490,7 +484,6 @@ func TestSpawnVehiclesInTerrain_ManyRooms(t *testing.T) {
 	params := procgen.GenerationParams{Difficulty: 0.5}
 
 	spawned, err := spawnVehiclesInTerrain(world, terrainMap, 12345, params, logger)
-
 	if err != nil {
 		t.Fatalf("Unexpected error: %v", err)
 	}
@@ -508,7 +501,6 @@ func TestSpawnCompanionsInTerrain_ManyRooms(t *testing.T) {
 	params := procgen.GenerationParams{Difficulty: 0.5}
 
 	spawned, err := spawnCompanionsInTerrain(world, terrainMap, 12345, params, logger)
-
 	if err != nil {
 		t.Fatalf("Unexpected error: %v", err)
 	}

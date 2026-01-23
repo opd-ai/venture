@@ -402,10 +402,10 @@ func TestAddExploreRequirements(t *testing.T) {
 	}
 
 	tests := []struct {
-		name       string
-		seed       int64
-		minExpect  int
-		maxExpect  int
+		name      string
+		seed      int64
+		minExpect int
+		maxExpect int
 	}{
 		{
 			name:      "basic exploration",

@@ -528,52 +528,52 @@ func BenchmarkMergeEventImpacts(b *testing.B) {
 
 func TestGenerateFactionResponse_TriggerActionInfluence(t *testing.T) {
 	tests := []struct {
-		name           string
-		seed           int64
-		factionID      string
-		triggerAction  string
-		severity       Severity
-		expectHostile  bool
+		name          string
+		seed          int64
+		factionID     string
+		triggerAction string
+		severity      Severity
+		expectHostile bool
 	}{
 		{
-			name:           "hostile action - attack",
-			seed:           12345,
-			factionID:      "faction_a",
-			triggerAction:  "attack",
-			severity:       SeverityMajor,
-			expectHostile:  true,
+			name:          "hostile action - attack",
+			seed:          12345,
+			factionID:     "faction_a",
+			triggerAction: "attack",
+			severity:      SeverityMajor,
+			expectHostile: true,
 		},
 		{
-			name:           "hostile action - guild_war",
-			seed:           12345,
-			factionID:      "faction_a",
-			triggerAction:  "guild_war",
-			severity:       SeverityMajor,
-			expectHostile:  true,
+			name:          "hostile action - guild_war",
+			seed:          12345,
+			factionID:     "faction_a",
+			triggerAction: "guild_war",
+			severity:      SeverityMajor,
+			expectHostile: true,
 		},
 		{
-			name:           "diplomatic action - trade",
-			seed:           12345,
-			factionID:      "faction_b",
-			triggerAction:  "trade",
-			severity:       SeverityMajor,
-			expectHostile:  false,
+			name:          "diplomatic action - trade",
+			seed:          12345,
+			factionID:     "faction_b",
+			triggerAction: "trade",
+			severity:      SeverityMajor,
+			expectHostile: false,
 		},
 		{
-			name:           "diplomatic action - peace",
-			seed:           12345,
-			factionID:      "faction_b",
-			triggerAction:  "peace",
-			severity:       SeverityMajor,
-			expectHostile:  false,
+			name:          "diplomatic action - peace",
+			seed:          12345,
+			factionID:     "faction_b",
+			triggerAction: "peace",
+			severity:      SeverityMajor,
+			expectHostile: false,
 		},
 		{
-			name:           "neutral action",
-			seed:           12345,
-			factionID:      "faction_c",
-			triggerAction:  "unknown_action",
-			severity:       SeverityMajor,
-			expectHostile:  false,
+			name:          "neutral action",
+			seed:          12345,
+			factionID:     "faction_c",
+			triggerAction: "unknown_action",
+			severity:      SeverityMajor,
+			expectHostile: false,
 		},
 	}
 

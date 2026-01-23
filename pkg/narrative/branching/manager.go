@@ -433,7 +433,7 @@ func (m *Manager) checkBoolRequirement(key string, required bool, actual interfa
 }
 
 // checkStringRequirement validates a string requirement.
-func (m *Manager) checkStringRequirement(key string, required string, actual interface{}) error {
+func (m *Manager) checkStringRequirement(key, required string, actual interface{}) error {
 	act, ok := actual.(string)
 	if !ok || act != required {
 		return fmt.Errorf("requirement %s not met: need %s, have %v", key, required, actual)

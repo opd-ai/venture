@@ -306,10 +306,10 @@ func BenchmarkConvertSnapshotToStateUpdates_1000Entities(b *testing.B) {
 	// Create 1000 entities
 	for i := uint64(0); i < 1000; i++ {
 		snapshot.Entities[i] = network.EntitySnapshot{
-			EntityID:   i,
-			Timestamp:  now,
-			Position:   network.Position{X: float64(i), Y: float64(i * 2)},
-			Velocity:   network.Velocity{VX: 1.0, VY: 1.0},
+			EntityID:  i,
+			Timestamp: now,
+			Position:  network.Position{X: float64(i), Y: float64(i * 2)},
+			Velocity:  network.Velocity{VX: 1.0, VY: 1.0},
 			Components: map[string][]byte{
 				"vehicle":   make([]byte, 64),
 				"companion": make([]byte, 32),

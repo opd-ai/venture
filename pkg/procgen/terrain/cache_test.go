@@ -11,11 +11,11 @@ import (
 
 func TestGenerateCacheKey(t *testing.T) {
 	tests := []struct {
-		name       string
-		seed1      int64
-		params1    procgen.GenerationParams
-		seed2      int64
-		params2    procgen.GenerationParams
+		name        string
+		seed1       int64
+		params1     procgen.GenerationParams
+		seed2       int64
+		params2     procgen.GenerationParams
 		shouldMatch bool
 	}{
 		{
@@ -412,7 +412,7 @@ func TestTerrainCache_CorruptedDiskCache(t *testing.T) {
 	// Corrupt the file
 	key := GenerateCacheKey(seed, params)
 	filename := filepath.Join(tmpDir, key+".gob")
-	os.WriteFile(filename, []byte("corrupted data"), 0644)
+	os.WriteFile(filename, []byte("corrupted data"), 0o644)
 
 	// Clear memory cache
 	cache.Clear(false)

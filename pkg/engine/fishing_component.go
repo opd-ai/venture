@@ -187,8 +187,6 @@ func (f *FishingSpotComponent) Type() string {
 	return "fishing_spot"
 }
 
-
-
 // Serialize converts the component to JSON bytes.
 func (f *FishingSpotComponent) Serialize() ([]byte, error) {
 	f.mu.RLock()

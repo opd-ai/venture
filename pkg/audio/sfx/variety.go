@@ -136,4 +136,3 @@ func (g *Generator) ApplyHighPassFilter(sample *audio.AudioSample, cutoffFactor 
 		sample.Data[i] = highPass
 	}
 }
-

@@ -372,10 +372,10 @@ func TestStateBroadcaster_BroadcastRateBoundary(t *testing.T) {
 		{"valid low", 1, 1},
 		{"valid mid", 30, 30},
 		{"valid high", 60, 60},
-		{"invalid zero", 0, 30},           // Should retain previous (30)
-		{"invalid negative", -1, 30},      // Should retain previous
-		{"invalid too high", 61, 30},      // Should retain previous
-		{"valid boundary", 60, 60},        // Max valid
+		{"invalid zero", 0, 30},            // Should retain previous (30)
+		{"invalid negative", -1, 30},       // Should retain previous
+		{"invalid too high", 61, 30},       // Should retain previous
+		{"valid boundary", 60, 60},         // Max valid
 		{"invalid over boundary", 100, 60}, // Should retain previous (60)
 	}
 

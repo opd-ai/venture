@@ -51,16 +51,16 @@ type CircuitBreakerConfig struct {
 // These metrics are suitable for Prometheus-style monitoring and alerting.
 type CircuitBreakerMetrics struct {
 	// State transition counters
-	ClosedToOpenTransitions   int64 `json:"closed_to_open_transitions"`
-	OpenToHalfOpenTransitions int64 `json:"open_to_half_open_transitions"`
+	ClosedToOpenTransitions     int64 `json:"closed_to_open_transitions"`
+	OpenToHalfOpenTransitions   int64 `json:"open_to_half_open_transitions"`
 	HalfOpenToClosedTransitions int64 `json:"half_open_to_closed_transitions"`
-	HalfOpenToOpenTransitions int64 `json:"half_open_to_open_transitions"`
+	HalfOpenToOpenTransitions   int64 `json:"half_open_to_open_transitions"`
 
 	// Call counters
-	TotalCalls           int64 `json:"total_calls"`
-	TotalSuccesses       int64 `json:"total_successes"`
-	TotalFailures        int64 `json:"total_failures"`
-	TotalRejected        int64 `json:"total_rejected"` // Calls rejected while circuit was open
+	TotalCalls     int64 `json:"total_calls"`
+	TotalSuccesses int64 `json:"total_successes"`
+	TotalFailures  int64 `json:"total_failures"`
+	TotalRejected  int64 `json:"total_rejected"` // Calls rejected while circuit was open
 
 	// Time tracking (in nanoseconds for precision)
 	TimeInClosedNs   int64 `json:"time_in_closed_ns"`

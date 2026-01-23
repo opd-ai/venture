@@ -46,7 +46,7 @@ func createPlayerEntity(world *engine.World, terrain *terrain.Terrain, playerID 
 
 	// Add sprite for rendering (Phase 45: 64×64 enhanced sprites)
 	var playerSprite *engine.EbitenSprite
-	const playerSpriteSize = 64  // Phase 45 standard sprite size
+	const playerSpriteSize = 64   // Phase 45 standard sprite size
 	const playerColliderOff = -32 // Center offset (64/2 = 32)
 	if useAerialSprites {
 		// Generate procedural directional sprites with aerial-view perspective

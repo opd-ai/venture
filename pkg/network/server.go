@@ -804,7 +804,7 @@ func (s *TCPServer) disconnectClient(playerID uint64) {
 func (s *TCPServer) removeClient(playerID uint64) *clientConnection {
 	s.clientsMu.Lock()
 	defer s.clientsMu.Unlock()
-	
+
 	client, exists := s.clients[playerID]
 	if exists {
 		client.disconnect()

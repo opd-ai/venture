@@ -14,9 +14,14 @@ import (
 // neighborOffsets contains pre-computed neighbor coordinate offsets for
 // the 8 surrounding cells. Using pre-computed offsets avoids nested loop overhead.
 var neighborOffsets = [8][2]int{
-	{-1, -1}, {0, -1}, {1, -1},
-	{-1, 0}, {1, 0},
-	{-1, 1}, {0, 1}, {1, 1},
+	{-1, -1},
+	{0, -1},
+	{1, -1},
+	{-1, 0},
+	{1, 0},
+	{-1, 1},
+	{0, 1},
+	{1, 1},
 }
 
 // CellularGenerator generates cave-like terrain using cellular automata.

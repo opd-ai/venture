@@ -489,7 +489,7 @@ func TestFleetManager_Load_InvalidGzip(t *testing.T) {
 	defer os.Remove(filename)
 
 	// Write non-gzip content
-	err := os.WriteFile(filename, []byte("not gzip content"), 0644)
+	err := os.WriteFile(filename, []byte("not gzip content"), 0o644)
 	if err != nil {
 		t.Fatalf("failed to create test file: %v", err)
 	}

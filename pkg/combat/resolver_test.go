@@ -7,13 +7,13 @@ import (
 
 // MockEntityProvider implements EntityStatsProvider for testing.
 type MockEntityProvider struct {
-	stats       map[uint64]*Stats
+	stats        map[uint64]*Stats
 	attackDamage map[uint64]Damage
 }
 
 func NewMockEntityProvider() *MockEntityProvider {
 	return &MockEntityProvider{
-		stats:       make(map[uint64]*Stats),
+		stats:        make(map[uint64]*Stats),
 		attackDamage: make(map[uint64]Damage),
 	}
 }
@@ -137,8 +137,8 @@ func TestCalculateDamage_MagicDefense(t *testing.T) {
 	for _, damageType := range magicTypes {
 		t.Run(damageType.String(), func(t *testing.T) {
 			stats := NewStats()
-			stats.Defense = 0         // High physical defense
-			stats.MagicDefense = 100  // Should use this
+			stats.Defense = 0        // High physical defense
+			stats.MagicDefense = 100 // Should use this
 
 			damage := Damage{Amount: 100, Type: damageType}
 			result := resolver.CalculateDamage(damage, stats)
@@ -193,7 +193,7 @@ func TestCalculateDamage_MinimumDamage(t *testing.T) {
 	resolver.MinDamageMultiplier = 0.1
 
 	stats := NewStats()
-	stats.Defense = 1000           // Extreme defense
+	stats.Defense = 1000                     // Extreme defense
 	stats.Resistances[DamagePhysical] = 0.99 // Near immunity
 
 	damage := Damage{Amount: 100, Type: DamagePhysical}
@@ -210,7 +210,7 @@ func TestCalculateDamage_CombinedMitigation(t *testing.T) {
 	resolver := NewDefaultCombatResolver(nil)
 
 	stats := NewStats()
-	stats.Defense = 50             // 100 * (100/150) ≈ 66.67
+	stats.Defense = 50                      // 100 * (100/150) ≈ 66.67
 	stats.Resistances[DamagePhysical] = 0.3 // 66.67 * 0.7 ≈ 46.67
 
 	damage := Damage{Amount: 100, Type: DamagePhysical}

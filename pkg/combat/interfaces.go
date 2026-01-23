@@ -16,4 +16,3 @@ type CombatResolver interface {
 	// ResolveCombat handles a combat interaction between entities
 	ResolveCombat(attackerID, defenderID uint64) []Damage
 }
-

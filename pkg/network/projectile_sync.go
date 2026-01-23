@@ -353,7 +353,7 @@ func (s *ProjectileNetworkSync) PredictProjectile(predictionID uint64, msg Proje
 //
 // When mispredicted is true, the caller should apply correction to the local
 // projectile (e.g., snap to server position or interpolate toward it).
-func (s *ProjectileNetworkSync) ConfirmPrediction(predictionID, serverProjectileID uint64, serverMsg ProjectileSpawnMessage) (confirmed bool, mispredicted bool) {
+func (s *ProjectileNetworkSync) ConfirmPrediction(predictionID, serverProjectileID uint64, serverMsg ProjectileSpawnMessage) (confirmed, mispredicted bool) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 

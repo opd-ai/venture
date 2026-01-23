@@ -269,39 +269,39 @@ func TestV9ValidationService_ValidateGuildPermission(t *testing.T) {
 	house := guildMgr.CreateGuildHouse("guild1", "owner1", 1)
 
 	tests := []struct {
-		name               string
-		houseID            string
-		rank               guild.Rank
-		requiredPermission guildhousing.Permission
+		name                string
+		houseID             string
+		rank                guild.Rank
+		requiredPermission  guildhousing.Permission
 		expectHasPermission bool
 		nilManager          bool
 	}{
 		{
-			name:               "leader_has_admin_access",
-			houseID:            house.HouseID,
-			rank:               guild.RankLeader,
-			requiredPermission: guildhousing.PermissionAdmin,
+			name:                "leader_has_admin_access",
+			houseID:             house.HouseID,
+			rank:                guild.RankLeader,
+			requiredPermission:  guildhousing.PermissionAdmin,
 			expectHasPermission: true, // Leader has admin access by default
 		},
 		{
-			name:               "recruit_limited_access",
-			houseID:            house.HouseID,
-			rank:               guild.RankRecruit,
-			requiredPermission: guildhousing.PermissionAdmin,
+			name:                "recruit_limited_access",
+			houseID:             house.HouseID,
+			rank:                guild.RankRecruit,
+			requiredPermission:  guildhousing.PermissionAdmin,
 			expectHasPermission: false,
 		},
 		{
-			name:               "nonexistent_house",
-			houseID:            "fake-house",
-			rank:               guild.RankLeader,
-			requiredPermission: guildhousing.PermissionView,
+			name:                "nonexistent_house",
+			houseID:             "fake-house",
+			rank:                guild.RankLeader,
+			requiredPermission:  guildhousing.PermissionView,
 			expectHasPermission: false,
 		},
 		{
-			name:               "nil_manager",
-			houseID:            house.HouseID,
-			rank:               guild.RankLeader,
-			requiredPermission: guildhousing.PermissionView,
+			name:                "nil_manager",
+			houseID:             house.HouseID,
+			rank:                guild.RankLeader,
+			requiredPermission:  guildhousing.PermissionView,
 			expectHasPermission: false,
 			nilManager:          true,
 		},
@@ -329,30 +329,30 @@ func TestV9ValidationService_GetGuildUpgradeBonus(t *testing.T) {
 	house := guildMgr.CreateGuildHouse("guild1", "owner1", 1)
 
 	tests := []struct {
-		name        string
-		houseID     string
-		expectBonus float64
+		name         string
+		houseID      string
+		expectBonus  float64
 		expectExists bool
-		nilManager  bool
+		nilManager   bool
 	}{
 		{
-			name:        "existing_house_base_tier",
-			houseID:     house.HouseID,
-			expectBonus: 1.0, // Basic tier = 1.0x multiplier
+			name:         "existing_house_base_tier",
+			houseID:      house.HouseID,
+			expectBonus:  1.0, // Basic tier = 1.0x multiplier
 			expectExists: true,
 		},
 		{
-			name:        "nonexistent_house",
-			houseID:     "fake-house",
-			expectBonus: 1.0,
+			name:         "nonexistent_house",
+			houseID:      "fake-house",
+			expectBonus:  1.0,
 			expectExists: false,
 		},
 		{
-			name:        "nil_manager",
-			houseID:     house.HouseID,
-			expectBonus: 1.0,
+			name:         "nil_manager",
+			houseID:      house.HouseID,
+			expectBonus:  1.0,
 			expectExists: false,
-			nilManager:  true,
+			nilManager:   true,
 		},
 	}
 
@@ -378,10 +378,10 @@ func TestV9ValidationService_GetGuildUpgradeBonus(t *testing.T) {
 
 func TestV9ValidationService_GetCompanionHome(t *testing.T) {
 	tests := []struct {
-		name          string
-		companionID   uint64
-		expectHome    string
-		nilManager    bool
+		name        string
+		companionID uint64
+		expectHome  string
+		nilManager  bool
 	}{
 		{
 			name:        "unassigned_companion",

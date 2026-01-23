@@ -83,4 +83,3 @@ func (t TrainingAreaType) XPMultiplier() float64 {
 		return 1.0
 	}
 }
-

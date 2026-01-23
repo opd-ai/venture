@@ -286,6 +286,7 @@ func (g *Generator) loadSkillGrammar(grammar *Grammar, genre, skillName string) 
 		})
 	}
 }
+
 // loadLoreGrammar loads grammar rules for lore books.
 func (g *Generator) loadLoreGrammar(grammar *Grammar, genre string) {
 	switch genre {

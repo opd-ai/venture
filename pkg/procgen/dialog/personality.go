@@ -286,4 +286,3 @@ func (p *Personality) String() string {
 	return fmt.Sprintf("Personality{type=%s, friendliness=%.2f, verbosity=%.2f, formality=%.2f, humor=%.2f, knowledge=%.2f}",
 		p.Type, p.Friendliness, p.Verbosity, p.Formality, p.Humor, p.Knowledge)
 }
-

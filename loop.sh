@@ -3,6 +3,7 @@
 for true; do
 	auditor.sh
 	devloop.sh
+	checkin.sh
 	if [ ! -f AUDIT.md ]; then
 		exit 0
 	fi

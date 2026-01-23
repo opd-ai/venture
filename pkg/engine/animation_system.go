@@ -40,6 +40,9 @@ type AnimationSystem struct {
 	// When many entities need sprite regeneration, this spreads the work across frames
 	maxRegenPerFrame int // Maximum sprite regenerations per frame (0 = unlimited)
 	regenCount       int // Current regeneration count this frame
+
+	// Performance optimization: Pool for frame slices to reduce allocations
+	frameSlicePool sync.Pool
 }
 
 // AnimationStats holds performance statistics for the animation system.
@@ -76,7 +79,7 @@ func NewAnimationSystemWithLogger(spriteGenerator *sprites.Generator, logger *lo
 		}).Debug("initializing animation system")
 	}
 
-	return &AnimationSystem{
+	sys := &AnimationSystem{
 		spriteGenerator: spriteGenerator,
 		frameCache:      make(map[string][]*ebiten.Image),
 		maxCacheSize:    100, // Cache up to 100 animation sequences
@@ -92,6 +95,16 @@ func NewAnimationSystemWithLogger(spriteGenerator *sprites.Generator, logger *lo
 		// This eliminates the immediate lag while maintaining smooth gameplay
 		maxRegenPerFrame: 8,
 	}
+
+	// Initialize frame slice pool for reuse (reduces allocations during regeneration)
+	sys.frameSlicePool = sync.Pool{
+		New: func() interface{} {
+			// Pre-allocate with capacity 16 to handle all animation types (max 8 frames typical)
+			return make([]*ebiten.Image, 0, 16)
+		},
+	}
+
+	return sys
 }
 
 // Phase 14.2: Configuration methods for viewport culling and distance-based LOD
@@ -811,8 +824,11 @@ func (s *AnimationSystem) logSpriteMiss(entity *Entity, cacheKey cache.CacheKey)
 }
 
 // generateAllFrames creates all animation frames from a base sprite.
+// Uses pooled frame slices to reduce allocations during regeneration.
 func (s *AnimationSystem) generateAllFrames(entity *Entity, baseSprite *ebiten.Image, config sprites.Config, anim *AnimationComponent, frameCount int) ([]*ebiten.Image, error) {
-	frames := make([]*ebiten.Image, frameCount)
+	// Get slice from pool and resize to needed capacity
+	frames := s.getFrameSlice(frameCount)
+	
 	for i := 0; i < frameCount; i++ {
 		frame, err := s.generateTransformedFrame(baseSprite, config, string(anim.CurrentState), i, frameCount)
 		if err != nil {
@@ -1296,6 +1312,10 @@ func (s *AnimationSystem) cacheFrames(key string, frames []*ebiten.Image) {
 				"max_size":    s.maxCacheSize,
 			}).Debug("evicting oldest cache entry")
 		}
+		// Return evicted frame slice to pool for reuse
+		if evictedFrames, ok := s.frameCache[oldestKey]; ok {
+			s.putFrameSlice(evictedFrames)
+		}
 		delete(s.frameCache, oldestKey)
 		s.cacheKeys = s.cacheKeys[1:]
 	}
@@ -1528,4 +1548,34 @@ func (s *AnimationSystem) appendGenreIfDifferent(parts []string, custom map[stri
 		parts = append(parts, "g:"+genre)
 	}
 	return parts
+}
+
+// getFrameSlice retrieves a frame slice from the pool and resizes it to the needed count.
+// The slice will have the exact length needed and adequate capacity.
+func (s *AnimationSystem) getFrameSlice(count int) []*ebiten.Image {
+	slice := s.frameSlicePool.Get().([]*ebiten.Image)
+	// Reset length but preserve capacity, then resize to exact count
+	slice = slice[:0]
+	if cap(slice) < count {
+		// If capacity insufficient, make new slice with headroom
+		slice = make([]*ebiten.Image, count, count+8)
+	} else {
+		// Resize to exact count within existing capacity
+		slice = slice[:count]
+	}
+	return slice
+}
+
+// putFrameSlice returns a frame slice to the pool for reuse.
+// The slice is cleared before returning to prevent memory leaks.
+func (s *AnimationSystem) putFrameSlice(slice []*ebiten.Image) {
+	if slice == nil {
+		return
+	}
+	// Clear references to allow GC
+	for i := range slice {
+		slice[i] = nil
+	}
+	slice = slice[:0]
+	s.frameSlicePool.Put(slice)
 }

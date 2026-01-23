@@ -18,7 +18,15 @@ echo_warn() { echo -e "${YELLOW}⚠${NC} $1"; }
 echo_error() { echo -e "${RED}✗${NC} $1"; }
 echo_header() { echo -e "${BLUE}=== $1 ===${NC}"; }
 
-APK_PATH="/home/runner/work/venture/venture/dist/android/Venture-1.0.0-debug.apk"
+# Determine APK path
+if [ -n "$1" ]; then
+    APK_PATH="$1"
+elif [ -f "$PROJECT_ROOT/dist/android/Venture-1.0.0-debug.apk" ]; then
+    APK_PATH="$PROJECT_ROOT/dist/android/Venture-1.0.0-debug.apk"
+else
+    echo_error "APK not found. Please specify path or build with 'make android-apk'"
+    exit 1
+fi
 
 echo_header "Android APK Build Verification"
 echo ""

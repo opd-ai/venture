@@ -2,11 +2,11 @@
 **Date:** 2026-01-23  
 **Investigator:** Claude Performance Audit  
 **Codebase:** Venture Game Engine
-**Status:** 1 of 7 issues resolved (2026-01-23)
+**Status:** 2 of 7 issues resolved (2026-01-23)
 
 ## Executive Summary
 
-The performance audit identified **7 distinct issues** across startup and runtime categories. ~~Startup performance is significantly impacted by procedural terrain generation (12-50ms for composite terrains) and parallel system initialization overhead. Runtime performance is generally well-optimized with ECS query caching and component accessor caching providing ~93x faster access, though specific bottlenecks remain in fluid physics updates (652µs/update), large terrain cellular automata (5.3ms), and periodic GC pressure from sprite cache evictions.~~ **UPDATE (2026-01-23):** Critical fluid physics issue (R1) has been resolved through double-buffering implementation, achieving 100% allocation reduction per update. The primary gap from the 500ms startup target is terrain generation (~40%) and system initialization (~30%), while 60 FPS is achievable under normal gameplay ~~but degrades during large-scale procedural generation or fluid physics updates~~ **and now maintains stability during fluid physics simulation** (GC pressure eliminated).
+The performance audit identified **7 distinct issues** across startup and runtime categories. ~~Startup performance is significantly impacted by procedural terrain generation (12-50ms for composite terrains) and parallel system initialization overhead. Runtime performance is generally well-optimized with ECS query caching and component accessor caching providing ~93x faster access, though specific bottlenecks remain in fluid physics updates (652µs/update), large terrain cellular automata (5.3ms), and periodic GC pressure from sprite cache evictions.~~ **UPDATE (2026-01-23):** Two runtime issues have been resolved - the critical fluid physics issue (R1) through double-buffering implementation (100% allocation reduction per update), and the visible tracks allocation issue (R3) through buffer reuse (6.3x faster, zero allocations). The primary gap from the 500ms startup target is terrain generation (~40%) and system initialization (~30%), while 60 FPS is now achievable under normal gameplay **with stable performance during fluid physics simulation and vehicle terrain deformation** (all per-frame GC pressure eliminated for these systems).
 
 ---
 
@@ -141,19 +141,33 @@ The performance audit identified **7 distinct issues** across startup and runtim
 
 ---
 
-### Issue R3: Terrain Visible Tracks Allocation Per Query
+### Issue R3: Terrain Visible Tracks Allocation Per Query ✅ RESOLVED (2026-01-23)
 - **Location:** `pkg/engine/physics/vehicle/terrain_deformation.go` (`GetVisibleTracks()`)
-- **Severity:** Low
-- **Measured Impact:**
+- **Severity:** ~~Low~~ **FIXED**
+- **Original Impact:**
   - Frame time increase: +1.7ms per call with 256 tracks
   - Memory growth: 13.5KB per call
   - Frequency: Every frame when vehicle deformation is visible
-- **Root Cause:** GetVisibleTracks allocates a new slice for each query rather than reusing a buffer.
-- **Evidence:**
+- **Root Cause:** GetVisibleTracks allocated a new slice for each query rather than reusing a buffer.
+- **Original Evidence:**
   ```
   BenchmarkTerrainDeformationComponent_GetVisibleTracks-4   688068   1703 ns/op   13568 B/op   1 allocs/op
   ```
-- **Performance Target Gap:** 1.7ms is 10% of 16.67ms frame budget per call.
+- **Solution Implemented:** Reusable buffer pattern
+  - Added `visibleBuffer` field to `TerrainDeformationComponent` struct
+  - Pre-allocate buffer in `NewTerrainDeformationComponent()` with capacity of 200
+  - Reset buffer length (preserve capacity) in `GetVisibleTracks()` using slice reslicing
+  - Return reused buffer (callers must use immediately, not store)
+- **Results After Fix:**
+  ```
+  BenchmarkTerrainDeformationComponent_GetVisibleTracks-4   4682892    257 ns/op      0 B/op       0 allocs/op
+  ```
+- **Performance Improvement:**
+  - **6.3x faster** (1,703 ns → 257 ns)
+  - **100% allocation reduction** (13,568 B → 0 B)
+  - **100% alloc/op reduction** (1 → 0)
+  - Eliminated per-frame allocation when vehicle deformation is visible
+- **Performance Target Status:** ✅ ACHIEVED - Zero allocations per query, 84% time reduction
 
 ---
 
@@ -163,17 +177,17 @@ The performance audit identified **7 distinct issues** across startup and runtim
 - ~~Critical (blocks playability): 1 issue (R1: Fluid Physics)~~ ✅ **0 issues remaining** (R1 resolved 2026-01-23)
 - High (significant degradation): 2 issues (S1: Composite Terrain, S2: Cellular Automata)  
 - Medium (noticeable impact): 3 issues (S3: Forest Gen, S4: System Init, R2: Animation Regen)
-- Low (minor optimization): 1 issue (R3: Visible Tracks)
+- ~~Low (minor optimization): 1 issue (R3: Visible Tracks)~~ ✅ **0 issues remaining** (R3 resolved 2026-01-23)
 
-**Total Issues:** ~~7~~ **6 remaining** (1 resolved)
+**Total Issues:** ~~7~~ ~~6~~ **5 remaining** (2 resolved)
 
 **By Type:**
-- Algorithmic inefficiency: 3 issues (S2, S3, R1)
-- Unnecessary allocations: 3 issues (S2, R1, R3)
+- Algorithmic inefficiency: 2 issues (S2, S3)
+- Unnecessary allocations: 1 issue (S2)
 - Blocking I/O: 0 issues
 - Cache thrashing: 0 issues (sprite caching is well-implemented)
 - Rendering overhead: 1 issue (R2)
-- Other: 0 issues
+- Other: 1 issue (S4: System Init)
 
 ---
 
@@ -259,9 +273,13 @@ Based on FrameTimeTracker implementation (`pkg/engine/frame_time_tracker.go`):
    - Implementation complexity: Low
 
 ### Priority 4 (Optimizations)
-7. **R3: Visible Tracks Buffer Reuse**: Add reusable slice for GetVisibleTracks
-   - Expected improvement: 1.7ms → 0.5ms per call
-   - Implementation complexity: Low
+7. ~~**R3: Visible Tracks Buffer Reuse**: Add reusable slice for GetVisibleTracks~~ ✅ **COMPLETED (2026-01-23)**
+   - **Actual improvement**: 1,703 ns → 257 ns (6.3x faster), 13,568 B → 0 B (100% reduction)
+   - **Implementation**: Pre-allocated buffer in component struct with slice reslicing
+   - **Benchmark results**:
+     - Before: 1703 ns/op, 13568 B/op, 1 allocs/op
+     - After: 257 ns/op, 0 B/op, 0 allocs/op
+   - **Impact**: Eliminated per-frame allocation when vehicle deformation is visible
 
 8. **Forest Poisson Optimization**: Use approximate Poisson disc with spatial hashing
    - Expected improvement: 11ms → 3ms for large forests

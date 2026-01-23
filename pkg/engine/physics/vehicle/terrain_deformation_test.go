@@ -287,3 +287,63 @@ func BenchmarkTerrainDeformationComponent_GetVisibleTracks(b *testing.B) {
 		_ = comp.GetVisibleTracks(500.0, 500.0, 700.0, 700.0)
 	}
 }
+
+// TestTerrainDeformationComponent_GetVisibleTracks_BufferReuse verifies that
+// the buffer reuse optimization works correctly across multiple calls.
+// Note: Callers must use the returned slice immediately and not store it,
+// as it will be overwritten by the next call to GetVisibleTracks.
+func TestTerrainDeformationComponent_GetVisibleTracks_BufferReuse(t *testing.T) {
+	comp := NewTerrainDeformationComponent(12345)
+
+	// Add tracks at different positions
+	comp.AddTrack(50.0, 50.0, 0.0, 1000.0, TerrainSoft)
+	comp.AddTrack(150.0, 150.0, 0.0, 1000.0, TerrainSoft)
+	comp.AddTrack(250.0, 250.0, 0.0, 1000.0, TerrainSoft)
+
+	// First call - should return middle track
+	visible1 := comp.GetVisibleTracks(100.0, 100.0, 200.0, 200.0)
+	if len(visible1) != 1 {
+		t.Errorf("first call: expected 1 visible track, got %d", len(visible1))
+	}
+	if visible1[0].X != 150.0 || visible1[0].Y != 150.0 {
+		t.Errorf("first call: wrong track position (%f,%f), want (150,150)", visible1[0].X, visible1[0].Y)
+	}
+
+	// Second call with different bounds - should return last track
+	visible2 := comp.GetVisibleTracks(200.0, 200.0, 300.0, 300.0)
+	if len(visible2) != 1 {
+		t.Errorf("second call: expected 1 visible track, got %d", len(visible2))
+	}
+	if visible2[0].X != 250.0 || visible2[0].Y != 250.0 {
+		t.Errorf("second call: wrong track position (%f,%f), want (250,250)", visible2[0].X, visible2[0].Y)
+	}
+
+	// Third call with bounds that includes all tracks
+	visible3 := comp.GetVisibleTracks(0.0, 0.0, 300.0, 300.0)
+	if len(visible3) != 3 {
+		t.Errorf("third call: expected 3 visible tracks, got %d", len(visible3))
+	}
+
+	// Verify positions are correct
+	expectedPositions := []struct{ x, y float64 }{
+		{50.0, 50.0},
+		{150.0, 150.0},
+		{250.0, 250.0},
+	}
+	for i, expected := range expectedPositions {
+		if i >= len(visible3) {
+			break
+		}
+		if visible3[i].X != expected.x || visible3[i].Y != expected.y {
+			t.Errorf("track %d: got position (%f,%f), want (%f,%f)",
+				i, visible3[i].X, visible3[i].Y, expected.x, expected.y)
+		}
+	}
+
+	// Fourth call with empty bounds - should return no tracks
+	visible4 := comp.GetVisibleTracks(500.0, 500.0, 600.0, 600.0)
+	if len(visible4) != 0 {
+		t.Errorf("fourth call: expected 0 visible tracks, got %d", len(visible4))
+	}
+}
+

@@ -24,6 +24,9 @@ type TerrainDeformationComponent struct {
 	// Seed for deterministic noise in track patterns
 	Seed int64
 	rng  *rand.Rand
+
+	// Reusable buffer for GetVisibleTracks to avoid per-call allocations
+	visibleBuffer []TrackMark
 }
 
 // Type returns the component type identifier.
@@ -41,6 +44,7 @@ func NewTerrainDeformationComponent(seed int64) *TerrainDeformationComponent {
 		MinTrackSpacing: 5.0, // 5 pixels between marks
 		Seed:            seed,
 		rng:             rng,
+		visibleBuffer:   make([]TrackMark, 0, 200), // Pre-allocate buffer for GetVisibleTracks
 		DeformationDepth: map[TerrainType]float64{
 			TerrainHard:  0.0, // No deformation on hard surfaces
 			TerrainFirm:  0.2, // Slight tracks
@@ -144,19 +148,21 @@ func (t *TerrainDeformationComponent) Update(deltaTime float64) {
 
 // GetVisibleTracks returns all tracks that should be rendered.
 // minX, minY, maxX, maxY: viewport bounds for culling
+// Returns a slice that is reused on subsequent calls - do not modify or store.
 func (t *TerrainDeformationComponent) GetVisibleTracks(minX, minY, maxX, maxY float64) []TrackMark {
-	visible := make([]TrackMark, 0, len(t.Tracks))
+	// Reset buffer length while preserving capacity
+	t.visibleBuffer = t.visibleBuffer[:0]
 
 	for i := range t.Tracks {
 		track := &t.Tracks[i]
 
 		// Simple AABB culling
 		if track.X >= minX && track.X <= maxX && track.Y >= minY && track.Y <= maxY {
-			visible = append(visible, *track)
+			t.visibleBuffer = append(t.visibleBuffer, *track)
 		}
 	}
 
-	return visible
+	return t.visibleBuffer
 }
 
 // GetTrackAlpha calculates the opacity of a track based on age and fade time.

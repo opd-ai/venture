@@ -139,10 +139,10 @@ build_apk() {
     
     # Build APK
     if [ "$build_type" == "release" ]; then
-        ./gradlew assembleRelease
+        bash gradlew assembleRelease
         APK_FILE="$BUILD_DIR/build/outputs/apk/release/*.apk"
     else
-        ./gradlew assembleDebug
+        bash gradlew assembleDebug
         APK_FILE="$BUILD_DIR/build/outputs/apk/debug/*.apk"
     fi
     
@@ -159,7 +159,7 @@ build_aab() {
     
     cd "$BUILD_DIR"
     
-    ./gradlew bundleRelease
+    bash gradlew bundleRelease
     
     AAB_FILE="$BUILD_DIR/build/outputs/bundle/release/*.aab"
     
@@ -175,7 +175,7 @@ install_debug() {
     echo_info "Installing debug APK on connected device..."
     
     cd "$BUILD_DIR"
-    ./gradlew installDebug
+    bash gradlew installDebug
     
     echo_info "App installed successfully"
 }

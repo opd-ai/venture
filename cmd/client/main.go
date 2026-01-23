@@ -98,6 +98,7 @@ func main() {
 
 // setupAllGameSystems initializes and registers all game systems.
 // Uses parallel initialization for independent system groups to reduce startup time.
+// Non-critical systems are deferred for lazy initialization after first frame.
 func setupAllGameSystems(game *engine.EbitenGame, logger *logrus.Logger, clientLogger *logrus.Entry) *systemsContainer {
 	sys := initializeCoreSystems(game, logger, clientLogger)
 
@@ -120,57 +121,14 @@ func setupAllGameSystems(game *engine.EbitenGame, logger *logrus.Logger, clientL
 
 	configureDeathCallback(sys, game, logger)
 
-	// Phase 2: Progression, audio, and combat systems (sequential - depend on generators)
+	// Phase 2: Core gameplay systems (critical for first frame)
 	initializeProgressionSystems(game, sys, logger)
-	initializeAudioSystem(game, sys, clientLogger)
 	initializeCombatSystems(game, sys)
 
 	tutorialSystem, helpSystem := initializeTutorialAndHelp(sys.inputSystem, game.CameraSystem)
 
-	// Phase 3: Version systems (parallel - independent of each other)
-	// These systems write to separate fields in systemsContainer, making them safe to parallelize
-	var wg2 sync.WaitGroup
-	wg2.Add(8)
-	go func() {
-		defer wg2.Done()
-		initializeEnvironmentalSystems(game, sys, clientLogger)
-	}()
-	go func() {
-		defer wg2.Done()
-		initializeV4Systems(game, sys, clientLogger)
-	}()
-	go func() {
-		defer wg2.Done()
-		initializeV5Systems(game, sys, clientLogger)
-	}()
-	go func() {
-		defer wg2.Done()
-		initializeV6Systems(game, sys, clientLogger)
-	}()
-	go func() {
-		defer wg2.Done()
-		initializeV7Systems(game, sys, clientLogger)
-	}()
-	go func() {
-		defer wg2.Done()
-		initializeV8Systems(game, sys, clientLogger)
-	}()
-	go func() {
-		defer wg2.Done()
-		initializeV9Systems(game, sys, clientLogger)
-	}()
-	go func() {
-		defer wg2.Done()
-		initializeV19Systems(game, sys, clientLogger)
-	}()
-	wg2.Wait()
-
-	// Phase 3.2: Initialize Guild Federation (PLAN.md)
-	// Cross-server guild management with synchronization
-	initializePhase3Systems(game, sys, clientLogger)
-
-	// Now register all systems (including environmental systems that are now initialized)
-	registerAllSystems(game, sys)
+	// Register critical systems immediately for first frame
+	registerCriticalSystems(game, sys)
 
 	game.World.AddSystem(tutorialSystem)
 	game.World.AddSystem(helpSystem)
@@ -181,8 +139,11 @@ func setupAllGameSystems(game *engine.EbitenGame, logger *logrus.Logger, clientL
 	configureSystemConnections(game, sys)
 
 	if *verbose {
-		clientLogger.Info("systems initialized (parallel mode)")
+		clientLogger.Info("critical systems initialized - deferring non-critical systems")
 	}
+
+	// Schedule lazy initialization for non-critical systems (deferred until after first frame)
+	sys.scheduleLazyInit(game, logger, clientLogger)
 
 	return sys
 }

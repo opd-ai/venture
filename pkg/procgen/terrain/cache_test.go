@@ -545,3 +545,70 @@ func BenchmarkGenerateCacheKey(b *testing.B) {
 		GenerateCacheKey(int64(i), params)
 	}
 }
+
+// TestPrewarmCache verifies that cache prewarming generates and stores common terrains.
+func TestPrewarmCache(t *testing.T) {
+	// Create a temporary cache for testing
+	tempDir := filepath.Join(os.TempDir(), "venture_test_prewarm")
+	defer os.RemoveAll(tempDir)
+
+	testCache := NewTerrainCache(20, tempDir)
+	originalCache := DefaultCache
+	DefaultCache = testCache
+	defer func() { DefaultCache = originalCache }()
+
+	// Verify cache is initially empty
+	stats := testCache.Stats()
+	if stats.MemorySize != 0 {
+		t.Fatalf("cache should start empty, got %d entries", stats.MemorySize)
+	}
+
+	// Prewarm cache
+	seedBase := int64(99999)
+	PrewarmCache(seedBase)
+
+	// Verify cache has entries
+	stats = testCache.Stats()
+	if stats.MemorySize == 0 {
+		t.Error("cache should have entries after prewarming")
+	}
+
+	// Verify we can retrieve a prewarmed terrain
+	params := procgen.GenerationParams{
+		GenreID:    "fantasy",
+		Difficulty: 0.5,
+		Depth:      1,
+		Custom: map[string]interface{}{
+			"width":           80,
+			"height":          50,
+			"biomeCount":      3,
+			"transitionWidth": 3,
+		},
+	}
+
+	terrain := GetCached(seedBase, params)
+	if terrain == nil {
+		t.Error("prewarmed terrain should be retrievable from cache")
+	}
+	if terrain != nil && (terrain.Width != 80 || terrain.Height != 50) {
+		t.Errorf("cached terrain has wrong dimensions: %dx%d, want 80x50",
+			terrain.Width, terrain.Height)
+	}
+}
+
+// BenchmarkPrewarmCache measures cache prewarming performance.
+func BenchmarkPrewarmCache(b *testing.B) {
+	tempDir := filepath.Join(os.TempDir(), "venture_bench_prewarm")
+	defer os.RemoveAll(tempDir)
+
+	testCache := NewTerrainCache(50, tempDir)
+	originalCache := DefaultCache
+	DefaultCache = testCache
+	defer func() { DefaultCache = originalCache }()
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		testCache.Clear(true)
+		PrewarmCache(int64(i * 10000))
+	}
+}

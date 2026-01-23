@@ -10,19 +10,39 @@ import (
 
 // Simulator handles fluid dynamics simulation
 type Simulator struct {
-	config SimulationConfig
-	grid   *Grid
-	time   float64
+	config        SimulationConfig
+	grid          *Grid
+	time          float64
+	bufferA       [][]Cell // First buffer for double-buffering
+	bufferB       [][]Cell // Second buffer for double-buffering
+	currentBuffer int      // 0 for bufferA, 1 for bufferB
 }
 
 // NewSimulator creates a new fluid simulator
 func NewSimulator(config SimulationConfig) *Simulator {
 	grid := NewGrid(config.GridWidth, config.GridHeight)
+	
+	// Pre-allocate two buffers for double-buffering to avoid allocations during updates
+	bufferA := allocateGrid(config.GridHeight, config.GridWidth)
+	bufferB := allocateGrid(config.GridHeight, config.GridWidth)
+	
 	return &Simulator{
-		config: config,
-		grid:   grid,
-		time:   0.0,
+		config:        config,
+		grid:          grid,
+		time:          0.0,
+		bufferA:       bufferA,
+		bufferB:       bufferB,
+		currentBuffer: 0,
 	}
+}
+
+// allocateGrid creates a 2D grid of cells without initializing the Grid struct
+func allocateGrid(height, width int) [][]Cell {
+	cells := make([][]Cell, height)
+	for y := 0; y < height; y++ {
+		cells[y] = make([]Cell, width)
+	}
+	return cells
 }
 
 // NewGrid creates a new fluid grid
@@ -152,19 +172,24 @@ func (s *Simulator) advect(deltaTime float64) {
 	s.grid.mu.Lock()
 	defer s.grid.mu.Unlock()
 
-	newCells := s.createTemporaryGrid()
-	s.advectFluidCells(newCells, deltaTime)
-	s.grid.Cells = newCells
-}
-
-// createTemporaryGrid creates a copy of the current grid for advection.
-func (s *Simulator) createTemporaryGrid() [][]Cell {
-	newCells := make([][]Cell, s.grid.Height)
-	for y := 0; y < s.grid.Height; y++ {
-		newCells[y] = make([]Cell, s.grid.Width)
-		copy(newCells[y], s.grid.Cells[y])
+	// Use double-buffering to avoid allocation
+	var targetBuffer [][]Cell
+	if s.currentBuffer == 0 {
+		targetBuffer = s.bufferB
+	} else {
+		targetBuffer = s.bufferA
 	}
-	return newCells
+	
+	// Copy current grid to target buffer
+	for y := 0; y < s.grid.Height; y++ {
+		copy(targetBuffer[y], s.grid.Cells[y])
+	}
+	
+	s.advectFluidCells(targetBuffer, deltaTime)
+	s.grid.Cells = targetBuffer
+	
+	// Swap buffers
+	s.currentBuffer = 1 - s.currentBuffer
 }
 
 // advectFluidCells processes all cells and distributes fluid based on velocity.

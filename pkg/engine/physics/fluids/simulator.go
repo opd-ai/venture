@@ -23,8 +23,8 @@ func NewSimulator(config SimulationConfig) *Simulator {
 	grid := NewGrid(config.GridWidth, config.GridHeight)
 	
 	// Pre-allocate two buffers for double-buffering to avoid allocations during updates
-	bufferA := allocateGrid(config.GridHeight, config.GridWidth)
-	bufferB := allocateGrid(config.GridHeight, config.GridWidth)
+	bufferA := allocateGrid(config.GridWidth, config.GridHeight)
+	bufferB := allocateGrid(config.GridWidth, config.GridHeight)
 	
 	return &Simulator{
 		config:        config,
@@ -36,8 +36,9 @@ func NewSimulator(config SimulationConfig) *Simulator {
 	}
 }
 
-// allocateGrid creates a 2D grid of cells without initializing the Grid struct
-func allocateGrid(height, width int) [][]Cell {
+// allocateGrid creates a 2D grid of cells without initializing the Grid struct.
+// Parameters follow (width, height) order to match NewGrid.
+func allocateGrid(width, height int) [][]Cell {
 	cells := make([][]Cell, height)
 	for y := 0; y < height; y++ {
 		cells[y] = make([]Cell, width)
@@ -186,9 +187,12 @@ func (s *Simulator) advect(deltaTime float64) {
 	}
 	
 	s.advectFluidCells(targetBuffer, deltaTime)
+	
+	// Safe to reassign Cells while holding grid.mu lock.
+	// All accesses to grid.Cells (internal and via GetGrid) properly use grid.mu.
 	s.grid.Cells = targetBuffer
 	
-	// Swap buffers
+	// Swap buffers for next update
 	s.currentBuffer = 1 - s.currentBuffer
 }
 

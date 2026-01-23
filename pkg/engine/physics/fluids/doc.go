@@ -68,7 +68,7 @@ The fluid simulation is optimized for large grids:
   - Buoyancy calculations: <100µs per entity
   - Thread-safe grid access with RWMutex
   - Separate update rate from main game loop
-  - Zero-allocation updates via double-buffering (optimized 2026-01-23)
+  - Zero-allocation updates via double-buffering (recent optimization)
 
 # Memory Management
 

@@ -9,6 +9,31 @@ This document tracks progress on Phase 3 deliverable: "Increase test coverage to
 
 ## Completed Improvements
 
+### 2026-01-23: pkg/network/trade
+- **Before:** 71.1%
+- **After:** 75.4%
+- **Improvement:** +4.3 percentage points
+- **Status:** ✅ Approaching 80% target
+
+#### Changes Made
+- Created `coverage_improvement_test.go` with 6 new test functions
+- Added comprehensive table-driven tests for trust validation and rollback functionality
+- Covered previously untested functions:
+  - `validateTrust`: Low/medium/high trust scenarios (45.5% → 100%)
+  - `createRollbackFunc`: Rollback functionality for trade failures (11.1% → 100%)
+  - `newTransferTracker`: Transfer tracker initialization (100%, verified)
+
+#### Test Coverage Details
+- Total new test functions: 6
+- Total new test cases: 29
+- New test coverage includes:
+  - Low trust validation: max items (5), rarity restrictions (common/uncommon only)
+  - Medium trust validation: legendary item restrictions, rare/epic allowed
+  - High trust validation: all rarities and quantities allowed
+  - Edge cases: threshold boundaries, zero trust, empty/nil item lists
+  - Rollback functionality: item restoration on trade failure
+  - Empty transfer rollback (no-op scenario)
+
 ### 2026-01-08: pkg/procgen/furniture
 - **Before:** 79.6%
 - **After:** 89.2%

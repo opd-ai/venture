@@ -188,8 +188,10 @@ func (s *Simulator) advect(deltaTime float64) {
 	
 	s.advectFluidCells(targetBuffer, deltaTime)
 	
-	// Safe to reassign Cells while holding grid.mu lock.
-	// All accesses to grid.Cells (internal and via GetGrid) properly use grid.mu.
+	// Safe to reassign Cells while holding grid.mu for internal simulator use.
+	// NOTE: GetGrid returns a shallow view of the Grid; callers must not retain or
+	// mutate grid.Cells without their own synchronization and must not rely on it
+	// remaining stable across simulation steps.
 	s.grid.Cells = targetBuffer
 	
 	// Swap buffers for next update

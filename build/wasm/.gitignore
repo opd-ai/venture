@@ -1,0 +1,3 @@
+# Generated WebAssembly files (built by CI/CD)
+venture.wasm
+wasm_exec.js

@@ -37,7 +37,8 @@ cd build/android && bash gradlew assembleDebug
 **Root Cause:** Android build infrastructure was completely missing - no Gradle build files, AndroidManifest.xml, or build scripts existed in the repository.
 
 **Solution:** Created complete Android build structure:
-- `AndroidManifest.xml` - App manifest with GoNativeActivity configuration
+- `AndroidManifest.xml` - App manifest with custom MainActivity configuration
+- `MainActivity.java` - Custom Activity using EbitenView for game rendering
 - `build.gradle` - Gradle build script using Android Gradle Plugin 7.4.2
 - `settings.gradle` - Gradle project configuration
 - `gradle.properties` - Build optimization settings
@@ -296,7 +297,9 @@ adb logcat | grep -E "(Venture|GoLog|ebitengine)"
 ### Current Limitations
 1. **Debug APK Only** - Release APK requires signing configuration
 2. **Large APK Size** - 85 MB (native code for all architectures)
-3. **GoNativeActivity Warning** - Expected behavior with ebitenmobile v2.9.7
+
+### Architecture Update (v2.9.7+)
+The build now uses a custom `MainActivity.java` that integrates with EbitenView, replacing the older GoNativeActivity approach. This is the recommended pattern for Ebiten v2.9+ and provides better control over the Android lifecycle.
 
 ### Future Enhancements
 - [ ] Add release signing configuration for Play Store

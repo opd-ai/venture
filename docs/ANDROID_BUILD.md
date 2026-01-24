@@ -87,7 +87,8 @@ ebitenmobile bind \
 This creates a 43MB AAR file containing:
 - Native libraries (libgojni.so) for all architectures
 - Java bindings for the Go mobile code
-- GoNativeActivity class for the Android activity
+- EbitenView class for rendering the game
+- Go mobile runtime (go.Seq package)
 
 #### Step 2: Build APK with Gradle
 
@@ -119,14 +120,16 @@ Key configuration:
 - **Package**: `com.venture.game`
 - **Min SDK**: 21 (Android 5.0)
 - **Target SDK**: 34 (Android 14)
-- **Activity**: `org.ebitengine.gomobile.GoNativeActivity`
+- **Activity**: `com.venture.game.MainActivity` (custom Activity using EbitenView)
 - **Screen Orientation**: Portrait
 - **Permissions**: Internet, Network State, Vibrate
 
-Critical meta-data:
-```xml
-<meta-data android:name="android.app.lib_name" android:value="mobile" />
-```
+The MainActivity is a custom Java Activity that:
+- Initializes the Go mobile runtime using `Seq.setContext()`
+- Creates and displays an `EbitenView` for game rendering
+- Calls `mobile.Mobile.start()` to begin the game loop
+- Handles activity lifecycle events (onPause, onResume)
+- Provides immersive fullscreen experience
 This tells Android to load the `libgojni.so` library (built from `cmd/mobile`).
 
 ### build.gradle
@@ -234,9 +237,24 @@ sourceSets {
 }
 ```
 
-### Issue: AAR doesn't contain GoNativeActivity
+### Architecture: Custom MainActivity with EbitenView
 
-**Solution**: This is expected for newer ebitenmobile versions. The GoNativeActivity class comes from the ebitengine/gomobile dependency, not the AAR itself.
+The Android build uses a custom `MainActivity.java` that integrates with the ebitenmobile-generated AAR:
+
+1. **MainActivity.java**: Custom Activity in `src/main/java/com/venture/game/MainActivity.java`
+   - Extends `android.app.Activity`
+   - Initializes Go mobile runtime (`Seq.setContext()`)
+   - Creates and displays `EbitenView` for game rendering
+   - Calls `mobile.Mobile.start()` to initialize the game
+   - Handles lifecycle events (pause/resume)
+   - Provides immersive fullscreen experience
+
+2. **EbitenView**: Provided by the AAR library
+   - Custom Android View for rendering Ebiten games
+   - Handles touch input and game rendering
+   - Managed by MainActivity's lifecycle
+
+This approach is the recommended way for Ebiten v2.9+, replacing the older GoNativeActivity pattern used in earlier versions.
 
 ## Build Artifacts
 

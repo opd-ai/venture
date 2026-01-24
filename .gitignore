@@ -108,6 +108,8 @@ build/
 !build/android/gradle/wrapper/gradle-wrapper.properties
 !build/android/src/
 !build/android/src/main/
+!build/android/src/main/java/
+!build/android/src/main/java/**
 !build/android/src/main/res/
 !build/android/src/main/res/values/
 !build/android/src/main/res/values/strings.xml

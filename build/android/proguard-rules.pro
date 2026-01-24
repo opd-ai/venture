@@ -12,9 +12,9 @@
     native <methods>;
 }
 
-# Keep GoNativeActivity
--keep class org.ebitengine.gomobile.GoNativeActivity { *; }
--keep class org.ebitengine.gomobile.EbitenView { *; }
+# Keep MainActivity and EbitenView
+-keep class com.venture.game.MainActivity { *; }
+-keep class mobile.EbitenView { *; }
 
 # Suppress warnings for Go generated code
 -dontwarn go.**

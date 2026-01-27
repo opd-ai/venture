@@ -11,11 +11,13 @@
 package engine
 
 import (
+	"image"
 	"image/color"
 	"math"
 	"time"
 
 	"github.com/hajimehoshi/ebiten/v2"
+	"github.com/opd-ai/venture/pkg/rendering/lighting"
 	"github.com/sirupsen/logrus"
 )
 
@@ -540,6 +542,21 @@ func (s *LightingSystem) ApplyLighting(screen, renderedScene *ebiten.Image, enti
 	bufferResized := s.createOrResizeLightingBuffer(w, h)
 
 	lightsApplied := s.applyAmbientAndPointLights(renderedScene, lights, ambientIntensity, ambientColor, usedCachedAmbient, bufferResized, collectDuration)
+
+	// Apply bloom effect if enabled
+	if s.config.EnableBloom && s.config.BloomIntensity > 0 {
+		bloomStart := time.Now()
+		s.applyBloomEffect()
+		bloomDuration := time.Since(bloomStart)
+		if s.logger != nil {
+			s.logger.WithFields(logrus.Fields{
+				"bloom_duration_ms": bloomDuration.Milliseconds(),
+				"bloom_threshold":   s.config.BloomThreshold,
+				"bloom_intensity":   s.config.BloomIntensity,
+				"bloom_radius":      s.config.BloomRadius,
+			}).Debug("Bloom effect applied")
+		}
+	}
 
 	screen.DrawImage(s.lightingBuffer, nil)
 
@@ -1152,6 +1169,43 @@ func (s *LightingSystem) GetConfig() *LightingConfig {
 	}
 	return s.config
 }
+
+// applyBloomEffect applies bloom/glow effect to bright areas of the lighting buffer.
+// This creates a soft glow around bright lights for enhanced visual quality.
+func (s *LightingSystem) applyBloomEffect() {
+	if s.lightingBuffer == nil {
+		return
+	}
+
+	bounds := s.lightingBuffer.Bounds()
+	w, h := bounds.Dx(), bounds.Dy()
+
+	// Convert ebiten.Image to image.RGBA for bloom processing
+	rgba := image.NewRGBA(image.Rect(0, 0, w, h))
+	for y := 0; y < h; y++ {
+		for x := 0; x < w; x++ {
+			rgba.Set(x, y, s.lightingBuffer.At(x, y))
+		}
+	}
+
+	// Configure bloom
+	bloomConfig := lighting.BloomConfig{
+		Enabled:   true,
+		Threshold: s.config.BloomThreshold,
+		Intensity: s.config.BloomIntensity,
+		Radius:    s.config.BloomRadius,
+		Samples:   7, // Good quality/performance balance
+	}
+
+	// Apply bloom
+	bloomedRGBA := lighting.ApplyBloom(rgba, bloomConfig)
+
+	// Convert back to ebiten.Image
+	s.lightingBuffer.Clear()
+	s.lightingBuffer.WritePixels(bloomedRGBA.Pix)
+}
+
+// GetConfig returns the current lighting configuration.
 
 // SetConfig updates the lighting configuration.
 func (s *LightingSystem) SetConfig(config *LightingConfig) {

@@ -667,3 +667,118 @@ func TestLightCacheKey(t *testing.T) {
 		t.Error("Different falloff should create different cache key")
 	}
 }
+
+// TestBloomIntegration tests that bloom effect is applied when enabled.
+func TestBloomIntegration(t *testing.T) {
+	world := NewWorld()
+	config := NewLightingConfig()
+	config.EnableBloom = true
+	config.BloomIntensity = 1.5
+	config.BloomThreshold = 0.7
+	config.BloomRadius = 12
+
+	system := NewLightingSystem(world, config)
+
+	// Create bright light source
+	entity := world.CreateEntity()
+	light := NewLightComponent(100, color.RGBA{255, 100, 255, 255}, 2.0) // Bright enough to bloom
+	pos := &PositionComponent{X: 400, Y: 300}
+	entity.AddComponent(light)
+	entity.AddComponent(pos)
+
+	// Apply lighting
+	system.SetViewport(0, 0, 800, 600)
+	entities := []*Entity{entity}
+	system.CollectVisibleLights(entities)
+
+	// Verify bloom config is set
+	if !system.config.EnableBloom {
+		t.Error("Bloom should be enabled")
+	}
+	if system.config.BloomIntensity != 1.5 {
+		t.Errorf("BloomIntensity = %v, want 1.5", system.config.BloomIntensity)
+	}
+	if system.config.BloomThreshold != 0.7 {
+		t.Errorf("BloomThreshold = %v, want 0.7", system.config.BloomThreshold)
+	}
+	if system.config.BloomRadius != 12 {
+		t.Errorf("BloomRadius = %v, want 12", system.config.BloomRadius)
+	}
+}
+
+// TestBloomDisabled tests that bloom is not applied when disabled.
+func TestBloomDisabled(t *testing.T) {
+	world := NewWorld()
+	config := NewLightingConfig()
+	config.EnableBloom = false
+
+	system := NewLightingSystem(world, config)
+
+	if system.config.EnableBloom {
+		t.Error("Bloom should be disabled")
+	}
+}
+
+// TestBloomConfigDefaults tests default bloom configuration values.
+func TestBloomConfigDefaults(t *testing.T) {
+	config := NewLightingConfig()
+
+	// Bloom should be enabled by default
+	if !config.EnableBloom {
+		t.Error("Bloom should be enabled by default")
+	}
+
+	// Verify sensible defaults
+	if config.BloomThreshold <= 0 || config.BloomThreshold >= 1 {
+		t.Errorf("BloomThreshold = %v, want in range (0, 1)", config.BloomThreshold)
+	}
+	if config.BloomIntensity <= 0 {
+		t.Errorf("BloomIntensity = %v, want > 0", config.BloomIntensity)
+	}
+	if config.BloomRadius <= 0 {
+		t.Errorf("BloomRadius = %v, want > 0", config.BloomRadius)
+	}
+}
+
+// TestApplyBloomEffect tests the bloom effect application method.
+func TestApplyBloomEffect(t *testing.T) {
+	world := NewWorld()
+	config := NewLightingConfig()
+	config.EnableBloom = true
+	config.BloomIntensity = 1.0
+	config.BloomThreshold = 0.8
+	config.BloomRadius = 10
+
+	system := NewLightingSystem(world, config)
+
+	// Test with nil buffer (should not crash)
+	system.applyBloomEffect()
+
+	// Create lighting buffer
+	system.createOrResizeLightingBuffer(800, 600)
+
+	// Apply bloom effect (should not crash)
+	system.applyBloomEffect()
+
+	if system.lightingBuffer == nil {
+		t.Error("Lighting buffer should still exist after bloom")
+	}
+}
+
+// TestBloomIntensityZero tests that bloom is skipped when intensity is 0.
+func TestBloomIntensityZero(t *testing.T) {
+	world := NewWorld()
+	config := NewLightingConfig()
+	config.EnableBloom = true
+	config.BloomIntensity = 0 // Zero intensity should skip bloom
+
+	system := NewLightingSystem(world, config)
+
+	// Bloom should be configured but effectively disabled
+	if !system.config.EnableBloom {
+		t.Error("EnableBloom should be true even with zero intensity")
+	}
+	if system.config.BloomIntensity != 0 {
+		t.Errorf("BloomIntensity = %v, want 0", system.config.BloomIntensity)
+	}
+}

@@ -742,6 +742,10 @@ func TestBloomConfigDefaults(t *testing.T) {
 
 // TestApplyBloomEffect tests the bloom effect application method.
 func TestApplyBloomEffect(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping Ebiten-dependent test in short mode")
+	}
+
 	world := NewWorld()
 	config := NewLightingConfig()
 	config.EnableBloom = true

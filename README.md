@@ -60,10 +60,16 @@ Venture v1.0.0 is a production-ready release with player housing, guild systems,
 - **Polished UI**: Dynamic color palettes, smooth transitions, visual hierarchy, procedural decorations
 
 **Performance Maintained:**
-- 89 FPS with 2000 entities (48% above 60 FPS target, v8.0 with all systems)
+- 89 FPS with 2000 entities (48% above 60 FPS target, v8.0 with all systems)*
 - 120MB memory (76% below 500MB budget, v8.0 with housing+guilds+physics)
 - 90.1% test coverage (25.1 percentage points above 65% requirement)
 - Sprite cache hit rate: 95.9%
+
+*Benchmark configuration: 1920×1080, fantasy genre, medium weather, bloom disabled, anti-aliasing low. Performance varies with settings:
+  - 4K resolution (3840×2160): ~55 FPS
+  - All visual features maxed (bloom high, AA high, extreme weather): ~70 FPS
+  - Weather extreme + bloom enabled: ~65 FPS
+  - Desktop scaling: Higher resolutions reduce FPS proportionally
 
 ## Quick Start
 

@@ -17,6 +17,49 @@ import (
 
 // AnimationSystem updates animation components and manages frame transitions.
 // Integrates with sprite generator to create procedural animation frames.
+//
+// Animation Timing:
+//   - Default FPS: 12 FPS for close-range entities (0.083s per frame)
+//   - Frame Count: 8 frames per animation state (idle, walk, attack, etc.)
+//   - Total Duration: ~0.67 seconds per animation cycle at base rate
+//
+// Distance-Based LOD (Level of Detail):
+//   - Close range (≤200px from player): 12 FPS (full animation rate)
+//   - Medium range (200-400px): 6 FPS (half animation rate for performance)
+//   - Far range (>400px): 3 FPS (minimal animation for distant entities)
+//   - Player entity: Always rendered at full rate regardless of distance
+//
+// Animation States and Typical Usage:
+//   - AnimationStateIdle: Looping idle animation (breathing, standing)
+//   - AnimationStateWalk: Looping walk animation (movement at normal speed)
+//   - AnimationStateRun: Looping run animation (faster movement)
+//   - AnimationStateAttack: One-shot attack animation (triggers on combat action)
+//   - AnimationStateCast: One-shot spell casting animation
+//   - AnimationStateHit: One-shot damage reaction animation
+//   - AnimationStateDeath: One-shot death animation (stops at final frame)
+//
+// Performance Optimizations:
+//   - Viewport Culling: Entities outside camera view are not animated
+//   - Frame Caching: Animation frames are cached per seed+state combination
+//   - Per-Frame Limits: Maximum 8 sprite regenerations per frame to prevent lag
+//   - LRU Eviction: Frame cache limited to 100 sequences to manage memory
+//
+// Tuning Animation Speed:
+//   - Modify AnimationComponent.FrameTime directly to change speed
+//   - Lower values = faster animation (e.g., 0.05s = 20 FPS)
+//   - Higher values = slower animation (e.g., 0.2s = 5 FPS)
+//   - Default: 1.0/12.0 (~0.083s) provides smooth motion without overhead
+//
+// Example:
+//
+//	// Create custom animation with faster playback
+//	anim := NewAnimationComponent(seed)
+//	anim.FrameTime = 0.05 // 20 FPS for fast combat animation
+//	anim.CurrentState = AnimationStateAttack
+//	anim.Loop = false // One-shot animation
+//	anim.OnComplete = func() {
+//	    // Trigger when attack animation finishes
+//	}
 type AnimationSystem struct {
 	spriteGenerator *sprites.Generator
 	spriteCache     *cache.SpriteCache         // Phase 1.2: External sprite cache for base sprites

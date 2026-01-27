@@ -141,6 +141,10 @@ type EbitenInput struct {
 	// Mouse state
 	MouseX, MouseY int
 	MousePressed   bool
+
+	// Mouse delta (movement since last frame)
+	// Gap #8 fix: Expose mouse delta for camera control and aiming
+	MouseDeltaX, MouseDeltaY int
 }
 
 // Type returns the component type identifier (implements Component).
@@ -214,6 +218,13 @@ func (i *EbitenInput) SetMovement(x, y float64) {
 // SetActionPressed implements InputProvider interface.
 func (i *EbitenInput) SetActionPressed(pressed bool) {
 	i.ActionPressed = pressed
+}
+
+// GetMouseDelta implements InputProvider interface.
+// Gap #8 fix: Returns the mouse movement since the last frame.
+// Useful for camera controls, aiming, and mouse-based interactions.
+func (i *EbitenInput) GetMouseDelta() (dx, dy int) {
+	return i.MouseDeltaX, i.MouseDeltaY
 }
 
 // Compile-time interface check
@@ -1283,6 +1294,10 @@ func (s *InputSystem) detectAnyKeyPress(input *EbitenInput) {
 func (s *InputSystem) processMouseState(input *EbitenInput) {
 	input.MouseX, input.MouseY = ebiten.CursorPosition()
 	input.MousePressed = ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft)
+
+	// Gap #8 fix: Populate mouse delta from tracked values
+	input.MouseDeltaX = s.mouseDeltaX
+	input.MouseDeltaY = s.mouseDeltaY
 }
 
 // updateEntityAim updates the aim component with mouse position in world coordinates.

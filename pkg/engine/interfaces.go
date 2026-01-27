@@ -200,6 +200,11 @@ type InputProvider interface {
 	// GetMousePosition returns the current mouse cursor position in screen coordinates
 	GetMousePosition() (x, y int)
 
+	// GetMouseDelta returns the mouse movement since the last frame
+	// Gap #8 fix: Essential for first-person camera control and aiming
+	// Returns the change in X and Y coordinates from the previous frame
+	GetMouseDelta() (dx, dy int)
+
 	// IsMousePressed returns whether the primary mouse button is pressed
 	IsMousePressed() bool
 

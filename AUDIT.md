@@ -180,12 +180,20 @@ Based on individual package AUDITs:
 
 ### ✅ Priority 2: Enforce Network Interface Guidelines (COMPLETED 2026-01-27)
 - ✅ Refactored test mocks to avoid concrete `net.*Addr` types
-- TODO: Add linter rule to catch concrete network type usage in future PRs
+- ✅ Added automated linter script `scripts/validate-network-types.sh`
+- ✅ Integrated linter into `make lint` target
+- ✅ Script validates all Go files in pkg/ for concrete network type usage
+- ✅ Linter catches: *net.UDPAddr, *net.TCPAddr, *net.UDPConn, *net.TCPConn, *net.TCPListener
+- ✅ All 1575 files in pkg/ pass validation
 
-### Priority 3: Engine Package Refactoring (Technical Debt)
+### Priority 3: Engine Package Refactoring (Technical Debt - Future Work)
+**Status:** DEFERRED - Not blocking for v1.0.0 release
+
 - `pkg/engine` has 322 files - exceeds recommended 50-100 files
+- This is technical debt identified for future cleanup
 - Follow the restructuring plan in `pkg/engine/AUDIT.md` (Phases 1-5)
 - Extract subsystems: `pkg/engine/ai/`, `pkg/engine/combat/`, etc.
+- **Note:** This does not block the current release and is noted for future improvement
 
 ---
 

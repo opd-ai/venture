@@ -890,3 +890,73 @@ func TestVirtualControlsLayout_Resize_UIShortcuts(t *testing.T) {
 		t.Log("Note: Button positions may not change if relative calculation is same")
 	}
 }
+
+// TestVirtualControlsLayout_IsVisible tests the IsVisible() method (Gap #3 fix).
+func TestVirtualControlsLayout_IsVisible(t *testing.T) {
+	layout := NewVirtualControlsLayout(800, 600)
+
+	// Default state should be visible
+	if !layout.IsVisible() {
+		t.Error("IsVisible() = false, want true for new layout")
+	}
+
+	// Hide layout
+	layout.SetVisible(false)
+	if layout.IsVisible() {
+		t.Error("IsVisible() = true, want false after SetVisible(false)")
+	}
+
+	// Show layout again
+	layout.SetVisible(true)
+	if !layout.IsVisible() {
+		t.Error("IsVisible() = false, want true after SetVisible(true)")
+	}
+}
+
+// TestVirtualControlsLayout_PreInitializedHidden tests pre-initialization pattern (Gap #3 fix).
+func TestVirtualControlsLayout_PreInitializedHidden(t *testing.T) {
+	// Simulate WASM pre-initialization pattern
+	layout := NewVirtualControlsLayout(800, 600)
+	layout.SetVisible(false) // Pre-initialized but hidden
+
+	// Should be created but not visible
+	if layout == nil {
+		t.Error("Layout should be created")
+	}
+
+	if layout.IsVisible() {
+		t.Error("Pre-initialized layout should be hidden")
+	}
+
+	// Verify controls exist even when hidden
+	if layout.DPad == nil {
+		t.Error("D-Pad should exist even when hidden")
+	}
+	if layout.ActionButton == nil {
+		t.Error("Action button should exist even when hidden")
+	}
+
+	// Show on "first touch" simulation
+	layout.SetVisible(true)
+	if !layout.IsVisible() {
+		t.Error("Layout should be visible after SetVisible(true)")
+	}
+}
+
+// TestVirtualControlsLayout_UpdateWhenHidden verifies hidden controls don't process input.
+func TestVirtualControlsLayout_UpdateWhenHidden(t *testing.T) {
+	layout := NewVirtualControlsLayout(800, 600)
+	layout.SetVisible(false)
+
+	// Update should return early when hidden
+	layout.Update()
+
+	// Verify controls are not active (should not process touches when hidden)
+	if layout.DPad.IsActive() {
+		t.Error("D-Pad should not be active when layout is hidden")
+	}
+
+	if layout.ActionButton.IsPressed() {
+		t.Error("Action button should not be pressed when layout is hidden")
+	}
+}

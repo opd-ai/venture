@@ -828,7 +828,7 @@ func (s *AnimationSystem) logSpriteMiss(entity *Entity, cacheKey cache.CacheKey)
 func (s *AnimationSystem) generateAllFrames(entity *Entity, baseSprite *ebiten.Image, config sprites.Config, anim *AnimationComponent, frameCount int) ([]*ebiten.Image, error) {
 	// Get slice from pool and resize to needed capacity
 	frames := s.getFrameSlice(frameCount)
-	
+
 	for i := 0; i < frameCount; i++ {
 		frame, err := s.generateTransformedFrame(baseSprite, config, string(anim.CurrentState), i, frameCount)
 		if err != nil {

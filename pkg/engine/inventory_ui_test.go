@@ -35,10 +35,10 @@ var _ UISystem = (*StubInventoryUI)(nil)
 // TestEaseInOutCubic tests the easing function behavior.
 func TestEaseInOutCubic(t *testing.T) {
 	tests := []struct {
-		name     string
-		input    float64
-		wantMin  float64
-		wantMax  float64
+		name    string
+		input   float64
+		wantMin float64
+		wantMax float64
 	}{
 		{"start", 0.0, 0.0, 0.0},
 		{"quarter", 0.25, 0.0, 0.2},
@@ -233,4 +233,3 @@ func formatFloat(f float64) string {
 	}
 	return "unknown"
 }
-

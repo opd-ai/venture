@@ -477,10 +477,10 @@ func NewLightingConfig() *LightingConfig {
 		ShadowOpacity:    0.5,
 		ShadowQuality:    1.0,
 		MaxShadows:       100,
-		EnableBloom:      true,  // Enable bloom by default for visual polish
-		BloomThreshold:   0.7,   // Bright lights bloom
-		BloomIntensity:   1.2,   // Moderate bloom strength
-		BloomRadius:      12,    // Medium spread
+		EnableBloom:      true, // Enable bloom by default for visual polish
+		BloomThreshold:   0.7,  // Bright lights bloom
+		BloomIntensity:   1.2,  // Moderate bloom strength
+		BloomRadius:      12,   // Medium spread
 	}
 
 	lightingLog.WithFields(logrus.Fields{

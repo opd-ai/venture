@@ -439,7 +439,7 @@ func (ui *EbitenInventoryUI) Draw(screen interface{}) {
 	}
 
 	windowX, windowY, windowWidth, windowHeight := ui.calculateWindowBounds()
-	
+
 	// Create temporary buffer for rendering with alpha
 	buffer := ebiten.NewImage(ui.screenWidth, ui.screenHeight)
 	ui.drawOverlayAndBackground(buffer, windowX, windowY, windowWidth, windowHeight)
@@ -447,7 +447,7 @@ func (ui *EbitenInventoryUI) Draw(screen interface{}) {
 	ui.drawInventoryGrid(buffer, windowX, windowY, windowWidth, windowHeight, inventory)
 	ui.drawEquipmentSlots(buffer, windowX, windowY, windowWidth, windowHeight)
 	ui.drawFooterAndExtras(buffer, windowX, windowY, windowWidth, windowHeight)
-	
+
 	// Apply alpha based on transition state
 	opts := &ebiten.DrawImageOptions{}
 	opts.ColorM.Scale(1, 1, 1, ui.currentAlpha)

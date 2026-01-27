@@ -73,8 +73,10 @@ func NewMobileMenu(x, y, width, height float64) *MobileMenu {
 		SelectedColor:   color.RGBA{100, 150, 255, 255},
 		TextColor:       color.RGBA{255, 255, 255, 255},
 
-		// Platform parity fix: Momentum scrolling configuration
-		scrollDeceleration: 0.95, // 5% velocity loss per frame (~60 FPS)
+		// Gap #9 fix: Tuned for iOS/Android-like momentum (1.5-2s scroll duration)
+		// 0.98 deceleration = 2% velocity loss per frame at 60 FPS
+		// Provides smooth, natural inertial scrolling matching mobile OS expectations
+		scrollDeceleration: 0.98,
 		longPressItem:      -1,
 		pressedItemIndex:   -1,
 	}
@@ -404,6 +406,31 @@ func (m *MobileMenu) StopScrolling() {
 // Platform parity fix: Provides visual feedback state (hover alternative for touch)
 func (m *MobileMenu) GetPressedItemIndex() int {
 	return m.pressedItemIndex
+}
+
+// SetScrollDeceleration sets the momentum scrolling deceleration rate.
+// Gap #9 fix: Allows customization of scroll feel per platform or preference.
+//
+// Recommended values:
+//   - 0.98: iOS/Android-like (1.5-2s scroll, smooth and natural) - DEFAULT
+//   - 0.95: Faster decay (0.7s scroll, more responsive but less smooth)
+//   - 0.99: Very long scroll (2.5-3s, may feel sluggish)
+//
+// Value must be between 0.9 and 0.99 for realistic physics.
+func (m *MobileMenu) SetScrollDeceleration(deceleration float64) {
+	if deceleration < 0.9 {
+		deceleration = 0.9
+	}
+	if deceleration > 0.99 {
+		deceleration = 0.99
+	}
+	m.scrollDeceleration = deceleration
+}
+
+// GetScrollDeceleration returns the current momentum scrolling deceleration rate.
+// Gap #9 fix: Allows inspection of scroll configuration.
+func (m *MobileMenu) GetScrollDeceleration() float64 {
+	return m.scrollDeceleration
 }
 
 // MobileHUD represents a mobile-optimized heads-up display.

@@ -72,6 +72,13 @@ type Config struct {
 	// PaletteOptions for advanced palette generation (Phase 5.4)
 	// If set, these options are used when generating palette from GenreID and Seed
 	PaletteOptions *palette.GenerationOptions
+
+	// AntiAlias controls edge smoothing quality for sprite rendering
+	// AntiAliasOff: Hard edges (fastest, no anti-aliasing)
+	// AntiAliasLow: 2x2 super-sampling (good balance)
+	// AntiAliasMedium: 4x4 super-sampling (high quality)
+	// AntiAliasHigh: 8x8 super-sampling (maximum quality, slower)
+	AntiAlias shapes.AntiAliasQuality
 }
 
 // DefaultConfig returns a default sprite configuration.
@@ -85,6 +92,7 @@ func DefaultConfig() Config {
 		Complexity: 0.5,
 		Variation:  0,
 		Custom:     make(map[string]interface{}),
+		AntiAlias:  shapes.AntiAliasLow, // Default to low quality AA for performance
 	}
 }
 

@@ -164,6 +164,7 @@ func (g *Generator) generateEntity(config Config, rng *rand.Rand) (*ebiten.Image
 		Color:     config.Palette.Primary,
 		Seed:      config.Seed,
 		Smoothing: 0.2,
+		AntiAlias: config.AntiAlias,
 	}
 
 	bodyShape, err := g.shapeGen.Generate(bodyConfig)
@@ -189,6 +190,7 @@ func (g *Generator) generateEntity(config Config, rng *rand.Rand) (*ebiten.Image
 			Seed:      config.Seed + int64(i),
 			Sides:     3 + rng.Intn(5),
 			Smoothing: rng.Float64() * 0.3,
+			AntiAlias: config.AntiAlias,
 		}
 
 		detailShape, err := g.shapeGen.Generate(detailConfig)
@@ -350,6 +352,7 @@ func (g *Generator) renderTemplatePart(img *ebiten.Image, spec PartSpec, config 
 		Seed:      config.Seed + int64(spec.ZIndex),
 		Smoothing: 0.2,
 		Rotation:  spec.Rotation,
+		AntiAlias: config.AntiAlias,
 	}
 
 	shape, err := g.shapeGen.Generate(shapeConfig)
@@ -451,6 +454,7 @@ func (g *Generator) generateItem(config Config, rng *rand.Rand) (*ebiten.Image, 
 			InnerRatio: 0.3 + rng.Float64()*0.4,
 			Rotation:   rng.Float64() * 360,
 			Smoothing:  0.1,
+			AntiAlias:  config.AntiAlias,
 		}
 
 		shape, err := g.shapeGen.Generate(itemConfig)
@@ -507,6 +511,7 @@ func (g *Generator) generateItemWithTemplate(config Config, itemType ItemType, r
 			Seed:      config.Seed + int64(part.ZIndex),
 			Smoothing: 0.2,
 			Rotation:  part.Rotation,
+			AntiAlias: config.AntiAlias,
 		}
 
 		shape, err := g.shapeGen.Generate(shapeConfig)
@@ -543,6 +548,7 @@ func (g *Generator) generateTile(config Config, rng *rand.Rand) (*ebiten.Image, 
 		Color:     config.Palette.Background,
 		Seed:      config.Seed,
 		Smoothing: 0,
+		AntiAlias: config.AntiAlias,
 	}
 
 	tile, err := g.shapeGen.Generate(tileConfig)
@@ -563,6 +569,7 @@ func (g *Generator) generateTile(config Config, rng *rand.Rand) (*ebiten.Image, 
 				Color:     config.Palette.Colors[rng.Intn(len(config.Palette.Colors))],
 				Seed:      config.Seed + int64(i),
 				Smoothing: 0.5,
+				AntiAlias: config.AntiAlias,
 			}
 
 			pattern, err := g.shapeGen.Generate(patternConfig)
@@ -595,6 +602,7 @@ func (g *Generator) generateParticle(config Config, rng *rand.Rand) (*ebiten.Ima
 		Color:     config.Palette.Accent1,
 		Seed:      config.Seed,
 		Smoothing: 0.5,
+		AntiAlias: config.AntiAlias,
 	}
 
 	particle, err := g.shapeGen.Generate(particleConfig)
@@ -617,6 +625,7 @@ func (g *Generator) generateUI(config Config, rng *rand.Rand) (*ebiten.Image, er
 		Color:     config.Palette.Background,
 		Seed:      config.Seed,
 		Smoothing: 0.1,
+		AntiAlias: config.AntiAlias,
 	}
 
 	uiShape, err := g.shapeGen.Generate(uiConfig)
@@ -636,6 +645,7 @@ func (g *Generator) generateUI(config Config, rng *rand.Rand) (*ebiten.Image, er
 		Seed:       config.Seed,
 		InnerRatio: 0.9,
 		Smoothing:  0,
+		AntiAlias:  config.AntiAlias,
 	}
 
 	border, err := g.shapeGen.Generate(borderConfig)

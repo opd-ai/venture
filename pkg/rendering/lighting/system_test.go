@@ -304,10 +304,22 @@ func TestSystem_ClearLights(t *testing.T) {
 	_ = system.AddLight(light)
 	_ = system.AddLight(light)
 
+	// Test GetLights before clearing
+	lights := system.GetLights()
+	if len(lights) != 2 {
+		t.Errorf("GetLights returned %d lights, want 2", len(lights))
+	}
+
 	system.ClearLights()
 
 	if system.LightCount() != 0 {
 		t.Errorf("LightCount = %d, want 0", system.LightCount())
+	}
+
+	// Test GetLights after clearing
+	lightsAfter := system.GetLights()
+	if len(lightsAfter) != 0 {
+		t.Errorf("GetLights returned %d lights after clear, want 0", len(lightsAfter))
 	}
 }
 
@@ -684,5 +696,196 @@ func BenchmarkSystem_ApplyLighting_MultipleLights(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		_ = system.ApplyLighting(img)
+	}
+}
+
+// TestSystem_SetConfig tests setting system configuration.
+func TestSystem_SetConfig(t *testing.T) {
+	system := NewSystem()
+
+	// Verify default config
+	defaultConfig := system.GetConfig()
+	if defaultConfig.MaxLights != 32 {
+		t.Errorf("Default MaxLights = %d, want 32", defaultConfig.MaxLights)
+	}
+
+	// Create custom config
+	customConfig := LightingConfig{
+		MaxLights:        64,
+		AmbientColor:     color.RGBA{R: 50, G: 50, B: 50, A: 255},
+		AmbientIntensity: 0.5,
+		GammaCorrection:  2.2,
+		EnableShadows:    false,
+		BloomConfig:      DefaultBloomConfig(),
+		AOConfig:         DefaultEnhancedAOConfig(),
+	}
+
+	// Set config
+	system.SetConfig(customConfig)
+
+	// Verify config was updated
+	newConfig := system.GetConfig()
+	if newConfig.MaxLights != 64 {
+		t.Errorf("Updated MaxLights = %d, want 64", newConfig.MaxLights)
+	}
+	if newConfig.AmbientIntensity != 0.5 {
+		t.Errorf("Updated AmbientIntensity = %v, want 0.5", newConfig.AmbientIntensity)
+	}
+	
+	// Check ambient color (need to convert to RGBA for comparison)
+	ambientRGBA := color.RGBAModel.Convert(newConfig.AmbientColor).(color.RGBA)
+	if ambientRGBA.R != 50 {
+		t.Errorf("Updated AmbientColor.R = %d, want 50", ambientRGBA.R)
+	}
+}
+
+// TestValidationError_Error tests ValidationError.Error() method.
+func TestValidationError_Error(t *testing.T) {
+	tests := []struct {
+		name     string
+		err      *ValidationError
+		expected string
+	}{
+		{
+			name:     "intensity error",
+			err:      &ValidationError{Field: "intensity", Message: "must be non-negative"},
+			expected: "lighting: intensity must be non-negative",
+		},
+		{
+			name:     "radius error",
+			err:      &ValidationError{Field: "radius", Message: "must be positive for point lights"},
+			expected: "lighting: radius must be positive for point lights",
+		},
+		{
+			name:     "index error",
+			err:      &ValidationError{Field: "index", Message: "out of bounds"},
+			expected: "lighting: index out of bounds",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := tt.err.Error()
+			if got != tt.expected {
+				t.Errorf("ValidationError.Error() = %q, want %q", got, tt.expected)
+			}
+		})
+	}
+}
+
+// TestSystem_DirectionalLight tests directional light calculation.
+func TestSystem_DirectionalLight(t *testing.T) {
+	system := NewSystem()
+
+	// Create a simple test image
+	img := image.NewRGBA(image.Rect(0, 0, 50, 50))
+	for y := 0; y < 50; y++ {
+		for x := 0; x < 50; x++ {
+			img.Set(x, y, color.RGBA{100, 100, 100, 255})
+		}
+	}
+
+	// Add a directional light (illuminates entire scene uniformly)
+	directionalLight := Light{
+		Type:      TypeDirectional,
+		Position:  image.Point{X: 0, Y: 0}, // Position doesn't matter for directional
+		Color:     color.RGBA{255, 200, 150, 255},
+		Intensity: 1.5,
+		Radius:    0, // Radius doesn't matter for directional
+		Falloff:   FalloffNone,
+		Enabled:   true,
+	}
+
+	err := system.AddLight(directionalLight)
+	if err != nil {
+		t.Fatalf("Failed to add directional light: %v", err)
+	}
+
+	// Apply lighting
+	result := system.ApplyLighting(img)
+	if result == nil {
+		t.Fatal("ApplyLighting returned nil")
+	}
+
+	// Verify result has correct bounds
+	if result.Bounds() != img.Bounds() {
+		t.Errorf("Result bounds = %v, want %v", result.Bounds(), img.Bounds())
+	}
+
+	// Sample a few pixels to verify directional lighting was applied
+	// Directional light should apply uniformly across the image
+	centerColor := result.At(25, 25).(color.RGBA)
+	cornerColor := result.At(5, 5).(color.RGBA)
+
+	// Both should be brightened equally since directional light is uniform
+	if centerColor.R < 100 || cornerColor.R < 100 {
+		t.Errorf("Directional light failed to brighten pixels: center=%+v, corner=%+v",
+			centerColor, cornerColor)
+	}
+
+	// Verify colors are similar (within tolerance due to calculations)
+	colorDiff := func(c1, c2 uint8) int {
+		diff := int(c1) - int(c2)
+		if diff < 0 {
+			return -diff
+		}
+		return diff
+	}
+
+	if colorDiff(centerColor.R, cornerColor.R) > 5 {
+		t.Errorf("Directional light produced non-uniform results: center=%+v, corner=%+v",
+			centerColor, cornerColor)
+	}
+}
+
+// TestSystem_DirectionalLight_WithPointLights tests combining directional and point lights.
+func TestSystem_DirectionalLight_WithPointLights(t *testing.T) {
+	system := NewSystem()
+
+	img := image.NewRGBA(image.Rect(0, 0, 60, 60))
+	for y := 0; y < 60; y++ {
+		for x := 0; x < 60; x++ {
+			img.Set(x, y, color.RGBA{50, 50, 50, 255})
+		}
+	}
+
+	// Add directional light for base illumination
+	directional := Light{
+		Type:      TypeDirectional,
+		Color:     color.RGBA{100, 100, 100, 255},
+		Intensity: 0.5,
+		Enabled:   true,
+	}
+	if err := system.AddLight(directional); err != nil {
+		t.Fatalf("Failed to add directional light: %v", err)
+	}
+
+	// Add point light for localized highlight
+	point := Light{
+		Type:      TypePoint,
+		Position:  image.Point{X: 30, Y: 30},
+		Color:     color.RGBA{255, 200, 100, 255},
+		Intensity: 1.0,
+		Radius:    20,
+		Falloff:   FalloffLinear,
+		Enabled:   true,
+	}
+	if err := system.AddLight(point); err != nil {
+		t.Fatalf("Failed to add point light: %v", err)
+	}
+
+	// Apply lighting
+	result := system.ApplyLighting(img)
+	if result == nil {
+		t.Fatal("ApplyLighting returned nil")
+	}
+
+	// Check that center (near point light) is brighter than edge
+	centerColor := result.At(30, 30).(color.RGBA)
+	edgeColor := result.At(5, 5).(color.RGBA)
+
+	if centerColor.R <= edgeColor.R {
+		t.Errorf("Point light did not create localized highlight: center=%+v, edge=%+v",
+			centerColor, edgeColor)
 	}
 }

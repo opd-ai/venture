@@ -40,6 +40,27 @@ func NewManager() *Manager {
 }
 
 // AddCompanion registers a companion for learning tracking.
+//
+// Parameters:
+//   - companionID: Unique identifier for the companion
+//   - learningRate: Rate at which the companion learns (multiplier for XP gain)
+//
+// Learning Rate Behavior:
+// This function implements "fail-soft" error handling for invalid learning rates.
+// If learningRate <= 0, it automatically clamps the value to 1.0 (default) and logs
+// a warning. This prevents crashes from invalid input while ensuring companions can
+// always learn at a reasonable rate.
+//
+// Design Rationale:
+// The fail-soft approach prioritizes system stability over strict validation. In a
+// game context, it's better to use a sensible default than to reject companion creation
+// entirely. This allows the game to continue functioning even if a bug or user error
+// provides an invalid learning rate.
+//
+// Expected Learning Rate Range: 0.5 (slow learner) to 2.0 (fast learner)
+// Default: 1.0 (normal learning speed)
+//
+// Thread Safety: Safe for concurrent calls.
 func (m *Manager) AddCompanion(companionID string, learningRate float64) *CompanionLearningComponent {
 	log.WithFields(logrus.Fields{
 		"companion_id":  companionID,

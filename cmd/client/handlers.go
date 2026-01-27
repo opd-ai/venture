@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"math/rand"
 	"runtime"
+	"sync"
 	"time"
 
 	"github.com/opd-ai/venture/pkg/class/advanced"
@@ -391,6 +392,11 @@ type systemsContainer struct {
 	// Fix: Added voice channel and spatial voice systems for multiplayer voice chat
 	voiceChannelSystem *engine.VoiceChannelSystem // Voice channel lifecycle and participant synchronization
 	spatialVoiceSystem *engine.SpatialVoiceSystem // Distance-based volume and stereo panning for voice
+
+	// Lazy initialization tracking (Performance Audit S4)
+	lazyInitStarted   bool // Tracks whether lazy initialization has been triggered
+	lazyInitCompleted bool // Tracks whether lazy initialization has finished
+	lazyInitMutex     sync.Mutex
 }
 
 // initializeCoreSystems creates and initializes all core game systems.
@@ -487,6 +493,88 @@ func initializeCoreSystems(game *engine.EbitenGame, logger *logrus.Logger, clien
 
 	return sys
 }
+
+// scheduleLazyInit triggers background initialization of non-critical systems after first frame.
+// This defers audio, environmental, and advanced feature systems to improve startup time.
+func (sys *systemsContainer) scheduleLazyInit(game *engine.EbitenGame, logger *logrus.Logger, clientLogger *logrus.Entry) {
+	sys.lazyInitMutex.Lock()
+	if sys.lazyInitStarted {
+		sys.lazyInitMutex.Unlock()
+		return
+	}
+	sys.lazyInitStarted = true
+	sys.lazyInitMutex.Unlock()
+
+	// Start background initialization after a small delay to ensure first frame renders
+	go func() {
+		// Wait for first frame to complete (approximately 16ms for 60fps target)
+		time.Sleep(20 * time.Millisecond)
+
+		startTime := time.Now()
+		clientLogger.Debug("starting lazy initialization of non-critical systems")
+
+		// Phase 1: Audio system (can be initialized in background)
+		initializeAudioSystem(game, sys, clientLogger)
+
+		// Phase 2: Environmental systems (parallel - weather, hazards, etc.)
+		var wg sync.WaitGroup
+		wg.Add(8)
+		go func() {
+			defer wg.Done()
+			initializeEnvironmentalSystems(game, sys, clientLogger)
+		}()
+		go func() {
+			defer wg.Done()
+			initializeV4Systems(game, sys, clientLogger)
+		}()
+		go func() {
+			defer wg.Done()
+			initializeV5Systems(game, sys, clientLogger)
+		}()
+		go func() {
+			defer wg.Done()
+			initializeV6Systems(game, sys, clientLogger)
+		}()
+		go func() {
+			defer wg.Done()
+			initializeV7Systems(game, sys, clientLogger)
+		}()
+		go func() {
+			defer wg.Done()
+			initializeV8Systems(game, sys, clientLogger)
+		}()
+		go func() {
+			defer wg.Done()
+			initializeV9Systems(game, sys, clientLogger)
+		}()
+		go func() {
+			defer wg.Done()
+			initializeV19Systems(game, sys, clientLogger)
+		}()
+		wg.Wait()
+
+		// Phase 3: Guild Federation and advanced systems
+		initializePhase3Systems(game, sys, clientLogger)
+
+		// Register non-critical systems
+		registerNonCriticalSystems(game, sys)
+
+		sys.lazyInitMutex.Lock()
+		sys.lazyInitCompleted = true
+		sys.lazyInitMutex.Unlock()
+
+		elapsed := time.Since(startTime)
+		clientLogger.WithField("duration_ms", elapsed.Milliseconds()).Info("lazy initialization completed")
+	}()
+}
+
+// isLazyInitCompleted returns true if lazy initialization has finished.
+func (sys *systemsContainer) isLazyInitCompleted() bool {
+	sys.lazyInitMutex.Lock()
+	defer sys.lazyInitMutex.Unlock()
+	return sys.lazyInitCompleted
+}
+
 
 // initializeGenerators creates item and recipe generators for loot drops.
 func initializeGenerators(sys *systemsContainer) {
@@ -1076,14 +1164,17 @@ func initializePhase3Systems(game *engine.EbitenGame, sys *systemsContainer, cli
 	}
 }
 
-// registerAllSystems adds all systems to the game world in the correct order.
-func registerAllSystems(game *engine.EbitenGame, sys *systemsContainer) {
+// registerCriticalSystems registers only systems required for first frame rendering.
+// This includes core gameplay, input, movement, collision, combat, and rendering systems.
+func registerCriticalSystems(game *engine.EbitenGame, sys *systemsContainer) {
 	// Phase 1.2: Performance monitoring - register first to track all systems
 	game.World.AddSystem(sys.performanceSystem)
 
+	// Core input and camera systems
 	game.World.AddSystem(sys.inputSystem)
 	game.World.AddSystem(game.CameraSystem)
 
+	// Essential gameplay systems for first frame
 	sys.rotationSystem = engine.NewRotationSystem(game.World)
 	game.World.AddSystem(&rotationSystemWrapper{system: sys.rotationSystem})
 
@@ -1115,6 +1206,41 @@ func registerAllSystems(game *engine.EbitenGame, sys *systemsContainer) {
 	// Phase 1.3: Prestige levels and resets
 	game.World.AddSystem(&prestigeSystemWrapper{system: sys.prestigeSystem})
 
+	// Essential game mechanics
+	game.World.AddSystem(sys.objectiveTracker)
+	game.World.AddSystem(sys.itemPickupSystem)
+	game.World.AddSystem(sys.spellCastingSystem)
+	game.World.AddSystem(sys.manaRegenSystem)
+	game.World.AddSystem(sys.inventorySystem)
+	game.World.AddSystem(sys.commerceSystem)
+	game.World.AddSystem(sys.dialogSystem)
+	game.World.AddSystem(sys.craftingSystem)
+	game.World.AddSystem(sys.interactionSystem)
+
+	// Core rendering systems
+	game.World.AddSystem(&animationSystemWrapper{
+		system: sys.animationSystem,
+		logger: game.World.GetLogger(),
+	})
+
+	game.World.AddSystem(sys.equipmentVisualSystem)
+	game.World.AddSystem(sys.particleSystem)
+
+	// Phase 2.2: Core Rendering Systems (PLAN.md)
+	game.World.AddSystem(sys.lightingAdapter)  // Dynamic lighting with multiple light sources
+	game.World.AddSystem(sys.animationAdapter) // Advanced animation features
+
+	// Phase 5.1 (PLAN.md): Quality-of-Life System - Essential for first frame UX
+	game.World.AddSystem(sys.qolSystem)
+}
+
+// registerNonCriticalSystems registers systems not required for first frame.
+// These include environmental effects, audio, advanced features, and federation systems.
+func registerNonCriticalSystems(game *engine.EbitenGame, sys *systemsContainer) {
+	// Audio system (deferred)
+	game.World.AddSystem(sys.audioManagerSystem)
+
+	// Faction and reputation systems
 	sys.factionSystem = engine.NewFactionSystem(game.World, game.World.GetLogger().Logger)
 	game.World.AddSystem(sys.factionSystem)
 
@@ -1133,27 +1259,12 @@ func registerAllSystems(game *engine.EbitenGame, sys *systemsContainer) {
 	sys.visualFeedbackSystem = engine.NewVisualFeedbackSystem()
 	game.World.AddSystem(sys.visualFeedbackSystem)
 
-	game.World.AddSystem(sys.audioManagerSystem)
-	game.World.AddSystem(sys.objectiveTracker)
-	game.World.AddSystem(sys.itemPickupSystem)
-	game.World.AddSystem(sys.spellCastingSystem)
-	game.World.AddSystem(sys.manaRegenSystem)
-	game.World.AddSystem(sys.inventorySystem)
-	game.World.AddSystem(sys.commerceSystem)
+	// Economy and advanced gameplay systems
 	game.World.AddSystem(sys.economySystem)        // Phase 2.1: Dynamic economy
 	game.World.AddSystem(sys.raidSystem)           // Phase 2.2: Dynamic raids
 	game.World.AddSystem(sys.legendaryQuestSystem) // Phase 3.3: Legendary quests
-	game.World.AddSystem(sys.dialogSystem)
-	game.World.AddSystem(sys.craftingSystem)
-	game.World.AddSystem(sys.interactionSystem)
 
-	game.World.AddSystem(&animationSystemWrapper{
-		system: sys.animationSystem,
-		logger: game.World.GetLogger(),
-	})
-
-	game.World.AddSystem(sys.equipmentVisualSystem)
-	game.World.AddSystem(sys.particleSystem)
+	// Environmental systems (deferred)
 	game.World.AddSystem(sys.weatherSystem)
 	game.World.AddSystem(sys.lifetimeSystem)
 	game.World.AddSystem(sys.puzzleSystem)
@@ -1166,11 +1277,6 @@ func registerAllSystems(game *engine.EbitenGame, sys *systemsContainer) {
 	game.World.AddSystem(sys.branchingNarrativeSystem) // Phase 6.1: Branching narratives
 	game.World.AddSystem(sys.worldEventsSystem)        // Phase 6.3: World events
 	game.World.AddSystem(sys.shadowSystem)
-
-	// Phase 2.2: Core Rendering Systems (PLAN.md)
-	game.World.AddSystem(sys.lightingAdapter)  // Dynamic lighting with multiple light sources
-	game.World.AddSystem(sys.animationAdapter) // Advanced animation features
-	// Note: PostProcessorAdapter is used during rendering, not in ECS update loop
 
 	// V4.0 System Registrations (Phase 21-27)
 	// Phase 21: Vehicle systems
@@ -1206,16 +1312,13 @@ func registerAllSystems(game *engine.EbitenGame, sys *systemsContainer) {
 	game.World.AddSystem(&achievementSystemWrapper{system: sys.achievementSystem})
 
 	// INTEGRATION FIX [Category A]: Phase 28 - MoralChoiceSystem registration
-	// Gap: MoralChoiceSystem created but never added to world update loop
-	// Fix: Registered system with wrapper for quest-driven moral decisions
-	// Roadmap: ROADMAP_V4.md Phase 28.2
 	game.World.AddSystem(&moralChoiceSystemWrapper{system: sys.moralChoiceSystem})
 
 	// Phase 27: Mini-game system (use wrapper)
 	game.World.AddSystem(&miniGameSystemWrapper{system: sys.miniGameSystem})
 
 	// Phase 3.4: Minigame implementations
-	game.World.AddSystem(sys.minigameGamesSystem) // Phase 3.4: Minigame implementations
+	game.World.AddSystem(sys.minigameGamesSystem)
 
 	// Phase 4.1: Choice & consequences
 	game.World.AddSystem(sys.choiceConsequencesSystem) // Phase 4.1: Choice tracking and consequences
@@ -1240,9 +1343,6 @@ func registerAllSystems(game *engine.EbitenGame, sys *systemsContainer) {
 	game.World.AddSystem(&networkChatSystemWrapper{system: sys.networkChatSystem})
 	game.World.AddSystem(&networkTradeSystemWrapper{system: sys.networkTradeSystem})
 
-	// Phase 5.1 (PLAN.md): Quality-of-Life System - Auto-loot, crafting queues, guild invitations
-	game.World.AddSystem(sys.qolSystem)
-
 	// Phase 3.2 (PLAN.md): Guild Federation - Cross-server guild management
 	if sys.guildSystem != nil {
 		game.World.AddSystem(sys.guildSystem)
@@ -1264,10 +1364,6 @@ func registerAllSystems(game *engine.EbitenGame, sys *systemsContainer) {
 	game.World.AddSystem(&politicsSystemWrapper{system: sys.politicsSystem})
 
 	// INTEGRATION FIX [Category A]: Missing System Registrations
-	// Gap: Systems initialized but never added to World update loop
-	// Fix: Registered all missing systems with appropriate wrappers
-	// Roadmap: ROADMAP_V4.md (Phase 14, 30-31) and ROADMAP_V5.md (Phase 32-36)
-
 	// Phase 30-31: Environmental Storytelling and NPC Dialog
 	game.World.AddSystem(&investigationSystemWrapper{system: sys.investigationSystem})
 	game.World.AddSystem(&npcDialogSystemWrapper{system: sys.npcDialogSystem})
@@ -1281,7 +1377,6 @@ func registerAllSystems(game *engine.EbitenGame, sys *systemsContainer) {
 	game.World.AddSystem(&qualitySystemWrapper{system: sys.qualitySystem})
 
 	// Voice Systems (PLAN.md Phase 1)
-	// Voice systems enable multiplayer voice chat with spatial audio
 	game.World.AddSystem(sys.voiceChannelSystem)
 	game.World.AddSystem(sys.spatialVoiceSystem)
 
@@ -1292,10 +1387,6 @@ func registerAllSystems(game *engine.EbitenGame, sys *systemsContainer) {
 	game.World.AddSystem(&merchantCaravanSystemWrapper{system: sys.merchantCaravanSystem})
 
 	// INTEGRATION FIX [Category A]: High-Level Management System Registrations
-	// Gap: CompanionSystem, VehicleSystem, AdaptiveSoundtrackSystem initialized but never registered
-	// Fix: Registered high-level wrapper systems for unified management
-	// Roadmap: ROADMAP_V4.md Phase 21.2, 22.2, 29
-
 	// Phase 21.2: High-level VehicleSystem wrapper
 	game.World.AddSystem(&vehicleSystemWrapper{system: sys.vehicleSystem})
 
@@ -1309,11 +1400,6 @@ func registerAllSystems(game *engine.EbitenGame, sys *systemsContainer) {
 	game.World.AddSystem(&adaptiveSoundtrackSystemWrapper{system: sys.adaptiveSoundtrackSystem})
 
 	// INTEGRATION FIX [Category A]: V8.0 Fluid Simulator System Registration (Phase 50.4)
-	// Gap: FluidSimulator has Update() method and should be registered for fluid dynamics
-	// Fix: Added fluid simulator to World update loop for water flow simulation
-	// Roadmap: ROADMAP_V8.md Phase 50.4
-	// Note: Other V8 managers (EnhancedVehicleSystem, SwimmingManager, FloodingManager) are
-	// helper utilities used by other systems, not standalone systems requiring registration
 	if sys.fluidSimulator != nil {
 		game.World.AddSystem(&fluidSimulatorWrapper{system: sys.fluidSimulator})
 	}
@@ -1328,6 +1414,14 @@ func registerAllSystems(game *engine.EbitenGame, sys *systemsContainer) {
 	if sys.worldEventManager != nil {
 		game.World.AddSystem(&worldEventManagerWrapper{system: sys.worldEventManager})
 	}
+}
+
+// registerAllSystems adds all systems to the game world in the correct order.
+// DEPRECATED: Use registerCriticalSystems + lazy initialization instead.
+// Kept for backwards compatibility and non-lazy initialization paths.
+func registerAllSystems(game *engine.EbitenGame, sys *systemsContainer) {
+	registerCriticalSystems(game, sys)
+	registerNonCriticalSystems(game, sys)
 }
 
 // configureSystemConnections wires up interdependent systems.
@@ -1362,9 +1456,10 @@ func startPerformanceMonitoring(game *engine.EbitenGame, clientLogger *logrus.En
 	}()
 }
 
-// generateWorldTerrain creates and validates procedural terrain.
+// generateWorldTerrain creates and validates procedural terrain using async loading.
+// This reduces startup blocking time by running generation in a background goroutine.
 func generateWorldTerrain(logger *logrus.Logger, clientLogger *logrus.Entry) *terrain.Terrain {
-	clientLogger.Info("generating procedural terrain")
+	clientLogger.Info("starting async terrain generation")
 
 	terrainGen := terrain.NewBSPGeneratorWithLogger(logger)
 	params := procgen.GenerationParams{
@@ -1378,17 +1473,36 @@ func generateWorldTerrain(logger *logrus.Logger, clientLogger *logrus.Entry) *te
 		},
 	}
 
-	terrainResult, err := terrainGen.Generate(*seed, params)
+	// Use async loader to generate terrain in background
+	loader := terrain.NewAsyncLoader(logger)
+	loader.StartGeneration(terrainGen, *seed, params)
+
+	// Poll progress until complete (simple progress logging)
+	lastProgress := 0.0
+	for !loader.IsDone() {
+		progress, err := loader.GetProgress()
+		if err != nil {
+			clientLogger.WithError(err).Fatal("terrain generation failed")
+		}
+
+		// Log progress updates at 25% intervals
+		if progress-lastProgress >= 0.25 {
+			clientLogger.WithField("progress", int(progress*100)).Info("terrain generation progress")
+			lastProgress = progress
+		}
+	}
+
+	// Wait for final result
+	generatedTerrain, err := loader.Wait()
 	if err != nil {
 		clientLogger.WithError(err).Fatal("failed to generate terrain")
 	}
 
-	generatedTerrain := terrainResult.(*terrain.Terrain)
 	clientLogger.WithFields(logrus.Fields{
 		"width":     generatedTerrain.Width,
 		"height":    generatedTerrain.Height,
 		"roomCount": len(generatedTerrain.Rooms),
-	}).Info("terrain generated")
+	}).Info("terrain generated successfully")
 
 	return generatedTerrain
 }

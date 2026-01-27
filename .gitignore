@@ -73,6 +73,7 @@ go.work.sum
 !AUDIT.md
 !FEATURES_DISCOVERED.md
 !ROADMAP.md
+!ANDROID_BUILD_REPORT.md
 /*.log
 /*.txt
 .DS_Store
@@ -86,10 +87,33 @@ go.work.sum
 **/baseline.json
 /improvements.html
 
-# Build directory - ignore everything except WASM static files
+# Build directory - ignore everything except WASM static files and Android build config
 build/
 !build/wasm/
 !build/wasm/.gitignore
 !build/wasm/README.md
 !build/wasm/index.html
 !build/wasm/game.html
+!build/android/
+!build/android/AndroidManifest.xml
+!build/android/build.gradle
+!build/android/settings.gradle
+!build/android/gradle.properties
+!build/android/proguard-rules.pro
+!build/android/gradlew
+!build/android/gradlew.bat
+!build/android/gradle/
+!build/android/gradle/wrapper/
+!build/android/gradle/wrapper/gradle-wrapper.jar
+!build/android/gradle/wrapper/gradle-wrapper.properties
+!build/android/src/
+!build/android/src/main/
+!build/android/src/main/java/
+!build/android/src/main/java/**
+!build/android/src/main/res/
+!build/android/src/main/res/values/
+!build/android/src/main/res/values/strings.xml
+!build/android/res/
+build/android/libs/
+build/android/.gradle/
+build/android/build/

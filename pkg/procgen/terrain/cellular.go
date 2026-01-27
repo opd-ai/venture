@@ -26,12 +26,20 @@ var neighborOffsets = [8][2]int{
 
 // CellularGenerator generates cave-like terrain using cellular automata.
 // It starts with random noise and applies rules to create organic structures.
+// Pre-allocated buffers reduce allocations during simulation iterations.
 type CellularGenerator struct {
 	fillProbability float64
 	iterations      int
 	birthLimit      int
 	deathLimit      int
 	logger          *logrus.Entry
+	// Pre-allocated buffers for simulation (double-buffering pattern)
+	bufferA [][]TileType
+	bufferB [][]TileType
+	// Track which buffer is currently active (true = bufferA, false = bufferB)
+	useBufferA bool
+	// Pre-allocated visited tracking for flood fill
+	visitedBuffer [][]bool
 }
 
 // NewCellularGenerator creates a new cellular automata generator.
@@ -107,6 +115,32 @@ func (g *CellularGenerator) parseTerrainDimensions(params procgen.GenerationPara
 	return width, height
 }
 
+// ensureBuffers allocates or resizes buffers if needed for given dimensions.
+// This minimizes allocations by reusing buffers across Generate calls.
+func (g *CellularGenerator) ensureBuffers(width, height int) {
+	// Check if buffers need allocation or resizing
+	needsResize := len(g.bufferA) != height
+	if !needsResize && len(g.bufferA) > 0 {
+		needsResize = len(g.bufferA[0]) != width
+	}
+
+	if needsResize {
+		// Allocate double buffers for simulation iterations
+		g.bufferA = make([][]TileType, height)
+		g.bufferB = make([][]TileType, height)
+		for y := 0; y < height; y++ {
+			g.bufferA[y] = make([]TileType, width)
+			g.bufferB[y] = make([]TileType, width)
+		}
+
+		// Allocate visited buffer for flood fill
+		g.visitedBuffer = make([][]bool, height)
+		for y := 0; y < height; y++ {
+			g.visitedBuffer[y] = make([]bool, width)
+		}
+	}
+}
+
 // validateTerrainDimensions validates width and height are within acceptable bounds.
 func (g *CellularGenerator) validateTerrainDimensions(width, height int) error {
 	if width <= 0 || height <= 0 {
@@ -124,13 +158,35 @@ func (g *CellularGenerator) validateTerrainDimensions(width, height int) error {
 // generateCellularTerrain creates terrain using cellular automata.
 func (g *CellularGenerator) generateCellularTerrain(seed int64, width, height int) (*Terrain, bool) {
 	rng := rand.New(rand.NewSource(seed))
-	terrain := NewTerrain(width, height, seed)
+
+	// Ensure buffers are allocated for this terrain size
+	g.ensureBuffers(width, height)
+
+	// Create terrain with one of our pre-allocated buffers
+	// This avoids the initial terrain allocation and final copy
+	terrain := &Terrain{
+		Width:  width,
+		Height: height,
+		Seed:   seed,
+		Tiles:  g.bufferA, // Start with bufferA
+	}
 
 	g.initializeNoise(terrain, rng)
 
+	// Start with bufferA (already assigned above), iterations will swap
+	g.useBufferA = true
 	for i := 0; i < g.iterations; i++ {
 		g.simulateStep(terrain)
 	}
+
+	// Copy final result to terrain's own buffer to avoid aliasing
+	// This ensures the terrain owns its data and isn't affected by future generations
+	finalTiles := make([][]TileType, height)
+	for y := 0; y < height; y++ {
+		finalTiles[y] = make([]TileType, width)
+		copy(finalTiles[y], terrain.Tiles[y])
+	}
+	terrain.Tiles = finalTiles
 
 	g.ensureConnectivity(terrain)
 
@@ -160,17 +216,26 @@ func (g *CellularGenerator) initializeNoise(terrain *Terrain, rng *rand.Rand) {
 }
 
 // simulateStep performs one iteration of the cellular automata rules.
-// Uses direct tile access without bounds checking for interior cells.
+// Uses pre-allocated buffers to eliminate per-iteration allocations.
 func (g *CellularGenerator) simulateStep(terrain *Terrain) {
 	width := terrain.Width
 	height := terrain.Height
 	tiles := terrain.Tiles
 
-	// Create a copy of the current state using a single allocation
-	newTiles := make([][]TileType, height)
-	for y := range newTiles {
-		newTiles[y] = make([]TileType, width)
-		copy(newTiles[y], tiles[y])
+	// Determine which buffer to use as output (swap between A and B)
+	// This eliminates the need to allocate newTiles on every iteration
+	var outputBuffer [][]TileType
+	if g.useBufferA {
+		outputBuffer = g.bufferA
+		g.useBufferA = false
+	} else {
+		outputBuffer = g.bufferB
+		g.useBufferA = true
+	}
+
+	// Copy current state to output buffer (edges stay as walls)
+	for y := 0; y < height; y++ {
+		copy(outputBuffer[y], tiles[y])
 	}
 
 	// Apply rules to each interior cell (edges stay as walls)
@@ -178,7 +243,7 @@ func (g *CellularGenerator) simulateStep(terrain *Terrain) {
 		row := tiles[y]
 		rowAbove := tiles[y-1]
 		rowBelow := tiles[y+1]
-		newRow := newTiles[y]
+		outputRow := outputBuffer[y]
 
 		for x := 1; x < width-1; x++ {
 			// Count wall neighbors using direct array access (no bounds checks needed)
@@ -188,19 +253,19 @@ func (g *CellularGenerator) simulateStep(terrain *Terrain) {
 			if row[x] == TileWall {
 				// Death rule: become floor if too few neighbors
 				if neighbors < g.deathLimit {
-					newRow[x] = TileFloor
+					outputRow[x] = TileFloor
 				}
 			} else {
 				// Birth rule: become wall if enough neighbors
 				if neighbors > g.birthLimit {
-					newRow[x] = TileWall
+					outputRow[x] = TileWall
 				}
 			}
 		}
 	}
 
-	// Update terrain with new state
-	terrain.Tiles = newTiles
+	// Swap buffer reference in terrain
+	terrain.Tiles = outputBuffer
 }
 
 // countWallNeighbors counts the number of wall tiles in the 8 surrounding cells.
@@ -286,18 +351,21 @@ func (g *CellularGenerator) ensureConnectivity(terrain *Terrain) {
 }
 
 // findRegions finds all connected floor regions using flood fill.
+// Uses pre-allocated visitedBuffer to reduce allocations.
 func (g *CellularGenerator) findRegions(terrain *Terrain) [][]*Tile {
-	visited := make([][]bool, terrain.Height)
-	for y := range visited {
-		visited[y] = make([]bool, terrain.Width)
+	// Reset visited buffer (zero all values)
+	for y := 0; y < terrain.Height; y++ {
+		for x := 0; x < terrain.Width; x++ {
+			g.visitedBuffer[y][x] = false
+		}
 	}
 
 	regions := make([][]*Tile, 0)
 
 	for y := 0; y < terrain.Height; y++ {
 		for x := 0; x < terrain.Width; x++ {
-			if !visited[y][x] && terrain.IsWalkable(x, y) {
-				region := g.floodFill(terrain, x, y, visited)
+			if !g.visitedBuffer[y][x] && terrain.IsWalkable(x, y) {
+				region := g.floodFill(terrain, x, y, g.visitedBuffer)
 				if len(region) > 10 { // Ignore very small regions
 					regions = append(regions, region)
 				}

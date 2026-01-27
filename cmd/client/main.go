@@ -73,7 +73,7 @@ func main() {
 	generatedTerrain := setupWorldTerrain(game, sys, logger, clientLogger)
 	params := createGenerationParams()
 	generateWorldFactions(game, params, clientLogger)
-	initializeSpatialPartitioning(game, generatedTerrain, clientLogger)
+	initializeSpatialPartitioning(game, sys, generatedTerrain, clientLogger)
 	connectMapUIToTerrain(game, generatedTerrain, clientLogger)
 
 	spawnWorldEntities(game, generatedTerrain, sys, clientLogger)

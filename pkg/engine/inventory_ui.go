@@ -11,6 +11,7 @@ import (
 	"github.com/hajimehoshi/ebiten/v2/vector"
 	"github.com/opd-ai/venture/pkg/mobile"
 	"github.com/opd-ai/venture/pkg/procgen/item"
+	"github.com/opd-ai/venture/pkg/rendering/palette"
 )
 
 // TransitionState represents the current state of UI transition animation.
@@ -79,10 +80,32 @@ type EbitenInventoryUI struct {
 	cachedEquipSlotBg  *ebiten.Image // Equipment slot background
 	lastWindowWidth    int           // Track window size for cache invalidation
 	lastWindowHeight   int           // Track window size for cache invalidation
+
+	// Gap #11 fix: Genre-based dynamic color palette
+	uiPalette *palette.Palette // Dynamic UI colors based on genre
 }
 
-// NewInventoryUI creates a new inventory UI.
+// NewInventoryUI creates a new inventory UI with genre-appropriate color palette.
+// Gap #11 fix: UI colors now adapt to genre (fantasy = warm, sci-fi = cool, etc.)
 func NewEbitenInventoryUI(world *World, screenWidth, screenHeight int) *EbitenInventoryUI {
+	return NewEbitenInventoryUIWithGenre(world, screenWidth, screenHeight, "fantasy", 0)
+}
+
+// NewEbitenInventoryUIWithGenre creates a new inventory UI with specified genre palette.
+func NewEbitenInventoryUIWithGenre(world *World, screenWidth, screenHeight int, genreID string, seed int64) *EbitenInventoryUI {
+	// Generate genre-appropriate UI palette
+	paletteGen := palette.NewGenerator()
+	uiPalette, err := paletteGen.Generate(genreID, seed)
+	if err != nil {
+		// Fallback to default palette if generation fails
+		uiPalette = &palette.Palette{
+			Primary:    color.RGBA{100, 150, 200, 255},
+			Secondary:  color.RGBA{40, 40, 50, 255},
+			Background: color.RGBA{30, 30, 40, 255},
+			Shadow1:    color.RGBA{0, 0, 0, 180},
+		}
+	}
+
 	ui := &EbitenInventoryUI{
 		visible:            false,
 		world:              world,
@@ -101,6 +124,7 @@ func NewEbitenInventoryUI(world *World, screenWidth, screenHeight int) *EbitenIn
 		transitionProgress: 0.0,
 		transitionDuration: 0.2, // 200ms smooth transitions
 		currentAlpha:       0.0,
+		uiPalette:          uiPalette, // Gap #11 fix
 	}
 
 	// Create close button (top-right of window)
@@ -478,14 +502,19 @@ func (ui *EbitenInventoryUI) validateAndPrepare(screen interface{}) (*ebiten.Ima
 
 // drawOverlayAndBackground renders the semi-transparent overlay and window background.
 // PERF: Uses cached images to avoid per-frame allocations.
+// Gap #11 fix: Uses genre-appropriate palette colors instead of hard-coded values.
 func (ui *EbitenInventoryUI) drawOverlayAndBackground(img *ebiten.Image, windowX, windowY, windowWidth, windowHeight int) {
+	// Gap #11 fix: Use palette colors for overlay and background
+	overlayColor := ui.getOverlayColor()
+	bgColor := ui.getBackgroundColor()
+
 	// PERF: Reuse cached overlay image, only fill on creation/resize
 	if ui.cachedOverlay == nil || ui.cachedOverlay.Bounds().Dx() != ui.screenWidth || ui.cachedOverlay.Bounds().Dy() != ui.screenHeight {
 		if ui.cachedOverlay != nil {
 			ui.cachedOverlay.Dispose()
 		}
 		ui.cachedOverlay = ebiten.NewImage(ui.screenWidth, ui.screenHeight)
-		ui.cachedOverlay.Fill(color.RGBA{0, 0, 0, 180})
+		ui.cachedOverlay.Fill(overlayColor)
 	}
 	img.DrawImage(ui.cachedOverlay, nil)
 
@@ -495,13 +524,29 @@ func (ui *EbitenInventoryUI) drawOverlayAndBackground(img *ebiten.Image, windowX
 			ui.cachedWindowBg.Dispose()
 		}
 		ui.cachedWindowBg = ebiten.NewImage(windowWidth, windowHeight)
-		ui.cachedWindowBg.Fill(color.RGBA{40, 40, 50, 255})
+		ui.cachedWindowBg.Fill(bgColor)
 		ui.lastWindowWidth = windowWidth
 		ui.lastWindowHeight = windowHeight
 	}
 	opts := &ebiten.DrawImageOptions{}
 	opts.GeoM.Translate(float64(windowX), float64(windowY))
 	img.DrawImage(ui.cachedWindowBg, opts)
+}
+
+// getOverlayColor returns the semi-transparent overlay color from palette.
+func (ui *EbitenInventoryUI) getOverlayColor() color.Color {
+	if ui.uiPalette != nil && ui.uiPalette.Shadow1 != nil {
+		return ui.uiPalette.Shadow1
+	}
+	return color.RGBA{0, 0, 0, 180} // Fallback
+}
+
+// getBackgroundColor returns the window background color from palette.
+func (ui *EbitenInventoryUI) getBackgroundColor() color.Color {
+	if ui.uiPalette != nil && ui.uiPalette.Background != nil {
+		return ui.uiPalette.Background
+	}
+	return color.RGBA{40, 40, 50, 255} // Fallback
 }
 
 // drawHeader renders the title, exit hint, capacity info, and gold display.

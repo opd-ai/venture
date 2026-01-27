@@ -13,6 +13,7 @@ import (
 	"github.com/hajimehoshi/ebiten/v2/vector"
 	"github.com/opd-ai/venture/pkg/combat"
 	"github.com/opd-ai/venture/pkg/mobile"
+	"github.com/opd-ai/venture/pkg/rendering/palette"
 	"golang.org/x/image/font/basicfont"
 )
 
@@ -41,9 +42,13 @@ type EbitenCharacterUI struct {
 	touchHandler *mobile.TouchInputHandler
 	closeButton  *mobile.TouchButton
 	scrollOffset float64
+
+	// Gap #11 fix: Genre-based dynamic color palette
+	uiPalette *palette.Palette // Dynamic UI colors based on genre
 }
 
-// NewCharacterUI creates a new character UI system.
+// NewCharacterUI creates a new character UI system with genre-appropriate color palette.
+// Gap #11 fix: UI colors now adapt to genre (fantasy = warm, sci-fi = cool, etc.)
 // Parameters:
 //
 //	world - ECS world instance for entity queries
@@ -52,6 +57,24 @@ type EbitenCharacterUI struct {
 // Returns: Initialized CharacterUI ready for use
 // Called by: Game.NewGame() during initialization
 func NewEbitenCharacterUI(world *World, screenWidth, screenHeight int) *EbitenCharacterUI {
+	return NewEbitenCharacterUIWithGenre(world, screenWidth, screenHeight, "fantasy", 0)
+}
+
+// NewEbitenCharacterUIWithGenre creates a new character UI with specified genre palette.
+func NewEbitenCharacterUIWithGenre(world *World, screenWidth, screenHeight int, genreID string, seed int64) *EbitenCharacterUI {
+	// Generate genre-appropriate UI palette
+	paletteGen := palette.NewGenerator()
+	uiPalette, err := paletteGen.Generate(genreID, seed)
+	if err != nil {
+		// Fallback to default palette if generation fails
+		uiPalette = &palette.Palette{
+			Primary:    color.RGBA{100, 150, 200, 255},
+			Secondary:  color.RGBA{80, 80, 100, 255},
+			Background: color.RGBA{30, 30, 40, 200},
+			Shadow1:    color.RGBA{0, 0, 0, 180},
+		}
+	}
+
 	ui := &EbitenCharacterUI{
 		visible:      false,
 		world:        world,
@@ -59,6 +82,7 @@ func NewEbitenCharacterUI(world *World, screenWidth, screenHeight int) *EbitenCh
 		screenHeight: screenHeight,
 		errorState:   NewUIErrorState(), // H-002 FIX
 		touchHandler: mobile.NewTouchInputHandler(),
+		uiPalette:    uiPalette, // Gap #11 fix
 	}
 	ui.calculateLayout()
 
@@ -236,15 +260,48 @@ func (ui *EbitenCharacterUI) calculatePanelDimensions() (x, y, width, height int
 }
 
 // drawBackground renders the overlay and panel background.
+// Gap #11 fix: Uses genre-appropriate palette colors instead of hard-coded values.
 func (ui *EbitenCharacterUI) drawBackground(img *ebiten.Image, panelX, panelY, panelWidth, panelHeight int) {
 	vector.DrawFilledRect(img, 0, 0, float32(ui.screenWidth), float32(ui.screenHeight),
-		color.RGBA{0, 0, 0, 180}, false)
+		ui.getOverlayColor(), false)
 	vector.DrawFilledRect(img, float32(panelX), float32(panelY),
 		float32(panelWidth), float32(panelHeight),
-		color.RGBA{20, 20, 30, 255}, false)
+		ui.getBackgroundColor(), false)
 	vector.StrokeRect(img, float32(panelX), float32(panelY),
 		float32(panelWidth), float32(panelHeight), 2,
-		color.RGBA{100, 150, 200, 255}, false)
+		ui.getPrimaryColor(), false)
+}
+
+// getOverlayColor returns the semi-transparent overlay color from palette.
+func (ui *EbitenCharacterUI) getOverlayColor() color.Color {
+	if ui.uiPalette != nil && ui.uiPalette.Shadow1 != nil {
+		return ui.uiPalette.Shadow1
+	}
+	return color.RGBA{0, 0, 0, 180} // Fallback
+}
+
+// getBackgroundColor returns the panel background color from palette.
+func (ui *EbitenCharacterUI) getBackgroundColor() color.Color {
+	if ui.uiPalette != nil && ui.uiPalette.Background != nil {
+		return ui.uiPalette.Background
+	}
+	return color.RGBA{20, 20, 30, 255} // Fallback
+}
+
+// getPrimaryColor returns the primary accent color from palette.
+func (ui *EbitenCharacterUI) getPrimaryColor() color.Color {
+	if ui.uiPalette != nil && ui.uiPalette.Primary != nil {
+		return ui.uiPalette.Primary
+	}
+	return color.RGBA{100, 150, 200, 255} // Fallback
+}
+
+// getSecondaryColor returns the secondary accent color from palette.
+func (ui *EbitenCharacterUI) getSecondaryColor() color.Color {
+	if ui.uiPalette != nil && ui.uiPalette.Secondary != nil {
+		return ui.uiPalette.Secondary
+	}
+	return color.RGBA{80, 80, 100, 255} // Fallback
 }
 
 // drawTitleBar renders the panel title.

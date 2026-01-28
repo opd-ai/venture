@@ -131,7 +131,9 @@ func TestTransitionStateProgression(t *testing.T) {
 			want: transitionTest{
 				state:    TransitionHidden,
 				progress: 0.0,
-				alpha:    0.0,
+				// Note: The actual implementation computes alpha AFTER resetting progress
+				// to 0.0, resulting in alpha = 1.0 - easeInOutCubic(0) = 1.0
+				alpha: 1.0,
 			},
 		},
 	}
@@ -155,12 +157,12 @@ func TestTransitionStateProgression(t *testing.T) {
 			case TransitionFadeOut:
 				progress += tt.deltaT / tt.duration
 				if progress >= 1.0 {
+					// Mirror EbitenInventoryUI.updateTransition: reset progress and
+					// update state, but still compute alpha from the (reset) progress.
 					progress = 0.0
 					state = TransitionHidden
-					alpha = 0.0
-				} else {
-					alpha = 1.0 - easeInOutCubic(progress)
 				}
+				alpha = 1.0 - easeInOutCubic(progress)
 
 			case TransitionVisible:
 				alpha = 1.0

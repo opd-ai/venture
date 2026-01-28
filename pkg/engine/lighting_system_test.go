@@ -1,8 +1,11 @@
 package engine
 
 import (
+	"image"
 	"image/color"
 	"testing"
+
+	"github.com/opd-ai/venture/pkg/rendering/lighting"
 )
 
 func TestNewLightingSystem(t *testing.T) {
@@ -740,33 +743,47 @@ func TestBloomConfigDefaults(t *testing.T) {
 	}
 }
 
-// TestApplyBloomEffect tests the bloom effect application method.
+// TestApplyBloomEffect tests the bloom effect application via CPU-side buffers.
+// Tests the pkg/rendering/lighting.ApplyBloom function directly, avoiding Ebiten runtime deps.
 func TestApplyBloomEffect(t *testing.T) {
-	// Skip this test as it requires Ebiten game loop to be running.
-	// The applyBloomEffect function calls Image.At() which internally uses ReadPixels,
-	// and ReadPixels cannot be called before the game starts.
-	t.Skip("skipping Ebiten-dependent test - requires active game loop for pixel operations")
+	// Create a CPU-side image with some bright pixels
+	img := image.NewRGBA(image.Rect(0, 0, 64, 64))
 
-	world := NewWorld()
-	config := NewLightingConfig()
-	config.EnableBloom = true
-	config.BloomIntensity = 1.0
-	config.BloomThreshold = 0.8
-	config.BloomRadius = 10
+	// Draw a bright center region (above threshold)
+	brightColor := color.RGBA{R: 255, G: 255, B: 255, A: 255}
+	for y := 20; y < 44; y++ {
+		for x := 20; x < 44; x++ {
+			img.Set(x, y, brightColor)
+		}
+	}
 
-	system := NewLightingSystem(world, config)
+	// Configure bloom
+	bloomConfig := lighting.BloomConfig{
+		Enabled:   true,
+		Threshold: 0.8,
+		Intensity: 1.0,
+		Radius:    8,
+		Samples:   5,
+	}
 
-	// Test with nil buffer (should not crash)
-	system.applyBloomEffect()
+	// Apply bloom effect (CPU-side, no Ebiten required)
+	result := lighting.ApplyBloom(img, bloomConfig)
 
-	// Create lighting buffer
-	system.createOrResizeLightingBuffer(800, 600)
+	if result == nil {
+		t.Fatal("ApplyBloom returned nil")
+	}
 
-	// Apply bloom effect (should not crash)
-	system.applyBloomEffect()
+	// Verify result has same dimensions
+	if result.Bounds() != img.Bounds() {
+		t.Errorf("Result bounds %v != input bounds %v", result.Bounds(), img.Bounds())
+	}
 
-	if system.lightingBuffer == nil {
-		t.Error("Lighting buffer should still exist after bloom")
+	// Verify bloom spread: pixels outside bright region should now have some brightness
+	// due to bloom glow effect
+	edgeColor := result.At(15, 32)
+	r, g, b, _ := edgeColor.RGBA()
+	if r == 0 && g == 0 && b == 0 {
+		t.Error("Bloom should have spread brightness to edge pixels")
 	}
 }
 

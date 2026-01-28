@@ -558,38 +558,54 @@ func TestMobileMenu_SetScrollDeceleration_BoundsChecking(t *testing.T) {
 // Gap #9: Verify 0.98 deceleration provides iOS-like 1.5-2s scroll duration
 func TestMomentumScrolling_DecayRate(t *testing.T) {
 	menu := NewMobileMenu(100, 100, 300, 400)
+	// Add enough items to make content taller than viewport (maxScroll > 0)
+	// With 400px height and 20 items at 50px each = 1000px content, maxScroll = 600px
+	for i := 0; i < 20; i++ {
+		menu.Items = append(menu.Items, MenuItem{Label: "Item"})
+	}
 	menu.SetScrollDeceleration(0.98) // iOS-like
 
-	// Test the deceleration rate directly by calling applyDeceleration
-	// The momentum scrolling mechanics stop when maxScroll <= 0, which is always
-	// the case with the auto-sizing menu design. So we test the decay factor directly.
-	menu.scrollVelocity = 100.0
+	// Use a lower initial velocity that won't trigger bounce-back during test
+	// The menu can scroll 600px total. With velocity -5, after 120 frames we scroll:
+	// sum of -5 * 0.98^i for i=0..119 ≈ -5 * (1-0.98^120)/(1-0.98) ≈ -5 * 45.5 = -228px
+	// This stays well within bounds and tests pure deceleration without bounce
+	menu.scrollVelocity = -5.0
+	menu.isScrolling = true
 
 	// Track velocity decay over 2 seconds (120 frames at 60 FPS)
 	velocities := []float64{}
 	for i := 0; i < 120; i++ {
 		velocities = append(velocities, menu.scrollVelocity)
-		menu.applyDeceleration()
+		menu.updateMomentumScrolling()
 	}
 
 	// At 0.98 deceleration, after 120 frames:
-	// velocity = 100 * 0.98^120 ≈ 9.07
+	// velocity = -5 * 0.98^120 ≈ -0.45
 	// Should still have ~9% velocity remaining (smooth, long scroll)
 	finalVelocity := velocities[119]
-	if finalVelocity < 5.0 {
-		t.Errorf("Velocity decayed too fast: %.2f at 2s, expected ~9 (iOS-like)", finalVelocity)
+	expectedFinal := -5.0 * 0.09 // approximately -0.45
+	if finalVelocity > expectedFinal+0.2 {
+		t.Errorf("Velocity decayed too fast: %.2f at 2s, expected ~%.2f (iOS-like)", finalVelocity, expectedFinal)
 	}
-	if finalVelocity > 15.0 {
-		t.Errorf("Velocity decayed too slow: %.2f at 2s, expected ~9", finalVelocity)
+	if finalVelocity < expectedFinal-0.2 {
+		t.Errorf("Velocity decayed too slow: %.2f at 2s, expected ~%.2f", finalVelocity, expectedFinal)
 	}
 
-	// Verify smooth decay (no sudden jumps)
+	// Verify smooth decay (absolute value should decrease)
 	for i := 1; i < len(velocities); i++ {
-		decay := velocities[i-1] - velocities[i]
-		if decay < 0 {
-			t.Errorf("Velocity increased at frame %d (should only decrease)", i)
+		absDecay := absFloatVal(velocities[i-1]) - absFloatVal(velocities[i])
+		if absDecay < -0.001 { // small tolerance for floating point
+			t.Errorf("Velocity magnitude increased at frame %d (should only decrease)", i)
 		}
 	}
+}
+
+// absFloatVal returns the absolute value of a float64
+func absFloatVal(x float64) float64 {
+	if x < 0 {
+		return -x
+	}
+	return x
 }
 
 // TestMomentumScrolling_FastDecayComparison tests faster 0.95 deceleration.

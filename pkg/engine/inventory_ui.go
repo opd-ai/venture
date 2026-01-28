@@ -244,8 +244,10 @@ func (ui *EbitenInventoryUI) updateTransition(deltaTime float64) {
 			ui.transitionProgress = 0.0
 			ui.transitionState = TransitionHidden
 			ui.visible = false
+			ui.currentAlpha = 0.0 // Set alpha to 0 when transition completes
+		} else {
+			ui.currentAlpha = 1.0 - easeInOutCubic(ui.transitionProgress)
 		}
-		ui.currentAlpha = 1.0 - easeInOutCubic(ui.transitionProgress)
 
 	case TransitionVisible:
 		ui.currentAlpha = 1.0

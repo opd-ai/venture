@@ -580,12 +580,11 @@ func TestMomentumScrolling_DecayRate(t *testing.T) {
 	}
 
 	// At 0.98 deceleration, after 120 frames:
-	// velocity = -5 * 0.98^120 ≈ -0.45
-	// Should still have ~9% velocity remaining (smooth, long scroll)
+	// velocity = -5 * 0.98^120 ≈ -0.45 (about 9% of original magnitude)
 	finalVelocity := velocities[119]
 	expectedFinal := -5.0 * 0.09 // approximately -0.45
 	if finalVelocity > expectedFinal+0.2 {
-		t.Errorf("Velocity decayed too fast: %.2f at 2s, expected ~%.2f (iOS-like)", finalVelocity, expectedFinal)
+		t.Errorf("Velocity decayed too fast: %.2f at 2s, expected ~%.2f", finalVelocity, expectedFinal)
 	}
 	if finalVelocity < expectedFinal-0.2 {
 		t.Errorf("Velocity decayed too slow: %.2f at 2s, expected ~%.2f", finalVelocity, expectedFinal)

@@ -13,7 +13,7 @@ The project targets game developers, contributors, and hobbyists interested in p
 - **High-Latency Multiplayer**: Designed for 200-5000ms latency (supports Tor/onion services)
 - **Genre-Based Theming**: Dynamic content generation based on genre (fantasy, sci-fi, horror, cyberpunk)
 - **VR/Stereoscopic Support**: VR controller integration and stereoscopic rendering
-- **Modding System**: Sandboxed mod loading with Lua-style scripting support
+- **Modding System**: Sandboxed, JSON-based rule mods for data-driven balance/content tweaks (validated with no executable code)
 
 The codebase follows an Entity-Component-System (ECS) architecture where entities are unique identifiers with component collections, components are pure data structures with no behavior, and systems contain all logic operating on entities with specific components. This separation enables data-oriented design, efficient caching, and easy testing.
 

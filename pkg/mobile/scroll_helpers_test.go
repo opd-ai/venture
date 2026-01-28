@@ -23,25 +23,25 @@ func TestMobileMenu_CalculateMaxScroll(t *testing.T) {
 			name:       "empty_menu",
 			menuHeight: 400,
 			itemCount:  0,
-			wantValue:  -400, // 0 items * 50 default height - 400 = -400
+			wantValue:  -400, // 0 items * 50 height - 400 = -400
 		},
 		{
 			name:       "single_item_fits",
 			menuHeight: 400,
 			itemCount:  1,
-			wantValue:  0, // itemHeight = 400/1 = 400, 1*400 - 400 = 0
+			wantValue:  -350, // 1 item * 50 height - 400 = -350 (no scroll needed)
 		},
 		{
-			name:       "many_items",
+			name:       "many_items_scrollable",
 			menuHeight: 200,
 			itemCount:  20,
-			wantValue:  0, // itemHeight = 200/20 = 10, 20*10 - 200 = 0
+			wantValue:  800, // 20 items * 50 height - 200 = 800 (scrollable)
 		},
 		{
 			name:       "items_exactly_fit",
 			menuHeight: 400,
 			itemCount:  8,
-			wantValue:  0, // itemHeight = 400/8 = 50, 8*50 - 400 = 0
+			wantValue:  0, // 8 items * 50 height - 400 = 0 (exactly fits)
 		},
 	}
 

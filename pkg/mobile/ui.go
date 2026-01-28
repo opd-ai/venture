@@ -332,12 +332,11 @@ func (m *MobileMenu) updateMomentumScrolling() {
 }
 
 // calculateMaxScroll returns the maximum scroll offset for the menu.
+// Uses a fixed item height (50px) to allow scrollable content when items exceed viewport.
 func (m *MobileMenu) calculateMaxScroll() float64 {
-	itemHeight := 50.0
-	if len(m.Items) > 0 {
-		itemHeight = m.Height / float64(len(m.Items))
-	}
-	return float64(len(m.Items))*itemHeight - m.Height
+	itemHeight := 50.0 // Fixed height per item for consistent scroll behavior
+	contentHeight := float64(len(m.Items)) * itemHeight
+	return contentHeight - m.Height
 }
 
 // applyBounceBackEffect applies rubber-band resistance when overscrolling.

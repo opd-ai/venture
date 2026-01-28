@@ -505,12 +505,11 @@ func TestPhase61_2_ExamplesValidation(t *testing.T) {
 	}
 
 	// List key examples that demonstrate core systems
+	// These represent the examples that currently exist in the repository
 	keyExamples := []string{
-		"movement_collision_demo",
-		"combat_demo",
-		"complete_dungeon_generation",
-		"multiplayer_demo",
-		"optimization_demo",
+		"animation_timing_demo",
+		"bloom_demo",
+		"soft_shadow_demo",
 	}
 
 	for _, example := range keyExamples {

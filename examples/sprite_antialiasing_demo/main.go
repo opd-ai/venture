@@ -2,7 +2,8 @@
 // This program shows how to generate sprites with different anti-aliasing quality levels.
 //
 // Usage:
-//   go run examples/sprite_antialiasing_demo.go
+//
+//	go run examples/sprite_antialiasing_demo.go
 //
 // The program generates sprites at different AA quality levels to demonstrate visual differences.
 package main

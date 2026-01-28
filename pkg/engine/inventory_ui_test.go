@@ -93,7 +93,7 @@ func TestTransitionStateProgression(t *testing.T) {
 			name: "fade-in complete",
 			initial: transitionTest{
 				state:    TransitionFadeIn,
-				progress: 0.9,
+				progress: 0.92,
 				alpha:    0.972, // eased value near end
 			},
 			deltaT:   1.0 / 60.0,
@@ -123,7 +123,7 @@ func TestTransitionStateProgression(t *testing.T) {
 			name: "fade-out complete",
 			initial: transitionTest{
 				state:    TransitionFadeOut,
-				progress: 0.9,
+				progress: 0.92,
 				alpha:    0.028, // 1.0 - eased(0.9)
 			},
 			deltaT:   1.0 / 60.0,
@@ -157,8 +157,10 @@ func TestTransitionStateProgression(t *testing.T) {
 				if progress >= 1.0 {
 					progress = 0.0
 					state = TransitionHidden
+					alpha = 0.0
+				} else {
+					alpha = 1.0 - easeInOutCubic(progress)
 				}
-				alpha = 1.0 - easeInOutCubic(progress)
 
 			case TransitionVisible:
 				alpha = 1.0

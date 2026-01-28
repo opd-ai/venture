@@ -17,13 +17,15 @@ import (
 )
 
 func main() {
-	fmt.Println("=== Soft Shadow System Demo ===\n")
+	fmt.Println("=== Soft Shadow System Demo ===")
+	fmt.Println()
 
 	// Demonstrate shadow types
 	fmt.Println("1. Shadow Types Available:")
 	fmt.Println("   - Hard Shadow: Sharp edges, fastest rendering")
 	fmt.Println("   - Soft Shadow: Gradient edges with umbra + penumbra")
-	fmt.Println("   - Contact Shadow: Ground contact cues\n")
+	fmt.Println("   - Contact Shadow: Ground contact cues")
+	fmt.Println()
 
 	fmt.Println("2. Shadow System Configuration:")
 	fmt.Printf("   - Max shadows: 100\n")
@@ -157,7 +159,8 @@ func main() {
 	fmt.Println("    lightingSystem := engine.NewLightingSystem(world, config)")
 	fmt.Println()
 	fmt.Println("    The shadow system is managed automatically and renders")
-	fmt.Println("    shadows for all light sources in the scene.\n")
+	fmt.Println("    shadows for all light sources in the scene.")
+	fmt.Println()
 
 	fmt.Println("=== Demo Complete ===")
 	fmt.Println()

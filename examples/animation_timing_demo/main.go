@@ -18,7 +18,8 @@ import (
 
 func main() {
 	fmt.Println("Venture Animation Timing Demo")
-	fmt.Println("=============================\n")
+	fmt.Println("=============================")
+	fmt.Println()
 
 	// Demonstrate default animation timing
 	demonstrateDefaultTiming()
@@ -113,8 +114,8 @@ func demonstrateFrameProgression() {
 	fmt.Println("--------------------------------")
 
 	// Animation state
-	frameTime := 1.0 / 12.0     // 12 FPS
-	frameCount := 8             // 8 frames per animation
+	frameTime := 1.0 / 12.0 // 12 FPS
+	frameCount := 8         // 8 frames per animation
 	timeAccumulator := 0.0
 	frameIndex := 0
 	currentState := "walk"

@@ -19,9 +19,9 @@ func main() {
 	// Configure lighting with bloom enabled
 	config := engine.NewLightingConfig()
 	config.EnableBloom = true
-	config.BloomThreshold = 0.7  // Only bright lights bloom
-	config.BloomIntensity = 1.5  // Strong glow effect
-	config.BloomRadius = 12      // Medium spread distance
+	config.BloomThreshold = 0.7 // Only bright lights bloom
+	config.BloomIntensity = 1.5 // Strong glow effect
+	config.BloomRadius = 12     // Medium spread distance
 
 	fmt.Printf("\nLighting Configuration:\n")
 	fmt.Printf("  Bloom Enabled: %v\n", config.EnableBloom)

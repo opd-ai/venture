@@ -143,7 +143,7 @@ The core game engine containing 400+ files with ECS implementation, all game sys
 | **Combat** | `combat_system.go`, `player_combat_system.go`, `spell_casting.go`, `spell_effect_system.go`, `spell_combination_system.go`, `status_effect_system.go` |
 | **AI & Behavior** | `ai_system.go`, `behavior_tree_system.go`, `behavior_tree_nodes.go`, `squad_system.go`, `companion_ai_system.go` |
 | **Rendering** | `render_system.go`, `animation_system.go`, `particle_system.go`, `lighting_system.go`, `shadow_system.go`, `post_processor.go` |
-| **UI Systems** | `menu_system.go`, `hud_system.go`, `inventory_ui.go`, `quest_ui.go`, `shop_ui.go`, `crafting_ui.go`, `trade_ui.go`, `guild_ui.go`, `housing_ui.go` |
+| **UI Systems** | `menu_system.go`, `hud_system.go`, `inventory_ui.go`, `quest_ui.go`, `shop_ui.go`, `crafting_ui.go`, `trade_ui.go`, `guild_ui.go`, housing UI (`pkg/world/housing/ui.go` via `HousingUIProvider` in `interfaces.go`) |
 | **Progression** | `progression_system.go`, `skill_progression_system.go`, `achievement.go`, `class_progression_system.go`, `reputation_system.go` |
 | **Social** | `chat_system.go`, `mail_system.go`, `trade_system.go`, `guild_system.go`, `faction_system.go` |
 | **World** | `weather_system.go`, `terrain_modification_system.go`, `world_events_system.go`, `city_evolution_system.go`, `economy_system.go` |

@@ -3,10 +3,12 @@
 // platforms to eliminate the first-touch delay issue documented in AUDIT.md Gap #3.
 //
 // Build for WASM:
-//   GOOS=js GOARCH=wasm go build -o virtual_controls_demo.wasm examples/virtual_controls_wasm_demo.go
+//
+//	GOOS=js GOARCH=wasm go build -o virtual_controls_demo.wasm examples/virtual_controls_wasm_demo.go
 //
 // Build for Desktop (testing):
-//   go run examples/virtual_controls_wasm_demo.go
+//
+//	go run examples/virtual_controls_wasm_demo.go
 package main
 
 import (
@@ -114,7 +116,7 @@ func (g *Game) Draw(screen *ebiten.Image) {
 		touchInfoMsg := fmt.Sprintf("First touch detected at frame %d", g.firstTouchFrame)
 		ebitenutil.DebugPrintAt(screen, touchInfoMsg, 20, int(y))
 		y += 25
-		
+
 		if g.controlsVisible {
 			visibleMsg := fmt.Sprintf("Controls visible at frame %d (same frame!)", g.firstTouchFrame)
 			ebitenutil.DebugPrintAt(screen, visibleMsg, 20, int(y))

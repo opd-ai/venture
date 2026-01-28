@@ -575,7 +575,6 @@ func (sys *systemsContainer) isLazyInitCompleted() bool {
 	return sys.lazyInitCompleted
 }
 
-
 // initializeGenerators creates item and recipe generators for loot drops.
 func initializeGenerators(sys *systemsContainer) {
 	sys.itemGen = item.NewItemGenerator()

@@ -7,10 +7,11 @@
 // users to specify weather type and intensity when starting the game client.
 //
 // Usage examples:
-//   go run weather_cli_demo.go
-//   go run weather_cli_demo.go -weather rain -weather-intensity heavy
-//   go run weather_cli_demo.go -weather snow -weather-intensity light
-//   go run weather_cli_demo.go -weather fog -weather-intensity extreme
+//
+//	go run weather_cli_demo.go
+//	go run weather_cli_demo.go -weather rain -weather-intensity heavy
+//	go run weather_cli_demo.go -weather snow -weather-intensity light
+//	go run weather_cli_demo.go -weather fog -weather-intensity extreme
 //
 // Available weather types:
 //   - rain, snow, fog, dust, ash (generic)
@@ -178,14 +179,14 @@ func main() {
 
 func getWeatherName(w particles.WeatherType) string {
 	names := map[particles.WeatherType]string{
-		particles.WeatherRain:       "rain",
-		particles.WeatherSnow:       "snow",
-		particles.WeatherFog:        "fog",
-		particles.WeatherDust:       "dust",
-		particles.WeatherAsh:        "ash",
-		particles.WeatherNeonRain:   "neonrain",
-		particles.WeatherSmog:       "smog",
-		particles.WeatherRadiation:  "radiation",
+		particles.WeatherRain:      "rain",
+		particles.WeatherSnow:      "snow",
+		particles.WeatherFog:       "fog",
+		particles.WeatherDust:      "dust",
+		particles.WeatherAsh:       "ash",
+		particles.WeatherNeonRain:  "neonrain",
+		particles.WeatherSmog:      "smog",
+		particles.WeatherRadiation: "radiation",
 	}
 	if name, ok := names[w]; ok {
 		return name

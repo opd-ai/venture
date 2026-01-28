@@ -223,11 +223,11 @@ func TestMouseDelta_UsageScenario_DragAndDrop(t *testing.T) {
 // TestMouseDelta_EdgeCases tests edge cases for mouse delta.
 func TestMouseDelta_EdgeCases(t *testing.T) {
 	tests := []struct {
-		name    string
-		deltaX  int
-		deltaY  int
-		wantX   int
-		wantY   int
+		name   string
+		deltaX int
+		deltaY int
+		wantX  int
+		wantY  int
 	}{
 		{"Zero delta", 0, 0, 0, 0},
 		{"Positive X only", 100, 0, 100, 0},
@@ -253,4 +253,3 @@ func TestMouseDelta_EdgeCases(t *testing.T) {
 		})
 	}
 }
-

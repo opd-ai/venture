@@ -13,10 +13,10 @@ func TestValidateTrust_LowTrust(t *testing.T) {
 	sys := NewTradeSystem(world)
 
 	tests := []struct {
-		name       string
-		trustScore float64
-		items      []*item.Item
-		wantErr    bool
+		name        string
+		trustScore  float64
+		items       []*item.Item
+		wantErr     bool
 		errContains string
 	}{
 		{
@@ -30,7 +30,7 @@ func TestValidateTrust_LowTrust(t *testing.T) {
 				{Name: "item5", Rarity: item.RarityCommon},
 				{Name: "item6", Rarity: item.RarityCommon}, // 6 items, over limit of 5
 			},
-			wantErr:    true,
+			wantErr:     true,
 			errContains: "low trust players can trade max",
 		},
 		{
@@ -39,7 +39,7 @@ func TestValidateTrust_LowTrust(t *testing.T) {
 			items: []*item.Item{
 				{Name: "rare_sword", Rarity: item.RarityRare},
 			},
-			wantErr:    true,
+			wantErr:     true,
 			errContains: "low trust players cannot trade rare",
 		},
 		{
@@ -48,7 +48,7 @@ func TestValidateTrust_LowTrust(t *testing.T) {
 			items: []*item.Item{
 				{Name: "epic_armor", Rarity: item.RarityEpic},
 			},
-			wantErr:    true,
+			wantErr:     true,
 			errContains: "low trust players cannot trade rare",
 		},
 		{
@@ -57,7 +57,7 @@ func TestValidateTrust_LowTrust(t *testing.T) {
 			items: []*item.Item{
 				{Name: "legendary_axe", Rarity: item.RarityLegendary},
 			},
-			wantErr:    true,
+			wantErr:     true,
 			errContains: "low trust players cannot trade rare",
 		},
 		{
@@ -115,10 +115,10 @@ func TestValidateTrust_MediumTrust(t *testing.T) {
 	sys := NewTradeSystem(world)
 
 	tests := []struct {
-		name       string
-		trustScore float64
-		items      []*item.Item
-		wantErr    bool
+		name        string
+		trustScore  float64
+		items       []*item.Item
+		wantErr     bool
 		errContains string
 	}{
 		{
@@ -127,7 +127,7 @@ func TestValidateTrust_MediumTrust(t *testing.T) {
 			items: []*item.Item{
 				{Name: "legendary_weapon", Rarity: item.RarityLegendary},
 			},
-			wantErr:    true,
+			wantErr:     true,
 			errContains: "too low for legendary items",
 		},
 		{
@@ -232,7 +232,7 @@ func TestValidateTrust_HighTrust(t *testing.T) {
 		{
 			name:       "high trust - many items allowed",
 			trustScore: 0.8,
-			items: make([]*item.Item, 20), // 20 items
+			items:      make([]*item.Item, 20), // 20 items
 			wantErr:    false,
 		},
 	}
@@ -317,13 +317,13 @@ func TestValidateTrust_EdgeCases(t *testing.T) {
 func TestTransferTracker_RollbackFunc(t *testing.T) {
 	// Create test inventories with large capacity
 	proposerInv := &engine.InventoryComponent{
-		Items:    []*item.Item{},
-		MaxItems: 100,
+		Items:     []*item.Item{},
+		MaxItems:  100,
 		MaxWeight: 1000.0,
 	}
 	recipientInv := &engine.InventoryComponent{
-		Items:    []*item.Item{},
-		MaxItems: 100,
+		Items:     []*item.Item{},
+		MaxItems:  100,
 		MaxWeight: 1000.0,
 	}
 
@@ -471,7 +471,7 @@ func TestTransferTracker_NewTransferTracker(t *testing.T) {
 
 // Helper function to check if a string contains a substring.
 func contains(s, substr string) bool {
-	return len(s) >= len(substr) && (s == substr || len(substr) == 0 || 
+	return len(s) >= len(substr) && (s == substr || len(substr) == 0 ||
 		(len(s) > 0 && len(substr) > 0 && findSubstring(s, substr)))
 }
 

@@ -135,4 +135,3 @@ func BenchmarkCollisionSystemUpdateWithQuadtree_Dense(b *testing.B) {
 		system.Update(entities, 0.016)
 	}
 }
-

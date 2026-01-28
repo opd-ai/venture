@@ -119,9 +119,9 @@ func TestAsyncLoader_Integration_Composite(t *testing.T) {
 		GenreID:    "scifi",
 		Difficulty: 0.7,
 		Custom: map[string]interface{}{
-			"width":         120,
-			"height":        100,
-			"biomeCount":    3,
+			"width":           120,
+			"height":          100,
+			"biomeCount":      3,
 			"transitionWidth": 3,
 		},
 	}

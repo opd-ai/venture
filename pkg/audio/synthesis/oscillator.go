@@ -26,7 +26,12 @@ type Oscillator struct {
 }
 
 // NewOscillator creates a new oscillator with the given sample rate.
+// If sampleRate is less than or equal to 0, it defaults to 44100 Hz.
 func NewOscillator(sampleRate int, seed int64) *Oscillator {
+	if sampleRate <= 0 {
+		sampleRate = 44100
+	}
+
 	log.WithFields(logrus.Fields{
 		"sample_rate": sampleRate,
 		"seed":        seed,

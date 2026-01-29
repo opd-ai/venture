@@ -328,3 +328,53 @@ func BenchmarkEnvelope_Apply(b *testing.B) {
 		env.Apply(sample.Data, sample.SampleRate)
 	}
 }
+
+func TestNewOscillator_InvalidSampleRate(t *testing.T) {
+	tests := []struct {
+		name         string
+		sampleRate   int
+		expectedRate int
+	}{
+		{
+			name:         "zero sample rate defaults to 44100",
+			sampleRate:   0,
+			expectedRate: 44100,
+		},
+		{
+			name:         "negative sample rate defaults to 44100",
+			sampleRate:   -1000,
+			expectedRate: 44100,
+		},
+		{
+			name:         "very negative sample rate defaults to 44100",
+			sampleRate:   -999999,
+			expectedRate: 44100,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			osc := NewOscillator(tt.sampleRate, 12345)
+
+			if osc == nil {
+				t.Fatal("NewOscillator returned nil")
+			}
+
+			// Generate a sample to verify the corrected sample rate was used
+			sample := osc.Generate(audio.WaveformSine, 440.0, 0.1)
+			if sample == nil {
+				t.Fatal("Oscillator with corrected sample rate failed to generate waveform")
+			}
+
+			if sample.SampleRate != tt.expectedRate {
+				t.Errorf("Generated sample has rate %d, expected %d", sample.SampleRate, tt.expectedRate)
+			}
+
+			// Verify correct number of samples generated with corrected rate
+			expectedSamples := int(float64(tt.expectedRate) * 0.1)
+			if len(sample.Data) != expectedSamples {
+				t.Errorf("Generated %d samples, expected %d", len(sample.Data), expectedSamples)
+			}
+		})
+	}
+}

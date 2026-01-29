@@ -34,6 +34,53 @@ func TestNewEngineWithSampleRate(t *testing.T) {
 	}
 }
 
+func TestNewEngineWithSampleRate_InvalidInput(t *testing.T) {
+	tests := []struct {
+		name         string
+		sampleRate   int
+		expectedRate int
+	}{
+		{
+			name:         "zero sample rate defaults to 44100",
+			sampleRate:   0,
+			expectedRate: 44100,
+		},
+		{
+			name:         "negative sample rate defaults to 44100",
+			sampleRate:   -1000,
+			expectedRate: 44100,
+		},
+		{
+			name:         "very negative sample rate defaults to 44100",
+			sampleRate:   -999999,
+			expectedRate: 44100,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			engine := NewEngineWithSampleRate(tt.sampleRate, 12345)
+
+			if engine == nil {
+				t.Fatal("NewEngineWithSampleRate returned nil")
+			}
+
+			if engine.GetSampleRate() != tt.expectedRate {
+				t.Errorf("Expected sample rate %d, got %d", tt.expectedRate, engine.GetSampleRate())
+			}
+
+			// Verify oscillator was created with corrected sample rate
+			sample := engine.GenerateTone(audio.WaveformSine, 440.0, 0.1)
+			if sample == nil {
+				t.Fatal("Engine with corrected sample rate failed to generate tone")
+			}
+			if sample.SampleRate != tt.expectedRate {
+				t.Errorf("Generated sample has rate %d, expected %d", sample.SampleRate, tt.expectedRate)
+			}
+		})
+	}
+}
+
 func TestEngine_GenerateTone(t *testing.T) {
 	engine := NewEngine(12345)
 

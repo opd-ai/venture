@@ -279,7 +279,7 @@ All generators must implement `procgen.Generator` interface and use deterministi
 | 24 | `pkg/procgen/skills` | `pkg/procgen/skills/AUDIT.md` | Skill trees, templates, progression | ✅ Complete (2026-02-07) |
 | 25 | `pkg/procgen/dialog` | `pkg/procgen/dialog/AUDIT.md` | Markov chains, personality, corpus | ✅ Complete (2026-02-07) |
 | 26 | `pkg/procgen/narrative` | `pkg/procgen/narrative/AUDIT.md` | Story beats, narrative arcs | ✅ Complete (2026-02-07) |
-| 27 | `pkg/procgen/story` | `pkg/procgen/story/AUDIT.md` | Archaeology, branching, cross-dungeon, timelines |
+| 27 | `pkg/procgen/story` | `pkg/procgen/story/AUDIT.md` | Archaeology, branching, cross-dungeon, timelines | ✅ Complete (2026-02-07) |
 | 28 | `pkg/procgen/faction` | `pkg/procgen/faction/AUDIT.md` | Faction generation, relationships |
 | 29 | `pkg/procgen/companion` | `pkg/procgen/companion/AUDIT.md` | Companion/pet generation |
 | 30 | `pkg/procgen/environment` | `pkg/procgen/environment/AUDIT.md` | Environmental detail generation |

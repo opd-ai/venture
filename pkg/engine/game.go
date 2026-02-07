@@ -33,6 +33,7 @@ type EbitenGame struct {
 	SettingsUI           *SettingsUI
 	SettingsManager      *SettingsManager
 	CharacterCreation    *EbitenCharacterCreation
+	LoadingUI            *LoadingUI // World generation loading screen (Phase Performance Audit)
 	pendingCharData      *CharacterData
 	isMultiplayerMode    bool   // Track if character creation is for multiplayer
 	selectedGenreID      string // Selected genre for world generation
@@ -99,6 +100,10 @@ type EbitenGame struct {
 	onNewGame            func() error
 	onMultiplayerConnect func(serverAddr string) error
 	onQuitToMenu         func() error
+
+	// Async world generation (Performance Audit - async terrain loading)
+	terrainLoader       interface{}         // *terrain.AsyncLoader - stored as interface{} to avoid circular import
+	terrainLoadComplete func(*Entity) error // Callback when terrain loading completes
 
 	// Logger for game operations
 	logger *logrus.Entry
@@ -265,6 +270,7 @@ func buildGameInstance(screenWidth, screenHeight int, world *World, logEntry *lo
 		SettingsUI:         ui.settingsUI,
 		SettingsManager:    core.settingsManager,
 		CharacterCreation:  ui.characterCreation,
+		LoadingUI:          NewLoadingUI(screenWidth, screenHeight),
 		CameraSystem:       core.cameraSystem,
 		RenderSystem:       core.renderSystem,
 		LightingSystem:     core.lightingSystem,
@@ -333,6 +339,23 @@ func (g *EbitenGame) SetMultiplayerConnectCallback(callback func(serverAddr stri
 // SetQuitToMenuCallback sets the callback function called when quitting to main menu.
 func (g *EbitenGame) SetQuitToMenuCallback(callback func() error) {
 	g.onQuitToMenu = callback
+}
+
+// SetTerrainLoader sets the async terrain loader for tracking world generation progress.
+// The loader should be started before transitioning to AppStateLoading.
+func (g *EbitenGame) SetTerrainLoader(loader interface{}) {
+	g.terrainLoader = loader
+}
+
+// GetTerrainLoader returns the current terrain loader reference.
+func (g *EbitenGame) GetTerrainLoader() interface{} {
+	return g.terrainLoader
+}
+
+// SetTerrainLoadCompleteCallback sets the callback function called when terrain loading completes.
+// The callback receives the player entity and should finalize world initialization.
+func (g *EbitenGame) SetTerrainLoadCompleteCallback(callback func(*Entity) error) {
+	g.terrainLoadComplete = callback
 }
 
 // SetWorldSeed sets the world generation seed and applies it to character creation defaults.
@@ -879,6 +902,78 @@ func (g *EbitenGame) triggerGameStartCallback(charData CharacterData) error {
 	return g.startSinglePlayerGame(charData)
 }
 
+// handleLoadingState updates the loading screen during async terrain generation.
+// Polls terrain loader progress and transitions to gameplay when complete.
+func (g *EbitenGame) handleLoadingState() error {
+	if g.terrainLoader == nil {
+		if g.logger != nil {
+			g.logger.Error("in loading state but no terrain loader set")
+		}
+		_ = g.StateManager.TransitionTo(AppStateMainMenu)
+		return nil
+	}
+
+	// Type assert to AsyncLoader interface (duck typing)
+	// We use interface{} to avoid circular import with terrain package
+	type asyncLoader interface {
+		GetProgress() (float64, error)
+		IsDone() bool
+	}
+
+	loader, ok := g.terrainLoader.(asyncLoader)
+	if !ok {
+		if g.logger != nil {
+			g.logger.Error("terrain loader does not implement required methods")
+		}
+		_ = g.StateManager.TransitionTo(AppStateMainMenu)
+		return nil
+	}
+
+	// Update progress display
+	progress, err := loader.GetProgress()
+	if err != nil {
+		if g.logger != nil {
+			g.logger.WithError(err).Error("terrain generation failed")
+		}
+		_ = g.StateManager.TransitionTo(AppStateMainMenu)
+		return err
+	}
+
+	if g.LoadingUI != nil {
+		g.LoadingUI.SetProgress(progress)
+	}
+
+	// Check if loading is complete
+	if loader.IsDone() {
+		if g.logger != nil {
+			g.logger.Info("terrain loading complete, transitioning to gameplay")
+		}
+
+		// Clear loader reference
+		g.terrainLoader = nil
+
+		// Transition to gameplay
+		if err := g.StateManager.TransitionTo(AppStateGameplay); err != nil {
+			if g.logger != nil {
+				g.logger.WithError(err).Error("failed to transition to gameplay after terrain load")
+			}
+			return err
+		}
+
+		// Call completion callback to finalize world initialization
+		if g.terrainLoadComplete != nil {
+			if err := g.terrainLoadComplete(g.PlayerEntity); err != nil {
+				if g.logger != nil {
+					g.logger.WithError(err).Error("terrain load complete callback failed")
+				}
+				return err
+			}
+		}
+	}
+
+	return nil
+}
+
 // startMultiplayerGame connects to multiplayer server with character data.
 func (g *EbitenGame) startMultiplayerGame(charData CharacterData) error {
 	if g.onMultiplayerConnect != nil {
@@ -1061,6 +1156,11 @@ func (g *EbitenGame) Update() error {
 
 	deltaTime := g.calculateDeltaTime()
 
+	// Handle loading state BEFORE other state checks
+	if g.StateManager.CurrentState() == AppStateLoading {
+		return g.handleLoadingState()
+	}
+
 	// Handle character creation BEFORE updateMenuState to prevent main menu from consuming input
 	if g.StateManager.CurrentState() == AppStateCharacterCreation {
 		return g.handleCharacterCreation()
@@ -1121,6 +1221,11 @@ func (g *EbitenGame) drawMenuState(screen *ebiten.Image) bool {
 	case AppStateMultiPlayerMenu:
 		if g.MultiplayerMenu != nil {
 			g.MultiplayerMenu.Draw(screen)
+		}
+		return true
+	case AppStateLoading:
+		if g.LoadingUI != nil {
+			g.LoadingUI.Draw(screen)
 		}
 		return true
 	case AppStateServerAddressInput:

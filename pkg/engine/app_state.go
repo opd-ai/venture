@@ -157,8 +157,8 @@ func isValidAppTransition(from, to AppState) bool {
 		// Can proceed to character creation or go back to single-player menu
 		return to == AppStateCharacterCreation || to == AppStateSinglePlayerMenu || to == AppStateMainMenu
 	case AppStateCharacterCreation:
-		// Can complete creation and start loading or go back to main menu (MVP flow)
-		return to == AppStateLoading || to == AppStateSinglePlayerMenu || to == AppStateMainMenu
+		// Can complete creation and start gameplay/loading or go back (MVP flow)
+		return to == AppStateGameplay || to == AppStateLoading || to == AppStateSinglePlayerMenu || to == AppStateMainMenu
 	case AppStateLoading:
 		// Can only proceed to gameplay after loading completes
 		return to == AppStateGameplay || to == AppStateMainMenu

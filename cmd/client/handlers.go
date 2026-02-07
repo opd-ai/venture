@@ -401,95 +401,82 @@ type systemsContainer struct {
 
 // initializeCoreSystems creates and initializes all core game systems.
 func initializeCoreSystems(game *engine.EbitenGame, logger *logrus.Logger, clientLogger *logrus.Entry) *systemsContainer {
-	clientLogger.Info("initializing game systems")
+	startTime := time.Now()
+	clientLogger.Info("initializing game systems with parallel optimization")
 
 	sys := &systemsContainer{}
 
-	// Phase 1.2: Performance monitoring (PLAN.md)
+	// Phase 1: Critical systems (must be sequential)
 	sys.performanceSystem = engine.NewPerformanceMonitoringSystem()
 	clientLogger.WithField("system_name", "performance").Debug("Created performance monitoring system")
 
-	// Core gameplay systems
 	sys.inputSystem = engine.NewInputSystem()
-
 	sys.movementSystem = engine.NewMovementSystem(playerMaxSpeed)
 	sys.collisionSystem = engine.NewCollisionSystem(collisionGridCellSize)
 	sys.movementSystem.SetCollisionSystem(sys.collisionSystem)
 
-	sys.combatSystem = engine.NewCombatSystemWithLogger(*seed, logger)
-	sys.interactionSystem = engine.NewInteractionSystem(game.World)
-	sys.particleSystem = engine.NewParticleSystem()
+	// Phase 2: Parallel initialization of independent systems
+	var wg sync.WaitGroup
+	wg.Add(3)
 
-	// Phase 1.2: Initialize sprite cache for base sprite caching
-	// 400MB limit provides significant performance improvement through cached sprite reuse
-	sys.spriteCache = cache.NewSpriteCache(spriteCacheMaxSize)
-	clientLogger.WithField("maxSize", spriteCacheMaxSize).Info("sprite cache initialized")
+	// Group 1: Combat & Interaction systems
+	go func() {
+		defer wg.Done()
+		sys.combatSystem = engine.NewCombatSystemWithLogger(*seed, logger)
+		sys.interactionSystem = engine.NewInteractionSystem(game.World)
+		sys.particleSystem = engine.NewParticleSystem()
+		clientLogger.Debug("combat & interaction systems initialized")
+	}()
 
-	sys.spriteGenerator = sprites.NewGenerator()
-	sys.animationSystem = engine.NewAnimationSystem(sys.spriteGenerator)
-	sys.animationSystem.SetMaxCacheSize(animationCacheSize)
+	// Group 2: Sprite & Animation systems
+	go func() {
+		defer wg.Done()
+		sys.spriteCache = cache.NewSpriteCache(spriteCacheMaxSize)
+		sys.spriteGenerator = sprites.NewGenerator()
+		sys.animationSystem = engine.NewAnimationSystem(sys.spriteGenerator)
+		sys.animationSystem.SetMaxCacheSize(animationCacheSize)
+		sys.animationSystem.SetSpriteCache(sys.spriteCache)
+		sys.equipmentVisualSystem = engine.NewEquipmentVisualSystem(sys.spriteGenerator)
+		clientLogger.WithField("maxSize", spriteCacheMaxSize).Debug("sprite & animation systems initialized")
+	}()
 
-	// Phase 1.2: Connect sprite cache to animation system
-	sys.animationSystem.SetSpriteCache(sys.spriteCache)
+	// Group 3: Rendering systems
+	go func() {
+		defer wg.Done()
+		qualityConfig := &quality.Config{
+			Level:                 quality.QualityMedium,
+			EnablePostProcessing:  true,
+			EnableBloom:           false,
+			EnableSoftShadows:     true,
+			SpriteDetailLevel:     0.7,
+			EnableAntiAliasing:    true,
+			AntiAliasingQuality:   1,
+			EnableSpriteCache:     true,
+			EnableDynamicLighting: true,
+			ShadowSampleCount:     2,
+		}
+		sys.qualitySystem = engine.NewQualitySystem(qualityConfig, 60.0)
+		sys.lightingAdapter = engine.NewLightingAdapter(clientLogger.WithField("system", "lighting"))
+		sys.animationAdapter = engine.NewAnimationAdapter(sys.spriteGenerator, clientLogger.WithField("system", "animation"))
+		sys.uiGenerator = ui.NewGeneratorWithLogger(logger)
+		sys.shapeRenderer = shapes.NewGenerator()
+		sys.patternGenerator = patterns.NewGeneratorWithLogger(logger)
+		sys.imagePool = pool.NewImagePool()
+		workerCount := runtime.NumCPU()
+		sys.parallelRenderer = parallel.NewWorkerPool(workerCount)
+		clientLogger.WithField("workerCount", workerCount).Debug("rendering systems initialized")
+	}()
 
-	sys.equipmentVisualSystem = engine.NewEquipmentVisualSystem(sys.spriteGenerator)
+	wg.Wait()
 
-	// INTEGRATION FIX [Category A]: Phase 14 - QualitySystem
-	// Gap: QualitySystem implemented for performance-based quality adjustment but never initialized
-	// Fix: Added system initialization for automatic quality settings based on frame rate
-	// Roadmap: ROADMAP_V4.md Phase 14
-	qualityConfig := &quality.Config{
-		Level:                 quality.QualityMedium,
-		EnablePostProcessing:  true,
-		EnableBloom:           false,
-		EnableSoftShadows:     true,
-		SpriteDetailLevel:     0.7,
-		EnableAntiAliasing:    true,
-		AntiAliasingQuality:   1, // 2x2 sampling
-		EnableSpriteCache:     true,
-		EnableDynamicLighting: true,
-		ShadowSampleCount:     2,
-	}
-	sys.qualitySystem = engine.NewQualitySystem(qualityConfig, 60.0)
-
-	// Phase 2.2: Core Rendering Systems (PLAN.md)
-	// Initialize lighting adapter for dynamic lighting effects
-	sys.lightingAdapter = engine.NewLightingAdapter(clientLogger.WithField("system", "lighting"))
-	clientLogger.Info("lighting adapter initialized")
-
-	// Initialize animation adapter for advanced animation features
-	sys.animationAdapter = engine.NewAnimationAdapter(sys.spriteGenerator, clientLogger.WithField("system", "animation"))
-	clientLogger.Info("animation adapter initialized")
-
-	// Phase 2.3: UI & Shape Rendering (PLAN.md)
-	// Initialize UI generator for procedural interface elements
-	sys.uiGenerator = ui.NewGeneratorWithLogger(logger)
-	clientLogger.Info("UI generator initialized")
-
-	// Initialize shape renderer for geometric primitives
-	sys.shapeRenderer = shapes.NewGenerator()
-	clientLogger.Info("shape renderer initialized")
-
-	// Initialize pattern generator for textures and materials
-	sys.patternGenerator = patterns.NewGeneratorWithLogger(logger)
-	clientLogger.Info("pattern generator initialized")
-
-	// Phase 2.4: Rendering Optimization (PLAN.md)
-	// Initialize image pool for memory efficiency (1000 pooled images)
-	sys.imagePool = pool.NewImagePool()
-	clientLogger.Info("image pool initialized")
-
-	// Initialize parallel renderer for performance (CPU count workers)
-	workerCount := runtime.NumCPU()
-	sys.parallelRenderer = parallel.NewWorkerPool(workerCount)
-	clientLogger.WithField("workerCount", workerCount).Info("parallel renderer initialized")
-
-	// Connect rendering optimizations to RenderSystem
+	// Phase 3: Final connections (requires all systems initialized)
 	poolAdapter := engine.NewImagePoolAdapter(sys.imagePool)
 	parallelAdapter := engine.NewParallelRendererAdapter(sys.parallelRenderer)
 	game.RenderSystem.SetPool(poolAdapter)
 	game.RenderSystem.SetParallelRenderer(parallelAdapter)
-	clientLogger.Info("rendering optimizations connected to RenderSystem")
+
+	elapsed := time.Since(startTime)
+	clientLogger.WithField("duration_ms", elapsed.Milliseconds()).Info("core systems initialized with parallel optimization")
 
 	return sys
 }

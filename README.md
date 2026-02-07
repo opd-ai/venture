@@ -6,7 +6,7 @@ A fully procedural multiplayer action-RPG built with Go and Ebiten where all gra
 
 Venture is a top-down action-RPG that uses deterministic, seed-based procedural generation to create all game content at runtime. The game uses an Entity-Component-System (ECS) architecture where entities are unique identifiers with component collections, components are pure data structures, and systems contain all game logic. Terrain is generated using BSP dungeons, cellular automata caves, L-system forests, and Voronoi biomes. Items, quests, NPCs, spells, and dialog are all procedurally generated based on a genre system supporting fantasy, sci-fi, horror, cyberpunk, and post-apocalyptic themes.
 
-The multiplayer networking layer supports high-latency connections (200–5000ms) suitable for Tor/onion service routing, with client-side prediction, lag compensation, and snapshot synchronization. A federation system enables cross-server travel, shared marketplaces, and multi-server guilds. The client automatically starts a localhost server for solo play, requiring no manual server setup.
+The multiplayer networking layer supports high-latency connections (200–5000ms) suitable for Tor/onion service routing, with client-side prediction, lag compensation, and snapshot synchronization. A federation system enables cross-server travel, shared marketplaces, and multi-server guilds. On desktop/native builds, the client automatically starts a localhost server for solo play, requiring no manual server setup; on WebAssembly builds, embedded server/host-and-play is disabled and the client must connect to an existing server.
 
 The rendering pipeline generates sprites with equipment overlays, tiles with transitions, dynamic lighting with bloom and ambient occlusion, particle effects, and post-processing—all at runtime. Audio synthesis generates music and sound effects procedurally. The result is a single distributable binary per platform with no external asset files.
 
@@ -96,7 +96,7 @@ Download the latest release from [GitHub Releases](https://github.com/opd-ai/ven
 
 ```bash
 tar -xzf venture-linux-amd64.tar.gz
-./venture-client
+./venture-client-linux-amd64
 ```
 
 ### Option B: Package Managers
@@ -122,7 +122,7 @@ docker run -d -p 8080:8080 ghcr.io/opd-ai/venture-server:1.0.0
 
 1. Install [Go 1.24.5+](https://go.dev/dl/)
 2. Install platform-specific dependencies:
-   - **Linux:** `sudo apt-get install libc6-dev libgl1-mesa-dev libxcursor-dev libxi-dev libxinerama-dev libxrandr-dev libxxf86vm-dev libasound2-dev pkg-config`
+   - **Linux:** `sudo apt-get install libc6-dev libgl1-mesa-dev libxcursor-dev libxi-dev libxinerama-dev libxrandr-dev libxxf86vm-dev libasound2-dev pkg-config xvfb`
    - **macOS:** Xcode command-line tools (`xcode-select --install`)
    - **Windows:** No additional dependencies
 3. Clone and build:
@@ -146,6 +146,10 @@ go build -o venture-server ./cmd/server
 
 ```bash
 # Start the game (auto-starts a localhost server for solo play)
+# After `make build`, binaries are in build/
+./build/venture-client
+
+# Or if built directly with `go build -o venture-client ./cmd/client`:
 ./venture-client
 
 # Custom settings
@@ -165,8 +169,8 @@ go build -o venture-server ./cmd/server
 ### LAN Co-op
 
 ```bash
-# Host: allow LAN connections
-./venture-client --host-lan
+# Host: start a local server and allow LAN connections
+./venture-client --host-and-play --host-lan
 
 # Other players: join the host
 ./venture-client --multiplayer --server <host-ip>:8080
@@ -218,19 +222,20 @@ See [Mobile Build Guide](docs/MOBILE_BUILD.md) for full instructions.
 | `-width` | `1920` | Window width in pixels |
 | `-height` | `1080` | Window height in pixels |
 | `-fullscreen` | `false` | Enable fullscreen mode |
-| `-seed` | `12345` | World generation seed |
-| `-genre` | `fantasy` | Genre (`fantasy`, `sci-fi`, `horror`, `cyberpunk`, `post-apocalyptic`) |
-| `--multiplayer` | `false` | Connect to a remote server |
-| `--server` | — | Server address (e.g., `192.168.1.5:8080`) |
-| `--host-lan` | `false` | Allow LAN connections in host-and-play mode |
-| `-weather` | — | Weather type (`rain`, `snow`, `fog`, `dust`, `ash`) |
-| `-weather-intensity` | — | Weather intensity (`light`, `medium`, `heavy`, `extreme`) |
+| `-seed` | `random` | World generation seed (uses a random seed if not specified) |
+| `-genre` | `random` | Genre (`random`, `fantasy`, `sci-fi`, `horror`, `cyberpunk`, `post-apocalyptic`) |
+| `--multiplayer` | `false` | Connect to a remote server instead of hosting locally |
+| `--server` | `localhost:8080` | Server address (e.g., `192.168.1.5:8080`) |
+| `--host-and-play` | `false` | Explicitly enable host-and-play mode (default behavior when `--multiplayer` not specified) |
+| `--host-lan` | `false` | Bind server to `0.0.0.0` for LAN access instead of `127.0.0.1` (requires host-and-play mode) |
+| `-weather` | — | Weather type (`rain`, `snow`, `fog`, `dust`, `ash`, `neonrain`, `smog`, `radiation`) |
+| `-weather-intensity` | `heavy` | Weather intensity (`light`, `medium`, `heavy`, `extreme`) |
 
 ### Server Flags
 
 | Flag | Default | Description |
 |------|---------|-------------|
-| `-port` | `8080` | Server port (auto-fallback to 8081–8089 if occupied) |
+| `-port` | `8080` | Server port |
 | `-max-players` | `8` | Maximum concurrent players |
 | `-seed` | `12345` | World generation seed |
 | `-genre` | `fantasy` | Genre ID for world generation |
@@ -243,7 +248,7 @@ See [Mobile Build Guide](docs/MOBILE_BUILD.md) for full instructions.
 
 | Variable | Values | Description |
 |----------|--------|-------------|
-| `LOG_LEVEL` | `debug`, `info`, `warn`, `error` | Logging verbosity |
+| `LOG_LEVEL` | `debug`, `info`, `warn`, `error`, `fatal` | Logging verbosity (unknown values default to `info`) |
 | `LOG_FORMAT` | `json`, `text` | Log output format |
 
 ### Mod Configuration

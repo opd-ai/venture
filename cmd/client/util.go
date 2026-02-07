@@ -75,7 +75,7 @@ var (
 	hostLAN       = flag.Bool("host-lan", false, "Bind server to 0.0.0.0 for LAN access instead of 127.0.0.1 (requires host-and-play mode)")
 	serverPort    = flag.Int("port", 8080, "Server port for --host-and-play mode (will try next 10 ports if occupied)")
 	serverPlayers = flag.Int("max-players", 4, "Maximum players for --host-and-play mode")
-	serverTick    = flag.Int("tick-rate", 20, "Server tick rate for --host-and-play mode (updates per second)")
+	serverTick    = flag.Int("tick-rate", 30, "Server tick rate for --host-and-play mode (updates per second)")
 	noTutorial    = flag.Bool("no-tutorial", false, "Disable tutorial for experienced players")
 	showVersion   = flag.Bool("version", false, "Print version information and exit")
 )

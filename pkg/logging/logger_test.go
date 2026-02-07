@@ -64,6 +64,14 @@ func TestNewLogger(t *testing.T) {
 			},
 			level: logrus.ErrorLevel,
 		},
+		{
+			name: "fatal level",
+			config: Config{
+				Level:  FatalLevel,
+				Format: TextFormat,
+			},
+			level: logrus.FatalLevel,
+		},
 	}
 
 	for _, tt := range tests {
@@ -103,6 +111,24 @@ func TestNewLoggerFromEnv(t *testing.T) {
 			envLevel: "Warn",
 			envFmt:   "json",
 			wantLvl:  logrus.WarnLevel,
+		},
+		{
+			name:     "error from env",
+			envLevel: "error",
+			envFmt:   "text",
+			wantLvl:  logrus.ErrorLevel,
+		},
+		{
+			name:     "fatal from env",
+			envLevel: "fatal",
+			envFmt:   "json",
+			wantLvl:  logrus.FatalLevel,
+		},
+		{
+			name:     "fatal uppercase from env",
+			envLevel: "FATAL",
+			envFmt:   "text",
+			wantLvl:  logrus.FatalLevel,
 		},
 		{
 			name:     "no env vars",

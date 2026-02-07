@@ -280,9 +280,9 @@ All generators must implement `procgen.Generator` interface and use deterministi
 | 25 | `pkg/procgen/dialog` | `pkg/procgen/dialog/AUDIT.md` | Markov chains, personality, corpus | ✅ Complete (2026-02-07) |
 | 26 | `pkg/procgen/narrative` | `pkg/procgen/narrative/AUDIT.md` | Story beats, narrative arcs | ✅ Complete (2026-02-07) |
 | 27 | `pkg/procgen/story` | `pkg/procgen/story/AUDIT.md` | Archaeology, branching, cross-dungeon, timelines | ✅ Complete (2026-02-07) |
-| 28 | `pkg/procgen/faction` | `pkg/procgen/faction/AUDIT.md` | Faction generation, relationships |
-| 29 | `pkg/procgen/companion` | `pkg/procgen/companion/AUDIT.md` | Companion/pet generation |
-| 30 | `pkg/procgen/environment` | `pkg/procgen/environment/AUDIT.md` | Environmental detail generation |
+| 28 | `pkg/procgen/faction` | `pkg/procgen/faction/AUDIT.md` | Faction generation, relationships | ✅ Complete (2026-02-07) |
+| 29 | `pkg/procgen/companion` | `pkg/procgen/companion/AUDIT.md` | Companion/pet generation | ✅ Complete (2026-02-07) |
+| 30 | `pkg/procgen/environment` | `pkg/procgen/environment/AUDIT.md` | Environmental detail generation | ✅ Complete (2026-02-07) |
 | 31 | `pkg/procgen/vehicle` | `pkg/procgen/vehicle/AUDIT.md` | Vehicle generation, combat variants |
 | 32 | `pkg/procgen/legendary` | `pkg/procgen/legendary/AUDIT.md` | Legendary items and quests |
 | 33 | `pkg/procgen/minigame` | `pkg/procgen/minigame/AUDIT.md` | Mini-game generation, state machine |

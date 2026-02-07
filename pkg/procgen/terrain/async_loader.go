@@ -50,7 +50,6 @@ func (l *AsyncLoader) StartGeneration(generator procgen.Generator, seed int64, p
 
 		// Generate terrain (this is the slow part: 12-50ms for composite)
 		result, err := generator.Generate(seed, params)
-
 		if err != nil {
 			l.mu.Lock()
 			l.err = err

@@ -114,45 +114,6 @@ track := gen.GenerateTrack("fantasy", "combat", seed, 10.0)
 ambientTrack := gen.GenerateTrack("horror", "ambient", seed, 30.0)
 ```
 
-## Command Line Tool
-
-The `audiotest` tool allows testing audio generation from the command line:
-
-```bash
-# Build the tool
-go build -o audiotest ./cmd/audiotest
-
-# Test oscillator
-./audiotest -type oscillator -waveform sine -frequency 440 -duration 1.0 -verbose
-
-# Test sound effects
-./audiotest -type sfx -effect magic -verbose
-
-# Test music generation
-./audiotest -type music -genre fantasy -context combat -duration 5.0 -verbose
-```
-
-### Options
-
-**Common:**
-- `-seed`: Random seed for generation (default: 12345)
-- `-duration`: Duration in seconds (default: 1.0)
-- `-verbose`: Show detailed statistics
-
-**Oscillator:**
-- `-type oscillator`
-- `-waveform`: sine, square, sawtooth, triangle, noise
-- `-frequency`: Frequency in Hz (default: 440.0)
-
-**Sound Effects:**
-- `-type sfx`
-- `-effect`: impact, explosion, magic, laser, pickup, hit, jump, death, powerup
-
-**Music:**
-- `-type music`
-- `-genre`: fantasy, scifi, horror, cyberpunk, post-apocalyptic
-- `-context`: combat, exploration, ambient, victory
-
 ## Performance
 
 The audio system meets all performance targets:
@@ -173,7 +134,7 @@ The audio system meets all performance targets:
 
 ## Testing
 
-Comprehensive test suite with >95% coverage:
+Comprehensive test suite with ~90% average coverage:
 
 ```bash
 # Run all audio tests
@@ -187,9 +148,10 @@ go test -tags test -bench=. ./pkg/audio/...
 ```
 
 **Test Coverage:**
-- `synthesis`: 94.2%
-- `sfx`: 99.1%
-- `music`: 100.0%
+- `pkg/audio`: 86.2%
+- `synthesis`: 96.5%
+- `sfx`: 89.9%
+- `music`: 93.9%
 
 ## Integration
 

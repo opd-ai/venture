@@ -97,17 +97,13 @@
 //
 // # Testing
 //
-// Use the cmd/musictest tool for manual validation:
+// The package includes comprehensive tests covering:
 //
-//	go run ./cmd/musictest -mode all -genre fantasy -seed 12345
-//
-// Test modes include:
-//
-//   - contexts: Test all music contexts
-//   - layers: Test individual layer activation
-//   - transitions: Test smooth context transitions
-//   - intensity: Test intensity scaling
-//   - all: Run all tests
+//   - contexts: All music contexts (combat, exploration, ambient, victory)
+//   - layers: Individual layer activation
+//   - transitions: Smooth context transitions
+//   - intensity: Intensity scaling
+//   - determinism: Seed-based reproducibility
 //
 // # Music Theory
 //

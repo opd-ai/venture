@@ -275,7 +275,6 @@ For developers working with this package:
 **Testing:**
 - Run tests: `go test ./pkg/audio/music/...`
 - Check coverage: `go test -cover ./pkg/audio/music/...`
-- Integration test: `go run ./cmd/musictest -mode all -genre fantasy`
 
 **Performance Targets:**
 - Track generation: <50ms for 10 seconds (achieved)

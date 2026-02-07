@@ -202,7 +202,6 @@ func TestGenerateAllFramesUsesPool(t *testing.T) {
 
 	baseSprite := ebiten.NewImage(16, 16)
 	frames, err := sys.generateAllFrames(entity, baseSprite, config, anim, 8)
-
 	if err != nil {
 		t.Fatalf("generateAllFrames failed: %v", err)
 	}

@@ -27,7 +27,6 @@ func TestInventoryUI_GenrePaletteIntegration(t *testing.T) {
 			// Test palette generation directly (avoids Ebiten initialization)
 			paletteGen := palette.NewGenerator()
 			p, err := paletteGen.Generate(tt.genreID, tt.seed)
-
 			if err != nil {
 				t.Fatalf("Failed to generate palette for genre %s: %v", tt.genreID, err)
 			}

@@ -13,8 +13,8 @@ type stubScreen struct {
 	width, height int
 }
 
-func (s *stubScreen) GetSize() (int, int)            { return s.width, s.height }
-func (s *stubScreen) GetPixel(x, y int) color.Color  { return color.Transparent }
+func (s *stubScreen) GetSize() (int, int)           { return s.width, s.height }
+func (s *stubScreen) GetPixel(x, y int) color.Color { return color.Transparent }
 
 // Compile-time interface check.
 var _ engine.ImageProvider = (*stubScreen)(nil)
@@ -382,8 +382,8 @@ func TestRender_CompletedGameStatus(t *testing.T) {
 	screen := &stubScreen{width: 320, height: 240}
 
 	tests := []struct {
-		name      string
-		setupGame func(t *testing.T) *CardGame
+		name       string
+		setupGame  func(t *testing.T) *CardGame
 		wantStatus string
 	}{
 		{

@@ -92,7 +92,7 @@ tar -xzf venture-linux-amd64.tar.gz
 
 ```bash
 # macOS (Homebrew)
-brew tap opd-ai/venture
+brew tap opd-ai/tap
 brew install venture
 
 # Debian/Ubuntu
@@ -237,10 +237,8 @@ The game automatically deploys to GitHub Pages on every push to main. See [GitHu
 **Contributors:** [Contributing Guide](docs/CONTRIBUTING.md)
 
 ### Project Information
-- **[Roadmap V8](docs/ROADMAP_V8.md)** - V8.0 development complete (housing, guilds, physics, federation+)
 - **[Architecture](docs/ARCHITECTURE.md)** - System architecture and design patterns
 - **[Technical Spec](docs/TECHNICAL_SPEC.md)** - Technical specifications and implementation details
-- **[Release Notes V8.0](docs/RELEASE_NOTES_V8.0.md)** - Version 8.0 release notes
 
 ### Build & Deployment Guides
 - **[Mobile Build Guide](docs/MOBILE_BUILD.md)** - iOS and Android build instructions

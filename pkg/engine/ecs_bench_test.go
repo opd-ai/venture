@@ -194,3 +194,61 @@ func BenchmarkGetEntitiesWithProjectileQuery(b *testing.B) {
 		_ = world.GetEntitiesWith("projectile", "position", "velocity")
 	}
 }
+
+// BenchmarkSystemUpdate benchmarks World.Update() with multiple systems.
+// Tests the performance impact of cached system names vs reflection.
+func BenchmarkSystemUpdate(b *testing.B) {
+	world := NewWorld()
+
+	// Add 44 systems (typical game has 30-50 systems)
+	for i := 0; i < 44; i++ {
+		world.AddSystem(&MockSystem{})
+	}
+
+	// Create 500 entities
+	for i := 0; i < 500; i++ {
+		entity := world.CreateEntity()
+		entity.AddComponent(&PositionComponent{X: float64(i), Y: float64(i)})
+		entity.AddComponent(&VelocityComponent{VX: 1.0, VY: 1.0})
+	}
+
+	// Prime the world
+	world.Update(0)
+
+	b.ResetTimer()
+	b.ReportAllocs()
+
+	for i := 0; i < b.N; i++ {
+		world.Update(0.016) // 60 FPS = 16.67ms per frame
+	}
+}
+
+// BenchmarkGetSystemName benchmarks the old reflection-based approach.
+// This shows the baseline cost that we're avoiding with caching.
+func BenchmarkGetSystemName(b *testing.B) {
+	world := NewWorld()
+	system := &MockSystem{}
+
+	b.ReportAllocs()
+
+	for i := 0; i < b.N; i++ {
+		_ = world.getSystemName(system)
+	}
+}
+
+// BenchmarkSystemNameCacheLookup benchmarks cached name lookup.
+// This shows the optimized performance after caching.
+func BenchmarkSystemNameCacheLookup(b *testing.B) {
+	world := NewWorld()
+	system := &MockSystem{}
+
+	// Populate cache
+	world.AddSystem(system)
+
+	b.ResetTimer()
+	b.ReportAllocs()
+
+	for i := 0; i < b.N; i++ {
+		_ = world.systemNameCache[system]
+	}
+}

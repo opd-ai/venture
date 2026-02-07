@@ -206,6 +206,90 @@ func TestGetEntitiesWithOptimizedPaths(t *testing.T) {
 	}
 }
 
+// TestSystemNameCaching verifies that system names are cached to avoid per-frame reflection.
+func TestSystemNameCaching(t *testing.T) {
+	world := NewWorld()
+	system := &MockSystem{}
+
+	// Add system - should populate cache
+	world.AddSystem(system)
+
+	// Verify cache was populated
+	cachedName, exists := world.systemNameCache[system]
+	if !exists {
+		t.Error("Expected system name to be cached after AddSystem")
+	}
+	if cachedName == "" {
+		t.Error("Expected cached system name to be non-empty")
+	}
+	if cachedName != "MockSystem" {
+		t.Errorf("Expected cached name 'MockSystem', got '%s'", cachedName)
+	}
+
+	// Update world - should use cached name (no reflection)
+	world.Update(0.016)
+
+	// Verify name is still cached after update
+	newCachedName, exists := world.systemNameCache[system]
+	if !exists {
+		t.Error("Expected system name to remain cached after Update")
+	}
+	if newCachedName != cachedName {
+		t.Error("Expected cached name to remain unchanged after Update")
+	}
+}
+
+// TestSystemNameCachingMultipleSystems verifies cache works with multiple systems.
+func TestSystemNameCachingMultipleSystems(t *testing.T) {
+	world := NewWorld()
+
+	// Add multiple systems
+	system1 := &MockSystem{}
+	system2 := &MockSystem{}
+
+	world.AddSystem(system1)
+	world.AddSystem(system2)
+
+	// Both should be in cache
+	if len(world.systemNameCache) != 2 {
+		t.Errorf("Expected 2 systems in cache, got %d", len(world.systemNameCache))
+	}
+
+	// Both should have correct names
+	name1 := world.systemNameCache[system1]
+	name2 := world.systemNameCache[system2]
+
+	if name1 != "MockSystem" {
+		t.Errorf("Expected 'MockSystem' for system1, got '%s'", name1)
+	}
+	if name2 != "MockSystem" {
+		t.Errorf("Expected 'MockSystem' for system2, got '%s'", name2)
+	}
+
+	// Update should not panic or modify cache
+	world.Update(0.016)
+
+	if len(world.systemNameCache) != 2 {
+		t.Errorf("Expected cache size to remain 2 after Update, got %d", len(world.systemNameCache))
+	}
+}
+
+// TestSystemNameCachingNilSystem verifies nil systems don't pollute cache.
+func TestSystemNameCachingNilSystem(t *testing.T) {
+	world := NewWorld()
+
+	// Attempt to add nil system
+	world.AddSystem(nil)
+
+	// Cache should be empty
+	if len(world.systemNameCache) != 0 {
+		t.Errorf("Expected empty cache after adding nil system, got %d entries", len(world.systemNameCache))
+	}
+
+	// Update should not panic
+	world.Update(0.016)
+}
+
 // Test that doesn't require display - just tests the constructor
 func TestGameStructure(t *testing.T) {
 	// Skip test requiring display in CI/headless environments

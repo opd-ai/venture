@@ -396,6 +396,9 @@ type World struct {
 	// Performance metrics for frame time tracking
 	performanceMetrics *PerformanceMetrics
 
+	// Cache of system names to avoid per-frame reflection (eliminates 2,640 reflection calls/sec at 60 FPS with 44 systems)
+	systemNameCache map[System]string
+
 	// Mutex for thread-safe access to entities and metrics
 	mu sync.RWMutex
 }
@@ -426,6 +429,7 @@ func NewWorldWithLogger(logger *logrus.Logger) *World {
 		Clock:              NewSimulationClock(0), // Default to deterministic simulation clock
 		logger:             logEntry,
 		performanceMetrics: NewPerformanceMetrics(), // Initialize performance metrics
+		systemNameCache:    make(map[System]string), // Initialize system name cache for reflection avoidance
 		builderPool: sync.Pool{
 			New: func() interface{} {
 				return &strings.Builder{}
@@ -498,12 +502,11 @@ func (w *World) AddSystem(system System) {
 
 	w.systems = append(w.systems, system)
 
+	// Cache system name to avoid per-frame reflection in Update()
+	systemName := w.getSystemName(system)
+	w.systemNameCache[system] = systemName
+
 	if w.logger != nil {
-		// Get system name if available
-		systemName := "unknown"
-		if named, ok := system.(interface{ Name() string }); ok {
-			systemName = named.Name()
-		}
 		w.logger.WithField("system", systemName).Debug("system added")
 	}
 }
@@ -544,8 +547,8 @@ func (w *World) Update(deltaTime float64) {
 		system.Update(w.cachedEntityList, deltaTime)
 		duration := time.Since(startTime)
 
-		// Record system timing in performance metrics
-		systemName := w.getSystemName(system)
+		// Use cached system name (eliminates per-frame reflection)
+		systemName := w.systemNameCache[system]
 		w.performanceMetrics.RecordSystemTime(systemName, duration)
 	}
 }

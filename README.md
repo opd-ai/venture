@@ -1,94 +1,105 @@
-# Venture - Procedural Action RPG
+# Venture
 
-A fully procedural multiplayer action-RPG built with Go and Ebiten. Every aspect of the game—graphics, audio, gameplay content—is generated at runtime with no external asset files.
+A fully procedural multiplayer action-RPG built with Go and Ebiten where all graphics, audio, and gameplay content are generated at runtime from a single binary with no external asset files.
 
-## Overview
+## Description
 
-Venture is a top-down action-RPG that combines the deep procedural generation of modern roguelikes (Dungeon Crawl Stone Soup, Cataclysm DDA) with real-time action gameplay inspired by classics like The Legend of Zelda and Anodyne.
+Venture is a top-down action-RPG that uses deterministic, seed-based procedural generation to create all game content at runtime. The game uses an Entity-Component-System (ECS) architecture where entities are unique identifiers with component collections, components are pure data structures, and systems contain all game logic. Terrain is generated using BSP dungeons, cellular automata caves, L-system forests, and Voronoi biomes. Items, quests, NPCs, spells, and dialog are all procedurally generated based on a genre system supporting fantasy, sci-fi, horror, cyberpunk, and post-apocalyptic themes.
 
-**Key Features:**
-- 🎮 Real-time action-RPG combat and exploration
-- 🌐 **Play in browser** - WebAssembly build available on [GitHub Pages](https://opd-ai.github.io/venture/)
-- 📱 **Native mobile support** - iOS and Android with touch-optimized controls
-- 🎲 100% procedurally generated content (maps, items, monsters, abilities, quests)
-- 🏠 **V8.0 Housing & Guilds** - Player housing, multi-server guilds, territory control, blueprint sharing
-- 🔬 **V8.0 Advanced Physics** - Vehicle suspension, fluid dynamics, swimming, destructible buildings
-- 🤝 **V8.0 Social Persistence** - Trust scores, chat history, image galleries, reputation tracking
-- 🌐 **V8.0 Federation+** - Mobile federation, NAT traversal, mod framework, WebRTC API (stub, TCP/UDP fallback)
-- 🧠 **V8.0 Deep Gameplay** - Companion AI learning, branching narratives, multi-classing, talent trees
-- 🖥️ **V7.0 Visual Fidelity** - 1920×1080 display, 64×64 sprites, 8-frame animations, anti-aliased walls, pixel-perfect collision
-- 🌍 **V6.0 Federation** - Persistent worlds, cross-server travel, federated marketplace, political systems
-- 💬 **V5.0 Social Systems** - E2E encrypted chat, dynamic NPC dialog, image sharing, secure item trading
-- 🚗 **V4.0 Gameplay Expansion** - Vehicles, pets/companions, books & lore, character classes, expressions, mini-games
-- 🎨 **V3.0 Enhanced Graphics** - Professional-grade visuals with advanced sprites, lighting, particles, and post-processing
-- 🎵 Procedural audio synthesis for music and sound effects
-- 🌐 Multiplayer co-op supporting high-latency connections (200-5000ms, onion services)
-- 🎭 Multiple genres (fantasy, sci-fi, post-apocalyptic, horror, cyberpunk)
-- 📦 Single binary distribution - no external asset files required
+The multiplayer networking layer supports high-latency connections (200–5000ms) suitable for Tor/onion service routing, with client-side prediction, lag compensation, and snapshot synchronization. A federation system enables cross-server travel, shared marketplaces, and multi-server guilds. The client automatically starts a localhost server for solo play, requiring no manual server setup.
 
-## Project Status
+The rendering pipeline generates sprites with equipment overlays, tiles with transitions, dynamic lighting with bloom and ambient occlusion, particle effects, and post-processing—all at runtime. Audio synthesis generates music and sound effects procedurally. The result is a single distributable binary per platform with no external asset files.
 
-**Current Version:** 1.0.0 Production ✅  
-**Semantic Version:** [v1.0.0](https://github.com/opd-ai/venture/releases/tag/v1.0.0) (see [API Compatibility](docs/API_COMPATIBILITY.md))
+## Tech Stack
 
-Venture v1.0.0 is a production-ready release with player housing, guild systems, advanced physics, federation, deep AI, and server modding. All core features operational with 90.1% test coverage and 60+ FPS performance.
+- **Language:** [Go](https://go.dev/) 1.24.5+
+- **Game Framework:** [Ebiten](https://ebiten.org/) v2.9.3 — 2D game engine with cross-platform support including WebAssembly
+- **Structured Logging:** [Logrus](https://github.com/sirupsen/logrus) v1.9.3
+- **UUID Generation:** [google/uuid](https://github.com/google/uuid) v1.6.0
+- **Image Processing:** [golang.org/x/image](https://pkg.go.dev/golang.org/x/image) v0.32.0
+- **Native Dialogs:** [ncruces/zenity](https://github.com/ncruces/zenity) v0.10.14
+- **Testing:** Go standard `testing` package with table-driven tests and benchmarks
+- **Build System:** GNU Make, Go build toolchain, GitHub Actions CI/CD
 
-**Version 8.0 Complete (Housing, Guilds & Advanced Systems):**
-- ✅ **V4.0 Complete** (Phases 21-30): Vehicles, companions, books, expanded magic, character classes, expressions, mini-games, reputation, adaptive music
-- ✅ **V5.0 Complete** (Phases 31-36): E2E encrypted chat, dynamic NPC dialog, image sharing, secure item trading, multi-party conversations
-- ✅ **V6.0 Complete** (Phases 37-42): Persistent worlds, server federation, cross-server travel, political & trade networks, territory control
-- ✅ **V7.0 Complete** (Phases 43-48): 1920×1080 display, 64×64 sprites, 8-frame animations, anti-aliased walls, pixel-perfect collision
-- ✅ **V8.0 Complete** (Phases 49-54): Player housing, guilds, territory warfare, vehicle physics, fluid dynamics, destructible buildings, mobile federation, companion AI learning, branching narratives, multi-classing, server mods, blueprint sharing, WebRTC stub (TCP/UDP active)
+## Project Structure
 
-**Key V8.0 Features:**
-- 🏠 **Player Housing**: 4 plot sizes, procedural buildings (6 types × 25 styles), furniture (36 types), blueprint sharing
-- 🛡️ **Guild Systems**: Multi-server guilds, guild halls (1-5 floors), territory control, guild warfare, shared treasury
-- 🤝 **Social Persistence**: Trust scores with decay, chat history (1000 messages), image galleries (100 images), reputation tracking
-- 🔬 **Advanced Physics**: Vehicle suspension, weight transfer, tire tracks, fluid dynamics, swimming, destructible buildings
-- 🌐 **Federation Extensions**: Mobile federation, battery optimization, NAT traversal, WebRTC API (stub mode with TCP/UDP fallback)
-- 🧠 **Deep Gameplay**: Companion AI with 24-skill trees & personality evolution, branching narratives with 6 endings, multi-classing (15 base + 20 prestige), talent trees (450 talents)
-- 🎮 **Server Modding**: JSON-based mods, blueprint sharing, zero-asset constraint maintained
-- ⚡ **Performance**: 60 FPS maintained, <500MB memory, <150MB per player persistence
+```
+venture/
+├── cmd/                    # Application entry points
+│   ├── client/             # Desktop game client (main.go)
+│   ├── server/             # Dedicated multiplayer server (main.go)
+│   └── mobile/             # Mobile entry point for iOS/Android (mobile.go)
+├── pkg/                    # Core library packages
+│   ├── engine/             # ECS core, 100+ game systems, components, spatial partitioning
+│   │   ├── physics/        # Vehicle physics, fluid simulation, environmental destruction
+│   │   ├── prestige/       # New Game+ and prestige progression
+│   │   └── qol/            # Quality-of-life systems (auto-loot, craft queue, etc.)
+│   ├── procgen/            # Procedural content generators (25+ subdirectories)
+│   │   ├── terrain/        # BSP dungeons, cellular automata, L-systems, Voronoi biomes
+│   │   ├── entity/         # NPC and creature generation
+│   │   ├── item/           # Item generation with rarity tiers
+│   │   ├── quest/          # Quest generation with objectives and rewards
+│   │   ├── magic/          # Spell and magic system generation
+│   │   ├── dialog/         # Dialog generation with Markov chains
+│   │   ├── narrative/      # Story beat and narrative arc generation
+│   │   └── ...             # genre, skills, building, furniture, vehicle, faction, etc.
+│   ├── rendering/          # Runtime graphics generation pipeline
+│   │   ├── sprites/        # Sprite generation, anatomy templates, equipment overlays
+│   │   ├── animation/      # Animation system with articulation and directional variants
+│   │   ├── tiles/          # Tile generation with transitions and parallax
+│   │   ├── lighting/       # Bloom, ambient occlusion, dynamic lights
+│   │   ├── postprocess/    # Chromatic aberration, color grading, depth blur, vignette
+│   │   ├── particles/      # Particle physics, weather effects, LOD
+│   │   └── ui/             # UI generation, chat, notifications, tutorials
+│   ├── audio/              # Procedural audio synthesis
+│   │   ├── music/          # Adaptive soundtrack, motifs, theory-based composition
+│   │   ├── sfx/            # Sound effect generation and processing
+│   │   └── synthesis/      # Oscillators, envelopes, synthesis engine
+│   ├── network/            # Multiplayer networking
+│   │   ├── federation/     # Cross-server discovery, auth, sync, WebRTC, portals
+│   │   ├── chat/           # Chat system with channels
+│   │   ├── trade/          # Player-to-player trade system
+│   │   └── resilience/     # Network resilience metrics and simulation
+│   ├── world/              # Persistent world state
+│   │   ├── housing/        # Player housing, blueprints, guildhalls
+│   │   ├── economy/        # Marketplace, pricing engine, guild bank
+│   │   ├── territory/      # Territory control and siege mechanics
+│   │   └── raids/          # Raid generation, instances, lockouts
+│   ├── integration/        # Cross-system feature integrations (10 subdirectories)
+│   ├── combat/             # Damage calculation and combat resolution
+│   ├── config/             # Configuration types and validation
+│   ├── modding/            # JSON-based mod loader and sandboxed execution
+│   ├── saveload/           # Save/load with migration and WASM storage support
+│   ├── validation/         # Input validation, chat filtering, rate limiting
+│   ├── security/           # Security audit and persistence
+│   └── version/            # Semantic version management (1.0.0)
+├── docs/                   # 60+ documentation files
+├── examples/               # Demo programs (bloom, shadows, weather, sprites, etc.)
+├── scripts/                # Build, test, packaging, and deployment scripts
+├── mods/                   # Example mod configurations (JSON)
+├── web/                    # WebAssembly deployment assets
+├── build/                  # Platform-specific build configs (Android, WASM)
+├── Formula/                # Homebrew formula (venture.rb)
+├── Makefile                # Build automation (build, test, lint, release, Docker)
+└── go.mod                  # Go module definition and dependencies
+```
 
-### Version 3.0.0 Achievements
+## Installation
 
-**Enhanced Visual Quality (Phases 15-20):**
-- **Enhanced Sprites**: 40% more anatomical detail with pixel-perfect dimensions, facial features, anti-aliasing
-- **Advanced Tiles**: Rich texture patterns (stone, wood, metal), smooth transitions, multi-layer depth
-- **Sophisticated Lighting**: Soft shadows, colored lighting, bloom effects, advanced ambient occlusion
-- **Rich Particles**: Weather systems (rain, snow, fog), fluid simulation, environmental interactions
-- **Polished UI**: Dynamic color palettes, smooth transitions, visual hierarchy, procedural decorations
+### Option A: Pre-built Binaries
 
-**Performance Maintained:**
-- 89 FPS with 2000 entities (48% above 60 FPS target, v8.0 with all systems)*
-- 120MB memory (76% below 500MB budget, v8.0 with housing+guilds+physics)
-- 90.1% test coverage (25.1 percentage points above 65% requirement)
-- Sprite cache hit rate: 95.9%
+Download the latest release from [GitHub Releases](https://github.com/opd-ai/venture/releases/latest):
 
-*Benchmark configuration: 1920×1080, fantasy genre, medium weather, bloom disabled, anti-aliasing low. Performance varies with settings:
-  - 4K resolution (3840×2160): ~55 FPS
-  - All visual features maxed (bloom high, AA high, extreme weather): ~70 FPS
-  - Weather extreme + bloom enabled: ~65 FPS
-  - Desktop scaling: Higher resolutions reduce FPS proportionally
-
-## Quick Start
-
-### 1. Installation
-
-**Option A: Download Pre-built Binaries (Recommended)**
-
-Download the latest release for your platform from [GitHub Releases](https://github.com/opd-ai/venture/releases/latest):
 - Linux: `venture-linux-amd64.tar.gz` or `venture-linux-arm64.tar.gz`
 - macOS: `venture-darwin-amd64.tar.gz` or `venture-darwin-arm64.tar.gz`
 - Windows: `venture-windows-amd64.zip`
 
 ```bash
-# Linux/macOS example
 tar -xzf venture-linux-amd64.tar.gz
 ./venture-client
 ```
 
-**Option B: Install via Package Manager**
+### Option B: Package Managers
 
 ```bash
 # macOS (Homebrew)
@@ -107,180 +118,151 @@ sudo rpm -i venture-1.0.0-1.x86_64.rpm
 docker run -d -p 8080:8080 ghcr.io/opd-ai/venture-server:1.0.0
 ```
 
-**Option C: Build from Source**
+### Option C: Build from Source
+
+1. Install [Go 1.24.5+](https://go.dev/dl/)
+2. Install platform-specific dependencies:
+   - **Linux:** `sudo apt-get install libc6-dev libgl1-mesa-dev libxcursor-dev libxi-dev libxinerama-dev libxrandr-dev libxxf86vm-dev libasound2-dev pkg-config`
+   - **macOS:** Xcode command-line tools (`xcode-select --install`)
+   - **Windows:** No additional dependencies
+3. Clone and build:
 
 ```bash
-# Clone the repository
 git clone https://github.com/opd-ai/venture.git
 cd venture
+make build
+```
 
-# Build the game
+This produces `build/venture-client` and `build/venture-server`. Alternatively, build directly with Go:
+
+```bash
 go build -o venture-client ./cmd/client
 go build -o venture-server ./cmd/server
 ```
 
-**Prerequisites (for building from source):** Go 1.24.5+. Platform-specific dependencies required (Linux: X11 libraries, macOS: Xcode tools, Windows: none). See [Getting Started Guide](docs/GETTING_STARTED.md) for installation commands.
+## Usage
 
-### 2. First Game
+### Running the Client
 
 ```bash
-# Start playing (default 1920x1080)
+# Start the game (auto-starts a localhost server for solo play)
 ./venture-client
 
-# Or with custom settings
+# Custom settings
 ./venture-client -width 2560 -height 1440 -fullscreen -seed 12345 -genre fantasy
-
-# Supported resolutions: 1280x720 (HD), 1920x1080 (Full HD), 2560x1440 (QHD), 3840x2160 (4K)
 ```
 
-**Visual Features (V3.0 Enhanced Graphics, V7.0 Display Foundation):**
-- **Display Scaling (V7.0)**: Dynamic resolution support (1280x720 to 3840x2160) with UI scaling and fullscreen mode
-- **Enhanced Sprites**: 40% more detail with anatomical accuracy, facial features, anti-aliasing, and genre variations
-- **Advanced Tiles**: Rich procedural textures with smooth transitions and depth effects
-- **Sophisticated Lighting**: Soft shadows, colored lighting, bloom effects, and advanced ambient occlusion
-- **Rich Weather**: Comprehensive weather systems with fluid simulation and environmental interactions (configure with `-weather` and `-weather-intensity` flags)
-- **Polished UI**: Dynamic color palettes with smooth transitions and visual hierarchy
-- `-weather <type>`: Choose specific weather: rain, snow, fog, dust, ash (sci-fi: neonrain, smog, radiation)
-- `-weather-intensity <level>`: Set intensity: light, medium, heavy, extreme
+### Running a Dedicated Server
 
-**Controls:** WASD (move), Space (attack), E (use item), F (interact with merchants/NPCs), 1-5 (cast spells), I (inventory), J (quests), K (skill tree), M (map), C (character), R (crafting), G (gallery), H (housing), ESC (close menus/pause), F5 (save), F9 (load), F1 (help)
-
-**All In-Game Menus** (Dual-Exit: Each menu's key OR ESC):
-
-| Menu | Key | Description |
-|------|-----|-------------|
-| Inventory | I | Manage items and equipment |
-| Character Stats | C | View stats, equipment, attributes, companions |
-| Skill Tree | K | Spend skill points, unlock abilities, talents |
-| Quest Log | J | Track active and completed quests, story arcs |
-| World Map | M | View explored areas and navigation |
-| Crafting | R | Brew potions, enchant items, craft equipment |
-| Gallery | G | View shared images and screenshots (V8.0) |
-| Shop | F | Buy/sell items (when near merchant) |
-| Housing | H | Manage player housing and plots (V8.0) |
-| Help | F1 | View controls and game information |
-
-**Menu Navigation:** All menus support dual-exit: press the menu's letter key again (e.g., I for inventory) OR press ESC. No menu traps!
-
-**Gameplay Systems:**
-- **Crafting (R key)**: Brew potions, enchant equipment, and create magic items from gathered materials
-- **Commerce (F key)**: Trade with merchants, sell loot, and purchase equipment in settlements
-- **Skills & Progression**: Unlock abilities, multi-class at level 20, prestige classes at level 20, talent trees
-
-### 3. Multiplayer
-
-**New Default Behavior:** The client automatically starts a localhost server when no server is specified.
-
-#### Solo Play (Default)
 ```bash
-# Simply run the client - automatically starts localhost server
-./venture-client
+# Start dedicated server
+./venture-server -port 8080 -max-players 8 -seed 12345 -genre fantasy
+
+# Connect a client to the server
+./venture-client --multiplayer --server <address>:8080
 ```
 
-#### LAN Party / Co-op Mode
+### LAN Co-op
+
 ```bash
-# Host: allow LAN connections (other computers can join)
+# Host: allow LAN connections
 ./venture-client --host-lan
 
 # Other players: join the host
 ./venture-client --multiplayer --server <host-ip>:8080
 ```
 
-**Host gets IP address:** `ip addr show` (Linux) / `ipconfig` (Windows) / `ifconfig` (macOS)  
-**Security:** Server binds to 127.0.0.1 by default. Use `--host-lan` to allow LAN connections.
-
-#### Dedicated Server (Advanced)
-```bash
-# Start a dedicated server (no graphics, 24/7 hosting)
-./venture-server -port 8080 -max-players 8
-
-# Connect clients
-./venture-client --multiplayer --server <server-address>:8080
-```
-
-**Port Fallback:** If port 8080 is occupied, the system automatically tries ports 8081-8089. Use `-port <num>` to specify a different starting port.
-
-**High-Latency Networks (Tor/Onion Services):** For connections over Tor or other high-latency networks (200-5000ms), use the `-high-latency` flag when starting the server. This optimizes timeouts and buffers for extreme latency conditions. See [docs/TOR_SETUP.md](docs/TOR_SETUP.md) for complete Tor setup instructions or [docs/MULTIPLAYER.md](docs/MULTIPLAYER.md) for general network configuration details.
+### WebAssembly Build
 
 ```bash
-# Server optimized for Tor/high-latency connections
-./venture-server -high-latency -port 8080
+make build-wasm      # Build WASM binary to build/wasm/
+make serve-wasm      # Build and serve locally at http://localhost:8080
 ```
 
-**For complete setup instructions, gameplay guide, and all features, see:**
-- **[Getting Started Guide](docs/GETTING_STARTED.md)** - Installation and first steps (5 minutes)
-- **[User Manual](docs/USER_MANUAL.md)** - Complete gameplay documentation
-- **[Multiplayer Guide](docs/MULTIPLAYER.md)** - Network configurations and Tor support
-- **[Tor Setup Guide](docs/TOR_SETUP.md)** - Complete Tor/onion service configuration
+The WASM build is also deployed to [GitHub Pages](https://opd-ai.github.io/venture/) on every push to `main`.
 
-## Platform Support
+### Makefile Targets
 
-Venture runs on multiple platforms:
+| Target | Description |
+|--------|-------------|
+| `make build` | Build client and server for the current platform |
+| `make build-all` | Build for Linux, Windows, and macOS |
+| `make build-wasm` | Build WebAssembly version |
+| `make test` | Run all tests (`go test -v ./...`) |
+| `make test-coverage` | Run tests with coverage report |
+| `make test-race` | Run tests with race detection |
+| `make bench` | Run benchmarks |
+| `make lint` | Run `go vet` and network type validation |
+| `make fmt` | Format code with `gofumpt` |
+| `make clean` | Remove build artifacts |
+| `make release VERSION=x.y.z` | Build all platforms, package, and generate checksums |
+| `make docker-build` | Build Docker image for the server |
+| `make dev-setup` | Install all dependencies for development |
+| `make quality` | Run all quality validation tools |
 
-- **🖥️ Desktop:** Linux, macOS, Windows (x64/ARM64) - Native builds
-- **🌐 Web:** Play in browser via [GitHub Pages](https://opd-ai.github.io/venture/)  
-  (WebAssembly with full touch support)
-- **📱 Mobile:** iOS and Android - Touch-optimized  
-  (see [Mobile Build Guide](docs/MOBILE_BUILD.md))
+### Mobile Builds
 
-**Touch Input:**
-The WebAssembly build fully supports touch input for mobile browsers and touch-capable devices. Virtual controls appear automatically when you touch the screen. See [Touch Input (WASM)](docs/TOUCH_INPUT_WASM.md) for details.
+```bash
+make android-apk     # Build Android debug APK
+make ios-simulator    # Build for iOS Simulator
+```
 
-**WebAssembly Deployment:**
-The game automatically deploys to GitHub Pages on every push to main. See [GitHub Pages Guide](docs/GITHUB_PAGES.md) for details.
+See [Mobile Build Guide](docs/MOBILE_BUILD.md) for full instructions.
 
-## Documentation
+## Configuration
 
-### Quick Access
-**New Players:** [Getting Started Guide](docs/GETTING_STARTED.md) (5 minutes) → [User Manual](docs/USER_MANUAL.md)  
-**Developers:** [Development Guide](docs/DEVELOPMENT.md) → [API Reference](docs/API_REFERENCE.md)  
-**Contributors:** [Contributing Guide](docs/CONTRIBUTING.md)
+### Client Flags
 
-### Project Information
-- **[Architecture](docs/ARCHITECTURE.md)** - System architecture and design patterns
-- **[Technical Spec](docs/TECHNICAL_SPEC.md)** - Technical specifications and implementation details
+| Flag | Default | Description |
+|------|---------|-------------|
+| `-width` | `1920` | Window width in pixels |
+| `-height` | `1080` | Window height in pixels |
+| `-fullscreen` | `false` | Enable fullscreen mode |
+| `-seed` | `12345` | World generation seed |
+| `-genre` | `fantasy` | Genre (`fantasy`, `sci-fi`, `horror`, `cyberpunk`, `post-apocalyptic`) |
+| `--multiplayer` | `false` | Connect to a remote server |
+| `--server` | — | Server address (e.g., `192.168.1.5:8080`) |
+| `--host-lan` | `false` | Allow LAN connections in host-and-play mode |
+| `-weather` | — | Weather type (`rain`, `snow`, `fog`, `dust`, `ash`) |
+| `-weather-intensity` | — | Weather intensity (`light`, `medium`, `heavy`, `extreme`) |
 
-### Build & Deployment Guides
-- **[Mobile Build Guide](docs/MOBILE_BUILD.md)** - iOS and Android build instructions
-- **[GitHub Pages Guide](docs/GITHUB_PAGES.md)** - WebAssembly deployment to GitHub Pages
-- **[Cross-Platform Builds](docs/CROSS_PLATFORM_BUILDS.md)** - Building for multiple platforms
-- **[CI/CD](docs/CI_CD.md)** - Continuous integration and deployment pipeline
-- **[Production Deployment](docs/PRODUCTION_DEPLOYMENT.md)** - Production deployment checklist
+### Server Flags
 
-### Testing & Quality
-- **[Testing Guide](docs/TESTING.md)** - Testing strategy and practices
-- **[Performance Guide](docs/PERFORMANCE.md)** - Performance optimization and profiling
+| Flag | Default | Description |
+|------|---------|-------------|
+| `-port` | `8080` | Server port (auto-fallback to 8081–8089 if occupied) |
+| `-max-players` | `8` | Maximum concurrent players |
+| `-seed` | `12345` | World generation seed |
+| `-genre` | `fantasy` | Genre ID for world generation |
+| `-tick-rate` | `30` | Server update rate in ticks per second |
+| `-high-latency` | `false` | Optimize for Tor/high-latency connections (200–5000ms) |
+| `-security-audit` | `true` | Run security audit at startup |
+| `-stability-monitor` | `true` | Enable stability monitoring |
 
-### System Documentation
-- **[Controls Reference](docs/CONTROLS.md)** - Complete keyboard, mouse, and gamepad controls
-- **[Lighting System](docs/LIGHTING_SYSTEM.md)** - Dynamic lighting implementation
-- **[Shadow System](docs/SHADOW_SYSTEM.md)** - Shadow casting and ambient occlusion
-- **[Magic System](docs/MAGIC_SYSTEM.md)** - Spell system and magic mechanics
-- **[Social Systems](docs/SOCIAL_SYSTEMS.md)** - Chat, NPC dialog, trading, trust
-- **[Rotation System](docs/ROTATION_SYSTEM_SPEC.md)** - Entity rotation specification
-- **[Rotation User Guide](docs/ROTATION_USER_GUIDE.md)** - User guide for rotation controls
-- **[Structured Logging](docs/STRUCTURED_LOGGING_GUIDE.md)** - Logging best practices
-- **[System Interaction Map](docs/SYSTEM_INTERACTION_MAP.md)** - System dependencies and interactions
+### Environment Variables
 
-### Specialized Topics
-- **[Multiplayer Guide](docs/MULTIPLAYER.md)** - Multiplayer networking and configuration
-- **[Tor Setup](docs/TOR_SETUP.md)** - Complete Tor/onion service configuration
-- **[FAQ](docs/FAQ.md)** - Frequently asked questions
-- **[Accessibility](docs/ACCESSIBILITY.md)** - Accessibility features and guidelines
-- **[Ebiten Guide](docs/EBITEN.md)** - Ebiten engine integration notes
-- **[Touch Input (WASM)](docs/TOUCH_INPUT_WASM.md)** - WebAssembly touch input implementation
-- **[Changelog](docs/CHANGELOG.md)** - Complete version history
+| Variable | Values | Description |
+|----------|--------|-------------|
+| `LOG_LEVEL` | `debug`, `info`, `warn`, `error` | Logging verbosity |
+| `LOG_FORMAT` | `json`, `text` | Log output format |
+
+### Mod Configuration
+
+JSON-based mods are placed in the `mods/` directory. Example mods are provided:
+- `mods/custom-spawns.json` — Custom entity spawn rules
+- `mods/hardcore-mode.json` — Hardcore difficulty settings
+- `mods/pvp-zones.json` — PvP zone configuration
 
 ## Contributing
 
-Contributions welcome! See [Contributing Guide](docs/CONTRIBUTING.md) for guidelines and [Development Guide](docs/DEVELOPMENT.md) for setup.
+Contributions are welcome. See [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md) for guidelines and [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) for development setup.
 
 ## License
 
-See [LICENSE](LICENSE) file for details.
+MIT License. See [LICENSE](LICENSE) for the full text.
 
 ## Acknowledgments
 
-- Built with [Ebiten](https://ebiten.org/) - A dead simple 2D game library for Go
-- Inspired by roguelikes like Dungeon Crawl Stone Soup and Cataclysm DDA
-- Gameplay inspired by classic action-RPGs like The Legend of Zelda and Anodyne
+- Built with [Ebiten](https://ebiten.org/) — a 2D game library for Go
+- Inspired by roguelikes such as Dungeon Crawl Stone Soup and Cataclysm DDA
+- Gameplay influenced by classic action-RPGs like The Legend of Zelda

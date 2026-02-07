@@ -1,4 +1,4 @@
-TASK: Perform a detailed, multi-dimensional implementation gap audit of the venture Go/Ebiten game codebase.
+TASK: Perform a detailed, multi-dimensional implementation gap audit of the venture Go/Ebiten game codebase. Place all findings directly into an AUDIT.md file.
 
 CONTEXT: Venture is a procedural multiplayer action-RPG using Entity-Component-System (ECS) architecture. Key directories:
 - `cmd/client/` — Desktop client entrypoint, UI systems, lazy initialization

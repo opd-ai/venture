@@ -29,6 +29,15 @@ var hashBufferPool = sync.Pool{
 	},
 }
 
+// keySlicePool pools string slices for sorting Custom parameter keys.
+// Eliminates per-call allocations when hashing configs with Custom parameters.
+var keySlicePool = sync.Pool{
+	New: func() interface{} {
+		keys := make([]string, 0, 8)
+		return &keys
+	},
+}
+
 // Cache is an LRU (Least Recently Used) cache for generated sprites.
 // It stores sprites by their configuration hash to avoid regenerating
 // identical sprites, improving performance during gameplay.
@@ -249,14 +258,47 @@ func (c *Cache) hashConfig(config Config) uint64 {
 	// Hash custom parameters in sorted key order for determinism
 	// Go map iteration order is randomized, so we must sort keys
 	if config.Custom != nil && len(config.Custom) > 0 {
-		keys := make([]string, 0, len(config.Custom))
+		// Get pooled key slice
+		keysPtr := keySlicePool.Get().(*[]string)
+		keys := (*keysPtr)[:0]
+
 		for key := range config.Custom {
 			keys = append(keys, key)
 		}
 		sort.Strings(keys)
+
+		// Reuse buf for custom params to avoid fmt.Fprintf allocations
+		buf = buf[:0]
 		for _, key := range keys {
-			fmt.Fprintf(h, "|%s=%v", key, config.Custom[key])
+			buf = append(buf, '|')
+			buf = append(buf, key...)
+			buf = append(buf, '=')
+
+			// Type switch to avoid fmt.Sprintf allocations
+			value := config.Custom[key]
+			switch v := value.(type) {
+			case string:
+				buf = append(buf, v...)
+			case int:
+				buf = strconv.AppendInt(buf, int64(v), 10)
+			case int64:
+				buf = strconv.AppendInt(buf, v, 10)
+			case bool:
+				buf = strconv.AppendBool(buf, v)
+			case float64:
+				buf = strconv.AppendFloat(buf, v, 'f', -1, 64)
+			case float32:
+				buf = strconv.AppendFloat(buf, float64(v), 'f', -1, 32)
+			default:
+				// Fallback for unsupported types (should be rare)
+				buf = append(buf, fmt.Sprintf("%v", v)...)
+			}
 		}
+		h.Write(buf)
+
+		// Return pooled key slice
+		*keysPtr = keys
+		keySlicePool.Put(keysPtr)
 	}
 
 	sum := h.Sum64()

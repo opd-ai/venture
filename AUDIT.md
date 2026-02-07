@@ -345,10 +345,22 @@ The Venture codebase exhibits **moderate performance concerns** with several ide
      - `pkg/engine/ecs_bench_test.go`: Added 3 benchmarks comparing cached vs reflection approaches
    - **Test Coverage:** 65.2% (meets minimum 65% target)
 
-2. **Issue R2: Eliminate hashConfig() Per-Lookup Allocations**
+2. **Issue R2: Eliminate hashConfig() Per-Lookup Allocations - ✅ COMPLETED**
    - Expected improvement: -100-200µs/frame under cache pressure
    - Implementation complexity: Medium (30 lines)
    - Fix: Pool key slices, replace `fmt.Fprintf` with direct byte writes using type switch
+   - **Implementation Date:** 2026-02-07
+   - **Actual Results:**
+     - Benchmark: Zero allocations achieved (0 B/op, 0 allocs/op)
+     - Performance: ~250ns/op for 4 Custom params, ~587ns/op for 10 params
+     - Eliminated: All slice allocations via `keySlicePool`
+     - Eliminated: All `fmt.Fprintf` allocations via type-switched direct byte writes
+     - Supports: string, int, int64, bool, float64, float32 types with fallback for others
+   - **Files Modified:**
+     - `pkg/rendering/sprites/cache.go`: Added `keySlicePool`, optimized `hashConfig()` Custom param handling
+     - `pkg/rendering/sprites/cache_hash_bench_test.go`: Added 4 benchmarks for various Custom param scenarios
+   - **Test Coverage:** 73.1% (exceeds 65% target)
+   - **Test Results:** All existing tests pass (TestCache_HashConfig, TestCache_HashConfigWithCustom, TestHashConfig_Deterministic, TestHashConfig_FieldSensitivity)
 
 ### Priority 2 (High Impact)
 

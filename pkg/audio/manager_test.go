@@ -279,3 +279,120 @@ func TestManager_VolumeApplication(t *testing.T) {
 		}
 	}
 }
+
+func TestManager_VoiceVolumeControls(t *testing.T) {
+	m := NewManager(44100, 12345)
+
+	tests := []struct {
+		name          string
+		setVolume     float64
+		expectVolume  float64
+		expectEnabled bool
+	}{
+		{"normal", 0.8, 0.8, true},
+		{"zero disables", 0.0, 0.0, false},
+		{"clamp high", 1.5, 1.0, true},
+		{"clamp low", -0.5, 0.0, false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			m.SetVoiceVolume(tt.setVolume)
+
+			if got := m.GetVoiceVolume(); got != tt.expectVolume {
+				t.Errorf("voiceVolume: got %f, want %f", got, tt.expectVolume)
+			}
+			if m.voiceEnabled != tt.expectEnabled {
+				t.Errorf("voiceEnabled: got %v, want %v", m.voiceEnabled, tt.expectEnabled)
+			}
+		})
+	}
+}
+
+func TestManager_VoiceCodecManagement(t *testing.T) {
+	m := NewManager(44100, 12345)
+
+	codec := NewSimpleVoiceCodec(44100, VoiceQualityMedium)
+	m.SetVoiceCodec(codec)
+
+	if m.GetVoiceCodec() != codec {
+		t.Error("voice codec not set correctly")
+	}
+}
+
+func TestManager_VoiceProcessorManagement(t *testing.T) {
+	m := NewManager(44100, 12345)
+
+	codec := NewSimpleVoiceCodec(44100, VoiceQualityMedium)
+	processor := NewVoiceProcessor(codec, nil)
+	m.SetVoiceProcessor(processor)
+
+	if m.GetVoiceProcessor() != processor {
+		t.Error("voice processor not set correctly")
+	}
+}
+
+func TestManager_IsVoiceEnabled(t *testing.T) {
+	m := NewManager(44100, 12345)
+
+	// Initially disabled (no codec/processor)
+	if m.IsVoiceEnabled() {
+		t.Error("voice should be disabled without codec")
+	}
+
+	// Set codec only
+	codec := NewSimpleVoiceCodec(44100, VoiceQualityMedium)
+	m.SetVoiceCodec(codec)
+	if m.IsVoiceEnabled() {
+		t.Error("voice should be disabled without processor")
+	}
+
+	// Set processor
+	processor := NewVoiceProcessor(codec, nil)
+	m.SetVoiceProcessor(processor)
+	if !m.IsVoiceEnabled() {
+		t.Error("voice should be enabled with codec and processor")
+	}
+
+	// Disable with volume
+	m.SetVoiceVolume(0.0)
+	if m.IsVoiceEnabled() {
+		t.Error("voice should be disabled with zero volume")
+	}
+
+	// Re-enable
+	m.SetVoiceVolume(1.0)
+	if !m.IsVoiceEnabled() {
+		t.Error("voice should be enabled again")
+	}
+}
+
+func TestManager_InitializeVoice(t *testing.T) {
+	m := NewManager(44100, 12345)
+	transport := newMockTransport()
+
+	err := m.InitializeVoice(VoiceQualityMedium, transport)
+	if err != nil {
+		t.Fatalf("InitializeVoice failed: %v", err)
+	}
+
+	if !m.IsVoiceEnabled() {
+		t.Error("voice should be enabled after initialization")
+	}
+
+	codec := m.GetVoiceCodec()
+	if codec == nil {
+		t.Fatal("codec should not be nil")
+	}
+	if codec.GetSampleRate() != 44100 {
+		t.Errorf("codec sample rate: got %d, want 44100", codec.GetSampleRate())
+	}
+
+	processor := m.GetVoiceProcessor()
+	if processor == nil {
+		t.Fatal("processor should not be nil")
+	}
+	if processor.GetCodec() != codec {
+		t.Error("processor codec mismatch")
+	}
+}

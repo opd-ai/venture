@@ -6,7 +6,7 @@ A fully procedural multiplayer action-RPG built with Go and Ebiten where all gra
 
 Venture is a top-down action-RPG that uses deterministic, seed-based procedural generation to create all game content at runtime. The game uses an Entity-Component-System (ECS) architecture where entities are unique identifiers with component collections, components are pure data structures, and systems contain all game logic. Terrain is generated using BSP dungeons, cellular automata caves, L-system forests, and Voronoi biomes. Items, quests, NPCs, spells, and dialog are all procedurally generated based on a genre system supporting fantasy, sci-fi, horror, cyberpunk, and post-apocalyptic themes.
 
-The multiplayer networking layer supports high-latency connections (200–5000ms) suitable for Tor/onion service routing, with client-side prediction, lag compensation, and snapshot synchronization. A federation system enables cross-server travel, shared marketplaces, and multi-server guilds. On desktop/native builds, the client automatically starts a localhost server for solo play, requiring no manual server setup; on WebAssembly builds, embedded server/host-and-play is disabled and the client must connect to an existing server.
+The multiplayer networking layer supports high-latency connections (200–5000ms) suitable for Tor/onion service routing, with client-side prediction, lag compensation, and snapshot synchronization. Voice chat is integrated with party, guild, proximity, and private channels using a built-in codec with spatial audio support. A federation system enables cross-server travel, shared marketplaces, and multi-server guilds. On desktop/native builds, the client automatically starts a localhost server for solo play, requiring no manual server setup; on WebAssembly builds, embedded server/host-and-play is disabled and the client must connect to an existing server.
 
 The rendering pipeline generates sprites with equipment overlays, tiles with transitions, dynamic lighting with bloom and ambient occlusion, particle effects, and post-processing—all at runtime. Audio synthesis generates music and sound effects procedurally. The result is a single distributable binary per platform with no external asset files.
 
@@ -54,7 +54,8 @@ venture/
 │   ├── audio/              # Procedural audio synthesis
 │   │   ├── music/          # Adaptive soundtrack, motifs, theory-based composition
 │   │   ├── sfx/            # Sound effect generation and processing
-│   │   └── synthesis/      # Oscillators, envelopes, synthesis engine
+│   │   ├── synthesis/      # Oscillators, envelopes, synthesis engine
+│   │   └── voice.go        # Voice codec for multiplayer voice chat (ADPCM encoding)
 │   ├── network/            # Multiplayer networking
 │   │   ├── federation/     # Cross-server discovery, auth, sync, WebRTC, portals
 │   │   ├── chat/           # Chat system with channels

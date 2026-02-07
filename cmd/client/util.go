@@ -46,7 +46,7 @@ var (
 	height           = flag.Int("height", 1080, "Screen height (720, 1080, 1440, 2160)")
 	fullscreen       = flag.Bool("fullscreen", false, "Start in fullscreen mode")
 	seed             = flag.Int64("seed", seededRandom(), "World generation seed")
-	genreID          = flag.String("genre", randomGenre(), "Genre ID (fantasy, scifi, horror, cyberpunk, postapoc)")
+	genreID          = flag.String("genre", "random", "Genre ID (fantasy, scifi, horror, cyberpunk, postapoc, random)")
 	weatherType      = flag.String("weather", "", "Weather type (rain, snow, fog, dust, ash, neonrain, smog, radiation) - empty for genre-appropriate random")
 	weatherIntensity = flag.String("weather-intensity", "heavy", "Weather intensity (light, medium, heavy, extreme)")
 

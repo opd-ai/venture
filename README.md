@@ -223,7 +223,7 @@ See [Mobile Build Guide](docs/MOBILE_BUILD.md) for full instructions.
 | `-height` | `1080` | Window height in pixels |
 | `-fullscreen` | `false` | Enable fullscreen mode |
 | `-seed` | `random` | World generation seed (uses a random seed if not specified) |
-| `-genre` | `random` | Genre (`random`, `fantasy`, `sci-fi`, `horror`, `cyberpunk`, `post-apocalyptic`) |
+| `-genre` | `random` | Genre (`random`, `fantasy`, `scifi`, `horror`, `cyberpunk`, `postapoc`) |
 | `--multiplayer` | `false` | Connect to a remote server instead of hosting locally |
 | `--server` | `localhost:8080` | Server address (e.g., `192.168.1.5:8080`) |
 | `--host-and-play` | `false` | Explicitly enable host-and-play mode (default behavior when `--multiplayer` not specified) |

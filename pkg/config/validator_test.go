@@ -104,11 +104,15 @@ func TestValidator_ValidateGenre(t *testing.T) {
 		{"valid - scifi", "scifi", false},
 		{"valid - horror", "horror", false},
 		{"valid - cyberpunk", "cyberpunk", false},
-		{"valid - postapocalyptic", "postapocalyptic", false},
+		{"valid - postapoc", "postapoc", false},
+		{"valid - random", "random", false},
 		{"invalid - unknown genre", "medieval", true},
 		{"invalid - empty", "", true},
 		{"invalid - typo", "fantazy", true},
 		{"invalid - case mismatch", "Fantasy", true},
+		{"invalid - old postapocalyptic", "postapocalyptic", true},
+		{"invalid - hyphenated sci-fi", "sci-fi", true},
+		{"invalid - hyphenated post-apocalyptic", "post-apocalyptic", true},
 	}
 
 	for _, tt := range tests {
@@ -171,11 +175,11 @@ func TestValidator_GetAvailableGenres(t *testing.T) {
 
 	// Check that expected genres are present
 	expectedGenres := map[string]bool{
-		"fantasy":         false,
-		"scifi":           false,
-		"horror":          false,
-		"cyberpunk":       false,
-		"postapocalyptic": false,
+		"fantasy":   false,
+		"scifi":     false,
+		"horror":    false,
+		"cyberpunk": false,
+		"postapoc":  false,
 	}
 
 	for _, genre := range genres {

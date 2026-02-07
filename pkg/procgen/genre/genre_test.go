@@ -2,6 +2,7 @@ package genre
 
 import (
 	"testing"
+	"time"
 )
 
 func TestGenre_Validate(t *testing.T) {
@@ -508,5 +509,62 @@ func TestGetTheme(t *testing.T) {
 				t.Errorf("GetTheme() returned invalid theme: %v", err)
 			}
 		})
+	}
+}
+
+func TestGetTheme_Random(t *testing.T) {
+	// Test that "random" returns a valid genre
+	theme := GetTheme("random")
+	if theme == nil {
+		t.Fatal("GetTheme('random') returned nil")
+	}
+	if err := theme.Validate(); err != nil {
+		t.Errorf("GetTheme('random') returned invalid theme: %v", err)
+	}
+
+	// Verify it's one of the predefined genres
+	validIDs := map[string]bool{
+		"fantasy": true, "scifi": true, "horror": true,
+		"cyberpunk": true, "postapoc": true,
+	}
+	if !validIDs[theme.ID] {
+		t.Errorf("GetTheme('random') returned unexpected genre ID: %s", theme.ID)
+	}
+}
+
+func TestGetRandomTheme(t *testing.T) {
+	// Test that GetRandomTheme returns valid genres
+	for i := 0; i < 10; i++ {
+		theme := GetRandomTheme()
+		if theme == nil {
+			t.Fatalf("GetRandomTheme() iteration %d returned nil", i)
+		}
+		if err := theme.Validate(); err != nil {
+			t.Errorf("GetRandomTheme() iteration %d returned invalid theme: %v", i, err)
+		}
+	}
+
+	// Test with mocked time to ensure deterministic behavior
+	oldTimeNow := timeNow
+	defer func() { timeNow = oldTimeNow }()
+
+	mockTime := int64(12345)
+	timeNow = func() time.Time {
+		return time.Unix(0, mockTime)
+	}
+
+	theme1 := GetRandomTheme()
+	theme2 := GetRandomTheme()
+	if theme1.ID != theme2.ID {
+		t.Error("GetRandomTheme() with same time should return same genre")
+	}
+
+	// Change mock time
+	mockTime = 67890
+	theme3 := GetRandomTheme()
+	// Note: We don't check if theme3 is different because it might happen to be the same
+	// by chance. We just verify it's valid.
+	if err := theme3.Validate(); err != nil {
+		t.Errorf("GetRandomTheme() with different time returned invalid theme: %v", err)
 	}
 }

@@ -230,11 +230,11 @@ func TestGetAvailableGenres(t *testing.T) {
 
 	// Verify expected genres
 	expected := map[string]bool{
-		"fantasy":         true,
-		"scifi":           true,
-		"horror":          true,
-		"cyberpunk":       true,
-		"postapocalyptic": true,
+		"fantasy":   true,
+		"scifi":     true,
+		"horror":    true,
+		"cyberpunk": true,
+		"postapoc":  true,
 	}
 
 	for _, genre := range genres {

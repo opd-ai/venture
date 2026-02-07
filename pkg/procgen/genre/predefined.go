@@ -3,6 +3,11 @@
 // Code relocated from: types.go
 package genre
 
+import "time"
+
+// timeNow is a variable for dependency injection in tests
+var timeNow = time.Now
+
 // PredefinedGenres returns a slice of all predefined genre definitions.
 func PredefinedGenres() []*Genre {
 	return []*Genre{
@@ -96,7 +101,13 @@ func PostApocalypticGenre() *Genre {
 
 // GetTheme retrieves a genre theme by ID.
 // Returns the genre for the given ID, or defaults to Fantasy if not found.
+// Special value "random" triggers random genre selection.
 func GetTheme(genreID string) *Genre {
+	// Handle special "random" value
+	if genreID == "random" {
+		return GetRandomTheme()
+	}
+
 	registry := DefaultRegistry()
 	genre, err := registry.Get(genreID)
 	if err != nil {
@@ -104,4 +115,13 @@ func GetTheme(genreID string) *Genre {
 		return FantasyGenre()
 	}
 	return genre
+}
+
+// GetRandomTheme returns a random genre from predefined genres.
+// Uses current time as seed for non-deterministic selection.
+func GetRandomTheme() *Genre {
+	genres := PredefinedGenres()
+	// Use simple modulo to avoid importing math/rand
+	idx := int(timeNow().UnixNano() % int64(len(genres)))
+	return genres[idx]
 }

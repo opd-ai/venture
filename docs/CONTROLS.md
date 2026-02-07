@@ -1,8 +1,8 @@
 # Controls Reference
 
 **Venture - Fully Procedural Multiplayer Action-RPG**  
-**Version:** 8.0  
-**Last Updated:** December 2025
+**Version:** 1.0.0  
+**Last Updated:** February 2026
 
 This document provides comprehensive keyboard, mouse, and gamepad control mappings for all platforms.
 
@@ -33,18 +33,16 @@ This document provides comprehensive keyboard, mouse, and gamepad control mappin
 | **A** / **←** | Move Left |
 | **D** / **→** | Move Right |
 | **Shift** | Sprint (2x speed, consumes stamina) |
-| **Space** | Jump / Climb |
 | **Ctrl** | Crouch / Sneak |
 
 #### Combat
 | Key | Action |
 |-----|--------|
-| **Q** | Primary Attack |
-| **E** | Secondary Attack / Special Ability |
-| **R** | Reload / Cycle Weapon |
-| **F** | Interact / Context Action |
+| **Space** | Attack / Interact |
+| **E** | Use Item / Open Chest |
+| **F** | Interact / Context Action (NPCs, merchants) |
 | **Tab** | Target Cycling |
-| **1-8** | Quick Cast Spells (hotbar slots 1-8) |
+| **1-5** | Cast Spells (hotbar slots 1-5) |
 
 #### Interface
 | Key | Action |
@@ -54,12 +52,10 @@ This document provides comprehensive keyboard, mouse, and gamepad control mappin
 | **K** | Skills Menu |
 | **J** | Quest Log |
 | **M** | Map |
-| **B** | Crafting Menu |
-| **L** | Mail System |
-| **G** | Guild Menu |
-| **V** | Vehicle Control Panel |
-| **P** | Companion Commands |
+| **R** | Crafting Menu |
+| **G** | Gallery (Image Gallery) |
 | **H** | Housing Menu |
+| **O** | Guild Menu |
 | **Esc** | Main Menu / Cancel |
 
 #### Social & Communication
@@ -294,27 +290,11 @@ Same as [Mobile Controls](#mobile-controls)
 
 ## Version History
 
-### v10.0 (December 2025)
-- Added mail system controls (L key)
-- Added guild menu (G key)
-- Added housing menu (H key)
-- Added vehicle control panel (V key)
-- Enhanced gamepad support (R3 target lock)
-
-### v8.0 (November 2025)
-- Added WebRTC browser controls
-- Mobile one-handed mode
-- Voice command beta
-
-### v7.0 (November 2025)
-- Enhanced mouse aim precision
-- Fullscreen toggle (F11)
-- Quick save/load (F5/F9)
-
-### v5.0 (November 2025)
-- Social features (Shift+1-9 emotes)
-- Chat channels (/g, /l, /p, /w)
-- Image sharing keybinds
+### v1.0.0 (February 2026)
+- Housing menu (H key)
+- Gallery menu (G key)
+- Enhanced gamepad support
+- Full control reference aligned with implementation
 
 ---
 

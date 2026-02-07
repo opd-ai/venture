@@ -2,8 +2,8 @@
 
 Complete guide to gameplay mechanics, systems, and features.
 
-**Version:** 3.0  
-**Last Updated:** November 2025
+**Version:** 1.0.0  
+**Last Updated:** February 2026
 
 **New to Venture?** Start with [Getting Started Guide](GETTING_STARTED.md).
 
@@ -35,7 +35,7 @@ Venture is a procedurally generated action-RPG where everything—dungeons, enem
 
 **Movement:** WASD (diagonal supported)  
 **Actions:** Space (attack/interact), E (use item), F (NPC interaction), 1-5 (spells)  
-**Interface:** I (inventory), C (character), K (skills), J (quests), M (map), R (crafting), Tab (cycle targets), Esc (close/pause)  
+**Interface:** I (inventory), C (character), K (skills), J (quests), M (map), R (crafting), G (gallery), H (housing), Tab (cycle targets), F1 (help), Esc (close/pause)  
 **Saving:** F5 (quick save), F9 (quick load)  
 **Mouse:** Move (aim), Left Click (select/attack), Right Click (cancel), Scroll (zoom)
 
@@ -247,6 +247,6 @@ Dynamic lighting with soft shadows, colored lights, and bloom effects. Genre-spe
 
 ---
 
-**Version:** 3.0  
-**Last Updated:** November 2025  
+**Version:** 1.0.0  
+**Last Updated:** February 2026  
 **Maintained By:** Venture Development Team

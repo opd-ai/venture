@@ -28,8 +28,8 @@ make build-windows    # Windows x64
 ```
 
 ### Display Requirements
-- **Default Resolution**: 800x600 (windowed mode)
-- **High-DPI Support**: 1920x1080 for V7+ (automatic scaling)
+- **Default Resolution**: 1920x1080 (windowed mode)
+- **Supported Resolutions**: 1280x720, 1920x1080, 2560x1440, 3840x2160
 - **Multi-Monitor**: Primary monitor detection with manual selection support
 - **Window Modes**: Windowed, fullscreen, borderless windowed
 
@@ -40,7 +40,7 @@ make build-windows    # Windows x64
 1. **Application Launch**
    - Build verification: `go build ./cmd/client`
    - Launch succeeds without crashes
-   - Window renders at correct resolution (800x600 default, 1920x1080 for V7+)
+   - Window renders at correct resolution (1920x1080 default)
    - Window title displays "Venture" or "Venture v[version]"
    - Window icon renders correctly (if implemented)
 

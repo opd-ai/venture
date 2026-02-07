@@ -1,0 +1,64 @@
+// Package games contains implementations of mini-game types for Venture.
+// This file defines render output types and shared rendering utilities
+// for Phase 27.3: Mini-Game Rendering.
+package games
+
+import (
+	"fmt"
+
+	"github.com/opd-ai/venture/pkg/engine"
+)
+
+// RenderOutput represents the computed visual state of a minigame.
+// The ECS render system reads this data to draw actual pixels to the screen.
+// Each Render() call populates this struct with the current visual state.
+//
+// Phase 27.3: Mini-Game Rendering
+type RenderOutput struct {
+	// Title is the display name of the minigame
+	Title string
+	// Status describes the current game state ("Playing", "Won", "Lost")
+	Status string
+	// Width is the available screen width in pixels
+	Width int
+	// Height is the available screen height in pixels
+	Height int
+	// Elements contains all visual elements to be drawn
+	Elements []RenderElement
+}
+
+// RenderElement represents a single visual element in the minigame display.
+// Elements are drawn in order, allowing layered composition.
+//
+// Phase 27.3: Mini-Game Rendering
+type RenderElement struct {
+	// Type identifies the element kind: "text", "rect", "progress", "card", "die", "tile", "pin", "symbol", "terminal"
+	Type string
+	// X is the horizontal position in pixels from top-left
+	X int
+	// Y is the vertical position in pixels from top-left
+	Y int
+	// W is the element width in pixels
+	W int
+	// H is the element height in pixels
+	H int
+	// Label is the display text for this element
+	Label string
+	// Value is a numeric value (0.0-1.0 for progress, card value, etc.)
+	Value float64
+	// Highlighted indicates this element should be visually emphasized
+	Highlighted bool
+}
+
+// validateScreen checks that the screen parameter is valid for rendering.
+// Returns an error if the screen is nil or has zero dimensions.
+func validateScreen(screen engine.ImageProvider) (int, int, error) {
+	if screen == nil {
+		return 0, 0, fmt.Errorf("screen is nil")
+	}
+	w, h := screen.GetSize()
+	if w <= 0 || h <= 0 {
+		return 0, 0, fmt.Errorf("invalid screen dimensions: %dx%d", w, h)
+	}
+	return w, h, nil
+}

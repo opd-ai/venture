@@ -396,8 +396,10 @@ func TestSystem_Update(t *testing.T) {
 	sys.Update([]*engine.Entity{}, 1.0)
 }
 
-// TestRender_Stub tests that Render stubs return nil without error.
+// TestRender_Stub tests that Render stubs validate screen input.
 func TestRender_Stub(t *testing.T) {
+	screen := &stubScreen{width: 320, height: 240}
+
 	games := []struct {
 		name string
 		game engine.MiniGame
@@ -412,13 +414,14 @@ func TestRender_Stub(t *testing.T) {
 	}
 
 	for _, g := range games {
+		g := g // rebind to avoid capturing loop variable in closure
 		t.Run(g.name, func(t *testing.T) {
 			if err := g.game.Initialize(12345, 0.5); err != nil {
 				t.Fatalf("Initialize() failed: %v", err)
 			}
 
-			// Render stub should return nil
-			if err := g.game.Render(nil); err != nil {
+			// Render with valid screen should succeed
+			if err := g.game.Render(screen); err != nil {
 				t.Errorf("Render() returned error: %v", err)
 			}
 		})

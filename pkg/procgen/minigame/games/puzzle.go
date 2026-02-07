@@ -25,6 +25,8 @@ type PuzzleGame struct {
 	solution   [][]int
 	completed  bool
 	playerWon  bool
+	// LastRender contains the most recent render output for external consumption.
+	LastRender *RenderOutput
 }
 
 // NewPuzzleGame creates a new puzzle game instance.
@@ -135,8 +137,67 @@ func (p *PuzzleGame) isSolved() bool {
 }
 
 // Render draws the puzzle game to the screen.
+// Computes visual state including the grid, solution comparison, and move counter.
 func (p *PuzzleGame) Render(screen engine.ImageProvider) error {
-	// Minimal implementation - actual rendering in Phase 27.3
+	w, h, err := validateScreen(screen)
+	if err != nil {
+		return fmt.Errorf("puzzle game render: %w", err)
+	}
+	if p.rng == nil {
+		return fmt.Errorf("puzzle game render: game not initialized")
+	}
+
+	status := "Playing"
+	if p.completed {
+		if p.playerWon {
+			status = "Won"
+		} else {
+			status = "Lost"
+		}
+	}
+
+	elements := make([]RenderElement, 0, 2+p.gridSize*p.gridSize)
+
+	// Move counter
+	elements = append(elements, RenderElement{
+		Type:  "text",
+		X:     w / 2,
+		Y:     10,
+		Label: fmt.Sprintf("Moves: %d / %d", p.moves, p.maxMoves),
+	})
+
+	// Grid tiles
+	tileSize := (h - 60) / p.gridSize
+	maxTile := (w - 20) / p.gridSize
+	if tileSize > maxTile {
+		tileSize = maxTile
+	}
+	startX := (w - p.gridSize*tileSize) / 2
+	startY := 40
+
+	for i := 0; i < p.gridSize; i++ {
+		for j := 0; j < p.gridSize; j++ {
+			correct := p.grid[i][j] == p.solution[i][j]
+			elements = append(elements, RenderElement{
+				Type:        "tile",
+				X:           startX + j*tileSize,
+				Y:           startY + i*tileSize,
+				W:           tileSize - 2,
+				H:           tileSize - 2,
+				Label:       fmt.Sprintf("%d", p.grid[i][j]),
+				Value:       float64(p.grid[i][j]),
+				Highlighted: correct,
+			})
+		}
+	}
+
+	p.LastRender = &RenderOutput{
+		Title:    "Puzzle",
+		Status:   status,
+		Width:    w,
+		Height:   h,
+		Elements: elements,
+	}
 	return nil
 }
 

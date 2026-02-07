@@ -29,6 +29,8 @@ type CardGame struct {
 	playerHand   []int // Card values
 	opponentHand []int
 	deck         []int
+	// LastRender contains the most recent render output for external consumption.
+	LastRender *RenderOutput
 }
 
 // NewCardGame creates a new card game instance.
@@ -153,9 +155,72 @@ func (c *CardGame) playRound() {
 }
 
 // Render draws the card game to the screen.
-// For Phase 27.2, this is a minimal implementation (actual rendering in Phase 27.3).
+// Computes visual state including player/opponent hands, scores, and round info.
 func (c *CardGame) Render(screen engine.ImageProvider) error {
-	// Minimal implementation - actual rendering happens in integration phase
+	w, h, err := validateScreen(screen)
+	if err != nil {
+		return fmt.Errorf("card game render: %w", err)
+	}
+	if c.rng == nil {
+		return fmt.Errorf("card game render: game not initialized")
+	}
+
+	status := "Playing"
+	if c.completed {
+		if c.playerWon {
+			status = "Won"
+		} else {
+			status = "Lost"
+		}
+	}
+
+	elements := make([]RenderElement, 0, 2+len(c.playerHand)+len(c.opponentHand))
+
+	// Score display
+	elements = append(elements, RenderElement{
+		Type:  "text",
+		X:     w / 2,
+		Y:     10,
+		Label: fmt.Sprintf("Round %d - You: %d / %d  Opponent: %d / %d", c.currentRound, c.playerWins, c.targetWins, c.opponentWins, c.targetWins),
+	})
+
+	// Player hand
+	cardW := w / (len(c.playerHand) + 1)
+	if cardW > 60 {
+		cardW = 60
+	}
+	for i, card := range c.playerHand {
+		elements = append(elements, RenderElement{
+			Type:  "card",
+			X:     10 + i*(cardW+5),
+			Y:     h - 100,
+			W:     cardW,
+			H:     80,
+			Label: fmt.Sprintf("%d", card),
+			Value: float64(card) / 10.0,
+		})
+	}
+
+	// Opponent hand (face down)
+	for i := range c.opponentHand {
+		elements = append(elements, RenderElement{
+			Type:  "card",
+			X:     10 + i*(cardW+5),
+			Y:     20,
+			W:     cardW,
+			H:     80,
+			Label: "?",
+			Value: 0.0,
+		})
+	}
+
+	c.LastRender = &RenderOutput{
+		Title:    "Card Game",
+		Status:   status,
+		Width:    w,
+		Height:   h,
+		Elements: elements,
+	}
 	return nil
 }
 

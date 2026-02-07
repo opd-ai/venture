@@ -47,7 +47,15 @@ type delayedPacket struct {
 }
 
 // NewNetworkSimulator creates a new network simulator with default config.
+// Uses time-based seed for backward compatibility. For deterministic testing,
+// use NewNetworkSimulatorWithSeed instead.
 func NewNetworkSimulator() *NetworkSimulator {
+	return NewNetworkSimulatorWithSeed(time.Now().UnixNano())
+}
+
+// NewNetworkSimulatorWithSeed creates a network simulator with deterministic seed.
+// Same seed produces same random sequence for reproducible test scenarios.
+func NewNetworkSimulatorWithSeed(seed int64) *NetworkSimulator {
 	return &NetworkSimulator{
 		config: NetworkConfig{
 			Latency:        0,
@@ -55,19 +63,25 @@ func NewNetworkSimulator() *NetworkSimulator {
 			Jitter:         0,
 			BandwidthLimit: 0,
 		},
-		rng:                rand.New(rand.NewSource(time.Now().UnixNano())),
+		rng:                rand.New(rand.NewSource(seed)),
 		delayQueue:         make([]*delayedPacket, 0, 1000),
 		bandwidthResetTime: time.Now(),
 	}
 }
 
 // NewNetworkSimulatorWithConfig creates a simulator with the given config.
+// Uses time-based seed. For deterministic testing, use NewNetworkSimulatorWithConfigAndSeed.
 func NewNetworkSimulatorWithConfig(config NetworkConfig) (*NetworkSimulator, error) {
+	return NewNetworkSimulatorWithConfigAndSeed(config, time.Now().UnixNano())
+}
+
+// NewNetworkSimulatorWithConfigAndSeed creates a simulator with config and deterministic seed.
+func NewNetworkSimulatorWithConfigAndSeed(config NetworkConfig, seed int64) (*NetworkSimulator, error) {
 	if err := config.Validate(); err != nil {
 		return nil, err
 	}
 
-	sim := NewNetworkSimulator()
+	sim := NewNetworkSimulatorWithSeed(seed)
 	sim.config = config
 	return sim, nil
 }

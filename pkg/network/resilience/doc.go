@@ -20,6 +20,7 @@
 // The NetworkSimulator applies configurable network impairments to
 // outgoing packets, simulating real-world network conditions:
 //
+//	// For non-deterministic testing (time-based seed)
 //	sim := resilience.NewNetworkSimulator()
 //	sim.SetLatency(500 * time.Millisecond)
 //	sim.SetPacketLoss(0.05) // 5% packet loss
@@ -30,6 +31,11 @@
 //	if err := sim.Send(packet); err != nil {
 //	    // Packet was dropped or delayed
 //	}
+//
+// For deterministic, reproducible testing use a fixed seed:
+//
+//	sim := resilience.NewNetworkSimulatorWithSeed(12345)
+//	// Same seed = same packet drop/delay pattern
 //
 // # Metrics Collection
 //

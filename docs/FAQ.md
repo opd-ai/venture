@@ -1,8 +1,8 @@
 # Frequently Asked Questions (FAQ)
 
 **Venture - Fully Procedural Multiplayer Action-RPG**  
-**Version:** 8.0  
-**Last Updated:** December 2025
+**Version:** 1.0.0  
+**Last Updated:** February 2026
 
 This document answers the 50+ most common questions from players, organized by category.
 

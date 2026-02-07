@@ -2,8 +2,8 @@
 
 Complete guide to gameplay mechanics, systems, and features.
 
-**Version:** 3.0  
-**Last Updated:** November 2025
+**Version:** 1.0.0  
+**Last Updated:** February 2026
 
 **New to Venture?** Start with [Getting Started Guide](GETTING_STARTED.md).
 
@@ -247,6 +247,6 @@ Dynamic lighting with soft shadows, colored lights, and bloom effects. Genre-spe
 
 ---
 
-**Version:** 3.0  
-**Last Updated:** November 2025  
+**Version:** 1.0.0  
+**Last Updated:** February 2026  
 **Maintained By:** Venture Development Team

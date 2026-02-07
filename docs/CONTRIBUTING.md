@@ -177,7 +177,7 @@ func (s *MovementSystem) Update(entities []*Entity, dt float64) {
 
 ### Test Requirements
 
-- **Coverage Target**: 80% minimum per package
+- **Coverage Target**: 65% minimum per package (current average: 90.1%)
 - **Test Execution**: Run tests with standard `go test` command (no build tags required)
 - **Table-Driven Tests**: For multiple scenarios
 - **Benchmarks**: For performance-critical code

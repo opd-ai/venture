@@ -1,7 +1,7 @@
 # Social Systems Guide
 
-**Version:** 5.0  
-**Date:** November 2025  
+**Version:** 1.0.0  
+**Date:** February 2026  
 **Status:** Production
 
 ## Overview
@@ -41,13 +41,12 @@ Venture v5.0 introduces comprehensive social systems for player-to-player commun
 - Conversation history provides context for responses
 
 **Deterministic Mode:**
-- Use `-deterministic-dialog=true` flag for reproducible dialog
+- Set `DeterministicMode` on the `NPCDialogComponent` for reproducible dialog
 - Useful for testing and debugging
 - Fallback to template-based responses
 
 **Multi-Player Dialogs:**
 - Each player sees personalized NPC responses
-- Use `-shared-dialog=true` for synchronized dialog (all players see same text)
 
 ### 3. Image Sharing
 
@@ -156,28 +155,15 @@ Venture v5.0 introduces comprehensive social systems for player-to-player commun
 /trust <player>  - View trust score with player
 ```
 
-## Configuration Flags
+## Configuration
 
-### Chat System
-```bash
---disable-social       # Disable all social features
---disable-chat         # Disable chat only
---profanity-filter     # Enable client-side profanity filter
---auto-download-images # Auto-download images (default: false)
-```
+Social systems are enabled by default when running in multiplayer mode. Configuration is handled programmatically through the ECS components and system initialization.
 
 ### NPC Dialog
-```bash
---deterministic-dialog # Use template-based dialog (testing)
---shared-dialog        # All players see same NPC dialog
---dialog-order=<2-3>   # Markov chain order (default: 2)
-```
-
-### Trading
-```bash
---disable-trading      # Disable item trading
---trade-radius=<tiles> # Custom trade proximity (default: 5)
-```
+Dialog behavior is controlled via the `NPCDialogComponent`:
+- `DeterministicMode`: Set to `true` for template-based dialog (useful for testing)
+- `NPCPersonality`: Adjusts friendliness, formality, and verbosity traits
+- Markov chain order is set when creating the generator (2-3 recommended)
 
 ## Best Practices
 
@@ -244,9 +230,8 @@ Venture v5.0 introduces comprehensive social systems for player-to-player commun
 - Different NPCs have different personalities
 
 **Inappropriate/nonsensical dialog:**
-- Enable deterministic mode: `--deterministic-dialog=true`
+- Set `DeterministicMode = true` on the `NPCDialogComponent` for template-based fallback
 - Report issue with seed/NPC ID for debugging
-- Corpus improvements planned for v5.1
 
 ## Performance Considerations
 
@@ -321,6 +306,6 @@ Venture v5.0 introduces comprehensive social systems for player-to-player commun
 
 ---
 
-**Last Updated:** November 2025  
+**Last Updated:** February 2026  
 **Maintained By:** Venture Development Team  
-**Version:** 5.0 Production
+**Version:** 1.0.0 Production

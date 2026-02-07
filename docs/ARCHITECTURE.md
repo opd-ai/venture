@@ -283,7 +283,7 @@ Implement comprehensive social systems (Phases 31-36) with:
 **Determinism Policy:**
 - **Preserved:** Terrain, items, quests, combat remain deterministic
 - **Non-Deterministic:** NPC dialog uses runtime entropy for variety
-- **Fallback:** Deterministic dialog mode available via `-deterministic-dialog` flag
+- **Fallback:** Deterministic dialog mode available via `DeterministicMode` field on `NPCDialogComponent`
 
 **Performance Targets (Achieved):**
 - Chat overhead: <1KB per message, <10KB/s average (achieved)

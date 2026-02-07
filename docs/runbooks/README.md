@@ -242,6 +242,6 @@ If runbooks don't resolve your issue:
 
 ---
 
-**Last Updated:** 2026-01-07  
+**Last Updated:** 2026-02-07  
 **Maintained By:** Infrastructure Team  
-**Version:** 10.0
+**Version:** 1.0.0

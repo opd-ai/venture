@@ -1,8 +1,8 @@
 # Troubleshooting Guide
 
 **Venture - Fully Procedural Multiplayer Action-RPG**  
-**Version:** 10.0  
-**Last Updated:** December 2025
+**Version:** 1.0.0  
+**Last Updated:** February 2026
 
 This guide provides solutions to common technical issues, organized by symptom.
 
@@ -420,5 +420,5 @@ telnet <server-ip> 8080  # Should connect
 
 **Can't find a solution?** Join our [Discord](https://discord.gg/venture) - the community is happy to help!
 
-**Version:** 10.0 (December 2025)  
+**Version:** 1.0.0 (February 2026)  
 **Maintained By:** Venture Development Team & Community Contributors

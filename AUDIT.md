@@ -271,7 +271,7 @@ All generators must implement `procgen.Generator` interface and use deterministi
 | # | Package | AUDIT.md | What to focus on | Status |
 |---|---------|----------|------------------|--------|
 | 18 | `pkg/procgen` | `pkg/procgen/AUDIT.md` | Root generator interface, shared types | ✅ Complete (2026-02-07) |
-| 19 | `pkg/procgen/terrain` | `pkg/procgen/terrain/AUDIT.md` | BSP, cellular automata, L-system, Voronoi, city | |
+| 19 | `pkg/procgen/terrain` | `pkg/procgen/terrain/AUDIT.md` | BSP, cellular automata, L-system, Voronoi, city | ✅ Complete (2026-02-07) |
 | 20 | `pkg/procgen/entity` | `pkg/procgen/entity/AUDIT.md` | NPC/creature generation, templates | |
 | 21 | `pkg/procgen/item` | `pkg/procgen/item/AUDIT.md` | Item generation, rarity, class restrictions |
 | 22 | `pkg/procgen/quest` | `pkg/procgen/quest/AUDIT.md` | Quest objectives, rewards, progression |

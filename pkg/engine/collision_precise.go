@@ -12,10 +12,26 @@ import (
 // Package-level logger for collision operations
 var collisionLog *logrus.Logger
 
+// collisionDebugEnabled caches the debug log level check to avoid per-call allocations.
+// This variable should be updated whenever the log level changes via SetCollisionLogLevel.
+var collisionDebugEnabled bool
+
 func init() {
 	collisionLog = logrus.New()
 	collisionLog.SetReportCaller(true)
 	collisionLog.SetLevel(logrus.InfoLevel)
+	refreshCollisionDebugFlag()
+}
+
+// SetCollisionLogLevel updates the collision logger level and refreshes the debug flag cache.
+func SetCollisionLogLevel(level logrus.Level) {
+	collisionLog.SetLevel(level)
+	refreshCollisionDebugFlag()
+}
+
+// refreshCollisionDebugFlag updates the cached debug flag based on current log level.
+func refreshCollisionDebugFlag() {
+	collisionDebugEnabled = collisionLog.GetLevel() >= logrus.DebugLevel
 }
 
 // CollisionPrecision defines the sub-pixel precision for collision detection.
@@ -64,9 +80,8 @@ func (p *PreciseColliderComponent) Type() string {
 // QuantizePosition rounds a position to the nearest collision precision unit.
 // This ensures consistent collision detection at 0.1-pixel precision.
 func QuantizePosition(x, y float64) (float64, float64) {
-	// OPTIMIZATION: Check log level before allocating Fields map to avoid per-call allocations
-	debugEnabled := collisionLog.GetLevel() >= logrus.DebugLevel
-	if debugEnabled {
+	// OPTIMIZATION: Use cached debug flag to avoid per-call GetLevel() allocations
+	if collisionDebugEnabled {
 		collisionLog.WithFields(logrus.Fields{
 			"input_x":   x,
 			"input_y":   y,
@@ -77,7 +92,7 @@ func QuantizePosition(x, y float64) (float64, float64) {
 	qx := math.Round(x/CollisionPrecision) * CollisionPrecision
 	qy := math.Round(y/CollisionPrecision) * CollisionPrecision
 
-	if debugEnabled {
+	if collisionDebugEnabled {
 		collisionLog.WithFields(logrus.Fields{
 			"quantized_x": qx,
 			"quantized_y": qy,
@@ -90,9 +105,8 @@ func QuantizePosition(x, y float64) (float64, float64) {
 // GetBounds returns the axis-aligned bounding box for this collider.
 // Returns min and max coordinates with sub-pixel precision.
 func (p *PreciseColliderComponent) GetBounds(x, y float64) (minX, minY, maxX, maxY float64) {
-	// OPTIMIZATION: Check log level before allocating Fields map to avoid per-call allocations
-	debugEnabled := collisionLog.GetLevel() >= logrus.DebugLevel
-	if debugEnabled {
+	// OPTIMIZATION: Use cached debug flag to avoid per-call GetLevel() allocations
+	if collisionDebugEnabled {
 		collisionLog.WithFields(logrus.Fields{
 			"component_type": "precise_collider",
 			"position_x":     x,
@@ -113,7 +127,7 @@ func (p *PreciseColliderComponent) GetBounds(x, y float64) (minX, minY, maxX, ma
 	minX, minY = QuantizePosition(minX, minY)
 	maxX, maxY = QuantizePosition(maxX, maxY)
 
-	if debugEnabled {
+	if collisionDebugEnabled {
 		collisionLog.WithFields(logrus.Fields{
 			"min_x": minX,
 			"min_y": minY,
@@ -127,8 +141,8 @@ func (p *PreciseColliderComponent) GetBounds(x, y float64) (minX, minY, maxX, ma
 
 // IntersectsAABB checks AABB intersection with sub-pixel precision.
 func (p *PreciseColliderComponent) IntersectsAABB(x1, y1 float64, other *PreciseColliderComponent, x2, y2 float64) bool {
-	// OPTIMIZATION: Check log level before allocating Fields map to avoid per-call allocations
-	if collisionLog.GetLevel() >= logrus.DebugLevel {
+	// OPTIMIZATION: Use cached debug flag to avoid per-call GetLevel() allocations
+	if collisionDebugEnabled {
 		collisionLog.WithFields(logrus.Fields{
 			"operation":      "intersects_aabb",
 			"component_type": "precise_collider",
@@ -150,8 +164,8 @@ func (p *PreciseColliderComponent) IntersectsAABB(x1, y1 float64, other *Precise
 		maxY1 <= minY2+epsilon ||
 		maxY2 <= minY1+epsilon)
 
-	// OPTIMIZATION: Check log level before allocating Fields map
-	if collisionLog.GetLevel() >= logrus.DebugLevel {
+	// OPTIMIZATION: Use cached debug flag to avoid per-call GetLevel() allocations
+	if collisionDebugEnabled {
 		collisionLog.WithFields(logrus.Fields{
 			"intersects": intersects,
 			"epsilon":    epsilon,
@@ -163,9 +177,8 @@ func (p *PreciseColliderComponent) IntersectsAABB(x1, y1 float64, other *Precise
 
 // IntersectsCircle checks circle-circle intersection.
 func (p *PreciseColliderComponent) IntersectsCircle(x1, y1 float64, other *PreciseColliderComponent, x2, y2 float64) bool {
-	// OPTIMIZATION: Check log level before allocating Fields map to avoid per-call allocations
-	debugEnabled := collisionLog.GetLevel() >= logrus.DebugLevel
-	if debugEnabled {
+	// OPTIMIZATION: Use cached debug flag to avoid per-call GetLevel() allocations
+	if collisionDebugEnabled {
 		collisionLog.WithFields(logrus.Fields{
 			"operation":      "intersects_circle",
 			"component_type": "precise_collider",
@@ -194,7 +207,7 @@ func (p *PreciseColliderComponent) IntersectsCircle(x1, y1 float64, other *Preci
 
 	intersects := distSq <= radiusSum*radiusSum+CollisionPrecision
 
-	if debugEnabled {
+	if collisionDebugEnabled {
 		collisionLog.WithFields(logrus.Fields{
 			"intersects":  intersects,
 			"distance_sq": distSq,
@@ -210,17 +223,16 @@ func (p *PreciseColliderComponent) IntersectsCircle(x1, y1 float64, other *Preci
 // IntersectsRoundedRect checks intersection with rounded rectangle.
 // Uses hybrid approach: AABB for core, circles for corners.
 func (p *PreciseColliderComponent) IntersectsRoundedRect(x1, y1 float64, other *PreciseColliderComponent, x2, y2 float64) bool {
-	debugEnabled := collisionLog.GetLevel() >= logrus.DebugLevel
-	logIntersectionStart(debugEnabled, x1, y1, x2, y2, p.CornerRadius, other.CornerRadius)
+	logIntersectionStart(collisionDebugEnabled, x1, y1, x2, y2, p.CornerRadius, other.CornerRadius)
 
 	coreMin1, coreMax1 := computeCoreBounds(x1, y1, p.OffsetX, p.OffsetY, p.Width, p.Height, p.CornerRadius)
 	coreMin2, coreMax2 := computeCoreBounds(x2, y2, other.OffsetX, other.OffsetY, other.Width, other.Height, other.CornerRadius)
 
-	if checkCoreAABBOverlap(coreMin1, coreMax1, coreMin2, coreMax2, debugEnabled) {
+	if checkCoreAABBOverlap(coreMin1, coreMax1, coreMin2, coreMax2, collisionDebugEnabled) {
 		return true
 	}
 
-	return checkCornerCircleCollision(p, x1, y1, other, x2, y2, debugEnabled)
+	return checkCornerCircleCollision(p, x1, y1, other, x2, y2, collisionDebugEnabled)
 }
 
 // logIntersectionStart logs the start of rounded rectangle intersection check.
@@ -314,9 +326,8 @@ func (p *PreciseColliderComponent) getCornerPositions(x, y float64) [4][2]float6
 
 // Intersects checks intersection based on shape type.
 func (p *PreciseColliderComponent) Intersects(x1, y1 float64, other *PreciseColliderComponent, x2, y2 float64) bool {
-	// OPTIMIZATION: Check log level before allocating Fields map to avoid per-call allocations
-	debugEnabled := collisionLog.GetLevel() >= logrus.DebugLevel
-	if debugEnabled {
+	// OPTIMIZATION: Use cached debug flag to avoid per-call GetLevel() allocations
+	if collisionDebugEnabled {
 		collisionLog.WithFields(logrus.Fields{
 			"operation":      "intersects",
 			"component_type": "precise_collider",
@@ -331,7 +342,7 @@ func (p *PreciseColliderComponent) Intersects(x1, y1 float64, other *PreciseColl
 
 	// Use most specific shape check
 	if p.Shape == ShapeCircle && other.Shape == ShapeCircle {
-		if debugEnabled {
+		if collisionDebugEnabled {
 			collisionLog.Debug("Using circle-circle intersection")
 		}
 		return p.IntersectsCircle(x1, y1, other, x2, y2)
@@ -339,14 +350,14 @@ func (p *PreciseColliderComponent) Intersects(x1, y1 float64, other *PreciseColl
 
 	if (p.Shape == ShapeRoundedRect || other.Shape == ShapeRoundedRect) &&
 		(p.CornerRadius > 0 || other.CornerRadius > 0) {
-		if debugEnabled {
+		if collisionDebugEnabled {
 			collisionLog.Debug("Using rounded rectangle intersection")
 		}
 		return p.IntersectsRoundedRect(x1, y1, other, x2, y2)
 	}
 
 	// Default to AABB
-	if debugEnabled {
+	if collisionDebugEnabled {
 		collisionLog.Debug("Using AABB intersection (default)")
 	}
 	return p.IntersectsAABB(x1, y1, other, x2, y2)
@@ -356,9 +367,8 @@ func (p *PreciseColliderComponent) Intersects(x1, y1 float64, other *PreciseColl
 // This enables smooth wall sliding instead of getting stuck on walls.
 // Returns a normalized vector perpendicular to the wall surface.
 func ComputeWallNormal(entityX, entityY, wallX, wallY float64) EdgeNormal {
-	// OPTIMIZATION: Check log level before allocating Fields map to avoid per-call allocations
-	debugEnabled := collisionLog.GetLevel() >= logrus.DebugLevel
-	if debugEnabled {
+	// OPTIMIZATION: Use cached debug flag to avoid per-call GetLevel() allocations
+	if collisionDebugEnabled {
 		collisionLog.WithFields(logrus.Fields{
 			"operation": "compute_wall_normal",
 			"entity_x":  entityX,
@@ -377,7 +387,7 @@ func ComputeWallNormal(entityX, entityY, wallX, wallY float64) EdgeNormal {
 	length := math.Sqrt(dx*dx + dy*dy)
 	if length < CollisionPrecision {
 		// Default to upward normal if too close
-		if debugEnabled {
+		if collisionDebugEnabled {
 			collisionLog.WithFields(logrus.Fields{
 				"result":   "default_normal",
 				"length":   length,
@@ -393,7 +403,7 @@ func ComputeWallNormal(entityX, entityY, wallX, wallY float64) EdgeNormal {
 		NY: dy / length,
 	}
 
-	if debugEnabled {
+	if collisionDebugEnabled {
 		collisionLog.WithFields(logrus.Fields{
 			"normal_x": normal.NX,
 			"normal_y": normal.NY,
@@ -407,9 +417,8 @@ func ComputeWallNormal(entityX, entityY, wallX, wallY float64) EdgeNormal {
 // ApplyWallSlide projects velocity along a wall surface for smooth sliding.
 // Takes current velocity and wall normal, returns adjusted velocity that slides along the wall.
 func ApplyWallSlide(vx, vy float64, normal EdgeNormal) (newVX, newVY float64) {
-	// OPTIMIZATION: Check log level before allocating Fields map to avoid per-call allocations
-	debugEnabled := collisionLog.GetLevel() >= logrus.DebugLevel
-	if debugEnabled {
+	// OPTIMIZATION: Use cached debug flag to avoid per-call GetLevel() allocations
+	if collisionDebugEnabled {
 		collisionLog.WithFields(logrus.Fields{
 			"operation":  "apply_wall_slide",
 			"velocity_x": vx,
@@ -431,7 +440,7 @@ func ApplyWallSlide(vx, vy float64, normal EdgeNormal) (newVX, newVY float64) {
 	newVX = dotProduct * tangentX
 	newVY = dotProduct * tangentY
 
-	if debugEnabled {
+	if collisionDebugEnabled {
 		collisionLog.WithFields(logrus.Fields{
 			"new_velocity_x": newVX,
 			"new_velocity_y": newVY,

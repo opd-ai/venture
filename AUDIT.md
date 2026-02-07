@@ -400,10 +400,24 @@ The Venture codebase exhibits **moderate performance concerns** with several ide
 
 ### Priority 3 (Medium Impact)
 
-5. **Issue R5: Cache Collision Debug Flag**
+5. **Issue R5: Cache Collision Debug Flag - ✅ COMPLETED**
    - Expected improvement: Negligible normally; -500µs+/frame with debug
    - Implementation complexity: Low (8 lines)
    - Fix: Package-level `collisionDebugEnabled` bool, refresh on log level change
+   - **Implementation Date:** 2026-02-07
+   - **Actual Results:**
+     - Added `collisionDebugEnabled` package-level bool variable
+     - Created `SetCollisionLogLevel()` function for updating logger level and refreshing cache
+     - Created `refreshCollisionDebugFlag()` internal function for cache updates
+     - Replaced all 9 instances of `collisionLog.GetLevel() >= logrus.DebugLevel` with cached flag
+     - Eliminates 1000+ GetLevel() calls per frame in collision hot path
+     - Zero performance overhead when debug is disabled (normal operation)
+     - Prevents severe frame time degradation when debug logging is enabled
+   - **Files Modified:**
+     - `pkg/engine/collision_precise.go`: Added cache variables, SetCollisionLogLevel(), refreshCollisionDebugFlag(), updated all debug checks
+     - `pkg/engine/collision_precise_test.go`: Added TestSetCollisionLogLevel, TestCollisionDebugFlagCache, TestRefreshCollisionDebugFlag, 3 benchmarks
+   - **Test Coverage:** All new tests pass with zero allocations in benchmarks
+   - **Expected Frame Budget Impact:** Eliminates per-call GetLevel() overhead; prevents +500µs/frame when debug enabled
 
 6. **Issue R6: Reduce AI Logging Allocations**
    - Expected improvement: -10-30µs/frame

@@ -139,41 +139,41 @@ func (h *HackingGame) generateHint(guess string) string {
 
 // Render draws the hacking game to the screen.
 // Computes visual state including terminal display with guesses and hints.
-func (h *HackingGame) Render(screen engine.ImageProvider) error {
-	w, h2, err := validateScreen(screen)
+func (hg *HackingGame) Render(screen engine.ImageProvider) error {
+	w, h, err := validateScreen(screen)
 	if err != nil {
 		return fmt.Errorf("hacking game render: %w", err)
 	}
-	if h.rng == nil {
+	if hg.rng == nil {
 		return fmt.Errorf("hacking game render: game not initialized")
 	}
 
 	status := "Playing"
-	if h.completed {
-		if h.playerWon {
+	if hg.completed {
+		if hg.playerWon {
 			status = "Won"
 		} else {
 			status = "Lost"
 		}
 	}
 
-	elements := make([]RenderElement, 0, 3+len(h.guesses))
+	elements := make([]RenderElement, 0, 3+len(hg.guesses))
 
 	// Header
 	elements = append(elements, RenderElement{
 		Type:  "text",
 		X:     w / 2,
 		Y:     10,
-		Label: fmt.Sprintf("CODE LENGTH: %d  ATTEMPTS: %d / %d", h.codeLength, h.attempts, h.maxAttempts),
+		Label: fmt.Sprintf("CODE LENGTH: %d  ATTEMPTS: %d / %d", hg.codeLength, hg.attempts, hg.maxAttempts),
 	})
 
 	// Terminal lines (guesses + hints)
 	lineH := 20
 	startY := 50
-	for i := 0; i < len(h.guesses); i++ {
+	for i := 0; i < len(hg.guesses); i++ {
 		hint := ""
-		if i < len(h.hints) {
-			hint = h.hints[i]
+		if i < len(hg.hints) {
+			hint = hg.hints[i]
 		}
 		elements = append(elements, RenderElement{
 			Type:  "terminal",
@@ -181,28 +181,28 @@ func (h *HackingGame) Render(screen engine.ImageProvider) error {
 			Y:     startY + i*lineH,
 			W:     w - 40,
 			H:     lineH,
-			Label: fmt.Sprintf("> %s  [%s]", h.guesses[i], hint),
+			Label: fmt.Sprintf("> %s  [%s]", hg.guesses[i], hint),
 			Value: float64(i + 1),
 		})
 	}
 
 	// Attempt progress
-	progress := float64(h.attempts) / float64(h.maxAttempts)
+	progress := float64(hg.attempts) / float64(hg.maxAttempts)
 	elements = append(elements, RenderElement{
 		Type:  "progress",
 		X:     20,
-		Y:     h2 - 40,
+		Y:     h - 40,
 		W:     w - 40,
 		H:     20,
 		Label: "Attempts Used",
 		Value: progress,
 	})
 
-	h.LastRender = &RenderOutput{
+	hg.LastRender = &RenderOutput{
 		Title:    "Hacking",
 		Status:   status,
 		Width:    w,
-		Height:   h2,
+		Height:   h,
 		Elements: elements,
 	}
 	return nil

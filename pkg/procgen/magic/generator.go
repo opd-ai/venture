@@ -234,9 +234,28 @@ func (g *SpellGenerator) generateStats(rng *rand.Rand, template SpellTemplate, d
 		"difficulty_scale": difficultyScale,
 		"rarity_scale":     rarityScale,
 	})
-	stats := Stats{}
 
-	// Damage
+	stats := Stats{}
+	g.generateDamageStat(&stats, rng, template, depthScale, difficultyScale, rarityScale)
+	g.generateHealingStat(&stats, rng, template, depthScale, rarityScale)
+	g.generateManaCostStat(&stats, rng, template, rarityScale)
+	g.generateCooldownStat(&stats, rng, template, rarityScale)
+	g.generateCastTimeStat(&stats, rng, template, rarityScale)
+	g.generateRangeStat(&stats, rng, template, rarityScale)
+	g.generateAreaSizeStat(&stats, rng, template, rarityScale)
+	g.generateDurationStat(&stats, rng, template, rarityScale)
+
+	g.logDebug("spell stats generation complete", logrus.Fields{
+		"damage":    stats.Damage,
+		"healing":   stats.Healing,
+		"mana_cost": stats.ManaCost,
+		"cooldown":  stats.Cooldown,
+	})
+	return stats
+}
+
+// generateDamageStat generates the damage stat for a spell.
+func (g *SpellGenerator) generateDamageStat(stats *Stats, rng *rand.Rand, template SpellTemplate, depthScale, difficultyScale, rarityScale float64) {
 	if template.DamageRange[1] > 0 {
 		baseMin := float64(template.DamageRange[0])
 		baseMax := float64(template.DamageRange[1])
@@ -247,8 +266,10 @@ func (g *SpellGenerator) generateStats(rng *rand.Rand, template SpellTemplate, d
 			"damage":     stats.Damage,
 		})
 	}
+}
 
-	// Healing
+// generateHealingStat generates the healing stat for a spell.
+func (g *SpellGenerator) generateHealingStat(stats *Stats, rng *rand.Rand, template SpellTemplate, depthScale, rarityScale float64) {
 	if template.HealingRange[1] > 0 {
 		baseMin := float64(template.HealingRange[0])
 		baseMax := float64(template.HealingRange[1])
@@ -259,82 +280,80 @@ func (g *SpellGenerator) generateStats(rng *rand.Rand, template SpellTemplate, d
 			"healing":    stats.Healing,
 		})
 	}
+}
 
-	// Mana cost
+// generateManaCostStat generates the mana cost stat for a spell.
+func (g *SpellGenerator) generateManaCostStat(stats *Stats, rng *rand.Rand, template SpellTemplate, rarityScale float64) {
 	if template.ManaCostRange[1] > 0 {
 		baseMin := float64(template.ManaCostRange[0])
 		baseMax := float64(template.ManaCostRange[1])
 		manaCost := baseMin + rng.Float64()*(baseMax-baseMin)
-		// Higher rarity costs more mana
 		stats.ManaCost = int(manaCost * rarityScale)
 		g.logDebug("generated mana cost", logrus.Fields{
 			"base_range": template.ManaCostRange,
 			"mana_cost":  stats.ManaCost,
 		})
 	}
+}
 
-	// Cooldown
+// generateCooldownStat generates the cooldown stat for a spell.
+func (g *SpellGenerator) generateCooldownStat(stats *Stats, rng *rand.Rand, template SpellTemplate, rarityScale float64) {
 	if template.CooldownRange[1] > 0 {
 		stats.Cooldown = template.CooldownRange[0] +
 			rng.Float64()*(template.CooldownRange[1]-template.CooldownRange[0])
-		// Higher rarity has shorter cooldown
 		stats.Cooldown = stats.Cooldown / rarityScale
 		g.logDebug("generated cooldown", logrus.Fields{
 			"cooldown": stats.Cooldown,
 		})
 	}
+}
 
-	// Cast time
+// generateCastTimeStat generates the cast time stat for a spell.
+func (g *SpellGenerator) generateCastTimeStat(stats *Stats, rng *rand.Rand, template SpellTemplate, rarityScale float64) {
 	if template.CastTimeRange[1] > 0 {
 		stats.CastTime = template.CastTimeRange[0] +
 			rng.Float64()*(template.CastTimeRange[1]-template.CastTimeRange[0])
-		// Higher rarity has faster cast time
 		stats.CastTime = stats.CastTime / (1.0 + float64(rarityScale)*0.1)
 		g.logDebug("generated cast time", logrus.Fields{
 			"cast_time": stats.CastTime,
 		})
 	}
+}
 
-	// Range
+// generateRangeStat generates the range stat for a spell.
+func (g *SpellGenerator) generateRangeStat(stats *Stats, rng *rand.Rand, template SpellTemplate, rarityScale float64) {
 	if template.RangeRange[1] > 0 {
 		stats.Range = template.RangeRange[0] +
 			rng.Float64()*(template.RangeRange[1]-template.RangeRange[0])
-		// Higher rarity has better range
 		stats.Range = stats.Range * (1.0 + float64(rarityScale)*0.1)
 		g.logDebug("generated range", logrus.Fields{
 			"range": stats.Range,
 		})
 	}
+}
 
-	// Area size
+// generateAreaSizeStat generates the area size stat for a spell.
+func (g *SpellGenerator) generateAreaSizeStat(stats *Stats, rng *rand.Rand, template SpellTemplate, rarityScale float64) {
 	if template.AreaSizeRange[1] > 0 {
 		stats.AreaSize = template.AreaSizeRange[0] +
 			rng.Float64()*(template.AreaSizeRange[1]-template.AreaSizeRange[0])
-		// Higher rarity has larger area
 		stats.AreaSize = stats.AreaSize * (1.0 + float64(rarityScale)*0.15)
 		g.logDebug("generated area size", logrus.Fields{
 			"area_size": stats.AreaSize,
 		})
 	}
+}
 
-	// Duration
+// generateDurationStat generates the duration stat for a spell.
+func (g *SpellGenerator) generateDurationStat(stats *Stats, rng *rand.Rand, template SpellTemplate, rarityScale float64) {
 	if template.DurationRange[1] > 0 {
 		stats.Duration = template.DurationRange[0] +
 			rng.Float64()*(template.DurationRange[1]-template.DurationRange[0])
-		// Higher rarity has longer duration
 		stats.Duration = stats.Duration * (1.0 + float64(rarityScale)*0.2)
 		g.logDebug("generated duration", logrus.Fields{
 			"duration": stats.Duration,
 		})
 	}
-
-	g.logDebug("spell stats generation complete", logrus.Fields{
-		"damage":    stats.Damage,
-		"healing":   stats.Healing,
-		"mana_cost": stats.ManaCost,
-		"cooldown":  stats.Cooldown,
-	})
-	return stats
 }
 
 // determineRarity calculates spell rarity based on depth and difficulty.

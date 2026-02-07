@@ -316,30 +316,48 @@ func (g *Generator) blendTJunction(img *image.RGBA, blendColor color.Color, radi
 	centerX := bounds.Min.X + width/2
 	centerY := bounds.Min.Y + height/2
 
-	// Blend at center and along the T stem
 	g.blendCircularArea(img, centerX, centerY, radius, blendColor)
+	g.blendTStem(img, blendColor, radius, neighbors, bounds, centerX, centerY)
+}
 
-	// Additional blending along connecting edges
+// blendTStem applies blending along the stem of a T-junction based on orientation.
+func (g *Generator) blendTStem(img *image.RGBA, blendColor color.Color, radius int, neighbors WallNeighbors, bounds image.Rectangle, centerX, centerY int) {
 	if !neighbors.North {
-		// T pointing up
-		for y := bounds.Min.Y; y < bounds.Min.Y+radius && y < bounds.Max.Y; y++ {
-			g.blendCircularArea(img, centerX, y, radius/2, blendColor)
-		}
+		g.blendNorthStem(img, blendColor, radius, bounds, centerX)
 	} else if !neighbors.South {
-		// T pointing down
-		for y := bounds.Max.Y - radius; y < bounds.Max.Y; y++ {
-			g.blendCircularArea(img, centerX, y, radius/2, blendColor)
-		}
+		g.blendSouthStem(img, blendColor, radius, bounds, centerX)
 	} else if !neighbors.East {
-		// T pointing right
-		for x := bounds.Max.X - radius; x < bounds.Max.X; x++ {
-			g.blendCircularArea(img, x, centerY, radius/2, blendColor)
-		}
+		g.blendEastStem(img, blendColor, radius, bounds, centerY)
 	} else if !neighbors.West {
-		// T pointing left
-		for x := bounds.Min.X; x < bounds.Min.X+radius && x < bounds.Max.X; x++ {
-			g.blendCircularArea(img, x, centerY, radius/2, blendColor)
-		}
+		g.blendWestStem(img, blendColor, radius, bounds, centerY)
+	}
+}
+
+// blendNorthStem blends the stem of a T-junction pointing up.
+func (g *Generator) blendNorthStem(img *image.RGBA, blendColor color.Color, radius int, bounds image.Rectangle, centerX int) {
+	for y := bounds.Min.Y; y < bounds.Min.Y+radius && y < bounds.Max.Y; y++ {
+		g.blendCircularArea(img, centerX, y, radius/2, blendColor)
+	}
+}
+
+// blendSouthStem blends the stem of a T-junction pointing down.
+func (g *Generator) blendSouthStem(img *image.RGBA, blendColor color.Color, radius int, bounds image.Rectangle, centerX int) {
+	for y := bounds.Max.Y - radius; y < bounds.Max.Y; y++ {
+		g.blendCircularArea(img, centerX, y, radius/2, blendColor)
+	}
+}
+
+// blendEastStem blends the stem of a T-junction pointing right.
+func (g *Generator) blendEastStem(img *image.RGBA, blendColor color.Color, radius int, bounds image.Rectangle, centerY int) {
+	for x := bounds.Max.X - radius; x < bounds.Max.X; x++ {
+		g.blendCircularArea(img, x, centerY, radius/2, blendColor)
+	}
+}
+
+// blendWestStem blends the stem of a T-junction pointing left.
+func (g *Generator) blendWestStem(img *image.RGBA, blendColor color.Color, radius int, bounds image.Rectangle, centerY int) {
+	for x := bounds.Min.X; x < bounds.Min.X+radius && x < bounds.Max.X; x++ {
+		g.blendCircularArea(img, x, centerY, radius/2, blendColor)
 	}
 }
 

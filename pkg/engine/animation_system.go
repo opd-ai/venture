@@ -466,57 +466,90 @@ func (s *AnimationSystem) updateEntityAnimation(entity *Entity, deltaTime, playe
 	if animComp == nil {
 		return nil
 	}
-
 	s.stats.AnimatedEntities++
 
-	spriteComp := s.getSpriteComponent(entity)
-	if spriteComp == nil {
-		if s.logger != nil {
-			s.logger.WithFields(logrus.Fields{
-				"entity_id": entity.ID,
-			}).Warn("entity has animation but no sprite component")
-		}
-		return nil
-	}
-
-	pos, ok := s.getEntityPosition(entity)
-	if !ok {
-		if s.logger != nil {
-			s.logger.WithFields(logrus.Fields{
-				"entity_id": entity.ID,
-			}).Warn("entity has animation but no position component")
-		}
+	spriteComp, pos, shouldContinue := s.validateAnimationComponents(entity)
+	if !shouldContinue {
 		return nil
 	}
 
 	if s.shouldCullEntity(entity, pos, viewport, hasViewport) {
-		s.stats.CulledByViewport++
-		if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
-			s.logger.WithFields(logrus.Fields{
-				"entity_id": entity.ID,
-				"pos_x":     pos.X,
-				"pos_y":     pos.Y,
-			}).Debug("entity culled by viewport")
-		}
+		s.logAndCountCulled(entity.ID, pos)
 		return nil
 	}
 
+	return s.processAnimation(entity, animComp, spriteComp, pos, playerX, playerY, deltaTime)
+}
+
+// validateAnimationComponents checks sprite and position components.
+func (s *AnimationSystem) validateAnimationComponents(entity *Entity) (*EbitenSprite, *PositionComponent, bool) {
+	spriteComp := s.getSpriteComponent(entity)
+	if spriteComp == nil {
+		s.logMissingSprite(entity.ID)
+		return nil, nil, false
+	}
+
+	pos, ok := s.getEntityPosition(entity)
+	if !ok {
+		s.logMissingPosition(entity.ID)
+		return nil, nil, false
+	}
+
+	return spriteComp, pos, true
+}
+
+// logMissingSprite logs when an entity lacks a sprite component.
+func (s *AnimationSystem) logMissingSprite(entityID uint64) {
+	if s.logger != nil {
+		s.logger.WithFields(logrus.Fields{
+			"entity_id": entityID,
+		}).Warn("entity has animation but no sprite component")
+	}
+}
+
+// logMissingPosition logs when an entity lacks a position component.
+func (s *AnimationSystem) logMissingPosition(entityID uint64) {
+	if s.logger != nil {
+		s.logger.WithFields(logrus.Fields{
+			"entity_id": entityID,
+		}).Warn("entity has animation but no position component")
+	}
+}
+
+// logAndCountCulled logs and counts culled entities.
+func (s *AnimationSystem) logAndCountCulled(entityID uint64, pos *PositionComponent) {
+	s.stats.CulledByViewport++
+	if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
+		s.logger.WithFields(logrus.Fields{
+			"entity_id": entityID,
+			"pos_x":     pos.X,
+			"pos_y":     pos.Y,
+		}).Debug("entity culled by viewport")
+	}
+}
+
+// processAnimation applies LOD, regenerates frames, and updates animation.
+func (s *AnimationSystem) processAnimation(entity *Entity, animComp *AnimationComponent, spriteComp *EbitenSprite, pos *PositionComponent, playerX, playerY, deltaTime float64) error {
 	effectiveDeltaTime := s.applyDistanceLOD(animComp, pos, playerX, playerY, deltaTime)
 
 	if err := s.regenerateFramesIfDirty(entity, animComp, spriteComp); err != nil {
-		if s.logger != nil {
-			s.logger.WithFields(logrus.Fields{
-				"entity_id": entity.ID,
-				"error":     err.Error(),
-			}).Error("failed to regenerate animation frames")
-		}
+		s.logFrameRegenerationError(entity.ID, err)
 		return err
 	}
 
 	s.updateAnimationFrame(animComp, effectiveDeltaTime)
 	s.syncSpriteFrame(entity, animComp, spriteComp)
-
 	return nil
+}
+
+// logFrameRegenerationError logs frame regeneration failures.
+func (s *AnimationSystem) logFrameRegenerationError(entityID uint64, err error) {
+	if s.logger != nil {
+		s.logger.WithFields(logrus.Fields{
+			"entity_id": entityID,
+			"error":     err.Error(),
+		}).Error("failed to regenerate animation frames")
+	}
 }
 
 // getEntityPosition retrieves entity position component.

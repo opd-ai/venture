@@ -905,19 +905,39 @@ func (g *EbitenGame) triggerGameStartCallback(charData CharacterData) error {
 // handleLoadingState updates the loading screen during async terrain generation.
 // Polls terrain loader progress and transitions to gameplay when complete.
 func (g *EbitenGame) handleLoadingState() error {
+	loader, err := g.validateTerrainLoader()
+	if err != nil {
+		return err
+	}
+	if loader == nil {
+		return nil
+	}
+
+	if err := g.updateLoadingProgress(loader); err != nil {
+		return err
+	}
+
+	if loader.IsDone() {
+		return g.handleLoadingComplete()
+	}
+
+	return nil
+}
+
+// asyncLoader defines the interface for async terrain loading to avoid circular imports.
+type asyncLoader interface {
+	GetProgress() (float64, error)
+	IsDone() bool
+}
+
+// validateTerrainLoader checks if the terrain loader is properly configured.
+func (g *EbitenGame) validateTerrainLoader() (asyncLoader, error) {
 	if g.terrainLoader == nil {
 		if g.logger != nil {
 			g.logger.Error("in loading state but no terrain loader set")
 		}
 		_ = g.StateManager.TransitionTo(AppStateMainMenu)
-		return nil
-	}
-
-	// Type assert to AsyncLoader interface (duck typing)
-	// We use interface{} to avoid circular import with terrain package
-	type asyncLoader interface {
-		GetProgress() (float64, error)
-		IsDone() bool
+		return nil, nil
 	}
 
 	loader, ok := g.terrainLoader.(asyncLoader)
@@ -926,10 +946,14 @@ func (g *EbitenGame) handleLoadingState() error {
 			g.logger.Error("terrain loader does not implement required methods")
 		}
 		_ = g.StateManager.TransitionTo(AppStateMainMenu)
-		return nil
+		return nil, nil
 	}
 
-	// Update progress display
+	return loader, nil
+}
+
+// updateLoadingProgress retrieves and displays current loading progress.
+func (g *EbitenGame) updateLoadingProgress(loader asyncLoader) error {
 	progress, err := loader.GetProgress()
 	if err != nil {
 		if g.logger != nil {
@@ -943,31 +967,30 @@ func (g *EbitenGame) handleLoadingState() error {
 		g.LoadingUI.SetProgress(progress)
 	}
 
-	// Check if loading is complete
-	if loader.IsDone() {
+	return nil
+}
+
+// handleLoadingComplete finalizes terrain loading and transitions to gameplay.
+func (g *EbitenGame) handleLoadingComplete() error {
+	if g.logger != nil {
+		g.logger.Info("terrain loading complete, transitioning to gameplay")
+	}
+
+	g.terrainLoader = nil
+
+	if err := g.StateManager.TransitionTo(AppStateGameplay); err != nil {
 		if g.logger != nil {
-			g.logger.Info("terrain loading complete, transitioning to gameplay")
+			g.logger.WithError(err).Error("failed to transition to gameplay after terrain load")
 		}
+		return err
+	}
 
-		// Clear loader reference
-		g.terrainLoader = nil
-
-		// Transition to gameplay
-		if err := g.StateManager.TransitionTo(AppStateGameplay); err != nil {
+	if g.terrainLoadComplete != nil {
+		if err := g.terrainLoadComplete(g.PlayerEntity); err != nil {
 			if g.logger != nil {
-				g.logger.WithError(err).Error("failed to transition to gameplay after terrain load")
+				g.logger.WithError(err).Error("terrain load complete callback failed")
 			}
 			return err
-		}
-
-		// Call completion callback to finalize world initialization
-		if g.terrainLoadComplete != nil {
-			if err := g.terrainLoadComplete(g.PlayerEntity); err != nil {
-				if g.logger != nil {
-					g.logger.WithError(err).Error("terrain load complete callback failed")
-				}
-				return err
-			}
 		}
 	}
 

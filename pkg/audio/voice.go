@@ -132,45 +132,46 @@ func (c *SimpleVoiceCodec) Decode(data []byte) ([]float64, error) {
 		return nil, fmt.Errorf("no data to decode")
 	}
 
-	// Decode 4-bit ADPCM
 	samples := make([]float64, len(data)*2)
 	var predictor float64
 
 	for i := 0; i < len(data); i++ {
-		// Extract two 4-bit values
-		val1 := int(data[i] & 0x0F)
-		val2 := int((data[i] >> 4) & 0x0F)
+		val1, val2 := extractFourBitValues(data[i])
+		predictor = decodeSample(val1, predictor, &samples, i*2)
 
-		// Sign extend from 4 bits
-		if val1 >= 8 {
-			val1 -= 16
-		}
-		if val2 >= 8 {
-			val2 -= 16
-		}
-
-		// Decode first sample
-		predictor += float64(val1) / 8.0
-		if predictor > 1.0 {
-			predictor = 1.0
-		} else if predictor < -1.0 {
-			predictor = -1.0
-		}
-		samples[i*2] = predictor
-
-		// Decode second sample if not past end
 		if i*2+1 < len(samples) {
-			predictor += float64(val2) / 8.0
-			if predictor > 1.0 {
-				predictor = 1.0
-			} else if predictor < -1.0 {
-				predictor = -1.0
-			}
-			samples[i*2+1] = predictor
+			predictor = decodeSample(val2, predictor, &samples, i*2+1)
 		}
 	}
 
 	return samples, nil
+}
+
+// extractFourBitValues extracts two 4-bit values from a byte and sign-extends them.
+func extractFourBitValues(b byte) (int, int) {
+	val1 := int(b & 0x0F)
+	val2 := int((b >> 4) & 0x0F)
+
+	if val1 >= 8 {
+		val1 -= 16
+	}
+	if val2 >= 8 {
+		val2 -= 16
+	}
+
+	return val1, val2
+}
+
+// decodeSample decodes a single ADPCM sample and clamps the predictor.
+func decodeSample(val int, predictor float64, samples *[]float64, index int) float64 {
+	predictor += float64(val) / 8.0
+	if predictor > 1.0 {
+		predictor = 1.0
+	} else if predictor < -1.0 {
+		predictor = -1.0
+	}
+	(*samples)[index] = predictor
+	return predictor
 }
 
 // GetBitrate returns the codec bitrate.

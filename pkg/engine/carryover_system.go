@@ -447,41 +447,58 @@ func (s *CarryOverSystem) transferCurrency(entity *Entity, carry *CarryOverCompo
 		return nil
 	}
 
-	// Get inventory for gold
+	inv := s.getInventoryComponent(entity)
+	if inv == nil {
+		return nil
+	}
+
+	transferred := make(map[string]int64)
+	s.transferGold(currencyMap, carry, inv, transferred)
+	s.transferOtherCurrencies(currencyMap, transferred)
+
+	return transferred
+}
+
+// getInventoryComponent retrieves and validates the inventory component.
+func (s *CarryOverSystem) getInventoryComponent(entity *Entity) *InventoryComponent {
 	invComp, ok := entity.GetComponent("inventory")
 	if !ok {
 		return nil
 	}
+
 	inv, ok := invComp.(*InventoryComponent)
 	if !ok {
 		return nil
 	}
 
-	transferred := make(map[string]int64)
+	return inv
+}
 
-	// Handle gold specifically
-	if goldAmount, exists := currencyMap["gold"]; exists && goldAmount > 0 {
-		finalGold := carry.CalculateFinalCurrencyAmount("gold", int64(inv.Gold))
-		if finalGold > goldAmount {
-			finalGold = goldAmount // Don't exceed requested amount
-		}
-		if finalGold > 0 {
-			transferred["gold"] = finalGold
-			// Note: Actual gold transfer happens in the callback
-		}
+// transferGold handles gold currency transfer with final amount calculation.
+func (s *CarryOverSystem) transferGold(currencyMap map[string]int64, carry *CarryOverComponent, inv *InventoryComponent, transferred map[string]int64) {
+	goldAmount, exists := currencyMap["gold"]
+	if !exists || goldAmount <= 0 {
+		return
 	}
 
-	// Other currencies would be handled via callbacks
+	finalGold := carry.CalculateFinalCurrencyAmount("gold", int64(inv.Gold))
+	if finalGold > goldAmount {
+		finalGold = goldAmount
+	}
+
+	if finalGold > 0 {
+		transferred["gold"] = finalGold
+	}
+}
+
+// transferOtherCurrencies processes non-gold currencies for transfer.
+func (s *CarryOverSystem) transferOtherCurrencies(currencyMap, transferred map[string]int64) {
 	for currType, amount := range currencyMap {
-		if currType == "gold" {
-			continue // Already handled
+		if currType == "gold" || amount <= 0 {
+			continue
 		}
-		if amount > 0 {
-			transferred[currType] = amount
-		}
+		transferred[currType] = amount
 	}
-
-	return transferred
 }
 
 // transferSkills handles skill carry-over.

@@ -39,19 +39,45 @@ func LoadPlayerSkillTree(player *Entity, seed int64, genreID string, depth int) 
 		"depth":     depth,
 	}).Debug("Entering LoadPlayerSkillTree")
 
-	// Generate skill trees using procgen system
+	trees, err := generateSkillTrees(player.ID, seed, genreID, depth)
+	if err != nil {
+		return err
+	}
+
+	if len(trees) == 0 {
+		skillTreeLog.WithFields(logrus.Fields{
+			"entity_id": player.ID,
+			"seed":      seed,
+			"genre_id":  genreID,
+		}).Warn("No skill trees generated, returning early")
+		return nil
+	}
+
+	mainTree := selectMainTree(trees, player.ID)
+	attachSkillTreeToPlayer(player, mainTree)
+
+	skillTreeLog.WithFields(logrus.Fields{
+		"entity_id": player.ID,
+		"tree_name": mainTree.Name,
+	}).Debug("Exiting LoadPlayerSkillTree successfully")
+
+	return nil
+}
+
+// generateSkillTrees generates skill trees using the procgen system.
+func generateSkillTrees(entityID uint64, seed int64, genreID string, depth int) ([]*skills.SkillTree, error) {
 	generator := skills.NewSkillTreeGenerator()
 	params := procgen.GenerationParams{
 		Difficulty: 0.5,
 		Depth:      depth,
 		GenreID:    genreID,
 		Custom: map[string]interface{}{
-			"count": 3, // Generate 3 skill trees (combat, utility, magic typically)
+			"count": 3,
 		},
 	}
 
 	skillTreeLog.WithFields(logrus.Fields{
-		"entity_id":  player.ID,
+		"entity_id":  entityID,
 		"seed":       seed,
 		"genre_id":   genreID,
 		"depth":      depth,
@@ -62,98 +88,98 @@ func LoadPlayerSkillTree(player *Entity, seed int64, genreID string, depth int) 
 	result, err := generator.Generate(seed, params)
 	if err != nil {
 		skillTreeLog.WithFields(logrus.Fields{
-			"entity_id": player.ID,
+			"entity_id": entityID,
 			"seed":      seed,
 			"genre_id":  genreID,
 			"depth":     depth,
 			"error":     err.Error(),
 		}).Error("Skill tree generation failed")
-		return err
+		return nil, err
 	}
 
 	skillTreeLog.WithFields(logrus.Fields{
-		"entity_id": player.ID,
+		"entity_id": entityID,
 		"seed":      seed,
 		"genre_id":  genreID,
 	}).Debug("Skill tree generation completed successfully")
 
-	trees := result.([]*skills.SkillTree)
-	if len(trees) == 0 {
-		skillTreeLog.WithFields(logrus.Fields{
-			"entity_id": player.ID,
-			"seed":      seed,
-			"genre_id":  genreID,
-		}).Warn("No skill trees generated, returning early")
-		return nil // No trees generated, not an error
-	}
+	return result.([]*skills.SkillTree), nil
+}
 
+// selectMainTree selects the primary skill tree from generated trees.
+func selectMainTree(trees []*skills.SkillTree, entityID uint64) *skills.SkillTree {
 	skillTreeLog.WithFields(logrus.Fields{
-		"entity_id":       player.ID,
+		"entity_id":       entityID,
 		"trees_generated": len(trees),
 		"tree_name":       trees[0].Name,
 	}).Debug("Selecting main skill tree")
 
-	// Use first tree as the main skill tree
-	// (In a full game, players could choose or have multiple trees)
-	mainTree := trees[0]
+	return trees[0]
+}
 
-	// Create skill tree component if doesn't exist
+// attachSkillTreeToPlayer creates or updates the skill tree component on the player.
+func attachSkillTreeToPlayer(player *Entity, mainTree *skills.SkillTree) {
 	if !player.HasComponent("skill_tree") {
-		skillTreeLog.WithFields(logrus.Fields{
-			"entity_id":      player.ID,
-			"component_type": "skill_tree",
-			"tree_name":      mainTree.Name,
-			"skill_count":    len(mainTree.Nodes),
-		}).Debug("Creating new skill tree component")
-
-		comp := NewSkillTreeComponent(mainTree)
-		player.AddComponent(comp)
-
-		skillTreeLog.WithFields(logrus.Fields{
-			"entity_id":      player.ID,
-			"component_type": "skill_tree",
-			"tree_name":      mainTree.Name,
-		}).Info("Skill tree component created and attached to player")
+		createNewSkillTreeComponent(player, mainTree)
 	} else {
-		skillTreeLog.WithFields(logrus.Fields{
-			"entity_id":      player.ID,
-			"component_type": "skill_tree",
-		}).Debug("Skill tree component already exists, updating")
-
-		// Update existing component with new tree
-		comp, ok := player.GetComponent("skill_tree")
-		if ok {
-			if treeComp, ok := comp.(*SkillTreeComponent); ok {
-				oldTreeName := treeComp.Tree.Name
-				treeComp.Tree = mainTree
-
-				skillTreeLog.WithFields(logrus.Fields{
-					"entity_id":       player.ID,
-					"component_type":  "skill_tree",
-					"old_tree_name":   oldTreeName,
-					"new_tree_name":   mainTree.Name,
-					"new_skill_count": len(mainTree.Nodes),
-				}).Info("Skill tree component updated with new tree")
-			} else {
-				skillTreeLog.WithFields(logrus.Fields{
-					"entity_id":      player.ID,
-					"component_type": "skill_tree",
-				}).Warn("Failed to cast component to SkillTreeComponent")
-			}
-		} else {
-			skillTreeLog.WithFields(logrus.Fields{
-				"entity_id":      player.ID,
-				"component_type": "skill_tree",
-			}).Warn("Failed to retrieve skill_tree component despite HasComponent check")
-		}
+		updateExistingSkillTreeComponent(player, mainTree)
 	}
+}
+
+// createNewSkillTreeComponent creates and attaches a new skill tree component.
+func createNewSkillTreeComponent(player *Entity, mainTree *skills.SkillTree) {
+	skillTreeLog.WithFields(logrus.Fields{
+		"entity_id":      player.ID,
+		"component_type": "skill_tree",
+		"tree_name":      mainTree.Name,
+		"skill_count":    len(mainTree.Nodes),
+	}).Debug("Creating new skill tree component")
+
+	comp := NewSkillTreeComponent(mainTree)
+	player.AddComponent(comp)
 
 	skillTreeLog.WithFields(logrus.Fields{
-		"entity_id": player.ID,
-		"tree_name": mainTree.Name,
-	}).Debug("Exiting LoadPlayerSkillTree successfully")
+		"entity_id":      player.ID,
+		"component_type": "skill_tree",
+		"tree_name":      mainTree.Name,
+	}).Info("Skill tree component created and attached to player")
+}
 
-	return nil
+// updateExistingSkillTreeComponent updates an existing skill tree component.
+func updateExistingSkillTreeComponent(player *Entity, mainTree *skills.SkillTree) {
+	skillTreeLog.WithFields(logrus.Fields{
+		"entity_id":      player.ID,
+		"component_type": "skill_tree",
+	}).Debug("Skill tree component already exists, updating")
+
+	comp, ok := player.GetComponent("skill_tree")
+	if !ok {
+		skillTreeLog.WithFields(logrus.Fields{
+			"entity_id":      player.ID,
+			"component_type": "skill_tree",
+		}).Warn("Failed to retrieve skill_tree component despite HasComponent check")
+		return
+	}
+
+	treeComp, ok := comp.(*SkillTreeComponent)
+	if !ok {
+		skillTreeLog.WithFields(logrus.Fields{
+			"entity_id":      player.ID,
+			"component_type": "skill_tree",
+		}).Warn("Failed to cast component to SkillTreeComponent")
+		return
+	}
+
+	oldTreeName := treeComp.Tree.Name
+	treeComp.Tree = mainTree
+
+	skillTreeLog.WithFields(logrus.Fields{
+		"entity_id":       player.ID,
+		"component_type":  "skill_tree",
+		"old_tree_name":   oldTreeName,
+		"new_tree_name":   mainTree.Name,
+		"new_skill_count": len(mainTree.Nodes),
+	}).Info("Skill tree component updated with new tree")
 }
 
 // GetPlayerSkillPoints calculates available skill points based on player level.

@@ -121,17 +121,56 @@ func (sm *ServerManager) Start() error {
 		return fmt.Errorf("server is already running")
 	}
 
-	// Determine bind address
+	bindAddr := sm.determineBindAddress()
+
+	if err := sm.initializeWorld(); err != nil {
+		return err
+	}
+
+	if err := sm.bindToPort(bindAddr); err != nil {
+		return err
+	}
+
+	sm.initializeNetworkComponents()
+	sm.startServerLoop()
+
+	sm.running = true
+
+	sm.logger.WithFields(logrus.Fields{
+		"address":     sm.address,
+		"max_players": sm.config.MaxPlayers,
+		"world_seed":  sm.config.WorldSeed,
+		"genre":       sm.config.GenreID,
+	}).Info("host-and-play server started")
+
+	return nil
+}
+
+// determineBindAddress determines the bind address based on configuration.
+func (sm *ServerManager) determineBindAddress() string {
 	bindAddr := "127.0.0.1"
 	if sm.config.BindLAN {
 		bindAddr = "0.0.0.0"
 		sm.logger.Warn("Server will bind to all interfaces (0.0.0.0) - accessible from LAN")
 	}
+	return bindAddr
+}
 
-	// Create ECS world with logger
+// initializeWorld creates the ECS world and adds gameplay systems.
+func (sm *ServerManager) initializeWorld() error {
 	sm.world = engine.NewWorldWithLogger(sm.logger)
 
-	// Add gameplay systems
+	sm.addGameplaySystems()
+
+	if err := sm.generateWorldTerrain(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// addGameplaySystems adds all necessary gameplay systems to the world.
+func (sm *ServerManager) addGameplaySystems() {
 	movementSystem := engine.NewMovementSystem(200.0)
 	collisionSystem := engine.NewCollisionSystem(64.0)
 	combatSystem := engine.NewCombatSystemWithLogger(sm.config.WorldSeed, sm.logger)
@@ -145,8 +184,10 @@ func (sm *ServerManager) Start() error {
 	sm.world.AddSystem(aiSystem)
 	sm.world.AddSystem(progressionSystem)
 	sm.world.AddSystem(inventorySystem)
+}
 
-	// Generate world terrain
+// generateWorldTerrain generates procedural terrain for the world.
+func (sm *ServerManager) generateWorldTerrain() error {
 	terrainGen := terrain.NewBSPGeneratorWithLogger(sm.logger)
 	params := procgen.GenerationParams{
 		Difficulty: sm.config.Difficulty,
@@ -162,7 +203,7 @@ func (sm *ServerManager) Start() error {
 	if err != nil {
 		return fmt.Errorf("failed to generate terrain: %w", err)
 	}
-	// Safe type assertion with error handling
+
 	terrain, ok := terrainResult.(*terrain.Terrain)
 	if !ok {
 		return fmt.Errorf("terrain generator returned unexpected type: %T", terrainResult)
@@ -175,78 +216,68 @@ func (sm *ServerManager) Start() error {
 		"roomCount": len(sm.generatedTerrain.Rooms),
 	}).Info("world terrain generated")
 
-	// Try to bind to a port (with fallback)
-	var port int
-	var serverConfig network.ServerConfig
+	return nil
+}
+
+// bindToPort attempts to bind the server to a port with fallback.
+func (sm *ServerManager) bindToPort(bindAddr string) error {
 	var lastErr error
+	maxPort := sm.config.Port + 9
 
-	maxPort := sm.config.Port + 9 // Try up to 10 ports
-	for port = sm.config.Port; port <= maxPort; port++ {
-		addr := fmt.Sprintf("%s:%d", bindAddr, port)
-		serverConfig = network.DefaultServerConfig()
-		serverConfig.Address = addr
-		serverConfig.MaxPlayers = sm.config.MaxPlayers
-		serverConfig.UpdateRate = sm.config.TickRate
-
-		// Try to create and start server
-		sm.server = network.NewServerWithLogger(serverConfig, sm.logger)
-		if err := sm.server.Start(); err == nil {
-			sm.logger.Info("Server bound to port", "address", addr, "port", port)
-			break
+	for port := sm.config.Port; port <= maxPort; port++ {
+		if sm.tryBindToPort(bindAddr, port, &lastErr) {
+			sm.port = port
+			sm.address = fmt.Sprintf("localhost:%d", port)
+			return nil
 		}
-		lastErr = err
-		sm.logger.Debug("Port in use, trying next", "port", port, "error", err)
-		sm.server = nil
+		sm.logger.Debug("Port in use, trying next", "port", port)
 	}
 
-	if sm.server == nil {
-		return fmt.Errorf("failed to bind to any port in range %d-%d: %w",
-			sm.config.Port, maxPort, lastErr)
+	return fmt.Errorf("failed to bind to any port in range %d-%d: %w",
+		sm.config.Port, maxPort, lastErr)
+}
+
+// tryBindToPort attempts to bind to a specific port.
+func (sm *ServerManager) tryBindToPort(bindAddr string, port int, lastErr *error) bool {
+	addr := fmt.Sprintf("%s:%d", bindAddr, port)
+	serverConfig := network.DefaultServerConfig()
+	serverConfig.Address = addr
+	serverConfig.MaxPlayers = sm.config.MaxPlayers
+	serverConfig.UpdateRate = sm.config.TickRate
+
+	sm.server = network.NewServerWithLogger(serverConfig, sm.logger)
+	if err := sm.server.Start(); err == nil {
+		sm.logger.Info("Server bound to port", "address", addr, "port", port)
+		return true
+	} else {
+		*lastErr = err
 	}
 
-	sm.port = port
-	sm.address = fmt.Sprintf("localhost:%d", port)
+	sm.server = nil
+	return false
+}
 
-	// Create snapshot manager and lag compensator
+// initializeNetworkComponents creates network-related components.
+func (sm *ServerManager) initializeNetworkComponents() {
 	sm.snapshotManager = network.NewSnapshotManager(100)
 	lagCompConfig := network.DefaultLagCompensationConfig()
 	sm.lagCompensator = network.NewLagCompensator(lagCompConfig)
 
-	// Create input handler and state broadcaster
 	loggerEntry := sm.logger.WithFields(logrus.Fields{"component": "server"})
 	sm.inputHandler = NewInputHandler(sm.world, loggerEntry)
 	sm.stateBroadcaster = NewStateBroadcaster(sm.world, sm.config.TickRate, loggerEntry)
+}
 
-	// Create context for shutdown coordination.
-	// The cancel function is stored and MUST be called via Stop() for proper cleanup.
-	// This pattern enables graceful shutdown with resource cleanup guarantees.
+// startServerLoop initializes and starts the server loop goroutine.
+func (sm *ServerManager) startServerLoop() {
 	ctx, cancel := context.WithCancel(context.Background())
 	sm.cancelFunc = cancel
-
-	// Create ready channel for server initialization synchronization.
-	// Buffered channel of size 1 prevents the serverLoop from blocking on send.
 	sm.readyChan = make(chan struct{}, 1)
 
-	// Start server goroutine
 	sm.wg.Add(1)
 	go sm.serverLoop(ctx)
 
-	// Wait for server goroutine to signal it's fully initialized.
-	// This provides proper synchronization instead of arbitrary sleep delays.
 	<-sm.readyChan
-
-	// Set running flag after server is fully initialized to avoid race condition
-	// where IsRunning() could return true before the server is actually ready.
-	sm.running = true
-
-	sm.logger.WithFields(logrus.Fields{
-		"address":     sm.address,
-		"max_players": sm.config.MaxPlayers,
-		"world_seed":  sm.config.WorldSeed,
-		"genre":       sm.config.GenreID,
-	}).Info("host-and-play server started")
-
-	return nil
 }
 
 // serverLoop runs the server in a goroutine until context is cancelled.

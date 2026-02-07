@@ -112,47 +112,76 @@ func (m *MemoryGame) Render(screen engine.ImageProvider) error {
 		return fmt.Errorf("memory game render: game not initialized")
 	}
 
-	status := "Playing"
+	status := m.determineGameStatus()
+	matchedCount := m.countMatched()
+	elements := m.buildRenderElements(w, h, matchedCount)
+
+	m.LastRender = &RenderOutput{
+		Title:    "Memory Game",
+		Status:   status,
+		Width:    w,
+		Height:   h,
+		Elements: elements,
+	}
+	return nil
+}
+
+// determineGameStatus returns the current status string for the game.
+func (m *MemoryGame) determineGameStatus() string {
 	if m.completed {
 		if m.playerWon {
-			status = "Won"
-		} else {
-			status = "Lost"
+			return "Won"
 		}
+		return "Lost"
 	}
+	return "Playing"
+}
 
-	matchedCount := 0
+// countMatched returns the number of matched pairs.
+func (m *MemoryGame) countMatched() int {
+	count := 0
 	for _, v := range m.matched {
 		if v {
-			matchedCount++
+			count++
 		}
 	}
+	return count
+}
 
+// buildRenderElements creates all visual elements for the memory game.
+func (m *MemoryGame) buildRenderElements(w, h, matchedCount int) []RenderElement {
 	elements := make([]RenderElement, 0, 3+m.numPairs)
+	elements = append(elements, m.createHeaderElement(w, matchedCount))
+	elements = append(elements, m.createCardElements(w)...)
+	elements = append(elements, m.createProgressBar(w, h, matchedCount))
+	return elements
+}
 
-	// Attempt counter
+// createHeaderElement creates the header text element showing game status.
+func (m *MemoryGame) createHeaderElement(w, matchedCount int) RenderElement {
 	mode := "Pairs"
 	if m.sequenceMode {
 		mode = "Sequence"
 	}
-	elements = append(elements, RenderElement{
+	return RenderElement{
 		Type:  "text",
 		X:     w / 2,
 		Y:     10,
 		Label: fmt.Sprintf("Mode: %s  Attempts: %d / %d  Matched: %d / %d", mode, m.attempts, m.maxAttempts, matchedCount, m.numPairs),
-	})
-
-	// Card pair display
-	cols := 4
-	if m.numPairs > 8 {
-		cols = 6
 	}
+}
+
+// createCardElements creates render elements for all card pairs.
+func (m *MemoryGame) createCardElements(w int) []RenderElement {
+	cols := m.calculateColumnCount()
 	cardW := (w - 40) / cols
 	cardH := 60
+
+	cards := make([]RenderElement, 0, m.numPairs)
 	for i := 0; i < m.numPairs; i++ {
 		col := i % cols
 		row := i / cols
-		elements = append(elements, RenderElement{
+		cards = append(cards, RenderElement{
 			Type:        "card",
 			X:           20 + col*cardW,
 			Y:           50 + row*(cardH+10),
@@ -163,10 +192,21 @@ func (m *MemoryGame) Render(screen engine.ImageProvider) error {
 			Highlighted: m.matched[i],
 		})
 	}
+	return cards
+}
 
-	// Progress bar
+// calculateColumnCount determines the number of columns for card layout.
+func (m *MemoryGame) calculateColumnCount() int {
+	if m.numPairs > 8 {
+		return 6
+	}
+	return 4
+}
+
+// createProgressBar creates the progress bar element.
+func (m *MemoryGame) createProgressBar(w, h, matchedCount int) RenderElement {
 	progress := float64(matchedCount) / float64(m.numPairs)
-	elements = append(elements, RenderElement{
+	return RenderElement{
 		Type:  "progress",
 		X:     20,
 		Y:     h - 40,
@@ -174,16 +214,7 @@ func (m *MemoryGame) Render(screen engine.ImageProvider) error {
 		H:     20,
 		Label: "Match Progress",
 		Value: progress,
-	})
-
-	m.LastRender = &RenderOutput{
-		Title:    "Memory Game",
-		Status:   status,
-		Width:    w,
-		Height:   h,
-		Elements: elements,
 	}
-	return nil
 }
 
 // IsComplete returns true when the game has finished.

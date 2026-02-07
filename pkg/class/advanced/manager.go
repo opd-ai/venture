@@ -272,43 +272,75 @@ func (m *Manager) CalculateTotalStats(playerID string) (StatBonuses, error) {
 	}
 
 	total := StatBonuses{}
-
-	if player.PrimaryClass != "" {
-		primaryDef, err := GetClassDefinition(player.PrimaryClass)
-		if err != nil {
-			return StatBonuses{}, fmt.Errorf("invalid primary class %s: %w", player.PrimaryClass, err)
-		}
-		total = total.Add(primaryDef.BaseStats)
-	}
-
-	if player.SecondaryClass != "" {
-		secondaryDef, err := GetClassDefinition(player.SecondaryClass)
-		if err != nil {
-			return StatBonuses{}, fmt.Errorf("invalid secondary class %s: %w", player.SecondaryClass, err)
-		}
-		total = total.Add(secondaryDef.BaseStats.Scale(0.5))
-	}
-
-	if player.PrestigeClass != "" {
-		prestigeDef, err := GetPrestigeClassDefinition(player.PrestigeClass)
-		if err != nil {
-			return StatBonuses{}, fmt.Errorf("invalid prestige class %s: %w", player.PrestigeClass, err)
-		}
-		total = total.Add(prestigeDef.BaseStats)
-	}
-
-	synergy := m.getSynergyBonus(player.PrimaryClass, player.SecondaryClass)
-	if synergy != nil {
-		total = total.Add(synergy.Bonuses)
-	}
-
-	tree := m.talentTrees[player.PrimaryClass]
-	if tree != nil {
-		talentBonuses := m.calculateTalentBonuses(player, tree)
-		total = total.Add(talentBonuses)
-	}
+	total = m.addPrimaryClassStats(total, player)
+	total = m.addSecondaryClassStats(total, player)
+	total = m.addPrestigeClassStats(total, player)
+	total = m.addSynergyBonus(total, player)
+	total = m.addTalentBonuses(total, player)
 
 	return total, nil
+}
+
+// addPrimaryClassStats adds primary class base stats to the total.
+func (m *Manager) addPrimaryClassStats(total StatBonuses, player *AdvancedClassComponent) StatBonuses {
+	if player.PrimaryClass == "" {
+		return total
+	}
+
+	primaryDef, err := GetClassDefinition(player.PrimaryClass)
+	if err != nil {
+		return total
+	}
+
+	return total.Add(primaryDef.BaseStats)
+}
+
+// addSecondaryClassStats adds secondary class base stats (at 50%) to the total.
+func (m *Manager) addSecondaryClassStats(total StatBonuses, player *AdvancedClassComponent) StatBonuses {
+	if player.SecondaryClass == "" {
+		return total
+	}
+
+	secondaryDef, err := GetClassDefinition(player.SecondaryClass)
+	if err != nil {
+		return total
+	}
+
+	return total.Add(secondaryDef.BaseStats.Scale(0.5))
+}
+
+// addPrestigeClassStats adds prestige class base stats to the total.
+func (m *Manager) addPrestigeClassStats(total StatBonuses, player *AdvancedClassComponent) StatBonuses {
+	if player.PrestigeClass == "" {
+		return total
+	}
+
+	prestigeDef, err := GetPrestigeClassDefinition(player.PrestigeClass)
+	if err != nil {
+		return total
+	}
+
+	return total.Add(prestigeDef.BaseStats)
+}
+
+// addSynergyBonus adds class synergy bonuses to the total.
+func (m *Manager) addSynergyBonus(total StatBonuses, player *AdvancedClassComponent) StatBonuses {
+	synergy := m.getSynergyBonus(player.PrimaryClass, player.SecondaryClass)
+	if synergy != nil {
+		return total.Add(synergy.Bonuses)
+	}
+	return total
+}
+
+// addTalentBonuses adds talent tree bonuses to the total.
+func (m *Manager) addTalentBonuses(total StatBonuses, player *AdvancedClassComponent) StatBonuses {
+	tree := m.talentTrees[player.PrimaryClass]
+	if tree == nil {
+		return total
+	}
+
+	talentBonuses := m.calculateTalentBonuses(player, tree)
+	return total.Add(talentBonuses)
 }
 
 // calculateTalentBonuses sums all bonuses from allocated talents

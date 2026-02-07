@@ -635,59 +635,88 @@ func NewMinimapWidget(x, y, width, height float64) *MinimapWidget {
 
 // Draw renders the minimap.
 func (m *MinimapWidget) Draw(screen *ebiten.Image) {
-	// Draw background
-	vector.DrawFilledRect(screen, float32(m.X), float32(m.Y), float32(m.Width), float32(m.Height), m.BackgroundColor, true)
+	m.drawBackground(screen)
+	m.drawBorder(screen)
+	m.drawMinimapContent(screen)
+}
 
-	// Draw border
+// drawBackground renders the minimap background.
+func (m *MinimapWidget) drawBackground(screen *ebiten.Image) {
+	vector.DrawFilledRect(screen, float32(m.X), float32(m.Y), float32(m.Width), float32(m.Height), m.BackgroundColor, true)
+}
+
+// drawBorder renders the minimap border.
+func (m *MinimapWidget) drawBorder(screen *ebiten.Image) {
 	borderColor := color.RGBA{100, 100, 100, 255}
 	vector.StrokeRect(screen, float32(m.X), float32(m.Y), float32(m.Width), float32(m.Height), 2, borderColor, true)
+}
 
-	// Draw minimap content if terrain data is available
-	if m.TileData != nil && m.TerrainWidth > 0 && m.TerrainHeight > 0 {
-		// Calculate tile scaling to fit terrain in minimap
-		scaleX := m.Width / float64(m.TerrainWidth)
-		scaleY := m.Height / float64(m.TerrainHeight)
-		tileScale := scaleX
-		if scaleY < scaleX {
-			tileScale = scaleY
-		}
+// drawMinimapContent renders terrain tiles and player icon if data is available.
+func (m *MinimapWidget) drawMinimapContent(screen *ebiten.Image) {
+	if m.TileData == nil || m.TerrainWidth <= 0 || m.TerrainHeight <= 0 {
+		return
+	}
 
-		// Draw terrain tiles
-		for y := 0; y < m.TerrainHeight && y < len(m.TileData); y++ {
-			for x := 0; x < m.TerrainWidth && x < len(m.TileData[y]); x++ {
-				// Check fog of war
-				if m.FogOfWar != nil && y < len(m.FogOfWar) && x < len(m.FogOfWar[y]) {
-					if !m.FogOfWar[y][x] {
-						continue // Skip unexplored tiles
-					}
-				}
+	tileScale := m.calculateTileScale()
+	m.drawTerrainTiles(screen, tileScale)
+	m.drawPlayerIcon(screen, tileScale)
+}
 
-				// Get tile color based on type
-				tileType := m.TileData[y][x]
-				tileColor := m.getTileColorForType(tileType)
+// calculateTileScale computes the scale factor to fit terrain in minimap.
+func (m *MinimapWidget) calculateTileScale() float64 {
+	scaleX := m.Width / float64(m.TerrainWidth)
+	scaleY := m.Height / float64(m.TerrainHeight)
+	if scaleY < scaleX {
+		return scaleY
+	}
+	return scaleX
+}
 
-				// Calculate pixel position
-				pixelX := float32(m.X) + float32(float64(x)*tileScale)
-				pixelY := float32(m.Y) + float32(float64(y)*tileScale)
-				pixelSize := float32(tileScale)
-
-				if pixelSize < 1 {
-					pixelSize = 1
-				}
-
-				vector.DrawFilledRect(screen, pixelX, pixelY, pixelSize, pixelSize, tileColor, true)
+// drawTerrainTiles renders all visible terrain tiles on the minimap.
+func (m *MinimapWidget) drawTerrainTiles(screen *ebiten.Image, tileScale float64) {
+	for y := 0; y < m.TerrainHeight && y < len(m.TileData); y++ {
+		for x := 0; x < m.TerrainWidth && x < len(m.TileData[y]); x++ {
+			if !m.isTileVisible(x, y) {
+				continue
 			}
-		}
-
-		// Draw player icon
-		if m.PlayerX >= 0 && m.PlayerX < m.TerrainWidth && m.PlayerY >= 0 && m.PlayerY < m.TerrainHeight {
-			pixelX := float32(m.X) + float32(float64(m.PlayerX)*tileScale)
-			pixelY := float32(m.Y) + float32(float64(m.PlayerY)*tileScale)
-
-			// Draw player as bright circle
-			vector.DrawFilledCircle(screen, pixelX, pixelY, 3, color.RGBA{100, 200, 255, 255}, true)
+			m.drawSingleTile(screen, x, y, tileScale)
 		}
 	}
+}
+
+// isTileVisible checks if a tile should be drawn based on fog of war.
+func (m *MinimapWidget) isTileVisible(x, y int) bool {
+	if m.FogOfWar == nil || y >= len(m.FogOfWar) || x >= len(m.FogOfWar[y]) {
+		return true
+	}
+	return m.FogOfWar[y][x]
+}
+
+// drawSingleTile renders a single terrain tile at the specified position.
+func (m *MinimapWidget) drawSingleTile(screen *ebiten.Image, x, y int, tileScale float64) {
+	tileType := m.TileData[y][x]
+	tileColor := m.getTileColorForType(tileType)
+
+	pixelX := float32(m.X) + float32(float64(x)*tileScale)
+	pixelY := float32(m.Y) + float32(float64(y)*tileScale)
+	pixelSize := float32(tileScale)
+
+	if pixelSize < 1 {
+		pixelSize = 1
+	}
+
+	vector.DrawFilledRect(screen, pixelX, pixelY, pixelSize, pixelSize, tileColor, true)
+}
+
+// drawPlayerIcon renders the player position as a bright circle.
+func (m *MinimapWidget) drawPlayerIcon(screen *ebiten.Image, tileScale float64) {
+	if m.PlayerX < 0 || m.PlayerX >= m.TerrainWidth || m.PlayerY < 0 || m.PlayerY >= m.TerrainHeight {
+		return
+	}
+
+	pixelX := float32(m.X) + float32(float64(m.PlayerX)*tileScale)
+	pixelY := float32(m.Y) + float32(float64(m.PlayerY)*tileScale)
+	vector.DrawFilledCircle(screen, pixelX, pixelY, 3, color.RGBA{100, 200, 255, 255}, true)
 }
 
 // getTileColorForType returns a color for a given tile type.

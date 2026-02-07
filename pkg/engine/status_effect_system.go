@@ -202,66 +202,107 @@ func (s *StatusEffectSystem) updateShieldComponent(entity *Entity, deltaTime flo
 
 // applyPeriodicEffect handles tick-based status effects.
 func (s *StatusEffectSystem) applyPeriodicEffect(entity *Entity, effect *StatusEffectComponent) {
+	s.logPeriodicEffect(entity.ID, effect)
+
+	health := s.getHealthComponent(entity, effect.EffectType)
+	if health == nil {
+		return
+	}
+
+	s.applyEffectToHealth(entity.ID, effect, health)
+}
+
+// logPeriodicEffect logs the periodic effect application.
+func (s *StatusEffectSystem) logPeriodicEffect(entityID uint64, effect *StatusEffectComponent) {
 	if s.logger != nil {
 		s.logger.WithFields(logrus.Fields{
-			"entity_id":   entity.ID,
+			"entity_id":   entityID,
 			"effect_type": effect.EffectType,
 			"magnitude":   effect.Magnitude,
 		}).Debug("Applying periodic effect to entity")
 	}
+}
 
+// getHealthComponent retrieves and validates the health component.
+func (s *StatusEffectSystem) getHealthComponent(entity *Entity, effectType string) *HealthComponent {
 	healthComp, hasHealth := entity.GetComponent("health")
 	if !hasHealth {
-		if s.logger != nil {
-			s.logger.WithFields(logrus.Fields{
-				"entity_id":   entity.ID,
-				"effect_type": effect.EffectType,
-			}).Warn("Entity has no health component for periodic effect")
-		}
-		return
+		s.logMissingHealth(entity.ID, effectType)
+		return nil
 	}
+
 	health, ok := healthComp.(*HealthComponent)
 	if !ok {
-		if s.logger != nil {
-			s.logger.WithFields(logrus.Fields{
-				"entity_id":      entity.ID,
-				"component_type": "health",
-			}).Warn("Failed to type assert health component")
-		}
-		return
+		s.logHealthTypeError(entity.ID)
+		return nil
 	}
 
+	return health
+}
+
+// logMissingHealth logs when an entity lacks a health component.
+func (s *StatusEffectSystem) logMissingHealth(entityID uint64, effectType string) {
+	if s.logger != nil {
+		s.logger.WithFields(logrus.Fields{
+			"entity_id":   entityID,
+			"effect_type": effectType,
+		}).Warn("Entity has no health component for periodic effect")
+	}
+}
+
+// logHealthTypeError logs when health component type assertion fails.
+func (s *StatusEffectSystem) logHealthTypeError(entityID uint64) {
+	if s.logger != nil {
+		s.logger.WithFields(logrus.Fields{
+			"entity_id":      entityID,
+			"component_type": "health",
+		}).Warn("Failed to type assert health component")
+	}
+}
+
+// applyEffectToHealth applies the specific effect type to health.
+func (s *StatusEffectSystem) applyEffectToHealth(entityID uint64, effect *StatusEffectComponent, health *HealthComponent) {
 	switch effect.EffectType {
 	case "burning":
-		// Fire DoT (damage over time)
-		if s.logger != nil {
-			s.logger.WithFields(logrus.Fields{
-				"entity_id": entity.ID,
-				"damage":    effect.Magnitude,
-			}).Debug("Applying burning damage")
-		}
-		health.TakeDamage(effect.Magnitude)
-
+		s.applyBurning(entityID, effect.Magnitude, health)
 	case "poisoned":
-		// Poison DoT (ignores armor)
-		if s.logger != nil {
-			s.logger.WithFields(logrus.Fields{
-				"entity_id": entity.ID,
-				"damage":    effect.Magnitude,
-			}).Debug("Applying poison damage")
-		}
-		health.TakeDamage(effect.Magnitude)
-
+		s.applyPoison(entityID, effect.Magnitude, health)
 	case "regeneration":
-		// Healing over time
-		if s.logger != nil {
-			s.logger.WithFields(logrus.Fields{
-				"entity_id": entity.ID,
-				"healing":   effect.Magnitude,
-			}).Debug("Applying regeneration healing")
-		}
-		health.Heal(effect.Magnitude)
+		s.applyRegeneration(entityID, effect.Magnitude, health)
 	}
+}
+
+// applyBurning applies fire damage over time.
+func (s *StatusEffectSystem) applyBurning(entityID uint64, magnitude float64, health *HealthComponent) {
+	if s.logger != nil {
+		s.logger.WithFields(logrus.Fields{
+			"entity_id": entityID,
+			"damage":    magnitude,
+		}).Debug("Applying burning damage")
+	}
+	health.TakeDamage(magnitude)
+}
+
+// applyPoison applies poison damage that ignores armor.
+func (s *StatusEffectSystem) applyPoison(entityID uint64, magnitude float64, health *HealthComponent) {
+	if s.logger != nil {
+		s.logger.WithFields(logrus.Fields{
+			"entity_id": entityID,
+			"damage":    magnitude,
+		}).Debug("Applying poison damage")
+	}
+	health.TakeDamage(magnitude)
+}
+
+// applyRegeneration applies healing over time.
+func (s *StatusEffectSystem) applyRegeneration(entityID uint64, magnitude float64, health *HealthComponent) {
+	if s.logger != nil {
+		s.logger.WithFields(logrus.Fields{
+			"entity_id": entityID,
+			"healing":   magnitude,
+		}).Debug("Applying regeneration healing")
+	}
+	health.Heal(magnitude)
 }
 
 // removeEffectModifiers removes stat modifications when effect expires.

@@ -151,64 +151,103 @@ func (ui *GuildUI) Draw(screen *ebiten.Image) {
 		return
 	}
 
-	// Get player entity
-	player := ui.getPlayerEntity()
-	if player == nil {
+	guildInfo, gc, err := ui.validateAndGetGuildData()
+	if err != nil {
+		ui.handleDrawError(screen, err)
 		return
 	}
 
-	// Get guild component
+	ui.drawGuildInterface(screen, guildInfo, gc)
+}
+
+// validateAndGetGuildData validates player and guild state.
+func (ui *GuildUI) validateAndGetGuildData() (*guild.Guild, *GuildComponent, error) {
+	player := ui.getPlayerEntity()
+	if player == nil {
+		return nil, nil, fmt.Errorf("no player entity")
+	}
+
 	guildComp, ok := player.GetComponent("guild")
 	if !ok || guildComp == nil {
-		ui.drawNoGuildScreen(screen)
-		return
+		return nil, nil, fmt.Errorf("no guild component")
 	}
 
 	gc := guildComp.(*GuildComponent)
 	if gc.GuildID == "" {
+		return nil, nil, fmt.Errorf("no guild assigned")
+	}
+
+	if ui.guildSystem == nil {
+		return nil, nil, fmt.Errorf("guild system not initialized")
+	}
+
+	guildInfo, err := ui.guildSystem.GetGuildInfo(gc.GuildID)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return guildInfo, gc, nil
+}
+
+// handleDrawError handles errors during drawing by showing appropriate screens.
+func (ui *GuildUI) handleDrawError(screen *ebiten.Image, err error) {
+	if err.Error() == "no guild component" || err.Error() == "no guild assigned" {
 		ui.drawNoGuildScreen(screen)
 		return
 	}
+	ui.drawErrorScreen(screen, err)
+}
 
-	// Check if guild system is available
-	if ui.guildSystem == nil {
-		ui.drawErrorScreen(screen, fmt.Errorf("guild system not initialized"))
-		return
-	}
+// drawGuildInterface draws the complete guild interface.
+func (ui *GuildUI) drawGuildInterface(screen *ebiten.Image, guildInfo *guild.Guild, gc *GuildComponent) {
+	ui.drawBackground(screen)
+	ui.drawHeader(screen, guildInfo.Name)
+	ui.drawCloseButton(screen)
+	ui.drawTabs(screen)
+	ui.drawTabContent(screen, guildInfo, gc)
+	ui.drawInstructions(screen)
+}
 
-	// Get guild info
-	guildInfo, err := ui.guildSystem.GetGuildInfo(gc.GuildID)
-	if err != nil {
-		ui.drawErrorScreen(screen, err)
-		return
-	}
-
-	// Draw background
+// drawBackground draws the UI background.
+func (ui *GuildUI) drawBackground(screen *ebiten.Image) {
 	bgColor := color.RGBA{20, 20, 30, 240}
 	ebitenutil.DrawRect(screen, 20, 20, float64(ui.width-40), float64(ui.height-40), bgColor)
+}
 
-	// Draw title
-	ebitenutil.DebugPrintAt(screen, fmt.Sprintf("Guild: %s", guildInfo.Name), 40, 40)
+// drawHeader draws the guild name header.
+func (ui *GuildUI) drawHeader(screen *ebiten.Image, guildName string) {
+	ebitenutil.DebugPrintAt(screen, fmt.Sprintf("Guild: %s", guildName), 40, 40)
+}
 
-	// Draw close button
+// drawCloseButton draws the close button.
+func (ui *GuildUI) drawCloseButton(screen *ebiten.Image) {
 	closeX := ui.width - 80
 	ebitenutil.DrawRect(screen, float64(closeX), 50, 60, 40, color.RGBA{100, 50, 50, 255})
 	ebitenutil.DebugPrintAt(screen, "X", closeX+20, 60)
+}
 
-	// Draw tabs
+// drawTabs draws the tab buttons.
+func (ui *GuildUI) drawTabs(screen *ebiten.Image) {
 	tabs := []string{"Info", "Members", "Treasury"}
 	for i, tab := range tabs {
 		tabX := 50 + i*160
 		tabY := 100
-		tabColor := color.RGBA{60, 60, 80, 255}
-		if i == ui.selectedTab {
-			tabColor = color.RGBA{100, 100, 140, 255}
-		}
+		tabColor := ui.getTabColor(i)
 		ebitenutil.DrawRect(screen, float64(tabX), float64(tabY), 150, 40, tabColor)
 		ebitenutil.DebugPrintAt(screen, tab, tabX+40, tabY+15)
 	}
+}
 
-	// Draw tab content
+// getTabColor returns the color for a tab based on selection state.
+func (ui *GuildUI) getTabColor(tabIndex int) color.RGBA {
+	if tabIndex == ui.selectedTab {
+		return color.RGBA{100, 100, 140, 255}
+	}
+	return color.RGBA{60, 60, 80, 255}
+}
+
+// drawTabContent draws the content for the selected tab.
+func (ui *GuildUI) drawTabContent(screen *ebiten.Image, guildInfo *guild.Guild, gc *GuildComponent) {
 	contentY := 160
 	switch ui.selectedTab {
 	case 0:
@@ -218,8 +257,10 @@ func (ui *GuildUI) Draw(screen *ebiten.Image) {
 	case 2:
 		ui.drawTreasuryTab(screen, guildInfo, gc, contentY)
 	}
+}
 
-	// Draw instructions
+// drawInstructions draws the keyboard instructions.
+func (ui *GuildUI) drawInstructions(screen *ebiten.Image) {
 	instructionsY := ui.height - 60
 	ebitenutil.DebugPrintAt(screen, "Keys: 1-3=Tabs, ESC=Close", 40, instructionsY)
 }

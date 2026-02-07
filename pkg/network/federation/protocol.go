@@ -139,54 +139,99 @@ func (f *FederationProtocol) Connect(peerAddress string) error {
 
 // TransferPlayer initiates player transfer to another server
 func (f *FederationProtocol) TransferPlayer(playerID uint64, world *engine.World, targetServer string, authMgr *AuthManager, transferMgr *TransferManager) error {
-	// Create session token for authentication
+	token, transfer, err := f.preparePlayerTransfer(playerID, world, targetServer, authMgr, transferMgr)
+	if err != nil {
+		return err
+	}
+
+	conn, exists := f.getTargetConnection(targetServer)
+	if !exists {
+		return nil
+	}
+
+	if err := f.executeTransferRequest(playerID, token, transfer, conn, transferMgr); err != nil {
+		return err
+	}
+
+	return transferMgr.ConfirmTransfer(playerID)
+}
+
+// preparePlayerTransfer creates auth token and prepares transfer state.
+func (f *FederationProtocol) preparePlayerTransfer(playerID uint64, world *engine.World, targetServer string, authMgr *AuthManager, transferMgr *TransferManager) (string, *Transfer, error) {
 	token, err := authMgr.CreateSessionToken(playerID, f.serverID)
 	if err != nil {
-		return fmt.Errorf("failed to create session token: %w", err)
+		return "", nil, fmt.Errorf("failed to create session token: %w", err)
 	}
 
-	// Prepare transfer
 	transfer, err := transferMgr.PrepareTransfer(playerID, world, targetServer)
 	if err != nil {
-		return fmt.Errorf("failed to prepare transfer: %w", err)
+		return "", nil, fmt.Errorf("failed to prepare transfer: %w", err)
 	}
 
-	// Validate state
+	if err := f.validateAndBeginTransfer(playerID, transfer, transferMgr); err != nil {
+		return "", nil, err
+	}
+
+	return token, transfer, nil
+}
+
+// validateAndBeginTransfer validates player state and begins the transfer.
+func (f *FederationProtocol) validateAndBeginTransfer(playerID uint64, transfer *Transfer, transferMgr *TransferManager) error {
 	if err := transferMgr.ValidatePlayerState(transfer.PlayerState); err != nil {
 		transferMgr.RollbackTransfer(playerID, "validation failed")
 		return fmt.Errorf("invalid player state: %w", err)
 	}
 
-	// Begin transfer phase
 	if err := transferMgr.BeginTransfer(playerID, f.serverID); err != nil {
 		transferMgr.RollbackTransfer(playerID, "begin transfer failed")
 		return fmt.Errorf("failed to begin transfer: %w", err)
 	}
 
+	return nil
+}
+
+// getTargetConnection retrieves the connection to the target server.
+func (f *FederationProtocol) getTargetConnection(targetServer string) (net.Conn, bool) {
 	f.mu.RLock()
 	conn, exists := f.connections[targetServer]
 	f.mu.RUnlock()
+	return conn, exists
+}
 
-	if !exists {
-		// In test/offline mode, allow transfer to be prepared without active connection
-		// The transfer will remain in Transfer phase until connection is established
-		return nil
+// executeTransferRequest sends the transfer request and handles response.
+func (f *FederationProtocol) executeTransferRequest(playerID uint64, token string, transfer *Transfer, conn net.Conn, transferMgr *TransferManager) error {
+	transferReq := f.buildTransferRequest(playerID, token, transfer)
+
+	if err := f.sendTransferRequest(transferReq, conn, playerID, transferMgr); err != nil {
+		return err
 	}
 
-	transferReq := map[string]interface{}{
+	return f.receiveTransferResponse(conn, playerID, transferMgr)
+}
+
+// buildTransferRequest creates the transfer request payload.
+func (f *FederationProtocol) buildTransferRequest(playerID uint64, token string, transfer *Transfer) map[string]interface{} {
+	return map[string]interface{}{
 		"type":         "transfer_request",
 		"player_id":    playerID,
 		"player_state": transfer.PlayerState,
 		"token":        token,
 		"timestamp":    time.Now().Unix(),
 	}
+}
 
+// sendTransferRequest encodes and sends the transfer request.
+func (f *FederationProtocol) sendTransferRequest(transferReq map[string]interface{}, conn net.Conn, playerID uint64, transferMgr *TransferManager) error {
 	encoder := json.NewEncoder(conn)
 	if err := encoder.Encode(transferReq); err != nil {
 		transferMgr.RollbackTransfer(playerID, "failed to send transfer request")
 		return fmt.Errorf("failed to send transfer request: %w", err)
 	}
+	return nil
+}
 
+// receiveTransferResponse decodes and validates the transfer response.
+func (f *FederationProtocol) receiveTransferResponse(conn net.Conn, playerID uint64, transferMgr *TransferManager) error {
 	decoder := json.NewDecoder(conn)
 	var response map[string]interface{}
 	if err := decoder.Decode(&response); err != nil {
@@ -195,15 +240,20 @@ func (f *FederationProtocol) TransferPlayer(playerID uint64, world *engine.World
 	}
 
 	if status, ok := response["status"].(string); !ok || status != "accepted" {
-		reason := "unknown"
-		if r, ok := response["reason"].(string); ok {
-			reason = r
-		}
+		reason := f.extractRejectionReason(response)
 		transferMgr.RollbackTransfer(playerID, reason)
 		return fmt.Errorf("transfer rejected: %s", reason)
 	}
 
-	return transferMgr.ConfirmTransfer(playerID)
+	return nil
+}
+
+// extractRejectionReason extracts the rejection reason from response.
+func (f *FederationProtocol) extractRejectionReason(response map[string]interface{}) string {
+	if r, ok := response["reason"].(string); ok {
+		return r
+	}
+	return "unknown"
 }
 
 // PortalSystem manages cross-server portals

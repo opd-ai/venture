@@ -27,6 +27,8 @@ type HackingGame struct {
 	hints       []string
 	completed   bool
 	playerWon   bool
+	// LastRender contains the most recent render output for external consumption.
+	LastRender *RenderOutput
 }
 
 // NewHackingGame creates a new hacking game instance.
@@ -136,8 +138,73 @@ func (h *HackingGame) generateHint(guess string) string {
 }
 
 // Render draws the hacking game to the screen.
+// Computes visual state including terminal display with guesses and hints.
 func (h *HackingGame) Render(screen engine.ImageProvider) error {
-	// Minimal implementation - actual rendering in Phase 27.3
+	w, h2, err := validateScreen(screen)
+	if err != nil {
+		return fmt.Errorf("hacking game render: %w", err)
+	}
+	if h.rng == nil {
+		return fmt.Errorf("hacking game render: game not initialized")
+	}
+
+	status := "Playing"
+	if h.completed {
+		if h.playerWon {
+			status = "Won"
+		} else {
+			status = "Lost"
+		}
+	}
+
+	elements := make([]RenderElement, 0, 3+len(h.guesses))
+
+	// Header
+	elements = append(elements, RenderElement{
+		Type:  "text",
+		X:     w / 2,
+		Y:     10,
+		Label: fmt.Sprintf("CODE LENGTH: %d  ATTEMPTS: %d / %d", h.codeLength, h.attempts, h.maxAttempts),
+	})
+
+	// Terminal lines (guesses + hints)
+	lineH := 20
+	startY := 50
+	for i := 0; i < len(h.guesses); i++ {
+		hint := ""
+		if i < len(h.hints) {
+			hint = h.hints[i]
+		}
+		elements = append(elements, RenderElement{
+			Type:  "terminal",
+			X:     20,
+			Y:     startY + i*lineH,
+			W:     w - 40,
+			H:     lineH,
+			Label: fmt.Sprintf("> %s  [%s]", h.guesses[i], hint),
+			Value: float64(i + 1),
+		})
+	}
+
+	// Attempt progress
+	progress := float64(h.attempts) / float64(h.maxAttempts)
+	elements = append(elements, RenderElement{
+		Type:  "progress",
+		X:     20,
+		Y:     h2 - 40,
+		W:     w - 40,
+		H:     20,
+		Label: "Attempts Used",
+		Value: progress,
+	})
+
+	h.LastRender = &RenderOutput{
+		Title:    "Hacking",
+		Status:   status,
+		Width:    w,
+		Height:   h2,
+		Elements: elements,
+	}
 	return nil
 }
 

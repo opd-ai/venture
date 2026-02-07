@@ -27,6 +27,8 @@ type LockPickingGame struct {
 	timeElapsed   float64
 	completed     bool
 	playerWon     bool
+	// LastRender contains the most recent render output for external consumption.
+	LastRender *RenderOutput
 }
 
 // NewLockPickingGame creates a new lock-picking game instance.
@@ -100,8 +102,75 @@ func (l *LockPickingGame) Update(deltaTime float64) error {
 }
 
 // Render draws the lock-picking game to the screen.
+// Computes visual state including pin positions, timing window, and failure count.
 func (l *LockPickingGame) Render(screen engine.ImageProvider) error {
-	// Minimal implementation - actual rendering in Phase 27.3
+	w, h, err := validateScreen(screen)
+	if err != nil {
+		return fmt.Errorf("lockpicking game render: %w", err)
+	}
+	if l.rng == nil {
+		return fmt.Errorf("lockpicking game render: game not initialized")
+	}
+
+	status := "Playing"
+	if l.completed {
+		if l.playerWon {
+			status = "Won"
+		} else {
+			status = "Lost"
+		}
+	}
+
+	elements := make([]RenderElement, 0, 3+l.numPins)
+
+	// Status display
+	elements = append(elements, RenderElement{
+		Type:  "text",
+		X:     w / 2,
+		Y:     10,
+		Label: fmt.Sprintf("Pin %d / %d  Failures: %d / %d  Time: %.1fs", l.currentPinIdx, l.numPins, l.failures, l.maxFailures, l.timeElapsed),
+	})
+
+	// Pin display
+	pinW := (w - 40) / l.numPins
+	if pinW > 80 {
+		pinW = 80
+	}
+	pinH := h / 2
+	startX := (w - l.numPins*pinW) / 2
+	for i := 0; i < l.numPins; i++ {
+		picked := i < l.currentPinIdx
+		active := i == l.currentPinIdx
+		elements = append(elements, RenderElement{
+			Type:        "pin",
+			X:           startX + i*pinW,
+			Y:           h/4 + int(l.pinPositions[i]*float64(pinH)/2),
+			W:           pinW - 5,
+			H:           20,
+			Label:       fmt.Sprintf("Pin %d", i+1),
+			Value:       l.pinPositions[i],
+			Highlighted: picked || active,
+		})
+	}
+
+	// Timing window indicator
+	elements = append(elements, RenderElement{
+		Type:  "progress",
+		X:     20,
+		Y:     h - 40,
+		W:     w - 40,
+		H:     20,
+		Label: fmt.Sprintf("Timing Window: %.2fs", l.timingWindow),
+		Value: l.timingWindow,
+	})
+
+	l.LastRender = &RenderOutput{
+		Title:    "Lock Picking",
+		Status:   status,
+		Width:    w,
+		Height:   h,
+		Elements: elements,
+	}
 	return nil
 }
 

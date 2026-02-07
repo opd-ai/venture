@@ -25,6 +25,8 @@ type MemoryGame struct {
 	completed    bool
 	playerWon    bool
 	sequenceMode bool
+	// LastRender contains the most recent render output for external consumption.
+	LastRender *RenderOutput
 }
 
 // NewMemoryGame creates a new memory game instance.
@@ -100,8 +102,87 @@ func (m *MemoryGame) Update(deltaTime float64) error {
 }
 
 // Render draws the memory game to the screen.
+// Computes visual state including card pairs, matched status, and attempt counter.
 func (m *MemoryGame) Render(screen engine.ImageProvider) error {
-	// Minimal implementation - actual rendering in Phase 27.3
+	w, h, err := validateScreen(screen)
+	if err != nil {
+		return fmt.Errorf("memory game render: %w", err)
+	}
+	if m.rng == nil {
+		return fmt.Errorf("memory game render: game not initialized")
+	}
+
+	status := "Playing"
+	if m.completed {
+		if m.playerWon {
+			status = "Won"
+		} else {
+			status = "Lost"
+		}
+	}
+
+	matchedCount := 0
+	for _, v := range m.matched {
+		if v {
+			matchedCount++
+		}
+	}
+
+	elements := make([]RenderElement, 0, 3+m.numPairs)
+
+	// Attempt counter
+	mode := "Pairs"
+	if m.sequenceMode {
+		mode = "Sequence"
+	}
+	elements = append(elements, RenderElement{
+		Type:  "text",
+		X:     w / 2,
+		Y:     10,
+		Label: fmt.Sprintf("Mode: %s  Attempts: %d / %d  Matched: %d / %d", mode, m.attempts, m.maxAttempts, matchedCount, m.numPairs),
+	})
+
+	// Card pair display
+	cols := 4
+	if m.numPairs > 8 {
+		cols = 6
+	}
+	cardW := (w - 40) / cols
+	cardH := 60
+	for i := 0; i < m.numPairs; i++ {
+		col := i % cols
+		row := i / cols
+		elements = append(elements, RenderElement{
+			Type:        "card",
+			X:           20 + col*cardW,
+			Y:           50 + row*(cardH+10),
+			W:           cardW - 5,
+			H:           cardH,
+			Label:       fmt.Sprintf("Pair %d", i+1),
+			Value:       float64(i + 1),
+			Highlighted: m.matched[i],
+		})
+	}
+
+	// Progress bar
+	progress := float64(matchedCount) / float64(m.numPairs)
+	elements = append(elements, RenderElement{
+		Type:  "progress",
+		X:     20,
+		Y:     h - 40,
+		W:     w - 40,
+		H:     20,
+		Label: "Match Progress",
+		Value: progress,
+	})
+
+	m.LastRender = &RenderOutput{
+		Title:    "Memory Game",
+		Status:   status,
+		Width:    w,
+		Height:   h,
+		Elements: elements,
+	}
 	return nil
 }
 

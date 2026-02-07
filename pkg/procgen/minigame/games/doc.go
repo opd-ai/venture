@@ -49,7 +49,16 @@
 //
 //   - Initialize: <1ms per game
 //   - Update: <0.1ms per frame
+//   - Render: <0.1ms per frame (state computation only)
 //   - Memory: <1KB per game instance
+//
+// # Rendering
+//
+// Each game's Render() method computes visual state (RenderOutput) rather than
+// directly drawing pixels, since ImageProvider is read-only. The ECS render
+// system reads the LastRender field to perform actual pixel drawing. Render
+// validates screen parameters and returns errors for nil screens, zero
+// dimensions, or uninitialized games.
 //
 // # Testing
 //
@@ -61,5 +70,5 @@
 //   - Reward calculation
 //   - Error handling
 //
-// Phase 27.2: Mini-Game Types (ROADMAP_V4.md)
+// Phase 27.3: Mini-Game Rendering (ROADMAP_V4.md)
 package games

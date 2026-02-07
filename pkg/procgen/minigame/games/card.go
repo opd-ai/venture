@@ -202,15 +202,15 @@ func (c *CardGame) Render(screen engine.ImageProvider) error {
 	}
 
 	// Opponent hand (face down)
-	for i, card := range c.opponentHand {
+	for i := range c.opponentHand {
 		elements = append(elements, RenderElement{
 			Type:  "card",
 			X:     10 + i*(cardW+5),
 			Y:     20,
 			W:     cardW,
 			H:     80,
-			Label: fmt.Sprintf("%d", card),
-			Value: float64(card) / 10.0,
+			Label: "?",
+			Value: 0.0,
 		})
 	}
 

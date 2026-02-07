@@ -35,6 +35,7 @@ func TestRender_NilScreen(t *testing.T) {
 	}
 
 	for _, g := range games {
+		g := g // rebind to avoid capturing loop variable in closure
 		t.Run(g.name, func(t *testing.T) {
 			if err := g.game.Initialize(12345, 0.5); err != nil {
 				t.Fatalf("Initialize() failed: %v", err)
@@ -66,6 +67,7 @@ func TestRender_Uninitialized(t *testing.T) {
 	}
 
 	for _, g := range games {
+		g := g // rebind to avoid capturing loop variable in closure
 		t.Run(g.name, func(t *testing.T) {
 			// Don't call Initialize
 			err := g.game.Render(screen)
@@ -88,6 +90,7 @@ func TestRender_ZeroDimensionScreen(t *testing.T) {
 	}
 
 	for _, s := range screens {
+		s := s // rebind to avoid capturing loop variable in closure
 		t.Run(s.name, func(t *testing.T) {
 			game := NewCardGame()
 			if err := game.Initialize(12345, 0.5); err != nil {
@@ -119,6 +122,7 @@ func TestRender_ValidScreen(t *testing.T) {
 	}
 
 	for _, g := range games {
+		g := g // rebind to avoid capturing loop variable in closure
 		t.Run(g.name, func(t *testing.T) {
 			if err := g.game.Initialize(12345, 0.5); err != nil {
 				t.Fatalf("Initialize() failed: %v", err)
@@ -314,7 +318,9 @@ func TestHackingGame_RenderOutput(t *testing.T) {
 
 	// Run a few updates to generate guesses
 	for i := 0; i < 3 && !game.IsComplete(); i++ {
-		game.Update(1.0)
+		if err := game.Update(1.0); err != nil {
+			t.Fatalf("Update() failed: %v", err)
+		}
 	}
 
 	if err := game.Render(screen); err != nil {
@@ -377,14 +383,17 @@ func TestRender_CompletedGameStatus(t *testing.T) {
 
 	tests := []struct {
 		name      string
-		setupGame func() *CardGame
+		setupGame func(t *testing.T) *CardGame
 		wantStatus string
 	}{
 		{
 			name: "won",
-			setupGame: func() *CardGame {
+			setupGame: func(t *testing.T) *CardGame {
+				t.Helper()
 				g := NewCardGame()
-				g.Initialize(12345, 0.5)
+				if err := g.Initialize(12345, 0.5); err != nil {
+					t.Fatalf("Initialize() failed: %v", err)
+				}
 				g.completed = true
 				g.playerWon = true
 				return g
@@ -393,9 +402,12 @@ func TestRender_CompletedGameStatus(t *testing.T) {
 		},
 		{
 			name: "lost",
-			setupGame: func() *CardGame {
+			setupGame: func(t *testing.T) *CardGame {
+				t.Helper()
 				g := NewCardGame()
-				g.Initialize(12345, 0.5)
+				if err := g.Initialize(12345, 0.5); err != nil {
+					t.Fatalf("Initialize() failed: %v", err)
+				}
 				g.completed = true
 				g.playerWon = false
 				return g
@@ -404,9 +416,12 @@ func TestRender_CompletedGameStatus(t *testing.T) {
 		},
 		{
 			name: "playing",
-			setupGame: func() *CardGame {
+			setupGame: func(t *testing.T) *CardGame {
+				t.Helper()
 				g := NewCardGame()
-				g.Initialize(12345, 0.5)
+				if err := g.Initialize(12345, 0.5); err != nil {
+					t.Fatalf("Initialize() failed: %v", err)
+				}
 				return g
 			},
 			wantStatus: "Playing",
@@ -414,8 +429,9 @@ func TestRender_CompletedGameStatus(t *testing.T) {
 	}
 
 	for _, tt := range tests {
+		tt := tt // rebind to avoid capturing loop variable in closure
 		t.Run(tt.name, func(t *testing.T) {
-			game := tt.setupGame()
+			game := tt.setupGame(t)
 			if err := game.Render(screen); err != nil {
 				t.Fatalf("Render() failed: %v", err)
 			}
@@ -439,6 +455,7 @@ func TestRender_DifferentScreenSizes(t *testing.T) {
 	}
 
 	for _, s := range screens {
+		s := s // rebind to avoid capturing loop variable in closure
 		t.Run(s.name, func(t *testing.T) {
 			screen := &stubScreen{width: s.width, height: s.height}
 			game := NewPuzzleGame()
@@ -474,7 +491,9 @@ func TestRender_AfterUpdates(t *testing.T) {
 
 	// Run some updates
 	for i := 0; i < 5 && !game.IsComplete(); i++ {
-		game.Update(1.0)
+		if err := game.Update(1.0); err != nil {
+			t.Fatalf("Update() failed: %v", err)
+		}
 	}
 
 	// Render after updates
@@ -511,11 +530,16 @@ func BenchmarkRender(b *testing.B) {
 	}
 
 	for _, g := range games {
-		g.game.Initialize(12345, 0.5)
+		g := g // rebind to avoid capturing loop variable in closure
+		if err := g.game.Initialize(12345, 0.5); err != nil {
+			b.Fatalf("Initialize() failed for %s: %v", g.name, err)
+		}
 		b.Run(g.name, func(b *testing.B) {
 			b.ResetTimer()
 			for i := 0; i < b.N; i++ {
-				g.game.Render(screen)
+				if err := g.game.Render(screen); err != nil {
+					b.Fatalf("Render() failed for %s: %v", g.name, err)
+				}
 			}
 		})
 	}

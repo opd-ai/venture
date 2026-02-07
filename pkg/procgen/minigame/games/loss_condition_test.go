@@ -414,6 +414,7 @@ func TestRender_Stub(t *testing.T) {
 	}
 
 	for _, g := range games {
+		g := g // rebind to avoid capturing loop variable in closure
 		t.Run(g.name, func(t *testing.T) {
 			if err := g.game.Initialize(12345, 0.5); err != nil {
 				t.Fatalf("Initialize() failed: %v", err)

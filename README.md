@@ -226,6 +226,7 @@ See [Mobile Build Guide](docs/MOBILE_BUILD.md) for full instructions.
 | `-genre` | `random` | Genre (`random`, `fantasy`, `scifi`, `horror`, `cyberpunk`, `postapoc`) |
 | `--multiplayer` | `false` | Connect to a remote server instead of hosting locally |
 | `--server` | `localhost:8080` | Server address (e.g., `192.168.1.5:8080`) |
+| `-high-latency` | `false` | Optimize for Tor/high-latency connections (200–5000ms) |
 | `--host-and-play` | `false` | Explicitly enable host-and-play mode (default behavior when `--multiplayer` not specified) |
 | `--host-lan` | `false` | Bind server to `0.0.0.0` for LAN access instead of `127.0.0.1` (requires host-and-play mode) |
 | `-weather` | — | Weather type (`rain`, `snow`, `fog`, `dust`, `ash`, `neonrain`, `smog`, `radiation`) |

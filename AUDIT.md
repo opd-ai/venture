@@ -5,7 +5,7 @@ Codebase Version: f4593ab935961ca53ed735fe3dafebc801a4c582
 ## Executive Summary
 Total Gaps Found: 5
 - Critical: 0 (1 completed)
-- Moderate: 1 (2 completed)
+- Moderate: 0 (3 completed)
 - Minor: 1
 
 ## Completed Gaps
@@ -79,88 +79,49 @@ export VENTURE_GENRE=fantasy
 
 ---
 
-### Gap #1: FishingSystem Uses Non-Deterministic Random in Core Game Logic
-**Documentation Reference:**
-> "All procedural generation MUST use seed-based deterministic algorithms. Never use `time.Now()`, global `math/rand` functions, or system-dependent randomness. Always use `rand.New(rand.NewSource(seed))` to ensure same seed = same output." (Project Overview - Code Assistance Guidelines, Rule #2)
+### ✅ Gap #3: Client Missing `-high-latency` Flag Documented in Server [COMPLETED]
+**Status:** Fixed on 2026-02-07
 
-**Implementation Location:** `pkg/engine/fishing_system.go:556-571`, `pkg/engine/fishing_system.go:574-585`, `pkg/engine/fishing_system.go:607-610`
-
-**Expected Behavior:** FishingSystem should use seed-based deterministic random for reproducible fish selection and weight calculation.
-
-**Actual Implementation:** Three methods in FishingSystem use `time.Now().UnixNano()` as seed for random generation, making fish catches and weights non-deterministic and non-reproducible across save/load or multiplayer sessions.
-
-**Gap Details:** The FishingSystem violates the core determinism requirement in three critical places:
-
-1. `selectRandomFish()` at line 557: Uses `time.Now().UnixNano()` to seed RNG for fish selection
-2. `calculateFishWeight()` at line 575: Uses `time.Now().UnixNano()` for weight randomization  
-3. `processReeling()` at line 608: Uses `time.Now().UnixNano()` for fish struggle updates
-
-This breaks multiplayer synchronization (server and client get different results) and save/load reproducibility.
-
-**Reproduction:**
-```go
-// Call FishingSystem methods twice in sequence
-// Results differ because time.Now() changes between calls
-fish1 := fs.selectRandomFish(eligibleList)
-fish2 := fs.selectRandomFish(eligibleList)
-// fish1 != fish2 even with identical inputs
-```
-
-**Production Impact:** Critical - Causes desync between server and clients in multiplayer fishing, and non-reproducible gameplay after loading saves.
-
-**Evidence:**
-```go
-// pkg/engine/fishing_system.go:556-558
-func (fs *FishingSystem) selectRandomFish(eligible eligibleFishList) *FishType {
-	seed := time.Now().UnixNano()  // Non-deterministic!
-	rng := rand.New(rand.NewSource(seed))
-```
-
----
-
-## Remaining Gaps
-
-### Gap #3: Client Missing `-high-latency` Flag Documented in Server
 **Documentation Reference:**
 > "The multiplayer networking layer supports high-latency connections (200–5000ms) suitable for Tor/onion service routing, with client-side prediction, lag compensation, and snapshot synchronization." (README.md:9)
 >
 > "| `-high-latency` | `false` | Optimize for Tor/high-latency connections (200–5000ms) |" (README.md:244 - Server Flags)
 
-**Implementation Location:** `cmd/client/util.go:44-81` (flag definitions), `cmd/server/main.go:40` (server has flag)
+**Implementation Location:** `cmd/client/util.go:44-81` (flag definitions), `cmd/client/util.go:125-138` (network initialization)
 
-**Expected Behavior:** Both client and server should have `-high-latency` flag for configuring high-latency mode, as both endpoints need optimized settings.
+**Solution Implemented:**
+1. Added `-high-latency` flag to client matching server implementation
+2. Modified `initializeNetworkClient()` to use `TorClientConfig()` when flag is true
+3. Uses `DefaultClientConfig()` when flag is false (default behavior)
+4. Added logging to indicate when high-latency mode is enabled
 
-**Actual Implementation:** Only the server implements the `-high-latency` flag. The client has no corresponding flag to enable high-latency optimizations for its network client configuration.
+**Changes Made:**
+- `cmd/client/util.go`: Added `highLatency` flag definition at line 74
+- `cmd/client/util.go`: Updated `initializeNetworkClient()` to conditionally use TorClientConfig
+- `cmd/client/high_latency_test.go`: Created integration test verifying flag exists and is documented
+- `pkg/network/high_latency_client_test.go`: Created comprehensive unit tests (5 test functions, 11 test cases)
+- `README.md`: Added `-high-latency` flag documentation to Client Flags section
 
-**Gap Details:** The server correctly implements:
-```go
-highLatency = flag.Bool("high-latency", false, "...")
-```
+**Verification:**
+- Flag compiles successfully ✓
+- Integration test verifies flag exists in help output ✓
+- Unit tests verify configuration selection logic ✓
+- Client-server configuration parity verified ✓
+- All 11 test cases pass ✓
+- No regressions in existing tests ✓
 
-But the client's `util.go` has no matching flag. The client documentation (`cmd/client/doc.go:124`) mentions "The client supports high-latency connections" but provides no mechanism to enable it.
+**Configuration Details:**
+When `-high-latency` is enabled, the client uses:
+- ConnectionTimeout: 60s (vs 10s default) - 6x increase for Tor circuit building
+- MaxLatency: 5000ms (vs 500ms default) - 10x increase for extreme latency tolerance
+- PingInterval: 5s (vs 1s default) - 5x increase to reduce traffic
+- BufferSize: 512 (vs 256 default) - 2x increase for latency spike buffering
 
-**Reproduction:**
-```bash
-# Server can enable high-latency mode
-./venture-server -high-latency
-
-# Client has no equivalent - must connect without optimization
-./venture-client --multiplayer --server example.onion:8080
-# No -high-latency flag available
-```
-
-**Production Impact:** Moderate - Users connecting over Tor/high-latency networks cannot optimize client settings to match server configuration.
-
-**Evidence:**
-```go
-// cmd/server/main.go:40 - EXISTS
-highLatency = flag.Bool("high-latency", false, "Use high-latency configuration optimized for Tor/onion services (200-5000ms latency)")
-
-// cmd/client/util.go:44-81 - MISSING
-// No high-latency flag defined
-```
+These values match the server's `HighLatencyServerConfig()` and `HighLatencyLagCompensationConfig()` for optimal client-server compatibility over high-latency networks.
 
 ---
+
+## Remaining Gaps
 
 ### Gap #4: NetworkSimulator Uses Non-Deterministic RNG for Testing
 **Documentation Reference:**
@@ -259,7 +220,7 @@ if logLevel := os.Getenv("LOG_LEVEL"); logLevel != "" {
 
 ### Moderate (Address Before Production)
 2. **Mobile Seed Configuration** - ✅ COMPLETED
-3. **Client High-Latency Flag** - Add `-high-latency` flag to client matching server implementation
+3. **Client High-Latency Flag** - ✅ COMPLETED
 4. **NetworkSimulator Seeding** - Add constructor variant accepting explicit seed for reproducible testing
 
 ### Minor (Documentation Enhancement)

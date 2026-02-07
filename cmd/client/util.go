@@ -71,6 +71,7 @@ var (
 	profile       = flag.Bool("profile", true, "Enable performance profiling with frame time tracking")
 	multiplayer   = flag.Bool("multiplayer", false, "Connect to remote multiplayer server (default: starts local server)")
 	server        = flag.String("server", "localhost:8080", "Server address (host:port) for multiplayer")
+	highLatency   = flag.Bool("high-latency", false, "Use high-latency configuration optimized for Tor/onion services (200-5000ms latency)")
 	hostAndPlay   = flag.Bool("host-and-play", false, "Explicitly enable host-and-play mode (default behavior when --multiplayer not specified)")
 	hostLAN       = flag.Bool("host-lan", false, "Bind server to 0.0.0.0 for LAN access instead of 127.0.0.1 (requires host-and-play mode)")
 	serverPort    = flag.Int("port", 8080, "Server port for --host-and-play mode (will try next 10 ports if occupied)")
@@ -125,7 +126,13 @@ func initializeLogger() (*logrus.Logger, *logrus.Entry) {
 func initializeNetworkClient(logger *logrus.Logger, clientLogger *logrus.Entry) network.ClientConnection {
 	clientLogger.WithField("server", *server).Info("connecting to server")
 
-	clientConfig := network.DefaultClientConfig()
+	var clientConfig network.ClientConfig
+	if *highLatency {
+		clientConfig = network.TorClientConfig()
+		clientLogger.Info("using high-latency client configuration (Tor/onion service optimized)")
+	} else {
+		clientConfig = network.DefaultClientConfig()
+	}
 	clientConfig.ServerAddress = *server
 	networkClient := network.NewClientWithLogger(clientConfig, logger)
 

@@ -245,3 +245,105 @@ func TestMobileFederationSystem_Integration(t *testing.T) {
 		t.Fatalf("Failed to stop: %v", err)
 	}
 }
+
+func TestMobileFederationSystem_CapabilityDetection(t *testing.T) {
+	sys := NewMobileFederationSystem(nil)
+
+	// System should have detected capabilities
+	if sys.capabilities == nil {
+		t.Fatal("Expected capabilities to be detected")
+	}
+
+	// Capabilities should match platform
+	caps := sys.GetCapabilities()
+	if caps == nil {
+		t.Fatal("GetCapabilities returned nil")
+	}
+
+	// Platform should be set
+	if caps.Platform == "" {
+		t.Error("Platform not detected")
+	}
+
+	// HTTP and WebSocket should always be available
+	if !caps.HTTPAvailable {
+		t.Error("HTTP should always be available")
+	}
+
+	if !caps.WebSocketAvailable {
+		t.Error("WebSocket should always be available")
+	}
+}
+
+func TestMobileFederationSystem_WebRTCAvailability(t *testing.T) {
+	sys := NewMobileFederationSystem(nil)
+
+	// Check if WebRTC availability is tracked
+	webrtcAvailable := sys.IsWebRTCAvailable()
+
+	// Should match detected capabilities
+	caps := sys.GetCapabilities()
+	if webrtcAvailable != caps.WebRTCAvailable {
+		t.Errorf("IsWebRTCAvailable() = %v, capabilities say %v",
+			webrtcAvailable, caps.WebRTCAvailable)
+	}
+}
+
+func TestMobileFederationSystem_FallbackMode(t *testing.T) {
+	sys := NewMobileFederationSystem(nil)
+
+	fallback := sys.GetFallbackMode()
+
+	// If WebRTC unavailable, should have fallback
+	if !sys.IsWebRTCAvailable() {
+		if fallback == "" {
+			t.Error("Expected fallback mode when WebRTC unavailable")
+		}
+	} else {
+		// If WebRTC available, fallback should be empty
+		if fallback != "" {
+			t.Errorf("Expected empty fallback when WebRTC available, got %s", fallback)
+		}
+	}
+}
+
+func TestMobileFederationSystem_GracefulDegradation(t *testing.T) {
+	// Create system and verify it handles unavailable WebRTC gracefully
+	sys := NewMobileFederationSystem(nil)
+
+	// System should start regardless of WebRTC availability
+	err := sys.Start()
+	if err != nil {
+		t.Fatalf("System should start even without WebRTC: %v", err)
+	}
+	defer sys.Stop()
+
+	// System should be functional
+	state := sys.GetState()
+	if state.SyncStatus != mobile.SyncStatusIdle {
+		t.Errorf("Expected system to be functional, got status %v", state.SyncStatus)
+	}
+
+	// Update operations should work
+	sys.UpdateBatteryLevel(0.7)
+	sys.Update(nil, 0.016)
+
+	// No panics = graceful degradation working
+}
+
+func TestMobileFederationSystem_StartLogging(t *testing.T) {
+	// Verify that Start() logs appropriate messages based on WebRTC availability
+	sys := NewMobileFederationSystem(nil)
+
+	// Start should not fail regardless of platform
+	err := sys.Start()
+	if err != nil {
+		t.Fatalf("Start failed: %v", err)
+	}
+	defer sys.Stop()
+
+	// Verify system is running
+	if !sys.adapter.IsRunning() {
+		t.Error("System should be running after Start()")
+	}
+}

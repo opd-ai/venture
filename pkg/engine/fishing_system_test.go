@@ -9,7 +9,7 @@ import (
 
 func TestNewFishingSystem(t *testing.T) {
 	world := NewWorld()
-	fs := NewFishingSystem(world)
+	fs := NewFishingSystem(world, 12345)
 
 	if fs == nil {
 		t.Fatal("fishing system should not be nil")
@@ -33,7 +33,7 @@ func TestNewFishingSystem(t *testing.T) {
 
 func TestFishingSystem_RegisterFishType(t *testing.T) {
 	world := NewWorld()
-	fs := NewFishingSystem(world)
+	fs := NewFishingSystem(world, 12345)
 
 	customFish := &FishType{
 		ID:         "custom_fish",
@@ -66,7 +66,7 @@ func TestFishingSystem_RegisterFishType(t *testing.T) {
 
 func TestFishingSystem_GetAllFishTypes(t *testing.T) {
 	world := NewWorld()
-	fs := NewFishingSystem(world)
+	fs := NewFishingSystem(world, 12345)
 
 	allFish := fs.GetAllFishTypes()
 	if len(allFish) == 0 {
@@ -89,7 +89,7 @@ func TestFishingSystem_GetAllFishTypes(t *testing.T) {
 
 func TestFishingSystem_DefaultFishTypes(t *testing.T) {
 	world := NewWorld()
-	fs := NewFishingSystem(world)
+	fs := NewFishingSystem(world, 12345)
 
 	tests := []struct {
 		id        string
@@ -132,7 +132,7 @@ func TestFishingSystem_DefaultFishTypes(t *testing.T) {
 
 func TestFishingSystem_GenerateFishingSpot(t *testing.T) {
 	world := NewWorld()
-	fs := NewFishingSystem(world)
+	fs := NewFishingSystem(world, 12345)
 
 	tests := []struct {
 		name       string
@@ -188,7 +188,7 @@ func TestFishingSystem_GenerateFishingSpot(t *testing.T) {
 
 func TestFishingSystem_GenerateFishingSpot_Deterministic(t *testing.T) {
 	world := NewWorld()
-	fs := NewFishingSystem(world)
+	fs := NewFishingSystem(world, 12345)
 
 	// Generate two spots with same seed
 	spot1 := fs.GenerateFishingSpot(12345, WaterTypeFreshwater, DepthMedium, "lake", 0, 0)
@@ -212,7 +212,7 @@ func TestFishingSystem_GenerateFishingSpot_Deterministic(t *testing.T) {
 
 func TestFishingSystem_StartFishing(t *testing.T) {
 	world := NewWorld()
-	fs := NewFishingSystem(world)
+	fs := NewFishingSystem(world, 12345)
 
 	// Create fisher entity
 	fisher := NewEntity(1)
@@ -247,7 +247,7 @@ func TestFishingSystem_StartFishing(t *testing.T) {
 
 func TestFishingSystem_StartFishing_NoBait(t *testing.T) {
 	world := NewWorld()
-	fs := NewFishingSystem(world)
+	fs := NewFishingSystem(world, 12345)
 
 	// Create fisher with no bait
 	fisher := NewEntity(1)
@@ -267,7 +267,7 @@ func TestFishingSystem_StartFishing_NoBait(t *testing.T) {
 
 func TestFishingSystem_StartFishing_SpotAtCapacity(t *testing.T) {
 	world := NewWorld()
-	fs := NewFishingSystem(world)
+	fs := NewFishingSystem(world, 12345)
 
 	// Create spot with capacity 1
 	spot := fs.GenerateFishingSpot(12345, WaterTypeFreshwater, DepthShallow, "lake", 0, 0)
@@ -299,7 +299,7 @@ func TestFishingSystem_StartFishing_SpotAtCapacity(t *testing.T) {
 
 func TestFishingSystem_Cast(t *testing.T) {
 	world := NewWorld()
-	fs := NewFishingSystem(world)
+	fs := NewFishingSystem(world, 12345)
 
 	fisher := NewEntity(1)
 	fishComp := NewFishingComponent()
@@ -324,7 +324,7 @@ func TestFishingSystem_Cast(t *testing.T) {
 
 func TestFishingSystem_Hook(t *testing.T) {
 	world := NewWorld()
-	fs := NewFishingSystem(world)
+	fs := NewFishingSystem(world, 12345)
 
 	fisher := NewEntity(1)
 	fishComp := NewFishingComponent()
@@ -349,7 +349,7 @@ func TestFishingSystem_Hook(t *testing.T) {
 
 func TestFishingSystem_Hook_WrongState(t *testing.T) {
 	world := NewWorld()
-	fs := NewFishingSystem(world)
+	fs := NewFishingSystem(world, 12345)
 
 	fisher := NewEntity(1)
 	fishComp := NewFishingComponent()
@@ -365,7 +365,7 @@ func TestFishingSystem_Hook_WrongState(t *testing.T) {
 
 func TestFishingSystem_CancelFishing(t *testing.T) {
 	world := NewWorld()
-	fs := NewFishingSystem(world)
+	fs := NewFishingSystem(world, 12345)
 
 	fisher := NewEntity(1)
 	fishComp := NewFishingComponent()
@@ -393,7 +393,7 @@ func TestFishingSystem_CancelFishing(t *testing.T) {
 
 func TestFishingSystem_GetNearbyFishingSpots(t *testing.T) {
 	world := NewWorld()
-	fs := NewFishingSystem(world)
+	fs := NewFishingSystem(world, 12345)
 
 	// Create spots at different positions
 	spot1 := fs.GenerateFishingSpot(1, WaterTypeFreshwater, DepthShallow, "lake", 0, 0)
@@ -412,7 +412,7 @@ func TestFishingSystem_GetNearbyFishingSpots(t *testing.T) {
 
 func TestFishingSystem_Update_Waiting(t *testing.T) {
 	world := NewWorld()
-	fs := NewFishingSystem(world)
+	fs := NewFishingSystem(world, 12345)
 	fs.BaseWaitTime = 0.5 // Short wait for test
 
 	fisher := NewEntity(1)
@@ -445,7 +445,7 @@ func TestFishingSystem_Update_Waiting(t *testing.T) {
 
 func TestFishingSystem_Update_BiteWindow(t *testing.T) {
 	world := NewWorld()
-	fs := NewFishingSystem(world)
+	fs := NewFishingSystem(world, 12345)
 
 	fisher := NewEntity(1)
 	fishComp := NewFishingComponent()
@@ -470,7 +470,7 @@ func TestFishingSystem_Update_BiteWindow(t *testing.T) {
 
 func TestFishingSystem_Update_SpotCooldown(t *testing.T) {
 	world := NewWorld()
-	fs := NewFishingSystem(world)
+	fs := NewFishingSystem(world, 12345)
 
 	spot := fs.GenerateFishingSpot(12345, WaterTypeFreshwater, DepthShallow, "lake", 0, 0)
 	spotCompRaw, _ := spot.GetComponent("fishing_spot")
@@ -491,7 +491,7 @@ func TestFishingSystem_Update_SpotCooldown(t *testing.T) {
 
 func TestFishingSystem_Callbacks(t *testing.T) {
 	world := NewWorld()
-	fs := NewFishingSystem(world)
+	fs := NewFishingSystem(world, 12345)
 
 	biteCalled := false
 	catchCalled := false
@@ -545,7 +545,7 @@ func TestFishingSystem_Callbacks(t *testing.T) {
 
 func TestFishingSystem_TimeOfDay(t *testing.T) {
 	world := NewWorld()
-	fs := NewFishingSystem(world)
+	fs := NewFishingSystem(world, 12345)
 
 	// Test custom time of day function
 	fs.CurrentTimeOfDay = func() TimeOfDay {
@@ -560,7 +560,7 @@ func TestFishingSystem_TimeOfDay(t *testing.T) {
 
 func TestFishingSystem_GetFishingSpotCount(t *testing.T) {
 	world := NewWorld()
-	fs := NewFishingSystem(world)
+	fs := NewFishingSystem(world, 12345)
 
 	if fs.GetFishingSpotCount() != 0 {
 		t.Error("should start with 0 spots")
@@ -578,7 +578,7 @@ func TestFishingSystem_GetFishingSpotCount(t *testing.T) {
 
 func TestFishingSystem_ReelingUpdate(t *testing.T) {
 	world := NewWorld()
-	fs := NewFishingSystem(world)
+	fs := NewFishingSystem(world, 12345)
 
 	fisher := NewEntity(1)
 	fishComp := NewFishingComponent()
@@ -612,7 +612,7 @@ func TestFishingSystem_ReelingUpdate(t *testing.T) {
 
 func TestFishingSystem_SelectFish_SkillFilter(t *testing.T) {
 	world := NewWorld()
-	fs := NewFishingSystem(world)
+	fs := NewFishingSystem(world, 12345)
 
 	// Register fish requiring high skill
 	fs.RegisterFishType(&FishType{
@@ -647,7 +647,7 @@ func TestFishingSystem_SelectFish_SkillFilter(t *testing.T) {
 
 func BenchmarkFishingSystem_Update(b *testing.B) {
 	world := NewWorld()
-	fs := NewFishingSystem(world)
+	fs := NewFishingSystem(world, 12345)
 
 	// Create entities
 	entities := make([]*Entity, 100)
@@ -674,7 +674,7 @@ func BenchmarkFishingSystem_Update(b *testing.B) {
 
 func BenchmarkFishingSystem_GenerateFishingSpot(b *testing.B) {
 	world := NewWorld()
-	fs := NewFishingSystem(world)
+	fs := NewFishingSystem(world, 12345)
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
@@ -684,7 +684,7 @@ func BenchmarkFishingSystem_GenerateFishingSpot(b *testing.B) {
 
 func BenchmarkFishingSystem_SelectFish(b *testing.B) {
 	world := NewWorld()
-	fs := NewFishingSystem(world)
+	fs := NewFishingSystem(world, 12345)
 
 	spot := NewFishingSpotComponent(WaterTypeFreshwater, DepthMedium, "lake")
 	fs.SpotAddFishType(spot, "bass", 10.0)
@@ -704,7 +704,7 @@ func BenchmarkFishingSystem_SelectFish(b *testing.B) {
 
 func TestFishingSystem_InputComponent(t *testing.T) {
 	world := NewWorld()
-	fs := NewFishingSystem(world)
+	fs := NewFishingSystem(world, 12345)
 
 	fisher := NewEntity(1)
 	fishComp := NewFishingComponent()
@@ -735,7 +735,7 @@ func TestFishingSystem_InputComponent(t *testing.T) {
 
 func TestFishingSystem_CompleteCatch(t *testing.T) {
 	world := NewWorld()
-	fs := NewFishingSystem(world)
+	fs := NewFishingSystem(world, 12345)
 
 	catchCount := 0
 	var lastCatch *CaughtFish
@@ -777,7 +777,7 @@ func TestFishingSystem_CompleteCatch(t *testing.T) {
 
 func TestFishingSystem_XPByRarity(t *testing.T) {
 	world := NewWorld()
-	fs := NewFishingSystem(world)
+	fs := NewFishingSystem(world, 12345)
 	fs.XPPerCatch = 10
 
 	fisher := NewEntity(1)
@@ -817,7 +817,7 @@ func TestFishingSystem_XPByRarity(t *testing.T) {
 
 func TestDefaultTimeOfDay(t *testing.T) {
 	world := NewWorld()
-	fs := NewFishingSystem(world)
+	fs := NewFishingSystem(world, 12345)
 
 	// Default function should return valid time of day
 	tod := fs.CurrentTimeOfDay()
@@ -836,7 +836,7 @@ func TestDefaultTimeOfDay(t *testing.T) {
 
 func TestDefaultWeather(t *testing.T) {
 	world := NewWorld()
-	fs := NewFishingSystem(world)
+	fs := NewFishingSystem(world, 12345)
 
 	weather := fs.CurrentWeather()
 	if weather != "clear" {
@@ -857,7 +857,7 @@ func TestFishingSystem_PositionString(t *testing.T) {
 
 func TestFishingSystem_SpotAddRemoveFishType(t *testing.T) {
 	world := NewWorld()
-	fs := NewFishingSystem(world)
+	fs := NewFishingSystem(world, 12345)
 	spot := NewFishingSpotComponent(WaterTypeFreshwater, DepthMedium, "lake")
 
 	// Add fish types
@@ -890,7 +890,7 @@ func TestFishingSystem_SpotAddRemoveFishType(t *testing.T) {
 
 func TestFishingSystem_SpotFisherManagement(t *testing.T) {
 	world := NewWorld()
-	fs := NewFishingSystem(world)
+	fs := NewFishingSystem(world, 12345)
 	spot := NewFishingSpotComponent(WaterTypeSaltwater, DepthDeep, "ocean")
 	spot.MaxConcurrentFishers = 2
 
@@ -933,7 +933,7 @@ func TestFishingSystem_SpotFisherManagement(t *testing.T) {
 
 func TestFishingSystem_SpotCanFish(t *testing.T) {
 	world := NewWorld()
-	fs := NewFishingSystem(world)
+	fs := NewFishingSystem(world, 12345)
 	spot := NewFishingSpotComponent(WaterTypeMagical, DepthMedium, "enchanted")
 	spot.MaxConcurrentFishers = 1
 
@@ -965,7 +965,7 @@ func TestFishingSystem_SpotCanFish(t *testing.T) {
 
 func TestFishingSystem_SpotCooldownUpdate(t *testing.T) {
 	world := NewWorld()
-	fs := NewFishingSystem(world)
+	fs := NewFishingSystem(world, 12345)
 	spot := NewFishingSpotComponent(WaterTypeFreshwater, DepthShallow, "pond")
 
 	// Set cooldown

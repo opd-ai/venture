@@ -74,7 +74,7 @@ func TestNewFishingSpotComponent(t *testing.T) {
 
 func TestFishingSpotComponent_FishPopulation(t *testing.T) {
 	world := NewWorld()
-	fs := NewFishingSystem(world)
+	fs := NewFishingSystem(world, 12345)
 	spot := NewFishingSpotComponent(WaterTypeFreshwater, DepthMedium, "lake")
 
 	// Add fish types
@@ -103,7 +103,7 @@ func TestFishingSpotComponent_FishPopulation(t *testing.T) {
 
 func TestFishingSpotComponent_CanFish(t *testing.T) {
 	world := NewWorld()
-	fs := NewFishingSystem(world)
+	fs := NewFishingSystem(world, 12345)
 	spot := NewFishingSpotComponent(WaterTypeFreshwater, DepthShallow, "river")
 	spot.MaxConcurrentFishers = 2
 
@@ -137,7 +137,7 @@ func TestFishingSpotComponent_CanFish(t *testing.T) {
 
 func TestFishingSpotComponent_Cooldown(t *testing.T) {
 	world := NewWorld()
-	fs := NewFishingSystem(world)
+	fs := NewFishingSystem(world, 12345)
 	spot := NewFishingSpotComponent(WaterTypeSaltwater, DepthDeep, "ocean")
 
 	// Set cooldown
@@ -163,7 +163,7 @@ func TestFishingSpotComponent_Cooldown(t *testing.T) {
 
 func TestFishingSpotComponent_Serialize(t *testing.T) {
 	world := NewWorld()
-	fs := NewFishingSystem(world)
+	fs := NewFishingSystem(world, 12345)
 	spot := NewFishingSpotComponent(WaterTypeMagical, DepthMedium, "enchanted")
 	fs.SpotAddFishType(spot, "moonfish", 5.0)
 	spot.RareFishBonus = 1.5

@@ -7,6 +7,7 @@ package engine
 
 import (
 	"math/rand"
+	"sort"
 	"sync"
 	"time"
 
@@ -17,6 +18,12 @@ import (
 type FishingSystem struct {
 	mu    sync.RWMutex
 	world *World
+
+	// seed is the deterministic random seed for reproducible fishing.
+	seed int64
+
+	// rng is the deterministic random number generator.
+	rng *rand.Rand
 
 	// fishingSpots maps entity IDs to fishing spot entities.
 	fishingSpots map[uint64]*Entity
@@ -58,14 +65,17 @@ type FishingSystem struct {
 	CurrentWeather func() string
 }
 
-// NewFishingSystem creates a new fishing system.
-func NewFishingSystem(world *World) *FishingSystem {
+// NewFishingSystem creates a new fishing system with a deterministic seed.
+func NewFishingSystem(world *World, seed int64) *FishingSystem {
 	log.WithFields(log.Fields{
 		"system_name": "fishing",
+		"seed":        seed,
 	}).Debug("Creating fishing system")
 
 	fs := &FishingSystem{
 		world:          world,
+		seed:           seed,
+		rng:            rand.New(rand.NewSource(seed)),
 		fishingSpots:   make(map[uint64]*Entity),
 		fishTypes:      make(map[string]*FishType),
 		nextEntityID:   2000000, // High start to avoid collision
@@ -477,6 +487,11 @@ func (fs *FishingSystem) buildEligibleFishList(spot *FishingSpotComponent, baitT
 		}
 	}
 
+	// Sort eligible fish by ID for deterministic ordering
+	sort.Slice(eligible, func(i, j int) bool {
+		return eligible[i].fish.ID < eligible[j].fish.ID
+	})
+
 	return eligibleFishList{fish: eligible, totalWeight: totalWeight}
 }
 
@@ -554,10 +569,10 @@ func (fs *FishingSystem) getRarityMultiplier(rarity FishRarity, rareFishBonus fl
 
 // selectRandomFish performs weighted random selection from eligible fish.
 func (fs *FishingSystem) selectRandomFish(eligible eligibleFishList) *FishType {
-	seed := time.Now().UnixNano()
-	rng := rand.New(rand.NewSource(seed))
+	fs.mu.Lock()
+	roll := fs.rng.Float64() * eligible.totalWeight
+	fs.mu.Unlock()
 
-	roll := rng.Float64() * eligible.totalWeight
 	cumulative := 0.0
 
 	for _, wf := range eligible.fish {
@@ -572,11 +587,10 @@ func (fs *FishingSystem) selectRandomFish(eligible eligibleFishList) *FishType {
 
 // calculateFishWeight determines the weight of the caught fish with skill bonuses.
 func (fs *FishingSystem) calculateFishWeight(fish *FishType, skillLevel int) float64 {
-	seed := time.Now().UnixNano()
-	rng := rand.New(rand.NewSource(seed))
-
+	fs.mu.Lock()
 	weightRange := fish.MaxWeight - fish.BaseWeight
-	fishWeight := fish.BaseWeight + rng.Float64()*weightRange
+	fishWeight := fish.BaseWeight + fs.rng.Float64()*weightRange
+	fs.mu.Unlock()
 
 	skillWeightBonus := 1.0 + float64(skillLevel)*0.005
 	fishWeight *= skillWeightBonus
@@ -605,8 +619,9 @@ func (fs *FishingSystem) processBite(fisher *Entity, fishComp *FishingComponent,
 // processReeling handles the reeling minigame phase.
 func (fs *FishingSystem) processReeling(fisher *Entity, fishComp *FishingComponent, deltaTime float64) {
 	// Update fish struggle
-	seed := time.Now().UnixNano()
-	rng := rand.New(rand.NewSource(seed))
+	fs.mu.Lock()
+	rng := fs.rng
+	fs.mu.Unlock()
 	fishComp.UpdateStruggle(deltaTime, rng)
 
 	// Get reel input from entity (stubbed - would come from input system)

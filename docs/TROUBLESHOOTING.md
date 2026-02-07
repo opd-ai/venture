@@ -108,7 +108,7 @@ This guide provides solutions to common technical issues, organized by symptom.
    - NVIDIA Control Panel → Manage 3D Settings → Program Settings → Add `venture-client.exe` → Preferred GPU: High-performance NVIDIA processor
    - Or AMD Radeon Settings equivalent
 
-**Performance Mode:** `-quality=low` flag bypasses menu, applies all optimizations at launch.
+**Performance Tip:** Use `-width 1280 -height 720` for lower resolution rendering to improve performance.
 
 ---
 
@@ -143,8 +143,8 @@ This guide provides solutions to common technical issues, organized by symptom.
    - Protocol: Both TCP and UDP
 
 5. **Timeout Issues:**
-   - Increase timeout: `-timeout 60` (60 seconds, default: 10)
-   - High-latency mode: `-high-latency` flag
+   - High-latency mode: start server with `-high-latency` flag
+   - This adjusts all timeouts for 200-5000ms latency scenarios
 
 ---
 
@@ -205,8 +205,8 @@ This guide provides solutions to common technical issues, organized by symptom.
    - Settings → Graphics → Bloom: Off
    - AO: Off, Motion Blur: Off, Vignette: Off
 
-3. **Change Renderer:**
-   - `-renderer opengl2` or `-renderer opengl3` flag (try both)
+3. **Try Windowed Mode:**
+   - Run without `-fullscreen` flag
 
 4. **Fullscreen Toggle:**
    - Press F11 twice (switch windowed → fullscreen → windowed)
@@ -274,7 +274,7 @@ xattr -cr /path/to/Venture.app
 ```
 
 **Apple Silicon Performance:**
-- Prefer ARM64 build (`venture-v10.0-macos-arm64.tar.gz`)
+- Prefer ARM64 build (`venture-darwin-arm64.tar.gz`)
 - Rosetta 2 works but slower (x64 build)
 
 **Sound Issues:**
@@ -347,13 +347,13 @@ go tool pprof cpu.prof
 # (pprof) list FunctionName
 ```
 
-### Test Mode
+### Debug Mode
 
 ```bash
-./venture-client -test-mode
+./venture-client -verbose
 ```
 
-Skips main menu, loads test world (seed 0), enables debug overlay (F3).
+Enables verbose logging for debugging. Check console output for detailed system information.
 
 ### Network Diagnostics
 

@@ -39,8 +39,8 @@ Yes, Venture is **open-source** (MIT License) and free to play. You can download
 
 ### What version should I play?
 
-**Latest stable:** v10.0 (December 2025)  
-**Recommended for new players:** Start with v10.0 for full feature set and polish.
+**Latest stable:** v1.0.0 (February 2026)  
+**Recommended for new players:** Start with v1.0.0 for full feature set and polish.
 
 ### Can I play offline / single-player?
 
@@ -54,7 +54,7 @@ Yes! Start the game without `-multiplayer` flag for local single-player mode. Al
 
 **Desktop:**
 1. Download the appropriate build for your OS from [Releases](https://github.com/opd-ai/venture/releases)
-2. Extract the archive (`venture-v10.0-linux-x64.tar.gz`, etc.)
+2. Extract the archive (`venture-linux-amd64.tar.gz`, etc.)
 3. Run `./venture-client` (Linux/macOS) or `venture-client.exe` (Windows)
 
 **Web:**
@@ -76,7 +76,7 @@ Visit [https://opd-ai.github.io/venture](https://opd-ai.github.io/venture) - no 
 3. Copy your `saves/` folder from old version to new version
 4. Run the new client
 
-**Automatic (planned for v10.1):** In-game update checker will notify you and auto-download.
+**Automatic:** Check [GitHub Releases](https://github.com/opd-ai/venture/releases) for new versions.
 ### Where are save files stored?
 
 - **Windows:** `%APPDATA%\Venture\saves\`
@@ -384,11 +384,8 @@ See [Modding Guide](MODDING_GUIDE.md) for mod creation tutorials.
 
 **Version History:**
 
-- **v10.0 (December 2025):** Added housing, guild warfare, Phase 66 production release
-- **v8.0 (November 2025):** Added housing, guilds, modding framework
-- **v7.0 (November 2025):** Enhanced sprites, display scaling, 1920×1080 default
-- **v6.0 (November 2025):** Server federation, persistent worlds, cross-server travel
-- **v5.0 (November 2025):** Social features, chat, image sharing, item trading
+- **v1.0.0 (February 2026):** Production release with housing, guilds, federation, modding, advanced physics, deep AI
+- See [CHANGELOG.md](CHANGELOG.md) for complete version history
 
 ---
 

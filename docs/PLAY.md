@@ -12,7 +12,7 @@ Identify and fix all gameplay-blocking bugs and critical defects in the Venture 
 1. **Application Launch**
    - Build verification: `go build ./cmd/client`
    - Launch succeeds without crashes
-   - Window renders at correct resolution (default 800x600 or 1920x1080 for V7+)
+   - Window renders at correct resolution (default 1920x1080)
 
 2. **Main Menu Navigation**
    - All menu buttons visible and functional (New Game, Load Game, Settings, Exit)

@@ -158,6 +158,12 @@ func (s *MovementSystem) calculateNewPosition(entity *Entity, pos *PositionCompo
 func (s *MovementSystem) validateAndUpdatePosition(entity *Entity, pos *PositionComponent, vel *VelocityComponent, newX, newY float64, debugEnabled bool, entities []*Entity) bool {
 	newX, newY = s.calculateValidPosition(entity, pos, vel, newX, newY, entities)
 	oldX, oldY := pos.X, pos.Y
+
+	// Track entity movement before updating position (for incremental spatial updates)
+	if s.spatialPartition != nil && (newX != oldX || newY != oldY) {
+		s.spatialPartition.TrackEntityMovement(entity)
+	}
+
 	pos.X = newX
 	pos.Y = newY
 

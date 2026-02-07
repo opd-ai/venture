@@ -33,13 +33,12 @@ This document provides comprehensive keyboard, mouse, and gamepad control mappin
 | **A** / **←** | Move Left |
 | **D** / **→** | Move Right |
 | **Shift** | Sprint (2x speed, consumes stamina) |
-| **Space** | Jump / Climb |
 | **Ctrl** | Crouch / Sneak |
 
 #### Combat
 | Key | Action |
 |-----|--------|
-| **Space** | Attack |
+| **Space** | Attack / Interact |
 | **E** | Use Item / Open Chest |
 | **F** | Interact / Context Action (NPCs, merchants) |
 | **Tab** | Target Cycling |
@@ -56,6 +55,7 @@ This document provides comprehensive keyboard, mouse, and gamepad control mappin
 | **R** | Crafting Menu |
 | **G** | Gallery (Image Gallery) |
 | **H** | Housing Menu |
+| **O** | Guild Menu |
 | **Esc** | Main Menu / Cancel |
 
 #### Social & Communication

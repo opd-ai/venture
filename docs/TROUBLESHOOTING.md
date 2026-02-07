@@ -349,11 +349,17 @@ go tool pprof cpu.prof
 
 ### Debug Mode
 
+Verbose logging is enabled by default (`-verbose=true`). To control log verbosity:
+
 ```bash
-./venture-client -verbose
+# Verbose is already on by default; to disable it:
+./venture-client -verbose=false
+
+# Use LOG_LEVEL env var for finer control (debug, info, warn, error, fatal):
+LOG_LEVEL=debug ./venture-client
 ```
 
-Enables verbose logging for debugging. Check console output for detailed system information.
+Check console output for detailed system information.
 
 ### Network Diagnostics
 

@@ -177,7 +177,7 @@ func (s *MovementSystem) Update(entities []*Entity, dt float64) {
 
 ### Test Requirements
 
-- **Coverage Target**: 65% minimum per package (current average: 90.1%)
+- **Coverage Target**: 65% minimum per package (see [Test Coverage Progress](TEST_COVERAGE_PROGRESS.md) for current average)
 - **Test Execution**: Run tests with standard `go test` command (no build tags required)
 - **Table-Driven Tests**: For multiple scenarios
 - **Benchmarks**: For performance-critical code
@@ -197,7 +197,7 @@ Follow standard Go conventions: use `go fmt`, pass `go vet`, check all errors, d
 **Key requirements:**
 - Deterministic generation (same seed = same output)
 - ECS architecture (separate entities, components, systems)
-- 65% test coverage minimum (current average: 82.4%)
+- 65% test coverage minimum (see [Test Coverage Progress](TEST_COVERAGE_PROGRESS.md))
 - No external assets (100% procedural)
 
 **For detailed code style guidelines, documentation standards, and examples, see [Development Guide](DEVELOPMENT.md).**

@@ -199,8 +199,10 @@ Dialog behavior is controlled via the `NPCDialogComponent`:
 - Reconnect to server (triggers key exchange)
 
 **Profanity filter issues:**
-- Profanity filtering is handled client-side automatically
-- Report issues on GitHub for filter improvements
+- The profanity filter is opt-in and disabled by default
+- Enable it programmatically via `ProfanityFilter.Enable()` (see `pkg/network/profanity.go`)
+- Custom word lists can be loaded with `LoadWordListFromFile()`
+- Report filter issues on GitHub for improvements
 
 ### Trading Issues
 

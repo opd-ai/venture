@@ -326,8 +326,11 @@ venture-server -network-compression
 ```bash
 # Connect with multiplayer flag
 venture-client -multiplayer -server $SERVER_IP:8080
+```
 
-# Use high-latency mode on the server for slow connections
+**Server-side (high-latency):**
+```bash
+# Use high-latency mode for slow connections (Tor, satellite)
 venture-server -high-latency -port 8080
 ```
 

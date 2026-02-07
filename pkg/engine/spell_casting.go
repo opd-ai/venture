@@ -2413,47 +2413,71 @@ func (s *SpellCastingSystem) isEntityInLineArea(casterPos, entityPos *PositionCo
 // getCasterDirection determines the caster's facing direction for directional spells.
 // Uses velocity if moving, otherwise uses direction towards target point (x, y).
 func (s *SpellCastingSystem) getCasterDirection(caster *Entity, targetX, targetY float64) (dirX, dirY float64) {
-	// Try to use velocity for moving entities
-	if velComp, hasVel := caster.GetComponent("velocity"); hasVel {
-		if vel, ok := velComp.(*VelocityComponent); ok {
-			if vel.VX != 0 || vel.VY != 0 {
-				if s.logger != nil {
-					s.logger.WithFields(logrus.Fields{
-						"caster_id": caster.ID,
-						"dir_x":     vel.VX,
-						"dir_y":     vel.VY,
-						"source":    "velocity",
-					}).Debug("Using velocity for spell direction")
-				}
-				return vel.VX, vel.VY
-			}
-		}
+	if dirX, dirY, ok := s.getDirectionFromVelocity(caster); ok {
+		return dirX, dirY
 	}
 
-	// Fall back to direction towards target point
-	if posComp, hasPos := caster.GetComponent("position"); hasPos {
-		if pos, ok := posComp.(*PositionComponent); ok {
-			dirX = targetX - pos.X
-			dirY = targetY - pos.Y
-			if s.logger != nil {
-				s.logger.WithFields(logrus.Fields{
-					"caster_id": caster.ID,
-					"dir_x":     dirX,
-					"dir_y":     dirY,
-					"source":    "target_point",
-				}).Debug("Using target point for spell direction")
-			}
-			return dirX, dirY
-		}
+	if dirX, dirY, ok := s.getDirectionFromTarget(caster, targetX, targetY); ok {
+		return dirX, dirY
 	}
 
-	// Default to facing right if no position
+	return s.getDefaultDirection(caster)
+}
+
+// getDirectionFromVelocity attempts to get direction from entity velocity.
+func (s *SpellCastingSystem) getDirectionFromVelocity(caster *Entity) (dirX, dirY float64, ok bool) {
+	velComp, hasVel := caster.GetComponent("velocity")
+	if !hasVel {
+		return 0, 0, false
+	}
+
+	vel, ok := velComp.(*VelocityComponent)
+	if !ok || (vel.VX == 0 && vel.VY == 0) {
+		return 0, 0, false
+	}
+
+	s.logDirection(caster.ID, vel.VX, vel.VY, "velocity")
+	return vel.VX, vel.VY, true
+}
+
+// getDirectionFromTarget calculates direction towards target point.
+func (s *SpellCastingSystem) getDirectionFromTarget(caster *Entity, targetX, targetY float64) (dirX, dirY float64, ok bool) {
+	posComp, hasPos := caster.GetComponent("position")
+	if !hasPos {
+		return 0, 0, false
+	}
+
+	pos, ok := posComp.(*PositionComponent)
+	if !ok {
+		return 0, 0, false
+	}
+
+	dirX = targetX - pos.X
+	dirY = targetY - pos.Y
+	s.logDirection(caster.ID, dirX, dirY, "target_point")
+	return dirX, dirY, true
+}
+
+// getDefaultDirection returns default direction when no other method works.
+func (s *SpellCastingSystem) getDefaultDirection(caster *Entity) (dirX, dirY float64) {
 	if s.logger != nil {
 		s.logger.WithFields(logrus.Fields{
 			"caster_id": caster.ID,
 		}).Debug("Using default direction (right)")
 	}
 	return 1.0, 0.0
+}
+
+// logDirection logs the computed spell direction.
+func (s *SpellCastingSystem) logDirection(casterID uint64, dirX, dirY float64, source string) {
+	if s.logger != nil {
+		s.logger.WithFields(logrus.Fields{
+			"caster_id": casterID,
+			"dir_x":     dirX,
+			"dir_y":     dirY,
+			"source":    source,
+		}).Debug("Using velocity for spell direction")
+	}
 }
 
 // StartCast initiates casting a spell from a slot.

@@ -96,47 +96,75 @@ func (m *Manager) UpdateCaptureProgress(territoryID string, attackers, defenders
 		return fmt.Errorf("territory not found: %s", territoryID)
 	}
 
-	if attackingGuild == "" && attackers > 0 {
-		return fmt.Errorf("attacking guild must be specified when attackers > 0")
+	if err := validateAttackingGuild(attackingGuild, attackers); err != nil {
+		return err
 	}
 
 	now := time.Now()
 	elapsed := now.Sub(territory.LastUpdate).Seconds()
 
 	if attackers > 0 && attackers > defenders {
-		captureTime := float64(BaseCaptureTime + (defenders * DefenderTimeBonus))
-		progressPerSecond := 1.0 / captureTime
-		territory.CaptureProgress += progressPerSecond * elapsed
-		territory.CapturingGuild = attackingGuild
-
-		if territory.Status == StatusOwned && territory.OwnerGuildID != attackingGuild {
-			territory.Status = StatusContested
-		}
-
-		if territory.CaptureProgress >= 1.0 {
-			territory.CaptureProgress = 1.0
-			territory.OwnerGuildID = attackingGuild
-			territory.Status = StatusOwned
-			territory.CapturingGuild = ""
-		}
+		m.applyAttackerProgress(territory, attackingGuild, defenders, elapsed)
 	} else if defenders > 0 && defenders >= attackers {
-		decayTime := float64(BaseCaptureTime + (defenders * DefenderTimeBonus))
-		decayPerSecond := 1.0 / decayTime
-		territory.CaptureProgress -= decayPerSecond * elapsed
-
-		if territory.CaptureProgress < 0.0 {
-			territory.CaptureProgress = 0.0
-			territory.CapturingGuild = ""
-			if territory.OwnerGuildID != "" {
-				territory.Status = StatusOwned
-			} else {
-				territory.Status = StatusNeutral
-			}
-		}
+		m.applyDefenderProgress(territory, defenders, elapsed)
 	}
 
 	territory.LastUpdate = now
 	return nil
+}
+
+// validateAttackingGuild ensures attackers have a valid guild specified.
+func validateAttackingGuild(attackingGuild string, attackers int) error {
+	if attackingGuild == "" && attackers > 0 {
+		return fmt.Errorf("attacking guild must be specified when attackers > 0")
+	}
+	return nil
+}
+
+// applyAttackerProgress updates territory progress when attackers outnumber defenders.
+func (m *Manager) applyAttackerProgress(territory *Territory, attackingGuild string, defenders int, elapsed float64) {
+	captureTime := float64(BaseCaptureTime + (defenders * DefenderTimeBonus))
+	progressPerSecond := 1.0 / captureTime
+	territory.CaptureProgress += progressPerSecond * elapsed
+	territory.CapturingGuild = attackingGuild
+
+	if territory.Status == StatusOwned && territory.OwnerGuildID != attackingGuild {
+		territory.Status = StatusContested
+	}
+
+	if territory.CaptureProgress >= 1.0 {
+		m.completeCapture(territory, attackingGuild)
+	}
+}
+
+// completeCapture finalizes territory capture by the attacking guild.
+func (m *Manager) completeCapture(territory *Territory, attackingGuild string) {
+	territory.CaptureProgress = 1.0
+	territory.OwnerGuildID = attackingGuild
+	territory.Status = StatusOwned
+	territory.CapturingGuild = ""
+}
+
+// applyDefenderProgress reduces capture progress when defenders hold the line.
+func (m *Manager) applyDefenderProgress(territory *Territory, defenders int, elapsed float64) {
+	decayTime := float64(BaseCaptureTime + (defenders * DefenderTimeBonus))
+	decayPerSecond := 1.0 / decayTime
+	territory.CaptureProgress -= decayPerSecond * elapsed
+
+	if territory.CaptureProgress < 0.0 {
+		m.resetCaptureProgress(territory)
+	}
+}
+
+// resetCaptureProgress clears capture state and updates territory status.
+func (m *Manager) resetCaptureProgress(territory *Territory) {
+	territory.CaptureProgress = 0.0
+	territory.CapturingGuild = ""
+	if territory.OwnerGuildID != "" {
+		territory.Status = StatusOwned
+	} else {
+		territory.Status = StatusNeutral
+	}
 }
 
 // BuildDefensiveStructure constructs a defensive structure in a territory.

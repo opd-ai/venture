@@ -516,6 +516,7 @@ type QuestStatistics struct {
 }
 
 // GetStatistics returns quest statistics.
+// GetStatistics returns statistics about all legendary quests.
 func (qm *QuestManager) GetStatistics() *QuestStatistics {
 	qm.mu.RLock()
 	defer qm.mu.RUnlock()
@@ -526,28 +527,61 @@ func (qm *QuestManager) GetStatistics() *QuestStatistics {
 		LastUpdated:  time.Now(),
 	}
 
-	// Calculate completion rate
+	qm.calculateCompletionRate(stats)
+	return stats
+}
+
+// calculateCompletionRate calculates the quest completion rate from player progress.
+func (qm *QuestManager) calculateCompletionRate(stats *QuestStatistics) {
 	totalPlayers := len(qm.playerProgress)
-	if totalPlayers > 0 {
-		completedCount := 0
-		for _, tracker := range qm.playerProgress {
-			// Count completed quests
-			if len(tracker.Progress) > 0 {
-				for questID, playerMap := range tracker.Progress {
-					// Check if quest is complete via the quest itself
-					if questID != "" {
-						for _, progress := range playerMap {
-							if quest, exists := qm.activeQuests[questID]; exists && quest.IsComplete() && progress.IsCompleted {
-								completedCount++
-							}
-						}
-					}
-				}
-			}
-		}
-		stats.CompletedQuests = completedCount
-		stats.CompletionRate = float64(completedCount) / float64(totalPlayers*len(qm.activeQuests))
+	if totalPlayers == 0 {
+		return
 	}
 
-	return stats
+	completedCount := qm.countCompletedQuests()
+	stats.CompletedQuests = completedCount
+	stats.CompletionRate = float64(completedCount) / float64(totalPlayers*len(qm.activeQuests))
+}
+
+// countCompletedQuests counts the total number of completed quests across all players.
+func (qm *QuestManager) countCompletedQuests() int {
+	completedCount := 0
+	for _, tracker := range qm.playerProgress {
+		completedCount += qm.countTrackerCompletedQuests(tracker)
+	}
+	return completedCount
+}
+
+// countTrackerCompletedQuests counts completed quests for a single progress tracker.
+func (qm *QuestManager) countTrackerCompletedQuests(tracker *ProgressTracker) int {
+	count := 0
+	if len(tracker.Progress) == 0 {
+		return 0
+	}
+
+	for questID, playerMap := range tracker.Progress {
+		count += qm.countQuestCompletions(questID, playerMap)
+	}
+	return count
+}
+
+// countQuestCompletions counts completions for a specific quest.
+func (qm *QuestManager) countQuestCompletions(questID string, playerMap map[string]*PlayerProgress) int {
+	if questID == "" {
+		return 0
+	}
+
+	count := 0
+	for _, progress := range playerMap {
+		if qm.isQuestCompleted(questID, progress) {
+			count++
+		}
+	}
+	return count
+}
+
+// isQuestCompleted checks if a quest is marked as completed.
+func (qm *QuestManager) isQuestCompleted(questID string, progress *PlayerProgress) bool {
+	quest, exists := qm.activeQuests[questID]
+	return exists && quest.IsComplete() && progress.IsCompleted
 }

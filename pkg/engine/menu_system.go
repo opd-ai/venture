@@ -129,53 +129,100 @@ func (ms *EbitenMenuSystem) SetLoadCallback(callback func(name string) error) {
 }
 
 // Toggle opens or closes the main menu.
+// Toggle toggles the menu on/off, creating it if needed.
 func (ms *EbitenMenuSystem) Toggle() {
+	ms.logToggleCalled()
+
+	if ms.menuEntity == nil {
+		ms.createAndOpenMenu()
+	} else {
+		ms.toggleExistingMenu()
+	}
+}
+
+// logToggleCalled logs the toggle action for debugging.
+func (ms *EbitenMenuSystem) logToggleCalled() {
 	if ms.logger != nil {
 		ms.logger.WithField("has_menu_entity", ms.menuEntity != nil).Debug("Toggle called")
 	}
-	if ms.menuEntity == nil {
-		if ms.logger != nil {
-			ms.logger.Debug("Creating menu entity")
-		}
-		ms.menuEntity = ms.world.CreateEntity()
-		menu := &MenuComponent{
-			Active:      true,
-			CurrentMenu: MenuTypeMain,
-		}
-		ms.menuEntity.AddComponent(menu)
-		ms.buildMainMenu(menu)
-		ms.world.Update(0) // Process entity addition
-		if ms.logger != nil {
-			ms.logger.WithFields(logrus.Fields{
-				"entity_id": ms.menuEntity.ID,
-				"menu_type": "main",
-				"active":    true,
-			}).Info("Menu opened")
-		}
-	} else {
-		if menu, ok := ms.menuEntity.GetComponent("menu"); ok {
-			// Type assert with safety check
-			if menuComp, ok := menu.(*MenuComponent); ok {
-				previousState := menuComp.Active
-				menuComp.Active = !menuComp.Active
+}
 
-				// Rebuild main menu when opening
-				if menuComp.Active {
-					menuComp.CurrentMenu = MenuTypeMain
-					menuComp.MenuStack = nil
-					ms.buildMainMenu(menuComp)
-				}
+// createAndOpenMenu creates and opens a new menu entity.
+func (ms *EbitenMenuSystem) createAndOpenMenu() {
+	ms.logMenuCreation()
 
-				if ms.logger != nil {
-					ms.logger.WithFields(logrus.Fields{
-						"entity_id":      ms.menuEntity.ID,
-						"previous_state": previousState,
-						"current_state":  menuComp.Active,
-					}).Debug("Menu toggled")
-				}
-			}
-		}
+	ms.menuEntity = ms.world.CreateEntity()
+	menu := &MenuComponent{
+		Active:      true,
+		CurrentMenu: MenuTypeMain,
 	}
+	ms.menuEntity.AddComponent(menu)
+	ms.buildMainMenu(menu)
+	ms.world.Update(0)
+
+	ms.logMenuOpened()
+}
+
+// logMenuCreation logs menu creation for debugging.
+func (ms *EbitenMenuSystem) logMenuCreation() {
+	if ms.logger != nil {
+		ms.logger.Debug("Creating menu entity")
+	}
+}
+
+// logMenuOpened logs successful menu opening.
+func (ms *EbitenMenuSystem) logMenuOpened() {
+	if ms.logger == nil {
+		return
+	}
+
+	ms.logger.WithFields(logrus.Fields{
+		"entity_id": ms.menuEntity.ID,
+		"menu_type": "main",
+		"active":    true,
+	}).Info("Menu opened")
+}
+
+// toggleExistingMenu toggles an existing menu entity.
+func (ms *EbitenMenuSystem) toggleExistingMenu() {
+	menu, ok := ms.menuEntity.GetComponent("menu")
+	if !ok {
+		return
+	}
+
+	menuComp, ok := menu.(*MenuComponent)
+	if !ok {
+		return
+	}
+
+	previousState := menuComp.Active
+	menuComp.Active = !menuComp.Active
+
+	if menuComp.Active {
+		ms.resetMenuToMain(menuComp)
+	}
+
+	ms.logMenuToggled(previousState, menuComp.Active)
+}
+
+// resetMenuToMain resets menu to main menu state.
+func (ms *EbitenMenuSystem) resetMenuToMain(menuComp *MenuComponent) {
+	menuComp.CurrentMenu = MenuTypeMain
+	menuComp.MenuStack = nil
+	ms.buildMainMenu(menuComp)
+}
+
+// logMenuToggled logs menu toggle state change.
+func (ms *EbitenMenuSystem) logMenuToggled(previousState, currentState bool) {
+	if ms.logger == nil {
+		return
+	}
+
+	ms.logger.WithFields(logrus.Fields{
+		"entity_id":      ms.menuEntity.ID,
+		"previous_state": previousState,
+		"current_state":  currentState,
+	}).Debug("Menu toggled")
 }
 
 // IsActive returns true if the menu is currently displayed.

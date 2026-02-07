@@ -299,41 +299,51 @@ func (q *Quadtree) Clear() {
 // Returns true if the entity was found and removed, false otherwise.
 // This enables incremental updates without full rebuilds.
 func (q *Quadtree) Remove(entity *Entity) bool {
-	// Use cached position accessor for fast access
 	pos := entity.GetPosition()
 	if pos == nil {
 		return false
 	}
 
-	// Check if point is in bounds
 	if !q.bounds.Contains(pos.X, pos.Y) {
 		return false
 	}
 
-	// Check entities at this level
+	if q.removeAtCurrentLevel(entity) {
+		return true
+	}
+
+	return q.removeFromChildren(entity)
+}
+
+// removeAtCurrentLevel attempts to remove entity from current node's entity list.
+func (q *Quadtree) removeAtCurrentLevel(entity *Entity) bool {
 	for i, e := range q.entities {
 		if e.ID == entity.ID {
-			// Remove by swapping with last element and truncating
 			q.entities[i] = q.entities[len(q.entities)-1]
 			q.entities = q.entities[:len(q.entities)-1]
 			return true
 		}
 	}
+	return false
+}
 
-	// Recursively try children
-	if q.divided {
-		if q.northwest.Remove(entity) {
-			return true
-		}
-		if q.northeast.Remove(entity) {
-			return true
-		}
-		if q.southwest.Remove(entity) {
-			return true
-		}
-		if q.southeast.Remove(entity) {
-			return true
-		}
+// removeFromChildren recursively tries to remove entity from child nodes.
+func (q *Quadtree) removeFromChildren(entity *Entity) bool {
+	if !q.divided {
+		return false
+	}
+
+	if q.northwest.Remove(entity) {
+		return true
+	}
+	if q.northeast.Remove(entity) {
+		return true
+	}
+	if q.southwest.Remove(entity) {
+		return true
+	}
+	if q.southeast.Remove(entity) {
+		return true
 	}
 
 	return false

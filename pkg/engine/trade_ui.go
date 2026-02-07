@@ -420,63 +420,69 @@ func (ui *TradeUI) drawRequestPanel(screen *ebiten.Image) {
 func (ui *TradeUI) drawItemGrid(screen *ebiten.Image, items []*item.Item, startY int, selectedSlots []int, panelType string) {
 	centerX := ui.screenWidth / 2
 	gridStartX := centerX - (ui.gridCols*ui.slotSize)/2
-
-	// Determine if this is the focused panel
-	isFocusedPanel := (panelType == "offer" && ui.focusedPanel == 0) || (panelType == "request" && ui.focusedPanel == 1)
+	isFocusedPanel := ui.isPanelFocused(panelType)
 
 	for i := 0; i < len(items) && i < ui.gridCols*ui.gridRows; i++ {
 		row := i / ui.gridCols
 		col := i % ui.gridCols
-
 		x := gridStartX + col*ui.slotSize
 		y := startY + row*ui.slotSize
 
-		// Determine if slot is selected
-		isSelected := false
-		for _, sel := range selectedSlots {
-			if sel == i {
-				isSelected = true
-				break
-			}
-		}
-
-		// Determine if this is the cursor position
+		isSelected := ui.isSlotSelected(i, selectedSlots)
 		isCursor := isFocusedPanel && row == ui.cursorRow && col == ui.cursorCol
 
-		// Draw slot background
-		bgColor := color.RGBA{50, 50, 50, 255}
-		if isSelected {
-			bgColor = color.RGBA{100, 150, 100, 255}
-		} else if isCursor {
-			bgColor = color.RGBA{100, 100, 150, 255} // Blue for cursor
-		} else if ui.hoveredSlot == i {
-			bgColor = color.RGBA{80, 80, 80, 255}
-		}
-
-		// PERF: Use vector drawing instead of creating new images per slot
-		vector.DrawFilledRect(screen, float32(x+2), float32(y+2), float32(ui.slotSize-4), float32(ui.slotSize-4), bgColor, true)
-
-		// Draw cursor border if focused
+		ui.drawSlotBackground(screen, x, y, isSelected, isCursor, i)
 		if isCursor {
-			borderColor := color.RGBA{200, 200, 255, 255}
-			// Top border
-			vector.DrawFilledRect(screen, float32(x+2), float32(y+2), float32(ui.slotSize-4), 2, borderColor, true)
-			// Bottom border
-			vector.DrawFilledRect(screen, float32(x+2), float32(y+ui.slotSize-6), float32(ui.slotSize-4), 2, borderColor, true)
+			ui.drawCursorBorder(screen, x, y)
 		}
-
-		// Draw item info
-		itm := items[i]
-		nameLen := len(itm.Name)
-		if nameLen > 10 {
-			nameLen = 10
-		}
-		ebitenutil.DebugPrintAt(screen, itm.Name[:nameLen], x+5, y+20)
-
-		// Draw rarity indicator
-		rarityColor := ui.getRarityColor(itm.Rarity)
-		vector.DrawFilledRect(screen, float32(x+4), float32(y+ui.slotSize-8), float32(ui.slotSize-8), 3, rarityColor, true)
+		ui.drawItemInfo(screen, items[i], x, y)
 	}
+}
+
+// isPanelFocused checks if the given panel type is currently focused.
+func (ui *TradeUI) isPanelFocused(panelType string) bool {
+	return (panelType == "offer" && ui.focusedPanel == 0) || (panelType == "request" && ui.focusedPanel == 1)
+}
+
+// isSlotSelected checks if a slot index is in the selected slots list.
+func (ui *TradeUI) isSlotSelected(slotIndex int, selectedSlots []int) bool {
+	for _, sel := range selectedSlots {
+		if sel == slotIndex {
+			return true
+		}
+	}
+	return false
+}
+
+// drawSlotBackground renders the background color for a slot based on its state.
+func (ui *TradeUI) drawSlotBackground(screen *ebiten.Image, x, y int, isSelected, isCursor bool, slotIndex int) {
+	bgColor := color.RGBA{50, 50, 50, 255}
+	if isSelected {
+		bgColor = color.RGBA{100, 150, 100, 255}
+	} else if isCursor {
+		bgColor = color.RGBA{100, 100, 150, 255}
+	} else if ui.hoveredSlot == slotIndex {
+		bgColor = color.RGBA{80, 80, 80, 255}
+	}
+	vector.DrawFilledRect(screen, float32(x+2), float32(y+2), float32(ui.slotSize-4), float32(ui.slotSize-4), bgColor, true)
+}
+
+// drawCursorBorder renders a border around the cursor position.
+func (ui *TradeUI) drawCursorBorder(screen *ebiten.Image, x, y int) {
+	borderColor := color.RGBA{200, 200, 255, 255}
+	vector.DrawFilledRect(screen, float32(x+2), float32(y+2), float32(ui.slotSize-4), 2, borderColor, true)
+	vector.DrawFilledRect(screen, float32(x+2), float32(y+ui.slotSize-6), float32(ui.slotSize-4), 2, borderColor, true)
+}
+
+// drawItemInfo renders the item name and rarity indicator.
+func (ui *TradeUI) drawItemInfo(screen *ebiten.Image, itm *item.Item, x, y int) {
+	nameLen := len(itm.Name)
+	if nameLen > 10 {
+		nameLen = 10
+	}
+	ebitenutil.DebugPrintAt(screen, itm.Name[:nameLen], x+5, y+20)
+	rarityColor := ui.getRarityColor(itm.Rarity)
+	vector.DrawFilledRect(screen, float32(x+4), float32(y+ui.slotSize-8), float32(ui.slotSize-8), 3, rarityColor, true)
 }
 
 // drawPendingState draws the pending state (waiting for response).

@@ -488,43 +488,68 @@ func (m *SaveManager) LoadGameWithRecovery(name string) (*GameSave, error) {
 		return nil, fmt.Errorf("save file not found: %s", name)
 	}
 
-	// Validate checksum if available
-	valid, hasChecksum := m.validateChecksum(name)
-	if hasChecksum && !valid {
-		js.Global().Get("console").Call("warn", fmt.Sprintf("[Venture] Checksum validation failed for %s, attempting recovery", name))
-		recovered, err := m.recoverFromBackup(name)
-		if err != nil {
-			return nil, fmt.Errorf("failed to recover from backup: %w", err)
-		}
-		if !recovered {
-			js.Global().Get("console").Call("warn", "[Venture] Recovery failed, attempting to load corrupted file")
-		}
+	if err := m.attemptChecksumRecovery(name); err != nil {
+		return nil, err
 	}
 
-	// Attempt to load save
-	save, err := m.LoadGame(name)
+	save, err := m.loadWithFallback(name)
 	if err != nil {
-		// Load failed, try recovery
-		js.Global().Get("console").Call("error", fmt.Sprintf("[Venture] Failed to load save, attempting recovery: %v", err))
-
-		recovered, recErr := m.recoverFromBackup(name)
-		if recErr != nil {
-			return nil, fmt.Errorf("failed to recover from backup: %w", recErr)
-		}
-		if !recovered {
-			return nil, fmt.Errorf("save corrupted and no valid backup available: %w", err)
-		}
-
-		// Retry load after recovery
-		save, err = m.LoadGame(name)
-		if err != nil {
-			return nil, fmt.Errorf("failed to load after recovery: %w", err)
-		}
-
-		js.Global().Get("console").Call("log", fmt.Sprintf("[Venture] Successfully recovered save: %s", name))
+		return nil, err
 	}
 
 	return save, nil
+}
+
+// attemptChecksumRecovery validates checksum and attempts recovery if needed.
+func (m *SaveManager) attemptChecksumRecovery(name string) error {
+	valid, hasChecksum := m.validateChecksum(name)
+	if !hasChecksum || valid {
+		return nil
+	}
+
+	js.Global().Get("console").Call("warn", fmt.Sprintf("[Venture] Checksum validation failed for %s, attempting recovery", name))
+	recovered, err := m.recoverFromBackup(name)
+	if err != nil {
+		return fmt.Errorf("failed to recover from backup: %w", err)
+	}
+	if !recovered {
+		js.Global().Get("console").Call("warn", "[Venture] Recovery failed, attempting to load corrupted file")
+	}
+	return nil
+}
+
+// loadWithFallback attempts to load a save, falling back to recovery if needed.
+func (m *SaveManager) loadWithFallback(name string) (*GameSave, error) {
+	save, err := m.LoadGame(name)
+	if err == nil {
+		return save, nil
+	}
+
+	js.Global().Get("console").Call("error", fmt.Sprintf("[Venture] Failed to load save, attempting recovery: %v", err))
+
+	if err := m.performRecoveryAndRetry(name, err); err != nil {
+		return nil, err
+	}
+
+	save, retryErr := m.LoadGame(name)
+	if retryErr != nil {
+		return nil, fmt.Errorf("failed to load after recovery: %w", retryErr)
+	}
+
+	js.Global().Get("console").Call("log", fmt.Sprintf("[Venture] Successfully recovered save: %s", name))
+	return save, nil
+}
+
+// performRecoveryAndRetry attempts to recover from backup.
+func (m *SaveManager) performRecoveryAndRetry(name string, originalErr error) error {
+	recovered, recErr := m.recoverFromBackup(name)
+	if recErr != nil {
+		return fmt.Errorf("failed to recover from backup: %w", recErr)
+	}
+	if !recovered {
+		return fmt.Errorf("save corrupted and no valid backup available: %w", originalErr)
+	}
+	return nil
 }
 
 // BackupExists checks if a backup exists for a save.

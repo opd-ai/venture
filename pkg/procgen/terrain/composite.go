@@ -416,47 +416,44 @@ func (g *CompositeGenerator) ensureConnectivity(terrain *Terrain, diagram *Voron
 // carveConnectingCorridor creates a walkable corridor between two points.
 // Uses L-shaped corridors (horizontal then vertical, or vice versa).
 func (g *CompositeGenerator) carveConnectingCorridor(terrain *Terrain, start, end Point, rng *rand.Rand) {
-	// Randomly choose horizontal-first or vertical-first
 	horizontalFirst := rng.Intn(2) == 0
 
 	if horizontalFirst {
-		// Horizontal then vertical
-		// Move horizontally from start.X to end.X
-		startX, endX := start.X, end.X
-		if startX > endX {
-			startX, endX = endX, startX
-		}
-		for x := startX; x <= endX; x++ {
-			terrain.SetTile(x, start.Y, TileFloor)
-		}
-
-		// Move vertically from start.Y to end.Y
-		startY, endY := start.Y, end.Y
-		if startY > endY {
-			startY, endY = endY, startY
-		}
-		for y := startY; y <= endY; y++ {
-			terrain.SetTile(end.X, y, TileFloor)
-		}
+		carveHorizontalThenVertical(terrain, start, end)
 	} else {
-		// Vertical then horizontal
-		// Move vertically from start.Y to end.Y
-		startY, endY := start.Y, end.Y
-		if startY > endY {
-			startY, endY = endY, startY
-		}
-		for y := startY; y <= endY; y++ {
-			terrain.SetTile(start.X, y, TileFloor)
-		}
+		carveVerticalThenHorizontal(terrain, start, end)
+	}
+}
 
-		// Move horizontally from start.X to end.X
-		startX, endX := start.X, end.X
-		if startX > endX {
-			startX, endX = endX, startX
-		}
-		for x := startX; x <= endX; x++ {
-			terrain.SetTile(x, end.Y, TileFloor)
-		}
+// carveHorizontalThenVertical carves a corridor horizontally first, then vertically.
+func carveHorizontalThenVertical(terrain *Terrain, start, end Point) {
+	carveHorizontalSegment(terrain, start.X, end.X, start.Y)
+	carveVerticalSegment(terrain, start.Y, end.Y, end.X)
+}
+
+// carveVerticalThenHorizontal carves a corridor vertically first, then horizontally.
+func carveVerticalThenHorizontal(terrain *Terrain, start, end Point) {
+	carveVerticalSegment(terrain, start.Y, end.Y, start.X)
+	carveHorizontalSegment(terrain, start.X, end.X, end.Y)
+}
+
+// carveHorizontalSegment carves a horizontal corridor segment.
+func carveHorizontalSegment(terrain *Terrain, startX, endX, y int) {
+	if startX > endX {
+		startX, endX = endX, startX
+	}
+	for x := startX; x <= endX; x++ {
+		terrain.SetTile(x, y, TileFloor)
+	}
+}
+
+// carveVerticalSegment carves a vertical corridor segment.
+func carveVerticalSegment(terrain *Terrain, startY, endY, x int) {
+	if startY > endY {
+		startY, endY = endY, startY
+	}
+	for y := startY; y <= endY; y++ {
+		terrain.SetTile(x, y, TileFloor)
 	}
 }
 

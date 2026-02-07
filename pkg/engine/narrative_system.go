@@ -40,44 +40,71 @@ func NewNarrativeSystem(world *World) *NarrativeSystem {
 // Update processes narrative components and checks trigger conditions.
 func (ns *NarrativeSystem) Update(entities []*Entity, deltaTime float64) {
 	for _, entity := range entities {
-		// Check if entity has narrative component (typically world entity)
-		narComp, ok := entity.GetComponent("narrative")
-		if !ok {
+		narrative := ns.getNarrativeComponent(entity)
+		if narrative == nil {
 			continue
 		}
 
-		narrative, ok := narComp.(*NarrativeComponent)
-		if !ok {
-			continue
-		}
+		ns.processTriggeredEvents(narrative)
+		ns.processActProgression(narrative)
+	}
+}
 
-		// Check for triggered events
-		triggeredEvents := narrative.CheckTriggerConditions()
-		for _, event := range triggeredEvents {
-			narrative.AddEvent(event)
+// getNarrativeComponent retrieves and validates the narrative component.
+func (ns *NarrativeSystem) getNarrativeComponent(entity *Entity) *NarrativeComponent {
+	narComp, ok := entity.GetComponent("narrative")
+	if !ok {
+		return nil
+	}
 
-			if ns.logger != nil && ns.logger.Logger.GetLevel() >= logrus.InfoLevel {
-				ns.logger.WithFields(logrus.Fields{
-					"event_type":     event.Type.String(),
-					"description":    event.Description,
-					"importance":     event.Importance,
-					"story_progress": narrative.StoryProgress,
-				}).Info("Narrative event triggered")
-			}
-		}
+	narrative, ok := narComp.(*NarrativeComponent)
+	if !ok {
+		return nil
+	}
 
-		// Check for act progression
-		if ns.shouldProgressAct(narrative) {
-			if err := narrative.ProgressToNextAct(); err == nil {
-				if ns.logger != nil && ns.logger.Logger.GetLevel() >= logrus.InfoLevel {
-					ns.logger.WithFields(logrus.Fields{
-						"new_act":        narrative.CurrentAct.String(),
-						"progress":       narrative.StoryProgress,
-						"active_threads": len(narrative.ActiveThreads),
-					}).Info("Story progressed to next act")
-				}
-			}
-		}
+	return narrative
+}
+
+// processTriggeredEvents checks and logs triggered narrative events.
+func (ns *NarrativeSystem) processTriggeredEvents(narrative *NarrativeComponent) {
+	triggeredEvents := narrative.CheckTriggerConditions()
+	for _, event := range triggeredEvents {
+		narrative.AddEvent(event)
+		ns.logNarrativeEvent(event, narrative.StoryProgress)
+	}
+}
+
+// logNarrativeEvent logs a triggered narrative event.
+func (ns *NarrativeSystem) logNarrativeEvent(event NarrativeEvent, storyProgress float64) {
+	if ns.logger != nil && ns.logger.Logger.GetLevel() >= logrus.InfoLevel {
+		ns.logger.WithFields(logrus.Fields{
+			"event_type":     event.Type.String(),
+			"description":    event.Description,
+			"importance":     event.Importance,
+			"story_progress": storyProgress,
+		}).Info("Narrative event triggered")
+	}
+}
+
+// processActProgression checks and progresses story acts.
+func (ns *NarrativeSystem) processActProgression(narrative *NarrativeComponent) {
+	if !ns.shouldProgressAct(narrative) {
+		return
+	}
+
+	if err := narrative.ProgressToNextAct(); err == nil {
+		ns.logActProgression(narrative)
+	}
+}
+
+// logActProgression logs story act progression.
+func (ns *NarrativeSystem) logActProgression(narrative *NarrativeComponent) {
+	if ns.logger != nil && ns.logger.Logger.GetLevel() >= logrus.InfoLevel {
+		ns.logger.WithFields(logrus.Fields{
+			"new_act":        narrative.CurrentAct.String(),
+			"progress":       narrative.StoryProgress,
+			"active_threads": len(narrative.ActiveThreads),
+		}).Info("Story progressed to next act")
 	}
 }
 

@@ -277,43 +277,51 @@ func (s *EquipmentVisualSystem) syncEquipmentChanges(entity *Entity) {
 		return
 	}
 
-	// Get equipment component to check for changes
-	comp, ok := entity.GetComponent("equipment")
-	if !ok {
-		return
-	}
-	equipComp, ok := comp.(*EquipmentComponent)
-	if !ok {
+	equipComp := s.getEquipmentComponentTyped(entity)
+	if equipComp == nil {
 		return
 	}
 
-	// Check each equipment slot for changes and update visual component
+	s.syncMainHandSlot(equipComp, equipVisualComp)
+	s.syncChestSlot(equipComp, equipVisualComp)
+	s.syncAccessories(equipComp, equipVisualComp)
+}
+
+// getEquipmentComponentTyped retrieves and type-asserts the equipment component.
+func (s *EquipmentVisualSystem) getEquipmentComponentTyped(entity *Entity) *EquipmentComponent {
+	comp, ok := entity.GetComponent("equipment")
+	if !ok {
+		return nil
+	}
+	equipComp, ok := comp.(*EquipmentComponent)
+	if !ok {
+		return nil
+	}
+	return equipComp
+}
+
+// syncMainHandSlot synchronizes the main hand weapon slot.
+func (s *EquipmentVisualSystem) syncMainHandSlot(equipComp *EquipmentComponent, equipVisualComp *EquipmentVisualComponent) {
 	mainHand := equipComp.GetEquipped(SlotMainHand)
 	if mainHand != nil {
-		// Use item ID as unique identifier and item seed for generation
-		itemID := mainHand.ID
-		itemSeed := mainHand.Seed
-		if equipVisualComp.WeaponID != itemID {
-			equipVisualComp.SetWeapon(itemID, itemSeed)
+		if equipVisualComp.WeaponID != mainHand.ID {
+			equipVisualComp.SetWeapon(mainHand.ID, mainHand.Seed)
 		}
 	} else if equipVisualComp.HasWeapon() {
 		equipVisualComp.ClearWeapon()
 	}
+}
 
-	// Check armor (chest slot is primary armor visual)
+// syncChestSlot synchronizes the chest armor slot.
+func (s *EquipmentVisualSystem) syncChestSlot(equipComp *EquipmentComponent, equipVisualComp *EquipmentVisualComponent) {
 	chest := equipComp.GetEquipped(SlotChest)
 	if chest != nil {
-		itemID := chest.ID
-		itemSeed := chest.Seed
-		if equipVisualComp.ArmorID != itemID {
-			equipVisualComp.SetArmor(itemID, itemSeed)
+		if equipVisualComp.ArmorID != chest.ID {
+			equipVisualComp.SetArmor(chest.ID, chest.Seed)
 		}
 	} else if equipVisualComp.HasArmor() {
 		equipVisualComp.ClearArmor()
 	}
-
-	// Sync accessories (accessory slots 1-3)
-	s.syncAccessories(equipComp, equipVisualComp)
 }
 
 // syncAccessories synchronizes accessory slots with visual component.

@@ -588,47 +588,63 @@ type EquipmentOption struct {
 // GetAvailableSkills returns a list of skills that can be selected for carry-over.
 func (s *CarryOverSystem) GetAvailableSkills(entity *Entity) []SkillOption {
 	carry := s.getCarryOverComponent(entity)
-
 	var options []SkillOption
 
-	// Check skill book
-	if skillComp, ok := entity.GetComponent("skill_book"); ok {
-		if skillBook, ok := skillComp.(*SkillBookComponent); ok {
-			for skillID, skill := range skillBook.LearnedSkills {
-				selected := false
-				if carry != nil {
-					selected = carry.IsSkillSelected(skillID)
-				}
-				options = append(options, SkillOption{
-					SkillID:  skillID,
-					Name:     skill.Name,
-					Type:     skill.Type,
-					Level:    skill.Level,
-					Selected: selected,
-				})
-			}
-		}
+	options = append(options, s.collectSkillBookOptions(entity, carry)...)
+	options = append(options, s.collectSpellOptions(entity, carry)...)
+
+	return options
+}
+
+// collectSkillBookOptions extracts skill options from the skill book component.
+func (s *CarryOverSystem) collectSkillBookOptions(entity *Entity, carry *CarryOverComponent) []SkillOption {
+	var options []SkillOption
+	skillComp, ok := entity.GetComponent("skill_book")
+	if !ok {
+		return options
 	}
 
-	// Check spell component
-	if spellComp, ok := entity.GetComponent("spell"); ok {
-		if spellList, ok := spellComp.(*SpellComponent); ok {
-			for spellID, spell := range spellList.KnownSpells {
-				selected := false
-				if carry != nil {
-					selected = carry.IsSkillSelected(spellID)
-				}
-				options = append(options, SkillOption{
-					SkillID:  spellID,
-					Name:     spell.Name,
-					Type:     "spell",
-					Level:    spell.SpellLevel,
-					Selected: selected,
-				})
-			}
-		}
+	skillBook, ok := skillComp.(*SkillBookComponent)
+	if !ok {
+		return options
 	}
 
+	for skillID, skill := range skillBook.LearnedSkills {
+		selected := carry != nil && carry.IsSkillSelected(skillID)
+		options = append(options, SkillOption{
+			SkillID:  skillID,
+			Name:     skill.Name,
+			Type:     skill.Type,
+			Level:    skill.Level,
+			Selected: selected,
+		})
+	}
+	return options
+}
+
+// collectSpellOptions extracts skill options from the spell component.
+func (s *CarryOverSystem) collectSpellOptions(entity *Entity, carry *CarryOverComponent) []SkillOption {
+	var options []SkillOption
+	spellComp, ok := entity.GetComponent("spell")
+	if !ok {
+		return options
+	}
+
+	spellList, ok := spellComp.(*SpellComponent)
+	if !ok {
+		return options
+	}
+
+	for spellID, spell := range spellList.KnownSpells {
+		selected := carry != nil && carry.IsSkillSelected(spellID)
+		options = append(options, SkillOption{
+			SkillID:  spellID,
+			Name:     spell.Name,
+			Type:     "spell",
+			Level:    spell.SpellLevel,
+			Selected: selected,
+		})
+	}
 	return options
 }
 

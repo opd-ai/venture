@@ -230,48 +230,75 @@ func (s *CollectionSystem) syncFishingCollection(entity *Entity) {
 
 // syncGatheringCollection syncs harvested resources to the collection.
 func (s *CollectionSystem) syncGatheringCollection(entity *Entity) {
+	gathering := s.getGatheringComponent(entity)
+	if gathering == nil {
+		return
+	}
+
+	collection := s.getCollectionComponent(entity)
+	if collection == nil {
+		return
+	}
+
+	s.processHarvestedResources(entity, gathering, collection)
+}
+
+// getGatheringComponent retrieves and type-asserts the gathering component.
+func (s *CollectionSystem) getGatheringComponent(entity *Entity) *GatheringComponent {
 	comp, ok := entity.GetComponent("gathering")
 	if !ok {
-		return
+		return nil
 	}
 	gathering, ok := comp.(*GatheringComponent)
 	if !ok || gathering == nil {
-		return
+		return nil
 	}
+	return gathering
+}
 
-	comp, ok = entity.GetComponent("collection")
+// getCollectionComponent retrieves and type-asserts the collection component.
+func (s *CollectionSystem) getCollectionComponent(entity *Entity) *CollectionComponent {
+	comp, ok := entity.GetComponent("collection")
 	if !ok {
-		return
+		return nil
 	}
 	collection, ok := comp.(*CollectionComponent)
 	if !ok || collection == nil {
-		return
+		return nil
 	}
+	return collection
+}
 
-	// Check each harvested resource type
+// processHarvestedResources adds harvested resources to the collection.
+func (s *CollectionSystem) processHarvestedResources(entity *Entity, gathering *GatheringComponent, collection *CollectionComponent) {
 	for resourceType, count := range gathering.TotalHarvested {
 		if count > 0 {
 			resourceID := string(resourceType)
 			if !collection.HasCollectible(resourceID) {
-				rarity := s.getResourceRarity(resourceType)
-				timestamp := s.getCurrentTimestamp()
-
-				isNew := collection.AddCollectible(
-					resourceID,
-					string(resourceType),
-					CollectionCategoryResources,
-					rarity,
-					"A resource harvested while gathering",
-					timestamp,
-				)
-
-				if isNew {
-					entry := collection.GetCollectible(resourceID)
-					s.notifyDiscovery(entity.ID, entry)
-					s.checkMilestones(entity.ID, collection, CollectionCategoryResources)
-				}
+				s.addNewResource(entity, collection, resourceType, resourceID)
 			}
 		}
+	}
+}
+
+// addNewResource adds a new resource to the collection and notifies on discovery.
+func (s *CollectionSystem) addNewResource(entity *Entity, collection *CollectionComponent, resourceType ResourceType, resourceID string) {
+	rarity := s.getResourceRarity(resourceType)
+	timestamp := s.getCurrentTimestamp()
+
+	isNew := collection.AddCollectible(
+		resourceID,
+		string(resourceType),
+		CollectionCategoryResources,
+		rarity,
+		"A resource harvested while gathering",
+		timestamp,
+	)
+
+	if isNew {
+		entry := collection.GetCollectible(resourceID)
+		s.notifyDiscovery(entity.ID, entry)
+		s.checkMilestones(entity.ID, collection, CollectionCategoryResources)
 	}
 }
 

@@ -414,63 +414,78 @@ func (m *Manager) calculateConcessionValue(concessions []DiplomaticConcession, d
 func (m *Manager) applyConcessions(attackerGuildID, defenderGuildID string, concessions []DiplomaticConcession, defenderGuild *guild.Guild) {
 	now := time.Now()
 	for _, concession := range concessions {
-		applied := AppliedConcession{
-			Type:            concession.Type,
-			AttackerGuildID: attackerGuildID,
-			DefenderGuildID: defenderGuildID,
-			AppliedAt:       now,
-		}
-
-		switch concession.Type {
-		case ConcessionGold:
-			if goldAmount, ok := concession.Value.(int); ok {
-				// Transfer gold from defender to attacker
-				defenderGuild.Treasury -= goldAmount
-				if attackerGuild, err := m.guildManager.GetGuild(attackerGuildID); err == nil {
-					attackerGuild.Treasury += goldAmount
-				}
-				applied.GoldAmount = goldAmount
-			}
-
-		case ConcessionTerritory:
-			if territoryID, ok := concession.Value.(string); ok && territoryID != "" {
-				// Record territory transfer for external system to process
-				// Territory system integration: query GetPendingTerritoryTransfers()
-				// to get territories that should be transferred
-				applied.TerritoryID = territoryID
-			}
-
-		case ConcessionApology:
-			if apologyText, ok := concession.Value.(string); ok && apologyText != "" {
-				// Record public apology for broadcast
-				// Messaging system integration: query GetPendingApologies()
-				// to get apologies that should be broadcast to all players
-				applied.ApologyText = apologyText
-			} else {
-				// Default apology text if none provided
-				applied.ApologyText = fmt.Sprintf("Guild %s publicly apologizes to guild %s for the conflict.",
-					defenderGuildID, attackerGuildID)
-			}
-
-		case ConcessionTribute:
-			if itemIDs, ok := concession.Value.([]string); ok && len(itemIDs) > 0 {
-				// Record item tribute for transfer
-				// Inventory system integration: query GetPendingTributes()
-				// to get items that should be transferred from defender to attacker
-				applied.TributeItemIDs = itemIDs
-			}
-
-		case ConcessionTrade:
-			if discount, ok := concession.Value.(float64); ok && discount > 0 {
-				// Record trade discount for future transactions
-				// Trade system integration: call GetTradeDiscount(attackerID, defenderID)
-				// to check if a discount applies to transactions between these guilds
-				applied.TradeDiscountPct = discount
-				applied.TradeDiscountEnds = now.Add(TradeDiscountDuration)
-			}
-		}
-
+		applied := m.createAppliedConcession(concession, attackerGuildID, defenderGuildID, now)
+		m.processConcessionType(concession, &applied, defenderGuild, attackerGuildID, now)
 		m.appliedConcessions = append(m.appliedConcessions, applied)
+	}
+}
+
+// createAppliedConcession initializes a new applied concession record.
+func (m *Manager) createAppliedConcession(concession DiplomaticConcession, attackerGuildID, defenderGuildID string, now time.Time) AppliedConcession {
+	return AppliedConcession{
+		Type:            concession.Type,
+		AttackerGuildID: attackerGuildID,
+		DefenderGuildID: defenderGuildID,
+		AppliedAt:       now,
+	}
+}
+
+// processConcessionType applies the concession based on its type.
+func (m *Manager) processConcessionType(concession DiplomaticConcession, applied *AppliedConcession, defenderGuild *guild.Guild, attackerGuildID string, now time.Time) {
+	switch concession.Type {
+	case ConcessionGold:
+		m.applyGoldConcession(concession, applied, defenderGuild, attackerGuildID)
+	case ConcessionTerritory:
+		m.applyTerritoryConcession(concession, applied)
+	case ConcessionApology:
+		m.applyApologyConcession(concession, applied, attackerGuildID)
+	case ConcessionTribute:
+		m.applyTributeConcession(concession, applied)
+	case ConcessionTrade:
+		m.applyTradeConcession(concession, applied, now)
+	}
+}
+
+// applyGoldConcession transfers gold from defender to attacker.
+func (m *Manager) applyGoldConcession(concession DiplomaticConcession, applied *AppliedConcession, defenderGuild *guild.Guild, attackerGuildID string) {
+	if goldAmount, ok := concession.Value.(int); ok {
+		defenderGuild.Treasury -= goldAmount
+		if attackerGuild, err := m.guildManager.GetGuild(attackerGuildID); err == nil {
+			attackerGuild.Treasury += goldAmount
+		}
+		applied.GoldAmount = goldAmount
+	}
+}
+
+// applyTerritoryConcession records territory transfer for external processing.
+func (m *Manager) applyTerritoryConcession(concession DiplomaticConcession, applied *AppliedConcession) {
+	if territoryID, ok := concession.Value.(string); ok && territoryID != "" {
+		applied.TerritoryID = territoryID
+	}
+}
+
+// applyApologyConcession records public apology for broadcast.
+func (m *Manager) applyApologyConcession(concession DiplomaticConcession, applied *AppliedConcession, attackerGuildID string) {
+	if apologyText, ok := concession.Value.(string); ok && apologyText != "" {
+		applied.ApologyText = apologyText
+	} else {
+		applied.ApologyText = fmt.Sprintf("Guild %s publicly apologizes to guild %s for the conflict.",
+			applied.DefenderGuildID, attackerGuildID)
+	}
+}
+
+// applyTributeConcession records item tribute for transfer.
+func (m *Manager) applyTributeConcession(concession DiplomaticConcession, applied *AppliedConcession) {
+	if itemIDs, ok := concession.Value.([]string); ok && len(itemIDs) > 0 {
+		applied.TributeItemIDs = itemIDs
+	}
+}
+
+// applyTradeConcession records trade discount for future transactions.
+func (m *Manager) applyTradeConcession(concession DiplomaticConcession, applied *AppliedConcession, now time.Time) {
+	if discount, ok := concession.Value.(float64); ok && discount > 0 {
+		applied.TradeDiscountPct = discount
+		applied.TradeDiscountEnds = now.Add(TradeDiscountDuration)
 	}
 }
 

@@ -24,17 +24,33 @@ type VoronoiDiagram struct {
 // GenerateVoronoiDiagram creates a Voronoi diagram with the specified number of regions.
 // Uses Manhattan distance for performance. Regions are evenly distributed spatially.
 func GenerateVoronoiDiagram(width, height, numRegions int, rng *rand.Rand) *VoronoiDiagram {
+	numRegions = clampNumRegions(width, height, numRegions)
+	seeds := generateSeedPoints(width, height, numRegions, rng)
+	regions := initializeRegions(seeds, numRegions)
+	assignment := createAssignmentGrid(width, height)
+	assignTilesToRegions(assignment, regions, seeds, width, height)
+
+	return &VoronoiDiagram{
+		Regions:    regions,
+		Assignment: assignment,
+		Width:      width,
+		Height:     height,
+	}
+}
+
+// clampNumRegions ensures numRegions is within valid bounds.
+func clampNumRegions(width, height, numRegions int) int {
 	if numRegions < 1 {
-		numRegions = 1
+		return 1
 	}
 	if numRegions > width*height {
-		numRegions = width * height
+		return width * height
 	}
+	return numRegions
+}
 
-	// Generate seed points with spatial distribution
-	seeds := generateSeedPoints(width, height, numRegions, rng)
-
-	// Initialize regions
+// initializeRegions creates the initial region structures.
+func initializeRegions(seeds []Point, numRegions int) []*VoronoiRegion {
 	regions := make([]*VoronoiRegion, numRegions)
 	for i := 0; i < numRegions; i++ {
 		regions[i] = &VoronoiRegion{
@@ -43,38 +59,43 @@ func GenerateVoronoiDiagram(width, height, numRegions int, rng *rand.Rand) *Voro
 			ID:    i,
 		}
 	}
+	return regions
+}
 
-	// Create assignment grid
+// createAssignmentGrid allocates the grid for tile assignments.
+func createAssignmentGrid(width, height int) [][]int {
 	assignment := make([][]int, height)
 	for y := range assignment {
 		assignment[y] = make([]int, width)
 	}
+	return assignment
+}
 
-	// Assign each tile to nearest seed (Manhattan distance)
+// assignTilesToRegions assigns each tile to the nearest seed using Manhattan distance.
+func assignTilesToRegions(assignment [][]int, regions []*VoronoiRegion, seeds []Point, width, height int) {
 	for y := 0; y < height; y++ {
 		for x := 0; x < width; x++ {
-			minDist := math.MaxInt32
-			closestRegion := 0
-
-			for i, seed := range seeds {
-				dist := manhattanDistance(x, y, seed.X, seed.Y)
-				if dist < minDist {
-					minDist = dist
-					closestRegion = i
-				}
-			}
-
+			closestRegion := findClosestRegion(x, y, seeds)
 			assignment[y][x] = closestRegion
 			regions[closestRegion].Tiles = append(regions[closestRegion].Tiles, Point{X: x, Y: y})
 		}
 	}
+}
 
-	return &VoronoiDiagram{
-		Regions:    regions,
-		Assignment: assignment,
-		Width:      width,
-		Height:     height,
+// findClosestRegion returns the index of the closest seed to the given position.
+func findClosestRegion(x, y int, seeds []Point) int {
+	minDist := math.MaxInt32
+	closestRegion := 0
+
+	for i, seed := range seeds {
+		dist := manhattanDistance(x, y, seed.X, seed.Y)
+		if dist < minDist {
+			minDist = dist
+			closestRegion = i
+		}
 	}
+
+	return closestRegion
 }
 
 // generateSeedPoints creates evenly distributed seed points using Poisson disc sampling.

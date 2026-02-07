@@ -569,9 +569,7 @@ func (fs *FishingSystem) getRarityMultiplier(rarity FishRarity, rareFishBonus fl
 
 // selectRandomFish performs weighted random selection from eligible fish.
 func (fs *FishingSystem) selectRandomFish(eligible eligibleFishList) *FishType {
-	fs.mu.Lock()
 	roll := fs.rng.Float64() * eligible.totalWeight
-	fs.mu.Unlock()
 
 	cumulative := 0.0
 
@@ -587,10 +585,8 @@ func (fs *FishingSystem) selectRandomFish(eligible eligibleFishList) *FishType {
 
 // calculateFishWeight determines the weight of the caught fish with skill bonuses.
 func (fs *FishingSystem) calculateFishWeight(fish *FishType, skillLevel int) float64 {
-	fs.mu.Lock()
 	weightRange := fish.MaxWeight - fish.BaseWeight
 	fishWeight := fish.BaseWeight + fs.rng.Float64()*weightRange
-	fs.mu.Unlock()
 
 	skillWeightBonus := 1.0 + float64(skillLevel)*0.005
 	fishWeight *= skillWeightBonus
@@ -619,9 +615,7 @@ func (fs *FishingSystem) processBite(fisher *Entity, fishComp *FishingComponent,
 // processReeling handles the reeling minigame phase.
 func (fs *FishingSystem) processReeling(fisher *Entity, fishComp *FishingComponent, deltaTime float64) {
 	// Update fish struggle
-	fs.mu.Lock()
 	rng := fs.rng
-	fs.mu.Unlock()
 	fishComp.UpdateStruggle(deltaTime, rng)
 
 	// Get reel input from entity (stubbed - would come from input system)

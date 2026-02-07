@@ -157,7 +157,7 @@ func (f *FederationProtocol) TransferPlayer(playerID uint64, world *engine.World
 }
 
 // preparePlayerTransfer creates auth token and prepares transfer state.
-func (f *FederationProtocol) preparePlayerTransfer(playerID uint64, world *engine.World, targetServer string, authMgr *AuthManager, transferMgr *TransferManager) (string, *Transfer, error) {
+func (f *FederationProtocol) preparePlayerTransfer(playerID uint64, world *engine.World, targetServer string, authMgr *AuthManager, transferMgr *TransferManager) (string, *PlayerTransfer, error) {
 	token, err := authMgr.CreateSessionToken(playerID, f.serverID)
 	if err != nil {
 		return "", nil, fmt.Errorf("failed to create session token: %w", err)
@@ -172,11 +172,11 @@ func (f *FederationProtocol) preparePlayerTransfer(playerID uint64, world *engin
 		return "", nil, err
 	}
 
-	return token, transfer, nil
+	return token.Token, transfer, nil
 }
 
 // validateAndBeginTransfer validates player state and begins the transfer.
-func (f *FederationProtocol) validateAndBeginTransfer(playerID uint64, transfer *Transfer, transferMgr *TransferManager) error {
+func (f *FederationProtocol) validateAndBeginTransfer(playerID uint64, transfer *PlayerTransfer, transferMgr *TransferManager) error {
 	if err := transferMgr.ValidatePlayerState(transfer.PlayerState); err != nil {
 		transferMgr.RollbackTransfer(playerID, "validation failed")
 		return fmt.Errorf("invalid player state: %w", err)
@@ -199,7 +199,7 @@ func (f *FederationProtocol) getTargetConnection(targetServer string) (net.Conn,
 }
 
 // executeTransferRequest sends the transfer request and handles response.
-func (f *FederationProtocol) executeTransferRequest(playerID uint64, token string, transfer *Transfer, conn net.Conn, transferMgr *TransferManager) error {
+func (f *FederationProtocol) executeTransferRequest(playerID uint64, token string, transfer *PlayerTransfer, conn net.Conn, transferMgr *TransferManager) error {
 	transferReq := f.buildTransferRequest(playerID, token, transfer)
 
 	if err := f.sendTransferRequest(transferReq, conn, playerID, transferMgr); err != nil {
@@ -210,7 +210,7 @@ func (f *FederationProtocol) executeTransferRequest(playerID uint64, token strin
 }
 
 // buildTransferRequest creates the transfer request payload.
-func (f *FederationProtocol) buildTransferRequest(playerID uint64, token string, transfer *Transfer) map[string]interface{} {
+func (f *FederationProtocol) buildTransferRequest(playerID uint64, token string, transfer *PlayerTransfer) map[string]interface{} {
 	return map[string]interface{}{
 		"type":         "transfer_request",
 		"player_id":    playerID,

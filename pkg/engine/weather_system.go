@@ -34,6 +34,9 @@ type WeatherSystem struct {
 	viewportY      float64
 	viewportWidth  float64
 	viewportHeight float64
+
+	// Reusable buffer for particle collection (performance optimization)
+	particleBuffer []WeatherParticleData
 }
 
 // NewWeatherSystem creates a new weather system.
@@ -121,12 +124,14 @@ func (ws *WeatherSystem) updateWeather(entity *Entity, deltaTime float64) {
 // GetWeatherParticles returns all active weather particles for rendering.
 // Returns particles with opacity applied for transitions.
 // The rendering system should use this to draw weather effects.
+// Performance: Reuses internal buffer to avoid per-frame allocations.
 func (ws *WeatherSystem) GetWeatherParticles() []WeatherParticleData {
 	if ws.world == nil {
 		return nil
 	}
 
-	var allParticles []WeatherParticleData
+	// Reuse buffer by resetting length (capacity preserved)
+	ws.particleBuffer = ws.particleBuffer[:0]
 
 	weatherEntities := ws.world.GetEntitiesWith("weather")
 	for _, entity := range weatherEntities {
@@ -162,7 +167,7 @@ func (ws *WeatherSystem) GetWeatherParticles() []WeatherParticleData {
 			originalAlpha := float64(rgba.A)
 			rgba.A = uint8(originalAlpha * opacity)
 
-			allParticles = append(allParticles, WeatherParticleData{
+			ws.particleBuffer = append(ws.particleBuffer, WeatherParticleData{
 				X:        p.X,
 				Y:        p.Y,
 				Size:     p.Size,
@@ -172,7 +177,7 @@ func (ws *WeatherSystem) GetWeatherParticles() []WeatherParticleData {
 		}
 	}
 
-	return allParticles
+	return ws.particleBuffer
 }
 
 // isInViewport checks if a particle is within viewport bounds.

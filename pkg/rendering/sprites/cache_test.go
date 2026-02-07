@@ -1,9 +1,17 @@
 package sprites
 
 import (
+	"os"
 	"sync"
 	"testing"
+
+	"github.com/hajimehoshi/ebiten/v2"
 )
+
+// createTestImage creates a test image for testing purposes.
+func createTestImage(width, height int) *ebiten.Image {
+	return ebiten.NewImage(width, height)
+}
 
 func TestNewCache(t *testing.T) {
 	tests := []struct {
@@ -498,5 +506,104 @@ func TestHashConfig_FieldSensitivity(t *testing.T) {
 				t.Errorf("Modified config produced same hash as base: %d", baseHash)
 			}
 		})
+	}
+}
+
+// TestCache_ConcurrentGetSafety tests that concurrent Get operations are safe with single lock.
+// This validates the mutex consolidation fix from Issue R3.
+func TestCache_ConcurrentGetSafety(t *testing.T) {
+	skipIfHeadless(t)
+
+	cache := NewCache(100)
+	config := Config{
+		Type:   0,
+		Seed:   12345,
+		Width:  32,
+		Height: 32,
+	}
+
+	// Pre-populate cache
+	testImg := createTestImage(32, 32)
+	cache.Put(config, testImg)
+
+	const goroutines = 100
+	const iterations = 1000
+
+	var wg sync.WaitGroup
+	wg.Add(goroutines)
+
+	// Run concurrent Get operations
+	for i := 0; i < goroutines; i++ {
+		go func() {
+			defer wg.Done()
+			for j := 0; j < iterations; j++ {
+				img := cache.Get(config)
+				if img == nil {
+					t.Error("Expected cache hit, got nil")
+				}
+			}
+		}()
+	}
+
+	wg.Wait()
+
+	// Verify cache state is consistent
+	stats := cache.Stats()
+	if stats.Hits != goroutines*iterations {
+		t.Errorf("Expected %d hits, got %d", goroutines*iterations, stats.Hits)
+	}
+}
+
+// TestCache_ConcurrentGetAndPut tests concurrent Get and Put operations.
+func TestCache_ConcurrentGetAndPut(t *testing.T) {
+	skipIfHeadless(t)
+
+	cache := NewCache(50)
+
+	const goroutines = 50
+	const iterations = 100
+
+	var wg sync.WaitGroup
+	wg.Add(goroutines * 2) // Both readers and writers
+
+	// Readers
+	for i := 0; i < goroutines; i++ {
+		go func(id int) {
+			defer wg.Done()
+			config := Config{
+				Type:   0,
+				Seed:   int64(id % 10), // 10 different configs
+				Width:  32,
+				Height: 32,
+			}
+			for j := 0; j < iterations; j++ {
+				_ = cache.Get(config)
+			}
+		}(i)
+	}
+
+	// Writers
+	for i := 0; i < goroutines; i++ {
+		go func(id int) {
+			defer wg.Done()
+			config := Config{
+				Type:   0,
+				Seed:   int64(id % 10),
+				Width:  32,
+				Height: 32,
+			}
+			for j := 0; j < iterations; j++ {
+				testImg := createTestImage(32, 32)
+				cache.Put(config, testImg)
+			}
+		}(i)
+	}
+
+	wg.Wait()
+
+	// Cache should not panic and should be in a valid state
+	stats := cache.Stats()
+	if stats.Size > 50 {
+		t.Errorf("Cache size %d exceeds capacity 50", stats.Size)
 	}
 }

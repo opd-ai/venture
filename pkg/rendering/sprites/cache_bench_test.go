@@ -1,8 +1,16 @@
 package sprites
 
 import (
+	"os"
 	"testing"
 )
+
+// skipIfHeadless skips the benchmark if running in a headless environment.
+func skipIfHeadless(b testing.TB) {
+	if os.Getenv("DISPLAY") == "" && os.Getenv("WAYLAND_DISPLAY") == "" {
+		b.Skip("Skipping benchmark in headless environment (no DISPLAY)")
+	}
+}
 
 // BenchmarkCache_Get tests cache lookup performance.
 func BenchmarkCache_Get(b *testing.B) {
@@ -173,4 +181,52 @@ func BenchmarkCacheStats_HitRate(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		_ = cache.Stats()
 	}
+}
+
+// BenchmarkCache_Get_SingleLock benchmarks the optimized single-lock Get implementation.
+// This measures the performance improvement from consolidating RLock→Lock upgrade to single Lock.
+func BenchmarkCache_Get_SingleLock(b *testing.B) {
+	skipIfHeadless(b)
+
+	cache := NewCache(100)
+	config := Config{
+		Type:   0,
+		Seed:   12345,
+		Width:  32,
+		Height: 32,
+	}
+
+	// Pre-populate cache to test hit path
+	testImg := createTestImage(32, 32)
+	cache.Put(config, testImg)
+
+	b.ResetTimer()
+	b.ReportAllocs()
+	for i := 0; i < b.N; i++ {
+		_ = cache.Get(config)
+	}
+}
+
+// BenchmarkCache_Get_ConcurrentHits benchmarks concurrent cache hits with single lock.
+func BenchmarkCache_Get_ConcurrentHits(b *testing.B) {
+	skipIfHeadless(b)
+
+	cache := NewCache(100)
+	config := Config{
+		Type:   0,
+		Seed:   12345,
+		Width:  32,
+		Height: 32,
+	}
+
+	// Pre-populate cache
+	testImg := createTestImage(32, 32)
+	cache.Put(config, testImg)
+
+	b.ResetTimer()
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			_ = cache.Get(config)
+		}
+	})
 }

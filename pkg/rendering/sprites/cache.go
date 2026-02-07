@@ -97,25 +97,22 @@ func NewCache(capacity int) *Cache {
 
 // Get retrieves a sprite from the cache by configuration.
 // Returns nil if not found.
+// Performance: Uses single Lock instead of RLock→Lock upgrade to reduce mutex operations.
 func (c *Cache) Get(config Config) *ebiten.Image {
 	key := c.hashConfig(config)
 
-	c.mutex.RLock()
-	entry, found := c.cache[key]
-	c.mutex.RUnlock()
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
 
+	entry, found := c.cache[key]
 	if found {
-		c.mutex.Lock()
 		// Move to front of LRU list (most recently used)
 		c.lruList.MoveToFront(entry.element)
 		c.hits++
-		c.mutex.Unlock()
 		return entry.sprite
 	}
 
-	c.mutex.Lock()
 	c.misses++
-	c.mutex.Unlock()
 	return nil
 }
 

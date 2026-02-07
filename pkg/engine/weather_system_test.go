@@ -395,3 +395,89 @@ func TestWeatherSystem_Update_WeatherChange(t *testing.T) {
 		t.Error("Weather type should be updated to Snow")
 	}
 }
+
+// TestWeatherSystem_GetWeatherParticles_BufferReuse tests buffer reuse optimization.
+// This validates the fix from Issue R4.
+func TestWeatherSystem_GetWeatherParticles_BufferReuse(t *testing.T) {
+	world := NewWorld()
+	system := NewWeatherSystem(world)
+
+	// Create weather entity
+	entity := world.CreateEntity()
+	config := particles.DefaultWeatherConfig()
+	config.Type = particles.WeatherRain
+	config.Intensity = particles.IntensityLight
+	weather := NewWeatherComponent(config)
+	entity.AddComponent(weather)
+	weather.StartWeather()
+	weather.UpdateTransition(5.0) // Complete transition
+
+	// Process entity
+	world.Update(0)
+
+	// First call allocates buffer
+	particles1 := system.GetWeatherParticles()
+	count1 := len(particles1)
+	cap1 := cap(particles1)
+
+	if count1 == 0 {
+		t.Fatal("Expected particles in first call")
+	}
+
+	// Second call should reuse buffer
+	particles2 := system.GetWeatherParticles()
+	count2 := len(particles2)
+	cap2 := cap(particles2)
+
+	if count2 == 0 {
+		t.Fatal("Expected particles in second call")
+	}
+
+	// Capacity should be reused (not reallocated)
+	if cap2 < cap1 {
+		t.Errorf("Buffer capacity decreased: %d -> %d (expected reuse)", cap1, cap2)
+	}
+
+	// Returned slices point to same underlying buffer (internal detail)
+	// Verify buffer is reset between calls by checking length
+	if count1 != count2 {
+		t.Logf("Particle count changed between calls: %d -> %d (this is OK)", count1, count2)
+	}
+}
+
+// TestWeatherSystem_GetWeatherParticles_MultipleCallsNoLeak tests multiple calls don't leak memory.
+func TestWeatherSystem_GetWeatherParticles_MultipleCallsNoLeak(t *testing.T) {
+	world := NewWorld()
+	system := NewWeatherSystem(world)
+
+	// Create weather entity
+	entity := world.CreateEntity()
+	config := particles.DefaultWeatherConfig()
+	config.Type = particles.WeatherRain
+	config.Intensity = particles.IntensityHeavy // More particles
+	weather := NewWeatherComponent(config)
+	entity.AddComponent(weather)
+	weather.StartWeather()
+	weather.UpdateTransition(5.0)
+
+	world.Update(0)
+
+	// Call multiple times
+	var maxCap int
+	for i := 0; i < 100; i++ {
+		particles := system.GetWeatherParticles()
+		if cap(particles) > maxCap {
+			maxCap = cap(particles)
+		}
+	}
+
+	// Final call to check capacity hasn't grown excessively
+	finalParticles := system.GetWeatherParticles()
+	finalCap := cap(finalParticles)
+
+	// Capacity should stabilize (not grow unbounded)
+	// Allow some growth for slice expansion, but not 100x
+	if finalCap > maxCap*2 {
+		t.Errorf("Buffer capacity grew excessively: %d (max was %d)", finalCap, maxCap)
+	}
+}

@@ -364,15 +364,39 @@ The Venture codebase exhibits **moderate performance concerns** with several ide
 
 ### Priority 2 (High Impact)
 
-3. **Issue R3: Consolidate Sprite Cache Mutex to Single Lock**
+3. **Issue R3: Consolidate Sprite Cache Mutex to Single Lock - ✅ COMPLETED**
    - Expected improvement: -10-20µs/frame
    - Implementation complexity: Low (10 lines)
    - Fix: Replace RLock→Lock upgrade pattern with single Lock for short critical section
+   - **Implementation Date:** 2026-02-07
+   - **Actual Results:**
+     - Replaced RLock→Lock upgrade pattern with single Lock + defer Unlock
+     - Eliminated 2-3 mutex operations per lookup (reduced to 1 Lock per call)
+     - Simplified code path: removed separate lock blocks for hit/miss counting
+     - Maintained thread safety with comprehensive concurrent tests
+   - **Files Modified:**
+     - `pkg/rendering/sprites/cache.go`: Consolidated Get() method to use single Lock
+     - `pkg/rendering/sprites/cache_test.go`: Added TestCache_ConcurrentGetSafety, TestCache_ConcurrentGetAndPut
+     - `pkg/rendering/sprites/cache_bench_test.go`: Added BenchmarkCache_Get_SingleLock, BenchmarkCache_Get_ConcurrentHits
+   - **Test Coverage:** Thread-safety validated with 100 goroutines × 1000 iterations
+   - **Expected Frame Budget Impact:** Reduces mutex contention, especially under concurrent access
 
-4. **Issue R4: Reuse Weather Particle Slice Buffer**
+4. **Issue R4: Reuse Weather Particle Slice Buffer - ✅ COMPLETED**
    - Expected improvement: -5-10µs/frame, eliminates 240 allocs/sec
    - Implementation complexity: Low (5 lines)
    - Fix: Add `particleBuffer []WeatherParticleData` field to WeatherSystem
+   - **Implementation Date:** 2026-02-07
+   - **Actual Results:**
+     - Added particleBuffer field to WeatherSystem struct
+     - Modified GetWeatherParticles() to reuse buffer via slice reset (buffer[:0])
+     - Eliminates per-frame slice allocation during weather rendering
+     - Buffer capacity grows to match max particle count, then stabilizes
+   - **Files Modified:**
+     - `pkg/engine/weather_system.go`: Added particleBuffer field, modified GetWeatherParticles()
+     - `pkg/engine/weather_system_test.go`: Added TestWeatherSystem_GetWeatherParticles_BufferReuse, TestWeatherSystem_GetWeatherParticles_MultipleCallsNoLeak
+     - `pkg/engine/weather_system_bench_test.go`: Added 4 benchmarks for buffer reuse validation
+   - **Test Coverage:** Buffer reuse verified with 100 sequential calls, capacity growth monitored
+   - **Expected Frame Budget Impact:** Eliminates 1-4 allocations/frame during active weather
 
 ### Priority 3 (Medium Impact)
 

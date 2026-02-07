@@ -184,7 +184,6 @@ Dialog behavior is controlled via the `NPCDialogComponent`:
 1. **Provide context**: NPCs use conversation history for better responses
 2. **Be patient**: Response generation takes <50ms but may seem instant
 3. **Experiment**: Different inputs yield different responses (non-deterministic)
-4. **Use shared mode**: Enable `-shared-dialog=true` for synchronized story experiences
 
 ## Troubleshooting
 
@@ -198,11 +197,10 @@ Dialog behavior is controlled via the `NPCDialogComponent`:
 
 **Can't read encrypted messages:**
 - Reconnect to server (triggers key exchange)
-- Disable E2E encryption: `--disable-encryption` (not recommended)
 
-**Profanity filter too aggressive:**
-- Configure filter level: `--profanity-level=<low|medium|high>`
-- Disable filter: `--profanity-filter=false`
+**Profanity filter issues:**
+- Profanity filtering is handled client-side automatically
+- Report issues on GitHub for filter improvements
 
 ### Trading Issues
 
@@ -225,7 +223,6 @@ Dialog behavior is controlled via the `NPCDialogComponent`:
 ### NPC Dialog Issues
 
 **Repetitive responses:**
-- Increase Markov order: `--dialog-order=3`
 - Provide varied inputs (conversation history matters)
 - Different NPCs have different personalities
 
@@ -269,7 +266,6 @@ Dialog behavior is controlled via the `NPCDialogComponent`:
 ### User Controls
 - Block list: `/mute <player>`
 - Report system: `/report <player> <reason>`
-- Disable features: `--disable-social`
 - Manual image acceptance (default)
 
 ## Future Enhancements (v5.1+)

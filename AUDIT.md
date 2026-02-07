@@ -369,13 +369,30 @@ The Venture game codebase demonstrates **mature performance optimization** with 
      - `pkg/engine/system_instrumentation_test.go` - Comprehensive tests and benchmarks
 
 ### Priority 4 (Optimizations)
-7. **Incremental Quadtree Updates**: Consider incremental updates for moved entities vs full rebuild
+7. **✅ Sprite Cache Lazy Warming**: ~~Defer cache warming to idle frames~~
+   - **Status**: IMPLEMENTED - Sprite cache warming integrated into lazy initialization
+   - **Expected improvement**: -10-20ms startup
+   - **Implementation complexity**: Low
+   - **Completion Date**: 2026-02-07
+   - **Changes Made**:
+     - Added `warmCommonSprites()` function to pre-generate common sprites during lazy init
+     - Queues 48 sprites: player (2 states × 4 frames × 4 directions = 32) + enemies (4 types × 4 directions = 16)
+     - Uses `PreGenerator` for async batch sprite generation
+     - Runs after first frame in Phase 4 of lazy initialization
+     - Deterministic sprite generation using game seed and genre
+     - Gracefully handles nil cache or generator
+   - **Performance Impact**:
+     - Warming completes in background without blocking startup
+     - Improves cache hit rate for first few seconds of gameplay
+     - Pre-warms most frequently accessed player and enemy sprites
+   - **Files Modified**:
+     - `cmd/client/handlers.go` - Added `warmCommonSprites()` function and integrated into `scheduleLazyInit()`
+   - **Files Added**:
+     - `cmd/client/sprite_warming_test.go` - Comprehensive tests for sprite cache warming functionality
+    
+8. **Incremental Quadtree Updates**: Consider incremental updates for moved entities vs full rebuild
    - Expected improvement: Eliminate periodic 1-5ms spikes
    - Implementation complexity: High
-   
-8. **Sprite Cache Lazy Warming**: Defer cache warming to idle frames
-   - Expected improvement: -10-20ms startup
-   - Implementation complexity: Low
 
 ---
 

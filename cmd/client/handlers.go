@@ -78,6 +78,9 @@ import (
 	// Phase 2.2: Core Rendering Systems (PLAN.md)
 	// Note: These packages are wrapped by adapters in pkg/engine/ (LightingAdapter, AnimationAdapter, PostProcessorAdapter)
 	// Imports kept for documentation purposes showing integration is complete
+
+	// Ebiten for sprite generation
+	"github.com/hajimehoshi/ebiten/v2"
 	_ "github.com/opd-ai/venture/pkg/rendering/animation"
 	_ "github.com/opd-ai/venture/pkg/rendering/lighting"
 	_ "github.com/opd-ai/venture/pkg/rendering/postprocess"
@@ -546,6 +549,10 @@ func (sys *systemsContainer) scheduleLazyInit(game *engine.EbitenGame, logger *l
 		// Register non-critical systems
 		registerNonCriticalSystems(game, sys)
 
+		// Phase 4: Sprite cache warming (deferred to idle time)
+		// Priority 4 optimization: Warm common sprites to improve cache hit rate
+		warmCommonSprites(sys, seed, genreID, clientLogger)
+
 		sys.lazyInitMutex.Lock()
 		sys.lazyInitCompleted = true
 		sys.lazyInitMutex.Unlock()
@@ -560,6 +567,106 @@ func (sys *systemsContainer) isLazyInitCompleted() bool {
 	sys.lazyInitMutex.Lock()
 	defer sys.lazyInitMutex.Unlock()
 	return sys.lazyInitCompleted
+}
+
+// warmCommonSprites pre-generates common sprites to improve cache hit rate.
+// This function queues sprite generation for:
+// - Player idle/walk animations (4 directions)
+// - Basic enemy types (idle state)
+// Expected impact: -10-20ms startup, improved first-frame responsiveness
+func warmCommonSprites(sys *systemsContainer, seed *int64, genre *string, logger *logrus.Entry) {
+	if sys.spriteCache == nil || sys.spriteGenerator == nil {
+		logger.Warn("sprite cache or generator not available, skipping warming")
+		return
+	}
+
+	startTime := time.Now()
+	logger.Debug("starting sprite cache warming")
+
+	// Create pre-generator for batch sprite generation
+	pregen := cache.NewPreGenerator(sys.spriteCache)
+
+	// Use game seed and genre for deterministic sprite generation
+	seedVal := int64(12345)
+	if seed != nil {
+		seedVal = *seed
+	}
+	genreVal := "fantasy"
+	if genre != nil {
+		genreVal = *genre
+	}
+
+	// Queue common player sprites (idle and walk animations, 4 directions)
+	playerStates := []string{"idle", "walk"}
+	directions := []string{"down", "up", "left", "right"}
+
+	for _, state := range playerStates {
+		for frame := 0; frame < 4; frame++ { // 4 frames per animation
+			for _, dir := range directions {
+				// Capture loop variables for closure
+				capturedState := state
+				capturedFrame := frame
+				capturedDir := dir
+
+				key := cache.GenerateKey(seedVal, capturedState+"_"+capturedDir, capturedFrame)
+				pregen.Queue(key, func() (*ebiten.Image, error) {
+					config := sprites.Config{
+						Type:    sprites.SpriteEntity,
+						Width:   64,
+						Height:  64,
+						Seed:    seedVal,
+						GenreID: genreVal,
+						Custom: map[string]interface{}{
+							"entityType": "player",
+							"state":      capturedState,
+							"frame":      capturedFrame,
+							"direction":  capturedDir,
+						},
+					}
+					return sys.spriteGenerator.Generate(config)
+				})
+			}
+		}
+	}
+
+	// Queue common enemy idle sprites (single frame, 4 directions)
+	enemyTypes := []string{"goblin", "skeleton", "orc", "slime"}
+	for i, enemyType := range enemyTypes {
+		for _, dir := range directions {
+			// Capture loop variables for closure
+			capturedEnemy := enemyType
+			capturedDir := dir
+			enemySeed := seedVal + int64(i+1)
+
+			key := cache.GenerateKey(enemySeed, "idle_"+capturedDir, 0)
+			pregen.Queue(key, func() (*ebiten.Image, error) {
+				config := sprites.Config{
+					Type:    sprites.SpriteEntity,
+					Width:   64,
+					Height:  64,
+					Seed:    enemySeed,
+					GenreID: genreVal,
+					Custom: map[string]interface{}{
+						"entityType": capturedEnemy,
+						"state":      "idle",
+						"frame":      0,
+						"direction":  capturedDir,
+					},
+				}
+				return sys.spriteGenerator.Generate(config)
+			})
+		}
+	}
+
+	// Generate sprites asynchronously
+	go func() {
+		count := pregen.Generate()
+		elapsed := time.Since(startTime)
+		logger.WithFields(logrus.Fields{
+			"sprites_generated": count,
+			"duration_ms":       elapsed.Milliseconds(),
+		}).Info("sprite cache warming completed")
+	}()
 }
 
 // initializeGenerators creates item and recipe generators for loot drops.

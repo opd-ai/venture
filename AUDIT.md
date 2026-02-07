@@ -275,7 +275,7 @@ All generators must implement `procgen.Generator` interface and use deterministi
 | 20 | `pkg/procgen/entity` | `pkg/procgen/entity/AUDIT.md` | NPC/creature generation, templates | ✅ Complete (2026-02-07) |
 | 21 | `pkg/procgen/item` | `pkg/procgen/item/AUDIT.md` | Item generation, rarity, class restrictions | ✅ Complete (2026-02-07) |
 | 22 | `pkg/procgen/quest` | `pkg/procgen/quest/AUDIT.md` | Quest objectives, rewards, progression | ✅ Complete (2026-02-07) |
-| 23 | `pkg/procgen/magic` | `pkg/procgen/magic/AUDIT.md` | Spell generation, balance calculations |
+| 23 | `pkg/procgen/magic` | `pkg/procgen/magic/AUDIT.md` | Spell generation, balance calculations | ✅ Complete (2026-02-07) |
 | 24 | `pkg/procgen/skills` | `pkg/procgen/skills/AUDIT.md` | Skill trees, templates, progression |
 | 25 | `pkg/procgen/dialog` | `pkg/procgen/dialog/AUDIT.md` | Markov chains, personality, corpus |
 | 26 | `pkg/procgen/narrative` | `pkg/procgen/narrative/AUDIT.md` | Story beats, narrative arcs |

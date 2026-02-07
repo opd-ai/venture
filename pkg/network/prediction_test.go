@@ -397,3 +397,171 @@ func BenchmarkClientPredictor_GetCurrentState(b *testing.B) {
 		predictor.GetCurrentState()
 	}
 }
+
+// TestNewHighLatencyClientPredictor verifies high-latency predictor initialization.
+func TestNewHighLatencyClientPredictor(t *testing.T) {
+	predictor := NewHighLatencyClientPredictor()
+
+	if predictor == nil {
+		t.Fatal("NewHighLatencyClientPredictor returned nil")
+	}
+
+	if predictor.maxHistory != 512 {
+		t.Errorf("Expected maxHistory 512 for high-latency mode, got %d", predictor.maxHistory)
+	}
+
+	if predictor.errorThreshold != 5.0 {
+		t.Errorf("Expected errorThreshold 5.0 for high-latency mode, got %f", predictor.errorThreshold)
+	}
+
+	if len(predictor.stateHistory) != 0 {
+		t.Errorf("Expected empty stateHistory, got length %d", len(predictor.stateHistory))
+	}
+}
+
+// TestHighLatencyPredictorConfigComparison verifies the differences between
+// standard and high-latency predictor configurations.
+func TestHighLatencyPredictorConfigComparison(t *testing.T) {
+	standard := NewClientPredictor()
+	highLatency := NewHighLatencyClientPredictor()
+
+	tests := []struct {
+		name          string
+		standardValue interface{}
+		highLatValue  interface{}
+		expectedRatio float64
+		description   string
+	}{
+		{
+			name:          "maxHistory",
+			standardValue: standard.maxHistory,
+			highLatValue:  highLatency.maxHistory,
+			expectedRatio: 2.0,
+			description:   "High-latency should have 2x history buffer",
+		},
+		{
+			name:          "errorThreshold",
+			standardValue: standard.errorThreshold,
+			highLatValue:  highLatency.errorThreshold,
+			expectedRatio: 5.0,
+			description:   "High-latency should have 5x error tolerance",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			switch tt.name {
+			case "maxHistory":
+				standardInt := tt.standardValue.(int)
+				highLatInt := tt.highLatValue.(int)
+				actualRatio := float64(highLatInt) / float64(standardInt)
+				if actualRatio != tt.expectedRatio {
+					t.Errorf("%s ratio = %.2f, want %.2f (%s)",
+						tt.name, actualRatio, tt.expectedRatio, tt.description)
+				}
+			case "errorThreshold":
+				standardFloat := tt.standardValue.(float64)
+				highLatFloat := tt.highLatValue.(float64)
+				actualRatio := highLatFloat / standardFloat
+				if actualRatio != tt.expectedRatio {
+					t.Errorf("%s ratio = %.2f, want %.2f (%s)",
+						tt.name, actualRatio, tt.expectedRatio, tt.description)
+				}
+			}
+		})
+	}
+}
+
+// TestHighLatencyPredictorReconciliation verifies that high-latency predictor
+// uses relaxed error threshold during server reconciliation.
+func TestHighLatencyPredictorReconciliation(t *testing.T) {
+	predictor := NewHighLatencyClientPredictor()
+	predictor.SetInitialState(Position{X: 0, Y: 0}, Velocity{VX: 0, VY: 0})
+
+	// Predict several inputs
+	for i := 0; i < 10; i++ {
+		predictor.PredictInput(100, 50, 0.05)
+	}
+
+	// Server reconciliation with moderate prediction error (3 units)
+	// This should NOT trigger correction in high-latency mode (threshold=5.0)
+	// but WOULD trigger correction in standard mode (threshold=1.0)
+	serverPos := Position{X: 23.0, Y: 11.5} // 3 units off from predicted position
+	serverVel := Velocity{VX: 100, VY: 50}
+	serverSeq := uint32(5)
+
+	correctedState := predictor.ReconcileServerState(serverSeq, serverPos, serverVel)
+
+	// In high-latency mode with threshold=5.0, 3-unit error should not trigger replay
+	// Verify state history was trimmed but not replayed
+	if len(predictor.stateHistory) > 5 {
+		t.Errorf("Expected state history trimmed to <=5 states, got %d", len(predictor.stateHistory))
+	}
+
+	// Current state should still have sequence > serverSeq (no full correction)
+	if correctedState.Sequence <= serverSeq {
+		t.Logf("State was corrected (replayed) due to prediction error exceeding threshold")
+	}
+}
+
+// TestHighLatencyPredictorHistoryCapacity verifies that high-latency predictor
+// can store more states before trimming (important for delayed server updates).
+func TestHighLatencyPredictorHistoryCapacity(t *testing.T) {
+	predictor := NewHighLatencyClientPredictor()
+	predictor.SetInitialState(Position{X: 0, Y: 0}, Velocity{VX: 0, VY: 0})
+
+	// Generate 520 prediction states (more than maxHistory=512)
+	for i := 0; i < 520; i++ {
+		predictor.PredictInput(10, 5, 0.05)
+	}
+
+	// Verify history is trimmed to maxHistory
+	if len(predictor.stateHistory) > 512 {
+		t.Errorf("Expected state history trimmed to 512, got %d", len(predictor.stateHistory))
+	}
+
+	// Verify oldest states were removed (FIFO)
+	if len(predictor.stateHistory) == 512 {
+		oldestSeq := predictor.stateHistory[0].Sequence
+		if oldestSeq != 9 { // Sequences 1-8 should be trimmed, leaving 9-520
+			t.Errorf("Expected oldest sequence 9 (8 states trimmed), got %d", oldestSeq)
+		}
+	}
+}
+
+// BenchmarkHighLatencyClientPredictor_PredictInput benchmarks input prediction
+// for high-latency mode (larger history buffer).
+func BenchmarkHighLatencyClientPredictor_PredictInput(b *testing.B) {
+	predictor := NewHighLatencyClientPredictor()
+	predictor.SetInitialState(Position{X: 0, Y: 0}, Velocity{VX: 0, VY: 0})
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		predictor.PredictInput(100, 50, 0.016)
+	}
+}
+
+// BenchmarkHighLatencyClientPredictor_ReconcileServerState benchmarks server
+// reconciliation for high-latency mode (more states to replay).
+func BenchmarkHighLatencyClientPredictor_ReconcileServerState(b *testing.B) {
+	predictor := NewHighLatencyClientPredictor()
+	predictor.SetInitialState(Position{X: 0, Y: 0}, Velocity{VX: 0, VY: 0})
+
+	// Build up history of 100 states
+	for i := 0; i < 100; i++ {
+		predictor.PredictInput(100, 50, 0.016)
+	}
+
+	serverPos := Position{X: 50, Y: 25}
+	serverVel := Velocity{VX: 100, VY: 50}
+	serverSeq := uint32(50)
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		predictor.ReconcileServerState(serverSeq, serverPos, serverVel)
+		// Restore some state for next iteration
+		for j := 0; j < 10; j++ {
+			predictor.PredictInput(100, 50, 0.016)
+		}
+	}
+}

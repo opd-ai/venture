@@ -2,8 +2,8 @@
 
 Developer documentation for the Venture procedural action-RPG engine.
 
-**Version:** 8.0  
-**Last Updated:** December 2025
+**Version:** 1.0.0  
+**Last Updated:** February 2026
 
 **New to development?** Start with [Development Guide](DEVELOPMENT.md) and [Contributing Guide](CONTRIBUTING.md).
 

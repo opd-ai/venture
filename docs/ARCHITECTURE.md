@@ -180,7 +180,7 @@ Implement comprehensive visual enhancement system across six phases (15-20):
 
 ---
 
-## ADR-007: V4.0 Gameplay Expansion Systems
+## ADR-009: V4.0 Gameplay Expansion Systems
 
 **Status:** Accepted
 
@@ -257,7 +257,7 @@ Implement comprehensive gameplay expansion across ten phases (21-30):
 
 ---
 
-## ADR-008: V5.0 Social Systems & Multiplayer Communication
+## ADR-010: V5.0 Social Systems & Multiplayer Communication
 
 **Status:** Accepted (Phases 31-36 Complete - November 2025)
 
@@ -302,7 +302,7 @@ Implement comprehensive social systems (Phases 31-36) with:
 
 ---
 
-## ADR-009: V6.0 Persistent Worlds & Server Federation
+## ADR-011: V6.0 Persistent Worlds & Server Federation
 
 **Status:** Accepted (Phases 37-42 Complete - November 2025)
 
@@ -344,7 +344,7 @@ Implement persistent worlds and federation (Phases 37-42) with:
 
 ---
 
-## ADR-010: V7.0 Advanced Visual Improvements
+## ADR-012: V7.0 Advanced Visual Improvements
 
 **Status:** Accepted (Phases 43-48 Complete - December 2025)
 
@@ -383,7 +383,7 @@ Implement visual improvements (Phases 43-48) with:
 
 ---
 
-## ADR-011: V8.0 Player Housing & Guild Systems
+## ADR-013: V8.0 Player Housing & Guild Systems
 
 **Status:** Accepted (Phases 49-54 Complete - December 2025)
 
@@ -499,16 +499,6 @@ pkg/world/housing/
 ```
 
 **CLI Integration:**
-- Added `-enable-housing` flag to client (default: true)
+- Housing system is enabled by default in the client
 - Created `examples/housingtest/` demo tool with actions: demo, save, load, benchmark
-
-**Next Steps (Remaining V8.0 Phases):**
-- Phase 49.2: Persistent trust & reputation system
-- Phase 49.3: Chat history with delta compression
-- Phase 49.4: Persistent image storage & gallery
-- Phase 50: Guilds, territory control, enhanced physics
-- Phase 51: Building generation, guild halls, furniture
-- Phase 52: WebRTC federation, mobile federation
-- Phase 53: Deep companion AI, branching narratives, advanced classes
-- Phase 54: Server modding, blueprint sharing, content tools
 

@@ -4,7 +4,7 @@
 
 ### Prerequisites
 
-- **Go:** Version 1.24.5 or later (project developed with 1.24.7)
+- **Go:** Version 1.24.5 or later
 - **Operating System:** Windows, macOS, or Linux
 - **Platform-specific dependencies:**
   - **Linux:** X11 development libraries
@@ -158,7 +158,7 @@ go test ./pkg/procgen
 
 ```bash
 # Run client (automatically starts localhost server)
-./venture-client -width 1024 -height 768 -seed 12345
+./venture-client -width 1920 -height 1080 -seed 12345
 
 # Run standalone server
 ./venture-server -port 8080 -max-players 4
@@ -479,8 +479,8 @@ Quick workflow:
    GOOS=darwin GOARCH=amd64 go build -ldflags="-s -w" -o venture-client-macos ./cmd/client
    ```
 4. **Create release notes**
-5. **Tag release:** `git tag -a v0.1.0 -m "Release v0.1.0"`
-6. **Push tag:** `git push origin v0.1.0`
+5. **Tag release:** `git tag -a v1.0.0 -m "Release v1.0.0"`
+6. **Push tag:** `git push origin v1.0.0`
 
 ## Resources
 

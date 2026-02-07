@@ -56,7 +56,7 @@ Audit `pkg/network/` for completeness. Flag:
 Scan the entire codebase for:
 - Exported functions/methods with zero callers outside their own package and tests
 - `TODO`, `FIXME`, `HACK`, `XXX` comments indicating unfinished work
-- Commented-out code blocks longer than 5 lines
+- Commented-out runtime logic or feature code (especially blocks longer than 5 lines) that indicates disabled/dead code paths or abandoned work (exclude purely stylistic or documentation comments)
 - Empty function/method bodies in non-test files
 
 ## 7. Documentation-to-Code Gaps
@@ -130,7 +130,7 @@ ANALYSIS INSTRUCTIONS:
 
 CONSTRAINTS:
 - Exclude `_test.go` files from runtime analysis (but note when something exists only in tests)
-- Exclude `examples/` and `docs/` from gap detection (they are reference material)
+- Exclude `examples/` and `docs/` from gap detection in categories 1–6 (they are reference material). For category 7 (Documentation-to-Code Gaps), `docs/` files serve as input sources to cross-reference against code — but audit/meta docs (like this file) are not themselves treated as missing implementations
 - Do not report style issues, naming conventions, or formatting concerns
 - Focus on functional gaps that affect runtime behavior
 - If the audit exceeds response limits, keep the total response under 4000 tokens, prioritize Critical and High severity gaps, and note that lower-severity items were truncated

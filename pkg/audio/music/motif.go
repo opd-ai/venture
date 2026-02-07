@@ -186,7 +186,7 @@ func (mg *MotifGenerator) getWaveformForMotif(genre string, motifType MotifType,
 	case "cyberpunk":
 		// Cyberpunk uses square waves
 		return audio.WaveformSquare
-	case "post-apocalyptic":
+	case "postapoc":
 		// Post-apocalyptic uses sawtooth for harshness
 		return audio.WaveformSawtooth
 	default:

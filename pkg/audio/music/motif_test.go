@@ -54,7 +54,7 @@ func TestMotifGenerator_GenerateMotif(t *testing.T) {
 		{"scifi faction", "corp_mega", "scifi", MotifTypeFaction, 4},
 		{"horror location", "mansion_13", "horror", MotifTypeLocation, 4},
 		{"cyberpunk character", "netrunner", "cyberpunk", MotifTypeCharacter, 4},
-		{"postapoc faction", "raiders", "post-apocalyptic", MotifTypeFaction, 4},
+		{"postapoc faction", "raiders", "postapoc", MotifTypeFaction, 4},
 	}
 
 	for _, tt := range tests {
@@ -157,7 +157,7 @@ func TestMotifGenerator_GenreWaveforms(t *testing.T) {
 		{"scifi", []audio.WaveformType{audio.WaveformSquare, audio.WaveformSawtooth}},
 		{"horror", []audio.WaveformType{audio.WaveformSawtooth, audio.WaveformSquare}},
 		{"cyberpunk", []audio.WaveformType{audio.WaveformSquare}},
-		{"post-apocalyptic", []audio.WaveformType{audio.WaveformSawtooth}},
+		{"postapoc", []audio.WaveformType{audio.WaveformSawtooth}},
 	}
 
 	for _, tt := range tests {

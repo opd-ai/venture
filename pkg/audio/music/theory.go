@@ -54,7 +54,7 @@ func GetScaleForGenre(genre string) Scale {
 		return ScaleMinor
 	case "cyberpunk":
 		return ScaleBlues
-	case "post-apocalyptic":
+	case "postapoc":
 		return ScalePentatonic
 	default:
 		return ScaleMajor

@@ -223,7 +223,7 @@ func TestAdaptiveComposer_ContextTransitions(t *testing.T) {
 }
 
 func TestAdaptiveComposer_GenreVariations(t *testing.T) {
-	genres := []string{"fantasy", "scifi", "horror", "cyberpunk", "post-apocalyptic"}
+	genres := []string{"fantasy", "scifi", "horror", "cyberpunk", "postapoc"}
 
 	for _, genre := range genres {
 		t.Run(genre, func(t *testing.T) {

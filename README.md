@@ -231,6 +231,7 @@ See [Mobile Build Guide](docs/MOBILE_BUILD.md) for full instructions.
 | `--host-lan` | `false` | Bind server to `0.0.0.0` for LAN access instead of `127.0.0.1` (requires host-and-play mode) |
 | `-weather` | — | Weather type (`rain`, `snow`, `fog`, `dust`, `ash`, `neonrain`, `smog`, `radiation`) |
 | `-weather-intensity` | `heavy` | Weather intensity (`light`, `medium`, `heavy`, `extreme`) |
+| `--verbose` | `true` | Enable verbose debug logging (sets log level to `debug` when `LOG_LEVEL` not set) |
 
 ### Server Flags
 
@@ -244,12 +245,13 @@ See [Mobile Build Guide](docs/MOBILE_BUILD.md) for full instructions.
 | `-high-latency` | `false` | Optimize for Tor/high-latency connections (200–5000ms) |
 | `-security-audit` | `true` | Run security audit at startup |
 | `-stability-monitor` | `true` | Enable stability monitoring |
+| `--verbose` | `true` | Enable verbose debug logging (sets log level to `debug` when `LOG_LEVEL` not set) |
 
 ### Environment Variables
 
 | Variable | Values | Description |
 |----------|--------|-------------|
-| `LOG_LEVEL` | `debug`, `info`, `warn`, `error`, `fatal` | Logging verbosity (unknown values default to `info`) |
+| `LOG_LEVEL` | `debug`, `info`, `warn`, `error`, `fatal` | Logging verbosity (unknown values default to `info`). **Note:** Takes precedence over `--verbose` flag. When `LOG_LEVEL` is not set, `--verbose=true` (default) sets level to `debug`, `--verbose=false` sets level to `info`. |
 | `LOG_FORMAT` | `json`, `text` | Log output format |
 
 ### Mod Configuration

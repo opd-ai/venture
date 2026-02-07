@@ -23,6 +23,9 @@ type MovementSystem struct {
 
 	// Track if any entity moved this frame
 	entitiesMoved bool
+
+	// Reusable buffer for nearby entity queries (reduces allocations)
+	nearbyBuffer []*Entity
 }
 
 // NewMovementSystem creates a new movement system.
@@ -33,7 +36,8 @@ func NewMovementSystem(maxSpeed float64) *MovementSystem {
 	}).Debug("Creating movement system")
 
 	return &MovementSystem{
-		MaxSpeed: maxSpeed,
+		MaxSpeed:     maxSpeed,
+		nearbyBuffer: make([]*Entity, 0, 64), // Pre-allocate for typical nearby count
 	}
 }
 
@@ -207,14 +211,52 @@ func (s *MovementSystem) finalizeUpdate(debugEnabled bool) {
 	}
 }
 
+// queryNearbyEntities returns entities near the given position using spatial partition if available.
+// Falls back to full entity list if spatial partition is not set.
+// Uses reusable buffer to minimize allocations.
+func (s *MovementSystem) queryNearbyEntities(entity *Entity, x, y float64, entities []*Entity) []*Entity {
+	if s.spatialPartition == nil {
+		return entities
+	}
+
+	// Get entity collision size for query bounds (default 32x32 if no collider)
+	queryRadius := 64.0 // Default search radius
+	if collider := entity.GetCollider(); collider != nil {
+		// Use max dimension + margin for collision detection
+		maxDim := collider.Width
+		if collider.Height > maxDim {
+			maxDim = collider.Height
+		}
+		queryRadius = maxDim * 2 // 2x entity size for safe collision checking
+	}
+
+	// Create query bounds centered on target position
+	queryBounds := Bounds{
+		X:      x - queryRadius,
+		Y:      y - queryRadius,
+		Width:  queryRadius * 2,
+		Height: queryRadius * 2,
+	}
+
+	// Reset buffer and query nearby entities
+	s.nearbyBuffer = s.nearbyBuffer[:0]
+	s.nearbyBuffer = s.spatialPartition.QueryBoundsInto(queryBounds, s.nearbyBuffer)
+
+	return s.nearbyBuffer
+}
+
 // anyEntityBlocking checks if any entity would block movement to the given position.
 // Helper method for collision sliding logic.
+// Uses spatial partition for O(log n) queries when available.
 func (s *MovementSystem) anyEntityBlocking(entity *Entity, x, y float64, entities []*Entity) bool {
 	if s.collisionSystem == nil {
 		return false
 	}
 
-	for _, other := range entities {
+	// Query nearby entities using spatial partition if available
+	nearbyEntities := s.queryNearbyEntities(entity, x, y, entities)
+
+	for _, other := range nearbyEntities {
 		if other.ID == entity.ID {
 			continue
 		}
@@ -346,8 +388,12 @@ func (s *MovementSystem) tryTerrainWallSlide(entity *Entity, pos *PositionCompon
 }
 
 // handleEntityCollisions checks collisions with other entities and applies wall sliding.
+// Uses spatial partition for O(log n) queries when available.
 func (s *MovementSystem) handleEntityCollisions(entity *Entity, pos *PositionComponent, vel *VelocityComponent, newX, newY float64, entities []*Entity) (float64, float64) {
-	for _, other := range entities {
+	// Query nearby entities using spatial partition if available
+	nearbyEntities := s.queryNearbyEntities(entity, newX, newY, entities)
+
+	for _, other := range nearbyEntities {
 		if other.ID == entity.ID {
 			continue
 		}

@@ -177,6 +177,9 @@ func (s *Stats) Validate() error {
 }
 
 // validateHealth checks if HP and MaxHP are valid.
+// Returns nil if validation passes, or an error describing the validation failure.
+// This is a complete implementation following Go's error handling pattern where
+// nil indicates success.
 func (s *Stats) validateHealth() error {
 	if s.HP < 0 {
 		return fmt.Errorf("%w: got %f", ErrNegativeHP, s.HP)
@@ -191,6 +194,9 @@ func (s *Stats) validateHealth() error {
 }
 
 // validateMana checks if Mana and MaxMana are valid.
+// Returns nil if validation passes, or an error describing the validation failure.
+// This is a complete implementation following Go's error handling pattern where
+// nil indicates success.
 func (s *Stats) validateMana() error {
 	if s.Mana < 0 {
 		return fmt.Errorf("%w: got %f", ErrNegativeMana, s.Mana)
@@ -205,6 +211,9 @@ func (s *Stats) validateMana() error {
 }
 
 // validateOffensiveStats checks if Attack and MagicPower are valid.
+// Returns nil if validation passes, or an error describing the validation failure.
+// This is a complete implementation following Go's error handling pattern where
+// nil indicates success.
 func (s *Stats) validateOffensiveStats() error {
 	if s.Attack < 0 {
 		return fmt.Errorf("%w: got %f", ErrNegativeAttack, s.Attack)
@@ -219,6 +228,9 @@ func (s *Stats) validateOffensiveStats() error {
 }
 
 // validateDefensiveStats checks if Defense, MagicDefense, and Evasion are valid.
+// Returns nil if validation passes, or an error describing the validation failure.
+// This is a complete implementation following Go's error handling pattern where
+// nil indicates success.
 func (s *Stats) validateDefensiveStats() error {
 	if s.Defense < 0 {
 		return fmt.Errorf("%w: got %f", ErrNegativeDefense, s.Defense)
@@ -233,6 +245,9 @@ func (s *Stats) validateDefensiveStats() error {
 }
 
 // validateCriticalStats checks if CritChance and CritDamage are valid.
+// Returns nil if validation passes, or an error describing the validation failure.
+// This is a complete implementation following Go's error handling pattern where
+// nil indicates success.
 func (s *Stats) validateCriticalStats() error {
 	if s.CritChance < 0 || s.CritChance > 1.0 {
 		return fmt.Errorf("%w: got %f", ErrInvalidCritChance, s.CritChance)
@@ -244,6 +259,9 @@ func (s *Stats) validateCriticalStats() error {
 }
 
 // validateResistances checks if all resistance values are within valid range.
+// Returns nil if validation passes, or an error describing the validation failure.
+// This is a complete implementation following Go's error handling pattern where
+// nil indicates success.
 func (s *Stats) validateResistances() error {
 	for damageType, resistance := range s.Resistances {
 		if resistance < -1.0 || resistance > 1.0 {

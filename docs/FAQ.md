@@ -338,7 +338,7 @@ See [Modding Guide](MODDING_GUIDE.md) for mod creation tutorials.
 2. **Firewall:** Allow port 8080 (TCP/UDP) in firewall settings
 3. **Correct IP:** Verify IP address (`ifconfig` / `ipconfig`)
 4. **Port Forwarding:** For internet play, forward port 8080 in router settings
-5. **Timeout:** Increase client timeout: `./venture-client -multiplayer -server <IP:PORT> -timeout 30`
+5. **High-Latency:** For slow connections, use `-high-latency` flag on the server: `./venture-server -high-latency -port 8080`
 
 ### Screen flickering / visual glitches
 

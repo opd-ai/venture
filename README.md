@@ -252,18 +252,24 @@ The game automatically deploys to GitHub Pages on every push to main. See [GitHu
 - **[Performance Guide](docs/PERFORMANCE.md)** - Performance optimization and profiling
 
 ### System Documentation
+- **[Controls Reference](docs/CONTROLS.md)** - Complete keyboard, mouse, and gamepad controls
 - **[Lighting System](docs/LIGHTING_SYSTEM.md)** - Dynamic lighting implementation
 - **[Shadow System](docs/SHADOW_SYSTEM.md)** - Shadow casting and ambient occlusion
+- **[Magic System](docs/MAGIC_SYSTEM.md)** - Spell system and magic mechanics
+- **[Social Systems](docs/SOCIAL_SYSTEMS.md)** - Chat, NPC dialog, trading, trust
 - **[Rotation System](docs/ROTATION_SYSTEM_SPEC.md)** - Entity rotation specification
 - **[Rotation User Guide](docs/ROTATION_USER_GUIDE.md)** - User guide for rotation controls
 - **[Structured Logging](docs/STRUCTURED_LOGGING_GUIDE.md)** - Logging best practices
 - **[System Interaction Map](docs/SYSTEM_INTERACTION_MAP.md)** - System dependencies and interactions
 
 ### Specialized Topics
+- **[Multiplayer Guide](docs/MULTIPLAYER.md)** - Multiplayer networking and configuration
+- **[Tor Setup](docs/TOR_SETUP.md)** - Complete Tor/onion service configuration
+- **[FAQ](docs/FAQ.md)** - Frequently asked questions
 - **[Accessibility](docs/ACCESSIBILITY.md)** - Accessibility features and guidelines
 - **[Ebiten Guide](docs/EBITEN.md)** - Ebiten engine integration notes
 - **[Touch Input (WASM)](docs/TOUCH_INPUT_WASM.md)** - WebAssembly touch input implementation
-- **[Changelog](docs/CHANGELOG.md)** - Complete version history (V1.0 - V10.0)
+- **[Changelog](docs/CHANGELOG.md)** - Complete version history
 
 ## Contributing
 

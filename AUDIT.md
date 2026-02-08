@@ -195,10 +195,21 @@ grep -r "TODO|FIXME|HACK|XXX" pkg/ --include="*.go" | grep -v "_test.go"
 
 ### Medium Priority
 
-3. **[Medium]** Add ECS system wrapper for `trade_routes` package
+3. **[Medium] ✅ COMPLETED** Add ECS system wrapper for `trade_routes` package
    - **File:** `cmd/server/system_wrappers.go`
    - **Action:** Create `tradeRouteSystemWrapper` and instantiate in `v6_systems.go`
    - **Impact:** Automated trade route updates instead of manual API calls
+   - **Completed:** 2026-02-08
+   - **Changes:**
+     - Added `tradeRouteManagerWrapper` to `cmd/server/system_wrappers.go` to adapt RouteManager to ECS System interface
+     - Added trade_routes import to `cmd/server/v4_systems.go` and `cmd/server/system_wrappers.go`
+     - Instantiated RouteManager with seed in `initializeV6SystemsServer()` in `cmd/server/v4_systems.go`
+     - Updated system count from 4 to 5 in V6 initialization logs and tests
+     - Updated `TestInitializeV6SystemsServer` to expect 5 systems (portal, bounty, politics, world events, trade routes)
+     - Added comprehensive integration tests in `cmd/server/trade_routes_integration_test.go` (207 lines)
+     - Tests verify: wrapper functionality, determinism, concurrent updates, ECS integration, escort missions
+     - Build and vet pass successfully
+     - All trade routes and V6 system tests pass (100% success rate)
 
 4. **[Medium]** Document `--vr` flag for VR systems
    - **File:** README.md Configuration section

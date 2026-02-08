@@ -7,6 +7,7 @@ package main
 
 import (
 	"github.com/opd-ai/venture/pkg/engine"
+	"github.com/opd-ai/venture/pkg/integration/trade_routes"
 	"github.com/opd-ai/venture/pkg/integration/world_events"
 	"github.com/opd-ai/venture/pkg/network/federation"
 	itemgen "github.com/opd-ai/venture/pkg/procgen/item"
@@ -227,6 +228,10 @@ func initializeV6SystemsServer(world *engine.World, seed int64, logger *logrus.L
 	worldEventManager := world_events.NewEventManager(seed)
 	world.AddSystem(&worldEventManagerWrapper{system: worldEventManager})
 
+	// Phase 57.3: Trade routes system for automated merchant caravans
+	tradeRouteManager := trade_routes.NewRouteManager(serverID, seed)
+	world.AddSystem(&tradeRouteManagerWrapper{system: tradeRouteManager})
+
 	// Note: TerritoryManager, RankingManager are world-level managers
 	// that don't need system wrappers. They're accessed directly by server logic.
 
@@ -235,9 +240,10 @@ func initializeV6SystemsServer(world *engine.World, seed int64, logger *logrus.L
 		"bountySystem":      1, // BountySystem
 		"politicsSystems":   1, // PoliticsSystem
 		"worldEventSystem":  1, // WorldEventManager
-		"totalV6Systems":    4,
+		"tradeRouteSystem":  1, // TradeRouteManager
+		"totalV6Systems":    5,
 		"note":              "Persistent world & federation systems for V6.0",
-	}).Info("V6.0 persistent world systems initialized on server (portals, bounties, politics, world events)")
+	}).Info("V6.0 persistent world systems initialized on server (portals, bounties, politics, world events, trade routes)")
 }
 
 // INTEGRATION FIX [Category A]: Core Gameplay Systems Missing from Server

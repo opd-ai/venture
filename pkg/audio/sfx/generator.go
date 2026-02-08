@@ -108,38 +108,70 @@ func (g *Generator) GenerateWithGenre(effectType string, seed int64, genre strin
 func (g *Generator) applyGenreModifications(sample *audio.AudioSample, genre string) {
 	switch genre {
 	case "scifi":
-		// Synthetic, clean, higher pitch
-		g.applyPitchBend(sample.Data, 1.3, 1.3)
-		// Reduce amplitude for cleaner sound
-		for i := range sample.Data {
-			sample.Data[i] *= 0.9
-		}
+		g.applyScifiModifications(sample)
 	case "horror":
-		// Dissonant, unsettling, lower pitch
-		g.applyPitchBend(sample.Data, 0.7, 0.7)
-		// Add vibrato for unsettling effect
-		g.applyVibrato(sample.Data, 3.0, 0.2)
+		g.applyHorrorModifications(sample)
 	case "cyberpunk":
-		// Sharp, electronic, glitchy
-		g.applyPitchBend(sample.Data, 1.4, 1.4)
-		// Add hard clipping for digital effect
-		for i := range sample.Data {
-			if sample.Data[i] > 0.7 {
-				sample.Data[i] = 0.7
-			} else if sample.Data[i] < -0.7 {
-				sample.Data[i] = -0.7
-			}
-		}
+		g.applyCyberpunkModifications(sample)
 	case "postapoc":
-		// Harsh, gritty, distorted
-		g.applyPitchBend(sample.Data, 0.9, 0.9)
-		// Add soft clipping for gritty effect
-		for i := range sample.Data {
-			if sample.Data[i] > 0.5 {
-				sample.Data[i] = 0.5 + (sample.Data[i]-0.5)*0.3
-			} else if sample.Data[i] < -0.5 {
-				sample.Data[i] = -0.5 + (sample.Data[i]+0.5)*0.3
-			}
+		g.applyPostApocalypticModifications(sample)
+	}
+}
+
+// applyScifiModifications applies synthetic, clean, higher-pitch modifications for sci-fi genre.
+func (g *Generator) applyScifiModifications(sample *audio.AudioSample) {
+	// Synthetic, clean, higher pitch
+	g.applyPitchBend(sample.Data, 1.3, 1.3)
+	g.reduceAmplitude(sample.Data, 0.9)
+}
+
+// applyHorrorModifications applies dissonant, unsettling, lower-pitch modifications for horror genre.
+func (g *Generator) applyHorrorModifications(sample *audio.AudioSample) {
+	// Dissonant, unsettling, lower pitch
+	g.applyPitchBend(sample.Data, 0.7, 0.7)
+	// Add vibrato for unsettling effect
+	g.applyVibrato(sample.Data, 3.0, 0.2)
+}
+
+// applyCyberpunkModifications applies sharp, electronic, glitchy modifications for cyberpunk genre.
+func (g *Generator) applyCyberpunkModifications(sample *audio.AudioSample) {
+	// Sharp, electronic, glitchy
+	g.applyPitchBend(sample.Data, 1.4, 1.4)
+	g.applyHardClipping(sample.Data, 0.7)
+}
+
+// applyPostApocalypticModifications applies harsh, gritty, distorted modifications for post-apocalyptic genre.
+func (g *Generator) applyPostApocalypticModifications(sample *audio.AudioSample) {
+	// Harsh, gritty, distorted
+	g.applyPitchBend(sample.Data, 0.9, 0.9)
+	g.applySoftClipping(sample.Data, 0.5, 0.3)
+}
+
+// reduceAmplitude multiplies all samples by the given factor for cleaner sound.
+func (g *Generator) reduceAmplitude(data []float64, factor float64) {
+	for i := range data {
+		data[i] *= factor
+	}
+}
+
+// applyHardClipping applies hard clipping at the specified threshold for digital effect.
+func (g *Generator) applyHardClipping(data []float64, threshold float64) {
+	for i := range data {
+		if data[i] > threshold {
+			data[i] = threshold
+		} else if data[i] < -threshold {
+			data[i] = -threshold
+		}
+	}
+}
+
+// applySoftClipping applies soft clipping at threshold with the given compression factor for gritty effect.
+func (g *Generator) applySoftClipping(data []float64, threshold, compression float64) {
+	for i := range data {
+		if data[i] > threshold {
+			data[i] = threshold + (data[i]-threshold)*compression
+		} else if data[i] < -threshold {
+			data[i] = -threshold + (data[i]+threshold)*compression
 		}
 	}
 }

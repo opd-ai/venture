@@ -60,63 +60,124 @@ func NewFederationProtocol(serverID string, identity *ServerIdentity) *Federatio
 
 // Connect establishes connection to a peer server with retry logic and circuit breaker
 func (f *FederationProtocol) Connect(peerAddress string) error {
-	// Check if federation is in local-only mode
+	if err := f.validateConnectionEligibility(peerAddress); err != nil {
+		return err
+	}
+
+	conn, handshakeResponse, err := f.establishConnectionWithRetry(peerAddress)
+	if err != nil {
+		return fmt.Errorf("failed to connect to %s after retries: %w", peerAddress, err)
+	}
+
+	f.registerPeerConnection(peerAddress, conn, handshakeResponse)
+	return nil
+}
+
+// validateConnectionEligibility checks if the connection can be established.
+func (f *FederationProtocol) validateConnectionEligibility(peerAddress string) error {
 	if f.health.IsLocalOnly() {
 		return fmt.Errorf("federation is in local-only mode, cannot connect to remote servers")
 	}
 
 	f.mu.Lock()
-	if _, exists := f.connections[peerAddress]; exists {
-		f.mu.Unlock()
-		return fmt.Errorf("already connected to %s", peerAddress)
-	}
+	_, exists := f.connections[peerAddress]
 	f.mu.Unlock()
 
-	// Use retry strategy with circuit breaker for connection attempt
-	var conn net.Conn
-	var handshakeResponse FederationHandshake
-	err := f.retryStrategy.Execute(func() error {
-		var dialErr error
-		conn, dialErr = net.DialTimeout("tcp", peerAddress, DefaultConnectionTimeout)
-		if dialErr != nil {
-			f.health.RecordFailure()
-			return dialErr
-		}
-
-		handshakeMsg, err := f.identity.CreateHandshake(DefaultProtocolVersion, DefaultProtocolFeatures, TrustVerified)
-		if err != nil {
-			conn.Close()
-			f.health.RecordFailure()
-			return fmt.Errorf("failed to create handshake: %w", err)
-		}
-
-		encoder := json.NewEncoder(conn)
-		if err := encoder.Encode(handshakeMsg); err != nil {
-			conn.Close()
-			f.health.RecordFailure()
-			return fmt.Errorf("failed to send handshake: %w", err)
-		}
-
-		decoder := json.NewDecoder(conn)
-		if err := decoder.Decode(&handshakeResponse); err != nil {
-			conn.Close()
-			f.health.RecordFailure()
-			return fmt.Errorf("failed to receive handshake response: %w", err)
-		}
-
-		if err := f.handshake.ProcessHandshake(&handshakeResponse); err != nil {
-			conn.Close()
-			f.health.RecordFailure()
-			return fmt.Errorf("invalid handshake response: %w", err)
-		}
-
-		return nil
-	}, IsNetworkError)
-	if err != nil {
-		return fmt.Errorf("failed to connect to %s after retries: %w", peerAddress, err)
+	if exists {
+		return fmt.Errorf("already connected to %s", peerAddress)
 	}
 
-	// Connection successful, record success and add to pool
+	return nil
+}
+
+// establishConnectionWithRetry attempts to connect and handshake with retry logic.
+func (f *FederationProtocol) establishConnectionWithRetry(peerAddress string) (net.Conn, FederationHandshake, error) {
+	var conn net.Conn
+	var handshakeResponse FederationHandshake
+
+	err := f.retryStrategy.Execute(func() error {
+		var attemptErr error
+		conn, handshakeResponse, attemptErr = f.attemptConnection(peerAddress)
+		return attemptErr
+	}, IsNetworkError)
+
+	return conn, handshakeResponse, err
+}
+
+// attemptConnection performs a single connection and handshake attempt.
+func (f *FederationProtocol) attemptConnection(peerAddress string) (net.Conn, FederationHandshake, error) {
+	conn, err := f.dialPeer(peerAddress)
+	if err != nil {
+		return nil, FederationHandshake{}, err
+	}
+
+	handshakeResponse, err := f.performHandshake(conn)
+	if err != nil {
+		conn.Close()
+		return nil, FederationHandshake{}, err
+	}
+
+	return conn, handshakeResponse, nil
+}
+
+// dialPeer establishes a TCP connection to the peer server.
+func (f *FederationProtocol) dialPeer(peerAddress string) (net.Conn, error) {
+	conn, err := net.DialTimeout("tcp", peerAddress, DefaultConnectionTimeout)
+	if err != nil {
+		f.health.RecordFailure()
+		return nil, err
+	}
+	return conn, nil
+}
+
+// performHandshake exchanges handshake messages with the peer.
+func (f *FederationProtocol) performHandshake(conn net.Conn) (FederationHandshake, error) {
+	handshakeMsg, err := f.identity.CreateHandshake(DefaultProtocolVersion, DefaultProtocolFeatures, TrustVerified)
+	if err != nil {
+		f.health.RecordFailure()
+		return FederationHandshake{}, fmt.Errorf("failed to create handshake: %w", err)
+	}
+
+	if err := f.sendHandshake(conn, *handshakeMsg); err != nil {
+		return FederationHandshake{}, err
+	}
+
+	handshakeResponse, err := f.receiveHandshake(conn)
+	if err != nil {
+		return FederationHandshake{}, err
+	}
+
+	if err := f.handshake.ProcessHandshake(&handshakeResponse); err != nil {
+		f.health.RecordFailure()
+		return FederationHandshake{}, fmt.Errorf("invalid handshake response: %w", err)
+	}
+
+	return handshakeResponse, nil
+}
+
+// sendHandshake sends the handshake message to the peer.
+func (f *FederationProtocol) sendHandshake(conn net.Conn, handshakeMsg FederationHandshake) error {
+	encoder := json.NewEncoder(conn)
+	if err := encoder.Encode(handshakeMsg); err != nil {
+		f.health.RecordFailure()
+		return fmt.Errorf("failed to send handshake: %w", err)
+	}
+	return nil
+}
+
+// receiveHandshake receives and decodes the handshake response from the peer.
+func (f *FederationProtocol) receiveHandshake(conn net.Conn) (FederationHandshake, error) {
+	var handshakeResponse FederationHandshake
+	decoder := json.NewDecoder(conn)
+	if err := decoder.Decode(&handshakeResponse); err != nil {
+		f.health.RecordFailure()
+		return FederationHandshake{}, fmt.Errorf("failed to receive handshake response: %w", err)
+	}
+	return handshakeResponse, nil
+}
+
+// registerPeerConnection records the successful connection in federation state.
+func (f *FederationProtocol) registerPeerConnection(peerAddress string, conn net.Conn, handshakeResponse FederationHandshake) {
 	f.health.RecordSuccess()
 
 	f.mu.Lock()
@@ -133,8 +194,6 @@ func (f *FederationProtocol) Connect(peerAddress string) error {
 		Connected:     true,
 		LastHeartbeat: time.Now().Unix(),
 	}
-
-	return nil
 }
 
 // TransferPlayer initiates player transfer to another server

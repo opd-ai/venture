@@ -261,7 +261,16 @@ func spawnWallTorches(world *engine.World, room *terrain.Room, config lightConfi
 	const tileSize = 32
 	const spawnChance = 0.6 // 60% chance per position
 
-	// Top and bottom walls
+	count += spawnTorchesOnHorizontalWalls(world, room, config, tileSize, spawnChance, rng)
+	count += spawnTorchesOnVerticalWalls(world, room, config, tileSize, spawnChance, rng)
+
+	return count
+}
+
+// spawnTorchesOnHorizontalWalls spawns torches on top and bottom walls.
+func spawnTorchesOnHorizontalWalls(world *engine.World, room *terrain.Room, config lightConfig, tileSize int, spawnChance float64, rng *rand.Rand) int {
+	count := 0
+
 	for x := room.X; x < room.X+room.Width; x++ {
 		if x%config.torchInterval == 0 {
 			// Top wall
@@ -281,7 +290,13 @@ func spawnWallTorches(world *engine.World, room *terrain.Room, config lightConfi
 		}
 	}
 
-	// Left and right walls
+	return count
+}
+
+// spawnTorchesOnVerticalWalls spawns torches on left and right walls.
+func spawnTorchesOnVerticalWalls(world *engine.World, room *terrain.Room, config lightConfig, tileSize int, spawnChance float64, rng *rand.Rand) int {
+	count := 0
+
 	for y := room.Y; y < room.Y+room.Height; y++ {
 		if y%config.torchInterval == 0 {
 			// Left wall

@@ -630,59 +630,86 @@ func (r *EbitenRenderSystem) returnBatchMap(batches map[*ebiten.Image][]*Entity)
 // getVisibleEntities returns only entities visible in the current viewport.
 // This uses spatial partitioning for efficient culling.
 func (r *EbitenRenderSystem) getVisibleEntities(entities []*Entity) []*Entity {
-	// Get camera bounds in world space
+	camera := r.getValidCamera()
+	if camera == nil {
+		return entities // No camera, render all
+	}
+
+	viewportBounds := r.calculateViewportBounds(camera)
+	visible := r.queryVisibleEntities(viewportBounds)
+	visible = r.ensurePlayersIncluded(entities, visible)
+
+	return visible
+}
+
+// getValidCamera retrieves and validates the active camera component.
+func (r *EbitenRenderSystem) getValidCamera() *CameraComponent {
 	cam := r.cameraSystem.activeCamera
 	if cam == nil {
-		return entities // No camera, render all
+		return nil
 	}
 
 	camComp, ok := cam.GetComponent("camera")
 	if !ok {
-		return entities
-	}
-	camera, ok := camComp.(*CameraComponent)
-	if !ok {
-		return entities
+		return nil
 	}
 
-	// Calculate viewport bounds in world space with margin for sprites
+	camera, ok := camComp.(*CameraComponent)
+	if !ok {
+		return nil
+	}
+
+	return camera
+}
+
+// calculateViewportBounds computes the viewport bounds in world space with margin.
+func (r *EbitenRenderSystem) calculateViewportBounds(camera *CameraComponent) Bounds {
 	margin := 100.0 // Extra space to render sprites partially off-screen
 
 	// BUG FIX: Use camera's actual position (camera.X, camera.Y) which includes
 	// smoothing and bounds clamping, NOT the entity's position component.
-	// The camera position is updated by CameraSystem and represents where
-	// the camera is actually looking, which may differ from the entity position
-	// due to smoothing, offsets, and bounds constraints.
-
-	// Calculate world viewport bounds
 	viewportWidth := float64(r.cameraSystem.ScreenWidth) / camera.Zoom
 	viewportHeight := float64(r.cameraSystem.ScreenHeight) / camera.Zoom
 
-	viewportBounds := Bounds{
+	return Bounds{
 		X:      camera.X - viewportWidth/2 - margin,
 		Y:      camera.Y - viewportHeight/2 - margin,
 		Width:  viewportWidth + margin*2,
 		Height: viewportHeight + margin*2,
 	}
+}
 
-	// Query spatial partition for entities in viewport using zero-allocation method
+// queryVisibleEntities retrieves entities within the viewport bounds.
+func (r *EbitenRenderSystem) queryVisibleEntities(viewportBounds Bounds) []*Entity {
 	r.viewportQueryBuffer = r.viewportQueryBuffer[:0]
 	visible := r.spatialPartition.QueryBoundsInto(viewportBounds, r.viewportQueryBuffer)
 	r.viewportQueryBuffer = visible // Update buffer reference in case it was reallocated
+	return visible
+}
 
-	// CRITICAL FIX: Always include local player(s) regardless of viewport culling
-	// Player entities have input component and should never be culled
-	// Reuse player buffer to reduce per-frame allocations
-	r.playerBuffer = r.playerBuffer[:0]
-
-	// Build O(1) lookup set from visible entities to replace O(n × m) nested loop
-	// Clear the map by deleting all keys (reuses underlying memory)
+// ensurePlayersIncluded adds player entities to visible list if not already included.
+func (r *EbitenRenderSystem) ensurePlayersIncluded(allEntities, visible []*Entity) []*Entity {
+	// Build O(1) lookup set from visible entities
 	clear(r.visibleEntityIDs)
 	for _, visibleEntity := range visible {
 		r.visibleEntityIDs[visibleEntity.ID] = struct{}{}
 	}
 
-	// Check players with O(1) lookup instead of O(m) scan per player
+	r.playerBuffer = r.collectNonVisiblePlayers(allEntities)
+
+	// Append player entities to visible list
+	if len(r.playerBuffer) > 0 {
+		visible = append(visible, r.playerBuffer...)
+		r.viewportQueryBuffer = visible // Update in case append reallocated
+	}
+
+	return visible
+}
+
+// collectNonVisiblePlayers collects player entities not already in the visible set.
+func (r *EbitenRenderSystem) collectNonVisiblePlayers(entities []*Entity) []*Entity {
+	r.playerBuffer = r.playerBuffer[:0]
+
 	for _, entity := range entities {
 		if entity.HasComponent("input") {
 			// O(1) map lookup instead of O(m) linear scan
@@ -692,13 +719,7 @@ func (r *EbitenRenderSystem) getVisibleEntities(entities []*Entity) []*Entity {
 		}
 	}
 
-	// Append player entities to visible list
-	if len(r.playerBuffer) > 0 {
-		visible = append(visible, r.playerBuffer...)
-		r.viewportQueryBuffer = visible // Update in case append reallocated
-	}
-
-	return visible
+	return r.playerBuffer
 }
 
 // drawEntity renders a single entity.

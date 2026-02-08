@@ -612,49 +612,58 @@ func (g *Generator) lightenPixel(img *image.RGBA, x, y int, factor float64) {
 func (g *Generator) applyWallSideEdges(img *image.RGBA, config EnhancedWallConfig, edgeThickness int) {
 	bounds := img.Bounds()
 
-	// Apply left edge (slightly darker - light coming from right)
 	if !config.Neighbors.West {
-		for t := 0; t < edgeThickness; t++ {
-			x := bounds.Min.X + t
-			if x >= bounds.Max.X {
-				continue
-			}
-
-			darkenFactor := 0.8 + 0.2*float64(t)/float64(edgeThickness)
-
-			for y := bounds.Min.Y + edgeThickness; y < bounds.Max.Y-edgeThickness; y++ {
-				existing := img.At(x, y)
-				r, gr, b, a := existing.RGBA()
-
-				newR := uint8(float64(r>>8) * darkenFactor)
-				newG := uint8(float64(gr>>8) * darkenFactor)
-				newB := uint8(float64(b>>8) * darkenFactor)
-
-				img.Set(x, y, color.RGBA{R: newR, G: newG, B: newB, A: uint8(a >> 8)})
-			}
-		}
+		g.applyLeftEdge(img, bounds, edgeThickness)
 	}
 
-	// Apply right edge (slightly lighter - facing the light)
 	if !config.Neighbors.East {
-		for t := 0; t < edgeThickness; t++ {
-			x := bounds.Max.X - 1 - t
-			if x < bounds.Min.X {
-				continue
-			}
+		g.applyRightEdge(img, bounds, edgeThickness)
+	}
+}
 
-			lightenFactor := 1.1 + 0.1*float64(edgeThickness-1-t)/float64(edgeThickness)
-
-			for y := bounds.Min.Y + edgeThickness; y < bounds.Max.Y-edgeThickness; y++ {
-				existing := img.At(x, y)
-				r, gr, b, a := existing.RGBA()
-
-				newR := uint8(math.Min(255, float64(r>>8)*lightenFactor))
-				newG := uint8(math.Min(255, float64(gr>>8)*lightenFactor))
-				newB := uint8(math.Min(255, float64(b>>8)*lightenFactor))
-
-				img.Set(x, y, color.RGBA{R: newR, G: newG, B: newB, A: uint8(a >> 8)})
-			}
+// applyLeftEdge applies a darker edge on the left side of the wall.
+func (g *Generator) applyLeftEdge(img *image.RGBA, bounds image.Rectangle, edgeThickness int) {
+	for t := 0; t < edgeThickness; t++ {
+		x := bounds.Min.X + t
+		if x >= bounds.Max.X {
+			continue
 		}
+
+		darkenFactor := 0.8 + 0.2*float64(t)/float64(edgeThickness)
+		g.applyVerticalEdgeColor(img, x, bounds.Min.Y+edgeThickness, bounds.Max.Y-edgeThickness, darkenFactor, false)
+	}
+}
+
+// applyRightEdge applies a lighter edge on the right side of the wall.
+func (g *Generator) applyRightEdge(img *image.RGBA, bounds image.Rectangle, edgeThickness int) {
+	for t := 0; t < edgeThickness; t++ {
+		x := bounds.Max.X - 1 - t
+		if x < bounds.Min.X {
+			continue
+		}
+
+		lightenFactor := 1.1 + 0.1*float64(edgeThickness-1-t)/float64(edgeThickness)
+		g.applyVerticalEdgeColor(img, x, bounds.Min.Y+edgeThickness, bounds.Max.Y-edgeThickness, lightenFactor, true)
+	}
+}
+
+// applyVerticalEdgeColor applies color modification to a vertical edge.
+func (g *Generator) applyVerticalEdgeColor(img *image.RGBA, x, yStart, yEnd int, factor float64, isLighten bool) {
+	for y := yStart; y < yEnd; y++ {
+		existing := img.At(x, y)
+		r, gr, b, a := existing.RGBA()
+
+		var newR, newG, newB uint8
+		if isLighten {
+			newR = uint8(math.Min(255, float64(r>>8)*factor))
+			newG = uint8(math.Min(255, float64(gr>>8)*factor))
+			newB = uint8(math.Min(255, float64(b>>8)*factor))
+		} else {
+			newR = uint8(float64(r>>8) * factor)
+			newG = uint8(float64(gr>>8) * factor)
+			newB = uint8(float64(b>>8) * factor)
+		}
+
+		img.Set(x, y, color.RGBA{R: newR, G: newG, B: newB, A: uint8(a >> 8)})
 	}
 }

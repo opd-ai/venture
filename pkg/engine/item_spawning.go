@@ -72,10 +72,27 @@ func SpawnItemInWorld(world *World, itm *item.Item, x, y float64) *Entity {
 // Uses the procedural item generator with scaling based on enemy difficulty.
 // Returns nil if no loot should be dropped (based on drop chance).
 func GenerateLootDrop(world *World, enemy *Entity, x, y float64, seed int64, genreID string) *Entity {
-	// Calculate drop chance based on enemy type
+	dropChance := calculateLootDropChance(enemy)
+
+	rng := rand.New(rand.NewSource(seed + int64(enemy.ID)))
+	if rng.Float64() > dropChance {
+		return nil // No drop
+	}
+
+	depth := extractEnemyLevel(enemy)
+	generatedItem := generateLootItem(seed, enemy.ID, depth, genreID)
+
+	if generatedItem == nil {
+		return nil
+	}
+
+	return SpawnItemInWorld(world, generatedItem, x, y)
+}
+
+// calculateLootDropChance determines drop chance based on enemy strength.
+func calculateLootDropChance(enemy *Entity) float64 {
 	dropChance := 0.3 // 30% base drop chance
 
-	// Increase drop chance for bosses/elites
 	if statsComp, ok := enemy.GetComponent("stats"); ok {
 		if stats, ok := statsComp.(*StatsComponent); ok {
 			if stats.Attack > 20 || stats.Defense > 20 {
@@ -84,21 +101,22 @@ func GenerateLootDrop(world *World, enemy *Entity, x, y float64, seed int64, gen
 		}
 	}
 
-	// Roll for drop
-	rng := rand.New(rand.NewSource(seed + int64(enemy.ID)))
-	if rng.Float64() > dropChance {
-		return nil // No drop
-	}
+	return dropChance
+}
 
-	// Determine item depth from enemy stats
+// extractEnemyLevel determines item generation depth from enemy level.
+func extractEnemyLevel(enemy *Entity) int {
 	depth := 1
 	if expComp, ok := enemy.GetComponent("experience"); ok {
 		if exp, ok := expComp.(*ExperienceComponent); ok {
 			depth = exp.Level
 		}
 	}
+	return depth
+}
 
-	// Generate item
+// generateLootItem creates a procedurally generated item for the enemy drop.
+func generateLootItem(seed int64, enemyID uint64, depth int, genreID string) *item.Item {
 	itemGen := item.NewItemGenerator()
 	params := procgen.GenerationParams{
 		Difficulty: 0.5 + float64(depth)*0.05, // Scale with depth
@@ -109,7 +127,7 @@ func GenerateLootDrop(world *World, enemy *Entity, x, y float64, seed int64, gen
 		},
 	}
 
-	result, err := itemGen.Generate(seed+int64(enemy.ID)+100, params)
+	result, err := itemGen.Generate(seed+int64(enemyID)+100, params)
 	if err != nil {
 		return nil
 	}
@@ -119,8 +137,7 @@ func GenerateLootDrop(world *World, enemy *Entity, x, y float64, seed int64, gen
 		return nil
 	}
 
-	// Spawn the item in the world
-	return SpawnItemInWorld(world, items[0], x, y)
+	return items[0]
 }
 
 // GenerateRecipeDrop creates a random recipe appropriate for the enemy's level and drops it.
@@ -128,11 +145,27 @@ func GenerateLootDrop(world *World, enemy *Entity, x, y float64, seed int64, gen
 // Returns nil if no recipe should be dropped (based on drop chance).
 // Recipe drop chances are lower than item drops to maintain balance.
 func GenerateRecipeDrop(recipeGen procgen.Generator, world *World, enemy *Entity, x, y float64, seed int64, genreID string) *Entity {
-	// Calculate recipe drop chance based on enemy type
-	// Recipes are rarer than items: 5% base, 20% for bosses
+	dropChance := calculateRecipeDropChance(enemy)
+
+	rng := rand.New(rand.NewSource(seed + int64(enemy.ID) + 500))
+	if rng.Float64() > dropChance {
+		return nil // No recipe drop
+	}
+
+	depth, difficulty := extractRecipeGenerationParams(enemy)
+	generatedRecipe := generateRecipe(recipeGen, seed, enemy.ID, depth, difficulty, genreID)
+
+	if generatedRecipe == nil {
+		return nil
+	}
+
+	return SpawnRecipeInWorld(world, generatedRecipe, x, y)
+}
+
+// calculateRecipeDropChance determines recipe drop chance based on enemy strength.
+func calculateRecipeDropChance(enemy *Entity) float64 {
 	dropChance := 0.05 // 5% base drop chance for recipes
 
-	// Increase drop chance for bosses/elites
 	if statsComp, ok := enemy.GetComponent("stats"); ok {
 		if stats, ok := statsComp.(*StatsComponent); ok {
 			if stats.Attack > 20 || stats.Defense > 20 {
@@ -141,13 +174,11 @@ func GenerateRecipeDrop(recipeGen procgen.Generator, world *World, enemy *Entity
 		}
 	}
 
-	// Roll for drop
-	rng := rand.New(rand.NewSource(seed + int64(enemy.ID) + 500))
-	if rng.Float64() > dropChance {
-		return nil // No recipe drop
-	}
+	return dropChance
+}
 
-	// Determine recipe depth/difficulty from enemy stats
+// extractRecipeGenerationParams determines recipe depth and difficulty from enemy stats.
+func extractRecipeGenerationParams(enemy *Entity) (int, float64) {
 	depth := 1
 	difficulty := 0.3 // Start lower for common recipes
 
@@ -158,7 +189,11 @@ func GenerateRecipeDrop(recipeGen procgen.Generator, world *World, enemy *Entity
 		}
 	}
 
-	// Generate recipe
+	return depth, difficulty
+}
+
+// generateRecipe creates a procedurally generated recipe for the enemy drop.
+func generateRecipe(recipeGen procgen.Generator, seed int64, enemyID uint64, depth int, difficulty float64, genreID string) *Recipe {
 	params := procgen.GenerationParams{
 		Difficulty: difficulty,
 		Depth:      depth,
@@ -168,7 +203,7 @@ func GenerateRecipeDrop(recipeGen procgen.Generator, world *World, enemy *Entity
 		},
 	}
 
-	result, err := recipeGen.Generate(seed+int64(enemy.ID)+1000, params)
+	result, err := recipeGen.Generate(seed+int64(enemyID)+1000, params)
 	if err != nil {
 		return nil
 	}
@@ -178,8 +213,7 @@ func GenerateRecipeDrop(recipeGen procgen.Generator, world *World, enemy *Entity
 		return nil
 	}
 
-	// Spawn the recipe in the world
-	return SpawnRecipeInWorld(world, recipes[0], x, y)
+	return recipes[0]
 }
 
 // getItemColor determines the sprite color based on item type and rarity.

@@ -156,36 +156,37 @@ func (csp *CSP) selectUnassignedVariable(assignments map[string]interface{}) *Va
 // isConsistent checks if current assignment is consistent with constraints.
 func (csp *CSP) isConsistent(varName string, assignments map[string]interface{}) bool {
 	for _, constraint := range csp.Constraints {
-		// Check if this constraint involves the variable
-		involves := false
-		for _, v := range constraint.Variables {
-			if v == varName {
-				involves = true
-				break
-			}
-		}
-
-		if !involves {
+		if !csp.constraintInvolvesVariable(constraint, varName) {
 			continue
 		}
 
-		// Check if all variables in constraint are assigned
-		allAssigned := true
-		for _, v := range constraint.Variables {
-			if _, assigned := assignments[v]; !assigned {
-				allAssigned = false
-				break
-			}
-		}
-
-		// Only check constraint if all involved variables are assigned
-		if allAssigned {
+		if csp.shouldCheckConstraint(constraint, assignments) {
 			if !constraint.IsSatisfied(assignments) {
 				return false
 			}
 		}
 	}
 
+	return true
+}
+
+// constraintInvolvesVariable checks if a constraint involves the given variable.
+func (csp *CSP) constraintInvolvesVariable(constraint *Constraint, varName string) bool {
+	for _, v := range constraint.Variables {
+		if v == varName {
+			return true
+		}
+	}
+	return false
+}
+
+// shouldCheckConstraint determines if all variables in a constraint are assigned.
+func (csp *CSP) shouldCheckConstraint(constraint *Constraint, assignments map[string]interface{}) bool {
+	for _, v := range constraint.Variables {
+		if _, assigned := assignments[v]; !assigned {
+			return false
+		}
+	}
 	return true
 }
 

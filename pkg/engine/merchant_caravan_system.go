@@ -41,43 +41,94 @@ func (s *MerchantCaravanSystem) Update(deltaTime float64) {
 	entities := s.world.GetEntitiesWith("merchantcaravan")
 
 	for _, entity := range entities {
-		compInt, ok := entity.GetComponent("merchantcaravan")
-		if !ok {
+		comp := s.getCaravanComponent(entity)
+		if comp == nil {
 			continue
 		}
-		comp := compInt.(*MerchantCaravanComponent)
 
-		// Check if waiting at destination
-		if comp.NextDepartureTime > 0 {
-			now := time.Now().Unix()
-			if now < comp.NextDepartureTime {
-				continue // Still resting
-			}
-			// Time to depart - reset and continue journey
-			comp.NextDepartureTime = 0
-		}
+		s.updateCaravan(entity, comp, deltaTime)
+	}
+}
 
-		// Update travel progress
-		if len(comp.RouteServers) > 0 && comp.CurrentRouteIndex < len(comp.RouteServers) {
-			progressDelta := deltaTime / s.hopDuration
-			comp.TravelProgress += progressDelta
+// getCaravanComponent retrieves and validates the merchant caravan component.
+func (s *MerchantCaravanSystem) getCaravanComponent(entity *Entity) *MerchantCaravanComponent {
+	compInt, ok := entity.GetComponent("merchantcaravan")
+	if !ok {
+		return nil
+	}
+	return compInt.(*MerchantCaravanComponent)
+}
 
-			// Check if reached next server
-			if comp.TravelProgress >= 1.0 {
-				comp.TravelProgress = 0.0
-				comp.CurrentRouteIndex++
+// updateCaravan processes a single caravan's movement and rest state.
+func (s *MerchantCaravanSystem) updateCaravan(entity *Entity, comp *MerchantCaravanComponent, deltaTime float64) {
+	if s.isCaravanResting(comp) {
+		return
+	}
 
-				// Update current server
-				if comp.CurrentRouteIndex < len(comp.RouteServers) {
-					comp.CurrentServer = comp.RouteServers[comp.CurrentRouteIndex]
-				}
+	s.processCaravanTravel(entity, comp, deltaTime)
+}
 
-				// Check if reached final destination
-				if comp.CurrentRouteIndex >= len(comp.RouteServers)-1 {
-					s.handleArrival(entity, comp)
-				}
-			}
-		}
+// isCaravanResting checks if the caravan is still resting at destination.
+func (s *MerchantCaravanSystem) isCaravanResting(comp *MerchantCaravanComponent) bool {
+	if comp.NextDepartureTime <= 0 {
+		return false
+	}
+
+	now := time.Now().Unix()
+	if now < comp.NextDepartureTime {
+		return true
+	}
+
+	// Time to depart - reset and continue journey
+	comp.NextDepartureTime = 0
+	return false
+}
+
+// processCaravanTravel advances the caravan along its route.
+func (s *MerchantCaravanSystem) processCaravanTravel(entity *Entity, comp *MerchantCaravanComponent, deltaTime float64) {
+	if !s.hasValidRoute(comp) {
+		return
+	}
+
+	s.advanceTravelProgress(comp, deltaTime)
+	s.checkServerHopCompletion(entity, comp)
+}
+
+// hasValidRoute verifies the caravan has a valid route to follow.
+func (s *MerchantCaravanSystem) hasValidRoute(comp *MerchantCaravanComponent) bool {
+	return len(comp.RouteServers) > 0 && comp.CurrentRouteIndex < len(comp.RouteServers)
+}
+
+// advanceTravelProgress increments the caravan's travel progress.
+func (s *MerchantCaravanSystem) advanceTravelProgress(comp *MerchantCaravanComponent, deltaTime float64) {
+	progressDelta := deltaTime / s.hopDuration
+	comp.TravelProgress += progressDelta
+}
+
+// checkServerHopCompletion handles completion of a server hop.
+func (s *MerchantCaravanSystem) checkServerHopCompletion(entity *Entity, comp *MerchantCaravanComponent) {
+	if comp.TravelProgress < 1.0 {
+		return
+	}
+
+	comp.TravelProgress = 0.0
+	comp.CurrentRouteIndex++
+
+	s.updateCurrentServer(comp)
+	s.checkFinalDestination(entity, comp)
+}
+
+// updateCurrentServer sets the caravan's current server location.
+func (s *MerchantCaravanSystem) updateCurrentServer(comp *MerchantCaravanComponent) {
+	if comp.CurrentRouteIndex < len(comp.RouteServers) {
+		comp.CurrentServer = comp.RouteServers[comp.CurrentRouteIndex]
+	}
+}
+
+// checkFinalDestination handles arrival at the final destination.
+func (s *MerchantCaravanSystem) checkFinalDestination(entity *Entity, comp *MerchantCaravanComponent) {
+	if comp.CurrentRouteIndex >= len(comp.RouteServers)-1 {
+		s.handleArrival(entity, comp)
 	}
 }
 

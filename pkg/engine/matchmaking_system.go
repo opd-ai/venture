@@ -330,12 +330,26 @@ func (s *MatchmakingSystem) tryCreateMatch(mode MatchmakingMode, now time.Time) 
 		return
 	}
 
-	// Sort queue by rating for better matching
+	s.sortQueueByRating(queue)
+
+	matched, matchedIndices := s.findCompatiblePlayers(queue, maxPlayers)
+
+	if len(matched) < minPlayers {
+		return
+	}
+
+	s.createPendingMatch(mode, matched, matchedIndices, now)
+}
+
+// sortQueueByRating sorts the matchmaking queue by player rating.
+func (s *MatchmakingSystem) sortQueueByRating(queue []*QueueEntry) {
 	sort.Slice(queue, func(i, j int) bool {
 		return queue[i].Rating < queue[j].Rating
 	})
+}
 
-	// Find compatible players
+// findCompatiblePlayers finds players within acceptable rating ranges for a match.
+func (s *MatchmakingSystem) findCompatiblePlayers(queue []*QueueEntry, maxPlayers int) ([]*QueueEntry, []int) {
 	var matched []*QueueEntry
 	var matchedIndices []int
 
@@ -344,35 +358,35 @@ func (s *MatchmakingSystem) tryCreateMatch(mode MatchmakingMode, now time.Time) 
 			break
 		}
 
-		if len(matched) == 0 {
-			matched = append(matched, entry)
-			matchedIndices = append(matchedIndices, i)
-			continue
-		}
-
-		// Check if this player is within range of existing matched players
-		compatible := true
-		for _, m := range matched {
-			diff := mmAbs(entry.Rating - m.Rating)
-			maxRange := mmMin(entry.RatingRange, m.RatingRange)
-			if diff > maxRange {
-				compatible = false
-				break
-			}
-		}
-
-		if compatible {
+		if s.shouldAddPlayerToMatch(entry, matched) {
 			matched = append(matched, entry)
 			matchedIndices = append(matchedIndices, i)
 		}
 	}
 
-	if len(matched) < minPlayers {
-		return
+	return matched, matchedIndices
+}
+
+// shouldAddPlayerToMatch checks if a player is compatible with existing matched players.
+func (s *MatchmakingSystem) shouldAddPlayerToMatch(entry *QueueEntry, matched []*QueueEntry) bool {
+	if len(matched) == 0 {
+		return true
 	}
 
-	// Create the match
-	s.createPendingMatch(mode, matched, matchedIndices, now)
+	for _, m := range matched {
+		if !s.arePlayersCompatible(entry, m) {
+			return false
+		}
+	}
+
+	return true
+}
+
+// arePlayersCompatible checks if two players are within acceptable rating range.
+func (s *MatchmakingSystem) arePlayersCompatible(entry1, entry2 *QueueEntry) bool {
+	diff := mmAbs(entry1.Rating - entry2.Rating)
+	maxRange := mmMin(entry1.RatingRange, entry2.RatingRange)
+	return diff <= maxRange
 }
 
 // createPendingMatch creates a new pending match from matched entries.

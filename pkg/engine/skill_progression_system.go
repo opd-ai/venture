@@ -219,79 +219,112 @@ func (s *SkillProgressionSystem) processLearnedSkill(entity *Entity, treeComp *S
 
 // applyEffect adds a single effect to the bonus accumulator.
 func (s *SkillProgressionSystem) applyEffect(bonuses *SkillBonuses, effect skills.Effect, skillLevel float64) {
-	// Scale effect value by skill level
 	value := effect.Value * skillLevel
+	s.logEffectApplication(effect, skillLevel, value)
 
+	switch effect.Type {
+	case "damage", "attack_power", "strength":
+		s.applyDamageBonusToSkillBonuses(bonuses, value, effect.IsPercent)
+	case "defense", "armor", "toughness":
+		s.applyDefenseBonusToSkillBonuses(bonuses, value, effect.IsPercent)
+	case "health", "vitality", "max_health":
+		s.applyHealthBonusToSkillBonuses(bonuses, value, effect.IsPercent)
+	case "speed", "movement_speed", "agility":
+		s.applySpeedBonusToSkillBonuses(bonuses, value, effect.IsPercent)
+	case "crit_chance", "critical_chance":
+		bonuses.CritChanceBonus += value
+	case "crit_damage", "critical_damage":
+		s.applyCritDamageBonusToSkillBonuses(bonuses, value, effect.IsPercent)
+	case "magic_power", "spell_power", "intelligence":
+		s.applyMagicPowerBonusToSkillBonuses(bonuses, value, effect.IsPercent)
+	case "mana_regen", "mana_regeneration":
+		s.applyManaRegenBonusToSkillBonuses(bonuses, value, effect.IsPercent)
+	case "cooldown_reduction", "haste":
+		bonuses.CooldownReduction += value
+	default:
+		s.logUnknownEffect(effect.Type)
+	}
+}
+
+// logEffectApplication logs the application of a skill effect.
+func (s *SkillProgressionSystem) logEffectApplication(effect skills.Effect, skillLevel, scaledValue float64) {
 	log.WithFields(log.Fields{
 		"effect_type":  effect.Type,
 		"effect_value": effect.Value,
 		"skill_level":  skillLevel,
-		"scaled_value": value,
+		"scaled_value": scaledValue,
 		"is_percent":   effect.IsPercent,
 	}).Debug("Applying skill effect")
+}
 
-	// Map effect types to stat bonuses
-	switch effect.Type {
-	case "damage", "attack_power", "strength":
-		if effect.IsPercent {
-			bonuses.DamageBonus += value
-		} else {
-			bonuses.DamageBonus += value / 100 // Convert flat bonus to percentage
-		}
-
-	case "defense", "armor", "toughness":
-		if effect.IsPercent {
-			bonuses.DefenseBonus += value
-		} else {
-			bonuses.DefenseBonus += value / 100
-		}
-
-	case "health", "vitality", "max_health":
-		if effect.IsPercent {
-			bonuses.HealthBonus += value
-		} else {
-			bonuses.HealthBonus += value / 100
-		}
-
-	case "speed", "movement_speed", "agility":
-		if effect.IsPercent {
-			bonuses.SpeedBonus += value
-		} else {
-			bonuses.SpeedBonus += value / 100
-		}
-
-	case "crit_chance", "critical_chance":
-		bonuses.CritChanceBonus += value
-
-	case "crit_damage", "critical_damage":
-		if effect.IsPercent {
-			bonuses.CritDamageBonus += value
-		} else {
-			bonuses.CritDamageBonus += value / 100
-		}
-
-	case "magic_power", "spell_power", "intelligence":
-		if effect.IsPercent {
-			bonuses.MagicPowerBonus += value
-		} else {
-			bonuses.MagicPowerBonus += value / 100
-		}
-
-	case "mana_regen", "mana_regeneration":
-		if effect.IsPercent {
-			bonuses.ManaRegenBonus += value
-		} else {
-			bonuses.ManaRegenBonus += value / 100
-		}
-
-	case "cooldown_reduction", "haste":
-		bonuses.CooldownReduction += value
-
-	default:
-		log.WithFields(log.Fields{
-			"effect_type": effect.Type,
-		}).Warn("Unknown effect type, not applied")
+// applyDamageBonusToSkillBonuses applies damage/attack power bonus to skill bonuses.
+func (s *SkillProgressionSystem) applyDamageBonusToSkillBonuses(bonuses *SkillBonuses, value float64, isPercent bool) {
+	if isPercent {
+		bonuses.DamageBonus += value
+	} else {
+		bonuses.DamageBonus += value / 100
 	}
+}
+
+// applyDefenseBonusToSkillBonuses applies defense/armor bonus to skill bonuses.
+func (s *SkillProgressionSystem) applyDefenseBonusToSkillBonuses(bonuses *SkillBonuses, value float64, isPercent bool) {
+	if isPercent {
+		bonuses.DefenseBonus += value
+	} else {
+		bonuses.DefenseBonus += value / 100
+	}
+}
+
+// applyHealthBonusToSkillBonuses applies health/vitality bonus to skill bonuses.
+func (s *SkillProgressionSystem) applyHealthBonusToSkillBonuses(bonuses *SkillBonuses, value float64, isPercent bool) {
+	if isPercent {
+		bonuses.HealthBonus += value
+	} else {
+		bonuses.HealthBonus += value / 100
+	}
+}
+
+// applySpeedBonusToSkillBonuses applies speed/movement bonus to skill bonuses.
+func (s *SkillProgressionSystem) applySpeedBonusToSkillBonuses(bonuses *SkillBonuses, value float64, isPercent bool) {
+	if isPercent {
+		bonuses.SpeedBonus += value
+	} else {
+		bonuses.SpeedBonus += value / 100
+	}
+}
+
+// applyCritDamageBonusToSkillBonuses applies critical damage bonus to skill bonuses.
+func (s *SkillProgressionSystem) applyCritDamageBonusToSkillBonuses(bonuses *SkillBonuses, value float64, isPercent bool) {
+	if isPercent {
+		bonuses.CritDamageBonus += value
+	} else {
+		bonuses.CritDamageBonus += value / 100
+	}
+}
+
+// applyMagicPowerBonusToSkillBonuses applies magic/spell power bonus to skill bonuses.
+func (s *SkillProgressionSystem) applyMagicPowerBonusToSkillBonuses(bonuses *SkillBonuses, value float64, isPercent bool) {
+	if isPercent {
+		bonuses.MagicPowerBonus += value
+	} else {
+		bonuses.MagicPowerBonus += value / 100
+	}
+}
+
+// applyManaRegenBonusToSkillBonuses applies mana regeneration bonus to skill bonuses.
+func (s *SkillProgressionSystem) applyManaRegenBonusToSkillBonuses(bonuses *SkillBonuses, value float64, isPercent bool) {
+	if isPercent {
+		bonuses.ManaRegenBonus += value
+	} else {
+		bonuses.ManaRegenBonus += value / 100
+	}
+}
+
+// logUnknownEffect logs a warning for unknown effect types.
+func (s *SkillProgressionSystem) logUnknownEffect(effectType string) {
+	log.WithFields(log.Fields{
+		"effect_type": effectType,
+	}).Warn("Unknown effect type, not applied")
 }
 
 // applyBonusesToStats modifies stats based on calculated bonuses.

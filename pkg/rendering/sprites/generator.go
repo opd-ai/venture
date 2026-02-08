@@ -413,7 +413,21 @@ func (g *Generator) getColorForRole(role string, pal *palette.Palette) color.Col
 func (g *Generator) generateItem(config Config, rng *rand.Rand) (*ebiten.Image, error) {
 	img := ebiten.NewImage(config.Width, config.Height)
 
-	// Extract item type and rarity from config
+	itemType, rarity := g.extractItemMetadata(config)
+
+	// Use template-based generation if item type specified
+	if itemType != "" {
+		return g.generateItemWithTemplate(config, itemType, rarity, rng)
+	}
+
+	// Fallback to procedural random generation when no item type specified
+	g.generateProceduralItemShapes(img, config, rng)
+
+	return img, nil
+}
+
+// extractItemMetadata extracts item type and rarity from config custom data.
+func (g *Generator) extractItemMetadata(config Config) (ItemType, ItemRarity) {
 	var itemType ItemType
 	var rarity ItemRarity = RarityCommon
 
@@ -428,49 +442,58 @@ func (g *Generator) generateItem(config Config, rng *rand.Rand) (*ebiten.Image, 
 		}
 	}
 
-	// Use template-based generation if item type specified
-	if itemType != "" {
-		return g.generateItemWithTemplate(config, itemType, rarity, rng)
-	}
+	return itemType, rarity
+}
 
-	// Fallback to procedural random generation when no item type specified
+// generateProceduralItemShapes generates multiple random shapes for item sprite.
+func (g *Generator) generateProceduralItemShapes(img *ebiten.Image, config Config, rng *rand.Rand) {
 	numShapes := 1 + int(config.Complexity*2)
 
 	for i := 0; i < numShapes; i++ {
-		var colorChoice color.Color
-		if i == 0 {
-			colorChoice = config.Palette.Secondary
-		} else {
-			colorChoice = config.Palette.Colors[rng.Intn(len(config.Palette.Colors))]
-		}
+		colorChoice := g.selectShapeColor(i, config, rng)
+		shapeConfig := g.createItemShapeConfig(i, config, colorChoice, rng)
 
-		itemConfig := shapes.Config{
-			Type:       shapes.ShapeType(rng.Intn(6)),
-			Width:      int(float64(config.Width) * (0.5 + rng.Float64()*0.4)),
-			Height:     int(float64(config.Height) * (0.5 + rng.Float64()*0.4)),
-			Color:      colorChoice,
-			Seed:       config.Seed + int64(i),
-			Sides:      4 + rng.Intn(4),
-			InnerRatio: 0.3 + rng.Float64()*0.4,
-			Rotation:   rng.Float64() * 360,
-			Smoothing:  0.1,
-			AntiAlias:  config.AntiAlias,
-		}
-
-		shape, err := g.shapeGen.Generate(itemConfig)
+		shape, err := g.shapeGen.Generate(shapeConfig)
 		if err != nil {
 			continue
 		}
 
-		opts := &ebiten.DrawImageOptions{}
-		opts.GeoM.Translate(
-			float64(config.Width-itemConfig.Width)/2,
-			float64(config.Height-itemConfig.Height)/2,
-		)
-		img.DrawImage(shape, opts)
+		g.drawCenteredShape(img, shape, config.Width, config.Height, shapeConfig.Width, shapeConfig.Height)
 	}
+}
 
-	return img, nil
+// selectShapeColor chooses color for item shape based on index.
+func (g *Generator) selectShapeColor(index int, config Config, rng *rand.Rand) color.Color {
+	if index == 0 {
+		return config.Palette.Secondary
+	}
+	return config.Palette.Colors[rng.Intn(len(config.Palette.Colors))]
+}
+
+// createItemShapeConfig creates shape configuration for procedural item generation.
+func (g *Generator) createItemShapeConfig(index int, config Config, colorChoice color.Color, rng *rand.Rand) shapes.Config {
+	return shapes.Config{
+		Type:       shapes.ShapeType(rng.Intn(6)),
+		Width:      int(float64(config.Width) * (0.5 + rng.Float64()*0.4)),
+		Height:     int(float64(config.Height) * (0.5 + rng.Float64()*0.4)),
+		Color:      colorChoice,
+		Seed:       config.Seed + int64(index),
+		Sides:      4 + rng.Intn(4),
+		InnerRatio: 0.3 + rng.Float64()*0.4,
+		Rotation:   rng.Float64() * 360,
+		Smoothing:  0.1,
+		AntiAlias:  config.AntiAlias,
+	}
+}
+
+// drawCenteredShape draws a shape centered within the target image.
+func (g *Generator) drawCenteredShape(img, shape *ebiten.Image, targetWidth, targetHeight, shapeWidth, shapeHeight int) {
+	opts := &ebiten.DrawImageOptions{}
+	opts.GeoM.Translate(
+		float64(targetWidth-shapeWidth)/2,
+		float64(targetHeight-shapeHeight)/2,
+	)
+	img.DrawImage(shape, opts)
 }
 
 // generateItemWithTemplate creates an item sprite using item templates (Phase 5.4).

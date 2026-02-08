@@ -2401,32 +2401,34 @@ func connectUIComponentsToInputSystem(game *engine.EbitenGame, inputSystem *engi
 }
 
 func connectBasicUIComponents(game *engine.EbitenGame, inputSystem *engine.InputSystem, shopUI *engine.ShopUI) {
-	if game.MailboxUI != nil {
-		inputSystem.SetMailboxUI(game.MailboxUI)
+	uiConnections := []struct {
+		ui     interface{}
+		setter func(interface{})
+	}{
+		{game.MailboxUI, func(ui interface{}) { inputSystem.SetMailboxUI(ui.(*engine.MailboxUI)) }},
+		{game.InventoryUI, func(ui interface{}) { inputSystem.SetInventoryUI(ui.(*engine.InventoryUI)) }},
+		{game.CharacterUI, func(ui interface{}) { inputSystem.SetCharacterUI(ui.(*engine.CharacterUI)) }},
+		{game.SkillsUI, func(ui interface{}) { inputSystem.SetSkillsUI(ui.(*engine.SkillsUI)) }},
+		{game.QuestUI, func(ui interface{}) { inputSystem.SetQuestUI(ui.(*engine.QuestUI)) }},
+		{game.MapUI, func(ui interface{}) { inputSystem.SetMapUI(ui.(*engine.MapUI)) }},
+		{game.CraftingUI, func(ui interface{}) { inputSystem.SetCraftingUI(ui.(*engine.CraftingUI)) }},
+		{shopUI, func(ui interface{}) { inputSystem.SetShopUI(ui.(*engine.ShopUI)) }},
+		{game.TradeUI, func(ui interface{}) { inputSystem.SetTradeUI(ui.(*engine.TradeUI)) }},
 	}
-	if game.InventoryUI != nil {
-		inputSystem.SetInventoryUI(game.InventoryUI)
-	}
-	if game.CharacterUI != nil {
-		inputSystem.SetCharacterUI(game.CharacterUI)
-	}
-	if game.SkillsUI != nil {
-		inputSystem.SetSkillsUI(game.SkillsUI)
-	}
-	if game.QuestUI != nil {
-		inputSystem.SetQuestUI(game.QuestUI)
-	}
-	if game.MapUI != nil {
-		inputSystem.SetMapUI(game.MapUI)
-	}
-	if game.CraftingUI != nil {
-		inputSystem.SetCraftingUI(game.CraftingUI)
-	}
-	if shopUI != nil {
-		inputSystem.SetShopUI(shopUI)
-	}
-	if game.TradeUI != nil {
-		inputSystem.SetTradeUI(game.TradeUI)
+
+	connectUIComponents(uiConnections)
+}
+
+// connectUIComponents connects non-nil UI components using the provided setters.
+func connectUIComponents(connections []struct {
+	ui     interface{}
+	setter func(interface{})
+},
+) {
+	for _, conn := range connections {
+		if conn.ui != nil {
+			conn.setter(conn.ui)
+		}
 	}
 }
 

@@ -562,34 +562,53 @@ func (s *TournamentSystem) moveToLosersBracket(tournament *TournamentInstance, p
 
 // checkTournamentComplete checks if the tournament is finished.
 func (s *TournamentSystem) checkTournamentComplete(tournament *TournamentInstance) {
-	// Check if all matches are complete
-	allComplete := true
-	for _, match := range tournament.Bracket {
-		if !match.Completed {
-			allComplete = false
-			break
-		}
-	}
-
-	if !allComplete {
+	if !s.areAllMatchesComplete(tournament) {
 		return
 	}
 
-	// For double elimination, also check losers bracket
+	s.finalizeTournament(tournament)
+	s.logTournamentCompletion(tournament)
+
+	delete(s.activeTournaments, tournament.InstanceID)
+}
+
+// areAllMatchesComplete checks if all tournament matches have finished.
+func (s *TournamentSystem) areAllMatchesComplete(tournament *TournamentInstance) bool {
+	if !s.isMainBracketComplete(tournament.Bracket) {
+		return false
+	}
+
 	if tournament.Definition.Format == TournamentFormatDoubleElim {
-		for _, match := range tournament.LosersBracket {
-			if !match.Completed && (match.Player1ID != 0 || match.Player2ID != 0) {
-				allComplete = false
-				break
-			}
+		if !s.isLosersBracketComplete(tournament.LosersBracket) {
+			return false
 		}
 	}
 
-	if !allComplete {
-		return
-	}
+	return true
+}
 
-	// Determine winner (last match winner)
+// isMainBracketComplete checks if all main bracket matches are complete.
+func (s *TournamentSystem) isMainBracketComplete(bracket []BracketMatch) bool {
+	for _, match := range bracket {
+		if !match.Completed {
+			return false
+		}
+	}
+	return true
+}
+
+// isLosersBracketComplete checks if all losers bracket matches are complete.
+func (s *TournamentSystem) isLosersBracketComplete(losersBracket []BracketMatch) bool {
+	for _, match := range losersBracket {
+		if !match.Completed && (match.Player1ID != 0 || match.Player2ID != 0) {
+			return false
+		}
+	}
+	return true
+}
+
+// finalizeTournament determines winners and marks tournament as complete.
+func (s *TournamentSystem) finalizeTournament(tournament *TournamentInstance) {
 	if len(tournament.Bracket) > 0 {
 		finalMatch := tournament.Bracket[len(tournament.Bracket)-1]
 		tournament.WinnerID = finalMatch.WinnerID
@@ -599,18 +618,17 @@ func (s *TournamentSystem) checkTournamentComplete(tournament *TournamentInstanc
 	tournament.Phase = TournamentPhaseComplete
 	tournament.EndsAt = time.Now()
 
-	// Notify participants and update their components
 	s.completeTournamentForPlayers(tournament)
+}
 
+// logTournamentCompletion logs tournament completion details.
+func (s *TournamentSystem) logTournamentCompletion(tournament *TournamentInstance) {
 	log.WithFields(log.Fields{
 		"system_name":   "tournament",
 		"tournament_id": tournament.InstanceID,
 		"winner":        tournament.WinnerID,
 		"runner_up":     tournament.RunnerUpID,
 	}).Info("Tournament completed")
-
-	// Remove from active
-	delete(s.activeTournaments, tournament.InstanceID)
 }
 
 // completeTournamentForPlayers updates player components with results.

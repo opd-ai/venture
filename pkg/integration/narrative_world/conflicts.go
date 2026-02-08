@@ -202,33 +202,57 @@ func (m *StoryEventManager) GenerateCrossCompanionStory(companionIDs []uint64, s
 func (m *StoryEventManager) GetDialogueContext(companionID uint64, maxRecent int) *DialogueContext {
 	memory, exists := m.memories[companionID]
 	if !exists || len(memory.Events) == 0 {
-		return &DialogueContext{
-			RecentEvents:    make([]MemoryEvent, 0),
-			ImportantEvents: make([]MemoryEvent, 0),
-			RelatedTo:       make([]uint64, 0),
-		}
+		return m.createEmptyDialogueContext()
 	}
 
-	// Get recent events (last N events)
+	recentEvents := m.extractRecentEvents(memory.Events, maxRecent)
+	importantEvents := m.extractImportantEvents(memory.Events)
+	relatedTo := m.extractRelatedEntityIDs(memory.Events, companionID)
+
+	return &DialogueContext{
+		RecentEvents:    recentEvents,
+		ImportantEvents: importantEvents,
+		RelatedTo:       relatedTo,
+	}
+}
+
+// createEmptyDialogueContext creates a dialogue context with empty slices.
+func (m *StoryEventManager) createEmptyDialogueContext() *DialogueContext {
+	return &DialogueContext{
+		RecentEvents:    make([]MemoryEvent, 0),
+		ImportantEvents: make([]MemoryEvent, 0),
+		RelatedTo:       make([]uint64, 0),
+	}
+}
+
+// extractRecentEvents retrieves the most recent memory events up to maxRecent.
+func (m *StoryEventManager) extractRecentEvents(events []MemoryEvent, maxRecent int) []MemoryEvent {
 	recentCount := maxRecent
-	if recentCount > len(memory.Events) {
-		recentCount = len(memory.Events)
+	if recentCount > len(events) {
+		recentCount = len(events)
 	}
 
 	recentEvents := make([]MemoryEvent, recentCount)
-	copy(recentEvents, memory.Events[len(memory.Events)-recentCount:])
+	copy(recentEvents, events[len(events)-recentCount:])
 
-	// Get important events (importance >= 0.7)
+	return recentEvents
+}
+
+// extractImportantEvents filters memory events by importance threshold.
+func (m *StoryEventManager) extractImportantEvents(events []MemoryEvent) []MemoryEvent {
 	importantEvents := make([]MemoryEvent, 0)
-	for _, event := range memory.Events {
+	for _, event := range events {
 		if event.Importance >= 0.7 {
 			importantEvents = append(importantEvents, event)
 		}
 	}
+	return importantEvents
+}
 
-	// Extract related entity IDs
+// extractRelatedEntityIDs collects unique entity IDs from event participants.
+func (m *StoryEventManager) extractRelatedEntityIDs(events []MemoryEvent, companionID uint64) []uint64 {
 	relatedMap := make(map[uint64]bool)
-	for _, event := range memory.Events {
+	for _, event := range events {
 		for _, participant := range event.Participants {
 			if participant != companionID {
 				relatedMap[participant] = true
@@ -241,11 +265,7 @@ func (m *StoryEventManager) GetDialogueContext(companionID uint64, maxRecent int
 		relatedTo = append(relatedTo, id)
 	}
 
-	return &DialogueContext{
-		RecentEvents:    recentEvents,
-		ImportantEvents: importantEvents,
-		RelatedTo:       relatedTo,
-	}
+	return relatedTo
 }
 
 // UpdateConflict updates conflict state over time

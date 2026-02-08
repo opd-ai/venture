@@ -8,13 +8,13 @@
 
 ## Executive Summary
 
-- **Total gaps found:** 11 (1 completed)
+- **Total gaps found:** 11 (3 completed)
 - **Critical (blocks functionality):** 0
-- **High (degrades quality):** 2
+- **High (degrades quality):** 2 (2 completed)
 - **Medium (incomplete feature):** 5 (1 completed)
 - **Low (cosmetic/cleanup):** 4
 
-The Venture codebase demonstrates strong integration completeness. Previous audit findings have been addressed—V9 systems are wired on server, crafting/companion/narrative integrations are connected, and all major ECS systems are initialized. **Latest update (2026-02-08):** EnhancedChatSystem player registration is now fully wired to network handlers, enabling persistent per-player chat history across sessions. Remaining gaps are primarily VR hardware integration and documentation accuracy.
+The Venture codebase demonstrates strong integration completeness. Previous audit findings have been addressed—V9 systems are wired on server, crafting/companion/narrative integrations are connected, and all major ECS systems are initialized. **Latest update (2026-02-08):** EnhancedChatSystem player registration is fully wired to network handlers, and VR documentation has been updated to accurately reflect experimental status with mock adapter usage. Remaining gaps are primarily low-priority server-side physics validation and potential future VR hardware SDK integration.
 
 ---
 
@@ -93,10 +93,19 @@ All packet types have corresponding handlers in server/client code.
 
 | Document | Claim | Code Location | Issue | Severity |
 |----------|-------|---------------|-------|----------|
-| `README.md:250-251` | VR mode with auto-detection | `cmd/client/util.go:81-82` | CLI flags exist but `VRHeadsetAdapter`/`VRControllerAdapter` have no hardware implementation | High |
-| `README.md:326-330` | "auto-detects VR hardware at startup" | `pkg/engine/interfaces.go:483-585` | Interfaces defined, no production adapter | High |
+| `README.md:250-251` | ✅ COMPLETED - VR mode documented as experimental with mock adapters | `cmd/client/util.go:81-82` | Documentation updated (2026-02-08) to clarify experimental status and mock adapter usage | — |
+| `README.md:316-362` | ✅ COMPLETED - VR section now includes limitations and development status | `pkg/engine/interfaces.go:483-585` | Documentation updated with clear "What works/What doesn't work" sections | — |
 
-**Analysis:** The README extensively documents VR support (lines 250-251, 316-344) including `--vr` and `--force-vr` flags, stereoscopic rendering, head tracking, and VR controller input. CLI flags are implemented at `cmd/client/util.go:81-82`. However, the `VRHeadsetAdapter` and `VRControllerAdapter` interfaces in `pkg/engine/interfaces.go` have no concrete hardware-backed implementations—only stub/mock versions for testing. This creates a documentation-code mismatch where VR features are advertised but not functional with real hardware.
+**Analysis:** ~~The README extensively documents VR support (lines 250-251, 316-344) including `--vr` and `--force-vr` flags, stereoscopic rendering, head tracking, and VR controller input. CLI flags are implemented at `cmd/client/util.go:81-82`. However, the `VRHeadsetAdapter` and `VRControllerAdapter` interfaces in `pkg/engine/interfaces.go` have no concrete hardware-backed implementations—only stub/mock versions for testing. This creates a documentation-code mismatch where VR features are advertised but not functional with real hardware.~~
+
+**UPDATE (2026-02-08):** Documentation-code gap **RESOLVED**. README.md has been updated to:
+- Mark VR mode as "Experimental" in section header and CLI flag descriptions
+- Add "⚠️ Current Limitations" section clearly stating mock/stub adapter usage
+- Document what works (runtime detection, stereoscopic rendering, mock controllers) vs. what doesn't (hardware SDK integration)
+- Explain that VR hardware integration is planned for future releases
+- Clarify that current implementation provides architecture/rendering pipeline using mock adapters
+
+The documentation now accurately reflects the codebase implementation (`MockHeadset`, `MockController`) and aligns with code comments in `cmd/client/handlers.go:1288-1300` stating "placeholder - real hardware would use SDK".
 
 **Verified Complete:**
 - ✅ All CLI flags documented in README match code definitions
@@ -110,15 +119,26 @@ All packet types have corresponding handlers in server/client code.
 
 ### High Priority
 
-1. **[High] VR Hardware Integration**
-   - **Issue:** VR mode is documented and has CLI flags but lacks hardware adapter implementations
-   - **Files:** `pkg/engine/interfaces.go:483-585`, create new `pkg/engine/vr_adapters.go`
-   - **Action:** Either implement hardware adapters (OpenVR/OpenXR) or update README to mark VR as "experimental/mock-only"
+1. **[High - COMPLETED] VR Documentation Accuracy**
+   - **Issue:** README claimed VR hardware support without actual SDK integration
+   - **Files:** `README.md:250-251, 316-362`
+   - **Status:** ✅ COMPLETED (2026-02-08)
+   - **Implementation:**
+     - Updated CLI flag descriptions to mark VR as "experimental" with mock adapters
+     - Renamed section to "VR Mode (Experimental)"
+     - Added "⚠️ Current Limitations" section documenting mock adapter usage
+     - Created "What works/What doesn't work" breakdown
+     - Clarified runtime path detection vs. hardware SDK integration
+     - Added development status note about planned future integration
+   - **Result:** Documentation now accurately reflects codebase (MockHeadset, MockController usage)
 
-2. **[High] Documentation Accuracy for VR**
-   - **Issue:** README claims VR auto-detection that doesn't exist
-   - **Files:** `README.md:316-344`
-   - **Action:** Add disclaimer that VR mode is stub-only without hardware integration, or implement actual VR support
+2. **[High - COMPLETED] VR Hardware Integration Decision**
+   - **Issue:** VR mode had CLI flags but lacked hardware adapter implementations
+   - **Files:** `pkg/engine/interfaces.go:483-585`, `README.md`
+   - **Status:** ✅ COMPLETED (2026-02-08) - Resolved via documentation
+   - **Decision:** Documented as experimental/mock-only rather than implementing OpenVR/OpenXR
+   - **Rationale:** VR hardware SDK integration is a future feature; current mock adapters provide architecture for development/testing
+   - **Note:** If hardware integration is desired, create `pkg/engine/vr_adapters.go` with OpenVR/OpenXR bindings
 
 ### Medium Priority
 

@@ -64,6 +64,26 @@ type ImageMetadataPacket struct {
 	Reserved        [16]byte
 }
 
+// ImageChunkPacket represents an image data chunk for transfer.
+// Layout:
+// - Header (16 bytes)
+// - ImageID (16 bytes): UUID
+// - ChunkIndex (4 bytes)
+// - TotalChunks (4 bytes)
+// - IsResume (1 byte)
+// - LastChunkIdx (4 bytes)
+// - DataLen (4 bytes)
+// - Data (variable)
+type ImageChunkPacket struct {
+	Header       PacketHeader
+	ImageID      [16]byte
+	ChunkIndex   uint32
+	TotalChunks  uint32
+	IsResume     bool
+	LastChunkIdx int32
+	Data         []byte
+}
+
 // TradeProposalPacket represents a trade proposal.
 // Header (16 bytes) + ProposerID (8 bytes) + RecipientID (8 bytes) + ItemCount (4 bytes) + Items (variable)
 type TradeProposalPacket struct {
@@ -214,6 +234,150 @@ func DeserializeTradeProposal(data []byte) (*TradeProposalPacket, error) {
 		pkt.Items[i].Quantity = binary.LittleEndian.Uint32(data[offset+8 : offset+12])
 		offset += 12
 	}
+
+	return pkt, nil
+}
+
+// SerializeImageMetadata serializes an image metadata packet to bytes.
+func SerializeImageMetadata(pkt *ImageMetadataPacket) ([]byte, error) {
+	// Fixed size: 80 bytes
+	buf := make([]byte, 80)
+
+	// Write header
+	copy(buf[0:16], pkt.Header.MessageID[:])
+
+	// Write image ID
+	copy(buf[16:32], pkt.ImageID[:])
+
+	// Write sender ID
+	binary.LittleEndian.PutUint64(buf[32:40], pkt.SenderID)
+
+	// Write dimensions and size
+	binary.LittleEndian.PutUint32(buf[40:44], pkt.Width)
+	binary.LittleEndian.PutUint32(buf[44:48], pkt.Height)
+	binary.LittleEndian.PutUint32(buf[48:52], pkt.Size)
+
+	// Write format
+	binary.LittleEndian.PutUint32(buf[52:56], pkt.Format)
+
+	// Write thumbnail offset
+	binary.LittleEndian.PutUint64(buf[56:64], pkt.ThumbnailOffset)
+
+	// Write reserved bytes (already zeroed)
+	copy(buf[64:80], pkt.Reserved[:])
+
+	return buf, nil
+}
+
+// DeserializeImageMetadata deserializes an image metadata packet from bytes.
+func DeserializeImageMetadata(data []byte) (*ImageMetadataPacket, error) {
+	if len(data) < 80 {
+		return nil, fmt.Errorf("packet too short: %d bytes (expected 80)", len(data))
+	}
+
+	pkt := &ImageMetadataPacket{}
+
+	// Read header
+	copy(pkt.Header.MessageID[:], data[0:16])
+
+	// Read image ID
+	copy(pkt.ImageID[:], data[16:32])
+
+	// Read sender ID
+	pkt.SenderID = binary.LittleEndian.Uint64(data[32:40])
+
+	// Read dimensions and size
+	pkt.Width = binary.LittleEndian.Uint32(data[40:44])
+	pkt.Height = binary.LittleEndian.Uint32(data[44:48])
+	pkt.Size = binary.LittleEndian.Uint32(data[48:52])
+
+	// Read format
+	pkt.Format = binary.LittleEndian.Uint32(data[52:56])
+
+	// Read thumbnail offset
+	pkt.ThumbnailOffset = binary.LittleEndian.Uint64(data[56:64])
+
+	// Read reserved bytes
+	copy(pkt.Reserved[:], data[64:80])
+
+	return pkt, nil
+}
+
+// SerializeImageChunk serializes an image chunk packet to bytes.
+// Format: Header (16) + ImageID (16) + ChunkIndex (4) + TotalChunks (4) + IsResume (1) + LastChunkIdx (4) + DataLen (4) + Data (variable)
+func SerializeImageChunk(pkt *ImageChunkPacket) ([]byte, error) {
+	// Calculate total size
+	totalSize := 16 + 16 + 4 + 4 + 1 + 4 + 4 + len(pkt.Data)
+	buf := make([]byte, totalSize)
+
+	// Write header
+	copy(buf[0:16], pkt.Header.MessageID[:])
+
+	// Write image ID
+	copy(buf[16:32], pkt.ImageID[:])
+
+	// Write chunk index
+	binary.LittleEndian.PutUint32(buf[32:36], pkt.ChunkIndex)
+
+	// Write total chunks
+	binary.LittleEndian.PutUint32(buf[36:40], pkt.TotalChunks)
+
+	// Write IsResume flag
+	if pkt.IsResume {
+		buf[40] = 1
+	} else {
+		buf[40] = 0
+	}
+
+	// Write last chunk index
+	binary.LittleEndian.PutUint32(buf[41:45], uint32(pkt.LastChunkIdx))
+
+	// Write data length
+	binary.LittleEndian.PutUint32(buf[45:49], uint32(len(pkt.Data)))
+
+	// Write data
+	copy(buf[49:], pkt.Data)
+
+	return buf, nil
+}
+
+// DeserializeImageChunk deserializes an image chunk packet from bytes.
+func DeserializeImageChunk(data []byte) (*ImageChunkPacket, error) {
+	if len(data) < 49 {
+		return nil, fmt.Errorf("packet too short: %d bytes (expected at least 49)", len(data))
+	}
+
+	pkt := &ImageChunkPacket{}
+
+	// Read header
+	copy(pkt.Header.MessageID[:], data[0:16])
+
+	// Read image ID
+	copy(pkt.ImageID[:], data[16:32])
+
+	// Read chunk index
+	pkt.ChunkIndex = binary.LittleEndian.Uint32(data[32:36])
+
+	// Read total chunks
+	pkt.TotalChunks = binary.LittleEndian.Uint32(data[36:40])
+
+	// Read IsResume flag
+	pkt.IsResume = data[40] != 0
+
+	// Read last chunk index
+	pkt.LastChunkIdx = int32(binary.LittleEndian.Uint32(data[41:45]))
+
+	// Read data length
+	dataLen := binary.LittleEndian.Uint32(data[45:49])
+
+	// Validate data length
+	if len(data) < int(49+dataLen) {
+		return nil, fmt.Errorf("invalid data length: expected %d, got %d", dataLen, len(data)-49)
+	}
+
+	// Read data
+	pkt.Data = make([]byte, dataLen)
+	copy(pkt.Data, data[49:49+dataLen])
 
 	return pkt, nil
 }

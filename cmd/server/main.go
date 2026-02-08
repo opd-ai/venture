@@ -337,9 +337,9 @@ func createGameWorld(logger *logrus.Logger) *engine.World {
 	// Gap: 29 server-critical systems were only on client, causing multiplayer desync
 	// Fix: Added all missing gameplay systems for server-authoritative state
 	// Roadmap: Multiple phases (V3-V6) - complete multiplayer parity
-	craftingSystem := initializeCoreGameplaySystems(world, *seed, logger, inventorySystem, itemGen)
+	craftingSystem, narrativeSystem := initializeCoreGameplaySystems(world, *seed, logger, inventorySystem, itemGen)
 
-	companionLoyaltySystem := initializeV4Systems(world, *seed, logger)
+	companionLoyaltySystem, _ := initializeV4Systems(world, *seed, logger)
 	enhancedChatSystem := initializeV5SystemsServer(world, logger)
 	initializeV6SystemsServer(world, *seed, logger)
 
@@ -358,8 +358,8 @@ func createGameWorld(logger *logrus.Logger) *engine.World {
 	// INTEGRATION FIX [Category A]: V9.0 Server Integration Manager Initialization
 	// Gap: V9.0 integration managers were client-only, allowing XP/loyalty/permission exploits
 	// Fix: Added V9.0 manager initialization and V9ValidationService for server-authoritative validation
-	// Roadmap: ROADMAP_V9.md (Phase 55.1-55.3)
-	stationMgr, petHomeMgr, guildHousingMgr := initializeV9SystemsServer(logger)
+	// Roadmap: ROADMAP_V9.md (Phase 55.1-55.3, Phase 58.1)
+	stationMgr, petHomeMgr, guildHousingMgr, narrativeWorldSys := initializeV9SystemsServer(world, *seed, logger)
 	v9ValidationService = NewV9ValidationService(stationMgr, petHomeMgr, guildHousingMgr, logger)
 
 	// INTEGRATION FIX [AUDIT.md Task #6]: Wire HousingCraftingSystem into CraftingSystem
@@ -373,6 +373,12 @@ func createGameWorld(logger *logrus.Logger) *engine.World {
 	// Fix: Inject PetHomeManager into CompanionLoyaltySystem for automatic loyalty bonus calculation
 	// Impact: Companions automatically receive loyalty bonuses from owned housing (bedding quality)
 	companionLoyaltySystem.SetPetHomeProvider(petHomeMgr)
+
+	// INTEGRATION FIX [AUDIT.md Task #10]: Wire NarrativeWorldSystem into NarrativeSystem
+	// Gap: Companion story events (quests, memories, conflicts) not integrated with main narrative
+	// Fix: Inject narrativeWorldSystem into NarrativeSystem for automatic companion story tracking
+	// Impact: Companions automatically generate personal quests and track memories during narrative events
+	narrativeSystem.SetCompanionStoryProvider(narrativeWorldSys)
 
 	if logger.GetLevel() >= logrus.DebugLevel {
 		worldLogger.Debug("game systems initialized")

@@ -15,11 +15,20 @@ const (
 	BossDetectionRange = 300.0
 )
 
+// CompanionStoryProvider provides companion-specific narrative functionality.
+// This interface enables integration with the narrative_world package
+// for personal quests, memory-based dialogue, and companion conflicts.
+type CompanionStoryProvider interface {
+	RecordCombatEvent(companionID uint64, description string)
+	RecordBondingEvent(companionID uint64, description string)
+}
+
 // NarrativeSystem manages narrative progression and event tracking.
 // It monitors gameplay events, checks trigger conditions, and advances story arcs.
 type NarrativeSystem struct {
-	world  *World
-	logger *logrus.Entry
+	world                  *World
+	logger                 *logrus.Entry
+	companionStoryProvider CompanionStoryProvider // Optional companion narrative integration
 }
 
 // NewNarrativeSystem creates a new narrative system.
@@ -34,6 +43,16 @@ func NewNarrativeSystem(world *World) *NarrativeSystem {
 	return &NarrativeSystem{
 		world:  world,
 		logger: logEntry,
+	}
+}
+
+// SetCompanionStoryProvider injects a companion story provider for enhanced narrative features.
+// This enables personal quests, memory-based dialogue, and companion conflict tracking.
+// Provider is optional - system works without it.
+func (ns *NarrativeSystem) SetCompanionStoryProvider(provider CompanionStoryProvider) {
+	ns.companionStoryProvider = provider
+	if ns.logger != nil && ns.logger.Logger.GetLevel() >= logrus.DebugLevel {
+		ns.logger.Debug("Companion story provider integrated")
 	}
 }
 
@@ -170,6 +189,15 @@ func (ns *NarrativeSystem) OnCombatVictory(narrative *NarrativeComponent, enemyE
 	}
 
 	ns.TriggerEvent(narrative, EventVictory, description, importance, []int{}, locationX, locationY)
+
+	// Record combat event for active companions (if provider available)
+	if ns.companionStoryProvider != nil && ns.world != nil {
+		for _, entity := range ns.world.entities {
+			if entity.HasComponent("companion") {
+				ns.companionStoryProvider.RecordCombatEvent(entity.ID, description)
+			}
+		}
+	}
 }
 
 // OnDiscovery is called when the player discovers something significant.
@@ -191,6 +219,15 @@ func (ns *NarrativeSystem) OnDialogueComplete(narrative *NarrativeComponent, npc
 	}
 
 	ns.TriggerEvent(narrative, EventAlliance, description, importance, []int{entityID}, 0, 0)
+
+	// Record bonding event for active companions (if provider available)
+	if ns.companionStoryProvider != nil && ns.world != nil {
+		for _, entity := range ns.world.entities {
+			if entity.HasComponent("companion") {
+				ns.companionStoryProvider.RecordBondingEvent(entity.ID, "Witnessed player dialogue interaction")
+			}
+		}
+	}
 }
 
 // OnPuzzleSolved is called when the player solves a puzzle.

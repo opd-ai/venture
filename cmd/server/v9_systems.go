@@ -10,9 +10,11 @@
 package main
 
 import (
+	"github.com/opd-ai/venture/pkg/engine"
 	companionhousing "github.com/opd-ai/venture/pkg/integration/companion_housing"
 	guildhousing "github.com/opd-ai/venture/pkg/integration/guild_housing"
 	housingcrafting "github.com/opd-ai/venture/pkg/integration/housing_crafting"
+	narrativeworld "github.com/opd-ai/venture/pkg/integration/narrative_world"
 	"github.com/sirupsen/logrus"
 )
 
@@ -21,13 +23,15 @@ import (
 //   - Crafting station bonuses (prevent XP/speed exploits)
 //   - Companion housing loyalty calculations (server-validated loyalty gains)
 //   - Guild housing permissions (access control enforcement)
+//   - Companion narrative events (quest generation, memory tracking, conflicts)
 //
 // These managers do NOT run as ECS systems, but are used by existing systems
-// (CraftingSystem, CompanionLoyaltySystem, etc.) to validate client claims.
-func initializeV9SystemsServer(logger *logrus.Logger) (
+// (CraftingSystem, CompanionLoyaltySystem, NarrativeSystem) to validate client claims.
+func initializeV9SystemsServer(world *engine.World, seed int64, logger *logrus.Logger) (
 	*housingcrafting.StationManager,
 	*companionhousing.PetHomeManager,
 	*guildhousing.Manager,
+	*narrativeworld.System,
 ) {
 	serverLogger := logger.WithField("component", "v9_systems")
 
@@ -46,15 +50,22 @@ func initializeV9SystemsServer(logger *logrus.Logger) (
 	// Validates guild resource access (storage, crafting stations, upgrades)
 	guildHousingManager := guildhousing.NewManager()
 
+	// Phase 58.1: Companion-Driven Narrative (companion quests, memory-based dialogue, conflicts)
+	// Server tracks companion personal quests, memory events, and personality conflicts
+	// Enables narrative progression based on companion loyalty and interactions
+	narrativeWorldSystem := narrativeworld.NewSystem(world, seed)
+	world.AddSystem(narrativeWorldSystem) // Runs as ECS system to track companion interactions
+
 	if logger.GetLevel() >= logrus.DebugLevel {
 		serverLogger.WithFields(logrus.Fields{
-			"stationManager":      "initialized",
-			"petHomeManager":      "initialized",
-			"guildHousingManager": "initialized",
-			"integrationSystems":  3,
-			"note":                "V9 managers for server-authoritative validation",
-		}).Info("V9.0 integration managers initialized on server (housing crafting, companion housing, guild housing)")
+			"stationManager":       "initialized",
+			"petHomeManager":       "initialized",
+			"guildHousingManager":  "initialized",
+			"narrativeWorldSystem": "initialized",
+			"integrationSystems":   4,
+			"note":                 "V9 managers + narrative system for server-authoritative validation",
+		}).Info("V9.0 integration managers initialized on server (housing crafting, companion housing, guild housing, companion narrative)")
 	}
 
-	return stationManager, petHomeManager, guildHousingManager
+	return stationManager, petHomeManager, guildHousingManager, narrativeWorldSystem
 }

@@ -38,7 +38,7 @@ import (
 // Phase 31: NPC Dialog (1 system)
 //
 // Returns: CompanionLoyaltySystem for housing integration wiring
-func initializeV4Systems(world *engine.World, seed int64, logger *logrus.Logger) *engine.CompanionLoyaltySystem {
+func initializeV4Systems(world *engine.World, seed int64, logger *logrus.Logger) (*engine.CompanionLoyaltySystem, *engine.NarrativeSystem) {
 	serverLogger := logger.WithField("component", "v4_systems")
 
 	// INTEGRATION FIX: Phase 21 - Complete Vehicle Systems (was: 1/4, now: 4/4)
@@ -165,7 +165,7 @@ func initializeV4Systems(world *engine.World, seed int64, logger *logrus.Logger)
 		"integrationStatus":  "COMPLETE - 100% feature parity with client",
 	}).Info("V4.0+ systems initialized on server (Phases 21-31)")
 
-	return companionLoyaltySystem
+	return companionLoyaltySystem, nil
 }
 
 // initializeV5SystemsServer initializes Version 5.0 social and communication systems on the server.
@@ -243,7 +243,7 @@ func initializeV6SystemsServer(world *engine.World, seed int64, logger *logrus.L
 // initializeCoreGameplaySystems adds all missing server-critical systems.
 // These systems were previously client-only, causing multiplayer desync.
 // Returns the CraftingSystem for wiring with V9 housing integration.
-func initializeCoreGameplaySystems(world *engine.World, seed int64, logger *logrus.Logger, inventorySystem *engine.InventorySystem, itemGen *itemgen.ItemGenerator) *engine.CraftingSystem {
+func initializeCoreGameplaySystems(world *engine.World, seed int64, logger *logrus.Logger, inventorySystem *engine.InventorySystem, itemGen *itemgen.ItemGenerator) (*engine.CraftingSystem, *engine.NarrativeSystem) {
 	serverLogger := logger.WithField("component", "core_gameplay_systems")
 
 	// Phase 13-14: Core Interaction Systems (V3.0)
@@ -373,5 +373,5 @@ func initializeCoreGameplaySystems(world *engine.World, seed int64, logger *logr
 		"integrationStatus":  "COMPLETE - All gameplay systems now on server",
 	}).Info("Core gameplay systems initialized on server (V3-V6 features)")
 
-	return craftingSystem
+	return craftingSystem, narrativeSystem
 }

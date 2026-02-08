@@ -132,8 +132,10 @@ func TestInitializeV8SystemsServer(t *testing.T) {
 // TestInitializeV9SystemsServer verifies V9.0 integration managers are created
 func TestInitializeV9SystemsServer(t *testing.T) {
 	logger := createTestLoggerForSystems()
+	world := engine.NewWorld()
+	seed := int64(12345)
 
-	stationManager, petHomeManager, guildHousingManager := initializeV9SystemsServer(logger)
+	stationManager, petHomeManager, guildHousingManager, narrativeWorldSys := initializeV9SystemsServer(world, seed, logger)
 
 	if stationManager == nil {
 		t.Error("initializeV9SystemsServer returned nil stationManager")
@@ -145,6 +147,10 @@ func TestInitializeV9SystemsServer(t *testing.T) {
 
 	if guildHousingManager == nil {
 		t.Error("initializeV9SystemsServer returned nil guildHousingManager")
+	}
+
+	if narrativeWorldSys == nil {
+		t.Error("initializeV9SystemsServer returned nil narrativeWorldSystem")
 	}
 
 	t.Log("V9 integration managers initialized successfully")
@@ -194,8 +200,8 @@ func TestAllSystemsInitialization_Integration(t *testing.T) {
 	initializeCoreGameplaySystems(world, seed, logger, inventorySystem, itemGen)
 
 	// Verify V9 managers are created
-	stationManager, petHomeManager, guildHousingManager := initializeV9SystemsServer(logger)
-	if stationManager == nil || petHomeManager == nil || guildHousingManager == nil {
+	stationManager, petHomeManager, guildHousingManager, narrativeWorldSys := initializeV9SystemsServer(world, seed, logger)
+	if stationManager == nil || petHomeManager == nil || guildHousingManager == nil || narrativeWorldSys == nil {
 		t.Error("V9 managers not created")
 	}
 
@@ -258,7 +264,7 @@ func TestSystemInitialization_LoggerLevels(t *testing.T) {
 			initializeV5SystemsServer(world, logger)
 			initializeV6SystemsServer(world, 12345, logger)
 			initializeV8SystemsServer(world, 12345, logger)
-			initializeV9SystemsServer(logger)
+			initializeV9SystemsServer(world, 12345, logger)
 
 			if len(world.GetSystems()) == 0 {
 				t.Errorf("No systems initialized at log level %s", level)
@@ -317,10 +323,12 @@ func BenchmarkInitializeV8SystemsServer(b *testing.B) {
 // BenchmarkInitializeV9SystemsServer measures V9 manager initialization performance
 func BenchmarkInitializeV9SystemsServer(b *testing.B) {
 	logger := createTestLoggerForSystems()
+	seed := int64(12345)
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		initializeV9SystemsServer(logger)
+		world := engine.NewWorld()
+		initializeV9SystemsServer(world, seed, logger)
 	}
 }
 
@@ -340,6 +348,6 @@ func BenchmarkInitializeAllSystems(b *testing.B) {
 		initializeV6SystemsServer(world, seed, logger)
 		initializeV8SystemsServer(world, seed, logger)
 		initializeCoreGameplaySystems(world, seed, logger, inventorySystem, itemGen)
-		initializeV9SystemsServer(logger)
+		initializeV9SystemsServer(world, seed, logger)
 	}
 }

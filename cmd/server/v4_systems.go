@@ -11,6 +11,7 @@ import (
 	"github.com/opd-ai/venture/pkg/integration/world_events"
 	"github.com/opd-ai/venture/pkg/network/federation"
 	itemgen "github.com/opd-ai/venture/pkg/procgen/item"
+	"github.com/opd-ai/venture/pkg/world/raids"
 	"github.com/sirupsen/logrus"
 )
 
@@ -151,7 +152,30 @@ func initializeV4Systems(world *engine.World, seed int64, logger *logrus.Logger)
 	npcDialogSystem := engine.NewNPCDialogSystem(world, seed) // FIXED: Added seed parameter
 	world.AddSystem(&npcDialogSystemWrapper{system: npcDialogSystem})
 
-	systemCount := 27 // Updated from 26 to 27 total V4.0+ systems
+	// AUDIT.md Task 4: Competitive PvP Systems (was: 0/4, now: 4/4)
+	// Gap: RaidSystem, TournamentSystem, PvPRatingSystem, LegendaryQuestSystem not initialized on server
+	// Fix: Added all competitive multiplayer features for server-authoritative PvP validation
+	// Note: All systems use Update(entities, deltaTime) - no wrappers needed
+	serverLogger.Debug("Initializing competitive PvP systems")
+
+	// Raid system for multiplayer raid instance management
+	raidSystem := engine.NewRaidSystem(world, seed)
+	world.AddSystem(raidSystem)
+
+	// Tournament system for scheduled competitive tournaments
+	tournamentSystem := engine.NewTournamentSystem(world, seed)
+	world.AddSystem(tournamentSystem)
+
+	// PvP rating system for competitive ranking and skill-based matchmaking
+	pvpRatingSystem := engine.NewPvPRatingSystem(world)
+	world.AddSystem(pvpRatingSystem)
+
+	// Legendary quest system requires raids.Manager for raid-based quest phases
+	raidManager := raids.NewManager(seed)
+	legendaryQuestSystem := engine.NewLegendaryQuestSystem(world, seed, raidManager)
+	world.AddSystem(legendaryQuestSystem)
+
+	systemCount := 31 // Updated from 27 to 31 total V4.0+ systems (includes competitive PvP systems)
 
 	serverLogger.WithFields(logrus.Fields{
 		"vehicleSystems":     4, // VehicleMovement, VehicleDurability, Mounting, VehicleCombat
@@ -166,6 +190,7 @@ func initializeV4Systems(world *engine.World, seed int64, logger *logrus.Logger)
 		"storySystems":       1, // Discovery
 		"achievementSystems": 1, // Achievement
 		"dialogSystems":      1, // NPCDialog
+		"competitiveSystems": 4, // Raid, Tournament, PvPRating, LegendaryQuest (server-authoritative)
 		"totalV4Systems":     systemCount,
 		"note":               "All systems running in server-authoritative mode (no audio/graphics)",
 		"integrationStatus":  "COMPLETE - 100% feature parity with client",

@@ -2493,11 +2493,11 @@ func connectBasicUIComponents(game *engine.EbitenGame, inputSystem *engine.Input
 		setter func(interface{})
 	}{
 		{game.MailboxUI, func(ui interface{}) { inputSystem.SetMailboxUI(ui.(*engine.MailboxUI)) }},
-		{game.InventoryUI, func(ui interface{}) { inputSystem.SetInventoryUI(ui.(*engine.InventoryUI)) }},
-		{game.CharacterUI, func(ui interface{}) { inputSystem.SetCharacterUI(ui.(*engine.CharacterUI)) }},
-		{game.SkillsUI, func(ui interface{}) { inputSystem.SetSkillsUI(ui.(*engine.SkillsUI)) }},
-		{game.QuestUI, func(ui interface{}) { inputSystem.SetQuestUI(ui.(*engine.QuestUI)) }},
-		{game.MapUI, func(ui interface{}) { inputSystem.SetMapUI(ui.(*engine.MapUI)) }},
+		{game.InventoryUI, func(ui interface{}) { inputSystem.SetInventoryUI(ui.(*engine.EbitenInventoryUI)) }},
+		{game.CharacterUI, func(ui interface{}) { inputSystem.SetCharacterUI(ui.(*engine.EbitenCharacterUI)) }},
+		{game.SkillsUI, func(ui interface{}) { inputSystem.SetSkillsUI(ui.(*engine.EbitenSkillsUI)) }},
+		{game.QuestUI, func(ui interface{}) { inputSystem.SetQuestUI(ui.(*engine.EbitenQuestUI)) }},
+		{game.MapUI, func(ui interface{}) { inputSystem.SetMapUI(ui.(*engine.EbitenMapUI)) }},
 		{game.CraftingUI, func(ui interface{}) { inputSystem.SetCraftingUI(ui.(*engine.CraftingUI)) }},
 		{shopUI, func(ui interface{}) { inputSystem.SetShopUI(ui.(*engine.ShopUI)) }},
 		{game.TradeUI, func(ui interface{}) { inputSystem.SetTradeUI(ui.(*engine.TradeUI)) }},

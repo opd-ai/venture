@@ -12,19 +12,20 @@
 - **Baseline FPS:** 106 FPS with 2,000 entities (per existing benchmarks in `cmd/client/AUDIT.md`)
 - **Degraded FPS:** Sub-2 FPS under adverse conditions (debug logging enabled, dense entity clusters, many unique sprites)
 - **Root causes (ranked by impact):**
-  1. Per-frame reflection in system timing instrumentation (`fmt.Sprintf("%T")` × 44 systems × 60 FPS)
-  2. Sprite cache `hashConfig()` allocates and sorts strings on every cache lookup
-  3. Sprite cache `Get()` acquires/releases mutex twice per call
-  4. Weather system allocates new particle slice every render frame
-  5. Collision precise logging checks log level on every `QuantizePosition`/`GetBounds` call
-- **Estimated improvement:** Fixes #1–#4 should restore 60+ FPS in all scenarios; fix #5 removes debug-mode penalty
+  1. ✅ **FIXED** - Per-frame reflection in system timing instrumentation (`fmt.Sprintf("%T")` × 44 systems × 60 FPS)
+  2. ✅ **FIXED** - Sprite cache `hashConfig()` allocates and sorts strings on every cache lookup
+  3. ✅ **FIXED** - Sprite cache `Get()` acquires/releases mutex twice per call
+  4. ✅ **FIXED** - Weather system allocates new particle slice every render frame
+  5. ✅ **FIXED** - Collision precise logging checks log level on every `QuantizePosition`/`GetBounds` call
+- **Status:** All critical performance fixes implemented (2026-02-07). FPS should be restored to 60+ in all scenarios.
 
 ---
 
 ## Critical Issues
 
-### Issue 1: Per-Frame Reflection in System Timing Instrumentation
+### Issue 1: Per-Frame Reflection in System Timing Instrumentation ✅ FIXED
 
+- **Status:** COMPLETED (2026-02-07)
 - **Location:** `pkg/engine/ecs.go:775-797` (`getSystemName`) called from `pkg/engine/ecs.go:548`
 - **Impact:** High
 - **Root cause:** `World.Update()` calls `getSystemName(system)` for every system on every frame. `getSystemName` uses `fmt.Sprintf("%T", system)` which invokes Go's reflection package and allocates a new string each call. With 44 registered systems at 60 FPS, this produces **2,640 reflection calls and string allocations per second**.
@@ -49,8 +50,9 @@
   ```
 - **Performance cost:** ~44 `fmt.Sprintf` + reflection calls per frame. Each allocates ~40–80 bytes (type name string). Total: ~2–3 KB/frame of garbage, plus reflection overhead (~500ns per call × 44 = ~22µs/frame).
 
-### Issue 2: Sprite Cache hashConfig() Per-Lookup Allocations
+### Issue 2: Sprite Cache hashConfig() Per-Lookup Allocations ✅ FIXED
 
+- **Status:** COMPLETED (2026-02-07)
 - **Location:** `pkg/rendering/sprites/cache.go:250-259` (`hashConfig`)
 - **Impact:** High
 - **Root cause:** Every sprite cache lookup calls `hashConfig()` which, when the sprite has custom parameters, allocates a `[]string` slice, sorts it with `sort.Strings()`, then calls `fmt.Fprintf()` for each key-value pair. `fmt.Fprintf` allocates despite the comment suggesting otherwise.
@@ -70,8 +72,9 @@
   ```
 - **Performance cost:** With 100+ visible sprites using custom parameters, this causes 100+ slice allocations + sorts + fmt allocations per frame. Each `sort.Strings` is O(k log k) where k = number of custom parameters. Combined cost: ~100–200µs/frame with many sprites.
 
-### Issue 3: Sprite Cache Double Mutex Lock in Get()
+### Issue 3: Sprite Cache Double Mutex Lock in Get() ✅ FIXED
 
+- **Status:** COMPLETED (2026-02-07)
 - **Location:** `pkg/rendering/sprites/cache.go:91-111` (`Get`)
 - **Impact:** Medium-High
 - **Root cause:** `Cache.Get()` acquires `RLock` for lookup, releases it, then acquires full `Lock` for LRU update and hit counter. On cache miss, it acquires `Lock` again just for the miss counter. This double-locking creates unnecessary contention and doubles synchronization overhead.
@@ -98,8 +101,9 @@
   ```
 - **Performance cost:** 2–3 mutex operations per sprite lookup instead of 1. With 100+ sprites/frame, this adds ~10–20µs/frame of synchronization overhead. Under contention (multiple goroutines), this cost multiplies significantly.
 
-### Issue 4: Weather System Per-Frame Slice Allocation
+### Issue 4: Weather System Per-Frame Slice Allocation ✅ FIXED
 
+- **Status:** COMPLETED (2026-02-07)
 - **Location:** `pkg/engine/weather_system.go:129` (`GetWeatherParticles`)
 - **Impact:** Medium
 - **Root cause:** `GetWeatherParticles()` declares `var allParticles []WeatherParticleData` which creates a new nil slice every frame. Subsequent `append()` calls trigger initial allocation and potentially multiple grow-and-copy operations as the slice expands.
@@ -117,8 +121,9 @@
   ```
 - **Performance cost:** With 200+ weather particles, this causes 1 allocation + ~3 grow-reallocations per frame = ~4 allocations/frame × 60 FPS = 240 allocations/sec. Each reallocation copies the entire existing slice.
 
-### Issue 5: Collision Precise Debug Logging in Hot Path
+### Issue 5: Collision Precise Debug Logging in Hot Path ✅ FIXED
 
+- **Status:** COMPLETED (2026-02-07)
 - **Location:** `pkg/engine/collision_precise.go:67-85, 93-105` (`QuantizePosition`, `GetBounds`)
 - **Impact:** Medium (High when debug logging is enabled)
 - **Root cause:** `QuantizePosition()` and `GetBounds()` check `collisionLog.GetLevel() >= logrus.DebugLevel` on every call. When debug logging IS enabled, they allocate `logrus.Fields` maps for every collision check. These functions are called in the innermost collision detection loop — potentially thousands of times per frame.
@@ -143,9 +148,10 @@
 
 ## Recommended Solutions
 
-### Fix 1: Cache System Names in World.Update()
+### Fix 1: Cache System Names in World.Update() ✅ IMPLEMENTED
 
 - **Addresses:** Issue 1
+- **Implementation Status:** COMPLETED (2026-02-07)
 - **Implementation steps:**
   1. Add a `systemNameCache map[System]string` field to the `World` struct (initialized in constructor).
   2. In `World.Update()`, replace `w.getSystemName(system)` with a cached lookup:
@@ -164,9 +170,10 @@
 - **Expected improvement:** Eliminates 2,640 reflection calls + string allocations per second. Saves ~22µs/frame.
 - **Risk level:** Low
 
-### Fix 2: Eliminate hashConfig() Per-Lookup Allocations
+### Fix 2: Eliminate hashConfig() Per-Lookup Allocations ✅ IMPLEMENTED
 
 - **Addresses:** Issue 2
+- **Implementation Status:** COMPLETED (2026-02-07)
 - **Implementation steps:**
   1. Replace `make([]string, ...)` + `sort.Strings()` with direct sorted iteration using a pooled `[]string`:
      ```go
@@ -201,9 +208,10 @@
 - **Expected improvement:** Eliminates 100+ slice allocations and sort operations per frame. Saves ~100–200µs/frame.
 - **Risk level:** Low
 
-### Fix 3: Consolidate Sprite Cache Mutex to Single Lock
+### Fix 3: Consolidate Sprite Cache Mutex to Single Lock ✅ IMPLEMENTED
 
 - **Addresses:** Issue 3
+- **Implementation Status:** COMPLETED (2026-02-07)
 - **Implementation steps:**
   1. Replace the RLock→RUnlock→Lock→Unlock pattern with a single `Lock()`:
      ```go
@@ -228,9 +236,10 @@
 - **Expected improvement:** Halves mutex operations per sprite lookup. Saves ~10–20µs/frame.
 - **Risk level:** Low
 
-### Fix 4: Reuse Weather Particle Slice Buffer
+### Fix 4: Reuse Weather Particle Slice Buffer ✅ IMPLEMENTED
 
 - **Addresses:** Issue 4
+- **Implementation Status:** COMPLETED (2026-02-07)
 - **Implementation steps:**
   1. Add a `particleBuffer []WeatherParticleData` field to `WeatherSystem`:
      ```go
@@ -253,9 +262,10 @@
 - **Expected improvement:** Eliminates 240 allocations/sec from weather particle collection. Saves ~5–10µs/frame.
 - **Risk level:** Low (callers must not retain slice across frames — review call sites)
 
-### Fix 5: Cache Debug Log Level for Collision Precise
+### Fix 5: Cache Debug Log Level for Collision Precise ✅ IMPLEMENTED
 
 - **Addresses:** Issue 5
+- **Implementation Status:** COMPLETED (2026-02-07)
 - **Implementation steps:**
   1. Add a package-level cached debug flag that's updated periodically:
      ```go
@@ -278,18 +288,21 @@
 
 ---
 
-## Quick Wins
+## Quick Wins (ALL COMPLETED ✅)
 
-| # | Fix | File | Effort | Impact |
+| # | Fix | File | Status | Impact |
 |---|-----|------|--------|--------|
-| 1 | Cache system names | `pkg/engine/ecs.go` | 10 lines | Eliminates 2,640 reflection calls/sec |
-| 2 | Reuse weather particle buffer | `pkg/engine/weather_system.go` | 5 lines | Eliminates 240 allocations/sec |
-| 3 | Single mutex in sprite cache Get() | `pkg/rendering/sprites/cache.go` | 10 lines | Halves lock contention per sprite |
-| 4 | Cache collision debug flag | `pkg/engine/collision_precise.go` | 8 lines | Removes per-call level check |
+| 1 | Cache system names | `pkg/engine/ecs.go` | ✅ DONE | Eliminates 2,640 reflection calls/sec |
+| 2 | Reuse weather particle buffer | `pkg/engine/weather_system.go` | ✅ DONE | Eliminates 240 allocations/sec |
+| 3 | Single mutex in sprite cache Get() | `pkg/rendering/sprites/cache.go` | ✅ DONE | Halves lock contention per sprite |
+| 4 | Cache collision debug flag | `pkg/engine/collision_precise.go` | ✅ DONE | Removes per-call level check |
+| 5 | Optimize hashConfig allocations | `pkg/rendering/sprites/cache.go` | ✅ DONE | Eliminates 100+ allocations/frame |
 
 ---
 
-## Long-term Optimizations
+## Long-term Optimizations (Future Work)
+
+**Note:** All critical performance issues have been resolved. The following are strategic optimizations for future consideration, not immediate action items.
 
 ### 1. Component-Based System Filtering
 

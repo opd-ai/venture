@@ -34,7 +34,7 @@ var (
 	maxPlayers    = flag.Int("max-players", 8, "Maximum number of players")
 	seed          = flag.Int64("seed", 12345, "World generation seed")
 	genreID       = flag.String("genre", "fantasy", "Genre ID for world generation")
-	terrainType   = flag.String("terrain-type", "bsp", "Terrain generator type: bsp, cellular, city, forest, composite, grammar")
+	terrainType   = flag.String("terrain-type", "bsp", "Terrain generator type: bsp, cellular, city, forest, composite, grammar, maze")
 	tickRate      = flag.Int("tick-rate", 30, "Server update rate (updates per second)")
 	verbose       = flag.Bool("verbose", true, "Enable verbose logging")
 	aerialSprites = flag.Bool("aerial-sprites", true, "Enable aerial-view perspective sprites for top-down gameplay")
@@ -443,6 +443,8 @@ func generateWorldTerrain(logger *logrus.Logger, serverLogger *logrus.Entry) *te
 		terrainGen = terrain.NewForestGeneratorWithLogger(logger)
 	case "composite":
 		terrainGen = terrain.NewCompositeGeneratorWithLogger(logger)
+	case "maze":
+		terrainGen = terrain.NewMazeGeneratorWithLogger(logger)
 	case "bsp":
 		fallthrough
 	default:

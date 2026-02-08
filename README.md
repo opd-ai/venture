@@ -259,7 +259,7 @@ See [Mobile Build Guide](docs/MOBILE_BUILD.md) for full instructions.
 | `-max-players` | `8` | Maximum concurrent players |
 | `-seed` | `12345` | World generation seed |
 | `-genre` | `fantasy` | Genre ID for world generation |
-| `-terrain-type` | `bsp` | Terrain generator type: `bsp`, `cellular`, `city`, `forest`, `composite`, `grammar` |
+| `-terrain-type` | `bsp` | Terrain generator type: `bsp`, `cellular`, `city`, `forest`, `composite`, `grammar`, `maze` |
 | `-tick-rate` | `30` | Server update rate in ticks per second |
 | `-aerial-sprites` | `true` | Enable aerial-view perspective sprites for top-down gameplay |
 | `-high-latency` | `false` | Optimize for Tor/high-latency connections (200–5000ms) |
@@ -296,6 +296,7 @@ The `-terrain-type` flag controls which procedural algorithm generates the world
 | `forest` | L-System Trees — Generates forest layouts with procedural tree placement | Natural outdoor environments, wilderness exploration |
 | `composite` | Multi-Biome Composite — Combines multiple terrain types using Voronoi regions | Large varied worlds with diverse environments |
 | `grammar` | Graph Grammar — Uses L-systems to create dungeons with narrative flow and structured room connections | Story-driven dungeons with meaningful layouts and progression |
+| `maze` | Recursive Backtracking Maze — Creates complex winding corridors with optional rooms at dead ends | Puzzle-focused dungeons, labyrinth exploration |
 
 Example usage:
 ```bash
@@ -307,6 +308,9 @@ Example usage:
 
 # Generate a cyberpunk city
 ./venture-server -terrain-type city -genre cyberpunk -seed 2077
+
+# Generate a complex maze with winding corridors
+./venture-server -terrain-type maze -genre fantasy -seed 1337
 ```
 
 ### VR Mode

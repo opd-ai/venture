@@ -110,6 +110,19 @@ func initializeV4Systems(world *engine.World, seed int64, logger *logrus.Logger,
 	miniGameSystem := engine.NewMiniGameSystem(world)
 	world.AddSystem(&miniGameSystemWrapper{system: miniGameSystem})
 
+	// AUDIT FIX: Phase 95-96 - Fishing and Gathering Systems
+	// Gap: FishingSystem and GatheringSystem implemented but never initialized on server
+	// Fix: Added system initialization for fishing and resource gathering
+	// Note: These systems MUST run on server for deterministic multiplayer sync (see fishing_multiplayer_sync_test.go)
+	// Server-authoritative validation prevents client-side fishing/gathering manipulation
+	fishingSystem := engine.NewFishingSystem(world, seed+15000) // Use unique seed offset
+	world.AddSystem(fishingSystem)                              // No wrapper needed - uses Update(entities, deltaTime)
+	serverLogger.Debug("Fishing system initialized for multiplayer sync")
+
+	gatheringSystem := engine.NewGatheringSystem(world)
+	world.AddSystem(gatheringSystem) // No wrapper needed - uses Update(entities, deltaTime)
+	serverLogger.Debug("Gathering system initialized for multiplayer sync")
+
 	// INTEGRATION FIX: Phase 28 - Reputation & Alignment Systems (was: 0/4, now: 4/4)
 	// Gap: All reputation systems missing from server
 	// Fix: Added reputation, alignment, faction reaction, choice consequences for server-authoritative moral choices
@@ -174,7 +187,7 @@ func initializeV4Systems(world *engine.World, seed int64, logger *logrus.Logger,
 	legendaryQuestSystem := engine.NewLegendaryQuestSystem(world, seed, raidManager)
 	world.AddSystem(legendaryQuestSystem)
 
-	systemCount := 31 // Updated from 27 to 31 total V4.0+ systems (includes competitive PvP systems)
+	systemCount := 33 // Updated from 31 to 33 total V4.0+ systems (includes fishing and gathering)
 
 	serverLogger.WithFields(logrus.Fields{
 		"vehicleSystems":     4, // VehicleMovement, VehicleDurability, Mounting, VehicleCombat
@@ -183,7 +196,7 @@ func initializeV4Systems(world *engine.World, seed int64, logger *logrus.Logger,
 		"magicSystems":       2, // SpellEffect, SpellCombination
 		"classSystems":       1, // ClassProgression
 		"expressionSystems":  2, // Expression, ExpressionCombo
-		"miniGameSystems":    1, // MiniGame
+		"miniGameSystems":    3, // MiniGame, Fishing, Gathering (multiplayer-synced minigames)
 		"reputationSystems":  5, // Reputation, Alignment, FactionReaction, MoralChoice, ChoiceConsequences
 		"musicSystems":       1, // MusicTrigger (headless)
 		"storySystems":       1, // Discovery
@@ -193,7 +206,7 @@ func initializeV4Systems(world *engine.World, seed int64, logger *logrus.Logger,
 		"totalV4Systems":     systemCount,
 		"note":               "All systems running in server-authoritative mode (no audio/graphics)",
 		"integrationStatus":  "COMPLETE - 100% feature parity with client",
-	}).Info("V4.0+ systems initialized on server (Phases 21-31)")
+	}).Info("V4.0+ systems initialized on server (Phases 21-31 + fishing/gathering)")
 
 	return companionLoyaltySystem, nil
 }

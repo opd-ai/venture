@@ -223,6 +223,11 @@ type systemsContainer struct {
 	achievementSystem       *engine.AchievementSystem
 	// Phase 28: Reputation & Moral Choices
 	moralChoiceSystem *engine.MoralChoiceSystem
+	// Phase 95-96: Resource gathering and fishing minigames
+	fishingSystem   *engine.FishingSystem
+	gatheringSystem *engine.GatheringSystem
+	// Phase 112: New Game Plus carry-over system
+	carryoverSystem *engine.CarryOverSystem
 	// Phase 30: Environmental Storytelling
 	discoverySystem *engine.DiscoverySystem
 	// V5.0 Systems (Social & Communication)
@@ -979,8 +984,24 @@ func initializeV4Systems(game *engine.EbitenGame, sys *systemsContainer, clientL
 	// Roadmap: ROADMAP_V4.md Phase 21.2
 	sys.vehicleSystem = engine.NewVehicleSystem(game.World)
 
+	// AUDIT FIX: Phase 95-96 - Fishing and Gathering Systems
+	// Gap: FishingSystem and GatheringSystem implemented but never initialized on client
+	// Fix: Added system initialization for fishing and resource gathering minigames
+	// Note: These systems must run on client for deterministic multiplayer sync (see fishing_multiplayer_sync_test.go)
+	sys.fishingSystem = engine.NewFishingSystem(game.World, *seed+seedOffsetFishing)
+	logging.ComponentLogger(clientLogger.Logger, "fishing").Debug("Created fishing system")
+	sys.gatheringSystem = engine.NewGatheringSystem(game.World)
+	logging.ComponentLogger(clientLogger.Logger, "gathering").Debug("Created gathering system")
+
+	// AUDIT FIX: Phase 112 - CarryOverSystem for New Game Plus
+	// Gap: CarryOverSystem implemented but never initialized on client
+	// Fix: Added system initialization for NG+ carry-over selection UI and item transfer
+	// Note: Client-only system for NG+ progression (works with prestige.System)
+	sys.carryoverSystem = engine.NewCarryOverSystem(game.World)
+	logging.ComponentLogger(clientLogger.Logger, "carryover").Debug("Created carryover system")
+
 	if *verbose {
-		clientLogger.Info("V4.0 systems initialized (vehicles, vehicle-mgmt, mounting, companions, companion-mgmt, skills, books, spells, classes, expressions, minigames, achievements, moral choices, discovery, investigation, NPC dialog, adaptive music)")
+		clientLogger.Info("V4.0 systems initialized (vehicles, vehicle-mgmt, mounting, companions, companion-mgmt, skills, books, spells, classes, expressions, minigames, achievements, moral choices, discovery, investigation, NPC dialog, adaptive music, fishing, gathering, carryover)")
 	}
 }
 
@@ -1515,6 +1536,13 @@ func registerNonCriticalSystems(game *engine.EbitenGame, sys *systemsContainer) 
 
 	// Phase 3.4: Minigame implementations
 	game.World.AddSystem(sys.minigameGamesSystem)
+
+	// AUDIT FIX: Phase 95-96 - Fishing and Gathering Systems
+	game.World.AddSystem(sys.fishingSystem)
+	game.World.AddSystem(sys.gatheringSystem)
+
+	// AUDIT FIX: Phase 112 - CarryOverSystem for New Game Plus
+	game.World.AddSystem(sys.carryoverSystem)
 
 	// Phase 4.1: Choice & consequences
 	game.World.AddSystem(sys.choiceConsequencesSystem) // Phase 4.1: Choice tracking and consequences

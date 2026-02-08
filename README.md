@@ -232,6 +232,21 @@ See [Mobile Build Guide](docs/MOBILE_BUILD.md) for full instructions.
 | `--host-lan` | `false` | Bind server to `0.0.0.0` for LAN access instead of `127.0.0.1` (requires host-and-play mode) |
 | `-weather` | — | Weather type (`rain`, `snow`, `fog`, `dust`, `ash`, `neonrain`, `smog`, `radiation`) |
 | `-weather-intensity` | `heavy` | Weather intensity (`light`, `medium`, `heavy`, `extreme`) |
+| `--postprocess-preset` | `cinematic` | Post-processing preset (`fantasy`, `sci-fi`, `horror`, `cyberpunk`, `post-apocalyptic`, `neutral`, `cinematic`) |
+| `--postprocess-color-grading` | `true` | Enable color grading effect |
+| `--postprocess-vignette` | `true` | Enable vignette effect |
+| `--postprocess-chromatic` | `true` | Enable chromatic aberration effect |
+| `--postprocess-saturation` | `1.1` | Color grading saturation (0.0–2.0) |
+| `--postprocess-contrast` | `1.05` | Color grading contrast (0.0–2.0) |
+| `--postprocess-brightness` | `0.02` | Color grading brightness (-1.0 to 1.0) |
+| `--postprocess-vignette-intensity` | `0.6` | Vignette intensity (0.0–1.0) |
+| `--postprocess-vignette-softness` | `0.4` | Vignette softness (0.0–1.0) |
+| `--postprocess-chromatic-intensity` | `0.3` | Chromatic aberration intensity (0.0–1.0) |
+| `--palette-harmony` | `triadic` | Color harmony type (`complementary`, `analogous`, `triadic`, `tetradic`, `split-complementary`, `monochromatic`) |
+| `--palette-mood` | `vibrant` | Palette mood (`normal`, `bright`, `dark`, `saturated`, `muted`, `vibrant`, `pastel`, `tense`, `calm`, `victorious`, `melancholic`, `energetic`, `mystical`, `ominous`, `serene`, `aggressive`, `playful`, `somber`, `ethereal`, `dangerous`, `peaceful`, `chaotic`, `regal`, `desolate`) |
+| `--palette-rarity` | `epic` | Palette rarity/intensity (`common`, `uncommon`, `rare`, `epic`, `legendary`) |
+| `-profile` | `true` | Enable performance profiling with frame time tracking |
+| `-no-tutorial` | `false` | Disable tutorial for experienced players |
 | `--verbose` | `true` | Enable verbose debug logging (sets log level to `debug` when `LOG_LEVEL` not set) |
 
 ### Server Flags
@@ -246,6 +261,15 @@ See [Mobile Build Guide](docs/MOBILE_BUILD.md) for full instructions.
 | `-high-latency` | `false` | Optimize for Tor/high-latency connections (200–5000ms) |
 | `-security-audit` | `true` | Run security audit at startup |
 | `-stability-monitor` | `true` | Enable stability monitoring |
+| `--simulate-network` | `""` | Simulate network conditions for testing (`low`, `medium`, `high`, `very-high`, `extreme`) |
+| `--resilience-metrics` | `true` | Enable network resilience metrics collection |
+| `--balance-validate` | `false` | Run combat and economic balance validation at startup |
+| `--migration-validate` | `false` | Run save file migration validation at startup |
+| `--ux-validate` | `false` | Run user experience journey validation at startup |
+| `--enable-mods` | `true` | Enable mod system with sandbox security |
+| `--mods-dir` | `mods` | Directory to load mods from |
+| `--metrics-port` | `9090` | Port for Prometheus metrics HTTP endpoint |
+| `--enable-metrics` | `true` | Enable Prometheus metrics export at /metrics endpoint |
 | `--verbose` | `true` | Enable verbose debug logging (sets log level to `debug` when `LOG_LEVEL` not set) |
 
 ### Environment Variables

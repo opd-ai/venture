@@ -155,6 +155,14 @@ func (w *chatSystemWrapper) Update(entities []*engine.Entity, deltaTime float64)
 	w.system.Update(deltaTime)
 }
 
+type enhancedChatSystemWrapper struct {
+	system *engine.EnhancedChatSystem
+}
+
+func (w *enhancedChatSystemWrapper) Update(entities []*engine.Entity, deltaTime float64) {
+	w.system.Update(deltaTime)
+}
+
 type mailSystemWrapper struct {
 	system *engine.MailSystem
 }

@@ -165,12 +165,14 @@ func initializeV4Systems(world *engine.World, seed int64, logger *logrus.Logger)
 }
 
 // initializeV5SystemsServer initializes Version 5.0 social and communication systems on the server.
-func initializeV5SystemsServer(world *engine.World, logger *logrus.Logger) {
+// Returns the EnhancedChatSystem for player registration during connection handling.
+// AUDIT.md Task 8: Server-side chat history persistence with EnhancedChatSystem.
+func initializeV5SystemsServer(world *engine.World, logger *logrus.Logger) *engine.EnhancedChatSystem {
 	serverLogger := logger.WithField("component", "v5_systems")
 
-	// Phase 32: Chat system for player-to-player communication (server-authoritative)
-	chatSystem := engine.NewChatSystem(world)
-	world.AddSystem(&chatSystemWrapper{system: chatSystem})
+	// Phase 32: Enhanced chat system with persistent history (server-authoritative)
+	enhancedChatSystem := engine.NewEnhancedChatSystem(world)
+	world.AddSystem(&enhancedChatSystemWrapper{system: enhancedChatSystem})
 
 	// Phase 40: Mail system for asynchronous messaging (server-authoritative)
 	mailSystem := engine.NewMailSystem(world)
@@ -181,11 +183,13 @@ func initializeV5SystemsServer(world *engine.World, logger *logrus.Logger) {
 	world.AddSystem(&courierSystemWrapper{system: courierSystem})
 
 	serverLogger.WithFields(logrus.Fields{
-		"chatSystems":    1, // ChatSystem
+		"chatSystems":    1, // EnhancedChatSystem (with persistence)
 		"mailSystems":    2, // MailSystem, CourierSystem
 		"totalV5Systems": 3,
-		"note":           "Social systems for V5.0 multiplayer communication",
-	}).Info("V5.0 social systems initialized on server (chat, mail, courier)")
+		"note":           "Social systems for V5.0 multiplayer communication with chat history",
+	}).Info("V5.0 social systems initialized on server (enhanced chat, mail, courier)")
+
+	return enhancedChatSystem
 }
 
 // initializeV6SystemsServer initializes Version 6.0 persistent world and federation systems on the server.

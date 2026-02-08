@@ -66,18 +66,23 @@ func TestInitializeV5SystemsServer(t *testing.T) {
 
 	initialSystemCount := len(world.GetSystems())
 
-	initializeV5SystemsServer(world, logger)
+	enhancedChat := initializeV5SystemsServer(world, logger)
 
 	finalSystemCount := len(world.GetSystems())
 	addedSystems := finalSystemCount - initialSystemCount
 
-	// V5 should add 3 systems (chat, mail, courier)
+	// V5 should add 3 systems (enhanced chat, mail, courier)
 	expectedSystems := 3
 	if addedSystems != expectedSystems {
 		t.Errorf("initializeV5SystemsServer added %d systems, expected %d", addedSystems, expectedSystems)
 	}
 
-	t.Logf("V5 systems initialized: %d systems added", addedSystems)
+	// Verify EnhancedChatSystem is returned
+	if enhancedChat == nil {
+		t.Error("initializeV5SystemsServer should return non-nil EnhancedChatSystem")
+	}
+
+	t.Logf("V5 systems initialized: %d systems added (returned EnhancedChatSystem)", addedSystems)
 }
 
 // TestInitializeV6SystemsServer verifies V6.0 federation systems are added

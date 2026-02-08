@@ -78,6 +78,8 @@ var (
 	serverPlayers = flag.Int("max-players", 4, "Maximum players for --host-and-play mode")
 	serverTick    = flag.Int("tick-rate", 30, "Server tick rate for --host-and-play mode (updates per second)")
 	noTutorial    = flag.Bool("no-tutorial", false, "Disable tutorial for experienced players")
+	enableVR      = flag.Bool("vr", false, "Enable VR mode (requires VR headset, auto-detects hardware)")
+	forceVR       = flag.Bool("force-vr", false, "Force VR mode even without detected hardware (for testing)")
 	showVersion   = flag.Bool("version", false, "Print version information and exit")
 )
 

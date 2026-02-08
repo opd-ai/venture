@@ -140,6 +140,9 @@ import (
 	"github.com/opd-ai/venture/pkg/integration/choice_consequences"
 	"github.com/opd-ai/venture/pkg/integration/guild_vehicle"
 	"github.com/opd-ai/venture/pkg/integration/world_events"
+
+	// AUDIT.md Task 7: VR Hardware Detection
+	"github.com/opd-ai/venture/pkg/vr"
 )
 
 // systemsContainer holds all initialized game systems for dependency injection.
@@ -396,6 +399,14 @@ type systemsContainer struct {
 	voiceChannelSystem *engine.VoiceChannelSystem // Voice channel lifecycle and participant synchronization
 	spatialVoiceSystem *engine.SpatialVoiceSystem // Distance-based volume and stereo panning for voice
 
+	// VR Systems (AUDIT.md Task 7)
+	// Gap: VR systems implemented but never initialized with hardware detection
+	// Fix: Added stereoscopic and head tracking systems with conditional initialization
+	stereoscopicSystem *engine.StereoscopicSystem // VR stereoscopic rendering (dual-eye cameras)
+	headTrackingSystem *engine.HeadTrackingSystem // VR head tracking with mouse fallback
+	vrControllerSystem *engine.VRControllerSystem // VR controller input system
+	vrUISystem         *engine.VRUISystem         // VR-optimized UI rendering
+
 	// Lazy initialization tracking (Performance Audit S4)
 	lazyInitStarted   bool // Tracks whether lazy initialization has been triggered
 	lazyInitCompleted bool // Tracks whether lazy initialization has finished
@@ -545,6 +556,9 @@ func (sys *systemsContainer) scheduleLazyInit(game *engine.EbitenGame, logger *l
 
 		// Phase 3: Guild Federation and advanced systems
 		initializePhase3Systems(game, sys, clientLogger)
+
+		// AUDIT.md Task 7: VR hardware detection and conditional system initialization
+		initializeVRSystems(game, sys, clientLogger)
 
 		// Register non-critical systems
 		registerNonCriticalSystems(game, sys)
@@ -1225,6 +1239,79 @@ func initializeV19Systems(game *engine.EbitenGame, sys *systemsContainer, client
 
 	if *verbose {
 		clientLogger.Info("V19.0 systems initialized (entity gen, dialog gen, legendary, economy, choice tracker, fleet manager, world events)")
+	}
+}
+
+// initializeVRSystems initializes VR systems with hardware detection.
+// AUDIT.md Task 7: VR hardware detection for conditional stereoscopic and head tracking initialization.
+func initializeVRSystems(game *engine.EbitenGame, sys *systemsContainer, clientLogger *logrus.Entry) {
+	// Check if VR is enabled via flags
+	if !*enableVR && !*forceVR {
+		clientLogger.Debug("VR disabled via flags, skipping VR system initialization")
+		return
+	}
+
+	// Perform hardware detection
+	detector := vr.NewDetector()
+	if *forceVR {
+		detector.SetForceEnable(true)
+		clientLogger.Info("VR mode force-enabled via --force-vr flag")
+	}
+
+	vrAvailable := detector.DetectHardware()
+
+	if !vrAvailable && !*forceVR {
+		clientLogger.Info("VR hardware not detected, skipping VR system initialization")
+		clientLogger.Info("Use --force-vr to enable VR mode without hardware (testing)")
+		return
+	}
+
+	clientLogger.WithFields(logrus.Fields{
+		"headset":    detector.IsHeadsetDetected(),
+		"controller": detector.IsControllerDetected(),
+		"force":      *forceVR,
+	}).Info("VR mode enabled, initializing VR systems")
+
+	// Initialize stereoscopic rendering system
+	sys.stereoscopicSystem = engine.NewStereoscopicSystem(game.World)
+	game.World.AddSystem(sys.stereoscopicSystem)
+	clientLogger.Debug("stereoscopic rendering system initialized")
+
+	// Initialize head tracking system
+	sys.headTrackingSystem = engine.NewHeadTrackingSystem(game.World)
+
+	// If no headset detected, enable mouse fallback
+	if !detector.IsHeadsetDetected() {
+		sys.headTrackingSystem.SetUseMouseFallback(true)
+		clientLogger.Debug("head tracking system initialized with mouse fallback (no headset)")
+	} else {
+		// Set up headset adapter (placeholder - real hardware would use SDK)
+		mockHeadset := engine.NewMockHeadset()
+		sys.headTrackingSystem.SetHeadsetAdapter(mockHeadset)
+		clientLogger.Debug("head tracking system initialized with headset adapter")
+	}
+
+	game.World.AddSystem(sys.headTrackingSystem)
+
+	// Initialize VR controller system if controllers detected
+	if detector.IsControllerDetected() || *forceVR {
+		sys.vrControllerSystem = engine.NewVRControllerSystem(game.World)
+
+		// Set up mock controllers (placeholder - real hardware would use SDK)
+		mockController := engine.NewMockController()
+		sys.vrControllerSystem.SetControllerAdapter(mockController)
+
+		game.World.AddSystem(sys.vrControllerSystem)
+		clientLogger.Debug("VR controller system initialized")
+	}
+
+	// Initialize VR UI system for VR-optimized rendering
+	sys.vrUISystem = engine.NewVRUISystem(game.World)
+	game.World.AddSystem(sys.vrUISystem)
+	clientLogger.Debug("VR UI system initialized")
+
+	if *verbose {
+		clientLogger.Info("VR systems initialized successfully")
 	}
 }
 

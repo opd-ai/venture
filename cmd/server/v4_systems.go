@@ -110,9 +110,9 @@ func initializeV4Systems(world *engine.World, seed int64, logger *logrus.Logger)
 	miniGameSystem := engine.NewMiniGameSystem(world)
 	world.AddSystem(&miniGameSystemWrapper{system: miniGameSystem})
 
-	// INTEGRATION FIX: Phase 28 - Reputation & Alignment Systems (was: 0/3, now: 3/3)
+	// INTEGRATION FIX: Phase 28 - Reputation & Alignment Systems (was: 0/4, now: 4/4)
 	// Gap: All reputation systems missing from server
-	// Fix: Added reputation, alignment, faction reaction for server-authoritative moral choices
+	// Fix: Added reputation, alignment, faction reaction, choice consequences for server-authoritative moral choices
 	reputationSystem := engine.NewReputationSystem(world, logger)
 	world.AddSystem(&reputationSystemWrapper{system: reputationSystem})
 
@@ -124,6 +124,10 @@ func initializeV4Systems(world *engine.World, seed int64, logger *logrus.Logger)
 
 	moralChoiceSystem := engine.NewMoralChoiceSystem(world, logger) // FIXED: Added logger parameter
 	world.AddSystem(&moralChoiceSystemWrapper{system: moralChoiceSystem})
+
+	// AUDIT.md Task 3: Server-side choice validation to prevent choice manipulation
+	choiceConsequencesSystem := engine.NewChoiceConsequencesSystem(world)
+	world.AddSystem(choiceConsequencesSystem) // No wrapper needed - uses Update(entities, deltaTime)
 
 	// INTEGRATION FIX: Phase 29 - Adaptive Music System (was: 0/1, now: 1/1)
 	// Gap: MusicTrigger system missing from server
@@ -147,7 +151,7 @@ func initializeV4Systems(world *engine.World, seed int64, logger *logrus.Logger)
 	npcDialogSystem := engine.NewNPCDialogSystem(world, seed) // FIXED: Added seed parameter
 	world.AddSystem(&npcDialogSystemWrapper{system: npcDialogSystem})
 
-	systemCount := 26 // Updated from 7 to 26 total V4.0+ systems
+	systemCount := 27 // Updated from 26 to 27 total V4.0+ systems
 
 	serverLogger.WithFields(logrus.Fields{
 		"vehicleSystems":     4, // VehicleMovement, VehicleDurability, Mounting, VehicleCombat
@@ -157,7 +161,7 @@ func initializeV4Systems(world *engine.World, seed int64, logger *logrus.Logger)
 		"classSystems":       1, // ClassProgression
 		"expressionSystems":  2, // Expression, ExpressionCombo
 		"miniGameSystems":    1, // MiniGame
-		"reputationSystems":  4, // Reputation, Alignment, FactionReaction, MoralChoice
+		"reputationSystems":  5, // Reputation, Alignment, FactionReaction, MoralChoice, ChoiceConsequences
 		"musicSystems":       1, // MusicTrigger (headless)
 		"storySystems":       1, // Discovery
 		"achievementSystems": 1, // Achievement

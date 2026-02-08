@@ -125,7 +125,7 @@ The Venture codebase is well-integrated with comprehensive system registration. 
 
 2. **[COMPLETED 2026-02-08]** ~~Wire FleetManager for guild vehicles~~: FleetManager is now instantiated in `cmd/server/v8_systems.go` and returned from `initializeV8SystemsServer()`. Provides server-authoritative fleet management with formation bonuses, siege engines, access control, and maintenance cost calculations. Available for future VehicleSystem integration and network packet handling. Test coverage: 97.5%.
 
-3. **[High]** Add server-side ChoiceConsequencesSystem: The client uses `choice_consequences.ChoiceTracker` for persistent choices, but the server lacks corresponding validation. Add system wrapper in `v4_systems.go` to prevent choice manipulation.
+3. **[COMPLETED 2026-02-08]** ~~Add server-side ChoiceConsequencesSystem~~: The `ChoiceConsequencesSystem` is now instantiated in `cmd/server/v4_systems.go` as part of Phase 28 (Reputation & Alignment Systems). This provides server-authoritative choice validation to prevent client-side choice manipulation. The system tracks player choices, NPC relationships, content locks, quest branches, class-specific quests, and companion reactions. It synchronizes with client-side `ChoiceTracker` components via the ECS Update loop. Test coverage: Existing comprehensive tests in `pkg/engine/choice_consequences_system_test.go` and `pkg/integration/choice_consequences/manager_test.go` with 100% pass rate.
 
 4. **[Medium]** Complete ImageChunk packet handling: `PacketTypeImageChunk` is defined but image transfer protocol appears incomplete. Verify image sharing works end-to-end or remove unused packet type.
 

@@ -7,6 +7,7 @@ package engine
 import (
 	"fmt"
 	"os"
+	"sync"
 	"time"
 
 	"github.com/hajimehoshi/ebiten/v2"
@@ -233,25 +234,84 @@ type uiComponents struct {
 	guildUI            *GuildUI           // Phase 3.2 Guild UI (PLAN.md)
 }
 
-// initializeUIComponents creates all UI systems.
+// initializeUIComponents creates all UI systems in parallel for faster startup.
+// Components are grouped by dependencies and initialized concurrently.
+// Expected improvement: ~20-40ms startup reduction from sequential initialization.
 func initializeUIComponents(world *World, screenWidth, screenHeight int, settingsManager *SettingsManager) *uiComponents {
-	return &uiComponents{
-		inventoryUI:        NewEbitenInventoryUI(world, screenWidth, screenHeight),
-		questUI:            NewEbitenQuestUI(world, screenWidth, screenHeight),
-		characterUI:        NewEbitenCharacterUI(world, screenWidth, screenHeight),
-		skillsUI:           NewEbitenSkillsUI(world, screenWidth, screenHeight),
-		mapUI:              NewEbitenMapUI(world, screenWidth, screenHeight),
-		settingsUI:         NewSettingsUI(screenWidth, screenHeight, settingsManager),
-		mainMenuUI:         NewMainMenuUI(screenWidth, screenHeight),
-		singlePlayerMenu:   NewSinglePlayerMenu(screenWidth, screenHeight),
-		genreSelectionMenu: NewGenreSelectionMenu(screenWidth, screenHeight),
-		multiplayerMenu:    NewMultiplayerMenu(screenWidth, screenHeight),
-		serverAddressInput: NewServerAddressInput(screenWidth, screenHeight),
-		characterCreation:  NewCharacterCreation(screenWidth, screenHeight),
-		galleryUI:          NewGalleryUI(screenWidth, screenHeight),
-		housingUI:          housing.NewHousingUI(screenWidth, screenHeight),   // V8.0 Housing UI (Phase 49.1)
-		guildUI:            NewGuildUI(world, nil, screenWidth, screenHeight), // Phase 3.2: GuildUI with nil GuildSystem (defensive)
-	}
+	ui := &uiComponents{}
+	var wg sync.WaitGroup
+
+	// Group 1: World-dependent UI components (5 components)
+	wg.Add(5)
+	go func() {
+		defer wg.Done()
+		ui.inventoryUI = NewEbitenInventoryUI(world, screenWidth, screenHeight)
+	}()
+	go func() {
+		defer wg.Done()
+		ui.questUI = NewEbitenQuestUI(world, screenWidth, screenHeight)
+	}()
+	go func() {
+		defer wg.Done()
+		ui.characterUI = NewEbitenCharacterUI(world, screenWidth, screenHeight)
+	}()
+	go func() {
+		defer wg.Done()
+		ui.skillsUI = NewEbitenSkillsUI(world, screenWidth, screenHeight)
+	}()
+	go func() {
+		defer wg.Done()
+		ui.mapUI = NewEbitenMapUI(world, screenWidth, screenHeight)
+	}()
+
+	// Group 2: Independent UI components (9 components)
+	wg.Add(9)
+	go func() {
+		defer wg.Done()
+		ui.settingsUI = NewSettingsUI(screenWidth, screenHeight, settingsManager)
+	}()
+	go func() {
+		defer wg.Done()
+		ui.mainMenuUI = NewMainMenuUI(screenWidth, screenHeight)
+	}()
+	go func() {
+		defer wg.Done()
+		ui.singlePlayerMenu = NewSinglePlayerMenu(screenWidth, screenHeight)
+	}()
+	go func() {
+		defer wg.Done()
+		ui.genreSelectionMenu = NewGenreSelectionMenu(screenWidth, screenHeight)
+	}()
+	go func() {
+		defer wg.Done()
+		ui.multiplayerMenu = NewMultiplayerMenu(screenWidth, screenHeight)
+	}()
+	go func() {
+		defer wg.Done()
+		ui.serverAddressInput = NewServerAddressInput(screenWidth, screenHeight)
+	}()
+	go func() {
+		defer wg.Done()
+		ui.characterCreation = NewCharacterCreation(screenWidth, screenHeight)
+	}()
+	go func() {
+		defer wg.Done()
+		ui.galleryUI = NewGalleryUI(screenWidth, screenHeight)
+	}()
+	go func() {
+		defer wg.Done()
+		ui.housingUI = housing.NewHousingUI(screenWidth, screenHeight)
+	}()
+
+	// Group 3: World-dependent with additional dependencies (1 component)
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		ui.guildUI = NewGuildUI(world, nil, screenWidth, screenHeight)
+	}()
+
+	wg.Wait()
+	return ui
 }
 
 // buildGameInstance constructs the EbitenGame struct with all components.

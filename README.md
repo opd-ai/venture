@@ -263,6 +263,7 @@ See [Mobile Build Guide](docs/MOBILE_BUILD.md) for full instructions.
 | `-tick-rate` | `30` | Server update rate in ticks per second |
 | `-aerial-sprites` | `true` | Enable aerial-view perspective sprites for top-down gameplay |
 | `-high-latency` | `false` | Optimize for Tor/high-latency connections (200–5000ms) |
+| `-server-name` | `venture-server` | Server name for federation identity (uses `SERVER_NAME` env if set) |
 | `-security-audit` | `true` | Run security audit at startup |
 | `-stability-monitor` | `true` | Enable stability monitoring |
 | `-simulate-network` | `""` | Simulate network conditions for testing (`low`, `medium`, `high`, `very-high`, `extreme`) |
@@ -283,6 +284,7 @@ See [Mobile Build Guide](docs/MOBILE_BUILD.md) for full instructions.
 |----------|--------|-------------|
 | `LOG_LEVEL` | `debug`, `info`, `warn`, `error`, `fatal` | Logging verbosity (unknown values default to `info`). **Note:** Takes precedence over `--verbose` flag. When `LOG_LEVEL` is not set, `--verbose=true` (default) sets level to `debug`, `--verbose=false` sets level to `info`. |
 | `LOG_FORMAT` | `json`, `text` | Log output format |
+| `SERVER_NAME` | Any non-empty string | Server name for federation identity. Overrides the `-server-name` flag default. Used to identify the server in cross-server guild federation and generates a unique ed25519 keypair for secure server authentication. |
 
 ### Terrain Generation Types
 

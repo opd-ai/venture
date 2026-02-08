@@ -23,7 +23,7 @@ import (
 // chat history persistence, image galleries, guild halls, fluid simulation,
 // enhanced vehicle physics, and building/furniture generation.
 // Returns the guild.Manager and FleetManager for use by V9 political warfare integration.
-func initializeV8SystemsServer(world *engine.World, seed int64, logger *logrus.Logger) (*guild.Manager, *guildvehicle.FleetManager) {
+func initializeV8SystemsServer(world *engine.World, seed int64, serverName string, logger *logrus.Logger) (*guild.Manager, *guildvehicle.FleetManager) {
 	serverLogger := logger.WithField("component", "v8_systems")
 
 	// Phase 49.1-49.2: Housing, Trust & Reputation Infrastructure
@@ -42,12 +42,21 @@ func initializeV8SystemsServer(world *engine.World, seed int64, logger *logrus.L
 	guildSystem := engine.NewGuildSystem(world, guildManager)
 	world.AddSystem(guildSystem)
 
-	// Initialize federation protocol for cross-server guild sync
-	serverIdentity := &federation.ServerIdentity{
-		PublicKey:  []byte("server-public-key"), // In production, load from config/cert
-		ServerName: "venture-server",
+	// Initialize server identity with proper ed25519 keypair generation
+	// In production, this generates a new keypair on each server start.
+	// For persistent identity across restarts, implement key persistence to file/database.
+	serverIdentity, err := federation.NewServerIdentity(serverName)
+	if err != nil {
+		serverLogger.WithError(err).Fatal("Failed to generate server identity")
 	}
-	federationProtocol := federation.NewFederationProtocol("server-id", serverIdentity)
+	serverLogger.WithFields(logrus.Fields{
+		"server_name":    serverIdentity.ServerName,
+		"fingerprint":    serverIdentity.GetFingerprint(),
+		"public_key_len": len(serverIdentity.PublicKey),
+	}).Info("Server identity generated with ed25519 keypair")
+
+	// Initialize federation protocol for cross-server guild sync
+	federationProtocol := federation.NewFederationProtocol(serverIdentity.ServerID, serverIdentity)
 	guildSystem.SetFederation(federationProtocol)
 	_ = federationProtocol // Available for future cross-server features
 

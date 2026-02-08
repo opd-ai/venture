@@ -65,12 +65,20 @@ var (
 	metricsPort   = flag.String("metrics-port", "9090", "Port for Prometheus metrics HTTP endpoint")
 	enableMetrics = flag.Bool("enable-metrics", true, "Enable Prometheus metrics export at /metrics endpoint")
 
-	// Version flag
-	showVersion = flag.Bool("version", false, "Print version information and exit")
+	// Federation server identity (uses environment variable if set)
+	serverName = flag.String("server-name", getEnvOrDefault("SERVER_NAME", "venture-server"), "Server name for federation identity")
 
 	// Version flag
-	// (moved to this block for consistency)
+	showVersion = flag.Bool("version", false, "Print version information and exit")
 )
+
+// getEnvOrDefault returns environment variable value or default if not set
+func getEnvOrDefault(key, defaultValue string) string {
+	if value := os.Getenv(key); value != "" {
+		return value
+	}
+	return defaultValue
+}
 
 func main() {
 	flag.Parse()
@@ -355,7 +363,7 @@ func createGameWorld(logger *logrus.Logger) (*engine.World, *engine.EnhancedChat
 	// Fix: Added V8.0 system initialization call for housing, fluids, vehicle physics, fleet management
 	// Roadmap: ROADMAP_V8.md (Phase 49-51), ROADMAP_V9.md (Phase 56.1)
 	// Returns guild.Manager and FleetManager for V9 political warfare integration
-	guildManager, fleetManager := initializeV8SystemsServer(world, *seed, logger)
+	guildManager, fleetManager := initializeV8SystemsServer(world, *seed, *serverName, logger)
 
 	// INTEGRATION FIX [Category A]: V9.0 Server Integration Manager Initialization
 	// Gap: V9.0 integration managers were client-only, allowing XP/loyalty/permission exploits

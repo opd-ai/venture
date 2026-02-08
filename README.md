@@ -261,19 +261,21 @@ See [Mobile Build Guide](docs/MOBILE_BUILD.md) for full instructions.
 | `-genre` | `fantasy` | Genre ID for world generation |
 | `-terrain-type` | `bsp` | Terrain generator type: `bsp`, `cellular`, `city`, `forest`, `composite`, `grammar` |
 | `-tick-rate` | `30` | Server update rate in ticks per second |
+| `-aerial-sprites` | `true` | Enable aerial-view perspective sprites for top-down gameplay |
 | `-high-latency` | `false` | Optimize for Tor/high-latency connections (200–5000ms) |
 | `-security-audit` | `true` | Run security audit at startup |
 | `-stability-monitor` | `true` | Enable stability monitoring |
-| `--simulate-network` | `""` | Simulate network conditions for testing (`low`, `medium`, `high`, `very-high`, `extreme`) |
-| `--resilience-metrics` | `true` | Enable network resilience metrics collection |
-| `--balance-validate` | `false` | Run combat and economic balance validation at startup |
-| `--migration-validate` | `false` | Run save file migration validation at startup |
-| `--ux-validate` | `false` | Run user experience journey validation at startup |
-| `--enable-mods` | `true` | Enable mod system with sandbox security |
-| `--mods-dir` | `mods` | Directory to load mods from |
-| `--metrics-port` | `9090` | Port for Prometheus metrics HTTP endpoint |
-| `--enable-metrics` | `true` | Enable Prometheus metrics export at /metrics endpoint |
-| `--verbose` | `true` | Enable verbose debug logging (sets log level to `debug` when `LOG_LEVEL` not set) |
+| `-simulate-network` | `""` | Simulate network conditions for testing (`low`, `medium`, `high`, `very-high`, `extreme`) |
+| `-resilience-metrics` | `true` | Enable network resilience metrics collection |
+| `-balance-validate` | `false` | Run combat and economic balance validation at startup |
+| `-migration-validate` | `false` | Run save file migration validation at startup |
+| `-ux-validate` | `false` | Run user experience journey validation at startup |
+| `-enable-mods` | `true` | Enable mod system with sandbox security |
+| `-mods-dir` | `mods` | Directory to load mods from |
+| `-metrics-port` | `9090` | Port for Prometheus metrics HTTP endpoint |
+| `-enable-metrics` | `true` | Enable Prometheus metrics export at /metrics endpoint |
+| `-verbose` | `true` | Enable verbose debug logging (sets log level to `debug` when `LOG_LEVEL` not set) |
+| `-version` | `false` | Print version information and exit |
 
 ### Environment Variables
 

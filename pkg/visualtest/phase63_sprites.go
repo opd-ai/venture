@@ -58,7 +58,19 @@ func GenerateAllSpriteTests() []SpriteTestCase {
 
 // RenderSpriteTestCase renders a single sprite test case to an image.
 func RenderSpriteTestCase(tc SpriteTestCase) (*image.RGBA, error) {
-	// Generate entity with specific parameters
+	ent, err := generateTestEntity(tc)
+	if err != nil {
+		return nil, err
+	}
+
+	img := createTestImage(tc.Size)
+	drawSpritePattern(img, ent, tc)
+
+	return img, nil
+}
+
+// generateTestEntity creates an entity for sprite testing.
+func generateTestEntity(tc SpriteTestCase) (*entity.Entity, error) {
 	gen := entity.NewEntityGenerator()
 	params := procgen.GenerationParams{
 		Difficulty: 0.5,
@@ -83,37 +95,43 @@ func RenderSpriteTestCase(tc SpriteTestCase) (*image.RGBA, error) {
 		return nil, fmt.Errorf("no entities generated")
 	}
 
-	ent := entities[0] // Use first generated entity
+	return entities[0], nil
+}
 
-	// Create sprite image
-	img := image.NewRGBA(image.Rect(0, 0, tc.Size, tc.Size))
-
-	// Fill with background color for testing
+// createTestImage creates a new test image with background fill.
+func createTestImage(size int) *image.RGBA {
+	img := image.NewRGBA(image.Rect(0, 0, size, size))
 	bgColor := color.RGBA{50, 50, 50, 255}
-	for y := 0; y < tc.Size; y++ {
-		for x := 0; x < tc.Size; x++ {
+
+	for y := 0; y < size; y++ {
+		for x := 0; x < size; x++ {
 			img.Set(x, y, bgColor)
 		}
 	}
 
-	// Generate sprite pattern (simplified - actual rendering would use sprites package)
-	// This creates a deterministic visual pattern based on entity properties
+	return img
+}
+
+// drawSpritePattern draws a simple circular sprite pattern for testing.
+func drawSpritePattern(img *image.RGBA, ent *entity.Entity, tc SpriteTestCase) {
 	primaryColor := GetEntityColor(ent.Type, tc.GenreID)
 	centerX, centerY := tc.Size/2, tc.Size/2
 	radius := tc.Size / 3
 
 	for y := 0; y < tc.Size; y++ {
 		for x := 0; x < tc.Size; x++ {
-			dx := x - centerX
-			dy := y - centerY
-			dist := dx*dx + dy*dy
-			if dist <= radius*radius {
+			if isInCircle(x, y, centerX, centerY, radius) {
 				img.Set(x, y, primaryColor)
 			}
 		}
 	}
+}
 
-	return img, nil
+// isInCircle checks if point (x, y) is within a circle centered at (cx, cy) with given radius.
+func isInCircle(x, y, cx, cy, radius int) bool {
+	dx := x - cx
+	dy := y - cy
+	return dx*dx+dy*dy <= radius*radius
 }
 
 // GetEntityColor returns genre-appropriate color for entity type.

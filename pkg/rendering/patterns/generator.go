@@ -328,38 +328,32 @@ func (g *Generator) clampChannel(value float64) float64 {
 func (g *Generator) addVariation(img *image.RGBA, config TextureConfig, rng *rand.Rand) {
 	for y := 0; y < config.Height; y++ {
 		for x := 0; x < config.Width; x++ {
-			// Small random variation
-			variation := (rng.Float64() - 0.5) * 0.08 // ±4% variation
-
-			// Get current pixel
-			c := img.RGBAAt(x, y)
-			r := float64(c.R) * (1 + variation)
-			g := float64(c.G) * (1 + variation)
-			b := float64(c.B) * (1 + variation)
-
-			// Clamp values
-			if r < 0 {
-				r = 0
-			}
-			if r > 255 {
-				r = 255
-			}
-			if g < 0 {
-				g = 0
-			}
-			if g > 255 {
-				g = 255
-			}
-			if b < 0 {
-				b = 0
-			}
-			if b > 255 {
-				b = 255
-			}
-
-			img.SetRGBA(x, y, color.RGBA{R: uint8(r), G: uint8(g), B: uint8(b), A: c.A})
+			g.applyPixelVariation(img, x, y, rng)
 		}
 	}
+}
+
+// applyPixelVariation applies random color variation to a single pixel.
+func (gen *Generator) applyPixelVariation(img *image.RGBA, x, y int, rng *rand.Rand) {
+	variation := (rng.Float64() - 0.5) * 0.08 // ±4% variation
+	c := img.RGBAAt(x, y)
+
+	r := clampColorValue(float64(c.R) * (1 + variation))
+	g := clampColorValue(float64(c.G) * (1 + variation))
+	b := clampColorValue(float64(c.B) * (1 + variation))
+
+	img.SetRGBA(x, y, color.RGBA{R: uint8(r), G: uint8(g), B: uint8(b), A: c.A})
+}
+
+// clampColorValue clamps a color value to the valid range [0, 255].
+func clampColorValue(val float64) float64 {
+	if val < 0 {
+		return 0
+	}
+	if val > 255 {
+		return 255
+	}
+	return val
 }
 
 // addDepthEffect adds normal map approximation for depth perception.

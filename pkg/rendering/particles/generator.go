@@ -40,6 +40,32 @@ func NewGeneratorWithLogger(logger *logrus.Logger) *Generator {
 
 // Generate creates a particle system from the given configuration.
 func (g *Generator) Generate(config Config) (*ParticleSystem, error) {
+	g.logGenerationStart(config)
+
+	if err := config.Validate(); err != nil {
+		g.logError(err, "invalid particle config")
+		return nil, fmt.Errorf("invalid config: %w", err)
+	}
+
+	rng, pal, system, err := g.initializeParticleSystem(config)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := g.generateParticlesByType(system, pal, rng, config); err != nil {
+		return nil, err
+	}
+
+	g.logGenerationComplete(config)
+
+	// Use pooled particle system instead of direct allocation
+	// This transfers particles to a pooled system, reducing GC pressure
+	pooledSystem := NewParticleSystem(system.Particles, config.Type, config)
+	return pooledSystem, nil
+}
+
+// logGenerationStart logs the start of particle system generation.
+func (g *Generator) logGenerationStart(config Config) {
 	if g.logger != nil && g.logger.Logger.GetLevel() >= logrus.DebugLevel {
 		g.logger.WithFields(logrus.Fields{
 			"type":    config.Type,
@@ -48,32 +74,26 @@ func (g *Generator) Generate(config Config) (*ParticleSystem, error) {
 			"count":   config.Count,
 		}).Debug("generating particle system")
 	}
+}
 
-	if err := config.Validate(); err != nil {
-		if g.logger != nil {
-			g.logger.WithError(err).Error("invalid particle config")
-		}
-		return nil, fmt.Errorf("invalid config: %w", err)
+// logError logs an error with context.
+func (g *Generator) logError(err error, msg string) {
+	if g.logger != nil {
+		g.logger.WithError(err).Error(msg)
 	}
+}
 
-	// Create RNG from seed
+// initializeParticleSystem initializes RNG, palette, and particle system.
+func (g *Generator) initializeParticleSystem(config Config) (*rand.Rand, *palette.Palette, *ParticleSystem, error) {
 	rng := rand.New(rand.NewSource(config.Seed))
 
-	// Generate color palette for genre
 	pal, err := g.paletteGen.Generate(config.GenreID, config.Seed)
 	if err != nil {
-		if g.logger != nil {
-			g.logger.WithError(err).Error("palette generation failed")
-		}
-		return nil, fmt.Errorf("failed to generate palette: %w", err)
+		g.logError(err, "palette generation failed")
+		return nil, nil, nil, fmt.Errorf("failed to generate palette: %w", err)
 	}
 
-	// Create particle system from pool with pre-allocated particles
-	// Note: NewParticleSystem expects particles to be passed in, but we
-	// need to generate them. Create temporary slice, then pass to pooled system.
 	particles := make([]Particle, config.Count)
-
-	// Temporarily create system for generation (will be replaced with pooled version)
 	system := &ParticleSystem{
 		Particles:   particles,
 		Type:        config.Type,
@@ -81,7 +101,11 @@ func (g *Generator) Generate(config Config) (*ParticleSystem, error) {
 		ElapsedTime: 0,
 	}
 
-	// Generate particles based on type
+	return rng, pal, system, nil
+}
+
+// generateParticlesByType generates particles based on the configured type.
+func (g *Generator) generateParticlesByType(system *ParticleSystem, pal *palette.Palette, rng *rand.Rand, config Config) error {
 	switch config.Type {
 	case ParticleSpark:
 		g.generateSparks(system, pal, rng, config)
@@ -108,21 +132,19 @@ func (g *Generator) Generate(config Config) (*ParticleSystem, error) {
 		if g.logger != nil {
 			g.logger.WithError(err).WithField("type", config.Type).Error("unknown particle type")
 		}
-		return nil, err
+		return err
 	}
+	return nil
+}
 
+// logGenerationComplete logs successful particle system generation.
+func (g *Generator) logGenerationComplete(config Config) {
 	if g.logger != nil {
 		g.logger.WithFields(logrus.Fields{
 			"type":  config.Type,
 			"count": config.Count,
 		}).Info("particle system generated")
 	}
-
-	// Use pooled particle system instead of direct allocation
-	// This transfers particles to a pooled system, reducing GC pressure
-	pooledSystem := NewParticleSystem(system.Particles, config.Type, config)
-
-	return pooledSystem, nil
 }
 
 // generateSparks creates bright, quick-moving spark particles.

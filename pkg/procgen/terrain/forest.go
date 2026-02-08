@@ -520,11 +520,16 @@ func (g *ForestGenerator) determineWaterType(dx, dy int, radiusX, radiusY float6
 
 // createRiver creates a winding river across the map.
 func (g *ForestGenerator) createRiver(terrain *Terrain, rng *rand.Rand) {
-	// River flows from one edge to opposite edge
-	startEdge := rng.Intn(4) // 0=top, 1=right, 2=bottom, 3=left
+	x, y, dx, dy := g.initializeRiverStart(terrain, rng)
+	riverWidth := 2 + rng.Intn(2) // 2-3 tiles wide
 
-	var x, y int
-	var dx, dy float64
+	g.traceRiverPath(terrain, x, y, dx, dy, riverWidth, rng)
+}
+
+// initializeRiverStart determines the starting position and direction for a river.
+// Returns starting x, y coordinates and directional vectors dx, dy.
+func (g *ForestGenerator) initializeRiverStart(terrain *Terrain, rng *rand.Rand) (x, y int, dx, dy float64) {
+	startEdge := rng.Intn(4) // 0=top, 1=right, 2=bottom, 3=left
 
 	switch startEdge {
 	case 0: // Top to bottom
@@ -549,42 +554,59 @@ func (g *ForestGenerator) createRiver(terrain *Terrain, rng *rand.Rand) {
 		dy = (rng.Float64() - 0.5) * 0.3
 	}
 
-	// Trace river path
-	riverWidth := 2 + rng.Intn(2) // 2-3 tiles wide
-	step := 0
+	return x, y, dx, dy
+}
 
-	for terrain.IsInBounds(x, y) && step < terrain.Width+terrain.Height {
-		// Place water at current position
-		for wy := -riverWidth / 2; wy <= riverWidth/2; wy++ {
-			for wx := -riverWidth / 2; wx <= riverWidth/2; wx++ {
-				rx := x + wx
-				ry := y + wy
-				if terrain.IsInBounds(rx, ry) {
-					if wx == 0 && wy == 0 {
-						terrain.SetTile(rx, ry, TileWaterDeep)
-					} else {
-						terrain.SetTile(rx, ry, TileWaterShallow)
-					}
+// traceRiverPath traces the river path from start to edge, placing water tiles.
+func (g *ForestGenerator) traceRiverPath(terrain *Terrain, x, y int, dx, dy float64, riverWidth int, rng *rand.Rand) {
+	step := 0
+	maxSteps := terrain.Width + terrain.Height
+
+	for terrain.IsInBounds(x, y) && step < maxSteps {
+		g.placeWaterTiles(terrain, x, y, riverWidth)
+		dx, dy = g.updateRiverDirection(dx, dy, rng)
+		x, y = g.advanceRiverPosition(x, y, dx, dy)
+		step++
+	}
+}
+
+// placeWaterTiles places water tiles at the current river position with specified width.
+func (g *ForestGenerator) placeWaterTiles(terrain *Terrain, x, y, riverWidth int) {
+	halfWidth := riverWidth / 2
+	for wy := -halfWidth; wy <= halfWidth; wy++ {
+		for wx := -halfWidth; wx <= halfWidth; wx++ {
+			rx := x + wx
+			ry := y + wy
+			if terrain.IsInBounds(rx, ry) {
+				if wx == 0 && wy == 0 {
+					terrain.SetTile(rx, ry, TileWaterDeep)
+				} else {
+					terrain.SetTile(rx, ry, TileWaterShallow)
 				}
 			}
 		}
-
-		// Add some randomness to direction
-		dx += (rng.Float64() - 0.5) * 0.2
-		dy += (rng.Float64() - 0.5) * 0.2
-
-		// Normalize direction
-		length := math.Sqrt(dx*dx + dy*dy)
-		if length > 0 {
-			dx /= length
-			dy /= length
-		}
-
-		// Move to next position
-		x += int(dx * 2.0)
-		y += int(dy * 2.0)
-		step++
 	}
+}
+
+// updateRiverDirection adds randomness to river direction and normalizes the vector.
+func (g *ForestGenerator) updateRiverDirection(dx, dy float64, rng *rand.Rand) (float64, float64) {
+	dx += (rng.Float64() - 0.5) * 0.2
+	dy += (rng.Float64() - 0.5) * 0.2
+
+	length := math.Sqrt(dx*dx + dy*dy)
+	if length > 0 {
+		dx /= length
+		dy /= length
+	}
+
+	return dx, dy
+}
+
+// advanceRiverPosition moves the river position forward along the direction vector.
+func (g *ForestGenerator) advanceRiverPosition(x, y int, dx, dy float64) (int, int) {
+	x += int(dx * 2.0)
+	y += int(dy * 2.0)
+	return x, y
 }
 
 // connectClearings creates organic paths between clearings.
@@ -613,42 +635,55 @@ func (g *ForestGenerator) createOrganicPath(start, end Point, terrain *Terrain, 
 	current := start
 
 	for current.ManhattanDistance(end) > 2 {
-		// Move toward target with some randomness
-		dx := 0
-		dy := 0
+		current = g.moveTowardTarget(current, end, rng)
 
-		if current.X < end.X {
-			dx = 1
-		} else if current.X > end.X {
-			dx = -1
-		}
-
-		if current.Y < end.Y {
-			dy = 1
-		} else if current.Y > end.Y {
-			dy = -1
-		}
-
-		// Add randomness
-		if rng.Float64() < 0.3 {
-			dx += rng.Intn(3) - 1
-			dy += rng.Intn(3) - 1
-		}
-
-		current.X += dx
-		current.Y += dy
-
-		// Ensure in bounds
 		if !current.IsInBounds(terrain.Width, terrain.Height) {
 			break
 		}
 
-		// Clear path (remove trees, keep water)
-		tile := terrain.GetTile(current.X, current.Y)
-		if tile == TileTree {
-			terrain.SetTile(current.X, current.Y, TileFloor)
-		}
-		// Note: Don't overwrite water tiles - bridges will be placed later
+		g.clearPathTile(current, terrain)
+	}
+}
+
+// moveTowardTarget moves current point one step toward end with random variation.
+func (g *ForestGenerator) moveTowardTarget(current, end Point, rng *rand.Rand) Point {
+	dx, dy := calculateDirection(current, end)
+
+	if rng.Float64() < 0.3 {
+		dx += rng.Intn(3) - 1
+		dy += rng.Intn(3) - 1
+	}
+
+	current.X += dx
+	current.Y += dy
+	return current
+}
+
+// calculateDirection returns the direction vector from current to target.
+func calculateDirection(current, target Point) (int, int) {
+	dx := 0
+	dy := 0
+
+	if current.X < target.X {
+		dx = 1
+	} else if current.X > target.X {
+		dx = -1
+	}
+
+	if current.Y < target.Y {
+		dy = 1
+	} else if current.Y > target.Y {
+		dy = -1
+	}
+
+	return dx, dy
+}
+
+// clearPathTile clears vegetation from a path tile (removes trees, keeps water).
+func (g *ForestGenerator) clearPathTile(pos Point, terrain *Terrain) {
+	tile := terrain.GetTile(pos.X, pos.Y)
+	if tile == TileTree {
+		terrain.SetTile(pos.X, pos.Y, TileFloor)
 	}
 }
 

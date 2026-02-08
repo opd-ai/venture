@@ -576,50 +576,69 @@ func (ui *EbitenMapUI) renderMapOverlays(screen *ebiten.Image, mapAreaX, mapArea
 // updateFogOfWar marks tiles as explored based on player visibility.
 // Called by: Update() every frame
 func (ui *EbitenMapUI) updateFogOfWar() {
-	if ui.terrain == nil || ui.playerEntity == nil || ui.fogOfWar == nil {
+	if !ui.canUpdateFogOfWar() {
 		return
 	}
 
-	// Get player position
-	posComp, ok := ui.playerEntity.GetComponent("position")
-	if !ok {
+	pos := ui.getPlayerPosition()
+	if pos == nil {
 		return
 	}
 
-	// Type assert with safety check
-	pos, ok := posComp.(*PositionComponent)
-	if !ok {
-		return
-	}
-	// Convert world position to tile coordinates (assuming 32px tiles)
 	centerX := int(pos.X / 32)
 	centerY := int(pos.Y / 32)
-
-	// Reveal tiles within vision radius
 	radius := ui.getVisibleRadius()
 
+	ui.revealTilesInRadius(centerX, centerY, radius)
+}
+
+// canUpdateFogOfWar checks if fog of war update is possible.
+func (ui *EbitenMapUI) canUpdateFogOfWar() bool {
+	return ui.terrain != nil && ui.playerEntity != nil && ui.fogOfWar != nil
+}
+
+// getPlayerPosition retrieves the player's position component.
+func (ui *EbitenMapUI) getPlayerPosition() *PositionComponent {
+	posComp, ok := ui.playerEntity.GetComponent("position")
+	if !ok {
+		return nil
+	}
+	pos, ok := posComp.(*PositionComponent)
+	if !ok {
+		return nil
+	}
+	return pos
+}
+
+// revealTilesInRadius reveals all tiles within the vision radius.
+func (ui *EbitenMapUI) revealTilesInRadius(centerX, centerY, radius int) {
 	for dy := -radius; dy <= radius; dy++ {
 		for dx := -radius; dx <= radius; dx++ {
-			// Check if within circular radius
-			dist := math.Sqrt(float64(dx*dx + dy*dy))
-			if dist > float64(radius) {
-				continue
-			}
-
-			tileX := centerX + dx
-			tileY := centerY + dy
-
-			// Bounds check
-			if tileX < 0 || tileX >= ui.terrain.Width || tileY < 0 || tileY >= ui.terrain.Height {
-				continue
-			}
-
-			// Mark as explored
-			if !ui.fogOfWar[tileY][tileX] {
-				ui.fogOfWar[tileY][tileX] = true
-				ui.mapNeedsUpdate = true
+			if ui.shouldRevealTile(dx, dy, radius, centerX, centerY) {
+				ui.revealTile(centerX+dx, centerY+dy)
 			}
 		}
+	}
+}
+
+// shouldRevealTile checks if a tile should be revealed based on distance and bounds.
+func (ui *EbitenMapUI) shouldRevealTile(dx, dy, radius, centerX, centerY int) bool {
+	dist := math.Sqrt(float64(dx*dx + dy*dy))
+	if dist > float64(radius) {
+		return false
+	}
+
+	tileX := centerX + dx
+	tileY := centerY + dy
+
+	return tileX >= 0 && tileX < ui.terrain.Width && tileY >= 0 && tileY < ui.terrain.Height
+}
+
+// revealTile marks a tile as explored and triggers map update if needed.
+func (ui *EbitenMapUI) revealTile(tileX, tileY int) {
+	if !ui.fogOfWar[tileY][tileX] {
+		ui.fogOfWar[tileY][tileX] = true
+		ui.mapNeedsUpdate = true
 	}
 }
 

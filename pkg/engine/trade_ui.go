@@ -943,28 +943,52 @@ func (ui *TradeUI) confirmItemSelection() {
 
 // proposeTrade proposes the trade to the partner.
 func (ui *TradeUI) proposeTrade() {
-	if ui.playerEntity == nil || ui.partnerEntity == nil {
-		ui.setStatusMessage("Invalid trade participants", color.RGBA{255, 100, 100, 255})
+	if !ui.validateTradeParticipants() {
 		return
 	}
 
 	playerInv := ui.getInventoryComponent(ui.playerEntity)
-	partnerInv := ui.getInventoryComponent(ui.partnerEntity)
-
 	if playerInv == nil {
 		ui.setStatusMessage("No inventory", color.RGBA{255, 100, 100, 255})
 		return
 	}
 
-	// Build item ID lists
+	offeredItemIDs := ui.buildOfferedItemIDs(playerInv)
+	requestedItemIDs := ui.buildRequestedItemIDs()
+
+	if err := ui.tradeSystem.ProposeTrade(ui.playerEntity.ID, ui.partnerEntity.ID, offeredItemIDs, requestedItemIDs); err != nil {
+		ui.setStatusMessage(fmt.Sprintf("Trade failed: %v", err), color.RGBA{255, 100, 100, 255})
+		return
+	}
+
+	ui.state = TradeUIStatePending
+	ui.setStatusMessage("Trade proposed, waiting for response...", color.RGBA{200, 200, 100, 255})
+}
+
+// validateTradeParticipants checks if both trade participants are valid.
+func (ui *TradeUI) validateTradeParticipants() bool {
+	if ui.playerEntity == nil || ui.partnerEntity == nil {
+		ui.setStatusMessage("Invalid trade participants", color.RGBA{255, 100, 100, 255})
+		return false
+	}
+	return true
+}
+
+// buildOfferedItemIDs creates a list of item IDs from the player's offered slots.
+func (ui *TradeUI) buildOfferedItemIDs(playerInv *InventoryComponent) []string {
 	offeredItemIDs := make([]string, 0)
 	for _, idx := range ui.selectedOfferedSlots {
 		if idx >= 0 && idx < len(playerInv.Items) {
 			offeredItemIDs = append(offeredItemIDs, playerInv.Items[idx].ID)
 		}
 	}
+	return offeredItemIDs
+}
 
+// buildRequestedItemIDs creates a list of item IDs from the partner's requested slots.
+func (ui *TradeUI) buildRequestedItemIDs() []string {
 	requestedItemIDs := make([]string, 0)
+	partnerInv := ui.getInventoryComponent(ui.partnerEntity)
 	if partnerInv != nil {
 		for _, idx := range ui.selectedRequestedSlots {
 			if idx >= 0 && idx < len(partnerInv.Items) {
@@ -972,16 +996,7 @@ func (ui *TradeUI) proposeTrade() {
 			}
 		}
 	}
-
-	// Propose trade
-	err := ui.tradeSystem.ProposeTrade(ui.playerEntity.ID, ui.partnerEntity.ID, offeredItemIDs, requestedItemIDs)
-	if err != nil {
-		ui.setStatusMessage(fmt.Sprintf("Trade failed: %v", err), color.RGBA{255, 100, 100, 255})
-		return
-	}
-
-	ui.state = TradeUIStatePending
-	ui.setStatusMessage("Trade proposed, waiting for response...", color.RGBA{200, 200, 100, 255})
+	return requestedItemIDs
 }
 
 // acceptTrade accepts the current trade proposal.

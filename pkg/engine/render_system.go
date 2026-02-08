@@ -1132,24 +1132,29 @@ func (r *EbitenRenderSystem) drawColliders(entities []*Entity) {
 // Optimized: Uses reusable buffers to eliminate per-frame allocations.
 // Optimized: Caches Y positions during collection to avoid O(n log n) map lookups during sort.
 func (r *EbitenRenderSystem) sortEntitiesByLayer(entities []*Entity) []*Entity {
-	// Reuse buffers, clearing them first
+	r.prepareSortBuffers(entities)
+	r.collectEntitiesWithSprites(entities)
+	r.sortCollectedEntities()
+	return r.extractSortedEntities()
+}
+
+// prepareSortBuffers reuses and grows buffers as needed for sorting.
+func (r *EbitenRenderSystem) prepareSortBuffers(entities []*Entity) {
 	r.sortBuffer = r.sortBuffer[:0]
 	r.sortCacheBuffer = r.sortCacheBuffer[:0]
 
-	// Grow buffers if needed (rare, only when entity count increases)
 	if cap(r.sortBuffer) < len(entities) {
 		r.sortBuffer = make([]*Entity, 0, len(entities))
 	}
 	if cap(r.sortCacheBuffer) < len(entities) {
 		r.sortCacheBuffer = make([]entitySprite, 0, len(entities))
 	}
+}
 
-	// Collect entities with sprites and cache their sprite components and Y positions.
-	// Caching Y here eliminates O(n log n) map lookups during sort comparisons.
-	// Uses cached GetSprite() getter for ~93x faster component access.
+// collectEntitiesWithSprites gathers entities with sprites and caches their Y positions.
+func (r *EbitenRenderSystem) collectEntitiesWithSprites(entities []*Entity) {
 	for _, entity := range entities {
 		if sprite := entity.GetSprite(); sprite != nil {
-			// Cache Y position now to avoid map lookups during sort
 			yPos := 0.0
 			if pos := entity.GetPosition(); pos != nil {
 				yPos = pos.Y
@@ -1162,11 +1167,10 @@ func (r *EbitenRenderSystem) sortEntitiesByLayer(entities []*Entity) []*Entity {
 			})
 		}
 	}
+}
 
-	// Sort using slices.SortFunc which is a generic function that avoids
-	// the interface allocation that sort.Sort causes when converting the slice
-	// to a sort.Interface. This eliminates 1 allocation per frame (24 bytes).
-	// Determinism is guaranteed by tertiary sort on entity ID - no two entities have identical sort keys.
+// sortCollectedEntities sorts cached entities by layer, Y position, and ID.
+func (r *EbitenRenderSystem) sortCollectedEntities() {
 	slices.SortFunc(r.sortCacheBuffer, func(a, b entitySprite) int {
 		// Primary sort: by sprite layer
 		if a.layer != b.layer {
@@ -1179,12 +1183,13 @@ func (r *EbitenRenderSystem) sortEntitiesByLayer(entities []*Entity) []*Entity {
 		// Tertiary sort: by entity ID for complete determinism
 		return cmp.Compare(a.entity.ID, b.entity.ID)
 	})
+}
 
-	// Extract sorted entities into reusable buffer
+// extractSortedEntities extracts the sorted entity list from the cache buffer.
+func (r *EbitenRenderSystem) extractSortedEntities() []*Entity {
 	for _, es := range r.sortCacheBuffer {
 		r.sortBuffer = append(r.sortBuffer, es.entity)
 	}
-
 	return r.sortBuffer
 }
 

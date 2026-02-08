@@ -95,41 +95,62 @@ func (m *Manager) RemoveMod(modID string) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	// Check if mod exists
 	mod, exists := m.mods[modID]
 	if !exists {
 		return fmt.Errorf("mod %s not found", modID)
 	}
 
-	// Check for dependent mods
-	for _, otherMod := range m.mods {
-		for _, depID := range otherMod.Dependencies {
-			if depID == modID {
-				return fmt.Errorf("cannot remove %s: mod %s depends on it", modID, otherMod.ID)
-			}
-		}
+	if err := m.checkModDependencies(modID); err != nil {
+		return err
 	}
 
-	// Remove event handlers belonging to this mod only
-	for eventType := range mod.EventHandlers {
-		handlers := m.eventHandlers[eventType]
-		filtered := handlers[:0]
-		for _, h := range handlers {
-			if h.modID != modID {
-				filtered = append(filtered, h)
-			}
-		}
-		if len(filtered) > 0 {
-			m.eventHandlers[eventType] = filtered
-		} else {
-			delete(m.eventHandlers, eventType)
-		}
-	}
-
-	// Remove mod
+	m.removeModEventHandlers(mod, modID)
 	delete(m.mods, modID)
 
 	return nil
+}
+
+// checkModDependencies validates that no other mods depend on the given mod.
+func (m *Manager) checkModDependencies(modID string) error {
+	for _, otherMod := range m.mods {
+		if hasDependency(otherMod.Dependencies, modID) {
+			return fmt.Errorf("cannot remove %s: mod %s depends on it", modID, otherMod.ID)
+		}
+	}
+	return nil
+}
+
+// hasDependency checks if depID exists in the dependencies list.
+func hasDependency(dependencies []string, depID string) bool {
+	for _, id := range dependencies {
+		if id == depID {
+			return true
+		}
+	}
+	return false
+}
+
+// removeModEventHandlers removes all event handlers registered by the given mod.
+func (m *Manager) removeModEventHandlers(mod *Mod, modID string) {
+	for eventType := range mod.EventHandlers {
+		m.filterEventHandlers(eventType, modID)
+	}
+}
+
+// filterEventHandlers removes handlers for the specified mod from an event type.
+func (m *Manager) filterEventHandlers(eventType, modID string) {
+	handlers := m.eventHandlers[eventType]
+	filtered := handlers[:0]
+	for _, h := range handlers {
+		if h.modID != modID {
+			filtered = append(filtered, h)
+		}
+	}
+	if len(filtered) > 0 {
+		m.eventHandlers[eventType] = filtered
+	} else {
+		delete(m.eventHandlers, eventType)
+	}
 }
 
 // GetMod retrieves a mod by ID.

@@ -578,42 +578,62 @@ func (g *GraphGrammarGenerator) identifyCriticalPath(graph *DungeonGraph) {
 
 // validateGraph ensures the graph meets quality requirements.
 func (g *GraphGrammarGenerator) validateGraph(graph *DungeonGraph) error {
-	// Check for start room
 	if graph.StartRoom == nil {
 		return fmt.Errorf("graph has no start room")
 	}
 
-	// Check that all rooms are reachable from start
+	if err := g.validateRoomReachability(graph); err != nil {
+		return err
+	}
+
+	if err := g.validateCriticalPath(graph); err != nil {
+		return err
+	}
+
+	return g.validateNarrativeDepth(graph)
+}
+
+// validateRoomReachability checks that all rooms are reachable from start.
+func (g *GraphGrammarGenerator) validateRoomReachability(graph *DungeonGraph) error {
 	reachable := g.countReachableRooms(graph)
 	if reachable < len(graph.Rooms) {
 		return fmt.Errorf("not all rooms are reachable from start (%d/%d)", reachable, len(graph.Rooms))
 	}
+	return nil
+}
 
-	// Check for critical path (must have at least 2 rooms for meaningful progression)
+// validateCriticalPath checks that the critical path has sufficient length.
+func (g *GraphGrammarGenerator) validateCriticalPath(graph *DungeonGraph) error {
 	if len(graph.CriticalPath) < 2 {
 		return fmt.Errorf("critical path too short (%d rooms, need at least 2)", len(graph.CriticalPath))
 	}
+	return nil
+}
 
-	// Check narrative depth progression (must be positive when boss room exists)
-	// Boss room can be identified either by BossRoom field or by room type in critical path
-	hasBoss := graph.BossRoom != nil
-	if !hasBoss {
-		for _, room := range graph.CriticalPath {
-			if room.Type == RoomBoss {
-				hasBoss = true
-				break
-			}
-		}
-	}
-
-	if hasBoss && graph.NarrativeDepth <= 0 {
-		return fmt.Errorf("narrative depth must be positive when boss room exists (%d)", graph.NarrativeDepth)
-	}
+// validateNarrativeDepth ensures narrative depth is valid when boss room exists.
+func (g *GraphGrammarGenerator) validateNarrativeDepth(graph *DungeonGraph) error {
 	if graph.NarrativeDepth < 0 {
 		return fmt.Errorf("narrative depth negative (%d)", graph.NarrativeDepth)
 	}
 
+	if hasBossRoom(graph) && graph.NarrativeDepth <= 0 {
+		return fmt.Errorf("narrative depth must be positive when boss room exists (%d)", graph.NarrativeDepth)
+	}
+
 	return nil
+}
+
+// hasBossRoom checks if the graph contains a boss room.
+func hasBossRoom(graph *DungeonGraph) bool {
+	if graph.BossRoom != nil {
+		return true
+	}
+	for _, room := range graph.CriticalPath {
+		if room.Type == RoomBoss {
+			return true
+		}
+	}
+	return false
 }
 
 // countReachableRooms counts how many rooms are reachable from the start.

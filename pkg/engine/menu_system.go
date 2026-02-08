@@ -1101,34 +1101,55 @@ func (ms *EbitenMenuSystem) drawControlsHint(img *ebiten.Image, menuX, menuY int
 // SetActive opens or closes the menu.
 // Implements UISystem interface.
 func (ms *EbitenMenuSystem) SetActive(active bool) {
+	ms.logSetActiveStart(active)
+
+	if active {
+		ms.activateMenu()
+	} else {
+		ms.deactivateMenu()
+	}
+
+	ms.logSetActiveComplete(active)
+}
+
+// logSetActiveStart logs the start of SetActive operation.
+func (ms *EbitenMenuSystem) logSetActiveStart(active bool) {
 	if ms.logger != nil {
 		ms.logger.WithFields(logrus.Fields{
 			"active":          active,
 			"has_menu_entity": ms.menuEntity != nil,
 		}).Debug("SetActive called")
 	}
+}
 
-	if active {
-		if ms.menuEntity == nil {
-			if ms.logger != nil {
-				ms.logger.Debug("Activating menu via SetActive")
-			}
-			ms.Toggle()
+// activateMenu activates the menu if it's not already active.
+func (ms *EbitenMenuSystem) activateMenu() {
+	if ms.menuEntity == nil {
+		if ms.logger != nil {
+			ms.logger.Debug("Activating menu via SetActive")
+		}
+		ms.Toggle()
+	}
+}
+
+// deactivateMenu deactivates the menu if it's currently active.
+func (ms *EbitenMenuSystem) deactivateMenu() {
+	if ms.menuEntity != nil {
+		entityID := ms.menuEntity.ID
+		ms.world.RemoveEntity(entityID)
+		ms.menuEntity = nil
+		if ms.logger != nil {
+			ms.logger.WithField("entity_id", entityID).Info("Menu entity removed")
 		}
 	} else {
-		if ms.menuEntity != nil {
-			entityID := ms.menuEntity.ID
-			ms.world.RemoveEntity(entityID)
-			ms.menuEntity = nil
-			if ms.logger != nil {
-				ms.logger.WithField("entity_id", entityID).Info("Menu entity removed")
-			}
-		} else {
-			if ms.logger != nil {
-				ms.logger.Debug("SetActive(false) called but no menu entity exists")
-			}
+		if ms.logger != nil {
+			ms.logger.Debug("SetActive(false) called but no menu entity exists")
 		}
 	}
+}
+
+// logSetActiveComplete logs the completion of SetActive operation.
+func (ms *EbitenMenuSystem) logSetActiveComplete(active bool) {
 	if ms.logger != nil {
 		ms.logger.WithFields(logrus.Fields{
 			"active":          active,

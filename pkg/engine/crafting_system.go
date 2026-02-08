@@ -189,29 +189,17 @@ func (s *CraftingSystem) StartCraft(entityID uint64, recipe *Recipe, stationID u
 		return nil, err
 	}
 
-	if result := s.validateRecipeKnowledge(entity, recipe); result != nil {
-		return result, nil
-	}
-
-	skillLevel := s.getCraftingSkillLevel(entity)
-	if result := s.validateSkillLevel(entityID, recipe, skillLevel); result != nil {
-		return result, nil
-	}
-
 	invComp, err := s.getInventoryComponent(entity)
 	if err != nil {
 		s.logInventoryError(entityID, err)
 		return nil, err
 	}
 
-	if result := s.validateCraftingMaterials(entityID, recipe, invComp); result != nil {
+	if result := s.validateAllCraftingRequirements(entity, entityID, recipe, invComp); result != nil {
 		return result, nil
 	}
 
-	if result := s.validateInventorySpace(entityID, recipe, invComp); result != nil {
-		return result, nil
-	}
-
+	skillLevel := s.getCraftingSkillLevel(entity)
 	stationBonus, craftTimeMultiplier, err := s.processStationValidation(entityID, recipe, stationID)
 	if err != nil {
 		return &CraftingResult{
@@ -227,17 +215,7 @@ func (s *CraftingSystem) StartCraft(entityID uint64, recipe *Recipe, stationID u
 	}
 
 	s.createCraftingProgress(entity, recipe, stationID, craftTimeMultiplier, skillLevel, stationBonus, consumed)
-
-	if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.InfoLevel {
-		s.logger.WithFields(logrus.Fields{
-			"entity_id":      entityID,
-			"recipe_id":      recipe.ID,
-			"recipe_name":    recipe.Name,
-			"skill_level":    skillLevel,
-			"station_id":     stationID,
-			"materials_used": len(consumed),
-		}).Info("craft started successfully")
-	}
+	s.logCraftSuccess(entityID, recipe, stationID, skillLevel, consumed)
 
 	return &CraftingResult{
 		Success:       true,
@@ -1273,5 +1251,42 @@ func (s *CraftingSystem) createCraftingProgress(entity *Entity, recipe *Recipe, 
 			"craft_time":     actualCraftTime,
 			"materials_used": len(consumed),
 		}).Debug("started crafting")
+	}
+}
+
+// validateAllCraftingRequirements performs all crafting prerequisite validations.
+// Returns CraftingResult if validation fails, nil if all validations pass.
+func (s *CraftingSystem) validateAllCraftingRequirements(entity *Entity, entityID uint64, recipe *Recipe, invComp *InventoryComponent) *CraftingResult {
+	if result := s.validateRecipeKnowledge(entity, recipe); result != nil {
+		return result
+	}
+
+	skillLevel := s.getCraftingSkillLevel(entity)
+	if result := s.validateSkillLevel(entityID, recipe, skillLevel); result != nil {
+		return result
+	}
+
+	if result := s.validateCraftingMaterials(entityID, recipe, invComp); result != nil {
+		return result
+	}
+
+	if result := s.validateInventorySpace(entityID, recipe, invComp); result != nil {
+		return result
+	}
+
+	return nil
+}
+
+// logCraftSuccess logs successful craft initiation.
+func (s *CraftingSystem) logCraftSuccess(entityID uint64, recipe *Recipe, stationID uint64, skillLevel int, consumed []string) {
+	if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.InfoLevel {
+		s.logger.WithFields(logrus.Fields{
+			"entity_id":      entityID,
+			"recipe_id":      recipe.ID,
+			"recipe_name":    recipe.Name,
+			"skill_level":    skillLevel,
+			"station_id":     stationID,
+			"materials_used": len(consumed),
+		}).Info("craft started successfully")
 	}
 }

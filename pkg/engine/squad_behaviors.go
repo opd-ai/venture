@@ -10,53 +10,74 @@ import (
 // NewMaintainFormationAction creates an action that moves towards formation position.
 func NewMaintainFormationAction() *ActionNode {
 	return NewActionNode("MaintainFormation", func(entity *Entity, blackboard *Blackboard, deltaTime float64) NodeStatus {
-		// Get formation target position from blackboard
-		targetX, okX := blackboard.GetFloat64("formation_target_x")
-		targetY, okY := blackboard.GetFloat64("formation_target_y")
-		if !okX || !okY {
-			return NodeFailure // No formation target set
-		}
-
-		// Get current position
-		posComp, ok := entity.GetComponent("position")
-		if !ok {
-			return NodeFailure
-		}
-		pos, ok := posComp.(*PositionComponent)
+		targetX, targetY, ok := getFormationTarget(blackboard)
 		if !ok {
 			return NodeFailure
 		}
 
-		// Calculate distance to formation position
-		dx := targetX - pos.X
-		dy := targetY - pos.Y
-		distance := math.Sqrt(dx*dx + dy*dy)
+		pos, ok := getEntityPosition(entity)
+		if !ok {
+			return NodeFailure
+		}
 
-		// If already at formation position (within 5 pixels), success
-		if distance < 5.0 {
-			// Stop movement
-			if velComp, ok := entity.GetComponent("velocity"); ok {
-				if vel, ok := velComp.(*VelocityComponent); ok {
-					vel.VX = 0
-					vel.VY = 0
-				}
-			}
+		if isAtFormationPosition(pos, targetX, targetY) {
+			stopEntityMovement(entity)
 			return NodeSuccess
 		}
 
-		// Move towards formation position
-		if velComp, ok := entity.GetComponent("velocity"); ok {
-			if vel, ok := velComp.(*VelocityComponent); ok {
-				speed := 80.0 // Formation movement speed
-
-				// Normalize direction
-				vel.VX = (dx / distance) * speed
-				vel.VY = (dy / distance) * speed
-			}
-		}
-
+		moveToFormation(entity, pos, targetX, targetY)
 		return NodeRunning
 	})
+}
+
+// getFormationTarget retrieves formation target coordinates from blackboard.
+func getFormationTarget(blackboard *Blackboard) (float64, float64, bool) {
+	targetX, okX := blackboard.GetFloat64("formation_target_x")
+	targetY, okY := blackboard.GetFloat64("formation_target_y")
+	return targetX, targetY, okX && okY
+}
+
+// getEntityPosition retrieves and validates the position component for formations.
+func getEntityPosition(entity *Entity) (*PositionComponent, bool) {
+	posComp, ok := entity.GetComponent("position")
+	if !ok {
+		return nil, false
+	}
+	pos, ok := posComp.(*PositionComponent)
+	return pos, ok
+}
+
+// isAtFormationPosition checks if entity is within formation tolerance.
+func isAtFormationPosition(pos *PositionComponent, targetX, targetY float64) bool {
+	dx := targetX - pos.X
+	dy := targetY - pos.Y
+	distance := math.Sqrt(dx*dx + dy*dy)
+	return distance < 5.0
+}
+
+// stopEntityMovement sets entity velocity to zero.
+func stopEntityMovement(entity *Entity) {
+	if velComp, ok := entity.GetComponent("velocity"); ok {
+		if vel, ok := velComp.(*VelocityComponent); ok {
+			vel.VX = 0
+			vel.VY = 0
+		}
+	}
+}
+
+// moveToFormation directs entity movement toward formation position.
+func moveToFormation(entity *Entity, pos *PositionComponent, targetX, targetY float64) {
+	dx := targetX - pos.X
+	dy := targetY - pos.Y
+	distance := math.Sqrt(dx*dx + dy*dy)
+
+	if velComp, ok := entity.GetComponent("velocity"); ok {
+		if vel, ok := velComp.(*VelocityComponent); ok {
+			speed := 80.0
+			vel.VX = (dx / distance) * speed
+			vel.VY = (dy / distance) * speed
+		}
+	}
 }
 
 // NewFlankTargetAction creates an action that attempts to flank the current target.

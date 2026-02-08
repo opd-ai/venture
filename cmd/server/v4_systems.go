@@ -8,7 +8,6 @@ package main
 import (
 	"github.com/opd-ai/venture/pkg/engine"
 	"github.com/opd-ai/venture/pkg/integration/trade_routes"
-	"github.com/opd-ai/venture/pkg/integration/world_events"
 	"github.com/opd-ai/venture/pkg/network/federation"
 	itemgen "github.com/opd-ai/venture/pkg/procgen/item"
 	"github.com/opd-ai/venture/pkg/world/raids"
@@ -254,8 +253,8 @@ func initializeV6SystemsServer(world *engine.World, seed int64, logger *logrus.L
 	world.AddSystem(&politicsSystemWrapper{system: politicsSystem})
 
 	// Phase 42: World events system for server-authoritative event generation
-	worldEventManager := world_events.NewEventManager(seed)
-	world.AddSystem(&worldEventManagerWrapper{system: worldEventManager})
+	worldEventsSystem := engine.NewWorldEventsSystemWithLogger(world, seed, serverLogger.Logger)
+	world.AddSystem(worldEventsSystem)
 
 	// Phase 57.3: Trade routes system for automated merchant caravans
 	tradeRouteManager := trade_routes.NewRouteManager(serverID, seed)

@@ -12,7 +12,6 @@ import (
 	"github.com/opd-ai/venture/pkg/engine"
 	"github.com/opd-ai/venture/pkg/engine/physics/fluids"
 	"github.com/opd-ai/venture/pkg/integration/trade_routes"
-	"github.com/opd-ai/venture/pkg/integration/world_events"
 	"github.com/opd-ai/venture/pkg/network/federation"
 )
 
@@ -266,15 +265,6 @@ type fluidSimulatorWrapper struct {
 }
 
 func (w *fluidSimulatorWrapper) Update(entities []*engine.Entity, deltaTime float64) {
-	w.system.Update(deltaTime)
-}
-
-// worldEventManagerWrapper adapts world_events.EventManager to the System interface for server.
-type worldEventManagerWrapper struct {
-	system *world_events.EventManager
-}
-
-func (w *worldEventManagerWrapper) Update(entities []*engine.Entity, deltaTime float64) {
 	w.system.Update(deltaTime)
 }
 

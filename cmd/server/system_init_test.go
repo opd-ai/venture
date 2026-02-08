@@ -28,7 +28,7 @@ func TestInitializeV4Systems(t *testing.T) {
 
 	initialSystemCount := len(world.GetSystems())
 
-	initializeV4Systems(world, seed, logger)
+	initializeV4Systems(world, seed, logger, nil)
 
 	finalSystemCount := len(world.GetSystems())
 	addedSystems := finalSystemCount - initialSystemCount
@@ -49,8 +49,8 @@ func TestInitializeV4Systems_Deterministic(t *testing.T) {
 	logger := createTestLoggerForSystems()
 	seed := int64(12345)
 
-	initializeV4Systems(world1, seed, logger)
-	initializeV4Systems(world2, seed, logger)
+	initializeV4Systems(world1, seed, logger, nil)
+	initializeV4Systems(world2, seed, logger, nil)
 
 	// Both worlds should have the same number of systems
 	if len(world1.GetSystems()) != len(world2.GetSystems()) {
@@ -93,7 +93,7 @@ func TestInitializeV6SystemsServer(t *testing.T) {
 
 	initialSystemCount := len(world.GetSystems())
 
-	initializeV6SystemsServer(world, seed, logger)
+	initializeV6SystemsServer(world, seed, logger, nil)
 
 	finalSystemCount := len(world.GetSystems())
 	addedSystems := finalSystemCount - initialSystemCount
@@ -242,9 +242,9 @@ func TestAllSystemsInitialization_Integration(t *testing.T) {
 	itemGen := itemgen.NewItemGenerator()
 
 	// Initialize all system versions in order
-	initializeV4Systems(world, seed, logger)
+	initializeV4Systems(world, seed, logger, nil)
 	initializeV5SystemsServer(world, logger)
-	initializeV6SystemsServer(world, seed, logger)
+	initializeV6SystemsServer(world, seed, logger, nil)
 	guildManager, fleetManager := initializeV8SystemsServer(world, seed, "test-server", logger)
 	initializeCoreGameplaySystems(world, seed, logger, inventorySystem, itemGen)
 
@@ -285,7 +285,7 @@ func TestInitializeV4Systems_DifferentSeeds(t *testing.T) {
 			world := engine.NewWorld()
 			logger := createTestLoggerForSystems()
 
-			initializeV4Systems(world, tt.seed, logger)
+			initializeV4Systems(world, tt.seed, logger, nil)
 
 			systemCount := len(world.GetSystems())
 			if systemCount == 0 {
@@ -314,9 +314,9 @@ func TestSystemInitialization_LoggerLevels(t *testing.T) {
 			logger.SetLevel(level)
 
 			// Should not panic regardless of log level
-			initializeV4Systems(world, 12345, logger)
+			initializeV4Systems(world, 12345, logger, nil)
 			initializeV5SystemsServer(world, logger)
-			initializeV6SystemsServer(world, 12345, logger)
+			initializeV6SystemsServer(world, 12345, logger, nil)
 			guildMgr, _ := initializeV8SystemsServer(world, 12345, "test-server", logger)
 			initializeV9SystemsServer(world, 12345, guildMgr, logger)
 
@@ -335,7 +335,7 @@ func BenchmarkInitializeV4Systems(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		world := engine.NewWorld()
-		initializeV4Systems(world, seed, logger)
+		initializeV4Systems(world, seed, logger, nil)
 	}
 }
 
@@ -358,7 +358,7 @@ func BenchmarkInitializeV6SystemsServer(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		world := engine.NewWorld()
-		initializeV6SystemsServer(world, seed, logger)
+		initializeV6SystemsServer(world, seed, logger, nil)
 	}
 }
 
@@ -398,9 +398,9 @@ func BenchmarkInitializeAllSystems(b *testing.B) {
 		inventorySystem := engine.NewInventorySystem(world)
 		itemGen := itemgen.NewItemGenerator()
 
-		initializeV4Systems(world, seed, logger)
+		initializeV4Systems(world, seed, logger, nil)
 		initializeV5SystemsServer(world, logger)
-		initializeV6SystemsServer(world, seed, logger)
+		initializeV6SystemsServer(world, seed, logger, nil)
 		guildManager, _ := initializeV8SystemsServer(world, seed, "test-server", logger)
 		initializeCoreGameplaySystems(world, seed, logger, inventorySystem, itemGen)
 		initializeV9SystemsServer(world, seed, guildManager, logger)

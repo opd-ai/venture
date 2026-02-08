@@ -116,41 +116,50 @@ func (cp *ClientPredictor) ReconcileServerState(serverSeq uint32, serverPos Posi
 
 	cp.lastAckedSeq = serverSeq
 
-	// Find the state that corresponds to the server's acknowledged sequence
-	stateIndex := -1
-	for i, state := range cp.stateHistory {
-		if state.Sequence == serverSeq {
-			stateIndex = i
-			break
-		}
-	}
-
-	// If we don't have the state anymore, trust the server completely
+	stateIndex := findStateIndex(cp.stateHistory, serverSeq)
 	if stateIndex == -1 {
-		cp.currentState = PredictedState{
-			Sequence:  serverSeq,
-			Timestamp: time.Now(),
-			Position:  serverPos,
-			Velocity:  serverVel,
-		}
-		cp.stateHistory = make([]PredictedState, 0, cp.maxHistory)
-		return cp.currentState
+		return cp.resetToServerState(serverSeq, serverPos, serverVel)
 	}
 
-	// Check if there's a significant difference (prediction error)
-	predicted := cp.stateHistory[stateIndex]
-	errorX := serverPos.X - predicted.Position.X
-	errorY := serverPos.Y - predicted.Position.Y
-
-	if abs(errorX) < cp.errorThreshold && abs(errorY) < cp.errorThreshold {
-		// Prediction was accurate, no correction needed
-		// Just remove old states
+	if isPredictionAccurate(cp.stateHistory[stateIndex], serverPos, cp.errorThreshold) {
 		cp.stateHistory = cp.stateHistory[stateIndex+1:]
 		return cp.currentState
 	}
 
-	// Prediction error detected, need to correct and replay
-	// Start from the server's authoritative state
+	return cp.correctAndReplay(stateIndex, serverSeq, serverPos, serverVel)
+}
+
+// findStateIndex locates the state matching the server sequence.
+func findStateIndex(history []PredictedState, serverSeq uint32) int {
+	for i, state := range history {
+		if state.Sequence == serverSeq {
+			return i
+		}
+	}
+	return -1
+}
+
+// resetToServerState resets client state to match server when history is lost.
+func (cp *ClientPredictor) resetToServerState(serverSeq uint32, serverPos Position, serverVel Velocity) PredictedState {
+	cp.currentState = PredictedState{
+		Sequence:  serverSeq,
+		Timestamp: time.Now(),
+		Position:  serverPos,
+		Velocity:  serverVel,
+	}
+	cp.stateHistory = make([]PredictedState, 0, cp.maxHistory)
+	return cp.currentState
+}
+
+// isPredictionAccurate checks if prediction error is within threshold.
+func isPredictionAccurate(predicted PredictedState, serverPos Position, threshold float64) bool {
+	errorX := serverPos.X - predicted.Position.X
+	errorY := serverPos.Y - predicted.Position.Y
+	return abs(errorX) < threshold && abs(errorY) < threshold
+}
+
+// correctAndReplay corrects prediction error and replays subsequent inputs.
+func (cp *ClientPredictor) correctAndReplay(stateIndex int, serverSeq uint32, serverPos Position, serverVel Velocity) PredictedState {
 	correctedState := PredictedState{
 		Sequence:  serverSeq,
 		Timestamp: time.Now(),
@@ -158,40 +167,47 @@ func (cp *ClientPredictor) ReconcileServerState(serverSeq uint32, serverPos Posi
 		Velocity:  serverVel,
 	}
 
-	// Replay all inputs that came after the acknowledged one
 	inputsToReplay := cp.stateHistory[stateIndex+1:]
+	predicted := cp.stateHistory[stateIndex]
+
 	for i, oldState := range inputsToReplay {
-		// Calculate deltaTime between states
-		var deltaTime float64
-		if i > 0 {
-			deltaTime = oldState.Timestamp.Sub(inputsToReplay[i-1].Timestamp).Seconds()
-		} else if stateIndex >= 0 {
-			deltaTime = oldState.Timestamp.Sub(predicted.Timestamp).Seconds()
-		} else {
-			deltaTime = 0.05 // Default to 50ms
-		}
-
-		// Clamp deltaTime
-		if deltaTime > 0.1 {
-			deltaTime = 0.1
-		}
-
-		// Re-apply the input
-		dx := oldState.Velocity.VX - correctedState.Velocity.VX
-		dy := oldState.Velocity.VY - correctedState.Velocity.VY
-
-		correctedState.Velocity.VX += dx
-		correctedState.Velocity.VY += dy
-		correctedState.Position.X += correctedState.Velocity.VX * deltaTime
-		correctedState.Position.Y += correctedState.Velocity.VY * deltaTime
-		correctedState.Sequence = oldState.Sequence
+		deltaTime := calculateReplayDelta(i, oldState, inputsToReplay, predicted)
+		applyInputReplay(&correctedState, oldState, deltaTime)
 	}
 
-	// Update history to only keep replayed states
 	cp.stateHistory = inputsToReplay
 	cp.currentState = correctedState
-
 	return correctedState
+}
+
+// calculateReplayDelta computes delta time for input replay.
+func calculateReplayDelta(i int, oldState PredictedState, inputsToReplay []PredictedState, predicted PredictedState) float64 {
+	var deltaTime float64
+	if i > 0 {
+		deltaTime = oldState.Timestamp.Sub(inputsToReplay[i-1].Timestamp).Seconds()
+	} else {
+		deltaTime = oldState.Timestamp.Sub(predicted.Timestamp).Seconds()
+	}
+
+	if deltaTime > 0.1 {
+		deltaTime = 0.1
+	}
+	if deltaTime < 0 {
+		deltaTime = 0.05
+	}
+	return deltaTime
+}
+
+// applyInputReplay applies a single input during state replay.
+func applyInputReplay(corrected *PredictedState, oldState PredictedState, deltaTime float64) {
+	dx := oldState.Velocity.VX - corrected.Velocity.VX
+	dy := oldState.Velocity.VY - corrected.Velocity.VY
+
+	corrected.Velocity.VX += dx
+	corrected.Velocity.VY += dy
+	corrected.Position.X += corrected.Velocity.VX * deltaTime
+	corrected.Position.Y += corrected.Velocity.VY * deltaTime
+	corrected.Sequence = oldState.Sequence
 }
 
 // GetCurrentState returns the current predicted state

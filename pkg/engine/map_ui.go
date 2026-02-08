@@ -360,30 +360,43 @@ func (ui *EbitenMapUI) drawMinimap(screen *ebiten.Image) {
 		return
 	}
 
-	// Calculate minimap position (top-right corner)
+	mapX, mapY := calculateMinimapPosition(ui)
+	drawMinimapFrame(screen, mapX, mapY, ui.minimapSize)
+
+	tileScale := calculateTileScale(ui)
+	drawMinimapTerrain(screen, ui, mapX, mapY, tileScale)
+	drawMinimapPlayer(screen, ui, mapX, mapY, tileScale)
+	drawMinimapCompass(screen, mapX, mapY, ui.minimapSize)
+}
+
+// calculateMinimapPosition computes the top-right corner position.
+func calculateMinimapPosition(ui *EbitenMapUI) (int, int) {
 	mapX := ui.screenWidth - ui.minimapSize - ui.minimapPadding
 	mapY := ui.minimapPadding
+	return mapX, mapY
+}
 
-	// Draw minimap background
+// drawMinimapFrame draws the background and border.
+func drawMinimapFrame(screen *ebiten.Image, mapX, mapY, size int) {
 	vector.DrawFilledRect(screen, float32(mapX), float32(mapY),
-		float32(ui.minimapSize), float32(ui.minimapSize),
-		color.RGBA{0, 0, 0, 200}, false)
-
-	// Draw minimap border
+		float32(size), float32(size), color.RGBA{0, 0, 0, 200}, false)
 	vector.StrokeRect(screen, float32(mapX), float32(mapY),
-		float32(ui.minimapSize), float32(ui.minimapSize), 2,
-		color.RGBA{255, 255, 255, 255}, false)
+		float32(size), float32(size), 2, color.RGBA{255, 255, 255, 255}, false)
+}
 
-	// Calculate tile scaling
+// calculateTileScale determines the scaling factor for minimap tiles.
+func calculateTileScale(ui *EbitenMapUI) float64 {
 	scaleX := float64(ui.minimapSize) / float64(ui.terrain.Width)
 	scaleY := float64(ui.minimapSize) / float64(ui.terrain.Height)
-	tileScale := math.Min(scaleX, scaleY)
+	return math.Min(scaleX, scaleY)
+}
 
-	// Draw terrain tiles
+// drawMinimapTerrain renders explored terrain tiles on the minimap.
+func drawMinimapTerrain(screen *ebiten.Image, ui *EbitenMapUI, mapX, mapY int, tileScale float64) {
 	for y := 0; y < ui.terrain.Height; y++ {
 		for x := 0; x < ui.terrain.Width; x++ {
 			if !ui.fogOfWar[y][x] {
-				continue // Skip unexplored tiles
+				continue
 			}
 
 			tileType := ui.terrain.GetTile(x, y)
@@ -392,7 +405,6 @@ func (ui *EbitenMapUI) drawMinimap(screen *ebiten.Image) {
 			pixelX := float32(mapX) + float32(float64(x)*tileScale)
 			pixelY := float32(mapY) + float32(float64(y)*tileScale)
 			pixelSize := float32(tileScale)
-
 			if pixelSize < 1 {
 				pixelSize = 1
 			}
@@ -400,29 +412,35 @@ func (ui *EbitenMapUI) drawMinimap(screen *ebiten.Image) {
 			vector.DrawFilledRect(screen, pixelX, pixelY, pixelSize, pixelSize, tileColor, false)
 		}
 	}
+}
 
-	// Draw player icon
-	if posComp, ok := ui.playerEntity.GetComponent("position"); ok {
-		// Type assert with safety check
-		if pos, ok := posComp.(*PositionComponent); ok {
-			// Convert world position to tile coordinates (assuming 32px tiles)
-			tileX := int(pos.X / 32)
-			tileY := int(pos.Y / 32)
-
-			if tileX >= 0 && tileX < ui.terrain.Width && tileY >= 0 && tileY < ui.terrain.Height {
-				pixelX := float32(mapX) + float32(float64(tileX)*tileScale)
-				pixelY := float32(mapY) + float32(float64(tileY)*tileScale)
-
-				// Draw player as blue circle
-				vector.DrawFilledCircle(screen, pixelX, pixelY, 3, color.RGBA{100, 150, 255, 255}, false)
-			}
-		}
+// drawMinimapPlayer renders the player icon on the minimap.
+func drawMinimapPlayer(screen *ebiten.Image, ui *EbitenMapUI, mapX, mapY int, tileScale float64) {
+	posComp, ok := ui.playerEntity.GetComponent("position")
+	if !ok {
+		return
 	}
 
-	// Draw compass rose (N indicator)
+	pos, ok := posComp.(*PositionComponent)
+	if !ok {
+		return
+	}
+
+	tileX := int(pos.X / 32)
+	tileY := int(pos.Y / 32)
+
+	if tileX >= 0 && tileX < ui.terrain.Width && tileY >= 0 && tileY < ui.terrain.Height {
+		pixelX := float32(mapX) + float32(float64(tileX)*tileScale)
+		pixelY := float32(mapY) + float32(float64(tileY)*tileScale)
+		vector.DrawFilledCircle(screen, pixelX, pixelY, 3, color.RGBA{100, 150, 255, 255}, false)
+	}
+}
+
+// drawMinimapCompass renders the compass indicator.
+func drawMinimapCompass(screen *ebiten.Image, mapX, mapY, size int) {
 	compassText := "N"
 	text.Draw(screen, compassText, basicfont.Face7x13,
-		mapX+ui.minimapSize/2-3, mapY-5, color.RGBA{255, 255, 255, 255})
+		mapX+size/2-3, mapY-5, color.RGBA{255, 255, 255, 255})
 }
 
 // drawFullScreenMap renders the large detailed map.

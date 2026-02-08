@@ -412,23 +412,40 @@ func (n *NGPlusRewardComponent) Deserialize(data []byte) error {
 	n.mu.Lock()
 	defer n.mu.Unlock()
 
-	var temp NGPlusRewardComponent
-	if err := json.Unmarshal(data, &temp); err != nil {
+	temp, err := unmarshalRewardData(data)
+	if err != nil {
 		return err
 	}
 
-	n.ExclusiveAchievements = temp.ExclusiveAchievements
-	n.ExclusiveItems = temp.ExclusiveItems
-	n.TitlesUnlocked = temp.TitlesUnlocked
-	n.ChallengesCompleted = temp.ChallengesCompleted
-	n.ChallengesActive = temp.ChallengesActive
-	n.HighestTierReached = temp.HighestTierReached
-	n.CurrentTitle = temp.CurrentTitle
-	n.TimeAttackBestTimes = temp.TimeAttackBestTimes
-	n.NoDeathRunProgress = temp.NoDeathRunProgress
-	n.NPCDialogVariationsUnlocked = temp.NPCDialogVariationsUnlocked
+	copyRewardFields(n, &temp)
+	initializeNilFields(n)
 
-	// Initialize nil maps/slices
+	return nil
+}
+
+// unmarshalRewardData deserializes JSON data into a temporary component.
+func unmarshalRewardData(data []byte) (NGPlusRewardComponent, error) {
+	var temp NGPlusRewardComponent
+	err := json.Unmarshal(data, &temp)
+	return temp, err
+}
+
+// copyRewardFields copies all fields from source to destination.
+func copyRewardFields(dst, src *NGPlusRewardComponent) {
+	dst.ExclusiveAchievements = src.ExclusiveAchievements
+	dst.ExclusiveItems = src.ExclusiveItems
+	dst.TitlesUnlocked = src.TitlesUnlocked
+	dst.ChallengesCompleted = src.ChallengesCompleted
+	dst.ChallengesActive = src.ChallengesActive
+	dst.HighestTierReached = src.HighestTierReached
+	dst.CurrentTitle = src.CurrentTitle
+	dst.TimeAttackBestTimes = src.TimeAttackBestTimes
+	dst.NoDeathRunProgress = src.NoDeathRunProgress
+	dst.NPCDialogVariationsUnlocked = src.NPCDialogVariationsUnlocked
+}
+
+// initializeNilFields ensures all maps and slices are non-nil.
+func initializeNilFields(n *NGPlusRewardComponent) {
 	if n.ExclusiveAchievements == nil {
 		n.ExclusiveAchievements = []string{}
 	}
@@ -453,8 +470,6 @@ func (n *NGPlusRewardComponent) Deserialize(data []byte) error {
 	if n.NPCDialogVariationsUnlocked == nil {
 		n.NPCDialogVariationsUnlocked = []string{}
 	}
-
-	return nil
 }
 
 // NGPlusAchievementDefinition defines an NG+ exclusive achievement.

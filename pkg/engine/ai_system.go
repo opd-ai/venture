@@ -857,10 +857,21 @@ func (ai *AISystem) processFlee(entity *Entity, aiComp *AIComponent, pos *Positi
 // processReturn handles the return state - go back to spawn point.
 func (ai *AISystem) processReturn(entity *Entity, aiComp *AIComponent, pos *PositionComponent) {
 	distance := aiComp.GetDistanceFromSpawn(pos.X, pos.Y)
+	ai.logReturnState(entity.ID, aiComp, pos, distance)
 
+	if distance < 10.0 {
+		ai.handleReturnComplete(entity, aiComp)
+		return
+	}
+
+	ai.moveTowards(entity, pos, aiComp.SpawnX, aiComp.SpawnY, aiComp.GetSpeedMultiplier())
+}
+
+// logReturnState logs the return state processing details.
+func (ai *AISystem) logReturnState(entityID uint64, aiComp *AIComponent, pos *PositionComponent, distance float64) {
 	if ai.logger != nil && aiDebugEnabled {
 		ai.logger.WithFields(logrus.Fields{
-			"entity_id": entity.ID,
+			"entity_id": entityID,
 			"state":     aiComp.State.String(),
 			"distance":  distance,
 			"spawn_x":   aiComp.SpawnX,
@@ -869,43 +880,36 @@ func (ai *AISystem) processReturn(entity *Entity, aiComp *AIComponent, pos *Posi
 			"current_y": pos.Y,
 		}).Debug("Processing return state")
 	}
+}
 
-	// If close enough to spawn, go idle
-	if distance < 10.0 {
-		if ai.logger != nil && aiDebugEnabled {
-			ai.logger.WithFields(logrus.Fields{
-				"entity_id":        entity.ID,
-				"state_transition": "Return->Idle",
-				"distance":         distance,
-			}).Debug("AI returned to spawn")
-		}
-		aiComp.ChangeState(AIStateIdle)
-		if ai.logger != nil && aiDebugEnabled {
-			ai.logger.WithFields(logrus.Fields{
-				"entity_id":  entity.ID,
-				"new_state":  AIStateIdle.String(),
-				"prev_state": AIStateReturn.String(),
-			}).Debug("State transition completed")
-		}
-		// Stop movement - Use cached GetVelocity() getter for ~93x faster access
-		if vel := entity.GetVelocity(); vel != nil {
-			vel.VX = 0
-			vel.VY = 0
-		}
+// handleReturnComplete transitions entity to idle when return is complete.
+func (ai *AISystem) handleReturnComplete(entity *Entity, aiComp *AIComponent) {
+	ai.logReturnCompletion(entity.ID)
+	aiComp.ChangeState(AIStateIdle)
+	ai.logStateTransition(entity.ID, AIStateReturn, AIStateIdle, "returned_to_spawn")
+	ai.stopEntityMovement(entity)
+	ai.setIdleAnimation(entity)
+}
 
-		// GAP-018 REPAIR: Set animation to idle when stopped
-		if animComp, ok := entity.GetComponent("animation"); ok {
-			if anim, ok := animComp.(*AnimationComponent); ok {
-				if anim.CurrentState != AnimationStateIdle {
-					anim.SetState(AnimationStateIdle)
-				}
+// logReturnCompletion logs successful return to spawn point.
+func (ai *AISystem) logReturnCompletion(entityID uint64) {
+	if ai.logger != nil && aiDebugEnabled {
+		ai.logger.WithFields(logrus.Fields{
+			"entity_id":        entityID,
+			"state_transition": "Return->Idle",
+		}).Debug("AI returned to spawn")
+	}
+}
+
+// setIdleAnimation sets entity animation to idle state.
+func (ai *AISystem) setIdleAnimation(entity *Entity) {
+	if animComp, ok := entity.GetComponent("animation"); ok {
+		if anim, ok := animComp.(*AnimationComponent); ok {
+			if anim.CurrentState != AnimationStateIdle {
+				anim.SetState(AnimationStateIdle)
 			}
 		}
-		return
 	}
-
-	// Move towards spawn
-	ai.moveTowards(entity, pos, aiComp.SpawnX, aiComp.SpawnY, aiComp.GetSpeedMultiplier())
 }
 
 // transitionToFlee switches to flee state and sets up retreat.

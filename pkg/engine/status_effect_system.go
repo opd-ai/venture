@@ -621,50 +621,68 @@ func (s *StatusEffectSystem) applyVulnerabilityEffect(entityID uint64, stats *St
 
 // ApplyShield creates a shield on the entity.
 func (s *StatusEffectSystem) ApplyShield(entity *Entity, amount, duration float64) {
-	if s.logger != nil {
-		s.logger.WithFields(logrus.Fields{
-			"entity_id": entity.ID,
+	logShieldApplication(s.logger, entity.ID, amount, duration)
+
+	if enhanceExistingShield(s.logger, entity, amount, duration) {
+		return
+	}
+
+	createNewShield(s.logger, entity, amount, duration)
+}
+
+// logShieldApplication logs the shield application attempt.
+func logShieldApplication(logger *logrus.Entry, entityID uint64, amount, duration float64) {
+	if logger != nil {
+		logger.WithFields(logrus.Fields{
+			"entity_id": entityID,
 			"amount":    amount,
 			"duration":  duration,
 		}).Debug("Applying shield to entity")
 	}
+}
 
-	// Check if shield already exists
-	if shieldComp, hasShield := entity.GetComponent("shield"); hasShield {
-		// Add to existing shield
-		shield, ok := shieldComp.(*ShieldComponent)
-		if !ok {
-			if s.logger != nil {
-				s.logger.WithFields(logrus.Fields{
-					"entity_id":      entity.ID,
-					"component_type": "shield",
-				}).Warn("Failed to type assert shield component, creating new shield")
-			}
-			// Create new shield if type assertion fails (fall through)
-		} else {
-			oldAmount := shield.Amount
-			shield.Amount += amount
-			if shield.Amount > shield.MaxAmount {
-				shield.MaxAmount = shield.Amount
-			}
-			if duration > shield.Duration {
-				shield.Duration = duration
-				shield.MaxDuration = duration
-			}
-			if s.logger != nil {
-				s.logger.WithFields(logrus.Fields{
-					"entity_id":    entity.ID,
-					"old_amount":   oldAmount,
-					"new_amount":   shield.Amount,
-					"max_amount":   shield.MaxAmount,
-					"new_duration": shield.Duration,
-				}).Debug("Enhanced existing shield")
-			}
-			return
-		}
+// enhanceExistingShield attempts to enhance an existing shield.
+func enhanceExistingShield(logger *logrus.Entry, entity *Entity, amount, duration float64) bool {
+	shieldComp, hasShield := entity.GetComponent("shield")
+	if !hasShield {
+		return false
 	}
 
-	// Create new shield
+	shield, ok := shieldComp.(*ShieldComponent)
+	if !ok {
+		if logger != nil {
+			logger.WithFields(logrus.Fields{
+				"entity_id":      entity.ID,
+				"component_type": "shield",
+			}).Warn("Failed to type assert shield component, creating new shield")
+		}
+		return false
+	}
+
+	oldAmount := shield.Amount
+	shield.Amount += amount
+	if shield.Amount > shield.MaxAmount {
+		shield.MaxAmount = shield.Amount
+	}
+	if duration > shield.Duration {
+		shield.Duration = duration
+		shield.MaxDuration = duration
+	}
+
+	if logger != nil {
+		logger.WithFields(logrus.Fields{
+			"entity_id":    entity.ID,
+			"old_amount":   oldAmount,
+			"new_amount":   shield.Amount,
+			"max_amount":   shield.MaxAmount,
+			"new_duration": shield.Duration,
+		}).Debug("Enhanced existing shield")
+	}
+	return true
+}
+
+// createNewShield creates a new shield component for the entity.
+func createNewShield(logger *logrus.Entry, entity *Entity, amount, duration float64) {
 	shield := &ShieldComponent{
 		Amount:      amount,
 		MaxAmount:   amount,
@@ -673,8 +691,8 @@ func (s *StatusEffectSystem) ApplyShield(entity *Entity, amount, duration float6
 	}
 	entity.AddComponent(shield)
 
-	if s.logger != nil {
-		s.logger.WithFields(logrus.Fields{
+	if logger != nil {
+		logger.WithFields(logrus.Fields{
 			"entity_id": entity.ID,
 			"amount":    amount,
 			"duration":  duration,

@@ -1371,66 +1371,86 @@ func (s *SpellCastingSystem) shouldApplyPoison() bool {
 
 // castUtilitySpell handles non-combat spells.
 func (s *SpellCastingSystem) castUtilitySpell(caster *Entity, spell *magic.Spell) {
-	if s.logger != nil {
-		s.logger.WithFields(logrus.Fields{
-			"entity_id":  caster.ID,
+	logUtilitySpellCast(s.logger, caster.ID, spell)
+
+	if tryTagBasedUtility(s, caster, spell) {
+		return
+	}
+
+	castElementBasedUtility(s, caster, spell)
+}
+
+// logUtilitySpellCast logs the initial utility spell cast.
+func logUtilitySpellCast(logger *logrus.Entry, casterID uint64, spell *magic.Spell) {
+	if logger != nil {
+		logger.WithFields(logrus.Fields{
+			"entity_id":  casterID,
 			"spell_name": spell.Name,
 			"element":    spell.Element.String(),
 			"tags":       spell.Tags,
 		}).Debug("Casting utility spell")
 	}
+}
 
-	// Determine utility spell type based on tags and element
+// tryTagBasedUtility attempts to cast utility based on spell tags.
+func tryTagBasedUtility(s *SpellCastingSystem, caster *Entity, spell *magic.Spell) bool {
 	switch {
 	case containsTag(spell.Tags, "teleport"):
-		if s.logger != nil {
-			s.logger.WithFields(logrus.Fields{
-				"entity_id":  caster.ID,
-				"spell_name": spell.Name,
-			}).Debug("Casting teleport utility spell")
-		}
+		logSpecificUtility(s.logger, caster.ID, spell, "teleport")
 		s.castTeleportSpell(caster, spell)
+		return true
 	case containsTag(spell.Tags, "light"), containsTag(spell.Tags, "reveal"):
-		if s.logger != nil {
-			s.logger.WithFields(logrus.Fields{
-				"entity_id":  caster.ID,
-				"spell_name": spell.Name,
-			}).Debug("Casting reveal utility spell")
-		}
+		logSpecificUtility(s.logger, caster.ID, spell, "reveal")
 		s.castRevealSpell(caster, spell)
+		return true
 	case containsTag(spell.Tags, "speed"), containsTag(spell.Tags, "haste"):
-		if s.logger != nil {
-			s.logger.WithFields(logrus.Fields{
-				"entity_id":  caster.ID,
-				"spell_name": spell.Name,
-			}).Debug("Casting speed boost utility spell")
-		}
+		logSpecificUtility(s.logger, caster.ID, spell, "speed boost")
 		s.castSpeedBoostSpell(caster, spell)
+		return true
+	}
+	return false
+}
+
+// castElementBasedUtility routes utility spell based on element.
+func castElementBasedUtility(s *SpellCastingSystem, caster *Entity, spell *magic.Spell) {
+	if s.logger != nil {
+		s.logger.WithFields(logrus.Fields{
+			"entity_id":  caster.ID,
+			"spell_name": spell.Name,
+			"element":    spell.Element.String(),
+		}).Debug("Using element-based utility spell routing")
+	}
+
+	switch spell.Element {
+	case magic.ElementLight:
+		s.castRevealSpell(caster, spell)
+	case magic.ElementWind:
+		s.castSpeedBoostSpell(caster, spell)
+	case magic.ElementArcane:
+		s.castTeleportSpell(caster, spell)
 	default:
-		// Generic utility effect based on element
-		if s.logger != nil {
-			s.logger.WithFields(logrus.Fields{
-				"entity_id":  caster.ID,
-				"spell_name": spell.Name,
-				"element":    spell.Element.String(),
-			}).Debug("Using element-based utility spell routing")
-		}
-		switch spell.Element {
-		case magic.ElementLight:
-			s.castRevealSpell(caster, spell)
-		case magic.ElementWind:
-			s.castSpeedBoostSpell(caster, spell)
-		case magic.ElementArcane:
-			s.castTeleportSpell(caster, spell)
-		default:
-			if s.logger != nil {
-				s.logger.WithFields(logrus.Fields{
-					"entity_id":  caster.ID,
-					"spell_name": spell.Name,
-					"element":    spell.Element.String(),
-				}).Debug("No matching utility spell implementation for element")
-			}
-		}
+		logUnmatchedUtility(s.logger, caster.ID, spell)
+	}
+}
+
+// logSpecificUtility logs a specific utility spell type being cast.
+func logSpecificUtility(logger *logrus.Entry, casterID uint64, spell *magic.Spell, utilityType string) {
+	if logger != nil {
+		logger.WithFields(logrus.Fields{
+			"entity_id":  casterID,
+			"spell_name": spell.Name,
+		}).Debug("Casting " + utilityType + " utility spell")
+	}
+}
+
+// logUnmatchedUtility logs when no utility implementation matches the spell.
+func logUnmatchedUtility(logger *logrus.Entry, casterID uint64, spell *magic.Spell) {
+	if logger != nil {
+		logger.WithFields(logrus.Fields{
+			"entity_id":  casterID,
+			"spell_name": spell.Name,
+			"element":    spell.Element.String(),
+		}).Debug("No matching utility spell implementation for element")
 	}
 }
 

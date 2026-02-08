@@ -250,34 +250,44 @@ func (ps *PoliticsSystem) IsTradeBlocked(serverID string) bool {
 	ps.mu.RLock()
 	defer ps.mu.RUnlock()
 
-	// Check for embargo events
 	for _, event := range ps.activeEvents {
 		if !event.IsActive() {
 			continue
 		}
 
-		// Check if this event involves the target server
-		involves := false
-		for _, party := range event.PartyServers {
-			if party == serverID {
-				involves = true
-				break
-			}
-		}
-
-		if !involves {
+		if !ps.eventInvolvesServer(event, serverID) {
 			continue
 		}
 
-		// Check if trade is blocked
-		if event.Type == EventTypeEmbargo {
-			if val, exists := event.GetEffect("trade_blocked"); exists {
-				if blocked, ok := val.(bool); ok && blocked {
-					return true
-				}
-			}
+		if ps.isEmbargoBlocking(event) {
+			return true
 		}
 	}
 
-	return false // Trade allowed by default
+	return false
+}
+
+// eventInvolvesServer checks if an event involves the specified server.
+func (ps *PoliticsSystem) eventInvolvesServer(event PoliticalEvent, serverID string) bool {
+	for _, party := range event.PartyServers {
+		if party == serverID {
+			return true
+		}
+	}
+	return false
+}
+
+// isEmbargoBlocking checks if an embargo event is blocking trade.
+func (ps *PoliticsSystem) isEmbargoBlocking(event PoliticalEvent) bool {
+	if event.Type != EventTypeEmbargo {
+		return false
+	}
+
+	val, exists := event.GetEffect("trade_blocked")
+	if !exists {
+		return false
+	}
+
+	blocked, ok := val.(bool)
+	return ok && blocked
 }

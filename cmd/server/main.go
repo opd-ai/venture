@@ -631,63 +631,69 @@ func buildWorldSnapshot(world *engine.World, timestamp time.Time) network.WorldS
 		Entities:  make(map[uint64]network.EntitySnapshot),
 	}
 
-	// Convert world entities to network entity snapshots
 	for _, entity := range world.GetEntities() {
-		// Get position component
-		if posComp, ok := entity.GetComponent("position"); ok {
-			pos := posComp.(*engine.PositionComponent)
-
-			// Get velocity if it exists
-			velX, velY := 0.0, 0.0
-			if velComp, ok := entity.GetComponent("velocity"); ok {
-				vel := velComp.(*engine.VelocityComponent)
-				velX = vel.VX
-				velY = vel.VY
-			}
-
-			entitySnapshot := network.EntitySnapshot{
-				EntityID:   entity.ID,
-				Position:   network.Position{X: pos.X, Y: pos.Y},
-				Velocity:   network.Velocity{VX: velX, VY: velY},
-				Components: make(map[string][]byte), // Initialize component data map
-			}
-
-			// Serialize V4.0 component data for network transmission
-			// Vehicle component
-			if vehicleComp, ok := entity.GetComponent("vehicle"); ok {
-				vehicle := vehicleComp.(*engine.VehicleComponent)
-				entitySnapshot.Components["vehicle"] = vehicle.Serialize()
-			}
-
-			// Companion component
-			if companionComp, ok := entity.GetComponent("companion"); ok {
-				companion := companionComp.(*engine.CompanionComponent)
-				entitySnapshot.Components["companion"] = companion.Serialize()
-			}
-
-			// Mount component (rider-vehicle relationship)
-			if mountComp, ok := entity.GetComponent("mount"); ok {
-				mount := mountComp.(*engine.MountComponent)
-				entitySnapshot.Components["mount"] = mount.Serialize()
-			}
-
-			// Achievement component
-			if achievementComp, ok := entity.GetComponent("achievement"); ok {
-				achievement := achievementComp.(*engine.AchievementComponent)
-				entitySnapshot.Components["achievement"] = achievement.Serialize()
-			}
-
-			// Bookshelf component
-			if bookshelfComp, ok := entity.GetComponent("bookshelf"); ok {
-				bookshelf := bookshelfComp.(*engine.BookshelfComponent)
-				entitySnapshot.Components["bookshelf"] = bookshelf.Serialize()
-			}
-
-			snapshot.Entities[entity.ID] = entitySnapshot
+		if entitySnap := buildEntitySnapshot(entity); entitySnap != nil {
+			snapshot.Entities[entity.ID] = *entitySnap
 		}
 	}
 
 	return snapshot
+}
+
+// buildEntitySnapshot creates a network snapshot for a single entity.
+func buildEntitySnapshot(entity *engine.Entity) *network.EntitySnapshot {
+	posComp, ok := entity.GetComponent("position")
+	if !ok {
+		return nil
+	}
+
+	pos := posComp.(*engine.PositionComponent)
+	velX, velY := extractVelocity(entity)
+
+	entitySnapshot := network.EntitySnapshot{
+		EntityID:   entity.ID,
+		Position:   network.Position{X: pos.X, Y: pos.Y},
+		Velocity:   network.Velocity{VX: velX, VY: velY},
+		Components: make(map[string][]byte),
+	}
+
+	serializeEntityComponents(entity, &entitySnapshot)
+	return &entitySnapshot
+}
+
+// extractVelocity retrieves velocity from entity or returns zero values.
+func extractVelocity(entity *engine.Entity) (float64, float64) {
+	if velComp, ok := entity.GetComponent("velocity"); ok {
+		vel := velComp.(*engine.VelocityComponent)
+		return vel.VX, vel.VY
+	}
+	return 0.0, 0.0
+}
+
+// serializeEntityComponents serializes all network-relevant components.
+func serializeEntityComponents(entity *engine.Entity, snapshot *network.EntitySnapshot) {
+	serializeIfPresent(entity, snapshot, "vehicle", func(c interface{}) []byte {
+		return c.(*engine.VehicleComponent).Serialize()
+	})
+	serializeIfPresent(entity, snapshot, "companion", func(c interface{}) []byte {
+		return c.(*engine.CompanionComponent).Serialize()
+	})
+	serializeIfPresent(entity, snapshot, "mount", func(c interface{}) []byte {
+		return c.(*engine.MountComponent).Serialize()
+	})
+	serializeIfPresent(entity, snapshot, "achievement", func(c interface{}) []byte {
+		return c.(*engine.AchievementComponent).Serialize()
+	})
+	serializeIfPresent(entity, snapshot, "bookshelf", func(c interface{}) []byte {
+		return c.(*engine.BookshelfComponent).Serialize()
+	})
+}
+
+// serializeIfPresent serializes a component if it exists on the entity.
+func serializeIfPresent(entity *engine.Entity, snapshot *network.EntitySnapshot, compType string, serializer func(interface{}) []byte) {
+	if comp, ok := entity.GetComponent(compType); ok {
+		snapshot.Components[compType] = serializer(comp)
+	}
 }
 
 // convertSnapshotToStateUpdates converts a WorldSnapshot to StateUpdates for broadcasting.

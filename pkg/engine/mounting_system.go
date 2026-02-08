@@ -219,40 +219,63 @@ func (ms *MountingSystem) Dismount(rider *Entity) error {
 		return fmt.Errorf("rider entity is nil")
 	}
 
-	// Check if rider is mounted
+	mount, err := ms.validateMountComponent(rider)
+	if err != nil {
+		return err
+	}
+
+	ms.updateVehiclePassengerCount(mount.MountedEntityID)
+	rider.RemoveComponent("mount")
+	ms.logDismount(rider.ID, mount.MountedEntityID)
+
+	return nil
+}
+
+// validateMountComponent retrieves and validates the mount component from a rider.
+func (ms *MountingSystem) validateMountComponent(rider *Entity) (*MountComponent, error) {
 	mountComp, isMounted := rider.GetComponent("mount")
 	if !isMounted {
-		return fmt.Errorf("rider is not mounted")
+		return nil, fmt.Errorf("rider is not mounted")
 	}
 
 	mount, ok := mountComp.(*MountComponent)
 	if !ok {
-		return fmt.Errorf("invalid mount component type")
+		return nil, fmt.Errorf("invalid mount component type")
 	}
 
-	// Find vehicle and update passenger count
-	if ms.world != nil {
-		vehicle, exists := ms.world.GetEntity(mount.MountedEntityID)
-		if exists && vehicle != nil {
-			if vehicleComp, hasVehicle := vehicle.GetComponent("vehicle"); hasVehicle {
-				if vehicleData, ok := vehicleComp.(*VehicleComponent); ok {
-					vehicleData.RemovePassenger()
-				}
-			}
-		}
+	return mount, nil
+}
+
+// updateVehiclePassengerCount decrements the passenger count on the vehicle.
+func (ms *MountingSystem) updateVehiclePassengerCount(vehicleID uint64) {
+	if ms.world == nil {
+		return
 	}
 
-	// Remove mount component
-	rider.RemoveComponent("mount")
+	vehicle, exists := ms.world.GetEntity(vehicleID)
+	if !exists || vehicle == nil {
+		return
+	}
 
+	vehicleComp, hasVehicle := vehicle.GetComponent("vehicle")
+	if !hasVehicle {
+		return
+	}
+
+	vehicleData, ok := vehicleComp.(*VehicleComponent)
+	if ok {
+		vehicleData.RemovePassenger()
+	}
+}
+
+// logDismount logs the dismount event.
+func (ms *MountingSystem) logDismount(riderID, vehicleID uint64) {
 	if ms.logger != nil {
 		ms.logger.WithFields(logrus.Fields{
-			"rider_id":   rider.ID,
-			"vehicle_id": mount.MountedEntityID,
+			"rider_id":   riderID,
+			"vehicle_id": vehicleID,
 		}).Debug("Entity dismounted vehicle")
 	}
-
-	return nil
 }
 
 // IsMounted checks if an entity is currently riding a vehicle.

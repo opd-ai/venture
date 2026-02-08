@@ -583,10 +583,17 @@ func warmCommonSprites(sys *systemsContainer, seed *int64, genre *string, logger
 	startTime := time.Now()
 	logger.Debug("starting sprite cache warming")
 
-	// Create pre-generator for batch sprite generation
 	pregen := cache.NewPreGenerator(sys.spriteCache)
+	seedVal, genreVal := resolveSeedAndGenre(seed, genre)
 
-	// Use game seed and genre for deterministic sprite generation
+	queuePlayerSprites(pregen, sys.spriteGenerator, seedVal, genreVal)
+	queueEnemySprites(pregen, sys.spriteGenerator, seedVal, genreVal)
+
+	launchAsyncGeneration(pregen, startTime, logger)
+}
+
+// resolveSeedAndGenre resolves the seed and genre values with defaults.
+func resolveSeedAndGenre(seed *int64, genre *string) (int64, string) {
 	seedVal := int64(12345)
 	if seed != nil {
 		seedVal = *seed
@@ -595,15 +602,17 @@ func warmCommonSprites(sys *systemsContainer, seed *int64, genre *string, logger
 	if genre != nil {
 		genreVal = *genre
 	}
+	return seedVal, genreVal
+}
 
-	// Queue common player sprites (idle and walk animations, 4 directions)
+// queuePlayerSprites queues common player sprite animations into the pre-generator.
+func queuePlayerSprites(pregen *cache.PreGenerator, gen *sprites.Generator, seedVal int64, genreVal string) {
 	playerStates := []string{"idle", "walk"}
 	directions := []string{"down", "up", "left", "right"}
 
 	for _, state := range playerStates {
-		for frame := 0; frame < 4; frame++ { // 4 frames per animation
+		for frame := 0; frame < 4; frame++ {
 			for _, dir := range directions {
-				// Capture loop variables for closure
 				capturedState := state
 				capturedFrame := frame
 				capturedDir := dir
@@ -623,17 +632,20 @@ func warmCommonSprites(sys *systemsContainer, seed *int64, genre *string, logger
 							"direction":  capturedDir,
 						},
 					}
-					return sys.spriteGenerator.Generate(config)
+					return gen.Generate(config)
 				})
 			}
 		}
 	}
+}
 
-	// Queue common enemy idle sprites (single frame, 4 directions)
+// queueEnemySprites queues common enemy idle sprites into the pre-generator.
+func queueEnemySprites(pregen *cache.PreGenerator, gen *sprites.Generator, seedVal int64, genreVal string) {
 	enemyTypes := []string{"goblin", "skeleton", "orc", "slime"}
+	directions := []string{"down", "up", "left", "right"}
+
 	for i, enemyType := range enemyTypes {
 		for _, dir := range directions {
-			// Capture loop variables for closure
 			capturedEnemy := enemyType
 			capturedDir := dir
 			enemySeed := seedVal + int64(i+1)
@@ -653,12 +665,14 @@ func warmCommonSprites(sys *systemsContainer, seed *int64, genre *string, logger
 						"direction":  capturedDir,
 					},
 				}
-				return sys.spriteGenerator.Generate(config)
+				return gen.Generate(config)
 			})
 		}
 	}
+}
 
-	// Generate sprites asynchronously
+// launchAsyncGeneration starts asynchronous sprite generation with logging.
+func launchAsyncGeneration(pregen *cache.PreGenerator, startTime time.Time, logger *logrus.Entry) {
 	go func() {
 		count := pregen.Generate()
 		elapsed := time.Since(startTime)

@@ -259,8 +259,8 @@ func TestPaletteOptions_CacheClear(t *testing.T) {
 
 	// Populate cache with dummy data
 	sys.cacheMutex.Lock()
-	sys.frameCache["test-key"] = nil
-	sys.cacheKeys = []string{"test-key"}
+	sys.frameCache[uint64(12345)] = nil
+	sys.cacheKeys = []uint64{uint64(12345)}
 	initialSize := len(sys.frameCache)
 	sys.cacheMutex.Unlock()
 

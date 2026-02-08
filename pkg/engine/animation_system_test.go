@@ -96,7 +96,7 @@ func TestAnimationSystem_CacheFrames(t *testing.T) {
 		ebiten.NewImage(28, 28),
 	}
 
-	key := "test_key"
+	key := uint64(12345)
 	sys.cacheFrames(key, frames)
 
 	// Check cache size
@@ -127,16 +127,16 @@ func TestAnimationSystem_CacheEviction(t *testing.T) {
 	frames := []*ebiten.Image{ebiten.NewImage(28, 28)}
 
 	// Fill cache
-	sys.cacheFrames("key1", frames)
-	sys.cacheFrames("key2", frames)
-	sys.cacheFrames("key3", frames)
+	sys.cacheFrames(uint64(1), frames)
+	sys.cacheFrames(uint64(2), frames)
+	sys.cacheFrames(uint64(3), frames)
 
 	if sys.GetCacheSize() != 3 {
 		t.Errorf("Expected cache size 3, got %d", sys.GetCacheSize())
 	}
 
 	// Add one more - should evict oldest
-	sys.cacheFrames("key4", frames)
+	sys.cacheFrames(uint64(4), frames)
 
 	if sys.GetCacheSize() != 3 {
 		t.Errorf("Expected cache size 3 after eviction, got %d", sys.GetCacheSize())
@@ -144,7 +144,7 @@ func TestAnimationSystem_CacheEviction(t *testing.T) {
 
 	// key1 should be evicted
 	sys.cacheMutex.RLock()
-	_, exists := sys.frameCache["key1"]
+	_, exists := sys.frameCache[uint64(1)]
 	sys.cacheMutex.RUnlock()
 
 	if exists {
@@ -153,7 +153,7 @@ func TestAnimationSystem_CacheEviction(t *testing.T) {
 
 	// key4 should exist
 	sys.cacheMutex.RLock()
-	_, exists = sys.frameCache["key4"]
+	_, exists = sys.frameCache[uint64(4)]
 	sys.cacheMutex.RUnlock()
 
 	if !exists {
@@ -167,8 +167,8 @@ func TestAnimationSystem_ClearCache(t *testing.T) {
 	sys := NewAnimationSystem(spriteGen)
 
 	frames := []*ebiten.Image{ebiten.NewImage(28, 28)}
-	sys.cacheFrames("key1", frames)
-	sys.cacheFrames("key2", frames)
+	sys.cacheFrames(uint64(1), frames)
+	sys.cacheFrames(uint64(2), frames)
 
 	if sys.GetCacheSize() != 2 {
 		t.Errorf("Expected cache size 2, got %d", sys.GetCacheSize())

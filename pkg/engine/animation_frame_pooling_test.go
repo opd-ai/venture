@@ -141,11 +141,11 @@ func TestCacheEvictionReturnsFramesToPool(t *testing.T) {
 	}
 
 	// Cache frames (fill cache)
-	sys.cacheFrames("key1", frames1)
-	sys.cacheFrames("key2", frames2)
+	sys.cacheFrames(uint64(1), frames1)
+	sys.cacheFrames(uint64(2), frames2)
 
 	// Cache third set (should evict key1)
-	sys.cacheFrames("key3", frames3)
+	sys.cacheFrames(uint64(3), frames3)
 
 	// Verify cache size
 	sys.cacheMutex.RLock()
@@ -158,7 +158,7 @@ func TestCacheEvictionReturnsFramesToPool(t *testing.T) {
 
 	// Verify key1 was evicted
 	sys.cacheMutex.RLock()
-	_, exists := sys.frameCache["key1"]
+	_, exists := sys.frameCache[uint64(1)]
 	sys.cacheMutex.RUnlock()
 
 	if exists {

@@ -63,10 +63,10 @@ import (
 type AnimationSystem struct {
 	spriteGenerator *sprites.Generator
 	spriteCache     *cache.SpriteCache         // Phase 1.2: External sprite cache for base sprites
-	frameCache      map[string][]*ebiten.Image // Cache by key: seed_state
+	frameCache      map[uint64][]*ebiten.Image // Cache by key: uint64 combining seed + state
 	cacheMutex      sync.RWMutex
 	maxCacheSize    int
-	cacheKeys       []string // For LRU eviction
+	cacheKeys       []uint64 // For LRU eviction
 	logger          *logrus.Entry
 	paletteOptions  *palette.GenerationOptions // Phase 5.4: Custom palette generation options
 
@@ -124,9 +124,9 @@ func NewAnimationSystemWithLogger(spriteGenerator *sprites.Generator, logger *lo
 
 	sys := &AnimationSystem{
 		spriteGenerator: spriteGenerator,
-		frameCache:      make(map[string][]*ebiten.Image),
+		frameCache:      make(map[uint64][]*ebiten.Image),
 		maxCacheSize:    100, // Cache up to 100 animation sequences
-		cacheKeys:       make([]string, 0, 100),
+		cacheKeys:       make([]uint64, 0, 100),
 		logger:          logEntry,
 		// Phase 14.2: Default optimization settings
 		enableViewportCull:  true,  // Enabled by default for performance
@@ -201,8 +201,8 @@ func (s *AnimationSystem) SetPaletteOptions(opts *palette.GenerationOptions) {
 	s.paletteOptions = opts
 	// Clear frame cache to regenerate sprites with new palette options
 	s.cacheMutex.Lock()
-	s.frameCache = make(map[string][]*ebiten.Image)
-	s.cacheKeys = make([]string, 0, s.maxCacheSize)
+	s.frameCache = make(map[uint64][]*ebiten.Image)
+	s.cacheKeys = make([]uint64, 0, s.maxCacheSize)
 	s.cacheMutex.Unlock()
 
 	if s.logger != nil {
@@ -1369,7 +1369,7 @@ func (s *AnimationSystem) getFrameCount(state AnimationState) int {
 }
 
 // cacheFrames stores frames in cache with LRU eviction.
-func (s *AnimationSystem) cacheFrames(key string, frames []*ebiten.Image) {
+func (s *AnimationSystem) cacheFrames(key uint64, frames []*ebiten.Image) {
 	s.cacheMutex.Lock()
 	defer s.cacheMutex.Unlock()
 
@@ -1409,20 +1409,48 @@ func (s *AnimationSystem) cacheFrames(key string, frames []*ebiten.Image) {
 	}
 }
 
+// stateToInt converts an AnimationState to its integer representation.
+// This enables zero-allocation cache keys by using uint64 instead of strings.
+func stateToInt(state AnimationState) uint8 {
+	switch state {
+	case AnimationStateIdle:
+		return 0
+	case AnimationStateWalk:
+		return 1
+	case AnimationStateRun:
+		return 2
+	case AnimationStateAttack:
+		return 3
+	case AnimationStateCast:
+		return 4
+	case AnimationStateHit:
+		return 5
+	case AnimationStateDeath:
+		return 6
+	case AnimationStateJump:
+		return 7
+	case AnimationStateCrouch:
+		return 8
+	case AnimationStateUse:
+		return 9
+	default:
+		return 255 // Unknown state
+	}
+}
+
 // getCacheKey generates a cache key for animation frames.
-// Optimized: Uses strconv.AppendInt instead of fmt.Sprintf for 4.3x speedup
-// and 62.5% allocation reduction (130ns/3allocs → 30ns/1alloc).
-func (s *AnimationSystem) getCacheKey(seed int64, state AnimationState) string {
-	// Pre-allocate buffer: max 20 digits for int64 + 1 underscore + state length
-	buf := make([]byte, 0, 21+len(state))
-	buf = strconv.AppendInt(buf, seed, 10)
-	buf = append(buf, '_')
-	buf = append(buf, state...)
-	key := string(buf)
+// Optimized: Uses uint64 combining seed + state for zero-allocation lookups.
+// Layout: upper 56 bits = seed (int64), lower 8 bits = state ID (uint8)
+func (s *AnimationSystem) getCacheKey(seed int64, state AnimationState) uint64 {
+	stateID := stateToInt(state)
+	// Combine: shift seed left 8 bits, OR with state ID in lower 8 bits
+	// This allows ~72 quadrillion unique seeds with 256 animation states
+	key := (uint64(seed) << 8) | uint64(stateID)
 	if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
 		s.logger.WithFields(logrus.Fields{
 			"seed":      seed,
 			"state":     state,
+			"state_id":  stateID,
 			"cache_key": key,
 		}).Debug("generated cache key")
 	}
@@ -1435,8 +1463,8 @@ func (s *AnimationSystem) ClearCache() {
 	defer s.cacheMutex.Unlock()
 
 	entriesCleared := len(s.frameCache)
-	s.frameCache = make(map[string][]*ebiten.Image)
-	s.cacheKeys = make([]string, 0, s.maxCacheSize)
+	s.frameCache = make(map[uint64][]*ebiten.Image)
+	s.cacheKeys = make([]uint64, 0, s.maxCacheSize)
 
 	if s.logger != nil {
 		s.logger.WithFields(logrus.Fields{

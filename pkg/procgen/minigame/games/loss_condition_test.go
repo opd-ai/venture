@@ -397,12 +397,13 @@ func TestSystem_Update(t *testing.T) {
 }
 
 // TestRender_Stub tests that Render stubs validate screen input.
+// This test uses the deprecated Render method for backward compatibility testing.
 func TestRender_Stub(t *testing.T) {
 	screen := &stubScreen{width: 320, height: 240}
 
 	games := []struct {
 		name string
-		game engine.MiniGame
+		game renderableGame
 	}{
 		{"Card", NewCardGame()},
 		{"Dice", NewDiceGame()},

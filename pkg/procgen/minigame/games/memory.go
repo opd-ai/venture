@@ -101,29 +101,47 @@ func (m *MemoryGame) Update(deltaTime float64) error {
 	return nil
 }
 
+// PrepareRender computes the current visual state for the memory game.
+// This validates screen dimensions and populates internal render data.
+// Implements engine.MiniGame interface.
+func (m *MemoryGame) PrepareRender(screenWidth, screenHeight int) error {
+	if err := validateScreenDimensions(screenWidth, screenHeight); err != nil {
+		return fmt.Errorf("memory game prepare render: %w", err)
+	}
+	if m.rng == nil {
+		return fmt.Errorf("memory game prepare render: game not initialized")
+	}
+
+	status := m.determineGameStatus()
+	matchedCount := m.countMatched()
+	elements := m.buildRenderElements(screenWidth, screenHeight, matchedCount)
+
+	m.LastRender = &RenderOutput{
+		Title:    "Memory Game",
+		Status:   status,
+		Width:    screenWidth,
+		Height:   screenHeight,
+		Elements: elements,
+	}
+	return nil
+}
+
+// GetRenderOutput returns the computed visual state from the last PrepareRender call.
+// Implements engine.MiniGame interface.
+func (m *MemoryGame) GetRenderOutput() engine.MiniGameRenderOutput {
+	return m.LastRender
+}
+
 // Render draws the memory game to the screen.
 // Computes visual state including card pairs, matched status, and attempt counter.
+// DEPRECATED: Use PrepareRender() and GetRenderOutput() instead.
+// Kept for backward compatibility with existing code.
 func (m *MemoryGame) Render(screen engine.ImageProvider) error {
 	w, h, err := validateScreen(screen)
 	if err != nil {
 		return fmt.Errorf("memory game render: %w", err)
 	}
-	if m.rng == nil {
-		return fmt.Errorf("memory game render: game not initialized")
-	}
-
-	status := m.determineGameStatus()
-	matchedCount := m.countMatched()
-	elements := m.buildRenderElements(w, h, matchedCount)
-
-	m.LastRender = &RenderOutput{
-		Title:    "Memory Game",
-		Status:   status,
-		Width:    w,
-		Height:   h,
-		Elements: elements,
-	}
-	return nil
+	return m.PrepareRender(w, h)
 }
 
 // determineGameStatus returns the current status string for the game.

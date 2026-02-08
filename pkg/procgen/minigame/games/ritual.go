@@ -154,15 +154,15 @@ func (r *RitualGame) Update(deltaTime float64) error {
 	return nil
 }
 
-// Render draws the ritual game to the screen.
-// Computes visual state including symbol patterns and drawing progress.
-func (r *RitualGame) Render(screen engine.ImageProvider) error {
-	w, h, err := validateScreen(screen)
-	if err != nil {
-		return fmt.Errorf("ritual game render: %w", err)
+// PrepareRender computes the current visual state for the ritual game.
+// This validates screen dimensions and populates internal render data.
+// Implements engine.MiniGame interface.
+func (r *RitualGame) PrepareRender(screenWidth, screenHeight int) error {
+	if err := validateScreenDimensions(screenWidth, screenHeight); err != nil {
+		return fmt.Errorf("ritual game prepare render: %w", err)
 	}
 	if r.rng == nil {
-		return fmt.Errorf("ritual game render: game not initialized")
+		return fmt.Errorf("ritual game prepare render: game not initialized")
 	}
 
 	status := "Playing"
@@ -179,24 +179,24 @@ func (r *RitualGame) Render(screen engine.ImageProvider) error {
 	// Status display
 	elements = append(elements, RenderElement{
 		Type:  "text",
-		X:     w / 2,
+		X:     screenWidth / 2,
 		Y:     10,
 		Label: fmt.Sprintf("Symbol %d / %d  Accuracy: %.0f%%", r.currentSymbol, r.numSymbols, r.drawAccuracy*100),
 	})
 
 	// Symbol icons showing completion status
-	symbolW := (w - 40) / r.numSymbols
+	symbolW := (screenWidth - 40) / r.numSymbols
 	if symbolW > 100 {
 		symbolW = 100
 	}
-	startX := (w - r.numSymbols*symbolW) / 2
+	startX := (screenWidth - r.numSymbols*symbolW) / 2
 	for i, sym := range r.symbols {
 		drawn := i < r.currentSymbol
 		active := i == r.currentSymbol
 		elements = append(elements, RenderElement{
 			Type:        "symbol",
 			X:           startX + i*symbolW,
-			Y:           h/2 - 30,
+			Y:           screenHeight/2 - 30,
 			W:           symbolW - 5,
 			H:           60,
 			Label:       sym.Name,
@@ -210,8 +210,8 @@ func (r *RitualGame) Render(screen engine.ImageProvider) error {
 	elements = append(elements, RenderElement{
 		Type:  "progress",
 		X:     20,
-		Y:     h - 40,
-		W:     w - 40,
+		Y:     screenHeight - 40,
+		W:     screenWidth - 40,
 		H:     20,
 		Label: "Ritual Progress",
 		Value: progress,
@@ -220,11 +220,29 @@ func (r *RitualGame) Render(screen engine.ImageProvider) error {
 	r.LastRender = &RenderOutput{
 		Title:    "Ritual",
 		Status:   status,
-		Width:    w,
-		Height:   h,
+		Width:    screenWidth,
+		Height:   screenHeight,
 		Elements: elements,
 	}
 	return nil
+}
+
+// GetRenderOutput returns the computed visual state from the last PrepareRender call.
+// Implements engine.MiniGame interface.
+func (r *RitualGame) GetRenderOutput() engine.MiniGameRenderOutput {
+	return r.LastRender
+}
+
+// Render draws the ritual game to the screen.
+// Computes visual state including symbol patterns and drawing progress.
+// DEPRECATED: Use PrepareRender() and GetRenderOutput() instead.
+// Kept for backward compatibility with existing code.
+func (r *RitualGame) Render(screen engine.ImageProvider) error {
+	w, h, err := validateScreen(screen)
+	if err != nil {
+		return fmt.Errorf("ritual game render: %w", err)
+	}
+	return r.PrepareRender(w, h)
 }
 
 // IsComplete returns true when the game has finished.

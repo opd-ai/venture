@@ -137,15 +137,15 @@ func (h *HackingGame) generateHint(guess string) string {
 	return fmt.Sprintf("%d correct, %d misplaced", correctPos, correctChar)
 }
 
-// Render draws the hacking game to the screen.
-// Computes visual state including terminal display with guesses and hints.
-func (hg *HackingGame) Render(screen engine.ImageProvider) error {
-	w, h, err := validateScreen(screen)
-	if err != nil {
-		return fmt.Errorf("hacking game render: %w", err)
+// PrepareRender computes the current visual state for the hacking game.
+// This validates screen dimensions and populates internal render data.
+// Implements engine.MiniGame interface.
+func (hg *HackingGame) PrepareRender(screenWidth, screenHeight int) error {
+	if err := validateScreenDimensions(screenWidth, screenHeight); err != nil {
+		return fmt.Errorf("hacking game prepare render: %w", err)
 	}
 	if hg.rng == nil {
-		return fmt.Errorf("hacking game render: game not initialized")
+		return fmt.Errorf("hacking game prepare render: game not initialized")
 	}
 
 	status := "Playing"
@@ -162,7 +162,7 @@ func (hg *HackingGame) Render(screen engine.ImageProvider) error {
 	// Header
 	elements = append(elements, RenderElement{
 		Type:  "text",
-		X:     w / 2,
+		X:     screenWidth / 2,
 		Y:     10,
 		Label: fmt.Sprintf("CODE LENGTH: %d  ATTEMPTS: %d / %d", hg.codeLength, hg.attempts, hg.maxAttempts),
 	})
@@ -179,7 +179,7 @@ func (hg *HackingGame) Render(screen engine.ImageProvider) error {
 			Type:  "terminal",
 			X:     20,
 			Y:     startY + i*lineH,
-			W:     w - 40,
+			W:     screenWidth - 40,
 			H:     lineH,
 			Label: fmt.Sprintf("> %s  [%s]", hg.guesses[i], hint),
 			Value: float64(i + 1),
@@ -191,8 +191,8 @@ func (hg *HackingGame) Render(screen engine.ImageProvider) error {
 	elements = append(elements, RenderElement{
 		Type:  "progress",
 		X:     20,
-		Y:     h - 40,
-		W:     w - 40,
+		Y:     screenHeight - 40,
+		W:     screenWidth - 40,
 		H:     20,
 		Label: "Attempts Used",
 		Value: progress,
@@ -201,11 +201,29 @@ func (hg *HackingGame) Render(screen engine.ImageProvider) error {
 	hg.LastRender = &RenderOutput{
 		Title:    "Hacking",
 		Status:   status,
-		Width:    w,
-		Height:   h,
+		Width:    screenWidth,
+		Height:   screenHeight,
 		Elements: elements,
 	}
 	return nil
+}
+
+// GetRenderOutput returns the computed visual state from the last PrepareRender call.
+// Implements engine.MiniGame interface.
+func (hg *HackingGame) GetRenderOutput() engine.MiniGameRenderOutput {
+	return hg.LastRender
+}
+
+// Render draws the hacking game to the screen.
+// Computes visual state including terminal display with guesses and hints.
+// DEPRECATED: Use PrepareRender() and GetRenderOutput() instead.
+// Kept for backward compatibility with existing code.
+func (hg *HackingGame) Render(screen engine.ImageProvider) error {
+	w, h, err := validateScreen(screen)
+	if err != nil {
+		return fmt.Errorf("hacking game render: %w", err)
+	}
+	return hg.PrepareRender(w, h)
 }
 
 // IsComplete returns true when the game has finished.

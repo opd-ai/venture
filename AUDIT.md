@@ -11,13 +11,13 @@
 | Metric | Count |
 |--------|-------|
 | **Total gaps found** | 18 |
-| **Completed** | 2 |
+| **Completed** | 3 |
 | **Critical (blocks functionality)** | 0 |
-| **High (degrades quality)** | 1 |
+| **High (degrades quality)** | 0 |
 | **Medium (incomplete feature)** | 9 |
 | **Low (cosmetic/cleanup)** | 6 |
 
-The Venture codebase demonstrates strong implementation completeness. Server-client system parity is well-maintained with V4-V9 systems properly initialized on both sides. No TODOs/FIXMEs were found in production code. The main gaps are interface compliance issues, partial network interface usage, and some generators lacking runtime invocation outside tests. **High-priority issues (federation server identity keys and client performance monitoring) have been resolved with comprehensive testing.**
+The Venture codebase demonstrates strong implementation completeness. Server-client system parity is well-maintained with V4-V9 systems properly initialized on both sides. No TODOs/FIXMEs were found in production code. The main gaps are interface compliance issues, partial network interface usage, and some generators lacking runtime invocation outside tests. **All high-priority issues have been resolved: federation server identity keys, client performance monitoring, and MiniGame interface alignment are now complete with comprehensive testing.**
 
 ---
 
@@ -154,10 +154,37 @@ The Venture codebase demonstrates strong implementation completeness. Server-cli
    - Zero regression: monitoring only active when `--verbose` flag is set
    - Integration maintains existing `PerformanceMonitor` for detailed system metrics
 
-3. **[High] MiniGame Interface Alignment**  
+3. **[High] ✅ COMPLETED - MiniGame Interface Alignment**  
    Files: `pkg/engine/interfaces.go:374`, `pkg/procgen/minigame/`  
    Issue: `MiniGame.Render(ImageProvider)` signature doesn't match ECS rendering pattern  
-   Fix: Either update interface to match ECS pattern or implement adapter
+   Fix: ✅ Updated interface to use `PrepareRender(width, height)` and `GetRenderOutput()` for ECS data-driven rendering  
+   **Resolution Details:**
+   - **Root Cause**: Interface defined `Render(screen ImageProvider) error` which suggested direct pixel drawing, but implementations only populate `RenderOutput` data structure since `ImageProvider` is read-only. This violated ECS data/logic separation.
+   - **Solution**: Updated `MiniGame` interface in `pkg/engine/interfaces.go`:
+     - Replaced `Render(screen ImageProvider) error` with `PrepareRender(screenWidth, screenHeight int) error`
+     - Added `GetRenderOutput() MiniGameRenderOutput` to expose computed visual state
+     - Created `MiniGameRenderOutput` interface for abstraction: `GetTitle()`, `GetStatus()`, `GetDimensions()`, `GetElements()`
+   - **Implementation Changes** (all 7 minigame types updated):
+     - `RenderOutput` struct implements `MiniGameRenderOutput` interface
+     - Each game type (`CardGame`, `DiceGame`, `PuzzleGame`, `MemoryGame`, `LockPickingGame`, `HackingGame`, `RitualGame`) now has:
+       - `PrepareRender(screenWidth, screenHeight int) error` - validates dimensions, computes visual state
+       - `GetRenderOutput() MiniGameRenderOutput` - returns computed `RenderOutput`
+       - Deprecated `Render(screen ImageProvider) error` kept for backward compatibility (calls `PrepareRender` internally)
+   - **Testing**:
+     - Created `pkg/procgen/minigame/games/interface_alignment_test.go` with 5 comprehensive tests:
+       - Interface compliance for all 7 game types
+       - Dimension validation (positive/zero/negative values)
+       - GetRenderOutput behavior before/after PrepareRender
+       - Backward compatibility with deprecated Render method
+       - Data consistency across multiple PrepareRender calls
+     - Created `pkg/procgen/minigame/games/test_helpers.go` with shared test utilities
+     - Updated existing tests to use `renderableGame` helper interface for backward compatibility testing
+   - **Benefits**:
+     - Aligns with ECS pattern: minigames provide data, render systems consume it
+     - No dependency on Ebiten during testing (no display required for PrepareRender)
+     - Clear separation: `PrepareRender` = compute state, `GetRenderOutput` = expose state
+     - Backward compatible: old `Render` method still works on concrete types
+   - **Verification**: All packages compile successfully, zero regressions
 
 ### Medium Priority
 

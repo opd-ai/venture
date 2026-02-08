@@ -11,7 +11,9 @@ import (
 
 // RenderOutput represents the computed visual state of a minigame.
 // The ECS render system reads this data to draw actual pixels to the screen.
-// Each Render() call populates this struct with the current visual state.
+// Each PrepareRender() call populates this struct with the current visual state.
+//
+// Implements engine.MiniGameRenderOutput interface.
 //
 // Phase 27.3: Mini-Game Rendering
 type RenderOutput struct {
@@ -25,6 +27,26 @@ type RenderOutput struct {
 	Height int
 	// Elements contains all visual elements to be drawn
 	Elements []RenderElement
+}
+
+// GetTitle implements engine.MiniGameRenderOutput interface.
+func (r *RenderOutput) GetTitle() string {
+	return r.Title
+}
+
+// GetStatus implements engine.MiniGameRenderOutput interface.
+func (r *RenderOutput) GetStatus() string {
+	return r.Status
+}
+
+// GetDimensions implements engine.MiniGameRenderOutput interface.
+func (r *RenderOutput) GetDimensions() (width, height int) {
+	return r.Width, r.Height
+}
+
+// GetElements implements engine.MiniGameRenderOutput interface.
+func (r *RenderOutput) GetElements() interface{} {
+	return r.Elements
 }
 
 // RenderElement represents a single visual element in the minigame display.
@@ -61,4 +83,13 @@ func validateScreen(screen engine.ImageProvider) (int, int, error) {
 		return 0, 0, fmt.Errorf("invalid screen dimensions: %dx%d", w, h)
 	}
 	return w, h, nil
+}
+
+// validateScreenDimensions checks that screen dimensions are valid for rendering.
+// Returns an error if dimensions are zero or negative.
+func validateScreenDimensions(width, height int) error {
+	if width <= 0 || height <= 0 {
+		return fmt.Errorf("invalid screen dimensions: %dx%d", width, height)
+	}
+	return nil
 }

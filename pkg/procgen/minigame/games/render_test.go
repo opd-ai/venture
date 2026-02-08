@@ -2,28 +2,15 @@
 package games
 
 import (
-	"image/color"
 	"testing"
-
-	"github.com/opd-ai/venture/pkg/engine"
 )
 
-// stubScreen implements engine.ImageProvider for testing.
-type stubScreen struct {
-	width, height int
-}
-
-func (s *stubScreen) GetSize() (int, int)           { return s.width, s.height }
-func (s *stubScreen) GetPixel(x, y int) color.Color { return color.Transparent }
-
-// Compile-time interface check.
-var _ engine.ImageProvider = (*stubScreen)(nil)
-
 // TestRender_NilScreen verifies all games return error for nil screen.
+// This test uses the deprecated Render method for backward compatibility testing.
 func TestRender_NilScreen(t *testing.T) {
 	games := []struct {
 		name string
-		game engine.MiniGame
+		game renderableGame
 	}{
 		{"Card", NewCardGame()},
 		{"Dice", NewDiceGame()},
@@ -55,7 +42,7 @@ func TestRender_Uninitialized(t *testing.T) {
 
 	games := []struct {
 		name string
-		game engine.MiniGame
+		game renderableGame
 	}{
 		{"Card", NewCardGame()},
 		{"Dice", NewDiceGame()},
@@ -110,7 +97,7 @@ func TestRender_ValidScreen(t *testing.T) {
 
 	games := []struct {
 		name string
-		game engine.MiniGame
+		game renderableGame
 	}{
 		{"Card", NewCardGame()},
 		{"Dice", NewDiceGame()},
@@ -518,7 +505,7 @@ func BenchmarkRender(b *testing.B) {
 
 	games := []struct {
 		name string
-		game engine.MiniGame
+		game renderableGame
 	}{
 		{"Card", NewCardGame()},
 		{"Dice", NewDiceGame()},

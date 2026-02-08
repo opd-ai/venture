@@ -101,15 +101,15 @@ func (l *LockPickingGame) Update(deltaTime float64) error {
 	return nil
 }
 
-// Render draws the lock-picking game to the screen.
-// Computes visual state including pin positions, timing window, and failure count.
-func (l *LockPickingGame) Render(screen engine.ImageProvider) error {
-	w, h, err := validateScreen(screen)
-	if err != nil {
-		return fmt.Errorf("lockpicking game render: %w", err)
+// PrepareRender computes the current visual state for the lock-picking game.
+// This validates screen dimensions and populates internal render data.
+// Implements engine.MiniGame interface.
+func (l *LockPickingGame) PrepareRender(screenWidth, screenHeight int) error {
+	if err := validateScreenDimensions(screenWidth, screenHeight); err != nil {
+		return fmt.Errorf("lockpicking game prepare render: %w", err)
 	}
 	if l.rng == nil {
-		return fmt.Errorf("lockpicking game render: game not initialized")
+		return fmt.Errorf("lockpicking game prepare render: game not initialized")
 	}
 
 	status := "Playing"
@@ -126,25 +126,25 @@ func (l *LockPickingGame) Render(screen engine.ImageProvider) error {
 	// Status display
 	elements = append(elements, RenderElement{
 		Type:  "text",
-		X:     w / 2,
+		X:     screenWidth / 2,
 		Y:     10,
 		Label: fmt.Sprintf("Pin %d / %d  Failures: %d / %d  Time: %.1fs", l.currentPinIdx, l.numPins, l.failures, l.maxFailures, l.timeElapsed),
 	})
 
 	// Pin display
-	pinW := (w - 40) / l.numPins
+	pinW := (screenWidth - 40) / l.numPins
 	if pinW > 80 {
 		pinW = 80
 	}
-	pinH := h / 2
-	startX := (w - l.numPins*pinW) / 2
+	pinH := screenHeight / 2
+	startX := (screenWidth - l.numPins*pinW) / 2
 	for i := 0; i < l.numPins; i++ {
 		picked := i < l.currentPinIdx
 		active := i == l.currentPinIdx
 		elements = append(elements, RenderElement{
 			Type:        "pin",
 			X:           startX + i*pinW,
-			Y:           h/4 + int(l.pinPositions[i]*float64(pinH)/2),
+			Y:           screenHeight/4 + int(l.pinPositions[i]*float64(pinH)/2),
 			W:           pinW - 5,
 			H:           20,
 			Label:       fmt.Sprintf("Pin %d", i+1),
@@ -157,8 +157,8 @@ func (l *LockPickingGame) Render(screen engine.ImageProvider) error {
 	elements = append(elements, RenderElement{
 		Type:  "progress",
 		X:     20,
-		Y:     h - 40,
-		W:     w - 40,
+		Y:     screenHeight - 40,
+		W:     screenWidth - 40,
 		H:     20,
 		Label: fmt.Sprintf("Timing Window: %.2fs", l.timingWindow),
 		Value: l.timingWindow,
@@ -167,11 +167,29 @@ func (l *LockPickingGame) Render(screen engine.ImageProvider) error {
 	l.LastRender = &RenderOutput{
 		Title:    "Lock Picking",
 		Status:   status,
-		Width:    w,
-		Height:   h,
+		Width:    screenWidth,
+		Height:   screenHeight,
 		Elements: elements,
 	}
 	return nil
+}
+
+// GetRenderOutput returns the computed visual state from the last PrepareRender call.
+// Implements engine.MiniGame interface.
+func (l *LockPickingGame) GetRenderOutput() engine.MiniGameRenderOutput {
+	return l.LastRender
+}
+
+// Render draws the lock-picking game to the screen.
+// Computes visual state including pin positions, timing window, and failure count.
+// DEPRECATED: Use PrepareRender() and GetRenderOutput() instead.
+// Kept for backward compatibility with existing code.
+func (l *LockPickingGame) Render(screen engine.ImageProvider) error {
+	w, h, err := validateScreen(screen)
+	if err != nil {
+		return fmt.Errorf("lockpicking game render: %w", err)
+	}
+	return l.PrepareRender(w, h)
 }
 
 // IsComplete returns true when the game has finished.

@@ -1802,6 +1802,16 @@ func (g *EbitenGame) GetFrameTimeStats() FrameTimeStats {
 	return g.frameTimeTracker.GetStats()
 }
 
+// CurrentFPS implements stability.FPSProvider interface.
+// Returns the current average frames per second from frame time tracking.
+func (g *EbitenGame) CurrentFPS() float64 {
+	if g.frameTimeTracker == nil {
+		return 60.0 // Default to target FPS when tracking disabled
+	}
+	stats := g.frameTimeTracker.GetStats()
+	return stats.GetFPS()
+}
+
 // Run starts the game loop.
 func (g *EbitenGame) Run(title string) error {
 	ebiten.SetWindowSize(g.ScreenWidth, g.ScreenHeight)

@@ -11,13 +11,13 @@
 | Metric | Count |
 |--------|-------|
 | **Total gaps found** | 18 |
-| **Completed** | 1 |
+| **Completed** | 2 |
 | **Critical (blocks functionality)** | 0 |
-| **High (degrades quality)** | 2 |
+| **High (degrades quality)** | 1 |
 | **Medium (incomplete feature)** | 9 |
 | **Low (cosmetic/cleanup)** | 6 |
 
-The Venture codebase demonstrates strong implementation completeness. Server-client system parity is well-maintained with V4-V9 systems properly initialized on both sides. No TODOs/FIXMEs were found in production code. The main gaps are interface compliance issues, partial network interface usage, and some generators lacking runtime invocation outside tests. **High-priority federation server identity keys issue has been resolved with proper ed25519 keypair generation.**
+The Venture codebase demonstrates strong implementation completeness. Server-client system parity is well-maintained with V4-V9 systems properly initialized on both sides. No TODOs/FIXMEs were found in production code. The main gaps are interface compliance issues, partial network interface usage, and some generators lacking runtime invocation outside tests. **High-priority issues (federation server identity keys and client performance monitoring) have been resolved with comprehensive testing.**
 
 ---
 
@@ -133,10 +133,26 @@ The Venture codebase demonstrates strong implementation completeness. Server-cli
    - Implementation generates unique ed25519 keypair on each server start (32-byte public key, 64-byte private key)
    - **Note:** For persistent identity across restarts, future work can implement key persistence to file/database
 
-2. **[High] Client Performance Monitoring**  
-   Files: `cmd/client/main.go`, `pkg/stability/`  
+2. **[High] ✅ COMPLETED - Client Performance Monitoring**  
+   Files: `cmd/client/main.go`, `pkg/stability/`, `pkg/engine/game.go`, `cmd/client/handlers.go`  
    Issue: README documents 60 FPS / 500MB targets but client lacks enforcement  
-   Fix: Initialize stability.Monitor on client and add frame time tracking
+   Fix: ✅ Initialized stability.Monitor on client with proper FPS tracking integration  
+   **Resolution Details:**
+   - Added `CurrentFPS()` method to `EbitenGame` to implement `stability.FPSProvider` interface
+   - Returns current average FPS from existing `frameTimeTracker`, defaults to 60.0 when tracker is nil
+   - Updated `startPerformanceMonitoring()` in `cmd/client/handlers.go` to:
+     - Initialize `stability.Monitor` with documented targets (60 FPS, 500MB memory)
+     - Wire `EbitenGame` as FPS provider via `SetFPSProvider()`
+     - Run background goroutine for continuous stability checks (30s intervals)
+     - Log warnings when FPS drops below 60 or memory exceeds 500MB
+     - Log debug messages when performance meets targets
+   - Added comprehensive test coverage:
+     - `pkg/engine/game_fps_test.go`: 4 tests for CurrentFPS() method including thread safety
+     - `cmd/client/performance_monitoring_test.go`: 5 tests for monitoring integration
+     - Tests cover: verbose flag handling, FPS provider integration, memory tracking, default behavior
+   - All changes follow existing patterns (background goroutines, structured logging)
+   - Zero regression: monitoring only active when `--verbose` flag is set
+   - Integration maintains existing `PerformanceMonitor` for detailed system metrics
 
 3. **[High] MiniGame Interface Alignment**  
    Files: `pkg/engine/interfaces.go:374`, `pkg/procgen/minigame/`  

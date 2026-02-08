@@ -4,6 +4,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"math/rand"
 	"runtime"
@@ -33,6 +34,7 @@ import (
 	"github.com/opd-ai/venture/pkg/rendering/sprites"
 	"github.com/opd-ai/venture/pkg/saveload"
 	"github.com/opd-ai/venture/pkg/social/persistence"
+	"github.com/opd-ai/venture/pkg/stability"
 	"github.com/opd-ai/venture/pkg/version"
 	"github.com/opd-ai/venture/pkg/world"
 	"github.com/opd-ai/venture/pkg/world/housing"
@@ -1631,21 +1633,80 @@ func configureSystemConnections(game *engine.EbitenGame, sys *systemsContainer) 
 	sys.interactionSystem.SetCarrySystem(sys.carrySystem)
 }
 
-// startPerformanceMonitoring begins background performance metric logging.
+// startPerformanceMonitoring begins background performance metric logging and stability monitoring.
+// Enforces documented performance targets: 60 FPS minimum and <500MB memory usage.
 func startPerformanceMonitoring(game *engine.EbitenGame, clientLogger *logrus.Entry) {
 	if !*verbose {
 		return
 	}
 
+	// Legacy performance monitor for detailed system metrics
 	perfMonitor := engine.NewPerformanceMonitor(game.World)
-	clientLogger.Info("performance monitoring initialized")
 
+	// Stability monitor for enforcing performance targets (60 FPS, 500MB memory)
+	stabilityConfig := stability.Config{
+		Duration:      0, // Run indefinitely (no duration limit)
+		CheckInterval: 30 * time.Second,
+		MemoryLimit:   500 * 1024 * 1024, // 500MB as documented in README
+		MinFPS:        60.0,              // 60 FPS as documented in README
+		ReportPath:    "",                // Don't write reports (monitoring only)
+	}
+	stabilityMonitor := stability.NewMonitor(stabilityConfig)
+	stabilityMonitor.SetFPSProvider(game) // EbitenGame implements FPSProvider via CurrentFPS()
+
+	clientLogger.WithFields(logrus.Fields{
+		"min_fps":      stabilityConfig.MinFPS,
+		"memory_limit": stabilityConfig.MemoryLimit / (1024 * 1024),
+	}).Info("performance monitoring initialized with stability enforcement")
+
+	// Background goroutine for legacy performance metrics logging
 	go func() {
 		ticker := time.NewTicker(perfMonitorInterval * time.Second)
 		defer ticker.Stop()
 		for range ticker.C {
 			metrics := perfMonitor.GetMetrics()
 			clientLogger.WithField("metrics", metrics.String()).Info("performance metrics")
+		}
+	}()
+
+	// Background goroutine for stability monitoring
+	go func() {
+		ctx := context.Background()
+		ticker := time.NewTicker(stabilityConfig.CheckInterval)
+		defer ticker.Stop()
+
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-ticker.C:
+				// Perform health check manually to log warnings without failing
+				fps := game.CurrentFPS()
+				memStats := runtime.MemStats{}
+				runtime.ReadMemStats(&memStats)
+				currentMem := memStats.HeapAlloc
+
+				fields := logrus.Fields{
+					"fps":        fmt.Sprintf("%.1f", fps),
+					"memory_mb":  fmt.Sprintf("%.1f", float64(currentMem)/(1024*1024)),
+					"goroutines": runtime.NumGoroutine(),
+				}
+
+				// Log warnings when exceeding documented performance targets
+				if fps < stabilityConfig.MinFPS {
+					fields["target_fps"] = stabilityConfig.MinFPS
+					clientLogger.WithFields(fields).Warn("FPS below target")
+				}
+				if currentMem > stabilityConfig.MemoryLimit {
+					fields["target_memory_mb"] = stabilityConfig.MemoryLimit / (1024 * 1024)
+					clientLogger.WithFields(fields).Warn("memory usage above target")
+				}
+
+				// Log info every check interval when performing well
+				if fps >= stabilityConfig.MinFPS && currentMem <= stabilityConfig.MemoryLimit {
+					clientLogger.WithFields(fields).Debug("stability check passed")
+				}
+			}
 		}
 	}()
 }

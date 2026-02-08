@@ -419,10 +419,23 @@ The Venture codebase exhibits **moderate performance concerns** with several ide
    - **Test Coverage:** All new tests pass with zero allocations in benchmarks
    - **Expected Frame Budget Impact:** Eliminates per-call GetLevel() overhead; prevents +500µs/frame when debug enabled
 
-6. **Issue R6: Reduce AI Logging Allocations**
+6. **Issue R6: Reduce AI Logging Allocations - ✅ COMPLETED**
    - Expected improvement: -10-30µs/frame
    - Implementation complexity: Low (wrap logging calls in level check)
-   - Fix: Check `ai.logger != nil && ai.logger.Logger.GetLevel() >= logrus.DebugLevel` before creating Fields
+   - Fix: Cache debug flag in package-level `aiDebugEnabled` variable, check before creating Fields
+   - **Implementation Date:** 2026-02-07
+   - **Actual Results:**
+     - Added `aiDebugEnabled` package-level bool variable for caching debug log level
+     - Created `SetAIDebugEnabled()` and `refreshAIDebugFlag()` functions for cache management
+     - Optimized 46 Debug-level logging checks with `&& aiDebugEnabled` condition
+     - Kept 13 Info/Warn logging checks unchanged (no optimization needed)
+     - Eliminates GetLevel() calls in hot path (46 checks × 60 FPS = 2,760 calls/sec)
+     - Prevents logrus.Fields map allocations when debug logging is disabled
+   - **Files Modified:**
+     - `pkg/engine/ai_system.go`: Added cache variables and updated all debug logging checks
+     - `pkg/engine/ai_test.go`: Added 4 comprehensive tests for cache behavior (TestSetAIDebugEnabled, TestSetAIDebugEnabled_NilLogger, TestRefreshAIDebugFlag, TestNewAISystem_DebugFlagInitialization)
+     - `pkg/engine/ai_logging_bench_test.go`: NEW file with 6 benchmarks comparing enabled/disabled debug logging and cached vs reflection approaches
+   - **Expected Frame Budget Impact:** Eliminates ~2,760 GetLevel() calls/sec and associated allocations when debug disabled
 
 ### Priority 4 (Optimizations)
 

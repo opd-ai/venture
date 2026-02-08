@@ -2,6 +2,8 @@ package engine
 
 import (
 	"testing"
+
+	"github.com/sirupsen/logrus"
 )
 
 // TestAIComponent tests the AIComponent functionality.
@@ -550,5 +552,88 @@ func TestAISystem_Patrol(t *testing.T) {
 	updatedAI := aiCompRaw.(*AIComponent)
 	if updatedAI.State != AIStatePatrol {
 		t.Errorf("State = %v, want Patrol", updatedAI.State)
+	}
+}
+
+// TestSetAIDebugEnabled tests the AI debug flag caching.
+func TestSetAIDebugEnabled(t *testing.T) {
+	tests := []struct {
+		name     string
+		logLevel logrus.Level
+		want     bool
+	}{
+		{"debug enabled", logrus.DebugLevel, true},
+		{"trace enabled", logrus.TraceLevel, true},
+		{"info disabled", logrus.InfoLevel, false},
+		{"warn disabled", logrus.WarnLevel, false},
+		{"error disabled", logrus.ErrorLevel, false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			logger := logrus.New()
+			logger.SetLevel(tt.logLevel)
+			entry := logger.WithField("test", "value")
+
+			SetAIDebugEnabled(entry)
+
+			if aiDebugEnabled != tt.want {
+				t.Errorf("aiDebugEnabled = %v, want %v", aiDebugEnabled, tt.want)
+			}
+		})
+	}
+}
+
+// TestSetAIDebugEnabled_NilLogger tests nil logger handling.
+func TestSetAIDebugEnabled_NilLogger(t *testing.T) {
+	SetAIDebugEnabled(nil)
+	if aiDebugEnabled != false {
+		t.Errorf("aiDebugEnabled with nil logger = %v, want false", aiDebugEnabled)
+	}
+}
+
+// TestRefreshAIDebugFlag tests the refresh helper.
+func TestRefreshAIDebugFlag(t *testing.T) {
+	logger := logrus.New()
+	logger.SetLevel(logrus.DebugLevel)
+	entry := logger.WithField("system", "ai")
+
+	refreshAIDebugFlag(entry)
+
+	if !aiDebugEnabled {
+		t.Error("aiDebugEnabled should be true after refresh with debug level")
+	}
+
+	// Change level and refresh
+	logger.SetLevel(logrus.InfoLevel)
+	refreshAIDebugFlag(entry)
+
+	if aiDebugEnabled {
+		t.Error("aiDebugEnabled should be false after refresh with info level")
+	}
+}
+
+// TestNewAISystem_DebugFlagInitialization tests that NewAISystem initializes debug flag.
+func TestNewAISystem_DebugFlagInitialization(t *testing.T) {
+	tests := []struct {
+		name     string
+		logLevel logrus.Level
+		want     bool
+	}{
+		{"debug level", logrus.DebugLevel, true},
+		{"info level", logrus.InfoLevel, false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			world := NewWorld()
+			world.logger.Logger.SetLevel(tt.logLevel)
+
+			_ = NewAISystem(world)
+
+			if aiDebugEnabled != tt.want {
+				t.Errorf("aiDebugEnabled after NewAISystem = %v, want %v", aiDebugEnabled, tt.want)
+			}
+		})
 	}
 }

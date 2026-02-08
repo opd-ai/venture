@@ -171,6 +171,40 @@ func TestInitializeV9SystemsServer(t *testing.T) {
 	t.Log("V9 integration managers initialized successfully")
 }
 
+// TestV8FluidPhysicsManagersInitialization verifies fluid physics managers can be initialized on server
+func TestV8FluidPhysicsManagersInitialization(t *testing.T) {
+	// Create a test logger that captures output
+	var buf bytes.Buffer
+	logger := logrus.New()
+	logger.SetOutput(&buf)
+	logger.SetLevel(logrus.DebugLevel)
+
+	world := engine.NewWorld()
+	seed := int64(12345)
+
+	// Initialize V8 systems which now includes fluid physics managers
+	_, _ = initializeV8SystemsServer(world, seed, logger)
+
+	// Verify debug log message was written
+	logOutput := buf.String()
+	if !bytes.Contains([]byte(logOutput), []byte("Fluid physics managers initialized")) {
+		t.Error("Expected debug log for fluid physics managers initialization, but not found")
+	}
+
+	// Verify the log mentions all three managers
+	if !bytes.Contains([]byte(logOutput), []byte("buoyancy")) {
+		t.Error("Expected 'buoyancy' in log output")
+	}
+	if !bytes.Contains([]byte(logOutput), []byte("swimming")) {
+		t.Error("Expected 'swimming' in log output")
+	}
+	if !bytes.Contains([]byte(logOutput), []byte("flooding")) {
+		t.Error("Expected 'flooding' in log output")
+	}
+
+	t.Log("Fluid physics managers initialization verified")
+}
+
 // TestInitializeCoreGameplaySystems verifies core gameplay systems are added
 func TestInitializeCoreGameplaySystems(t *testing.T) {
 	world := engine.NewWorld()

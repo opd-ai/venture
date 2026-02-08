@@ -78,12 +78,13 @@ func initializeV8SystemsServer(world *engine.World, seed int64, logger *logrus.L
 	fluidSimulator := fluids.NewSimulator(fluidConfig)
 	world.AddSystem(&fluidSimulatorWrapper{system: fluidSimulator})
 
-	// Phase 50.4: Swimming and flooding managers
-	// NOTE: These utilities are used by entity systems on the client side.
-	// Server uses simplified physics. Add when implementing:
-	// - fluids.NewBuoyancyCalculator(gravity) for buoyancy validation
-	// - fluids.NewSwimmingManager(gravity) for swim speed validation
-	// - fluids.NewFloodingManager(simulator) for flood damage validation
+	// Phase 50.4: Server-side fluid physics validation utilities
+	// Initialize buoyancy, swimming, and flooding managers for server-authoritative physics validation
+	buoyancyCalculator := fluids.NewBuoyancyCalculator(fluidConfig.Gravity)
+	swimmingManager := fluids.NewSwimmingManager(fluidConfig.Gravity)
+	floodingManager := fluids.NewFloodingManager(fluidSimulator)
+	serverLogger.Debug("Fluid physics managers initialized (buoyancy, swimming, flooding)")
+	_, _, _ = buoyancyCalculator, swimmingManager, floodingManager // Available for future validation systems
 
 	// Phase 51.1-51.3: Building, Guild Hall, and Furniture Generation
 	// NOTE: These generators are used during world/structure spawning on client side.

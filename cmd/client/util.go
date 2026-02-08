@@ -660,26 +660,8 @@ func addMinigamesToMerchants(world *engine.World, minigameGen *minigame.Generato
 			continue
 		}
 
-		// Map procgen.GameType to engine.MiniGameType
-		var gameType engine.MiniGameType
-		switch mg.Type {
-		case minigame.GameTypeCard:
-			gameType = engine.MiniGameCard
-		case minigame.GameTypeDice:
-			gameType = engine.MiniGameDice
-		case minigame.GameTypePuzzle:
-			gameType = engine.MiniGamePuzzle
-		case minigame.GameTypeMemory:
-			gameType = engine.MiniGameMemory
-		case minigame.GameTypeLockPicking:
-			gameType = engine.MiniGameLockPicking
-		case minigame.GameTypeHacking:
-			gameType = engine.MiniGameHacking
-		case minigame.GameTypeRitual:
-			gameType = engine.MiniGameRitual
-		default:
-			gameType = engine.MiniGameCard
-		}
+		// Use factory function to convert procgen.GameType to engine.MiniGameType
+		gameType := minigame.GameTypeToEngineType(mg.Type)
 
 		// Add minigame component to merchant
 		entity.AddComponent(&engine.MiniGameComponent{

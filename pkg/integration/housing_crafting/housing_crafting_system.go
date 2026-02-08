@@ -3,6 +3,12 @@ package housing_crafting
 // HousingCraftingSystem provides operations on HousingCraftingComponent.
 // Following ECS pattern, all logic that was previously in component methods
 // is now in this system. Components remain pure data structures.
+//
+// Deprecated: This system is a thin wrapper around StationManager and is not
+// used in runtime code. Use StationManager directly instead, which is injected
+// into CraftingSystem and other systems that need crafting station functionality.
+// This struct is kept for backward compatibility with existing tests but may be
+// removed in a future version.
 type HousingCraftingSystem struct {
 	manager *StationManager
 }

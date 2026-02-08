@@ -7,6 +7,12 @@ import (
 // CompanionHousingSystem provides operations on CompanionHousingComponent.
 // Following ECS pattern, all logic that was previously in component methods
 // is now in this system. Components remain pure data structures.
+//
+// Deprecated: This system is a thin wrapper around PetHomeManager and is not
+// used in runtime code. Use PetHomeManager directly instead, which is injected
+// into CompanionLoyaltySystem and other systems that need companion housing
+// functionality. This struct is kept for backward compatibility with existing
+// tests but may be removed in a future version.
 type CompanionHousingSystem struct {
 	manager *PetHomeManager
 }

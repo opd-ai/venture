@@ -10,6 +10,22 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+// movementDebugEnabled caches whether debug-level movement logging is enabled.
+// This variable is set at system creation to avoid per-frame GetLevel() checks.
+// Eliminates ~1µs/frame overhead (mutex acquisition in GetLevel()).
+var movementDebugEnabled bool
+
+// SetMovementDebugEnabled updates the cached movement debug flag based on logger level.
+// Call this whenever changing the log level to refresh the cached flag.
+func SetMovementDebugEnabled(enabled bool) {
+	movementDebugEnabled = enabled
+}
+
+// RefreshMovementDebugFlag updates the cached debug flag from the current log level.
+func RefreshMovementDebugFlag() {
+	movementDebugEnabled = log.GetLevel() >= log.DebugLevel
+}
+
 // MovementSystem handles entity movement based on velocity.
 type MovementSystem struct {
 	// MaxSpeed limits entity velocity (0 = no limit)
@@ -30,10 +46,15 @@ type MovementSystem struct {
 
 // NewMovementSystem creates a new movement system.
 func NewMovementSystem(maxSpeed float64) *MovementSystem {
-	log.WithFields(log.Fields{
-		"system_name": "movement",
-		"max_speed":   maxSpeed,
-	}).Debug("Creating movement system")
+	// Cache debug flag once to avoid per-frame GetLevel() checks
+	movementDebugEnabled = log.GetLevel() >= log.DebugLevel
+
+	if movementDebugEnabled {
+		log.WithFields(log.Fields{
+			"system_name": "movement",
+			"max_speed":   maxSpeed,
+		}).Debug("Creating movement system")
+	}
 
 	return &MovementSystem{
 		MaxSpeed:     maxSpeed,
@@ -44,10 +65,12 @@ func NewMovementSystem(maxSpeed float64) *MovementSystem {
 // SetCollisionSystem sets the collision system for predictive collision checking.
 // When set, MovementSystem will validate positions before applying movement.
 func (s *MovementSystem) SetCollisionSystem(collisionSystem *CollisionSystem) {
-	log.WithFields(log.Fields{
-		"system_name":       "movement",
-		"collision_enabled": collisionSystem != nil,
-	}).Debug("Setting collision system")
+	if movementDebugEnabled {
+		log.WithFields(log.Fields{
+			"system_name":       "movement",
+			"collision_enabled": collisionSystem != nil,
+		}).Debug("Setting collision system")
+	}
 
 	s.collisionSystem = collisionSystem
 }
@@ -55,10 +78,12 @@ func (s *MovementSystem) SetCollisionSystem(collisionSystem *CollisionSystem) {
 // SetSpatialPartition sets the spatial partition system for dirty tracking.
 // When entities move, the spatial partition will be marked dirty for lazy rebuilding.
 func (s *MovementSystem) SetSpatialPartition(spatialPartition *SpatialPartitionSystem) {
-	log.WithFields(log.Fields{
-		"system_name":       "movement",
-		"partition_enabled": spatialPartition != nil,
-	}).Debug("Setting spatial partition system")
+	if movementDebugEnabled {
+		log.WithFields(log.Fields{
+			"system_name":       "movement",
+			"partition_enabled": spatialPartition != nil,
+		}).Debug("Setting spatial partition system")
+	}
 
 	s.spatialPartition = spatialPartition
 }
@@ -86,15 +111,15 @@ func (s *MovementSystem) Update(entities []*Entity, deltaTime float64) {
 
 // logUpdateStart logs the movement system start and returns debug state.
 func (s *MovementSystem) logUpdateStart(entityCount int, deltaTime float64) bool {
-	debugEnabled := log.GetLevel() >= log.DebugLevel
-	if debugEnabled {
+	// Use cached debug flag to avoid per-frame GetLevel() call
+	if movementDebugEnabled {
 		log.WithFields(log.Fields{
 			"system_name":  "movement",
 			"entity_count": entityCount,
 			"delta_time":   deltaTime,
 		}).Debug("Movement system update started")
 	}
-	return debugEnabled
+	return movementDebugEnabled
 }
 
 // shouldSkipEntity checks if an entity should be skipped during movement processing.

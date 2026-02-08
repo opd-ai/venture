@@ -626,8 +626,9 @@ func TestNewAISystem_DebugFlagInitialization(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			world := NewWorld()
-			world.logger.Logger.SetLevel(tt.logLevel)
+			logger := logrus.New()
+			logger.SetLevel(tt.logLevel)
+			world := NewWorldWithLogger(logger)
 
 			_ = NewAISystem(world)
 

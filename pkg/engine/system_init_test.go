@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/opd-ai/venture/pkg/logging"
+	"github.com/sirupsen/logrus"
 )
 
 // TestInitializeGameSystems verifies that all 44 systems are registered.
@@ -324,5 +325,68 @@ func TestInitializeSpatialPartitionSystem(t *testing.T) {
 	systems := game.World.GetSystems()
 	if len(systems) != 44 {
 		t.Errorf("Expected 44 systems after spatial partition init, got %d", len(systems))
+	}
+}
+
+// TestSystemInitDebugFlagCaching verifies debug flag caching optimization (S4).
+// This test ensures the systemInitDebugEnabled flag is set correctly during initialization.
+func TestSystemInitDebugFlagCaching(t *testing.T) {
+	tests := []struct {
+		name          string
+		logLevel      logrus.Level
+		expectedDebug bool
+	}{
+		{"debug level", logrus.DebugLevel, true},
+		{"info level", logrus.InfoLevel, false},
+		{"warn level", logrus.WarnLevel, false},
+		{"error level", logrus.ErrorLevel, false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			logger := logging.TestUtilityLogger("system_init_test")
+			logger.SetLevel(tt.logLevel)
+			game := NewEbitenGameWithLogger(800, 600, logger)
+
+			config := DefaultSystemInitConfig(12345, "fantasy", logger)
+			_, err := InitializeGameSystems(game, config)
+			if err != nil {
+				t.Fatalf("InitializeGameSystems failed: %v", err)
+			}
+
+			// Verify the cached flag is set correctly
+			if systemInitDebugEnabled != tt.expectedDebug {
+				t.Errorf("systemInitDebugEnabled = %v, want %v", systemInitDebugEnabled, tt.expectedDebug)
+			}
+		})
+	}
+}
+
+// BenchmarkSystemInitDebugFlagCaching benchmarks initialization with/without debug logging.
+// This measures the optimization impact of cached debug flag (S4).
+func BenchmarkSystemInitDebugFlagCaching(b *testing.B) {
+	benchmarks := []struct {
+		name     string
+		logLevel logrus.Level
+	}{
+		{"with_debug_logging", logrus.DebugLevel},
+		{"without_debug_logging", logrus.InfoLevel},
+	}
+
+	for _, bm := range benchmarks {
+		b.Run(bm.name, func(b *testing.B) {
+			logger := logging.TestUtilityLogger("system_init_benchmark")
+			logger.SetLevel(bm.logLevel)
+
+			b.ResetTimer()
+			for i := 0; i < b.N; i++ {
+				game := NewEbitenGameWithLogger(800, 600, logger)
+				config := DefaultSystemInitConfig(12345, "fantasy", logger)
+				_, err := InitializeGameSystems(game, config)
+				if err != nil {
+					b.Fatalf("InitializeGameSystems failed: %v", err)
+				}
+			}
+		})
 	}
 }

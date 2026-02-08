@@ -836,3 +836,88 @@ func (g *GraphGrammarGenerator) countReachableRooms(graph *DungeonGraph) int {
 
 	return count
 }
+
+// GraphToTerrain converts a DungeonGraph into a Terrain map suitable for gameplay.
+// It places rooms according to their graph positions and connects them with corridors.
+func GraphToTerrain(graph *DungeonGraph) *Terrain {
+	// Create terrain filled with walls
+	terrain := NewTerrain(graph.Width, graph.Height, graph.Seed)
+
+	// Convert each room node to a terrain room and carve it out
+	for _, roomNode := range graph.Rooms {
+		// Create a Room struct from RoomNode
+		room := &Room{
+			X:      roomNode.Position.X,
+			Y:      roomNode.Position.Y,
+			Width:  roomNode.Width,
+			Height: roomNode.Height,
+			Type:   roomNode.Type,
+		}
+		terrain.Rooms = append(terrain.Rooms, room)
+
+		// Carve out the room floor
+		for y := roomNode.Position.Y; y < roomNode.Position.Y+roomNode.Height; y++ {
+			for x := roomNode.Position.X; x < roomNode.Position.X+roomNode.Width; x++ {
+				if x >= 0 && x < graph.Width && y >= 0 && y < graph.Height {
+					terrain.SetTile(x, y, TileFloor)
+				}
+			}
+		}
+	}
+
+	// Create corridors between connected rooms
+	for _, roomNode := range graph.Rooms {
+		for _, conn := range roomNode.Connections {
+			// Get room centers for corridor placement
+			x1, y1 := roomNode.Position.X+roomNode.Width/2, roomNode.Position.Y+roomNode.Height/2
+			x2, y2 := conn.To.Position.X+conn.To.Width/2, conn.To.Position.Y+conn.To.Height/2
+
+			// Determine tile type based on connection type
+			tileType := TileCorridor
+			if conn.Type == ConnectionDoor {
+				tileType = TileDoor
+			} else if conn.Type == ConnectionSecret {
+				tileType = TileSecretDoor
+			}
+
+			// Create L-shaped corridor: horizontal then vertical
+			// Horizontal segment
+			minX, maxX := x1, x2
+			if minX > maxX {
+				minX, maxX = maxX, minX
+			}
+			for x := minX; x <= maxX; x++ {
+				if y1 >= 0 && y1 < graph.Height && x >= 0 && x < graph.Width {
+					if terrain.GetTile(x, y1) == TileWall {
+						terrain.SetTile(x, y1, tileType)
+					}
+				}
+			}
+
+			// Vertical segment
+			minY, maxY := y1, y2
+			if minY > maxY {
+				minY, maxY = maxY, minY
+			}
+			for y := minY; y <= maxY; y++ {
+				if y >= 0 && y < graph.Height && x2 >= 0 && x2 < graph.Width {
+					if terrain.GetTile(x2, y) == TileWall {
+						terrain.SetTile(x2, y, tileType)
+					}
+				}
+			}
+		}
+	}
+
+	// Add stairs if we have a start and boss room
+	if graph.StartRoom != nil {
+		startX, startY := graph.StartRoom.Position.X+graph.StartRoom.Width/2, graph.StartRoom.Position.Y+graph.StartRoom.Height/2
+		terrain.AddStairs(startX, startY, true) // Stairs up at start
+	}
+	if graph.BossRoom != nil {
+		bossX, bossY := graph.BossRoom.Position.X+graph.BossRoom.Width/2, graph.BossRoom.Position.Y+graph.BossRoom.Height/2
+		terrain.AddStairs(bossX, bossY, false) // Stairs down at boss
+	}
+
+	return terrain
+}

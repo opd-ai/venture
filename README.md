@@ -257,6 +257,7 @@ See [Mobile Build Guide](docs/MOBILE_BUILD.md) for full instructions.
 | `-max-players` | `8` | Maximum concurrent players |
 | `-seed` | `12345` | World generation seed |
 | `-genre` | `fantasy` | Genre ID for world generation |
+| `-terrain-type` | `bsp` | Terrain generator type: `bsp`, `cellular`, `city`, `forest`, `composite`, `grammar` |
 | `-tick-rate` | `30` | Server update rate in ticks per second |
 | `-high-latency` | `false` | Optimize for Tor/high-latency connections (200–5000ms) |
 | `-security-audit` | `true` | Run security audit at startup |
@@ -278,6 +279,31 @@ See [Mobile Build Guide](docs/MOBILE_BUILD.md) for full instructions.
 |----------|--------|-------------|
 | `LOG_LEVEL` | `debug`, `info`, `warn`, `error`, `fatal` | Logging verbosity (unknown values default to `info`). **Note:** Takes precedence over `--verbose` flag. When `LOG_LEVEL` is not set, `--verbose=true` (default) sets level to `debug`, `--verbose=false` sets level to `info`. |
 | `LOG_FORMAT` | `json`, `text` | Log output format |
+
+### Terrain Generation Types
+
+The `-terrain-type` flag controls which procedural algorithm generates the world layout:
+
+| Type | Description | Best For |
+|------|-------------|----------|
+| `bsp` | Binary Space Partitioning — Creates dungeon-style layouts with rectangular rooms connected by corridors | Traditional dungeon crawling, fantasy genres |
+| `cellular` | Cellular Automata — Generates organic cave systems with natural-looking formations | Cave exploration, underground environments |
+| `city` | City Generator — Creates urban layouts with roads, buildings, and districts | Urban exploration, cyberpunk/modern settings |
+| `forest` | L-System Trees — Generates forest layouts with procedural tree placement | Natural outdoor environments, wilderness exploration |
+| `composite` | Multi-Biome Composite — Combines multiple terrain types using Voronoi regions | Large varied worlds with diverse environments |
+| `grammar` | Graph Grammar — Uses L-systems to create dungeons with narrative flow and structured room connections | Story-driven dungeons with meaningful layouts and progression |
+
+Example usage:
+```bash
+# Generate a story-driven dungeon with graph grammar
+./venture-server -terrain-type grammar -genre fantasy -seed 42
+
+# Generate an organic cave system
+./venture-server -terrain-type cellular -genre horror -seed 99
+
+# Generate a cyberpunk city
+./venture-server -terrain-type city -genre cyberpunk -seed 2077
+```
 
 ### Mod Configuration
 

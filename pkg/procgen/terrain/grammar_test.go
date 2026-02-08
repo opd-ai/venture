@@ -1280,3 +1280,258 @@ func hasSubstring(s, substr string) bool {
 	}
 	return false
 }
+
+func TestGraphToTerrain(t *testing.T) {
+	tests := []struct {
+		name            string
+		setupGraph      func() *DungeonGraph
+		expectedRooms   int
+		validateTerrain func(*testing.T, *Terrain)
+	}{
+		{
+			name: "simple graph with two connected rooms",
+			setupGraph: func() *DungeonGraph {
+				graph := NewDungeonGraph(12345, 100, 80)
+
+				// Create start room
+				startRoom := &RoomNode{
+					ID:       0,
+					Type:     RoomSpawn,
+					Position: Point{X: 10, Y: 10},
+					Width:    8,
+					Height:   6,
+				}
+				graph.AddRoom(startRoom)
+				graph.StartRoom = startRoom
+
+				// Create boss room
+				bossRoom := &RoomNode{
+					ID:       1,
+					Type:     RoomBoss,
+					Position: Point{X: 30, Y: 20},
+					Width:    10,
+					Height:   8,
+				}
+				graph.AddRoom(bossRoom)
+				graph.BossRoom = bossRoom
+
+				// Connect them
+				graph.ConnectRooms(startRoom, bossRoom, ConnectionCorridor, 1.0)
+
+				return graph
+			},
+			expectedRooms: 2,
+			validateTerrain: func(t *testing.T, terrain *Terrain) {
+				// Check dimensions
+				if terrain.Width != 100 || terrain.Height != 80 {
+					t.Errorf("unexpected terrain dimensions: %dx%d, want 100x80", terrain.Width, terrain.Height)
+				}
+
+				// Check that start room area has floor tiles (avoid center where stairs might be)
+				if terrain.GetTile(11, 11) != TileFloor && terrain.GetTile(11, 11) != TileStairsUp {
+					t.Errorf("expected floor or stairs tile in start room, got %v", terrain.GetTile(11, 11))
+				}
+
+				// Check that boss room area has floor tiles (avoid center where stairs might be)
+				if terrain.GetTile(31, 21) != TileFloor && terrain.GetTile(31, 21) != TileStairsDown {
+					t.Errorf("expected floor or stairs tile in boss room, got %v", terrain.GetTile(31, 21))
+				}
+
+				// Check stairs placement
+				if len(terrain.StairsUp) != 1 {
+					t.Errorf("expected 1 stairs up, got %d", len(terrain.StairsUp))
+				}
+				if len(terrain.StairsDown) != 1 {
+					t.Errorf("expected 1 stairs down, got %d", len(terrain.StairsDown))
+				}
+			},
+		},
+		{
+			name: "graph with multiple room types",
+			setupGraph: func() *DungeonGraph {
+				graph := NewDungeonGraph(54321, 120, 100)
+
+				rooms := []*RoomNode{
+					{ID: 0, Type: RoomSpawn, Position: Point{X: 5, Y: 5}, Width: 6, Height: 6},
+					{ID: 1, Type: RoomCombat, Position: Point{X: 20, Y: 5}, Width: 8, Height: 6},
+					{ID: 2, Type: RoomTreasure, Position: Point{X: 35, Y: 5}, Width: 7, Height: 7},
+					{ID: 3, Type: RoomBoss, Position: Point{X: 50, Y: 5}, Width: 10, Height: 10},
+				}
+
+				for _, room := range rooms {
+					graph.AddRoom(room)
+				}
+				graph.StartRoom = rooms[0]
+				graph.BossRoom = rooms[3]
+
+				// Create a linear path
+				for i := 0; i < len(rooms)-1; i++ {
+					graph.ConnectRooms(rooms[i], rooms[i+1], ConnectionCorridor, 1.0)
+				}
+
+				return graph
+			},
+			expectedRooms: 4,
+			validateTerrain: func(t *testing.T, terrain *Terrain) {
+				// Verify all rooms were created
+				if len(terrain.Rooms) != 4 {
+					t.Errorf("expected 4 rooms, got %d", len(terrain.Rooms))
+				}
+
+				// Verify room types are preserved
+				roomTypes := make(map[RoomType]int)
+				for _, room := range terrain.Rooms {
+					roomTypes[room.Type]++
+				}
+
+				if roomTypes[RoomSpawn] != 1 {
+					t.Errorf("expected 1 spawn room, got %d", roomTypes[RoomSpawn])
+				}
+				if roomTypes[RoomCombat] != 1 {
+					t.Errorf("expected 1 combat room, got %d", roomTypes[RoomCombat])
+				}
+				if roomTypes[RoomTreasure] != 1 {
+					t.Errorf("expected 1 treasure room, got %d", roomTypes[RoomTreasure])
+				}
+				if roomTypes[RoomBoss] != 1 {
+					t.Errorf("expected 1 boss room, got %d", roomTypes[RoomBoss])
+				}
+			},
+		},
+		{
+			name: "graph with secret connections",
+			setupGraph: func() *DungeonGraph {
+				graph := NewDungeonGraph(99999, 80, 60)
+
+				room1 := &RoomNode{ID: 0, Type: RoomSpawn, Position: Point{X: 10, Y: 10}, Width: 6, Height: 6}
+				room2 := &RoomNode{ID: 1, Type: RoomSecret, Position: Point{X: 30, Y: 10}, Width: 5, Height: 5}
+
+				graph.AddRoom(room1)
+				graph.AddRoom(room2)
+				graph.StartRoom = room1
+
+				// Connect with secret door
+				graph.ConnectRooms(room1, room2, ConnectionSecret, 1.0)
+
+				return graph
+			},
+			expectedRooms: 2,
+			validateTerrain: func(t *testing.T, terrain *Terrain) {
+				// Count secret doors in corridor between rooms
+				secretDoorCount := 0
+				for y := 0; y < terrain.Height; y++ {
+					for x := 0; x < terrain.Width; x++ {
+						if terrain.GetTile(x, y) == TileSecretDoor {
+							secretDoorCount++
+						}
+					}
+				}
+
+				if secretDoorCount == 0 {
+					t.Error("expected at least one secret door tile in terrain")
+				}
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			graph := tt.setupGraph()
+			terrain := GraphToTerrain(graph)
+
+			if terrain == nil {
+				t.Fatal("GraphToTerrain returned nil")
+			}
+
+			if len(terrain.Rooms) != tt.expectedRooms {
+				t.Errorf("expected %d rooms, got %d", tt.expectedRooms, len(terrain.Rooms))
+			}
+
+			if terrain.Seed != graph.Seed {
+				t.Errorf("terrain seed %d doesn't match graph seed %d", terrain.Seed, graph.Seed)
+			}
+
+			if tt.validateTerrain != nil {
+				tt.validateTerrain(t, terrain)
+			}
+		})
+	}
+}
+
+func TestGraphToTerrain_EmptyGraph(t *testing.T) {
+	graph := NewDungeonGraph(12345, 50, 50)
+	terrain := GraphToTerrain(graph)
+
+	if terrain == nil {
+		t.Fatal("GraphToTerrain returned nil for empty graph")
+	}
+
+	if len(terrain.Rooms) != 0 {
+		t.Errorf("expected 0 rooms for empty graph, got %d", len(terrain.Rooms))
+	}
+
+	// All tiles should be walls
+	for y := 0; y < terrain.Height; y++ {
+		for x := 0; x < terrain.Width; x++ {
+			if terrain.GetTile(x, y) != TileWall {
+				t.Errorf("expected wall at (%d,%d) for empty graph, got %v", x, y, terrain.GetTile(x, y))
+				return
+			}
+		}
+	}
+}
+
+func TestGraphGrammarGenerator_GenerateAndConvert(t *testing.T) {
+	// Integration test: Generate a graph and convert to terrain
+	config := GetFantasyConfig(12345)
+	gen := NewGraphGrammarGenerator(config)
+
+	params := procgen.GenerationParams{
+		Difficulty: 0.5,
+		Depth:      1,
+		GenreID:    "fantasy",
+		Custom: map[string]interface{}{
+			"width":  100,
+			"height": 80,
+		},
+	}
+
+	result, err := gen.Generate(12345, params)
+	if err != nil {
+		t.Fatalf("failed to generate graph: %v", err)
+	}
+
+	graph, ok := result.(*DungeonGraph)
+	if !ok {
+		t.Fatalf("expected *DungeonGraph, got %T", result)
+	}
+
+	// Convert to terrain
+	terrain := GraphToTerrain(graph)
+	if terrain == nil {
+		t.Fatal("GraphToTerrain returned nil")
+	}
+
+	// Validate terrain structure
+	if terrain.Width != 100 || terrain.Height != 80 {
+		t.Errorf("unexpected terrain dimensions: %dx%d", terrain.Width, terrain.Height)
+	}
+
+	if len(terrain.Rooms) == 0 {
+		t.Error("converted terrain has no rooms")
+	}
+
+	// Ensure there are walkable tiles
+	walkableCount := 0
+	for y := 0; y < terrain.Height; y++ {
+		for x := 0; x < terrain.Width; x++ {
+			if terrain.IsWalkable(x, y) {
+				walkableCount++
+			}
+		}
+	}
+
+	if walkableCount == 0 {
+		t.Error("converted terrain has no walkable tiles")
+	}
+}

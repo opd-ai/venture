@@ -34,6 +34,7 @@ var (
 	maxPlayers    = flag.Int("max-players", 8, "Maximum number of players")
 	seed          = flag.Int64("seed", 12345, "World generation seed")
 	genreID       = flag.String("genre", "fantasy", "Genre ID for world generation")
+	terrainType   = flag.String("terrain-type", "bsp", "Terrain generator type: bsp, cellular, city, forest, composite, grammar")
 	tickRate      = flag.Int("tick-rate", 30, "Server update rate (updates per second)")
 	verbose       = flag.Bool("verbose", true, "Enable verbose logging")
 	aerialSprites = flag.Bool("aerial-sprites", true, "Enable aerial-view perspective sprites for top-down gameplay")
@@ -400,12 +401,47 @@ func generateWorldTerrain(logger *logrus.Logger, serverLogger *logrus.Entry) *te
 	terrainLogger := logging.GeneratorLogger(logger, "terrain", *seed, *genreID)
 	if logger.GetLevel() >= logrus.DebugLevel {
 		terrainLogger.WithFields(logrus.Fields{
-			"width":  100,
-			"height": 100,
+			"width":       100,
+			"height":      100,
+			"terrainType": *terrainType,
 		}).Debug("generating world terrain")
 	}
 
-	terrainGen := terrain.NewBSPGeneratorWithLogger(logger)
+	// Select generator based on terrain type
+	var terrainGen procgen.Generator
+	switch *terrainType {
+	case "grammar":
+		// Use GraphGrammarGenerator with genre-specific config
+		var config terrain.LSystemConfig
+		switch *genreID {
+		case "fantasy":
+			config = terrain.GetFantasyConfig(*seed)
+		case "scifi", "sci-fi":
+			config = terrain.GetSciFiConfig(*seed)
+		case "horror":
+			config = terrain.GetHorrorConfig(*seed)
+		case "cyberpunk":
+			config = terrain.GetCyberpunkConfig(*seed)
+		case "post-apocalyptic", "postapocalyptic":
+			config = terrain.GetPostApocalypticConfig(*seed)
+		default:
+			config = terrain.GetFantasyConfig(*seed)
+		}
+		terrainGen = terrain.NewGraphGrammarGeneratorWithLogger(config, logger)
+	case "cellular":
+		terrainGen = terrain.NewCellularGeneratorWithLogger(logger)
+	case "city":
+		terrainGen = terrain.NewCityGeneratorWithLogger(logger)
+	case "forest":
+		terrainGen = terrain.NewForestGeneratorWithLogger(logger)
+	case "composite":
+		terrainGen = terrain.NewCompositeGeneratorWithLogger(logger)
+	case "bsp":
+		fallthrough
+	default:
+		terrainGen = terrain.NewBSPGeneratorWithLogger(logger)
+	}
+
 	params := procgen.GenerationParams{
 		Difficulty: 0.5,
 		Depth:      1,
@@ -421,11 +457,24 @@ func generateWorldTerrain(logger *logrus.Logger, serverLogger *logrus.Entry) *te
 		serverLogger.WithError(err).Fatal("failed to generate terrain")
 	}
 
-	generatedTerrain := terrainResult.(*terrain.Terrain)
+	// Convert result to Terrain (handles both *Terrain and *DungeonGraph)
+	var generatedTerrain *terrain.Terrain
+	if graph, ok := terrainResult.(*terrain.DungeonGraph); ok {
+		// Grammar generator returns DungeonGraph, convert it
+		generatedTerrain = terrain.GraphToTerrain(graph)
+		terrainLogger.WithFields(logrus.Fields{
+			"graphRooms": len(graph.Rooms),
+			"converted":  true,
+		}).Debug("converted DungeonGraph to Terrain")
+	} else {
+		generatedTerrain = terrainResult.(*terrain.Terrain)
+	}
+
 	terrainLogger.WithFields(logrus.Fields{
-		"width":     generatedTerrain.Width,
-		"height":    generatedTerrain.Height,
-		"roomCount": len(generatedTerrain.Rooms),
+		"width":       generatedTerrain.Width,
+		"height":      generatedTerrain.Height,
+		"roomCount":   len(generatedTerrain.Rooms),
+		"terrainType": *terrainType,
 	}).Info("world terrain generated")
 
 	return generatedTerrain

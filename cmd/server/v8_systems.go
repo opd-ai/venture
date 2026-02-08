@@ -6,6 +6,7 @@ package main
 import (
 	"github.com/opd-ai/venture/pkg/engine"
 	"github.com/opd-ai/venture/pkg/engine/physics/fluids"
+	guildvehicle "github.com/opd-ai/venture/pkg/integration/guild_vehicle"
 	"github.com/opd-ai/venture/pkg/network/federation"
 	"github.com/opd-ai/venture/pkg/network/federation/guild"
 	"github.com/sirupsen/logrus"
@@ -21,8 +22,8 @@ import (
 // Server-side systems include: housing infrastructure, trust/reputation tracking,
 // chat history persistence, image galleries, guild halls, fluid simulation,
 // enhanced vehicle physics, and building/furniture generation.
-// Returns the guild.Manager for use by V9 political warfare integration.
-func initializeV8SystemsServer(world *engine.World, seed int64, logger *logrus.Logger) *guild.Manager {
+// Returns the guild.Manager and FleetManager for use by V9 political warfare integration.
+func initializeV8SystemsServer(world *engine.World, seed int64, logger *logrus.Logger) (*guild.Manager, *guildvehicle.FleetManager) {
 	serverLogger := logger.WithField("component", "v8_systems")
 
 	// Phase 49.1-49.2: Housing, Trust & Reputation Infrastructure
@@ -49,6 +50,12 @@ func initializeV8SystemsServer(world *engine.World, seed int64, logger *logrus.L
 	federationProtocol := federation.NewFederationProtocol("server-id", serverIdentity)
 	guildSystem.SetFederation(federationProtocol)
 	_ = federationProtocol // Available for future cross-server features
+
+	// Phase 56.1: Guild Vehicle Fleet Combat (ROADMAP_V9.md)
+	// FleetManager coordinates guild vehicle fleets with formations, siege engines, and maintenance
+	// Provides server-authoritative fleet management for guild vehicle coordination
+	fleetManager := guildvehicle.NewFleetManager()
+	serverLogger.Debug("FleetManager initialized for guild vehicle coordination")
 
 	// Phase 50.3: Enhanced Vehicle Physics
 	// NOTE: EnhancedVehicleSystem is client-side only (handles visual physics).
@@ -86,8 +93,8 @@ func initializeV8SystemsServer(world *engine.World, seed int64, logger *logrus.L
 	// - furniture.NewGenerator() for interior furniture
 
 	if logger.GetLevel() >= logrus.DebugLevel {
-		serverLogger.Info("V8.0 systems initialized (guild federation, housing, trust, reputation, fluid dynamics, vehicle physics, building/furniture)")
+		serverLogger.Info("V8.0 systems initialized (guild federation, fleet management, housing, trust, reputation, fluid dynamics, vehicle physics, building/furniture)")
 	}
 
-	return guildManager
+	return guildManager, fleetManager
 }

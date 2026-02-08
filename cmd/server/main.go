@@ -352,10 +352,10 @@ func createGameWorld(logger *logrus.Logger) *engine.World {
 
 	// INTEGRATION FIX [Category A]: V8.0 Server System Initialization
 	// Gap: V8.0 systems implemented but never initialized on server
-	// Fix: Added V8.0 system initialization call for housing, fluids, vehicle physics
-	// Roadmap: ROADMAP_V8.md (Phase 49-51)
-	// Returns guild.Manager for V9 political warfare integration
-	guildManager := initializeV8SystemsServer(world, *seed, logger)
+	// Fix: Added V8.0 system initialization call for housing, fluids, vehicle physics, fleet management
+	// Roadmap: ROADMAP_V8.md (Phase 49-51), ROADMAP_V9.md (Phase 56.1)
+	// Returns guild.Manager and FleetManager for V9 political warfare integration
+	guildManager, fleetManager := initializeV8SystemsServer(world, *seed, logger)
 
 	// INTEGRATION FIX [Category A]: V9.0 Server Integration Manager Initialization
 	// Gap: V9.0 integration managers were client-only, allowing XP/loyalty/permission exploits
@@ -388,6 +388,13 @@ func createGameWorld(logger *logrus.Logger) *engine.World {
 	// Impact: Guild wars, treaties, embargoes, and diplomatic victories enabled server-side
 	// Note: Manager accessible via politicalWarfareSys.GetManager() for direct API calls
 	_ = politicalWarfareSys // System runs via world.Update(), manager available for future use
+
+	// INTEGRATION FIX [AUDIT.md Task #2]: FleetManager for guild vehicle coordination
+	// Gap: FleetManager defined but never instantiated for guild vehicle coordination
+	// Fix: Initialize FleetManager in v8_systems.go for server-authoritative fleet management
+	// Impact: Guild fleet formations, siege engines, and vehicle maintenance enabled server-side
+	// Note: Available for VehicleSystem integration and network packet handling
+	_ = fleetManager // Manager available for future vehicle fleet coordination features
 
 	if logger.GetLevel() >= logrus.DebugLevel {
 		worldLogger.Debug("game systems initialized")

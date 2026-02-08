@@ -115,10 +115,14 @@ func TestInitializeV8SystemsServer(t *testing.T) {
 
 	initialSystemCount := len(world.GetSystems())
 
-	guildManager := initializeV8SystemsServer(world, seed, logger)
+	guildManager, fleetManager := initializeV8SystemsServer(world, seed, logger)
 
 	if guildManager == nil {
 		t.Error("initializeV8SystemsServer returned nil guildManager")
+	}
+
+	if fleetManager == nil {
+		t.Error("initializeV8SystemsServer returned nil fleetManager")
 	}
 
 	finalSystemCount := len(world.GetSystems())
@@ -130,7 +134,7 @@ func TestInitializeV8SystemsServer(t *testing.T) {
 		t.Errorf("initializeV8SystemsServer added %d systems, expected at least %d", addedSystems, expectedMinSystems)
 	}
 
-	t.Logf("V8 systems initialized: %d systems added", addedSystems)
+	t.Logf("V8 systems initialized: %d systems added (guildManager, fleetManager returned)", addedSystems)
 }
 
 // TestInitializeV9SystemsServer verifies V9.0 integration managers are created
@@ -140,7 +144,7 @@ func TestInitializeV9SystemsServer(t *testing.T) {
 	seed := int64(12345)
 
 	// V9 now requires guildManager from V8
-	guildManager := initializeV8SystemsServer(world, seed, logger)
+	guildManager, _ := initializeV8SystemsServer(world, seed, logger)
 
 	stationManager, petHomeManager, guildHousingManager, narrativeWorldSys, politicalWarfareSys := initializeV9SystemsServer(world, seed, guildManager, logger)
 
@@ -207,8 +211,13 @@ func TestAllSystemsInitialization_Integration(t *testing.T) {
 	initializeV4Systems(world, seed, logger)
 	initializeV5SystemsServer(world, logger)
 	initializeV6SystemsServer(world, seed, logger)
-	guildManager := initializeV8SystemsServer(world, seed, logger)
+	guildManager, fleetManager := initializeV8SystemsServer(world, seed, logger)
 	initializeCoreGameplaySystems(world, seed, logger, inventorySystem, itemGen)
+
+	// Verify FleetManager is returned from V8
+	if fleetManager == nil {
+		t.Error("FleetManager not returned from V8 initialization")
+	}
 
 	// Verify V9 managers are created
 	stationManager, petHomeManager, guildHousingManager, narrativeWorldSys, politicalWarfareSys := initializeV9SystemsServer(world, seed, guildManager, logger)
@@ -274,7 +283,7 @@ func TestSystemInitialization_LoggerLevels(t *testing.T) {
 			initializeV4Systems(world, 12345, logger)
 			initializeV5SystemsServer(world, logger)
 			initializeV6SystemsServer(world, 12345, logger)
-			guildMgr := initializeV8SystemsServer(world, 12345, logger)
+			guildMgr, _ := initializeV8SystemsServer(world, 12345, logger)
 			initializeV9SystemsServer(world, 12345, guildMgr, logger)
 
 			if len(world.GetSystems()) == 0 {
@@ -327,7 +336,7 @@ func BenchmarkInitializeV8SystemsServer(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		world := engine.NewWorld()
-		_ = initializeV8SystemsServer(world, seed, logger)
+		_, _ = initializeV8SystemsServer(world, seed, logger)
 	}
 }
 
@@ -339,7 +348,7 @@ func BenchmarkInitializeV9SystemsServer(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		world := engine.NewWorld()
-		guildManager := initializeV8SystemsServer(world, seed, logger)
+		guildManager, _ := initializeV8SystemsServer(world, seed, logger)
 		initializeV9SystemsServer(world, seed, guildManager, logger)
 	}
 }
@@ -358,7 +367,7 @@ func BenchmarkInitializeAllSystems(b *testing.B) {
 		initializeV4Systems(world, seed, logger)
 		initializeV5SystemsServer(world, logger)
 		initializeV6SystemsServer(world, seed, logger)
-		guildManager := initializeV8SystemsServer(world, seed, logger)
+		guildManager, _ := initializeV8SystemsServer(world, seed, logger)
 		initializeCoreGameplaySystems(world, seed, logger, inventorySystem, itemGen)
 		initializeV9SystemsServer(world, seed, guildManager, logger)
 	}

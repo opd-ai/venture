@@ -515,6 +515,15 @@ type FederationBroadcaster interface {
 }
 
 // VRHeadsetAdapter abstracts VR headset hardware for head tracking.
+//
+// EXPERIMENTAL: VR support is currently experimental. Production code uses
+// StubHeadsetAdapter which reports no hardware connected. Future releases
+// will integrate OpenVR/OpenXR SDKs for real hardware support.
+//
+// Implementations:
+//   - StubHeadsetAdapter: Production stub (no hardware SDK)
+//   - MockHeadset: Test implementation with configurable values
+//
 // Originally from: head_tracking_system.go
 type VRHeadsetAdapter interface {
 	// IsConnected returns true if headset is available
@@ -594,6 +603,15 @@ type ParallelRendererProvider interface {
 }
 
 // VRControllerAdapter abstracts VR controller hardware.
+//
+// EXPERIMENTAL: VR support is currently experimental. Production code uses
+// StubControllerAdapter which reports no controllers connected. Future releases
+// will integrate OpenVR/OpenXR SDKs for real hardware support.
+//
+// Implementations:
+//   - StubControllerAdapter: Production stub (no hardware SDK)
+//   - MockController: Test implementation with configurable values
+//
 // Originally from: vr_controller_system.go
 type VRControllerAdapter interface {
 	// IsConnected returns true if controller is available

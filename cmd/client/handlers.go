@@ -1287,10 +1287,10 @@ func initializeVRSystems(game *engine.EbitenGame, sys *systemsContainer, clientL
 		sys.headTrackingSystem.SetUseMouseFallback(true)
 		clientLogger.Debug("head tracking system initialized with mouse fallback (no headset)")
 	} else {
-		// Set up headset adapter (placeholder - real hardware would use SDK)
-		mockHeadset := engine.NewMockHeadset()
-		sys.headTrackingSystem.SetHeadsetAdapter(mockHeadset)
-		clientLogger.Debug("head tracking system initialized with headset adapter")
+		// Set up stub headset adapter (production stub - real hardware SDK integration planned)
+		stubHeadset := engine.NewStubHeadsetAdapter()
+		sys.headTrackingSystem.SetHeadsetAdapter(stubHeadset)
+		clientLogger.Debug("head tracking system initialized with stub adapter (no hardware SDK)")
 	}
 
 	game.World.AddSystem(sys.headTrackingSystem)
@@ -1299,12 +1299,12 @@ func initializeVRSystems(game *engine.EbitenGame, sys *systemsContainer, clientL
 	if detector.IsControllerDetected() || *forceVR {
 		sys.vrControllerSystem = engine.NewVRControllerSystem(game.World)
 
-		// Set up mock controllers (placeholder - real hardware would use SDK)
-		mockController := engine.NewMockController()
-		sys.vrControllerSystem.SetControllerAdapter(mockController)
+		// Set up stub controller adapter (production stub - real hardware SDK integration planned)
+		stubController := engine.NewStubControllerAdapter()
+		sys.vrControllerSystem.SetControllerAdapter(stubController)
 
 		game.World.AddSystem(sys.vrControllerSystem)
-		clientLogger.Debug("VR controller system initialized")
+		clientLogger.Debug("VR controller system initialized with stub adapter (no hardware SDK)")
 	}
 
 	// Initialize VR UI system for VR-optimized rendering

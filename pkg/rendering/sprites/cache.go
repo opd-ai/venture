@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"hash"
 	"hash/fnv"
-	"sort"
 	"strconv"
 	"sync"
 
@@ -26,15 +25,6 @@ var hashBufferPool = sync.Pool{
 	New: func() interface{} {
 		buf := make([]byte, 0, 128)
 		return &buf
-	},
-}
-
-// keySlicePool pools string slices for sorting Custom parameter keys.
-// Eliminates per-call allocations when hashing configs with Custom parameters.
-var keySlicePool = sync.Pool{
-	New: func() interface{} {
-		keys := make([]string, 0, 8)
-		return &keys
 	},
 }
 
@@ -253,16 +243,10 @@ func (c *Cache) hashConfig(config Config) uint64 {
 	h.Write(buf)
 
 	// Hash custom parameters in sorted key order for determinism
-	// Go map iteration order is randomized, so we must sort keys
+	// Performance: Use pre-sorted keys from config to avoid O(k log k) sort per lookup
 	if config.Custom != nil && len(config.Custom) > 0 {
-		// Get pooled key slice
-		keysPtr := keySlicePool.Get().(*[]string)
-		keys := (*keysPtr)[:0]
-
-		for key := range config.Custom {
-			keys = append(keys, key)
-		}
-		sort.Strings(keys)
+		// Get pre-sorted keys from config (auto-sorts if needed)
+		keys := config.GetSortedCustomKeys()
 
 		// Reuse buf for custom params to avoid fmt.Fprintf allocations
 		buf = buf[:0]
@@ -292,10 +276,6 @@ func (c *Cache) hashConfig(config Config) uint64 {
 			}
 		}
 		h.Write(buf)
-
-		// Return pooled key slice
-		*keysPtr = keys
-		keySlicePool.Put(keysPtr)
 	}
 
 	sum := h.Sum64()

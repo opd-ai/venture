@@ -1,7 +1,6 @@
 package sprites
 
 import (
-	"os"
 	"sync"
 	"testing"
 
@@ -605,5 +604,108 @@ func TestCache_ConcurrentGetAndPut(t *testing.T) {
 	stats := cache.Stats()
 	if stats.Size > 50 {
 		t.Errorf("Cache size %d exceeds capacity 50", stats.Size)
+	}
+}
+
+// TestConfig_SetCustom verifies that SetCustom properly sorts keys.
+func TestConfig_SetCustom(t *testing.T) {
+	config := DefaultConfig()
+
+	custom := map[string]interface{}{
+		"zebra":  "last",
+		"alpha":  "first",
+		"middle": "middle",
+	}
+
+	config.SetCustom(custom)
+
+	// Verify keys are sorted
+	keys := config.GetSortedCustomKeys()
+	expected := []string{"alpha", "middle", "zebra"}
+
+	if len(keys) != len(expected) {
+		t.Fatalf("Expected %d keys, got %d", len(expected), len(keys))
+	}
+
+	for i, key := range keys {
+		if key != expected[i] {
+			t.Errorf("Key[%d] = %s, want %s", i, key, expected[i])
+		}
+	}
+}
+
+// TestConfig_sortCustomKeys verifies manual sorting after direct Custom modification.
+func TestConfig_sortCustomKeys(t *testing.T) {
+	config := DefaultConfig()
+
+	// Modify Custom directly (not recommended, but should still work)
+	config.Custom = map[string]interface{}{
+		"c": 3,
+		"a": 1,
+		"b": 2,
+	}
+
+	// Should auto-sort on first access
+	keys := config.GetSortedCustomKeys()
+	expected := []string{"a", "b", "c"}
+
+	if len(keys) != len(expected) {
+		t.Fatalf("Expected %d keys, got %d", len(expected), len(keys))
+	}
+
+	for i, key := range keys {
+		if key != expected[i] {
+			t.Errorf("Key[%d] = %s, want %s", i, key, expected[i])
+		}
+	}
+}
+
+// TestConfig_GetSortedCustomKeys_Empty verifies handling of nil/empty Custom.
+func TestConfig_GetSortedCustomKeys_Empty(t *testing.T) {
+	tests := []struct {
+		name   string
+		custom map[string]interface{}
+	}{
+		{"nil custom", nil},
+		{"empty custom", map[string]interface{}{}},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			config := DefaultConfig()
+			config.Custom = tt.custom
+
+			keys := config.GetSortedCustomKeys()
+			if keys != nil {
+				t.Errorf("Expected nil keys for empty custom, got %v", keys)
+			}
+		})
+	}
+}
+
+// TestHashConfig_UsesPreSortedKeys verifies that hashConfig uses pre-sorted keys.
+func TestHashConfig_UsesPreSortedKeys(t *testing.T) {
+	cache := NewCache(10)
+
+	// Create two configs with same custom params but set differently
+	config1 := DefaultConfig()
+	config1.SetCustom(map[string]interface{}{
+		"param1": "value1",
+		"param2": "value2",
+	})
+
+	config2 := DefaultConfig()
+	// Directly set Custom (will auto-sort on first hash)
+	config2.Custom = map[string]interface{}{
+		"param2": "value2",
+		"param1": "value1",
+	}
+
+	// Both should generate same hash despite different insertion order
+	hash1 := cache.hashConfig(config1)
+	hash2 := cache.hashConfig(config2)
+
+	if hash1 != hash2 {
+		t.Errorf("Hash mismatch: %d != %d (custom params should produce deterministic hash)", hash1, hash2)
 	}
 }

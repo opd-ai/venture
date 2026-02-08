@@ -2,6 +2,7 @@
 package engine
 
 import (
+	"image/color"
 	"testing"
 
 	"github.com/opd-ai/venture/pkg/rendering/particles"
@@ -479,5 +480,55 @@ func TestWeatherSystem_GetWeatherParticles_MultipleCallsNoLeak(t *testing.T) {
 	// Allow some growth for slice expansion, but not 100x
 	if finalCap > maxCap*2 {
 		t.Errorf("Buffer capacity grew excessively: %d (max was %d)", finalCap, maxCap)
+	}
+}
+
+// TestWeatherSystem_GetWeatherParticles_NoColorConversion verifies color handling.
+// Performance: Ensures we don't allocate via color.RGBAModel.Convert().
+func TestWeatherSystem_GetWeatherParticles_NoColorConversion(t *testing.T) {
+	world := NewWorld()
+	ws := NewWeatherSystem(world)
+
+	entity := world.CreateEntity()
+
+	// Create a weather system with particles
+	weatherSys := &particles.WeatherSystem{
+		Particles: []particles.Particle{
+			{
+				X:     100,
+				Y:     100,
+				Size:  4.0,
+				Color: color.RGBA{255, 0, 0, 200}, // Red with alpha
+				Life:  1.0,
+			},
+		},
+	}
+
+	// Create weather component with transition (50% opacity)
+	weatherComp := &WeatherComponent{
+		System:          weatherSys,
+		Active:          true,
+		Transitioning:   true,
+		TransitionTime:  2.5, // Half of 5.0 = 50% opacity
+		TransitionTotal: 5.0,
+		FadingIn:        true,
+	}
+
+	entity.AddComponent(weatherComp)
+
+	weatherData := ws.GetWeatherParticles()
+	if len(weatherData) != 1 {
+		t.Fatalf("Expected 1 particle, got %d", len(weatherData))
+	}
+
+	// Verify color was modified correctly (alpha reduced by opacity)
+	p := weatherData[0]
+	if p.Color.R != 255 {
+		t.Errorf("Red channel = %d, want 255", p.Color.R)
+	}
+	// Opacity at halfway through transition should be 0.5
+	expectedAlpha := uint8(200 * 0.5)
+	if p.Color.A != expectedAlpha {
+		t.Errorf("Alpha = %d, want %d (200 * 0.5)", p.Color.A, expectedAlpha)
 	}
 }

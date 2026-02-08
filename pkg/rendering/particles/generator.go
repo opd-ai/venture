@@ -128,10 +128,10 @@ func (g *Generator) Generate(config Config) (*ParticleSystem, error) {
 // generateSparks creates bright, quick-moving spark particles.
 // Phase 45: Sparks render at entity level with scaled sizes.
 func (g *Generator) generateSparks(system *ParticleSystem, pal *palette.Palette, rng *rand.Rand, config Config) {
-	colors := []color.Color{
-		color.RGBA{255, 255, 200, 255}, // Bright yellow
-		color.RGBA{255, 200, 100, 255}, // Orange
-		color.RGBA{255, 255, 255, 255}, // White
+	colors := []color.RGBA{
+		{255, 255, 200, 255}, // Bright yellow
+		{255, 200, 100, 255}, // Orange
+		{255, 255, 255, 255}, // White
 	}
 
 	for i := range system.Particles {
@@ -159,10 +159,10 @@ func (g *Generator) generateSparks(system *ParticleSystem, pal *palette.Palette,
 // generateSmoke creates soft, slowly rising smoke particles.
 // Phase 45: Smoke rises with shrink-on-rise behavior, rendering above entities.
 func (g *Generator) generateSmoke(system *ParticleSystem, pal *palette.Palette, rng *rand.Rand, config Config) {
-	smokeColors := []color.Color{
-		color.RGBA{100, 100, 100, 200},
-		color.RGBA{120, 120, 120, 180},
-		color.RGBA{80, 80, 80, 220},
+	smokeColors := []color.RGBA{
+		{100, 100, 100, 200},
+		{120, 120, 120, 180},
+		{80, 80, 80, 220},
 	}
 
 	for i := range system.Particles {
@@ -198,10 +198,10 @@ func (g *Generator) generateSmoke(system *ParticleSystem, pal *palette.Palette, 
 // Phase 45: Magic particles render above entities with orbital movement.
 func (g *Generator) generateMagic(system *ParticleSystem, pal *palette.Palette, rng *rand.Rand, config Config) {
 	// Use palette colors for magic
-	magicColors := []color.Color{
-		pal.Primary,
-		pal.Secondary,
-		pal.Colors[rng.Intn(len(pal.Colors)/2)],
+	magicColors := []color.RGBA{
+		color.RGBAModel.Convert(pal.Primary).(color.RGBA),
+		color.RGBAModel.Convert(pal.Secondary).(color.RGBA),
+		color.RGBAModel.Convert(pal.Colors[rng.Intn(len(pal.Colors)/2)]).(color.RGBA),
 	}
 
 	for i := range system.Particles {
@@ -229,11 +229,11 @@ func (g *Generator) generateMagic(system *ParticleSystem, pal *palette.Palette, 
 // generateFlame creates fire-like particles.
 // Phase 45: Flames render above entities, shrinking as they rise.
 func (g *Generator) generateFlame(system *ParticleSystem, pal *palette.Palette, rng *rand.Rand, config Config) {
-	flameColors := []color.Color{
-		color.RGBA{255, 100, 0, 255},   // Orange
-		color.RGBA{255, 200, 0, 255},   // Yellow
-		color.RGBA{200, 50, 0, 255},    // Red
-		color.RGBA{255, 255, 100, 255}, // Bright yellow
+	flameColors := []color.RGBA{
+		{255, 100, 0, 255},   // Orange
+		{255, 200, 0, 255},   // Yellow
+		{200, 50, 0, 255},    // Red
+		{255, 255, 100, 255}, // Bright yellow
 	}
 
 	for i := range system.Particles {
@@ -268,10 +268,10 @@ func (g *Generator) generateFlame(system *ParticleSystem, pal *palette.Palette, 
 // generateBlood creates blood splatter particles.
 // Phase 45: Blood splatters render at ground level.
 func (g *Generator) generateBlood(system *ParticleSystem, pal *palette.Palette, rng *rand.Rand, config Config) {
-	bloodColors := []color.Color{
-		color.RGBA{150, 0, 0, 255},
-		color.RGBA{180, 20, 20, 255},
-		color.RGBA{120, 0, 0, 255},
+	bloodColors := []color.RGBA{
+		{150, 0, 0, 255},
+		{180, 20, 20, 255},
+		{120, 0, 0, 255},
 	}
 
 	for i := range system.Particles {
@@ -306,10 +306,10 @@ func (g *Generator) generateBlood(system *ParticleSystem, pal *palette.Palette, 
 // generateDust creates small dust particles.
 // Phase 45: Dust renders at ground level with scaled sizes.
 func (g *Generator) generateDust(system *ParticleSystem, pal *palette.Palette, rng *rand.Rand, config Config) {
-	dustColors := []color.Color{
-		color.RGBA{160, 140, 120, 180},
-		color.RGBA{140, 120, 100, 160},
-		color.RGBA{180, 160, 140, 170},
+	dustColors := []color.RGBA{
+		{160, 140, 120, 180},
+		{140, 120, 100, 160},
+		{180, 160, 140, 170},
 	}
 
 	for i := range system.Particles {
@@ -337,11 +337,11 @@ func (g *Generator) generateDust(system *ParticleSystem, pal *palette.Palette, r
 // generateEmbers creates glowing fire embers that rise and fade.
 // Phase 45: Embers use rising behavior with shrink-on-rise, rendering at sky level.
 func (g *Generator) generateEmbers(system *ParticleSystem, pal *palette.Palette, rng *rand.Rand, config Config) {
-	emberColors := []color.Color{
-		color.RGBA{255, 100, 0, 255},   // Bright orange
-		color.RGBA{255, 150, 50, 255},  // Light orange
-		color.RGBA{200, 50, 0, 255},    // Dark red
-		color.RGBA{255, 200, 100, 255}, // Yellow-orange
+	emberColors := []color.RGBA{
+		{255, 100, 0, 255},   // Bright orange
+		{255, 150, 50, 255},  // Light orange
+		{200, 50, 0, 255},    // Dark red
+		{255, 200, 100, 255}, // Yellow-orange
 	}
 
 	for i := range system.Particles {
@@ -379,11 +379,11 @@ func (g *Generator) generateEmbers(system *ParticleSystem, pal *palette.Palette,
 // Phase 45: Sparkles render above entities with orbital movement.
 func (g *Generator) generateSparkles(system *ParticleSystem, pal *palette.Palette, rng *rand.Rand, config Config) {
 	// Use palette colors for genre-specific sparkles
-	sparkleColors := []color.Color{
-		pal.Primary,
-		pal.Secondary,
-		pal.Colors[rng.Intn(len(pal.Colors)/2)],
-		color.RGBA{255, 255, 255, 255}, // White sparkle
+	sparkleColors := []color.RGBA{
+		color.RGBAModel.Convert(pal.Primary).(color.RGBA),
+		color.RGBAModel.Convert(pal.Secondary).(color.RGBA),
+		color.RGBAModel.Convert(pal.Colors[rng.Intn(len(pal.Colors)/2)]).(color.RGBA),
+		{255, 255, 255, 255}, // White sparkle
 	}
 
 	for i := range system.Particles {
@@ -423,11 +423,11 @@ func (g *Generator) generateSparkles(system *ParticleSystem, pal *palette.Palett
 // generateSmokePlume creates billowing smoke clouds.
 // Phase 45: Smoke plumes use rising + air resistance with shrink-on-rise, rendering at sky level.
 func (g *Generator) generateSmokePlume(system *ParticleSystem, pal *palette.Palette, rng *rand.Rand, config Config) {
-	plumeColors := []color.Color{
-		color.RGBA{80, 80, 80, 180},
-		color.RGBA{100, 100, 100, 160},
-		color.RGBA{120, 120, 120, 140},
-		color.RGBA{60, 60, 60, 200},
+	plumeColors := []color.RGBA{
+		{80, 80, 80, 180},
+		{100, 100, 100, 160},
+		{120, 120, 120, 140},
+		{60, 60, 60, 200},
 	}
 
 	for i := range system.Particles {
@@ -463,11 +463,11 @@ func (g *Generator) generateSmokePlume(system *ParticleSystem, pal *palette.Pale
 // generateDebris creates bouncing debris chunks.
 // Phase 45: Debris uses gravity + bouncing with grow-on-fall, rendering at ground level.
 func (g *Generator) generateDebris(system *ParticleSystem, pal *palette.Palette, rng *rand.Rand, config Config) {
-	debrisColors := []color.Color{
-		color.RGBA{100, 80, 60, 255},   // Brown
-		color.RGBA{120, 120, 120, 255}, // Gray
-		color.RGBA{80, 60, 40, 255},    // Dark brown
-		color.RGBA{140, 120, 100, 255}, // Light brown
+	debrisColors := []color.RGBA{
+		{100, 80, 60, 255},   // Brown
+		{120, 120, 120, 255}, // Gray
+		{80, 60, 40, 255},    // Dark brown
+		{140, 120, 100, 255}, // Light brown
 	}
 
 	for i := range system.Particles {

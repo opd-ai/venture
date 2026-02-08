@@ -684,11 +684,8 @@ func applyFadeBehavior(p *Particle) {
 		if fadeRatio < 0 {
 			fadeRatio = 0
 		}
-		// Reduce alpha
-		if c, ok := p.Color.(color.RGBA); ok {
-			c.A = uint8(float64(c.A) * fadeRatio)
-			p.Color = c
-		}
+		// Reduce alpha directly (Color is now color.RGBA)
+		p.Color.A = uint8(float64(p.Color.A) * fadeRatio)
 	}
 }
 

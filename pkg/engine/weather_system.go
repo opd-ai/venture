@@ -174,9 +174,8 @@ func (ws *WeatherSystem) GetWeatherParticles() []WeatherParticleData {
 			}
 
 			// Apply transition opacity to particle color
-			// Convert color.Color interface to color.RGBA for alpha manipulation
-			rgba := color.RGBAModel.Convert(p.Color).(color.RGBA)
-			// Adjust alpha based on opacity
+			// Performance: p.Color is already color.RGBA, no conversion needed
+			rgba := p.Color
 			originalAlpha := float64(rgba.A)
 			rgba.A = uint8(originalAlpha * opacity)
 

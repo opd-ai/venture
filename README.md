@@ -247,6 +247,8 @@ See [Mobile Build Guide](docs/MOBILE_BUILD.md) for full instructions.
 | `--palette-rarity` | `epic` | Palette rarity/intensity (`common`, `uncommon`, `rare`, `epic`, `legendary`) |
 | `-profile` | `true` | Enable performance profiling with frame time tracking |
 | `-no-tutorial` | `false` | Disable tutorial for experienced players |
+| `--vr` | `false` | Enable VR mode with auto-detection of VR headset hardware (activates stereoscopic rendering, head tracking, VR controllers, and VR UI) |
+| `--force-vr` | `false` | Force VR mode even without detected hardware (for testing VR systems without a physical headset) |
 | `--verbose` | `true` | Enable verbose debug logging (sets log level to `debug` when `LOG_LEVEL` not set) |
 
 ### Server Flags
@@ -304,6 +306,36 @@ Example usage:
 # Generate a cyberpunk city
 ./venture-server -terrain-type city -genre cyberpunk -seed 2077
 ```
+
+### VR Mode
+
+The `--vr` flag enables virtual reality mode with support for VR headsets and controllers. When enabled, the client activates four VR-specific systems:
+
+| System | Description |
+|--------|-------------|
+| **Stereoscopic Rendering** | Renders separate images for each eye with proper eye separation for depth perception |
+| **Head Tracking** | Tracks headset position and rotation for immersive camera control |
+| **VR Controller Input** | Supports VR controller input for natural gesture-based interactions |
+| **VR UI** | Adapts the user interface for VR display with spatial positioning |
+
+**Hardware Detection:**
+- By default (`--vr`), the client auto-detects VR hardware at startup
+- If no VR headset is detected, VR mode will not activate
+- Use `--force-vr` to enable VR systems without hardware detection (useful for testing or debugging)
+
+Example usage:
+```bash
+# Enable VR mode with auto-detection
+./venture-client --vr
+
+# Force VR mode for testing without a headset
+./venture-client --force-vr
+
+# Combine with other settings
+./venture-client --vr --genre scifi --seed 2077 --fullscreen
+```
+
+**Note:** VR mode requires compatible VR hardware. The auto-detection system checks for connected headsets and controllers at startup.
 
 ### Mod Configuration
 

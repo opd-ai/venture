@@ -211,10 +211,17 @@ grep -r "TODO|FIXME|HACK|XXX" pkg/ --include="*.go" | grep -v "_test.go"
      - Build and vet pass successfully
      - All trade routes and V6 system tests pass (100% success rate)
 
-4. **[Medium]** Document `--vr` flag for VR systems
+4. **[Medium] ✅ COMPLETED** Document `--vr` flag for VR systems
    - **File:** README.md Configuration section
    - **Action:** Add `--vr` flag documentation noting conditional VR system activation
    - **Impact:** Discoverability of VR features
+   - **Completed:** 2026-02-08
+   - **Changes:**
+     - Added `--vr` and `--force-vr` flags to Client Flags table in README.md
+     - Added comprehensive "VR Mode" section with system descriptions
+     - Documented four VR systems: Stereoscopic Rendering, Head Tracking, VR Controller Input, VR UI
+     - Included hardware detection behavior and usage examples
+     - Clarified `--force-vr` for testing without physical VR hardware
 
 ### Low Priority
 

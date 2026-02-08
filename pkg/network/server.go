@@ -546,7 +546,7 @@ func (s *TCPServer) isServerFull(conn net.Conn) bool {
 }
 
 // configureTCPKeepalive enables TCP keepalive for long-duration connections to prevent silent disconnections.
-// Uses KeepAliveConn interface for testability instead of concrete *net.TCPConn.
+// Uses KeepAliveConn interface for testability and flexible connection handling.
 func (s *TCPServer) configureTCPKeepalive(conn net.Conn) {
 	kaConn, ok := conn.(KeepAliveConn)
 	if !ok {

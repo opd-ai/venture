@@ -90,7 +90,7 @@ type ServerConnection interface {
 }
 
 // KeepAliveConn is an interface for connections that support TCP keepalive.
-// Using an interface instead of *net.TCPConn enhances testability.
+// Using an interface enhances testability and enables flexible implementations.
 // Originally from: client.go
 type KeepAliveConn interface {
 	SetKeepAlive(keepalive bool) error

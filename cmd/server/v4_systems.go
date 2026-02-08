@@ -232,9 +232,10 @@ func initializeV6SystemsServer(world *engine.World, seed int64, logger *logrus.L
 // Roadmap: Multiple phases (V3-V6) - complete multiplayer parity
 // Note: All system wrapper definitions moved to system_wrappers.go
 
-// initializeCoreGameplaySystems adds all missing server-critical systems
-// These systems were previously client-only, causing multiplayer desync
-func initializeCoreGameplaySystems(world *engine.World, seed int64, logger *logrus.Logger, inventorySystem *engine.InventorySystem, itemGen *itemgen.ItemGenerator) {
+// initializeCoreGameplaySystems adds all missing server-critical systems.
+// These systems were previously client-only, causing multiplayer desync.
+// Returns the CraftingSystem for wiring with V9 housing integration.
+func initializeCoreGameplaySystems(world *engine.World, seed int64, logger *logrus.Logger, inventorySystem *engine.InventorySystem, itemGen *itemgen.ItemGenerator) *engine.CraftingSystem {
 	serverLogger := logger.WithField("component", "core_gameplay_systems")
 
 	// Phase 13-14: Core Interaction Systems (V3.0)
@@ -363,4 +364,6 @@ func initializeCoreGameplaySystems(world *engine.World, seed int64, logger *logr
 		"note":               "Server-authoritative gameplay systems for multiplayer parity",
 		"integrationStatus":  "COMPLETE - All gameplay systems now on server",
 	}).Info("Core gameplay systems initialized on server (V3-V6 features)")
+
+	return craftingSystem
 }

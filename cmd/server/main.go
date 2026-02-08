@@ -337,7 +337,7 @@ func createGameWorld(logger *logrus.Logger) *engine.World {
 	// Gap: 29 server-critical systems were only on client, causing multiplayer desync
 	// Fix: Added all missing gameplay systems for server-authoritative state
 	// Roadmap: Multiple phases (V3-V6) - complete multiplayer parity
-	initializeCoreGameplaySystems(world, *seed, logger, inventorySystem, itemGen)
+	craftingSystem := initializeCoreGameplaySystems(world, *seed, logger, inventorySystem, itemGen)
 
 	initializeV4Systems(world, *seed, logger)
 	initializeV5SystemsServer(world, logger)
@@ -355,6 +355,12 @@ func createGameWorld(logger *logrus.Logger) *engine.World {
 	// Roadmap: ROADMAP_V9.md (Phase 55.1-55.3)
 	stationMgr, petHomeMgr, guildHousingMgr := initializeV9SystemsServer(logger)
 	v9ValidationService = NewV9ValidationService(stationMgr, petHomeMgr, guildHousingMgr, logger)
+
+	// INTEGRATION FIX [AUDIT.md Task #6]: Wire HousingCraftingSystem into CraftingSystem
+	// Gap: Station bonuses required manual registration, no auto-discovery
+	// Fix: Inject StationManager into CraftingSystem for automatic bonus calculation
+	// Impact: Players automatically receive crafting bonuses from owned housing stations
+	craftingSystem.SetStationManager(stationMgr)
 
 	if logger.GetLevel() >= logrus.DebugLevel {
 		worldLogger.Debug("game systems initialized")

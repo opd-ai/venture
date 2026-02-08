@@ -339,7 +339,7 @@ func createGameWorld(logger *logrus.Logger) *engine.World {
 	// Roadmap: Multiple phases (V3-V6) - complete multiplayer parity
 	craftingSystem := initializeCoreGameplaySystems(world, *seed, logger, inventorySystem, itemGen)
 
-	initializeV4Systems(world, *seed, logger)
+	companionLoyaltySystem := initializeV4Systems(world, *seed, logger)
 	enhancedChatSystem := initializeV5SystemsServer(world, logger)
 	initializeV6SystemsServer(world, *seed, logger)
 
@@ -367,6 +367,12 @@ func createGameWorld(logger *logrus.Logger) *engine.World {
 	// Fix: Inject StationManager into CraftingSystem for automatic bonus calculation
 	// Impact: Players automatically receive crafting bonuses from owned housing stations
 	craftingSystem.SetStationManager(stationMgr)
+
+	// INTEGRATION FIX [AUDIT.md Task #9]: Wire CompanionHousingSystem into CompanionLoyaltySystem
+	// Gap: Companion housing bonuses required manual PetHomeManager calls
+	// Fix: Inject PetHomeManager into CompanionLoyaltySystem for automatic loyalty bonus calculation
+	// Impact: Companions automatically receive loyalty bonuses from owned housing (bedding quality)
+	companionLoyaltySystem.SetPetHomeProvider(petHomeMgr)
 
 	if logger.GetLevel() >= logrus.DebugLevel {
 		worldLogger.Debug("game systems initialized")

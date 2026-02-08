@@ -36,7 +36,9 @@ import (
 // Phase 29: Adaptive Music (1 system)
 // Phase 30: Environmental Storytelling (1 system)
 // Phase 31: NPC Dialog (1 system)
-func initializeV4Systems(world *engine.World, seed int64, logger *logrus.Logger) {
+//
+// Returns: CompanionLoyaltySystem for housing integration wiring
+func initializeV4Systems(world *engine.World, seed int64, logger *logrus.Logger) *engine.CompanionLoyaltySystem {
 	serverLogger := logger.WithField("component", "v4_systems")
 
 	// INTEGRATION FIX: Phase 21 - Complete Vehicle Systems (was: 1/4, now: 4/4)
@@ -162,6 +164,8 @@ func initializeV4Systems(world *engine.World, seed int64, logger *logrus.Logger)
 		"note":               "All systems running in server-authoritative mode (no audio/graphics)",
 		"integrationStatus":  "COMPLETE - 100% feature parity with client",
 	}).Info("V4.0+ systems initialized on server (Phases 21-31)")
+
+	return companionLoyaltySystem
 }
 
 // initializeV5SystemsServer initializes Version 5.0 social and communication systems on the server.

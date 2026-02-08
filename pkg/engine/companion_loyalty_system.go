@@ -6,6 +6,14 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+// PetHomeProvider defines the interface for companion housing integration.
+// This interface allows CompanionLoyaltySystem to query housing-based bonuses
+// without importing the integration package (avoiding circular dependencies).
+type PetHomeProvider interface {
+	GetCompanionHome(companionID uint64) string
+	GetLoyaltyBonus(companionID uint64, houseID string) float64
+}
+
 // LoyaltyChangeReason describes why loyalty changed
 type LoyaltyChangeReason int
 
@@ -58,6 +66,9 @@ type CompanionLoyaltySystem struct {
 
 	// TimeAccumulator tracks time for passive loyalty gain
 	TimeAccumulator float64
+
+	// petHomeProvider provides housing-based loyalty bonuses (optional)
+	petHomeProvider PetHomeProvider
 }
 
 // NewCompanionLoyaltySystem creates a new companion loyalty system
@@ -71,7 +82,16 @@ func NewCompanionLoyaltySystem(world *World, logger *logrus.Logger) *CompanionLo
 		logger:                logger,
 		PendingLoyaltyChanges: make([]LoyaltyChange, 0),
 		TimeAccumulator:       0.0,
+		petHomeProvider:       nil, // Optional, set via SetPetHomeProvider
 	}
+}
+
+// SetPetHomeProvider injects a pet home manager for housing-based loyalty bonuses.
+// This is optional - the system works without it using default base loyalty gain.
+// Server-side integration ensures companions receive proper housing bonuses.
+func (s *CompanionLoyaltySystem) SetPetHomeProvider(provider PetHomeProvider) {
+	s.petHomeProvider = provider
+	s.logger.WithField("provider", "PetHomeProvider").Debug("Housing integration enabled for companion loyalty")
 }
 
 // Update processes loyalty changes and passive loyalty gain
@@ -164,8 +184,31 @@ func (s *CompanionLoyaltySystem) applyPassiveLoyaltyGain() {
 			// Track time spent together (1 minute)
 			comp.TimeWithOwner += 60.0
 
-			// Small passive gain (0.5 loyalty per minute)
-			comp.Loyalty = math.Min(100.0, comp.Loyalty+0.5)
+			// Calculate base passive gain (0.5 loyalty per minute)
+			baseLoyaltyGain := 0.5
+
+			// Apply housing bonus if available
+			housingBonus := 0.0
+			if s.petHomeProvider != nil {
+				houseID := s.petHomeProvider.GetCompanionHome(entity.ID)
+				if houseID != "" {
+					housingBonus = s.petHomeProvider.GetLoyaltyBonus(entity.ID, houseID)
+				}
+			}
+
+			// Total loyalty gain = base + housing bonus
+			totalGain := baseLoyaltyGain + housingBonus
+			comp.Loyalty = math.Min(100.0, comp.Loyalty+totalGain)
+
+			if housingBonus > 0 {
+				s.logger.WithFields(logrus.Fields{
+					"companionID":  entity.ID,
+					"baseGain":     baseLoyaltyGain,
+					"housingBonus": housingBonus,
+					"totalGain":    totalGain,
+					"newLoyalty":   comp.Loyalty,
+				}).Debug("Companion gained loyalty with housing bonus")
+			}
 
 			// Check for bonding perk unlocks
 			s.checkBondingPerks(comp)

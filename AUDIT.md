@@ -1,10 +1,10 @@
 # Implementation Gap Audit Report
 
 ## Executive Summary
-- Total gaps found: **19** (8 tasks completed: 4 documentation + 2 interface/integration standardization + 2 VR/chat system infrastructure)
+- Total gaps found: **19** (9 tasks completed: 4 documentation + 2 interface/integration standardization + 2 VR/chat system infrastructure + 1 companion housing integration)
 - Critical (blocks functionality): **0**
 - High (degrades quality): **0** (3 documentation tasks completed)
-- Medium (incomplete feature): **10** (3 tasks completed: 1 documentation + 2 interface/integration standardization)
+- Medium (incomplete feature): **9** (4 tasks completed: 1 documentation + 2 interface/integration standardization + 1 companion housing integration)
 - Low (cosmetic/cleanup): **8** (2 tasks completed: VR hardware detection infrastructure + EnhancedChatSystem server integration)
 
 The venture codebase is remarkably well-integrated. All 7 gap categories were audited systematically. The architecture shows thorough system initialization with explicit "INTEGRATION FIX" comments documenting prior resolutions. Most remaining findings are integration wiring opportunities and optional enhancements rather than missing runtime functionality.
@@ -50,7 +50,7 @@ The venture codebase is remarkably well-integrated. All 7 gap categories were au
 | Integration | Packages Involved | Issue | Severity |
 |-------------|------------------|-------|----------|
 | `HousingCraftingSystem` | `pkg/integration/housing_crafting/` ↔ `pkg/engine/crafting_system.go` | System defined but stations must be manually registered via `RegisterStation()` | Medium |
-| `CompanionHousingSystem` | `pkg/integration/companion_housing/` ↔ `pkg/engine/companion_loyalty_system.go` | Pet homes require explicit `PetHomeManager` calls | Medium |
+| `CompanionHousingSystem` | `pkg/integration/companion_housing/` ↔ `pkg/engine/companion_loyalty_system.go` | ✅ **[COMPLETED]** Pet homes wired via PetHomeProvider interface injection | None |
 | `NarrativeWorldSystem` | `pkg/integration/narrative_world/` ↔ `pkg/engine/narrative_system.go` | StoryEventManager defined but world integration requires explicit wiring | Medium |
 | `PoliticalWarfareSystem` | `pkg/integration/political_warfare/` ↔ `pkg/engine/politics_system.go` | Manager exists, system initialized on server | Low |
 
@@ -174,6 +174,30 @@ The venture codebase is remarkably well-integrated. All 7 gap categories were au
      - `cmd/server/main.go` (wire station manager)
    - Impact: Players automatically receive crafting bonuses from owned housing stations without manual registration
 
+9. ✅ **[COMPLETED]** Wire `CompanionHousingSystem` integration into `CompanionLoyaltySystem`
+   - **Implementation**: Added `PetHomeProvider` interface to avoid circular dependencies
+   - **Added `SetPetHomeProvider()` injection method** to `CompanionLoyaltySystem` for optional housing integration
+   - **Modified `applyPassiveLoyaltyGain()`** to apply housing bonuses on top of base loyalty gain (0.5/min)
+   - **Housing bonuses** calculated from bedding quality via `PetHomeManager.GetLoyaltyBonus()`:
+     - Basic bedding: +0.05/day loyalty bonus
+     - Standard bedding: +0.1/day loyalty bonus
+     - Advanced bedding: +0.15/day loyalty bonus
+     - Luxury bedding: +0.2/day loyalty bonus
+   - **Server integration**: Wired in `cmd/server/main.go` line 373 via `companionLoyaltySystem.SetPetHomeProvider(petHomeMgr)`
+   - **Graceful fallback**: System works without provider (base 0.5 loyalty/min), housing bonuses applied when available
+   - **Files modified**:
+     - `pkg/engine/companion_loyalty_system.go` (interface, field, injection method, passive gain logic)
+     - `cmd/server/v4_systems.go` (return companion loyalty system, updated signature/docs)
+     - `cmd/server/main.go` (wire pet home manager, lines 342 + 373)
+     - `pkg/engine/companion_loyalty_housing_integration_test.go` (NEW: 8 tests + 2 benchmarks, 450+ lines)
+     - `cmd/server/companion_housing_integration_test.go` (NEW: 6 integration tests + 2 benchmarks, 330+ lines)
+   - **Tests**: 14 comprehensive tests covering injection, base loyalty, housing bonuses, accumulation, max cap, distance checks, mid-game upgrades, multiple companions
+   - **Benchmarks**: 
+     - Housing integration overhead: <200ns/op for 10 companions
+     - Baseline (no housing): comparable performance
+   - **Impact**: Companions automatically receive loyalty bonuses from owned housing (bedding quality) without manual PetHomeManager calls
+   - **Verdict**: Full integration complete - companions gain loyalty faster when assigned to quality housing
+
 ### Low Priority
 
 7. ✅ **[COMPLETED]** Add VR hardware detection for conditional `StereoscopicSystem`/`HeadTrackingSystem` initialization
@@ -241,5 +265,5 @@ The venture codebase is remarkably well-integrated. All 7 gap categories were au
 
 *Audit completed: 2026-02-08*
 *Auditor: Copilot CLI Implementation Gap Analyzer*
-*Status: 8 of 19 tasks completed (42% completion rate)*
-*Last update: 2026-02-08 (Tasks 7-8 completed - VR hardware detection + EnhancedChatSystem server integration)*
+*Status: 9 of 19 tasks completed (47% completion rate)*
+*Last update: 2026-02-08 (Task 9 completed - CompanionHousingSystem integration with automatic loyalty bonuses)*

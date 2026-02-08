@@ -95,7 +95,7 @@ func main() {
 	modManager, stabilityMon, networkSim, metricsCollector := initializeOptionalSystems(serverLogger)
 	_ = modManager
 
-	world := createGameWorld(logger)
+	world, enhancedChatSystem := createGameWorld(logger)
 	generatedTerrain := generateWorldTerrain(logger, serverLogger)
 	spawnV4Entities(world, generatedTerrain, logger)
 
@@ -111,7 +111,7 @@ func main() {
 
 	defer shutdownServer(serverLogger, metricsExporter, stabilityMon, metricsCollector, networkSim, server)
 
-	executeGameLoop(world, server, snapshotManager, lagCompensator, logger, serverLogger)
+	executeGameLoop(world, enhancedChatSystem, server, snapshotManager, lagCompensator, logger, serverLogger)
 }
 
 // validateConfiguration validates server configuration before startup.
@@ -269,7 +269,7 @@ func logNetworkSimulationStats(networkSim *resilience.NetworkSimulator, serverLo
 }
 
 // executeGameLoop sets up and runs the main server game loop.
-func executeGameLoop(world *engine.World, server *network.TCPServer, snapshotManager *network.SnapshotManager, lagCompensator *network.LagCompensator, logger *logrus.Logger, serverLogger *logrus.Entry) {
+func executeGameLoop(world *engine.World, enhancedChatSystem *engine.EnhancedChatSystem, server *network.TCPServer, snapshotManager *network.SnapshotManager, lagCompensator *network.LagCompensator, logger *logrus.Logger, serverLogger *logrus.Entry) {
 	tickDuration := time.Duration(1000000000 / *tickRate)
 	ticker := time.NewTicker(tickDuration)
 	defer ticker.Stop()
@@ -279,7 +279,7 @@ func executeGameLoop(world *engine.World, server *network.TCPServer, snapshotMan
 	serverLogger.WithField("tickRate", *tickRate).Info("starting authoritative game loop")
 
 	startErrorHandler(server, logger)
-	startPlayerManagementHandlers(server, world, nil, logger)
+	startPlayerManagementHandlers(server, world, nil, enhancedChatSystem, logger)
 
 	runGameLoop(world, server, snapshotManager, lagCompensator, ticker, logger, serverLogger, &lastUpdate)
 }
@@ -303,7 +303,8 @@ func initializeLogger() *logrus.Logger {
 }
 
 // createGameWorld initializes the game world with all required systems.
-func createGameWorld(logger *logrus.Logger) *engine.World {
+// Returns the world and the enhanced chat system for player registration.
+func createGameWorld(logger *logrus.Logger) (*engine.World, *engine.EnhancedChatSystem) {
 	worldLogger := logger.WithFields(logrus.Fields{"system": "world"})
 	if logger.GetLevel() >= logrus.DebugLevel {
 		worldLogger.Debug("creating game world")
@@ -344,11 +345,10 @@ func createGameWorld(logger *logrus.Logger) *engine.World {
 	enhancedChatSystem := initializeV5SystemsServer(world, logger)
 	initializeV6SystemsServer(world, *seed, logger)
 
-	// AUDIT.md Task 8: EnhancedChatSystem provides persistent chat history
-	// Player registration (enhancedChatSystem.RegisterPlayer/UnregisterPlayer) would be
-	// integrated with network connection handling for cross-session history persistence.
-	// This is a future enhancement; current implementation provides the infrastructure.
-	_ = enhancedChatSystem // Reserved for future network integration
+	// AUDIT.md Task 3: Wire EnhancedChatSystem Player Registration
+	// EnhancedChatSystem provides persistent chat history per player.
+	// RegisterPlayer/UnregisterPlayer are now wired to network connection handlers
+	// in handlePlayerJoins/handlePlayerLeaves for cross-session history persistence.
 
 	// INTEGRATION FIX [Category A]: V8.0 Server System Initialization
 	// Gap: V8.0 systems implemented but never initialized on server
@@ -400,7 +400,7 @@ func createGameWorld(logger *logrus.Logger) *engine.World {
 		worldLogger.Debug("game systems initialized")
 	}
 
-	return world
+	return world, enhancedChatSystem
 }
 
 // generateWorldTerrain creates the initial terrain and spawns V4 entities.
@@ -615,18 +615,18 @@ func startErrorHandler(server *network.TCPServer, logger *logrus.Logger) {
 }
 
 // startPlayerManagementHandlers starts goroutines for player join, leave, and input handling.
-func startPlayerManagementHandlers(server *network.TCPServer, world *engine.World, generatedTerrain *terrain.Terrain, logger *logrus.Logger) {
+func startPlayerManagementHandlers(server *network.TCPServer, world *engine.World, generatedTerrain *terrain.Terrain, enhancedChatSystem *engine.EnhancedChatSystem, logger *logrus.Logger) {
 	playerEntities := make(map[uint64]*engine.Entity)
 	playerEntitiesMu := &sync.RWMutex{}
 	networkLogger := logger.WithFields(logrus.Fields{"system": "network"})
 
-	go handlePlayerJoins(server, world, generatedTerrain, playerEntities, playerEntitiesMu, logger)
-	go handlePlayerLeaves(server, world, playerEntities, playerEntitiesMu, logger)
+	go handlePlayerJoins(server, world, generatedTerrain, playerEntities, playerEntitiesMu, enhancedChatSystem, logger)
+	go handlePlayerLeaves(server, world, playerEntities, playerEntitiesMu, enhancedChatSystem, logger)
 	go handleInputCommands(server, playerEntities, playerEntitiesMu, networkLogger, logger)
 }
 
 // handlePlayerJoins processes new player connections and creates entities.
-func handlePlayerJoins(server *network.TCPServer, world *engine.World, generatedTerrain *terrain.Terrain, playerEntities map[uint64]*engine.Entity, playerEntitiesMu *sync.RWMutex, logger *logrus.Logger) {
+func handlePlayerJoins(server *network.TCPServer, world *engine.World, generatedTerrain *terrain.Terrain, playerEntities map[uint64]*engine.Entity, playerEntitiesMu *sync.RWMutex, enhancedChatSystem *engine.EnhancedChatSystem, logger *logrus.Logger) {
 	for playerID := range server.ReceivePlayerJoin() {
 		playerLogger := logging.NetworkLogger(logger, "", "connected").WithField("playerID", playerID)
 		playerLogger.Info("player joined - creating entity")
@@ -637,18 +637,29 @@ func handlePlayerJoins(server *network.TCPServer, world *engine.World, generated
 		playerEntities[playerID] = entity
 		playerEntitiesMu.Unlock()
 
+		// Register player with enhanced chat system for persistent history
+		if err := enhancedChatSystem.RegisterPlayer(entity.ID); err != nil {
+			playerLogger.WithError(err).Warn("failed to register player with chat system")
+		} else {
+			playerLogger.Debug("player registered with chat system")
+		}
+
 		playerLogger.WithField("entityID", entity.ID).Debug("player entity created")
 	}
 }
 
 // handlePlayerLeaves processes player disconnections and removes entities.
-func handlePlayerLeaves(server *network.TCPServer, world *engine.World, playerEntities map[uint64]*engine.Entity, playerEntitiesMu *sync.RWMutex, logger *logrus.Logger) {
+func handlePlayerLeaves(server *network.TCPServer, world *engine.World, playerEntities map[uint64]*engine.Entity, playerEntitiesMu *sync.RWMutex, enhancedChatSystem *engine.EnhancedChatSystem, logger *logrus.Logger) {
 	for playerID := range server.ReceivePlayerLeave() {
 		playerLogger := logging.NetworkLogger(logger, "", "disconnected").WithField("playerID", playerID)
 		playerLogger.Info("player left - removing entity")
 
 		playerEntitiesMu.Lock()
 		if entity, exists := playerEntities[playerID]; exists {
+			// Unregister player from enhanced chat system
+			enhancedChatSystem.UnregisterPlayer(entity.ID)
+			playerLogger.Debug("player unregistered from chat system")
+
 			world.RemoveEntity(entity.ID)
 			delete(playerEntities, playerID)
 			playerLogger.WithField("entityID", entity.ID).Debug("player entity removed")

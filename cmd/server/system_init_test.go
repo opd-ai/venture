@@ -115,7 +115,11 @@ func TestInitializeV8SystemsServer(t *testing.T) {
 
 	initialSystemCount := len(world.GetSystems())
 
-	initializeV8SystemsServer(world, seed, logger)
+	guildManager := initializeV8SystemsServer(world, seed, logger)
+
+	if guildManager == nil {
+		t.Error("initializeV8SystemsServer returned nil guildManager")
+	}
 
 	finalSystemCount := len(world.GetSystems())
 	addedSystems := finalSystemCount - initialSystemCount
@@ -135,7 +139,10 @@ func TestInitializeV9SystemsServer(t *testing.T) {
 	world := engine.NewWorld()
 	seed := int64(12345)
 
-	stationManager, petHomeManager, guildHousingManager, narrativeWorldSys := initializeV9SystemsServer(world, seed, logger)
+	// V9 now requires guildManager from V8
+	guildManager := initializeV8SystemsServer(world, seed, logger)
+
+	stationManager, petHomeManager, guildHousingManager, narrativeWorldSys, politicalWarfareSys := initializeV9SystemsServer(world, seed, guildManager, logger)
 
 	if stationManager == nil {
 		t.Error("initializeV9SystemsServer returned nil stationManager")
@@ -151,6 +158,10 @@ func TestInitializeV9SystemsServer(t *testing.T) {
 
 	if narrativeWorldSys == nil {
 		t.Error("initializeV9SystemsServer returned nil narrativeWorldSystem")
+	}
+
+	if politicalWarfareSys == nil {
+		t.Error("initializeV9SystemsServer returned nil politicalWarfareSystem")
 	}
 
 	t.Log("V9 integration managers initialized successfully")
@@ -196,12 +207,12 @@ func TestAllSystemsInitialization_Integration(t *testing.T) {
 	initializeV4Systems(world, seed, logger)
 	initializeV5SystemsServer(world, logger)
 	initializeV6SystemsServer(world, seed, logger)
-	initializeV8SystemsServer(world, seed, logger)
+	guildManager := initializeV8SystemsServer(world, seed, logger)
 	initializeCoreGameplaySystems(world, seed, logger, inventorySystem, itemGen)
 
 	// Verify V9 managers are created
-	stationManager, petHomeManager, guildHousingManager, narrativeWorldSys := initializeV9SystemsServer(world, seed, logger)
-	if stationManager == nil || petHomeManager == nil || guildHousingManager == nil || narrativeWorldSys == nil {
+	stationManager, petHomeManager, guildHousingManager, narrativeWorldSys, politicalWarfareSys := initializeV9SystemsServer(world, seed, guildManager, logger)
+	if stationManager == nil || petHomeManager == nil || guildHousingManager == nil || narrativeWorldSys == nil || politicalWarfareSys == nil {
 		t.Error("V9 managers not created")
 	}
 
@@ -263,8 +274,8 @@ func TestSystemInitialization_LoggerLevels(t *testing.T) {
 			initializeV4Systems(world, 12345, logger)
 			initializeV5SystemsServer(world, logger)
 			initializeV6SystemsServer(world, 12345, logger)
-			initializeV8SystemsServer(world, 12345, logger)
-			initializeV9SystemsServer(world, 12345, logger)
+			guildMgr := initializeV8SystemsServer(world, 12345, logger)
+			initializeV9SystemsServer(world, 12345, guildMgr, logger)
 
 			if len(world.GetSystems()) == 0 {
 				t.Errorf("No systems initialized at log level %s", level)
@@ -316,7 +327,7 @@ func BenchmarkInitializeV8SystemsServer(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		world := engine.NewWorld()
-		initializeV8SystemsServer(world, seed, logger)
+		_ = initializeV8SystemsServer(world, seed, logger)
 	}
 }
 
@@ -328,7 +339,8 @@ func BenchmarkInitializeV9SystemsServer(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		world := engine.NewWorld()
-		initializeV9SystemsServer(world, seed, logger)
+		guildManager := initializeV8SystemsServer(world, seed, logger)
+		initializeV9SystemsServer(world, seed, guildManager, logger)
 	}
 }
 
@@ -346,8 +358,8 @@ func BenchmarkInitializeAllSystems(b *testing.B) {
 		initializeV4Systems(world, seed, logger)
 		initializeV5SystemsServer(world, logger)
 		initializeV6SystemsServer(world, seed, logger)
-		initializeV8SystemsServer(world, seed, logger)
+		guildManager := initializeV8SystemsServer(world, seed, logger)
 		initializeCoreGameplaySystems(world, seed, logger, inventorySystem, itemGen)
-		initializeV9SystemsServer(world, seed, logger)
+		initializeV9SystemsServer(world, seed, guildManager, logger)
 	}
 }

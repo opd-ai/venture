@@ -21,7 +21,8 @@ import (
 // Server-side systems include: housing infrastructure, trust/reputation tracking,
 // chat history persistence, image galleries, guild halls, fluid simulation,
 // enhanced vehicle physics, and building/furniture generation.
-func initializeV8SystemsServer(world *engine.World, seed int64, logger *logrus.Logger) {
+// Returns the guild.Manager for use by V9 political warfare integration.
+func initializeV8SystemsServer(world *engine.World, seed int64, logger *logrus.Logger) *guild.Manager {
 	serverLogger := logger.WithField("component", "v8_systems")
 
 	// Phase 49.1-49.2: Housing, Trust & Reputation Infrastructure
@@ -87,4 +88,6 @@ func initializeV8SystemsServer(world *engine.World, seed int64, logger *logrus.L
 	if logger.GetLevel() >= logrus.DebugLevel {
 		serverLogger.Info("V8.0 systems initialized (guild federation, housing, trust, reputation, fluid dynamics, vehicle physics, building/furniture)")
 	}
+
+	return guildManager
 }

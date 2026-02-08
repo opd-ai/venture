@@ -353,13 +353,14 @@ func createGameWorld(logger *logrus.Logger) *engine.World {
 	// Gap: V8.0 systems implemented but never initialized on server
 	// Fix: Added V8.0 system initialization call for housing, fluids, vehicle physics
 	// Roadmap: ROADMAP_V8.md (Phase 49-51)
-	initializeV8SystemsServer(world, *seed, logger)
+	// Returns guild.Manager for V9 political warfare integration
+	guildManager := initializeV8SystemsServer(world, *seed, logger)
 
 	// INTEGRATION FIX [Category A]: V9.0 Server Integration Manager Initialization
 	// Gap: V9.0 integration managers were client-only, allowing XP/loyalty/permission exploits
 	// Fix: Added V9.0 manager initialization and V9ValidationService for server-authoritative validation
-	// Roadmap: ROADMAP_V9.md (Phase 55.1-55.3, Phase 58.1)
-	stationMgr, petHomeMgr, guildHousingMgr, narrativeWorldSys := initializeV9SystemsServer(world, *seed, logger)
+	// Roadmap: ROADMAP_V9.md (Phase 55.1-55.3, Phase 56.3, Phase 58.1)
+	stationMgr, petHomeMgr, guildHousingMgr, narrativeWorldSys, politicalWarfareSys := initializeV9SystemsServer(world, *seed, guildManager, logger)
 	v9ValidationService = NewV9ValidationService(stationMgr, petHomeMgr, guildHousingMgr, logger)
 
 	// INTEGRATION FIX [AUDIT.md Task #6]: Wire HousingCraftingSystem into CraftingSystem
@@ -379,6 +380,13 @@ func createGameWorld(logger *logrus.Logger) *engine.World {
 	// Fix: Inject narrativeWorldSystem into NarrativeSystem for automatic companion story tracking
 	// Impact: Companions automatically generate personal quests and track memories during narrative events
 	narrativeSystem.SetCompanionStoryProvider(narrativeWorldSys)
+
+	// INTEGRATION FIX [AUDIT.md Task #12]: PoliticalWarfareSystem for guild-level warfare
+	// Gap: Political warfare system implemented but not initialized on server
+	// Fix: Initialize PoliticalWarfareSystem in v9_systems.go and add to world ECS
+	// Impact: Guild wars, treaties, embargoes, and diplomatic victories enabled server-side
+	// Note: Manager accessible via politicalWarfareSys.GetManager() for direct API calls
+	_ = politicalWarfareSys // System runs via world.Update(), manager available for future use
 
 	if logger.GetLevel() >= logrus.DebugLevel {
 		worldLogger.Debug("game systems initialized")

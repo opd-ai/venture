@@ -7,6 +7,7 @@ package main
 
 import (
 	"github.com/opd-ai/venture/pkg/engine"
+	"github.com/opd-ai/venture/pkg/integration/world_events"
 	"github.com/opd-ai/venture/pkg/network/federation"
 	itemgen "github.com/opd-ai/venture/pkg/procgen/item"
 	"github.com/sirupsen/logrus"
@@ -222,16 +223,21 @@ func initializeV6SystemsServer(world *engine.World, seed int64, logger *logrus.L
 	politicsSystem := engine.NewPoliticsSystem(world)
 	world.AddSystem(&politicsSystemWrapper{system: politicsSystem})
 
-	// Note: TerritoryManager, RankingManager, and EventManager are world-level managers
+	// Phase 42: World events system for server-authoritative event generation
+	worldEventManager := world_events.NewEventManager(seed)
+	world.AddSystem(&worldEventManagerWrapper{system: worldEventManager})
+
+	// Note: TerritoryManager, RankingManager are world-level managers
 	// that don't need system wrappers. They're accessed directly by server logic.
 
 	serverLogger.WithFields(logrus.Fields{
 		"federationSystems": 1, // PortalSystem
 		"bountySystem":      1, // BountySystem
 		"politicsSystems":   1, // PoliticsSystem
-		"totalV6Systems":    3,
+		"worldEventSystem":  1, // WorldEventManager
+		"totalV6Systems":    4,
 		"note":              "Persistent world & federation systems for V6.0",
-	}).Info("V6.0 persistent world systems initialized on server (portals, bounties, politics)")
+	}).Info("V6.0 persistent world systems initialized on server (portals, bounties, politics, world events)")
 }
 
 // INTEGRATION FIX [Category A]: Core Gameplay Systems Missing from Server

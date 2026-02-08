@@ -98,8 +98,8 @@ func TestInitializeV6SystemsServer(t *testing.T) {
 	finalSystemCount := len(world.GetSystems())
 	addedSystems := finalSystemCount - initialSystemCount
 
-	// V6 should add 3 systems (portal, bounty, politics)
-	expectedSystems := 3
+	// V6 should add 4 systems (portal, bounty, politics, world events)
+	expectedSystems := 4
 	if addedSystems != expectedSystems {
 		t.Errorf("initializeV6SystemsServer added %d systems, expected %d", addedSystems, expectedSystems)
 	}

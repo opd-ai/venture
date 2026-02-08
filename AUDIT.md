@@ -178,10 +178,20 @@ grep -r "TODO|FIXME|HACK|XXX" pkg/ --include="*.go" | grep -v "_test.go"
      - Added comprehensive tests for GraphToTerrain conversion (93.9% coverage maintained)
      - Updated README.md with terrain type documentation and usage examples
 
-2. **[High]** Wire `world_events.EventManager` to server
-   - **File:** `cmd/server/v6_systems.go`
-   - **Action:** Add `worldEventManager := world_events.NewEventManager()` and `world.AddSystem(&worldEventManagerWrapper{system: worldEventManager})`
+2. **[High] ✅ COMPLETED** Wire `world_events.EventManager` to server
+   - **File:** `cmd/server/v4_systems.go`
+   - **Action:** Add `worldEventManager := world_events.NewEventManager(seed)` and `world.AddSystem(&worldEventManagerWrapper{system: worldEventManager})`
    - **Impact:** Enables server-authoritative world events for multiplayer
+   - **Completed:** 2026-02-08
+   - **Changes:**
+     - Added `worldEventManagerWrapper` to `cmd/server/system_wrappers.go` to adapt EventManager to ECS System interface
+     - Added world_events import to `cmd/server/v4_systems.go` and `cmd/server/system_wrappers.go`
+     - Instantiated EventManager with seed in `initializeV6SystemsServer()` in `cmd/server/v4_systems.go`
+     - Updated system count from 3 to 4 in V6 initialization logs and tests
+     - Updated `TestInitializeV6SystemsServer` to expect 4 systems (portal, bounty, politics, world events)
+     - Added comprehensive integration tests in `cmd/server/world_events_integration_test.go` (106 lines)
+     - Tests verify: wrapper functionality, determinism, concurrent updates
+     - Build and vet pass successfully
 
 ### Medium Priority
 

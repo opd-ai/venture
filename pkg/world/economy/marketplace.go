@@ -338,6 +338,12 @@ func (fm *FederatedMarketplace) GetPriceTrend(itemType string) *PriceTrend {
 	return fm.pricingEngine.GetTrend(itemType)
 }
 
+// GetPricingEngine returns the pricing engine for direct access.
+// This enables external systems (e.g., trade routes) to influence prices.
+func (fm *FederatedMarketplace) GetPricingEngine() *PricingEngine {
+	return fm.pricingEngine
+}
+
 // UpdateRemoteCache updates the cache of remote server listings.
 func (fm *FederatedMarketplace) UpdateRemoteCache(serverID string, listings []*Listing) {
 	fm.mu.Lock()

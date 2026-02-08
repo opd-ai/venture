@@ -131,3 +131,52 @@ func (pe *PricingEngine) ResetTrends() {
 
 	pe.trends = make(map[string]*PriceTrend)
 }
+
+// ApplyTradeImpact applies price changes from external trade activity (e.g., trade routes).
+// priceChange is a multiplier (1.1 = +10%, 0.9 = -10%) representing supply/demand impact.
+// volume is the quantity traded, used to weight the impact on average price.
+func (pe *PricingEngine) ApplyTradeImpact(itemType string, priceChange float64, volume int) {
+	pe.mu.Lock()
+	defer pe.mu.Unlock()
+
+	trend, exists := pe.trends[itemType]
+	if !exists {
+		// Create new trend if item type hasn't been seen before
+		trend = &PriceTrend{
+			ItemType:      itemType,
+			AveragePrice:  100, // Default base price
+			MinPrice:      100,
+			MaxPrice:      100,
+			TotalVolume:   0,
+			TotalListings: 0,
+			LastUpdated:   time.Now(),
+		}
+		pe.trends[itemType] = trend
+	}
+
+	// Apply price change to average (supply/demand adjustment)
+	newAvgPrice := int(float64(trend.AveragePrice) * priceChange)
+	if newAvgPrice < 1 {
+		newAvgPrice = 1 // Price floor
+	}
+
+	// Update min/max if new average exceeds bounds
+	if newAvgPrice < trend.MinPrice {
+		trend.MinPrice = newAvgPrice
+	}
+	if newAvgPrice > trend.MaxPrice {
+		trend.MaxPrice = newAvgPrice
+	}
+
+	// Weighted average: existing average + new trade impact
+	// Weight new trade by volume (more volume = more impact)
+	totalWeight := float64(trend.TotalVolume + volume)
+	if totalWeight > 0 {
+		trend.AveragePrice = int((float64(trend.AveragePrice)*float64(trend.TotalVolume) + float64(newAvgPrice)*float64(volume)) / totalWeight)
+	} else {
+		trend.AveragePrice = newAvgPrice
+	}
+
+	trend.TotalVolume += volume
+	trend.LastUpdated = time.Now()
+}

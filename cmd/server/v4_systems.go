@@ -41,7 +41,7 @@ import (
 // Phase 31: NPC Dialog (1 system)
 //
 // Returns: CompanionLoyaltySystem for housing integration wiring
-func initializeV4Systems(world *engine.World, seed int64, logger *logrus.Logger) (*engine.CompanionLoyaltySystem, *engine.NarrativeSystem) {
+func initializeV4Systems(world *engine.World, seed int64, logger *logrus.Logger, economySystem *engine.EconomySystem) (*engine.CompanionLoyaltySystem, *engine.NarrativeSystem) {
 	serverLogger := logger.WithField("component", "v4_systems")
 
 	// INTEGRATION FIX: Phase 21 - Complete Vehicle Systems (was: 1/4, now: 4/4)
@@ -229,7 +229,7 @@ func initializeV5SystemsServer(world *engine.World, logger *logrus.Logger) *engi
 
 // initializeV6SystemsServer initializes Version 6.0 persistent world and federation systems on the server.
 // ROADMAP_V6.md Phases 39-42: Cross-server travel, bounties, politics, territories, rankings, events
-func initializeV6SystemsServer(world *engine.World, seed int64, logger *logrus.Logger) {
+func initializeV6SystemsServer(world *engine.World, seed int64, logger *logrus.Logger, economySystem *engine.EconomySystem) {
 	serverLogger := logger.WithField("component", "v6_systems")
 
 	// Phase 38: Federation protocol for server-to-server communication
@@ -260,6 +260,12 @@ func initializeV6SystemsServer(world *engine.World, seed int64, logger *logrus.L
 	// Phase 57.3: Trade routes system for automated merchant caravans
 	tradeRouteManager := trade_routes.NewRouteManager(serverID, seed)
 	world.AddSystem(&tradeRouteManagerWrapper{system: tradeRouteManager})
+
+	// Wire trade routes to economy system for price updates
+	if economySystem != nil {
+		tradeRouteManager.SetPriceUpdateHandler(economySystem)
+		serverLogger.Debug("trade routes wired to economy system for price updates")
+	}
 
 	// Note: TerritoryManager, RankingManager are world-level managers
 	// that don't need system wrappers. They're accessed directly by server logic.

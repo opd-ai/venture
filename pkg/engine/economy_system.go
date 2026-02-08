@@ -163,3 +163,19 @@ func (es *EconomySystem) WithdrawGold(guildID, memberID, memberName, rankID stri
 	}).Debug("gold withdrawn from guild vault")
 	return nil
 }
+
+// ApplyTradeImpact applies price changes from external trade activity (e.g., trade routes).
+// This enables trade routes and other systems to influence marketplace prices based on supply/demand.
+// itemType: The type of item affected (e.g., "Timber", "Ore")
+// priceChange: Multiplier for price impact (1.1 = +10% increase, 0.9 = -10% decrease)
+// volume: Quantity traded, used to weight the impact on average price
+func (es *EconomySystem) ApplyTradeImpact(itemType string, priceChange float64, volume int) {
+	pricingEngine := es.marketplace.GetPricingEngine()
+	pricingEngine.ApplyTradeImpact(itemType, priceChange, volume)
+
+	es.logger.WithFields(logrus.Fields{
+		"itemType":    itemType,
+		"priceChange": priceChange,
+		"volume":      volume,
+	}).Debug("trade route price impact applied")
+}

@@ -349,9 +349,9 @@ func createGameWorld(logger *logrus.Logger) (*engine.World, *engine.EnhancedChat
 	// Roadmap: Multiple phases (V3-V6) - complete multiplayer parity
 	craftingSystem, narrativeSystem := initializeCoreGameplaySystems(world, *seed, logger, inventorySystem, itemGen)
 
-	companionLoyaltySystem, _ := initializeV4Systems(world, *seed, logger)
+	companionLoyaltySystem, _ := initializeV4Systems(world, *seed, logger, economySystem)
 	enhancedChatSystem := initializeV5SystemsServer(world, logger)
-	initializeV6SystemsServer(world, *seed, logger)
+	initializeV6SystemsServer(world, *seed, logger, economySystem)
 
 	// AUDIT.md Task 3: Wire EnhancedChatSystem Player Registration
 	// EnhancedChatSystem provides persistent chat history per player.

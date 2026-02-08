@@ -64,9 +64,10 @@ type RouteManager struct {
 	nextMissionID   int
 	rng             *rand.Rand
 	updateTicker    *time.Ticker
-	stopChan        chan struct{} // Closed by Stop() to signal goroutine termination
-	startOnce       sync.Once     // Ensures Start() is idempotent
-	stopOnce        sync.Once     // Ensures Stop() is idempotent
+	stopChan        chan struct{}      // Closed by Stop() to signal goroutine termination
+	startOnce       sync.Once          // Ensures Start() is idempotent
+	stopOnce        sync.Once          // Ensures Stop() is idempotent
+	priceHandler    PriceUpdateHandler // Optional: economy system for price updates
 }
 
 // NewRouteManager creates a new route manager instance.
@@ -144,6 +145,15 @@ func (rm *RouteManager) Stop() {
 		}
 		close(rm.stopChan)
 	})
+}
+
+// SetPriceUpdateHandler sets the economy system for price updates.
+// This enables trade route completion to influence marketplace prices.
+// handler: Implementation of PriceUpdateHandler (typically economy.System)
+func (rm *RouteManager) SetPriceUpdateHandler(handler PriceUpdateHandler) {
+	rm.mu.Lock()
+	defer rm.mu.Unlock()
+	rm.priceHandler = handler
 }
 
 // CreateRoute creates a new trade route with optimized cargo and path.
@@ -611,6 +621,21 @@ func (rm *RouteManager) completeRoute(route *TradeRoute) {
 
 	// Update success rate
 	route.SuccessRate = route.SuccessRate*0.9 + 0.1 // EWMA with 10% weight
+
+	// Apply price impacts to economy system (supply increases = price decreases)
+	if rm.priceHandler != nil {
+		for _, item := range route.Cargo {
+			if item.Quantity > 0 {
+				// Successful delivery increases supply, reduces price
+				// Impact: 0.95-0.99 (1-5% price reduction) based on quantity
+				priceImpact := 1.0 - (float64(item.Quantity) / 1000.0 * 0.05)
+				if priceImpact < 0.95 {
+					priceImpact = 0.95 // Max 5% price reduction per route
+				}
+				rm.priceHandler.ApplyTradeImpact(item.ItemName, priceImpact, item.Quantity)
+			}
+		}
+	}
 
 	// Clean up caravan mapping
 	delete(rm.activeCaravans, route.CaravanID)

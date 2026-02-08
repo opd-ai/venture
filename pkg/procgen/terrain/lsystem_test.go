@@ -3,6 +3,8 @@ package terrain
 import (
 	"strings"
 	"testing"
+
+	"github.com/opd-ai/venture/pkg/procgen"
 )
 
 func TestSymbolConstants(t *testing.T) {
@@ -78,7 +80,7 @@ func TestLSystemGenerator_Generate_SimpleRule(t *testing.T) {
 	}
 
 	gen := NewLSystemGenerator(config)
-	result := gen.Generate()
+	result := gen.GenerateString()
 
 	// Iteration 0: S
 	// Iteration 1: S-C
@@ -100,7 +102,7 @@ func TestLSystemGenerator_Generate_NoRules(t *testing.T) {
 	}
 
 	gen := NewLSystemGenerator(config)
-	result := gen.Generate()
+	result := gen.GenerateString()
 
 	// Without rules, string should remain unchanged
 	if result != config.Axiom {
@@ -122,7 +124,7 @@ func TestLSystemGenerator_Generate_TerminalSymbols(t *testing.T) {
 	}
 
 	gen := NewLSystemGenerator(config)
-	result := gen.Generate()
+	result := gen.GenerateString()
 
 	// Iteration 0: S
 	// Iteration 1: S-T (S expands to S-T, T stays as T since no rule)
@@ -156,7 +158,7 @@ func TestLSystemGenerator_Generate_MaxRoomLimit(t *testing.T) {
 	}
 
 	gen := NewLSystemGenerator(config)
-	result := gen.Generate()
+	result := gen.GenerateString()
 
 	roomCount := gen.countRooms(result)
 	// Should stop at or just slightly above max (due to expansion in one iteration)
@@ -179,7 +181,7 @@ func TestLSystemGenerator_Generate_MinRoomRequirement(t *testing.T) {
 	}
 
 	gen := NewLSystemGenerator(config)
-	result := gen.Generate()
+	result := gen.GenerateString()
 
 	roomCount := gen.countRooms(result)
 	if roomCount < config.MinRoomCount {
@@ -204,10 +206,10 @@ func TestLSystemGenerator_Generate_Determinism(t *testing.T) {
 
 	// Generate twice with same seed
 	gen1 := NewLSystemGenerator(config)
-	result1 := gen1.Generate()
+	result1 := gen1.GenerateString()
 
 	gen2 := NewLSystemGenerator(config)
-	result2 := gen2.Generate()
+	result2 := gen2.GenerateString()
 
 	if result1 != result2 {
 		t.Errorf("Non-deterministic generation:\nFirst:  %s\nSecond: %s", result1, result2)
@@ -229,12 +231,12 @@ func TestLSystemGenerator_Generate_DifferentSeeds(t *testing.T) {
 	config1 := baseConfig
 	config1.Seed = 11111
 	gen1 := NewLSystemGenerator(config1)
-	result1 := gen1.Generate()
+	result1 := gen1.GenerateString()
 
 	config2 := baseConfig
 	config2.Seed = 22222
 	gen2 := NewLSystemGenerator(config2)
-	result2 := gen2.Generate()
+	result2 := gen2.GenerateString()
 
 	// Different seeds should (very likely) produce different results
 	// Note: There's a tiny chance they could be the same, but extremely unlikely
@@ -316,7 +318,7 @@ func TestLSystemGenerator_StochasticRules(t *testing.T) {
 	}
 
 	gen := NewLSystemGenerator(config)
-	result := gen.Generate()
+	result := gen.GenerateString()
 
 	// Should have chosen one of the two expansions
 	if !strings.Contains(result, "S-C") && !strings.Contains(result, "S-P") {
@@ -488,11 +490,11 @@ func TestGenreConfigs_Determinism(t *testing.T) {
 		t.Run(genre, func(t *testing.T) {
 			config := GetConfigForGenre(genre, seed)
 			gen1 := NewLSystemGenerator(config)
-			result1 := gen1.Generate()
+			result1 := gen1.GenerateString()
 
 			config = GetConfigForGenre(genre, seed)
 			gen2 := NewLSystemGenerator(config)
-			result2 := gen2.Generate()
+			result2 := gen2.GenerateString()
 
 			if result1 != result2 {
 				t.Errorf("Non-deterministic generation for %s:\nFirst:  %s\nSecond: %s", genre, result1, result2)
@@ -509,7 +511,7 @@ func TestGenreConfigs_GenerateValid(t *testing.T) {
 		t.Run(genre, func(t *testing.T) {
 			config := GetConfigForGenre(genre, seed)
 			gen := NewLSystemGenerator(config)
-			result := gen.Generate()
+			result := gen.GenerateString()
 
 			if len(result) == 0 {
 				t.Errorf("Generated empty string for %s", genre)
@@ -541,7 +543,345 @@ func BenchmarkLSystemGenerator_Generate(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		_ = gen.Generate()
+		_ = gen.GenerateString()
+	}
+}
+
+// TestLSystemGenerator_GenerateInterface tests the Generator interface implementation.
+func TestLSystemGenerator_GenerateInterface(t *testing.T) {
+	tests := []struct {
+		name       string
+		seed       int64
+		params     procgen.GenerationParams
+		wantErr    bool
+		checkStart bool
+	}{
+		{
+			name: "valid fantasy generation",
+			seed: 12345,
+			params: procgen.GenerationParams{
+				Difficulty: 0.5,
+				Depth:      1,
+				GenreID:    "fantasy",
+			},
+			wantErr:    false,
+			checkStart: true,
+		},
+		{
+			name: "valid sci-fi generation",
+			seed: 67890,
+			params: procgen.GenerationParams{
+				Difficulty: 0.7,
+				Depth:      3,
+				GenreID:    "sci-fi",
+			},
+			wantErr:    false,
+			checkStart: true,
+		},
+		{
+			name: "high difficulty",
+			seed: 11111,
+			params: procgen.GenerationParams{
+				Difficulty: 1.0,
+				Depth:      5,
+				GenreID:    "horror",
+			},
+			wantErr:    false,
+			checkStart: true,
+		},
+		{
+			name: "low difficulty",
+			seed: 22222,
+			params: procgen.GenerationParams{
+				Difficulty: 0.0,
+				Depth:      0,
+				GenreID:    "cyberpunk",
+			},
+			wantErr:    false,
+			checkStart: true,
+		},
+		{
+			name: "invalid difficulty negative",
+			seed: 33333,
+			params: procgen.GenerationParams{
+				Difficulty: -0.5,
+				Depth:      1,
+				GenreID:    "fantasy",
+			},
+			wantErr: true,
+		},
+		{
+			name: "invalid difficulty too high",
+			seed: 44444,
+			params: procgen.GenerationParams{
+				Difficulty: 1.5,
+				Depth:      1,
+				GenreID:    "fantasy",
+			},
+			wantErr: true,
+		},
+		{
+			name: "invalid depth negative",
+			seed: 55555,
+			params: procgen.GenerationParams{
+				Difficulty: 0.5,
+				Depth:      -1,
+				GenreID:    "fantasy",
+			},
+			wantErr: true,
+		},
+		{
+			name: "empty genre",
+			seed: 66666,
+			params: procgen.GenerationParams{
+				Difficulty: 0.5,
+				Depth:      1,
+				GenreID:    "",
+			},
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			config := GetFantasyConfig(12345) // Start with any config
+			gen := NewLSystemGenerator(config)
+
+			result, err := gen.Generate(tt.seed, tt.params)
+
+			if (err != nil) != tt.wantErr {
+				t.Errorf("Generate() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+
+			if err != nil {
+				return // Expected error, test passed
+			}
+
+			// Check result type
+			lsystemString, ok := result.(string)
+			if !ok {
+				t.Errorf("Generate() result is not string, got type %T", result)
+				return
+			}
+
+			// Check non-empty
+			if len(lsystemString) == 0 {
+				t.Error("Generate() returned empty string")
+			}
+
+			// Check starts with S
+			if tt.checkStart && !strings.HasPrefix(lsystemString, "S") {
+				t.Errorf("Generate() result doesn't start with S: %s", lsystemString)
+			}
+		})
+	}
+}
+
+// TestLSystemGenerator_GenerateInterface_Determinism tests deterministic generation via interface.
+func TestLSystemGenerator_GenerateInterface_Determinism(t *testing.T) {
+	seed := int64(99999)
+	params := procgen.GenerationParams{
+		Difficulty: 0.6,
+		Depth:      2,
+		GenreID:    "fantasy",
+	}
+
+	config := GetFantasyConfig(12345)
+	gen := NewLSystemGenerator(config)
+
+	result1, err1 := gen.Generate(seed, params)
+	if err1 != nil {
+		t.Fatalf("First Generate() failed: %v", err1)
+	}
+
+	result2, err2 := gen.Generate(seed, params)
+	if err2 != nil {
+		t.Fatalf("Second Generate() failed: %v", err2)
+	}
+
+	if result1 != result2 {
+		t.Errorf("Non-deterministic generation:\nFirst:  %v\nSecond: %v", result1, result2)
+	}
+}
+
+// TestLSystemGenerator_Validate tests the Validate interface method.
+func TestLSystemGenerator_Validate(t *testing.T) {
+	gen := NewLSystemGenerator(GetFantasyConfig(12345))
+
+	tests := []struct {
+		name    string
+		result  interface{}
+		wantErr bool
+		errMsg  string
+	}{
+		{
+			name:    "valid simple layout",
+			result:  "S-C-T-E",
+			wantErr: false,
+		},
+		{
+			name:    "valid complex layout",
+			result:  "S-C-+-P-?-T-E",
+			wantErr: false,
+		},
+		{
+			name:    "valid minimal layout",
+			result:  "S-E",
+			wantErr: false,
+		},
+		{
+			name:    "invalid type not string",
+			result:  12345,
+			wantErr: true,
+			errMsg:  "not a string",
+		},
+		{
+			name:    "empty string",
+			result:  "",
+			wantErr: true,
+			errMsg:  "empty",
+		},
+		{
+			name:    "missing start symbol",
+			result:  "C-T-E",
+			wantErr: true,
+			errMsg:  "start with 'S'",
+		},
+		{
+			name:    "too few rooms",
+			result:  "S",
+			wantErr: true,
+			errMsg:  "too few rooms",
+		},
+		{
+			name:    "invalid symbol",
+			result:  "S-X-E",
+			wantErr: true,
+			errMsg:  "invalid symbol",
+		},
+		{
+			name:    "multiple invalid symbols",
+			result:  "S-C-@-#-E",
+			wantErr: true,
+			errMsg:  "invalid symbol",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := gen.Validate(tt.result)
+
+			if (err != nil) != tt.wantErr {
+				t.Errorf("Validate() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+
+			if err != nil && tt.errMsg != "" {
+				if !strings.Contains(err.Error(), tt.errMsg) {
+					t.Errorf("Validate() error = %v, should contain %q", err, tt.errMsg)
+				}
+			}
+		})
+	}
+}
+
+// TestLSystemGenerator_GenerateAndValidate tests full generation and validation workflow.
+func TestLSystemGenerator_GenerateAndValidate(t *testing.T) {
+	genres := []string{"fantasy", "sci-fi", "horror", "cyberpunk", "post-apocalyptic"}
+
+	for _, genre := range genres {
+		t.Run(genre, func(t *testing.T) {
+			seed := int64(12345)
+			params := procgen.GenerationParams{
+				Difficulty: 0.5,
+				Depth:      2,
+				GenreID:    genre,
+			}
+
+			config := GetFantasyConfig(seed)
+			gen := NewLSystemGenerator(config)
+
+			// Generate
+			result, err := gen.Generate(seed, params)
+			if err != nil {
+				t.Fatalf("Generate() failed: %v", err)
+			}
+
+			// Validate
+			err = gen.Validate(result)
+			if err != nil {
+				t.Errorf("Validate() failed for generated content: %v", err)
+			}
+		})
+	}
+}
+
+// TestLSystemGenerator_DifficultyScaling tests room count scaling with difficulty.
+func TestLSystemGenerator_DifficultyScaling(t *testing.T) {
+	seed := int64(77777)
+	config := GetFantasyConfig(seed)
+	gen := NewLSystemGenerator(config)
+
+	tests := []struct {
+		name       string
+		difficulty float64
+		depth      int
+	}{
+		{"easy shallow", 0.0, 0},
+		{"medium shallow", 0.5, 0},
+		{"hard shallow", 1.0, 0},
+		{"easy deep", 0.0, 5},
+		{"medium deep", 0.5, 5},
+		{"hard deep", 1.0, 5},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			params := procgen.GenerationParams{
+				Difficulty: tt.difficulty,
+				Depth:      tt.depth,
+				GenreID:    "fantasy",
+			}
+
+			result, err := gen.Generate(seed, params)
+			if err != nil {
+				t.Fatalf("Generate() failed: %v", err)
+			}
+
+			lsystemString := result.(string)
+			roomCount := gen.countRooms(lsystemString)
+
+			// Higher difficulty/depth should generally produce more rooms
+			// (though this is probabilistic, so we just check it's reasonable)
+			if roomCount < 2 {
+				t.Errorf("Too few rooms (%d) for difficulty=%.1f, depth=%d",
+					roomCount, tt.difficulty, tt.depth)
+			}
+
+			// Should not exceed maximum (100 rooms cap)
+			if roomCount > 100 {
+				t.Errorf("Too many rooms (%d), exceeded cap of 100", roomCount)
+			}
+		})
+	}
+}
+
+// BenchmarkLSystemGenerator_GenerateInterface benchmarks interface-based generation.
+
+// BenchmarkLSystemGenerator_GenerateInterface benchmarks interface-based generation.
+func BenchmarkLSystemGenerator_GenerateInterface(b *testing.B) {
+	config := GetFantasyConfig(12345)
+	gen := NewLSystemGenerator(config)
+	params := procgen.GenerationParams{
+		Difficulty: 0.5,
+		Depth:      2,
+		GenreID:    "fantasy",
+	}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_, _ = gen.Generate(12345, params)
 	}
 }
 
@@ -555,7 +895,7 @@ func BenchmarkLSystemGenerator_GenreConfigs(b *testing.B) {
 			b.ResetTimer()
 			for i := 0; i < b.N; i++ {
 				gen := NewLSystemGenerator(config)
-				_ = gen.Generate()
+				_ = gen.GenerateString()
 			}
 		})
 	}

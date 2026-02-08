@@ -146,7 +146,7 @@ func (g *GraphGrammarGenerator) GenerateGraph(width, height int) (*DungeonGraph,
 	}
 
 	// Generate L-system string
-	lsystemString := g.lsystemGen.Generate()
+	lsystemString := g.lsystemGen.GenerateString()
 
 	if g.logger != nil && g.logger.Logger.GetLevel() >= logrus.DebugLevel {
 		g.logger.WithField("lsystem", lsystemString).Debug("L-system string generated")

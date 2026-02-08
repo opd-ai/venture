@@ -24,6 +24,8 @@ type RecipeGenerator struct {
 	potionTemplates    map[string][]RecipeTemplate
 	enchantTemplates   map[string][]RecipeTemplate
 	magicItemTemplates map[string][]RecipeTemplate
+	cookingTemplates   map[string][]RecipeTemplate
+	smithingTemplates  map[string][]RecipeTemplate
 	logger             *logrus.Entry
 }
 
@@ -58,6 +60,8 @@ func NewRecipeGeneratorWithLogger(logger *logrus.Logger) *RecipeGenerator {
 		potionTemplates:    make(map[string][]RecipeTemplate),
 		enchantTemplates:   make(map[string][]RecipeTemplate),
 		magicItemTemplates: make(map[string][]RecipeTemplate),
+		cookingTemplates:   make(map[string][]RecipeTemplate),
+		smithingTemplates:  make(map[string][]RecipeTemplate),
 		logger:             logEntry,
 	}
 
@@ -72,6 +76,8 @@ func NewRecipeGeneratorWithLogger(logger *logrus.Logger) *RecipeGenerator {
 	gen.potionTemplates[""] = gen.potionTemplates["fantasy"]
 	gen.enchantTemplates[""] = gen.enchantTemplates["fantasy"]
 	gen.magicItemTemplates[""] = gen.magicItemTemplates["fantasy"]
+	gen.cookingTemplates[""] = gen.cookingTemplates["fantasy"]
+	gen.smithingTemplates[""] = gen.smithingTemplates["fantasy"]
 
 	if logEntry != nil {
 		logEntry.Debug("recipe generator initialized")
@@ -237,6 +243,12 @@ func (g *RecipeGenerator) extractRecipeTypeFilter(params procgen.GenerationParam
 	case "magic_item":
 		t := engine.RecipeMagicItem
 		return &t
+	case "cooking":
+		t := engine.RecipeCooking
+		return &t
+	case "smithing":
+		t := engine.RecipeSmithing
+		return &t
 	}
 	return nil
 }
@@ -259,12 +271,16 @@ func (g *RecipeGenerator) determineRecipeType(rng *rand.Rand, typeFilter *engine
 	}
 
 	roll := rng.Float64()
-	if roll < 0.5 {
+	if roll < 0.30 {
 		return engine.RecipePotion
-	} else if roll < 0.8 {
+	} else if roll < 0.50 {
 		return engine.RecipeEnchanting
+	} else if roll < 0.70 {
+		return engine.RecipeMagicItem
+	} else if roll < 0.85 {
+		return engine.RecipeCooking
 	}
-	return engine.RecipeMagicItem
+	return engine.RecipeSmithing
 }
 
 // logGenerationComplete logs the completion of recipe generation.
@@ -312,6 +328,14 @@ func (g *RecipeGenerator) getTemplatesForType(genreID string, recipeType engine.
 		}
 	case engine.RecipeMagicItem:
 		if templates, ok := g.magicItemTemplates[genreID]; ok {
+			return templates
+		}
+	case engine.RecipeCooking:
+		if templates, ok := g.cookingTemplates[genreID]; ok {
+			return templates
+		}
+	case engine.RecipeSmithing:
+		if templates, ok := g.smithingTemplates[genreID]; ok {
 			return templates
 		}
 	}
@@ -373,6 +397,56 @@ func (g *RecipeGenerator) registerFantasyTemplates() {
 			CraftTimeRange:   [2]float64{10.0, 15.0},
 		},
 	}
+
+	g.cookingTemplates["fantasy"] = []RecipeTemplate{
+		{
+			NamePrefix: "Hearty", NameSuffix: "Stew",
+			RecipeType: engine.RecipeCooking, RecipeRarity: engine.RecipeCommon,
+			OutputType:       item.TypeConsumable,
+			MaterialNames:    []string{"Meat", "Vegetables", "Spices", "Water"},
+			MaterialCount:    [2]int{2, 4},
+			GoldCostRange:    [2]int{3, 10},
+			SkillRange:       [2]int{0, 2},
+			BaseSuccessRange: [2]float64{0.80, 0.90},
+			CraftTimeRange:   [2]float64{5.0, 10.0},
+		},
+		{
+			NamePrefix: "Stamina", NameSuffix: "Pie",
+			RecipeType: engine.RecipeCooking, RecipeRarity: engine.RecipeUncommon,
+			OutputType:       item.TypeConsumable,
+			MaterialNames:    []string{"Flour", "Butter", "Honey", "Berries"},
+			MaterialCount:    [2]int{3, 4},
+			GoldCostRange:    [2]int{10, 20},
+			SkillRange:       [2]int{2, 4},
+			BaseSuccessRange: [2]float64{0.70, 0.80},
+			CraftTimeRange:   [2]float64{8.0, 12.0},
+		},
+	}
+
+	g.smithingTemplates["fantasy"] = []RecipeTemplate{
+		{
+			NamePrefix: "Iron", NameSuffix: "Sword",
+			RecipeType: engine.RecipeSmithing, RecipeRarity: engine.RecipeCommon,
+			OutputType:       item.TypeWeapon,
+			MaterialNames:    []string{"Iron Ore", "Coal", "Leather Grip"},
+			MaterialCount:    [2]int{2, 3},
+			GoldCostRange:    [2]int{20, 40},
+			SkillRange:       [2]int{3, 5},
+			BaseSuccessRange: [2]float64{0.70, 0.80},
+			CraftTimeRange:   [2]float64{10.0, 15.0},
+		},
+		{
+			NamePrefix: "Steel", NameSuffix: "Plate Armor",
+			RecipeType: engine.RecipeSmithing, RecipeRarity: engine.RecipeUncommon,
+			OutputType:       item.TypeArmor,
+			MaterialNames:    []string{"Steel Ingot", "Leather Straps", "Iron Rivets"},
+			MaterialCount:    [2]int{4, 5},
+			GoldCostRange:    [2]int{40, 80},
+			SkillRange:       [2]int{5, 8},
+			BaseSuccessRange: [2]float64{0.60, 0.70},
+			CraftTimeRange:   [2]float64{15.0, 25.0},
+		},
+	}
 }
 
 func (g *RecipeGenerator) registerSciFiTemplates() {
@@ -415,6 +489,34 @@ func (g *RecipeGenerator) registerSciFiTemplates() {
 			SkillRange:       [2]int{5, 7},
 			BaseSuccessRange: [2]float64{0.60, 0.70},
 			CraftTimeRange:   [2]float64{10.0, 15.0},
+		},
+	}
+
+	g.cookingTemplates["scifi"] = []RecipeTemplate{
+		{
+			NamePrefix: "Nutrient", NameSuffix: "Paste",
+			RecipeType: engine.RecipeCooking, RecipeRarity: engine.RecipeCommon,
+			OutputType:       item.TypeConsumable,
+			MaterialNames:    []string{"Protein Powder", "Vitamin Mix", "Flavor Pack"},
+			MaterialCount:    [2]int{2, 3},
+			GoldCostRange:    [2]int{5, 12},
+			SkillRange:       [2]int{0, 2},
+			BaseSuccessRange: [2]float64{0.80, 0.90},
+			CraftTimeRange:   [2]float64{3.0, 5.0},
+		},
+	}
+
+	g.smithingTemplates["scifi"] = []RecipeTemplate{
+		{
+			NamePrefix: "Titanium", NameSuffix: "Armor Plating",
+			RecipeType: engine.RecipeSmithing, RecipeRarity: engine.RecipeUncommon,
+			OutputType:       item.TypeArmor,
+			MaterialNames:    []string{"Titanium Alloy", "Ceramic Plate", "Flex-Gel"},
+			MaterialCount:    [2]int{3, 4},
+			GoldCostRange:    [2]int{50, 100},
+			SkillRange:       [2]int{4, 7},
+			BaseSuccessRange: [2]float64{0.65, 0.75},
+			CraftTimeRange:   [2]float64{12.0, 18.0},
 		},
 	}
 }
@@ -461,6 +563,34 @@ func (g *RecipeGenerator) registerHorrorTemplates() {
 			CraftTimeRange:   [2]float64{12.0, 18.0},
 		},
 	}
+
+	g.cookingTemplates["horror"] = []RecipeTemplate{
+		{
+			NamePrefix: "Grave", NameSuffix: "Rations",
+			RecipeType: engine.RecipeCooking, RecipeRarity: engine.RecipeCommon,
+			OutputType:       item.TypeConsumable,
+			MaterialNames:    []string{"Preserved Meat", "Fungus", "Bitter Herb"},
+			MaterialCount:    [2]int{2, 3},
+			GoldCostRange:    [2]int{4, 10},
+			SkillRange:       [2]int{0, 2},
+			BaseSuccessRange: [2]float64{0.75, 0.85},
+			CraftTimeRange:   [2]float64{4.0, 8.0},
+		},
+	}
+
+	g.smithingTemplates["horror"] = []RecipeTemplate{
+		{
+			NamePrefix: "Rusted", NameSuffix: "Chainmail",
+			RecipeType: engine.RecipeSmithing, RecipeRarity: engine.RecipeCommon,
+			OutputType:       item.TypeArmor,
+			MaterialNames:    []string{"Scrap Iron", "Old Chain", "Blood Oil"},
+			MaterialCount:    [2]int{3, 4},
+			GoldCostRange:    [2]int{25, 50},
+			SkillRange:       [2]int{3, 6},
+			BaseSuccessRange: [2]float64{0.70, 0.80},
+			CraftTimeRange:   [2]float64{10.0, 15.0},
+		},
+	}
 }
 
 func (g *RecipeGenerator) registerCyberpunkTemplates() {
@@ -505,6 +635,34 @@ func (g *RecipeGenerator) registerCyberpunkTemplates() {
 			CraftTimeRange:   [2]float64{10.0, 15.0},
 		},
 	}
+
+	g.cookingTemplates["cyberpunk"] = []RecipeTemplate{
+		{
+			NamePrefix: "Synth", NameSuffix: "Ramen",
+			RecipeType: engine.RecipeCooking, RecipeRarity: engine.RecipeCommon,
+			OutputType:       item.TypeConsumable,
+			MaterialNames:    []string{"Noodle Block", "Flavor Powder", "Synth-Protein"},
+			MaterialCount:    [2]int{2, 3},
+			GoldCostRange:    [2]int{2, 8},
+			SkillRange:       [2]int{0, 1},
+			BaseSuccessRange: [2]float64{0.85, 0.95},
+			CraftTimeRange:   [2]float64{2.0, 4.0},
+		},
+	}
+
+	g.smithingTemplates["cyberpunk"] = []RecipeTemplate{
+		{
+			NamePrefix: "Cyber", NameSuffix: "Exo-Suit",
+			RecipeType: engine.RecipeSmithing, RecipeRarity: engine.RecipeRare,
+			OutputType:       item.TypeArmor,
+			MaterialNames:    []string{"Carbon Fiber", "Servo Motors", "Power Cell", "Neural Interface"},
+			MaterialCount:    [2]int{4, 5},
+			GoldCostRange:    [2]int{70, 120},
+			SkillRange:       [2]int{6, 9},
+			BaseSuccessRange: [2]float64{0.55, 0.65},
+			CraftTimeRange:   [2]float64{18.0, 30.0},
+		},
+	}
 }
 
 func (g *RecipeGenerator) registerPostApocTemplates() {
@@ -547,6 +705,34 @@ func (g *RecipeGenerator) registerPostApocTemplates() {
 			SkillRange:       [2]int{5, 7},
 			BaseSuccessRange: [2]float64{0.65, 0.75},
 			CraftTimeRange:   [2]float64{8.0, 12.0},
+		},
+	}
+
+	g.cookingTemplates["postapoc"] = []RecipeTemplate{
+		{
+			NamePrefix: "Canned", NameSuffix: "Rations",
+			RecipeType: engine.RecipeCooking, RecipeRarity: engine.RecipeCommon,
+			OutputType:       item.TypeConsumable,
+			MaterialNames:    []string{"Canned Goods", "Clean Water", "Salt"},
+			MaterialCount:    [2]int{2, 3},
+			GoldCostRange:    [2]int{3, 9},
+			SkillRange:       [2]int{0, 1},
+			BaseSuccessRange: [2]float64{0.85, 0.95},
+			CraftTimeRange:   [2]float64{2.0, 5.0},
+		},
+	}
+
+	g.smithingTemplates["postapoc"] = []RecipeTemplate{
+		{
+			NamePrefix: "Salvaged", NameSuffix: "Body Armor",
+			RecipeType: engine.RecipeSmithing, RecipeRarity: engine.RecipeCommon,
+			OutputType:       item.TypeArmor,
+			MaterialNames:    []string{"Scrap Metal", "Leather", "Bolts"},
+			MaterialCount:    [2]int{3, 4},
+			GoldCostRange:    [2]int{20, 40},
+			SkillRange:       [2]int{3, 5},
+			BaseSuccessRange: [2]float64{0.70, 0.80},
+			CraftTimeRange:   [2]float64{10.0, 15.0},
 		},
 	}
 }

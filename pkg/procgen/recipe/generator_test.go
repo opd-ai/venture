@@ -5,6 +5,7 @@ import (
 
 	"github.com/opd-ai/venture/pkg/engine"
 	"github.com/opd-ai/venture/pkg/procgen"
+	"github.com/opd-ai/venture/pkg/procgen/item"
 )
 
 // TestNewRecipeGenerator tests generator creation.
@@ -420,6 +421,258 @@ func BenchmarkRecipeGenerator_Generate(b *testing.B) {
 		Depth:      3,
 		GenreID:    "fantasy",
 		Custom:     map[string]interface{}{"count": 10},
+	}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		gen.Generate(int64(i), params)
+	}
+}
+
+// TestRecipeGenerator_NewRecipeTypes tests cooking and smithing recipe types.
+func TestRecipeGenerator_NewRecipeTypes(t *testing.T) {
+	gen := NewRecipeGenerator()
+
+	tests := []struct {
+		name       string
+		typeFilter string
+		wantType   engine.RecipeType
+	}{
+		{"cooking filter", "cooking", engine.RecipeCooking},
+		{"smithing filter", "smithing", engine.RecipeSmithing},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			params := procgen.GenerationParams{
+				Difficulty: 0.5,
+				Depth:      3,
+				GenreID:    "fantasy",
+				Custom:     map[string]interface{}{"type": tt.typeFilter, "count": 5},
+			}
+
+			result, err := gen.Generate(12345, params)
+			if err != nil {
+				t.Fatalf("Generate() failed: %v", err)
+			}
+
+			recipes := result.([]*engine.Recipe)
+			if len(recipes) != 5 {
+				t.Fatalf("Generate() returned %d recipes, want 5", len(recipes))
+			}
+
+			// All recipes should match the filtered type
+			for i, recipe := range recipes {
+				if recipe.Type != tt.wantType {
+					t.Errorf("Recipe %d has type %v, want %v", i, recipe.Type, tt.wantType)
+				}
+			}
+		})
+	}
+}
+
+// TestRecipeGenerator_CookingTemplatesAllGenres tests cooking templates exist for all genres.
+func TestRecipeGenerator_CookingTemplatesAllGenres(t *testing.T) {
+	gen := NewRecipeGenerator()
+	genres := []string{"fantasy", "scifi", "horror", "cyberpunk", "postapoc"}
+
+	for _, genreID := range genres {
+		t.Run(genreID, func(t *testing.T) {
+			templates := gen.cookingTemplates[genreID]
+			if len(templates) == 0 {
+				t.Errorf("No cooking templates for genre %s", genreID)
+			}
+
+			// Verify template structure
+			for i, tmpl := range templates {
+				if tmpl.RecipeType != engine.RecipeCooking {
+					t.Errorf("Template %d has type %v, want RecipeCooking", i, tmpl.RecipeType)
+				}
+				if tmpl.NamePrefix == "" || tmpl.NameSuffix == "" {
+					t.Errorf("Template %d has empty name parts", i)
+				}
+				if len(tmpl.MaterialNames) == 0 {
+					t.Errorf("Template %d has no material names", i)
+				}
+			}
+		})
+	}
+}
+
+// TestRecipeGenerator_SmithingTemplatesAllGenres tests smithing templates exist for all genres.
+func TestRecipeGenerator_SmithingTemplatesAllGenres(t *testing.T) {
+	gen := NewRecipeGenerator()
+	genres := []string{"fantasy", "scifi", "horror", "cyberpunk", "postapoc"}
+
+	for _, genreID := range genres {
+		t.Run(genreID, func(t *testing.T) {
+			templates := gen.smithingTemplates[genreID]
+			if len(templates) == 0 {
+				t.Errorf("No smithing templates for genre %s", genreID)
+			}
+
+			// Verify template structure
+			for i, tmpl := range templates {
+				if tmpl.RecipeType != engine.RecipeSmithing {
+					t.Errorf("Template %d has type %v, want RecipeSmithing", i, tmpl.RecipeType)
+				}
+				if tmpl.NamePrefix == "" || tmpl.NameSuffix == "" {
+					t.Errorf("Template %d has empty name parts", i)
+				}
+				if len(tmpl.MaterialNames) == 0 {
+					t.Errorf("Template %d has no material names", i)
+				}
+				// Smithing should output weapons or armor
+				if tmpl.OutputType != item.TypeWeapon && tmpl.OutputType != item.TypeArmor {
+					t.Errorf("Template %d has output type %v, want weapon or armor", i, tmpl.OutputType)
+				}
+			}
+		})
+	}
+}
+
+// TestRecipeGenerator_AllFiveRecipeTypes tests random distribution includes all 5 types.
+func TestRecipeGenerator_AllFiveRecipeTypes(t *testing.T) {
+	gen := NewRecipeGenerator()
+
+	params := procgen.GenerationParams{
+		Difficulty: 0.5,
+		Depth:      5,
+		GenreID:    "fantasy",
+		Custom:     map[string]interface{}{"count": 200}, // Generate many to hit all types
+	}
+
+	result, err := gen.Generate(98765, params)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	recipes := result.([]*engine.Recipe)
+	typeCounts := make(map[engine.RecipeType]int)
+
+	for _, recipe := range recipes {
+		typeCounts[recipe.Type]++
+	}
+
+	// Verify all 5 types are generated
+	expectedTypes := []engine.RecipeType{
+		engine.RecipePotion,
+		engine.RecipeEnchanting,
+		engine.RecipeMagicItem,
+		engine.RecipeCooking,
+		engine.RecipeSmithing,
+	}
+
+	for _, expectedType := range expectedTypes {
+		if count := typeCounts[expectedType]; count == 0 {
+			t.Errorf("No recipes of type %v generated (generated %d recipes total)", expectedType, len(recipes))
+		}
+	}
+
+	t.Logf("Type distribution: %v", typeCounts)
+}
+
+// TestRecipeType_String tests new recipe type string representations.
+func TestRecipeType_String(t *testing.T) {
+	tests := []struct {
+		recType  engine.RecipeType
+		expected string
+	}{
+		{engine.RecipePotion, "potion"},
+		{engine.RecipeEnchanting, "enchanting"},
+		{engine.RecipeMagicItem, "magic_item"},
+		{engine.RecipeCooking, "cooking"},
+		{engine.RecipeSmithing, "smithing"},
+		{engine.RecipeType(99), "unknown"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.expected, func(t *testing.T) {
+			if got := tt.recType.String(); got != tt.expected {
+				t.Errorf("RecipeType.String() = %v, want %v", got, tt.expected)
+			}
+		})
+	}
+}
+
+// TestRecipeGenerator_CookingRecipeProperties tests cooking recipes have appropriate properties.
+func TestRecipeGenerator_CookingRecipeProperties(t *testing.T) {
+	gen := NewRecipeGenerator()
+
+	params := procgen.GenerationParams{
+		Difficulty: 0.5,
+		Depth:      2,
+		GenreID:    "fantasy",
+		Custom:     map[string]interface{}{"type": "cooking", "count": 10},
+	}
+
+	result, err := gen.Generate(11111, params)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	recipes := result.([]*engine.Recipe)
+	for i, recipe := range recipes {
+		// Cooking recipes should be consumables
+		if recipe.OutputItemType != item.TypeConsumable {
+			t.Errorf("Recipe %d outputs %v, want TypeConsumable", i, recipe.OutputItemType)
+		}
+
+		// Cooking should be relatively fast (< 30 seconds)
+		if recipe.CraftTimeSec > 30.0 {
+			t.Errorf("Recipe %d craft time %f is too long for cooking", i, recipe.CraftTimeSec)
+		}
+
+		// Should have reasonable success chance (cooking is easier than complex magic)
+		if recipe.BaseSuccessChance < 0.50 {
+			t.Errorf("Recipe %d success chance %f is too low for cooking", i, recipe.BaseSuccessChance)
+		}
+	}
+}
+
+// TestRecipeGenerator_SmithingRecipeProperties tests smithing recipes have appropriate properties.
+func TestRecipeGenerator_SmithingRecipeProperties(t *testing.T) {
+	gen := NewRecipeGenerator()
+
+	params := procgen.GenerationParams{
+		Difficulty: 0.6,
+		Depth:      3,
+		GenreID:    "fantasy",
+		Custom:     map[string]interface{}{"type": "smithing", "count": 10},
+	}
+
+	result, err := gen.Generate(22222, params)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	recipes := result.([]*engine.Recipe)
+	for i, recipe := range recipes {
+		// Smithing recipes should output weapons or armor
+		if recipe.OutputItemType != item.TypeWeapon && recipe.OutputItemType != item.TypeArmor {
+			t.Errorf("Recipe %d outputs %v, want weapon or armor", i, recipe.OutputItemType)
+		}
+
+		// Smithing should take reasonable time (5-40 seconds)
+		if recipe.CraftTimeSec < 5.0 || recipe.CraftTimeSec > 40.0 {
+			t.Errorf("Recipe %d craft time %f is outside expected range [5.0, 40.0]", i, recipe.CraftTimeSec)
+		}
+
+		// Should require materials (metal, leather, etc.)
+		if len(recipe.Materials) < 2 {
+			t.Errorf("Recipe %d has only %d materials, smithing should require at least 2", i, len(recipe.Materials))
+		}
+	}
+}
+
+// BenchmarkGenerateNewRecipeTypes benchmarks generation of cooking and smithing recipes.
+func BenchmarkGenerateNewRecipeTypes(b *testing.B) {
+	gen := NewRecipeGenerator()
+	params := procgen.GenerationParams{
+		Difficulty: 0.5,
+		Depth:      3,
+		GenreID:    "fantasy",
+		Custom:     map[string]interface{}{"count": 20},
 	}
 
 	b.ResetTimer()

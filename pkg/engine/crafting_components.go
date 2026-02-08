@@ -25,6 +25,10 @@ const (
 	RecipeEnchanting
 	// RecipeMagicItem represents magic item creation (base + essence + materials -> magic item)
 	RecipeMagicItem
+	// RecipeCooking represents food preparation (ingredients -> consumables with buffs)
+	RecipeCooking
+	// RecipeSmithing represents weapon/armor forging (ore + materials -> equipment)
+	RecipeSmithing
 )
 
 // String returns the string representation of a recipe type.
@@ -36,6 +40,10 @@ func (r RecipeType) String() string {
 		return "enchanting"
 	case RecipeMagicItem:
 		return "magic_item"
+	case RecipeCooking:
+		return "cooking"
+	case RecipeSmithing:
+		return "smithing"
 	default:
 		return "unknown"
 	}

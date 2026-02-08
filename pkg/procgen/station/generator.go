@@ -1,11 +1,11 @@
 // Package station provides procedural crafting station generation.
 // This file implements deterministic station generators that create crafting stations
-// (alchemy tables, forges, workbenches) based on genre and seed.
+// (alchemy tables, forges, workbenches, kitchens, anvils) based on genre and seed.
 //
 // Design Philosophy:
 // - Deterministic: same seed always generates same stations
 // - Genre-themed: station names reflect genre aesthetics
-// - Balanced: 3 stations per area (one per recipe type)
+// - Balanced: 5 stations per area (one per recipe type)
 // - Simple: minimal complexity following SIMPLICITY RULE
 package station
 
@@ -27,6 +27,10 @@ const (
 	StationForge
 	// StationWorkbench is for crafting magic items.
 	StationWorkbench
+	// StationKitchen is for cooking food.
+	StationKitchen
+	// StationAnvil is for smithing weapons and armor.
+	StationAnvil
 )
 
 // String returns the string representation of the station type.
@@ -38,6 +42,10 @@ func (s StationType) String() string {
 		return "Forge"
 	case StationWorkbench:
 		return "Workbench"
+	case StationKitchen:
+		return "Kitchen"
+	case StationAnvil:
+		return "Anvil"
 	default:
 		return "Unknown"
 	}
@@ -101,7 +109,7 @@ func NewStationGeneratorWithLogger(logger *logrus.Logger) *StationGenerator {
 }
 
 // Generate creates crafting stations based on seed and parameters.
-// Always generates exactly 3 stations (one per station type).
+// Always generates exactly 5 stations (one per station type).
 // Returns a slice of *StationData.
 func (g *StationGenerator) Generate(seed int64, params procgen.GenerationParams) (interface{}, error) {
 	if g.logger != nil && g.logger.Logger.GetLevel() >= logrus.DebugLevel {
@@ -123,9 +131,9 @@ func (g *StationGenerator) Generate(seed int64, params procgen.GenerationParams)
 		templates = g.nameTemplates["fantasy"]
 	}
 
-	// Generate exactly 3 stations (one per type)
-	stations := make([]*StationData, 3)
-	stationTypes := []StationType{StationAlchemyTable, StationForge, StationWorkbench}
+	// Generate exactly 5 stations (one per type)
+	stations := make([]*StationData, 5)
+	stationTypes := []StationType{StationAlchemyTable, StationForge, StationWorkbench, StationKitchen, StationAnvil}
 
 	for i, stationType := range stationTypes {
 		stationSeed := seed + int64(i*100) // Derive unique seed per station
@@ -159,8 +167,8 @@ func (g *StationGenerator) Validate(result interface{}) error {
 		return fmt.Errorf("result is not []*StationData")
 	}
 
-	if len(stations) != 3 {
-		return fmt.Errorf("expected exactly 3 stations, got %d", len(stations))
+	if len(stations) != 5 {
+		return fmt.Errorf("expected exactly 5 stations, got %d", len(stations))
 	}
 
 	// Check that we have one of each type
@@ -174,7 +182,7 @@ func (g *StationGenerator) Validate(result interface{}) error {
 			return fmt.Errorf("station has empty name")
 		}
 
-		if station.StationType < StationAlchemyTable || station.StationType > StationWorkbench {
+		if station.StationType < StationAlchemyTable || station.StationType > StationAnvil {
 			return fmt.Errorf("invalid station type: %d", station.StationType)
 		}
 
@@ -182,9 +190,11 @@ func (g *StationGenerator) Validate(result interface{}) error {
 	}
 
 	// Verify one of each type
-	if typeCount[StationAlchemyTable] != 1 || typeCount[StationForge] != 1 || typeCount[StationWorkbench] != 1 {
-		return fmt.Errorf("must have exactly one of each station type, got: alchemy=%d, forge=%d, workbench=%d",
-			typeCount[StationAlchemyTable], typeCount[StationForge], typeCount[StationWorkbench])
+	if typeCount[StationAlchemyTable] != 1 || typeCount[StationForge] != 1 || typeCount[StationWorkbench] != 1 ||
+		typeCount[StationKitchen] != 1 || typeCount[StationAnvil] != 1 {
+		return fmt.Errorf("must have exactly one of each station type, got: alchemy=%d, forge=%d, workbench=%d, kitchen=%d, anvil=%d",
+			typeCount[StationAlchemyTable], typeCount[StationForge], typeCount[StationWorkbench],
+			typeCount[StationKitchen], typeCount[StationAnvil])
 	}
 
 	return nil
@@ -234,6 +244,16 @@ func (g *StationGenerator) registerFantasyTemplates() {
 			Adjective: []string{"Magical", "Precision", "Fine", "Skilled"},
 			Noun:      []string{"Workbench", "Table", "Station", "Bench"},
 		},
+		StationKitchen: {
+			Prefix:    []string{"Tavern", "Castle", "Guild", "Hearth"},
+			Adjective: []string{"Warm", "Cozy", "Grand", "Bustling"},
+			Noun:      []string{"Kitchen", "Cookery", "Hearth", "Galley"},
+		},
+		StationAnvil: {
+			Prefix:    []string{"Blacksmith's", "Master", "Dwarven", "Iron"},
+			Adjective: []string{"Heavy", "Sturdy", "Ancient", "Ringing"},
+			Noun:      []string{"Anvil", "Forge Block", "Strike Plate", "Smithing Station"},
+		},
 	}
 }
 
@@ -254,6 +274,16 @@ func (g *StationGenerator) registerSciFiTemplates() {
 			Prefix:    []string{"Tech", "Engineering", "Robotics", "Cybernetics"},
 			Adjective: []string{"Assembly", "Modification", "Crafting", "Fabrication"},
 			Noun:      []string{"Station", "Terminal", "Workbench", "Bay"},
+		},
+		StationKitchen: {
+			Prefix:    []string{"Nutrition", "Food", "Synthesizer", "Ration"},
+			Adjective: []string{"Automated", "Molecular", "Processing", "Prep"},
+			Noun:      []string{"Station", "Bay", "Unit", "Module"},
+		},
+		StationAnvil: {
+			Prefix:    []string{"Industrial", "Fabrication", "Manufacturing", "Metalwork"},
+			Adjective: []string{"Forging", "Pressing", "Shaping", "Forming"},
+			Noun:      []string{"Station", "Press", "Unit", "Module"},
 		},
 	}
 }
@@ -276,6 +306,16 @@ func (g *StationGenerator) registerHorrorTemplates() {
 			Adjective: []string{"Surgeon's", "Butcher's", "Torturer's", "Anatomist's"},
 			Noun:      []string{"Table", "Workbench", "Station", "Bench"},
 		},
+		StationKitchen: {
+			Prefix:    []string{"Haunted", "Decrepit", "Abandoned", "Cursed"},
+			Adjective: []string{"Rotting", "Moldy", "Pestilent", "Blighted"},
+			Noun:      []string{"Kitchen", "Larder", "Cookery", "Pantry"},
+		},
+		StationAnvil: {
+			Prefix:    []string{"Bone", "Blood", "Flesh", "Corpse"},
+			Adjective: []string{"Grinding", "Crushing", "Pounding", "Shaping"},
+			Noun:      []string{"Block", "Anvil", "Press", "Platform"},
+		},
 	}
 }
 
@@ -297,6 +337,16 @@ func (g *StationGenerator) registerCyberpunkTemplates() {
 			Adjective: []string{"Assembly", "Modding", "Crafting", "Tuning"},
 			Noun:      []string{"Station", "Terminal", "Workbench", "Rig"},
 		},
+		StationKitchen: {
+			Prefix:    []string{"Street", "Noodle", "Synth", "Corp"},
+			Adjective: []string{"Food", "Nutrient", "Meal", "Ration"},
+			Noun:      []string{"Cart", "Stand", "Dispenser", "Bar"},
+		},
+		StationAnvil: {
+			Prefix:    []string{"Industrial", "Heavy", "Mech", "Cyber"},
+			Adjective: []string{"Forging", "Pressing", "Shaping", "Forming"},
+			Noun:      []string{"Press", "Forge", "Station", "Unit"},
+		},
 	}
 }
 
@@ -317,6 +367,16 @@ func (g *StationGenerator) registerPostApocTemplates() {
 			Prefix:    []string{"Survivor's", "Scavenger's", "Wasteland", "Makeshift"},
 			Adjective: []string{"Repair", "Crafting", "Assembly", "Tinkering"},
 			Noun:      []string{"Workbench", "Table", "Station", "Setup"},
+		},
+		StationKitchen: {
+			Prefix:    []string{"Wasteland", "Scavenger's", "Survivor", "Ration"},
+			Adjective: []string{"Cooking", "Food Prep", "Canning", "Preserving"},
+			Noun:      []string{"Station", "Area", "Setup", "Corner"},
+		},
+		StationAnvil: {
+			Prefix:    []string{"Scrap", "Salvaged", "Makeshift", "Wasteland"},
+			Adjective: []string{"Hammering", "Pounding", "Forging", "Shaping"},
+			Noun:      []string{"Anvil", "Block", "Station", "Slab"},
 		},
 	}
 }

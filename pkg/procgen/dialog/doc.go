@@ -31,7 +31,7 @@
 //	gen := dialog.NewMarkovGenerator(seed, genreID, order)
 //	gen.TrainFromCorpus(corpus)
 //
-//	response := gen.Generate(dialog.GenerateParams{
+//	response := gen.GenerateText(dialog.GenerateParams{
 //	    PlayerInput:    "Where is the dungeon?",
 //	    ConversationID: "merchant-12345",
 //	    NPCPersonality: dialog.PersonalityHelpful,
@@ -75,7 +75,7 @@
 //	// Variation test: Same input produces different responses
 //	responses := make(map[string]bool)
 //	for i := 0; i < 10; i++ {
-//	    response := gen.Generate(params)
+//	    response := gen.GenerateText(params)
 //	    responses[response] = true
 //	}
 //	// Expect >80% unique responses

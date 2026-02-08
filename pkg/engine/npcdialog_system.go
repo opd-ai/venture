@@ -142,7 +142,7 @@ func (s *NPCDialogSystem) GenerateResponse(entity *Entity, playerInput string) (
 	if dialogComp.DeterministicMode {
 		response = dialogComp.Generator.GenerateDeterministic(params)
 	} else {
-		response = dialogComp.Generator.Generate(params)
+		response = dialogComp.Generator.GenerateText(params)
 	}
 
 	// Fallback to template if generation failed

@@ -56,7 +56,7 @@ func (m *MarkovDialogProvider) GetDialog() (string, []DialogOption) {
 		Temperature:    0.7,
 	}
 
-	text := m.generator.Generate(params)
+	text := m.generator.GenerateText(params)
 
 	// Fallback to simple greeting if generation fails
 	if text == "" {
@@ -96,7 +96,7 @@ func (m *MarkovDialogProvider) GenerateResponse(playerInput string) string {
 		Temperature:    0.7,
 	}
 
-	response := m.generator.Generate(params)
+	response := m.generator.GenerateText(params)
 
 	// Fallback
 	if response == "" {

@@ -302,3 +302,113 @@ func BenchmarkRateLimiter_GetClientRequestCount(b *testing.B) {
 		limiter.GetClientRequestCount(clientID)
 	}
 }
+
+func TestRateLimiter_InvalidRateValues(t *testing.T) {
+	tests := []struct {
+		name            string
+		rate            int
+		interval        time.Duration
+		expectedRate    int
+		expectedAllowed bool
+	}{
+		{
+			name:            "zero rate defaults to 1",
+			rate:            0,
+			interval:        time.Second,
+			expectedRate:    1,
+			expectedAllowed: true,
+		},
+		{
+			name:            "negative rate defaults to 1",
+			rate:            -5,
+			interval:        time.Second,
+			expectedRate:    1,
+			expectedAllowed: true,
+		},
+		{
+			name:            "zero interval defaults to 1 second",
+			rate:            5,
+			interval:        0,
+			expectedRate:    5,
+			expectedAllowed: true,
+		},
+		{
+			name:            "negative interval defaults to 1 second",
+			rate:            5,
+			interval:        -time.Second,
+			expectedRate:    5,
+			expectedAllowed: true,
+		},
+		{
+			name:            "both zero defaults to 1 request per second",
+			rate:            0,
+			interval:        0,
+			expectedRate:    1,
+			expectedAllowed: true,
+		},
+		{
+			name:            "both negative defaults to 1 request per second",
+			rate:            -1,
+			interval:        -time.Second,
+			expectedRate:    1,
+			expectedAllowed: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			limiter := NewRateLimiter(tt.rate, tt.interval)
+			clientID := uint64(1)
+
+			// First request should always be allowed with valid defaults
+			allowed := limiter.Allow(clientID)
+			if allowed != tt.expectedAllowed {
+				t.Errorf("First request allowed = %v, want %v", allowed, tt.expectedAllowed)
+			}
+
+			// Verify rate was set correctly by checking how many requests are allowed
+			for i := 1; i < tt.expectedRate; i++ {
+				if !limiter.Allow(clientID) {
+					t.Errorf("Request %d should be allowed (expected rate %d)", i+1, tt.expectedRate)
+				}
+			}
+
+			// Next request should be denied (rate limit reached)
+			if limiter.Allow(clientID) {
+				t.Errorf("Request %d should be denied (rate limit %d reached)", tt.expectedRate+1, tt.expectedRate)
+			}
+		})
+	}
+}
+
+func TestRateLimiter_ZeroRateDoesNotDenyAllRequests(t *testing.T) {
+	// This test ensures the bug is fixed: zero rate should default to 1, not deny all requests
+	limiter := NewRateLimiter(0, time.Second)
+	clientID := uint64(1)
+
+	// First request should be allowed (rate defaults to 1)
+	if !limiter.Allow(clientID) {
+		t.Error("First request should be allowed with rate=0 (defaults to 1)")
+	}
+
+	// Second request should be denied (rate limit of 1 reached)
+	if limiter.Allow(clientID) {
+		t.Error("Second request should be denied (rate limit 1 reached)")
+	}
+}
+
+func TestRateLimiter_NegativeRateDoesNotDenyAllRequests(t *testing.T) {
+	// This test ensures the bug is fixed: negative rate should default to 1, not deny all requests
+	limiter := NewRateLimiter(-5, time.Second)
+	clientID := uint64(1)
+
+	// First request should be allowed (rate defaults to 1)
+	if !limiter.Allow(clientID) {
+		t.Error("First request should be allowed with rate=-5 (defaults to 1)")
+	}
+
+	// Second request should be denied (rate limit of 1 reached)
+	if limiter.Allow(clientID) {
+		t.Error("Second request should be denied (rate limit 1 reached)")
+	}
+}

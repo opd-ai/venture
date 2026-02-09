@@ -121,10 +121,10 @@ func TestGetCacheKey_BitLayout(t *testing.T) {
 
 	key := sys.getCacheKey(seed, state)
 
-	// Extract state ID from lower 8 bits
+	// Extract state ID from lower 8 bits (stateID + 1 to ensure non-zero keys)
 	extractedStateID := uint8(key & 0xFF)
-	if extractedStateID != 1 {
-		t.Errorf("State ID in key = %d; want 1", extractedStateID)
+	if extractedStateID != 2 { // Walk = 1 + 1 = 2
+		t.Errorf("State ID in key = %d; want 2", extractedStateID)
 	}
 
 	// Extract seed from upper 56 bits

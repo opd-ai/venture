@@ -1443,10 +1443,10 @@ func stateToInt(state AnimationState) uint8 {
 // Layout: upper 56 bits = seed (int64), lower 8 bits = state ID (uint8)
 func (s *AnimationSystem) getCacheKey(seed int64, state AnimationState) uint64 {
 	stateID := stateToInt(state)
-	// Combine: shift seed left 8 bits, OR with state ID in lower 8 bits
+	// Combine: shift seed left 8 bits, OR with (state ID + 1) in lower 8 bits
+	// Adding 1 to stateID ensures the key is never zero (even for seed=0, idle state)
 	// This allows ~72 quadrillion unique seeds with 256 animation states
-	// Add 1 to seed to ensure seed=0 with stateID=0 produces a non-zero key
-	key := (uint64(seed+1) << 8) | uint64(stateID)
+	key := (uint64(seed) << 8) | uint64(stateID+1)
 	if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
 		s.logger.WithFields(logrus.Fields{
 			"seed":      seed,

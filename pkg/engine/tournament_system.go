@@ -651,7 +651,11 @@ func (s *TournamentSystem) completeTournamentForPlayers(tournament *TournamentIn
 			continue
 		}
 
-		placement := placements[playerID]
+		placement, exists := placements[playerID]
+		if !exists {
+			// Player didn't participate in any matches, assign last place
+			placement = len(tournament.Participants)
+		}
 		result := TournamentResult{
 			TournamentID:      tournament.InstanceID,
 			TournamentName:    tournament.Definition.Name,

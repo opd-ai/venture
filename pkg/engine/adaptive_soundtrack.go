@@ -148,7 +148,9 @@ func (s *AdaptiveSoundtrackSystem) analyzeGameState(player *Entity, soundtrack *
 	healthPercent := 1.0
 	if hasHealth {
 		health := healthComp.(*HealthComponent)
-		healthPercent = health.Current / health.Max
+		if health.Max > 0 {
+			healthPercent = health.Current / health.Max
+		}
 	}
 
 	// Determine intensity based on multiple factors

@@ -1210,3 +1210,225 @@ func TestCombatSystem_SetAudioManager(t *testing.T) {
 		t.Error("expected audioManager to match the one that was set")
 	}
 }
+
+// TestCombatSystem_UsesAuthoritativeCombatResolver verifies that CombatSystem
+// uses the combat package's DefaultCombatResolver for damage calculation.
+// This test addresses the AUDIT.md finding: "Defense Calculation Formula Inconsistency"
+func TestCombatSystem_UsesAuthoritativeCombatResolver(t *testing.T) {
+	combatSystem := NewCombatSystem(12345)
+
+	tests := []struct {
+		name       string
+		baseDamage float64
+		damageType combat.DamageType
+		defense    float64
+		magicDef   float64
+		resistance float64
+		wantMin    float64 // Minimum expected damage
+		wantMax    float64 // Maximum expected damage
+	}{
+		{
+			name:       "physical damage with defense",
+			baseDamage: 100,
+			damageType: combat.DamagePhysical,
+			defense:    50,
+			magicDef:   0,
+			resistance: 0,
+			wantMin:    66.0, // 100 * (100 / (100 + 50)) ≈ 66.67
+			wantMax:    67.0,
+		},
+		{
+			name:       "magical damage with magic defense",
+			baseDamage: 100,
+			damageType: combat.DamageMagical,
+			defense:    50,
+			magicDef:   30,
+			resistance: 0,
+			wantMin:    76.0, // 100 * (100 / (100 + 30)) ≈ 76.92
+			wantMax:    77.0,
+		},
+		{
+			name:       "fire damage uses magic defense (not physical)",
+			baseDamage: 100,
+			damageType: combat.DamageFire,
+			defense:    100, // Should NOT be used
+			magicDef:   20,  // Should be used
+			resistance: 0,
+			wantMin:    83.0, // 100 * (100 / (100 + 20)) ≈ 83.33
+			wantMax:    84.0,
+		},
+		{
+			name:       "ice damage uses magic defense",
+			baseDamage: 100,
+			damageType: combat.DamageIce,
+			defense:    50,
+			magicDef:   25,
+			resistance: 0,
+			wantMin:    79.0, // 100 * (100 / (100 + 25)) = 80.0
+			wantMax:    81.0,
+		},
+		{
+			name:       "lightning damage uses magic defense",
+			baseDamage: 100,
+			damageType: combat.DamageLightning,
+			defense:    50,
+			magicDef:   10,
+			resistance: 0,
+			wantMin:    90.0, // 100 * (100 / (100 + 10)) ≈ 90.91
+			wantMax:    91.0,
+		},
+		{
+			name:       "poison damage uses magic defense",
+			baseDamage: 100,
+			damageType: combat.DamagePoison,
+			defense:    50,
+			magicDef:   40,
+			resistance: 0,
+			wantMin:    71.0, // 100 * (100 / (100 + 40)) ≈ 71.43
+			wantMax:    72.0,
+		},
+		{
+			name:       "resistance reduces damage after defense",
+			baseDamage: 100,
+			damageType: combat.DamageFire,
+			defense:    0,
+			magicDef:   0,
+			resistance: 0.5,  // 50% resistance
+			wantMin:    49.0, // 100 * (1 - 0.5) = 50.0, then min damage kicks in
+			wantMax:    51.0,
+		},
+		{
+			name:       "high defense with diminishing returns",
+			baseDamage: 100,
+			damageType: combat.DamagePhysical,
+			defense:    200, // Very high defense
+			magicDef:   0,
+			resistance: 0,
+			wantMin:    33.0, // 100 * (100 / (100 + 200)) ≈ 33.33
+			wantMax:    34.0,
+		},
+		{
+			name:       "minimum damage enforcement",
+			baseDamage: 100,
+			damageType: combat.DamagePhysical,
+			defense:    1000, // Extreme defense
+			magicDef:   0,
+			resistance: 0,
+			wantMin:    9.0,  // MinDamageMultiplier (0.1) * 100 = 10.0
+			wantMax:    10.1, // Allow slight floating point variance
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			targetStats := &StatsComponent{
+				Defense:      tt.defense,
+				MagicDefense: tt.magicDef,
+				Resistances:  make(map[combat.DamageType]float64),
+			}
+
+			if tt.resistance != 0 {
+				targetStats.Resistances[tt.damageType] = tt.resistance
+			}
+
+			result := combatSystem.applyDefenseAndResistance(tt.baseDamage, tt.damageType, targetStats)
+
+			if result < tt.wantMin || result > tt.wantMax {
+				t.Errorf("expected damage in range [%.2f, %.2f], got %.2f", tt.wantMin, tt.wantMax, result)
+			}
+		})
+	}
+}
+
+// TestStatsComponentToCombatStats verifies the conversion helper works correctly.
+func TestStatsComponentToCombatStats(t *testing.T) {
+	statsComp := &StatsComponent{
+		Attack:       25.0,
+		Defense:      30.0,
+		MagicPower:   20.0,
+		MagicDefense: 15.0,
+		CritChance:   0.15,
+		CritDamage:   2.0,
+		Evasion:      0.1,
+		Resistances: map[combat.DamageType]float64{
+			combat.DamageFire: 0.5,
+			combat.DamageIce:  0.25,
+		},
+	}
+
+	combatStats := statsComponentToCombatStats(statsComp)
+
+	if combatStats.Attack != 25.0 {
+		t.Errorf("expected Attack 25.0, got %v", combatStats.Attack)
+	}
+	if combatStats.Defense != 30.0 {
+		t.Errorf("expected Defense 30.0, got %v", combatStats.Defense)
+	}
+	if combatStats.MagicPower != 20.0 {
+		t.Errorf("expected MagicPower 20.0, got %v", combatStats.MagicPower)
+	}
+	if combatStats.MagicDefense != 15.0 {
+		t.Errorf("expected MagicDefense 15.0, got %v", combatStats.MagicDefense)
+	}
+	if combatStats.CritChance != 0.15 {
+		t.Errorf("expected CritChance 0.15, got %v", combatStats.CritChance)
+	}
+	if combatStats.CritDamage != 2.0 {
+		t.Errorf("expected CritDamage 2.0, got %v", combatStats.CritDamage)
+	}
+	if combatStats.Evasion != 0.1 {
+		t.Errorf("expected Evasion 0.1, got %v", combatStats.Evasion)
+	}
+	if combatStats.Resistances[combat.DamageFire] != 0.5 {
+		t.Errorf("expected Fire resistance 0.5, got %v", combatStats.Resistances[combat.DamageFire])
+	}
+	if combatStats.Resistances[combat.DamageIce] != 0.25 {
+		t.Errorf("expected Ice resistance 0.25, got %v", combatStats.Resistances[combat.DamageIce])
+	}
+}
+
+// TestCombatSystem_ResistanceClampingBehavior verifies resistance clamping matches combat package.
+func TestCombatSystem_ResistanceClampingBehavior(t *testing.T) {
+	combatSystem := NewCombatSystem(12345)
+
+	tests := []struct {
+		name       string
+		resistance float64
+		wantMin    float64
+		wantMax    float64
+	}{
+		{
+			name:       "extreme negative resistance clamped to -0.5",
+			resistance: -1.0, // 200% damage if not clamped
+			wantMin:    149.0,
+			wantMax:    151.0, // 100 * (1 - (-0.5)) = 150.0
+		},
+		{
+			name:       "normal negative resistance",
+			resistance: -0.3, // 130% damage
+			wantMin:    129.0,
+			wantMax:    131.0,
+		},
+		{
+			name:       "full immunity",
+			resistance: 1.0, // 0% damage (min damage kicks in)
+			wantMin:    9.0,
+			wantMax:    10.1, // MinDamageMultiplier * 100 = 10.0
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			targetStats := &StatsComponent{
+				Defense:     0,
+				Resistances: map[combat.DamageType]float64{combat.DamagePhysical: tt.resistance},
+			}
+
+			result := combatSystem.applyDefenseAndResistance(100, combat.DamagePhysical, targetStats)
+
+			if result < tt.wantMin || result > tt.wantMax {
+				t.Errorf("expected damage in range [%.2f, %.2f], got %.2f", tt.wantMin, tt.wantMax, result)
+			}
+		})
+	}
+}

@@ -28,7 +28,7 @@ func TestAppStateManager_LoadingTransitions(t *testing.T) {
 		{"character creation to loading", AppStateCharacterCreation, AppStateLoading, false},
 		{"loading to gameplay", AppStateLoading, AppStateGameplay, false},
 		{"loading to main menu", AppStateLoading, AppStateMainMenu, false},
-		{"main menu to loading", AppStateMainMenu, AppStateLoading, true}, // Invalid
+		{"main menu to loading", AppStateMainMenu, AppStateLoading, false}, // Valid: direct loading from main menu
 		{"gameplay to loading", AppStateGameplay, AppStateLoading, true},  // Invalid
 	}
 

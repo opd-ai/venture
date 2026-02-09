@@ -142,8 +142,8 @@ func isValidAppTransition(from, to AppState) bool {
 
 	switch from {
 	case AppStateMainMenu:
-		// Can go to any submenu, settings, or directly to gameplay (MVP) from main menu
-		return to == AppStateSinglePlayerMenu || to == AppStateMultiPlayerMenu || to == AppStateSettings || to == AppStateCharacterCreation || to == AppStateGameplay
+		// Can go to any submenu, settings, loading, or directly to gameplay (MVP) from main menu
+		return to == AppStateSinglePlayerMenu || to == AppStateMultiPlayerMenu || to == AppStateSettings || to == AppStateCharacterCreation || to == AppStateGameplay || to == AppStateLoading
 	case AppStateSinglePlayerMenu:
 		// Can start new game (via genre selection), load game, or go back to main menu
 		return to == AppStateGenreSelection || to == AppStateCharacterCreation || to == AppStateGameplay || to == AppStateMainMenu

@@ -1414,25 +1414,25 @@ func (s *AnimationSystem) cacheFrames(key uint64, frames []*ebiten.Image) {
 func stateToInt(state AnimationState) uint8 {
 	switch state {
 	case AnimationStateIdle:
-		return 0
-	case AnimationStateWalk:
 		return 1
-	case AnimationStateRun:
+	case AnimationStateWalk:
 		return 2
-	case AnimationStateAttack:
+	case AnimationStateRun:
 		return 3
-	case AnimationStateCast:
+	case AnimationStateAttack:
 		return 4
-	case AnimationStateHit:
+	case AnimationStateCast:
 		return 5
-	case AnimationStateDeath:
+	case AnimationStateHit:
 		return 6
-	case AnimationStateJump:
+	case AnimationStateDeath:
 		return 7
-	case AnimationStateCrouch:
+	case AnimationStateJump:
 		return 8
-	case AnimationStateUse:
+	case AnimationStateCrouch:
 		return 9
+	case AnimationStateUse:
+		return 10
 	default:
 		return 255 // Unknown state
 	}
@@ -1444,7 +1444,8 @@ func stateToInt(state AnimationState) uint8 {
 func (s *AnimationSystem) getCacheKey(seed int64, state AnimationState) uint64 {
 	stateID := stateToInt(state)
 	// Combine: shift seed left 8 bits, OR with state ID in lower 8 bits
-	// This allows ~72 quadrillion unique seeds with 256 animation states
+	// stateToInt returns 1-based IDs (1–10 for known states, 255 for unknown),
+	// guaranteeing the key is never zero even when seed=0.
 	key := (uint64(seed) << 8) | uint64(stateID)
 	if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
 		s.logger.WithFields(logrus.Fields{

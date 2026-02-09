@@ -120,7 +120,7 @@ func (s FrameTimeStats) GetFPS() float64 {
 	if s.Average == 0 {
 		return 0
 	}
-	return 1000.0 / float64(s.Average.Milliseconds())
+	return float64(time.Second) / float64(s.Average)
 }
 
 // GetWorstFPS returns the FPS of the worst 1% of frames (99th percentile).
@@ -130,5 +130,5 @@ func (s FrameTimeStats) GetWorstFPS() float64 {
 	if s.Percentile1 == 0 {
 		return 0
 	}
-	return 1000.0 / float64(s.Percentile1.Milliseconds())
+	return float64(time.Second) / float64(s.Percentile1)
 }

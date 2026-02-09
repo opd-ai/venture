@@ -63,8 +63,8 @@ func TestGenerate(t *testing.T) {
 				t.Fatal("result is not []*StationData")
 			}
 
-			if len(stations) != 3 {
-				t.Errorf("expected 3 stations, got %d", len(stations))
+			if len(stations) != 5 {
+				t.Errorf("expected 5 stations, got %d", len(stations))
 			}
 
 			// Check station properties
@@ -107,6 +107,12 @@ func TestGenerate(t *testing.T) {
 			}
 			if typeCount[StationWorkbench] != 1 {
 				t.Errorf("expected 1 workbench, got %d", typeCount[StationWorkbench])
+			}
+			if typeCount[StationKitchen] != 1 {
+				t.Errorf("expected 1 kitchen, got %d", typeCount[StationKitchen])
+			}
+			if typeCount[StationAnvil] != 1 {
+				t.Errorf("expected 1 anvil, got %d", typeCount[StationAnvil])
 			}
 		})
 	}
@@ -204,6 +210,8 @@ func TestValidate(t *testing.T) {
 				{StationType: StationAlchemyTable, Name: "Test Table", GenreID: "fantasy", Seed: 1},
 				{StationType: StationForge, Name: "Test Forge", GenreID: "fantasy", Seed: 2},
 				{StationType: StationWorkbench, Name: "Test Bench", GenreID: "fantasy", Seed: 3},
+				{StationType: StationKitchen, Name: "Test Kitchen", GenreID: "fantasy", Seed: 4},
+				{StationType: StationAnvil, Name: "Test Anvil", GenreID: "fantasy", Seed: 5},
 			},
 			wantError: false,
 		},

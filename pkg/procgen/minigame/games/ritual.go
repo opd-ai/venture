@@ -230,6 +230,9 @@ func (r *RitualGame) PrepareRender(screenWidth, screenHeight int) error {
 // GetRenderOutput returns the computed visual state from the last PrepareRender call.
 // Implements engine.MiniGame interface.
 func (r *RitualGame) GetRenderOutput() engine.MiniGameRenderOutput {
+	if r.LastRender == nil {
+		return nil
+	}
 	return r.LastRender
 }
 

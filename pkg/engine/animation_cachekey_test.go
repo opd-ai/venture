@@ -10,16 +10,16 @@ func TestStateToInt(t *testing.T) {
 		state    AnimationState
 		expected uint8
 	}{
-		{AnimationStateIdle, 0},
-		{AnimationStateWalk, 1},
-		{AnimationStateRun, 2},
-		{AnimationStateAttack, 3},
-		{AnimationStateCast, 4},
-		{AnimationStateHit, 5},
-		{AnimationStateDeath, 6},
-		{AnimationStateJump, 7},
-		{AnimationStateCrouch, 8},
-		{AnimationStateUse, 9},
+		{AnimationStateIdle, 1},
+		{AnimationStateWalk, 2},
+		{AnimationStateRun, 3},
+		{AnimationStateAttack, 4},
+		{AnimationStateCast, 5},
+		{AnimationStateHit, 6},
+		{AnimationStateDeath, 7},
+		{AnimationStateJump, 8},
+		{AnimationStateCrouch, 9},
+		{AnimationStateUse, 10},
 		{AnimationState("unknown"), 255},
 	}
 
@@ -121,10 +121,10 @@ func TestGetCacheKey_BitLayout(t *testing.T) {
 
 	key := sys.getCacheKey(seed, state)
 
-	// Extract state ID from lower 8 bits
+	// Extract state ID from lower 8 bits (1-based: Walk = 2)
 	extractedStateID := uint8(key & 0xFF)
-	if extractedStateID != 1 {
-		t.Errorf("State ID in key = %d; want 1", extractedStateID)
+	if extractedStateID != 2 { // Walk = 2
+		t.Errorf("State ID in key = %d; want 2", extractedStateID)
 	}
 
 	// Extract seed from upper 56 bits

@@ -417,16 +417,16 @@ func (n *NGPlusRewardComponent) Deserialize(data []byte) error {
 		return err
 	}
 
-	copyRewardFields(n, &temp)
+	copyRewardFields(n, temp)
 	initializeNilFields(n)
 
 	return nil
 }
 
 // unmarshalRewardData deserializes JSON data into a temporary component.
-func unmarshalRewardData(data []byte) (NGPlusRewardComponent, error) {
-	var temp NGPlusRewardComponent
-	err := json.Unmarshal(data, &temp)
+func unmarshalRewardData(data []byte) (*NGPlusRewardComponent, error) {
+	temp := &NGPlusRewardComponent{}
+	err := json.Unmarshal(data, temp)
 	return temp, err
 }
 

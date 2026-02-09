@@ -36,9 +36,9 @@ var baselineHashPrefixes = map[string]string{
 	"LegendaryGenerator": "bc3b12fd01179b64",
 	"MagicGenerator":     "67956a60c3646731",
 	"QuestGenerator":     "0235ef4b824e6040",
-	"RecipeGenerator":    "9d26ef8df104edf4",
+	"RecipeGenerator":    "547f0b59015c7510",
 	"SkillGenerator":     "cef103c9c0f578e7",
-	"StationGenerator":   "d347e682d1bc9100",
+	"StationGenerator":   "9f3cbfe6094f8491",
 	"VehicleGenerator":   "202dac42c53e9d2a",
 }
 

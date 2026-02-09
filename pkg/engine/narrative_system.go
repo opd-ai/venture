@@ -192,7 +192,12 @@ func (ns *NarrativeSystem) OnCombatVictory(narrative *NarrativeComponent, enemyE
 
 	// Record combat event for active companions (if provider available)
 	if ns.companionStoryProvider != nil && ns.world != nil {
-		for _, entity := range ns.world.entities {
+		for _, entity := range ns.world.GetEntities() {
+			if entity.HasComponent("companion") {
+				ns.companionStoryProvider.RecordCombatEvent(entity.ID, description)
+			}
+		}
+		for _, entity := range ns.world.entitiesToAdd {
 			if entity.HasComponent("companion") {
 				ns.companionStoryProvider.RecordCombatEvent(entity.ID, description)
 			}
@@ -222,7 +227,12 @@ func (ns *NarrativeSystem) OnDialogueComplete(narrative *NarrativeComponent, npc
 
 	// Record bonding event for active companions (if provider available)
 	if ns.companionStoryProvider != nil && ns.world != nil {
-		for _, entity := range ns.world.entities {
+		for _, entity := range ns.world.GetEntities() {
+			if entity.HasComponent("companion") {
+				ns.companionStoryProvider.RecordBondingEvent(entity.ID, "Witnessed player dialogue interaction")
+			}
+		}
+		for _, entity := range ns.world.entitiesToAdd {
 			if entity.HasComponent("companion") {
 				ns.companionStoryProvider.RecordBondingEvent(entity.ID, "Witnessed player dialogue interaction")
 			}

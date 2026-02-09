@@ -175,6 +175,9 @@ func (d *DiceGame) PrepareRender(screenWidth, screenHeight int) error {
 // GetRenderOutput returns the computed visual state from the last PrepareRender call.
 // Implements engine.MiniGame interface.
 func (d *DiceGame) GetRenderOutput() engine.MiniGameRenderOutput {
+	if d.LastRender == nil {
+		return nil
+	}
 	return d.LastRender
 }
 

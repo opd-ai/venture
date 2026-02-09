@@ -177,6 +177,9 @@ func (l *LockPickingGame) PrepareRender(screenWidth, screenHeight int) error {
 // GetRenderOutput returns the computed visual state from the last PrepareRender call.
 // Implements engine.MiniGame interface.
 func (l *LockPickingGame) GetRenderOutput() engine.MiniGameRenderOutput {
+	if l.LastRender == nil {
+		return nil
+	}
 	return l.LastRender
 }
 

@@ -211,6 +211,9 @@ func (hg *HackingGame) PrepareRender(screenWidth, screenHeight int) error {
 // GetRenderOutput returns the computed visual state from the last PrepareRender call.
 // Implements engine.MiniGame interface.
 func (hg *HackingGame) GetRenderOutput() engine.MiniGameRenderOutput {
+	if hg.LastRender == nil {
+		return nil
+	}
 	return hg.LastRender
 }
 

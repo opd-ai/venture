@@ -67,6 +67,7 @@ func TestEconomySystemTradeImpactWithListings(t *testing.T) {
 
 	// Create initial listing
 	listing := &economy.Listing{
+		ItemID:   "spice-001",
 		ItemType: "Spices",
 		ItemName: "Exotic Spices",
 		Price:    100,

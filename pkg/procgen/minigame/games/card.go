@@ -227,6 +227,9 @@ func (c *CardGame) PrepareRender(screenWidth, screenHeight int) error {
 // GetRenderOutput returns the computed visual state from the last PrepareRender call.
 // Implements engine.MiniGame interface.
 func (c *CardGame) GetRenderOutput() engine.MiniGameRenderOutput {
+	if c.LastRender == nil {
+		return nil
+	}
 	return c.LastRender
 }
 

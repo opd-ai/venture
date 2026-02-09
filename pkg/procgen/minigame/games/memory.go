@@ -129,6 +129,9 @@ func (m *MemoryGame) PrepareRender(screenWidth, screenHeight int) error {
 // GetRenderOutput returns the computed visual state from the last PrepareRender call.
 // Implements engine.MiniGame interface.
 func (m *MemoryGame) GetRenderOutput() engine.MiniGameRenderOutput {
+	if m.LastRender == nil {
+		return nil
+	}
 	return m.LastRender
 }
 

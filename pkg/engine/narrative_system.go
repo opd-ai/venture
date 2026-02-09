@@ -192,16 +192,9 @@ func (ns *NarrativeSystem) OnCombatVictory(narrative *NarrativeComponent, enemyE
 
 	// Record combat event for active companions (if provider available)
 	if ns.companionStoryProvider != nil && ns.world != nil {
-		for _, entity := range ns.world.GetEntities() {
-			if entity.HasComponent("companion") {
-				ns.companionStoryProvider.RecordCombatEvent(entity.ID, description)
-			}
-		}
-		for _, entity := range ns.world.entitiesToAdd {
-			if entity.HasComponent("companion") {
-				ns.companionStoryProvider.RecordCombatEvent(entity.ID, description)
-			}
-		}
+		ns.forEachCompanion(func(entity *Entity) {
+			ns.companionStoryProvider.RecordCombatEvent(entity.ID, description)
+		})
 	}
 }
 
@@ -227,15 +220,23 @@ func (ns *NarrativeSystem) OnDialogueComplete(narrative *NarrativeComponent, npc
 
 	// Record bonding event for active companions (if provider available)
 	if ns.companionStoryProvider != nil && ns.world != nil {
-		for _, entity := range ns.world.GetEntities() {
-			if entity.HasComponent("companion") {
-				ns.companionStoryProvider.RecordBondingEvent(entity.ID, "Witnessed player dialogue interaction")
-			}
+		ns.forEachCompanion(func(entity *Entity) {
+			ns.companionStoryProvider.RecordBondingEvent(entity.ID, "Witnessed player dialogue interaction")
+		})
+	}
+}
+
+// forEachCompanion iterates over all companion entities in the world,
+// including both committed and pending entities.
+func (ns *NarrativeSystem) forEachCompanion(fn func(entity *Entity)) {
+	for _, entity := range ns.world.GetEntities() {
+		if entity.HasComponent("companion") {
+			fn(entity)
 		}
-		for _, entity := range ns.world.entitiesToAdd {
-			if entity.HasComponent("companion") {
-				ns.companionStoryProvider.RecordBondingEvent(entity.ID, "Witnessed player dialogue interaction")
-			}
+	}
+	for _, entity := range ns.world.entitiesToAdd {
+		if entity.HasComponent("companion") {
+			fn(entity)
 		}
 	}
 }

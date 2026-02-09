@@ -86,8 +86,16 @@ func (e SandboxError) Error() string {
 }
 
 // ValidatePath checks if a file path is within the allowed mods directory.
+// This function resolves symbolic links to prevent symlink traversal attacks.
 func (s *Sandbox) ValidatePath(path string) error {
-	absPath, err := filepath.Abs(path)
+	// Resolve symlinks first to prevent symlink traversal bypass
+	resolvedPath := path
+	if evalPath, err := filepath.EvalSymlinks(path); err == nil {
+		resolvedPath = evalPath
+	}
+	// If EvalSymlinks fails (e.g., file doesn't exist), continue with original path
+
+	absPath, err := filepath.Abs(resolvedPath)
 	if err != nil {
 		return SandboxError{
 			Check:   "FileSystemIsolation",

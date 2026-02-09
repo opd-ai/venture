@@ -117,12 +117,15 @@ func setupModBrowserWithFilesystem() {
 
 		// Trigger install callback
 		var mod modding.Mod
-		json.Unmarshal(data, &mod)
-		moddingManager.AddMod(&mod)
-		moddingManager.EnableMod(mod.ID)
+		if err := json.Unmarshal(data, &mod); err != nil {
+			log.Printf("Failed to unmarshal mod data: %v", err)
+		} else {
+			moddingManager.AddMod(&mod)
+			moddingManager.EnableMod(mod.ID)
 
-		browserComp.SetInstalled(modToInstall.ID, true)
-		log.Printf("Mod installed successfully!")
+			browserComp.SetInstalled(modToInstall.ID, true)
+			log.Printf("Mod installed successfully!")
+		}
 	}
 }
 

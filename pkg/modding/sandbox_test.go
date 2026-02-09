@@ -1,6 +1,7 @@
 package modding
 
 import (
+	"os"
 	"path/filepath"
 	"testing"
 )
@@ -55,6 +56,53 @@ func TestSandbox_ValidatePath(t *testing.T) {
 				t.Errorf("ValidatePath() error = %v, wantError %v", err, tt.wantError)
 			}
 		})
+	}
+}
+
+// TestSandbox_ValidatePath_SymlinkTraversal tests that symlink traversal attacks are prevented
+func TestSandbox_ValidatePath_SymlinkTraversal(t *testing.T) {
+	// Create temporary directory structure for testing
+	tempDir := t.TempDir()
+	modsDir := filepath.Join(tempDir, "mods")
+	externalDir := filepath.Join(tempDir, "external")
+	externalFile := filepath.Join(externalDir, "malicious.json")
+
+	// Create directories
+	if err := os.MkdirAll(modsDir, 0o755); err != nil {
+		t.Fatalf("Failed to create mods directory: %v", err)
+	}
+	if err := os.MkdirAll(externalDir, 0o755); err != nil {
+		t.Fatalf("Failed to create external directory: %v", err)
+	}
+
+	// Create external file
+	if err := os.WriteFile(externalFile, []byte(`{"malicious": true}`), 0o644); err != nil {
+		t.Fatalf("Failed to create external file: %v", err)
+	}
+
+	// Create symlink inside mods directory pointing to external file
+	symlinkPath := filepath.Join(modsDir, "symlink.json")
+	if err := os.Symlink(externalFile, symlinkPath); err != nil {
+		t.Skipf("Symlink creation not supported on this platform: %v", err)
+	}
+
+	// Test that symlink traversal is detected and rejected
+	config := DefaultSandboxConfig()
+	config.ModsDirectory = modsDir
+	sandbox := NewSandboxWithConfig(config)
+
+	err := sandbox.ValidatePath(symlinkPath)
+	if err == nil {
+		t.Error("ValidatePath() should reject symlink pointing outside mods directory, but returned nil")
+	}
+
+	// Verify error message indicates sandbox violation
+	sandboxErr, ok := err.(SandboxError)
+	if !ok {
+		t.Errorf("Expected SandboxError, got %T", err)
+	}
+	if sandboxErr.Check != "FileSystemIsolation" {
+		t.Errorf("Expected FileSystemIsolation check, got %s", sandboxErr.Check)
 	}
 }
 

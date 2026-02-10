@@ -6,11 +6,11 @@
   "description": "Enables player versus player combat in designated zones",
   "type": "rule",
   "rules": {
-    "pvp_enabled": true,
-    "pvp_zone_percentage": 0.2,
-    "friendly_fire_enabled": true,
-    "pvp_death_penalty": 0.5,
-    "pvp_reward_multiplier": 1.5
+    "player.pvp_enabled": true,
+    "world.pvp_zone_percentage": 0.2,
+    "combat.friendly_fire_enabled": true,
+    "player.pvp_death_penalty": 0.5,
+    "combat.pvp_reward_multiplier": 1.5
   },
   "enabled": false
 }

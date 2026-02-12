@@ -1581,6 +1581,10 @@ func (g *EbitenGame) drawVirtualControls(screen *ebiten.Image) {
 
 // Layout implements ebiten.Game interface. Returns the game's screen size.
 func (g *EbitenGame) Layout(outsideWidth, outsideHeight int) (int, int) {
+	if outsideWidth > 0 && outsideHeight > 0 {
+		g.ScreenWidth = outsideWidth
+		g.ScreenHeight = outsideHeight
+	}
 	return g.ScreenWidth, g.ScreenHeight
 }
 

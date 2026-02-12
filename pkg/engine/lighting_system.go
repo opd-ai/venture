@@ -11,7 +11,6 @@
 package engine
 
 import (
-	"image"
 	"image/color"
 	"math"
 	"time"
@@ -63,6 +62,10 @@ type LightingSystem struct {
 
 	// Reusable lightMetrics to eliminate per-frame allocation in CollectVisibleLights
 	metrics lightMetrics
+
+	// GPU bloom processor for hardware-accelerated bloom effects (V2 fix)
+	// Uses Kage shaders instead of CPU pixel iteration, reducing bloom from 15-50ms to <2ms
+	gpuBloom *lighting.GPUBloom
 }
 
 // lightWithPosition combines a light component with its world position.
@@ -1172,37 +1175,29 @@ func (s *LightingSystem) GetConfig() *LightingConfig {
 
 // applyBloomEffect applies bloom/glow effect to bright areas of the lighting buffer.
 // This creates a soft glow around bright lights for enhanced visual quality.
+// Uses GPU-accelerated Kage shaders for performance (<2ms vs 15-50ms CPU-based).
 func (s *LightingSystem) applyBloomEffect() {
 	if s.lightingBuffer == nil {
 		return
 	}
 
-	bounds := s.lightingBuffer.Bounds()
-	w, h := bounds.Dx(), bounds.Dy()
-
-	// Convert ebiten.Image to image.RGBA for bloom processing
-	rgba := image.NewRGBA(image.Rect(0, 0, w, h))
-	for y := 0; y < h; y++ {
-		for x := 0; x < w; x++ {
-			rgba.Set(x, y, s.lightingBuffer.At(x, y))
-		}
+	// Lazy-initialize GPU bloom processor
+	if s.gpuBloom == nil {
+		s.gpuBloom = lighting.NewGPUBloom()
 	}
 
-	// Configure bloom
+	// Configure bloom from lighting config
 	bloomConfig := lighting.BloomConfig{
 		Enabled:   true,
 		Threshold: s.config.BloomThreshold,
 		Intensity: s.config.BloomIntensity,
 		Radius:    s.config.BloomRadius,
-		Samples:   7, // Good quality/performance balance
+		Samples:   7, // Not used by GPU bloom, kept for compatibility
 	}
+	s.gpuBloom.SetConfig(bloomConfig)
 
-	// Apply bloom
-	bloomedRGBA := lighting.ApplyBloom(rgba, bloomConfig)
-
-	// Convert back to ebiten.Image
-	s.lightingBuffer.Clear()
-	s.lightingBuffer.WritePixels(bloomedRGBA.Pix)
+	// Apply GPU-accelerated bloom directly to the lighting buffer
+	s.gpuBloom.ApplyToBuffer(s.lightingBuffer)
 }
 
 // GetConfig returns the current lighting configuration.

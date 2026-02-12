@@ -62,7 +62,7 @@ This document tracks the audit status of all Go packages in the Venture codebase
 - [ ] `pkg/integration/narrative_world/` — Not Started
 - [ ] `pkg/integration/political_warfare/` — Not Started
 - [x] `pkg/integration/trade_routes/AUDIT.md` — Needs Work — 3 issues (1 high, 1 med, 1 low)
-- [ ] `pkg/integration/world_events/` — Not Started
+- [x] `pkg/integration/world_events/AUDIT.md` — Needs Work — 6 issues (2 high, 2 med, 2 low)
 
 ### Supporting
 - [x] `pkg/balance/AUDIT.md` — Incomplete — 7 issues (2 high, 2 med, 3 low)

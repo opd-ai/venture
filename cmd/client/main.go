@@ -63,8 +63,18 @@ func main() {
 	serverCleanup := handleHostAndPlay(logger, clientLogger)
 	defer serverCleanup() // Cleanup server when application exits
 
-	networkClient := initializeNetworkClient(logger, clientLogger)
-	defer cleanupNetworkClient(networkClient, clientLogger)
+	// BUG FIX: Skip network client initialization in WASM single-player mode.
+	// In WASM, host-and-play is disabled (no network listen in browser sandbox),
+	// so if *multiplayer is not set, there is no server to connect to.
+	// Attempting to connect would fail with a Fatal error, crashing the game.
+	var networkClient interface{}
+	if *multiplayer || *hostAndPlay {
+		nc := initializeNetworkClient(logger, clientLogger)
+		defer cleanupNetworkClient(nc, clientLogger)
+		networkClient = nc
+	} else {
+		clientLogger.Info("running in offline single-player mode - no network connection")
+	}
 
 	game := createGameInstance(logger, clientLogger)
 	sys := setupAllGameSystems(game, logger, clientLogger)

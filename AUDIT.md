@@ -31,12 +31,12 @@ This document tracks the audit status of all Go packages in the Venture codebase
 - [ ] `pkg/rendering/` — Not Started
 - [x] `pkg/rendering/sprites/AUDIT.md` — Needs Work — 7 issues (2 high, 1 med, 4 low)
 - [x] `pkg/rendering/animation/AUDIT.md` — Needs Work — 4 issues (1 high, 0 med, 3 low)
-- [ ] `pkg/rendering/lighting/` — Not Started
+- [x] `pkg/rendering/lighting/AUDIT.md` — Needs Work — 4 issues (1 high, 1 med, 2 low)
 
 ### Audio
 - [ ] `pkg/audio/` — Not Started
 - [x] `pkg/audio/synthesis/AUDIT.md` — Needs Work — 6 issues (3 high, 1 med, 2 low)
-- [ ] `pkg/audio/music/` — Not Started
+- [x] `pkg/audio/music/AUDIT.md` — Needs Work — 6 issues (1 high, 2 med, 3 low)
 - [ ] `pkg/audio/sfx/` — Not Started
 
 ### World Management
@@ -85,10 +85,10 @@ Each audit should produce a `AUDIT.md` file in the package directory following t
 ## Summary Statistics
 
 **Total Packages**: 50+  
-**Audited**: 18  
+**Audited**: 19  
 **Complete**: 5  
-**Needs Work**: 13  
+**Needs Work**: 14  
 **Incomplete**: 0  
-**Not Started**: 32+
+**Not Started**: 31+
 
 **Average Test Coverage** (audited packages): ~87% (estimated - some packages require GUI environment)

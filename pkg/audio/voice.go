@@ -82,15 +82,19 @@ func NewSimpleVoiceCodec(sampleRate int, quality VoiceQuality) *SimpleVoiceCodec
 }
 
 // Encode compresses audio samples using simple ADPCM-like encoding.
+// Each sample is quantized to 4 bits, with two samples packed per byte.
+// Note: For odd-length sample arrays, the output rounds up to ceil(n/2) bytes.
+// During decoding, this produces an extra sample (decode always produces even count).
+// Frame sizes (320-960 based on sample rate) are typically even, so this rarely matters.
 func (c *SimpleVoiceCodec) Encode(samples []float64) ([]byte, error) {
 	if len(samples) == 0 {
 		return nil, fmt.Errorf("no samples to encode")
 	}
 
-	// Simple 4-bit ADPCM encoding
-	encoded := make([]byte, len(samples)/2+1)
+	// Simple 4-bit ADPCM encoding - two samples per byte
+	encodedLen := (len(samples) + 1) / 2
+	encoded := make([]byte, encodedLen)
 	var predictor float64
-	var index int
 
 	for i := 0; i < len(samples); i++ {
 		sample := samples[i]
@@ -104,7 +108,7 @@ func (c *SimpleVoiceCodec) Encode(samples []float64) ([]byte, error) {
 			quantized = -8
 		}
 
-		// Store 4-bit value
+		// Store 4-bit value: low nibble for even indices, high nibble for odd
 		byteIndex := i / 2
 		if i%2 == 0 {
 			encoded[byteIndex] = byte(quantized & 0x0F)
@@ -112,21 +116,22 @@ func (c *SimpleVoiceCodec) Encode(samples []float64) ([]byte, error) {
 			encoded[byteIndex] |= byte((quantized & 0x0F) << 4)
 		}
 
-		// Update predictor
+		// Update predictor with dequantized value
 		predictor += float64(quantized) / 8.0
 		if predictor > 1.0 {
 			predictor = 1.0
 		} else if predictor < -1.0 {
 			predictor = -1.0
 		}
-
-		index++
 	}
 
-	return encoded[:index/2+1], nil
+	return encoded, nil
 }
 
 // Decode decompresses received data into audio samples.
+// The output always has an even number of samples (2 samples per byte).
+// If the original input had an odd number of samples, the decoded output
+// will include one extra sample derived from the padding zero nibble.
 func (c *SimpleVoiceCodec) Decode(data []byte) ([]float64, error) {
 	if len(data) == 0 {
 		return nil, fmt.Errorf("no data to decode")

@@ -1,9 +1,10 @@
 # Audio Package Audit Report
 
 **Audit Date:** 2026-02-07
+**Last Updated:** 2026-02-12
 **Package:** `pkg/audio/` (including `music/`, `sfx/`, `synthesis/` subpackages)
 **Auditor:** Automated Code Audit
-**Test Coverage:** 91.4% (audio), 93.9% (music), 89.9% (sfx), 96.5% (synthesis)
+**Test Coverage:** 91.4% (audio), 93.9% (music), 87.5% (sfx), 97.8% (synthesis)
 
 ---
 
@@ -12,12 +13,13 @@
 | Category | Count | Severity Distribution |
 |----------|-------|----------------------|
 | CRITICAL BUG | 0 | - |
-| FUNCTIONAL MISMATCH | ~~2~~ 1 ✅ | Medium: 1 (1 resolved) |
+| FUNCTIONAL MISMATCH | ~~2~~ 0 ✅ | All resolved |
 | MISSING FEATURE | 1 | Low: 1 |
-| EDGE CASE BUG | 2 | Medium: 1, Low: 1 |
+| EDGE CASE BUG | ~~2~~ 1 ✅ | Low: 1 (1 documented/resolved) |
 | PERFORMANCE ISSUE | 0 | - |
+| DEAD CODE | ~~1~~ 0 ✅ | Resolved |
 
-**Overall Assessment:** The audio package is well-implemented with excellent test coverage and no critical bugs. Priority 1 issue (genre naming) resolved 2026-02-07. The remaining issues are primarily documentation/naming inconsistencies and minor edge cases that do not impact normal operation. The code follows Go best practices, uses proper concurrency controls, and maintains deterministic generation.
+**Overall Assessment:** The audio package is well-implemented with excellent test coverage and no critical bugs. Priority 1 issue (genre naming) resolved 2026-02-07. Priority 2 (odd sample encoding) and Priority 3 (dead code) resolved 2026-02-12. The remaining issues are minor edge cases (ADSR envelope overlap for very short samples) and optional enhancements that do not impact normal operation. The code follows Go best practices, uses proper concurrency controls, and maintains deterministic generation.
 
 ---
 
@@ -115,10 +117,12 @@ type VoiceTransport interface {
 
 ~~~~
 
-### EDGE CASE BUG: Potential Slice Bounds Issue in Voice Encode
+### EDGE CASE BUG: Potential Slice Bounds Issue in Voice Encode ✅ DOCUMENTED 2026-02-12
 
-**File:** voice.go:91-127
-**Severity:** Medium
+**File:** voice.go:85-130
+**Severity:** Medium → Low (documented as expected behavior)
+**Status:** ✅ DOCUMENTED
+
 **Description:** When encoding an odd number of samples, the final byte may contain only one valid 4-bit value in the lower nibble, but the upper nibble contains uninitialized data (zero). During decoding, this produces an extra sample with value derived from zero.
 
 **Expected Behavior:** Odd-length sample arrays should encode/decode to the same length.
@@ -127,6 +131,11 @@ type VoiceTransport interface {
 
 **Impact:** Minor audio artifacts at the end of odd-length voice frames. The frame size (320-960 samples based on sample rate) is typically even, so this rarely occurs in practice.
 
+**Resolution (2026-02-12):** This behavior is now documented in the `Encode()` and `Decode()` method comments:
+- `Encode()` documents that output rounds up to `ceil(n/2)` bytes
+- `Decode()` documents that output always has even sample count
+- Both note that standard frame sizes are even, making this a non-issue in practice
+
 **Reproduction:**
 ```go
 codec := NewSimpleVoiceCodec(48000, VoiceQualityMedium)
@@ -134,22 +143,6 @@ samples := []float64{0.5, 0.5, 0.5, 0.5, 0.5} // 5 samples (odd)
 encoded, _ := codec.Encode(samples)           // 3 bytes
 decoded, _ := codec.Decode(encoded)           // Returns 6 samples
 // decoded[5] contains extra spurious sample
-```
-
-**Code Reference:**
-```go
-// voice.go:130-148
-func (c *SimpleVoiceCodec) Decode(data []byte) ([]float64, error) {
-    // ...
-    samples := make([]float64, len(data)*2)  // Always creates even length
-    // ...
-    for i := 0; i < len(data); i++ {
-        val1, val2 := extractFourBitValues(data[i])
-        predictor = decodeSample(val1, predictor, &samples, i*2)
-        if i*2+1 < len(samples) {
-            predictor = decodeSample(val2, predictor, &samples, i*2+1)  // Extra sample on odd input
-        }
-    }
 ```
 
 ~~~~
@@ -252,11 +245,24 @@ The following areas were audited and found to be correctly implemented:
 
 **Impact:** Genre consistency now ensures cross-package compatibility. Developers using `"scifi"` or `"postapoc"` will correctly get chromatic and pentatonic scales respectively, matching the SFX generator's expectations.
 
-### Priority 2: Document Odd Sample Encoding Behavior
-Add documentation noting that voice codec rounds up to even sample counts during encode/decode cycle. Alternatively, track original sample count in the encoded header.
+### Priority 2: Document Odd Sample Encoding Behavior ✅ RESOLVED 2026-02-12
+~~Add documentation noting that voice codec rounds up to even sample counts during encode/decode cycle. Alternatively, track original sample count in the encoded header.~~
 
-### Priority 3: Remove Dead Code
-Remove unused `index` variable from `SimpleVoiceCodec.Encode()` or implement proper ADPCM step adaptation if desired.
+**Resolution:** Added comprehensive documentation to both `Encode()` and `Decode()` methods in `voice.go`:
+- `Encode()` now documents that output rounds up to `ceil(n/2)` bytes for odd-length inputs
+- `Decode()` documents that output always has even sample count (2 per byte)
+- Both document the edge case where odd inputs produce one extra sample on decode
+- Notes that standard frame sizes (320-960) are even, so this rarely affects real usage
+
+### Priority 3: Remove Dead Code ✅ RESOLVED 2026-02-12
+~~Remove unused `index` variable from `SimpleVoiceCodec.Encode()` or implement proper ADPCM step adaptation if desired.~~
+
+**Resolution:** Removed unused `index` variable from `SimpleVoiceCodec.Encode()`:
+- Removed `var index int` declaration
+- Removed `index++` increment in loop
+- Changed `return encoded[:index/2+1], nil` to `return encoded, nil`
+- Simplified `encodedLen` calculation to `(len(samples) + 1) / 2`
+- All tests pass, coverage maintained at 91.4%
 
 ### Optional Enhancements
 - Implement spatial audio processing in `VoiceProcessor.ProcessOutput()`

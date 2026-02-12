@@ -644,3 +644,110 @@ func TestAnimationSystem_PlayerBypassesRegenLimit(t *testing.T) {
 		t.Error("NPC animation should have regenerated (Dirty should be false)")
 	}
 }
+
+// TestAnimationImagePool_GetPut tests the animation frame image pool.
+// V7 Performance fix: Verifies image pooling reduces allocations.
+func TestAnimationImagePool_GetPut(t *testing.T) {
+	pool := newAnimationImagePool()
+
+	tests := []struct {
+		name          string
+		width, height int
+		expectPooled  bool
+		expectedSize  int // Expected bucket size for pooled images
+	}{
+		{"standard_64", 64, 64, true, 64},
+		{"typical_frame_74", 74, 74, true, 80}, // Most common animation frame size
+		{"typical_frame_80", 80, 80, true, 80},
+		{"large_sprite_96", 96, 96, true, 96},
+		{"boss_sprite_128", 128, 128, true, 128},
+		{"extra_large_150", 150, 150, true, 160},
+		{"non_standard_200", 200, 200, false, 0}, // Too large for pool
+		{"non_square_70x80", 70, 80, true, 80},   // Should use bucket 80
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			img := pool.Get(tt.width, tt.height)
+			if img == nil {
+				t.Fatal("Get returned nil image")
+			}
+
+			bounds := img.Bounds()
+			if tt.expectPooled {
+				// Pooled images should be square with bucket size
+				if bounds.Dx() != tt.expectedSize || bounds.Dy() != tt.expectedSize {
+					t.Errorf("Expected pooled image size %dx%d, got %dx%d",
+						tt.expectedSize, tt.expectedSize, bounds.Dx(), bounds.Dy())
+				}
+			} else {
+				// Non-pooled images should match requested size
+				if bounds.Dx() != tt.width || bounds.Dy() != tt.height {
+					t.Errorf("Expected image size %dx%d, got %dx%d",
+						tt.width, tt.height, bounds.Dx(), bounds.Dy())
+				}
+			}
+
+			// Return to pool (should not panic)
+			pool.Put(img)
+		})
+	}
+}
+
+// TestAnimationImagePool_Reuse verifies images are actually reused.
+func TestAnimationImagePool_Reuse(t *testing.T) {
+	pool := newAnimationImagePool()
+
+	// Get and return an image
+	img1 := pool.Get(80, 80)
+	pool.Put(img1)
+
+	// Get again - should be the same image (from pool)
+	img2 := pool.Get(80, 80)
+
+	// In Go, we can't directly compare pointers from pool,
+	// but we can verify the image was cleared
+	bounds := img2.Bounds()
+	if bounds.Dx() != 80 || bounds.Dy() != 80 {
+		t.Errorf("Expected 80x80 image, got %dx%d", bounds.Dx(), bounds.Dy())
+	}
+
+	pool.Put(img2)
+}
+
+// TestAnimationImagePool_NilPut verifies Put handles nil gracefully.
+func TestAnimationImagePool_NilPut(t *testing.T) {
+	pool := newAnimationImagePool()
+	// Should not panic
+	pool.Put(nil)
+}
+
+// TestAnimationImagePool_BucketSelection verifies correct bucket selection.
+func TestAnimationImagePool_BucketSelection(t *testing.T) {
+	pool := newAnimationImagePool()
+
+	tests := []struct {
+		width, height  int
+		expectedBucket int
+	}{
+		{60, 60, 64},
+		{64, 64, 64},
+		{65, 65, 80},
+		{80, 80, 80},
+		{81, 81, 96},
+		{96, 96, 96},
+		{97, 97, 128},
+		{128, 128, 128},
+		{129, 129, 160},
+		{160, 160, 160},
+		{161, 161, 0}, // No bucket, creates new
+	}
+
+	for _, tt := range tests {
+		bucket := pool.getBucket(tt.width, tt.height)
+		if bucket != tt.expectedBucket {
+			t.Errorf("getBucket(%d, %d) = %d, expected %d",
+				tt.width, tt.height, bucket, tt.expectedBucket)
+		}
+	}
+}

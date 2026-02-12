@@ -86,6 +86,12 @@ type AnimationSystem struct {
 
 	// Performance optimization: Pool for frame slices to reduce allocations
 	frameSlicePool sync.Pool
+
+	// V7 Performance fix: Pool for animation frame images and reusable DrawImageOptions
+	// Animation frames typically have dimensions near 74-84 pixels (64px sprite + offset + margin)
+	// The pool uses bucketed sizes (64, 80, 96, 128) to maximize reuse while minimizing wasted space
+	frameImagePool    *animationImagePool
+	transformDrawOpts ebiten.DrawImageOptions // Reusable DrawImageOptions for frame generation
 }
 
 // AnimationStats holds performance statistics for the animation system.
@@ -147,6 +153,10 @@ func NewAnimationSystemWithLogger(spriteGenerator *sprites.Generator, logger *lo
 		},
 	}
 
+	// V7 Performance fix: Initialize animation frame image pool
+	// Animation frames use dimensions around 74-84 pixels for standard 64px sprites
+	sys.frameImagePool = newAnimationImagePool()
+
 	return sys
 }
 
@@ -201,6 +211,12 @@ func (s *AnimationSystem) SetPaletteOptions(opts *palette.GenerationOptions) {
 	s.paletteOptions = opts
 	// Clear frame cache to regenerate sprites with new palette options
 	s.cacheMutex.Lock()
+	// V7: Return all cached images to pool before clearing
+	for _, frames := range s.frameCache {
+		for _, img := range frames {
+			s.frameImagePool.Put(img)
+		}
+	}
 	s.frameCache = make(map[uint64][]*ebiten.Image)
 	s.cacheKeys = make([]uint64, 0, s.maxCacheSize)
 	s.cacheMutex.Unlock()
@@ -281,6 +297,12 @@ func (s *AnimationSystem) SetMaxCacheSize(maxSize int) {
 		}
 		for i := 0; i < toEvict && len(s.cacheKeys) > 0; i++ {
 			oldestKey := s.cacheKeys[0]
+			// V7: Return evicted images to pool
+			if evictedFrames, ok := s.frameCache[oldestKey]; ok {
+				for _, img := range evictedFrames {
+					s.frameImagePool.Put(img)
+				}
+			}
 			delete(s.frameCache, oldestKey)
 			s.cacheKeys = s.cacheKeys[1:]
 		}
@@ -929,6 +951,7 @@ func (s *AnimationSystem) logFrameTransformError(entity *Entity, frameIndex int,
 
 // generateTransformedFrame creates a single animation frame by applying transformations to a base sprite.
 // This ensures consistent sprite appearance across all frames, with only position/rotation/scale changing.
+// V7 Performance fix: Uses pooled images and reusable DrawImageOptions to reduce allocations.
 func (s *AnimationSystem) generateTransformedFrame(baseSprite *ebiten.Image, config sprites.Config, state string, frameIndex, frameCount int) (*ebiten.Image, error) {
 	// Calculate transformations for this frame
 	offset := calculateAnimationOffset(state, frameIndex, frameCount)
@@ -948,12 +971,14 @@ func (s *AnimationSystem) generateTransformedFrame(baseSprite *ebiten.Image, con
 	}
 
 	// Create output image with room for transformations
+	// V7: Use pooled images instead of ebiten.NewImage
 	outputWidth := config.Width + int(math.Abs(offset.X)*2) + 10
 	outputHeight := config.Height + int(math.Abs(offset.Y)*2) + 10
-	img := ebiten.NewImage(outputWidth, outputHeight)
+	img := s.frameImagePool.Get(outputWidth, outputHeight)
 
-	// Apply transformations to the base sprite
-	opts := &ebiten.DrawImageOptions{}
+	// V7: Reuse pre-allocated DrawImageOptions, reset GeoM for this frame
+	s.transformDrawOpts.GeoM.Reset()
+	s.transformDrawOpts.ColorScale.Reset()
 
 	// Center sprite in output image
 	centerX := float64(outputWidth) / 2
@@ -961,22 +986,22 @@ func (s *AnimationSystem) generateTransformedFrame(baseSprite *ebiten.Image, con
 
 	// Apply scale around center
 	if scale != 1.0 {
-		opts.GeoM.Translate(-float64(config.Width)/2, -float64(config.Height)/2)
-		opts.GeoM.Scale(scale, scale)
-		opts.GeoM.Translate(float64(config.Width)/2, float64(config.Height)/2)
+		s.transformDrawOpts.GeoM.Translate(-float64(config.Width)/2, -float64(config.Height)/2)
+		s.transformDrawOpts.GeoM.Scale(scale, scale)
+		s.transformDrawOpts.GeoM.Translate(float64(config.Width)/2, float64(config.Height)/2)
 	}
 
 	// Apply rotation around center
 	if rotation != 0 {
-		opts.GeoM.Translate(-float64(config.Width)/2, -float64(config.Height)/2)
-		opts.GeoM.Rotate(rotation)
-		opts.GeoM.Translate(float64(config.Width)/2, float64(config.Height)/2)
+		s.transformDrawOpts.GeoM.Translate(-float64(config.Width)/2, -float64(config.Height)/2)
+		s.transformDrawOpts.GeoM.Rotate(rotation)
+		s.transformDrawOpts.GeoM.Translate(float64(config.Width)/2, float64(config.Height)/2)
 	}
 
 	// Apply position offset and center in output
-	opts.GeoM.Translate(centerX-float64(config.Width)/2+offset.X, centerY-float64(config.Height)/2+offset.Y)
+	s.transformDrawOpts.GeoM.Translate(centerX-float64(config.Width)/2+offset.X, centerY-float64(config.Height)/2+offset.Y)
 
-	img.DrawImage(baseSprite, opts)
+	img.DrawImage(baseSprite, &s.transformDrawOpts)
 
 	return img, nil
 }
@@ -1388,8 +1413,11 @@ func (s *AnimationSystem) cacheFrames(key uint64, frames []*ebiten.Image) {
 				"max_size":    s.maxCacheSize,
 			}).Debug("evicting oldest cache entry")
 		}
-		// Return evicted frame slice to pool for reuse
+		// V7: Return evicted images to pool, then return slice to pool
 		if evictedFrames, ok := s.frameCache[oldestKey]; ok {
+			for _, img := range evictedFrames {
+				s.frameImagePool.Put(img)
+			}
 			s.putFrameSlice(evictedFrames)
 		}
 		delete(s.frameCache, oldestKey)
@@ -1464,6 +1492,14 @@ func (s *AnimationSystem) ClearCache() {
 	defer s.cacheMutex.Unlock()
 
 	entriesCleared := len(s.frameCache)
+
+	// V7: Return all cached images to pool before clearing
+	for _, frames := range s.frameCache {
+		for _, img := range frames {
+			s.frameImagePool.Put(img)
+		}
+	}
+
 	s.frameCache = make(map[uint64][]*ebiten.Image)
 	s.cacheKeys = make([]uint64, 0, s.maxCacheSize)
 
@@ -1683,4 +1719,122 @@ func (s *AnimationSystem) putFrameSlice(slice []*ebiten.Image) {
 	}
 	slice = slice[:0]
 	s.frameSlicePool.Put(slice)
+}
+
+// animationImagePool manages pools of Ebiten images for animation frames.
+// V7 Performance fix: Reduces GPU texture allocations during animation frame generation.
+// Uses bucketed sizes (64, 80, 96, 128, 160) to balance memory efficiency with reuse rate.
+// Animation frames typically need ~74-84 pixels for 64px sprites with transformations.
+type animationImagePool struct {
+	pool64  sync.Pool // For sizes up to 64
+	pool80  sync.Pool // For sizes up to 80 (typical animation frame size)
+	pool96  sync.Pool // For sizes up to 96
+	pool128 sync.Pool // For sizes up to 128
+	pool160 sync.Pool // For sizes up to 160 (large sprites with transforms)
+}
+
+// newAnimationImagePool creates a new animation frame image pool.
+func newAnimationImagePool() *animationImagePool {
+	p := &animationImagePool{}
+
+	p.pool64.New = func() interface{} {
+		return ebiten.NewImage(64, 64)
+	}
+	p.pool80.New = func() interface{} {
+		return ebiten.NewImage(80, 80)
+	}
+	p.pool96.New = func() interface{} {
+		return ebiten.NewImage(96, 96)
+	}
+	p.pool128.New = func() interface{} {
+		return ebiten.NewImage(128, 128)
+	}
+	p.pool160.New = func() interface{} {
+		return ebiten.NewImage(160, 160)
+	}
+
+	return p
+}
+
+// getBucket returns the appropriate bucket size for the given dimensions.
+// Rounds up to the nearest bucket to maximize reuse.
+func (p *animationImagePool) getBucket(width, height int) int {
+	maxDim := width
+	if height > maxDim {
+		maxDim = height
+	}
+	switch {
+	case maxDim <= 64:
+		return 64
+	case maxDim <= 80:
+		return 80
+	case maxDim <= 96:
+		return 96
+	case maxDim <= 128:
+		return 128
+	case maxDim <= 160:
+		return 160
+	default:
+		return 0 // No bucket available, will create non-pooled image
+	}
+}
+
+// Get retrieves an image from the pool, sized to at least the requested dimensions.
+// Returns a pooled image for common sizes, or creates a new one for non-standard sizes.
+// The caller must ensure the image is cleared before use (Clear() is called by Put).
+func (p *animationImagePool) Get(width, height int) *ebiten.Image {
+	bucket := p.getBucket(width, height)
+	switch bucket {
+	case 64:
+		return p.pool64.Get().(*ebiten.Image)
+	case 80:
+		return p.pool80.Get().(*ebiten.Image)
+	case 96:
+		return p.pool96.Get().(*ebiten.Image)
+	case 128:
+		return p.pool128.Get().(*ebiten.Image)
+	case 160:
+		return p.pool160.Get().(*ebiten.Image)
+	default:
+		// Non-standard size: create new image (not pooled)
+		return ebiten.NewImage(width, height)
+	}
+}
+
+// Put returns an image to the appropriate pool.
+// The image is cleared before being returned to the pool.
+// Only images matching bucket sizes are pooled; others are left for GC.
+func (p *animationImagePool) Put(img *ebiten.Image) {
+	if img == nil {
+		return
+	}
+
+	bounds := img.Bounds()
+	width := bounds.Dx()
+	height := bounds.Dy()
+
+	// Clear the image before returning to pool
+	img.Clear()
+
+	// Only pool images that match our bucket sizes exactly
+	if width == height {
+		switch width {
+		case 64:
+			p.pool64.Put(img)
+			return
+		case 80:
+			p.pool80.Put(img)
+			return
+		case 96:
+			p.pool96.Put(img)
+			return
+		case 128:
+			p.pool128.Put(img)
+			return
+		case 160:
+			p.pool160.Put(img)
+			return
+		}
+	}
+	// Non-standard size: let it be garbage collected
 }

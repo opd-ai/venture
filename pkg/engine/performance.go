@@ -120,10 +120,11 @@ func (pm *PerformanceMetrics) RecordUpdate(updateTime time.Duration) {
 }
 
 // RecordSystemTime records timing for a specific system.
-// This is called from the single-threaded World.Update() loop, so no mutex is needed.
-// Reading SystemTimes from other goroutines should use GetSnapshot() which takes a read lock.
+// Uses a write lock because GetSnapshot() may read SystemTimes concurrently.
 func (pm *PerformanceMetrics) RecordSystemTime(systemName string, duration time.Duration) {
+	pm.mu.Lock()
 	pm.SystemTimes[systemName] = duration
+	pm.mu.Unlock()
 }
 
 // UpdateEntityCount updates the entity count statistics.

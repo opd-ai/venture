@@ -60,7 +60,7 @@ This document tracks the audit status of all Go packages in the Venture codebase
 - [x] `pkg/integration/guild_vehicle/AUDIT.md` — Needs Work — 4 issues (1 high, 1 med, 2 low)
 - [x] `pkg/integration/housing_crafting/AUDIT.md` — Complete — 1 issue (0 high, 0 med, 1 low)
 - [ ] `pkg/integration/narrative_world/` — Not Started
-- [ ] `pkg/integration/political_warfare/` — Not Started
+- [x] `pkg/integration/political_warfare/AUDIT.md` — Needs Work — 6 issues (0 high, 4 med, 2 low)
 - [x] `pkg/integration/trade_routes/AUDIT.md` — Needs Work — 3 issues (1 high, 1 med, 1 low)
 - [x] `pkg/integration/world_events/AUDIT.md` — Needs Work — 6 issues (2 high, 2 med, 2 low)
 
@@ -99,10 +99,10 @@ Each audit should produce a `AUDIT.md` file in the package directory following t
 ## Summary Statistics
 
 **Total Packages**: 50+  
-**Audited**: 43  
+**Audited**: 44  
 **Complete**: 18  
-**Needs Work**: 24  
+**Needs Work**: 25  
 **Incomplete**: 1  
-**Not Started**: 12+
+**Not Started**: 11+
 
 **Average Test Coverage** (audited packages): ~86% (estimated - some packages require GUI environment)

@@ -301,73 +301,114 @@ func (s *CraftingSystem) validateCraftCompletion(entityID uint64, progressComp *
 // This enables automatic bonus calculation without manual station registration.
 func (s *CraftingSystem) extractStationBonus(entityID uint64, recipeID string, stationID uint64) float64 {
 	// Try auto-discovery via housing crafting stations first
-	if s.stationManager != nil {
-		entity, ok := s.world.GetEntity(entityID)
-		if ok {
-			// Extract player ID from network component
-			if networkComp, ok := entity.GetComponent("network"); ok {
-				if nc, ok := networkComp.(*NetworkComponent); ok && nc.PlayerID > 0 {
-					playerIDStr := fmt.Sprintf("%d", nc.PlayerID)
-					bonus := s.stationManager.GetCraftingBonus(playerIDStr, recipeID)
-
-					if bonus > 1.0 {
-						if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
-							s.logger.WithFields(logrus.Fields{
-								"entity_id": entityID,
-								"player_id": playerIDStr,
-								"recipe_id": recipeID,
-								"bonus":     bonus,
-								"source":    "housing_stations",
-							}).Debug("housing station bonus auto-discovered")
-						}
-						// Convert multiplier (1.0-2.0) to success bonus (0.0-1.0)
-						return (bonus - 1.0)
-					}
-				}
-			}
-		}
+	if bonus := s.tryHousingStationBonus(entityID, recipeID); bonus > 0 {
+		return bonus
 	}
-
 	// Fallback to explicit station lookup
-	if stationID == 0 {
-		if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
-			s.logger.Debug("no station specified and no housing bonus, bonus is 0")
-		}
+	return s.tryExplicitStationBonus(stationID)
+}
+
+// tryHousingStationBonus attempts to get bonus from housing crafting stations.
+func (s *CraftingSystem) tryHousingStationBonus(entityID uint64, recipeID string) float64 {
+	if s.stationManager == nil {
 		return 0.0
 	}
-
-	if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
-		s.logger.WithField("station_id", stationID).Debug("extracting station bonus from entity")
+	entity, ok := s.world.GetEntity(entityID)
+	if !ok {
+		return 0.0
 	}
+	playerID := s.extractPlayerID(entity)
+	if playerID == "" {
+		return 0.0
+	}
+	bonus := s.stationManager.GetCraftingBonus(playerID, recipeID)
+	if bonus > 1.0 {
+		s.logHousingBonus(entityID, playerID, recipeID, bonus)
+		return bonus - 1.0
+	}
+	return 0.0
+}
 
+// extractPlayerID extracts player ID string from entity's network component.
+func (s *CraftingSystem) extractPlayerID(entity *Entity) string {
+	networkComp, ok := entity.GetComponent("network")
+	if !ok {
+		return ""
+	}
+	nc, ok := networkComp.(*NetworkComponent)
+	if !ok || nc.PlayerID == 0 {
+		return ""
+	}
+	return fmt.Sprintf("%d", nc.PlayerID)
+}
+
+// logHousingBonus logs housing station bonus discovery at debug level.
+func (s *CraftingSystem) logHousingBonus(entityID uint64, playerID, recipeID string, bonus float64) {
+	if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
+		s.logger.WithFields(logrus.Fields{
+			"entity_id": entityID,
+			"player_id": playerID,
+			"recipe_id": recipeID,
+			"bonus":     bonus,
+			"source":    "housing_stations",
+		}).Debug("housing station bonus auto-discovered")
+	}
+}
+
+// tryExplicitStationBonus attempts to get bonus from explicit station entity.
+func (s *CraftingSystem) tryExplicitStationBonus(stationID uint64) float64 {
+	if stationID == 0 {
+		s.logDebug("no station specified and no housing bonus, bonus is 0")
+		return 0.0
+	}
+	s.logDebugWithField("station_id", stationID, "extracting station bonus from entity")
 	station, ok := s.world.GetEntity(stationID)
 	if !ok {
-		if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
-			s.logger.WithField("station_id", stationID).Debug("station not found, bonus is 0")
-		}
+		s.logDebugWithField("station_id", stationID, "station not found, bonus is 0")
 		return 0.0
 	}
-
 	stationComp, err := s.getCraftingStationComponent(station)
 	if err != nil {
-		if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
-			s.logger.WithFields(logrus.Fields{
-				"station_id": stationID,
-				"error":      err.Error(),
-			}).Debug("failed to get station component, bonus is 0")
-		}
+		s.logStationError(stationID, err)
 		return 0.0
 	}
+	s.logStationBonus(stationID, stationComp.BonusSuccessChance)
+	return stationComp.BonusSuccessChance
+}
 
+// logDebug logs a debug message if logger is available and at debug level.
+func (s *CraftingSystem) logDebug(msg string) {
+	if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
+		s.logger.Debug(msg)
+	}
+}
+
+// logDebugWithField logs a debug message with a field if logger is available.
+func (s *CraftingSystem) logDebugWithField(key string, value interface{}, msg string) {
+	if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
+		s.logger.WithField(key, value).Debug(msg)
+	}
+}
+
+// logStationError logs station component extraction error.
+func (s *CraftingSystem) logStationError(stationID uint64, err error) {
 	if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
 		s.logger.WithFields(logrus.Fields{
 			"station_id": stationID,
-			"bonus":      stationComp.BonusSuccessChance,
+			"error":      err.Error(),
+		}).Debug("failed to get station component, bonus is 0")
+	}
+}
+
+// logStationBonus logs successful station bonus extraction.
+func (s *CraftingSystem) logStationBonus(stationID uint64, bonus float64) {
+	if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
+		s.logger.WithFields(logrus.Fields{
+			"station_id": stationID,
+			"bonus":      bonus,
 			"source":     "station_entity",
 		}).Debug("station bonus extracted from entity")
 	}
-
-	return stationComp.BonusSuccessChance
 }
 
 // calculateFinalSuccessChance computes the total success chance with all bonuses applied.

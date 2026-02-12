@@ -270,73 +270,81 @@ func (p *GPUProcessor) ApplyAll(input *ebiten.Image) *ebiten.Image {
 	if input == nil {
 		return nil
 	}
+	if !p.hasEnabledEffects() {
+		return input
+	}
+	if err := p.ensureShaders(); err != nil {
+		return input
+	}
+	return p.applyEnabledEffects(input)
+}
 
-	// Check if any effects are enabled
+// hasEnabledEffects checks if any post-processing effects are enabled.
+func (p *GPUProcessor) hasEnabledEffects() bool {
 	hasColorGrading := p.config.ColorGrading.Enabled && !isNeutralColorGrading(p.config.ColorGrading)
 	hasVignette := p.config.Vignette.Enabled && p.config.Vignette.Intensity > 0
 	hasChromatic := p.config.ChromaticAberration.Enabled && p.config.ChromaticAberration.Intensity > 0
+	return hasColorGrading || hasVignette || hasChromatic
+}
 
-	if !hasColorGrading && !hasVignette && !hasChromatic {
-		return input
-	}
-
-	// Ensure shaders are compiled
-	if err := p.ensureShaders(); err != nil {
-		// Fallback: return input unchanged if shader compilation fails
-		return input
-	}
-
+// applyEnabledEffects applies all enabled effects in sequence to the input image.
+func (p *GPUProcessor) applyEnabledEffects(input *ebiten.Image) *ebiten.Image {
 	bounds := input.Bounds()
-	width := bounds.Dx()
-	height := bounds.Dy()
-
-	// Ensure output buffer exists
+	width, height := bounds.Dx(), bounds.Dy()
 	p.ensureBuffer(width, height)
 
-	// Track current source (ping-pong between input and buffer)
 	currentSrc := input
 	needsCopy := false
 
-	// Apply effects in recommended order
+	currentSrc, needsCopy = p.applyColorGradingIfEnabled(currentSrc, width, height, needsCopy)
+	currentSrc, needsCopy = p.applyVignetteIfEnabled(currentSrc, width, height, needsCopy)
+	currentSrc = p.applyChromaticAberrationIfEnabled(currentSrc, width, height, needsCopy)
 
-	// 1. Color grading (modifies color values)
-	if hasColorGrading {
-		p.outputBuffer.Clear()
-		p.applyColorGrading(p.outputBuffer, currentSrc, width, height)
-		currentSrc = p.outputBuffer
-		needsCopy = true
-	}
-
-	// 2. Vignette (darkens edges)
-	if hasVignette {
-		if needsCopy && currentSrc == p.outputBuffer {
-			// Need to use a ping-pong approach - draw to temp then back
-			// For now, apply directly to same buffer (vignette is a pass-through)
-			p.applyVignetteInPlace(p.outputBuffer, width, height)
-		} else {
-			p.outputBuffer.Clear()
-			p.applyVignette(p.outputBuffer, currentSrc, width, height)
-			currentSrc = p.outputBuffer
-			needsCopy = true
-		}
-	}
-
-	// 3. Chromatic aberration (final artistic effect)
-	if hasChromatic {
-		if needsCopy && currentSrc == p.outputBuffer {
-			p.applyChromaticAberrationInPlace(p.outputBuffer, width, height)
-		} else {
-			p.outputBuffer.Clear()
-			p.applyChromaticAberration(p.outputBuffer, currentSrc, width, height)
-			currentSrc = p.outputBuffer
-		}
-	}
-
-	// If we used the buffer, return it; otherwise return input unchanged
 	if currentSrc == p.outputBuffer {
 		return p.outputBuffer
 	}
 	return input
+}
+
+// applyColorGradingIfEnabled applies color grading effect if enabled.
+func (p *GPUProcessor) applyColorGradingIfEnabled(src *ebiten.Image, width, height int, needsCopy bool) (*ebiten.Image, bool) {
+	hasColorGrading := p.config.ColorGrading.Enabled && !isNeutralColorGrading(p.config.ColorGrading)
+	if !hasColorGrading {
+		return src, needsCopy
+	}
+	p.outputBuffer.Clear()
+	p.applyColorGrading(p.outputBuffer, src, width, height)
+	return p.outputBuffer, true
+}
+
+// applyVignetteIfEnabled applies vignette effect if enabled.
+func (p *GPUProcessor) applyVignetteIfEnabled(src *ebiten.Image, width, height int, needsCopy bool) (*ebiten.Image, bool) {
+	hasVignette := p.config.Vignette.Enabled && p.config.Vignette.Intensity > 0
+	if !hasVignette {
+		return src, needsCopy
+	}
+	if needsCopy && src == p.outputBuffer {
+		p.applyVignetteInPlace(p.outputBuffer, width, height)
+		return p.outputBuffer, true
+	}
+	p.outputBuffer.Clear()
+	p.applyVignette(p.outputBuffer, src, width, height)
+	return p.outputBuffer, true
+}
+
+// applyChromaticAberrationIfEnabled applies chromatic aberration effect if enabled.
+func (p *GPUProcessor) applyChromaticAberrationIfEnabled(src *ebiten.Image, width, height int, needsCopy bool) *ebiten.Image {
+	hasChromatic := p.config.ChromaticAberration.Enabled && p.config.ChromaticAberration.Intensity > 0
+	if !hasChromatic {
+		return src
+	}
+	if needsCopy && src == p.outputBuffer {
+		p.applyChromaticAberrationInPlace(p.outputBuffer, width, height)
+		return p.outputBuffer
+	}
+	p.outputBuffer.Clear()
+	p.applyChromaticAberration(p.outputBuffer, src, width, height)
+	return p.outputBuffer
 }
 
 // isNeutralColorGrading checks if color grading settings are neutral (no effect).

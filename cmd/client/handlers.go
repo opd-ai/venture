@@ -1670,27 +1670,32 @@ func startPerformanceMonitoring(game *engine.EbitenGame, clientLogger *logrus.En
 	if !*verbose {
 		return
 	}
+	perfMonitor, stabilityMonitor := initializeMonitors(game, clientLogger)
+	startLegacyMetricsMonitor(perfMonitor, clientLogger)
+	startStabilityMonitor(game, stabilityMonitor, clientLogger)
+}
 
-	// Legacy performance monitor for detailed system metrics
+// initializeMonitors creates and configures performance and stability monitors.
+func initializeMonitors(game *engine.EbitenGame, clientLogger *logrus.Entry) (*engine.PerformanceMonitor, *stability.Monitor) {
 	perfMonitor := engine.NewPerformanceMonitor(game.World)
-
-	// Stability monitor for enforcing performance targets (60 FPS, 500MB memory)
 	stabilityConfig := stability.Config{
-		Duration:      0, // Run indefinitely (no duration limit)
+		Duration:      0,
 		CheckInterval: 30 * time.Second,
-		MemoryLimit:   500 * 1024 * 1024, // 500MB as documented in README
-		MinFPS:        60.0,              // 60 FPS as documented in README
-		ReportPath:    "",                // Don't write reports (monitoring only)
+		MemoryLimit:   500 * 1024 * 1024,
+		MinFPS:        60.0,
+		ReportPath:    "",
 	}
 	stabilityMonitor := stability.NewMonitor(stabilityConfig)
-	stabilityMonitor.SetFPSProvider(game) // EbitenGame implements FPSProvider via CurrentFPS()
-
+	stabilityMonitor.SetFPSProvider(game)
 	clientLogger.WithFields(logrus.Fields{
 		"min_fps":      stabilityConfig.MinFPS,
 		"memory_limit": stabilityConfig.MemoryLimit / (1024 * 1024),
 	}).Info("performance monitoring initialized with stability enforcement")
+	return perfMonitor, stabilityMonitor
+}
 
-	// Background goroutine for legacy performance metrics logging
+// startLegacyMetricsMonitor starts background goroutine for legacy performance metrics.
+func startLegacyMetricsMonitor(perfMonitor *engine.PerformanceMonitor, clientLogger *logrus.Entry) {
 	go func() {
 		ticker := time.NewTicker(perfMonitorInterval * time.Second)
 		defer ticker.Stop()
@@ -1699,47 +1704,64 @@ func startPerformanceMonitoring(game *engine.EbitenGame, clientLogger *logrus.En
 			clientLogger.WithField("metrics", metrics.String()).Info("performance metrics")
 		}
 	}()
+}
 
-	// Background goroutine for stability monitoring
+// startStabilityMonitor starts background goroutine for stability monitoring.
+func startStabilityMonitor(game *engine.EbitenGame, monitor *stability.Monitor, clientLogger *logrus.Entry) {
 	go func() {
 		ctx := context.Background()
-		ticker := time.NewTicker(stabilityConfig.CheckInterval)
+		ticker := time.NewTicker(30 * time.Second)
 		defer ticker.Stop()
-
 		for {
 			select {
 			case <-ctx.Done():
 				return
 			case <-ticker.C:
-				// Perform health check manually to log warnings without failing
-				fps := game.CurrentFPS()
-				memStats := runtime.MemStats{}
-				runtime.ReadMemStats(&memStats)
-				currentMem := memStats.HeapAlloc
-
-				fields := logrus.Fields{
-					"fps":        fmt.Sprintf("%.1f", fps),
-					"memory_mb":  fmt.Sprintf("%.1f", float64(currentMem)/(1024*1024)),
-					"goroutines": runtime.NumGoroutine(),
-				}
-
-				// Log warnings when exceeding documented performance targets
-				if fps < stabilityConfig.MinFPS {
-					fields["target_fps"] = stabilityConfig.MinFPS
-					clientLogger.WithFields(fields).Warn("FPS below target")
-				}
-				if currentMem > stabilityConfig.MemoryLimit {
-					fields["target_memory_mb"] = stabilityConfig.MemoryLimit / (1024 * 1024)
-					clientLogger.WithFields(fields).Warn("memory usage above target")
-				}
-
-				// Log info every check interval when performing well
-				if fps >= stabilityConfig.MinFPS && currentMem <= stabilityConfig.MemoryLimit {
-					clientLogger.WithFields(fields).Debug("stability check passed")
-				}
+				checkAndLogStability(game, clientLogger)
 			}
 		}
 	}()
+}
+
+// checkAndLogStability performs health check and logs warnings when targets are exceeded.
+func checkAndLogStability(game *engine.EbitenGame, clientLogger *logrus.Entry) {
+	fps, currentMem := collectPerformanceMetrics(game)
+	fields := buildPerformanceFields(fps, currentMem)
+	logPerformanceStatus(fps, currentMem, fields, clientLogger)
+}
+
+// collectPerformanceMetrics gathers current FPS and memory usage.
+func collectPerformanceMetrics(game *engine.EbitenGame) (float64, uint64) {
+	fps := game.CurrentFPS()
+	var memStats runtime.MemStats
+	runtime.ReadMemStats(&memStats)
+	return fps, memStats.HeapAlloc
+}
+
+// buildPerformanceFields constructs log fields for performance metrics.
+func buildPerformanceFields(fps float64, currentMem uint64) logrus.Fields {
+	return logrus.Fields{
+		"fps":        fmt.Sprintf("%.1f", fps),
+		"memory_mb":  fmt.Sprintf("%.1f", float64(currentMem)/(1024*1024)),
+		"goroutines": runtime.NumGoroutine(),
+	}
+}
+
+// logPerformanceStatus logs warnings for threshold violations or debug for passing checks.
+func logPerformanceStatus(fps float64, currentMem uint64, fields logrus.Fields, clientLogger *logrus.Entry) {
+	const minFPS = 60.0
+	const memoryLimit = 500 * 1024 * 1024
+	if fps < minFPS {
+		fields["target_fps"] = minFPS
+		clientLogger.WithFields(fields).Warn("FPS below target")
+	}
+	if currentMem > memoryLimit {
+		fields["target_memory_mb"] = memoryLimit / (1024 * 1024)
+		clientLogger.WithFields(fields).Warn("memory usage above target")
+	}
+	if fps >= minFPS && currentMem <= memoryLimit {
+		clientLogger.WithFields(fields).Debug("stability check passed")
+	}
 }
 
 // generateWorldTerrain creates and validates procedural terrain using async loading.

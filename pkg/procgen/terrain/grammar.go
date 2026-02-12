@@ -270,28 +270,79 @@ func (g *GraphGrammarGenerator) Generate(seed int64, params procgen.GenerationPa
 // Validate implements the procgen.Generator interface.
 // It checks if the generated dungeon graph is valid.
 func (g *GraphGrammarGenerator) Validate(result interface{}) error {
-	// Type check
+	graph, err := validateGraphType(result)
+	if err != nil {
+		return err
+	}
+	if err := validateGraphStructure(graph); err != nil {
+		return err
+	}
+	if err := validateRoomData(graph); err != nil {
+		return err
+	}
+	if err := validateConnections(graph); err != nil {
+		return err
+	}
+	return nil
+}
+
+// validateGraphType checks result type and nil conditions.
+func validateGraphType(result interface{}) (*DungeonGraph, error) {
 	graph, ok := result.(*DungeonGraph)
 	if !ok {
-		return fmt.Errorf("result is not a *DungeonGraph, got type %T", result)
+		return nil, fmt.Errorf("result is not a *DungeonGraph, got type %T", result)
 	}
-
-	// Check for nil graph
 	if graph == nil {
-		return fmt.Errorf("dungeon graph is nil")
+		return nil, fmt.Errorf("dungeon graph is nil")
 	}
+	return graph, nil
+}
 
-	// Check for start room
+// validateGraphStructure checks high-level graph constraints.
+func validateGraphStructure(graph *DungeonGraph) error {
 	if graph.StartRoom == nil {
 		return fmt.Errorf("dungeon graph has no start room")
 	}
-
-	// Check minimum room count (must have at least start + one other room)
 	if len(graph.Rooms) < 2 {
 		return fmt.Errorf("dungeon graph has too few rooms (%d), need at least 2", len(graph.Rooms))
 	}
+	if len(graph.RoomsByID) != len(graph.Rooms) {
+		return fmt.Errorf("RoomsByID map size (%d) doesn't match Rooms slice size (%d)",
+			len(graph.RoomsByID), len(graph.Rooms))
+	}
+	if graph.Width <= 0 || graph.Height <= 0 {
+		return fmt.Errorf("dungeon graph has invalid dimensions: %dx%d", graph.Width, graph.Height)
+	}
+	if err := validateCriticalPath(graph); err != nil {
+		return err
+	}
+	return validateNarrativeDepth(graph)
+}
 
-	// Check that all rooms have valid IDs
+// validateCriticalPath checks critical path integrity.
+func validateCriticalPath(graph *DungeonGraph) error {
+	if len(graph.CriticalPath) < 2 {
+		return fmt.Errorf("critical path too short (%d rooms), need at least 2", len(graph.CriticalPath))
+	}
+	if graph.CriticalPath[0] != graph.StartRoom {
+		return fmt.Errorf("critical path doesn't start with start room")
+	}
+	return nil
+}
+
+// validateNarrativeDepth checks narrative depth constraints.
+func validateNarrativeDepth(graph *DungeonGraph) error {
+	if graph.NarrativeDepth < 0 {
+		return fmt.Errorf("narrative depth is negative: %d", graph.NarrativeDepth)
+	}
+	if graph.BossRoom != nil && graph.NarrativeDepth <= 0 {
+		return fmt.Errorf("narrative depth must be positive when boss room exists (%d)", graph.NarrativeDepth)
+	}
+	return nil
+}
+
+// validateRoomData checks room IDs and dimensions.
+func validateRoomData(graph *DungeonGraph) error {
 	for i, room := range graph.Rooms {
 		if room == nil {
 			return fmt.Errorf("room at index %d is nil", i)
@@ -299,47 +350,15 @@ func (g *GraphGrammarGenerator) Validate(result interface{}) error {
 		if room.ID < 0 {
 			return fmt.Errorf("room %d has invalid ID: %d", i, room.ID)
 		}
-	}
-
-	// Check that all rooms are in the RoomsByID map
-	if len(graph.RoomsByID) != len(graph.Rooms) {
-		return fmt.Errorf("RoomsByID map size (%d) doesn't match Rooms slice size (%d)",
-			len(graph.RoomsByID), len(graph.Rooms))
-	}
-
-	// Check for valid dimensions
-	if graph.Width <= 0 || graph.Height <= 0 {
-		return fmt.Errorf("dungeon graph has invalid dimensions: %dx%d", graph.Width, graph.Height)
-	}
-
-	// Check critical path exists and is valid
-	if len(graph.CriticalPath) < 2 {
-		return fmt.Errorf("critical path too short (%d rooms), need at least 2", len(graph.CriticalPath))
-	}
-
-	// Check that critical path starts with start room
-	if graph.CriticalPath[0] != graph.StartRoom {
-		return fmt.Errorf("critical path doesn't start with start room")
-	}
-
-	// Check narrative depth is valid
-	if graph.NarrativeDepth < 0 {
-		return fmt.Errorf("narrative depth is negative: %d", graph.NarrativeDepth)
-	}
-
-	// If boss room exists, narrative depth must be positive
-	if graph.BossRoom != nil && graph.NarrativeDepth <= 0 {
-		return fmt.Errorf("narrative depth must be positive when boss room exists (%d)", graph.NarrativeDepth)
-	}
-
-	// Check that all rooms have valid dimensions
-	for _, room := range graph.Rooms {
 		if room.Width <= 0 || room.Height <= 0 {
 			return fmt.Errorf("room %d has invalid dimensions: %dx%d", room.ID, room.Width, room.Height)
 		}
 	}
+	return nil
+}
 
-	// Check that all connections are valid
+// validateConnections checks all room connections for integrity.
+func validateConnections(graph *DungeonGraph) error {
 	for _, room := range graph.Rooms {
 		for _, conn := range room.Connections {
 			if conn.From != room {
@@ -353,7 +372,6 @@ func (g *GraphGrammarGenerator) Validate(result interface{}) error {
 			}
 		}
 	}
-
 	return nil
 }
 
@@ -840,12 +858,16 @@ func (g *GraphGrammarGenerator) countReachableRooms(graph *DungeonGraph) int {
 // GraphToTerrain converts a DungeonGraph into a Terrain map suitable for gameplay.
 // It places rooms according to their graph positions and connects them with corridors.
 func GraphToTerrain(graph *DungeonGraph) *Terrain {
-	// Create terrain filled with walls
 	terrain := NewTerrain(graph.Width, graph.Height, graph.Seed)
+	carveRoomsIntoTerrain(graph, terrain)
+	connectRoomsWithCorridors(graph, terrain)
+	placeStairsInSpecialRooms(graph, terrain)
+	return terrain
+}
 
-	// Convert each room node to a terrain room and carve it out
+// carveRoomsIntoTerrain converts room nodes to terrain rooms and carves floor tiles.
+func carveRoomsIntoTerrain(graph *DungeonGraph, terrain *Terrain) {
 	for _, roomNode := range graph.Rooms {
-		// Create a Room struct from RoomNode
 		room := &Room{
 			X:      roomNode.Position.X,
 			Y:      roomNode.Position.Y,
@@ -854,77 +876,96 @@ func GraphToTerrain(graph *DungeonGraph) *Terrain {
 			Type:   roomNode.Type,
 		}
 		terrain.Rooms = append(terrain.Rooms, room)
+		carveRoomFloor(roomNode, terrain, graph.Width, graph.Height)
+	}
+}
 
-		// Carve out the room floor
-		for y := roomNode.Position.Y; y < roomNode.Position.Y+roomNode.Height; y++ {
-			for x := roomNode.Position.X; x < roomNode.Position.X+roomNode.Width; x++ {
-				if x >= 0 && x < graph.Width && y >= 0 && y < graph.Height {
-					terrain.SetTile(x, y, TileFloor)
-				}
+// carveRoomFloor sets floor tiles for a single room within terrain bounds.
+func carveRoomFloor(roomNode *RoomNode, terrain *Terrain, width, height int) {
+	for y := roomNode.Position.Y; y < roomNode.Position.Y+roomNode.Height; y++ {
+		for x := roomNode.Position.X; x < roomNode.Position.X+roomNode.Width; x++ {
+			if x >= 0 && x < width && y >= 0 && y < height {
+				terrain.SetTile(x, y, TileFloor)
 			}
 		}
 	}
+}
 
-	// Create corridors between connected rooms
+// connectRoomsWithCorridors creates L-shaped corridors between connected rooms.
+func connectRoomsWithCorridors(graph *DungeonGraph, terrain *Terrain) {
 	for _, roomNode := range graph.Rooms {
 		for _, conn := range roomNode.Connections {
-			// Get room centers for corridor placement
 			x1, y1 := roomNode.Position.X+roomNode.Width/2, roomNode.Position.Y+roomNode.Height/2
 			x2, y2 := conn.To.Position.X+conn.To.Width/2, conn.To.Position.Y+conn.To.Height/2
+			tileType := determineTileType(conn.Type)
+			carveLShapedCorridor(terrain, x1, y1, x2, y2, tileType, graph.Width, graph.Height)
+		}
+	}
+}
 
-			// Determine tile type based on connection type
-			tileType := TileCorridor
-			if conn.Type == ConnectionDoor {
-				tileType = TileDoor
-			} else if conn.Type == ConnectionSecret {
-				tileType = TileSecretDoor
-			}
+// determineTileType maps connection type to terrain tile type.
+func determineTileType(connType ConnectionType) TileType {
+	if connType == ConnectionDoor {
+		return TileDoor
+	}
+	if connType == ConnectionSecret {
+		return TileSecretDoor
+	}
+	return TileCorridor
+}
 
-			// Create L-shaped corridor: horizontal then vertical
-			// Corridors are 3 tiles wide to accommodate 64×64 player sprites
-			// Horizontal segment
-			minX, maxX := x1, x2
-			if minX > maxX {
-				minX, maxX = maxX, minX
-			}
-			for x := minX; x <= maxX; x++ {
-				for dy := -corridorHalfWidth; dy <= corridorHalfWidth; dy++ {
-					ny := y1 + dy
-					if ny >= 0 && ny < graph.Height && x >= 0 && x < graph.Width {
-						if terrain.GetTile(x, ny) == TileWall {
-							terrain.SetTile(x, ny, tileType)
-						}
-					}
-				}
-			}
+// carveLShapedCorridor creates horizontal then vertical corridor segments.
+func carveLShapedCorridor(terrain *Terrain, x1, y1, x2, y2 int, tileType TileType, width, height int) {
+	carveHorizontalCorridor(terrain, x1, x2, y1, tileType, width, height)
+	carveVerticalCorridor(terrain, y1, y2, x2, tileType, width, height)
+}
 
-			// Vertical segment
-			minY, maxY := y1, y2
-			if minY > maxY {
-				minY, maxY = maxY, minY
-			}
-			for y := minY; y <= maxY; y++ {
-				for dx := -corridorHalfWidth; dx <= corridorHalfWidth; dx++ {
-					nx := x2 + dx
-					if y >= 0 && y < graph.Height && nx >= 0 && nx < graph.Width {
-						if terrain.GetTile(nx, y) == TileWall {
-							terrain.SetTile(nx, y, tileType)
-						}
-					}
+// carveHorizontalCorridor creates a horizontal corridor segment.
+func carveHorizontalCorridor(terrain *Terrain, x1, x2, y int, tileType TileType, width, height int) {
+	minX, maxX := x1, x2
+	if minX > maxX {
+		minX, maxX = maxX, minX
+	}
+	for x := minX; x <= maxX; x++ {
+		for dy := -corridorHalfWidth; dy <= corridorHalfWidth; dy++ {
+			ny := y + dy
+			if ny >= 0 && ny < height && x >= 0 && x < width {
+				if terrain.GetTile(x, ny) == TileWall {
+					terrain.SetTile(x, ny, tileType)
 				}
 			}
 		}
 	}
+}
 
-	// Add stairs if we have a start and boss room
+// carveVerticalCorridor creates a vertical corridor segment.
+func carveVerticalCorridor(terrain *Terrain, y1, y2, x int, tileType TileType, width, height int) {
+	minY, maxY := y1, y2
+	if minY > maxY {
+		minY, maxY = maxY, minY
+	}
+	for y := minY; y <= maxY; y++ {
+		for dx := -corridorHalfWidth; dx <= corridorHalfWidth; dx++ {
+			nx := x + dx
+			if y >= 0 && y < height && nx >= 0 && nx < width {
+				if terrain.GetTile(nx, y) == TileWall {
+					terrain.SetTile(nx, y, tileType)
+				}
+			}
+		}
+	}
+}
+
+// placeStairsInSpecialRooms adds stairs to start and boss rooms if they exist.
+func placeStairsInSpecialRooms(graph *DungeonGraph, terrain *Terrain) {
 	if graph.StartRoom != nil {
-		startX, startY := graph.StartRoom.Position.X+graph.StartRoom.Width/2, graph.StartRoom.Position.Y+graph.StartRoom.Height/2
-		terrain.AddStairs(startX, startY, true) // Stairs up at start
+		startX := graph.StartRoom.Position.X + graph.StartRoom.Width/2
+		startY := graph.StartRoom.Position.Y + graph.StartRoom.Height/2
+		terrain.AddStairs(startX, startY, true)
 	}
 	if graph.BossRoom != nil {
-		bossX, bossY := graph.BossRoom.Position.X+graph.BossRoom.Width/2, graph.BossRoom.Position.Y+graph.BossRoom.Height/2
-		terrain.AddStairs(bossX, bossY, false) // Stairs down at boss
+		bossX := graph.BossRoom.Position.X + graph.BossRoom.Width/2
+		bossY := graph.BossRoom.Position.Y + graph.BossRoom.Height/2
+		terrain.AddStairs(bossX, bossY, false)
 	}
-
-	return terrain
 }

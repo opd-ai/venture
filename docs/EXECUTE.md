@@ -1,78 +1,47 @@
-# Phase: Execute Next Planned Phase
+You are implementing ONE novel enhancement to a Go/Ebiten procedural multiplayer action-RPG called Venture. Act autonomously. Do not ask for approval.
 
-## OBJECTIVE
-Identify and implement the next incomplete Phase from docs/PLAN.md (short-term) or docs/ROADMAP_ V7.md (long-term). Prioritize PLAN.md Phases. If PLAN.md is complete, verify thoroughly then delete it. Complete exactly ONE Phase following Venture's ECS architecture, procedural generation patterns, and testing standards. Work in complete sections, implement the entire objective defined by the planning document, do not stop until you are finished. You are not done until all tests pass. We have multiple `ROADMAP_V*.md` files in the codebase, choose the first unfinished item from the lowest-numbered unfinished roadmap to complete.
+STEP 1 — DISCOVER (spend ≤5 minutes here):
+- Run `git log --oneline -20` to avoid duplicating recent work.
+- Read pkg/engine/system_init.go to understand registered systems.
+- Grep for TODO, FIXME, stub, placeholder in pkg/engine/ and pkg/procgen/.
+- Pick ONE enhancement you have NOT seen in git history. Prefer:
+  - Connecting two existing systems that don't yet interact
+  - Adding depth to a system with minimal/placeholder logic
+  - New visual feedback for existing gameplay mechanics
+  - Genre-aware variation in procgen outputs
+- If multiple candidates exist, pick the one requiring fewest files changed.
 
-## EXECUTION MODE
-**Autonomous Action** - Implement the Phase immediately with full testing and documentation.
+STEP 2 — IMPLEMENT (this is the bulk of the work):
+Follow these rules strictly. Violations are build failures.
 
-## CONTEXT
-- **Project**: Venture (Go 1.24+, Ebiten 2.9) - Procedural action-RPG with ECS architecture
-- **Current Version**: 3.0.0 Production (Phases 15-20 complete);  V7.0 in progress (Phases 21-29 complete, Phase 30 status: planning)
-- **Key Constraints**: Deterministic generation (seed-based), 60 FPS target, >65% test coverage per package
+Architecture:
+- Components = pure data + `Type() string`. Zero methods with logic.
+- Systems = all logic. Signature: `Update(entities []*Entity, deltaTime float64)`.
+- Procgen: `rand.New(rand.NewSource(seed))` only. Never global rand. Never time.Now().
+- Logging: `logrus.WithFields(logrus.Fields{"system_name": "...", ...})`.
+- No external assets. No new dependencies beyond go.mod.
 
-## IMPLEMENTATION WORKFLOW
+Integration (mandatory — this is where past attempts fail):
+- Register in `pkg/engine/system_init.go` → `InitializeGameSystems()`.
+- Register in `cmd/client/handlers.go` → add to `systemsContainer` struct AND call `game.World.AddSystem()` in the appropriate init function or `registerNonCriticalSystems()`.
+- If your system's Update signature differs from `(entities []*Entity, deltaTime float64)`, create a wrapper in `cmd/client/system_wrappers.go` matching existing patterns.
+- The system MUST be on by default. No feature flags.
+- Persistent component data must integrate with SerializeEntity/DeserializeEntity, or be explicitly transient.
 
-### 1. Analysis (Read First)
-- Check `docs/PLAN.md` for next incomplete Phase
-- If PLAN.md doesn't exist or is complete, check `docs/ROADMAP_ V7.md` for current development phases
-- Extract clear acceptance criteria and affected systems
+Constraints:
+- <500 lines total new/modified code.
+- `go build ./...` and `go vet ./...` must pass.
+- Write table-driven tests. Target ≥65% coverage on new code.
+- No breaking changes to saves, network protocol, or configs.
+- Maintain 60+ FPS. Cache/pool on hot paths.
 
-### 2. Design (Before Coding)
-- Review `.github/copilot-instructions.md` for project patterns
-- Identify affected packages under `pkg/` (engine, procgen, rendering, etc.)
-- Choose standard library or minimal dependencies (logrus, zenity, golang.org/x/image only)
-- Document approach in code comments explaining WHY
+STEP 3 — VERIFY:
+Run `go build ./...` and `go vet ./...`. Fix any errors before reporting.
 
-### 3. Implementation
-- **ECS Pattern**: Entities (IDs), Components (data only), Systems (logic)
-- **Deterministic**: Use `rand.New(rand.NewSource(seed))`, never `time.Now()` or global `math/rand`
-- **Functions**: <50 lines, single responsibility, explicit error handling
-- **Naming**: MixedCaps (not snake_case), descriptive over abbreviated
-- **No Ebiten in Tests**: Use stub implementations (StubInput, StubSprite, etc.)
+STEP 4 — REPORT (keep concise):
+1. **Enhancement**: What and why, 2-3 sentences.
+2. **Files**: List with one-line change summary each.
+3. **Integration**: Where the system is registered (exact file + function).
+4. **Verification**: How to observe the improvement in-game.
 
-### 4. Testing
-- Install dependencies per `test.yml` workflow and use `xvfb` to run test suite.
-- Table-driven tests for multiple scenarios
-- Test success AND error paths
-- Verify determinism: same seed = identical output
-- Target: >65% coverage (exclude Ebiten-dependent rendering functions)
-- Run: `go test -race ./...` before completion
-
-### 5. Documentation
-- GoDoc comments for all exported elements (start with element name)
-- Update package `doc.go` if adding features
-- Update relevant docs in `docs/` directory
-- Add usage examples for CLI tools in cmd/
-
-### 6. Validation & Reporting
-- [ ] Passes `go fmt`, `go vet`, and `go test -race ./...`
-- [ ] Test coverage >65% for affected packages
-- [ ] No circular dependencies, follows pkg/ hierarchy
-- [ ] Deterministic generation verified (if applicable)
-- [ ] Update PLAN.md or ROADMAP_ V7.md with completion status, avoid extra detail
-- [ ] Do not create unnecessary new `*.md` or `docs/*.md` files—update existing documentation as required by the workflow, and write excellent godoc instead.
-
-> **Checklist convention:** Mark completed items with `[x]` and incomplete items with `[ ]` for consistency.
-
-## OUTPUT FORMAT
-Provide brief status updates:
-1. **Phase Identified**: "[Phase name from PLAN.md/ROADMAP_ V7.md]"
-2. **Implementation**: Concise progress during work
-3. **Completion**: "✅ [Phase] complete. Coverage: X%. Tests passing."
-
-## SUCCESS CRITERIA
-- Exactly one Phase completed with zero regressions
-- All tests pass: `go test ./...`
-- Code follows Venture conventions (see copilot-instructions.md)
-- Planning document updated to reflect completion
-- No performance degradation (<16.67ms frame time maintained)
-
-## VENTURE-SPECIFIC RULES
-- **Package Structure**: Follow `pkg/` organization, avoid circular deps
-- **Generators**: Implement `procgen.Generator` interface with Validate()
-- **Performance**: Profile before optimizing (use Makefile targets)
-- **Logging**: Use structured logging with logrus (see pkg/logging/)
-- **No Asset Files**: All content procedurally generated at runtime
-- **Replace, Don't Accumulate**: When a system/technique is completely replaced (e.g., improved sprites, better generation algorithms), remove the old implementation entirely without backward compatibility concerns. Only keep code that still serves a purpose.
-    - *Example*: If a new terrain generator fully supersedes the old one, delete the old generator code and tests instead of leaving them commented out or in an "old" directory. Do not keep deprecated code for reference—use version control history if needed.
+STOP when the report is written and builds pass. Do not refactor unrelated code. Do not write documentation files. Do not suggest follow-up work.

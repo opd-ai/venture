@@ -52,25 +52,26 @@ func DefaultSystemInitConfig(seed int64, genreID string, logger *logrus.Logger) 
 // further configuration after initialization (e.g., setting callbacks).
 type SystemInitResult struct {
 	// Systems that often need post-initialization configuration
-	InputSystem              *InputSystem
-	CombatSystem             *CombatSystem
-	CollisionSystem          *CollisionSystem
-	ProjectileSystem         *ProjectileSystem
-	AudioManager             *AudioManager
-	ObjectiveTracker         *ObjectiveTrackerSystem
-	CommerceSystem           *CommerceSystem
-	DialogSystem             *DialogSystem
-	CraftingSystem           *CraftingSystem
-	InteractionSystem        *InteractionSystem
-	MiniGameSystem           *MiniGameSystem
-	AnimationSystem          *AnimationSystem
-	ParticleSystem           *ParticleSystem
-	TutorialSystem           *EbitenTutorialSystem
-	HelpSystem               *EbitenHelpSystem
-	LevelUpParticleSystem    *LevelUpParticleSystem
-	ItemPickupParticleSystem *ItemPickupParticleSystem
-	ItemPickupSystem         *ItemPickupSystem
-	ProgressionSystem        *ProgressionSystem
+	InputSystem               *InputSystem
+	CombatSystem              *CombatSystem
+	CollisionSystem           *CollisionSystem
+	ProjectileSystem          *ProjectileSystem
+	AudioManager              *AudioManager
+	ObjectiveTracker          *ObjectiveTrackerSystem
+	CommerceSystem            *CommerceSystem
+	DialogSystem              *DialogSystem
+	CraftingSystem            *CraftingSystem
+	InteractionSystem         *InteractionSystem
+	MiniGameSystem            *MiniGameSystem
+	AnimationSystem           *AnimationSystem
+	ParticleSystem            *ParticleSystem
+	TutorialSystem            *EbitenTutorialSystem
+	HelpSystem                *EbitenHelpSystem
+	LevelUpParticleSystem     *LevelUpParticleSystem
+	ItemPickupParticleSystem  *ItemPickupParticleSystem
+	SpellEffectParticleSystem *SpellEffectParticleSystem
+	ItemPickupSystem          *ItemPickupSystem
+	ProgressionSystem         *ProgressionSystem
 
 	// System wrappers
 	AnimationSystemWrapper System
@@ -329,6 +330,13 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 	result.ItemPickupSystem.SetPickupCallback(itemPickupParticleSystem.OnItemPickup)
 	result.ItemPickupParticleSystem = itemPickupParticleSystem
 	game.World.AddSystem(itemPickupParticleSystem)
+
+	// 36f. SpellEffectParticleSystem - visual feedback for spell effects
+	spellEffectParticleSystem := NewSpellEffectParticleSystem(game.World, config.Seed+5500)
+	spellEffectParticleSystem.SetParticleSystem(result.ParticleSystem)
+	spellEffectParticleSystem.SetGenre(config.GenreID)
+	result.SpellEffectParticleSystem = spellEffectParticleSystem
+	game.World.AddSystem(spellEffectParticleSystem)
 
 	// 37. LifetimeSystem - temporary entities (Phase 5.3)
 	lifetimeSystem := NewLifetimeSystemWithLogger(game.World, logger)

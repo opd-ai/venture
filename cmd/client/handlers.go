@@ -194,6 +194,7 @@ type systemsContainer struct {
 	criticalHitParticleSystem  *engine.CriticalHitParticleSystem  // Connects combat crits to particle effects
 	levelUpParticleSystem      *engine.LevelUpParticleSystem      // Connects level-ups to particle effects
 	itemPickupParticleSystem   *engine.ItemPickupParticleSystem   // Connects item pickups to particle effects
+	spellEffectParticleSystem  *engine.SpellEffectParticleSystem  // Connects spell effects to particle effects
 	lifetimeSystem             *engine.LifetimeSystem
 	puzzleSystem               *engine.PuzzleSystem
 	firePropagationSystem      *engine.FirePropagationSystem
@@ -877,6 +878,11 @@ func initializeEnvironmentalSystems(game *engine.EbitenGame, sys *systemsContain
 	sys.itemPickupParticleSystem.SetGenre(*genreID)
 	sys.itemPickupSystem.SetPickupCallback(sys.itemPickupParticleSystem.OnItemPickup)
 
+	// SpellEffectParticleSystem - visual feedback for spell effects
+	sys.spellEffectParticleSystem = engine.NewSpellEffectParticleSystem(game.World, *seed+5500)
+	sys.spellEffectParticleSystem.SetParticleSystem(sys.particleSystem)
+	sys.spellEffectParticleSystem.SetGenre(*genreID)
+
 	sys.lifetimeSystem = engine.NewLifetimeSystemWithLogger(game.World, clientLogger.Logger)
 	sys.puzzleSystem = engine.NewPuzzleSystem(game.World)
 
@@ -1530,6 +1536,7 @@ func registerNonCriticalSystems(game *engine.EbitenGame, sys *systemsContainer) 
 	game.World.AddSystem(sys.criticalHitParticleSystem)  // Critical hit visual feedback via particles
 	game.World.AddSystem(sys.levelUpParticleSystem)      // Level-up visual feedback via particles
 	game.World.AddSystem(sys.itemPickupParticleSystem)   // Item pickup visual feedback via particles
+	game.World.AddSystem(sys.spellEffectParticleSystem)  // Spell effect visual feedback via particles
 	game.World.AddSystem(sys.lifetimeSystem)
 	game.World.AddSystem(sys.puzzleSystem)
 	game.World.AddSystem(sys.firePropagationSystem)

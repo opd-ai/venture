@@ -890,6 +890,10 @@ func (r *EbitenRenderSystem) drawSpriteImage(img *ebiten.Image, sprite *EbitenSp
 // drawFallbackRect renders a colored rectangle when no sprite image exists.
 func (r *EbitenRenderSystem) drawFallbackRect(sprite *EbitenSprite, screenX, screenY, layerYOffset, layerAlpha, flashAlpha float64) {
 	col := sprite.Color
+	// Safety check: default to opaque magenta if no color is set (makes missing colors obvious)
+	if col == nil {
+		col = color.RGBA{R: 255, G: 0, B: 255, A: 255}
+	}
 
 	if flashAlpha > 0 {
 		red, green, blue, alpha := col.RGBA()
@@ -1088,6 +1092,11 @@ func (r *EbitenRenderSystem) drawParticleSystem(system *particles.ParticleSystem
 func (r *EbitenRenderSystem) drawRect(x, y, width, height float64, col color.Color) {
 	// Safety check: ensure screen is available
 	if r.screen == nil {
+		return
+	}
+
+	// Safety check: ensure color is not nil
+	if col == nil {
 		return
 	}
 

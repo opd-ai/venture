@@ -76,6 +76,7 @@ type SystemInitResult struct {
 	ProgressionSystem              *ProgressionSystem
 	CompanionProgressionSystem     *CompanionProgressionSystem
 	WeatherAudioSystem             *WeatherAudioSystem
+	FactionXPBonusSystem           *FactionXPBonusSystem
 
 	// System wrappers
 	AnimationSystemWrapper            System
@@ -208,6 +209,14 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 	progressionSystem := NewProgressionSystem(game.World)
 	result.ProgressionSystem = progressionSystem
 	game.World.AddSystem(progressionSystem)
+
+	// 17a. FactionXPBonusSystem - awards bonus XP for killing enemies of allied factions
+	// Connects FactionComponent reputation with ProgressionSystem XP rewards
+	factionXPBonusSystem := NewFactionXPBonusSystem(game.World, config.Seed+5100)
+	factionXPBonusSystem.SetFactionSystem(factionSystem)
+	factionXPBonusSystem.SetProgressionSystem(progressionSystem)
+	result.FactionXPBonusSystem = factionXPBonusSystem
+	game.World.AddSystem(factionXPBonusSystem)
 
 	// 18. SkillProgressionSystem - applies skill effects to stats
 	skillProgressionSystem := NewSkillProgressionSystem()

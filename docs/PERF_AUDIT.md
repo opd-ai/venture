@@ -76,7 +76,7 @@ Document actual measurements with frame-by-frame data, not assumptions.
 
 OUTPUT FORMAT:
 
-Create `PERF_AUDIT.md` with this exact structure:
+Create `AUDIT.md` with this exact structure:
 
 ---
 # Visual Performance Audit

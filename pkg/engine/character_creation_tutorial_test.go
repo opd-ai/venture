@@ -6,7 +6,7 @@ import (
 
 // TestNewCharacterCreationTutorial tests tutorial creation with default steps.
 func TestNewCharacterCreationTutorial(t *testing.T) {
-	cct := NewCharacterCreationTutorial(800, 600)
+	cct := NewCharacterCreationTutorial()
 
 	if cct == nil {
 		t.Fatal("NewCharacterCreationTutorial returned nil")
@@ -52,7 +52,7 @@ func TestNewCharacterCreationTutorial(t *testing.T) {
 
 // TestCharacterCreationTutorial_GetCurrentStep tests current step retrieval.
 func TestCharacterCreationTutorial_GetCurrentStep(t *testing.T) {
-	cct := NewCharacterCreationTutorial(800, 600)
+	cct := NewCharacterCreationTutorial()
 
 	step := cct.GetCurrentStep()
 	if step == nil {
@@ -87,7 +87,7 @@ func TestCharacterCreationTutorial_GetCurrentStep(t *testing.T) {
 
 // TestCharacterCreationTutorial_GetProgress tests progress calculation.
 func TestCharacterCreationTutorial_GetProgress(t *testing.T) {
-	cct := NewCharacterCreationTutorial(800, 600)
+	cct := NewCharacterCreationTutorial()
 
 	tests := []struct {
 		name    string
@@ -124,7 +124,7 @@ func TestCharacterCreationTutorial_GetProgress_EmptySteps(t *testing.T) {
 
 // TestCharacterCreationTutorial_SkipTutorial tests skip functionality.
 func TestCharacterCreationTutorial_SkipTutorial(t *testing.T) {
-	cct := NewCharacterCreationTutorial(800, 600)
+	cct := NewCharacterCreationTutorial()
 
 	cct.SkipTutorial()
 
@@ -147,7 +147,7 @@ func TestCharacterCreationTutorial_SkipTutorial(t *testing.T) {
 
 // TestCharacterCreationTutorial_Reset tests resetting the tutorial.
 func TestCharacterCreationTutorial_Reset(t *testing.T) {
-	cct := NewCharacterCreationTutorial(800, 600)
+	cct := NewCharacterCreationTutorial()
 
 	// Modify state
 	cct.Enabled = false
@@ -190,7 +190,7 @@ func TestCharacterCreationTutorial_Reset(t *testing.T) {
 
 // TestCharacterCreationTutorial_ExportImportState tests state serialization.
 func TestCharacterCreationTutorial_ExportImportState(t *testing.T) {
-	cct := NewCharacterCreationTutorial(800, 600)
+	cct := NewCharacterCreationTutorial()
 
 	// Advance through some steps
 	cct.Steps[0].Completed = true
@@ -217,7 +217,7 @@ func TestCharacterCreationTutorial_ExportImportState(t *testing.T) {
 	}
 
 	// Import into fresh tutorial
-	cct2 := NewCharacterCreationTutorial(800, 600)
+	cct2 := NewCharacterCreationTutorial()
 	cct2.ImportState(completed, skipped, completedSteps)
 
 	if cct2.CurrentStepIdx != 2 {
@@ -236,7 +236,7 @@ func TestCharacterCreationTutorial_ExportImportState(t *testing.T) {
 
 // TestCharacterCreationTutorial_ImportState_Completed tests importing a completed tutorial.
 func TestCharacterCreationTutorial_ImportState_Completed(t *testing.T) {
-	cct := NewCharacterCreationTutorial(800, 600)
+	cct := NewCharacterCreationTutorial()
 
 	cct.ImportState(true, false, nil)
 
@@ -253,7 +253,7 @@ func TestCharacterCreationTutorial_ImportState_Completed(t *testing.T) {
 
 // TestCharacterCreationTutorial_ImportState_Skipped tests importing a skipped tutorial.
 func TestCharacterCreationTutorial_ImportState_Skipped(t *testing.T) {
-	cct := NewCharacterCreationTutorial(800, 600)
+	cct := NewCharacterCreationTutorial()
 
 	cct.ImportState(true, true, nil)
 
@@ -267,7 +267,7 @@ func TestCharacterCreationTutorial_ImportState_Skipped(t *testing.T) {
 
 // TestCharacterCreationTutorial_Update_WhenDisabled tests no-op when disabled.
 func TestCharacterCreationTutorial_Update_WhenDisabled(t *testing.T) {
-	cct := NewCharacterCreationTutorial(800, 600)
+	cct := NewCharacterCreationTutorial()
 	cct.Enabled = false
 
 	initialIdx := cct.CurrentStepIdx
@@ -280,7 +280,7 @@ func TestCharacterCreationTutorial_Update_WhenDisabled(t *testing.T) {
 
 // TestCharacterCreationTutorial_Update_WhenCompleted tests no-op when completed.
 func TestCharacterCreationTutorial_Update_WhenCompleted(t *testing.T) {
-	cct := NewCharacterCreationTutorial(800, 600)
+	cct := NewCharacterCreationTutorial()
 	cct.Completed = true
 
 	initialIdx := cct.CurrentStepIdx
@@ -294,7 +294,7 @@ func TestCharacterCreationTutorial_Update_WhenCompleted(t *testing.T) {
 // TestCharacterCreationTutorial_Update_StepSync tests that tutorial steps
 // advance to match character creation progress.
 func TestCharacterCreationTutorial_Update_StepSync(t *testing.T) {
-	cct := NewCharacterCreationTutorial(800, 600)
+	cct := NewCharacterCreationTutorial()
 
 	// Start past the welcome step
 	cct.CurrentStepIdx = 1
@@ -314,7 +314,7 @@ func TestCharacterCreationTutorial_Update_StepSync(t *testing.T) {
 
 // TestCharacterCreationTutorial_Update_NotificationTTL tests notification timeout.
 func TestCharacterCreationTutorial_Update_NotificationTTL(t *testing.T) {
-	cct := NewCharacterCreationTutorial(800, 600)
+	cct := NewCharacterCreationTutorial()
 	cct.NotificationMsg = "Test notification"
 	cct.NotificationTTL = 0.1
 
@@ -330,27 +330,33 @@ func TestCharacterCreationTutorial_Update_NotificationTTL(t *testing.T) {
 
 // TestCharacterCreationTutorial_CompleteTutorial tests completing all steps.
 func TestCharacterCreationTutorial_CompleteTutorial(t *testing.T) {
-	cct := NewCharacterCreationTutorial(800, 600)
+	cct := NewCharacterCreationTutorial()
 
 	// Skip welcome step manually
 	cct.CurrentStepIdx = 1
 	cct.Steps[0].Completed = true
 
-	// Simulate progressing through all creation steps
+	// Simulate progressing through all creation steps (1=class, 2=portrait, 3=confirmation)
 	for step := 1; step <= 3; step++ {
 		cct.Update(step, 0.016)
 	}
 
-	// All tutorial steps should now be completed
-	// The creation step 3 (confirmation) maps to tutorial step 4 (index 4)
-	// But completion happens when currentStepIdx >= len(steps)
+	// After stepping through creation steps 1-3, the tutorial should be at the
+	// confirmation step (index 4). The confirmation step is completed externally
+	// when character creation is confirmed (via CompleteTutorial in the game loop).
+	if cct.CurrentStepIdx != 4 {
+		t.Fatalf("expected CurrentStepIdx=4 before final completion, got %d", cct.CurrentStepIdx)
+	}
+
+	// Simulate the game loop marking the tutorial as complete on character creation confirm
+	cct.CompleteTutorial()
+
 	if !cct.Completed {
-		// It should be complete since we went through all steps
-		// Let's check current state
-		t.Logf("CurrentStepIdx=%d, len(Steps)=%d", cct.CurrentStepIdx, len(cct.Steps))
-		// The 5th step (confirmation at index 4) needs to be explicitly completed
-		// when the character creation is confirmed. Let's advance one more.
-		cct.Update(3, 0.016) // creation step 3 -> tutorial step 4
+		t.Fatalf("tutorial should be completed: Completed=false, CurrentStepIdx=%d, len(Steps)=%d",
+			cct.CurrentStepIdx, len(cct.Steps))
+	}
+	if !cct.Steps[4].Completed {
+		t.Error("confirmation step should not be left incomplete after CompleteTutorial")
 	}
 }
 
@@ -372,7 +378,7 @@ func TestCharacterCreationTutorial_IsActive(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			cct := NewCharacterCreationTutorial(800, 600)
+			cct := NewCharacterCreationTutorial()
 			cct.Enabled = tt.enabled
 			cct.ShowUI = tt.showUI
 			cct.Completed = tt.completed
@@ -386,7 +392,7 @@ func TestCharacterCreationTutorial_IsActive(t *testing.T) {
 
 // TestCharacterCreationTutorial_GetStepByID tests step retrieval by ID.
 func TestCharacterCreationTutorial_GetStepByID(t *testing.T) {
-	cct := NewCharacterCreationTutorial(800, 600)
+	cct := NewCharacterCreationTutorial()
 
 	step := cct.GetStepByID("class_selection")
 	if step == nil {
@@ -404,7 +410,7 @@ func TestCharacterCreationTutorial_GetStepByID(t *testing.T) {
 
 // TestCharacterCreationTutorial_IsStepCompleted tests step completion check.
 func TestCharacterCreationTutorial_IsStepCompleted(t *testing.T) {
-	cct := NewCharacterCreationTutorial(800, 600)
+	cct := NewCharacterCreationTutorial()
 
 	if cct.IsStepCompleted("welcome_creation") {
 		t.Error("Step should not be completed initially")
@@ -571,7 +577,7 @@ func TestMarkCreationTutorialComplete_NilPlayer(t *testing.T) {
 
 // TestCharacterCreationTutorial_Integration tests the full tutorial workflow.
 func TestCharacterCreationTutorial_Integration(t *testing.T) {
-	cct := NewCharacterCreationTutorial(800, 600)
+	cct := NewCharacterCreationTutorial()
 
 	// Verify initial state
 	if !cct.IsActive() {
@@ -626,7 +632,7 @@ func TestCharacterCreationTutorial_Integration(t *testing.T) {
 // TestCharacterCreationTutorial_AllCharacterOptions tests that all character
 // creation steps are represented in the tutorial.
 func TestCharacterCreationTutorial_AllCharacterOptions(t *testing.T) {
-	cct := NewCharacterCreationTutorial(800, 600)
+	cct := NewCharacterCreationTutorial()
 
 	// Verify that all character creation steps have corresponding tutorial steps
 	requiredSteps := map[string]bool{

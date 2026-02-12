@@ -44,22 +44,16 @@ type CharacterCreationTutorial struct {
 	// Notification state
 	NotificationMsg string
 	NotificationTTL float64
-
-	// Screen dimensions for layout
-	screenWidth  int
-	screenHeight int
 }
 
 // NewCharacterCreationTutorial creates a new character creation tutorial.
 // The tutorial is enabled by default for first-time players.
-func NewCharacterCreationTutorial(screenWidth, screenHeight int) *CharacterCreationTutorial {
+func NewCharacterCreationTutorial() *CharacterCreationTutorial {
 	return &CharacterCreationTutorial{
 		Enabled:        true,
 		ShowUI:         true,
 		CurrentStepIdx: 0,
 		Steps:          createCharacterCreationTutorialSteps(),
-		screenWidth:    screenWidth,
-		screenHeight:   screenHeight,
 	}
 }
 
@@ -120,8 +114,8 @@ func (cct *CharacterCreationTutorial) Update(currentCreationStep int, deltaTime 
 		}
 	}
 
-	// Handle skip input (F1 key)
-	if inpututil.IsKeyJustPressed(ebiten.KeyF1) {
+	// Handle skip input (F3 key - F1 is help, F2 is save defaults)
+	if inpututil.IsKeyJustPressed(ebiten.KeyF3) {
 		cct.SkipTutorial()
 		return
 	}
@@ -134,10 +128,12 @@ func (cct *CharacterCreationTutorial) Update(currentCreationStep int, deltaTime 
 	// stepConfirmation (3) -> tutorial step 4 (confirmation)
 	targetTutorialStep := currentCreationStep + 1 // +1 because tutorial step 0 is welcome
 
-	// Auto-advance the welcome step when the user starts interacting
+	// Auto-advance the welcome step when the user starts interacting.
+	// Advance on any key press or text input so the name_input guidance
+	// appears as soon as the player begins typing.
 	if cct.CurrentStepIdx == 0 && currentCreationStep == 0 {
-		// Welcome step - advance on any key press
-		if inpututil.IsKeyJustPressed(ebiten.KeyEnter) || inpututil.IsKeyJustPressed(ebiten.KeySpace) {
+		chars := ebiten.AppendInputChars(nil)
+		if len(chars) > 0 || inpututil.IsKeyJustPressed(ebiten.KeyEnter) || inpututil.IsKeyJustPressed(ebiten.KeySpace) {
 			cct.advanceStep()
 		}
 		return
@@ -179,7 +175,12 @@ func (cct *CharacterCreationTutorial) advanceStep() {
 }
 
 // CompleteTutorial marks the tutorial as finished.
+// Any remaining steps are marked as completed.
 func (cct *CharacterCreationTutorial) CompleteTutorial() {
+	for i := range cct.Steps {
+		cct.Steps[i].Completed = true
+	}
+	cct.CurrentStepIdx = len(cct.Steps)
 	cct.Completed = true
 	cct.Enabled = false
 	cct.NotificationMsg = "Character creation tutorial complete! Enjoy your adventure!"
@@ -260,7 +261,7 @@ func (cct *CharacterCreationTutorial) drawTutorialOverlay(screen *ebiten.Image, 
 		color.RGBA{100, 255, 100, 255})
 
 	// Skip hint (right-aligned)
-	skipText := "F1: Skip Tutorial"
+	skipText := "F3: Skip Tutorial"
 	skipX := screenWidth - 30 - len(skipText)*basicFontCharWidth
 	text.Draw(screen, skipText, basicfont.Face7x13, skipX, bannerY+25,
 		color.RGBA{180, 180, 180, 200})

@@ -339,7 +339,7 @@ func buildGameInstance(screenWidth, screenHeight int, world *World, logEntry *lo
 		SettingsUI:         ui.settingsUI,
 		SettingsManager:    core.settingsManager,
 		CharacterCreation:         ui.characterCreation,
-		CharacterCreationTutorial: NewCharacterCreationTutorial(screenWidth, screenHeight),
+		CharacterCreationTutorial: NewCharacterCreationTutorial(),
 		LoadingUI:                 NewLoadingUI(screenWidth, screenHeight),
 		CameraSystem:       core.cameraSystem,
 		RenderSystem:       core.renderSystem,
@@ -556,14 +556,13 @@ func (g *EbitenGame) handleGenreSelection(genreID string) {
 	// Reset character creation UI for new game
 	g.CharacterCreation.Reset()
 
-	// Reset character creation tutorial for first-time players
-	// Check if player already completed the tutorial; if so, skip it
+	// Reset character creation tutorial for new game.
+	// In the new-game flow, no player entity exists yet (it is created
+	// after terrain-load completion), so we always reset the tutorial here.
+	// Returning players who load a saved game will have tutorial state
+	// restored via ImportState on their persisted player entity.
 	if g.CharacterCreationTutorial != nil {
-		if ShouldShowCreationTutorial(g.PlayerEntity) {
-			g.CharacterCreationTutorial.Reset()
-		} else {
-			g.CharacterCreationTutorial.SkipTutorial()
-		}
+		g.CharacterCreationTutorial.Reset()
 	}
 
 	// Set default name from world seed so user has a starting name
@@ -951,9 +950,12 @@ func (g *EbitenGame) updateMenuState() (handled bool) {
 
 // handleCharacterCreation processes character creation updates and transitions to gameplay.
 func (g *EbitenGame) handleCharacterCreation() error {
+	// Use the same fixed timestep as the rest of the game to keep tutorial timing consistent.
+	deltaTime := g.calculateDeltaTime()
+
 	// Update the character creation tutorial overlay alongside character creation
 	if g.CharacterCreationTutorial != nil && g.CharacterCreationTutorial.IsActive() {
-		g.CharacterCreationTutorial.Update(int(g.CharacterCreation.currentStep), 1.0/60.0)
+		g.CharacterCreationTutorial.Update(int(g.CharacterCreation.currentStep), deltaTime)
 	}
 
 	completed := g.CharacterCreation.Update()

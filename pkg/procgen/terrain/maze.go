@@ -32,7 +32,7 @@ func NewMazeGeneratorWithLogger(logger *logrus.Logger) *MazeGenerator {
 	}
 	return &MazeGenerator{
 		roomChance:    0.1, // 10% of dead ends become rooms
-		corridorWidth: 1,   // Single-tile corridors
+		corridorWidth: 2,   // Double-wide corridors to accommodate 64×64 player sprites
 		logger:        logEntry,
 	}
 }

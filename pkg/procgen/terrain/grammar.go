@@ -615,9 +615,9 @@ func (g *GraphGrammarGenerator) getRoomDimensions(roomType RoomType) (int, int) 
 		h := 5 + g.rng.Intn(4)
 		return w, h
 	case RoomCorridor:
-		// Narrow corridors (3-5 wide, 3-5 tall)
-		w := 3 + g.rng.Intn(3)
-		h := 3 + g.rng.Intn(3)
+		// Wide corridors (5-7 wide, 5-7 tall) to accommodate 64×64 player sprites
+		w := 5 + g.rng.Intn(3)
+		h := 5 + g.rng.Intn(3)
 		return w, h
 	case RoomBranch:
 		// Medium hub rooms (8-12 tiles)

@@ -33,7 +33,7 @@ func NewCityGeneratorWithLogger(logger *logrus.Logger) *CityGenerator {
 	}
 	return &CityGenerator{
 		blockSize:       12, // 12x12 tile blocks
-		streetWidth:     2,  // 2-tile wide streets
+		streetWidth:     3,  // 3-tile wide streets to accommodate 64×64 player sprites
 		buildingDensity: 0.7,
 		plazaDensity:    0.2,
 		logger:          logEntry,

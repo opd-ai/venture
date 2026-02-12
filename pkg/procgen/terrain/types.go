@@ -8,6 +8,11 @@ import "fmt"
 // TileType represents different types of terrain tiles.
 type TileType int
 
+// corridorHalfWidth is the number of tiles to carve on each side of the
+// corridor center line. A value of 1 produces a 3-tile-wide corridor,
+// which accommodates the 64×64 (2-tile) player sprites with clearance.
+const corridorHalfWidth = 1
+
 const (
 	// TileWall represents a solid wall that blocks movement
 	TileWall TileType = iota

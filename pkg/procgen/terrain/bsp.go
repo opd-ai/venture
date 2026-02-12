@@ -306,11 +306,6 @@ func (g *BSPGenerator) getRoom(node *bspNode) *Room {
 	return nil
 }
 
-// corridorHalfWidth is the number of tiles to carve on each side of the
-// corridor center line. A value of 1 produces a 3-tile-wide corridor,
-// which accommodates the 64×64 (2-tile) player sprites with clearance.
-const corridorHalfWidth = 1
-
 // createCorridor carves a corridor between two points.
 // Corridors are 3 tiles wide (center ± corridorHalfWidth) so that 64×64
 // player sprites can pass through comfortably.

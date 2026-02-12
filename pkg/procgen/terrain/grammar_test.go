@@ -312,7 +312,7 @@ func TestGraphGrammarGenerator_GetRoomDimensions(t *testing.T) {
 		{"puzzle", RoomPuzzle, 10, 14},
 		{"rest", RoomRest, 6, 10},
 		{"secret", RoomSecret, 5, 8},
-		{"corridor", RoomCorridor, 3, 5},
+		{"corridor", RoomCorridor, 5, 7},
 	}
 
 	for _, tt := range tests {

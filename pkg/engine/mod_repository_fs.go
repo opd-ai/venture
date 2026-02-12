@@ -155,41 +155,13 @@ func categoriesFromModType(modType modding.ModType) []string {
 
 // DownloadMod reads a mod file and returns its contents.
 func (r *FileSystemModRepository) DownloadMod(modID string, progressCallback func(downloaded, total int64)) ([]byte, error) {
-	// Find mod in cache or rescan
-	r.cacheMu.RLock()
-	var modFile string
-	if r.cache != nil {
-		for _, mod := range r.cache {
-			if mod.ID == modID {
-				modFile = filepath.Join(r.modsDir, modID+".json")
-				break
-			}
-		}
-	}
-	r.cacheMu.RUnlock()
-
-	if modFile == "" {
-		// Try direct file access
-		modFile = filepath.Join(r.modsDir, modID+".json")
-	}
-
-	data, err := os.ReadFile(modFile)
+	modFile := r.findModFile(modID)
+	data, err := r.readModFile(modFile)
 	if err != nil {
-		return nil, fmt.Errorf("failed to read mod file: %w", err)
+		return nil, err
 	}
 
-	if progressCallback != nil {
-		total := int64(len(data))
-		step := total / 10
-		if step < 1 {
-			step = 1
-		}
-		for i := int64(0); i <= total; i += step {
-			progressCallback(i, total)
-			time.Sleep(time.Millisecond)
-		}
-		progressCallback(total, total)
-	}
+	r.simulateProgressCallback(progressCallback, data)
 
 	r.logger.WithFields(logrus.Fields{
 		"mod_id": modID,
@@ -197,6 +169,48 @@ func (r *FileSystemModRepository) DownloadMod(modID string, progressCallback fun
 	}).Debug("Downloaded mod from filesystem")
 
 	return data, nil
+}
+
+// findModFile locates the mod file path from cache or constructs default path.
+func (r *FileSystemModRepository) findModFile(modID string) string {
+	r.cacheMu.RLock()
+	defer r.cacheMu.RUnlock()
+
+	if r.cache != nil {
+		for _, mod := range r.cache {
+			if mod.ID == modID {
+				return filepath.Join(r.modsDir, modID+".json")
+			}
+		}
+	}
+	return filepath.Join(r.modsDir, modID+".json")
+}
+
+// readModFile reads the mod file data from disk.
+func (r *FileSystemModRepository) readModFile(modFile string) ([]byte, error) {
+	data, err := os.ReadFile(modFile)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read mod file: %w", err)
+	}
+	return data, nil
+}
+
+// simulateProgressCallback calls the progress callback with incremental updates.
+func (r *FileSystemModRepository) simulateProgressCallback(progressCallback func(downloaded, total int64), data []byte) {
+	if progressCallback == nil {
+		return
+	}
+
+	total := int64(len(data))
+	step := total / 10
+	if step < 1 {
+		step = 1
+	}
+	for i := int64(0); i <= total; i += step {
+		progressCallback(i, total)
+		time.Sleep(time.Millisecond)
+	}
+	progressCallback(total, total)
 }
 
 // GetModDetails returns detailed information for a specific mod.

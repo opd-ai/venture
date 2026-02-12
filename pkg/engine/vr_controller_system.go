@@ -205,48 +205,58 @@ func (s *VRControllerSystem) GetControllerAdapter() VRControllerAdapter {
 
 // Update processes VR controller input for entities with VRControllerComponent.
 func (s *VRControllerSystem) Update(entities []*Entity, deltaTime float64) {
-	s.mu.RLock()
-	if !s.enabled {
-		s.mu.RUnlock()
+	controller := s.getEnabledController()
+	if controller == nil {
 		return
 	}
-	controller := s.controller
-	s.mu.RUnlock()
 
 	for _, entity := range entities {
-		comp, ok := entity.GetComponent("vr_controller")
-		if !ok || comp == nil {
-			continue
-		}
-
-		ctrl, ok := comp.(*VRControllerComponent)
-		if !ok {
-			continue
-		}
-
-		if !ctrl.IsEnabled() {
-			continue
-		}
-
-		// Update controller from adapter
-		if controller != nil {
-			hand := ctrl.GetHand()
-			if controller.IsConnected(hand) {
-				s.updateFromAdapter(ctrl, controller)
-			}
-		}
-
-		// Update haptic timer
-		ctrl.UpdateHaptic(deltaTime)
-
-		// Process input actions
-		s.processActions(ctrl)
-
-		// Send haptic feedback to adapter
-		if controller != nil {
-			s.sendHaptics(ctrl, controller)
-		}
+		s.updateVRControllerEntity(entity, controller, deltaTime)
 	}
+}
+
+// getEnabledController returns the controller if enabled, nil otherwise.
+func (s *VRControllerSystem) getEnabledController() VRControllerAdapter {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	if !s.enabled {
+		return nil
+	}
+	return s.controller
+}
+
+// updateVRControllerEntity updates a single VR controller entity.
+func (s *VRControllerSystem) updateVRControllerEntity(entity *Entity, controller VRControllerAdapter, deltaTime float64) {
+	ctrl, ok := s.getVRControllerComponent(entity)
+	if !ok || !ctrl.IsEnabled() {
+		return
+	}
+
+	if controller != nil && controller.IsConnected(ctrl.GetHand()) {
+		s.updateFromAdapter(ctrl, controller)
+	}
+
+	ctrl.UpdateHaptic(deltaTime)
+	s.processActions(ctrl)
+
+	if controller != nil {
+		s.sendHaptics(ctrl, controller)
+	}
+}
+
+// getVRControllerComponent retrieves and validates the VR controller component.
+func (s *VRControllerSystem) getVRControllerComponent(entity *Entity) (*VRControllerComponent, bool) {
+	comp, ok := entity.GetComponent("vr_controller")
+	if !ok || comp == nil {
+		return nil, false
+	}
+
+	ctrl, ok := comp.(*VRControllerComponent)
+	if !ok {
+		return nil, false
+	}
+
+	return ctrl, true
 }
 
 // updateFromAdapter updates the component from controller adapter data.

@@ -413,38 +413,56 @@ func (s *ShadowSystem) RenderAmbientOcclusion(screen *ebiten.Image) {
 
 	entities := s.world.GetEntities()
 	for _, entity := range entities {
-		// Get AO component
-		aoComp, hasAO := entity.GetComponent("ambient_occlusion")
-		if !hasAO {
-			continue
-		}
-		ao, ok := aoComp.(*AmbientOcclusionComponent)
-		if !ok || !ao.Enabled {
-			continue
-		}
-
-		// Get position
-		posComp, hasPos := entity.GetComponent("position")
-		if !hasPos {
-			continue
-		}
-		pos, ok := posComp.(*PositionComponent)
-		if !ok {
-			continue
-		}
-
-		// Viewport culling
-		if s.viewportSet {
-			if pos.X+ao.Radius < s.cameraX ||
-				pos.X-ao.Radius > s.cameraX+float64(s.viewportW) ||
-				pos.Y+ao.Radius < s.cameraY ||
-				pos.Y-ao.Radius > s.cameraY+float64(s.viewportH) {
-				continue
-			}
-		}
-
-		s.renderAOForEntity(screen, ao, pos)
+		s.renderEntityAO(screen, entity)
 	}
+}
+
+// renderEntityAO renders ambient occlusion for an entity if applicable.
+func (s *ShadowSystem) renderEntityAO(screen *ebiten.Image, entity *Entity) {
+	ao, pos, ok := s.getAOComponents(entity)
+	if !ok {
+		return
+	}
+
+	if s.isAOOutsideViewport(pos, ao) {
+		return
+	}
+
+	s.renderAOForEntity(screen, ao, pos)
+}
+
+// getAOComponents retrieves and validates AO and position components.
+func (s *ShadowSystem) getAOComponents(entity *Entity) (*AmbientOcclusionComponent, *PositionComponent, bool) {
+	aoComp, hasAO := entity.GetComponent("ambient_occlusion")
+	if !hasAO {
+		return nil, nil, false
+	}
+	ao, ok := aoComp.(*AmbientOcclusionComponent)
+	if !ok || !ao.Enabled {
+		return nil, nil, false
+	}
+
+	posComp, hasPos := entity.GetComponent("position")
+	if !hasPos {
+		return nil, nil, false
+	}
+	pos, ok := posComp.(*PositionComponent)
+	if !ok {
+		return nil, nil, false
+	}
+
+	return ao, pos, true
+}
+
+// isAOOutsideViewport checks if an AO entity is outside the viewport bounds.
+func (s *ShadowSystem) isAOOutsideViewport(pos *PositionComponent, ao *AmbientOcclusionComponent) bool {
+	if !s.viewportSet {
+		return false
+	}
+	return pos.X+ao.Radius < s.cameraX ||
+		pos.X-ao.Radius > s.cameraX+float64(s.viewportW) ||
+		pos.Y+ao.Radius < s.cameraY ||
+		pos.Y-ao.Radius > s.cameraY+float64(s.viewportH)
 }
 
 // renderAOForEntity renders ambient occlusion for a single entity.

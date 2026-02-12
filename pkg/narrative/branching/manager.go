@@ -264,41 +264,52 @@ func (m *Manager) CheckConsequences(playerID, arcID string) []string {
 		return nil
 	}
 
-	triggered := []string{}
-
+	var triggered []string
 	for consequenceID, consequence := range m.graph.Consequences {
-		// Skip already triggered - safely handle both []string and []interface{} from JSON
-		alreadyTriggered := false
-		triggeredList := toStringSlice(progress.Variables["triggered_consequences"])
-		for _, id := range triggeredList {
-			if id == consequenceID {
-				alreadyTriggered = true
-				break
-			}
-		}
-		if alreadyTriggered {
+		if m.isConsequenceAlreadyTriggered(progress, consequenceID) {
 			continue
 		}
 
-		// Check trigger conditions
-		if m.evaluateConditions(progress, consequence.TriggerConditions) {
-			// Apply effects
-			for key, value := range consequence.Effects {
-				progress.Variables[key] = value
-			}
-
+		if m.shouldTriggerConsequence(progress, consequence) {
+			m.applyConsequenceEffects(progress, consequence)
 			triggered = append(triggered, consequenceID)
-
-			// Track triggered consequence - convert to []string if needed
-			existingList := toStringSlice(progress.Variables["triggered_consequences"])
-			if existingList == nil {
-				existingList = []string{}
-			}
-			progress.Variables["triggered_consequences"] = append(existingList, consequenceID)
+			m.trackTriggeredConsequence(progress, consequenceID)
 		}
 	}
 
 	return triggered
+}
+
+// isConsequenceAlreadyTriggered checks if a consequence was already triggered for this progress.
+func (m *Manager) isConsequenceAlreadyTriggered(progress *PlayerProgress, consequenceID string) bool {
+	triggeredList := toStringSlice(progress.Variables["triggered_consequences"])
+	for _, id := range triggeredList {
+		if id == consequenceID {
+			return true
+		}
+	}
+	return false
+}
+
+// shouldTriggerConsequence evaluates if consequence conditions are met.
+func (m *Manager) shouldTriggerConsequence(progress *PlayerProgress, consequence *Consequence) bool {
+	return m.evaluateConditions(progress, consequence.TriggerConditions)
+}
+
+// applyConsequenceEffects applies the consequence effects to player progress.
+func (m *Manager) applyConsequenceEffects(progress *PlayerProgress, consequence *Consequence) {
+	for key, value := range consequence.Effects {
+		progress.Variables[key] = value
+	}
+}
+
+// trackTriggeredConsequence records that a consequence was triggered.
+func (m *Manager) trackTriggeredConsequence(progress *PlayerProgress, consequenceID string) {
+	existingList := toStringSlice(progress.Variables["triggered_consequences"])
+	if existingList == nil {
+		existingList = []string{}
+	}
+	progress.Variables["triggered_consequences"] = append(existingList, consequenceID)
 }
 
 // GetArc returns a story arc by ID

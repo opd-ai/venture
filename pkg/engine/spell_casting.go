@@ -611,6 +611,13 @@ func (s *SpellCastingSystem) logDamageApplied(caster, target *Entity, spell *mag
 
 // applySpellEffectsAndFeedback applies elemental effects, visuals, and audio.
 func (s *SpellCastingSystem) applySpellEffectsAndFeedback(target *Entity, spell *magic.Spell) {
+	s.logSpellApplication(target, spell)
+	s.applyTargetSpellEffects(target, spell)
+	s.createSpellFeedback(target, spell)
+}
+
+// logSpellApplication logs the spell application event.
+func (s *SpellCastingSystem) logSpellApplication(target *Entity, spell *magic.Spell) {
 	if s.logger != nil {
 		s.logger.WithFields(logrus.Fields{
 			"target_id":  target.ID,
@@ -618,28 +625,49 @@ func (s *SpellCastingSystem) applySpellEffectsAndFeedback(target *Entity, spell 
 			"element":    spell.Element.String(),
 		}).Debug("Applying spell effects and feedback")
 	}
+}
 
+// applyTargetSpellEffects applies the elemental effects of the spell to the target.
+func (s *SpellCastingSystem) applyTargetSpellEffects(target *Entity, spell *magic.Spell) {
 	if s.statusEffectSys != nil {
 		s.applyElementalEffect(target, spell)
 	}
+}
 
-	if s.particleSys != nil {
-		targetPos, hasPos := target.GetComponent("position")
-		if hasPos {
-			if pos, ok := targetPos.(*PositionComponent); ok {
-				s.spawnElementalHitEffect(pos.X, pos.Y, spell.Element, target.ID)
-			}
-		}
+// createSpellFeedback creates visual and audio feedback for the spell.
+func (s *SpellCastingSystem) createSpellFeedback(target *Entity, spell *magic.Spell) {
+	s.createVisualFeedback(target, spell)
+	s.createAudioFeedback(target)
+}
+
+// createVisualFeedback spawns visual particle effects for the spell hit.
+func (s *SpellCastingSystem) createVisualFeedback(target *Entity, spell *magic.Spell) {
+	if s.particleSys == nil {
+		return
 	}
 
-	if s.audioMgr != nil {
-		if err := s.audioMgr.PlaySFX("impact", int64(target.ID)); err != nil {
-			if s.logger != nil {
-				s.logger.WithFields(logrus.Fields{
-					"target_id": target.ID,
-					"error":     err.Error(),
-				}).Debug("Failed to play impact sound")
-			}
+	targetPos, hasPos := target.GetComponent("position")
+	if !hasPos {
+		return
+	}
+
+	if pos, ok := targetPos.(*PositionComponent); ok {
+		s.spawnElementalHitEffect(pos.X, pos.Y, spell.Element, target.ID)
+	}
+}
+
+// createAudioFeedback plays impact sound effect.
+func (s *SpellCastingSystem) createAudioFeedback(target *Entity) {
+	if s.audioMgr == nil {
+		return
+	}
+
+	if err := s.audioMgr.PlaySFX("impact", int64(target.ID)); err != nil {
+		if s.logger != nil {
+			s.logger.WithFields(logrus.Fields{
+				"target_id": target.ID,
+				"error":     err.Error(),
+			}).Debug("Failed to play impact sound")
 		}
 	}
 }

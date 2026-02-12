@@ -501,38 +501,35 @@ func (cc *EbitenCharacterCreation) GetDefaults() CharacterCreationDefaults {
 // Update handles input for character creation (keyboard/mouse navigation)
 // Returns true when character creation is complete
 func (cc *EbitenCharacterCreation) Update() bool {
-	// Reset step change flag at start of frame
 	cc.stepChangedThisFrame = false
-
-	// Calculate panel dimensions first (needed for touch hit detection)
-	// This must be done before processing input
 	cc.updatePanelDimensions()
 
-	// Update touch handler and buttons
+	cc.updateTouchControls()
+	cc.processCurrentStep()
+
+	return cc.confirmed
+}
+
+// updateTouchControls updates all touch-based UI controls.
+func (cc *EbitenCharacterCreation) updateTouchControls() {
 	if cc.touchHandler != nil {
 		cc.touchHandler.Update()
 	}
 
-	// Update touch button positions based on panel layout
 	cc.updateTouchButtonPositions()
 
-	// Update touch buttons (conditionally based on current step)
-	// Next button is always visible
 	if cc.nextButton != nil {
 		cc.nextButton.Update()
 	}
 
-	// Back button only on steps after nameInput
 	if cc.backButton != nil && cc.currentStep != stepNameInput {
 		cc.backButton.Update()
 	}
 
-	// Skip button only on portrait selection step
 	if cc.skipButton != nil && cc.currentStep == stepPortraitSelection {
 		cc.skipButton.Update()
 	}
 
-	// Update preset name buttons (only in name input step)
 	if cc.currentStep == stepNameInput {
 		for _, btn := range cc.presetNameButtons {
 			if btn != nil {
@@ -540,7 +537,10 @@ func (cc *EbitenCharacterCreation) Update() bool {
 			}
 		}
 	}
+}
 
+// processCurrentStep processes the current character creation step.
+func (cc *EbitenCharacterCreation) processCurrentStep() {
 	switch cc.currentStep {
 	case stepNameInput:
 		cc.updateNameInput()
@@ -551,8 +551,6 @@ func (cc *EbitenCharacterCreation) Update() bool {
 	case stepConfirmation:
 		cc.updateConfirmation()
 	}
-
-	return cc.confirmed
 }
 
 // updateTouchButtonPositions positions touch buttons based on panel layout

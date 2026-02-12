@@ -284,22 +284,28 @@ func (g *Generator) generateRamp(img *image.RGBA, pal *palette.Palette, rng *ran
 // generatePit creates a pit/chasm tile.
 // Phase 11.1: Pits appear as dark voids with depth.
 func (g *Generator) generatePit(img *image.RGBA, pal *palette.Palette, rng *rand.Rand, config Config) {
-	// Use dark background color
 	pitColor := g.darkenColor(pal.Background, 0.6)
 	bounds := img.Bounds()
 
-	// Fill with dark base
+	g.fillPitBackground(img, bounds, pitColor)
+	g.applyPitVignette(img, bounds, pitColor)
+	g.addPitEdgeHighlights(img, bounds, pitColor)
+}
+
+// fillPitBackground fills the pit area with a dark base color.
+func (g *Generator) fillPitBackground(img *image.RGBA, bounds image.Rectangle, pitColor color.Color) {
 	for y := bounds.Min.Y; y < bounds.Max.Y; y++ {
 		for x := bounds.Min.X; x < bounds.Max.X; x++ {
 			img.Set(x, y, pitColor)
 		}
 	}
+}
 
-	// Add vignette effect to center (darker in middle)
+// applyPitVignette applies a vignette effect to create depth (darker in center).
+func (g *Generator) applyPitVignette(img *image.RGBA, bounds image.Rectangle, pitColor color.Color) {
 	centerX := bounds.Min.X + bounds.Dx()/2
 	centerY := bounds.Min.Y + bounds.Dy()/2
 	maxDist := math.Sqrt(float64(bounds.Dx()*bounds.Dx()+bounds.Dy()*bounds.Dy())) / 2.0
-
 	r, gr, b, a := pitColor.RGBA()
 
 	for y := bounds.Min.Y; y < bounds.Max.Y; y++ {
@@ -307,12 +313,7 @@ func (g *Generator) generatePit(img *image.RGBA, pal *palette.Palette, rng *rand
 			dx := float64(x - centerX)
 			dy := float64(y - centerY)
 			dist := math.Sqrt(dx*dx + dy*dy)
-
-			// Darken based on distance from center
-			darkFactor := 1.0 - (dist / maxDist * 0.4)
-			if darkFactor < 0.6 {
-				darkFactor = 0.6
-			}
+			darkFactor := g.calculateVignetteFactor(dist, maxDist)
 
 			varR := uint8(float64(r>>8) * darkFactor)
 			varG := uint8(float64(gr>>8) * darkFactor)
@@ -321,17 +322,26 @@ func (g *Generator) generatePit(img *image.RGBA, pal *palette.Palette, rng *rand
 			img.Set(x, y, color.RGBA{R: varR, G: varG, B: varB, A: uint8(a >> 8)})
 		}
 	}
+}
 
-	// Add subtle edge highlights to show depth
+// calculateVignetteFactor computes the darkening factor for vignette effect.
+func (g *Generator) calculateVignetteFactor(dist, maxDist float64) float64 {
+	darkFactor := 1.0 - (dist / maxDist * 0.4)
+	if darkFactor < 0.6 {
+		darkFactor = 0.6
+	}
+	return darkFactor
+}
+
+// addPitEdgeHighlights adds subtle edge highlights to show pit depth.
+func (g *Generator) addPitEdgeHighlights(img *image.RGBA, bounds image.Rectangle, pitColor color.Color) {
 	edgeColor := g.lightenColor(pitColor, 0.2)
 	thickness := 2
 
 	for t := 0; t < thickness; t++ {
-		// Top edge
 		for x := bounds.Min.X; x < bounds.Max.X; x++ {
 			img.Set(x, bounds.Min.Y+t, edgeColor)
 		}
-		// Left edge
 		for y := bounds.Min.Y; y < bounds.Max.Y; y++ {
 			img.Set(bounds.Min.X+t, y, edgeColor)
 		}

@@ -213,42 +213,61 @@ func (s *RaidSystem) updateBossMechanics(deltaTime float64) {
 	entities := s.world.GetEntitiesWith("raid_boss", "health")
 
 	for _, entity := range entities {
-		bossCompRaw, ok := entity.GetComponent("raid_boss")
-		if !ok {
+		s.updateBossEntity(entity, deltaTime)
+	}
+}
+
+// updateBossEntity updates mechanics for a single boss entity.
+func (s *RaidSystem) updateBossEntity(entity *Entity, deltaTime float64) {
+	bossComp, healthComp, ok := s.getBossComponents(entity)
+	if !ok {
+		return
+	}
+
+	s.updateMechanicTimers(bossComp, deltaTime)
+	s.executeReadyMechanics(entity, bossComp, healthComp)
+}
+
+// getBossComponents retrieves boss and health components from an entity.
+func (s *RaidSystem) getBossComponents(entity *Entity) (*RaidBossComponent, *HealthComponent, bool) {
+	bossCompRaw, ok := entity.GetComponent("raid_boss")
+	if !ok {
+		return nil, nil, false
+	}
+	bossComp := bossCompRaw.(*RaidBossComponent)
+
+	healthCompRaw, ok := entity.GetComponent("health")
+	if !ok {
+		return nil, nil, false
+	}
+	healthComp := healthCompRaw.(*HealthComponent)
+
+	return bossComp, healthComp, true
+}
+
+// updateMechanicTimers decrements all active mechanic timers.
+func (s *RaidSystem) updateMechanicTimers(bossComp *RaidBossComponent, deltaTime float64) {
+	for mechanicID, timer := range bossComp.MechanicTimer {
+		if timer > 0 {
+			bossComp.MechanicTimer[mechanicID] = timer - deltaTime
+		}
+	}
+}
+
+// executeReadyMechanics executes mechanics that are off cooldown.
+func (s *RaidSystem) executeReadyMechanics(entity *Entity, bossComp *RaidBossComponent, healthComp *HealthComponent) {
+	for i, mechanic := range bossComp.Mechanics {
+		mechanicID := fmt.Sprintf("mechanic_%d", i)
+		timer, exists := bossComp.MechanicTimer[mechanicID]
+
+		if !exists {
+			bossComp.MechanicTimer[mechanicID] = 0
 			continue
 		}
-		bossComp := bossCompRaw.(*RaidBossComponent)
 
-		healthCompRaw, ok := entity.GetComponent("health")
-		if !ok {
-			continue
-		}
-		healthComp := healthCompRaw.(*HealthComponent)
-
-		// Update mechanic timers
-		for mechanicID, timer := range bossComp.MechanicTimer {
-			if timer > 0 {
-				bossComp.MechanicTimer[mechanicID] = timer - deltaTime
-			}
-		}
-
-		// Execute ready mechanics
-		for i, mechanic := range bossComp.Mechanics {
-			mechanicID := fmt.Sprintf("mechanic_%d", i)
-			timer, exists := bossComp.MechanicTimer[mechanicID]
-
-			if !exists {
-				// Initialize timer
-				bossComp.MechanicTimer[mechanicID] = 0
-				continue
-			}
-
-			if timer <= 0 && healthComp.Current > 0 {
-				// Execute mechanic
-				s.executeBossMechanic(entity, &mechanic)
-				// Reset cooldown
-				bossComp.MechanicTimer[mechanicID] = mechanic.Cooldown.Seconds()
-			}
+		if timer <= 0 && healthComp.Current > 0 {
+			s.executeBossMechanic(entity, &mechanic)
+			bossComp.MechanicTimer[mechanicID] = mechanic.Cooldown.Seconds()
 		}
 	}
 }
@@ -286,27 +305,14 @@ func (s *RaidSystem) updateBossPhases() {
 	entities := s.world.GetEntitiesWith("raid_boss", "health")
 
 	for _, entity := range entities {
-		bossComp, healthComp := s.getBossComponents(entity)
-		if bossComp == nil || healthComp == nil {
+		bossComp, healthComp, ok := s.getBossComponents(entity)
+		if !ok {
 			continue
 		}
 
 		healthPercent := healthComp.Current / healthComp.Max
 		s.checkPhaseTransitions(entity, bossComp, healthPercent)
 	}
-}
-
-// getBossComponents retrieves boss and health components from entity.
-func (s *RaidSystem) getBossComponents(entity *Entity) (*RaidBossComponent, *HealthComponent) {
-	bossCompRaw, ok := entity.GetComponent("raid_boss")
-	if !ok {
-		return nil, nil
-	}
-	healthCompRaw, ok := entity.GetComponent("health")
-	if !ok {
-		return nil, nil
-	}
-	return bossCompRaw.(*RaidBossComponent), healthCompRaw.(*HealthComponent)
 }
 
 // checkPhaseTransitions triggers boss phase transitions based on health thresholds.

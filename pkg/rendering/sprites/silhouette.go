@@ -291,10 +291,20 @@ func ValidateContrast(sprite *ebiten.Image, minLuminanceDiff float64) bool {
 		return true
 	}
 
+	luminances := sampleSpriteLuminance(sprite)
+	if len(luminances) < 2 {
+		return true
+	}
+
+	minLum, maxLum := findLuminanceRange(luminances)
+	diff := maxLum - minLum
+	return diff >= minLuminanceDiff
+}
+
+// sampleSpriteLuminance samples luminance values across the sprite.
+func sampleSpriteLuminance(sprite *ebiten.Image) []float64 {
 	bounds := sprite.Bounds()
 	width, height := bounds.Dx(), bounds.Dy()
-
-	// Sample luminance values across the sprite
 	var luminances []float64
 
 	for y := 0; y < height; y++ {
@@ -304,17 +314,21 @@ func ValidateContrast(sprite *ebiten.Image, minLuminanceDiff float64) bool {
 				continue
 			}
 
-			// Calculate luminance (perceived brightness)
-			lum := (0.299*float64(r) + 0.587*float64(g) + 0.114*float64(b)) / 65535.0
+			lum := calculateLuminance(r, g, b)
 			luminances = append(luminances, lum)
 		}
 	}
 
-	if len(luminances) < 2 {
-		return true
-	}
+	return luminances
+}
 
-	// Find min and max luminance
+// calculateLuminance computes perceived brightness from RGB values.
+func calculateLuminance(r, g, b uint32) float64 {
+	return (0.299*float64(r) + 0.587*float64(g) + 0.114*float64(b)) / 65535.0
+}
+
+// findLuminanceRange finds the minimum and maximum luminance values.
+func findLuminanceRange(luminances []float64) (float64, float64) {
 	minLum, maxLum := luminances[0], luminances[0]
 	for _, lum := range luminances {
 		if lum < minLum {
@@ -324,10 +338,7 @@ func ValidateContrast(sprite *ebiten.Image, minLuminanceDiff float64) bool {
 			maxLum = lum
 		}
 	}
-
-	// Check if difference meets threshold
-	diff := maxLum - minLum
-	return diff >= minLuminanceDiff
+	return minLum, maxLum
 }
 
 // TestOnBackground composites a sprite onto a background color and returns the result.

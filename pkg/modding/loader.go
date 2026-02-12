@@ -207,50 +207,55 @@ func (l *Loader) validateLoadResults(mods []*Mod, loadErrors []error) ([]*Mod, e
 
 // SaveToFile saves a mod to a JSON file.
 func (l *Loader) SaveToFile(mod *Mod, path string) error {
-	// Validate mod
 	if err := mod.Validate(); err != nil {
 		return &LoadError{ModID: mod.ID, Err: err}
 	}
 
-	// Validate path is within mods directory if sandboxing enabled
-	if l.config.EnableSandbox {
-		sandbox := NewSandboxWithConfig(SandboxConfig{
-			ModsDirectory: l.config.ModsDirectory,
-		})
-		if err := sandbox.ValidatePath(path); err != nil {
-			return &LoadError{
-				ModID: mod.ID,
-				Err:   err,
-			}
-		}
-
-		// Validate mod content against sandbox rules
-		result := sandbox.ValidateMod(mod)
-		if !result.Valid {
-			errMsgs := make([]string, 0, len(result.Errors))
-			for _, e := range result.Errors {
-				errMsgs = append(errMsgs, e.Error())
-			}
-			errMsg := strings.Join(errMsgs, "; ")
-			if len(errMsgs) > 0 {
-				errMsg += "; "
-			}
-			return &LoadError{ModID: mod.ID, Err: fmt.Errorf("sandbox validation failed: %s", errMsg)}
-		}
+	if err := l.validateSavePermissions(mod, path); err != nil {
+		return err
 	}
 
-	// Marshal to JSON with indentation
-	data, err := json.MarshalIndent(mod, "", "  ")
+	data, err := l.marshalModToJSON(mod)
 	if err != nil {
-		return &LoadError{ModID: mod.ID, Err: fmt.Errorf("failed to marshal JSON: %w", err)}
+		return err
 	}
 
-	// Write file
 	if err := os.WriteFile(path, data, 0o644); err != nil {
 		return &LoadError{ModID: mod.ID, Err: err}
 	}
 
 	return nil
+}
+
+// validateSavePermissions validates the save path and mod content against sandbox rules.
+func (l *Loader) validateSavePermissions(mod *Mod, path string) error {
+	if !l.config.EnableSandbox {
+		return nil
+	}
+
+	sandbox := NewSandboxWithConfig(SandboxConfig{
+		ModsDirectory: l.config.ModsDirectory,
+	})
+
+	if err := sandbox.ValidatePath(path); err != nil {
+		return &LoadError{ModID: mod.ID, Err: err}
+	}
+
+	result := sandbox.ValidateMod(mod)
+	if !result.Valid {
+		errMsg := buildSandboxErrorMessages(result.Errors)
+		return &LoadError{ModID: mod.ID, Err: fmt.Errorf("sandbox validation failed: %s", errMsg)}
+	}
+	return nil
+}
+
+// marshalModToJSON converts a mod to formatted JSON bytes.
+func (l *Loader) marshalModToJSON(mod *Mod) ([]byte, error) {
+	data, err := json.MarshalIndent(mod, "", "  ")
+	if err != nil {
+		return nil, &LoadError{ModID: mod.ID, Err: fmt.Errorf("failed to marshal JSON: %w", err)}
+	}
+	return data, nil
 }
 
 // GetModPath returns the file path for a mod by ID.

@@ -201,6 +201,7 @@ func SaveLoadLogger(logger *logrus.Logger, operation, path string) *logrus.Entry
 
 // TestUtilityLogger creates a logger configured for CLI test utilities.
 // Uses colored text format for better readability in terminal.
+// The utilityName is added as a "utility" field to all log entries via a hook.
 func TestUtilityLogger(utilityName string) *logrus.Logger {
 	config := Config{
 		Level:       InfoLevel,
@@ -216,6 +217,24 @@ func TestUtilityLogger(utilityName string) *logrus.Logger {
 
 	logger := NewLogger(config)
 
-	// Add utility name as field for all logs
+	// Add utility name as field for all logs via hook
+	logger.AddHook(&utilityNameHook{utilityName: utilityName})
+
 	return logger
+}
+
+// utilityNameHook is a logrus hook that adds the utility name field to all log entries.
+type utilityNameHook struct {
+	utilityName string
+}
+
+// Levels returns all log levels for which the hook should fire.
+func (h *utilityNameHook) Levels() []logrus.Level {
+	return logrus.AllLevels
+}
+
+// Fire adds the utility name field to the log entry.
+func (h *utilityNameHook) Fire(entry *logrus.Entry) error {
+	entry.Data["utility"] = h.utilityName
+	return nil
 }

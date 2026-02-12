@@ -1,6 +1,7 @@
 # Logging Package Audit Report
 
 **Audit Date:** 2026-02-10  
+**Updated:** 2026-02-12 (TestUtilityLogger parameter fix)
 **Package:** `pkg/logging`  
 **Auditor:** Automated Code Audit  
 **Go Version:** 1.24.5+
@@ -10,56 +11,69 @@
 | Category | Count |
 |----------|-------|
 | CRITICAL BUG | 0 |
-| FUNCTIONAL MISMATCH | 1 |
+| FUNCTIONAL MISMATCH | ~~1~~ 0 ✅ |
 | MISSING FEATURE | 1 |
 | EDGE CASE BUG | 1 |
 | PERFORMANCE ISSUE | 0 |
 
-**Overall Assessment:** The logging package is well-implemented with 100% test coverage. Three issues were identified: one functional mismatch where a parameter is documented as used but is ignored, one missing feature where several exported functions lack README documentation, and one edge case bug where nil logger parameters cause panics.
+**Overall Assessment:** The logging package is well-implemented with 100% test coverage. ~~Three~~ Two issues ~~were~~ remain identified: ~~one functional mismatch where a parameter is documented as used but is ignored (now fixed),~~ one missing feature where several exported functions lack README documentation, and one edge case bug where nil logger parameters cause panics.
 
 ---
 
 ## DETAILED FINDINGS
 
 ~~~~
-### FUNCTIONAL MISMATCH: TestUtilityLogger Parameter Ignored
+### ~~FUNCTIONAL MISMATCH: TestUtilityLogger Parameter Ignored~~ ✅ FIXED 2026-02-12
 
-**File:** logger.go:204-221  
-**Severity:** Medium  
-**Description:** The `TestUtilityLogger` function accepts a `utilityName` parameter and includes a comment "Add utility name as field for all logs" (line 219), but the parameter is never used. The function returns a bare `*logrus.Logger` without any fields set, making the utility name context unavailable in log output.
+**File:** logger.go:204-239  
+**Severity:** ~~Medium~~ **RESOLVED**
+**Status:** ✅ COMPLETE
 
-**Expected Behavior:** Based on the function's documentation comment and parameter name, the utility name should be added as a field to all log entries, similar to how `SystemLogger` adds a "system" field.
+**Original Issue:** The `TestUtilityLogger` function accepted a `utilityName` parameter but the parameter was never used. The function returned a bare `*logrus.Logger` without any fields set.
 
-**Actual Behavior:** The `utilityName` parameter is completely ignored. The function creates a logger and returns it without adding any identifying context.
+**Resolution Applied:**
+- Added `utilityNameHook` struct implementing `logrus.Hook` interface
+- Hook adds "utility" field to all log entries fired through the logger
+- Maintains backward compatibility by returning `*logrus.Logger` (not `*logrus.Entry`)
+- Added test `TestTestUtilityLogger_AddsUtilityField` verifying the utility field appears in logs
+- All existing tests continue to pass
+- Coverage maintained at 100%
 
-**Impact:** 
-- Logs from test utilities lack identifying context, making it harder to correlate log entries with their source
-- Developers may expect utility identification in logs but not receive it
-- Inconsistent behavior compared to other context logger functions like `SystemLogger`
+**Verification:**
+```go
+// Before (bug):
+logger := TestUtilityLogger("my-utility")
+logger.Info("test") // No "utility" field in output
 
-**Reproduction:** Call `TestUtilityLogger("my-utility")` and observe that no "utility" field appears in log output.
+// After (fixed):
+logger := TestUtilityLogger("my-utility")
+logger.Info("test") // Output includes "utility":"my-utility"
+```
 
 **Code Reference:**
 ```go
-// TestUtilityLogger creates a logger configured for CLI test utilities.
-// Uses colored text format for better readability in terminal.
+// logger.go:204-239
 func TestUtilityLogger(utilityName string) *logrus.Logger {
-    config := Config{
-        Level:       InfoLevel,
-        Format:      TextFormat,
-        AddCaller:   false, // Cleaner output for CLI tools
-        EnableColor: true,  // Color for terminal readability
-    }
-
-    // Override from environment if set
-    if level := os.Getenv("LOG_LEVEL"); level != "" {
-        config.Level = LogLevel(strings.ToLower(level))
-    }
-
+    // ... config setup ...
     logger := NewLogger(config)
+    
+    // Add utility name as field for all logs via hook
+    logger.AddHook(&utilityNameHook{utilityName: utilityName})
+    
+    return logger
+}
 
-    // Add utility name as field for all logs
-    return logger  // <-- utilityName never used
+type utilityNameHook struct {
+    utilityName string
+}
+
+func (h *utilityNameHook) Levels() []logrus.Level {
+    return logrus.AllLevels
+}
+
+func (h *utilityNameHook) Fire(entry *logrus.Entry) error {
+    entry.Data["utility"] = h.utilityName
+    return nil
 }
 ```
 ~~~~

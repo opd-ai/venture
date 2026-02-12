@@ -372,6 +372,26 @@ func TestTestUtilityLogger(t *testing.T) {
 	}
 }
 
+func TestTestUtilityLogger_AddsUtilityField(t *testing.T) {
+	// Save and restore LOG_LEVEL env to avoid test interference
+	originalLevel := os.Getenv("LOG_LEVEL")
+	defer os.Setenv("LOG_LEVEL", originalLevel)
+	os.Unsetenv("LOG_LEVEL")
+
+	// Capture log output
+	var buf bytes.Buffer
+	logger := TestUtilityLogger("my_test_util")
+	logger.SetOutput(&buf)
+	logger.SetFormatter(&logrus.JSONFormatter{})
+
+	logger.Info("test message")
+
+	output := buf.String()
+	if !strings.Contains(output, "\"utility\":\"my_test_util\"") {
+		t.Errorf("expected log output to contain utility field 'my_test_util', got: %s", output)
+	}
+}
+
 func TestTestUtilityLogger_WithEnvOverride(t *testing.T) {
 	// Test that LOG_LEVEL environment variable overrides the default
 	originalLevel := os.Getenv("LOG_LEVEL")

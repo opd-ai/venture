@@ -1385,6 +1385,7 @@ func spawnProceduralLoot(
 // - Dropping inventory and equipped items with scatter physics
 // - Generating procedural loot drops for non-player entities
 // - Playing death sound effects
+// - Spawning death particle effects
 // - Tracking quest objectives
 func createDeathCallback(
 	game *engine.EbitenGame,
@@ -1394,6 +1395,7 @@ func createDeathCallback(
 	recipeGen *recipe.RecipeGenerator,
 	magicGen *magic.SpellGenerator,
 	skillGen *skills.SkillTreeGenerator,
+	deathParticleSystem *engine.DeathParticleSystem,
 	seed int64,
 	genreID string,
 	logger *logrus.Logger,
@@ -1415,6 +1417,11 @@ func createDeathCallback(
 		gameTime := float64(time.Now().Unix()) // Use game time if available
 		deadComp := engine.NewDeadComponent(gameTime)
 		enemy.AddComponent(deadComp)
+
+		// Spawn death particle effects for visual feedback
+		if deathParticleSystem != nil {
+			deathParticleSystem.OnDeath(enemy)
+		}
 
 		// Priority 1.4: Drop all items from entity's inventory
 		dropInventoryItems(game, enemy, pos, deadComp)

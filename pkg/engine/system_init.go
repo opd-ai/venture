@@ -70,6 +70,7 @@ type SystemInitResult struct {
 	LevelUpParticleSystem          *LevelUpParticleSystem
 	ItemPickupParticleSystem       *ItemPickupParticleSystem
 	SpellEffectParticleSystem      *SpellEffectParticleSystem
+	DeathParticleSystem            *DeathParticleSystem
 	CompanionLevelUpParticleSystem *CompanionLevelUpParticleSystem
 	ItemPickupSystem               *ItemPickupSystem
 	ProgressionSystem              *ProgressionSystem
@@ -354,6 +355,14 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 	spellEffectParticleSystem.SetGenre(config.GenreID)
 	result.SpellEffectParticleSystem = spellEffectParticleSystem
 	game.World.AddSystem(spellEffectParticleSystem)
+
+	// 36f2. DeathParticleSystem - visual feedback for entity deaths
+	// Spawns genre-aware particles (smoke, debris, blood) when entities die
+	deathParticleSystem := NewDeathParticleSystem(game.World, config.Seed+5600)
+	deathParticleSystem.SetParticleSystem(result.ParticleSystem)
+	deathParticleSystem.SetGenre(config.GenreID)
+	result.DeathParticleSystem = deathParticleSystem
+	game.World.AddSystem(deathParticleSystem)
 
 	// 36g. WeatherGroundEffectSystem - visual feedback for weather ground impacts
 	// Spawns rain splashes, snow puffs, dust clouds when weather particles hit ground

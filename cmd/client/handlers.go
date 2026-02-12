@@ -195,6 +195,7 @@ type systemsContainer struct {
 	criticalHitParticleSystem  *engine.CriticalHitParticleSystem  // Connects combat crits to particle effects
 	levelUpParticleSystem      *engine.LevelUpParticleSystem      // Connects level-ups to particle effects
 	itemPickupParticleSystem   *engine.ItemPickupParticleSystem   // Connects item pickups to particle effects
+	deathParticleSystem        *engine.DeathParticleSystem        // Connects entity deaths to particle effects
 	spellEffectParticleSystem  *engine.SpellEffectParticleSystem  // Connects spell effects to particle effects
 	lifetimeSystem             *engine.LifetimeSystem
 	puzzleSystem               *engine.PuzzleSystem
@@ -883,6 +884,11 @@ func initializeEnvironmentalSystems(game *engine.EbitenGame, sys *systemsContain
 	sys.spellEffectParticleSystem = engine.NewSpellEffectParticleSystem(game.World, *seed+5500)
 	sys.spellEffectParticleSystem.SetParticleSystem(sys.particleSystem)
 	sys.spellEffectParticleSystem.SetGenre(*genreID)
+
+	// DeathParticleSystem - visual feedback for entity deaths
+	sys.deathParticleSystem = engine.NewDeathParticleSystem(game.World, *seed+5600)
+	sys.deathParticleSystem.SetParticleSystem(sys.particleSystem)
+	sys.deathParticleSystem.SetGenre(*genreID)
 
 	// WeatherGroundEffectSystem - visual feedback for weather ground impacts
 	sys.weatherGroundEffectSystem = engine.NewWeatherGroundEffectSystem(game.World, *seed+6000)
@@ -3136,7 +3142,7 @@ func configureDeathCallback(sys *systemsContainer, game *engine.EbitenGame, logg
 	var playerEntity *engine.Entity
 	sys.combatSystem.SetDeathCallback(createDeathCallback(
 		game, &playerEntity, sys.objectiveTracker, &sys.audioManager,
-		sys.recipeGen, sys.magicGenerator, sys.skillGenerator, *seed, *genreID, logger,
+		sys.recipeGen, sys.magicGenerator, sys.skillGenerator, sys.deathParticleSystem, *seed, *genreID, logger,
 	))
 }
 

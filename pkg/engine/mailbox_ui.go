@@ -8,6 +8,10 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/hajimehoshi/ebiten/v2"
+	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
+	"github.com/hajimehoshi/ebiten/v2/vector"
 )
 
 // MailboxUI represents a mailbox interface for viewing and managing mail.
@@ -221,6 +225,309 @@ func (m *MailboxUI) Render() *image.RGBA {
 	}
 
 	return img
+}
+
+// Draw renders the mailbox UI directly to an ebiten.Image.
+// Performance Audit V6 fix: eliminates CPU→GPU image conversion by drawing directly.
+func (m *MailboxUI) Draw(screen *ebiten.Image) {
+	if screen == nil || !m.Visible {
+		return
+	}
+
+	// Draw background
+	m.drawEbitenRect(screen, float32(m.X), float32(m.Y), float32(m.Width), float32(m.Height), m.BackgroundColor)
+
+	// Draw title bar
+	m.drawEbitenTitleBar(screen)
+
+	// Draw content based on view mode
+	switch m.ViewMode {
+	case ViewInbox:
+		m.drawEbitenInboxList(screen)
+	case ViewOutbox:
+		m.drawEbitenOutboxList(screen)
+	case ViewCompose:
+		m.drawEbitenComposeView(screen)
+	case ViewMessageDetail:
+		m.drawEbitenMessageDetail(screen)
+	}
+}
+
+// drawEbitenRect draws a filled rectangle directly to an ebiten.Image.
+func (m *MailboxUI) drawEbitenRect(screen *ebiten.Image, x, y, width, height float32, col color.Color) {
+	r, g, b, a := col.RGBA()
+	vector.DrawFilledRect(screen, x, y, width, height,
+		color.RGBA{uint8(r >> 8), uint8(g >> 8), uint8(b >> 8), uint8(a >> 8)}, false)
+}
+
+// drawEbitenText draws text directly to an ebiten.Image using ebitenutil.
+func (m *MailboxUI) drawEbitenText(screen *ebiten.Image, text string, x, y int) {
+	if text == "" {
+		return
+	}
+	ebitenutil.DebugPrintAt(screen, text, m.X+x, m.Y+y)
+}
+
+// drawEbitenTitleBar draws the title bar with tab buttons using ebiten drawing.
+func (m *MailboxUI) drawEbitenTitleBar(screen *ebiten.Image) {
+	titleHeight := 40
+	tabWidth := m.Width / 3
+
+	// Draw title background
+	titleBg := m.lightenColor(m.BackgroundColor, 0.2)
+	m.drawEbitenRect(screen, float32(m.X), float32(m.Y), float32(m.Width), float32(titleHeight), titleBg)
+
+	// Draw tabs
+	tabs := []struct {
+		name string
+		mode MailboxViewMode
+	}{
+		{"Inbox", ViewInbox},
+		{"Outbox", ViewOutbox},
+		{"Compose", ViewCompose},
+	}
+
+	for i, tab := range tabs {
+		x := m.X + i*tabWidth
+		// Highlight active tab
+		if m.ViewMode == tab.mode {
+			m.drawEbitenRect(screen, float32(x), float32(m.Y), float32(tabWidth), float32(titleHeight), m.HighlightColor)
+		}
+		// Draw tab text centered
+		textX := x + tabWidth/2 - len(tab.name)*3
+		textY := m.Y + titleHeight/2 - 6
+		ebitenutil.DebugPrintAt(screen, tab.name, textX, textY)
+	}
+
+	// Draw unread count badge on inbox tab if there are unread messages
+	unreadCount := m.GetUnreadCount()
+	if unreadCount > 0 {
+		badgeText := fmt.Sprintf("(%d)", unreadCount)
+		r, g, b, a := m.UnreadColor.RGBA()
+		badgeCol := color.RGBA{uint8(r >> 8), uint8(g >> 8), uint8(b >> 8), uint8(a >> 8)}
+		m.drawEbitenRect(screen, float32(m.X+tabWidth-50), float32(m.Y+8), float32(len(badgeText)*7+4), 14, badgeCol)
+		ebitenutil.DebugPrintAt(screen, badgeText, m.X+tabWidth-48, m.Y+10)
+	}
+}
+
+// drawEbitenInboxList draws the inbox message list using ebiten drawing.
+func (m *MailboxUI) drawEbitenInboxList(screen *ebiten.Image) {
+	startY := 50
+	rowHeight := 60
+	padding := 10
+
+	// Draw header
+	headerText := fmt.Sprintf("Inbox (%d/%d messages)", len(m.InboxMessages), len(m.InboxMessages))
+	ebitenutil.DebugPrintAt(screen, headerText, m.X+padding, m.Y+startY)
+	startY += 30
+
+	// Draw messages
+	for i, msg := range m.InboxMessages {
+		y := startY + (i * rowHeight)
+		if y+rowHeight > m.Height {
+			break // Don't render beyond window
+		}
+
+		// Highlight selected message
+		if i == m.SelectedInboxIndex {
+			m.drawEbitenRect(screen, float32(m.X+padding), float32(m.Y+y), float32(m.Width-2*padding), float32(rowHeight-5), m.HighlightColor)
+		}
+
+		// Draw message row
+		m.drawEbitenMessageRow(screen, msg, padding+5, y+5, m.Width-2*padding-10, rowHeight-10)
+	}
+
+	// Draw empty state
+	if len(m.InboxMessages) == 0 {
+		emptyText := "No messages in inbox"
+		textX := m.X + m.Width/2 - len(emptyText)*3
+		ebitenutil.DebugPrintAt(screen, emptyText, textX, m.Y+m.Height/2-10)
+	}
+}
+
+// drawEbitenOutboxList draws the outbox message list using ebiten drawing.
+func (m *MailboxUI) drawEbitenOutboxList(screen *ebiten.Image) {
+	startY := 50
+	rowHeight := 60
+	padding := 10
+
+	// Draw header
+	headerText := fmt.Sprintf("Outbox (%d messages sent)", len(m.OutboxMessages))
+	ebitenutil.DebugPrintAt(screen, headerText, m.X+padding, m.Y+startY)
+	startY += 30
+
+	// Draw messages
+	for i, msg := range m.OutboxMessages {
+		y := startY + (i * rowHeight)
+		if y+rowHeight > m.Height {
+			break
+		}
+
+		// Highlight selected message
+		if i == m.SelectedOutboxIndex {
+			m.drawEbitenRect(screen, float32(m.X+padding), float32(m.Y+y), float32(m.Width-2*padding), float32(rowHeight-5), m.HighlightColor)
+		}
+
+		// Draw message row
+		m.drawEbitenMessageRow(screen, msg, padding+5, y+5, m.Width-2*padding-10, rowHeight-10)
+	}
+
+	// Draw empty state
+	if len(m.OutboxMessages) == 0 {
+		emptyText := "No messages sent"
+		textX := m.X + m.Width/2 - len(emptyText)*3
+		ebitenutil.DebugPrintAt(screen, emptyText, textX, m.Y+m.Height/2-10)
+	}
+}
+
+// drawEbitenComposeView draws the compose mail interface using ebiten drawing.
+func (m *MailboxUI) drawEbitenComposeView(screen *ebiten.Image) {
+	startY := 50
+	padding := 10
+	fieldHeight := 30
+
+	// Draw compose form
+	ebitenutil.DebugPrintAt(screen, "To:", m.X+padding, m.Y+startY)
+	fieldBg := m.lightenColor(m.BackgroundColor, 0.3)
+	m.drawEbitenRect(screen, float32(m.X+padding+50), float32(m.Y+startY), float32(m.Width-padding-60), float32(fieldHeight), fieldBg)
+	ebitenutil.DebugPrintAt(screen, m.ComposeRecipient, m.X+padding+55, m.Y+startY+8)
+
+	startY += fieldHeight + 10
+	ebitenutil.DebugPrintAt(screen, "Subject:", m.X+padding, m.Y+startY)
+	m.drawEbitenRect(screen, float32(m.X+padding+70), float32(m.Y+startY), float32(m.Width-padding-80), float32(fieldHeight), fieldBg)
+	ebitenutil.DebugPrintAt(screen, m.ComposeSubject, m.X+padding+75, m.Y+startY+8)
+
+	startY += fieldHeight + 10
+	ebitenutil.DebugPrintAt(screen, "Body:", m.X+padding, m.Y+startY)
+	bodyHeight := 150
+	m.drawEbitenRect(screen, float32(m.X+padding), float32(m.Y+startY+25), float32(m.Width-2*padding), float32(bodyHeight), fieldBg)
+	// Draw wrapped body text
+	wrappedBody := m.wrapText(m.ComposeBody, m.Width-2*padding-10)
+	lines := strings.Split(wrappedBody, "\n")
+	for i, line := range lines {
+		if i*15 < bodyHeight-20 {
+			ebitenutil.DebugPrintAt(screen, line, m.X+padding+5, m.Y+startY+30+i*15)
+		}
+	}
+
+	startY += bodyHeight + 35
+	ebitenutil.DebugPrintAt(screen, fmt.Sprintf("Attachments: %d/5", len(m.ComposeAttachments)), m.X+padding, m.Y+startY)
+
+	startY += 30
+	// Draw send button
+	buttonWidth := 120
+	buttonHeight := 35
+	sendX := m.X + m.Width - padding - buttonWidth
+	m.drawEbitenRect(screen, float32(sendX), float32(m.Y+startY), float32(buttonWidth), float32(buttonHeight), m.HighlightColor)
+	ebitenutil.DebugPrintAt(screen, "Send", sendX+buttonWidth/2-12, m.Y+startY+buttonHeight/2-6)
+
+	// Draw cancel button
+	cancelBg := m.lightenColor(m.BackgroundColor, 0.4)
+	cancelX := sendX - buttonWidth - 10
+	m.drawEbitenRect(screen, float32(cancelX), float32(m.Y+startY), float32(buttonWidth), float32(buttonHeight), cancelBg)
+	ebitenutil.DebugPrintAt(screen, "Cancel", cancelX+buttonWidth/2-18, m.Y+startY+buttonHeight/2-6)
+}
+
+// drawEbitenMessageDetail draws detailed view of a selected message using ebiten drawing.
+func (m *MailboxUI) drawEbitenMessageDetail(screen *ebiten.Image) {
+	startY := 50
+	padding := 10
+
+	var msg MailEntry
+	if m.ViewMode == ViewInbox && m.SelectedInboxIndex < len(m.InboxMessages) {
+		msg = m.InboxMessages[m.SelectedInboxIndex]
+	} else if m.ViewMode == ViewOutbox && m.SelectedOutboxIndex < len(m.OutboxMessages) {
+		msg = m.OutboxMessages[m.SelectedOutboxIndex]
+	} else {
+		emptyText := "No message selected"
+		textX := m.X + m.Width/2 - len(emptyText)*3
+		ebitenutil.DebugPrintAt(screen, emptyText, textX, m.Y+m.Height/2-10)
+		return
+	}
+
+	// Draw message header
+	ebitenutil.DebugPrintAt(screen, fmt.Sprintf("From: %s", msg.SenderID), m.X+padding, m.Y+startY)
+	startY += 20
+	ebitenutil.DebugPrintAt(screen, fmt.Sprintf("To: %s", msg.RecipientID), m.X+padding, m.Y+startY)
+	startY += 20
+	ebitenutil.DebugPrintAt(screen, fmt.Sprintf("Subject: %s", msg.Subject), m.X+padding, m.Y+startY)
+	startY += 20
+
+	// Draw status and timestamps
+	statusText := fmt.Sprintf("Status: %s", msg.Status.String())
+	ebitenutil.DebugPrintAt(screen, statusText, m.X+padding, m.Y+startY)
+	startY += 20
+	if msg.SentAt > 0 {
+		sentTime := time.Unix(msg.SentAt, 0).Format("2006-01-02 15:04:05")
+		ebitenutil.DebugPrintAt(screen, fmt.Sprintf("Sent: %s", sentTime), m.X+padding, m.Y+startY)
+		startY += 20
+	}
+	if msg.DeliveredAt > 0 {
+		deliveredTime := time.Unix(msg.DeliveredAt, 0).Format("2006-01-02 15:04:05")
+		ebitenutil.DebugPrintAt(screen, fmt.Sprintf("Delivered: %s", deliveredTime), m.X+padding, m.Y+startY)
+		startY += 20
+	}
+
+	// Draw separator
+	startY += 10
+	m.drawEbitenRect(screen, float32(m.X+padding), float32(m.Y+startY), float32(m.Width-2*padding), 2, m.HighlightColor)
+	startY += 15
+
+	// Draw body
+	bodyText := m.wrapText(msg.Body, m.Width-2*padding)
+	lines := strings.Split(bodyText, "\n")
+	for i, line := range lines {
+		ebitenutil.DebugPrintAt(screen, line, m.X+padding, m.Y+startY+i*15)
+	}
+	startY += m.textHeight(bodyText) + 20
+
+	// Draw attachments
+	if msg.AttachmentCount > 0 {
+		ebitenutil.DebugPrintAt(screen, fmt.Sprintf("Attachments: %d items", msg.AttachmentCount), m.X+padding, m.Y+startY)
+	}
+}
+
+// drawEbitenMessageRow draws a single message in the list using ebiten drawing.
+func (m *MailboxUI) drawEbitenMessageRow(screen *ebiten.Image, msg MailEntry, x, y, width, height int) {
+	absX := m.X + x
+	absY := m.Y + y
+
+	// Draw unread indicator
+	if msg.IsUnread {
+		m.drawEbitenRect(screen, float32(absX), float32(absY), 5, float32(height), m.UnreadColor)
+		absX += 10
+		width -= 10
+	}
+
+	// Draw sender/recipient (truncate if too long)
+	senderLabel := msg.SenderID
+	if m.ViewMode == ViewOutbox {
+		senderLabel = "To: " + msg.RecipientID
+	}
+	if len(senderLabel) > 25 {
+		senderLabel = senderLabel[:22] + "..."
+	}
+	ebitenutil.DebugPrintAt(screen, senderLabel, absX, absY)
+
+	// Draw subject (truncate if too long)
+	subject := msg.Subject
+	if subject == "" {
+		subject = "(no subject)"
+	}
+	if len(subject) > 35 {
+		subject = subject[:32] + "..."
+	}
+	ebitenutil.DebugPrintAt(screen, subject, absX, absY+15)
+
+	// Draw status indicator
+	statusText := msg.Status.String()
+	ebitenutil.DebugPrintAt(screen, statusText, absX, absY+30)
+
+	// Draw attachment indicator
+	if msg.AttachmentCount > 0 {
+		attachText := fmt.Sprintf("[%d]", msg.AttachmentCount)
+		ebitenutil.DebugPrintAt(screen, attachText, absX+width-50, absY+30)
+	}
 }
 
 // drawTitleBar draws the title bar with tab buttons

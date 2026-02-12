@@ -65,10 +65,6 @@ type EbitenGame struct {
 	MailboxUI   *MailboxUI  // Mail system UI (Phase 40.3)
 	TradeUI     *TradeUI    // Player-to-player trading UI (Phase 3.3)
 
-	// Cached mailbox UI image (Performance Audit fix: avoid per-frame image conversion)
-	cachedMailboxImage     *ebiten.Image
-	lastMailboxRenderState string // Hash of mailbox state to detect changes
-
 	// INTEGRATION FIX [Category B]: V8.0 UI systems
 	// Gap: V8 systems (housing, gallery) fully implemented but no UI fields
 	// Fix: Added UI fields for housing and gallery management
@@ -1550,10 +1546,9 @@ func (g *EbitenGame) drawPhaseUIOverlays(screen *ebiten.Image) {
 }
 
 // drawMailboxUI renders the mailbox interface if open and loads mail data from player entity.
+// Performance Audit V6 fix: now draws directly to screen without CPU→GPU image conversion.
 func (g *EbitenGame) drawMailboxUI(screen *ebiten.Image) {
 	if g.MailboxUI == nil || !g.MailboxUI.IsOpen() {
-		// Clean up cached image when mailbox is closed to free GPU memory
-		g.clearMailboxCache()
 		return
 	}
 
@@ -1563,33 +1558,8 @@ func (g *EbitenGame) drawMailboxUI(screen *ebiten.Image) {
 		}
 	}
 
-	// Performance Audit fix: cache the ebiten.Image conversion
-	currentState := g.MailboxUI.GetStateHash()
-	if g.cachedMailboxImage == nil || g.lastMailboxRenderState != currentState {
-		mailImg := g.MailboxUI.Render()
-		if mailImg != nil {
-			// Dispose old image to free GPU resources
-			if g.cachedMailboxImage != nil {
-				g.cachedMailboxImage.Dispose()
-			}
-			g.cachedMailboxImage = ebiten.NewImageFromImage(mailImg)
-			g.lastMailboxRenderState = currentState
-		}
-	}
-
-	if g.cachedMailboxImage != nil {
-		screen.DrawImage(g.cachedMailboxImage, nil)
-	}
-}
-
-// clearMailboxCache disposes the cached mailbox image to free GPU resources.
-// Called when the mailbox UI is closed or during cleanup.
-func (g *EbitenGame) clearMailboxCache() {
-	if g.cachedMailboxImage != nil {
-		g.cachedMailboxImage.Dispose()
-		g.cachedMailboxImage = nil
-		g.lastMailboxRenderState = ""
-	}
+	// Draw directly to screen - eliminates ebiten.NewImageFromImage conversion spike
+	g.MailboxUI.Draw(screen)
 }
 
 // drawVirtualControls renders mobile touch controls on top of all other elements.

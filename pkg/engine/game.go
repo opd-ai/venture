@@ -1036,8 +1036,6 @@ func (g *EbitenGame) handleLoadingComplete() error {
 		g.logger.Info("terrain loading complete, transitioning to gameplay")
 	}
 
-	g.terrainLoader = nil
-
 	if err := g.StateManager.TransitionTo(AppStateGameplay); err != nil {
 		if g.logger != nil {
 			g.logger.WithError(err).Error("failed to transition to gameplay after terrain load")
@@ -1053,6 +1051,9 @@ func (g *EbitenGame) handleLoadingComplete() error {
 			return err
 		}
 	}
+
+	// Clear terrain loader after callback completes (callback may need to access it)
+	g.terrainLoader = nil
 
 	return nil
 }

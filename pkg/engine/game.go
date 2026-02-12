@@ -1579,9 +1579,52 @@ func (g *EbitenGame) drawVirtualControls(screen *ebiten.Image) {
 	}
 }
 
+// screenDimensionConsumer is implemented by systems that maintain cached copies
+// of the screen dimensions and need to be kept in sync when the window is resized.
+type screenDimensionConsumer interface {
+	OnScreenResize(width, height int)
+}
+
 // Layout implements ebiten.Game interface. Returns the game's screen size.
 func (g *EbitenGame) Layout(outsideWidth, outsideHeight int) (int, int) {
+	if outsideWidth > 0 && outsideHeight > 0 {
+		// Only propagate when the dimensions actually change to avoid redundant work.
+		if outsideWidth != g.ScreenWidth || outsideHeight != g.ScreenHeight {
+			g.ScreenWidth = outsideWidth
+			g.ScreenHeight = outsideHeight
+
+			// Keep sceneBuffer in sync with the current screen size. LightingSystem.ApplyLighting
+			// uses the rendered scene size (sceneBuffer.Size()) to build its lighting buffer,
+			// so a stale buffer size after a resize would cause clipping/misalignment.
+			if g.sceneBuffer != nil {
+				g.sceneBuffer.Dispose()
+				g.sceneBuffer = ebiten.NewImage(g.ScreenWidth, g.ScreenHeight)
+			}
+
+			g.propagateScreenResize()
+		}
+	}
 	return g.ScreenWidth, g.ScreenHeight
+}
+
+// propagateScreenResize updates any systems that cache the screen dimensions so
+// they remain in sync with EbitenGame.ScreenWidth/ScreenHeight.
+func (g *EbitenGame) propagateScreenResize() {
+	if g.CameraSystem != nil {
+		g.CameraSystem.ScreenWidth = g.ScreenWidth
+		g.CameraSystem.ScreenHeight = g.ScreenHeight
+	}
+
+	if g.World == nil {
+		return
+	}
+
+	systems := g.World.GetSystems()
+	for _, system := range systems {
+		if consumer, ok := system.(screenDimensionConsumer); ok {
+			consumer.OnScreenResize(g.ScreenWidth, g.ScreenHeight)
+		}
+	}
 }
 
 // SetPlayerEntity sets the player entity for the game and UI systems.

@@ -21,7 +21,7 @@ type WeatherCombatSystem struct {
 	// Maps entity ID to time remaining before next weather effect can be applied.
 	cooldowns map[uint64]float64
 
-	// How often (seconds) a new weather status effect can be applied per entity.
+	// Minimum interval (seconds) between weather effect re-applications per entity.
 	applyCooldown float64
 }
 
@@ -116,7 +116,7 @@ func (s *WeatherCombatSystem) hasWeatherEffect(entity *Entity) bool {
 			continue
 		}
 		switch effect.EffectType {
-		case "wet", "chilled", "sandblasted":
+		case "wet", "chilled", "sandblasted", "burning":
 			return true
 		}
 	}

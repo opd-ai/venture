@@ -52,21 +52,23 @@ func DefaultSystemInitConfig(seed int64, genreID string, logger *logrus.Logger) 
 // further configuration after initialization (e.g., setting callbacks).
 type SystemInitResult struct {
 	// Systems that often need post-initialization configuration
-	InputSystem       *InputSystem
-	CombatSystem      *CombatSystem
-	CollisionSystem   *CollisionSystem
-	ProjectileSystem  *ProjectileSystem
-	AudioManager      *AudioManager
-	ObjectiveTracker  *ObjectiveTrackerSystem
-	CommerceSystem    *CommerceSystem
-	DialogSystem      *DialogSystem
-	CraftingSystem    *CraftingSystem
-	InteractionSystem *InteractionSystem
-	MiniGameSystem    *MiniGameSystem
-	AnimationSystem   *AnimationSystem
-	ParticleSystem    *ParticleSystem
-	TutorialSystem    *EbitenTutorialSystem
-	HelpSystem        *EbitenHelpSystem
+	InputSystem           *InputSystem
+	CombatSystem          *CombatSystem
+	CollisionSystem       *CollisionSystem
+	ProjectileSystem      *ProjectileSystem
+	AudioManager          *AudioManager
+	ObjectiveTracker      *ObjectiveTrackerSystem
+	CommerceSystem        *CommerceSystem
+	DialogSystem          *DialogSystem
+	CraftingSystem        *CraftingSystem
+	InteractionSystem     *InteractionSystem
+	MiniGameSystem        *MiniGameSystem
+	AnimationSystem       *AnimationSystem
+	ParticleSystem        *ParticleSystem
+	TutorialSystem        *EbitenTutorialSystem
+	HelpSystem            *EbitenHelpSystem
+	LevelUpParticleSystem *LevelUpParticleSystem
+	ProgressionSystem     *ProgressionSystem
 
 	// System wrappers
 	AnimationSystemWrapper System
@@ -186,6 +188,7 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 
 	// 17. ProgressionSystem - XP and leveling
 	progressionSystem := NewProgressionSystem(game.World)
+	result.ProgressionSystem = progressionSystem
 	game.World.AddSystem(progressionSystem)
 
 	// 18. SkillProgressionSystem - applies skill effects to stats
@@ -287,6 +290,14 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 	criticalHitParticleSystem.SetGenre(config.GenreID)
 	result.CombatSystem.SetCriticalHitCallback(criticalHitParticleSystem.OnCriticalHit)
 	game.World.AddSystem(criticalHitParticleSystem)
+
+	// 36d. LevelUpParticleSystem - visual feedback for level-ups
+	levelUpParticleSystem := NewLevelUpParticleSystem(game.World, config.Seed+4000)
+	levelUpParticleSystem.SetParticleSystem(result.ParticleSystem)
+	levelUpParticleSystem.SetGenre(config.GenreID)
+	result.ProgressionSystem.AddLevelUpCallback(levelUpParticleSystem.OnLevelUp)
+	result.LevelUpParticleSystem = levelUpParticleSystem
+	game.World.AddSystem(levelUpParticleSystem)
 
 	// 37. LifetimeSystem - temporary entities (Phase 5.3)
 	lifetimeSystem := NewLifetimeSystemWithLogger(game.World, logger)

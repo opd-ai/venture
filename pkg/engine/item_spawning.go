@@ -529,6 +529,9 @@ type ItemPickupSystem struct {
 	// GAP-015 REPAIR: System references for feedback
 	audioManager   *AudioManager
 	tutorialSystem *EbitenTutorialSystem
+
+	// Callback for particle effects on pickup
+	onPickupCallback func(x, y float64, rarity int)
 }
 
 // NewItemPickupSystem creates a new item pickup system.
@@ -574,6 +577,12 @@ func (s *ItemPickupSystem) getTutorialSystem() *EbitenTutorialSystem {
 		}
 	}
 	return s.tutorialSystem
+}
+
+// SetPickupCallback sets the callback function for item pickup events.
+// The callback receives the pickup position (x, y) and item rarity (0-4).
+func (s *ItemPickupSystem) SetPickupCallback(callback func(x, y float64, rarity int)) {
+	s.onPickupCallback = callback
 }
 
 // Update checks for item-player collisions and handles pickup.
@@ -725,6 +734,14 @@ func (s *ItemPickupSystem) playItemPickupFeedback(itemEntity *Entity, itemData *
 	if tutorialSys := s.getTutorialSystem(); tutorialSys != nil {
 		notifText := fmt.Sprintf("Picked up: %s", itemData.Item.Name)
 		tutorialSys.ShowNotification(notifText, 2.0)
+	}
+
+	// Trigger particle effects callback if registered
+	if s.onPickupCallback != nil {
+		if pos := itemEntity.GetPosition(); pos != nil {
+			rarity := int(itemData.Item.Rarity)
+			s.onPickupCallback(pos.X, pos.Y, rarity)
+		}
 	}
 }
 

@@ -149,58 +149,59 @@ import (
 
 // systemsContainer holds all initialized game systems for dependency injection.
 type systemsContainer struct {
-	inputSystem              *engine.InputSystem
-	movementSystem           *engine.MovementSystem
-	collisionSystem          *engine.CollisionSystem
-	combatSystem             *engine.CombatSystem
-	interactionSystem        *engine.InteractionSystem
-	particleSystem           *engine.ParticleSystem
-	animationSystem          *engine.AnimationSystem
-	equipmentVisualSystem    *engine.EquipmentVisualSystem
-	objectiveTracker         *engine.ObjectiveTrackerSystem
-	aiSystem                 *engine.AISystem
-	progressionSystem        *engine.ProgressionSystem
-	inventorySystem          *engine.InventorySystem
-	commerceSystem           *engine.CommerceSystem
-	dialogSystem             *engine.DialogSystem
-	craftingSystem           *engine.CraftingSystem
-	audioManager             *engine.AudioManager
-	audioManagerSystem       *engine.AudioManagerSystem
-	itemPickupSystem         *engine.ItemPickupSystem
-	statusEffectSystem       *engine.StatusEffectSystem
-	spellCastingSystem       *engine.SpellCastingSystem
-	playerSpellCasting       *engine.PlayerSpellCastingSystem
-	manaRegenSystem          *engine.ManaRegenSystem
-	playerCombatSystem       *engine.PlayerCombatSystem
-	playerItemUseSystem      *engine.PlayerItemUseSystem
-	rotationSystem           *engine.RotationSystem
-	projectileSystem         *engine.ProjectileSystem
-	revivalSystem            *engine.RevivalSystem
-	behaviorTreeSystem       *engine.BehaviorTreeSystem
-	squadSystem              *engine.SquadSystem
-	factionSystem            *engine.FactionSystem
-	reputationSystem         *engine.ReputationSystem
-	alignmentSystem          *engine.AlignmentSystem
-	factionReactionSystem    *engine.FactionReactionSystem
-	skillProgressionSystem   *engine.SkillProgressionSystem
-	visualFeedbackSystem     *engine.VisualFeedbackSystem
-	weatherSystem            *engine.WeatherSystem
-	weatherCombatSystem      *engine.WeatherCombatSystem
-	lifetimeSystem           *engine.LifetimeSystem
-	puzzleSystem             *engine.PuzzleSystem
-	firePropagationSystem    *engine.FirePropagationSystem
-	destructibleSystem       *engine.DestructibleObjectSystem
-	carrySystem              *engine.CarrySystem
-	hazardSystem             *engine.HazardSystem
-	narrativeSystem          *engine.NarrativeSystem
-	branchingNarrativeSystem *engine.BranchingNarrativeSystem // Phase 6.1: Branching story arc system
-	worldEventsSystem        *engine.WorldEventsSystem        // Phase 6.3: World-responsive events
-	shadowSystem             *engine.ShadowSystem
-	spriteGenerator          *sprites.Generator
-	spriteCache              *cache.SpriteCache // Phase 1.2: Sprite caching for animation performance
-	itemGen                  *item.ItemGenerator
-	recipeGen                *recipe.RecipeGenerator
-	statusEffectRNG          *rand.Rand
+	inputSystem                *engine.InputSystem
+	movementSystem             *engine.MovementSystem
+	collisionSystem            *engine.CollisionSystem
+	combatSystem               *engine.CombatSystem
+	interactionSystem          *engine.InteractionSystem
+	particleSystem             *engine.ParticleSystem
+	animationSystem            *engine.AnimationSystem
+	equipmentVisualSystem      *engine.EquipmentVisualSystem
+	objectiveTracker           *engine.ObjectiveTrackerSystem
+	aiSystem                   *engine.AISystem
+	progressionSystem          *engine.ProgressionSystem
+	inventorySystem            *engine.InventorySystem
+	commerceSystem             *engine.CommerceSystem
+	dialogSystem               *engine.DialogSystem
+	craftingSystem             *engine.CraftingSystem
+	audioManager               *engine.AudioManager
+	audioManagerSystem         *engine.AudioManagerSystem
+	itemPickupSystem           *engine.ItemPickupSystem
+	statusEffectSystem         *engine.StatusEffectSystem
+	spellCastingSystem         *engine.SpellCastingSystem
+	playerSpellCasting         *engine.PlayerSpellCastingSystem
+	manaRegenSystem            *engine.ManaRegenSystem
+	playerCombatSystem         *engine.PlayerCombatSystem
+	playerItemUseSystem        *engine.PlayerItemUseSystem
+	rotationSystem             *engine.RotationSystem
+	projectileSystem           *engine.ProjectileSystem
+	revivalSystem              *engine.RevivalSystem
+	behaviorTreeSystem         *engine.BehaviorTreeSystem
+	squadSystem                *engine.SquadSystem
+	factionSystem              *engine.FactionSystem
+	reputationSystem           *engine.ReputationSystem
+	alignmentSystem            *engine.AlignmentSystem
+	factionReactionSystem      *engine.FactionReactionSystem
+	skillProgressionSystem     *engine.SkillProgressionSystem
+	visualFeedbackSystem       *engine.VisualFeedbackSystem
+	weatherSystem              *engine.WeatherSystem
+	weatherCombatSystem        *engine.WeatherCombatSystem
+	statusEffectLightingSystem *engine.StatusEffectLightingSystem // Connects status effects to lighting for visual feedback
+	lifetimeSystem             *engine.LifetimeSystem
+	puzzleSystem               *engine.PuzzleSystem
+	firePropagationSystem      *engine.FirePropagationSystem
+	destructibleSystem         *engine.DestructibleObjectSystem
+	carrySystem                *engine.CarrySystem
+	hazardSystem               *engine.HazardSystem
+	narrativeSystem            *engine.NarrativeSystem
+	branchingNarrativeSystem   *engine.BranchingNarrativeSystem // Phase 6.1: Branching story arc system
+	worldEventsSystem          *engine.WorldEventsSystem        // Phase 6.3: World-responsive events
+	shadowSystem               *engine.ShadowSystem
+	spriteGenerator            *sprites.Generator
+	spriteCache                *cache.SpriteCache // Phase 1.2: Sprite caching for animation performance
+	itemGen                    *item.ItemGenerator
+	recipeGen                  *recipe.RecipeGenerator
+	statusEffectRNG            *rand.Rand
 	// V4.0 Systems (Phase 21-27)
 	vehicleMovementSys      *engine.VehicleMovementSystem
 	vehicleDurabilitySys    *engine.VehicleDurabilitySystem
@@ -849,6 +850,7 @@ func initializeCombatSystems(game *engine.EbitenGame, sys *systemsContainer) {
 func initializeEnvironmentalSystems(game *engine.EbitenGame, sys *systemsContainer, clientLogger *logrus.Entry) {
 	sys.weatherSystem = engine.NewWeatherSystem(game.World)
 	sys.weatherCombatSystem = engine.NewWeatherCombatSystem(game.World)
+	sys.statusEffectLightingSystem = engine.NewStatusEffectLightingSystem(game.World, *seed+2000)
 	sys.lifetimeSystem = engine.NewLifetimeSystemWithLogger(game.World, clientLogger.Logger)
 	sys.puzzleSystem = engine.NewPuzzleSystem(game.World)
 
@@ -1486,6 +1488,7 @@ func registerNonCriticalSystems(game *engine.EbitenGame, sys *systemsContainer) 
 	// Environmental systems (deferred)
 	game.World.AddSystem(sys.weatherSystem)
 	game.World.AddSystem(sys.weatherCombatSystem)
+	game.World.AddSystem(sys.statusEffectLightingSystem) // Status effect visual feedback via lighting
 	game.World.AddSystem(sys.lifetimeSystem)
 	game.World.AddSystem(sys.puzzleSystem)
 	game.World.AddSystem(sys.firePropagationSystem)

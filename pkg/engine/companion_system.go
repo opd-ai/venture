@@ -340,21 +340,153 @@ func (s *CompanionSystem) executeDefend(companion *Entity, companionComp *Compan
 }
 
 // executeGather makes the companion collect nearby items.
+// Companions search for item_entity components within gather range, move toward
+// the nearest item, and pick it up when close enough. Items are added to the
+// companion's inventory if it has a CompanionInventoryComponent.
 func (s *CompanionSystem) executeGather(companion *Entity, companionComp *CompanionComponent) {
-	// Find and move toward nearby items
-	// This is a stub - full implementation would detect item entities
 	compPos, hasPos := companion.GetComponent("position")
-	_, ok := compPos.(*PositionComponent)
+	companionPos, ok := compPos.(*PositionComponent)
 	if !hasPos || !ok {
 		return
 	}
 
-	// Would search for entities with "item" component within range
-	// For now, just idle
+	// Find nearest item entity within gather range (200 pixels)
+	const gatherRange = 200.0
+	const pickupRange = 32.0
+	nearestItem := s.findNearestItem(companionPos, gatherRange)
+
+	if nearestItem == nil {
+		// No items nearby, stop moving
+		s.stopCompanionMovement(companion)
+		return
+	}
+
+	// Get item position
+	itemPosComp, hasItemPos := nearestItem.GetComponent("position")
+	if !hasItemPos {
+		s.stopCompanionMovement(companion)
+		return
+	}
+	itemPos := itemPosComp.(*PositionComponent)
+
+	// Calculate distance to item
+	dx := itemPos.X - companionPos.X
+	dy := itemPos.Y - companionPos.Y
+	distance := math.Sqrt(dx*dx + dy*dy)
+
+	// If close enough, pick up the item
+	if distance <= pickupRange {
+		s.pickupItem(companion, nearestItem)
+		s.stopCompanionMovement(companion)
+		return
+	}
+
+	// Move toward the item
+	s.moveCompanionToward(companion, dx, dy, distance, 100.0)
+}
+
+// findNearestItem finds the closest item_entity within the specified range.
+func (s *CompanionSystem) findNearestItem(companionPos *PositionComponent, maxRange float64) *Entity {
+	items := s.world.GetEntitiesWith("item_entity", "position")
+	var nearestItem *Entity
+	minDistance := maxRange
+
+	for _, itemEntity := range items {
+		itemPosComp, ok := itemEntity.GetComponent("position")
+		if !ok {
+			continue
+		}
+		itemPos := itemPosComp.(*PositionComponent)
+
+		dx := itemPos.X - companionPos.X
+		dy := itemPos.Y - companionPos.Y
+		distance := math.Sqrt(dx*dx + dy*dy)
+
+		if distance < minDistance {
+			minDistance = distance
+			nearestItem = itemEntity
+		}
+	}
+
+	return nearestItem
+}
+
+// pickupItem adds the item to companion inventory and removes it from world.
+func (s *CompanionSystem) pickupItem(companion, itemEntity *Entity) {
+	// Get item data
+	itemCompRaw, hasItem := itemEntity.GetComponent("item_entity")
+	if !hasItem {
+		return
+	}
+	itemEntityComp := itemCompRaw.(*ItemEntityComponent)
+	if itemEntityComp.Item == nil {
+		return
+	}
+
+	// Try to add to companion inventory
+	invCompRaw, hasInv := companion.GetComponent("companioninventory")
+	if hasInv {
+		invComp := invCompRaw.(*CompanionInventoryComponent)
+		if invComp.AddItem(itemEntityComp.Item) {
+			s.world.RemoveEntity(itemEntity.ID)
+			s.logger.WithFields(logrus.Fields{
+				"companion": companion.ID,
+				"item":      itemEntityComp.Item.Name,
+			}).Debug("companion gathered item")
+			return
+		}
+	}
+
+	// If no inventory or full, try to transfer directly to owner
+	companionCompRaw, hasCompanion := companion.GetComponent("companion")
+	if !hasCompanion {
+		return
+	}
+	companionComp := companionCompRaw.(*CompanionComponent)
+
+	owner, ownerExists := s.world.GetEntity(companionComp.OwnerID)
+	if !ownerExists || owner == nil {
+		return
+	}
+
+	ownerInvRaw, hasOwnerInv := owner.GetComponent("inventory")
+	if !hasOwnerInv {
+		return
+	}
+	ownerInv := ownerInvRaw.(*InventoryComponent)
+
+	if ownerInv.AddItem(itemEntityComp.Item) {
+		s.world.RemoveEntity(itemEntity.ID)
+		s.logger.WithFields(logrus.Fields{
+			"companion": companion.ID,
+			"owner":     owner.ID,
+			"item":      itemEntityComp.Item.Name,
+		}).Debug("companion gathered item for owner")
+	}
+}
+
+// stopCompanionMovement sets companion velocity to zero.
+func (s *CompanionSystem) stopCompanionMovement(companion *Entity) {
 	velComp, hasVelocity := companion.GetComponent("velocity")
 	if velocityComp, ok := velComp.(*VelocityComponent); hasVelocity && ok {
 		velocityComp.VX = 0
 		velocityComp.VY = 0
+	}
+}
+
+// moveCompanionToward sets companion velocity to move toward a target.
+func (s *CompanionSystem) moveCompanionToward(companion *Entity, dx, dy, distance, speed float64) {
+	if distance <= 0 {
+		return
+	}
+	// Normalize direction
+	dx /= distance
+	dy /= distance
+
+	velComp, hasVelocity := companion.GetComponent("velocity")
+	if velocityComp, ok := velComp.(*VelocityComponent); hasVelocity && ok {
+		velocityComp.VX = dx * speed
+		velocityComp.VY = dy * speed
 	}
 }
 

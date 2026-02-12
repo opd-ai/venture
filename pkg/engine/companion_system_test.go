@@ -2,6 +2,8 @@ package engine
 
 import (
 	"testing"
+
+	"github.com/opd-ai/venture/pkg/procgen/item"
 )
 
 func TestCompanionSystem(t *testing.T) {
@@ -193,6 +195,211 @@ func TestCompanionSystemDefendCommand(t *testing.T) {
 	velocityComp, _ := velComp.(*VelocityComponent)
 	if velocityComp.VX == 0 && velocityComp.VY == 0 {
 		t.Error("Companion should move to defensive position near owner")
+	}
+}
+
+func TestCompanionSystemGatherCommand(t *testing.T) {
+	world := NewWorld()
+	system := NewCompanionSystem(world)
+
+	owner := world.CreateEntity()
+	owner.AddComponent(&PositionComponent{X: 100, Y: 100})
+	owner.AddComponent(&InventoryComponent{
+		Items:     make([]*item.Item, 0),
+		MaxItems:  20,
+		MaxWeight: 100,
+		Gold:      0,
+	})
+
+	companion := world.CreateEntity()
+	companionComp := &CompanionComponent{
+		OwnerID:  owner.ID,
+		Commands: []CommandType{CommandGather},
+	}
+	companion.AddComponent(companionComp)
+	companion.AddComponent(&PositionComponent{X: 100, Y: 100})
+	companion.AddComponent(&VelocityComponent{})
+	companion.AddComponent(NewCompanionInventoryComponent(10, 50.0))
+
+	// Create a nearby item entity
+	testItem := &item.Item{
+		Name:        "Test Coin",
+		Description: "A shiny coin",
+		Type:        item.TypeConsumable,
+		Rarity:      item.RarityCommon,
+		Stats: item.Stats{
+			Value:  10,
+			Weight: 0.1,
+		},
+	}
+	itemEntity := world.CreateEntity()
+	itemEntity.AddComponent(&PositionComponent{X: 150, Y: 100}) // 50 pixels away
+	itemEntity.AddComponent(&ItemEntityComponent{Item: testItem})
+
+	// Process pending entities
+	world.Update(0)
+
+	// First update - companion should start moving toward item
+	system.Update(0.1)
+
+	velComp, _ := companion.GetComponent("velocity")
+	velocityComp := velComp.(*VelocityComponent)
+	if velocityComp.VX <= 0 {
+		t.Error("Companion should move toward item (positive X velocity)")
+	}
+}
+
+func TestCompanionSystemGatherPickup(t *testing.T) {
+	world := NewWorld()
+	system := NewCompanionSystem(world)
+
+	owner := world.CreateEntity()
+	owner.AddComponent(&PositionComponent{X: 100, Y: 100})
+	owner.AddComponent(&InventoryComponent{
+		Items:     make([]*item.Item, 0),
+		MaxItems:  20,
+		MaxWeight: 100,
+		Gold:      0,
+	})
+
+	companion := world.CreateEntity()
+	companionComp := &CompanionComponent{
+		OwnerID:  owner.ID,
+		Commands: []CommandType{CommandGather},
+	}
+	companion.AddComponent(companionComp)
+	companion.AddComponent(&PositionComponent{X: 100, Y: 100})
+	companion.AddComponent(&VelocityComponent{})
+	companionInv := NewCompanionInventoryComponent(10, 50.0)
+	companion.AddComponent(companionInv)
+
+	// Create an item right next to companion (within pickup range of 32)
+	testItem := &item.Item{
+		Name:        "Gathered Gem",
+		Description: "A precious gem",
+		Type:        item.TypeConsumable,
+		Rarity:      item.RarityUncommon,
+		Stats: item.Stats{
+			Value:  50,
+			Weight: 0.5,
+		},
+	}
+	itemEntity := world.CreateEntity()
+	itemEntity.AddComponent(&PositionComponent{X: 110, Y: 100}) // 10 pixels away (within pickup)
+	itemEntity.AddComponent(&ItemEntityComponent{Item: testItem})
+
+	// Process pending entities
+	world.Update(0)
+
+	initialItemCount := companionInv.GetItemCount()
+	itemEntityID := itemEntity.ID
+
+	// Update - companion should pick up the item
+	system.Update(0.1)
+
+	// Process pending entity removals
+	world.Update(0)
+
+	// Item should be in companion inventory
+	if companionInv.GetItemCount() != initialItemCount+1 {
+		t.Errorf("Companion inventory should have 1 item, got %d", companionInv.GetItemCount())
+	}
+
+	// Item entity should be removed from world
+	if _, exists := world.GetEntity(itemEntityID); exists {
+		t.Error("Item entity should be removed from world after pickup")
+	}
+}
+
+func TestCompanionSystemGatherNoItems(t *testing.T) {
+	world := NewWorld()
+	system := NewCompanionSystem(world)
+
+	owner := world.CreateEntity()
+	owner.AddComponent(&PositionComponent{X: 100, Y: 100})
+
+	companion := world.CreateEntity()
+	companionComp := &CompanionComponent{
+		OwnerID:  owner.ID,
+		Commands: []CommandType{CommandGather},
+	}
+	companion.AddComponent(companionComp)
+	companion.AddComponent(&PositionComponent{X: 100, Y: 100})
+	companion.AddComponent(&VelocityComponent{})
+
+	// Process pending entities
+	world.Update(0)
+
+	// Update - no items, companion should stop
+	system.Update(0.1)
+
+	velComp, _ := companion.GetComponent("velocity")
+	velocityComp := velComp.(*VelocityComponent)
+	if velocityComp.VX != 0 || velocityComp.VY != 0 {
+		t.Error("Companion should stop when no items nearby")
+	}
+}
+
+func TestCompanionSystemGatherTransferToOwner(t *testing.T) {
+	world := NewWorld()
+	system := NewCompanionSystem(world)
+
+	ownerInv := &InventoryComponent{
+		Items:     make([]*item.Item, 0),
+		MaxItems:  20,
+		MaxWeight: 100,
+		Gold:      0,
+	}
+	owner := world.CreateEntity()
+	owner.AddComponent(&PositionComponent{X: 100, Y: 100})
+	owner.AddComponent(ownerInv)
+
+	// Companion with NO inventory - item should go to owner
+	companion := world.CreateEntity()
+	companionComp := &CompanionComponent{
+		OwnerID:  owner.ID,
+		Commands: []CommandType{CommandGather},
+	}
+	companion.AddComponent(companionComp)
+	companion.AddComponent(&PositionComponent{X: 100, Y: 100})
+	companion.AddComponent(&VelocityComponent{})
+	// Note: No CompanionInventoryComponent
+
+	// Create an item right next to companion
+	testItem := &item.Item{
+		Name:        "Owner's Item",
+		Description: "Goes to owner",
+		Type:        item.TypeConsumable,
+		Rarity:      item.RarityCommon,
+		Stats: item.Stats{
+			Value:  5,
+			Weight: 0.1,
+		},
+	}
+	itemEntity := world.CreateEntity()
+	itemEntity.AddComponent(&PositionComponent{X: 110, Y: 100})
+	itemEntity.AddComponent(&ItemEntityComponent{Item: testItem})
+
+	// Process pending entities
+	world.Update(0)
+
+	initialOwnerItems := len(ownerInv.Items)
+	itemEntityID := itemEntity.ID
+
+	// Update - companion should pick up item for owner
+	system.Update(0.1)
+
+	// Process pending entity removals
+	world.Update(0)
+
+	// Item should be in owner inventory
+	if len(ownerInv.Items) != initialOwnerItems+1 {
+		t.Errorf("Owner inventory should have 1 item, got %d", len(ownerInv.Items))
+	}
+
+	// Item entity should be removed from world
+	if _, exists := world.GetEntity(itemEntityID); exists {
+		t.Error("Item entity should be removed from world after pickup")
 	}
 }
 

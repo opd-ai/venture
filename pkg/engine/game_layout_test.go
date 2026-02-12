@@ -1,6 +1,10 @@
 package engine
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/hajimehoshi/ebiten/v2"
+)
 
 // TestEbitenGame_Layout verifies that the Layout method adapts to outside dimensions.
 func TestEbitenGame_Layout(t *testing.T) {
@@ -102,3 +106,63 @@ func TestEbitenGame_Layout(t *testing.T) {
 		})
 	}
 }
+
+// TestEbitenGame_Layout_PropagatesCameraResize verifies that Layout propagates
+// dimension changes to the CameraSystem.
+func TestEbitenGame_Layout_PropagatesCameraResize(t *testing.T) {
+	camera := NewCameraSystem(1920, 1080)
+	game := &EbitenGame{
+		ScreenWidth:  1920,
+		ScreenHeight: 1080,
+		CameraSystem: camera,
+	}
+
+	game.Layout(1366, 768)
+
+	if camera.ScreenWidth != 1366 {
+		t.Errorf("CameraSystem.ScreenWidth = %d, want 1366", camera.ScreenWidth)
+	}
+	if camera.ScreenHeight != 768 {
+		t.Errorf("CameraSystem.ScreenHeight = %d, want 768", camera.ScreenHeight)
+	}
+}
+
+// TestEbitenGame_Layout_RecreatesSceneBuffer verifies that Layout recreates
+// sceneBuffer when dimensions change to prevent clipping/misalignment.
+func TestEbitenGame_Layout_RecreatesSceneBuffer(t *testing.T) {
+	oldBuffer := ebiten.NewImage(1920, 1080)
+	game := &EbitenGame{
+		ScreenWidth:  1920,
+		ScreenHeight: 1080,
+		sceneBuffer:  oldBuffer,
+	}
+
+	game.Layout(1366, 768)
+
+	if game.sceneBuffer == nil {
+		t.Fatal("sceneBuffer should not be nil after resize")
+	}
+	bounds := game.sceneBuffer.Bounds()
+	if bounds.Dx() != 1366 || bounds.Dy() != 768 {
+		t.Errorf("sceneBuffer size = %dx%d, want 1366x768", bounds.Dx(), bounds.Dy())
+	}
+}
+
+// TestEbitenGame_Layout_SkipsRedundantResize verifies that Layout does not
+// reallocate buffers or propagate when dimensions are unchanged.
+func TestEbitenGame_Layout_SkipsRedundantResize(t *testing.T) {
+	buf := ebiten.NewImage(1920, 1080)
+	game := &EbitenGame{
+		ScreenWidth:  1920,
+		ScreenHeight: 1080,
+		sceneBuffer:  buf,
+	}
+
+	game.Layout(1920, 1080)
+
+	// sceneBuffer should be the same instance (no reallocation)
+	if game.sceneBuffer != buf {
+		t.Error("sceneBuffer was reallocated despite no dimension change")
+	}
+}
+

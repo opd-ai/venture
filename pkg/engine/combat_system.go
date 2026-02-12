@@ -45,6 +45,9 @@ type CombatSystem struct {
 	// Callback for when a critical hit occurs
 	onCriticalHitCallback func(attacker, target *Entity, damage float64)
 
+	// Callback for when damage is significantly reduced by resistance
+	onDamageResistedCallback func(target *Entity, damageType combat.DamageType, originalDamage, finalDamage, resistance float64)
+
 	// Logger for combat events
 	logger *logrus.Entry
 }
@@ -438,8 +441,17 @@ func (s *CombatSystem) executeMeleeAttack(attacker, target *Entity, attack *Atta
 // computeFinalDamage calculates the final damage after all modifiers.
 func (s *CombatSystem) computeFinalDamage(attack *AttackComponent, attackerStats, targetStats *StatsComponent, target *Entity) (float64, bool) {
 	baseDamage, isCrit := s.calculateDamage(attack, attackerStats)
-	finalDamage := s.applyDefenseAndResistance(baseDamage, attack.DamageType, targetStats)
+	damageAfterResist := s.applyDefenseAndResistance(baseDamage, attack.DamageType, targetStats)
 
+	// Check if significant damage was resisted and trigger callback
+	if s.onDamageResistedCallback != nil && targetStats != nil {
+		resistance := targetStats.GetResistance(attack.DamageType)
+		if resistance > 0 && baseDamage > damageAfterResist {
+			s.onDamageResistedCallback(target, attack.DamageType, baseDamage, damageAfterResist, resistance)
+		}
+	}
+
+	finalDamage := damageAfterResist
 	if finalDamage < 1.0 {
 		finalDamage = 1.0
 	}
@@ -924,6 +936,16 @@ func (s *CombatSystem) SetCriticalHitCallback(callback func(attacker, target *En
 		s.logger.Debug("critical hit callback registered")
 	}
 	s.onCriticalHitCallback = callback
+}
+
+// SetDamageResistedCallback sets the callback function for when damage is resisted.
+// The callback receives the target entity, damage type, original damage before resistance,
+// final damage after resistance, and the resistance value (0.0-1.0).
+func (s *CombatSystem) SetDamageResistedCallback(callback func(target *Entity, damageType combat.DamageType, originalDamage, finalDamage, resistance float64)) {
+	if s.logger != nil {
+		s.logger.Debug("damage resisted callback registered")
+	}
+	s.onDamageResistedCallback = callback
 }
 
 // isValidEnemyTarget checks if entity is a valid enemy target.

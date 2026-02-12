@@ -71,6 +71,7 @@ type SystemInitResult struct {
 	ItemPickupParticleSystem       *ItemPickupParticleSystem
 	SpellEffectParticleSystem      *SpellEffectParticleSystem
 	DeathParticleSystem            *DeathParticleSystem
+	DamageResistanceParticleSystem *DamageResistanceParticleSystem
 	CompanionLevelUpParticleSystem *CompanionLevelUpParticleSystem
 	ItemPickupSystem               *ItemPickupSystem
 	ProgressionSystem              *ProgressionSystem
@@ -383,6 +384,15 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 	deathParticleSystem.SetGenre(config.GenreID)
 	result.DeathParticleSystem = deathParticleSystem
 	game.World.AddSystem(deathParticleSystem)
+
+	// 36f3. DamageResistanceParticleSystem - visual feedback for damage resistance
+	// Spawns genre-aware particles when damage is significantly reduced by resistances
+	damageResistanceParticleSystem := NewDamageResistanceParticleSystem(game.World, config.Seed+5700)
+	damageResistanceParticleSystem.SetParticleSystem(result.ParticleSystem)
+	damageResistanceParticleSystem.SetGenre(config.GenreID)
+	result.CombatSystem.SetDamageResistedCallback(damageResistanceParticleSystem.OnDamageResisted)
+	result.DamageResistanceParticleSystem = damageResistanceParticleSystem
+	game.World.AddSystem(damageResistanceParticleSystem)
 
 	// 36g. WeatherGroundEffectSystem - visual feedback for weather ground impacts
 	// Spawns rain splashes, snow puffs, dust clouds when weather particles hit ground

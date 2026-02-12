@@ -967,7 +967,7 @@ func (g *EbitenGame) handleCharacterCreation() error {
 
 	// Mark the character creation tutorial as complete
 	if g.CharacterCreationTutorial != nil && !g.CharacterCreationTutorial.IsComplete() {
-		g.CharacterCreationTutorial.completeTutorial()
+		g.CharacterCreationTutorial.CompleteTutorial()
 	}
 
 	charData := g.CharacterCreation.GetCharacterData()

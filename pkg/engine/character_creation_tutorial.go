@@ -14,6 +14,9 @@ import (
 	"golang.org/x/image/font/basicfont"
 )
 
+// basicFontCharWidth is the character width for basicfont.Face7x13 (7 pixels per character).
+const basicFontCharWidth = 7
+
 // CharacterCreationTutorialStep represents a guided step in the character creation tutorial.
 type CharacterCreationTutorialStep struct {
 	ID          string
@@ -156,7 +159,7 @@ func (cct *CharacterCreationTutorial) Update(currentCreationStep int, deltaTime 
 
 	// Check if tutorial is complete (all steps done)
 	if cct.CurrentStepIdx >= len(cct.Steps) {
-		cct.completeTutorial()
+		cct.CompleteTutorial()
 	}
 }
 
@@ -170,13 +173,13 @@ func (cct *CharacterCreationTutorial) advanceStep() {
 			cct.NotificationMsg = fmt.Sprintf("Next: %s", cct.Steps[cct.CurrentStepIdx].Title)
 			cct.NotificationTTL = 2.0
 		} else {
-			cct.completeTutorial()
+			cct.CompleteTutorial()
 		}
 	}
 }
 
-// completeTutorial marks the tutorial as finished.
-func (cct *CharacterCreationTutorial) completeTutorial() {
+// CompleteTutorial marks the tutorial as finished.
+func (cct *CharacterCreationTutorial) CompleteTutorial() {
 	cct.Completed = true
 	cct.Enabled = false
 	cct.NotificationMsg = "Character creation tutorial complete! Enjoy your adventure!"
@@ -244,7 +247,7 @@ func (cct *CharacterCreationTutorial) drawTutorialOverlay(screen *ebiten.Image, 
 		color.RGBA{100, 200, 255, 255}, false)
 
 	// Title
-	titleText := fmt.Sprintf("📖 Tutorial: %s (%d/%d)", step.Title, cct.CurrentStepIdx+1, len(cct.Steps))
+	titleText := fmt.Sprintf("[Tutorial] %s (%d/%d)", step.Title, cct.CurrentStepIdx+1, len(cct.Steps))
 	text.Draw(screen, titleText, basicfont.Face7x13, 20, bannerY+25,
 		color.RGBA{255, 255, 200, 255})
 
@@ -258,7 +261,7 @@ func (cct *CharacterCreationTutorial) drawTutorialOverlay(screen *ebiten.Image, 
 
 	// Skip hint (right-aligned)
 	skipText := "F1: Skip Tutorial"
-	skipX := screenWidth - 30 - len(skipText)*7
+	skipX := screenWidth - 30 - len(skipText)*basicFontCharWidth
 	text.Draw(screen, skipText, basicfont.Face7x13, skipX, bannerY+25,
 		color.RGBA{180, 180, 180, 200})
 }
@@ -293,7 +296,7 @@ func (cct *CharacterCreationTutorial) drawNotification(screen *ebiten.Image) {
 		1, color.RGBA{100, 200, 100, alpha}, false)
 
 	textColor := color.RGBA{255, 255, 255, alpha}
-	textX := notifX + (notifWidth-len(cct.NotificationMsg)*7)/2
+	textX := notifX + (notifWidth-len(cct.NotificationMsg)*basicFontCharWidth)/2
 	text.Draw(screen, cct.NotificationMsg, basicfont.Face7x13, textX, notifY+25, textColor)
 }
 

@@ -2,6 +2,7 @@ package logging
 
 import (
 	"bytes"
+	"errors"
 	"os"
 	"strings"
 	"testing"
@@ -406,4 +407,67 @@ func TestTestUtilityLogger_WithEnvOverride(t *testing.T) {
 	if logger.GetLevel() != logrus.DebugLevel {
 		t.Errorf("expected level %v, got %v", logrus.DebugLevel, logger.GetLevel())
 	}
+}
+
+// TestNilLoggerHandling verifies that all context logger functions
+// handle nil loggers gracefully without panicking.
+func TestNilLoggerHandling(t *testing.T) {
+	tests := []struct {
+		name string
+		fn   func() *logrus.Entry
+	}{
+		{
+			name: "WithContext",
+			fn:   func() *logrus.Entry { return WithContext(nil, logrus.Fields{"key": "value"}) },
+		},
+		{
+			name: "SystemLogger",
+			fn:   func() *logrus.Entry { return SystemLogger(nil, "test") },
+		},
+		{
+			name: "ComponentLogger",
+			fn:   func() *logrus.Entry { return ComponentLogger(nil, "test") },
+		},
+		{
+			name: "EntityLogger",
+			fn:   func() *logrus.Entry { return EntityLogger(nil, 123) },
+		},
+		{
+			name: "GeneratorLogger",
+			fn:   func() *logrus.Entry { return GeneratorLogger(nil, "terrain", 12345, "fantasy") },
+		},
+		{
+			name: "NetworkLogger",
+			fn:   func() *logrus.Entry { return NetworkLogger(nil, "player1", "connected") },
+		},
+		{
+			name: "PerformanceLogger",
+			fn:   func() *logrus.Entry { return PerformanceLogger(nil, "operation") },
+		},
+		{
+			name: "CombatLogger",
+			fn:   func() *logrus.Entry { return CombatLogger(nil, 100, 200) },
+		},
+		{
+			name: "SaveLoadLogger",
+			fn:   func() *logrus.Entry { return SaveLoadLogger(nil, "save", "/path") },
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Should not panic
+			entry := tt.fn()
+			if entry != nil {
+				t.Errorf("%s with nil logger should return nil, got %v", tt.name, entry)
+			}
+		})
+	}
+}
+
+// TestLogError_NilLogger verifies LogError handles nil logger gracefully.
+func TestLogError_NilLogger(t *testing.T) {
+	// This should not panic
+	LogError(nil, errors.New("test error"), "test message")
+	// No assertion needed - test passes if no panic occurs
 }

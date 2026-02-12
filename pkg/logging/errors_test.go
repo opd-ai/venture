@@ -204,3 +204,20 @@ func (h *testHook) Fire(entry *logrus.Entry) error {
 	}
 	return nil
 }
+
+// TestErrorLogger_NilLogger verifies ErrorLogger handles nil logger gracefully.
+func TestErrorLogger_NilLogger(t *testing.T) {
+	err := errors.New(errors.ErrorTypeNetwork, "test error")
+	entry := ErrorLogger(nil, err)
+	if entry != nil {
+		t.Errorf("ErrorLogger with nil logger should return nil, got %v", entry)
+	}
+}
+
+// TestCorrelationLogger_NilLogger verifies CorrelationLogger handles nil logger gracefully.
+func TestCorrelationLogger_NilLogger(t *testing.T) {
+	entry := CorrelationLogger(nil, "test-correlation-id")
+	if entry != nil {
+		t.Errorf("CorrelationLogger with nil logger should return nil, got %v", entry)
+	}
+}

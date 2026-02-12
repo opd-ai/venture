@@ -9,7 +9,7 @@
 - [ ] `pkg/combat/AUDIT.md`
 - [ ] `pkg/config/AUDIT.md`
 - [ ] `pkg/errors/AUDIT.md`
-- [ ] `pkg/logging/AUDIT.md`
+- [x] `pkg/logging/AUDIT.md`
 - [ ] `pkg/modding/AUDIT.md`
 - [ ] `pkg/network/AUDIT.md`
 - [ ] `pkg/validation/AUDIT.md`

@@ -134,33 +134,53 @@ func parseLogLevel(level LogLevel) logrus.Level {
 
 // WithContext creates a logger with standard context fields.
 // This is useful for adding common fields that should appear in all logs from a component.
+// Returns nil if logger is nil to prevent panics.
 func WithContext(logger *logrus.Logger, fields logrus.Fields) *logrus.Entry {
+	if logger == nil {
+		return nil
+	}
 	return logger.WithFields(fields)
 }
 
 // SystemLogger creates a logger with system context.
+// Returns nil if logger is nil to prevent panics.
 func SystemLogger(logger *logrus.Logger, systemName string) *logrus.Entry {
+	if logger == nil {
+		return nil
+	}
 	return logger.WithFields(logrus.Fields{
 		"system": systemName,
 	})
 }
 
 // ComponentLogger creates a logger with component context.
+// Returns nil if logger is nil to prevent panics.
 func ComponentLogger(logger *logrus.Logger, componentType string) *logrus.Entry {
+	if logger == nil {
+		return nil
+	}
 	return logger.WithFields(logrus.Fields{
 		"component": componentType,
 	})
 }
 
 // EntityLogger creates a logger with entity context.
+// Returns nil if logger is nil to prevent panics.
 func EntityLogger(logger *logrus.Logger, entityID int) *logrus.Entry {
+	if logger == nil {
+		return nil
+	}
 	return logger.WithFields(logrus.Fields{
 		"entityID": entityID,
 	})
 }
 
 // GeneratorLogger creates a logger with procedural generation context.
+// Returns nil if logger is nil to prevent panics.
 func GeneratorLogger(logger *logrus.Logger, generatorType string, seed int64, genreID string) *logrus.Entry {
+	if logger == nil {
+		return nil
+	}
 	return logger.WithFields(logrus.Fields{
 		"generator": generatorType,
 		"seed":      seed,
@@ -169,7 +189,11 @@ func GeneratorLogger(logger *logrus.Logger, generatorType string, seed int64, ge
 }
 
 // NetworkLogger creates a logger with network context.
+// Returns nil if logger is nil to prevent panics.
 func NetworkLogger(logger *logrus.Logger, playerID, connectionState string) *logrus.Entry {
+	if logger == nil {
+		return nil
+	}
 	return logger.WithFields(logrus.Fields{
 		"playerID":        playerID,
 		"connectionState": connectionState,
@@ -177,14 +201,22 @@ func NetworkLogger(logger *logrus.Logger, playerID, connectionState string) *log
 }
 
 // PerformanceLogger creates a logger with performance metrics context.
+// Returns nil if logger is nil to prevent panics.
 func PerformanceLogger(logger *logrus.Logger, operation string) *logrus.Entry {
+	if logger == nil {
+		return nil
+	}
 	return logger.WithFields(logrus.Fields{
 		"operation": operation,
 	})
 }
 
 // CombatLogger creates a logger with combat context.
+// Returns nil if logger is nil to prevent panics.
 func CombatLogger(logger *logrus.Logger, attackerID, targetID int) *logrus.Entry {
+	if logger == nil {
+		return nil
+	}
 	return logger.WithFields(logrus.Fields{
 		"attackerID": attackerID,
 		"targetID":   targetID,
@@ -192,7 +224,11 @@ func CombatLogger(logger *logrus.Logger, attackerID, targetID int) *logrus.Entry
 }
 
 // SaveLoadLogger creates a logger with save/load context.
+// Returns nil if logger is nil to prevent panics.
 func SaveLoadLogger(logger *logrus.Logger, operation, path string) *logrus.Entry {
+	if logger == nil {
+		return nil
+	}
 	return logger.WithFields(logrus.Fields{
 		"operation": operation,
 		"path":      path,

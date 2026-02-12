@@ -330,8 +330,8 @@ The animation system's `maxRegenPerFrame=8` limiter spreads sprite generation ov
 - **Shadow map updates per frame:** 0 (shadows rendered on demand via `RenderShadows`, not called in main path)
 - **Lighting calculation cost:** ~1–3ms (light collection + ambient + point light composition, well-optimized with cached buffers)
 - **Bloom pass cost:** +15–50ms when enabled (V2 — CPU-side full-screen processing)
-- **Debug logging overhead:** +2–10ms (V3 — 50+ unguarded log calls)
-- **Issues found:** 2 (V2, V3)
+- **Debug logging overhead:** ~0ms (V3 — FIXED: log level guards now prevent allocations when debug logging disabled)
+- **Issues found:** 1 (V2) — V3 FIXED
 
 ### Post-Processing Performance
 - **Full-screen passes per frame:** 3–5 when enabled (GPU→CPU readback, color grading, vignette, chromatic aberration, CPU→GPU upload)
@@ -396,7 +396,7 @@ The animation system's `maxRegenPerFrame=8` limiter spreads sprite generation ov
 - Cache thrashing: 0 (caching is well-implemented)
 - Shader compilation/uploads: 0 (no custom shaders)
 - Overdraw/fill rate: 0 (viewport culling works correctly)
-- Debug logging overhead: 1 (V3)
+- Debug logging overhead: 0 (V3 — FIXED: log level guards added)
 - Defensive coding overhead: 1 (V5)
 
 ---
@@ -419,11 +419,12 @@ The animation system's `maxRegenPerFrame=8` limiter spreads sprite generation ov
 
 ### Priority 2 (Reduces Noticeable Jitter)
 
-3. **V3: Add Log Level Guards to All Lighting System Debug Calls**
+3. **V3: Add Log Level Guards to All Lighting System Debug Calls** ✅ COMPLETED (2026-02-12)
    - Add `if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel` guard before every `WithFields().Debug()` call in the lighting hot path, matching the pattern already used in the animation system. This eliminates map allocations and string formatting when debug logging is disabled.
    - Expected improvement: Eliminates 2–10ms per frame during lit scenes
    - Visual quality: No visual change
    - Implementation complexity: Low (mechanical code change — add guards to 50+ log sites)
+   - **Implementation:** Added log level guards (`s.logger.Logger.GetLevel() >= logrus.DebugLevel`) to all 50+ Debug log calls in the lighting system hot path. Warn and Info calls are appropriately left unguarded as they indicate important events.
 
 4. **V4: Reuse Pre-Allocated `DrawImageOptions` in Terrain Rendering** ✅ COMPLETED (2026-02-12)
    - Add a `drawTileOpts ebiten.DrawImageOptions` field to `TerrainRenderSystem` and reuse it with `Reset()` + `Translate()` in `drawTile()`, matching the pattern in `EbitenRenderSystem.drawSpriteImage()`.

@@ -135,7 +135,7 @@ func NewLightingSystemWithLogger(world *World, config *LightingConfig, logger *l
 
 // SetViewport updates the camera position and viewport size for culling.
 func (s *LightingSystem) SetViewport(cameraX, cameraY float64, width, height int) {
-	if s.logger != nil {
+	if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
 		s.logger.WithFields(logrus.Fields{
 			"camera_x":          cameraX,
 			"camera_y":          cameraY,
@@ -153,7 +153,7 @@ func (s *LightingSystem) SetViewport(cameraX, cameraY float64, width, height int
 	s.viewportH = height
 	s.viewportSet = true
 
-	if s.logger != nil {
+	if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
 		s.logger.WithFields(logrus.Fields{
 			"camera_x":     cameraX,
 			"camera_y":     cameraY,
@@ -165,7 +165,7 @@ func (s *LightingSystem) SetViewport(cameraX, cameraY float64, width, height int
 
 	// Update shadow system viewport
 	if s.shadowSystem != nil {
-		if s.logger != nil {
+		if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
 			s.logger.Debug("Updating shadow system viewport")
 		}
 		s.shadowSystem.SetViewport(cameraX, cameraY, width, height)
@@ -174,7 +174,7 @@ func (s *LightingSystem) SetViewport(cameraX, cameraY float64, width, height int
 
 // EnableShadows enables or disables shadow rendering.
 func (s *LightingSystem) EnableShadows(enabled bool) {
-	if s.logger != nil {
+	if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
 		s.logger.WithFields(logrus.Fields{
 			"enabled":              enabled,
 			"shadow_system_exists": s.shadowSystem != nil,
@@ -208,7 +208,7 @@ func (s *LightingSystem) EnableShadows(enabled bool) {
 // GetShadowSystem returns the shadow system for direct access.
 // Returns nil if shadows are not enabled.
 func (s *LightingSystem) GetShadowSystem() *ShadowSystem {
-	if s.logger != nil {
+	if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
 		s.logger.WithFields(logrus.Fields{
 			"has_shadow_system": s.shadowSystem != nil,
 		}).Debug("Getting shadow system")
@@ -218,7 +218,7 @@ func (s *LightingSystem) GetShadowSystem() *ShadowSystem {
 
 // Update processes lighting each frame (updates animation times).
 func (s *LightingSystem) Update(entities []*Entity, deltaTime float64) {
-	if s.logger != nil {
+	if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
 		s.logger.WithFields(logrus.Fields{
 			"entity_count": len(entities),
 			"delta_time":   deltaTime,
@@ -227,7 +227,7 @@ func (s *LightingSystem) Update(entities []*Entity, deltaTime float64) {
 	}
 
 	if !s.config.Enabled {
-		if s.logger != nil {
+		if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
 			s.logger.Debug("Lighting system disabled, skipping update")
 		}
 		return
@@ -250,7 +250,7 @@ func (s *LightingSystem) Update(entities []*Entity, deltaTime float64) {
 		light.internalTime += deltaTime
 		updatedLights++
 
-		if s.logger != nil {
+		if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
 			s.logger.WithFields(logrus.Fields{
 				"entity_id":     entity.ID,
 				"previous_time": previousTime,
@@ -260,7 +260,7 @@ func (s *LightingSystem) Update(entities []*Entity, deltaTime float64) {
 		}
 	}
 
-	if s.logger != nil {
+	if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
 		s.logger.WithFields(logrus.Fields{
 			"updated_lights": updatedLights,
 			"total_entities": len(entities),
@@ -305,7 +305,7 @@ func (s *LightingSystem) CollectVisibleLights(entities []*Entity) []lightWithPos
 
 // validateLightCollection performs initial validation for light collection.
 func (s *LightingSystem) validateLightCollection(entityCount int) bool {
-	if s.logger != nil {
+	if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
 		s.logger.WithFields(logrus.Fields{
 			"entity_count":  entityCount,
 			"enabled":       s.config.Enabled,
@@ -316,7 +316,7 @@ func (s *LightingSystem) validateLightCollection(entityCount int) bool {
 	}
 
 	if !s.config.Enabled {
-		if s.logger != nil {
+		if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
 			s.logger.Debug("Lighting disabled, returning empty light collection")
 		}
 		return false
@@ -387,7 +387,7 @@ func (s *LightingSystem) extractLightAndPosition(entity *Entity, metrics *lightM
 func (s *LightingSystem) isLightVisibleInViewport(entity *Entity, pos *PositionComponent, light *LightComponent, metrics *lightMetrics) bool {
 	if s.viewportSet && !s.isLightInViewport(pos.X, pos.Y, light.Radius) {
 		metrics.culledLights++
-		if s.logger != nil {
+		if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
 			s.logger.WithFields(logrus.Fields{
 				"entity_id": entity.ID,
 				"x":         pos.X,
@@ -408,7 +408,7 @@ func (s *LightingSystem) addVisibleLight(entity *Entity, light *LightComponent, 
 		y:     pos.Y,
 	})
 
-	if s.logger != nil {
+	if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
 		s.logger.WithFields(logrus.Fields{
 			"entity_id": entity.ID,
 			"x":         pos.X,
@@ -434,7 +434,7 @@ func (s *LightingSystem) logMaxLightsReached(metrics *lightMetrics) {
 // logLightCollectionComplete logs the completion of light collection.
 func (s *LightingSystem) logLightCollectionComplete(metrics *lightMetrics, entityCount int, startTime time.Time) {
 	duration := time.Since(startTime)
-	if s.logger != nil {
+	if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
 		s.logger.WithFields(logrus.Fields{
 			"total_lights":     metrics.totalLights,
 			"culled_lights":    metrics.culledLights,
@@ -459,7 +459,7 @@ func (s *LightingSystem) isLightInViewport(x, y, radius float64) bool {
 
 	inViewport := x >= minX && x <= maxX && y >= minY && y <= maxY
 
-	if s.logger != nil {
+	if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
 		s.logger.WithFields(logrus.Fields{
 			"x":           x,
 			"y":           y,
@@ -479,7 +479,7 @@ func (s *LightingSystem) isLightInViewport(x, y, radius float64) bool {
 // This should be called when creating or changing the ambient light entity
 // to avoid O(n) iteration on every frame.
 func (s *LightingSystem) SetAmbientLightEntity(entityID uint64) {
-	if s.logger != nil {
+	if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
 		s.logger.WithFields(logrus.Fields{
 			"entity_id":          entityID,
 			"previous_entity_id": s.ambientLightEntityID,
@@ -490,7 +490,7 @@ func (s *LightingSystem) SetAmbientLightEntity(entityID uint64) {
 	s.ambientLightEntityID = entityID
 	s.ambientLightCached = true
 
-	if s.logger != nil {
+	if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
 		s.logger.WithFields(logrus.Fields{
 			"entity_id": entityID,
 			"cached":    s.ambientLightCached,
@@ -501,7 +501,7 @@ func (s *LightingSystem) SetAmbientLightEntity(entityID uint64) {
 // ClearAmbientLightCache clears the cached ambient light entity.
 // Call this if the ambient light entity is removed from the world.
 func (s *LightingSystem) ClearAmbientLightCache() {
-	if s.logger != nil {
+	if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
 		s.logger.WithFields(logrus.Fields{
 			"previous_entity_id": s.ambientLightEntityID,
 			"was_cached":         s.ambientLightCached,
@@ -511,7 +511,7 @@ func (s *LightingSystem) ClearAmbientLightCache() {
 	s.ambientLightEntityID = 0
 	s.ambientLightCached = false
 
-	if s.logger != nil {
+	if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
 		s.logger.Debug("Ambient light cache cleared")
 	}
 }
@@ -548,7 +548,7 @@ func (s *LightingSystem) ApplyLighting(screen, renderedScene *ebiten.Image, enti
 		bloomStart := time.Now()
 		s.applyBloomEffect()
 		bloomDuration := time.Since(bloomStart)
-		if s.logger != nil {
+		if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
 			s.logger.WithFields(logrus.Fields{
 				"bloom_duration_ms": bloomDuration.Milliseconds(),
 				"bloom_threshold":   s.config.BloomThreshold,
@@ -565,7 +565,7 @@ func (s *LightingSystem) ApplyLighting(screen, renderedScene *ebiten.Image, enti
 
 // validateLightingSetup performs initial validation and logging for lighting application.
 func (s *LightingSystem) validateLightingSetup(renderedScene *ebiten.Image, entityCount int) bool {
-	if s.logger != nil {
+	if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
 		w, h := renderedScene.Size()
 		s.logger.WithFields(logrus.Fields{
 			"entity_count": entityCount,
@@ -576,7 +576,7 @@ func (s *LightingSystem) validateLightingSetup(renderedScene *ebiten.Image, enti
 	}
 
 	if !s.config.Enabled {
-		if s.logger != nil {
+		if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
 			s.logger.Debug("Lighting disabled, drawing scene directly")
 		}
 		return false
@@ -597,7 +597,7 @@ func (s *LightingSystem) getCachedAmbientLight() (float64, color.RGBA, bool) {
 					ambientIntensity = ambient.Intensity
 					ambientColor = ambient.Color
 					usedCachedAmbient = true
-					if s.logger != nil {
+					if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
 						s.logger.WithFields(logrus.Fields{
 							"entity_id":         s.ambientLightEntityID,
 							"ambient_intensity": ambientIntensity,
@@ -619,14 +619,14 @@ func (s *LightingSystem) getCachedAmbientLight() (float64, color.RGBA, bool) {
 // shouldSkipLighting determines if lighting can be skipped for performance.
 func (s *LightingSystem) shouldSkipLighting(lights []lightWithPosition, ambientIntensity float64, startTime time.Time) bool {
 	if len(lights) == 0 && ambientIntensity > 0.8 {
-		if s.logger != nil {
+		if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
 			s.logger.WithFields(logrus.Fields{
 				"ambient_intensity": ambientIntensity,
 				"light_count":       0,
 			}).Debug("Skipping lighting (high ambient, no lights)")
 		}
 		duration := time.Since(startTime)
-		if s.logger != nil {
+		if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
 			s.logger.WithFields(logrus.Fields{
 				"duration_ms": duration.Milliseconds(),
 				"duration_us": duration.Microseconds(),
@@ -648,7 +648,7 @@ func (s *LightingSystem) createOrResizeLightingBuffer(w, h int) bool {
 		}
 		s.lightingBuffer = ebiten.NewImage(w, h)
 		bufferResized = true
-		if s.logger != nil {
+		if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
 			s.logger.WithFields(logrus.Fields{
 				"width":      w,
 				"height":     h,
@@ -668,7 +668,7 @@ func (s *LightingSystem) applyAmbientAndPointLights(renderedScene *ebiten.Image,
 	ambG := float64(ambientColor.G) / 255.0 * ambientIntensity
 	ambB := float64(ambientColor.B) / 255.0 * ambientIntensity
 
-	if s.logger != nil {
+	if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
 		s.logger.WithFields(logrus.Fields{
 			"light_count":         len(lights),
 			"ambient_intensity":   ambientIntensity,
@@ -701,7 +701,7 @@ func (s *LightingSystem) applyAmbientAndPointLights(renderedScene *ebiten.Image,
 // logLightingComplete logs the completion of lighting application.
 func (s *LightingSystem) logLightingComplete(lightsApplied int, startTime time.Time, collectDuration time.Duration, ambientIntensity float64, bufferResized bool) {
 	duration := time.Since(startTime)
-	if s.logger != nil {
+	if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
 		s.logger.WithFields(logrus.Fields{
 			"lights_applied":      lightsApplied,
 			"total_duration_ms":   duration.Milliseconds(),
@@ -716,7 +716,7 @@ func (s *LightingSystem) logLightingComplete(lightsApplied int, startTime time.T
 // applyPointLight applies a single point light to the lighting buffer.
 // This is a simplified implementation; full lighting would use shaders.
 func (s *LightingSystem) applyPointLight(lightBuffer, scene *ebiten.Image, lwp *lightWithPosition) {
-	if s.logger != nil {
+	if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
 		s.logger.WithFields(logrus.Fields{
 			"x":      lwp.x,
 			"y":      lwp.y,
@@ -726,7 +726,7 @@ func (s *LightingSystem) applyPointLight(lightBuffer, scene *ebiten.Image, lwp *
 
 	intensity := lwp.light.GetCurrentIntensity()
 	if intensity <= 0 {
-		if s.logger != nil {
+		if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
 			s.logger.WithFields(logrus.Fields{
 				"x":         lwp.x,
 				"y":         lwp.y,
@@ -776,7 +776,7 @@ func (s *LightingSystem) applyPointLight(lightBuffer, scene *ebiten.Image, lwp *
 	lightImg := s.getCachedLightCircle(diameter, lwp.light.Falloff)
 	lightBuffer.DrawImage(lightImg, &s.lightDrawOpts)
 
-	if s.logger != nil {
+	if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
 		s.logger.WithFields(logrus.Fields{
 			"x":         lwp.x,
 			"y":         lwp.y,
@@ -869,7 +869,7 @@ func (s *LightingSystem) calculateFalloffIntensity(normalizedDist float64, fallo
 
 // findAmbientIntensity searches for ambient light component and returns its intensity.
 func (s *LightingSystem) findAmbientIntensity(entities []*Entity) float64 {
-	if s.logger != nil {
+	if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
 		s.logger.WithFields(logrus.Fields{
 			"entity_count":      len(entities),
 			"default_intensity": s.config.AmbientIntensity,
@@ -879,7 +879,7 @@ func (s *LightingSystem) findAmbientIntensity(entities []*Entity) float64 {
 	for _, entity := range entities {
 		if ambComp, hasAmb := entity.GetComponent("ambient_light"); hasAmb {
 			if ambient, ok := ambComp.(*AmbientLightComponent); ok {
-				if s.logger != nil {
+				if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
 					s.logger.WithFields(logrus.Fields{
 						"entity_id":         entity.ID,
 						"ambient_intensity": ambient.Intensity,
@@ -890,7 +890,7 @@ func (s *LightingSystem) findAmbientIntensity(entities []*Entity) float64 {
 		}
 	}
 
-	if s.logger != nil {
+	if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
 		s.logger.WithFields(logrus.Fields{
 			"default_intensity": s.config.AmbientIntensity,
 		}).Debug("No ambient light component found, using default")
@@ -926,7 +926,7 @@ func (s *LightingSystem) calculateLightContribution(entity *Entity, x, y float64
 
 // logCalculationStart logs the beginning of light contribution calculation.
 func (s *LightingSystem) logCalculationStart(entityID uint64, x, y float64) {
-	if s.logger != nil {
+	if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
 		s.logger.WithFields(logrus.Fields{
 			"entity_id": entityID,
 			"target_x":  x,
@@ -953,7 +953,7 @@ func (s *LightingSystem) getLightComponent(entity *Entity) *LightComponent {
 
 // logDisabledLight logs when a light component is disabled or invalid.
 func (s *LightingSystem) logDisabledLight(entityID uint64, light *LightComponent) {
-	if s.logger != nil && light != nil {
+	if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel && light != nil {
 		s.logger.WithFields(logrus.Fields{
 			"entity_id": entityID,
 			"enabled":   light.Enabled,
@@ -1002,7 +1002,7 @@ func (s *LightingSystem) isWithinRange(entityID uint64, dist, radius float64) bo
 
 // logOutOfRange logs when a light is out of range.
 func (s *LightingSystem) logOutOfRange(entityID uint64, dist, radius float64) {
-	if s.logger != nil {
+	if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
 		s.logger.WithFields(logrus.Fields{
 			"entity_id": entityID,
 			"distance":  dist,
@@ -1019,7 +1019,7 @@ func (s *LightingSystem) computeIntensity(light *LightComponent, dist float64) f
 
 // logCalculationResult logs the final light contribution calculation.
 func (s *LightingSystem) logCalculationResult(entityID uint64, dist, radius, intensity float64) {
-	if s.logger != nil {
+	if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
 		falloff := intensity / (intensity + 1) // Approximate falloff for logging
 		s.logger.WithFields(logrus.Fields{
 			"entity_id": entityID,
@@ -1036,7 +1036,7 @@ func (s *LightingSystem) logCalculationResult(entityID uint64, dist, radius, int
 func (s *LightingSystem) CalculateLightIntensityAt(x, y float64, entities []*Entity) float64 {
 	startTime := time.Now()
 
-	if s.logger != nil {
+	if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
 		s.logger.WithFields(logrus.Fields{
 			"x":            x,
 			"y":            y,
@@ -1046,7 +1046,7 @@ func (s *LightingSystem) CalculateLightIntensityAt(x, y float64, entities []*Ent
 	}
 
 	if !s.config.Enabled {
-		if s.logger != nil {
+		if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
 			s.logger.Debug("Lighting disabled, returning full intensity")
 		}
 		return 1.0
@@ -1072,7 +1072,7 @@ func (s *LightingSystem) CalculateLightIntensityAt(x, y float64, entities []*Ent
 	}
 
 	duration := time.Since(startTime)
-	if s.logger != nil {
+	if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
 		s.logger.WithFields(logrus.Fields{
 			"x":                   x,
 			"y":                   y,
@@ -1093,7 +1093,7 @@ func (s *LightingSystem) CalculateLightIntensityAt(x, y float64, entities []*Ent
 // It delegates to calculateFalloffIntensity for consistent falloff behavior across
 // both rendering (gradient generation) and gameplay (intensity calculation).
 func (s *LightingSystem) calculateFalloff(dist, radius float64, falloffType LightFalloffType) float64 {
-	if s.logger != nil {
+	if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
 		s.logger.WithFields(logrus.Fields{
 			"distance":     dist,
 			"radius":       radius,
@@ -1102,7 +1102,7 @@ func (s *LightingSystem) calculateFalloff(dist, radius float64, falloffType Ligh
 	}
 
 	if dist >= radius {
-		if s.logger != nil {
+		if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
 			s.logger.WithFields(logrus.Fields{
 				"distance": dist,
 				"radius":   radius,
@@ -1116,7 +1116,7 @@ func (s *LightingSystem) calculateFalloff(dist, radius float64, falloffType Ligh
 	normalizedDist := dist / radius
 	falloff := s.calculateFalloffIntensity(normalizedDist, falloffType)
 
-	if s.logger != nil {
+	if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
 		s.logger.WithFields(logrus.Fields{
 			"distance":        dist,
 			"radius":          radius,
@@ -1131,7 +1131,7 @@ func (s *LightingSystem) calculateFalloff(dist, radius float64, falloffType Ligh
 // SetEnabled enables or disables the lighting system.
 func (s *LightingSystem) SetEnabled(enabled bool) {
 	previousState := s.config.Enabled
-	if s.logger != nil {
+	if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
 		s.logger.WithFields(logrus.Fields{
 			"enabled":        enabled,
 			"previous_state": previousState,
@@ -1151,7 +1151,7 @@ func (s *LightingSystem) SetEnabled(enabled bool) {
 // IsEnabled returns whether lighting is currently enabled.
 func (s *LightingSystem) IsEnabled() bool {
 	enabled := s.config.Enabled
-	if s.logger != nil {
+	if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
 		s.logger.WithField("enabled", enabled).Debug("Checking if lighting is enabled")
 	}
 	return enabled
@@ -1159,7 +1159,7 @@ func (s *LightingSystem) IsEnabled() bool {
 
 // GetConfig returns the current lighting configuration.
 func (s *LightingSystem) GetConfig() *LightingConfig {
-	if s.logger != nil {
+	if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
 		s.logger.WithFields(logrus.Fields{
 			"max_lights":        s.config.MaxLights,
 			"ambient_intensity": s.config.AmbientIntensity,
@@ -1209,7 +1209,7 @@ func (s *LightingSystem) applyBloomEffect() {
 
 // SetConfig updates the lighting configuration.
 func (s *LightingSystem) SetConfig(config *LightingConfig) {
-	if s.logger != nil {
+	if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
 		s.logger.WithFields(logrus.Fields{
 			"max_lights":        config.MaxLights,
 			"ambient_intensity": config.AmbientIntensity,

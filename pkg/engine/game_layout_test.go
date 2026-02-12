@@ -131,6 +131,7 @@ func TestEbitenGame_Layout_PropagatesCameraResize(t *testing.T) {
 // sceneBuffer when dimensions change to prevent clipping/misalignment.
 func TestEbitenGame_Layout_RecreatesSceneBuffer(t *testing.T) {
 	oldBuffer := ebiten.NewImage(1920, 1080)
+	defer oldBuffer.Dispose()
 	game := &EbitenGame{
 		ScreenWidth:  1920,
 		ScreenHeight: 1080,

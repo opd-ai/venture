@@ -1598,8 +1598,8 @@ func (g *EbitenGame) Layout(outsideWidth, outsideHeight int) (int, int) {
 			// so a stale buffer size after a resize would cause clipping/misalignment.
 			if g.sceneBuffer != nil {
 				g.sceneBuffer.Dispose()
+				g.sceneBuffer = ebiten.NewImage(g.ScreenWidth, g.ScreenHeight)
 			}
-			g.sceneBuffer = ebiten.NewImage(g.ScreenWidth, g.ScreenHeight)
 
 			g.propagateScreenResize()
 		}

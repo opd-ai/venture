@@ -4,26 +4,30 @@ import (
 	"sync"
 )
 
-// Manager is a unified audio manager that coordinates music and SFX systems.
+// Manager is a unified audio manager that coordinates music, SFX, and voice systems.
 // It provides a single interface for managing all game audio with support
-// for adaptive music and varied sound effects.
+// for adaptive music, varied sound effects, and voice chat.
 type Manager struct {
 	sampleRate int
 	seed       int64
 	mu         sync.RWMutex
 
 	// Sub-managers (set via dependency injection)
-	musicManager AdaptiveMusicSystem
-	sfxManager   SFXGenerator
+	musicManager   AdaptiveMusicSystem
+	sfxManager     SFXGenerator
+	voiceCodec     VoiceCodec
+	voiceProcessor *VoiceProcessor
 
 	// Volume controls
 	masterVolume float64
 	musicVolume  float64
 	sfxVolume    float64
+	voiceVolume  float64
 
 	// Enabled states
 	musicEnabled bool
 	sfxEnabled   bool
+	voiceEnabled bool
 }
 
 // NewManager creates a new unified audio manager.
@@ -38,8 +42,10 @@ func NewManager(sampleRate int, seed int64) *Manager {
 		masterVolume: 1.0,
 		musicVolume:  1.0,
 		sfxVolume:    1.0,
+		voiceVolume:  1.0,
 		musicEnabled: true,
 		sfxEnabled:   true,
+		voiceEnabled: true,
 	}
 }
 
@@ -233,6 +239,71 @@ func (m *Manager) GetSampleRate() int {
 // GetSeed returns the seed.
 func (m *Manager) GetSeed() int64 {
 	return m.seed
+}
+
+// SetVoiceCodec sets the voice codec implementation.
+func (m *Manager) SetVoiceCodec(codec VoiceCodec) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.voiceCodec = codec
+}
+
+// GetVoiceCodec returns the current voice codec.
+func (m *Manager) GetVoiceCodec() VoiceCodec {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	return m.voiceCodec
+}
+
+// SetVoiceProcessor sets the voice processor implementation.
+func (m *Manager) SetVoiceProcessor(processor *VoiceProcessor) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.voiceProcessor = processor
+}
+
+// GetVoiceProcessor returns the current voice processor.
+func (m *Manager) GetVoiceProcessor() *VoiceProcessor {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	return m.voiceProcessor
+}
+
+// SetVoiceVolume sets the voice chat volume (0.0-1.0).
+func (m *Manager) SetVoiceVolume(volume float64) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.voiceVolume = clampVolume(volume)
+	m.voiceEnabled = volume > 0.0
+}
+
+// GetVoiceVolume returns the voice chat volume.
+func (m *Manager) GetVoiceVolume() float64 {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	return m.voiceVolume
+}
+
+// IsVoiceEnabled returns whether voice chat is enabled.
+func (m *Manager) IsVoiceEnabled() bool {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	return m.voiceEnabled && m.voiceCodec != nil && m.voiceProcessor != nil
+}
+
+// InitializeVoice sets up voice codec with the specified quality.
+func (m *Manager) InitializeVoice(quality VoiceQuality, transport VoiceTransport) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	codec := NewSimpleVoiceCodec(m.sampleRate, quality)
+	processor := NewVoiceProcessor(codec, transport)
+
+	m.voiceCodec = codec
+	m.voiceProcessor = processor
+	m.voiceEnabled = true
+
+	return nil
 }
 
 // clampVolume ensures volume is in valid range [0.0, 1.0].

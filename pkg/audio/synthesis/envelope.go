@@ -35,52 +35,93 @@ func (e *Envelope) Apply(data []float64, sampleRate int) {
 		return
 	}
 
-	attackSamples := int(e.Attack * float64(sampleRate))
-	decaySamples := int(e.Decay * float64(sampleRate))
-	releaseSamples := int(e.Release * float64(sampleRate))
+	phases := e.calculatePhaseLengths(numSamples, sampleRate)
+	e.applyAllPhases(data, phases)
+}
 
-	// Ensure we don't exceed the sample length
-	if attackSamples > numSamples {
-		attackSamples = numSamples
-	}
-	if attackSamples+decaySamples > numSamples {
-		decaySamples = numSamples - attackSamples
-	}
-	if releaseSamples > numSamples {
-		releaseSamples = numSamples
+// envelopePhases holds the calculated lengths of each ADSR phase.
+type envelopePhases struct {
+	attack  int
+	decay   int
+	sustain int
+	release int
+}
+
+// calculatePhaseLengths computes the sample counts for each envelope phase.
+func (e *Envelope) calculatePhaseLengths(numSamples, sampleRate int) envelopePhases {
+	attack := e.clampToSampleLength(int(e.Attack*float64(sampleRate)), numSamples)
+	decay := e.clampToSampleLength(int(e.Decay*float64(sampleRate)), numSamples-attack)
+	release := e.clampToSampleLength(int(e.Release*float64(sampleRate)), numSamples)
+
+	sustain := numSamples - attack - decay - release
+	if sustain < 0 {
+		sustain = 0
 	}
 
-	sustainSamples := numSamples - attackSamples - decaySamples - releaseSamples
-	if sustainSamples < 0 {
-		sustainSamples = 0
+	return envelopePhases{
+		attack:  attack,
+		decay:   decay,
+		sustain: sustain,
+		release: release,
 	}
+}
 
+// clampToSampleLength ensures a phase length does not exceed the maximum allowed.
+func (e *Envelope) clampToSampleLength(phase, max int) int {
+	if phase > max {
+		return max
+	}
+	return phase
+}
+
+// applyAllPhases applies attack, decay, sustain, and release phases to the audio data.
+func (e *Envelope) applyAllPhases(data []float64, phases envelopePhases) {
 	idx := 0
+	idx = e.applyAttack(data, idx, phases.attack)
+	idx = e.applyDecay(data, idx, phases.decay)
+	idx = e.applySustain(data, idx, phases.sustain)
+	e.applyRelease(data, idx, phases.release)
+}
 
-	// Attack phase: ramp from 0 to 1
-	for i := 0; i < attackSamples && idx < len(data); i++ {
-		envelope := float64(i) / float64(attackSamples)
+// applyAttack applies the attack phase (ramp from 0 to 1).
+func (e *Envelope) applyAttack(data []float64, start, length int) int {
+	idx := start
+	for i := 0; i < length && idx < len(data); i++ {
+		envelope := float64(i) / float64(length)
 		data[idx] *= envelope
 		idx++
 	}
+	return idx
+}
 
-	// Decay phase: ramp from 1 to sustain level
-	for i := 0; i < decaySamples && idx < len(data); i++ {
-		envelope := 1.0 - (1.0-e.Sustain)*(float64(i)/float64(decaySamples))
+// applyDecay applies the decay phase (ramp from 1 to sustain level).
+func (e *Envelope) applyDecay(data []float64, start, length int) int {
+	idx := start
+	for i := 0; i < length && idx < len(data); i++ {
+		envelope := 1.0 - (1.0-e.Sustain)*(float64(i)/float64(length))
 		data[idx] *= envelope
 		idx++
 	}
+	return idx
+}
 
-	// Sustain phase: constant at sustain level
-	for i := 0; i < sustainSamples && idx < len(data); i++ {
+// applySustain applies the sustain phase (constant at sustain level).
+func (e *Envelope) applySustain(data []float64, start, length int) int {
+	idx := start
+	for i := 0; i < length && idx < len(data); i++ {
 		data[idx] *= e.Sustain
 		idx++
 	}
+	return idx
+}
 
-	// Release phase: ramp from sustain to 0
-	for i := 0; i < releaseSamples && idx < len(data); i++ {
-		envelope := e.Sustain * (1.0 - float64(i)/float64(releaseSamples))
+// applyRelease applies the release phase (ramp from sustain to 0).
+func (e *Envelope) applyRelease(data []float64, start, length int) int {
+	idx := start
+	for i := 0; i < length && idx < len(data); i++ {
+		envelope := e.Sustain * (1.0 - float64(i)/float64(length))
 		data[idx] *= envelope
 		idx++
 	}
+	return idx
 }

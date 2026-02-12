@@ -60,63 +60,124 @@ func NewFederationProtocol(serverID string, identity *ServerIdentity) *Federatio
 
 // Connect establishes connection to a peer server with retry logic and circuit breaker
 func (f *FederationProtocol) Connect(peerAddress string) error {
-	// Check if federation is in local-only mode
+	if err := f.validateConnectionEligibility(peerAddress); err != nil {
+		return err
+	}
+
+	conn, handshakeResponse, err := f.establishConnectionWithRetry(peerAddress)
+	if err != nil {
+		return fmt.Errorf("failed to connect to %s after retries: %w", peerAddress, err)
+	}
+
+	f.registerPeerConnection(peerAddress, conn, handshakeResponse)
+	return nil
+}
+
+// validateConnectionEligibility checks if the connection can be established.
+func (f *FederationProtocol) validateConnectionEligibility(peerAddress string) error {
 	if f.health.IsLocalOnly() {
 		return fmt.Errorf("federation is in local-only mode, cannot connect to remote servers")
 	}
 
 	f.mu.Lock()
-	if _, exists := f.connections[peerAddress]; exists {
-		f.mu.Unlock()
-		return fmt.Errorf("already connected to %s", peerAddress)
-	}
+	_, exists := f.connections[peerAddress]
 	f.mu.Unlock()
 
-	// Use retry strategy with circuit breaker for connection attempt
-	var conn net.Conn
-	var handshakeResponse FederationHandshake
-	err := f.retryStrategy.Execute(func() error {
-		var dialErr error
-		conn, dialErr = net.DialTimeout("tcp", peerAddress, DefaultConnectionTimeout)
-		if dialErr != nil {
-			f.health.RecordFailure()
-			return dialErr
-		}
-
-		handshakeMsg, err := f.identity.CreateHandshake(DefaultProtocolVersion, DefaultProtocolFeatures, TrustVerified)
-		if err != nil {
-			conn.Close()
-			f.health.RecordFailure()
-			return fmt.Errorf("failed to create handshake: %w", err)
-		}
-
-		encoder := json.NewEncoder(conn)
-		if err := encoder.Encode(handshakeMsg); err != nil {
-			conn.Close()
-			f.health.RecordFailure()
-			return fmt.Errorf("failed to send handshake: %w", err)
-		}
-
-		decoder := json.NewDecoder(conn)
-		if err := decoder.Decode(&handshakeResponse); err != nil {
-			conn.Close()
-			f.health.RecordFailure()
-			return fmt.Errorf("failed to receive handshake response: %w", err)
-		}
-
-		if err := f.handshake.ProcessHandshake(&handshakeResponse); err != nil {
-			conn.Close()
-			f.health.RecordFailure()
-			return fmt.Errorf("invalid handshake response: %w", err)
-		}
-
-		return nil
-	}, IsNetworkError)
-	if err != nil {
-		return fmt.Errorf("failed to connect to %s after retries: %w", peerAddress, err)
+	if exists {
+		return fmt.Errorf("already connected to %s", peerAddress)
 	}
 
-	// Connection successful, record success and add to pool
+	return nil
+}
+
+// establishConnectionWithRetry attempts to connect and handshake with retry logic.
+func (f *FederationProtocol) establishConnectionWithRetry(peerAddress string) (net.Conn, FederationHandshake, error) {
+	var conn net.Conn
+	var handshakeResponse FederationHandshake
+
+	err := f.retryStrategy.Execute(func() error {
+		var attemptErr error
+		conn, handshakeResponse, attemptErr = f.attemptConnection(peerAddress)
+		return attemptErr
+	}, IsNetworkError)
+
+	return conn, handshakeResponse, err
+}
+
+// attemptConnection performs a single connection and handshake attempt.
+func (f *FederationProtocol) attemptConnection(peerAddress string) (net.Conn, FederationHandshake, error) {
+	conn, err := f.dialPeer(peerAddress)
+	if err != nil {
+		return nil, FederationHandshake{}, err
+	}
+
+	handshakeResponse, err := f.performHandshake(conn)
+	if err != nil {
+		conn.Close()
+		return nil, FederationHandshake{}, err
+	}
+
+	return conn, handshakeResponse, nil
+}
+
+// dialPeer establishes a TCP connection to the peer server.
+func (f *FederationProtocol) dialPeer(peerAddress string) (net.Conn, error) {
+	conn, err := net.DialTimeout("tcp", peerAddress, DefaultConnectionTimeout)
+	if err != nil {
+		f.health.RecordFailure()
+		return nil, err
+	}
+	return conn, nil
+}
+
+// performHandshake exchanges handshake messages with the peer.
+func (f *FederationProtocol) performHandshake(conn net.Conn) (FederationHandshake, error) {
+	handshakeMsg, err := f.identity.CreateHandshake(DefaultProtocolVersion, DefaultProtocolFeatures, TrustVerified)
+	if err != nil {
+		f.health.RecordFailure()
+		return FederationHandshake{}, fmt.Errorf("failed to create handshake: %w", err)
+	}
+
+	if err := f.sendHandshake(conn, *handshakeMsg); err != nil {
+		return FederationHandshake{}, err
+	}
+
+	handshakeResponse, err := f.receiveHandshake(conn)
+	if err != nil {
+		return FederationHandshake{}, err
+	}
+
+	if err := f.handshake.ProcessHandshake(&handshakeResponse); err != nil {
+		f.health.RecordFailure()
+		return FederationHandshake{}, fmt.Errorf("invalid handshake response: %w", err)
+	}
+
+	return handshakeResponse, nil
+}
+
+// sendHandshake sends the handshake message to the peer.
+func (f *FederationProtocol) sendHandshake(conn net.Conn, handshakeMsg FederationHandshake) error {
+	encoder := json.NewEncoder(conn)
+	if err := encoder.Encode(handshakeMsg); err != nil {
+		f.health.RecordFailure()
+		return fmt.Errorf("failed to send handshake: %w", err)
+	}
+	return nil
+}
+
+// receiveHandshake receives and decodes the handshake response from the peer.
+func (f *FederationProtocol) receiveHandshake(conn net.Conn) (FederationHandshake, error) {
+	var handshakeResponse FederationHandshake
+	decoder := json.NewDecoder(conn)
+	if err := decoder.Decode(&handshakeResponse); err != nil {
+		f.health.RecordFailure()
+		return FederationHandshake{}, fmt.Errorf("failed to receive handshake response: %w", err)
+	}
+	return handshakeResponse, nil
+}
+
+// registerPeerConnection records the successful connection in federation state.
+func (f *FederationProtocol) registerPeerConnection(peerAddress string, conn net.Conn, handshakeResponse FederationHandshake) {
 	f.health.RecordSuccess()
 
 	f.mu.Lock()
@@ -133,60 +194,103 @@ func (f *FederationProtocol) Connect(peerAddress string) error {
 		Connected:     true,
 		LastHeartbeat: time.Now().Unix(),
 	}
-
-	return nil
 }
 
 // TransferPlayer initiates player transfer to another server
 func (f *FederationProtocol) TransferPlayer(playerID uint64, world *engine.World, targetServer string, authMgr *AuthManager, transferMgr *TransferManager) error {
-	// Create session token for authentication
+	token, transfer, err := f.preparePlayerTransfer(playerID, world, targetServer, authMgr, transferMgr)
+	if err != nil {
+		return err
+	}
+
+	conn, exists := f.getTargetConnection(targetServer)
+	if !exists {
+		return nil
+	}
+
+	if err := f.executeTransferRequest(playerID, token, transfer, conn, transferMgr); err != nil {
+		return err
+	}
+
+	return transferMgr.ConfirmTransfer(playerID)
+}
+
+// preparePlayerTransfer creates auth token and prepares transfer state.
+func (f *FederationProtocol) preparePlayerTransfer(playerID uint64, world *engine.World, targetServer string, authMgr *AuthManager, transferMgr *TransferManager) (string, *PlayerTransfer, error) {
 	token, err := authMgr.CreateSessionToken(playerID, f.serverID)
 	if err != nil {
-		return fmt.Errorf("failed to create session token: %w", err)
+		return "", nil, fmt.Errorf("failed to create session token: %w", err)
 	}
 
-	// Prepare transfer
 	transfer, err := transferMgr.PrepareTransfer(playerID, world, targetServer)
 	if err != nil {
-		return fmt.Errorf("failed to prepare transfer: %w", err)
+		return "", nil, fmt.Errorf("failed to prepare transfer: %w", err)
 	}
 
-	// Validate state
+	if err := f.validateAndBeginTransfer(playerID, transfer, transferMgr); err != nil {
+		return "", nil, err
+	}
+
+	return token.Token, transfer, nil
+}
+
+// validateAndBeginTransfer validates player state and begins the transfer.
+func (f *FederationProtocol) validateAndBeginTransfer(playerID uint64, transfer *PlayerTransfer, transferMgr *TransferManager) error {
 	if err := transferMgr.ValidatePlayerState(transfer.PlayerState); err != nil {
 		transferMgr.RollbackTransfer(playerID, "validation failed")
 		return fmt.Errorf("invalid player state: %w", err)
 	}
 
-	// Begin transfer phase
 	if err := transferMgr.BeginTransfer(playerID, f.serverID); err != nil {
 		transferMgr.RollbackTransfer(playerID, "begin transfer failed")
 		return fmt.Errorf("failed to begin transfer: %w", err)
 	}
 
+	return nil
+}
+
+// getTargetConnection retrieves the connection to the target server.
+func (f *FederationProtocol) getTargetConnection(targetServer string) (net.Conn, bool) {
 	f.mu.RLock()
 	conn, exists := f.connections[targetServer]
 	f.mu.RUnlock()
+	return conn, exists
+}
 
-	if !exists {
-		// In test/offline mode, allow transfer to be prepared without active connection
-		// The transfer will remain in Transfer phase until connection is established
-		return nil
+// executeTransferRequest sends the transfer request and handles response.
+func (f *FederationProtocol) executeTransferRequest(playerID uint64, token string, transfer *PlayerTransfer, conn net.Conn, transferMgr *TransferManager) error {
+	transferReq := f.buildTransferRequest(playerID, token, transfer)
+
+	if err := f.sendTransferRequest(transferReq, conn, playerID, transferMgr); err != nil {
+		return err
 	}
 
-	transferReq := map[string]interface{}{
+	return f.receiveTransferResponse(conn, playerID, transferMgr)
+}
+
+// buildTransferRequest creates the transfer request payload.
+func (f *FederationProtocol) buildTransferRequest(playerID uint64, token string, transfer *PlayerTransfer) map[string]interface{} {
+	return map[string]interface{}{
 		"type":         "transfer_request",
 		"player_id":    playerID,
 		"player_state": transfer.PlayerState,
 		"token":        token,
 		"timestamp":    time.Now().Unix(),
 	}
+}
 
+// sendTransferRequest encodes and sends the transfer request.
+func (f *FederationProtocol) sendTransferRequest(transferReq map[string]interface{}, conn net.Conn, playerID uint64, transferMgr *TransferManager) error {
 	encoder := json.NewEncoder(conn)
 	if err := encoder.Encode(transferReq); err != nil {
 		transferMgr.RollbackTransfer(playerID, "failed to send transfer request")
 		return fmt.Errorf("failed to send transfer request: %w", err)
 	}
+	return nil
+}
 
+// receiveTransferResponse decodes and validates the transfer response.
+func (f *FederationProtocol) receiveTransferResponse(conn net.Conn, playerID uint64, transferMgr *TransferManager) error {
 	decoder := json.NewDecoder(conn)
 	var response map[string]interface{}
 	if err := decoder.Decode(&response); err != nil {
@@ -195,15 +299,20 @@ func (f *FederationProtocol) TransferPlayer(playerID uint64, world *engine.World
 	}
 
 	if status, ok := response["status"].(string); !ok || status != "accepted" {
-		reason := "unknown"
-		if r, ok := response["reason"].(string); ok {
-			reason = r
-		}
+		reason := f.extractRejectionReason(response)
 		transferMgr.RollbackTransfer(playerID, reason)
 		return fmt.Errorf("transfer rejected: %s", reason)
 	}
 
-	return transferMgr.ConfirmTransfer(playerID)
+	return nil
+}
+
+// extractRejectionReason extracts the rejection reason from response.
+func (f *FederationProtocol) extractRejectionReason(response map[string]interface{}) string {
+	if r, ok := response["reason"].(string); ok {
+		return r
+	}
+	return "unknown"
 }
 
 // PortalSystem manages cross-server portals

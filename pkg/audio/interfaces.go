@@ -69,6 +69,21 @@ type AudioMixer interface {
 	SetVolume(volume float64)
 }
 
+// VoiceSystem provides voice chat capabilities with codec integration.
+type VoiceSystem interface {
+	// GetCodec returns the voice codec for encoding/decoding
+	GetCodec() VoiceCodec
+
+	// GetProcessor returns the voice processor for transmission
+	GetProcessor() *VoiceProcessor
+
+	// SetQuality sets the voice quality preset
+	SetQuality(quality VoiceQuality) error
+
+	// IsAvailable returns whether voice chat is available
+	IsAvailable() bool
+}
+
 // MusicContext represents the gameplay context for adaptive music.
 type MusicContext struct {
 	// Location describes where the player is (e.g., "dungeon", "town", "wilderness")

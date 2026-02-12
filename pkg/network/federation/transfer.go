@@ -327,13 +327,26 @@ func (tm *TransferManager) serializePlayerState(playerID uint64, world *engine.W
 		return nil, fmt.Errorf("player entity not found")
 	}
 
-	state := &PlayerState{
+	state := tm.createEmptyPlayerState(playerID)
+
+	tm.serializePosition(entity, state)
+	tm.serializeHealth(entity, state)
+	tm.serializeInventory(entity, state)
+
+	return state, nil
+}
+
+// createEmptyPlayerState creates a new PlayerState with initialized maps.
+func (tm *TransferManager) createEmptyPlayerState(playerID uint64) *PlayerState {
+	return &PlayerState{
 		PlayerID:   playerID,
 		Stats:      make(map[string]interface{}),
 		Reputation: make(map[string]float64),
 	}
+}
 
-	// Serialize position
+// serializePosition extracts position component data into PlayerState.
+func (tm *TransferManager) serializePosition(entity *engine.Entity, state *PlayerState) {
 	if posComp, ok := entity.GetComponent("position"); ok {
 		if pos, ok := posComp.(*engine.PositionComponent); ok {
 			state.Position = &PositionData{
@@ -342,8 +355,10 @@ func (tm *TransferManager) serializePlayerState(playerID uint64, world *engine.W
 			}
 		}
 	}
+}
 
-	// Serialize health
+// serializeHealth extracts health component data into PlayerState.
+func (tm *TransferManager) serializeHealth(entity *engine.Entity, state *PlayerState) {
 	if healthComp, ok := entity.GetComponent("health"); ok {
 		if health, ok := healthComp.(*engine.HealthComponent); ok {
 			state.Health = &HealthData{
@@ -352,8 +367,10 @@ func (tm *TransferManager) serializePlayerState(playerID uint64, world *engine.W
 			}
 		}
 	}
+}
 
-	// Serialize inventory
+// serializeInventory extracts inventory component data into PlayerState.
+func (tm *TransferManager) serializeInventory(entity *engine.Entity, state *PlayerState) {
 	if invComp, ok := entity.GetComponent("inventory"); ok {
 		if inv, ok := invComp.(*engine.InventoryComponent); ok {
 			state.Inventory = make([]ItemData, 0, len(inv.Items))
@@ -366,8 +383,6 @@ func (tm *TransferManager) serializePlayerState(playerID uint64, world *engine.W
 			}
 		}
 	}
-
-	return state, nil
 }
 
 // deserializePlayerState restores player entity from PlayerState

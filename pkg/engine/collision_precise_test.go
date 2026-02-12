@@ -3,6 +3,8 @@ package engine
 import (
 	"math"
 	"testing"
+
+	"github.com/sirupsen/logrus"
 )
 
 // TestQuantizePosition verifies sub-pixel precision quantization to 0.1px.
@@ -631,5 +633,120 @@ func BenchmarkApplyWallSlide(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		ApplyWallSlide(5.0, 3.0, normal)
+	}
+}
+
+// TestSetCollisionLogLevel verifies that SetCollisionLogLevel updates both logger and cache.
+func TestSetCollisionLogLevel(t *testing.T) {
+	tests := []struct {
+		name          string
+		level         logrus.Level
+		expectEnabled bool
+	}{
+		{"debug level enables flag", logrus.DebugLevel, true},
+		{"trace level enables flag", logrus.TraceLevel, true},
+		{"info level disables flag", logrus.InfoLevel, false},
+		{"warn level disables flag", logrus.WarnLevel, false},
+		{"error level disables flag", logrus.ErrorLevel, false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			SetCollisionLogLevel(tt.level)
+
+			if collisionDebugEnabled != tt.expectEnabled {
+				t.Errorf("collisionDebugEnabled = %v, want %v for level %v",
+					collisionDebugEnabled, tt.expectEnabled, tt.level)
+			}
+
+			if collisionLog.GetLevel() != tt.level {
+				t.Errorf("collisionLog.GetLevel() = %v, want %v",
+					collisionLog.GetLevel(), tt.level)
+			}
+		})
+	}
+}
+
+// TestCollisionDebugFlagCache verifies that cached flag avoids GetLevel() calls.
+func TestCollisionDebugFlagCache(t *testing.T) {
+	// Set to Info (debug disabled)
+	SetCollisionLogLevel(logrus.InfoLevel)
+	if collisionDebugEnabled {
+		t.Fatal("collisionDebugEnabled should be false at Info level")
+	}
+
+	// Call functions that previously checked GetLevel() every call
+	c := &PreciseColliderComponent{Width: 10, Height: 10}
+	QuantizePosition(5.5, 7.7)
+	c.GetBounds(0, 0)
+	c.IntersectsAABB(0, 0, c, 10, 10)
+	ComputeWallNormal(5, 5, 0, 0)
+	ApplyWallSlide(1.0, 1.0, EdgeNormal{NX: 1, NY: 0})
+
+	// Set to Debug (debug enabled)
+	SetCollisionLogLevel(logrus.DebugLevel)
+	if !collisionDebugEnabled {
+		t.Fatal("collisionDebugEnabled should be true at Debug level")
+	}
+
+	// Functions should now use cached true value
+	QuantizePosition(5.5, 7.7)
+	c.GetBounds(0, 0)
+	c.IntersectsAABB(0, 0, c, 10, 10)
+	ComputeWallNormal(5, 5, 0, 0)
+	ApplyWallSlide(1.0, 1.0, EdgeNormal{NX: 1, NY: 0})
+}
+
+// TestRefreshCollisionDebugFlag verifies internal flag refresh logic.
+func TestRefreshCollisionDebugFlag(t *testing.T) {
+	// Manually set logger level and refresh
+	collisionLog.SetLevel(logrus.WarnLevel)
+	refreshCollisionDebugFlag()
+
+	if collisionDebugEnabled {
+		t.Errorf("collisionDebugEnabled should be false at Warn level, got true")
+	}
+
+	collisionLog.SetLevel(logrus.DebugLevel)
+	refreshCollisionDebugFlag()
+
+	if !collisionDebugEnabled {
+		t.Errorf("collisionDebugEnabled should be true at Debug level, got false")
+	}
+}
+
+// BenchmarkQuantizePosition_CachedDebugFlag benchmarks with cached flag (debug off).
+func BenchmarkQuantizePosition_CachedDebugFlag(b *testing.B) {
+	SetCollisionLogLevel(logrus.InfoLevel) // Disable debug
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		QuantizePosition(123.456, 789.012)
+	}
+}
+
+// BenchmarkGetBounds_CachedDebugFlag benchmarks with cached flag (debug off).
+func BenchmarkGetBounds_CachedDebugFlag(b *testing.B) {
+	SetCollisionLogLevel(logrus.InfoLevel) // Disable debug
+	c := &PreciseColliderComponent{
+		Width: 32, Height: 32,
+		OffsetX: -16, OffsetY: -16,
+	}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		c.GetBounds(100, 200)
+	}
+}
+
+// BenchmarkIntersectsAABB_CachedDebugFlag benchmarks with cached flag (debug off).
+func BenchmarkIntersectsAABB_CachedDebugFlag(b *testing.B) {
+	SetCollisionLogLevel(logrus.InfoLevel) // Disable debug
+	c1 := &PreciseColliderComponent{Width: 32, Height: 32}
+	c2 := &PreciseColliderComponent{Width: 32, Height: 32}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		c1.IntersectsAABB(0, 0, c2, 16, 16)
 	}
 }

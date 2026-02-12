@@ -32,7 +32,7 @@ func NewMazeGeneratorWithLogger(logger *logrus.Logger) *MazeGenerator {
 	}
 	return &MazeGenerator{
 		roomChance:    0.1, // 10% of dead ends become rooms
-		corridorWidth: 1,   // Single-tile corridors
+		corridorWidth: 2,   // Double-wide corridors to accommodate 64×64 player sprites
 		logger:        logEntry,
 	}
 }
@@ -78,42 +78,63 @@ func (g *MazeGenerator) Generate(seed int64, params procgen.GenerationParams) (i
 
 // extractDimensions extracts and validates maze dimensions from parameters.
 func (g *MazeGenerator) extractDimensions(params procgen.GenerationParams) (int, int, error) {
+	width, height := g.parseCustomDimensions(params)
+
+	if err := g.validateDimensions(width, height); err != nil {
+		return 0, 0, err
+	}
+
+	width, height = g.normalizeToOddDimensions(width, height)
+	return width, height, nil
+}
+
+// parseCustomDimensions extracts dimensions and settings from custom parameters.
+func (g *MazeGenerator) parseCustomDimensions(params procgen.GenerationParams) (int, int) {
 	width := 80
 	height := 50
 
-	if params.Custom != nil {
-		if w, ok := params.Custom["width"].(int); ok {
-			width = w
-		}
-		if h, ok := params.Custom["height"].(int); ok {
-			height = h
-		}
-		if rc, ok := params.Custom["roomChance"].(float64); ok {
-			g.roomChance = rc
-		}
-		if cw, ok := params.Custom["corridorWidth"].(int); ok {
-			g.corridorWidth = cw
-		}
+	if params.Custom == nil {
+		return width, height
 	}
 
-	// Validate dimensions
+	if w, ok := params.Custom["width"].(int); ok {
+		width = w
+	}
+	if h, ok := params.Custom["height"].(int); ok {
+		height = h
+	}
+	if rc, ok := params.Custom["roomChance"].(float64); ok {
+		g.roomChance = rc
+	}
+	if cw, ok := params.Custom["corridorWidth"].(int); ok {
+		g.corridorWidth = cw
+	}
+
+	return width, height
+}
+
+// validateDimensions checks if dimensions are within valid bounds.
+func (g *MazeGenerator) validateDimensions(width, height int) error {
 	if width <= 0 || height <= 0 {
-		return 0, 0, fmt.Errorf("invalid dimensions: width=%d, height=%d (must be positive)", width, height)
+		return fmt.Errorf("invalid dimensions: width=%d, height=%d (must be positive)", width, height)
 	}
 
 	if width > 1000 || height > 1000 {
-		return 0, 0, fmt.Errorf("dimensions too large: width=%d, height=%d (max 1000x1000)", width, height)
+		return fmt.Errorf("dimensions too large: width=%d, height=%d (max 1000x1000)", width, height)
 	}
 
-	// Ensure dimensions are odd for maze algorithm (walls on edges, floors in between)
+	return nil
+}
+
+// normalizeToOddDimensions ensures dimensions are odd for maze algorithm.
+func (g *MazeGenerator) normalizeToOddDimensions(width, height int) (int, int) {
 	if width%2 == 0 {
 		width++
 	}
 	if height%2 == 0 {
 		height++
 	}
-
-	return width, height, nil
+	return width, height
 }
 
 // generateMazeStructure creates the basic maze layout using recursive backtracking.

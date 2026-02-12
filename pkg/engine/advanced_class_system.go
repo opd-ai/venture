@@ -42,33 +42,58 @@ func (acs *AdvancedClassSystem) Update(entities []*Entity, deltaTime float64) {
 
 // applyStatBonuses applies calculated stat bonuses to entity components
 func (acs *AdvancedClassSystem) applyStatBonuses(entity *Entity, bonuses advanced.StatBonuses) {
-	if healthComp, ok := entity.GetComponent("health"); ok {
-		if health, ok := healthComp.(*HealthComponent); ok {
-			health.Max += float64(bonuses.Health)
-			if health.Current > health.Max {
-				health.Current = health.Max
-			}
-		}
-	}
+	acs.applyHealthBonuses(entity, bonuses)
+	acs.applyManaBonuses(entity, bonuses)
+	acs.applyStatsBonuses(entity, bonuses)
+}
 
-	if manaComp, ok := entity.GetComponent("mana"); ok {
-		if mana, ok := manaComp.(*ManaComponent); ok {
-			mana.Max += bonuses.Mana
-			if mana.Current > mana.Max {
-				mana.Current = mana.Max
-			}
-		}
+// applyHealthBonuses applies health bonuses to an entity's health component.
+func (acs *AdvancedClassSystem) applyHealthBonuses(entity *Entity, bonuses advanced.StatBonuses) {
+	healthComp, ok := entity.GetComponent("health")
+	if !ok {
+		return
 	}
+	health, ok := healthComp.(*HealthComponent)
+	if !ok {
+		return
+	}
+	health.Max += float64(bonuses.Health)
+	if health.Current > health.Max {
+		health.Current = health.Max
+	}
+}
 
-	if statsComp, ok := entity.GetComponent("stats"); ok {
-		if stats, ok := statsComp.(*StatsComponent); ok {
-			stats.Attack += float64(bonuses.Strength)
-			stats.Defense += float64(bonuses.Defense)
-			stats.MagicPower += float64(bonuses.Intelligence)
-			stats.CritChance += bonuses.CritChance
-			stats.CritDamage += bonuses.CritDamage
-		}
+// applyManaBonuses applies mana bonuses to an entity's mana component.
+func (acs *AdvancedClassSystem) applyManaBonuses(entity *Entity, bonuses advanced.StatBonuses) {
+	manaComp, ok := entity.GetComponent("mana")
+	if !ok {
+		return
 	}
+	mana, ok := manaComp.(*ManaComponent)
+	if !ok {
+		return
+	}
+	mana.Max += bonuses.Mana
+	if mana.Current > mana.Max {
+		mana.Current = mana.Max
+	}
+}
+
+// applyStatsBonuses applies attribute bonuses to an entity's stats component.
+func (acs *AdvancedClassSystem) applyStatsBonuses(entity *Entity, bonuses advanced.StatBonuses) {
+	statsComp, ok := entity.GetComponent("stats")
+	if !ok {
+		return
+	}
+	stats, ok := statsComp.(*StatsComponent)
+	if !ok {
+		return
+	}
+	stats.Attack += float64(bonuses.Strength)
+	stats.Defense += float64(bonuses.Defense)
+	stats.MagicPower += float64(bonuses.Intelligence)
+	stats.CritChance += bonuses.CritChance
+	stats.CritDamage += bonuses.CritDamage
 }
 
 // InitializePlayerClass sets up a player's advanced class configuration

@@ -34,6 +34,9 @@ type WeatherSystem struct {
 	viewportY      float64
 	viewportWidth  float64
 	viewportHeight float64
+
+	// Reusable buffer for particle collection (performance optimization)
+	particleBuffer []WeatherParticleData
 }
 
 // NewWeatherSystem creates a new weather system.
@@ -75,44 +78,57 @@ func (ws *WeatherSystem) Update(entities []*Entity, deltaTime float64) {
 
 // updateWeather handles a single entity's weather effect.
 func (ws *WeatherSystem) updateWeather(entity *Entity, deltaTime float64) {
-	comp, ok := entity.GetComponent("weather")
+	weather, ok := ws.getWeatherComponent(entity)
 	if !ok {
 		return
+	}
+
+	transitionCompleted := weather.UpdateTransition(deltaTime)
+
+	if transitionCompleted {
+		ws.handleTransitionCompletion(weather)
+	}
+
+	ws.updateWeatherSystem(weather, deltaTime)
+}
+
+// getWeatherComponent retrieves and validates the weather component from an entity.
+func (ws *WeatherSystem) getWeatherComponent(entity *Entity) (*WeatherComponent, bool) {
+	comp, ok := entity.GetComponent("weather")
+	if !ok {
+		return nil, false
 	}
 
 	weather, ok := comp.(*WeatherComponent)
 	if !ok {
-		return
+		return nil, false
 	}
 
-	// Update transition state
-	transitionCompleted := weather.UpdateTransition(deltaTime)
+	return weather, true
+}
 
-	// Handle transition completion
-	if transitionCompleted {
-		// If fading out completed and no new weather pending, clear system
-		if !weather.Active && weather.System != nil {
-			// Check if this is a weather change (config was updated)
-			// Compare the system's config with component's config
-			isWeatherChange := false
-			if weather.System != nil {
-				// If configs differ, it's a weather change
-				if weather.System.Config.Type != weather.Config.Type {
-					isWeatherChange = true
-				}
-			}
+// handleTransitionCompletion handles weather transition completion logic.
+func (ws *WeatherSystem) handleTransitionCompletion(weather *WeatherComponent) {
+	if !weather.Active && weather.System != nil {
+		isWeatherChange := ws.isWeatherConfigChanged(weather)
+		weather.System = nil
 
-			// Clear the old system
-			weather.System = nil
-
-			// If it's a weather change, start new weather
-			if isWeatherChange {
-				weather.StartWeather()
-			}
+		if isWeatherChange {
+			weather.StartWeather()
 		}
 	}
+}
 
-	// Update weather particle system if active
+// isWeatherConfigChanged checks if the weather configuration has changed.
+func (ws *WeatherSystem) isWeatherConfigChanged(weather *WeatherComponent) bool {
+	if weather.System == nil {
+		return false
+	}
+	return weather.System.Config.Type != weather.Config.Type
+}
+
+// updateWeatherSystem updates the weather particle system if active.
+func (ws *WeatherSystem) updateWeatherSystem(weather *WeatherComponent, deltaTime float64) {
 	if weather.System != nil && (weather.Active || weather.Transitioning) {
 		weather.System.Update(deltaTime)
 	}
@@ -121,12 +137,14 @@ func (ws *WeatherSystem) updateWeather(entity *Entity, deltaTime float64) {
 // GetWeatherParticles returns all active weather particles for rendering.
 // Returns particles with opacity applied for transitions.
 // The rendering system should use this to draw weather effects.
+// Performance: Reuses internal buffer to avoid per-frame allocations.
 func (ws *WeatherSystem) GetWeatherParticles() []WeatherParticleData {
 	if ws.world == nil {
 		return nil
 	}
 
-	var allParticles []WeatherParticleData
+	// Reuse buffer by resetting length (capacity preserved)
+	ws.particleBuffer = ws.particleBuffer[:0]
 
 	weatherEntities := ws.world.GetEntitiesWith("weather")
 	for _, entity := range weatherEntities {
@@ -156,13 +174,12 @@ func (ws *WeatherSystem) GetWeatherParticles() []WeatherParticleData {
 			}
 
 			// Apply transition opacity to particle color
-			// Convert color.Color interface to color.RGBA for alpha manipulation
-			rgba := color.RGBAModel.Convert(p.Color).(color.RGBA)
-			// Adjust alpha based on opacity
+			// Performance: p.Color is already color.RGBA, no conversion needed
+			rgba := p.Color
 			originalAlpha := float64(rgba.A)
 			rgba.A = uint8(originalAlpha * opacity)
 
-			allParticles = append(allParticles, WeatherParticleData{
+			ws.particleBuffer = append(ws.particleBuffer, WeatherParticleData{
 				X:        p.X,
 				Y:        p.Y,
 				Size:     p.Size,
@@ -172,7 +189,7 @@ func (ws *WeatherSystem) GetWeatherParticles() []WeatherParticleData {
 		}
 	}
 
-	return allParticles
+	return ws.particleBuffer
 }
 
 // isInViewport checks if a particle is within viewport bounds.

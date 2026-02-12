@@ -23,6 +23,9 @@ type ViewportOptimizer struct {
 	// Reusable buffer for player entities to reduce per-frame allocations
 	playerBuffer []*Entity
 
+	// Reusable buffer for visible entities to eliminate QueryBounds allocations
+	visibleBuffer []*Entity
+
 	// Logger for structured logging
 	logger *logrus.Entry
 }
@@ -42,10 +45,11 @@ func NewViewportOptimizer() *ViewportOptimizer {
 	logger.SetReportCaller(true)
 
 	vo := &ViewportOptimizer{
-		tileSize:     32.0,
-		marginTiles:  1,                     // 1-tile margin as per Phase 44
-		playerBuffer: make([]*Entity, 0, 4), // Pre-allocate for typical player count (1-4)
-		logger:       logger.WithField("system_name", "viewport_optimizer"),
+		tileSize:      32.0,
+		marginTiles:   1,                       // 1-tile margin as per Phase 44
+		playerBuffer:  make([]*Entity, 0, 4),   // Pre-allocate for typical player count (1-4)
+		visibleBuffer: make([]*Entity, 0, 256), // Pre-allocate for typical visible entity count
+		logger:        logger.WithField("system_name", "viewport_optimizer"),
 	}
 
 	vo.logger.WithFields(logrus.Fields{
@@ -250,7 +254,10 @@ func (v *ViewportOptimizer) OptimizeVisibleSet(
 		"viewport_bounds": viewportBounds,
 	}).Debug("Viewport bounds calculated for optimization")
 
-	visible := spatialPartition.QueryBounds(viewportBounds)
+	// Use zero-allocation QueryBoundsInto to eliminate per-frame allocations
+	// This reduces GC pressure by reusing the visibleBuffer (Priority 1.2 from AUDIT.md)
+	v.visibleBuffer = v.visibleBuffer[:0]
+	visible := spatialPartition.QueryBoundsInto(viewportBounds, v.visibleBuffer)
 
 	v.logger.WithFields(logrus.Fields{
 		"spatial_query_results": len(visible),

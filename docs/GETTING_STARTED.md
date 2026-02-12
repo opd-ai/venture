@@ -67,7 +67,9 @@ Start the game client:
 | World Map | M | Navigate explored areas, fog of war |
 | Crafting | R | Brew potions, enchant gear, craft items |
 | Shop | F | Buy/sell items (when near merchant) |
-| Help | H or F1 | Controls reference and game tips |
+| Gallery | G | View shared images and screenshots |
+| Housing | H | Manage player housing and plots |
+| Help | F1 | Controls reference and game tips |
 | Pause | ESC | Pause game (closes any open menu first) |
 
 **Navigation Tip:** All menus use dual-exit—press the menu's letter key to toggle, or ESC to close any menu.
@@ -419,8 +421,8 @@ Now that you're familiar with the basics:
 
 ## Command Reference
 
-**Client:** `-width`, `-height`, `-fullscreen`, `-seed`, `-genre`, `-weather`, `-weather-intensity`, `-verbose`, `-profile`, `-multiplayer`, `-server`, `-host-and-play`, `-host-lan`, `-port`, `-max-players`, `-tick-rate`, `-no-tutorial`
-**Server:** `-port`, `-max-players`, `-tick-rate`, `-seed`, `-genre`, `-verbose`, `-aerial-sprites`, `-high-latency`
+**Client:** `-width`, `-height`, `-fullscreen`, `-seed`, `-genre`, `-weather`, `-weather-intensity`, `-postprocess-preset`, `-postprocess-color-grading`, `-postprocess-vignette`, `-postprocess-chromatic`, `-postprocess-saturation`, `-postprocess-contrast`, `-postprocess-brightness`, `-postprocess-vignette-intensity`, `-postprocess-vignette-softness`, `-postprocess-chromatic-intensity`, `-palette-harmony`, `-palette-mood`, `-palette-rarity`, `-verbose`, `-profile`, `-multiplayer`, `-server`, `-host-and-play`, `-host-lan`, `-port`, `-max-players`, `-tick-rate`, `-no-tutorial`, `-version`
+**Server:** `-port`, `-max-players`, `-tick-rate`, `-seed`, `-genre`, `-verbose`, `-aerial-sprites`, `-high-latency`, `-security-audit`, `-stability-monitor`, `-simulate-network`, `-resilience-metrics`, `-balance-validate`, `-migration-validate`, `-ux-validate`, `-enable-mods`, `-mods-dir`, `-metrics-port`, `-enable-metrics`, `-version`
 
 **V3.0 Weather Options:**
 - `-weather`: Weather type (rain, snow, fog, dust, ash, neonrain, smog, radiation)

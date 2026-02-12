@@ -5,6 +5,7 @@ import "errors"
 // LegendaryQuestComponent tracks a player's legendary quest progress.
 type LegendaryQuestComponent struct {
 	QuestID         string
+	GenreID         string // Genre for procedural item generation
 	CurrentPhase    int
 	PhasesCompleted []bool
 	StartedAt       float64

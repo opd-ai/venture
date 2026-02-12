@@ -20,6 +20,15 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+// StationBonusProvider provides crafting bonuses from player-owned housing stations.
+// This interface allows CraftingSystem to integrate with housing_crafting package
+// without creating a circular dependency.
+type StationBonusProvider interface {
+	// GetCraftingBonus returns the best crafting bonus multiplier for a player's recipe.
+	// Returns 1.0 (no bonus) if player has no stations or no stations with the recipe.
+	GetCraftingBonus(playerID, recipeID string) float64
+}
+
 // CraftingResult contains the outcome of a crafting attempt.
 type CraftingResult struct {
 	Success       bool
@@ -32,10 +41,11 @@ type CraftingResult struct {
 
 // CraftingSystem manages recipe-based item crafting.
 type CraftingSystem struct {
-	world         *World
-	inventory     *InventorySystem
-	itemGenerator *item.ItemGenerator
-	logger        *logrus.Entry
+	world          *World
+	inventory      *InventorySystem
+	itemGenerator  *item.ItemGenerator
+	logger         *logrus.Entry
+	stationManager StationBonusProvider // Optional housing crafting integration
 }
 
 // NewCraftingSystem creates a new crafting system.
@@ -56,6 +66,16 @@ func NewCraftingSystemWithLogger(world *World, inventorySystem *InventorySystem,
 		inventory:     inventorySystem,
 		itemGenerator: itemGen,
 		logger:        logEntry,
+	}
+}
+
+// SetStationManager configures the housing crafting station manager for bonus calculations.
+// This enables auto-discovery of player-owned stations for crafting bonuses.
+// Call this after system initialization to wire in the housing_crafting integration.
+func (s *CraftingSystem) SetStationManager(manager StationBonusProvider) {
+	s.stationManager = manager
+	if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.InfoLevel {
+		s.logger.Info("housing crafting station manager configured for auto-discovery")
 	}
 }
 
@@ -189,29 +209,17 @@ func (s *CraftingSystem) StartCraft(entityID uint64, recipe *Recipe, stationID u
 		return nil, err
 	}
 
-	if result := s.validateRecipeKnowledge(entity, recipe); result != nil {
-		return result, nil
-	}
-
-	skillLevel := s.getCraftingSkillLevel(entity)
-	if result := s.validateSkillLevel(entityID, recipe, skillLevel); result != nil {
-		return result, nil
-	}
-
 	invComp, err := s.getInventoryComponent(entity)
 	if err != nil {
 		s.logInventoryError(entityID, err)
 		return nil, err
 	}
 
-	if result := s.validateCraftingMaterials(entityID, recipe, invComp); result != nil {
+	if result := s.validateAllCraftingRequirements(entity, entityID, recipe, invComp); result != nil {
 		return result, nil
 	}
 
-	if result := s.validateInventorySpace(entityID, recipe, invComp); result != nil {
-		return result, nil
-	}
-
+	skillLevel := s.getCraftingSkillLevel(entity)
 	stationBonus, craftTimeMultiplier, err := s.processStationValidation(entityID, recipe, stationID)
 	if err != nil {
 		return &CraftingResult{
@@ -227,17 +235,7 @@ func (s *CraftingSystem) StartCraft(entityID uint64, recipe *Recipe, stationID u
 	}
 
 	s.createCraftingProgress(entity, recipe, stationID, craftTimeMultiplier, skillLevel, stationBonus, consumed)
-
-	if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.InfoLevel {
-		s.logger.WithFields(logrus.Fields{
-			"entity_id":      entityID,
-			"recipe_id":      recipe.ID,
-			"recipe_name":    recipe.Name,
-			"skill_level":    skillLevel,
-			"station_id":     stationID,
-			"materials_used": len(consumed),
-		}).Info("craft started successfully")
-	}
+	s.logCraftSuccess(entityID, recipe, stationID, skillLevel, consumed)
 
 	return &CraftingResult{
 		Success:       true,
@@ -260,7 +258,7 @@ func (s *CraftingSystem) completeCraft(entityID uint64, progressComp *CraftingPr
 	}
 
 	skillLevel := s.getCraftingSkillLevel(entity)
-	stationBonus := s.extractStationBonus(progressComp.UsingStationID)
+	stationBonus := s.extractStationBonus(entityID, recipe.ID, progressComp.UsingStationID)
 	finalChance := s.calculateFinalSuccessChance(recipe, skillLevel, stationBonus)
 
 	rng := rand.New(rand.NewSource(recipe.OutputItemSeed + int64(entityID)))
@@ -297,17 +295,49 @@ func (s *CraftingSystem) validateCraftCompletion(entityID uint64, progressComp *
 	return entity, recipe
 }
 
-// extractStationBonus retrieves the success bonus from a crafting station.
-func (s *CraftingSystem) extractStationBonus(stationID uint64) float64 {
+// extractStationBonus retrieves the success bonus from crafting stations.
+// First tries auto-discovery via StationManager (player-owned housing stations),
+// then falls back to explicit station entity lookup (placed crafting stations).
+// This enables automatic bonus calculation without manual station registration.
+func (s *CraftingSystem) extractStationBonus(entityID uint64, recipeID string, stationID uint64) float64 {
+	// Try auto-discovery via housing crafting stations first
+	if s.stationManager != nil {
+		entity, ok := s.world.GetEntity(entityID)
+		if ok {
+			// Extract player ID from network component
+			if networkComp, ok := entity.GetComponent("network"); ok {
+				if nc, ok := networkComp.(*NetworkComponent); ok && nc.PlayerID > 0 {
+					playerIDStr := fmt.Sprintf("%d", nc.PlayerID)
+					bonus := s.stationManager.GetCraftingBonus(playerIDStr, recipeID)
+
+					if bonus > 1.0 {
+						if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
+							s.logger.WithFields(logrus.Fields{
+								"entity_id": entityID,
+								"player_id": playerIDStr,
+								"recipe_id": recipeID,
+								"bonus":     bonus,
+								"source":    "housing_stations",
+							}).Debug("housing station bonus auto-discovered")
+						}
+						// Convert multiplier (1.0-2.0) to success bonus (0.0-1.0)
+						return (bonus - 1.0)
+					}
+				}
+			}
+		}
+	}
+
+	// Fallback to explicit station lookup
 	if stationID == 0 {
 		if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
-			s.logger.Debug("no station specified, bonus is 0")
+			s.logger.Debug("no station specified and no housing bonus, bonus is 0")
 		}
 		return 0.0
 	}
 
 	if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
-		s.logger.WithField("station_id", stationID).Debug("extracting station bonus")
+		s.logger.WithField("station_id", stationID).Debug("extracting station bonus from entity")
 	}
 
 	station, ok := s.world.GetEntity(stationID)
@@ -333,7 +363,8 @@ func (s *CraftingSystem) extractStationBonus(stationID uint64) float64 {
 		s.logger.WithFields(logrus.Fields{
 			"station_id": stationID,
 			"bonus":      stationComp.BonusSuccessChance,
-		}).Debug("station bonus extracted")
+			"source":     "station_entity",
+		}).Debug("station bonus extracted from entity")
 	}
 
 	return stationComp.BonusSuccessChance
@@ -1273,5 +1304,42 @@ func (s *CraftingSystem) createCraftingProgress(entity *Entity, recipe *Recipe, 
 			"craft_time":     actualCraftTime,
 			"materials_used": len(consumed),
 		}).Debug("started crafting")
+	}
+}
+
+// validateAllCraftingRequirements performs all crafting prerequisite validations.
+// Returns CraftingResult if validation fails, nil if all validations pass.
+func (s *CraftingSystem) validateAllCraftingRequirements(entity *Entity, entityID uint64, recipe *Recipe, invComp *InventoryComponent) *CraftingResult {
+	if result := s.validateRecipeKnowledge(entity, recipe); result != nil {
+		return result
+	}
+
+	skillLevel := s.getCraftingSkillLevel(entity)
+	if result := s.validateSkillLevel(entityID, recipe, skillLevel); result != nil {
+		return result
+	}
+
+	if result := s.validateCraftingMaterials(entityID, recipe, invComp); result != nil {
+		return result
+	}
+
+	if result := s.validateInventorySpace(entityID, recipe, invComp); result != nil {
+		return result
+	}
+
+	return nil
+}
+
+// logCraftSuccess logs successful craft initiation.
+func (s *CraftingSystem) logCraftSuccess(entityID uint64, recipe *Recipe, stationID uint64, skillLevel int, consumed []string) {
+	if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.InfoLevel {
+		s.logger.WithFields(logrus.Fields{
+			"entity_id":      entityID,
+			"recipe_id":      recipe.ID,
+			"recipe_name":    recipe.Name,
+			"skill_level":    skillLevel,
+			"station_id":     stationID,
+			"materials_used": len(consumed),
+		}).Info("craft started successfully")
 	}
 }

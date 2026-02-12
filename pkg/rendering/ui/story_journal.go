@@ -97,62 +97,86 @@ func NewStoryJournalUI(x, y, width, height int, genreID string) *StoryJournalUI 
 
 // LoadFromJournal populates the UI from a StoryJournalComponent and world entities.
 func (j *StoryJournalUI) LoadFromJournal(journal *engine.StoryJournalComponent, world *engine.World) {
-	// Clear existing data
 	j.SeriesList = []SeriesEntry{}
 
-	// Track series and their fragments
-	seriesMap := make(map[string]*SeriesEntry)
+	seriesMap := j.buildSeriesMap(journal, world)
+	j.markCompletedSeries(journal, seriesMap)
+	j.convertAndSortSeries(seriesMap)
+}
 
-	// Get all story fragments from the world
+// buildSeriesMap creates a map of series from world fragments.
+func (j *StoryJournalUI) buildSeriesMap(journal *engine.StoryJournalComponent, world *engine.World) map[string]*SeriesEntry {
+	seriesMap := make(map[string]*SeriesEntry)
 	fragments := world.GetEntitiesWith("storyfragment")
 
 	for _, fragEntity := range fragments {
-		fragComp, ok := fragEntity.GetComponent("storyfragment")
-		if !ok {
+		storyFrag := j.extractStoryFragment(fragEntity)
+		if storyFrag == nil {
 			continue
 		}
 
-		storyFrag, ok := fragComp.(*engine.StoryFragmentComponent)
-		if !ok {
-			continue
-		}
-
-		seriesID := storyFrag.SeriesID
-
-		// Create or update series entry
-		series, exists := seriesMap[seriesID]
-		if !exists {
-			series = &SeriesEntry{
-				SeriesID:        seriesID,
-				SeriesName:      formatSeriesName(seriesID),
-				FragmentCount:   0,
-				DiscoveredCount: 0,
-				IsComplete:      false,
-			}
-			seriesMap[seriesID] = series
-		}
-
-		series.FragmentCount++
-
-		// Check if discovered using journal's IsDiscovered method
-		if journal.IsDiscovered(seriesID, storyFrag.SequenceNum) {
-			series.DiscoveredCount++
-		}
+		j.updateSeriesEntry(seriesMap, storyFrag, journal)
 	}
 
-	// Check for completed series
+	return seriesMap
+}
+
+// extractStoryFragment extracts and validates story fragment component.
+func (j *StoryJournalUI) extractStoryFragment(fragEntity *engine.Entity) *engine.StoryFragmentComponent {
+	fragComp, ok := fragEntity.GetComponent("storyfragment")
+	if !ok {
+		return nil
+	}
+
+	storyFrag, ok := fragComp.(*engine.StoryFragmentComponent)
+	if !ok {
+		return nil
+	}
+
+	return storyFrag
+}
+
+// updateSeriesEntry creates or updates series entry with fragment data.
+func (j *StoryJournalUI) updateSeriesEntry(seriesMap map[string]*SeriesEntry, storyFrag *engine.StoryFragmentComponent, journal *engine.StoryJournalComponent) {
+	series := j.getOrCreateSeries(seriesMap, storyFrag.SeriesID)
+	series.FragmentCount++
+
+	if journal.IsDiscovered(storyFrag.SeriesID, storyFrag.SequenceNum) {
+		series.DiscoveredCount++
+	}
+}
+
+// getOrCreateSeries retrieves existing or creates new series entry.
+func (j *StoryJournalUI) getOrCreateSeries(seriesMap map[string]*SeriesEntry, seriesID string) *SeriesEntry {
+	series, exists := seriesMap[seriesID]
+	if !exists {
+		series = &SeriesEntry{
+			SeriesID:        seriesID,
+			SeriesName:      formatSeriesName(seriesID),
+			FragmentCount:   0,
+			DiscoveredCount: 0,
+			IsComplete:      false,
+		}
+		seriesMap[seriesID] = series
+	}
+	return series
+}
+
+// markCompletedSeries marks series that are completed in the journal.
+func (j *StoryJournalUI) markCompletedSeries(journal *engine.StoryJournalComponent, seriesMap map[string]*SeriesEntry) {
 	for seriesID, series := range seriesMap {
 		if journal.CompletedSeries[seriesID] {
 			series.IsComplete = true
 		}
 	}
+}
 
-	// Convert map to sorted slice
+// convertAndSortSeries converts map to sorted slice.
+func (j *StoryJournalUI) convertAndSortSeries(seriesMap map[string]*SeriesEntry) {
 	for _, series := range seriesMap {
 		j.SeriesList = append(j.SeriesList, *series)
 	}
 
-	// Sort by completion status (complete first), then by name
 	sort.Slice(j.SeriesList, func(i, k int) bool {
 		if j.SeriesList[i].IsComplete != j.SeriesList[k].IsComplete {
 			return j.SeriesList[i].IsComplete

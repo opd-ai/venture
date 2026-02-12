@@ -1089,41 +1089,12 @@ func (ui *CraftingUI) matchesSearch(recipe *Recipe) bool {
 	if ui.searchQuery == "" {
 		return true
 	}
+	return containsCaseInsensitive(recipe.Name, ui.searchQuery)
+}
 
-	// Case-insensitive substring match on recipe name
-	query := ui.searchQuery
-	name := recipe.Name
-
-	// Simple case-insensitive contains check
-	queryLen := len(query)
-	nameLen := len(name)
-	if queryLen > nameLen {
-		return false
-	}
-
-	for i := 0; i <= nameLen-queryLen; i++ {
-		match := true
-		for j := 0; j < queryLen; j++ {
-			c1 := name[i+j]
-			c2 := query[j]
-			// Convert to lowercase for comparison
-			if c1 >= 'A' && c1 <= 'Z' {
-				c1 = c1 + 32
-			}
-			if c2 >= 'A' && c2 <= 'Z' {
-				c2 = c2 + 32
-			}
-			if c1 != c2 {
-				match = false
-				break
-			}
-		}
-		if match {
-			return true
-		}
-	}
-
-	return false
+// containsCaseInsensitive checks if s contains substr case-insensitively.
+func containsCaseInsensitive(s, substr string) bool {
+	return strings.Contains(strings.ToLower(s), strings.ToLower(substr))
 }
 
 // matchesCategory returns true if recipe matches current category filter.

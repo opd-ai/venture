@@ -33,6 +33,9 @@ type CombatSystem struct {
 	// Plan Phase 1.1: Audio manager for combat SFX
 	audioManager *AudioManager
 
+	// Combat resolver for damage calculation (uses authoritative combat package)
+	combatResolver combat.CombatResolver
+
 	// Callback for when an entity dies
 	onDeathCallback func(entity *Entity)
 
@@ -59,10 +62,14 @@ func NewCombatSystemWithLogger(seed int64, logger *logrus.Logger) *CombatSystem 
 		logEntry.Debug("combat system created")
 	}
 
+	// Use the authoritative combat package's damage calculation formulas
+	combatResolver := combat.NewDefaultCombatResolver(nil)
+
 	return &CombatSystem{
-		rng:    rand.New(rand.NewSource(seed)),
-		seed:   seed,
-		logger: logEntry,
+		rng:            rand.New(rand.NewSource(seed)),
+		seed:           seed,
+		logger:         logEntry,
+		combatResolver: combatResolver,
 	}
 }
 
@@ -577,21 +584,37 @@ func (s *CombatSystem) calculateDamage(attack *AttackComponent, attackerStats *S
 }
 
 // applyDefenseAndResistance reduces damage based on target's defense and resistances.
+// Uses the authoritative combat.CombatResolver for consistent damage formulas across the codebase.
 func (s *CombatSystem) applyDefenseAndResistance(baseDamage float64, damageType combat.DamageType, targetStats *StatsComponent) float64 {
-	finalDamage := baseDamage
-	if targetStats != nil {
-		// Apply defense
-		if damageType == combat.DamageMagical {
-			finalDamage -= targetStats.MagicDefense
-		} else {
-			finalDamage -= targetStats.Defense
-		}
-
-		// Apply resistance
-		resistance := targetStats.GetResistance(damageType)
-		finalDamage *= (1.0 - resistance)
+	if targetStats == nil {
+		return baseDamage
 	}
-	return finalDamage
+
+	// Convert StatsComponent to combat.Stats for resolver
+	stats := statsComponentToCombatStats(targetStats)
+
+	// Use combat package's authoritative damage calculation
+	damage := combat.Damage{
+		Amount: baseDamage,
+		Type:   damageType,
+	}
+
+	return s.combatResolver.CalculateDamage(damage, &stats)
+}
+
+// statsComponentToCombatStats converts engine StatsComponent to combat.Stats.
+// This allows us to use the combat package's authoritative damage formulas.
+func statsComponentToCombatStats(stats *StatsComponent) combat.Stats {
+	return combat.Stats{
+		Attack:       stats.Attack,
+		MagicPower:   stats.MagicPower,
+		Defense:      stats.Defense,
+		MagicDefense: stats.MagicDefense,
+		CritChance:   stats.CritChance,
+		CritDamage:   stats.CritDamage,
+		Evasion:      stats.Evasion,
+		Resistances:  stats.Resistances,
+	}
 }
 
 // applyShieldAbsorption reduces damage by shield absorption, returns remaining damage.

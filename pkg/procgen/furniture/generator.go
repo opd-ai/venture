@@ -345,107 +345,116 @@ func (gen *Generator) trySelectPostapocMaterialDeterministic(roll float64, tmpl 
 func (gen *Generator) getMaterialColor(rng *rand.Rand, material MaterialType, genreID string) color.RGBA {
 	switch material {
 	case MaterialWood:
-		// Browns and tans
-		r := uint8(100 + rng.Intn(56)) // 100-155
-		g := uint8(60 + rng.Intn(41))  // 60-100
-		b := uint8(20 + rng.Intn(31))  // 20-50
-		return color.RGBA{R: r, G: g, B: b, A: 255}
-
+		return gen.getWoodColor(rng)
 	case MaterialMetal:
-		// Grays, silvers, with genre tint
-		base := uint8(140 + rng.Intn(76)) // 140-215
-		// Pre-roll for fantasy gold/silver choice to ensure determinism
-		goldRoll := rng.Float64()
-		var r, g, b uint8
-		switch genreID {
-		case "scifi", "cyberpunk":
-			// Blue-tinted metal
-			r = base - 20
-			g = base - 10
-			b = base
-		case "fantasy":
-			// Silver/gold tint
-			if goldRoll < 0.3 {
-				// Gold
-				r = base + 20
-				g = base + 10
-				b = base - 30
-			} else {
-				// Silver
-				r = base
-				g = base
-				b = base
-			}
-		default:
+		return gen.getMetalColor(rng, genreID)
+	case MaterialStone:
+		return gen.getStoneColor(rng)
+	case MaterialCrystal:
+		return gen.getCrystalColor(rng, genreID)
+	case MaterialFabric:
+		return gen.getFabricColor(rng, genreID)
+	}
+	return color.RGBA{R: 128, G: 128, B: 128, A: 255}
+}
+
+// getWoodColor generates a wood material color.
+func (gen *Generator) getWoodColor(rng *rand.Rand) color.RGBA {
+	r := uint8(100 + rng.Intn(56))
+	g := uint8(60 + rng.Intn(41))
+	b := uint8(20 + rng.Intn(31))
+	return color.RGBA{R: r, G: g, B: b, A: 255}
+}
+
+// getMetalColor generates a metal material color with genre tints.
+func (gen *Generator) getMetalColor(rng *rand.Rand, genreID string) color.RGBA {
+	base := uint8(140 + rng.Intn(76))
+	goldRoll := rng.Float64()
+	var r, g, b uint8
+
+	switch genreID {
+	case "scifi", "cyberpunk":
+		r = base - 20
+		g = base - 10
+		b = base
+	case "fantasy":
+		if goldRoll < 0.3 {
+			r = base + 20
+			g = base + 10
+			b = base - 30
+		} else {
 			r = base
 			g = base
 			b = base
 		}
-		return color.RGBA{R: r, G: g, B: b, A: 255}
-
-	case MaterialStone:
-		// Grays and browns
-		base := uint8(80 + rng.Intn(96))      // 80-175
-		variation := uint8(rng.Intn(21) - 10) // -10 to +10
-		r := base
-		g := base + variation
-		b := base + variation/2
-		return color.RGBA{R: r, G: g, B: b, A: 255}
-
-	case MaterialCrystal:
-		// Bright, saturated colors influenced by genre
-		switch genreID {
-		case "fantasy":
-			// Blue, purple, green crystals
-			crystalType := rng.Intn(3)
-			switch crystalType {
-			case 0: // Blue
-				return color.RGBA{R: 100, G: 150, B: 255, A: 255}
-			case 1: // Purple
-				return color.RGBA{R: 200, G: 100, B: 255, A: 255}
-			default: // Green
-				return color.RGBA{R: 100, G: 255, B: 150, A: 255}
-			}
-		case "scifi", "cyberpunk":
-			// Neon colors
-			return color.RGBA{R: 0, G: 255, B: 255, A: 255} // Cyan
-		case "horror":
-			// Dark red/purple
-			return color.RGBA{R: 150, G: 50, B: 100, A: 255}
-		default:
-			// White/clear
-			return color.RGBA{R: 230, G: 240, B: 255, A: 255}
-		}
-
-	case MaterialFabric:
-		// Wide variety of colors, genre-influenced
-		switch genreID {
-		case "fantasy":
-			// Rich colors
-			colors := []color.RGBA{
-				{R: 180, G: 20, B: 20, A: 255},  // Red
-				{R: 20, G: 100, B: 180, A: 255}, // Blue
-				{R: 100, G: 150, B: 50, A: 255}, // Green
-				{R: 120, G: 80, B: 150, A: 255}, // Purple
-			}
-			return colors[rng.Intn(len(colors))]
-		case "horror":
-			// Dark, muted colors
-			r := uint8(40 + rng.Intn(41))
-			g := uint8(30 + rng.Intn(31))
-			b := uint8(30 + rng.Intn(31))
-			return color.RGBA{R: r, G: g, B: b, A: 255}
-		default:
-			// Random colors
-			r := uint8(100 + rng.Intn(156))
-			g := uint8(100 + rng.Intn(156))
-			b := uint8(100 + rng.Intn(156))
-			return color.RGBA{R: r, G: g, B: b, A: 255}
-		}
+	default:
+		r = base
+		g = base
+		b = base
 	}
 
-	// Fallback
-	return color.RGBA{R: 128, G: 128, B: 128, A: 255}
+	return color.RGBA{R: r, G: g, B: b, A: 255}
+}
+
+// getStoneColor generates a stone material color.
+func (gen *Generator) getStoneColor(rng *rand.Rand) color.RGBA {
+	base := uint8(80 + rng.Intn(96))
+	variation := uint8(rng.Intn(21) - 10)
+	r := base
+	g := base + variation
+	b := base + variation/2
+	return color.RGBA{R: r, G: g, B: b, A: 255}
+}
+
+// getCrystalColor generates a crystal material color based on genre.
+func (gen *Generator) getCrystalColor(rng *rand.Rand, genreID string) color.RGBA {
+	switch genreID {
+	case "fantasy":
+		return gen.getFantasyCrystalColor(rng)
+	case "scifi", "cyberpunk":
+		return color.RGBA{R: 0, G: 255, B: 255, A: 255}
+	case "horror":
+		return color.RGBA{R: 150, G: 50, B: 100, A: 255}
+	default:
+		return color.RGBA{R: 230, G: 240, B: 255, A: 255}
+	}
+}
+
+// getFantasyCrystalColor generates fantasy-themed crystal colors.
+func (gen *Generator) getFantasyCrystalColor(rng *rand.Rand) color.RGBA {
+	crystalType := rng.Intn(3)
+	switch crystalType {
+	case 0:
+		return color.RGBA{R: 100, G: 150, B: 255, A: 255}
+	case 1:
+		return color.RGBA{R: 200, G: 100, B: 255, A: 255}
+	default:
+		return color.RGBA{R: 100, G: 255, B: 150, A: 255}
+	}
+}
+
+// getFabricColor generates a fabric material color based on genre.
+func (gen *Generator) getFabricColor(rng *rand.Rand, genreID string) color.RGBA {
+	switch genreID {
+	case "fantasy":
+		colors := []color.RGBA{
+			{R: 180, G: 20, B: 20, A: 255},
+			{R: 20, G: 100, B: 180, A: 255},
+			{R: 100, G: 150, B: 50, A: 255},
+			{R: 120, G: 80, B: 150, A: 255},
+		}
+		return colors[rng.Intn(len(colors))]
+	case "horror":
+		r := uint8(40 + rng.Intn(41))
+		g := uint8(30 + rng.Intn(31))
+		b := uint8(30 + rng.Intn(31))
+		return color.RGBA{R: r, G: g, B: b, A: 255}
+	default:
+		r := uint8(100 + rng.Intn(156))
+		g := uint8(100 + rng.Intn(156))
+		b := uint8(100 + rng.Intn(156))
+		return color.RGBA{R: r, G: g, B: b, A: 255}
+	}
 }
 
 // getSecondaryColor generates a complementary or accent color

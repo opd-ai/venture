@@ -4,6 +4,8 @@
 package sprites
 
 import (
+	"sort"
+
 	"github.com/opd-ai/venture/pkg/rendering/palette"
 	"github.com/opd-ai/venture/pkg/rendering/shapes"
 )
@@ -69,9 +71,58 @@ type Config struct {
 	// Custom parameters for specific sprite types
 	Custom map[string]interface{}
 
+	// sortedCustomKeys caches sorted keys of Custom map for hash generation
+	// Performance: Pre-sorting eliminates O(k log k) sort per cache lookup
+	// This field is automatically populated when Custom is set via SetCustom()
+	sortedCustomKeys []string
+
 	// PaletteOptions for advanced palette generation (Phase 5.4)
 	// If set, these options are used when generating palette from GenreID and Seed
 	PaletteOptions *palette.GenerationOptions
+
+	// AntiAlias controls edge smoothing quality for sprite rendering
+	// AntiAliasOff: Hard edges (fastest, no anti-aliasing)
+	// AntiAliasLow: 2x2 super-sampling (good balance)
+	// AntiAliasMedium: 4x4 super-sampling (high quality)
+	// AntiAliasHigh: 8x8 super-sampling (maximum quality, slower)
+	AntiAlias shapes.AntiAliasQuality
+}
+
+// SetCustom sets custom parameters and pre-sorts keys for cache efficiency.
+// Performance: Sorting keys once at creation avoids O(k log k) sort per lookup.
+func (c *Config) SetCustom(custom map[string]interface{}) {
+	c.Custom = custom
+	c.sortCustomKeys()
+}
+
+// sortCustomKeys pre-sorts Custom map keys for deterministic hash generation.
+// Called automatically by SetCustom() or can be called manually after direct Custom modification.
+func (c *Config) sortCustomKeys() {
+	if c.Custom == nil || len(c.Custom) == 0 {
+		c.sortedCustomKeys = nil
+		return
+	}
+
+	// Allocate or reuse slice
+	if cap(c.sortedCustomKeys) >= len(c.Custom) {
+		c.sortedCustomKeys = c.sortedCustomKeys[:0]
+	} else {
+		c.sortedCustomKeys = make([]string, 0, len(c.Custom))
+	}
+
+	for key := range c.Custom {
+		c.sortedCustomKeys = append(c.sortedCustomKeys, key)
+	}
+	sort.Strings(c.sortedCustomKeys)
+}
+
+// GetSortedCustomKeys returns pre-sorted custom parameter keys.
+// If keys haven't been sorted yet (e.g., Custom modified directly), sorts them first.
+func (c *Config) GetSortedCustomKeys() []string {
+	if c.Custom != nil && len(c.Custom) > 0 && len(c.sortedCustomKeys) == 0 {
+		c.sortCustomKeys()
+	}
+	return c.sortedCustomKeys
 }
 
 // DefaultConfig returns a default sprite configuration.
@@ -85,6 +136,7 @@ func DefaultConfig() Config {
 		Complexity: 0.5,
 		Variation:  0,
 		Custom:     make(map[string]interface{}),
+		AntiAlias:  shapes.AntiAliasLow, // Default to low quality AA for performance
 	}
 }
 

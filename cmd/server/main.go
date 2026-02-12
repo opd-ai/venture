@@ -34,6 +34,7 @@ var (
 	maxPlayers    = flag.Int("max-players", 8, "Maximum number of players")
 	seed          = flag.Int64("seed", 12345, "World generation seed")
 	genreID       = flag.String("genre", "fantasy", "Genre ID for world generation")
+	terrainType   = flag.String("terrain-type", "bsp", "Terrain generator type: bsp, cellular, city, forest, composite, grammar, maze")
 	tickRate      = flag.Int("tick-rate", 30, "Server update rate (updates per second)")
 	verbose       = flag.Bool("verbose", true, "Enable verbose logging")
 	aerialSprites = flag.Bool("aerial-sprites", true, "Enable aerial-view perspective sprites for top-down gameplay")
@@ -64,12 +65,20 @@ var (
 	metricsPort   = flag.String("metrics-port", "9090", "Port for Prometheus metrics HTTP endpoint")
 	enableMetrics = flag.Bool("enable-metrics", true, "Enable Prometheus metrics export at /metrics endpoint")
 
-	// Version flag
-	showVersion = flag.Bool("version", false, "Print version information and exit")
+	// Federation server identity (uses environment variable if set)
+	serverName = flag.String("server-name", getEnvOrDefault("SERVER_NAME", "venture-server"), "Server name for federation identity")
 
 	// Version flag
-	// (moved to this block for consistency)
+	showVersion = flag.Bool("version", false, "Print version information and exit")
 )
+
+// getEnvOrDefault returns environment variable value or default if not set
+func getEnvOrDefault(key, defaultValue string) string {
+	if value := os.Getenv(key); value != "" {
+		return value
+	}
+	return defaultValue
+}
 
 func main() {
 	flag.Parse()
@@ -94,7 +103,7 @@ func main() {
 	modManager, stabilityMon, networkSim, metricsCollector := initializeOptionalSystems(serverLogger)
 	_ = modManager
 
-	world := createGameWorld(logger)
+	world, enhancedChatSystem := createGameWorld(logger)
 	generatedTerrain := generateWorldTerrain(logger, serverLogger)
 	spawnV4Entities(world, generatedTerrain, logger)
 
@@ -110,7 +119,7 @@ func main() {
 
 	defer shutdownServer(serverLogger, metricsExporter, stabilityMon, metricsCollector, networkSim, server)
 
-	executeGameLoop(world, server, snapshotManager, lagCompensator, logger, serverLogger)
+	executeGameLoop(world, enhancedChatSystem, server, snapshotManager, lagCompensator, logger, serverLogger)
 }
 
 // validateConfiguration validates server configuration before startup.
@@ -268,7 +277,7 @@ func logNetworkSimulationStats(networkSim *resilience.NetworkSimulator, serverLo
 }
 
 // executeGameLoop sets up and runs the main server game loop.
-func executeGameLoop(world *engine.World, server *network.TCPServer, snapshotManager *network.SnapshotManager, lagCompensator *network.LagCompensator, logger *logrus.Logger, serverLogger *logrus.Entry) {
+func executeGameLoop(world *engine.World, enhancedChatSystem *engine.EnhancedChatSystem, server *network.TCPServer, snapshotManager *network.SnapshotManager, lagCompensator *network.LagCompensator, logger *logrus.Logger, serverLogger *logrus.Entry) {
 	tickDuration := time.Duration(1000000000 / *tickRate)
 	ticker := time.NewTicker(tickDuration)
 	defer ticker.Stop()
@@ -278,7 +287,7 @@ func executeGameLoop(world *engine.World, server *network.TCPServer, snapshotMan
 	serverLogger.WithField("tickRate", *tickRate).Info("starting authoritative game loop")
 
 	startErrorHandler(server, logger)
-	startPlayerManagementHandlers(server, world, nil, logger)
+	startPlayerManagementHandlers(server, world, nil, enhancedChatSystem, logger)
 
 	runGameLoop(world, server, snapshotManager, lagCompensator, ticker, logger, serverLogger, &lastUpdate)
 }
@@ -302,7 +311,8 @@ func initializeLogger() *logrus.Logger {
 }
 
 // createGameWorld initializes the game world with all required systems.
-func createGameWorld(logger *logrus.Logger) *engine.World {
+// Returns the world and the enhanced chat system for player registration.
+func createGameWorld(logger *logrus.Logger) (*engine.World, *engine.EnhancedChatSystem) {
 	worldLogger := logger.WithFields(logrus.Fields{"system": "world"})
 	if logger.GetLevel() >= logrus.DebugLevel {
 		worldLogger.Debug("creating game world")
@@ -337,30 +347,68 @@ func createGameWorld(logger *logrus.Logger) *engine.World {
 	// Gap: 29 server-critical systems were only on client, causing multiplayer desync
 	// Fix: Added all missing gameplay systems for server-authoritative state
 	// Roadmap: Multiple phases (V3-V6) - complete multiplayer parity
-	initializeCoreGameplaySystems(world, *seed, logger, inventorySystem, itemGen)
+	craftingSystem, narrativeSystem := initializeCoreGameplaySystems(world, *seed, logger, inventorySystem, itemGen)
 
-	initializeV4Systems(world, *seed, logger)
-	initializeV5SystemsServer(world, logger)
-	initializeV6SystemsServer(world, *seed, logger)
+	companionLoyaltySystem, _ := initializeV4Systems(world, *seed, logger, economySystem)
+	enhancedChatSystem := initializeV5SystemsServer(world, logger)
+	initializeV6SystemsServer(world, *seed, logger, economySystem)
+
+	// AUDIT.md Task 3: Wire EnhancedChatSystem Player Registration
+	// EnhancedChatSystem provides persistent chat history per player.
+	// RegisterPlayer/UnregisterPlayer are now wired to network connection handlers
+	// in handlePlayerJoins/handlePlayerLeaves for cross-session history persistence.
 
 	// INTEGRATION FIX [Category A]: V8.0 Server System Initialization
 	// Gap: V8.0 systems implemented but never initialized on server
-	// Fix: Added V8.0 system initialization call for housing, fluids, vehicle physics
-	// Roadmap: ROADMAP_V8.md (Phase 49-51)
-	initializeV8SystemsServer(world, *seed, logger)
+	// Fix: Added V8.0 system initialization call for housing, fluids, vehicle physics, fleet management
+	// Roadmap: ROADMAP_V8.md (Phase 49-51), ROADMAP_V9.md (Phase 56.1)
+	// Returns guild.Manager and FleetManager for V9 political warfare integration
+	guildManager, fleetManager := initializeV8SystemsServer(world, *seed, *serverName, logger)
 
 	// INTEGRATION FIX [Category A]: V9.0 Server Integration Manager Initialization
 	// Gap: V9.0 integration managers were client-only, allowing XP/loyalty/permission exploits
 	// Fix: Added V9.0 manager initialization and V9ValidationService for server-authoritative validation
-	// Roadmap: ROADMAP_V9.md (Phase 55.1-55.3)
-	stationMgr, petHomeMgr, guildHousingMgr := initializeV9SystemsServer(logger)
+	// Roadmap: ROADMAP_V9.md (Phase 55.1-55.3, Phase 56.3, Phase 58.1)
+	stationMgr, petHomeMgr, guildHousingMgr, narrativeWorldSys, politicalWarfareSys := initializeV9SystemsServer(world, *seed, guildManager, logger)
 	v9ValidationService = NewV9ValidationService(stationMgr, petHomeMgr, guildHousingMgr, logger)
+
+	// INTEGRATION FIX [AUDIT.md Task #6]: Wire HousingCraftingSystem into CraftingSystem
+	// Gap: Station bonuses required manual registration, no auto-discovery
+	// Fix: Inject StationManager into CraftingSystem for automatic bonus calculation
+	// Impact: Players automatically receive crafting bonuses from owned housing stations
+	craftingSystem.SetStationManager(stationMgr)
+
+	// INTEGRATION FIX [AUDIT.md Task #9]: Wire CompanionHousingSystem into CompanionLoyaltySystem
+	// Gap: Companion housing bonuses required manual PetHomeManager calls
+	// Fix: Inject PetHomeManager into CompanionLoyaltySystem for automatic loyalty bonus calculation
+	// Impact: Companions automatically receive loyalty bonuses from owned housing (bedding quality)
+	companionLoyaltySystem.SetPetHomeProvider(petHomeMgr)
+
+	// INTEGRATION FIX [AUDIT.md Task #10]: Wire NarrativeWorldSystem into NarrativeSystem
+	// Gap: Companion story events (quests, memories, conflicts) not integrated with main narrative
+	// Fix: Inject narrativeWorldSystem into NarrativeSystem for automatic companion story tracking
+	// Impact: Companions automatically generate personal quests and track memories during narrative events
+	narrativeSystem.SetCompanionStoryProvider(narrativeWorldSys)
+
+	// INTEGRATION FIX [AUDIT.md Task #12]: PoliticalWarfareSystem for guild-level warfare
+	// Gap: Political warfare system implemented but not initialized on server
+	// Fix: Initialize PoliticalWarfareSystem in v9_systems.go and add to world ECS
+	// Impact: Guild wars, treaties, embargoes, and diplomatic victories enabled server-side
+	// Note: Manager accessible via politicalWarfareSys.GetManager() for direct API calls
+	_ = politicalWarfareSys // System runs via world.Update(), manager available for future use
+
+	// INTEGRATION FIX [AUDIT.md Task #2]: FleetManager for guild vehicle coordination
+	// Gap: FleetManager defined but never instantiated for guild vehicle coordination
+	// Fix: Initialize FleetManager in v8_systems.go for server-authoritative fleet management
+	// Impact: Guild fleet formations, siege engines, and vehicle maintenance enabled server-side
+	// Note: Available for VehicleSystem integration and network packet handling
+	_ = fleetManager // Manager available for future vehicle fleet coordination features
 
 	if logger.GetLevel() >= logrus.DebugLevel {
 		worldLogger.Debug("game systems initialized")
 	}
 
-	return world
+	return world, enhancedChatSystem
 }
 
 // generateWorldTerrain creates the initial terrain and spawns V4 entities.
@@ -368,12 +416,49 @@ func generateWorldTerrain(logger *logrus.Logger, serverLogger *logrus.Entry) *te
 	terrainLogger := logging.GeneratorLogger(logger, "terrain", *seed, *genreID)
 	if logger.GetLevel() >= logrus.DebugLevel {
 		terrainLogger.WithFields(logrus.Fields{
-			"width":  100,
-			"height": 100,
+			"width":       100,
+			"height":      100,
+			"terrainType": *terrainType,
 		}).Debug("generating world terrain")
 	}
 
-	terrainGen := terrain.NewBSPGeneratorWithLogger(logger)
+	// Select generator based on terrain type
+	var terrainGen procgen.Generator
+	switch *terrainType {
+	case "grammar":
+		// Use GraphGrammarGenerator with genre-specific config
+		var config terrain.LSystemConfig
+		switch *genreID {
+		case "fantasy":
+			config = terrain.GetFantasyConfig(*seed)
+		case "scifi", "sci-fi":
+			config = terrain.GetSciFiConfig(*seed)
+		case "horror":
+			config = terrain.GetHorrorConfig(*seed)
+		case "cyberpunk":
+			config = terrain.GetCyberpunkConfig(*seed)
+		case "post-apocalyptic", "postapocalyptic":
+			config = terrain.GetPostApocalypticConfig(*seed)
+		default:
+			config = terrain.GetFantasyConfig(*seed)
+		}
+		terrainGen = terrain.NewGraphGrammarGeneratorWithLogger(config, logger)
+	case "cellular":
+		terrainGen = terrain.NewCellularGeneratorWithLogger(logger)
+	case "city":
+		terrainGen = terrain.NewCityGeneratorWithLogger(logger)
+	case "forest":
+		terrainGen = terrain.NewForestGeneratorWithLogger(logger)
+	case "composite":
+		terrainGen = terrain.NewCompositeGeneratorWithLogger(logger)
+	case "maze":
+		terrainGen = terrain.NewMazeGeneratorWithLogger(logger)
+	case "bsp":
+		fallthrough
+	default:
+		terrainGen = terrain.NewBSPGeneratorWithLogger(logger)
+	}
+
 	params := procgen.GenerationParams{
 		Difficulty: 0.5,
 		Depth:      1,
@@ -389,11 +474,24 @@ func generateWorldTerrain(logger *logrus.Logger, serverLogger *logrus.Entry) *te
 		serverLogger.WithError(err).Fatal("failed to generate terrain")
 	}
 
-	generatedTerrain := terrainResult.(*terrain.Terrain)
+	// Convert result to Terrain (handles both *Terrain and *DungeonGraph)
+	var generatedTerrain *terrain.Terrain
+	if graph, ok := terrainResult.(*terrain.DungeonGraph); ok {
+		// Grammar generator returns DungeonGraph, convert it
+		generatedTerrain = terrain.GraphToTerrain(graph)
+		terrainLogger.WithFields(logrus.Fields{
+			"graphRooms": len(graph.Rooms),
+			"converted":  true,
+		}).Debug("converted DungeonGraph to Terrain")
+	} else {
+		generatedTerrain = terrainResult.(*terrain.Terrain)
+	}
+
 	terrainLogger.WithFields(logrus.Fields{
-		"width":     generatedTerrain.Width,
-		"height":    generatedTerrain.Height,
-		"roomCount": len(generatedTerrain.Rooms),
+		"width":       generatedTerrain.Width,
+		"height":      generatedTerrain.Height,
+		"roomCount":   len(generatedTerrain.Rooms),
+		"terrainType": *terrainType,
 	}).Info("world terrain generated")
 
 	return generatedTerrain
@@ -525,18 +623,18 @@ func startErrorHandler(server *network.TCPServer, logger *logrus.Logger) {
 }
 
 // startPlayerManagementHandlers starts goroutines for player join, leave, and input handling.
-func startPlayerManagementHandlers(server *network.TCPServer, world *engine.World, generatedTerrain *terrain.Terrain, logger *logrus.Logger) {
+func startPlayerManagementHandlers(server *network.TCPServer, world *engine.World, generatedTerrain *terrain.Terrain, enhancedChatSystem *engine.EnhancedChatSystem, logger *logrus.Logger) {
 	playerEntities := make(map[uint64]*engine.Entity)
 	playerEntitiesMu := &sync.RWMutex{}
 	networkLogger := logger.WithFields(logrus.Fields{"system": "network"})
 
-	go handlePlayerJoins(server, world, generatedTerrain, playerEntities, playerEntitiesMu, logger)
-	go handlePlayerLeaves(server, world, playerEntities, playerEntitiesMu, logger)
+	go handlePlayerJoins(server, world, generatedTerrain, playerEntities, playerEntitiesMu, enhancedChatSystem, logger)
+	go handlePlayerLeaves(server, world, playerEntities, playerEntitiesMu, enhancedChatSystem, logger)
 	go handleInputCommands(server, playerEntities, playerEntitiesMu, networkLogger, logger)
 }
 
 // handlePlayerJoins processes new player connections and creates entities.
-func handlePlayerJoins(server *network.TCPServer, world *engine.World, generatedTerrain *terrain.Terrain, playerEntities map[uint64]*engine.Entity, playerEntitiesMu *sync.RWMutex, logger *logrus.Logger) {
+func handlePlayerJoins(server *network.TCPServer, world *engine.World, generatedTerrain *terrain.Terrain, playerEntities map[uint64]*engine.Entity, playerEntitiesMu *sync.RWMutex, enhancedChatSystem *engine.EnhancedChatSystem, logger *logrus.Logger) {
 	for playerID := range server.ReceivePlayerJoin() {
 		playerLogger := logging.NetworkLogger(logger, "", "connected").WithField("playerID", playerID)
 		playerLogger.Info("player joined - creating entity")
@@ -547,18 +645,29 @@ func handlePlayerJoins(server *network.TCPServer, world *engine.World, generated
 		playerEntities[playerID] = entity
 		playerEntitiesMu.Unlock()
 
+		// Register player with enhanced chat system for persistent history
+		if err := enhancedChatSystem.RegisterPlayer(entity.ID); err != nil {
+			playerLogger.WithError(err).Warn("failed to register player with chat system")
+		} else {
+			playerLogger.Debug("player registered with chat system")
+		}
+
 		playerLogger.WithField("entityID", entity.ID).Debug("player entity created")
 	}
 }
 
 // handlePlayerLeaves processes player disconnections and removes entities.
-func handlePlayerLeaves(server *network.TCPServer, world *engine.World, playerEntities map[uint64]*engine.Entity, playerEntitiesMu *sync.RWMutex, logger *logrus.Logger) {
+func handlePlayerLeaves(server *network.TCPServer, world *engine.World, playerEntities map[uint64]*engine.Entity, playerEntitiesMu *sync.RWMutex, enhancedChatSystem *engine.EnhancedChatSystem, logger *logrus.Logger) {
 	for playerID := range server.ReceivePlayerLeave() {
 		playerLogger := logging.NetworkLogger(logger, "", "disconnected").WithField("playerID", playerID)
 		playerLogger.Info("player left - removing entity")
 
 		playerEntitiesMu.Lock()
 		if entity, exists := playerEntities[playerID]; exists {
+			// Unregister player from enhanced chat system
+			enhancedChatSystem.UnregisterPlayer(entity.ID)
+			playerLogger.Debug("player unregistered from chat system")
+
 			world.RemoveEntity(entity.ID)
 			delete(playerEntities, playerID)
 			playerLogger.WithField("entityID", entity.ID).Debug("player entity removed")
@@ -631,63 +740,69 @@ func buildWorldSnapshot(world *engine.World, timestamp time.Time) network.WorldS
 		Entities:  make(map[uint64]network.EntitySnapshot),
 	}
 
-	// Convert world entities to network entity snapshots
 	for _, entity := range world.GetEntities() {
-		// Get position component
-		if posComp, ok := entity.GetComponent("position"); ok {
-			pos := posComp.(*engine.PositionComponent)
-
-			// Get velocity if it exists
-			velX, velY := 0.0, 0.0
-			if velComp, ok := entity.GetComponent("velocity"); ok {
-				vel := velComp.(*engine.VelocityComponent)
-				velX = vel.VX
-				velY = vel.VY
-			}
-
-			entitySnapshot := network.EntitySnapshot{
-				EntityID:   entity.ID,
-				Position:   network.Position{X: pos.X, Y: pos.Y},
-				Velocity:   network.Velocity{VX: velX, VY: velY},
-				Components: make(map[string][]byte), // Initialize component data map
-			}
-
-			// Serialize V4.0 component data for network transmission
-			// Vehicle component
-			if vehicleComp, ok := entity.GetComponent("vehicle"); ok {
-				vehicle := vehicleComp.(*engine.VehicleComponent)
-				entitySnapshot.Components["vehicle"] = vehicle.Serialize()
-			}
-
-			// Companion component
-			if companionComp, ok := entity.GetComponent("companion"); ok {
-				companion := companionComp.(*engine.CompanionComponent)
-				entitySnapshot.Components["companion"] = companion.Serialize()
-			}
-
-			// Mount component (rider-vehicle relationship)
-			if mountComp, ok := entity.GetComponent("mount"); ok {
-				mount := mountComp.(*engine.MountComponent)
-				entitySnapshot.Components["mount"] = mount.Serialize()
-			}
-
-			// Achievement component
-			if achievementComp, ok := entity.GetComponent("achievement"); ok {
-				achievement := achievementComp.(*engine.AchievementComponent)
-				entitySnapshot.Components["achievement"] = achievement.Serialize()
-			}
-
-			// Bookshelf component
-			if bookshelfComp, ok := entity.GetComponent("bookshelf"); ok {
-				bookshelf := bookshelfComp.(*engine.BookshelfComponent)
-				entitySnapshot.Components["bookshelf"] = bookshelf.Serialize()
-			}
-
-			snapshot.Entities[entity.ID] = entitySnapshot
+		if entitySnap := buildEntitySnapshot(entity); entitySnap != nil {
+			snapshot.Entities[entity.ID] = *entitySnap
 		}
 	}
 
 	return snapshot
+}
+
+// buildEntitySnapshot creates a network snapshot for a single entity.
+func buildEntitySnapshot(entity *engine.Entity) *network.EntitySnapshot {
+	posComp, ok := entity.GetComponent("position")
+	if !ok {
+		return nil
+	}
+
+	pos := posComp.(*engine.PositionComponent)
+	velX, velY := extractVelocity(entity)
+
+	entitySnapshot := network.EntitySnapshot{
+		EntityID:   entity.ID,
+		Position:   network.Position{X: pos.X, Y: pos.Y},
+		Velocity:   network.Velocity{VX: velX, VY: velY},
+		Components: make(map[string][]byte),
+	}
+
+	serializeEntityComponents(entity, &entitySnapshot)
+	return &entitySnapshot
+}
+
+// extractVelocity retrieves velocity from entity or returns zero values.
+func extractVelocity(entity *engine.Entity) (float64, float64) {
+	if velComp, ok := entity.GetComponent("velocity"); ok {
+		vel := velComp.(*engine.VelocityComponent)
+		return vel.VX, vel.VY
+	}
+	return 0.0, 0.0
+}
+
+// serializeEntityComponents serializes all network-relevant components.
+func serializeEntityComponents(entity *engine.Entity, snapshot *network.EntitySnapshot) {
+	serializeIfPresent(entity, snapshot, "vehicle", func(c interface{}) []byte {
+		return c.(*engine.VehicleComponent).Serialize()
+	})
+	serializeIfPresent(entity, snapshot, "companion", func(c interface{}) []byte {
+		return c.(*engine.CompanionComponent).Serialize()
+	})
+	serializeIfPresent(entity, snapshot, "mount", func(c interface{}) []byte {
+		return c.(*engine.MountComponent).Serialize()
+	})
+	serializeIfPresent(entity, snapshot, "achievement", func(c interface{}) []byte {
+		return c.(*engine.AchievementComponent).Serialize()
+	})
+	serializeIfPresent(entity, snapshot, "bookshelf", func(c interface{}) []byte {
+		return c.(*engine.BookshelfComponent).Serialize()
+	})
+}
+
+// serializeIfPresent serializes a component if it exists on the entity.
+func serializeIfPresent(entity *engine.Entity, snapshot *network.EntitySnapshot, compType string, serializer func(interface{}) []byte) {
+	if comp, ok := entity.GetComponent(compType); ok {
+		snapshot.Components[compType] = serializer(comp)
+	}
 }
 
 // convertSnapshotToStateUpdates converts a WorldSnapshot to StateUpdates for broadcasting.

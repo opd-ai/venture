@@ -79,6 +79,10 @@ func SpawnStationFromData(world *World, stationData *StationData, x, y float64) 
 		recipeType = RecipeEnchanting
 	case 2: // StationWorkbench
 		recipeType = RecipeMagicItem
+	case 3: // StationKitchen
+		recipeType = RecipeCooking
+	case 4: // StationAnvil
+		recipeType = RecipeSmithing
 	default:
 		recipeType = RecipePotion
 	}
@@ -91,7 +95,7 @@ func SpawnStationFromData(world *World, stationData *StationData, x, y float64) 
 }
 
 // SpawnStationsInTerrain spawns crafting stations at deterministic locations in the terrain.
-// Uses station generator to create 3 stations (alchemy, forge, workbench) and places them
+// Uses station generator to create 5 stations (alchemy, forge, workbench, kitchen, anvil) and places them
 // on walkable tiles at safe distances from each other.
 //
 // Parameters:

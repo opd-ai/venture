@@ -23,6 +23,9 @@ type CameraComponent struct {
 	// Current camera position (world coordinates)
 	X, Y float64
 
+	// Previous tick camera position for render interpolation
+	PrevX, PrevY float64
+
 	// GAP-012 REPAIR: Screen shake for visual feedback
 	ShakeIntensity float64 // Current shake intensity (pixels)
 	ShakeDecay     float64 // Shake decay rate per second
@@ -126,7 +129,12 @@ func (s *CameraSystem) calculateTargetPosition(camera *CameraComponent, pos *Pos
 }
 
 // applyCameraSmoothing applies exponential smoothing to camera position.
+// Saves previous position for render interpolation before updating.
 func (s *CameraSystem) applyCameraSmoothing(camera *CameraComponent, targetX, targetY, deltaTime float64) {
+	// Save previous position for render interpolation in Draw()
+	camera.PrevX = camera.X
+	camera.PrevY = camera.Y
+
 	if camera.Smoothing > 0 {
 		alpha := 1.0 - math.Exp(-deltaTime/camera.Smoothing)
 		camera.X += (targetX - camera.X) * alpha
@@ -258,6 +266,42 @@ func (s *CameraSystem) WorldToScreen(worldX, worldY float64) (screenX, screenY f
 	// Apply camera transform
 	screenX = (worldX - camera.X) * camera.Zoom
 	screenY = (worldY - camera.Y) * camera.Zoom
+
+	// Center on screen
+	screenX += float64(s.ScreenWidth) / 2
+	screenY += float64(s.ScreenHeight) / 2
+
+	// GAP-012 REPAIR: Apply screen shake offset
+	screenX += camera.ShakeOffsetX
+	screenY += camera.ShakeOffsetY
+
+	return screenX, screenY
+}
+
+// WorldToScreenInterpolated converts world coordinates to screen coordinates
+// using an interpolated camera position for smooth rendering between ticks.
+// alpha ranges from 0.0 (previous tick camera pos) to 1.0 (current tick camera pos).
+func (s *CameraSystem) WorldToScreenInterpolated(worldX, worldY, alpha float64) (screenX, screenY float64) {
+	if s.activeCamera == nil {
+		return worldX, worldY
+	}
+
+	cameraComp, ok := s.activeCamera.GetComponent("camera")
+	if !ok {
+		return worldX, worldY
+	}
+	camera, ok := cameraComp.(*CameraComponent)
+	if !ok {
+		return worldX, worldY
+	}
+
+	// Interpolate camera position between previous and current tick
+	camX := camera.PrevX + (camera.X-camera.PrevX)*alpha
+	camY := camera.PrevY + (camera.Y-camera.PrevY)*alpha
+
+	// Apply camera transform with interpolated position
+	screenX = (worldX - camX) * camera.Zoom
+	screenY = (worldY - camY) * camera.Zoom
 
 	// Center on screen
 	screenX += float64(s.ScreenWidth) / 2

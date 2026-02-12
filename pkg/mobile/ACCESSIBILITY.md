@@ -189,7 +189,11 @@ func PlayInputFeedback(inputType InputFeedbackType) {
 - [x] Gesture alternatives (mobile/web touch)
 - [x] Dual-exit pattern (all platforms)
 - [x] Clear visual hierarchy (all platforms)
-- [ ] Screen reader support (web ARIA, mobile native - TODO)
+- [x] Screen reader support (web ARIA, mobile native)
+  - **WASM**: ARIA labels, roles, and live regions in `build/wasm/index.html` and `build/wasm/game.html`
+  - **Mobile**: Accessibility hints via `pkg/mobile/accessibility.go` with `AccessibilityHint` type
+  - **Standard hints**: Pre-configured for health bars, buttons, minimap, notifications
+  - **Coverage**: 100% test coverage with 19 test cases
 - [ ] High contrast mode (future enhancement)
 - [ ] Adjustable text size (future enhancement)
 - [ ] Colorblind modes (future enhancement)

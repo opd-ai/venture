@@ -478,26 +478,55 @@ func (g *Generator) drawDashedBorder(img *image.RGBA, col color.Color, thickness
 
 	dashLength := 6
 	gapLength := 4
-	// Top and bottom borders
+
+	g.drawHorizontalDashedBorders(img, col, thickness, w, h, dashLength, gapLength)
+	g.drawVerticalDashedBorders(img, col, thickness, w, h, dashLength, gapLength)
+}
+
+// drawHorizontalDashedBorders draws dashed top and bottom borders.
+func (g *Generator) drawHorizontalDashedBorders(img *image.RGBA, col color.Color, thickness, w, h, dashLength, gapLength int) {
 	for x := 0; x < w; x += dashLength + gapLength {
-		for dx := 0; dx < dashLength && x+dx < w; dx++ {
-			for t := 0; t < thickness; t++ {
-				if t < h {
-					img.Set(x+dx, t, col)     // Top
-					img.Set(x+dx, h-t-1, col) // Bottom
-				}
-			}
+		g.drawHorizontalDashSegment(img, col, thickness, x, w, h, dashLength)
+	}
+}
+
+// drawHorizontalDashSegment draws a single dash segment on top and bottom borders.
+func (g *Generator) drawHorizontalDashSegment(img *image.RGBA, col color.Color, thickness, x, w, h, dashLength int) {
+	for dx := 0; dx < dashLength && x+dx < w; dx++ {
+		g.drawHorizontalDashPixels(img, col, thickness, x+dx, h)
+	}
+}
+
+// drawHorizontalDashPixels draws thickness pixels vertically at position x for top and bottom borders.
+func (g *Generator) drawHorizontalDashPixels(img *image.RGBA, col color.Color, thickness, x, h int) {
+	for t := 0; t < thickness; t++ {
+		if t < h {
+			img.Set(x, t, col)     // Top
+			img.Set(x, h-t-1, col) // Bottom
 		}
 	}
-	// Left and right borders
+}
+
+// drawVerticalDashedBorders draws dashed left and right borders.
+func (g *Generator) drawVerticalDashedBorders(img *image.RGBA, col color.Color, thickness, w, h, dashLength, gapLength int) {
 	for y := 0; y < h; y += dashLength + gapLength {
-		for dy := 0; dy < dashLength && y+dy < h; dy++ {
-			for t := 0; t < thickness; t++ {
-				if t < w {
-					img.Set(t, y+dy, col)     // Left
-					img.Set(w-t-1, y+dy, col) // Right
-				}
-			}
+		g.drawVerticalDashSegment(img, col, thickness, y, w, h, dashLength)
+	}
+}
+
+// drawVerticalDashSegment draws a single dash segment on left and right borders.
+func (g *Generator) drawVerticalDashSegment(img *image.RGBA, col color.Color, thickness, y, w, h, dashLength int) {
+	for dy := 0; dy < dashLength && y+dy < h; dy++ {
+		g.drawVerticalDashPixels(img, col, thickness, y+dy, w)
+	}
+}
+
+// drawVerticalDashPixels draws thickness pixels horizontally at position y for left and right borders.
+func (g *Generator) drawVerticalDashPixels(img *image.RGBA, col color.Color, thickness, y, w int) {
+	for t := 0; t < thickness; t++ {
+		if t < w {
+			img.Set(t, y, col)     // Left
+			img.Set(w-t-1, y, col) // Right
 		}
 	}
 }

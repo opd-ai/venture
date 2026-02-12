@@ -3,6 +3,7 @@ package engine
 import (
 	"fmt"
 	"image/color"
+	"math"
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
@@ -10,9 +11,26 @@ import (
 	"github.com/hajimehoshi/ebiten/v2/vector"
 	"github.com/opd-ai/venture/pkg/mobile"
 	"github.com/opd-ai/venture/pkg/procgen/item"
+	"github.com/opd-ai/venture/pkg/rendering/palette"
+)
+
+// TransitionState represents the current state of UI transition animation.
+// The UI smoothly fades between states using cubic easing for professional polish.
+type TransitionState int
+
+const (
+	// TransitionHidden means the UI is completely hidden (alpha=0).
+	TransitionHidden TransitionState = iota
+	// TransitionFadeIn means the UI is animating from hidden to visible.
+	TransitionFadeIn
+	// TransitionVisible means the UI is fully visible (alpha=1).
+	TransitionVisible
+	// TransitionFadeOut means the UI is animating from visible to hidden.
+	TransitionFadeOut
 )
 
 // InventoryUI handles rendering and interaction for the inventory screen.
+// Features smooth fade-in/fade-out transitions with configurable duration.
 type EbitenInventoryUI struct {
 	visible      bool
 	world        *World
@@ -46,6 +64,12 @@ type EbitenInventoryUI struct {
 	closeButton  *mobile.TouchButton
 	scrollOffset float64 // For touch scrolling
 
+	// Transition state for smooth animations
+	transitionState    TransitionState
+	transitionProgress float64 // 0.0 to 1.0
+	transitionDuration float64 // seconds (default: 0.2 for 200ms)
+	currentAlpha       float64 // calculated alpha for rendering
+
 	// PERF: Cached images to avoid per-frame allocations (Critical Issue #2)
 	cachedOverlay      *ebiten.Image // Semi-transparent background overlay
 	cachedWindowBg     *ebiten.Image // Window background
@@ -56,24 +80,51 @@ type EbitenInventoryUI struct {
 	cachedEquipSlotBg  *ebiten.Image // Equipment slot background
 	lastWindowWidth    int           // Track window size for cache invalidation
 	lastWindowHeight   int           // Track window size for cache invalidation
+
+	// Gap #11 fix: Genre-based dynamic color palette
+	uiPalette *palette.Palette // Dynamic UI colors based on genre
 }
 
-// NewInventoryUI creates a new inventory UI.
+// NewInventoryUI creates a new inventory UI with genre-appropriate color palette.
+// Gap #11 fix: UI colors now adapt to genre (fantasy = warm, sci-fi = cool, etc.)
 func NewEbitenInventoryUI(world *World, screenWidth, screenHeight int) *EbitenInventoryUI {
+	return NewEbitenInventoryUIWithGenre(world, screenWidth, screenHeight, "fantasy", 0)
+}
+
+// NewEbitenInventoryUIWithGenre creates a new inventory UI with specified genre palette.
+func NewEbitenInventoryUIWithGenre(world *World, screenWidth, screenHeight int, genreID string, seed int64) *EbitenInventoryUI {
+	// Generate genre-appropriate UI palette
+	paletteGen := palette.NewGenerator()
+	uiPalette, err := paletteGen.Generate(genreID, seed)
+	if err != nil {
+		// Fallback to default palette if generation fails
+		uiPalette = &palette.Palette{
+			Primary:    color.RGBA{100, 150, 200, 255},
+			Secondary:  color.RGBA{40, 40, 50, 255},
+			Background: color.RGBA{30, 30, 40, 255},
+			Shadow1:    color.RGBA{0, 0, 0, 180},
+		}
+	}
+
 	ui := &EbitenInventoryUI{
-		visible:      false,
-		world:        world,
-		screenWidth:  screenWidth,
-		screenHeight: screenHeight,
-		gridCols:     8,
-		gridRows:     4,
-		slotSize:     48,
-		padding:      10,
-		selectedSlot: -1,
-		hoveredSlot:  -1,
-		draggedIndex: -1,
-		errorState:   NewUIErrorState(), // H-002 FIX
-		touchHandler: mobile.NewTouchInputHandler(),
+		visible:            false,
+		world:              world,
+		screenWidth:        screenWidth,
+		screenHeight:       screenHeight,
+		gridCols:           8,
+		gridRows:           4,
+		slotSize:           48,
+		padding:            10,
+		selectedSlot:       -1,
+		hoveredSlot:        -1,
+		draggedIndex:       -1,
+		errorState:         NewUIErrorState(), // H-002 FIX
+		touchHandler:       mobile.NewTouchInputHandler(),
+		transitionState:    TransitionHidden,
+		transitionProgress: 0.0,
+		transitionDuration: 0.2, // 200ms smooth transitions
+		currentAlpha:       0.0,
+		uiPalette:          uiPalette, // Gap #11 fix
 	}
 
 	// Create close button (top-right of window)
@@ -105,33 +156,57 @@ func (ui *EbitenInventoryUI) SetInventorySystem(system *InventorySystem) {
 
 // Toggle shows or hides the inventory UI.
 func (ui *EbitenInventoryUI) Toggle() {
-	ui.visible = !ui.visible
+	if ui.transitionState == TransitionHidden || ui.transitionState == TransitionFadeOut {
+		ui.Show()
+	} else if ui.transitionState == TransitionVisible || ui.transitionState == TransitionFadeIn {
+		ui.Hide()
+	}
 }
 
 // IsVisible returns whether the inventory is currently shown.
 func (ui *EbitenInventoryUI) IsVisible() bool {
-	return ui.visible
+	return ui.transitionState == TransitionVisible || ui.transitionState == TransitionFadeIn
 }
 
-// Show displays the inventory UI.
+// Show displays the inventory UI with smooth fade-in transition.
 func (ui *EbitenInventoryUI) Show() {
-	ui.visible = true
+	if ui.transitionState == TransitionHidden || ui.transitionState == TransitionFadeOut {
+		ui.transitionState = TransitionFadeIn
+		ui.transitionProgress = 0.0
+		ui.visible = true
+	}
 }
 
-// Hide hides the inventory UI.
+// Hide hides the inventory UI with smooth fade-out transition.
 func (ui *EbitenInventoryUI) Hide() {
-	ui.visible = false
+	if ui.transitionState == TransitionVisible || ui.transitionState == TransitionFadeIn {
+		ui.transitionState = TransitionFadeOut
+		ui.transitionProgress = 0.0
+	}
+}
+
+// SetTransitionDuration sets the duration for fade transitions in seconds.
+func (ui *EbitenInventoryUI) SetTransitionDuration(duration float64) {
+	ui.transitionDuration = duration
+}
+
+// GetCurrentAlpha returns the current alpha value for rendering (0.0 to 1.0).
+func (ui *EbitenInventoryUI) GetCurrentAlpha() float64 {
+	return ui.currentAlpha
 }
 
 // Update processes input for the inventory UI.
 func (ui *EbitenInventoryUI) Update(entities []*Entity, deltaTime float64) {
+	// Update transition animation
+	ui.updateTransition(deltaTime)
+
 	ui.updateTouchComponents()
 
 	if ui.handleMenuNavigation() {
 		return
 	}
 
-	if !ui.visible || ui.playerEntity == nil {
+	if ui.transitionState == TransitionHidden || ui.playerEntity == nil {
 		return
 	}
 
@@ -150,6 +225,36 @@ func (ui *EbitenInventoryUI) Update(entities []*Entity, deltaTime float64) {
 	ui.handleMouseHover(mouseX, mouseY, windowX, windowY, windowWidth, windowHeight, inventory, mousePressed)
 	ui.handleDragRelease(mouseReleased, inventory)
 	ui.handleKeyboardShortcuts(inventory)
+}
+
+// updateTransition updates the transition animation state.
+func (ui *EbitenInventoryUI) updateTransition(deltaTime float64) {
+	switch ui.transitionState {
+	case TransitionFadeIn:
+		ui.transitionProgress += deltaTime / ui.transitionDuration
+		if ui.transitionProgress >= 1.0 {
+			ui.transitionProgress = 1.0
+			ui.transitionState = TransitionVisible
+		}
+		ui.currentAlpha = easeInOutCubic(ui.transitionProgress)
+
+	case TransitionFadeOut:
+		ui.transitionProgress += deltaTime / ui.transitionDuration
+		if ui.transitionProgress >= 1.0 {
+			ui.transitionProgress = 0.0
+			ui.transitionState = TransitionHidden
+			ui.visible = false
+			ui.currentAlpha = 0.0 // Set alpha to 0 when transition completes
+		} else {
+			ui.currentAlpha = 1.0 - easeInOutCubic(ui.transitionProgress)
+		}
+
+	case TransitionVisible:
+		ui.currentAlpha = 1.0
+
+	case TransitionHidden:
+		ui.currentAlpha = 0.0
+	}
 }
 
 // updateTouchComponents updates touch-related UI components.
@@ -352,7 +457,7 @@ func (ui *EbitenInventoryUI) handleDropKey() {
 	ui.selectedSlot = -1
 }
 
-// Draw renders the inventory UI.
+// Draw renders the inventory UI with smooth fade transitions.
 func (ui *EbitenInventoryUI) Draw(screen interface{}) {
 	img, inventory := ui.validateAndPrepare(screen)
 	if img == nil || inventory == nil {
@@ -360,11 +465,19 @@ func (ui *EbitenInventoryUI) Draw(screen interface{}) {
 	}
 
 	windowX, windowY, windowWidth, windowHeight := ui.calculateWindowBounds()
-	ui.drawOverlayAndBackground(img, windowX, windowY, windowWidth, windowHeight)
-	ui.drawHeader(img, windowX, windowY, windowWidth, inventory)
-	ui.drawInventoryGrid(img, windowX, windowY, windowWidth, windowHeight, inventory)
-	ui.drawEquipmentSlots(img, windowX, windowY, windowWidth, windowHeight)
-	ui.drawFooterAndExtras(img, windowX, windowY, windowWidth, windowHeight)
+
+	// Create temporary buffer for rendering with alpha
+	buffer := ebiten.NewImage(ui.screenWidth, ui.screenHeight)
+	ui.drawOverlayAndBackground(buffer, windowX, windowY, windowWidth, windowHeight)
+	ui.drawHeader(buffer, windowX, windowY, windowWidth, inventory)
+	ui.drawInventoryGrid(buffer, windowX, windowY, windowWidth, windowHeight, inventory)
+	ui.drawEquipmentSlots(buffer, windowX, windowY, windowWidth, windowHeight)
+	ui.drawFooterAndExtras(buffer, windowX, windowY, windowWidth, windowHeight)
+
+	// Apply alpha based on transition state
+	opts := &ebiten.DrawImageOptions{}
+	opts.ColorM.Scale(1, 1, 1, ui.currentAlpha)
+	img.DrawImage(buffer, opts)
 }
 
 // validateAndPrepare validates the screen and retrieves the inventory component.
@@ -373,7 +486,7 @@ func (ui *EbitenInventoryUI) validateAndPrepare(screen interface{}) (*ebiten.Ima
 	if !ok {
 		return nil, nil
 	}
-	if !ui.visible || ui.playerEntity == nil {
+	if ui.transitionState == TransitionHidden || ui.playerEntity == nil {
 		return nil, nil
 	}
 
@@ -391,14 +504,19 @@ func (ui *EbitenInventoryUI) validateAndPrepare(screen interface{}) (*ebiten.Ima
 
 // drawOverlayAndBackground renders the semi-transparent overlay and window background.
 // PERF: Uses cached images to avoid per-frame allocations.
+// Gap #11 fix: Uses genre-appropriate palette colors instead of hard-coded values.
 func (ui *EbitenInventoryUI) drawOverlayAndBackground(img *ebiten.Image, windowX, windowY, windowWidth, windowHeight int) {
+	// Gap #11 fix: Use palette colors for overlay and background
+	overlayColor := ui.getOverlayColor()
+	bgColor := ui.getBackgroundColor()
+
 	// PERF: Reuse cached overlay image, only fill on creation/resize
 	if ui.cachedOverlay == nil || ui.cachedOverlay.Bounds().Dx() != ui.screenWidth || ui.cachedOverlay.Bounds().Dy() != ui.screenHeight {
 		if ui.cachedOverlay != nil {
 			ui.cachedOverlay.Dispose()
 		}
 		ui.cachedOverlay = ebiten.NewImage(ui.screenWidth, ui.screenHeight)
-		ui.cachedOverlay.Fill(color.RGBA{0, 0, 0, 180})
+		ui.cachedOverlay.Fill(overlayColor)
 	}
 	img.DrawImage(ui.cachedOverlay, nil)
 
@@ -408,13 +526,29 @@ func (ui *EbitenInventoryUI) drawOverlayAndBackground(img *ebiten.Image, windowX
 			ui.cachedWindowBg.Dispose()
 		}
 		ui.cachedWindowBg = ebiten.NewImage(windowWidth, windowHeight)
-		ui.cachedWindowBg.Fill(color.RGBA{40, 40, 50, 255})
+		ui.cachedWindowBg.Fill(bgColor)
 		ui.lastWindowWidth = windowWidth
 		ui.lastWindowHeight = windowHeight
 	}
 	opts := &ebiten.DrawImageOptions{}
 	opts.GeoM.Translate(float64(windowX), float64(windowY))
 	img.DrawImage(ui.cachedWindowBg, opts)
+}
+
+// getOverlayColor returns the semi-transparent overlay color from palette.
+func (ui *EbitenInventoryUI) getOverlayColor() color.Color {
+	if ui.uiPalette != nil && ui.uiPalette.Shadow1 != nil {
+		return ui.uiPalette.Shadow1
+	}
+	return color.RGBA{0, 0, 0, 180} // Fallback
+}
+
+// getBackgroundColor returns the window background color from palette.
+func (ui *EbitenInventoryUI) getBackgroundColor() color.Color {
+	if ui.uiPalette != nil && ui.uiPalette.Background != nil {
+		return ui.uiPalette.Background
+	}
+	return color.RGBA{40, 40, 50, 255} // Fallback
 }
 
 // drawHeader renders the title, exit hint, capacity info, and gold display.
@@ -643,13 +777,26 @@ func (ui *EbitenInventoryUI) generateItemPreview(itm interface{}) *ebiten.Image 
 // IsActive returns whether the inventory UI is currently visible.
 // Implements UISystem interface.
 func (i *EbitenInventoryUI) IsActive() bool {
-	return i.visible
+	return i.transitionState == TransitionVisible || i.transitionState == TransitionFadeIn
 }
 
 // SetActive sets whether the inventory UI is visible.
 // Implements UISystem interface.
 func (i *EbitenInventoryUI) SetActive(active bool) {
-	i.visible = active
+	if active {
+		i.Show()
+	} else {
+		i.Hide()
+	}
+}
+
+// easeInOutCubic applies cubic ease-in-out interpolation for smooth transitions.
+// t is progress from 0.0 to 1.0, returns interpolated value 0.0 to 1.0.
+func easeInOutCubic(t float64) float64 {
+	if t < 0.5 {
+		return 4 * t * t * t
+	}
+	return 1 - math.Pow(-2*t+2, 3)/2
 }
 
 // Compile-time check that EbitenInventoryUI implements UISystem

@@ -78,14 +78,20 @@ func (v *Validator) ValidateTickRate(tickRate int) error {
 
 // ValidateGenre validates that the genre ID is supported.
 // Returns available genres in error message if invalid.
+// "random" is a special value that triggers random genre selection.
 func (v *Validator) ValidateGenre(genreID string) error {
 	if genreID == "" {
 		return fmt.Errorf("genre cannot be empty")
 	}
 
+	// "random" is a valid special value
+	if genreID == "random" {
+		return nil
+	}
+
 	if !v.validGenres[genreID] {
 		available := v.GetAvailableGenres()
-		return fmt.Errorf("invalid genre '%s', available genres: %s", genreID, strings.Join(available, ", "))
+		return fmt.Errorf("invalid genre '%s', available genres: %s (or 'random')", genreID, strings.Join(available, ", "))
 	}
 
 	return nil

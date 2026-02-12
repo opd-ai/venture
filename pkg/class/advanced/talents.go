@@ -159,9 +159,9 @@ func buildSynergies() []SynergyBonus {
 	}
 }
 
-// initializeTalentTrees creates talent trees for all base classes
-func (m *Manager) initializeTalentTrees() {
-	m.talentTrees[ClassWarrior] = &TalentTree{
+// createWarriorTalentTree constructs the Warrior class talent tree with offensive, defensive, and utility talents.
+func createWarriorTalentTree() *TalentTree {
+	return &TalentTree{
 		Name:    "Warrior Talents",
 		ClassID: ClassWarrior,
 		Offensive: []TalentDefinition{
@@ -434,8 +434,11 @@ func (m *Manager) initializeTalentTrees() {
 			},
 		},
 	}
+}
 
-	m.talentTrees[ClassMage] = &TalentTree{
+// createMageTalentTree constructs the Mage class talent tree with offensive, defensive, and utility talents.
+func createMageTalentTree() *TalentTree {
+	return &TalentTree{
 		Name:    "Mage Talents",
 		ClassID: ClassMage,
 		Offensive: []TalentDefinition{
@@ -704,11 +707,14 @@ func (m *Manager) initializeTalentTrees() {
 			},
 		},
 	}
+}
 
+// initializeTalentTrees creates talent trees for all base classes
+func (m *Manager) initializeTalentTrees() {
+	m.talentTrees[ClassWarrior] = createWarriorTalentTree()
+	m.talentTrees[ClassMage] = createMageTalentTree()
 	m.talentTrees[ClassRogue] = createRogueTalentTree()
 	m.talentTrees[ClassCleric] = createClericTalentTree()
-
-	// Extended talent trees for remaining base classes
 	m.talentTrees[ClassBerserker] = createBerserkerTalentTree()
 	m.talentTrees[ClassPaladin] = createPaladinTalentTree()
 	m.talentTrees[ClassKnight] = createKnightTalentTree()

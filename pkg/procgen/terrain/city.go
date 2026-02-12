@@ -33,7 +33,7 @@ func NewCityGeneratorWithLogger(logger *logrus.Logger) *CityGenerator {
 	}
 	return &CityGenerator{
 		blockSize:       12, // 12x12 tile blocks
-		streetWidth:     2,  // 2-tile wide streets
+		streetWidth:     3,  // 3-tile wide streets to accommodate 64×64 player sprites
 		buildingDensity: 0.7,
 		plazaDensity:    0.2,
 		logger:          logEntry,
@@ -517,41 +517,58 @@ func (g *CityGenerator) placePondTiles(rect Rect, terrain *Terrain, cx, cy, radi
 
 // addAlleys creates narrow passages between some buildings.
 func (g *CityGenerator) addAlleys(blocks []*CityBlock, terrain *Terrain, rng *rand.Rand) {
-	// Find adjacent building blocks and add alleys (30% chance)
-	for i := 0; i < len(blocks); i++ {
-		if blocks[i].BlockType != BlockBuilding {
-			continue
-		}
+	buildingBlocks := g.filterBuildingBlocks(blocks)
 
-		for j := i + 1; j < len(blocks); j++ {
-			if blocks[j].BlockType != BlockBuilding {
+	for i := 0; i < len(buildingBlocks); i++ {
+		for j := i + 1; j < len(buildingBlocks); j++ {
+			if g.shouldSkipAlley(buildingBlocks[i], buildingBlocks[j]) {
 				continue
-			}
-
-			// Check if blocks are adjacent
-			r1 := blocks[i].Rect
-			r2 := blocks[j].Rect
-
-			// Horizontal adjacency (side by side)
-			if r1.Y == r2.Y && r1.Height == r2.Height {
-				if r1.X+r1.Width == r2.X-g.streetWidth || r2.X+r2.Width == r1.X-g.streetWidth {
-					// Already have street between them, skip
-					continue
-				}
-			}
-
-			// Vertical adjacency (top/bottom)
-			if r1.X == r2.X && r1.Width == r2.Width {
-				if r1.Y+r1.Height == r2.Y-g.streetWidth || r2.Y+r2.Height == r1.Y-g.streetWidth {
-					// Already have street between them, skip
-					continue
-				}
 			}
 		}
 	}
+}
 
-	// Note: Alley generation deferred to keep implementation simple
-	// Streets already provide full connectivity
+// filterBuildingBlocks returns only building blocks from the given blocks.
+func (g *CityGenerator) filterBuildingBlocks(blocks []*CityBlock) []*CityBlock {
+	buildings := make([]*CityBlock, 0, len(blocks))
+	for _, block := range blocks {
+		if block.BlockType == BlockBuilding {
+			buildings = append(buildings, block)
+		}
+	}
+	return buildings
+}
+
+// shouldSkipAlley checks if blocks already have streets between them.
+func (g *CityGenerator) shouldSkipAlley(block1, block2 *CityBlock) bool {
+	r1 := block1.Rect
+	r2 := block2.Rect
+
+	if g.hasHorizontalStreet(r1, r2) {
+		return true
+	}
+
+	if g.hasVerticalStreet(r1, r2) {
+		return true
+	}
+
+	return false
+}
+
+// hasHorizontalStreet checks if blocks have a street between them horizontally.
+func (g *CityGenerator) hasHorizontalStreet(r1, r2 Rect) bool {
+	if r1.Y != r2.Y || r1.Height != r2.Height {
+		return false
+	}
+	return r1.X+r1.Width == r2.X-g.streetWidth || r2.X+r2.Width == r1.X-g.streetWidth
+}
+
+// hasVerticalStreet checks if blocks have a street between them vertically.
+func (g *CityGenerator) hasVerticalStreet(r1, r2 Rect) bool {
+	if r1.X != r2.X || r1.Width != r2.Width {
+		return false
+	}
+	return r1.Y+r1.Height == r2.Y-g.streetWidth || r2.Y+r2.Height == r1.Y-g.streetWidth
 }
 
 // placeStairs places stairs in the largest plaza or a large building.

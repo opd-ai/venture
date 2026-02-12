@@ -28,25 +28,46 @@ func (cs *ChatSystem) Update(deltaTime float64) {
 // SendMessage sends a chat message from an entity to a channel.
 // Returns error if entity cannot send (muted, rate limited, invalid channel).
 func (cs *ChatSystem) SendMessage(senderID uint64, channel ChatChannel, content string, recipientID uint64) error {
-	// Get sender's chat component
+	sender, chat, err := cs.getSenderAndChat(senderID)
+	if err != nil {
+		return err
+	}
+
+	if err := cs.validateMessagePermissions(chat, channel, recipientID); err != nil {
+		return err
+	}
+
+	chat.RecordMessageSent(channel)
+	msg := cs.createMessage(senderID, sender, channel, content, recipientID)
+	chat.AddMessage(msg)
+	cs.deliverMessage(msg, sender, chat)
+
+	return nil
+}
+
+// getSenderAndChat retrieves the sender entity and their chat component.
+func (cs *ChatSystem) getSenderAndChat(senderID uint64) (*Entity, *ChatComponent, error) {
 	sender, exists := cs.world.GetEntity(senderID)
 	if !exists {
-		return fmt.Errorf("sender entity not found")
+		return nil, nil, fmt.Errorf("sender entity not found")
 	}
 
 	chatComp, exists := sender.GetComponent("chat")
 	if !exists {
-		// Create chat component if it doesn't exist
 		chatComp = NewChatComponent()
 		sender.AddComponent(chatComp)
 	}
 
 	chat, ok := chatComp.(*ChatComponent)
 	if !ok {
-		return fmt.Errorf("invalid chat component type")
+		return nil, nil, fmt.Errorf("invalid chat component type")
 	}
 
-	// Check if entity can send to this channel
+	return sender, chat, nil
+}
+
+// validateMessagePermissions checks if the entity can send a message to the channel.
+func (cs *ChatSystem) validateMessagePermissions(chat *ChatComponent, channel ChatChannel, recipientID uint64) error {
 	if !chat.CanSendMessage(channel) {
 		if chat.IsMuted() {
 			return social.ErrMuted(chat.MuteExpiry.Format(time.RFC1123))
@@ -54,27 +75,32 @@ func (cs *ChatSystem) SendMessage(senderID uint64, channel ChatChannel, content 
 		return social.ErrRateLimit(channel.String())
 	}
 
-	// Validate channel subscription
 	if !chat.IsChannelActive(channel) {
 		return social.ErrNotSubscribed(channel.String())
 	}
 
-	// Validate recipient for whispers
 	if channel == ChatWhisper {
-		if recipientID == 0 {
-			return fmt.Errorf("whisper requires recipient ID")
-		}
-		_, exists := cs.world.GetEntity(recipientID)
-		if !exists {
-			return fmt.Errorf("whisper recipient not found")
-		}
+		return cs.validateWhisperRecipient(recipientID)
 	}
 
-	// Record message sent (for rate limiting)
-	chat.RecordMessageSent(channel)
+	return nil
+}
 
-	// Create message
-	msg := ChatMessage{
+// validateWhisperRecipient ensures a valid recipient exists for whisper messages.
+func (cs *ChatSystem) validateWhisperRecipient(recipientID uint64) error {
+	if recipientID == 0 {
+		return fmt.Errorf("whisper requires recipient ID")
+	}
+	_, exists := cs.world.GetEntity(recipientID)
+	if !exists {
+		return fmt.Errorf("whisper recipient not found")
+	}
+	return nil
+}
+
+// createMessage constructs a new chat message.
+func (cs *ChatSystem) createMessage(senderID uint64, sender *Entity, channel ChatChannel, content string, recipientID uint64) ChatMessage {
+	return ChatMessage{
 		ID:          cs.generateMessageID(),
 		SenderID:    senderID,
 		SenderName:  cs.getSenderName(sender),
@@ -85,14 +111,6 @@ func (cs *ChatSystem) SendMessage(senderID uint64, channel ChatChannel, content 
 		Delivered:   false,
 		Failed:      false,
 	}
-
-	// Add to sender's history
-	chat.AddMessage(msg)
-
-	// Deliver to recipients based on channel
-	cs.deliverMessage(msg, sender, chat)
-
-	return nil
 }
 
 // deliverMessage delivers a message to appropriate recipients based on channel.

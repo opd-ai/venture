@@ -26,6 +26,8 @@ type DiceGame struct {
 	opponentWins int
 	completed    bool
 	playerWon    bool
+	// LastRender contains the most recent render output for external consumption.
+	LastRender *RenderOutput
 }
 
 // NewDiceGame creates a new dice game instance.
@@ -100,10 +102,95 @@ func (d *DiceGame) rollDice() int {
 	return sum
 }
 
-// Render draws the dice game to the screen.
-func (d *DiceGame) Render(screen engine.ImageProvider) error {
-	// Minimal implementation - actual rendering in Phase 27.3
+// PrepareRender computes the current visual state for the dice game.
+// This validates screen dimensions and populates internal render data.
+// Implements engine.MiniGame interface.
+func (d *DiceGame) PrepareRender(screenWidth, screenHeight int) error {
+	if err := validateScreenDimensions(screenWidth, screenHeight); err != nil {
+		return fmt.Errorf("dice game prepare render: %w", err)
+	}
+	if d.rng == nil {
+		return fmt.Errorf("dice game prepare render: game not initialized")
+	}
+
+	status := "Playing"
+	if d.completed {
+		if d.playerWon {
+			status = "Won"
+		} else {
+			status = "Lost"
+		}
+	}
+
+	elements := make([]RenderElement, 0, 3+d.numDice)
+
+	// Score and bet display
+	elements = append(elements, RenderElement{
+		Type:  "text",
+		X:     screenWidth / 2,
+		Y:     10,
+		Label: fmt.Sprintf("You: %d / %d  Opponent: %d / %d  Bet: %d gold", d.playerWins, d.targetRolls, d.opponentWins, d.targetRolls, d.betAmount),
+	})
+
+	// Dice layout
+	dieSize := 50
+	startX := (screenWidth - d.numDice*(dieSize+10)) / 2
+	for i := 0; i < d.numDice; i++ {
+		elements = append(elements, RenderElement{
+			Type:  "die",
+			X:     startX + i*(dieSize+10),
+			Y:     screenHeight / 2,
+			W:     dieSize,
+			H:     dieSize,
+			Label: fmt.Sprintf("d%d", d.diceSides),
+			Value: float64(d.diceSides),
+		})
+	}
+
+	// Progress bar
+	progress := float64(d.playerWins+d.opponentWins) / float64(d.targetRolls*2)
+	if progress > 1.0 {
+		progress = 1.0
+	}
+	elements = append(elements, RenderElement{
+		Type:  "progress",
+		X:     20,
+		Y:     screenHeight - 40,
+		W:     screenWidth - 40,
+		H:     20,
+		Label: "Game Progress",
+		Value: progress,
+	})
+
+	d.LastRender = &RenderOutput{
+		Title:    "Dice Game",
+		Status:   status,
+		Width:    screenWidth,
+		Height:   screenHeight,
+		Elements: elements,
+	}
 	return nil
+}
+
+// GetRenderOutput returns the computed visual state from the last PrepareRender call.
+// Implements engine.MiniGame interface.
+func (d *DiceGame) GetRenderOutput() engine.MiniGameRenderOutput {
+	if d.LastRender == nil {
+		return nil
+	}
+	return d.LastRender
+}
+
+// Render draws the dice game to the screen.
+// Computes visual state including dice configuration, scores, and bet info.
+// DEPRECATED: Use PrepareRender() and GetRenderOutput() instead.
+// Kept for backward compatibility with existing code.
+func (d *DiceGame) Render(screen engine.ImageProvider) error {
+	w, h, err := validateScreen(screen)
+	if err != nil {
+		return fmt.Errorf("dice game render: %w", err)
+	}
+	return d.PrepareRender(w, h)
 }
 
 // IsComplete returns true when the game has finished.

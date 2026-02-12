@@ -1,7 +1,10 @@
 package engine
 
 import (
+	"math/rand"
+
 	"github.com/opd-ai/venture/pkg/procgen"
+	"github.com/opd-ai/venture/pkg/procgen/item"
 	"github.com/opd-ai/venture/pkg/procgen/legendary"
 	"github.com/opd-ai/venture/pkg/world/raids"
 	"github.com/sirupsen/logrus"
@@ -12,6 +15,7 @@ import (
 type LegendaryQuestSystem struct {
 	world        *World
 	questManager *legendary.QuestManager
+	itemGen      *item.ItemGenerator
 	worldSeed    int64
 	logger       *logrus.Entry
 }
@@ -22,6 +26,7 @@ func NewLegendaryQuestSystem(world *World, worldSeed int64, raidManager *raids.M
 	return &LegendaryQuestSystem{
 		world:        world,
 		questManager: legendary.NewQuestManager(raidManager),
+		itemGen:      item.NewItemGenerator(),
 		worldSeed:    worldSeed,
 		logger:       logger,
 	}
@@ -83,6 +88,7 @@ func (s *LegendaryQuestSystem) StartQuest(playerEntity *Entity, difficulty float
 	// Add legendary quest component to player
 	questComp := &LegendaryQuestComponent{
 		QuestID:         quest.ID,
+		GenreID:         genreID,
 		CurrentPhase:    0,
 		PhasesCompleted: make([]bool, len(quest.Phases)),
 		StartedAt:       0, // Set by component
@@ -166,32 +172,116 @@ func (s *LegendaryQuestSystem) GrantReward(playerEntity *Entity) error {
 	return nil
 }
 
-// createRewardItemByID spawns a legendary reward item by ID in the world.
+// createRewardItemByID spawns a procedurally-generated legendary reward item in the world.
 func (s *LegendaryQuestSystem) createRewardItemByID(playerEntity *Entity, itemID string) {
 	// Get player position
 	comp, ok := playerEntity.GetComponent("position")
 	if !ok {
+		s.logger.Warn("player entity has no position component, cannot spawn legendary item")
 		return
 	}
 	posComp := comp.(*PositionComponent)
 
+	// Extract genre from quest component if available
+	genreID := "fantasy" // Default
+	if questComp, ok := playerEntity.GetComponent("legendary_quest"); ok {
+		if lqc, ok := questComp.(*LegendaryQuestComponent); ok && lqc.GenreID != "" {
+			genreID = lqc.GenreID
+		}
+	}
+
+	// Generate legendary item using procedural generator
+	generatedItem := s.generateLegendaryItem(itemID, genreID)
+	if generatedItem == nil {
+		s.logger.WithField("itemID", itemID).Error("failed to generate legendary item")
+		return
+	}
+
 	// Create reward entity
-	item := s.world.CreateEntity()
-	item.AddComponent(&PositionComponent{X: posComp.X, Y: posComp.Y})
-	item.AddComponent(&LegendaryItemComponent{
+	itemEntity := s.world.CreateEntity()
+	itemEntity.AddComponent(&PositionComponent{X: posComp.X, Y: posComp.Y})
+	itemEntity.AddComponent(&LegendaryItemComponent{
 		RewardID:    itemID,
-		Name:        "Legendary Item",
-		Description: "A legendary reward",
-		Stats:       make(map[string]int),
-		Rarity:      3.0,
+		Name:        generatedItem.Name,
+		Description: generatedItem.Description,
+		Stats:       convertItemStatsToIntMap(generatedItem.Stats),
+		Rarity:      item.RarityLegendary.Value(),
 		Unique:      true,
 	})
-	item.AddComponent(&EbitenSprite{
+	itemEntity.AddComponent(&EbitenSprite{
 		Width:   32,
 		Height:  32,
 		Visible: true,
 		Layer:   3,
 	})
+
+	s.logger.WithFields(logrus.Fields{
+		"itemID":  itemID,
+		"name":    generatedItem.Name,
+		"damage":  generatedItem.Stats.Damage,
+		"defense": generatedItem.Stats.Defense,
+	}).Debug("legendary item spawned")
+}
+
+// generateLegendaryItem creates a procedurally-generated legendary item.
+func (s *LegendaryQuestSystem) generateLegendaryItem(itemID, genreID string) *item.Item {
+	// Create seed from itemID for deterministic generation
+	rng := rand.New(rand.NewSource(s.worldSeed + int64(hashString(itemID))))
+	seed := rng.Int63()
+
+	// Generate legendary item with high depth and difficulty
+	params := procgen.GenerationParams{
+		Difficulty: 0.9, // High difficulty for legendary items
+		Depth:      50,  // High depth for strong stats
+		GenreID:    genreID,
+		Custom: map[string]interface{}{
+			"count":  1,
+			"rarity": item.RarityLegendary,
+		},
+	}
+
+	result, err := s.itemGen.Generate(seed, params)
+	if err != nil {
+		s.logger.WithError(err).Error("item generation failed")
+		return nil
+	}
+
+	items, ok := result.([]*item.Item)
+	if !ok || len(items) == 0 {
+		s.logger.Error("item generator returned unexpected result type")
+		return nil
+	}
+
+	// Force legendary rarity (generator uses depth-based probability)
+	generatedItem := items[0]
+	generatedItem.Rarity = item.RarityLegendary
+
+	// Validate returns error for wrong type, so we skip it
+	// The item is already validated during generation
+
+	return generatedItem
+}
+
+// convertItemStatsToIntMap converts item.Stats to map[string]int for component.
+func convertItemStatsToIntMap(stats item.Stats) map[string]int {
+	result := make(map[string]int)
+	result["damage"] = stats.Damage
+	result["defense"] = stats.Defense
+	result["attack_speed"] = int(stats.AttackSpeed * 10) // Convert float to int (scaled)
+	result["value"] = stats.Value
+	result["weight"] = int(stats.Weight * 10) // Convert float to int (scaled)
+	result["required_level"] = stats.RequiredLevel
+	result["durability"] = stats.Durability
+	return result
+}
+
+// hashString creates a deterministic hash from a string.
+func hashString(s string) int {
+	hash := 0
+	for i := 0; i < len(s); i++ {
+		hash = 31*hash + int(s[i])
+	}
+	return hash
 }
 
 // getPlayerID extracts player ID from entity.

@@ -23,7 +23,7 @@ Marks an entity as casting shadows when illuminated by light sources.
 
 **Shadow Types:**
 - **Hard Shadows**: Sharp edges, fastest rendering
-- **Soft Shadows**: Gradual edge transition with penumbra (future enhancement)
+- **Soft Shadows**: Gradual edge transition with realistic penumbra rendering
 - **Contact Shadows**: Small shadows at ground contact points
 
 **Usage Example:**
@@ -191,9 +191,12 @@ go tool pprof mem.prof
 - Fastest performance
 
 **Soft Shadows:**
-- Currently uses hard shadow with reduced opacity
-- Future: Implement penumbra gradients
-- Requires blur/gradient rendering
+- Multi-layer rendering with umbra (dark core) and penumbra (gradient falloff)
+- Penumbra width scales with light distance (closer = harder, farther = softer)
+- 3-layer gradient for smooth edge transition without performance impact
+- Distance-based calculation: penumbra factor = min(distance/500, 2.0)
+- Each layer has expanded radius and reduced opacity for realistic falloff
+- Performance: ~3x cost of hard shadows (umbra + 3 penumbra layers)
 
 **Contact Shadows:**
 - Small elliptical shadows at entity's "feet"
@@ -266,8 +269,7 @@ func (g *Game) Draw(screen *ebiten.Image) {
 
 ### Planned Features
 
-1. **Soft Shadow Penumbra**: Implement proper gradient-based soft shadows
-2. **Shadow Caching**: Cache static shadow shapes for stationary entities
+1. **Shadow Caching**: Cache static shadow shapes for stationary entities
 3. **Shadow Maps**: 2D shadow map generation for more accurate shadows
 4. **Colored Shadows**: Support tinted shadows for stained glass effects
 5. **Dynamic Shadow Blending**: Multiple overlapping shadows blend naturally

@@ -447,41 +447,58 @@ func (s *CarryOverSystem) transferCurrency(entity *Entity, carry *CarryOverCompo
 		return nil
 	}
 
-	// Get inventory for gold
+	inv := s.getInventoryComponent(entity)
+	if inv == nil {
+		return nil
+	}
+
+	transferred := make(map[string]int64)
+	s.transferGold(currencyMap, carry, inv, transferred)
+	s.transferOtherCurrencies(currencyMap, transferred)
+
+	return transferred
+}
+
+// getInventoryComponent retrieves and validates the inventory component.
+func (s *CarryOverSystem) getInventoryComponent(entity *Entity) *InventoryComponent {
 	invComp, ok := entity.GetComponent("inventory")
 	if !ok {
 		return nil
 	}
+
 	inv, ok := invComp.(*InventoryComponent)
 	if !ok {
 		return nil
 	}
 
-	transferred := make(map[string]int64)
+	return inv
+}
 
-	// Handle gold specifically
-	if goldAmount, exists := currencyMap["gold"]; exists && goldAmount > 0 {
-		finalGold := carry.CalculateFinalCurrencyAmount("gold", int64(inv.Gold))
-		if finalGold > goldAmount {
-			finalGold = goldAmount // Don't exceed requested amount
-		}
-		if finalGold > 0 {
-			transferred["gold"] = finalGold
-			// Note: Actual gold transfer happens in the callback
-		}
+// transferGold handles gold currency transfer with final amount calculation.
+func (s *CarryOverSystem) transferGold(currencyMap map[string]int64, carry *CarryOverComponent, inv *InventoryComponent, transferred map[string]int64) {
+	goldAmount, exists := currencyMap["gold"]
+	if !exists || goldAmount <= 0 {
+		return
 	}
 
-	// Other currencies would be handled via callbacks
+	finalGold := carry.CalculateFinalCurrencyAmount("gold", int64(inv.Gold))
+	if finalGold > goldAmount {
+		finalGold = goldAmount
+	}
+
+	if finalGold > 0 {
+		transferred["gold"] = finalGold
+	}
+}
+
+// transferOtherCurrencies processes non-gold currencies for transfer.
+func (s *CarryOverSystem) transferOtherCurrencies(currencyMap, transferred map[string]int64) {
 	for currType, amount := range currencyMap {
-		if currType == "gold" {
-			continue // Already handled
+		if currType == "gold" || amount <= 0 {
+			continue
 		}
-		if amount > 0 {
-			transferred[currType] = amount
-		}
+		transferred[currType] = amount
 	}
-
-	return transferred
 }
 
 // transferSkills handles skill carry-over.
@@ -571,47 +588,63 @@ type EquipmentOption struct {
 // GetAvailableSkills returns a list of skills that can be selected for carry-over.
 func (s *CarryOverSystem) GetAvailableSkills(entity *Entity) []SkillOption {
 	carry := s.getCarryOverComponent(entity)
-
 	var options []SkillOption
 
-	// Check skill book
-	if skillComp, ok := entity.GetComponent("skill_book"); ok {
-		if skillBook, ok := skillComp.(*SkillBookComponent); ok {
-			for skillID, skill := range skillBook.LearnedSkills {
-				selected := false
-				if carry != nil {
-					selected = carry.IsSkillSelected(skillID)
-				}
-				options = append(options, SkillOption{
-					SkillID:  skillID,
-					Name:     skill.Name,
-					Type:     skill.Type,
-					Level:    skill.Level,
-					Selected: selected,
-				})
-			}
-		}
+	options = append(options, s.collectSkillBookOptions(entity, carry)...)
+	options = append(options, s.collectSpellOptions(entity, carry)...)
+
+	return options
+}
+
+// collectSkillBookOptions extracts skill options from the skill book component.
+func (s *CarryOverSystem) collectSkillBookOptions(entity *Entity, carry *CarryOverComponent) []SkillOption {
+	var options []SkillOption
+	skillComp, ok := entity.GetComponent("skill_book")
+	if !ok {
+		return options
 	}
 
-	// Check spell component
-	if spellComp, ok := entity.GetComponent("spell"); ok {
-		if spellList, ok := spellComp.(*SpellComponent); ok {
-			for spellID, spell := range spellList.KnownSpells {
-				selected := false
-				if carry != nil {
-					selected = carry.IsSkillSelected(spellID)
-				}
-				options = append(options, SkillOption{
-					SkillID:  spellID,
-					Name:     spell.Name,
-					Type:     "spell",
-					Level:    spell.SpellLevel,
-					Selected: selected,
-				})
-			}
-		}
+	skillBook, ok := skillComp.(*SkillBookComponent)
+	if !ok {
+		return options
 	}
 
+	for skillID, skill := range skillBook.LearnedSkills {
+		selected := carry != nil && carry.IsSkillSelected(skillID)
+		options = append(options, SkillOption{
+			SkillID:  skillID,
+			Name:     skill.Name,
+			Type:     skill.Type,
+			Level:    skill.Level,
+			Selected: selected,
+		})
+	}
+	return options
+}
+
+// collectSpellOptions extracts skill options from the spell component.
+func (s *CarryOverSystem) collectSpellOptions(entity *Entity, carry *CarryOverComponent) []SkillOption {
+	var options []SkillOption
+	spellComp, ok := entity.GetComponent("spell")
+	if !ok {
+		return options
+	}
+
+	spellList, ok := spellComp.(*SpellComponent)
+	if !ok {
+		return options
+	}
+
+	for spellID, spell := range spellList.KnownSpells {
+		selected := carry != nil && carry.IsSkillSelected(spellID)
+		options = append(options, SkillOption{
+			SkillID:  spellID,
+			Name:     spell.Name,
+			Type:     "spell",
+			Level:    spell.SpellLevel,
+			Selected: selected,
+		})
+	}
 	return options
 }
 

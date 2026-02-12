@@ -448,6 +448,18 @@ type LightingConfig struct {
 
 	// MaxShadows is the maximum number of shadow casters per frame
 	MaxShadows int
+
+	// EnableBloom toggles bloom/glow effects for bright lights
+	EnableBloom bool
+
+	// BloomThreshold is the brightness threshold for bloom (0.0-1.0)
+	BloomThreshold float64
+
+	// BloomIntensity controls bloom strength multiplier (0.0-2.0 typical)
+	BloomIntensity float64
+
+	// BloomRadius is the bloom spread distance in pixels (1-20 typical)
+	BloomRadius int
 }
 
 // NewLightingConfig creates default lighting configuration.
@@ -465,6 +477,10 @@ func NewLightingConfig() *LightingConfig {
 		ShadowOpacity:    0.5,
 		ShadowQuality:    1.0,
 		MaxShadows:       100,
+		EnableBloom:      true, // Enable bloom by default for visual polish
+		BloomThreshold:   0.7,  // Bright lights bloom
+		BloomIntensity:   1.2,  // Moderate bloom strength
+		BloomRadius:      12,   // Medium spread
 	}
 
 	lightingLog.WithFields(logrus.Fields{
@@ -476,6 +492,9 @@ func NewLightingConfig() *LightingConfig {
 		"shadows_enabled":   config.ShadowsEnabled,
 		"shadow_opacity":    config.ShadowOpacity,
 		"max_shadows":       config.MaxShadows,
+		"enable_bloom":      config.EnableBloom,
+		"bloom_threshold":   config.BloomThreshold,
+		"bloom_intensity":   config.BloomIntensity,
 	}).Debug("LightingConfig created with defaults")
 
 	return config

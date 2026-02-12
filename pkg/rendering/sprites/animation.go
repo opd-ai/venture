@@ -223,6 +223,7 @@ func (g *Generator) addAnimationDetails(img *ebiten.Image, config Config, rng *r
 			Color:     config.Palette.Accent1,
 			Seed:      config.Seed + int64(frameIndex),
 			Smoothing: 0.5,
+			AntiAlias: config.AntiAlias,
 		}
 
 		detail, err := g.shapeGen.Generate(detailConfig)

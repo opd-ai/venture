@@ -165,8 +165,9 @@ type Particle struct {
 	// Velocity
 	VX, VY float64
 
-	// Color
-	Color color.Color
+	// Color stored as RGBA to avoid conversion overhead
+	// Performance: Eliminates color.RGBAModel.Convert() allocations per particle
+	Color color.RGBA
 
 	// Size in pixels
 	// Phase 45: Scaled 2× for 64×64 tiles

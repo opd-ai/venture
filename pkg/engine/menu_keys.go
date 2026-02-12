@@ -140,48 +140,69 @@ func HandleMenuInput(toggleKey ebiten.Key, isVisible bool) (shouldClose, shouldT
 //	    return
 //	}
 func HandleMenuInputWithTouch(toggleKey ebiten.Key, isVisible bool, touchHandler *mobile.TouchInputHandler) (shouldClose, shouldToggle bool) {
-	// Check keyboard input first (desktop + Android back button)
 	if shouldClose, shouldToggle := HandleMenuInput(toggleKey, isVisible); shouldClose {
 		return shouldClose, shouldToggle
 	}
 
-	// BUG FIX: Mobile gesture support - only check when menu is visible
 	if !isVisible || touchHandler == nil {
 		return false, false
 	}
 
-	// Check for swipe-down gesture (common mobile dismiss pattern)
+	return checkSwipeGestures(touchHandler)
+}
+
+// checkSwipeGestures checks for swipe gestures to close the menu.
+func checkSwipeGestures(touchHandler *mobile.TouchInputHandler) (shouldClose, shouldToggle bool) {
 	direction, distance, detected := touchHandler.GetSwipe()
-	if detected {
-		// Convert angle to degrees for easier logic
-		// direction is in radians: 0=right, π/2=down, π=left, 3π/2=up
-		degrees := direction * 180.0 / math.Pi
-		if degrees < 0 {
-			degrees += 360
-		}
+	if !detected {
+		return false, false
+	}
 
-		// Swipe down: 45° to 135° (downward arc)
-		// This matches iOS "swipe down to dismiss" pattern
-		if degrees >= 45 && degrees <= 135 && distance >= 50 {
-			return true, false // Close menu via downward swipe
-		}
+	degrees := convertRadiansToDegrees(direction)
 
-		// Edge swipe (iOS back gesture): swipe from left edge (135° to 225°)
-		// Only trigger if swipe starts near screen edge
-		touches := touchHandler.GetActiveTouches()
-		if len(touches) > 0 {
-			touch := touches[0]
-			// Check if swipe started near left or right edge (within 50px)
-			if touch.StartX < 50 || touch.StartX > (720-50) { // Assuming 720px width
-				// Right-to-left swipe (back gesture)
-				if degrees >= 135 && degrees <= 225 && distance >= 75 {
-					return true, false // Close menu via edge swipe
-				}
-			}
-		}
+	if isDownwardSwipe(degrees, distance) {
+		return true, false
+	}
+
+	if isEdgeSwipe(touchHandler, degrees, distance) {
+		return true, false
 	}
 
 	return false, false
+}
+
+// convertRadiansToDegrees converts radians to degrees in 0-360 range.
+func convertRadiansToDegrees(radians float64) float64 {
+	degrees := radians * 180.0 / math.Pi
+	if degrees < 0 {
+		degrees += 360
+	}
+	return degrees
+}
+
+// isDownwardSwipe checks if the gesture is a downward swipe (iOS dismiss pattern).
+func isDownwardSwipe(degrees, distance float64) bool {
+	return degrees >= 45 && degrees <= 135 && distance >= 50
+}
+
+// isEdgeSwipe checks if the gesture is an edge swipe (iOS back gesture).
+func isEdgeSwipe(touchHandler *mobile.TouchInputHandler, degrees, distance float64) bool {
+	touches := touchHandler.GetActiveTouches()
+	if len(touches) == 0 {
+		return false
+	}
+
+	touch := touches[0]
+	if !isTouchNearEdge(touch.StartX) {
+		return false
+	}
+
+	return degrees >= 135 && degrees <= 225 && distance >= 75
+}
+
+// isTouchNearEdge checks if touch position is near screen edge.
+func isTouchNearEdge(x int) bool {
+	return x < 50 || x > (720-50)
 }
 
 // IsKeyJustPressed is a convenience wrapper for inpututil.IsKeyJustPressed.

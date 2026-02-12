@@ -80,34 +80,55 @@ func (t *TerrainCollisionChecker) CheckCollisionBoundsWithLayer(minX, minY, maxX
 	minTileX, minTileY := t.worldToTileCoords(minX, minY)
 	maxTileX, maxTileY := t.worldToTileCoords(maxX, maxY)
 
-	// Check all tiles that the bounding box overlaps
+	return t.checkTilesInBounds(minTileX, minTileY, maxTileX, maxTileY, minX, minY, maxX, maxY, layer)
+}
+
+// checkTilesInBounds checks all tiles within the bounding box for collisions.
+func (t *TerrainCollisionChecker) checkTilesInBounds(minTileX, minTileY, maxTileX, maxTileY int, minX, minY, maxX, maxY float64, layer int) bool {
 	for y := minTileY; y <= maxTileY; y++ {
-		for x := minTileX; x <= maxTileX; x++ {
-			tile := t.terrain.GetTile(x, y)
-
-			// Skip if tile is not on the entity's layer
-			if !t.tileMatchesLayer(tile, layer) {
-				continue
-			}
-
-			// Check standard axis-aligned walls
-			if tile == terrain.TileWall {
-				return true
-			}
-
-			// Check pits (blocks ground layer entities)
-			if tile == terrain.TilePit {
-				return true
-			}
-
-			// Check diagonal walls using triangle collision
-			if tile.IsDiagonalWall() {
-				if t.checkDiagonalWallCollision(x, y, tile, minX, minY, maxX, maxY) {
-					return true
-				}
-			}
-
+		if t.checkTileRow(y, minTileX, maxTileX, minX, minY, maxX, maxY, layer) {
+			return true
 		}
+	}
+	return false
+}
+
+// checkTileRow checks a row of tiles for collisions.
+func (t *TerrainCollisionChecker) checkTileRow(y, minTileX, maxTileX int, minX, minY, maxX, maxY float64, layer int) bool {
+	for x := minTileX; x <= maxTileX; x++ {
+		if t.checkSingleTile(x, y, minX, minY, maxX, maxY, layer) {
+			return true
+		}
+	}
+	return false
+}
+
+// checkSingleTile checks a single tile for collision with the bounding box.
+func (t *TerrainCollisionChecker) checkSingleTile(x, y int, minX, minY, maxX, maxY float64, layer int) bool {
+	tile := t.terrain.GetTile(x, y)
+
+	if !t.tileMatchesLayer(tile, layer) {
+		return false
+	}
+
+	return t.tileCollidesWithBounds(x, y, tile, minX, minY, maxX, maxY)
+}
+
+// tileCollidesWithBounds determines if a tile collides with the given bounding box.
+func (t *TerrainCollisionChecker) tileCollidesWithBounds(x, y int, tile terrain.TileType, minX, minY, maxX, maxY float64) bool {
+	// Check standard axis-aligned walls
+	if tile == terrain.TileWall {
+		return true
+	}
+
+	// Check pits (blocks ground layer entities)
+	if tile == terrain.TilePit {
+		return true
+	}
+
+	// Check diagonal walls using triangle collision
+	if tile.IsDiagonalWall() {
+		return t.checkDiagonalWallCollision(x, y, tile, minX, minY, maxX, maxY)
 	}
 
 	return false

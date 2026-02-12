@@ -124,36 +124,48 @@ func buildSandboxErrorMessages(errors []SandboxError) string {
 
 // LoadAll loads all mods from the mods directory.
 func (l *Loader) LoadAll() ([]*Mod, error) {
-	// Check if directory exists
-	if _, err := os.Stat(l.config.ModsDirectory); os.IsNotExist(err) {
-		// Create directory if it doesn't exist
-		if err := os.MkdirAll(l.config.ModsDirectory, 0o755); err != nil {
-			return nil, fmt.Errorf("failed to create mods directory: %w", err)
-		}
-		return []*Mod{}, nil
+	if err := l.ensureModsDirectoryExists(); err != nil {
+		return nil, err
 	}
 
-	// Read directory
+	entries, err := l.readModsDirectory()
+	if err != nil {
+		return nil, err
+	}
+
+	return l.loadModsFromEntries(entries)
+}
+
+// ensureModsDirectoryExists creates the mods directory if it doesn't exist.
+func (l *Loader) ensureModsDirectoryExists() error {
+	if _, err := os.Stat(l.config.ModsDirectory); os.IsNotExist(err) {
+		if err := os.MkdirAll(l.config.ModsDirectory, 0o755); err != nil {
+			return fmt.Errorf("failed to create mods directory: %w", err)
+		}
+	}
+	return nil
+}
+
+// readModsDirectory reads entries from the mods directory.
+func (l *Loader) readModsDirectory() ([]os.DirEntry, error) {
 	entries, err := os.ReadDir(l.config.ModsDirectory)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read mods directory: %w", err)
 	}
+	return entries, nil
+}
 
+// loadModsFromEntries loads mods from directory entries up to the max mods limit.
+func (l *Loader) loadModsFromEntries(entries []os.DirEntry) ([]*Mod, error) {
 	var mods []*Mod
 	var loadErrors []error
 
-	// Load each JSON file
 	for _, entry := range entries {
-		if entry.IsDir() {
+		if !l.isValidModFile(entry) {
 			continue
 		}
 
-		if !strings.HasSuffix(entry.Name(), ".json") {
-			continue
-		}
-
-		path := filepath.Join(l.config.ModsDirectory, entry.Name())
-		mod, err := l.LoadFromFile(path)
+		mod, err := l.loadModFromEntry(entry)
 		if err != nil {
 			loadErrors = append(loadErrors, err)
 			continue
@@ -161,17 +173,35 @@ func (l *Loader) LoadAll() ([]*Mod, error) {
 
 		mods = append(mods, mod)
 
-		// Check max mods limit
-		if len(mods) >= l.config.MaxMods {
+		if l.reachedMaxModsLimit(mods) {
 			break
 		}
 	}
 
-	// If all loads failed, return error
+	return l.validateLoadResults(mods, loadErrors)
+}
+
+// isValidModFile checks if the directory entry is a valid mod JSON file.
+func (l *Loader) isValidModFile(entry os.DirEntry) bool {
+	return !entry.IsDir() && strings.HasSuffix(entry.Name(), ".json")
+}
+
+// loadModFromEntry loads a mod from a directory entry.
+func (l *Loader) loadModFromEntry(entry os.DirEntry) (*Mod, error) {
+	path := filepath.Join(l.config.ModsDirectory, entry.Name())
+	return l.LoadFromFile(path)
+}
+
+// reachedMaxModsLimit checks if the max mods limit has been reached.
+func (l *Loader) reachedMaxModsLimit(mods []*Mod) bool {
+	return len(mods) >= l.config.MaxMods
+}
+
+// validateLoadResults validates the load results and returns appropriate error.
+func (l *Loader) validateLoadResults(mods []*Mod, loadErrors []error) ([]*Mod, error) {
 	if len(mods) == 0 && len(loadErrors) > 0 {
 		return nil, fmt.Errorf("failed to load any mods: %w", errors.Join(loadErrors...))
 	}
-
 	return mods, nil
 }
 

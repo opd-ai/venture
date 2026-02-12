@@ -29,6 +29,7 @@ type TerrainRenderSystem struct {
 	cameraX             float64                  // Camera X for parallax
 	cameraY             float64                  // Camera Y for parallax
 	fallbackTileCache   map[uint32]*ebiten.Image // PERF: Cache fallback tiles by RGBA color (Issue #3)
+	drawTileOpts        ebiten.DrawImageOptions  // PERF V4: Pre-allocated options to avoid per-tile heap allocation
 }
 
 // NewTerrainRenderSystem creates a new terrain rendering system.
@@ -158,112 +159,131 @@ func (t *TerrainRenderSystem) drawTile(screen *ebiten.Image, camera *CameraSyste
 	// Convert to screen coordinates
 	screenX, screenY := camera.WorldToScreen(worldX, worldY)
 
-	// Draw tile
-	opts := &ebiten.DrawImageOptions{}
-	opts.GeoM.Translate(screenX, screenY)
-	screen.DrawImage(img, opts)
+	// Draw tile - PERF V4: Reuse pre-allocated options
+	t.drawTileOpts.GeoM.Reset()
+	t.drawTileOpts.GeoM.Translate(screenX, screenY)
+	screen.DrawImage(img, &t.drawTileOpts)
 }
 
 // getTileImage retrieves or generates an ebiten.Image for the given tile type.
 func (t *TerrainRenderSystem) getTileImage(tileType tiles.TileType, tileX, tileY int) (*ebiten.Image, error) {
-	// Create cache key
-	// Use position-based variant for visual variety
 	variant := float64((tileX*7+tileY*13)%100) / 100.0
+	keyStr := t.buildCacheKey(tileType, variant)
 
-	// Include feature flags in cache key to avoid conflicts
-	keyStr := fmt.Sprintf("%s-%s-%d-%.2f-%dx%d-t%v-p%v-w%v",
-		tileType, t.genreID, t.seed, variant, t.tileWidth, t.tileHeight,
-		t.enableTransitions, t.enableParallax, t.enableEnhancedWalls)
-
-	// Check if we already have an ebiten image
 	if img, ok := t.tileImages[keyStr]; ok {
 		return img, nil
 	}
 
-	// Generate RGBA image using advanced features
-	var rgbaImg *image.RGBA
-	var err error
-
-	if tileType == tiles.TileWall && t.enableEnhancedWalls {
-		// Use enhanced wall rendering with corner detection
-		neighbors := t.getWallNeighbors(tileX, tileY)
-		wallConfig := tiles.EnhancedWallConfig{
-			Config: tiles.Config{
-				Type:    tileType,
-				Width:   t.tileWidth,
-				Height:  t.tileHeight,
-				GenreID: t.genreID,
-				Seed:    t.seed,
-				Variant: variant,
-			},
-			Neighbors:          neighbors,
-			EnableAntialiasing: true,
-			EnableShadows:      true,
-			BlendRadius:        4,
-		}
-		rgbaImg, err = t.tileCache.gen.GenerateEnhancedWall(wallConfig)
-	} else if t.enableTransitions && (tileType == tiles.TileFloor || tileType == tiles.TileCorridor) {
-		// Use transition system for smooth floor connections
-		neighbors := t.getTileNeighbors(tileX, tileY, tileType)
-		transitionType := tiles.DetermineTransition(neighbors)
-		transConfig := tiles.TransitionConfig{
-			BaseConfig: tiles.Config{
-				Type:    tileType,
-				Width:   t.tileWidth,
-				Height:  t.tileHeight,
-				GenreID: t.genreID,
-				Seed:    t.seed,
-				Variant: variant,
-			},
-			Transition:   transitionType,
-			Neighbors:    neighbors,
-			BlendRadius:  0.3,
-			CornerRadius: 0.25,
-			Smoothness:   0.5,
-		}
-		rgbaImg, err = t.tileCache.gen.GenerateWithTransition(transConfig)
-	} else if t.enableParallax {
-		// Use parallax rendering for depth effects
-		parallaxConfig := tiles.ParallaxConfig{
-			BaseConfig: tiles.Config{
-				Type:    tileType,
-				Width:   t.tileWidth,
-				Height:  t.tileHeight,
-				GenreID: t.genreID,
-				Seed:    t.seed,
-				Variant: variant,
-			},
-			Layer:         tiles.LayerBase,
-			CameraX:       t.cameraX,
-			CameraY:       t.cameraY,
-			ParallaxDepth: 1.0,
-			AOIntensity:   0.5,
-			ShadowHeight:  0.3,
-			ShadowAngle:   math.Pi / 4,
-		}
-		rgbaImg, err = t.tileCache.gen.GenerateWithParallax(parallaxConfig)
-	} else {
-		// Use basic generation
-		key := TileCacheKey{
-			TileType: tileType,
-			GenreID:  t.genreID,
-			Seed:     t.seed,
-			Variant:  variant,
-			Width:    t.tileWidth,
-			Height:   t.tileHeight,
-		}
-		rgbaImg, err = t.tileCache.Get(key)
-	}
-
+	rgbaImg, err := t.generateTileImage(tileType, tileX, tileY, variant)
 	if err != nil {
 		return nil, err
 	}
 
-	// Convert to ebiten.Image
 	ebitenImg := ebiten.NewImageFromImage(rgbaImg)
 	t.tileImages[keyStr] = ebitenImg
 
 	return ebitenImg, nil
+}
+
+// buildCacheKey creates a cache key for tile images.
+func (t *TerrainRenderSystem) buildCacheKey(tileType tiles.TileType, variant float64) string {
+	return fmt.Sprintf("%s-%s-%d-%.2f-%dx%d-t%v-p%v-w%v",
+		tileType, t.genreID, t.seed, variant, t.tileWidth, t.tileHeight,
+		t.enableTransitions, t.enableParallax, t.enableEnhancedWalls)
+}
+
+// generateTileImage generates the RGBA image for a tile using advanced features.
+func (t *TerrainRenderSystem) generateTileImage(tileType tiles.TileType, tileX, tileY int, variant float64) (*image.RGBA, error) {
+	if tileType == tiles.TileWall && t.enableEnhancedWalls {
+		return t.generateEnhancedWall(tileX, tileY, variant)
+	}
+
+	if t.enableTransitions && (tileType == tiles.TileFloor || tileType == tiles.TileCorridor) {
+		return t.generateWithTransition(tileType, tileX, tileY, variant)
+	}
+
+	if t.enableParallax {
+		return t.generateWithParallax(tileType, variant)
+	}
+
+	return t.generateBasicTile(tileType, variant)
+}
+
+// generateEnhancedWall generates an enhanced wall tile with corner detection.
+func (t *TerrainRenderSystem) generateEnhancedWall(tileX, tileY int, variant float64) (*image.RGBA, error) {
+	neighbors := t.getWallNeighbors(tileX, tileY)
+	wallConfig := tiles.EnhancedWallConfig{
+		Config: tiles.Config{
+			Type:    tiles.TileWall,
+			Width:   t.tileWidth,
+			Height:  t.tileHeight,
+			GenreID: t.genreID,
+			Seed:    t.seed,
+			Variant: variant,
+		},
+		Neighbors:          neighbors,
+		EnableAntialiasing: true,
+		EnableShadows:      true,
+		BlendRadius:        4,
+	}
+	return t.tileCache.gen.GenerateEnhancedWall(wallConfig)
+}
+
+// generateWithTransition generates a tile with smooth transitions.
+func (t *TerrainRenderSystem) generateWithTransition(tileType tiles.TileType, tileX, tileY int, variant float64) (*image.RGBA, error) {
+	neighbors := t.getTileNeighbors(tileX, tileY, tileType)
+	transitionType := tiles.DetermineTransition(neighbors)
+	transConfig := tiles.TransitionConfig{
+		BaseConfig: tiles.Config{
+			Type:    tileType,
+			Width:   t.tileWidth,
+			Height:  t.tileHeight,
+			GenreID: t.genreID,
+			Seed:    t.seed,
+			Variant: variant,
+		},
+		Transition:   transitionType,
+		Neighbors:    neighbors,
+		BlendRadius:  0.3,
+		CornerRadius: 0.25,
+		Smoothness:   0.5,
+	}
+	return t.tileCache.gen.GenerateWithTransition(transConfig)
+}
+
+// generateWithParallax generates a tile with parallax depth effects.
+func (t *TerrainRenderSystem) generateWithParallax(tileType tiles.TileType, variant float64) (*image.RGBA, error) {
+	parallaxConfig := tiles.ParallaxConfig{
+		BaseConfig: tiles.Config{
+			Type:    tileType,
+			Width:   t.tileWidth,
+			Height:  t.tileHeight,
+			GenreID: t.genreID,
+			Seed:    t.seed,
+			Variant: variant,
+		},
+		Layer:         tiles.LayerBase,
+		CameraX:       t.cameraX,
+		CameraY:       t.cameraY,
+		ParallaxDepth: 1.0,
+		AOIntensity:   0.5,
+		ShadowHeight:  0.3,
+		ShadowAngle:   math.Pi / 4,
+	}
+	return t.tileCache.gen.GenerateWithParallax(parallaxConfig)
+}
+
+// generateBasicTile generates a basic tile without advanced features.
+func (t *TerrainRenderSystem) generateBasicTile(tileType tiles.TileType, variant float64) (*image.RGBA, error) {
+	key := TileCacheKey{
+		TileType: tileType,
+		GenreID:  t.genreID,
+		Seed:     t.seed,
+		Variant:  variant,
+		Width:    t.tileWidth,
+		Height:   t.tileHeight,
+	}
+	return t.tileCache.Get(key)
 }
 
 // drawFallbackTile draws a colored rectangle when tile generation fails.
@@ -309,10 +329,11 @@ func (t *TerrainRenderSystem) drawFallbackTile(screen *ebiten.Image, camera *Cam
 		t.fallbackTileCache[cacheKey] = fallbackImg
 	}
 
-	opts := &ebiten.DrawImageOptions{}
-	opts.GeoM.Translate(screenX, screenY)
+	// PERF V4: Reuse pre-allocated options
+	t.drawTileOpts.GeoM.Reset()
+	t.drawTileOpts.GeoM.Translate(screenX, screenY)
 	// GAP REPAIR: Remove redundant color scaling - image is already colored
-	screen.DrawImage(fallbackImg, opts)
+	screen.DrawImage(fallbackImg, &t.drawTileOpts)
 }
 
 // getRoomTypeAt returns the room type for the tile at the given coordinates.

@@ -1,12 +1,20 @@
 // Package terrain provides grammar-based dungeon generation.
 // This file implements a graph grammar system for structured dungeon layouts
 // with narrative flow and genre-appropriate architectural themes.
+//
+// GraphGrammarGenerator implements the procgen.Generator interface, providing both:
+//   - Generate(seed, params) for standard interface usage with parameter-based configuration
+//   - GenerateGraph(width, height) for internal direct usage with pre-configured settings
+//
+// The interface implementation supports difficulty and depth-based scaling of dungeon complexity,
+// allowing procedural dungeons to adapt to player progression and challenge level.
 package terrain
 
 import (
 	"fmt"
 	"math/rand"
 
+	"github.com/opd-ai/venture/pkg/procgen"
 	"github.com/sirupsen/logrus"
 )
 
@@ -146,7 +154,7 @@ func (g *GraphGrammarGenerator) GenerateGraph(width, height int) (*DungeonGraph,
 	}
 
 	// Generate L-system string
-	lsystemString := g.lsystemGen.Generate()
+	lsystemString := g.lsystemGen.GenerateString()
 
 	if g.logger != nil && g.logger.Logger.GetLevel() >= logrus.DebugLevel {
 		g.logger.WithField("lsystem", lsystemString).Debug("L-system string generated")
@@ -181,6 +189,172 @@ func (g *GraphGrammarGenerator) GenerateGraph(width, height int) (*DungeonGraph,
 	}
 
 	return graph, nil
+}
+
+// Generate implements the procgen.Generator interface.
+// It generates a dungeon graph using graph grammars based on the seed and parameters.
+// The genreID in params is used to select genre-specific L-system rules.
+// Width and height are extracted from params.Custom["width"] and params.Custom["height"].
+func (g *GraphGrammarGenerator) Generate(seed int64, params procgen.GenerationParams) (interface{}, error) {
+	// Validate parameters
+	if err := procgen.ValidateParams(params); err != nil {
+		return nil, fmt.Errorf("invalid generation parameters: %w", err)
+	}
+
+	// Extract width and height from custom parameters
+	width, height := 80, 50 // Default dimensions
+	if params.Custom != nil {
+		if w, ok := params.Custom["width"].(int); ok && w > 0 {
+			width = w
+		}
+		if h, ok := params.Custom["height"].(int); ok && h > 0 {
+			height = h
+		}
+	}
+
+	// Validate dimensions
+	if err := procgen.ValidateDimensions(width, height, 20, 20, 500, 500); err != nil {
+		return nil, fmt.Errorf("invalid dungeon dimensions: %w", err)
+	}
+
+	// Get genre-specific L-system configuration
+	var config LSystemConfig
+	switch params.GenreID {
+	case "fantasy":
+		config = GetFantasyConfig(seed)
+	case "scifi", "sci-fi":
+		config = GetSciFiConfig(seed)
+	case "horror":
+		config = GetHorrorConfig(seed)
+	case "cyberpunk":
+		config = GetCyberpunkConfig(seed)
+	case "post-apocalyptic", "postapocalyptic":
+		config = GetPostApocalypticConfig(seed)
+	default:
+		// Default to fantasy for unknown genres
+		config = GetFantasyConfig(seed)
+	}
+
+	// Adjust room counts based on difficulty and depth
+	// Higher difficulty = more rooms (more challenging navigation)
+	// Higher depth = more complex layouts
+	roomMultiplier := 1.0 + (params.Difficulty * 0.5) + (float64(params.Depth) * 0.1)
+	config.MinRoomCount = int(float64(config.MinRoomCount) * roomMultiplier)
+	config.MaxRoomCount = int(float64(config.MaxRoomCount) * roomMultiplier)
+
+	// Prevent excessive room counts
+	if config.MinRoomCount > 50 {
+		config.MinRoomCount = 50
+	}
+	if config.MaxRoomCount > 100 {
+		config.MaxRoomCount = 100
+	}
+
+	// Ensure MinRoomCount doesn't exceed MaxRoomCount
+	if config.MinRoomCount > config.MaxRoomCount {
+		config.MinRoomCount = config.MaxRoomCount
+	}
+
+	// Create a temporary generator with the updated config
+	tempGen := NewGraphGrammarGenerator(config)
+
+	// Generate the dungeon graph
+	graph, err := tempGen.GenerateGraph(width, height)
+	if err != nil {
+		return nil, fmt.Errorf("failed to generate dungeon graph: %w", err)
+	}
+
+	return graph, nil
+}
+
+// Validate implements the procgen.Generator interface.
+// It checks if the generated dungeon graph is valid.
+func (g *GraphGrammarGenerator) Validate(result interface{}) error {
+	// Type check
+	graph, ok := result.(*DungeonGraph)
+	if !ok {
+		return fmt.Errorf("result is not a *DungeonGraph, got type %T", result)
+	}
+
+	// Check for nil graph
+	if graph == nil {
+		return fmt.Errorf("dungeon graph is nil")
+	}
+
+	// Check for start room
+	if graph.StartRoom == nil {
+		return fmt.Errorf("dungeon graph has no start room")
+	}
+
+	// Check minimum room count (must have at least start + one other room)
+	if len(graph.Rooms) < 2 {
+		return fmt.Errorf("dungeon graph has too few rooms (%d), need at least 2", len(graph.Rooms))
+	}
+
+	// Check that all rooms have valid IDs
+	for i, room := range graph.Rooms {
+		if room == nil {
+			return fmt.Errorf("room at index %d is nil", i)
+		}
+		if room.ID < 0 {
+			return fmt.Errorf("room %d has invalid ID: %d", i, room.ID)
+		}
+	}
+
+	// Check that all rooms are in the RoomsByID map
+	if len(graph.RoomsByID) != len(graph.Rooms) {
+		return fmt.Errorf("RoomsByID map size (%d) doesn't match Rooms slice size (%d)",
+			len(graph.RoomsByID), len(graph.Rooms))
+	}
+
+	// Check for valid dimensions
+	if graph.Width <= 0 || graph.Height <= 0 {
+		return fmt.Errorf("dungeon graph has invalid dimensions: %dx%d", graph.Width, graph.Height)
+	}
+
+	// Check critical path exists and is valid
+	if len(graph.CriticalPath) < 2 {
+		return fmt.Errorf("critical path too short (%d rooms), need at least 2", len(graph.CriticalPath))
+	}
+
+	// Check that critical path starts with start room
+	if graph.CriticalPath[0] != graph.StartRoom {
+		return fmt.Errorf("critical path doesn't start with start room")
+	}
+
+	// Check narrative depth is valid
+	if graph.NarrativeDepth < 0 {
+		return fmt.Errorf("narrative depth is negative: %d", graph.NarrativeDepth)
+	}
+
+	// If boss room exists, narrative depth must be positive
+	if graph.BossRoom != nil && graph.NarrativeDepth <= 0 {
+		return fmt.Errorf("narrative depth must be positive when boss room exists (%d)", graph.NarrativeDepth)
+	}
+
+	// Check that all rooms have valid dimensions
+	for _, room := range graph.Rooms {
+		if room.Width <= 0 || room.Height <= 0 {
+			return fmt.Errorf("room %d has invalid dimensions: %dx%d", room.ID, room.Width, room.Height)
+		}
+	}
+
+	// Check that all connections are valid
+	for _, room := range graph.Rooms {
+		for _, conn := range room.Connections {
+			if conn.From != room {
+				return fmt.Errorf("room %d has connection with mismatched From pointer", room.ID)
+			}
+			if conn.To == nil {
+				return fmt.Errorf("room %d has connection with nil To pointer", room.ID)
+			}
+			if conn.Weight <= 0 {
+				return fmt.Errorf("room %d has connection with invalid weight: %f", room.ID, conn.Weight)
+			}
+		}
+	}
+
+	return nil
 }
 
 // parseIntoGraph converts L-system string into a room graph.
@@ -441,9 +615,9 @@ func (g *GraphGrammarGenerator) getRoomDimensions(roomType RoomType) (int, int) 
 		h := 5 + g.rng.Intn(4)
 		return w, h
 	case RoomCorridor:
-		// Narrow corridors (3-5 wide, 3-5 tall)
-		w := 3 + g.rng.Intn(3)
-		h := 3 + g.rng.Intn(3)
+		// Wide corridors (5-7 wide, 5-7 tall) to accommodate 64×64 player sprites
+		w := 5 + g.rng.Intn(3)
+		h := 5 + g.rng.Intn(3)
 		return w, h
 	case RoomBranch:
 		// Medium hub rooms (8-12 tiles)
@@ -578,42 +752,62 @@ func (g *GraphGrammarGenerator) identifyCriticalPath(graph *DungeonGraph) {
 
 // validateGraph ensures the graph meets quality requirements.
 func (g *GraphGrammarGenerator) validateGraph(graph *DungeonGraph) error {
-	// Check for start room
 	if graph.StartRoom == nil {
 		return fmt.Errorf("graph has no start room")
 	}
 
-	// Check that all rooms are reachable from start
+	if err := g.validateRoomReachability(graph); err != nil {
+		return err
+	}
+
+	if err := g.validateCriticalPath(graph); err != nil {
+		return err
+	}
+
+	return g.validateNarrativeDepth(graph)
+}
+
+// validateRoomReachability checks that all rooms are reachable from start.
+func (g *GraphGrammarGenerator) validateRoomReachability(graph *DungeonGraph) error {
 	reachable := g.countReachableRooms(graph)
 	if reachable < len(graph.Rooms) {
 		return fmt.Errorf("not all rooms are reachable from start (%d/%d)", reachable, len(graph.Rooms))
 	}
+	return nil
+}
 
-	// Check for critical path (must have at least 2 rooms for meaningful progression)
+// validateCriticalPath checks that the critical path has sufficient length.
+func (g *GraphGrammarGenerator) validateCriticalPath(graph *DungeonGraph) error {
 	if len(graph.CriticalPath) < 2 {
 		return fmt.Errorf("critical path too short (%d rooms, need at least 2)", len(graph.CriticalPath))
 	}
+	return nil
+}
 
-	// Check narrative depth progression (must be positive when boss room exists)
-	// Boss room can be identified either by BossRoom field or by room type in critical path
-	hasBoss := graph.BossRoom != nil
-	if !hasBoss {
-		for _, room := range graph.CriticalPath {
-			if room.Type == RoomBoss {
-				hasBoss = true
-				break
-			}
-		}
-	}
-
-	if hasBoss && graph.NarrativeDepth <= 0 {
-		return fmt.Errorf("narrative depth must be positive when boss room exists (%d)", graph.NarrativeDepth)
-	}
+// validateNarrativeDepth ensures narrative depth is valid when boss room exists.
+func (g *GraphGrammarGenerator) validateNarrativeDepth(graph *DungeonGraph) error {
 	if graph.NarrativeDepth < 0 {
 		return fmt.Errorf("narrative depth negative (%d)", graph.NarrativeDepth)
 	}
 
+	if hasBossRoom(graph) && graph.NarrativeDepth <= 0 {
+		return fmt.Errorf("narrative depth must be positive when boss room exists (%d)", graph.NarrativeDepth)
+	}
+
 	return nil
+}
+
+// hasBossRoom checks if the graph contains a boss room.
+func hasBossRoom(graph *DungeonGraph) bool {
+	if graph.BossRoom != nil {
+		return true
+	}
+	for _, room := range graph.CriticalPath {
+		if room.Type == RoomBoss {
+			return true
+		}
+	}
+	return false
 }
 
 // countReachableRooms counts how many rooms are reachable from the start.
@@ -641,4 +835,96 @@ func (g *GraphGrammarGenerator) countReachableRooms(graph *DungeonGraph) int {
 	}
 
 	return count
+}
+
+// GraphToTerrain converts a DungeonGraph into a Terrain map suitable for gameplay.
+// It places rooms according to their graph positions and connects them with corridors.
+func GraphToTerrain(graph *DungeonGraph) *Terrain {
+	// Create terrain filled with walls
+	terrain := NewTerrain(graph.Width, graph.Height, graph.Seed)
+
+	// Convert each room node to a terrain room and carve it out
+	for _, roomNode := range graph.Rooms {
+		// Create a Room struct from RoomNode
+		room := &Room{
+			X:      roomNode.Position.X,
+			Y:      roomNode.Position.Y,
+			Width:  roomNode.Width,
+			Height: roomNode.Height,
+			Type:   roomNode.Type,
+		}
+		terrain.Rooms = append(terrain.Rooms, room)
+
+		// Carve out the room floor
+		for y := roomNode.Position.Y; y < roomNode.Position.Y+roomNode.Height; y++ {
+			for x := roomNode.Position.X; x < roomNode.Position.X+roomNode.Width; x++ {
+				if x >= 0 && x < graph.Width && y >= 0 && y < graph.Height {
+					terrain.SetTile(x, y, TileFloor)
+				}
+			}
+		}
+	}
+
+	// Create corridors between connected rooms
+	for _, roomNode := range graph.Rooms {
+		for _, conn := range roomNode.Connections {
+			// Get room centers for corridor placement
+			x1, y1 := roomNode.Position.X+roomNode.Width/2, roomNode.Position.Y+roomNode.Height/2
+			x2, y2 := conn.To.Position.X+conn.To.Width/2, conn.To.Position.Y+conn.To.Height/2
+
+			// Determine tile type based on connection type
+			tileType := TileCorridor
+			if conn.Type == ConnectionDoor {
+				tileType = TileDoor
+			} else if conn.Type == ConnectionSecret {
+				tileType = TileSecretDoor
+			}
+
+			// Create L-shaped corridor: horizontal then vertical
+			// Corridors are 3 tiles wide to accommodate 64×64 player sprites
+			// Horizontal segment
+			minX, maxX := x1, x2
+			if minX > maxX {
+				minX, maxX = maxX, minX
+			}
+			for x := minX; x <= maxX; x++ {
+				for dy := -corridorHalfWidth; dy <= corridorHalfWidth; dy++ {
+					ny := y1 + dy
+					if ny >= 0 && ny < graph.Height && x >= 0 && x < graph.Width {
+						if terrain.GetTile(x, ny) == TileWall {
+							terrain.SetTile(x, ny, tileType)
+						}
+					}
+				}
+			}
+
+			// Vertical segment
+			minY, maxY := y1, y2
+			if minY > maxY {
+				minY, maxY = maxY, minY
+			}
+			for y := minY; y <= maxY; y++ {
+				for dx := -corridorHalfWidth; dx <= corridorHalfWidth; dx++ {
+					nx := x2 + dx
+					if y >= 0 && y < graph.Height && nx >= 0 && nx < graph.Width {
+						if terrain.GetTile(nx, y) == TileWall {
+							terrain.SetTile(nx, y, tileType)
+						}
+					}
+				}
+			}
+		}
+	}
+
+	// Add stairs if we have a start and boss room
+	if graph.StartRoom != nil {
+		startX, startY := graph.StartRoom.Position.X+graph.StartRoom.Width/2, graph.StartRoom.Position.Y+graph.StartRoom.Height/2
+		terrain.AddStairs(startX, startY, true) // Stairs up at start
+	}
+	if graph.BossRoom != nil {
+		bossX, bossY := graph.BossRoom.Position.X+graph.BossRoom.Width/2, graph.BossRoom.Position.Y+graph.BossRoom.Height/2
+		terrain.AddStairs(bossX, bossY, false) // Stairs down at boss
+	}
+
+	return terrain
 }

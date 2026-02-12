@@ -3,7 +3,14 @@ package sprites
 import (
 	"sync"
 	"testing"
+
+	"github.com/hajimehoshi/ebiten/v2"
 )
+
+// createTestImage creates a test image for testing purposes.
+func createTestImage(width, height int) *ebiten.Image {
+	return ebiten.NewImage(width, height)
+}
 
 func TestNewCache(t *testing.T) {
 	tests := []struct {
@@ -498,5 +505,207 @@ func TestHashConfig_FieldSensitivity(t *testing.T) {
 				t.Errorf("Modified config produced same hash as base: %d", baseHash)
 			}
 		})
+	}
+}
+
+// TestCache_ConcurrentGetSafety tests that concurrent Get operations are safe with single lock.
+// This validates the mutex consolidation fix from Issue R3.
+func TestCache_ConcurrentGetSafety(t *testing.T) {
+	skipIfHeadless(t)
+
+	cache := NewCache(100)
+	config := Config{
+		Type:   0,
+		Seed:   12345,
+		Width:  32,
+		Height: 32,
+	}
+
+	// Pre-populate cache
+	testImg := createTestImage(32, 32)
+	cache.Put(config, testImg)
+
+	const goroutines = 100
+	const iterations = 1000
+
+	var wg sync.WaitGroup
+	wg.Add(goroutines)
+
+	// Run concurrent Get operations
+	for i := 0; i < goroutines; i++ {
+		go func() {
+			defer wg.Done()
+			for j := 0; j < iterations; j++ {
+				img := cache.Get(config)
+				if img == nil {
+					t.Error("Expected cache hit, got nil")
+				}
+			}
+		}()
+	}
+
+	wg.Wait()
+
+	// Verify cache state is consistent
+	stats := cache.Stats()
+	if stats.Hits != goroutines*iterations {
+		t.Errorf("Expected %d hits, got %d", goroutines*iterations, stats.Hits)
+	}
+}
+
+// TestCache_ConcurrentGetAndPut tests concurrent Get and Put operations.
+func TestCache_ConcurrentGetAndPut(t *testing.T) {
+	skipIfHeadless(t)
+
+	cache := NewCache(50)
+
+	const goroutines = 50
+	const iterations = 100
+
+	var wg sync.WaitGroup
+	wg.Add(goroutines * 2) // Both readers and writers
+
+	// Readers
+	for i := 0; i < goroutines; i++ {
+		go func(id int) {
+			defer wg.Done()
+			config := Config{
+				Type:   0,
+				Seed:   int64(id % 10), // 10 different configs
+				Width:  32,
+				Height: 32,
+			}
+			for j := 0; j < iterations; j++ {
+				_ = cache.Get(config)
+			}
+		}(i)
+	}
+
+	// Writers
+	for i := 0; i < goroutines; i++ {
+		go func(id int) {
+			defer wg.Done()
+			config := Config{
+				Type:   0,
+				Seed:   int64(id % 10),
+				Width:  32,
+				Height: 32,
+			}
+			for j := 0; j < iterations; j++ {
+				testImg := createTestImage(32, 32)
+				cache.Put(config, testImg)
+			}
+		}(i)
+	}
+
+	wg.Wait()
+
+	// Cache should not panic and should be in a valid state
+	stats := cache.Stats()
+	if stats.Size > 50 {
+		t.Errorf("Cache size %d exceeds capacity 50", stats.Size)
+	}
+}
+
+// TestConfig_SetCustom verifies that SetCustom properly sorts keys.
+func TestConfig_SetCustom(t *testing.T) {
+	config := DefaultConfig()
+
+	custom := map[string]interface{}{
+		"zebra":  "last",
+		"alpha":  "first",
+		"middle": "middle",
+	}
+
+	config.SetCustom(custom)
+
+	// Verify keys are sorted
+	keys := config.GetSortedCustomKeys()
+	expected := []string{"alpha", "middle", "zebra"}
+
+	if len(keys) != len(expected) {
+		t.Fatalf("Expected %d keys, got %d", len(expected), len(keys))
+	}
+
+	for i, key := range keys {
+		if key != expected[i] {
+			t.Errorf("Key[%d] = %s, want %s", i, key, expected[i])
+		}
+	}
+}
+
+// TestConfig_sortCustomKeys verifies manual sorting after direct Custom modification.
+func TestConfig_sortCustomKeys(t *testing.T) {
+	config := DefaultConfig()
+
+	// Modify Custom directly (not recommended, but should still work)
+	config.Custom = map[string]interface{}{
+		"c": 3,
+		"a": 1,
+		"b": 2,
+	}
+
+	// Should auto-sort on first access
+	keys := config.GetSortedCustomKeys()
+	expected := []string{"a", "b", "c"}
+
+	if len(keys) != len(expected) {
+		t.Fatalf("Expected %d keys, got %d", len(expected), len(keys))
+	}
+
+	for i, key := range keys {
+		if key != expected[i] {
+			t.Errorf("Key[%d] = %s, want %s", i, key, expected[i])
+		}
+	}
+}
+
+// TestConfig_GetSortedCustomKeys_Empty verifies handling of nil/empty Custom.
+func TestConfig_GetSortedCustomKeys_Empty(t *testing.T) {
+	tests := []struct {
+		name   string
+		custom map[string]interface{}
+	}{
+		{"nil custom", nil},
+		{"empty custom", map[string]interface{}{}},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			config := DefaultConfig()
+			config.Custom = tt.custom
+
+			keys := config.GetSortedCustomKeys()
+			if keys != nil {
+				t.Errorf("Expected nil keys for empty custom, got %v", keys)
+			}
+		})
+	}
+}
+
+// TestHashConfig_UsesPreSortedKeys verifies that hashConfig uses pre-sorted keys.
+func TestHashConfig_UsesPreSortedKeys(t *testing.T) {
+	cache := NewCache(10)
+
+	// Create two configs with same custom params but set differently
+	config1 := DefaultConfig()
+	config1.SetCustom(map[string]interface{}{
+		"param1": "value1",
+		"param2": "value2",
+	})
+
+	config2 := DefaultConfig()
+	// Directly set Custom (will auto-sort on first hash)
+	config2.Custom = map[string]interface{}{
+		"param2": "value2",
+		"param1": "value1",
+	}
+
+	// Both should generate same hash despite different insertion order
+	hash1 := cache.hashConfig(config1)
+	hash2 := cache.hashConfig(config2)
+
+	if hash1 != hash2 {
+		t.Errorf("Hash mismatch: %d != %d (custom params should produce deterministic hash)", hash1, hash2)
 	}
 }

@@ -277,8 +277,10 @@ func TestMazeGenerator_StairPlacement(t *testing.T) {
 		t.Error("No stairs down placed")
 	}
 
-	// Verify stairs are in corner regions (within 10 tiles of edges)
-	cornerSize := 10
+	// Verify stairs are in corner regions (within 12 tiles of edges).
+	// The wider corridors (2-tile) shift dead-end positions slightly
+	// compared to single-tile corridors, so a larger margin is needed.
+	cornerSize := 12
 	for _, stair := range terrain.StairsUp {
 		inCorner := (stair.X < cornerSize || stair.X >= terrain.Width-cornerSize) &&
 			(stair.Y < cornerSize || stair.Y >= terrain.Height-cornerSize)

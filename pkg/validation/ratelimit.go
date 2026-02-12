@@ -37,9 +37,17 @@ type clientBucket struct {
 }
 
 // NewRateLimiter creates a new rate limiter
-// rate: number of requests allowed per interval
-// interval: time window for rate limiting (e.g., time.Second for requests/second)
+// rate: number of requests allowed per interval (defaults to 1 if <= 0)
+// interval: time window for rate limiting (defaults to 1 second if <= 0)
 func NewRateLimiter(rate int, interval time.Duration) *RateLimiter {
+	// Validate and set defaults for invalid values
+	if rate <= 0 {
+		rate = 1
+	}
+	if interval <= 0 {
+		interval = time.Second
+	}
+
 	return &RateLimiter{
 		rate:            rate,
 		interval:        interval,

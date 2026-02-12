@@ -337,6 +337,53 @@ func TestWrapf(t *testing.T) {
 	}
 }
 
+func TestRetryabilityByErrorType(t *testing.T) {
+	tests := []struct {
+		name      string
+		errType   ErrorType
+		retryable bool
+	}{
+		// Retryable types
+		{"Network is retryable", ErrorTypeNetwork, true},
+		{"Timeout is retryable", ErrorTypeTimeout, true},
+		{"Database is retryable", ErrorTypeDatabase, true},
+		{"RateLimit is retryable", ErrorTypeRateLimit, true},
+		{"Resource is retryable", ErrorTypeResource, true},
+		// Non-retryable types
+		{"Validation is not retryable", ErrorTypeValidation, false},
+		{"Configuration is not retryable", ErrorTypeConfiguration, false},
+		{"Generation is not retryable", ErrorTypeGeneration, false},
+		{"Serialization is not retryable", ErrorTypeSerialization, false},
+		{"FileSystem is not retryable", ErrorTypeFileSystem, false},
+		{"Authentication is not retryable", ErrorTypeAuthentication, false},
+		{"Concurrency is not retryable", ErrorTypeConcurrency, false},
+		{"Unknown is not retryable", ErrorTypeUnknown, false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Test New()
+			err := New(tt.errType, "test message")
+			if err.IsRetryable() != tt.retryable {
+				t.Errorf("New(%s).IsRetryable() = %v, want %v", tt.errType.String(), err.IsRetryable(), tt.retryable)
+			}
+
+			// Test Wrap()
+			baseErr := fmt.Errorf("base error")
+			wrappedErr := Wrap(baseErr, tt.errType, "wrapped message")
+			if wrappedErr.IsRetryable() != tt.retryable {
+				t.Errorf("Wrap(%s).IsRetryable() = %v, want %v", tt.errType.String(), wrappedErr.IsRetryable(), tt.retryable)
+			}
+
+			// Test Wrapf()
+			wrappedErrF := Wrapf(baseErr, tt.errType, "formatted %s", "message")
+			if wrappedErrF.IsRetryable() != tt.retryable {
+				t.Errorf("Wrapf(%s).IsRetryable() = %v, want %v", tt.errType.String(), wrappedErrF.IsRetryable(), tt.retryable)
+			}
+		})
+	}
+}
+
 func TestIs(t *testing.T) {
 	networkErr := Network("test")
 	validationErr := Validation("test")

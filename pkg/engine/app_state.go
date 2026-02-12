@@ -23,6 +23,8 @@ const (
 	AppStateServerAddressInput
 	// AppStateCharacterCreation shows character creation UI (future).
 	AppStateCharacterCreation
+	// AppStateLoading shows world generation progress before gameplay.
+	AppStateLoading
 	// AppStateGameplay is the active game state with world simulation.
 	AppStateGameplay
 	// AppStateSettings shows game settings (future).
@@ -44,6 +46,8 @@ func (s AppState) String() string {
 		return "ServerAddressInput"
 	case AppStateCharacterCreation:
 		return "CharacterCreation"
+	case AppStateLoading:
+		return "Loading"
 	case AppStateGameplay:
 		return "Gameplay"
 	case AppStateSettings:
@@ -138,8 +142,8 @@ func isValidAppTransition(from, to AppState) bool {
 
 	switch from {
 	case AppStateMainMenu:
-		// Can go to any submenu, settings, or directly to gameplay (MVP) from main menu
-		return to == AppStateSinglePlayerMenu || to == AppStateMultiPlayerMenu || to == AppStateSettings || to == AppStateCharacterCreation || to == AppStateGameplay
+		// Can go to any submenu, settings, loading, or directly to gameplay (MVP) from main menu
+		return to == AppStateSinglePlayerMenu || to == AppStateMultiPlayerMenu || to == AppStateSettings || to == AppStateCharacterCreation || to == AppStateGameplay || to == AppStateLoading
 	case AppStateSinglePlayerMenu:
 		// Can start new game (via genre selection), load game, or go back to main menu
 		return to == AppStateGenreSelection || to == AppStateCharacterCreation || to == AppStateGameplay || to == AppStateMainMenu
@@ -153,8 +157,11 @@ func isValidAppTransition(from, to AppState) bool {
 		// Can proceed to character creation or go back to single-player menu
 		return to == AppStateCharacterCreation || to == AppStateSinglePlayerMenu || to == AppStateMainMenu
 	case AppStateCharacterCreation:
-		// Can complete creation and start game or go back to main menu (MVP flow)
-		return to == AppStateGameplay || to == AppStateSinglePlayerMenu || to == AppStateMainMenu
+		// Can complete creation and start gameplay/loading or go back (MVP flow)
+		return to == AppStateGameplay || to == AppStateLoading || to == AppStateSinglePlayerMenu || to == AppStateMainMenu
+	case AppStateLoading:
+		// Can only proceed to gameplay after loading completes
+		return to == AppStateGameplay || to == AppStateMainMenu
 	case AppStateSettings:
 		// Can only go back to main menu
 		return to == AppStateMainMenu
@@ -166,9 +173,9 @@ func isValidAppTransition(from, to AppState) bool {
 	}
 }
 
-// IsInMenu returns true if currently in any menu state (not gameplay).
+// IsInMenu returns true if currently in any menu state (not gameplay or loading).
 func (asm *AppStateManager) IsInMenu() bool {
-	return asm.currentState != AppStateGameplay
+	return asm.currentState != AppStateGameplay && asm.currentState != AppStateLoading
 }
 
 // IsInGameplay returns true if currently in gameplay state.

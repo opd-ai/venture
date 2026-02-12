@@ -200,6 +200,11 @@ type InputProvider interface {
 	// GetMousePosition returns the current mouse cursor position in screen coordinates
 	GetMousePosition() (x, y int)
 
+	// GetMouseDelta returns the mouse movement since the last frame
+	// Gap #8 fix: Essential for first-person camera control and aiming
+	// Returns the change in X and Y coordinates from the previous frame
+	GetMouseDelta() (dx, dy int)
+
 	// IsMousePressed returns whether the primary mouse button is pressed
 	IsMousePressed() bool
 
@@ -365,6 +370,14 @@ type AnimationSequence interface {
 // MiniGame represents an embedded procedural mini-game that can be played within Venture.
 // Mini-games are deterministically generated using a seed and provide rewards upon completion.
 //
+// Design: Mini-games follow ECS data-driven rendering pattern. They compute visual state
+// via PrepareRender() and expose it through GetRenderOutput(). A separate ECS rendering
+// system consumes this data to draw actual pixels. This separation enables:
+//   - Clean separation between game logic and rendering
+//   - Easy testing without graphics initialization
+//   - Multiplayer sync of visual state
+//   - Data-driven UI rendering
+//
 // Phase 27.1: Mini-Game Framework
 type MiniGame interface {
 	// Initialize sets up the mini-game with the given seed and difficulty
@@ -375,9 +388,18 @@ type MiniGame interface {
 	// Returns an error if the update fails
 	Update(deltaTime float64) error
 
-	// Render draws the mini-game to the provided screen
-	// Returns an error if rendering fails
-	Render(screen ImageProvider) error
+	// PrepareRender computes the current visual state for the mini-game
+	// This validates screen dimensions and populates internal render data
+	// Returns an error if screen is invalid or game is not initialized
+	//
+	// NOTE: This does NOT draw pixels - it only prepares render data.
+	// Use GetRenderOutput() to retrieve the computed visual state.
+	PrepareRender(screenWidth, screenHeight int) error
+
+	// GetRenderOutput returns the computed visual state from the last PrepareRender call
+	// Returns nil if PrepareRender has not been called yet
+	// The render system reads this data to draw actual pixels to the screen
+	GetRenderOutput() MiniGameRenderOutput
 
 	// IsComplete returns true when the mini-game has finished (won or lost)
 	IsComplete() bool
@@ -385,6 +407,23 @@ type MiniGame interface {
 	// GetReward returns the reward earned from completing the mini-game
 	// Returns nil if the game is not complete or if the player lost
 	GetReward() *Reward
+}
+
+// MiniGameRenderOutput provides visual state data for rendering a mini-game.
+// This interface abstracts render output to avoid import cycles between engine and procgen packages.
+// Implementations should provide title, status, dimensions, and visual elements.
+//
+// Phase 27.3: Mini-Game Rendering
+type MiniGameRenderOutput interface {
+	// GetTitle returns the display name of the mini-game
+	GetTitle() string
+	// GetStatus returns the current game state ("Playing", "Won", "Lost")
+	GetStatus() string
+	// GetDimensions returns the screen width and height in pixels
+	GetDimensions() (width, height int)
+	// GetElements returns the visual elements to be drawn (implementation-specific)
+	// The rendering system casts this to the concrete type it expects
+	GetElements() interface{}
 }
 
 // HousingUIProvider is the interface for housing UI panels.
@@ -476,6 +515,15 @@ type FederationBroadcaster interface {
 }
 
 // VRHeadsetAdapter abstracts VR headset hardware for head tracking.
+//
+// EXPERIMENTAL: VR support is currently experimental. Production code uses
+// StubHeadsetAdapter which reports no hardware connected. Future releases
+// will integrate OpenVR/OpenXR SDKs for real hardware support.
+//
+// Implementations:
+//   - StubHeadsetAdapter: Production stub (no hardware SDK)
+//   - MockHeadset: Test implementation with configurable values
+//
 // Originally from: head_tracking_system.go
 type VRHeadsetAdapter interface {
 	// IsConnected returns true if headset is available
@@ -555,6 +603,15 @@ type ParallelRendererProvider interface {
 }
 
 // VRControllerAdapter abstracts VR controller hardware.
+//
+// EXPERIMENTAL: VR support is currently experimental. Production code uses
+// StubControllerAdapter which reports no controllers connected. Future releases
+// will integrate OpenVR/OpenXR SDKs for real hardware support.
+//
+// Implementations:
+//   - StubControllerAdapter: Production stub (no hardware SDK)
+//   - MockController: Test implementation with configurable values
+//
 // Originally from: vr_controller_system.go
 type VRControllerAdapter interface {
 	// IsConnected returns true if controller is available

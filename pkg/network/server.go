@@ -252,39 +252,61 @@ func (s *TCPServer) Stop() error {
 // Returns an error if shutdown doesn't complete within the context deadline.
 // All client connections are closed immediately, but goroutines are given time to cleanup.
 func (s *TCPServer) StopWithContext(ctx context.Context) error {
-	s.clientsMu.Lock()
-
-	if !s.running {
-		s.clientsMu.Unlock()
+	if !s.initiateShutdown() {
 		return nil
 	}
 
-	s.running = false
+	clientCount := s.disconnectAllClients()
+	s.logShutdownStart(clientCount)
 
-	// Cancel server context to signal all operations
+	return s.waitForGoroutines(ctx)
+}
+
+// initiateShutdown begins the shutdown process.
+func (s *TCPServer) initiateShutdown() bool {
+	s.clientsMu.Lock()
+	defer s.clientsMu.Unlock()
+
+	if !s.running {
+		return false
+	}
+
+	s.running = false
 	s.cancel()
 	close(s.done)
 
-	// Close listener
 	if s.listener != nil {
 		s.listener.Close()
 	}
 
-	// Disconnect all clients
+	return true
+}
+
+// disconnectAllClients disconnects all connected clients.
+func (s *TCPServer) disconnectAllClients() int {
+	s.clientsMu.Lock()
+	defer s.clientsMu.Unlock()
+
 	clientCount := len(s.clients)
 	for _, client := range s.clients {
 		client.disconnect()
 	}
-	s.clientsMu.Unlock()
 
+	return clientCount
+}
+
+// logShutdownStart logs the beginning of shutdown process.
+func (s *TCPServer) logShutdownStart(clientCount int) {
 	if s.logger != nil {
 		s.logger.WithFields(logrus.Fields{
 			"client_count": clientCount,
 			"timeout":      s.shutdownTimeout,
 		}).Info("shutting down server, waiting for goroutines")
 	}
+}
 
-	// Wait for goroutines with timeout
+// waitForGoroutines waits for all goroutines to finish with timeout.
+func (s *TCPServer) waitForGoroutines(ctx context.Context) error {
 	done := make(chan struct{})
 	go func() {
 		s.wg.Wait()
@@ -293,15 +315,25 @@ func (s *TCPServer) StopWithContext(ctx context.Context) error {
 
 	select {
 	case <-done:
-		if s.logger != nil {
-			s.logger.Info("server shutdown complete")
-		}
+		s.logShutdownComplete()
 		return nil
 	case <-ctx.Done():
-		if s.logger != nil {
-			s.logger.Warn("server shutdown timed out, some goroutines may still be running")
-		}
+		s.logShutdownTimeout()
 		return fmt.Errorf("shutdown timeout: %w", ctx.Err())
+	}
+}
+
+// logShutdownComplete logs successful shutdown completion.
+func (s *TCPServer) logShutdownComplete() {
+	if s.logger != nil {
+		s.logger.Info("server shutdown complete")
+	}
+}
+
+// logShutdownTimeout logs when shutdown times out.
+func (s *TCPServer) logShutdownTimeout() {
+	if s.logger != nil {
+		s.logger.Warn("server shutdown timed out, some goroutines may still be running")
 	}
 }
 
@@ -514,7 +546,7 @@ func (s *TCPServer) isServerFull(conn net.Conn) bool {
 }
 
 // configureTCPKeepalive enables TCP keepalive for long-duration connections to prevent silent disconnections.
-// Uses KeepAliveConn interface for testability instead of concrete *net.TCPConn.
+// Uses KeepAliveConn interface for testability and flexible connection handling.
 func (s *TCPServer) configureTCPKeepalive(conn net.Conn) {
 	kaConn, ok := conn.(KeepAliveConn)
 	if !ok {

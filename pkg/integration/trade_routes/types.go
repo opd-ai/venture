@@ -8,6 +8,7 @@
 // - EscortMission: Player protection missions
 // - GuildSponsorship: Guild funding for market manipulation
 // - Enum type declarations (RouteStatus, EncounterOutcome, MissionStatus)
+// - PriceUpdateHandler: Interface for economy system integration
 //
 // Constants for these enums are defined in constants.go.
 // Package trade_routes implements automated AI merchant caravan systems for cross-server trading.
@@ -26,6 +27,7 @@
 // - V4 Vehicles: pkg/procgen/vehicle (caravan vehicles)
 // - V6 Federation Market: pkg/network/federation/market.go (pricing)
 // - V4 AI: pkg/engine/ai_system.go (merchant pathfinding)
+// - V6 Economy: pkg/world/economy (price updates on route completion)
 //
 // Performance: <1ms per route calculation, <50 active routes per server
 package trade_routes
@@ -33,6 +35,16 @@ package trade_routes
 import (
 	"time"
 )
+
+// PriceUpdateHandler receives notifications when trade routes affect market prices.
+// Implemented by pkg/world/economy.System to integrate trade route supply/demand with marketplace pricing.
+type PriceUpdateHandler interface {
+	// ApplyTradeImpact applies price changes from trade route completion.
+	// itemType: The commodity traded (e.g., "Timber", "Ore")
+	// priceChange: Multiplier for price impact (1.1 = +10% increase, 0.9 = -10% decrease)
+	// volume: Total quantity traded, used to weight the price impact
+	ApplyTradeImpact(itemType string, priceChange float64, volume int)
+}
 
 // TradeRoute represents an automated merchant caravan route between regions.
 type TradeRoute struct {

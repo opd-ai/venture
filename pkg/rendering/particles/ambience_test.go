@@ -259,8 +259,10 @@ func TestGenerateAmbience_AllEnvironments(t *testing.T) {
 				if p.Life <= 0 {
 					t.Errorf("particle %d has invalid lifetime: %f", i, p.Life)
 				}
-				if p.Color == nil {
-					t.Errorf("particle %d has nil color", i)
+				// Color is color.RGBA (not interface), can't be nil
+				// Just verify it's been set (non-zero alpha)
+				if p.Color.A == 0 {
+					t.Errorf("particle %d has zero alpha color", i)
 				}
 			}
 		})

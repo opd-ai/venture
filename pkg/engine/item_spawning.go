@@ -72,10 +72,27 @@ func SpawnItemInWorld(world *World, itm *item.Item, x, y float64) *Entity {
 // Uses the procedural item generator with scaling based on enemy difficulty.
 // Returns nil if no loot should be dropped (based on drop chance).
 func GenerateLootDrop(world *World, enemy *Entity, x, y float64, seed int64, genreID string) *Entity {
-	// Calculate drop chance based on enemy type
+	dropChance := calculateLootDropChance(enemy)
+
+	rng := rand.New(rand.NewSource(seed + int64(enemy.ID)))
+	if rng.Float64() > dropChance {
+		return nil // No drop
+	}
+
+	depth := extractEnemyLevel(enemy)
+	generatedItem := generateLootItem(seed, enemy.ID, depth, genreID)
+
+	if generatedItem == nil {
+		return nil
+	}
+
+	return SpawnItemInWorld(world, generatedItem, x, y)
+}
+
+// calculateLootDropChance determines drop chance based on enemy strength.
+func calculateLootDropChance(enemy *Entity) float64 {
 	dropChance := 0.3 // 30% base drop chance
 
-	// Increase drop chance for bosses/elites
 	if statsComp, ok := enemy.GetComponent("stats"); ok {
 		if stats, ok := statsComp.(*StatsComponent); ok {
 			if stats.Attack > 20 || stats.Defense > 20 {
@@ -84,21 +101,22 @@ func GenerateLootDrop(world *World, enemy *Entity, x, y float64, seed int64, gen
 		}
 	}
 
-	// Roll for drop
-	rng := rand.New(rand.NewSource(seed + int64(enemy.ID)))
-	if rng.Float64() > dropChance {
-		return nil // No drop
-	}
+	return dropChance
+}
 
-	// Determine item depth from enemy stats
+// extractEnemyLevel determines item generation depth from enemy level.
+func extractEnemyLevel(enemy *Entity) int {
 	depth := 1
 	if expComp, ok := enemy.GetComponent("experience"); ok {
 		if exp, ok := expComp.(*ExperienceComponent); ok {
 			depth = exp.Level
 		}
 	}
+	return depth
+}
 
-	// Generate item
+// generateLootItem creates a procedurally generated item for the enemy drop.
+func generateLootItem(seed int64, enemyID uint64, depth int, genreID string) *item.Item {
 	itemGen := item.NewItemGenerator()
 	params := procgen.GenerationParams{
 		Difficulty: 0.5 + float64(depth)*0.05, // Scale with depth
@@ -109,7 +127,7 @@ func GenerateLootDrop(world *World, enemy *Entity, x, y float64, seed int64, gen
 		},
 	}
 
-	result, err := itemGen.Generate(seed+int64(enemy.ID)+100, params)
+	result, err := itemGen.Generate(seed+int64(enemyID)+100, params)
 	if err != nil {
 		return nil
 	}
@@ -119,8 +137,7 @@ func GenerateLootDrop(world *World, enemy *Entity, x, y float64, seed int64, gen
 		return nil
 	}
 
-	// Spawn the item in the world
-	return SpawnItemInWorld(world, items[0], x, y)
+	return items[0]
 }
 
 // GenerateRecipeDrop creates a random recipe appropriate for the enemy's level and drops it.
@@ -128,11 +145,27 @@ func GenerateLootDrop(world *World, enemy *Entity, x, y float64, seed int64, gen
 // Returns nil if no recipe should be dropped (based on drop chance).
 // Recipe drop chances are lower than item drops to maintain balance.
 func GenerateRecipeDrop(recipeGen procgen.Generator, world *World, enemy *Entity, x, y float64, seed int64, genreID string) *Entity {
-	// Calculate recipe drop chance based on enemy type
-	// Recipes are rarer than items: 5% base, 20% for bosses
+	dropChance := calculateRecipeDropChance(enemy)
+
+	rng := rand.New(rand.NewSource(seed + int64(enemy.ID) + 500))
+	if rng.Float64() > dropChance {
+		return nil // No recipe drop
+	}
+
+	depth, difficulty := extractRecipeGenerationParams(enemy)
+	generatedRecipe := generateRecipe(recipeGen, seed, enemy.ID, depth, difficulty, genreID)
+
+	if generatedRecipe == nil {
+		return nil
+	}
+
+	return SpawnRecipeInWorld(world, generatedRecipe, x, y)
+}
+
+// calculateRecipeDropChance determines recipe drop chance based on enemy strength.
+func calculateRecipeDropChance(enemy *Entity) float64 {
 	dropChance := 0.05 // 5% base drop chance for recipes
 
-	// Increase drop chance for bosses/elites
 	if statsComp, ok := enemy.GetComponent("stats"); ok {
 		if stats, ok := statsComp.(*StatsComponent); ok {
 			if stats.Attack > 20 || stats.Defense > 20 {
@@ -141,13 +174,11 @@ func GenerateRecipeDrop(recipeGen procgen.Generator, world *World, enemy *Entity
 		}
 	}
 
-	// Roll for drop
-	rng := rand.New(rand.NewSource(seed + int64(enemy.ID) + 500))
-	if rng.Float64() > dropChance {
-		return nil // No recipe drop
-	}
+	return dropChance
+}
 
-	// Determine recipe depth/difficulty from enemy stats
+// extractRecipeGenerationParams determines recipe depth and difficulty from enemy stats.
+func extractRecipeGenerationParams(enemy *Entity) (int, float64) {
 	depth := 1
 	difficulty := 0.3 // Start lower for common recipes
 
@@ -158,7 +189,11 @@ func GenerateRecipeDrop(recipeGen procgen.Generator, world *World, enemy *Entity
 		}
 	}
 
-	// Generate recipe
+	return depth, difficulty
+}
+
+// generateRecipe creates a procedurally generated recipe for the enemy drop.
+func generateRecipe(recipeGen procgen.Generator, seed int64, enemyID uint64, depth int, difficulty float64, genreID string) *Recipe {
 	params := procgen.GenerationParams{
 		Difficulty: difficulty,
 		Depth:      depth,
@@ -168,7 +203,7 @@ func GenerateRecipeDrop(recipeGen procgen.Generator, world *World, enemy *Entity
 		},
 	}
 
-	result, err := recipeGen.Generate(seed+int64(enemy.ID)+1000, params)
+	result, err := recipeGen.Generate(seed+int64(enemyID)+1000, params)
 	if err != nil {
 		return nil
 	}
@@ -178,8 +213,7 @@ func GenerateRecipeDrop(recipeGen procgen.Generator, world *World, enemy *Entity
 		return nil
 	}
 
-	// Spawn the recipe in the world
-	return SpawnRecipeInWorld(world, recipes[0], x, y)
+	return recipes[0]
 }
 
 // getItemColor determines the sprite color based on item type and rarity.
@@ -239,43 +273,47 @@ func getItemColor(itm *item.Item) color.RGBA {
 // Returns nil if no spell scroll should be dropped (based on drop chance).
 // Spell scrolls are rarer than items: 10% base, 25% for bosses.
 func GenerateSpellScrollDrop(spellGen *magic.SpellGenerator, world *World, enemy *Entity, x, y float64, seed int64, genreID string) *Entity {
-	// Calculate spell scroll drop chance based on enemy type
-	dropChance := 0.10 // 10% base drop chance for spell scrolls
+	dropChance := calculateSpellScrollDropChance(enemy)
+	if !rollForScrollDrop(seed, enemy.ID, dropChance) {
+		return nil
+	}
 
-	// Increase drop chance for bosses/elites (spell casters more likely to drop scrolls)
+	spell := generateSpellFromEnemy(spellGen, enemy, seed, genreID)
+	if spell == nil {
+		return nil
+	}
+
+	return createScrollEntity(world, spell, x, y)
+}
+
+// calculateSpellScrollDropChance determines drop chance based on enemy strength.
+func calculateSpellScrollDropChance(enemy *Entity) float64 {
+	dropChance := 0.10
 	if statsComp, ok := enemy.GetComponent("stats"); ok {
 		if stats, ok := statsComp.(*StatsComponent); ok {
 			if stats.Attack > 20 || stats.Defense > 20 {
-				dropChance = 0.25 // 25% for strong enemies
+				dropChance = 0.25
 			}
 		}
 	}
+	return dropChance
+}
 
-	// Roll for drop
-	rng := rand.New(rand.NewSource(seed + int64(enemy.ID) + 2000))
-	if rng.Float64() > dropChance {
-		return nil // No spell scroll drop
-	}
+// rollForScrollDrop performs the random drop check.
+func rollForScrollDrop(seed int64, enemyID uint64, dropChance float64) bool {
+	rng := rand.New(rand.NewSource(seed + int64(enemyID) + 2000))
+	return rng.Float64() <= dropChance
+}
 
-	// Determine spell depth/difficulty from enemy stats
-	depth := 1
-	difficulty := 0.4 // Start moderate for spell scrolls
+// generateSpellFromEnemy creates a spell appropriate for the enemy's level.
+func generateSpellFromEnemy(spellGen *magic.SpellGenerator, enemy *Entity, seed int64, genreID string) *magic.Spell {
+	depth, difficulty := extractSpellParameters(enemy)
 
-	if expComp, ok := enemy.GetComponent("experience"); ok {
-		if exp, ok := expComp.(*ExperienceComponent); ok {
-			depth = exp.Level
-			difficulty = 0.4 + float64(depth)*0.05 // Scale with depth
-		}
-	}
-
-	// Generate spell
 	params := procgen.GenerationParams{
 		Difficulty: difficulty,
 		Depth:      depth,
 		GenreID:    genreID,
-		Custom: map[string]interface{}{
-			"count": 1, // Generate 1 spell
-		},
+		Custom:     map[string]interface{}{"count": 1},
 	}
 
 	result, err := spellGen.Generate(seed+int64(enemy.ID)+2100, params)
@@ -287,47 +325,54 @@ func GenerateSpellScrollDrop(spellGen *magic.SpellGenerator, world *World, enemy
 	if len(spells) == 0 {
 		return nil
 	}
+	return spells[0]
+}
 
-	// Create spell scroll item entity
-	spell := spells[0]
+// extractSpellParameters determines spell depth and difficulty from enemy stats.
+func extractSpellParameters(enemy *Entity) (int, float64) {
+	depth := 1
+	difficulty := 0.4
+
+	if expComp, ok := enemy.GetComponent("experience"); ok {
+		if exp, ok := expComp.(*ExperienceComponent); ok {
+			depth = exp.Level
+			difficulty = 0.4 + float64(depth)*0.05
+		}
+	}
+	return depth, difficulty
+}
+
+// createScrollEntity builds the complete scroll entity with components.
+func createScrollEntity(world *World, spell *magic.Spell, x, y float64) *Entity {
 	scrollEntity := world.CreateEntity()
 
-	// Position in world
-	scrollEntity.AddComponent(&PositionComponent{
-		X: x,
-		Y: y,
-	})
+	scrollEntity.AddComponent(&PositionComponent{X: x, Y: y})
 
-	// Visual representation - scrolls are purple/arcane colored
 	scrollSize := 24.0
 	scrollColor := getSpellScrollColor(spell)
 	sprite := NewSpriteComponent(scrollSize, scrollSize, scrollColor)
-	sprite.Layer = 3 // Items drawn below entities but above terrain
+	sprite.Layer = 3
 	scrollEntity.AddComponent(sprite)
 
-	// Collision for pickup detection
 	scrollEntity.AddComponent(&ColliderComponent{
 		Width:     scrollSize,
 		Height:    scrollSize,
-		Solid:     false, // Scrolls don't block movement
-		IsTrigger: true,  // Trigger collision events for pickup
-		Layer:     3,     // Item collision layer
+		Solid:     false,
+		IsTrigger: true,
+		Layer:     3,
 		OffsetX:   -scrollSize / 2,
 		OffsetY:   -scrollSize / 2,
 	})
 
-	// Create a consumable item representing the spell scroll
 	scrollItem := &item.Item{
 		Name:           fmt.Sprintf("Scroll of %s", spell.Name),
 		Description:    fmt.Sprintf("A magical scroll containing the spell '%s'. %s (Damage: %d, Mana: %d, Element: %s)", spell.Name, spell.Description, spell.Stats.Damage, spell.Stats.ManaCost, spell.Element.String()),
 		Type:           item.TypeConsumable,
-		ConsumableType: item.ConsumableScroll,     // Spell scrolls are scroll-type consumables
-		Rarity:         item.Rarity(spell.Rarity), // Map spell rarity to item rarity
+		ConsumableType: item.ConsumableScroll,
+		Rarity:         item.Rarity(spell.Rarity),
 		Seed:           spell.Seed,
 	}
-	scrollEntity.AddComponent(&ItemEntityComponent{
-		Item: scrollItem,
-	})
+	scrollEntity.AddComponent(&ItemEntityComponent{Item: scrollItem})
 
 	return scrollEntity
 }

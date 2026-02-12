@@ -46,7 +46,7 @@ var (
 	height           = flag.Int("height", 1080, "Screen height (720, 1080, 1440, 2160)")
 	fullscreen       = flag.Bool("fullscreen", false, "Start in fullscreen mode")
 	seed             = flag.Int64("seed", seededRandom(), "World generation seed")
-	genreID          = flag.String("genre", randomGenre(), "Genre ID (fantasy, scifi, horror, cyberpunk, postapoc)")
+	genreID          = flag.String("genre", "random", "Genre ID (fantasy, scifi, horror, cyberpunk, postapoc, random)")
 	weatherType      = flag.String("weather", "", "Weather type (rain, snow, fog, dust, ash, neonrain, smog, radiation) - empty for genre-appropriate random")
 	weatherIntensity = flag.String("weather-intensity", "heavy", "Weather intensity (light, medium, heavy, extreme)")
 
@@ -71,12 +71,15 @@ var (
 	profile       = flag.Bool("profile", true, "Enable performance profiling with frame time tracking")
 	multiplayer   = flag.Bool("multiplayer", false, "Connect to remote multiplayer server (default: starts local server)")
 	server        = flag.String("server", "localhost:8080", "Server address (host:port) for multiplayer")
+	highLatency   = flag.Bool("high-latency", false, "Use high-latency configuration optimized for Tor/onion services (200-5000ms latency)")
 	hostAndPlay   = flag.Bool("host-and-play", false, "Explicitly enable host-and-play mode (default behavior when --multiplayer not specified)")
 	hostLAN       = flag.Bool("host-lan", false, "Bind server to 0.0.0.0 for LAN access instead of 127.0.0.1 (requires host-and-play mode)")
 	serverPort    = flag.Int("port", 8080, "Server port for --host-and-play mode (will try next 10 ports if occupied)")
 	serverPlayers = flag.Int("max-players", 4, "Maximum players for --host-and-play mode")
-	serverTick    = flag.Int("tick-rate", 20, "Server tick rate for --host-and-play mode (updates per second)")
+	serverTick    = flag.Int("tick-rate", 30, "Server tick rate for --host-and-play mode (updates per second)")
 	noTutorial    = flag.Bool("no-tutorial", false, "Disable tutorial for experienced players")
+	enableVR      = flag.Bool("vr", false, "Enable VR mode (requires VR headset, auto-detects hardware)")
+	forceVR       = flag.Bool("force-vr", false, "Force VR mode even without detected hardware (for testing)")
 	showVersion   = flag.Bool("version", false, "Print version information and exit")
 )
 
@@ -125,7 +128,13 @@ func initializeLogger() (*logrus.Logger, *logrus.Entry) {
 func initializeNetworkClient(logger *logrus.Logger, clientLogger *logrus.Entry) network.ClientConnection {
 	clientLogger.WithField("server", *server).Info("connecting to server")
 
-	clientConfig := network.DefaultClientConfig()
+	var clientConfig network.ClientConfig
+	if *highLatency {
+		clientConfig = network.TorClientConfig()
+		clientLogger.Info("using high-latency client configuration (Tor/onion service optimized)")
+	} else {
+		clientConfig = network.DefaultClientConfig()
+	}
 	clientConfig.ServerAddress = *server
 	networkClient := network.NewClientWithLogger(clientConfig, logger)
 
@@ -254,7 +263,16 @@ func spawnWallTorches(world *engine.World, room *terrain.Room, config lightConfi
 	const tileSize = 32
 	const spawnChance = 0.6 // 60% chance per position
 
-	// Top and bottom walls
+	count += spawnTorchesOnHorizontalWalls(world, room, config, tileSize, spawnChance, rng)
+	count += spawnTorchesOnVerticalWalls(world, room, config, tileSize, spawnChance, rng)
+
+	return count
+}
+
+// spawnTorchesOnHorizontalWalls spawns torches on top and bottom walls.
+func spawnTorchesOnHorizontalWalls(world *engine.World, room *terrain.Room, config lightConfig, tileSize int, spawnChance float64, rng *rand.Rand) int {
+	count := 0
+
 	for x := room.X; x < room.X+room.Width; x++ {
 		if x%config.torchInterval == 0 {
 			// Top wall
@@ -274,7 +292,13 @@ func spawnWallTorches(world *engine.World, room *terrain.Room, config lightConfi
 		}
 	}
 
-	// Left and right walls
+	return count
+}
+
+// spawnTorchesOnVerticalWalls spawns torches on left and right walls.
+func spawnTorchesOnVerticalWalls(world *engine.World, room *terrain.Room, config lightConfig, tileSize int, spawnChance float64, rng *rand.Rand) int {
+	count := 0
+
 	for y := room.Y; y < room.Y+room.Height; y++ {
 		if y%config.torchInterval == 0 {
 			// Left wall
@@ -636,26 +660,8 @@ func addMinigamesToMerchants(world *engine.World, minigameGen *minigame.Generato
 			continue
 		}
 
-		// Map procgen.GameType to engine.MiniGameType
-		var gameType engine.MiniGameType
-		switch mg.Type {
-		case minigame.GameTypeCard:
-			gameType = engine.MiniGameCard
-		case minigame.GameTypeDice:
-			gameType = engine.MiniGameDice
-		case minigame.GameTypePuzzle:
-			gameType = engine.MiniGamePuzzle
-		case minigame.GameTypeMemory:
-			gameType = engine.MiniGameMemory
-		case minigame.GameTypeLockPicking:
-			gameType = engine.MiniGameLockPicking
-		case minigame.GameTypeHacking:
-			gameType = engine.MiniGameHacking
-		case minigame.GameTypeRitual:
-			gameType = engine.MiniGameRitual
-		default:
-			gameType = engine.MiniGameCard
-		}
+		// Use factory function to convert procgen.GameType to engine.MiniGameType
+		gameType := minigame.GameTypeToEngineType(mg.Type)
 
 		// Add minigame component to merchant
 		entity.AddComponent(&engine.MiniGameComponent{

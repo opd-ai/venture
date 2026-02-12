@@ -141,6 +141,10 @@ type EbitenInput struct {
 	// Mouse state
 	MouseX, MouseY int
 	MousePressed   bool
+
+	// Mouse delta (movement since last frame)
+	// Gap #8 fix: Expose mouse delta for camera control and aiming
+	MouseDeltaX, MouseDeltaY int
 }
 
 // Type returns the component type identifier (implements Component).
@@ -214,6 +218,13 @@ func (i *EbitenInput) SetMovement(x, y float64) {
 // SetActionPressed implements InputProvider interface.
 func (i *EbitenInput) SetActionPressed(pressed bool) {
 	i.ActionPressed = pressed
+}
+
+// GetMouseDelta implements InputProvider interface.
+// Gap #8 fix: Returns the mouse movement since the last frame.
+// Useful for camera controls, aiming, and mouse-based interactions.
+func (i *EbitenInput) GetMouseDelta() (dx, dy int) {
+	return i.MouseDeltaX, i.MouseDeltaY
 }
 
 // Compile-time interface check
@@ -342,8 +353,9 @@ type InputSystem struct {
 
 // NewInputSystem creates a new input system with default key bindings.
 // Platform parity fix: Now initializes gamepad handler for Desktop/WASM support.
+// WASM fix: Pre-initializes virtual controls to eliminate first-touch delay.
 func NewInputSystem() *InputSystem {
-	return &InputSystem{
+	system := &InputSystem{
 		MoveSpeed: 100.0, // pixels per second
 
 		// Movement keys
@@ -403,6 +415,16 @@ func NewInputSystem() *InputSystem {
 		// Pre-allocate buffer for pressed keys (typical case: 1-4 keys pressed)
 		pressedKeysBuffer: make([]ebiten.Key, 0, 10),
 	}
+
+	// WASM FIX (Gap #3): Pre-initialize virtual controls to eliminate first-touch delay
+	// On WASM, touch-capable devices need controls ready immediately to avoid 1-frame lag
+	if mobile.IsWASM() && mobile.IsTouchCapable() {
+		// Pre-initialize with default screen size (will resize on first Update)
+		system.virtualControls = mobile.NewVirtualControlsLayout(800, 600)
+		system.virtualControls.SetVisible(false) // Hidden until first touch
+	}
+
+	return system
 }
 
 // InitializeVirtualControls sets up virtual controls for mobile platforms and WASM/browser.
@@ -965,9 +987,17 @@ func (s *InputSystem) resetInputFlags(input *EbitenInput) {
 }
 
 // detectInputMethod auto-detects whether to use touch or keyboard/mouse input.
+// WASM fix: Shows pre-initialized virtual controls on first touch.
 func (s *InputSystem) detectInputMethod() {
 	if len(ebiten.TouchIDs()) > 0 {
 		s.useTouchInput = true
+
+		// WASM FIX (Gap #3): Show pre-initialized controls on first touch
+		if s.virtualControls != nil && !s.virtualControls.IsVisible() {
+			s.virtualControls.SetVisible(true)
+		}
+
+		// Fallback: Initialize if controls don't exist (native mobile platforms)
 		if s.virtualControls == nil && mobile.IsTouchCapable() {
 			screenW, screenH := ebiten.WindowSize()
 			s.InitializeVirtualControls(screenW, screenH)
@@ -1264,6 +1294,10 @@ func (s *InputSystem) detectAnyKeyPress(input *EbitenInput) {
 func (s *InputSystem) processMouseState(input *EbitenInput) {
 	input.MouseX, input.MouseY = ebiten.CursorPosition()
 	input.MousePressed = ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft)
+
+	// Gap #8 fix: Populate mouse delta from tracked values
+	input.MouseDeltaX = s.mouseDeltaX
+	input.MouseDeltaY = s.mouseDeltaY
 }
 
 // updateEntityAim updates the aim component with mouse position in world coordinates.

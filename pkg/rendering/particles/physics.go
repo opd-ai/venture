@@ -610,102 +610,46 @@ func UpdateSmoke(particles []PhysicsParticle, config SmokeConfig, deltaTime, tim
 }
 
 // UpdateDebris updates debris particles with collision detection.
+// UpdateDebris updates debris particles with collision detection and ground interaction.
 func UpdateDebris(particles []PhysicsParticle, config DebrisConfig, deltaTime, groundY float64) {
 	if len(particles) == 0 {
 		return
 	}
 
-	// Build spatial hash for collision detection
+	hash := buildDebrisSpatialHash(particles, config)
+	updateDebrisCollisions(particles, hash, config, deltaTime, groundY)
+}
+
+// buildDebrisSpatialHash creates and populates a spatial hash for collision detection.
+func buildDebrisSpatialHash(particles []PhysicsParticle, config DebrisConfig) *SpatialHash {
 	hash := NewSpatialHash(config.CollisionRadius*2, -1000, -1000, 1000, 1000)
 	for i := range particles {
 		hash.Insert(i, particles[i].X, particles[i].Y)
 	}
+	return hash
+}
 
-	// Particle-particle collisions
+// updateDebrisCollisions processes collisions and updates for all debris particles.
+func updateDebrisCollisions(particles []PhysicsParticle, hash *SpatialHash, config DebrisConfig, deltaTime, groundY float64) {
 	for i := range particles {
 		p := &particles[i]
-
-		// Find nearby particles for collision
-		neighbors := hash.GetNeighbors(particles, p.X, p.Y, config.CollisionRadius*2)
-
-		for _, nIdx := range neighbors {
-			if nIdx <= i { // Avoid duplicate checks
-				continue
-			}
-			n := &particles[nIdx]
-
-			dx := n.X - p.X
-			dy := n.Y - p.Y
-			distSq := dx*dx + dy*dy
-			minDist := config.CollisionRadius * 2
-
-			if distSq < minDist*minDist && distSq > 0 {
-				dist := math.Sqrt(distSq)
-
-				// Normalize collision vector
-				nx := dx / dist
-				ny := dy / dist
-
-				// Relative velocity
-				dvx := n.VX - p.VX
-				dvy := n.VY - p.VY
-
-				// Velocity along collision normal
-				dvn := dvx*nx + dvy*ny
-
-				// Only resolve if particles are moving toward each other
-				if dvn < 0 {
-					// Impulse magnitude (equal mass assumed)
-					impulse := -(1.0 + config.Restitution) * dvn / 2.0
-
-					// Apply impulse
-					p.VX -= impulse * nx
-					p.VY -= impulse * ny
-					n.VX += impulse * nx
-					n.VY += impulse * ny
-
-					// Separate particles to avoid overlap
-					overlap := minDist - dist
-					separationX := nx * overlap * 0.5
-					separationY := ny * overlap * 0.5
-					p.X -= separationX
-					p.Y -= separationY
-					n.X += separationX
-					n.Y += separationY
-
-					// Transfer angular velocity
-					p.AngularVelocity += dvn * 10.0
-					n.AngularVelocity -= dvn * 10.0
-
-					p.LastCollision = 0
-					n.LastCollision = 0
-				}
-			}
-		}
-
-		// Ground collision
-		if p.Y > groundY && p.VY > 0 {
-			p.Y = groundY
-			p.VY = -p.VY * config.Restitution
-
-			// Apply friction to horizontal velocity
-			p.VX *= (1.0 - config.Friction*deltaTime)
-
-			// Add rotation from impact
-			p.AngularVelocity += p.VX * 0.5
-
-			p.LastCollision = 0
-		}
-
-		// Apply angular damping
-		p.AngularVelocity *= math.Pow(config.RotationDamping, deltaTime)
-
-		// Update rotation
-		p.Rotation += p.AngularVelocity * deltaTime
-
-		// Update collision timer
-		p.LastCollision += deltaTime
+		updateDebrisParticle(particles, i, p, hash, config, deltaTime, groundY)
 	}
+}
+
+// updateDebrisParticle updates a single debris particle with collisions.
+func updateDebrisParticle(particles []PhysicsParticle, i int, p *PhysicsParticle, hash *SpatialHash, config DebrisConfig, deltaTime, groundY float64) {
+	neighbors := hash.GetNeighbors(particles, p.X, p.Y, config.CollisionRadius*2)
+
+	for _, nIdx := range neighbors {
+		if nIdx <= i {
+			continue
+		}
+		resolveParticleCollision(p, &particles[nIdx], config)
+	}
+
+	processGroundCollision(p, groundY, config, deltaTime)
+	updateParticleRotation(p, config, deltaTime)
 }
 
 // UpdateDebrisPooled updates debris particles using a pooled context for zero-allocation updates.
@@ -722,111 +666,126 @@ func UpdateDebris(particles []PhysicsParticle, config DebrisConfig, deltaTime, g
 //	for frame := 0; frame < 1000; frame++ {
 //	    UpdateDebrisPooled(particles, config, deltaTime, groundY, ctx)
 //	}
+//
+// UpdateDebrisPooled updates debris particles using pooled resources for collision detection.
 func UpdateDebrisPooled(particles []PhysicsParticle, config DebrisConfig, deltaTime, groundY float64, ctx *DebrisContext) {
 	if len(particles) == 0 || ctx == nil {
 		return
 	}
 
-	// Reset and configure spatial hash
+	prepareSpatialHash(particles, config, ctx)
+	processParticleCollisions(particles, config, deltaTime, groundY, ctx)
+}
+
+// prepareSpatialHash resets and builds the spatial hash for collision detection.
+func prepareSpatialHash(particles []PhysicsParticle, config DebrisConfig, ctx *DebrisContext) {
 	ctx.SpatialHash.Clear()
 	ctx.SpatialHash.CellSize = config.CollisionRadius * 2
 
-	// Build spatial hash for collision detection
 	for i := range particles {
 		ctx.SpatialHash.Insert(i, particles[i].X, particles[i].Y)
 	}
+}
 
-	// Particle-particle collisions with reused buffers
+// processParticleCollisions handles all collision processing for particles.
+func processParticleCollisions(particles []PhysicsParticle, config DebrisConfig, deltaTime, groundY float64, ctx *DebrisContext) {
 	for i := range particles {
 		p := &particles[i]
-
-		// Reset buffers for each particle
-		ctx.candidateBuffer = ctx.candidateBuffer[:0]
-		ctx.neighborsBuffer = ctx.neighborsBuffer[:0]
-
-		// Find nearby particles using pooled buffers
-		neighbors := ctx.SpatialHash.GetNeighborsInto(
-			particles, p.X, p.Y,
-			config.CollisionRadius*2,
-			ctx.candidateBuffer, ctx.neighborsBuffer,
-		)
-
-		for _, nIdx := range neighbors {
-			if nIdx <= i { // Avoid duplicate checks
-				continue
-			}
-			n := &particles[nIdx]
-
-			dx := n.X - p.X
-			dy := n.Y - p.Y
-			distSq := dx*dx + dy*dy
-			minDist := config.CollisionRadius * 2
-
-			if distSq < minDist*minDist && distSq > 0 {
-				dist := math.Sqrt(distSq)
-
-				// Normalize collision vector
-				nx := dx / dist
-				ny := dy / dist
-
-				// Relative velocity
-				dvx := n.VX - p.VX
-				dvy := n.VY - p.VY
-
-				// Velocity along collision normal
-				dvn := dvx*nx + dvy*ny
-
-				// Only resolve if particles are moving toward each other
-				if dvn < 0 {
-					// Impulse magnitude (equal mass assumed)
-					impulse := -(1.0 + config.Restitution) * dvn / 2.0
-
-					// Apply impulse
-					p.VX -= impulse * nx
-					p.VY -= impulse * ny
-					n.VX += impulse * nx
-					n.VY += impulse * ny
-
-					// Separate particles to avoid overlap
-					overlap := minDist - dist
-					separationX := nx * overlap * 0.5
-					separationY := ny * overlap * 0.5
-					p.X -= separationX
-					p.Y -= separationY
-					n.X += separationX
-					n.Y += separationY
-
-					// Transfer angular velocity
-					p.AngularVelocity += dvn * 10.0
-					n.AngularVelocity -= dvn * 10.0
-
-					p.LastCollision = 0
-					n.LastCollision = 0
-				}
-			}
-		}
-
-		// Ground collision
-		if p.Y > groundY && p.VY > 0 {
-			p.Y = groundY
-			p.VY = -p.VY * config.Restitution
-
-			// Apply friction to horizontal velocity
-			p.VX *= (1.0 - config.Friction*deltaTime)
-
-			// Add rotation from impact
-			p.AngularVelocity += p.VX * 0.5
-
-			p.LastCollision = 0
-		}
-
-		// Apply angular damping
-		p.AngularVelocity *= math.Pow(config.RotationDamping, deltaTime)
-
-		// Update rotation
-		p.Rotation += p.AngularVelocity * deltaTime
-
-		// Update collision timer
-		p.LastCollision += deltaTime
+		processParticleInteractions(particles, i, p, config, ctx)
+		processGroundCollision(p, groundY, config, deltaTime)
+		updateParticleRotation(p, config, deltaTime)
 	}
+}
+
+// processParticleInteractions handles particle-particle collisions.
+func processParticleInteractions(particles []PhysicsParticle, i int, p *PhysicsParticle, config DebrisConfig, ctx *DebrisContext) {
+	ctx.candidateBuffer = ctx.candidateBuffer[:0]
+	ctx.neighborsBuffer = ctx.neighborsBuffer[:0]
+
+	neighbors := ctx.SpatialHash.GetNeighborsInto(
+		particles, p.X, p.Y,
+		config.CollisionRadius*2,
+		ctx.candidateBuffer, ctx.neighborsBuffer,
+	)
+
+	for _, nIdx := range neighbors {
+		if nIdx <= i {
+			continue
+		}
+		resolveParticleCollision(p, &particles[nIdx], config)
+	}
+}
+
+// resolveParticleCollision resolves collision between two particles.
+func resolveParticleCollision(p, n *PhysicsParticle, config DebrisConfig) {
+	dx := n.X - p.X
+	dy := n.Y - p.Y
+	distSq := dx*dx + dy*dy
+	minDist := config.CollisionRadius * 2
+
+	if distSq >= minDist*minDist || distSq <= 0 {
+		return
+	}
+
+	dist := math.Sqrt(distSq)
+	nx, ny := dx/dist, dy/dist
+
+	applyCollisionImpulse(p, n, nx, ny, config)
+	separateOverlappingParticles(p, n, nx, ny, minDist, dist)
+}
+
+// applyCollisionImpulse applies collision impulse if particles are approaching.
+func applyCollisionImpulse(p, n *PhysicsParticle, nx, ny float64, config DebrisConfig) {
+	dvx := n.VX - p.VX
+	dvy := n.VY - p.VY
+	dvn := dvx*nx + dvy*ny
+
+	if dvn >= 0 {
+		return
+	}
+
+	impulse := -(1.0 + config.Restitution) * dvn / 2.0
+
+	p.VX -= impulse * nx
+	p.VY -= impulse * ny
+	n.VX += impulse * nx
+	n.VY += impulse * ny
+
+	p.AngularVelocity += dvn * 10.0
+	n.AngularVelocity -= dvn * 10.0
+
+	p.LastCollision = 0
+	n.LastCollision = 0
+}
+
+// separateOverlappingParticles moves particles apart to prevent overlap.
+func separateOverlappingParticles(p, n *PhysicsParticle, nx, ny, minDist, dist float64) {
+	overlap := minDist - dist
+	separationX := nx * overlap * 0.5
+	separationY := ny * overlap * 0.5
+
+	p.X -= separationX
+	p.Y -= separationY
+	n.X += separationX
+	n.Y += separationY
+}
+
+// processGroundCollision handles collision with ground surface.
+func processGroundCollision(p *PhysicsParticle, groundY float64, config DebrisConfig, deltaTime float64) {
+	if p.Y <= groundY || p.VY <= 0 {
+		return
+	}
+
+	p.Y = groundY
+	p.VY = -p.VY * config.Restitution
+	p.VX *= (1.0 - config.Friction*deltaTime)
+	p.AngularVelocity += p.VX * 0.5
+	p.LastCollision = 0
+}
+
+// updateParticleRotation updates particle rotation and collision timer.
+func updateParticleRotation(p *PhysicsParticle, config DebrisConfig, deltaTime float64) {
+	p.AngularVelocity *= math.Pow(config.RotationDamping, deltaTime)
+	p.Rotation += p.AngularVelocity * deltaTime
+	p.LastCollision += deltaTime
 }

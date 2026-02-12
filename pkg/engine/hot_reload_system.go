@@ -120,51 +120,81 @@ func (s *HotReloadSystem) checkForChanges(comp *HotReloadComponent) {
 	s.checkMutex.Lock()
 	defer s.checkMutex.Unlock()
 
-	// Throttle checks based on watch interval
-	interval := comp.GetWatchInterval()
-	if time.Since(s.lastCheck) < interval {
+	if !s.shouldCheckForChanges(comp) {
 		return
 	}
+
 	s.lastCheck = time.Now()
 
-	s.mu.RLock()
-	watcher := s.fileWatcher
-	hashCb := s.hashCallback
-	s.mu.RUnlock()
-
+	watcher, hashCb := s.getWatchingComponents()
 	if watcher == nil && hashCb == nil {
 		return
 	}
 
-	// Check each watched mod
+	s.checkModsForChanges(comp, watcher, hashCb)
+}
+
+// shouldCheckForChanges determines if enough time has passed since last check.
+func (s *HotReloadSystem) shouldCheckForChanges(comp *HotReloadComponent) bool {
+	interval := comp.GetWatchInterval()
+	return time.Since(s.lastCheck) >= interval
+}
+
+// getWatchingComponents retrieves the file watcher and hash callback.
+func (s *HotReloadSystem) getWatchingComponents() (FileWatcher, func(string) (string, error)) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.fileWatcher, s.hashCallback
+}
+
+// checkModsForChanges iterates through watched mods and detects changes.
+func (s *HotReloadSystem) checkModsForChanges(comp *HotReloadComponent, watcher FileWatcher, hashCb func(string) (string, error)) {
 	for _, modID := range comp.GetWatchedModIDs() {
-		var newHash string
-		var err error
-
-		if hashCb != nil {
-			newHash, err = hashCb(modID)
-		} else if watcher != nil {
-			newHash, err = watcher.GetFileHash(modID)
-		}
-
-		if err != nil {
-			logrus.WithFields(logrus.Fields{
-				"mod_id": modID,
-			}).WithError(err).Debug("hot reload: failed to get file hash")
-			continue
-		}
-
-		if comp.DetectChange(modID, newHash) {
-			hashDisplay := newHash
-			if len(hashDisplay) > 8 {
-				hashDisplay = newHash[:8]
-			}
-			logrus.WithFields(logrus.Fields{
-				"mod_id":   modID,
-				"new_hash": hashDisplay,
-			}).Info("hot reload: detected change in mod")
-		}
+		s.checkSingleMod(comp, modID, watcher, hashCb)
 	}
+}
+
+// checkSingleMod checks a single mod for changes and logs if detected.
+func (s *HotReloadSystem) checkSingleMod(comp *HotReloadComponent, modID string, watcher FileWatcher, hashCb func(string) (string, error)) {
+	newHash, err := s.getModHash(modID, watcher, hashCb)
+	if err != nil {
+		s.logHashError(modID, err)
+		return
+	}
+
+	if comp.DetectChange(modID, newHash) {
+		s.logChangeDetected(modID, newHash)
+	}
+}
+
+// getModHash retrieves the current hash for a mod using the available hash source.
+func (s *HotReloadSystem) getModHash(modID string, watcher FileWatcher, hashCb func(string) (string, error)) (string, error) {
+	if hashCb != nil {
+		return hashCb(modID)
+	}
+	if watcher != nil {
+		return watcher.GetFileHash(modID)
+	}
+	return "", nil
+}
+
+// logHashError logs errors encountered while getting file hashes.
+func (s *HotReloadSystem) logHashError(modID string, err error) {
+	logrus.WithFields(logrus.Fields{
+		"mod_id": modID,
+	}).WithError(err).Debug("hot reload: failed to get file hash")
+}
+
+// logChangeDetected logs when a change is detected in a mod.
+func (s *HotReloadSystem) logChangeDetected(modID, newHash string) {
+	hashDisplay := newHash
+	if len(hashDisplay) > 8 {
+		hashDisplay = newHash[:8]
+	}
+	logrus.WithFields(logrus.Fields{
+		"mod_id":   modID,
+		"new_hash": hashDisplay,
+	}).Info("hot reload: detected change in mod")
 }
 
 // processAutoReloads automatically reloads mods with pending changes.

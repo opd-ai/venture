@@ -281,28 +281,46 @@ func (s *EventRewardSystem) PurchaseFromVendor(entity *Entity, eventID, vendorIt
 		return false
 	}
 
-	vendor := s.GetVendorInventory(eventID)
-	var vendorItem *EventVendorItem
-	var itemIndex int
-	for i := range vendor {
-		if vendor[i].ID == vendorItemID {
-			vendorItem = &vendor[i]
-			itemIndex = i
-			break
-		}
-	}
-
+	vendorItem, itemIndex := s.findVendorItem(eventID, vendorItemID, entity.ID)
 	if vendorItem == nil {
-		logrus.WithFields(logrus.Fields{
-			"system_name":    "event_reward",
-			"entity_id":      entity.ID,
-			"event_id":       eventID,
-			"vendor_item_id": vendorItemID,
-		}).Debug("Vendor item not found")
 		return false
 	}
 
-	// Check stock
+	if !s.validatePurchaseEligibility(vendorItem, vendorItemID) {
+		return false
+	}
+
+	if !s.processCurrencyPayment(entity, rewardComp, eventID, vendorItem) {
+		return false
+	}
+
+	s.decrementVendorStock(eventID, itemIndex, vendorItem)
+	s.grantPurchaseRewards(rewardComp, eventID, vendorItemID, vendorItem)
+	s.logSuccessfulPurchase(entity.ID, vendorItemID, vendorItem.CurrencyCost)
+
+	return true
+}
+
+// findVendorItem searches for and returns a vendor item by ID.
+func (s *EventRewardSystem) findVendorItem(eventID, vendorItemID string, entityID uint64) (*EventVendorItem, int) {
+	vendor := s.GetVendorInventory(eventID)
+	for i := range vendor {
+		if vendor[i].ID == vendorItemID {
+			return &vendor[i], i
+		}
+	}
+
+	logrus.WithFields(logrus.Fields{
+		"system_name":    "event_reward",
+		"entity_id":      entityID,
+		"event_id":       eventID,
+		"vendor_item_id": vendorItemID,
+	}).Debug("Vendor item not found")
+	return nil, 0
+}
+
+// validatePurchaseEligibility checks if the vendor item is in stock.
+func (s *EventRewardSystem) validatePurchaseEligibility(vendorItem *EventVendorItem, vendorItemID string) bool {
 	if vendorItem.Stock == 0 {
 		logrus.WithFields(logrus.Fields{
 			"system_name":    "event_reward",
@@ -310,8 +328,11 @@ func (s *EventRewardSystem) PurchaseFromVendor(entity *Entity, eventID, vendorIt
 		}).Debug("Vendor item out of stock")
 		return false
 	}
+	return true
+}
 
-	// Check currency
+// processCurrencyPayment attempts to spend the required currency for a purchase.
+func (s *EventRewardSystem) processCurrencyPayment(entity *Entity, rewardComp *EventRewardComponent, eventID string, vendorItem *EventVendorItem) bool {
 	if !rewardComp.SpendCurrency(eventID, vendorItem.CurrencyCost) {
 		logrus.WithFields(logrus.Fields{
 			"system_name": "event_reward",
@@ -321,13 +342,18 @@ func (s *EventRewardSystem) PurchaseFromVendor(entity *Entity, eventID, vendorIt
 		}).Debug("Insufficient currency for vendor purchase")
 		return false
 	}
+	return true
+}
 
-	// Decrease stock
+// decrementVendorStock decreases the stock count for a vendor item.
+func (s *EventRewardSystem) decrementVendorStock(eventID string, itemIndex int, vendorItem *EventVendorItem) {
 	if vendorItem.Stock > 0 {
 		s.VendorInventory[eventID][itemIndex].Stock--
 	}
+}
 
-	// Grant reward
+// grantPurchaseRewards grants the purchased item and type-specific rewards to the player.
+func (s *EventRewardSystem) grantPurchaseRewards(rewardComp *EventRewardComponent, eventID, vendorItemID string, vendorItem *EventVendorItem) {
 	reward := EventReward{
 		ID:          vendorItemID + "_purchased",
 		EventID:     eventID,
@@ -340,7 +366,11 @@ func (s *EventRewardSystem) PurchaseFromVendor(entity *Entity, eventID, vendorIt
 	}
 	rewardComp.AddReward(reward)
 
-	// Handle type-specific grants
+	s.grantTypeSpecificReward(rewardComp, eventID, vendorItemID, vendorItem)
+}
+
+// grantTypeSpecificReward grants cosmetic rewards based on the reward type.
+func (s *EventRewardSystem) grantTypeSpecificReward(rewardComp *EventRewardComponent, eventID, vendorItemID string, vendorItem *EventVendorItem) {
 	switch vendorItem.RewardType {
 	case EventRewardTitle:
 		rewardComp.AddTitle(EventCosmeticTitle{
@@ -359,15 +389,16 @@ func (s *EventRewardSystem) PurchaseFromVendor(entity *Entity, eventID, vendorIt
 			Intensity:  0.8,
 		})
 	}
+}
 
+// logSuccessfulPurchase logs a successful vendor purchase.
+func (s *EventRewardSystem) logSuccessfulPurchase(entityID uint64, vendorItemID string, cost int) {
 	logrus.WithFields(logrus.Fields{
 		"system_name":    "event_reward",
-		"entity_id":      entity.ID,
+		"entity_id":      entityID,
 		"vendor_item_id": vendorItemID,
-		"cost":           vendorItem.CurrencyCost,
+		"cost":           cost,
 	}).Info("Vendor purchase successful")
-
-	return true
 }
 
 // GetVendorInventory returns the vendor inventory for an event.

@@ -158,24 +158,24 @@
     </style>
 </head>
 <body>
-    <div id="gameContainer">
-        <div id="loadingScreen">
-            <div class="loader"></div>
+    <div id="gameContainer" role="application" aria-label="Venture game window">
+        <div id="loadingScreen" role="status" aria-live="polite" aria-label="Loading game">
+            <div class="loader" aria-hidden="true"></div>
             <div id="loadingText">Loading Venture...</div>
             <div id="loadingProgress">Initializing WebAssembly</div>
         </div>
         
-        <div id="errorScreen">
-            <div class="error-icon">⚠️</div>
+        <div id="errorScreen" role="alert" aria-live="assertive">
+            <div class="error-icon" aria-hidden="true">⚠️</div>
             <div class="error-title">Failed to Load Game</div>
             <div class="error-message" id="errorMessage">
                 An error occurred while loading the game. Please ensure you're using a modern browser with WebAssembly support.
             </div>
-            <a href="index.html" class="back-button">← Back to Home</a>
+            <a href="index.html" class="back-button" role="button">← Back to Home</a>
         </div>
     </div>
     
-    <div id="controls">
+    <div id="controls" role="complementary" aria-label="Game controls reference">
         <strong>Controls:</strong> Arrow Keys/WASD - Move | Space - Attack | E - Interact | I - Inventory | M - Map | ESC - Menu
     </div>
     

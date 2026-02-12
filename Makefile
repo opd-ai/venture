@@ -95,6 +95,8 @@ audit: ## Run audit tests for procedural generators
 lint: ## Run linters
 	@echo "Running linters..."
 	go vet ./...
+	@echo "Validating network type interfaces..."
+	@bash scripts/validate-network-types.sh
 	@if command -v golangci-lint >/dev/null 2>&1; then \
 		golangci-lint run; \
 	else \

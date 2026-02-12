@@ -78,6 +78,7 @@ func (g *Generator) generateLayer(layerCfg LayerConfig, baseConfig Config) (*ebi
 		Color:     g.getLayerColor(layerCfg, baseConfig, rng),
 		Seed:      layerCfg.Seed,
 		Smoothing: 0.2,
+		AntiAlias: baseConfig.AntiAlias,
 	}
 
 	// Generate shape for layer
@@ -204,6 +205,7 @@ func (g *Generator) generateEquipmentLayer(equip EquipmentVisual, baseConfig Con
 		Color:     equipColor,
 		Seed:      equip.Seed,
 		Smoothing: 0.15 * (1.0 - damageEffects.EdgeRoughness), // Rougher edges for damaged items
+		AntiAlias: baseConfig.AntiAlias,
 	}
 
 	// Generate base equipment shape

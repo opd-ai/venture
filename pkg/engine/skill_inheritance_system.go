@@ -45,57 +45,95 @@ func (s *SkillInheritanceSystem) Update(deltaTime float64) {
 		return
 	}
 
-	// Decay recent skill usage tracking
 	s.decaySkillUsage(deltaTime)
-
-	// Get all companions with skill inheritance
 	companions := s.world.GetEntitiesWith("companion", "skillinheritance", "position")
 
 	for _, companion := range companions {
-		companionCompRaw, ok := companion.GetComponent("companion")
-		if !ok {
-			continue
-		}
-		companionComp := companionCompRaw.(*CompanionComponent)
-
-		skillCompRaw, ok := companion.GetComponent("skillinheritance")
-		if !ok {
-			continue
-		}
-		skillComp := skillCompRaw.(*SkillInheritanceComponent)
-
-		posCompRaw, ok := companion.GetComponent("position")
-		if !ok {
-			continue
-		}
-		posComp := posCompRaw.(*PositionComponent)
-
-		// Check loyalty requirement
-		if companionComp.Loyalty < skillComp.RequiredLoyalty {
-			continue
-		}
-
-		// Get owner
-		owner, ok := s.world.GetEntity(companionComp.OwnerID)
-		if !ok || owner == nil {
-			continue
-		}
-
-		ownerPosRaw, ok := owner.GetComponent("position")
-		if !ok {
-			continue
-		}
-		ownerPos := ownerPosRaw.(*PositionComponent)
-
-		// Check if companion is near owner (learning range: 300 units)
-		distance := s.distance(posComp, ownerPos)
-		if distance > 300.0 {
-			continue
-		}
-
-		// Process learning from recent skill usage
-		s.processLearning(companion, companionComp, skillComp, owner.ID, distance, deltaTime)
+		s.processCompanionLearning(companion, deltaTime)
 	}
+}
+
+// processCompanionLearning processes skill learning for a single companion.
+func (s *SkillInheritanceSystem) processCompanionLearning(companion *Entity, deltaTime float64) {
+	components := s.extractCompanionComponents(companion)
+	if components == nil {
+		return
+	}
+
+	if !s.meetsLoyaltyRequirement(components.companionComp, components.skillComp) {
+		return
+	}
+
+	owner, ownerPos := s.getOwnerAndPosition(components.companionComp.OwnerID)
+	if owner == nil || ownerPos == nil {
+		return
+	}
+
+	distance := s.distance(components.posComp, ownerPos)
+	if !s.isWithinLearningRange(distance) {
+		return
+	}
+
+	s.processLearning(companion, components.companionComp, components.skillComp, owner.ID, distance, deltaTime)
+}
+
+// companionComponents holds extracted companion-related components.
+type companionComponents struct {
+	companionComp *CompanionComponent
+	skillComp     *SkillInheritanceComponent
+	posComp       *PositionComponent
+}
+
+// extractCompanionComponents extracts required components from a companion entity.
+func (s *SkillInheritanceSystem) extractCompanionComponents(companion *Entity) *companionComponents {
+	companionCompRaw, ok := companion.GetComponent("companion")
+	if !ok {
+		return nil
+	}
+	companionComp := companionCompRaw.(*CompanionComponent)
+
+	skillCompRaw, ok := companion.GetComponent("skillinheritance")
+	if !ok {
+		return nil
+	}
+	skillComp := skillCompRaw.(*SkillInheritanceComponent)
+
+	posCompRaw, ok := companion.GetComponent("position")
+	if !ok {
+		return nil
+	}
+	posComp := posCompRaw.(*PositionComponent)
+
+	return &companionComponents{
+		companionComp: companionComp,
+		skillComp:     skillComp,
+		posComp:       posComp,
+	}
+}
+
+// meetsLoyaltyRequirement checks if companion loyalty meets the required threshold.
+func (s *SkillInheritanceSystem) meetsLoyaltyRequirement(companionComp *CompanionComponent, skillComp *SkillInheritanceComponent) bool {
+	return companionComp.Loyalty >= skillComp.RequiredLoyalty
+}
+
+// getOwnerAndPosition retrieves the owner entity and its position component.
+func (s *SkillInheritanceSystem) getOwnerAndPosition(ownerID uint64) (*Entity, *PositionComponent) {
+	owner, ok := s.world.GetEntity(ownerID)
+	if !ok || owner == nil {
+		return nil, nil
+	}
+
+	ownerPosRaw, ok := owner.GetComponent("position")
+	if !ok {
+		return nil, nil
+	}
+
+	return owner, ownerPosRaw.(*PositionComponent)
+}
+
+// isWithinLearningRange checks if the distance is within the learning range.
+func (s *SkillInheritanceSystem) isWithinLearningRange(distance float64) bool {
+	return distance <= 300.0
 }
 
 // processLearning applies skill learning based on recent owner skill usage.

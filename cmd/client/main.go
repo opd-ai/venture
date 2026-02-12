@@ -63,36 +63,36 @@ func main() {
 	serverCleanup := handleHostAndPlay(logger, clientLogger)
 	defer serverCleanup() // Cleanup server when application exits
 
-	networkClient := initializeNetworkClient(logger, clientLogger)
-	defer cleanupNetworkClient(networkClient, clientLogger)
+	// BUG FIX: Skip network client initialization in WASM single-player mode.
+	// In WASM, host-and-play is disabled (no network listen in browser sandbox),
+	// so if *multiplayer is not set, there is no server to connect to.
+	// Attempting to connect would fail with a Fatal error, crashing the game.
+	var networkClient interface{}
+	if *multiplayer || *hostAndPlay {
+		nc := initializeNetworkClient(logger, clientLogger)
+		defer cleanupNetworkClient(nc, clientLogger)
+		networkClient = nc
+	} else {
+		clientLogger.Info("running in offline single-player mode - no network connection")
+	}
 
 	game := createGameInstance(logger, clientLogger)
 	sys := setupAllGameSystems(game, logger, clientLogger)
 	startPerformanceMonitoring(game, clientLogger)
 
-	generatedTerrain := setupWorldTerrain(game, sys, logger, clientLogger)
-	params := createGenerationParams()
-	generateWorldFactions(game, params, clientLogger)
-	initializeSpatialPartitioning(game, generatedTerrain, clientLogger)
-	connectMapUIToTerrain(game, generatedTerrain, clientLogger)
+	// Performance Audit Fix: Start async terrain generation and show loading screen
+	// instead of blocking main thread. This prevents 2-8s freeze for large terrains.
+	startAsyncTerrainGeneration(game, logger, clientLogger)
 
-	spawnWorldEntities(game, generatedTerrain, sys, clientLogger)
-	spawnEnvironmentalEffects(game, generatedTerrain, clientLogger)
+	// Set up callbacks for when terrain loading completes
+	setupAsyncTerrainCallbacks(game, sys, networkClient, logger, clientLogger)
 
-	player := setupCompletePlayerEntity(game, generatedTerrain, sys, logger, clientLogger)
-	setupGameUI(game, player, generatedTerrain, sys, clientLogger)
-
-	// CRITICAL FIX: Rebuild spatial partition after ALL entities are created
-	// The initial rebuild happens before player and enemies are spawned,
-	// so we need to rebuild again to include them in the quadtree for culling
-	if spatialSystem := game.RenderSystem.GetSpatialPartition(); spatialSystem != nil {
-		spatialSystem.Rebuild(game.World.GetEntities())
-		if *verbose {
-			clientLogger.WithField("entityCount", len(game.World.GetEntities())).Info("spatial partition rebuilt after all entities spawned")
-		}
+	// Transition to loading state and start game loop immediately
+	// The loading screen will be shown while terrain generates in background
+	if err := game.StateManager.TransitionTo(engine.AppStateLoading); err != nil {
+		clientLogger.WithError(err).Fatal("failed to transition to loading state")
 	}
 
-	finalizeGameInitialization(game, player, networkClient, clientLogger)
 	runGameLoop(game, clientLogger)
 }
 
@@ -148,9 +148,76 @@ func setupAllGameSystems(game *engine.EbitenGame, logger *logrus.Logger, clientL
 	return sys
 }
 
-// setupWorldTerrain generates terrain, initializes rendering, lighting, and collision.
-func setupWorldTerrain(game *engine.EbitenGame, sys *systemsContainer, logger *logrus.Logger, clientLogger *logrus.Entry) *terrain.Terrain {
-	generatedTerrain := generateWorldTerrain(logger, clientLogger)
+// startAsyncTerrainGeneration begins terrain generation in background and returns the loader.
+// Performance Audit: This prevents blocking the main thread during 2-8s terrain generation.
+func startAsyncTerrainGeneration(game *engine.EbitenGame, logger *logrus.Logger, clientLogger *logrus.Entry) *terrain.AsyncLoader {
+	clientLogger.Info("initiating async terrain generation")
+
+	// Start terrain generation in background
+	loader := generateWorldTerrain(logger, clientLogger)
+
+	// Store loader in game for progress tracking
+	game.SetTerrainLoader(loader)
+
+	return loader
+}
+
+// setupAsyncTerrainCallbacks configures the callback that runs when terrain loading completes.
+// This callback performs all world initialization that depends on terrain being ready.
+func setupAsyncTerrainCallbacks(game *engine.EbitenGame, sys *systemsContainer, networkClient interface{}, logger *logrus.Logger, clientLogger *logrus.Entry) {
+	game.SetTerrainLoadCompleteCallback(func(player *engine.Entity) error {
+		clientLogger.Info("terrain loaded, completing world initialization")
+
+		// Get terrain loader reference (stored as interface{})
+		loaderInterface := game.GetTerrainLoader()
+		if loaderInterface == nil {
+			return fmt.Errorf("terrain loader is nil")
+		}
+
+		loader, ok := loaderInterface.(*terrain.AsyncLoader)
+		if !ok {
+			return fmt.Errorf("invalid terrain loader type")
+		}
+
+		generatedTerrain, err := loader.Wait()
+		if err != nil {
+			return fmt.Errorf("failed to get terrain result: %w", err)
+		}
+
+		clientLogger.WithFields(logrus.Fields{
+			"width":     generatedTerrain.Width,
+			"height":    generatedTerrain.Height,
+			"roomCount": len(generatedTerrain.Rooms),
+		}).Info("terrain generated successfully")
+
+		// Now complete all terrain-dependent initialization
+		completeWorldInitialization(game, sys, generatedTerrain, logger, clientLogger)
+
+		// Create player entity
+		playerEntity := setupCompletePlayerEntity(game, generatedTerrain, sys, logger, clientLogger)
+		game.PlayerEntity = playerEntity
+
+		// Setup UI with player and terrain
+		setupGameUI(game, playerEntity, generatedTerrain, sys, clientLogger)
+
+		// Rebuild spatial partition after all entities created
+		if spatialSystem := game.RenderSystem.GetSpatialPartition(); spatialSystem != nil {
+			spatialSystem.Rebuild(game.World.GetEntities())
+			if *verbose {
+				clientLogger.WithField("entityCount", len(game.World.GetEntities())).Info("spatial partition rebuilt")
+			}
+		}
+
+		// Finalize initialization
+		finalizeGameInitialization(game, playerEntity, networkClient, clientLogger)
+
+		return nil
+	})
+}
+
+// completeWorldInitialization performs all terrain-dependent setup.
+func completeWorldInitialization(game *engine.EbitenGame, sys *systemsContainer, generatedTerrain *terrain.Terrain, logger *logrus.Logger, clientLogger *logrus.Entry) {
+	// Initialize terrain rendering and lighting
 	initializeTerrainRendering(game, generatedTerrain, clientLogger)
 	configureLightingSystem(game, clientLogger)
 
@@ -161,9 +228,20 @@ func setupWorldTerrain(game *engine.EbitenGame, sys *systemsContainer, logger *l
 	// Phase 5.4: Configure palette options for sprite generation
 	configurePaletteOptions(sys, clientLogger)
 
+	// Initialize collision and spatial systems
 	initializeTerrainCollision(game, sys, generatedTerrain, clientLogger)
 
-	return generatedTerrain
+	// Generate factions
+	params := createGenerationParams()
+	generateWorldFactions(game, params, clientLogger)
+
+	// Setup spatial partitioning and map UI
+	initializeSpatialPartitioning(game, sys, generatedTerrain, clientLogger)
+	connectMapUIToTerrain(game, generatedTerrain, clientLogger)
+
+	// Spawn entities and effects
+	spawnWorldEntities(game, generatedTerrain, sys, clientLogger)
+	spawnEnvironmentalEffects(game, generatedTerrain, clientLogger)
 }
 
 // setupCompletePlayerEntity creates player, adds components, and applies character class.

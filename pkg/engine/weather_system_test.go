@@ -2,6 +2,7 @@
 package engine
 
 import (
+	"image/color"
 	"testing"
 
 	"github.com/opd-ai/venture/pkg/rendering/particles"
@@ -393,5 +394,141 @@ func TestWeatherSystem_Update_WeatherChange(t *testing.T) {
 	}
 	if weather.Config.Type != particles.WeatherSnow {
 		t.Error("Weather type should be updated to Snow")
+	}
+}
+
+// TestWeatherSystem_GetWeatherParticles_BufferReuse tests buffer reuse optimization.
+// This validates the fix from Issue R4.
+func TestWeatherSystem_GetWeatherParticles_BufferReuse(t *testing.T) {
+	world := NewWorld()
+	system := NewWeatherSystem(world)
+
+	// Create weather entity
+	entity := world.CreateEntity()
+	config := particles.DefaultWeatherConfig()
+	config.Type = particles.WeatherRain
+	config.Intensity = particles.IntensityLight
+	weather := NewWeatherComponent(config)
+	entity.AddComponent(weather)
+	weather.StartWeather()
+	weather.UpdateTransition(5.0) // Complete transition
+
+	// Process entity
+	world.Update(0)
+
+	// First call allocates buffer
+	particles1 := system.GetWeatherParticles()
+	count1 := len(particles1)
+	cap1 := cap(particles1)
+
+	if count1 == 0 {
+		t.Fatal("Expected particles in first call")
+	}
+
+	// Second call should reuse buffer
+	particles2 := system.GetWeatherParticles()
+	count2 := len(particles2)
+	cap2 := cap(particles2)
+
+	if count2 == 0 {
+		t.Fatal("Expected particles in second call")
+	}
+
+	// Capacity should be reused (not reallocated)
+	if cap2 < cap1 {
+		t.Errorf("Buffer capacity decreased: %d -> %d (expected reuse)", cap1, cap2)
+	}
+
+	// Returned slices point to same underlying buffer (internal detail)
+	// Verify buffer is reset between calls by checking length
+	if count1 != count2 {
+		t.Logf("Particle count changed between calls: %d -> %d (this is OK)", count1, count2)
+	}
+}
+
+// TestWeatherSystem_GetWeatherParticles_MultipleCallsNoLeak tests multiple calls don't leak memory.
+func TestWeatherSystem_GetWeatherParticles_MultipleCallsNoLeak(t *testing.T) {
+	world := NewWorld()
+	system := NewWeatherSystem(world)
+
+	// Create weather entity
+	entity := world.CreateEntity()
+	config := particles.DefaultWeatherConfig()
+	config.Type = particles.WeatherRain
+	config.Intensity = particles.IntensityHeavy // More particles
+	weather := NewWeatherComponent(config)
+	entity.AddComponent(weather)
+	weather.StartWeather()
+	weather.UpdateTransition(5.0)
+
+	world.Update(0)
+
+	// Call multiple times
+	var maxCap int
+	for i := 0; i < 100; i++ {
+		particles := system.GetWeatherParticles()
+		if cap(particles) > maxCap {
+			maxCap = cap(particles)
+		}
+	}
+
+	// Final call to check capacity hasn't grown excessively
+	finalParticles := system.GetWeatherParticles()
+	finalCap := cap(finalParticles)
+
+	// Capacity should stabilize (not grow unbounded)
+	// Allow some growth for slice expansion, but not 100x
+	if finalCap > maxCap*2 {
+		t.Errorf("Buffer capacity grew excessively: %d (max was %d)", finalCap, maxCap)
+	}
+}
+
+// TestWeatherSystem_GetWeatherParticles_NoColorConversion verifies color handling.
+// Performance: Ensures we don't allocate via color.RGBAModel.Convert().
+func TestWeatherSystem_GetWeatherParticles_NoColorConversion(t *testing.T) {
+	world := NewWorld()
+	ws := NewWeatherSystem(world)
+
+	entity := world.CreateEntity()
+
+	// Create a weather system with particles
+	weatherSys := &particles.WeatherSystem{
+		Particles: []particles.Particle{
+			{
+				X:     100,
+				Y:     100,
+				Size:  4.0,
+				Color: color.RGBA{255, 0, 0, 200}, // Red with alpha
+				Life:  1.0,
+			},
+		},
+	}
+
+	// Create weather component with transition (50% opacity)
+	weatherComp := &WeatherComponent{
+		System:          weatherSys,
+		Active:          true,
+		Transitioning:   true,
+		TransitionTime:  2.5, // Half of 5.0 = 50% opacity
+		TransitionTotal: 5.0,
+		FadingIn:        true,
+	}
+
+	entity.AddComponent(weatherComp)
+
+	weatherData := ws.GetWeatherParticles()
+	if len(weatherData) != 1 {
+		t.Fatalf("Expected 1 particle, got %d", len(weatherData))
+	}
+
+	// Verify color was modified correctly (alpha reduced by opacity)
+	p := weatherData[0]
+	if p.Color.R != 255 {
+		t.Errorf("Red channel = %d, want 255", p.Color.R)
+	}
+	// Opacity at halfway through transition should be 0.5
+	expectedAlpha := uint8(200 * 0.5)
+	if p.Color.A != expectedAlpha {
+		t.Errorf("Alpha = %d, want %d (200 * 0.5)", p.Color.A, expectedAlpha)
 	}
 }

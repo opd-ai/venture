@@ -306,42 +306,45 @@ func (s *DestructibleObjectSystem) ApplyDamageToObject(x, y, damage, radius floa
 		return false
 	}
 
-	// Find destructible objects in range
 	entities := s.world.GetEntitiesWith("destructibleObject")
 	for _, entity := range entities {
-		// Get position
-		posComp, ok := entity.GetComponent("position")
-		if !ok {
-			continue
-		}
-		pos, ok := posComp.(*PositionComponent)
-		if !ok {
-			continue
-		}
-
-		// Check if within damage radius
-		dx := pos.X - x
-		dy := pos.Y - y
-		distSq := dx*dx + dy*dy
-
-		if distSq <= radius*radius {
-			// Get destructible component
-			objComp, ok := entity.GetComponent("destructibleObject")
-			if !ok {
-				continue
-			}
-			destructibleObj, ok := objComp.(*DestructibleObjectComponent)
-			if !ok {
-				continue
-			}
-
-			// Apply damage
-			destroyed := destructibleObj.TakeDamage(damage)
-			if destroyed {
-				return true
-			}
+		if s.tryDamageEntity(entity, x, y, damage, radius) {
+			return true
 		}
 	}
 
 	return false
+}
+
+// tryDamageEntity attempts to damage a single entity if it's in range.
+func (s *DestructibleObjectSystem) tryDamageEntity(entity *Entity, x, y, damage, radius float64) bool {
+	pos := s.getEntityPosition(entity)
+	if pos == nil {
+		return false
+	}
+
+	distSq := s.calculateDistanceSquared(pos.X, pos.Y, x, y)
+	if distSq > radius*radius {
+		return false
+	}
+
+	destructibleObj := s.getDestructibleComponent(entity)
+	if destructibleObj == nil {
+		return false
+	}
+
+	return destructibleObj.TakeDamage(damage)
+}
+
+// getDestructibleComponent extracts and validates the destructible object component.
+func (s *DestructibleObjectSystem) getDestructibleComponent(entity *Entity) *DestructibleObjectComponent {
+	objComp, ok := entity.GetComponent("destructibleObject")
+	if !ok {
+		return nil
+	}
+	destructibleObj, ok := objComp.(*DestructibleObjectComponent)
+	if !ok {
+		return nil
+	}
+	return destructibleObj
 }

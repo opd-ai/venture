@@ -4,6 +4,38 @@ This directory contains scripts for building, testing, and validating the Ventur
 
 ## Code Quality
 
+### validate-network-types.sh
+**Purpose:** Enforces networking best practices by detecting concrete network types that should use interfaces.
+
+**Usage:**
+```bash
+# Validate all Go files in pkg/
+./scripts/validate-network-types.sh
+
+# Validate specific directory
+./scripts/validate-network-types.sh pkg/network/
+
+# Run via Makefile (included in 'make lint')
+make lint
+```
+
+**Detects:**
+- ✗ `*net.UDPAddr` → Use `net.Addr` interface
+- ✗ `*net.TCPAddr` → Use `net.Addr` interface
+- ✗ `*net.UDPConn` → Use `net.PacketConn` interface
+- ✗ `*net.TCPConn` → Use `net.Conn` interface
+- ✗ `*net.TCPListener` → Use `net.Listener` interface
+
+**Exit Codes:**
+- 0: All files follow interface-based networking
+- 1: Violations found
+
+**Testing:**
+```bash
+# Run test suite
+./scripts/test-validate-network-types.sh
+```
+
 ### validate-code-review.sh
 **Purpose:** Automated validation of code review quality gates as defined in `docs/CODE_REVIEW_PLAN.md`.
 

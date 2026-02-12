@@ -316,11 +316,24 @@ func (ui *EbitenQuestUI) Draw(screen interface{}) {
 
 	windowWidth := 600
 	windowHeight := 500
+	windowX, windowY := ui.drawMainWindow(img, windowWidth, windowHeight)
+	quests := ui.getQuestsForCurrentTab(tracker)
+	ui.drawQuestContent(img, quests, windowX, windowY, windowWidth, windowHeight)
+	ui.drawTouchControls(img, windowX, windowY, windowWidth)
+	ui.errorState.DrawError(img)
+}
+
+// drawMainWindow draws the window background, header, and tabs.
+func (ui *EbitenQuestUI) drawMainWindow(img *ebiten.Image, windowWidth, windowHeight int) (int, int) {
 	windowX, windowY := ui.drawWindowBackground(img, windowWidth, windowHeight)
 	ui.drawHeader(img, windowX, windowY, windowWidth)
-	tabY := ui.drawTabs(img, windowX, windowY)
+	ui.drawTabs(img, windowX, windowY)
+	return windowX, windowY
+}
 
-	quests := ui.getQuestsForCurrentTab(tracker)
+// drawQuestContent draws the quest list and scrollbar.
+func (ui *EbitenQuestUI) drawQuestContent(img *ebiten.Image, quests []*TrackedQuest, windowX, windowY, windowWidth, windowHeight int) {
+	tabY := windowY + 60
 	listY := tabY + 40
 	contentStartY := listY + 10
 	contentMaxY := windowY + windowHeight - 20
@@ -328,46 +341,64 @@ func (ui *EbitenQuestUI) Draw(screen interface{}) {
 
 	if len(quests) == 0 {
 		ebitenutil.DebugPrintAt(img, "No quests", windowX+20, contentStartY)
-	} else {
-		totalContentHeight := ui.getCachedQuestListHeight(quests, windowWidth)
-		ui.drawQuestList(img, quests, windowX, windowWidth, contentStartY, contentMaxY)
-		ui.updateMaxScroll(totalContentHeight, contentHeight)
-		ui.drawScrollbar(img, windowX, windowWidth, contentStartY, contentHeight, totalContentHeight)
+		return
 	}
 
+	totalContentHeight := ui.getCachedQuestListHeight(quests, windowWidth)
+	ui.drawQuestList(img, quests, windowX, windowWidth, contentStartY, contentMaxY)
+	ui.updateMaxScroll(totalContentHeight, contentHeight)
+	ui.drawScrollbar(img, windowX, windowWidth, contentStartY, contentHeight, totalContentHeight)
 	ui.drawControlsHint(img, windowX, windowY, windowHeight)
+}
 
-	// Draw touch buttons
+// drawTouchControls draws the close and tab buttons.
+func (ui *EbitenQuestUI) drawTouchControls(img *ebiten.Image, windowX, windowY, windowWidth int) {
+	ui.drawCloseButton(img, windowX, windowY, windowWidth)
+	ui.drawTabButtons(img, windowX)
+}
+
+// drawCloseButton draws the close button at top-right.
+func (ui *EbitenQuestUI) drawCloseButton(img *ebiten.Image, windowX, windowY, windowWidth int) {
 	if ui.closeButton != nil {
-		// Position close button at top-right of window
 		ui.closeButton.SetPosition(float64(windowX+windowWidth-54), float64(windowY+10))
 		ui.closeButton.Draw(img)
 	}
+}
 
-	// Draw tab buttons at correct position
-	if ui.activeTabButton != nil {
-		// Highlight active tab
-		if ui.currentTab == 0 {
-			ui.activeTabButton.BackgroundColor = color.RGBA{100, 150, 255, 255}
-		} else {
-			ui.activeTabButton.BackgroundColor = color.RGBA{50, 50, 70, 255}
-		}
-		ui.activeTabButton.SetPosition(float64(windowX+20), 60)
-		ui.activeTabButton.Draw(img)
+// drawTabButtons draws both tab buttons with highlighting.
+func (ui *EbitenQuestUI) drawTabButtons(img *ebiten.Image, windowX int) {
+	ui.drawActiveTabButton(img, windowX)
+	ui.drawDoneTabButton(img, windowX)
+}
+
+// drawActiveTabButton draws the active quests tab button.
+func (ui *EbitenQuestUI) drawActiveTabButton(img *ebiten.Image, windowX int) {
+	if ui.activeTabButton == nil {
+		return
 	}
 
-	if ui.doneTabButton != nil {
-		// Highlight active tab
-		if ui.currentTab == 1 {
-			ui.doneTabButton.BackgroundColor = color.RGBA{100, 150, 255, 255}
-		} else {
-			ui.doneTabButton.BackgroundColor = color.RGBA{50, 50, 70, 255}
-		}
-		ui.doneTabButton.SetPosition(float64(windowX+150), 60)
-		ui.doneTabButton.Draw(img)
+	if ui.currentTab == 0 {
+		ui.activeTabButton.BackgroundColor = color.RGBA{100, 150, 255, 255}
+	} else {
+		ui.activeTabButton.BackgroundColor = color.RGBA{50, 50, 70, 255}
+	}
+	ui.activeTabButton.SetPosition(float64(windowX+20), 60)
+	ui.activeTabButton.Draw(img)
+}
+
+// drawDoneTabButton draws the done quests tab button.
+func (ui *EbitenQuestUI) drawDoneTabButton(img *ebiten.Image, windowX int) {
+	if ui.doneTabButton == nil {
+		return
 	}
 
-	ui.errorState.DrawError(img)
+	if ui.currentTab == 1 {
+		ui.doneTabButton.BackgroundColor = color.RGBA{100, 150, 255, 255}
+	} else {
+		ui.doneTabButton.BackgroundColor = color.RGBA{50, 50, 70, 255}
+	}
+	ui.doneTabButton.SetPosition(float64(windowX+150), 60)
+	ui.doneTabButton.Draw(img)
 }
 
 // getQuestTracker retrieves the quest tracker component from the player entity.

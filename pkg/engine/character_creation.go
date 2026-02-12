@@ -1796,39 +1796,45 @@ func extractPlayerComponents(player *Entity) (*classComponents, error) {
 		return nil, fmt.Errorf("player entity is nil")
 	}
 
-	healthComp, hasHealth := player.GetComponent("health")
-	if !hasHealth {
-		return nil, fmt.Errorf("player missing health component")
+	rawComps, err := getRawComponents(player)
+	if err != nil {
+		return nil, err
 	}
 
-	manaComp, hasMana := player.GetComponent("mana")
-	if !hasMana {
-		return nil, fmt.Errorf("player missing mana component")
+	return assertComponentTypes(rawComps)
+}
+
+// getRawComponents retrieves required components from player entity.
+func getRawComponents(player *Entity) (map[string]interface{}, error) {
+	required := []string{"health", "mana", "stats", "attack"}
+	rawComps := make(map[string]interface{})
+
+	for _, name := range required {
+		comp, has := player.GetComponent(name)
+		if !has {
+			return nil, fmt.Errorf("player missing %s component", name)
+		}
+		rawComps[name] = comp
 	}
 
-	statsComp, hasStats := player.GetComponent("stats")
-	if !hasStats {
-		return nil, fmt.Errorf("player missing stats component")
-	}
+	return rawComps, nil
+}
 
-	attackComp, hasAttack := player.GetComponent("attack")
-	if !hasAttack {
-		return nil, fmt.Errorf("player missing attack component")
-	}
-
-	health, ok := healthComp.(*HealthComponent)
+// assertComponentTypes type-asserts components to their concrete types.
+func assertComponentTypes(rawComps map[string]interface{}) (*classComponents, error) {
+	health, ok := rawComps["health"].(*HealthComponent)
 	if !ok {
 		return nil, fmt.Errorf("health component has wrong type")
 	}
-	mana, ok := manaComp.(*ManaComponent)
+	mana, ok := rawComps["mana"].(*ManaComponent)
 	if !ok {
 		return nil, fmt.Errorf("mana component has wrong type")
 	}
-	stats, ok := statsComp.(*StatsComponent)
+	stats, ok := rawComps["stats"].(*StatsComponent)
 	if !ok {
 		return nil, fmt.Errorf("stats component has wrong type")
 	}
-	attack, ok := attackComp.(*AttackComponent)
+	attack, ok := rawComps["attack"].(*AttackComponent)
 	if !ok {
 		return nil, fmt.Errorf("attack component has wrong type")
 	}

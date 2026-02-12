@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"math/rand"
 	"strings"
+
+	"github.com/opd-ai/venture/pkg/procgen"
 )
 
 // MarkovOrder defines the n-gram size for the Markov chain.
@@ -116,7 +118,9 @@ func (m *MarkovGenerator) TrainFromCorpus(sentences []string) {
 	}
 }
 
-// Generate creates a response based on parameters.
+// GenerateText creates a response based on parameters.
+// This is the internal method used for dialog generation. For the standard Generator interface,
+// use the Generate method instead.
 //
 // Generation process:
 //  1. Derives a seed from player input, conversation ID, and timestamp (non-deterministic)
@@ -126,7 +130,7 @@ func (m *MarkovGenerator) TrainFromCorpus(sentences []string) {
 //  5. Ensures MinWords is met (re-generates if too short)
 //
 // Returns empty string if generation fails (corpus not trained, invalid params).
-func (m *MarkovGenerator) Generate(params GenerateParams) string {
+func (m *MarkovGenerator) GenerateText(params GenerateParams) string {
 	// Apply defaults
 	if params.MaxWords <= 0 {
 		params.MaxWords = 30
@@ -335,4 +339,97 @@ func (m *MarkovGenerator) Reset() {
 func (m *MarkovGenerator) String() string {
 	return fmt.Sprintf("MarkovGenerator{genre=%s, order=%d, chainSize=%d, prefixStarts=%d}",
 		m.genreID, m.order, len(m.chain), len(m.prefixStarts))
+}
+
+// Generate implements the procgen.Generator interface.
+// It generates dialog text using Markov chain generation based on the seed and parameters.
+// The genreID in params is used to select appropriate corpus if different from the generator's genre.
+//
+// Returns a string containing the generated dialog text.
+func (m *MarkovGenerator) Generate(seed int64, params procgen.GenerationParams) (interface{}, error) {
+	// Validate parameters
+	if err := procgen.ValidateParams(params); err != nil {
+		return nil, fmt.Errorf("invalid generation parameters: %w", err)
+	}
+
+	// Check if corpus is trained
+	if len(m.chain) == 0 || len(m.prefixStarts) == 0 {
+		return nil, fmt.Errorf("markov chain not trained, call TrainFromCorpus first")
+	}
+
+	// Create dialog generation params from procgen params
+	// Use difficulty to adjust length: higher difficulty = longer responses
+	// Use depth to adjust complexity: higher depth = more temperature variation
+	minWords := 10 + int(params.Difficulty*10)     // 10-20 words
+	maxWords := 30 + int(params.Difficulty*20)     // 30-50 words
+	temperature := 0.5 + (params.Difficulty * 0.3) // 0.5-0.8 temperature
+
+	// Add depth-based variation
+	if params.Depth > 0 {
+		// Deeper dungeons = slightly longer dialog
+		maxWords += params.Depth
+		if maxWords > 100 {
+			maxWords = 100 // Cap at 100 words
+		}
+	}
+
+	dialogParams := GenerateParams{
+		PlayerInput:    "greeting",                  // Default greeting
+		ConversationID: fmt.Sprintf("gen-%d", seed), // Unique conversation ID
+		MaxWords:       maxWords,
+		MinWords:       minWords,
+		Temperature:    temperature,
+	}
+
+	// Generate dialog using deterministic mode (seed-based)
+	result := m.GenerateDeterministic(dialogParams)
+
+	// Validate non-empty result
+	if result == "" {
+		return nil, fmt.Errorf("failed to generate dialog text")
+	}
+
+	return result, nil
+}
+
+// Validate implements the procgen.Generator interface.
+// It checks if the generated dialog text is valid.
+func (m *MarkovGenerator) Validate(result interface{}) error {
+	// Type check
+	dialogText, ok := result.(string)
+	if !ok {
+		return fmt.Errorf("result is not a string, got type %T", result)
+	}
+
+	// Check for empty result
+	if len(dialogText) == 0 {
+		return fmt.Errorf("generated dialog text is empty")
+	}
+
+	// Check minimum length (should be at least a few words)
+	words := strings.Fields(dialogText)
+	if len(words) < 3 {
+		return fmt.Errorf("generated dialog text has too few words (%d), need at least 3", len(words))
+	}
+
+	// Check maximum length (prevent runaway generation)
+	if len(words) > 150 {
+		return fmt.Errorf("generated dialog text has too many words (%d), maximum is 150", len(words))
+	}
+
+	// Check for proper punctuation at end
+	lastChar := dialogText[len(dialogText)-1]
+	if lastChar != '.' && lastChar != '!' && lastChar != '?' {
+		return fmt.Errorf("generated dialog text must end with punctuation (. ! ?), got: %c", lastChar)
+	}
+
+	// Validate that text contains only printable ASCII characters and common punctuation
+	for _, char := range dialogText {
+		if char < 32 || char > 126 {
+			// Allow only printable ASCII
+			return fmt.Errorf("generated dialog text contains invalid character (code %d)", char)
+		}
+	}
+
+	return nil
 }

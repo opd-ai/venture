@@ -2,9 +2,9 @@ package mobile
 
 import (
 	"math/rand"
-	"time"
 
 	"github.com/hajimehoshi/ebiten/v2/mobile"
+	"github.com/opd-ai/venture/cmd/mobile/config"
 	"github.com/opd-ai/venture/pkg/engine"
 	"github.com/opd-ai/venture/pkg/logging"
 	"github.com/opd-ai/venture/pkg/procgen"
@@ -30,11 +30,11 @@ func init() {
 	logConfig.Level = logging.InfoLevel
 	logger = logging.NewLogger(logConfig)
 
-	// Generate default seed and genre
-	worldSeed = time.Now().UnixNano()
+	// Generate seed (check environment variable first for testing/debugging)
+	worldSeed = config.GetSeedFromEnv(logger)
 	genres := []string{"fantasy", "scifi", "horror", "cyberpunk", "postapoc"}
 	rng := rand.New(rand.NewSource(worldSeed))
-	genreID = genres[rng.Intn(len(genres))]
+	genreID = config.GetGenreFromEnv(genres, rng, logger)
 
 	// Initialize the game immediately for ebitenmobile
 	initializeGame()

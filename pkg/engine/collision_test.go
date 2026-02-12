@@ -396,3 +396,98 @@ func BenchmarkMovementSystem(b *testing.B) {
 		system.Update(entities, 0.016)
 	}
 }
+
+// TestCollisionSystemWithQuadtree tests collision detection using quadtree optimization
+func TestCollisionSystemWithQuadtree(t *testing.T) {
+	world := NewWorld()
+	system := NewCollisionSystem(32.0)
+
+	// Create two overlapping entities
+	e1 := world.CreateEntity()
+	e1.AddComponent(&PositionComponent{X: 0, Y: 0})
+	e1.AddComponent(&ColliderComponent{Width: 10, Height: 10, Solid: true})
+
+	e2 := world.CreateEntity()
+	e2.AddComponent(&PositionComponent{X: 5, Y: 5})
+	e2.AddComponent(&ColliderComponent{Width: 10, Height: 10, Solid: true})
+
+	world.Update(0)
+
+	// Setup quadtree
+	bounds := Bounds{X: -100, Y: -100, Width: 200, Height: 200}
+	quadtree := NewQuadtree(bounds, 32)
+	quadtree.Rebuild(world.GetEntities())
+	system.SetQuadtree(quadtree)
+
+	// Track collisions
+	collisionCount := 0
+	system.SetCollisionCallback(func(e1, e2 *Entity) {
+		collisionCount++
+	})
+
+	system.Update(world.GetEntities(), 0.016)
+
+	if collisionCount == 0 {
+		t.Error("Expected collision to be detected with quadtree")
+	}
+}
+
+// TestCollisionSystemQuadtreeVsGrid verifies quadtree and grid produce same results
+func TestCollisionSystemQuadtreeVsGrid(t *testing.T) {
+	// Create test entities
+	entities := make([]*Entity, 50)
+	for i := 0; i < 50; i++ {
+		entity := NewEntity(uint64(i))
+		entity.AddComponent(&PositionComponent{
+			X: float64(i%10) * 30,
+			Y: float64(i/10) * 30,
+		})
+		entity.AddComponent(&ColliderComponent{
+			Width:  20,
+			Height: 20,
+			Solid:  true,
+		})
+		entities[i] = entity
+	}
+
+	// Test with grid-based collision
+	systemGrid := NewCollisionSystem(100.0)
+	gridCollisions := 0
+	systemGrid.SetCollisionCallback(func(e1, e2 *Entity) {
+		gridCollisions++
+	})
+	systemGrid.Update(entities, 0.016)
+
+	// Test with quadtree-based collision
+	systemQuadtree := NewCollisionSystem(100.0)
+	bounds := Bounds{X: 0, Y: 0, Width: 500, Height: 500}
+	quadtree := NewQuadtree(bounds, 32)
+	quadtree.Rebuild(entities)
+	systemQuadtree.SetQuadtree(quadtree)
+
+	quadtreeCollisions := 0
+	systemQuadtree.SetCollisionCallback(func(e1, e2 *Entity) {
+		quadtreeCollisions++
+	})
+	systemQuadtree.Update(entities, 0.016)
+
+	// Both methods should detect same number of collisions
+	if gridCollisions != quadtreeCollisions {
+		t.Errorf("Collision count mismatch: grid=%d, quadtree=%d", gridCollisions, quadtreeCollisions)
+	}
+}
+
+// TestCollisionSystemQuadtreeNilSafety tests that system handles nil quadtree gracefully
+func TestCollisionSystemQuadtreeNilSafety(t *testing.T) {
+	world := NewWorld()
+	system := NewCollisionSystem(32.0)
+
+	e1 := world.CreateEntity()
+	e1.AddComponent(&PositionComponent{X: 0, Y: 0})
+	e1.AddComponent(&ColliderComponent{Width: 10, Height: 10, Solid: true})
+
+	world.Update(0)
+
+	// Should not panic with nil quadtree (falls back to grid)
+	system.Update(world.GetEntities(), 0.016)
+}

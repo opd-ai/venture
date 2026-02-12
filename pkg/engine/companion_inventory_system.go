@@ -87,52 +87,86 @@ func (s *CompanionInventorySystem) Update(deltaTime float64) {
 
 // fetchNearbyItems searches for and picks up items within fetch radius.
 func (s *CompanionInventorySystem) fetchNearbyItems(companion *Entity, pos *PositionComponent, inv *CompanionInventoryComponent) {
-	// Get all entities with item components in the world
-	// Note: This is a simplified implementation. In a real game, you would use
-	// spatial partitioning (quadtree) for efficiency.
 	allEntities := s.world.GetEntitiesWith("item", "position")
 
 	for _, entity := range allEntities {
-		// Skip if inventory is full
 		if inv.IsFull() {
 			break
 		}
 
-		// Get item component
-		itemCompRaw, ok := entity.GetComponent("item")
-		if !ok {
-			continue
-		}
-		itemComp := itemCompRaw.(*ItemComponent)
-
-		// Get item position
-		itemPosRaw, ok := entity.GetComponent("position")
-		if !ok {
-			continue
-		}
-		itemPos := itemPosRaw.(*PositionComponent)
-
-		// Check if item is within fetch radius
-		distance := s.distance(pos, itemPos)
-		if distance > inv.FetchRadius {
-			continue
-		}
-
-		// Try to pick up the item
-		if inv.CanAddItem(itemComp.Item) {
-			if inv.AddItem(itemComp.Item) {
-				// Remove item entity from world
-				s.world.RemoveEntity(entity.ID)
-
-				if s.logger != nil {
-					s.logger.WithFields(logrus.Fields{
-						"companion": companion.ID,
-						"item":      itemComp.Item.Name,
-					}).Debug("companion fetched item")
-				}
-			}
+		if s.tryPickupItem(companion, entity, pos, inv) {
+			s.logItemFetched(companion.ID, entity)
 		}
 	}
+}
+
+// tryPickupItem attempts to pick up an item entity if it's within range.
+func (s *CompanionInventorySystem) tryPickupItem(companion, itemEntity *Entity, companionPos *PositionComponent, inv *CompanionInventoryComponent) bool {
+	itemComp, itemPos, ok := s.getItemComponents(itemEntity)
+	if !ok {
+		return false
+	}
+
+	if !s.isItemInRange(companionPos, itemPos, inv.FetchRadius) {
+		return false
+	}
+
+	return s.addItemToInventory(itemEntity, itemComp, inv)
+}
+
+// getItemComponents retrieves item and position components from an entity.
+func (s *CompanionInventorySystem) getItemComponents(entity *Entity) (*ItemComponent, *PositionComponent, bool) {
+	itemCompRaw, ok := entity.GetComponent("item")
+	if !ok {
+		return nil, nil, false
+	}
+	itemComp := itemCompRaw.(*ItemComponent)
+
+	itemPosRaw, ok := entity.GetComponent("position")
+	if !ok {
+		return nil, nil, false
+	}
+	itemPos := itemPosRaw.(*PositionComponent)
+
+	return itemComp, itemPos, true
+}
+
+// isItemInRange checks if an item is within the companion's fetch radius.
+func (s *CompanionInventorySystem) isItemInRange(companionPos, itemPos *PositionComponent, fetchRadius float64) bool {
+	distance := s.distance(companionPos, itemPos)
+	return distance <= fetchRadius
+}
+
+// addItemToInventory adds an item to the companion's inventory and removes it from the world.
+func (s *CompanionInventorySystem) addItemToInventory(itemEntity *Entity, itemComp *ItemComponent, inv *CompanionInventoryComponent) bool {
+	if !inv.CanAddItem(itemComp.Item) {
+		return false
+	}
+
+	if !inv.AddItem(itemComp.Item) {
+		return false
+	}
+
+	s.world.RemoveEntity(itemEntity.ID)
+	return true
+}
+
+// logItemFetched logs successful item pickup by companion.
+func (s *CompanionInventorySystem) logItemFetched(companionID uint64, itemEntity *Entity) {
+	if s.logger == nil {
+		return
+	}
+
+	itemCompRaw, ok := itemEntity.GetComponent("item")
+	if !ok {
+		return
+	}
+	itemComp := itemCompRaw.(*ItemComponent)
+
+	s.logger.WithFields(logrus.Fields{
+		"companion": companionID,
+		"item":      itemComp.Item.Name,
+	}).Debug("companion fetched item")
 }
 
 // distance calculates the Euclidean distance between two positions.

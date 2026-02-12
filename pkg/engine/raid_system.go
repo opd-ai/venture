@@ -143,9 +143,21 @@ func (s *RaidSystem) EnterRaidInstance(playerEntity, entranceEntity *Entity) err
 
 // CompleteRaidInstance marks the instance complete and sets player lockouts.
 func (s *RaidSystem) CompleteRaidInstance(instanceID string, playerEntities []*Entity) error {
-	// Find instance entity
+	instance, err := s.findRaidInstance(instanceID)
+	if err != nil {
+		return err
+	}
+
+	instance.Completed = true
+
+	s.applyPlayerLockouts(instance, playerEntities)
+
+	return nil
+}
+
+// findRaidInstance locates a raid instance by ID.
+func (s *RaidSystem) findRaidInstance(instanceID string) (*RaidInstanceComponent, error) {
 	entities := s.world.GetEntitiesWith("raid_instance")
-	var instance *RaidInstanceComponent
 
 	for _, entity := range entities {
 		compRaw, ok := entity.GetComponent("raid_instance")
@@ -154,44 +166,46 @@ func (s *RaidSystem) CompleteRaidInstance(instanceID string, playerEntities []*E
 		}
 		comp := compRaw.(*RaidInstanceComponent)
 		if comp.InstanceID == instanceID {
-			instance = comp
-			break
+			return comp, nil
 		}
 	}
 
-	if instance == nil {
-		return fmt.Errorf("instance %s not found", instanceID)
-	}
+	return nil, fmt.Errorf("instance %s not found", instanceID)
+}
 
-	// Mark complete
-	instance.Completed = true
-
-	// Set player lockouts
+// applyPlayerLockouts sets raid lockouts for all players in the instance.
+func (s *RaidSystem) applyPlayerLockouts(instance *RaidInstanceComponent, playerEntities []*Entity) {
 	for _, player := range playerEntities {
-		lockoutCompRaw, ok := player.GetComponent("raid_lockout")
-		var lockout *RaidLockoutComponent
-		if !ok {
-			lockout = NewRaidLockoutComponent()
-			player.AddComponent(lockout)
-		} else {
-			lockout = lockoutCompRaw.(*RaidLockoutComponent)
-		}
-
-		// Get player ID from network component (if exists)
-		playerID := fmt.Sprintf("player_%d", player.ID) // Fallback to entity ID
-
-		networkCompRaw, ok := player.GetComponent("network")
-		if ok {
-			networkComp := networkCompRaw.(*NetworkComponent)
-			if networkComp.PlayerID != 0 {
-				playerID = fmt.Sprintf("player_%d", networkComp.PlayerID)
-			}
-		}
-
+		lockout := s.getOrCreateLockout(player)
+		playerID := s.extractPlayerID(player)
 		lockout.SetLockout(playerID, instance.Tier)
 	}
+}
 
-	return nil
+// getOrCreateLockout retrieves or creates a raid lockout component for a player.
+func (s *RaidSystem) getOrCreateLockout(player *Entity) *RaidLockoutComponent {
+	lockoutCompRaw, ok := player.GetComponent("raid_lockout")
+	if !ok {
+		lockout := NewRaidLockoutComponent()
+		player.AddComponent(lockout)
+		return lockout
+	}
+	return lockoutCompRaw.(*RaidLockoutComponent)
+}
+
+// extractPlayerID determines the player ID from entity components.
+func (s *RaidSystem) extractPlayerID(player *Entity) string {
+	playerID := fmt.Sprintf("player_%d", player.ID) // Fallback to entity ID
+
+	networkCompRaw, ok := player.GetComponent("network")
+	if ok {
+		networkComp := networkCompRaw.(*NetworkComponent)
+		if networkComp.PlayerID != 0 {
+			playerID = fmt.Sprintf("player_%d", networkComp.PlayerID)
+		}
+	}
+
+	return playerID
 }
 
 // updateBossMechanics processes boss ability cooldowns and executes ready mechanics.

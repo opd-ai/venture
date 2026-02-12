@@ -132,7 +132,21 @@ func (b *StateBroadcaster) serializeEntity(entity *engine.Entity) *EntityState {
 		ID: entity.ID,
 	}
 
-	// Serialize position
+	serializePosition(entity, state)
+	serializeVelocity(entity, state)
+	serializeHealth(entity, state)
+	serializeRotation(entity, state)
+
+	// Only include entities with at least position
+	if state.Position == nil {
+		return nil
+	}
+
+	return state
+}
+
+// serializePosition extracts position component to state.
+func serializePosition(entity *engine.Entity, state *EntityState) {
 	if posComp, ok := entity.GetComponent("position"); ok {
 		if pos, ok := posComp.(*engine.PositionComponent); ok {
 			state.Position = &PositionState{
@@ -141,8 +155,10 @@ func (b *StateBroadcaster) serializeEntity(entity *engine.Entity) *EntityState {
 			}
 		}
 	}
+}
 
-	// Serialize velocity
+// serializeVelocity extracts velocity component to state.
+func serializeVelocity(entity *engine.Entity, state *EntityState) {
 	if velComp, ok := entity.GetComponent("velocity"); ok {
 		if vel, ok := velComp.(*engine.VelocityComponent); ok {
 			state.Velocity = &VelocityState{
@@ -151,8 +167,10 @@ func (b *StateBroadcaster) serializeEntity(entity *engine.Entity) *EntityState {
 			}
 		}
 	}
+}
 
-	// Serialize health
+// serializeHealth extracts health component to state.
+func serializeHealth(entity *engine.Entity, state *EntityState) {
 	if healthComp, ok := entity.GetComponent("health"); ok {
 		if health, ok := healthComp.(*engine.HealthComponent); ok {
 			state.Health = &HealthState{
@@ -161,8 +179,10 @@ func (b *StateBroadcaster) serializeEntity(entity *engine.Entity) *EntityState {
 			}
 		}
 	}
+}
 
-	// Serialize rotation
+// serializeRotation extracts rotation component to state.
+func serializeRotation(entity *engine.Entity, state *EntityState) {
 	if rotComp, ok := entity.GetComponent("rotation"); ok {
 		if rot, ok := rotComp.(*engine.RotationComponent); ok {
 			state.Rotation = &RotationState{
@@ -170,13 +190,6 @@ func (b *StateBroadcaster) serializeEntity(entity *engine.Entity) *EntityState {
 			}
 		}
 	}
-
-	// Only include entities with at least position
-	if state.Position == nil {
-		return nil
-	}
-
-	return state
 }
 
 // CreateDeltaSnapshot creates a delta snapshot (only changed entities).

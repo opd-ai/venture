@@ -29,6 +29,8 @@ type CardGame struct {
 	playerHand   []int // Card values
 	opponentHand []int
 	deck         []int
+	// LastRender contains the most recent render output for external consumption.
+	LastRender *RenderOutput
 }
 
 // NewCardGame creates a new card game instance.
@@ -152,11 +154,95 @@ func (c *CardGame) playRound() {
 	c.dealHands()
 }
 
-// Render draws the card game to the screen.
-// For Phase 27.2, this is a minimal implementation (actual rendering in Phase 27.3).
-func (c *CardGame) Render(screen engine.ImageProvider) error {
-	// Minimal implementation - actual rendering happens in integration phase
+// PrepareRender computes the current visual state for the card game.
+// This validates screen dimensions and populates internal render data.
+// Implements engine.MiniGame interface.
+func (c *CardGame) PrepareRender(screenWidth, screenHeight int) error {
+	if err := validateScreenDimensions(screenWidth, screenHeight); err != nil {
+		return fmt.Errorf("card game prepare render: %w", err)
+	}
+	if c.rng == nil {
+		return fmt.Errorf("card game prepare render: game not initialized")
+	}
+
+	status := "Playing"
+	if c.completed {
+		if c.playerWon {
+			status = "Won"
+		} else {
+			status = "Lost"
+		}
+	}
+
+	elements := make([]RenderElement, 0, 2+len(c.playerHand)+len(c.opponentHand))
+
+	// Score display
+	elements = append(elements, RenderElement{
+		Type:  "text",
+		X:     screenWidth / 2,
+		Y:     10,
+		Label: fmt.Sprintf("Round %d - You: %d / %d  Opponent: %d / %d", c.currentRound, c.playerWins, c.targetWins, c.opponentWins, c.targetWins),
+	})
+
+	// Player hand
+	cardW := screenWidth / (len(c.playerHand) + 1)
+	if cardW > 60 {
+		cardW = 60
+	}
+	for i, card := range c.playerHand {
+		elements = append(elements, RenderElement{
+			Type:  "card",
+			X:     10 + i*(cardW+5),
+			Y:     screenHeight - 100,
+			W:     cardW,
+			H:     80,
+			Label: fmt.Sprintf("%d", card),
+			Value: float64(card) / 10.0,
+		})
+	}
+
+	// Opponent hand (face down)
+	for i := range c.opponentHand {
+		elements = append(elements, RenderElement{
+			Type:  "card",
+			X:     10 + i*(cardW+5),
+			Y:     20,
+			W:     cardW,
+			H:     80,
+			Label: "?",
+			Value: 0.0,
+		})
+	}
+
+	c.LastRender = &RenderOutput{
+		Title:    "Card Game",
+		Status:   status,
+		Width:    screenWidth,
+		Height:   screenHeight,
+		Elements: elements,
+	}
 	return nil
+}
+
+// GetRenderOutput returns the computed visual state from the last PrepareRender call.
+// Implements engine.MiniGame interface.
+func (c *CardGame) GetRenderOutput() engine.MiniGameRenderOutput {
+	if c.LastRender == nil {
+		return nil
+	}
+	return c.LastRender
+}
+
+// Render draws the card game to the screen.
+// Computes visual state including player/opponent hands, scores, and round info.
+// DEPRECATED: Use PrepareRender() and GetRenderOutput() instead.
+// Kept for backward compatibility with existing code.
+func (c *CardGame) Render(screen engine.ImageProvider) error {
+	w, h, err := validateScreen(screen)
+	if err != nil {
+		return fmt.Errorf("card game render: %w", err)
+	}
+	return c.PrepareRender(w, h)
 }
 
 // IsComplete returns true when the game has finished.

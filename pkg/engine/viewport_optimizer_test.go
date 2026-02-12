@@ -17,6 +17,14 @@ func TestNewViewportOptimizer(t *testing.T) {
 	if vo.marginTiles != 1 {
 		t.Errorf("Expected marginTiles 1, got %d", vo.marginTiles)
 	}
+
+	// Verify visibleBuffer is initialized (AUDIT.md Priority 1.2)
+	if vo.visibleBuffer == nil {
+		t.Error("Expected visibleBuffer to be initialized")
+	}
+	if cap(vo.visibleBuffer) != 256 {
+		t.Errorf("Expected visibleBuffer capacity 256, got %d", cap(vo.visibleBuffer))
+	}
 }
 
 func TestSetTileSize(t *testing.T) {
@@ -484,6 +492,34 @@ func BenchmarkOptimizeVisibleSet(b *testing.B) {
 	partition.Rebuild(entities)
 	vo := NewViewportOptimizer()
 
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		vo.OptimizeVisibleSet(camera, 1920, 1080, partition, entities)
+	}
+}
+
+// BenchmarkOptimizeVisibleSet_Allocations verifies zero-allocation queries (AUDIT.md Priority 1.2)
+func BenchmarkOptimizeVisibleSet_Allocations(b *testing.B) {
+	world := NewWorld()
+	partition := NewSpatialPartitionSystem(5000, 5000)
+
+	camera := NewCameraComponent()
+	camera.X = 2500
+	camera.Y = 2500
+	camera.Zoom = 1.0
+
+	// Create 500 entities in viewport
+	entities := make([]*Entity, 500)
+	for i := 0; i < 500; i++ {
+		x := 2500 + float64(i%20)*40
+		y := 2500 + float64(i/20)*40
+		entities[i] = createTestEntityAt(world, x, y, i == 0)
+	}
+
+	partition.Rebuild(entities)
+	vo := NewViewportOptimizer()
+
+	b.ReportAllocs()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		vo.OptimizeVisibleSet(camera, 1920, 1080, partition, entities)

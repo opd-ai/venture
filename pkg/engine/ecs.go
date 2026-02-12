@@ -4,8 +4,10 @@
 package engine
 
 import (
+	"fmt"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/sirupsen/logrus"
 )
@@ -391,6 +393,12 @@ type World struct {
 	// Logger for ECS operations
 	logger *logrus.Entry
 
+	// Performance metrics for frame time tracking
+	performanceMetrics *PerformanceMetrics
+
+	// Cache of system names to avoid per-frame reflection (eliminates 2,640 reflection calls/sec at 60 FPS with 44 systems)
+	systemNameCache map[System]string
+
 	// Mutex for thread-safe access to entities and metrics
 	mu sync.RWMutex
 }
@@ -410,16 +418,18 @@ func NewWorldWithLogger(logger *logrus.Logger) *World {
 	}
 
 	w := &World{
-		entities:         make(map[uint64]*Entity),
-		systems:          make([]System, 0),
-		nextEntityID:     1,                       // Start entity IDs at 1 (0 reserved as invalid ID)
-		cachedEntityList: make([]*Entity, 0, 256), // Pre-allocate for 256 entities
-		queryBuffer:      make([]*Entity, 0, 256), // Pre-allocate query buffer
-		queryCache:       make(map[string][]*Entity),
-		queryCacheDirty:  make(map[string]bool),
-		entityListDirty:  true,
-		Clock:            NewSimulationClock(0), // Default to deterministic simulation clock
-		logger:           logEntry,
+		entities:           make(map[uint64]*Entity),
+		systems:            make([]System, 0),
+		nextEntityID:       1,                       // Start entity IDs at 1 (0 reserved as invalid ID)
+		cachedEntityList:   make([]*Entity, 0, 256), // Pre-allocate for 256 entities
+		queryBuffer:        make([]*Entity, 0, 256), // Pre-allocate query buffer
+		queryCache:         make(map[string][]*Entity),
+		queryCacheDirty:    make(map[string]bool),
+		entityListDirty:    true,
+		Clock:              NewSimulationClock(0), // Default to deterministic simulation clock
+		logger:             logEntry,
+		performanceMetrics: NewPerformanceMetrics(), // Initialize performance metrics
+		systemNameCache:    make(map[System]string), // Initialize system name cache for reflection avoidance
 		builderPool: sync.Pool{
 			New: func() interface{} {
 				return &strings.Builder{}
@@ -492,17 +502,17 @@ func (w *World) AddSystem(system System) {
 
 	w.systems = append(w.systems, system)
 
+	// Cache system name to avoid per-frame reflection in Update()
+	systemName := w.getSystemName(system)
+	w.systemNameCache[system] = systemName
+
 	if w.logger != nil {
-		// Get system name if available
-		systemName := "unknown"
-		if named, ok := system.(interface{ Name() string }); ok {
-			systemName = named.Name()
-		}
 		w.logger.WithField("system", systemName).Debug("system added")
 	}
 }
 
 // Update updates all systems with the current entity list.
+// When performance instrumentation is enabled, per-system timing is recorded.
 func (w *World) Update(deltaTime float64) {
 	// Advance game clock for deterministic time tracking
 	w.Clock.Advance(deltaTime)
@@ -531,9 +541,16 @@ func (w *World) Update(deltaTime float64) {
 		w.rebuildEntityCache()
 	}
 
-	// Update all systems with cached list
+	// Update all systems with cached list and timing instrumentation.
+	// Uses time.Now() only once per system (unavoidable for per-system metrics).
+	// RecordSystemTime is lock-free since World.Update() is single-threaded.
 	for _, system := range w.systems {
+		startTime := time.Now()
 		system.Update(w.cachedEntityList, deltaTime)
+
+		// Use cached system name (eliminates per-frame reflection)
+		systemName := w.systemNameCache[system]
+		w.performanceMetrics.RecordSystemTime(systemName, time.Since(startTime))
 	}
 }
 
@@ -748,4 +765,38 @@ func (w *World) GetTradeVolume() uint64 {
 		}
 	}
 	return total
+}
+
+// GetPerformanceMetrics returns the world's performance metrics snapshot.
+// This provides access to per-system timing data for performance monitoring.
+// Thread-safe for concurrent access from metrics HTTP handler.
+func (w *World) GetPerformanceMetrics() *PerformanceMetrics {
+	return w.performanceMetrics.GetSnapshot()
+}
+
+// getSystemName extracts a readable name from a system instance.
+// Uses reflection to get the type name without pointer prefix.
+func (w *World) getSystemName(system System) string {
+	// Use fmt.Sprintf with %T to get the type name
+	typeName := fmt.Sprintf("%T", system)
+
+	// Remove pointer prefix if present
+	if len(typeName) > 0 && typeName[0] == '*' {
+		typeName = typeName[1:]
+	}
+
+	// Extract just the struct name without package path
+	// e.g., "engine.MovementSystem" -> "MovementSystem"
+	lastDot := -1
+	for i := len(typeName) - 1; i >= 0; i-- {
+		if typeName[i] == '.' {
+			lastDot = i
+			break
+		}
+	}
+	if lastDot >= 0 && lastDot < len(typeName)-1 {
+		typeName = typeName[lastDot+1:]
+	}
+
+	return typeName
 }

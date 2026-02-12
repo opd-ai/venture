@@ -6,12 +6,12 @@
   "description": "Increased difficulty with permadeath and higher spawn rates",
   "type": "rule",
   "rules": {
-    "difficulty_multiplier": 2.0,
-    "permadeath_enabled": true,
-    "spawn_rate_multiplier": 1.5,
-    "loot_drop_multiplier": 0.7,
-    "enemy_health_multiplier": 1.3,
-    "player_damage_multiplier": 0.8
+    "difficulty.multiplier": 2.0,
+    "player.permadeath": true,
+    "spawn.rate_multiplier": 1.5,
+    "loot.drop_multiplier": 0.7,
+    "combat.enemy_health_multiplier": 1.3,
+    "combat.player_damage_multiplier": 0.8
   },
   "enabled": true
 }

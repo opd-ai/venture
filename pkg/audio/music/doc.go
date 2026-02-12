@@ -11,7 +11,7 @@
 //   - Adaptive music that responds to gameplay context (exploration, combat, boss battles, etc.)
 //   - Layered composition with independent control over ambient, melody, harmony, percussion, and intensity layers
 //   - Smooth crossfade transitions between contexts (<1 second)
-//   - Genre-specific instrumentation and scales (fantasy, sci-fi, horror, cyberpunk, post-apocalyptic)
+//   - Genre-specific instrumentation and scales (fantasy, scifi, horror, cyberpunk, postapoc)
 //   - Deterministic generation from seed values for reproducibility
 //
 // # Basic Usage
@@ -97,17 +97,13 @@
 //
 // # Testing
 //
-// Use the cmd/musictest tool for manual validation:
+// The package includes comprehensive tests covering:
 //
-//	go run ./cmd/musictest -mode all -genre fantasy -seed 12345
-//
-// Test modes include:
-//
-//   - contexts: Test all music contexts
-//   - layers: Test individual layer activation
-//   - transitions: Test smooth context transitions
-//   - intensity: Test intensity scaling
-//   - all: Run all tests
+//   - contexts: All music contexts (combat, exploration, ambient, victory)
+//   - layers: Individual layer activation
+//   - transitions: Smooth context transitions
+//   - intensity: Intensity scaling
+//   - determinism: Seed-based reproducibility
 //
 // # Music Theory
 //
@@ -123,8 +119,8 @@
 // Each genre has distinct musical characteristics:
 //
 //   - Fantasy: Major/minor scales, orchestral feel, moderate tempo
-//   - Sci-Fi: Whole tone scales, synthetic sounds, electronic percussion
-//   - Horror: Chromatic scales, dissonant harmonies, unsettling rhythms
-//   - Cyberpunk: Pentatonic scales, driving beats, neon energy
-//   - Post-Apocalyptic: Blues scales, sparse instrumentation, slow tempo
+//   - Scifi: Chromatic scales, synthetic sounds, electronic percussion
+//   - Horror: Minor scales, dissonant harmonies, unsettling rhythms
+//   - Cyberpunk: Blues scales, driving beats, neon energy
+//   - Postapoc: Pentatonic scales, sparse instrumentation, slow tempo
 package music

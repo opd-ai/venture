@@ -6,6 +6,7 @@ package main
 import (
 	"github.com/opd-ai/venture/pkg/engine"
 	"github.com/opd-ai/venture/pkg/engine/physics/fluids"
+	guildvehicle "github.com/opd-ai/venture/pkg/integration/guild_vehicle"
 	"github.com/opd-ai/venture/pkg/network/federation"
 	"github.com/opd-ai/venture/pkg/network/federation/guild"
 	"github.com/sirupsen/logrus"
@@ -21,7 +22,8 @@ import (
 // Server-side systems include: housing infrastructure, trust/reputation tracking,
 // chat history persistence, image galleries, guild halls, fluid simulation,
 // enhanced vehicle physics, and building/furniture generation.
-func initializeV8SystemsServer(world *engine.World, seed int64, logger *logrus.Logger) {
+// Returns the guild.Manager and FleetManager for use by V9 political warfare integration.
+func initializeV8SystemsServer(world *engine.World, seed int64, serverName string, logger *logrus.Logger) (*guild.Manager, *guildvehicle.FleetManager) {
 	serverLogger := logger.WithField("component", "v8_systems")
 
 	// Phase 49.1-49.2: Housing, Trust & Reputation Infrastructure
@@ -40,14 +42,29 @@ func initializeV8SystemsServer(world *engine.World, seed int64, logger *logrus.L
 	guildSystem := engine.NewGuildSystem(world, guildManager)
 	world.AddSystem(guildSystem)
 
-	// Initialize federation protocol for cross-server guild sync
-	serverIdentity := &federation.ServerIdentity{
-		PublicKey:  []byte("server-public-key"), // In production, load from config/cert
-		ServerName: "venture-server",
+	// Initialize server identity with proper ed25519 keypair generation
+	// In production, this generates a new keypair on each server start.
+	// For persistent identity across restarts, implement key persistence to file/database.
+	serverIdentity, err := federation.NewServerIdentity(serverName)
+	if err != nil {
+		serverLogger.WithError(err).Fatal("Failed to generate server identity")
 	}
-	federationProtocol := federation.NewFederationProtocol("server-id", serverIdentity)
+	serverLogger.WithFields(logrus.Fields{
+		"server_name":    serverIdentity.ServerName,
+		"fingerprint":    serverIdentity.GetFingerprint(),
+		"public_key_len": len(serverIdentity.PublicKey),
+	}).Info("Server identity generated with ed25519 keypair")
+
+	// Initialize federation protocol for cross-server guild sync
+	federationProtocol := federation.NewFederationProtocol(serverIdentity.ServerID, serverIdentity)
 	guildSystem.SetFederation(federationProtocol)
 	_ = federationProtocol // Available for future cross-server features
+
+	// Phase 56.1: Guild Vehicle Fleet Combat (ROADMAP_V9.md)
+	// FleetManager coordinates guild vehicle fleets with formations, siege engines, and maintenance
+	// Provides server-authoritative fleet management for guild vehicle coordination
+	fleetManager := guildvehicle.NewFleetManager()
+	serverLogger.Debug("FleetManager initialized for guild vehicle coordination")
 
 	// Phase 50.3: Enhanced Vehicle Physics
 	// NOTE: EnhancedVehicleSystem is client-side only (handles visual physics).
@@ -70,12 +87,13 @@ func initializeV8SystemsServer(world *engine.World, seed int64, logger *logrus.L
 	fluidSimulator := fluids.NewSimulator(fluidConfig)
 	world.AddSystem(&fluidSimulatorWrapper{system: fluidSimulator})
 
-	// Phase 50.4: Swimming and flooding managers
-	// NOTE: These utilities are used by entity systems on the client side.
-	// Server uses simplified physics. Add when implementing:
-	// - fluids.NewBuoyancyCalculator(gravity) for buoyancy validation
-	// - fluids.NewSwimmingManager(gravity) for swim speed validation
-	// - fluids.NewFloodingManager(simulator) for flood damage validation
+	// Phase 50.4: Server-side fluid physics validation utilities
+	// Initialize buoyancy, swimming, and flooding managers for server-authoritative physics validation
+	buoyancyCalculator := fluids.NewBuoyancyCalculator(fluidConfig.Gravity)
+	swimmingManager := fluids.NewSwimmingManager(fluidConfig.Gravity)
+	floodingManager := fluids.NewFloodingManager(fluidSimulator)
+	serverLogger.Debug("Fluid physics managers initialized (buoyancy, swimming, flooding)")
+	_, _, _ = buoyancyCalculator, swimmingManager, floodingManager // Available for future validation systems
 
 	// Phase 51.1-51.3: Building, Guild Hall, and Furniture Generation
 	// NOTE: These generators are used during world/structure spawning on client side.
@@ -85,6 +103,8 @@ func initializeV8SystemsServer(world *engine.World, seed int64, logger *logrus.L
 	// - furniture.NewGenerator() for interior furniture
 
 	if logger.GetLevel() >= logrus.DebugLevel {
-		serverLogger.Info("V8.0 systems initialized (guild federation, housing, trust, reputation, fluid dynamics, vehicle physics, building/furniture)")
+		serverLogger.Info("V8.0 systems initialized (guild federation, fleet management, housing, trust, reputation, fluid dynamics, vehicle physics, building/furniture)")
 	}
+
+	return guildManager, fleetManager
 }

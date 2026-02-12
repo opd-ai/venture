@@ -184,3 +184,22 @@ func (r Rarity) String() string {
 		return "unknown"
 	}
 }
+
+// Value returns the numeric value of a rarity level.
+// Used for compatibility with systems that use float64 for rarity.
+func (r Rarity) Value() float64 {
+	switch r {
+	case RarityCommon:
+		return 1.0
+	case RarityUncommon:
+		return 1.2
+	case RarityRare:
+		return 1.5
+	case RarityEpic:
+		return 2.0
+	case RarityLegendary:
+		return 3.0
+	default:
+		return 1.0
+	}
+}

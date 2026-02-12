@@ -3,10 +3,18 @@ package federation
 import (
 	"encoding/json"
 	"fmt"
-	"net"
 	"testing"
 	"time"
 )
+
+// mockAddr implements net.Addr interface for testing without concrete network types.
+type mockAddr struct {
+	network string
+	address string
+}
+
+func (m *mockAddr) Network() string { return m.network }
+func (m *mockAddr) String() string  { return m.address }
 
 func TestNewDiscoverySystem(t *testing.T) {
 	identity, err := NewServerIdentity("TestServer")
@@ -135,7 +143,7 @@ func TestDiscoverySystem_ProcessPacket(t *testing.T) {
 	}
 
 	// Process packet
-	addr := &net.UDPAddr{IP: net.ParseIP("192.168.1.100"), Port: 8090}
+	addr := &mockAddr{network: "udp", address: "192.168.1.100:8090"}
 	ds.processPacket(data, addr)
 
 	// Verify peer was added
@@ -184,7 +192,7 @@ func TestDiscoverySystem_IgnoreOwnPackets(t *testing.T) {
 	}
 
 	// Process packet
-	addr := &net.UDPAddr{IP: net.ParseIP("127.0.0.1"), Port: 8090}
+	addr := &mockAddr{network: "udp", address: "127.0.0.1:8090"}
 	ds.processPacket(data, addr)
 
 	// Verify no peers were added
@@ -251,7 +259,7 @@ func TestDiscoverySystem_TimestampValidation(t *testing.T) {
 			}
 
 			data, _ := json.Marshal(packet)
-			addr := &net.UDPAddr{IP: net.ParseIP("192.168.1.100"), Port: 8090}
+			addr := &mockAddr{network: "udp", address: "192.168.1.100:8090"}
 
 			// Clear existing peers
 			ds.mu.Lock()
@@ -561,7 +569,7 @@ func BenchmarkDiscoverySystem_ProcessPacket(b *testing.B) {
 	}
 
 	data, _ := json.Marshal(packet)
-	addr := &net.UDPAddr{IP: net.ParseIP("192.168.1.100"), Port: 8090}
+	addr := &mockAddr{network: "udp", address: "192.168.1.100:8090"}
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {

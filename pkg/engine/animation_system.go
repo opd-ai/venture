@@ -17,13 +17,56 @@ import (
 
 // AnimationSystem updates animation components and manages frame transitions.
 // Integrates with sprite generator to create procedural animation frames.
+//
+// Animation Timing:
+//   - Default FPS: 12 FPS for close-range entities (0.083s per frame)
+//   - Frame Count: 8 frames per animation state (idle, walk, attack, etc.)
+//   - Total Duration: ~0.67 seconds per animation cycle at base rate
+//
+// Distance-Based LOD (Level of Detail):
+//   - Close range (≤200px from player): 12 FPS (full animation rate)
+//   - Medium range (200-400px): 6 FPS (half animation rate for performance)
+//   - Far range (>400px): 3 FPS (minimal animation for distant entities)
+//   - Player entity: Always rendered at full rate regardless of distance
+//
+// Animation States and Typical Usage:
+//   - AnimationStateIdle: Looping idle animation (breathing, standing)
+//   - AnimationStateWalk: Looping walk animation (movement at normal speed)
+//   - AnimationStateRun: Looping run animation (faster movement)
+//   - AnimationStateAttack: One-shot attack animation (triggers on combat action)
+//   - AnimationStateCast: One-shot spell casting animation
+//   - AnimationStateHit: One-shot damage reaction animation
+//   - AnimationStateDeath: One-shot death animation (stops at final frame)
+//
+// Performance Optimizations:
+//   - Viewport Culling: Entities outside camera view are not animated
+//   - Frame Caching: Animation frames are cached per seed+state combination
+//   - Per-Frame Limits: Maximum 8 sprite regenerations per frame to prevent lag
+//   - LRU Eviction: Frame cache limited to 100 sequences to manage memory
+//
+// Tuning Animation Speed:
+//   - Modify AnimationComponent.FrameTime directly to change speed
+//   - Lower values = faster animation (e.g., 0.05s = 20 FPS)
+//   - Higher values = slower animation (e.g., 0.2s = 5 FPS)
+//   - Default: 1.0/12.0 (~0.083s) provides smooth motion without overhead
+//
+// Example:
+//
+//	// Create custom animation with faster playback
+//	anim := NewAnimationComponent(seed)
+//	anim.FrameTime = 0.05 // 20 FPS for fast combat animation
+//	anim.CurrentState = AnimationStateAttack
+//	anim.Loop = false // One-shot animation
+//	anim.OnComplete = func() {
+//	    // Trigger when attack animation finishes
+//	}
 type AnimationSystem struct {
 	spriteGenerator *sprites.Generator
 	spriteCache     *cache.SpriteCache         // Phase 1.2: External sprite cache for base sprites
-	frameCache      map[string][]*ebiten.Image // Cache by key: seed_state
+	frameCache      map[uint64][]*ebiten.Image // Cache by key: uint64 combining seed + state
 	cacheMutex      sync.RWMutex
 	maxCacheSize    int
-	cacheKeys       []string // For LRU eviction
+	cacheKeys       []uint64 // For LRU eviction
 	logger          *logrus.Entry
 	paletteOptions  *palette.GenerationOptions // Phase 5.4: Custom palette generation options
 
@@ -43,6 +86,12 @@ type AnimationSystem struct {
 
 	// Performance optimization: Pool for frame slices to reduce allocations
 	frameSlicePool sync.Pool
+
+	// V7 Performance fix: Pool for animation frame images and reusable DrawImageOptions
+	// Animation frames typically have dimensions near 74-84 pixels (64px sprite + offset + margin)
+	// The pool uses bucketed sizes (64, 80, 96, 128) to maximize reuse while minimizing wasted space
+	frameImagePool    *animationImagePool
+	transformDrawOpts ebiten.DrawImageOptions // Reusable DrawImageOptions for frame generation
 }
 
 // AnimationStats holds performance statistics for the animation system.
@@ -81,9 +130,9 @@ func NewAnimationSystemWithLogger(spriteGenerator *sprites.Generator, logger *lo
 
 	sys := &AnimationSystem{
 		spriteGenerator: spriteGenerator,
-		frameCache:      make(map[string][]*ebiten.Image),
+		frameCache:      make(map[uint64][]*ebiten.Image),
 		maxCacheSize:    100, // Cache up to 100 animation sequences
-		cacheKeys:       make([]string, 0, 100),
+		cacheKeys:       make([]uint64, 0, 100),
 		logger:          logEntry,
 		// Phase 14.2: Default optimization settings
 		enableViewportCull:  true,  // Enabled by default for performance
@@ -103,6 +152,10 @@ func NewAnimationSystemWithLogger(spriteGenerator *sprites.Generator, logger *lo
 			return make([]*ebiten.Image, 0, 16)
 		},
 	}
+
+	// V7 Performance fix: Initialize animation frame image pool
+	// Animation frames use dimensions around 74-84 pixels for standard 64px sprites
+	sys.frameImagePool = newAnimationImagePool()
 
 	return sys
 }
@@ -158,8 +211,14 @@ func (s *AnimationSystem) SetPaletteOptions(opts *palette.GenerationOptions) {
 	s.paletteOptions = opts
 	// Clear frame cache to regenerate sprites with new palette options
 	s.cacheMutex.Lock()
-	s.frameCache = make(map[string][]*ebiten.Image)
-	s.cacheKeys = make([]string, 0, s.maxCacheSize)
+	// V7: Return all cached images to pool before clearing
+	for _, frames := range s.frameCache {
+		for _, img := range frames {
+			s.frameImagePool.Put(img)
+		}
+	}
+	s.frameCache = make(map[uint64][]*ebiten.Image)
+	s.cacheKeys = make([]uint64, 0, s.maxCacheSize)
 	s.cacheMutex.Unlock()
 
 	if s.logger != nil {
@@ -238,6 +297,12 @@ func (s *AnimationSystem) SetMaxCacheSize(maxSize int) {
 		}
 		for i := 0; i < toEvict && len(s.cacheKeys) > 0; i++ {
 			oldestKey := s.cacheKeys[0]
+			// V7: Return evicted images to pool
+			if evictedFrames, ok := s.frameCache[oldestKey]; ok {
+				for _, img := range evictedFrames {
+					s.frameImagePool.Put(img)
+				}
+			}
 			delete(s.frameCache, oldestKey)
 			s.cacheKeys = s.cacheKeys[1:]
 		}
@@ -423,57 +488,90 @@ func (s *AnimationSystem) updateEntityAnimation(entity *Entity, deltaTime, playe
 	if animComp == nil {
 		return nil
 	}
-
 	s.stats.AnimatedEntities++
 
-	spriteComp := s.getSpriteComponent(entity)
-	if spriteComp == nil {
-		if s.logger != nil {
-			s.logger.WithFields(logrus.Fields{
-				"entity_id": entity.ID,
-			}).Warn("entity has animation but no sprite component")
-		}
-		return nil
-	}
-
-	pos, ok := s.getEntityPosition(entity)
-	if !ok {
-		if s.logger != nil {
-			s.logger.WithFields(logrus.Fields{
-				"entity_id": entity.ID,
-			}).Warn("entity has animation but no position component")
-		}
+	spriteComp, pos, shouldContinue := s.validateAnimationComponents(entity)
+	if !shouldContinue {
 		return nil
 	}
 
 	if s.shouldCullEntity(entity, pos, viewport, hasViewport) {
-		s.stats.CulledByViewport++
-		if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
-			s.logger.WithFields(logrus.Fields{
-				"entity_id": entity.ID,
-				"pos_x":     pos.X,
-				"pos_y":     pos.Y,
-			}).Debug("entity culled by viewport")
-		}
+		s.logAndCountCulled(entity.ID, pos)
 		return nil
 	}
 
+	return s.processAnimation(entity, animComp, spriteComp, pos, playerX, playerY, deltaTime)
+}
+
+// validateAnimationComponents checks sprite and position components.
+func (s *AnimationSystem) validateAnimationComponents(entity *Entity) (*EbitenSprite, *PositionComponent, bool) {
+	spriteComp := s.getSpriteComponent(entity)
+	if spriteComp == nil {
+		s.logMissingSprite(entity.ID)
+		return nil, nil, false
+	}
+
+	pos, ok := s.getEntityPosition(entity)
+	if !ok {
+		s.logMissingPosition(entity.ID)
+		return nil, nil, false
+	}
+
+	return spriteComp, pos, true
+}
+
+// logMissingSprite logs when an entity lacks a sprite component.
+func (s *AnimationSystem) logMissingSprite(entityID uint64) {
+	if s.logger != nil {
+		s.logger.WithFields(logrus.Fields{
+			"entity_id": entityID,
+		}).Warn("entity has animation but no sprite component")
+	}
+}
+
+// logMissingPosition logs when an entity lacks a position component.
+func (s *AnimationSystem) logMissingPosition(entityID uint64) {
+	if s.logger != nil {
+		s.logger.WithFields(logrus.Fields{
+			"entity_id": entityID,
+		}).Warn("entity has animation but no position component")
+	}
+}
+
+// logAndCountCulled logs and counts culled entities.
+func (s *AnimationSystem) logAndCountCulled(entityID uint64, pos *PositionComponent) {
+	s.stats.CulledByViewport++
+	if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
+		s.logger.WithFields(logrus.Fields{
+			"entity_id": entityID,
+			"pos_x":     pos.X,
+			"pos_y":     pos.Y,
+		}).Debug("entity culled by viewport")
+	}
+}
+
+// processAnimation applies LOD, regenerates frames, and updates animation.
+func (s *AnimationSystem) processAnimation(entity *Entity, animComp *AnimationComponent, spriteComp *EbitenSprite, pos *PositionComponent, playerX, playerY, deltaTime float64) error {
 	effectiveDeltaTime := s.applyDistanceLOD(animComp, pos, playerX, playerY, deltaTime)
 
 	if err := s.regenerateFramesIfDirty(entity, animComp, spriteComp); err != nil {
-		if s.logger != nil {
-			s.logger.WithFields(logrus.Fields{
-				"entity_id": entity.ID,
-				"error":     err.Error(),
-			}).Error("failed to regenerate animation frames")
-		}
+		s.logFrameRegenerationError(entity.ID, err)
 		return err
 	}
 
 	s.updateAnimationFrame(animComp, effectiveDeltaTime)
 	s.syncSpriteFrame(entity, animComp, spriteComp)
-
 	return nil
+}
+
+// logFrameRegenerationError logs frame regeneration failures.
+func (s *AnimationSystem) logFrameRegenerationError(entityID uint64, err error) {
+	if s.logger != nil {
+		s.logger.WithFields(logrus.Fields{
+			"entity_id": entityID,
+			"error":     err.Error(),
+		}).Error("failed to regenerate animation frames")
+	}
 }
 
 // getEntityPosition retrieves entity position component.
@@ -828,7 +926,7 @@ func (s *AnimationSystem) logSpriteMiss(entity *Entity, cacheKey cache.CacheKey)
 func (s *AnimationSystem) generateAllFrames(entity *Entity, baseSprite *ebiten.Image, config sprites.Config, anim *AnimationComponent, frameCount int) ([]*ebiten.Image, error) {
 	// Get slice from pool and resize to needed capacity
 	frames := s.getFrameSlice(frameCount)
-	
+
 	for i := 0; i < frameCount; i++ {
 		frame, err := s.generateTransformedFrame(baseSprite, config, string(anim.CurrentState), i, frameCount)
 		if err != nil {
@@ -853,6 +951,7 @@ func (s *AnimationSystem) logFrameTransformError(entity *Entity, frameIndex int,
 
 // generateTransformedFrame creates a single animation frame by applying transformations to a base sprite.
 // This ensures consistent sprite appearance across all frames, with only position/rotation/scale changing.
+// V7 Performance fix: Uses pooled images and reusable DrawImageOptions to reduce allocations.
 func (s *AnimationSystem) generateTransformedFrame(baseSprite *ebiten.Image, config sprites.Config, state string, frameIndex, frameCount int) (*ebiten.Image, error) {
 	// Calculate transformations for this frame
 	offset := calculateAnimationOffset(state, frameIndex, frameCount)
@@ -872,12 +971,14 @@ func (s *AnimationSystem) generateTransformedFrame(baseSprite *ebiten.Image, con
 	}
 
 	// Create output image with room for transformations
+	// V7: Use pooled images instead of ebiten.NewImage
 	outputWidth := config.Width + int(math.Abs(offset.X)*2) + 10
 	outputHeight := config.Height + int(math.Abs(offset.Y)*2) + 10
-	img := ebiten.NewImage(outputWidth, outputHeight)
+	img := s.frameImagePool.Get(outputWidth, outputHeight)
 
-	// Apply transformations to the base sprite
-	opts := &ebiten.DrawImageOptions{}
+	// V7: Reuse pre-allocated DrawImageOptions, reset GeoM for this frame
+	s.transformDrawOpts.GeoM.Reset()
+	s.transformDrawOpts.ColorScale.Reset()
 
 	// Center sprite in output image
 	centerX := float64(outputWidth) / 2
@@ -885,22 +986,22 @@ func (s *AnimationSystem) generateTransformedFrame(baseSprite *ebiten.Image, con
 
 	// Apply scale around center
 	if scale != 1.0 {
-		opts.GeoM.Translate(-float64(config.Width)/2, -float64(config.Height)/2)
-		opts.GeoM.Scale(scale, scale)
-		opts.GeoM.Translate(float64(config.Width)/2, float64(config.Height)/2)
+		s.transformDrawOpts.GeoM.Translate(-float64(config.Width)/2, -float64(config.Height)/2)
+		s.transformDrawOpts.GeoM.Scale(scale, scale)
+		s.transformDrawOpts.GeoM.Translate(float64(config.Width)/2, float64(config.Height)/2)
 	}
 
 	// Apply rotation around center
 	if rotation != 0 {
-		opts.GeoM.Translate(-float64(config.Width)/2, -float64(config.Height)/2)
-		opts.GeoM.Rotate(rotation)
-		opts.GeoM.Translate(float64(config.Width)/2, float64(config.Height)/2)
+		s.transformDrawOpts.GeoM.Translate(-float64(config.Width)/2, -float64(config.Height)/2)
+		s.transformDrawOpts.GeoM.Rotate(rotation)
+		s.transformDrawOpts.GeoM.Translate(float64(config.Width)/2, float64(config.Height)/2)
 	}
 
 	// Apply position offset and center in output
-	opts.GeoM.Translate(centerX-float64(config.Width)/2+offset.X, centerY-float64(config.Height)/2+offset.Y)
+	s.transformDrawOpts.GeoM.Translate(centerX-float64(config.Width)/2+offset.X, centerY-float64(config.Height)/2+offset.Y)
 
-	img.DrawImage(baseSprite, opts)
+	img.DrawImage(baseSprite, &s.transformDrawOpts)
 
 	return img, nil
 }
@@ -1293,7 +1394,7 @@ func (s *AnimationSystem) getFrameCount(state AnimationState) int {
 }
 
 // cacheFrames stores frames in cache with LRU eviction.
-func (s *AnimationSystem) cacheFrames(key string, frames []*ebiten.Image) {
+func (s *AnimationSystem) cacheFrames(key uint64, frames []*ebiten.Image) {
 	s.cacheMutex.Lock()
 	defer s.cacheMutex.Unlock()
 
@@ -1312,8 +1413,11 @@ func (s *AnimationSystem) cacheFrames(key string, frames []*ebiten.Image) {
 				"max_size":    s.maxCacheSize,
 			}).Debug("evicting oldest cache entry")
 		}
-		// Return evicted frame slice to pool for reuse
+		// V7: Return evicted images to pool, then return slice to pool
 		if evictedFrames, ok := s.frameCache[oldestKey]; ok {
+			for _, img := range evictedFrames {
+				s.frameImagePool.Put(img)
+			}
 			s.putFrameSlice(evictedFrames)
 		}
 		delete(s.frameCache, oldestKey)
@@ -1333,20 +1437,49 @@ func (s *AnimationSystem) cacheFrames(key string, frames []*ebiten.Image) {
 	}
 }
 
+// stateToInt converts an AnimationState to its integer representation.
+// This enables zero-allocation cache keys by using uint64 instead of strings.
+func stateToInt(state AnimationState) uint8 {
+	switch state {
+	case AnimationStateIdle:
+		return 1
+	case AnimationStateWalk:
+		return 2
+	case AnimationStateRun:
+		return 3
+	case AnimationStateAttack:
+		return 4
+	case AnimationStateCast:
+		return 5
+	case AnimationStateHit:
+		return 6
+	case AnimationStateDeath:
+		return 7
+	case AnimationStateJump:
+		return 8
+	case AnimationStateCrouch:
+		return 9
+	case AnimationStateUse:
+		return 10
+	default:
+		return 255 // Unknown state
+	}
+}
+
 // getCacheKey generates a cache key for animation frames.
-// Optimized: Uses strconv.AppendInt instead of fmt.Sprintf for 4.3x speedup
-// and 62.5% allocation reduction (130ns/3allocs → 30ns/1alloc).
-func (s *AnimationSystem) getCacheKey(seed int64, state AnimationState) string {
-	// Pre-allocate buffer: max 20 digits for int64 + 1 underscore + state length
-	buf := make([]byte, 0, 21+len(state))
-	buf = strconv.AppendInt(buf, seed, 10)
-	buf = append(buf, '_')
-	buf = append(buf, state...)
-	key := string(buf)
+// Optimized: Uses uint64 combining seed + state for zero-allocation lookups.
+// Layout: upper 56 bits = seed (int64), lower 8 bits = state ID (uint8)
+func (s *AnimationSystem) getCacheKey(seed int64, state AnimationState) uint64 {
+	stateID := stateToInt(state)
+	// Combine: shift seed left 8 bits, OR with state ID in lower 8 bits
+	// stateToInt returns 1-based IDs (1–10 for known states, 255 for unknown),
+	// guaranteeing the key is never zero even when seed=0.
+	key := (uint64(seed) << 8) | uint64(stateID)
 	if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
 		s.logger.WithFields(logrus.Fields{
 			"seed":      seed,
 			"state":     state,
+			"state_id":  stateID,
 			"cache_key": key,
 		}).Debug("generated cache key")
 	}
@@ -1359,8 +1492,16 @@ func (s *AnimationSystem) ClearCache() {
 	defer s.cacheMutex.Unlock()
 
 	entriesCleared := len(s.frameCache)
-	s.frameCache = make(map[string][]*ebiten.Image)
-	s.cacheKeys = make([]string, 0, s.maxCacheSize)
+
+	// V7: Return all cached images to pool before clearing
+	for _, frames := range s.frameCache {
+		for _, img := range frames {
+			s.frameImagePool.Put(img)
+		}
+	}
+
+	s.frameCache = make(map[uint64][]*ebiten.Image)
+	s.cacheKeys = make([]uint64, 0, s.maxCacheSize)
 
 	if s.logger != nil {
 		s.logger.WithFields(logrus.Fields{
@@ -1578,4 +1719,122 @@ func (s *AnimationSystem) putFrameSlice(slice []*ebiten.Image) {
 	}
 	slice = slice[:0]
 	s.frameSlicePool.Put(slice)
+}
+
+// animationImagePool manages pools of Ebiten images for animation frames.
+// V7 Performance fix: Reduces GPU texture allocations during animation frame generation.
+// Uses bucketed sizes (64, 80, 96, 128, 160) to balance memory efficiency with reuse rate.
+// Animation frames typically need ~74-84 pixels for 64px sprites with transformations.
+type animationImagePool struct {
+	pool64  sync.Pool // For sizes up to 64
+	pool80  sync.Pool // For sizes up to 80 (typical animation frame size)
+	pool96  sync.Pool // For sizes up to 96
+	pool128 sync.Pool // For sizes up to 128
+	pool160 sync.Pool // For sizes up to 160 (large sprites with transforms)
+}
+
+// newAnimationImagePool creates a new animation frame image pool.
+func newAnimationImagePool() *animationImagePool {
+	p := &animationImagePool{}
+
+	p.pool64.New = func() interface{} {
+		return ebiten.NewImage(64, 64)
+	}
+	p.pool80.New = func() interface{} {
+		return ebiten.NewImage(80, 80)
+	}
+	p.pool96.New = func() interface{} {
+		return ebiten.NewImage(96, 96)
+	}
+	p.pool128.New = func() interface{} {
+		return ebiten.NewImage(128, 128)
+	}
+	p.pool160.New = func() interface{} {
+		return ebiten.NewImage(160, 160)
+	}
+
+	return p
+}
+
+// getBucket returns the appropriate bucket size for the given dimensions.
+// Rounds up to the nearest bucket to maximize reuse.
+func (p *animationImagePool) getBucket(width, height int) int {
+	maxDim := width
+	if height > maxDim {
+		maxDim = height
+	}
+	switch {
+	case maxDim <= 64:
+		return 64
+	case maxDim <= 80:
+		return 80
+	case maxDim <= 96:
+		return 96
+	case maxDim <= 128:
+		return 128
+	case maxDim <= 160:
+		return 160
+	default:
+		return 0 // No bucket available, will create non-pooled image
+	}
+}
+
+// Get retrieves an image from the pool, sized to at least the requested dimensions.
+// Returns a pooled image for common sizes, or creates a new one for non-standard sizes.
+// The caller must ensure the image is cleared before use (Clear() is called by Put).
+func (p *animationImagePool) Get(width, height int) *ebiten.Image {
+	bucket := p.getBucket(width, height)
+	switch bucket {
+	case 64:
+		return p.pool64.Get().(*ebiten.Image)
+	case 80:
+		return p.pool80.Get().(*ebiten.Image)
+	case 96:
+		return p.pool96.Get().(*ebiten.Image)
+	case 128:
+		return p.pool128.Get().(*ebiten.Image)
+	case 160:
+		return p.pool160.Get().(*ebiten.Image)
+	default:
+		// Non-standard size: create new image (not pooled)
+		return ebiten.NewImage(width, height)
+	}
+}
+
+// Put returns an image to the appropriate pool.
+// The image is cleared before being returned to the pool.
+// Only images matching bucket sizes are pooled; others are left for GC.
+func (p *animationImagePool) Put(img *ebiten.Image) {
+	if img == nil {
+		return
+	}
+
+	bounds := img.Bounds()
+	width := bounds.Dx()
+	height := bounds.Dy()
+
+	// Clear the image before returning to pool
+	img.Clear()
+
+	// Only pool images that match our bucket sizes exactly
+	if width == height {
+		switch width {
+		case 64:
+			p.pool64.Put(img)
+			return
+		case 80:
+			p.pool80.Put(img)
+			return
+		case 96:
+			p.pool96.Put(img)
+			return
+		case 128:
+			p.pool128.Put(img)
+			return
+		case 160:
+			p.pool160.Put(img)
+			return
+		}
+	}
+	// Non-standard size: let it be garbage collected
 }

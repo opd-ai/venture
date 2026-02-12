@@ -307,14 +307,24 @@ func (g *BSPGenerator) getRoom(node *bspNode) *Room {
 }
 
 // createCorridor carves a corridor between two points.
+// Corridors are 3 tiles wide (center ± corridorHalfWidth) so that 64×64
+// player sprites can pass through comfortably.
 func (g *BSPGenerator) createCorridor(terrain *Terrain, x1, y1, x2, y2 int) {
 	// Create L-shaped corridor
 	// First horizontal, then vertical
 	for x := min(x1, x2); x <= max(x1, x2); x++ {
-		terrain.SetTile(x, y1, TileCorridor)
+		for dy := -corridorHalfWidth; dy <= corridorHalfWidth; dy++ {
+			if terrain.IsInBounds(x, y1+dy) {
+				terrain.SetTile(x, y1+dy, TileCorridor)
+			}
+		}
 	}
 	for y := min(y1, y2); y <= max(y1, y2); y++ {
-		terrain.SetTile(x2, y, TileCorridor)
+		for dx := -corridorHalfWidth; dx <= corridorHalfWidth; dx++ {
+			if terrain.IsInBounds(x2+dx, y) {
+				terrain.SetTile(x2+dx, y, TileCorridor)
+			}
+		}
 	}
 }
 

@@ -185,6 +185,15 @@ func TestServerContextCancellation(t *testing.T) {
 	}
 }
 
+// mockAddr implements net.Addr interface for testing without concrete network types.
+type mockAddr struct {
+	network string
+	address string
+}
+
+func (m *mockAddr) Network() string { return m.network }
+func (m *mockAddr) String() string  { return m.address }
+
 // MockConn implements net.Conn for testing idle client cleanup.
 type MockConn struct {
 	closed bool
@@ -211,11 +220,11 @@ func (m *MockConn) Close() error {
 }
 
 func (m *MockConn) LocalAddr() net.Addr {
-	return &net.TCPAddr{IP: net.IPv4(127, 0, 0, 1), Port: 8080}
+	return &mockAddr{network: "tcp", address: "127.0.0.1:8080"}
 }
 
 func (m *MockConn) RemoteAddr() net.Addr {
-	return &net.TCPAddr{IP: net.IPv4(127, 0, 0, 1), Port: 9090}
+	return &mockAddr{network: "tcp", address: "127.0.0.1:9090"}
 }
 
 func (m *MockConn) SetDeadline(t time.Time) error      { return nil }

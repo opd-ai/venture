@@ -34,7 +34,7 @@ func TestGetScaleForGenre(t *testing.T) {
 		{"scifi", "Chromatic"},
 		{"horror", "Minor"},
 		{"cyberpunk", "Blues"},
-		{"post-apocalyptic", "Pentatonic"},
+		{"postapoc", "Pentatonic"},
 		{"unknown", "Major"},
 	}
 

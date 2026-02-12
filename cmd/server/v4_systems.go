@@ -7,8 +7,10 @@ package main
 
 import (
 	"github.com/opd-ai/venture/pkg/engine"
+	"github.com/opd-ai/venture/pkg/integration/trade_routes"
 	"github.com/opd-ai/venture/pkg/network/federation"
 	itemgen "github.com/opd-ai/venture/pkg/procgen/item"
+	"github.com/opd-ai/venture/pkg/world/raids"
 	"github.com/sirupsen/logrus"
 )
 
@@ -36,7 +38,9 @@ import (
 // Phase 29: Adaptive Music (1 system)
 // Phase 30: Environmental Storytelling (1 system)
 // Phase 31: NPC Dialog (1 system)
-func initializeV4Systems(world *engine.World, seed int64, logger *logrus.Logger) {
+//
+// Returns: CompanionLoyaltySystem for housing integration wiring
+func initializeV4Systems(world *engine.World, seed int64, logger *logrus.Logger, economySystem *engine.EconomySystem) (*engine.CompanionLoyaltySystem, *engine.NarrativeSystem) {
 	serverLogger := logger.WithField("component", "v4_systems")
 
 	// INTEGRATION FIX: Phase 21 - Complete Vehicle Systems (was: 1/4, now: 4/4)
@@ -106,9 +110,22 @@ func initializeV4Systems(world *engine.World, seed int64, logger *logrus.Logger)
 	miniGameSystem := engine.NewMiniGameSystem(world)
 	world.AddSystem(&miniGameSystemWrapper{system: miniGameSystem})
 
-	// INTEGRATION FIX: Phase 28 - Reputation & Alignment Systems (was: 0/3, now: 3/3)
+	// AUDIT FIX: Phase 95-96 - Fishing and Gathering Systems
+	// Gap: FishingSystem and GatheringSystem implemented but never initialized on server
+	// Fix: Added system initialization for fishing and resource gathering
+	// Note: These systems MUST run on server for deterministic multiplayer sync (see fishing_multiplayer_sync_test.go)
+	// Server-authoritative validation prevents client-side fishing/gathering manipulation
+	fishingSystem := engine.NewFishingSystem(world, seed+15000) // Use unique seed offset
+	world.AddSystem(fishingSystem)                              // No wrapper needed - uses Update(entities, deltaTime)
+	serverLogger.Debug("Fishing system initialized for multiplayer sync")
+
+	gatheringSystem := engine.NewGatheringSystem(world)
+	world.AddSystem(gatheringSystem) // No wrapper needed - uses Update(entities, deltaTime)
+	serverLogger.Debug("Gathering system initialized for multiplayer sync")
+
+	// INTEGRATION FIX: Phase 28 - Reputation & Alignment Systems (was: 0/4, now: 4/4)
 	// Gap: All reputation systems missing from server
-	// Fix: Added reputation, alignment, faction reaction for server-authoritative moral choices
+	// Fix: Added reputation, alignment, faction reaction, choice consequences for server-authoritative moral choices
 	reputationSystem := engine.NewReputationSystem(world, logger)
 	world.AddSystem(&reputationSystemWrapper{system: reputationSystem})
 
@@ -120,6 +137,10 @@ func initializeV4Systems(world *engine.World, seed int64, logger *logrus.Logger)
 
 	moralChoiceSystem := engine.NewMoralChoiceSystem(world, logger) // FIXED: Added logger parameter
 	world.AddSystem(&moralChoiceSystemWrapper{system: moralChoiceSystem})
+
+	// AUDIT.md Task 3: Server-side choice validation to prevent choice manipulation
+	choiceConsequencesSystem := engine.NewChoiceConsequencesSystem(world)
+	world.AddSystem(choiceConsequencesSystem) // No wrapper needed - uses Update(entities, deltaTime)
 
 	// INTEGRATION FIX: Phase 29 - Adaptive Music System (was: 0/1, now: 1/1)
 	// Gap: MusicTrigger system missing from server
@@ -143,7 +164,30 @@ func initializeV4Systems(world *engine.World, seed int64, logger *logrus.Logger)
 	npcDialogSystem := engine.NewNPCDialogSystem(world, seed) // FIXED: Added seed parameter
 	world.AddSystem(&npcDialogSystemWrapper{system: npcDialogSystem})
 
-	systemCount := 26 // Updated from 7 to 26 total V4.0+ systems
+	// AUDIT.md Task 4: Competitive PvP Systems (was: 0/4, now: 4/4)
+	// Gap: RaidSystem, TournamentSystem, PvPRatingSystem, LegendaryQuestSystem not initialized on server
+	// Fix: Added all competitive multiplayer features for server-authoritative PvP validation
+	// Note: All systems use Update(entities, deltaTime) - no wrappers needed
+	serverLogger.Debug("Initializing competitive PvP systems")
+
+	// Raid system for multiplayer raid instance management
+	raidSystem := engine.NewRaidSystem(world, seed)
+	world.AddSystem(raidSystem)
+
+	// Tournament system for scheduled competitive tournaments
+	tournamentSystem := engine.NewTournamentSystem(world, seed)
+	world.AddSystem(tournamentSystem)
+
+	// PvP rating system for competitive ranking and skill-based matchmaking
+	pvpRatingSystem := engine.NewPvPRatingSystem(world)
+	world.AddSystem(pvpRatingSystem)
+
+	// Legendary quest system requires raids.Manager for raid-based quest phases
+	raidManager := raids.NewManager(seed)
+	legendaryQuestSystem := engine.NewLegendaryQuestSystem(world, seed, raidManager)
+	world.AddSystem(legendaryQuestSystem)
+
+	systemCount := 33 // Updated from 31 to 33 total V4.0+ systems (includes fishing and gathering)
 
 	serverLogger.WithFields(logrus.Fields{
 		"vehicleSystems":     4, // VehicleMovement, VehicleDurability, Mounting, VehicleCombat
@@ -152,25 +196,30 @@ func initializeV4Systems(world *engine.World, seed int64, logger *logrus.Logger)
 		"magicSystems":       2, // SpellEffect, SpellCombination
 		"classSystems":       1, // ClassProgression
 		"expressionSystems":  2, // Expression, ExpressionCombo
-		"miniGameSystems":    1, // MiniGame
-		"reputationSystems":  4, // Reputation, Alignment, FactionReaction, MoralChoice
+		"miniGameSystems":    3, // MiniGame, Fishing, Gathering (multiplayer-synced minigames)
+		"reputationSystems":  5, // Reputation, Alignment, FactionReaction, MoralChoice, ChoiceConsequences
 		"musicSystems":       1, // MusicTrigger (headless)
 		"storySystems":       1, // Discovery
 		"achievementSystems": 1, // Achievement
 		"dialogSystems":      1, // NPCDialog
+		"competitiveSystems": 4, // Raid, Tournament, PvPRating, LegendaryQuest (server-authoritative)
 		"totalV4Systems":     systemCount,
 		"note":               "All systems running in server-authoritative mode (no audio/graphics)",
 		"integrationStatus":  "COMPLETE - 100% feature parity with client",
-	}).Info("V4.0+ systems initialized on server (Phases 21-31)")
+	}).Info("V4.0+ systems initialized on server (Phases 21-31 + fishing/gathering)")
+
+	return companionLoyaltySystem, nil
 }
 
 // initializeV5SystemsServer initializes Version 5.0 social and communication systems on the server.
-func initializeV5SystemsServer(world *engine.World, logger *logrus.Logger) {
+// Returns the EnhancedChatSystem for player registration during connection handling.
+// AUDIT.md Task 8: Server-side chat history persistence with EnhancedChatSystem.
+func initializeV5SystemsServer(world *engine.World, logger *logrus.Logger) *engine.EnhancedChatSystem {
 	serverLogger := logger.WithField("component", "v5_systems")
 
-	// Phase 32: Chat system for player-to-player communication (server-authoritative)
-	chatSystem := engine.NewChatSystem(world)
-	world.AddSystem(&chatSystemWrapper{system: chatSystem})
+	// Phase 32: Enhanced chat system with persistent history (server-authoritative)
+	enhancedChatSystem := engine.NewEnhancedChatSystem(world)
+	world.AddSystem(&enhancedChatSystemWrapper{system: enhancedChatSystem})
 
 	// Phase 40: Mail system for asynchronous messaging (server-authoritative)
 	mailSystem := engine.NewMailSystem(world)
@@ -181,16 +230,18 @@ func initializeV5SystemsServer(world *engine.World, logger *logrus.Logger) {
 	world.AddSystem(&courierSystemWrapper{system: courierSystem})
 
 	serverLogger.WithFields(logrus.Fields{
-		"chatSystems":    1, // ChatSystem
+		"chatSystems":    1, // EnhancedChatSystem (with persistence)
 		"mailSystems":    2, // MailSystem, CourierSystem
 		"totalV5Systems": 3,
-		"note":           "Social systems for V5.0 multiplayer communication",
-	}).Info("V5.0 social systems initialized on server (chat, mail, courier)")
+		"note":           "Social systems for V5.0 multiplayer communication with chat history",
+	}).Info("V5.0 social systems initialized on server (enhanced chat, mail, courier)")
+
+	return enhancedChatSystem
 }
 
 // initializeV6SystemsServer initializes Version 6.0 persistent world and federation systems on the server.
 // ROADMAP_V6.md Phases 39-42: Cross-server travel, bounties, politics, territories, rankings, events
-func initializeV6SystemsServer(world *engine.World, seed int64, logger *logrus.Logger) {
+func initializeV6SystemsServer(world *engine.World, seed int64, logger *logrus.Logger, economySystem *engine.EconomySystem) {
 	serverLogger := logger.WithField("component", "v6_systems")
 
 	// Phase 38: Federation protocol for server-to-server communication
@@ -214,16 +265,32 @@ func initializeV6SystemsServer(world *engine.World, seed int64, logger *logrus.L
 	politicsSystem := engine.NewPoliticsSystem(world)
 	world.AddSystem(&politicsSystemWrapper{system: politicsSystem})
 
-	// Note: TerritoryManager, RankingManager, and EventManager are world-level managers
+	// Phase 42: World events system for server-authoritative event generation
+	worldEventsSystem := engine.NewWorldEventsSystemWithLogger(world, seed, serverLogger.Logger)
+	world.AddSystem(worldEventsSystem)
+
+	// Phase 57.3: Trade routes system for automated merchant caravans
+	tradeRouteManager := trade_routes.NewRouteManager(serverID, seed)
+	world.AddSystem(&tradeRouteManagerWrapper{system: tradeRouteManager})
+
+	// Wire trade routes to economy system for price updates
+	if economySystem != nil {
+		tradeRouteManager.SetPriceUpdateHandler(economySystem)
+		serverLogger.Debug("trade routes wired to economy system for price updates")
+	}
+
+	// Note: TerritoryManager, RankingManager are world-level managers
 	// that don't need system wrappers. They're accessed directly by server logic.
 
 	serverLogger.WithFields(logrus.Fields{
 		"federationSystems": 1, // PortalSystem
 		"bountySystem":      1, // BountySystem
 		"politicsSystems":   1, // PoliticsSystem
-		"totalV6Systems":    3,
+		"worldEventSystem":  1, // WorldEventManager
+		"tradeRouteSystem":  1, // TradeRouteManager
+		"totalV6Systems":    5,
 		"note":              "Persistent world & federation systems for V6.0",
-	}).Info("V6.0 persistent world systems initialized on server (portals, bounties, politics)")
+	}).Info("V6.0 persistent world systems initialized on server (portals, bounties, politics, world events, trade routes)")
 }
 
 // INTEGRATION FIX [Category A]: Core Gameplay Systems Missing from Server
@@ -232,9 +299,10 @@ func initializeV6SystemsServer(world *engine.World, seed int64, logger *logrus.L
 // Roadmap: Multiple phases (V3-V6) - complete multiplayer parity
 // Note: All system wrapper definitions moved to system_wrappers.go
 
-// initializeCoreGameplaySystems adds all missing server-critical systems
-// These systems were previously client-only, causing multiplayer desync
-func initializeCoreGameplaySystems(world *engine.World, seed int64, logger *logrus.Logger, inventorySystem *engine.InventorySystem, itemGen *itemgen.ItemGenerator) {
+// initializeCoreGameplaySystems adds all missing server-critical systems.
+// These systems were previously client-only, causing multiplayer desync.
+// Returns the CraftingSystem for wiring with V9 housing integration.
+func initializeCoreGameplaySystems(world *engine.World, seed int64, logger *logrus.Logger, inventorySystem *engine.InventorySystem, itemGen *itemgen.ItemGenerator) (*engine.CraftingSystem, *engine.NarrativeSystem) {
 	serverLogger := logger.WithField("component", "core_gameplay_systems")
 
 	// Phase 13-14: Core Interaction Systems (V3.0)
@@ -363,4 +431,6 @@ func initializeCoreGameplaySystems(world *engine.World, seed int64, logger *logr
 		"note":               "Server-authoritative gameplay systems for multiplayer parity",
 		"integrationStatus":  "COMPLETE - All gameplay systems now on server",
 	}).Info("Core gameplay systems initialized on server (V3-V6 features)")
+
+	return craftingSystem, narrativeSystem
 }

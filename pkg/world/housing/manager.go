@@ -158,61 +158,10 @@ func (m *Manager) CreateHouse(ownerID string, buildingData interface{}, seed int
 		return "", fmt.Errorf("housing is disabled")
 	}
 
-	// Generate plot ID
 	plotID := fmt.Sprintf("house_%s_%d", ownerID, len(m.playerPlots[ownerID]))
+	size := m.determinePlotSize(buildingData)
+	position := m.generatePlotPosition(ownerID, seed, size)
 
-	// Default position and size
-	position := Vector2{X: 0, Y: 0}
-	size := SizeMedium
-
-	// Type assert to extract building metadata
-	// Expected structure: building with Width, Height fields (tiles)
-	if buildingData != nil {
-		type BuildingInterface interface {
-			GetWidth() int
-			GetHeight() int
-		}
-
-		if b, ok := buildingData.(BuildingInterface); ok {
-			width := b.GetWidth()
-			height := b.GetHeight()
-
-			// Determine plot size based on building dimensions
-			if width <= 8 && height <= 8 {
-				size = SizeSmall // 8x8
-			} else if width <= 16 && height <= 16 {
-				size = SizeMedium // 16x16
-			} else if width <= 24 && height <= 24 {
-				size = SizeLarge // 24x24
-			} else {
-				size = SizeEstate // 32x32
-			}
-		}
-	}
-
-	// Generate deterministic position based on seed
-	// This prevents all houses from spawning at (0,0)
-	// Use seed combined with current player plot count for unique positions
-	// Note: math/rand is appropriate here for deterministic procedural generation.
-	// The goal is reproducibility from the same seed, not cryptographic security.
-	// Each call creates a new rand.Rand instance, making this safe for concurrent use
-	// as the instance is not shared between goroutines.
-	rng := rand.New(rand.NewSource(seed + int64(len(m.playerPlots[ownerID]))))
-
-	// Distribute houses in a grid pattern with some randomness
-	// Grid cells are spaced by 64 units (average plot size + padding)
-	gridSpacing := 64.0
-	gridX := float64(len(m.playerPlots[ownerID]) % 10) // 10 houses per row
-	gridY := float64(len(m.playerPlots[ownerID]) / 10)
-
-	// Add random offset within the grid cell for variety
-	offsetX := rng.Float64() * (gridSpacing - float64(size))
-	offsetY := rng.Float64() * (gridSpacing - float64(size))
-
-	position.X = gridX*gridSpacing + offsetX
-	position.Y = gridY*gridSpacing + offsetY
-
-	// Create plot
 	plot := &Plot{
 		ID:       plotID,
 		OwnerID:  ownerID,
@@ -225,6 +174,59 @@ func (m *Manager) CreateHouse(ownerID string, buildingData interface{}, seed int
 	}
 
 	return plotID, nil
+}
+
+// determinePlotSize determines the plot size based on building dimensions.
+// Returns SizeMedium if buildingData is nil or doesn't implement BuildingInterface.
+func (m *Manager) determinePlotSize(buildingData interface{}) BuildingSize {
+	if buildingData == nil {
+		return SizeMedium
+	}
+
+	type BuildingInterface interface {
+		GetWidth() int
+		GetHeight() int
+	}
+
+	b, ok := buildingData.(BuildingInterface)
+	if !ok {
+		return SizeMedium
+	}
+
+	width := b.GetWidth()
+	height := b.GetHeight()
+
+	if width <= 8 && height <= 8 {
+		return SizeSmall // 8x8
+	} else if width <= 16 && height <= 16 {
+		return SizeMedium // 16x16
+	} else if width <= 24 && height <= 24 {
+		return SizeLarge // 24x24
+	}
+	return SizeEstate // 32x32
+}
+
+// generatePlotPosition generates a deterministic position for a house plot.
+// Uses grid-based distribution with randomized offsets within cells.
+func (m *Manager) generatePlotPosition(ownerID string, seed int64, size BuildingSize) Vector2 {
+	// Note: math/rand is appropriate here for deterministic procedural generation.
+	// The goal is reproducibility from the same seed, not cryptographic security.
+	// Each call creates a new rand.Rand instance, making this safe for concurrent use
+	// as the instance is not shared between goroutines.
+	rng := rand.New(rand.NewSource(seed + int64(len(m.playerPlots[ownerID]))))
+
+	const gridSpacing = 64.0
+	plotCount := len(m.playerPlots[ownerID])
+	gridX := float64(plotCount % 10) // 10 houses per row
+	gridY := float64(plotCount / 10)
+
+	offsetX := rng.Float64() * (gridSpacing - float64(size))
+	offsetY := rng.Float64() * (gridSpacing - float64(size))
+
+	return Vector2{
+		X: gridX*gridSpacing + offsetX,
+		Y: gridY*gridSpacing + offsetY,
+	}
 }
 
 // GetHouse retrieves a house plot by ID.

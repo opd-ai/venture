@@ -95,3 +95,16 @@ func (s *System) GetStats() map[string]interface{} {
 	defer s.mu.RUnlock()
 	return s.marketplace.GetStats()
 }
+
+// ApplyTradeImpact applies price changes from external trade activity.
+// This method enables trade routes and other systems to influence market prices.
+// itemType: The type of item affected (e.g., "Timber", "Ore")
+// priceChange: Multiplier for price impact (1.1 = +10%, 0.9 = -10%)
+// volume: Quantity traded, used to weight the impact
+func (s *System) ApplyTradeImpact(itemType string, priceChange float64, volume int) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	pricingEngine := s.marketplace.GetPricingEngine()
+	pricingEngine.ApplyTradeImpact(itemType, priceChange, volume)
+}

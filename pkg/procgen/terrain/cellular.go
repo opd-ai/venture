@@ -415,16 +415,25 @@ func (g *CellularGenerator) floodFill(terrain *Terrain, startX, startY int, visi
 }
 
 // connectRegions creates a corridor between two regions.
+// Corridors are 3 tiles wide to accommodate 64×64 player sprites.
 func (g *CellularGenerator) connectRegions(terrain *Terrain, tile1, tile2 *Tile) {
 	x1, y1 := tile1.X, tile1.Y
 	x2, y2 := tile2.X, tile2.Y
 
-	// Create L-shaped corridor
+	// Create L-shaped corridor (3 tiles wide)
 	for x := min(x1, x2); x <= max(x1, x2); x++ {
-		terrain.SetTile(x, y1, TileCorridor)
+		for dy := -corridorHalfWidth; dy <= corridorHalfWidth; dy++ {
+			if terrain.IsInBounds(x, y1+dy) {
+				terrain.SetTile(x, y1+dy, TileCorridor)
+			}
+		}
 	}
 	for y := min(y1, y2); y <= max(y1, y2); y++ {
-		terrain.SetTile(x2, y, TileCorridor)
+		for dx := -corridorHalfWidth; dx <= corridorHalfWidth; dx++ {
+			if terrain.IsInBounds(x2+dx, y) {
+				terrain.SetTile(x2+dx, y, TileCorridor)
+			}
+		}
 	}
 }
 

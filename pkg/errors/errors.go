@@ -81,17 +81,30 @@ func (e *VentureError) IsRetryable() bool {
 	return e.Retryable
 }
 
+// isRetryableType determines if an error type is retryable by default.
+// Network, timeout, database, rate limit, and resource errors are retryable.
+func isRetryableType(errType ErrorType) bool {
+	switch errType {
+	case ErrorTypeNetwork, ErrorTypeTimeout, ErrorTypeDatabase, ErrorTypeRateLimit, ErrorTypeResource:
+		return true
+	default:
+		return false
+	}
+}
+
 // New creates a new VentureError with the specified type and message.
+// Retryability is set based on the error type.
 func New(errType ErrorType, message string) *VentureError {
 	return &VentureError{
 		Type:      errType,
 		Message:   message,
 		Context:   make(map[string]interface{}),
-		Retryable: false,
+		Retryable: isRetryableType(errType),
 	}
 }
 
 // Wrap wraps an existing error with VentureError context.
+// Retryability is set based on the error type.
 func Wrap(err error, errType ErrorType, message string) *VentureError {
 	if err == nil {
 		return nil
@@ -101,11 +114,12 @@ func Wrap(err error, errType ErrorType, message string) *VentureError {
 		Message:   message,
 		Err:       err,
 		Context:   make(map[string]interface{}),
-		Retryable: false,
+		Retryable: isRetryableType(errType),
 	}
 }
 
 // Wrapf wraps an existing error with formatted message.
+// Retryability is set based on the error type.
 func Wrapf(err error, errType ErrorType, format string, args ...interface{}) *VentureError {
 	if err == nil {
 		return nil
@@ -115,7 +129,7 @@ func Wrapf(err error, errType ErrorType, format string, args ...interface{}) *Ve
 		Message:   fmt.Sprintf(format, args...),
 		Err:       err,
 		Context:   make(map[string]interface{}),
-		Retryable: false,
+		Retryable: isRetryableType(errType),
 	}
 }
 

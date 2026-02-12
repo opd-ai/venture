@@ -23,6 +23,9 @@ type StubInput struct {
 	// Mouse state
 	MouseX, MouseY int
 	MousePressed   bool
+
+	// Mouse delta (Gap #8 fix)
+	MouseDeltaX, MouseDeltaY int
 }
 
 // Type implements Component interface.
@@ -96,6 +99,11 @@ func (i *StubInput) SetMovement(x, y float64) {
 // SetActionPressed implements InputProvider interface.
 func (i *StubInput) SetActionPressed(pressed bool) {
 	i.ActionPressed = pressed
+}
+
+// GetMouseDelta implements InputProvider interface (Gap #8 fix).
+func (i *StubInput) GetMouseDelta() (dx, dy int) {
+	return i.MouseDeltaX, i.MouseDeltaY
 }
 
 // NewStubInput creates a new test input component.

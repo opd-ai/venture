@@ -324,11 +324,14 @@ venture-server -network-compression
 
 **Client-side:**
 ```bash
-# Connect with high-latency mode
-venture-client -server $SERVER_IP:8080 -high-latency
+# Connect with multiplayer flag
+venture-client -multiplayer -server $SERVER_IP:8080
+```
 
-# Increase timeout
-venture-client -server $SERVER_IP:8080 -timeout 30
+**Server-side (high-latency):**
+```bash
+# Use high-latency mode for slow connections (Tor, satellite)
+venture-server -high-latency -port 8080
 ```
 
 **Network-side:**

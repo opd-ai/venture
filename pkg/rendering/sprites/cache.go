@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"hash"
 	"hash/fnv"
-	"sort"
 	"strconv"
 	"sync"
 
@@ -88,25 +87,22 @@ func NewCache(capacity int) *Cache {
 
 // Get retrieves a sprite from the cache by configuration.
 // Returns nil if not found.
+// Performance: Uses single Lock instead of RLock→Lock upgrade to reduce mutex operations.
 func (c *Cache) Get(config Config) *ebiten.Image {
 	key := c.hashConfig(config)
 
-	c.mutex.RLock()
-	entry, found := c.cache[key]
-	c.mutex.RUnlock()
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
 
+	entry, found := c.cache[key]
 	if found {
-		c.mutex.Lock()
 		// Move to front of LRU list (most recently used)
 		c.lruList.MoveToFront(entry.element)
 		c.hits++
-		c.mutex.Unlock()
 		return entry.sprite
 	}
 
-	c.mutex.Lock()
 	c.misses++
-	c.mutex.Unlock()
 	return nil
 }
 
@@ -247,16 +243,39 @@ func (c *Cache) hashConfig(config Config) uint64 {
 	h.Write(buf)
 
 	// Hash custom parameters in sorted key order for determinism
-	// Go map iteration order is randomized, so we must sort keys
+	// Performance: Use pre-sorted keys from config to avoid O(k log k) sort per lookup
 	if config.Custom != nil && len(config.Custom) > 0 {
-		keys := make([]string, 0, len(config.Custom))
-		for key := range config.Custom {
-			keys = append(keys, key)
-		}
-		sort.Strings(keys)
+		// Get pre-sorted keys from config (auto-sorts if needed)
+		keys := config.GetSortedCustomKeys()
+
+		// Reuse buf for custom params to avoid fmt.Fprintf allocations
+		buf = buf[:0]
 		for _, key := range keys {
-			fmt.Fprintf(h, "|%s=%v", key, config.Custom[key])
+			buf = append(buf, '|')
+			buf = append(buf, key...)
+			buf = append(buf, '=')
+
+			// Type switch to avoid fmt.Sprintf allocations
+			value := config.Custom[key]
+			switch v := value.(type) {
+			case string:
+				buf = append(buf, v...)
+			case int:
+				buf = strconv.AppendInt(buf, int64(v), 10)
+			case int64:
+				buf = strconv.AppendInt(buf, v, 10)
+			case bool:
+				buf = strconv.AppendBool(buf, v)
+			case float64:
+				buf = strconv.AppendFloat(buf, v, 'f', -1, 64)
+			case float32:
+				buf = strconv.AppendFloat(buf, float64(v), 'f', -1, 32)
+			default:
+				// Fallback for unsupported types (should be rare)
+				buf = append(buf, fmt.Sprintf("%v", v)...)
+			}
 		}
+		h.Write(buf)
 	}
 
 	sum := h.Sum64()

@@ -213,43 +213,16 @@ func (s *ScriptingSystem) executeScript(script *Script, ctx *ScriptContext) (any
 
 // evaluateSource evaluates script source code.
 func (s *ScriptingSystem) evaluateSource(source string, ctx *ScriptContext) (any, error) {
-	// Split into statements
 	statements := strings.Split(source, ";")
-
 	var result any
+
 	for _, stmt := range statements {
 		stmt = strings.TrimSpace(stmt)
 		if stmt == "" {
 			continue
 		}
 
-		// Check for function calls
-		if strings.Contains(stmt, "(") {
-			r, err := s.evaluateFunctionCall(stmt, ctx)
-			if err != nil {
-				return nil, err
-			}
-			result = r
-			continue
-		}
-
-		// Check for variable assignment
-		if strings.Contains(stmt, "=") && !strings.Contains(stmt, "==") {
-			parts := strings.SplitN(stmt, "=", 2)
-			if len(parts) == 2 {
-				name := strings.TrimSpace(parts[0])
-				value, err := s.evaluator.Evaluate(strings.TrimSpace(parts[1]), ctx.Variables)
-				if err != nil {
-					return nil, err
-				}
-				ctx.Variables[name] = value
-				result = value
-				continue
-			}
-		}
-
-		// Otherwise, evaluate as expression
-		r, err := s.evaluator.Evaluate(stmt, ctx.Variables)
+		r, err := s.evaluateStatement(stmt, ctx)
 		if err != nil {
 			return nil, err
 		}
@@ -257,6 +230,41 @@ func (s *ScriptingSystem) evaluateSource(source string, ctx *ScriptContext) (any
 	}
 
 	return result, nil
+}
+
+// evaluateStatement processes a single statement based on its type.
+func (s *ScriptingSystem) evaluateStatement(stmt string, ctx *ScriptContext) (any, error) {
+	if strings.Contains(stmt, "(") {
+		return s.evaluateFunctionCall(stmt, ctx)
+	}
+
+	if s.isAssignment(stmt) {
+		return s.evaluateAssignment(stmt, ctx)
+	}
+
+	return s.evaluator.Evaluate(stmt, ctx.Variables)
+}
+
+// isAssignment checks if a statement is a variable assignment.
+func (s *ScriptingSystem) isAssignment(stmt string) bool {
+	return strings.Contains(stmt, "=") && !strings.Contains(stmt, "==")
+}
+
+// evaluateAssignment processes a variable assignment statement.
+func (s *ScriptingSystem) evaluateAssignment(stmt string, ctx *ScriptContext) (any, error) {
+	parts := strings.SplitN(stmt, "=", 2)
+	if len(parts) != 2 {
+		return nil, fmt.Errorf("invalid assignment: %s", stmt)
+	}
+
+	name := strings.TrimSpace(parts[0])
+	value, err := s.evaluator.Evaluate(strings.TrimSpace(parts[1]), ctx.Variables)
+	if err != nil {
+		return nil, err
+	}
+
+	ctx.Variables[name] = value
+	return value, nil
 }
 
 // evaluateFunctionCall parses and executes a function call.

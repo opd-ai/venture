@@ -29,7 +29,11 @@ func NewEngine(seed int64) *Engine {
 }
 
 // NewEngineWithSampleRate creates a new synthesis engine with a custom sample rate.
+// If sampleRate is less than or equal to 0, it defaults to 44100 Hz.
 func NewEngineWithSampleRate(sampleRate int, seed int64) *Engine {
+	if sampleRate <= 0 {
+		sampleRate = 44100
+	}
 	return &Engine{
 		sampleRate: sampleRate,
 		seed:       seed,

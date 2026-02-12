@@ -11,6 +11,7 @@ package main
 import (
 	"github.com/opd-ai/venture/pkg/engine"
 	"github.com/opd-ai/venture/pkg/engine/physics/fluids"
+	"github.com/opd-ai/venture/pkg/integration/trade_routes"
 	"github.com/opd-ai/venture/pkg/network/federation"
 )
 
@@ -155,6 +156,14 @@ func (w *chatSystemWrapper) Update(entities []*engine.Entity, deltaTime float64)
 	w.system.Update(deltaTime)
 }
 
+type enhancedChatSystemWrapper struct {
+	system *engine.EnhancedChatSystem
+}
+
+func (w *enhancedChatSystemWrapper) Update(entities []*engine.Entity, deltaTime float64) {
+	w.system.Update(deltaTime)
+}
+
 type mailSystemWrapper struct {
 	system *engine.MailSystem
 }
@@ -257,4 +266,14 @@ type fluidSimulatorWrapper struct {
 
 func (w *fluidSimulatorWrapper) Update(entities []*engine.Entity, deltaTime float64) {
 	w.system.Update(deltaTime)
+}
+
+// tradeRouteManagerWrapper adapts trade_routes.RouteManager to the System interface for server.
+// This enables automated trade route updates via the ECS instead of manual API calls.
+type tradeRouteManagerWrapper struct {
+	system *trade_routes.RouteManager
+}
+
+func (w *tradeRouteManagerWrapper) Update(entities []*engine.Entity, deltaTime float64) {
+	w.system.UpdateRoutes()
 }

@@ -317,42 +317,96 @@ func HighQualityConfig() Config {
 
 // Validate checks if the quality configuration is valid.
 func (c *Config) Validate() error {
+	validators := []func() error{
+		c.validateSpriteDetailLevel,
+		c.validateAntiAliasingQuality,
+		c.validateTileLayerCount,
+		c.validateParticleCountMultiplier,
+		c.validateDecorationDensity,
+		c.validateShadowSampleCount,
+		c.validateMaxParticles,
+		c.validateCacheSizeMB,
+		c.validateParticleLODDistance,
+	}
+
+	for _, validator := range validators {
+		if err := validator(); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// validateSpriteDetailLevel checks SpriteDetailLevel is in valid range.
+func (c *Config) validateSpriteDetailLevel() error {
 	if c.SpriteDetailLevel < 0.0 || c.SpriteDetailLevel > 1.0 {
 		return fmt.Errorf("quality: SpriteDetailLevel must be in range [0.0, 1.0], got %f", c.SpriteDetailLevel)
 	}
+	return nil
+}
 
+// validateAntiAliasingQuality checks AntiAliasingQuality is in valid range.
+func (c *Config) validateAntiAliasingQuality() error {
 	if c.AntiAliasingQuality < 0 || c.AntiAliasingQuality > 3 {
 		return fmt.Errorf("quality: AntiAliasingQuality must be in range [0, 3], got %d", c.AntiAliasingQuality)
 	}
+	return nil
+}
 
+// validateTileLayerCount checks TileLayerCount is in valid range.
+func (c *Config) validateTileLayerCount() error {
 	if c.TileLayerCount < 1 || c.TileLayerCount > 3 {
 		return fmt.Errorf("quality: TileLayerCount must be in range [1, 3], got %d", c.TileLayerCount)
 	}
+	return nil
+}
 
+// validateParticleCountMultiplier checks ParticleCountMultiplier is in valid range.
+func (c *Config) validateParticleCountMultiplier() error {
 	if c.ParticleCountMultiplier < 0.0 || c.ParticleCountMultiplier > 1.0 {
 		return fmt.Errorf("quality: ParticleCountMultiplier must be in range [0.0, 1.0], got %f", c.ParticleCountMultiplier)
 	}
+	return nil
+}
 
+// validateDecorationDensity checks DecorationDensity is in valid range.
+func (c *Config) validateDecorationDensity() error {
 	if c.DecorationDensity < 0.0 || c.DecorationDensity > 1.0 {
 		return fmt.Errorf("quality: DecorationDensity must be in range [0.0, 1.0], got %f", c.DecorationDensity)
 	}
+	return nil
+}
 
+// validateShadowSampleCount checks ShadowSampleCount is in valid range.
+func (c *Config) validateShadowSampleCount() error {
 	if c.ShadowSampleCount < 1 || c.ShadowSampleCount > 5 {
 		return fmt.Errorf("quality: ShadowSampleCount must be in range [1, 5], got %d", c.ShadowSampleCount)
 	}
+	return nil
+}
 
+// validateMaxParticles checks MaxParticles is non-negative.
+func (c *Config) validateMaxParticles() error {
 	if c.MaxParticles < 0 {
 		return fmt.Errorf("quality: MaxParticles must be non-negative, got %d", c.MaxParticles)
 	}
+	return nil
+}
 
+// validateCacheSizeMB checks CacheSizeMB is non-negative.
+func (c *Config) validateCacheSizeMB() error {
 	if c.CacheSizeMB < 0 {
 		return fmt.Errorf("quality: CacheSizeMB must be non-negative, got %d", c.CacheSizeMB)
 	}
+	return nil
+}
 
+// validateParticleLODDistance checks ParticleLODDistance is non-negative.
+func (c *Config) validateParticleLODDistance() error {
 	if c.ParticleLODDistance < 0.0 {
 		return fmt.Errorf("quality: ParticleLODDistance must be non-negative, got %f", c.ParticleLODDistance)
 	}
-
 	return nil
 }
 

@@ -454,52 +454,80 @@ func (s *MoralChoiceSystem) StartRedemption(entity *Entity, factionName string, 
 // UpdateRedemptionProgress updates progress on a specific redemption action.
 // Returns an error if the redemption arc or action doesn't exist.
 func (s *MoralChoiceSystem) UpdateRedemptionProgress(entity *Entity, factionName string, actionIndex, progressDelta int) error {
+	moralChoice, err := s.getMoralChoiceComponent(entity)
+	if err != nil {
+		return err
+	}
+
+	arc, err := s.validateRedemptionArc(moralChoice, factionName, actionIndex)
+	if err != nil {
+		return err
+	}
+
+	action := &arc.RequiredActions[actionIndex]
+	wasComplete := action.Progress >= action.Quantity
+	action.Progress += progressDelta
+
+	if !wasComplete && action.IsComplete() {
+		s.handleActionCompletion(entity, arc, action, factionName)
+	}
+
+	return nil
+}
+
+// getMoralChoiceComponent retrieves and validates the moral choice component.
+func (s *MoralChoiceSystem) getMoralChoiceComponent(entity *Entity) (*MoralChoiceComponent, error) {
 	comp, ok := entity.GetComponent("moral_choice")
 	if comp == nil {
-		return fmt.Errorf("entity has no moral choice component")
+		return nil, fmt.Errorf("entity has no moral choice component")
 	}
 
 	moralChoice, ok := comp.(*MoralChoiceComponent)
 	if !ok {
-		return fmt.Errorf("invalid moral choice component type")
+		return nil, fmt.Errorf("invalid moral choice component type")
 	}
 
+	return moralChoice, nil
+}
+
+// validateRedemptionArc checks if the redemption arc and action index are valid.
+func (s *MoralChoiceSystem) validateRedemptionArc(moralChoice *MoralChoiceComponent, factionName string, actionIndex int) (*RedemptionArc, error) {
 	arc := moralChoice.GetRedemptionArc(factionName)
 	if arc == nil {
-		return fmt.Errorf("no redemption arc found for faction %s", factionName)
+		return nil, fmt.Errorf("no redemption arc found for faction %s", factionName)
 	}
 
 	if actionIndex < 0 || actionIndex >= len(arc.RequiredActions) {
-		return fmt.Errorf("invalid action index %d (arc has %d actions)", actionIndex, len(arc.RequiredActions))
+		return nil, fmt.Errorf("invalid action index %d (arc has %d actions)", actionIndex, len(arc.RequiredActions))
 	}
 
-	action := &arc.RequiredActions[actionIndex]
-	action.Progress += progressDelta
+	return arc, nil
+}
 
-	// Check if action just completed
-	wasComplete := action.Progress-progressDelta >= action.Quantity
-	nowComplete := action.IsComplete()
+// handleActionCompletion processes completion of a redemption action.
+func (s *MoralChoiceSystem) handleActionCompletion(entity *Entity, arc *RedemptionArc, action *RedemptionAction, factionName string) {
+	arc.CompletedActions++
+	s.applyReputationGain(entity, action, factionName)
+}
 
-	if !wasComplete && nowComplete {
-		arc.CompletedActions++
-
-		// Apply reputation gain
-		repComp, ok := entity.GetComponent("reputation")
-		if ok {
-			if repComp != nil {
-				if rep, ok := repComp.(*ReputationComponent); ok {
-					rep.AdjustReputation(factionName, action.ReputationGain)
-					s.logger.Info("Redemption action completed",
-						"entity", entity.ID,
-						"faction", factionName,
-						"action", action.Description,
-						"reputationGain", action.ReputationGain)
-				}
-			}
-		}
+// applyReputationGain applies reputation gain for completed redemption action.
+func (s *MoralChoiceSystem) applyReputationGain(entity *Entity, action *RedemptionAction, factionName string) {
+	repComp, ok := entity.GetComponent("reputation")
+	if !ok || repComp == nil {
+		return
 	}
 
-	return nil
+	rep, ok := repComp.(*ReputationComponent)
+	if !ok {
+		return
+	}
+
+	rep.AdjustReputation(factionName, action.ReputationGain)
+	s.logger.Info("Redemption action completed",
+		"entity", entity.ID,
+		"faction", factionName,
+		"action", action.Description,
+		"reputationGain", action.ReputationGain)
 }
 
 // OfferFactionConflictChoice presents a choice where the player must pick sides in a faction conflict.

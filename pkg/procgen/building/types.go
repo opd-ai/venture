@@ -236,41 +236,44 @@ func (b *Building) IsNavigable() bool {
 		return false
 	}
 
-	// Find entrance room
-	entranceIdx := -1
-	for i, room := range b.Rooms {
-		if room.Type == RoomEntrance {
-			entranceIdx = i
-			break
-		}
-	}
+	entranceIdx := b.findEntranceRoom()
 	if entranceIdx == -1 {
 		return false
 	}
 
-	// BFS to check connectivity
+	visited := b.findConnectedRooms(entranceIdx)
+	return len(visited) == len(b.Rooms)
+}
+
+// findEntranceRoom returns the index of the entrance room, or -1 if not found.
+func (b *Building) findEntranceRoom() int {
+	for i, room := range b.Rooms {
+		if room.Type == RoomEntrance {
+			return i
+		}
+	}
+	return -1
+}
+
+// findConnectedRooms performs BFS to find all rooms connected to the starting room.
+func (b *Building) findConnectedRooms(startIdx int) map[int]bool {
 	visited := make(map[int]bool)
-	queue := []int{entranceIdx}
-	visited[entranceIdx] = true
+	queue := []int{startIdx}
+	visited[startIdx] = true
 
 	for len(queue) > 0 {
 		current := queue[0]
 		queue = queue[1:]
 
-		// Find connected rooms via doors
 		for i, room := range b.Rooms {
-			if visited[i] {
-				continue
-			}
-			if b.areRoomsConnected(b.Rooms[current], room) {
+			if !visited[i] && b.areRoomsConnected(b.Rooms[current], room) {
 				visited[i] = true
 				queue = append(queue, i)
 			}
 		}
 	}
 
-	// All rooms should be reachable
-	return len(visited) == len(b.Rooms)
+	return visited
 }
 
 // areRoomsConnected checks if two rooms share a door

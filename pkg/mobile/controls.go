@@ -662,6 +662,12 @@ func (l *VirtualControlsLayout) SetVisible(visible bool) {
 	l.Visible = visible
 }
 
+// IsVisible returns true if virtual controls are currently visible.
+// Platform parity fix: Allows checking visibility state for UI logic.
+func (l *VirtualControlsLayout) IsVisible() bool {
+	return l.Visible
+}
+
 // Platform parity fix: Additional input getter methods for complete action coverage
 
 // IsInventoryPressed returns true when the inventory button is pressed.

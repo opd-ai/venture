@@ -12,7 +12,6 @@ import (
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/vector"
 	"github.com/opd-ai/venture/pkg/rendering/particles"
-	"github.com/sirupsen/logrus"
 )
 
 // EbitenSprite holds visual representation data for an entity (Ebiten implementation).
@@ -205,6 +204,11 @@ type EbitenRenderSystem struct {
 
 	// Pre-allocated DrawImageOptions to avoid per-sprite allocations in drawSpriteImage
 	drawImageOptions ebiten.DrawImageOptions
+
+	// Render interpolation alpha (0.0 to 1.0) for smooth position interpolation
+	// between previous tick (PrevX/PrevY) and current tick (X/Y) positions.
+	// Set by the game loop each Draw() frame based on elapsed time since last Update().
+	renderAlpha float64
 }
 
 // RenderStats tracks rendering performance metrics.
@@ -284,6 +288,28 @@ func (r *EbitenRenderSystem) SetParallelRenderer(renderer ParallelRendererProvid
 // GetStats returns rendering performance statistics.
 func (r *EbitenRenderSystem) GetStats() RenderStats {
 	return r.stats
+}
+
+// SetRenderAlpha sets the interpolation alpha for smooth rendering between ticks.
+// alpha ranges from 0.0 (render at previous tick position) to 1.0 (render at current tick position).
+// Called by the game loop each Draw() frame.
+func (r *EbitenRenderSystem) SetRenderAlpha(alpha float64) {
+	r.renderAlpha = alpha
+}
+
+// interpolatePosition returns the interpolated screen position for an entity,
+// blending between the previous tick position (PrevX/PrevY) and current position (X/Y)
+// using the render alpha. Both entity and camera positions are interpolated to
+// eliminate visual snapping on high-refresh-rate monitors.
+func (r *EbitenRenderSystem) interpolatePosition(pos *PositionComponent) (float64, float64) {
+	// If previous position is uninitialized (zero values and current is non-zero),
+	// or alpha is 1.0, use current position directly
+	if r.renderAlpha >= 1.0 || (pos.PrevX == 0 && pos.PrevY == 0 && (pos.X != 0 || pos.Y != 0)) {
+		return r.cameraSystem.WorldToScreen(pos.X, pos.Y)
+	}
+	interpX := pos.PrevX + (pos.X-pos.PrevX)*r.renderAlpha
+	interpY := pos.PrevY + (pos.Y-pos.PrevY)*r.renderAlpha
+	return r.cameraSystem.WorldToScreenInterpolated(interpX, interpY, r.renderAlpha)
 }
 
 // Update is called every frame but doesn't modify entities.
@@ -467,7 +493,8 @@ func (r *EbitenRenderSystem) buildBatchGeometry(entities []*Entity, batchSpriteI
 			continue
 		}
 
-		screenX, screenY := r.cameraSystem.WorldToScreen(pos.X, pos.Y)
+		// Use interpolated position for smooth rendering between simulation ticks
+		screenX, screenY := r.interpolatePosition(pos)
 		flashAlpha, tintR, tintG, tintB, tintA := r.extractVisualFeedback(entity)
 
 		r.appendSpriteVertices(&r.vertexBuffer, &r.indexBuffer, sprite, screenX, screenY, flashAlpha, tintR, tintG, tintB, tintA, batchSpriteImage, &vertexIndex)
@@ -630,59 +657,86 @@ func (r *EbitenRenderSystem) returnBatchMap(batches map[*ebiten.Image][]*Entity)
 // getVisibleEntities returns only entities visible in the current viewport.
 // This uses spatial partitioning for efficient culling.
 func (r *EbitenRenderSystem) getVisibleEntities(entities []*Entity) []*Entity {
-	// Get camera bounds in world space
+	camera := r.getValidCamera()
+	if camera == nil {
+		return entities // No camera, render all
+	}
+
+	viewportBounds := r.calculateViewportBounds(camera)
+	visible := r.queryVisibleEntities(viewportBounds)
+	visible = r.ensurePlayersIncluded(entities, visible)
+
+	return visible
+}
+
+// getValidCamera retrieves and validates the active camera component.
+func (r *EbitenRenderSystem) getValidCamera() *CameraComponent {
 	cam := r.cameraSystem.activeCamera
 	if cam == nil {
-		return entities // No camera, render all
+		return nil
 	}
 
 	camComp, ok := cam.GetComponent("camera")
 	if !ok {
-		return entities
-	}
-	camera, ok := camComp.(*CameraComponent)
-	if !ok {
-		return entities
+		return nil
 	}
 
-	// Calculate viewport bounds in world space with margin for sprites
+	camera, ok := camComp.(*CameraComponent)
+	if !ok {
+		return nil
+	}
+
+	return camera
+}
+
+// calculateViewportBounds computes the viewport bounds in world space with margin.
+func (r *EbitenRenderSystem) calculateViewportBounds(camera *CameraComponent) Bounds {
 	margin := 100.0 // Extra space to render sprites partially off-screen
 
 	// BUG FIX: Use camera's actual position (camera.X, camera.Y) which includes
 	// smoothing and bounds clamping, NOT the entity's position component.
-	// The camera position is updated by CameraSystem and represents where
-	// the camera is actually looking, which may differ from the entity position
-	// due to smoothing, offsets, and bounds constraints.
-
-	// Calculate world viewport bounds
 	viewportWidth := float64(r.cameraSystem.ScreenWidth) / camera.Zoom
 	viewportHeight := float64(r.cameraSystem.ScreenHeight) / camera.Zoom
 
-	viewportBounds := Bounds{
+	return Bounds{
 		X:      camera.X - viewportWidth/2 - margin,
 		Y:      camera.Y - viewportHeight/2 - margin,
 		Width:  viewportWidth + margin*2,
 		Height: viewportHeight + margin*2,
 	}
+}
 
-	// Query spatial partition for entities in viewport using zero-allocation method
+// queryVisibleEntities retrieves entities within the viewport bounds.
+func (r *EbitenRenderSystem) queryVisibleEntities(viewportBounds Bounds) []*Entity {
 	r.viewportQueryBuffer = r.viewportQueryBuffer[:0]
 	visible := r.spatialPartition.QueryBoundsInto(viewportBounds, r.viewportQueryBuffer)
 	r.viewportQueryBuffer = visible // Update buffer reference in case it was reallocated
+	return visible
+}
 
-	// CRITICAL FIX: Always include local player(s) regardless of viewport culling
-	// Player entities have input component and should never be culled
-	// Reuse player buffer to reduce per-frame allocations
-	r.playerBuffer = r.playerBuffer[:0]
-
-	// Build O(1) lookup set from visible entities to replace O(n × m) nested loop
-	// Clear the map by deleting all keys (reuses underlying memory)
+// ensurePlayersIncluded adds player entities to visible list if not already included.
+func (r *EbitenRenderSystem) ensurePlayersIncluded(allEntities, visible []*Entity) []*Entity {
+	// Build O(1) lookup set from visible entities
 	clear(r.visibleEntityIDs)
 	for _, visibleEntity := range visible {
 		r.visibleEntityIDs[visibleEntity.ID] = struct{}{}
 	}
 
-	// Check players with O(1) lookup instead of O(m) scan per player
+	r.playerBuffer = r.collectNonVisiblePlayers(allEntities)
+
+	// Append player entities to visible list
+	if len(r.playerBuffer) > 0 {
+		visible = append(visible, r.playerBuffer...)
+		r.viewportQueryBuffer = visible // Update in case append reallocated
+	}
+
+	return visible
+}
+
+// collectNonVisiblePlayers collects player entities not already in the visible set.
+func (r *EbitenRenderSystem) collectNonVisiblePlayers(entities []*Entity) []*Entity {
+	r.playerBuffer = r.playerBuffer[:0]
+
 	for _, entity := range entities {
 		if entity.HasComponent("input") {
 			// O(1) map lookup instead of O(m) linear scan
@@ -692,13 +746,7 @@ func (r *EbitenRenderSystem) getVisibleEntities(entities []*Entity) []*Entity {
 		}
 	}
 
-	// Append player entities to visible list
-	if len(r.playerBuffer) > 0 {
-		visible = append(visible, r.playerBuffer...)
-		r.viewportQueryBuffer = visible // Update in case append reallocated
-	}
-
-	return visible
+	return r.playerBuffer
 }
 
 // drawEntity renders a single entity.
@@ -710,7 +758,8 @@ func (r *EbitenRenderSystem) drawEntity(entity *Entity) {
 
 	r.syncSpriteState(entity, sprite)
 
-	screenX, screenY := r.cameraSystem.WorldToScreen(pos.X, pos.Y)
+	// Use interpolated position for smooth rendering between simulation ticks
+	screenX, screenY := r.interpolatePosition(pos)
 
 	if r.enableCulling && !r.spatialCullingUsed && !r.cameraSystem.IsVisible(pos.X, pos.Y, sprite.Width) {
 		return
@@ -841,6 +890,10 @@ func (r *EbitenRenderSystem) drawSpriteImage(img *ebiten.Image, sprite *EbitenSp
 // drawFallbackRect renders a colored rectangle when no sprite image exists.
 func (r *EbitenRenderSystem) drawFallbackRect(sprite *EbitenSprite, screenX, screenY, layerYOffset, layerAlpha, flashAlpha float64) {
 	col := sprite.Color
+	// Safety check: default to opaque magenta if no color is set (makes missing colors obvious)
+	if col == nil {
+		col = color.RGBA{R: 255, G: 0, B: 255, A: 255}
+	}
 
 	if flashAlpha > 0 {
 		red, green, blue, alpha := col.RGBA()
@@ -1035,22 +1088,17 @@ func (r *EbitenRenderSystem) drawParticleSystem(system *particles.ParticleSystem
 }
 
 // drawRect draws a filled rectangle at the given screen position.
+// PERF V5: Removed defer recover() from hot path - nil check provides adequate safety.
 func (r *EbitenRenderSystem) drawRect(x, y, width, height float64, col color.Color) {
 	// Safety check: ensure screen is available
 	if r.screen == nil {
 		return
 	}
 
-	// Defensive: Catch panics from vector drawing (can happen during initialization or threading issues)
-	defer func() {
-		if recovered := recover(); recovered != nil {
-			logrus.WithFields(logrus.Fields{
-				"component": "render_system",
-				"function":  "drawRect",
-				"panic":     recovered,
-			}).Warn("recovered from vector drawing panic")
-		}
-	}()
+	// Safety check: ensure color is not nil
+	if col == nil {
+		return
+	}
 
 	// Convert color
 	red, green, blue, alpha := col.RGBA()
@@ -1111,24 +1159,29 @@ func (r *EbitenRenderSystem) drawColliders(entities []*Entity) {
 // Optimized: Uses reusable buffers to eliminate per-frame allocations.
 // Optimized: Caches Y positions during collection to avoid O(n log n) map lookups during sort.
 func (r *EbitenRenderSystem) sortEntitiesByLayer(entities []*Entity) []*Entity {
-	// Reuse buffers, clearing them first
+	r.prepareSortBuffers(entities)
+	r.collectEntitiesWithSprites(entities)
+	r.sortCollectedEntities()
+	return r.extractSortedEntities()
+}
+
+// prepareSortBuffers reuses and grows buffers as needed for sorting.
+func (r *EbitenRenderSystem) prepareSortBuffers(entities []*Entity) {
 	r.sortBuffer = r.sortBuffer[:0]
 	r.sortCacheBuffer = r.sortCacheBuffer[:0]
 
-	// Grow buffers if needed (rare, only when entity count increases)
 	if cap(r.sortBuffer) < len(entities) {
 		r.sortBuffer = make([]*Entity, 0, len(entities))
 	}
 	if cap(r.sortCacheBuffer) < len(entities) {
 		r.sortCacheBuffer = make([]entitySprite, 0, len(entities))
 	}
+}
 
-	// Collect entities with sprites and cache their sprite components and Y positions.
-	// Caching Y here eliminates O(n log n) map lookups during sort comparisons.
-	// Uses cached GetSprite() getter for ~93x faster component access.
+// collectEntitiesWithSprites gathers entities with sprites and caches their Y positions.
+func (r *EbitenRenderSystem) collectEntitiesWithSprites(entities []*Entity) {
 	for _, entity := range entities {
 		if sprite := entity.GetSprite(); sprite != nil {
-			// Cache Y position now to avoid map lookups during sort
 			yPos := 0.0
 			if pos := entity.GetPosition(); pos != nil {
 				yPos = pos.Y
@@ -1141,11 +1194,10 @@ func (r *EbitenRenderSystem) sortEntitiesByLayer(entities []*Entity) []*Entity {
 			})
 		}
 	}
+}
 
-	// Sort using slices.SortFunc which is a generic function that avoids
-	// the interface allocation that sort.Sort causes when converting the slice
-	// to a sort.Interface. This eliminates 1 allocation per frame (24 bytes).
-	// Determinism is guaranteed by tertiary sort on entity ID - no two entities have identical sort keys.
+// sortCollectedEntities sorts cached entities by layer, Y position, and ID.
+func (r *EbitenRenderSystem) sortCollectedEntities() {
 	slices.SortFunc(r.sortCacheBuffer, func(a, b entitySprite) int {
 		// Primary sort: by sprite layer
 		if a.layer != b.layer {
@@ -1158,12 +1210,13 @@ func (r *EbitenRenderSystem) sortEntitiesByLayer(entities []*Entity) []*Entity {
 		// Tertiary sort: by entity ID for complete determinism
 		return cmp.Compare(a.entity.ID, b.entity.ID)
 	})
+}
 
-	// Extract sorted entities into reusable buffer
+// extractSortedEntities extracts the sorted entity list from the cache buffer.
+func (r *EbitenRenderSystem) extractSortedEntities() []*Entity {
 	for _, es := range r.sortCacheBuffer {
 		r.sortBuffer = append(r.sortBuffer, es.entity)
 	}
-
 	return r.sortBuffer
 }
 

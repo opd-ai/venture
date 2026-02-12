@@ -159,14 +159,15 @@
     </style>
 </head>
 <body>
-    <header>
-        <h1>⚔️ Venture</h1>
+    <header role="banner">
+        <h1 id="game-title">⚔️ Venture</h1>
         <p class="tagline">A Fully Procedural Multiplayer Action-RPG</p>
     </header>
     
+    <main role="main" aria-labelledby="game-title">
     <div class="container">
         <div style="text-align: center;">
-            <a href="game.html" class="play-button">🎮 Play Now</a>
+            <a href="game.html" class="play-button" role="button" aria-label="Start playing Venture game">🎮 Play Now</a>
         </div>
         
         <div class="loading-notice">
@@ -174,48 +175,48 @@
             Please be patient while the WebAssembly binary downloads and initializes.
         </div>
         
-        <div class="features">
-            <h2>Features</h2>
-            <div class="feature-grid">
-                <div class="feature">
+        <section class="features" aria-labelledby="features-heading">
+            <h2 id="features-heading">Features</h2>
+            <div class="feature-grid" role="list">
+                <div class="feature" role="listitem">
                     <h3>🎲 100% Procedural</h3>
                     <p>Every aspect—graphics, audio, and gameplay—is generated at runtime. No external assets, infinite variety.</p>
                 </div>
-                <div class="feature">
+                <div class="feature" role="listitem">
                     <h3>🌍 Multiple Genres</h3>
                     <p>Experience fantasy, sci-fi, horror, or cyberpunk themes, each with unique visuals and gameplay elements.</p>
                 </div>
-                <div class="feature">
+                <div class="feature" role="listitem">
                     <h3>⚔️ Real-Time Combat</h3>
                     <p>Action-RPG combat inspired by classics like The Legend of Zelda, with procedurally generated enemies and weapons.</p>
                 </div>
-                <div class="feature">
+                <div class="feature" role="listitem">
                     <h3>🏠 Player Housing</h3>
                     <p>Build and customize your own house with procedurally generated furniture and decorations.</p>
                 </div>
-                <div class="feature">
+                <div class="feature" role="listitem">
                     <h3>🤝 Multiplayer Ready</h3>
                     <p>Join other players in cooperative gameplay with high-latency support for global connectivity.</p>
                 </div>
-                <div class="feature">
+                <div class="feature" role="listitem">
                     <h3>📱 Cross-Platform</h3>
                     <p>Play on desktop (Linux, macOS, Windows), web browsers (WebAssembly), and mobile (iOS, Android).</p>
                 </div>
             </div>
-        </div>
+        </section>
         
-        <div class="info">
-            <h3>Browser Requirements</h3>
+        <section class="info" aria-labelledby="browser-requirements">
+            <h3 id="browser-requirements">Browser Requirements</h3>
             <ul>
                 <li>WebAssembly support (all modern browsers)</li>
                 <li>WebGL for rendering</li>
                 <li>Web Audio API for sound</li>
                 <li>Recommended: Chrome/Edge 90+, Firefox 88+, Safari 14+</li>
             </ul>
-        </div>
+        </section>
         
-        <div class="info">
-            <h3>Controls</h3>
+        <section class="info" aria-labelledby="game-controls">
+            <h3 id="game-controls">Controls</h3>
             <ul>
                 <li>Arrow Keys / WASD - Move</li>
                 <li>Space - Attack</li>
@@ -224,20 +225,21 @@
                 <li>M - Map</li>
                 <li>ESC - Menu</li>
             </ul>
-        </div>
+        </section>
         
-        <div class="info">
-            <h3>About</h3>
+        <section class="info" aria-labelledby="about-game">
+            <h3 id="about-game">About</h3>
             <p style="color: #b0b0b0; line-height: 1.8; margin-top: 10px;">
                 Venture is an open-source procedural action-RPG built with Go and the Ebiten game engine. 
                 The entire game—from graphics to music to quests—is generated procedurally at runtime, 
                 creating a unique experience with every playthrough. Built using Entity-Component-System 
                 architecture for maximum performance and flexibility.
             </p>
-        </div>
+        </section>
     </div>
+    </main>
     
-    <footer>
+    <footer role="contentinfo">
         <p>
             Built with <a href="https://go.dev/" target="_blank">Go</a> and 
             <a href="https://ebitengine.org/" target="_blank">Ebiten</a>

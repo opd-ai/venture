@@ -202,66 +202,107 @@ func (s *StatusEffectSystem) updateShieldComponent(entity *Entity, deltaTime flo
 
 // applyPeriodicEffect handles tick-based status effects.
 func (s *StatusEffectSystem) applyPeriodicEffect(entity *Entity, effect *StatusEffectComponent) {
+	s.logPeriodicEffect(entity.ID, effect)
+
+	health := s.getHealthComponent(entity, effect.EffectType)
+	if health == nil {
+		return
+	}
+
+	s.applyEffectToHealth(entity.ID, effect, health)
+}
+
+// logPeriodicEffect logs the periodic effect application.
+func (s *StatusEffectSystem) logPeriodicEffect(entityID uint64, effect *StatusEffectComponent) {
 	if s.logger != nil {
 		s.logger.WithFields(logrus.Fields{
-			"entity_id":   entity.ID,
+			"entity_id":   entityID,
 			"effect_type": effect.EffectType,
 			"magnitude":   effect.Magnitude,
 		}).Debug("Applying periodic effect to entity")
 	}
+}
 
+// getHealthComponent retrieves and validates the health component.
+func (s *StatusEffectSystem) getHealthComponent(entity *Entity, effectType string) *HealthComponent {
 	healthComp, hasHealth := entity.GetComponent("health")
 	if !hasHealth {
-		if s.logger != nil {
-			s.logger.WithFields(logrus.Fields{
-				"entity_id":   entity.ID,
-				"effect_type": effect.EffectType,
-			}).Warn("Entity has no health component for periodic effect")
-		}
-		return
+		s.logMissingHealth(entity.ID, effectType)
+		return nil
 	}
+
 	health, ok := healthComp.(*HealthComponent)
 	if !ok {
-		if s.logger != nil {
-			s.logger.WithFields(logrus.Fields{
-				"entity_id":      entity.ID,
-				"component_type": "health",
-			}).Warn("Failed to type assert health component")
-		}
-		return
+		s.logHealthTypeError(entity.ID)
+		return nil
 	}
 
+	return health
+}
+
+// logMissingHealth logs when an entity lacks a health component.
+func (s *StatusEffectSystem) logMissingHealth(entityID uint64, effectType string) {
+	if s.logger != nil {
+		s.logger.WithFields(logrus.Fields{
+			"entity_id":   entityID,
+			"effect_type": effectType,
+		}).Warn("Entity has no health component for periodic effect")
+	}
+}
+
+// logHealthTypeError logs when health component type assertion fails.
+func (s *StatusEffectSystem) logHealthTypeError(entityID uint64) {
+	if s.logger != nil {
+		s.logger.WithFields(logrus.Fields{
+			"entity_id":      entityID,
+			"component_type": "health",
+		}).Warn("Failed to type assert health component")
+	}
+}
+
+// applyEffectToHealth applies the specific effect type to health.
+func (s *StatusEffectSystem) applyEffectToHealth(entityID uint64, effect *StatusEffectComponent, health *HealthComponent) {
 	switch effect.EffectType {
 	case "burning":
-		// Fire DoT (damage over time)
-		if s.logger != nil {
-			s.logger.WithFields(logrus.Fields{
-				"entity_id": entity.ID,
-				"damage":    effect.Magnitude,
-			}).Debug("Applying burning damage")
-		}
-		health.TakeDamage(effect.Magnitude)
-
+		s.applyBurning(entityID, effect.Magnitude, health)
 	case "poisoned":
-		// Poison DoT (ignores armor)
-		if s.logger != nil {
-			s.logger.WithFields(logrus.Fields{
-				"entity_id": entity.ID,
-				"damage":    effect.Magnitude,
-			}).Debug("Applying poison damage")
-		}
-		health.TakeDamage(effect.Magnitude)
-
+		s.applyPoison(entityID, effect.Magnitude, health)
 	case "regeneration":
-		// Healing over time
-		if s.logger != nil {
-			s.logger.WithFields(logrus.Fields{
-				"entity_id": entity.ID,
-				"healing":   effect.Magnitude,
-			}).Debug("Applying regeneration healing")
-		}
-		health.Heal(effect.Magnitude)
+		s.applyRegeneration(entityID, effect.Magnitude, health)
 	}
+}
+
+// applyBurning applies fire damage over time.
+func (s *StatusEffectSystem) applyBurning(entityID uint64, magnitude float64, health *HealthComponent) {
+	if s.logger != nil {
+		s.logger.WithFields(logrus.Fields{
+			"entity_id": entityID,
+			"damage":    magnitude,
+		}).Debug("Applying burning damage")
+	}
+	health.TakeDamage(magnitude)
+}
+
+// applyPoison applies poison damage that ignores armor.
+func (s *StatusEffectSystem) applyPoison(entityID uint64, magnitude float64, health *HealthComponent) {
+	if s.logger != nil {
+		s.logger.WithFields(logrus.Fields{
+			"entity_id": entityID,
+			"damage":    magnitude,
+		}).Debug("Applying poison damage")
+	}
+	health.TakeDamage(magnitude)
+}
+
+// applyRegeneration applies healing over time.
+func (s *StatusEffectSystem) applyRegeneration(entityID uint64, magnitude float64, health *HealthComponent) {
+	if s.logger != nil {
+		s.logger.WithFields(logrus.Fields{
+			"entity_id": entityID,
+			"healing":   magnitude,
+		}).Debug("Applying regeneration healing")
+	}
+	health.Heal(magnitude)
 }
 
 // removeEffectModifiers removes stat modifications when effect expires.
@@ -580,50 +621,68 @@ func (s *StatusEffectSystem) applyVulnerabilityEffect(entityID uint64, stats *St
 
 // ApplyShield creates a shield on the entity.
 func (s *StatusEffectSystem) ApplyShield(entity *Entity, amount, duration float64) {
-	if s.logger != nil {
-		s.logger.WithFields(logrus.Fields{
-			"entity_id": entity.ID,
+	logShieldApplication(s.logger, entity.ID, amount, duration)
+
+	if enhanceExistingShield(s.logger, entity, amount, duration) {
+		return
+	}
+
+	createNewShield(s.logger, entity, amount, duration)
+}
+
+// logShieldApplication logs the shield application attempt.
+func logShieldApplication(logger *logrus.Entry, entityID uint64, amount, duration float64) {
+	if logger != nil {
+		logger.WithFields(logrus.Fields{
+			"entity_id": entityID,
 			"amount":    amount,
 			"duration":  duration,
 		}).Debug("Applying shield to entity")
 	}
+}
 
-	// Check if shield already exists
-	if shieldComp, hasShield := entity.GetComponent("shield"); hasShield {
-		// Add to existing shield
-		shield, ok := shieldComp.(*ShieldComponent)
-		if !ok {
-			if s.logger != nil {
-				s.logger.WithFields(logrus.Fields{
-					"entity_id":      entity.ID,
-					"component_type": "shield",
-				}).Warn("Failed to type assert shield component, creating new shield")
-			}
-			// Create new shield if type assertion fails (fall through)
-		} else {
-			oldAmount := shield.Amount
-			shield.Amount += amount
-			if shield.Amount > shield.MaxAmount {
-				shield.MaxAmount = shield.Amount
-			}
-			if duration > shield.Duration {
-				shield.Duration = duration
-				shield.MaxDuration = duration
-			}
-			if s.logger != nil {
-				s.logger.WithFields(logrus.Fields{
-					"entity_id":    entity.ID,
-					"old_amount":   oldAmount,
-					"new_amount":   shield.Amount,
-					"max_amount":   shield.MaxAmount,
-					"new_duration": shield.Duration,
-				}).Debug("Enhanced existing shield")
-			}
-			return
-		}
+// enhanceExistingShield attempts to enhance an existing shield.
+func enhanceExistingShield(logger *logrus.Entry, entity *Entity, amount, duration float64) bool {
+	shieldComp, hasShield := entity.GetComponent("shield")
+	if !hasShield {
+		return false
 	}
 
-	// Create new shield
+	shield, ok := shieldComp.(*ShieldComponent)
+	if !ok {
+		if logger != nil {
+			logger.WithFields(logrus.Fields{
+				"entity_id":      entity.ID,
+				"component_type": "shield",
+			}).Warn("Failed to type assert shield component, creating new shield")
+		}
+		return false
+	}
+
+	oldAmount := shield.Amount
+	shield.Amount += amount
+	if shield.Amount > shield.MaxAmount {
+		shield.MaxAmount = shield.Amount
+	}
+	if duration > shield.Duration {
+		shield.Duration = duration
+		shield.MaxDuration = duration
+	}
+
+	if logger != nil {
+		logger.WithFields(logrus.Fields{
+			"entity_id":    entity.ID,
+			"old_amount":   oldAmount,
+			"new_amount":   shield.Amount,
+			"max_amount":   shield.MaxAmount,
+			"new_duration": shield.Duration,
+		}).Debug("Enhanced existing shield")
+	}
+	return true
+}
+
+// createNewShield creates a new shield component for the entity.
+func createNewShield(logger *logrus.Entry, entity *Entity, amount, duration float64) {
 	shield := &ShieldComponent{
 		Amount:      amount,
 		MaxAmount:   amount,
@@ -632,8 +691,8 @@ func (s *StatusEffectSystem) ApplyShield(entity *Entity, amount, duration float6
 	}
 	entity.AddComponent(shield)
 
-	if s.logger != nil {
-		s.logger.WithFields(logrus.Fields{
+	if logger != nil {
+		logger.WithFields(logrus.Fields{
 			"entity_id": entity.ID,
 			"amount":    amount,
 			"duration":  duration,

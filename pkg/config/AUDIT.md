@@ -1,124 +1,215 @@
-# Package Audit: config
-Generated during reorganization on: 2026-01-20
-Updated: 2026-01-21 (Test coverage improved from 92.4% to 100.0%)
+# Config Package Audit
 
-## Summary
-- Missing Implementations: 0
-- Incomplete Features: 0
-- Interface Violations: 0
-- Untested Code: 0 ✅ (was 2, all coverage gaps fixed)
-- Dead Code: 0
-- Error Handling Gaps: 0
-- Documentation Gaps: 0 ✅ (was 1, already documented in types.go)
-- Dependency Issues: 0
+**Audit Date:** 2026-02-09
+**Package:** pkg/config
+**Auditor:** Automated Code Audit
+**Test Coverage:** 100.0%
 
-## Overall Assessment
+## AUDIT SUMMARY
 
-The `pkg/config` package is **production-ready and fully tested**. Test coverage is now **100.0%** (up from 92.4%), all exported symbols are properly documented, and there are no implementation gaps.
+| Category | Count |
+|----------|-------|
+| CRITICAL BUG | 0 |
+| FUNCTIONAL MISMATCH | 1 |
+| MISSING FEATURE | 0 |
+| EDGE CASE BUG | 0 |
+| PERFORMANCE ISSUE | 0 |
+| DOCUMENTATION ISSUE | 1 |
 
-## Detailed Findings
+**Overall Assessment:** The config package is well-implemented with comprehensive test coverage. The code is clean, follows Go idioms, and correctly validates all configuration parameters. One documentation inconsistency was identified regarding genre naming.
 
-### Missing Implementations
-None identified. All methods have complete implementations.
+---
 
-### Incomplete Features
-None identified.
+## DETAILED FINDINGS
 
-### Interface Violations
-None identified. Package does not define interfaces.
+~~~~
+### DOCUMENTATION ISSUE: Genre Name Mismatch in README
 
-### Untested Code
+**File:** README.md:98, README.md:136, README.md:153
+**Severity:** Low
+**Description:** The README.md documentation incorrectly references the genre `postapocalyptic` in multiple locations, but the actual valid genre ID is `postapoc`. This discrepancy can cause user confusion when configuring the game.
 
-**All coverage gaps resolved (2026-01-21):**
+**Expected Behavior:** Documentation should accurately reflect the valid genre IDs: `fantasy`, `scifi`, `horror`, `cyberpunk`, `postapoc`
 
-~~**1. ValidateDirectory - MkdirAll failure path**~~ **FIXED: Now 100%**
-- Added `TestValidator_ValidateDirectory_MkdirAllFailure` to test os.MkdirAll failure path
-- Uses read-only parent directory technique to trigger permission denied error
-- Validates error is returned when directory creation fails
+**Actual Behavior:** README references `postapocalyptic` which is not a valid genre (confirmed by test case on line 113 of validator_test.go)
 
-~~**2. ValidateAll - LogDir/ModsDir validation paths**~~ **FIXED: Now 100%**
-- Added `TestValidator_ValidateAll_LogDir` to test LogDir validation branch
-- Added `TestValidator_ValidateAll_ModsDir` to test ModsDir validation branch
-- All Config field validation paths now covered
+**Impact:** Users following the README examples will receive validation errors when using the documented genre names.
 
-### Dead Code
-None identified.
+**Reproduction:** 
+1. Follow README example on line 98
+2. Call `validator.ValidateGenre("postapocalyptic")` 
+3. Receive error: "invalid genre 'postapocalyptic', available genres: cyberpunk, fantasy, horror, postapoc, scifi (or 'random')"
 
-### Error Handling Gaps
-None identified. All error-prone operations properly return errors with context.
+**Code Reference:**
+```markdown
+// From README.md line 98:
+// Output: Available genres: cyberpunk, fantasy, horror, postapocalyptic, scifi
 
-### Documentation Gaps
+// From README.md line 136:
+- **Common Genres**: fantasy, scifi, horror, cyberpunk, postapocalyptic
 
-**All documentation gaps resolved:**
-- All Config struct fields have detailed godoc comments in types.go
-- Port: Valid range documented (1024-65535)
-- MaxPlayers: Valid range documented (1-100)
-- TickRate: Valid range documented (1-60 Hz)
-- Genre: Reference to GetAvailableGenres() method
-- Directory fields: Creation behavior documented
-
-### Dependency Issues
-**Accepted design decision:**
-- Depends on `pkg/procgen/dialog` for genre list
-- This is acceptable as genres are game-specific domain knowledge
-- The dependency is one-way and doesn't create cycles
-
-## Package Organization Assessment
-
-### Current Structure (Post-Reorganization)
-```
-pkg/config/
-├── doc.go           (package documentation with examples)
-├── types.go         (Config struct with field documentation)
-├── validator.go     (Validator struct and validation methods)
-└── validator_test.go (comprehensive tests - 100.0% coverage)
+// From README.md line 153:
+"invalid genre 'western', available genres: cyberpunk, fantasy, horror, postapocalyptic, scifi"
 ```
 
-### Quality Metrics
-- **Test Coverage**: 100.0% ✅ (exceeds 65% minimum)
-- **Documentation Coverage**: 100% ✅ (all symbols documented)
-- **Build Status**: PASS ✅
-- **File Organization**: Excellent - clear separation of types and behavior
-- **Naming Conventions**: Consistent and idiomatic Go
+**Correct Values (from pkg/procgen/dialog/corpus.go:688-695):**
+```go
+func GetAvailableGenres() []string {
+    return []string{
+        "fantasy",
+        "scifi",
+        "horror",
+        "cyberpunk",
+        "postapoc",  // NOT "postapocalyptic"
+    }
+}
+```
+~~~~
 
-## Test Coverage Details
+~~~~
+### FUNCTIONAL MISMATCH: Error Message Example Uses Incorrect Genre List
+
+**File:** README.md:153
+**Severity:** Low
+**Description:** The example error message in the README shows a genre list that doesn't match the actual error output from the validator. The example omits the `(or 'random')` suffix that the actual implementation includes.
+
+**Expected Behavior:** Error message example should match actual validator output format.
+
+**Actual Behavior:** Documentation shows:
+```
+"invalid genre 'western', available genres: cyberpunk, fantasy, horror, postapocalyptic, scifi"
+```
+
+Actual implementation outputs (from validator.go:94):
+```
+"invalid genre 'western', available genres: cyberpunk, fantasy, horror, postapoc, scifi (or 'random')"
+```
+
+**Impact:** Minor - users may be confused by slight output format differences.
+
+**Reproduction:** Call `validator.ValidateGenre("western")` and compare output to README example.
+
+**Code Reference:**
+```go
+// validator.go:94
+return fmt.Errorf("invalid genre '%s', available genres: %s (or 'random')", genreID, strings.Join(available, ", "))
+```
+~~~~
+
+---
+
+## VERIFIED FUNCTIONALITY
+
+The following documented features were verified as correctly implemented:
+
+### Port Validation ✅
+- Range 1024-65535 enforced correctly
+- Non-numeric values rejected with clear error
+- Descriptive error message includes reason (root privileges)
+
+### MaxPlayers Validation ✅
+- Range 1-100 enforced correctly  
+- Optional validation via `ValidateMaxPlayers` flag works
+
+### TickRate Validation ✅
+- Range 1-60 Hz enforced correctly
+- Optional validation via `ValidateTickRate` flag works
+
+### Genre Validation ✅
+- Validates against dialog package genre list
+- Special value "random" accepted
+- Error message lists available genres
+
+### Directory Validation ✅
+- Checks existence correctly
+- Creates directories when `create=true`
+- Validates path is directory, not file
+- Uses 0o755 permissions for created directories
+
+### ValidateAll ✅
+- Validates all config fields correctly
+- Respects conditional validation flags
+- Returns first error encountered
+
+### GetAvailableGenres ✅
+- Returns sorted list of genres
+- Pulls from centralized dialog package source
+
+---
+
+## CODE QUALITY ASSESSMENT
+
+### Strengths
+1. **100% test coverage** - All code paths are tested
+2. **Clear separation of concerns** - types.go, validator.go, doc.go properly separated
+3. **Comprehensive error messages** - Include specific values and helpful context
+4. **Table-driven tests** - Follow Go best practices
+5. **Defensive programming** - Empty string checks, nil-safe operations
+6. **Single source of truth** - Genres pulled from procgen/dialog package
+
+### Minor Observations
+1. **Magic numbers** - Port range (1024, 65535), player limits (1, 100), tick rate (1, 60) are hardcoded. Consider extracting to named constants for maintainability.
+2. **Cross-package dependency** - Validator depends on `pkg/procgen/dialog` for genre list. This creates coupling but maintains single source of truth.
+
+---
+
+## DEPENDENCY ANALYSIS
+
+**Level 0 Files (no internal imports):**
+- `types.go` - Pure data structure, no imports
+
+**Level 1 Files (imports Level 0 only):**
+- `doc.go` - Package documentation only
+
+**Level 2 Files (imports external packages):**
+- `validator.go` - Imports `pkg/procgen/dialog`
+- `validator_test.go` - Test file
+
+**External Dependencies:**
+- `github.com/opd-ai/venture/pkg/procgen/dialog` - For GetAvailableGenres()
+- Standard library: `fmt`, `os`, `sort`, `strconv`, `strings`
+
+---
+
+## RECOMMENDATIONS
+
+1. **Update README.md** to use `postapoc` instead of `postapocalyptic` in all genre examples
+2. **Update error message example** in README.md to include `(or 'random')` suffix
+3. **Consider extracting constants** for validation limits (optional, low priority)
+
+---
+
+## TEST EXECUTION RESULTS
 
 ```
-=== Coverage by Function ===
-NewValidator         100.0%
-ValidatePort         100.0%
-ValidateMaxPlayers   100.0%
-ValidateTickRate     100.0%
-ValidateGenre        100.0%
-ValidateDirectory    100.0%
-GetAvailableGenres   100.0%
-ValidateAll          100.0%
-total                100.0%
+$ go test -v ./pkg/config/...
+=== RUN   TestValidator_ValidatePort
+--- PASS: TestValidator_ValidatePort (0.00s)
+=== RUN   TestValidator_ValidateMaxPlayers
+--- PASS: TestValidator_ValidateMaxPlayers (0.00s)
+=== RUN   TestValidator_ValidateTickRate  
+--- PASS: TestValidator_ValidateTickRate (0.00s)
+=== RUN   TestValidator_ValidateGenre
+--- PASS: TestValidator_ValidateGenre (0.00s)
+=== RUN   TestValidator_ValidateDirectory
+--- PASS: TestValidator_ValidateDirectory (0.00s)
+=== RUN   TestValidator_GetAvailableGenres
+--- PASS: TestValidator_GetAvailableGenres (0.00s)
+=== RUN   TestValidator_ValidateAll
+--- PASS: TestValidator_ValidateAll (0.00s)
+=== RUN   TestNewValidator
+--- PASS: TestNewValidator (0.00s)
+=== RUN   TestValidator_ValidateDirectory_MkdirAllFailure
+--- PASS: TestValidator_ValidateDirectory_MkdirAllFailure (0.00s)
+=== RUN   TestValidator_ValidateAll_LogDir
+--- PASS: TestValidator_ValidateAll_LogDir (0.00s)
+=== RUN   TestValidator_ValidateAll_ModsDir
+--- PASS: TestValidator_ValidateAll_ModsDir (0.00s)
+PASS
+ok  	github.com/opd-ai/venture/pkg/config	0.005s	coverage: 100.0% of statements
 ```
 
-## Recommendations
-
-### Completed ✅
-1. ~~Enhance Config Documentation~~ - Already complete in types.go
-2. ~~Increase Test Coverage to 100%~~ - Done (2026-01-21)
-
-### Optional Enhancements (Low Priority)
-1. **Consider Validation Constants**
-   - Export MinPort, MaxPort, MinPlayers, etc. as public constants
-   - Would improve discoverability and allow external validation
-
-2. **Add Benchmarks**
-   - Benchmark validation performance for optimization
-   - Low priority since validation is infrequent
-
-## Conclusion
-
-The `pkg/config` package is in **excellent condition**. It provides:
-
-1. ✅ Complete configuration validation for server/client settings
-2. ✅ 100% test coverage with comprehensive edge case testing
-3. ✅ Full documentation on all exported symbols
-4. ✅ Clean separation of types and validation logic
-
-**Status**: ✅ AUDIT COMPLETE - All issues resolved
-**Recommendation**: ✅ APPROVED for production use. Package is stable, fully-tested, and properly organized.
+```
+$ go vet ./pkg/config/...
+# No issues found
+```

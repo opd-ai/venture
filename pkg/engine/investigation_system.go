@@ -185,14 +185,49 @@ func (s *InvestigationSystem) tryRevealFragment(investigator, fragment *Entity, 
 		"fragment_id":     fragment.ID,
 	}).Debug("Attempting to reveal fragment")
 
-	// Get fragment position
+	fragPos, ok := s.getFragmentPosition(fragment)
+	if !ok {
+		return false
+	}
+
+	if !s.isFragmentWithinRange(investigatorPos, fragPos, radius, investigator.ID, fragment.ID) {
+		return false
+	}
+
+	storyFragComp, ok := s.getStoryFragmentComponent(fragment)
+	if !ok {
+		return false
+	}
+
+	if !s.canRevealFragment(fragment.ID, investigation, investigator.ID) {
+		return false
+	}
+
+	if !s.rollDetectionCheck(investigation, investigator.ID, fragment.ID) {
+		return false
+	}
+
+	s.revealFragment(fragment, investigator, investigation)
+
+	log.WithFields(log.Fields{
+		"investigator": investigator.ID,
+		"fragment":     fragment.ID,
+		"seriesID":     storyFragComp.SeriesID,
+		"sequence":     storyFragComp.SequenceNum,
+	}).Info("Fragment revealed through investigation")
+
+	return true
+}
+
+// getFragmentPosition retrieves the position component from a fragment entity.
+func (s *InvestigationSystem) getFragmentPosition(fragment *Entity) (*PositionComponent, bool) {
 	fragPosComp, ok := fragment.GetComponent("position")
 	if !ok {
 		log.WithFields(log.Fields{
 			"fragment_id":    fragment.ID,
 			"component_type": "position",
 		}).Debug("Fragment missing position component")
-		return false
+		return nil, false
 	}
 
 	fragPos, ok := fragPosComp.(*PositionComponent)
@@ -201,35 +236,41 @@ func (s *InvestigationSystem) tryRevealFragment(investigator, fragment *Entity, 
 			"fragment_id":    fragment.ID,
 			"component_type": "position",
 		}).Debug("Invalid fragment position component type")
-		return false
+		return nil, false
 	}
 
-	// Check distance
+	return fragPos, true
+}
+
+// isFragmentWithinRange checks if a fragment is within investigation range.
+func (s *InvestigationSystem) isFragmentWithinRange(investigatorPos, fragPos *PositionComponent, radius float64, investigatorID, fragmentID uint64) bool {
 	dx := investigatorPos.X - fragPos.X
 	dy := investigatorPos.Y - fragPos.Y
 	distance := math.Sqrt(dx*dx + dy*dy)
-
-	// Convert radius from tiles to pixels (32 pixels per tile)
 	radiusPixels := radius * 32.0
 
 	if distance > radiusPixels {
 		log.WithFields(log.Fields{
-			"investigator_id": investigator.ID,
-			"fragment_id":     fragment.ID,
+			"investigator_id": investigatorID,
+			"fragment_id":     fragmentID,
 			"distance":        distance,
 			"radius_pixels":   radiusPixels,
 		}).Debug("Fragment out of investigation range")
-		return false // Out of range
+		return false
 	}
 
-	// Get fragment component
+	return true
+}
+
+// getStoryFragmentComponent retrieves the story fragment component.
+func (s *InvestigationSystem) getStoryFragmentComponent(fragment *Entity) (*StoryFragmentComponent, bool) {
 	fragComp, ok := fragment.GetComponent("storyfragment")
 	if !ok {
 		log.WithFields(log.Fields{
 			"fragment_id":    fragment.ID,
 			"component_type": "storyfragment",
 		}).Debug("Fragment missing storyfragment component")
-		return false
+		return nil, false
 	}
 
 	storyFragComp, ok := fragComp.(*StoryFragmentComponent)
@@ -238,54 +279,49 @@ func (s *InvestigationSystem) tryRevealFragment(investigator, fragment *Entity, 
 			"fragment_id":    fragment.ID,
 			"component_type": "storyfragment",
 		}).Debug("Invalid storyfragment component type")
-		return false
+		return nil, false
 	}
 
-	// Check if fragment is hidden and not yet revealed by this investigator
-	isHidden := s.IsFragmentHidden(fragment.ID)
-	alreadyRevealed := investigation.HasRevealedFragment(fragment.ID)
+	return storyFragComp, true
+}
+
+// canRevealFragment checks if a fragment can be revealed by the investigator.
+func (s *InvestigationSystem) canRevealFragment(fragmentID uint64, investigation *InvestigationComponent, investigatorID uint64) bool {
+	isHidden := s.IsFragmentHidden(fragmentID)
+	alreadyRevealed := investigation.HasRevealedFragment(fragmentID)
 
 	if !isHidden {
 		log.WithFields(log.Fields{
-			"fragment_id": fragment.ID,
+			"fragment_id": fragmentID,
 		}).Debug("Fragment is not hidden")
 		return false
 	}
 
 	if alreadyRevealed {
 		log.WithFields(log.Fields{
-			"investigator_id": investigator.ID,
-			"fragment_id":     fragment.ID,
+			"investigator_id": investigatorID,
+			"fragment_id":     fragmentID,
 		}).Debug("Fragment already revealed by this investigator")
 		return false
 	}
 
-	// Roll for detection
+	return true
+}
+
+// rollDetectionCheck performs a detection roll against the investigation chance.
+func (s *InvestigationSystem) rollDetectionCheck(investigation *InvestigationComponent, investigatorID, fragmentID uint64) bool {
 	detectionChance := investigation.GetDetectionChance()
 	roll := s.rng.Float64()
 
 	if roll > detectionChance {
 		log.WithFields(log.Fields{
-			"investigator_id": investigator.ID,
-			"fragment_id":     fragment.ID,
+			"investigator_id": investigatorID,
+			"fragment_id":     fragmentID,
 			"roll":            roll,
 			"chance":          detectionChance,
 		}).Debug("Detection roll failed")
-		return false // Detection failed
+		return false
 	}
-
-	// Success! Reveal the fragment
-	s.revealFragment(fragment, investigator, investigation)
-
-	log.WithFields(log.Fields{
-		"investigator": investigator.ID,
-		"fragment":     fragment.ID,
-		"seriesID":     storyFragComp.SeriesID,
-		"sequence":     storyFragComp.SequenceNum,
-		"distance":     distance,
-		"roll":         roll,
-		"chance":       detectionChance,
-	}).Info("Fragment revealed through investigation")
 
 	return true
 }

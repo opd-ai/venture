@@ -37,45 +37,73 @@ func (p *BinaryProtocol) EncodeStateUpdate(update *StateUpdate) ([]byte, error) 
 
 	buf := new(bytes.Buffer)
 
-	// Write fixed-size header
-	if err := binary.Write(buf, binary.LittleEndian, update.Timestamp); err != nil {
-		return nil, fmt.Errorf("failed to write timestamp: %w", err)
-	}
-	if err := binary.Write(buf, binary.LittleEndian, update.EntityID); err != nil {
-		return nil, fmt.Errorf("failed to write entity ID: %w", err)
-	}
-	if err := binary.Write(buf, binary.LittleEndian, update.Priority); err != nil {
-		return nil, fmt.Errorf("failed to write priority: %w", err)
-	}
-	if err := binary.Write(buf, binary.LittleEndian, update.SequenceNumber); err != nil {
-		return nil, fmt.Errorf("failed to write sequence number: %w", err)
+	if err := encodeStateUpdateHeader(buf, update); err != nil {
+		return nil, err
 	}
 
-	// Write component count
-	componentCount := uint16(len(update.Components))
-	if err := binary.Write(buf, binary.LittleEndian, componentCount); err != nil {
-		return nil, fmt.Errorf("failed to write component count: %w", err)
+	if err := encodeComponentCount(buf, update.Components); err != nil {
+		return nil, err
 	}
 
-	// Write each component
-	for _, comp := range update.Components {
-		// Write type string
-		typeBytes := []byte(comp.Type)
-		typeLength := uint16(len(typeBytes))
-		if err := binary.Write(buf, binary.LittleEndian, typeLength); err != nil {
-			return nil, fmt.Errorf("failed to write type length: %w", err)
-		}
-		buf.Write(typeBytes)
-
-		// Write data
-		dataLength := uint32(len(comp.Data))
-		if err := binary.Write(buf, binary.LittleEndian, dataLength); err != nil {
-			return nil, fmt.Errorf("failed to write data length: %w", err)
-		}
-		buf.Write(comp.Data)
+	if err := encodeComponents(buf, update.Components); err != nil {
+		return nil, err
 	}
 
 	return buf.Bytes(), nil
+}
+
+// encodeStateUpdateHeader writes the fixed-size header fields.
+func encodeStateUpdateHeader(buf *bytes.Buffer, update *StateUpdate) error {
+	if err := binary.Write(buf, binary.LittleEndian, update.Timestamp); err != nil {
+		return fmt.Errorf("failed to write timestamp: %w", err)
+	}
+	if err := binary.Write(buf, binary.LittleEndian, update.EntityID); err != nil {
+		return fmt.Errorf("failed to write entity ID: %w", err)
+	}
+	if err := binary.Write(buf, binary.LittleEndian, update.Priority); err != nil {
+		return fmt.Errorf("failed to write priority: %w", err)
+	}
+	if err := binary.Write(buf, binary.LittleEndian, update.SequenceNumber); err != nil {
+		return fmt.Errorf("failed to write sequence number: %w", err)
+	}
+	return nil
+}
+
+// encodeComponentCount writes the number of components.
+func encodeComponentCount(buf *bytes.Buffer, components []ComponentData) error {
+	componentCount := uint16(len(components))
+	if err := binary.Write(buf, binary.LittleEndian, componentCount); err != nil {
+		return fmt.Errorf("failed to write component count: %w", err)
+	}
+	return nil
+}
+
+// encodeComponents writes all component data to the buffer.
+func encodeComponents(buf *bytes.Buffer, components []ComponentData) error {
+	for _, comp := range components {
+		if err := encodeComponentData(buf, &comp); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// encodeComponentData writes a single component's type and data.
+func encodeComponentData(buf *bytes.Buffer, comp *ComponentData) error {
+	typeBytes := []byte(comp.Type)
+	typeLength := uint16(len(typeBytes))
+	if err := binary.Write(buf, binary.LittleEndian, typeLength); err != nil {
+		return fmt.Errorf("failed to write type length: %w", err)
+	}
+	buf.Write(typeBytes)
+
+	dataLength := uint32(len(comp.Data))
+	if err := binary.Write(buf, binary.LittleEndian, dataLength); err != nil {
+		return fmt.Errorf("failed to write data length: %w", err)
+	}
+	buf.Write(comp.Data)
+
+	return nil
 }
 
 // DecodeStateUpdate deserializes a state update from binary format.
@@ -191,33 +219,54 @@ func (p *BinaryProtocol) EncodeInputCommand(cmd *InputCommand) ([]byte, error) {
 
 	buf := new(bytes.Buffer)
 
-	// Write fixed-size fields
-	if err := binary.Write(buf, binary.LittleEndian, cmd.PlayerID); err != nil {
-		return nil, fmt.Errorf("failed to write player ID: %w", err)
-	}
-	if err := binary.Write(buf, binary.LittleEndian, cmd.Timestamp); err != nil {
-		return nil, fmt.Errorf("failed to write timestamp: %w", err)
-	}
-	if err := binary.Write(buf, binary.LittleEndian, cmd.SequenceNumber); err != nil {
-		return nil, fmt.Errorf("failed to write sequence number: %w", err)
+	if err := encodeInputCommandHeader(buf, cmd); err != nil {
+		return nil, err
 	}
 
-	// Write input type
-	typeBytes := []byte(cmd.InputType)
-	typeLength := uint16(len(typeBytes))
-	if err := binary.Write(buf, binary.LittleEndian, typeLength); err != nil {
-		return nil, fmt.Errorf("failed to write type length: %w", err)
+	if err := encodeInputType(buf, cmd.InputType); err != nil {
+		return nil, err
 	}
-	buf.Write(typeBytes)
 
-	// Write data
-	dataLength := uint32(len(cmd.Data))
-	if err := binary.Write(buf, binary.LittleEndian, dataLength); err != nil {
-		return nil, fmt.Errorf("failed to write data length: %w", err)
+	if err := encodeInputData(buf, cmd.Data); err != nil {
+		return nil, err
 	}
-	buf.Write(cmd.Data)
 
 	return buf.Bytes(), nil
+}
+
+// encodeInputCommandHeader writes the fixed-size header fields.
+func encodeInputCommandHeader(buf *bytes.Buffer, cmd *InputCommand) error {
+	if err := binary.Write(buf, binary.LittleEndian, cmd.PlayerID); err != nil {
+		return fmt.Errorf("failed to write player ID: %w", err)
+	}
+	if err := binary.Write(buf, binary.LittleEndian, cmd.Timestamp); err != nil {
+		return fmt.Errorf("failed to write timestamp: %w", err)
+	}
+	if err := binary.Write(buf, binary.LittleEndian, cmd.SequenceNumber); err != nil {
+		return fmt.Errorf("failed to write sequence number: %w", err)
+	}
+	return nil
+}
+
+// encodeInputType writes the input type string.
+func encodeInputType(buf *bytes.Buffer, inputType string) error {
+	typeBytes := []byte(inputType)
+	typeLength := uint16(len(typeBytes))
+	if err := binary.Write(buf, binary.LittleEndian, typeLength); err != nil {
+		return fmt.Errorf("failed to write type length: %w", err)
+	}
+	buf.Write(typeBytes)
+	return nil
+}
+
+// encodeInputData writes the input data payload.
+func encodeInputData(buf *bytes.Buffer, data []byte) error {
+	dataLength := uint32(len(data))
+	if err := binary.Write(buf, binary.LittleEndian, dataLength); err != nil {
+		return fmt.Errorf("failed to write data length: %w", err)
+	}
+	buf.Write(data)
+	return nil
 }
 
 // DecodeInputCommand deserializes an input command from binary format.
@@ -229,42 +278,63 @@ func (p *BinaryProtocol) DecodeInputCommand(data []byte) (*InputCommand, error) 
 	buf := bytes.NewReader(data)
 	cmd := &InputCommand{}
 
-	// Read fixed-size fields
-	if err := binary.Read(buf, binary.LittleEndian, &cmd.PlayerID); err != nil {
-		return nil, fmt.Errorf("failed to read player ID: %w", err)
-	}
-	if err := binary.Read(buf, binary.LittleEndian, &cmd.Timestamp); err != nil {
-		return nil, fmt.Errorf("failed to read timestamp: %w", err)
-	}
-	if err := binary.Read(buf, binary.LittleEndian, &cmd.SequenceNumber); err != nil {
-		return nil, fmt.Errorf("failed to read sequence number: %w", err)
+	if err := decodeInputCommandHeader(buf, cmd); err != nil {
+		return nil, err
 	}
 
-	// Read input type
+	if err := decodeInputType(buf, cmd); err != nil {
+		return nil, err
+	}
+
+	if err := decodeInputData(buf, cmd); err != nil {
+		return nil, err
+	}
+
+	return cmd, nil
+}
+
+// decodeInputCommandHeader reads the fixed-size header fields.
+func decodeInputCommandHeader(buf *bytes.Reader, cmd *InputCommand) error {
+	if err := binary.Read(buf, binary.LittleEndian, &cmd.PlayerID); err != nil {
+		return fmt.Errorf("failed to read player ID: %w", err)
+	}
+	if err := binary.Read(buf, binary.LittleEndian, &cmd.Timestamp); err != nil {
+		return fmt.Errorf("failed to read timestamp: %w", err)
+	}
+	if err := binary.Read(buf, binary.LittleEndian, &cmd.SequenceNumber); err != nil {
+		return fmt.Errorf("failed to read sequence number: %w", err)
+	}
+	return nil
+}
+
+// decodeInputType reads the input type string.
+func decodeInputType(buf *bytes.Reader, cmd *InputCommand) error {
 	var typeLength uint16
 	if err := binary.Read(buf, binary.LittleEndian, &typeLength); err != nil {
-		return nil, fmt.Errorf("failed to read type length: %w", err)
+		return fmt.Errorf("failed to read type length: %w", err)
 	}
 
 	typeBytes := make([]byte, typeLength)
 	if _, err := buf.Read(typeBytes); err != nil {
-		return nil, fmt.Errorf("failed to read type bytes: %w", err)
+		return fmt.Errorf("failed to read type bytes: %w", err)
 	}
 	cmd.InputType = string(typeBytes)
+	return nil
+}
 
-	// Read data
+// decodeInputData reads the input data payload.
+func decodeInputData(buf *bytes.Reader, cmd *InputCommand) error {
 	var dataLength uint32
 	if err := binary.Read(buf, binary.LittleEndian, &dataLength); err != nil {
-		return nil, fmt.Errorf("failed to read data length: %w", err)
+		return fmt.Errorf("failed to read data length: %w", err)
 	}
 
 	if dataLength > 0 {
 		dataBytes := make([]byte, dataLength)
 		if _, err := buf.Read(dataBytes); err != nil {
-			return nil, fmt.Errorf("failed to read data bytes: %w", err)
+			return fmt.Errorf("failed to read data bytes: %w", err)
 		}
 		cmd.Data = dataBytes
 	}
-
-	return cmd, nil
+	return nil
 }

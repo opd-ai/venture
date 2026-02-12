@@ -691,6 +691,6 @@ func GetAvailableGenres() []string {
 		"scifi",
 		"horror",
 		"cyberpunk",
-		"postapocalyptic",
+		"postapoc",
 	}
 }

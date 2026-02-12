@@ -16,8 +16,8 @@ func TestNewPostProcessorAdapter(t *testing.T) {
 		t.Fatal("NewPostProcessorAdapter returned nil")
 	}
 
-	if adapter.processor == nil {
-		t.Error("processor not initialized")
+	if adapter.gpuProcessor == nil {
+		t.Error("gpuProcessor not initialized")
 	}
 
 	if adapter.enabled {
@@ -252,4 +252,18 @@ func TestPostProcessorAdapter_DisableAll(t *testing.T) {
 	if config.ChromaticAberration.Enabled {
 		t.Error("chromatic aberration still enabled")
 	}
+}
+
+func TestPostProcessorAdapter_Dispose(t *testing.T) {
+	adapter := NewPostProcessorAdapter(nil)
+
+	// Enable effects and use the adapter
+	adapter.SetEnabled(true)
+	adapter.EnableVignette(0.5, 0.3)
+
+	// Dispose should not panic
+	adapter.Dispose()
+
+	// Dispose again should be safe (idempotent)
+	adapter.Dispose()
 }

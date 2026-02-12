@@ -538,7 +538,7 @@ func (ac *AdaptiveComposer) chooseChordProgression() ChordProgression {
 		return ProgressionPopular
 	case "horror":
 		return ProgressionMinor
-	case "sci-fi", "cyberpunk":
+	case "scifi", "cyberpunk":
 		return ProgressionJazz
 	default:
 		return ProgressionPopular
@@ -603,11 +603,11 @@ func (ac *AdaptiveComposer) chooseDrumPattern() DrumPattern {
 	switch ac.currentGenre {
 	case "fantasy":
 		return PatternOrchestral
-	case "sci-fi", "cyberpunk":
+	case "scifi", "cyberpunk":
 		return PatternElectronic
 	case "horror":
 		return PatternIndustrial
-	case "post-apocalyptic":
+	case "postapoc":
 		return PatternMinimal
 	default:
 		return PatternRock

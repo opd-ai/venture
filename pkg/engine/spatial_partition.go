@@ -295,6 +295,60 @@ func (q *Quadtree) Clear() {
 	q.southeast = nil
 }
 
+// Remove removes a specific entity from the quadtree.
+// Returns true if the entity was found and removed, false otherwise.
+// This enables incremental updates without full rebuilds.
+func (q *Quadtree) Remove(entity *Entity) bool {
+	pos := entity.GetPosition()
+	if pos == nil {
+		return false
+	}
+
+	if !q.bounds.Contains(pos.X, pos.Y) {
+		return false
+	}
+
+	if q.removeAtCurrentLevel(entity) {
+		return true
+	}
+
+	return q.removeFromChildren(entity)
+}
+
+// removeAtCurrentLevel attempts to remove entity from current node's entity list.
+func (q *Quadtree) removeAtCurrentLevel(entity *Entity) bool {
+	for i, e := range q.entities {
+		if e.ID == entity.ID {
+			q.entities[i] = q.entities[len(q.entities)-1]
+			q.entities = q.entities[:len(q.entities)-1]
+			return true
+		}
+	}
+	return false
+}
+
+// removeFromChildren recursively tries to remove entity from child nodes.
+func (q *Quadtree) removeFromChildren(entity *Entity) bool {
+	if !q.divided {
+		return false
+	}
+
+	if q.northwest.Remove(entity) {
+		return true
+	}
+	if q.northeast.Remove(entity) {
+		return true
+	}
+	if q.southwest.Remove(entity) {
+		return true
+	}
+	if q.southeast.Remove(entity) {
+		return true
+	}
+
+	return false
+}
+
 // Rebuild reconstructs the quadtree with current entities.
 // This should be called periodically as entities move.
 func (q *Quadtree) Rebuild(entities []*Entity) {
@@ -328,12 +382,19 @@ type SpatialPartitionSystem struct {
 	lastRebuildFrame int
 	minRebuildFrames int // Minimum frames between rebuilds (e.g., 3 = 50ms at 60fps)
 
+	// Incremental update tracking
+	movedEntities        map[uint64]*Entity                // Entities that have moved since last update
+	lastKnownPositions   map[uint64]struct{ X, Y float64 } // Previous positions for moved entities
+	useIncrementalUpdate bool                              // Enable incremental updates vs full rebuilds
+	fullRebuildInterval  int                               // Periodic full rebuild (safety mechanism)
+
 	// Statistics
-	lastRebuildTime float64
-	queryCount      int
-	skippedRebuilds int
-	forcedRebuilds  int
-	lazyRebuilds    int
+	lastRebuildTime    float64
+	queryCount         int
+	skippedRebuilds    int
+	forcedRebuilds     int
+	lazyRebuilds       int
+	incrementalUpdates int
 }
 
 // NewSpatialPartitionSystem creates a new spatial partition system.
@@ -346,13 +407,17 @@ func NewSpatialPartitionSystem(worldWidth, worldHeight float64) *SpatialPartitio
 	}
 
 	return &SpatialPartitionSystem{
-		quadtree:         NewQuadtree(bounds, 32), // 32 entities per node (optimized: 38% faster, 51% less memory vs 16)
-		worldBounds:      bounds,
-		rebuildEvery:     60, // Check for rebuild every 60 frames (1 second at 60fps)
-		frameCount:       0,
-		isDirty:          false,
-		lastRebuildFrame: 0,
-		minRebuildFrames: 3, // Minimum 3 frames (50ms at 60fps) between rebuilds
+		quadtree:             NewQuadtree(bounds, 32), // 32 entities per node (optimized: 38% faster, 51% less memory vs 16)
+		worldBounds:          bounds,
+		rebuildEvery:         60, // Check for rebuild every 60 frames (1 second at 60fps)
+		frameCount:           0,
+		isDirty:              false,
+		lastRebuildFrame:     0,
+		minRebuildFrames:     3, // Minimum 3 frames (50ms at 60fps) between rebuilds
+		movedEntities:        make(map[uint64]*Entity),
+		lastKnownPositions:   make(map[uint64]struct{ X, Y float64 }),
+		useIncrementalUpdate: true, // Enable incremental updates by default
+		fullRebuildInterval:  300,  // Full rebuild every 300 frames (5 seconds at 60fps) as safety mechanism
 	}
 }
 
@@ -373,37 +438,96 @@ func (s *SpatialPartitionSystem) SetRebuildInterval(frames int) {
 	s.rebuildEvery = frames
 }
 
-// Update rebuilds the quadtree periodically with lazy rebuild optimization.
-// Uses dirty tracking to skip rebuilds when entities haven't moved significantly.
+// SetIncrementalUpdate enables or disables incremental updates.
+// When enabled, only moved entities are updated instead of full rebuilds.
+// When disabled, falls back to full rebuilds every rebuildEvery frames.
+func (s *SpatialPartitionSystem) SetIncrementalUpdate(enabled bool) {
+	s.useIncrementalUpdate = enabled
+}
+
+// TrackEntityMovement tracks that an entity has moved and needs spatial update.
+// This should be called by movement systems before updating position.
+// The entity's current position is snapshot for incremental removal.
+func (s *SpatialPartitionSystem) TrackEntityMovement(entity *Entity) {
+	if !s.useIncrementalUpdate {
+		s.isDirty = true
+		return
+	}
+
+	pos := entity.GetPosition()
+	if pos == nil {
+		return
+	}
+
+	// Store current position before movement
+	s.lastKnownPositions[entity.ID] = struct{ X, Y float64 }{X: pos.X, Y: pos.Y}
+	s.movedEntities[entity.ID] = entity
+	s.isDirty = true
+}
+
+// Update rebuilds the quadtree periodically with incremental update optimization.
+// Uses dirty tracking and selective updates to minimize rebuild cost.
 func (s *SpatialPartitionSystem) Update(entities []*Entity, deltaTime float64) {
 	s.frameCount++
 
 	// Check if enough time has passed since last rebuild
 	framesSinceRebuild := s.frameCount - s.lastRebuildFrame
 
-	// Rebuild if:
-	// 1. We've reached the rebuild interval, AND
-	// 2. Enough frames have passed since last rebuild (rate limiting)
-	// 3. OR we're marked as dirty (entities moved)
-	shouldRebuild := false
+	// Determine update strategy
+	shouldFullRebuild := false
+	shouldIncrementalUpdate := false
 
-	// CRITICAL FIX: Always rebuild periodically even if not dirty
-	// This ensures new entities that spawned are added to the quadtree
-	// The original logic only rebuilt if dirty, which meant stationary
-	// entities that were newly spawned would never be added
-	if framesSinceRebuild >= s.rebuildEvery {
-		shouldRebuild = true
+	// Full rebuild every fullRebuildInterval frames (safety mechanism)
+	if framesSinceRebuild >= s.fullRebuildInterval {
+		shouldFullRebuild = true
+		s.forcedRebuilds++
+	} else if framesSinceRebuild >= s.rebuildEvery {
+		// Time for periodic update
 		if s.isDirty {
-			s.lazyRebuilds++
+			// Incremental update if enabled and entities have moved
+			if s.useIncrementalUpdate && len(s.movedEntities) > 0 {
+				shouldIncrementalUpdate = true
+				s.incrementalUpdates++
+			} else {
+				// Fall back to full rebuild when dirty
+				shouldFullRebuild = true
+				s.lazyRebuilds++
+			}
 		} else {
-			s.forcedRebuilds++ // Periodic forced rebuild
+			// Periodic rebuild even if not dirty (for new entities that spawned)
+			shouldFullRebuild = true
+			s.forcedRebuilds++
 		}
 	}
 
-	if shouldRebuild {
+	if shouldIncrementalUpdate {
+		// Incremental update: only update moved entities
+		s.performIncrementalUpdate()
+		s.lastRebuildFrame = s.frameCount
+		s.isDirty = false
+	} else if shouldFullRebuild {
+		// Full rebuild
 		s.quadtree.Rebuild(entities)
 		s.lastRebuildFrame = s.frameCount
-		s.isDirty = false // Clear dirty flag after rebuild
+		s.isDirty = false
+		// Clear tracking maps after full rebuild
+		s.movedEntities = make(map[uint64]*Entity)
+		s.lastKnownPositions = make(map[uint64]struct{ X, Y float64 })
+	}
+}
+
+// performIncrementalUpdate updates only the entities that have moved.
+func (s *SpatialPartitionSystem) performIncrementalUpdate() {
+	for entityID, entity := range s.movedEntities {
+		// Remove entity from its old position
+		s.quadtree.Remove(entity)
+
+		// Re-insert at new position
+		s.quadtree.Insert(entity)
+
+		// Clean up tracking
+		delete(s.movedEntities, entityID)
+		delete(s.lastKnownPositions, entityID)
 	}
 }
 
@@ -458,15 +582,24 @@ func (s *SpatialPartitionSystem) QueryRadiusInto(x, y, radius float64, buffer []
 // GetStatistics returns performance statistics.
 func (s *SpatialPartitionSystem) GetStatistics() map[string]interface{} {
 	return map[string]interface{}{
-		"entity_count":      s.quadtree.Count(),
-		"last_rebuild_time": s.lastRebuildTime,
-		"query_count":       s.queryCount,
-		"frame_count":       s.frameCount,
-		"is_dirty":          s.isDirty,
-		"skipped_rebuilds":  s.skippedRebuilds,
-		"forced_rebuilds":   s.forcedRebuilds,
-		"lazy_rebuilds":     s.lazyRebuilds,
+		"entity_count":        s.quadtree.Count(),
+		"last_rebuild_time":   s.lastRebuildTime,
+		"query_count":         s.queryCount,
+		"frame_count":         s.frameCount,
+		"is_dirty":            s.isDirty,
+		"skipped_rebuilds":    s.skippedRebuilds,
+		"forced_rebuilds":     s.forcedRebuilds,
+		"lazy_rebuilds":       s.lazyRebuilds,
+		"incremental_updates": s.incrementalUpdates,
+		"moved_entities":      len(s.movedEntities),
 	}
+}
+
+// GetQuadtree returns the underlying quadtree for direct access.
+// This allows other systems (e.g., CollisionSystem) to use the quadtree
+// for spatial queries without rebuilding their own.
+func (s *SpatialPartitionSystem) GetQuadtree() *Quadtree {
+	return s.quadtree
 }
 
 // Distance calculates the Euclidean distance between two points.

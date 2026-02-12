@@ -7,6 +7,7 @@ package engine
 
 import (
 	"math/rand"
+	"sort"
 	"sync"
 	"time"
 
@@ -17,6 +18,12 @@ import (
 type FishingSystem struct {
 	mu    sync.RWMutex
 	world *World
+
+	// seed is the deterministic random seed for reproducible fishing.
+	seed int64
+
+	// rng is the deterministic random number generator.
+	rng *rand.Rand
 
 	// fishingSpots maps entity IDs to fishing spot entities.
 	fishingSpots map[uint64]*Entity
@@ -58,14 +65,17 @@ type FishingSystem struct {
 	CurrentWeather func() string
 }
 
-// NewFishingSystem creates a new fishing system.
-func NewFishingSystem(world *World) *FishingSystem {
+// NewFishingSystem creates a new fishing system with a deterministic seed.
+func NewFishingSystem(world *World, seed int64) *FishingSystem {
 	log.WithFields(log.Fields{
 		"system_name": "fishing",
+		"seed":        seed,
 	}).Debug("Creating fishing system")
 
 	fs := &FishingSystem{
 		world:          world,
+		seed:           seed,
+		rng:            rand.New(rand.NewSource(seed)),
 		fishingSpots:   make(map[uint64]*Entity),
 		fishTypes:      make(map[string]*FishType),
 		nextEntityID:   2000000, // High start to avoid collision
@@ -477,6 +487,11 @@ func (fs *FishingSystem) buildEligibleFishList(spot *FishingSpotComponent, baitT
 		}
 	}
 
+	// Sort eligible fish by ID for deterministic ordering
+	sort.Slice(eligible, func(i, j int) bool {
+		return eligible[i].fish.ID < eligible[j].fish.ID
+	})
+
 	return eligibleFishList{fish: eligible, totalWeight: totalWeight}
 }
 
@@ -554,10 +569,8 @@ func (fs *FishingSystem) getRarityMultiplier(rarity FishRarity, rareFishBonus fl
 
 // selectRandomFish performs weighted random selection from eligible fish.
 func (fs *FishingSystem) selectRandomFish(eligible eligibleFishList) *FishType {
-	seed := time.Now().UnixNano()
-	rng := rand.New(rand.NewSource(seed))
+	roll := fs.rng.Float64() * eligible.totalWeight
 
-	roll := rng.Float64() * eligible.totalWeight
 	cumulative := 0.0
 
 	for _, wf := range eligible.fish {
@@ -572,11 +585,8 @@ func (fs *FishingSystem) selectRandomFish(eligible eligibleFishList) *FishType {
 
 // calculateFishWeight determines the weight of the caught fish with skill bonuses.
 func (fs *FishingSystem) calculateFishWeight(fish *FishType, skillLevel int) float64 {
-	seed := time.Now().UnixNano()
-	rng := rand.New(rand.NewSource(seed))
-
 	weightRange := fish.MaxWeight - fish.BaseWeight
-	fishWeight := fish.BaseWeight + rng.Float64()*weightRange
+	fishWeight := fish.BaseWeight + fs.rng.Float64()*weightRange
 
 	skillWeightBonus := 1.0 + float64(skillLevel)*0.005
 	fishWeight *= skillWeightBonus
@@ -605,8 +615,7 @@ func (fs *FishingSystem) processBite(fisher *Entity, fishComp *FishingComponent,
 // processReeling handles the reeling minigame phase.
 func (fs *FishingSystem) processReeling(fisher *Entity, fishComp *FishingComponent, deltaTime float64) {
 	// Update fish struggle
-	seed := time.Now().UnixNano()
-	rng := rand.New(rand.NewSource(seed))
+	rng := fs.rng
 	fishComp.UpdateStruggle(deltaTime, rng)
 
 	// Get reel input from entity (stubbed - would come from input system)
@@ -780,41 +789,73 @@ func (fs *FishingSystem) StartFishing(fisher *Entity, spotID uint64) bool {
 	fs.mu.Lock()
 	defer fs.mu.Unlock()
 
-	comp, ok := fisher.GetComponent("fishing")
+	fishComp, ok := fs.validateFisherComponent(fisher)
 	if !ok {
 		return false
 	}
-	fishComp, ok := comp.(*FishingComponent)
-	if !ok || fishComp == nil {
-		return false
-	}
 
-	// Check if already fishing
 	if fishComp.GetState() != FishingStateIdle {
 		return false
 	}
 
-	// Get fishing spot
+	spotComp, ok := fs.validateFishingSpot(spotID)
+	if !ok {
+		return false
+	}
+
+	if !fs.checkAndConsumeBait(fisher, fishComp) {
+		return false
+	}
+
+	if !fs.SpotAddFisher(spotComp) {
+		return false
+	}
+
+	fishComp.StartCasting(spotID)
+	fs.logFishingStarted(fisher.ID, spotID, spotComp.WaterType)
+
+	return true
+}
+
+// validateFisherComponent retrieves and validates the fishing component from an entity.
+func (fs *FishingSystem) validateFisherComponent(fisher *Entity) (*FishingComponent, bool) {
+	comp, ok := fisher.GetComponent("fishing")
+	if !ok {
+		return nil, false
+	}
+	fishComp, ok := comp.(*FishingComponent)
+	if !ok || fishComp == nil {
+		return nil, false
+	}
+	return fishComp, true
+}
+
+// validateFishingSpot retrieves and validates a fishing spot component.
+func (fs *FishingSystem) validateFishingSpot(spotID uint64) (*FishingSpotComponent, bool) {
 	spotEntity, ok := fs.fishingSpots[spotID]
 	if !ok || spotEntity == nil {
-		return false
+		return nil, false
 	}
 
 	spotCompRaw, ok := spotEntity.GetComponent("fishing_spot")
 	if !ok {
-		return false
+		return nil, false
 	}
+
 	spotComp, ok := spotCompRaw.(*FishingSpotComponent)
 	if !ok || spotComp == nil {
-		return false
+		return nil, false
 	}
 
-	// Validate can fish
 	if !fs.SpotCanFish(spotComp) {
-		return false
+		return nil, false
 	}
 
-	// Check bait
+	return spotComp, true
+}
+
+// checkAndConsumeBait validates bait availability and consumes one unit.
+func (fs *FishingSystem) checkAndConsumeBait(fisher *Entity, fishComp *FishingComponent) bool {
 	_, baitCount := fishComp.GetBait()
 	if baitCount <= 0 {
 		log.WithFields(log.Fields{
@@ -823,24 +864,17 @@ func (fs *FishingSystem) StartFishing(fisher *Entity, spotID uint64) bool {
 		return false
 	}
 
-	// Use bait
 	fishComp.UseBait()
-
-	// Add fisher to spot
-	if !fs.SpotAddFisher(spotComp) {
-		return false
-	}
-
-	// Start casting
-	fishComp.StartCasting(spotID)
-
-	log.WithFields(log.Fields{
-		"entity_id":  fisher.ID,
-		"spot_id":    spotID,
-		"water_type": spotComp.WaterType,
-	}).Debug("Started fishing")
-
 	return true
+}
+
+// logFishingStarted logs successful fishing initiation.
+func (fs *FishingSystem) logFishingStarted(entityID, spotID uint64, waterType WaterType) {
+	log.WithFields(log.Fields{
+		"entity_id":  entityID,
+		"spot_id":    spotID,
+		"water_type": waterType,
+	}).Debug("Started fishing")
 }
 
 // Cast performs the cast with given power and starts waiting.

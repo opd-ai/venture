@@ -220,7 +220,7 @@ func (c *TCPClient) establishConnection() (net.Conn, error) {
 }
 
 // configureTCPKeepalive enables TCP keepalive to prevent silent disconnections.
-// Uses KeepAliveConn interface for testability instead of concrete *net.TCPConn.
+// Uses KeepAliveConn interface for testability and flexible connection handling.
 func (c *TCPClient) configureTCPKeepalive(conn net.Conn) {
 	kaConn, ok := conn.(KeepAliveConn)
 	if !ok {

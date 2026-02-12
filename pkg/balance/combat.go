@@ -90,27 +90,50 @@ func (v *CombatValidator) runClassBattleSimulations(ctx context.Context, classTy
 	simCount := totalSims / len(classTypes)
 
 	for i, class1 := range classTypes {
-		for j, class2 := range classTypes {
-			if i == j {
-				continue
-			}
-
-			select {
-			case <-ctx.Done():
-				return wins, battles
-			default:
-			}
-
-			for k := 0; k < simCount/len(classTypes); k++ {
-				winner := v.simulateBattle(class1, class2, rng)
-				battles[classNames[i]]++
-				if winner == 1 {
-					wins[classNames[i]]++
-				}
-			}
-		}
+		v.runBattlesForClass(ctx, i, class1, classTypes, classNames, simCount, rng, wins, battles)
 	}
 	return wins, battles
+}
+
+// runBattlesForClass runs all battle simulations for a single class against all other classes.
+func (v *CombatValidator) runBattlesForClass(ctx context.Context, classIndex int, class1 engine.CharacterClass, classTypes []engine.CharacterClass, classNames []string, simCount int, rng *rand.Rand, wins, battles map[string]int) {
+	for j, class2 := range classTypes {
+		if v.shouldSkipBattle(ctx, classIndex, j) {
+			return
+		}
+		v.runClassVsClassBattles(classIndex, j, class1, class2, classNames, simCount, len(classTypes), rng, wins, battles)
+	}
+}
+
+// shouldSkipBattle determines if a battle should be skipped due to same-class or context cancellation.
+func (v *CombatValidator) shouldSkipBattle(ctx context.Context, i, j int) bool {
+	if i == j {
+		return true
+	}
+
+	select {
+	case <-ctx.Done():
+		return true
+	default:
+		return false
+	}
+}
+
+// runClassVsClassBattles runs multiple simulations of one class versus another.
+func (v *CombatValidator) runClassVsClassBattles(i, j int, class1, class2 engine.CharacterClass, classNames []string, simCount, classTypeCount int, rng *rand.Rand, wins, battles map[string]int) {
+	numBattles := simCount / classTypeCount
+	for k := 0; k < numBattles; k++ {
+		v.recordBattleOutcome(i, class1, class2, classNames, rng, wins, battles)
+	}
+}
+
+// recordBattleOutcome simulates a single battle and records the result.
+func (v *CombatValidator) recordBattleOutcome(classIndex int, class1, class2 engine.CharacterClass, classNames []string, rng *rand.Rand, wins, battles map[string]int) {
+	winner := v.simulateBattle(class1, class2, rng)
+	battles[classNames[classIndex]]++
+	if winner == 1 {
+		wins[classNames[classIndex]]++
+	}
 }
 
 // calculateWinRateMetrics computes win rates, variance, and extremes.

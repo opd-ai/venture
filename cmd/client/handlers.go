@@ -4,6 +4,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"math/rand"
 	"runtime"
@@ -33,6 +34,7 @@ import (
 	"github.com/opd-ai/venture/pkg/rendering/sprites"
 	"github.com/opd-ai/venture/pkg/saveload"
 	"github.com/opd-ai/venture/pkg/social/persistence"
+	"github.com/opd-ai/venture/pkg/stability"
 	"github.com/opd-ai/venture/pkg/version"
 	"github.com/opd-ai/venture/pkg/world"
 	"github.com/opd-ai/venture/pkg/world/housing"
@@ -78,6 +80,9 @@ import (
 	// Phase 2.2: Core Rendering Systems (PLAN.md)
 	// Note: These packages are wrapped by adapters in pkg/engine/ (LightingAdapter, AnimationAdapter, PostProcessorAdapter)
 	// Imports kept for documentation purposes showing integration is complete
+
+	// Ebiten for sprite generation
+	"github.com/hajimehoshi/ebiten/v2"
 	_ "github.com/opd-ai/venture/pkg/rendering/animation"
 	_ "github.com/opd-ai/venture/pkg/rendering/lighting"
 	_ "github.com/opd-ai/venture/pkg/rendering/postprocess"
@@ -137,6 +142,9 @@ import (
 	"github.com/opd-ai/venture/pkg/integration/choice_consequences"
 	"github.com/opd-ai/venture/pkg/integration/guild_vehicle"
 	"github.com/opd-ai/venture/pkg/integration/world_events"
+
+	// AUDIT.md Task 7: VR Hardware Detection
+	"github.com/opd-ai/venture/pkg/vr"
 )
 
 // systemsContainer holds all initialized game systems for dependency injection.
@@ -215,6 +223,11 @@ type systemsContainer struct {
 	achievementSystem       *engine.AchievementSystem
 	// Phase 28: Reputation & Moral Choices
 	moralChoiceSystem *engine.MoralChoiceSystem
+	// Phase 95-96: Resource gathering and fishing minigames
+	fishingSystem   *engine.FishingSystem
+	gatheringSystem *engine.GatheringSystem
+	// Phase 112: New Game Plus carry-over system
+	carryoverSystem *engine.CarryOverSystem
 	// Phase 30: Environmental Storytelling
 	discoverySystem *engine.DiscoverySystem
 	// V5.0 Systems (Social & Communication)
@@ -393,6 +406,14 @@ type systemsContainer struct {
 	voiceChannelSystem *engine.VoiceChannelSystem // Voice channel lifecycle and participant synchronization
 	spatialVoiceSystem *engine.SpatialVoiceSystem // Distance-based volume and stereo panning for voice
 
+	// VR Systems (AUDIT.md Task 7)
+	// Gap: VR systems implemented but never initialized with hardware detection
+	// Fix: Added stereoscopic and head tracking systems with conditional initialization
+	stereoscopicSystem *engine.StereoscopicSystem // VR stereoscopic rendering (dual-eye cameras)
+	headTrackingSystem *engine.HeadTrackingSystem // VR head tracking with mouse fallback
+	vrControllerSystem *engine.VRControllerSystem // VR controller input system
+	vrUISystem         *engine.VRUISystem         // VR-optimized UI rendering
+
 	// Lazy initialization tracking (Performance Audit S4)
 	lazyInitStarted   bool // Tracks whether lazy initialization has been triggered
 	lazyInitCompleted bool // Tracks whether lazy initialization has finished
@@ -401,95 +422,82 @@ type systemsContainer struct {
 
 // initializeCoreSystems creates and initializes all core game systems.
 func initializeCoreSystems(game *engine.EbitenGame, logger *logrus.Logger, clientLogger *logrus.Entry) *systemsContainer {
-	clientLogger.Info("initializing game systems")
+	startTime := time.Now()
+	clientLogger.Info("initializing game systems with parallel optimization")
 
 	sys := &systemsContainer{}
 
-	// Phase 1.2: Performance monitoring (PLAN.md)
+	// Phase 1: Critical systems (must be sequential)
 	sys.performanceSystem = engine.NewPerformanceMonitoringSystem()
 	clientLogger.WithField("system_name", "performance").Debug("Created performance monitoring system")
 
-	// Core gameplay systems
 	sys.inputSystem = engine.NewInputSystem()
-
 	sys.movementSystem = engine.NewMovementSystem(playerMaxSpeed)
 	sys.collisionSystem = engine.NewCollisionSystem(collisionGridCellSize)
 	sys.movementSystem.SetCollisionSystem(sys.collisionSystem)
 
-	sys.combatSystem = engine.NewCombatSystemWithLogger(*seed, logger)
-	sys.interactionSystem = engine.NewInteractionSystem(game.World)
-	sys.particleSystem = engine.NewParticleSystem()
+	// Phase 2: Parallel initialization of independent systems
+	var wg sync.WaitGroup
+	wg.Add(3)
 
-	// Phase 1.2: Initialize sprite cache for base sprite caching
-	// 400MB limit provides significant performance improvement through cached sprite reuse
-	sys.spriteCache = cache.NewSpriteCache(spriteCacheMaxSize)
-	clientLogger.WithField("maxSize", spriteCacheMaxSize).Info("sprite cache initialized")
+	// Group 1: Combat & Interaction systems
+	go func() {
+		defer wg.Done()
+		sys.combatSystem = engine.NewCombatSystemWithLogger(*seed, logger)
+		sys.interactionSystem = engine.NewInteractionSystem(game.World)
+		sys.particleSystem = engine.NewParticleSystem()
+		clientLogger.Debug("combat & interaction systems initialized")
+	}()
 
-	sys.spriteGenerator = sprites.NewGenerator()
-	sys.animationSystem = engine.NewAnimationSystem(sys.spriteGenerator)
-	sys.animationSystem.SetMaxCacheSize(animationCacheSize)
+	// Group 2: Sprite & Animation systems
+	go func() {
+		defer wg.Done()
+		sys.spriteCache = cache.NewSpriteCache(spriteCacheMaxSize)
+		sys.spriteGenerator = sprites.NewGenerator()
+		sys.animationSystem = engine.NewAnimationSystem(sys.spriteGenerator)
+		sys.animationSystem.SetMaxCacheSize(animationCacheSize)
+		sys.animationSystem.SetSpriteCache(sys.spriteCache)
+		sys.equipmentVisualSystem = engine.NewEquipmentVisualSystem(sys.spriteGenerator)
+		clientLogger.WithField("maxSize", spriteCacheMaxSize).Debug("sprite & animation systems initialized")
+	}()
 
-	// Phase 1.2: Connect sprite cache to animation system
-	sys.animationSystem.SetSpriteCache(sys.spriteCache)
+	// Group 3: Rendering systems
+	go func() {
+		defer wg.Done()
+		qualityConfig := &quality.Config{
+			Level:                 quality.QualityMedium,
+			EnablePostProcessing:  true,
+			EnableBloom:           false,
+			EnableSoftShadows:     true,
+			SpriteDetailLevel:     0.7,
+			EnableAntiAliasing:    true,
+			AntiAliasingQuality:   1,
+			EnableSpriteCache:     true,
+			EnableDynamicLighting: true,
+			ShadowSampleCount:     2,
+		}
+		sys.qualitySystem = engine.NewQualitySystem(qualityConfig, 60.0)
+		sys.lightingAdapter = engine.NewLightingAdapter(clientLogger.WithField("system", "lighting"))
+		sys.animationAdapter = engine.NewAnimationAdapter(sys.spriteGenerator, clientLogger.WithField("system", "animation"))
+		sys.uiGenerator = ui.NewGeneratorWithLogger(logger)
+		sys.shapeRenderer = shapes.NewGenerator()
+		sys.patternGenerator = patterns.NewGeneratorWithLogger(logger)
+		sys.imagePool = pool.NewImagePool()
+		workerCount := runtime.NumCPU()
+		sys.parallelRenderer = parallel.NewWorkerPool(workerCount)
+		clientLogger.WithField("workerCount", workerCount).Debug("rendering systems initialized")
+	}()
 
-	sys.equipmentVisualSystem = engine.NewEquipmentVisualSystem(sys.spriteGenerator)
+	wg.Wait()
 
-	// INTEGRATION FIX [Category A]: Phase 14 - QualitySystem
-	// Gap: QualitySystem implemented for performance-based quality adjustment but never initialized
-	// Fix: Added system initialization for automatic quality settings based on frame rate
-	// Roadmap: ROADMAP_V4.md Phase 14
-	qualityConfig := &quality.Config{
-		Level:                 quality.QualityMedium,
-		EnablePostProcessing:  true,
-		EnableBloom:           false,
-		EnableSoftShadows:     true,
-		SpriteDetailLevel:     0.7,
-		EnableAntiAliasing:    true,
-		AntiAliasingQuality:   1, // 2x2 sampling
-		EnableSpriteCache:     true,
-		EnableDynamicLighting: true,
-		ShadowSampleCount:     2,
-	}
-	sys.qualitySystem = engine.NewQualitySystem(qualityConfig, 60.0)
-
-	// Phase 2.2: Core Rendering Systems (PLAN.md)
-	// Initialize lighting adapter for dynamic lighting effects
-	sys.lightingAdapter = engine.NewLightingAdapter(clientLogger.WithField("system", "lighting"))
-	clientLogger.Info("lighting adapter initialized")
-
-	// Initialize animation adapter for advanced animation features
-	sys.animationAdapter = engine.NewAnimationAdapter(sys.spriteGenerator, clientLogger.WithField("system", "animation"))
-	clientLogger.Info("animation adapter initialized")
-
-	// Phase 2.3: UI & Shape Rendering (PLAN.md)
-	// Initialize UI generator for procedural interface elements
-	sys.uiGenerator = ui.NewGeneratorWithLogger(logger)
-	clientLogger.Info("UI generator initialized")
-
-	// Initialize shape renderer for geometric primitives
-	sys.shapeRenderer = shapes.NewGenerator()
-	clientLogger.Info("shape renderer initialized")
-
-	// Initialize pattern generator for textures and materials
-	sys.patternGenerator = patterns.NewGeneratorWithLogger(logger)
-	clientLogger.Info("pattern generator initialized")
-
-	// Phase 2.4: Rendering Optimization (PLAN.md)
-	// Initialize image pool for memory efficiency (1000 pooled images)
-	sys.imagePool = pool.NewImagePool()
-	clientLogger.Info("image pool initialized")
-
-	// Initialize parallel renderer for performance (CPU count workers)
-	workerCount := runtime.NumCPU()
-	sys.parallelRenderer = parallel.NewWorkerPool(workerCount)
-	clientLogger.WithField("workerCount", workerCount).Info("parallel renderer initialized")
-
-	// Connect rendering optimizations to RenderSystem
+	// Phase 3: Final connections (requires all systems initialized)
 	poolAdapter := engine.NewImagePoolAdapter(sys.imagePool)
 	parallelAdapter := engine.NewParallelRendererAdapter(sys.parallelRenderer)
 	game.RenderSystem.SetPool(poolAdapter)
 	game.RenderSystem.SetParallelRenderer(parallelAdapter)
-	clientLogger.Info("rendering optimizations connected to RenderSystem")
+
+	elapsed := time.Since(startTime)
+	clientLogger.WithField("duration_ms", elapsed.Milliseconds()).Info("core systems initialized with parallel optimization")
 
 	return sys
 }
@@ -556,8 +564,15 @@ func (sys *systemsContainer) scheduleLazyInit(game *engine.EbitenGame, logger *l
 		// Phase 3: Guild Federation and advanced systems
 		initializePhase3Systems(game, sys, clientLogger)
 
+		// AUDIT.md Task 7: VR hardware detection and conditional system initialization
+		initializeVRSystems(game, sys, clientLogger)
+
 		// Register non-critical systems
 		registerNonCriticalSystems(game, sys)
+
+		// Phase 4: Sprite cache warming (deferred to idle time)
+		// Priority 4 optimization: Warm common sprites to improve cache hit rate
+		warmCommonSprites(sys, seed, genreID, clientLogger)
 
 		sys.lazyInitMutex.Lock()
 		sys.lazyInitCompleted = true
@@ -575,6 +590,119 @@ func (sys *systemsContainer) isLazyInitCompleted() bool {
 	return sys.lazyInitCompleted
 }
 
+// warmCommonSprites pre-generates common sprites to improve cache hit rate.
+// This function queues sprite generation for:
+// - Player idle/walk animations (4 directions)
+// - Basic enemy types (idle state)
+// Expected impact: -10-20ms startup, improved first-frame responsiveness
+func warmCommonSprites(sys *systemsContainer, seed *int64, genre *string, logger *logrus.Entry) {
+	if sys.spriteCache == nil || sys.spriteGenerator == nil {
+		logger.Warn("sprite cache or generator not available, skipping warming")
+		return
+	}
+
+	startTime := time.Now()
+	logger.Debug("starting sprite cache warming")
+
+	pregen := cache.NewPreGenerator(sys.spriteCache)
+	seedVal, genreVal := resolveSeedAndGenre(seed, genre)
+
+	queuePlayerSprites(pregen, sys.spriteGenerator, seedVal, genreVal)
+	queueEnemySprites(pregen, sys.spriteGenerator, seedVal, genreVal)
+
+	launchAsyncGeneration(pregen, startTime, logger)
+}
+
+// resolveSeedAndGenre resolves the seed and genre values with defaults.
+func resolveSeedAndGenre(seed *int64, genre *string) (int64, string) {
+	seedVal := int64(12345)
+	if seed != nil {
+		seedVal = *seed
+	}
+	genreVal := "fantasy"
+	if genre != nil {
+		genreVal = *genre
+	}
+	return seedVal, genreVal
+}
+
+// queuePlayerSprites queues common player sprite animations into the pre-generator.
+func queuePlayerSprites(pregen *cache.PreGenerator, gen *sprites.Generator, seedVal int64, genreVal string) {
+	playerStates := []string{"idle", "walk"}
+	directions := []string{"down", "up", "left", "right"}
+
+	for _, state := range playerStates {
+		for frame := 0; frame < 4; frame++ {
+			for _, dir := range directions {
+				capturedState := state
+				capturedFrame := frame
+				capturedDir := dir
+
+				key := cache.GenerateKey(seedVal, capturedState+"_"+capturedDir, capturedFrame)
+				pregen.Queue(key, func() (*ebiten.Image, error) {
+					config := sprites.Config{
+						Type:    sprites.SpriteEntity,
+						Width:   64,
+						Height:  64,
+						Seed:    seedVal,
+						GenreID: genreVal,
+						Custom: map[string]interface{}{
+							"entityType": "player",
+							"state":      capturedState,
+							"frame":      capturedFrame,
+							"direction":  capturedDir,
+						},
+					}
+					return gen.Generate(config)
+				})
+			}
+		}
+	}
+}
+
+// queueEnemySprites queues common enemy idle sprites into the pre-generator.
+func queueEnemySprites(pregen *cache.PreGenerator, gen *sprites.Generator, seedVal int64, genreVal string) {
+	enemyTypes := []string{"goblin", "skeleton", "orc", "slime"}
+	directions := []string{"down", "up", "left", "right"}
+
+	for i, enemyType := range enemyTypes {
+		for _, dir := range directions {
+			capturedEnemy := enemyType
+			capturedDir := dir
+			enemySeed := seedVal + int64(i+1)
+
+			key := cache.GenerateKey(enemySeed, "idle_"+capturedDir, 0)
+			pregen.Queue(key, func() (*ebiten.Image, error) {
+				config := sprites.Config{
+					Type:    sprites.SpriteEntity,
+					Width:   64,
+					Height:  64,
+					Seed:    enemySeed,
+					GenreID: genreVal,
+					Custom: map[string]interface{}{
+						"entityType": capturedEnemy,
+						"state":      "idle",
+						"frame":      0,
+						"direction":  capturedDir,
+					},
+				}
+				return gen.Generate(config)
+			})
+		}
+	}
+}
+
+// launchAsyncGeneration starts asynchronous sprite generation with logging.
+func launchAsyncGeneration(pregen *cache.PreGenerator, startTime time.Time, logger *logrus.Entry) {
+	go func() {
+		count := pregen.Generate()
+		elapsed := time.Since(startTime)
+		logger.WithFields(logrus.Fields{
+			"sprites_generated": count,
+			"duration_ms":       elapsed.Milliseconds(),
+		}).Info("sprite cache warming completed")
+	}()
+}
 
 // initializeGenerators creates item and recipe generators for loot drops.
 func initializeGenerators(sys *systemsContainer) {
@@ -856,8 +984,24 @@ func initializeV4Systems(game *engine.EbitenGame, sys *systemsContainer, clientL
 	// Roadmap: ROADMAP_V4.md Phase 21.2
 	sys.vehicleSystem = engine.NewVehicleSystem(game.World)
 
+	// AUDIT FIX: Phase 95-96 - Fishing and Gathering Systems
+	// Gap: FishingSystem and GatheringSystem implemented but never initialized on client
+	// Fix: Added system initialization for fishing and resource gathering minigames
+	// Note: These systems must run on client for deterministic multiplayer sync (see fishing_multiplayer_sync_test.go)
+	sys.fishingSystem = engine.NewFishingSystem(game.World, *seed+seedOffsetFishing)
+	logging.ComponentLogger(clientLogger.Logger, "fishing").Debug("Created fishing system")
+	sys.gatheringSystem = engine.NewGatheringSystem(game.World)
+	logging.ComponentLogger(clientLogger.Logger, "gathering").Debug("Created gathering system")
+
+	// AUDIT FIX: Phase 112 - CarryOverSystem for New Game Plus
+	// Gap: CarryOverSystem implemented but never initialized on client
+	// Fix: Added system initialization for NG+ carry-over selection UI and item transfer
+	// Note: Client-only system for NG+ progression (works with prestige.System)
+	sys.carryoverSystem = engine.NewCarryOverSystem(game.World)
+	logging.ComponentLogger(clientLogger.Logger, "carryover").Debug("Created carryover system")
+
 	if *verbose {
-		clientLogger.Info("V4.0 systems initialized (vehicles, vehicle-mgmt, mounting, companions, companion-mgmt, skills, books, spells, classes, expressions, minigames, achievements, moral choices, discovery, investigation, NPC dialog, adaptive music)")
+		clientLogger.Info("V4.0 systems initialized (vehicles, vehicle-mgmt, mounting, companions, companion-mgmt, skills, books, spells, classes, expressions, minigames, achievements, moral choices, discovery, investigation, NPC dialog, adaptive music, fishing, gathering, carryover)")
 	}
 }
 
@@ -1121,6 +1265,79 @@ func initializeV19Systems(game *engine.EbitenGame, sys *systemsContainer, client
 	}
 }
 
+// initializeVRSystems initializes VR systems with hardware detection.
+// AUDIT.md Task 7: VR hardware detection for conditional stereoscopic and head tracking initialization.
+func initializeVRSystems(game *engine.EbitenGame, sys *systemsContainer, clientLogger *logrus.Entry) {
+	// Check if VR is enabled via flags
+	if !*enableVR && !*forceVR {
+		clientLogger.Debug("VR disabled via flags, skipping VR system initialization")
+		return
+	}
+
+	// Perform hardware detection
+	detector := vr.NewDetector()
+	if *forceVR {
+		detector.SetForceEnable(true)
+		clientLogger.Info("VR mode force-enabled via --force-vr flag")
+	}
+
+	vrAvailable := detector.DetectHardware()
+
+	if !vrAvailable && !*forceVR {
+		clientLogger.Info("VR hardware not detected, skipping VR system initialization")
+		clientLogger.Info("Use --force-vr to enable VR mode without hardware (testing)")
+		return
+	}
+
+	clientLogger.WithFields(logrus.Fields{
+		"headset":    detector.IsHeadsetDetected(),
+		"controller": detector.IsControllerDetected(),
+		"force":      *forceVR,
+	}).Info("VR mode enabled, initializing VR systems")
+
+	// Initialize stereoscopic rendering system
+	sys.stereoscopicSystem = engine.NewStereoscopicSystem(game.World)
+	game.World.AddSystem(sys.stereoscopicSystem)
+	clientLogger.Debug("stereoscopic rendering system initialized")
+
+	// Initialize head tracking system
+	sys.headTrackingSystem = engine.NewHeadTrackingSystem(game.World)
+
+	// If no headset detected, enable mouse fallback
+	if !detector.IsHeadsetDetected() {
+		sys.headTrackingSystem.SetUseMouseFallback(true)
+		clientLogger.Debug("head tracking system initialized with mouse fallback (no headset)")
+	} else {
+		// Set up stub headset adapter (production stub - real hardware SDK integration planned)
+		stubHeadset := engine.NewStubHeadsetAdapter()
+		sys.headTrackingSystem.SetHeadsetAdapter(stubHeadset)
+		clientLogger.Debug("head tracking system initialized with stub adapter (no hardware SDK)")
+	}
+
+	game.World.AddSystem(sys.headTrackingSystem)
+
+	// Initialize VR controller system if controllers detected
+	if detector.IsControllerDetected() || *forceVR {
+		sys.vrControllerSystem = engine.NewVRControllerSystem(game.World)
+
+		// Set up stub controller adapter (production stub - real hardware SDK integration planned)
+		stubController := engine.NewStubControllerAdapter()
+		sys.vrControllerSystem.SetControllerAdapter(stubController)
+
+		game.World.AddSystem(sys.vrControllerSystem)
+		clientLogger.Debug("VR controller system initialized with stub adapter (no hardware SDK)")
+	}
+
+	// Initialize VR UI system for VR-optimized rendering
+	sys.vrUISystem = engine.NewVRUISystem(game.World)
+	game.World.AddSystem(sys.vrUISystem)
+	clientLogger.Debug("VR UI system initialized")
+
+	if *verbose {
+		clientLogger.Info("VR systems initialized successfully")
+	}
+}
+
 // initializePhase3Systems initializes Phase 3 systems from PLAN.md (Networking & Social Features)
 func initializePhase3Systems(game *engine.EbitenGame, sys *systemsContainer, clientLogger *logrus.Entry) {
 	// Phase 3.2: Guild Federation - Cross-server guild management
@@ -1320,6 +1537,13 @@ func registerNonCriticalSystems(game *engine.EbitenGame, sys *systemsContainer) 
 	// Phase 3.4: Minigame implementations
 	game.World.AddSystem(sys.minigameGamesSystem)
 
+	// AUDIT FIX: Phase 95-96 - Fishing and Gathering Systems
+	game.World.AddSystem(sys.fishingSystem)
+	game.World.AddSystem(sys.gatheringSystem)
+
+	// AUDIT FIX: Phase 112 - CarryOverSystem for New Game Plus
+	game.World.AddSystem(sys.carryoverSystem)
+
 	// Phase 4.1: Choice & consequences
 	game.World.AddSystem(sys.choiceConsequencesSystem) // Phase 4.1: Choice tracking and consequences
 	game.World.AddSystem(sys.guildVehicleSystem)       // Phase 4.2: Guild vehicle fleets
@@ -1437,15 +1661,33 @@ func configureSystemConnections(game *engine.EbitenGame, sys *systemsContainer) 
 	sys.interactionSystem.SetCarrySystem(sys.carrySystem)
 }
 
-// startPerformanceMonitoring begins background performance metric logging.
+// startPerformanceMonitoring begins background performance metric logging and stability monitoring.
+// Enforces documented performance targets: 60 FPS minimum and <500MB memory usage.
 func startPerformanceMonitoring(game *engine.EbitenGame, clientLogger *logrus.Entry) {
 	if !*verbose {
 		return
 	}
 
+	// Legacy performance monitor for detailed system metrics
 	perfMonitor := engine.NewPerformanceMonitor(game.World)
-	clientLogger.Info("performance monitoring initialized")
 
+	// Stability monitor for enforcing performance targets (60 FPS, 500MB memory)
+	stabilityConfig := stability.Config{
+		Duration:      0, // Run indefinitely (no duration limit)
+		CheckInterval: 30 * time.Second,
+		MemoryLimit:   500 * 1024 * 1024, // 500MB as documented in README
+		MinFPS:        60.0,              // 60 FPS as documented in README
+		ReportPath:    "",                // Don't write reports (monitoring only)
+	}
+	stabilityMonitor := stability.NewMonitor(stabilityConfig)
+	stabilityMonitor.SetFPSProvider(game) // EbitenGame implements FPSProvider via CurrentFPS()
+
+	clientLogger.WithFields(logrus.Fields{
+		"min_fps":      stabilityConfig.MinFPS,
+		"memory_limit": stabilityConfig.MemoryLimit / (1024 * 1024),
+	}).Info("performance monitoring initialized with stability enforcement")
+
+	// Background goroutine for legacy performance metrics logging
 	go func() {
 		ticker := time.NewTicker(perfMonitorInterval * time.Second)
 		defer ticker.Stop()
@@ -1454,11 +1696,52 @@ func startPerformanceMonitoring(game *engine.EbitenGame, clientLogger *logrus.En
 			clientLogger.WithField("metrics", metrics.String()).Info("performance metrics")
 		}
 	}()
+
+	// Background goroutine for stability monitoring
+	go func() {
+		ctx := context.Background()
+		ticker := time.NewTicker(stabilityConfig.CheckInterval)
+		defer ticker.Stop()
+
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-ticker.C:
+				// Perform health check manually to log warnings without failing
+				fps := game.CurrentFPS()
+				memStats := runtime.MemStats{}
+				runtime.ReadMemStats(&memStats)
+				currentMem := memStats.HeapAlloc
+
+				fields := logrus.Fields{
+					"fps":        fmt.Sprintf("%.1f", fps),
+					"memory_mb":  fmt.Sprintf("%.1f", float64(currentMem)/(1024*1024)),
+					"goroutines": runtime.NumGoroutine(),
+				}
+
+				// Log warnings when exceeding documented performance targets
+				if fps < stabilityConfig.MinFPS {
+					fields["target_fps"] = stabilityConfig.MinFPS
+					clientLogger.WithFields(fields).Warn("FPS below target")
+				}
+				if currentMem > stabilityConfig.MemoryLimit {
+					fields["target_memory_mb"] = stabilityConfig.MemoryLimit / (1024 * 1024)
+					clientLogger.WithFields(fields).Warn("memory usage above target")
+				}
+
+				// Log info every check interval when performing well
+				if fps >= stabilityConfig.MinFPS && currentMem <= stabilityConfig.MemoryLimit {
+					clientLogger.WithFields(fields).Debug("stability check passed")
+				}
+			}
+		}
+	}()
 }
 
 // generateWorldTerrain creates and validates procedural terrain using async loading.
-// This reduces startup blocking time by running generation in a background goroutine.
-func generateWorldTerrain(logger *logrus.Logger, clientLogger *logrus.Entry) *terrain.Terrain {
+// Returns the async loader for tracking progress instead of blocking until complete.
+func generateWorldTerrain(logger *logrus.Logger, clientLogger *logrus.Entry) *terrain.AsyncLoader {
 	clientLogger.Info("starting async terrain generation")
 
 	terrainGen := terrain.NewBSPGeneratorWithLogger(logger)
@@ -1477,34 +1760,8 @@ func generateWorldTerrain(logger *logrus.Logger, clientLogger *logrus.Entry) *te
 	loader := terrain.NewAsyncLoader(logger)
 	loader.StartGeneration(terrainGen, *seed, params)
 
-	// Poll progress until complete (simple progress logging)
-	lastProgress := 0.0
-	for !loader.IsDone() {
-		progress, err := loader.GetProgress()
-		if err != nil {
-			clientLogger.WithError(err).Fatal("terrain generation failed")
-		}
-
-		// Log progress updates at 25% intervals
-		if progress-lastProgress >= 0.25 {
-			clientLogger.WithField("progress", int(progress*100)).Info("terrain generation progress")
-			lastProgress = progress
-		}
-	}
-
-	// Wait for final result
-	generatedTerrain, err := loader.Wait()
-	if err != nil {
-		clientLogger.WithError(err).Fatal("failed to generate terrain")
-	}
-
-	clientLogger.WithFields(logrus.Fields{
-		"width":     generatedTerrain.Width,
-		"height":    generatedTerrain.Height,
-		"roomCount": len(generatedTerrain.Rooms),
-	}).Info("terrain generated successfully")
-
-	return generatedTerrain
+	clientLogger.Info("terrain generation started in background")
+	return loader
 }
 
 // initializeTerrainRendering sets up the terrain rendering system.
@@ -1686,9 +1943,10 @@ func generateWorldFactions(game *engine.EbitenGame, params procgen.GenerationPar
 }
 
 // initializeSpatialPartitioning creates and configures the spatial partition system.
-func initializeSpatialPartitioning(game *engine.EbitenGame, generatedTerrain *terrain.Terrain, clientLogger *logrus.Entry) {
+// Also enables quadtree-based collision optimization for O(n log n) collision detection.
+func initializeSpatialPartitioning(game *engine.EbitenGame, sys *systemsContainer, generatedTerrain *terrain.Terrain, clientLogger *logrus.Entry) {
 	if *verbose {
-		clientLogger.Info("initializing spatial partition system for viewport culling")
+		clientLogger.Info("initializing spatial partition system for viewport culling and collision optimization")
 	}
 
 	worldWidth := float64(generatedTerrain.Width) * worldPixelsPerTile
@@ -1703,14 +1961,34 @@ func initializeSpatialPartitioning(game *engine.EbitenGame, generatedTerrain *te
 	game.RenderSystem.EnableCulling(true)
 	game.RenderSystem.EnableBatching(true)
 
+	// Enable quadtree-based collision optimization (29% faster than grid-based)
+	// This reduces collision detection from O(n²) to O(n log n)
+	if sys.collisionSystem != nil {
+		sys.collisionSystem.SetQuadtree(spatialSystem.GetQuadtree())
+		if *verbose {
+			clientLogger.Info("quadtree-based collision optimization enabled")
+		}
+	}
+
+	// Enable quadtree-based AI enemy detection (50-80% faster with 500+ entities)
+	// This reduces enemy search from O(n) to O(log n)
+	if sys.aiSystem != nil {
+		sys.aiSystem.SetQuadtree(spatialSystem.GetQuadtree())
+		if *verbose {
+			clientLogger.Info("quadtree-based AI optimization enabled")
+		}
+	}
+
 	clientLogger.WithFields(logrus.Fields{
-		"worldWidth":     worldWidth,
-		"worldHeight":    worldHeight,
-		"cellSize":       quadtreeCapacity,
-		"initialCount":   len(game.World.GetEntities()),
-		"cullingActive":  true,
-		"batchingActive": true,
-	}).Info("spatial partition system initialized with initial rebuild, culling and batching enabled")
+		"worldWidth":         worldWidth,
+		"worldHeight":        worldHeight,
+		"cellSize":           quadtreeCapacity,
+		"initialCount":       len(game.World.GetEntities()),
+		"cullingActive":      true,
+		"batchingActive":     true,
+		"collisionOptimized": sys.collisionSystem != nil,
+		"aiOptimized":        sys.aiSystem != nil,
+	}).Info("spatial partition system initialized with initial rebuild, culling, batching, and collision optimization enabled")
 }
 
 // connectMapUIToTerrain wires the map UI to terrain data.
@@ -2299,32 +2577,34 @@ func connectUIComponentsToInputSystem(game *engine.EbitenGame, inputSystem *engi
 }
 
 func connectBasicUIComponents(game *engine.EbitenGame, inputSystem *engine.InputSystem, shopUI *engine.ShopUI) {
-	if game.MailboxUI != nil {
-		inputSystem.SetMailboxUI(game.MailboxUI)
+	uiConnections := []struct {
+		ui     interface{}
+		setter func(interface{})
+	}{
+		{game.MailboxUI, func(ui interface{}) { inputSystem.SetMailboxUI(ui.(*engine.MailboxUI)) }},
+		{game.InventoryUI, func(ui interface{}) { inputSystem.SetInventoryUI(ui.(*engine.EbitenInventoryUI)) }},
+		{game.CharacterUI, func(ui interface{}) { inputSystem.SetCharacterUI(ui.(*engine.EbitenCharacterUI)) }},
+		{game.SkillsUI, func(ui interface{}) { inputSystem.SetSkillsUI(ui.(*engine.EbitenSkillsUI)) }},
+		{game.QuestUI, func(ui interface{}) { inputSystem.SetQuestUI(ui.(*engine.EbitenQuestUI)) }},
+		{game.MapUI, func(ui interface{}) { inputSystem.SetMapUI(ui.(*engine.EbitenMapUI)) }},
+		{game.CraftingUI, func(ui interface{}) { inputSystem.SetCraftingUI(ui.(*engine.CraftingUI)) }},
+		{shopUI, func(ui interface{}) { inputSystem.SetShopUI(ui.(*engine.ShopUI)) }},
+		{game.TradeUI, func(ui interface{}) { inputSystem.SetTradeUI(ui.(*engine.TradeUI)) }},
 	}
-	if game.InventoryUI != nil {
-		inputSystem.SetInventoryUI(game.InventoryUI)
-	}
-	if game.CharacterUI != nil {
-		inputSystem.SetCharacterUI(game.CharacterUI)
-	}
-	if game.SkillsUI != nil {
-		inputSystem.SetSkillsUI(game.SkillsUI)
-	}
-	if game.QuestUI != nil {
-		inputSystem.SetQuestUI(game.QuestUI)
-	}
-	if game.MapUI != nil {
-		inputSystem.SetMapUI(game.MapUI)
-	}
-	if game.CraftingUI != nil {
-		inputSystem.SetCraftingUI(game.CraftingUI)
-	}
-	if shopUI != nil {
-		inputSystem.SetShopUI(shopUI)
-	}
-	if game.TradeUI != nil {
-		inputSystem.SetTradeUI(game.TradeUI)
+
+	connectUIComponents(uiConnections)
+}
+
+// connectUIComponents connects non-nil UI components using the provided setters.
+func connectUIComponents(connections []struct {
+	ui     interface{}
+	setter func(interface{})
+},
+) {
+	for _, conn := range connections {
+		if conn.ui != nil {
+			conn.setter(conn.ui)
+		}
 	}
 }
 

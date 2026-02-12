@@ -150,11 +150,12 @@ func TestMiniGameComponent_GameInstance(t *testing.T) {
 
 // StubMiniGame is a test implementation of MiniGame interface
 type StubMiniGame struct {
-	initError  error
-	updateErr  error
-	renderErr  error
-	isComplete bool
-	reward     *Reward
+	initError    error
+	updateErr    error
+	prepareErr   error
+	isComplete   bool
+	reward       *Reward
+	renderOutput MiniGameRenderOutput
 }
 
 func (s *StubMiniGame) Initialize(seed int64, difficulty float64) error {
@@ -165,8 +166,12 @@ func (s *StubMiniGame) Update(deltaTime float64) error {
 	return s.updateErr
 }
 
-func (s *StubMiniGame) Render(screen ImageProvider) error {
-	return s.renderErr
+func (s *StubMiniGame) PrepareRender(screenWidth, screenHeight int) error {
+	return s.prepareErr
+}
+
+func (s *StubMiniGame) GetRenderOutput() MiniGameRenderOutput {
+	return s.renderOutput
 }
 
 func (s *StubMiniGame) IsComplete() bool {

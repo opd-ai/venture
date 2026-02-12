@@ -1,343 +1,208 @@
-# Package Audit: pkg/network
-Generated during reorganization on: 2026-01-20
-Updated: 2026-01-23 (Comprehensive functional audit)
+# Network Package Audit
 
-## Summary
-- **Package Size**: 27 non-test Go files (60 total including tests)
-- **Test Coverage**: 72.2% (exceeds minimum 65% requirement)
-- **Missing Implementations**: 0
-- **Incomplete Features**: 0
-- **Interface Violations**: 0
-- **Untested Code**: ~28% of statements lack test coverage
-- **Dead Code**: 0 identified
-- **Error Handling Gaps**: 0
-- **Documentation Gaps**: 0 (all exported symbols documented)
-- **Dependency Issues**: 0
-- **CRITICAL BUGs**: 0
-- **FUNCTIONAL MISMATCHES**: 0
-- **EDGE CASE BUGs**: 0
-- **PERFORMANCE ISSUEs**: 0
+**Audit Date:** 2026-02-09
+**Auditor:** Automated Code Audit
+**Package:** `pkg/network`
+**Coverage:** 82.6% (as documented in README)
 
-## AUDIT SUMMARY (2026-01-23)
+## AUDIT SUMMARY
 
-**Audit Result: PASS - No issues found**
+This audit examines the `pkg/network` package for discrepancies between documented functionality and actual implementation, focusing on bugs, missing features, and functional misalignments.
 
-All documented functionality in README.md matches implementation:
-- ✅ Binary Protocol: Implemented in `serialization.go` with efficient encode/decode
-- ✅ Client-Side Prediction: Implemented in `prediction.go` with proper reconciliation
-- ✅ Entity Interpolation: Implemented in `snapshot.go` with lerp-based interpolation
-- ✅ Lag Compensation: Implemented in `lag_compensation.go` with 10ms-5000ms support
-- ✅ Buffer Monitoring: Implemented in `buffer_stats.go` with automatic warnings
-- ✅ Delta Compression: Implemented in `snapshot.go` with configurable epsilon
-- ✅ Thread-Safe Operations: All shared state protected by sync.RWMutex
-- ✅ E2E Encryption: Implemented in `crypto.go` with DH key exchange and AES-256-GCM
-- ✅ Chat System: Implemented in `chat.go` with rate limiting and ACK/NACK
-- ✅ Image Sharing: Implemented in `images.go` with chunked transfer and moderation
-- ✅ High-Latency Support: TorClientConfig/HighLatencyServerConfig with 5000ms tolerance
+| Category | Count |
+|----------|-------|
+| CRITICAL BUG | 0 |
+| FUNCTIONAL MISMATCH | 0 |
+| MISSING FEATURE | 1 |
+| EDGE CASE BUG | 2 |
+| PERFORMANCE ISSUE | 0 |
 
-### Code Quality Verification
-
-**Build Status**: ✅ `go build ./pkg/network/...` passes
-**Go Vet**: ✅ `go vet ./pkg/network/...` passes with no issues
-**Test Status**: ✅ All tests pass, 72.2% coverage
-**TODO/FIXME**: ✅ None in production code
-
-## Detailed Findings
-
-### Missing Implementations
-**Status**: ✅ None found
-
-All functions are fully implemented with no stubs or placeholders.
-
-### Incomplete Features
-**Status**: ✅ None found
-
-No TODO, FIXME, or XXX comments found in non-test code. All features are complete.
-
-### Interface Violations
-**Status**: ✅ None found
-
-All structs implementing interfaces have complete method sets.
-
-### Untested Code
-**Status**: ✅ Good coverage (72.2%)
-
-Test coverage exceeds the minimum requirement by 7.2 percentage points. The ~28% untested code likely consists of:
-- Error paths in network I/O operations
-- Edge cases in protocol handling
-- Cleanup/shutdown paths
-
-**Recommendations**:
-- Add tests for network error scenarios (connection drops, malformed packets)
-- Test compression/decompression edge cases
-- Add integration tests for client-server handshake flows
-
-### Dead Code
-**Status**: ✅ None found
-
-No unreachable or unused functions identified.
-
-### Error Handling Gaps
-**Status**: ✅ Comprehensive
-
-All network operations properly return and handle errors. No silent failures detected.
-
-### Documentation Gaps
-**Status**: ✅ Well documented
-
-All exported functions, types, and interfaces have documentation comments. Package has `doc.go` explaining purpose.
-
-### Dependency Issues
-**Status**: ✅ Clean
-
-- No circular dependencies
-- No unused imports
-- Proper use of interface types for testability (`net.Conn`, `net.PacketConn`, `net.Addr`)
-
-## Interface Consolidation - Completed ✅
-
-### Changes Made
-All 5 interfaces in pkg/network are now consolidated in `interfaces.go`:
-
-**Original Interfaces (3)**:
-- Protocol
-- ClientConnection  
-- ServerConnection
-
-**Moved Interfaces (2)**:
-- KeepAliveConn (from client.go)
-- DesyncRecoveryStrategy (from desync.go)
-
-### Build Status
-✅ Build successful: `go build ./pkg/network/...`
-✅ Tests passing: 8 test packages, all passed
-✅ Coverage: 72.2% (exceeds 65% requirement)
-
-## File Organization Assessment
-
-The pkg/network package (27 files) has reasonable organization:
-
-**Core Networking (9 files)**:
-- client.go, server.go - Client/server implementations
-- protocol.go, packets.go - Protocol definitions
-- serialization.go, component_serialization.go - Data marshaling
-- compression.go, crypto.go - Data transformation
-- interfaces.go - Interface definitions ✅
-
-**Synchronization (6 files)**:
-- snapshot.go, snapshot_builder.go - State snapshots
-- animation_sync.go, projectile_sync.go - Entity synchronization
-- lag_compensation.go, prediction.go - Client-side prediction
-- desync.go - Desynchronization detection/recovery
-
-**Infrastructure (6 files)**:
-- buffer_pool.go, buffer_stats.go - Memory management
-- bandwidth.go - Bandwidth monitoring
-- priority_queue.go - Packet prioritization
-- images.go - Image data handling
-- helpers.go - Utility functions
-
-**Testing (3 files)**:
-- mock_client.go, mock_server.go - Test mocks
-- doc.go - Package documentation
-
-**Social Features (3 files)**:
-- chat.go - Chat messaging
-- profanity.go - Content filtering
-
-## Structural Recommendations
-
-### Minimal Changes Required
-The package is well-organized with logical file grouping. No major restructuring needed.
-
-**Optional Refinements**:
-1. Consider moving mock_*.go to `pkg/network/testing/` sub-package
-2. Group sync-related files: `pkg/network/sync/` (snapshot.go, *_sync.go, prediction.go, lag_compensation.go, desync.go)
-3. Group infrastructure: `pkg/network/transport/` (buffer_*.go, bandwidth.go, priority_queue.go)
-
-However, these are **low priority** given the package size is manageable (27 files vs 322 in pkg/engine).
-
-## Recommendations
-
-### High Priority
-None - package is in good shape
-
-### Medium Priority
-1. Increase test coverage from 72.2% to 80%+ (focus on error paths)
-2. Add integration tests for full client-server flows
-3. Test compression edge cases (highly compressible vs incompressible data)
-
-### Low Priority
-4. Consider extracting test mocks to `testing/` sub-package
-5. Add benchmarks for serialization/compression performance
-6. Document network protocol wire format in separate spec file
-
-## Conclusion
-
-pkg/network is well-maintained with:
-- ✅ Good test coverage (72.2%, exceeds requirement)
-- ✅ Complete implementations (no TODOs/stubs)
-- ✅ Proper error handling
-- ✅ Interface-based design for testability
-- ✅ All interfaces consolidated in interfaces.go
-
-**Status**: AUDIT COMPLETE - Package meets all quality standards
-**Last Audit**: 2026-01-23 (comprehensive functional audit)
-**Next Action**: Move to next unaudited package
+**Overall Assessment:** The network package is well-implemented with high code quality. The implementation closely matches the documented functionality in both README.md and doc.go. Minor issues identified are edge cases that don't affect normal operation.
 
 ---
 
-## DETAILED FINDINGS (2026-01-23 Audit)
+## DETAILED FINDINGS
 
-### Documentation vs Implementation Verification
-
-The following claims from README.md were verified against the implementation:
+### MISSING FEATURE: LoadWordListFromFile Not Implemented
 
 ~~~~
-### VERIFIED: Binary Protocol Performance
-**File:** serialization.go
-**Documented:** <0.5µs encode/decode, ~80 bytes per update
-**Actual:** Binary protocol implemented with efficient length-prefixed framing
-**Status:** ✅ MATCH - Uses binary.LittleEndian for efficient serialization
+**File:** profanity.go:199-205
+**Severity:** Low
+**Description:** The `LoadWordListFromFile` function is documented and exported but contains only a placeholder implementation that returns nil without actually loading any file.
+**Expected Behavior:** According to the function comment, it should load a profanity word list from a file where each line contains one word and lines starting with # are comments.
+**Actual Behavior:** The function immediately returns nil without reading any file, making it a no-op.
+**Impact:** Users who attempt to load custom profanity word lists from files will silently fail. The function appears to work but does nothing.
+**Reproduction:** Call `pf.LoadWordListFromFile("any/path.txt")` - it will return nil regardless of file contents or existence.
 **Code Reference:**
 ```go
-// Binary format with compact representation
-// Header: Timestamp(8) + EntityID(8) + Priority(1) + SequenceNumber(4) + ComponentCount(2) = 23 bytes fixed
-func (p *BinaryProtocol) EncodeStateUpdate(update *StateUpdate) ([]byte, error)
-```
-~~~~
-
-~~~~
-### VERIFIED: High-Latency Support (200-5000ms)
-**File:** client.go:49-57, server.go:60-69, lag_compensation.go:70-77
-**Documented:** Supports 200-5000ms latency for Tor/onion services
-**Actual:** TorClientConfig (5000ms MaxLatency), HighLatencyLagCompensationConfig (5000ms MaxCompensation, 300 snapshots)
-**Status:** ✅ MATCH
-**Code Reference:**
-```go
-func TorClientConfig() ClientConfig {
-    return ClientConfig{
-        ConnectionTimeout: 60 * time.Second,
-        MaxLatency:        5000 * time.Millisecond,
-        BufferSize:        512,
-    }
-}
-
-func HighLatencyLagCompensationConfig() LagCompensationConfig {
-    return LagCompensationConfig{
-        MaxCompensation:    5000 * time.Millisecond,
-        SnapshotBufferSize: 300, // 15s at 20Hz
-    }
+// LoadWordListFromFile loads a profanity word list from a file.
+// Each line should contain one word. Lines starting with # are comments.
+func (pf *ProfanityFilter) LoadWordListFromFile(filepath string) error {
+	// Note: This would read from file, but we keep it simple for now
+	// since the project uses zero external assets. Users can provide
+	// word lists via API instead.
+	return nil // Placeholder - implement if needed
 }
 ```
+**Mitigation:** This is intentionally unimplemented per the comment - the project philosophy is zero external assets. Users should use `SetWordList()` or `AddWord()` APIs instead. Consider either implementing the function or removing it from the public API to avoid confusion.
 ~~~~
 
+### EDGE CASE BUG: Client receiveLoop May Miss Connection Nil After Lock Release
+
 ~~~~
-### VERIFIED: E2E Encrypted Chat
-**File:** crypto.go, chat.go
-**Documented:** Diffie-Hellman key exchange and AES-256-GCM encryption
-**Actual:** RFC 3526 Group 14 (2048-bit), AES-256-GCM with random IV
-**Status:** ✅ MATCH
+**File:** client.go:486-509
+**Severity:** Low
+**Description:** In the `receiveLoop` function, there's a potential race condition between checking if connection is nil and using it. The code checks `conn == nil` after releasing the read lock, but the connection could be set to nil by `Disconnect()` between the check and subsequent operations.
+**Expected Behavior:** The receive loop should handle connection closure gracefully without potential nil pointer access.
+**Actual Behavior:** While the code includes a nil check, there's a small window where the connection could be closed by another goroutine after the check passes but before `SetReadDeadline` is called. However, this is mitigated by the fact that `SetReadDeadline` on a closed connection returns an error that will be caught.
+**Impact:** Very low. The existing error handling in `readMessageLength` will catch any issues from a closed connection. This is a theoretical race rather than a practical bug.
+**Reproduction:** Difficult to reproduce due to timing requirements. Would require precise timing of `Disconnect()` call during the window between lock release and `SetReadDeadline`.
 **Code Reference:**
 ```go
-// DefaultDHParams uses RFC 3526 2048-bit MODP Group 14
-func DefaultDHParams() *DiffieHellmanParams
+// Check if connection is valid before accessing it
+// Note: This nil check is an early-exit optimization, not full race prevention.
+// The connection may still be closed after this point; in that case,
+// SetReadDeadline and subsequent reads will return errors that are already
+// handled by readMessageLength/readMessageData.
+c.mu.RLock()
+conn := c.conn
+c.mu.RUnlock()
 
-// EncryptMessage uses AES-256-GCM with random IV (12 bytes + ciphertext + 16 bytes tag)
-func EncryptMessage(key AESKey, plaintext []byte) ([]byte, error)
-```
-~~~~
-
-~~~~
-### VERIFIED: Image Sharing Constraints
-**File:** images.go:28-36
-**Documented:** <500KB, PNG/JPEG/GIF only, <2048×2048 pixels, 1 per 60 seconds, 10min expiry
-**Actual:** All constraints implemented with proper validation
-**Status:** ✅ MATCH
-**Code Reference:**
-```go
-const (
-    MaxImageSize      = 500 * 1024 // 500KB
-    MaxImageDimension = 2048       // 2048x2048 pixels
-    ThumbnailSize     = 128        // 128x128 pixels
-    ImageExpiryTime   = 10 * time.Minute
-    ImageRateLimit    = 60 * time.Second
-    MaxChunkSize      = 64 * 1024  // 64KB chunks
-)
-```
-~~~~
-
-~~~~
-### VERIFIED: Decompression Bomb Protection
-**File:** compression.go:18-23
-**Documented:** (Implicit security requirement)
-**Actual:** MaxDecompressedSize = 10MB, LimitReader used
-**Status:** ✅ GOOD - Security protection implemented
-**Code Reference:**
-```go
-const MaxDecompressedSize = 10 * 1024 * 1024 // 10 MB
-
-func DecompressMessage(data []byte) ([]byte, error) {
-    limitedReader := io.LimitReader(reader, MaxDecompressedSize+1)
-    // Returns ErrDecompressedSizeExceeded if limit exceeded
-}
-```
-~~~~
-
-~~~~
-### VERIFIED: Sequence Number Wrap-Around Handling
-**File:** helpers.go:55-102
-**Documented:** Sequence numbers for lag compensation and prediction
-**Actual:** Proper uint32 wrap-around handling with half-range comparison
-**Status:** ✅ GOOD - Handles 2^32 wrap-around correctly
-**Code Reference:**
-```go
-// Uses half-range comparison for uint32 wrap-around
-// Safe for ~3.4 years at 20Hz update rate
-func sequenceLessThan(seq1, seq2 uint32) bool {
-    diff := seq2 - seq1
-    return diff < (1 << 31)
-}
-```
-~~~~
-
-~~~~
-### VERIFIED: Network Interface Best Practices
-**File:** client.go:98, server.go:95, interfaces.go
-**Documented:** Use net.Conn instead of net.TCPConn
-**Actual:** All production code uses interface types
-**Status:** ✅ MATCH - Uses net.Conn, net.Listener, KeepAliveConn interface
-**Code Reference:**
-```go
-type TCPClient struct {
-    conn net.Conn  // Interface, not *net.TCPConn
+if conn == nil {
+	return
 }
 
-type KeepAliveConn interface {
-    SetKeepAlive(keepalive bool) error
-    SetKeepAlivePeriod(d time.Duration) error
-}
+conn.SetReadDeadline(time.Now().Add(c.config.ConnectionTimeout))
 ```
+**Mitigation:** The code already documents this behavior in comments and handles it through error catching. No fix required - this is a documentation note for completeness.
 ~~~~
 
-### Edge Cases Reviewed
+### EDGE CASE BUG: SnapshotManager ApplyDelta Double-Locks on GetSnapshotAtSequence
 
-1. **Nil Connection Handling (client.go:487-493)**: ✅ Properly checks conn != nil before operations
-2. **Channel Full Handling (server.go:690-698)**: ✅ Non-blocking sends with drop tracking
-3. **Priority Queue Full (priority_queue.go:97-99)**: ✅ Returns false when capacity exceeded
-4. **Expiry Timer Cleanup (images.go:400-407)**: ✅ Timer.Stop() called before deletion
-5. **Concurrent Access (snapshot.go:310-316)**: ✅ Uses unlocked internal method to avoid recursive RLock
-
-### Thread Safety Analysis
-
-All shared state is properly protected:
-- `TCPClient.mu` (sync.RWMutex): Protects connection state
-- `TCPServer.clientsMu` (sync.RWMutex): Protects client map
-- `ChatManager.mu` (sync.RWMutex): Protects player state
-- `ImageManager.mu` (sync.RWMutex): Protects image storage
-- `SnapshotManager.mu` (sync.RWMutex): Protects snapshot buffer
-- `LagCompensator.mu` (sync.RWMutex): Protects snapshot access
-- `DesyncDetector.mu` (sync.RWMutex): Protects event history
-- `StateUpdatePriorityQueue.mu` (sync.RWMutex): Protects heap operations
+~~~~
+**File:** snapshot.go:360-389
+**Severity:** Low
+**Description:** The `ApplyDelta` function acquires a read lock, then calls `GetSnapshotAtSequence` which also acquires a read lock. While Go's `sync.RWMutex` allows multiple concurrent read locks, this pattern could cause issues if the code were refactored to use different lock types.
+**Expected Behavior:** Functions should either use internal unlocked versions when already holding a lock, or document lock requirements clearly.
+**Actual Behavior:** The code works correctly due to `RWMutex` allowing multiple readers, but the pattern is inconsistent with other parts of the codebase (e.g., `CreateDelta` uses `getSnapshotAtSequenceUnlocked`).
+**Impact:** None in current implementation. This is a code quality observation rather than a functional bug.
+**Reproduction:** N/A - the code functions correctly.
+**Code Reference:**
+```go
+// ApplyDelta applies a delta to a snapshot to produce a new snapshot
+func (sm *SnapshotManager) ApplyDelta(baseSeq uint32, delta *SnapshotDelta) *WorldSnapshot {
+	sm.mu.RLock()
+	base := sm.GetSnapshotAtSequence(baseSeq) // This also acquires RLock
+	sm.mu.RUnlock()
+```
+**Mitigation:** Consider using `getSnapshotAtSequenceUnlocked` for consistency with `CreateDelta`:
+```go
+func (sm *SnapshotManager) ApplyDelta(baseSeq uint32, delta *SnapshotDelta) *WorldSnapshot {
+	sm.mu.RLock()
+	base := sm.getSnapshotAtSequenceUnlocked(baseSeq)
+	sm.mu.RUnlock()
+```
+~~~~
 
 ---
+
+## DOCUMENTATION VERIFICATION
+
+### README.md Claims Verified ✓
+
+| Claim | Status | Notes |
+|-------|--------|-------|
+| Binary Protocol (<0.5µs encode/decode) | ✓ Verified | BinaryProtocol implemented in serialization.go |
+| Client-Side Prediction | ✓ Verified | ClientPredictor in prediction.go with reconciliation |
+| Entity Interpolation | ✓ Verified | InterpolateEntity in snapshot.go |
+| Lag Compensation (10ms-5000ms) | ✓ Verified | LagCompensator in lag_compensation.go |
+| Buffer Monitoring | ✓ Verified | BufferStats in buffer_stats.go |
+| Delta Compression | ✓ Verified | SnapshotDelta in snapshot.go |
+| Thread-Safe Operations | ✓ Verified | Mutex usage throughout client.go, server.go |
+| High-Latency Support (200-5000ms) | ✓ Verified | TorClientConfig, HighLatencyServerConfig |
+| TCP Keepalive | ✓ Verified | configureTCPKeepalive in client.go, server.go |
+| Wire Protocol Format | ✓ Verified | Length-prefixed framing in client.go, server.go |
+
+### doc.go Claims Verified ✓
+
+| Claim | Status | Notes |
+|-------|--------|-------|
+| E2E Encrypted Chat (AES-256-GCM) | ✓ Verified | crypto.go implements DH + AES-GCM |
+| ACK/NACK Protocol | ✓ Verified | MessageACK in chat.go |
+| Rate Limiting | ✓ Verified | RateLimiter in chat.go |
+| Profanity Filter | ✓ Verified | ProfanityFilter in profanity.go |
+| Image Sharing (Phase 23) | ✓ Verified | ImageManager in images.go |
+| Chunked Transfer (64KB) | ✓ Verified | MaxChunkSize = 64*1024 in images.go |
+| Thumbnail Generation (128x128) | ✓ Verified | GenerateThumbnail in images.go |
+| Image Constraints | ✓ Verified | <500KB, <2048x2048, PNG/JPEG/GIF |
+| Rate Limit (1/60s) | ✓ Verified | ImageRateLimit = 60*time.Second |
+| 10-minute Expiry | ✓ Verified | ImageExpiryTime = 10*time.Minute |
+
+---
+
+## CODE QUALITY OBSERVATIONS
+
+### Positive Findings
+
+1. **Consistent Error Handling:** All functions return descriptive errors with context.
+
+2. **Thread Safety:** Proper use of `sync.RWMutex` and `atomic` operations throughout.
+
+3. **Documentation:** Excellent inline documentation explaining design decisions (e.g., hot-path optimizations, lock ordering).
+
+4. **Interface Usage:** Good use of interfaces (Protocol, ClientConnection, ServerConnection, KeepAliveConn) for testability.
+
+5. **Panic Recovery:** Server uses `recovery.RecoverPanic` for goroutine safety.
+
+6. **Context Cancellation:** Server implements proper context-based shutdown with configurable timeout.
+
+7. **Sequence Wrap-around:** Helper functions in helpers.go handle uint32 sequence wrap-around correctly.
+
+8. **Buffer Monitoring:** BufferStats provides real-time visibility into channel congestion.
+
+9. **Priority Queue:** StateUpdatePriorityQueue ensures critical updates are sent first.
+
+10. **Decompression Bomb Protection:** MaxDecompressedSize limit in compression.go prevents memory exhaustion attacks.
+
+### Areas for Future Enhancement (Not Bugs)
+
+1. **UDP Support:** README mentions sequence numbers are "for future UDP support" - this is documented as planned, not missing.
+
+2. **Voice Chat Integration:** Referenced in main README but implemented in separate `pkg/audio/voice.go`, not in network package.
+
+3. **Metrics Export:** Server tracks totalBytesSent/Recv but doesn't export to Prometheus (handled by observability package).
+
+---
+
+## DEPENDENCY ANALYSIS
+
+### Level 0 (No Internal Imports)
+- protocol.go, packets.go, interfaces.go, serialization.go, crypto.go, compression.go
+- chat.go, images.go, profanity.go, bandwidth.go
+- buffer_pool.go, buffer_stats.go, priority_queue.go, helpers.go
+- prediction.go, snapshot.go, desync.go, lag_compensation.go
+- component_serialization.go, projectile_sync.go
+
+### Level 1 (Import pkg/recovery)
+- server.go
+- federation/discovery.go, federation/handshake.go, federation/sync.go
+- federation/market.go
+- federation/webrtc/*.go
+
+### Level 2 (Import pkg/engine)
+- animation_sync.go
+- snapshot_builder.go
+- federation/protocol.go, federation/transfer.go
+- chat/system.go (also imports pkg/validation)
+- trade/system.go (also imports pkg/procgen/item, pkg/validation)
+
+---
+
+## CONCLUSION
+
+The network package is well-designed and thoroughly implemented. The documentation in README.md and doc.go accurately reflects the actual implementation. The identified issues are minor:
+
+1. One placeholder function (`LoadWordListFromFile`) that is intentionally unimplemented per project philosophy
+2. Two edge-case observations that don't affect normal operation
+
+**Recommendation:** No critical fixes required. Consider removing or implementing `LoadWordListFromFile` to avoid API confusion. The package meets its documented specifications and is production-ready.

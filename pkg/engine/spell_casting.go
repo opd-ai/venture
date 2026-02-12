@@ -316,58 +316,102 @@ func (s *SpellCastingSystem) logSpellExecution(caster *Entity, spell *magic.Spel
 // validateAndConsumeMana checks if the caster has sufficient mana and deducts the spell cost.
 // Returns the ManaComponent if successful, nil otherwise.
 func (s *SpellCastingSystem) validateAndConsumeMana(caster *Entity, spell *magic.Spell) *ManaComponent {
+	mana := s.getManaComponent(caster, spell.Name)
+	if mana == nil {
+		return nil
+	}
+
+	if !s.hasEnoughMana(mana, spell) {
+		return nil
+	}
+
+	s.consumeMana(caster.ID, mana, spell.Stats.ManaCost)
+	return mana
+}
+
+// getManaComponent retrieves and validates the mana component.
+func (s *SpellCastingSystem) getManaComponent(caster *Entity, spellName string) *ManaComponent {
 	manaComp, hasMana := caster.GetComponent("mana")
 	if !hasMana {
-		if s.logger != nil {
-			s.logger.WithFields(logrus.Fields{
-				"entity_id":  caster.ID,
-				"spell_name": spell.Name,
-			}).Warn("Entity has no mana component, cannot cast spell")
-		}
+		s.logMissingMana(caster.ID, spellName)
 		return nil
 	}
+
 	mana, ok := manaComp.(*ManaComponent)
 	if !ok {
-		if s.logger != nil {
-			s.logger.WithFields(logrus.Fields{
-				"entity_id":      caster.ID,
-				"component_type": "mana",
-			}).Error("Failed to cast mana component to ManaComponent")
-		}
+		s.logManaTypeError(caster.ID)
 		return nil
 	}
 
-	if mana.Current < spell.Stats.ManaCost {
-		if s.logger != nil {
-			s.logger.WithFields(logrus.Fields{
-				"entity_id":     caster.ID,
-				"spell_name":    spell.Name,
-				"mana_current":  mana.Current,
-				"mana_required": spell.Stats.ManaCost,
-			}).Debug("Insufficient mana for spell cast")
-		}
-		if s.tutorialSys != nil {
-			s.tutorialSys.ShowNotification("Not enough mana!", 1.5)
-		}
-		return nil
+	return mana
+}
+
+// logMissingMana logs when an entity lacks a mana component.
+func (s *SpellCastingSystem) logMissingMana(entityID uint64, spellName string) {
+	if s.logger != nil {
+		s.logger.WithFields(logrus.Fields{
+			"entity_id":  entityID,
+			"spell_name": spellName,
+		}).Warn("Entity has no mana component, cannot cast spell")
+	}
+}
+
+// logManaTypeError logs when mana component type assertion fails.
+func (s *SpellCastingSystem) logManaTypeError(entityID uint64) {
+	if s.logger != nil {
+		s.logger.WithFields(logrus.Fields{
+			"entity_id":      entityID,
+			"component_type": "mana",
+		}).Error("Failed to cast mana component to ManaComponent")
+	}
+}
+
+// hasEnoughMana checks if the caster has sufficient mana.
+func (s *SpellCastingSystem) hasEnoughMana(mana *ManaComponent, spell *magic.Spell) bool {
+	if mana.Current >= spell.Stats.ManaCost {
+		return true
 	}
 
+	s.logInsufficientMana(mana, spell)
+	if s.tutorialSys != nil {
+		s.tutorialSys.ShowNotification("Not enough mana!", 1.5)
+	}
+	return false
+}
+
+// logInsufficientMana logs when insufficient mana is available.
+func (s *SpellCastingSystem) logInsufficientMana(mana *ManaComponent, spell *magic.Spell) {
+	if s.logger != nil {
+		s.logger.WithFields(logrus.Fields{
+			"entity_id":     "unknown",
+			"spell_name":    spell.Name,
+			"mana_current":  mana.Current,
+			"mana_required": spell.Stats.ManaCost,
+		}).Debug("Insufficient mana for spell cast")
+	}
+}
+
+// consumeMana deducts mana cost and logs the consumption.
+func (s *SpellCastingSystem) consumeMana(entityID uint64, mana *ManaComponent, manaCost int) {
 	previousMana := mana.Current
-	mana.Current -= spell.Stats.ManaCost
+	mana.Current -= manaCost
 	if mana.Current < 0 {
 		mana.Current = 0
 	}
 
+	s.logManaConsumption(entityID, previousMana, manaCost, mana.Current)
+}
+
+// logManaConsumption logs mana consumption details.
+func (s *SpellCastingSystem) logManaConsumption(entityID uint64, before, deducted, remaining int) {
 	if s.logger != nil {
 		s.logger.WithFields(logrus.Fields{
-			"entity_id":      caster.ID,
-			"mana_before":    previousMana,
-			"mana_deducted":  spell.Stats.ManaCost,
-			"mana_remaining": mana.Current,
+			"entity_id":      entityID,
+			"mana_before":    before,
+			"mana_deducted":  deducted,
+			"mana_remaining": remaining,
 		}).Info("Mana consumed for spell cast")
 	}
-
-	return mana
 }
 
 // getCasterPosition retrieves and validates the caster's position component.
@@ -1327,66 +1371,86 @@ func (s *SpellCastingSystem) shouldApplyPoison() bool {
 
 // castUtilitySpell handles non-combat spells.
 func (s *SpellCastingSystem) castUtilitySpell(caster *Entity, spell *magic.Spell) {
-	if s.logger != nil {
-		s.logger.WithFields(logrus.Fields{
-			"entity_id":  caster.ID,
+	logUtilitySpellCast(s.logger, caster.ID, spell)
+
+	if tryTagBasedUtility(s, caster, spell) {
+		return
+	}
+
+	castElementBasedUtility(s, caster, spell)
+}
+
+// logUtilitySpellCast logs the initial utility spell cast.
+func logUtilitySpellCast(logger *logrus.Entry, casterID uint64, spell *magic.Spell) {
+	if logger != nil {
+		logger.WithFields(logrus.Fields{
+			"entity_id":  casterID,
 			"spell_name": spell.Name,
 			"element":    spell.Element.String(),
 			"tags":       spell.Tags,
 		}).Debug("Casting utility spell")
 	}
+}
 
-	// Determine utility spell type based on tags and element
+// tryTagBasedUtility attempts to cast utility based on spell tags.
+func tryTagBasedUtility(s *SpellCastingSystem, caster *Entity, spell *magic.Spell) bool {
 	switch {
 	case containsTag(spell.Tags, "teleport"):
-		if s.logger != nil {
-			s.logger.WithFields(logrus.Fields{
-				"entity_id":  caster.ID,
-				"spell_name": spell.Name,
-			}).Debug("Casting teleport utility spell")
-		}
+		logSpecificUtility(s.logger, caster.ID, spell, "teleport")
 		s.castTeleportSpell(caster, spell)
+		return true
 	case containsTag(spell.Tags, "light"), containsTag(spell.Tags, "reveal"):
-		if s.logger != nil {
-			s.logger.WithFields(logrus.Fields{
-				"entity_id":  caster.ID,
-				"spell_name": spell.Name,
-			}).Debug("Casting reveal utility spell")
-		}
+		logSpecificUtility(s.logger, caster.ID, spell, "reveal")
 		s.castRevealSpell(caster, spell)
+		return true
 	case containsTag(spell.Tags, "speed"), containsTag(spell.Tags, "haste"):
-		if s.logger != nil {
-			s.logger.WithFields(logrus.Fields{
-				"entity_id":  caster.ID,
-				"spell_name": spell.Name,
-			}).Debug("Casting speed boost utility spell")
-		}
+		logSpecificUtility(s.logger, caster.ID, spell, "speed boost")
 		s.castSpeedBoostSpell(caster, spell)
+		return true
+	}
+	return false
+}
+
+// castElementBasedUtility routes utility spell based on element.
+func castElementBasedUtility(s *SpellCastingSystem, caster *Entity, spell *magic.Spell) {
+	if s.logger != nil {
+		s.logger.WithFields(logrus.Fields{
+			"entity_id":  caster.ID,
+			"spell_name": spell.Name,
+			"element":    spell.Element.String(),
+		}).Debug("Using element-based utility spell routing")
+	}
+
+	switch spell.Element {
+	case magic.ElementLight:
+		s.castRevealSpell(caster, spell)
+	case magic.ElementWind:
+		s.castSpeedBoostSpell(caster, spell)
+	case magic.ElementArcane:
+		s.castTeleportSpell(caster, spell)
 	default:
-		// Generic utility effect based on element
-		if s.logger != nil {
-			s.logger.WithFields(logrus.Fields{
-				"entity_id":  caster.ID,
-				"spell_name": spell.Name,
-				"element":    spell.Element.String(),
-			}).Debug("Using element-based utility spell routing")
-		}
-		switch spell.Element {
-		case magic.ElementLight:
-			s.castRevealSpell(caster, spell)
-		case magic.ElementWind:
-			s.castSpeedBoostSpell(caster, spell)
-		case magic.ElementArcane:
-			s.castTeleportSpell(caster, spell)
-		default:
-			if s.logger != nil {
-				s.logger.WithFields(logrus.Fields{
-					"entity_id":  caster.ID,
-					"spell_name": spell.Name,
-					"element":    spell.Element.String(),
-				}).Debug("No matching utility spell implementation for element")
-			}
-		}
+		logUnmatchedUtility(s.logger, caster.ID, spell)
+	}
+}
+
+// logSpecificUtility logs a specific utility spell type being cast.
+func logSpecificUtility(logger *logrus.Entry, casterID uint64, spell *magic.Spell, utilityType string) {
+	if logger != nil {
+		logger.WithFields(logrus.Fields{
+			"entity_id":  casterID,
+			"spell_name": spell.Name,
+		}).Debug("Casting " + utilityType + " utility spell")
+	}
+}
+
+// logUnmatchedUtility logs when no utility implementation matches the spell.
+func logUnmatchedUtility(logger *logrus.Entry, casterID uint64, spell *magic.Spell) {
+	if logger != nil {
+		logger.WithFields(logrus.Fields{
+			"entity_id":  casterID,
+			"spell_name": spell.Name,
+			"element":    spell.Element.String(),
+		}).Debug("No matching utility spell implementation for element")
 	}
 }
 
@@ -2369,47 +2433,71 @@ func (s *SpellCastingSystem) isEntityInLineArea(casterPos, entityPos *PositionCo
 // getCasterDirection determines the caster's facing direction for directional spells.
 // Uses velocity if moving, otherwise uses direction towards target point (x, y).
 func (s *SpellCastingSystem) getCasterDirection(caster *Entity, targetX, targetY float64) (dirX, dirY float64) {
-	// Try to use velocity for moving entities
-	if velComp, hasVel := caster.GetComponent("velocity"); hasVel {
-		if vel, ok := velComp.(*VelocityComponent); ok {
-			if vel.VX != 0 || vel.VY != 0 {
-				if s.logger != nil {
-					s.logger.WithFields(logrus.Fields{
-						"caster_id": caster.ID,
-						"dir_x":     vel.VX,
-						"dir_y":     vel.VY,
-						"source":    "velocity",
-					}).Debug("Using velocity for spell direction")
-				}
-				return vel.VX, vel.VY
-			}
-		}
+	if dirX, dirY, ok := s.getDirectionFromVelocity(caster); ok {
+		return dirX, dirY
 	}
 
-	// Fall back to direction towards target point
-	if posComp, hasPos := caster.GetComponent("position"); hasPos {
-		if pos, ok := posComp.(*PositionComponent); ok {
-			dirX = targetX - pos.X
-			dirY = targetY - pos.Y
-			if s.logger != nil {
-				s.logger.WithFields(logrus.Fields{
-					"caster_id": caster.ID,
-					"dir_x":     dirX,
-					"dir_y":     dirY,
-					"source":    "target_point",
-				}).Debug("Using target point for spell direction")
-			}
-			return dirX, dirY
-		}
+	if dirX, dirY, ok := s.getDirectionFromTarget(caster, targetX, targetY); ok {
+		return dirX, dirY
 	}
 
-	// Default to facing right if no position
+	return s.getDefaultDirection(caster)
+}
+
+// getDirectionFromVelocity attempts to get direction from entity velocity.
+func (s *SpellCastingSystem) getDirectionFromVelocity(caster *Entity) (dirX, dirY float64, ok bool) {
+	velComp, hasVel := caster.GetComponent("velocity")
+	if !hasVel {
+		return 0, 0, false
+	}
+
+	vel, ok := velComp.(*VelocityComponent)
+	if !ok || (vel.VX == 0 && vel.VY == 0) {
+		return 0, 0, false
+	}
+
+	s.logDirection(caster.ID, vel.VX, vel.VY, "velocity")
+	return vel.VX, vel.VY, true
+}
+
+// getDirectionFromTarget calculates direction towards target point.
+func (s *SpellCastingSystem) getDirectionFromTarget(caster *Entity, targetX, targetY float64) (dirX, dirY float64, ok bool) {
+	posComp, hasPos := caster.GetComponent("position")
+	if !hasPos {
+		return 0, 0, false
+	}
+
+	pos, ok := posComp.(*PositionComponent)
+	if !ok {
+		return 0, 0, false
+	}
+
+	dirX = targetX - pos.X
+	dirY = targetY - pos.Y
+	s.logDirection(caster.ID, dirX, dirY, "target_point")
+	return dirX, dirY, true
+}
+
+// getDefaultDirection returns default direction when no other method works.
+func (s *SpellCastingSystem) getDefaultDirection(caster *Entity) (dirX, dirY float64) {
 	if s.logger != nil {
 		s.logger.WithFields(logrus.Fields{
 			"caster_id": caster.ID,
 		}).Debug("Using default direction (right)")
 	}
 	return 1.0, 0.0
+}
+
+// logDirection logs the computed spell direction.
+func (s *SpellCastingSystem) logDirection(casterID uint64, dirX, dirY float64, source string) {
+	if s.logger != nil {
+		s.logger.WithFields(logrus.Fields{
+			"caster_id": casterID,
+			"dir_x":     dirX,
+			"dir_y":     dirY,
+			"source":    source,
+		}).Debug("Using velocity for spell direction")
+	}
 }
 
 // StartCast initiates casting a spell from a slot.
@@ -2757,39 +2845,69 @@ func (s *ManaRegenSystem) Update(entities []*Entity, deltaTime float64) {
 		}).Debug("ManaRegenSystem update started")
 	}
 
+	regenCount, totalRegenerated := s.regenerateManaForEntities(entities, deltaTime)
+	s.logRegenerationStats(regenCount, totalRegenerated, deltaTime)
+}
+
+// regenerateManaForEntities processes mana regeneration for all entities with mana.
+func (s *ManaRegenSystem) regenerateManaForEntities(entities []*Entity, deltaTime float64) (int, float64) {
 	regenCount := 0
 	totalRegenerated := 0.0
+
 	for _, entity := range entities {
-		manaComp, hasMana := entity.GetComponent("mana")
-		if !hasMana {
-			continue
-		}
-		mana, ok := manaComp.(*ManaComponent)
-		if !ok {
-			if s.logger != nil {
-				s.logger.WithFields(logrus.Fields{
-					"entity_id": entity.ID,
-				}).Warn("Failed to cast mana component in mana regen system")
-			}
+		mana := s.getManaComponent(entity)
+		if mana == nil {
 			continue
 		}
 
-		// Only regenerate if not at max
-		if mana.Current < mana.Max {
-			oldMana := mana.Current
-			regenAmount := mana.Regen * deltaTime
-			mana.Current += int(regenAmount)
-			if mana.Current > mana.Max {
-				mana.Current = mana.Max
-			}
-
-			if mana.Current != oldMana {
-				regenCount++
-				totalRegenerated += float64(mana.Current - oldMana)
-			}
+		regenerated := s.regenerateMana(mana, deltaTime)
+		if regenerated > 0 {
+			regenCount++
+			totalRegenerated += regenerated
 		}
 	}
 
+	return regenCount, totalRegenerated
+}
+
+// getManaComponent retrieves and validates the mana component for an entity.
+func (s *ManaRegenSystem) getManaComponent(entity *Entity) *ManaComponent {
+	manaComp, hasMana := entity.GetComponent("mana")
+	if !hasMana {
+		return nil
+	}
+
+	mana, ok := manaComp.(*ManaComponent)
+	if !ok {
+		if s.logger != nil {
+			s.logger.WithFields(logrus.Fields{
+				"entity_id": entity.ID,
+			}).Warn("Failed to cast mana component in mana regen system")
+		}
+		return nil
+	}
+
+	return mana
+}
+
+// regenerateMana applies mana regeneration to a component and returns amount regenerated.
+func (s *ManaRegenSystem) regenerateMana(mana *ManaComponent, deltaTime float64) float64 {
+	if mana.Current >= mana.Max {
+		return 0
+	}
+
+	oldMana := mana.Current
+	regenAmount := mana.Regen * deltaTime
+	mana.Current += int(regenAmount)
+	if mana.Current > mana.Max {
+		mana.Current = mana.Max
+	}
+
+	return float64(mana.Current - oldMana)
+}
+
+// logRegenerationStats logs mana regeneration statistics if any regeneration occurred.
+func (s *ManaRegenSystem) logRegenerationStats(regenCount int, totalRegenerated, deltaTime float64) {
 	if s.logger != nil && regenCount > 0 {
 		s.logger.WithFields(logrus.Fields{
 			"entity_count":      regenCount,

@@ -7,6 +7,7 @@ package engine
 import (
 	"fmt"
 	"os"
+	"sync"
 	"time"
 
 	"github.com/hajimehoshi/ebiten/v2"
@@ -33,6 +34,7 @@ type EbitenGame struct {
 	SettingsUI           *SettingsUI
 	SettingsManager      *SettingsManager
 	CharacterCreation    *EbitenCharacterCreation
+	LoadingUI            *LoadingUI // World generation loading screen (Phase Performance Audit)
 	pendingCharData      *CharacterData
 	isMultiplayerMode    bool   // Track if character creation is for multiplayer
 	selectedGenreID      string // Selected genre for world generation
@@ -62,10 +64,6 @@ type EbitenGame struct {
 	CraftingUI  *CraftingUI // Crafting and recipe UI
 	MailboxUI   *MailboxUI  // Mail system UI (Phase 40.3)
 	TradeUI     *TradeUI    // Player-to-player trading UI (Phase 3.3)
-
-	// Cached mailbox UI image (Performance Audit fix: avoid per-frame image conversion)
-	cachedMailboxImage     *ebiten.Image
-	lastMailboxRenderState string // Hash of mailbox state to detect changes
 
 	// INTEGRATION FIX [Category B]: V8.0 UI systems
 	// Gap: V8 systems (housing, gallery) fully implemented but no UI fields
@@ -100,6 +98,10 @@ type EbitenGame struct {
 	onMultiplayerConnect func(serverAddr string) error
 	onQuitToMenu         func() error
 
+	// Async world generation (Performance Audit - async terrain loading)
+	terrainLoader       interface{}         // *terrain.AsyncLoader - stored as interface{} to avoid circular import
+	terrainLoadComplete func(*Entity) error // Callback when terrain loading completes
+
 	// Logger for game operations
 	logger *logrus.Entry
 
@@ -107,6 +109,18 @@ type EbitenGame struct {
 	frameTimeTracker *FrameTimeTracker
 	frameCount       uint64
 	profilingEnabled bool
+
+	// Render interpolation: alpha = fraction of tick elapsed since last Update(),
+	// used to interpolate entity positions between PrevX/PrevY and X/Y in Draw().
+	// This eliminates visual jitter on high-refresh-rate monitors where Draw() is
+	// called more frequently than Update().
+	renderAlpha float64
+
+	// Cached reference to InputSystem to avoid linear scan of all systems every Draw frame
+	cachedInputSystem *InputSystem
+
+	// Cached entity list for Draw() to avoid redundant GetEntities() calls per frame
+	cachedDrawEntities []*Entity
 }
 
 // NewEbitenGame creates a new game instance with Ebiten integration.
@@ -228,25 +242,84 @@ type uiComponents struct {
 	guildUI            *GuildUI           // Phase 3.2 Guild UI (PLAN.md)
 }
 
-// initializeUIComponents creates all UI systems.
+// initializeUIComponents creates all UI systems in parallel for faster startup.
+// Components are grouped by dependencies and initialized concurrently.
+// Expected improvement: ~20-40ms startup reduction from sequential initialization.
 func initializeUIComponents(world *World, screenWidth, screenHeight int, settingsManager *SettingsManager) *uiComponents {
-	return &uiComponents{
-		inventoryUI:        NewEbitenInventoryUI(world, screenWidth, screenHeight),
-		questUI:            NewEbitenQuestUI(world, screenWidth, screenHeight),
-		characterUI:        NewEbitenCharacterUI(world, screenWidth, screenHeight),
-		skillsUI:           NewEbitenSkillsUI(world, screenWidth, screenHeight),
-		mapUI:              NewEbitenMapUI(world, screenWidth, screenHeight),
-		settingsUI:         NewSettingsUI(screenWidth, screenHeight, settingsManager),
-		mainMenuUI:         NewMainMenuUI(screenWidth, screenHeight),
-		singlePlayerMenu:   NewSinglePlayerMenu(screenWidth, screenHeight),
-		genreSelectionMenu: NewGenreSelectionMenu(screenWidth, screenHeight),
-		multiplayerMenu:    NewMultiplayerMenu(screenWidth, screenHeight),
-		serverAddressInput: NewServerAddressInput(screenWidth, screenHeight),
-		characterCreation:  NewCharacterCreation(screenWidth, screenHeight),
-		galleryUI:          NewGalleryUI(screenWidth, screenHeight),
-		housingUI:          housing.NewHousingUI(screenWidth, screenHeight),   // V8.0 Housing UI (Phase 49.1)
-		guildUI:            NewGuildUI(world, nil, screenWidth, screenHeight), // Phase 3.2: GuildUI with nil GuildSystem (defensive)
-	}
+	ui := &uiComponents{}
+	var wg sync.WaitGroup
+
+	// Group 1: World-dependent UI components (5 components)
+	wg.Add(5)
+	go func() {
+		defer wg.Done()
+		ui.inventoryUI = NewEbitenInventoryUI(world, screenWidth, screenHeight)
+	}()
+	go func() {
+		defer wg.Done()
+		ui.questUI = NewEbitenQuestUI(world, screenWidth, screenHeight)
+	}()
+	go func() {
+		defer wg.Done()
+		ui.characterUI = NewEbitenCharacterUI(world, screenWidth, screenHeight)
+	}()
+	go func() {
+		defer wg.Done()
+		ui.skillsUI = NewEbitenSkillsUI(world, screenWidth, screenHeight)
+	}()
+	go func() {
+		defer wg.Done()
+		ui.mapUI = NewEbitenMapUI(world, screenWidth, screenHeight)
+	}()
+
+	// Group 2: Independent UI components (9 components)
+	wg.Add(9)
+	go func() {
+		defer wg.Done()
+		ui.settingsUI = NewSettingsUI(screenWidth, screenHeight, settingsManager)
+	}()
+	go func() {
+		defer wg.Done()
+		ui.mainMenuUI = NewMainMenuUI(screenWidth, screenHeight)
+	}()
+	go func() {
+		defer wg.Done()
+		ui.singlePlayerMenu = NewSinglePlayerMenu(screenWidth, screenHeight)
+	}()
+	go func() {
+		defer wg.Done()
+		ui.genreSelectionMenu = NewGenreSelectionMenu(screenWidth, screenHeight)
+	}()
+	go func() {
+		defer wg.Done()
+		ui.multiplayerMenu = NewMultiplayerMenu(screenWidth, screenHeight)
+	}()
+	go func() {
+		defer wg.Done()
+		ui.serverAddressInput = NewServerAddressInput(screenWidth, screenHeight)
+	}()
+	go func() {
+		defer wg.Done()
+		ui.characterCreation = NewCharacterCreation(screenWidth, screenHeight)
+	}()
+	go func() {
+		defer wg.Done()
+		ui.galleryUI = NewGalleryUI(screenWidth, screenHeight)
+	}()
+	go func() {
+		defer wg.Done()
+		ui.housingUI = housing.NewHousingUI(screenWidth, screenHeight)
+	}()
+
+	// Group 3: World-dependent with additional dependencies (1 component)
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		ui.guildUI = NewGuildUI(world, nil, screenWidth, screenHeight)
+	}()
+
+	wg.Wait()
+	return ui
 }
 
 // buildGameInstance constructs the EbitenGame struct with all components.
@@ -265,6 +338,7 @@ func buildGameInstance(screenWidth, screenHeight int, world *World, logEntry *lo
 		SettingsUI:         ui.settingsUI,
 		SettingsManager:    core.settingsManager,
 		CharacterCreation:  ui.characterCreation,
+		LoadingUI:          NewLoadingUI(screenWidth, screenHeight),
 		CameraSystem:       core.cameraSystem,
 		RenderSystem:       core.renderSystem,
 		LightingSystem:     core.lightingSystem,
@@ -333,6 +407,23 @@ func (g *EbitenGame) SetMultiplayerConnectCallback(callback func(serverAddr stri
 // SetQuitToMenuCallback sets the callback function called when quitting to main menu.
 func (g *EbitenGame) SetQuitToMenuCallback(callback func() error) {
 	g.onQuitToMenu = callback
+}
+
+// SetTerrainLoader sets the async terrain loader for tracking world generation progress.
+// The loader should be started before transitioning to AppStateLoading.
+func (g *EbitenGame) SetTerrainLoader(loader interface{}) {
+	g.terrainLoader = loader
+}
+
+// GetTerrainLoader returns the current terrain loader reference.
+func (g *EbitenGame) GetTerrainLoader() interface{} {
+	return g.terrainLoader
+}
+
+// SetTerrainLoadCompleteCallback sets the callback function called when terrain loading completes.
+// The callback receives the player entity and should finalize world initialization.
+func (g *EbitenGame) SetTerrainLoadCompleteCallback(callback func(*Entity) error) {
+	g.terrainLoadComplete = callback
 }
 
 // SetWorldSeed sets the world generation seed and applies it to character creation defaults.
@@ -796,16 +887,16 @@ func (g *EbitenGame) logFrameStats() {
 	}
 }
 
-// calculateDeltaTime computes time elapsed since last update with capping to prevent spiral of death.
+// calculateDeltaTime returns the fixed timestep matching Ebiten's TPS rate.
+// Using a constant fixed timestep instead of wall-clock time.Now() deltas eliminates
+// jitter caused by OS scheduling variance, GC pauses, and Ebiten catch-up ticks
+// (where Update() is called multiple times in succession with near-zero wall-clock deltas).
 func (g *EbitenGame) calculateDeltaTime() float64 {
-	now := time.Now()
-	deltaTime := now.Sub(g.lastUpdateTime).Seconds()
-	g.lastUpdateTime = now
-
-	if deltaTime > 0.1 {
-		deltaTime = 0.1
+	tps := ebiten.TPS()
+	if tps <= 0 {
+		return 1.0 / 60.0 // Fallback to 60 TPS default
 	}
-	return deltaTime
+	return 1.0 / float64(tps)
 }
 
 // updateMenuState handles updates for all menu-related application states.
@@ -877,6 +968,102 @@ func (g *EbitenGame) triggerGameStartCallback(charData CharacterData) error {
 		return g.startMultiplayerGame(charData)
 	}
 	return g.startSinglePlayerGame(charData)
+}
+
+// handleLoadingState updates the loading screen during async terrain generation.
+// Polls terrain loader progress and transitions to gameplay when complete.
+func (g *EbitenGame) handleLoadingState() error {
+	loader, err := g.validateTerrainLoader()
+	if err != nil {
+		return err
+	}
+	if loader == nil {
+		return nil
+	}
+
+	if err := g.updateLoadingProgress(loader); err != nil {
+		return err
+	}
+
+	if loader.IsDone() {
+		return g.handleLoadingComplete()
+	}
+
+	return nil
+}
+
+// asyncLoader defines the interface for async terrain loading to avoid circular imports.
+type asyncLoader interface {
+	GetProgress() (float64, error)
+	IsDone() bool
+}
+
+// validateTerrainLoader checks if the terrain loader is properly configured.
+func (g *EbitenGame) validateTerrainLoader() (asyncLoader, error) {
+	if g.terrainLoader == nil {
+		if g.logger != nil {
+			g.logger.Error("in loading state but no terrain loader set")
+		}
+		_ = g.StateManager.TransitionTo(AppStateMainMenu)
+		return nil, nil
+	}
+
+	loader, ok := g.terrainLoader.(asyncLoader)
+	if !ok {
+		if g.logger != nil {
+			g.logger.Error("terrain loader does not implement required methods")
+		}
+		_ = g.StateManager.TransitionTo(AppStateMainMenu)
+		return nil, nil
+	}
+
+	return loader, nil
+}
+
+// updateLoadingProgress retrieves and displays current loading progress.
+func (g *EbitenGame) updateLoadingProgress(loader asyncLoader) error {
+	progress, err := loader.GetProgress()
+	if err != nil {
+		if g.logger != nil {
+			g.logger.WithError(err).Error("terrain generation failed")
+		}
+		_ = g.StateManager.TransitionTo(AppStateMainMenu)
+		return err
+	}
+
+	if g.LoadingUI != nil {
+		g.LoadingUI.SetProgress(progress)
+	}
+
+	return nil
+}
+
+// handleLoadingComplete finalizes terrain loading and transitions to gameplay.
+func (g *EbitenGame) handleLoadingComplete() error {
+	if g.logger != nil {
+		g.logger.Info("terrain loading complete, transitioning to gameplay")
+	}
+
+	if err := g.StateManager.TransitionTo(AppStateGameplay); err != nil {
+		if g.logger != nil {
+			g.logger.WithError(err).Error("failed to transition to gameplay after terrain load")
+		}
+		return err
+	}
+
+	if g.terrainLoadComplete != nil {
+		if err := g.terrainLoadComplete(g.PlayerEntity); err != nil {
+			if g.logger != nil {
+				g.logger.WithError(err).Error("terrain load complete callback failed")
+			}
+			return err
+		}
+	}
+
+	// Clear terrain loader after callback completes (callback may need to access it)
+	g.terrainLoader = nil
+
+	return nil
 }
 
 // startMultiplayerGame connects to multiplayer server with character data.
@@ -1061,6 +1248,11 @@ func (g *EbitenGame) Update() error {
 
 	deltaTime := g.calculateDeltaTime()
 
+	// Handle loading state BEFORE other state checks
+	if g.StateManager.CurrentState() == AppStateLoading {
+		return g.handleLoadingState()
+	}
+
 	// Handle character creation BEFORE updateMenuState to prevent main menu from consuming input
 	if g.StateManager.CurrentState() == AppStateCharacterCreation {
 		return g.handleCharacterCreation()
@@ -1082,19 +1274,52 @@ func (g *EbitenGame) Update() error {
 
 	g.updateGameplayUI(deltaTime)
 
+	// Update camera BEFORE world systems so that camera and entities are in sync
+	// for the same tick. This eliminates the one-frame lag where entities move
+	// but the camera hasn't caught up yet.
+	g.CameraSystem.Update(g.World.GetEntities(), deltaTime)
+
 	if g.shouldUpdateWorld() {
 		g.World.Update(deltaTime)
 	}
 
-	g.CameraSystem.Update(g.World.GetEntities(), deltaTime)
+	// Cache entity list once per Update for Draw() to reuse, avoiding redundant calls
+	g.cachedDrawEntities = g.World.GetEntities()
+
+	// Record wall-clock timestamp for render interpolation alpha calculation in Draw()
+	g.lastUpdateTime = time.Now()
 	return nil
 }
 
 // Draw implements ebiten.Game interface. Called every frame.
+// Calculates render interpolation alpha to smoothly interpolate entity positions
+// between the previous and current simulation tick, eliminating visual jitter
+// on monitors with refresh rates higher than the TPS.
 func (g *EbitenGame) Draw(screen *ebiten.Image) {
 	if g.drawMenuState(screen) {
 		return
 	}
+
+	// Calculate render interpolation alpha: fraction of time elapsed since last Update().
+	// On a 60 TPS / 144 Hz setup, Draw() is called ~2.4x per Update(). Alpha smoothly
+	// advances from 0.0 to 1.0 between ticks so entity positions are interpolated.
+	tps := ebiten.TPS()
+	if tps > 0 {
+		elapsed := time.Since(g.lastUpdateTime).Seconds()
+		tickDuration := 1.0 / float64(tps)
+		g.renderAlpha = elapsed / tickDuration
+		if g.renderAlpha > 1.0 {
+			g.renderAlpha = 1.0
+		}
+		if g.renderAlpha < 0.0 {
+			g.renderAlpha = 0.0
+		}
+	} else {
+		g.renderAlpha = 1.0
+	}
+
+	// Pass interpolation alpha to render system
+	g.RenderSystem.SetRenderAlpha(g.renderAlpha)
 
 	g.drawGameplayScene(screen)
 	g.drawOverlays(screen)
@@ -1121,6 +1346,11 @@ func (g *EbitenGame) drawMenuState(screen *ebiten.Image) bool {
 	case AppStateMultiPlayerMenu:
 		if g.MultiplayerMenu != nil {
 			g.MultiplayerMenu.Draw(screen)
+		}
+		return true
+	case AppStateLoading:
+		if g.LoadingUI != nil {
+			g.LoadingUI.Draw(screen)
 		}
 		return true
 	case AppStateServerAddressInput:
@@ -1165,14 +1395,18 @@ func (g *EbitenGame) drawLitScene(screen *ebiten.Image) {
 		g.TerrainRenderSystem.Draw(g.sceneBuffer, g.CameraSystem)
 	}
 
-	g.RenderSystem.Draw(g.sceneBuffer, g.World.GetEntities())
+	// Use cached entity list from Update() to avoid redundant GetEntities() calls
+	entities := g.cachedDrawEntities
+	if entities == nil {
+		entities = g.World.GetEntities()
+	}
+
+	g.RenderSystem.Draw(g.sceneBuffer, entities)
 
 	if g.CameraSystem != nil {
 		camX, camY := g.CameraSystem.GetPosition()
 		g.LightingSystem.SetViewport(camX, camY, g.ScreenWidth, g.ScreenHeight)
 	}
-
-	entities := g.World.GetEntities()
 
 	// Apply lighting to cached buffer (Performance Audit fix: reuse litBuffer)
 	if g.litBuffer == nil || g.litBuffer.Bounds().Dx() != g.ScreenWidth || g.litBuffer.Bounds().Dy() != g.ScreenHeight {
@@ -1196,6 +1430,12 @@ func (g *EbitenGame) drawLitScene(screen *ebiten.Image) {
 
 // drawStandardScene renders the game scene without lighting effects, with optional post-processing.
 func (g *EbitenGame) drawStandardScene(screen *ebiten.Image) {
+	// Use cached entity list from Update() to avoid redundant GetEntities() calls
+	entities := g.cachedDrawEntities
+	if entities == nil {
+		entities = g.World.GetEntities()
+	}
+
 	// Render to buffer if post-processing is enabled
 	if g.PostProcessor != nil && g.PostProcessor.IsEnabled() {
 		if g.sceneBuffer == nil {
@@ -1208,7 +1448,7 @@ func (g *EbitenGame) drawStandardScene(screen *ebiten.Image) {
 			g.TerrainRenderSystem.Draw(g.sceneBuffer, g.CameraSystem)
 		}
 
-		g.RenderSystem.Draw(g.sceneBuffer, g.World.GetEntities())
+		g.RenderSystem.Draw(g.sceneBuffer, entities)
 
 		// Apply post-processing
 		finalImage := g.PostProcessor.Apply(g.sceneBuffer)
@@ -1219,7 +1459,7 @@ func (g *EbitenGame) drawStandardScene(screen *ebiten.Image) {
 			g.TerrainRenderSystem.Draw(screen, g.CameraSystem)
 		}
 
-		g.RenderSystem.Draw(screen, g.World.GetEntities())
+		g.RenderSystem.Draw(screen, entities)
 	}
 }
 
@@ -1306,10 +1546,9 @@ func (g *EbitenGame) drawPhaseUIOverlays(screen *ebiten.Image) {
 }
 
 // drawMailboxUI renders the mailbox interface if open and loads mail data from player entity.
+// Performance Audit V6 fix: now draws directly to screen without CPU→GPU image conversion.
 func (g *EbitenGame) drawMailboxUI(screen *ebiten.Image) {
 	if g.MailboxUI == nil || !g.MailboxUI.IsOpen() {
-		// Clean up cached image when mailbox is closed to free GPU memory
-		g.clearMailboxCache()
 		return
 	}
 
@@ -1319,48 +1558,73 @@ func (g *EbitenGame) drawMailboxUI(screen *ebiten.Image) {
 		}
 	}
 
-	// Performance Audit fix: cache the ebiten.Image conversion
-	currentState := g.MailboxUI.GetStateHash()
-	if g.cachedMailboxImage == nil || g.lastMailboxRenderState != currentState {
-		mailImg := g.MailboxUI.Render()
-		if mailImg != nil {
-			// Dispose old image to free GPU resources
-			if g.cachedMailboxImage != nil {
-				g.cachedMailboxImage.Dispose()
-			}
-			g.cachedMailboxImage = ebiten.NewImageFromImage(mailImg)
-			g.lastMailboxRenderState = currentState
-		}
-	}
-
-	if g.cachedMailboxImage != nil {
-		screen.DrawImage(g.cachedMailboxImage, nil)
-	}
-}
-
-// clearMailboxCache disposes the cached mailbox image to free GPU resources.
-// Called when the mailbox UI is closed or during cleanup.
-func (g *EbitenGame) clearMailboxCache() {
-	if g.cachedMailboxImage != nil {
-		g.cachedMailboxImage.Dispose()
-		g.cachedMailboxImage = nil
-		g.lastMailboxRenderState = ""
-	}
+	// Draw directly to screen - eliminates ebiten.NewImageFromImage conversion spike
+	g.MailboxUI.Draw(screen)
 }
 
 // drawVirtualControls renders mobile touch controls on top of all other elements.
+// Uses a cached InputSystem reference to avoid linear scanning all 44+ systems every frame.
 func (g *EbitenGame) drawVirtualControls(screen *ebiten.Image) {
-	for _, system := range g.World.GetSystems() {
-		if inputSys, ok := system.(*InputSystem); ok {
-			inputSys.DrawVirtualControls(screen)
-			break
+	// Lazily cache the InputSystem reference on first call
+	if g.cachedInputSystem == nil {
+		for _, system := range g.World.GetSystems() {
+			if inputSys, ok := system.(*InputSystem); ok {
+				g.cachedInputSystem = inputSys
+				break
+			}
 		}
 	}
+	if g.cachedInputSystem != nil {
+		g.cachedInputSystem.DrawVirtualControls(screen)
+	}
+}
+
+// screenDimensionConsumer is implemented by systems that maintain cached copies
+// of the screen dimensions and need to be kept in sync when the window is resized.
+type screenDimensionConsumer interface {
+	OnScreenResize(width, height int)
 }
 
 // Layout implements ebiten.Game interface. Returns the game's screen size.
 func (g *EbitenGame) Layout(outsideWidth, outsideHeight int) (int, int) {
+	if outsideWidth > 0 && outsideHeight > 0 {
+		// Only propagate when the dimensions actually change to avoid redundant work.
+		if outsideWidth != g.ScreenWidth || outsideHeight != g.ScreenHeight {
+			g.ScreenWidth = outsideWidth
+			g.ScreenHeight = outsideHeight
+
+			// Keep sceneBuffer in sync with the current screen size. LightingSystem.ApplyLighting
+			// uses the rendered scene size (sceneBuffer.Size()) to build its lighting buffer,
+			// so a stale buffer size after a resize would cause clipping/misalignment.
+			if g.sceneBuffer != nil {
+				g.sceneBuffer.Dispose()
+				g.sceneBuffer = ebiten.NewImage(g.ScreenWidth, g.ScreenHeight)
+			}
+
+			g.propagateScreenResize()
+		}
+	}
 	return g.ScreenWidth, g.ScreenHeight
+}
+
+// propagateScreenResize updates any systems that cache the screen dimensions so
+// they remain in sync with EbitenGame.ScreenWidth/ScreenHeight.
+func (g *EbitenGame) propagateScreenResize() {
+	if g.CameraSystem != nil {
+		g.CameraSystem.ScreenWidth = g.ScreenWidth
+		g.CameraSystem.ScreenHeight = g.ScreenHeight
+	}
+
+	if g.World == nil {
+		return
+	}
+
+	systems := g.World.GetSystems()
+	for _, system := range systems {
+		if consumer, ok := system.(screenDimensionConsumer); ok {
+			consumer.OnScreenResize(g.ScreenWidth, g.ScreenHeight)
+		}
+	}
 }
 
 // SetPlayerEntity sets the player entity for the game and UI systems.
@@ -1612,6 +1876,16 @@ func (g *EbitenGame) GetFrameTimeStats() FrameTimeStats {
 		return FrameTimeStats{}
 	}
 	return g.frameTimeTracker.GetStats()
+}
+
+// CurrentFPS implements stability.FPSProvider interface.
+// Returns the current average frames per second from frame time tracking.
+func (g *EbitenGame) CurrentFPS() float64 {
+	if g.frameTimeTracker == nil {
+		return 60.0 // Default to target FPS when tracking disabled
+	}
+	stats := g.frameTimeTracker.GetStats()
+	return stats.GetFPS()
 }
 
 // Run starts the game loop.

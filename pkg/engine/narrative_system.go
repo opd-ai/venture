@@ -15,11 +15,20 @@ const (
 	BossDetectionRange = 300.0
 )
 
+// CompanionStoryProvider provides companion-specific narrative functionality.
+// This interface enables integration with the narrative_world package
+// for personal quests, memory-based dialogue, and companion conflicts.
+type CompanionStoryProvider interface {
+	RecordCombatEvent(companionID uint64, description string)
+	RecordBondingEvent(companionID uint64, description string)
+}
+
 // NarrativeSystem manages narrative progression and event tracking.
 // It monitors gameplay events, checks trigger conditions, and advances story arcs.
 type NarrativeSystem struct {
-	world  *World
-	logger *logrus.Entry
+	world                  *World
+	logger                 *logrus.Entry
+	companionStoryProvider CompanionStoryProvider // Optional companion narrative integration
 }
 
 // NewNarrativeSystem creates a new narrative system.
@@ -37,47 +46,84 @@ func NewNarrativeSystem(world *World) *NarrativeSystem {
 	}
 }
 
+// SetCompanionStoryProvider injects a companion story provider for enhanced narrative features.
+// This enables personal quests, memory-based dialogue, and companion conflict tracking.
+// Provider is optional - system works without it.
+func (ns *NarrativeSystem) SetCompanionStoryProvider(provider CompanionStoryProvider) {
+	ns.companionStoryProvider = provider
+	if ns.logger != nil && ns.logger.Logger.GetLevel() >= logrus.DebugLevel {
+		ns.logger.Debug("Companion story provider integrated")
+	}
+}
+
 // Update processes narrative components and checks trigger conditions.
 func (ns *NarrativeSystem) Update(entities []*Entity, deltaTime float64) {
 	for _, entity := range entities {
-		// Check if entity has narrative component (typically world entity)
-		narComp, ok := entity.GetComponent("narrative")
-		if !ok {
+		narrative := ns.getNarrativeComponent(entity)
+		if narrative == nil {
 			continue
 		}
 
-		narrative, ok := narComp.(*NarrativeComponent)
-		if !ok {
-			continue
-		}
+		ns.processTriggeredEvents(narrative)
+		ns.processActProgression(narrative)
+	}
+}
 
-		// Check for triggered events
-		triggeredEvents := narrative.CheckTriggerConditions()
-		for _, event := range triggeredEvents {
-			narrative.AddEvent(event)
+// getNarrativeComponent retrieves and validates the narrative component.
+func (ns *NarrativeSystem) getNarrativeComponent(entity *Entity) *NarrativeComponent {
+	narComp, ok := entity.GetComponent("narrative")
+	if !ok {
+		return nil
+	}
 
-			if ns.logger != nil && ns.logger.Logger.GetLevel() >= logrus.InfoLevel {
-				ns.logger.WithFields(logrus.Fields{
-					"event_type":     event.Type.String(),
-					"description":    event.Description,
-					"importance":     event.Importance,
-					"story_progress": narrative.StoryProgress,
-				}).Info("Narrative event triggered")
-			}
-		}
+	narrative, ok := narComp.(*NarrativeComponent)
+	if !ok {
+		return nil
+	}
 
-		// Check for act progression
-		if ns.shouldProgressAct(narrative) {
-			if err := narrative.ProgressToNextAct(); err == nil {
-				if ns.logger != nil && ns.logger.Logger.GetLevel() >= logrus.InfoLevel {
-					ns.logger.WithFields(logrus.Fields{
-						"new_act":        narrative.CurrentAct.String(),
-						"progress":       narrative.StoryProgress,
-						"active_threads": len(narrative.ActiveThreads),
-					}).Info("Story progressed to next act")
-				}
-			}
-		}
+	return narrative
+}
+
+// processTriggeredEvents checks and logs triggered narrative events.
+func (ns *NarrativeSystem) processTriggeredEvents(narrative *NarrativeComponent) {
+	triggeredEvents := narrative.CheckTriggerConditions()
+	for _, event := range triggeredEvents {
+		narrative.AddEvent(event)
+		ns.logNarrativeEvent(event, narrative.StoryProgress)
+	}
+}
+
+// logNarrativeEvent logs a triggered narrative event.
+func (ns *NarrativeSystem) logNarrativeEvent(event NarrativeEvent, storyProgress float64) {
+	if ns.logger != nil && ns.logger.Logger.GetLevel() >= logrus.InfoLevel {
+		ns.logger.WithFields(logrus.Fields{
+			"event_type":     event.Type.String(),
+			"description":    event.Description,
+			"importance":     event.Importance,
+			"story_progress": storyProgress,
+		}).Info("Narrative event triggered")
+	}
+}
+
+// processActProgression checks and progresses story acts.
+func (ns *NarrativeSystem) processActProgression(narrative *NarrativeComponent) {
+	if !ns.shouldProgressAct(narrative) {
+		return
+	}
+
+	if err := narrative.ProgressToNextAct(); err == nil {
+		ns.logActProgression(narrative)
+	}
+}
+
+// logActProgression logs story act progression.
+func (ns *NarrativeSystem) logActProgression(narrative *NarrativeComponent) {
+	if ns.logger != nil && ns.logger.Logger.GetLevel() >= logrus.InfoLevel {
+		ns.logger.WithFields(logrus.Fields{
+			"new_act":        narrative.CurrentAct.String(),
+			"progress":       narrative.StoryProgress,
+			"active_threads": len(narrative.ActiveThreads),
+		}).Info("Story progressed to next act")
 	}
 }
 
@@ -143,6 +189,13 @@ func (ns *NarrativeSystem) OnCombatVictory(narrative *NarrativeComponent, enemyE
 	}
 
 	ns.TriggerEvent(narrative, EventVictory, description, importance, []int{}, locationX, locationY)
+
+	// Record combat event for active companions (if provider available)
+	if ns.companionStoryProvider != nil && ns.world != nil {
+		ns.forEachCompanion(func(entity *Entity) {
+			ns.companionStoryProvider.RecordCombatEvent(entity.ID, description)
+		})
+	}
 }
 
 // OnDiscovery is called when the player discovers something significant.
@@ -164,6 +217,28 @@ func (ns *NarrativeSystem) OnDialogueComplete(narrative *NarrativeComponent, npc
 	}
 
 	ns.TriggerEvent(narrative, EventAlliance, description, importance, []int{entityID}, 0, 0)
+
+	// Record bonding event for active companions (if provider available)
+	if ns.companionStoryProvider != nil && ns.world != nil {
+		ns.forEachCompanion(func(entity *Entity) {
+			ns.companionStoryProvider.RecordBondingEvent(entity.ID, "Witnessed player dialogue interaction")
+		})
+	}
+}
+
+// forEachCompanion iterates over all companion entities in the world,
+// including both committed and pending entities.
+func (ns *NarrativeSystem) forEachCompanion(fn func(entity *Entity)) {
+	for _, entity := range ns.world.GetEntities() {
+		if entity.HasComponent("companion") {
+			fn(entity)
+		}
+	}
+	for _, entity := range ns.world.entitiesToAdd {
+		if entity.HasComponent("companion") {
+			fn(entity)
+		}
+	}
 }
 
 // OnPuzzleSolved is called when the player solves a puzzle.

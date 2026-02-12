@@ -10,14 +10,35 @@ import (
 
 // MobileFederationSystem manages mobile-optimized federation
 type MobileFederationSystem struct {
-	adapter *mobile.Adapter
-	logger  *logrus.Entry
+	adapter         *mobile.Adapter
+	logger          *logrus.Entry
+	webrtcAvailable bool
+	fallbackMode    string
+	capabilities    *mobile.PlatformCapabilities
 }
 
 // NewMobileFederationSystem creates a mobile federation system
 func NewMobileFederationSystem(config *mobile.Config) *MobileFederationSystem {
 	if config == nil {
 		config = mobile.DefaultConfig()
+	}
+
+	// Detect platform capabilities
+	capabilities := mobile.DetectCapabilities()
+
+	logger := logrus.WithField("system", "mobile_federation")
+
+	// Log detected capabilities
+	mobile.LogCapabilities(logger)
+
+	// Determine fallback mode if WebRTC unavailable
+	fallbackMode := ""
+	if !capabilities.WebRTCAvailable {
+		fallbackMode = mobile.GetFallbackTransport()
+		logger.WithFields(logrus.Fields{
+			"platform": capabilities.Platform,
+			"fallback": fallbackMode,
+		}).Warn("WebRTC unavailable, using fallback mode")
 	}
 
 	adapter := mobile.NewAdapter(config)
@@ -36,14 +57,25 @@ func NewMobileFederationSystem(config *mobile.Config) *MobileFederationSystem {
 	})
 
 	return &MobileFederationSystem{
-		adapter: adapter,
-		logger:  logrus.WithField("system", "mobile_federation"),
+		adapter:         adapter,
+		logger:          logger,
+		webrtcAvailable: capabilities.WebRTCAvailable,
+		fallbackMode:    fallbackMode,
+		capabilities:    capabilities,
 	}
 }
 
 // Start initializes the mobile federation system
 func (s *MobileFederationSystem) Start() error {
-	s.logger.Debug("Starting mobile federation system")
+	if !s.webrtcAvailable {
+		s.logger.WithFields(logrus.Fields{
+			"fallback_mode": s.fallbackMode,
+			"platform":      s.capabilities.Platform,
+		}).Info("Starting mobile federation in fallback mode (WebRTC unavailable)")
+	} else {
+		s.logger.Debug("Starting mobile federation system with WebRTC")
+	}
+
 	return s.adapter.Start()
 }
 
@@ -74,6 +106,21 @@ func (s *MobileFederationSystem) GetAdapter() *mobile.Adapter {
 // GetState returns current federation state
 func (s *MobileFederationSystem) GetState() mobile.State {
 	return s.adapter.GetState()
+}
+
+// IsWebRTCAvailable returns whether WebRTC is available on this platform
+func (s *MobileFederationSystem) IsWebRTCAvailable() bool {
+	return s.webrtcAvailable
+}
+
+// GetFallbackMode returns the fallback transport mode (empty if WebRTC available)
+func (s *MobileFederationSystem) GetFallbackMode() string {
+	return s.fallbackMode
+}
+
+// GetCapabilities returns detected platform capabilities
+func (s *MobileFederationSystem) GetCapabilities() *mobile.PlatformCapabilities {
+	return s.capabilities
 }
 
 // PauseSync pauses federation sync operations

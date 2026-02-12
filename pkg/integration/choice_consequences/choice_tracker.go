@@ -148,7 +148,17 @@ func (ct *ChoiceTracker) getOrCreateState(playerID string) *PlayerState {
 }
 
 // updateNPCRelationship updates NPC attitude based on choice.
+// updateNPCRelationship updates relationship state based on a player's choice.
 func (ct *ChoiceTracker) updateNPCRelationship(state *PlayerState, npcID string, choice *PlayerChoice) {
+	rel := ct.getOrCreateRelationship(state, npcID)
+	impact := ct.calculateChoiceImpact(choice)
+
+	ct.recordMemorableEvent(rel, choice, npcID, impact)
+	ct.updateRelationshipValues(rel, impact)
+}
+
+// getOrCreateRelationship retrieves or creates an NPC relationship entry.
+func (ct *ChoiceTracker) getOrCreateRelationship(state *PlayerState, npcID string) *NPCRelationship {
 	rel, exists := state.NPCRelationships[npcID]
 	if !exists {
 		rel = &NPCRelationship{
@@ -162,16 +172,22 @@ func (ct *ChoiceTracker) updateNPCRelationship(state *PlayerState, npcID string,
 		}
 		state.NPCRelationships[npcID] = rel
 	}
+	return rel
+}
 
-	// Calculate impact based on alignment shift
-	impact := 0.0
-	if choice.MoralAlignment != nil {
-		// Good actions tend to improve NPC relations
-		impact = choice.MoralAlignment.GoodEvil * 0.3
-		impact += choice.MoralAlignment.HonorDishonor * 0.2
+// calculateChoiceImpact calculates relationship impact from a choice's moral alignment.
+func (ct *ChoiceTracker) calculateChoiceImpact(choice *PlayerChoice) float64 {
+	if choice.MoralAlignment == nil {
+		return 0.0
 	}
 
-	// Add memorable event
+	impact := choice.MoralAlignment.GoodEvil * 0.3
+	impact += choice.MoralAlignment.HonorDishonor * 0.2
+	return impact
+}
+
+// recordMemorableEvent adds a new memorable event and enforces memory limits.
+func (ct *ChoiceTracker) recordMemorableEvent(rel *NPCRelationship, choice *PlayerChoice, npcID string, impact float64) {
 	event := MemorableEvent{
 		EventID:     fmt.Sprintf("%s_%s", choice.ChoiceID, npcID),
 		ChoiceID:    choice.ChoiceID,
@@ -181,32 +197,47 @@ func (ct *ChoiceTracker) updateNPCRelationship(state *PlayerState, npcID string,
 	}
 
 	rel.MemorableEvents = append(rel.MemorableEvents, event)
+	ct.enforceMemoryLimit(rel)
+}
 
-	// Enforce memory limit (keep most impactful events)
-	if len(rel.MemorableEvents) > ct.npcMemoryLimit {
-		// Sort by absolute impact (most significant events)
-		for i := 0; i < len(rel.MemorableEvents)-1; i++ {
-			for j := i + 1; j < len(rel.MemorableEvents); j++ {
-				if abs(rel.MemorableEvents[i].Impact) < abs(rel.MemorableEvents[j].Impact) {
-					rel.MemorableEvents[i], rel.MemorableEvents[j] = rel.MemorableEvents[j], rel.MemorableEvents[i]
-				}
-			}
-		}
-		rel.MemorableEvents = rel.MemorableEvents[:ct.npcMemoryLimit]
+// enforceMemoryLimit keeps only the most impactful events within memory limit.
+func (ct *ChoiceTracker) enforceMemoryLimit(rel *NPCRelationship) {
+	if len(rel.MemorableEvents) <= ct.npcMemoryLimit {
+		return
 	}
 
-	// Update attitude and trust
+	ct.sortEventsByImpact(rel.MemorableEvents)
+	rel.MemorableEvents = rel.MemorableEvents[:ct.npcMemoryLimit]
+}
+
+// sortEventsByImpact sorts events by absolute impact (bubble sort for simplicity).
+func (ct *ChoiceTracker) sortEventsByImpact(events []MemorableEvent) {
+	for i := 0; i < len(events)-1; i++ {
+		for j := i + 1; j < len(events); j++ {
+			if abs(events[i].Impact) < abs(events[j].Impact) {
+				events[i], events[j] = events[j], events[i]
+			}
+		}
+	}
+}
+
+// updateRelationshipValues updates attitude and trust based on choice impact.
+func (ct *ChoiceTracker) updateRelationshipValues(rel *NPCRelationship, impact float64) {
 	rel.Attitude += impact
 	rel.Attitude = clamp(rel.Attitude, -1.0, 1.0)
 
+	ct.adjustTrustLevel(rel)
+	rel.LastUpdate = time.Now().Unix()
+}
+
+// adjustTrustLevel modifies trust level based on current attitude.
+func (ct *ChoiceTracker) adjustTrustLevel(rel *NPCRelationship) {
 	if rel.Attitude > 0.0 {
-		rel.TrustLevel += 0.05 // Positive actions build trust slowly
+		rel.TrustLevel += 0.05
 	} else if rel.Attitude < 0.0 {
-		rel.TrustLevel -= 0.1 // Negative actions destroy trust quickly
+		rel.TrustLevel -= 0.1
 	}
 	rel.TrustLevel = clamp(rel.TrustLevel, 0.0, 1.0)
-
-	rel.LastUpdate = time.Now().Unix()
 }
 
 // lockTypePrefixes maps consequence prefixes to their LockType values.

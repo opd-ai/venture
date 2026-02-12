@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/opd-ai/venture/pkg/procgen/item"
+	"github.com/opd-ai/venture/pkg/rendering/palette"
 	"github.com/opd-ai/venture/pkg/rendering/sprites"
 )
 
@@ -74,31 +75,48 @@ func (s *EquipmentVisualSystem) regenerateEquipmentLayers(entity *Entity, equipC
 
 // buildCompositeConfig creates a composite configuration from components.
 func (s *EquipmentVisualSystem) buildCompositeConfig(entity *Entity, equipComp *EquipmentVisualComponent, spriteComp *EbitenSprite) sprites.CompositeConfig {
-	// Get or create palette
 	entitySeed := s.getEntitySeed(entity)
 	genreID := s.getGenreID(entity)
+	pal := s.generatePalette(genreID, entitySeed)
 
-	// Generate palette for base config
-	pal, err := s.spriteGenerator.GetPaletteGenerator().Generate(genreID, entitySeed)
-	if err != nil {
-		// Fallback to default palette if generation fails
-		pal = nil
+	baseConfig := s.createBaseConfig(spriteComp, entitySeed, genreID, pal)
+	layers := s.createBaseLayers(baseConfig.Seed)
+	equipment := s.buildEquipmentLayers(entity, equipComp, genreID)
+	statusEffects := s.getStatusEffects(entity)
+
+	return sprites.CompositeConfig{
+		BaseConfig:    baseConfig,
+		Layers:        layers,
+		Equipment:     equipment,
+		StatusEffects: statusEffects,
 	}
+}
 
-	// Base sprite config
-	baseConfig := sprites.Config{
+// generatePalette generates a color palette for the entity.
+func (s *EquipmentVisualSystem) generatePalette(genreID string, seed int64) *palette.Palette {
+	pal, err := s.spriteGenerator.GetPaletteGenerator().Generate(genreID, seed)
+	if err != nil {
+		return nil
+	}
+	return pal
+}
+
+// createBaseConfig creates the base sprite configuration.
+func (s *EquipmentVisualSystem) createBaseConfig(spriteComp *EbitenSprite, seed int64, genreID string, pal *palette.Palette) sprites.Config {
+	return sprites.Config{
 		Type:       sprites.SpriteEntity,
 		Width:      int(spriteComp.Width),
 		Height:     int(spriteComp.Height),
-		Seed:       entitySeed,
+		Seed:       seed,
 		Complexity: 0.5,
 		GenreID:    genreID,
 		Palette:    pal,
 	}
+}
 
-	// Build layers with proper Z-ordering (Body < Armor < Head < Weapon < Accessory)
-	// Uses standardized Z-index constants from sprites package
-	layers := []sprites.LayerConfig{
+// createBaseLayers creates the base body and head layers.
+func (s *EquipmentVisualSystem) createBaseLayers(seed int64) []sprites.LayerConfig {
+	return []sprites.LayerConfig{
 		{
 			Type:      sprites.LayerBody,
 			ZIndex:    sprites.ZIndexBody,
@@ -106,8 +124,8 @@ func (s *EquipmentVisualSystem) buildCompositeConfig(entity *Entity, equipComp *
 			OffsetY:   0,
 			Scale:     1.0,
 			Visible:   true,
-			Seed:      baseConfig.Seed,
-			ShapeType: 0, // Circle
+			Seed:      seed,
+			ShapeType: 0,
 		},
 		{
 			Type:      sprites.LayerHead,
@@ -116,20 +134,29 @@ func (s *EquipmentVisualSystem) buildCompositeConfig(entity *Entity, equipComp *
 			OffsetY:   -8,
 			Scale:     1.0,
 			Visible:   true,
-			Seed:      baseConfig.Seed + 1,
-			ShapeType: 0, // Circle
+			Seed:      seed + 1,
+			ShapeType: 0,
 		},
 	}
+}
 
-	// Build equipment visuals with enhanced properties (Phase 15.3)
+// buildEquipmentLayers creates equipment visual layers.
+func (s *EquipmentVisualSystem) buildEquipmentLayers(entity *Entity, equipComp *EquipmentVisualComponent, genreID string) []sprites.EquipmentVisual {
 	equipment := make([]sprites.EquipmentVisual, 0)
-
-	// Get equipment component for item data access
 	equipmentComp := s.getEquipmentComponent(entity)
 
+	s.addWeaponLayer(&equipment, equipComp, equipmentComp, genreID)
+	s.addArmorLayer(&equipment, equipComp, equipmentComp, genreID)
+	s.addAccessoryLayers(&equipment, equipComp, equipmentComp, genreID)
+
+	return equipment
+}
+
+// addWeaponLayer adds weapon equipment visual if present.
+func (s *EquipmentVisualSystem) addWeaponLayer(equipment *[]sprites.EquipmentVisual, equipComp *EquipmentVisualComponent, equipmentComp *EquipmentComponent, genreID string) {
 	if equipComp.HasWeapon() && equipComp.ShowWeapon {
 		weaponItem := s.getEquippedItem(equipmentComp, SlotMainHand)
-		equipment = append(equipment, s.buildEquipmentVisual(
+		*equipment = append(*equipment, s.buildEquipmentVisual(
 			"weapon",
 			equipComp.WeaponID,
 			equipComp.WeaponSeed,
@@ -138,10 +165,13 @@ func (s *EquipmentVisualSystem) buildCompositeConfig(entity *Entity, equipComp *
 			genreID,
 		))
 	}
+}
 
+// addArmorLayer adds armor equipment visual if present.
+func (s *EquipmentVisualSystem) addArmorLayer(equipment *[]sprites.EquipmentVisual, equipComp *EquipmentVisualComponent, equipmentComp *EquipmentComponent, genreID string) {
 	if equipComp.HasArmor() && equipComp.ShowArmor {
 		armorItem := s.getEquippedItem(equipmentComp, SlotChest)
-		equipment = append(equipment, s.buildEquipmentVisual(
+		*equipment = append(*equipment, s.buildEquipmentVisual(
 			"armor",
 			equipComp.ArmorID,
 			equipComp.ArmorSeed,
@@ -150,33 +180,28 @@ func (s *EquipmentVisualSystem) buildCompositeConfig(entity *Entity, equipComp *
 			genreID,
 		))
 	}
+}
 
-	if equipComp.HasAccessories() && equipComp.ShowAccessories {
-		accessorySlots := []EquipmentSlot{SlotAccessory1, SlotAccessory2, SlotAccessory3}
-		for i, accessoryID := range equipComp.AccessoryIDs {
-			var accessoryItem *item.Item
-			if equipmentComp != nil && i < len(accessorySlots) {
-				accessoryItem = s.getEquippedItem(equipmentComp, accessorySlots[i])
-			}
-			equipment = append(equipment, s.buildEquipmentVisual(
-				"accessory",
-				accessoryID,
-				equipComp.AccessorySeeds[i],
-				sprites.LayerAccessory,
-				accessoryItem,
-				genreID,
-			))
-		}
+// addAccessoryLayers adds accessory equipment visuals if present.
+func (s *EquipmentVisualSystem) addAccessoryLayers(equipment *[]sprites.EquipmentVisual, equipComp *EquipmentVisualComponent, equipmentComp *EquipmentComponent, genreID string) {
+	if !equipComp.HasAccessories() || !equipComp.ShowAccessories {
+		return
 	}
 
-	// Get status effects if available
-	statusEffects := s.getStatusEffects(entity)
-
-	return sprites.CompositeConfig{
-		BaseConfig:    baseConfig,
-		Layers:        layers,
-		Equipment:     equipment,
-		StatusEffects: statusEffects,
+	accessorySlots := []EquipmentSlot{SlotAccessory1, SlotAccessory2, SlotAccessory3}
+	for i, accessoryID := range equipComp.AccessoryIDs {
+		var accessoryItem *item.Item
+		if equipmentComp != nil && i < len(accessorySlots) {
+			accessoryItem = s.getEquippedItem(equipmentComp, accessorySlots[i])
+		}
+		*equipment = append(*equipment, s.buildEquipmentVisual(
+			"accessory",
+			accessoryID,
+			equipComp.AccessorySeeds[i],
+			sprites.LayerAccessory,
+			accessoryItem,
+			genreID,
+		))
 	}
 }
 
@@ -252,43 +277,51 @@ func (s *EquipmentVisualSystem) syncEquipmentChanges(entity *Entity) {
 		return
 	}
 
-	// Get equipment component to check for changes
-	comp, ok := entity.GetComponent("equipment")
-	if !ok {
-		return
-	}
-	equipComp, ok := comp.(*EquipmentComponent)
-	if !ok {
+	equipComp := s.getEquipmentComponentTyped(entity)
+	if equipComp == nil {
 		return
 	}
 
-	// Check each equipment slot for changes and update visual component
+	s.syncMainHandSlot(equipComp, equipVisualComp)
+	s.syncChestSlot(equipComp, equipVisualComp)
+	s.syncAccessories(equipComp, equipVisualComp)
+}
+
+// getEquipmentComponentTyped retrieves and type-asserts the equipment component.
+func (s *EquipmentVisualSystem) getEquipmentComponentTyped(entity *Entity) *EquipmentComponent {
+	comp, ok := entity.GetComponent("equipment")
+	if !ok {
+		return nil
+	}
+	equipComp, ok := comp.(*EquipmentComponent)
+	if !ok {
+		return nil
+	}
+	return equipComp
+}
+
+// syncMainHandSlot synchronizes the main hand weapon slot.
+func (s *EquipmentVisualSystem) syncMainHandSlot(equipComp *EquipmentComponent, equipVisualComp *EquipmentVisualComponent) {
 	mainHand := equipComp.GetEquipped(SlotMainHand)
 	if mainHand != nil {
-		// Use item ID as unique identifier and item seed for generation
-		itemID := mainHand.ID
-		itemSeed := mainHand.Seed
-		if equipVisualComp.WeaponID != itemID {
-			equipVisualComp.SetWeapon(itemID, itemSeed)
+		if equipVisualComp.WeaponID != mainHand.ID {
+			equipVisualComp.SetWeapon(mainHand.ID, mainHand.Seed)
 		}
 	} else if equipVisualComp.HasWeapon() {
 		equipVisualComp.ClearWeapon()
 	}
+}
 
-	// Check armor (chest slot is primary armor visual)
+// syncChestSlot synchronizes the chest armor slot.
+func (s *EquipmentVisualSystem) syncChestSlot(equipComp *EquipmentComponent, equipVisualComp *EquipmentVisualComponent) {
 	chest := equipComp.GetEquipped(SlotChest)
 	if chest != nil {
-		itemID := chest.ID
-		itemSeed := chest.Seed
-		if equipVisualComp.ArmorID != itemID {
-			equipVisualComp.SetArmor(itemID, itemSeed)
+		if equipVisualComp.ArmorID != chest.ID {
+			equipVisualComp.SetArmor(chest.ID, chest.Seed)
 		}
 	} else if equipVisualComp.HasArmor() {
 		equipVisualComp.ClearArmor()
 	}
-
-	// Sync accessories (accessory slots 1-3)
-	s.syncAccessories(equipComp, equipVisualComp)
 }
 
 // syncAccessories synchronizes accessory slots with visual component.

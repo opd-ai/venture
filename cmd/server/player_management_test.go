@@ -624,3 +624,53 @@ func BenchmarkApplyInputCommand_Attack(b *testing.B) {
 		applyInputCommand(entity, cmd, logger)
 	}
 }
+
+// TestEnhancedChatSystemRegistration tests player registration with chat system
+func TestEnhancedChatSystemRegistration(t *testing.T) {
+	world := engine.NewWorld()
+	chatSystem := engine.NewEnhancedChatSystem(world)
+
+	// Create a player entity
+	entity := world.CreateEntity()
+
+	// Register player with chat system
+	err := chatSystem.RegisterPlayer(entity.ID)
+	if err != nil {
+		t.Fatalf("RegisterPlayer failed: %v", err)
+	}
+
+	// Verify chat component was added
+	if !entity.HasComponent("chat") {
+		t.Error("expected entity to have chat component after registration")
+	}
+
+	// Verify chat component is properly initialized
+	chatComp, ok := entity.GetComponent("chat")
+	if !ok {
+		t.Fatal("failed to get chat component")
+	}
+	chat := chatComp.(*engine.ChatComponent)
+	if chat == nil {
+		t.Error("chat component is nil")
+	}
+
+	// Unregister player
+	chatSystem.UnregisterPlayer(entity.ID)
+
+	// Chat component should still exist on entity (only history is removed)
+	if !entity.HasComponent("chat") {
+		t.Error("chat component should persist after unregistration")
+	}
+}
+
+// TestEnhancedChatSystemRegistrationNonexistentEntity tests registration with invalid entity
+func TestEnhancedChatSystemRegistrationNonexistentEntity(t *testing.T) {
+	world := engine.NewWorld()
+	chatSystem := engine.NewEnhancedChatSystem(world)
+
+	// Try to register a non-existent entity
+	err := chatSystem.RegisterPlayer(99999)
+	if err == nil {
+		t.Error("expected error when registering non-existent entity")
+	}
+}

@@ -25,6 +25,11 @@ func NewQoLSystem(manager *qol.Manager) *QoLSystemWrapper {
 // Update implements the engine.System interface.
 // It performs periodic cleanup of expired guild invitations.
 func (s *QoLSystemWrapper) Update(entities []*Entity, deltaTime float64) {
+	// Guard against nil receiver (can happen during lazy initialization)
+	if s == nil || s.manager == nil {
+		return
+	}
+
 	// Periodic cleanup of expired guild invitations
 	if time.Since(s.lastCleanup) > s.cleanupInterval {
 		s.manager.GuildInvites().CleanupExpired()

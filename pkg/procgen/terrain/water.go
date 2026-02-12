@@ -194,71 +194,93 @@ func placeWaterTile(x, y int, tileType TileType, p Point, terrain *Terrain, feat
 
 // generateRiverPath creates a winding path between two points.
 func generateRiverPath(start, end Point, terrain *Terrain, rng *rand.Rand) []Point {
-	path := make([]Point, 0, 50)
-
-	// Calculate direction vector
-	dx := end.X - start.X
-	dy := end.Y - start.Y
-	distance := math.Sqrt(float64(dx*dx + dy*dy))
-
+	dx, dy, distance := calculatePathVector(start, end)
 	if distance < 1 {
 		return []Point{start}
 	}
 
-	// Step size based on distance
+	steps := calculateSteps(distance)
+	stepX, stepY := float64(dx)/float64(steps), float64(dy)/float64(steps)
+
+	return buildMeanderingPath(start, steps, stepX, stepY, distance, terrain, rng)
+}
+
+// calculatePathVector computes the direction vector and distance.
+func calculatePathVector(start, end Point) (int, int, float64) {
+	dx := end.X - start.X
+	dy := end.Y - start.Y
+	distance := math.Sqrt(float64(dx*dx + dy*dy))
+	return dx, dy, distance
+}
+
+// calculateSteps determines the number of steps for the path.
+func calculateSteps(distance float64) int {
 	steps := int(distance)
 	if steps < 5 {
-		steps = 5
+		return 5
 	}
+	return steps
+}
 
-	stepX := float64(dx) / float64(steps)
-	stepY := float64(dy) / float64(steps)
+// buildMeanderingPath generates path points with meandering offset.
+func buildMeanderingPath(start Point, steps int, stepX, stepY, distance float64, terrain *Terrain, rng *rand.Rand) []Point {
+	path := make([]Point, 0, 50)
 
-	// Generate path with meandering
 	for i := 0; i <= steps; i++ {
-		// Base position
 		baseX := float64(start.X) + stepX*float64(i)
 		baseY := float64(start.Y) + stepY*float64(i)
 
-		// Add perpendicular offset for meandering
-		perpendicularDist := int(distance * 0.2) // 20% of total distance
-		if perpendicularDist < 2 {
-			perpendicularDist = 2
-		}
+		offset := calculateMeanderOffset(distance, rng)
+		perpX, perpY := calculatePerpendicularDirection(stepX, stepY)
 
-		offset := rng.Intn(perpendicularDist*2+1) - perpendicularDist
-
-		// Calculate perpendicular direction
-		perpX := -stepY
-		perpY := stepX
-		perpLen := math.Sqrt(perpX*perpX + perpY*perpY)
-		if perpLen > 0 {
-			perpX /= perpLen
-			perpY /= perpLen
-		}
-
-		// Apply offset
-		x := int(baseX + perpX*float64(offset))
-		y := int(baseY + perpY*float64(offset))
-
-		// Clamp to terrain bounds
-		if x < 0 {
-			x = 0
-		}
-		if x >= terrain.Width {
-			x = terrain.Width - 1
-		}
-		if y < 0 {
-			y = 0
-		}
-		if y >= terrain.Height {
-			y = terrain.Height - 1
-		}
-
+		x, y := applyOffsetAndClamp(baseX, baseY, perpX, perpY, offset, terrain)
 		path = append(path, Point{x, y})
 	}
 
 	return path
+}
+
+// calculateMeanderOffset calculates random perpendicular offset.
+func calculateMeanderOffset(distance float64, rng *rand.Rand) int {
+	perpendicularDist := int(distance * 0.2)
+	if perpendicularDist < 2 {
+		perpendicularDist = 2
+	}
+	return rng.Intn(perpendicularDist*2+1) - perpendicularDist
+}
+
+// calculatePerpendicularDirection computes normalized perpendicular vector.
+func calculatePerpendicularDirection(stepX, stepY float64) (float64, float64) {
+	perpX := -stepY
+	perpY := stepX
+	perpLen := math.Sqrt(perpX*perpX + perpY*perpY)
+	if perpLen > 0 {
+		perpX /= perpLen
+		perpY /= perpLen
+	}
+	return perpX, perpY
+}
+
+// applyOffsetAndClamp applies offset and clamps coordinates to terrain bounds.
+func applyOffsetAndClamp(baseX, baseY, perpX, perpY float64, offset int, terrain *Terrain) (int, int) {
+	x := int(baseX + perpX*float64(offset))
+	y := int(baseY + perpY*float64(offset))
+
+	x = clampToRange(x, 0, terrain.Width-1)
+	y = clampToRange(y, 0, terrain.Height-1)
+
+	return x, y
+}
+
+// clampToRange constrains a value within min and max bounds.
+func clampToRange(value, min, max int) int {
+	if value < min {
+		return min
+	}
+	if value > max {
+		return max
+	}
+	return value
 }
 
 // GenerateMoat creates a water-filled moat around a room.
@@ -362,44 +384,56 @@ func placeMoatTile(terrain *Terrain, feature *WaterFeature, x, y, dist, width in
 // water tiles, creating crossings. Uses TileBridge tile type.
 // Updates feature.Bridges with placed bridge locations.
 func PlaceBridges(feature *WaterFeature, terrain *Terrain, rng *rand.Rand) {
+	bridgeLocations := findBridgeLocations(feature, terrain)
+	applyBridgesToTerrain(bridgeLocations, feature, terrain)
+}
+
+// findBridgeLocations identifies water tiles that should become bridges.
+func findBridgeLocations(feature *WaterFeature, terrain *Terrain) map[Point]bool {
 	bridgeLocations := make(map[Point]bool)
 
-	// Find water tiles adjacent to paths
 	for _, waterTile := range feature.Tiles {
-		// Check all 8 neighbors
-		for _, neighbor := range waterTile.Neighbors() {
-			if !terrain.IsInBounds(neighbor.X, neighbor.Y) {
-				continue
-			}
-
-			tile := terrain.GetTile(neighbor.X, neighbor.Y)
-
-			// If neighbor is a walkable path tile
-			if tile == TileCorridor || tile == TileFloor {
-				// Check if this water tile is between two path tiles
-				hasPathOnOppositeSide := false
-
-				// Check opposite neighbors
-				dx := neighbor.X - waterTile.X
-				dy := neighbor.Y - waterTile.Y
-
-				opposite := Point{waterTile.X - dx, waterTile.Y - dy}
-				if terrain.IsInBounds(opposite.X, opposite.Y) {
-					oppositeTile := terrain.GetTile(opposite.X, opposite.Y)
-					if oppositeTile == TileCorridor || oppositeTile == TileFloor {
-						hasPathOnOppositeSide = true
-					}
-				}
-
-				// Place bridge if water is between paths
-				if hasPathOnOppositeSide {
-					bridgeLocations[waterTile] = true
-				}
-			}
+		if shouldPlaceBridge(waterTile, terrain) {
+			bridgeLocations[waterTile] = true
 		}
 	}
 
-	// Apply bridges to terrain
+	return bridgeLocations
+}
+
+// shouldPlaceBridge checks if a water tile is between two path tiles.
+func shouldPlaceBridge(waterTile Point, terrain *Terrain) bool {
+	for _, neighbor := range waterTile.Neighbors() {
+		if !isPathTile(neighbor, terrain) {
+			continue
+		}
+
+		if hasPathOnOppositeSide(waterTile, neighbor, terrain) {
+			return true
+		}
+	}
+	return false
+}
+
+// isPathTile checks if a tile is a walkable path.
+func isPathTile(p Point, terrain *Terrain) bool {
+	if !terrain.IsInBounds(p.X, p.Y) {
+		return false
+	}
+	tile := terrain.GetTile(p.X, p.Y)
+	return tile == TileCorridor || tile == TileFloor
+}
+
+// hasPathOnOppositeSide checks if there's a path tile on the opposite side of a water tile.
+func hasPathOnOppositeSide(waterTile, neighbor Point, terrain *Terrain) bool {
+	dx := neighbor.X - waterTile.X
+	dy := neighbor.Y - waterTile.Y
+	opposite := Point{waterTile.X - dx, waterTile.Y - dy}
+	return isPathTile(opposite, terrain)
+}
+
+// applyBridgesToTerrain converts identified locations to bridge tiles.
+func applyBridgesToTerrain(bridgeLocations map[Point]bool, feature *WaterFeature, terrain *Terrain) {
 	for bridgePoint := range bridgeLocations {
 		terrain.SetTile(bridgePoint.X, bridgePoint.Y, TileBridge)
 		feature.Bridges = append(feature.Bridges, bridgePoint)

@@ -25,6 +25,8 @@ type PuzzleGame struct {
 	solution   [][]int
 	completed  bool
 	playerWon  bool
+	// LastRender contains the most recent render output for external consumption.
+	LastRender *RenderOutput
 }
 
 // NewPuzzleGame creates a new puzzle game instance.
@@ -134,10 +136,90 @@ func (p *PuzzleGame) isSolved() bool {
 	return true
 }
 
-// Render draws the puzzle game to the screen.
-func (p *PuzzleGame) Render(screen engine.ImageProvider) error {
-	// Minimal implementation - actual rendering in Phase 27.3
+// PrepareRender computes the current visual state for the puzzle game.
+// This validates screen dimensions and populates internal render data.
+// Implements engine.MiniGame interface.
+func (p *PuzzleGame) PrepareRender(screenWidth, screenHeight int) error {
+	if err := validateScreenDimensions(screenWidth, screenHeight); err != nil {
+		return fmt.Errorf("puzzle game prepare render: %w", err)
+	}
+	if p.rng == nil {
+		return fmt.Errorf("puzzle game prepare render: game not initialized")
+	}
+
+	status := "Playing"
+	if p.completed {
+		if p.playerWon {
+			status = "Won"
+		} else {
+			status = "Lost"
+		}
+	}
+
+	elements := make([]RenderElement, 0, 2+p.gridSize*p.gridSize)
+
+	// Move counter
+	elements = append(elements, RenderElement{
+		Type:  "text",
+		X:     screenWidth / 2,
+		Y:     10,
+		Label: fmt.Sprintf("Moves: %d / %d", p.moves, p.maxMoves),
+	})
+
+	// Grid tiles
+	tileSize := (screenHeight - 60) / p.gridSize
+	maxTile := (screenWidth - 20) / p.gridSize
+	if tileSize > maxTile {
+		tileSize = maxTile
+	}
+	startX := (screenWidth - p.gridSize*tileSize) / 2
+	startY := 40
+
+	for i := 0; i < p.gridSize; i++ {
+		for j := 0; j < p.gridSize; j++ {
+			correct := p.grid[i][j] == p.solution[i][j]
+			elements = append(elements, RenderElement{
+				Type:        "tile",
+				X:           startX + j*tileSize,
+				Y:           startY + i*tileSize,
+				W:           tileSize - 2,
+				H:           tileSize - 2,
+				Label:       fmt.Sprintf("%d", p.grid[i][j]),
+				Value:       float64(p.grid[i][j]),
+				Highlighted: correct,
+			})
+		}
+	}
+
+	p.LastRender = &RenderOutput{
+		Title:    "Puzzle",
+		Status:   status,
+		Width:    screenWidth,
+		Height:   screenHeight,
+		Elements: elements,
+	}
 	return nil
+}
+
+// GetRenderOutput returns the computed visual state from the last PrepareRender call.
+// Implements engine.MiniGame interface.
+func (p *PuzzleGame) GetRenderOutput() engine.MiniGameRenderOutput {
+	if p.LastRender == nil {
+		return nil
+	}
+	return p.LastRender
+}
+
+// Render draws the puzzle game to the screen.
+// Computes visual state including the grid, solution comparison, and move counter.
+// DEPRECATED: Use PrepareRender() and GetRenderOutput() instead.
+// Kept for backward compatibility with existing code.
+func (p *PuzzleGame) Render(screen engine.ImageProvider) error {
+	w, h, err := validateScreen(screen)
+	if err != nil {
+		return fmt.Errorf("puzzle game render: %w", err)
+	}
+	return p.PrepareRender(w, h)
 }
 
 // IsComplete returns true when the game has finished.

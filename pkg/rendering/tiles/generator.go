@@ -41,6 +41,28 @@ func NewGeneratorWithLogger(logger *logrus.Logger) *Generator {
 
 // Generate creates a tile image from the given configuration.
 func (g *Generator) Generate(config Config) (*image.RGBA, error) {
+	g.logGenerationStart(config)
+
+	if err := config.Validate(); err != nil {
+		g.logError(err, "invalid tile config")
+		return nil, fmt.Errorf("invalid config: %w", err)
+	}
+
+	rng, pal, img, err := g.initializeTileGeneration(config)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := g.generateTileByType(img, pal, rng, config); err != nil {
+		return nil, err
+	}
+
+	g.logGenerationComplete(config)
+	return img, nil
+}
+
+// logGenerationStart logs the start of tile generation.
+func (g *Generator) logGenerationStart(config Config) {
 	if g.logger != nil && g.logger.Logger.GetLevel() >= logrus.DebugLevel {
 		g.logger.WithFields(logrus.Fields{
 			"type":    config.Type,
@@ -49,30 +71,31 @@ func (g *Generator) Generate(config Config) (*image.RGBA, error) {
 			"variant": config.Variant,
 		}).Debug("generating tile")
 	}
+}
 
-	if err := config.Validate(); err != nil {
-		if g.logger != nil {
-			g.logger.WithError(err).Error("invalid tile config")
-		}
-		return nil, fmt.Errorf("invalid config: %w", err)
+// logError logs an error with context.
+func (g *Generator) logError(err error, msg string) {
+	if g.logger != nil {
+		g.logger.WithError(err).Error(msg)
 	}
+}
 
-	// Create RNG from seed
+// initializeTileGeneration initializes RNG, palette, and base image.
+func (g *Generator) initializeTileGeneration(config Config) (*rand.Rand, *palette.Palette, *image.RGBA, error) {
 	rng := rand.New(rand.NewSource(config.Seed))
 
-	// Generate color palette for genre
 	pal, err := g.paletteGen.Generate(config.GenreID, config.Seed)
 	if err != nil {
-		if g.logger != nil {
-			g.logger.WithError(err).Error("palette generation failed")
-		}
-		return nil, fmt.Errorf("failed to generate palette: %w", err)
+		g.logError(err, "palette generation failed")
+		return nil, nil, nil, fmt.Errorf("failed to generate palette: %w", err)
 	}
 
-	// Create base image
 	img := image.NewRGBA(image.Rect(0, 0, config.Width, config.Height))
+	return rng, pal, img, nil
+}
 
-	// Generate tile based on type
+// generateTileByType generates the appropriate tile based on type.
+func (g *Generator) generateTileByType(img *image.RGBA, pal *palette.Palette, rng *rand.Rand, config Config) error {
 	switch config.Type {
 	case TileFloor:
 		g.generateFloor(img, pal, rng, config)
@@ -109,17 +132,19 @@ func (g *Generator) Generate(config Config) (*image.RGBA, error) {
 		if g.logger != nil {
 			g.logger.WithError(err).WithField("type", config.Type).Error("unknown tile type")
 		}
-		return nil, err
+		return err
 	}
+	return nil
+}
 
+// logGenerationComplete logs successful tile generation.
+func (g *Generator) logGenerationComplete(config Config) {
 	if g.logger != nil {
 		g.logger.WithFields(logrus.Fields{
 			"type": config.Type,
 			"seed": config.Seed,
 		}).Info("tile generated")
 	}
-
-	return img, nil
 }
 
 // generateFloor creates a floor tile with subtle texture.

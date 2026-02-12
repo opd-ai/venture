@@ -363,3 +363,43 @@ func BenchmarkParticleUpdate_WithBehaviors(b *testing.B) {
 		system.Update(0.016) // 60 FPS
 	}
 }
+
+// TestParticle_ColorIsRGBA verifies that Particle.Color is color.RGBA (not interface).
+func TestParticle_ColorIsRGBA(t *testing.T) {
+	gen := NewGenerator()
+	config := Config{
+		Type:     ParticleSpark,
+		Count:    10,
+		GenreID:  "fantasy",
+		Seed:     12345,
+		Duration: 1.0,
+		SpreadX:  50.0,
+		SpreadY:  50.0,
+		MinSize:  2.0,
+		MaxSize:  4.0,
+		Custom:   make(map[string]interface{}),
+	}
+
+	system, err := gen.Generate(config)
+	if err != nil {
+		t.Fatalf("Generate() error = %v", err)
+	}
+
+	if len(system.Particles) == 0 {
+		t.Fatal("Expected particles to be generated")
+	}
+
+	// Verify Color field is color.RGBA
+	p := system.Particles[0]
+	_ = p.Color.R // Should compile if Color is color.RGBA
+	_ = p.Color.G
+	_ = p.Color.B
+	_ = p.Color.A
+
+	// Verify alpha channel can be manipulated directly
+	originalAlpha := p.Color.A
+	p.Color.A = uint8(float64(originalAlpha) * 0.5)
+	if p.Color.A >= originalAlpha {
+		t.Errorf("Alpha modification failed: %d >= %d", p.Color.A, originalAlpha)
+	}
+}

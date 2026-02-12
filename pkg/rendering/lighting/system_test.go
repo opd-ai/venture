@@ -731,7 +731,7 @@ func TestSystem_SetConfig(t *testing.T) {
 	if newConfig.AmbientIntensity != 0.5 {
 		t.Errorf("Updated AmbientIntensity = %v, want 0.5", newConfig.AmbientIntensity)
 	}
-	
+
 	// Check ambient color (need to convert to RGBA for comparison)
 	ambientRGBA := color.RGBAModel.Convert(newConfig.AmbientColor).(color.RGBA)
 	if ambientRGBA.R != 50 {

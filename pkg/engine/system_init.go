@@ -187,6 +187,11 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 	factionAwareAISystem := NewFactionAwareAISystem(game.World)
 	game.World.AddSystem(factionAwareAISystem)
 
+	// 16b. StatusEffectAISystem - bridges status effects with AI behavior
+	// Disables AI actions when entities are stunned, frozen, feared, or paralyzed
+	statusEffectAISystem := NewStatusEffectAISystem(game.World, config.Seed+2200)
+	game.World.AddSystem(statusEffectAISystem)
+
 	// ========================================================================
 	// PROGRESSION SYSTEMS (5 systems)
 	// ========================================================================

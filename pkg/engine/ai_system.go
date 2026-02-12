@@ -111,6 +111,17 @@ func (ai *AISystem) Update(entities []*Entity, deltaTime float64) {
 
 // processAI handles the AI decision-making logic for an entity.
 func (ai *AISystem) processAI(entity *Entity, aiComp *AIComponent, deltaTime float64) {
+	// Skip processing if AI is disabled by a control effect (stun, frozen, etc.)
+	if aiComp.Disabled {
+		if ai.logger != nil && aiDebugEnabled {
+			ai.logger.WithFields(logrus.Fields{
+				"entity_id": entity.ID,
+				"reason":    aiComp.DisabledReason,
+			}).Debug("AI processing skipped - disabled by control effect")
+		}
+		return
+	}
+
 	// Get position component using typed getter for ~94x faster access
 	pos := entity.GetPosition()
 	if pos == nil {

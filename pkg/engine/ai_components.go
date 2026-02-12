@@ -100,6 +100,15 @@ type AIComponent struct {
 
 	// Distance threshold to consider waypoint "reached" (in pixels)
 	WaypointReachDistance float64
+
+	// Disabled indicates AI is currently under a control effect (stun, frozen, etc.)
+	Disabled bool
+
+	// DisabledReason stores the status effect type that disabled this AI
+	DisabledReason string
+
+	// PreviousState stores the state before being disabled for restoration
+	PreviousState AIState
 }
 
 // PatrolWaypoint represents a point in a patrol route.

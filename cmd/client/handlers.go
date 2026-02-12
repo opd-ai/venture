@@ -181,6 +181,7 @@ type systemsContainer struct {
 	squadSystem                *engine.SquadSystem
 	factionSystem              *engine.FactionSystem
 	factionAwareAISystem       *engine.FactionAwareAISystem // Bridges faction reputation with AI hostility
+	statusEffectAISystem       *engine.StatusEffectAISystem // Bridges status effects with AI (stun/frozen disable AI)
 	reputationSystem           *engine.ReputationSystem
 	alignmentSystem            *engine.AlignmentSystem
 	factionReactionSystem      *engine.FactionReactionSystem
@@ -1488,6 +1489,11 @@ func registerNonCriticalSystems(game *engine.EbitenGame, sys *systemsContainer) 
 	// Makes neutral NPCs become enemies when player reputation drops to hostile (-50 or below)
 	sys.factionAwareAISystem = engine.NewFactionAwareAISystem(game.World)
 	game.World.AddSystem(sys.factionAwareAISystem)
+
+	// StatusEffectAISystem: bridges status effects with AI behavior
+	// Disables AI actions when entities are stunned, frozen, feared, or paralyzed
+	sys.statusEffectAISystem = engine.NewStatusEffectAISystem(game.World, *seed+2200)
+	game.World.AddSystem(sys.statusEffectAISystem)
 
 	sys.reputationSystem = engine.NewReputationSystem(game.World, game.World.GetLogger().Logger)
 	game.World.AddSystem(&reputationSystemWrapper{system: sys.reputationSystem})

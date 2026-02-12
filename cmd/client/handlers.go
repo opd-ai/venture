@@ -162,6 +162,7 @@ type systemsContainer struct {
 	progressionSystem          *engine.ProgressionSystem
 	inventorySystem            *engine.InventorySystem
 	commerceSystem             *engine.CommerceSystem
+	reputationPricingSystem    *engine.ReputationPricingSystem // Connects faction reputation with merchant pricing
 	dialogSystem               *engine.DialogSystem
 	craftingSystem             *engine.CraftingSystem
 	audioManager               *engine.AudioManager
@@ -751,6 +752,7 @@ func initializeProgressionSystems(game *engine.EbitenGame, sys *systemsContainer
 	sys.progressionSystem = engine.NewProgressionSystem(game.World)
 	sys.inventorySystem = engine.NewInventorySystem(game.World)
 	sys.commerceSystem = engine.NewCommerceSystemWithLogger(game.World, sys.inventorySystem, logger)
+	sys.reputationPricingSystem = engine.NewReputationPricingSystem(game.World, *seed+5000)
 	sys.dialogSystem = engine.NewDialogSystemWithLogger(game.World, logger)
 	sys.craftingSystem = engine.NewCraftingSystem(game.World, sys.inventorySystem, sys.itemGen)
 
@@ -1450,6 +1452,7 @@ func registerCriticalSystems(game *engine.EbitenGame, sys *systemsContainer) {
 	game.World.AddSystem(sys.manaRegenSystem)
 	game.World.AddSystem(sys.inventorySystem)
 	game.World.AddSystem(sys.commerceSystem)
+	game.World.AddSystem(sys.reputationPricingSystem) // Adjusts merchant prices based on faction reputation
 	game.World.AddSystem(sys.dialogSystem)
 	game.World.AddSystem(sys.craftingSystem)
 	game.World.AddSystem(sys.interactionSystem)

@@ -234,6 +234,11 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 	result.CommerceSystem = NewCommerceSystemWithLogger(game.World, inventorySystem, logger)
 	game.World.AddSystem(result.CommerceSystem)
 
+	// 29a. ReputationPricingSystem - adjusts merchant prices based on player faction reputation
+	// Connects FactionComponent reputation with MerchantComponent pricing
+	reputationPricingSystem := NewReputationPricingSystem(game.World, config.Seed+5000)
+	game.World.AddSystem(reputationPricingSystem)
+
 	result.DialogSystem = NewDialogSystemWithLogger(game.World, logger)
 	game.World.AddSystem(result.DialogSystem)
 

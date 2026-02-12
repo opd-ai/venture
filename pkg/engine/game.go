@@ -33,13 +33,14 @@ type EbitenGame struct {
 	ServerAddressInput   *ServerAddressInput // Text input for server address
 	SettingsUI           *SettingsUI
 	SettingsManager      *SettingsManager
-	CharacterCreation    *EbitenCharacterCreation
-	LoadingUI            *LoadingUI // World generation loading screen (Phase Performance Audit)
-	pendingCharData      *CharacterData
-	isMultiplayerMode    bool   // Track if character creation is for multiplayer
-	selectedGenreID      string // Selected genre for world generation
-	pendingServerAddress string // Server address for Join option
-	worldSeed            int64  // World generation seed for deterministic content
+	CharacterCreation         *EbitenCharacterCreation
+	CharacterCreationTutorial *CharacterCreationTutorial // Tutorial overlay for character creation
+	LoadingUI                 *LoadingUI                 // World generation loading screen (Phase Performance Audit)
+	pendingCharData           *CharacterData
+	isMultiplayerMode         bool   // Track if character creation is for multiplayer
+	selectedGenreID           string // Selected genre for world generation
+	pendingServerAddress      string // Server address for Join option
+	worldSeed                 int64  // World generation seed for deterministic content
 
 	// Rendering systems
 	CameraSystem        *CameraSystem
@@ -337,8 +338,9 @@ func buildGameInstance(screenWidth, screenHeight int, world *World, logEntry *lo
 		ServerAddressInput: ui.serverAddressInput,
 		SettingsUI:         ui.settingsUI,
 		SettingsManager:    core.settingsManager,
-		CharacterCreation:  ui.characterCreation,
-		LoadingUI:          NewLoadingUI(screenWidth, screenHeight),
+		CharacterCreation:         ui.characterCreation,
+		CharacterCreationTutorial: NewCharacterCreationTutorial(screenWidth, screenHeight),
+		LoadingUI:                 NewLoadingUI(screenWidth, screenHeight),
 		CameraSystem:       core.cameraSystem,
 		RenderSystem:       core.renderSystem,
 		LightingSystem:     core.lightingSystem,
@@ -553,6 +555,16 @@ func (g *EbitenGame) handleGenreSelection(genreID string) {
 
 	// Reset character creation UI for new game
 	g.CharacterCreation.Reset()
+
+	// Reset character creation tutorial for first-time players
+	// Check if player already completed the tutorial; if so, skip it
+	if g.CharacterCreationTutorial != nil {
+		if ShouldShowCreationTutorial(g.PlayerEntity) {
+			g.CharacterCreationTutorial.Reset()
+		} else {
+			g.CharacterCreationTutorial.SkipTutorial()
+		}
+	}
 
 	// Set default name from world seed so user has a starting name
 	g.CharacterCreation.SetDefaultNameFromSeed(g.worldSeed)
@@ -939,6 +951,11 @@ func (g *EbitenGame) updateMenuState() (handled bool) {
 
 // handleCharacterCreation processes character creation updates and transitions to gameplay.
 func (g *EbitenGame) handleCharacterCreation() error {
+	// Update the character creation tutorial overlay alongside character creation
+	if g.CharacterCreationTutorial != nil && g.CharacterCreationTutorial.IsActive() {
+		g.CharacterCreationTutorial.Update(int(g.CharacterCreation.currentStep), 1.0/60.0)
+	}
+
 	completed := g.CharacterCreation.Update()
 	if !completed {
 		return nil
@@ -946,6 +963,11 @@ func (g *EbitenGame) handleCharacterCreation() error {
 
 	if g.logger != nil {
 		g.logger.Info("character creation completed, transitioning to gameplay")
+	}
+
+	// Mark the character creation tutorial as complete
+	if g.CharacterCreationTutorial != nil && !g.CharacterCreationTutorial.IsComplete() {
+		g.CharacterCreationTutorial.completeTutorial()
 	}
 
 	charData := g.CharacterCreation.GetCharacterData()
@@ -1363,6 +1385,10 @@ func (g *EbitenGame) drawMenuState(screen *ebiten.Image) bool {
 		return true
 	case AppStateCharacterCreation:
 		g.CharacterCreation.Draw(screen)
+		// Draw tutorial overlay on top of character creation UI
+		if g.CharacterCreationTutorial != nil {
+			g.CharacterCreationTutorial.Draw(screen)
+		}
 		return true
 	}
 

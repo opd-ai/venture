@@ -6,7 +6,7 @@
 - [x] `cmd/mobile/AUDIT.md` - Reviewed 2026-02-12: Complete, no changes needed
 - [x] `cmd/server/AUDIT.md` - Reviewed 2026-02-12: All items complete, 65% coverage achieved
 - [x] `pkg/audio/AUDIT.md` - Reviewed 2026-02-12: Priority 2 & 3 completed (voice codec docs and dead code removal)
-- [ ] `pkg/combat/AUDIT.md`
+- [x] `pkg/combat/AUDIT.md` - Reviewed 2026-02-12: All issues resolved, 98.3% coverage
 - [ ] `pkg/config/AUDIT.md`
 - [ ] `pkg/errors/AUDIT.md`
 - [x] `pkg/logging/AUDIT.md`

@@ -12,7 +12,7 @@ pkg/combat/
 ├── types.go          - Core data structures (Damage, Stats) and constructors
 ├── interfaces.go     - Combat resolution interface (CombatResolver)
 ├── doc.go            - Package documentation
-├── interfaces_test.go - Comprehensive test suite (100% coverage)
+├── interfaces_test.go - Comprehensive test suite (~98% coverage)
 └── AUDIT.md          - Implementation gap audit and recommendations
 ```
 
@@ -96,7 +96,7 @@ Run package tests:
 go test ./pkg/combat/...
 ```
 
-Current test coverage: **100%**
+Current test coverage: **~98%**
 
 ## Implementation Status
 

@@ -63,8 +63,8 @@ func (r *DefaultCombatResolver) CalculateDamage(damage Damage, targetStats *Stat
 	defenseMultiplier := 100.0 / (100.0 + defense)
 	mitigatedDamage := baseDamage * defenseMultiplier
 
-	// Step 3: Apply resistance
-	resistance := targetStats.Resistances[damage.Type]
+	// Step 3: Apply resistance using nil-safe getter
+	resistance := targetStats.GetResistance(damage.Type)
 	// Clamp resistance to prevent negative damage or over-immunity
 	resistance = math.Max(-0.5, math.Min(resistance, 1.0))
 	resistedDamage := mitigatedDamage * (1.0 - resistance)

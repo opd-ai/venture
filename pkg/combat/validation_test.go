@@ -316,6 +316,15 @@ func TestStats_Validate(t *testing.T) {
 			wantErr: ErrInvalidResistance,
 		},
 		{
+			name: "resistance_below_min_weakness",
+			setup: func() *Stats {
+				s := NewStats()
+				s.Resistances[DamagePoison] = -0.6 // Below -0.5 min
+				return s
+			},
+			wantErr: ErrInvalidResistance,
+		},
+		{
 			name: "resistance_too_high",
 			setup: func() *Stats {
 				s := NewStats()
@@ -642,5 +651,29 @@ func TestValidationErrors(t *testing.T) {
 		if err.Error() == "" {
 			t.Errorf("Error %v has empty message", err)
 		}
+	}
+}
+
+// TestDamageType_String verifies the String method returns correct names.
+func TestDamageType_String(t *testing.T) {
+	tests := []struct {
+		damageType DamageType
+		want       string
+	}{
+		{DamagePhysical, "Physical"},
+		{DamageMagical, "Magical"},
+		{DamageFire, "Fire"},
+		{DamageIce, "Ice"},
+		{DamageLightning, "Lightning"},
+		{DamagePoison, "Poison"},
+		{DamageType(999), "Unknown"}, // Invalid type
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.want, func(t *testing.T) {
+			if got := tt.damageType.String(); got != tt.want {
+				t.Errorf("DamageType(%d).String() = %q, want %q", tt.damageType, got, tt.want)
+			}
+		})
 	}
 }

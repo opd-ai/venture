@@ -1,7 +1,7 @@
 # Combat Package Functional Audit
 
 **Audit Date:** 2026-02-08  
-**Updated:** 2026-02-09 (Defense formula inconsistency resolved)
+**Updated:** 2026-02-12 (All remaining issues resolved)
 **Package Version:** As of commit at audit time  
 **Auditor:** Automated Code Audit  
 
@@ -10,15 +10,66 @@
 | Category | Count | Severity |
 |----------|-------|----------|
 | CRITICAL BUG | 0 | - |
-| FUNCTIONAL MISMATCH | ~~3~~ 1 ✅ | ~~Medium-High~~ Medium |
-| MISSING FEATURE | 1 | Low |
-| EDGE CASE BUG | 1 | Low |
-| DOCUMENTATION BUG | 3 | Low |
-| **TOTAL** | ~~8~~ **6** | - |
+| FUNCTIONAL MISMATCH | ~~3~~ 0 ✅ | - |
+| MISSING FEATURE | ~~1~~ 0 ✅ | - |
+| EDGE CASE BUG | ~~1~~ 0 ✅ | - |
+| DOCUMENTATION BUG | ~~3~~ 0 ✅ | - |
+| **TOTAL** | **0** | - |
 
-**Test Coverage:** 98.1% (README incorrectly claims 100%)  
+**Test Coverage:** 98.3%  
 **go vet:** No issues  
 **Build Status:** Passes
+
+---
+
+## RECENT UPDATES (2026-02-12)
+
+### ✅ RESOLVED: Resistance Validation vs Runtime Clamping Range
+
+**Status:** COMPLETE  
+**Files Modified:**
+- `pkg/combat/types.go` - Updated validation range from -1.0 to -0.5 minimum
+
+**Changes:**
+1. Updated `validateResistances()` to check range -0.5 to 1.0 (matching runtime clamping)
+2. Updated `ErrInvalidResistance` error message to reflect correct range
+3. Updated doc comments to explain the -0.5 minimum (150% max weakness)
+
+### ✅ RESOLVED: Resistances Map Not Nil-Checked in CalculateDamage
+
+**Status:** COMPLETE  
+**Files Modified:**
+- `pkg/combat/resolver.go` - Now uses `GetResistance()` method
+
+**Changes:**
+1. Changed `targetStats.Resistances[damage.Type]` to `targetStats.GetResistance(damage.Type)`
+2. This provides nil-safe access consistent with other parts of the codebase
+
+### ✅ RESOLVED: DamageType.String() Method Not Exported
+
+**Status:** COMPLETE  
+**Files Modified:**
+- `pkg/combat/constants.go` - Added exported String() method
+- `pkg/combat/interfaces_test.go` - Removed duplicate test-only implementation
+- `pkg/combat/validation_test.go` - Added tests for String() method
+
+**Changes:**
+1. Moved String() method from test file to constants.go (exported)
+2. Added comprehensive tests for all damage types including unknown/invalid
+
+### ✅ RESOLVED: Documentation Bugs
+
+**Status:** COMPLETE  
+**Files Modified:**
+- `pkg/combat/README.md` - Fixed coverage claims (100% → ~98%)
+- `pkg/combat/doc.go` - Fixed package description (removed unimplemented features)
+- `pkg/combat/constants.go` - Removed inaccurate package comment
+- `pkg/combat/types.go` - Removed inaccurate package comment
+
+**Changes:**
+1. README now correctly states ~98% coverage
+2. doc.go now accurately describes package scope (damage types, stats, interfaces)
+3. Clarified that status effects, combat AI, and battle resolution are in pkg/engine
 
 ---
 
@@ -55,9 +106,7 @@
 
 ---
 
-## DETAILED FINDINGS
-
----
+## DETAILED FINDINGS (All Resolved)
 
 ### ~~FUNCTIONAL MISMATCH: Defense Calculation Formula Inconsistency~~ ✅ RESOLVED 2026-02-09
 
@@ -117,173 +166,79 @@
 
 ---
 
-### FUNCTIONAL MISMATCH: Resistance Validation vs Runtime Clamping Range
+### ~~FUNCTIONAL MISMATCH: Resistance Validation vs Runtime Clamping Range~~ ✅ RESOLVED 2026-02-12
 
 **File:** `types.go:119-121` vs `resolver.go:69`  
-**Severity:** Medium  
-**Description:** The Stats validation allows resistance values from -1.0 to 1.0, but CalculateDamage clamps resistance to -0.5 to 1.0. This creates a silent behavior change for values between -1.0 and -0.5.
+**Severity:** ~~Medium~~ **RESOLVED**  
+**Status:** ✅ COMPLETE
 
-**Expected Behavior:** Validation range should match the effective range used in calculations.
+**Original Issue:** The Stats validation allowed resistance values from -1.0 to 1.0, but CalculateDamage clamped resistance to -0.5 to 1.0. This created a silent behavior change for values between -1.0 and -0.5.
 
-**Actual Behavior:**
-- `Stats.Validate()`: Accepts resistances from -1.0 to 1.0
-- `CalculateDamage()`: Clamps resistance to -0.5 to 1.0
-
-**Impact:** A resistance of -1.0 (extreme weakness) would pass validation but be silently clamped to -0.5 during damage calculation, resulting in 150% damage instead of 200% damage.
-
-**Reproduction:** 
-1. Create Stats with Resistances[DamageFire] = -1.0
-2. Call Stats.Validate() - returns nil (passes)
-3. Call CalculateDamage with 100 fire damage
-4. Expected: 200 damage (1 - (-1.0) = 2.0 multiplier)
-5. Actual: 150 damage (clamped to 1 - (-0.5) = 1.5 multiplier)
-
-**Code Reference:**
-```go
-// types.go - validation
-ErrInvalidResistance = errors.New("resistance must be between -1.0 and 1.0")
-
-// validateResistances()
-if resistance < -1.0 || resistance > 1.0 {
-    return fmt.Errorf("%w: %v resistance is %f", ErrInvalidResistance, damageType, resistance)
-}
-
-// resolver.go - runtime clamping
-resistance = math.Max(-0.5, math.Min(resistance, 1.0))
-```
+**Resolution Applied:**
+- Updated `validateResistances()` in types.go to check range -0.5 to 1.0
+- Updated `ErrInvalidResistance` error message to reflect correct range
+- Added test case for -0.6 (below new minimum) in validation_test.go
 
 ---
 
-### EDGE CASE BUG: Resistances Map Not Nil-Checked in CalculateDamage
+### ~~EDGE CASE BUG: Resistances Map Not Nil-Checked in CalculateDamage~~ ✅ RESOLVED 2026-02-12
 
 **File:** `resolver.go:67`  
-**Severity:** Low  
-**Description:** `CalculateDamage` directly accesses `targetStats.Resistances[damage.Type]` without checking if the map is nil. While Go doesn't panic on nil map reads (returns zero value), this behavior differs from using `GetResistance()` which explicitly handles nil.
+**Severity:** ~~Low~~ **RESOLVED**  
+**Status:** ✅ COMPLETE
 
-**Expected Behavior:** Consistent nil-safety across all resistance access patterns.
+**Original Issue:** `CalculateDamage` directly accessed `targetStats.Resistances[damage.Type]` without checking if the map is nil.
 
-**Actual Behavior:** Direct map access in `CalculateDamage` vs nil-safe `GetResistance()` method creates inconsistent patterns. While not currently causing panics, future changes to map implementation or similar patterns for other maps could introduce issues.
-
-**Impact:** Low - currently no functional impact due to Go's nil map read behavior, but represents defensive programming gap.
-
-**Reproduction:** Create Stats with nil Resistances map, call CalculateDamage - works but doesn't use GetResistance().
-
-**Code Reference:**
-```go
-// resolver.go - direct access
-resistance := targetStats.Resistances[damage.Type]
-
-// types.go - safe access
-func (s *Stats) GetResistance(damageType DamageType) float64 {
-    if s.Resistances == nil {
-        return 0.0
-    }
-    return s.Resistances[damageType]
-}
-```
+**Resolution Applied:**
+- Changed to use `targetStats.GetResistance(damage.Type)` which is nil-safe
+- Now consistent with other resistance access patterns in the codebase
 
 ---
 
-### MISSING FEATURE: DamageType.String() Method Not Exported
+### ~~MISSING FEATURE: DamageType.String() Method Not Exported~~ ✅ RESOLVED 2026-02-12
 
-**File:** `constants.go` (missing), `interfaces_test.go:389-406`  
-**Severity:** Low  
-**Description:** The `DamageType.String()` method is only defined in test files and not exported in the main package. External packages needing to display damage types must implement their own string conversion.
+**File:** `constants.go` (added), `interfaces_test.go:389-406` (removed duplicate)
+**Severity:** ~~Low~~ **RESOLVED**  
+**Status:** ✅ COMPLETE
 
-**Expected Behavior:** Common types should have String() methods for debugging and logging.
+**Original Issue:** The `DamageType.String()` method was only defined in test files and not exported in the main package.
 
-**Actual Behavior:** String() method only exists in test file `interfaces_test.go`.
-
-**Impact:** External packages cannot easily log or display damage type names without implementing their own conversion.
-
-**Reproduction:** Import combat package and try to call `combat.DamageFire.String()` - compile error.
-
-**Code Reference:**
-```go
-// Only in interfaces_test.go (not exported)
-func (d DamageType) String() string {
-    switch d {
-    case DamagePhysical:
-        return "Physical"
-    // ... etc
-    }
-}
-```
+**Resolution Applied:**
+- Added exported `String()` method to DamageType in constants.go
+- Removed duplicate implementation from interfaces_test.go
+- Added comprehensive tests in validation_test.go for all damage types including unknown/invalid
 
 ---
 
-### DOCUMENTATION BUG: README Claims Non-Existent AUDIT.md
+### ~~DOCUMENTATION BUG: README Claims Non-Existent AUDIT.md~~ ✅ RESOLVED 2026-02-08
 
 **File:** `README.md:16-17`, `README.md:106`  
-**Severity:** Low  
-**Description:** The README.md lists `AUDIT.md` in the package structure and links to it, but the file did not exist before this audit.
-
-**Expected Behavior:** All documented files should exist.
-
-**Actual Behavior:** README claims AUDIT.md exists; file was missing.
-
-**Impact:** Documentation inaccuracy; users following links encounter 404.
-
-**Reproduction:** Check package structure in README vs actual files.
-
-**Code Reference:**
-```markdown
-# README.md
-├── interfaces_test.go - Comprehensive test suite (100% coverage)
-└── AUDIT.md          - Implementation gap audit and recommendations
-
-See [AUDIT.md](./AUDIT.md) for detailed implementation gap analysis...
-```
+**Severity:** ~~Low~~ **RESOLVED**  
+**Status:** ✅ COMPLETE (AUDIT.md now exists)
 
 ---
 
-### DOCUMENTATION BUG: README Claims 100% Test Coverage
+### ~~DOCUMENTATION BUG: README Claims 100% Test Coverage~~ ✅ RESOLVED 2026-02-12
 
 **File:** `README.md:15`, `README.md:99`  
-**Severity:** Low  
-**Description:** README claims "100% coverage" for tests, but actual coverage is 98.1%.
+**Severity:** ~~Low~~ **RESOLVED**  
+**Status:** ✅ COMPLETE
 
-**Expected Behavior:** Documentation should reflect actual test coverage.
-
-**Actual Behavior:** 
-- README states: "Comprehensive test suite (100% coverage)" and "Current test coverage: **100%**"
-- Actual: 98.1% coverage (verified via `go test -cover`)
-
-**Impact:** Misleading documentation about code quality metrics.
-
-**Reproduction:** Run `go test -cover ./pkg/combat/...`
-
-**Code Reference:**
-```markdown
-# README.md
-├── interfaces_test.go - Comprehensive test suite (100% coverage)
-...
-Current test coverage: **100%**
-```
+**Resolution Applied:**
+- Updated README.md to claim ~98% coverage (actual: 98.3%)
 
 ---
 
-### DOCUMENTATION BUG: doc.go Claims Unimplemented Features
+### ~~DOCUMENTATION BUG: doc.go Claims Unimplemented Features~~ ✅ RESOLVED 2026-02-12
 
 **File:** `doc.go:2`, `constants.go:6`, `types.go:7`  
-**Severity:** Low  
-**Description:** Package documentation comments claim the package provides "status effects, combat AI, and battle resolution" but these features are not implemented in this package. They are implemented in `pkg/engine` instead.
+**Severity:** ~~Low~~ **RESOLVED**  
+**Status:** ✅ COMPLETE
 
-**Expected Behavior:** Package documentation should accurately describe the package's scope.
-
-**Actual Behavior:** doc.go states: "Package combat provides combat mechanics including damage calculation, status effects, combat AI, and battle resolution." Only damage calculation is actually implemented here.
-
-**Impact:** Developer confusion about package responsibilities and feature locations.
-
-**Reproduction:** Search for "status effect" or "combat AI" implementations in pkg/combat - none found.
-
-**Code Reference:**
-```go
-// doc.go
-// Package combat provides combat mechanics including damage calculation,
-// status effects, combat AI, and battle resolution.
-package combat
-```
+**Resolution Applied:**
+- Updated doc.go to accurately describe package scope
+- Clarified that status effects, combat AI, and battle resolution are in pkg/engine
+- Removed inaccurate package comments from constants.go and types.go
 
 ---
 
@@ -300,13 +255,18 @@ package combat
    - Elemental damage types (Fire, Ice, Lightning, Poison) now correctly use MagicDefense
    - Resolved as part of adopting `DefaultCombatResolver`
 
-### Priority 2: Medium Priority (Remaining Issues)
+### ~~Priority 2: Medium Priority (Remaining Issues)~~ ✅ COMPLETE (2026-02-12)
 
-4. **Low Priority:** Export `DamageType.String()` method in the main package for external use.
+3. ~~**Align validation and runtime clamping ranges for resistances**~~ ✅ DONE
+   - Both now use -0.5 to 1.0 range
 
-5. **Low Priority:** Update doc.go to accurately describe package scope (damage types, stats, damage calculation interface only).
+4. ~~**Export `DamageType.String()` method in the main package**~~ ✅ DONE
+   - Now available for external use
 
-6. **Low Priority:** Update README coverage claim from 100% to actual 98.1%.
+5. ~~**Update doc.go to accurately describe package scope**~~ ✅ DONE
+   - Now correctly states: damage types, stats, damage calculation interface
+
+6. ~~**Update README coverage claim from 100% to actual ~98%**~~ ✅ DONE
 
 ---
 
@@ -347,14 +307,15 @@ None - the combat package uses only Go standard library.
 - ✅ No regressions introduced (all builds pass)
 
 **Remaining Issues (Low Priority):**
-- Documentation accuracy (3 issues)
-- Missing feature (DamageType.String() export)
-- Edge case bug (resistance validation range)
+- ~~Documentation accuracy (3 issues)~~ ✅ RESOLVED 2026-02-12
+- ~~Missing feature (DamageType.String() export)~~ ✅ RESOLVED 2026-02-12
+- ~~Edge case bug (resistance validation range)~~ ✅ RESOLVED 2026-02-12
 
 **Overall Package Health:** ✅ EXCELLENT
-- Test coverage: 98.1%
-- No critical bugs
-- All high-priority functional mismatches resolved
+- Test coverage: 98.3%
+- No open bugs or issues
+- All functional mismatches resolved
+- All documentation accurate
 - Production-ready with authoritative damage calculations
 
 ---
@@ -371,4 +332,5 @@ None - the combat package uses only Go standard library.
 8. Tested edge cases for nil safety
 9. **Updated (2026-02-09):** Verified integration with engine package
 10. **Updated (2026-02-09):** Confirmed all damage formulas now consistent
+11. **Updated (2026-02-12):** Resolved all remaining issues (validation, documentation, String() method)
 

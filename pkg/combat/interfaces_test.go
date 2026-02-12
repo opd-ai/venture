@@ -385,26 +385,6 @@ func TestDamage_AllTypes(t *testing.T) {
 	}
 }
 
-// Helper method to provide string representation for DamageType (for testing)
-func (d DamageType) String() string {
-	switch d {
-	case DamagePhysical:
-		return "Physical"
-	case DamageMagical:
-		return "Magical"
-	case DamageFire:
-		return "Fire"
-	case DamageIce:
-		return "Ice"
-	case DamageLightning:
-		return "Lightning"
-	case DamagePoison:
-		return "Poison"
-	default:
-		return "Unknown"
-	}
-}
-
 // TestStats_ZeroValues verifies behavior with zero-initialized stats.
 func TestStats_ZeroValues(t *testing.T) {
 	var stats Stats // Zero-initialized

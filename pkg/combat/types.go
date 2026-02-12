@@ -2,9 +2,6 @@
 // This file contains the Damage and Stats types along with their
 // associated constructor functions. These types are used throughout
 // the combat system for damage calculation and entity statistics.
-//
-// Package combat provides combat mechanics including damage calculation,
-// status effects, combat AI, and battle resolution.
 package combat
 
 import (
@@ -117,7 +114,9 @@ var (
 	ErrInvalidEvasion = errors.New("Evasion must be between 0.0 and 1.0")
 
 	// ErrInvalidResistance indicates a resistance value is outside valid range.
-	ErrInvalidResistance = errors.New("resistance must be between -1.0 and 1.0")
+	// Note: Range is -0.5 to 1.0 to match the runtime clamping in CalculateDamage.
+	// -0.5 represents maximum weakness (150% damage), 1.0 represents immunity.
+	ErrInvalidResistance = errors.New("resistance must be between -0.5 and 1.0")
 )
 
 // Validate checks if the Damage struct contains valid values.
@@ -153,7 +152,7 @@ func (d *Damage) Validate() error {
 //   - CritChance must be between 0.0 and 1.0
 //   - CritDamage must be at least 1.0 (if set above zero)
 //   - Evasion must be between 0.0 and 1.0
-//   - All resistances must be between -1.0 (weakness) and 1.0 (immunity)
+//   - All resistances must be between -0.5 (max weakness) and 1.0 (immunity)
 func (s *Stats) Validate() error {
 	if err := s.validateHealth(); err != nil {
 		return err
@@ -260,11 +259,11 @@ func (s *Stats) validateCriticalStats() error {
 
 // validateResistances checks if all resistance values are within valid range.
 // Returns nil if validation passes, or an error describing the validation failure.
-// This is a complete implementation following Go's error handling pattern where
-// nil indicates success.
+// Range is -0.5 to 1.0 to match the runtime clamping in CalculateDamage.
+// -0.5 represents maximum weakness (150% damage), 1.0 represents immunity.
 func (s *Stats) validateResistances() error {
 	for damageType, resistance := range s.Resistances {
-		if resistance < -1.0 || resistance > 1.0 {
+		if resistance < -0.5 || resistance > 1.0 {
 			return fmt.Errorf("%w: %v resistance is %f", ErrInvalidResistance, damageType, resistance)
 		}
 	}

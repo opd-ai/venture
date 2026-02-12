@@ -881,15 +881,19 @@ func GraphToTerrain(graph *DungeonGraph) *Terrain {
 			}
 
 			// Create L-shaped corridor: horizontal then vertical
+			// Corridors are 3 tiles wide to accommodate 64×64 player sprites
 			// Horizontal segment
 			minX, maxX := x1, x2
 			if minX > maxX {
 				minX, maxX = maxX, minX
 			}
 			for x := minX; x <= maxX; x++ {
-				if y1 >= 0 && y1 < graph.Height && x >= 0 && x < graph.Width {
-					if terrain.GetTile(x, y1) == TileWall {
-						terrain.SetTile(x, y1, tileType)
+				for dy := -corridorHalfWidth; dy <= corridorHalfWidth; dy++ {
+					ny := y1 + dy
+					if ny >= 0 && ny < graph.Height && x >= 0 && x < graph.Width {
+						if terrain.GetTile(x, ny) == TileWall {
+							terrain.SetTile(x, ny, tileType)
+						}
 					}
 				}
 			}
@@ -900,9 +904,12 @@ func GraphToTerrain(graph *DungeonGraph) *Terrain {
 				minY, maxY = maxY, minY
 			}
 			for y := minY; y <= maxY; y++ {
-				if y >= 0 && y < graph.Height && x2 >= 0 && x2 < graph.Width {
-					if terrain.GetTile(x2, y) == TileWall {
-						terrain.SetTile(x2, y, tileType)
+				for dx := -corridorHalfWidth; dx <= corridorHalfWidth; dx++ {
+					nx := x2 + dx
+					if y >= 0 && y < graph.Height && nx >= 0 && nx < graph.Width {
+						if terrain.GetTile(nx, y) == TileWall {
+							terrain.SetTile(nx, y, tileType)
+						}
 					}
 				}
 			}

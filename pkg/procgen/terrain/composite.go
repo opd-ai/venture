@@ -438,22 +438,32 @@ func carveVerticalThenHorizontal(terrain *Terrain, start, end Point) {
 }
 
 // carveHorizontalSegment carves a horizontal corridor segment.
+// Carves 3 tiles wide (center ± 1) to accommodate 64×64 player sprites.
 func carveHorizontalSegment(terrain *Terrain, startX, endX, y int) {
 	if startX > endX {
 		startX, endX = endX, startX
 	}
 	for x := startX; x <= endX; x++ {
-		terrain.SetTile(x, y, TileFloor)
+		for dy := -corridorHalfWidth; dy <= corridorHalfWidth; dy++ {
+			if terrain.IsInBounds(x, y+dy) {
+				terrain.SetTile(x, y+dy, TileFloor)
+			}
+		}
 	}
 }
 
 // carveVerticalSegment carves a vertical corridor segment.
+// Carves 3 tiles wide (center ± 1) to accommodate 64×64 player sprites.
 func carveVerticalSegment(terrain *Terrain, startY, endY, x int) {
 	if startY > endY {
 		startY, endY = endY, startY
 	}
 	for y := startY; y <= endY; y++ {
-		terrain.SetTile(x, y, TileFloor)
+		for dx := -corridorHalfWidth; dx <= corridorHalfWidth; dx++ {
+			if terrain.IsInBounds(x+dx, y) {
+				terrain.SetTile(x+dx, y, TileFloor)
+			}
+		}
 	}
 }
 

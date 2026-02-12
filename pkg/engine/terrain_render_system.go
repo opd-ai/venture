@@ -29,6 +29,7 @@ type TerrainRenderSystem struct {
 	cameraX             float64                  // Camera X for parallax
 	cameraY             float64                  // Camera Y for parallax
 	fallbackTileCache   map[uint32]*ebiten.Image // PERF: Cache fallback tiles by RGBA color (Issue #3)
+	drawTileOpts        ebiten.DrawImageOptions  // PERF V4: Pre-allocated options to avoid per-tile heap allocation
 }
 
 // NewTerrainRenderSystem creates a new terrain rendering system.
@@ -158,10 +159,10 @@ func (t *TerrainRenderSystem) drawTile(screen *ebiten.Image, camera *CameraSyste
 	// Convert to screen coordinates
 	screenX, screenY := camera.WorldToScreen(worldX, worldY)
 
-	// Draw tile
-	opts := &ebiten.DrawImageOptions{}
-	opts.GeoM.Translate(screenX, screenY)
-	screen.DrawImage(img, opts)
+	// Draw tile - PERF V4: Reuse pre-allocated options
+	t.drawTileOpts.GeoM.Reset()
+	t.drawTileOpts.GeoM.Translate(screenX, screenY)
+	screen.DrawImage(img, &t.drawTileOpts)
 }
 
 // getTileImage retrieves or generates an ebiten.Image for the given tile type.
@@ -328,10 +329,11 @@ func (t *TerrainRenderSystem) drawFallbackTile(screen *ebiten.Image, camera *Cam
 		t.fallbackTileCache[cacheKey] = fallbackImg
 	}
 
-	opts := &ebiten.DrawImageOptions{}
-	opts.GeoM.Translate(screenX, screenY)
+	// PERF V4: Reuse pre-allocated options
+	t.drawTileOpts.GeoM.Reset()
+	t.drawTileOpts.GeoM.Translate(screenX, screenY)
 	// GAP REPAIR: Remove redundant color scaling - image is already colored
-	screen.DrawImage(fallbackImg, opts)
+	screen.DrawImage(fallbackImg, &t.drawTileOpts)
 }
 
 // getRoomTypeAt returns the room type for the tile at the given coordinates.

@@ -425,11 +425,12 @@ The animation system's `maxRegenPerFrame=8` limiter spreads sprite generation ov
    - Visual quality: No visual change
    - Implementation complexity: Low (mechanical code change — add guards to 50+ log sites)
 
-4. **V4: Reuse Pre-Allocated `DrawImageOptions` in Terrain Rendering**
+4. **V4: Reuse Pre-Allocated `DrawImageOptions` in Terrain Rendering** ✅ COMPLETED (2026-02-12)
    - Add a `drawTileOpts ebiten.DrawImageOptions` field to `TerrainRenderSystem` and reuse it with `Reset()` + `Translate()` in `drawTile()`, matching the pattern in `EbitenRenderSystem.drawSpriteImage()`.
    - Expected improvement: Eliminates ~2,000 heap allocations/frame → reduces GC pressure by ~1–4ms
    - Visual quality: No visual change
    - Implementation complexity: Low (add field, replace local `opts` variable)
+   - **Implementation:** Added `drawTileOpts ebiten.DrawImageOptions` field to struct, modified `drawTile()` and `drawFallbackTile()` to reuse it with `Reset()` + `Translate()`.
 
 ### Priority 3 (Improves Frame Pacing)
 
@@ -447,11 +448,12 @@ The animation system's `maxRegenPerFrame=8` limiter spreads sprite generation ov
 
 ### Priority 4 (Micro-Optimizations)
 
-7. **V5: Remove `defer recover()` from `drawRect()` Hot Path**
+7. **V5: Remove `defer recover()` from `drawRect()` Hot Path** ✅ COMPLETED (2026-02-12)
    - Replace the `defer recover()` with a simple nil-check guard or move the defensive recovery to a higher level (e.g., wrapping the entire `Draw()` call). The `drawRect()` function is called in the entity rendering hot path and should not have per-call overhead.
    - Expected improvement: Eliminates ~50–100ns × N non-sprite entities per frame
    - Visual quality: No visual change
    - Implementation complexity: Low (remove defer, add nil checks if needed)
+   - **Implementation:** Removed the `defer recover()` block entirely; the existing nil-check for `r.screen` provides adequate safety. Also removed the now-unused logrus import.
 
 8. **Terrain Tile Draw Call Batching (Opportunity)**
    - Group terrain tiles by cache key (texture) and render using `DrawTriangles` batching similar to entity sprite batching. This would reduce ~2,000 individual `DrawImage` calls to ~10–50 batched `DrawTriangles` calls.

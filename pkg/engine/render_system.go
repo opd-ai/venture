@@ -12,7 +12,6 @@ import (
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/vector"
 	"github.com/opd-ai/venture/pkg/rendering/particles"
-	"github.com/sirupsen/logrus"
 )
 
 // EbitenSprite holds visual representation data for an entity (Ebiten implementation).
@@ -1085,22 +1084,12 @@ func (r *EbitenRenderSystem) drawParticleSystem(system *particles.ParticleSystem
 }
 
 // drawRect draws a filled rectangle at the given screen position.
+// PERF V5: Removed defer recover() from hot path - nil check provides adequate safety.
 func (r *EbitenRenderSystem) drawRect(x, y, width, height float64, col color.Color) {
 	// Safety check: ensure screen is available
 	if r.screen == nil {
 		return
 	}
-
-	// Defensive: Catch panics from vector drawing (can happen during initialization or threading issues)
-	defer func() {
-		if recovered := recover(); recovered != nil {
-			logrus.WithFields(logrus.Fields{
-				"component": "render_system",
-				"function":  "drawRect",
-				"panic":     recovered,
-			}).Warn("recovered from vector drawing panic")
-		}
-	}()
 
 	// Convert color
 	red, green, blue, alpha := col.RGBA()

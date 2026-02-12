@@ -52,31 +52,34 @@ func DefaultSystemInitConfig(seed int64, genreID string, logger *logrus.Logger) 
 // further configuration after initialization (e.g., setting callbacks).
 type SystemInitResult struct {
 	// Systems that often need post-initialization configuration
-	InputSystem               *InputSystem
-	CombatSystem              *CombatSystem
-	CollisionSystem           *CollisionSystem
-	ProjectileSystem          *ProjectileSystem
-	AudioManager              *AudioManager
-	ObjectiveTracker          *ObjectiveTrackerSystem
-	CommerceSystem            *CommerceSystem
-	DialogSystem              *DialogSystem
-	CraftingSystem            *CraftingSystem
-	InteractionSystem         *InteractionSystem
-	MiniGameSystem            *MiniGameSystem
-	AnimationSystem           *AnimationSystem
-	ParticleSystem            *ParticleSystem
-	TutorialSystem            *EbitenTutorialSystem
-	HelpSystem                *EbitenHelpSystem
-	LevelUpParticleSystem     *LevelUpParticleSystem
-	ItemPickupParticleSystem  *ItemPickupParticleSystem
-	SpellEffectParticleSystem *SpellEffectParticleSystem
-	ItemPickupSystem          *ItemPickupSystem
-	ProgressionSystem         *ProgressionSystem
+	InputSystem                    *InputSystem
+	CombatSystem                   *CombatSystem
+	CollisionSystem                *CollisionSystem
+	ProjectileSystem               *ProjectileSystem
+	AudioManager                   *AudioManager
+	ObjectiveTracker               *ObjectiveTrackerSystem
+	CommerceSystem                 *CommerceSystem
+	DialogSystem                   *DialogSystem
+	CraftingSystem                 *CraftingSystem
+	InteractionSystem              *InteractionSystem
+	MiniGameSystem                 *MiniGameSystem
+	AnimationSystem                *AnimationSystem
+	ParticleSystem                 *ParticleSystem
+	TutorialSystem                 *EbitenTutorialSystem
+	HelpSystem                     *EbitenHelpSystem
+	LevelUpParticleSystem          *LevelUpParticleSystem
+	ItemPickupParticleSystem       *ItemPickupParticleSystem
+	SpellEffectParticleSystem      *SpellEffectParticleSystem
+	CompanionLevelUpParticleSystem *CompanionLevelUpParticleSystem
+	ItemPickupSystem               *ItemPickupSystem
+	ProgressionSystem              *ProgressionSystem
+	CompanionProgressionSystem     *CompanionProgressionSystem
 
 	// System wrappers
-	AnimationSystemWrapper System
-	RotationSystemWrapper  System
-	SquadSystemWrapper     System
+	AnimationSystemWrapper            System
+	RotationSystemWrapper             System
+	SquadSystemWrapper                System
+	CompanionProgressionSystemWrapper System
 }
 
 // InitializeGameSystems initializes all game systems for Version 2.0 feature parity.
@@ -323,6 +326,20 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 	result.LevelUpParticleSystem = levelUpParticleSystem
 	game.World.AddSystem(levelUpParticleSystem)
 
+	// 36d2. CompanionProgressionSystem - companion XP and leveling
+	companionProgressionSystem := NewCompanionProgressionSystem(game.World)
+	result.CompanionProgressionSystem = companionProgressionSystem
+	result.CompanionProgressionSystemWrapper = &companionProgressionSystemWrapper{system: companionProgressionSystem}
+	game.World.AddSystem(result.CompanionProgressionSystemWrapper)
+
+	// 36d3. CompanionLevelUpParticleSystem - visual feedback for companion level-ups
+	companionLevelUpParticleSystem := NewCompanionLevelUpParticleSystem(game.World, config.Seed+4100)
+	companionLevelUpParticleSystem.SetParticleSystem(result.ParticleSystem)
+	companionLevelUpParticleSystem.SetGenre(config.GenreID)
+	companionProgressionSystem.AddLevelUpCallback(companionLevelUpParticleSystem.OnCompanionLevelUp)
+	result.CompanionLevelUpParticleSystem = companionLevelUpParticleSystem
+	game.World.AddSystem(companionLevelUpParticleSystem)
+
 	// 36e. ItemPickupParticleSystem - visual feedback for item pickups
 	itemPickupParticleSystem := NewItemPickupParticleSystem(game.World, config.Seed+4500)
 	itemPickupParticleSystem.SetParticleSystem(result.ParticleSystem)
@@ -497,5 +514,14 @@ type squadSystemWrapper struct {
 }
 
 func (w *squadSystemWrapper) Update(entities []*Entity, deltaTime float64) {
+	w.system.Update(deltaTime)
+}
+
+// companionProgressionSystemWrapper adapts CompanionProgressionSystem to System interface
+type companionProgressionSystemWrapper struct {
+	system *CompanionProgressionSystem
+}
+
+func (w *companionProgressionSystemWrapper) Update(entities []*Entity, deltaTime float64) {
 	w.system.Update(deltaTime)
 }

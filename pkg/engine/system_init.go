@@ -77,6 +77,7 @@ type SystemInitResult struct {
 	CompanionProgressionSystem     *CompanionProgressionSystem
 	WeatherAudioSystem             *WeatherAudioSystem
 	FactionXPBonusSystem           *FactionXPBonusSystem
+	WeatherManaRegenSystem         *WeatherManaRegenSystem
 
 	// System wrappers
 	AnimationSystemWrapper            System
@@ -393,6 +394,13 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 	// Connects WeatherSystem with AISystem for tactical stealth gameplay
 	weatherAwareAISystem := NewWeatherAwareAISystem(game.World, config.Seed+6200)
 	game.World.AddSystem(weatherAwareAISystem)
+
+	// 36j. WeatherManaRegenSystem - modifies mana regeneration based on weather
+	// Connects WeatherSystem with ManaComponent for magical gameplay synergy
+	weatherManaRegenSystem := NewWeatherManaRegenSystem(game.World, config.Seed+6300)
+	weatherManaRegenSystem.SetGenre(config.GenreID)
+	result.WeatherManaRegenSystem = weatherManaRegenSystem
+	game.World.AddSystem(weatherManaRegenSystem)
 
 	// 37. LifetimeSystem - temporary entities (Phase 5.3)
 	lifetimeSystem := NewLifetimeSystemWithLogger(game.World, logger)

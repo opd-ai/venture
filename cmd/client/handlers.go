@@ -192,6 +192,7 @@ type systemsContainer struct {
 	weatherCombatSystem        *engine.WeatherCombatSystem
 	weatherGroundEffectSystem  *engine.WeatherGroundEffectSystem  // Connects weather to ground impact particle effects
 	weatherAudioSystem         *engine.WeatherAudioSystem         // Connects weather to ambient audio sounds
+	weatherManaRegenSystem     *engine.WeatherManaRegenSystem     // Connects weather to mana regeneration rates
 	statusEffectLightingSystem *engine.StatusEffectLightingSystem // Connects status effects to lighting for visual feedback
 	statusEffectMovementSystem *engine.StatusEffectMovementSystem // Connects status effects to movement speed modifiers
 	criticalHitParticleSystem  *engine.CriticalHitParticleSystem  // Connects combat crits to particle effects
@@ -902,6 +903,10 @@ func initializeEnvironmentalSystems(game *engine.EbitenGame, sys *systemsContain
 	sys.weatherAudioSystem.SetAudioManager(sys.audioManager)
 	sys.weatherAudioSystem.SetGenre(*genreID)
 
+	// WeatherManaRegenSystem - modifies mana regeneration based on weather
+	sys.weatherManaRegenSystem = engine.NewWeatherManaRegenSystem(game.World, *seed+6300)
+	sys.weatherManaRegenSystem.SetGenre(*genreID)
+
 	sys.lifetimeSystem = engine.NewLifetimeSystemWithLogger(game.World, clientLogger.Logger)
 	sys.puzzleSystem = engine.NewPuzzleSystem(game.World)
 
@@ -1559,6 +1564,7 @@ func registerNonCriticalSystems(game *engine.EbitenGame, sys *systemsContainer) 
 	game.World.AddSystem(sys.weatherCombatSystem)
 	game.World.AddSystem(sys.weatherGroundEffectSystem)  // Weather ground impact visual feedback via particles
 	game.World.AddSystem(sys.weatherAudioSystem)         // Weather ambient audio feedback
+	game.World.AddSystem(sys.weatherManaRegenSystem)     // Weather mana regeneration modifiers
 	game.World.AddSystem(sys.statusEffectLightingSystem) // Status effect visual feedback via lighting
 	game.World.AddSystem(sys.statusEffectMovementSystem) // Status effect movement speed modifiers
 	game.World.AddSystem(sys.criticalHitParticleSystem)  // Critical hit visual feedback via particles

@@ -205,6 +205,11 @@ type EbitenRenderSystem struct {
 
 	// Pre-allocated DrawImageOptions to avoid per-sprite allocations in drawSpriteImage
 	drawImageOptions ebiten.DrawImageOptions
+
+	// Render interpolation alpha (0.0 to 1.0) for smooth position interpolation
+	// between previous tick (PrevX/PrevY) and current tick (X/Y) positions.
+	// Set by the game loop each Draw() frame based on elapsed time since last Update().
+	renderAlpha float64
 }
 
 // RenderStats tracks rendering performance metrics.
@@ -284,6 +289,28 @@ func (r *EbitenRenderSystem) SetParallelRenderer(renderer ParallelRendererProvid
 // GetStats returns rendering performance statistics.
 func (r *EbitenRenderSystem) GetStats() RenderStats {
 	return r.stats
+}
+
+// SetRenderAlpha sets the interpolation alpha for smooth rendering between ticks.
+// alpha ranges from 0.0 (render at previous tick position) to 1.0 (render at current tick position).
+// Called by the game loop each Draw() frame.
+func (r *EbitenRenderSystem) SetRenderAlpha(alpha float64) {
+	r.renderAlpha = alpha
+}
+
+// interpolatePosition returns the interpolated screen position for an entity,
+// blending between the previous tick position (PrevX/PrevY) and current position (X/Y)
+// using the render alpha. Both entity and camera positions are interpolated to
+// eliminate visual snapping on high-refresh-rate monitors.
+func (r *EbitenRenderSystem) interpolatePosition(pos *PositionComponent) (float64, float64) {
+	// If previous position is uninitialized (zero values and current is non-zero),
+	// or alpha is 1.0, use current position directly
+	if r.renderAlpha >= 1.0 || (pos.PrevX == 0 && pos.PrevY == 0 && (pos.X != 0 || pos.Y != 0)) {
+		return r.cameraSystem.WorldToScreen(pos.X, pos.Y)
+	}
+	interpX := pos.PrevX + (pos.X-pos.PrevX)*r.renderAlpha
+	interpY := pos.PrevY + (pos.Y-pos.PrevY)*r.renderAlpha
+	return r.cameraSystem.WorldToScreenInterpolated(interpX, interpY, r.renderAlpha)
 }
 
 // Update is called every frame but doesn't modify entities.
@@ -467,7 +494,8 @@ func (r *EbitenRenderSystem) buildBatchGeometry(entities []*Entity, batchSpriteI
 			continue
 		}
 
-		screenX, screenY := r.cameraSystem.WorldToScreen(pos.X, pos.Y)
+		// Use interpolated position for smooth rendering between simulation ticks
+		screenX, screenY := r.interpolatePosition(pos)
 		flashAlpha, tintR, tintG, tintB, tintA := r.extractVisualFeedback(entity)
 
 		r.appendSpriteVertices(&r.vertexBuffer, &r.indexBuffer, sprite, screenX, screenY, flashAlpha, tintR, tintG, tintB, tintA, batchSpriteImage, &vertexIndex)
@@ -731,7 +759,8 @@ func (r *EbitenRenderSystem) drawEntity(entity *Entity) {
 
 	r.syncSpriteState(entity, sprite)
 
-	screenX, screenY := r.cameraSystem.WorldToScreen(pos.X, pos.Y)
+	// Use interpolated position for smooth rendering between simulation ticks
+	screenX, screenY := r.interpolatePosition(pos)
 
 	if r.enableCulling && !r.spatialCullingUsed && !r.cameraSystem.IsVisible(pos.X, pos.Y, sprite.Width) {
 		return

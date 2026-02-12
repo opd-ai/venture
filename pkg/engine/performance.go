@@ -26,7 +26,9 @@ type PerformanceMetrics struct {
 	UpdateTime        time.Duration
 	AverageUpdateTime time.Duration
 
-	// System timing (per system)
+	// System timing (per system) — written without mutex from the single-threaded
+	// World.Update() loop, read under RLock from diagnostics/snapshot paths.
+	// This eliminates 44+ mutex lock/unlock pairs per frame in the hot path.
 	SystemTimes map[string]time.Duration
 
 	// Entity stats
@@ -118,10 +120,9 @@ func (pm *PerformanceMetrics) RecordUpdate(updateTime time.Duration) {
 }
 
 // RecordSystemTime records timing for a specific system.
+// This is called from the single-threaded World.Update() loop, so no mutex is needed.
+// Reading SystemTimes from other goroutines should use GetSnapshot() which takes a read lock.
 func (pm *PerformanceMetrics) RecordSystemTime(systemName string, duration time.Duration) {
-	pm.mu.Lock()
-	defer pm.mu.Unlock()
-
 	pm.SystemTimes[systemName] = duration
 }
 

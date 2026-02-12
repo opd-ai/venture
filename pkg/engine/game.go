@@ -113,6 +113,18 @@ type EbitenGame struct {
 	frameTimeTracker *FrameTimeTracker
 	frameCount       uint64
 	profilingEnabled bool
+
+	// Render interpolation: alpha = fraction of tick elapsed since last Update(),
+	// used to interpolate entity positions between PrevX/PrevY and X/Y in Draw().
+	// This eliminates visual jitter on high-refresh-rate monitors where Draw() is
+	// called more frequently than Update().
+	renderAlpha float64
+
+	// Cached reference to InputSystem to avoid linear scan of all systems every Draw frame
+	cachedInputSystem *InputSystem
+
+	// Cached entity list for Draw() to avoid redundant GetEntities() calls per frame
+	cachedDrawEntities []*Entity
 }
 
 // NewEbitenGame creates a new game instance with Ebiten integration.
@@ -879,16 +891,16 @@ func (g *EbitenGame) logFrameStats() {
 	}
 }
 
-// calculateDeltaTime computes time elapsed since last update with capping to prevent spiral of death.
+// calculateDeltaTime returns the fixed timestep matching Ebiten's TPS rate.
+// Using a constant fixed timestep instead of wall-clock time.Now() deltas eliminates
+// jitter caused by OS scheduling variance, GC pauses, and Ebiten catch-up ticks
+// (where Update() is called multiple times in succession with near-zero wall-clock deltas).
 func (g *EbitenGame) calculateDeltaTime() float64 {
-	now := time.Now()
-	deltaTime := now.Sub(g.lastUpdateTime).Seconds()
-	g.lastUpdateTime = now
-
-	if deltaTime > 0.1 {
-		deltaTime = 0.1
+	tps := ebiten.TPS()
+	if tps <= 0 {
+		return 1.0 / 60.0 // Fallback to 60 TPS default
 	}
-	return deltaTime
+	return 1.0 / float64(tps)
 }
 
 // updateMenuState handles updates for all menu-related application states.
@@ -1266,19 +1278,52 @@ func (g *EbitenGame) Update() error {
 
 	g.updateGameplayUI(deltaTime)
 
+	// Update camera BEFORE world systems so that camera and entities are in sync
+	// for the same tick. This eliminates the one-frame lag where entities move
+	// but the camera hasn't caught up yet.
+	g.CameraSystem.Update(g.World.GetEntities(), deltaTime)
+
 	if g.shouldUpdateWorld() {
 		g.World.Update(deltaTime)
 	}
 
-	g.CameraSystem.Update(g.World.GetEntities(), deltaTime)
+	// Cache entity list once per Update for Draw() to reuse, avoiding redundant calls
+	g.cachedDrawEntities = g.World.GetEntities()
+
+	// Record wall-clock timestamp for render interpolation alpha calculation in Draw()
+	g.lastUpdateTime = time.Now()
 	return nil
 }
 
 // Draw implements ebiten.Game interface. Called every frame.
+// Calculates render interpolation alpha to smoothly interpolate entity positions
+// between the previous and current simulation tick, eliminating visual jitter
+// on monitors with refresh rates higher than the TPS.
 func (g *EbitenGame) Draw(screen *ebiten.Image) {
 	if g.drawMenuState(screen) {
 		return
 	}
+
+	// Calculate render interpolation alpha: fraction of time elapsed since last Update().
+	// On a 60 TPS / 144 Hz setup, Draw() is called ~2.4x per Update(). Alpha smoothly
+	// advances from 0.0 to 1.0 between ticks so entity positions are interpolated.
+	tps := ebiten.TPS()
+	if tps > 0 {
+		elapsed := time.Since(g.lastUpdateTime).Seconds()
+		tickDuration := 1.0 / float64(tps)
+		g.renderAlpha = elapsed / tickDuration
+		if g.renderAlpha > 1.0 {
+			g.renderAlpha = 1.0
+		}
+		if g.renderAlpha < 0.0 {
+			g.renderAlpha = 0.0
+		}
+	} else {
+		g.renderAlpha = 1.0
+	}
+
+	// Pass interpolation alpha to render system
+	g.RenderSystem.SetRenderAlpha(g.renderAlpha)
 
 	g.drawGameplayScene(screen)
 	g.drawOverlays(screen)
@@ -1354,14 +1399,18 @@ func (g *EbitenGame) drawLitScene(screen *ebiten.Image) {
 		g.TerrainRenderSystem.Draw(g.sceneBuffer, g.CameraSystem)
 	}
 
-	g.RenderSystem.Draw(g.sceneBuffer, g.World.GetEntities())
+	// Use cached entity list from Update() to avoid redundant GetEntities() calls
+	entities := g.cachedDrawEntities
+	if entities == nil {
+		entities = g.World.GetEntities()
+	}
+
+	g.RenderSystem.Draw(g.sceneBuffer, entities)
 
 	if g.CameraSystem != nil {
 		camX, camY := g.CameraSystem.GetPosition()
 		g.LightingSystem.SetViewport(camX, camY, g.ScreenWidth, g.ScreenHeight)
 	}
-
-	entities := g.World.GetEntities()
 
 	// Apply lighting to cached buffer (Performance Audit fix: reuse litBuffer)
 	if g.litBuffer == nil || g.litBuffer.Bounds().Dx() != g.ScreenWidth || g.litBuffer.Bounds().Dy() != g.ScreenHeight {
@@ -1385,6 +1434,12 @@ func (g *EbitenGame) drawLitScene(screen *ebiten.Image) {
 
 // drawStandardScene renders the game scene without lighting effects, with optional post-processing.
 func (g *EbitenGame) drawStandardScene(screen *ebiten.Image) {
+	// Use cached entity list from Update() to avoid redundant GetEntities() calls
+	entities := g.cachedDrawEntities
+	if entities == nil {
+		entities = g.World.GetEntities()
+	}
+
 	// Render to buffer if post-processing is enabled
 	if g.PostProcessor != nil && g.PostProcessor.IsEnabled() {
 		if g.sceneBuffer == nil {
@@ -1397,7 +1452,7 @@ func (g *EbitenGame) drawStandardScene(screen *ebiten.Image) {
 			g.TerrainRenderSystem.Draw(g.sceneBuffer, g.CameraSystem)
 		}
 
-		g.RenderSystem.Draw(g.sceneBuffer, g.World.GetEntities())
+		g.RenderSystem.Draw(g.sceneBuffer, entities)
 
 		// Apply post-processing
 		finalImage := g.PostProcessor.Apply(g.sceneBuffer)
@@ -1408,7 +1463,7 @@ func (g *EbitenGame) drawStandardScene(screen *ebiten.Image) {
 			g.TerrainRenderSystem.Draw(screen, g.CameraSystem)
 		}
 
-		g.RenderSystem.Draw(screen, g.World.GetEntities())
+		g.RenderSystem.Draw(screen, entities)
 	}
 }
 
@@ -1538,12 +1593,19 @@ func (g *EbitenGame) clearMailboxCache() {
 }
 
 // drawVirtualControls renders mobile touch controls on top of all other elements.
+// Uses a cached InputSystem reference to avoid linear scanning all 44+ systems every frame.
 func (g *EbitenGame) drawVirtualControls(screen *ebiten.Image) {
-	for _, system := range g.World.GetSystems() {
-		if inputSys, ok := system.(*InputSystem); ok {
-			inputSys.DrawVirtualControls(screen)
-			break
+	// Lazily cache the InputSystem reference on first call
+	if g.cachedInputSystem == nil {
+		for _, system := range g.World.GetSystems() {
+			if inputSys, ok := system.(*InputSystem); ok {
+				g.cachedInputSystem = inputSys
+				break
+			}
 		}
+	}
+	if g.cachedInputSystem != nil {
+		g.cachedInputSystem.DrawVirtualControls(screen)
 	}
 }
 

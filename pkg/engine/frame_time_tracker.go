@@ -3,59 +3,107 @@ package engine
 
 import (
 	"sort"
+	"sync"
 	"time"
 )
 
 // FrameTimeTracker tracks frame times to detect performance issues and stuttering.
 // It maintains a rolling window of frame durations and calculates statistics
 // including percentiles to identify frame time variance (jank).
+// Incrementally tracks min/max/sum to avoid expensive full-window recalculation.
+// Thread-safe: protected by a mutex for concurrent RecordFrame/GetStats access.
 type FrameTimeTracker struct {
+	mu         sync.Mutex
 	frameTimes []time.Duration
 	maxSamples int
 	index      int
+
+	// Incrementally maintained running statistics to avoid per-call allocations.
+	runningSum time.Duration // Sum of all samples in the window
+	runningMin time.Duration // Min frame time in window (approximate, refreshed periodically)
+	runningMax time.Duration // Max frame time in window
+
+	// Cached sorted copy reused across GetStats calls to reduce allocations.
+	// Only re-sorted when dirty (new samples recorded since last GetStats).
+	sortedCache []time.Duration
+	sortDirty   bool
 }
 
 // NewFrameTimeTracker creates a new frame time tracker with the specified sample window size.
 // maxSamples determines how many frames to track (e.g., 1000 frames = ~16 seconds at 60 FPS).
 func NewFrameTimeTracker(maxSamples int) *FrameTimeTracker {
 	return &FrameTimeTracker{
-		frameTimes: make([]time.Duration, 0, maxSamples),
-		maxSamples: maxSamples,
-		index:      0,
+		frameTimes:  make([]time.Duration, 0, maxSamples),
+		maxSamples:  maxSamples,
+		index:       0,
+		runningMin:  time.Hour,
+		sortedCache: make([]time.Duration, 0, maxSamples),
+		sortDirty:   true,
 	}
 }
 
 // RecordFrame records the duration of a single frame.
 // This should be called at the end of each frame's Update() method.
+// Thread-safe: can be called concurrently with GetStats.
 func (f *FrameTimeTracker) RecordFrame(duration time.Duration) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+
 	if len(f.frameTimes) < f.maxSamples {
 		f.frameTimes = append(f.frameTimes, duration)
+		f.runningSum += duration
 	} else {
+		// Subtract the old sample being overwritten, add the new one
+		f.runningSum -= f.frameTimes[f.index]
+		f.runningSum += duration
 		f.frameTimes[f.index] = duration
 		f.index = (f.index + 1) % f.maxSamples
 	}
+
+	// Update running max (always accurate)
+	if duration > f.runningMax {
+		f.runningMax = duration
+	}
+	// Update running min (always accurate for new minimums)
+	if duration < f.runningMin {
+		f.runningMin = duration
+	}
+
+	f.sortDirty = true
 }
 
 // GetStats calculates comprehensive frame time statistics including percentiles.
 // Returns empty stats if no frames have been recorded.
+// Reuses a cached sorted buffer to minimize allocations and only re-sorts when dirty.
+// Thread-safe: can be called concurrently with RecordFrame.
 func (f *FrameTimeTracker) GetStats() FrameTimeStats {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+
 	if len(f.frameTimes) == 0 {
 		return FrameTimeStats{}
 	}
 
-	// Copy and sort for percentile calculation
-	sorted := make([]time.Duration, len(f.frameTimes))
-	copy(sorted, f.frameTimes)
-	sort.Slice(sorted, func(i, j int) bool { return sorted[i] < sorted[j] })
+	count := len(f.frameTimes)
 
-	// Calculate average
-	var total time.Duration
-	for _, ft := range sorted {
-		total += ft
+	// Reuse sorted cache buffer — only copy and sort if new frames have been recorded
+	if f.sortDirty {
+		if cap(f.sortedCache) < count {
+			f.sortedCache = make([]time.Duration, count)
+		}
+		f.sortedCache = f.sortedCache[:count]
+		copy(f.sortedCache, f.frameTimes)
+		sort.Slice(f.sortedCache, func(i, j int) bool { return f.sortedCache[i] < f.sortedCache[j] })
+		// Refresh exact min/max from sorted data
+		f.runningMin = f.sortedCache[0]
+		f.runningMax = f.sortedCache[count-1]
+		f.sortDirty = false
 	}
 
-	count := len(sorted)
-	avg := total / time.Duration(count)
+	sorted := f.sortedCache
+
+	// Use incrementally maintained sum for O(1) average
+	avg := f.runningSum / time.Duration(count)
 
 	// Calculate standard deviation
 	var variance float64
@@ -66,9 +114,7 @@ func (f *FrameTimeTracker) GetStats() FrameTimeStats {
 	stdDev := time.Duration(variance / float64(count))
 
 	// Calculate percentiles
-	// For 1% low, we want the 1st percentile (worst 1% of frames)
-	// This should be a HIGH value (slow frames), not low
-	idx1Pct := int(float64(count) * 0.99) // 99th percentile index
+	idx1Pct := int(float64(count) * 0.99)
 	if idx1Pct >= count {
 		idx1Pct = count - 1
 	}
@@ -80,12 +126,12 @@ func (f *FrameTimeTracker) GetStats() FrameTimeStats {
 
 	return FrameTimeStats{
 		Average:       avg,
-		Min:           sorted[0],
-		Max:           sorted[count-1],
-		Percentile1:   sorted[idx1Pct],   // 99th percentile (1% worst frames)
-		Percentile01:  sorted[count-1],   // 0.1% low (worst frame)
-		Percentile99:  sorted[idx99Pct],  // 99th percentile
-		Percentile999: sorted[idx999Pct], // 99.9th percentile
+		Min:           f.runningMin,
+		Max:           f.runningMax,
+		Percentile1:   sorted[idx1Pct],
+		Percentile01:  sorted[count-1],
+		Percentile99:  sorted[idx99Pct],
+		Percentile999: sorted[idx999Pct],
 		StdDev:        stdDev,
 		SampleCount:   count,
 	}

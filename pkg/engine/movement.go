@@ -184,6 +184,10 @@ func (s *MovementSystem) validateAndUpdatePosition(entity *Entity, pos *Position
 	newX, newY = s.calculateValidPosition(entity, pos, vel, newX, newY, entities)
 	oldX, oldY := pos.X, pos.Y
 
+	// Save previous position for render interpolation (fixes visual jitter between Update/Draw)
+	pos.PrevX = oldX
+	pos.PrevY = oldY
+
 	// Track entity movement before updating position (for incremental spatial updates)
 	if s.spatialPartition != nil && (newX != oldX || newY != oldY) {
 		s.spatialPartition.TrackEntityMovement(entity)

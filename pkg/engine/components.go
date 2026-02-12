@@ -19,8 +19,11 @@ func init() {
 }
 
 // PositionComponent represents an entity's position in 2D space.
+// PrevX/PrevY store the position from the previous simulation tick,
+// enabling smooth interpolation in the render path between Update() and Draw().
 type PositionComponent struct {
-	X, Y float64
+	X, Y         float64
+	PrevX, PrevY float64 // Previous tick position for render interpolation
 }
 
 // Type returns the component type identifier.

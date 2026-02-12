@@ -541,15 +541,16 @@ func (w *World) Update(deltaTime float64) {
 		w.rebuildEntityCache()
 	}
 
-	// Update all systems with cached list and timing instrumentation
+	// Update all systems with cached list and timing instrumentation.
+	// Uses time.Now() only once per system (unavoidable for per-system metrics).
+	// RecordSystemTime is lock-free since World.Update() is single-threaded.
 	for _, system := range w.systems {
 		startTime := time.Now()
 		system.Update(w.cachedEntityList, deltaTime)
-		duration := time.Since(startTime)
 
 		// Use cached system name (eliminates per-frame reflection)
 		systemName := w.systemNameCache[system]
-		w.performanceMetrics.RecordSystemTime(systemName, duration)
+		w.performanceMetrics.RecordSystemTime(systemName, time.Since(startTime))
 	}
 }
 

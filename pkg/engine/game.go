@@ -33,13 +33,14 @@ type EbitenGame struct {
 	ServerAddressInput   *ServerAddressInput // Text input for server address
 	SettingsUI           *SettingsUI
 	SettingsManager      *SettingsManager
-	CharacterCreation    *EbitenCharacterCreation
-	LoadingUI            *LoadingUI // World generation loading screen (Phase Performance Audit)
-	pendingCharData      *CharacterData
-	isMultiplayerMode    bool   // Track if character creation is for multiplayer
-	selectedGenreID      string // Selected genre for world generation
-	pendingServerAddress string // Server address for Join option
-	worldSeed            int64  // World generation seed for deterministic content
+	CharacterCreation         *EbitenCharacterCreation
+	CharacterCreationTutorial *CharacterCreationTutorial // Tutorial overlay for character creation
+	LoadingUI                 *LoadingUI                 // World generation loading screen (Phase Performance Audit)
+	pendingCharData           *CharacterData
+	isMultiplayerMode         bool   // Track if character creation is for multiplayer
+	selectedGenreID           string // Selected genre for world generation
+	pendingServerAddress      string // Server address for Join option
+	worldSeed                 int64  // World generation seed for deterministic content
 
 	// Rendering systems
 	CameraSystem        *CameraSystem
@@ -337,8 +338,9 @@ func buildGameInstance(screenWidth, screenHeight int, world *World, logEntry *lo
 		ServerAddressInput: ui.serverAddressInput,
 		SettingsUI:         ui.settingsUI,
 		SettingsManager:    core.settingsManager,
-		CharacterCreation:  ui.characterCreation,
-		LoadingUI:          NewLoadingUI(screenWidth, screenHeight),
+		CharacterCreation:         ui.characterCreation,
+		CharacterCreationTutorial: NewCharacterCreationTutorial(),
+		LoadingUI:                 NewLoadingUI(screenWidth, screenHeight),
 		CameraSystem:       core.cameraSystem,
 		RenderSystem:       core.renderSystem,
 		LightingSystem:     core.lightingSystem,
@@ -553,6 +555,15 @@ func (g *EbitenGame) handleGenreSelection(genreID string) {
 
 	// Reset character creation UI for new game
 	g.CharacterCreation.Reset()
+
+	// Reset character creation tutorial for new game.
+	// In the new-game flow, no player entity exists yet (it is created
+	// after terrain-load completion), so we always reset the tutorial here.
+	// Returning players who load a saved game will have tutorial state
+	// restored via ImportState on their persisted player entity.
+	if g.CharacterCreationTutorial != nil {
+		g.CharacterCreationTutorial.Reset()
+	}
 
 	// Set default name from world seed so user has a starting name
 	g.CharacterCreation.SetDefaultNameFromSeed(g.worldSeed)
@@ -939,6 +950,14 @@ func (g *EbitenGame) updateMenuState() (handled bool) {
 
 // handleCharacterCreation processes character creation updates and transitions to gameplay.
 func (g *EbitenGame) handleCharacterCreation() error {
+	// Use the same fixed timestep as the rest of the game to keep tutorial timing consistent.
+	deltaTime := g.calculateDeltaTime()
+
+	// Update the character creation tutorial overlay alongside character creation
+	if g.CharacterCreationTutorial != nil && g.CharacterCreationTutorial.IsActive() {
+		g.CharacterCreationTutorial.Update(int(g.CharacterCreation.currentStep), deltaTime)
+	}
+
 	completed := g.CharacterCreation.Update()
 	if !completed {
 		return nil
@@ -946,6 +965,11 @@ func (g *EbitenGame) handleCharacterCreation() error {
 
 	if g.logger != nil {
 		g.logger.Info("character creation completed, transitioning to gameplay")
+	}
+
+	// Mark the character creation tutorial as complete
+	if g.CharacterCreationTutorial != nil && !g.CharacterCreationTutorial.IsComplete() {
+		g.CharacterCreationTutorial.CompleteTutorial()
 	}
 
 	charData := g.CharacterCreation.GetCharacterData()
@@ -1363,6 +1387,10 @@ func (g *EbitenGame) drawMenuState(screen *ebiten.Image) bool {
 		return true
 	case AppStateCharacterCreation:
 		g.CharacterCreation.Draw(screen)
+		// Draw tutorial overlay on top of character creation UI
+		if g.CharacterCreationTutorial != nil {
+			g.CharacterCreationTutorial.Draw(screen)
+		}
 		return true
 	}
 

@@ -253,6 +253,13 @@ func setupCompletePlayerEntity(game *engine.EbitenGame, generatedTerrain *terrai
 	applyCharacterClass(player, game, clientLogger)
 	initializePlayerAdvancedClass(player, game, clientLogger)
 
+	// Mark character creation tutorial as complete on the player entity
+	// so returning players (load game) will skip the tutorial
+	if game.CharacterCreationTutorial != nil {
+		skipped := game.CharacterCreationTutorial.Skipped
+		engine.MarkCreationTutorialComplete(player, skipped)
+	}
+
 	return player
 }
 

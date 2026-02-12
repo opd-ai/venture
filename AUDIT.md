@@ -37,7 +37,7 @@ This document tracks the audit status of all Go packages in the Venture codebase
 - [ ] `pkg/audio/` — Not Started
 - [x] `pkg/audio/synthesis/AUDIT.md` — Needs Work — 6 issues (3 high, 1 med, 2 low)
 - [x] `pkg/audio/music/AUDIT.md` — Needs Work — 6 issues (1 high, 2 med, 3 low)
-- [ ] `pkg/audio/sfx/` — Not Started
+- [x] `pkg/audio/sfx/AUDIT.md` — Needs Work — 6 issues (2 high, 3 med, 1 low)
 
 ### World Management
 - [x] `pkg/world/AUDIT.md` — Needs Work — 4 issues (0 high, 0 med, 4 low)
@@ -85,10 +85,10 @@ Each audit should produce a `AUDIT.md` file in the package directory following t
 ## Summary Statistics
 
 **Total Packages**: 50+  
-**Audited**: 19  
+**Audited**: 20  
 **Complete**: 5  
-**Needs Work**: 14  
+**Needs Work**: 15  
 **Incomplete**: 0  
-**Not Started**: 31+
+**Not Started**: 30+
 
 **Average Test Coverage** (audited packages): ~87% (estimated - some packages require GUI environment)

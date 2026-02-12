@@ -78,6 +78,7 @@ type SystemInitResult struct {
 	WeatherAudioSystem             *WeatherAudioSystem
 	FactionXPBonusSystem           *FactionXPBonusSystem
 	WeatherManaRegenSystem         *WeatherManaRegenSystem
+	TerrainMovementSpeedSystem     *TerrainMovementSpeedSystem
 
 	// System wrappers
 	AnimationSystemWrapper            System
@@ -322,6 +323,14 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 	// Connects WeatherCombatSystem (chilled, wet) with MovementSystem velocity scaling
 	statusEffectMovementSystem := NewStatusEffectMovementSystem(game.World, config.Seed+2100)
 	game.World.AddSystem(statusEffectMovementSystem)
+
+	// 36b3. TerrainMovementSpeedSystem - applies movement speed modifiers from terrain type
+	// Connects terrain generation with MovementSystem for genre-aware terrain effects
+	terrainMovementSpeedSystem := NewTerrainMovementSpeedSystem(game.World, config.Seed+2150)
+	terrainMovementSpeedSystem.SetGenre(config.GenreID)
+	terrainMovementSpeedSystem.SetTileSize(config.TileSize)
+	result.TerrainMovementSpeedSystem = terrainMovementSpeedSystem
+	game.World.AddSystem(terrainMovementSpeedSystem)
 
 	// 36c. CriticalHitParticleSystem - visual feedback for critical hits
 	criticalHitParticleSystem := NewCriticalHitParticleSystem(game.World, config.Seed+3000)

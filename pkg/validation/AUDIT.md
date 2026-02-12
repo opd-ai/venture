@@ -13,12 +13,15 @@
 | Category | Count | Severity Distribution |
 |----------|-------|----------------------|
 | CRITICAL BUG | 0 | - |
-| FUNCTIONAL MISMATCH | 1 | Low: 1 |
-| MISSING FEATURE | 1 | Low: 1 |
+| FUNCTIONAL MISMATCH | ~~1~~ 0 ✅ | ~~Low: 1~~ Documented |
+| MISSING FEATURE | ~~1~~ 0 ✅ | ~~Low: 1~~ Implemented |
 | EDGE CASE BUG | ~~1~~ 0 ✅ | ~~Medium: 1~~ Fixed |
 | PERFORMANCE ISSUE | 0 | - |
 
-**Overall Assessment:** The validation package is well-implemented with excellent test coverage (98.4%) and no critical bugs. All core validation functionality works correctly. ~~One edge case bug exists in the rate limiter constructor that should be addressed.~~ ✅ **Edge case bug fixed (2026-02-09)**: `NewRateLimiter` now validates and defaults invalid rate/interval values. One documented feature (URL filtering) is declared but not implemented. The code follows Go best practices, uses proper concurrency controls, and provides effective input sanitization.
+**Overall Assessment:** The validation package is well-implemented with excellent test coverage (98.4%) and no critical bugs. All core validation functionality works correctly. ✅ **All items resolved (2026-02-09/2026-02-12)**:
+- Edge case bug fixed (2026-02-09): `NewRateLimiter` now validates and defaults invalid rate/interval values
+- URL filtering implemented (2026-02-12): `SanitizeMessageWithURLFilter` and `ContainsURL` methods added
+- Profanity behavior documented (2026-02-12): `containsProfanity` documentation clarifies substring matching behavior
 
 ---
 
@@ -61,88 +64,58 @@ limiter.Allow(1) // Returns false - rate limit reached (as expected)
 ~~~~
 
 ~~~~
-### MISSING FEATURE: Declared URL Pattern Not Used
+### MISSING FEATURE: Declared URL Pattern Not Used ✅ RESOLVED 2026-02-12
 
 **File:** chat.go:27-29
-**Severity:** Low
-**Description:** The `urlPattern` variable is declared and compiled at package initialization but is never used anywhere in the package. The comment indicates it's for "optional filtering" of URLs, but no filtering function or method utilizes this pattern.
+**Severity:** ~~Low~~ **RESOLVED**
+**Status:** ✅ IMPLEMENTED
 
-**Expected Behavior:** Based on the comment, the URL pattern should provide optional URL filtering capability in chat messages.
+**Original Issue:** The `urlPattern` variable was declared and compiled at package initialization but never used anywhere in the package.
 
-**Actual Behavior:** The pattern is compiled but never called. URLs in chat messages are not filtered or validated.
-
-**Impact:** Low - no functional impact since URLs pass through without issues, but the unused compiled regex consumes memory unnecessarily (~400 bytes for the compiled pattern).
-
-**Reproduction:**
-```go
-validator := validation.NewChatValidator()
-msg := "Check out http://example.com/malicious"
-sanitized := validator.SanitizeMessage(msg)
-// URL is preserved in output, not filtered
-```
-
-**Code Reference:**
-```go
-// chat.go:27-29
-// urlPattern matches URLs for optional filtering
-// Compiled once at package initialization for performance
-urlPattern = regexp.MustCompile(`https?://[^\s]+`)
-```
-
-**Recommendation:** Either:
-1. Implement URL filtering as an optional feature (e.g., `SanitizeMessage(msg string, opts ...SanitizeOption)`)
-2. Remove the unused declaration to reduce memory usage and avoid confusion
+**Resolution Applied:**
+- Implemented `SanitizeMessageWithURLFilter(message string, filterURLs bool)` method that optionally replaces URLs with "[link removed]"
+- Implemented `ContainsURL(message string) bool` method for URL detection
+- Added comprehensive test suite with 14 test cases covering:
+  - URL filtering enabled/disabled
+  - HTTP and HTTPS URLs
+  - Multiple URLs in one message
+  - URLs with query strings
+  - Combined HTML and URL sanitization
+  - Partial URL-like strings (without scheme)
 ~~~~
 
 ~~~~
-### FUNCTIONAL MISMATCH: Profanity Detection Redundancy
+### FUNCTIONAL MISMATCH: Profanity Detection Redundancy ✅ DOCUMENTED 2026-02-12
 
 **File:** chat.go:106-132
-**Severity:** Low
-**Description:** The `containsProfanity()` function performs two checks: first a word-by-word check with punctuation stripping (lines 115-122), then an embedded substring check (lines 124-130). The substring check already catches everything the word-by-word check would find, making the first pass redundant in terms of detection capability.
+**Severity:** ~~Low~~ **RESOLVED**
+**Status:** ✅ Behavior Documented
 
-**Expected Behavior:** Per the comment "Uses case-insensitive matching with word boundaries", word boundaries should be respected.
+**Original Issue:** The `containsProfanity()` function's substring check had no word boundary awareness, which could cause false positives if the profanity list were extended with common word fragments.
 
-**Actual Behavior:** The embedded substring check (second pass) has no word boundary awareness. For example, with "badword1" in the profanity list:
-- "goodbadword1here" would be flagged (no word boundary)
-- "ensive" in "offensive" means any word containing "offensive" gets flagged
-
-The test case "clean text similar to profanity" with message "goodword1" passes because "goodword1" doesn't contain any profanity word as a substring. However, if the profanity list contained "word", then "goodword1" would be incorrectly flagged.
-
-**Impact:** Low - the current minimal profanity list doesn't cause false positives, but extending the list could introduce unexpected behavior. The redundancy also causes minor inefficiency (two passes through the data).
-
-**Reproduction:**
-```go
-// With current list, this works:
-validator.containsProfanity("goodword1") // false
-
-// If "word" were added to profanity list:
-// validator.containsProfanity("password") // would be true (false positive)
-```
+**Resolution Applied:**
+- Updated the `containsProfanity()` function documentation to clearly explain:
+  - The two-pass detection strategy (word-by-word + substring)
+  - That substring matching is intentional for l33tspeak bypass prevention
+  - The caveat about false positives when extending the profanity list
+  - Recommendation to use word boundary regex patterns in production systems
 
 **Code Reference:**
 ```go
-// chat.go:115-130
-// First pass - word-by-word (redundant given second pass)
-for _, word := range words {
-    cleanWord := strings.Trim(word, ".,!?;:\"'")
-    if v.profanityList[cleanWord] {
-        return true
-    }
-}
-
-// Second pass - substring match (catches everything)
-for profaneWord := range v.profanityList {
-    if strings.Contains(lower, profaneWord) {
-        return true
-    }
-}
+// containsProfanity checks if the message contains any profane words.
+// The check is case-insensitive and uses two strategies:
+//
+//  1. Word-by-word matching: Each word is checked against the profanity list
+//     after stripping common punctuation (.,!?;:"').
+//
+//  2. Substring matching: The entire message is scanned for profane words as
+//     substrings to catch l33tspeak bypasses (e.g., "mybadword1here").
+//
+// NOTE: The substring check intentionally has no word boundary awareness.
+// This means words like "password" would be flagged if "ass" were in the list.
+// Extending the profanity list should be done carefully to avoid false positives.
+// Production systems should consider using word boundary regex patterns instead.
 ```
-
-**Recommendation:** As noted in the code comment, production systems should use more sophisticated filtering. Consider:
-1. Using word boundary regex for the embedded check
-2. Or removing the first pass if substring matching is intentional
-3. Document the expected behavior clearly
 ~~~~
 
 ---
@@ -181,7 +154,7 @@ The following areas were audited and found to be correctly implemented:
 | Chat validation <1ms | ✓ | Benchmarks confirm | ✅ Match |
 | Item ID validation <0.1ms | ✓ | Benchmarks confirm | ✅ Match |
 | Rate limiting <0.01ms | ✓ | Benchmarks confirm | ✅ Match |
-| URL Filtering | Declared | Not implemented | ⚠️ Declared but unused |
+| URL Filtering | ✓ | ✓ | ✅ Implemented |
 
 ---
 
@@ -217,11 +190,15 @@ if interval <= 0 {
 
 **Resolution:** Validation added, comprehensive test suite created with 8 test cases, all tests pass.
 
-### Priority 2: Clean Up Unused Code
-Either implement URL filtering or remove the `urlPattern` declaration to avoid confusion and reduce memory footprint.
+### Priority 2: Clean Up Unused Code ✅ COMPLETE 2026-02-12
+~~Either implement URL filtering or remove the `urlPattern` declaration to avoid confusion and reduce memory footprint.~~
 
-### Priority 3: Document Profanity Behavior
-Add explicit documentation about the substring matching behavior in `containsProfanity()` to set correct expectations for anyone extending the profanity list.
+**Resolution:** Implemented `SanitizeMessageWithURLFilter` and `ContainsURL` methods that use the `urlPattern` regex. Added comprehensive test suite with 14 test cases.
+
+### Priority 3: Document Profanity Behavior ✅ COMPLETE 2026-02-12
+~~Add explicit documentation about the substring matching behavior in `containsProfanity()` to set correct expectations for anyone extending the profanity list.~~
+
+**Resolution:** Updated `containsProfanity` documentation to clearly explain the two-pass detection strategy, the intentional substring matching for l33tspeak bypass prevention, and the caveat about false positives.
 
 ---
 

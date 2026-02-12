@@ -89,6 +89,26 @@ func (v *ChatValidator) SanitizeMessage(message string) string {
 	return sanitized
 }
 
+// SanitizeMessageWithURLFilter removes dangerous characters and optionally filters URLs.
+// When filterURLs is true, URLs are replaced with "[link removed]".
+// This is useful for channels where URL sharing is not permitted.
+func (v *ChatValidator) SanitizeMessageWithURLFilter(message string, filterURLs bool) string {
+	// Apply standard sanitization first
+	sanitized := v.SanitizeMessage(message)
+
+	// Optionally filter URLs
+	if filterURLs {
+		sanitized = urlPattern.ReplaceAllString(sanitized, "[link removed]")
+	}
+
+	return sanitized
+}
+
+// ContainsURL returns true if the message contains any URL patterns
+func (v *ChatValidator) ContainsURL(message string) bool {
+	return urlPattern.MatchString(message)
+}
+
 // ValidateAndSanitize combines validation and sanitization in one call
 // Returns the sanitized message and any validation errors
 func (v *ChatValidator) ValidateAndSanitize(message string) (string, error) {
@@ -103,8 +123,19 @@ func (v *ChatValidator) ValidateAndSanitize(message string) (string, error) {
 	return sanitized, nil
 }
 
-// containsProfanity checks if the message contains any profane words
-// Uses case-insensitive matching with word boundaries
+// containsProfanity checks if the message contains any profane words.
+// The check is case-insensitive and uses two strategies:
+//
+//  1. Word-by-word matching: Each word is checked against the profanity list
+//     after stripping common punctuation (.,!?;:"').
+//
+//  2. Substring matching: The entire message is scanned for profane words as
+//     substrings to catch l33tspeak bypasses (e.g., "mybadword1here").
+//
+// NOTE: The substring check intentionally has no word boundary awareness.
+// This means words like "password" would be flagged if "ass" were in the list.
+// Extending the profanity list should be done carefully to avoid false positives.
+// Production systems should consider using word boundary regex patterns instead.
 func (v *ChatValidator) containsProfanity(message string) bool {
 	// Convert to lowercase for case-insensitive matching
 	lower := strings.ToLower(message)

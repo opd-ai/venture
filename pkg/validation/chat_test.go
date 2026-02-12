@@ -292,3 +292,122 @@ func BenchmarkChatValidator_ValidateAndSanitize(b *testing.B) {
 		_, _ = validator.ValidateAndSanitize(message)
 	}
 }
+
+func TestChatValidator_SanitizeMessageWithURLFilter(t *testing.T) {
+	validator := NewChatValidator()
+
+	tests := []struct {
+		name       string
+		message    string
+		filterURLs bool
+		expected   string
+	}{
+		{
+			name:       "no URL, filter disabled",
+			message:    "Hello world",
+			filterURLs: false,
+			expected:   "Hello world",
+		},
+		{
+			name:       "no URL, filter enabled",
+			message:    "Hello world",
+			filterURLs: true,
+			expected:   "Hello world",
+		},
+		{
+			name:       "URL present, filter disabled",
+			message:    "Check out http://example.com",
+			filterURLs: false,
+			expected:   "Check out http://example.com",
+		},
+		{
+			name:       "URL present, filter enabled",
+			message:    "Check out http://example.com",
+			filterURLs: true,
+			expected:   "Check out [link removed]",
+		},
+		{
+			name:       "HTTPS URL, filter enabled",
+			message:    "Visit https://secure.example.com/path",
+			filterURLs: true,
+			expected:   "Visit [link removed]",
+		},
+		{
+			name:       "multiple URLs, filter enabled",
+			message:    "See http://a.com and https://b.com",
+			filterURLs: true,
+			expected:   "See [link removed] and [link removed]",
+		},
+		{
+			name:       "URL with query string",
+			message:    "Link: http://example.com/page?id=123&name=test",
+			filterURLs: true,
+			expected:   "Link: [link removed]",
+		},
+		{
+			name:       "HTML and URL combined",
+			message:    "<b>Check</b> http://example.com",
+			filterURLs: true,
+			expected:   "Check [link removed]",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := validator.SanitizeMessageWithURLFilter(tt.message, tt.filterURLs)
+			if result != tt.expected {
+				t.Errorf("SanitizeMessageWithURLFilter() = %q, want %q", result, tt.expected)
+			}
+		})
+	}
+}
+
+func TestChatValidator_ContainsURL(t *testing.T) {
+	validator := NewChatValidator()
+
+	tests := []struct {
+		name    string
+		message string
+		want    bool
+	}{
+		{
+			name:    "no URL",
+			message: "Hello world",
+			want:    false,
+		},
+		{
+			name:    "HTTP URL",
+			message: "Visit http://example.com",
+			want:    true,
+		},
+		{
+			name:    "HTTPS URL",
+			message: "Go to https://secure.example.com",
+			want:    true,
+		},
+		{
+			name:    "URL only",
+			message: "https://example.com/path",
+			want:    true,
+		},
+		{
+			name:    "partial URL-like (no scheme)",
+			message: "Visit example.com",
+			want:    false,
+		},
+		{
+			name:    "ftp URL (not matched)",
+			message: "ftp://files.example.com",
+			want:    false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := validator.ContainsURL(tt.message)
+			if result != tt.want {
+				t.Errorf("ContainsURL() = %v, want %v", result, tt.want)
+			}
+		})
+	}
+}

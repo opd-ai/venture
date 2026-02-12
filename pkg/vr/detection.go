@@ -181,11 +181,17 @@ func (d *Detector) SetForceEnable(enable bool) {
 
 // SetForceDisable forces VR to be disabled regardless of hardware detection.
 // This is useful for disabling VR on systems where it's not desired.
+// When disable is true, this also clears any cached detection results.
 func (d *Detector) SetForceDisable(disable bool) {
 	d.mu.Lock()
 	defer d.mu.Unlock()
 	d.forceDisable = disable
 	d.detectionRun = false // Reset detection cache
+	if disable {
+		// Clear detection state for consistency
+		d.headsetDetected = false
+		d.controllerDetected = false
+	}
 
 	log.WithField("disabled", disable).Debug("VR force disable toggled")
 }

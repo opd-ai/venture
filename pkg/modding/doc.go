@@ -10,7 +10,28 @@
 // Supported mod types:
 //   - Rule mods: Modify gameplay parameters (spawn rates, difficulty scaling)
 //   - Generator mods: Customize procedural generation parameters
-//   - Event mods: Add custom server events and triggers
+//   - Event mods: Add custom server events and triggers (programmatic only; see below)
+//
+// # Event Mod Limitations
+//
+// Event mods require programmatic registration and cannot be fully defined via JSON files.
+// The EventHandlers field is excluded from JSON serialization (`json:"-"`) because event
+// handlers must be Go functions that cannot be safely represented in JSON. To create an
+// event mod:
+//
+//	mod := &modding.Mod{
+//	    ID:   "my-events",
+//	    Type: modding.ModTypeEvent,
+//	    EventHandlers: map[string]modding.EventHandler{
+//	        "player_join": func(e modding.Event) error {
+//	            // Handle player join event
+//	            return nil
+//	        },
+//	    },
+//	}
+//	manager.AddMod(mod)
+//
+// Rule and Generator mods can be fully defined via JSON files.
 //
 // # Constraints
 //

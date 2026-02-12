@@ -22,79 +22,15 @@
 
 ## DETAILED FINDINGS
 
-~~~~
-### DOCUMENTATION ISSUE: Genre Name Mismatch in README
+### DOCUMENTATION ISSUE: Genre Name Mismatch in README ✅ RESOLVED
 
-**File:** README.md:98, README.md:136, README.md:153
-**Severity:** Low
-**Description:** The README.md documentation incorrectly references the genre `postapocalyptic` in multiple locations, but the actual valid genre ID is `postapoc`. This discrepancy can cause user confusion when configuring the game.
+**Status:** Fixed on 2026-02-12
+**Resolution:** Updated README.md to use `postapoc` instead of `postapocalyptic` in all three locations (lines 98, 136, 153).
 
-**Expected Behavior:** Documentation should accurately reflect the valid genre IDs: `fantasy`, `scifi`, `horror`, `cyberpunk`, `postapoc`
+### FUNCTIONAL MISMATCH: Error Message Example Uses Incorrect Genre List ✅ RESOLVED
 
-**Actual Behavior:** README references `postapocalyptic` which is not a valid genre (confirmed by test case on line 113 of validator_test.go)
-
-**Impact:** Users following the README examples will receive validation errors when using the documented genre names.
-
-**Reproduction:** 
-1. Follow README example on line 98
-2. Call `validator.ValidateGenre("postapocalyptic")` 
-3. Receive error: "invalid genre 'postapocalyptic', available genres: cyberpunk, fantasy, horror, postapoc, scifi (or 'random')"
-
-**Code Reference:**
-```markdown
-// From README.md line 98:
-// Output: Available genres: cyberpunk, fantasy, horror, postapocalyptic, scifi
-
-// From README.md line 136:
-- **Common Genres**: fantasy, scifi, horror, cyberpunk, postapocalyptic
-
-// From README.md line 153:
-"invalid genre 'western', available genres: cyberpunk, fantasy, horror, postapocalyptic, scifi"
-```
-
-**Correct Values (from pkg/procgen/dialog/corpus.go:688-695):**
-```go
-func GetAvailableGenres() []string {
-    return []string{
-        "fantasy",
-        "scifi",
-        "horror",
-        "cyberpunk",
-        "postapoc",  // NOT "postapocalyptic"
-    }
-}
-```
-~~~~
-
-~~~~
-### FUNCTIONAL MISMATCH: Error Message Example Uses Incorrect Genre List
-
-**File:** README.md:153
-**Severity:** Low
-**Description:** The example error message in the README shows a genre list that doesn't match the actual error output from the validator. The example omits the `(or 'random')` suffix that the actual implementation includes.
-
-**Expected Behavior:** Error message example should match actual validator output format.
-
-**Actual Behavior:** Documentation shows:
-```
-"invalid genre 'western', available genres: cyberpunk, fantasy, horror, postapocalyptic, scifi"
-```
-
-Actual implementation outputs (from validator.go:94):
-```
-"invalid genre 'western', available genres: cyberpunk, fantasy, horror, postapoc, scifi (or 'random')"
-```
-
-**Impact:** Minor - users may be confused by slight output format differences.
-
-**Reproduction:** Call `validator.ValidateGenre("western")` and compare output to README example.
-
-**Code Reference:**
-```go
-// validator.go:94
-return fmt.Errorf("invalid genre '%s', available genres: %s (or 'random')", genreID, strings.Join(available, ", "))
-```
-~~~~
+**Status:** Fixed on 2026-02-12
+**Resolution:** Updated README.md error message example to include `(or 'random')` suffix and use correct genre `postapoc`.
 
 ---
 

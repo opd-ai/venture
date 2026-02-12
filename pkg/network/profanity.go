@@ -1,6 +1,9 @@
 package network
 
 import (
+	"bufio"
+	"fmt"
+	"os"
 	"regexp"
 	"strings"
 	"sync"
@@ -196,9 +199,35 @@ func defaultProfanityWords() []string {
 
 // LoadWordListFromFile loads a profanity word list from a file.
 // Each line should contain one word. Lines starting with # are comments.
+// Empty lines are ignored. The word list is appended to the existing list.
 func (pf *ProfanityFilter) LoadWordListFromFile(filepath string) error {
-	// Note: This would read from file, but we keep it simple for now
-	// since the project uses zero external assets. Users can provide
-	// word lists via API instead.
-	return nil // Placeholder - implement if needed
+	file, err := os.Open(filepath)
+	if err != nil {
+		return fmt.Errorf("failed to open word list file: %w", err)
+	}
+	defer file.Close()
+
+	var words []string
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		line := strings.TrimSpace(scanner.Text())
+		// Skip empty lines and comments
+		if line == "" || strings.HasPrefix(line, "#") {
+			continue
+		}
+		words = append(words, strings.ToLower(line))
+	}
+
+	if err := scanner.Err(); err != nil {
+		return fmt.Errorf("error reading word list file: %w", err)
+	}
+
+	if len(words) > 0 {
+		pf.mu.Lock()
+		pf.wordList = append(pf.wordList, words...)
+		pf.compilePatterns()
+		pf.mu.Unlock()
+	}
+
+	return nil
 }

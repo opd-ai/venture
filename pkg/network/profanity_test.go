@@ -1,6 +1,7 @@
 package network
 
 import (
+	"os"
 	"strings"
 	"testing"
 )
@@ -288,6 +289,115 @@ func TestEmptyWordList(t *testing.T) {
 
 	if pf.ContainsProfanity(text) {
 		t.Error("Empty word list should not detect profanity")
+	}
+}
+
+// TestLoadWordListFromFile tests loading word list from a file
+func TestLoadWordListFromFile(t *testing.T) {
+	// Create a temp file with test word list
+	tmpFile, err := os.CreateTemp("", "wordlist_*.txt")
+	if err != nil {
+		t.Fatalf("Failed to create temp file: %v", err)
+	}
+	defer os.Remove(tmpFile.Name())
+
+	// Write test content
+	content := `# This is a comment
+badword1
+badword2
+# Another comment
+
+badword3
+`
+	if _, err := tmpFile.WriteString(content); err != nil {
+		t.Fatalf("Failed to write test content: %v", err)
+	}
+	tmpFile.Close()
+
+	pf := NewProfanityFilter()
+	pf.Enable()
+	initialCount := len(pf.GetWordList())
+
+	// Load from file
+	if err := pf.LoadWordListFromFile(tmpFile.Name()); err != nil {
+		t.Fatalf("LoadWordListFromFile failed: %v", err)
+	}
+
+	// Verify words were added
+	wordList := pf.GetWordList()
+	expectedCount := initialCount + 3 // badword1, badword2, badword3
+	if len(wordList) != expectedCount {
+		t.Errorf("Expected %d words, got %d", expectedCount, len(wordList))
+	}
+
+	// Verify filter detects new words
+	if !pf.ContainsProfanity("this has badword1 in it") {
+		t.Error("Should detect badword1 from loaded file")
+	}
+	if !pf.ContainsProfanity("contains BADWORD2") {
+		t.Error("Should detect badword2 (case insensitive)")
+	}
+	if !pf.ContainsProfanity("badword3 here") {
+		t.Error("Should detect badword3 from loaded file")
+	}
+}
+
+// TestLoadWordListFromFile_NonExistent tests error on non-existent file
+func TestLoadWordListFromFile_NonExistent(t *testing.T) {
+	pf := NewProfanityFilter()
+	err := pf.LoadWordListFromFile("/nonexistent/path/wordlist.txt")
+	if err == nil {
+		t.Error("Expected error for non-existent file")
+	}
+}
+
+// TestLoadWordListFromFile_EmptyFile tests loading an empty file
+func TestLoadWordListFromFile_EmptyFile(t *testing.T) {
+	tmpFile, err := os.CreateTemp("", "empty_*.txt")
+	if err != nil {
+		t.Fatalf("Failed to create temp file: %v", err)
+	}
+	defer os.Remove(tmpFile.Name())
+	tmpFile.Close()
+
+	pf := NewProfanityFilter()
+	initialCount := len(pf.GetWordList())
+
+	if err := pf.LoadWordListFromFile(tmpFile.Name()); err != nil {
+		t.Fatalf("LoadWordListFromFile should not fail on empty file: %v", err)
+	}
+
+	if len(pf.GetWordList()) != initialCount {
+		t.Error("Word list should remain unchanged for empty file")
+	}
+}
+
+// TestLoadWordListFromFile_CommentsOnly tests file with only comments
+func TestLoadWordListFromFile_CommentsOnly(t *testing.T) {
+	tmpFile, err := os.CreateTemp("", "comments_*.txt")
+	if err != nil {
+		t.Fatalf("Failed to create temp file: %v", err)
+	}
+	defer os.Remove(tmpFile.Name())
+
+	content := `# Comment 1
+# Comment 2
+   # Indented comment
+`
+	if _, err := tmpFile.WriteString(content); err != nil {
+		t.Fatalf("Failed to write test content: %v", err)
+	}
+	tmpFile.Close()
+
+	pf := NewProfanityFilter()
+	initialCount := len(pf.GetWordList())
+
+	if err := pf.LoadWordListFromFile(tmpFile.Name()); err != nil {
+		t.Fatalf("LoadWordListFromFile should not fail on comments-only file: %v", err)
+	}
+
+	if len(pf.GetWordList()) != initialCount {
+		t.Error("Word list should remain unchanged for comments-only file")
 	}
 }
 

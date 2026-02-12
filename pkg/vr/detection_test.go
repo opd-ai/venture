@@ -68,6 +68,35 @@ func TestDetectorForceDisableTakesPrecedence(t *testing.T) {
 	}
 }
 
+func TestDetectorForceDisableClearsDetectionState(t *testing.T) {
+	d := NewDetector()
+	// First, force enable and detect
+	d.SetForceEnable(true)
+	d.DetectHardware()
+
+	// Verify detection state is set
+	if !d.IsHeadsetDetected() {
+		t.Error("expected headset to be detected after force enable")
+	}
+	if !d.IsControllerDetected() {
+		t.Error("expected controller to be detected after force enable")
+	}
+
+	// Now force disable - this should clear detection state
+	d.SetForceDisable(true)
+
+	// All detection methods should now return false for consistency
+	if d.DetectHardware() {
+		t.Error("expected DetectHardware to return false after force disable")
+	}
+	if d.IsHeadsetDetected() {
+		t.Error("expected IsHeadsetDetected to return false after force disable")
+	}
+	if d.IsControllerDetected() {
+		t.Error("expected IsControllerDetected to return false after force disable")
+	}
+}
+
 func TestDetectorCaching(t *testing.T) {
 	d := NewDetector()
 	d.SetForceEnable(true)

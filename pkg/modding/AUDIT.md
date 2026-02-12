@@ -13,12 +13,12 @@
 | Category | Count | Severity Distribution |
 |----------|-------|----------------------|
 | CRITICAL BUG | ~~1~~ 0 ✅ | ~~High: 1~~ Fixed |
-| FUNCTIONAL MISMATCH | ~~2~~ 1 ✅ | ~~High: 1,~~ Medium: 1 |
+| FUNCTIONAL MISMATCH | ~~2~~ 0 ✅ | ~~High: 1, Medium: 1~~ Fixed |
 | MISSING FEATURE | 2 | Low: 2 |
 | EDGE CASE BUG | 1 | Low: 1 |
 | PERFORMANCE ISSUE | 0 | - |
 
-**Overall Assessment:** The modding package ~~has a critical security vulnerability (symlink traversal bypass) and~~ has ~~significant~~ minor documentation/implementation mismatches. ✅ **Critical symlink traversal vulnerability fixed (2026-02-09)** with `filepath.EvalSymlinks()` resolution before path validation. ✅ **Example mod files fixed (2026-02-10)** to use dot-separated rule naming matching AllowedRulePatterns. The package has excellent test coverage (90.2%) and proper concurrency handling, and is now secure for production use.
+**Overall Assessment:** The modding package ~~has a critical security vulnerability (symlink traversal bypass) and~~ has ~~significant~~ minor documentation/implementation mismatches. ✅ **Critical symlink traversal vulnerability fixed (2026-02-09)** with `filepath.EvalSymlinks()` resolution before path validation. ✅ **Example mod files fixed (2026-02-10)** to use dot-separated rule naming matching AllowedRulePatterns. ✅ **Event mod documentation clarified (2026-02-12)** in doc.go. The package has excellent test coverage (90.2%) and proper concurrency handling, and is now secure for production use. Only optional enhancements remain.
 
 ---
 
@@ -129,38 +129,18 @@ PASS
 ~~~~
 
 ~~~~
-### FUNCTIONAL MISMATCH: Event Mods Cannot Be Created via JSON Files
+### FUNCTIONAL MISMATCH: Event Mods Cannot Be Created via JSON Files ✅ DOCUMENTED 2026-02-12
 
 **File:** types.go:55
-**Severity:** Medium
-**Description:** The documentation (doc.go) describes three mod types including "Event mods: Add custom server events and triggers", implying users can create event mods via JSON files. However, the `EventHandlers` field has the JSON tag `json:"-"` which excludes it from serialization/deserialization.
+**Severity:** ~~Medium~~ **RESOLVED**
+**Status:** ✅ Documentation Updated
 
-**Expected Behavior:** Users should be able to define event handlers in JSON mod files, or documentation should clarify that event mods require programmatic registration.
+**Original Issue:** The documentation (doc.go) described three mod types including "Event mods: Add custom server events and triggers", implying users can create event mods via JSON files. However, the `EventHandlers` field has the JSON tag `json:"-"` which excludes it from serialization/deserialization.
 
-**Actual Behavior:** The `EventHandlers` field is never populated when loading from JSON. Event mods can only be created programmatically by directly assigning to the `EventHandlers` map before calling `AddMod()`.
-
-**Impact:** Documentation misleads users about event mod capabilities. Users cannot create event-driven mods through the documented JSON file approach.
-
-**Reproduction:**
-```go
-// Event handler in JSON is ignored
-{
-  "id": "my-events",
-  "type": "event",
-  "event_handlers": {"player_join": "some_handler"}  // Ignored!
-}
-```
-
-**Code Reference:**
-```go
-// types.go:55
-EventHandlers map[string]EventHandler `json:"-"`  // Never serialized
-```
-
-**Recommended Fix:** Either:
-1. Document that event mods require programmatic registration (update doc.go)
-2. Remove ModTypeEvent from the advertised mod types if it's not JSON-loadable
-3. Design a JSON-serializable event handler format (more complex)
+**Resolution Applied:**
+- Updated doc.go to clarify that event mods require programmatic registration
+- Added "Event Mod Limitations" section with example code showing proper usage
+- Clarified that Rule and Generator mods can be fully defined via JSON files
 ~~~~
 
 ~~~~
@@ -307,14 +287,14 @@ The following areas were audited and found to be correctly implemented:
 
 | Item | doc.go Claims | Implementation | Status |
 |------|---------------|----------------|--------|
-| 3 mod types | ✓ | ✓ | ⚠️ Event type limited |
-| File system isolation | ✓ | ⚠️ Symlink bypass | ❌ Vulnerable |
+| 3 mod types | ✓ | ✓ | ✅ Event documented |
+| File system isolation | ✓ | ✓ | ✅ Symlink fixed |
 | Network isolation | ✓ | ✓ | ✅ Match |
 | Memory limits | ✓ | ✓ | ✅ Match |
 | CPU limits | ✓ | ✓ | ✅ Match |
-| API restrictions | ✓ | ⚠️ Pattern mismatch | ⚠️ Partial |
+| API restrictions | ✓ | ✓ | ✅ Match |
 | Code execution safety | ✓ | ✓ | ✅ Match |
-| Example mods | ✓ | ❌ Invalid with sandbox | ❌ Broken |
+| Example mods | ✓ | ✓ | ✅ Fixed |
 
 ---
 
@@ -333,8 +313,10 @@ The following areas were audited and found to be correctly implemented:
 
 **Resolution:** Updated example mod files (`hardcore-mode.json`, `pvp-zones.json`) to use dot-separated naming consistent with `AllowedRulePatterns`. Created comprehensive test suite (`example_mods_test.go`) with 4 test functions validating all example mods against sandbox. All tests pass.
 
-### Priority 3: Document Event Mod Limitations
-Update doc.go to clarify that event mods require programmatic registration and cannot be fully defined via JSON files.
+### Priority 3: Document Event Mod Limitations ✅ COMPLETE 2026-02-12
+~~Update doc.go to clarify that event mods require programmatic registration and cannot be fully defined via JSON files.~~
+
+**Resolution:** Updated doc.go with a new "Event Mod Limitations" section explaining that event mods require programmatic registration because EventHandlers are Go functions that cannot be represented in JSON. Added example code showing proper programmatic event mod creation.
 
 ### Optional Enhancements
 - Add `GetRuleString()` helper method for API consistency

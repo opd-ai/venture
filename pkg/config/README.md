@@ -95,7 +95,7 @@ if err := validator.ValidateAll(cfg); err != nil {
 validator := config.NewValidator()
 genres := validator.GetAvailableGenres()
 fmt.Printf("Available genres: %s\n", strings.Join(genres, ", "))
-// Output: Available genres: cyberpunk, fantasy, horror, postapocalyptic, scifi
+// Output: Available genres: cyberpunk, fantasy, horror, postapoc, scifi
 ```
 
 ### Directory Validation
@@ -133,7 +133,7 @@ if err := validator.ValidateDirectory("/path/to/newdir", true); err != nil {
 
 ### Genre Validation
 - **Valid Values**: Retrieved from procgen/dialog package
-- **Common Genres**: fantasy, scifi, horror, cyberpunk, postapocalyptic
+- **Common Genres**: fantasy, scifi, horror, cyberpunk, postapoc
 - **Error Message**: Lists available genres if invalid
 
 ### Directory Validation
@@ -150,7 +150,7 @@ All validation methods return descriptive errors:
 "port must be between 1024 and 65535, got 80 (ports < 1024 require root privileges)"
 
 // Genre error example
-"invalid genre 'western', available genres: cyberpunk, fantasy, horror, postapocalyptic, scifi"
+"invalid genre 'western', available genres: cyberpunk, fantasy, horror, postapoc, scifi (or 'random')"
 
 // Directory error example
 "directory /invalid/path is not accessible: no such file or directory"

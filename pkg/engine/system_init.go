@@ -273,6 +273,10 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 	weatherSystem := NewWeatherSystem(game.World)
 	game.World.AddSystem(weatherSystem)
 
+	// 36a. WeatherCombatSystem - applies weather-based status effects
+	weatherCombatSystem := NewWeatherCombatSystem(game.World)
+	game.World.AddSystem(weatherCombatSystem)
+
 	// 37. LifetimeSystem - temporary entities (Phase 5.3)
 	lifetimeSystem := NewLifetimeSystemWithLogger(game.World, logger)
 	game.World.AddSystem(lifetimeSystem)

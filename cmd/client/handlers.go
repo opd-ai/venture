@@ -185,6 +185,7 @@ type systemsContainer struct {
 	skillProgressionSystem   *engine.SkillProgressionSystem
 	visualFeedbackSystem     *engine.VisualFeedbackSystem
 	weatherSystem            *engine.WeatherSystem
+	weatherCombatSystem      *engine.WeatherCombatSystem
 	lifetimeSystem           *engine.LifetimeSystem
 	puzzleSystem             *engine.PuzzleSystem
 	firePropagationSystem    *engine.FirePropagationSystem
@@ -847,6 +848,7 @@ func initializeCombatSystems(game *engine.EbitenGame, sys *systemsContainer) {
 // initializeEnvironmentalSystems creates weather, lifetime, puzzle, and destruction systems.
 func initializeEnvironmentalSystems(game *engine.EbitenGame, sys *systemsContainer, clientLogger *logrus.Entry) {
 	sys.weatherSystem = engine.NewWeatherSystem(game.World)
+	sys.weatherCombatSystem = engine.NewWeatherCombatSystem(game.World)
 	sys.lifetimeSystem = engine.NewLifetimeSystemWithLogger(game.World, clientLogger.Logger)
 	sys.puzzleSystem = engine.NewPuzzleSystem(game.World)
 
@@ -1483,6 +1485,7 @@ func registerNonCriticalSystems(game *engine.EbitenGame, sys *systemsContainer) 
 
 	// Environmental systems (deferred)
 	game.World.AddSystem(sys.weatherSystem)
+	game.World.AddSystem(sys.weatherCombatSystem)
 	game.World.AddSystem(sys.lifetimeSystem)
 	game.World.AddSystem(sys.puzzleSystem)
 	game.World.AddSystem(sys.firePropagationSystem)

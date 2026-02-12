@@ -50,7 +50,7 @@ This document tracks the audit status of all Go packages in the Venture codebase
 - [ ] `pkg/integration/` — Not Started
 - [x] `pkg/integration/companion_housing/AUDIT.md` — Needs Work — 5 issues (2 high, 1 med, 2 low)
 - [x] `pkg/integration/guild_housing/AUDIT.md` — Needs Work — 7 issues (1 high, 3 med, 3 low)
-- [ ] `pkg/integration/guild_vehicle/` — Not Started
+- [x] `pkg/integration/guild_vehicle/AUDIT.md` — Needs Work — 4 issues (1 high, 1 med, 2 low)
 
 ### Supporting
 - [x] `pkg/combat/AUDIT.md` — Complete — 0 issues

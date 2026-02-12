@@ -289,6 +289,11 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 	statusEffectLightingSystem := NewStatusEffectLightingSystem(game.World, config.Seed+2000)
 	game.World.AddSystem(statusEffectLightingSystem)
 
+	// 36b2. StatusEffectMovementSystem - applies movement speed modifiers from status effects
+	// Connects WeatherCombatSystem (chilled, wet) with MovementSystem velocity scaling
+	statusEffectMovementSystem := NewStatusEffectMovementSystem(game.World, config.Seed+2100)
+	game.World.AddSystem(statusEffectMovementSystem)
+
 	// 36c. CriticalHitParticleSystem - visual feedback for critical hits
 	criticalHitParticleSystem := NewCriticalHitParticleSystem(game.World, config.Seed+3000)
 	criticalHitParticleSystem.SetParticleSystem(result.ParticleSystem)

@@ -15,7 +15,7 @@ This document tracks the audit status of all Go packages in the Venture codebase
 - [x] `pkg/network/AUDIT_COMPLETE.md` — Complete — 0 issues (3 informational notes)
 - [x] `pkg/network/chat/AUDIT.md` — Needs Work — 7 issues (1 high, 2 med, 4 low)
 - [x] `pkg/network/trade/AUDIT.md` — Needs Work — 5 issues (0 high, 2 med, 3 low)
-- [ ] `pkg/network/resilience/` — Not Started
+- [x] `pkg/network/resilience/AUDIT.md` — Needs Work — 3 issues (1 high, 0 med, 2 low)
 
 ### Engine
 - [ ] `pkg/engine/` — Not Started
@@ -85,10 +85,10 @@ Each audit should produce a `AUDIT.md` file in the package directory following t
 ## Summary Statistics
 
 **Total Packages**: 50+  
-**Audited**: 16  
+**Audited**: 17  
 **Complete**: 4  
-**Needs Work**: 12  
+**Needs Work**: 13  
 **Incomplete**: 0  
-**Not Started**: 34+
+**Not Started**: 33+
 
-**Average Test Coverage** (audited packages): ~85% (estimated - some packages require GUI environment)
+**Average Test Coverage** (audited packages): ~86% (estimated - some packages require GUI environment)

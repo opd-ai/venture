@@ -75,6 +75,7 @@ type SystemInitResult struct {
 	ItemPickupSystem               *ItemPickupSystem
 	ProgressionSystem              *ProgressionSystem
 	CompanionProgressionSystem     *CompanionProgressionSystem
+	WeatherAudioSystem             *WeatherAudioSystem
 
 	// System wrappers
 	AnimationSystemWrapper            System
@@ -370,6 +371,14 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 	weatherGroundEffectSystem.SetParticleSystem(result.ParticleSystem)
 	weatherGroundEffectSystem.SetGenre(config.GenreID)
 	game.World.AddSystem(weatherGroundEffectSystem)
+
+	// 36h. WeatherAudioSystem - audio feedback for weather conditions
+	// Plays ambient sounds (rain, wind, etc.) when weather is active
+	weatherAudioSystem := NewWeatherAudioSystem(game.World, config.Seed+6100)
+	weatherAudioSystem.SetAudioManager(result.AudioManager)
+	weatherAudioSystem.SetGenre(config.GenreID)
+	result.WeatherAudioSystem = weatherAudioSystem
+	game.World.AddSystem(weatherAudioSystem)
 
 	// 37. LifetimeSystem - temporary entities (Phase 5.3)
 	lifetimeSystem := NewLifetimeSystemWithLogger(game.World, logger)

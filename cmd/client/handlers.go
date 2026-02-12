@@ -179,6 +179,7 @@ type systemsContainer struct {
 	behaviorTreeSystem         *engine.BehaviorTreeSystem
 	squadSystem                *engine.SquadSystem
 	factionSystem              *engine.FactionSystem
+	factionAwareAISystem       *engine.FactionAwareAISystem // Bridges faction reputation with AI hostility
 	reputationSystem           *engine.ReputationSystem
 	alignmentSystem            *engine.AlignmentSystem
 	factionReactionSystem      *engine.FactionReactionSystem
@@ -1477,6 +1478,11 @@ func registerNonCriticalSystems(game *engine.EbitenGame, sys *systemsContainer) 
 	// Faction and reputation systems
 	sys.factionSystem = engine.NewFactionSystem(game.World, game.World.GetLogger().Logger)
 	game.World.AddSystem(sys.factionSystem)
+
+	// FactionAwareAISystem: bridges faction reputation with AI hostility
+	// Makes neutral NPCs become enemies when player reputation drops to hostile (-50 or below)
+	sys.factionAwareAISystem = engine.NewFactionAwareAISystem(game.World)
+	game.World.AddSystem(sys.factionAwareAISystem)
 
 	sys.reputationSystem = engine.NewReputationSystem(game.World, game.World.GetLogger().Logger)
 	game.World.AddSystem(&reputationSystemWrapper{system: sys.reputationSystem})

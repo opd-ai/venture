@@ -182,6 +182,11 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 	factionSystem := NewFactionSystem(game.World, logger)
 	game.World.AddSystem(factionSystem)
 
+	// 16a. FactionAwareAISystem - bridges faction reputation with AI behavior
+	// Makes neutral NPCs hostile when player reputation drops below -50
+	factionAwareAISystem := NewFactionAwareAISystem(game.World)
+	game.World.AddSystem(factionAwareAISystem)
+
 	// ========================================================================
 	// PROGRESSION SYSTEMS (5 systems)
 	// ========================================================================

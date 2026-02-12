@@ -355,6 +355,13 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 	result.SpellEffectParticleSystem = spellEffectParticleSystem
 	game.World.AddSystem(spellEffectParticleSystem)
 
+	// 36g. WeatherGroundEffectSystem - visual feedback for weather ground impacts
+	// Spawns rain splashes, snow puffs, dust clouds when weather particles hit ground
+	weatherGroundEffectSystem := NewWeatherGroundEffectSystem(game.World, config.Seed+6000)
+	weatherGroundEffectSystem.SetParticleSystem(result.ParticleSystem)
+	weatherGroundEffectSystem.SetGenre(config.GenreID)
+	game.World.AddSystem(weatherGroundEffectSystem)
+
 	// 37. LifetimeSystem - temporary entities (Phase 5.3)
 	lifetimeSystem := NewLifetimeSystemWithLogger(game.World, logger)
 	game.World.AddSystem(lifetimeSystem)

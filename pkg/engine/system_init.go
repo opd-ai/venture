@@ -389,6 +389,11 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 	result.WeatherAudioSystem = weatherAudioSystem
 	game.World.AddSystem(weatherAudioSystem)
 
+	// 36i. WeatherAwareAISystem - modifies AI detection ranges based on weather
+	// Connects WeatherSystem with AISystem for tactical stealth gameplay
+	weatherAwareAISystem := NewWeatherAwareAISystem(game.World, config.Seed+6200)
+	game.World.AddSystem(weatherAwareAISystem)
+
 	// 37. LifetimeSystem - temporary entities (Phase 5.3)
 	lifetimeSystem := NewLifetimeSystemWithLogger(game.World, logger)
 	game.World.AddSystem(lifetimeSystem)

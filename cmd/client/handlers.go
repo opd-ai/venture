@@ -187,6 +187,7 @@ type systemsContainer struct {
 	weatherSystem              *engine.WeatherSystem
 	weatherCombatSystem        *engine.WeatherCombatSystem
 	statusEffectLightingSystem *engine.StatusEffectLightingSystem // Connects status effects to lighting for visual feedback
+	criticalHitParticleSystem  *engine.CriticalHitParticleSystem  // Connects combat crits to particle effects
 	lifetimeSystem             *engine.LifetimeSystem
 	puzzleSystem               *engine.PuzzleSystem
 	firePropagationSystem      *engine.FirePropagationSystem
@@ -851,6 +852,10 @@ func initializeEnvironmentalSystems(game *engine.EbitenGame, sys *systemsContain
 	sys.weatherSystem = engine.NewWeatherSystem(game.World)
 	sys.weatherCombatSystem = engine.NewWeatherCombatSystem(game.World)
 	sys.statusEffectLightingSystem = engine.NewStatusEffectLightingSystem(game.World, *seed+2000)
+	sys.criticalHitParticleSystem = engine.NewCriticalHitParticleSystem(game.World, *seed+3000)
+	sys.criticalHitParticleSystem.SetParticleSystem(sys.particleSystem)
+	sys.criticalHitParticleSystem.SetGenre(*genreID)
+	sys.combatSystem.SetCriticalHitCallback(sys.criticalHitParticleSystem.OnCriticalHit)
 	sys.lifetimeSystem = engine.NewLifetimeSystemWithLogger(game.World, clientLogger.Logger)
 	sys.puzzleSystem = engine.NewPuzzleSystem(game.World)
 
@@ -1489,6 +1494,7 @@ func registerNonCriticalSystems(game *engine.EbitenGame, sys *systemsContainer) 
 	game.World.AddSystem(sys.weatherSystem)
 	game.World.AddSystem(sys.weatherCombatSystem)
 	game.World.AddSystem(sys.statusEffectLightingSystem) // Status effect visual feedback via lighting
+	game.World.AddSystem(sys.criticalHitParticleSystem)  // Critical hit visual feedback via particles
 	game.World.AddSystem(sys.lifetimeSystem)
 	game.World.AddSystem(sys.puzzleSystem)
 	game.World.AddSystem(sys.firePropagationSystem)

@@ -281,6 +281,13 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 	statusEffectLightingSystem := NewStatusEffectLightingSystem(game.World, config.Seed+2000)
 	game.World.AddSystem(statusEffectLightingSystem)
 
+	// 36c. CriticalHitParticleSystem - visual feedback for critical hits
+	criticalHitParticleSystem := NewCriticalHitParticleSystem(game.World, config.Seed+3000)
+	criticalHitParticleSystem.SetParticleSystem(result.ParticleSystem)
+	criticalHitParticleSystem.SetGenre(config.GenreID)
+	result.CombatSystem.SetCriticalHitCallback(criticalHitParticleSystem.OnCriticalHit)
+	game.World.AddSystem(criticalHitParticleSystem)
+
 	// 37. LifetimeSystem - temporary entities (Phase 5.3)
 	lifetimeSystem := NewLifetimeSystemWithLogger(game.World, logger)
 	game.World.AddSystem(lifetimeSystem)

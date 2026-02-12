@@ -42,6 +42,9 @@ type CombatSystem struct {
 	// Callback for when damage is dealt
 	onDamageCallback func(attacker, target *Entity, damage float64)
 
+	// Callback for when a critical hit occurs
+	onCriticalHitCallback func(attacker, target *Entity, damage float64)
+
 	// Logger for combat events
 	logger *logrus.Entry
 }
@@ -454,6 +457,11 @@ func (s *CombatSystem) applyDamageAndFeedback(attacker, target *Entity, health *
 
 	if s.onDamageCallback != nil {
 		s.onDamageCallback(attacker, target, finalDamage)
+	}
+
+	// Trigger critical hit callback for visual effects
+	if isCrit && s.onCriticalHitCallback != nil {
+		s.onCriticalHitCallback(attacker, target, finalDamage)
 	}
 }
 
@@ -908,6 +916,14 @@ func (s *CombatSystem) SetDamageCallback(callback func(attacker, target *Entity,
 		s.logger.Debug("damage callback registered")
 	}
 	s.onDamageCallback = callback
+}
+
+// SetCriticalHitCallback sets the callback function for critical hits.
+func (s *CombatSystem) SetCriticalHitCallback(callback func(attacker, target *Entity, damage float64)) {
+	if s.logger != nil {
+		s.logger.Debug("critical hit callback registered")
+	}
+	s.onCriticalHitCallback = callback
 }
 
 // isValidEnemyTarget checks if entity is a valid enemy target.

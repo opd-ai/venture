@@ -9,13 +9,13 @@ import (
 // TestEbitenGame_Layout verifies that the Layout method adapts to outside dimensions.
 func TestEbitenGame_Layout(t *testing.T) {
 	tests := []struct {
-		name           string
-		initialWidth   int
-		initialHeight  int
-		outsideWidth   int
-		outsideHeight  int
-		expectWidth    int
-		expectHeight   int
+		name          string
+		initialWidth  int
+		initialHeight int
+		outsideWidth  int
+		outsideHeight int
+		expectWidth   int
+		expectHeight  int
 	}{
 		{
 			name:          "adapts_to_browser_window",
@@ -166,4 +166,3 @@ func TestEbitenGame_Layout_SkipsRedundantResize(t *testing.T) {
 		t.Error("sceneBuffer was reallocated despite no dimension change")
 	}
 }
-

@@ -106,42 +106,55 @@ func (cct *CharacterCreationTutorial) Update(currentCreationStep int, deltaTime 
 		return
 	}
 
-	// Update notification TTL
+	cct.updateNotification(deltaTime)
+
+	if cct.handleSkipInput() {
+		return
+	}
+
+	if cct.handleWelcomeStep(currentCreationStep) {
+		return
+	}
+
+	cct.synchronizeTutorialProgress(currentCreationStep)
+}
+
+// updateNotification decrements notification timer and clears message when expired.
+func (cct *CharacterCreationTutorial) updateNotification(deltaTime float64) {
 	if cct.NotificationTTL > 0 {
 		cct.NotificationTTL -= deltaTime
 		if cct.NotificationTTL <= 0 {
 			cct.NotificationMsg = ""
 		}
 	}
+}
 
-	// Handle skip input (F3 key - F1 is help, F2 is save defaults)
+// handleSkipInput processes F3 key press to skip tutorial. Returns true if skipped.
+func (cct *CharacterCreationTutorial) handleSkipInput() bool {
 	if inpututil.IsKeyJustPressed(ebiten.KeyF3) {
 		cct.SkipTutorial()
-		return
+		return true
 	}
+	return false
+}
 
-	// Synchronize tutorial step with character creation step.
-	// Map creation steps to tutorial steps:
-	// stepNameInput (0) -> tutorial step 1 (name_input)
-	// stepClassSelection (1) -> tutorial step 2 (class_selection)
-	// stepPortraitSelection (2) -> tutorial step 3 (portrait_selection)
-	// stepConfirmation (3) -> tutorial step 4 (confirmation)
-	targetTutorialStep := currentCreationStep + 1 // +1 because tutorial step 0 is welcome
-
-	// Auto-advance the welcome step when the user starts interacting.
-	// Advance on any key press or text input so the name_input guidance
-	// appears as soon as the player begins typing.
+// handleWelcomeStep manages auto-advance of the welcome screen on user input. Returns true if on welcome step.
+func (cct *CharacterCreationTutorial) handleWelcomeStep(currentCreationStep int) bool {
 	if cct.CurrentStepIdx == 0 && currentCreationStep == 0 {
 		chars := ebiten.AppendInputChars(nil)
 		if len(chars) > 0 || inpututil.IsKeyJustPressed(ebiten.KeyEnter) || inpututil.IsKeyJustPressed(ebiten.KeySpace) {
 			cct.advanceStep()
 		}
-		return
+		return true
 	}
+	return false
+}
 
-	// Advance tutorial steps to match creation progress
+// synchronizeTutorialProgress advances tutorial steps to match character creation progress.
+func (cct *CharacterCreationTutorial) synchronizeTutorialProgress(currentCreationStep int) {
+	targetTutorialStep := currentCreationStep + 1
+
 	if targetTutorialStep > cct.CurrentStepIdx && cct.CurrentStepIdx < len(cct.Steps) {
-		// Mark intermediate steps as completed
 		for cct.CurrentStepIdx < targetTutorialStep && cct.CurrentStepIdx < len(cct.Steps) {
 			cct.Steps[cct.CurrentStepIdx].Completed = true
 			cct.CurrentStepIdx++
@@ -153,7 +166,6 @@ func (cct *CharacterCreationTutorial) Update(currentCreationStep int, deltaTime 
 		}
 	}
 
-	// Check if tutorial is complete (all steps done)
 	if cct.CurrentStepIdx >= len(cct.Steps) {
 		cct.CompleteTutorial()
 	}

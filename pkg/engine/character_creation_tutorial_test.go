@@ -437,7 +437,7 @@ func TestTutorialCompletionComponent_Type(t *testing.T) {
 // TestShouldShowCreationTutorial tests first-time player detection.
 func TestShouldShowCreationTutorial(t *testing.T) {
 	tests := []struct {
-		name string
+		name  string
 		setup func() *Entity
 		want  bool
 	}{
@@ -636,10 +636,10 @@ func TestCharacterCreationTutorial_AllCharacterOptions(t *testing.T) {
 
 	// Verify that all character creation steps have corresponding tutorial steps
 	requiredSteps := map[string]bool{
-		"name_input":          false, // stepNameInput
-		"class_selection":     false, // stepClassSelection
-		"portrait_selection":  false, // stepPortraitSelection
-		"confirmation":        false, // stepConfirmation
+		"name_input":         false, // stepNameInput
+		"class_selection":    false, // stepClassSelection
+		"portrait_selection": false, // stepPortraitSelection
+		"confirmation":       false, // stepConfirmation
 	}
 
 	for _, step := range cct.Steps {

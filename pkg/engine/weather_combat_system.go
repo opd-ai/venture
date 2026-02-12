@@ -41,33 +41,29 @@ func NewWeatherCombatSystem(world *World) *WeatherCombatSystem {
 
 // Update processes all entities and applies weather-based status effects.
 func (s *WeatherCombatSystem) Update(entities []*Entity, deltaTime float64) {
-	// First, find the active weather type from any weather entity.
 	weatherType, intensity, found := s.findActiveWeather(entities)
 	if !found {
 		return
 	}
 
-	// Update cooldowns.
+	s.updateCooldowns(deltaTime)
+	s.applyWeatherEffectsToEntities(entities, weatherType, intensity)
+}
+
+// updateCooldowns decrements cooldown timers and removes expired entries.
+func (s *WeatherCombatSystem) updateCooldowns(deltaTime float64) {
 	for id, cd := range s.cooldowns {
 		s.cooldowns[id] = cd - deltaTime
 		if s.cooldowns[id] <= 0 {
 			delete(s.cooldowns, id)
 		}
 	}
+}
 
-	// Apply weather effects to entities with health (players, NPCs, enemies).
+// applyWeatherEffectsToEntities applies weather status effects to eligible entities.
+func (s *WeatherCombatSystem) applyWeatherEffectsToEntities(entities []*Entity, weatherType particles.WeatherType, intensity particles.WeatherIntensity) {
 	for _, entity := range entities {
-		if !entity.HasComponent("health") {
-			continue
-		}
-
-		// Skip entities still on cooldown.
-		if _, onCooldown := s.cooldowns[entity.ID]; onCooldown {
-			continue
-		}
-
-		// Skip if entity already has a weather-sourced status effect.
-		if s.hasWeatherEffect(entity) {
+		if !s.isEligibleForWeatherEffect(entity) {
 			continue
 		}
 
@@ -78,16 +74,34 @@ func (s *WeatherCombatSystem) Update(entities []*Entity, deltaTime float64) {
 
 		entity.AddComponent(effect)
 		s.cooldowns[entity.ID] = s.applyCooldown
+		s.logEffectApplication(entity, weatherType, effect)
+	}
+}
 
-		if s.logger != nil {
-			s.logger.WithFields(logrus.Fields{
-				"entityID":    entity.ID,
-				"weather":     weatherType.String(),
-				"effect_type": effect.EffectType,
-				"magnitude":   effect.Magnitude,
-				"duration":    effect.Duration,
-			}).Debug("applied weather status effect")
-		}
+// isEligibleForWeatherEffect checks if an entity can receive a weather effect.
+func (s *WeatherCombatSystem) isEligibleForWeatherEffect(entity *Entity) bool {
+	if !entity.HasComponent("health") {
+		return false
+	}
+	if _, onCooldown := s.cooldowns[entity.ID]; onCooldown {
+		return false
+	}
+	if s.hasWeatherEffect(entity) {
+		return false
+	}
+	return true
+}
+
+// logEffectApplication logs the application of a weather effect to an entity.
+func (s *WeatherCombatSystem) logEffectApplication(entity *Entity, weatherType particles.WeatherType, effect *StatusEffectComponent) {
+	if s.logger != nil {
+		s.logger.WithFields(logrus.Fields{
+			"entityID":    entity.ID,
+			"weather":     weatherType.String(),
+			"effect_type": effect.EffectType,
+			"magnitude":   effect.Magnitude,
+			"duration":    effect.Duration,
+		}).Debug("applied weather status effect")
 	}
 }
 

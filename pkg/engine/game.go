@@ -25,14 +25,14 @@ type EbitenGame struct {
 	Paused         bool
 
 	// Application state management
-	StateManager         *AppStateManager
-	MainMenuUI           *MainMenuUI
-	SinglePlayerMenu     *SinglePlayerMenu   // Submenu for single-player options
-	GenreSelectionMenu   *GenreSelectionMenu // Genre selection for single-player
-	MultiplayerMenu      *MultiplayerMenu    // Submenu for multiplayer options
-	ServerAddressInput   *ServerAddressInput // Text input for server address
-	SettingsUI           *SettingsUI
-	SettingsManager      *SettingsManager
+	StateManager              *AppStateManager
+	MainMenuUI                *MainMenuUI
+	SinglePlayerMenu          *SinglePlayerMenu   // Submenu for single-player options
+	GenreSelectionMenu        *GenreSelectionMenu // Genre selection for single-player
+	MultiplayerMenu           *MultiplayerMenu    // Submenu for multiplayer options
+	ServerAddressInput        *ServerAddressInput // Text input for server address
+	SettingsUI                *SettingsUI
+	SettingsManager           *SettingsManager
 	CharacterCreation         *EbitenCharacterCreation
 	CharacterCreationTutorial *CharacterCreationTutorial // Tutorial overlay for character creation
 	LoadingUI                 *LoadingUI                 // World generation loading screen (Phase Performance Audit)
@@ -326,39 +326,39 @@ func initializeUIComponents(world *World, screenWidth, screenHeight int, setting
 // buildGameInstance constructs the EbitenGame struct with all components.
 func buildGameInstance(screenWidth, screenHeight int, world *World, logEntry *logrus.Entry, core *coreComponents, ui *uiComponents) *EbitenGame {
 	return &EbitenGame{
-		World:              world,
-		lastUpdateTime:     time.Now(),
-		ScreenWidth:        screenWidth,
-		ScreenHeight:       screenHeight,
-		StateManager:       NewAppStateManager(),
-		MainMenuUI:         ui.mainMenuUI,
-		SinglePlayerMenu:   ui.singlePlayerMenu,
-		GenreSelectionMenu: ui.genreSelectionMenu,
-		MultiplayerMenu:    ui.multiplayerMenu,
-		ServerAddressInput: ui.serverAddressInput,
-		SettingsUI:         ui.settingsUI,
-		SettingsManager:    core.settingsManager,
+		World:                     world,
+		lastUpdateTime:            time.Now(),
+		ScreenWidth:               screenWidth,
+		ScreenHeight:              screenHeight,
+		StateManager:              NewAppStateManager(),
+		MainMenuUI:                ui.mainMenuUI,
+		SinglePlayerMenu:          ui.singlePlayerMenu,
+		GenreSelectionMenu:        ui.genreSelectionMenu,
+		MultiplayerMenu:           ui.multiplayerMenu,
+		ServerAddressInput:        ui.serverAddressInput,
+		SettingsUI:                ui.settingsUI,
+		SettingsManager:           core.settingsManager,
 		CharacterCreation:         ui.characterCreation,
 		CharacterCreationTutorial: NewCharacterCreationTutorial(),
 		LoadingUI:                 NewLoadingUI(screenWidth, screenHeight),
-		CameraSystem:       core.cameraSystem,
-		RenderSystem:       core.renderSystem,
-		LightingSystem:     core.lightingSystem,
-		sceneBuffer:        core.sceneBuffer,
-		HUDSystem:          core.hudSystem,
-		MenuSystem:         core.menuSystem,
-		InventoryUI:        ui.inventoryUI,
-		QuestUI:            ui.questUI,
-		CharacterUI:        ui.characterUI,
-		SkillsUI:           ui.skillsUI,
-		MapUI:              ui.mapUI,
-		GalleryUI:          ui.galleryUI,
-		HousingUI:          ui.housingUI, // V8.0 Housing UI (Phase 49.1) - INTEGRATION FIX [Category B]
-		GuildUI:            ui.guildUI,   // Phase 3.2 Guild UI (PLAN.md)
-		logger:             logEntry,
-		frameTimeTracker:   core.frameTimeTracker,
-		frameCount:         0,
-		profilingEnabled:   false,
+		CameraSystem:              core.cameraSystem,
+		RenderSystem:              core.renderSystem,
+		LightingSystem:            core.lightingSystem,
+		sceneBuffer:               core.sceneBuffer,
+		HUDSystem:                 core.hudSystem,
+		MenuSystem:                core.menuSystem,
+		InventoryUI:               ui.inventoryUI,
+		QuestUI:                   ui.questUI,
+		CharacterUI:               ui.characterUI,
+		SkillsUI:                  ui.skillsUI,
+		MapUI:                     ui.mapUI,
+		GalleryUI:                 ui.galleryUI,
+		HousingUI:                 ui.housingUI, // V8.0 Housing UI (Phase 49.1) - INTEGRATION FIX [Category B]
+		GuildUI:                   ui.guildUI,   // Phase 3.2 Guild UI (PLAN.md)
+		logger:                    logEntry,
+		frameTimeTracker:          core.frameTimeTracker,
+		frameCount:                0,
+		profilingEnabled:          false,
 	}
 }
 

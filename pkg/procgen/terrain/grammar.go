@@ -196,13 +196,30 @@ func (g *GraphGrammarGenerator) GenerateGraph(width, height int) (*DungeonGraph,
 // The genreID in params is used to select genre-specific L-system rules.
 // Width and height are extracted from params.Custom["width"] and params.Custom["height"].
 func (g *GraphGrammarGenerator) Generate(seed int64, params procgen.GenerationParams) (interface{}, error) {
-	// Validate parameters
 	if err := procgen.ValidateParams(params); err != nil {
 		return nil, fmt.Errorf("invalid generation parameters: %w", err)
 	}
 
-	// Extract width and height from custom parameters
-	width, height := 80, 50 // Default dimensions
+	width, height, err := extractDimensions(params)
+	if err != nil {
+		return nil, err
+	}
+
+	config := selectGenreConfig(seed, params.GenreID)
+	adjustConfigForDifficulty(&config, params)
+
+	tempGen := NewGraphGrammarGenerator(config)
+	graph, err := tempGen.GenerateGraph(width, height)
+	if err != nil {
+		return nil, fmt.Errorf("failed to generate dungeon graph: %w", err)
+	}
+
+	return graph, nil
+}
+
+// extractDimensions extracts and validates width and height from generation parameters.
+func extractDimensions(params procgen.GenerationParams) (int, int, error) {
+	width, height := 80, 50
 	if params.Custom != nil {
 		if w, ok := params.Custom["width"].(int); ok && w > 0 {
 			width = w
@@ -212,59 +229,46 @@ func (g *GraphGrammarGenerator) Generate(seed int64, params procgen.GenerationPa
 		}
 	}
 
-	// Validate dimensions
 	if err := procgen.ValidateDimensions(width, height, 20, 20, 500, 500); err != nil {
-		return nil, fmt.Errorf("invalid dungeon dimensions: %w", err)
+		return 0, 0, fmt.Errorf("invalid dungeon dimensions: %w", err)
 	}
 
-	// Get genre-specific L-system configuration
-	var config LSystemConfig
-	switch params.GenreID {
+	return width, height, nil
+}
+
+// selectGenreConfig returns the appropriate L-system configuration for the given genre.
+func selectGenreConfig(seed int64, genreID string) LSystemConfig {
+	switch genreID {
 	case "fantasy":
-		config = GetFantasyConfig(seed)
+		return GetFantasyConfig(seed)
 	case "scifi", "sci-fi":
-		config = GetSciFiConfig(seed)
+		return GetSciFiConfig(seed)
 	case "horror":
-		config = GetHorrorConfig(seed)
+		return GetHorrorConfig(seed)
 	case "cyberpunk":
-		config = GetCyberpunkConfig(seed)
+		return GetCyberpunkConfig(seed)
 	case "post-apocalyptic", "postapocalyptic":
-		config = GetPostApocalypticConfig(seed)
+		return GetPostApocalypticConfig(seed)
 	default:
-		// Default to fantasy for unknown genres
-		config = GetFantasyConfig(seed)
+		return GetFantasyConfig(seed)
 	}
+}
 
-	// Adjust room counts based on difficulty and depth
-	// Higher difficulty = more rooms (more challenging navigation)
-	// Higher depth = more complex layouts
+// adjustConfigForDifficulty modifies room counts based on difficulty and depth parameters.
+func adjustConfigForDifficulty(config *LSystemConfig, params procgen.GenerationParams) {
 	roomMultiplier := 1.0 + (params.Difficulty * 0.5) + (float64(params.Depth) * 0.1)
 	config.MinRoomCount = int(float64(config.MinRoomCount) * roomMultiplier)
 	config.MaxRoomCount = int(float64(config.MaxRoomCount) * roomMultiplier)
 
-	// Prevent excessive room counts
 	if config.MinRoomCount > 50 {
 		config.MinRoomCount = 50
 	}
 	if config.MaxRoomCount > 100 {
 		config.MaxRoomCount = 100
 	}
-
-	// Ensure MinRoomCount doesn't exceed MaxRoomCount
 	if config.MinRoomCount > config.MaxRoomCount {
 		config.MinRoomCount = config.MaxRoomCount
 	}
-
-	// Create a temporary generator with the updated config
-	tempGen := NewGraphGrammarGenerator(config)
-
-	// Generate the dungeon graph
-	graph, err := tempGen.GenerateGraph(width, height)
-	if err != nil {
-		return nil, fmt.Errorf("failed to generate dungeon graph: %w", err)
-	}
-
-	return graph, nil
 }
 
 // Validate implements the procgen.Generator interface.

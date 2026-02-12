@@ -11,17 +11,44 @@ import (
 
 // FileWatcherDemo demonstrates FileSystemFileWatcher usage
 func main() {
-	// Create temporary directory for demo
-	tmpDir, err := os.MkdirTemp("", "filewatcher-demo-")
+	tmpDir, err := setupDemoEnvironment()
 	if err != nil {
-		log.Fatalf("Failed to create temp dir: %v", err)
+		log.Fatalf("Failed to setup demo: %v", err)
 	}
 	defer os.RemoveAll(tmpDir)
 
 	fmt.Printf("Demo directory: %s\n\n", tmpDir)
 
-	// Create a sample mod file
 	modID := "demo-mod"
+	if err := createInitialModFile(tmpDir, modID); err != nil {
+		log.Fatalf("Failed to create mod file: %v", err)
+	}
+
+	watcher := engine.NewFileSystemFileWatcher(tmpDir)
+	fmt.Println("✓ Created FileSystemFileWatcher")
+
+	if err := verifyInitialModState(watcher, modID); err != nil {
+		log.Fatalf("Initial verification failed: %v", err)
+	}
+
+	if err := simulateModUpdate(tmpDir, watcher, modID); err != nil {
+		log.Fatalf("Update simulation failed: %v", err)
+	}
+
+	displayUsageInstructions()
+}
+
+// setupDemoEnvironment creates a temporary directory for the demo.
+func setupDemoEnvironment() (string, error) {
+	tmpDir, err := os.MkdirTemp("", "filewatcher-demo-")
+	if err != nil {
+		return "", fmt.Errorf("failed to create temp dir: %w", err)
+	}
+	return tmpDir, nil
+}
+
+// createInitialModFile creates the initial demo mod file.
+func createInitialModFile(tmpDir, modID string) error {
 	modJSON := []byte(`{
   "id": "demo-mod",
   "name": "Demo Mod",
@@ -34,37 +61,44 @@ func main() {
 }`)
 	modFile := filepath.Join(tmpDir, modID+".json")
 	if err := os.WriteFile(modFile, modJSON, 0o644); err != nil {
-		log.Fatalf("Failed to write mod file: %v", err)
+		return fmt.Errorf("failed to write mod file: %w", err)
 	}
+	return nil
+}
 
-	// Create FileSystemFileWatcher
-	watcher := engine.NewFileSystemFileWatcher(tmpDir)
-	fmt.Println("✓ Created FileSystemFileWatcher")
-
-	// Get initial hash
-	hash1, err := watcher.GetFileHash(modID)
+// verifyInitialModState checks hash, version, and data of the initial mod.
+func verifyInitialModState(watcher *engine.FileSystemFileWatcher, modID string) error {
+	hash, err := watcher.GetFileHash(modID)
 	if err != nil {
-		log.Fatalf("GetFileHash failed: %v", err)
+		return fmt.Errorf("GetFileHash failed: %w", err)
 	}
-	fmt.Printf("✓ Initial hash: %s\n", hash1[:16]+"...")
+	fmt.Printf("✓ Initial hash: %s\n", hash[:16]+"...")
 
-	// Get version
 	version, err := watcher.GetModVersion(modID)
 	if err != nil {
-		log.Fatalf("GetModVersion failed: %v", err)
+		return fmt.Errorf("GetModVersion failed: %w", err)
 	}
 	fmt.Printf("✓ Version: %s\n", version)
 
-	// Get mod data
 	data, err := watcher.GetModData(modID)
 	if err != nil {
-		log.Fatalf("GetModData failed: %v", err)
+		return fmt.Errorf("GetModData failed: %w", err)
 	}
 	fmt.Printf("✓ Mod data size: %d bytes\n", len(data))
 
-	// Simulate file change
+	return nil
+}
+
+// simulateModUpdate modifies the mod file and verifies hot reload detection.
+func simulateModUpdate(tmpDir string, watcher *engine.FileSystemFileWatcher, modID string) error {
 	fmt.Println("\nSimulating mod file update...")
-	modJSON2 := []byte(`{
+
+	hash1, err := watcher.GetFileHash(modID)
+	if err != nil {
+		return fmt.Errorf("failed to get initial hash: %w", err)
+	}
+
+	modJSON := []byte(`{
   "id": "demo-mod",
   "name": "Demo Mod",
   "version": "2.0.0",
@@ -74,35 +108,37 @@ func main() {
     "difficulty": 3.0
   }
 }`)
-	if err := os.WriteFile(modFile, modJSON2, 0o644); err != nil {
-		log.Fatalf("Failed to update mod file: %v", err)
+	modFile := filepath.Join(tmpDir, modID+".json")
+	if err := os.WriteFile(modFile, modJSON, 0o644); err != nil {
+		return fmt.Errorf("failed to update mod file: %w", err)
 	}
 
-	// Invalidate cache to detect change
 	watcher.InvalidateCache(modID)
 	fmt.Println("✓ Cache invalidated")
 
-	// Get new hash
 	hash2, err := watcher.GetFileHash(modID)
 	if err != nil {
-		log.Fatalf("GetFileHash (updated) failed: %v", err)
+		return fmt.Errorf("GetFileHash (updated) failed: %w", err)
 	}
 	fmt.Printf("✓ Updated hash: %s\n", hash2[:16]+"...")
 
-	// Verify hash changed
 	if hash1 == hash2 {
-		log.Fatal("ERROR: Hash should have changed!")
+		return fmt.Errorf("hash should have changed")
 	}
 	fmt.Println("✓ Hash changed successfully (hot reload detected)")
 
-	// Get updated version
-	version2, err := watcher.GetModVersion(modID)
+	version, err := watcher.GetModVersion(modID)
 	if err != nil {
-		log.Fatalf("GetModVersion (updated) failed: %v", err)
+		return fmt.Errorf("GetModVersion (updated) failed: %w", err)
 	}
-	fmt.Printf("✓ Updated version: %s\n", version2)
+	fmt.Printf("✓ Updated version: %s\n", version)
 
 	fmt.Println("\n✓ FileSystemFileWatcher demo complete!")
+	return nil
+}
+
+// displayUsageInstructions shows how to integrate the file watcher.
+func displayUsageInstructions() {
 	fmt.Println("\nUsage with HotReloadSystem:")
 	fmt.Println("  watcher := engine.NewFileSystemFileWatcher(\"mods\")")
 	fmt.Println("  hotReload := engine.NewHotReloadSystem(world, modManager)")

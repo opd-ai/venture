@@ -14,46 +14,24 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-func setupModBrowserWithFilesystem() {
-	// 1. Create ECS world
-	world := engine.NewWorld()
-
-	// 2. Create modding manager for actual mod loading
-	moddingManager := modding.NewManager()
-
-	// 3. Create filesystem mod repository
-	repo := engine.NewFileSystemModRepository("mods")
-
-	// Optional: Enable debug logging for troubleshooting
-	logger := logrus.New()
-	logger.SetLevel(logrus.DebugLevel)
-	repo.SetLogger(logger)
-
-	// 4. Create mod browser system
-	browserSystem := engine.NewModBrowserSystem(world)
-	browserSystem.SetRepository(repo)
-
-	// 5. Set install callback to integrate with modding manager
-	browserSystem.SetInstallCallback(func(modID string, modData []byte) error {
+// createModInstallCallback creates a callback function for installing mods.
+func createModInstallCallback(moddingManager *modding.Manager) func(string, []byte) error {
+	return func(modID string, modData []byte) error {
 		log.Printf("Installing mod: %s", modID)
 
-		// Parse mod data
 		var mod modding.Mod
 		if err := json.Unmarshal(modData, &mod); err != nil {
 			return err
 		}
 
-		// Add to modding manager
 		if err := moddingManager.AddMod(&mod); err != nil {
 			return err
 		}
 
-		// Enable the mod
 		if err := moddingManager.EnableMod(mod.ID); err != nil {
 			return err
 		}
 
-		// Apply rules if it's a rule mod
 		if mod.Type == modding.ModTypeRule {
 			if err := moddingManager.ApplyRules(); err != nil {
 				return err
@@ -62,10 +40,12 @@ func setupModBrowserWithFilesystem() {
 
 		log.Printf("Successfully installed mod: %s", mod.Name)
 		return nil
-	})
+	}
+}
 
-	// 6. Set uninstall callback
-	browserSystem.SetUninstallCallback(func(modID string) error {
+// createModUninstallCallback creates a callback function for uninstalling mods.
+func createModUninstallCallback(moddingManager *modding.Manager) func(string) error {
+	return func(modID string) error {
 		log.Printf("Uninstalling mod: %s", modID)
 
 		if err := moddingManager.RemoveMod(modID); err != nil {
@@ -74,21 +54,42 @@ func setupModBrowserWithFilesystem() {
 
 		log.Printf("Successfully uninstalled mod: %s", modID)
 		return nil
-	})
+	}
+}
 
-	// 7. Create mod browser entity
+// initializeModRepository creates and configures a filesystem mod repository with debug logging.
+func initializeModRepository() *engine.FileSystemModRepository {
+	repo := engine.NewFileSystemModRepository("mods")
+	logger := logrus.New()
+	logger.SetLevel(logrus.DebugLevel)
+	repo.SetLogger(logger)
+	return repo
+}
+
+// setupBrowserSystem creates and configures a mod browser system with callbacks.
+func setupBrowserSystem(world *engine.World, repo *engine.FileSystemModRepository, moddingManager *modding.Manager) *engine.ModBrowserSystem {
+	browserSystem := engine.NewModBrowserSystem(world)
+	browserSystem.SetRepository(repo)
+	browserSystem.SetInstallCallback(createModInstallCallback(moddingManager))
+	browserSystem.SetUninstallCallback(createModUninstallCallback(moddingManager))
+	return browserSystem
+}
+
+// loadAvailableMods initializes browser entity and loads available mods.
+func loadAvailableMods(world *engine.World, browserSystem *engine.ModBrowserSystem) (*engine.Entity, *engine.ModBrowserComponent) {
 	entity := world.CreateEntity()
 	browserComp := engine.NewModBrowserComponent()
 	entity.AddComponent(browserComp)
-
-	// 8. Trigger initial mod fetch
 	browserComp.RefreshPending = true
 
-	// 9. Update system to load mods
 	entities := []*engine.Entity{entity}
-	browserSystem.Update(entities, 0.016) // One frame
+	browserSystem.Update(entities, 0.016)
 
-	// 10. Access loaded mods
+	return entity, browserComp
+}
+
+// displayAvailableMods logs all available mods with their status.
+func displayAvailableMods(browserComp *engine.ModBrowserComponent) {
 	availableMods := browserComp.GetFilteredMods()
 	log.Printf("Loaded %d mods from filesystem", len(availableMods))
 
@@ -100,33 +101,46 @@ func setupModBrowserWithFilesystem() {
 			log.Printf("    Status: Available for download")
 		}
 	}
+}
 
-	// Example: Install a mod programmatically
-	if len(availableMods) > 0 {
-		modToInstall := availableMods[0]
-		log.Printf("Installing mod: %s", modToInstall.Name)
-
-		// Download and install
-		data, err := repo.DownloadMod(modToInstall.ID, func(downloaded, total int64) {
-			progress := float64(downloaded) / float64(total) * 100
-			log.Printf("Download progress: %.1f%%", progress)
-		})
-		if err != nil {
-			log.Fatalf("Download failed: %v", err)
-		}
-
-		// Trigger install callback
-		var mod modding.Mod
-		if err := json.Unmarshal(data, &mod); err != nil {
-			log.Printf("Failed to unmarshal mod data: %v", err)
-		} else {
-			moddingManager.AddMod(&mod)
-			moddingManager.EnableMod(mod.ID)
-
-			browserComp.SetInstalled(modToInstall.ID, true)
-			log.Printf("Mod installed successfully!")
-		}
+// installFirstAvailableMod downloads and installs the first available mod as an example.
+func installFirstAvailableMod(repo *engine.FileSystemModRepository, browserComp *engine.ModBrowserComponent, moddingManager *modding.Manager) {
+	availableMods := browserComp.GetFilteredMods()
+	if len(availableMods) == 0 {
+		return
 	}
+
+	modToInstall := availableMods[0]
+	log.Printf("Installing mod: %s", modToInstall.Name)
+
+	data, err := repo.DownloadMod(modToInstall.ID, func(downloaded, total int64) {
+		progress := float64(downloaded) / float64(total) * 100
+		log.Printf("Download progress: %.1f%%", progress)
+	})
+	if err != nil {
+		log.Fatalf("Download failed: %v", err)
+	}
+
+	var mod modding.Mod
+	if err := json.Unmarshal(data, &mod); err != nil {
+		log.Printf("Failed to unmarshal mod data: %v", err)
+		return
+	}
+
+	moddingManager.AddMod(&mod)
+	moddingManager.EnableMod(mod.ID)
+	browserComp.SetInstalled(modToInstall.ID, true)
+	log.Printf("Mod installed successfully!")
+}
+
+func setupModBrowserWithFilesystem() {
+	world := engine.NewWorld()
+	moddingManager := modding.NewManager()
+	repo := initializeModRepository()
+	browserSystem := setupBrowserSystem(world, repo, moddingManager)
+	_, browserComp := loadAvailableMods(world, browserSystem)
+	displayAvailableMods(browserComp)
+	installFirstAvailableMod(repo, browserComp, moddingManager)
 }
 
 // This function would be called during client initialization, likely in

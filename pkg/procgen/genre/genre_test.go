@@ -2,7 +2,6 @@ package genre
 
 import (
 	"testing"
-	"time"
 )
 
 func TestGenre_Validate(t *testing.T) {
@@ -513,7 +512,7 @@ func TestGetTheme(t *testing.T) {
 }
 
 func TestGetTheme_Random(t *testing.T) {
-	// Test that "random" returns a valid genre
+	// Test that "random" returns a valid genre (uses seed 0 for backwards compatibility)
 	theme := GetTheme("random")
 	if theme == nil {
 		t.Fatal("GetTheme('random') returned nil")
@@ -532,39 +531,62 @@ func TestGetTheme_Random(t *testing.T) {
 	}
 }
 
+func TestGetThemeWithSeed(t *testing.T) {
+	tests := []struct {
+		name    string
+		genreID string
+		seed    int64
+		wantID  string
+	}{
+		{"fantasy explicit", "fantasy", 12345, "fantasy"},
+		{"scifi explicit", "scifi", 12345, "scifi"},
+		{"random with seed", "random", 12345, ""}, // ID will be determined by seed
+		{"unknown defaults to fantasy", "unknown", 12345, "fantasy"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			theme := GetThemeWithSeed(tt.genreID, tt.seed)
+			if theme == nil {
+				t.Fatal("GetThemeWithSeed returned nil")
+			}
+			if tt.wantID != "" && theme.ID != tt.wantID {
+				t.Errorf("GetThemeWithSeed() ID = %v, want %v", theme.ID, tt.wantID)
+			}
+			if err := theme.Validate(); err != nil {
+				t.Errorf("GetThemeWithSeed() returned invalid theme: %v", err)
+			}
+		})
+	}
+}
+
 func TestGetRandomTheme(t *testing.T) {
-	// Test that GetRandomTheme returns valid genres
-	for i := 0; i < 10; i++ {
-		theme := GetRandomTheme()
+	// Test that GetRandomTheme returns valid genres for various seeds
+	seeds := []int64{0, 12345, 67890, 999999, -12345}
+	for _, seed := range seeds {
+		theme := GetRandomTheme(seed)
 		if theme == nil {
-			t.Fatalf("GetRandomTheme() iteration %d returned nil", i)
+			t.Fatalf("GetRandomTheme(%d) returned nil", seed)
 		}
 		if err := theme.Validate(); err != nil {
-			t.Errorf("GetRandomTheme() iteration %d returned invalid theme: %v", i, err)
+			t.Errorf("GetRandomTheme(%d) returned invalid theme: %v", seed, err)
 		}
 	}
 
-	// Test with mocked time to ensure deterministic behavior
-	oldTimeNow := timeNow
-	defer func() { timeNow = oldTimeNow }()
-
-	mockTime := int64(12345)
-	timeNow = func() time.Time {
-		return time.Unix(0, mockTime)
-	}
-
-	theme1 := GetRandomTheme()
-	theme2 := GetRandomTheme()
+	// Test deterministic behavior - same seed returns same genre
+	seed := int64(12345)
+	theme1 := GetRandomTheme(seed)
+	theme2 := GetRandomTheme(seed)
 	if theme1.ID != theme2.ID {
-		t.Error("GetRandomTheme() with same time should return same genre")
+		t.Errorf("GetRandomTheme() with same seed returned different genres: %s vs %s", theme1.ID, theme2.ID)
 	}
 
-	// Change mock time
-	mockTime = 67890
-	theme3 := GetRandomTheme()
-	// Note: We don't check if theme3 is different because it might happen to be the same
-	// by chance. We just verify it's valid.
+	// Test different seeds can return different genres
+	differentSeed := int64(67890)
+	theme3 := GetRandomTheme(differentSeed)
 	if err := theme3.Validate(); err != nil {
-		t.Errorf("GetRandomTheme() with different time returned invalid theme: %v", err)
+		t.Errorf("GetRandomTheme() with different seed returned invalid theme: %v", err)
 	}
+	// Note: Different seeds might still return the same genre by chance,
+	// so we only verify validity, not uniqueness
 }

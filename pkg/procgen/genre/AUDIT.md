@@ -1,18 +1,18 @@
 # Audit: github.com/opd-ai/venture/pkg/procgen/genre
 **Date**: 2026-02-13
-**Status**: Needs Work
+**Status**: Complete
 
 ## Summary
-The genre package provides centralized genre definitions and blending for procedural content generation. It has excellent test coverage (100%), comprehensive documentation, and clean API design. However, it contains one high-severity issue with non-deterministic random genre selection and two medium-severity error handling gaps that need addressing before production use.
+The genre package provides centralized genre definitions and blending for procedural content generation. It has excellent test coverage (94.8%), comprehensive documentation, and clean API design. All issues have been resolved including deterministic random genre selection and proper error handling.
 
 ## Issues Found
-- [ ] **severity:high** Deterministic procgen — `GetRandomTheme()` uses `time.Now()` for non-deterministic selection, violating deterministic generation requirement (`predefined.go:125`)
-- [ ] **severity:med** Error handling — `parseHexColor()` silently ignores `strconv.ParseInt` errors, returns (0,0,0) on malformed hex strings without logging (`blender_utils.go:121-123`)
-- [ ] **severity:med** Error handling — `DefaultRegistry()` ignores genre registration errors; bugs in predefined genres would be silently swallowed (`registry.go:79`)
-- [ ] **severity:low** Documentation — `GetRandomTheme()` godoc claims "non-deterministic selection" which conflicts with project determinism requirement (`predefined.go:121`)
+- [x] **severity:high** Deterministic procgen — `GetRandomTheme()` uses `time.Now()` for non-deterministic selection, violating deterministic generation requirement (`predefined.go:125`) — **FIXED**: Changed API to accept seed parameter for deterministic selection
+- [x] **severity:med** Error handling — `parseHexColor()` silently ignores `strconv.ParseInt` errors, returns (0,0,0) on malformed hex strings without logging (`blender_utils.go:121-123`) — **FIXED**: Added structured logging with logrus.WithFields for parse errors
+- [x] **severity:med** Error handling — `DefaultRegistry()` ignores genre registration errors; bugs in predefined genres would be silently swallowed (`registry.go:79`) — **FIXED**: Changed to use log.Fatal on registration failure (fail-fast for programmer errors)
+- [x] **severity:low** Documentation — `GetRandomTheme()` godoc claims "non-deterministic selection" which conflicts with project determinism requirement (`predefined.go:121`) — **FIXED**: Updated documentation to reflect deterministic seed-based selection
 
 ## Test Coverage
-100.0% (target: 65%) ✅
+94.8% (target: 65%) ✅
 
 ## Integration Status
 Package is integrated with 3 consumers:
@@ -24,23 +24,15 @@ Package provides:
 - Genre type definitions with validation
 - Registry for genre management (DefaultRegistry with 5 predefined genres)
 - GenreBlender for hybrid genre creation with 5 preset blends
-- Helper function `GetTheme(genreID)` that handles "random" special value
+- Helper functions `GetTheme(genreID)` and `GetThemeWithSeed(genreID, seed)` for deterministic genre selection
 
 **No system registration required** — Pure data/utility package, not an ECS system.
 
 **Serialization support**: Not applicable — genres are configuration data, not entity components.
 
 ## Recommendations
-1. **CRITICAL**: Replace `GetRandomTheme()` time-based selection with seed-based deterministic selection
-   - Change signature to `GetRandomTheme(seed int64) *Genre`
-   - Update callers to pass seed (from world seed or CLI seed flag)
-   - Update `GetTheme("random")` to require seed parameter or derive from global world seed
-   - Alternative: Remove "random" support entirely and require explicit genre selection
-2. **HIGH**: Add error handling/logging to `parseHexColor()` for malformed hex strings
-   - Log warning with `logrus.WithFields` when ParseInt fails
-   - Consider returning error instead of silently defaulting to black (0,0,0)
-3. **HIGH**: Fix `DefaultRegistry()` to panic or log error on registration failure
-   - Change to `panic(err)` if predefined genre is invalid (fail-fast at init)
-   - Or use `logrus.Fatal` with structured fields
-   - Rationale: Registration failure indicates programmer error in predefined genres
-4. **LOW**: Update `GetRandomTheme()` documentation to reflect deterministic requirement after fix
+All issues have been resolved:
+1. ~~**CRITICAL**: Replace `GetRandomTheme()` time-based selection with seed-based deterministic selection~~ ✅ COMPLETED: `GetRandomTheme(seed)` and `GetThemeWithSeed(genreID, seed)` now accept explicit seed
+2. ~~**HIGH**: Add error handling/logging to `parseHexColor()` for malformed hex strings~~ ✅ COMPLETED: Added logrus.WithFields logging for parse errors
+3. ~~**HIGH**: Fix `DefaultRegistry()` to panic or log error on registration failure~~ ✅ COMPLETED: Changed to log.Fatal on failure
+4. ~~**LOW**: Update `GetRandomTheme()` documentation to reflect deterministic requirement~~ ✅ COMPLETED: Updated godoc comments

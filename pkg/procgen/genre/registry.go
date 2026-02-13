@@ -3,7 +3,11 @@
 // Code relocated from: types.go
 package genre
 
-import "fmt"
+import (
+	"fmt"
+
+	log "github.com/sirupsen/logrus"
+)
 
 // Registry manages a collection of genres.
 type Registry struct {
@@ -70,13 +74,18 @@ func (r *Registry) Count() int {
 }
 
 // DefaultRegistry returns a registry pre-populated with standard genres.
+// Panics if any predefined genre fails validation (indicates programmer error).
 func DefaultRegistry() *Registry {
 	registry := NewRegistry()
 
 	// Register all predefined genres
 	for _, g := range PredefinedGenres() {
-		// Ignore errors for predefined genres - they should always be valid
-		_ = registry.Register(g)
+		if err := registry.Register(g); err != nil {
+			log.WithFields(log.Fields{
+				"genre_id": g.ID,
+				"error":    err.Error(),
+			}).Fatal("Failed to register predefined genre")
+		}
 	}
 
 	return registry

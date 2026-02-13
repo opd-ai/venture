@@ -8,6 +8,8 @@ import (
 	"math/rand"
 	"strconv"
 	"strings"
+
+	log "github.com/sirupsen/logrus"
 )
 
 // generateBlendedID creates a unique ID for the blended genre.
@@ -118,10 +120,39 @@ func parseHexColor(hex string) (r, g, b int) {
 
 	// Parse hex values
 	if len(hex) == 6 {
-		r64, _ := strconv.ParseInt(hex[0:2], 16, 0)
-		g64, _ := strconv.ParseInt(hex[2:4], 16, 0)
-		b64, _ := strconv.ParseInt(hex[4:6], 16, 0)
+		r64, err := strconv.ParseInt(hex[0:2], 16, 0)
+		if err != nil {
+			log.WithFields(log.Fields{
+				"hex":       hex,
+				"component": "red",
+				"error":     err.Error(),
+			}).Warn("Failed to parse hex color component")
+			return 0, 0, 0
+		}
+		g64, err := strconv.ParseInt(hex[2:4], 16, 0)
+		if err != nil {
+			log.WithFields(log.Fields{
+				"hex":       hex,
+				"component": "green",
+				"error":     err.Error(),
+			}).Warn("Failed to parse hex color component")
+			return 0, 0, 0
+		}
+		b64, err := strconv.ParseInt(hex[4:6], 16, 0)
+		if err != nil {
+			log.WithFields(log.Fields{
+				"hex":       hex,
+				"component": "blue",
+				"error":     err.Error(),
+			}).Warn("Failed to parse hex color component")
+			return 0, 0, 0
+		}
 		r, g, b = int(r64), int(g64), int(b64)
+	} else {
+		log.WithFields(log.Fields{
+			"hex":    hex,
+			"length": len(hex),
+		}).Warn("Invalid hex color format: expected 6 characters")
 	}
 
 	return r, g, b

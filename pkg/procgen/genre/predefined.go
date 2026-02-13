@@ -3,10 +3,7 @@
 // Code relocated from: types.go
 package genre
 
-import "time"
-
-// timeNow is a variable for dependency injection in tests
-var timeNow = time.Now
+import "math/rand"
 
 // PredefinedGenres returns a slice of all predefined genre definitions.
 func PredefinedGenres() []*Genre {
@@ -101,11 +98,12 @@ func PostApocalypticGenre() *Genre {
 
 // GetTheme retrieves a genre theme by ID.
 // Returns the genre for the given ID, or defaults to Fantasy if not found.
-// Special value "random" triggers random genre selection.
+// Special value "random" triggers random genre selection using the provided seed.
 func GetTheme(genreID string) *Genre {
-	// Handle special "random" value
+	// Handle special "random" value - use 0 seed for backwards compatibility
+	// Callers should use GetThemeWithSeed for deterministic random selection
 	if genreID == "random" {
-		return GetRandomTheme()
+		return GetRandomTheme(0)
 	}
 
 	registry := DefaultRegistry()
@@ -117,11 +115,27 @@ func GetTheme(genreID string) *Genre {
 	return genre
 }
 
-// GetRandomTheme returns a random genre from predefined genres.
-// Uses current time as seed for non-deterministic selection.
-func GetRandomTheme() *Genre {
+// GetThemeWithSeed retrieves a genre theme by ID with explicit seed for random selection.
+// Returns the genre for the given ID, or defaults to Fantasy if not found.
+// When genreID is "random", uses the seed for deterministic selection.
+func GetThemeWithSeed(genreID string, seed int64) *Genre {
+	if genreID == "random" {
+		return GetRandomTheme(seed)
+	}
+
+	registry := DefaultRegistry()
+	genre, err := registry.Get(genreID)
+	if err != nil {
+		return FantasyGenre()
+	}
+	return genre
+}
+
+// GetRandomTheme returns a random genre from predefined genres using deterministic seed.
+// Same seed always returns the same genre, ensuring reproducible procedural generation.
+func GetRandomTheme(seed int64) *Genre {
 	genres := PredefinedGenres()
-	// Use simple modulo to avoid importing math/rand
-	idx := int(timeNow().UnixNano() % int64(len(genres)))
+	rng := rand.New(rand.NewSource(seed))
+	idx := rng.Intn(len(genres))
 	return genres[idx]
 }

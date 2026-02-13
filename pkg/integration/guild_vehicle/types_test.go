@@ -2,6 +2,7 @@ package guild_vehicle
 
 import (
 	"testing"
+	"time"
 )
 
 func TestFormationType_String(t *testing.T) {
@@ -265,5 +266,177 @@ func BenchmarkGuildVehicle_HasAccess(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		_ = vehicle.HasAccess("player1")
+	}
+}
+
+func TestGuildVehicleFleetComponent_Serialize(t *testing.T) {
+	now := time.Now()
+	tests := []struct {
+		name    string
+		comp    *GuildVehicleFleetComponent
+		wantErr bool
+	}{
+		{
+			name: "basic component",
+			comp: &GuildVehicleFleetComponent{
+				GuildID:             "guild-123",
+				FleetID:             "fleet-456",
+				SiegeType:           SiegeCatapult,
+				FormationPosition:   2,
+				LastFormationUpdate: now,
+			},
+			wantErr: false,
+		},
+		{
+			name:    "empty component",
+			comp:    &GuildVehicleFleetComponent{},
+			wantErr: false,
+		},
+		{
+			name: "siege engine leader",
+			comp: &GuildVehicleFleetComponent{
+				GuildID:             "siege-guild",
+				FleetID:             "siege-fleet",
+				SiegeType:           SiegeBatteringRam,
+				FormationPosition:   0,
+				LastFormationUpdate: now,
+			},
+			wantErr: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			data, err := tt.comp.Serialize()
+			if (err != nil) != tt.wantErr {
+				t.Errorf("Serialize() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !tt.wantErr && len(data) == 0 {
+				t.Error("Serialize() returned empty data")
+			}
+		})
+	}
+}
+
+func TestGuildVehicleFleetComponent_Deserialize(t *testing.T) {
+	now := time.Now()
+	tests := []struct {
+		name    string
+		comp    *GuildVehicleFleetComponent
+		wantErr bool
+	}{
+		{
+			name: "round trip basic",
+			comp: &GuildVehicleFleetComponent{
+				GuildID:             "guild-123",
+				FleetID:             "fleet-456",
+				SiegeType:           SiegeCatapult,
+				FormationPosition:   2,
+				LastFormationUpdate: now,
+			},
+			wantErr: false,
+		},
+		{
+			name:    "round trip empty",
+			comp:    &GuildVehicleFleetComponent{},
+			wantErr: false,
+		},
+		{
+			name: "round trip all siege types",
+			comp: &GuildVehicleFleetComponent{
+				GuildID:             "test-guild",
+				FleetID:             "test-fleet",
+				SiegeType:           SiegeBallistaBattery,
+				FormationPosition:   5,
+				LastFormationUpdate: now,
+			},
+			wantErr: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Serialize
+			data, err := tt.comp.Serialize()
+			if err != nil {
+				t.Fatalf("Serialize() failed: %v", err)
+			}
+
+			// Deserialize into new component
+			restored := &GuildVehicleFleetComponent{}
+			err = restored.Deserialize(data)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("Deserialize() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+
+			if tt.wantErr {
+				return
+			}
+
+			// Verify fields match
+			if restored.GuildID != tt.comp.GuildID {
+				t.Errorf("GuildID = %v, want %v", restored.GuildID, tt.comp.GuildID)
+			}
+			if restored.FleetID != tt.comp.FleetID {
+				t.Errorf("FleetID = %v, want %v", restored.FleetID, tt.comp.FleetID)
+			}
+			if restored.SiegeType != tt.comp.SiegeType {
+				t.Errorf("SiegeType = %v, want %v", restored.SiegeType, tt.comp.SiegeType)
+			}
+			if restored.FormationPosition != tt.comp.FormationPosition {
+				t.Errorf("FormationPosition = %v, want %v", restored.FormationPosition, tt.comp.FormationPosition)
+			}
+		})
+	}
+}
+
+func TestGuildVehicleFleetComponent_Deserialize_InvalidData(t *testing.T) {
+	comp := &GuildVehicleFleetComponent{}
+
+	// Test with invalid JSON
+	err := comp.Deserialize([]byte("invalid json"))
+	if err == nil {
+		t.Error("Deserialize() expected error for invalid JSON")
+	}
+
+	// Test with empty data
+	err = comp.Deserialize([]byte{})
+	if err == nil {
+		t.Error("Deserialize() expected error for empty data")
+	}
+}
+
+func BenchmarkGuildVehicleFleetComponent_Serialize(b *testing.B) {
+	comp := &GuildVehicleFleetComponent{
+		GuildID:             "benchmark-guild",
+		FleetID:             "benchmark-fleet",
+		SiegeType:           SiegeCatapult,
+		FormationPosition:   3,
+		LastFormationUpdate: time.Now(),
+	}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_, _ = comp.Serialize()
+	}
+}
+
+func BenchmarkGuildVehicleFleetComponent_Deserialize(b *testing.B) {
+	comp := &GuildVehicleFleetComponent{
+		GuildID:             "benchmark-guild",
+		FleetID:             "benchmark-fleet",
+		SiegeType:           SiegeCatapult,
+		FormationPosition:   3,
+		LastFormationUpdate: time.Now(),
+	}
+
+	data, _ := comp.Serialize()
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		restored := &GuildVehicleFleetComponent{}
+		_ = restored.Deserialize(data)
 	}
 }

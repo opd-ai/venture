@@ -7,7 +7,7 @@ The guild_vehicle package provides fleet management for guild-owned vehicles wit
 
 ## Issues Found
 - [x] **high** Deterministic Procgen — Uses `time.Now()` for timestamps which violates determinism requirement. While this package is an integration package (not procgen), timestamps should ideally use injected time providers for testability. (`fleet_manager.go:44`, `fleet_manager.go:45`, `fleet_manager.go:72`, `fleet_manager.go:73`, `fleet_manager.go:91`, `fleet_manager.go:92`, `fleet_manager.go:96`, `fleet_manager.go:117`, `fleet_manager.go:135`, `fleet_manager.go:156`, `fleet_manager.go:194`, `fleet_manager.go:211`) - Fixed 2026-02-13: EXEMPTED - This is an integration package that manages guild fleets. Timestamps (CreatedAt, UpdatedAt, AddedAt, LastMaintenance) track operational events for server coordination and must reflect real wall-clock time. Not content generation.
-- [ ] **med** Integration Points — GuildVehicleFleetComponent lacks Serialize/Deserialize methods for persistence support. Core engine components (PositionComponent, VelocityComponent, ColliderComponent) implement these methods for save/load functionality. (`types.go:209-225`)
+- [x] **med** Integration Points — GuildVehicleFleetComponent lacks Serialize/Deserialize methods for persistence support. Core engine components (PositionComponent, VelocityComponent, ColliderComponent) implement these methods for save/load functionality. (`types.go:209-225`) - Fixed 2026-02-13: Added Serialize/Deserialize methods with JSON marshaling and structured logging
 - [ ] **low** Error Handling — No structured logging with logrus.WithFields for error paths or important operations. While errors are properly returned with context using fmt.Errorf, operational logging would improve observability. (All files)
 - [ ] **low** Doc Coverage — FleetManager methods have no godoc comments. Only package-level documentation exists in doc.go. Public methods should document parameters, return values, and error conditions. (`fleet_manager.go:14-367`)
 
@@ -28,7 +28,7 @@ The package is integrated with the engine layer via `pkg/engine/guild_vehicle_sy
 **Integration Points:**
 - ✅ Engine system exists: `pkg/engine/guild_vehicle_system.go`
 - ✅ Engine tests exist: `pkg/engine/guild_vehicle_system_test.go`
-- ⚠️ Component persistence: Missing Serialize/Deserialize methods
+- ✅ Component persistence: Serialize/Deserialize methods implemented (2026-02-13)
 - ⚠️ System registration: Not found in `pkg/engine/system_init.go` (may need to verify registration)
 
 **Planned Integrations (from doc.go):**

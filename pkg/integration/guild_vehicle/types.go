@@ -1,7 +1,10 @@
 package guild_vehicle
 
 import (
+	"encoding/json"
 	"time"
+
+	"github.com/sirupsen/logrus"
 )
 
 // FormationType represents fleet formation patterns
@@ -222,4 +225,57 @@ type GuildVehicleFleetComponent struct {
 // Type returns the component type identifier
 func (g *GuildVehicleFleetComponent) Type() string {
 	return "guild_vehicle_fleet"
+}
+
+// Serialize encodes the component to JSON bytes for persistence.
+// Returns the encoded bytes and any error encountered during marshaling.
+func (g *GuildVehicleFleetComponent) Serialize() ([]byte, error) {
+	logrus.WithFields(logrus.Fields{
+		"component_type":     "guild_vehicle_fleet",
+		"guild_id":           g.GuildID,
+		"fleet_id":           g.FleetID,
+		"formation_position": g.FormationPosition,
+	}).Debug("Serializing guild vehicle fleet component")
+
+	data, err := json.Marshal(g)
+	if err != nil {
+		logrus.WithFields(logrus.Fields{
+			"component_type": "guild_vehicle_fleet",
+			"error":          err.Error(),
+		}).Error("Failed to serialize guild vehicle fleet component")
+		return nil, err
+	}
+
+	logrus.WithFields(logrus.Fields{
+		"component_type": "guild_vehicle_fleet",
+		"bytes":          len(data),
+	}).Debug("Guild vehicle fleet component serialized successfully")
+
+	return data, nil
+}
+
+// Deserialize decodes the component from JSON bytes.
+// Returns any error encountered during unmarshaling.
+func (g *GuildVehicleFleetComponent) Deserialize(data []byte) error {
+	logrus.WithFields(logrus.Fields{
+		"component_type": "guild_vehicle_fleet",
+		"bytes":          len(data),
+	}).Debug("Deserializing guild vehicle fleet component")
+
+	if err := json.Unmarshal(data, g); err != nil {
+		logrus.WithFields(logrus.Fields{
+			"component_type": "guild_vehicle_fleet",
+			"error":          err.Error(),
+		}).Error("Failed to deserialize guild vehicle fleet component")
+		return err
+	}
+
+	logrus.WithFields(logrus.Fields{
+		"component_type":     "guild_vehicle_fleet",
+		"guild_id":           g.GuildID,
+		"fleet_id":           g.FleetID,
+		"formation_position": g.FormationPosition,
+	}).Debug("Guild vehicle fleet component deserialized successfully")
+
+	return nil
 }

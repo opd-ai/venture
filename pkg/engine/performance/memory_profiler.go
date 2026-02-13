@@ -4,6 +4,8 @@ import (
 	"runtime"
 	"sync"
 	"time"
+
+	log "github.com/sirupsen/logrus"
 )
 
 // MemoryProfiler tracks memory allocations across V9 systems
@@ -52,6 +54,12 @@ func (mp *MemoryProfiler) ReleaseAllocation(name string, bytes uint64) {
 
 	if current, exists := mp.allocations[name]; exists {
 		if bytes > current {
+			// Log underflow for debugging - requested release exceeds tracked allocation
+			log.WithFields(log.Fields{
+				"allocation_name": name,
+				"requested_bytes": bytes,
+				"current_bytes":   current,
+			}).Warn("memory release underflow, clamping to current allocation")
 			bytes = current
 		}
 		mp.allocations[name] -= bytes

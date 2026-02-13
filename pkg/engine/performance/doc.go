@@ -21,10 +21,15 @@
 //
 // The NetworkBatcher combines multiple small messages into batched packets:
 //
-//	batcher := performance.NewNetworkBatcher(100) // 100ms window
-//	batcher.QueueMessage("guild_update", data)
-//	batcher.QueueMessage("player_position", posData)
+//	sendFunc := func(batch *BatchedMessage) {
+//	    // Send the batched messages
+//	}
+//	batcher := performance.NewNetworkBatcher(100, sendFunc) // 100ms window
+//	batcher.Start()
+//	batcher.QueueMessage("guild_update", data, playerID)
+//	batcher.QueueMessage("player_position", posData, playerID)
 //	// Messages automatically batched and sent every 100ms
+//	batcher.Stop()
 //
 // # Cache Management
 //

@@ -5,6 +5,8 @@ import (
 	"sync"
 	"time"
 
+	log "github.com/sirupsen/logrus"
+
 	"github.com/opd-ai/venture/pkg/recovery"
 )
 
@@ -126,6 +128,12 @@ func (cm *CacheManager) evictIfNeeded() {
 
 		key := element.Value.(string)
 		if entry, exists := cm.entries[key]; exists {
+			log.WithFields(log.Fields{
+				"key":             key,
+				"size_bytes":      entry.SizeBytes,
+				"current_size_mb": cm.stats.CurrentSizeMB,
+				"max_size_mb":     cm.stats.MaxSizeMB,
+			}).Debug("cache evicting LRU entry")
 			cm.removeEntry(entry)
 			cm.stats.EvictionCount++
 		}
@@ -315,7 +323,13 @@ func (bl *BackgroundLoader) worker() {
 		case request := <-bl.workChan:
 			// Load resource using the injected loader
 			data, err := bl.loader.Load(request)
-			if err == nil && data != nil {
+			if err != nil {
+				log.WithFields(log.Fields{
+					"request_id":   request.ID,
+					"request_type": request.Type,
+					"error":        err.Error(),
+				}).Warn("background loader failed to load resource")
+			} else if data != nil {
 				request.Data = data
 			}
 

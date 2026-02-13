@@ -4,6 +4,8 @@ import (
 	"sync"
 	"time"
 
+	log "github.com/sirupsen/logrus"
+
 	"github.com/opd-ai/venture/pkg/recovery"
 )
 
@@ -18,9 +20,12 @@ type NetworkBatcher struct {
 	sendFunc     func(*BatchedMessage)
 	stopChan     chan struct{}
 	running      bool
+	startTime    time.Time // Track when batcher started for rate calculation
 }
 
-// NewNetworkBatcher creates a new network batcher
+// NewNetworkBatcher creates a new network batcher with the specified batch window and send function.
+// windowMs specifies the time window in milliseconds for batching messages.
+// sendFunc is the callback function that will be invoked with batched messages.
 func NewNetworkBatcher(windowMs int, sendFunc func(*BatchedMessage)) *NetworkBatcher {
 	nb := &NetworkBatcher{
 		windowMs:     windowMs,
@@ -43,7 +48,13 @@ func (nb *NetworkBatcher) Start() {
 	}
 
 	nb.running = true
+	nb.startTime = time.Now() // Track start time for rate calculation
 	nb.ticker = time.NewTicker(time.Duration(nb.windowMs) * time.Millisecond)
+
+	log.WithFields(log.Fields{
+		"window_ms":      nb.windowMs,
+		"max_batch_size": nb.maxBatchSize,
+	}).Debug("network batcher started")
 
 	go nb.runBatchLoop()
 }
@@ -68,6 +79,12 @@ func (nb *NetworkBatcher) Stop() {
 	if len(nb.queue) > 0 {
 		nb.flushBatch()
 	}
+
+	log.WithFields(log.Fields{
+		"messages_sent": nb.stats.MessagesSent,
+		"bytes_sent":    nb.stats.BytesSent,
+		"batch_count":   nb.stats.BatchCount,
+	}).Debug("network batcher stopped")
 }
 
 // QueueMessage adds a message to the batch queue
@@ -147,11 +164,14 @@ func (nb *NetworkBatcher) GetStats() *NetworkStats {
 
 	stats := *nb.stats
 
-	// Calculate per-second rates
-	elapsed := time.Since(nb.stats.LastBatchTime).Seconds()
-	if elapsed > 0 {
-		stats.MessagesPerSec = float64(nb.stats.MessagesSent) / elapsed
-		stats.BytesPerSec = float64(nb.stats.BytesSent) / elapsed
+	// Calculate per-second rates using time since batcher started
+	// This provides accurate throughput metrics rather than stale LastBatchTime
+	if !nb.startTime.IsZero() {
+		elapsed := time.Since(nb.startTime).Seconds()
+		if elapsed > 0 {
+			stats.MessagesPerSec = float64(nb.stats.MessagesSent) / elapsed
+			stats.BytesPerSec = float64(nb.stats.BytesSent) / elapsed
+		}
 	}
 
 	return &stats

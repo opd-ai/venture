@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/opd-ai/venture/pkg/recovery"
+	"github.com/opd-ai/venture/pkg/version"
 )
 
 // TrustLevel represents the trust relationship with a peer server
@@ -321,23 +322,11 @@ func (hm *HandshakeManager) CreateResponse(peerHandshake *FederationHandshake, t
 	return hm.identity.CreateHandshake(peerHandshake.Version, peerHandshake.Features, trustLevel)
 }
 
-// IsCompatibleVersion checks if protocol versions are compatible
+// IsCompatibleVersion checks if protocol versions are compatible.
+// Compatible versions share the same major version number.
+// This is a convenience wrapper around version.IsCompatible for federation protocol use.
 func IsCompatibleVersion(ourVersion, theirVersion string) bool {
-	// Simple major.minor.patch comparison
-	// Compatible if major versions match
-	if ourVersion == "" || theirVersion == "" {
-		return false
-	}
-
-	ourParts := strings.Split(ourVersion, ".")
-	theirParts := strings.Split(theirVersion, ".")
-
-	if len(ourParts) == 0 || len(theirParts) == 0 {
-		return false
-	}
-
-	// Compare major version only
-	return ourParts[0] == theirParts[0]
+	return version.IsCompatible(ourVersion, theirVersion)
 }
 
 // NegotiateFeatures returns the intersection of supported features

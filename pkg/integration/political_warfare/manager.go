@@ -264,8 +264,6 @@ func (m *Manager) CallReinforcementAllies(callingGuildID, targetGuildID string) 
 		call.ResponingAllies = append(call.ResponingAllies, response)
 	}
 
-	call.Completed = true
-
 	// Store alliance call
 	callKey := fmt.Sprintf("%s_%s", callingGuildID, targetGuildID)
 	m.allianceCalls[callKey] = call

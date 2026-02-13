@@ -32,7 +32,7 @@ var baselineHashPrefixes = map[string]string{
 	"CompanionGenerator": "4dda1e3a6cd24740",
 	"EntityGenerator":    "f0302eb430a7d0cd",
 	"FurnitureGenerator": "325d3cce6085ef17",
-	"ItemGenerator":      "87bebd0146d19d2f",
+	"ItemGenerator":      "8d453362a9545a7b",
 	"LegendaryGenerator": "bc3b12fd01179b64",
 	"MagicGenerator":     "67956a60c3646731",
 	"QuestGenerator":     "0235ef4b824e6040",

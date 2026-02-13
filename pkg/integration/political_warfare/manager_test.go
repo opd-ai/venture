@@ -183,8 +183,8 @@ func TestCallReinforcementAllies(t *testing.T) {
 	if call == nil {
 		t.Fatal("Expected alliance call, got nil")
 	}
-	if !call.Completed {
-		t.Error("Alliance call should be completed")
+	if call.Completed {
+		t.Error("Alliance call should not be completed immediately")
 	}
 
 	// guild3 has 0.7 reputation with guild1, should be called

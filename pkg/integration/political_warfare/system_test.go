@@ -133,8 +133,8 @@ func TestSystemIntegration(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to call allies: %v", err)
 	}
-	if !call.Completed {
-		t.Error("Alliance call should be completed")
+	if call.Completed {
+		t.Error("Alliance call should not be completed immediately")
 	}
 
 	// Test peace treaty

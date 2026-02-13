@@ -6,8 +6,8 @@
 The dialog package provides runtime NPC dialog generation using Markov chains with genre-specific corpora and personality traits. Overall package health is strong with 88.7% test coverage and solid deterministic procgen patterns. Three medium-severity issues identified: unchecked error in hash seeding, genre ID mismatch between getter and corpus retrieval, and missing structured logging for debugging. No blocking issues found.
 
 ## Issues Found
-- [ ] **severity:med** Error handling — `binary.Write()` error ignored in `deriveRuntimeSeed()` (`markov.go:289`)
-- [ ] **severity:med** API consistency — `GetAvailableGenres()` returns `"postapoc"` but `GetCorpus()` expects `"postapocalyptic"`, causing nil corpus retrieval (`corpus.go:694` vs `corpus.go:30`)
+- [x] **severity:med** Error handling — `binary.Write()` error ignored in `deriveRuntimeSeed()` (`markov.go:289`) — **FIXED**: Added error check with fallback seed derivation using hash64()
+- [x] **severity:med** API consistency — `GetAvailableGenres()` returns `"postapoc"` but `GetCorpus()` expects `"postapocalyptic"`, causing nil corpus retrieval (`corpus.go:694` vs `corpus.go:30`) — **FIXED**: Updated GetAvailableGenres() to return "postapocalyptic" matching GetCorpus() switch cases
 - [ ] **severity:low** Logging — No structured logging with `logrus.WithFields` for generation failures or fallbacks (all files)
 - [ ] **severity:low** Documentation — `GenerateParams.Temperature` field not documented in procgen.Generator integration example in `doc.go`
 - [ ] **severity:low** Test coverage — Missing benchmark for `deriveRuntimeSeed()` hash performance (should verify <1ms target)

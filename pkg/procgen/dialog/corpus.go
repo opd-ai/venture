@@ -685,12 +685,13 @@ func GetAllCorpora() []*Corpus {
 }
 
 // GetAvailableGenres returns a list of supported genre IDs.
+// These IDs match the switch cases in GetCorpus().
 func GetAvailableGenres() []string {
 	return []string{
 		"fantasy",
 		"scifi",
 		"horror",
 		"cyberpunk",
-		"postapoc",
+		"postapocalyptic",
 	}
 }

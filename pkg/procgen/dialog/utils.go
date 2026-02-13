@@ -178,3 +178,13 @@ func splitOnWhitespace(text string) []string {
 	}
 	return words
 }
+
+// hash64 computes a simple hash of a string, returning an int64.
+// Used as a fallback for seed derivation when binary.Write fails.
+func hash64(s string) int64 {
+	var h int64
+	for i, c := range s {
+		h = h*31 + int64(c) + int64(i)
+	}
+	return h
+}

@@ -228,13 +228,13 @@ func TestGetAvailableGenres(t *testing.T) {
 		t.Errorf("GetAvailableGenres returned %d genres, want 5", len(genres))
 	}
 
-	// Verify expected genres
+	// Verify expected genres - these should match GetCorpus() switch cases
 	expected := map[string]bool{
-		"fantasy":   true,
-		"scifi":     true,
-		"horror":    true,
-		"cyberpunk": true,
-		"postapoc":  true,
+		"fantasy":         true,
+		"scifi":           true,
+		"horror":          true,
+		"cyberpunk":       true,
+		"postapocalyptic": true,
 	}
 
 	for _, genre := range genres {

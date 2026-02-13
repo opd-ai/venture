@@ -285,8 +285,11 @@ func (m *MarkovGenerator) selectNextWord(candidates []string, rng *rand.Rand, te
 func (m *MarkovGenerator) deriveRuntimeSeed(playerInput, conversationID string) int64 {
 	h := sha256.New()
 
-	// Write base seed
-	binary.Write(h, binary.LittleEndian, m.seed)
+	// Write base seed - if write fails, use simpler fallback seed derivation
+	if err := binary.Write(h, binary.LittleEndian, m.seed); err != nil {
+		// Fallback: combine seed with string hashes directly
+		return m.seed ^ int64(hash64(playerInput)) ^ int64(hash64(conversationID))
+	}
 
 	// Write player input
 	h.Write([]byte(playerInput))

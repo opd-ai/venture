@@ -6,20 +6,32 @@ import (
 
 	"github.com/opd-ai/venture/pkg/engine"
 	"github.com/opd-ai/venture/pkg/procgen"
+	"github.com/sirupsen/logrus"
 )
 
 // ClassPreset defines a character class configuration.
+// It contains all the starting stats and abilities for a character class.
 type ClassPreset struct {
-	Type              engine.CharacterClass
-	Name              string
-	Description       string
-	StartingHP        float64
-	StartingMana      float64
-	StartingAttack    float64
-	StartingDefense   float64
-	StartingSpeed     float64
+	// Type is the character class enum value (e.g., ClassWarrior, ClassMage)
+	Type engine.CharacterClass
+	// Name is the display name of the class (e.g., "Warrior", "Mage")
+	Name string
+	// Description is a short text describing the class playstyle
+	Description string
+	// StartingHP is the initial health points for this class
+	StartingHP float64
+	// StartingMana is the initial mana/energy pool for this class
+	StartingMana float64
+	// StartingAttack is the base attack power for this class
+	StartingAttack float64
+	// StartingDefense is the base defense rating for this class
+	StartingDefense float64
+	// StartingSpeed is the base movement/action speed for this class
+	StartingSpeed float64
+	// StartingAbilities is the list of ability IDs available at level 1
 	StartingAbilities []string
-	Specializations   []engine.SpecializationType
+	// Specializations are the advanced class paths available for this class
+	Specializations []engine.SpecializationType
 }
 
 // ClassGenerator generates character class configurations.
@@ -332,6 +344,12 @@ func (g *ClassGenerator) Generate(seed int64, params procgen.GenerationParams) (
 	// Get base preset
 	preset, ok := g.presets[classType]
 	if !ok {
+		logrus.WithFields(logrus.Fields{
+			"seed":       seed,
+			"class_type": classType,
+			"difficulty": params.Difficulty,
+			"genre_id":   params.GenreID,
+		}).Error("class generation failed: invalid class type")
 		return nil, fmt.Errorf("invalid class type: %d", classType)
 	}
 

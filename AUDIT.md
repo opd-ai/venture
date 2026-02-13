@@ -12,7 +12,7 @@ This document tracks the audit status of all Go packages in the Venture codebase
 
 ### Network Layer
 - [x] `pkg/network/federation/AUDIT.md` — Complete — 0 issues (2 fixed on 2026-02-13)
-- [x] `pkg/network/federation/guild/AUDIT.md` — Needs Work — 6 issues (0 high, 3 med, 3 low) - Updated 2026-02-13: Fixed 3 high-priority issues (deterministic guild ID, seed passthrough, error logging)
+- [x] `pkg/network/federation/guild/AUDIT.md` — Needs Work — 1 issue (0 high, 1 med, 0 low) - Updated 2026-02-13: Fixed 3 high-priority issues (deterministic guild ID, seed passthrough, error logging), 5 doc issues fixed (godoc comments for constants and methods)
 - [x] `pkg/network/federation/mobile/AUDIT.md` — Needs Work — 9 issues (3 high, 4 med, 2 low)
 - [x] `pkg/network/federation/webrtc/AUDIT.md` — Needs Work — 7 issues (4 high, 3 med, 1 low)
 - [x] `pkg/network/AUDIT_COMPLETE.md` — Complete — 0 issues (3 informational notes)

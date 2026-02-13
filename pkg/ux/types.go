@@ -53,7 +53,10 @@ type JourneyContext struct {
 	WorldSeed     int64
 	StepIndex     int
 	StepStartTime time.Time
-	Data          map[string]interface{}
+	// Data holds step-specific state data that persists across journey steps.
+	// Each step can read and write arbitrary key-value pairs to share state
+	// (e.g., "last_item_id", "selected_npc", "crafted_item_count").
+	Data map[string]interface{}
 }
 
 // JourneyResult contains the outcome of a journey validation.
@@ -84,7 +87,11 @@ type ValidationConfig struct {
 	MinCompletionRate    float64
 	MinSatisfaction      float64
 	MaxErrorRate         float64
-	Seed                 int64 // RNG seed; 0 means use time-based seed
+	// Seed is the RNG seed for deterministic simulation reproducibility.
+	// When set to 0, a time-based seed is used for varied test runs.
+	// Set to a non-zero value to reproduce specific test scenarios.
+	// Note: This controls UX validation timing, not game content generation.
+	Seed int64
 }
 
 // DefaultValidationConfig returns the standard validation configuration.

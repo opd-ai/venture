@@ -9,6 +9,45 @@ import (
 	"time"
 )
 
+// TimeProvider is an interface for obtaining timestamps.
+// This enables deterministic timestamps for testing and network synchronization.
+// In production, use RealTimeProvider. For tests, use MockTimeProvider.
+type TimeProvider interface {
+	// Now returns the current timestamp.
+	Now() time.Time
+}
+
+// RealTimeProvider implements TimeProvider using the system clock.
+// Use this in production code.
+type RealTimeProvider struct{}
+
+// Now returns the current system time.
+func (r RealTimeProvider) Now() time.Time {
+	return time.Now()
+}
+
+// MockTimeProvider implements TimeProvider with a fixed timestamp.
+// Use this for testing and deterministic generation.
+type MockTimeProvider struct {
+	CurrentTime time.Time
+}
+
+// Now returns the mock timestamp.
+func (m MockTimeProvider) Now() time.Time {
+	return m.CurrentTime
+}
+
+// NewMockTimeProvider creates a MockTimeProvider from a seed.
+// The timestamp is deterministically derived from the seed.
+func NewMockTimeProvider(seed int64) *MockTimeProvider {
+	return &MockTimeProvider{
+		CurrentTime: time.Unix(seed, 0),
+	}
+}
+
+// defaultTimeProvider is the package-level time provider used when none is specified.
+var defaultTimeProvider TimeProvider = RealTimeProvider{}
+
 // BuildingSize represents the size tier of a building.
 type BuildingSize int
 
@@ -119,8 +158,15 @@ type Plot struct {
 }
 
 // NewPlot creates a new plot with default settings.
+// Uses the default time provider for timestamps.
 func NewPlot(ownerID string, position Vector2, size BuildingSize) *Plot {
-	now := time.Now()
+	return NewPlotWithTime(ownerID, position, size, defaultTimeProvider)
+}
+
+// NewPlotWithTime creates a new plot with timestamps from the provided TimeProvider.
+// Use this for deterministic timestamps in multiplayer synchronization and testing.
+func NewPlotWithTime(ownerID string, position Vector2, size BuildingSize, tp TimeProvider) *Plot {
+	now := tp.Now()
 	return &Plot{
 		ID:          generatePlotID(),
 		OwnerID:     ownerID,
@@ -312,8 +358,15 @@ func (bp *Blueprint) UnmarshalJSON(data []byte) error {
 }
 
 // NewBlueprint creates a new blueprint with default metadata.
+// Uses the default time provider for timestamps.
 func NewBlueprint(name, author, genreID string, buildingDef *BuildingDefinition) *Blueprint {
-	now := time.Now()
+	return NewBlueprintWithTime(name, author, genreID, buildingDef, defaultTimeProvider)
+}
+
+// NewBlueprintWithTime creates a new blueprint with timestamps from the provided TimeProvider.
+// Use this for deterministic timestamps in multiplayer synchronization and testing.
+func NewBlueprintWithTime(name, author, genreID string, buildingDef *BuildingDefinition, tp TimeProvider) *Blueprint {
+	now := tp.Now()
 	return &Blueprint{
 		ID:          generateBlueprintID(),
 		Name:        name,

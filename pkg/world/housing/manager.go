@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"math/rand"
+
+	log "github.com/sirupsen/logrus"
 )
 
 // Manager handles plot placement, validation, and persistence.
@@ -38,19 +40,34 @@ func (m *Manager) IsEnabled() bool {
 // Returns an error if placement is invalid.
 func (m *Manager) PlacePlot(plot *Plot) error {
 	if !m.enabled {
+		log.WithFields(log.Fields{
+			"error": "housing is disabled",
+		}).Warn("failed to place plot: housing disabled")
 		return fmt.Errorf("housing is disabled")
 	}
 
 	if plot == nil {
+		log.WithFields(log.Fields{
+			"error": "plot cannot be nil",
+		}).Warn("failed to place plot: nil plot")
 		return fmt.Errorf("plot cannot be nil")
 	}
 
 	if plot.OwnerID == "" {
+		log.WithFields(log.Fields{
+			"plotID": plot.ID,
+			"error":  "plot must have an owner",
+		}).Warn("failed to place plot: missing owner")
 		return fmt.Errorf("plot must have an owner")
 	}
 
 	// Check for overlaps with existing plots
 	if err := m.validatePlacement(plot); err != nil {
+		log.WithFields(log.Fields{
+			"plotID":  plot.ID,
+			"ownerID": plot.OwnerID,
+			"error":   err.Error(),
+		}).Warn("failed to place plot: invalid placement")
 		return err
 	}
 
@@ -66,6 +83,10 @@ func (m *Manager) PlacePlot(plot *Plot) error {
 func (m *Manager) RemovePlot(plotID string) error {
 	plot, ok := m.plots[plotID]
 	if !ok {
+		log.WithFields(log.Fields{
+			"plotID": plotID,
+			"error":  "plot not found",
+		}).Warn("failed to remove plot")
 		return fmt.Errorf("plot %s not found", plotID)
 	}
 

@@ -116,11 +116,19 @@ type GuildHall struct {
 	ModifiedAt        time.Time
 	BuildingID        string
 	mu                sync.RWMutex
+	timeProvider      TimeProvider // Time provider for deterministic timestamps
 }
 
 // NewGuildHall creates a new guild hall construction project.
+// Uses the default time provider for timestamps.
 func NewGuildHall(guildID, guildName string, position Vector2, size GuildHallSize, floors int) *GuildHall {
-	now := time.Now()
+	return NewGuildHallWithTime(guildID, guildName, position, size, floors, defaultTimeProvider)
+}
+
+// NewGuildHallWithTime creates a new guild hall with timestamps from the provided TimeProvider.
+// Use this for deterministic timestamps in multiplayer synchronization and testing.
+func NewGuildHallWithTime(guildID, guildName string, position Vector2, size GuildHallSize, floors int, tp TimeProvider) *GuildHall {
+	now := tp.Now()
 	gh := &GuildHall{
 		ID:                generateGuildHallID(),
 		GuildID:           guildID,
@@ -134,6 +142,7 @@ func NewGuildHall(guildID, guildName string, position Vector2, size GuildHallSiz
 		RequiredMaterials: make(map[MaterialType]int),
 		CreatedAt:         now,
 		ModifiedAt:        now,
+		timeProvider:      tp,
 	}
 	gh.calculateRequiredMaterials()
 	return gh
@@ -144,17 +153,23 @@ func (gh *GuildHall) AddMaterial(playerID string, materialType MaterialType, amo
 	gh.mu.Lock()
 	defer gh.mu.Unlock()
 
+	// Get time provider, default to real time if not set
+	tp := gh.timeProvider
+	if tp == nil {
+		tp = defaultTimeProvider
+	}
+
 	// Record contribution
 	gh.Contributions = append(gh.Contributions, MaterialContribution{
 		PlayerID:     playerID,
 		MaterialType: materialType,
 		Amount:       amount,
-		Timestamp:    time.Now(),
+		Timestamp:    tp.Now(),
 	})
 
 	// Add to materials
 	gh.Materials[materialType] += amount
-	gh.ModifiedAt = time.Now()
+	gh.ModifiedAt = tp.Now()
 
 	// Check if phase is complete
 	return gh.checkPhaseComplete()
@@ -190,7 +205,13 @@ func (gh *GuildHall) AdvancePhase() error {
 	}
 
 	gh.Phase++
-	gh.ModifiedAt = time.Now()
+
+	// Get time provider, default to real time if not set
+	tp := gh.timeProvider
+	if tp == nil {
+		tp = defaultTimeProvider
+	}
+	gh.ModifiedAt = tp.Now()
 
 	// Calculate new requirements
 	if gh.Phase != PhaseComplete {

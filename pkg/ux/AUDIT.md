@@ -7,8 +7,8 @@ The UX package provides user experience journey validation through simulation-ba
 
 ## Issues Found
 - [ ] low deterministic — Uses `time.Now()` for default seed generation when ValidationConfig.Seed is 0, which is acceptable for UX validation testing but deviates from deterministic procgen standard (`validator.go:30`)
-- [ ] low doc — JourneyContext.Data field lacks godoc comment explaining it holds step-specific state data (`types.go:56`)
-- [ ] low doc — ValidationConfig.Seed field comment could clarify this is for simulation reproducibility, not game content generation (`types.go:87`)
+- [x] low doc — JourneyContext.Data field lacks godoc comment explaining it holds step-specific state data (`types.go:56`) — **FIXED 2026-02-13**: Added comprehensive godoc comment explaining Data holds step-specific state that persists across journey steps
+- [x] low doc — ValidationConfig.Seed field comment could clarify this is for simulation reproducibility, not game content generation (`types.go:87`) — **FIXED 2026-02-13**: Added detailed godoc comment clarifying Seed controls UX validation timing reproducibility, not game content generation
 
 ## Test Coverage
 96.2% (target: 65%) ✅

@@ -6,8 +6,8 @@
 The stability package provides long-running stability testing for server uptime validation with memory leak detection, FPS monitoring, and crash detection. The package is production-ready with excellent test coverage (95.5%) and clean architecture. It is successfully integrated into both client and server entry points for production monitoring. All critical functionality is complete with only minor low-priority recommendations.
 
 ## Issues Found
-- [ ] low error-handling — WriteReport swallows stdout write error without wrapping (`monitor.go:292-293`)
-- [ ] low documentation — time.Now() usage legitimate (monitoring wall-clock time, not procgen) but lacks comment explaining exemption from deterministic rules (`monitor.go:157,165,168,191`)
+- [x] low error-handling — WriteReport swallows stdout write error without wrapping (`monitor.go:292-293`) — **FIXED 2026-02-13**: Error now wrapped with `fmt.Errorf("failed to write report to stdout: %w", err)` for consistent error messages
+- [x] low documentation — time.Now() usage legitimate (monitoring wall-clock time, not procgen) but lacks comment explaining exemption from deterministic rules (`monitor.go:157,165,168,191`) — **FIXED 2026-02-13**: Added explanatory comment at line 157 documenting that stability monitoring is exempt from deterministic procgen rules
 - [ ] low observability — Package has no structured logging for debugging stability monitor operations; all logging deferred to calling code (`monitor.go:1-302`)
 - [ ] low code-comment — Memory leak detection uses simple first-to-last comparison instead of linear regression; comment at line 242 acknowledges this but doesn't explain when it will be upgraded (`monitor.go:242-256`)
 

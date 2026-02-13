@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+
+	log "github.com/sirupsen/logrus"
 )
 
 // SaveData represents the serializable state of all housing data.
@@ -19,6 +21,10 @@ func (m *Manager) Save(filename string) error {
 	// Create directory if needed
 	dir := filepath.Dir(filename)
 	if err := os.MkdirAll(dir, 0o755); err != nil {
+		log.WithFields(log.Fields{
+			"filename": filename,
+			"error":    err.Error(),
+		}).Error("failed to create directory for housing save")
 		return fmt.Errorf("failed to create directory: %w", err)
 	}
 
@@ -36,6 +42,10 @@ func (m *Manager) Save(filename string) error {
 	// Create file
 	file, err := os.Create(filename)
 	if err != nil {
+		log.WithFields(log.Fields{
+			"filename": filename,
+			"error":    err.Error(),
+		}).Error("failed to create housing save file")
 		return fmt.Errorf("failed to create file: %w", err)
 	}
 	defer file.Close()
@@ -48,6 +58,11 @@ func (m *Manager) Save(filename string) error {
 	encoder := json.NewEncoder(gzWriter)
 	encoder.SetIndent("", "  ")
 	if err := encoder.Encode(saveData); err != nil {
+		log.WithFields(log.Fields{
+			"filename":   filename,
+			"plot_count": len(plots),
+			"error":      err.Error(),
+		}).Error("failed to encode housing data")
 		return fmt.Errorf("failed to encode JSON: %w", err)
 	}
 
@@ -59,6 +74,10 @@ func (m *Manager) Load(filename string) error {
 	// Open file
 	file, err := os.Open(filename)
 	if err != nil {
+		log.WithFields(log.Fields{
+			"filename": filename,
+			"error":    err.Error(),
+		}).Error("failed to open housing save file")
 		return fmt.Errorf("failed to open file: %w", err)
 	}
 	defer file.Close()
@@ -66,6 +85,10 @@ func (m *Manager) Load(filename string) error {
 	// Create gzip reader
 	gzReader, err := gzip.NewReader(file)
 	if err != nil {
+		log.WithFields(log.Fields{
+			"filename": filename,
+			"error":    err.Error(),
+		}).Error("failed to create gzip reader for housing data")
 		return fmt.Errorf("failed to create gzip reader: %w", err)
 	}
 	defer gzReader.Close()
@@ -74,11 +97,19 @@ func (m *Manager) Load(filename string) error {
 	var saveData SaveData
 	decoder := json.NewDecoder(gzReader)
 	if err := decoder.Decode(&saveData); err != nil {
+		log.WithFields(log.Fields{
+			"filename": filename,
+			"error":    err.Error(),
+		}).Error("failed to decode housing data")
 		return fmt.Errorf("failed to decode JSON: %w", err)
 	}
 
 	// Validate version
 	if saveData.Version != "1.0" {
+		log.WithFields(log.Fields{
+			"filename": filename,
+			"version":  saveData.Version,
+		}).Error("unsupported housing save version")
 		return fmt.Errorf("unsupported save version: %s", saveData.Version)
 	}
 
@@ -112,12 +143,22 @@ func (m *Manager) SavePlayerData(playerID, filename string) error {
 	// Create directory if needed
 	dir := filepath.Dir(filename)
 	if err := os.MkdirAll(dir, 0o755); err != nil {
+		log.WithFields(log.Fields{
+			"playerID": playerID,
+			"filename": filename,
+			"error":    err.Error(),
+		}).Error("failed to create directory for player housing save")
 		return fmt.Errorf("failed to create directory: %w", err)
 	}
 
 	// Create file
 	file, err := os.Create(filename)
 	if err != nil {
+		log.WithFields(log.Fields{
+			"playerID": playerID,
+			"filename": filename,
+			"error":    err.Error(),
+		}).Error("failed to create player housing save file")
 		return fmt.Errorf("failed to create file: %w", err)
 	}
 	defer file.Close()
@@ -130,6 +171,12 @@ func (m *Manager) SavePlayerData(playerID, filename string) error {
 	encoder := json.NewEncoder(gzWriter)
 	encoder.SetIndent("", "  ")
 	if err := encoder.Encode(saveData); err != nil {
+		log.WithFields(log.Fields{
+			"playerID":   playerID,
+			"filename":   filename,
+			"plot_count": len(plots),
+			"error":      err.Error(),
+		}).Error("failed to encode player housing data")
 		return fmt.Errorf("failed to encode JSON: %w", err)
 	}
 

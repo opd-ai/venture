@@ -154,6 +154,10 @@ func (m *Monitor) Run(ctx context.Context) (*Report, error) {
 		m.mu.Unlock()
 	}()
 
+	// NOTE: time.Now() is intentionally used throughout this monitoring package
+	// for wall-clock measurements. Stability monitoring requires real-time metrics
+	// (memory, FPS, goroutines) at actual intervals, not deterministic simulation.
+	// This is exempt from the deterministic procgen rules per audit guidelines.
 	startTime := time.Now()
 	ticker := time.NewTicker(m.config.CheckInterval)
 	defer ticker.Stop()
@@ -290,7 +294,10 @@ func (m *Monitor) WriteReport(report *Report) error {
 	// Write to stdout if no path or "-" specified
 	if reportPath == "" || reportPath == "-" {
 		_, err = os.Stdout.Write(append(data, '\n'))
-		return err
+		if err != nil {
+			return fmt.Errorf("failed to write report to stdout: %w", err)
+		}
+		return nil
 	}
 
 	// Write to file

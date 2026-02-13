@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"io"
 	"sync"
+
+	log "github.com/sirupsen/logrus"
 )
 
 // GuildHallManager manages all guild halls in the world.
@@ -28,11 +30,20 @@ func (m *GuildHallManager) CreateGuildHall(guildID, guildName string, position V
 
 	// Validate guild level determines max floors
 	if floors < 1 || floors > 5 {
+		log.WithFields(log.Fields{
+			"guildID": guildID,
+			"floors":  floors,
+			"error":   "invalid floor count",
+		}).Warn("failed to create guild hall: invalid floor count")
 		return nil, fmt.Errorf("invalid floor count: %d (must be 1-5)", floors)
 	}
 
 	// Check if guild already has a hall
 	if _, exists := m.guildHalls[guildID]; exists {
+		log.WithFields(log.Fields{
+			"guildID": guildID,
+			"error":   "guild already has a hall",
+		}).Warn("failed to create guild hall: already exists")
 		return nil, fmt.Errorf("guild %s already has a guild hall", guildID)
 	}
 
@@ -46,6 +57,13 @@ func (m *GuildHallManager) CreateGuildHall(guildID, guildName string, position V
 		// Check for overlap
 		if !(max.X < existingMin.X || min.X > existingMax.X ||
 			max.Y < existingMin.Y || min.Y > existingMax.Y) {
+			log.WithFields(log.Fields{
+				"guildID":          guildID,
+				"position_x":       position.X,
+				"position_y":       position.Y,
+				"existing_guildID": existing.GuildID,
+				"error":            "location overlap",
+			}).Warn("failed to create guild hall: location overlaps")
 			return nil, fmt.Errorf("guild hall location overlaps with existing guild hall")
 		}
 	}
@@ -73,10 +91,21 @@ func (m *GuildHallManager) ContributeMaterial(guildID, playerID string, material
 	m.mu.RUnlock()
 
 	if !ok {
+		log.WithFields(log.Fields{
+			"guildID":  guildID,
+			"playerID": playerID,
+			"error":    "guild hall not found",
+		}).Warn("failed to contribute material: guild hall not found")
 		return fmt.Errorf("guild hall not found for guild %s", guildID)
 	}
 
 	if amount <= 0 {
+		log.WithFields(log.Fields{
+			"guildID":  guildID,
+			"playerID": playerID,
+			"amount":   amount,
+			"error":    "invalid material amount",
+		}).Warn("failed to contribute material: invalid amount")
 		return fmt.Errorf("invalid material amount: %d", amount)
 	}
 
@@ -88,6 +117,11 @@ func (m *GuildHallManager) ContributeMaterial(guildID, playerID string, material
 		if err := gh.AdvancePhase(); err != nil {
 			// Don't fail on advancement error, just log it
 			// The materials are still added
+			log.WithFields(log.Fields{
+				"guildID": guildID,
+				"phase":   gh.GetCurrentPhase().String(),
+				"error":   err.Error(),
+			}).Warn("auto-advance phase failed after material contribution")
 		}
 	}
 
@@ -101,6 +135,10 @@ func (m *GuildHallManager) AdvanceConstruction(guildID string) error {
 	m.mu.RUnlock()
 
 	if !ok {
+		log.WithFields(log.Fields{
+			"guildID": guildID,
+			"error":   "guild hall not found",
+		}).Warn("failed to advance construction: guild hall not found")
 		return fmt.Errorf("guild hall not found for guild %s", guildID)
 	}
 
@@ -143,6 +181,10 @@ func (m *GuildHallManager) RemoveGuildHall(guildID string) error {
 	defer m.mu.Unlock()
 
 	if _, ok := m.guildHalls[guildID]; !ok {
+		log.WithFields(log.Fields{
+			"guildID": guildID,
+			"error":   "guild hall not found",
+		}).Warn("failed to remove guild hall: not found")
 		return fmt.Errorf("guild hall not found for guild %s", guildID)
 	}
 
@@ -205,6 +247,9 @@ func (m *GuildHallManager) Load(r io.Reader) error {
 	// Create gzip reader
 	gzReader, err := gzip.NewReader(r)
 	if err != nil {
+		log.WithFields(log.Fields{
+			"error": err.Error(),
+		}).Error("failed to create gzip reader for guild hall data")
 		return fmt.Errorf("gzip reader creation failed: %w", err)
 	}
 	defer gzReader.Close()
@@ -213,6 +258,9 @@ func (m *GuildHallManager) Load(r io.Reader) error {
 	guildHalls := make(map[string]*GuildHall)
 	decoder := json.NewDecoder(gzReader)
 	if err := decoder.Decode(&guildHalls); err != nil {
+		log.WithFields(log.Fields{
+			"error": err.Error(),
+		}).Error("failed to decode guild hall data")
 		return fmt.Errorf("guild halls decode failed: %w", err)
 	}
 
@@ -229,23 +277,42 @@ func (m *GuildHallManager) ValidateProgress(guildID string) error {
 	m.mu.RUnlock()
 
 	if !ok {
+		log.WithFields(log.Fields{
+			"guildID": guildID,
+			"error":   "guild hall not found",
+		}).Warn("failed to validate progress: guild hall not found")
 		return fmt.Errorf("guild hall not found for guild %s", guildID)
 	}
 
 	// Check progress is valid
 	progress := gh.GetProgress()
 	if progress < 0.0 || progress > 1.0 {
+		log.WithFields(log.Fields{
+			"guildID":  guildID,
+			"progress": progress,
+			"error":    "invalid progress",
+		}).Error("guild hall progress validation failed")
 		return fmt.Errorf("invalid progress: %.2f", progress)
 	}
 
 	// Check phase consistency
 	phase := gh.GetCurrentPhase()
 	if phase < PhaseFoundation || phase > PhaseComplete {
+		log.WithFields(log.Fields{
+			"guildID": guildID,
+			"phase":   phase,
+			"error":   "invalid phase",
+		}).Error("guild hall phase validation failed")
 		return fmt.Errorf("invalid phase: %d", phase)
 	}
 
 	// Check floors are valid
 	if gh.Floors < 1 || gh.Floors > 5 {
+		log.WithFields(log.Fields{
+			"guildID": guildID,
+			"floors":  gh.Floors,
+			"error":   "invalid floor count",
+		}).Error("guild hall floor validation failed")
 		return fmt.Errorf("invalid floor count: %d", gh.Floors)
 	}
 

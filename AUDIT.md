@@ -131,8 +131,8 @@ This document tracks the audit status of all Go packages in the Venture codebase
 - [x] `pkg/security/AUDIT.md` — Complete — 2 issues (0 high, 0 med, 2 low)
 - [x] `pkg/social/AUDIT.md` — Complete — 3 issues (0 high, 0 med, 3 low) - Updated 2026-02-13: Fixed 2 high-priority issues (TimeProvider for deterministic ImageGallery timestamps), exempted 1 med-priority issue (background decay time.Now() documented as server operation)
 - [x] `pkg/social/persistence/AUDIT.md` — Complete — 2 issues (0 high, 0 med, 2 low) - Updated 2026-02-13: Fixed 2 high-priority issues (TimeProvider), 1 med-priority (AddImage godoc), exempted 1 med-priority (background decay time.Now())
-- [x] `pkg/stability/AUDIT.md` — Complete — 4 issues (0 high, 0 med, 4 low)
-- [x] `pkg/ux/AUDIT.md` — Complete — 3 issues (0 high, 0 med, 3 low)
+- [x] `pkg/stability/AUDIT.md` — Complete — 2 issues (0 high, 0 med, 2 low) - Updated 2026-02-13: Fixed 2 low-priority issues (WriteReport error wrapping, time.Now() exemption documentation)
+- [x] `pkg/ux/AUDIT.md` — Complete — 1 issue (0 high, 0 med, 1 low) - Updated 2026-02-13: Fixed 2 low-priority doc issues (JourneyContext.Data godoc, ValidationConfig.Seed clarification)
 - [x] `pkg/version/AUDIT.md` — Complete — 2 issues (0 high, 0 med, 2 low) - Updated 2026-02-13: Fixed handshake integration to use version.IsCompatible(), all high/med issues resolved
 - [x] `pkg/visualtest/AUDIT.md` — Complete — 2 issues (0 high, 0 med, 2 low)
 - [x] `pkg/visualtest/parity/AUDIT.md` — Complete — 3 issues (0 high, 0 med, 3 low)

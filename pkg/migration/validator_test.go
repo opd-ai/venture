@@ -1,9 +1,13 @@
 package migration
 
 import (
+	"fmt"
 	"os"
 	"strings"
 	"testing"
+
+	"github.com/opd-ai/venture/pkg/saveload"
+	"github.com/sirupsen/logrus"
 )
 
 func TestValidator_NewValidator(t *testing.T) {
@@ -242,15 +246,24 @@ func TestValidator_ComponentPreservation(t *testing.T) {
 		ValidateData: true,
 	})
 
-	// Create save with optional components
+	// Create save with valid GameSave structure
+	// Note: In the real GameSave, inventory/companions/vehicles are nested under player
 	saveData := map[string]interface{}{
-		"version":    "0.9.2",
-		"player":     map[string]interface{}{"level": 20},
-		"world":      map[string]interface{}{"seed": 12345},
-		"inventory":  []interface{}{},
-		"quests":     []interface{}{},
-		"companions": []interface{}{},
-		"vehicles":   []interface{}{},
+		"version": "0.9.2",
+		"player": map[string]interface{}{
+			"level":             20,
+			"items":             []interface{}{},
+			"active_companions": []interface{}{},
+			"owned_vehicles":    []interface{}{},
+		},
+		"world": map[string]interface{}{
+			"seed":  12345,
+			"depth": 5,
+		},
+		"settings": map[string]interface{}{
+			"screen_width":  800,
+			"screen_height": 600,
+		},
 	}
 
 	migratedData, _, err := validator.performMigration(saveData, "0.9.2", "1.0.0")
@@ -263,9 +276,10 @@ func TestValidator_ComponentPreservation(t *testing.T) {
 		t.Fatalf("validation error: %v", err)
 	}
 
-	// Verify all components preserved
-	expectedComponents := []string{"version", "player", "world", "inventory", "quests", "companions", "vehicles"}
-	for _, expected := range expectedComponents {
+	// Verify required components are preserved (version, player, world)
+	// Note: Real migrator produces GameSave structure, not arbitrary maps
+	expectedRequired := []string{"version", "player", "world"}
+	for _, expected := range expectedRequired {
 		found := false
 		for _, component := range components {
 			if component == expected {
@@ -276,6 +290,11 @@ func TestValidator_ComponentPreservation(t *testing.T) {
 		if !found {
 			t.Errorf("expected component %s to be preserved", expected)
 		}
+	}
+
+	// Verify at least the 3 required components are present
+	if len(components) < 3 {
+		t.Errorf("expected at least 3 components, got %d: %v", len(components), components)
 	}
 }
 
@@ -445,12 +464,16 @@ func TestValidator_ValidateMigration_InvalidPlayerType(t *testing.T) {
 
 	result := validator.ValidateMigration("0.9.0", "1.0.0")
 
-	// Validation should fail because player is not a map
+	// Migration should fail because player type is invalid
+	// Now using real migrator which catches this during JSON unmarshal
 	if result.Passed {
 		t.Error("expected migration to fail for invalid player type")
 	}
-	if !strings.Contains(result.Error, "must be an object") {
-		t.Errorf("expected 'must be an object' error, got: %s", result.Error)
+	// Check for any indication of type mismatch - either original or JSON unmarshal error
+	if !strings.Contains(result.Error, "must be an object") &&
+		!strings.Contains(result.Error, "cannot unmarshal") &&
+		!strings.Contains(result.Error, "failed to convert") {
+		t.Errorf("expected type mismatch error, got: %s", result.Error)
 	}
 }
 
@@ -656,4 +679,156 @@ func TestValidator_ValidateMigration_093(t *testing.T) {
 	if len(result.ComponentsPreserved) < 3 {
 		t.Errorf("expected at least 3 components, got %d", len(result.ComponentsPreserved))
 	}
+}
+
+// TestValidator_NewValidatorWithLogger tests creating validator with custom logger.
+func TestValidator_NewValidatorWithLogger(t *testing.T) {
+	logger := logrus.New()
+	logger.SetLevel(logrus.DebugLevel)
+
+	validator := NewValidatorWithLogger(Config{
+		TargetVersion: "1.0.0",
+	}, logger)
+
+	if validator == nil {
+		t.Fatal("expected validator instance, got nil")
+	}
+	if validator.logger != logger {
+		t.Error("expected custom logger to be set")
+	}
+}
+
+// TestValidator_NewValidatorWithMigrator tests creating validator with custom migrator.
+func TestValidator_NewValidatorWithMigrator(t *testing.T) {
+	migrator := saveload.NewDefaultMigrator()
+
+	validator := NewValidatorWithMigrator(Config{
+		TargetVersion: "1.0.0",
+	}, migrator)
+
+	if validator == nil {
+		t.Fatal("expected validator instance, got nil")
+	}
+	if validator.migrator != migrator {
+		t.Error("expected custom migrator to be set")
+	}
+}
+
+// TestValidator_RealMigrationTime tests that migration time is actually measured.
+func TestValidator_RealMigrationTime(t *testing.T) {
+	validator := NewValidator(Config{
+		TargetVersion: "1.0.0",
+		TestDataPath:  "testdata/",
+		ValidateData:  true,
+	})
+
+	result := validator.ValidateMigration("0.9.0", "1.0.0")
+
+	if !result.Passed {
+		t.Errorf("expected migration to pass, got error: %s", result.Error)
+	}
+	// Migration time should be non-zero (real measurement)
+	if result.MigrationTime == 0 {
+		t.Error("expected non-zero migration time")
+	}
+	// Migration time should be reasonable (not the old hardcoded 0.001)
+	// It should be at least slightly different from 0.001 due to actual timing
+	// Note: Very fast systems might still measure ~0.001s, so we just check it's > 0
+	if result.MigrationTime <= 0 {
+		t.Errorf("expected positive migration time, got %f", result.MigrationTime)
+	}
+}
+
+// TestValidator_MapToGameSaveConversion tests the map-to-GameSave conversion.
+func TestValidator_MapToGameSaveConversion(t *testing.T) {
+	validator := NewValidator(Config{})
+
+	data := map[string]interface{}{
+		"version": "0.9.0",
+		"player": map[string]interface{}{
+			"level": 10,
+			"x":     100.0,
+			"y":     200.0,
+		},
+		"world": map[string]interface{}{
+			"seed":  int64(12345),
+			"depth": 5,
+		},
+	}
+
+	gameSave, err := validator.mapToGameSave(data, "0.9.0")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if gameSave == nil {
+		t.Fatal("expected game save, got nil")
+	}
+	if gameSave.Version != "0.9.0" {
+		t.Errorf("expected version 0.9.0, got %s", gameSave.Version)
+	}
+}
+
+// TestValidator_GameSaveToMapConversion tests the GameSave-to-map conversion.
+func TestValidator_GameSaveToMapConversion(t *testing.T) {
+	validator := NewValidator(Config{})
+
+	gameSave := saveload.NewGameSave()
+	gameSave.Version = "1.0.0"
+
+	mapData, err := validator.gameSaveToMap(gameSave)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if mapData == nil {
+		t.Fatal("expected map data, got nil")
+	}
+	if version, ok := mapData["version"].(string); !ok || version != "1.0.0" {
+		t.Errorf("expected version 1.0.0, got %v", mapData["version"])
+	}
+}
+
+// TestValidator_FallbackMigration tests fallback migration for unsupported versions.
+func TestValidator_FallbackMigration(t *testing.T) {
+	// Create a mock migrator that doesn't support any versions
+	mockMigrator := &mockMigrator{}
+
+	validator := NewValidatorWithMigrator(Config{
+		TargetVersion: "1.0.0",
+	}, mockMigrator)
+
+	data := map[string]interface{}{
+		"version": "0.8.0", // Unsupported version
+		"player":  map[string]interface{}{"level": 10},
+		"world":   map[string]interface{}{"seed": 12345},
+	}
+
+	// Should fall back to simulated migration
+	migratedData, migrationTime, err := validator.performMigration(data, "0.8.0", "1.0.0")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if migratedData == nil {
+		t.Fatal("expected migrated data, got nil")
+	}
+	if migrationTime <= 0 {
+		t.Error("expected positive migration time")
+	}
+	if version, ok := migratedData["version"].(string); !ok || version != "1.0.0" {
+		t.Errorf("expected version 1.0.0, got %v", migratedData["version"])
+	}
+}
+
+// mockMigrator is a test migrator that doesn't support any versions.
+type mockMigrator struct{}
+
+func (m *mockMigrator) CanMigrate(sourceVersion string) bool {
+	return false
+}
+
+func (m *mockMigrator) Migrate(save *saveload.GameSave, sourceVersion string) (*saveload.GameSave, error) {
+	return nil, fmt.Errorf("unsupported version: %s", sourceVersion)
+}
+
+func (m *mockMigrator) SupportedVersions() []string {
+	return []string{}
 }

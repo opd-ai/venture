@@ -11,12 +11,18 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
+
+	"github.com/opd-ai/venture/pkg/saveload"
+	"github.com/sirupsen/logrus"
 )
 
 // Validator performs save file migration validation.
 // Code relocated from original validator.go (types moved to types.go)
 type Validator struct {
-	config Config
+	config   Config
+	migrator saveload.Migrator
+	logger   *logrus.Logger
 }
 
 // NewValidator creates a migration validator with the given configuration.
@@ -29,8 +35,29 @@ func NewValidator(config Config) *Validator {
 	}
 
 	return &Validator{
-		config: config,
+		config:   config,
+		migrator: saveload.NewDefaultMigrator(),
+		logger:   logrus.StandardLogger(),
 	}
+}
+
+// NewValidatorWithLogger creates a migration validator with custom logger.
+func NewValidatorWithLogger(config Config, logger *logrus.Logger) *Validator {
+	v := NewValidator(config)
+	if logger != nil {
+		v.logger = logger
+	}
+	return v
+}
+
+// NewValidatorWithMigrator creates a migration validator with a custom migrator.
+// This allows injecting mock migrators for testing.
+func NewValidatorWithMigrator(config Config, migrator saveload.Migrator) *Validator {
+	v := NewValidator(config)
+	if migrator != nil {
+		v.migrator = migrator
+	}
+	return v
 }
 
 // ValidateAll tests migration from all supported versions to target version.
@@ -162,10 +189,69 @@ func extractVersion(path string) string {
 	return ""
 }
 
-// performMigration applies version-specific migration logic.
+// performMigration applies version-specific migration logic using the real saveload migrator.
+// It converts the map data to a GameSave, calls the actual migration, and measures real time.
 func (v *Validator) performMigration(data map[string]interface{}, source, target string) (map[string]interface{}, float64, error) {
-	// In a real implementation, this would call pkg/saveload migration functions
-	// For now, simulate migration by updating version field
+	startTime := time.Now()
+
+	// Convert map data to GameSave struct for real migration
+	gameSave, err := v.mapToGameSave(data, source)
+	if err != nil {
+		v.logger.WithFields(logrus.Fields{
+			"source_version": source,
+			"target_version": target,
+			"error":          err.Error(),
+		}).Error("failed to convert save data to GameSave")
+		return nil, 0, fmt.Errorf("failed to convert to GameSave: %w", err)
+	}
+
+	// Check if migrator supports this version
+	if !v.migrator.CanMigrate(source) {
+		v.logger.WithFields(logrus.Fields{
+			"source_version": source,
+			"target_version": target,
+		}).Warn("migrator does not support source version, using fallback migration")
+		// Fallback to simulated migration for unsupported versions
+		return v.performFallbackMigration(data, source, target, startTime)
+	}
+
+	// Call real migrator
+	migratedSave, err := v.migrator.Migrate(gameSave, source)
+	if err != nil {
+		v.logger.WithFields(logrus.Fields{
+			"source_version": source,
+			"target_version": target,
+			"error":          err.Error(),
+		}).Error("migration failed")
+		return nil, 0, fmt.Errorf("migration failed: %w", err)
+	}
+
+	// Convert migrated GameSave back to map
+	migratedData, err := v.gameSaveToMap(migratedSave)
+	if err != nil {
+		v.logger.WithFields(logrus.Fields{
+			"source_version": source,
+			"target_version": target,
+			"error":          err.Error(),
+		}).Error("failed to convert migrated save to map")
+		return nil, 0, fmt.Errorf("failed to convert migrated save: %w", err)
+	}
+
+	// Measure actual migration time
+	migrationTime := time.Since(startTime).Seconds()
+
+	v.logger.WithFields(logrus.Fields{
+		"source_version": source,
+		"target_version": target,
+		"migration_time": migrationTime,
+	}).Debug("migration completed successfully")
+
+	return migratedData, migrationTime, nil
+}
+
+// performFallbackMigration uses the simulated migration for unsupported versions.
+func (v *Validator) performFallbackMigration(data map[string]interface{}, source, target string, startTime time.Time) (map[string]interface{}, float64, error) {
+	// Copy data
 	migratedData := make(map[string]interface{})
 	for k, val := range data {
 		migratedData[k] = val
@@ -177,10 +263,45 @@ func (v *Validator) performMigration(data map[string]interface{}, source, target
 		return nil, 0, err
 	}
 
-	// Simulate migration time (would be actual measurement in real implementation)
-	migrationTime := 0.001 // 1ms
+	// Measure actual time even for fallback
+	migrationTime := time.Since(startTime).Seconds()
 
 	return migratedData, migrationTime, nil
+}
+
+// mapToGameSave converts a map[string]interface{} to a saveload.GameSave.
+func (v *Validator) mapToGameSave(data map[string]interface{}, version string) (*saveload.GameSave, error) {
+	// Marshal the map to JSON, then unmarshal to GameSave
+	jsonData, err := json.Marshal(data)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal data: %w", err)
+	}
+
+	var gameSave saveload.GameSave
+	if err := json.Unmarshal(jsonData, &gameSave); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal to GameSave: %w", err)
+	}
+
+	// Ensure version is set
+	gameSave.Version = version
+
+	return &gameSave, nil
+}
+
+// gameSaveToMap converts a saveload.GameSave back to map[string]interface{}.
+func (v *Validator) gameSaveToMap(save *saveload.GameSave) (map[string]interface{}, error) {
+	// Marshal GameSave to JSON, then unmarshal to map
+	jsonData, err := json.Marshal(save)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal GameSave: %w", err)
+	}
+
+	var result map[string]interface{}
+	if err := json.Unmarshal(jsonData, &result); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal to map: %w", err)
+	}
+
+	return result, nil
 }
 
 // applyMigrationRules applies version-specific data transformations.

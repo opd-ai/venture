@@ -6,10 +6,10 @@
 The trade package implements a two-phase commit protocol for multiplayer item trading with proximity validation, trust mechanics, and atomic ownership transfer. Code quality is high with comprehensive error handling, proper validation, and clean separation of concerns. However, tests cannot run in headless CI environments due to Ebiten dependency, and several types lack godoc comments.
 
 ## Issues Found
-- [ ] **med** Doc coverage — TradeProposal struct lacks godoc comment (`pkg/engine/chat_trade_components.go:257`)
-- [ ] **med** Doc coverage — TradeRecord struct lacks godoc comment (`pkg/engine/chat_trade_components.go:268`)
-- [ ] **low** Doc coverage — ChatComponent struct lacks godoc comment (`pkg/engine/chat_trade_components.go:57`)
-- [ ] **low** Doc coverage — PartyComponent struct lacks godoc comment (`pkg/engine/chat_trade_components.go:325`)
+- [x] **med** Doc coverage — TradeProposal struct lacks godoc comment (`pkg/engine/chat_trade_components.go:257`) — **FIXED 2026-02-13**: Added comprehensive godoc with field documentation
+- [x] **med** Doc coverage — TradeRecord struct lacks godoc comment (`pkg/engine/chat_trade_components.go:268`) — **FIXED 2026-02-13**: Added comprehensive godoc with field documentation
+- [x] **low** Doc coverage — ChatComponent struct lacks godoc comment (`pkg/engine/chat_trade_components.go:57`) — **ALREADY HAD COMMENT**: Verified existing godoc comment on line 56
+- [x] **low** Doc coverage — PartyComponent struct lacks godoc comment (`pkg/engine/chat_trade_components.go:325`) — **ALREADY HAD COMMENT**: Verified extensive godoc comment (lines 287-325) explaining shared instance model
 - [ ] **low** Test coverage — Tests require GUI environment; cannot run in headless CI without Ebiten stub (`system_test.go`)
 
 ## Test Coverage

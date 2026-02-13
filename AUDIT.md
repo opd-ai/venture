@@ -17,7 +17,7 @@ This document tracks the audit status of all Go packages in the Venture codebase
 - [x] `pkg/network/federation/webrtc/AUDIT.md` — Needs Work — 7 issues (4 high, 3 med, 1 low)
 - [x] `pkg/network/AUDIT_COMPLETE.md` — Complete — 0 issues (3 informational notes)
 - [x] `pkg/network/chat/AUDIT.md` — Complete — 0 issues (7 fixed on 2026-02-13: structured logging, nil safety, NewChatComponent helper, documentation)
-- [x] `pkg/network/trade/AUDIT.md` — Needs Work — 5 issues (0 high, 2 med, 3 low)
+- [x] `pkg/network/trade/AUDIT.md` — Needs Work — 1 issue (0 high, 0 med, 1 low) - Updated 2026-02-13: Fixed 4 doc issues (TradeProposal, TradeRecord godocs added; verified ChatComponent, PartyComponent already documented)
 - [x] `pkg/network/resilience/AUDIT.md` — Needs Work — 3 issues (1 high, 0 med, 2 low)
 
 ### Engine
@@ -40,7 +40,7 @@ This document tracks the audit status of all Go packages in the Venture codebase
 - [x] `pkg/procgen/quest/AUDIT.md` — Complete — 1 issue (0 high, 0 med, 1 low)
 - [x] `pkg/procgen/magic/AUDIT.md` — Complete — 4 issues (0 high, 0 med, 4 low)
 - [x] `pkg/procgen/skills/AUDIT.md` — Complete — 4 issues (0 high, 0 med, 4 low)
-- [x] `pkg/procgen/dialog/AUDIT.md` — Needs Work — 5 issues (0 high, 2 med, 3 low)
+- [x] `pkg/procgen/dialog/AUDIT.md` — Needs Work — 3 issues (0 high, 0 med, 3 low) - Updated 2026-02-13: Fixed 2 medium-priority issues (binary.Write error handling, genre ID mismatch)
 - [x] `pkg/procgen/building/AUDIT.md` — Complete — 2 issues (0 high, 0 med, 2 low)
 - [x] `pkg/procgen/furniture/AUDIT.md` — Complete — 3 issues (0 high, 0 med, 3 low)
 - [x] `pkg/procgen/narrative/AUDIT.md` — Complete — 3 issues (0 high, 0 med, 3 low)
@@ -63,8 +63,8 @@ This document tracks the audit status of all Go packages in the Venture codebase
 ### Rendering
 - [x] `pkg/rendering/AUDIT.md` — Complete — 1 issue (0 high, 0 med, 1 low)
 - [x] `pkg/rendering/sprites/AUDIT.md` — Complete — 3 issues (0 high, 0 med, 3 low) - Updated 2026-02-13: Fixed 2 high-priority issues (procgen.Generator interface compliance, Validate method)
-- [x] `pkg/rendering/animation/AUDIT.md` — Needs Work — 4 issues (1 high, 0 med, 3 low)
-- [x] `pkg/rendering/lighting/AUDIT.md` — Needs Work — 4 issues (1 high, 1 med, 2 low) - Updated 2026-02-13: Fixed high-priority issue (added structured logging for shader compilation errors)
+- [x] `pkg/rendering/animation/AUDIT.md` — Needs Work — 3 issues (0 high, 0 med, 3 low) - Updated 2026-02-13: Fixed high-priority issue (implemented full body part articulation rendering with per-part transformations)
+- [x] `pkg/rendering/lighting/AUDIT.md` — Needs Work — 1 issue (0 high, 0 med, 1 low) - Updated 2026-02-13: Fixed 3 issues (1 high, 1 med, 1 low) - structured logging on all error paths, NewSystemWithLogger constructor, updated integration comment
 - [x] `pkg/rendering/particles/AUDIT.md` — Complete — 1 issue (0 high, 0 med, 1 low)
 - [x] `pkg/rendering/cache/AUDIT.md` — Needs Work — 3 issues (0 high, 1 med, 2 low)
 - [x] `pkg/rendering/tiles/AUDIT.md` — Complete — 1 issue (0 high, 0 med, 1 low)

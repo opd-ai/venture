@@ -5,14 +5,17 @@ import (
 	"image"
 	"image/color"
 	"math"
+
+	log "github.com/sirupsen/logrus"
 )
 
 // System manages multiple light sources and applies lighting to images.
-// Future feature: This system is designed for dynamic lighting but not yet integrated into the main game loop.
-// Planned integration for enhanced visual effects (see roadmap category 5.3).
+// This system is integrated via pkg/engine/lighting_adapter.go (LightingAdapter)
+// which wraps this system for ECS compatibility.
 type System struct {
 	lights []Light
 	config LightingConfig
+	logger *log.Logger
 }
 
 // NewSystem creates a new lighting system with default configuration.
@@ -20,6 +23,7 @@ func NewSystem() *System {
 	return &System{
 		lights: make([]Light, 0),
 		config: DefaultConfig(),
+		logger: log.StandardLogger(),
 	}
 }
 
@@ -28,16 +32,40 @@ func NewSystemWithConfig(config LightingConfig) *System {
 	return &System{
 		lights: make([]Light, 0),
 		config: config,
+		logger: log.StandardLogger(),
+	}
+}
+
+// NewSystemWithLogger creates a new lighting system with custom configuration and logger.
+func NewSystemWithLogger(config LightingConfig, logger *log.Logger) *System {
+	if logger == nil {
+		logger = log.StandardLogger()
+	}
+	return &System{
+		lights: make([]Light, 0),
+		config: config,
+		logger: logger,
 	}
 }
 
 // AddLight adds a light source to the system.
 func (s *System) AddLight(light Light) error {
 	if err := light.Validate(); err != nil {
+		s.logger.WithFields(log.Fields{
+			"package":    "lighting",
+			"light_type": light.Type,
+			"error":      err.Error(),
+		}).Debug("failed to validate light")
 		return err
 	}
 	if len(s.lights) >= s.config.MaxLights {
-		return &ValidationError{Field: "lights", Message: "maximum number of lights reached"}
+		err := &ValidationError{Field: "lights", Message: "maximum number of lights reached"}
+		s.logger.WithFields(log.Fields{
+			"package":    "lighting",
+			"max_lights": s.config.MaxLights,
+			"error":      err.Error(),
+		}).Debug("cannot add light: maximum lights reached")
+		return err
 	}
 	s.lights = append(s.lights, light)
 	return nil
@@ -46,7 +74,14 @@ func (s *System) AddLight(light Light) error {
 // RemoveLight removes a light at the specified index.
 func (s *System) RemoveLight(index int) error {
 	if index < 0 || index >= len(s.lights) {
-		return &ValidationError{Field: "index", Message: "out of bounds"}
+		err := &ValidationError{Field: "index", Message: "out of bounds"}
+		s.logger.WithFields(log.Fields{
+			"package":     "lighting",
+			"index":       index,
+			"light_count": len(s.lights),
+			"error":       err.Error(),
+		}).Debug("cannot remove light: index out of bounds")
+		return err
 	}
 	s.lights = append(s.lights[:index], s.lights[index+1:]...)
 	return nil
@@ -67,7 +102,14 @@ func (s *System) GetLights() []Light {
 // GetLight returns the light at the specified index.
 func (s *System) GetLight(index int) (Light, error) {
 	if index < 0 || index >= len(s.lights) {
-		return Light{}, &ValidationError{Field: "index", Message: "out of bounds"}
+		err := &ValidationError{Field: "index", Message: "out of bounds"}
+		s.logger.WithFields(log.Fields{
+			"package":     "lighting",
+			"index":       index,
+			"light_count": len(s.lights),
+			"error":       err.Error(),
+		}).Debug("cannot get light: index out of bounds")
+		return Light{}, err
 	}
 	return s.lights[index], nil
 }
@@ -75,9 +117,22 @@ func (s *System) GetLight(index int) (Light, error) {
 // UpdateLight updates the light at the specified index.
 func (s *System) UpdateLight(index int, light Light) error {
 	if index < 0 || index >= len(s.lights) {
-		return &ValidationError{Field: "index", Message: "out of bounds"}
+		err := &ValidationError{Field: "index", Message: "out of bounds"}
+		s.logger.WithFields(log.Fields{
+			"package":     "lighting",
+			"index":       index,
+			"light_count": len(s.lights),
+			"error":       err.Error(),
+		}).Debug("cannot update light: index out of bounds")
+		return err
 	}
 	if err := light.Validate(); err != nil {
+		s.logger.WithFields(log.Fields{
+			"package":    "lighting",
+			"index":      index,
+			"light_type": light.Type,
+			"error":      err.Error(),
+		}).Debug("cannot update light: validation failed")
 		return err
 	}
 	s.lights[index] = light

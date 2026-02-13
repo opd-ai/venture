@@ -253,7 +253,19 @@ func (c *ChatComponent) GetEffectiveRadius() float64 {
 	return c.LocalRadius
 }
 
-// TradeProposal represents an active trade
+// TradeProposal represents an active trade between two players in the two-phase
+// commit protocol. The proposer initiates the trade by specifying items to offer
+// and items to request from the recipient. The trade progresses through statuses:
+// "pending" → "accepted" → "committed" (success) or "rejected"/"cancelled"/"failed".
+//
+// Fields:
+//   - ProposerID: Entity ID of the player who initiated the trade
+//   - RecipientID: Entity ID of the player receiving the trade offer
+//   - OfferedItems: Item IDs that the proposer will give to the recipient
+//   - RequestedItems: Item IDs that the proposer wants from the recipient
+//   - Status: Current trade state ("pending", "accepted", "rejected", "committed", "cancelled", "failed")
+//   - ProposalTime: Unix timestamp when the trade was proposed (for timeout checks)
+//   - FailureReason: Human-readable explanation when Status is "failed" or "cancelled"
 type TradeProposal struct {
 	ProposerID     uint64
 	RecipientID    uint64
@@ -264,7 +276,14 @@ type TradeProposal struct {
 	FailureReason  string   // Reason for failure/cancellation
 }
 
-// TradeRecord represents a completed trade
+// TradeRecord represents a completed trade in a player's trade history.
+// Records are stored in TradeComponent.TradeHistory for trust score calculation
+// and trade analytics. Each record captures the outcome of a single trade.
+//
+// Fields:
+//   - Timestamp: Unix timestamp when the trade completed
+//   - PartnerID: Entity ID of the other player in the trade
+//   - Success: Whether the trade completed successfully (true) or failed/cancelled (false)
 type TradeRecord struct {
 	Timestamp int64
 	PartnerID uint64

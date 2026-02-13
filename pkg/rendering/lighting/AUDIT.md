@@ -7,8 +7,8 @@ The lighting package provides dynamic lighting effects (point, ambient, directio
 
 ## Issues Found
 - [x] **high** Error handling — Shader compilation error swallowed silently without logging (`gpu_bloom.go:261-267`) - Fixed 2026-02-13: Added structured logging with logrus.WithFields for shader compilation errors
-- [ ] **med** Error handling — No structured logging (logrus) on any error paths; package has zero logging statements
-- [ ] **low** Documentation — Comment states system "not yet integrated into main game loop" but LightingAdapter exists in engine and system is actively used (`system.go:11-12`)
+- [x] **med** Error handling — No structured logging (logrus) on any error paths; package has zero logging statements — **FIXED 2026-02-13**: Added logrus logger to System struct, NewSystemWithLogger constructor, and logrus.WithFields logging on all error paths (AddLight, RemoveLight, GetLight, UpdateLight)
+- [x] **low** Documentation — Comment states system "not yet integrated into main game loop" but LightingAdapter exists in engine and system is actively used (`system.go:11-12`) — **FIXED 2026-02-13**: Updated comment to reference LightingAdapter integration
 - [ ] **low** Test coverage — Tests cannot run in headless CI due to Ebiten initialization (gpu_bloom.go imports ebiten which requires display)
 
 ## Test Coverage
@@ -34,7 +34,7 @@ Unable to measure (Ebiten requires display; tests panic with "GLFW library is no
 - ⚠️ LightingSystem not registered in system_init.go (StatusEffectLightingSystem is, but not base LightingSystem)
 
 ## Recommendations
-1. **HIGH PRIORITY**: Add structured logging with logrus.WithFields for shader compilation errors (gpu_bloom.go:261)
-2. **MEDIUM PRIORITY**: Add logging to error paths in System methods (AddLight, UpdateLight validation failures)
-3. **LOW PRIORITY**: Update system.go:11-12 comment to reflect current integration status via LightingAdapter
+1. **HIGH PRIORITY**: Add structured logging with logrus.WithFields for shader compilation errors (gpu_bloom.go:261) ✅ **DONE**
+2. **MEDIUM PRIORITY**: Add logging to error paths in System methods (AddLight, UpdateLight validation failures) ✅ **DONE**
+3. **LOW PRIORITY**: Update system.go:11-12 comment to reflect current integration status via LightingAdapter ✅ **DONE**
 4. **LOW PRIORITY**: Consider build tags or interface abstraction to enable headless testing (exclude gpu_bloom.go in test-only builds)

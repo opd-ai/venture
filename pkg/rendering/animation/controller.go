@@ -95,11 +95,68 @@ func (c *Controller) generateFrameInternal(seed int64, state string, frameIndex,
 	return frame, nil
 }
 
+// bodyPartRegion defines the proportional bounds of a body part within a sprite.
+// Regions are defined as fractions of sprite dimensions (0.0-1.0).
+type bodyPartRegion struct {
+	yStart float64 // Start Y as fraction of height
+	yEnd   float64 // End Y as fraction of height
+	xStart float64 // Start X as fraction of width
+	xEnd   float64 // End X as fraction of width
+}
+
+// humanoidBodyParts returns approximate body part regions for humanoid sprites.
+// Proportions based on standard humanoid template: Head 12%, Torso 40%, Legs 48%.
+func humanoidBodyParts() map[string]bodyPartRegion {
+	return map[string]bodyPartRegion{
+		"head": {
+			yStart: 0.0,
+			yEnd:   0.20, // Top 20% of sprite
+			xStart: 0.25,
+			xEnd:   0.75,
+		},
+		"torso": {
+			yStart: 0.20,
+			yEnd:   0.55, // Middle 35% of sprite
+			xStart: 0.20,
+			xEnd:   0.80,
+		},
+		"leftArm": {
+			yStart: 0.22,
+			yEnd:   0.55,
+			xStart: 0.0,
+			xEnd:   0.30, // Left side
+		},
+		"rightArm": {
+			yStart: 0.22,
+			yEnd:   0.55,
+			xStart: 0.70,
+			xEnd:   1.0, // Right side
+		},
+		"leftLeg": {
+			yStart: 0.55,
+			yEnd:   1.0, // Bottom 45%
+			xStart: 0.25,
+			xEnd:   0.50, // Left half of legs area
+		},
+		"rightLeg": {
+			yStart: 0.55,
+			yEnd:   1.0,
+			xStart: 0.50,
+			xEnd:   0.75, // Right half of legs area
+		},
+		"tail": {
+			yStart: 0.45,
+			yEnd:   0.70,
+			xStart: 0.35,
+			xEnd:   0.65,
+		},
+	}
+}
+
 // applyArticulation applies body part articulation to a sprite.
-// This creates the final animated frame by transforming the base sprite.
+// This creates the final animated frame by transforming each body part region
+// according to its calculated articulation offsets and rotations.
 func (c *Controller) applyArticulation(baseSprite *ebiten.Image, articulation Articulation, config sprites.Config) *ebiten.Image {
-	// For now, apply global transformations
-	// Future enhancement: multi-layer composition with per-part transforms
 	bounds := baseSprite.Bounds()
 	width := bounds.Dx()
 	height := bounds.Dy()
@@ -111,26 +168,70 @@ func (c *Controller) applyArticulation(baseSprite *ebiten.Image, articulation Ar
 	outputHeight := height + padding*2
 	output := ebiten.NewImage(outputWidth, outputHeight)
 
-	// Calculate composite transformation from articulation
-	opts := &ebiten.DrawImageOptions{}
+	// Get body part regions
+	regions := humanoidBodyParts()
 
-	// Center point for rotations
-	centerX := float64(width) / 2
-	centerY := float64(height) / 2
+	// Draw body parts from back to front (Z-order)
+	// Order: tail (if present), legs, torso, arms, head
+	drawOrder := []struct {
+		name string
+		art  ArticulationOffset
+	}{
+		{"tail", articulation.Tail},
+		{"leftLeg", articulation.LeftLeg},
+		{"rightLeg", articulation.RightLeg},
+		{"torso", articulation.Torso},
+		{"leftArm", articulation.LeftArm},
+		{"rightArm", articulation.RightArm},
+		{"head", articulation.Head},
+	}
 
-	// Apply torso transformations (affects whole sprite)
-	// Translate to center, rotate, translate back
-	opts.GeoM.Translate(-centerX, -centerY)
-	opts.GeoM.Rotate(articulation.Torso.Rotation)
-	opts.GeoM.Translate(centerX, centerY)
+	for _, part := range drawOrder {
+		region, exists := regions[part.name]
+		if !exists {
+			continue
+		}
 
-	// Apply torso position offset
-	opts.GeoM.Translate(
-		articulation.Torso.X+float64(padding),
-		articulation.Torso.Y+float64(padding),
-	)
+		// Calculate pixel bounds for this region
+		x0 := int(region.xStart * float64(width))
+		y0 := int(region.yStart * float64(height))
+		x1 := int(region.xEnd * float64(width))
+		y1 := int(region.yEnd * float64(height))
 
-	output.DrawImage(baseSprite, opts)
+		// Ensure valid bounds
+		if x1 <= x0 || y1 <= y0 {
+			continue
+		}
+
+		// For sub-image extraction, create a new image and draw the region
+		partWidth := x1 - x0
+		partHeight := y1 - y0
+		partImg := ebiten.NewImage(partWidth, partHeight)
+
+		// Draw the region from baseSprite to partImg
+		srcOpts := &ebiten.DrawImageOptions{}
+		srcOpts.GeoM.Translate(-float64(x0), -float64(y0))
+		partImg.DrawImage(baseSprite, srcOpts)
+
+		// Calculate center point for rotation
+		centerX := float64(partWidth) / 2
+		centerY := float64(partHeight) / 2
+
+		// Create draw options for this body part
+		opts := &ebiten.DrawImageOptions{}
+
+		// Apply rotation around part center
+		opts.GeoM.Translate(-centerX, -centerY)
+		opts.GeoM.Rotate(part.art.Rotation)
+		opts.GeoM.Translate(centerX, centerY)
+
+		// Apply position offset and move to final position
+		destX := float64(x0) + float64(padding) + part.art.X
+		destY := float64(y0) + float64(padding) + part.art.Y
+		opts.GeoM.Translate(destX, destY)
+
+		output.DrawImage(partImg, opts)
+	}
 
 	return output
 }

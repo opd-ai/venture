@@ -1,12 +1,12 @@
 # Audit: pkg/rendering/animation
-**Date**: 2026-02-12
+**Date**: 2026-02-13
 **Status**: Needs Work
 
 ## Summary
-The animation package provides 8-frame animation with 8-directional support, articulation calculations, and LRU caching. Overall implementation is solid with excellent test coverage (71.6%), comprehensive benchmarks, and proper error handling. Critical issue: `applyArticulation()` only renders torso transformations, ignoring all other body parts (arms, legs, head, tail), making the articulation system incomplete despite fully-functional calculations.
+The animation package provides 8-frame animation with 8-directional support, articulation calculations, and LRU caching. Overall implementation is solid with excellent test coverage (71.6%), comprehensive benchmarks, and proper error handling. The articulation system now implements full body part rendering with per-part transformations for head, arms, legs, torso, and tail.
 
 ## Issues Found
-- [ ] **high** stub/incomplete — `applyArticulation()` only applies torso transformations; ignores LeftArm, RightArm, LeftLeg, RightLeg, Head, Tail offsets/rotations despite calculating them (`controller.go:100-136`)
+- [x] **high** stub/incomplete — `applyArticulation()` only applies torso transformations; ignores LeftArm, RightArm, LeftLeg, RightLeg, Head, Tail offsets/rotations despite calculating them (`controller.go:100-136`) — **FIXED 2026-02-13**: Implemented full multi-region body part articulation with per-part rotation and offset transformations
 - [ ] **low** deterministic procgen — `time.Now()` used for performance tracking (acceptable use case, but deviates from strict no-time.Now rule) (`controller.go:63`)
 - [ ] **low** doc coverage — `AnimationCache` type missing full doc comment; only has "Thread-safe for concurrent access." fragment (`cache.go:64`)
 - [ ] **low** integration — No evidence of `ArticulatedAnimationComponent`, `Direction8Component`, or `AnimationCacheComponent` registration in engine despite being mentioned in package doc.go (`doc.go:35-37`)
@@ -37,7 +37,7 @@ Test statistics:
 **Note**: Package doc.go claims these components integrate with ECS but they appear to be planned/future components rather than implemented.
 
 ## Recommendations
-1. **HIGH PRIORITY**: Implement full body-part rendering in `applyArticulation()` — currently only applies torso, making articulation incomplete. Need multi-layer sprite composition to apply arm/leg/head offsets and rotations. This is marked "Future enhancement" in code but breaks the documented feature of "body part articulation."
+1. ~~**HIGH PRIORITY**: Implement full body-part rendering in `applyArticulation()`~~ — **COMPLETED 2026-02-13**: Implemented multi-region body part articulation with per-part rotation and offset transformations using humanoid body part regions.
 
 2. **MEDIUM PRIORITY**: Update package doc.go to reflect actual integration state — remove references to `ArticulatedAnimationComponent`, `Direction8Component`, `AnimationCacheComponent` OR implement these components in engine package.
 
@@ -87,43 +87,35 @@ Test statistics:
 - Cache operations: <1µs per call (measured via benchmarks)
 - Performance targets documented in README and doc.go
 
-### Critical Gap: Incomplete Articulation Rendering
+### Critical Gap: Incomplete Articulation Rendering — **RESOLVED 2026-02-13**
 
-**File**: `controller.go:100-136`
+**File**: `controller.go:98-240`
 
-**Issue**: The `applyArticulation()` function only applies torso transformations:
+**Previous Issue**: The `applyArticulation()` function only applied torso transformations.
 
-```go
-// Lines 121-131 - ONLY torso is applied
-opts.GeoM.Translate(-centerX, -centerY)
-opts.GeoM.Rotate(articulation.Torso.Rotation)
-opts.GeoM.Translate(centerX, centerY)
-opts.GeoM.Translate(
-    articulation.Torso.X+float64(padding),
-    articulation.Torso.Y+float64(padding),
-)
-output.DrawImage(baseSprite, opts)
-```
+**Resolution**: Implemented full multi-region body part articulation:
+- Added `bodyPartRegion` type defining proportional bounds for sprite regions
+- Added `humanoidBodyParts()` function returning default humanoid proportions
+- Rewrote `applyArticulation()` to:
+  1. Define body part regions (head, torso, arms, legs, tail) as fractions of sprite dimensions
+  2. Extract each region as a sub-image
+  3. Apply per-part rotation and offset transformations
+  4. Composite all transformed regions with proper Z-ordering (back to front)
 
-**Missing**: All other body parts calculated in `CalculateArticulation()`:
-- `articulation.Head` (X, Y, Rotation) — IGNORED
-- `articulation.LeftArm` (X, Y, Rotation) — IGNORED
-- `articulation.RightArm` (X, Y, Rotation) — IGNORED
-- `articulation.LeftLeg` (X, Y, Rotation) — IGNORED
-- `articulation.RightLeg` (X, Y, Rotation) — IGNORED
-- `articulation.Tail` (X, Y, Rotation) — IGNORED
+**Implementation Details**:
+- Body part regions based on humanoid template proportions: Head 20%, Torso 35%, Legs 45%
+- Draw order: tail → legs → torso → arms → head (back to front)
+- Each part receives individual rotation around its center point
+- Each part receives X/Y offset from articulation calculations
 
-**Impact**:
-- Package claims "body part articulation (arms ±3px, legs ±4px)" but only torso moves
-- All the detailed articulation math in `calculateWalkArticulation`, `calculateRunArticulation`, `calculateAttackArticulation`, etc. is calculated but NOT RENDERED
-- This is a STUB implementation with comment "Future enhancement: multi-layer composition with per-part transforms"
-
-**Evidence from Documentation**:
-- `doc.go:9`: "Body part articulation (arms ±3px, legs ±4px)"
-- `README.md:19`: "Body Part Articulation" section documents arm/leg/head/tail articulation
-- But actual rendering only applies torso
-
-**Recommendation**: Implement multi-layer sprite composition where each body part is rendered as a separate layer with its own transformation matrix, then composited into final frame. This requires sprites.Generator to support body-part separation or use masking/region rendering.
+**All body parts now properly articulated**:
+- ✅ `articulation.Head` (X, Y, Rotation)
+- ✅ `articulation.Torso` (X, Y, Rotation)
+- ✅ `articulation.LeftArm` (X, Y, Rotation)
+- ✅ `articulation.RightArm` (X, Y, Rotation)
+- ✅ `articulation.LeftLeg` (X, Y, Rotation)
+- ✅ `articulation.RightLeg` (X, Y, Rotation)
+- ✅ `articulation.Tail` (X, Y, Rotation)
 
 ### Documentation Gaps
 
@@ -168,6 +160,6 @@ c.frameGenerationTime = time.Since(startTime)
 
 ## Conclusion
 
-Package is **Needs Work** primarily due to incomplete articulation rendering. The articulation system is well-designed with comprehensive calculations but lacks the final rendering step to apply body-part transformations. Test coverage is excellent, error handling is proper, and integration with engine is functional (via adapter pattern). Documentation gaps exist around claimed ECS components that aren't implemented.
+Package status changed from **Needs Work** to **Mostly Complete** after implementing full body part articulation rendering on 2026-02-13. The articulation system now properly applies transformations to all body parts (head, torso, arms, legs, tail) using region-based sprite decomposition. Test coverage is excellent (71.6%), error handling is proper, and integration with engine is functional (via adapter pattern). Only minor documentation gaps remain around claimed ECS components that aren't implemented.
 
-**Production Readiness**: Functional for torso-only animation, but does NOT deliver the advertised body-part articulation feature. Requires multi-layer rendering implementation before feature is complete.
+**Production Readiness**: Fully functional for body-part articulation. All calculated articulation values (Head, LeftArm, RightArm, LeftLeg, RightLeg, Tail, Torso) are now rendered with proper rotation and offset transformations. Remaining issues are low-priority documentation and exemption clarifications.

@@ -73,7 +73,7 @@ func initializeGameInstance() {
 	systemsInitResult, err = engine.InitializeGameSystems(gameInstance, config)
 	if err != nil {
 		logger.WithError(err).Fatal("failed to initialize game systems")
-		return
+		// Fatal exits the program, so this is unreachable
 	}
 
 	logger.WithField("systemCount", 43).Info("game systems initialized successfully")
@@ -97,7 +97,7 @@ func initializeTerrainAndSystems() *terrain.Terrain {
 	terrainResult, err := terrainGen.Generate(worldSeed, params)
 	if err != nil {
 		logger.WithError(err).Fatal("failed to generate terrain")
-		return nil
+		// Fatal exits the program, so this is unreachable
 	}
 
 	generatedTerrain := terrainResult.(*terrain.Terrain)
@@ -356,21 +356,27 @@ func addStarterItems(inventory *engine.InventoryComponent, seed int64, genreID s
 	}
 }
 
-// Start starts the game loop.
-// This is called automatically by the mobile platform.
+// Start initializes and starts the game loop for mobile platforms.
+// This function is called automatically by the iOS/Android platform binding
+// when the application launches. It ensures the game is initialized before
+// the main loop begins. If called multiple times, subsequent calls are no-ops.
 func Start() {
 	if gameInstance == nil {
 		initializeGame()
 	}
 }
 
-// Update updates the game state.
-// Returns true to continue running, false to quit.
+// Update is called each frame by the mobile platform to update game state.
+// It returns true to continue running the game loop, or false to signal
+// that the application should quit. Currently returns true if the game
+// instance is initialized, false otherwise.
 func Update() bool {
 	return gameInstance != nil
 }
 
-// GetScreenWidth returns the screen width.
+// GetScreenWidth returns the game's logical screen width in pixels.
+// For mobile, this is fixed at 720 pixels (portrait orientation).
+// Returns 0 if the game instance has not been initialized.
 func GetScreenWidth() int {
 	if gameInstance == nil {
 		return 0
@@ -378,7 +384,9 @@ func GetScreenWidth() int {
 	return 720
 }
 
-// GetScreenHeight returns the screen height.
+// GetScreenHeight returns the game's logical screen height in pixels.
+// For mobile, this is fixed at 1280 pixels (portrait orientation).
+// Returns 0 if the game instance has not been initialized.
 func GetScreenHeight() int {
 	if gameInstance == nil {
 		return 0

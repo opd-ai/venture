@@ -11,6 +11,10 @@ import (
 
 // GetSeedFromEnv retrieves the world seed from VENTURE_SEED environment variable.
 // Falls back to time-based seed if not set or invalid.
+//
+// Time-based fallback is intentional for mobile UX: players get a unique
+// experience each launch unless they explicitly set VENTURE_SEED for
+// reproducible gameplay (e.g., testing, sharing worlds with friends).
 func GetSeedFromEnv(logger *logrus.Logger) int64 {
 	if seedStr := os.Getenv("VENTURE_SEED"); seedStr != "" {
 		if seed, err := strconv.ParseInt(seedStr, 10, 64); err == nil {

@@ -7,15 +7,15 @@ The `cmd/mobile` package serves as the entry point for iOS and Android platforms
 
 ## Issues Found
 - [ ] **high** Test coverage — mobile.go has 0.0% coverage (target: 65%) (`mobile.go`)
-- [ ] **med** Error handling — Unreachable return after logger.Fatal (`mobile.go:76`)
-- [ ] **med** Error handling — Unreachable return nil after logger.Fatal (`mobile.go:99`)
-- [ ] **med** Doc coverage — No package doc.go for cmd/mobile (missing package-level documentation)
-- [ ] **med** Doc coverage — No package doc.go for cmd/mobile/config (missing package-level documentation)
-- [ ] **low** Doc coverage — Exported function Start lacks godoc comment (`mobile.go:361`)
-- [ ] **low** Doc coverage — Exported function Update lacks godoc comment (`mobile.go:369`)
-- [ ] **low** Doc coverage — Exported function GetScreenWidth lacks godoc comment (`mobile.go:374`)
-- [ ] **low** Doc coverage — Exported function GetScreenHeight lacks godoc comment (`mobile.go:382`)
-- [ ] **low** Deterministic procgen — Uses time.Now().UnixNano() for default seed (acceptable for mobile UX but should be documented) (`config/seed.go:32`)
+- [x] **med** Error handling — Unreachable return after logger.Fatal (`mobile.go:76`) — **FIXED 2026-02-13**: Removed unreachable return, added comment explaining Fatal exits
+- [x] **med** Error handling — Unreachable return nil after logger.Fatal (`mobile.go:99`) — **FIXED 2026-02-13**: Removed unreachable return, added comment explaining Fatal exits
+- [x] **med** Doc coverage — No package doc.go for cmd/mobile (missing package-level documentation) — **FIXED 2026-02-13**: Created comprehensive doc.go with platform support, initialization flow, environment variables, exported API, and build instructions
+- [x] **med** Doc coverage — No package doc.go for cmd/mobile/config (missing package-level documentation) — **FIXED 2026-02-13**: Created doc.go with seed configuration, genre configuration, thread safety, and example usage
+- [x] **low** Doc coverage — Exported function Start lacks godoc comment (`mobile.go:361`) — **FIXED 2026-02-13**: Added comprehensive godoc comment
+- [x] **low** Doc coverage — Exported function Update lacks godoc comment (`mobile.go:369`) — **FIXED 2026-02-13**: Added comprehensive godoc comment
+- [x] **low** Doc coverage — Exported function GetScreenWidth lacks godoc comment (`mobile.go:374`) — **FIXED 2026-02-13**: Added comprehensive godoc comment
+- [x] **low** Doc coverage — Exported function GetScreenHeight lacks godoc comment (`mobile.go:382`) — **FIXED 2026-02-13**: Added comprehensive godoc comment
+- [x] **low** Deterministic procgen — Uses time.Now().UnixNano() for default seed (acceptable for mobile UX but should be documented) (`config/seed.go:32`) — **FIXED 2026-02-13**: Added documentation in GetSeedFromEnv godoc explaining intentional time-based fallback for mobile UX
 
 ## Test Coverage
 - **Overall**: 36.95% (mobile.go: 0.0%, config/: 73.9%)

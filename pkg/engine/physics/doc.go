@@ -9,19 +9,29 @@
 // # Architecture
 //
 // The physics package is organized into specialized sub-systems:
-//   - vehicle/: Vehicle-specific physics (suspension, weight transfer)
-//   - terrain/: Terrain interaction and deformation
-//   - collision/: Advanced collision response
+//   - vehicle/: Vehicle-specific physics (suspension, weight transfer, terrain deformation, collision response)
+//   - fluids/: Fluid simulation (buoyancy, flooding, swimming)
+//   - destruction/: Environmental destruction (structural integrity, damage propagation, debris physics)
 //
 // # Integration
 //
-// Physics components integrate with the ECS (Entity-Component-System) pattern:
+// Physics systems are initialized in cmd/client/handlers.go and use component-based data:
 //
-//	// Create a vehicle with physics
-//	entity := world.CreateEntity()
-//	entity.AddComponent(engine.NewVehicleComponent(engine.VehicleCart))
-//	entity.AddComponent(physics.NewSuspensionComponent(4)) // 4-wheel suspension
-//	entity.AddComponent(physics.NewWeightTransferComponent())
+//	// Vehicle physics example
+//	sys := vehicle.NewEnhancedVehicleSystem()
+//	suspension := vehicle.NewSuspensionComponent(4) // 4-wheel suspension
+//	weightTransfer := vehicle.NewWeightTransferComponent(mass, wheelbase, trackWidth)
+//	state := sys.UpdateVehiclePhysics(suspension, weightTransfer, deform, collision, state, dt)
+//
+//	// Destruction physics example
+//	destructionSys := destruction.NewSystem(destruction.DefaultConfig())
+//	destructionSys.RegisterBuilding("building_01", 100, 200, 3, destruction.MaterialConcrete)
+//	destructionSys.Update(deltaTime)
+//
+//	// Fluid simulation example
+//	fluidSim := fluids.NewSimulator(fluids.DefaultSimulationConfig())
+//	buoyancy := fluids.NewBuoyancyCalculator(gravity)
+//	force := buoyancy.Calculate(entity, waterLevel)
 //
 // # Performance
 //

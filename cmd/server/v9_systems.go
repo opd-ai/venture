@@ -64,7 +64,7 @@ func initializeV9SystemsServer(world *engine.World, seed int64, guildManager *gu
 	// Phase 56.3: Political Warfare Integration (guild wars, treaties, embargoes)
 	// Server manages guild-level political warfare with preparation periods and cooldowns
 	// Integrates with V6 Politics, V8 Guilds, and V6 Federation Market
-	politicalWarfareSystem := politicalwarfare.NewSystem(world, guildManager)
+	politicalWarfareSystem := politicalwarfare.NewSystem(world, guildManager, seed)
 	world.AddSystem(politicalWarfareSystem) // Runs as ECS system for time-based war/treaty updates
 
 	if logger.GetLevel() >= logrus.DebugLevel {

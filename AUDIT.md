@@ -66,10 +66,10 @@ This document tracks the audit status of all Go packages in the Venture codebase
 - [x] `pkg/rendering/animation/AUDIT.md` — Needs Work — 3 issues (0 high, 0 med, 3 low) - Updated 2026-02-13: Fixed high-priority issue (implemented full body part articulation rendering with per-part transformations)
 - [x] `pkg/rendering/lighting/AUDIT.md` — Needs Work — 1 issue (0 high, 0 med, 1 low) - Updated 2026-02-13: Fixed 3 issues (1 high, 1 med, 1 low) - structured logging on all error paths, NewSystemWithLogger constructor, updated integration comment
 - [x] `pkg/rendering/particles/AUDIT.md` — Complete — 1 issue (0 high, 0 med, 1 low)
-- [x] `pkg/rendering/cache/AUDIT.md` — Needs Work — 3 issues (0 high, 1 med, 2 low)
+- [x] `pkg/rendering/cache/AUDIT.md` — Needs Work — 2 issues (0 high, 0 med, 2 low) - Updated 2026-02-13: Fixed med-priority error handling issue (PreGenerator.Generate() now logs sprite generation failures with structured logging)
 - [x] `pkg/rendering/tiles/AUDIT.md` — Complete — 1 issue (0 high, 0 med, 1 low)
-- [x] `pkg/rendering/postprocess/AUDIT.md` — Needs Work — 6 issues (0 high, 1 med, 5 low)
-- [x] `pkg/rendering/ui/AUDIT.md` — Needs Work — 5 issues (1 high, 1 med, 3 low) - Updated 2026-02-13: High-priority time.Now() usage exempted (UI timing for cursor blink, notifications is inherently real-time visual effects)
+- [x] `pkg/rendering/postprocess/AUDIT.md` — Complete — 4 issues (0 high, 0 med, 4 low) - Updated 2026-02-13: Fixed 1 med-priority issue (shader compilation error logging with NewGPUProcessorWithLogger), fixed 1 low-priority issue (ensureShaders structured logging)
+- [x] `pkg/rendering/ui/AUDIT.md` — Needs Work — 4 issues (0 high, 0 med, 4 low) - Updated 2026-02-13: High-priority time.Now() usage exempted (UI timing for cursor blink, notifications is inherently real-time visual effects), fixed med-priority stub-code issue (StoryJournalUI.drawText() now uses proper font rendering with golang.org/x/image/font)
 - [x] `pkg/rendering/palette/AUDIT.md` — Complete — 1 issue (0 high, 0 med, 1 low) - Updated 2026-02-13: Fixed 2 high-priority division-by-zero issues (GenerateGradient width/height validation, calculateRadialGradient radius validation) + 2 low doc issues
 - [x] `pkg/rendering/pool/AUDIT.md` — Complete — 1 issue (0 high, 0 med, 1 low)
 - [x] `pkg/rendering/patterns/AUDIT.md` — Needs Work — 2 issues (0 high, 0 med, 2 low) - Updated 2026-02-13: Fixed 1 med-priority issue (code duplication - consolidated 3 clamp functions to 1), fixed 1 low-priority issue (inconsistent receiver name)
@@ -100,7 +100,7 @@ This document tracks the audit status of all Go packages in the Venture codebase
 - [x] `pkg/integration/guild_vehicle/AUDIT.md` — Needs Work — 4 issues (1 high, 1 med, 2 low) - Updated 2026-02-13: High-priority time.Now() usage exempted (fleet timestamps track operational events for server coordination)
 - [x] `pkg/integration/housing_crafting/AUDIT.md` — Complete — 1 issue (0 high, 0 med, 1 low)
 - [x] `pkg/integration/narrative_world/AUDIT.md` — Needs Work — 7 issues (2 high, 3 med, 2 low)
-- [x] `pkg/integration/political_warfare/AUDIT.md` — Needs Work — 6 issues (0 high, 4 med, 2 low)
+- [x] `pkg/integration/political_warfare/AUDIT.md` — Needs Work — 2 issues (0 high, 2 med, 0 low) - Updated 2026-02-13: Fixed 4 issues (1 med seed passthrough to NewSystem, 1 med gold concession error logging, 2 low structured logging)
 - [x] `pkg/integration/trade_routes/AUDIT.md` — Complete — 0 issues (3 fixed on 2026-02-13: structured logging with logrus.WithFields on all error paths, TestGetRoute table-driven test, camelCase variable naming)
 - [x] `pkg/integration/world_events/AUDIT.md` — Needs Work — 6 issues (2 high, 2 med, 2 low)
 
@@ -114,8 +114,8 @@ This document tracks the audit status of all Go packages in the Venture codebase
 - [x] `pkg/class/advanced/AUDIT.md` — Complete — 3 issues (0 high, 0 med, 3 low)
 - [x] `pkg/combat/AUDIT.md` — Complete — 0 issues
 - [x] `pkg/combat/AUDIT_2026-02-13.md` — Complete — 2 issues (0 high, 0 med, 2 low)
-- [x] `pkg/companion/learning/AUDIT.md` — Needs Work — 5 issues (0 high, 2 med, 3 low)
-- [x] `pkg/saveload/AUDIT.md` — Needs Work — 3 issues (1 high, 1 med, 1 low)
+- [x] `pkg/companion/learning/AUDIT.md` — Complete — 0 issues (5 fixed on 2026-02-13: TimeProvider interface for deterministic timestamps, Serialize/Deserialize methods for persistence, deltaTime-based skill decay)
+- [x] `pkg/saveload/AUDIT.md` — Complete — 0 issues (3 fixed on 2026-02-13: WASM API parity with SetMigrator/NewSaveManagerWithLogger/NewSaveManagerWithMigrator methods, WASM documentation in doc.go, shared ValidateSaveName function)
 - [x] `pkg/config/AUDIT.md` — Complete — 0 issues
 - [x] `pkg/validation/AUDIT.md` — Complete — 0 issues
 - [x] `pkg/validation/AUDIT_2026-02-13.md` — Complete — 0 issues (comprehensive re-audit)  
@@ -129,8 +129,8 @@ This document tracks the audit status of all Go packages in the Venture codebase
 - [x] `pkg/narrative/branching/AUDIT.md` — Complete — 3 issues (0 high, 0 med, 3 low)
 - [x] `pkg/observability/AUDIT.md` — Complete — 1 issue (0 high, 0 med, 1 low)
 - [x] `pkg/security/AUDIT.md` — Complete — 2 issues (0 high, 0 med, 2 low)
-- [x] `pkg/social/AUDIT.md` — Needs Work — 4 issues (0 high, 1 med, 3 low) - Updated 2026-02-13: Fixed 2 high-priority issues (TimeProvider for deterministic ImageGallery timestamps)
-- [x] `pkg/social/persistence/AUDIT.md` — Needs Work — 4 issues (0 high, 1 med, 3 low) - Updated 2026-02-13: Fixed 2 high-priority issues (TimeProvider), 1 med-priority (AddImage godoc)
+- [x] `pkg/social/AUDIT.md` — Complete — 3 issues (0 high, 0 med, 3 low) - Updated 2026-02-13: Fixed 2 high-priority issues (TimeProvider for deterministic ImageGallery timestamps), exempted 1 med-priority issue (background decay time.Now() documented as server operation)
+- [x] `pkg/social/persistence/AUDIT.md` — Complete — 2 issues (0 high, 0 med, 2 low) - Updated 2026-02-13: Fixed 2 high-priority issues (TimeProvider), 1 med-priority (AddImage godoc), exempted 1 med-priority (background decay time.Now())
 - [x] `pkg/stability/AUDIT.md` — Complete — 4 issues (0 high, 0 med, 4 low)
 - [x] `pkg/ux/AUDIT.md` — Complete — 3 issues (0 high, 0 med, 3 low)
 - [x] `pkg/version/AUDIT.md` — Needs Work — 3 issues (0 high, 1 med, 2 low) - Updated 2026-02-13: Fixed 4 issues (3 high, 1 med) - protocol version, comparison functions, federation integration
@@ -164,8 +164,8 @@ Each audit should produce a `AUDIT.md` file in the package directory following t
 
 **Total Packages**: 50+  
 **Audited**: 106  
-**Complete**: 73  
-**Needs Work**: 33  
+**Complete**: 78  
+**Needs Work**: 28  
 **Incomplete**: 0  
 **Not Started**: 0
 

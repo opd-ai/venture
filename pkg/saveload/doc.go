@@ -49,4 +49,18 @@
 // The package supports save file versioning to handle format changes across
 // game versions. Older save files are automatically migrated to the current
 // format when loaded.
+//
+// # Platform-Specific Behavior
+//
+// Desktop (Linux/macOS/Windows):
+//   - Uses file-based persistence with .sav extension
+//   - Supports save migration via Migrator interface
+//   - SHA256 checksums for integrity validation
+//
+// WASM (Browser):
+//   - Uses localStorage API (5MB limit per origin)
+//   - No migration support (incompatible versions rejected)
+//   - FNV-1a checksums for integrity validation
+//   - Falls back to in-memory storage if localStorage unavailable
+//   - Logger parameter ignored (browser console used instead)
 package saveload

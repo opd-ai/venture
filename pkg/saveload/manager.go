@@ -278,25 +278,9 @@ func (m *SaveManager) getFilePath(name string) string {
 }
 
 // validateSaveName validates that a save name is acceptable.
+// Delegates to the shared ValidateSaveName function.
 func (m *SaveManager) validateSaveName(name string) error {
-	if name == "" {
-		return fmt.Errorf("save name cannot be empty")
-	}
-
-	// Remove extension for validation
-	name = strings.TrimSuffix(name, ".sav")
-
-	// Check for path separators (security check)
-	if strings.ContainsAny(name, "/\\") {
-		return fmt.Errorf("save name cannot contain path separators")
-	}
-
-	// Check for special characters
-	if strings.ContainsAny(name, "<>:\"|?*") {
-		return fmt.Errorf("save name contains invalid characters")
-	}
-
-	return nil
+	return ValidateSaveName(name)
 }
 
 // validateAndMigrate validates a save file and migrates it if necessary.

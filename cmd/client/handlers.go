@@ -1416,7 +1416,7 @@ func initializePhase3Systems(game *engine.EbitenGame, sys *systemsContainer, cli
 	}
 
 	// Phase 4.4: Political Warfare Integration
-	sys.politicalWarfareSystem = political_warfare.NewSystem(game.World, guildManager)
+	sys.politicalWarfareSystem = political_warfare.NewSystem(game.World, guildManager, *seed)
 	logging.ComponentLogger(clientLogger.Logger, "political_warfare").Debug("Created political warfare system")
 
 	// Phase 4.5: Territory Siege System

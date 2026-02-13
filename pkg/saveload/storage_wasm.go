@@ -26,6 +26,20 @@ const (
 	maxLocalStorageSize = 5 * 1024 * 1024
 )
 
+// Migrator handles save file version migrations.
+// On WASM, migration is not supported - this interface exists only for API parity.
+type Migrator interface {
+	// CanMigrate returns true if the migrator can handle the given source version.
+	CanMigrate(sourceVersion string) bool
+
+	// Migrate transforms a save from sourceVersion to the current SaveVersion.
+	// Returns the migrated save or an error if migration fails.
+	Migrate(save *GameSave, sourceVersion string) (*GameSave, error)
+
+	// SupportedVersions returns the list of versions this migrator can upgrade from.
+	SupportedVersions() []string
+}
+
 // SaveManager is the WASM implementation using localStorage.
 // On WASM, SaveManager is type-aliased to the localStorage implementation.
 // This allows the same API across desktop and WASM platforms.
@@ -33,6 +47,8 @@ type SaveManager struct {
 	useInMemory  bool
 	memoryStore  map[string]*GameSave
 	localStorage js.Value
+	// migrator is stored for API parity but not used on WASM (migration not supported)
+	migrator Migrator
 }
 
 // NewSaveManager creates a save manager for WASM/browser environment.
@@ -67,6 +83,41 @@ func NewSaveManager(saveDir string) (*SaveManager, error) {
 
 	js.Global().Get("console").Call("log", "[Venture] WASM save manager initialized with localStorage")
 	return mgr, nil
+}
+
+// NewSaveManagerWithLogger creates a new save manager with a logger.
+// On WASM, the logger parameter is ignored (browser console is used instead).
+// This method exists for API parity with the desktop implementation.
+func NewSaveManagerWithLogger(saveDir string, logger interface{}) (*SaveManager, error) {
+	js.Global().Get("console").Call("log", "[Venture] WASM save manager: logger parameter ignored, using browser console")
+	return NewSaveManager(saveDir)
+}
+
+// NewSaveManagerWithMigrator creates a new save manager with a logger and migrator.
+// On WASM, migration is not supported. The migrator is stored for API parity but
+// incompatible save versions will be rejected rather than migrated.
+// This method exists for API parity with the desktop implementation.
+func NewSaveManagerWithMigrator(saveDir string, logger interface{}, migrator Migrator) (*SaveManager, error) {
+	mgr, err := NewSaveManager(saveDir)
+	if err != nil {
+		return nil, err
+	}
+	if migrator != nil {
+		js.Global().Get("console").Call("warn", "[Venture] WASM save manager: migration not supported, migrator will be ignored")
+	}
+	mgr.migrator = migrator
+	return mgr, nil
+}
+
+// SetMigrator sets the migrator for handling older save file versions.
+// On WASM, migration is not supported. This method exists for API parity
+// with the desktop implementation. The migrator is stored but not used;
+// incompatible save versions will be rejected.
+func (m *SaveManager) SetMigrator(migrator Migrator) {
+	if migrator != nil {
+		js.Global().Get("console").Call("warn", "[Venture] WASM save manager: migration not supported, migrator will be ignored")
+	}
+	m.migrator = migrator
 }
 
 // SaveGame saves the game state to browser localStorage.
@@ -360,23 +411,9 @@ func (m *SaveManager) SaveExists(name string) bool {
 }
 
 // validateSaveName validates that a save name is acceptable.
-// This mirrors the desktop implementation for security.
+// Delegates to the shared ValidateSaveName function for consistency.
 func (m *SaveManager) validateSaveName(name string) error {
-	if name == "" {
-		return fmt.Errorf("save name cannot be empty")
-	}
-
-	// Check for path separators (security check)
-	if strings.ContainsAny(name, "/\\") {
-		return fmt.Errorf("save name cannot contain path separators")
-	}
-
-	// Check for special characters
-	if strings.ContainsAny(name, "<>:\"|?*") {
-		return fmt.Errorf("save name contains invalid characters")
-	}
-
-	return nil
+	return ValidateSaveName(name)
 }
 
 // validateSave validates a loaded save file for version compatibility and required fields.

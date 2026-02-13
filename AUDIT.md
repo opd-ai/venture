@@ -82,7 +82,7 @@ This document tracks the audit status of all Go packages in the Venture codebase
 - [x] `pkg/audio/AUDIT.md` — Complete — 1 issue (0 high, 0 med, 1 low)
 - [x] `pkg/audio/synthesis/AUDIT.md` — Complete — 0 issues (3 fixed on 2026-02-13: consolidated package docs, removed hot-path logging, exported WaveformName)
 - [x] `pkg/audio/synthesis/AUDIT_2026-02-13_COMPREHENSIVE.md` — Complete — 0 issues - Updated 2026-02-13: All issues fixed (consolidated package docs, removed hot-path logging, exported WaveformName, enhanced DefaultEnvelope godoc)
-- [x] `pkg/audio/music/AUDIT.md` — Needs Work — 6 issues (1 high, 2 med, 3 low)
+- [x] `pkg/audio/music/AUDIT.md` — Complete — 2 issues (0 high, 0 med, 2 low) - Updated 2026-02-13: Fixed 1 high-priority issue (layer name mismatch "ambient"→"base"), 2 med-priority issues (AddLayer/RemoveLayer error returns), added regression tests
 - [x] `pkg/audio/sfx/AUDIT.md` — Complete — 0 issues (6 fixed on 2026-02-13: GenerateWithGenre tests, genre modification tests, documentation)
 
 ### World Management
@@ -164,8 +164,8 @@ Each audit should produce a `AUDIT.md` file in the package directory following t
 
 **Total Packages**: 50+  
 **Audited**: 106  
-**Complete**: 79  
-**Needs Work**: 27  
+**Complete**: 80  
+**Needs Work**: 26  
 **Incomplete**: 0  
 **Not Started**: 0
 

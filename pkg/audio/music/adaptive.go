@@ -3,6 +3,7 @@
 package music
 
 import (
+	"fmt"
 	"math"
 	"math/rand"
 
@@ -121,8 +122,8 @@ func (ac *AdaptiveComposer) Initialize(genre string, rootNote int) {
 	ac.tempo = 120.0 // Default tempo
 
 	// Initialize base layers
-	ac.layers["ambient"] = &MusicLayer{
-		Name:         "ambient",
+	ac.layers["base"] = &MusicLayer{
+		Name:         "base",
 		Active:       true,
 		Volume:       0.3,
 		TargetVolume: 0.3,
@@ -170,7 +171,7 @@ func (ac *AdaptiveComposer) SetContext(context string) {
 	// Adjust layer volumes and activation based on context
 	switch context {
 	case "exploration":
-		ac.setLayerTarget("ambient", 0.4, true)
+		ac.setLayerTarget("base", 0.4, true)
 		ac.setLayerTarget("melody", 0.5, true)
 		ac.setLayerTarget("harmony", 0.0, false)
 		ac.setLayerTarget("percussion", 0.0, false)
@@ -178,7 +179,7 @@ func (ac *AdaptiveComposer) SetContext(context string) {
 		ac.tempo = 90.0
 
 	case "combat":
-		ac.setLayerTarget("ambient", 0.2, true)
+		ac.setLayerTarget("base", 0.2, true)
 		ac.setLayerTarget("melody", 0.4, true)
 		ac.setLayerTarget("harmony", 0.3, true)
 		ac.setLayerTarget("percussion", 0.5, true)
@@ -186,7 +187,7 @@ func (ac *AdaptiveComposer) SetContext(context string) {
 		ac.tempo = 140.0
 
 	case "boss":
-		ac.setLayerTarget("ambient", 0.1, true)
+		ac.setLayerTarget("base", 0.1, true)
 		ac.setLayerTarget("melody", 0.5, true)
 		ac.setLayerTarget("harmony", 0.4, true)
 		ac.setLayerTarget("percussion", 0.6, true)
@@ -194,7 +195,7 @@ func (ac *AdaptiveComposer) SetContext(context string) {
 		ac.tempo = 160.0
 
 	case "puzzle":
-		ac.setLayerTarget("ambient", 0.5, true)
+		ac.setLayerTarget("base", 0.5, true)
 		ac.setLayerTarget("melody", 0.3, true)
 		ac.setLayerTarget("harmony", 0.0, false)
 		ac.setLayerTarget("percussion", 0.0, false)
@@ -202,7 +203,7 @@ func (ac *AdaptiveComposer) SetContext(context string) {
 		ac.tempo = 80.0
 
 	case "victory":
-		ac.setLayerTarget("ambient", 0.3, true)
+		ac.setLayerTarget("base", 0.3, true)
 		ac.setLayerTarget("melody", 0.6, true)
 		ac.setLayerTarget("harmony", 0.5, true)
 		ac.setLayerTarget("percussion", 0.4, true)
@@ -282,7 +283,7 @@ func (ac *AdaptiveComposer) generateLayer(layer *MusicLayer, duration float64) [
 	beatDuration := 60.0 / ac.tempo // seconds per beat
 
 	switch layer.Name {
-	case "ambient":
+	case "base":
 		// Slow-moving pad sound
 		freq := NoteToFrequency(ac.rootNote - 12) // One octave below root
 		sample := ac.osc.Generate(layer.Waveform, freq, duration)
@@ -785,6 +786,7 @@ func (ac *AdaptiveComposer) UpdateIntensity(intensity float64) error {
 
 // AddLayer activates a specific music layer.
 // This implements the audio.AdaptiveMusicSystem interface.
+// Returns an error if the layer does not exist.
 func (ac *AdaptiveComposer) AddLayer(layer audio.MusicLayer) error {
 	layerName := layer.String()
 
@@ -809,11 +811,12 @@ func (ac *AdaptiveComposer) AddLayer(layer audio.MusicLayer) error {
 		return nil
 	}
 
-	return nil
+	return fmt.Errorf("layer %q not found", layerName)
 }
 
 // RemoveLayer deactivates a specific music layer.
 // This implements the audio.AdaptiveMusicSystem interface.
+// Returns an error if the layer does not exist.
 func (ac *AdaptiveComposer) RemoveLayer(layer audio.MusicLayer) error {
 	layerName := layer.String()
 
@@ -822,7 +825,7 @@ func (ac *AdaptiveComposer) RemoveLayer(layer audio.MusicLayer) error {
 		return nil
 	}
 
-	return nil
+	return fmt.Errorf("layer %q not found", layerName)
 }
 
 // Update performs smooth layer transitions.

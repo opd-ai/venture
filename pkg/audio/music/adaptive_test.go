@@ -32,7 +32,7 @@ func TestAdaptiveComposer_Initialize(t *testing.T) {
 	}
 
 	// Check that base layers are initialized
-	expectedLayers := []string{"ambient", "melody", "harmony", "percussion", "intensity"}
+	expectedLayers := []string{"base", "melody", "harmony", "percussion", "intensity"}
 	for _, layerName := range expectedLayers {
 		if _, exists := composer.layers[layerName]; !exists {
 			t.Errorf("Layer %s not initialized", layerName)
@@ -40,8 +40,8 @@ func TestAdaptiveComposer_Initialize(t *testing.T) {
 	}
 
 	// Check initial layer states
-	if !composer.layers["ambient"].Active {
-		t.Error("ambient layer should be active initially")
+	if !composer.layers["base"].Active {
+		t.Error("base layer should be active initially")
 	}
 	if !composer.layers["melody"].Active {
 		t.Error("melody layer should be active initially")
@@ -57,7 +57,7 @@ func TestAdaptiveComposer_SetContext(t *testing.T) {
 
 	tests := []struct {
 		context            string
-		expectedAmbient    bool
+		expectedBase       bool
 		expectedMelody     bool
 		expectedPercussion bool
 		expectedIntensity  bool
@@ -76,8 +76,8 @@ func TestAdaptiveComposer_SetContext(t *testing.T) {
 			composer.SetContext(tt.context)
 
 			// Check layer activation targets
-			if tt.expectedAmbient && composer.layers["ambient"].TargetVolume == 0.0 {
-				t.Error("ambient layer should have target volume > 0")
+			if tt.expectedBase && composer.layers["base"].TargetVolume == 0.0 {
+				t.Error("base layer should have target volume > 0")
 			}
 			if tt.expectedMelody && composer.layers["melody"].TargetVolume == 0.0 {
 				t.Error("melody layer should have target volume > 0")
@@ -105,16 +105,16 @@ func TestAdaptiveComposer_UpdateLayers(t *testing.T) {
 	composer.SetContext("combat")
 
 	// Initial volume should be at exploration values
-	initialAmbientVolume := composer.layers["ambient"].Volume
+	initialBaseVolume := composer.layers["base"].Volume
 
 	// Update layers with fast transition
 	composer.UpdateLayers(0.5)
 
 	// Volumes should have moved toward targets
-	newAmbientVolume := composer.layers["ambient"].Volume
+	newBaseVolume := composer.layers["base"].Volume
 
 	// Check that volume has changed
-	if newAmbientVolume == initialAmbientVolume {
+	if newBaseVolume == initialBaseVolume {
 		// This might happen if initial and target are the same, but for combat they should differ
 		// If they're different contexts, volume should change
 		t.Log("Note: Volume didn't change - may be expected if initial = target")
@@ -167,7 +167,7 @@ func TestAdaptiveComposer_GetActiveLayerCount(t *testing.T) {
 	composer := NewAdaptiveComposer(44100, 12345)
 	composer.Initialize("fantasy", 60)
 
-	// Exploration: ambient + melody = 2 layers
+	// Exploration: base + melody = 2 layers
 	composer.SetContext("exploration")
 	count := composer.GetActiveLayerCount()
 	if count != 2 {
@@ -189,9 +189,9 @@ func TestAdaptiveComposer_GetLayerVolume(t *testing.T) {
 	composer.Initialize("fantasy", 60)
 
 	// Check initial volumes
-	ambientVolume := composer.GetLayerVolume("ambient")
-	if ambientVolume <= 0.0 {
-		t.Error("ambient volume should be > 0 after initialization")
+	baseVolume := composer.GetLayerVolume("base")
+	if baseVolume <= 0.0 {
+		t.Error("base volume should be > 0 after initialization")
 	}
 
 	// Check non-existent layer
@@ -344,7 +344,7 @@ func TestAdaptiveComposer_SetContextFromStruct(t *testing.T) {
 				Danger:   0.1,
 			},
 			expectedActive: map[string]bool{
-				"ambient":    true,
+				"base":       true,
 				"melody":     true,
 				"percussion": false,
 			},
@@ -357,7 +357,7 @@ func TestAdaptiveComposer_SetContextFromStruct(t *testing.T) {
 				Danger:   0.5,
 			},
 			expectedActive: map[string]bool{
-				"ambient":    true,
+				"base":       true,
 				"melody":     true,
 				"percussion": true,
 				"intensity":  true,
@@ -372,7 +372,7 @@ func TestAdaptiveComposer_SetContextFromStruct(t *testing.T) {
 				Danger:     1.0,
 			},
 			expectedActive: map[string]bool{
-				"ambient":    true,
+				"base":       true,
 				"melody":     true,
 				"percussion": true,
 				"harmony":    true,
@@ -387,8 +387,8 @@ func TestAdaptiveComposer_SetContextFromStruct(t *testing.T) {
 				Danger:   0.0,
 			},
 			expectedActive: map[string]bool{
-				"ambient": true,
-				"melody":  true,
+				"base":   true,
+				"melody": true,
 			},
 		},
 	}
@@ -717,5 +717,61 @@ func BenchmarkAdaptiveComposer_GenerateTrack(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		composer.GenerateTrack(1.0)
+	}
+}
+
+func TestAdaptiveComposer_AddRemoveLayerBase(t *testing.T) {
+	// Regression test: Verify MusicLayerBase maps correctly to "base" layer
+	composer := NewAdaptiveComposer(44100, 12345)
+	composer.Initialize("fantasy", 60)
+
+	// First remove the base layer
+	err := composer.RemoveLayer(audio.MusicLayerBase)
+	if err != nil {
+		t.Fatalf("RemoveLayer(MusicLayerBase) error = %v", err)
+	}
+
+	// Update to apply volume change
+	for i := 0; i < 10; i++ {
+		composer.UpdateLayers(0.5)
+	}
+
+	// Verify base layer was deactivated (volume near 0)
+	baseVolume := composer.GetLayerVolume("base")
+	if baseVolume > 0.05 {
+		t.Errorf("base layer volume = %f, want near 0 after RemoveLayer", baseVolume)
+	}
+
+	// Now add the base layer back
+	err = composer.AddLayer(audio.MusicLayerBase)
+	if err != nil {
+		t.Fatalf("AddLayer(MusicLayerBase) error = %v", err)
+	}
+
+	// Update to apply volume change
+	for i := 0; i < 20; i++ {
+		composer.UpdateLayers(0.5)
+	}
+
+	// Verify base layer was re-activated
+	baseVolume = composer.GetLayerVolume("base")
+	if baseVolume < 0.2 {
+		t.Errorf("base layer volume = %f, want > 0.2 after AddLayer", baseVolume)
+	}
+}
+
+func TestAdaptiveComposer_AddRemoveLayerErrors(t *testing.T) {
+	composer := NewAdaptiveComposer(44100, 12345)
+	// Don't initialize - layers map should be empty
+
+	// Should return error for unknown layer
+	err := composer.AddLayer(audio.MusicLayerBase)
+	if err == nil {
+		t.Error("AddLayer() should return error for uninitialized layer")
+	}
+
+	err = composer.RemoveLayer(audio.MusicLayerMelody)
+	if err == nil {
+		t.Error("RemoveLayer() should return error for uninitialized layer")
 	}
 }

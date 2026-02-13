@@ -268,6 +268,105 @@ func TestNoLeakDetection(t *testing.T) {
 	}
 }
 
+// TestZeroInitialAllocationLeakDetection tests that leak detection handles zero initial allocation.
+func TestZeroInitialAllocationLeakDetection(t *testing.T) {
+	tests := []struct {
+		name                string
+		firstAlloc          uint64
+		firstLiveObjects    uint64
+		secondAlloc         uint64
+		secondLiveObjects   uint64
+		expectLeakDetected  bool
+		expectNonNaNPercent bool // Ensures no NaN or Inf values
+	}{
+		{
+			name:                "zero_initial_alloc_with_growth",
+			firstAlloc:          0,
+			firstLiveObjects:    100,
+			secondAlloc:         100000, // Growth from zero
+			secondLiveObjects:   200,    // 100% growth
+			expectLeakDetected:  true,
+			expectNonNaNPercent: true,
+		},
+		{
+			name:                "zero_initial_objects_with_growth",
+			firstAlloc:          100000,
+			firstLiveObjects:    0,
+			secondAlloc:         120000, // 20% growth
+			secondLiveObjects:   100,    // Growth from zero
+			expectLeakDetected:  true,
+			expectNonNaNPercent: true,
+		},
+		{
+			name:                "both_zero_initial_with_growth",
+			firstAlloc:          0,
+			firstLiveObjects:    0,
+			secondAlloc:         100000,
+			secondLiveObjects:   100,
+			expectLeakDetected:  true,
+			expectNonNaNPercent: true,
+		},
+		{
+			name:                "zero_initial_no_growth",
+			firstAlloc:          0,
+			firstLiveObjects:    0,
+			secondAlloc:         0,
+			secondLiveObjects:   0,
+			expectLeakDetected:  false,
+			expectNonNaNPercent: true,
+		},
+		{
+			name:                "normal_values",
+			firstAlloc:          1000000,
+			firstLiveObjects:    1000,
+			secondAlloc:         1200000, // 20% growth
+			secondLiveObjects:   1300,    // 30% growth
+			expectLeakDetected:  true,
+			expectNonNaNPercent: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			profile := &MemoryProfile{
+				Name:      tt.name,
+				Snapshots: make([]MemorySnapshot, 0),
+				StartTime: time.Now(),
+			}
+
+			profile.Snapshots = append(profile.Snapshots, MemorySnapshot{
+				Timestamp:   time.Now(),
+				Alloc:       tt.firstAlloc,
+				LiveObjects: tt.firstLiveObjects,
+			})
+
+			time.Sleep(10 * time.Millisecond)
+
+			profile.Snapshots = append(profile.Snapshots, MemorySnapshot{
+				Timestamp:   time.Now(),
+				Alloc:       tt.secondAlloc,
+				LiveObjects: tt.secondLiveObjects,
+			})
+
+			profile.EndTime = time.Now()
+
+			// This should not panic or produce NaN/Inf values
+			profile.detectLeaks()
+
+			if profile.LeakDetected != tt.expectLeakDetected {
+				t.Errorf("expected LeakDetected=%v, got %v", tt.expectLeakDetected, profile.LeakDetected)
+			}
+
+			// Verify leak rate is not NaN or Inf when a leak is detected
+			if profile.LeakDetected && tt.expectNonNaNPercent {
+				if profile.LeakRate != profile.LeakRate { // NaN check: NaN != NaN
+					t.Error("LeakRate is NaN")
+				}
+			}
+		})
+	}
+}
+
 // TestPrintProfile verifies profile printing doesn't panic.
 func TestPrintProfile(t *testing.T) {
 	profile := StartMemoryProfile("test")

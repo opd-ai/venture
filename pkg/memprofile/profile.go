@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"runtime"
 	"time"
+
+	log "github.com/sirupsen/logrus"
 )
 
 // MemorySnapshot captures memory statistics at a point in time.
@@ -61,6 +63,12 @@ func StartMemoryProfile(name string) *MemoryProfile {
 	// Take initial snapshot
 	profile.Snapshots = append(profile.Snapshots, CaptureMemorySnapshot())
 
+	log.WithFields(log.Fields{
+		"profile_name":    name,
+		"initial_alloc":   profile.Snapshots[0].Alloc,
+		"initial_objects": profile.Snapshots[0].LiveObjects,
+	}).Debug("memory profile started")
+
 	return profile
 }
 
@@ -79,6 +87,16 @@ func (p *MemoryProfile) End() {
 
 	// Detect memory leaks
 	p.detectLeaks()
+
+	finalSnapshot := p.Snapshots[len(p.Snapshots)-1]
+	log.WithFields(log.Fields{
+		"profile_name":  p.Name,
+		"duration":      p.EndTime.Sub(p.StartTime),
+		"final_alloc":   finalSnapshot.Alloc,
+		"final_objects": finalSnapshot.LiveObjects,
+		"leak_detected": p.LeakDetected,
+		"leak_rate":     p.LeakRate,
+	}).Debug("memory profile ended")
 }
 
 // detectLeaks analyzes snapshots to identify memory leaks.
@@ -97,8 +115,21 @@ func (p *MemoryProfile) detectLeaks() {
 
 	// If allocation and object count both grew significantly, suspect leak
 	// Allow 10% growth as normal variation
-	allocGrowthPercent := float64(allocGrowth) / float64(first.Alloc) * 100.0
-	objectGrowthPercent := float64(objectGrowth) / float64(first.LiveObjects) * 100.0
+	// Guard against division by zero when first.Alloc or first.LiveObjects is 0
+	var allocGrowthPercent, objectGrowthPercent float64
+	if first.Alloc > 0 {
+		allocGrowthPercent = float64(allocGrowth) / float64(first.Alloc) * 100.0
+	} else if allocGrowth > 0 {
+		// Started at zero allocation, any growth from zero is significant
+		allocGrowthPercent = 100.0
+	}
+
+	if first.LiveObjects > 0 {
+		objectGrowthPercent = float64(objectGrowth) / float64(first.LiveObjects) * 100.0
+	} else if objectGrowth > 0 {
+		// Started with zero objects, any growth from zero is significant
+		objectGrowthPercent = 100.0
+	}
 
 	// Consider it a leak if:
 	// 1. Both alloc and objects grew by >10%
@@ -108,6 +139,15 @@ func (p *MemoryProfile) detectLeaks() {
 		if duration.Seconds() > 0 {
 			p.LeakRate = float64(allocGrowth) / duration.Seconds()
 		}
+
+		log.WithFields(log.Fields{
+			"profile_name":          p.Name,
+			"alloc_growth_percent":  allocGrowthPercent,
+			"object_growth_percent": objectGrowthPercent,
+			"alloc_growth_bytes":    allocGrowth,
+			"object_growth_count":   objectGrowth,
+			"leak_rate_bytes_sec":   p.LeakRate,
+		}).Warn("memory leak detected")
 	}
 }
 

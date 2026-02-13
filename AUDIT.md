@@ -12,6 +12,7 @@ This document tracks the audit status of all Go packages in the Venture codebase
 
 ### Network Layer
 - [x] `pkg/network/federation/AUDIT.md` — Needs Work — 2 issues (1 high, 1 low)
+- [x] `pkg/network/federation/webrtc/AUDIT.md` — Needs Work — 7 issues (4 high, 3 med, 1 low)
 - [x] `pkg/network/AUDIT_COMPLETE.md` — Complete — 0 issues (3 informational notes)
 - [x] `pkg/network/chat/AUDIT.md` — Needs Work — 7 issues (1 high, 2 med, 4 low)
 - [x] `pkg/network/trade/AUDIT.md` — Needs Work — 5 issues (0 high, 2 med, 3 low)
@@ -114,9 +115,9 @@ Each audit should produce a `AUDIT.md` file in the package directory following t
 ## Summary Statistics
 
 **Total Packages**: 50+  
-**Audited**: 63  
+**Audited**: 64  
 **Complete**: 25  
-**Needs Work**: 37  
+**Needs Work**: 38  
 **Incomplete**: 1  
 **Not Started**: 0
 

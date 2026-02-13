@@ -99,7 +99,7 @@ This document tracks the audit status of all Go packages in the Venture codebase
 - [x] `pkg/integration/guild_housing/AUDIT.md` — Needs Work — 2 issues (0 high, 0 med, 2 low) - Updated 2026-02-13: Fixed 4 med-priority issues (structured logging with logrus.WithFields, ID validation, BuildingSize validation, capacity validation)
 - [x] `pkg/integration/guild_vehicle/AUDIT.md` — Needs Work — 2 issues (0 high, 0 med, 2 low) - Updated 2026-02-13: High-priority time.Now() usage exempted (fleet timestamps track operational events for server coordination), Fixed med-priority Serialize/Deserialize methods with JSON marshaling and structured logging
 - [x] `pkg/integration/housing_crafting/AUDIT.md` — Complete — 1 issue (0 high, 0 med, 1 low)
-- [x] `pkg/integration/narrative_world/AUDIT.md` — Needs Work — 7 issues (2 high, 3 med, 2 low)
+- [x] `pkg/integration/narrative_world/AUDIT.md` — Needs Work — 5 issues (0 high, 2 med, 3 low) - Updated 2026-02-13: Fixed 2 high-priority issues (TimeProvider interface for deterministic timestamps in RecordMemory and pruneOldMemories)
 - [x] `pkg/integration/political_warfare/AUDIT.md` — Needs Work — 1 issue (0 high, 1 med, 0 low) - Updated 2026-02-13: Fixed 5 issues (1 med seed passthrough, 1 med Save/Load persistence methods added, 1 med gold concession error logging, 2 low structured logging)
 - [x] `pkg/integration/trade_routes/AUDIT.md` — Complete — 0 issues (3 fixed on 2026-02-13: structured logging with logrus.WithFields on all error paths, TestGetRoute table-driven test, camelCase variable naming)
 - [x] `pkg/integration/world_events/AUDIT.md` — Needs Work — 6 issues (2 high, 2 med, 2 low)

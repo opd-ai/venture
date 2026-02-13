@@ -201,6 +201,10 @@ func TestRecordMemory(t *testing.T) {
 }
 
 func TestMemoryPruning(t *testing.T) {
+	// Use incrementing time provider for deterministic timestamps
+	SetTimeProvider(&IncrementingTimeProvider{Current: 1000000, Step: 60}) // 60 second increments
+	defer ResetTimeProvider()
+
 	manager := NewStoryEventManager(12345)
 	manager.SetMaxMemoryEvents(10) // Set low limit for testing
 
@@ -213,7 +217,7 @@ func TestMemoryPruning(t *testing.T) {
 			eventType = EventTypeSacrifice // High importance
 		}
 		manager.RecordMemory(companionID, eventType, "Test event")
-		time.Sleep(time.Millisecond) // Ensure different timestamps
+		// No time.Sleep needed - IncrementingTimeProvider ensures different timestamps
 	}
 
 	count := manager.GetMemoryCount(companionID)

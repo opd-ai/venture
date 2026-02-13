@@ -3,7 +3,6 @@ package narrative_world
 import (
 	"fmt"
 	"math/rand"
-	"time"
 
 	"github.com/opd-ai/venture/pkg/companion/learning"
 	"github.com/opd-ai/venture/pkg/engine"
@@ -428,7 +427,7 @@ func (m *StoryEventManager) RecordMemory(companionID uint64, eventType EventType
 	}
 
 	event := MemoryEvent{
-		Timestamp:    time.Now(),
+		Timestamp:    now(), // Deterministic via TimeProvider
 		Type:         eventType,
 		Description:  description,
 		Participants: []uint64{companionID},
@@ -472,10 +471,15 @@ func (m *StoryEventManager) pruneOldMemories(memory *CompanionMemory) {
 	}
 
 	scored := make([]scoredEvent, len(memory.Events))
-	now := time.Now()
+	currentTime := now() // Deterministic via TimeProvider
+
+	// Seconds in a year for recency calculation
+	const secondsPerYear = 365 * 24 * 3600
 
 	for i, event := range memory.Events {
-		recency := 1.0 - (now.Sub(event.Timestamp).Hours() / (24 * 365)) // Decay over year
+		// Calculate recency based on Unix timestamp difference (seconds)
+		ageSeconds := currentTime - event.Timestamp
+		recency := 1.0 - (float64(ageSeconds) / float64(secondsPerYear)) // Decay over year
 		if recency < 0 {
 			recency = 0
 		}

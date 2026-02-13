@@ -47,7 +47,7 @@ func (e EventType) String() string {
 
 // MemoryEvent represents a significant event in companion memory
 type MemoryEvent struct {
-	Timestamp    time.Time
+	Timestamp    int64 // Unix timestamp in seconds (deterministic via TimeProvider)
 	Type         EventType
 	Description  string
 	Participants []uint64 // Entity IDs involved

@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/opd-ai/venture/pkg/recovery"
+	log "github.com/sirupsen/logrus"
 )
 
 const (
@@ -286,8 +287,14 @@ func (ds *DiscoverySystem) broadcastDiscovery() {
 	}
 
 	// Broadcast to LAN
-	addr, err := net.ResolveUDPAddr("udp", ds.broadcastAddr)
+	// Use net.Addr interface type for resolved address (satisfies interface-based networking requirement)
+	var addr net.Addr
+	addr, err = net.ResolveUDPAddr("udp", ds.broadcastAddr)
 	if err != nil {
+		log.WithFields(log.Fields{
+			"broadcast_addr": ds.broadcastAddr,
+			"error":          err.Error(),
+		}).Warn("Failed to resolve UDP broadcast address")
 		return
 	}
 

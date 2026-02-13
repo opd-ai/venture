@@ -53,7 +53,7 @@ Target: 65% — **EXCEEDS** (82.6% documented)
 - ✅ All main package files use `net.Conn`, `net.Listener`, `net.Addr` interfaces (no concrete types)
 - ✅ No type assertions to concrete network types (`net.TCPConn`, `net.UDPAddr`, etc.)
 - ✅ `KeepAliveConn` interface used for TCP keepalive (enables testability)
-- ⚠️ Federation subdirectory has 1 concrete type usage (`discovery.go:289` uses `net.ResolveUDPAddr`) — already flagged in federation audit
+- ✅ Federation subdirectory now compliant — `discovery.go:289` fixed to use `net.Addr` interface (2026-02-13)
 
 **Documentation Coverage:**
 - ✅ Package doc.go: Comprehensive overview with examples (138 lines)

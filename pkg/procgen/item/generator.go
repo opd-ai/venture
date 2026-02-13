@@ -48,6 +48,16 @@ func NewItemGeneratorWithLogger(logger *logrus.Logger) *ItemGenerator {
 	gen.armorTemplates["scifi"] = GetSciFiArmorTemplates()
 	gen.consumableTemplates["scifi"] = GetSciFiConsumableTemplates()
 
+	// Register horror genre templates
+	gen.weaponTemplates["horror"] = GetHorrorWeaponTemplates()
+	gen.armorTemplates["horror"] = GetHorrorArmorTemplates()
+	gen.consumableTemplates["horror"] = GetHorrorConsumableTemplates()
+
+	// Register cyberpunk genre templates
+	gen.weaponTemplates["cyberpunk"] = GetCyberpunkWeaponTemplates()
+	gen.armorTemplates["cyberpunk"] = GetCyberpunkArmorTemplates()
+	gen.consumableTemplates["cyberpunk"] = GetCyberpunkConsumableTemplates()
+
 	// Default templates
 	gen.weaponTemplates[""] = GetFantasyWeaponTemplates()
 	gen.armorTemplates[""] = GetFantasyArmorTemplates()

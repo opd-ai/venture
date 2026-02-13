@@ -826,3 +826,291 @@ func TestUnknownGenreFallback(t *testing.T) {
 		}
 	}
 }
+
+// TestGetHorrorWeaponTemplates tests horror genre weapon templates.
+func TestGetHorrorWeaponTemplates(t *testing.T) {
+	templates := GetHorrorWeaponTemplates()
+	if len(templates) == 0 {
+		t.Error("No horror weapon templates returned")
+	}
+
+	// Should have at least 5 weapon types for variety
+	if len(templates) < 5 {
+		t.Errorf("Expected at least 5 horror weapon templates, got %d", len(templates))
+	}
+
+	for i, template := range templates {
+		if template.BaseType != TypeWeapon {
+			t.Errorf("Template %d is not weapon", i)
+		}
+		if len(template.NamePrefixes) == 0 {
+			t.Errorf("Template %d has no name prefixes", i)
+		}
+		if len(template.NameSuffixes) == 0 {
+			t.Errorf("Template %d has no name suffixes", i)
+		}
+	}
+}
+
+// TestGetHorrorArmorTemplates tests horror genre armor templates.
+func TestGetHorrorArmorTemplates(t *testing.T) {
+	templates := GetHorrorArmorTemplates()
+	if len(templates) == 0 {
+		t.Error("No horror armor templates returned")
+	}
+
+	for i, template := range templates {
+		if template.BaseType != TypeArmor {
+			t.Errorf("Template %d is not armor", i)
+		}
+	}
+}
+
+// TestGetHorrorConsumableTemplates tests horror genre consumable templates.
+func TestGetHorrorConsumableTemplates(t *testing.T) {
+	templates := GetHorrorConsumableTemplates()
+	if len(templates) == 0 {
+		t.Error("No horror consumable templates returned")
+	}
+
+	for i, template := range templates {
+		if template.BaseType != TypeConsumable {
+			t.Errorf("Template %d is not consumable", i)
+		}
+	}
+
+	// Verify scroll templates have spell effects
+	scrollFound := false
+	for _, template := range templates {
+		if template.ConsumableType == ConsumableScroll {
+			scrollFound = true
+			if len(template.SpellEffectIDs) == 0 {
+				t.Error("Horror scroll template has no spell effects")
+			}
+		}
+	}
+	if !scrollFound {
+		t.Error("No horror scroll template found")
+	}
+}
+
+// TestGetCyberpunkWeaponTemplates tests cyberpunk genre weapon templates.
+func TestGetCyberpunkWeaponTemplates(t *testing.T) {
+	templates := GetCyberpunkWeaponTemplates()
+	if len(templates) == 0 {
+		t.Error("No cyberpunk weapon templates returned")
+	}
+
+	// Should have at least 5 weapon types for variety
+	if len(templates) < 5 {
+		t.Errorf("Expected at least 5 cyberpunk weapon templates, got %d", len(templates))
+	}
+
+	for i, template := range templates {
+		if template.BaseType != TypeWeapon {
+			t.Errorf("Template %d is not weapon", i)
+		}
+		if len(template.NamePrefixes) == 0 {
+			t.Errorf("Template %d has no name prefixes", i)
+		}
+		if len(template.NameSuffixes) == 0 {
+			t.Errorf("Template %d has no name suffixes", i)
+		}
+	}
+}
+
+// TestGetCyberpunkArmorTemplates tests cyberpunk genre armor templates.
+func TestGetCyberpunkArmorTemplates(t *testing.T) {
+	templates := GetCyberpunkArmorTemplates()
+	if len(templates) == 0 {
+		t.Error("No cyberpunk armor templates returned")
+	}
+
+	for i, template := range templates {
+		if template.BaseType != TypeArmor {
+			t.Errorf("Template %d is not armor", i)
+		}
+	}
+}
+
+// TestGetCyberpunkConsumableTemplates tests cyberpunk genre consumable templates.
+func TestGetCyberpunkConsumableTemplates(t *testing.T) {
+	templates := GetCyberpunkConsumableTemplates()
+	if len(templates) == 0 {
+		t.Error("No cyberpunk consumable templates returned")
+	}
+
+	for i, template := range templates {
+		if template.BaseType != TypeConsumable {
+			t.Errorf("Template %d is not consumable", i)
+		}
+	}
+
+	// Verify scroll templates have spell effects
+	scrollFound := false
+	for _, template := range templates {
+		if template.ConsumableType == ConsumableScroll {
+			scrollFound = true
+			if len(template.SpellEffectIDs) == 0 {
+				t.Error("Cyberpunk scroll template has no spell effects")
+			}
+		}
+	}
+	if !scrollFound {
+		t.Error("No cyberpunk scroll template found")
+	}
+}
+
+// TestHorrorItemGeneration tests generation of horror genre items.
+func TestHorrorItemGeneration(t *testing.T) {
+	gen := NewItemGenerator()
+	params := procgen.GenerationParams{
+		Depth:      5,
+		Difficulty: 0.5,
+		GenreID:    "horror",
+		Custom: map[string]interface{}{
+			"count": 20,
+		},
+	}
+
+	result, err := gen.Generate(99999, params)
+	if err != nil {
+		t.Fatalf("Generate failed: %v", err)
+	}
+
+	items := result.([]*Item)
+	if len(items) != 20 {
+		t.Errorf("Expected 20 items, got %d", len(items))
+	}
+
+	// All items should have names
+	for i, item := range items {
+		if item.Name == "" {
+			t.Errorf("Horror item %d has empty name", i)
+		}
+	}
+}
+
+// TestCyberpunkItemGeneration tests generation of cyberpunk genre items.
+func TestCyberpunkItemGeneration(t *testing.T) {
+	gen := NewItemGenerator()
+	params := procgen.GenerationParams{
+		Depth:      5,
+		Difficulty: 0.5,
+		GenreID:    "cyberpunk",
+		Custom: map[string]interface{}{
+			"count": 20,
+		},
+	}
+
+	result, err := gen.Generate(88888, params)
+	if err != nil {
+		t.Fatalf("Generate failed: %v", err)
+	}
+
+	items := result.([]*Item)
+	if len(items) != 20 {
+		t.Errorf("Expected 20 items, got %d", len(items))
+	}
+
+	// All items should have names
+	for i, item := range items {
+		if item.Name == "" {
+			t.Errorf("Cyberpunk item %d has empty name", i)
+		}
+	}
+}
+
+// TestHorrorConsumableGeneration tests horror consumables have correct spell effects.
+func TestHorrorConsumableGeneration(t *testing.T) {
+	gen := NewItemGenerator()
+	params := procgen.GenerationParams{
+		Depth:      5,
+		Difficulty: 0.5,
+		GenreID:    "horror",
+		Custom: map[string]interface{}{
+			"count": 50,
+			"type":  "consumable",
+		},
+	}
+
+	result, err := gen.Generate(77777, params)
+	if err != nil {
+		t.Fatalf("Generate failed: %v", err)
+	}
+
+	items := result.([]*Item)
+	scrollsFound := 0
+	scrollsWithEffects := 0
+
+	for _, item := range items {
+		if item.ConsumableType == ConsumableScroll {
+			scrollsFound++
+			if item.SpellEffectID != "" {
+				scrollsWithEffects++
+				validEffects := map[string]bool{
+					"banish_horror":   true,
+					"protection_ward": true,
+					"dark_sight":      true,
+					"summon_ally":     true,
+				}
+				if !validEffects[item.SpellEffectID] {
+					t.Errorf("Horror scroll %s has unknown spell effect: %s", item.Name, item.SpellEffectID)
+				}
+			}
+		}
+	}
+
+	t.Logf("Generated %d horror scrolls (%d with effects)", scrollsFound, scrollsWithEffects)
+
+	if scrollsFound > 0 && scrollsWithEffects == 0 {
+		t.Error("Expected horror scrolls to have spell effects")
+	}
+}
+
+// TestCyberpunkConsumableGeneration tests cyberpunk consumables have correct spell effects.
+func TestCyberpunkConsumableGeneration(t *testing.T) {
+	gen := NewItemGenerator()
+	params := procgen.GenerationParams{
+		Depth:      5,
+		Difficulty: 0.5,
+		GenreID:    "cyberpunk",
+		Custom: map[string]interface{}{
+			"count": 50,
+			"type":  "consumable",
+		},
+	}
+
+	result, err := gen.Generate(66666, params)
+	if err != nil {
+		t.Fatalf("Generate failed: %v", err)
+	}
+
+	items := result.([]*Item)
+	scrollsFound := 0
+	scrollsWithEffects := 0
+
+	for _, item := range items {
+		if item.ConsumableType == ConsumableScroll {
+			scrollsFound++
+			if item.SpellEffectID != "" {
+				scrollsWithEffects++
+				validEffects := map[string]bool{
+					"contagion":       true,
+					"short_circuit":   true,
+					"synapse_burnout": true,
+					"memory_wipe":     true,
+				}
+				if !validEffects[item.SpellEffectID] {
+					t.Errorf("Cyberpunk scroll %s has unknown spell effect: %s", item.Name, item.SpellEffectID)
+				}
+			}
+		}
+	}
+
+	t.Logf("Generated %d cyberpunk scrolls (%d with effects)", scrollsFound, scrollsWithEffects)
+
+	if scrollsFound > 0 && scrollsWithEffects == 0 {
+		t.Error("Expected cyberpunk scrolls to have spell effects")
+	}
+}

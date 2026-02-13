@@ -344,3 +344,315 @@ func GetSciFiConsumableTemplates() []ItemTemplate {
 		},
 	}
 }
+
+// GetHorrorWeaponTemplates returns weapon templates for horror genre.
+func GetHorrorWeaponTemplates() []ItemTemplate {
+	return []ItemTemplate{
+		{
+			BaseType:          TypeWeapon,
+			WeaponType:        WeaponAxe,
+			NamePrefixes:      []string{"Rusty", "Blood-Stained", "Jagged", "Cursed", "Corroded"},
+			NameSuffixes:      []string{"Axe", "Cleaver", "Machete", "Hatchet"},
+			Tags:              []string{"brutal", "makeshift"},
+			DamageRange:       [2]int{10, 18},
+			AttackSpeedRange:  [2]float64{0.8, 1.0},
+			ValueRange:        [2]int{20, 100},
+			WeightRange:       [2]float64{3.0, 6.0},
+			DurabilityRange:   [2]int{40, 80},
+			ClassRestrictions: []string{}, // Survival weapons usable by any class
+		},
+		{
+			BaseType:          TypeWeapon,
+			WeaponType:        WeaponDagger,
+			NamePrefixes:      []string{"Ritual", "Bone", "Serrated", "Sacrificial", "Obsidian"},
+			NameSuffixes:      []string{"Knife", "Shiv", "Blade", "Scalpel"},
+			Tags:              []string{"occult", "silent"},
+			DamageRange:       [2]int{5, 10},
+			AttackSpeedRange:  [2]float64{1.4, 1.8},
+			ValueRange:        [2]int{15, 80},
+			WeightRange:       [2]float64{0.3, 1.0},
+			DurabilityRange:   [2]int{30, 60},
+			ClassRestrictions: []string{}, // Light weapons usable by any class
+		},
+		{
+			BaseType:         TypeWeapon,
+			WeaponType:       WeaponGun,
+			NamePrefixes:     []string{"Worn", "Antique", "Salvaged", "Modified", "Silenced"},
+			NameSuffixes:     []string{"Revolver", "Shotgun", "Pistol", "Rifle"},
+			Tags:             []string{"firearm", "loud", "limited_ammo"},
+			DamageRange:      [2]int{12, 22},
+			AttackSpeedRange: [2]float64{0.5, 0.8},
+			ValueRange:       [2]int{80, 300},
+			WeightRange:      [2]float64{2.0, 6.0},
+			DurabilityRange:  [2]int{60, 100},
+			// Projectile properties
+			IsProjectile:         true,
+			ProjectileSpeedRange: [2]float64{500.0, 800.0},
+			ProjectileLifetime:   1.5,
+			ProjectileType:       "bullet",
+			PierceChance:         0.20,
+			PierceRange:          [2]int{1, 2},
+			BounceChance:         0.0,
+			ExplosiveChance:      0.05, // Rare explosive rounds
+			ExplosionRadiusRange: [2]float64{30.0, 50.0},
+			ClassRestrictions:    []string{}, // Guns usable by any class
+		},
+		{
+			BaseType:          TypeWeapon,
+			WeaponType:        WeaponStaff, // Using as occult focus
+			NamePrefixes:      []string{"Eldritch", "Forbidden", "Sanity-Draining", "Void", "Abyssal"},
+			NameSuffixes:      []string{"Tome", "Grimoire", "Focus", "Idol"},
+			Tags:              []string{"occult", "sanity_cost", "dark_magic"},
+			DamageRange:       [2]int{8, 15},
+			AttackSpeedRange:  [2]float64{0.6, 0.9},
+			ValueRange:        [2]int{100, 400},
+			WeightRange:       [2]float64{1.0, 2.5},
+			DurabilityRange:   [2]int{40, 70},
+			ClassRestrictions: []string{"mage", "necromancer"}, // Occult knowledge required
+		},
+		{
+			BaseType:          TypeWeapon,
+			WeaponType:        WeaponSword,
+			NamePrefixes:      []string{"Pipe", "Crowbar", "Broken", "Improvised", "Found"},
+			NameSuffixes:      []string{"Wrench", "Bar", "Club", "Baton"},
+			Tags:              []string{"blunt", "makeshift", "common"},
+			DamageRange:       [2]int{6, 12},
+			AttackSpeedRange:  [2]float64{1.0, 1.3},
+			ValueRange:        [2]int{5, 30},
+			WeightRange:       [2]float64{2.0, 4.0},
+			DurabilityRange:   [2]int{50, 90},
+			ClassRestrictions: []string{}, // Improvised weapons usable by any class
+		},
+	}
+}
+
+// GetHorrorArmorTemplates returns armor templates for horror genre.
+func GetHorrorArmorTemplates() []ItemTemplate {
+	return []ItemTemplate{
+		{
+			BaseType:          TypeArmor,
+			ArmorType:         ArmorChest,
+			NamePrefixes:      []string{"Tattered", "Bloodied", "Reinforced", "Scavenged", "Stitched"},
+			NameSuffixes:      []string{"Jacket", "Vest", "Coat", "Overalls"},
+			Tags:              []string{"light", "worn"},
+			DefenseRange:      [2]int{4, 12},
+			ValueRange:        [2]int{20, 100},
+			WeightRange:       [2]float64{2.0, 5.0},
+			DurabilityRange:   [2]int{40, 80},
+			ClassRestrictions: []string{}, // Survival gear usable by any class
+		},
+		{
+			BaseType:          TypeArmor,
+			ArmorType:         ArmorHelmet,
+			NamePrefixes:      []string{"Gas", "Construction", "Riot", "Cracked", "Salvaged"},
+			NameSuffixes:      []string{"Mask", "Helmet", "Hood", "Goggles"},
+			Tags:              []string{"protective", "visibility"},
+			DefenseRange:      [2]int{2, 8},
+			ValueRange:        [2]int{15, 60},
+			WeightRange:       [2]float64{0.5, 2.0},
+			DurabilityRange:   [2]int{30, 60},
+			ClassRestrictions: []string{}, // Protective gear usable by any class
+		},
+		{
+			BaseType:          TypeArmor,
+			ArmorType:         ArmorShield, // Using as improvised shield
+			NamePrefixes:      []string{"Car Door", "Riot", "Improvised", "Dented", "Trash Lid"},
+			NameSuffixes:      []string{"Shield", "Barrier", "Guard", "Blocker"},
+			Tags:              []string{"makeshift", "heavy"},
+			DefenseRange:      [2]int{6, 14},
+			ValueRange:        [2]int{10, 50},
+			WeightRange:       [2]float64{5.0, 10.0},
+			DurabilityRange:   [2]int{50, 100},
+			ClassRestrictions: []string{}, // Improvised shields usable by any class
+		},
+	}
+}
+
+// GetHorrorConsumableTemplates returns consumable templates for horror genre.
+func GetHorrorConsumableTemplates() []ItemTemplate {
+	return []ItemTemplate{
+		{
+			BaseType:       TypeConsumable,
+			ConsumableType: ConsumablePotion,
+			NamePrefixes:   []string{"Emergency", "Expired", "Homemade", "Contraband", "Bootleg"},
+			NameSuffixes:   []string{"First Aid Kit", "Bandages", "Painkillers", "Adrenaline Shot"},
+			Tags:           []string{"medical", "scarce", "survival"},
+			ValueRange:     [2]int{15, 80},
+			WeightRange:    [2]float64{0.2, 0.5},
+		},
+		{
+			BaseType:         TypeConsumable,
+			ConsumableType:   ConsumableScroll, // Using scroll type for occult rituals
+			NamePrefixes:     []string{"Forbidden Ritual:", "Dark Incantation:", "Blood Rite:"},
+			NameSuffixes:     []string{"Banishment", "Ward", "Sight Beyond", "Summoning"},
+			Tags:             []string{"occult", "sanity_cost", "ritual"},
+			ValueRange:       [2]int{40, 200},
+			WeightRange:      [2]float64{0.1, 0.3},
+			SpellEffectIDs:   []string{"banish_horror", "protection_ward", "dark_sight", "summon_ally"},
+			SpellDurations:   []float64{0.0, 30.0, 20.0, 60.0},
+			SpellTargetTypes: []string{"area", "self", "self", "area"},
+			SpellRadii:       []float64{100.0, 0.0, 0.0, 50.0},
+		},
+	}
+}
+
+// GetCyberpunkWeaponTemplates returns weapon templates for cyberpunk genre.
+func GetCyberpunkWeaponTemplates() []ItemTemplate {
+	return []ItemTemplate{
+		{
+			BaseType:          TypeWeapon,
+			WeaponType:        WeaponSword, // Using as monofilament blade
+			NamePrefixes:      []string{"Mono", "Thermal", "Vibro", "Smart", "Razor"},
+			NameSuffixes:      []string{"Blade", "Katana", "Wire", "Edge"},
+			Tags:              []string{"high-tech", "melee", "precision"},
+			DamageRange:       [2]int{12, 20},
+			AttackSpeedRange:  [2]float64{1.3, 1.6},
+			ValueRange:        [2]int{200, 600},
+			WeightRange:       [2]float64{0.8, 1.5},
+			DurabilityRange:   [2]int{150, 250},
+			ClassRestrictions: []string{}, // High-tech blades usable by any class
+		},
+		{
+			BaseType:         TypeWeapon,
+			WeaponType:       WeaponGun,
+			NamePrefixes:     []string{"Smart", "Tracking", "Power", "Tech", "Ricochet"},
+			NameSuffixes:     []string{"Pistol", "SMG", "Shotgun", "Assault Rifle"},
+			Tags:             []string{"smart_link", "high_capacity"},
+			DamageRange:      [2]int{9, 16},
+			AttackSpeedRange: [2]float64{1.6, 2.2},
+			ValueRange:       [2]int{250, 700},
+			WeightRange:      [2]float64{1.5, 4.0},
+			DurabilityRange:  [2]int{180, 280},
+			// Projectile properties
+			IsProjectile:         true,
+			ProjectileSpeedRange: [2]float64{700.0, 1200.0}, // Very fast smart rounds
+			ProjectileLifetime:   2.0,
+			ProjectileType:       "smart_bullet",
+			PierceChance:         0.35, // High chance for AP rounds
+			PierceRange:          [2]int{2, 5},
+			BounceChance:         0.15, // Smart ricochet
+			BounceRange:          [2]int{1, 3},
+			ExplosiveChance:      0.25, // High-tech explosive rounds
+			ExplosionRadiusRange: [2]float64{45.0, 75.0},
+			ClassRestrictions:    []string{}, // Guns usable by any class
+		},
+		{
+			BaseType:         TypeWeapon,
+			WeaponType:       WeaponCrossbow, // Using as tech crossbow/launcher
+			NamePrefixes:     []string{"Grenade", "Micro-Missile", "Drone", "Shock", "Gas"},
+			NameSuffixes:     []string{"Launcher", "Deployer", "Projector", "System"},
+			Tags:             []string{"heavy", "explosive", "area_effect"},
+			DamageRange:      [2]int{15, 25},
+			AttackSpeedRange: [2]float64{0.4, 0.7},
+			ValueRange:       [2]int{400, 1000},
+			WeightRange:      [2]float64{4.0, 8.0},
+			DurabilityRange:  [2]int{120, 200},
+			// Projectile properties
+			IsProjectile:         true,
+			ProjectileSpeedRange: [2]float64{200.0, 400.0}, // Slower ordinance
+			ProjectileLifetime:   3.0,
+			ProjectileType:       "grenade",
+			PierceChance:         0.0,
+			BounceChance:         0.0,
+			ExplosiveChance:      0.90, // Almost always explosive
+			ExplosionRadiusRange: [2]float64{80.0, 150.0},
+			ClassRestrictions:    []string{}, // Heavy weapons usable by any class
+		},
+		{
+			BaseType:          TypeWeapon,
+			WeaponType:        WeaponWand, // Using as hacking device
+			NamePrefixes:      []string{"Neural", "ICE-Breaker", "Black", "Daemon", "Phantom"},
+			NameSuffixes:      []string{"Deck", "Interface", "Jack", "Link"},
+			Tags:              []string{"hacking", "digital", "stealth"},
+			DamageRange:       [2]int{6, 12}, // Low physical, but affects machines
+			AttackSpeedRange:  [2]float64{1.0, 1.4},
+			ValueRange:        [2]int{300, 800},
+			WeightRange:       [2]float64{0.3, 1.0},
+			DurabilityRange:   [2]int{100, 180},
+			ClassRestrictions: []string{"rogue", "mage"}, // Netrunners and hackers
+		},
+		{
+			BaseType:          TypeWeapon,
+			WeaponType:        WeaponAxe, // Using as mantis blades / gorilla arms
+			NamePrefixes:      []string{"Mantis", "Gorilla", "Monowire", "Projectile", "Grapple"},
+			NameSuffixes:      []string{"Arms", "Blades", "Fists", "Launcher"},
+			Tags:              []string{"cyberware", "implant", "melee"},
+			DamageRange:       [2]int{14, 24},
+			AttackSpeedRange:  [2]float64{0.9, 1.2},
+			ValueRange:        [2]int{500, 1200},
+			WeightRange:       [2]float64{0.0, 0.0}, // Implanted, no carry weight
+			DurabilityRange:   [2]int{200, 400},
+			ClassRestrictions: []string{}, // Cyberware usable by any class
+		},
+	}
+}
+
+// GetCyberpunkArmorTemplates returns armor templates for cyberpunk genre.
+func GetCyberpunkArmorTemplates() []ItemTemplate {
+	return []ItemTemplate{
+		{
+			BaseType:          TypeArmor,
+			ArmorType:         ArmorChest,
+			NamePrefixes:      []string{"Armored", "Tactical", "Corporate", "Street", "Military"},
+			NameSuffixes:      []string{"Jacket", "Vest", "Bodysuit", "Skinweave"},
+			Tags:              []string{"ballistic", "stylish"},
+			DefenseRange:      [2]int{12, 30},
+			ValueRange:        [2]int{200, 600},
+			WeightRange:       [2]float64{3.0, 8.0},
+			DurabilityRange:   [2]int{150, 280},
+			ClassRestrictions: []string{}, // Armor usable by any class
+		},
+		{
+			BaseType:          TypeArmor,
+			ArmorType:         ArmorHelmet,
+			NamePrefixes:      []string{"Smart", "Tactical", "Neural", "Combat", "Synth"},
+			NameSuffixes:      []string{"Visor", "Helmet", "Interface", "Optics"},
+			Tags:              []string{"hud", "threat_detection", "comms"},
+			DefenseRange:      [2]int{6, 16},
+			ValueRange:        [2]int{150, 450},
+			WeightRange:       [2]float64{0.8, 2.5},
+			DurabilityRange:   [2]int{120, 220},
+			ClassRestrictions: []string{}, // Headgear usable by any class
+		},
+		{
+			BaseType:          TypeArmor,
+			ArmorType:         ArmorShield, // Using as deployable barrier/drone
+			NamePrefixes:      []string{"Deployable", "Holographic", "Kinetic", "Drone", "Smart"},
+			NameSuffixes:      []string{"Barrier", "Shield", "Cover", "Wall"},
+			Tags:              []string{"tech", "deployable", "temporary"},
+			DefenseRange:      [2]int{10, 25},
+			ValueRange:        [2]int{250, 550},
+			WeightRange:       [2]float64{2.0, 5.0},
+			DurabilityRange:   [2]int{80, 150},
+			ClassRestrictions: []string{}, // Tech shields usable by any class
+		},
+	}
+}
+
+// GetCyberpunkConsumableTemplates returns consumable templates for cyberpunk genre.
+func GetCyberpunkConsumableTemplates() []ItemTemplate {
+	return []ItemTemplate{
+		{
+			BaseType:       TypeConsumable,
+			ConsumableType: ConsumablePotion,
+			NamePrefixes:   []string{"Trauma Team", "Street", "Military Grade", "Black Market", "Synth"},
+			NameSuffixes:   []string{"MaxDoc", "Bounce Back", "Biomonitor", "Blood Pack"},
+			Tags:           []string{"medical", "quick_heal", "combat_stim"},
+			ValueRange:     [2]int{30, 180},
+			WeightRange:    [2]float64{0.1, 0.4},
+		},
+		{
+			BaseType:         TypeConsumable,
+			ConsumableType:   ConsumableScroll, // Using scroll type for quickhacks/programs
+			NamePrefixes:     []string{"Quickhack:", "Daemon:", "ICE:", "Virus:"},
+			NameSuffixes:     []string{"Contagion", "Short Circuit", "Synapse Burnout", "Memory Wipe"},
+			Tags:             []string{"netrunning", "hack", "digital_attack"},
+			ValueRange:       [2]int{60, 300},
+			WeightRange:      [2]float64{0.0, 0.1},
+			SpellEffectIDs:   []string{"contagion", "short_circuit", "synapse_burnout", "memory_wipe"},
+			SpellDurations:   []float64{8.0, 0.0, 5.0, 15.0},
+			SpellTargetTypes: []string{"entity", "entity", "entity", "area"},
+			SpellRadii:       []float64{0.0, 0.0, 0.0, 60.0},
+		},
+	}
+}

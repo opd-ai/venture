@@ -64,6 +64,7 @@ This document tracks the audit status of all Go packages in the Venture codebase
 - [x] `pkg/rendering/ui/AUDIT.md` — Needs Work — 5 issues (1 high, 1 med, 3 low)
 - [x] `pkg/rendering/palette/AUDIT.md` — Needs Work — 4 issues (2 high, 0 med, 2 low)
 - [x] `pkg/rendering/pool/AUDIT.md` — Complete — 1 issue (0 high, 0 med, 1 low)
+- [x] `pkg/rendering/patterns/AUDIT.md` — Needs Work — 4 issues (0 high, 1 med, 3 low)
 
 ### Audio
 - [x] `pkg/audio/AUDIT.md` — Complete — 1 issue (0 high, 0 med, 1 low)
@@ -104,6 +105,7 @@ This document tracks the audit status of all Go packages in the Venture codebase
 - [x] `pkg/recovery/AUDIT.md` — Complete — 2 issues (0 high, 0 med, 2 low)
 - [x] `pkg/modding/AUDIT.md` — Complete — 2 issues (0 high, 0 med, 2 low)
 - [x] `pkg/mobile/AUDIT.md` — Needs Work — 6 issues (2 high, 2 med, 2 low)
+- [x] `pkg/narrative/branching/AUDIT.md` — Complete — 3 issues (0 high, 0 med, 3 low)
 - [x] `pkg/observability/AUDIT.md` — Complete — 1 issue (0 high, 0 med, 1 low)
 - [x] `pkg/security/AUDIT.md` — Complete — 2 issues (0 high, 0 med, 2 low)
 - [x] `pkg/social/AUDIT.md` — Needs Work — 6 issues (2 high, 1 med, 3 low)
@@ -133,9 +135,9 @@ Each audit should produce a `AUDIT.md` file in the package directory following t
 ## Summary Statistics
 
 **Total Packages**: 50+  
-**Audited**: 82  
-**Complete**: 37  
-**Needs Work**: 44  
+**Audited**: 84  
+**Complete**: 38  
+**Needs Work**: 45  
 **Incomplete**: 1  
 **Not Started**: 0
 

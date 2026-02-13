@@ -62,12 +62,12 @@ func TestPoliticalWarfareSystem_WarDeclaration(t *testing.T) {
 	_, _, _, _, politicalWarfareSys := initializeV9SystemsServer(world, seed, guildManager, logger)
 
 	// Create test guilds
-	guildID1, err := guildManager.CreateGuild("fantasy", "Player1")
+	guildID1, err := guildManager.CreateGuild("fantasy", "Player1", 12345)
 	if err != nil {
 		t.Fatalf("Failed to create guild1: %v", err)
 	}
 
-	guildID2, err := guildManager.CreateGuild("fantasy", "Player2")
+	guildID2, err := guildManager.CreateGuild("fantasy", "Player2", 23456)
 	if err != nil {
 		t.Fatalf("Failed to create guild2: %v", err)
 	}
@@ -113,8 +113,8 @@ func TestPoliticalWarfareSystem_Update(t *testing.T) {
 	_, _, _, _, politicalWarfareSys := initializeV9SystemsServer(world, seed, guildManager, logger)
 
 	// Create test guilds
-	guildID1, _ := guildManager.CreateGuild("fantasy", "Player1")
-	guildID2, _ := guildManager.CreateGuild("fantasy", "Player2")
+	guildID1, _ := guildManager.CreateGuild("fantasy", "Player1", 12345)
+	guildID2, _ := guildManager.CreateGuild("fantasy", "Player2", 23456)
 
 	// Declare war with short preparation period
 	manager := politicalWarfareSys.GetManager()
@@ -162,8 +162,8 @@ func TestPoliticalWarfareSystem_PeaceTreaty(t *testing.T) {
 	_, _, _, _, politicalWarfareSys := initializeV9SystemsServer(world, seed, guildManager, logger)
 
 	// Create test guilds
-	guildID1, _ := guildManager.CreateGuild("fantasy", "Player1")
-	guildID2, _ := guildManager.CreateGuild("fantasy", "Player2")
+	guildID1, _ := guildManager.CreateGuild("fantasy", "Player1", 12345)
+	guildID2, _ := guildManager.CreateGuild("fantasy", "Player2", 23456)
 
 	// Sign peace treaty
 	manager := politicalWarfareSys.GetManager()
@@ -202,8 +202,8 @@ func TestPoliticalWarfareSystem_TradeEmbargo(t *testing.T) {
 	_, _, _, _, politicalWarfareSys := initializeV9SystemsServer(world, seed, guildManager, logger)
 
 	// Create test guilds
-	guildID1, _ := guildManager.CreateGuild("fantasy", "Player1")
-	guildID2, _ := guildManager.CreateGuild("fantasy", "Player2")
+	guildID1, _ := guildManager.CreateGuild("fantasy", "Player1", 12345)
+	guildID2, _ := guildManager.CreateGuild("fantasy", "Player2", 23456)
 
 	// Impose embargo
 	manager := politicalWarfareSys.GetManager()
@@ -240,9 +240,9 @@ func TestPoliticalWarfareSystem_AllianceCall(t *testing.T) {
 	_, _, _, _, politicalWarfareSys := initializeV9SystemsServer(world, seed, guildManager, logger)
 
 	// Create test guilds
-	guildID1, _ := guildManager.CreateGuild("fantasy", "Player1")
-	guildID2, _ := guildManager.CreateGuild("fantasy", "Player2")
-	guildID3, _ := guildManager.CreateGuild("fantasy", "Player3")
+	guildID1, _ := guildManager.CreateGuild("fantasy", "Player1", 12345)
+	guildID2, _ := guildManager.CreateGuild("fantasy", "Player2", 23456)
+	guildID3, _ := guildManager.CreateGuild("fantasy", "Player3", 34567)
 
 	// Set up alliance (high reputation)
 	guild1, _ := guildManager.GetGuild(guildID1)
@@ -286,7 +286,7 @@ func TestPoliticalWarfareSystem_ReputationPenalty(t *testing.T) {
 	_, _, _, _, politicalWarfareSys := initializeV9SystemsServer(world, seed, guildManager, logger)
 
 	// Create test guild
-	guildID, _ := guildManager.CreateGuild("fantasy", "Player1")
+	guildID, _ := guildManager.CreateGuild("fantasy", "Player1", 12345)
 
 	// Apply reputation penalty
 	manager := politicalWarfareSys.GetManager()
@@ -325,8 +325,8 @@ func TestPoliticalWarfareSystem_DiplomaticVictory(t *testing.T) {
 	_, _, _, _, politicalWarfareSys := initializeV9SystemsServer(world, seed, guildManager, logger)
 
 	// Create test guilds
-	guildID1, _ := guildManager.CreateGuild("fantasy", "Player1")
-	guildID2, _ := guildManager.CreateGuild("fantasy", "Player2")
+	guildID1, _ := guildManager.CreateGuild("fantasy", "Player1", 12345)
+	guildID2, _ := guildManager.CreateGuild("fantasy", "Player2", 23456)
 
 	// Attempt diplomatic victory with concessions
 	manager := politicalWarfareSys.GetManager()
@@ -393,7 +393,7 @@ func BenchmarkPoliticalWarfareSystem_WarDeclaration(b *testing.B) {
 	// Create test guilds
 	guilds := make([]string, 100)
 	for i := 0; i < 100; i++ {
-		guildID, _ := guildManager.CreateGuild("fantasy", "Player")
+		guildID, _ := guildManager.CreateGuild("fantasy", "Player", 12345)
 		guilds[i] = guildID
 	}
 

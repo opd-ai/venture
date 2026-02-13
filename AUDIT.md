@@ -11,8 +11,8 @@ This document tracks the audit status of all Go packages in the Venture codebase
 ## Core Packages
 
 ### Network Layer
-- [x] `pkg/network/federation/AUDIT.md` — Needs Work — 2 issues (1 high, 1 low)
-- [x] `pkg/network/federation/guild/AUDIT.md` — Needs Work — 9 issues (3 high, 3 med, 3 low)
+- [x] `pkg/network/federation/AUDIT.md` — Complete — 0 issues (2 fixed on 2026-02-13)
+- [x] `pkg/network/federation/guild/AUDIT.md` — Needs Work — 6 issues (0 high, 3 med, 3 low) - Updated 2026-02-13: Fixed 3 high-priority issues (deterministic guild ID, seed passthrough, error logging)
 - [x] `pkg/network/federation/mobile/AUDIT.md` — Needs Work — 9 issues (3 high, 4 med, 2 low)
 - [x] `pkg/network/federation/webrtc/AUDIT.md` — Needs Work — 7 issues (4 high, 3 med, 1 low)
 - [x] `pkg/network/AUDIT_COMPLETE.md` — Complete — 0 issues (3 informational notes)
@@ -164,8 +164,8 @@ Each audit should produce a `AUDIT.md` file in the package directory following t
 
 **Total Packages**: 50+  
 **Audited**: 106  
-**Complete**: 49  
-**Needs Work**: 57  
+**Complete**: 50  
+**Needs Work**: 56  
 **Incomplete**: 0  
 **Not Started**: 0
 

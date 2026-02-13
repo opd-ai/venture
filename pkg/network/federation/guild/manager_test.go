@@ -21,19 +21,20 @@ func TestCreateGuild(t *testing.T) {
 		name     string
 		genre    string
 		leaderID string
+		seed     int64
 	}{
-		{"fantasy guild", "fantasy", "player1"},
-		{"sci-fi guild", "sci-fi", "player2"},
-		{"horror guild", "horror", "player3"},
-		{"cyberpunk guild", "cyberpunk", "player4"},
-		{"post-apocalyptic guild", "post-apocalyptic", "player5"},
-		{"unknown genre", "unknown", "player6"},
+		{"fantasy guild", "fantasy", "player1", 12345},
+		{"sci-fi guild", "sci-fi", "player2", 23456},
+		{"horror guild", "horror", "player3", 34567},
+		{"cyberpunk guild", "cyberpunk", "player4", 45678},
+		{"post-apocalyptic guild", "post-apocalyptic", "player5", 56789},
+		{"unknown genre", "unknown", "player6", 67890},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			m := NewManager()
-			guildID, err := m.CreateGuild(tt.genre, tt.leaderID)
+			guildID, err := m.CreateGuild(tt.genre, tt.leaderID, tt.seed)
 			if err != nil {
 				t.Fatalf("CreateGuild failed: %v", err)
 			}
@@ -70,7 +71,7 @@ func TestCreateGuild(t *testing.T) {
 
 func TestGetGuild(t *testing.T) {
 	m := NewManager()
-	guildID, _ := m.CreateGuild("fantasy", "player1")
+	guildID, _ := m.CreateGuild("fantasy", "player1", 12345)
 
 	t.Run("existing guild", func(t *testing.T) {
 		guild, err := m.GetGuild(guildID)
@@ -92,7 +93,7 @@ func TestGetGuild(t *testing.T) {
 
 func TestAddMember(t *testing.T) {
 	m := NewManager()
-	guildID, _ := m.CreateGuild("fantasy", "leader")
+	guildID, _ := m.CreateGuild("fantasy", "leader", 12345)
 
 	t.Run("add new member", func(t *testing.T) {
 		err := m.AddMember(guildID, "player1", RankRecruit)
@@ -132,7 +133,7 @@ func TestAddMember(t *testing.T) {
 
 func TestRemoveMember(t *testing.T) {
 	m := NewManager()
-	guildID, _ := m.CreateGuild("fantasy", "leader")
+	guildID, _ := m.CreateGuild("fantasy", "leader", 12345)
 	m.AddMember(guildID, "player1", RankMember)
 
 	t.Run("remove existing member", func(t *testing.T) {
@@ -171,7 +172,7 @@ func TestRemoveMember(t *testing.T) {
 
 func TestPromoteMember(t *testing.T) {
 	m := NewManager()
-	guildID, _ := m.CreateGuild("fantasy", "leader")
+	guildID, _ := m.CreateGuild("fantasy", "leader", 12345)
 	m.AddMember(guildID, "player1", RankRecruit)
 
 	t.Run("promote recruit to member", func(t *testing.T) {
@@ -272,7 +273,7 @@ func TestPromoteMember(t *testing.T) {
 
 func TestDepositTreasury(t *testing.T) {
 	m := NewManager()
-	guildID, _ := m.CreateGuild("fantasy", "leader")
+	guildID, _ := m.CreateGuild("fantasy", "leader", 12345)
 
 	t.Run("valid deposit", func(t *testing.T) {
 		err := m.DepositTreasury(guildID, "leader", 100)
@@ -321,7 +322,7 @@ func TestDepositTreasury(t *testing.T) {
 
 func TestWithdrawTreasury(t *testing.T) {
 	m := NewManager()
-	guildID, _ := m.CreateGuild("fantasy", "leader")
+	guildID, _ := m.CreateGuild("fantasy", "leader", 12345)
 	m.DepositTreasury(guildID, "leader", 1000)
 
 	t.Run("valid withdrawal", func(t *testing.T) {
@@ -367,7 +368,7 @@ func TestWithdrawTreasury(t *testing.T) {
 
 func TestSetMOTD(t *testing.T) {
 	m := NewManager()
-	guildID, _ := m.CreateGuild("fantasy", "leader")
+	guildID, _ := m.CreateGuild("fantasy", "leader", 12345)
 
 	t.Run("valid MOTD", func(t *testing.T) {
 		newMOTD := "New message of the day!"
@@ -401,8 +402,8 @@ func TestSaveLoad(t *testing.T) {
 	m := NewManager()
 
 	// Create multiple guilds
-	guildID1, _ := m.CreateGuild("fantasy", "leader1")
-	guildID2, _ := m.CreateGuild("sci-fi", "leader2")
+	guildID1, _ := m.CreateGuild("fantasy", "leader1", 12345)
+	guildID2, _ := m.CreateGuild("sci-fi", "leader2", 23456)
 	m.AddMember(guildID1, "player1", RankMember)
 	m.DepositTreasury(guildID1, "leader1", 500)
 
@@ -445,7 +446,7 @@ func TestSaveLoad(t *testing.T) {
 
 func TestConcurrency(t *testing.T) {
 	m := NewManager()
-	guildID, _ := m.CreateGuild("fantasy", "leader")
+	guildID, _ := m.CreateGuild("fantasy", "leader", 12345)
 
 	// Concurrent deposits
 	var wg sync.WaitGroup
@@ -467,7 +468,7 @@ func TestConcurrency(t *testing.T) {
 
 func TestGuildHasPermission(t *testing.T) {
 	m := NewManager()
-	guildID, _ := m.CreateGuild("fantasy", "leader")
+	guildID, _ := m.CreateGuild("fantasy", "leader", 12345)
 	guild, _ := m.GetGuild(guildID)
 
 	tests := []struct {
@@ -498,7 +499,7 @@ func TestGuildHasPermission(t *testing.T) {
 
 func TestGetMember(t *testing.T) {
 	m := NewManager()
-	guildID, _ := m.CreateGuild("fantasy", "leader")
+	guildID, _ := m.CreateGuild("fantasy", "leader", 12345)
 	m.AddMember(guildID, "player1", RankMember)
 	guild, _ := m.GetGuild(guildID)
 
@@ -525,13 +526,13 @@ func BenchmarkCreateGuild(b *testing.B) {
 	m := NewManager()
 	for i := 0; i < b.N; i++ {
 		playerID := "player" + string(rune(i))
-		m.CreateGuild("fantasy", playerID)
+		m.CreateGuild("fantasy", playerID, int64(i+12345))
 	}
 }
 
 func BenchmarkAddMember(b *testing.B) {
 	m := NewManager()
-	guildID, _ := m.CreateGuild("fantasy", "leader")
+	guildID, _ := m.CreateGuild("fantasy", "leader", 12345)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		playerID := "player" + string(rune(i))
@@ -541,7 +542,7 @@ func BenchmarkAddMember(b *testing.B) {
 
 func BenchmarkDepositTreasury(b *testing.B) {
 	m := NewManager()
-	guildID, _ := m.CreateGuild("fantasy", "leader")
+	guildID, _ := m.CreateGuild("fantasy", "leader", 12345)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		m.DepositTreasury(guildID, "leader", 10)
@@ -550,7 +551,7 @@ func BenchmarkDepositTreasury(b *testing.B) {
 
 func BenchmarkWithdrawTreasury(b *testing.B) {
 	m := NewManager()
-	guildID, _ := m.CreateGuild("fantasy", "leader")
+	guildID, _ := m.CreateGuild("fantasy", "leader", 12345)
 	m.DepositTreasury(guildID, "leader", 1000000)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
@@ -562,7 +563,7 @@ func BenchmarkSave(b *testing.B) {
 	m := NewManager()
 	for i := 0; i < 100; i++ {
 		playerID := "player" + string(rune(i))
-		m.CreateGuild("fantasy", playerID)
+		m.CreateGuild("fantasy", playerID, int64(i+12345))
 	}
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
@@ -574,7 +575,7 @@ func BenchmarkLoad(b *testing.B) {
 	m := NewManager()
 	for i := 0; i < 100; i++ {
 		playerID := "player" + string(rune(i))
-		m.CreateGuild("fantasy", playerID)
+		m.CreateGuild("fantasy", playerID, int64(i+12345))
 	}
 	data, _ := m.Save()
 	b.ResetTimer()
@@ -586,7 +587,7 @@ func BenchmarkLoad(b *testing.B) {
 
 func BenchmarkHasPermission(b *testing.B) {
 	m := NewManager()
-	guildID, _ := m.CreateGuild("fantasy", "leader")
+	guildID, _ := m.CreateGuild("fantasy", "leader", 12345)
 	guild, _ := m.GetGuild(guildID)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
@@ -655,7 +656,7 @@ func TestGuildType(t *testing.T) {
 
 func TestTransactionHistory(t *testing.T) {
 	m := NewManager()
-	guildID, _ := m.CreateGuild("fantasy", "leader")
+	guildID, _ := m.CreateGuild("fantasy", "leader", 12345)
 
 	// Multiple transactions
 	m.DepositTreasury(guildID, "player1", 100)
@@ -678,7 +679,7 @@ func TestTransactionHistory(t *testing.T) {
 
 func TestUpdatedAtTimestamp(t *testing.T) {
 	m := NewManager()
-	guildID, _ := m.CreateGuild("fantasy", "leader")
+	guildID, _ := m.CreateGuild("fantasy", "leader", 12345)
 
 	guild1, _ := m.GetGuild(guildID)
 	oldTime := guild1.UpdatedAt
@@ -790,7 +791,7 @@ func TestRemoveFederatedServer(t *testing.T) {
 
 func TestSyncGuildState(t *testing.T) {
 	m := NewManager()
-	guildID, _ := m.CreateGuild("fantasy", "leader")
+	guildID, _ := m.CreateGuild("fantasy", "leader", 12345)
 
 	t.Run("sync existing guild", func(t *testing.T) {
 		err := m.SyncGuildState(guildID)
@@ -854,7 +855,7 @@ func TestHandleGuildMessage_GuildSync(t *testing.T) {
 
 func TestHandleGuildMessage_MemberJoin(t *testing.T) {
 	m := NewManager()
-	guildID, _ := m.CreateGuild("fantasy", "leader")
+	guildID, _ := m.CreateGuild("fantasy", "leader", 12345)
 
 	joinData := MemberJoinData{
 		PlayerID: "new-player",
@@ -887,7 +888,7 @@ func TestHandleGuildMessage_MemberJoin(t *testing.T) {
 
 func TestHandleGuildMessage_MemberLeave(t *testing.T) {
 	m := NewManager()
-	guildID, _ := m.CreateGuild("fantasy", "leader")
+	guildID, _ := m.CreateGuild("fantasy", "leader", 12345)
 	m.AddMember(guildID, "leaving-player", RankMember)
 
 	leaveData := MemberLeaveData{
@@ -917,7 +918,7 @@ func TestHandleGuildMessage_MemberLeave(t *testing.T) {
 
 func TestHandleGuildMessage_TerritoryChange(t *testing.T) {
 	m := NewManager()
-	guildID, _ := m.CreateGuild("fantasy", "leader")
+	guildID, _ := m.CreateGuild("fantasy", "leader", 12345)
 
 	territoryData := TerritoryChangeData{
 		ZoneID:   "zone-123",
@@ -995,7 +996,7 @@ func TestHandleGuildMessage_EmptyGuildID(t *testing.T) {
 
 func TestHandleGuildMessage_JSONDeserialization(t *testing.T) {
 	m := NewManager()
-	guildID, _ := m.CreateGuild("fantasy", "leader")
+	guildID, _ := m.CreateGuild("fantasy", "leader", 12345)
 
 	// Simulate JSON deserialization by using map[string]interface{}
 	joinData := map[string]interface{}{
@@ -1026,7 +1027,7 @@ func TestHandleGuildMessage_JSONDeserialization(t *testing.T) {
 
 func TestHandleGuildMessage_DuplicateMemberJoin(t *testing.T) {
 	m := NewManager()
-	guildID, _ := m.CreateGuild("fantasy", "leader")
+	guildID, _ := m.CreateGuild("fantasy", "leader", 12345)
 
 	joinData := MemberJoinData{
 		PlayerID: "duplicate-player",
@@ -1066,7 +1067,7 @@ func TestHandleGuildMessage_DuplicateMemberJoin(t *testing.T) {
 
 func TestHandleGuildMessage_NonExistentMemberLeave(t *testing.T) {
 	m := NewManager()
-	guildID, _ := m.CreateGuild("fantasy", "leader")
+	guildID, _ := m.CreateGuild("fantasy", "leader", 12345)
 
 	leaveData := MemberLeaveData{
 		PlayerID: "nonexistent-player",
@@ -1100,7 +1101,7 @@ func TestCrossFederationScenario(t *testing.T) {
 	server2.AddFederatedServer("server-1")
 
 	// Create guild on server 1
-	guildID, _ := server1.CreateGuild("fantasy", "leader-on-server-1")
+	guildID, _ := server1.CreateGuild("fantasy", "leader-on-server-1", 12345)
 	guild1, _ := server1.GetGuild(guildID)
 
 	// Sync guild to server 2
@@ -1188,7 +1189,7 @@ func TestSaveLoadWithinLimit(t *testing.T) {
 	m := NewManager()
 
 	// Create a guild and track its ID
-	guildID, err := m.CreateGuild("fantasy", "leader1")
+	guildID, err := m.CreateGuild("fantasy", "leader1", 12345)
 	if err != nil {
 		t.Fatalf("CreateGuild failed: %v", err)
 	}
@@ -1213,5 +1214,73 @@ func TestSaveLoadWithinLimit(t *testing.T) {
 	}
 	if guild.LeaderID != "leader1" {
 		t.Errorf("Expected leader1, got %s", guild.LeaderID)
+	}
+}
+
+// TestCreateGuildDeterminism verifies that the same seed produces the same guild identity.
+func TestCreateGuildDeterminism(t *testing.T) {
+	seed := int64(54321)
+	genre := "fantasy"
+	leaderID := "player1"
+
+	// Create first guild with seed
+	m1 := NewManager()
+	guildID1, err := m1.CreateGuild(genre, leaderID, seed)
+	if err != nil {
+		t.Fatalf("CreateGuild 1 failed: %v", err)
+	}
+	guild1, err := m1.GetGuild(guildID1)
+	if err != nil {
+		t.Fatalf("GetGuild 1 failed: %v", err)
+	}
+
+	// Create second guild with same seed
+	m2 := NewManager()
+	guildID2, err := m2.CreateGuild(genre, leaderID, seed)
+	if err != nil {
+		t.Fatalf("CreateGuild 2 failed: %v", err)
+	}
+	guild2, err := m2.GetGuild(guildID2)
+	if err != nil {
+		t.Fatalf("GetGuild 2 failed: %v", err)
+	}
+
+	// Verify same seed produces same guild ID
+	if guildID1 != guildID2 {
+		t.Errorf("Expected identical guild IDs, got %s and %s", guildID1, guildID2)
+	}
+
+	// Verify same seed produces same guild name
+	if guild1.Name != guild2.Name {
+		t.Errorf("Expected identical guild names, got %s and %s", guild1.Name, guild2.Name)
+	}
+
+	// Verify same seed produces same emblem
+	if guild1.Emblem.Shape != guild2.Emblem.Shape {
+		t.Errorf("Expected identical emblem shape, got %s and %s", guild1.Emblem.Shape, guild2.Emblem.Shape)
+	}
+	if guild1.Emblem.Symbol != guild2.Emblem.Symbol {
+		t.Errorf("Expected identical emblem symbol, got %s and %s", guild1.Emblem.Symbol, guild2.Emblem.Symbol)
+	}
+	if guild1.Emblem.PrimaryR != guild2.Emblem.PrimaryR ||
+		guild1.Emblem.PrimaryG != guild2.Emblem.PrimaryG ||
+		guild1.Emblem.PrimaryB != guild2.Emblem.PrimaryB {
+		t.Error("Expected identical primary colors")
+	}
+
+	// Verify different seed produces different guild
+	m3 := NewManager()
+	guildID3, _ := m3.CreateGuild(genre, leaderID, seed+1)
+	guild3, _ := m3.GetGuild(guildID3)
+
+	// Different seed should produce different guild ID
+	if guildID1 == guildID3 {
+		t.Error("Different seeds should produce different guild IDs")
+	}
+
+	// Different seed should (likely) produce different name/emblem
+	// Note: could collide, but unlikely
+	if guild1.Name == guild3.Name && guild1.Emblem.Symbol == guild3.Emblem.Symbol {
+		t.Log("Warning: Different seeds produced identical name and symbol (rare but possible)")
 	}
 }

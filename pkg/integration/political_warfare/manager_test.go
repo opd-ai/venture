@@ -15,9 +15,9 @@ func setupTestManager(t *testing.T) (*Manager, *guild.Manager, string, string, s
 	guildManager := guild.NewManager()
 
 	// Create test guild IDs
-	guildID1, _ := guildManager.CreateGuild("fantasy", "player1")
-	guildID2, _ := guildManager.CreateGuild("fantasy", "player2")
-	guildID3, _ := guildManager.CreateGuild("fantasy", "player3")
+	guildID1, _ := guildManager.CreateGuild("fantasy", "player1", 12345)
+	guildID2, _ := guildManager.CreateGuild("fantasy", "player2", 23456)
+	guildID3, _ := guildManager.CreateGuild("fantasy", "player3", 34567)
 
 	// Get guilds and set up reputation relationships
 	guild1, _ := guildManager.GetGuild(guildID1)
@@ -437,7 +437,7 @@ func TestCallReinforcementAlliesNoAllies(t *testing.T) {
 	manager, guildManager, _, guild2, _ := setupTestManager(t)
 
 	// Create a guild with no allies
-	loneGuildID, _ := guildManager.CreateGuild("fantasy", "player4")
+	loneGuildID, _ := guildManager.CreateGuild("fantasy", "player4", 45678)
 
 	call, err := manager.CallReinforcementAllies(loneGuildID, guild2)
 	if err != nil {
@@ -622,7 +622,7 @@ func TestGetActiveTreaties(t *testing.T) {
 	manager, guildManager, guild1, guild2, guild3 := setupTestManager(t)
 
 	// Create fourth guild
-	guild4, _ := guildManager.CreateGuild("fantasy", "player4")
+	guild4, _ := guildManager.CreateGuild("fantasy", "player4", 45678)
 
 	// Sign multiple treaties
 	_, err := manager.SignPeaceTreaty(guild1, guild2, 7*24*time.Hour)
@@ -645,7 +645,7 @@ func TestGetActiveEmbargoes(t *testing.T) {
 	manager, guildManager, guild1, guild2, guild3 := setupTestManager(t)
 
 	// Create fourth guild
-	guild4, _ := guildManager.CreateGuild("fantasy", "player4")
+	guild4, _ := guildManager.CreateGuild("fantasy", "player4", 45678)
 
 	// Impose multiple embargoes
 	_, err := manager.ImposeEmbargo(guild1, guild2, 0.75)

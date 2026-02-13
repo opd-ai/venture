@@ -20,16 +20,25 @@ type GuildSystem struct {
 	lastSync       time.Time
 	syncInterval   time.Duration
 	pendingUpdates []string // Guild IDs needing sync
+
+	// Seed for deterministic guild generation
+	seed int64
 }
 
 // NewGuildSystem creates a new guild management system
 func NewGuildSystem(world *World, manager *guild.Manager) *GuildSystem {
+	return NewGuildSystemWithSeed(world, manager, 0)
+}
+
+// NewGuildSystemWithSeed creates a new guild management system with a specific seed
+func NewGuildSystemWithSeed(world *World, manager *guild.Manager, seed int64) *GuildSystem {
 	return &GuildSystem{
 		world:          world,
 		manager:        manager,
 		logger:         logrus.WithField("system", "guild"),
 		syncInterval:   time.Second * 5, // Sync every 5 seconds
 		pendingUpdates: make([]string, 0),
+		seed:           seed,
 	}
 }
 
@@ -66,8 +75,10 @@ func (s *GuildSystem) CreateGuild(leaderEntity *Entity, genre string) error {
 		}
 	}
 
-	// Create guild through federation manager
-	guildID, err := s.manager.CreateGuild(genre, strconv.FormatUint(leaderEntity.ID, 10))
+	// Create guild through federation manager with deterministic seed
+	// Seed is based on system seed + entity ID for uniqueness
+	guildSeed := s.seed + int64(leaderEntity.ID)
+	guildID, err := s.manager.CreateGuild(genre, strconv.FormatUint(leaderEntity.ID, 10), guildSeed)
 	if err != nil {
 		return fmt.Errorf("failed to create guild: %w", err)
 	}

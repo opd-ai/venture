@@ -23,6 +23,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/sirupsen/logrus"
 )
 
 // ErrGuildDataSizeExceeded indicates the decompressed guild data exceeds MaxGuildDataSize.
@@ -41,6 +42,8 @@ type Manager struct {
 	federatedServers []string // List of federated server IDs
 	messageHandlers  map[MessageType]func(msg GuildMessage) error
 	serverID         string // This server's ID
+	logger           *logrus.Entry
+	guildCounter     int64 // Counter for deterministic guild ID generation
 }
 
 // NewManager creates a new guild manager
@@ -50,6 +53,8 @@ func NewManager() *Manager {
 		federatedServers: make([]string, 0),
 		messageHandlers:  make(map[MessageType]func(msg GuildMessage) error),
 		serverID:         fmt.Sprintf("server-%s", uuid.New().String()),
+		logger:           logrus.WithField("component", "guild_manager"),
+		guildCounter:     0,
 	}
 
 	// Register message handlers
@@ -61,16 +66,19 @@ func NewManager() *Manager {
 	return m
 }
 
-// CreateGuild creates a new guild with procedural identity
-func (m *Manager) CreateGuild(genre, leaderID string) (string, error) {
+// CreateGuild creates a new guild with procedural identity.
+// The seed parameter ensures deterministic guild ID and identity generation.
+// Same seed + genre + leaderID produces the same guild identity.
+func (m *Manager) CreateGuild(genre, leaderID string, seed int64) (string, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	// Generate unique guild ID
-	guildID := fmt.Sprintf("guild-%d-%s", time.Now().UnixNano(), leaderID)
+	// Generate deterministic guild ID using seed and counter
+	m.guildCounter++
+	guildID := fmt.Sprintf("guild-%d-%s-%d", seed, leaderID, m.guildCounter)
 
-	// Generate procedural guild identity
-	identity := GenerateIdentity(genre, time.Now().Unix())
+	// Generate procedural guild identity using the provided seed
+	identity := GenerateIdentity(genre, seed)
 
 	// Create default permission set
 	permissions := make(map[Rank][]Permission)
@@ -101,6 +109,14 @@ func (m *Manager) CreateGuild(genre, leaderID string) (string, error) {
 	}
 
 	m.guilds[guildID] = guild
+
+	m.logger.WithFields(logrus.Fields{
+		"guild_id":  guildID,
+		"leader_id": leaderID,
+		"genre":     genre,
+		"seed":      seed,
+	}).Info("guild created")
+
 	return guildID, nil
 }
 
@@ -111,6 +127,7 @@ func (m *Manager) GetGuild(guildID string) (*Guild, error) {
 
 	guild, exists := m.guilds[guildID]
 	if !exists {
+		m.logger.WithField("guild_id", guildID).Debug("guild not found")
 		return nil, fmt.Errorf("guild not found: %s", guildID)
 	}
 	return guild, nil
@@ -123,12 +140,20 @@ func (m *Manager) AddMember(guildID, playerID string, rank Rank) error {
 
 	guild, exists := m.guilds[guildID]
 	if !exists {
+		m.logger.WithFields(logrus.Fields{
+			"guild_id":  guildID,
+			"player_id": playerID,
+		}).Warn("add member failed: guild not found")
 		return fmt.Errorf("guild not found: %s", guildID)
 	}
 
 	// Check if already a member
 	for _, member := range guild.Members {
 		if member.PlayerID == playerID {
+			m.logger.WithFields(logrus.Fields{
+				"guild_id":  guildID,
+				"player_id": playerID,
+			}).Debug("add member failed: already a member")
 			return fmt.Errorf("player already a member: %s", playerID)
 		}
 	}
@@ -150,11 +175,19 @@ func (m *Manager) RemoveMember(guildID, playerID string) error {
 
 	guild, exists := m.guilds[guildID]
 	if !exists {
+		m.logger.WithFields(logrus.Fields{
+			"guild_id":  guildID,
+			"player_id": playerID,
+		}).Warn("remove member failed: guild not found")
 		return fmt.Errorf("guild not found: %s", guildID)
 	}
 
 	// Cannot remove guild leader
 	if playerID == guild.LeaderID {
+		m.logger.WithFields(logrus.Fields{
+			"guild_id":  guildID,
+			"player_id": playerID,
+		}).Warn("remove member failed: cannot remove leader")
 		return fmt.Errorf("cannot remove guild leader")
 	}
 
@@ -165,6 +198,10 @@ func (m *Manager) RemoveMember(guildID, playerID string) error {
 			return nil
 		}
 	}
+	m.logger.WithFields(logrus.Fields{
+		"guild_id":  guildID,
+		"player_id": playerID,
+	}).Debug("remove member failed: member not found")
 	return fmt.Errorf("member not found: %s", playerID)
 }
 
@@ -175,11 +212,22 @@ func (m *Manager) PromoteMember(guildID, targetPlayerID, promoterID string) erro
 
 	guild, err := m.getGuildUnsafe(guildID)
 	if err != nil {
+		m.logger.WithFields(logrus.Fields{
+			"guild_id":    guildID,
+			"target_id":   targetPlayerID,
+			"promoter_id": promoterID,
+		}).Warn("promote member failed: guild not found")
 		return err
 	}
 
 	promoter, err := m.validatePromoterPermissions(guild, promoterID)
 	if err != nil {
+		m.logger.WithFields(logrus.Fields{
+			"guild_id":    guildID,
+			"target_id":   targetPlayerID,
+			"promoter_id": promoterID,
+			"error":       err.Error(),
+		}).Warn("promote member failed: permission validation error")
 		return err
 	}
 
@@ -271,6 +319,7 @@ func (m *Manager) SetMOTD(guildID, motd string) error {
 
 	guild, exists := m.guilds[guildID]
 	if !exists {
+		m.logger.WithField("guild_id", guildID).Warn("set MOTD failed: guild not found")
 		return fmt.Errorf("guild not found: %s", guildID)
 	}
 

@@ -30,8 +30,8 @@ func TestSystemUpdate(t *testing.T) {
 	guildManager := guild.NewManager()
 
 	// Create test guilds
-	guildID1, _ := guildManager.CreateGuild("fantasy", "Player1")
-	guildID2, _ := guildManager.CreateGuild("fantasy", "Player2")
+	guildID1, _ := guildManager.CreateGuild("fantasy", "Player1", 12345)
+	guildID2, _ := guildManager.CreateGuild("fantasy", "Player2", 23456)
 
 	sys := NewSystem(world, guildManager)
 
@@ -93,9 +93,9 @@ func TestSystemIntegration(t *testing.T) {
 	guildManager := guild.NewManager()
 
 	// Create test guilds
-	guildID1, _ := guildManager.CreateGuild("fantasy", "Warlord1")
-	guildID2, _ := guildManager.CreateGuild("fantasy", "Diplomat1")
-	guildID3, _ := guildManager.CreateGuild("fantasy", "Ally1")
+	guildID1, _ := guildManager.CreateGuild("fantasy", "Warlord1", 11111)
+	guildID2, _ := guildManager.CreateGuild("fantasy", "Diplomat1", 22222)
+	guildID3, _ := guildManager.CreateGuild("fantasy", "Ally1", 33333)
 
 	// Set up alliance (high reputation)
 	guild1, _ := guildManager.GetGuild(guildID1)
@@ -149,8 +149,8 @@ func TestSystemIntegration(t *testing.T) {
 	}
 
 	// Test diplomatic victory
-	guildID4, _ := guildManager.CreateGuild("fantasy", "Conqueror1")
-	guildID5, _ := guildManager.CreateGuild("fantasy", "Defender1")
+	guildID4, _ := guildManager.CreateGuild("fantasy", "Conqueror1", 44444)
+	guildID5, _ := guildManager.CreateGuild("fantasy", "Defender1", 55555)
 	guild5, _ := guildManager.GetGuild(guildID5)
 	guild5.Treasury = 100000 // Give defender gold for concessions
 
@@ -167,8 +167,8 @@ func TestSystemIntegration(t *testing.T) {
 	successCount := 0
 	for i := 0; i < 100; i++ {
 		// Create new war for each attempt
-		testGuildID1, _ := guildManager.CreateGuild("fantasy", "TestPlayer1"+string(rune(i)))
-		testGuildID2, _ := guildManager.CreateGuild("fantasy", "TestPlayer2"+string(rune(i)))
+		testGuildID1, _ := guildManager.CreateGuild("fantasy", "TestPlayer1"+string(rune(i)), int64(i*1000+100))
+		testGuildID2, _ := guildManager.CreateGuild("fantasy", "TestPlayer2"+string(rune(i)), int64(i*1000+200))
 		testGuild2, _ := guildManager.GetGuild(testGuildID2)
 		testGuild2.Treasury = 100000
 
@@ -198,8 +198,8 @@ func TestSystemTreatyExpiration(t *testing.T) {
 	world := engine.NewWorld()
 	guildManager := guild.NewManager()
 
-	guildID1, _ := guildManager.CreateGuild("fantasy", "Player1")
-	guildID2, _ := guildManager.CreateGuild("fantasy", "Player2")
+	guildID1, _ := guildManager.CreateGuild("fantasy", "Player1", 12345)
+	guildID2, _ := guildManager.CreateGuild("fantasy", "Player2", 23456)
 
 	sys := NewSystem(world, guildManager)
 

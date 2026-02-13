@@ -49,8 +49,8 @@
 //	// Create guild manager
 //	manager := guild.NewManager()
 //
-//	// Create a new guild with procedural identity
-//	guildID, err := manager.CreateGuild("fantasy", "player-123")
+//	// Create a new guild with procedural identity (seed ensures determinism)
+//	guildID, err := manager.CreateGuild("fantasy", "player-123", 12345)
 //	if err != nil {
 //	    log.Fatal(err)
 //	}
@@ -68,8 +68,8 @@
 //
 // This package is designed to integrate with pkg/network/federation for cross-server sync:
 //
-//	// Server A: Create guild
-//	guildID, _ := manager.CreateGuild("sci-fi", "player-123")
+//	// Server A: Create guild with seed for deterministic identity
+//	guildID, _ := manager.CreateGuild("sci-fi", "player-123", 12345)
 //
 //	// Serialize for federation
 //	data, _ := manager.Save()

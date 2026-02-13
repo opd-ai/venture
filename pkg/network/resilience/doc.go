@@ -58,11 +58,13 @@
 //
 // Pre-defined test scenarios validate specific network conditions:
 //
-//	scenario := resilience.HighLatencyScenario // 2000ms latency
-//	results := resilience.RunScenario(scenario, gameState)
+//	sim := resilience.NewNetworkSimulatorWithSeed(12345)
+//	collector := resilience.NewMetricsCollector()
+//	scenario := &resilience.HighLatencyScenario // 1000ms latency
+//	result := resilience.RunScenario(context.Background(), scenario, sim, collector)
 //
-//	if results.Failed() {
-//	    fmt.Printf("Scenario failed: %s\n", results.Reason)
+//	if result.Failed() {
+//	    fmt.Printf("Scenario failed: %s\n", result.FailureReason)
 //	}
 //
 // # Performance Targets

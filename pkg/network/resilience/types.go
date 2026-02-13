@@ -111,8 +111,20 @@ type Packet struct {
 }
 
 // Pre-defined test scenarios based on Phase 64.1 requirements.
+// Each scenario represents a different network condition tier with
+// specific acceptance criteria for validation testing.
+//
+// Scenarios are ordered from best to worst network conditions:
+//   - LowLatencyScenario: Optimal conditions, smooth gameplay
+//   - MediumLatencyScenario: Typical home network, playable with minor lag
+//   - HighLatencyScenario: Degraded conditions, turn-based viable
+//   - VeryHighLatencyScenario: Poor conditions, degraded but stable
+//   - ExtremeLatencyScenario: Tor/satellite, minimal functionality
 var (
-	// LowLatencyScenario (200ms) - smooth gameplay expected
+	// LowLatencyScenario represents optimal network conditions (200ms latency).
+	// Use this scenario to validate smooth, responsive gameplay with minimal lag.
+	// Acceptance criteria are strict: <0.1 desyncs/hour, <5% mispredictions.
+	// Expected use case: Local/regional servers, fiber/cable connections.
 	LowLatencyScenario = TestScenario{
 		Name:        "Low Latency",
 		Description: "200ms latency, 1% packet loss - should be smooth",
@@ -129,7 +141,10 @@ var (
 		RequiresPlayable:     true,
 	}
 
-	// MediumLatencyScenario (500ms) - noticeable lag but functional
+	// MediumLatencyScenario represents typical home network conditions (500ms latency).
+	// Use this scenario to validate playable but laggy gameplay.
+	// Acceptance criteria are moderate: <0.5 desyncs/hour, <10% mispredictions.
+	// Expected use case: Mobile networks, international servers, VPN connections.
 	MediumLatencyScenario = TestScenario{
 		Name:        "Medium Latency",
 		Description: "500ms latency, 5% packet loss - noticeable but playable",
@@ -146,7 +161,10 @@ var (
 		RequiresPlayable:     true,
 	}
 
-	// HighLatencyScenario (1000ms) - turn-based viable
+	// HighLatencyScenario represents degraded network conditions (1000ms latency).
+	// Use this scenario to validate turn-based gameplay viability.
+	// Acceptance criteria are relaxed: <1.0 desyncs/hour, <15% mispredictions.
+	// Expected use case: Satellite internet, congested networks, cross-continent servers.
 	HighLatencyScenario = TestScenario{
 		Name:        "High Latency",
 		Description: "1000ms latency, 10% packet loss - turn-based viable",
@@ -163,7 +181,10 @@ var (
 		RequiresPlayable:     false,
 	}
 
-	// VeryHighLatencyScenario (2000ms) - degraded but stable
+	// VeryHighLatencyScenario represents poor network conditions (2000ms latency).
+	// Use this scenario to validate degraded but stable operation.
+	// Acceptance criteria are permissive: <2.0 desyncs/hour, <20% mispredictions.
+	// Expected use case: Remote areas, multi-hop VPN, severely congested networks.
 	VeryHighLatencyScenario = TestScenario{
 		Name:        "Very High Latency",
 		Description: "2000ms latency, 20% packet loss - degraded but stable",
@@ -180,7 +201,10 @@ var (
 		RequiresPlayable:     false,
 	}
 
-	// ExtremeLatencyScenario (5000ms) - minimal functionality, graceful degradation
+	// ExtremeLatencyScenario represents worst-case network conditions (5000ms latency).
+	// Use this scenario to validate graceful degradation under extreme conditions.
+	// Acceptance criteria are very permissive: <5.0 desyncs/hour, <30% mispredictions.
+	// Expected use case: Tor/onion routing, extremely remote locations, testing limits.
 	ExtremeLatencyScenario = TestScenario{
 		Name:        "Extreme Latency (Tor)",
 		Description: "5000ms latency, 20% packet loss - minimal functionality",

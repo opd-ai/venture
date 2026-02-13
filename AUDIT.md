@@ -18,7 +18,7 @@ This document tracks the audit status of all Go packages in the Venture codebase
 - [x] `pkg/network/AUDIT_COMPLETE.md` — Complete — 0 issues (3 informational notes)
 - [x] `pkg/network/chat/AUDIT.md` — Complete — 0 issues (7 fixed on 2026-02-13: structured logging, nil safety, NewChatComponent helper, documentation)
 - [x] `pkg/network/trade/AUDIT.md` — Needs Work — 1 issue (0 high, 0 med, 1 low) - Updated 2026-02-13: Fixed 4 doc issues (TradeProposal, TradeRecord godocs added; verified ChatComponent, PartyComponent already documented)
-- [x] `pkg/network/resilience/AUDIT.md` — Needs Work — 3 issues (1 high, 0 med, 2 low)
+- [x] `pkg/network/resilience/AUDIT.md` — Complete — 1 issue (0 high, 0 med, 1 low) - Updated 2026-02-13: Fixed high-priority issue (RunScenario implementation), fixed low-priority issue (scenario godoc comments)
 
 ### Engine
 - [x] `pkg/engine/AUDIT.md` — Needs Work — 18 issues (7 high, 9 med, 2 low) - Updated 2026-02-13: Fixed high-priority build failure (weather_spell_damage_system_test.go WeatherIntensity type mismatch)
@@ -164,8 +164,8 @@ Each audit should produce a `AUDIT.md` file in the package directory following t
 
 **Total Packages**: 50+  
 **Audited**: 106  
-**Complete**: 66  
-**Needs Work**: 40  
+**Complete**: 67  
+**Needs Work**: 39  
 **Incomplete**: 0  
 **Not Started**: 0
 

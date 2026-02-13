@@ -5,6 +5,7 @@ import (
 	"image"
 	"image/color"
 	"testing"
+	"time"
 )
 
 // createTestImage creates a simple test image
@@ -589,5 +590,104 @@ func BenchmarkImageGalleryGetThumbnails(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		_ = gallery.GetThumbnails()
+	}
+}
+
+// MockTimeProvider implements TimeProvider for deterministic testing
+type MockTimeProvider struct {
+	fixedTime time.Time
+}
+
+func (m *MockTimeProvider) Now() time.Time {
+	return m.fixedTime
+}
+
+func TestImageGalleryDeterministicTimestamps(t *testing.T) {
+	// Create a fixed time for deterministic testing
+	fixedTime := time.Date(2026, 2, 13, 12, 0, 0, 123456789, time.UTC)
+	mockTP := &MockTimeProvider{fixedTime: fixedTime}
+
+	gallery := NewImageGalleryWithTimeProvider("player1", mockTP)
+	img := createTestImage(64, 64, color.RGBA{255, 0, 0, 255})
+
+	stored, err := gallery.AddImage(img, "Test", ImageFormatPNG, nil)
+	if err != nil {
+		t.Fatalf("AddImage failed: %v", err)
+	}
+
+	// Verify ID includes the fixed timestamp's UnixNano
+	expectedID := fmt.Sprintf("player1-%d", fixedTime.UnixNano())
+	if stored.ID != expectedID {
+		t.Errorf("Expected deterministic ID '%s', got '%s'", expectedID, stored.ID)
+	}
+
+	// Verify timestamp matches fixed time
+	if !stored.Timestamp.Equal(fixedTime) {
+		t.Errorf("Expected deterministic timestamp %v, got %v", fixedTime, stored.Timestamp)
+	}
+}
+
+func TestImageGalleryTimeProviderAfterLoad(t *testing.T) {
+	// Create gallery with mock time provider
+	fixedTime := time.Date(2026, 2, 13, 12, 0, 0, 123456789, time.UTC)
+	mockTP := &MockTimeProvider{fixedTime: fixedTime}
+
+	gallery := NewImageGalleryWithTimeProvider("player1", mockTP)
+	img := createTestImage(32, 32, color.RGBA{255, 0, 0, 255})
+	_, err := gallery.AddImage(img, "Test1", ImageFormatPNG, nil)
+	if err != nil {
+		t.Fatalf("AddImage failed: %v", err)
+	}
+
+	// Save gallery
+	data, err := gallery.Save()
+	if err != nil {
+		t.Fatalf("Save failed: %v", err)
+	}
+
+	// Load into new gallery with different time provider
+	newTime := time.Date(2026, 2, 14, 12, 0, 0, 0, time.UTC)
+	newMockTP := &MockTimeProvider{fixedTime: newTime}
+	newGallery := NewImageGalleryWithTimeProvider("player2", newMockTP)
+	err = newGallery.Load(data)
+	if err != nil {
+		t.Fatalf("Load failed: %v", err)
+	}
+
+	// Add new image - should use the new time provider
+	newImg := createTestImage(32, 32, color.RGBA{0, 255, 0, 255})
+	stored, err := newGallery.AddImage(newImg, "Test2", ImageFormatPNG, nil)
+	if err != nil {
+		t.Fatalf("AddImage after load failed: %v", err)
+	}
+
+	// Verify new image uses the new time provider
+	expectedID := fmt.Sprintf("player1-%d", newTime.UnixNano())
+	if stored.ID != expectedID {
+		t.Errorf("Expected ID '%s', got '%s'", expectedID, stored.ID)
+	}
+
+	if !stored.Timestamp.Equal(newTime) {
+		t.Errorf("Expected timestamp %v, got %v", newTime, stored.Timestamp)
+	}
+}
+
+func TestSetTimeProvider(t *testing.T) {
+	gallery := NewImageGallery("player1")
+
+	// Set a mock time provider
+	fixedTime := time.Date(2026, 2, 13, 15, 0, 0, 0, time.UTC)
+	mockTP := &MockTimeProvider{fixedTime: fixedTime}
+	gallery.SetTimeProvider(mockTP)
+
+	img := createTestImage(32, 32, color.RGBA{0, 0, 255, 255})
+	stored, err := gallery.AddImage(img, "Test", ImageFormatPNG, nil)
+	if err != nil {
+		t.Fatalf("AddImage failed: %v", err)
+	}
+
+	// Verify timestamp uses the mock time provider
+	if !stored.Timestamp.Equal(fixedTime) {
+		t.Errorf("Expected timestamp %v, got %v", fixedTime, stored.Timestamp)
 	}
 }

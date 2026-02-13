@@ -6,8 +6,8 @@
 The social package provides well-structured error types for social interactions (chat, trade, trust) and a comprehensive persistence layer for trust, reputation, chat history, and image galleries. Overall health is excellent with 95%+ test coverage and comprehensive documentation. Critical risk: use of `time.Now()` for ID generation and decay scheduling violates determinism requirements for network/auth-exempt contexts, though the package is primarily a utility/infrastructure package rather than procedural generation.
 
 ## Issues Found
-- [ ] **high** Deterministic procgen — Non-deterministic ID generation using `time.Now().UnixNano()` (`persistence/image_gallery.go:102`)
-- [ ] **high** Deterministic procgen — Non-deterministic timestamp assignment using `time.Now()` (`persistence/image_gallery.go:111`)
+- [x] **high** Deterministic procgen — Non-deterministic ID generation using `time.Now().UnixNano()` (`persistence/image_gallery.go:102`) — **FIXED 2026-02-13**: Added TimeProvider interface and NewImageGalleryWithTimeProvider constructor for deterministic timestamp injection
+- [x] **high** Deterministic procgen — Non-deterministic timestamp assignment using `time.Now()` (`persistence/image_gallery.go:111`) — **FIXED 2026-02-13**: createStoredImage now uses injected TimeProvider
 - [ ] **med** Deterministic procgen — Background decay goroutine uses `time.Now()` for automatic decay (`persistence/trust_manager.go:281`)
 - [ ] **low** Error handling — No structured logging with logrus.WithFields throughout the package; errors are returned but not logged with context
 - [ ] **low** Test coverage — Missing benchmarks for compression/serialization operations (Save/Load methods)
@@ -48,7 +48,7 @@ No missing system registrations — this is a utility/error package rather than 
 - `ImageGallery.Save/Load` — Images with base64 encoding and deduplication
 
 ## Recommendations
-1. **[HIGH PRIORITY]** Refactor `ImageGallery.createStoredImage` to accept timestamp as parameter instead of using `time.Now()` — allows deterministic testing and aligns with codebase standards for non-procedural generation code. Note: This is infrastructure code (not procedural generation), so `time.Now()` usage may be acceptable per audit guidelines exemption for "network/auth packages," but image IDs should be deterministic for testing.
+1. ~~**[HIGH PRIORITY]** Refactor `ImageGallery.createStoredImage` to accept timestamp as parameter instead of using `time.Now()` — allows deterministic testing and aligns with codebase standards for non-procedural generation code.~~ ✅ **COMPLETED 2026-02-13**: Added `TimeProvider` interface and `NewImageGalleryWithTimeProvider` constructor. Tests added for deterministic timestamp verification.
 2. **[MEDIUM PRIORITY]** Add structured logging to TrustManager/ReputationManager decay operations with `logrus.WithFields` to track decay events for debugging (e.g., log player pairs affected, decay amounts).
 3. **[LOW PRIORITY]** Add benchmarks for `Save()/Load()` compression operations to track serialization performance as data grows (especially `ImageGallery` with base64 encoding).
 4. **[LOW PRIORITY]** Add package-level godoc to `persistence/types.go` explaining the consolidated type definitions pattern used in the package.

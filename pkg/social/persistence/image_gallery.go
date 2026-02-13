@@ -31,18 +31,26 @@ type StoredImage struct {
 
 // ImageGallery manages persistent image storage for a player
 type ImageGallery struct {
-	PlayerID   string         `json:"player_id"`
-	Images     []*StoredImage `json:"images"`
-	TotalBytes int            `json:"total_bytes"`
-	mu         sync.RWMutex
+	PlayerID     string         `json:"player_id"`
+	Images       []*StoredImage `json:"images"`
+	TotalBytes   int            `json:"total_bytes"`
+	mu           sync.RWMutex
+	timeProvider TimeProvider `json:"-"` // TimeProvider for deterministic timestamps
 }
 
-// NewImageGallery creates a new image gallery manager
+// NewImageGallery creates a new image gallery manager using real system time.
 func NewImageGallery(playerID string) *ImageGallery {
+	return NewImageGalleryWithTimeProvider(playerID, DefaultTimeProvider())
+}
+
+// NewImageGalleryWithTimeProvider creates a new image gallery manager with a custom TimeProvider.
+// Use this constructor in tests to inject a mock TimeProvider for deterministic timestamps.
+func NewImageGalleryWithTimeProvider(playerID string, tp TimeProvider) *ImageGallery {
 	return &ImageGallery{
-		PlayerID:   playerID,
-		Images:     make([]*StoredImage, 0, MaxImagesPerPlayer),
-		TotalBytes: 0,
+		PlayerID:     playerID,
+		Images:       make([]*StoredImage, 0, MaxImagesPerPlayer),
+		TotalBytes:   0,
+		timeProvider: tp,
 	}
 }
 
@@ -97,9 +105,10 @@ func (g *ImageGallery) createStoredImage(img image.Image, title string, imageDat
 	bounds := img.Bounds()
 	hash := fmt.Sprintf("%x", sha256.Sum256(imageData))
 	sizeBytes := len(imageData)
+	now := g.timeProvider.Now()
 
 	return &StoredImage{
-		ID:        fmt.Sprintf("%s-%d", g.PlayerID, time.Now().UnixNano()),
+		ID:        fmt.Sprintf("%s-%d", g.PlayerID, now.UnixNano()),
 		OwnerID:   g.PlayerID,
 		Title:     title,
 		Data:      base64.StdEncoding.EncodeToString(imageData),
@@ -108,11 +117,18 @@ func (g *ImageGallery) createStoredImage(img image.Image, title string, imageDat
 		Height:    bounds.Dy(),
 		SizeBytes: sizeBytes,
 		Hash:      hash,
-		Timestamp: time.Now(),
+		Timestamp: now,
 		Tags:      tags,
 	}
 }
 
+// AddImage adds a new image to the gallery.
+// The image is encoded to the specified format, deduplicated via SHA256 hash,
+// and stored with base64 encoding. If the gallery exceeds MaxImagesPerPlayer,
+// the oldest images are evicted (LRU). Duplicate images (same hash) return
+// the existing stored image without creating a new entry.
+// Returns the stored image or an error if the image is nil, the format is
+// unsupported, or the encoded size exceeds MaxImageSizeBytes.
 func (g *ImageGallery) AddImage(img image.Image, title string, format ImageFormat, tags []string) (*StoredImage, error) {
 	if img == nil {
 		return nil, fmt.Errorf("image cannot be nil")
@@ -304,8 +320,21 @@ func (g *ImageGallery) Load(data []byte) error {
 	g.PlayerID = temp.PlayerID
 	g.Images = temp.Images
 	g.TotalBytes = temp.TotalBytes
+	// timeProvider is preserved from the original gallery (not serialized)
+	// If nil after load, initialize with default
+	if g.timeProvider == nil {
+		g.timeProvider = DefaultTimeProvider()
+	}
 
 	return nil
+}
+
+// SetTimeProvider sets the time provider for the gallery.
+// This is useful when loading a gallery from JSON and needing to inject a mock time provider.
+func (g *ImageGallery) SetTimeProvider(tp TimeProvider) {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	g.timeProvider = tp
 }
 
 // Clear removes all images from the gallery

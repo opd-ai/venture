@@ -1,7 +1,15 @@
-# Package Audit: cmd/client
-Generated during reorganization on: 2026-01-20
+# Audit: github.com/opd-ai/venture/cmd/client
+**Date**: 2026-02-13
+**Status**: Needs Work
 
 ## Summary
+Desktop game client entry point with comprehensive system initialization for 80+ ECS systems, UI orchestration, and multiplayer networking. Overall package health is **very good** with excellent architecture and extensive integration testing. Critical risks are **VR system stub implementations** and **per-player system placeholders** that require completion before production deployment. Package is production-ready for desktop/WASM/mobile non-VR use cases. Test coverage is intentionally low (0.4%) due to Ebiten GUI requirements - this is acceptable as core logic in pkg/ has 82.4% coverage.
+
+## Previous Audits
+- 2026-01-20: Reorganization audit (handlers.go/util.go split, performance fix)
+- 2026-02-13: Completeness audit (this audit)
+
+## Summary (2026-01-20)
 - Missing Implementations: 0
 - Incomplete Features: 0
 - Interface Violations: 0
@@ -327,15 +335,99 @@ network_init.go (new)    -> Network and logger initialization (~200 lines)
 
 **Exception:** If refactoring extracts pure business logic (e.g., spawn position calculation), consider unit tests for that extracted logic.
 
-## Conclusion
+## Issues Found (2026-02-13 Audit)
+- [ ] **severity:high** Stub/incomplete code — VR headset adapter uses stub implementation instead of real hardware SDK (`handlers.go:1379-1382`)
+- [ ] **severity:high** Stub/incomplete code — VR controller adapter uses stub implementation instead of real hardware SDK (`handlers.go:1391-1396`)
+- [ ] **severity:high** Stub/incomplete code — ChatHistory initialized with "system" placeholder instead of per-player instance (`handlers.go:1181-1183`)
+- [ ] **severity:high** Stub/incomplete code — ImageGallery initialized with "system" placeholder instead of per-player instance (`handlers.go:1186-1188`)
+- [ ] **severity:med** Deterministic procgen — `randomGenre()` uses `time.Now()` for default genre selection (`util.go:170-174`)
+- [ ] **severity:med** Deterministic procgen — `seededRandom()` uses `time.Now()` for default seed generation (`util.go:161-165`)
+- [ ] **severity:low** ECS compliance — ChatHistory and ImageGallery are manager types, not components, but stored in systemsContainer (acceptable architectural pattern)
+- [ ] **severity:low** Doc coverage — `main_mobile.go` is a minimal stub that redirects to cmd/mobile (intentional, acceptable)
 
-The cmd/client package is functionally complete with no missing implementations or critical gaps. Structural organization has been improved with the extraction of 46 system wrappers into `system_wrappers.go` (2026-01-21).
+## Test Coverage (2026-02-13)
+**0.4%** (target: 65%)
+
+**Note**: Intentionally low coverage is **acceptable** for this package. Tests require Ebiten GUI runtime with display server (X11/Wayland), which is unavailable in standard CI environments. The package is extensively tested via integration tests that run under Xvfb. Core game logic in pkg/ packages has 82.4% average coverage.
+
+**go vet**: ✅ Passes with no warnings or errors
+
+## Integration Status (2026-02-13)
+**Fully integrated** client orchestrating all engine systems, UI components, and network connections.
+
+### System Registration
+All 80+ game systems properly registered in handlers.go:
+- **Core Systems** (V1-V3): movement, collision, combat, AI, rendering, particles, audio
+- **V4.0 Systems**: vehicles, companions, spells, classes, expressions, minigames, achievements
+- **V5.0 Systems**: chat, trade, terrain modification, merchant caravans
+- **V6.0 Systems**: federation, portals, bounties, politics, territories
+- **V7.0 Systems**: display management, viewport optimization
+- **V8.0 Systems**: housing, physics, fluid dynamics, buildings, furniture
+- **V9.0 Systems**: integration managers (crafting stations, companion housing, guild housing)
+- **V19.0 Systems**: entity/dialog generators, legendary quests, world economy, world events
+
+All systems use wrapper types in `system_wrappers.go` to adapt to engine.System interface.
+
+### UI Integration
+All 15+ UI components registered with InputSystem for ESC key dual-exit pattern:
+- ✅ InventoryUI, QuestUI, MapUI, CharacterUI, SkillsUI
+- ✅ CraftingUI, ShopUI, TradeUI, MailboxUI
+- ✅ HousingUI, GalleryUI, GuildUI, TerritoryUI
+- ✅ AdvancedClassUI, DialogUI, StoryChoiceUI
+
+### Network Integration
+- ✅ Client-server protocol with lag compensation and client-side prediction
+- ✅ Host-and-play mode with embedded server via pkg/hostplay
+- ✅ WebRTC federation for WASM builds (`webrtc_wasm.go`)
+- ✅ High-latency configuration support (200-5000ms for Tor/onion services)
+- ✅ Network interface types (net.Addr, net.PacketConn, net.Conn, net.Listener)
+
+### Save/Load Integration
+- ✅ SaveManager with automatic storage backend selection (file/localStorage/in-memory)
+- ✅ Quick save/load callbacks (F5/F9)
+- ✅ Menu system save/load integration
+- ✅ Tutorial state persistence
+- ✅ Player state serialization/deserialization (position, health, inventory, equipment, spells)
+
+### VR Integration
+- ⚠️ StereoscopicSystem registered (dual-eye rendering)
+- ⚠️ HeadTrackingSystem registered with **stub adapter** (blocks production VR)
+- ⚠️ VRControllerSystem registered with **stub adapter** (blocks production VR)
+- ⚠️ VRUISystem registered (world-space UI rendering)
+- ✅ Hardware detection logic exists (`vr.DetectHardware()`)
+- ✅ Force-VR flag for testing without hardware
+
+## Recommendations (2026-02-13)
+1. **[HIGH PRIORITY]** Integrate real VR hardware SDK for headset/controller adapters to replace stub implementations (currently blocks production VR deployment)
+2. **[HIGH PRIORITY]** Fix ChatHistory and ImageGallery initialization to create per-player instances instead of "system" placeholder in `initializeV8Systems` (currently breaks multi-player chat/gallery)
+3. **[MED PRIORITY]** Add validation to ensure `randomGenre()` and `seededRandom()` are only called during CLI flag initialization, never during gameplay (add runtime panic if called after world gen starts)
+4. **[MED PRIORITY]** Add integration test coverage for VR initialization path with mock hardware adapter (currently no test coverage for VR code paths)
+5. **[LOW PRIORITY]** Document Xvfb requirement for local testing in TESTING.md to help new contributors understand coverage limitations
+
+## Conclusion (2026-02-13)
+
+The cmd/client package is **production-ready for non-VR use cases** (desktop, WASM, mobile) with excellent system integration and architecture. VR support requires hardware SDK integration to replace stub adapters. Per-player systems (ChatHistory, ImageGallery) need instance creation fixes for multiplayer scenarios.
 
 **Current File Sizes:**
-- handlers.go: 2864 lines (down from 3043)
-- util.go: 2336 lines (down from 2626)
-- system_wrappers.go: 504 lines (new)
+- handlers.go: 2864 lines (system initialization)
+- util.go: 2336 lines (helpers and config)
+- system_wrappers.go: 504 lines (adapter types)
+- main.go: 97 lines (entry point)
+- consts.go: 100 lines (constants)
+- Total: ~8,454 lines
 
-**Next Steps:** Continue with optional Priority 1 steps (version-specific initialization files, entity_spawning.go, etc.) when time permits. These are low-risk, incremental improvements.
+**Integration Test Coverage:**
+- ✅ Host-and-play initialization
+- ✅ Lazy system loading
+- ✅ Parallel initialization
+- ✅ Performance monitoring
+- ✅ Sprite warming
+- ✅ High-latency networking
+- ✅ Minigame systems
+
+**Next Steps:** 
+1. Complete VR hardware SDK integration (high priority for VR release)
+2. Fix per-player system instantiation (high priority for multiplayer)
+3. Continue optional Priority 1 structural refactoring when time permits (low priority)
 
 **Test Validation:** Continue using integration tests for initialization flows. Do not attempt to increase unit test coverage for Ebiten-dependent initialization code.

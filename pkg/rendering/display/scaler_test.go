@@ -5,7 +5,10 @@ import (
 )
 
 func TestNewScaler(t *testing.T) {
-	cfg, _ := NewConfig(1920, 1080, false)
+	cfg, err := NewConfig(1920, 1080, false)
+	if err != nil {
+		t.Fatalf("NewConfig() unexpected error: %v", err)
+	}
 	scaler := NewScaler(cfg)
 
 	if scaler == nil {
@@ -31,7 +34,10 @@ func TestScalerGetScaleFactor(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			cfg, _ := NewConfig(tt.width, tt.height, false)
+			cfg, err := NewConfig(tt.width, tt.height, false)
+			if err != nil {
+				t.Fatalf("NewConfig() unexpected error: %v", err)
+			}
 			scaler := NewScaler(cfg)
 			got := scaler.GetScaleFactor()
 			if got != tt.want {
@@ -57,7 +63,10 @@ func TestScaleWidth(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			cfg, _ := NewConfig(tt.resWidth, tt.resHeight, false)
+			cfg, err := NewConfig(tt.resWidth, tt.resHeight, false)
+			if err != nil {
+				t.Fatalf("NewConfig() unexpected error: %v", err)
+			}
 			scaler := NewScaler(cfg)
 			got := scaler.ScaleWidth(tt.inputWidth)
 			if got != tt.want {
@@ -83,7 +92,10 @@ func TestScaleHeight(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			cfg, _ := NewConfig(tt.resWidth, tt.resHeight, false)
+			cfg, err := NewConfig(tt.resWidth, tt.resHeight, false)
+			if err != nil {
+				t.Fatalf("NewConfig() unexpected error: %v", err)
+			}
 			scaler := NewScaler(cfg)
 			got := scaler.ScaleHeight(tt.inputHeight)
 			if got != tt.want {
@@ -94,7 +106,10 @@ func TestScaleHeight(t *testing.T) {
 }
 
 func TestScaleFloat(t *testing.T) {
-	cfg, _ := NewConfig(3840, 2160, false) // 4K = 2x scale
+	cfg, err := NewConfig(3840, 2160, false) // 4K = 2x scale
+	if err != nil {
+		t.Fatalf("NewConfig() unexpected error: %v", err)
+	}
 	scaler := NewScaler(cfg)
 
 	input := 10.5
@@ -122,7 +137,10 @@ func TestScaleFontSize(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			cfg, _ := NewConfig(tt.resWidth, tt.resHeight, false)
+			cfg, err := NewConfig(tt.resWidth, tt.resHeight, false)
+			if err != nil {
+				t.Fatalf("NewConfig() unexpected error: %v", err)
+			}
 			scaler := NewScaler(cfg)
 			got := scaler.ScaleFontSize(tt.fontSize)
 			if got != tt.want {
@@ -133,7 +151,10 @@ func TestScaleFontSize(t *testing.T) {
 }
 
 func TestScalePosition(t *testing.T) {
-	cfg, _ := NewConfig(3840, 2160, false) // 4K = 2x scale
+	cfg, err := NewConfig(3840, 2160, false) // 4K = 2x scale
+	if err != nil {
+		t.Fatalf("NewConfig() unexpected error: %v", err)
+	}
 	scaler := NewScaler(cfg)
 
 	x, y := scaler.ScalePosition(100, 50)
@@ -143,7 +164,10 @@ func TestScalePosition(t *testing.T) {
 }
 
 func TestScaleSize(t *testing.T) {
-	cfg, _ := NewConfig(3840, 2160, false) // 4K = 2x scale
+	cfg, err := NewConfig(3840, 2160, false) // 4K = 2x scale
+	if err != nil {
+		t.Fatalf("NewConfig() unexpected error: %v", err)
+	}
 	scaler := NewScaler(cfg)
 
 	w, h := scaler.ScaleSize(100, 50)
@@ -153,7 +177,10 @@ func TestScaleSize(t *testing.T) {
 }
 
 func TestUnscaleWidth(t *testing.T) {
-	cfg, _ := NewConfig(3840, 2160, false) // 4K = 2x scale
+	cfg, err := NewConfig(3840, 2160, false) // 4K = 2x scale
+	if err != nil {
+		t.Fatalf("NewConfig() unexpected error: %v", err)
+	}
 	scaler := NewScaler(cfg)
 
 	// Scale up then unscale should return original
@@ -166,7 +193,10 @@ func TestUnscaleWidth(t *testing.T) {
 }
 
 func TestUnscaleHeight(t *testing.T) {
-	cfg, _ := NewConfig(3840, 2160, false) // 4K = 2x scale
+	cfg, err := NewConfig(3840, 2160, false) // 4K = 2x scale
+	if err != nil {
+		t.Fatalf("NewConfig() unexpected error: %v", err)
+	}
 	scaler := NewScaler(cfg)
 
 	original := 100
@@ -178,7 +208,10 @@ func TestUnscaleHeight(t *testing.T) {
 }
 
 func TestUnscalePosition(t *testing.T) {
-	cfg, _ := NewConfig(3840, 2160, false) // 4K = 2x scale
+	cfg, err := NewConfig(3840, 2160, false) // 4K = 2x scale
+	if err != nil {
+		t.Fatalf("NewConfig() unexpected error: %v", err)
+	}
 	scaler := NewScaler(cfg)
 
 	origX, origY := 100, 50
@@ -192,7 +225,10 @@ func TestUnscalePosition(t *testing.T) {
 }
 
 func BenchmarkScaleWidth(b *testing.B) {
-	cfg, _ := NewConfig(1920, 1080, false)
+	cfg, err := NewConfig(1920, 1080, false)
+	if err != nil {
+		b.Fatalf("NewConfig() unexpected error: %v", err)
+	}
 	scaler := NewScaler(cfg)
 
 	for i := 0; i < b.N; i++ {
@@ -201,7 +237,10 @@ func BenchmarkScaleWidth(b *testing.B) {
 }
 
 func BenchmarkScalePosition(b *testing.B) {
-	cfg, _ := NewConfig(1920, 1080, false)
+	cfg, err := NewConfig(1920, 1080, false)
+	if err != nil {
+		b.Fatalf("NewConfig() unexpected error: %v", err)
+	}
 	scaler := NewScaler(cfg)
 
 	for i := 0; i < b.N; i++ {
@@ -210,7 +249,10 @@ func BenchmarkScalePosition(b *testing.B) {
 }
 
 func BenchmarkScaleFontSize(b *testing.B) {
-	cfg, _ := NewConfig(1920, 1080, false)
+	cfg, err := NewConfig(1920, 1080, false)
+	if err != nil {
+		b.Fatalf("NewConfig() unexpected error: %v", err)
+	}
 	scaler := NewScaler(cfg)
 
 	for i := 0; i < b.N; i++ {

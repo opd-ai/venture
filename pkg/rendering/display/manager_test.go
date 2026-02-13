@@ -3,7 +3,10 @@ package display
 import "testing"
 
 func TestNewManager(t *testing.T) {
-	cfg, _ := NewConfig(1920, 1080, false)
+	cfg, err := NewConfig(1920, 1080, false)
+	if err != nil {
+		t.Fatalf("NewConfig() unexpected error: %v", err)
+	}
 	mgr := NewManager(cfg)
 
 	if mgr == nil {
@@ -15,7 +18,10 @@ func TestNewManager(t *testing.T) {
 }
 
 func TestManagerSetResolution(t *testing.T) {
-	cfg, _ := NewConfig(1920, 1080, false)
+	cfg, err := NewConfig(1920, 1080, false)
+	if err != nil {
+		t.Fatalf("NewConfig() unexpected error: %v", err)
+	}
 	mgr := NewManager(cfg)
 
 	tests := []struct {
@@ -48,7 +54,10 @@ func TestManagerSetResolution(t *testing.T) {
 }
 
 func TestManagerGetConfig(t *testing.T) {
-	cfg, _ := NewConfig(1920, 1080, false)
+	cfg, err := NewConfig(1920, 1080, false)
+	if err != nil {
+		t.Fatalf("NewConfig() unexpected error: %v", err)
+	}
 	mgr := NewManager(cfg)
 
 	gotCfg := mgr.GetConfig()
@@ -59,7 +68,10 @@ func TestManagerGetConfig(t *testing.T) {
 }
 
 func TestManagerSupportedResolutions(t *testing.T) {
-	cfg, _ := NewConfig(1920, 1080, false)
+	cfg, err := NewConfig(1920, 1080, false)
+	if err != nil {
+		t.Fatalf("NewConfig() unexpected error: %v", err)
+	}
 	mgr := NewManager(cfg)
 
 	supported := mgr.SupportedResolutions()
@@ -69,7 +81,10 @@ func TestManagerSupportedResolutions(t *testing.T) {
 }
 
 func TestManagerSetFullscreen(t *testing.T) {
-	cfg, _ := NewConfig(1920, 1080, false)
+	cfg, err := NewConfig(1920, 1080, false)
+	if err != nil {
+		t.Fatalf("NewConfig() unexpected error: %v", err)
+	}
 	mgr := NewManager(cfg)
 
 	mgr.SetFullscreen(true)
@@ -84,7 +99,10 @@ func TestManagerSetFullscreen(t *testing.T) {
 }
 
 func TestManagerToggleFullscreen(t *testing.T) {
-	cfg, _ := NewConfig(1920, 1080, false)
+	cfg, err := NewConfig(1920, 1080, false)
+	if err != nil {
+		t.Fatalf("NewConfig() unexpected error: %v", err)
+	}
 	mgr := NewManager(cfg)
 
 	initial := mgr.config.Fullscreen
@@ -100,11 +118,53 @@ func TestManagerToggleFullscreen(t *testing.T) {
 }
 
 func TestManagerGetLastSwitchDuration(t *testing.T) {
-	cfg, _ := NewConfig(1920, 1080, false)
+	cfg, err := NewConfig(1920, 1080, false)
+	if err != nil {
+		t.Fatalf("NewConfig() unexpected error: %v", err)
+	}
 	mgr := NewManager(cfg)
 
 	// Initial duration should be zero
 	if mgr.GetLastSwitchDuration() != 0 {
 		t.Error("Initial switch duration should be zero")
+	}
+}
+
+// BenchmarkManagerSetResolution benchmarks resolution change operations.
+// Target: <50ms per Phase 43 spec (actual operations depend on Ebiten runtime).
+func BenchmarkManagerSetResolution(b *testing.B) {
+	cfg, err := NewConfig(1920, 1080, false)
+	if err != nil {
+		b.Fatalf("NewConfig() unexpected error: %v", err)
+	}
+	mgr := NewManager(cfg)
+
+	resolutions := []struct {
+		width, height int
+	}{
+		{1280, 720},
+		{1920, 1080},
+		{2560, 1440},
+		{3840, 2160},
+	}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		res := resolutions[i%len(resolutions)]
+		_ = mgr.SetResolution(res.width, res.height)
+	}
+}
+
+// BenchmarkManagerToggleFullscreen benchmarks fullscreen toggle operations.
+func BenchmarkManagerToggleFullscreen(b *testing.B) {
+	cfg, err := NewConfig(1920, 1080, false)
+	if err != nil {
+		b.Fatalf("NewConfig() unexpected error: %v", err)
+	}
+	mgr := NewManager(cfg)
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		mgr.ToggleFullscreen()
 	}
 }

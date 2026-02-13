@@ -49,8 +49,16 @@ func NewConfig(width, height int, fullscreen bool) (*Config, error) {
 }
 
 // NewConfigDefault creates default 1920x1080 configuration.
+// This function intentionally ignores the error from NewConfig because
+// 1920x1080 is a standard supported resolution that is guaranteed to be valid.
+// If the hardcoded values are ever changed, this function will panic during testing.
 func NewConfigDefault() *Config {
-	cfg, _ := NewConfig(1920, 1080, false)
+	cfg, err := NewConfig(1920, 1080, false)
+	if err != nil {
+		// This should never happen with hardcoded 1920x1080 (Full HD).
+		// If it does, the standardResolutions slice was incorrectly modified.
+		panic("NewConfigDefault: 1920x1080 is not a valid resolution - check standardResolutions")
+	}
 	return cfg
 }
 

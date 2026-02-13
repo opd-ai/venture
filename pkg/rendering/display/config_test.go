@@ -115,7 +115,10 @@ func TestGetResolutionByName(t *testing.T) {
 }
 
 func TestConfigGetResolution(t *testing.T) {
-	cfg, _ := NewConfig(1920, 1080, false)
+	cfg, err := NewConfig(1920, 1080, false)
+	if err != nil {
+		t.Fatalf("NewConfig() unexpected error: %v", err)
+	}
 	res := cfg.GetResolution()
 	if res.Width != 1920 || res.Height != 1080 {
 		t.Errorf("GetResolution() = %dx%d, want 1920x1080", res.Width, res.Height)
@@ -140,7 +143,10 @@ func TestConfigAspectRatio(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			cfg, _ := NewConfig(tt.width, tt.height, false)
+			cfg, err := NewConfig(tt.width, tt.height, false)
+			if err != nil {
+				t.Fatalf("NewConfig() unexpected error: %v", err)
+			}
 			got := cfg.AspectRatio()
 			if got != tt.want {
 				t.Errorf("AspectRatio() = %f, want %f", got, tt.want)

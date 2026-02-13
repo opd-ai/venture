@@ -23,6 +23,7 @@ This document tracks the audit status of all Go packages in the Venture codebase
 - [x] `pkg/engine/physics/vehicle/AUDIT.md` — Needs Work — 10 issues (3 high, 4 med, 3 low)
 - [x] `pkg/engine/physics/fluids/AUDIT.md` — Needs Work — 6 issues (2 high, 2 med, 2 low)
 - [x] `pkg/engine/physics/destruction/AUDIT.md` — Needs Work — 4 issues (1 high, 1 med, 2 low)
+- [x] `pkg/engine/qol/AUDIT.md` — Needs Work — 4 issues (0 high, 3 med, 1 low)
 
 ### Procedural Generation
 - [x] `pkg/procgen/AUDIT.md` — Complete — 3 issues (0 high, 0 med, 3 low)
@@ -124,9 +125,9 @@ Each audit should produce a `AUDIT.md` file in the package directory following t
 ## Summary Statistics
 
 **Total Packages**: 50+  
-**Audited**: 73  
+**Audited**: 74  
 **Complete**: 31  
-**Needs Work**: 41  
+**Needs Work**: 42  
 **Incomplete**: 1  
 **Not Started**: 0
 

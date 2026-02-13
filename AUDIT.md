@@ -89,7 +89,7 @@ This document tracks the audit status of all Go packages in the Venture codebase
 - [x] `pkg/world/AUDIT.md` — Needs Work — 4 issues (0 high, 0 med, 4 low)
 - [x] `pkg/world/housing/AUDIT.md` — Needs Work — 6 issues (2 high, 2 med, 2 low)
 - [x] `pkg/world/economy/AUDIT.md` — Complete — 1 issue (0 high, 0 med, 1 low)
-- [x] `pkg/world/territory/AUDIT.md` — Needs Work — 6 issues (2 high, 2 med, 2 low)
+- [x] `pkg/world/territory/AUDIT.md` — Needs Work — 2 issues (0 high, 1 med, 1 low) - Updated 2026-02-13: Fixed 4 issues (2 high, 1 med, 1 low) - TimeProvider interface for deterministic timestamps, structured logging with logrus.WithFields
 - [x] `pkg/world/raids/AUDIT.md` — Needs Work — 5 issues (1 high, 2 med, 2 low)
 
 ### Integration

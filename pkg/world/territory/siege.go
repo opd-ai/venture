@@ -5,6 +5,8 @@ import (
 	"math/rand"
 	"sync"
 	"time"
+
+	log "github.com/sirupsen/logrus"
 )
 
 // SiegePhase represents the current phase of a siege.
@@ -98,16 +100,22 @@ type Siege struct {
 }
 
 // NewSiege creates a new siege instance.
+// Deprecated: Use NewSiegeWithTime for deterministic siege creation.
 func NewSiege(territoryID, attackerGuild, defenderGuild string, defenderTreasury int) *Siege {
-	now := time.Now()
+	return NewSiegeWithTime(territoryID, attackerGuild, defenderGuild, defenderTreasury, time.Now())
+}
+
+// NewSiegeWithTime creates a new siege instance with a specified start time.
+// This enables deterministic siege creation for testing and state replication.
+func NewSiegeWithTime(territoryID, attackerGuild, defenderGuild string, defenderTreasury int, startTime time.Time) *Siege {
 	return &Siege{
-		ID:                    fmt.Sprintf("siege_%s_%d", territoryID, now.Unix()),
+		ID:                    fmt.Sprintf("siege_%s_%d", territoryID, startTime.Unix()),
 		TerritoryID:           territoryID,
 		AttackerGuildID:       attackerGuild,
 		DefenderGuildID:       defenderGuild,
 		Phase:                 PhasePreparation,
-		StartTime:             now,
-		PhaseStartTime:        now,
+		StartTime:             startTime,
+		PhaseStartTime:        startTime,
 		EndTime:               time.Time{},
 		Attackers:             make(map[string]bool),
 		Defenders:             make(map[string]bool),
@@ -125,17 +133,30 @@ func NewSiege(territoryID, attackerGuild, defenderGuild string, defenderTreasury
 // CanJoin checks if a player can join the siege.
 func (s *Siege) CanJoin(playerID string, isAttacker bool) error {
 	if s.Phase == PhaseEnded {
+		log.WithFields(log.Fields{
+			"siege_id":  s.ID,
+			"player_id": playerID,
+		}).Debug("siege has ended")
 		return fmt.Errorf("siege has ended")
 	}
 
 	// Check if already in the siege
 	if s.Attackers[playerID] || s.Defenders[playerID] {
+		log.WithFields(log.Fields{
+			"siege_id":  s.ID,
+			"player_id": playerID,
+		}).Debug("player already in siege")
 		return fmt.Errorf("player already in siege")
 	}
 
 	// Check participant cap (50-100 players per siege)
 	totalParticipants := len(s.Attackers) + len(s.Defenders)
 	if totalParticipants >= 100 {
+		log.WithFields(log.Fields{
+			"siege_id":     s.ID,
+			"player_id":    playerID,
+			"participants": totalParticipants,
+		}).Debug("siege is at maximum capacity")
 		return fmt.Errorf("siege is at maximum capacity")
 	}
 
@@ -160,16 +181,29 @@ func (s *Siege) JoinSiege(playerID string, isAttacker bool) error {
 // AddReinforcements adds allied guild members to the siege.
 func (s *Siege) AddReinforcements(guildID string, playerIDs []string) error {
 	if s.Phase == PhaseEnded {
+		log.WithFields(log.Fields{
+			"siege_id": s.ID,
+			"guild_id": guildID,
+		}).Debug("siege has ended, cannot add reinforcements")
 		return fmt.Errorf("siege has ended")
 	}
 
 	// Check if guild already has reinforcements
 	if _, exists := s.Reinforcements[guildID]; exists {
+		log.WithFields(log.Fields{
+			"siege_id": s.ID,
+			"guild_id": guildID,
+		}).Debug("guild already has reinforcements")
 		return fmt.Errorf("guild %s already has reinforcements", guildID)
 	}
 
 	// Cap reinforcements at 5 guilds per side
 	if len(s.Reinforcements) >= 5 {
+		log.WithFields(log.Fields{
+			"siege_id":             s.ID,
+			"guild_id":             guildID,
+			"reinforcement_guilds": len(s.Reinforcements),
+		}).Debug("maximum reinforcement guilds reached")
 		return fmt.Errorf("maximum reinforcement guilds reached (5)")
 	}
 
@@ -185,13 +219,23 @@ func (s *Siege) AddReinforcements(guildID string, playerIDs []string) error {
 }
 
 // AdvancePhase moves the siege to the next phase.
+// Deprecated: Use AdvancePhaseWithTime for deterministic phase transitions.
 func (s *Siege) AdvancePhase() error {
-	now := time.Now()
+	return s.AdvancePhaseWithTime(time.Now())
+}
 
+// AdvancePhaseWithTime moves the siege to the next phase using a specified time.
+// This enables deterministic phase transitions for testing and state replication.
+func (s *Siege) AdvancePhaseWithTime(now time.Time) error {
 	switch s.Phase {
 	case PhasePreparation:
 		// Check if 1 hour has passed
 		if now.Sub(s.PhaseStartTime) < time.Hour {
+			log.WithFields(log.Fields{
+				"siege_id": s.ID,
+				"phase":    s.Phase.String(),
+				"elapsed":  now.Sub(s.PhaseStartTime).String(),
+			}).Debug("preparation phase not complete yet")
 			return fmt.Errorf("preparation phase not complete yet")
 		}
 		s.Phase = PhaseAssault
@@ -200,6 +244,11 @@ func (s *Siege) AdvancePhase() error {
 	case PhaseAssault:
 		// Check if 2 hours have passed or victory condition met
 		if now.Sub(s.PhaseStartTime) < 2*time.Hour && s.WinnerGuildID == "" {
+			log.WithFields(log.Fields{
+				"siege_id": s.ID,
+				"phase":    s.Phase.String(),
+				"elapsed":  now.Sub(s.PhaseStartTime).String(),
+			}).Debug("assault phase not complete yet")
 			return fmt.Errorf("assault phase not complete yet")
 		}
 		s.Phase = PhaseResolution
@@ -210,6 +259,10 @@ func (s *Siege) AdvancePhase() error {
 		s.EndTime = now
 
 	default:
+		log.WithFields(log.Fields{
+			"siege_id": s.ID,
+			"phase":    s.Phase.String(),
+		}).Debug("cannot advance from this phase")
 		return fmt.Errorf("cannot advance from phase %s", s.Phase)
 	}
 
@@ -219,6 +272,10 @@ func (s *Siege) AdvancePhase() error {
 // CaptureControlPoint marks a control point as captured.
 func (s *Siege) CaptureControlPoint() error {
 	if s.Phase != PhaseAssault {
+		log.WithFields(log.Fields{
+			"siege_id": s.ID,
+			"phase":    s.Phase.String(),
+		}).Debug("control points can only be captured during assault phase")
 		return fmt.Errorf("control points can only be captured during assault phase")
 	}
 
@@ -236,6 +293,10 @@ func (s *Siege) CaptureControlPoint() error {
 // DamageGuildHall applies damage to the guild hall.
 func (s *Siege) DamageGuildHall(damage float64) error {
 	if s.Phase != PhaseAssault {
+		log.WithFields(log.Fields{
+			"siege_id": s.ID,
+			"phase":    s.Phase.String(),
+		}).Debug("guild hall can only be damaged during assault phase")
 		return fmt.Errorf("guild hall can only be damaged during assault phase")
 	}
 
@@ -256,14 +317,24 @@ func (s *Siege) DamageGuildHall(damage float64) error {
 // DistributeLoot calculates and distributes loot to winners.
 func (s *Siege) DistributeLoot() (int, error) {
 	if s.Phase != PhaseResolution {
+		log.WithFields(log.Fields{
+			"siege_id": s.ID,
+			"phase":    s.Phase.String(),
+		}).Debug("loot can only be distributed during resolution phase")
 		return 0, fmt.Errorf("loot can only be distributed during resolution phase")
 	}
 
 	if s.LootDistributed {
+		log.WithFields(log.Fields{
+			"siege_id": s.ID,
+		}).Debug("loot already distributed")
 		return 0, fmt.Errorf("loot already distributed")
 	}
 
 	if s.WinnerGuildID == "" {
+		log.WithFields(log.Fields{
+			"siege_id": s.ID,
+		}).Debug("no winner determined for loot distribution")
 		return 0, fmt.Errorf("no winner determined")
 	}
 
@@ -276,14 +347,22 @@ func (s *Siege) DistributeLoot() (int, error) {
 
 // SiegeManager manages multiple sieges across territories.
 type SiegeManager struct {
-	sieges map[string]*Siege // Siege ID -> Siege
-	mu     sync.RWMutex
+	sieges       map[string]*Siege // Siege ID -> Siege
+	mu           sync.RWMutex
+	timeProvider TimeProvider
 }
 
-// NewSiegeManager creates a new siege manager.
+// NewSiegeManager creates a new siege manager with the default time provider.
 func NewSiegeManager() *SiegeManager {
+	return NewSiegeManagerWithTimeProvider(DefaultTimeProvider())
+}
+
+// NewSiegeManagerWithTimeProvider creates a new siege manager with a custom time provider.
+// This enables deterministic timestamps for testing and reproducible state.
+func NewSiegeManagerWithTimeProvider(tp TimeProvider) *SiegeManager {
 	return &SiegeManager{
-		sieges: make(map[string]*Siege),
+		sieges:       make(map[string]*Siege),
+		timeProvider: tp,
 	}
 }
 
@@ -295,11 +374,15 @@ func (sm *SiegeManager) CreateSiege(territoryID, attackerGuild, defenderGuild st
 	// Check if territory already has an active siege
 	for _, siege := range sm.sieges {
 		if siege.TerritoryID == territoryID && siege.Phase != PhaseEnded {
+			log.WithFields(log.Fields{
+				"territory_id":   territoryID,
+				"existing_siege": siege.ID,
+			}).Debug("territory already has an active siege")
 			return nil, fmt.Errorf("territory %s already has an active siege", territoryID)
 		}
 	}
 
-	siege := NewSiege(territoryID, attackerGuild, defenderGuild, defenderTreasury)
+	siege := NewSiegeWithTime(territoryID, attackerGuild, defenderGuild, defenderTreasury, sm.timeProvider.Now())
 	sm.sieges[siege.ID] = siege
 
 	return siege, nil
@@ -312,6 +395,9 @@ func (sm *SiegeManager) GetSiege(siegeID string) (*Siege, error) {
 
 	siege, exists := sm.sieges[siegeID]
 	if !exists {
+		log.WithFields(log.Fields{
+			"siege_id": siegeID,
+		}).Debug("siege not found")
 		return nil, fmt.Errorf("siege not found: %s", siegeID)
 	}
 
@@ -352,7 +438,7 @@ func (sm *SiegeManager) Update(deltaTime float64) {
 	sm.mu.Lock()
 	defer sm.mu.Unlock()
 
-	now := time.Now()
+	now := sm.timeProvider.Now()
 
 	for _, siege := range sm.sieges {
 		if siege.Phase == PhaseEnded {
@@ -363,7 +449,7 @@ func (sm *SiegeManager) Update(deltaTime float64) {
 		switch siege.Phase {
 		case PhasePreparation:
 			if now.Sub(siege.PhaseStartTime) >= time.Hour {
-				siege.AdvancePhase()
+				siege.AdvancePhaseWithTime(now)
 			}
 
 		case PhaseAssault:
@@ -373,20 +459,27 @@ func (sm *SiegeManager) Update(deltaTime float64) {
 					siege.VictoryCondition = VictoryDefenseTimeout
 					siege.WinnerGuildID = siege.DefenderGuildID
 				}
-				siege.AdvancePhase()
+				siege.AdvancePhaseWithTime(now)
 			}
 
 		case PhaseResolution:
 			// Auto-advance after resolution calculations
 			if now.Sub(siege.PhaseStartTime) >= 5*time.Minute {
-				siege.AdvancePhase()
+				siege.AdvancePhaseWithTime(now)
 			}
 		}
 	}
 }
 
 // GenerateDefensiveStructures procedurally generates defensive structures for a territory.
+// Deprecated: Use GenerateDefensiveStructuresWithTime for deterministic structure generation.
 func GenerateDefensiveStructures(territoryID string, seed int64, count int) []*DefensiveStructure {
+	return GenerateDefensiveStructuresWithTime(territoryID, seed, count, time.Now())
+}
+
+// GenerateDefensiveStructuresWithTime procedurally generates defensive structures with a specified construction time.
+// This enables deterministic structure generation for testing and reproducible state.
+func GenerateDefensiveStructuresWithTime(territoryID string, seed int64, count int, constructionTime time.Time) []*DefensiveStructure {
 	rng := rand.New(rand.NewSource(seed))
 
 	structures := make([]*DefensiveStructure, 0, count)
@@ -416,7 +509,7 @@ func GenerateDefensiveStructures(territoryID string, seed int64, count int) []*D
 			MaxHP:         hp,
 			Damage:        damage,
 			Level:         level,
-			ConstructedAt: time.Now(),
+			ConstructedAt: constructionTime,
 		}
 
 		structures = append(structures, structure)

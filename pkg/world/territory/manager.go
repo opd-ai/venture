@@ -3,9 +3,9 @@ package territory
 import (
 	"fmt"
 	"sync"
-	"time"
 
 	"github.com/google/uuid"
+	log "github.com/sirupsen/logrus"
 )
 
 // Manager manages guild territories, warfare, and defensive structures.
@@ -15,15 +15,23 @@ type Manager struct {
 	wars          map[string]*WarDeclaration
 	guildWars     map[string][]string
 	captureRadius float64
+	timeProvider  TimeProvider
 }
 
-// NewManager creates a new territory manager.
+// NewManager creates a new territory manager with the default time provider.
 func NewManager() *Manager {
+	return NewManagerWithTimeProvider(DefaultTimeProvider())
+}
+
+// NewManagerWithTimeProvider creates a new territory manager with a custom time provider.
+// This enables deterministic timestamps for testing and reproducible state.
+func NewManagerWithTimeProvider(tp TimeProvider) *Manager {
 	return &Manager{
 		territories:   make(map[string]*Territory),
 		wars:          make(map[string]*WarDeclaration),
 		guildWars:     make(map[string][]string),
 		captureRadius: 50.0,
+		timeProvider:  tp,
 	}
 }
 
@@ -33,6 +41,9 @@ func (m *Manager) CreateTerritory(id string, coords TerritoryCoords) (*Territory
 	defer m.mu.Unlock()
 
 	if _, exists := m.territories[id]; exists {
+		log.WithFields(log.Fields{
+			"territory_id": id,
+		}).Debug("territory already exists")
 		return nil, fmt.Errorf("territory already exists: %s", id)
 	}
 
@@ -43,7 +54,7 @@ func (m *Manager) CreateTerritory(id string, coords TerritoryCoords) (*Territory
 		Status:          StatusNeutral,
 		CaptureProgress: 0.0,
 		CapturingGuild:  "",
-		LastUpdate:      time.Now(),
+		LastUpdate:      m.timeProvider.Now(),
 		Structures:      make([]*DefensiveStructure, 0),
 		ResourceBonus:   BaseResourceBonus,
 		XPBonus:         BaseXPBonus,
@@ -62,6 +73,9 @@ func (m *Manager) GetTerritory(id string) (*Territory, error) {
 
 	territory, exists := m.territories[id]
 	if !exists {
+		log.WithFields(log.Fields{
+			"territory_id": id,
+		}).Debug("territory not found")
 		return nil, fmt.Errorf("territory not found: %s", id)
 	}
 	return territory, nil
@@ -74,6 +88,10 @@ func (m *Manager) AssignOwner(territoryID, guildID string) error {
 
 	territory, exists := m.territories[territoryID]
 	if !exists {
+		log.WithFields(log.Fields{
+			"territory_id": territoryID,
+			"guild_id":     guildID,
+		}).Debug("territory not found for ownership assignment")
 		return fmt.Errorf("territory not found: %s", territoryID)
 	}
 
@@ -81,7 +99,7 @@ func (m *Manager) AssignOwner(territoryID, guildID string) error {
 	territory.Status = StatusOwned
 	territory.CaptureProgress = 0.0
 	territory.CapturingGuild = ""
-	territory.LastUpdate = time.Now()
+	territory.LastUpdate = m.timeProvider.Now()
 
 	return nil
 }
@@ -93,14 +111,23 @@ func (m *Manager) UpdateCaptureProgress(territoryID string, attackers, defenders
 
 	territory, exists := m.territories[territoryID]
 	if !exists {
+		log.WithFields(log.Fields{
+			"territory_id":    territoryID,
+			"attacking_guild": attackingGuild,
+		}).Debug("territory not found for capture progress update")
 		return fmt.Errorf("territory not found: %s", territoryID)
 	}
 
 	if err := validateAttackingGuild(attackingGuild, attackers); err != nil {
+		log.WithFields(log.Fields{
+			"territory_id":    territoryID,
+			"attacking_guild": attackingGuild,
+			"attackers":       attackers,
+		}).Debug("invalid attacking guild for capture progress")
 		return err
 	}
 
-	now := time.Now()
+	now := m.timeProvider.Now()
 	elapsed := now.Sub(territory.LastUpdate).Seconds()
 
 	if attackers > 0 && attackers > defenders {
@@ -174,10 +201,18 @@ func (m *Manager) BuildDefensiveStructure(territoryID string, structureType Stru
 
 	territory, exists := m.territories[territoryID]
 	if !exists {
+		log.WithFields(log.Fields{
+			"territory_id":   territoryID,
+			"structure_type": structureType.String(),
+		}).Debug("territory not found for structure building")
 		return nil, fmt.Errorf("territory not found: %s", territoryID)
 	}
 
 	if territory.OwnerGuildID == "" {
+		log.WithFields(log.Fields{
+			"territory_id":   territoryID,
+			"structure_type": structureType.String(),
+		}).Debug("cannot build in unowned territory")
 		return nil, fmt.Errorf("cannot build in unowned territory: %s", territoryID)
 	}
 
@@ -198,6 +233,10 @@ func (m *Manager) BuildDefensiveStructure(territoryID string, structureType Stru
 		damage = 0.0
 		level = GuardLevel
 	default:
+		log.WithFields(log.Fields{
+			"territory_id":   territoryID,
+			"structure_type": int(structureType),
+		}).Debug("unknown structure type")
 		return nil, fmt.Errorf("unknown structure type: %d", structureType)
 	}
 
@@ -210,7 +249,7 @@ func (m *Manager) BuildDefensiveStructure(territoryID string, structureType Stru
 		MaxHP:         maxHP,
 		Damage:        damage,
 		Level:         level,
-		ConstructedAt: time.Now(),
+		ConstructedAt: m.timeProvider.Now(),
 	}
 
 	territory.Structures = append(territory.Structures, structure)
@@ -224,6 +263,10 @@ func (m *Manager) DamageStructure(territoryID, structureID string, damage float6
 
 	territory, exists := m.territories[territoryID]
 	if !exists {
+		log.WithFields(log.Fields{
+			"territory_id": territoryID,
+			"structure_id": structureID,
+		}).Debug("territory not found for structure damage")
 		return fmt.Errorf("territory not found: %s", territoryID)
 	}
 
@@ -237,6 +280,10 @@ func (m *Manager) DamageStructure(territoryID, structureID string, damage float6
 		}
 	}
 
+	log.WithFields(log.Fields{
+		"territory_id": territoryID,
+		"structure_id": structureID,
+	}).Debug("structure not found")
 	return fmt.Errorf("structure not found: %s", structureID)
 }
 
@@ -246,6 +293,9 @@ func (m *Manager) DeclareWar(attackerGuild, defenderGuild string) (*WarDeclarati
 	defer m.mu.Unlock()
 
 	if attackerGuild == defenderGuild {
+		log.WithFields(log.Fields{
+			"guild_id": attackerGuild,
+		}).Debug("guild cannot declare war on itself")
 		return nil, fmt.Errorf("guild cannot declare war on itself")
 	}
 
@@ -253,18 +303,22 @@ func (m *Manager) DeclareWar(attackerGuild, defenderGuild string) (*WarDeclarati
 		if war.Active &&
 			((war.AttackerGuild == attackerGuild && war.DefenderGuild == defenderGuild) ||
 				(war.AttackerGuild == defenderGuild && war.DefenderGuild == attackerGuild)) {
+			log.WithFields(log.Fields{
+				"attacker_guild": attackerGuild,
+				"defender_guild": defenderGuild,
+			}).Debug("war already exists between these guilds")
 			return nil, fmt.Errorf("war already exists between these guilds")
 		}
 	}
 
 	warID := uuid.New().String()
-	now := time.Now()
+	now := m.timeProvider.Now()
 	war := &WarDeclaration{
 		ID:            warID,
 		AttackerGuild: attackerGuild,
 		DefenderGuild: defenderGuild,
 		DeclaredAt:    now,
-		EndsAt:        now.Add(time.Duration(WarDurationDays) * 24 * time.Hour),
+		EndsAt:        now.Add(WarDurationDays * 24 * 3600 * 1e9), // days in nanoseconds
 		Active:        true,
 		Cost:          WarDeclarationCost,
 	}
@@ -291,11 +345,14 @@ func (m *Manager) EndWar(warID string) error {
 
 	war, exists := m.wars[warID]
 	if !exists {
+		log.WithFields(log.Fields{
+			"war_id": warID,
+		}).Debug("war not found")
 		return fmt.Errorf("war not found: %s", warID)
 	}
 
 	war.Active = false
-	war.EndsAt = time.Now()
+	war.EndsAt = m.timeProvider.Now()
 
 	return nil
 }

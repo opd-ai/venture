@@ -2,6 +2,27 @@ package territory
 
 import "time"
 
+// TimeProvider is an interface for obtaining the current time.
+// This enables deterministic timestamps for testing and reproducible state.
+// In production, use RealTimeProvider; in tests, use a mock implementation.
+type TimeProvider interface {
+	// Now returns the current time
+	Now() time.Time
+}
+
+// RealTimeProvider implements TimeProvider using the actual system clock.
+type RealTimeProvider struct{}
+
+// Now returns the current system time.
+func (RealTimeProvider) Now() time.Time {
+	return time.Now()
+}
+
+// DefaultTimeProvider returns the default TimeProvider (real system time).
+func DefaultTimeProvider() TimeProvider {
+	return RealTimeProvider{}
+}
+
 // TerritoryCoords represents the chunk coordinates of a territory (5×5 chunks).
 type TerritoryCoords struct {
 	ChunkX int

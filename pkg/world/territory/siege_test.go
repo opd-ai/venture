@@ -1,6 +1,7 @@
 package territory
 
 import (
+	"fmt"
 	"testing"
 	"time"
 )
@@ -537,5 +538,168 @@ func BenchmarkSiegeManagerUpdate(b *testing.B) {
 func BenchmarkGenerateDefensiveStructures(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		GenerateDefensiveStructures("territory1", int64(i), 10)
+	}
+}
+
+// MockTimeProvider is a mock implementation of TimeProvider for testing.
+type MockTimeProvider struct {
+	fixedTime time.Time
+}
+
+// Now returns the fixed time.
+func (m *MockTimeProvider) Now() time.Time {
+	return m.fixedTime
+}
+
+// SetTime sets the fixed time for testing.
+func (m *MockTimeProvider) SetTime(t time.Time) {
+	m.fixedTime = t
+}
+
+func TestNewManagerWithTimeProvider(t *testing.T) {
+	fixedTime := time.Date(2026, 1, 1, 12, 0, 0, 0, time.UTC)
+	tp := &MockTimeProvider{fixedTime: fixedTime}
+	m := NewManagerWithTimeProvider(tp)
+
+	territory, err := m.CreateTerritory("terr-1", TerritoryCoords{ChunkX: 10, ChunkZ: 20})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if !territory.LastUpdate.Equal(fixedTime) {
+		t.Errorf("expected LastUpdate %v, got %v", fixedTime, territory.LastUpdate)
+	}
+}
+
+func TestManagerTimeProviderDeterminism(t *testing.T) {
+	fixedTime := time.Date(2026, 1, 1, 12, 0, 0, 0, time.UTC)
+	tp1 := &MockTimeProvider{fixedTime: fixedTime}
+	tp2 := &MockTimeProvider{fixedTime: fixedTime}
+
+	m1 := NewManagerWithTimeProvider(tp1)
+	m2 := NewManagerWithTimeProvider(tp2)
+
+	coords := TerritoryCoords{ChunkX: 10, ChunkZ: 20}
+
+	territory1, _ := m1.CreateTerritory("terr-1", coords)
+	territory2, _ := m2.CreateTerritory("terr-1", coords)
+
+	if !territory1.LastUpdate.Equal(territory2.LastUpdate) {
+		t.Error("expected deterministic LastUpdate with same TimeProvider")
+	}
+}
+
+func TestNewSiegeManagerWithTimeProvider(t *testing.T) {
+	fixedTime := time.Date(2026, 1, 1, 12, 0, 0, 0, time.UTC)
+	tp := &MockTimeProvider{fixedTime: fixedTime}
+	sm := NewSiegeManagerWithTimeProvider(tp)
+
+	siege, err := sm.CreateSiege("territory1", "guild_attack", "guild_defend", 10000)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if !siege.StartTime.Equal(fixedTime) {
+		t.Errorf("expected StartTime %v, got %v", fixedTime, siege.StartTime)
+	}
+	if !siege.PhaseStartTime.Equal(fixedTime) {
+		t.Errorf("expected PhaseStartTime %v, got %v", fixedTime, siege.PhaseStartTime)
+	}
+}
+
+func TestSiegeManagerUpdateWithTimeProvider(t *testing.T) {
+	initialTime := time.Date(2026, 1, 1, 12, 0, 0, 0, time.UTC)
+	tp := &MockTimeProvider{fixedTime: initialTime}
+	sm := NewSiegeManagerWithTimeProvider(tp)
+
+	siege, _ := sm.CreateSiege("territory1", "guild_attack", "guild_defend", 10000)
+
+	// Verify initial phase
+	if siege.Phase != PhasePreparation {
+		t.Errorf("expected initial phase %v, got %v", PhasePreparation, siege.Phase)
+	}
+
+	// Advance time by 1 hour and update
+	tp.SetTime(initialTime.Add(61 * time.Minute))
+	sm.Update(0.016)
+
+	// Should advance to assault
+	if siege.Phase != PhaseAssault {
+		t.Errorf("expected phase %v, got %v", PhaseAssault, siege.Phase)
+	}
+}
+
+func TestNewSiegeWithTime(t *testing.T) {
+	fixedTime := time.Date(2026, 1, 1, 12, 0, 0, 0, time.UTC)
+	siege := NewSiegeWithTime("territory1", "guild_attack", "guild_defend", 10000, fixedTime)
+
+	if !siege.StartTime.Equal(fixedTime) {
+		t.Errorf("expected StartTime %v, got %v", fixedTime, siege.StartTime)
+	}
+
+	expectedID := "siege_territory1_" + fmt.Sprintf("%d", fixedTime.Unix())
+	if siege.ID != expectedID {
+		t.Errorf("expected ID %v, got %v", expectedID, siege.ID)
+	}
+}
+
+func TestAdvancePhaseWithTime(t *testing.T) {
+	initialTime := time.Date(2026, 1, 1, 12, 0, 0, 0, time.UTC)
+	siege := NewSiegeWithTime("territory1", "guild_attack", "guild_defend", 10000, initialTime)
+
+	// Try to advance before 1 hour - should fail
+	err := siege.AdvancePhaseWithTime(initialTime.Add(30 * time.Minute))
+	if err == nil {
+		t.Error("expected error when advancing before 1 hour")
+	}
+
+	// Advance after 1 hour - should succeed
+	err = siege.AdvancePhaseWithTime(initialTime.Add(61 * time.Minute))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if siege.Phase != PhaseAssault {
+		t.Errorf("expected phase %v, got %v", PhaseAssault, siege.Phase)
+	}
+}
+
+func TestGenerateDefensiveStructuresWithTime(t *testing.T) {
+	fixedTime := time.Date(2026, 1, 1, 12, 0, 0, 0, time.UTC)
+	structures := GenerateDefensiveStructuresWithTime("territory1", 12345, 10, fixedTime)
+
+	// Verify count
+	if len(structures) != 10 {
+		t.Errorf("Structure count = %v, want 10", len(structures))
+	}
+
+	// Verify all structures have the fixed construction time
+	for i, s := range structures {
+		if !s.ConstructedAt.Equal(fixedTime) {
+			t.Errorf("Structure %d ConstructedAt = %v, want %v", i, s.ConstructedAt, fixedTime)
+		}
+	}
+}
+
+func TestGenerateDefensiveStructuresWithTimeDeterminism(t *testing.T) {
+	fixedTime := time.Date(2026, 1, 1, 12, 0, 0, 0, time.UTC)
+
+	structures1 := GenerateDefensiveStructuresWithTime("territory1", 12345, 10, fixedTime)
+	structures2 := GenerateDefensiveStructuresWithTime("territory1", 12345, 10, fixedTime)
+
+	// Verify complete determinism including ConstructedAt
+	for i := range structures1 {
+		if structures1[i].Type != structures2[i].Type {
+			t.Errorf("Structure %d Type mismatch", i)
+		}
+		if structures1[i].HP != structures2[i].HP {
+			t.Errorf("Structure %d HP mismatch", i)
+		}
+		if structures1[i].Damage != structures2[i].Damage {
+			t.Errorf("Structure %d Damage mismatch", i)
+		}
+		if !structures1[i].ConstructedAt.Equal(structures2[i].ConstructedAt) {
+			t.Errorf("Structure %d ConstructedAt mismatch", i)
+		}
 	}
 }

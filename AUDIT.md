@@ -35,6 +35,7 @@ This document tracks the audit status of all Go packages in the Venture codebase
 - [x] `pkg/procgen/terrain/AUDIT.md` — Needs Work — 6 issues (1 high, 1 med, 4 low)
 - [x] `pkg/procgen/entity/AUDIT.md` — Needs Work — 3 issues (1 high, 1 med, 1 low)
 - [x] `pkg/procgen/item/AUDIT.md` — Needs Work — 7 issues (5 high, 1 med, 1 low)
+- [x] `pkg/procgen/item/AUDIT_2026-02-13.md` — Needs Work — 12 issues (8 high, 3 med, 1 low)
 - [x] `pkg/procgen/quest/AUDIT.md` — Complete — 1 issue (0 high, 0 med, 1 low)
 - [x] `pkg/procgen/magic/AUDIT.md` — Complete — 4 issues (0 high, 0 med, 4 low)
 - [x] `pkg/procgen/skills/AUDIT.md` — Complete — 4 issues (0 high, 0 med, 4 low)

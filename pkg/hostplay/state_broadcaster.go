@@ -15,7 +15,8 @@ type StateBroadcaster struct {
 	broadcastRate  int // Hz (updates per second)
 	lastBroadcast  time.Time
 	logger         *logrus.Entry
-	priorityRadius float64 // Radius for high-priority entities
+	priorityRadius float64      // Radius for high-priority entities
+	timeProvider   TimeProvider // TimeProvider for deterministic timestamps
 }
 
 // EntityState represents serialized entity state for network transmission.
@@ -58,12 +59,19 @@ type WorldState struct {
 
 // NewStateBroadcaster creates a new state broadcaster.
 func NewStateBroadcaster(world *engine.World, broadcastRate int, logger *logrus.Entry) *StateBroadcaster {
+	return NewStateBroadcasterWithTimeProvider(world, broadcastRate, logger, DefaultTimeProvider())
+}
+
+// NewStateBroadcasterWithTimeProvider creates a new state broadcaster with a custom time provider.
+// Use this constructor in tests to inject a mock TimeProvider for deterministic timestamps.
+func NewStateBroadcasterWithTimeProvider(world *engine.World, broadcastRate int, logger *logrus.Entry, tp TimeProvider) *StateBroadcaster {
 	return &StateBroadcaster{
 		world:          world,
 		broadcastRate:  broadcastRate,
 		lastBroadcast:  time.Time{}, // Zero time ensures first broadcast happens immediately
 		logger:         logger,
 		priorityRadius: 1000.0, // Default 1000 pixels
+		timeProvider:   tp,
 	}
 }
 
@@ -75,15 +83,16 @@ func (b *StateBroadcaster) SetPriorityRadius(radius float64) {
 // ShouldBroadcast checks if it's time to broadcast based on rate.
 func (b *StateBroadcaster) ShouldBroadcast() bool {
 	interval := time.Duration(1000/b.broadcastRate) * time.Millisecond
-	return time.Since(b.lastBroadcast) >= interval
+	return b.timeProvider.Now().Sub(b.lastBroadcast) >= interval
 }
 
 // CreateSnapshot creates a snapshot of the current world state.
 func (b *StateBroadcaster) CreateSnapshot() (*WorldState, error) {
 	entities := b.world.GetEntities()
 
+	now := b.timeProvider.Now()
 	snapshot := &WorldState{
-		Timestamp: time.Now().UnixMilli(),
+		Timestamp: now.UnixMilli(),
 		Entities:  make([]EntityState, 0, len(entities)),
 	}
 
@@ -94,7 +103,7 @@ func (b *StateBroadcaster) CreateSnapshot() (*WorldState, error) {
 		}
 	}
 
-	b.lastBroadcast = time.Now()
+	b.lastBroadcast = now
 
 	return snapshot, nil
 } // SerializeSnapshot serializes a world state to JSON bytes.

@@ -478,12 +478,17 @@ func (sm *ServerManager) addPositionComponent(update *network.StateUpdate, posit
 		Y: position.Y,
 	}
 	posData, err := json.Marshal(posComp)
-	if err == nil {
-		update.Components = append(update.Components, network.ComponentData{
-			Type: "position",
-			Data: posData,
-		})
+	if err != nil {
+		sm.logger.WithFields(logrus.Fields{
+			"component_type": "position",
+			"error":          err,
+		}).Warn("failed to marshal position component")
+		return
 	}
+	update.Components = append(update.Components, network.ComponentData{
+		Type: "position",
+		Data: posData,
+	})
 }
 
 // addVelocityComponent adds a velocity component to the state update if present.
@@ -497,12 +502,17 @@ func (sm *ServerManager) addVelocityComponent(update *network.StateUpdate, veloc
 		VY: velocity.VY,
 	}
 	velData, err := json.Marshal(velComp)
-	if err == nil {
-		update.Components = append(update.Components, network.ComponentData{
-			Type: "velocity",
-			Data: velData,
-		})
+	if err != nil {
+		sm.logger.WithFields(logrus.Fields{
+			"component_type": "velocity",
+			"error":          err,
+		}).Warn("failed to marshal velocity component")
+		return
 	}
+	update.Components = append(update.Components, network.ComponentData{
+		Type: "velocity",
+		Data: velData,
+	})
 }
 
 // addHealthComponent adds a health component to the state update if present.
@@ -516,12 +526,17 @@ func (sm *ServerManager) addHealthComponent(update *network.StateUpdate, health 
 		Max:     health.Max,
 	}
 	healthData, err := json.Marshal(healthComp)
-	if err == nil {
-		update.Components = append(update.Components, network.ComponentData{
-			Type: "health",
-			Data: healthData,
-		})
+	if err != nil {
+		sm.logger.WithFields(logrus.Fields{
+			"component_type": "health",
+			"error":          err,
+		}).Warn("failed to marshal health component")
+		return
 	}
+	update.Components = append(update.Components, network.ComponentData{
+		Type: "health",
+		Data: healthData,
+	})
 }
 
 // addRotationComponent adds a rotation component to the state update if present.
@@ -534,12 +549,17 @@ func (sm *ServerManager) addRotationComponent(update *network.StateUpdate, rotat
 		Angle: rotation.Angle,
 	}
 	rotData, err := json.Marshal(rotComp)
-	if err == nil {
-		update.Components = append(update.Components, network.ComponentData{
-			Type: "rotation",
-			Data: rotData,
-		})
+	if err != nil {
+		sm.logger.WithFields(logrus.Fields{
+			"component_type": "rotation",
+			"error":          err,
+		}).Warn("failed to marshal rotation component")
+		return
 	}
+	update.Components = append(update.Components, network.ComponentData{
+		Type: "rotation",
+		Data: rotData,
+	})
 }
 
 // Stop gracefully stops the server and waits for the goroutine to exit.

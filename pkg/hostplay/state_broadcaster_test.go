@@ -438,3 +438,103 @@ func TestStateBroadcaster_HighFrequencyBroadcast(t *testing.T) {
 		t.Error("broadcast after interval should succeed")
 	}
 }
+
+// MockTimeProvider implements TimeProvider for deterministic testing.
+type MockTimeProvider struct {
+	fixedTime time.Time
+}
+
+// Now returns the fixed time.
+func (m *MockTimeProvider) Now() time.Time {
+	return m.fixedTime
+}
+
+// SetTime updates the fixed time for test progression.
+func (m *MockTimeProvider) SetTime(t time.Time) {
+	m.fixedTime = t
+}
+
+// Advance moves the fixed time forward by the given duration.
+func (m *MockTimeProvider) Advance(d time.Duration) {
+	m.fixedTime = m.fixedTime.Add(d)
+}
+
+func TestNewStateBroadcasterWithTimeProvider(t *testing.T) {
+	world := engine.NewWorld()
+	logger := logrus.NewEntry(logrus.New())
+	fixedTime := time.Date(2026, 2, 13, 12, 0, 0, 0, time.UTC)
+	tp := &MockTimeProvider{fixedTime: fixedTime}
+
+	broadcaster := NewStateBroadcasterWithTimeProvider(world, 20, logger, tp)
+
+	if broadcaster == nil {
+		t.Fatal("NewStateBroadcasterWithTimeProvider returned nil")
+	}
+	if broadcaster.timeProvider != tp {
+		t.Error("timeProvider not set correctly")
+	}
+}
+
+func TestStateBroadcaster_TimeProviderDeterminism(t *testing.T) {
+	// Create two broadcasters with same fixed time
+	fixedTime := time.Date(2026, 2, 13, 12, 0, 0, 0, time.UTC)
+	tp1 := &MockTimeProvider{fixedTime: fixedTime}
+	tp2 := &MockTimeProvider{fixedTime: fixedTime}
+
+	world := engine.NewWorld()
+	entity := world.CreateEntity()
+	entity.AddComponent(&engine.PositionComponent{X: 100, Y: 200})
+	world.Update(0)
+
+	logger := logrus.NewEntry(logrus.New())
+	b1 := NewStateBroadcasterWithTimeProvider(world, 20, logger, tp1)
+	b2 := NewStateBroadcasterWithTimeProvider(world, 20, logger, tp2)
+
+	// Create snapshots
+	s1, _ := b1.CreateSnapshot()
+	s2, _ := b2.CreateSnapshot()
+
+	// Timestamps should be identical
+	if s1.Timestamp != s2.Timestamp {
+		t.Errorf("timestamps differ: %d vs %d", s1.Timestamp, s2.Timestamp)
+	}
+	expectedTimestamp := fixedTime.UnixMilli()
+	if s1.Timestamp != expectedTimestamp {
+		t.Errorf("timestamp = %d, want %d", s1.Timestamp, expectedTimestamp)
+	}
+}
+
+func TestStateBroadcaster_ShouldBroadcastWithTimeProvider(t *testing.T) {
+	world := engine.NewWorld()
+	logger := logrus.NewEntry(logrus.New())
+	startTime := time.Date(2026, 2, 13, 12, 0, 0, 0, time.UTC)
+	tp := &MockTimeProvider{fixedTime: startTime}
+
+	// 20 Hz = 50ms interval
+	broadcaster := NewStateBroadcasterWithTimeProvider(world, 20, logger, tp)
+
+	// Should broadcast immediately (first time)
+	if !broadcaster.ShouldBroadcast() {
+		t.Error("ShouldBroadcast() = false, want true on first call")
+	}
+
+	// Create a snapshot to update lastBroadcast
+	broadcaster.CreateSnapshot()
+
+	// Should not broadcast immediately after
+	if broadcaster.ShouldBroadcast() {
+		t.Error("ShouldBroadcast() = true, want false immediately after broadcast")
+	}
+
+	// Advance time by 30ms (not enough)
+	tp.Advance(30 * time.Millisecond)
+	if broadcaster.ShouldBroadcast() {
+		t.Error("ShouldBroadcast() = true, want false after 30ms (interval is 50ms)")
+	}
+
+	// Advance time by another 30ms (total 60ms, exceeds 50ms interval)
+	tp.Advance(30 * time.Millisecond)
+	if !broadcaster.ShouldBroadcast() {
+		t.Error("ShouldBroadcast() = false, want true after 60ms")
+	}
+}

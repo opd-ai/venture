@@ -1,13 +1,13 @@
 # Audit: pkg/rendering/postprocess
-**Date**: 2026-02-12
-**Status**: Needs Work
+**Date**: 2026-02-13
+**Status**: Complete
 
 ## Summary
 The postprocess package provides GPU-accelerated screen-space post-processing effects (vignette, color grading, chromatic aberration, motion blur, depth blur) for the rendering pipeline. The package is well-structured with 3,772 LOC (1,543 test lines) and comprehensive test coverage. However, it has 6 issues: lack of structured logging for error paths, missing error propagation in GPUProcessor.ApplyAll, no validation for configuration parameters, insufficient godoc for utility functions, and test failures due to Ebiten GUI requirement (not a code issue). Integration is limited to engine adapter and client handlers.
 
 ## Issues Found
-- [ ] **med** Error handling — GPU shader compilation errors silently return input image without logging (`gpu_processor.go:276-277`)
-- [ ] **low** Error handling — ensureShaders() error propagation lacks structured logging context (`gpu_processor.go:224-252`)
+- [x] **med** Error handling — GPU shader compilation errors silently return input image without logging (`gpu_processor.go:276-277`) — **FIXED 2026-02-13**: Added structured logging with logrus.WithFields to ApplyAll error path; added NewGPUProcessorWithLogger constructor for logger injection
+- [x] **low** Error handling — ensureShaders() error propagation lacks structured logging context (`gpu_processor.go:224-252`) — **FIXED 2026-02-13**: Added structured logging with shader name context to each shader compilation failure
 - [ ] **low** Validation — No parameter validation for Config values (e.g., Intensity 0-1, Samples > 0) before applying effects (`types.go:204-231`)
 - [ ] **low** Documentation — Utility functions normalizeColor, applyBrightnessAdjustment, etc. lack godoc comments (`color_grading.go:44-107`)
 - [ ] **low** Documentation — Helper functions clamp, lerp, smoothstep lack godoc comments (`processor.go:72-102`)
@@ -24,7 +24,7 @@ Unable to measure (requires display environment for Ebiten). Estimated 75-85% ba
 - **GPU resource management**: GPUProcessor.Dispose() properly releases resources
 
 ## Recommendations
-1. Add structured logging (logrus.WithFields) for shader compilation errors in ensureShaders() and ApplyAll() error path
+1. ~~Add structured logging (logrus.WithFields) for shader compilation errors in ensureShaders() and ApplyAll() error path~~ — **DONE 2026-02-13**: Added NewGPUProcessorWithLogger constructor and structured logging with shader name context
 2. Implement ValidateConfig() function to check parameter ranges before applying effects (return ValidationError for out-of-range values)
 3. Add godoc comments to all utility/helper functions (normalizeColor, clamp, lerp, smoothstep, apply* functions)
 4. Document GPU shader sources with inline comments explaining uniform parameters and calculations

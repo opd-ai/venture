@@ -6,6 +6,7 @@ import (
 	"sync"
 
 	"github.com/hajimehoshi/ebiten/v2"
+	"github.com/sirupsen/logrus"
 )
 
 // Kage shader sources for GPU-based post-processing effects.
@@ -194,6 +195,9 @@ type GPUProcessor struct {
 
 	// Shader compilation mutex
 	mu sync.Mutex
+
+	// Optional logger for error reporting
+	logger *logrus.Logger
 }
 
 // NewGPUProcessor creates a new GPU-accelerated post-processor.
@@ -207,6 +211,15 @@ func NewGPUProcessor() *GPUProcessor {
 func NewGPUProcessorWithConfig(config Config) *GPUProcessor {
 	return &GPUProcessor{
 		config: config,
+	}
+}
+
+// NewGPUProcessorWithLogger creates a GPU processor with custom configuration and logger.
+// The logger is used to report shader compilation errors for debugging.
+func NewGPUProcessorWithLogger(config Config, logger *logrus.Logger) *GPUProcessor {
+	return &GPUProcessor{
+		config: config,
+		logger: logger,
 	}
 }
 
@@ -230,6 +243,13 @@ func (p *GPUProcessor) ensureShaders() error {
 	if p.vignetteShader == nil {
 		p.vignetteShader, err = ebiten.NewShader(vignetteShaderSrc)
 		if err != nil {
+			if p.logger != nil {
+				p.logger.WithFields(logrus.Fields{
+					"component": "GPUProcessor",
+					"shader":    "vignette",
+					"error":     err.Error(),
+				}).Error("failed to compile vignette shader")
+			}
 			return err
 		}
 	}
@@ -237,6 +257,13 @@ func (p *GPUProcessor) ensureShaders() error {
 	if p.colorGradingShader == nil {
 		p.colorGradingShader, err = ebiten.NewShader(colorGradingShaderSrc)
 		if err != nil {
+			if p.logger != nil {
+				p.logger.WithFields(logrus.Fields{
+					"component": "GPUProcessor",
+					"shader":    "color_grading",
+					"error":     err.Error(),
+				}).Error("failed to compile color grading shader")
+			}
 			return err
 		}
 	}
@@ -244,6 +271,13 @@ func (p *GPUProcessor) ensureShaders() error {
 	if p.chromaticAberrationShader == nil {
 		p.chromaticAberrationShader, err = ebiten.NewShader(chromaticAberrationShaderSrc)
 		if err != nil {
+			if p.logger != nil {
+				p.logger.WithFields(logrus.Fields{
+					"component": "GPUProcessor",
+					"shader":    "chromatic_aberration",
+					"error":     err.Error(),
+				}).Error("failed to compile chromatic aberration shader")
+			}
 			return err
 		}
 	}
@@ -266,6 +300,8 @@ func (p *GPUProcessor) ensureBuffer(width, height int) {
 // ApplyAll applies all enabled effects using GPU shaders.
 // This is the GPU-optimized replacement for the CPU-based Processor.ApplyAll.
 // Returns the processed image. Input image is not modified.
+// If shader compilation fails, the input image is returned unchanged and
+// the error is logged if a logger was provided.
 func (p *GPUProcessor) ApplyAll(input *ebiten.Image) *ebiten.Image {
 	if input == nil {
 		return nil
@@ -274,6 +310,12 @@ func (p *GPUProcessor) ApplyAll(input *ebiten.Image) *ebiten.Image {
 		return input
 	}
 	if err := p.ensureShaders(); err != nil {
+		if p.logger != nil {
+			p.logger.WithFields(logrus.Fields{
+				"component": "GPUProcessor",
+				"error":     err.Error(),
+			}).Warn("shader compilation failed, returning unprocessed image")
+		}
 		return input
 	}
 	return p.applyEnabledEffects(input)

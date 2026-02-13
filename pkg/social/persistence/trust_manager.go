@@ -272,6 +272,12 @@ func (tm *TrustManager) IsAutomaticDecayRunning() bool {
 }
 
 // runDecayLoop is the background goroutine that applies decay at regular intervals.
+// NOTE: Uses time.Now() intentionally - this is a server-side background operation
+// that requires real wall-clock time for trust decay scheduling. The ApplyDecay
+// method accepts a currentTime parameter for deterministic testing, but the
+// production background loop needs actual time for server coordination.
+// This is exempt from seed-based determinism per AUDIT.md guidelines for
+// network/auth/server operations.
 func (tm *TrustManager) runDecayLoop() {
 	for {
 		select {

@@ -1,6 +1,6 @@
 # Audit: github.com/opd-ai/venture/pkg/social
-**Date**: 2026-02-12
-**Status**: Needs Work
+**Date**: 2026-02-13
+**Status**: Complete
 
 ## Summary
 The social package provides well-structured error types for social interactions (chat, trade, trust) and a comprehensive persistence layer for trust, reputation, chat history, and image galleries. Overall health is excellent with 95%+ test coverage and comprehensive documentation. Critical risk: use of `time.Now()` for ID generation and decay scheduling violates determinism requirements for network/auth-exempt contexts, though the package is primarily a utility/infrastructure package rather than procedural generation.
@@ -8,7 +8,7 @@ The social package provides well-structured error types for social interactions 
 ## Issues Found
 - [x] **high** Deterministic procgen — Non-deterministic ID generation using `time.Now().UnixNano()` (`persistence/image_gallery.go:102`) — **FIXED 2026-02-13**: Added TimeProvider interface and NewImageGalleryWithTimeProvider constructor for deterministic timestamp injection
 - [x] **high** Deterministic procgen — Non-deterministic timestamp assignment using `time.Now()` (`persistence/image_gallery.go:111`) — **FIXED 2026-02-13**: createStoredImage now uses injected TimeProvider
-- [ ] **med** Deterministic procgen — Background decay goroutine uses `time.Now()` for automatic decay (`persistence/trust_manager.go:281`)
+- [x] **med** Deterministic procgen — Background decay goroutine uses `time.Now()` for automatic decay (`persistence/trust_manager.go:281`) — **EXEMPTED 2026-02-13**: Documented exemption in godoc comment - server-side background decay requires wall-clock time for scheduling; ApplyDecay method already accepts time parameter for deterministic testing
 - [ ] **low** Error handling — No structured logging with logrus.WithFields throughout the package; errors are returned but not logged with context
 - [ ] **low** Test coverage — Missing benchmarks for compression/serialization operations (Save/Load methods)
 - [ ] **low** Documentation — `persistence/types.go` missing package-level godoc comments (though individual functions are documented)

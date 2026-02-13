@@ -18,7 +18,7 @@ This document tracks the audit status of all Go packages in the Venture codebase
 - [x] `pkg/network/resilience/AUDIT.md` — Needs Work — 3 issues (1 high, 0 med, 2 low)
 
 ### Engine
-- [ ] `pkg/engine/` — Not Started
+- [x] `pkg/engine/AUDIT.md` — Needs Work — 18 issues (7 high, 9 med, 2 low)
 - [x] `pkg/engine/physics/vehicle/AUDIT.md` — Needs Work — 10 issues (3 high, 4 med, 3 low)
 
 ### Procedural Generation

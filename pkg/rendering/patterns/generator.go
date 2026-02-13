@@ -307,21 +307,10 @@ func (g *Generator) calculatePixelDetail(x, y int, config TextureConfig, rng *ra
 
 // applyDetailToChannels applies detail to RGB channels and clamps values to 0-255.
 func (g *Generator) applyDetailToChannels(c color.RGBA, detail float64) (float64, float64, float64) {
-	r := g.clampChannel(float64(c.R) + detail*255)
-	gr := g.clampChannel(float64(c.G) + detail*255)
-	b := g.clampChannel(float64(c.B) + detail*255)
+	r := g.clampColorValue(float64(c.R) + detail*255)
+	gr := g.clampColorValue(float64(c.G) + detail*255)
+	b := g.clampColorValue(float64(c.B) + detail*255)
 	return r, gr, b
-}
-
-// clampChannel ensures a color channel value stays within 0-255 range.
-func (g *Generator) clampChannel(value float64) float64 {
-	if value < 0 {
-		return 0
-	}
-	if value > 255 {
-		return 255
-	}
-	return value
 }
 
 // addVariation adds per-pixel variation to prevent repetitive patterns.
@@ -334,26 +323,15 @@ func (g *Generator) addVariation(img *image.RGBA, config TextureConfig, rng *ran
 }
 
 // applyPixelVariation applies random color variation to a single pixel.
-func (gen *Generator) applyPixelVariation(img *image.RGBA, x, y int, rng *rand.Rand) {
+func (g *Generator) applyPixelVariation(img *image.RGBA, x, y int, rng *rand.Rand) {
 	variation := (rng.Float64() - 0.5) * 0.08 // ±4% variation
 	c := img.RGBAAt(x, y)
 
-	r := clampColorValue(float64(c.R) * (1 + variation))
-	g := clampColorValue(float64(c.G) * (1 + variation))
-	b := clampColorValue(float64(c.B) * (1 + variation))
+	r := g.clampColorValue(float64(c.R) * (1 + variation))
+	green := g.clampColorValue(float64(c.G) * (1 + variation))
+	b := g.clampColorValue(float64(c.B) * (1 + variation))
 
-	img.SetRGBA(x, y, color.RGBA{R: uint8(r), G: uint8(g), B: uint8(b), A: c.A})
-}
-
-// clampColorValue clamps a color value to the valid range [0, 255].
-func clampColorValue(val float64) float64 {
-	if val < 0 {
-		return 0
-	}
-	if val > 255 {
-		return 255
-	}
-	return val
+	img.SetRGBA(x, y, color.RGBA{R: uint8(r), G: uint8(green), B: uint8(b), A: c.A})
 }
 
 // addDepthEffect adds normal map approximation for depth perception.

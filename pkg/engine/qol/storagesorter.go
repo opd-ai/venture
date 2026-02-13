@@ -9,13 +9,14 @@ import (
 	"sync"
 )
 
-// StorageSorter handles inventory and storage sorting
+// StorageSorter handles inventory and storage sorting with customizable presets.
+// Provides default presets for common sorting patterns (by type, rarity, value).
 type StorageSorter struct {
 	presets map[string]*StorageSortPreset
 	mu      sync.RWMutex
 }
 
-// NewStorageSorter creates a new storage sorter
+// NewStorageSorter creates a new storage sorter with default presets.
 func NewStorageSorter() *StorageSorter {
 	s := &StorageSorter{
 		presets: make(map[string]*StorageSortPreset),
@@ -48,21 +49,22 @@ func NewStorageSorter() *StorageSorter {
 	return s
 }
 
-// AddPreset adds a custom sort preset
+// AddPreset adds or updates a custom sort preset by name.
 func (s *StorageSorter) AddPreset(preset *StorageSortPreset) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.presets[preset.Name] = preset
 }
 
-// GetPreset retrieves a sort preset by name
+// GetPreset retrieves a sort preset by name.
+// Returns nil if the preset does not exist.
 func (s *StorageSorter) GetPreset(name string) *StorageSortPreset {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	return s.presets[name]
 }
 
-// Item represents an inventory item for sorting operations
+// Item represents an inventory item for sorting operations.
 type Item struct {
 	ID       string
 	Name     string
@@ -72,7 +74,8 @@ type Item struct {
 	Quantity int
 }
 
-// SortItems sorts a slice of items using the specified criteria
+// SortItems sorts a slice of items in-place using the specified criteria.
+// Uses stable sort to preserve relative order of equal elements.
 func (s *StorageSorter) SortItems(items []*Item, criteria SortCriteria) {
 	sort.SliceStable(items, func(i, j int) bool {
 		switch criteria {

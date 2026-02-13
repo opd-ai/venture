@@ -1,9 +1,14 @@
 // Package qol - types.go
 // This file contains all type definitions, constants, and helper functions for QoL features.
+// Note: time.Now() usage in this package is intentional. QoL features like guild invitations,
+// mount summoning, and crafting queues are real-time gameplay mechanics that require actual
+// wall-clock time for proper expiry, cooldowns, and UI display. This is distinct from
+// procedural generation which must be deterministic.
 
 package qol
 
 import (
+	"encoding/json"
 	"time"
 )
 
@@ -107,7 +112,8 @@ type StorageSortPreset struct {
 	GroupByType       bool
 }
 
-// QoLComponent is the ECS component for quality of life features
+// QoLComponent is the ECS component for quality of life features.
+// Stores player preferences for auto-loot, crafting, sorting, and other QoL settings.
 type QoLComponent struct {
 	PlayerID        uint64
 	AutoLootEnabled bool
@@ -118,9 +124,50 @@ type QoLComponent struct {
 	RecipeTracking  bool
 }
 
-// Type returns the component type identifier
+// Type returns the component type identifier.
 func (q QoLComponent) Type() string {
 	return "qol"
+}
+
+// qolComponentData is the serialization format for QoLComponent.
+type qolComponentData struct {
+	PlayerID        uint64             `json:"player_id"`
+	AutoLootEnabled bool               `json:"auto_loot_enabled"`
+	AutoLootRadius  float64            `json:"auto_loot_radius"`
+	CraftQueue      []*CraftQueueEntry `json:"craft_queue"`
+	SortPreset      string             `json:"sort_preset"`
+	MountWhistle    bool               `json:"mount_whistle"`
+	RecipeTracking  bool               `json:"recipe_tracking"`
+}
+
+// Serialize converts the QoLComponent to JSON bytes for persistence.
+func (q *QoLComponent) Serialize() ([]byte, error) {
+	data := qolComponentData{
+		PlayerID:        q.PlayerID,
+		AutoLootEnabled: q.AutoLootEnabled,
+		AutoLootRadius:  q.AutoLootRadius,
+		CraftQueue:      q.CraftQueue,
+		SortPreset:      q.SortPreset,
+		MountWhistle:    q.MountWhistle,
+		RecipeTracking:  q.RecipeTracking,
+	}
+	return json.Marshal(data)
+}
+
+// Deserialize restores the QoLComponent from JSON bytes.
+func (q *QoLComponent) Deserialize(data []byte) error {
+	var d qolComponentData
+	if err := json.Unmarshal(data, &d); err != nil {
+		return err
+	}
+	q.PlayerID = d.PlayerID
+	q.AutoLootEnabled = d.AutoLootEnabled
+	q.AutoLootRadius = d.AutoLootRadius
+	q.CraftQueue = d.CraftQueue
+	q.SortPreset = d.SortPreset
+	q.MountWhistle = d.MountWhistle
+	q.RecipeTracking = d.RecipeTracking
+	return nil
 }
 
 // DefaultAutoLootConfig returns default auto-loot settings

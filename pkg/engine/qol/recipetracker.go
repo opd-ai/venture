@@ -8,20 +8,22 @@ import (
 	"sync"
 )
 
-// RecipeTracker tracks recipe availability and missing materials
+// RecipeTracker tracks recipe availability, missing materials, and craftability
+// for players who want to monitor what they can craft.
 type RecipeTracker struct {
 	tracking map[uint64]map[string]*RecipeTrackingInfo // playerID -> recipeID -> tracking info
 	mu       sync.RWMutex
 }
 
-// NewRecipeTracker creates a new recipe tracker
+// NewRecipeTracker creates a new recipe tracker.
 func NewRecipeTracker() *RecipeTracker {
 	return &RecipeTracker{
 		tracking: make(map[uint64]map[string]*RecipeTrackingInfo),
 	}
 }
 
-// TrackRecipe adds a recipe to tracking for a player
+// TrackRecipe adds a recipe to tracking for a player.
+// Automatically calculates missing materials and craftability based on available materials.
 func (r *RecipeTracker) TrackRecipe(playerID uint64, info *RecipeTrackingInfo) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -55,7 +57,8 @@ func (r *RecipeTracker) TrackRecipe(playerID uint64, info *RecipeTrackingInfo) {
 	r.tracking[playerID][info.RecipeID] = info
 }
 
-// GetTrackedRecipes retrieves all tracked recipes for a player
+// GetTrackedRecipes retrieves all tracked recipes for a player.
+// Returns an empty slice if the player has no tracked recipes.
 func (r *RecipeTracker) GetTrackedRecipes(playerID uint64) []*RecipeTrackingInfo {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
@@ -73,7 +76,7 @@ func (r *RecipeTracker) GetTrackedRecipes(playerID uint64) []*RecipeTrackingInfo
 	return result
 }
 
-// UntrackRecipe removes a recipe from tracking
+// UntrackRecipe removes a recipe from tracking for a player.
 func (r *RecipeTracker) UntrackRecipe(playerID uint64, recipeID string) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -83,7 +86,8 @@ func (r *RecipeTracker) UntrackRecipe(playerID uint64, recipeID string) {
 	}
 }
 
-// UpdateMaterialAvailability updates available materials and recalculates craftability
+// UpdateMaterialAvailability updates available materials for a tracked recipe
+// and recalculates craftability and missing materials.
 func (r *RecipeTracker) UpdateMaterialAvailability(playerID uint64, recipeID string, availableMats map[string]int) {
 	r.mu.Lock()
 	defer r.mu.Unlock()

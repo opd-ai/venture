@@ -119,6 +119,87 @@ func TestQoLComponentType(t *testing.T) {
 	}
 }
 
+func TestQoLComponentSerializeDeserialize(t *testing.T) {
+	tests := []struct {
+		name string
+		comp QoLComponent
+	}{
+		{
+			name: "empty component",
+			comp: QoLComponent{},
+		},
+		{
+			name: "full component",
+			comp: QoLComponent{
+				PlayerID:        12345,
+				AutoLootEnabled: true,
+				AutoLootRadius:  7.5,
+				CraftQueue:      []*CraftQueueEntry{{RecipeID: "iron_sword", Quantity: 3, Position: 0}},
+				SortPreset:      "rarity",
+				MountWhistle:    true,
+				RecipeTracking:  true,
+			},
+		},
+		{
+			name: "with craft queue",
+			comp: QoLComponent{
+				PlayerID: 999,
+				CraftQueue: []*CraftQueueEntry{
+					{RecipeID: "recipe1", Quantity: 1, Position: 0},
+					{RecipeID: "recipe2", Quantity: 5, Position: 1},
+				},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Serialize
+			data, err := tt.comp.Serialize()
+			if err != nil {
+				t.Fatalf("Serialize() error = %v", err)
+			}
+
+			// Deserialize
+			var restored QoLComponent
+			if err := restored.Deserialize(data); err != nil {
+				t.Fatalf("Deserialize() error = %v", err)
+			}
+
+			// Verify all fields
+			if restored.PlayerID != tt.comp.PlayerID {
+				t.Errorf("PlayerID = %d, want %d", restored.PlayerID, tt.comp.PlayerID)
+			}
+			if restored.AutoLootEnabled != tt.comp.AutoLootEnabled {
+				t.Errorf("AutoLootEnabled = %v, want %v", restored.AutoLootEnabled, tt.comp.AutoLootEnabled)
+			}
+			if restored.AutoLootRadius != tt.comp.AutoLootRadius {
+				t.Errorf("AutoLootRadius = %f, want %f", restored.AutoLootRadius, tt.comp.AutoLootRadius)
+			}
+			if restored.SortPreset != tt.comp.SortPreset {
+				t.Errorf("SortPreset = %s, want %s", restored.SortPreset, tt.comp.SortPreset)
+			}
+			if restored.MountWhistle != tt.comp.MountWhistle {
+				t.Errorf("MountWhistle = %v, want %v", restored.MountWhistle, tt.comp.MountWhistle)
+			}
+			if restored.RecipeTracking != tt.comp.RecipeTracking {
+				t.Errorf("RecipeTracking = %v, want %v", restored.RecipeTracking, tt.comp.RecipeTracking)
+			}
+			if len(restored.CraftQueue) != len(tt.comp.CraftQueue) {
+				t.Errorf("CraftQueue length = %d, want %d", len(restored.CraftQueue), len(tt.comp.CraftQueue))
+			}
+		})
+	}
+}
+
+func TestQoLComponentDeserializeError(t *testing.T) {
+	var comp QoLComponent
+	err := comp.Deserialize([]byte("invalid json"))
+	if err == nil {
+		t.Error("Deserialize() expected error for invalid JSON")
+	}
+}
+
 func BenchmarkEstimateArrivalTime(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		EstimateArrivalTime(7.5)

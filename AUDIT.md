@@ -27,13 +27,13 @@ This document tracks the audit status of all Go packages in the Venture codebase
 - [x] `pkg/engine/physics/vehicle/AUDIT.md` — Needs Work — 10 issues (3 high, 4 med, 3 low)
 - [x] `pkg/engine/physics/fluids/AUDIT.md` — Complete — 0 issues (6 fixed on 2026-02-13: FluidPhysicsSystem implementation, Serialize/Deserialize methods, structured logging)
 - [x] `pkg/engine/physics/destruction/AUDIT.md` — Needs Work — 4 issues (1 high, 1 med, 2 low)
-- [x] `pkg/engine/qol/AUDIT.md` — Needs Work — 4 issues (0 high, 3 med, 1 low)
+- [x] `pkg/engine/qol/AUDIT.md` — Complete — 0 issues (4 fixed on 2026-02-13: godoc comments, structured logging, Serialize/Deserialize methods, time.Now() documentation)
 - [x] `pkg/engine/prestige/AUDIT.md` — Complete — 3 issues (0 high, 0 med, 3 low)
 
 ### Procedural Generation
 - [x] `pkg/procgen/AUDIT.md` — Complete — 3 issues (0 high, 0 med, 3 low)
 - [x] `pkg/procgen/terrain/AUDIT.md` — Complete — 0 issues (2 fixed on 2026-02-13: cache error handling with structured logging, test expectation fix)
-- [x] `pkg/procgen/entity/AUDIT.md` — Needs Work — 3 issues (1 high, 1 med, 1 low)
+- [x] `pkg/procgen/entity/AUDIT.md` — Complete — 2 issues (0 high, 1 med, 1 low) - Updated 2026-02-13: Fixed high-priority issue (ECS compliance - logic methods moved to standalone query functions)
 - [x] `pkg/procgen/item/AUDIT.md` — Needs Work — 1 issue (0 high, 0 med, 1 low) - Updated 2026-02-13: Fixed 6 issues (5 high, 1 med) - class restrictions and spell effects now populated
 - [x] `pkg/procgen/item/AUDIT_2026-02-13.md` — Complete — 1 issue (0 high, 0 med, 1 low) - Updated 2026-02-13: All genre templates implemented (horror, cyberpunk)
 - [x] `pkg/procgen/item/AUDIT_2026-02-13_COMPREHENSIVE.md` — Complete — 0 issues (0 high, 0 med, 0 low) - Updated 2026-02-13: All 13 issues fixed (9 high, 3 med, 1 low) - all genre templates implemented (fantasy, scifi, horror, cyberpunk, postapoc)
@@ -164,8 +164,8 @@ Each audit should produce a `AUDIT.md` file in the package directory following t
 
 **Total Packages**: 50+  
 **Audited**: 106  
-**Complete**: 64  
-**Needs Work**: 42  
+**Complete**: 66  
+**Needs Work**: 40  
 **Incomplete**: 0  
 **Not Started**: 0
 

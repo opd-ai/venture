@@ -10,20 +10,23 @@ import (
 	"time"
 )
 
-// MountWhistleManager manages vehicle summoning
+// MountWhistleManager manages vehicle summoning via whistle mechanic.
+// Tracks active summon requests and their estimated arrival times.
 type MountWhistleManager struct {
 	summons map[uint64]*MountSummon
 	mu      sync.RWMutex
 }
 
-// NewMountWhistleManager creates a new mount whistle manager
+// NewMountWhistleManager creates a new mount whistle manager.
 func NewMountWhistleManager() *MountWhistleManager {
 	return &MountWhistleManager{
 		summons: make(map[uint64]*MountSummon),
 	}
 }
 
-// SummonMount summons a vehicle to the player
+// SummonMount initiates a vehicle summon to the player's location.
+// Calculates distance and estimated arrival time based on current and target positions.
+// The RequestTime uses time.Now() for accurate summon timing (real-time gameplay feature).
 func (m *MountWhistleManager) SummonMount(summon *MountSummon) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -33,20 +36,21 @@ func (m *MountWhistleManager) SummonMount(summon *MountSummon) {
 			math.Pow(summon.TargetPos[1]-summon.CurrentPos[1], 2),
 	)
 	summon.EstimatedTime = EstimateArrivalTime(summon.Distance)
-	summon.RequestTime = time.Now()
+	summon.RequestTime = time.Now() // Real-time timestamp for summon timing
 	summon.Completed = false
 
 	m.summons[summon.PlayerID] = summon
 }
 
-// GetActiveSummon retrieves the active summon for a player
+// GetActiveSummon retrieves the current active summon for a player.
+// Returns nil if the player has no active summon request.
 func (m *MountWhistleManager) GetActiveSummon(playerID uint64) *MountSummon {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 	return m.summons[playerID]
 }
 
-// CompleteSummon marks a summon as completed
+// CompleteSummon marks a summon as completed when the vehicle arrives.
 func (m *MountWhistleManager) CompleteSummon(playerID uint64) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -55,7 +59,7 @@ func (m *MountWhistleManager) CompleteSummon(playerID uint64) {
 	}
 }
 
-// CancelSummon cancels an active summon
+// CancelSummon cancels an active summon request for a player.
 func (m *MountWhistleManager) CancelSummon(playerID uint64) {
 	m.mu.Lock()
 	defer m.mu.Unlock()

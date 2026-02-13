@@ -216,6 +216,61 @@ func TestGenerateGradient_SingleColor(t *testing.T) {
 	}
 }
 
+func TestGenerateGradient_ZeroDimensions(t *testing.T) {
+	tests := []struct {
+		name   string
+		width  int
+		height int
+	}{
+		{"zero width", 0, 100},
+		{"zero height", 100, 0},
+		{"both zero", 0, 0},
+		{"negative width", -5, 100},
+		{"negative height", 100, -5},
+		{"both negative", -5, -5},
+	}
+
+	config := GradientConfig{
+		Type:   GradientLinear,
+		Colors: []color.Color{color.Black, color.White},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Should not panic, returns 1x1 minimum image
+			img := GenerateGradient(tt.width, tt.height, config)
+			if img == nil {
+				t.Error("GenerateGradient() returned nil for edge case dimensions")
+			}
+			// Verify dimensions are at least 1x1
+			if img.Bounds().Dx() < 1 || img.Bounds().Dy() < 1 {
+				t.Errorf("GenerateGradient() returned invalid dimensions: %dx%d",
+					img.Bounds().Dx(), img.Bounds().Dy())
+			}
+		})
+	}
+}
+
+func TestCalculateRadialGradient_ZeroRadius(t *testing.T) {
+	tests := []struct {
+		name   string
+		radius float64
+	}{
+		{"zero radius", 0.0},
+		{"negative radius", -0.5},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Should not panic, treats as radius=1.0
+			got := calculateRadialGradient(0.5, 0.5, 0.0, 0.0, tt.radius)
+			if got < 0 || got > 1 {
+				t.Errorf("calculateRadialGradient with radius=%f returned %f, want [0, 1]", tt.radius, got)
+			}
+		})
+	}
+}
+
 func TestCalculateLinearGradient(t *testing.T) {
 	tests := []struct {
 		name  string

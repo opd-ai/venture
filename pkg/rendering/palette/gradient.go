@@ -11,7 +11,17 @@ import (
 )
 
 // GenerateGradient creates a gradient image based on the configuration.
+// Width and height must be positive; values <= 0 are treated as 1 to prevent
+// division by zero while still generating a valid (minimal) image.
 func GenerateGradient(width, height int, config GradientConfig) *image.RGBA {
+	// Prevent division by zero - default to 1x1 for invalid dimensions
+	if width <= 0 {
+		width = 1
+	}
+	if height <= 0 {
+		height = 1
+	}
+
 	img := image.NewRGBA(image.Rect(0, 0, width, height))
 
 	if len(config.Colors) < 2 {
@@ -70,10 +80,15 @@ func calculateLinearGradient(x, y, angle float64) float64 {
 }
 
 // calculateRadialGradient computes gradient position for radial gradients.
+// Radius values <= 0 are treated as 1.0 to prevent division by zero.
 func calculateRadialGradient(x, y, cx, cy, radius float64) float64 {
 	dx := x - cx
 	dy := y - cy
 	dist := math.Sqrt(dx*dx + dy*dy)
+	// Prevent division by zero - default to 1.0 for invalid radius
+	if radius <= 0 {
+		radius = 1.0
+	}
 	// Normalize by radius and clamp to [0, 1]
 	t := dist / radius
 	if t > 1.0 {

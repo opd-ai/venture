@@ -1,4 +1,10 @@
-// Package chat provides player-to-player chat functionality with E2E encryption.
+// Package chat provides player-to-player chat functionality with validation
+// and rate limiting. This package acts as a network wrapper around the engine
+// chat system, adding message validation and DoS protection.
+//
+// Note: This package uses time.Now() for message timestamps, which is intentional
+// and exempt from the deterministic-procgen rule. Network chat messages inherently
+// require real timestamps for multiplayer synchronization and message ordering.
 package chat
 
 import (
@@ -9,6 +15,7 @@ import (
 
 	"github.com/opd-ai/venture/pkg/engine"
 	"github.com/opd-ai/venture/pkg/validation"
+	log "github.com/sirupsen/logrus"
 )
 
 const (
@@ -45,58 +52,81 @@ func (s *ChatSystem) Update(deltaTime float64) {
 func (s *ChatSystem) SendMessage(senderID uint64, channel engine.ChatChannel, content string) error {
 	// Check rate limit
 	if !s.limiter.Allow(senderID) {
+		log.WithFields(log.Fields{
+			"sender_id": senderID,
+			"channel":   channel,
+			"limit":     ChatRateLimit,
+		}).Warn("chat rate limit exceeded")
 		return fmt.Errorf("rate limit exceeded (maximum 10 messages per second)")
 	}
 
 	// Validate and sanitize message
 	sanitized, err := s.validator.ValidateAndSanitize(content)
 	if err != nil {
+		log.WithFields(log.Fields{
+			"sender_id": senderID,
+			"channel":   channel,
+			"error":     err.Error(),
+		}).Warn("chat message validation failed")
 		return fmt.Errorf("message validation failed: %w", err)
 	}
 
 	// Generate message ID
 	msgID, err := generateMessageID()
 	if err != nil {
+		log.WithFields(log.Fields{
+			"sender_id": senderID,
+			"error":     err.Error(),
+		}).Error("failed to generate message ID")
 		return fmt.Errorf("failed to generate message ID: %w", err)
 	}
 
 	// Create message with sanitized content
+	// Note: time.Now() is intentional here - chat messages require real timestamps
 	message := engine.ChatMessage{
 		ID:        msgID,
 		SenderID:  senderID,
 		Channel:   channel,
-		Content:   sanitized,  // Use sanitized content
-		Timestamp: time.Now(), // Use current timestamp for message creation
-		Encrypted: nil,        // E2E encryption available in pkg/network/chat.go
+		Content:   sanitized,
+		Timestamp: time.Now(),
+		Encrypted: nil,
 	}
 
 	// Add to sender's chat component
 	sender, ok := s.world.GetEntity(senderID)
 	if !ok || sender == nil {
+		log.WithFields(log.Fields{
+			"sender_id": senderID,
+		}).Error("chat sender entity not found")
 		return fmt.Errorf("sender entity not found")
 	}
 
 	chatCompRaw, ok := sender.GetComponent("chat")
+	var chatComp *engine.ChatComponent
 	if !ok {
-		// Create chat component
-		chatComp := &engine.ChatComponent{
-			Messages:       []engine.ChatMessage{},
-			UnreadCount:    0,
-			ActiveChannels: []engine.ChatChannel{channel},
-		}
+		// Create chat component using helper for proper defaults
+		chatComp = engine.NewChatComponent()
+		chatComp.ActiveChannels = append(chatComp.ActiveChannels, channel)
 		sender.AddComponent(chatComp)
-		chatCompRaw, _ = sender.GetComponent("chat")
+	} else {
+		chatComp, ok = chatCompRaw.(*engine.ChatComponent)
+		if !ok {
+			log.WithFields(log.Fields{
+				"sender_id": senderID,
+			}).Error("chat component type assertion failed")
+			return fmt.Errorf("invalid chat component type")
+		}
 	}
 
-	chatComp := chatCompRaw.(*engine.ChatComponent)
 	chatComp.Messages = append(chatComp.Messages, message)
 
-	// Message broadcasting and encryption are handled by the main chat system
-	// in pkg/network/chat.go which provides full E2E encryption support
+	// Message broadcasting is handled by the engine chat system
 
 	return nil
 }
 
+// generateMessageID creates a collision-resistant message ID using 128 bits
+// of cryptographic randomness encoded as URL-safe base64.
 func generateMessageID() (string, error) {
 	b := make([]byte, 16)
 	_, err := rand.Read(b)

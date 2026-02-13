@@ -1114,3 +1114,143 @@ func TestCyberpunkConsumableGeneration(t *testing.T) {
 		t.Error("Expected cyberpunk scrolls to have spell effects")
 	}
 }
+
+// TestGetPostApocWeaponTemplates tests post-apocalyptic weapon template structure.
+func TestGetPostApocWeaponTemplates(t *testing.T) {
+	templates := GetPostApocWeaponTemplates()
+	if len(templates) == 0 {
+		t.Fatal("Expected post-apocalyptic weapon templates")
+	}
+
+	for i, tmpl := range templates {
+		if tmpl.BaseType != TypeWeapon {
+			t.Errorf("Template %d has wrong base type: %v", i, tmpl.BaseType)
+		}
+		if len(tmpl.NamePrefixes) == 0 {
+			t.Errorf("Template %d has no name prefixes", i)
+		}
+		if len(tmpl.NameSuffixes) == 0 {
+			t.Errorf("Template %d has no name suffixes", i)
+		}
+		if len(tmpl.Tags) == 0 {
+			t.Errorf("Template %d has no tags", i)
+		}
+	}
+}
+
+// TestGetPostApocArmorTemplates tests post-apocalyptic armor template structure.
+func TestGetPostApocArmorTemplates(t *testing.T) {
+	templates := GetPostApocArmorTemplates()
+	if len(templates) == 0 {
+		t.Fatal("Expected post-apocalyptic armor templates")
+	}
+
+	for i, tmpl := range templates {
+		if tmpl.BaseType != TypeArmor {
+			t.Errorf("Template %d has wrong base type: %v", i, tmpl.BaseType)
+		}
+		if len(tmpl.NamePrefixes) == 0 {
+			t.Errorf("Template %d has no name prefixes", i)
+		}
+		if len(tmpl.NameSuffixes) == 0 {
+			t.Errorf("Template %d has no name suffixes", i)
+		}
+	}
+}
+
+// TestGetPostApocConsumableTemplates tests post-apocalyptic consumable template structure.
+func TestGetPostApocConsumableTemplates(t *testing.T) {
+	templates := GetPostApocConsumableTemplates()
+	if len(templates) == 0 {
+		t.Fatal("Expected post-apocalyptic consumable templates")
+	}
+
+	for i, tmpl := range templates {
+		if tmpl.BaseType != TypeConsumable {
+			t.Errorf("Template %d has wrong base type: %v", i, tmpl.BaseType)
+		}
+		if len(tmpl.NamePrefixes) == 0 {
+			t.Errorf("Template %d has no name prefixes", i)
+		}
+		if len(tmpl.NameSuffixes) == 0 {
+			t.Errorf("Template %d has no name suffixes", i)
+		}
+	}
+}
+
+// TestPostApocItemGeneration tests post-apocalyptic item generation produces valid items.
+func TestPostApocItemGeneration(t *testing.T) {
+	gen := NewItemGenerator()
+	params := procgen.GenerationParams{
+		Depth:      5,
+		Difficulty: 0.5,
+		GenreID:    "postapoc",
+		Custom: map[string]interface{}{
+			"count": 50,
+		},
+	}
+
+	result, err := gen.Generate(99999, params)
+	if err != nil {
+		t.Fatalf("Generate failed: %v", err)
+	}
+
+	items := result.([]*Item)
+	if len(items) != 50 {
+		t.Errorf("Expected 50 items, got %d", len(items))
+	}
+
+	// Validate all items have names
+	for i, item := range items {
+		if item.Name == "" {
+			t.Errorf("Post-apocalyptic item %d has empty name", i)
+		}
+	}
+}
+
+// TestPostApocConsumableGeneration tests post-apocalyptic consumables have correct spell effects.
+func TestPostApocConsumableGeneration(t *testing.T) {
+	gen := NewItemGenerator()
+	params := procgen.GenerationParams{
+		Depth:      5,
+		Difficulty: 0.5,
+		GenreID:    "postapoc",
+		Custom: map[string]interface{}{
+			"count": 50,
+			"type":  "consumable",
+		},
+	}
+
+	result, err := gen.Generate(88888, params)
+	if err != nil {
+		t.Fatalf("Generate failed: %v", err)
+	}
+
+	items := result.([]*Item)
+	scrollsFound := 0
+	scrollsWithEffects := 0
+
+	for _, item := range items {
+		if item.ConsumableType == ConsumableScroll {
+			scrollsFound++
+			if item.SpellEffectID != "" {
+				scrollsWithEffects++
+				validEffects := map[string]bool{
+					"deploy_turret":  true,
+					"purify_area":    true,
+					"rad_protection": true,
+					"signal_flare":   true,
+				}
+				if !validEffects[item.SpellEffectID] {
+					t.Errorf("Post-apocalyptic scroll %s has unknown spell effect: %s", item.Name, item.SpellEffectID)
+				}
+			}
+		}
+	}
+
+	t.Logf("Generated %d postapoc scrolls (%d with effects)", scrollsFound, scrollsWithEffects)
+
+	if scrollsFound > 0 && scrollsWithEffects == 0 {
+		t.Error("Expected post-apocalyptic scrolls to have spell effects")
+	}
+}

@@ -656,3 +656,163 @@ func GetCyberpunkConsumableTemplates() []ItemTemplate {
 		},
 	}
 }
+
+// GetPostApocWeaponTemplates returns weapon templates for post-apocalyptic genre.
+func GetPostApocWeaponTemplates() []ItemTemplate {
+	return []ItemTemplate{
+		{
+			BaseType:          TypeWeapon,
+			WeaponType:        WeaponAxe,
+			NamePrefixes:      []string{"Rusted", "Salvaged", "Jury-Rigged", "Scrapped", "Wasteland"},
+			NameSuffixes:      []string{"Machete", "Axe", "Sledge", "Hammer"},
+			Tags:              []string{"makeshift", "brutal", "scrap"},
+			DamageRange:       [2]int{8, 16},
+			AttackSpeedRange:  [2]float64{0.7, 1.0},
+			ValueRange:        [2]int{15, 80},
+			WeightRange:       [2]float64{3.0, 7.0},
+			DurabilityRange:   [2]int{30, 70},
+			ClassRestrictions: []string{}, // Survival weapons usable by any class
+		},
+		{
+			BaseType:          TypeWeapon,
+			WeaponType:        WeaponDagger,
+			NamePrefixes:      []string{"Sharpened", "Bone", "Scrap", "Rusty", "Makeshift"},
+			NameSuffixes:      []string{"Shiv", "Spike", "Blade", "Knife"},
+			Tags:              []string{"light", "concealed", "crude"},
+			DamageRange:       [2]int{4, 9},
+			AttackSpeedRange:  [2]float64{1.3, 1.7},
+			ValueRange:        [2]int{5, 40},
+			WeightRange:       [2]float64{0.2, 0.8},
+			DurabilityRange:   [2]int{20, 50},
+			ClassRestrictions: []string{}, // Light weapons usable by any class
+		},
+		{
+			BaseType:         TypeWeapon,
+			WeaponType:       WeaponGun,
+			NamePrefixes:     []string{"Pipe", "Scrap", "Salvaged", "Jury-Rigged", "Wasteland"},
+			NameSuffixes:     []string{"Rifle", "Shotgun", "Pistol", "Carbine"},
+			Tags:             []string{"firearm", "unreliable", "scarce_ammo"},
+			DamageRange:      [2]int{10, 20},
+			AttackSpeedRange: [2]float64{0.5, 0.9},
+			ValueRange:       [2]int{60, 250},
+			WeightRange:      [2]float64{3.0, 7.0},
+			DurabilityRange:  [2]int{40, 80},
+			// Projectile properties
+			IsProjectile:         true,
+			ProjectileSpeedRange: [2]float64{400.0, 700.0},
+			ProjectileLifetime:   1.8,
+			ProjectileType:       "bullet",
+			PierceChance:         0.15,
+			PierceRange:          [2]int{1, 2},
+			BounceChance:         0.0,
+			ExplosiveChance:      0.08, // Rare homemade explosive rounds
+			ExplosionRadiusRange: [2]float64{25.0, 45.0},
+			ClassRestrictions:    []string{}, // Guns usable by any class
+		},
+		{
+			BaseType:         TypeWeapon,
+			WeaponType:       WeaponCrossbow, // Using as improvised launcher
+			NamePrefixes:     []string{"Nail", "Scrap", "Pneumatic", "Spring", "Homemade"},
+			NameSuffixes:     []string{"Gun", "Launcher", "Chucker", "Thrower"},
+			Tags:             []string{"improvised", "silent", "ammo_efficient"},
+			DamageRange:      [2]int{7, 14},
+			AttackSpeedRange: [2]float64{0.8, 1.1},
+			ValueRange:       [2]int{30, 120},
+			WeightRange:      [2]float64{2.0, 5.0},
+			DurabilityRange:  [2]int{35, 65},
+			// Projectile properties
+			IsProjectile:         true,
+			ProjectileSpeedRange: [2]float64{200.0, 350.0},
+			ProjectileLifetime:   2.0,
+			ProjectileType:       "bolt",
+			PierceChance:         0.20,
+			PierceRange:          [2]int{1, 2},
+			BounceChance:         0.0,
+			ExplosiveChance:      0.0,
+			ClassRestrictions:    []string{}, // Improvised launchers usable by any class
+		},
+		{
+			BaseType:          TypeWeapon,
+			WeaponType:        WeaponSword,
+			NamePrefixes:      []string{"Stop Sign", "Rebar", "Pipe", "Crowbar", "Wrench"},
+			NameSuffixes:      []string{"Club", "Bat", "Bludgeon", "Beater"},
+			Tags:              []string{"blunt", "common", "durable"},
+			DamageRange:       [2]int{6, 13},
+			AttackSpeedRange:  [2]float64{0.9, 1.2},
+			ValueRange:        [2]int{5, 35},
+			WeightRange:       [2]float64{2.0, 5.0},
+			DurabilityRange:   [2]int{60, 120},
+			ClassRestrictions: []string{}, // Improvised weapons usable by any class
+		},
+	}
+}
+
+// GetPostApocArmorTemplates returns armor templates for post-apocalyptic genre.
+func GetPostApocArmorTemplates() []ItemTemplate {
+	return []ItemTemplate{
+		{
+			BaseType:          TypeArmor,
+			ArmorType:         ArmorChest,
+			NamePrefixes:      []string{"Scrap", "Tire", "Road Sign", "Barrel Lid", "Wasteland"},
+			NameSuffixes:      []string{"Vest", "Harness", "Plates", "Armor"},
+			Tags:              []string{"improvised", "heavy", "noisy"},
+			DefenseRange:      [2]int{6, 18},
+			ValueRange:        [2]int{25, 120},
+			WeightRange:       [2]float64{4.0, 10.0},
+			DurabilityRange:   [2]int{50, 100},
+			ClassRestrictions: []string{}, // Scrap armor usable by any class
+		},
+		{
+			BaseType:          TypeArmor,
+			ArmorType:         ArmorHelmet,
+			NamePrefixes:      []string{"Bucket", "Pot", "Football", "Motorcycle", "Welding"},
+			NameSuffixes:      []string{"Helm", "Helmet", "Mask", "Hood"},
+			Tags:              []string{"improvised", "visibility_reduced"},
+			DefenseRange:      [2]int{3, 10},
+			ValueRange:        [2]int{10, 60},
+			WeightRange:       [2]float64{1.0, 3.0},
+			DurabilityRange:   [2]int{30, 70},
+			ClassRestrictions: []string{}, // Improvised helmets usable by any class
+		},
+		{
+			BaseType:          TypeArmor,
+			ArmorType:         ArmorShield,
+			NamePrefixes:      []string{"Car Door", "Manhole", "Trash Can", "Stop Sign", "Sheet Metal"},
+			NameSuffixes:      []string{"Shield", "Blocker", "Guard", "Barrier"},
+			Tags:              []string{"improvised", "heavy", "unwieldy"},
+			DefenseRange:      [2]int{8, 16},
+			ValueRange:        [2]int{15, 70},
+			WeightRange:       [2]float64{6.0, 12.0},
+			DurabilityRange:   [2]int{60, 120},
+			ClassRestrictions: []string{}, // Improvised shields usable by any class
+		},
+	}
+}
+
+// GetPostApocConsumableTemplates returns consumable templates for post-apocalyptic genre.
+func GetPostApocConsumableTemplates() []ItemTemplate {
+	return []ItemTemplate{
+		{
+			BaseType:       TypeConsumable,
+			ConsumableType: ConsumablePotion,
+			NamePrefixes:   []string{"Salvaged", "Expired", "Homemade", "Bootleg", "Irradiated"},
+			NameSuffixes:   []string{"Med Kit", "Bandages", "Rad-Away", "Stimpak"},
+			Tags:           []string{"medical", "scarce", "possibly_contaminated"},
+			ValueRange:     [2]int{20, 100},
+			WeightRange:    [2]float64{0.2, 0.5},
+		},
+		{
+			BaseType:         TypeConsumable,
+			ConsumableType:   ConsumableScroll, // Using scroll type for blueprints/schematics
+			NamePrefixes:     []string{"Blueprint:", "Schematic:", "Recipe:"},
+			NameSuffixes:     []string{"Makeshift Turret", "Water Purifier", "Rad Shield", "Signal Flare"},
+			Tags:             []string{"knowledge", "crafting", "survival"},
+			ValueRange:       [2]int{35, 180},
+			WeightRange:      [2]float64{0.1, 0.2},
+			SpellEffectIDs:   []string{"deploy_turret", "purify_area", "rad_protection", "signal_flare"},
+			SpellDurations:   []float64{60.0, 0.0, 30.0, 5.0},
+			SpellTargetTypes: []string{"area", "area", "self", "area"},
+			SpellRadii:       []float64{80.0, 50.0, 0.0, 200.0},
+		},
+	}
+}

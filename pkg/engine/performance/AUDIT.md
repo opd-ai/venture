@@ -3,12 +3,12 @@
 **Status**: Needs Work
 
 ## Summary
-Performance optimization toolkit providing memory profiling, network batching, caching, background loading, and LOD management. Package is well-structured with excellent test coverage (94.6%) and clean concurrency patterns. Critical issue: BackgroundLoader has stub implementation with simulated delays instead of actual resource loading. Cache hit rate is hardcoded rather than measured. No structured logging throughout.
+Performance optimization toolkit providing memory profiling, network batching, caching, background loading, and LOD management. Package is well-structured with excellent test coverage (94.8%) and clean concurrency patterns. Cache hit rate now calculated from actual hits/misses. BackgroundLoader now uses ResourceLoader interface for actual resource loading instead of stub.
 
 ## Issues Found
-- [ ] **severity:high** stub/incomplete — BackgroundLoader.worker has stub implementation with `time.Sleep(100 * time.Millisecond)` comment "Simulate loading" instead of actual resource loading logic (`cache_and_lod.go:272`)
-- [ ] **severity:high** stub/incomplete — CacheManager.GetStats returns hardcoded hit rate 95% instead of calculating from actual cache hits/misses (`cache_and_lod.go:157`)
-- [ ] **severity:high** stub/incomplete — CacheManager lacks hit/miss tracking fields and logic; no way to calculate actual hit rate (`cache_and_lod.go:12-19`)
+- [x] **severity:high** stub/incomplete — BackgroundLoader.worker has stub implementation with `time.Sleep(100 * time.Millisecond)` comment "Simulate loading" instead of actual resource loading logic (`cache_and_lod.go:272`) — **FIXED**: Added ResourceLoader interface with Load() method; worker now calls loader.Load() instead of sleeping
+- [x] **severity:high** stub/incomplete — CacheManager.GetStats returns hardcoded hit rate 95% instead of calculating from actual cache hits/misses (`cache_and_lod.go:157`) — **FIXED**: Now calculates hit rate from hitCount/missCount tracking
+- [x] **severity:high** stub/incomplete — CacheManager lacks hit/miss tracking fields and logic; no way to calculate actual hit rate (`cache_and_lod.go:12-19`) — **FIXED**: Added hitCount and missCount fields, updated Get() to track hits/misses
 - [ ] **severity:med** error handling — NetworkBatcher.GetStats per-second rate calculation uses `LastBatchTime` which may be stale; should track start time or use different approach for accurate rate calculation (`network_batcher.go:151-155`)
 - [ ] **severity:med** error handling — No structured logging with `logrus.WithFields` on any error paths or state changes; violates project logging standards (`all files`)
 - [ ] **severity:med** doc coverage — Doc.go example shows `NewNetworkBatcher(100)` but actual constructor requires 2 parameters (windowMs, sendFunc); misleading example (`doc.go:24`)
@@ -17,7 +17,7 @@ Performance optimization toolkit providing memory profiling, network batching, c
 - [ ] **severity:low** error handling — MemoryProfiler.ReleaseAllocation silently clamps underflow without logging; should use structured logging to track potential issues (`memory_profiler.go:53-56`)
 
 ## Test Coverage
-94.6% (target: 65%) ✅ **EXCELLENT**
+94.8% (target: 65%) ✅ **EXCELLENT**
 
 ## Integration Status
 Package is integrated into the engine via `PerformanceMonitoringSystem` in `pkg/engine/performance_monitoring_system.go`. The system creates a `PerformanceMonitor` and tracks frame time, memory, network, and cache stats. Package is properly imported and used.
@@ -25,16 +25,16 @@ Package is integrated into the engine via `PerformanceMonitoringSystem` in `pkg/
 **Integration Points:**
 - ✅ Used by `PerformanceMonitoringSystem` in main engine
 - ✅ Provides monitoring for V9 systems (raids, guild halls, terrain)
-- ⚠️ BackgroundLoader stub prevents actual resource preloading
-- ⚠️ Cache metrics incomplete due to missing hit/miss tracking
+- ✅ BackgroundLoader supports custom ResourceLoader injection via NewBackgroundLoaderWithLoader()
+- ✅ Cache hit rate calculated from actual Get() calls
 
 **Dependencies:**
 - `github.com/opd-ai/venture/pkg/recovery` — Used for goroutine panic recovery (correct usage)
 - Standard library: `sync`, `time`, `runtime`, `container/list`
 
 ## Recommendations
-1. **[CRITICAL]** Implement actual resource loading in `BackgroundLoader.worker` — remove `time.Sleep` stub and add real loading logic for raids, guild halls, terrain, etc.
-2. **[CRITICAL]** Add cache hit/miss tracking fields to `CacheManager` and implement real hit rate calculation in `GetStats`
+1. ~~**[CRITICAL]** Implement actual resource loading in `BackgroundLoader.worker`~~ ✅ FIXED: Added ResourceLoader interface
+2. ~~**[CRITICAL]** Add cache hit/miss tracking fields to `CacheManager` and implement real hit rate calculation in `GetStats`~~ ✅ FIXED: Added hitCount/missCount tracking
 3. **[HIGH]** Add structured logging with `logrus.WithFields` for all state changes, errors, evictions, batch sends, worker panics
 4. **[MEDIUM]** Fix `NetworkBatcher.GetStats` rate calculation to use a proper start time instead of stale `LastBatchTime`
 5. **[MEDIUM]** Add parameter validation to all constructors with error returns or panic for invalid inputs

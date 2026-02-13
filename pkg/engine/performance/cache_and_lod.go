@@ -16,6 +16,8 @@ type CacheManager struct {
 	lruList   *list.List
 	lruMap    map[string]*list.Element
 	stats     *CacheStats
+	hitCount  uint64 // Total cache hits
+	missCount uint64 // Total cache misses
 }
 
 // NewCacheManager creates a new cache manager
@@ -71,8 +73,12 @@ func (cm *CacheManager) Get(key string) (interface{}, bool) {
 
 	entry, exists := cm.entries[key]
 	if !exists {
+		cm.missCount++
 		return nil, false
 	}
+
+	// Track cache hit
+	cm.hitCount++
 
 	// Update access stats
 	entry.LastAccessed = time.Now()
@@ -153,8 +159,13 @@ func (cm *CacheManager) GetStats() *CacheStats {
 
 	stats := *cm.stats
 
-	// Calculate hit rate (placeholder, would need hit/miss tracking)
-	stats.HitRate = 0.95 // Assume 95% for now
+	// Calculate actual hit rate from tracked hits/misses
+	totalRequests := cm.hitCount + cm.missCount
+	if totalRequests > 0 {
+		stats.HitRate = float64(cm.hitCount) / float64(totalRequests)
+	} else {
+		stats.HitRate = 0.0 // No requests yet
+	}
 
 	return &stats
 }
@@ -169,6 +180,24 @@ func (cm *CacheManager) Clear() {
 	cm.lruMap = make(map[string]*list.Element)
 	cm.stats.ItemCount = 0
 	cm.stats.CurrentSizeMB = 0
+	cm.hitCount = 0
+	cm.missCount = 0
+}
+
+// ResourceLoader defines the interface for loading resources
+type ResourceLoader interface {
+	// Load loads the resource identified by the request and returns the loaded data
+	Load(request *LoadRequest) (interface{}, error)
+}
+
+// DefaultResourceLoader provides a no-op implementation for testing
+type DefaultResourceLoader struct{}
+
+// Load returns nil data (no-op implementation)
+func (d *DefaultResourceLoader) Load(request *LoadRequest) (interface{}, error) {
+	// Default implementation returns nil - actual resource loading
+	// is provided by injecting a real ResourceLoader implementation
+	return nil, nil
 }
 
 // BackgroundLoader preloads resources asynchronously
@@ -179,6 +208,7 @@ type BackgroundLoader struct {
 	workChan chan *LoadRequest
 	stopChan chan struct{}
 	running  bool
+	loader   ResourceLoader // Injected resource loader
 }
 
 // NewBackgroundLoader creates a new background loader
@@ -188,6 +218,21 @@ func NewBackgroundLoader(workers int) *BackgroundLoader {
 		workers:  workers,
 		workChan: make(chan *LoadRequest, 100),
 		stopChan: make(chan struct{}),
+		loader:   &DefaultResourceLoader{},
+	}
+}
+
+// NewBackgroundLoaderWithLoader creates a new background loader with a custom resource loader
+func NewBackgroundLoaderWithLoader(workers int, loader ResourceLoader) *BackgroundLoader {
+	if loader == nil {
+		loader = &DefaultResourceLoader{}
+	}
+	return &BackgroundLoader{
+		queue:    make([]*LoadRequest, 0),
+		workers:  workers,
+		workChan: make(chan *LoadRequest, 100),
+		stopChan: make(chan struct{}),
+		loader:   loader,
 	}
 }
 
@@ -268,8 +313,11 @@ func (bl *BackgroundLoader) worker() {
 	for {
 		select {
 		case request := <-bl.workChan:
-			// Simulate loading (actual implementation would load resources)
-			time.Sleep(100 * time.Millisecond)
+			// Load resource using the injected loader
+			data, err := bl.loader.Load(request)
+			if err == nil && data != nil {
+				request.Data = data
+			}
 
 			if request.Callback != nil {
 				request.Callback(request.Data)

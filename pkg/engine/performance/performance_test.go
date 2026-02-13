@@ -475,6 +475,52 @@ func TestCacheClear(t *testing.T) {
 	}
 }
 
+// TestCacheHitRate tests cache hit rate calculation
+func TestCacheHitRate(t *testing.T) {
+	cm := NewCacheManager(100 * 1024 * 1024)
+
+	// Initial hit rate should be 0 (no requests)
+	stats := cm.GetStats()
+	if stats.HitRate != 0.0 {
+		t.Errorf("Expected 0 hit rate with no requests, got %f", stats.HitRate)
+	}
+
+	// Add entries
+	cm.Set("entry1", "data1", 1024)
+	cm.Set("entry2", "data2", 1024)
+
+	// 2 hits
+	cm.Get("entry1")
+	cm.Get("entry2")
+
+	// 2 misses
+	cm.Get("non-existent1")
+	cm.Get("non-existent2")
+
+	// Hit rate should be 50% (2 hits / 4 total)
+	stats = cm.GetStats()
+	if stats.HitRate != 0.5 {
+		t.Errorf("Expected 0.5 hit rate, got %f", stats.HitRate)
+	}
+
+	// 2 more hits (4 hits / 6 total = 66.7%)
+	cm.Get("entry1")
+	cm.Get("entry2")
+
+	stats = cm.GetStats()
+	expectedRate := 4.0 / 6.0
+	if stats.HitRate != expectedRate {
+		t.Errorf("Expected %f hit rate, got %f", expectedRate, stats.HitRate)
+	}
+
+	// Clear should reset hit rate
+	cm.Clear()
+	stats = cm.GetStats()
+	if stats.HitRate != 0.0 {
+		t.Errorf("Expected 0 hit rate after clear, got %f", stats.HitRate)
+	}
+}
+
 // TestBackgroundLoaderPreloadGuildHall tests guild hall preloading
 func TestBackgroundLoaderPreloadGuildHall(t *testing.T) {
 	bl := NewBackgroundLoader(2)
@@ -491,6 +537,77 @@ func TestBackgroundLoaderPreloadGuildHall(t *testing.T) {
 
 	if atomic.LoadInt32(&loaded) != 1 {
 		t.Error("Expected guild hall to be loaded")
+	}
+}
+
+// mockResourceLoader implements ResourceLoader for testing
+type mockResourceLoader struct {
+	loadCalls int
+	loadData  interface{}
+	loadErr   error
+}
+
+func (m *mockResourceLoader) Load(request *LoadRequest) (interface{}, error) {
+	m.loadCalls++
+	return m.loadData, m.loadErr
+}
+
+// TestBackgroundLoaderWithCustomLoader tests custom resource loader
+func TestBackgroundLoaderWithCustomLoader(t *testing.T) {
+	mockLoader := &mockResourceLoader{loadData: "loaded_data"}
+	bl := NewBackgroundLoaderWithLoader(2, mockLoader)
+	bl.Start()
+	defer bl.Stop()
+
+	var receivedData interface{}
+	var callbackCalled int32
+	bl.Queue(&LoadRequest{
+		ID:   "test1",
+		Type: "raid",
+		Callback: func(data interface{}) {
+			receivedData = data
+			atomic.StoreInt32(&callbackCalled, 1)
+		},
+	})
+
+	// Wait for processing
+	time.Sleep(50 * time.Millisecond)
+
+	if atomic.LoadInt32(&callbackCalled) != 1 {
+		t.Error("Expected callback to be called")
+	}
+
+	if receivedData != "loaded_data" {
+		t.Errorf("Expected 'loaded_data', got %v", receivedData)
+	}
+
+	if mockLoader.loadCalls < 1 {
+		t.Errorf("Expected Load to be called at least once, got %d", mockLoader.loadCalls)
+	}
+}
+
+// TestBackgroundLoaderWithNilLoader tests nil loader defaults to DefaultResourceLoader
+func TestBackgroundLoaderWithNilLoader(t *testing.T) {
+	bl := NewBackgroundLoaderWithLoader(2, nil)
+	if bl.loader == nil {
+		t.Error("Expected loader to default to DefaultResourceLoader when nil is passed")
+	}
+	bl.Start()
+	defer bl.Stop()
+
+	var callbackCalled int32
+	bl.Queue(&LoadRequest{
+		ID: "test1",
+		Callback: func(data interface{}) {
+			atomic.StoreInt32(&callbackCalled, 1)
+		},
+	})
+
+	// Wait for processing
+	time.Sleep(50 * time.Millisecond)
+
+	if atomic.LoadInt32(&callbackCalled) != 1 {
+		t.Error("Expected callback to be called with default loader")
 	}
 }
 

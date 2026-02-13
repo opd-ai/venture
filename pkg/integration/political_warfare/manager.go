@@ -1,7 +1,11 @@
 package political_warfare
 
 import (
+	"bytes"
+	"compress/gzip"
+	"encoding/json"
 	"fmt"
+	"io"
 	"math/rand"
 	"sync"
 	"time"
@@ -10,6 +14,19 @@ import (
 	"github.com/opd-ai/venture/pkg/network/federation/guild"
 	"github.com/sirupsen/logrus"
 )
+
+// managerState holds the serializable state of the Manager for persistence.
+// This is used internally by Save/Load methods to marshal all political
+// warfare state to/from compressed JSON.
+type managerState struct {
+	Wars               []*WarDeclaration   `json:"wars"`
+	Treaties           []*PeaceTreaty      `json:"treaties"`
+	Embargoes          []*TradeEmbargo     `json:"embargoes"`
+	AllianceCalls      []*AllianceCall     `json:"alliance_calls"`
+	Penalties          []ReputationPenalty `json:"penalties"`
+	AppliedConcessions []AppliedConcession `json:"applied_concessions"`
+	Seed               int64               `json:"seed"`
+}
 
 // Manager coordinates political warfare between guilds
 type Manager struct {
@@ -614,6 +631,20 @@ func (m *Manager) GetActiveEmbargoes() []*TradeEmbargo {
 	return embargoes
 }
 
+// GetActiveAllianceCalls returns all non-completed alliance calls.
+func (m *Manager) GetActiveAllianceCalls() []*AllianceCall {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
+	calls := make([]*AllianceCall, 0)
+	for _, call := range m.allianceCalls {
+		if !call.Completed {
+			calls = append(calls, call)
+		}
+	}
+	return calls
+}
+
 // GetReputationPenalties returns all reputation penalties
 func (m *Manager) GetReputationPenalties() []ReputationPenalty {
 	m.mu.RLock()
@@ -622,4 +653,114 @@ func (m *Manager) GetReputationPenalties() []ReputationPenalty {
 	penalties := make([]ReputationPenalty, len(m.penalties))
 	copy(penalties, m.penalties)
 	return penalties
+}
+
+// Save serializes the manager state to compressed JSON.
+// The returned bytes can be stored to disk and later restored using Load().
+// Thread-safe: acquires read lock during serialization.
+func (m *Manager) Save() ([]byte, error) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
+	// Convert maps to slices for JSON serialization
+	state := managerState{
+		Penalties:          m.penalties,
+		AppliedConcessions: m.appliedConcessions,
+		Seed:               m.seed,
+	}
+
+	for _, war := range m.wars {
+		state.Wars = append(state.Wars, war)
+	}
+	for _, treaty := range m.treaties {
+		state.Treaties = append(state.Treaties, treaty)
+	}
+	for _, embargo := range m.embargoes {
+		state.Embargoes = append(state.Embargoes, embargo)
+	}
+	for _, call := range m.allianceCalls {
+		state.AllianceCalls = append(state.AllianceCalls, call)
+	}
+
+	jsonData, err := json.Marshal(state)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal political warfare state: %w", err)
+	}
+
+	var buf bytes.Buffer
+	gzipWriter := gzip.NewWriter(&buf)
+	if _, err := gzipWriter.Write(jsonData); err != nil {
+		return nil, fmt.Errorf("failed to compress political warfare data: %w", err)
+	}
+	if err := gzipWriter.Close(); err != nil {
+		return nil, fmt.Errorf("failed to close gzip writer: %w", err)
+	}
+
+	return buf.Bytes(), nil
+}
+
+// Load deserializes manager state from compressed JSON.
+// Restores all wars, treaties, embargoes, alliance calls, penalties, and concessions.
+// The RNG is re-initialized from the saved seed for deterministic continuation.
+// Thread-safe: acquires write lock during deserialization.
+func (m *Manager) Load(data []byte) error {
+	gzipReader, err := gzip.NewReader(bytes.NewReader(data))
+	if err != nil {
+		return fmt.Errorf("failed to create gzip reader: %w", err)
+	}
+	defer gzipReader.Close()
+
+	jsonData, err := io.ReadAll(gzipReader)
+	if err != nil {
+		return fmt.Errorf("failed to decompress political warfare data: %w", err)
+	}
+
+	var state managerState
+	if err := json.Unmarshal(jsonData, &state); err != nil {
+		return fmt.Errorf("failed to unmarshal political warfare state: %w", err)
+	}
+
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	// Restore maps from slices
+	m.wars = make(map[string]*WarDeclaration)
+	for _, war := range state.Wars {
+		key := fmt.Sprintf("%s_%s", war.AttackerGuildID, war.DefenderGuildID)
+		m.wars[key] = war
+	}
+
+	m.treaties = make(map[string]*PeaceTreaty)
+	for _, treaty := range state.Treaties {
+		key := m.makeTreatyKey(treaty.GuildID1, treaty.GuildID2)
+		m.treaties[key] = treaty
+	}
+
+	m.embargoes = make(map[string]*TradeEmbargo)
+	for _, embargo := range state.Embargoes {
+		key := fmt.Sprintf("%s_%s", embargo.ImposingGuildID, embargo.TargetGuildID)
+		m.embargoes[key] = embargo
+	}
+
+	m.allianceCalls = make(map[string]*AllianceCall)
+	for _, call := range state.AllianceCalls {
+		key := fmt.Sprintf("%s_%s", call.CallingGuildID, call.TargetGuildID)
+		m.allianceCalls[key] = call
+	}
+
+	m.penalties = state.Penalties
+	if m.penalties == nil {
+		m.penalties = make([]ReputationPenalty, 0)
+	}
+
+	m.appliedConcessions = state.AppliedConcessions
+	if m.appliedConcessions == nil {
+		m.appliedConcessions = make([]AppliedConcession, 0)
+	}
+
+	// Restore seed and reinitialize RNG for deterministic continuation
+	m.seed = state.Seed
+	m.rng = rand.New(rand.NewSource(m.seed))
+
+	return nil
 }

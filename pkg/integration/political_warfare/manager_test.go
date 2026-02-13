@@ -1091,3 +1091,188 @@ func TestGetPendingTributesEmpty(t *testing.T) {
 		t.Errorf("Expected no pending tributes, got %d", len(tributes))
 	}
 }
+
+// TestSaveLoadRoundTrip verifies Save/Load preserves all political warfare state.
+func TestSaveLoadRoundTrip(t *testing.T) {
+	manager, guildManager, guildID1, guildID2, guildID3 := setupTestManager(t)
+
+	// Set up some state to serialize
+	// Create a war
+	war, err := manager.DeclareWar(guildID1, guildID2, 5*time.Minute)
+	if err != nil {
+		t.Fatalf("Failed to declare war: %v", err)
+	}
+	war.Active = true
+
+	// Create a treaty
+	treaty, err := manager.SignPeaceTreaty(guildID1, guildID3, 24*time.Hour)
+	if err != nil {
+		t.Fatalf("Failed to sign treaty: %v", err)
+	}
+
+	// Create an embargo (50% price increase)
+	embargo, err := manager.ImposeEmbargo(guildID2, guildID3, 0.5)
+	if err != nil {
+		t.Fatalf("Failed to impose embargo: %v", err)
+	}
+
+	// Create alliance call
+	allianceCall, err := manager.CallReinforcementAllies(guildID1, guildID2)
+	if err != nil {
+		t.Fatalf("Failed to call allies: %v", err)
+	}
+
+	// Save state
+	data, err := manager.Save()
+	if err != nil {
+		t.Fatalf("Failed to save: %v", err)
+	}
+	if len(data) == 0 {
+		t.Fatal("Save returned empty data")
+	}
+
+	// Create a new manager to load into
+	world2 := engine.NewWorld()
+	manager2 := NewManager(world2, guildManager)
+
+	// Load state
+	err = manager2.Load(data)
+	if err != nil {
+		t.Fatalf("Failed to load: %v", err)
+	}
+
+	// Verify wars
+	wars := manager2.GetActiveWars()
+	if len(wars) != 1 {
+		t.Errorf("Expected 1 war, got %d", len(wars))
+	}
+	if len(wars) > 0 && wars[0].AttackerGuildID != war.AttackerGuildID {
+		t.Errorf("War attacker mismatch: expected %s, got %s", war.AttackerGuildID, wars[0].AttackerGuildID)
+	}
+
+	// Verify treaties
+	treaties := manager2.GetActiveTreaties()
+	if len(treaties) != 1 {
+		t.Errorf("Expected 1 treaty, got %d", len(treaties))
+	}
+	if len(treaties) > 0 && treaties[0].GuildID1 != treaty.GuildID1 && treaties[0].GuildID2 != treaty.GuildID1 {
+		t.Errorf("Treaty guild mismatch")
+	}
+
+	// Verify embargoes
+	embargoes := manager2.GetActiveEmbargoes()
+	if len(embargoes) != 1 {
+		t.Errorf("Expected 1 embargo, got %d", len(embargoes))
+	}
+	if len(embargoes) > 0 && embargoes[0].ImposingGuildID != embargo.ImposingGuildID {
+		t.Errorf("Embargo imposing guild mismatch: expected %s, got %s", embargo.ImposingGuildID, embargoes[0].ImposingGuildID)
+	}
+
+	// Verify alliance calls
+	calls := manager2.GetActiveAllianceCalls()
+	if len(calls) != 1 {
+		t.Errorf("Expected 1 alliance call, got %d", len(calls))
+	}
+	if len(calls) > 0 && calls[0].CallingGuildID != allianceCall.CallingGuildID {
+		t.Errorf("Alliance call guild mismatch: expected %s, got %s", allianceCall.CallingGuildID, calls[0].CallingGuildID)
+	}
+
+	// Verify seed was preserved
+	if manager2.seed != manager.seed {
+		t.Errorf("Seed not preserved: expected %d, got %d", manager.seed, manager2.seed)
+	}
+}
+
+// TestSaveLoadEmpty verifies Save/Load works with empty state.
+func TestSaveLoadEmpty(t *testing.T) {
+	world := engine.NewWorld()
+	guildManager := guild.NewManager()
+	manager := NewManagerWithSeed(world, guildManager, 99999)
+
+	// Save empty state
+	data, err := manager.Save()
+	if err != nil {
+		t.Fatalf("Failed to save empty state: %v", err)
+	}
+	if len(data) == 0 {
+		t.Fatal("Save returned empty data for empty state")
+	}
+
+	// Load into new manager
+	manager2 := NewManager(world, guildManager)
+	err = manager2.Load(data)
+	if err != nil {
+		t.Fatalf("Failed to load empty state: %v", err)
+	}
+
+	// Verify all collections are empty
+	if len(manager2.GetActiveWars()) != 0 {
+		t.Error("Expected no wars after loading empty state")
+	}
+	if len(manager2.GetActiveTreaties()) != 0 {
+		t.Error("Expected no treaties after loading empty state")
+	}
+	if len(manager2.GetActiveEmbargoes()) != 0 {
+		t.Error("Expected no embargoes after loading empty state")
+	}
+	if len(manager2.GetActiveAllianceCalls()) != 0 {
+		t.Error("Expected no alliance calls after loading empty state")
+	}
+
+	// Verify seed was preserved
+	if manager2.seed != 99999 {
+		t.Errorf("Seed not preserved: expected 99999, got %d", manager2.seed)
+	}
+}
+
+// TestLoadInvalidData verifies Load handles corrupt data gracefully.
+func TestLoadInvalidData(t *testing.T) {
+	world := engine.NewWorld()
+	guildManager := guild.NewManager()
+	manager := NewManager(world, guildManager)
+
+	// Test with invalid gzip data
+	err := manager.Load([]byte("not valid gzip data"))
+	if err == nil {
+		t.Error("Expected error when loading invalid gzip data")
+	}
+
+	// Test with empty data
+	err = manager.Load([]byte{})
+	if err == nil {
+		t.Error("Expected error when loading empty data")
+	}
+}
+
+// TestSaveLoadReputationPenalties verifies penalties are preserved.
+func TestSaveLoadReputationPenalties(t *testing.T) {
+	manager, _, guildID1, guildID2, _ := setupTestManager(t)
+
+	// Declare war to generate reputation penalty
+	_, err := manager.DeclareWar(guildID1, guildID2, 5*time.Minute)
+	if err != nil {
+		t.Fatalf("Failed to declare war: %v", err)
+	}
+
+	originalPenalties := manager.GetReputationPenalties()
+
+	// Save and load
+	data, err := manager.Save()
+	if err != nil {
+		t.Fatalf("Failed to save: %v", err)
+	}
+
+	world2 := engine.NewWorld()
+	guildManager2 := guild.NewManager()
+	manager2 := NewManager(world2, guildManager2)
+
+	err = manager2.Load(data)
+	if err != nil {
+		t.Fatalf("Failed to load: %v", err)
+	}
+
+	loadedPenalties := manager2.GetReputationPenalties()
+	if len(loadedPenalties) != len(originalPenalties) {
+		t.Errorf("Penalty count mismatch: expected %d, got %d", len(originalPenalties), len(loadedPenalties))
+	}
+}

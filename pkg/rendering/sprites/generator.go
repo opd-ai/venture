@@ -4,6 +4,7 @@
 package sprites
 
 import (
+	"fmt"
 	"image/color"
 	"math/rand"
 
@@ -774,4 +775,98 @@ func (g *Generator) logDirectionalSpriteComplete(config Config, useAerial bool, 
 			"count":     count,
 		}).Info("directional sprite sheet generated")
 	}
+}
+
+// GenerateFromParams implements the procgen.Generator interface.
+// It creates a sprite based on the seed and generation parameters.
+func (g *Generator) GenerateFromParams(seed int64, params procgen.GenerationParams) (interface{}, error) {
+	// Build Config from GenerationParams
+	config := Config{
+		Type:       SpriteEntity, // Default type
+		Width:      32,           // Default width
+		Height:     32,           // Default height
+		Seed:       seed,
+		GenreID:    params.GenreID,
+		Complexity: params.Difficulty,
+	}
+
+	// Extract custom parameters if provided
+	if params.Custom != nil {
+		if w, ok := params.Custom["width"].(int); ok {
+			config.Width = w
+		}
+		if h, ok := params.Custom["height"].(int); ok {
+			config.Height = h
+		}
+		if t, ok := params.Custom["type"].(SpriteType); ok {
+			config.Type = t
+		} else if ts, ok := params.Custom["type"].(string); ok {
+			switch ts {
+			case "entity":
+				config.Type = SpriteEntity
+			case "item":
+				config.Type = SpriteItem
+			case "tile":
+				config.Type = SpriteTile
+			case "particle":
+				config.Type = SpriteParticle
+			case "ui":
+				config.Type = SpriteUI
+			}
+		}
+		if v, ok := params.Custom["variation"].(int); ok {
+			config.Variation = v
+		}
+		// Pass through remaining custom parameters
+		config.SetCustom(params.Custom)
+	}
+
+	return g.Generate(config)
+}
+
+// Validate implements the procgen.Generator interface.
+// It checks if the generated sprite meets minimum quality thresholds.
+func (g *Generator) Validate(result interface{}) error {
+	img, ok := result.(*ebiten.Image)
+	if !ok {
+		return fmt.Errorf("invalid result type: expected *ebiten.Image, got %T", result)
+	}
+
+	if img == nil {
+		return fmt.Errorf("sprite is nil")
+	}
+
+	bounds := img.Bounds()
+	width := bounds.Dx()
+	height := bounds.Dy()
+
+	if width <= 0 || height <= 0 {
+		return fmt.Errorf("invalid sprite dimensions: %dx%d", width, height)
+	}
+
+	// Check for minimum opacity coverage (at least 1% of pixels should be non-transparent)
+	// This ensures the sprite isn't completely empty
+	minOpaquePixels := (width * height) / 100
+	if minOpaquePixels < 1 {
+		minOpaquePixels = 1
+	}
+
+	opaqueCount := 0
+	for y := bounds.Min.Y; y < bounds.Max.Y; y++ {
+		for x := bounds.Min.X; x < bounds.Max.X; x++ {
+			_, _, _, a := img.At(x, y).RGBA()
+			if a > 0 {
+				opaqueCount++
+				if opaqueCount >= minOpaquePixels {
+					return nil // Early exit once threshold met
+				}
+			}
+		}
+	}
+
+	if opaqueCount < minOpaquePixels {
+		return fmt.Errorf("sprite has insufficient opacity coverage: %d opaque pixels (minimum: %d)", opaqueCount, minOpaquePixels)
+	}
+
+	return nil
 }

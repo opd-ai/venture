@@ -175,8 +175,9 @@ func randomGenre() string {
 }
 
 // getGenreTheme returns the genre theme configuration for all generators.
+// Uses the world seed for deterministic random genre selection.
 func getGenreTheme() *genre.Genre {
-	return genre.GetTheme(*genreID)
+	return genre.GetThemeWithSeed(*genreID, *seed)
 }
 
 // spawnEnvironmentalLights creates atmospheric lighting throughout the dungeon.

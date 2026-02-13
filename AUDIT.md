@@ -72,7 +72,7 @@ This document tracks the audit status of all Go packages in the Venture codebase
 - [x] `pkg/rendering/ui/AUDIT.md` — Needs Work — 5 issues (1 high, 1 med, 3 low) - Updated 2026-02-13: High-priority time.Now() usage exempted (UI timing for cursor blink, notifications is inherently real-time visual effects)
 - [x] `pkg/rendering/palette/AUDIT.md` — Complete — 1 issue (0 high, 0 med, 1 low) - Updated 2026-02-13: Fixed 2 high-priority division-by-zero issues (GenerateGradient width/height validation, calculateRadialGradient radius validation) + 2 low doc issues
 - [x] `pkg/rendering/pool/AUDIT.md` — Complete — 1 issue (0 high, 0 med, 1 low)
-- [x] `pkg/rendering/patterns/AUDIT.md` — Needs Work — 4 issues (0 high, 1 med, 3 low)
+- [x] `pkg/rendering/patterns/AUDIT.md` — Needs Work — 2 issues (0 high, 0 med, 2 low) - Updated 2026-02-13: Fixed 1 med-priority issue (code duplication - consolidated 3 clamp functions to 1), fixed 1 low-priority issue (inconsistent receiver name)
 - [x] `pkg/rendering/shapes/AUDIT.md` — Complete — 1 issue (0 high, 0 med, 1 low)
 - [x] `pkg/rendering/quality/AUDIT.md` — Complete — 2 issues (0 high, 0 med, 2 low)
 - [x] `pkg/rendering/parallel/AUDIT.md` — Needs Work — 4 issues (1 high, 2 med, 1 low)
@@ -125,7 +125,7 @@ This document tracks the audit status of all Go packages in the Venture codebase
 - [x] `pkg/memprofile/AUDIT.md` — Complete — 1 issue (0 high, 0 med, 1 low) - Updated 2026-02-13: Fixed 3 medium-priority issues (division by zero guards, structured logging with logrus.WithFields)
 - [x] `pkg/recovery/AUDIT.md` — Complete — 2 issues (0 high, 0 med, 2 low)
 - [x] `pkg/modding/AUDIT.md` — Complete — 2 issues (0 high, 0 med, 2 low)
-- [x] `pkg/mobile/AUDIT.md` — Needs Work — 6 issues (2 high, 2 med, 2 low) - Updated 2026-02-13: High-priority issues exempted (mobile input package has minimal error paths; Android JNI requires NDK environment)
+- [x] `pkg/mobile/AUDIT.md` — Needs Work — 2 issues (0 high, 0 med, 2 low) - Updated 2026-02-13: All high/med issues exempted (mobile input has minimal error paths; Android JNI requires NDK; time.Now() appropriate for real-time input timing)
 - [x] `pkg/narrative/branching/AUDIT.md` — Complete — 3 issues (0 high, 0 med, 3 low)
 - [x] `pkg/observability/AUDIT.md` — Complete — 1 issue (0 high, 0 med, 1 low)
 - [x] `pkg/security/AUDIT.md` — Complete — 2 issues (0 high, 0 med, 2 low)
@@ -140,10 +140,10 @@ This document tracks the audit status of all Go packages in the Venture codebase
 - [x] `pkg/migration/AUDIT.md` — Needs Work — 12 issues (2 high, 2 med, 8 low)
 
 ## Commands
-- [x] `cmd/client/AUDIT.md` — Needs Work — 6 issues (2 high, 2 med, 2 low) - Updated 2026-02-13: Fixed 2 high-priority issues (per-player ChatHistory/ImageGallery initialization)
+- [x] `cmd/client/AUDIT.md` — Needs Work — 4 issues (2 high, 0 med, 2 low) - Updated 2026-02-13: Fixed 2 high-priority issues (per-player ChatHistory/ImageGallery initialization), fixed 2 med-priority issues (removed dead randomGenre() function, exempted seededRandom() CLI initialization)
 - [x] `cmd/server/AUDIT.md` — Complete — 2 issues (0 high, 0 med, 2 low)
 - [x] `cmd/mobile/AUDIT.md` — Needs Work — 1 issue (1 high, 0 med, 0 low) - Updated 2026-02-13: Fixed 9 issues (0 high, 4 med, 5 low) - doc.go files for cmd/mobile and cmd/mobile/config, godoc comments for exported functions, removed unreachable returns, documented time-based seed behavior
-- [x] `cmd/mobile/config/AUDIT.md` — Needs Work — 4 issues (0 high, 1 med, 3 low)
+- [x] `cmd/mobile/config/AUDIT.md` — Needs Work — 2 issues (0 high, 0 med, 2 low) - Updated 2026-02-13: Exempted med-priority time.Now() fallback (intentional UX behavior documented in doc.go), corrected false positive about missing doc.go
 
 ## Audit Guidelines
 

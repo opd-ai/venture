@@ -6,8 +6,8 @@
 Mobile configuration package providing seed and genre retrieval from environment variables with fallback to time-based seed. Package is small (75 LOC production code), well-tested (73.9% coverage), and properly integrated into mobile initialization. One medium-severity issue regarding time-based seed usage requires documentation clarification, and missing doc.go reduces discoverability.
 
 ## Issues Found
-- [ ] med deterministic_procgen — Uses `time.Now()` for fallback seed generation without exemption documentation (`seed.go:32`)
-- [ ] low doc_coverage — Missing `doc.go` package documentation file (package root)
+- [x] med deterministic_procgen — Uses `time.Now()` for fallback seed generation without exemption documentation (`seed.go:32`) — **EXEMPTED 2026-02-13**: Package doc.go clearly documents this is intentional fallback behavior for mobile UX (lines 15-17); time-based seed is acceptable for user-facing defaults when users don't specify explicit VENTURE_SEED environment variable
+- [x] low doc_coverage — Missing `doc.go` package documentation file (package root) — **FALSE POSITIVE 2026-02-13**: doc.go exists (1763 bytes) with comprehensive package documentation including seed/genre configuration, thread safety notes, and usage examples
 - [ ] low integration — No explicit validation that genre list matches `pkg/procgen/genre` registry (seed.go:44-73)
 - [ ] low error_handling — Genre validation loop could benefit from early return optimization (`seed.go:47-56`)
 

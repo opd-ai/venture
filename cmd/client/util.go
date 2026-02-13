@@ -155,23 +155,25 @@ func initializeNetworkClient(logger *logrus.Logger, clientLogger *logrus.Entry) 
 	return networkClient
 }
 
-// return a random seed based on time (for default seed only, not for procedural generation)
-// Note: This is only used for default flag values when user doesn't specify --seed
-// Once a seed is chosen, all generation uses that deterministic seed.
+// seededRandom returns a random seed based on time for CLI flag default values.
+//
+// IMPORTANT: This function is called ONLY at program initialization time via
+// flag.Int64("seed", seededRandom(), ...) in the var() block. It is NOT called
+// during gameplay. The time-based randomness is appropriate here because:
+//
+//  1. It provides a unique default seed for each program run when users don't
+//     specify --seed explicitly
+//  2. Once the seed is chosen (either from this default or from --seed flag),
+//     ALL procedural generation uses that deterministic seed
+//  3. This is a one-time initialization, not ongoing randomness
+//
+// The time.Now() usage here is explicitly EXEMPT from the "no time.Now() in
+// procgen" rule because it's for CLI initialization, not for procedural content
+// generation during gameplay.
 func seededRandom() int64 {
 	nowNano := time.Now().UnixNano()
 	rng := rand.New(rand.NewSource(nowNano))
 	return rng.Int63()
-}
-
-// return a random genre based on time (for default genre only)
-// Note: This is only used for default flag values when user doesn't specify --genre
-// Once a genre is chosen, all generation uses that deterministic value.
-func randomGenre() string {
-	genres := []string{"fantasy", "scifi", "horror", "cyberpunk", "postapoc"}
-	nowNano := time.Now().UnixNano()
-	rng := rand.New(rand.NewSource(nowNano))
-	return genres[rng.Intn(len(genres))]
 }
 
 // getGenreTheme returns the genre theme configuration for all generators.

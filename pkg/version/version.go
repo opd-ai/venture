@@ -14,6 +14,8 @@ package version
 import (
 	"fmt"
 	"runtime"
+	"strconv"
+	"strings"
 )
 
 const (
@@ -34,6 +36,20 @@ const (
 
 	// FullVersion returns the complete version string.
 	FullVersion = Version + " " + Release
+
+	// ProtocolVersion is the network federation protocol version.
+	// Protocol versions follow semantic versioning independently of application version.
+	// Compatibility is determined by major version: 6.x.x is compatible with 6.y.z.
+	ProtocolVersion = "6.0.0"
+
+	// ProtocolMajor is the major version of the federation protocol.
+	ProtocolMajor = 6
+
+	// ProtocolMinor is the minor version of the federation protocol.
+	ProtocolMinor = 0
+
+	// ProtocolPatch is the patch version of the federation protocol.
+	ProtocolPatch = 0
 )
 
 // BuildInfo returns build information including Go version and platform.
@@ -53,4 +69,89 @@ func ShortVersion() string {
 // PrintVersion prints version information to stdout.
 func PrintVersion() {
 	fmt.Println(BuildInfo())
+}
+
+// ParseVersion parses a semantic version string into major, minor, patch components.
+// Returns an error if the version string is not valid semver format (e.g., "1.2.3").
+func ParseVersion(v string) (major, minor, patch int, err error) {
+	if v == "" {
+		return 0, 0, 0, fmt.Errorf("empty version string")
+	}
+
+	parts := strings.Split(v, ".")
+	if len(parts) != 3 {
+		return 0, 0, 0, fmt.Errorf("invalid version format: expected MAJOR.MINOR.PATCH, got %q", v)
+	}
+
+	major, err = strconv.Atoi(parts[0])
+	if err != nil {
+		return 0, 0, 0, fmt.Errorf("invalid major version %q: %w", parts[0], err)
+	}
+
+	minor, err = strconv.Atoi(parts[1])
+	if err != nil {
+		return 0, 0, 0, fmt.Errorf("invalid minor version %q: %w", parts[1], err)
+	}
+
+	patch, err = strconv.Atoi(parts[2])
+	if err != nil {
+		return 0, 0, 0, fmt.Errorf("invalid patch version %q: %w", parts[2], err)
+	}
+
+	return major, minor, patch, nil
+}
+
+// Compare compares two semantic version strings.
+// Returns -1 if v1 < v2, 0 if v1 == v2, 1 if v1 > v2.
+// Returns an error if either version string is invalid.
+func Compare(v1, v2 string) (int, error) {
+	maj1, min1, pat1, err := ParseVersion(v1)
+	if err != nil {
+		return 0, fmt.Errorf("invalid first version: %w", err)
+	}
+
+	maj2, min2, pat2, err := ParseVersion(v2)
+	if err != nil {
+		return 0, fmt.Errorf("invalid second version: %w", err)
+	}
+
+	if maj1 != maj2 {
+		if maj1 < maj2 {
+			return -1, nil
+		}
+		return 1, nil
+	}
+
+	if min1 != min2 {
+		if min1 < min2 {
+			return -1, nil
+		}
+		return 1, nil
+	}
+
+	if pat1 != pat2 {
+		if pat1 < pat2 {
+			return -1, nil
+		}
+		return 1, nil
+	}
+
+	return 0, nil
+}
+
+// IsCompatible checks if two semantic version strings are compatible.
+// Two versions are compatible if they share the same major version number.
+// This is used for network protocol version negotiation.
+func IsCompatible(v1, v2 string) bool {
+	maj1, _, _, err1 := ParseVersion(v1)
+	if err1 != nil {
+		return false
+	}
+
+	maj2, _, _, err2 := ParseVersion(v2)
+	if err2 != nil {
+		return false
+	}
+
+	return maj1 == maj2
 }

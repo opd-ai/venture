@@ -11,6 +11,23 @@
 //   - Release: release status (e.g., "Production", "Beta", "Alpha")
 //   - FullVersion: combined version string (e.g., "1.2.3 Production")
 //
+// # Protocol Versioning
+//
+// The package also provides protocol version constants for network federation:
+//   - ProtocolVersion: federation protocol version (e.g., "6.0.0")
+//   - ProtocolMajor, ProtocolMinor, ProtocolPatch: individual components
+//
+// Protocol versions follow semantic versioning independently of the application
+// version. Two protocol versions are compatible if they share the same major
+// version number. Use IsCompatible() for version negotiation.
+//
+// # Version Comparison
+//
+// The package provides utilities for parsing and comparing semantic versions:
+//   - ParseVersion: parse "1.2.3" into (1, 2, 3) components
+//   - Compare: compare two versions (-1, 0, 1)
+//   - IsCompatible: check if major versions match (for protocol negotiation)
+//
 // # Usage
 //
 // Import and use the version constants in startup messages:
@@ -18,4 +35,10 @@
 //	import "github.com/opd-ai/venture/pkg/version"
 //
 //	logger.Infof("Starting Venture %s", version.FullVersion)
+//
+// For network protocol negotiation:
+//
+//	if version.IsCompatible(ourVersion, theirVersion) {
+//	    // Versions are compatible, proceed with connection
+//	}
 package version

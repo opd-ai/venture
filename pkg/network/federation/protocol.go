@@ -9,14 +9,17 @@ import (
 	"time"
 
 	"github.com/opd-ai/venture/pkg/engine"
+	"github.com/opd-ai/venture/pkg/version"
 )
 
 const (
 	// DefaultConnectionTimeout is the timeout for establishing TCP connections
 	DefaultConnectionTimeout = 10 * time.Second
-	// DefaultProtocolVersion is the current federation protocol version
-	DefaultProtocolVersion = "6.0.0"
 )
+
+// DefaultProtocolVersion returns the current federation protocol version from the version package.
+// This ensures protocol version is centrally managed and consistent across the codebase.
+var DefaultProtocolVersion = version.ProtocolVersion
 
 // DefaultProtocolFeatures lists the features supported by this server
 var DefaultProtocolFeatures = []string{"travel", "trade", "post"}

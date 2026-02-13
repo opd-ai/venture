@@ -7,7 +7,7 @@ The `pkg/rendering/ui` package provides procedural UI element generation for men
 
 ## Issues Found
 - [x] **high** deterministic-procgen — Uses `time.Now()` for UI state (cursor blink, notifications, chat timestamps) in non-test files. UI state timing should use deterministic frame counters or explicit timestamps passed from caller. (`chat.go:90,109,268,319`, `tutorial.go:261`, `notifications.go:107,145`, `image_preview.go:129`) - Fixed 2026-02-13: EXEMPTED - UI timing for cursor blinks, notification age, and chat timestamps must use real time for proper user experience. These are visual effects that don't affect game content generation or determinism. UI rendering is inherently non-deterministic (frame rate varies, display timing varies).
-- [ ] **med** stub-code — Placeholder text rendering implementation in StoryJournalUI.drawText() marked as "simple placeholder" that draws colored rectangles instead of actual text (`story_journal.go:442-445`)
+- [x] **med** stub-code — Placeholder text rendering implementation in StoryJournalUI.drawText() marked as "simple placeholder" that draws colored rectangles instead of actual text (`story_journal.go:442-445`) — **FIXED 2026-02-13**: Implemented proper text rendering using `golang.org/x/image/font.Drawer` with `basicfont.Face7x13`, consistent with other UI components that use proper font rendering
 - [ ] **low** test-infrastructure — Tests fail in headless/CI environment due to Ebiten GLFW initialization requirement. Package documentation claims 92.6% coverage but tests cannot run without GUI environment (`go test` output shows panic)
 - [ ] **low** integration — Package has zero direct importers outside tests. UI generators are not currently integrated into client or engine systems (0 imports found via grep)
 - [ ] **low** doc-coverage — Chat.go placeholder text usage documented in comment but not in package godoc (`chat.go:237-240`)
@@ -28,6 +28,6 @@ Key integration points that should exist:
 ## Recommendations
 1. **HIGH PRIORITY**: Refactor time-based UI state to use deterministic frame counters. Replace all `time.Now()` calls in non-test production code with frame-based timing or externally provided timestamps. This is critical for maintaining deterministic behavior and replay capability.
 2. **HIGH PRIORITY**: Integrate UI generators into client. Add imports in `cmd/client/` to actually use the procedural UI generation system instead of letting this code remain unused.
-3. **MEDIUM PRIORITY**: Complete StoryJournalUI.drawText() implementation with proper font rendering using existing font libraries (already imported `golang.org/x/image/font`)
+3. ~~**MEDIUM PRIORITY**: Complete StoryJournalUI.drawText() implementation with proper font rendering using existing font libraries (already imported `golang.org/x/image/font`)~~ — **DONE 2026-02-13**
 4. **LOW PRIORITY**: Add test build tag to skip GUI tests in headless environments (`// +build !headless` or use Ebiten's test mode)
 5. **LOW PRIORITY**: Document placeholder text behavior in package godoc for completeness

@@ -8,6 +8,9 @@ import (
 	"strings"
 
 	"github.com/opd-ai/venture/pkg/engine"
+	"golang.org/x/image/font"
+	"golang.org/x/image/font/basicfont"
+	"golang.org/x/image/math/fixed"
 )
 
 // StoryJournalUI represents a story journal interface for viewing discovered fragments.
@@ -438,22 +441,16 @@ func (j *StoryJournalUI) renderFragmentDetail(img *image.RGBA) {
 	j.drawText(img, 20, j.Height-30, "Esc: Back", j.TextColor)
 }
 
-// drawText draws text at the specified position (simple implementation).
-// This is a placeholder - real implementation would use proper font rendering.
+// drawText draws text at the specified position using the basicfont package.
+// Uses golang.org/x/image/font for proper text rendering on image.RGBA.
 func (j *StoryJournalUI) drawText(img *image.RGBA, x, y int, text string, col color.Color) {
-	// This is a simple placeholder that just draws a colored rectangle
-	// In a real implementation, this would use a font rendering library
-	// For now, we'll just mark the area to indicate text would be here
-	textCol := col.(color.RGBA)
-	for i := 0; i < len(text) && x+i*6 < j.Width; i++ {
-		for dy := 0; dy < 8; dy++ {
-			for dx := 0; dx < 5; dx++ {
-				if x+i*6+dx < j.Width && y+dy < j.Height && y+dy >= 0 {
-					img.Set(x+i*6+dx, y+dy, textCol)
-				}
-			}
-		}
+	drawer := &font.Drawer{
+		Dst:  img,
+		Src:  image.NewUniform(col),
+		Face: basicfont.Face7x13,
+		Dot:  fixed.Point26_6{X: fixed.I(x), Y: fixed.I(y + 13)}, // Add baseline offset for 7x13 font
 	}
+	drawer.DrawString(text)
 }
 
 // formatSeriesName formats a series ID into a readable name.

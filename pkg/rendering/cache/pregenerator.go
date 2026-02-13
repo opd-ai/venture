@@ -4,6 +4,7 @@ import (
 	"sync"
 
 	"github.com/hajimehoshi/ebiten/v2"
+	log "github.com/sirupsen/logrus"
 )
 
 // GeneratorFunc represents a function that generates a sprite image.
@@ -104,7 +105,14 @@ func (p *PreGenerator) Generate() int {
 		if err != nil {
 			p.mu.Lock()
 			p.stats.RequestsFailed++
+			failCount := p.stats.RequestsFailed
 			p.mu.Unlock()
+			log.WithFields(log.Fields{
+				"system_name":  "pregenerator",
+				"cache_key":    string(req.Key),
+				"failed_count": failCount,
+				"error":        err.Error(),
+			}).Warn("sprite pre-generation failed")
 			continue
 		}
 

@@ -7,7 +7,7 @@ The rendering cache package provides high-quality LRU sprite caching with memory
 
 ## Issues Found
 - [ ] low determinism — `time.Now()` used for LastCleanupAt timestamps in memory monitor (`memory_monitor.go:135`, `memory_monitor.go:149`)
-- [ ] med error-handling — PreGenerator.Generate() continues silently on generator errors without logging (`pregenerator.go:104-109`)
+- [x] med error-handling — PreGenerator.Generate() continues silently on generator errors without logging (`pregenerator.go:104-109`) — **FIXED 2026-02-13**: Added structured logging with logrus.WithFields including cache_key, failed_count, and error message
 - [ ] low logging — No structured logging throughout package; error conditions, evictions, and cleanup events not logged
 
 ## Test Coverage
@@ -43,7 +43,7 @@ All four core types (SpriteCache, MemoryMonitor, PreGenerator, PredictiveCacheWa
        "max_size": c.maxSize,
    }).Warn("LRU eviction triggered")
    ```
-2. **MEDIUM PRIORITY**: Add error logging in PreGenerator.Generate() when generator functions fail (currently silent at `pregenerator.go:104-109`). Track failed generation count and log with structured fields.
+2. ~~**MEDIUM PRIORITY**: Add error logging in PreGenerator.Generate() when generator functions fail (currently silent at `pregenerator.go:104-109`). Track failed generation count and log with structured fields.~~ — **DONE 2026-02-13**
 3. **LOW PRIORITY**: Consider exemption request for `time.Now()` usage in memory monitor statistics (LastCleanupAt timestamps) - this is monitoring/metrics code, not procedural generation, so time-based timestamps are acceptable. Add exemption comment citing AUDIT.md guidelines: "Network/auth packages are exempt - use time-based seeds for jitter/nonces" - extend to include monitoring/metrics.
 4. **ENHANCEMENT**: Consider adding cache persistence support via Serialize/Deserialize methods for warm cache recovery across save/load cycles (mentioned in doc.go but not implemented).
 5. **ENHANCEMENT**: Add benchmark tests for critical hot paths (Get, Put, GenerateKey) to track performance regressions.

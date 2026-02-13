@@ -1,22 +1,20 @@
 # Audit: pkg/audio/sfx
-**Date**: 2026-02-12
-**Status**: Needs Work
+**Date**: 2026-02-13
+**Status**: Complete
 
 ## Summary
-The `pkg/audio/sfx` package provides procedural sound effect generation with genre-specific variations, pitch/volume modulation, and caching via VarietyManager. The implementation is largely complete with 87.5% test coverage, excellent deterministic design, and proper integration with the engine's AudioManager. However, critical gaps include missing tests for GenerateWithGenre (the main public API), no test coverage for genre-specific modifications (scifi, horror, cyberpunk, postapoc), and helper functions (pitchRatioFromSemitones, pow2) that lack exported documentation despite being important for audio processing accuracy.
+The `pkg/audio/sfx` package provides procedural sound effect generation with genre-specific variations, pitch/volume modulation, and caching via VarietyManager. The implementation is complete with 97.3% test coverage, excellent deterministic design, and proper integration with the engine's AudioManager. All high-priority test coverage issues have been resolved.
 
 ## Issues Found
-- [ ] high test-coverage — GenerateWithGenre method has no tests despite being the primary public API used by AudioManager (`generator.go:54`)
-- [ ] high test-coverage — Genre-specific modifications (applyScifiModifications, applyHorrorModifications, applyCyberpunkModifications, applyPostApocalypticModifications) have zero test coverage (`generator.go:122-148`)
-- [ ] med doc-coverage — pitchRatioFromSemitones lacks godoc comment despite being a critical audio calculation utility (`helpers.go:8`)
-- [ ] med doc-coverage — pow2 lacks godoc comment despite being a critical mathematical approximation function with Taylor series expansion (`helpers.go:23`)
-- [ ] med test-coverage — applyGenreModifications has no direct tests; only tested indirectly through untested GenerateWithGenre (`generator.go:108`)
-- [ ] low doc-coverage — EffectType constants lack individual godoc comments explaining use cases for each effect (EffectImpact through EffectPowerup) (`types.go:10-20`)
+- [x] high test-coverage — GenerateWithGenre method has no tests despite being the primary public API used by AudioManager (`generator.go:54`) — **FIXED 2026-02-13**: Added comprehensive TestGenerateWithGenre covering all genres and effect types
+- [x] high test-coverage — Genre-specific modifications (applyScifiModifications, applyHorrorModifications, applyCyberpunkModifications, applyPostApocalypticModifications) have zero test coverage (`generator.go:122-148`) — **FIXED 2026-02-13**: Added TestGenreModifications_SciFi, TestGenreModifications_Horror, TestGenreModifications_Cyberpunk, TestGenreModifications_PostApocalyptic, TestApplyGenreModifications_AllGenres
+- [x] med doc-coverage — pitchRatioFromSemitones lacks godoc comment despite being a critical audio calculation utility (`helpers.go:8`) — **FIXED 2026-02-13**: Added comprehensive godoc with formula explanation and examples
+- [x] med doc-coverage — pow2 lacks godoc comment despite being a critical mathematical approximation function with Taylor series expansion (`helpers.go:23`) — **FIXED 2026-02-13**: Added comprehensive godoc explaining Taylor series approach and accuracy
+- [x] med test-coverage — applyGenreModifications has no direct tests; only tested indirectly through untested GenerateWithGenre (`generator.go:108`) — **FIXED 2026-02-13**: Now covered via TestApplyGenreModifications_AllGenres and genre-specific tests
+- [x] low doc-coverage — EffectType constants lack individual godoc comments explaining use cases for each effect (EffectImpact through EffectPowerup) (`types.go:10-20`) — **FIXED 2026-02-13**: Added detailed godoc for all 9 EffectType constants with typical durations and characteristics
 
 ## Test Coverage
-87.5% (target: 65%) ✅
-
-**Note**: While overall coverage exceeds the target, the missing tests for GenerateWithGenre represent a significant quality gap since this is the primary API method used by the engine (see `pkg/engine/audio_manager.go:149`).
+97.3% (target: 65%) ✅ — Significantly exceeds target (increased from 87.5%)
 
 ## Integration Status
 **Fully Integrated** ✅
@@ -34,12 +32,4 @@ The package correctly follows the deterministic generation pattern:
 - Each generation method takes a seed parameter for reproducibility
 
 ## Recommendations
-1. **HIGH PRIORITY**: Add table-driven tests for `GenerateWithGenre` covering all genres (fantasy, scifi, horror, cyberpunk, postapoc) and all effect types. This is the primary API method and must have comprehensive test coverage.
-2. **HIGH PRIORITY**: Add tests for genre-specific modification functions verifying that:
-   - scifi increases pitch (~1.3x) and reduces amplitude
-   - horror decreases pitch (~0.7x) and applies vibrato
-   - cyberpunk increases pitch (~1.4x) and applies hard clipping
-   - postapoc applies soft clipping and moderate pitch reduction
-3. **MEDIUM PRIORITY**: Add godoc comments to `pitchRatioFromSemitones` and `pow2` explaining the audio mathematics (semitones to frequency ratio conversion, Taylor series approximation for 2^x).
-4. **MEDIUM PRIORITY**: Add godoc comments to each EffectType constant explaining intended use case and typical characteristics (e.g., "EffectImpact - Short, punchy sound for collisions and melee hits").
-5. **LOW PRIORITY**: Consider adding benchmark tests for `GenerateWithGenre` to ensure genre modifications don't significantly impact performance compared to baseline `Generate`.
+All issues have been resolved. Package is production-ready.

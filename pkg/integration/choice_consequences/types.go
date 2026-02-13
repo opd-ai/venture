@@ -1,5 +1,12 @@
 package choice_consequences
 
+import (
+	"encoding/json"
+	"fmt"
+
+	log "github.com/sirupsen/logrus"
+)
+
 // types.go defines the core domain types for choice tracking and consequences.
 // This includes player choices, NPC relationships, content locks, quest branches,
 // companion reactions, and the ECS component for integrating with the game engine.
@@ -121,4 +128,67 @@ type ChoiceTrackerComponent struct {
 // Type returns the component type identifier.
 func (c ChoiceTrackerComponent) Type() string {
 	return "choice_tracker"
+}
+
+// choiceTrackerLogger provides structured logging for component operations.
+var choiceTrackerLogger = log.WithField("component_type", "choice_tracker")
+
+// Serialize encodes the component to bytes for persistence.
+func (c *ChoiceTrackerComponent) Serialize() ([]byte, error) {
+	choiceTrackerLogger.WithFields(log.Fields{
+		"player_id":      c.PlayerID,
+		"choice_count":   len(c.ChoiceHistory),
+		"npc_count":      len(c.NPCRelationships),
+		"lock_count":     len(c.ContentLocks),
+		"reaction_count": len(c.CompanionReactions),
+	}).Debug("Serializing choice tracker component")
+
+	data, err := json.Marshal(c)
+	if err != nil {
+		choiceTrackerLogger.WithFields(log.Fields{
+			"player_id": c.PlayerID,
+			"error":     err.Error(),
+		}).Error("Failed to serialize choice tracker component")
+		return nil, fmt.Errorf("failed to serialize choice tracker: %w", err)
+	}
+
+	choiceTrackerLogger.WithFields(log.Fields{
+		"player_id": c.PlayerID,
+		"bytes":     len(data),
+	}).Debug("Choice tracker component serialized successfully")
+
+	return data, nil
+}
+
+// Deserialize decodes the component from bytes.
+func (c *ChoiceTrackerComponent) Deserialize(data []byte) error {
+	choiceTrackerLogger.WithFields(log.Fields{
+		"bytes": len(data),
+	}).Debug("Deserializing choice tracker component")
+
+	if len(data) == 0 {
+		choiceTrackerLogger.WithFields(log.Fields{
+			"expected_bytes": ">0",
+			"received_bytes": 0,
+		}).Error("Empty data for choice tracker component deserialization")
+		return fmt.Errorf("empty data for choice tracker deserialization")
+	}
+
+	if err := json.Unmarshal(data, c); err != nil {
+		choiceTrackerLogger.WithFields(log.Fields{
+			"bytes": len(data),
+			"error": err.Error(),
+		}).Error("Failed to deserialize choice tracker component")
+		return fmt.Errorf("failed to deserialize choice tracker: %w", err)
+	}
+
+	choiceTrackerLogger.WithFields(log.Fields{
+		"player_id":      c.PlayerID,
+		"choice_count":   len(c.ChoiceHistory),
+		"npc_count":      len(c.NPCRelationships),
+		"lock_count":     len(c.ContentLocks),
+		"reaction_count": len(c.CompanionReactions),
+	}).Debug("Choice tracker component deserialized successfully")
+
+	return nil
 }

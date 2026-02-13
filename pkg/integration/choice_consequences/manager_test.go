@@ -931,3 +931,192 @@ func TestIsContentAvailableThreadSafety(t *testing.T) {
 		t.Error("Expected lock to be removed after unlock conditions met")
 	}
 }
+
+func TestChoiceTrackerComponentSerialize(t *testing.T) {
+	tests := []struct {
+		name string
+		comp *ChoiceTrackerComponent
+	}{
+		{
+			name: "empty component",
+			comp: &ChoiceTrackerComponent{
+				PlayerID: "player_1",
+			},
+		},
+		{
+			name: "component with data",
+			comp: &ChoiceTrackerComponent{
+				PlayerID: "player_2",
+				ChoiceHistory: []*PlayerChoice{
+					{
+						ChoiceID:     "choice_1",
+						StoryNodeID:  "node_1",
+						Timestamp:    1234567890,
+						Irreversible: true,
+					},
+				},
+				NPCRelationships: map[string]*NPCRelationship{
+					"npc_1": {
+						NPCID:      "npc_1",
+						Attitude:   0.5,
+						TrustLevel: 0.3,
+					},
+				},
+				ContentLocks: map[string]*ContentLock{
+					"quest_1": {
+						ContentID: "quest_1",
+						LockedBy:  "choice_1",
+						LockType:  LockTypeQuest,
+						Permanent: true,
+					},
+				},
+				Alignment: &PlayerAlignment{
+					GoodEvil:      0.5,
+					LawChaos:      -0.2,
+					HonorDishonor: 0.3,
+				},
+				CompanionReactions: []*CompanionReaction{
+					{
+						CompanionID:  "companion_1",
+						ChoiceID:     "choice_1",
+						LoyaltyDelta: 0.1,
+						Approval:     true,
+					},
+				},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Serialize
+			data, err := tt.comp.Serialize()
+			if err != nil {
+				t.Fatalf("Serialize() error = %v", err)
+			}
+			if len(data) == 0 {
+				t.Error("Serialize() returned empty data")
+			}
+
+			// Deserialize into new component
+			newComp := &ChoiceTrackerComponent{}
+			if err := newComp.Deserialize(data); err != nil {
+				t.Fatalf("Deserialize() error = %v", err)
+			}
+
+			// Verify round-trip
+			if newComp.PlayerID != tt.comp.PlayerID {
+				t.Errorf("PlayerID = %v, want %v", newComp.PlayerID, tt.comp.PlayerID)
+			}
+			if len(newComp.ChoiceHistory) != len(tt.comp.ChoiceHistory) {
+				t.Errorf("ChoiceHistory len = %v, want %v", len(newComp.ChoiceHistory), len(tt.comp.ChoiceHistory))
+			}
+			if len(newComp.NPCRelationships) != len(tt.comp.NPCRelationships) {
+				t.Errorf("NPCRelationships len = %v, want %v", len(newComp.NPCRelationships), len(tt.comp.NPCRelationships))
+			}
+			if len(newComp.ContentLocks) != len(tt.comp.ContentLocks) {
+				t.Errorf("ContentLocks len = %v, want %v", len(newComp.ContentLocks), len(tt.comp.ContentLocks))
+			}
+		})
+	}
+}
+
+func TestChoiceTrackerComponentDeserializeErrors(t *testing.T) {
+	tests := []struct {
+		name    string
+		data    []byte
+		wantErr bool
+	}{
+		{
+			name:    "empty data",
+			data:    []byte{},
+			wantErr: true,
+		},
+		{
+			name:    "nil data",
+			data:    nil,
+			wantErr: true,
+		},
+		{
+			name:    "invalid JSON",
+			data:    []byte("not valid json"),
+			wantErr: true,
+		},
+		{
+			name:    "valid JSON",
+			data:    []byte(`{"PlayerID":"test"}`),
+			wantErr: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			comp := &ChoiceTrackerComponent{}
+			err := comp.Deserialize(tt.data)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("Deserialize() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func BenchmarkSerialize(b *testing.B) {
+	comp := &ChoiceTrackerComponent{
+		PlayerID:      "benchmark_player",
+		ChoiceHistory: make([]*PlayerChoice, 100),
+		NPCRelationships: map[string]*NPCRelationship{
+			"npc_1": {NPCID: "npc_1", Attitude: 0.5},
+		},
+		ContentLocks: make(map[string]*ContentLock),
+		Alignment: &PlayerAlignment{
+			GoodEvil:      0.5,
+			LawChaos:      -0.2,
+			HonorDishonor: 0.3,
+		},
+	}
+
+	for i := 0; i < 100; i++ {
+		comp.ChoiceHistory[i] = &PlayerChoice{
+			ChoiceID:    "choice_" + string(rune('a'+i%26)),
+			StoryNodeID: "node_1",
+			Timestamp:   int64(1234567890 + i),
+		}
+	}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		comp.Serialize()
+	}
+}
+
+func BenchmarkDeserialize(b *testing.B) {
+	comp := &ChoiceTrackerComponent{
+		PlayerID:      "benchmark_player",
+		ChoiceHistory: make([]*PlayerChoice, 100),
+		NPCRelationships: map[string]*NPCRelationship{
+			"npc_1": {NPCID: "npc_1", Attitude: 0.5},
+		},
+		ContentLocks: make(map[string]*ContentLock),
+		Alignment: &PlayerAlignment{
+			GoodEvil:      0.5,
+			LawChaos:      -0.2,
+			HonorDishonor: 0.3,
+		},
+	}
+
+	for i := 0; i < 100; i++ {
+		comp.ChoiceHistory[i] = &PlayerChoice{
+			ChoiceID:    "choice_" + string(rune('a'+i%26)),
+			StoryNodeID: "node_1",
+			Timestamp:   int64(1234567890 + i),
+		}
+	}
+
+	data, _ := comp.Serialize()
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		newComp := &ChoiceTrackerComponent{}
+		newComp.Deserialize(data)
+	}
+}

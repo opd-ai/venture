@@ -7,6 +7,8 @@ import (
 	"os"
 	"strings"
 	"sync"
+
+	log "github.com/sirupsen/logrus"
 )
 
 // choice_tracker.go implements the core ChoiceTracker manager that coordinates
@@ -16,6 +18,9 @@ import (
 //
 // The ChoiceTracker uses thread-safe operations (sync.RWMutex) to support
 // concurrent access from multiple game systems.
+
+// trackerLogger provides structured logging for choice tracker operations.
+var trackerLogger = log.WithField("system", "choice_tracker")
 
 // ChoiceTracker manages player choice tracking and consequence application.
 type ChoiceTracker struct {
@@ -63,15 +68,26 @@ func (ct *ChoiceTracker) RecordChoice(playerID string, choice *PlayerChoice) err
 	applyChoiceEffects(ct, state, choice)
 	state.LastUpdate = now()
 
+	trackerLogger.WithFields(log.Fields{
+		"player_id":     playerID,
+		"choice_id":     choice.ChoiceID,
+		"story_node_id": choice.StoryNodeID,
+		"irreversible":  choice.Irreversible,
+		"npcs_affected": len(choice.NPCsAffected),
+		"consequences":  len(choice.Consequences),
+	}).Debug("Player choice recorded")
+
 	return nil
 }
 
 // validateChoice validates the choice parameters.
 func validateChoice(choice *PlayerChoice) error {
 	if choice == nil {
+		trackerLogger.Error("Attempted to record nil choice")
 		return fmt.Errorf("choice cannot be nil")
 	}
 	if choice.ChoiceID == "" {
+		trackerLogger.WithField("story_node_id", choice.StoryNodeID).Error("Choice ID cannot be empty")
 		return fmt.Errorf("choice ID cannot be empty")
 	}
 	return nil
@@ -377,9 +393,11 @@ func (ct *ChoiceTracker) GetAlignment(playerID string) *PlayerAlignment {
 // RegisterQuestBranch registers a quest branch with prerequisites.
 func (ct *ChoiceTracker) RegisterQuestBranch(branch *QuestBranch) error {
 	if branch == nil {
+		trackerLogger.Error("Attempted to register nil quest branch")
 		return fmt.Errorf("branch cannot be nil")
 	}
 	if branch.QuestID == "" {
+		trackerLogger.Error("Quest branch ID cannot be empty")
 		return fmt.Errorf("quest ID cannot be empty")
 	}
 
@@ -387,6 +405,13 @@ func (ct *ChoiceTracker) RegisterQuestBranch(branch *QuestBranch) error {
 	defer ct.mu.Unlock()
 
 	ct.questBranches[branch.QuestID] = branch
+
+	trackerLogger.WithFields(log.Fields{
+		"quest_id":      branch.QuestID,
+		"branch_id":     branch.BranchID,
+		"prerequisites": len(branch.Prerequisites),
+	}).Debug("Quest branch registered")
+
 	return nil
 }
 
@@ -422,9 +447,11 @@ func (ct *ChoiceTracker) IsQuestBranchAvailable(playerID, questID, branchID stri
 // RegisterClassQuest registers a class-specific quest.
 func (ct *ChoiceTracker) RegisterClassQuest(quest *ClassSpecificQuest) error {
 	if quest == nil {
+		trackerLogger.Error("Attempted to register nil class quest")
 		return fmt.Errorf("quest cannot be nil")
 	}
 	if quest.QuestID == "" {
+		trackerLogger.Error("Class quest ID cannot be empty")
 		return fmt.Errorf("quest ID cannot be empty")
 	}
 
@@ -432,6 +459,13 @@ func (ct *ChoiceTracker) RegisterClassQuest(quest *ClassSpecificQuest) error {
 	defer ct.mu.Unlock()
 
 	ct.classQuests = append(ct.classQuests, quest)
+
+	trackerLogger.WithFields(log.Fields{
+		"quest_id":       quest.QuestID,
+		"required_class": quest.RequiredClass,
+		"min_level":      quest.MinLevel,
+	}).Debug("Class quest registered")
+
 	return nil
 }
 
@@ -499,6 +533,7 @@ func (ct *ChoiceTracker) checkAlignmentAndPrerequisites(playerID string, quest *
 // RecordCompanionReaction records how a companion reacted to a choice.
 func (ct *ChoiceTracker) RecordCompanionReaction(playerID string, reaction *CompanionReaction) error {
 	if reaction == nil {
+		trackerLogger.WithField("player_id", playerID).Error("Attempted to record nil companion reaction")
 		return fmt.Errorf("reaction cannot be nil")
 	}
 
@@ -512,6 +547,14 @@ func (ct *ChoiceTracker) RecordCompanionReaction(playerID string, reaction *Comp
 	if len(state.CompanionReactions) > 20 {
 		state.CompanionReactions = state.CompanionReactions[len(state.CompanionReactions)-20:]
 	}
+
+	trackerLogger.WithFields(log.Fields{
+		"player_id":     playerID,
+		"companion_id":  reaction.CompanionID,
+		"choice_id":     reaction.ChoiceID,
+		"loyalty_delta": reaction.LoyaltyDelta,
+		"approval":      reaction.Approval,
+	}).Debug("Companion reaction recorded")
 
 	return nil
 }
@@ -541,8 +584,17 @@ func (ct *ChoiceTracker) Save(filename string) error {
 	ct.mu.RLock()
 	defer ct.mu.RUnlock()
 
+	trackerLogger.WithFields(log.Fields{
+		"filename":     filename,
+		"player_count": len(ct.players),
+	}).Debug("Saving choice tracker data")
+
 	file, err := os.Create(filename)
 	if err != nil {
+		trackerLogger.WithFields(log.Fields{
+			"filename": filename,
+			"error":    err.Error(),
+		}).Error("Failed to create save file")
 		return fmt.Errorf("failed to create file: %w", err)
 	}
 	defer file.Close()
@@ -552,22 +604,41 @@ func (ct *ChoiceTracker) Save(filename string) error {
 
 	encoder := json.NewEncoder(gzWriter)
 	if err := encoder.Encode(ct.players); err != nil {
+		trackerLogger.WithFields(log.Fields{
+			"filename": filename,
+			"error":    err.Error(),
+		}).Error("Failed to encode choice tracker data")
 		return fmt.Errorf("failed to encode data: %w", err)
 	}
+
+	trackerLogger.WithFields(log.Fields{
+		"filename":     filename,
+		"player_count": len(ct.players),
+	}).Info("Choice tracker data saved successfully")
 
 	return nil
 }
 
 // Load loads player choice data from a file.
 func (ct *ChoiceTracker) Load(filename string) error {
+	trackerLogger.WithField("filename", filename).Debug("Loading choice tracker data")
+
 	file, err := os.Open(filename)
 	if err != nil {
+		trackerLogger.WithFields(log.Fields{
+			"filename": filename,
+			"error":    err.Error(),
+		}).Error("Failed to open save file")
 		return fmt.Errorf("failed to open file: %w", err)
 	}
 	defer file.Close()
 
 	gzReader, err := gzip.NewReader(file)
 	if err != nil {
+		trackerLogger.WithFields(log.Fields{
+			"filename": filename,
+			"error":    err.Error(),
+		}).Error("Failed to create gzip reader")
 		return fmt.Errorf("failed to create gzip reader: %w", err)
 	}
 	defer gzReader.Close()
@@ -577,8 +648,17 @@ func (ct *ChoiceTracker) Load(filename string) error {
 
 	decoder := json.NewDecoder(gzReader)
 	if err := decoder.Decode(&ct.players); err != nil {
+		trackerLogger.WithFields(log.Fields{
+			"filename": filename,
+			"error":    err.Error(),
+		}).Error("Failed to decode choice tracker data")
 		return fmt.Errorf("failed to decode data: %w", err)
 	}
+
+	trackerLogger.WithFields(log.Fields{
+		"filename":     filename,
+		"player_count": len(ct.players),
+	}).Info("Choice tracker data loaded successfully")
 
 	return nil
 }

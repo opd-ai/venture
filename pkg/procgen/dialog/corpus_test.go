@@ -15,7 +15,7 @@ func TestGetCorpus(t *testing.T) {
 		{"scifi", false, 50},
 		{"horror", false, 50},
 		{"cyberpunk", false, 50},
-		{"postapocalyptic", false, 50},
+		{"postapoc", false, 50},
 		{"unknown", true, 0},
 		{"", true, 0},
 	}
@@ -174,7 +174,7 @@ func TestGetPostApocalypticCorpus(t *testing.T) {
 		t.Fatal("GetPostApocalypticCorpus returned nil")
 	}
 
-	if corpus.GenreID != "postapocalyptic" {
+	if corpus.GenreID != "postapoc" {
 		t.Errorf("GenreID = %q, want postapocalyptic", corpus.GenreID)
 	}
 
@@ -212,7 +212,7 @@ func TestGetAllCorpora(t *testing.T) {
 		}
 	}
 
-	expected := []string{"fantasy", "scifi", "horror", "cyberpunk", "postapocalyptic"}
+	expected := []string{"fantasy", "scifi", "horror", "cyberpunk", "postapoc"}
 	for _, genre := range expected {
 		if !genres[genre] {
 			t.Errorf("GetAllCorpora missing genre %q", genre)
@@ -234,7 +234,7 @@ func TestGetAvailableGenres(t *testing.T) {
 		"scifi":           true,
 		"horror":          true,
 		"cyberpunk":       true,
-		"postapocalyptic": true,
+		"postapoc": true,
 	}
 
 	for _, genre := range genres {

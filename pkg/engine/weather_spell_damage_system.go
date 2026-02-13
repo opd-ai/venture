@@ -3,6 +3,7 @@
 package engine
 
 import (
+	"math"
 	"math/rand"
 
 	"github.com/opd-ai/venture/pkg/procgen/magic"
@@ -111,7 +112,8 @@ func (s *WeatherSpellDamageSystem) getCurrentWeather() *WeatherComponent {
 func (s *WeatherSpellDamageSystem) calculateModifier(weather particles.WeatherType, element magic.ElementType) float64 {
 	baseModifier := s.getBaseModifier(weather, element)
 	genreBonus := s.getGenreBonus(weather, element)
-	return baseModifier + genreBonus
+	// Round to 2 decimal places to avoid IEEE 754 floating-point addition artifacts
+	return math.Round((baseModifier+genreBonus)*100) / 100
 }
 
 // getBaseModifier returns the base damage modifier for weather-element synergies.

@@ -62,7 +62,7 @@ type MarkovGenerator struct {
 //   - Non-deterministic mode: Seed is combined with runtime entropy
 //
 // The genreID parameter should match one of the supported genres:
-// "fantasy", "scifi", "horror", "cyberpunk", "postapocalyptic"
+// "fantasy", "scifi", "horror", "cyberpunk", "postapoc"
 //
 // The order parameter controls n-gram size (Order2 or Order3).
 func NewMarkovGenerator(seed int64, genreID string, order MarkovOrder) *MarkovGenerator {

@@ -34,6 +34,7 @@ This document tracks the audit status of all Go packages in the Venture codebase
 - [x] `pkg/procgen/building/AUDIT.md` — Complete — 2 issues (0 high, 0 med, 2 low)
 - [x] `pkg/procgen/furniture/AUDIT.md` — Complete — 3 issues (0 high, 0 med, 3 low)
 - [x] `pkg/procgen/narrative/AUDIT.md` — Complete — 3 issues (0 high, 0 med, 3 low)
+- [x] `pkg/procgen/genre/AUDIT.md` — Needs Work — 4 issues (1 high, 2 med, 1 low)
 
 ### Rendering
 - [x] `pkg/rendering/AUDIT.md` — Complete — 1 issue (0 high, 0 med, 1 low)
@@ -103,10 +104,10 @@ Each audit should produce a `AUDIT.md` file in the package directory following t
 ## Summary Statistics
 
 **Total Packages**: 50+  
-**Audited**: 49  
+**Audited**: 50  
 **Complete**: 20  
-**Needs Work**: 28  
+**Needs Work**: 29  
 **Incomplete**: 1  
-**Not Started**: 6+
+**Not Started**: 5+
 
 **Average Test Coverage** (audited packages): ~86% (estimated - some packages require GUI environment)

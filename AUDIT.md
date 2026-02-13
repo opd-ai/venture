@@ -103,12 +103,13 @@ This document tracks the audit status of all Go packages in the Venture codebase
 
 ### Supporting
 - [x] `pkg/audit/features/AUDIT.md` — Complete — 1 issue (0 high, 0 med, 1 low)
-- [x] `pkg/balance/AUDIT.md` — Incomplete — 7 issues (2 high, 2 med, 3 low)
+- [x] `pkg/balance/AUDIT.md` — Needs Work — 4 issues (1 high, 1 med, 2 low)
 - [x] `pkg/benchmark/AUDIT.md` — Complete — 3 issues (0 high, 0 med, 3 low)
 - [x] `pkg/benchmark/fps/AUDIT.md` — Complete — 3 issues (0 high, 1 med, 2 low)
 - [x] `pkg/benchmark/memory/AUDIT.md` — Complete — 3 issues (0 high, 0 med, 3 low)
 - [x] `pkg/class/advanced/AUDIT.md` — Complete — 3 issues (0 high, 0 med, 3 low)
 - [x] `pkg/combat/AUDIT.md` — Complete — 0 issues
+- [x] `pkg/combat/AUDIT_2026-02-13.md` — Complete — 2 issues (0 high, 0 med, 2 low)
 - [x] `pkg/companion/learning/AUDIT.md` — Needs Work — 5 issues (0 high, 2 med, 3 low)
 - [x] `pkg/saveload/AUDIT.md` — Needs Work — 3 issues (1 high, 1 med, 1 low)
 - [x] `pkg/config/AUDIT.md` — Complete — 0 issues
@@ -159,8 +160,8 @@ Each audit should produce a `AUDIT.md` file in the package directory following t
 **Total Packages**: 50+  
 **Audited**: 106  
 **Complete**: 49  
-**Needs Work**: 56  
-**Incomplete**: 1  
+**Needs Work**: 57  
+**Incomplete**: 0  
 **Not Started**: 0
 
 **Average Test Coverage** (audited packages): ~85% (estimated - some packages require GUI environment)

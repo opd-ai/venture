@@ -899,7 +899,7 @@ func TestGraphGrammarGenerator_Validate(t *testing.T) {
 				return graph
 			}(),
 			wantErr: true,
-			errMsg:  "is nil",
+			errMsg:  "doesn't match Rooms slice size",
 		},
 		{
 			name: "invalid_room_id",

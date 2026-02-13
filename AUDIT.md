@@ -32,7 +32,7 @@ This document tracks the audit status of all Go packages in the Venture codebase
 
 ### Procedural Generation
 - [x] `pkg/procgen/AUDIT.md` — Complete — 3 issues (0 high, 0 med, 3 low)
-- [x] `pkg/procgen/terrain/AUDIT.md` — Needs Work — 6 issues (1 high, 1 med, 4 low)
+- [x] `pkg/procgen/terrain/AUDIT.md` — Complete — 0 issues (2 fixed on 2026-02-13: cache error handling with structured logging, test expectation fix)
 - [x] `pkg/procgen/entity/AUDIT.md` — Needs Work — 3 issues (1 high, 1 med, 1 low)
 - [x] `pkg/procgen/item/AUDIT.md` — Needs Work — 1 issue (0 high, 0 med, 1 low) - Updated 2026-02-13: Fixed 6 issues (5 high, 1 med) - class restrictions and spell effects now populated
 - [x] `pkg/procgen/item/AUDIT_2026-02-13.md` — Complete — 1 issue (0 high, 0 med, 1 low) - Updated 2026-02-13: All genre templates implemented (horror, cyberpunk)
@@ -164,8 +164,8 @@ Each audit should produce a `AUDIT.md` file in the package directory following t
 
 **Total Packages**: 50+  
 **Audited**: 106  
-**Complete**: 61  
-**Needs Work**: 45  
+**Complete**: 62  
+**Needs Work**: 44  
 **Incomplete**: 0  
 **Not Started**: 0
 

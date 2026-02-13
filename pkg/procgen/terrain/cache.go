@@ -22,6 +22,7 @@ import (
 	"time"
 
 	"github.com/opd-ai/venture/pkg/procgen"
+	"github.com/sirupsen/logrus"
 )
 
 // TerrainCache provides caching for generated terrain with disk persistence.
@@ -281,7 +282,13 @@ func (c *TerrainCache) saveToDisk(key string, terrain *Terrain) {
 	defer file.Close()
 
 	encoder := gob.NewEncoder(file)
-	encoder.Encode(entry)
+	if err := encoder.Encode(entry); err != nil {
+		logrus.WithFields(logrus.Fields{
+			"key":      key,
+			"filename": filename,
+			"error":    err.Error(),
+		}).Warn("Failed to encode terrain to disk cache")
+	}
 }
 
 // loadFromDisk loads terrain from disk with checksum validation.

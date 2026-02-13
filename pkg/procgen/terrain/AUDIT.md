@@ -1,17 +1,17 @@
 # Audit: github.com/opd-ai/venture/pkg/procgen/terrain
-**Date**: 2026-02-12
-**Status**: Needs Work
+**Date**: 2026-02-13
+**Status**: Complete
 
 ## Summary
-The terrain package implements 10+ procedural generation algorithms (BSP, cellular, L-system, maze, forest, city, composite, multi-level) with excellent documentation (125-line package doc.go), strong test coverage (94.0%), and deterministic seed-based generation. Critical issues include one unchecked error in cache persistence, one failing validation test due to check ordering, and minor documentation gaps on exported types.
+The terrain package implements 10+ procedural generation algorithms (BSP, cellular, L-system, maze, forest, city, composite, multi-level) with excellent documentation (125-line package doc.go), strong test coverage (94.0%), and deterministic seed-based generation. All issues have been resolved.
 
 ## Issues Found
-- [ ] high error-handling — `encoder.Encode(entry)` error not checked in cache persistence (`cache.go:284`)
-- [ ] med test-failure — Validation test `nil_room_in_slice` expects "is nil" error but gets size mismatch error due to validation order; test expectation should be updated (`grammar_test.go:890-902`, validated in `grammar.go:313-315` before `grammar.go:351`)
-- [ ] low doc-coverage — Exported type `CacheStats` missing godoc comment (`cache.go:48`)
-- [ ] low doc-coverage — Exported type `BiomeRegionInfo` missing godoc comment (`composite.go:49`)
-- [ ] low doc-coverage — Exported type `CityBlock` missing godoc comment (`city.go:56`)
-- [ ] low doc-coverage — Exported type `Rect` missing godoc comment (`city.go:62`)
+- [x] high error-handling — `encoder.Encode(entry)` error not checked in cache persistence — **FIXED 2026-02-13**: Added structured logging with `logrus.WithFields` for encode errors (`cache.go:284`)
+- [x] med test-failure — Validation test `nil_room_in_slice` expects "is nil" error but gets size mismatch error due to validation order — **FIXED 2026-02-13**: Updated test expectation to match actual validation order (`grammar_test.go:902`)
+- [x] low doc-coverage — Exported type `CacheStats` godoc comment — **VERIFIED**: Already exists (`cache.go:48`)
+- [x] low doc-coverage — Exported type `BiomeRegionInfo` godoc comment — **VERIFIED**: Already exists (`composite.go:48`)
+- [x] low doc-coverage — Exported type `CityBlock` godoc comment — **VERIFIED**: Already exists (`city.go:55`)
+- [x] low doc-coverage — Exported type `Rect` godoc comment — **VERIFIED**: Already exists (`city.go:61`)
 
 ## Test Coverage
 94.0% (target: 65%) ✅ EXCEEDS TARGET
@@ -45,9 +45,9 @@ Not applicable - this is a generation package, not an ECS component package. Gen
 - All generators follow deterministic seed-based generation pattern ✅
 
 ## Recommendations
-1. **[HIGH]** Fix error handling in `cache.go:284` - check `encoder.Encode(entry)` error and log failure with structured logging
-2. **[MED]** Fix test `grammar_test.go:890-902` - update `errMsg` expectation from `"is nil"` to `"doesn't match Rooms slice size"` to match actual validation order (size check at line 313 runs before nil check at line 351)
-3. **[LOW]** Add godoc comments to 4 exported types: `CacheStats`, `BiomeRegionInfo`, `CityBlock`, `Rect`
+1. ~~**[HIGH]** Fix error handling in `cache.go:284` - check `encoder.Encode(entry)` error and log failure with structured logging~~ **DONE**
+2. ~~**[MED]** Fix test `grammar_test.go:890-902` - update `errMsg` expectation from `"is nil"` to `"doesn't match Rooms slice size"` to match actual validation order~~ **DONE**
+3. ~~**[LOW]** Add godoc comments to 4 exported types: `CacheStats`, `BiomeRegionInfo`, `CityBlock`, `Rect`~~ **Already documented**
 4. **[INFO]** Consider adding structured logging to `cache.go:84-86` where disk cache directory creation failure is silently ignored (currently just disables disk caching)
 
 ## Compliance Verification
@@ -64,16 +64,16 @@ All generators use seed-based `rand.New(rand.NewSource(seed))` pattern. No globa
 Not applicable - no networking code in this package.
 
 ### ✅ Error Handling
-Generally excellent with one exception:
+All errors properly handled:
 - All generator errors properly checked and returned
 - Parameter validation uses `procgen.ValidateParams()` and `procgen.ValidateDimensions()`
-- One unchecked error at `cache.go:284` (encoder.Encode)
+- Cache encode errors logged with structured logging (`cache.go:284-289`)
 - Cache fallback patterns handle errors gracefully (disable features vs. crash)
 
 ### ✅ Documentation
 - Comprehensive package-level `doc.go` with usage examples
 - All major exported functions documented
-- 4 minor exported types missing comments (see issues above)
+- All exported types have godoc comments
 - README.md and ASYNC_LOADING.md provide additional documentation
 
 ### ✅ Integration

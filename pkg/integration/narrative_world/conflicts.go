@@ -421,8 +421,8 @@ func (m *StoryEventManager) SetConflictChance(chance float64) {
 
 // SetMaxMemoryEvents sets the maximum memory events per companion
 func (m *StoryEventManager) SetMaxMemoryEvents(max int) {
-	if max < 1 {
-		max = 1 // Minimum 1 event
+	if max < 10 {
+		max = 10 // Minimum 10 events
 	}
 	if max > 200 {
 		max = 200 // Maximum 200 events

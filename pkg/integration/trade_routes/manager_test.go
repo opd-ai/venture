@@ -197,6 +197,52 @@ func TestRemoveEscort(t *testing.T) {
 	}
 }
 
+func TestGetRoute(t *testing.T) {
+	rm := NewRouteManager("test-server", 12345)
+
+	// Create a valid route
+	route, err := rm.CreateRoute("region-a", "region-b", 1000.0)
+	if err != nil {
+		t.Fatalf("Failed to create route: %v", err)
+	}
+
+	tests := []struct {
+		name    string
+		routeID string
+		wantErr bool
+	}{
+		{"valid route ID", route.ID, false},
+		{"empty route ID", "", true},
+		{"nonexistent route ID", "nonexistent-route-999", true},
+		{"invalid format route ID", "invalid", true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result, err := rm.GetRoute(tt.routeID)
+
+			if tt.wantErr {
+				if err == nil {
+					t.Error("Expected error, got nil")
+				}
+				return
+			}
+
+			if err != nil {
+				t.Fatalf("Unexpected error: %v", err)
+			}
+
+			if result == nil {
+				t.Fatal("Expected non-nil route")
+			}
+
+			if result.ID != tt.routeID {
+				t.Errorf("Expected route ID '%s', got '%s'", tt.routeID, result.ID)
+			}
+		})
+	}
+}
+
 func TestGetActiveRoutes(t *testing.T) {
 	rm := NewRouteManager("test-server", 12345)
 

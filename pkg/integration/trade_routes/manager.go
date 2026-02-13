@@ -19,6 +19,8 @@ import (
 	"sync"
 	"time"
 
+	log "github.com/sirupsen/logrus"
+
 	"github.com/opd-ai/venture/pkg/procgen"
 	"github.com/opd-ai/venture/pkg/procgen/vehicle"
 )
@@ -162,14 +164,30 @@ func (rm *RouteManager) CreateRoute(startRegion, endRegion string, cargoValue fl
 	defer rm.mu.Unlock()
 
 	if startRegion == "" || endRegion == "" {
+		log.WithFields(log.Fields{
+			"startRegion": startRegion,
+			"endRegion":   endRegion,
+			"serverID":    rm.serverID,
+		}).Warn("CreateRoute: start and end regions cannot be empty")
 		return nil, fmt.Errorf("start and end regions cannot be empty")
 	}
 
 	if startRegion == endRegion {
+		log.WithFields(log.Fields{
+			"startRegion": startRegion,
+			"endRegion":   endRegion,
+			"serverID":    rm.serverID,
+		}).Warn("CreateRoute: start and end regions must be different")
 		return nil, fmt.Errorf("start and end regions must be different")
 	}
 
 	if cargoValue <= 0 {
+		log.WithFields(log.Fields{
+			"startRegion": startRegion,
+			"endRegion":   endRegion,
+			"cargoValue":  cargoValue,
+			"serverID":    rm.serverID,
+		}).Warn("CreateRoute: cargo value must be positive")
 		return nil, fmt.Errorf("cargo value must be positive, got %.2f", cargoValue)
 	}
 
@@ -213,14 +231,28 @@ func (rm *RouteManager) StartRoute(routeID string, caravanID uint64) error {
 
 	route, exists := rm.routes[routeID]
 	if !exists {
+		log.WithFields(log.Fields{
+			"routeID":  routeID,
+			"serverID": rm.serverID,
+		}).Warn("StartRoute: route not found")
 		return fmt.Errorf("route not found: %s", routeID)
 	}
 
 	if route.Status != StatusPlanning {
+		log.WithFields(log.Fields{
+			"routeID":  routeID,
+			"status":   route.Status,
+			"serverID": rm.serverID,
+		}).Warn("StartRoute: route must be in planning status")
 		return fmt.Errorf("route must be in planning status, got %s", route.Status)
 	}
 
 	if caravanID == 0 {
+		log.WithFields(log.Fields{
+			"routeID":   routeID,
+			"caravanID": caravanID,
+			"serverID":  rm.serverID,
+		}).Warn("StartRoute: caravan ID cannot be zero")
 		return fmt.Errorf("caravan ID cannot be zero")
 	}
 
@@ -277,16 +309,32 @@ func (rm *RouteManager) AddEscort(routeID string, playerID uint64) error {
 
 	route, exists := rm.routes[routeID]
 	if !exists {
+		log.WithFields(log.Fields{
+			"routeID":  routeID,
+			"playerID": playerID,
+			"serverID": rm.serverID,
+		}).Warn("AddEscort: route not found")
 		return fmt.Errorf("route not found: %s", routeID)
 	}
 
 	if route.Status != StatusActive {
+		log.WithFields(log.Fields{
+			"routeID":  routeID,
+			"playerID": playerID,
+			"status":   route.Status,
+			"serverID": rm.serverID,
+		}).Warn("AddEscort: can only escort active routes")
 		return fmt.Errorf("can only escort active routes, got status: %s", route.Status)
 	}
 
 	// Check if player is already escorting
 	for _, escort := range route.EscortPlayers {
 		if escort == playerID {
+			log.WithFields(log.Fields{
+				"routeID":  routeID,
+				"playerID": playerID,
+				"serverID": rm.serverID,
+			}).Warn("AddEscort: player already escorting")
 			return fmt.Errorf("player %d is already escorting this route", playerID)
 		}
 	}
@@ -302,6 +350,11 @@ func (rm *RouteManager) RemoveEscort(routeID string, playerID uint64) error {
 
 	route, exists := rm.routes[routeID]
 	if !exists {
+		log.WithFields(log.Fields{
+			"routeID":  routeID,
+			"playerID": playerID,
+			"serverID": rm.serverID,
+		}).Warn("RemoveEscort: route not found")
 		return fmt.Errorf("route not found: %s", routeID)
 	}
 
@@ -312,6 +365,11 @@ func (rm *RouteManager) RemoveEscort(routeID string, playerID uint64) error {
 		}
 	}
 
+	log.WithFields(log.Fields{
+		"routeID":  routeID,
+		"playerID": playerID,
+		"serverID": rm.serverID,
+	}).Warn("RemoveEscort: player not escorting route")
 	return fmt.Errorf("player %d is not escorting route %s", playerID, routeID)
 }
 
@@ -322,6 +380,10 @@ func (rm *RouteManager) GetRoute(routeID string) (*TradeRoute, error) {
 
 	route, exists := rm.routes[routeID]
 	if !exists {
+		log.WithFields(log.Fields{
+			"routeID":  routeID,
+			"serverID": rm.serverID,
+		}).Warn("GetRoute: route not found")
 		return nil, fmt.Errorf("route not found: %s", routeID)
 	}
 
@@ -350,6 +412,10 @@ func (rm *RouteManager) GetRouteByCaravan(caravanID uint64) (*TradeRoute, error)
 
 	route, exists := rm.activeCaravans[caravanID]
 	if !exists {
+		log.WithFields(log.Fields{
+			"caravanID": caravanID,
+			"serverID":  rm.serverID,
+		}).Warn("GetRouteByCaravan: no active route for caravan")
 		return nil, fmt.Errorf("no active route for caravan %d", caravanID)
 	}
 
@@ -391,10 +457,21 @@ func (rm *RouteManager) CreateEscortMission(routeID string, playerID uint64, bas
 
 	route, exists := rm.routes[routeID]
 	if !exists {
+		log.WithFields(log.Fields{
+			"routeID":  routeID,
+			"playerID": playerID,
+			"serverID": rm.serverID,
+		}).Warn("CreateEscortMission: route not found")
 		return nil, fmt.Errorf("route not found: %s", routeID)
 	}
 
 	if route.Status != StatusActive {
+		log.WithFields(log.Fields{
+			"routeID":  routeID,
+			"playerID": playerID,
+			"status":   route.Status,
+			"serverID": rm.serverID,
+		}).Warn("CreateEscortMission: can only create missions for active routes")
 		return nil, fmt.Errorf("can only create missions for active routes")
 	}
 
@@ -545,8 +622,8 @@ func (rm *RouteManager) updateEncounter(encounter *BanditEncounter, now time.Tim
 		encounter.Outcome = OutcomeDefended
 		rm.resolveDefendedEncounter(encounter)
 	} else {
-		strength_ratio := encounter.DefenseStrength / encounter.BanditStrength
-		if strength_ratio > 0.7 {
+		strengthRatio := encounter.DefenseStrength / encounter.BanditStrength
+		if strengthRatio > 0.7 {
 			encounter.Outcome = OutcomeCompromised
 			rm.resolveCompromisedEncounter(encounter)
 		} else {
@@ -687,11 +764,22 @@ func (rm *RouteManager) CreateCaravan(seed int64, genreID string) (*vehicle.Vehi
 
 	result, err := gen.Generate(seed, params)
 	if err != nil {
+		log.WithFields(log.Fields{
+			"seed":     seed,
+			"genreID":  genreID,
+			"serverID": rm.serverID,
+			"error":    err.Error(),
+		}).Error("CreateCaravan: failed to generate caravan")
 		return nil, fmt.Errorf("failed to generate caravan: %w", err)
 	}
 
 	vehicles, ok := result.([]*vehicle.Vehicle)
 	if !ok || len(vehicles) == 0 {
+		log.WithFields(log.Fields{
+			"seed":     seed,
+			"genreID":  genreID,
+			"serverID": rm.serverID,
+		}).Error("CreateCaravan: generator returned invalid type or empty list")
 		return nil, fmt.Errorf("generator returned invalid type or empty list")
 	}
 

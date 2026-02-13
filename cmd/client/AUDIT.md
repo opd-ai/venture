@@ -3,7 +3,7 @@
 **Status**: Needs Work
 
 ## Summary
-Desktop game client entry point with comprehensive system initialization for 80+ ECS systems, UI orchestration, and multiplayer networking. Overall package health is **very good** with excellent architecture and extensive integration testing. Critical risks are **VR system stub implementations** and **per-player system placeholders** that require completion before production deployment. Package is production-ready for desktop/WASM/mobile non-VR use cases. Test coverage is intentionally low (0.4%) due to Ebiten GUI requirements - this is acceptable as core logic in pkg/ has 82.4% coverage.
+Desktop game client entry point with comprehensive system initialization for 80+ ECS systems, UI orchestration, and multiplayer networking. Overall package health is **very good** with excellent architecture and extensive integration testing. Critical risks are **VR system stub implementations** that require real hardware SDK integration before production VR deployment. Per-player system placeholders (ChatHistory, ImageGallery) have been fixed as of 2026-02-13. Package is production-ready for desktop/WASM/mobile non-VR use cases. Test coverage is intentionally low (0.4%) due to Ebiten GUI requirements - this is acceptable as core logic in pkg/ has 82.4% coverage.
 
 ## Previous Audits
 - 2026-01-20: Reorganization audit (handlers.go/util.go split, performance fix)
@@ -338,8 +338,8 @@ network_init.go (new)    -> Network and logger initialization (~200 lines)
 ## Issues Found (2026-02-13 Audit)
 - [ ] **severity:high** Stub/incomplete code — VR headset adapter uses stub implementation instead of real hardware SDK (`handlers.go:1379-1382`)
 - [ ] **severity:high** Stub/incomplete code — VR controller adapter uses stub implementation instead of real hardware SDK (`handlers.go:1391-1396`)
-- [ ] **severity:high** Stub/incomplete code — ChatHistory initialized with "system" placeholder instead of per-player instance (`handlers.go:1181-1183`)
-- [ ] **severity:high** Stub/incomplete code — ImageGallery initialized with "system" placeholder instead of per-player instance (`handlers.go:1186-1188`)
+- [x] **severity:high** Stub/incomplete code — ChatHistory initialized with "system" placeholder instead of per-player instance (`handlers.go:1181-1183`) — **FIXED 2026-02-13**: Moved initialization to `initializeHousingAndGalleryUI` with actual player ID (`player_%d` format)
+- [x] **severity:high** Stub/incomplete code — ImageGallery initialized with "system" placeholder instead of per-player instance (`handlers.go:1186-1188`) — **FIXED 2026-02-13**: Moved initialization to `initializeHousingAndGalleryUI` with actual player ID (`player_%d` format)
 - [ ] **severity:med** Deterministic procgen — `randomGenre()` uses `time.Now()` for default genre selection (`util.go:170-174`)
 - [ ] **severity:med** Deterministic procgen — `seededRandom()` uses `time.Now()` for default seed generation (`util.go:161-165`)
 - [ ] **severity:low** ECS compliance — ChatHistory and ImageGallery are manager types, not components, but stored in systemsContainer (acceptable architectural pattern)

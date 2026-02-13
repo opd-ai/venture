@@ -1178,14 +1178,10 @@ func initializeV8Systems(game *engine.EbitenGame, sys *systemsContainer, clientL
 	sys.reputationManager = persistence.NewReputationManager()
 
 	// Phase 49.3: Chat History with Delta Compression
-	// Note: ChatHistory is created per-player, this is a global placeholder for the system
-	// Actual player-specific instances will be created when player entity is spawned
-	sys.chatHistory = persistence.NewChatHistory("system")
-
-	// Phase 49.4: Persistent Image Storage & Gallery
-	// Note: ImageGallery is created per-player, this is a global placeholder for the system
-	// Actual player-specific instances will be created when player entity is spawned
-	sys.imageGallery = persistence.NewImageGallery("system")
+	// Note: ChatHistory/ImageGallery are per-player instances. They are initialized
+	// in initializeHousingAndGalleryUI after the player entity is created with the
+	// actual player ID. We leave them nil here - they will be created later.
+	// sys.chatHistory and sys.imageGallery initialized in initializeHousingAndGalleryUI
 
 	// Phase 50.3: Enhanced Vehicle Physics
 	sys.enhancedVehicleSys = vehicle.NewEnhancedVehicleSystem()
@@ -2932,6 +2928,13 @@ func initializeHousingAndGalleryUI(game *engine.EbitenGame, player *engine.Entit
 	if *verbose {
 		clientLogger.Info("housing UI initialized (H key to open)")
 	}
+
+	// Create per-player ChatHistory and ImageGallery with actual player ID
+	playerIDStr := fmt.Sprintf("player_%d", player.ID)
+	sys.chatHistory = persistence.NewChatHistory(playerIDStr)
+	sys.imageGallery = persistence.NewImageGallery(playerIDStr)
+
+	clientLogger.WithField("playerID", playerIDStr).Debug("per-player chat history and image gallery initialized")
 
 	galleryUI := engine.NewGalleryUI(*width, *height)
 	if sys.imageGallery != nil {

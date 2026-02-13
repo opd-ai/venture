@@ -140,7 +140,7 @@ This document tracks the audit status of all Go packages in the Venture codebase
 - [x] `pkg/migration/AUDIT.md` — Needs Work — 12 issues (2 high, 2 med, 8 low)
 
 ## Commands
-- [x] `cmd/client/AUDIT.md` — Needs Work — 8 issues (4 high, 2 med, 2 low)
+- [x] `cmd/client/AUDIT.md` — Needs Work — 6 issues (2 high, 2 med, 2 low) - Updated 2026-02-13: Fixed 2 high-priority issues (per-player ChatHistory/ImageGallery initialization)
 - [x] `cmd/server/AUDIT.md` — Complete — 2 issues (0 high, 0 med, 2 low)
 - [x] `cmd/mobile/AUDIT.md` — Needs Work — 10 issues (1 high, 4 med, 5 low)
 - [x] `cmd/mobile/config/AUDIT.md` — Needs Work — 4 issues (0 high, 1 med, 3 low)

@@ -179,23 +179,23 @@ gen.templates["custom"] = customTemplates
 
 ## Entity Properties
 
-### Methods
+### Query Functions
 
 ```go
-entity := entities[0]
+ent := entities[0]
 
-// Check if hostile to player
-if entity.IsHostile() {
+// Check if hostile to player (standalone function for ECS compliance)
+if IsHostile(ent) {
     // Attack logic
 }
 
 // Check if boss
-if entity.IsBoss() {
+if IsBoss(ent) {
     // Special boss mechanics
 }
 
 // Get threat level (0-100)
-threat := entity.GetThreatLevel()
+threat := GetThreatLevel(ent)
 ```
 
 ### Fields

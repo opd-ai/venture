@@ -254,9 +254,14 @@ func TestEntityIsHostile(t *testing.T) {
 
 	for _, tt := range tests {
 		entity := &Entity{Type: tt.entityType}
-		if got := entity.IsHostile(); got != tt.expected {
-			t.Errorf("Entity{Type: %v}.IsHostile() = %v, want %v", tt.entityType, got, tt.expected)
+		if got := IsHostile(entity); got != tt.expected {
+			t.Errorf("IsHostile(&Entity{Type: %v}) = %v, want %v", tt.entityType, got, tt.expected)
 		}
+	}
+
+	// Test nil safety
+	if IsHostile(nil) {
+		t.Error("IsHostile(nil) should return false")
 	}
 }
 
@@ -273,9 +278,14 @@ func TestEntityIsBoss(t *testing.T) {
 
 	for _, tt := range tests {
 		entity := &Entity{Type: tt.entityType}
-		if got := entity.IsBoss(); got != tt.expected {
-			t.Errorf("Entity{Type: %v}.IsBoss() = %v, want %v", tt.entityType, got, tt.expected)
+		if got := IsBoss(entity); got != tt.expected {
+			t.Errorf("IsBoss(&Entity{Type: %v}) = %v, want %v", tt.entityType, got, tt.expected)
 		}
+	}
+
+	// Test nil safety
+	if IsBoss(nil) {
+		t.Error("IsBoss(nil) should return false")
 	}
 }
 
@@ -291,7 +301,7 @@ func TestEntityThreatLevel(t *testing.T) {
 		},
 	}
 
-	threat := entity.GetThreatLevel()
+	threat := GetThreatLevel(entity)
 	if threat < 0 || threat > 100 {
 		t.Errorf("GetThreatLevel() = %d, expected 0-100", threat)
 	}
@@ -308,9 +318,14 @@ func TestEntityThreatLevel(t *testing.T) {
 		},
 	}
 
-	bossThreat := boss.GetThreatLevel()
+	bossThreat := GetThreatLevel(boss)
 	if bossThreat <= threat {
 		t.Errorf("Boss threat (%d) should be higher than monster threat (%d)", bossThreat, threat)
+	}
+
+	// Test nil safety
+	if GetThreatLevel(nil) != 0 {
+		t.Error("GetThreatLevel(nil) should return 0")
 	}
 }
 
@@ -626,7 +641,7 @@ func TestEntityThreatLevel_EdgeCases(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			threat := tt.entity.GetThreatLevel()
+			threat := GetThreatLevel(tt.entity)
 			if threat < 0 {
 				t.Errorf("GetThreatLevel() = %d, should not be negative", threat)
 			}

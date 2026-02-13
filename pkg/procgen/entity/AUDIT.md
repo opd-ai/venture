@@ -1,12 +1,12 @@
 # Audit: pkg/procgen/entity
-**Date**: 2026-02-12
-**Status**: Needs Work
+**Date**: 2026-02-13
+**Status**: Complete
 
 ## Summary
-The entity package provides deterministic procedural generation for game entities (monsters, NPCs, bosses, merchants) across multiple genres. Overall health is good with 92.2% test coverage and proper deterministic design. Critical risk: Entity struct has logic methods which violates ECS purity rules - these should be moved to systems.
+The entity package provides deterministic procedural generation for game entities (monsters, NPCs, bosses, merchants) across multiple genres. Overall health is excellent with 92.4% test coverage and proper deterministic design. All issues resolved.
 
 ## Issues Found
-- [x] **high** ECS compliance — Entity struct has logic methods (IsHostile, IsBoss, GetThreatLevel) violating ECS purity; should be query functions in a system or helper package (`entity.go:42,47,52`)
+- [x] **high** ECS compliance — ✅ FIXED 2026-02-13: Logic methods (IsHostile, IsBoss, GetThreatLevel) moved from Entity struct to standalone query functions in `queries.go`, maintaining ECS purity
 - [x] **med** Error handling — In merchant.go, item generation errors are only logged (Warn) and skipped without clear indication to caller that inventory may be incomplete (`merchant.go:198-202`)
 - [x] **low** Documentation — MerchantData struct lacks godoc comment explaining its role as a bridge between procgen and ECS runtime (`merchant.go:17`)
 

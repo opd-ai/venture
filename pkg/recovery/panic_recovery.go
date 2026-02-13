@@ -8,6 +8,16 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+// logPanic is a helper that logs a panic with the given fields, using either
+// the provided logger or the default logrus logger as a fallback.
+func logPanic(logger *logrus.Entry, fields logrus.Fields, message string) {
+	if logger != nil {
+		logger.WithFields(fields).Error(message)
+	} else {
+		logrus.WithFields(fields).Error(message)
+	}
+}
+
 // LogPanicAndCleanup logs a recovered panic and executes cleanup. This should be
 // called from a deferred function after calling recover(). This is a helper that
 // does the logging and cleanup, but does NOT call recover() itself.
@@ -36,45 +46,25 @@ import (
 //	    // handle client...
 //	}()
 func LogPanicAndCleanup(logger *logrus.Entry, context string, panicValue interface{}, cleanup func()) {
-	// Get stack trace
+	// Get stack trace and log the panic
 	stack := debug.Stack()
-
-	// Log the panic with context and stack trace
-	if logger != nil {
-		logger.WithFields(logrus.Fields{
-			"panic":      panicValue,
-			"context":    context,
-			"stack":      string(stack),
-			"error_type": "panic",
-		}).Error("Goroutine panic recovered")
-	} else {
-		// Fallback to standard logrus if no logger provided
-		logrus.WithFields(logrus.Fields{
-			"panic":      panicValue,
-			"context":    context,
-			"stack":      string(stack),
-			"error_type": "panic",
-		}).Error("Goroutine panic recovered")
-	}
+	logPanic(logger, logrus.Fields{
+		"panic":      panicValue,
+		"context":    context,
+		"stack":      string(stack),
+		"error_type": "panic",
+	}, "Goroutine panic recovered")
 
 	// Execute cleanup if provided
 	if cleanup != nil {
 		// Protect against panics in cleanup function
 		defer func() {
 			if cleanupPanic := recover(); cleanupPanic != nil {
-				if logger != nil {
-					logger.WithFields(logrus.Fields{
-						"panic":      cleanupPanic,
-						"context":    fmt.Sprintf("%s cleanup", context),
-						"error_type": "panic_in_cleanup",
-					}).Error("Panic during cleanup function")
-				} else {
-					logrus.WithFields(logrus.Fields{
-						"panic":      cleanupPanic,
-						"context":    fmt.Sprintf("%s cleanup", context),
-						"error_type": "panic_in_cleanup",
-					}).Error("Panic during cleanup function")
-				}
+				logPanic(logger, logrus.Fields{
+					"panic":      cleanupPanic,
+					"context":    fmt.Sprintf("%s cleanup", context),
+					"error_type": "panic_in_cleanup",
+				}, "Panic during cleanup function")
 			}
 		}()
 		cleanup()

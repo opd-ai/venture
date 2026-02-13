@@ -1,6 +1,9 @@
 package procgen
 
-import "testing"
+import (
+	"strings"
+	"testing"
+)
 
 func TestSeedGenerator(t *testing.T) {
 	sg := NewSeedGenerator(12345)
@@ -330,24 +333,10 @@ func TestValidateDimensions(t *testing.T) {
 				t.Errorf("ValidateDimensions() error = %v, wantErr %v", err, tt.wantErr)
 			}
 			if tt.wantErr && err != nil && tt.errContains != "" {
-				if !containsString(err.Error(), tt.errContains) {
+				if !strings.Contains(err.Error(), tt.errContains) {
 					t.Errorf("ValidateDimensions() error = %v, want error containing %q", err, tt.errContains)
 				}
 			}
 		})
 	}
-}
-
-// containsString checks if s contains substr (helper for error message validation)
-func containsString(s, substr string) bool {
-	return len(s) >= len(substr) && (s == substr || len(s) > 0 && containsSubstring(s, substr))
-}
-
-func containsSubstring(s, substr string) bool {
-	for i := 0; i <= len(s)-len(substr); i++ {
-		if s[i:i+len(substr)] == substr {
-			return true
-		}
-	}
-	return false
 }

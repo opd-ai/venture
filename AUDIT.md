@@ -31,7 +31,7 @@ This document tracks the audit status of all Go packages in the Venture codebase
 - [x] `pkg/engine/prestige/AUDIT.md` — Complete — 3 issues (0 high, 0 med, 3 low)
 
 ### Procedural Generation
-- [x] `pkg/procgen/AUDIT.md` — Complete — 3 issues (0 high, 0 med, 3 low)
+- [x] `pkg/procgen/AUDIT.md` — Complete — 0 issues (3 fixed on 2026-02-13: reduced SelectDefaultName debug logging, updated GetSeed hash documentation, replaced containsString with strings.Contains)
 - [x] `pkg/procgen/terrain/AUDIT.md` — Complete — 0 issues (2 fixed on 2026-02-13: cache error handling with structured logging, test expectation fix)
 - [x] `pkg/procgen/entity/AUDIT.md` — Complete — 2 issues (0 high, 1 med, 1 low) - Updated 2026-02-13: Fixed high-priority issue (ECS compliance - logic methods moved to standalone query functions)
 - [x] `pkg/procgen/item/AUDIT.md` — Needs Work — 1 issue (0 high, 0 med, 1 low) - Updated 2026-02-13: Fixed 6 issues (5 high, 1 med) - class restrictions and spell effects now populated
@@ -94,7 +94,7 @@ This document tracks the audit status of all Go packages in the Venture codebase
 
 ### Integration
 - [x] `pkg/integration/AUDIT.md` — Complete — 0 issues (4 recommendations)
-- [x] `pkg/integration/choice_consequences/AUDIT.md` — Needs Work — 3 issues (0 high, 2 med, 1 low) - Updated 2026-02-13: Fixed 2 high-priority issues (thread-safety in IsContentAvailable, TimeProvider interface for deterministic timestamps)
+- [x] `pkg/integration/choice_consequences/AUDIT.md` — Complete — 1 issue (0 high, 0 med, 1 low) - Updated 2026-02-13: Fixed 2 high-priority issues (thread-safety in IsContentAvailable, TimeProvider interface for deterministic timestamps), Fixed 2 med-priority issues (Serialize/Deserialize methods for ChoiceTrackerComponent, structured logging with logrus.WithFields)
 - [x] `pkg/integration/companion_housing/AUDIT.md` — Complete — 0 issues (5 fixed on 2026-02-13: deterministic time, serialization, structured logging)
 - [x] `pkg/integration/guild_housing/AUDIT.md` — Needs Work — 2 issues (0 high, 0 med, 2 low) - Updated 2026-02-13: Fixed 4 med-priority issues (structured logging with logrus.WithFields, ID validation, BuildingSize validation, capacity validation)
 - [x] `pkg/integration/guild_vehicle/AUDIT.md` — Needs Work — 4 issues (1 high, 1 med, 2 low) - Updated 2026-02-13: High-priority time.Now() usage exempted (fleet timestamps track operational events for server coordination)
@@ -123,11 +123,11 @@ This document tracks the audit status of all Go packages in the Venture codebase
 - [x] `pkg/hostplay/AUDIT.md` — Complete — 0 issues - Updated 2026-02-13: Fixed 2 med-priority issues (TimeProvider for deterministic timestamps, CreateDeltaSnapshot implementation), fixed 2 low-priority issues (JSON marshal error logging), exempted 1 med-priority issue (net.IPNet type assertion for LAN discovery)
 - [x] `pkg/logging/AUDIT.md` — Complete — 0 issues
 - [x] `pkg/memprofile/AUDIT.md` — Complete — 1 issue (0 high, 0 med, 1 low) - Updated 2026-02-13: Fixed 3 medium-priority issues (division by zero guards, structured logging with logrus.WithFields)
-- [x] `pkg/recovery/AUDIT.md` — Complete — 2 issues (0 high, 0 med, 2 low)
+- [x] `pkg/recovery/AUDIT.md` — Complete — 0 issues (2 fixed on 2026-02-13: added doc.go, extracted duplicate logging logic to logPanic helper)
 - [x] `pkg/modding/AUDIT.md` — Complete — 2 issues (0 high, 0 med, 2 low)
 - [x] `pkg/mobile/AUDIT.md` — Needs Work — 2 issues (0 high, 0 med, 2 low) - Updated 2026-02-13: All high/med issues exempted (mobile input has minimal error paths; Android JNI requires NDK; time.Now() appropriate for real-time input timing)
 - [x] `pkg/narrative/branching/AUDIT.md` — Complete — 3 issues (0 high, 0 med, 3 low)
-- [x] `pkg/observability/AUDIT.md` — Complete — 1 issue (0 high, 0 med, 1 low)
+- [x] `pkg/observability/AUDIT.md` — Complete — 0 issues (1 fixed on 2026-02-13: added ReadinessChecker implementation example to doc.go)
 - [x] `pkg/security/AUDIT.md` — Complete — 2 issues (0 high, 0 med, 2 low)
 - [x] `pkg/social/AUDIT.md` — Complete — 3 issues (0 high, 0 med, 3 low) - Updated 2026-02-13: Fixed 2 high-priority issues (TimeProvider for deterministic ImageGallery timestamps), exempted 1 med-priority issue (background decay time.Now() documented as server operation)
 - [x] `pkg/social/persistence/AUDIT.md` — Complete — 2 issues (0 high, 0 med, 2 low) - Updated 2026-02-13: Fixed 2 high-priority issues (TimeProvider), 1 med-priority (AddImage godoc), exempted 1 med-priority (background decay time.Now())

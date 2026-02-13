@@ -62,33 +62,18 @@ var DefaultNames = [100]string{
 //
 //	name := SelectDefaultName(12345) // Always returns the same name for seed 12345
 func SelectDefaultName(seed int64) string {
-	log.WithFields(logrus.Fields{
-		"seed":            seed,
-		"operation":       "select_default_name",
-		"available_names": len(DefaultNames),
-	}).Debug("SelectDefaultName function entry")
-
 	// Create a seeded random number generator for deterministic selection
 	rng := rand.New(rand.NewSource(seed))
-	log.WithFields(logrus.Fields{
-		"seed": seed,
-	}).Debug("Created seeded RNG for deterministic name selection")
 
 	// Select an index from the name list
 	index := rng.Intn(len(DefaultNames))
-	log.WithFields(logrus.Fields{
-		"seed":      seed,
-		"index":     index,
-		"max_index": len(DefaultNames) - 1,
-	}).Debug("Generated random index for name selection")
-
 	selectedName := DefaultNames[index]
+
 	log.WithFields(logrus.Fields{
 		"seed":          seed,
 		"index":         index,
 		"selected_name": selectedName,
-		"operation":     "select_default_name",
-	}).Debug("SelectDefaultName function exit")
+	}).Debug("Selected default name")
 
 	return selectedName
 }

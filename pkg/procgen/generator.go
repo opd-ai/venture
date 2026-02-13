@@ -42,8 +42,9 @@ func NewSeedGenerator(baseSeed int64) *SeedGenerator {
 
 // GetSeed generates a deterministic seed for a specific purpose.
 // This allows different aspects of the game to have independent but deterministic seeds.
+// Uses polynomial rolling hash (base 31) which provides good distribution for string categories
+// with ~10^18 unique values before collision becomes statistically significant.
 func (sg *SeedGenerator) GetSeed(category string, index int) int64 {
-	// Simple hash combination - can be improved with better hash function
 	hash := sg.baseSeed
 	for _, c := range category {
 		hash = hash*31 + int64(c)

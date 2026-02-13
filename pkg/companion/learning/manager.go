@@ -20,16 +20,25 @@ func init() {
 // Manager handles companion learning operations.
 // Thread-safe for concurrent access from multiple goroutines.
 type Manager struct {
-	mu         sync.RWMutex
-	companions map[string]*CompanionLearningComponent
+	mu           sync.RWMutex
+	companions   map[string]*CompanionLearningComponent
+	timeProvider TimeProvider
 }
 
 // NewManager creates a new companion learning manager.
+// Uses real wall-clock time. For deterministic behavior, use NewManagerWithTimeProvider.
 func NewManager() *Manager {
+	return NewManagerWithTimeProvider(DefaultTimeProvider())
+}
+
+// NewManagerWithTimeProvider creates a manager with custom time source.
+// This enables deterministic testing and reproducible state.
+func NewManagerWithTimeProvider(timeProvider TimeProvider) *Manager {
 	log.Debug("Creating new companion learning manager")
 
 	m := &Manager{
-		companions: make(map[string]*CompanionLearningComponent),
+		companions:   make(map[string]*CompanionLearningComponent),
+		timeProvider: timeProvider,
 	}
 
 	log.WithFields(logrus.Fields{
@@ -79,8 +88,8 @@ func (m *Manager) AddCompanion(companionID string, learningRate float64) *Compan
 	comp := &CompanionLearningComponent{
 		CompanionID:  companionID,
 		SkillTree:    NewSkillProgression(),
-		Personality:  NewPersonalityEvolution(),
-		Memory:       NewEventMemory(1000),
+		Personality:  NewPersonalityEvolutionWithTimeProvider(m.timeProvider),
+		Memory:       NewEventMemoryWithTimeProvider(1000, m.timeProvider),
 		LearningRate: learningRate,
 		LastSkillUse: make(map[string]time.Time),
 	}
@@ -408,14 +417,21 @@ func (sp *SkillProgression) LearnSkill(skillName string) error {
 }
 
 // NewPersonalityEvolution creates a new personality system.
+// Uses real wall-clock time. For deterministic behavior, use NewPersonalityEvolutionWithTimeProvider.
 func NewPersonalityEvolution() *PersonalityEvolution {
+	return NewPersonalityEvolutionWithTimeProvider(DefaultTimeProvider())
+}
+
+// NewPersonalityEvolutionWithTimeProvider creates a personality system with custom time source.
+func NewPersonalityEvolutionWithTimeProvider(timeProvider TimeProvider) *PersonalityEvolution {
 	log.Debug("Creating new personality evolution system")
 
 	pe := &PersonalityEvolution{
-		Traits:     make(map[PersonalityTrait]float64),
-		Changes:    []PersonalityChange{},
-		MaxChanges: 1000, // Limit personality change history (LRU eviction)
-		LastUpdate: time.Now(),
+		Traits:       make(map[PersonalityTrait]float64),
+		Changes:      []PersonalityChange{},
+		MaxChanges:   1000, // Limit personality change history (LRU eviction)
+		LastUpdate:   timeProvider.Now(),
+		timeProvider: timeProvider,
 	}
 
 	// Initialize traits with neutral values
@@ -439,6 +455,7 @@ func NewPersonalityEvolution() *PersonalityEvolution {
 }
 
 // AdjustTrait modifies a personality trait.
+// Uses the injected time provider for deterministic timestamps.
 func (pe *PersonalityEvolution) AdjustTrait(trait PersonalityTrait, delta float64, reason string) {
 	log.WithFields(logrus.Fields{
 		"trait":  trait.String(),
@@ -467,15 +484,22 @@ func (pe *PersonalityEvolution) AdjustTrait(trait PersonalityTrait, delta float6
 		}).Debug("Trait value clamped to maximum")
 	}
 
+	// Use time provider for deterministic timestamps
+	tp := pe.timeProvider
+	if tp == nil {
+		tp = DefaultTimeProvider()
+	}
+	now := tp.Now()
+
 	pe.Traits[trait] = newValue
-	pe.LastUpdate = time.Now()
+	pe.LastUpdate = now
 
 	change := PersonalityChange{
 		Trait:     trait,
 		OldValue:  oldValue,
 		NewValue:  newValue,
 		Reason:    reason,
-		Timestamp: time.Now(),
+		Timestamp: now,
 	}
 	pe.Changes = append(pe.Changes, change)
 
@@ -525,7 +549,13 @@ func (pe *PersonalityEvolution) GetDominantTrait() PersonalityTrait {
 }
 
 // NewEventMemory creates a new event memory system.
+// Uses real wall-clock time. For deterministic behavior, use NewEventMemoryWithTimeProvider.
 func NewEventMemory(maxEvents int) *EventMemory {
+	return NewEventMemoryWithTimeProvider(maxEvents, DefaultTimeProvider())
+}
+
+// NewEventMemoryWithTimeProvider creates an event memory system with custom time source.
+func NewEventMemoryWithTimeProvider(maxEvents int, timeProvider TimeProvider) *EventMemory {
 	log.WithFields(logrus.Fields{
 		"max_events": maxEvents,
 	}).Debug("Creating new event memory system")
@@ -534,7 +564,7 @@ func NewEventMemory(maxEvents int) *EventMemory {
 		Events:       []MemorableEvent{},
 		MaxEvents:    maxEvents,
 		TotalEvents:  0,
-		FirstEventAt: time.Now(),
+		FirstEventAt: timeProvider.Now(),
 	}
 
 	log.WithFields(logrus.Fields{
@@ -624,6 +654,7 @@ func (em *EventMemory) GetEventsByType(eventType EventType) []MemorableEvent {
 }
 
 // ProcessCombatAction updates skills and personality based on combat behavior.
+// Uses the companion's internal time provider for deterministic timestamps.
 func ProcessCombatAction(comp *CompanionLearningComponent, aggressive, successful bool) {
 	log.WithFields(logrus.Fields{
 		"companion_id": comp.CompanionID,
@@ -659,10 +690,12 @@ func ProcessCombatAction(comp *CompanionLearningComponent, aggressive, successfu
 		comp.Personality.AdjustTrait(TraitCautious, 0.01, "used defensive tactics")
 	}
 
+	// Use personality's time provider for deterministic timestamps
+	tp := getTimeProviderFromPersonality(comp.Personality)
 	comp.Memory.AddEvent(MemorableEvent{
 		Type:        EventCombat,
 		Description: fmt.Sprintf("Combat action (aggressive=%v, successful=%v)", aggressive, successful),
-		Timestamp:   time.Now(),
+		Timestamp:   tp.Now(),
 		Importance:  0.6,
 	})
 
@@ -674,7 +707,17 @@ func ProcessCombatAction(comp *CompanionLearningComponent, aggressive, successfu
 	}).Info("Combat action processed")
 }
 
+// getTimeProviderFromPersonality retrieves the time provider from a PersonalityEvolution.
+// Falls back to real time if no time provider is set.
+func getTimeProviderFromPersonality(pe *PersonalityEvolution) TimeProvider {
+	if pe != nil && pe.timeProvider != nil {
+		return pe.timeProvider
+	}
+	return DefaultTimeProvider()
+}
+
 // ProcessSocialInteraction updates skills and personality based on social behavior.
+// Uses the companion's internal time provider for deterministic timestamps.
 func ProcessSocialInteraction(comp *CompanionLearningComponent, playerID string, positive bool) {
 	log.WithFields(logrus.Fields{
 		"companion_id": comp.CompanionID,
@@ -700,10 +743,12 @@ func ProcessSocialInteraction(comp *CompanionLearningComponent, playerID string,
 		comp.Personality.AdjustTrait(TraitOutgoing, -0.01, "negative social interaction")
 	}
 
+	// Use personality's time provider for deterministic timestamps
+	tp := getTimeProviderFromPersonality(comp.Personality)
 	comp.Memory.AddEvent(MemorableEvent{
 		Type:        EventDialog,
 		Description: fmt.Sprintf("Social interaction with %s (positive=%v)", playerID, positive),
-		Timestamp:   time.Now(),
+		Timestamp:   tp.Now(),
 		Importance:  0.5,
 		PlayerID:    playerID,
 	})
@@ -717,6 +762,7 @@ func ProcessSocialInteraction(comp *CompanionLearningComponent, playerID string,
 }
 
 // ProcessExploration updates skills and personality based on exploration behavior.
+// Uses the companion's internal time provider for deterministic timestamps.
 func ProcessExploration(comp *CompanionLearningComponent, discovered bool) {
 	log.WithFields(logrus.Fields{
 		"companion_id": comp.CompanionID,
@@ -739,10 +785,12 @@ func ProcessExploration(comp *CompanionLearningComponent, discovered bool) {
 	comp.Personality.AdjustTrait(TraitCurious, 0.015, "explored new area")
 	comp.Personality.AdjustTrait(TraitPractical, -0.005, "took exploratory risk")
 
+	// Use personality's time provider for deterministic timestamps
+	tp := getTimeProviderFromPersonality(comp.Personality)
 	comp.Memory.AddEvent(MemorableEvent{
 		Type:        EventExploration,
 		Description: fmt.Sprintf("Explored area (discovered=%v)", discovered),
-		Timestamp:   time.Now(),
+		Timestamp:   tp.Now(),
 		Importance:  0.4,
 	})
 

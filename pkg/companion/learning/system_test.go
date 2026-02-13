@@ -80,7 +80,7 @@ func TestRecordSkillUse(t *testing.T) {
 	comp := manager.AddCompanion("test", 1.0)
 
 	before := time.Now()
-	RecordSkillUse(comp, "Basic Attack")
+	RecordSkillUse(comp, "Basic Attack", nil) // nil uses default time provider
 	after := time.Now()
 
 	lastUse, ok := comp.LastSkillUse["Basic Attack"]
@@ -334,7 +334,7 @@ func BenchmarkShouldLearnNewSkill(b *testing.B) {
 // TestRecordSkillUse_NilComponent tests RecordSkillUse with nil component.
 func TestRecordSkillUse_NilComponent(t *testing.T) {
 	// Should not panic with nil component
-	RecordSkillUse(nil, "Basic Attack")
+	RecordSkillUse(nil, "Basic Attack", nil)
 }
 
 // TestRecordSkillUse_NilLastSkillUse tests RecordSkillUse with nil map.
@@ -343,7 +343,7 @@ func TestRecordSkillUse_NilLastSkillUse(t *testing.T) {
 		LastSkillUse: nil,
 	}
 	// Should not panic with nil LastSkillUse map
-	RecordSkillUse(comp, "Basic Attack")
+	RecordSkillUse(comp, "Basic Attack", nil)
 }
 
 // TestGetPersonalityInfluence_NilComponent tests with nil component.

@@ -10,20 +10,31 @@ type CompanionLearningSystem struct {
 	manager        *Manager
 	updateInterval time.Duration
 	lastUpdate     time.Time
+	timeProvider   TimeProvider
 }
 
 // NewCompanionLearningSystem creates a new system for ECS integration.
+// Uses real wall-clock time by default. For deterministic behavior,
+// use NewCompanionLearningSystemWithTimeProvider instead.
 func NewCompanionLearningSystem(updateInterval time.Duration) *CompanionLearningSystem {
+	return NewCompanionLearningSystemWithTimeProvider(updateInterval, DefaultTimeProvider())
+}
+
+// NewCompanionLearningSystemWithTimeProvider creates a system with custom time source.
+// This enables deterministic testing and reproducible state across save/load cycles.
+func NewCompanionLearningSystemWithTimeProvider(updateInterval time.Duration, timeProvider TimeProvider) *CompanionLearningSystem {
 	return &CompanionLearningSystem{
-		manager:        NewManager(),
+		manager:        NewManagerWithTimeProvider(timeProvider),
 		updateInterval: updateInterval,
-		lastUpdate:     time.Now(),
+		lastUpdate:     timeProvider.Now(),
+		timeProvider:   timeProvider,
 	}
 }
 
 // Update processes companion learning for all companions.
+// Uses deltaTime for frame-rate independent skill decay.
 func (s *CompanionLearningSystem) Update(deltaTime float64) {
-	now := time.Now()
+	now := s.timeProvider.Now()
 	if now.Sub(s.lastUpdate) < s.updateInterval {
 		return
 	}
@@ -37,12 +48,16 @@ func (s *CompanionLearningSystem) Update(deltaTime float64) {
 }
 
 // updateCompanion performs periodic companion updates.
+// Uses deltaTime for frame-rate independent skill decay.
 func (s *CompanionLearningSystem) updateCompanion(companionID string, comp *CompanionLearningComponent, deltaTime float64) {
-	// Decay unused skills slightly
+	// Decay unused skills slightly based on deltaTime (not real-time intervals)
+	// This ensures consistent decay rate regardless of frame rate
+	now := s.timeProvider.Now()
 	for skillName, skill := range comp.SkillTree.Skills {
 		lastUse, ok := comp.LastSkillUse[skillName]
-		if !ok || time.Since(lastUse) > 24*time.Hour {
+		if !ok || now.Sub(lastUse) > 24*time.Hour {
 			// Very slow skill decay for unused skills
+			// Using deltaTime makes decay frame-rate independent
 			if skill.Experience > 0 {
 				skill.Experience -= 0.1 * deltaTime
 				if skill.Experience < 0 {
@@ -98,11 +113,15 @@ func (s *CompanionLearningSystem) GetManager() *Manager {
 }
 
 // RecordSkillUse marks a skill as recently used.
-func RecordSkillUse(comp *CompanionLearningComponent, skillName string) {
+// Uses the provided timeProvider for deterministic timestamps.
+func RecordSkillUse(comp *CompanionLearningComponent, skillName string, timeProvider TimeProvider) {
 	if comp == nil || comp.LastSkillUse == nil {
 		return
 	}
-	comp.LastSkillUse[skillName] = time.Now()
+	if timeProvider == nil {
+		timeProvider = DefaultTimeProvider()
+	}
+	comp.LastSkillUse[skillName] = timeProvider.Now()
 }
 
 // GetSkillBonus calculates a bonus multiplier based on skill level.

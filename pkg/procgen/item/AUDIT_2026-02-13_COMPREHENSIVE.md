@@ -3,22 +3,22 @@
 **Status**: Needs Work
 
 ## Summary
-The item package provides procedural generation for weapons, armor, consumables, and accessories with seed-based deterministic generation. Test coverage is excellent at 91.8%, deterministic RNG usage is correct throughout, and the package passes all code quality checks. However, **critical integration gaps** exist where Item struct fields required by engine systems (`ClassRestrictions`, `SpellEffectID`, `SpellDuration`, `SpellTargetType`, `SpellRadius`) are defined and tested but **never populated** during generation, breaking game functionality. Additionally, only 2 of 5 tested genres have templates, with horror/cyberpunk/postapoc falling back silently to default fantasy templates.
+The item package provides procedural generation for weapons, armor, consumables, and accessories with seed-based deterministic generation. Test coverage is excellent at 91.7%, deterministic RNG usage is correct throughout, and the package passes all code quality checks. **UPDATED 2026-02-13**: Fixed critical integration gaps - Item struct fields (`ClassRestrictions`, `SpellEffectID`, `SpellDuration`, `SpellTargetType`, `SpellRadius`) are now properly populated during generation. Sci-fi consumables implemented. Remaining issues: 3 high-priority (horror/cyberpunk/postapoc genre templates missing).
 
 ## Issues Found
-- [ ] **high** stub/incomplete — `ClassRestrictions` field never populated during generation; field always empty array (`generator.go:155-178`)
-- [ ] **high** stub/incomplete — `SpellEffectID` field never populated during generation; all scrolls non-functional (`generator.go:155-178`)
-- [ ] **high** stub/incomplete — `SpellDuration` field never populated during generation; field always zero (`generator.go:155-178`)
-- [ ] **high** stub/incomplete — `SpellTargetType` field never populated during generation; field always empty string (`generator.go:155-178`)
-- [ ] **high** stub/incomplete — `SpellRadius` field never populated during generation; field always zero (`generator.go:155-178`)
+- [x] **high** stub/incomplete — `ClassRestrictions` field never populated during generation; field always empty array (`generator.go:155-178`) — **FIXED 2026-02-13**: Added `ClassRestrictions` field to `ItemTemplate` struct and populate it in `generateSingleItem()`
+- [x] **high** stub/incomplete — `SpellEffectID` field never populated during generation; all scrolls non-functional (`generator.go:155-178`) — **FIXED 2026-02-13**: Added spell effect fields to `ItemTemplate` and copy to items during scroll generation
+- [x] **high** stub/incomplete — `SpellDuration` field never populated during generation; field always zero (`generator.go:155-178`) — **FIXED 2026-02-13**: Added spell effect fields to `ItemTemplate` and copy to items during scroll generation
+- [x] **high** stub/incomplete — `SpellTargetType` field never populated during generation; field always empty string (`generator.go:155-178`) — **FIXED 2026-02-13**: Added spell effect fields to `ItemTemplate` and copy to items during scroll generation
+- [x] **high** stub/incomplete — `SpellRadius` field never populated during generation; field always zero (`generator.go:155-178`) — **FIXED 2026-02-13**: Added spell effect fields to `ItemTemplate` and copy to items during scroll generation
 - [ ] **high** stub/incomplete — Horror genre templates completely missing; falls back to fantasy (`generator.go:41-54`, `templates.go`)
 - [ ] **high** stub/incomplete — Cyberpunk genre templates completely missing; falls back to fantasy (`generator.go:41-54`, `templates.go`)
 - [ ] **high** stub/incomplete — Post-apocalyptic genre templates missing; tested in `determinism_test.go:88` but not implemented
-- [ ] **high** stub/incomplete — Sci-fi consumable templates not implemented; `GetSciFiConsumableTemplates()` does not exist (`generator.go:48`, `templates.go:218-287`)
-- [ ] **med** integration — `ItemTemplate` struct lacks `ClassRestrictions` field to define class-restricted equipment (`templates.go:7-33`)
-- [ ] **med** integration — `ItemTemplate` struct lacks spell effect arrays (`SpellEffectIDs`, `SpellDurations`, `SpellTargetTypes`, `SpellRadii`) for scroll generation (`templates.go:7-33`)
-- [ ] **med** integration — No registration of sci-fi consumables in generator initialization even though sci-fi weapons/armor exist (`generator.go:47-48`)
-- [ ] **low** error-handling — Silent fallback to fantasy templates when unknown genre requested; should log warning (`generator.go:203-207, 211-216, 220-225`)
+- [x] **high** stub/incomplete — Sci-fi consumable templates not implemented; `GetSciFiConsumableTemplates()` does not exist (`generator.go:48`, `templates.go:218-287`) — **FIXED 2026-02-13**: Added `GetSciFiConsumableTemplates()` and registered in generator
+- [x] **med** integration — `ItemTemplate` struct lacks `ClassRestrictions` field to define class-restricted equipment (`templates.go:7-33`) — **FIXED 2026-02-13**: Added `ClassRestrictions` field to `ItemTemplate` struct
+- [x] **med** integration — `ItemTemplate` struct lacks spell effect arrays (`SpellEffectIDs`, `SpellDurations`, `SpellTargetTypes`, `SpellRadii`) for scroll generation (`templates.go:7-33`) — **FIXED 2026-02-13**: Added spell effect fields to `ItemTemplate` struct
+- [x] **med** integration — No registration of sci-fi consumables in generator initialization even though sci-fi weapons/armor exist (`generator.go:47-48`) — **FIXED 2026-02-13**: Registered `GetSciFiConsumableTemplates()` in generator init
+- [x] **low** error-handling — Silent fallback to fantasy templates when unknown genre requested; should log warning (`generator.go:203-207, 211-216, 220-225`) — **FIXED 2026-02-13**: Added logging in `getWeaponTemplates()`, `getArmorTemplates()`, `getConsumableTemplates()` for unknown genre fallback
 
 ## Test Coverage
 91.8% (target: 65%) ✅

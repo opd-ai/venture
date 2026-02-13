@@ -614,3 +614,215 @@ func TestRarityDistribution(t *testing.T) {
 		t.Errorf("Expected more uncommon+ items at depth 20, got %d", uncommonPlus)
 	}
 }
+
+// TestClassRestrictionsGeneration verifies that generated items have class restrictions from templates.
+func TestClassRestrictionsGeneration(t *testing.T) {
+	gen := NewItemGenerator()
+
+	// Generate many weapons to get variety
+	params := procgen.GenerationParams{
+		Depth:      5,
+		Difficulty: 0.5,
+		GenreID:    "fantasy",
+		Custom: map[string]interface{}{
+			"count": 100,
+			"type":  "weapon",
+		},
+	}
+
+	result, err := gen.Generate(12345, params)
+	if err != nil {
+		t.Fatalf("Generate failed: %v", err)
+	}
+
+	items := result.([]*Item)
+
+	// Track how many items have restrictions
+	withRestrictions := 0
+	withoutRestrictions := 0
+
+	for _, item := range items {
+		if len(item.ClassRestrictions) > 0 {
+			withRestrictions++
+			// Verify restrictions are valid class names
+			validClasses := map[string]bool{
+				"warrior":     true,
+				"mage":        true,
+				"rogue":       true,
+				"ranger":      true,
+				"cleric":      true,
+				"necromancer": true,
+			}
+			for _, class := range item.ClassRestrictions {
+				if !validClasses[class] {
+					t.Errorf("Item %s has invalid class restriction: %s", item.Name, class)
+				}
+			}
+		} else {
+			withoutRestrictions++
+		}
+	}
+
+	// Should have a mix of items with and without restrictions
+	t.Logf("Generated %d items with restrictions, %d without", withRestrictions, withoutRestrictions)
+
+	// At least some weapons should have restrictions (axes, staves, daggers, etc.)
+	if withRestrictions == 0 {
+		t.Error("Expected some weapons to have class restrictions")
+	}
+	// Some weapons should be unrestricted (swords)
+	if withoutRestrictions == 0 {
+		t.Error("Expected some weapons to have no class restrictions")
+	}
+}
+
+// TestScrollSpellEffectGeneration verifies that generated scrolls have spell effect data.
+func TestScrollSpellEffectGeneration(t *testing.T) {
+	gen := NewItemGenerator()
+
+	// Generate many consumables to get scrolls
+	params := procgen.GenerationParams{
+		Depth:      5,
+		Difficulty: 0.5,
+		GenreID:    "fantasy",
+		Custom: map[string]interface{}{
+			"count": 100,
+			"type":  "consumable",
+		},
+	}
+
+	result, err := gen.Generate(98765, params)
+	if err != nil {
+		t.Fatalf("Generate failed: %v", err)
+	}
+
+	items := result.([]*Item)
+
+	scrollsFound := 0
+	scrollsWithEffects := 0
+	potionsFound := 0
+
+	for _, item := range items {
+		if item.ConsumableType == ConsumableScroll {
+			scrollsFound++
+			if item.SpellEffectID != "" {
+				scrollsWithEffects++
+				// Verify spell effect is from the known list
+				validEffects := map[string]bool{
+					"fireball":        true,
+					"lightning":       true,
+					"ice_nova":        true,
+					"protection_ward": true,
+				}
+				if !validEffects[item.SpellEffectID] {
+					t.Errorf("Scroll %s has unknown spell effect: %s", item.Name, item.SpellEffectID)
+				}
+				// Verify target type is set
+				if item.SpellTargetType == "" {
+					t.Errorf("Scroll %s has spell effect but empty target type", item.Name)
+				}
+			}
+		} else if item.ConsumableType == ConsumablePotion {
+			potionsFound++
+			// Potions should NOT have spell effects
+			if item.SpellEffectID != "" {
+				t.Errorf("Potion %s should not have spell effect", item.Name)
+			}
+		}
+	}
+
+	t.Logf("Generated %d scrolls (%d with effects), %d potions", scrollsFound, scrollsWithEffects, potionsFound)
+
+	// Should have some scrolls
+	if scrollsFound == 0 {
+		t.Error("Expected to generate some scrolls")
+	}
+	// All scrolls should have spell effects
+	if scrollsFound > 0 && scrollsWithEffects != scrollsFound {
+		t.Errorf("Expected all %d scrolls to have spell effects, only %d did", scrollsFound, scrollsWithEffects)
+	}
+}
+
+// TestSciFiConsumableGeneration verifies sci-fi consumables are generated with spell effects.
+func TestSciFiConsumableGeneration(t *testing.T) {
+	gen := NewItemGenerator()
+
+	params := procgen.GenerationParams{
+		Depth:      5,
+		Difficulty: 0.5,
+		GenreID:    "scifi",
+		Custom: map[string]interface{}{
+			"count": 100,
+			"type":  "consumable",
+		},
+	}
+
+	result, err := gen.Generate(11111, params)
+	if err != nil {
+		t.Fatalf("Generate failed: %v", err)
+	}
+
+	items := result.([]*Item)
+
+	scrollsFound := 0
+	scrollsWithEffects := 0
+
+	for _, item := range items {
+		if item.ConsumableType == ConsumableScroll {
+			scrollsFound++
+			if item.SpellEffectID != "" {
+				scrollsWithEffects++
+				// Verify spell effect is from sci-fi list
+				validEffects := map[string]bool{
+					"shield_boost":   true,
+					"emp_burst":      true,
+					"cloak":          true,
+					"repair_nanites": true,
+				}
+				if !validEffects[item.SpellEffectID] {
+					t.Errorf("Sci-fi scroll %s has unknown spell effect: %s", item.Name, item.SpellEffectID)
+				}
+			}
+		}
+	}
+
+	t.Logf("Generated %d sci-fi scrolls (%d with effects)", scrollsFound, scrollsWithEffects)
+
+	if scrollsFound > 0 && scrollsWithEffects == 0 {
+		t.Error("Expected sci-fi scrolls to have spell effects")
+	}
+}
+
+// TestUnknownGenreFallback verifies that unknown genres fall back to fantasy templates.
+func TestUnknownGenreFallback(t *testing.T) {
+	gen := NewItemGenerator()
+
+	// Generate with unknown genre
+	params := procgen.GenerationParams{
+		Depth:      5,
+		Difficulty: 0.5,
+		GenreID:    "unknown_genre_that_does_not_exist",
+		Custom: map[string]interface{}{
+			"count": 10,
+		},
+	}
+
+	result, err := gen.Generate(22222, params)
+	if err != nil {
+		t.Fatalf("Generate failed for unknown genre: %v", err)
+	}
+
+	items := result.([]*Item)
+
+	// Should still get items (fallback to fantasy)
+	if len(items) != 10 {
+		t.Errorf("Expected 10 items from fallback, got %d", len(items))
+	}
+
+	// Items should be valid
+	for i, item := range items {
+		if item.Name == "" {
+			t.Errorf("Item %d from fallback has empty name", i)
+		}
+	}
+}

@@ -46,6 +46,7 @@ func NewItemGeneratorWithLogger(logger *logrus.Logger) *ItemGenerator {
 	// Register sci-fi genre templates
 	gen.weaponTemplates["scifi"] = GetSciFiWeaponTemplates()
 	gen.armorTemplates["scifi"] = GetSciFiArmorTemplates()
+	gen.consumableTemplates["scifi"] = GetSciFiConsumableTemplates()
 
 	// Default templates
 	gen.weaponTemplates[""] = GetFantasyWeaponTemplates()
@@ -163,6 +164,12 @@ func (g *ItemGenerator) generateSingleItem(seed int64, params procgen.Generation
 	}
 	copy(item.Tags, template.Tags)
 
+	// Copy class restrictions from template
+	if len(template.ClassRestrictions) > 0 {
+		item.ClassRestrictions = make([]string, len(template.ClassRestrictions))
+		copy(item.ClassRestrictions, template.ClassRestrictions)
+	}
+
 	// Determine rarity based on depth
 	item.Rarity = g.determineRarity(params.Depth, rng)
 
@@ -174,6 +181,21 @@ func (g *ItemGenerator) generateSingleItem(seed int64, params procgen.Generation
 
 	// Generate description
 	item.Description = g.generateDescription(item, template, rng)
+
+	// Generate spell effect for scrolls
+	if item.ConsumableType == ConsumableScroll && len(template.SpellEffectIDs) > 0 {
+		spellIndex := rng.Intn(len(template.SpellEffectIDs))
+		item.SpellEffectID = template.SpellEffectIDs[spellIndex]
+		if spellIndex < len(template.SpellDurations) {
+			item.SpellDuration = template.SpellDurations[spellIndex]
+		}
+		if spellIndex < len(template.SpellTargetTypes) {
+			item.SpellTargetType = template.SpellTargetTypes[spellIndex]
+		}
+		if spellIndex < len(template.SpellRadii) {
+			item.SpellRadius = template.SpellRadii[spellIndex]
+		}
+	}
 
 	return item
 }
@@ -202,6 +224,9 @@ func (g *ItemGenerator) determineItemType(filter *ItemType, rng *rand.Rand) Item
 func (g *ItemGenerator) getWeaponTemplates(genreID string) []ItemTemplate {
 	templates := g.weaponTemplates[genreID]
 	if templates == nil {
+		if g.logger != nil && genreID != "" {
+			g.logger.WithField("genreID", genreID).Warn("unknown genre, using default weapon templates")
+		}
 		templates = g.weaponTemplates[""] // fallback to default
 	}
 	return templates
@@ -211,6 +236,9 @@ func (g *ItemGenerator) getWeaponTemplates(genreID string) []ItemTemplate {
 func (g *ItemGenerator) getArmorTemplates(genreID string) []ItemTemplate {
 	templates := g.armorTemplates[genreID]
 	if templates == nil {
+		if g.logger != nil && genreID != "" {
+			g.logger.WithField("genreID", genreID).Warn("unknown genre, using default armor templates")
+		}
 		templates = g.armorTemplates[""] // fallback to default
 	}
 	return templates
@@ -220,6 +248,9 @@ func (g *ItemGenerator) getArmorTemplates(genreID string) []ItemTemplate {
 func (g *ItemGenerator) getConsumableTemplates(genreID string) []ItemTemplate {
 	templates := g.consumableTemplates[genreID]
 	if templates == nil {
+		if g.logger != nil && genreID != "" {
+			g.logger.WithField("genreID", genreID).Warn("unknown genre, using default consumable templates")
+		}
 		templates = g.consumableTemplates[""] // fallback to default
 	}
 	return templates

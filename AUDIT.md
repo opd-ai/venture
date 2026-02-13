@@ -34,9 +34,9 @@ This document tracks the audit status of all Go packages in the Venture codebase
 - [x] `pkg/procgen/AUDIT.md` — Complete — 3 issues (0 high, 0 med, 3 low)
 - [x] `pkg/procgen/terrain/AUDIT.md` — Needs Work — 6 issues (1 high, 1 med, 4 low)
 - [x] `pkg/procgen/entity/AUDIT.md` — Needs Work — 3 issues (1 high, 1 med, 1 low)
-- [x] `pkg/procgen/item/AUDIT.md` — Needs Work — 7 issues (5 high, 1 med, 1 low)
+- [x] `pkg/procgen/item/AUDIT.md` — Needs Work — 1 issue (0 high, 0 med, 1 low) - Updated 2026-02-13: Fixed 6 issues (5 high, 1 med) - class restrictions and spell effects now populated
 - [x] `pkg/procgen/item/AUDIT_2026-02-13.md` — Needs Work — 12 issues (8 high, 3 med, 1 low)
-- [x] `pkg/procgen/item/AUDIT_2026-02-13_COMPREHENSIVE.md` — Needs Work — 13 issues (9 high, 3 med, 1 low)
+- [x] `pkg/procgen/item/AUDIT_2026-02-13_COMPREHENSIVE.md` — Needs Work — 3 issues (3 high, 0 med, 0 low) - Updated 2026-02-13: Fixed 10 issues (6 high, 3 med, 1 low) - class restrictions, spell effects, sci-fi consumables, logging
 - [x] `pkg/procgen/quest/AUDIT.md` — Complete — 1 issue (0 high, 0 med, 1 low)
 - [x] `pkg/procgen/magic/AUDIT.md` — Complete — 4 issues (0 high, 0 med, 4 low)
 - [x] `pkg/procgen/skills/AUDIT.md` — Complete — 4 issues (0 high, 0 med, 4 low)

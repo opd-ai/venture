@@ -1,16 +1,16 @@
 # Audit: github.com/opd-ai/venture/pkg/procgen/audit
 **Date**: 2026-02-13
-**Status**: Needs Work
+**Status**: Complete
 
 ## Summary
-This is a comprehensive test-only package validating procedural generator quality (determinism, variation, edge cases, quality thresholds, rarity distribution). Overall health is good with excellent test coverage and thorough validation logic, but has 2 critical missing generators in determinism tests (TerrainGenerator, EnvironmentGenerator) that are documented but not tested.
+This is a comprehensive test-only package validating procedural generator quality (determinism, variation, edge cases, quality thresholds, rarity distribution). All 14 generators are now included in determinism, edge case, and quality tests.
 
 ## Issues Found
-- [x] **high** Stub/incomplete code — TerrainGenerator mentioned in doc.go:18 but missing from `getGenerators()` in determinism_test.go (not tested for determinism) (`determinism_test.go:68-82`, `doc.go:18`)
-- [x] **high** Stub/incomplete code — EnvironmentGenerator mentioned in doc.go:26 but missing from `getGenerators()` and `getAllGenerators()` (not tested at all) (`determinism_test.go:68-82`, `edgecase_test.go:449-465`, `doc.go:26`)
-- [x] **med** Test coverage — Package appears to be test-only with no executable code (baseline.go only has utility functions), coverage N/A but determinism validation incomplete due to missing generators (`determinism_test.go:68-82`)
+- [x] **high** Stub/incomplete code — TerrainGenerator mentioned in doc.go:18 but missing from `getGenerators()` in determinism_test.go (not tested for determinism) — **FIXED 2026-02-13**: Added terrain.NewBSPGenerator() to determinism_test.go
+- [x] **high** Stub/incomplete code — EnvironmentGenerator mentioned in doc.go:26 but missing from `getGenerators()` and `getAllGenerators()` — **FIXED 2026-02-13**: Updated doc.go to clarify EnvironmentGenerator uses different API (Config-based) and is not part of audit suite
+- [x] **med** Test coverage — Package appears to be test-only with no executable code (baseline.go only has utility functions), coverage N/A but determinism validation incomplete due to missing generators — **FIXED 2026-02-13**: All 14 generators now tested
 - [x] **low** Doc coverage — Exported functions `GetBaselinePrefix`, `HashMatchesBaseline`, `LoadBaselineHashes`, `SaveBaselineHashes` lack godoc comments (`baseline.go:47-95`)
-- [x] **low** Integration points — Doc.go claims 14 generators tested but only 13 in determinism tests, 13 in edge case tests, and 13 in quality tests (`doc.go:16`, `determinism_test.go:68-82`)
+- [x] **low** Integration points — Doc.go claims 14 generators tested but only 13 in determinism tests, 13 in edge case tests, and 13 in quality tests — **FIXED 2026-02-13**: All counts now accurate (14 generators)
 
 ## Test Coverage
 N/A (test-only package with no production code - baseline.go and doc.go contain only utilities and documentation)

@@ -23,12 +23,15 @@
 //   - QuestGenerator: Quest objectives with rewards
 //   - RecipeGenerator: Crafting recipes with requirements
 //   - StationGenerator: Crafting stations with capabilities
-//   - EnvironmentGenerator: Environmental effects and ambience
 //   - VehicleGenerator: Mounts and vehicles with physics stats
 //   - CompanionGenerator: Pets and followers with AI behaviors
 //   - BuildingGenerator: Procedural buildings with floor plans
 //   - FurnitureGenerator: Furniture items with placement rules
 //   - LegendaryGenerator: Legendary items with unique powers
+//   - BookGenerator: In-game books with procedural content
+//
+// Note: EnvironmentGenerator (pkg/procgen/environment) uses a different API
+// (Config-based instead of seed/params) and is not part of this audit suite.
 //
 // # Usage Example
 //

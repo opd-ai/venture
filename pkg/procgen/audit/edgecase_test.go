@@ -20,6 +20,7 @@ import (
 	"github.com/opd-ai/venture/pkg/procgen/recipe"
 	"github.com/opd-ai/venture/pkg/procgen/skills"
 	"github.com/opd-ai/venture/pkg/procgen/station"
+	"github.com/opd-ai/venture/pkg/procgen/terrain"
 	"github.com/opd-ai/venture/pkg/procgen/vehicle"
 )
 
@@ -454,6 +455,7 @@ func getAllGenerators() map[string]procgen.Generator {
 		"Quest":     quest.NewQuestGenerator(),
 		"Recipe":    recipe.NewRecipeGenerator(),
 		"Station":   station.NewStationGenerator(),
+		"Terrain":   terrain.NewBSPGenerator(),
 		"Vehicle":   vehicle.NewVehicleGenerator(),
 		"Companion": companion.NewGenerator(),
 		"Building":  building.NewGenerator(),

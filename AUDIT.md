@@ -58,7 +58,7 @@ This document tracks the audit status of all Go packages in the Venture codebase
 - [x] `pkg/procgen/station/AUDIT.md` — Complete — 2 issues (0 high, 0 med, 2 low)
 - [x] `pkg/procgen/class/AUDIT.md` — Complete — 1 issue (0 high, 0 med, 1 low) - Updated 2026-02-13: Fixed 3 issues (1 med, 2 low) - structured logging with logrus.WithFields, ClassPreset field godoc comments
 - [x] `pkg/procgen/minigame/games/AUDIT.md` — Complete — 1 issue (0 high, 0 med, 1 low)
-- [x] `pkg/procgen/audit/AUDIT.md` — Needs Work — 5 issues (2 high, 1 med, 2 low)
+- [x] `pkg/procgen/audit/AUDIT.md` — Complete — 2 issues (0 high, 0 med, 2 low) - Updated 2026-02-13: Fixed 2 high-priority issues (TerrainGenerator added to determinism/edgecase tests, EnvironmentGenerator status clarified in doc.go)
 
 ### Rendering
 - [x] `pkg/rendering/AUDIT.md` — Complete — 1 issue (0 high, 0 med, 1 low)
@@ -164,8 +164,8 @@ Each audit should produce a `AUDIT.md` file in the package directory following t
 
 **Total Packages**: 50+  
 **Audited**: 106  
-**Complete**: 81  
-**Needs Work**: 25  
+**Complete**: 82  
+**Needs Work**: 24  
 **Incomplete**: 0  
 **Not Started**: 0
 

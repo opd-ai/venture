@@ -201,12 +201,118 @@ func serializeRotation(entity *engine.Entity, state *EntityState) {
 	}
 }
 
-// CreateDeltaSnapshot creates a delta snapshot (only changed entities).
-// This is an optimization for future use.
+// CreateDeltaSnapshot creates a delta snapshot containing only entities that have
+// changed since the previous snapshot. This reduces network bandwidth by not
+// retransmitting unchanged entity state.
+//
+// If previousSnapshot is nil, returns a full snapshot (all entities).
+// An entity is considered changed if:
+//   - It is new (not in the previous snapshot)
+//   - Its position, velocity, health, or rotation has changed
+//
+// Removed entities are not explicitly tracked; clients should use full snapshots
+// periodically to reconcile state.
 func (b *StateBroadcaster) CreateDeltaSnapshot(previousSnapshot *WorldState) (*WorldState, error) {
-	// For now, just return a full snapshot
-	// Future: implement delta compression by comparing with previous state
-	return b.CreateSnapshot()
+	// If no previous snapshot, return full snapshot
+	if previousSnapshot == nil {
+		return b.CreateSnapshot()
+	}
+
+	// Build map of previous entity states for fast lookup
+	previousStates := make(map[uint64]*EntityState, len(previousSnapshot.Entities))
+	for i := range previousSnapshot.Entities {
+		previousStates[previousSnapshot.Entities[i].ID] = &previousSnapshot.Entities[i]
+	}
+
+	entities := b.world.GetEntities()
+	now := b.timeProvider.Now()
+
+	snapshot := &WorldState{
+		Timestamp: now.UnixMilli(),
+		Entities:  make([]EntityState, 0),
+	}
+
+	for _, entity := range entities {
+		currentState := b.serializeEntity(entity)
+		if currentState == nil {
+			continue // Entity has no position, skip
+		}
+
+		prevState, exists := previousStates[entity.ID]
+		if !exists || entityStateChanged(prevState, currentState) {
+			snapshot.Entities = append(snapshot.Entities, *currentState)
+		}
+	}
+
+	b.lastBroadcast = now
+
+	return snapshot, nil
+}
+
+// entityStateChanged compares two entity states and returns true if any
+// component has changed.
+func entityStateChanged(prev, current *EntityState) bool {
+	// Check position changes
+	if !positionEqual(prev.Position, current.Position) {
+		return true
+	}
+	// Check velocity changes
+	if !velocityEqual(prev.Velocity, current.Velocity) {
+		return true
+	}
+	// Check health changes
+	if !healthEqual(prev.Health, current.Health) {
+		return true
+	}
+	// Check rotation changes
+	if !rotationEqual(prev.Rotation, current.Rotation) {
+		return true
+	}
+	return false
+}
+
+// positionEqual returns true if two position states are equal.
+func positionEqual(a, b *PositionState) bool {
+	if a == nil && b == nil {
+		return true
+	}
+	if a == nil || b == nil {
+		return false
+	}
+	return a.X == b.X && a.Y == b.Y
+}
+
+// velocityEqual returns true if two velocity states are equal.
+func velocityEqual(a, b *VelocityState) bool {
+	if a == nil && b == nil {
+		return true
+	}
+	if a == nil || b == nil {
+		return false
+	}
+	return a.VX == b.VX && a.VY == b.VY
+}
+
+// healthEqual returns true if two health states are equal.
+func healthEqual(a, b *HealthState) bool {
+	if a == nil && b == nil {
+		return true
+	}
+	if a == nil || b == nil {
+		return false
+	}
+	return a.Current == b.Current && a.Max == b.Max
+}
+
+// rotationEqual returns true if two rotation states are equal.
+func rotationEqual(a, b *RotationState) bool {
+	if a == nil && b == nil {
+		return true
+	}
+	if a == nil || b == nil {
+		return false
+	}
+	return a.Angle == b.Angle
 }
 
 // GetBroadcastRate returns the current broadcast rate in Hz.

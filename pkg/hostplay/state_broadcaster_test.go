@@ -316,7 +316,7 @@ func TestStateBroadcaster_CreateDeltaSnapshot(t *testing.T) {
 	// Wait for broadcast interval to reset
 	time.Sleep(60 * time.Millisecond)
 
-	// Create delta snapshot (currently just returns full snapshot)
+	// Create delta snapshot with no changes - should return 0 entities
 	deltaSnapshot, err := broadcaster.CreateDeltaSnapshot(previousSnapshot)
 	if err != nil {
 		t.Fatalf("CreateDeltaSnapshot() error = %v", err)
@@ -326,10 +326,274 @@ func TestStateBroadcaster_CreateDeltaSnapshot(t *testing.T) {
 		t.Fatal("deltaSnapshot is nil")
 	}
 
-	// Delta snapshot should have same entities as full snapshot (current implementation)
-	if len(deltaSnapshot.Entities) != len(previousSnapshot.Entities) {
-		t.Errorf("delta len(Entities) = %d, want %d",
-			len(deltaSnapshot.Entities), len(previousSnapshot.Entities))
+	// Delta snapshot should have 0 entities (nothing changed)
+	if len(deltaSnapshot.Entities) != 0 {
+		t.Errorf("delta len(Entities) = %d, want 0 (no changes)",
+			len(deltaSnapshot.Entities))
+	}
+}
+
+// TestStateBroadcaster_CreateDeltaSnapshotWithChanges tests delta snapshot with actual changes
+func TestStateBroadcaster_CreateDeltaSnapshotWithChanges(t *testing.T) {
+	world := engine.NewWorld()
+	logger := logrus.NewEntry(logrus.New())
+	fixedTime := time.Date(2026, 2, 13, 12, 0, 0, 0, time.UTC)
+	tp := &MockTimeProvider{fixedTime: fixedTime}
+	broadcaster := NewStateBroadcasterWithTimeProvider(world, 20, logger, tp)
+
+	// Create test entities
+	entity1 := world.CreateEntity()
+	posComp1 := &engine.PositionComponent{X: 100, Y: 200}
+	entity1.AddComponent(posComp1)
+
+	entity2 := world.CreateEntity()
+	posComp2 := &engine.PositionComponent{X: 300, Y: 400}
+	entity2.AddComponent(posComp2)
+
+	entity3 := world.CreateEntity()
+	entity3.AddComponent(&engine.PositionComponent{X: 500, Y: 600})
+
+	world.Update(0)
+
+	// Create first snapshot
+	previousSnapshot, err := broadcaster.CreateSnapshot()
+	if err != nil {
+		t.Fatalf("CreateSnapshot() error = %v", err)
+	}
+
+	// Advance time
+	tp.Advance(100 * time.Millisecond)
+
+	// Modify entity1's position
+	posComp1.X = 150
+	posComp1.Y = 250
+
+	// Modify entity2's position
+	posComp2.X = 350
+	// entity3 unchanged
+
+	// Create delta snapshot
+	deltaSnapshot, err := broadcaster.CreateDeltaSnapshot(previousSnapshot)
+	if err != nil {
+		t.Fatalf("CreateDeltaSnapshot() error = %v", err)
+	}
+
+	// Should have 2 changed entities
+	if len(deltaSnapshot.Entities) != 2 {
+		t.Errorf("delta len(Entities) = %d, want 2 (entity1 and entity2 changed)",
+			len(deltaSnapshot.Entities))
+	}
+
+	// Verify changed entities have correct IDs
+	changedIDs := make(map[uint64]bool)
+	for _, e := range deltaSnapshot.Entities {
+		changedIDs[e.ID] = true
+	}
+
+	if !changedIDs[entity1.ID] {
+		t.Error("entity1 should be in delta (position changed)")
+	}
+	if !changedIDs[entity2.ID] {
+		t.Error("entity2 should be in delta (position changed)")
+	}
+	if changedIDs[entity3.ID] {
+		t.Error("entity3 should NOT be in delta (unchanged)")
+	}
+}
+
+// TestStateBroadcaster_CreateDeltaSnapshotNewEntity tests delta snapshot with new entity
+func TestStateBroadcaster_CreateDeltaSnapshotNewEntity(t *testing.T) {
+	world := engine.NewWorld()
+	logger := logrus.NewEntry(logrus.New())
+	fixedTime := time.Date(2026, 2, 13, 12, 0, 0, 0, time.UTC)
+	tp := &MockTimeProvider{fixedTime: fixedTime}
+	broadcaster := NewStateBroadcasterWithTimeProvider(world, 20, logger, tp)
+
+	// Create initial entity
+	entity1 := world.CreateEntity()
+	entity1.AddComponent(&engine.PositionComponent{X: 100, Y: 200})
+	world.Update(0)
+
+	// Create first snapshot
+	previousSnapshot, err := broadcaster.CreateSnapshot()
+	if err != nil {
+		t.Fatalf("CreateSnapshot() error = %v", err)
+	}
+
+	// Advance time and add new entity
+	tp.Advance(100 * time.Millisecond)
+
+	entity2 := world.CreateEntity()
+	entity2.AddComponent(&engine.PositionComponent{X: 300, Y: 400})
+	world.Update(0)
+
+	// Create delta snapshot
+	deltaSnapshot, err := broadcaster.CreateDeltaSnapshot(previousSnapshot)
+	if err != nil {
+		t.Fatalf("CreateDeltaSnapshot() error = %v", err)
+	}
+
+	// Should have 1 new entity (entity2)
+	if len(deltaSnapshot.Entities) != 1 {
+		t.Errorf("delta len(Entities) = %d, want 1 (new entity only)",
+			len(deltaSnapshot.Entities))
+	}
+
+	if len(deltaSnapshot.Entities) > 0 && deltaSnapshot.Entities[0].ID != entity2.ID {
+		t.Errorf("delta entity ID = %d, want %d", deltaSnapshot.Entities[0].ID, entity2.ID)
+	}
+}
+
+// TestStateBroadcaster_CreateDeltaSnapshotHealthChange tests delta with health change only
+func TestStateBroadcaster_CreateDeltaSnapshotHealthChange(t *testing.T) {
+	world := engine.NewWorld()
+	logger := logrus.NewEntry(logrus.New())
+	fixedTime := time.Date(2026, 2, 13, 12, 0, 0, 0, time.UTC)
+	tp := &MockTimeProvider{fixedTime: fixedTime}
+	broadcaster := NewStateBroadcasterWithTimeProvider(world, 20, logger, tp)
+
+	entity := world.CreateEntity()
+	entity.AddComponent(&engine.PositionComponent{X: 100, Y: 200})
+	healthComp := &engine.HealthComponent{Current: 100, Max: 100}
+	entity.AddComponent(healthComp)
+	world.Update(0)
+
+	// Create first snapshot
+	previousSnapshot, err := broadcaster.CreateSnapshot()
+	if err != nil {
+		t.Fatalf("CreateSnapshot() error = %v", err)
+	}
+
+	tp.Advance(100 * time.Millisecond)
+
+	// Take damage
+	healthComp.Current = 75
+
+	// Create delta snapshot
+	deltaSnapshot, err := broadcaster.CreateDeltaSnapshot(previousSnapshot)
+	if err != nil {
+		t.Fatalf("CreateDeltaSnapshot() error = %v", err)
+	}
+
+	// Should have 1 entity (health changed)
+	if len(deltaSnapshot.Entities) != 1 {
+		t.Errorf("delta len(Entities) = %d, want 1 (health changed)",
+			len(deltaSnapshot.Entities))
+	}
+
+	if len(deltaSnapshot.Entities) > 0 && deltaSnapshot.Entities[0].Health.Current != 75 {
+		t.Errorf("delta health = %f, want 75", deltaSnapshot.Entities[0].Health.Current)
+	}
+}
+
+// TestStateBroadcaster_CreateDeltaSnapshotVelocityChange tests delta with velocity change
+func TestStateBroadcaster_CreateDeltaSnapshotVelocityChange(t *testing.T) {
+	world := engine.NewWorld()
+	logger := logrus.NewEntry(logrus.New())
+	fixedTime := time.Date(2026, 2, 13, 12, 0, 0, 0, time.UTC)
+	tp := &MockTimeProvider{fixedTime: fixedTime}
+	broadcaster := NewStateBroadcasterWithTimeProvider(world, 20, logger, tp)
+
+	entity := world.CreateEntity()
+	entity.AddComponent(&engine.PositionComponent{X: 100, Y: 200})
+	velComp := &engine.VelocityComponent{VX: 0, VY: 0}
+	entity.AddComponent(velComp)
+	world.Update(0)
+
+	previousSnapshot, err := broadcaster.CreateSnapshot()
+	if err != nil {
+		t.Fatalf("CreateSnapshot() error = %v", err)
+	}
+
+	tp.Advance(100 * time.Millisecond)
+
+	// Start moving
+	velComp.VX = 10
+	velComp.VY = 5
+
+	deltaSnapshot, err := broadcaster.CreateDeltaSnapshot(previousSnapshot)
+	if err != nil {
+		t.Fatalf("CreateDeltaSnapshot() error = %v", err)
+	}
+
+	if len(deltaSnapshot.Entities) != 1 {
+		t.Errorf("delta len(Entities) = %d, want 1 (velocity changed)",
+			len(deltaSnapshot.Entities))
+	}
+}
+
+// TestStateBroadcaster_CreateDeltaSnapshotRotationChange tests delta with rotation change
+func TestStateBroadcaster_CreateDeltaSnapshotRotationChange(t *testing.T) {
+	world := engine.NewWorld()
+	logger := logrus.NewEntry(logrus.New())
+	fixedTime := time.Date(2026, 2, 13, 12, 0, 0, 0, time.UTC)
+	tp := &MockTimeProvider{fixedTime: fixedTime}
+	broadcaster := NewStateBroadcasterWithTimeProvider(world, 20, logger, tp)
+
+	entity := world.CreateEntity()
+	entity.AddComponent(&engine.PositionComponent{X: 100, Y: 200})
+	rotComp := &engine.RotationComponent{Angle: 0}
+	entity.AddComponent(rotComp)
+	world.Update(0)
+
+	previousSnapshot, err := broadcaster.CreateSnapshot()
+	if err != nil {
+		t.Fatalf("CreateSnapshot() error = %v", err)
+	}
+
+	tp.Advance(100 * time.Millisecond)
+
+	// Rotate
+	rotComp.Angle = 1.57
+
+	deltaSnapshot, err := broadcaster.CreateDeltaSnapshot(previousSnapshot)
+	if err != nil {
+		t.Fatalf("CreateDeltaSnapshot() error = %v", err)
+	}
+
+	if len(deltaSnapshot.Entities) != 1 {
+		t.Errorf("delta len(Entities) = %d, want 1 (rotation changed)",
+			len(deltaSnapshot.Entities))
+	}
+}
+
+// TestStateBroadcaster_CreateDeltaSnapshotComponentAddedRemoved tests component addition detection
+func TestStateBroadcaster_CreateDeltaSnapshotComponentAddedRemoved(t *testing.T) {
+	world := engine.NewWorld()
+	logger := logrus.NewEntry(logrus.New())
+	fixedTime := time.Date(2026, 2, 13, 12, 0, 0, 0, time.UTC)
+	tp := &MockTimeProvider{fixedTime: fixedTime}
+	broadcaster := NewStateBroadcasterWithTimeProvider(world, 20, logger, tp)
+
+	entity := world.CreateEntity()
+	entity.AddComponent(&engine.PositionComponent{X: 100, Y: 200})
+	// No health initially
+	world.Update(0)
+
+	previousSnapshot, err := broadcaster.CreateSnapshot()
+	if err != nil {
+		t.Fatalf("CreateSnapshot() error = %v", err)
+	}
+
+	tp.Advance(100 * time.Millisecond)
+
+	// Add health component
+	entity.AddComponent(&engine.HealthComponent{Current: 100, Max: 100})
+	world.Update(0)
+
+	deltaSnapshot, err := broadcaster.CreateDeltaSnapshot(previousSnapshot)
+	if err != nil {
+		t.Fatalf("CreateDeltaSnapshot() error = %v", err)
+	}
+
+	// Should detect entity changed (health component added)
+	if len(deltaSnapshot.Entities) != 1 {
+		t.Errorf("delta len(Entities) = %d, want 1 (health component added)",
+			len(deltaSnapshot.Entities))
+	}
+
+	if len(deltaSnapshot.Entities) > 0 && deltaSnapshot.Entities[0].Health == nil {
+		t.Error("delta entity should have health component")
 	}
 }
 

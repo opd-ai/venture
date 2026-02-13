@@ -18,6 +18,9 @@ type Engine struct {
 	mu         sync.RWMutex
 }
 
+// Verify Engine implements audio.Synthesizer interface at compile time.
+var _ audio.Synthesizer = (*Engine)(nil)
+
 // NewEngine creates a new synthesis engine with the given seed.
 func NewEngine(seed int64) *Engine {
 	const defaultSampleRate = 44100
@@ -55,11 +58,18 @@ func (e *Engine) GetSeed() int64 {
 	return e.seed
 }
 
-// GenerateTone generates a simple tone with the specified waveform, frequency, and duration.
-func (e *Engine) GenerateTone(waveform audio.WaveformType, frequency, duration float64) *audio.AudioSample {
+// Generate generates a simple tone with the specified waveform, frequency, and duration.
+// This method implements the audio.Synthesizer interface.
+func (e *Engine) Generate(waveform audio.WaveformType, frequency, duration float64) *audio.AudioSample {
 	e.mu.Lock()
 	defer e.mu.Unlock()
 	return e.osc.Generate(waveform, frequency, duration)
+}
+
+// GenerateTone is an alias for Generate for backward compatibility.
+// Deprecated: Use Generate instead.
+func (e *Engine) GenerateTone(waveform audio.WaveformType, frequency, duration float64) *audio.AudioSample {
+	return e.Generate(waveform, frequency, duration)
 }
 
 // GenerateToneWithEnvelope generates a tone shaped by an ADSR envelope.
@@ -130,8 +140,11 @@ func (e *Engine) GenerateChord(notes []audio.Note, waveform audio.WaveformType) 
 }
 
 // GenerateChordWithEnvelope generates a chord shaped by an ADSR envelope.
+// The envelope is applied to the generated chord in a thread-safe manner.
 func (e *Engine) GenerateChordWithEnvelope(notes []audio.Note, waveform audio.WaveformType, env Envelope) *audio.AudioSample {
 	sample := e.GenerateChord(notes, waveform)
+	e.mu.Lock()
+	defer e.mu.Unlock()
 	env.Apply(sample.Data, sample.SampleRate)
 	return sample
 }
@@ -173,6 +186,11 @@ func (e *Engine) MixSamples(samples []*audio.AudioSample) *audio.AudioSample {
 }
 
 // ApplyEnvelope applies an ADSR envelope to an existing audio sample.
+// Note: The caller must ensure the sample is not being accessed by other
+// goroutines during this call, as the sample data is modified in-place.
+// For concurrent use, make a copy of the sample before calling this method.
 func (e *Engine) ApplyEnvelope(sample *audio.AudioSample, env Envelope) {
+	e.mu.Lock()
+	defer e.mu.Unlock()
 	env.Apply(sample.Data, sample.SampleRate)
 }

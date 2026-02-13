@@ -6,6 +6,29 @@ import (
 	"github.com/opd-ai/venture/pkg/audio"
 )
 
+// TestEngine_ImplementsSynthesizer verifies that Engine implements audio.Synthesizer.
+func TestEngine_ImplementsSynthesizer(t *testing.T) {
+	engine := NewEngine(12345)
+
+	// This will fail to compile if Engine doesn't implement audio.Synthesizer
+	var synth audio.Synthesizer = engine
+	if synth == nil {
+		t.Fatal("Engine should implement audio.Synthesizer")
+	}
+
+	// Verify interface methods work correctly
+	sample := synth.Generate(audio.WaveformSine, 440.0, 0.5)
+	if sample == nil {
+		t.Fatal("Synthesizer.Generate returned nil")
+	}
+
+	note := audio.Note{Frequency: 440.0, Duration: 0.5, Velocity: 0.8}
+	noteSample := synth.GenerateNote(note, audio.WaveformSine)
+	if noteSample == nil {
+		t.Fatal("Synthesizer.GenerateNote returned nil")
+	}
+}
+
 func TestNewEngine(t *testing.T) {
 	engine := NewEngine(12345)
 
@@ -114,6 +137,62 @@ func TestEngine_GenerateTone(t *testing.T) {
 				t.Errorf("Expected sample rate %d, got %d", engine.GetSampleRate(), sample.SampleRate)
 			}
 		})
+	}
+}
+
+func TestEngine_Generate(t *testing.T) {
+	engine := NewEngine(12345)
+
+	tests := []struct {
+		name      string
+		waveform  audio.WaveformType
+		frequency float64
+		duration  float64
+	}{
+		{"sine_440hz", audio.WaveformSine, 440.0, 0.5},
+		{"square_880hz", audio.WaveformSquare, 880.0, 0.25},
+		{"sawtooth_220hz", audio.WaveformSawtooth, 220.0, 1.0},
+		{"triangle_330hz", audio.WaveformTriangle, 330.0, 0.1},
+		{"noise_short", audio.WaveformNoise, 0.0, 0.2},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			sample := engine.Generate(tt.waveform, tt.frequency, tt.duration)
+
+			if sample == nil {
+				t.Fatal("Generate returned nil")
+			}
+
+			expectedSamples := int(float64(engine.GetSampleRate()) * tt.duration)
+			if len(sample.Data) != expectedSamples {
+				t.Errorf("Expected %d samples, got %d", expectedSamples, len(sample.Data))
+			}
+
+			if sample.SampleRate != engine.GetSampleRate() {
+				t.Errorf("Expected sample rate %d, got %d", engine.GetSampleRate(), sample.SampleRate)
+			}
+		})
+	}
+}
+
+func TestEngine_Generate_EqualsGenerateTone(t *testing.T) {
+	// Verify Generate and GenerateTone produce identical results
+	engine1 := NewEngine(12345)
+	engine2 := NewEngine(12345)
+
+	sample1 := engine1.Generate(audio.WaveformSine, 440.0, 0.5)
+	sample2 := engine2.GenerateTone(audio.WaveformSine, 440.0, 0.5)
+
+	if len(sample1.Data) != len(sample2.Data) {
+		t.Fatalf("Samples have different lengths: %d vs %d", len(sample1.Data), len(sample2.Data))
+	}
+
+	for i := range sample1.Data {
+		if sample1.Data[i] != sample2.Data[i] {
+			t.Errorf("Sample %d differs: %f vs %f", i, sample1.Data[i], sample2.Data[i])
+			break
+		}
 	}
 }
 
@@ -319,6 +398,37 @@ func TestEngine_ConcurrentAccess(t *testing.T) {
 				_ = engine.GenerateTone(audio.WaveformSine, 440.0, 0.01)
 				_ = engine.GetSampleRate()
 				_ = engine.GetSeed()
+			}
+			done <- true
+		}()
+	}
+
+	// Wait for all goroutines
+	for i := 0; i < 10; i++ {
+		<-done
+	}
+}
+
+func TestEngine_ConcurrentEnvelopeMethods(t *testing.T) {
+	engine := NewEngine(12345)
+	env := DefaultEnvelope()
+
+	done := make(chan bool, 10)
+
+	// Run multiple goroutines calling envelope methods concurrently
+	for i := 0; i < 10; i++ {
+		go func() {
+			for j := 0; j < 50; j++ {
+				// Test GenerateChordWithEnvelope concurrent access
+				notes := []audio.Note{
+					{Frequency: 261.63, Duration: 0.05, Velocity: 0.8},
+					{Frequency: 329.63, Duration: 0.05, Velocity: 0.8},
+				}
+				_ = engine.GenerateChordWithEnvelope(notes, audio.WaveformSine, env)
+
+				// Test ApplyEnvelope concurrent access (each goroutine uses its own sample)
+				sample := engine.Generate(audio.WaveformSine, 440.0, 0.05)
+				engine.ApplyEnvelope(sample, env)
 			}
 			done <- true
 		}()

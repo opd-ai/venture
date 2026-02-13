@@ -8,7 +8,23 @@ import (
 
 	"github.com/opd-ai/venture/pkg/network/federation/guild"
 	"github.com/opd-ai/venture/pkg/world/housing"
+	"github.com/sirupsen/logrus"
 )
+
+// logger is the package-level logger for structured logging.
+var logger = logrus.StandardLogger()
+
+// validateID validates a string ID parameter.
+// Returns an error if the ID is empty or exceeds 256 characters.
+func validateID(fieldName, value string) error {
+	if value == "" {
+		return fmt.Errorf("%s cannot be empty", fieldName)
+	}
+	if len(value) > 256 {
+		return fmt.Errorf("%s exceeds maximum length of 256 characters", fieldName)
+	}
+	return nil
+}
 
 // guild_housing_manager.go implements the Manager for guild housing operations.
 // This includes creating guild houses, managing permissions, storage, upgrades,
@@ -30,7 +46,32 @@ func NewManager() *Manager {
 }
 
 // CreateGuildHouse creates a new guild-owned house.
-func (m *Manager) CreateGuildHouse(guildID, ownerID string, size housing.BuildingSize) *GuildHouse {
+// Returns an error if guildID, ownerID are empty, or if size is invalid.
+func (m *Manager) CreateGuildHouse(guildID, ownerID string, size housing.BuildingSize) (*GuildHouse, error) {
+	if err := validateID("guildID", guildID); err != nil {
+		logger.WithFields(logrus.Fields{
+			"guildID": guildID,
+			"ownerID": ownerID,
+		}).Error("CreateGuildHouse validation failed: ", err)
+		return nil, err
+	}
+	if err := validateID("ownerID", ownerID); err != nil {
+		logger.WithFields(logrus.Fields{
+			"guildID": guildID,
+			"ownerID": ownerID,
+		}).Error("CreateGuildHouse validation failed: ", err)
+		return nil, err
+	}
+	if size <= 0 {
+		err := fmt.Errorf("building size must be positive, got %d", size)
+		logger.WithFields(logrus.Fields{
+			"guildID": guildID,
+			"ownerID": ownerID,
+			"size":    size,
+		}).Error("CreateGuildHouse validation failed: ", err)
+		return nil, err
+	}
+
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -49,7 +90,7 @@ func (m *Manager) CreateGuildHouse(guildID, ownerID string, size housing.Buildin
 	}
 
 	m.houses[houseID] = house
-	return house
+	return house, nil
 }
 
 // GetGuildHouse retrieves a guild house by ID.
@@ -59,7 +100,11 @@ func (m *Manager) GetGuildHouse(houseID string) (*GuildHouse, error) {
 
 	house, exists := m.houses[houseID]
 	if !exists {
-		return nil, fmt.Errorf("guild house not found: %s", houseID)
+		err := fmt.Errorf("guild house not found: %s", houseID)
+		logger.WithFields(logrus.Fields{
+			"houseID": houseID,
+		}).Warn(err.Error())
+		return nil, err
 	}
 	return house, nil
 }
@@ -80,12 +125,25 @@ func (m *Manager) GetGuildHouses(guildID string) []*GuildHouse {
 
 // SetPermission sets rank-based permission for a guild house.
 func (m *Manager) SetPermission(houseID string, rank guild.Rank, permission Permission) error {
+	if err := validateID("houseID", houseID); err != nil {
+		logger.WithFields(logrus.Fields{
+			"houseID":    houseID,
+			"rank":       rank,
+			"permission": permission,
+		}).Error("SetPermission validation failed: ", err)
+		return err
+	}
+
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
 	house, exists := m.houses[houseID]
 	if !exists {
-		return fmt.Errorf("guild house not found: %s", houseID)
+		err := fmt.Errorf("guild house not found: %s", houseID)
+		logger.WithFields(logrus.Fields{
+			"houseID": houseID,
+		}).Warn(err.Error())
+		return err
 	}
 
 	house.Permissions[rank] = permission
@@ -113,12 +171,32 @@ func (m *Manager) CheckPermission(houseID string, rank guild.Rank, required Perm
 
 // AddCraftingStation adds a crafting station to a guild house.
 func (m *Manager) AddCraftingStation(houseID, stationID string) error {
+	if err := validateID("houseID", houseID); err != nil {
+		logger.WithFields(logrus.Fields{
+			"houseID":   houseID,
+			"stationID": stationID,
+		}).Error("AddCraftingStation validation failed: ", err)
+		return err
+	}
+	if err := validateID("stationID", stationID); err != nil {
+		logger.WithFields(logrus.Fields{
+			"houseID":   houseID,
+			"stationID": stationID,
+		}).Error("AddCraftingStation validation failed: ", err)
+		return err
+	}
+
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
 	house, exists := m.houses[houseID]
 	if !exists {
-		return fmt.Errorf("guild house not found: %s", houseID)
+		err := fmt.Errorf("guild house not found: %s", houseID)
+		logger.WithFields(logrus.Fields{
+			"houseID":   houseID,
+			"stationID": stationID,
+		}).Warn(err.Error())
+		return err
 	}
 
 	house.Stations = append(house.Stations, stationID)
@@ -133,14 +211,35 @@ func (m *Manager) GetCraftingStations(houseID string) ([]string, error) {
 
 	house, exists := m.houses[houseID]
 	if !exists {
-		return nil, fmt.Errorf("guild house not found: %s", houseID)
+		err := fmt.Errorf("guild house not found: %s", houseID)
+		logger.WithFields(logrus.Fields{
+			"houseID": houseID,
+		}).Warn(err.Error())
+		return nil, err
 	}
 
 	return house.Stations, nil
 }
 
 // CreateGuildStorage creates storage for a guild house.
-func (m *Manager) CreateGuildStorage(guildID string, capacity int) *GuildStorage {
+// Returns an error if guildID is empty or capacity is not positive.
+func (m *Manager) CreateGuildStorage(guildID string, capacity int) (*GuildStorage, error) {
+	if err := validateID("guildID", guildID); err != nil {
+		logger.WithFields(logrus.Fields{
+			"guildID":  guildID,
+			"capacity": capacity,
+		}).Error("CreateGuildStorage validation failed: ", err)
+		return nil, err
+	}
+	if capacity <= 0 {
+		err := fmt.Errorf("capacity must be positive, got %d", capacity)
+		logger.WithFields(logrus.Fields{
+			"guildID":  guildID,
+			"capacity": capacity,
+		}).Error("CreateGuildStorage validation failed: ", err)
+		return nil, err
+	}
+
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -155,7 +254,7 @@ func (m *Manager) CreateGuildStorage(guildID string, capacity int) *GuildStorage
 	}
 
 	m.storage[storageID] = storage
-	return storage
+	return storage, nil
 }
 
 // GetGuildStorage retrieves guild storage by ID.
@@ -165,7 +264,11 @@ func (m *Manager) GetGuildStorage(storageID string) (*GuildStorage, error) {
 
 	storage, exists := m.storage[storageID]
 	if !exists {
-		return nil, fmt.Errorf("guild storage not found: %s", storageID)
+		err := fmt.Errorf("guild storage not found: %s", storageID)
+		logger.WithFields(logrus.Fields{
+			"storageID": storageID,
+		}).Warn(err.Error())
+		return nil, err
 	}
 	return storage, nil
 }
@@ -173,12 +276,46 @@ func (m *Manager) GetGuildStorage(storageID string) (*GuildStorage, error) {
 // DepositItem deposits an item into guild storage.
 // Capacity limits the number of unique item types (slots), not total quantity.
 func (m *Manager) DepositItem(storageID, playerID, itemID string, quantity int) error {
+	if err := validateID("storageID", storageID); err != nil {
+		logger.WithFields(logrus.Fields{
+			"storageID": storageID,
+			"playerID":  playerID,
+			"itemID":    itemID,
+			"quantity":  quantity,
+		}).Error("DepositItem validation failed: ", err)
+		return err
+	}
+	if err := validateID("playerID", playerID); err != nil {
+		logger.WithFields(logrus.Fields{
+			"storageID": storageID,
+			"playerID":  playerID,
+			"itemID":    itemID,
+			"quantity":  quantity,
+		}).Error("DepositItem validation failed: ", err)
+		return err
+	}
+	if err := validateID("itemID", itemID); err != nil {
+		logger.WithFields(logrus.Fields{
+			"storageID": storageID,
+			"playerID":  playerID,
+			"itemID":    itemID,
+			"quantity":  quantity,
+		}).Error("DepositItem validation failed: ", err)
+		return err
+	}
+
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
 	storage, exists := m.storage[storageID]
 	if !exists {
-		return fmt.Errorf("guild storage not found: %s", storageID)
+		err := fmt.Errorf("guild storage not found: %s", storageID)
+		logger.WithFields(logrus.Fields{
+			"storageID": storageID,
+			"playerID":  playerID,
+			"itemID":    itemID,
+		}).Warn(err.Error())
+		return err
 	}
 
 	if existing, exists := storage.Items[itemID]; exists {
@@ -187,7 +324,14 @@ func (m *Manager) DepositItem(storageID, playerID, itemID string, quantity int) 
 	} else {
 		// Adding a new item type requires an available slot
 		if len(storage.Items) >= storage.Capacity {
-			return fmt.Errorf("storage capacity reached: %d unique item types", storage.Capacity)
+			err := fmt.Errorf("storage capacity reached: %d unique item types", storage.Capacity)
+			logger.WithFields(logrus.Fields{
+				"storageID": storageID,
+				"playerID":  playerID,
+				"itemID":    itemID,
+				"capacity":  storage.Capacity,
+			}).Warn(err.Error())
+			return err
 		}
 		storage.Items[itemID] = &StoredItem{
 			ItemID:   itemID,
@@ -212,17 +356,57 @@ func (m *Manager) DepositItem(storageID, playerID, itemID string, quantity int) 
 
 // WithdrawItem withdraws an item from guild storage.
 func (m *Manager) WithdrawItem(storageID, playerID, itemID string, quantity int) (int, error) {
+	if err := validateID("storageID", storageID); err != nil {
+		logger.WithFields(logrus.Fields{
+			"storageID": storageID,
+			"playerID":  playerID,
+			"itemID":    itemID,
+			"quantity":  quantity,
+		}).Error("WithdrawItem validation failed: ", err)
+		return 0, err
+	}
+	if err := validateID("playerID", playerID); err != nil {
+		logger.WithFields(logrus.Fields{
+			"storageID": storageID,
+			"playerID":  playerID,
+			"itemID":    itemID,
+			"quantity":  quantity,
+		}).Error("WithdrawItem validation failed: ", err)
+		return 0, err
+	}
+	if err := validateID("itemID", itemID); err != nil {
+		logger.WithFields(logrus.Fields{
+			"storageID": storageID,
+			"playerID":  playerID,
+			"itemID":    itemID,
+			"quantity":  quantity,
+		}).Error("WithdrawItem validation failed: ", err)
+		return 0, err
+	}
+
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
 	storage, exists := m.storage[storageID]
 	if !exists {
-		return 0, fmt.Errorf("guild storage not found: %s", storageID)
+		err := fmt.Errorf("guild storage not found: %s", storageID)
+		logger.WithFields(logrus.Fields{
+			"storageID": storageID,
+			"playerID":  playerID,
+			"itemID":    itemID,
+		}).Warn(err.Error())
+		return 0, err
 	}
 
 	item, exists := storage.Items[itemID]
 	if !exists {
-		return 0, fmt.Errorf("item not found in storage: %s", itemID)
+		err := fmt.Errorf("item not found in storage: %s", itemID)
+		logger.WithFields(logrus.Fields{
+			"storageID": storageID,
+			"playerID":  playerID,
+			"itemID":    itemID,
+		}).Warn(err.Error())
+		return 0, err
 	}
 
 	withdrawn := quantity
@@ -255,7 +439,11 @@ func (m *Manager) GetStorageItems(storageID string) (map[string]*StoredItem, err
 
 	storage, exists := m.storage[storageID]
 	if !exists {
-		return nil, fmt.Errorf("guild storage not found: %s", storageID)
+		err := fmt.Errorf("guild storage not found: %s", storageID)
+		logger.WithFields(logrus.Fields{
+			"storageID": storageID,
+		}).Warn(err.Error())
+		return nil, err
 	}
 
 	return storage.Items, nil
@@ -268,7 +456,11 @@ func (m *Manager) GetTransactions(storageID string) ([]*Transaction, error) {
 
 	storage, exists := m.storage[storageID]
 	if !exists {
-		return nil, fmt.Errorf("guild storage not found: %s", storageID)
+		err := fmt.Errorf("guild storage not found: %s", storageID)
+		logger.WithFields(logrus.Fields{
+			"storageID": storageID,
+		}).Warn(err.Error())
+		return nil, err
 	}
 
 	return storage.Transactions, nil
@@ -281,18 +473,34 @@ func (m *Manager) UpgradeHouse(houseID string, goldSpent int) error {
 
 	house, exists := m.houses[houseID]
 	if !exists {
-		return fmt.Errorf("guild house not found: %s", houseID)
+		err := fmt.Errorf("guild house not found: %s", houseID)
+		logger.WithFields(logrus.Fields{
+			"houseID":   houseID,
+			"goldSpent": goldSpent,
+		}).Warn(err.Error())
+		return err
 	}
 
 	if house.Tier >= TierMaster {
-		return fmt.Errorf("house already at maximum tier")
+		err := fmt.Errorf("house already at maximum tier")
+		logger.WithFields(logrus.Fields{
+			"houseID": houseID,
+			"tier":    house.Tier,
+		}).Warn(err.Error())
+		return err
 	}
 
 	nextTier := house.Tier + 1
 	requiredGold := nextTier.Cost()
 
 	if goldSpent < requiredGold {
-		return fmt.Errorf("insufficient gold: need %d, have %d", requiredGold, goldSpent)
+		err := fmt.Errorf("insufficient gold: need %d, have %d", requiredGold, goldSpent)
+		logger.WithFields(logrus.Fields{
+			"houseID":      houseID,
+			"requiredGold": requiredGold,
+			"goldSpent":    goldSpent,
+		}).Warn(err.Error())
+		return err
 	}
 
 	house.Tier = nextTier
@@ -307,7 +515,11 @@ func (m *Manager) GetUpgradeBonus(houseID string) (float64, error) {
 
 	house, exists := m.houses[houseID]
 	if !exists {
-		return 1.0, fmt.Errorf("guild house not found: %s", houseID)
+		err := fmt.Errorf("guild house not found: %s", houseID)
+		logger.WithFields(logrus.Fields{
+			"houseID": houseID,
+		}).Warn(err.Error())
+		return 1.0, err
 	}
 
 	return house.Tier.BonusMultiplier(), nil
@@ -372,15 +584,24 @@ func (m *Manager) Load(data []byte) error {
 
 	var state map[string]interface{}
 	if err := json.Unmarshal(data, &state); err != nil {
+		logger.WithFields(logrus.Fields{
+			"error": err.Error(),
+		}).Error("Load failed to unmarshal state")
 		return err
 	}
 
 	if houses, ok := state["houses"].(map[string]interface{}); ok {
 		housesData, err := json.Marshal(houses)
 		if err != nil {
+			logger.WithFields(logrus.Fields{
+				"error": err.Error(),
+			}).Error("Load failed to marshal houses")
 			return fmt.Errorf("failed to marshal houses: %w", err)
 		}
 		if err := json.Unmarshal(housesData, &m.houses); err != nil {
+			logger.WithFields(logrus.Fields{
+				"error": err.Error(),
+			}).Error("Load failed to unmarshal houses")
 			return fmt.Errorf("failed to unmarshal houses: %w", err)
 		}
 	}
@@ -388,9 +609,15 @@ func (m *Manager) Load(data []byte) error {
 	if storage, ok := state["storage"].(map[string]interface{}); ok {
 		storageData, err := json.Marshal(storage)
 		if err != nil {
+			logger.WithFields(logrus.Fields{
+				"error": err.Error(),
+			}).Error("Load failed to marshal storage")
 			return fmt.Errorf("failed to marshal storage: %w", err)
 		}
 		if err := json.Unmarshal(storageData, &m.storage); err != nil {
+			logger.WithFields(logrus.Fields{
+				"error": err.Error(),
+			}).Error("Load failed to unmarshal storage")
 			return fmt.Errorf("failed to unmarshal storage: %w", err)
 		}
 	}

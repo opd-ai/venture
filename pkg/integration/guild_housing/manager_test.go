@@ -133,7 +133,10 @@ func TestCreateGuildHouse(t *testing.T) {
 	manager := NewManager()
 	size := housing.SizeLarge // 24x24
 
-	house := manager.CreateGuildHouse("guild-001", "player-001", size)
+	house, err := manager.CreateGuildHouse("guild-001", "player-001", size)
+	if err != nil {
+		t.Fatalf("CreateGuildHouse() error = %v", err)
+	}
 
 	if house.GuildID != "guild-001" {
 		t.Errorf("GuildID = %v, want %v", house.GuildID, "guild-001")
@@ -162,10 +165,51 @@ func TestCreateGuildHouse(t *testing.T) {
 	}
 }
 
+func TestCreateGuildHouseValidation(t *testing.T) {
+	manager := NewManager()
+	size := housing.SizeLarge
+
+	// Test empty guildID
+	_, err := manager.CreateGuildHouse("", "player-001", size)
+	if err == nil {
+		t.Error("CreateGuildHouse() expected error for empty guildID")
+	}
+	if err != nil && !strings.Contains(err.Error(), "guildID cannot be empty") {
+		t.Errorf("CreateGuildHouse() error = %v, want error containing 'guildID cannot be empty'", err)
+	}
+
+	// Test empty ownerID
+	_, err = manager.CreateGuildHouse("guild-001", "", size)
+	if err == nil {
+		t.Error("CreateGuildHouse() expected error for empty ownerID")
+	}
+	if err != nil && !strings.Contains(err.Error(), "ownerID cannot be empty") {
+		t.Errorf("CreateGuildHouse() error = %v, want error containing 'ownerID cannot be empty'", err)
+	}
+
+	// Test zero size
+	_, err = manager.CreateGuildHouse("guild-001", "player-001", 0)
+	if err == nil {
+		t.Error("CreateGuildHouse() expected error for zero size")
+	}
+	if err != nil && !strings.Contains(err.Error(), "building size must be positive") {
+		t.Errorf("CreateGuildHouse() error = %v, want error containing 'building size must be positive'", err)
+	}
+
+	// Test negative size
+	_, err = manager.CreateGuildHouse("guild-001", "player-001", -1)
+	if err == nil {
+		t.Error("CreateGuildHouse() expected error for negative size")
+	}
+}
+
 func TestGetGuildHouse(t *testing.T) {
 	manager := NewManager()
 	size := housing.SizeMedium
-	created := manager.CreateGuildHouse("guild-001", "player-001", size)
+	created, err := manager.CreateGuildHouse("guild-001", "player-001", size)
+	if err != nil {
+		t.Fatalf("CreateGuildHouse() error = %v", err)
+	}
 
 	retrieved, err := manager.GetGuildHouse(created.HouseID)
 	if err != nil {
@@ -185,9 +229,9 @@ func TestGetGuildHouses(t *testing.T) {
 	manager := NewManager()
 	size := housing.SizeMedium
 
-	manager.CreateGuildHouse("guild-001", "player-001", size)
-	manager.CreateGuildHouse("guild-001", "player-002", size)
-	manager.CreateGuildHouse("guild-002", "player-003", size)
+	_, _ = manager.CreateGuildHouse("guild-001", "player-001", size)
+	_, _ = manager.CreateGuildHouse("guild-001", "player-002", size)
+	_, _ = manager.CreateGuildHouse("guild-002", "player-003", size)
 
 	houses := manager.GetGuildHouses("guild-001")
 	if len(houses) != 2 {
@@ -203,9 +247,12 @@ func TestGetGuildHouses(t *testing.T) {
 func TestSetPermission(t *testing.T) {
 	manager := NewManager()
 	size := housing.SizeMedium
-	house := manager.CreateGuildHouse("guild-001", "player-001", size)
+	house, err := manager.CreateGuildHouse("guild-001", "player-001", size)
+	if err != nil {
+		t.Fatalf("CreateGuildHouse() error = %v", err)
+	}
 
-	err := manager.SetPermission(house.HouseID, guild.RankMember, PermissionManage)
+	err = manager.SetPermission(house.HouseID, guild.RankMember, PermissionManage)
 	if err != nil {
 		t.Fatalf("SetPermission() error = %v", err)
 	}
@@ -224,7 +271,10 @@ func TestSetPermission(t *testing.T) {
 func TestCheckPermission(t *testing.T) {
 	manager := NewManager()
 	size := housing.SizeMedium
-	house := manager.CreateGuildHouse("guild-001", "player-001", size)
+	house, err := manager.CreateGuildHouse("guild-001", "player-001", size)
+	if err != nil {
+		t.Fatalf("CreateGuildHouse() error = %v", err)
+	}
 
 	tests := []struct {
 		name     string
@@ -258,9 +308,12 @@ func TestCheckPermission(t *testing.T) {
 func TestAddCraftingStation(t *testing.T) {
 	manager := NewManager()
 	size := housing.SizeMedium
-	house := manager.CreateGuildHouse("guild-001", "player-001", size)
+	house, err := manager.CreateGuildHouse("guild-001", "player-001", size)
+	if err != nil {
+		t.Fatalf("CreateGuildHouse() error = %v", err)
+	}
 
-	err := manager.AddCraftingStation(house.HouseID, "station-001")
+	err = manager.AddCraftingStation(house.HouseID, "station-001")
 	if err != nil {
 		t.Fatalf("AddCraftingStation() error = %v", err)
 	}
@@ -287,7 +340,10 @@ func TestAddCraftingStation(t *testing.T) {
 func TestGetCraftingStations(t *testing.T) {
 	manager := NewManager()
 	size := housing.SizeMedium
-	house := manager.CreateGuildHouse("guild-001", "player-001", size)
+	house, err := manager.CreateGuildHouse("guild-001", "player-001", size)
+	if err != nil {
+		t.Fatalf("CreateGuildHouse() error = %v", err)
+	}
 
 	stations, err := manager.GetCraftingStations(house.HouseID)
 	if err != nil {
@@ -307,7 +363,10 @@ func TestCreateGuildStorage(t *testing.T) {
 	manager := NewManager()
 	capacity := 500
 
-	storage := manager.CreateGuildStorage("guild-001", capacity)
+	storage, err := manager.CreateGuildStorage("guild-001", capacity)
+	if err != nil {
+		t.Fatalf("CreateGuildStorage() error = %v", err)
+	}
 
 	if storage.GuildID != "guild-001" {
 		t.Errorf("GuildID = %v, want %v", storage.GuildID, "guild-001")
@@ -320,9 +379,40 @@ func TestCreateGuildStorage(t *testing.T) {
 	}
 }
 
+func TestCreateGuildStorageValidation(t *testing.T) {
+	manager := NewManager()
+
+	// Test empty guildID
+	_, err := manager.CreateGuildStorage("", 500)
+	if err == nil {
+		t.Error("CreateGuildStorage() expected error for empty guildID")
+	}
+	if err != nil && !strings.Contains(err.Error(), "guildID cannot be empty") {
+		t.Errorf("CreateGuildStorage() error = %v, want error containing 'guildID cannot be empty'", err)
+	}
+
+	// Test zero capacity
+	_, err = manager.CreateGuildStorage("guild-001", 0)
+	if err == nil {
+		t.Error("CreateGuildStorage() expected error for zero capacity")
+	}
+	if err != nil && !strings.Contains(err.Error(), "capacity must be positive") {
+		t.Errorf("CreateGuildStorage() error = %v, want error containing 'capacity must be positive'", err)
+	}
+
+	// Test negative capacity
+	_, err = manager.CreateGuildStorage("guild-001", -1)
+	if err == nil {
+		t.Error("CreateGuildStorage() expected error for negative capacity")
+	}
+}
+
 func TestGetGuildStorage(t *testing.T) {
 	manager := NewManager()
-	created := manager.CreateGuildStorage("guild-001", 500)
+	created, err := manager.CreateGuildStorage("guild-001", 500)
+	if err != nil {
+		t.Fatalf("CreateGuildStorage() error = %v", err)
+	}
 
 	retrieved, err := manager.GetGuildStorage(created.StorageID)
 	if err != nil {
@@ -340,9 +430,12 @@ func TestGetGuildStorage(t *testing.T) {
 
 func TestDepositItem(t *testing.T) {
 	manager := NewManager()
-	storage := manager.CreateGuildStorage("guild-001", 500)
+	storage, err := manager.CreateGuildStorage("guild-001", 500)
+	if err != nil {
+		t.Fatalf("CreateGuildStorage() error = %v", err)
+	}
 
-	err := manager.DepositItem(storage.StorageID, "player-001", "item-001", 10)
+	err = manager.DepositItem(storage.StorageID, "player-001", "item-001", 10)
 	if err != nil {
 		t.Fatalf("DepositItem() error = %v", err)
 	}
@@ -374,10 +467,13 @@ func TestDepositItem(t *testing.T) {
 func TestDepositItemCapacity(t *testing.T) {
 	manager := NewManager()
 	// Create storage with capacity of 2 unique item types
-	storage := manager.CreateGuildStorage("guild-001", 2)
+	storage, err := manager.CreateGuildStorage("guild-001", 2)
+	if err != nil {
+		t.Fatalf("CreateGuildStorage() error = %v", err)
+	}
 
 	// First unique item type
-	err := manager.DepositItem(storage.StorageID, "player-001", "item-001", 10)
+	err = manager.DepositItem(storage.StorageID, "player-001", "item-001", 10)
 	if err != nil {
 		t.Fatalf("DepositItem() first item error = %v", err)
 	}
@@ -414,7 +510,10 @@ func TestDepositItemCapacity(t *testing.T) {
 
 func TestWithdrawItem(t *testing.T) {
 	manager := NewManager()
-	storage := manager.CreateGuildStorage("guild-001", 500)
+	storage, err := manager.CreateGuildStorage("guild-001", 500)
+	if err != nil {
+		t.Fatalf("CreateGuildStorage() error = %v", err)
+	}
 
 	manager.DepositItem(storage.StorageID, "player-001", "item-001", 10)
 
@@ -457,7 +556,10 @@ func TestWithdrawItem(t *testing.T) {
 
 func TestGetStorageItems(t *testing.T) {
 	manager := NewManager()
-	storage := manager.CreateGuildStorage("guild-001", 500)
+	storage, err := manager.CreateGuildStorage("guild-001", 500)
+	if err != nil {
+		t.Fatalf("CreateGuildStorage() error = %v", err)
+	}
 
 	manager.DepositItem(storage.StorageID, "player-001", "item-001", 10)
 	manager.DepositItem(storage.StorageID, "player-002", "item-002", 20)
@@ -478,7 +580,10 @@ func TestGetStorageItems(t *testing.T) {
 
 func TestGetTransactions(t *testing.T) {
 	manager := NewManager()
-	storage := manager.CreateGuildStorage("guild-001", 500)
+	storage, err := manager.CreateGuildStorage("guild-001", 500)
+	if err != nil {
+		t.Fatalf("CreateGuildStorage() error = %v", err)
+	}
 
 	manager.DepositItem(storage.StorageID, "player-001", "item-001", 10)
 	manager.WithdrawItem(storage.StorageID, "player-002", "item-001", 5)
@@ -506,9 +611,12 @@ func TestGetTransactions(t *testing.T) {
 func TestUpgradeHouse(t *testing.T) {
 	manager := NewManager()
 	size := housing.SizeMedium
-	house := manager.CreateGuildHouse("guild-001", "player-001", size)
+	house, err := manager.CreateGuildHouse("guild-001", "player-001", size)
+	if err != nil {
+		t.Fatalf("CreateGuildHouse() error = %v", err)
+	}
 
-	err := manager.UpgradeHouse(house.HouseID, 10000)
+	err = manager.UpgradeHouse(house.HouseID, 10000)
 	if err != nil {
 		t.Fatalf("UpgradeHouse() error = %v", err)
 	}
@@ -552,7 +660,10 @@ func TestUpgradeHouse(t *testing.T) {
 func TestGetUpgradeBonus(t *testing.T) {
 	manager := NewManager()
 	size := housing.SizeMedium
-	house := manager.CreateGuildHouse("guild-001", "player-001", size)
+	house, err := manager.CreateGuildHouse("guild-001", "player-001", size)
+	if err != nil {
+		t.Fatalf("CreateGuildHouse() error = %v", err)
+	}
 
 	bonus, err := manager.GetUpgradeBonus(house.HouseID)
 	if err != nil {
@@ -645,9 +756,9 @@ func TestSaveLoad(t *testing.T) {
 	manager := NewManager()
 	size := housing.SizeMedium
 
-	house1 := manager.CreateGuildHouse("guild-001", "player-001", size)
-	house2 := manager.CreateGuildHouse("guild-002", "player-002", size)
-	storage := manager.CreateGuildStorage("guild-001", 500)
+	house1, _ := manager.CreateGuildHouse("guild-001", "player-001", size)
+	house2, _ := manager.CreateGuildHouse("guild-002", "player-002", size)
+	storage, _ := manager.CreateGuildStorage("guild-001", 500)
 	manager.DepositItem(storage.StorageID, "player-001", "item-001", 10)
 
 	data, err := manager.Save()
@@ -747,14 +858,14 @@ func BenchmarkCreateGuildHouse(b *testing.B) {
 	size := housing.SizeMedium
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		manager.CreateGuildHouse("guild-001", "player-001", size)
+		_, _ = manager.CreateGuildHouse("guild-001", "player-001", size)
 	}
 }
 
 func BenchmarkCheckPermission(b *testing.B) {
 	manager := NewManager()
 	size := housing.SizeMedium
-	house := manager.CreateGuildHouse("guild-001", "player-001", size)
+	house, _ := manager.CreateGuildHouse("guild-001", "player-001", size)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		manager.CheckPermission(house.HouseID, guild.RankMember, PermissionUse)
@@ -763,7 +874,7 @@ func BenchmarkCheckPermission(b *testing.B) {
 
 func BenchmarkDepositItem(b *testing.B) {
 	manager := NewManager()
-	storage := manager.CreateGuildStorage("guild-001", 10000)
+	storage, _ := manager.CreateGuildStorage("guild-001", 10000)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		manager.DepositItem(storage.StorageID, "player-001", "item-001", 1)
@@ -772,7 +883,7 @@ func BenchmarkDepositItem(b *testing.B) {
 
 func BenchmarkWithdrawItem(b *testing.B) {
 	manager := NewManager()
-	storage := manager.CreateGuildStorage("guild-001", 500)
+	storage, _ := manager.CreateGuildStorage("guild-001", 500)
 	manager.DepositItem(storage.StorageID, "player-001", "item-001", 1000000)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
@@ -783,7 +894,7 @@ func BenchmarkWithdrawItem(b *testing.B) {
 func BenchmarkGetUpgradeBonus(b *testing.B) {
 	manager := NewManager()
 	size := housing.SizeMedium
-	house := manager.CreateGuildHouse("guild-001", "player-001", size)
+	house, _ := manager.CreateGuildHouse("guild-001", "player-001", size)
 	manager.UpgradeHouse(house.HouseID, 50000)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {

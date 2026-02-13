@@ -7,6 +7,8 @@ import (
 	"sync"
 	"time"
 
+	log "github.com/sirupsen/logrus"
+
 	"github.com/opd-ai/venture/pkg/procgen"
 	"github.com/opd-ai/venture/pkg/world/raids"
 )
@@ -20,6 +22,7 @@ type QuestManager struct {
 	raidManager      *raids.Manager // Integration with Phase 59.1
 	serverValidation *ServerValidator
 	rewardCatalog    *RewardCatalog
+	timeProvider     TimeProvider // TimeProvider for deterministic timestamps
 }
 
 // ServerValidator validates cross-server quest step completion.
@@ -48,8 +51,14 @@ type LegendaryReward struct {
 	Unique      bool    // True for one-time rewards
 }
 
-// NewQuestManager creates a new legendary quest manager.
+// NewQuestManager creates a new legendary quest manager with default time provider.
 func NewQuestManager(raidMgr *raids.Manager) *QuestManager {
+	return NewQuestManagerWithTimeProvider(raidMgr, DefaultTimeProvider())
+}
+
+// NewQuestManagerWithTimeProvider creates a new legendary quest manager with a custom time provider.
+// This enables deterministic timestamps for testing and reproducible state.
+func NewQuestManagerWithTimeProvider(raidMgr *raids.Manager, tp TimeProvider) *QuestManager {
 	return &QuestManager{
 		activeQuests:     make(map[string]*LegendaryQuest),
 		playerProgress:   make(map[string]*ProgressTracker),
@@ -57,6 +66,7 @@ func NewQuestManager(raidMgr *raids.Manager) *QuestManager {
 		raidManager:      raidMgr,
 		serverValidation: NewServerValidator(),
 		rewardCatalog:    NewRewardCatalog(),
+		timeProvider:     tp,
 	}
 }
 
@@ -108,10 +118,20 @@ func (qm *QuestManager) UpdatePhaseProgress(playerID, questID string, phaseIndex
 	qm.mu.RUnlock()
 
 	if !exists {
+		log.WithFields(log.Fields{
+			"playerID": playerID,
+			"questID":  questID,
+		}).Warn("quest not found during phase progress update")
 		return fmt.Errorf("quest not found: %s", questID)
 	}
 
 	if phaseIndex < 0 || phaseIndex >= len(quest.Phases) {
+		log.WithFields(log.Fields{
+			"playerID":   playerID,
+			"questID":    questID,
+			"phaseIndex": phaseIndex,
+			"maxPhases":  len(quest.Phases),
+		}).Warn("invalid phase index during progress update")
 		return fmt.Errorf("invalid phase index: %d", phaseIndex)
 	}
 
@@ -122,7 +142,7 @@ func (qm *QuestManager) UpdatePhaseProgress(playerID, questID string, phaseIndex
 	if progress >= 1.0 {
 		qm.mu.Lock()
 		quest.Phases[phaseIndex].Completed = true
-		quest.Phases[phaseIndex].CompletedAt = time.Now()
+		quest.Phases[phaseIndex].CompletedAt = qm.timeProvider.Now()
 		qm.mu.Unlock()
 	}
 
@@ -136,6 +156,11 @@ func (qm *QuestManager) ValidateServerVisit(playerID, questID, serverID string) 
 	qm.mu.RUnlock()
 
 	if !exists {
+		log.WithFields(log.Fields{
+			"playerID": playerID,
+			"questID":  questID,
+			"serverID": serverID,
+		}).Warn("quest not found during server visit validation")
 		return fmt.Errorf("quest not found: %s", questID)
 	}
 
@@ -153,11 +178,22 @@ func (qm *QuestManager) ValidateServerVisit(playerID, questID, serverID string) 
 	}
 
 	if !found {
+		log.WithFields(log.Fields{
+			"playerID": playerID,
+			"questID":  questID,
+			"serverID": serverID,
+		}).Debug("server not required by quest")
 		return fmt.Errorf("server %s not required by quest", serverID)
 	}
 
 	// Validate server visit
 	if err := qm.serverValidation.RecordVisit(playerID, serverID); err != nil {
+		log.WithFields(log.Fields{
+			"playerID": playerID,
+			"questID":  questID,
+			"serverID": serverID,
+			"error":    err.Error(),
+		}).Error("failed to record server visit")
 		return fmt.Errorf("failed to record server visit: %w", err)
 	}
 
@@ -175,6 +211,12 @@ func (qm *QuestManager) ValidateRaidCompletion(playerID, questID, raidID string,
 	qm.mu.RUnlock()
 
 	if !exists {
+		log.WithFields(log.Fields{
+			"playerID": playerID,
+			"questID":  questID,
+			"raidID":   raidID,
+			"raidTier": tier.String(),
+		}).Warn("quest not found during raid completion validation")
 		return fmt.Errorf("quest not found: %s", questID)
 	}
 
@@ -192,6 +234,12 @@ func (qm *QuestManager) ValidateRaidCompletion(playerID, questID, raidID string,
 	}
 
 	if !found {
+		log.WithFields(log.Fields{
+			"playerID": playerID,
+			"questID":  questID,
+			"raidID":   raidID,
+			"raidTier": tier.String(),
+		}).Debug("raid tier not required by quest")
 		return fmt.Errorf("raid tier %s not required by quest", tier.String())
 	}
 
@@ -209,6 +257,12 @@ func (qm *QuestManager) ValidateCraftingCompletion(playerID, questID, itemID str
 	qm.mu.RUnlock()
 
 	if !exists {
+		log.WithFields(log.Fields{
+			"playerID":       playerID,
+			"questID":        questID,
+			"itemID":         itemID,
+			"stationQuality": stationQuality,
+		}).Warn("quest not found during crafting completion validation")
 		return fmt.Errorf("quest not found: %s", questID)
 	}
 
@@ -234,10 +288,22 @@ func (qm *QuestManager) ValidateCraftingCompletion(playerID, questID, itemID str
 	}
 
 	if !found {
+		log.WithFields(log.Fields{
+			"playerID": playerID,
+			"questID":  questID,
+			"itemID":   itemID,
+		}).Debug("crafting not required by quest")
 		return fmt.Errorf("crafting not required by quest")
 	}
 
 	if stationQuality < minQuality {
+		log.WithFields(log.Fields{
+			"playerID":       playerID,
+			"questID":        questID,
+			"itemID":         itemID,
+			"stationQuality": stationQuality,
+			"requiredMin":    minQuality,
+		}).Info("insufficient crafting station quality")
 		return fmt.Errorf("insufficient crafting station quality: need %d, got %d", minQuality, stationQuality)
 	}
 
@@ -413,7 +479,7 @@ func (qm *QuestManager) getOrCreateTracker(playerID string) *ProgressTracker {
 	defer qm.mu.Unlock()
 
 	if qm.playerProgress[playerID] == nil {
-		qm.playerProgress[playerID] = NewProgressTracker()
+		qm.playerProgress[playerID] = NewProgressTrackerWithTimeProvider(qm.timeProvider)
 	}
 	return qm.playerProgress[playerID]
 }
@@ -421,16 +487,24 @@ func (qm *QuestManager) getOrCreateTracker(playerID string) *ProgressTracker {
 // grantRewards grants quest rewards to a player.
 func (qm *QuestManager) grantRewards(playerID string, quest *LegendaryQuest) (*QuestRewards, error) {
 	rewards := &QuestRewards{
-		Items:  make([]string, 0),
-		Titles: make([]string, 0),
-		Gold:   quest.Rewards.Gold,
+		Items:        make([]string, 0),
+		Titles:       make([]string, 0),
+		Gold:         quest.Rewards.Gold,
+		SkippedItems: make([]string, 0),
 	}
 
 	// Grant legendary items
 	for _, item := range quest.Rewards.Items {
 		itemKey := fmt.Sprintf("item_%s", item.Name)
 		if err := qm.rewardCatalog.ClaimReward(playerID, itemKey); err != nil {
-			// Already claimed, skip
+			// Already claimed, log and record
+			log.WithFields(log.Fields{
+				"playerID": playerID,
+				"questID":  quest.ID,
+				"itemKey":  itemKey,
+				"reason":   err.Error(),
+			}).Info("reward already claimed, skipping")
+			rewards.SkippedItems = append(rewards.SkippedItems, item.Name)
 			continue
 		}
 		rewards.Items = append(rewards.Items, item.Name)
@@ -439,9 +513,16 @@ func (qm *QuestManager) grantRewards(playerID string, quest *LegendaryQuest) (*Q
 	// Grant titles
 	for _, title := range quest.Rewards.Titles {
 		titleID := fmt.Sprintf("title_%s", title)
-		if err := qm.rewardCatalog.ClaimReward(playerID, titleID); err == nil {
-			rewards.Titles = append(rewards.Titles, title)
+		if err := qm.rewardCatalog.ClaimReward(playerID, titleID); err != nil {
+			log.WithFields(log.Fields{
+				"playerID": playerID,
+				"questID":  quest.ID,
+				"titleID":  titleID,
+				"reason":   err.Error(),
+			}).Info("title already claimed, skipping")
+			continue
 		}
+		rewards.Titles = append(rewards.Titles, title)
 	}
 
 	return rewards, nil
@@ -449,9 +530,10 @@ func (qm *QuestManager) grantRewards(playerID string, quest *LegendaryQuest) (*Q
 
 // QuestRewards represents rewards granted to a player.
 type QuestRewards struct {
-	Items  []string
-	Titles []string
-	Gold   int
+	Items        []string
+	Titles       []string
+	Gold         int
+	SkippedItems []string // Items that were already claimed
 }
 
 // generateLegendaryRewards creates the pool of legendary rewards.
@@ -524,7 +606,7 @@ func (qm *QuestManager) GetStatistics() *QuestStatistics {
 	stats := &QuestStatistics{
 		TotalQuests:  len(qm.activeQuests),
 		ActiveQuests: len(qm.activeQuests),
-		LastUpdated:  time.Now(),
+		LastUpdated:  qm.timeProvider.Now(),
 	}
 
 	qm.calculateCompletionRate(stats)

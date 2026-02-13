@@ -9,11 +9,14 @@ import (
 )
 
 // LegendaryQuestGenerator generates multi-phase legendary quests.
+// It implements the procgen.Generator interface for consistent procedural generation.
 type LegendaryQuestGenerator struct {
 	templates []*QuestTemplate
 }
 
 // NewLegendaryQuestGenerator creates a new legendary quest generator.
+// The generator uses default quest templates for creating multi-phase legendary quests
+// that include travel, crafting, raids, and other challenge phases.
 func NewLegendaryQuestGenerator() *LegendaryQuestGenerator {
 	return &LegendaryQuestGenerator{
 		templates: defaultQuestTemplates(),

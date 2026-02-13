@@ -47,7 +47,7 @@ This document tracks the audit status of all Go packages in the Venture codebase
 - [x] `pkg/procgen/genre/AUDIT.md` — Complete — 0 issues (4 fixed on 2026-02-13: deterministic selection, error handling, logging)
 - [x] `pkg/procgen/faction/AUDIT.md` — Complete — 0 issues
 - [x] `pkg/procgen/companion/AUDIT.md` — Needs Work — 5 issues (2 high, 1 med, 2 low)
-- [x] `pkg/procgen/legendary/AUDIT.md` — Needs Work — 6 issues (1 high, 2 med, 3 low)
+- [x] `pkg/procgen/legendary/AUDIT.md` — Complete — 0 issues (6 fixed on 2026-02-13: TimeProvider interface for deterministic timestamps, structured logging with logrus.WithFields, SkippedItems tracking in rewards, godoc comments)
 - [x] `pkg/procgen/story/AUDIT.md` — Needs Work — 1 issue (0 high, 0 med, 1 low)
 - [x] `pkg/procgen/minigame/AUDIT.md` — Complete — 3 issues (0 high, 0 med, 3 low)
 - [x] `pkg/procgen/book/AUDIT.md` — Complete — 3 issues (0 high, 0 med, 3 low)
@@ -164,8 +164,8 @@ Each audit should produce a `AUDIT.md` file in the package directory following t
 
 **Total Packages**: 50+  
 **Audited**: 106  
-**Complete**: 60  
-**Needs Work**: 46  
+**Complete**: 61  
+**Needs Work**: 45  
 **Incomplete**: 0  
 **Not Started**: 0
 

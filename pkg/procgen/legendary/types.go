@@ -6,6 +6,27 @@ import (
 	"github.com/opd-ai/venture/pkg/world/raids"
 )
 
+// TimeProvider is an interface for obtaining the current time.
+// This enables deterministic timestamps for testing and reproducible state.
+// In production, use RealTimeProvider; in tests, use a mock implementation.
+type TimeProvider interface {
+	// Now returns the current time
+	Now() time.Time
+}
+
+// RealTimeProvider implements TimeProvider using the actual system clock.
+type RealTimeProvider struct{}
+
+// Now returns the current system time.
+func (RealTimeProvider) Now() time.Time {
+	return time.Now()
+}
+
+// DefaultTimeProvider returns the default TimeProvider (real system time).
+func DefaultTimeProvider() TimeProvider {
+	return RealTimeProvider{}
+}
+
 // PhaseType categorizes quest phase activities.
 type PhaseType int
 
@@ -473,13 +494,21 @@ type PlayerProgress struct {
 
 // ProgressTracker tracks player progress across all legendary quests.
 type ProgressTracker struct {
-	Progress map[string]map[string]*PlayerProgress `json:"progress"` // questID -> playerID -> progress
+	Progress     map[string]map[string]*PlayerProgress `json:"progress"` // questID -> playerID -> progress
+	timeProvider TimeProvider                          `json:"-"`        // TimeProvider for deterministic timestamps
 }
 
-// NewProgressTracker creates a new progress tracker.
+// NewProgressTracker creates a new progress tracker with default time provider.
 func NewProgressTracker() *ProgressTracker {
+	return NewProgressTrackerWithTimeProvider(DefaultTimeProvider())
+}
+
+// NewProgressTrackerWithTimeProvider creates a new progress tracker with a custom time provider.
+// This enables deterministic timestamps for testing and reproducible state.
+func NewProgressTrackerWithTimeProvider(tp TimeProvider) *ProgressTracker {
 	return &ProgressTracker{
-		Progress: make(map[string]map[string]*PlayerProgress),
+		Progress:     make(map[string]map[string]*PlayerProgress),
+		timeProvider: tp,
 	}
 }
 
@@ -497,6 +526,7 @@ func (pt *ProgressTracker) UpdatePhase(questID, playerID string, phase int, prog
 		pt.Progress[questID] = make(map[string]*PlayerProgress)
 	}
 
+	now := pt.timeProvider.Now()
 	p := pt.Progress[questID][playerID]
 	if p == nil {
 		p = &PlayerProgress{
@@ -508,21 +538,21 @@ func (pt *ProgressTracker) UpdatePhase(questID, playerID string, phase int, prog
 			RaidsCompleted:    make([]string, 0),
 			ItemsCrafted:      make([]string, 0),
 			MaterialsGathered: make(map[string]int),
-			StartedAt:         time.Now(),
-			LastUpdated:       time.Now(),
+			StartedAt:         now,
+			LastUpdated:       now,
 		}
 		pt.Progress[questID][playerID] = p
 	}
 
 	p.CurrentPhase = phase
 	p.PhaseProgress = progress
-	p.LastUpdated = time.Now()
+	p.LastUpdated = now
 }
 
 // CompleteQuest marks a quest as completed for a player.
 func (pt *ProgressTracker) CompleteQuest(questID, playerID string) {
 	if p := pt.GetProgress(questID, playerID); p != nil {
-		now := time.Now()
+		now := pt.timeProvider.Now()
 		p.CompletedAt = &now
 		p.IsCompleted = true
 		p.LastUpdated = now
@@ -535,6 +565,7 @@ func (pt *ProgressTracker) AddServerVisited(questID, playerID, serverID string) 
 		pt.Progress[questID] = make(map[string]*PlayerProgress)
 	}
 
+	now := pt.timeProvider.Now()
 	p := pt.Progress[questID][playerID]
 	if p == nil {
 		p = &PlayerProgress{
@@ -546,8 +577,8 @@ func (pt *ProgressTracker) AddServerVisited(questID, playerID, serverID string) 
 			RaidsCompleted:    make([]string, 0),
 			ItemsCrafted:      make([]string, 0),
 			MaterialsGathered: make(map[string]int),
-			StartedAt:         time.Now(),
-			LastUpdated:       time.Now(),
+			StartedAt:         now,
+			LastUpdated:       now,
 		}
 		pt.Progress[questID][playerID] = p
 	}
@@ -558,7 +589,7 @@ func (pt *ProgressTracker) AddServerVisited(questID, playerID, serverID string) 
 		}
 	}
 	p.ServersVisited = append(p.ServersVisited, serverID)
-	p.LastUpdated = time.Now()
+	p.LastUpdated = now
 }
 
 // AddRaidCompleted adds a raid to the player's completed list.
@@ -567,6 +598,7 @@ func (pt *ProgressTracker) AddRaidCompleted(questID, playerID, raidID string) {
 		pt.Progress[questID] = make(map[string]*PlayerProgress)
 	}
 
+	now := pt.timeProvider.Now()
 	p := pt.Progress[questID][playerID]
 	if p == nil {
 		p = &PlayerProgress{
@@ -578,8 +610,8 @@ func (pt *ProgressTracker) AddRaidCompleted(questID, playerID, raidID string) {
 			RaidsCompleted:    make([]string, 0),
 			ItemsCrafted:      make([]string, 0),
 			MaterialsGathered: make(map[string]int),
-			StartedAt:         time.Now(),
-			LastUpdated:       time.Now(),
+			StartedAt:         now,
+			LastUpdated:       now,
 		}
 		pt.Progress[questID][playerID] = p
 	}
@@ -590,7 +622,7 @@ func (pt *ProgressTracker) AddRaidCompleted(questID, playerID, raidID string) {
 		}
 	}
 	p.RaidsCompleted = append(p.RaidsCompleted, raidID)
-	p.LastUpdated = time.Now()
+	p.LastUpdated = now
 }
 
 // AddMaterial adds or increments material count for a player.
@@ -599,6 +631,7 @@ func (pt *ProgressTracker) AddMaterial(questID, playerID, materialID string, qua
 		pt.Progress[questID] = make(map[string]*PlayerProgress)
 	}
 
+	now := pt.timeProvider.Now()
 	p := pt.Progress[questID][playerID]
 	if p == nil {
 		p = &PlayerProgress{
@@ -610,12 +643,12 @@ func (pt *ProgressTracker) AddMaterial(questID, playerID, materialID string, qua
 			RaidsCompleted:    make([]string, 0),
 			ItemsCrafted:      make([]string, 0),
 			MaterialsGathered: make(map[string]int),
-			StartedAt:         time.Now(),
-			LastUpdated:       time.Now(),
+			StartedAt:         now,
+			LastUpdated:       now,
 		}
 		pt.Progress[questID][playerID] = p
 	}
 
 	p.MaterialsGathered[materialID] += quantity
-	p.LastUpdated = time.Now()
+	p.LastUpdated = now
 }

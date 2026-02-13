@@ -3,6 +3,7 @@ package companion_housing
 import (
 	"fmt"
 	"testing"
+	"time"
 )
 
 func BenchmarkBedding_LoyaltyBonus(b *testing.B) {
@@ -72,9 +73,10 @@ func BenchmarkPetHomeManager_GetTrainingBonus(b *testing.B) {
 		}
 	}
 
-	// Start training session
+	// Start training session with explicit time
 	companionID := uint64(100)
-	manager.StartTrainingSession(companionID, "training_0_0")
+	sessionTime := time.Date(2026, 2, 13, 14, 30, 0, 0, time.UTC)
+	manager.StartTrainingSession(companionID, "training_0_0", sessionTime)
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {

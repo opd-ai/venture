@@ -95,7 +95,7 @@ This document tracks the audit status of all Go packages in the Venture codebase
 ### Integration
 - [x] `pkg/integration/AUDIT.md` — Complete — 0 issues (4 recommendations)
 - [x] `pkg/integration/choice_consequences/AUDIT.md` — Needs Work — 5 issues (2 high, 2 med, 1 low)
-- [x] `pkg/integration/companion_housing/AUDIT.md` — Needs Work — 5 issues (2 high, 1 med, 2 low)
+- [x] `pkg/integration/companion_housing/AUDIT.md` — Complete — 0 issues (5 fixed on 2026-02-13: deterministic time, serialization, structured logging)
 - [x] `pkg/integration/guild_housing/AUDIT.md` — Needs Work — 7 issues (1 high, 3 med, 3 low)
 - [x] `pkg/integration/guild_vehicle/AUDIT.md` — Needs Work — 4 issues (1 high, 1 med, 2 low)
 - [x] `pkg/integration/housing_crafting/AUDIT.md` — Complete — 1 issue (0 high, 0 med, 1 low)
@@ -164,8 +164,8 @@ Each audit should produce a `AUDIT.md` file in the package directory following t
 
 **Total Packages**: 50+  
 **Audited**: 106  
-**Complete**: 55  
-**Needs Work**: 51  
+**Complete**: 56  
+**Needs Work**: 50  
 **Incomplete**: 0  
 **Not Started**: 0
 

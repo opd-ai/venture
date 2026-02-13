@@ -177,7 +177,9 @@ func TestCompanionHousingSystem_UpdateFromManager(t *testing.T) {
 	manager.AddBedding("house_1", "bed_1", BeddingAdvanced)
 	manager.AssignCompanionToBed(100, "bed_1")
 	manager.AddTrainingArea("house_1", "training_1", TrainingCombat)
-	manager.StartTrainingSession(100, "training_1")
+	// Use explicit time for determinism
+	sessionTime := time.Date(2026, 2, 13, 14, 30, 0, 0, time.UTC)
+	manager.StartTrainingSession(100, "training_1", sessionTime)
 
 	t.Run("assigned companion", func(t *testing.T) {
 		c := &CompanionHousingComponent{}
@@ -223,5 +225,66 @@ func TestCompanionHousingComponent_Type(t *testing.T) {
 
 	if got != want {
 		t.Errorf("Type() = %s, want %s", got, want)
+	}
+}
+
+func TestCompanionHousingComponent_SerializeDeserialize(t *testing.T) {
+	original := &CompanionHousingComponent{
+		OwnerHouseID:      "house_123",
+		BeddingID:         "bed_456",
+		LastRestTime:      time.Date(2026, 2, 13, 10, 30, 0, 0, time.UTC),
+		LoyaltyBonus:      0.15,
+		ActiveTraining:    "training_789",
+		TrainingBonus:     1.5,
+		SharedChestAccess: []string{"chest_1", "chest_2"},
+	}
+
+	// Serialize
+	data, err := original.Serialize()
+	if err != nil {
+		t.Fatalf("Serialize() error = %v", err)
+	}
+
+	// Deserialize into new component
+	restored := &CompanionHousingComponent{}
+	err = restored.Deserialize(data)
+	if err != nil {
+		t.Fatalf("Deserialize() error = %v", err)
+	}
+
+	// Verify all fields match
+	if restored.OwnerHouseID != original.OwnerHouseID {
+		t.Errorf("OwnerHouseID = %s, want %s", restored.OwnerHouseID, original.OwnerHouseID)
+	}
+	if restored.BeddingID != original.BeddingID {
+		t.Errorf("BeddingID = %s, want %s", restored.BeddingID, original.BeddingID)
+	}
+	if !restored.LastRestTime.Equal(original.LastRestTime) {
+		t.Errorf("LastRestTime = %v, want %v", restored.LastRestTime, original.LastRestTime)
+	}
+	if restored.LoyaltyBonus != original.LoyaltyBonus {
+		t.Errorf("LoyaltyBonus = %v, want %v", restored.LoyaltyBonus, original.LoyaltyBonus)
+	}
+	if restored.ActiveTraining != original.ActiveTraining {
+		t.Errorf("ActiveTraining = %s, want %s", restored.ActiveTraining, original.ActiveTraining)
+	}
+	if restored.TrainingBonus != original.TrainingBonus {
+		t.Errorf("TrainingBonus = %v, want %v", restored.TrainingBonus, original.TrainingBonus)
+	}
+	if len(restored.SharedChestAccess) != len(original.SharedChestAccess) {
+		t.Errorf("SharedChestAccess len = %d, want %d", len(restored.SharedChestAccess), len(original.SharedChestAccess))
+	}
+	for i, v := range restored.SharedChestAccess {
+		if v != original.SharedChestAccess[i] {
+			t.Errorf("SharedChestAccess[%d] = %s, want %s", i, v, original.SharedChestAccess[i])
+		}
+	}
+}
+
+func TestCompanionHousingComponent_Deserialize_InvalidJSON(t *testing.T) {
+	c := &CompanionHousingComponent{}
+	err := c.Deserialize([]byte("invalid json"))
+	if err == nil {
+		t.Error("Deserialize() should fail on invalid JSON")
 	}
 }

@@ -1,6 +1,7 @@
 package companion_housing
 
 import (
+	"encoding/json"
 	"time"
 )
 
@@ -21,4 +22,14 @@ type CompanionHousingComponent struct {
 // Type returns the component type identifier for ECS.
 func (c *CompanionHousingComponent) Type() string {
 	return "companion_housing"
+}
+
+// Serialize encodes the component to JSON for persistence.
+func (c *CompanionHousingComponent) Serialize() ([]byte, error) {
+	return json.Marshal(c)
+}
+
+// Deserialize decodes the component from JSON persistence data.
+func (c *CompanionHousingComponent) Deserialize(data []byte) error {
+	return json.Unmarshal(data, c)
 }

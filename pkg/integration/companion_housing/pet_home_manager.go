@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"sync"
 	"time"
+
+	"github.com/sirupsen/logrus"
 )
 
 // PetHomeManager manages companion interactions with housing furniture.
@@ -71,9 +73,18 @@ func (m *PetHomeManager) AssignCompanionToBed(companionID uint64, furnitureID st
 
 	bedding, ok := m.bedding[furnitureID]
 	if !ok {
+		logrus.WithFields(logrus.Fields{
+			"companionID": companionID,
+			"furnitureID": furnitureID,
+		}).Warn("bedding furniture not found")
 		return fmt.Errorf("bedding furniture %s not found", furnitureID)
 	}
 	if bedding.CompanionID != 0 && bedding.CompanionID != companionID {
+		logrus.WithFields(logrus.Fields{
+			"companionID":         companionID,
+			"furnitureID":         furnitureID,
+			"existingCompanionID": bedding.CompanionID,
+		}).Warn("bedding already occupied")
 		return fmt.Errorf("bedding %s already occupied by companion %d", furnitureID, bedding.CompanionID)
 	}
 
@@ -118,17 +129,21 @@ func (m *PetHomeManager) GetLoyaltyBonus(companionID uint64, houseID string) flo
 }
 
 // RecordRest updates the last rest time for a companion.
+// The now parameter must be provided for deterministic gameplay.
 // Returns error if companion not assigned to bedding.
-func (m *PetHomeManager) RecordRest(companionID uint64) error {
+func (m *PetHomeManager) RecordRest(companionID uint64, now time.Time) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
 	for _, bedding := range m.bedding {
 		if bedding.CompanionID == companionID {
-			bedding.LastRestTime = time.Now()
+			bedding.LastRestTime = now
 			return nil
 		}
 	}
+	logrus.WithFields(logrus.Fields{
+		"companionID": companionID,
+	}).Warn("companion has no assigned bedding")
 	return fmt.Errorf("companion %d has no assigned bedding", companionID)
 }
 
@@ -159,17 +174,22 @@ func (m *PetHomeManager) RemoveTrainingArea(furnitureID string) {
 }
 
 // StartTrainingSession begins a training session for a companion.
+// The now parameter must be provided for deterministic gameplay.
 // Returns error if training area doesn't exist.
-func (m *PetHomeManager) StartTrainingSession(companionID uint64, furnitureID string) error {
+func (m *PetHomeManager) StartTrainingSession(companionID uint64, furnitureID string, now time.Time) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
 	area, ok := m.trainingAreas[furnitureID]
 	if !ok {
+		logrus.WithFields(logrus.Fields{
+			"companionID": companionID,
+			"furnitureID": furnitureID,
+		}).Warn("training area not found")
 		return fmt.Errorf("training area %s not found", furnitureID)
 	}
 
-	area.ActiveSessions[companionID] = time.Now()
+	area.ActiveSessions[companionID] = now
 	return nil
 }
 

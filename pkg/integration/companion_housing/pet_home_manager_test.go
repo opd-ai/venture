@@ -275,21 +275,26 @@ func TestPetHomeManager_RecordRest(t *testing.T) {
 
 	before := manager.bedding["bed_1"].LastRestTime
 
-	time.Sleep(10 * time.Millisecond) // Ensure time difference
+	// Use explicit time for determinism
+	restTime := time.Date(2026, 2, 13, 12, 0, 0, 0, time.UTC)
 
-	err := manager.RecordRest(100)
+	err := manager.RecordRest(100, restTime)
 	if err != nil {
 		t.Fatalf("RecordRest() error = %v", err)
 	}
 
 	after := manager.bedding["bed_1"].LastRestTime
 
+	if after != restTime {
+		t.Errorf("RecordRest() did not set LastRestTime correctly, got %v, want %v", after, restTime)
+	}
+
 	if !after.After(before) {
 		t.Error("RecordRest() did not update LastRestTime")
 	}
 
 	// Recording rest for unassigned companion should fail
-	err = manager.RecordRest(999)
+	err = manager.RecordRest(999, restTime)
 	if err == nil {
 		t.Error("RecordRest() succeeded for unassigned companion, expected error")
 	}
@@ -321,16 +326,23 @@ func TestPetHomeManager_TrainingSession(t *testing.T) {
 	manager := NewPetHomeManager()
 	manager.AddTrainingArea("house_1", "training_1", TrainingMagic)
 
+	// Use explicit time for determinism
+	sessionTime := time.Date(2026, 2, 13, 14, 30, 0, 0, time.UTC)
+
 	// Start training session
-	err := manager.StartTrainingSession(100, "training_1")
+	err := manager.StartTrainingSession(100, "training_1", sessionTime)
 	if err != nil {
 		t.Fatalf("StartTrainingSession() error = %v", err)
 	}
 
 	// Verify session active
 	area := manager.trainingAreas["training_1"]
-	if _, ok := area.ActiveSessions[100]; !ok {
+	startTime, ok := area.ActiveSessions[100]
+	if !ok {
 		t.Error("Training session not started")
+	}
+	if startTime != sessionTime {
+		t.Errorf("Training session time = %v, want %v", startTime, sessionTime)
 	}
 
 	// End training session
@@ -342,7 +354,7 @@ func TestPetHomeManager_TrainingSession(t *testing.T) {
 	}
 
 	// Starting session on non-existent area should fail
-	err = manager.StartTrainingSession(100, "training_999")
+	err = manager.StartTrainingSession(100, "training_999", sessionTime)
 	if err == nil {
 		t.Error("StartTrainingSession() succeeded for non-existent area, expected error")
 	}
@@ -351,7 +363,10 @@ func TestPetHomeManager_TrainingSession(t *testing.T) {
 func TestPetHomeManager_GetTrainingBonus(t *testing.T) {
 	manager := NewPetHomeManager()
 	manager.AddTrainingArea("house_1", "training_1", TrainingCombat)
-	manager.StartTrainingSession(100, "training_1")
+
+	// Use explicit time for determinism
+	sessionTime := time.Date(2026, 2, 13, 14, 30, 0, 0, time.UTC)
+	manager.StartTrainingSession(100, "training_1", sessionTime)
 
 	bonus := manager.GetTrainingBonus(100, "house_1")
 	want := 1.5 // TrainingCombat XP multiplier

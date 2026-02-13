@@ -200,3 +200,203 @@ func BenchmarkUpdateDensity(b *testing.B) {
 		UpdateDensity(component)
 	}
 }
+
+func TestBuoyancyComponent_Serialization(t *testing.T) {
+	original := &BuoyancyComponent{
+		Mass:         100.0,
+		Volume:       0.2,
+		Density:      500.0,
+		Buoyant:      true,
+		Submerged:    0.75,
+		BuoyantForce: 150.0,
+	}
+
+	data, err := original.Serialize()
+	if err != nil {
+		t.Fatalf("Serialize failed: %v", err)
+	}
+
+	restored := &BuoyancyComponent{}
+	err = restored.Deserialize(data)
+	if err != nil {
+		t.Fatalf("Deserialize failed: %v", err)
+	}
+
+	if restored.Mass != original.Mass {
+		t.Errorf("Mass mismatch: got %f, want %f", restored.Mass, original.Mass)
+	}
+	if restored.Volume != original.Volume {
+		t.Errorf("Volume mismatch: got %f, want %f", restored.Volume, original.Volume)
+	}
+	if restored.Buoyant != original.Buoyant {
+		t.Errorf("Buoyant mismatch: got %v, want %v", restored.Buoyant, original.Buoyant)
+	}
+	if restored.Submerged != original.Submerged {
+		t.Errorf("Submerged mismatch: got %f, want %f", restored.Submerged, original.Submerged)
+	}
+}
+
+func TestSwimmingComponent_Serialization(t *testing.T) {
+	original := &SwimmingComponent{
+		IsSwimming:     true,
+		Stamina:        75.5,
+		MaxStamina:     100.0,
+		StaminaDrain:   5.0,
+		StaminaRegen:   2.5,
+		SwimSpeed:      0.6,
+		TreadingWater:  true,
+		Drowning:       false,
+		DrowningDamage: 10.0,
+	}
+
+	data, err := original.Serialize()
+	if err != nil {
+		t.Fatalf("Serialize failed: %v", err)
+	}
+
+	restored := &SwimmingComponent{}
+	err = restored.Deserialize(data)
+	if err != nil {
+		t.Fatalf("Deserialize failed: %v", err)
+	}
+
+	if restored.IsSwimming != original.IsSwimming {
+		t.Errorf("IsSwimming mismatch: got %v, want %v", restored.IsSwimming, original.IsSwimming)
+	}
+	if restored.Stamina != original.Stamina {
+		t.Errorf("Stamina mismatch: got %f, want %f", restored.Stamina, original.Stamina)
+	}
+	if restored.TreadingWater != original.TreadingWater {
+		t.Errorf("TreadingWater mismatch: got %v, want %v", restored.TreadingWater, original.TreadingWater)
+	}
+	if restored.SwimSpeed != original.SwimSpeed {
+		t.Errorf("SwimSpeed mismatch: got %f, want %f", restored.SwimSpeed, original.SwimSpeed)
+	}
+}
+
+func TestFloodingComponent_Serialization(t *testing.T) {
+	original := &FloodingComponent{
+		AreaID:        "dungeon-room-1",
+		FloodLevel:    0.35,
+		FloodRate:     0.1,
+		MaxFloodLevel: 1.0,
+		Sources: []FloodSource{
+			{X: 10, Y: 20, FlowRate: 0.05},
+			{X: 30, Y: 40, FlowRate: 0.08},
+		},
+	}
+
+	data, err := original.Serialize()
+	if err != nil {
+		t.Fatalf("Serialize failed: %v", err)
+	}
+
+	restored := &FloodingComponent{}
+	err = restored.Deserialize(data)
+	if err != nil {
+		t.Fatalf("Deserialize failed: %v", err)
+	}
+
+	if restored.AreaID != original.AreaID {
+		t.Errorf("AreaID mismatch: got %q, want %q", restored.AreaID, original.AreaID)
+	}
+	if restored.FloodLevel != original.FloodLevel {
+		t.Errorf("FloodLevel mismatch: got %f, want %f", restored.FloodLevel, original.FloodLevel)
+	}
+	if len(restored.Sources) != len(original.Sources) {
+		t.Fatalf("Sources length mismatch: got %d, want %d", len(restored.Sources), len(original.Sources))
+	}
+	for i, src := range restored.Sources {
+		if src.X != original.Sources[i].X || src.Y != original.Sources[i].Y {
+			t.Errorf("Source %d position mismatch: got (%d,%d), want (%d,%d)",
+				i, src.X, src.Y, original.Sources[i].X, original.Sources[i].Y)
+		}
+		if src.FlowRate != original.Sources[i].FlowRate {
+			t.Errorf("Source %d FlowRate mismatch: got %f, want %f",
+				i, src.FlowRate, original.Sources[i].FlowRate)
+		}
+	}
+}
+
+func TestFloodingComponent_SerializationEmpty(t *testing.T) {
+	original := &FloodingComponent{
+		AreaID:        "",
+		FloodLevel:    0,
+		FloodRate:     0,
+		MaxFloodLevel: 0,
+		Sources:       nil,
+	}
+
+	data, err := original.Serialize()
+	if err != nil {
+		t.Fatalf("Serialize failed: %v", err)
+	}
+
+	restored := &FloodingComponent{}
+	err = restored.Deserialize(data)
+	if err != nil {
+		t.Fatalf("Deserialize failed: %v", err)
+	}
+
+	if restored.AreaID != "" {
+		t.Errorf("Expected empty AreaID, got %q", restored.AreaID)
+	}
+	if len(restored.Sources) != 0 {
+		t.Errorf("Expected empty Sources, got %d", len(restored.Sources))
+	}
+}
+
+func TestComponentDeserialization_InvalidData(t *testing.T) {
+	tests := []struct {
+		name      string
+		component interface{ Deserialize([]byte) error }
+		data      []byte
+	}{
+		{"BuoyancyComponent", &BuoyancyComponent{}, []byte{1, 2, 3}},
+		{"SwimmingComponent", &SwimmingComponent{}, []byte{1, 2, 3}},
+		{"FloodingComponent", &FloodingComponent{}, []byte{1, 2, 3}},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := tt.component.Deserialize(tt.data)
+			if err == nil {
+				t.Error("Expected error for invalid data")
+			}
+		})
+	}
+}
+
+func BenchmarkBuoyancyComponent_Serialize(b *testing.B) {
+	component := &BuoyancyComponent{
+		Mass:         100.0,
+		Volume:       0.2,
+		Density:      500.0,
+		Buoyant:      true,
+		Submerged:    0.75,
+		BuoyantForce: 150.0,
+	}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_, _ = component.Serialize()
+	}
+}
+
+func BenchmarkBuoyancyComponent_Deserialize(b *testing.B) {
+	component := &BuoyancyComponent{
+		Mass:         100.0,
+		Volume:       0.2,
+		Density:      500.0,
+		Buoyant:      true,
+		Submerged:    0.75,
+		BuoyantForce: 150.0,
+	}
+	data, _ := component.Serialize()
+
+	restored := &BuoyancyComponent{}
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_ = restored.Deserialize(data)
+	}
+}

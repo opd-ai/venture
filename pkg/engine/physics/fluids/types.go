@@ -4,9 +4,15 @@
 package fluids
 
 import (
+	"encoding/binary"
+	"errors"
 	"image/color"
+	"math"
 	"sync"
 )
+
+// ErrInvalidData is returned when deserialization encounters invalid data
+var ErrInvalidData = errors.New("invalid component data")
 
 // FluidType represents the type of fluid
 type FluidType int
@@ -79,6 +85,37 @@ func (b BuoyancyComponent) Type() string {
 	return "buoyancy"
 }
 
+// Serialize encodes the component to bytes for persistence
+func (b *BuoyancyComponent) Serialize() ([]byte, error) {
+	// 6 float64s (48 bytes) + 1 bool (1 byte) = 49 bytes
+	buf := make([]byte, 49)
+	binary.LittleEndian.PutUint64(buf[0:8], math.Float64bits(b.Mass))
+	binary.LittleEndian.PutUint64(buf[8:16], math.Float64bits(b.Volume))
+	binary.LittleEndian.PutUint64(buf[16:24], math.Float64bits(b.Density))
+	binary.LittleEndian.PutUint64(buf[24:32], math.Float64bits(b.Submerged))
+	binary.LittleEndian.PutUint64(buf[32:40], math.Float64bits(b.BuoyantForce))
+	if b.Buoyant {
+		buf[48] = 1
+	} else {
+		buf[48] = 0
+	}
+	return buf, nil
+}
+
+// Deserialize decodes the component from bytes
+func (b *BuoyancyComponent) Deserialize(data []byte) error {
+	if len(data) < 49 {
+		return ErrInvalidData
+	}
+	b.Mass = math.Float64frombits(binary.LittleEndian.Uint64(data[0:8]))
+	b.Volume = math.Float64frombits(binary.LittleEndian.Uint64(data[8:16]))
+	b.Density = math.Float64frombits(binary.LittleEndian.Uint64(data[16:24]))
+	b.Submerged = math.Float64frombits(binary.LittleEndian.Uint64(data[24:32]))
+	b.BuoyantForce = math.Float64frombits(binary.LittleEndian.Uint64(data[32:40]))
+	b.Buoyant = data[48] != 0
+	return nil
+}
+
 // SwimmingComponent defines swimming mechanics for an entity
 type SwimmingComponent struct {
 	IsSwimming     bool    // Currently in water and swimming
@@ -97,6 +134,45 @@ func (s SwimmingComponent) Type() string {
 	return "swimming"
 }
 
+// Serialize encodes the component to bytes for persistence
+func (s *SwimmingComponent) Serialize() ([]byte, error) {
+	// 6 float64s (48 bytes) + 3 bools (3 bytes) = 51 bytes
+	buf := make([]byte, 51)
+	binary.LittleEndian.PutUint64(buf[0:8], math.Float64bits(s.Stamina))
+	binary.LittleEndian.PutUint64(buf[8:16], math.Float64bits(s.MaxStamina))
+	binary.LittleEndian.PutUint64(buf[16:24], math.Float64bits(s.StaminaDrain))
+	binary.LittleEndian.PutUint64(buf[24:32], math.Float64bits(s.StaminaRegen))
+	binary.LittleEndian.PutUint64(buf[32:40], math.Float64bits(s.SwimSpeed))
+	binary.LittleEndian.PutUint64(buf[40:48], math.Float64bits(s.DrowningDamage))
+	if s.IsSwimming {
+		buf[48] = 1
+	}
+	if s.TreadingWater {
+		buf[49] = 1
+	}
+	if s.Drowning {
+		buf[50] = 1
+	}
+	return buf, nil
+}
+
+// Deserialize decodes the component from bytes
+func (s *SwimmingComponent) Deserialize(data []byte) error {
+	if len(data) < 51 {
+		return ErrInvalidData
+	}
+	s.Stamina = math.Float64frombits(binary.LittleEndian.Uint64(data[0:8]))
+	s.MaxStamina = math.Float64frombits(binary.LittleEndian.Uint64(data[8:16]))
+	s.StaminaDrain = math.Float64frombits(binary.LittleEndian.Uint64(data[16:24]))
+	s.StaminaRegen = math.Float64frombits(binary.LittleEndian.Uint64(data[24:32]))
+	s.SwimSpeed = math.Float64frombits(binary.LittleEndian.Uint64(data[32:40]))
+	s.DrowningDamage = math.Float64frombits(binary.LittleEndian.Uint64(data[40:48]))
+	s.IsSwimming = data[48] != 0
+	s.TreadingWater = data[49] != 0
+	s.Drowning = data[50] != 0
+	return nil
+}
+
 // FloodingComponent tracks flooding state for an enclosed area
 type FloodingComponent struct {
 	AreaID        string        // Identifier for the area being flooded
@@ -109,6 +185,85 @@ type FloodingComponent struct {
 // Type returns the component type identifier
 func (f FloodingComponent) Type() string {
 	return "flooding"
+}
+
+// Serialize encodes the component to bytes for persistence
+func (f *FloodingComponent) Serialize() ([]byte, error) {
+	// Calculate size: AreaID length prefix (4) + AreaID + 3 float64s (24) + source count (4) + sources
+	sourceSize := len(f.Sources) * (4 + 4 + 8) // x(4) + y(4) + flowRate(8) per source
+	areaIDLen := len(f.AreaID)
+	totalSize := 4 + areaIDLen + 24 + 4 + sourceSize
+	buf := make([]byte, totalSize)
+
+	offset := 0
+	// Write AreaID length and content
+	binary.LittleEndian.PutUint32(buf[offset:], uint32(areaIDLen))
+	offset += 4
+	copy(buf[offset:], f.AreaID)
+	offset += areaIDLen
+
+	// Write float64 fields
+	binary.LittleEndian.PutUint64(buf[offset:], math.Float64bits(f.FloodLevel))
+	offset += 8
+	binary.LittleEndian.PutUint64(buf[offset:], math.Float64bits(f.FloodRate))
+	offset += 8
+	binary.LittleEndian.PutUint64(buf[offset:], math.Float64bits(f.MaxFloodLevel))
+	offset += 8
+
+	// Write sources
+	binary.LittleEndian.PutUint32(buf[offset:], uint32(len(f.Sources)))
+	offset += 4
+	for _, source := range f.Sources {
+		binary.LittleEndian.PutUint32(buf[offset:], uint32(source.X))
+		offset += 4
+		binary.LittleEndian.PutUint32(buf[offset:], uint32(source.Y))
+		offset += 4
+		binary.LittleEndian.PutUint64(buf[offset:], math.Float64bits(source.FlowRate))
+		offset += 8
+	}
+	return buf, nil
+}
+
+// Deserialize decodes the component from bytes
+func (f *FloodingComponent) Deserialize(data []byte) error {
+	if len(data) < 32 { // minimum: 4 (areaID len) + 0 (areaID) + 24 (floats) + 4 (source count)
+		return ErrInvalidData
+	}
+	offset := 0
+
+	// Read AreaID
+	areaIDLen := int(binary.LittleEndian.Uint32(data[offset:]))
+	offset += 4
+	if len(data) < offset+areaIDLen+28 {
+		return ErrInvalidData
+	}
+	f.AreaID = string(data[offset : offset+areaIDLen])
+	offset += areaIDLen
+
+	// Read float64 fields
+	f.FloodLevel = math.Float64frombits(binary.LittleEndian.Uint64(data[offset:]))
+	offset += 8
+	f.FloodRate = math.Float64frombits(binary.LittleEndian.Uint64(data[offset:]))
+	offset += 8
+	f.MaxFloodLevel = math.Float64frombits(binary.LittleEndian.Uint64(data[offset:]))
+	offset += 8
+
+	// Read sources
+	sourceCount := int(binary.LittleEndian.Uint32(data[offset:]))
+	offset += 4
+	if len(data) < offset+sourceCount*16 {
+		return ErrInvalidData
+	}
+	f.Sources = make([]FloodSource, sourceCount)
+	for i := 0; i < sourceCount; i++ {
+		f.Sources[i].X = int(binary.LittleEndian.Uint32(data[offset:]))
+		offset += 4
+		f.Sources[i].Y = int(binary.LittleEndian.Uint32(data[offset:]))
+		offset += 4
+		f.Sources[i].FlowRate = math.Float64frombits(binary.LittleEndian.Uint64(data[offset:]))
+		offset += 8
+	}
+	return nil
 }
 
 // FloodSource represents a water entry point

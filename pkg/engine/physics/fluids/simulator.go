@@ -354,3 +354,8 @@ func (s *Simulator) Reset() {
 
 	s.time = 0.0
 }
+
+// GetConfig returns the simulator configuration.
+func (s *Simulator) GetConfig() SimulationConfig {
+	return s.config
+}

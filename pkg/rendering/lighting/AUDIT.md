@@ -6,7 +6,7 @@
 The lighting package provides dynamic lighting effects (point, ambient, directional lights) with post-processing (bloom, ambient occlusion) for rendered scenes. The package has comprehensive test coverage (74 test functions, 2177 test lines) and clean separation from ECS (components live in pkg/engine). The code is well-structured with deterministic algorithms and proper validation, but lacks structured logging for error paths and has one swallowed shader compilation error.
 
 ## Issues Found
-- [ ] **high** Error handling — Shader compilation error swallowed silently without logging (`gpu_bloom.go:261-267`)
+- [x] **high** Error handling — Shader compilation error swallowed silently without logging (`gpu_bloom.go:261-267`) - Fixed 2026-02-13: Added structured logging with logrus.WithFields for shader compilation errors
 - [ ] **med** Error handling — No structured logging (logrus) on any error paths; package has zero logging statements
 - [ ] **low** Documentation — Comment states system "not yet integrated into main game loop" but LightingAdapter exists in engine and system is actively used (`system.go:11-12`)
 - [ ] **low** Test coverage — Tests cannot run in headless CI due to Ebiten initialization (gpu_bloom.go imports ebiten which requires display)

@@ -7,6 +7,7 @@ import (
 	"sync"
 
 	"github.com/hajimehoshi/ebiten/v2"
+	log "github.com/sirupsen/logrus"
 )
 
 // Kage shader sources for GPU-based bloom effects.
@@ -259,6 +260,12 @@ func (b *GPUBloom) Apply(input, dst *ebiten.Image) {
 
 	// Ensure shaders are compiled
 	if err := b.ensureShaders(); err != nil {
+		log.WithFields(log.Fields{
+			"system":  "lighting",
+			"subsys":  "gpu_bloom",
+			"error":   err.Error(),
+			"context": "shader_compilation",
+		}).Error("Shader compilation failed, falling back to passthrough")
 		// Fallback: copy input to dst unchanged if shader compilation fails
 		if dst != nil && dst != input {
 			dst.DrawImage(input, nil)

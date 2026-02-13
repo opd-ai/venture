@@ -69,7 +69,7 @@ func TestWeatherSpellDamageSystem_RainModifiers(t *testing.T) {
 	weatherEntity := world.CreateEntity()
 	weatherComp := NewWeatherComponent(particles.WeatherConfig{
 		Type:      particles.WeatherRain,
-		Intensity: 0.5,
+		Intensity: particles.IntensityMedium,
 	})
 	weatherComp.Active = true
 	weatherEntity.AddComponent(weatherComp)
@@ -102,7 +102,7 @@ func TestWeatherSpellDamageSystem_SnowModifiers(t *testing.T) {
 	weatherEntity := world.CreateEntity()
 	weatherComp := NewWeatherComponent(particles.WeatherConfig{
 		Type:      particles.WeatherSnow,
-		Intensity: 0.7,
+		Intensity: particles.IntensityHeavy,
 	})
 	weatherComp.Active = true
 	weatherEntity.AddComponent(weatherComp)
@@ -134,7 +134,7 @@ func TestWeatherSpellDamageSystem_NeonRainCyberpunk(t *testing.T) {
 	weatherEntity := world.CreateEntity()
 	weatherComp := NewWeatherComponent(particles.WeatherConfig{
 		Type:      particles.WeatherNeonRain,
-		Intensity: 0.8,
+		Intensity: particles.IntensityHeavy,
 	})
 	weatherComp.Active = true
 	weatherEntity.AddComponent(weatherComp)
@@ -155,7 +155,7 @@ func TestWeatherSpellDamageSystem_BloodRainHorror(t *testing.T) {
 	weatherEntity := world.CreateEntity()
 	weatherComp := NewWeatherComponent(particles.WeatherConfig{
 		Type:      particles.WeatherBloodRain,
-		Intensity: 0.9,
+		Intensity: particles.IntensityExtreme,
 	})
 	weatherComp.Active = true
 	weatherEntity.AddComponent(weatherComp)
@@ -182,7 +182,7 @@ func TestWeatherSpellDamageSystem_RadiationPostApoc(t *testing.T) {
 	weatherEntity := world.CreateEntity()
 	weatherComp := NewWeatherComponent(particles.WeatherConfig{
 		Type:      particles.WeatherRadiation,
-		Intensity: 0.6,
+		Intensity: particles.IntensityMedium,
 	})
 	weatherComp.Active = true
 	weatherEntity.AddComponent(weatherComp)
@@ -202,7 +202,7 @@ func TestWeatherSpellDamageSystem_CacheClearing(t *testing.T) {
 	weatherEntity := world.CreateEntity()
 	weatherComp := NewWeatherComponent(particles.WeatherConfig{
 		Type:      particles.WeatherRain,
-		Intensity: 0.5,
+		Intensity: particles.IntensityMedium,
 	})
 	weatherComp.Active = true
 	weatherEntity.AddComponent(weatherComp)
@@ -228,7 +228,7 @@ func TestWeatherSpellDamageSystem_InactiveWeather(t *testing.T) {
 	weatherEntity := world.CreateEntity()
 	weatherComp := NewWeatherComponent(particles.WeatherConfig{
 		Type:      particles.WeatherRain,
-		Intensity: 0.5,
+		Intensity: particles.IntensityMedium,
 	})
 	weatherComp.Active = false // Inactive
 	weatherEntity.AddComponent(weatherComp)
@@ -254,7 +254,7 @@ func TestWeatherSpellDamageSystem_GetCurrentWeatherType(t *testing.T) {
 	weatherEntity := world.CreateEntity()
 	weatherComp := NewWeatherComponent(particles.WeatherConfig{
 		Type:      particles.WeatherFog,
-		Intensity: 0.4,
+		Intensity: particles.IntensityLight,
 	})
 	weatherComp.Active = true
 	weatherEntity.AddComponent(weatherComp)
@@ -275,7 +275,7 @@ func TestWeatherSpellDamageSystem_DustModifiers(t *testing.T) {
 	weatherEntity := world.CreateEntity()
 	weatherComp := NewWeatherComponent(particles.WeatherConfig{
 		Type:      particles.WeatherDust,
-		Intensity: 0.6,
+		Intensity: particles.IntensityMedium,
 	})
 	weatherComp.Active = true
 	weatherEntity.AddComponent(weatherComp)
@@ -306,7 +306,7 @@ func TestWeatherSpellDamageSystem_SmogModifiers(t *testing.T) {
 	weatherEntity := world.CreateEntity()
 	weatherComp := NewWeatherComponent(particles.WeatherConfig{
 		Type:      particles.WeatherSmog,
-		Intensity: 0.5,
+		Intensity: particles.IntensityMedium,
 	})
 	weatherComp.Active = true
 	weatherEntity.AddComponent(weatherComp)
@@ -351,7 +351,7 @@ func BenchmarkWeatherSpellDamageSystem_GetDamageModifier(b *testing.B) {
 	weatherEntity := world.CreateEntity()
 	weatherComp := NewWeatherComponent(particles.WeatherConfig{
 		Type:      particles.WeatherRain,
-		Intensity: 0.5,
+		Intensity: particles.IntensityMedium,
 	})
 	weatherComp.Active = true
 	weatherEntity.AddComponent(weatherComp)
@@ -369,7 +369,7 @@ func BenchmarkWeatherSpellDamageSystem_GetDamageModifierUncached(b *testing.B) {
 	weatherEntity := world.CreateEntity()
 	weatherComp := NewWeatherComponent(particles.WeatherConfig{
 		Type:      particles.WeatherRain,
-		Intensity: 0.5,
+		Intensity: particles.IntensityMedium,
 	})
 	weatherComp.Active = true
 	weatherEntity.AddComponent(weatherComp)

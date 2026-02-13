@@ -6,7 +6,7 @@
 Display package provides resolution management and UI scaling for Venture (Phase 43/V7.0). Package is functional with comprehensive test coverage but has 4 issues: 1 high-severity (time.Now() usage violates deterministic principles), 2 medium (test errors silently swallowed, missing structured logging), and 2 low (missing performance benchmarks for Manager, minimal documentation gaps). Package properly integrates with cmd/client and pkg/rendering/ui.
 
 ## Issues Found
-- [ ] **high** deterministic-procgen — Manager.ApplyResolution() uses `time.Now()` for timing measurements, violating deterministic execution principle (`manager.go:27`, `manager.go:33`)
+- [x] **high** deterministic-procgen — Manager.ApplyResolution() uses `time.Now()` for timing measurements, violating deterministic execution principle (`manager.go:27`, `manager.go:33`) - Fixed 2026-02-13: EXEMPTED - This is performance measurement for OS window operations, not content generation. Display/window management is inherently non-deterministic OS interaction. time.Since() uses monotonic clock internally, making timing reliable.
 - [ ] **med** error-handling — NewConfigDefault() silently swallows error from NewConfig(1920, 1080, false) which can never fail but violates error handling pattern (`config.go:53`)
 - [ ] **med** error-handling — Test files systematically use `cfg, _ := NewConfig(...)` pattern, swallowing errors in 24 locations across test files (all test files)
 - [ ] **low** doc-coverage — Package lacks comprehensive example code in doc.go showing integration with Ebiten window initialization (`doc.go:19-26`)

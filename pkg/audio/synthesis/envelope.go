@@ -1,6 +1,3 @@
-// Package synthesis provides ADSR envelope control.
-// This file implements ADSR (Attack, Decay, Sustain, Release) envelopes
-// for shaping sound amplitude over time.
 package synthesis
 
 // Envelope represents an ADSR (Attack, Decay, Sustain, Release) envelope.
@@ -18,7 +15,10 @@ type Envelope struct {
 	Release float64
 }
 
-// DefaultEnvelope returns a standard ADSR envelope.
+// DefaultEnvelope returns a standard ADSR envelope suitable for short percussive
+// sounds. For sustained tones or pads, customize the values: increase Attack for
+// softer onset, increase Sustain (closer to 1.0) for longer held notes, and
+// increase Release for gradual fadeout.
 func DefaultEnvelope() Envelope {
 	return Envelope{
 		Attack:  0.01,

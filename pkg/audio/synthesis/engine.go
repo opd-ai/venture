@@ -1,6 +1,3 @@
-// Package synthesis provides low-level audio waveform generation.
-// This file implements the synthesis Engine that provides a unified API
-// for audio waveform generation, combining oscillators and ADSR envelopes.
 package synthesis
 
 import (

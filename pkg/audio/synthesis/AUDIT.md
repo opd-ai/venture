@@ -1,6 +1,6 @@
 # Audit: github.com/opd-ai/venture/pkg/audio/synthesis
 **Date**: 2026-02-12 (Updated: 2026-02-13)
-**Status**: Needs Work
+**Status**: Complete
 
 ## Summary
 The audio synthesis package provides deterministic waveform generation with ADSR envelopes and is well-tested (98.9% coverage). Core functionality is solid with proper seed-based randomness and structured logging. Interface compliance and concurrency issues have been fixed. Remaining issues are low-priority documentation and logging verbosity concerns.
@@ -9,9 +9,9 @@ The audio synthesis package provides deterministic waveform generation with ADSR
 - [x] **high** Interface compliance — Engine now implements audio.Synthesizer interface; added `Generate()` method (equivalent to `GenerateTone()`) and compile-time interface verification (`engine.go:22,60-64`)
 - [x] **high** Concurrency — GenerateChordWithEnvelope now has proper mutex lock when applying envelope to returned sample data (`engine.go:141-147`)
 - [x] **high** Concurrency — ApplyEnvelope now has mutex protection while modifying sample data; documented that callers should not share samples across goroutines during modification (`engine.go:185-193`)
-- [ ] **med** Documentation — Multiple package-level doc comments across files (doc.go, engine.go, oscillator.go, envelope.go) create inconsistent/redundant documentation (`doc.go:1`, `engine.go:1`, `oscillator.go:1`, `envelope.go:1`)
-- [ ] **low** Performance — Excessive debug logging in hot path waveform generation (27 log statements for simple operations) (`oscillator.go:55-262`)
-- [ ] **low** Documentation — waveformName() is unexported but could be useful for debugging/logging in other packages (`oscillator.go:265`)
+- [x] **med** Documentation — Multiple package-level doc comments across files (doc.go, engine.go, oscillator.go, envelope.go) create inconsistent/redundant documentation (`doc.go:1`, `engine.go:1`, `oscillator.go:1`, `envelope.go:1`) — **FIXED 2026-02-13**: Consolidated package documentation to doc.go only; removed duplicate package comments from engine.go, oscillator.go, envelope.go
+- [x] **low** Performance — Excessive debug logging in hot path waveform generation (27 log statements for simple operations) (`oscillator.go:55-262`) — **FIXED 2026-02-13**: Removed all hot-path debug logging from waveform generation functions; kept only essential debug log in NewOscillator
+- [x] **low** Documentation — waveformName() is unexported but could be useful for debugging/logging in other packages (`oscillator.go:265`) — **FIXED 2026-02-13**: Exported as WaveformName() with enhanced godoc comment
 
 ## Test Coverage
 98.9% (target: 65%) ✅

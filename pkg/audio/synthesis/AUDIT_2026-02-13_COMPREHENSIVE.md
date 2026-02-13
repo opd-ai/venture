@@ -1,6 +1,6 @@
 # Audit: github.com/opd-ai/venture/pkg/audio/synthesis
 **Date**: 2026-02-13
-**Status**: Needs Work
+**Status**: Complete
 
 ## Summary
 Audio synthesis package provides deterministic waveform generation with oscillators and ADSR envelopes for procedural audio. Core functionality is solid with excellent test coverage (97.8%), proper seed-based randomness, and structured logging. Interface compliance verified at compile time. Concurrency fixes applied for envelope methods.
@@ -9,11 +9,11 @@ Audio synthesis package provides deterministic waveform generation with oscillat
 - [x] **high** Interface compliance — Engine doesn't implement audio.Synthesizer interface; has `GenerateTone()` instead of `Generate()` method — **FIXED**: Engine now implements Synthesizer interface via `Generate()` method with compile-time verification (`var _ audio.Synthesizer = (*Engine)(nil)`)
 - [x] **high** Concurrency — GenerateChordWithEnvelope calls GenerateChord (releases mutex), then calls env.Apply without mutex protection — **FIXED**: Mutex is now acquired before env.Apply() call
 - [x] **high** Concurrency — ApplyEnvelope has no mutex protection while modifying sample data — **FIXED**: ApplyEnvelope now has proper mutex protection with documentation noting caller must ensure sample is not accessed by other goroutines
-- [ ] **med** Performance — Excessive debug logging in hot path: 51 log.WithFields() calls in waveform generation (oscillator.go has 27 statements per simple waveform) (`oscillator.go:55-262`)
-- [ ] **med** Documentation — Package-level doc comments duplicated across 4 files (doc.go, engine.go, oscillator.go, envelope.go); should have single authoritative package doc (`doc.go:1`, `engine.go:1-3`, `oscillator.go:1-3`, `envelope.go:1-3`)
-- [ ] **low** Code organization — Global package-level logger with init() makes testing harder; should inject logger or use context-based logging (`oscillator.go:14-20`)
-- [ ] **low** API design — waveformName() helper is unexported; could be useful for debugging/logging in music/sfx packages (`oscillator.go:265`)
-- [ ] **low** Documentation — DefaultEnvelope() lacks godoc explaining when/why to use defaults vs custom values (`envelope.go:22`)
+- [x] **med** Performance — Excessive debug logging in hot path: 51 log.WithFields() calls in waveform generation (oscillator.go has 27 statements per simple waveform) (`oscillator.go:55-262`) — **FIXED 2026-02-13**: Removed all hot-path debug logging from waveform generation functions; kept only essential debug log in NewOscillator
+- [x] **med** Documentation — Package-level doc comments duplicated across 4 files (doc.go, engine.go, oscillator.go, envelope.go); should have single authoritative package doc (`doc.go:1`, `engine.go:1-3`, `oscillator.go:1-3`, `envelope.go:1-3`) — **FIXED 2026-02-13**: Consolidated package documentation to doc.go only; removed duplicate package comments from engine.go, oscillator.go, envelope.go
+- [x] **low** Code organization — Global package-level logger with init() makes testing harder; should inject logger or use context-based logging (`oscillator.go:14-20`) — **ACKNOWLEDGED**: Logger kept for NewOscillator debug logging only; hot-path logging removed to minimize impact
+- [x] **low** API design — waveformName() helper is unexported; could be useful for debugging/logging in music/sfx packages (`oscillator.go:265`) — **FIXED 2026-02-13**: Exported as WaveformName() with enhanced godoc comment
+- [x] **low** Documentation — DefaultEnvelope() lacks godoc explaining when/why to use defaults vs custom values (`envelope.go:22`) — **FIXED 2026-02-13**: Added detailed godoc explaining use cases for defaults vs custom values
 
 ## Test Coverage
 97.8% (target: 65%) ✅

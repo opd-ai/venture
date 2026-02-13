@@ -175,7 +175,7 @@ func TestGetPostApocalypticCorpus(t *testing.T) {
 	}
 
 	if corpus.GenreID != "postapoc" {
-		t.Errorf("GenreID = %q, want postapocalyptic", corpus.GenreID)
+		t.Errorf("GenreID = %q, want postapoc", corpus.GenreID)
 	}
 
 	if len(corpus.Sentences) == 0 {

@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/opd-ai/venture/pkg/engine"
+	"github.com/sirupsen/logrus"
 )
 
 // CombatValidator validates combat balance through simulated battles.
@@ -39,27 +40,63 @@ func (v *CombatValidator) Validate(ctx context.Context) (*ValidationResult, erro
 		SimulationCount: v.config.GetSimulationCount("Combat"),
 	}
 
+	logrus.WithFields(logrus.Fields{
+		"domain":      "Combat",
+		"simulations": result.SimulationCount,
+		"seed":        v.config.Seed,
+	}).Debug("starting combat balance validation")
+
 	// Test 1: Class Balance (win rates within 45-55%)
+	logrus.Debug("validating class balance")
 	if err := v.validateClassBalance(ctx, result); err != nil {
+		logrus.WithFields(logrus.Fields{
+			"domain": "Combat",
+			"test":   "class_balance",
+			"error":  err.Error(),
+		}).Error("class balance validation failed")
 		return nil, fmt.Errorf("class balance validation failed: %w", err)
 	}
 
 	// Test 2: Weapon Balance (all weapons viable, usage 5-40%)
+	logrus.Debug("validating weapon balance")
 	if err := v.validateWeaponBalance(ctx, result); err != nil {
+		logrus.WithFields(logrus.Fields{
+			"domain": "Combat",
+			"test":   "weapon_balance",
+			"error":  err.Error(),
+		}).Error("weapon balance validation failed")
 		return nil, fmt.Errorf("weapon balance validation failed: %w", err)
 	}
 
 	// Test 3: Enemy Scaling (smooth difficulty curve, R² > 0.95)
+	logrus.Debug("validating enemy scaling")
 	if err := v.validateEnemyScaling(ctx, result); err != nil {
+		logrus.WithFields(logrus.Fields{
+			"domain": "Combat",
+			"test":   "enemy_scaling",
+			"error":  err.Error(),
+		}).Error("enemy scaling validation failed")
 		return nil, fmt.Errorf("enemy scaling validation failed: %w", err)
 	}
 
 	// Test 4: Boss Difficulty (60-80% first-attempt failure rate)
+	logrus.Debug("validating boss difficulty")
 	if err := v.validateBossDifficulty(ctx, result); err != nil {
+		logrus.WithFields(logrus.Fields{
+			"domain": "Combat",
+			"test":   "boss_difficulty",
+			"error":  err.Error(),
+		}).Error("boss difficulty validation failed")
 		return nil, fmt.Errorf("boss difficulty validation failed: %w", err)
 	}
 
 	result.Duration = time.Since(start).Seconds()
+	logrus.WithFields(logrus.Fields{
+		"domain":   "Combat",
+		"passed":   result.Passed,
+		"duration": result.Duration,
+		"issues":   len(result.Issues),
+	}).Info("combat balance validation complete")
 	return result, nil
 }
 
@@ -90,6 +127,12 @@ func (v *CombatValidator) runClassBattleSimulations(ctx context.Context, classTy
 	simCount := totalSims / len(classTypes)
 
 	for i, class1 := range classTypes {
+		// Log progress every class to track long-running simulations
+		logrus.WithFields(logrus.Fields{
+			"progress": fmt.Sprintf("%d/%d", i+1, len(classTypes)),
+			"class":    classNames[i],
+			"percent":  float64(i+1) / float64(len(classTypes)) * 100,
+		}).Debug("class balance simulation progress")
 		v.runBattlesForClass(ctx, i, class1, classTypes, classNames, simCount, rng, wins, battles)
 	}
 	return wins, battles
@@ -259,12 +302,25 @@ func (v *CombatValidator) validateWeaponBalance(ctx context.Context, result *Val
 func (v *CombatValidator) simulateWeaponUsage(ctx context.Context, weaponTypes []string, simCount int) map[string]int {
 	usage := make(map[string]int)
 	rng := rand.New(rand.NewSource(v.config.Seed + 1))
+	progressInterval := simCount / 10 // Log every 10%
+	if progressInterval == 0 {
+		progressInterval = 1
+	}
 
 	for i := 0; i < simCount; i++ {
 		select {
 		case <-ctx.Done():
 			return nil
 		default:
+		}
+
+		// Log progress every 10%
+		if (i+1)%progressInterval == 0 {
+			logrus.WithFields(logrus.Fields{
+				"progress": i + 1,
+				"total":    simCount,
+				"percent":  float64(i+1) / float64(simCount) * 100,
+			}).Debug("weapon balance simulation progress")
 		}
 
 		weaponIndex := rng.Intn(len(weaponTypes))
@@ -362,11 +418,25 @@ func (v *CombatValidator) validateBossDifficulty(ctx context.Context, result *Va
 
 	// Simulate boss battles
 	bossCount := result.SimulationCount / 5 // ~2000 boss battles
+	progressInterval := bossCount / 10      // Log every 10%
+	if progressInterval == 0 {
+		progressInterval = 1
+	}
+
 	for i := 0; i < bossCount; i++ {
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
 		default:
+		}
+
+		// Log progress every 10%
+		if (i+1)%progressInterval == 0 {
+			logrus.WithFields(logrus.Fields{
+				"progress": i + 1,
+				"total":    bossCount,
+				"percent":  float64(i+1) / float64(bossCount) * 100,
+			}).Debug("boss difficulty simulation progress")
 		}
 
 		// Simulate boss with 3x stats of normal enemy

@@ -6,6 +6,8 @@ import (
 	"math"
 	"math/rand"
 	"time"
+
+	"github.com/sirupsen/logrus"
 )
 
 // EconomicValidator validates economic balance through simulated transactions.
@@ -37,22 +39,52 @@ func (v *EconomicValidator) Validate(ctx context.Context) (*ValidationResult, er
 		SimulationCount: v.config.GetSimulationCount("Economic"),
 	}
 
+	logrus.WithFields(logrus.Fields{
+		"domain":      "Economic",
+		"simulations": result.SimulationCount,
+		"seed":        v.config.Seed,
+	}).Debug("starting economic balance validation")
+
 	// Test 1: Loot value matches enemy difficulty
+	logrus.Debug("validating loot value correlation")
 	if err := v.validateLootValue(ctx, result); err != nil {
+		logrus.WithFields(logrus.Fields{
+			"domain": "Economic",
+			"test":   "loot_value",
+			"error":  err.Error(),
+		}).Error("loot value validation failed")
 		return nil, fmt.Errorf("loot value validation failed: %w", err)
 	}
 
 	// Test 2: Crafting profitability (10-30% margin)
+	logrus.Debug("validating crafting profitability")
 	if err := v.validateCraftingProfit(ctx, result); err != nil {
+		logrus.WithFields(logrus.Fields{
+			"domain": "Economic",
+			"test":   "crafting_profit",
+			"error":  err.Error(),
+		}).Error("crafting validation failed")
 		return nil, fmt.Errorf("crafting validation failed: %w", err)
 	}
 
 	// Test 3: Gold sink/source ratio (0.8-1.2)
+	logrus.Debug("validating gold balance")
 	if err := v.validateGoldBalance(ctx, result); err != nil {
+		logrus.WithFields(logrus.Fields{
+			"domain": "Economic",
+			"test":   "gold_balance",
+			"error":  err.Error(),
+		}).Error("gold balance validation failed")
 		return nil, fmt.Errorf("gold balance validation failed: %w", err)
 	}
 
 	result.Duration = time.Since(start).Seconds()
+	logrus.WithFields(logrus.Fields{
+		"domain":   "Economic",
+		"passed":   result.Passed,
+		"duration": result.Duration,
+		"issues":   len(result.Issues),
+	}).Info("economic balance validation complete")
 	return result, nil
 }
 
@@ -60,12 +92,22 @@ func (v *EconomicValidator) validateLootValue(ctx context.Context, result *Valid
 	difficulties := make([]float64, 0)
 	values := make([]float64, 0)
 	rng := rand.New(rand.NewSource(v.config.Seed))
+	totalDepths := 50 // Total iterations for progress tracking
 
-	for depth := 1; depth <= 50; depth++ {
+	for depth := 1; depth <= totalDepths; depth++ {
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
 		default:
+		}
+
+		// Log progress every 10 depths
+		if depth%10 == 0 {
+			logrus.WithFields(logrus.Fields{
+				"progress": depth,
+				"total":    totalDepths,
+				"percent":  float64(depth) / float64(totalDepths) * 100,
+			}).Debug("loot value simulation progress")
 		}
 
 		// Enemy difficulty scales with depth
@@ -110,12 +152,22 @@ func (v *EconomicValidator) validateCraftingProfit(ctx context.Context, result *
 func (v *EconomicValidator) simulateRecipeProfits(ctx context.Context) []float64 {
 	profits := make([]float64, 0)
 	rng := rand.New(rand.NewSource(v.config.Seed + 1))
+	totalRecipes := 100 // Total iterations for progress tracking
 
-	for i := 0; i < 100; i++ {
+	for i := 0; i < totalRecipes; i++ {
 		select {
 		case <-ctx.Done():
 			return nil
 		default:
+		}
+
+		// Log progress every 25 recipes
+		if (i+1)%25 == 0 {
+			logrus.WithFields(logrus.Fields{
+				"progress": i + 1,
+				"total":    totalRecipes,
+				"percent":  float64(i+1) / float64(totalRecipes) * 100,
+			}).Debug("crafting profit simulation progress")
 		}
 
 		profit := v.calculateRecipeProfit(rng)
@@ -190,15 +242,18 @@ func (v *EconomicValidator) validateGoldBalance(ctx context.Context, result *Val
 	goldSources := 0.0
 	goldSinks := 0.0
 	rng := rand.New(rand.NewSource(v.config.Seed + 2))
+	totalIterations := 1000 // Total iterations for progress tracking
 
+	logrus.Debug("simulating gold sources")
 	// Sources: loot from killing enemies
-	for i := 0; i < 1000; i++ {
+	for i := 0; i < totalIterations; i++ {
 		itemValue := 5 + rng.Intn(50) // 5-55 gold per item
 		goldSources += float64(itemValue)
 	}
 
+	logrus.Debug("simulating gold sinks")
 	// Sinks: equipment repairs (10% of value per use), housing costs, consumables
-	for i := 0; i < 1000; i++ {
+	for i := 0; i < totalIterations; i++ {
 		itemValue := 5 + rng.Intn(50) // Same as sources
 		// Repairs: 10% of item value per 100 uses
 		goldSinks += float64(itemValue) * 0.1

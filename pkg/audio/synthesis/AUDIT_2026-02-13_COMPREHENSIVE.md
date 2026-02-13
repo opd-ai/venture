@@ -3,12 +3,12 @@
 **Status**: Needs Work
 
 ## Summary
-Audio synthesis package provides deterministic waveform generation with oscillators and ADSR envelopes for procedural audio. Core functionality is solid with excellent test coverage (97.8%), proper seed-based randomness, and structured logging. Critical issues include interface non-compliance, concurrency bugs in envelope methods, and excessive debug logging in hot paths that impact runtime performance.
+Audio synthesis package provides deterministic waveform generation with oscillators and ADSR envelopes for procedural audio. Core functionality is solid with excellent test coverage (97.8%), proper seed-based randomness, and structured logging. Interface compliance verified at compile time. Concurrency fixes applied for envelope methods.
 
 ## Issues Found
-- [ ] **high** Interface compliance — Engine doesn't implement audio.Synthesizer interface; has `GenerateTone()` instead of `Generate()` method (`engine.go:59`)
-- [ ] **high** Concurrency — GenerateChordWithEnvelope calls GenerateChord (releases mutex), then calls env.Apply without mutex protection (`engine.go:133-136`)
-- [ ] **high** Concurrency — ApplyEnvelope has no mutex protection while modifying sample data; concurrent access could cause data races (`engine.go:176-178`)
+- [x] **high** Interface compliance — Engine doesn't implement audio.Synthesizer interface; has `GenerateTone()` instead of `Generate()` method — **FIXED**: Engine now implements Synthesizer interface via `Generate()` method with compile-time verification (`var _ audio.Synthesizer = (*Engine)(nil)`)
+- [x] **high** Concurrency — GenerateChordWithEnvelope calls GenerateChord (releases mutex), then calls env.Apply without mutex protection — **FIXED**: Mutex is now acquired before env.Apply() call
+- [x] **high** Concurrency — ApplyEnvelope has no mutex protection while modifying sample data — **FIXED**: ApplyEnvelope now has proper mutex protection with documentation noting caller must ensure sample is not accessed by other goroutines
 - [ ] **med** Performance — Excessive debug logging in hot path: 51 log.WithFields() calls in waveform generation (oscillator.go has 27 statements per simple waveform) (`oscillator.go:55-262`)
 - [ ] **med** Documentation — Package-level doc comments duplicated across 4 files (doc.go, engine.go, oscillator.go, envelope.go); should have single authoritative package doc (`doc.go:1`, `engine.go:1-3`, `oscillator.go:1-3`, `envelope.go:1-3`)
 - [ ] **low** Code organization — Global package-level logger with init() makes testing harder; should inject logger or use context-based logging (`oscillator.go:14-20`)

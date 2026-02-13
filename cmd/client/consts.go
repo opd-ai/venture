@@ -60,29 +60,30 @@ const (
 	worldPixelsPerTile   = 32.0 // pixels per tile for world coordinate conversion
 
 	// Seed offsets for deterministic generation
-	seedOffsetFaction         = 1000  // offset for faction generation
-	seedOffsetStation         = 1010  // offset for station generation
-	seedOffsetStatusEffect    = 1020  // offset for status effect RNG
-	seedOffsetPlayerAnimation = 1030  // multiplier for player animation seed
-	seedOffsetPuzzle          = 2000  // offset for puzzle generation
-	seedOffsetLight           = 2010  // offset for environmental light generation
-	seedOffsetObject          = 3000  // offset for destructible object generation
-	seedOffsetWeather         = 3010  // offset for weather generation
-	seedOffsetFirePropagation = 1090  // offset for fire propagation system
-	seedOffsetDestructible    = 1100  // offset for destructible object system
-	seedOffsetSpellEffects    = 1200  // offset for spell effect system (V4.0)
-	seedOffsetVehicle         = 4000  // offset for vehicle generation (V4.0)
-	seedOffsetCompanion       = 5000  // offset for companion generation (V4.0)
-	seedOffsetBook            = 6000  // offset for book/bookshelf generation (V4.0)
-	seedOffsetStory           = 7000  // offset for story fragment generation (Phase 30)
-	seedOffsetReverb          = 8000  // offset for reverb system (Phase 14.4)
-	seedOffsetInvestigation   = 9000  // offset for investigation system (Phase 30)
-	seedOffsetNPCDialog       = 10000 // offset for NPC dialog system (Phase 31)
-	seedOffsetWorldEvents     = 11000 // offset for world events system (Phase 6.3)
-	seedOffsetEnvironment     = 12000 // offset for environmental hazard generation (Phase 3.4)
-	seedOffsetNarrative       = 13000 // offset for procedural narrative arc generation (Phase 3.6)
-	seedOffsetTradeRoutes     = 14000 // offset for trade route system (Phase 4.4)
-	seedOffsetFishing         = 15000 // offset for fishing system (Phase 95-96)
+	seedOffsetFaction            = 1000  // offset for faction generation
+	seedOffsetStation            = 1010  // offset for station generation
+	seedOffsetStatusEffect       = 1020  // offset for status effect RNG
+	seedOffsetPlayerAnimation    = 1030  // multiplier for player animation seed
+	seedOffsetPuzzle             = 2000  // offset for puzzle generation
+	seedOffsetLight              = 2010  // offset for environmental light generation
+	seedOffsetObject             = 3000  // offset for destructible object generation
+	seedOffsetWeather            = 3010  // offset for weather generation
+	seedOffsetFirePropagation    = 1090  // offset for fire propagation system
+	seedOffsetDestructible       = 1100  // offset for destructible object system
+	seedOffsetDestructionPhysics = 1110  // offset for destruction physics (debris generation)
+	seedOffsetSpellEffects       = 1200  // offset for spell effect system (V4.0)
+	seedOffsetVehicle            = 4000  // offset for vehicle generation (V4.0)
+	seedOffsetCompanion          = 5000  // offset for companion generation (V4.0)
+	seedOffsetBook               = 6000  // offset for book/bookshelf generation (V4.0)
+	seedOffsetStory              = 7000  // offset for story fragment generation (Phase 30)
+	seedOffsetReverb             = 8000  // offset for reverb system (Phase 14.4)
+	seedOffsetInvestigation      = 9000  // offset for investigation system (Phase 30)
+	seedOffsetNPCDialog          = 10000 // offset for NPC dialog system (Phase 31)
+	seedOffsetWorldEvents        = 11000 // offset for world events system (Phase 6.3)
+	seedOffsetEnvironment        = 12000 // offset for environmental hazard generation (Phase 3.4)
+	seedOffsetNarrative          = 13000 // offset for procedural narrative arc generation (Phase 3.6)
+	seedOffsetTradeRoutes        = 14000 // offset for trade route system (Phase 4.4)
+	seedOffsetFishing            = 15000 // offset for fishing system (Phase 95-96)
 
 	// Fallback positions
 	fallbackPlayerX = 400 // fallback X position if no valid spawn

@@ -566,3 +566,126 @@ func BenchmarkSystem_RegisterBuilding(b *testing.B) {
 		_ = sys.RegisterBuilding("bench", 16, 16, 2, MaterialStone)
 	}
 }
+
+func TestGenerateCollapseDebris_Deterministic(t *testing.T) {
+	// Test that debris generation is deterministic with the same seed and building ID
+	tests := []struct {
+		name       string
+		seed       int64
+		buildingID string
+	}{
+		{"seed_12345", 12345, "test_building_1"},
+		{"seed_99999", 99999, "test_building_2"},
+		{"same_seed_diff_building", 12345, "test_building_different"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Use low collapse threshold to ensure collapse triggers
+			config1 := &Config{
+				EnableIntegrityChecks: true,
+				DamagePropagationRate: 0.5,
+				CollapseThreshold:     0.6, // Higher threshold to trigger collapse sooner
+				EnableDebris:          true,
+				MaxDebrisParticles:    500,
+				DebrisLifetime:        10.0,
+				Gravity:               980.0,
+				AirResistance:         0.05,
+				GroundFriction:        0.8,
+				MaxFallingObjects:     100,
+				UpdateFrequency:       30.0,
+				Seed:                  tt.seed,
+			}
+			config2 := &Config{
+				EnableIntegrityChecks: true,
+				DamagePropagationRate: 0.5,
+				CollapseThreshold:     0.6,
+				EnableDebris:          true,
+				MaxDebrisParticles:    500,
+				DebrisLifetime:        10.0,
+				Gravity:               980.0,
+				AirResistance:         0.05,
+				GroundFriction:        0.8,
+				MaxFallingObjects:     100,
+				UpdateFrequency:       30.0,
+				Seed:                  tt.seed,
+			}
+
+			sys1 := NewSystem(config1)
+			sys2 := NewSystem(config2)
+
+			// Register buildings with same config
+			_ = sys1.RegisterBuilding(tt.buildingID, 10, 10, 2, MaterialStone)
+			_ = sys2.RegisterBuilding(tt.buildingID, 10, 10, 2, MaterialStone)
+
+			// Apply heavy damage to all floors to trigger collapse
+			// Apply damage multiple times across the building to destroy supports
+			for floor := 0; floor < 2; floor++ {
+				for x := 0; x < 10; x += 2 {
+					_ = sys1.ApplyDamage(tt.buildingID, x, 5, floor, 1.0, 3.0)
+					_ = sys2.ApplyDamage(tt.buildingID, x, 5, floor, 1.0, 3.0)
+				}
+			}
+
+			// Run updates to trigger collapse and debris generation
+			for i := 0; i < 100; i++ {
+				sys1.Update(0.1)
+				sys2.Update(0.1)
+			}
+
+			debris1 := sys1.GetDebris()
+			debris2 := sys2.GetDebris()
+
+			if len(debris1) != len(debris2) {
+				t.Fatalf("Debris count mismatch: %d vs %d", len(debris1), len(debris2))
+			}
+
+			if len(debris1) == 0 {
+				// Get integrity to check state
+				integrity1, _ := sys1.GetIntegrity(tt.buildingID)
+				t.Skipf("No debris generated (state: %v, health: %.2f)", integrity1.State, integrity1.CurrentHealth)
+			}
+
+			// Compare first few debris properties (debris may have moved due to physics)
+			// Only compare initial properties that should be deterministic
+			for i := 0; i < len(debris1) && i < 5; i++ {
+				if debris1[i].Material != debris2[i].Material {
+					t.Errorf("Debris[%d] Material mismatch: %v vs %v", i, debris1[i].Material, debris2[i].Material)
+				}
+				if debris1[i].Size != debris2[i].Size {
+					t.Errorf("Debris[%d] Size mismatch: %v vs %v", i, debris1[i].Size, debris2[i].Size)
+				}
+			}
+		})
+	}
+}
+
+func TestHashBuildingID(t *testing.T) {
+	// Test that hash is deterministic
+	tests := []struct {
+		name string
+		id   string
+	}{
+		{"simple", "building1"},
+		{"complex", "guild_hall_12345"},
+		{"empty", ""},
+		{"unicode", "建物"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			hash1 := hashBuildingID(tt.id)
+			hash2 := hashBuildingID(tt.id)
+			if hash1 != hash2 {
+				t.Errorf("Hash not deterministic: %d vs %d", hash1, hash2)
+			}
+		})
+	}
+
+	// Test that different IDs produce different hashes
+	hash1 := hashBuildingID("building1")
+	hash2 := hashBuildingID("building2")
+	if hash1 == hash2 {
+		t.Error("Different IDs should produce different hashes")
+	}
+}

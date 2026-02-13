@@ -949,6 +949,7 @@ func initializeEnvironmentalSystems(game *engine.EbitenGame, sys *systemsContain
 		GroundFriction:        0.8,
 		MaxFallingObjects:     100,
 		UpdateFrequency:       30.0,
+		Seed:                  *seed + seedOffsetDestructionPhysics,
 	}
 	sys.destructionSystem = destruction.NewSystem(&destructionConfig)
 	clientLogger.Info("destruction physics system initialized")

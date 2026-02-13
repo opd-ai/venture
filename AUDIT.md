@@ -26,7 +26,7 @@ This document tracks the audit status of all Go packages in the Venture codebase
 - [x] `pkg/engine/physics/AUDIT.md` — Complete — 0 issues (5 fixed on 2026-02-13: doc.go architecture section, example code, integration documentation)
 - [x] `pkg/engine/physics/vehicle/AUDIT.md` — Needs Work — 10 issues (3 high, 4 med, 3 low)
 - [x] `pkg/engine/physics/fluids/AUDIT.md` — Complete — 0 issues (6 fixed on 2026-02-13: FluidPhysicsSystem implementation, Serialize/Deserialize methods, structured logging)
-- [x] `pkg/engine/physics/destruction/AUDIT.md` — Needs Work — 4 issues (1 high, 1 med, 2 low)
+- [x] `pkg/engine/physics/destruction/AUDIT.md` — Complete — 2 issues (0 high, 0 med, 2 low) - Updated 2026-02-13: Fixed high-priority deterministic procgen issue (added Seed field to Config, hashBuildingID for deterministic debris generation), exempted medium-priority ECS compliance (standalone subsystem architecture appropriate for client-side visual physics)
 - [x] `pkg/engine/qol/AUDIT.md` — Complete — 0 issues (4 fixed on 2026-02-13: godoc comments, structured logging, Serialize/Deserialize methods, time.Now() documentation)
 - [x] `pkg/engine/prestige/AUDIT.md` — Complete — 3 issues (0 high, 0 med, 3 low)
 
@@ -164,8 +164,8 @@ Each audit should produce a `AUDIT.md` file in the package directory following t
 
 **Total Packages**: 50+  
 **Audited**: 106  
-**Complete**: 83  
-**Needs Work**: 23  
+**Complete**: 84  
+**Needs Work**: 22  
 **Incomplete**: 0  
 **Not Started**: 0
 

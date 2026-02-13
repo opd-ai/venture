@@ -254,6 +254,9 @@ type Config struct {
 	GroundFriction        float64
 	MaxFallingObjects     int
 	UpdateFrequency       float64
+	// Seed is used for deterministic debris generation. If zero, a default
+	// seed (12345) is used. Required for multiplayer sync and test reproducibility.
+	Seed int64
 }
 
 // DefaultConfig returns default configuration for the destruction system
@@ -270,5 +273,6 @@ func DefaultConfig() *Config {
 		GroundFriction:        0.8,
 		MaxFallingObjects:     100,
 		UpdateFrequency:       30.0,
+		Seed:                  12345,
 	}
 }

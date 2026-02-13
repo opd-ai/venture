@@ -1,13 +1,13 @@
 # Audit: pkg/engine/physics/destruction
 **Date**: 2026-02-13
-**Status**: Needs Work
+**Status**: Complete
 
 ## Summary
-The destruction package implements building structural integrity simulation, damage propagation, and environmental physics for destructible buildings. The package is well-documented with comprehensive tests (81.4% coverage) and proper error handling. However, it has one critical non-deterministic random usage issue and lacks formal ECS component integration, though it is successfully integrated via a wrapper in the client.
+The destruction package implements building structural integrity simulation, damage propagation, and environmental physics for destructible buildings. The package is well-documented with comprehensive tests (81.4% coverage) and proper error handling. The critical non-deterministic random usage issue has been fixed. The package is successfully integrated via a wrapper in the client.
 
 ## Issues Found
-- [x] **severity:high** deterministic-procgen — Non-deterministic random seed in debris generation uses `len(s.debris)` which varies at runtime; should accept explicit seed parameter (`system.go:319`)
-- [x] **severity:med** ecs-compliance — No ECS Component interface implementations; `StructuralIntegrity`, `DebrisParticle`, and `FallingObject` are standalone types not implementing `Type() string` method (`types.go:36-237`)
+- [x] **severity:high** deterministic-procgen — Non-deterministic random seed in debris generation uses `len(s.debris)` which varies at runtime; should accept explicit seed parameter (`system.go:319`) — **FIXED 2026-02-13**: Added `Seed` field to `Config` struct and `hashBuildingID()` helper. Debris generation now uses deterministic seed derived from `config.Seed ^ hashBuildingID(buildingID)`. Client passes seed via `seedOffsetDestructionPhysics`. Added determinism test.
+- [x] **severity:med** ecs-compliance — No ECS Component interface implementations; `StructuralIntegrity`, `DebrisParticle`, and `FallingObject` are standalone types not implementing `Type() string` method (`types.go:36-237`) — **EXEMPTED**: Destruction system operates as standalone subsystem for client-side visual physics; ECS components not required for current integration
 - [x] **severity:low** integration-points — Missing Serialize/Deserialize methods on `StructuralIntegrity` type for potential save/load support (`types.go:36`)
 - [x] **severity:low** test-coverage — Edge cases for damage propagation timing and multi-floor collapse could have additional test coverage (`system_test.go:240-270`)
 
@@ -55,8 +55,8 @@ The destruction system is successfully integrated into the Venture client:
 - Imports: Standard library + `logrus` for structured logging only
 
 ## Recommendations
-1. **HIGH PRIORITY** — Add explicit seed parameter to `generateCollapseDebris()` or accept seed in `System.NewSystem(config, seed)` to enable deterministic debris generation for multiplayer sync and testing
-2. **MEDIUM PRIORITY** — Consider defining ECS components (`BuildingDestructionComponent`, `DebrisComponent`) if future integration with entity-based buildings is planned; current standalone approach is valid for client-side only simulation
+1. ~~**HIGH PRIORITY** — Add explicit seed parameter to `generateCollapseDebris()` or accept seed in `System.NewSystem(config, seed)` to enable deterministic debris generation for multiplayer sync and testing~~ — **COMPLETED 2026-02-13**
+2. **MEDIUM PRIORITY** — Consider defining ECS components (`BuildingDestructionComponent`, `DebrisComponent`) if future integration with entity-based buildings is planned; current standalone approach is valid for client-side only simulation — **EXEMPTED**: Current architecture appropriate for client-side visual physics
 3. **LOW PRIORITY** — Add `Serialize()`/`Deserialize()` to `StructuralIntegrity` if save/load of building damage state is a future requirement
 4. **LOW PRIORITY** — Add stress test with simultaneous max debris (500) + max falling objects (100) + multiple building collapses to validate performance targets (<50ms per update at 30Hz)
 5. **INFORMATIONAL** — Current architecture is appropriate for client-side visual physics; if authoritative server-side destruction is needed, consider extracting deterministic core logic into separate package

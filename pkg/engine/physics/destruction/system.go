@@ -309,14 +309,27 @@ func (s *System) triggerCollapse(buildingID string) {
 	}
 }
 
-// generateCollapseDebris creates debris particles from a collapsed building
+// hashBuildingID generates a deterministic hash from a building ID for seed derivation
+func hashBuildingID(buildingID string) int64 {
+	var hash int64 = 17
+	for _, c := range buildingID {
+		hash = hash*31 + int64(c)
+	}
+	return hash
+}
+
+// generateCollapseDebris creates debris particles from a collapsed building.
+// Uses deterministic seed derived from config.Seed and building ID for multiplayer sync.
 func (s *System) generateCollapseDebris(integrity *StructuralIntegrity) {
 	debrisCount := len(integrity.Supports) * 3
 	if debrisCount > s.config.MaxDebrisParticles-len(s.debris) {
 		debrisCount = s.config.MaxDebrisParticles - len(s.debris)
 	}
 
-	rng := rand.New(rand.NewSource(int64(len(s.debris))))
+	// Derive deterministic seed from config seed and building ID hash
+	buildingHash := hashBuildingID(integrity.BuildingID)
+	seed := s.config.Seed ^ buildingHash
+	rng := rand.New(rand.NewSource(seed))
 
 	for i := 0; i < debrisCount; i++ {
 		support := integrity.Supports[i%len(integrity.Supports)]

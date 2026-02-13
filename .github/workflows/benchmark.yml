@@ -36,13 +36,14 @@ jobs:
       - name: Download dependencies
         run: go mod download
 
-      - name: Run ECS World Update Benchmark (2000 entities)
+      - name: Run FPS Benchmark (2000 entities)
         run: |
           mkdir -p build
           
-          # Run the benchmark with 2000 entities and capture results
-          go test -run='^$' -bench='^BenchmarkWorldUpdateWith2000Entities$' \
-            -benchmem -benchtime=3s ./pkg/engine/ > build/fps-benchmark.txt 2>&1 || true
+          # Run the dedicated FPS benchmark with 2000 entities and capture results
+          # Uses pkg/benchmark/fps/ for separated FPS/memory test infrastructure
+          go test -run='^$' -bench='^BenchmarkFPS2000Entities$' \
+            -benchmem -benchtime=3s ./pkg/benchmark/fps/ > build/fps-benchmark.txt 2>&1 || true
           
           # Display results
           cat build/fps-benchmark.txt
@@ -50,7 +51,7 @@ jobs:
       - name: Validate FPS Target (60 FPS minimum)
         run: |
           # Extract ns/op from benchmark output
-          NS_PER_OP=$(grep "BenchmarkWorldUpdateWith2000Entities" build/fps-benchmark.txt | awk '{print $3}' | head -1)
+          NS_PER_OP=$(grep "BenchmarkFPS2000Entities" build/fps-benchmark.txt | awk '{print $3}' | head -1)
           
           if [ -z "$NS_PER_OP" ]; then
             echo "ERROR: Benchmark not found or failed to run"

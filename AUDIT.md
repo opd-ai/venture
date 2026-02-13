@@ -109,7 +109,7 @@ This document tracks the audit status of all Go packages in the Venture codebase
 - [x] `pkg/balance/AUDIT.md` — Complete — 2 issues (0 high, 0 med, 2 low) - Updated 2026-02-13: All 8 validators implemented (6 missing validators added: Progression, Social, Housing, Vehicle, Companion, Quest)
 - [x] `pkg/balance/AUDIT_2026-02-13_COMPREHENSIVE.md` — Complete — 1 issues (0 high, 0 med, 1 low) - Updated 2026-02-13: All 8 validators implemented
 - [x] `pkg/benchmark/AUDIT.md` — Complete — 3 issues (0 high, 0 med, 3 low)
-- [x] `pkg/benchmark/fps/AUDIT.md` — Complete — 3 issues (0 high, 1 med, 2 low)
+- [x] `pkg/benchmark/fps/AUDIT.md` — Complete — 2 issues (0 high, 0 med, 2 low) - Updated 2026-02-13: Fixed medium-priority CI integration (benchmark.yml now uses pkg/benchmark/fps instead of pkg/engine)
 - [x] `pkg/benchmark/memory/AUDIT.md` — Complete — 3 issues (0 high, 0 med, 3 low)
 - [x] `pkg/class/advanced/AUDIT.md` — Complete — 3 issues (0 high, 0 med, 3 low)
 - [x] `pkg/combat/AUDIT.md` — Complete — 0 issues

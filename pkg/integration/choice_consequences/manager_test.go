@@ -830,3 +830,104 @@ func BenchmarkGetAlignment(b *testing.B) {
 		tracker.GetAlignment(playerID)
 	}
 }
+
+func TestTimeProvider(t *testing.T) {
+	// Test with fixed time provider
+	fixedTime := int64(1234567890)
+	SetTimeProvider(FixedTimeProvider{Timestamp: fixedTime})
+	defer ResetTimeProvider()
+
+	tracker := NewChoiceTracker()
+	playerID := "time_test_player"
+
+	choice := &PlayerChoice{
+		ChoiceID:    "test_choice",
+		StoryNodeID: "test_node",
+		Timestamp:   fixedTime,
+		MoralAlignment: &AlignmentShift{
+			GoodEvil: 0.5,
+		},
+	}
+
+	err := tracker.RecordChoice(playerID, choice)
+	if err != nil {
+		t.Fatalf("RecordChoice failed: %v", err)
+	}
+
+	alignment := tracker.GetAlignment(playerID)
+	if alignment.UpdatedAt != fixedTime {
+		t.Errorf("Expected UpdatedAt = %d, got %d", fixedTime, alignment.UpdatedAt)
+	}
+
+	// Verify player state LastUpdate
+	tracker.mu.RLock()
+	state := tracker.players[playerID]
+	tracker.mu.RUnlock()
+
+	if state.LastUpdate != fixedTime {
+		t.Errorf("Expected LastUpdate = %d, got %d", fixedTime, state.LastUpdate)
+	}
+}
+
+func TestRealTimeProvider(t *testing.T) {
+	rtp := RealTimeProvider{}
+	before := time.Now().Unix()
+	ts := rtp.Now()
+	after := time.Now().Unix()
+
+	if ts < before || ts > after {
+		t.Errorf("RealTimeProvider.Now() = %d, expected between %d and %d", ts, before, after)
+	}
+}
+
+func TestIsContentAvailableThreadSafety(t *testing.T) {
+	// Test that IsContentAvailable properly handles the unlock path
+	// without data races (uses write lock when deleting)
+	tracker := NewChoiceTracker()
+	playerID := "thread_safety_test"
+
+	// Create a non-permanent lock with unlock conditions
+	choice := &PlayerChoice{
+		ChoiceID:     "initial_choice",
+		StoryNodeID:  "test_node",
+		Timestamp:    time.Now().Unix(),
+		Irreversible: true,
+		Consequences: []string{"lock_quest_test_content"},
+	}
+	tracker.RecordChoice(playerID, choice)
+
+	// Modify the lock to be non-permanent with conditions
+	tracker.mu.Lock()
+	state := tracker.players[playerID]
+	lock := state.ContentLocks["test_content"]
+	lock.Permanent = false
+	lock.UnlockConditions = []string{"unlock_choice"}
+	tracker.mu.Unlock()
+
+	// Content should be locked since we don't have the unlock choice
+	if tracker.IsContentAvailable(playerID, "test_content") {
+		t.Error("Expected content to be locked without unlock choice")
+	}
+
+	// Record the unlock choice
+	unlockChoice := &PlayerChoice{
+		ChoiceID:    "unlock_choice",
+		StoryNodeID: "test_node",
+		Timestamp:   time.Now().Unix(),
+	}
+	tracker.RecordChoice(playerID, unlockChoice)
+
+	// Now content should be available (and lock removed)
+	if !tracker.IsContentAvailable(playerID, "test_content") {
+		t.Error("Expected content to be available after unlock choice")
+	}
+
+	// Verify lock was removed
+	tracker.mu.RLock()
+	_, stillLocked := tracker.players[playerID].ContentLocks["test_content"]
+	tracker.mu.RUnlock()
+
+	if stillLocked {
+		t.Error("Expected lock to be removed after unlock conditions met")
+	}
+}

@@ -1,7 +1,5 @@
 package choice_consequences
 
-import "time"
-
 // alignment.go contains types and logic for tracking player moral alignment.
 // This includes alignment shifts from choices, alignment requirements for content,
 // and methods for applying alignment changes with clamping to valid ranges.
@@ -67,5 +65,5 @@ func (pa *PlayerAlignment) ApplyShift(shift *AlignmentShift) {
 	pa.LawChaos = clamp(pa.LawChaos, -1.0, 1.0)
 	pa.HonorDishonor = clamp(pa.HonorDishonor, -1.0, 1.0)
 
-	pa.UpdatedAt = time.Now().Unix()
+	pa.UpdatedAt = now()
 }

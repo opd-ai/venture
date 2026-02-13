@@ -7,7 +7,6 @@ import (
 	"os"
 	"strings"
 	"sync"
-	"time"
 )
 
 // choice_tracker.go implements the core ChoiceTracker manager that coordinates
@@ -62,7 +61,7 @@ func (ct *ChoiceTracker) RecordChoice(playerID string, choice *PlayerChoice) err
 	state := ct.getOrCreateState(playerID)
 	addChoiceToHistory(state, choice, ct.choiceLimit)
 	applyChoiceEffects(ct, state, choice)
-	state.LastUpdate = time.Now().Unix()
+	state.LastUpdate = now()
 
 	return nil
 }
@@ -137,10 +136,10 @@ func (ct *ChoiceTracker) getOrCreateState(playerID string) *PlayerState {
 			GoodEvil:      0.0,
 			LawChaos:      0.0,
 			HonorDishonor: 0.0,
-			UpdatedAt:     time.Now().Unix(),
+			UpdatedAt:     now(),
 		},
 		CompanionReactions: make([]*CompanionReaction, 0, 20),
-		LastUpdate:         time.Now().Unix(),
+		LastUpdate:         now(),
 	}
 
 	ct.players[playerID] = state
@@ -165,7 +164,7 @@ func (ct *ChoiceTracker) getOrCreateRelationship(state *PlayerState, npcID strin
 			NPCID:           npcID,
 			Attitude:        0.0,
 			TrustLevel:      0.0,
-			LastUpdate:      time.Now().Unix(),
+			LastUpdate:      now(),
 			MemorableEvents: make([]MemorableEvent, 0, ct.npcMemoryLimit),
 			DialogueUnlocks: make([]string, 0),
 			QuestsAffected:  make([]string, 0),
@@ -227,7 +226,7 @@ func (ct *ChoiceTracker) updateRelationshipValues(rel *NPCRelationship, impact f
 	rel.Attitude = clamp(rel.Attitude, -1.0, 1.0)
 
 	ct.adjustTrustLevel(rel)
-	rel.LastUpdate = time.Now().Unix()
+	rel.LastUpdate = now()
 }
 
 // adjustTrustLevel modifies trust level based on current attitude.
@@ -272,7 +271,7 @@ func (ct *ChoiceTracker) applyConsequence(state *PlayerState, choiceID, conseque
 		ContentID:        contentID,
 		LockedBy:         choiceID,
 		LockType:         lockType,
-		Timestamp:        time.Now().Unix(),
+		Timestamp:        now(),
 		Permanent:        true, // Most consequences are permanent
 		UnlockConditions: make([]string, 0),
 	}
@@ -283,34 +282,49 @@ func (ct *ChoiceTracker) applyConsequence(state *PlayerState, choiceID, conseque
 // IsContentAvailable checks if content is available to a player.
 func (ct *ChoiceTracker) IsContentAvailable(playerID, contentID string) bool {
 	ct.mu.RLock()
-	defer ct.mu.RUnlock()
-
 	state, exists := ct.players[playerID]
 	if !exists {
+		ct.mu.RUnlock()
 		return true // No choices made yet, all content available
 	}
 
-	if lock, locked := state.ContentLocks[contentID]; locked {
-		if lock.Permanent {
-			return false
-		}
-
-		// Check if unlock conditions are met
-		if len(lock.UnlockConditions) == 0 {
-			return false
-		}
-
-		for _, condition := range lock.UnlockConditions {
-			if !ct.hasChoice(state, condition) {
-				return false
-			}
-		}
-
-		// All unlock conditions met, remove lock
-		delete(state.ContentLocks, contentID)
+	lock, locked := state.ContentLocks[contentID]
+	if !locked {
+		ct.mu.RUnlock()
 		return true
 	}
 
+	if lock.Permanent {
+		ct.mu.RUnlock()
+		return false
+	}
+
+	// Check if unlock conditions are met
+	if len(lock.UnlockConditions) == 0 {
+		ct.mu.RUnlock()
+		return false
+	}
+
+	for _, condition := range lock.UnlockConditions {
+		if !ct.hasChoice(state, condition) {
+			ct.mu.RUnlock()
+			return false
+		}
+	}
+
+	// All unlock conditions met, need write lock to remove lock
+	ct.mu.RUnlock()
+	ct.mu.Lock()
+	defer ct.mu.Unlock()
+
+	// Re-check state under write lock (may have changed)
+	state, exists = ct.players[playerID]
+	if !exists {
+		return true
+	}
+	if _, stillLocked := state.ContentLocks[contentID]; stillLocked {
+		delete(state.ContentLocks, contentID)
+	}
 	return true
 }
 
@@ -353,7 +367,7 @@ func (ct *ChoiceTracker) GetAlignment(playerID string) *PlayerAlignment {
 			GoodEvil:      0.0,
 			LawChaos:      0.0,
 			HonorDishonor: 0.0,
-			UpdatedAt:     time.Now().Unix(),
+			UpdatedAt:     now(),
 		}
 	}
 

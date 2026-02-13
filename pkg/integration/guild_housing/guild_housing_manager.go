@@ -171,6 +171,7 @@ func (m *Manager) GetGuildStorage(storageID string) (*GuildStorage, error) {
 }
 
 // DepositItem deposits an item into guild storage.
+// Capacity limits the number of unique item types (slots), not total quantity.
 func (m *Manager) DepositItem(storageID, playerID, itemID string, quantity int) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -180,13 +181,14 @@ func (m *Manager) DepositItem(storageID, playerID, itemID string, quantity int) 
 		return fmt.Errorf("guild storage not found: %s", storageID)
 	}
 
-	if len(storage.Items) >= storage.Capacity {
-		return fmt.Errorf("storage capacity reached: %d", storage.Capacity)
-	}
-
 	if existing, exists := storage.Items[itemID]; exists {
+		// Adding to existing item doesn't consume a new slot
 		existing.Quantity += quantity
 	} else {
+		// Adding a new item type requires an available slot
+		if len(storage.Items) >= storage.Capacity {
+			return fmt.Errorf("storage capacity reached: %d unique item types", storage.Capacity)
+		}
 		storage.Items[itemID] = &StoredItem{
 			ItemID:   itemID,
 			Quantity: quantity,

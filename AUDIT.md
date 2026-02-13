@@ -94,9 +94,9 @@ This document tracks the audit status of all Go packages in the Venture codebase
 
 ### Integration
 - [x] `pkg/integration/AUDIT.md` — Complete — 0 issues (4 recommendations)
-- [x] `pkg/integration/choice_consequences/AUDIT.md` — Needs Work — 5 issues (2 high, 2 med, 1 low)
+- [x] `pkg/integration/choice_consequences/AUDIT.md` — Needs Work — 3 issues (0 high, 2 med, 1 low) - Updated 2026-02-13: Fixed 2 high-priority issues (thread-safety in IsContentAvailable, TimeProvider interface for deterministic timestamps)
 - [x] `pkg/integration/companion_housing/AUDIT.md` — Complete — 0 issues (5 fixed on 2026-02-13: deterministic time, serialization, structured logging)
-- [x] `pkg/integration/guild_housing/AUDIT.md` — Needs Work — 7 issues (1 high, 3 med, 3 low)
+- [x] `pkg/integration/guild_housing/AUDIT.md` — Needs Work — 6 issues (0 high, 3 med, 3 low) - Updated 2026-02-13: Fixed high-priority storage capacity bug (capacity check now only triggers for new item types)
 - [x] `pkg/integration/guild_vehicle/AUDIT.md` — Needs Work — 4 issues (1 high, 1 med, 2 low) - Updated 2026-02-13: High-priority time.Now() usage exempted (fleet timestamps track operational events for server coordination)
 - [x] `pkg/integration/housing_crafting/AUDIT.md` — Complete — 1 issue (0 high, 0 med, 1 low)
 - [x] `pkg/integration/narrative_world/AUDIT.md` — Needs Work — 7 issues (2 high, 3 med, 2 low)

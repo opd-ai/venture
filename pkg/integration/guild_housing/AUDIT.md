@@ -3,10 +3,10 @@
 **Status**: Needs Work
 
 ## Summary
-The guild_housing integration package provides communal guild housing features including rank-based permissions, shared crafting stations, guild storage, and meeting halls. Overall health is good with 91.8% test coverage and solid concurrency handling. However, there is 1 high-severity functional bug in storage capacity checking and several medium-severity issues related to error handling patterns and missing validation.
+The guild_housing integration package provides communal guild housing features including rank-based permissions, shared crafting stations, guild storage, and meeting halls. Overall health is good with 91.8% test coverage and solid concurrency handling. High-severity storage capacity bug was fixed on 2026-02-13. Remaining issues are medium-severity (error handling, validation) and low-severity (documentation, serialization).
 
 ## Issues Found
-- [ ] **severity:high** Functional Bug — Storage capacity check only counts unique item types, not total stacks. Adding to existing items bypasses capacity limit entirely (`guild_housing_manager.go:183`)
+- [x] **severity:high** Functional Bug — Storage capacity check only counts unique item types, not total stacks. Adding to existing items bypasses capacity limit entirely (`guild_housing_manager.go:183`) — FIXED 2026-02-13: Moved capacity check to only trigger when adding new item types; adding to existing items correctly bypasses check since it doesn't consume a new slot
 - [ ] **severity:med** Error Handling — No structured logging with logrus.WithFields() for error paths; plain fmt.Errorf used throughout (multiple files)
 - [ ] **severity:med** Missing Validation — No input validation for playerID, itemID, guildID, stationID parameters (empty string checks, length limits, format validation) (`guild_housing_manager.go:33,115,174,212`)
 - [ ] **severity:med** Missing Validation — CreateGuildHouse accepts zero/negative BuildingSize with no validation (`guild_housing_manager.go:33`)
@@ -127,7 +127,7 @@ $ go vet ./pkg/integration/guild_housing/...
 - **Total Files**: 7 (1 doc, 5 implementation, 1 test)
 - **Total Lines**: ~1000 (excluding test)
 - **Test Coverage**: 91.8%
-- **Critical Issues**: 1
+- **Critical Issues**: 0 (1 fixed on 2026-02-13)
 - **Medium Issues**: 3
 - **Low Issues**: 3
 - **go vet**: PASS

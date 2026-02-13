@@ -371,6 +371,47 @@ func TestDepositItem(t *testing.T) {
 	}
 }
 
+func TestDepositItemCapacity(t *testing.T) {
+	manager := NewManager()
+	// Create storage with capacity of 2 unique item types
+	storage := manager.CreateGuildStorage("guild-001", 2)
+
+	// First unique item type
+	err := manager.DepositItem(storage.StorageID, "player-001", "item-001", 10)
+	if err != nil {
+		t.Fatalf("DepositItem() first item error = %v", err)
+	}
+
+	// Second unique item type
+	err = manager.DepositItem(storage.StorageID, "player-001", "item-002", 20)
+	if err != nil {
+		t.Fatalf("DepositItem() second item error = %v", err)
+	}
+
+	// Third unique item type should fail (capacity reached)
+	err = manager.DepositItem(storage.StorageID, "player-001", "item-003", 5)
+	if err == nil {
+		t.Error("DepositItem() expected error when capacity reached for new item type")
+	}
+	if err != nil && !strings.Contains(err.Error(), "capacity reached") {
+		t.Errorf("DepositItem() error = %v, want error containing 'capacity reached'", err)
+	}
+
+	// Adding to existing item should succeed (doesn't consume new slot)
+	err = manager.DepositItem(storage.StorageID, "player-002", "item-001", 100)
+	if err != nil {
+		t.Fatalf("DepositItem() adding to existing item error = %v", err)
+	}
+
+	items, _ := manager.GetStorageItems(storage.StorageID)
+	if items["item-001"].Quantity != 110 {
+		t.Errorf("item-001 quantity = %v, want 110", items["item-001"].Quantity)
+	}
+	if len(items) != 2 {
+		t.Errorf("unique item count = %v, want 2", len(items))
+	}
+}
+
 func TestWithdrawItem(t *testing.T) {
 	manager := NewManager()
 	storage := manager.CreateGuildStorage("guild-001", 500)

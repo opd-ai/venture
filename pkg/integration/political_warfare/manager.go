@@ -8,6 +8,7 @@ import (
 
 	"github.com/opd-ai/venture/pkg/engine"
 	"github.com/opd-ai/venture/pkg/network/federation/guild"
+	"github.com/sirupsen/logrus"
 )
 
 // Manager coordinates political warfare between guilds
@@ -452,6 +453,14 @@ func (m *Manager) applyGoldConcession(concession DiplomaticConcession, applied *
 		defenderGuild.Treasury -= goldAmount
 		if attackerGuild, err := m.guildManager.GetGuild(attackerGuildID); err == nil {
 			attackerGuild.Treasury += goldAmount
+		} else {
+			// Log error - gold deducted from defender but not added to attacker
+			logrus.WithFields(logrus.Fields{
+				"attacker_guild_id": attackerGuildID,
+				"defender_guild_id": defenderGuild.ID,
+				"gold_amount":       goldAmount,
+				"error":             err.Error(),
+			}).Error("Failed to add gold to attacker guild during concession")
 		}
 		applied.GoldAmount = goldAmount
 	}

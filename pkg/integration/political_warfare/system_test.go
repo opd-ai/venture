@@ -11,8 +11,9 @@ import (
 func TestNewSystem(t *testing.T) {
 	world := engine.NewWorld()
 	guildManager := guild.NewManager()
+	seed := int64(12345)
 
-	sys := NewSystem(world, guildManager)
+	sys := NewSystem(world, guildManager, seed)
 
 	if sys == nil {
 		t.Fatal("Expected non-nil system")
@@ -28,12 +29,13 @@ func TestNewSystem(t *testing.T) {
 func TestSystemUpdate(t *testing.T) {
 	world := engine.NewWorld()
 	guildManager := guild.NewManager()
+	seed := int64(12345)
 
 	// Create test guilds
 	guildID1, _ := guildManager.CreateGuild("fantasy", "Player1", 12345)
 	guildID2, _ := guildManager.CreateGuild("fantasy", "Player2", 23456)
 
-	sys := NewSystem(world, guildManager)
+	sys := NewSystem(world, guildManager, seed)
 
 	// Declare war with 1 second preparation
 	_, err := sys.manager.DeclareWar(guildID1, guildID2, 1*time.Second)
@@ -76,8 +78,9 @@ func TestSystemUpdate(t *testing.T) {
 func TestSystemGetManager(t *testing.T) {
 	world := engine.NewWorld()
 	guildManager := guild.NewManager()
+	seed := int64(12345)
 
-	sys := NewSystem(world, guildManager)
+	sys := NewSystem(world, guildManager, seed)
 
 	manager := sys.GetManager()
 	if manager == nil {
@@ -91,6 +94,7 @@ func TestSystemGetManager(t *testing.T) {
 func TestSystemIntegration(t *testing.T) {
 	world := engine.NewWorld()
 	guildManager := guild.NewManager()
+	seed := int64(12345)
 
 	// Create test guilds
 	guildID1, _ := guildManager.CreateGuild("fantasy", "Warlord1", 11111)
@@ -101,7 +105,7 @@ func TestSystemIntegration(t *testing.T) {
 	guild1, _ := guildManager.GetGuild(guildID1)
 	guild1.Reputation[guildID3] = 0.7
 
-	sys := NewSystem(world, guildManager)
+	sys := NewSystem(world, guildManager, seed)
 
 	// Test war declaration
 	war, err := sys.manager.DeclareWar(guildID1, guildID2, 1*time.Second)
@@ -197,11 +201,12 @@ func TestSystemIntegration(t *testing.T) {
 func TestSystemTreatyExpiration(t *testing.T) {
 	world := engine.NewWorld()
 	guildManager := guild.NewManager()
+	seed := int64(12345)
 
 	guildID1, _ := guildManager.CreateGuild("fantasy", "Player1", 12345)
 	guildID2, _ := guildManager.CreateGuild("fantasy", "Player2", 23456)
 
-	sys := NewSystem(world, guildManager)
+	sys := NewSystem(world, guildManager, seed)
 
 	// Sign short-duration treaty
 	_, err := sys.manager.SignPeaceTreaty(guildID1, guildID2, 500*time.Millisecond)

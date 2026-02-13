@@ -13,12 +13,15 @@ type System struct {
 	logger  *logrus.Entry
 }
 
-// NewSystem creates a new political warfare system
-func NewSystem(world *engine.World, guildManager *guild.Manager) *System {
+// NewSystem creates a new political warfare system with the given seed for
+// deterministic RNG. The seed should match the world seed to ensure political
+// calculations are reproducible across game sessions.
+func NewSystem(world *engine.World, guildManager *guild.Manager, seed int64) *System {
 	logger := logrus.WithField("system", "political_warfare")
+	logger.WithField("seed", seed).Debug("Creating political warfare system with seed")
 	return &System{
 		world:   world,
-		manager: NewManager(world, guildManager),
+		manager: NewManagerWithSeed(world, guildManager, seed),
 		logger:  logger,
 	}
 }

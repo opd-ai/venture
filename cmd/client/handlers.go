@@ -202,6 +202,7 @@ type systemsContainer struct {
 	deathParticleSystem            *engine.DeathParticleSystem            // Connects entity deaths to particle effects
 	spellEffectParticleSystem      *engine.SpellEffectParticleSystem      // Connects spell effects to particle effects
 	damageResistanceParticleSystem *engine.DamageResistanceParticleSystem // Connects damage resistance to particle effects
+	lowHealthVFXSystem             *engine.LowHealthVFXSystem             // Connects low player health to warning particle effects
 	lifetimeSystem                 *engine.LifetimeSystem
 	puzzleSystem                   *engine.PuzzleSystem
 	firePropagationSystem          *engine.FirePropagationSystem
@@ -915,6 +916,11 @@ func initializeEnvironmentalSystems(game *engine.EbitenGame, sys *systemsContain
 	sys.weatherManaRegenSystem = engine.NewWeatherManaRegenSystem(game.World, *seed+6300)
 	sys.weatherManaRegenSystem.SetGenre(*genreID)
 
+	// LowHealthVFXSystem - visual feedback for low player health
+	sys.lowHealthVFXSystem = engine.NewLowHealthVFXSystem(game.World, *seed+6400)
+	sys.lowHealthVFXSystem.SetParticleSystem(sys.particleSystem)
+	sys.lowHealthVFXSystem.SetGenre(*genreID)
+
 	sys.lifetimeSystem = engine.NewLifetimeSystemWithLogger(game.World, clientLogger.Logger)
 	sys.puzzleSystem = engine.NewPuzzleSystem(game.World)
 
@@ -1577,6 +1583,7 @@ func registerNonCriticalSystems(game *engine.EbitenGame, sys *systemsContainer) 
 	game.World.AddSystem(sys.itemPickupParticleSystem)       // Item pickup visual feedback via particles
 	game.World.AddSystem(sys.spellEffectParticleSystem)      // Spell effect visual feedback via particles
 	game.World.AddSystem(sys.damageResistanceParticleSystem) // Damage resistance visual feedback via particles
+	game.World.AddSystem(sys.lowHealthVFXSystem)             // Low player health warning visual feedback via particles
 	game.World.AddSystem(sys.lifetimeSystem)
 	game.World.AddSystem(sys.puzzleSystem)
 	game.World.AddSystem(sys.firePropagationSystem)

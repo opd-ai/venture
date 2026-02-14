@@ -80,6 +80,7 @@ type SystemInitResult struct {
 	FactionXPBonusSystem           *FactionXPBonusSystem
 	WeatherManaRegenSystem         *WeatherManaRegenSystem
 	TerrainMovementSpeedSystem     *TerrainMovementSpeedSystem
+	LowHealthVFXSystem             *LowHealthVFXSystem
 
 	// System wrappers
 	AnimationSystemWrapper            System
@@ -420,6 +421,14 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 	weatherManaRegenSystem.SetGenre(config.GenreID)
 	result.WeatherManaRegenSystem = weatherManaRegenSystem
 	game.World.AddSystem(weatherManaRegenSystem)
+
+	// 36k. LowHealthVFXSystem - visual feedback for low player health
+	// Spawns genre-aware pulsing particles when player health is critically low
+	lowHealthVFXSystem := NewLowHealthVFXSystem(game.World, config.Seed+6400)
+	lowHealthVFXSystem.SetParticleSystem(result.ParticleSystem)
+	lowHealthVFXSystem.SetGenre(config.GenreID)
+	result.LowHealthVFXSystem = lowHealthVFXSystem
+	game.World.AddSystem(lowHealthVFXSystem)
 
 	// 37. LifetimeSystem - temporary entities (Phase 5.3)
 	lifetimeSystem := NewLifetimeSystemWithLogger(game.World, logger)

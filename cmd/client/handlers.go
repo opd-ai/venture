@@ -222,27 +222,28 @@ type systemsContainer struct {
 	recipeGen                      *recipe.RecipeGenerator
 	statusEffectRNG                *rand.Rand
 	// V4.0 Systems (Phase 21-27)
-	vehicleMovementSys         *engine.VehicleMovementSystem
-	vehicleDurabilitySys       *engine.VehicleDurabilitySystem
-	mountingSystem             *engine.MountingSystem
-	vehicleCombatSystem        *engine.VehicleCombatSystem
-	companionAISystem          *engine.CompanionAISystem
-	companionProgressionSys    *engine.CompanionProgressionSystem
-	companionLoyaltySys        *engine.CompanionLoyaltySystem
-	companionInventorySys      *engine.CompanionInventorySystem
-	companionLearningSys       *engine.CompanionLearningSystem // Phase 4.1: Companion AI skill progression and personality evolution
-	advancedClassSystem        *engine.AdvancedClassSystem     // Phase 4.2: Multi-classing, prestige classes, talent trees
-	skillInheritanceSys        *engine.SkillInheritanceSystem
-	bookReadingSystem          *engine.BookReadingSystem
-	spellEffectSystem          *engine.SpellEffectSystem
-	spellCombinationSys        *engine.SpellCombinationSystem
-	classProgressionSys        *engine.ClassProgressionSystem
-	specializationManaBoostSys *engine.SpecializationManaBoostSystem // Connects class specialization with mana regen bonuses
-	expressionSystem           *engine.ExpressionSystem
-	expressionComboSys         *engine.ExpressionComboSystem
-	miniGameSystem             *engine.MiniGameSystem
-	minigameGamesSystem        *games.System // Phase 3.4: Minigame implementations
-	achievementSystem          *engine.AchievementSystem
+	vehicleMovementSys           *engine.VehicleMovementSystem
+	vehicleDurabilitySys         *engine.VehicleDurabilitySystem
+	mountingSystem               *engine.MountingSystem
+	vehicleCombatSystem          *engine.VehicleCombatSystem
+	companionAISystem            *engine.CompanionAISystem
+	companionProgressionSys      *engine.CompanionProgressionSystem
+	companionLoyaltySys          *engine.CompanionLoyaltySystem
+	companionInventorySys        *engine.CompanionInventorySystem
+	companionLearningSys         *engine.CompanionLearningSystem // Phase 4.1: Companion AI skill progression and personality evolution
+	advancedClassSystem          *engine.AdvancedClassSystem     // Phase 4.2: Multi-classing, prestige classes, talent trees
+	skillInheritanceSys          *engine.SkillInheritanceSystem
+	bookReadingSystem            *engine.BookReadingSystem
+	spellEffectSystem            *engine.SpellEffectSystem
+	spellCombinationSys          *engine.SpellCombinationSystem
+	classProgressionSys          *engine.ClassProgressionSystem
+	specializationManaBoostSys   *engine.SpecializationManaBoostSystem   // Connects class specialization with mana regen bonuses
+	specializationHealthRegenSys *engine.SpecializationHealthRegenSystem // Connects class specialization with health regen bonuses
+	expressionSystem             *engine.ExpressionSystem
+	expressionComboSys           *engine.ExpressionComboSystem
+	miniGameSystem               *engine.MiniGameSystem
+	minigameGamesSystem          *games.System // Phase 3.4: Minigame implementations
+	achievementSystem            *engine.AchievementSystem
 	// Phase 28: Reputation & Moral Choices
 	moralChoiceSystem *engine.MoralChoiceSystem
 	// Phase 95-96: Resource gathering and fishing minigames
@@ -1008,6 +1009,11 @@ func initializeV4Systems(game *engine.EbitenGame, sys *systemsContainer, clientL
 	sys.specializationManaBoostSys.SetGenre(*genreID)
 	logging.ComponentLogger(clientLogger.Logger, "specialization_mana_boost").Debug("Created specialization mana boost system")
 
+	// Phase 25b: Specialization health regen system - connects class specialization with health regen
+	sys.specializationHealthRegenSys = engine.NewSpecializationHealthRegenSystem(game.World, *seed+seedOffsetSpecHealthRegen)
+	sys.specializationHealthRegenSys.SetGenre(*genreID)
+	logging.ComponentLogger(clientLogger.Logger, "specialization_health_regen").Debug("Created specialization health regen system")
+
 	// Phase 26: Expression systems (requires audio manager)
 	sys.expressionSystem = engine.NewExpressionSystem(game.World, sys.audioManager)
 	sys.expressionComboSys = engine.NewExpressionComboSystem(game.World)
@@ -1645,6 +1651,9 @@ func registerNonCriticalSystems(game *engine.EbitenGame, sys *systemsContainer) 
 
 	// Phase 25a: Specialization mana boost - connects class specialization with mana regen bonuses
 	game.World.AddSystem(sys.specializationManaBoostSys)
+
+	// Phase 25b: Specialization health regen - connects class specialization with health regen bonuses
+	game.World.AddSystem(sys.specializationHealthRegenSys)
 
 	// Phase 26: Expression systems (use wrappers)
 	game.World.AddSystem(&expressionSystemWrapper{system: sys.expressionSystem})

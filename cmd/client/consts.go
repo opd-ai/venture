@@ -85,6 +85,7 @@ const (
 	seedOffsetTradeRoutes        = 14000 // offset for trade route system (Phase 4.4)
 	seedOffsetFishing            = 15000 // offset for fishing system (Phase 95-96)
 	seedOffsetSpecManaBoost      = 16000 // offset for specialization mana boost system (class-mana integration)
+	seedOffsetSpecHealthRegen    = 16500 // offset for specialization health regen system (class-health integration)
 
 	// Fallback positions
 	fallbackPlayerX = 400 // fallback X position if no valid spawn

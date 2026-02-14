@@ -52,39 +52,40 @@ func DefaultSystemInitConfig(seed int64, genreID string, logger *logrus.Logger) 
 // further configuration after initialization (e.g., setting callbacks).
 type SystemInitResult struct {
 	// Systems that often need post-initialization configuration
-	InputSystem                    *InputSystem
-	CombatSystem                   *CombatSystem
-	CollisionSystem                *CollisionSystem
-	ProjectileSystem               *ProjectileSystem
-	AudioManager                   *AudioManager
-	ObjectiveTracker               *ObjectiveTrackerSystem
-	CommerceSystem                 *CommerceSystem
-	DialogSystem                   *DialogSystem
-	CraftingSystem                 *CraftingSystem
-	InteractionSystem              *InteractionSystem
-	MiniGameSystem                 *MiniGameSystem
-	AnimationSystem                *AnimationSystem
-	ParticleSystem                 *ParticleSystem
-	TutorialSystem                 *EbitenTutorialSystem
-	HelpSystem                     *EbitenHelpSystem
-	LevelUpParticleSystem          *LevelUpParticleSystem
-	ItemPickupParticleSystem       *ItemPickupParticleSystem
-	SpellEffectParticleSystem      *SpellEffectParticleSystem
-	DeathParticleSystem            *DeathParticleSystem
-	DamageResistanceParticleSystem *DamageResistanceParticleSystem
-	CompanionLevelUpParticleSystem *CompanionLevelUpParticleSystem
-	ItemPickupSystem               *ItemPickupSystem
-	ProgressionSystem              *ProgressionSystem
-	CompanionProgressionSystem     *CompanionProgressionSystem
-	WeatherAudioSystem             *WeatherAudioSystem
-	FactionXPBonusSystem           *FactionXPBonusSystem
-	WeatherManaRegenSystem         *WeatherManaRegenSystem
-	TerrainMovementSpeedSystem     *TerrainMovementSpeedSystem
-	TerrainCombatBonusSystem       *TerrainCombatBonusSystem
-	LowHealthVFXSystem             *LowHealthVFXSystem
-	CompanionAuraParticleSystem    *CompanionAuraParticleSystem
-	SpecializationManaBoostSystem  *SpecializationManaBoostSystem
-	ElementalComboParticleSystem   *ElementalComboParticleSystem
+	InputSystem                     *InputSystem
+	CombatSystem                    *CombatSystem
+	CollisionSystem                 *CollisionSystem
+	ProjectileSystem                *ProjectileSystem
+	AudioManager                    *AudioManager
+	ObjectiveTracker                *ObjectiveTrackerSystem
+	CommerceSystem                  *CommerceSystem
+	DialogSystem                    *DialogSystem
+	CraftingSystem                  *CraftingSystem
+	InteractionSystem               *InteractionSystem
+	MiniGameSystem                  *MiniGameSystem
+	AnimationSystem                 *AnimationSystem
+	ParticleSystem                  *ParticleSystem
+	TutorialSystem                  *EbitenTutorialSystem
+	HelpSystem                      *EbitenHelpSystem
+	LevelUpParticleSystem           *LevelUpParticleSystem
+	ItemPickupParticleSystem        *ItemPickupParticleSystem
+	SpellEffectParticleSystem       *SpellEffectParticleSystem
+	DeathParticleSystem             *DeathParticleSystem
+	DamageResistanceParticleSystem  *DamageResistanceParticleSystem
+	CompanionLevelUpParticleSystem  *CompanionLevelUpParticleSystem
+	ItemPickupSystem                *ItemPickupSystem
+	ProgressionSystem               *ProgressionSystem
+	CompanionProgressionSystem      *CompanionProgressionSystem
+	WeatherAudioSystem              *WeatherAudioSystem
+	FactionXPBonusSystem            *FactionXPBonusSystem
+	WeatherManaRegenSystem          *WeatherManaRegenSystem
+	TerrainMovementSpeedSystem      *TerrainMovementSpeedSystem
+	TerrainCombatBonusSystem        *TerrainCombatBonusSystem
+	LowHealthVFXSystem              *LowHealthVFXSystem
+	CompanionAuraParticleSystem     *CompanionAuraParticleSystem
+	SpecializationManaBoostSystem   *SpecializationManaBoostSystem
+	SpecializationHealthRegenSystem *SpecializationHealthRegenSystem
+	ElementalComboParticleSystem    *ElementalComboParticleSystem
 
 	// System wrappers
 	AnimationSystemWrapper            System
@@ -264,6 +265,13 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 	specializationManaBoostSystem.SetGenre(config.GenreID)
 	result.SpecializationManaBoostSystem = specializationManaBoostSystem
 	game.World.AddSystem(specializationManaBoostSystem)
+
+	// 25b. SpecializationHealthRegenSystem - passive health regen bonuses from class specializations
+	// Connects ClassProgressionComponent with HealthComponent for genre-aware tank/healer bonuses
+	specializationHealthRegenSystem := NewSpecializationHealthRegenSystem(game.World, config.Seed+6650)
+	specializationHealthRegenSystem.SetGenre(config.GenreID)
+	result.SpecializationHealthRegenSystem = specializationHealthRegenSystem
+	game.World.AddSystem(specializationHealthRegenSystem)
 
 	// 26. InventorySystem - item management
 	game.World.AddSystem(inventorySystem)

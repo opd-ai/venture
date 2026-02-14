@@ -133,6 +133,7 @@ type SystemInitResult struct {
 	TerrainAmbushCritSystem             *TerrainAmbushCritSystem
 	FactionDamageBonusSystem            *FactionDamageBonusSystem
 	WeatherCritChanceSystem             *WeatherCritChanceSystem
+	WeatherBlockChanceSystem            *WeatherBlockChanceSystem
 	StealthIndicatorParticleSystem      *StealthIndicatorParticleSystem
 	FishingWeatherBonusSystem           *FishingWeatherBonusSystem
 	TimeOfDayFishingBonusSystem         *TimeOfDayFishingBonusSystem
@@ -771,6 +772,14 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 	weatherCritChanceSystem.SetGenre(config.GenreID)
 	result.WeatherCritChanceSystem = weatherCritChanceSystem
 	game.World.AddSystem(weatherCritChanceSystem)
+
+	// 36n3. WeatherBlockChanceSystem - modifies block chance based on weather conditions
+	// Connects WeatherSystem with StatsComponent.BlockChance for tactical block penalties
+	// Rain makes shields slippery, snow slows reflexes, storms hamper defense
+	weatherBlockChanceSystem := NewWeatherBlockChanceSystem(game.World, config.Seed+6780)
+	weatherBlockChanceSystem.SetGenre(config.GenreID)
+	result.WeatherBlockChanceSystem = weatherBlockChanceSystem
+	game.World.AddSystem(weatherBlockChanceSystem)
 
 	// 36o. WeatherXPBonusSystem - modifies XP gains based on weather conditions
 	// Connects WeatherSystem with ProgressionSystem for genre-aware XP bonuses

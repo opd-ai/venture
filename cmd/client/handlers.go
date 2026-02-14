@@ -180,11 +180,11 @@ type systemsContainer struct {
 	behaviorTreeSystem                      *engine.BehaviorTreeSystem
 	squadSystem                             *engine.SquadSystem
 	factionSystem                           *engine.FactionSystem
-	factionAwareAISystem                    *engine.FactionAwareAISystem     // Bridges faction reputation with AI hostility
-	factionXPBonusSystem                    *engine.FactionXPBonusSystem     // Bridges faction reputation with XP bonus rewards
-	factionDamageBonusSystem                *engine.FactionDamageBonusSystem // Bridges faction reputation with damage bonuses
+	factionAwareAISystem                    *engine.FactionAwareAISystem         // Bridges faction reputation with AI hostility
+	factionXPBonusSystem                    *engine.FactionXPBonusSystem         // Bridges faction reputation with XP bonus rewards
+	factionDamageBonusSystem                *engine.FactionDamageBonusSystem     // Bridges faction reputation with damage bonuses
 	reputationDefenseBonusSystem            *engine.ReputationDefenseBonusSystem // Bridges faction reputation with defense bonuses
-	statusEffectAISystem                    *engine.StatusEffectAISystem     // Bridges status effects with AI (stun/frozen disable AI)
+	statusEffectAISystem                    *engine.StatusEffectAISystem         // Bridges status effects with AI (stun/frozen disable AI)
 	reputationSystem                        *engine.ReputationSystem
 	alignmentSystem                         *engine.AlignmentSystem
 	factionReactionSystem                   *engine.FactionReactionSystem

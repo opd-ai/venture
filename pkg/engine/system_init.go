@@ -164,6 +164,7 @@ type SystemInitResult struct {
 	WeatherMovementSpeedParticleSystem       *WeatherMovementSpeedParticleSystem
 	WeatherCompanionBonusParticleSystem      *WeatherCompanionBonusParticleSystem
 	CombatEquipmentDurabilityParticleSystem  *CombatEquipmentDurabilityParticleSystem
+	ReputationDefenseBonusSystem             *ReputationDefenseBonusSystem
 
 	// System wrappers
 	AnimationSystemWrapper            System
@@ -312,6 +313,14 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 	factionDamageBonusSystem.SetGenre(config.GenreID)
 	result.FactionDamageBonusSystem = factionDamageBonusSystem
 	game.World.AddSystem(factionDamageBonusSystem)
+
+	// 17c. ReputationDefenseBonusSystem - defense bonus against enemies of allied factions
+	// Connects FactionComponent reputation with StatsComponent.Defense for damage reduction
+	reputationDefenseBonusSystem := NewReputationDefenseBonusSystem(game.World, config.Seed+5175)
+	reputationDefenseBonusSystem.SetFactionSystem(factionSystem)
+	reputationDefenseBonusSystem.SetGenre(config.GenreID)
+	result.ReputationDefenseBonusSystem = reputationDefenseBonusSystem
+	game.World.AddSystem(reputationDefenseBonusSystem)
 
 	// 18. SkillProgressionSystem - applies skill effects to stats
 	skillProgressionSystem := NewSkillProgressionSystem()

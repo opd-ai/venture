@@ -183,6 +183,7 @@ type systemsContainer struct {
 	factionAwareAISystem                    *engine.FactionAwareAISystem     // Bridges faction reputation with AI hostility
 	factionXPBonusSystem                    *engine.FactionXPBonusSystem     // Bridges faction reputation with XP bonus rewards
 	factionDamageBonusSystem                *engine.FactionDamageBonusSystem // Bridges faction reputation with damage bonuses
+	reputationDefenseBonusSystem            *engine.ReputationDefenseBonusSystem // Bridges faction reputation with defense bonuses
 	statusEffectAISystem                    *engine.StatusEffectAISystem     // Bridges status effects with AI (stun/frozen disable AI)
 	reputationSystem                        *engine.ReputationSystem
 	alignmentSystem                         *engine.AlignmentSystem
@@ -1828,6 +1829,13 @@ func registerNonCriticalSystems(game *engine.EbitenGame, sys *systemsContainer) 
 	sys.factionDamageBonusSystem.SetFactionSystem(sys.factionSystem)
 	sys.factionDamageBonusSystem.SetGenre(*genreID)
 	game.World.AddSystem(sys.factionDamageBonusSystem)
+
+	// ReputationDefenseBonusSystem: bridges faction reputation with defense bonuses
+	// Reduces incoming damage when player is attacked by enemies of allied factions
+	sys.reputationDefenseBonusSystem = engine.NewReputationDefenseBonusSystem(game.World, *seed+5175)
+	sys.reputationDefenseBonusSystem.SetFactionSystem(sys.factionSystem)
+	sys.reputationDefenseBonusSystem.SetGenre(*genreID)
+	game.World.AddSystem(sys.reputationDefenseBonusSystem)
 
 	// FactionCompanionBehaviorSystem: bridges faction reputation with companion AI targeting
 	// Companions won't attack allied faction members and prioritize hostile faction enemies

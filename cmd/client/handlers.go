@@ -180,9 +180,10 @@ type systemsContainer struct {
 	behaviorTreeSystem                *engine.BehaviorTreeSystem
 	squadSystem                       *engine.SquadSystem
 	factionSystem                     *engine.FactionSystem
-	factionAwareAISystem              *engine.FactionAwareAISystem // Bridges faction reputation with AI hostility
-	factionXPBonusSystem              *engine.FactionXPBonusSystem // Bridges faction reputation with XP bonus rewards
-	statusEffectAISystem              *engine.StatusEffectAISystem // Bridges status effects with AI (stun/frozen disable AI)
+	factionAwareAISystem              *engine.FactionAwareAISystem     // Bridges faction reputation with AI hostility
+	factionXPBonusSystem              *engine.FactionXPBonusSystem     // Bridges faction reputation with XP bonus rewards
+	factionDamageBonusSystem          *engine.FactionDamageBonusSystem // Bridges faction reputation with damage bonuses
+	statusEffectAISystem              *engine.StatusEffectAISystem     // Bridges status effects with AI (stun/frozen disable AI)
 	reputationSystem                  *engine.ReputationSystem
 	alignmentSystem                   *engine.AlignmentSystem
 	factionReactionSystem             *engine.FactionReactionSystem
@@ -1704,6 +1705,13 @@ func registerNonCriticalSystems(game *engine.EbitenGame, sys *systemsContainer) 
 	sys.factionXPBonusSystem.SetFactionSystem(sys.factionSystem)
 	sys.factionXPBonusSystem.SetProgressionSystem(sys.progressionSystem)
 	game.World.AddSystem(sys.factionXPBonusSystem)
+
+	// FactionDamageBonusSystem: bridges faction reputation with damage bonuses
+	// Deals bonus damage when player attacks enemies of factions they have good standing with
+	sys.factionDamageBonusSystem = engine.NewFactionDamageBonusSystem(game.World, *seed+5150)
+	sys.factionDamageBonusSystem.SetFactionSystem(sys.factionSystem)
+	sys.factionDamageBonusSystem.SetGenre(*genreID)
+	game.World.AddSystem(sys.factionDamageBonusSystem)
 
 	// FactionCompanionBehaviorSystem: bridges faction reputation with companion AI targeting
 	// Companions won't attack allied faction members and prioritize hostile faction enemies

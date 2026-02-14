@@ -125,6 +125,7 @@ type SystemInitResult struct {
 	BlockParticleSystem               *BlockParticleSystem
 	TimeOfDayLightingSystem           *TimeOfDayLightingSystem
 	TerrainAmbushCritSystem           *TerrainAmbushCritSystem
+	FactionDamageBonusSystem          *FactionDamageBonusSystem
 
 	// System wrappers
 	AnimationSystemWrapper            System
@@ -265,6 +266,14 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 	factionXPBonusSystem.SetProgressionSystem(progressionSystem)
 	result.FactionXPBonusSystem = factionXPBonusSystem
 	game.World.AddSystem(factionXPBonusSystem)
+
+	// 17b. FactionDamageBonusSystem - bonus damage against enemies of allied factions
+	// Connects FactionComponent reputation with CombatSystem damage modifiers
+	factionDamageBonusSystem := NewFactionDamageBonusSystem(game.World, config.Seed+5150)
+	factionDamageBonusSystem.SetFactionSystem(factionSystem)
+	factionDamageBonusSystem.SetGenre(config.GenreID)
+	result.FactionDamageBonusSystem = factionDamageBonusSystem
+	game.World.AddSystem(factionDamageBonusSystem)
 
 	// 18. SkillProgressionSystem - applies skill effects to stats
 	skillProgressionSystem := NewSkillProgressionSystem()

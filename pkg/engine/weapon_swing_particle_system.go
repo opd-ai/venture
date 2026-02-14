@@ -132,7 +132,7 @@ func (s *WeaponSwingParticleSystem) spawnSwingParticles(x, y float64, rarity ite
 
 	// Create trail config for weapon swing effect
 	config := particles.Config{
-		Type:     particles.ParticleTrail,
+		Type:     particles.ParticleSpark, // Trail-like effect via spark particles
 		Count:    count,
 		GenreID:  s.genreID,
 		Seed:     effectSeed,

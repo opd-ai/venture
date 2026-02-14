@@ -54,6 +54,9 @@ type CombatSystem struct {
 	// Callback for when a shield absorbs damage
 	onShieldAbsorbCallback func(target *Entity, absorbed, remaining float64)
 
+	// Callback for when an attack is evaded
+	onEvasionCallback func(attacker, target *Entity, evasionChance float64)
+
 	// Logger for combat events
 	logger *logrus.Entry
 }
@@ -574,6 +577,10 @@ func (s *CombatSystem) checkEvasion(attacker, target *Entity, targetStats *Stats
 				"evasion":    targetStats.Evasion,
 			}).Debug("attack evaded")
 		}
+		// Trigger evasion callback for visual effects
+		if s.onEvasionCallback != nil {
+			s.onEvasionCallback(attacker, target, targetStats.Evasion)
+		}
 		return true
 	}
 	return false
@@ -974,6 +981,15 @@ func (s *CombatSystem) SetShieldAbsorbCallback(callback func(target *Entity, abs
 		s.logger.Debug("shield absorb callback registered")
 	}
 	s.onShieldAbsorbCallback = callback
+}
+
+// SetEvasionCallback sets the callback function for when an attack is evaded.
+// The callback receives the attacker, target, and the evasion chance that succeeded.
+func (s *CombatSystem) SetEvasionCallback(callback func(attacker, target *Entity, evasionChance float64)) {
+	if s.logger != nil {
+		s.logger.Debug("evasion callback registered")
+	}
+	s.onEvasionCallback = callback
 }
 
 // isValidEnemyTarget checks if entity is a valid enemy target.

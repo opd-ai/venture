@@ -110,6 +110,7 @@ type SystemInitResult struct {
 	TerrainCompanionBonusSystem      *TerrainCompanionBonusSystem
 	FactionCompanionBehaviorSystem   *FactionCompanionBehaviorSystem
 	WeatherCompanionBonusSystem      *WeatherCompanionBonusSystem
+	EvasionParticleSystem            *EvasionParticleSystem
 
 	// System wrappers
 	AnimationSystemWrapper            System
@@ -678,6 +679,15 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 	fearFleeParticleSystem.SetGenre(config.GenreID)
 	result.FearFleeParticleSystem = fearFleeParticleSystem
 	game.World.AddSystem(fearFleeParticleSystem)
+
+	// 36w. EvasionParticleSystem - visual feedback for dodged attacks
+	// Connects CombatSystem evasion events with ParticleSystem for genre-aware dodge effects
+	evasionParticleSystem := NewEvasionParticleSystem(game.World, config.Seed+7200)
+	evasionParticleSystem.SetParticleSystem(result.ParticleSystem)
+	evasionParticleSystem.SetGenre(config.GenreID)
+	result.CombatSystem.SetEvasionCallback(evasionParticleSystem.OnEvasion)
+	result.EvasionParticleSystem = evasionParticleSystem
+	game.World.AddSystem(evasionParticleSystem)
 
 	// 37. LifetimeSystem - temporary entities (Phase 5.3)
 	lifetimeSystem := NewLifetimeSystemWithLogger(game.World, logger)

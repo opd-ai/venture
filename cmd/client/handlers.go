@@ -214,6 +214,7 @@ type systemsContainer struct {
 	damageResistanceParticleSystem   *engine.DamageResistanceParticleSystem   // Connects damage resistance to particle effects
 	shieldAbsorbParticleSystem       *engine.ShieldAbsorbParticleSystem       // Connects shield absorption to particle effects
 	lowHealthVFXSystem               *engine.LowHealthVFXSystem               // Connects low player health to warning particle effects
+	manaRegenParticleSystem          *engine.ManaRegenParticleSystem          // Connects mana regeneration to visual particle effects
 	companionAuraParticleSystem      *engine.CompanionAuraParticleSystem      // Connects companion bonding perks to aura particles
 	elementalComboParticleSystem     *engine.ElementalComboParticleSystem     // Connects elemental status combos to visual effects
 	elementalComboDamageSystem       *engine.ElementalComboDamageSystem       // Connects elemental status combos to bonus damage
@@ -980,6 +981,11 @@ func initializeEnvironmentalSystems(game *engine.EbitenGame, sys *systemsContain
 	sys.lowHealthVFXSystem.SetParticleSystem(sys.particleSystem)
 	sys.lowHealthVFXSystem.SetGenre(*genreID)
 
+	// ManaRegenParticleSystem - visual feedback for mana regeneration
+	sys.manaRegenParticleSystem = engine.NewManaRegenParticleSystem(game.World, *seed+6450)
+	sys.manaRegenParticleSystem.SetParticleSystem(sys.particleSystem)
+	sys.manaRegenParticleSystem.SetGenre(*genreID)
+
 	// CompanionAuraParticleSystem - visual feedback for companion bonding perks
 	sys.companionAuraParticleSystem = engine.NewCompanionAuraParticleSystem(game.World, *seed+6500)
 	sys.companionAuraParticleSystem.SetParticleSystem(sys.particleSystem)
@@ -1681,7 +1687,7 @@ func registerNonCriticalSystems(game *engine.EbitenGame, sys *systemsContainer) 
 	// Companions won't attack allied faction members and prioritize hostile faction enemies
 	sys.factionCompanionBehaviorSystem = engine.NewFactionCompanionBehaviorSystem(game.World, *seed+2198)
 	sys.factionCompanionBehaviorSystem.SetFactionSystem(sys.factionSystem)
-	sys.factionCompanionBehaviorSystem.SetGenre(*genre)
+	sys.factionCompanionBehaviorSystem.SetGenre(*genreID)
 	game.World.AddSystem(sys.factionCompanionBehaviorSystem)
 
 	// StatusEffectAISystem: bridges status effects with AI behavior
@@ -1744,6 +1750,7 @@ func registerNonCriticalSystems(game *engine.EbitenGame, sys *systemsContainer) 
 	game.World.AddSystem(sys.damageResistanceParticleSystem)   // Damage resistance visual feedback via particles
 	game.World.AddSystem(sys.shieldAbsorbParticleSystem)       // Shield absorption visual feedback via particles
 	game.World.AddSystem(sys.lowHealthVFXSystem)               // Low player health warning visual feedback via particles
+	game.World.AddSystem(sys.manaRegenParticleSystem)          // Mana regeneration visual feedback via particles
 	game.World.AddSystem(sys.companionAuraParticleSystem)      // Companion bonding perk aura visual feedback via particles
 	game.World.AddSystem(sys.elementalComboParticleSystem)     // Elemental status combo visual feedback via particles
 	game.World.AddSystem(sys.elementalComboDamageSystem)       // Elemental status combo bonus damage

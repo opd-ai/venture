@@ -92,6 +92,7 @@ type SystemInitResult struct {
 	SpecializationHealthRegenSystem  *SpecializationHealthRegenSystem
 	SpecializationSpellDamageSystem  *SpecializationSpellDamageSystem
 	SpecializationAttackSpeedSystem  *SpecializationAttackSpeedSystem
+	SpecializationDefenseSystem      *SpecializationDefenseSystem
 	ElementalComboParticleSystem     *ElementalComboParticleSystem
 	WeatherRangedAccuracySystem      *WeatherRangedAccuracySystem
 	StatusEffectEvasionSystem        *StatusEffectEvasionSystem
@@ -304,6 +305,13 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 	specializationAttackSpeedSystem.SetGenre(config.GenreID)
 	result.SpecializationAttackSpeedSystem = specializationAttackSpeedSystem
 	game.World.AddSystem(specializationAttackSpeedSystem)
+
+	// 25e. SpecializationDefenseSystem - passive defense bonuses from class specializations
+	// Connects ClassProgressionComponent with StatsComponent.Defense for genre-aware tank bonuses
+	specializationDefenseSystem := NewSpecializationDefenseSystem(game.World, config.Seed+6680)
+	specializationDefenseSystem.SetGenre(config.GenreID)
+	result.SpecializationDefenseSystem = specializationDefenseSystem
+	game.World.AddSystem(specializationDefenseSystem)
 
 	// 26. InventorySystem - item management
 	game.World.AddSystem(inventorySystem)

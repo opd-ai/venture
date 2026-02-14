@@ -137,6 +137,7 @@ type SystemInitResult struct {
 	TimeOfDayFishingBonusSystem       *TimeOfDayFishingBonusSystem
 	FishingCatchParticleSystem        *FishingCatchParticleSystem
 	TimeOfDayCompanionBonusSystem     *TimeOfDayCompanionBonusSystem
+	TimeOfDayHealthRegenSystem        *TimeOfDayHealthRegenSystem
 
 	// System wrappers
 	AnimationSystemWrapper            System
@@ -936,6 +937,14 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 	timeOfDayCompanionBonusSystem.SetGenre(config.GenreID)
 	result.TimeOfDayCompanionBonusSystem = timeOfDayCompanionBonusSystem
 	game.World.AddSystem(timeOfDayCompanionBonusSystem)
+
+	// 43h. TimeOfDayHealthRegenSystem - day/night health regeneration modulation
+	// Connects TimeOfDayLightingSystem with HealthComponent for genre-aware health regen
+	timeOfDayHealthRegenSystem := NewTimeOfDayHealthRegenSystem(game.World, config.Seed+7675)
+	timeOfDayHealthRegenSystem.SetLightingSystem(timeOfDayLightingSystem)
+	timeOfDayHealthRegenSystem.SetGenre(config.GenreID)
+	result.TimeOfDayHealthRegenSystem = timeOfDayHealthRegenSystem
+	game.World.AddSystem(timeOfDayHealthRegenSystem)
 
 	// Note: SpatialPartitionSystem (system #44) is initialized separately
 	// after terrain generation via InitializeSpatialPartitionSystem()

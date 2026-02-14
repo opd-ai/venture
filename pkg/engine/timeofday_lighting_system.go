@@ -300,3 +300,13 @@ func (s *TimeOfDayLightingSystem) GetTransitionProgress() float64 {
 func (s *TimeOfDayLightingSystem) GetDayDuration() float64 {
 	return s.dayDuration
 }
+
+// ForceTimeOfDay forces the current time of day to a specific value (for testing).
+// This bypasses the clock-based calculation and sets the time directly.
+func (s *TimeOfDayLightingSystem) ForceTimeOfDay(timeOfDay palette.TimeOfDay) {
+	s.currentTimeOfDay = timeOfDay
+	s.transitionProgress = 0.0
+	if s.logger != nil {
+		s.logger.WithField("time_of_day", timeOfDay.String()).Debug("forced time of day")
+	}
+}

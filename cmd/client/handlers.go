@@ -249,6 +249,7 @@ type systemsContainer struct {
 	timeOfDayXPBonusSystem            *engine.TimeOfDayXPBonusSystem        // Connects time-of-day lighting with XP bonuses
 	timeOfDayManaCostSystem           *engine.TimeOfDayManaCostSystem       // Connects time-of-day lighting with spell mana costs
 	timeOfDayCriticalChanceSystem     *engine.TimeOfDayCriticalChanceSystem // Connects time-of-day lighting with crit chance bonuses
+	timeOfDayCompanionBonusSystem     *engine.TimeOfDayCompanionBonusSystem // Connects time-of-day lighting with companion stat bonuses
 	spriteGenerator                   *sprites.Generator
 	spriteCache                       *cache.SpriteCache // Phase 1.2: Sprite caching for animation performance
 	itemGen                           *item.ItemGenerator
@@ -2348,6 +2349,9 @@ func initializeTerrainCollision(game *engine.EbitenGame, sys *systemsContainer, 
 		}
 		if timeOfDayCritChanceSys, ok := system.(*engine.TimeOfDayCriticalChanceSystem); ok {
 			sys.timeOfDayCriticalChanceSystem = timeOfDayCritChanceSys
+		}
+		if timeOfDayCompanionBonusSys, ok := system.(*engine.TimeOfDayCompanionBonusSystem); ok {
+			sys.timeOfDayCompanionBonusSystem = timeOfDayCompanionBonusSys
 		}
 	}
 

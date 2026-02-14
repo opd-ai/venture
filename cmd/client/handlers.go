@@ -201,6 +201,7 @@ type systemsContainer struct {
 	statusEffectCritChanceSystem      *engine.StatusEffectCriticalChanceSystem  // Connects status effects to crit chance modifiers
 	terrainMovementSpeedSystem        *engine.TerrainMovementSpeedSystem        // Connects terrain tiles to movement speed modifiers
 	terrainCombatBonusSystem          *engine.TerrainCombatBonusSystem          // Connects terrain tiles to combat bonuses (high ground, cover)
+	terrainCombatBonusParticleSystem  *engine.TerrainCombatBonusParticleSystem  // Connects terrain combat bonuses to visual particle feedback
 	terrainStealthSystem              *engine.TerrainStealthSystem              // Connects terrain tiles to AI detection for stealth gameplay
 	stealthIndicatorParticleSystem    *engine.StealthIndicatorParticleSystem    // Connects terrain stealth to visual particle feedback
 	terrainAmbushCritSystem           *engine.TerrainAmbushCritSystem           // Connects terrain stealth to critical hit bonuses for ambush
@@ -1250,7 +1251,7 @@ func initializeV4Systems(game *engine.EbitenGame, sys *systemsContainer, clientL
 	// FishingWeatherBonusSystem - connects weather with fishing for immersive gameplay
 	// Rain increases rare fish bonus, storms attract legendary fish, etc.
 	sys.fishingWeatherBonusSystem = engine.NewFishingWeatherBonusSystem(game.World, *seed+seedOffsetFishing+50)
-	sys.fishingWeatherBonusSystem.SetGenre(*genre)
+	sys.fishingWeatherBonusSystem.SetGenre(*genreID)
 	sys.fishingWeatherBonusSystem.SetFishingSystem(sys.fishingSystem)
 	game.World.AddSystem(sys.fishingWeatherBonusSystem)
 	logging.ComponentLogger(clientLogger.Logger, "fishing_weather").Debug("Created fishing weather bonus system")
@@ -1258,7 +1259,7 @@ func initializeV4Systems(game *engine.EbitenGame, sys *systemsContainer, clientL
 	// TimeOfDayFishingBonusSystem - connects time of day with fishing for immersive gameplay
 	// Dawn/dusk boost rare fish catches, night enhances legendary fish chance
 	sys.timeOfDayFishingBonusSystem = engine.NewTimeOfDayFishingBonusSystem(game.World, *seed+seedOffsetFishing+100)
-	sys.timeOfDayFishingBonusSystem.SetGenre(*genre)
+	sys.timeOfDayFishingBonusSystem.SetGenre(*genreID)
 	sys.timeOfDayFishingBonusSystem.SetLightingSystem(sys.timeOfDayLightingSystem)
 	sys.timeOfDayFishingBonusSystem.SetFishingSystem(sys.fishingSystem)
 	game.World.AddSystem(sys.timeOfDayFishingBonusSystem)
@@ -1269,7 +1270,7 @@ func initializeV4Systems(game *engine.EbitenGame, sys *systemsContainer, clientL
 	sys.fishingCatchParticleSystem = engine.NewFishingCatchParticleSystem(game.World, *seed+seedOffsetFishing+150)
 	sys.fishingCatchParticleSystem.SetParticleSystem(sys.particleSystem)
 	sys.fishingCatchParticleSystem.SetFishingSystem(sys.fishingSystem)
-	sys.fishingCatchParticleSystem.SetGenre(*genre)
+	sys.fishingCatchParticleSystem.SetGenre(*genreID)
 	game.World.AddSystem(sys.fishingCatchParticleSystem)
 	logging.ComponentLogger(clientLogger.Logger, "fishing_particle").Debug("Created fishing catch particle system")
 
@@ -2298,6 +2299,13 @@ func initializeTerrainCollision(game *engine.EbitenGame, sys *systemsContainer, 
 		if terrainCombatSys, ok := system.(*engine.TerrainCombatBonusSystem); ok {
 			terrainCombatSys.SetTerrain(generatedTerrain)
 			sys.terrainCombatBonusSystem = terrainCombatSys
+		}
+		if terrainCombatParticleSys, ok := system.(*engine.TerrainCombatBonusParticleSystem); ok {
+			// Connect to terrain combat bonus system for bonus lookups
+			if sys.terrainCombatBonusSystem != nil {
+				terrainCombatParticleSys.SetTerrainCombatBonusSystem(sys.terrainCombatBonusSystem)
+			}
+			sys.terrainCombatBonusParticleSystem = terrainCombatParticleSys
 		}
 		if terrainStealthSys, ok := system.(*engine.TerrainStealthSystem); ok {
 			terrainStealthSys.SetTerrain(generatedTerrain)

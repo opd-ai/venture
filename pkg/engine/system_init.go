@@ -139,6 +139,7 @@ type SystemInitResult struct {
 	TimeOfDayCompanionBonusSystem     *TimeOfDayCompanionBonusSystem
 	TimeOfDayHealthRegenSystem        *TimeOfDayHealthRegenSystem
 	TimeOfDayManaRegenSystem          *TimeOfDayManaRegenSystem
+	TerrainCombatBonusParticleSystem  *TerrainCombatBonusParticleSystem
 
 	// System wrappers
 	AnimationSystemWrapper            System
@@ -491,6 +492,15 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 	terrainCombatBonusSystem.SetTileSize(config.TileSize)
 	result.TerrainCombatBonusSystem = terrainCombatBonusSystem
 	game.World.AddSystem(terrainCombatBonusSystem)
+
+	// 36b4b. TerrainCombatBonusParticleSystem - visual feedback for terrain combat bonuses
+	// Connects TerrainCombatBonusSystem with ParticleSystem for genre-aware high ground/cover particles
+	terrainCombatBonusParticleSystem := NewTerrainCombatBonusParticleSystem(game.World, config.Seed+2165)
+	terrainCombatBonusParticleSystem.SetTerrainCombatBonusSystem(terrainCombatBonusSystem)
+	terrainCombatBonusParticleSystem.SetParticleSystem(result.ParticleSystem)
+	terrainCombatBonusParticleSystem.SetGenre(config.GenreID)
+	result.TerrainCombatBonusParticleSystem = terrainCombatBonusParticleSystem
+	game.World.AddSystem(terrainCombatBonusParticleSystem)
 
 	// 36b5. TerrainStealthSystem - modifies AI detection based on target terrain
 	// Connects terrain generation with AISystem for tactical stealth gameplay

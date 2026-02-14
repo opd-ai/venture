@@ -126,6 +126,7 @@ type SystemInitResult struct {
 	BlockParticleSystem               *BlockParticleSystem
 	TimeOfDayLightingSystem           *TimeOfDayLightingSystem
 	TimeOfDayStealthSystem            *TimeOfDayStealthSystem
+	TimeOfDayXPBonusSystem            *TimeOfDayXPBonusSystem
 	TerrainAmbushCritSystem           *TerrainAmbushCritSystem
 	FactionDamageBonusSystem          *FactionDamageBonusSystem
 	WeatherCritChanceSystem           *WeatherCritChanceSystem
@@ -897,6 +898,15 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 	timeOfDayStealthSystem.SetGenre(config.GenreID)
 	result.TimeOfDayStealthSystem = timeOfDayStealthSystem
 	game.World.AddSystem(timeOfDayStealthSystem)
+
+	// 43d. TimeOfDayXPBonusSystem - day/night XP bonus modulation
+	// Connects TimeOfDayLightingSystem with ProgressionSystem for time-based XP bonuses
+	timeOfDayXPBonusSystem := NewTimeOfDayXPBonusSystem(game.World, config.Seed+7575)
+	timeOfDayXPBonusSystem.SetLightingSystem(timeOfDayLightingSystem)
+	timeOfDayXPBonusSystem.SetProgressionSystem(progressionSystem)
+	timeOfDayXPBonusSystem.SetGenre(config.GenreID)
+	result.TimeOfDayXPBonusSystem = timeOfDayXPBonusSystem
+	game.World.AddSystem(timeOfDayXPBonusSystem)
 
 	// Note: SpatialPartitionSystem (system #44) is initialized separately
 	// after terrain generation via InitializeSpatialPartitionSystem()

@@ -16,13 +16,13 @@ import (
 // near the player's hands, with genre-aware colors and intensity proportional
 // to the bonus percentage.
 type ReputationCriticalChanceParticleSystem struct {
-	world    *World
-	critSys  *ReputationCriticalChanceBonusSystem
-	partSys  *ParticleSystem
-	genreID  string
-	seed     int64
-	rng      *rand.Rand
-	logger   *logrus.Entry
+	world   *World
+	critSys *ReputationCriticalChanceBonusSystem
+	partSys *ParticleSystem
+	genreID string
+	seed    int64
+	rng     *rand.Rand
+	logger  *logrus.Entry
 
 	particleCount int
 	spreadFactor  float64

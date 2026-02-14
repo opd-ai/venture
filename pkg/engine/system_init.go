@@ -171,10 +171,10 @@ type SystemInitResult struct {
 	ReputationHealingBonusParticleSystem     *ReputationHealingBonusParticleSystem
 	ReputationSpellDamageBonusSystem         *ReputationSpellDamageBonusSystem
 	ReputationSpellDamageBonusParticleSystem *ReputationSpellDamageBonusParticleSystem
-	ReputationMovementSpeedSystem               *ReputationMovementSpeedSystem
-	ReputationMovementSpeedParticleSystem       *ReputationMovementSpeedParticleSystem
-	ReputationCriticalChanceBonusSystem         *ReputationCriticalChanceBonusSystem
-	ReputationCriticalChanceParticleSystem      *ReputationCriticalChanceParticleSystem
+	ReputationMovementSpeedSystem            *ReputationMovementSpeedSystem
+	ReputationMovementSpeedParticleSystem    *ReputationMovementSpeedParticleSystem
+	ReputationCriticalChanceBonusSystem      *ReputationCriticalChanceBonusSystem
+	ReputationCriticalChanceParticleSystem   *ReputationCriticalChanceParticleSystem
 
 	// System wrappers
 	AnimationSystemWrapper            System

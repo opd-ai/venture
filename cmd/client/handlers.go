@@ -190,9 +190,9 @@ type systemsContainer struct {
 	reputationSpellDamageBonusSystem         *engine.ReputationSpellDamageBonusSystem         // Bridges faction reputation with spell damage
 	reputationSpellDamageBonusParticleSystem *engine.ReputationSpellDamageBonusParticleSystem // Visual feedback for reputation spell damage
 	reputationMovementSpeedSystem            *engine.ReputationMovementSpeedSystem            // Bridges faction reputation with movement speed
-	reputationMovementSpeedParticleSystem       *engine.ReputationMovementSpeedParticleSystem    // Visual feedback for reputation speed bonus
-	reputationCriticalChanceBonusSystem         *engine.ReputationCriticalChanceBonusSystem      // Bridges faction reputation with critical hit chance
-	reputationCriticalChanceParticleSystem      *engine.ReputationCriticalChanceParticleSystem   // Visual feedback for reputation crit bonus
+	reputationMovementSpeedParticleSystem    *engine.ReputationMovementSpeedParticleSystem    // Visual feedback for reputation speed bonus
+	reputationCriticalChanceBonusSystem      *engine.ReputationCriticalChanceBonusSystem      // Bridges faction reputation with critical hit chance
+	reputationCriticalChanceParticleSystem   *engine.ReputationCriticalChanceParticleSystem   // Visual feedback for reputation crit bonus
 	statusEffectAISystem                     *engine.StatusEffectAISystem                     // Bridges status effects with AI (stun/frozen disable AI)
 	reputationSystem                         *engine.ReputationSystem
 	alignmentSystem                          *engine.AlignmentSystem

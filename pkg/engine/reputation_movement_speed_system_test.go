@@ -323,7 +323,7 @@ func TestReputationMovementSpeedSystem_MultipleBestFaction(t *testing.T) {
 	factionSys.AddFaction(guards)
 	factionSys.AddFaction(merchants)
 	factionSys.SetPlayerReputation("guards", 30)    // Neutral: 3%
-	factionSys.SetPlayerReputation("merchants", 80)  // Honored: 10%
+	factionSys.SetPlayerReputation("merchants", 80) // Honored: 10%
 	sys.SetFactionSystem(factionSys)
 	sys.SetGenre("fantasy")
 

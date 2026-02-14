@@ -9,6 +9,9 @@ STEP 1 — DISCOVER (spend ≤5 minutes here):
   - Adding depth to a system with minimal/placeholder logic
   - New visual feedback for existing gameplay mechanics
   - Genre-aware variation in procgen outputs
+  - Improving visual detail (lighting falloff, shadow quality, sprite fidelity)
+  - Enhancing visual realism (post-processing effects, color grading, ambient occlusion)
+  - Animation improvements (smoother transitions, new states, distance-based LOD tuning)
 - If multiple candidates exist, pick the one requiring fewest files changed.
 
 STEP 2 — IMPLEMENT (this is the bulk of the work):
@@ -20,6 +23,14 @@ Architecture:
 - Procgen: `rand.New(rand.NewSource(seed))` only. Never global rand. Never time.Now().
 - Logging: `logrus.WithFields(logrus.Fields{"system_name": "...", ...})`.
 - No external assets. No new dependencies beyond go.mod.
+
+Visual & Animation:
+- Lighting must use radial gradients with proper falloff (linear, quadratic, inverse-square). No flat circles.
+- Shadows use soft penumbra with distance-based falloff. Support genre-specific opacity presets.
+- Post-processing effects (color grading, vignette, chromatic aberration) must be genre-aware.
+- Animation playback: 12 FPS (0.083s per frame), 8 frames per state. Use distance-based LOD (full rate at ≤200px, half at ≤400px, minimal beyond).
+- Sprite generation must be seeded and cached (LRU, max 100 entries). Pool image buffers by size bucket.
+- All visual enhancements must maintain 60+ FPS. Profile before and after with `go test -bench`.
 
 Integration (mandatory — this is where past attempts fail):
 - Register in `pkg/engine/system_init.go` → `InitializeGameSystems()`.

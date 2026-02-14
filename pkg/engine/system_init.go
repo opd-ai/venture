@@ -124,6 +124,7 @@ type SystemInitResult struct {
 	DestructionParticleSystem         *DestructionParticleSystem
 	BlockParticleSystem               *BlockParticleSystem
 	TimeOfDayLightingSystem           *TimeOfDayLightingSystem
+	TerrainAmbushCritSystem           *TerrainAmbushCritSystem
 
 	// System wrappers
 	AnimationSystemWrapper            System
@@ -469,6 +470,14 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 	terrainStealthSystem.SetTileSize(config.TileSize)
 	result.TerrainStealthSystem = terrainStealthSystem
 	game.World.AddSystem(terrainStealthSystem)
+
+	// 36b5b. TerrainAmbushCritSystem - grants critical hit bonuses for terrain concealment
+	// Connects TerrainStealthSystem with StatsComponent for tactical ambush attacks
+	terrainAmbushCritSystem := NewTerrainAmbushCritSystem(game.World, config.Seed+2175)
+	terrainAmbushCritSystem.SetTerrainStealthSystem(terrainStealthSystem)
+	terrainAmbushCritSystem.SetGenre(config.GenreID)
+	result.TerrainAmbushCritSystem = terrainAmbushCritSystem
+	game.World.AddSystem(terrainAmbushCritSystem)
 
 	// 36b6. TerrainStatusEffectSystem - applies elemental status effects from terrain type
 	// Connects terrain tiles (water, lava) with StatusEffectSystem for elemental combos

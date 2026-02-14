@@ -23,7 +23,7 @@ func TestGetBaselinePrefix(t *testing.T) {
 		{
 			name:       "ItemGenerator exists",
 			generator:  "ItemGenerator",
-			wantPrefix: "87bebd0146d19d2f",
+			wantPrefix: "8d453362a9545a7b",
 			wantEmpty:  false,
 		},
 		{

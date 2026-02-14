@@ -156,8 +156,8 @@ func TestParticleSystem_Update_TimeLimitedEmitter(t *testing.T) {
 	emitter.EmissionTime = 0.5                               // Only emit for 0.5 seconds
 	entity.AddComponent(emitter)
 
-	// Update for 0.3 seconds (within emission time)
-	for i := 0; i < 3; i++ {
+	// Update for 0.5 seconds (reach emission time limit)
+	for i := 0; i < 5; i++ {
 		ps.Update(world.GetEntities(), 0.1)
 	}
 

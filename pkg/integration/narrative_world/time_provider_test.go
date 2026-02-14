@@ -81,22 +81,22 @@ func TestDeterministicPruning(t *testing.T) {
 	defer ResetTimeProvider()
 
 	manager := NewStoryEventManager(12345)
-	manager.SetMaxMemoryEvents(5)
+	manager.SetMaxMemoryEvents(10) // Minimum is 10
 	companionID := uint64(100)
 
-	// Record 10 events with different timestamps
-	for i := 0; i < 10; i++ {
+	// Record 20 events with different timestamps (exceeds max of 10)
+	for i := 0; i < 20; i++ {
 		eventType := EventTypeCombat
-		if i == 0 || i == 9 {
+		if i == 0 || i == 19 {
 			eventType = EventTypeSacrifice // High importance (oldest and newest)
 		}
 		manager.RecordMemory(companionID, eventType, "Test event")
 	}
 
-	// Should be pruned to 5 events
+	// Should be pruned to 10 events
 	count := manager.GetMemoryCount(companionID)
-	if count != 5 {
-		t.Errorf("expected 5 events after pruning, got %d", count)
+	if count != 10 {
+		t.Errorf("expected 10 events after pruning, got %d", count)
 	}
 
 	// Verify high importance events are retained

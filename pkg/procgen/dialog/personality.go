@@ -210,7 +210,7 @@ func (p *Personality) GetGreeting(genreID string) string {
 		"scifi":           {"Hello there, citizen.", "Greetings, traveler.", "Welcome to the station."},
 		"horror":          {"You... you're still alive?", "Please, help me...", "Don't go in there!"},
 		"cyberpunk":       {"Hey choom, need something?", "What's the word?", "You looking for work?"},
-		"postapocalyptic": {"Another survivor!", "Glad to see a friendly face.", "You made it through!"},
+		"postapoc": {"Another survivor!", "Glad to see a friendly face.", "You made it through!"},
 	}
 
 	greetings[PersonalityMerchant] = map[string][]string{
@@ -218,7 +218,7 @@ func (p *Personality) GetGreeting(genreID string) string {
 		"scifi":           {"Browse my inventory.", "All items guaranteed.", "What do you need?"},
 		"horror":          {"Take what you need, quickly.", "I have supplies... for a price.", "Coin still spends here."},
 		"cyberpunk":       {"Got eddies? Got goods.", "What're you buying?", "Best prices in the sector."},
-		"postapocalyptic": {"What have you got to trade?", "Let's see your scrap.", "Barter or bullets?"},
+		"postapoc": {"What have you got to trade?", "Let's see your scrap.", "Barter or bullets?"},
 	}
 
 	greetings[PersonalityHostile] = map[string][]string{
@@ -226,7 +226,7 @@ func (p *Personality) GetGreeting(genreID string) string {
 		"scifi":           {"State your business.", "You're not authorized.", "Access denied."},
 		"horror":          {"Get out while you can.", "Leave me alone!", "You shouldn't be here."},
 		"cyberpunk":       {"What're you looking at?", "Beat it, gonk.", "This is my turf."},
-		"postapocalyptic": {"Keep moving.", "Don't have time for this.", "You lost?"},
+		"postapoc": {"Keep moving.", "Don't have time for this.", "You lost?"},
 	}
 
 	greetings[PersonalityMysterious] = map[string][]string{
@@ -234,7 +234,7 @@ func (p *Personality) GetGreeting(genreID string) string {
 		"scifi":           {"Interesting timing.", "The data suggested you would come.", "Calculating probabilities..."},
 		"horror":          {"They told me you would come.", "Do you hear them too?", "The signs were clear."},
 		"cyberpunk":       {"I know what you're looking for.", "The matrix whispers your name.", "Encrypted messages, decrypted fate."},
-		"postapocalyptic": {"The old ways predicted this.", "Signs in the wastes led you here.", "I've been waiting."},
+		"postapoc": {"The old ways predicted this.", "Signs in the wastes led you here.", "I've been waiting."},
 	}
 
 	greetings[PersonalityScholarly] = map[string][]string{
@@ -242,7 +242,7 @@ func (p *Personality) GetGreeting(genreID string) string {
 		"scifi":           {"Fascinating data patterns today.", "Research continues apace.", "Science waits for no one."},
 		"horror":          {"The texts spoke of this.", "Ancient knowledge preserved.", "I've documented everything."},
 		"cyberpunk":       {"The algorithms predicted this interaction.", "Processing your inquiry.", "Data streams converge."},
-		"postapocalyptic": {"Pre-war knowledge is precious.", "I preserve what was lost.", "The old books still teach."},
+		"postapoc": {"Pre-war knowledge is precious.", "I preserve what was lost.", "The old books still teach."},
 	}
 
 	greetings[PersonalityWarrior] = map[string][]string{
@@ -250,7 +250,7 @@ func (p *Personality) GetGreeting(genreID string) string {
 		"scifi":           {"Weapons ready.", "Combat systems online.", "Reporting for duty."},
 		"horror":          {"Still fighting?", "We must survive.", "Stand and fight!"},
 		"cyberpunk":       {"Chrome and steel, choom.", "Lock and load.", "Combat protocol engaged."},
-		"postapocalyptic": {"Armed and ready.", "Survival first.", "Watch your back out there."},
+		"postapoc": {"Armed and ready.", "Survival first.", "Watch your back out there."},
 	}
 
 	greetings[PersonalityTimid] = map[string][]string{
@@ -258,7 +258,7 @@ func (p *Personality) GetGreeting(genreID string) string {
 		"scifi":           {"Identify yourself!", "Don't come closer!", "Who sent you?"},
 		"horror":          {"They're... they're everywhere!", "Hide! Quickly!", "We're not safe!"},
 		"cyberpunk":       {"Don't shoot!", "I'm just a civilian!", "I didn't see anything!"},
-		"postapocalyptic": {"Please, I have nothing!", "Don't take my supplies!", "I'm no threat!"},
+		"postapoc": {"Please, I have nothing!", "Don't take my supplies!", "I'm no threat!"},
 	}
 
 	greetings[PersonalityArrogant] = map[string][]string{
@@ -266,7 +266,7 @@ func (p *Personality) GetGreeting(genreID string) string {
 		"scifi":           {"Your clearance level is insufficient.", "Executive priority only.", "This better be important."},
 		"horror":          {"I'm above such concerns.", "My position protects me.", "You wouldn't understand."},
 		"cyberpunk":       {"Corpo life, choom. You wouldn't get it.", "My time is valuable.", "Street trash..."},
-		"postapocalyptic": {"I've survived this long for a reason.", "Know your place.", "I've seen worse than you."},
+		"postapoc": {"I've survived this long for a reason.", "Know your place.", "I've seen worse than you."},
 	}
 
 	// Get greeting for this personality and genre

@@ -574,6 +574,8 @@ func (w *World) rebuildEntityCache() {
 // GetEntities returns all entities in the world.
 // Note: Returns the cached list, do not modify.
 func (w *World) GetEntities() []*Entity {
+	// Ensure pending entity additions are processed before returning
+	w.processPendingEntityAdditions()
 	if w.entityListDirty {
 		w.rebuildEntityCache()
 	}

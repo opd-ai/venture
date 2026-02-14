@@ -37,6 +37,7 @@ func NewDeathParticleSystem(world *World, seed int64) *DeathParticleSystem {
 
 	return &DeathParticleSystem{
 		world:             world,
+		genreID:           "fantasy",
 		seed:              seed,
 		rng:               rand.New(rand.NewSource(seed)),
 		logger:            logEntry,

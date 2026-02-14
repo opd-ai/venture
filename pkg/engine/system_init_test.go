@@ -78,10 +78,10 @@ func TestInitializeGameSystems(t *testing.T) {
 		t.Error("SquadSystemWrapper not returned in result")
 	}
 
-	// Verify systems are registered with world (43 systems, not including SpatialPartitionSystem)
+	// Verify systems are registered with world (63 systems, not including SpatialPartitionSystem)
 	systems := game.World.GetSystems()
-	if len(systems) != 43 {
-		t.Errorf("Expected 43 systems registered, got %d", len(systems))
+	if len(systems) != 63 {
+		t.Errorf("Expected 63 systems registered, got %d", len(systems))
 	}
 
 	// Verify game references are set
@@ -210,8 +210,8 @@ func TestInitializeGameSystems_MultipleGenres(t *testing.T) {
 			}
 
 			systems := game.World.GetSystems()
-			if len(systems) != 43 {
-				t.Errorf("Genre %s: expected 43 systems (44th requires terrain), got %d", genre, len(systems))
+			if len(systems) != 63 {
+				t.Errorf("Genre %s: expected 63 systems (64th requires terrain), got %d", genre, len(systems))
 			}
 		})
 	}
@@ -321,10 +321,10 @@ func TestInitializeSpatialPartitionSystem(t *testing.T) {
 		t.Error("SpatialPartitionSystem should not be nil")
 	}
 
-	// Verify it was added to world (should now have 44 systems)
+	// Verify it was added to world (should now have 64 systems)
 	systems := game.World.GetSystems()
-	if len(systems) != 44 {
-		t.Errorf("Expected 44 systems after spatial partition init, got %d", len(systems))
+	if len(systems) != 64 {
+		t.Errorf("Expected 64 systems after spatial partition init, got %d", len(systems))
 	}
 }
 

@@ -117,7 +117,7 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 	result := &SystemInitResult{}
 
 	if config.EnableVerboseLogging {
-		logger.Info("initializing game systems (44 total)")
+		logger.Info("initializing game systems (64 total)")
 	}
 
 	// ========================================================================
@@ -490,16 +490,16 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 
 	if config.EnableVerboseLogging {
 		logger.WithFields(logrus.Fields{
-			"systemCount": 43,
+			"systemCount": 63,
 			"seed":        config.Seed,
 			"genre":       config.GenreID,
-		}).Info("game systems initialized successfully (44th system requires terrain)")
+		}).Info("game systems initialized successfully (64th system requires terrain)")
 	}
 
 	return result, nil
 }
 
-// InitializeSpatialPartitionSystem initializes the SpatialPartitionSystem (system #44)
+// InitializeSpatialPartitionSystem initializes the SpatialPartitionSystem (system #64)
 // after terrain generation. This must be called separately from InitializeGameSystems()
 // because it requires world dimensions from generated terrain.
 //

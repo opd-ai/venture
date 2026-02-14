@@ -37,6 +37,7 @@ func NewLevelUpParticleSystem(world *World, seed int64) *LevelUpParticleSystem {
 
 	return &LevelUpParticleSystem{
 		world:             world,
+		genreID:           "fantasy",
 		seed:              seed,
 		rng:               rand.New(rand.NewSource(seed)),
 		logger:            logEntry,

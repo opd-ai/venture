@@ -13,7 +13,7 @@ type Corpus struct {
 //   - "scifi": Futuristic technology and space themes
 //   - "horror": Dark, ominous, scary atmosphere
 //   - "cyberpunk": Urban future with hacking and neon
-//   - "postapocalyptic": Survival in wasteland
+//   - "postapoc": Survival in wasteland (also accepts "postapocalyptic")
 //
 // Returns nil if genreID is not recognized.
 func GetCorpus(genreID string) *Corpus {
@@ -26,7 +26,7 @@ func GetCorpus(genreID string) *Corpus {
 		return GetHorrorCorpus()
 	case "cyberpunk":
 		return GetCyberpunkCorpus()
-	case "postapocalyptic":
+	case "postapoc", "postapocalyptic":
 		return GetPostApocalypticCorpus()
 	default:
 		return nil
@@ -548,7 +548,7 @@ func GetCyberpunkCorpus() *Corpus {
 // GetPostApocalypticCorpus returns post-apocalyptic genre training data.
 func GetPostApocalypticCorpus() *Corpus {
 	return &Corpus{
-		GenreID: "postapocalyptic",
+		GenreID: "postapoc",
 		Sentences: []string{
 			// Survival greetings
 			"Still breathing out there?",
@@ -692,6 +692,6 @@ func GetAvailableGenres() []string {
 		"scifi",
 		"horror",
 		"cyberpunk",
-		"postapocalyptic",
+		"postapoc",
 	}
 }

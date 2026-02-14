@@ -96,6 +96,7 @@ type SystemInitResult struct {
 	ElementalComboDamageSystem      *ElementalComboDamageSystem
 	ElementalCompanionSynergySystem *ElementalCompanionSynergySystem
 	LifestealSystem                 *LifestealSystem
+	StatusEffectManaCostSystem      *StatusEffectManaCostSystem
 
 	// System wrappers
 	AnimationSystemWrapper            System
@@ -558,6 +559,13 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 	result.CombatSystem.SetDamageCallback(lifestealSystem.OnDamageDealt)
 	result.LifestealSystem = lifestealSystem
 	game.World.AddSystem(lifestealSystem)
+
+	// 36s. StatusEffectManaCostSystem - modifies spell mana costs based on status effects
+	// Connects StatusEffectSystem with SpellCastingSystem for tactical spell management
+	statusEffectManaCostSystem := NewStatusEffectManaCostSystem(game.World, config.Seed+7000)
+	statusEffectManaCostSystem.SetGenre(config.GenreID)
+	result.StatusEffectManaCostSystem = statusEffectManaCostSystem
+	game.World.AddSystem(statusEffectManaCostSystem)
 
 	// 37. LifetimeSystem - temporary entities (Phase 5.3)
 	lifetimeSystem := NewLifetimeSystemWithLogger(game.World, logger)

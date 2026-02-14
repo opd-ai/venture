@@ -215,6 +215,7 @@ type systemsContainer struct {
 	weatherRangedAccuracySystem     *engine.WeatherRangedAccuracySystem     // Connects weather to ranged attack accuracy modifiers
 	weatherXPBonusSystem            *engine.WeatherXPBonusSystem            // Connects weather to XP gain bonuses
 	lifestealSystem                 *engine.LifestealSystem                 // Connects combat damage to attacker healing
+	statusEffectManaCostSystem      *engine.StatusEffectManaCostSystem      // Connects status effects to spell mana cost modifiers
 	lifetimeSystem                  *engine.LifetimeSystem
 	puzzleSystem                    *engine.PuzzleSystem
 	firePropagationSystem           *engine.FirePropagationSystem
@@ -888,6 +889,10 @@ func initializeEnvironmentalSystems(game *engine.EbitenGame, sys *systemsContain
 	// StatusEffectEvasionSystem - applies evasion modifiers from status effects
 	sys.statusEffectEvasionSystem = engine.NewStatusEffectEvasionSystem(game.World, *seed+2120)
 	sys.statusEffectEvasionSystem.SetGenre(*genreID)
+
+	// StatusEffectManaCostSystem - applies mana cost modifiers from status effects
+	sys.statusEffectManaCostSystem = engine.NewStatusEffectManaCostSystem(game.World, *seed+7000)
+	sys.statusEffectManaCostSystem.SetGenre(*genreID)
 
 	sys.criticalHitParticleSystem = engine.NewCriticalHitParticleSystem(game.World, *seed+3000)
 	sys.criticalHitParticleSystem.SetParticleSystem(sys.particleSystem)
@@ -1633,6 +1638,10 @@ func registerNonCriticalSystems(game *engine.EbitenGame, sys *systemsContainer) 
 	// StatusEffectEvasionSystem: bridges status effects with combat evasion
 	// Modifies evasion chance based on status effects (frozen, haste, stunned, etc.)
 	game.World.AddSystem(sys.statusEffectEvasionSystem)
+
+	// StatusEffectManaCostSystem: bridges status effects with spell mana costs
+	// Modifies mana costs based on status effects (haste, cursed, focused, etc.)
+	game.World.AddSystem(sys.statusEffectManaCostSystem)
 
 	sys.reputationSystem = engine.NewReputationSystem(game.World, game.World.GetLogger().Logger)
 	game.World.AddSystem(&reputationSystemWrapper{system: sys.reputationSystem})

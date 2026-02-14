@@ -136,6 +136,7 @@ type SystemInitResult struct {
 	FishingWeatherBonusSystem         *FishingWeatherBonusSystem
 	TimeOfDayFishingBonusSystem       *TimeOfDayFishingBonusSystem
 	FishingCatchParticleSystem        *FishingCatchParticleSystem
+	TimeOfDayCompanionBonusSystem     *TimeOfDayCompanionBonusSystem
 
 	// System wrappers
 	AnimationSystemWrapper            System
@@ -927,6 +928,14 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 	timeOfDayCriticalChanceSystem.SetGenre(config.GenreID)
 	result.TimeOfDayCriticalChanceSystem = timeOfDayCriticalChanceSystem
 	game.World.AddSystem(timeOfDayCriticalChanceSystem)
+
+	// 43g. TimeOfDayCompanionBonusSystem - day/night companion stat modulation
+	// Connects TimeOfDayLightingSystem with CompanionStatsComponent for companion bonuses
+	timeOfDayCompanionBonusSystem := NewTimeOfDayCompanionBonusSystem(game.World, config.Seed+7650)
+	timeOfDayCompanionBonusSystem.SetLightingSystem(timeOfDayLightingSystem)
+	timeOfDayCompanionBonusSystem.SetGenre(config.GenreID)
+	result.TimeOfDayCompanionBonusSystem = timeOfDayCompanionBonusSystem
+	game.World.AddSystem(timeOfDayCompanionBonusSystem)
 
 	// Note: SpatialPartitionSystem (system #44) is initialized separately
 	// after terrain generation via InitializeSpatialPartitionSystem()

@@ -214,6 +214,7 @@ type systemsContainer struct {
 	damageResistanceParticleSystem   *engine.DamageResistanceParticleSystem   // Connects damage resistance to particle effects
 	shieldAbsorbParticleSystem       *engine.ShieldAbsorbParticleSystem       // Connects shield absorption to particle effects
 	shieldRegenSystem                *engine.ShieldRegenSystem                // Connects shield regeneration to particle effects
+	drowningParticleSystem           *engine.DrowningParticleSystem           // Connects drowning state to particle effects
 	lowHealthVFXSystem               *engine.LowHealthVFXSystem               // Connects low player health to warning particle effects
 	manaRegenParticleSystem          *engine.ManaRegenParticleSystem          // Connects mana regeneration to visual particle effects
 	companionAuraParticleSystem      *engine.CompanionAuraParticleSystem      // Connects companion bonding perks to aura particles
@@ -960,6 +961,12 @@ func initializeEnvironmentalSystems(game *engine.EbitenGame, sys *systemsContain
 	sys.shieldRegenSystem = engine.NewShieldRegenSystem(game.World, *seed+5775)
 	sys.shieldRegenSystem.SetParticleSystem(sys.particleSystem)
 	sys.shieldRegenSystem.SetGenre(*genreID)
+
+	// DrowningParticleSystem - visual feedback for drowning entities
+	// Connects SwimmingComponent.Drowning state with ParticleSystem for genre-aware suffocation effects
+	sys.drowningParticleSystem = engine.NewDrowningParticleSystem(game.World, *seed+5780)
+	sys.drowningParticleSystem.SetParticleSystem(sys.particleSystem)
+	sys.drowningParticleSystem.SetGenre(*genreID)
 
 	// WeatherGroundEffectSystem - visual feedback for weather ground impacts
 	sys.weatherGroundEffectSystem = engine.NewWeatherGroundEffectSystem(game.World, *seed+6000)

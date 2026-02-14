@@ -117,6 +117,8 @@ type SystemInitResult struct {
 	HealingParticleSystem            *HealingParticleSystem
 	SpecializationCritDamageSystem   *SpecializationCritDamageSystem
 	ShieldRegenSystem                *ShieldRegenSystem
+	WeatherMeleeDamageSystem         *WeatherMeleeDamageSystem
+	DrowningParticleSystem           *DrowningParticleSystem
 
 	// System wrappers
 	AnimationSystemWrapper            System
@@ -741,6 +743,21 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 	shieldRegenSystem.SetGenre(config.GenreID)
 	result.ShieldRegenSystem = shieldRegenSystem
 	game.World.AddSystem(shieldRegenSystem)
+
+	// 36ab. DrowningParticleSystem - visual feedback for drowning entities
+	// Connects SwimmingComponent.Drowning state with ParticleSystem for genre-aware suffocation effects
+	drowningParticleSystem := NewDrowningParticleSystem(game.World, config.Seed+7450)
+	drowningParticleSystem.SetParticleSystem(result.ParticleSystem)
+	drowningParticleSystem.SetGenre(config.GenreID)
+	result.DrowningParticleSystem = drowningParticleSystem
+	game.World.AddSystem(drowningParticleSystem)
+
+	// 36aa. WeatherMeleeDamageSystem - modifies physical/melee damage based on weather
+	// Connects WeatherSystem with CombatSystem for genre-aware melee damage modifiers
+	weatherMeleeDamageSystem := NewWeatherMeleeDamageSystem(game.World, config.Seed+7400)
+	weatherMeleeDamageSystem.SetGenre(config.GenreID)
+	result.WeatherMeleeDamageSystem = weatherMeleeDamageSystem
+	game.World.AddSystem(weatherMeleeDamageSystem)
 
 	// 37. LifetimeSystem - temporary entities (Phase 5.3)
 	lifetimeSystem := NewLifetimeSystemWithLogger(game.World, logger)

@@ -90,6 +90,7 @@ type SystemInitResult struct {
 	ElementalComboParticleSystem    *ElementalComboParticleSystem
 	WeatherRangedAccuracySystem     *WeatherRangedAccuracySystem
 	StatusEffectEvasionSystem       *StatusEffectEvasionSystem
+	WeatherXPBonusSystem            *WeatherXPBonusSystem
 
 	// System wrappers
 	AnimationSystemWrapper            System
@@ -506,6 +507,14 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 	weatherRangedAccuracySystem.SetGenre(config.GenreID)
 	result.WeatherRangedAccuracySystem = weatherRangedAccuracySystem
 	game.World.AddSystem(weatherRangedAccuracySystem)
+
+	// 36o. WeatherXPBonusSystem - modifies XP gains based on weather conditions
+	// Connects WeatherSystem with ProgressionSystem for genre-aware XP bonuses
+	weatherXPBonusSystem := NewWeatherXPBonusSystem(game.World, config.Seed+6800)
+	weatherXPBonusSystem.SetGenre(config.GenreID)
+	weatherXPBonusSystem.SetProgressionSystem(progressionSystem)
+	result.WeatherXPBonusSystem = weatherXPBonusSystem
+	game.World.AddSystem(weatherXPBonusSystem)
 
 	// 37. LifetimeSystem - temporary entities (Phase 5.3)
 	lifetimeSystem := NewLifetimeSystemWithLogger(game.World, logger)

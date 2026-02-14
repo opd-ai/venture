@@ -210,6 +210,7 @@ type systemsContainer struct {
 	companionAuraParticleSystem    *engine.CompanionAuraParticleSystem    // Connects companion bonding perks to aura particles
 	elementalComboParticleSystem   *engine.ElementalComboParticleSystem   // Connects elemental status combos to visual effects
 	weatherRangedAccuracySystem    *engine.WeatherRangedAccuracySystem    // Connects weather to ranged attack accuracy modifiers
+	weatherXPBonusSystem           *engine.WeatherXPBonusSystem           // Connects weather to XP gain bonuses
 	lifetimeSystem                 *engine.LifetimeSystem
 	puzzleSystem                   *engine.PuzzleSystem
 	firePropagationSystem          *engine.FirePropagationSystem
@@ -959,6 +960,12 @@ func initializeEnvironmentalSystems(game *engine.EbitenGame, sys *systemsContain
 	sys.weatherRangedAccuracySystem = engine.NewWeatherRangedAccuracySystem(game.World, *seed+6750)
 	sys.weatherRangedAccuracySystem.SetGenre(*genreID)
 
+	// WeatherXPBonusSystem: bridges weather conditions with XP gains
+	// Grants bonus XP when players earn experience during specific weather conditions
+	sys.weatherXPBonusSystem = engine.NewWeatherXPBonusSystem(game.World, *seed+6800)
+	sys.weatherXPBonusSystem.SetGenre(*genreID)
+	sys.weatherXPBonusSystem.SetProgressionSystem(sys.progressionSystem)
+
 	sys.lifetimeSystem = engine.NewLifetimeSystemWithLogger(game.World, clientLogger.Logger)
 	sys.puzzleSystem = engine.NewPuzzleSystem(game.World)
 
@@ -1630,6 +1637,7 @@ func registerNonCriticalSystems(game *engine.EbitenGame, sys *systemsContainer) 
 	game.World.AddSystem(sys.weatherManaRegenSystem)         // Weather mana regeneration modifiers
 	game.World.AddSystem(sys.weatherCooldownSystem)          // Weather spell cooldown rate modifiers
 	game.World.AddSystem(sys.weatherRangedAccuracySystem)    // Weather ranged attack accuracy modifiers
+	game.World.AddSystem(sys.weatherXPBonusSystem)           // Weather XP gain bonuses
 	game.World.AddSystem(sys.statusEffectLightingSystem)     // Status effect visual feedback via lighting
 	game.World.AddSystem(sys.statusEffectMovementSystem)     // Status effect movement speed modifiers
 	game.World.AddSystem(sys.criticalHitParticleSystem)      // Critical hit visual feedback via particles

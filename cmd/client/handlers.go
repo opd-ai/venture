@@ -193,6 +193,7 @@ type systemsContainer struct {
 	weatherGroundEffectSystem      *engine.WeatherGroundEffectSystem      // Connects weather to ground impact particle effects
 	weatherAudioSystem             *engine.WeatherAudioSystem             // Connects weather to ambient audio sounds
 	weatherManaRegenSystem         *engine.WeatherManaRegenSystem         // Connects weather to mana regeneration rates
+	weatherCooldownSystem          *engine.WeatherCooldownSystem          // Connects weather to spell cooldown rates
 	statusEffectLightingSystem     *engine.StatusEffectLightingSystem     // Connects status effects to lighting for visual feedback
 	statusEffectMovementSystem     *engine.StatusEffectMovementSystem     // Connects status effects to movement speed modifiers
 	terrainMovementSpeedSystem     *engine.TerrainMovementSpeedSystem     // Connects terrain tiles to movement speed modifiers
@@ -203,6 +204,7 @@ type systemsContainer struct {
 	deathParticleSystem            *engine.DeathParticleSystem            // Connects entity deaths to particle effects
 	spellEffectParticleSystem      *engine.SpellEffectParticleSystem      // Connects spell effects to particle effects
 	damageResistanceParticleSystem *engine.DamageResistanceParticleSystem // Connects damage resistance to particle effects
+	shieldAbsorbParticleSystem     *engine.ShieldAbsorbParticleSystem     // Connects shield absorption to particle effects
 	lowHealthVFXSystem             *engine.LowHealthVFXSystem             // Connects low player health to warning particle effects
 	companionAuraParticleSystem    *engine.CompanionAuraParticleSystem    // Connects companion bonding perks to aura particles
 	elementalComboParticleSystem   *engine.ElementalComboParticleSystem   // Connects elemental status combos to visual effects
@@ -907,6 +909,12 @@ func initializeEnvironmentalSystems(game *engine.EbitenGame, sys *systemsContain
 	sys.damageResistanceParticleSystem.SetGenre(*genreID)
 	sys.combatSystem.SetDamageResistedCallback(sys.damageResistanceParticleSystem.OnDamageResisted)
 
+	// ShieldAbsorbParticleSystem - visual feedback for shield absorption
+	sys.shieldAbsorbParticleSystem = engine.NewShieldAbsorbParticleSystem(game.World, *seed+5750)
+	sys.shieldAbsorbParticleSystem.SetParticleSystem(sys.particleSystem)
+	sys.shieldAbsorbParticleSystem.SetGenre(*genreID)
+	sys.combatSystem.SetShieldAbsorbCallback(sys.shieldAbsorbParticleSystem.OnShieldAbsorb)
+
 	// WeatherGroundEffectSystem - visual feedback for weather ground impacts
 	sys.weatherGroundEffectSystem = engine.NewWeatherGroundEffectSystem(game.World, *seed+6000)
 	sys.weatherGroundEffectSystem.SetParticleSystem(sys.particleSystem)
@@ -920,6 +928,10 @@ func initializeEnvironmentalSystems(game *engine.EbitenGame, sys *systemsContain
 	// WeatherManaRegenSystem - modifies mana regeneration based on weather
 	sys.weatherManaRegenSystem = engine.NewWeatherManaRegenSystem(game.World, *seed+6300)
 	sys.weatherManaRegenSystem.SetGenre(*genreID)
+
+	// WeatherCooldownSystem - modifies spell cooldown rates based on weather
+	sys.weatherCooldownSystem = engine.NewWeatherCooldownSystem(game.World, *seed+6350)
+	sys.weatherCooldownSystem.SetGenre(*genreID)
 
 	// LowHealthVFXSystem - visual feedback for low player health
 	sys.lowHealthVFXSystem = engine.NewLowHealthVFXSystem(game.World, *seed+6400)
@@ -1601,6 +1613,7 @@ func registerNonCriticalSystems(game *engine.EbitenGame, sys *systemsContainer) 
 	game.World.AddSystem(sys.weatherGroundEffectSystem)      // Weather ground impact visual feedback via particles
 	game.World.AddSystem(sys.weatherAudioSystem)             // Weather ambient audio feedback
 	game.World.AddSystem(sys.weatherManaRegenSystem)         // Weather mana regeneration modifiers
+	game.World.AddSystem(sys.weatherCooldownSystem)          // Weather spell cooldown rate modifiers
 	game.World.AddSystem(sys.statusEffectLightingSystem)     // Status effect visual feedback via lighting
 	game.World.AddSystem(sys.statusEffectMovementSystem)     // Status effect movement speed modifiers
 	game.World.AddSystem(sys.criticalHitParticleSystem)      // Critical hit visual feedback via particles
@@ -1608,6 +1621,7 @@ func registerNonCriticalSystems(game *engine.EbitenGame, sys *systemsContainer) 
 	game.World.AddSystem(sys.itemPickupParticleSystem)       // Item pickup visual feedback via particles
 	game.World.AddSystem(sys.spellEffectParticleSystem)      // Spell effect visual feedback via particles
 	game.World.AddSystem(sys.damageResistanceParticleSystem) // Damage resistance visual feedback via particles
+	game.World.AddSystem(sys.shieldAbsorbParticleSystem)     // Shield absorption visual feedback via particles
 	game.World.AddSystem(sys.lowHealthVFXSystem)             // Low player health warning visual feedback via particles
 	game.World.AddSystem(sys.companionAuraParticleSystem)    // Companion bonding perk aura visual feedback via particles
 	game.World.AddSystem(sys.elementalComboParticleSystem)   // Elemental status combo visual feedback via particles

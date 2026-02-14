@@ -80,6 +80,7 @@ type SystemInitResult struct {
 	WeatherAudioSystem              *WeatherAudioSystem
 	FactionXPBonusSystem            *FactionXPBonusSystem
 	WeatherManaRegenSystem          *WeatherManaRegenSystem
+	WeatherCooldownSystem           *WeatherCooldownSystem
 	TerrainMovementSpeedSystem      *TerrainMovementSpeedSystem
 	TerrainCombatBonusSystem        *TerrainCombatBonusSystem
 	LowHealthVFXSystem              *LowHealthVFXSystem
@@ -458,6 +459,13 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 	weatherManaRegenSystem.SetGenre(config.GenreID)
 	result.WeatherManaRegenSystem = weatherManaRegenSystem
 	game.World.AddSystem(weatherManaRegenSystem)
+
+	// 36j2. WeatherCooldownSystem - modifies spell cooldown rates based on weather
+	// Connects WeatherSystem with SpellCastingSystem for magical gameplay synergy
+	weatherCooldownSystem := NewWeatherCooldownSystem(game.World, config.Seed+6350)
+	weatherCooldownSystem.SetGenre(config.GenreID)
+	result.WeatherCooldownSystem = weatherCooldownSystem
+	game.World.AddSystem(weatherCooldownSystem)
 
 	// 36k. LowHealthVFXSystem - visual feedback for low player health
 	// Spawns genre-aware pulsing particles when player health is critically low

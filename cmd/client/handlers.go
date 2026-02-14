@@ -244,6 +244,7 @@ type systemsContainer struct {
 	branchingNarrativeSystem          *engine.BranchingNarrativeSystem // Phase 6.1: Branching story arc system
 	worldEventsSystem                 *engine.WorldEventsSystem        // Phase 6.3: World-responsive events
 	shadowSystem                      *engine.ShadowSystem
+	timeOfDayStealthSystem            *engine.TimeOfDayStealthSystem // Connects time-of-day lighting with AI detection for stealth
 	spriteGenerator                   *sprites.Generator
 	spriteCache                       *cache.SpriteCache // Phase 1.2: Sprite caching for animation performance
 	itemGen                           *item.ItemGenerator
@@ -280,8 +281,9 @@ type systemsContainer struct {
 	// Phase 28: Reputation & Moral Choices
 	moralChoiceSystem *engine.MoralChoiceSystem
 	// Phase 95-96: Resource gathering and fishing minigames
-	fishingSystem   *engine.FishingSystem
-	gatheringSystem *engine.GatheringSystem
+	fishingSystem             *engine.FishingSystem
+	gatheringSystem           *engine.GatheringSystem
+	fishingWeatherBonusSystem *engine.FishingWeatherBonusSystem
 	// Phase 112: New Game Plus carry-over system
 	carryoverSystem *engine.CarryOverSystem
 	// Phase 30: Environmental Storytelling
@@ -1236,6 +1238,14 @@ func initializeV4Systems(game *engine.EbitenGame, sys *systemsContainer, clientL
 	logging.ComponentLogger(clientLogger.Logger, "fishing").Debug("Created fishing system")
 	sys.gatheringSystem = engine.NewGatheringSystem(game.World)
 	logging.ComponentLogger(clientLogger.Logger, "gathering").Debug("Created gathering system")
+
+	// FishingWeatherBonusSystem - connects weather with fishing for immersive gameplay
+	// Rain increases rare fish bonus, storms attract legendary fish, etc.
+	sys.fishingWeatherBonusSystem = engine.NewFishingWeatherBonusSystem(game.World, *seed+seedOffsetFishing+50)
+	sys.fishingWeatherBonusSystem.SetGenre(*genre)
+	sys.fishingWeatherBonusSystem.SetFishingSystem(sys.fishingSystem)
+	game.World.AddSystem(sys.fishingWeatherBonusSystem)
+	logging.ComponentLogger(clientLogger.Logger, "fishing_weather").Debug("Created fishing weather bonus system")
 
 	// AUDIT FIX: Phase 112 - CarryOverSystem for New Game Plus
 	// Gap: CarryOverSystem implemented but never initialized on client
@@ -2299,6 +2309,9 @@ func initializeTerrainCollision(game *engine.EbitenGame, sys *systemsContainer, 
 		}
 		if footstepParticleSys, ok := system.(*engine.FootstepParticleSystem); ok {
 			footstepParticleSys.SetTerrain(generatedTerrain)
+		}
+		if timeOfDayStealthSys, ok := system.(*engine.TimeOfDayStealthSystem); ok {
+			sys.timeOfDayStealthSystem = timeOfDayStealthSys
 		}
 	}
 

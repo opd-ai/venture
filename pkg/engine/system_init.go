@@ -125,6 +125,7 @@ type SystemInitResult struct {
 	DestructionParticleSystem         *DestructionParticleSystem
 	BlockParticleSystem               *BlockParticleSystem
 	TimeOfDayLightingSystem           *TimeOfDayLightingSystem
+	TimeOfDayStealthSystem            *TimeOfDayStealthSystem
 	TerrainAmbushCritSystem           *TerrainAmbushCritSystem
 	FactionDamageBonusSystem          *FactionDamageBonusSystem
 	WeatherCritChanceSystem           *WeatherCritChanceSystem
@@ -888,6 +889,14 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 	timeOfDayLightingSystem.SetGenre(config.GenreID)
 	result.TimeOfDayLightingSystem = timeOfDayLightingSystem
 	game.World.AddSystem(timeOfDayLightingSystem)
+
+	// 43c. TimeOfDayStealthSystem - day/night AI detection modulation
+	// Connects TimeOfDayLightingSystem with AIComponent detection ranges for stealth
+	timeOfDayStealthSystem := NewTimeOfDayStealthSystem(game.World, config.Seed+7550)
+	timeOfDayStealthSystem.SetLightingSystem(timeOfDayLightingSystem)
+	timeOfDayStealthSystem.SetGenre(config.GenreID)
+	result.TimeOfDayStealthSystem = timeOfDayStealthSystem
+	game.World.AddSystem(timeOfDayStealthSystem)
 
 	// Note: SpatialPartitionSystem (system #44) is initialized separately
 	// after terrain generation via InitializeSpatialPartitionSystem()

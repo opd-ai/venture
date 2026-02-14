@@ -5,7 +5,7 @@ import (
 )
 
 func TestNewBlockParticleSystem(t *testing.T) {
-	world := NewWorld(nil)
+	world := NewWorld()
 	seed := int64(12345)
 
 	system := NewBlockParticleSystem(world, seed)
@@ -31,7 +31,7 @@ func TestNewBlockParticleSystem(t *testing.T) {
 }
 
 func TestBlockParticleSystem_SetParticleSystem(t *testing.T) {
-	world := NewWorld(nil)
+	world := NewWorld()
 	system := NewBlockParticleSystem(world, 12345)
 	ps := NewParticleSystem()
 
@@ -56,7 +56,7 @@ func TestBlockParticleSystem_SetGenre(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			world := NewWorld(nil)
+			world := NewWorld()
 			system := NewBlockParticleSystem(world, 12345)
 
 			system.SetGenre(tt.genreID)
@@ -69,7 +69,7 @@ func TestBlockParticleSystem_SetGenre(t *testing.T) {
 }
 
 func TestBlockParticleSystem_Update(t *testing.T) {
-	world := NewWorld(nil)
+	world := NewWorld()
 	system := NewBlockParticleSystem(world, 12345)
 
 	// Update is a no-op, just verify it doesn't panic
@@ -78,12 +78,12 @@ func TestBlockParticleSystem_Update(t *testing.T) {
 }
 
 func TestBlockParticleSystem_OnBlock_NilChecks(t *testing.T) {
-	world := NewWorld(nil)
+	world := NewWorld()
 	system := NewBlockParticleSystem(world, 12345)
 
 	// Should not panic with nil particle system
-	attacker := NewEntity()
-	target := NewEntity()
+	attacker := world.CreateEntity()
+	target := world.CreateEntity()
 	system.OnBlock(attacker, target, 0.2, 20.0, 10.0)
 
 	// Should not panic with nil target
@@ -92,13 +92,13 @@ func TestBlockParticleSystem_OnBlock_NilChecks(t *testing.T) {
 }
 
 func TestBlockParticleSystem_OnBlock_NoPosition(t *testing.T) {
-	world := NewWorld(nil)
+	world := NewWorld()
 	system := NewBlockParticleSystem(world, 12345)
 	system.SetParticleSystem(NewParticleSystem())
 	system.SetGenre("fantasy")
 
-	attacker := NewEntity()
-	target := NewEntity()
+	attacker := world.CreateEntity()
+	target := world.CreateEntity()
 	// Target has no position component
 
 	// Should not panic, just return early
@@ -106,15 +106,15 @@ func TestBlockParticleSystem_OnBlock_NoPosition(t *testing.T) {
 }
 
 func TestBlockParticleSystem_OnBlock_WithPosition(t *testing.T) {
-	world := NewWorld(nil)
+	world := NewWorld()
 	system := NewBlockParticleSystem(world, 12345)
 	system.SetParticleSystem(NewParticleSystem())
 	system.SetGenre("fantasy")
 
-	attacker := NewEntity()
+	attacker := world.CreateEntity()
 	attacker.AddComponent(&PositionComponent{X: 0, Y: 0})
 
-	target := NewEntity()
+	target := world.CreateEntity()
 	target.AddComponent(&PositionComponent{X: 100, Y: 100})
 
 	// Should spawn particles without panic
@@ -122,13 +122,13 @@ func TestBlockParticleSystem_OnBlock_WithPosition(t *testing.T) {
 }
 
 func TestBlockParticleSystem_OnBlock_HighDamage(t *testing.T) {
-	world := NewWorld(nil)
+	world := NewWorld()
 	system := NewBlockParticleSystem(world, 12345)
 	system.SetParticleSystem(NewParticleSystem())
 	system.SetGenre("scifi")
 
-	attacker := NewEntity()
-	target := NewEntity()
+	attacker := world.CreateEntity()
+	target := world.CreateEntity()
 	target.AddComponent(&PositionComponent{X: 50, Y: 50})
 
 	// High damage should scale up particle count
@@ -151,7 +151,7 @@ func TestBlockParticleSystem_getParticleTypeForGenre(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.genreID, func(t *testing.T) {
-			world := NewWorld(nil)
+			world := NewWorld()
 			system := NewBlockParticleSystem(world, 12345)
 			system.SetGenre(tt.genreID)
 
@@ -165,7 +165,7 @@ func TestBlockParticleSystem_getParticleTypeForGenre(t *testing.T) {
 }
 
 func TestBlockParticleSystem_SpawnBlockEffect(t *testing.T) {
-	world := NewWorld(nil)
+	world := NewWorld()
 	system := NewBlockParticleSystem(world, 12345)
 
 	// Should not panic without particle system
@@ -178,7 +178,7 @@ func TestBlockParticleSystem_SpawnBlockEffect(t *testing.T) {
 }
 
 func TestBlockParticleSystem_Integration_WithCombatSystem(t *testing.T) {
-	world := NewWorld(nil)
+	world := NewWorld()
 	combatSystem := NewCombatSystem(12345)
 
 	blockParticleSystem := NewBlockParticleSystem(world, 12345)
@@ -189,11 +189,11 @@ func TestBlockParticleSystem_Integration_WithCombatSystem(t *testing.T) {
 	combatSystem.SetBlockCallback(blockParticleSystem.OnBlock)
 
 	// Create attacker and target
-	attacker := NewEntity()
+	attacker := world.CreateEntity()
 	attacker.AddComponent(&PositionComponent{X: 0, Y: 0})
 	attacker.AddComponent(&AttackComponent{Damage: 20, Range: 50, Cooldown: 1.0})
 
-	target := NewEntity()
+	target := world.CreateEntity()
 	target.AddComponent(&PositionComponent{X: 30, Y: 0})
 	target.AddComponent(&HealthComponent{Current: 100, Max: 100})
 	stats := NewStatsComponent()
@@ -220,7 +220,7 @@ func TestBlockParticleSystem_Integration_WithCombatSystem(t *testing.T) {
 }
 
 func TestBlockParticleSystem_DeterministicSeeding(t *testing.T) {
-	world := NewWorld(nil)
+	world := NewWorld()
 	seed := int64(99999)
 
 	system1 := NewBlockParticleSystem(world, seed)
@@ -233,13 +233,13 @@ func TestBlockParticleSystem_DeterministicSeeding(t *testing.T) {
 }
 
 func BenchmarkBlockParticleSystem_OnBlock(b *testing.B) {
-	world := NewWorld(nil)
+	world := NewWorld()
 	system := NewBlockParticleSystem(world, 12345)
 	system.SetParticleSystem(NewParticleSystem())
 	system.SetGenre("fantasy")
 
-	attacker := NewEntity()
-	target := NewEntity()
+	attacker := world.CreateEntity()
+	target := world.CreateEntity()
 	target.AddComponent(&PositionComponent{X: 100, Y: 100})
 
 	b.ResetTimer()

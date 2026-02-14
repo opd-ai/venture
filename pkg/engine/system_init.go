@@ -144,6 +144,7 @@ type SystemInitResult struct {
 	TerrainCombatBonusParticleSystem    *TerrainCombatBonusParticleSystem
 	CompanionManaRegenSystem            *CompanionManaRegenSystem
 	WeatherElementalComboBonusSystem    *WeatherElementalComboBonusSystem
+	TerrainFishingBonusSystem           *TerrainFishingBonusSystem
 
 	// System wrappers
 	AnimationSystemWrapper            System
@@ -687,6 +688,14 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 	fishingWeatherBonusSystem.SetGenre(config.GenreID)
 	result.FishingWeatherBonusSystem = fishingWeatherBonusSystem
 	game.World.AddSystem(fishingWeatherBonusSystem)
+
+	// 36j4. TerrainFishingBonusSystem - modifies fishing bonuses based on terrain
+	// Connects terrain tiles (deep water, kelp, ruins) with FishingSystem for strategic spot placement
+	terrainFishingBonusSystem := NewTerrainFishingBonusSystem(game.World, config.Seed+6380)
+	terrainFishingBonusSystem.SetGenre(config.GenreID)
+	terrainFishingBonusSystem.SetTileSize(config.TileSize)
+	result.TerrainFishingBonusSystem = terrainFishingBonusSystem
+	game.World.AddSystem(terrainFishingBonusSystem)
 
 	// 36k. LowHealthVFXSystem - visual feedback for low player health
 	// Spawns genre-aware pulsing particles when player health is critically low

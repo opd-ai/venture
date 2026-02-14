@@ -52,106 +52,108 @@ func DefaultSystemInitConfig(seed int64, genreID string, logger *logrus.Logger) 
 // further configuration after initialization (e.g., setting callbacks).
 type SystemInitResult struct {
 	// Systems that often need post-initialization configuration
-	InputSystem                         *InputSystem
-	CombatSystem                        *CombatSystem
-	CollisionSystem                     *CollisionSystem
-	ProjectileSystem                    *ProjectileSystem
-	AudioManager                        *AudioManager
-	ObjectiveTracker                    *ObjectiveTrackerSystem
-	CommerceSystem                      *CommerceSystem
-	DialogSystem                        *DialogSystem
-	CraftingSystem                      *CraftingSystem
-	InteractionSystem                   *InteractionSystem
-	MiniGameSystem                      *MiniGameSystem
-	AnimationSystem                     *AnimationSystem
-	ParticleSystem                      *ParticleSystem
-	TutorialSystem                      *EbitenTutorialSystem
-	HelpSystem                          *EbitenHelpSystem
-	LevelUpParticleSystem               *LevelUpParticleSystem
-	ItemPickupParticleSystem            *ItemPickupParticleSystem
-	SpellEffectParticleSystem           *SpellEffectParticleSystem
-	DeathParticleSystem                 *DeathParticleSystem
-	DamageResistanceParticleSystem      *DamageResistanceParticleSystem
-	ShieldAbsorbParticleSystem          *ShieldAbsorbParticleSystem
-	CompanionLevelUpParticleSystem      *CompanionLevelUpParticleSystem
-	ItemPickupSystem                    *ItemPickupSystem
-	ProgressionSystem                   *ProgressionSystem
-	CompanionProgressionSystem          *CompanionProgressionSystem
-	WeatherAudioSystem                  *WeatherAudioSystem
-	FactionXPBonusSystem                *FactionXPBonusSystem
-	WeatherManaRegenSystem              *WeatherManaRegenSystem
-	WeatherCooldownSystem               *WeatherCooldownSystem
-	TerrainMovementSpeedSystem          *TerrainMovementSpeedSystem
-	TerrainCombatBonusSystem            *TerrainCombatBonusSystem
-	TerrainStealthSystem                *TerrainStealthSystem
-	TerrainStatusEffectSystem           *TerrainStatusEffectSystem
-	TerrainManaRegenSystem              *TerrainManaRegenSystem
-	TerrainSpellDamageSystem            *TerrainSpellDamageSystem
-	LowHealthVFXSystem                  *LowHealthVFXSystem
-	ManaRegenParticleSystem             *ManaRegenParticleSystem
-	CompanionAuraParticleSystem         *CompanionAuraParticleSystem
-	SpecializationManaBoostSystem       *SpecializationManaBoostSystem
-	SpecializationHealthRegenSystem     *SpecializationHealthRegenSystem
-	SpecializationSpellDamageSystem     *SpecializationSpellDamageSystem
-	SpecializationAttackSpeedSystem     *SpecializationAttackSpeedSystem
-	SpecializationDefenseSystem         *SpecializationDefenseSystem
-	ElementalComboParticleSystem        *ElementalComboParticleSystem
-	WeatherRangedAccuracySystem         *WeatherRangedAccuracySystem
-	StatusEffectEvasionSystem           *StatusEffectEvasionSystem
-	StatusEffectCriticalChanceSystem    *StatusEffectCriticalChanceSystem
-	WeatherXPBonusSystem                *WeatherXPBonusSystem
-	ElementalComboDamageSystem          *ElementalComboDamageSystem
-	ElementalCompanionSynergySystem     *ElementalCompanionSynergySystem
-	CompanionSpellAmplificationSystem   *CompanionSpellAmplificationSystem
-	LifestealSystem                     *LifestealSystem
-	StatusEffectManaCostSystem          *StatusEffectManaCostSystem
-	StatusEffectDamageParticleSystem    *StatusEffectDamageParticleSystem
-	WeaponSwingParticleSystem           *WeaponSwingParticleSystem
-	FearFleeParticleSystem              *FearFleeParticleSystem
-	StatusEffectDamageBoostSystem       *StatusEffectDamageBoostSystem
-	TerrainCompanionBonusSystem         *TerrainCompanionBonusSystem
-	FactionCompanionBehaviorSystem      *FactionCompanionBehaviorSystem
-	WeatherCompanionBonusSystem         *WeatherCompanionBonusSystem
-	EvasionParticleSystem               *EvasionParticleSystem
-	FootstepParticleSystem              *FootstepParticleSystem
-	SpecializationStatusResistSystem    *SpecializationStatusResistSystem
-	StatusEffectHealthRegenSystem       *StatusEffectHealthRegenSystem
-	HealingParticleSystem               *HealingParticleSystem
-	SpecializationCritDamageSystem      *SpecializationCritDamageSystem
-	SpecializationEvasionSystem         *SpecializationEvasionSystem
-	ShieldRegenSystem                   *ShieldRegenSystem
-	WeatherMeleeDamageSystem            *WeatherMeleeDamageSystem
-	WeatherAttackSpeedSystem            *WeatherAttackSpeedSystem
-	DrowningParticleSystem              *DrowningParticleSystem
-	DestructionParticleSystem           *DestructionParticleSystem
-	BlockParticleSystem                 *BlockParticleSystem
-	TimeOfDayLightingSystem             *TimeOfDayLightingSystem
-	TimeOfDayStealthSystem              *TimeOfDayStealthSystem
-	TimeOfDayXPBonusSystem              *TimeOfDayXPBonusSystem
-	TimeOfDayManaCostSystem             *TimeOfDayManaCostSystem
-	TimeOfDayCriticalChanceSystem       *TimeOfDayCriticalChanceSystem
-	TerrainAmbushCritSystem             *TerrainAmbushCritSystem
-	FactionDamageBonusSystem            *FactionDamageBonusSystem
-	WeatherCritChanceSystem             *WeatherCritChanceSystem
-	WeatherBlockChanceSystem            *WeatherBlockChanceSystem
-	StealthIndicatorParticleSystem      *StealthIndicatorParticleSystem
-	FishingWeatherBonusSystem           *FishingWeatherBonusSystem
-	TimeOfDayFishingBonusSystem         *TimeOfDayFishingBonusSystem
-	FishingCatchParticleSystem          *FishingCatchParticleSystem
-	TimeOfDayFishingBonusParticleSystem *TimeOfDayFishingBonusParticleSystem
-	TimeOfDayCompanionBonusSystem       *TimeOfDayCompanionBonusSystem
-	TimeOfDayHealthRegenSystem          *TimeOfDayHealthRegenSystem
-	TimeOfDayManaRegenSystem            *TimeOfDayManaRegenSystem
-	TimeOfDayBlockChanceSystem          *TimeOfDayBlockChanceSystem
-	TerrainCombatBonusParticleSystem    *TerrainCombatBonusParticleSystem
-	CompanionManaRegenSystem            *CompanionManaRegenSystem
-	WeatherElementalComboBonusSystem    *WeatherElementalComboBonusSystem
-	TerrainFishingBonusSystem           *TerrainFishingBonusSystem
-	WeatherSpellDamageSystem            *WeatherSpellDamageSystem
-	SpecializationLifestealSystem       *SpecializationLifestealSystem
-	CompanionFishingBonusSystem         *CompanionFishingBonusSystem
-	TerrainEquipmentDurabilitySystem    *TerrainEquipmentDurabilitySystem
-	WeatherEquipmentDurabilitySystem    *WeatherEquipmentDurabilitySystem
+	InputSystem                              *InputSystem
+	CombatSystem                             *CombatSystem
+	CollisionSystem                          *CollisionSystem
+	ProjectileSystem                         *ProjectileSystem
+	AudioManager                             *AudioManager
+	ObjectiveTracker                         *ObjectiveTrackerSystem
+	CommerceSystem                           *CommerceSystem
+	DialogSystem                             *DialogSystem
+	CraftingSystem                           *CraftingSystem
+	InteractionSystem                        *InteractionSystem
+	MiniGameSystem                           *MiniGameSystem
+	AnimationSystem                          *AnimationSystem
+	ParticleSystem                           *ParticleSystem
+	TutorialSystem                           *EbitenTutorialSystem
+	HelpSystem                               *EbitenHelpSystem
+	LevelUpParticleSystem                    *LevelUpParticleSystem
+	ItemPickupParticleSystem                 *ItemPickupParticleSystem
+	SpellEffectParticleSystem                *SpellEffectParticleSystem
+	DeathParticleSystem                      *DeathParticleSystem
+	DamageResistanceParticleSystem           *DamageResistanceParticleSystem
+	ShieldAbsorbParticleSystem               *ShieldAbsorbParticleSystem
+	CompanionLevelUpParticleSystem           *CompanionLevelUpParticleSystem
+	ItemPickupSystem                         *ItemPickupSystem
+	ProgressionSystem                        *ProgressionSystem
+	CompanionProgressionSystem               *CompanionProgressionSystem
+	WeatherAudioSystem                       *WeatherAudioSystem
+	FactionXPBonusSystem                     *FactionXPBonusSystem
+	WeatherManaRegenSystem                   *WeatherManaRegenSystem
+	WeatherCooldownSystem                    *WeatherCooldownSystem
+	TerrainMovementSpeedSystem               *TerrainMovementSpeedSystem
+	TerrainCombatBonusSystem                 *TerrainCombatBonusSystem
+	TerrainStealthSystem                     *TerrainStealthSystem
+	TerrainStatusEffectSystem                *TerrainStatusEffectSystem
+	TerrainManaRegenSystem                   *TerrainManaRegenSystem
+	TerrainSpellDamageSystem                 *TerrainSpellDamageSystem
+	LowHealthVFXSystem                       *LowHealthVFXSystem
+	ManaRegenParticleSystem                  *ManaRegenParticleSystem
+	CompanionAuraParticleSystem              *CompanionAuraParticleSystem
+	SpecializationManaBoostSystem            *SpecializationManaBoostSystem
+	SpecializationHealthRegenSystem          *SpecializationHealthRegenSystem
+	SpecializationSpellDamageSystem          *SpecializationSpellDamageSystem
+	SpecializationAttackSpeedSystem          *SpecializationAttackSpeedSystem
+	SpecializationDefenseSystem              *SpecializationDefenseSystem
+	ElementalComboParticleSystem             *ElementalComboParticleSystem
+	WeatherRangedAccuracySystem              *WeatherRangedAccuracySystem
+	StatusEffectEvasionSystem                *StatusEffectEvasionSystem
+	StatusEffectCriticalChanceSystem         *StatusEffectCriticalChanceSystem
+	WeatherXPBonusSystem                     *WeatherXPBonusSystem
+	ElementalComboDamageSystem               *ElementalComboDamageSystem
+	ElementalCompanionSynergySystem          *ElementalCompanionSynergySystem
+	CompanionSpellAmplificationSystem        *CompanionSpellAmplificationSystem
+	LifestealSystem                          *LifestealSystem
+	StatusEffectManaCostSystem               *StatusEffectManaCostSystem
+	StatusEffectDamageParticleSystem         *StatusEffectDamageParticleSystem
+	WeaponSwingParticleSystem                *WeaponSwingParticleSystem
+	FearFleeParticleSystem                   *FearFleeParticleSystem
+	StatusEffectDamageBoostSystem            *StatusEffectDamageBoostSystem
+	TerrainCompanionBonusSystem              *TerrainCompanionBonusSystem
+	FactionCompanionBehaviorSystem           *FactionCompanionBehaviorSystem
+	WeatherCompanionBonusSystem              *WeatherCompanionBonusSystem
+	EvasionParticleSystem                    *EvasionParticleSystem
+	FootstepParticleSystem                   *FootstepParticleSystem
+	SpecializationStatusResistSystem         *SpecializationStatusResistSystem
+	StatusEffectHealthRegenSystem            *StatusEffectHealthRegenSystem
+	HealingParticleSystem                    *HealingParticleSystem
+	SpecializationCritDamageSystem           *SpecializationCritDamageSystem
+	SpecializationEvasionSystem              *SpecializationEvasionSystem
+	ShieldRegenSystem                        *ShieldRegenSystem
+	WeatherMeleeDamageSystem                 *WeatherMeleeDamageSystem
+	WeatherAttackSpeedSystem                 *WeatherAttackSpeedSystem
+	DrowningParticleSystem                   *DrowningParticleSystem
+	DestructionParticleSystem                *DestructionParticleSystem
+	BlockParticleSystem                      *BlockParticleSystem
+	TimeOfDayLightingSystem                  *TimeOfDayLightingSystem
+	TimeOfDayStealthSystem                   *TimeOfDayStealthSystem
+	TimeOfDayXPBonusSystem                   *TimeOfDayXPBonusSystem
+	TimeOfDayManaCostSystem                  *TimeOfDayManaCostSystem
+	TimeOfDayCriticalChanceSystem            *TimeOfDayCriticalChanceSystem
+	TerrainAmbushCritSystem                  *TerrainAmbushCritSystem
+	FactionDamageBonusSystem                 *FactionDamageBonusSystem
+	WeatherCritChanceSystem                  *WeatherCritChanceSystem
+	WeatherBlockChanceSystem                 *WeatherBlockChanceSystem
+	StealthIndicatorParticleSystem           *StealthIndicatorParticleSystem
+	FishingWeatherBonusSystem                *FishingWeatherBonusSystem
+	TimeOfDayFishingBonusSystem              *TimeOfDayFishingBonusSystem
+	FishingCatchParticleSystem               *FishingCatchParticleSystem
+	TimeOfDayFishingBonusParticleSystem      *TimeOfDayFishingBonusParticleSystem
+	TimeOfDayCompanionBonusSystem            *TimeOfDayCompanionBonusSystem
+	TimeOfDayHealthRegenSystem               *TimeOfDayHealthRegenSystem
+	TimeOfDayManaRegenSystem                 *TimeOfDayManaRegenSystem
+	TimeOfDayBlockChanceSystem               *TimeOfDayBlockChanceSystem
+	TerrainCombatBonusParticleSystem         *TerrainCombatBonusParticleSystem
+	CompanionManaRegenSystem                 *CompanionManaRegenSystem
+	WeatherElementalComboBonusSystem         *WeatherElementalComboBonusSystem
+	TerrainFishingBonusSystem                *TerrainFishingBonusSystem
+	WeatherSpellDamageSystem                 *WeatherSpellDamageSystem
+	SpecializationLifestealSystem            *SpecializationLifestealSystem
+	CompanionFishingBonusSystem              *CompanionFishingBonusSystem
+	TerrainEquipmentDurabilitySystem         *TerrainEquipmentDurabilitySystem
+	TerrainEquipmentDurabilityParticleSystem *TerrainEquipmentDurabilityParticleSystem
+	WeatherEquipmentDurabilitySystem         *WeatherEquipmentDurabilitySystem
+	SpellChannelParticleSystem               *SpellChannelParticleSystem
 
 	// System wrappers
 	AnimationSystemWrapper            System
@@ -578,6 +580,16 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 	result.TerrainEquipmentDurabilitySystem = terrainEquipmentDurabilitySystem
 	game.World.AddSystem(terrainEquipmentDurabilitySystem)
 
+	// 36b7c2. TerrainEquipmentDurabilityParticleSystem - visual feedback for terrain equipment damage
+	// Connects TerrainEquipmentDurabilitySystem with ParticleSystem for genre-aware damage particles
+	terrainEquipmentDurabilityParticleSystem := NewTerrainEquipmentDurabilityParticleSystem(game.World, config.Seed+2195)
+	terrainEquipmentDurabilityParticleSystem.SetParticleSystem(result.ParticleSystem)
+	terrainEquipmentDurabilityParticleSystem.SetTerrainEquipmentDurabilitySystem(terrainEquipmentDurabilitySystem)
+	terrainEquipmentDurabilityParticleSystem.SetGenre(config.GenreID)
+	terrainEquipmentDurabilityParticleSystem.SetTileSize(config.TileSize)
+	result.TerrainEquipmentDurabilityParticleSystem = terrainEquipmentDurabilityParticleSystem
+	game.World.AddSystem(terrainEquipmentDurabilityParticleSystem)
+
 	// 36b7d. WeatherEquipmentDurabilitySystem - degrades equipment from weather conditions
 	// Connects WeatherComponent (rain, snow, sandstorm) with EquipmentComponent durability for environmental wear
 	weatherEquipmentDurabilitySystem := NewWeatherEquipmentDurabilitySystem(game.World, config.Seed+2196)
@@ -650,6 +662,14 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 	spellEffectParticleSystem.SetGenre(config.GenreID)
 	result.SpellEffectParticleSystem = spellEffectParticleSystem
 	game.World.AddSystem(spellEffectParticleSystem)
+
+	// 36f1b. SpellChannelParticleSystem - visual feedback during spell channeling
+	// Connects SpellSlotComponent.IsCasting() with ParticleSystem for element-colored particles
+	spellChannelParticleSystem := NewSpellChannelParticleSystem(game.World, config.Seed+5550)
+	spellChannelParticleSystem.SetParticleSystem(result.ParticleSystem)
+	spellChannelParticleSystem.SetGenre(config.GenreID)
+	result.SpellChannelParticleSystem = spellChannelParticleSystem
+	game.World.AddSystem(spellChannelParticleSystem)
 
 	// 36f2. DeathParticleSystem - visual feedback for entity deaths
 	// Spawns genre-aware particles (smoke, debris, blood) when entities die

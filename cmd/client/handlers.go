@@ -244,6 +244,7 @@ type systemsContainer struct {
 	branchingNarrativeSystem          *engine.BranchingNarrativeSystem // Phase 6.1: Branching story arc system
 	worldEventsSystem                 *engine.WorldEventsSystem        // Phase 6.3: World-responsive events
 	shadowSystem                      *engine.ShadowSystem
+	timeOfDayLightingSystem           *engine.TimeOfDayLightingSystem       // Time-of-day ambient lighting modulation
 	timeOfDayStealthSystem            *engine.TimeOfDayStealthSystem        // Connects time-of-day lighting with AI detection for stealth
 	timeOfDayXPBonusSystem            *engine.TimeOfDayXPBonusSystem        // Connects time-of-day lighting with XP bonuses
 	timeOfDayManaCostSystem           *engine.TimeOfDayManaCostSystem       // Connects time-of-day lighting with spell mana costs
@@ -284,9 +285,10 @@ type systemsContainer struct {
 	// Phase 28: Reputation & Moral Choices
 	moralChoiceSystem *engine.MoralChoiceSystem
 	// Phase 95-96: Resource gathering and fishing minigames
-	fishingSystem             *engine.FishingSystem
-	gatheringSystem           *engine.GatheringSystem
-	fishingWeatherBonusSystem *engine.FishingWeatherBonusSystem
+	fishingSystem               *engine.FishingSystem
+	gatheringSystem             *engine.GatheringSystem
+	fishingWeatherBonusSystem   *engine.FishingWeatherBonusSystem
+	timeOfDayFishingBonusSystem *engine.TimeOfDayFishingBonusSystem
 	// Phase 112: New Game Plus carry-over system
 	carryoverSystem *engine.CarryOverSystem
 	// Phase 30: Environmental Storytelling
@@ -1249,6 +1251,15 @@ func initializeV4Systems(game *engine.EbitenGame, sys *systemsContainer, clientL
 	sys.fishingWeatherBonusSystem.SetFishingSystem(sys.fishingSystem)
 	game.World.AddSystem(sys.fishingWeatherBonusSystem)
 	logging.ComponentLogger(clientLogger.Logger, "fishing_weather").Debug("Created fishing weather bonus system")
+
+	// TimeOfDayFishingBonusSystem - connects time of day with fishing for immersive gameplay
+	// Dawn/dusk boost rare fish catches, night enhances legendary fish chance
+	sys.timeOfDayFishingBonusSystem = engine.NewTimeOfDayFishingBonusSystem(game.World, *seed+seedOffsetFishing+100)
+	sys.timeOfDayFishingBonusSystem.SetGenre(*genre)
+	sys.timeOfDayFishingBonusSystem.SetLightingSystem(sys.timeOfDayLightingSystem)
+	sys.timeOfDayFishingBonusSystem.SetFishingSystem(sys.fishingSystem)
+	game.World.AddSystem(sys.timeOfDayFishingBonusSystem)
+	logging.ComponentLogger(clientLogger.Logger, "fishing_timeofday").Debug("Created time-of-day fishing bonus system")
 
 	// AUDIT FIX: Phase 112 - CarryOverSystem for New Game Plus
 	// Gap: CarryOverSystem implemented but never initialized on client
@@ -2313,6 +2324,9 @@ func initializeTerrainCollision(game *engine.EbitenGame, sys *systemsContainer, 
 		if footstepParticleSys, ok := system.(*engine.FootstepParticleSystem); ok {
 			footstepParticleSys.SetTerrain(generatedTerrain)
 		}
+		if timeOfDayLightingSys, ok := system.(*engine.TimeOfDayLightingSystem); ok {
+			sys.timeOfDayLightingSystem = timeOfDayLightingSys
+		}
 		if timeOfDayStealthSys, ok := system.(*engine.TimeOfDayStealthSystem); ok {
 			sys.timeOfDayStealthSystem = timeOfDayStealthSys
 		}
@@ -2325,6 +2339,11 @@ func initializeTerrainCollision(game *engine.EbitenGame, sys *systemsContainer, 
 		if timeOfDayCritChanceSys, ok := system.(*engine.TimeOfDayCriticalChanceSystem); ok {
 			sys.timeOfDayCriticalChanceSystem = timeOfDayCritChanceSys
 		}
+	}
+
+	// Connect TimeOfDayFishingBonusSystem to extracted TimeOfDayLightingSystem
+	if sys.timeOfDayFishingBonusSystem != nil && sys.timeOfDayLightingSystem != nil {
+		sys.timeOfDayFishingBonusSystem.SetLightingSystem(sys.timeOfDayLightingSystem)
 	}
 
 	if *verbose {

@@ -134,6 +134,7 @@ type SystemInitResult struct {
 	WeatherCritChanceSystem           *WeatherCritChanceSystem
 	StealthIndicatorParticleSystem    *StealthIndicatorParticleSystem
 	FishingWeatherBonusSystem         *FishingWeatherBonusSystem
+	TimeOfDayFishingBonusSystem       *TimeOfDayFishingBonusSystem
 
 	// System wrappers
 	AnimationSystemWrapper            System

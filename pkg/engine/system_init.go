@@ -87,6 +87,7 @@ type SystemInitResult struct {
 	TerrainStatusEffectSystem        *TerrainStatusEffectSystem
 	TerrainManaRegenSystem           *TerrainManaRegenSystem
 	LowHealthVFXSystem               *LowHealthVFXSystem
+	ManaRegenParticleSystem          *ManaRegenParticleSystem
 	CompanionAuraParticleSystem      *CompanionAuraParticleSystem
 	SpecializationManaBoostSystem    *SpecializationManaBoostSystem
 	SpecializationHealthRegenSystem  *SpecializationHealthRegenSystem
@@ -583,6 +584,14 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 	lowHealthVFXSystem.SetGenre(config.GenreID)
 	result.LowHealthVFXSystem = lowHealthVFXSystem
 	game.World.AddSystem(lowHealthVFXSystem)
+
+	// 36k2. ManaRegenParticleSystem - visual feedback for mana regeneration
+	// Spawns genre-aware particles when entities actively regenerate mana
+	manaRegenParticleSystem := NewManaRegenParticleSystem(game.World, config.Seed+6450)
+	manaRegenParticleSystem.SetParticleSystem(result.ParticleSystem)
+	manaRegenParticleSystem.SetGenre(config.GenreID)
+	result.ManaRegenParticleSystem = manaRegenParticleSystem
+	game.World.AddSystem(manaRegenParticleSystem)
 
 	// 36l. CompanionAuraParticleSystem - visual feedback for companion bonding perks
 	// Spawns genre-aware aura particles around companions with active bonding perks

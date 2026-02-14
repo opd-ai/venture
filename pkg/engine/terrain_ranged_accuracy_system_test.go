@@ -57,12 +57,12 @@ func TestTerrainRangedAccuracySystem_UpdateNoTerrain(t *testing.T) {
 
 func TestTerrainRangedAccuracySystem_CalculateModifier(t *testing.T) {
 	tests := []struct {
-		name       string
-		tileType   terrain.TileType
-		genre      string
-		wantMin    float64
-		wantMax    float64
-		wantNil    bool
+		name     string
+		tileType terrain.TileType
+		genre    string
+		wantMin  float64
+		wantMax  float64
+		wantNil  bool
 	}{
 		{"corridor_bonus", terrain.TileCorridor, "fantasy", 1.10, 1.20, false},
 		{"platform_bonus", terrain.TilePlatform, "fantasy", 1.05, 1.15, false},

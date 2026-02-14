@@ -5,7 +5,7 @@ import (
 )
 
 func TestNewCompanionDamageLifestealSystem(t *testing.T) {
-	world := NewWorld(nil)
+	world := NewWorld()
 	system := NewCompanionDamageLifestealSystem(world, 12345)
 
 	if system == nil {
@@ -26,7 +26,7 @@ func TestNewCompanionDamageLifestealSystem(t *testing.T) {
 }
 
 func TestCompanionDamageLifestealSystem_SetParticleSystem(t *testing.T) {
-	world := NewWorld(nil)
+	world := NewWorld()
 	system := NewCompanionDamageLifestealSystem(world, 12345)
 	ps := NewParticleSystem()
 
@@ -38,7 +38,7 @@ func TestCompanionDamageLifestealSystem_SetParticleSystem(t *testing.T) {
 }
 
 func TestCompanionDamageLifestealSystem_SetGenre(t *testing.T) {
-	world := NewWorld(nil)
+	world := NewWorld()
 	system := NewCompanionDamageLifestealSystem(world, 12345)
 
 	system.SetGenre("horror")
@@ -49,7 +49,7 @@ func TestCompanionDamageLifestealSystem_SetGenre(t *testing.T) {
 }
 
 func TestCompanionDamageLifestealSystem_OnCompanionDamageDealt_NilAttacker(t *testing.T) {
-	world := NewWorld(nil)
+	world := NewWorld()
 	system := NewCompanionDamageLifestealSystem(world, 12345)
 
 	// Should not panic with nil attacker
@@ -57,7 +57,7 @@ func TestCompanionDamageLifestealSystem_OnCompanionDamageDealt_NilAttacker(t *te
 }
 
 func TestCompanionDamageLifestealSystem_OnCompanionDamageDealt_ZeroDamage(t *testing.T) {
-	world := NewWorld(nil)
+	world := NewWorld()
 	system := NewCompanionDamageLifestealSystem(world, 12345)
 	attacker := world.CreateEntity()
 
@@ -66,7 +66,7 @@ func TestCompanionDamageLifestealSystem_OnCompanionDamageDealt_ZeroDamage(t *tes
 }
 
 func TestCompanionDamageLifestealSystem_OnCompanionDamageDealt_NotCompanion(t *testing.T) {
-	world := NewWorld(nil)
+	world := NewWorld()
 	system := NewCompanionDamageLifestealSystem(world, 12345)
 	attacker := world.CreateEntity()
 
@@ -75,7 +75,7 @@ func TestCompanionDamageLifestealSystem_OnCompanionDamageDealt_NotCompanion(t *t
 }
 
 func TestCompanionDamageLifestealSystem_OnCompanionDamageDealt_NoOwner(t *testing.T) {
-	world := NewWorld(nil)
+	world := NewWorld()
 	system := NewCompanionDamageLifestealSystem(world, 12345)
 	companion := world.CreateEntity()
 
@@ -91,7 +91,7 @@ func TestCompanionDamageLifestealSystem_OnCompanionDamageDealt_NoOwner(t *testin
 }
 
 func TestCompanionDamageLifestealSystem_OnCompanionDamageDealt_OwnerNotFound(t *testing.T) {
-	world := NewWorld(nil)
+	world := NewWorld()
 	system := NewCompanionDamageLifestealSystem(world, 12345)
 	companion := world.CreateEntity()
 
@@ -107,7 +107,7 @@ func TestCompanionDamageLifestealSystem_OnCompanionDamageDealt_OwnerNotFound(t *
 }
 
 func TestCompanionDamageLifestealSystem_OnCompanionDamageDealt_OwnerNoHealth(t *testing.T) {
-	world := NewWorld(nil)
+	world := NewWorld()
 	system := NewCompanionDamageLifestealSystem(world, 12345)
 
 	owner := world.CreateEntity()
@@ -125,7 +125,7 @@ func TestCompanionDamageLifestealSystem_OnCompanionDamageDealt_OwnerNoHealth(t *
 }
 
 func TestCompanionDamageLifestealSystem_OnCompanionDamageDealt_BasicHealing(t *testing.T) {
-	world := NewWorld(nil)
+	world := NewWorld()
 	system := NewCompanionDamageLifestealSystem(world, 12345)
 	system.SetGenre("fantasy")
 
@@ -160,7 +160,7 @@ func TestCompanionDamageLifestealSystem_OnCompanionDamageDealt_BasicHealing(t *t
 }
 
 func TestCompanionDamageLifestealSystem_OnCompanionDamageDealt_WithPerks(t *testing.T) {
-	world := NewWorld(nil)
+	world := NewWorld()
 	system := NewCompanionDamageLifestealSystem(world, 12345)
 	system.SetGenre("fantasy")
 
@@ -194,7 +194,7 @@ func TestCompanionDamageLifestealSystem_OnCompanionDamageDealt_WithPerks(t *test
 }
 
 func TestCompanionDamageLifestealSystem_OnCompanionDamageDealt_GenreHorror(t *testing.T) {
-	world := NewWorld(nil)
+	world := NewWorld()
 	system := NewCompanionDamageLifestealSystem(world, 12345)
 	system.SetGenre("horror") // 1.5x multiplier
 
@@ -222,7 +222,7 @@ func TestCompanionDamageLifestealSystem_OnCompanionDamageDealt_GenreHorror(t *te
 }
 
 func TestCompanionDamageLifestealSystem_OnCompanionDamageDealt_CapAt15Percent(t *testing.T) {
-	world := NewWorld(nil)
+	world := NewWorld()
 	system := NewCompanionDamageLifestealSystem(world, 12345)
 	system.SetGenre("horror") // 1.5x multiplier
 
@@ -309,7 +309,7 @@ func TestCompanionDamageLifestealSystem_GetLifestealForCompanion(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			world := NewWorld(nil)
+			world := NewWorld()
 			system := NewCompanionDamageLifestealSystem(world, 12345)
 			system.SetGenre(tt.genre)
 
@@ -322,7 +322,7 @@ func TestCompanionDamageLifestealSystem_GetLifestealForCompanion(t *testing.T) {
 }
 
 func TestCompanionDamageLifestealSystem_Update(t *testing.T) {
-	world := NewWorld(nil)
+	world := NewWorld()
 	system := NewCompanionDamageLifestealSystem(world, 12345)
 
 	// Update should be a no-op (callback-driven)
@@ -331,7 +331,7 @@ func TestCompanionDamageLifestealSystem_Update(t *testing.T) {
 }
 
 func TestCompanionDamageLifestealSystem_ParticleSpawning(t *testing.T) {
-	world := NewWorld(nil)
+	world := NewWorld()
 	system := NewCompanionDamageLifestealSystem(world, 12345)
 	ps := NewParticleSystem()
 	system.SetParticleSystem(ps)
@@ -357,7 +357,7 @@ func TestCompanionDamageLifestealSystem_ParticleSpawning(t *testing.T) {
 }
 
 func BenchmarkCompanionDamageLifestealSystem_OnCompanionDamageDealt(b *testing.B) {
-	world := NewWorld(nil)
+	world := NewWorld()
 	system := NewCompanionDamageLifestealSystem(world, 12345)
 	system.SetGenre("fantasy")
 

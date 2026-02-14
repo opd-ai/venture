@@ -156,7 +156,7 @@ type SystemInitResult struct {
 	CompanionFishingBonusSystem              *CompanionFishingBonusSystem
 	TerrainEquipmentDurabilitySystem         *TerrainEquipmentDurabilitySystem
 	TerrainEquipmentDurabilityParticleSystem *TerrainEquipmentDurabilityParticleSystem
-	TerrainRangedAccuracySystem             *TerrainRangedAccuracySystem
+	TerrainRangedAccuracySystem              *TerrainRangedAccuracySystem
 	WeatherEquipmentDurabilitySystem         *WeatherEquipmentDurabilitySystem
 	SpellChannelParticleSystem               *SpellChannelParticleSystem
 	CompanionDamageLifestealSystem           *CompanionDamageLifestealSystem

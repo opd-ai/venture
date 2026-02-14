@@ -8,7 +8,7 @@ import (
 )
 
 func TestNewCombatEquipmentDurabilityParticleSystem(t *testing.T) {
-	world := NewWorld(nil)
+	world := NewWorld()
 	sys := NewCombatEquipmentDurabilityParticleSystem(world, 12345)
 
 	if sys == nil {
@@ -29,7 +29,7 @@ func TestNewCombatEquipmentDurabilityParticleSystem(t *testing.T) {
 }
 
 func TestCombatEquipmentDurabilityParticleSystem_SetParticleSystem(t *testing.T) {
-	world := NewWorld(nil)
+	world := NewWorld()
 	sys := NewCombatEquipmentDurabilityParticleSystem(world, 12345)
 	ps := NewParticleSystem()
 
@@ -41,7 +41,7 @@ func TestCombatEquipmentDurabilityParticleSystem_SetParticleSystem(t *testing.T)
 }
 
 func TestCombatEquipmentDurabilityParticleSystem_SetGenre(t *testing.T) {
-	world := NewWorld(nil)
+	world := NewWorld()
 	sys := NewCombatEquipmentDurabilityParticleSystem(world, 12345)
 
 	sys.SetGenre("sci-fi")
@@ -52,7 +52,7 @@ func TestCombatEquipmentDurabilityParticleSystem_SetGenre(t *testing.T) {
 }
 
 func TestCombatEquipmentDurabilityParticleSystem_OnDamageTaken_NilTarget(t *testing.T) {
-	world := NewWorld(nil)
+	world := NewWorld()
 	sys := NewCombatEquipmentDurabilityParticleSystem(world, 12345)
 	sys.SetParticleSystem(NewParticleSystem())
 	sys.SetGenre("fantasy")
@@ -62,13 +62,13 @@ func TestCombatEquipmentDurabilityParticleSystem_OnDamageTaken_NilTarget(t *test
 }
 
 func TestCombatEquipmentDurabilityParticleSystem_OnDamageTaken_ZeroDamage(t *testing.T) {
-	world := NewWorld(nil)
+	world := NewWorld()
 	sys := NewCombatEquipmentDurabilityParticleSystem(world, 12345)
 
 	entity := world.CreateEntity()
 	equipComp := &EquipmentComponent{Slots: make(map[EquipmentSlot]*item.Item)}
 	equipComp.Slots[SlotChest] = &item.Item{
-		Stats: item.ItemStats{Durability: 100, DurabilityMax: 100},
+		Stats: item.Stats{Durability: 100, DurabilityMax: 100},
 	}
 	entity.AddComponent(equipComp)
 
@@ -81,7 +81,7 @@ func TestCombatEquipmentDurabilityParticleSystem_OnDamageTaken_ZeroDamage(t *tes
 }
 
 func TestCombatEquipmentDurabilityParticleSystem_OnDamageTaken_NoEquipment(t *testing.T) {
-	world := NewWorld(nil)
+	world := NewWorld()
 	sys := NewCombatEquipmentDurabilityParticleSystem(world, 12345)
 	sys.SetParticleSystem(NewParticleSystem())
 	sys.SetGenre("fantasy")
@@ -93,7 +93,7 @@ func TestCombatEquipmentDurabilityParticleSystem_OnDamageTaken_NoEquipment(t *te
 }
 
 func TestCombatEquipmentDurabilityParticleSystem_OnDamageTaken_ReducesDurability(t *testing.T) {
-	world := NewWorld(nil)
+	world := NewWorld()
 	sys := NewCombatEquipmentDurabilityParticleSystem(world, 12345)
 	sys.SetParticleSystem(NewParticleSystem())
 	sys.SetGenre("fantasy")
@@ -103,7 +103,7 @@ func TestCombatEquipmentDurabilityParticleSystem_OnDamageTaken_ReducesDurability
 
 	equipComp := &EquipmentComponent{Slots: make(map[EquipmentSlot]*item.Item)}
 	equipComp.Slots[SlotChest] = &item.Item{
-		Stats: item.ItemStats{Durability: 100, DurabilityMax: 100},
+		Stats: item.Stats{Durability: 100, DurabilityMax: 100},
 	}
 	entity.AddComponent(equipComp)
 
@@ -118,7 +118,7 @@ func TestCombatEquipmentDurabilityParticleSystem_OnDamageTaken_ReducesDurability
 }
 
 func TestCombatEquipmentDurabilityParticleSystem_OnDamageTaken_MultipleArmorPieces(t *testing.T) {
-	world := NewWorld(nil)
+	world := NewWorld()
 	sys := NewCombatEquipmentDurabilityParticleSystem(world, 12345)
 	sys.SetParticleSystem(NewParticleSystem())
 	sys.SetGenre("fantasy")
@@ -128,13 +128,13 @@ func TestCombatEquipmentDurabilityParticleSystem_OnDamageTaken_MultipleArmorPiec
 
 	equipComp := &EquipmentComponent{Slots: make(map[EquipmentSlot]*item.Item)}
 	equipComp.Slots[SlotChest] = &item.Item{
-		Stats: item.ItemStats{Durability: 100, DurabilityMax: 100},
+		Stats: item.Stats{Durability: 100, DurabilityMax: 100},
 	}
-	equipComp.Slots[SlotHelmet] = &item.Item{
-		Stats: item.ItemStats{Durability: 100, DurabilityMax: 100},
+	equipComp.Slots[SlotHead] = &item.Item{
+		Stats: item.Stats{Durability: 100, DurabilityMax: 100},
 	}
 	equipComp.Slots[SlotBoots] = &item.Item{
-		Stats: item.ItemStats{Durability: 100, DurabilityMax: 100},
+		Stats: item.Stats{Durability: 100, DurabilityMax: 100},
 	}
 	entity.AddComponent(equipComp)
 
@@ -147,7 +147,7 @@ func TestCombatEquipmentDurabilityParticleSystem_OnDamageTaken_MultipleArmorPiec
 	if equipComp.Slots[SlotChest].Stats.Durability == 100 {
 		t.Error("chest durability should have decreased")
 	}
-	if equipComp.Slots[SlotHelmet].Stats.Durability == 100 {
+	if equipComp.Slots[SlotHead].Stats.Durability == 100 {
 		t.Error("helmet durability should have decreased")
 	}
 	if equipComp.Slots[SlotBoots].Stats.Durability == 100 {
@@ -156,7 +156,7 @@ func TestCombatEquipmentDurabilityParticleSystem_OnDamageTaken_MultipleArmorPiec
 }
 
 func TestCombatEquipmentDurabilityParticleSystem_OnDamageTaken_StateTransition(t *testing.T) {
-	world := NewWorld(nil)
+	world := NewWorld()
 	sys := NewCombatEquipmentDurabilityParticleSystem(world, 12345)
 	sys.SetParticleSystem(NewParticleSystem())
 	sys.SetGenre("fantasy")
@@ -167,7 +167,7 @@ func TestCombatEquipmentDurabilityParticleSystem_OnDamageTaken_StateTransition(t
 	equipComp := &EquipmentComponent{Slots: make(map[EquipmentSlot]*item.Item)}
 	// Start at 51% durability (just above Worn -> Damaged threshold)
 	equipComp.Slots[SlotChest] = &item.Item{
-		Stats: item.ItemStats{Durability: 51, DurabilityMax: 100},
+		Stats: item.Stats{Durability: 51, DurabilityMax: 100},
 	}
 	entity.AddComponent(equipComp)
 
@@ -189,7 +189,7 @@ func TestCombatEquipmentDurabilityParticleSystem_OnDamageTaken_StateTransition(t
 }
 
 func TestCombatEquipmentDurabilityParticleSystem_OnDamageTaken_DurabilityClamped(t *testing.T) {
-	world := NewWorld(nil)
+	world := NewWorld()
 	sys := NewCombatEquipmentDurabilityParticleSystem(world, 12345)
 	sys.SetParticleSystem(NewParticleSystem())
 	sys.SetGenre("fantasy")
@@ -199,7 +199,7 @@ func TestCombatEquipmentDurabilityParticleSystem_OnDamageTaken_DurabilityClamped
 
 	equipComp := &EquipmentComponent{Slots: make(map[EquipmentSlot]*item.Item)}
 	equipComp.Slots[SlotChest] = &item.Item{
-		Stats: item.ItemStats{Durability: 1, DurabilityMax: 100},
+		Stats: item.Stats{Durability: 1, DurabilityMax: 100},
 	}
 	entity.AddComponent(equipComp)
 
@@ -396,7 +396,7 @@ func TestCombatEquipmentDurabilityParticleSystem_GetSpread(t *testing.T) {
 }
 
 func TestCombatEquipmentDurabilityParticleSystem_Update(t *testing.T) {
-	world := NewWorld(nil)
+	world := NewWorld()
 	sys := NewCombatEquipmentDurabilityParticleSystem(world, 12345)
 
 	// Update should not panic (callback-driven system)
@@ -405,7 +405,7 @@ func TestCombatEquipmentDurabilityParticleSystem_Update(t *testing.T) {
 }
 
 func BenchmarkCombatEquipmentDurabilityParticleSystem_OnDamageTaken(b *testing.B) {
-	world := NewWorld(nil)
+	world := NewWorld()
 	sys := NewCombatEquipmentDurabilityParticleSystem(world, 12345)
 	sys.SetParticleSystem(NewParticleSystem())
 	sys.SetGenre("fantasy")
@@ -415,7 +415,7 @@ func BenchmarkCombatEquipmentDurabilityParticleSystem_OnDamageTaken(b *testing.B
 
 	equipComp := &EquipmentComponent{Slots: make(map[EquipmentSlot]*item.Item)}
 	equipComp.Slots[SlotChest] = &item.Item{
-		Stats: item.ItemStats{Durability: 10000, DurabilityMax: 10000},
+		Stats: item.Stats{Durability: 10000, DurabilityMax: 10000},
 	}
 	entity.AddComponent(equipComp)
 

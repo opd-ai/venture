@@ -144,13 +144,13 @@ func (s *ReputationHealingBonusSystem) processEntity(entity *Entity, elapsed flo
 
 	if s.logger != nil && health.Current != oldHealth && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
 		s.logger.WithFields(logrus.Fields{
-			"entity_id":   entity.ID,
-			"regen_rate":  regenRate,
+			"entity_id":    entity.ID,
+			"regen_rate":   regenRate,
 			"regen_amount": regenAmount,
-			"old_health":  oldHealth,
-			"new_health":  health.Current,
-			"max_health":  health.Max,
-			"genre":       s.genreID,
+			"old_health":   oldHealth,
+			"new_health":   health.Current,
+			"max_health":   health.Max,
+			"genre":        s.genreID,
 		}).Debug("reputation healing bonus applied")
 	}
 }

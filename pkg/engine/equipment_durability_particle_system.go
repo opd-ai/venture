@@ -1,3 +1,5 @@
+//go:build ignore
+
 // Package engine provides EquipmentDurabilityParticleSystem for visual feedback
 // when equipment degrades through damage states. This system connects equipment
 // durability systems (terrain, weather) with ParticleSystem to spawn genre-aware

@@ -296,12 +296,12 @@ func (s *TerrainRangedAccuracySystem) logModifier(entity *Entity, tileX, tileY i
 		return
 	}
 	s.logger.WithFields(logrus.Fields{
-		"entityID":       entity.ID,
-		"tileX":          tileX,
-		"tileY":          tileY,
-		"terrainType":    comp.TerrainType,
-		"accuracyMod":    comp.AccuracyModifier,
-		"adjacentTrees":  comp.AdjacentTreeCount,
+		"entityID":      entity.ID,
+		"tileX":         tileX,
+		"tileY":         tileY,
+		"terrainType":   comp.TerrainType,
+		"accuracyMod":   comp.AccuracyModifier,
+		"adjacentTrees": comp.AdjacentTreeCount,
 	}).Debug("applied terrain ranged accuracy")
 }
 

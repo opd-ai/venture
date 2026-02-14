@@ -5,7 +5,7 @@ import (
 )
 
 func TestNewFishingCatchParticleSystem(t *testing.T) {
-	world := NewWorld(nil)
+	world := NewWorld()
 	system := NewFishingCatchParticleSystem(world, 12345)
 
 	if system == nil {
@@ -30,7 +30,7 @@ func TestNewFishingCatchParticleSystem(t *testing.T) {
 }
 
 func TestFishingCatchParticleSystem_SetGenre(t *testing.T) {
-	world := NewWorld(nil)
+	world := NewWorld()
 	system := NewFishingCatchParticleSystem(world, 12345)
 
 	system.SetGenre("horror")
@@ -40,7 +40,7 @@ func TestFishingCatchParticleSystem_SetGenre(t *testing.T) {
 }
 
 func TestFishingCatchParticleSystem_SetParticleSystem(t *testing.T) {
-	world := NewWorld(nil)
+	world := NewWorld()
 	system := NewFishingCatchParticleSystem(world, 12345)
 	ps := NewParticleSystem()
 
@@ -51,7 +51,7 @@ func TestFishingCatchParticleSystem_SetParticleSystem(t *testing.T) {
 }
 
 func TestFishingCatchParticleSystem_SetFishingSystem(t *testing.T) {
-	world := NewWorld(nil)
+	world := NewWorld()
 	system := NewFishingCatchParticleSystem(world, 12345)
 	fs := NewFishingSystem(world, 54321)
 
@@ -67,7 +67,7 @@ func TestFishingCatchParticleSystem_SetFishingSystem(t *testing.T) {
 }
 
 func TestFishingCatchParticleSystem_GetFishRarity(t *testing.T) {
-	world := NewWorld(nil)
+	world := NewWorld()
 	system := NewFishingCatchParticleSystem(world, 12345)
 	fs := NewFishingSystem(world, 54321)
 	system.SetFishingSystem(fs)
@@ -96,7 +96,7 @@ func TestFishingCatchParticleSystem_GetFishRarity(t *testing.T) {
 }
 
 func TestFishingCatchParticleSystem_SelectParticleType(t *testing.T) {
-	world := NewWorld(nil)
+	world := NewWorld()
 	system := NewFishingCatchParticleSystem(world, 12345)
 
 	tests := []struct {
@@ -119,7 +119,7 @@ func TestFishingCatchParticleSystem_SelectParticleType(t *testing.T) {
 			system.SetGenre(tt.genre)
 			pt := system.selectParticleType(tt.rarity)
 			// Just verify no panic and returns valid type
-			if pt == "" {
+			if pt == 0 {
 				t.Error("selectParticleType returned empty string")
 			}
 		})
@@ -127,7 +127,7 @@ func TestFishingCatchParticleSystem_SelectParticleType(t *testing.T) {
 }
 
 func TestFishingCatchParticleSystem_SelectDuration(t *testing.T) {
-	world := NewWorld(nil)
+	world := NewWorld()
 	system := NewFishingCatchParticleSystem(world, 12345)
 
 	// Duration should increase with rarity
@@ -144,7 +144,7 @@ func TestFishingCatchParticleSystem_SelectDuration(t *testing.T) {
 }
 
 func TestFishingCatchParticleSystem_SelectGravity(t *testing.T) {
-	world := NewWorld(nil)
+	world := NewWorld()
 	system := NewFishingCatchParticleSystem(world, 12345)
 
 	// Common fish should have positive gravity (fall down)
@@ -161,7 +161,7 @@ func TestFishingCatchParticleSystem_SelectGravity(t *testing.T) {
 }
 
 func TestFishingCatchParticleSystem_Update(t *testing.T) {
-	world := NewWorld(nil)
+	world := NewWorld()
 	system := NewFishingCatchParticleSystem(world, 12345)
 
 	// Update should be no-op (callback-driven)
@@ -171,7 +171,7 @@ func TestFishingCatchParticleSystem_Update(t *testing.T) {
 }
 
 func TestFishingCatchParticleSystem_OnFishCaught_NilChecks(t *testing.T) {
-	world := NewWorld(nil)
+	world := NewWorld()
 	system := NewFishingCatchParticleSystem(world, 12345)
 
 	// Should not panic with nil inputs
@@ -181,7 +181,7 @@ func TestFishingCatchParticleSystem_OnFishCaught_NilChecks(t *testing.T) {
 }
 
 func TestFishingCatchParticleSystem_OnFishCaught(t *testing.T) {
-	world := NewWorld(nil)
+	world := NewWorld()
 	system := NewFishingCatchParticleSystem(world, 12345)
 	ps := NewParticleSystem()
 	fs := NewFishingSystem(world, 54321)
@@ -206,7 +206,7 @@ func TestFishingCatchParticleSystem_OnFishCaught(t *testing.T) {
 }
 
 func TestFishingCatchParticleSystem_OnFishCaught_MissingPosition(t *testing.T) {
-	world := NewWorld(nil)
+	world := NewWorld()
 	system := NewFishingCatchParticleSystem(world, 12345)
 	ps := NewParticleSystem()
 
@@ -221,7 +221,7 @@ func TestFishingCatchParticleSystem_OnFishCaught_MissingPosition(t *testing.T) {
 }
 
 func TestFishingCatchParticleSystem_SpawnCatchEffect(t *testing.T) {
-	world := NewWorld(nil)
+	world := NewWorld()
 	system := NewFishingCatchParticleSystem(world, 12345)
 	ps := NewParticleSystem()
 
@@ -233,7 +233,7 @@ func TestFishingCatchParticleSystem_SpawnCatchEffect(t *testing.T) {
 }
 
 func TestFishingCatchParticleSystem_SpawnCatchEffect_NoParticleSystem(t *testing.T) {
-	world := NewWorld(nil)
+	world := NewWorld()
 	system := NewFishingCatchParticleSystem(world, 12345)
 
 	// Should not panic without particle system
@@ -241,7 +241,7 @@ func TestFishingCatchParticleSystem_SpawnCatchEffect_NoParticleSystem(t *testing
 }
 
 func TestFishingCatchParticleSystem_CallbackChaining(t *testing.T) {
-	world := NewWorld(nil)
+	world := NewWorld()
 	system := NewFishingCatchParticleSystem(world, 12345)
 	fs := NewFishingSystem(world, 54321)
 
@@ -269,7 +269,7 @@ func TestFishingCatchParticleSystem_CallbackChaining(t *testing.T) {
 }
 
 func TestFishingCatchParticleSystem_RarityParticleScaling(t *testing.T) {
-	world := NewWorld(nil)
+	world := NewWorld()
 	system := NewFishingCatchParticleSystem(world, 12345)
 
 	// Test particle count scales with rarity
@@ -311,7 +311,7 @@ func TestFishingCatchParticleSystem_RarityParticleScaling(t *testing.T) {
 }
 
 func BenchmarkFishingCatchParticleSystem_OnFishCaught(b *testing.B) {
-	world := NewWorld(nil)
+	world := NewWorld()
 	system := NewFishingCatchParticleSystem(world, 12345)
 	ps := NewParticleSystem()
 	fs := NewFishingSystem(world, 54321)

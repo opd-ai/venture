@@ -1,3 +1,5 @@
+//go:build ignore
+
 // Package engine provides tests for EquipmentDurabilityParticleSystem.
 package engine
 

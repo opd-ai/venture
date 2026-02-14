@@ -147,6 +147,7 @@ type SystemInitResult struct {
 	TerrainFishingBonusSystem           *TerrainFishingBonusSystem
 	WeatherSpellDamageSystem            *WeatherSpellDamageSystem
 	SpecializationLifestealSystem       *SpecializationLifestealSystem
+	CompanionFishingBonusSystem         *CompanionFishingBonusSystem
 
 	// System wrappers
 	AnimationSystemWrapper            System
@@ -804,6 +805,13 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 	companionManaRegenSystem.SetGenre(config.GenreID)
 	result.CompanionManaRegenSystem = companionManaRegenSystem
 	game.World.AddSystem(companionManaRegenSystem)
+
+	// 36q4. CompanionFishingBonusSystem - boosts fishing rates based on nearby companions
+	// Connects CompanionComponent (type, loyalty) with FishingComponent for companion-assisted fishing
+	companionFishingBonusSystem := NewCompanionFishingBonusSystem(game.World, config.Seed+6930)
+	companionFishingBonusSystem.SetGenre(config.GenreID)
+	result.CompanionFishingBonusSystem = companionFishingBonusSystem
+	game.World.AddSystem(companionFishingBonusSystem)
 
 	// 36r. LifestealSystem - heals attackers based on damage dealt
 	// Connects CombatSystem damage events with HealthComponent healing for sustained combat

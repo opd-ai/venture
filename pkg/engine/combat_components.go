@@ -75,6 +75,9 @@ type StatsComponent struct {
 	// Evasion chance
 	Evasion float64 // 0.0 to 1.0
 
+	// Block chance - reduces damage by 50% when triggered (0.0 to 1.0)
+	BlockChance float64
+
 	// Lifesteal - heals attacker for percentage of damage dealt (0.0 to 1.0)
 	Lifesteal float64
 
@@ -97,6 +100,7 @@ func NewStatsComponent() *StatsComponent {
 		CritChance:   0.05,
 		CritDamage:   2.0,
 		Evasion:      0.0,
+		BlockChance:  0.0,
 		Resistances:  make(map[combat.DamageType]float64),
 	}
 }

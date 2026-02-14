@@ -52,73 +52,76 @@ func DefaultSystemInitConfig(seed int64, genreID string, logger *logrus.Logger) 
 // further configuration after initialization (e.g., setting callbacks).
 type SystemInitResult struct {
 	// Systems that often need post-initialization configuration
-	InputSystem                      *InputSystem
-	CombatSystem                     *CombatSystem
-	CollisionSystem                  *CollisionSystem
-	ProjectileSystem                 *ProjectileSystem
-	AudioManager                     *AudioManager
-	ObjectiveTracker                 *ObjectiveTrackerSystem
-	CommerceSystem                   *CommerceSystem
-	DialogSystem                     *DialogSystem
-	CraftingSystem                   *CraftingSystem
-	InteractionSystem                *InteractionSystem
-	MiniGameSystem                   *MiniGameSystem
-	AnimationSystem                  *AnimationSystem
-	ParticleSystem                   *ParticleSystem
-	TutorialSystem                   *EbitenTutorialSystem
-	HelpSystem                       *EbitenHelpSystem
-	LevelUpParticleSystem            *LevelUpParticleSystem
-	ItemPickupParticleSystem         *ItemPickupParticleSystem
-	SpellEffectParticleSystem        *SpellEffectParticleSystem
-	DeathParticleSystem              *DeathParticleSystem
-	DamageResistanceParticleSystem   *DamageResistanceParticleSystem
-	ShieldAbsorbParticleSystem       *ShieldAbsorbParticleSystem
-	CompanionLevelUpParticleSystem   *CompanionLevelUpParticleSystem
-	ItemPickupSystem                 *ItemPickupSystem
-	ProgressionSystem                *ProgressionSystem
-	CompanionProgressionSystem       *CompanionProgressionSystem
-	WeatherAudioSystem               *WeatherAudioSystem
-	FactionXPBonusSystem             *FactionXPBonusSystem
-	WeatherManaRegenSystem           *WeatherManaRegenSystem
-	WeatherCooldownSystem            *WeatherCooldownSystem
-	TerrainMovementSpeedSystem       *TerrainMovementSpeedSystem
-	TerrainCombatBonusSystem         *TerrainCombatBonusSystem
-	TerrainStealthSystem             *TerrainStealthSystem
-	TerrainStatusEffectSystem        *TerrainStatusEffectSystem
-	TerrainManaRegenSystem           *TerrainManaRegenSystem
-	LowHealthVFXSystem               *LowHealthVFXSystem
-	ManaRegenParticleSystem          *ManaRegenParticleSystem
-	CompanionAuraParticleSystem      *CompanionAuraParticleSystem
-	SpecializationManaBoostSystem    *SpecializationManaBoostSystem
-	SpecializationHealthRegenSystem  *SpecializationHealthRegenSystem
-	SpecializationSpellDamageSystem  *SpecializationSpellDamageSystem
-	SpecializationAttackSpeedSystem  *SpecializationAttackSpeedSystem
-	SpecializationDefenseSystem      *SpecializationDefenseSystem
-	ElementalComboParticleSystem     *ElementalComboParticleSystem
-	WeatherRangedAccuracySystem      *WeatherRangedAccuracySystem
-	StatusEffectEvasionSystem        *StatusEffectEvasionSystem
-	StatusEffectCriticalChanceSystem *StatusEffectCriticalChanceSystem
-	WeatherXPBonusSystem             *WeatherXPBonusSystem
-	ElementalComboDamageSystem       *ElementalComboDamageSystem
-	ElementalCompanionSynergySystem  *ElementalCompanionSynergySystem
-	LifestealSystem                  *LifestealSystem
-	StatusEffectManaCostSystem       *StatusEffectManaCostSystem
-	StatusEffectDamageParticleSystem *StatusEffectDamageParticleSystem
-	WeaponSwingParticleSystem        *WeaponSwingParticleSystem
-	FearFleeParticleSystem           *FearFleeParticleSystem
-	StatusEffectDamageBoostSystem    *StatusEffectDamageBoostSystem
-	TerrainCompanionBonusSystem      *TerrainCompanionBonusSystem
-	FactionCompanionBehaviorSystem   *FactionCompanionBehaviorSystem
-	WeatherCompanionBonusSystem      *WeatherCompanionBonusSystem
-	EvasionParticleSystem            *EvasionParticleSystem
-	FootstepParticleSystem           *FootstepParticleSystem
-	SpecializationStatusResistSystem *SpecializationStatusResistSystem
-	StatusEffectHealthRegenSystem    *StatusEffectHealthRegenSystem
-	HealingParticleSystem            *HealingParticleSystem
-	SpecializationCritDamageSystem   *SpecializationCritDamageSystem
-	ShieldRegenSystem                *ShieldRegenSystem
-	WeatherMeleeDamageSystem         *WeatherMeleeDamageSystem
-	DrowningParticleSystem           *DrowningParticleSystem
+	InputSystem                       *InputSystem
+	CombatSystem                      *CombatSystem
+	CollisionSystem                   *CollisionSystem
+	ProjectileSystem                  *ProjectileSystem
+	AudioManager                      *AudioManager
+	ObjectiveTracker                  *ObjectiveTrackerSystem
+	CommerceSystem                    *CommerceSystem
+	DialogSystem                      *DialogSystem
+	CraftingSystem                    *CraftingSystem
+	InteractionSystem                 *InteractionSystem
+	MiniGameSystem                    *MiniGameSystem
+	AnimationSystem                   *AnimationSystem
+	ParticleSystem                    *ParticleSystem
+	TutorialSystem                    *EbitenTutorialSystem
+	HelpSystem                        *EbitenHelpSystem
+	LevelUpParticleSystem             *LevelUpParticleSystem
+	ItemPickupParticleSystem          *ItemPickupParticleSystem
+	SpellEffectParticleSystem         *SpellEffectParticleSystem
+	DeathParticleSystem               *DeathParticleSystem
+	DamageResistanceParticleSystem    *DamageResistanceParticleSystem
+	ShieldAbsorbParticleSystem        *ShieldAbsorbParticleSystem
+	CompanionLevelUpParticleSystem    *CompanionLevelUpParticleSystem
+	ItemPickupSystem                  *ItemPickupSystem
+	ProgressionSystem                 *ProgressionSystem
+	CompanionProgressionSystem        *CompanionProgressionSystem
+	WeatherAudioSystem                *WeatherAudioSystem
+	FactionXPBonusSystem              *FactionXPBonusSystem
+	WeatherManaRegenSystem            *WeatherManaRegenSystem
+	WeatherCooldownSystem             *WeatherCooldownSystem
+	TerrainMovementSpeedSystem        *TerrainMovementSpeedSystem
+	TerrainCombatBonusSystem          *TerrainCombatBonusSystem
+	TerrainStealthSystem              *TerrainStealthSystem
+	TerrainStatusEffectSystem         *TerrainStatusEffectSystem
+	TerrainManaRegenSystem            *TerrainManaRegenSystem
+	LowHealthVFXSystem                *LowHealthVFXSystem
+	ManaRegenParticleSystem           *ManaRegenParticleSystem
+	CompanionAuraParticleSystem       *CompanionAuraParticleSystem
+	SpecializationManaBoostSystem     *SpecializationManaBoostSystem
+	SpecializationHealthRegenSystem   *SpecializationHealthRegenSystem
+	SpecializationSpellDamageSystem   *SpecializationSpellDamageSystem
+	SpecializationAttackSpeedSystem   *SpecializationAttackSpeedSystem
+	SpecializationDefenseSystem       *SpecializationDefenseSystem
+	ElementalComboParticleSystem      *ElementalComboParticleSystem
+	WeatherRangedAccuracySystem       *WeatherRangedAccuracySystem
+	StatusEffectEvasionSystem         *StatusEffectEvasionSystem
+	StatusEffectCriticalChanceSystem  *StatusEffectCriticalChanceSystem
+	WeatherXPBonusSystem              *WeatherXPBonusSystem
+	ElementalComboDamageSystem        *ElementalComboDamageSystem
+	ElementalCompanionSynergySystem   *ElementalCompanionSynergySystem
+	CompanionSpellAmplificationSystem *CompanionSpellAmplificationSystem
+	LifestealSystem                   *LifestealSystem
+	StatusEffectManaCostSystem        *StatusEffectManaCostSystem
+	StatusEffectDamageParticleSystem  *StatusEffectDamageParticleSystem
+	WeaponSwingParticleSystem         *WeaponSwingParticleSystem
+	FearFleeParticleSystem            *FearFleeParticleSystem
+	StatusEffectDamageBoostSystem     *StatusEffectDamageBoostSystem
+	TerrainCompanionBonusSystem       *TerrainCompanionBonusSystem
+	FactionCompanionBehaviorSystem    *FactionCompanionBehaviorSystem
+	WeatherCompanionBonusSystem       *WeatherCompanionBonusSystem
+	EvasionParticleSystem             *EvasionParticleSystem
+	FootstepParticleSystem            *FootstepParticleSystem
+	SpecializationStatusResistSystem  *SpecializationStatusResistSystem
+	StatusEffectHealthRegenSystem     *StatusEffectHealthRegenSystem
+	HealingParticleSystem             *HealingParticleSystem
+	SpecializationCritDamageSystem    *SpecializationCritDamageSystem
+	ShieldRegenSystem                 *ShieldRegenSystem
+	WeatherMeleeDamageSystem          *WeatherMeleeDamageSystem
+	DrowningParticleSystem            *DrowningParticleSystem
+	DestructionParticleSystem         *DestructionParticleSystem
+	BlockParticleSystem               *BlockParticleSystem
 
 	// System wrappers
 	AnimationSystemWrapper            System
@@ -668,6 +671,13 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 	result.ElementalCompanionSynergySystem = elementalCompanionSynergySystem
 	game.World.AddSystem(elementalCompanionSynergySystem)
 
+	// 36q2. CompanionSpellAmplificationSystem - boosts owner spell damage/healing based on companion bonding
+	// Connects CompanionComponent (loyalty, bonding perks) with owner spell effectiveness
+	companionSpellAmplificationSystem := NewCompanionSpellAmplificationSystem(game.World, config.Seed+6910)
+	companionSpellAmplificationSystem.SetGenre(config.GenreID)
+	result.CompanionSpellAmplificationSystem = companionSpellAmplificationSystem
+	game.World.AddSystem(companionSpellAmplificationSystem)
+
 	// 36r. LifestealSystem - heals attackers based on damage dealt
 	// Connects CombatSystem damage events with HealthComponent healing for sustained combat
 	lifestealSystem := NewLifestealSystem(game.World, config.Seed+6950)
@@ -717,6 +727,15 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 	result.CombatSystem.SetEvasionCallback(evasionParticleSystem.OnEvasion)
 	result.EvasionParticleSystem = evasionParticleSystem
 	game.World.AddSystem(evasionParticleSystem)
+
+	// 36w2. BlockParticleSystem - visual feedback for blocked attacks
+	// Connects CombatSystem block events with ParticleSystem for genre-aware shield particles
+	blockParticleSystem := NewBlockParticleSystem(game.World, config.Seed+7225)
+	blockParticleSystem.SetParticleSystem(result.ParticleSystem)
+	blockParticleSystem.SetGenre(config.GenreID)
+	result.CombatSystem.SetBlockCallback(blockParticleSystem.OnBlock)
+	result.BlockParticleSystem = blockParticleSystem
+	game.World.AddSystem(blockParticleSystem)
 
 	// 36x. FootstepParticleSystem - visual feedback for terrain-aware movement
 	// Connects MovementSystem with ParticleSystem for genre-aware footstep effects
@@ -776,6 +795,14 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 	destructibleObjectSystem.SetWorld(game.World)
 	destructibleObjectSystem.SetFireSystem(firePropagationSystem)
 	game.World.AddSystem(destructibleObjectSystem)
+
+	// 39b. DestructionParticleSystem - visual feedback for destructible objects
+	// Connects DestructibleObjectSystem with ParticleSystem for genre-aware destruction effects
+	destructionParticleSystem := NewDestructionParticleSystem(game.World, config.Seed+1110)
+	destructionParticleSystem.SetParticleSystem(result.ParticleSystem)
+	destructionParticleSystem.SetGenre(config.GenreID)
+	result.DestructionParticleSystem = destructionParticleSystem
+	game.World.AddSystem(destructionParticleSystem)
 
 	carrySystem := NewCarrySystemWithLogger(logger)
 	carrySystem.SetWorld(game.World)

@@ -60,6 +60,9 @@ type CombatSystem struct {
 	// Callback for when an entity is healed
 	onHealCallback func(healer, target *Entity, amount float64)
 
+	// Callback for when an attack is blocked (damage reduced)
+	onBlockCallback func(attacker, target *Entity, blockChance, originalDamage, reducedDamage float64)
+
 	// Logger for combat events
 	logger *logrus.Entry
 }
@@ -439,11 +442,23 @@ func (s *CombatSystem) executeMeleeAttack(attacker, target *Entity, attack *Atta
 		return false
 	}
 
+	// Check for block - reduces damage by 50% if successful
+	blocked := s.checkBlock(attacker, target, targetStats)
+
 	finalDamage, isCrit := s.computeFinalDamage(attack, attackerStats, targetStats, target)
 	if finalDamage <= 0 {
 		attack.ResetCooldown()
 		s.logDamageAbsorbed(attacker, target)
 		return true
+	}
+
+	// Apply block damage reduction
+	originalDamage := finalDamage
+	if blocked {
+		finalDamage *= 0.5
+		if s.onBlockCallback != nil && targetStats != nil {
+			s.onBlockCallback(attacker, target, targetStats.BlockChance, originalDamage, finalDamage)
+		}
 	}
 
 	s.applyDamageAndFeedback(attacker, target, health, attack, finalDamage, isCrit)
@@ -583,6 +598,21 @@ func (s *CombatSystem) checkEvasion(attacker, target *Entity, targetStats *Stats
 		// Trigger evasion callback for visual effects
 		if s.onEvasionCallback != nil {
 			s.onEvasionCallback(attacker, target, targetStats.Evasion)
+		}
+		return true
+	}
+	return false
+}
+
+// checkBlock determines if an attack is blocked (damage reduced) based on target block stats.
+func (s *CombatSystem) checkBlock(attacker, target *Entity, targetStats *StatsComponent) bool {
+	if targetStats != nil && targetStats.BlockChance > 0 && s.rollChance(targetStats.BlockChance) {
+		if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
+			s.logger.WithFields(logrus.Fields{
+				"attackerID":  attacker.ID,
+				"targetID":    target.ID,
+				"blockChance": targetStats.BlockChance,
+			}).Debug("attack blocked")
 		}
 		return true
 	}
@@ -1019,6 +1049,15 @@ func (s *CombatSystem) SetHealCallback(callback func(healer, target *Entity, amo
 		s.logger.Debug("heal callback registered")
 	}
 	s.onHealCallback = callback
+}
+
+// SetBlockCallback sets the callback function for when an attack is blocked.
+// The callback receives the attacker, target, block chance, original damage, and reduced damage.
+func (s *CombatSystem) SetBlockCallback(callback func(attacker, target *Entity, blockChance, originalDamage, reducedDamage float64)) {
+	if s.logger != nil {
+		s.logger.Debug("block callback registered")
+	}
+	s.onBlockCallback = callback
 }
 
 // isValidEnemyTarget checks if entity is a valid enemy target.

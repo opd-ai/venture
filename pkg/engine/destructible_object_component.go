@@ -69,6 +69,9 @@ type DestructibleObjectComponent struct {
 	// IsDestroyed tracks if this object has been destroyed
 	IsDestroyed bool
 
+	// ParticlesSpawned tracks if destruction particles have been emitted
+	ParticlesSpawned bool
+
 	// LastDamageTime tracks when the object was last damaged
 	LastDamageTime time.Time
 
@@ -80,6 +83,9 @@ type DestructibleObjectComponent struct {
 
 	// PoisonDuration is how long poison cloud lingers after destruction (seconds)
 	PoisonDuration float64
+
+	// PoisonRadius is the area of effect for poison cloud (0 = not poison)
+	PoisonRadius float64
 
 	// DebrisCount is how many debris entities to spawn on destruction
 	DebrisCount int
@@ -122,6 +128,7 @@ func NewDestructibleObjectComponent(objType ObjectType) *DestructibleObjectCompo
 		comp.Health = 15.0
 		comp.MaxHealth = 15.0
 		comp.PoisonDuration = 10.0 // 10 seconds of poison cloud
+		comp.PoisonRadius = 64.0   // 2 tiles radius
 	case ObjectExplosiveBarrel:
 		comp.Health = 25.0
 		comp.MaxHealth = 25.0

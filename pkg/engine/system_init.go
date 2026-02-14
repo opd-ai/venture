@@ -171,8 +171,10 @@ type SystemInitResult struct {
 	ReputationHealingBonusParticleSystem     *ReputationHealingBonusParticleSystem
 	ReputationSpellDamageBonusSystem         *ReputationSpellDamageBonusSystem
 	ReputationSpellDamageBonusParticleSystem *ReputationSpellDamageBonusParticleSystem
-	ReputationMovementSpeedSystem            *ReputationMovementSpeedSystem
-	ReputationMovementSpeedParticleSystem    *ReputationMovementSpeedParticleSystem
+	ReputationMovementSpeedSystem               *ReputationMovementSpeedSystem
+	ReputationMovementSpeedParticleSystem       *ReputationMovementSpeedParticleSystem
+	ReputationCriticalChanceBonusSystem         *ReputationCriticalChanceBonusSystem
+	ReputationCriticalChanceParticleSystem      *ReputationCriticalChanceParticleSystem
 
 	// System wrappers
 	AnimationSystemWrapper            System
@@ -382,6 +384,21 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 	reputationMovementSpeedParticleSystem.SetGenre(config.GenreID)
 	result.ReputationMovementSpeedParticleSystem = reputationMovementSpeedParticleSystem
 	game.World.AddSystem(reputationMovementSpeedParticleSystem)
+
+	// 17k. ReputationCriticalChanceBonusSystem - crit chance bonus from allied faction reputation
+	reputationCriticalChanceBonusSystem := NewReputationCriticalChanceBonusSystem(game.World, config.Seed+5215)
+	reputationCriticalChanceBonusSystem.SetFactionSystem(factionSystem)
+	reputationCriticalChanceBonusSystem.SetGenre(config.GenreID)
+	result.ReputationCriticalChanceBonusSystem = reputationCriticalChanceBonusSystem
+	game.World.AddSystem(reputationCriticalChanceBonusSystem)
+
+	// 17l. ReputationCriticalChanceParticleSystem - visual feedback for reputation crit bonus
+	reputationCriticalChanceParticleSystem := NewReputationCriticalChanceParticleSystem(game.World, config.Seed+5220)
+	reputationCriticalChanceParticleSystem.SetParticleSystem(result.ParticleSystem)
+	reputationCriticalChanceParticleSystem.SetCritSystem(reputationCriticalChanceBonusSystem)
+	reputationCriticalChanceParticleSystem.SetGenre(config.GenreID)
+	result.ReputationCriticalChanceParticleSystem = reputationCriticalChanceParticleSystem
+	game.World.AddSystem(reputationCriticalChanceParticleSystem)
 
 	// 18. SkillProgressionSystem - applies skill effects to stats
 	skillProgressionSystem := NewSkillProgressionSystem()

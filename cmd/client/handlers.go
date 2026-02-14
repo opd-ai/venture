@@ -190,7 +190,9 @@ type systemsContainer struct {
 	reputationSpellDamageBonusSystem         *engine.ReputationSpellDamageBonusSystem         // Bridges faction reputation with spell damage
 	reputationSpellDamageBonusParticleSystem *engine.ReputationSpellDamageBonusParticleSystem // Visual feedback for reputation spell damage
 	reputationMovementSpeedSystem            *engine.ReputationMovementSpeedSystem            // Bridges faction reputation with movement speed
-	reputationMovementSpeedParticleSystem    *engine.ReputationMovementSpeedParticleSystem    // Visual feedback for reputation speed bonus
+	reputationMovementSpeedParticleSystem       *engine.ReputationMovementSpeedParticleSystem    // Visual feedback for reputation speed bonus
+	reputationCriticalChanceBonusSystem         *engine.ReputationCriticalChanceBonusSystem      // Bridges faction reputation with critical hit chance
+	reputationCriticalChanceParticleSystem      *engine.ReputationCriticalChanceParticleSystem   // Visual feedback for reputation crit bonus
 	statusEffectAISystem                     *engine.StatusEffectAISystem                     // Bridges status effects with AI (stun/frozen disable AI)
 	reputationSystem                         *engine.ReputationSystem
 	alignmentSystem                          *engine.AlignmentSystem
@@ -1896,6 +1898,21 @@ func registerNonCriticalSystems(game *engine.EbitenGame, sys *systemsContainer) 
 	sys.reputationMovementSpeedParticleSystem.SetSpeedSystem(sys.reputationMovementSpeedSystem)
 	sys.reputationMovementSpeedParticleSystem.SetGenre(*genreID)
 	game.World.AddSystem(sys.reputationMovementSpeedParticleSystem)
+
+	// ReputationCriticalChanceBonusSystem: bridges faction reputation with critical hit chance
+	// Players with high faction standing gain a passive crit chance bonus
+	sys.reputationCriticalChanceBonusSystem = engine.NewReputationCriticalChanceBonusSystem(game.World, *seed+5215)
+	sys.reputationCriticalChanceBonusSystem.SetFactionSystem(sys.factionSystem)
+	sys.reputationCriticalChanceBonusSystem.SetGenre(*genreID)
+	game.World.AddSystem(sys.reputationCriticalChanceBonusSystem)
+
+	// ReputationCriticalChanceParticleSystem: visual feedback for reputation crit bonus
+	// Spawns genre-aware glint particles when faction reputation boosts critical chance
+	sys.reputationCriticalChanceParticleSystem = engine.NewReputationCriticalChanceParticleSystem(game.World, *seed+5220)
+	sys.reputationCriticalChanceParticleSystem.SetParticleSystem(sys.particleSystem)
+	sys.reputationCriticalChanceParticleSystem.SetCritSystem(sys.reputationCriticalChanceBonusSystem)
+	sys.reputationCriticalChanceParticleSystem.SetGenre(*genreID)
+	game.World.AddSystem(sys.reputationCriticalChanceParticleSystem)
 
 	// FactionCompanionBehaviorSystem: bridges faction reputation with companion AI targeting
 	// Companions won't attack allied faction members and prioritize hostile faction enemies

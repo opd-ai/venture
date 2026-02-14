@@ -290,11 +290,12 @@ type systemsContainer struct {
 	// Phase 28: Reputation & Moral Choices
 	moralChoiceSystem *engine.MoralChoiceSystem
 	// Phase 95-96: Resource gathering and fishing minigames
-	fishingSystem               *engine.FishingSystem
-	gatheringSystem             *engine.GatheringSystem
-	fishingWeatherBonusSystem   *engine.FishingWeatherBonusSystem
-	timeOfDayFishingBonusSystem *engine.TimeOfDayFishingBonusSystem
-	fishingCatchParticleSystem  *engine.FishingCatchParticleSystem
+	fishingSystem                       *engine.FishingSystem
+	gatheringSystem                     *engine.GatheringSystem
+	fishingWeatherBonusSystem           *engine.FishingWeatherBonusSystem
+	timeOfDayFishingBonusSystem         *engine.TimeOfDayFishingBonusSystem
+	fishingCatchParticleSystem          *engine.FishingCatchParticleSystem
+	timeOfDayFishingBonusParticleSystem *engine.TimeOfDayFishingBonusParticleSystem
 	// Phase 112: New Game Plus carry-over system
 	carryoverSystem *engine.CarryOverSystem
 	// Phase 30: Environmental Storytelling
@@ -1280,6 +1281,15 @@ func initializeV4Systems(game *engine.EbitenGame, sys *systemsContainer, clientL
 	sys.fishingCatchParticleSystem.SetGenre(*genreID)
 	game.World.AddSystem(sys.fishingCatchParticleSystem)
 	logging.ComponentLogger(clientLogger.Logger, "fishing_particle").Debug("Created fishing catch particle system")
+
+	// TimeOfDayFishingBonusParticleSystem - visual feedback for time-based fishing bonuses
+	// Spawns genre-aware particles on fishing spots when dawn/dusk/night bonuses are active
+	sys.timeOfDayFishingBonusParticleSystem = engine.NewTimeOfDayFishingBonusParticleSystem(game.World, *seed+seedOffsetFishing+175)
+	sys.timeOfDayFishingBonusParticleSystem.SetParticleSystem(sys.particleSystem)
+	sys.timeOfDayFishingBonusParticleSystem.SetTimeOfDayFishingBonusSystem(sys.timeOfDayFishingBonusSystem)
+	sys.timeOfDayFishingBonusParticleSystem.SetGenre(*genreID)
+	game.World.AddSystem(sys.timeOfDayFishingBonusParticleSystem)
+	logging.ComponentLogger(clientLogger.Logger, "fishing_timeofday_particle").Debug("Created time-of-day fishing bonus particle system")
 
 	// AUDIT FIX: Phase 112 - CarryOverSystem for New Game Plus
 	// Gap: CarryOverSystem implemented but never initialized on client

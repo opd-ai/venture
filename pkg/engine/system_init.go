@@ -149,6 +149,7 @@ type SystemInitResult struct {
 	WeatherSpellDamageSystem            *WeatherSpellDamageSystem
 	SpecializationLifestealSystem       *SpecializationLifestealSystem
 	CompanionFishingBonusSystem         *CompanionFishingBonusSystem
+	TerrainEquipmentDurabilitySystem    *TerrainEquipmentDurabilitySystem
 
 	// System wrappers
 	AnimationSystemWrapper            System
@@ -566,6 +567,14 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 	terrainSpellDamageSystem.SetTileSize(config.TileSize)
 	result.TerrainSpellDamageSystem = terrainSpellDamageSystem
 	game.World.AddSystem(terrainSpellDamageSystem)
+
+	// 36b7c. TerrainEquipmentDurabilitySystem - degrades equipment from terrain hazards
+	// Connects terrain tiles (lava, water, traps) with EquipmentComponent durability for environmental wear
+	terrainEquipmentDurabilitySystem := NewTerrainEquipmentDurabilitySystem(game.World, config.Seed+2194)
+	terrainEquipmentDurabilitySystem.SetGenre(config.GenreID)
+	terrainEquipmentDurabilitySystem.SetTileSize(config.TileSize)
+	result.TerrainEquipmentDurabilitySystem = terrainEquipmentDurabilitySystem
+	game.World.AddSystem(terrainEquipmentDurabilitySystem)
 
 	// 36b8. TerrainCompanionBonusSystem - modifies companion stats based on terrain type
 	// Connects terrain tiles with CompanionStatsComponent for tactical companion positioning

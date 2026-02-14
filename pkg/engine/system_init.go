@@ -93,6 +93,7 @@ type SystemInitResult struct {
 	StatusEffectEvasionSystem       *StatusEffectEvasionSystem
 	WeatherXPBonusSystem            *WeatherXPBonusSystem
 	ElementalComboDamageSystem      *ElementalComboDamageSystem
+	ElementalCompanionSynergySystem *ElementalCompanionSynergySystem
 
 	// System wrappers
 	AnimationSystemWrapper            System
@@ -531,6 +532,13 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 	elementalComboDamageSystem.SetGenre(config.GenreID)
 	result.ElementalComboDamageSystem = elementalComboDamageSystem
 	game.World.AddSystem(elementalComboDamageSystem)
+
+	// 36q. ElementalCompanionSynergySystem - boosts elemental companions based on owner status effects
+	// Connects CompanionComponent (elemental type) with StatusEffectComponent for tactical synergy
+	elementalCompanionSynergySystem := NewElementalCompanionSynergySystem(game.World, config.Seed+6900)
+	elementalCompanionSynergySystem.SetGenre(config.GenreID)
+	result.ElementalCompanionSynergySystem = elementalCompanionSynergySystem
+	game.World.AddSystem(elementalCompanionSynergySystem)
 
 	// 37. LifetimeSystem - temporary entities (Phase 5.3)
 	lifetimeSystem := NewLifetimeSystemWithLogger(game.World, logger)

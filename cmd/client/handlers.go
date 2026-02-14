@@ -149,84 +149,85 @@ import (
 
 // systemsContainer holds all initialized game systems for dependency injection.
 type systemsContainer struct {
-	inputSystem                    *engine.InputSystem
-	movementSystem                 *engine.MovementSystem
-	collisionSystem                *engine.CollisionSystem
-	combatSystem                   *engine.CombatSystem
-	interactionSystem              *engine.InteractionSystem
-	particleSystem                 *engine.ParticleSystem
-	animationSystem                *engine.AnimationSystem
-	equipmentVisualSystem          *engine.EquipmentVisualSystem
-	objectiveTracker               *engine.ObjectiveTrackerSystem
-	aiSystem                       *engine.AISystem
-	progressionSystem              *engine.ProgressionSystem
-	inventorySystem                *engine.InventorySystem
-	commerceSystem                 *engine.CommerceSystem
-	reputationPricingSystem        *engine.ReputationPricingSystem // Connects faction reputation with merchant pricing
-	dialogSystem                   *engine.DialogSystem
-	craftingSystem                 *engine.CraftingSystem
-	audioManager                   *engine.AudioManager
-	audioManagerSystem             *engine.AudioManagerSystem
-	itemPickupSystem               *engine.ItemPickupSystem
-	statusEffectSystem             *engine.StatusEffectSystem
-	spellCastingSystem             *engine.SpellCastingSystem
-	playerSpellCasting             *engine.PlayerSpellCastingSystem
-	manaRegenSystem                *engine.ManaRegenSystem
-	playerCombatSystem             *engine.PlayerCombatSystem
-	playerItemUseSystem            *engine.PlayerItemUseSystem
-	rotationSystem                 *engine.RotationSystem
-	projectileSystem               *engine.ProjectileSystem
-	revivalSystem                  *engine.RevivalSystem
-	behaviorTreeSystem             *engine.BehaviorTreeSystem
-	squadSystem                    *engine.SquadSystem
-	factionSystem                  *engine.FactionSystem
-	factionAwareAISystem           *engine.FactionAwareAISystem // Bridges faction reputation with AI hostility
-	factionXPBonusSystem           *engine.FactionXPBonusSystem // Bridges faction reputation with XP bonus rewards
-	statusEffectAISystem           *engine.StatusEffectAISystem // Bridges status effects with AI (stun/frozen disable AI)
-	reputationSystem               *engine.ReputationSystem
-	alignmentSystem                *engine.AlignmentSystem
-	factionReactionSystem          *engine.FactionReactionSystem
-	skillProgressionSystem         *engine.SkillProgressionSystem
-	visualFeedbackSystem           *engine.VisualFeedbackSystem
-	weatherSystem                  *engine.WeatherSystem
-	weatherCombatSystem            *engine.WeatherCombatSystem
-	weatherGroundEffectSystem      *engine.WeatherGroundEffectSystem      // Connects weather to ground impact particle effects
-	weatherAudioSystem             *engine.WeatherAudioSystem             // Connects weather to ambient audio sounds
-	weatherManaRegenSystem         *engine.WeatherManaRegenSystem         // Connects weather to mana regeneration rates
-	weatherCooldownSystem          *engine.WeatherCooldownSystem          // Connects weather to spell cooldown rates
-	statusEffectLightingSystem     *engine.StatusEffectLightingSystem     // Connects status effects to lighting for visual feedback
-	statusEffectMovementSystem     *engine.StatusEffectMovementSystem     // Connects status effects to movement speed modifiers
-	statusEffectEvasionSystem      *engine.StatusEffectEvasionSystem      // Connects status effects to evasion modifiers in combat
-	terrainMovementSpeedSystem     *engine.TerrainMovementSpeedSystem     // Connects terrain tiles to movement speed modifiers
-	terrainCombatBonusSystem       *engine.TerrainCombatBonusSystem       // Connects terrain tiles to combat bonuses (high ground, cover)
-	criticalHitParticleSystem      *engine.CriticalHitParticleSystem      // Connects combat crits to particle effects
-	levelUpParticleSystem          *engine.LevelUpParticleSystem          // Connects level-ups to particle effects
-	itemPickupParticleSystem       *engine.ItemPickupParticleSystem       // Connects item pickups to particle effects
-	deathParticleSystem            *engine.DeathParticleSystem            // Connects entity deaths to particle effects
-	spellEffectParticleSystem      *engine.SpellEffectParticleSystem      // Connects spell effects to particle effects
-	damageResistanceParticleSystem *engine.DamageResistanceParticleSystem // Connects damage resistance to particle effects
-	shieldAbsorbParticleSystem     *engine.ShieldAbsorbParticleSystem     // Connects shield absorption to particle effects
-	lowHealthVFXSystem             *engine.LowHealthVFXSystem             // Connects low player health to warning particle effects
-	companionAuraParticleSystem    *engine.CompanionAuraParticleSystem    // Connects companion bonding perks to aura particles
-	elementalComboParticleSystem   *engine.ElementalComboParticleSystem   // Connects elemental status combos to visual effects
-	elementalComboDamageSystem     *engine.ElementalComboDamageSystem     // Connects elemental status combos to bonus damage
-	weatherRangedAccuracySystem    *engine.WeatherRangedAccuracySystem    // Connects weather to ranged attack accuracy modifiers
-	weatherXPBonusSystem           *engine.WeatherXPBonusSystem           // Connects weather to XP gain bonuses
-	lifetimeSystem                 *engine.LifetimeSystem
-	puzzleSystem                   *engine.PuzzleSystem
-	firePropagationSystem          *engine.FirePropagationSystem
-	destructibleSystem             *engine.DestructibleObjectSystem
-	carrySystem                    *engine.CarrySystem
-	hazardSystem                   *engine.HazardSystem
-	narrativeSystem                *engine.NarrativeSystem
-	branchingNarrativeSystem       *engine.BranchingNarrativeSystem // Phase 6.1: Branching story arc system
-	worldEventsSystem              *engine.WorldEventsSystem        // Phase 6.3: World-responsive events
-	shadowSystem                   *engine.ShadowSystem
-	spriteGenerator                *sprites.Generator
-	spriteCache                    *cache.SpriteCache // Phase 1.2: Sprite caching for animation performance
-	itemGen                        *item.ItemGenerator
-	recipeGen                      *recipe.RecipeGenerator
-	statusEffectRNG                *rand.Rand
+	inputSystem                     *engine.InputSystem
+	movementSystem                  *engine.MovementSystem
+	collisionSystem                 *engine.CollisionSystem
+	combatSystem                    *engine.CombatSystem
+	interactionSystem               *engine.InteractionSystem
+	particleSystem                  *engine.ParticleSystem
+	animationSystem                 *engine.AnimationSystem
+	equipmentVisualSystem           *engine.EquipmentVisualSystem
+	objectiveTracker                *engine.ObjectiveTrackerSystem
+	aiSystem                        *engine.AISystem
+	progressionSystem               *engine.ProgressionSystem
+	inventorySystem                 *engine.InventorySystem
+	commerceSystem                  *engine.CommerceSystem
+	reputationPricingSystem         *engine.ReputationPricingSystem // Connects faction reputation with merchant pricing
+	dialogSystem                    *engine.DialogSystem
+	craftingSystem                  *engine.CraftingSystem
+	audioManager                    *engine.AudioManager
+	audioManagerSystem              *engine.AudioManagerSystem
+	itemPickupSystem                *engine.ItemPickupSystem
+	statusEffectSystem              *engine.StatusEffectSystem
+	spellCastingSystem              *engine.SpellCastingSystem
+	playerSpellCasting              *engine.PlayerSpellCastingSystem
+	manaRegenSystem                 *engine.ManaRegenSystem
+	playerCombatSystem              *engine.PlayerCombatSystem
+	playerItemUseSystem             *engine.PlayerItemUseSystem
+	rotationSystem                  *engine.RotationSystem
+	projectileSystem                *engine.ProjectileSystem
+	revivalSystem                   *engine.RevivalSystem
+	behaviorTreeSystem              *engine.BehaviorTreeSystem
+	squadSystem                     *engine.SquadSystem
+	factionSystem                   *engine.FactionSystem
+	factionAwareAISystem            *engine.FactionAwareAISystem // Bridges faction reputation with AI hostility
+	factionXPBonusSystem            *engine.FactionXPBonusSystem // Bridges faction reputation with XP bonus rewards
+	statusEffectAISystem            *engine.StatusEffectAISystem // Bridges status effects with AI (stun/frozen disable AI)
+	reputationSystem                *engine.ReputationSystem
+	alignmentSystem                 *engine.AlignmentSystem
+	factionReactionSystem           *engine.FactionReactionSystem
+	skillProgressionSystem          *engine.SkillProgressionSystem
+	visualFeedbackSystem            *engine.VisualFeedbackSystem
+	weatherSystem                   *engine.WeatherSystem
+	weatherCombatSystem             *engine.WeatherCombatSystem
+	weatherGroundEffectSystem       *engine.WeatherGroundEffectSystem       // Connects weather to ground impact particle effects
+	weatherAudioSystem              *engine.WeatherAudioSystem              // Connects weather to ambient audio sounds
+	weatherManaRegenSystem          *engine.WeatherManaRegenSystem          // Connects weather to mana regeneration rates
+	weatherCooldownSystem           *engine.WeatherCooldownSystem           // Connects weather to spell cooldown rates
+	statusEffectLightingSystem      *engine.StatusEffectLightingSystem      // Connects status effects to lighting for visual feedback
+	statusEffectMovementSystem      *engine.StatusEffectMovementSystem      // Connects status effects to movement speed modifiers
+	statusEffectEvasionSystem       *engine.StatusEffectEvasionSystem       // Connects status effects to evasion modifiers in combat
+	terrainMovementSpeedSystem      *engine.TerrainMovementSpeedSystem      // Connects terrain tiles to movement speed modifiers
+	terrainCombatBonusSystem        *engine.TerrainCombatBonusSystem        // Connects terrain tiles to combat bonuses (high ground, cover)
+	criticalHitParticleSystem       *engine.CriticalHitParticleSystem       // Connects combat crits to particle effects
+	levelUpParticleSystem           *engine.LevelUpParticleSystem           // Connects level-ups to particle effects
+	itemPickupParticleSystem        *engine.ItemPickupParticleSystem        // Connects item pickups to particle effects
+	deathParticleSystem             *engine.DeathParticleSystem             // Connects entity deaths to particle effects
+	spellEffectParticleSystem       *engine.SpellEffectParticleSystem       // Connects spell effects to particle effects
+	damageResistanceParticleSystem  *engine.DamageResistanceParticleSystem  // Connects damage resistance to particle effects
+	shieldAbsorbParticleSystem      *engine.ShieldAbsorbParticleSystem      // Connects shield absorption to particle effects
+	lowHealthVFXSystem              *engine.LowHealthVFXSystem              // Connects low player health to warning particle effects
+	companionAuraParticleSystem     *engine.CompanionAuraParticleSystem     // Connects companion bonding perks to aura particles
+	elementalComboParticleSystem    *engine.ElementalComboParticleSystem    // Connects elemental status combos to visual effects
+	elementalComboDamageSystem      *engine.ElementalComboDamageSystem      // Connects elemental status combos to bonus damage
+	elementalCompanionSynergySystem *engine.ElementalCompanionSynergySystem // Connects elemental companions to owner status effects
+	weatherRangedAccuracySystem     *engine.WeatherRangedAccuracySystem     // Connects weather to ranged attack accuracy modifiers
+	weatherXPBonusSystem            *engine.WeatherXPBonusSystem            // Connects weather to XP gain bonuses
+	lifetimeSystem                  *engine.LifetimeSystem
+	puzzleSystem                    *engine.PuzzleSystem
+	firePropagationSystem           *engine.FirePropagationSystem
+	destructibleSystem              *engine.DestructibleObjectSystem
+	carrySystem                     *engine.CarrySystem
+	hazardSystem                    *engine.HazardSystem
+	narrativeSystem                 *engine.NarrativeSystem
+	branchingNarrativeSystem        *engine.BranchingNarrativeSystem // Phase 6.1: Branching story arc system
+	worldEventsSystem               *engine.WorldEventsSystem        // Phase 6.3: World-responsive events
+	shadowSystem                    *engine.ShadowSystem
+	spriteGenerator                 *sprites.Generator
+	spriteCache                     *cache.SpriteCache // Phase 1.2: Sprite caching for animation performance
+	itemGen                         *item.ItemGenerator
+	recipeGen                       *recipe.RecipeGenerator
+	statusEffectRNG                 *rand.Rand
 	// V4.0 Systems (Phase 21-27)
 	vehicleMovementSys           *engine.VehicleMovementSystem
 	vehicleDurabilitySys         *engine.VehicleDurabilitySystem
@@ -962,6 +963,10 @@ func initializeEnvironmentalSystems(game *engine.EbitenGame, sys *systemsContain
 	sys.elementalComboDamageSystem = engine.NewElementalComboDamageSystem(game.World, *seed+6850)
 	sys.elementalComboDamageSystem.SetGenre(*genreID)
 
+	// ElementalCompanionSynergySystem - boosts elemental companions based on owner status effects
+	sys.elementalCompanionSynergySystem = engine.NewElementalCompanionSynergySystem(game.World, *seed+6900)
+	sys.elementalCompanionSynergySystem.SetGenre(*genreID)
+
 	// WeatherRangedAccuracySystem - modifies ranged attack accuracy based on weather
 	sys.weatherRangedAccuracySystem = engine.NewWeatherRangedAccuracySystem(game.World, *seed+6750)
 	sys.weatherRangedAccuracySystem.SetGenre(*genreID)
@@ -1643,24 +1648,25 @@ func registerNonCriticalSystems(game *engine.EbitenGame, sys *systemsContainer) 
 	// Environmental systems (deferred)
 	game.World.AddSystem(sys.weatherSystem)
 	game.World.AddSystem(sys.weatherCombatSystem)
-	game.World.AddSystem(sys.weatherGroundEffectSystem)      // Weather ground impact visual feedback via particles
-	game.World.AddSystem(sys.weatherAudioSystem)             // Weather ambient audio feedback
-	game.World.AddSystem(sys.weatherManaRegenSystem)         // Weather mana regeneration modifiers
-	game.World.AddSystem(sys.weatherCooldownSystem)          // Weather spell cooldown rate modifiers
-	game.World.AddSystem(sys.weatherRangedAccuracySystem)    // Weather ranged attack accuracy modifiers
-	game.World.AddSystem(sys.weatherXPBonusSystem)           // Weather XP gain bonuses
-	game.World.AddSystem(sys.statusEffectLightingSystem)     // Status effect visual feedback via lighting
-	game.World.AddSystem(sys.statusEffectMovementSystem)     // Status effect movement speed modifiers
-	game.World.AddSystem(sys.criticalHitParticleSystem)      // Critical hit visual feedback via particles
-	game.World.AddSystem(sys.levelUpParticleSystem)          // Level-up visual feedback via particles
-	game.World.AddSystem(sys.itemPickupParticleSystem)       // Item pickup visual feedback via particles
-	game.World.AddSystem(sys.spellEffectParticleSystem)      // Spell effect visual feedback via particles
-	game.World.AddSystem(sys.damageResistanceParticleSystem) // Damage resistance visual feedback via particles
-	game.World.AddSystem(sys.shieldAbsorbParticleSystem)     // Shield absorption visual feedback via particles
-	game.World.AddSystem(sys.lowHealthVFXSystem)             // Low player health warning visual feedback via particles
-	game.World.AddSystem(sys.companionAuraParticleSystem)    // Companion bonding perk aura visual feedback via particles
-	game.World.AddSystem(sys.elementalComboParticleSystem)   // Elemental status combo visual feedback via particles
-	game.World.AddSystem(sys.elementalComboDamageSystem)     // Elemental status combo bonus damage
+	game.World.AddSystem(sys.weatherGroundEffectSystem)       // Weather ground impact visual feedback via particles
+	game.World.AddSystem(sys.weatherAudioSystem)              // Weather ambient audio feedback
+	game.World.AddSystem(sys.weatherManaRegenSystem)          // Weather mana regeneration modifiers
+	game.World.AddSystem(sys.weatherCooldownSystem)           // Weather spell cooldown rate modifiers
+	game.World.AddSystem(sys.weatherRangedAccuracySystem)     // Weather ranged attack accuracy modifiers
+	game.World.AddSystem(sys.weatherXPBonusSystem)            // Weather XP gain bonuses
+	game.World.AddSystem(sys.statusEffectLightingSystem)      // Status effect visual feedback via lighting
+	game.World.AddSystem(sys.statusEffectMovementSystem)      // Status effect movement speed modifiers
+	game.World.AddSystem(sys.criticalHitParticleSystem)       // Critical hit visual feedback via particles
+	game.World.AddSystem(sys.levelUpParticleSystem)           // Level-up visual feedback via particles
+	game.World.AddSystem(sys.itemPickupParticleSystem)        // Item pickup visual feedback via particles
+	game.World.AddSystem(sys.spellEffectParticleSystem)       // Spell effect visual feedback via particles
+	game.World.AddSystem(sys.damageResistanceParticleSystem)  // Damage resistance visual feedback via particles
+	game.World.AddSystem(sys.shieldAbsorbParticleSystem)      // Shield absorption visual feedback via particles
+	game.World.AddSystem(sys.lowHealthVFXSystem)              // Low player health warning visual feedback via particles
+	game.World.AddSystem(sys.companionAuraParticleSystem)     // Companion bonding perk aura visual feedback via particles
+	game.World.AddSystem(sys.elementalComboParticleSystem)    // Elemental status combo visual feedback via particles
+	game.World.AddSystem(sys.elementalComboDamageSystem)      // Elemental status combo bonus damage
+	game.World.AddSystem(sys.elementalCompanionSynergySystem) // Elemental companion stat bonuses from owner effects
 	game.World.AddSystem(sys.lifetimeSystem)
 	game.World.AddSystem(sys.puzzleSystem)
 	game.World.AddSystem(sys.firePropagationSystem)

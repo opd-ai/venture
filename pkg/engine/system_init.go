@@ -126,6 +126,7 @@ type SystemInitResult struct {
 	TimeOfDayLightingSystem           *TimeOfDayLightingSystem
 	TerrainAmbushCritSystem           *TerrainAmbushCritSystem
 	FactionDamageBonusSystem          *FactionDamageBonusSystem
+	WeatherCritChanceSystem           *WeatherCritChanceSystem
 
 	// System wrappers
 	AnimationSystemWrapper            System
@@ -163,7 +164,7 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 	result := &SystemInitResult{}
 
 	if config.EnableVerboseLogging {
-		logger.Info("initializing game systems (65 total)")
+		logger.Info("initializing game systems (66 total)")
 	}
 
 	// ========================================================================
@@ -677,6 +678,13 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 	result.WeatherRangedAccuracySystem = weatherRangedAccuracySystem
 	game.World.AddSystem(weatherRangedAccuracySystem)
 
+	// 36n2. WeatherCritChanceSystem - modifies critical hit chance based on weather conditions
+	// Connects WeatherSystem with StatsComponent.CritChance for tactical crit bonuses/penalties
+	weatherCritChanceSystem := NewWeatherCritChanceSystem(game.World, config.Seed+6775)
+	weatherCritChanceSystem.SetGenre(config.GenreID)
+	result.WeatherCritChanceSystem = weatherCritChanceSystem
+	game.World.AddSystem(weatherCritChanceSystem)
+
 	// 36o. WeatherXPBonusSystem - modifies XP gains based on weather conditions
 	// Connects WeatherSystem with ProgressionSystem for genre-aware XP bonuses
 	weatherXPBonusSystem := NewWeatherXPBonusSystem(game.World, config.Seed+6800)
@@ -890,7 +898,7 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 
 	if config.EnableVerboseLogging {
 		logger.WithFields(logrus.Fields{
-			"systemCount": 64,
+			"systemCount": 65,
 			"seed":        config.Seed,
 			"genre":       config.GenreID,
 		}).Info("game systems initialized successfully (65th system requires terrain)")

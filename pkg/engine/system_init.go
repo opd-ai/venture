@@ -163,6 +163,7 @@ type SystemInitResult struct {
 	WeatherMovementSpeedSystem               *WeatherMovementSpeedSystem
 	WeatherMovementSpeedParticleSystem       *WeatherMovementSpeedParticleSystem
 	WeatherCompanionBonusParticleSystem      *WeatherCompanionBonusParticleSystem
+	CombatEquipmentDurabilityParticleSystem  *CombatEquipmentDurabilityParticleSystem
 
 	// System wrappers
 	AnimationSystemWrapper            System
@@ -945,6 +946,15 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 	weaponSwingParticleSystem.SetGenre(config.GenreID)
 	result.WeaponSwingParticleSystem = weaponSwingParticleSystem
 	game.World.AddSystem(weaponSwingParticleSystem)
+
+	// 36u2. CombatEquipmentDurabilityParticleSystem - visual feedback for armor damage absorption
+	// Connects CombatSystem damage events with ParticleSystem for armor wear particle effects
+	combatEquipmentDurabilityParticleSystem := NewCombatEquipmentDurabilityParticleSystem(game.World, config.Seed+7125)
+	combatEquipmentDurabilityParticleSystem.SetParticleSystem(result.ParticleSystem)
+	combatEquipmentDurabilityParticleSystem.SetGenre(config.GenreID)
+	result.CombatSystem.AddDamageCallback(combatEquipmentDurabilityParticleSystem.OnDamageTaken)
+	result.CombatEquipmentDurabilityParticleSystem = combatEquipmentDurabilityParticleSystem
+	game.World.AddSystem(combatEquipmentDurabilityParticleSystem)
 
 	// 36v. FearFleeParticleSystem - visual feedback for feared fleeing entities
 	// Connects StatusEffectAISystem flee behavior with ParticleSystem for genre-aware fear effects

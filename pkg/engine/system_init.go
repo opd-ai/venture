@@ -89,6 +89,7 @@ type SystemInitResult struct {
 	SpecializationHealthRegenSystem *SpecializationHealthRegenSystem
 	ElementalComboParticleSystem    *ElementalComboParticleSystem
 	WeatherRangedAccuracySystem     *WeatherRangedAccuracySystem
+	StatusEffectEvasionSystem       *StatusEffectEvasionSystem
 
 	// System wrappers
 	AnimationSystemWrapper            System
@@ -126,7 +127,7 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 	result := &SystemInitResult{}
 
 	if config.EnableVerboseLogging {
-		logger.Info("initializing game systems (64 total)")
+		logger.Info("initializing game systems (65 total)")
 	}
 
 	// ========================================================================
@@ -348,6 +349,13 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 	statusEffectMovementSystem := NewStatusEffectMovementSystem(game.World, config.Seed+2100)
 	game.World.AddSystem(statusEffectMovementSystem)
 
+	// 36b2b. StatusEffectEvasionSystem - applies evasion modifiers from status effects
+	// Connects StatusEffectSystem with CombatSystem for genre-aware evasion bonuses/penalties
+	statusEffectEvasionSystem := NewStatusEffectEvasionSystem(game.World, config.Seed+2120)
+	statusEffectEvasionSystem.SetGenre(config.GenreID)
+	result.StatusEffectEvasionSystem = statusEffectEvasionSystem
+	game.World.AddSystem(statusEffectEvasionSystem)
+
 	// 36b3. TerrainMovementSpeedSystem - applies movement speed modifiers from terrain type
 	// Connects terrain generation with MovementSystem for genre-aware terrain effects
 	terrainMovementSpeedSystem := NewTerrainMovementSpeedSystem(game.World, config.Seed+2150)
@@ -568,16 +576,16 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 
 	if config.EnableVerboseLogging {
 		logger.WithFields(logrus.Fields{
-			"systemCount": 63,
+			"systemCount": 64,
 			"seed":        config.Seed,
 			"genre":       config.GenreID,
-		}).Info("game systems initialized successfully (64th system requires terrain)")
+		}).Info("game systems initialized successfully (65th system requires terrain)")
 	}
 
 	return result, nil
 }
 
-// InitializeSpatialPartitionSystem initializes the SpatialPartitionSystem (system #64)
+// InitializeSpatialPartitionSystem initializes the SpatialPartitionSystem (system #65)
 // after terrain generation. This must be called separately from InitializeGameSystems()
 // because it requires world dimensions from generated terrain.
 //

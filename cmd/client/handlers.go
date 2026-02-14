@@ -196,6 +196,7 @@ type systemsContainer struct {
 	weatherCooldownSystem          *engine.WeatherCooldownSystem          // Connects weather to spell cooldown rates
 	statusEffectLightingSystem     *engine.StatusEffectLightingSystem     // Connects status effects to lighting for visual feedback
 	statusEffectMovementSystem     *engine.StatusEffectMovementSystem     // Connects status effects to movement speed modifiers
+	statusEffectEvasionSystem      *engine.StatusEffectEvasionSystem      // Connects status effects to evasion modifiers in combat
 	terrainMovementSpeedSystem     *engine.TerrainMovementSpeedSystem     // Connects terrain tiles to movement speed modifiers
 	terrainCombatBonusSystem       *engine.TerrainCombatBonusSystem       // Connects terrain tiles to combat bonuses (high ground, cover)
 	criticalHitParticleSystem      *engine.CriticalHitParticleSystem      // Connects combat crits to particle effects
@@ -877,6 +878,11 @@ func initializeEnvironmentalSystems(game *engine.EbitenGame, sys *systemsContain
 	sys.weatherCombatSystem = engine.NewWeatherCombatSystem(game.World)
 	sys.statusEffectLightingSystem = engine.NewStatusEffectLightingSystem(game.World, *seed+2000)
 	sys.statusEffectMovementSystem = engine.NewStatusEffectMovementSystem(game.World, *seed+2100)
+
+	// StatusEffectEvasionSystem - applies evasion modifiers from status effects
+	sys.statusEffectEvasionSystem = engine.NewStatusEffectEvasionSystem(game.World, *seed+2120)
+	sys.statusEffectEvasionSystem.SetGenre(*genreID)
+
 	sys.criticalHitParticleSystem = engine.NewCriticalHitParticleSystem(game.World, *seed+3000)
 	sys.criticalHitParticleSystem.SetParticleSystem(sys.particleSystem)
 	sys.criticalHitParticleSystem.SetGenre(*genreID)
@@ -1591,6 +1597,10 @@ func registerNonCriticalSystems(game *engine.EbitenGame, sys *systemsContainer) 
 	// Disables AI actions when entities are stunned, frozen, feared, or paralyzed
 	sys.statusEffectAISystem = engine.NewStatusEffectAISystem(game.World, *seed+2200)
 	game.World.AddSystem(sys.statusEffectAISystem)
+
+	// StatusEffectEvasionSystem: bridges status effects with combat evasion
+	// Modifies evasion chance based on status effects (frozen, haste, stunned, etc.)
+	game.World.AddSystem(sys.statusEffectEvasionSystem)
 
 	sys.reputationSystem = engine.NewReputationSystem(game.World, game.World.GetLogger().Logger)
 	game.World.AddSystem(&reputationSystemWrapper{system: sys.reputationSystem})

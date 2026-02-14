@@ -233,6 +233,7 @@ type systemsContainer struct {
 	companionManaRegenSystem          *engine.CompanionManaRegenSystem          // Connects companion bonding to owner mana regeneration
 	weatherRangedAccuracySystem       *engine.WeatherRangedAccuracySystem       // Connects weather to ranged attack accuracy modifiers
 	weatherCritChanceSystem           *engine.WeatherCritChanceSystem           // Connects weather to critical hit chance modifiers
+	weatherBlockChanceSystem          *engine.WeatherBlockChanceSystem          // Connects weather to block chance modifiers
 	weatherXPBonusSystem              *engine.WeatherXPBonusSystem              // Connects weather to XP gain bonuses
 	lifestealSystem                   *engine.LifestealSystem                   // Connects combat damage to attacker healing
 	statusEffectManaCostSystem        *engine.StatusEffectManaCostSystem        // Connects status effects to spell mana cost modifiers

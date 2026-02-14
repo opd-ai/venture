@@ -171,6 +171,8 @@ type SystemInitResult struct {
 	ReputationHealingBonusParticleSystem     *ReputationHealingBonusParticleSystem
 	ReputationSpellDamageBonusSystem         *ReputationSpellDamageBonusSystem
 	ReputationSpellDamageBonusParticleSystem *ReputationSpellDamageBonusParticleSystem
+	ReputationMovementSpeedSystem            *ReputationMovementSpeedSystem
+	ReputationMovementSpeedParticleSystem    *ReputationMovementSpeedParticleSystem
 
 	// System wrappers
 	AnimationSystemWrapper            System
@@ -365,6 +367,21 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 	reputationSpellDamageBonusParticleSystem.SetGenre(config.GenreID)
 	result.ReputationSpellDamageBonusParticleSystem = reputationSpellDamageBonusParticleSystem
 	game.World.AddSystem(reputationSpellDamageBonusParticleSystem)
+
+	// 17i. ReputationMovementSpeedSystem - movement speed bonus from allied faction reputation
+	reputationMovementSpeedSystem := NewReputationMovementSpeedSystem(game.World, config.Seed+5205)
+	reputationMovementSpeedSystem.SetFactionSystem(factionSystem)
+	reputationMovementSpeedSystem.SetGenre(config.GenreID)
+	result.ReputationMovementSpeedSystem = reputationMovementSpeedSystem
+	game.World.AddSystem(reputationMovementSpeedSystem)
+
+	// 17j. ReputationMovementSpeedParticleSystem - visual feedback for reputation speed bonus
+	reputationMovementSpeedParticleSystem := NewReputationMovementSpeedParticleSystem(game.World, config.Seed+5210)
+	reputationMovementSpeedParticleSystem.SetParticleSystem(result.ParticleSystem)
+	reputationMovementSpeedParticleSystem.SetSpeedSystem(reputationMovementSpeedSystem)
+	reputationMovementSpeedParticleSystem.SetGenre(config.GenreID)
+	result.ReputationMovementSpeedParticleSystem = reputationMovementSpeedParticleSystem
+	game.World.AddSystem(reputationMovementSpeedParticleSystem)
 
 	// 18. SkillProgressionSystem - applies skill effects to stats
 	skillProgressionSystem := NewSkillProgressionSystem()

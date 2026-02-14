@@ -220,6 +220,7 @@ type systemsContainer struct {
 	lifestealSystem                  *engine.LifestealSystem                  // Connects combat damage to attacker healing
 	statusEffectManaCostSystem       *engine.StatusEffectManaCostSystem       // Connects status effects to spell mana cost modifiers
 	statusEffectDamageParticleSystem *engine.StatusEffectDamageParticleSystem // Connects status effect ticks (burn, poison, regen) to particle effects
+	statusEffectDamageBoostSystem    *engine.StatusEffectDamageBoostSystem    // Connects status effects to damage modifiers for attacks
 	fearFleeParticleSystem           *engine.FearFleeParticleSystem           // Connects fear status effects with flee particle effects
 	lifetimeSystem                   *engine.LifetimeSystem
 	puzzleSystem                     *engine.PuzzleSystem
@@ -256,6 +257,7 @@ type systemsContainer struct {
 	specializationHealthRegenSys *engine.SpecializationHealthRegenSystem // Connects class specialization with health regen bonuses
 	specializationSpellDamageSys *engine.SpecializationSpellDamageSystem // Connects class specialization with spell damage bonuses
 	specializationAttackSpeedSys *engine.SpecializationAttackSpeedSystem // Connects class specialization with attack speed bonuses
+	specializationDefenseSys     *engine.SpecializationDefenseSystem     // Connects class specialization with defense bonuses
 	expressionSystem             *engine.ExpressionSystem
 	expressionComboSys           *engine.ExpressionComboSystem
 	miniGameSystem               *engine.MiniGameSystem
@@ -904,6 +906,10 @@ func initializeEnvironmentalSystems(game *engine.EbitenGame, sys *systemsContain
 	sys.statusEffectManaCostSystem = engine.NewStatusEffectManaCostSystem(game.World, *seed+7000)
 	sys.statusEffectManaCostSystem.SetGenre(*genreID)
 
+	// StatusEffectDamageBoostSystem - applies damage modifiers from status effects
+	sys.statusEffectDamageBoostSystem = engine.NewStatusEffectDamageBoostSystem(game.World, *seed+2140)
+	sys.statusEffectDamageBoostSystem.SetGenre(*genreID)
+
 	sys.criticalHitParticleSystem = engine.NewCriticalHitParticleSystem(game.World, *seed+3000)
 	sys.criticalHitParticleSystem.SetParticleSystem(sys.particleSystem)
 	sys.criticalHitParticleSystem.SetGenre(*genreID)
@@ -1101,6 +1107,11 @@ func initializeV4Systems(game *engine.EbitenGame, sys *systemsContainer, clientL
 	sys.specializationAttackSpeedSys = engine.NewSpecializationAttackSpeedSystem(game.World, *seed+seedOffsetSpecAttackSpeed)
 	sys.specializationAttackSpeedSys.SetGenre(*genreID)
 	logging.ComponentLogger(clientLogger.Logger, "specialization_attack_speed").Debug("Created specialization attack speed system")
+
+	// Phase 25e: Specialization defense system - connects class specialization with defense bonuses
+	sys.specializationDefenseSys = engine.NewSpecializationDefenseSystem(game.World, *seed+seedOffsetSpecDefense)
+	sys.specializationDefenseSys.SetGenre(*genreID)
+	logging.ComponentLogger(clientLogger.Logger, "specialization_defense").Debug("Created specialization defense system")
 
 	// Phase 26: Expression systems (requires audio manager)
 	sys.expressionSystem = engine.NewExpressionSystem(game.World, sys.audioManager)
@@ -1675,6 +1686,10 @@ func registerNonCriticalSystems(game *engine.EbitenGame, sys *systemsContainer) 
 	// Modifies mana costs based on status effects (haste, cursed, focused, etc.)
 	game.World.AddSystem(sys.statusEffectManaCostSystem)
 
+	// StatusEffectDamageBoostSystem: bridges status effects with combat damage
+	// Modifies Attack/MagicPower based on status effects (enraged, empowered, weakness, etc.)
+	game.World.AddSystem(sys.statusEffectDamageBoostSystem)
+
 	sys.reputationSystem = engine.NewReputationSystem(game.World, game.World.GetLogger().Logger)
 	game.World.AddSystem(&reputationSystemWrapper{system: sys.reputationSystem})
 
@@ -1769,6 +1784,9 @@ func registerNonCriticalSystems(game *engine.EbitenGame, sys *systemsContainer) 
 
 	// Phase 25d: Specialization attack speed - connects class specialization with attack cooldown bonuses
 	game.World.AddSystem(sys.specializationAttackSpeedSys)
+
+	// Phase 25e: Specialization defense - connects class specialization with defense bonuses
+	game.World.AddSystem(sys.specializationDefenseSys)
 
 	// Phase 26: Expression systems (use wrappers)
 	game.World.AddSystem(&expressionSystemWrapper{system: sys.expressionSystem})

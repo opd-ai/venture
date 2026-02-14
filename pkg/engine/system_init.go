@@ -105,6 +105,7 @@ type SystemInitResult struct {
 	StatusEffectDamageParticleSystem *StatusEffectDamageParticleSystem
 	WeaponSwingParticleSystem        *WeaponSwingParticleSystem
 	FearFleeParticleSystem           *FearFleeParticleSystem
+	StatusEffectDamageBoostSystem    *StatusEffectDamageBoostSystem
 
 	// System wrappers
 	AnimationSystemWrapper            System
@@ -398,6 +399,13 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 	statusEffectCriticalChanceSystem.SetGenre(config.GenreID)
 	result.StatusEffectCriticalChanceSystem = statusEffectCriticalChanceSystem
 	game.World.AddSystem(statusEffectCriticalChanceSystem)
+
+	// 36b2d. StatusEffectDamageBoostSystem - applies damage modifiers from status effects
+	// Connects StatusEffectSystem with CombatSystem for genre-aware damage bonuses/penalties
+	statusEffectDamageBoostSystem := NewStatusEffectDamageBoostSystem(game.World, config.Seed+2140)
+	statusEffectDamageBoostSystem.SetGenre(config.GenreID)
+	result.StatusEffectDamageBoostSystem = statusEffectDamageBoostSystem
+	game.World.AddSystem(statusEffectDamageBoostSystem)
 
 	// 36b3. TerrainMovementSpeedSystem - applies movement speed modifiers from terrain type
 	// Connects terrain generation with MovementSystem for genre-aware terrain effects

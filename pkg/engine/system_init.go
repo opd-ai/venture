@@ -106,6 +106,7 @@ type SystemInitResult struct {
 	WeaponSwingParticleSystem        *WeaponSwingParticleSystem
 	FearFleeParticleSystem           *FearFleeParticleSystem
 	StatusEffectDamageBoostSystem    *StatusEffectDamageBoostSystem
+	TerrainCompanionBonusSystem      *TerrainCompanionBonusSystem
 
 	// System wrappers
 	AnimationSystemWrapper            System
@@ -446,6 +447,14 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 	terrainManaRegenSystem.SetTileSize(config.TileSize)
 	result.TerrainManaRegenSystem = terrainManaRegenSystem
 	game.World.AddSystem(terrainManaRegenSystem)
+
+	// 36b8. TerrainCompanionBonusSystem - modifies companion stats based on terrain type
+	// Connects terrain tiles with CompanionStatsComponent for tactical companion positioning
+	terrainCompanionBonusSystem := NewTerrainCompanionBonusSystem(game.World, config.Seed+2195)
+	terrainCompanionBonusSystem.SetGenre(config.GenreID)
+	terrainCompanionBonusSystem.SetTileSize(config.TileSize)
+	result.TerrainCompanionBonusSystem = terrainCompanionBonusSystem
+	game.World.AddSystem(terrainCompanionBonusSystem)
 
 	// 36c. CriticalHitParticleSystem - visual feedback for critical hits
 	criticalHitParticleSystem := NewCriticalHitParticleSystem(game.World, config.Seed+3000)

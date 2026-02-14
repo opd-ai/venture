@@ -225,6 +225,7 @@ type systemsContainer struct {
 	companionAuraParticleSystem       *engine.CompanionAuraParticleSystem       // Connects companion bonding perks to aura particles
 	elementalComboParticleSystem      *engine.ElementalComboParticleSystem      // Connects elemental status combos to visual effects
 	elementalComboDamageSystem        *engine.ElementalComboDamageSystem        // Connects elemental status combos to bonus damage
+	weatherElementalComboBonusSystem  *engine.WeatherElementalComboBonusSystem  // Connects weather to elemental combo damage modifiers
 	elementalCompanionSynergySystem   *engine.ElementalCompanionSynergySystem   // Connects elemental companions to owner status effects
 	companionSpellAmplificationSystem *engine.CompanionSpellAmplificationSystem // Connects companion bonding to owner spell effectiveness
 	companionManaRegenSystem          *engine.CompanionManaRegenSystem          // Connects companion bonding to owner mana regeneration
@@ -1035,6 +1036,12 @@ func initializeEnvironmentalSystems(game *engine.EbitenGame, sys *systemsContain
 	// ElementalComboDamageSystem - applies bonus damage when elemental status effects combine
 	sys.elementalComboDamageSystem = engine.NewElementalComboDamageSystem(game.World, *seed+6850)
 	sys.elementalComboDamageSystem.SetGenre(*genreID)
+
+	// WeatherElementalComboBonusSystem - modifies elemental combo damage based on weather
+	// Rain enhances steam/water combos, storms boost electric combos, snow enhances ice combos
+	sys.weatherElementalComboBonusSystem = engine.NewWeatherElementalComboBonusSystem(game.World, *seed+6855)
+	sys.weatherElementalComboBonusSystem.SetElementalComboDamageSystem(sys.elementalComboDamageSystem)
+	sys.weatherElementalComboBonusSystem.SetGenre(*genreID)
 
 	// ElementalCompanionSynergySystem - boosts elemental companions based on owner status effects
 	sys.elementalCompanionSynergySystem = engine.NewElementalCompanionSynergySystem(game.World, *seed+6900)
@@ -1847,6 +1854,7 @@ func registerNonCriticalSystems(game *engine.EbitenGame, sys *systemsContainer) 
 	game.World.AddSystem(sys.companionAuraParticleSystem)       // Companion bonding perk aura visual feedback via particles
 	game.World.AddSystem(sys.elementalComboParticleSystem)      // Elemental status combo visual feedback via particles
 	game.World.AddSystem(sys.elementalComboDamageSystem)        // Elemental status combo bonus damage
+	game.World.AddSystem(sys.weatherElementalComboBonusSystem)  // Weather-based elemental combo damage modifiers
 	game.World.AddSystem(sys.elementalCompanionSynergySystem)   // Elemental companion stat bonuses from owner effects
 	game.World.AddSystem(sys.companionSpellAmplificationSystem) // Owner spell damage/healing bonuses from companion bonding
 	game.World.AddSystem(sys.companionManaRegenSystem)          // Owner mana regeneration bonuses from companion bonding

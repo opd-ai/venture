@@ -143,6 +143,7 @@ type SystemInitResult struct {
 	TimeOfDayBlockChanceSystem          *TimeOfDayBlockChanceSystem
 	TerrainCombatBonusParticleSystem    *TerrainCombatBonusParticleSystem
 	CompanionManaRegenSystem            *CompanionManaRegenSystem
+	WeatherElementalComboBonusSystem    *WeatherElementalComboBonusSystem
 
 	// System wrappers
 	AnimationSystemWrapper            System
@@ -747,6 +748,14 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 	elementalComboDamageSystem.SetGenre(config.GenreID)
 	result.ElementalComboDamageSystem = elementalComboDamageSystem
 	game.World.AddSystem(elementalComboDamageSystem)
+
+	// 36p2. WeatherElementalComboBonusSystem - modifies elemental combo damage based on weather
+	// Connects WeatherSystem with ElementalComboDamageSystem for environmental synergies
+	weatherElementalComboBonusSystem := NewWeatherElementalComboBonusSystem(game.World, config.Seed+6855)
+	weatherElementalComboBonusSystem.SetElementalComboDamageSystem(elementalComboDamageSystem)
+	weatherElementalComboBonusSystem.SetGenre(config.GenreID)
+	result.WeatherElementalComboBonusSystem = weatherElementalComboBonusSystem
+	game.World.AddSystem(weatherElementalComboBonusSystem)
 
 	// 36q. ElementalCompanionSynergySystem - boosts elemental companions based on owner status effects
 	// Connects CompanionComponent (elemental type) with StatusEffectComponent for tactical synergy

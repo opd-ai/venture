@@ -83,6 +83,7 @@ type SystemInitResult struct {
 	LowHealthVFXSystem             *LowHealthVFXSystem
 	CompanionAuraParticleSystem    *CompanionAuraParticleSystem
 	SpecializationManaBoostSystem  *SpecializationManaBoostSystem
+	ElementalComboParticleSystem   *ElementalComboParticleSystem
 
 	// System wrappers
 	AnimationSystemWrapper            System
@@ -446,6 +447,14 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 	companionAuraParticleSystem.SetGenre(config.GenreID)
 	result.CompanionAuraParticleSystem = companionAuraParticleSystem
 	game.World.AddSystem(companionAuraParticleSystem)
+
+	// 36m. ElementalComboParticleSystem - visual feedback for elemental status combos
+	// Spawns genre-aware particles when elemental effects combine (fire+ice=steam, etc.)
+	elementalComboParticleSystem := NewElementalComboParticleSystem(game.World, config.Seed+6700)
+	elementalComboParticleSystem.SetParticleSystem(result.ParticleSystem)
+	elementalComboParticleSystem.SetGenre(config.GenreID)
+	result.ElementalComboParticleSystem = elementalComboParticleSystem
+	game.World.AddSystem(elementalComboParticleSystem)
 
 	// 37. LifetimeSystem - temporary entities (Phase 5.3)
 	lifetimeSystem := NewLifetimeSystemWithLogger(game.World, logger)

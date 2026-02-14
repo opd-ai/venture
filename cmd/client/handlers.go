@@ -204,6 +204,7 @@ type systemsContainer struct {
 	damageResistanceParticleSystem *engine.DamageResistanceParticleSystem // Connects damage resistance to particle effects
 	lowHealthVFXSystem             *engine.LowHealthVFXSystem             // Connects low player health to warning particle effects
 	companionAuraParticleSystem    *engine.CompanionAuraParticleSystem    // Connects companion bonding perks to aura particles
+	elementalComboParticleSystem   *engine.ElementalComboParticleSystem   // Connects elemental status combos to visual effects
 	lifetimeSystem                 *engine.LifetimeSystem
 	puzzleSystem                   *engine.PuzzleSystem
 	firePropagationSystem          *engine.FirePropagationSystem
@@ -928,6 +929,11 @@ func initializeEnvironmentalSystems(game *engine.EbitenGame, sys *systemsContain
 	sys.companionAuraParticleSystem.SetParticleSystem(sys.particleSystem)
 	sys.companionAuraParticleSystem.SetGenre(*genreID)
 
+	// ElementalComboParticleSystem - visual feedback for elemental status combos
+	sys.elementalComboParticleSystem = engine.NewElementalComboParticleSystem(game.World, *seed+6700)
+	sys.elementalComboParticleSystem.SetParticleSystem(sys.particleSystem)
+	sys.elementalComboParticleSystem.SetGenre(*genreID)
+
 	sys.lifetimeSystem = engine.NewLifetimeSystemWithLogger(game.World, clientLogger.Logger)
 	sys.puzzleSystem = engine.NewPuzzleSystem(game.World)
 
@@ -1597,6 +1603,7 @@ func registerNonCriticalSystems(game *engine.EbitenGame, sys *systemsContainer) 
 	game.World.AddSystem(sys.damageResistanceParticleSystem) // Damage resistance visual feedback via particles
 	game.World.AddSystem(sys.lowHealthVFXSystem)             // Low player health warning visual feedback via particles
 	game.World.AddSystem(sys.companionAuraParticleSystem)    // Companion bonding perk aura visual feedback via particles
+	game.World.AddSystem(sys.elementalComboParticleSystem)   // Elemental status combo visual feedback via particles
 	game.World.AddSystem(sys.lifetimeSystem)
 	game.World.AddSystem(sys.puzzleSystem)
 	game.World.AddSystem(sys.firePropagationSystem)

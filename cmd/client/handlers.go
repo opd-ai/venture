@@ -226,6 +226,7 @@ type systemsContainer struct {
 	elementalCompanionSynergySystem   *engine.ElementalCompanionSynergySystem   // Connects elemental companions to owner status effects
 	companionSpellAmplificationSystem *engine.CompanionSpellAmplificationSystem // Connects companion bonding to owner spell effectiveness
 	weatherRangedAccuracySystem       *engine.WeatherRangedAccuracySystem       // Connects weather to ranged attack accuracy modifiers
+	weatherCritChanceSystem           *engine.WeatherCritChanceSystem           // Connects weather to critical hit chance modifiers
 	weatherXPBonusSystem              *engine.WeatherXPBonusSystem              // Connects weather to XP gain bonuses
 	lifestealSystem                   *engine.LifestealSystem                   // Connects combat damage to attacker healing
 	statusEffectManaCostSystem        *engine.StatusEffectManaCostSystem        // Connects status effects to spell mana cost modifiers
@@ -269,6 +270,7 @@ type systemsContainer struct {
 	specializationAttackSpeedSys *engine.SpecializationAttackSpeedSystem // Connects class specialization with attack speed bonuses
 	specializationDefenseSys     *engine.SpecializationDefenseSystem     // Connects class specialization with defense bonuses
 	specializationCritDamageSys  *engine.SpecializationCritDamageSystem  // Connects class specialization with crit damage bonuses
+	specializationEvasionSys     *engine.SpecializationEvasionSystem     // Connects class specialization with evasion bonuses
 	expressionSystem             *engine.ExpressionSystem
 	expressionComboSys           *engine.ExpressionComboSystem
 	miniGameSystem               *engine.MiniGameSystem
@@ -1030,6 +1032,11 @@ func initializeEnvironmentalSystems(game *engine.EbitenGame, sys *systemsContain
 	// WeatherRangedAccuracySystem - modifies ranged attack accuracy based on weather
 	sys.weatherRangedAccuracySystem = engine.NewWeatherRangedAccuracySystem(game.World, *seed+6750)
 	sys.weatherRangedAccuracySystem.SetGenre(*genreID)
+
+	// WeatherCritChanceSystem - modifies critical hit chance based on weather conditions
+	// Fog and dust increase crit (concealment), rain/snow decrease crit (precision penalty)
+	sys.weatherCritChanceSystem = engine.NewWeatherCritChanceSystem(game.World, *seed+6775)
+	sys.weatherCritChanceSystem.SetGenre(*genreID)
 
 	// WeatherXPBonusSystem: bridges weather conditions with XP gains
 	// Grants bonus XP when players earn experience during specific weather conditions

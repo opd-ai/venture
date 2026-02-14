@@ -118,6 +118,7 @@ type SystemInitResult struct {
 	StatusEffectHealthRegenSystem     *StatusEffectHealthRegenSystem
 	HealingParticleSystem             *HealingParticleSystem
 	SpecializationCritDamageSystem    *SpecializationCritDamageSystem
+	SpecializationEvasionSystem       *SpecializationEvasionSystem
 	ShieldRegenSystem                 *ShieldRegenSystem
 	WeatherMeleeDamageSystem          *WeatherMeleeDamageSystem
 	DrowningParticleSystem            *DrowningParticleSystem
@@ -356,6 +357,13 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 	specializationCritDamageSystem.SetGenre(config.GenreID)
 	result.SpecializationCritDamageSystem = specializationCritDamageSystem
 	game.World.AddSystem(specializationCritDamageSystem)
+
+	// 25i. SpecializationEvasionSystem - evasion bonuses from class specializations
+	// Connects ClassProgressionComponent with StatsComponent.Evasion for rogue/monk bonuses
+	specializationEvasionSystem := NewSpecializationEvasionSystem(game.World, config.Seed+6710)
+	specializationEvasionSystem.SetGenre(config.GenreID)
+	result.SpecializationEvasionSystem = specializationEvasionSystem
+	game.World.AddSystem(specializationEvasionSystem)
 
 	// 25g. StatusEffectHealthRegenSystem - health regeneration modifiers from status effects
 	// Connects StatusEffectSystem with HealthComponent for genre-aware regen bonuses/penalties

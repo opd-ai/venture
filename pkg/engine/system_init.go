@@ -85,6 +85,7 @@ type SystemInitResult struct {
 	TerrainCombatBonusSystem         *TerrainCombatBonusSystem
 	TerrainStealthSystem             *TerrainStealthSystem
 	TerrainStatusEffectSystem        *TerrainStatusEffectSystem
+	TerrainManaRegenSystem           *TerrainManaRegenSystem
 	LowHealthVFXSystem               *LowHealthVFXSystem
 	CompanionAuraParticleSystem      *CompanionAuraParticleSystem
 	SpecializationManaBoostSystem    *SpecializationManaBoostSystem
@@ -421,6 +422,14 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 	terrainStatusEffectSystem.SetTileSize(config.TileSize)
 	result.TerrainStatusEffectSystem = terrainStatusEffectSystem
 	game.World.AddSystem(terrainStatusEffectSystem)
+
+	// 36b7. TerrainManaRegenSystem - modifies mana regeneration based on terrain type
+	// Connects terrain tiles (water, platforms) with ManaComponent for tactical spellcasting
+	terrainManaRegenSystem := NewTerrainManaRegenSystem(game.World, config.Seed+2190)
+	terrainManaRegenSystem.SetGenre(config.GenreID)
+	terrainManaRegenSystem.SetTileSize(config.TileSize)
+	result.TerrainManaRegenSystem = terrainManaRegenSystem
+	game.World.AddSystem(terrainManaRegenSystem)
 
 	// 36c. CriticalHitParticleSystem - visual feedback for critical hits
 	criticalHitParticleSystem := NewCriticalHitParticleSystem(game.World, config.Seed+3000)

@@ -80,6 +80,7 @@ type SystemInitResult struct {
 	FactionXPBonusSystem           *FactionXPBonusSystem
 	WeatherManaRegenSystem         *WeatherManaRegenSystem
 	TerrainMovementSpeedSystem     *TerrainMovementSpeedSystem
+	TerrainCombatBonusSystem       *TerrainCombatBonusSystem
 	LowHealthVFXSystem             *LowHealthVFXSystem
 	CompanionAuraParticleSystem    *CompanionAuraParticleSystem
 	SpecializationManaBoostSystem  *SpecializationManaBoostSystem
@@ -343,6 +344,14 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 	terrainMovementSpeedSystem.SetTileSize(config.TileSize)
 	result.TerrainMovementSpeedSystem = terrainMovementSpeedSystem
 	game.World.AddSystem(terrainMovementSpeedSystem)
+
+	// 36b4. TerrainCombatBonusSystem - applies combat stat modifiers from terrain type
+	// Connects terrain generation with CombatSystem for tactical bonuses (high ground, cover, water)
+	terrainCombatBonusSystem := NewTerrainCombatBonusSystem(game.World, config.Seed+2160)
+	terrainCombatBonusSystem.SetGenre(config.GenreID)
+	terrainCombatBonusSystem.SetTileSize(config.TileSize)
+	result.TerrainCombatBonusSystem = terrainCombatBonusSystem
+	game.World.AddSystem(terrainCombatBonusSystem)
 
 	// 36c. CriticalHitParticleSystem - visual feedback for critical hits
 	criticalHitParticleSystem := NewCriticalHitParticleSystem(game.World, config.Seed+3000)

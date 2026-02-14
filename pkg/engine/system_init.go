@@ -128,6 +128,7 @@ type SystemInitResult struct {
 	TerrainAmbushCritSystem           *TerrainAmbushCritSystem
 	FactionDamageBonusSystem          *FactionDamageBonusSystem
 	WeatherCritChanceSystem           *WeatherCritChanceSystem
+	StealthIndicatorParticleSystem    *StealthIndicatorParticleSystem
 
 	// System wrappers
 	AnimationSystemWrapper            System
@@ -496,6 +497,15 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 	terrainAmbushCritSystem.SetGenre(config.GenreID)
 	result.TerrainAmbushCritSystem = terrainAmbushCritSystem
 	game.World.AddSystem(terrainAmbushCritSystem)
+
+	// 36b5c. StealthIndicatorParticleSystem - visual feedback for terrain cover state changes
+	// Connects TerrainStealthSystem with ParticleSystem for genre-aware stealth particles
+	stealthIndicatorParticleSystem := NewStealthIndicatorParticleSystem(game.World, config.Seed+2177)
+	stealthIndicatorParticleSystem.SetTerrainStealthSystem(terrainStealthSystem)
+	stealthIndicatorParticleSystem.SetParticleSystem(result.ParticleSystem)
+	stealthIndicatorParticleSystem.SetGenre(config.GenreID)
+	result.StealthIndicatorParticleSystem = stealthIndicatorParticleSystem
+	game.World.AddSystem(stealthIndicatorParticleSystem)
 
 	// 36b6. TerrainStatusEffectSystem - applies elemental status effects from terrain type
 	// Connects terrain tiles (water, lava) with StatusEffectSystem for elemental combos

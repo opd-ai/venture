@@ -167,8 +167,10 @@ type SystemInitResult struct {
 	CombatEquipmentDurabilityParticleSystem  *CombatEquipmentDurabilityParticleSystem
 	ReputationDefenseBonusSystem             *ReputationDefenseBonusSystem
 	ReputationDefenseBonusParticleSystem     *ReputationDefenseBonusParticleSystem
-	ReputationHealingBonusSystem             *ReputationHealingBonusSystem
-	ReputationHealingBonusParticleSystem     *ReputationHealingBonusParticleSystem
+	ReputationHealingBonusSystem                *ReputationHealingBonusSystem
+	ReputationHealingBonusParticleSystem        *ReputationHealingBonusParticleSystem
+	ReputationSpellDamageBonusSystem            *ReputationSpellDamageBonusSystem
+	ReputationSpellDamageBonusParticleSystem    *ReputationSpellDamageBonusParticleSystem
 
 	// System wrappers
 	AnimationSystemWrapper            System
@@ -348,6 +350,21 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 	reputationHealingBonusParticleSystem.SetGenre(config.GenreID)
 	result.ReputationHealingBonusParticleSystem = reputationHealingBonusParticleSystem
 	game.World.AddSystem(reputationHealingBonusParticleSystem)
+
+	// 17g. ReputationSpellDamageBonusSystem - spell damage bonus from allied faction reputation
+	reputationSpellDamageBonusSystem := NewReputationSpellDamageBonusSystem(game.World, config.Seed+5195)
+	reputationSpellDamageBonusSystem.SetFactionSystem(factionSystem)
+	reputationSpellDamageBonusSystem.SetGenre(config.GenreID)
+	result.ReputationSpellDamageBonusSystem = reputationSpellDamageBonusSystem
+	game.World.AddSystem(reputationSpellDamageBonusSystem)
+
+	// 17h. ReputationSpellDamageBonusParticleSystem - visual feedback for reputation spell damage
+	reputationSpellDamageBonusParticleSystem := NewReputationSpellDamageBonusParticleSystem(game.World, config.Seed+5200)
+	reputationSpellDamageBonusParticleSystem.SetParticleSystem(result.ParticleSystem)
+	reputationSpellDamageBonusParticleSystem.SetSpellDamageSystem(reputationSpellDamageBonusSystem)
+	reputationSpellDamageBonusParticleSystem.SetGenre(config.GenreID)
+	result.ReputationSpellDamageBonusParticleSystem = reputationSpellDamageBonusParticleSystem
+	game.World.AddSystem(reputationSpellDamageBonusParticleSystem)
 
 	// 18. SkillProgressionSystem - applies skill effects to stats
 	skillProgressionSystem := NewSkillProgressionSystem()

@@ -185,8 +185,10 @@ type systemsContainer struct {
 	factionDamageBonusSystem                *engine.FactionDamageBonusSystem             // Bridges faction reputation with damage bonuses
 	reputationDefenseBonusSystem            *engine.ReputationDefenseBonusSystem         // Bridges faction reputation with defense bonuses
 	reputationDefenseBonusParticleSystem    *engine.ReputationDefenseBonusParticleSystem // Visual feedback for reputation defense bonuses
-	reputationHealingBonusSystem            *engine.ReputationHealingBonusSystem         // Bridges faction reputation with health regen
-	reputationHealingBonusParticleSystem    *engine.ReputationHealingBonusParticleSystem // Visual feedback for reputation healing
+	reputationHealingBonusSystem            *engine.ReputationHealingBonusSystem            // Bridges faction reputation with health regen
+	reputationHealingBonusParticleSystem    *engine.ReputationHealingBonusParticleSystem    // Visual feedback for reputation healing
+	reputationSpellDamageBonusSystem        *engine.ReputationSpellDamageBonusSystem        // Bridges faction reputation with spell damage
+	reputationSpellDamageBonusParticleSystem *engine.ReputationSpellDamageBonusParticleSystem // Visual feedback for reputation spell damage
 	statusEffectAISystem                    *engine.StatusEffectAISystem                 // Bridges status effects with AI (stun/frozen disable AI)
 	reputationSystem                        *engine.ReputationSystem
 	alignmentSystem                         *engine.AlignmentSystem
@@ -1862,6 +1864,21 @@ func registerNonCriticalSystems(game *engine.EbitenGame, sys *systemsContainer) 
 	sys.reputationHealingBonusParticleSystem.SetHealingSystem(sys.reputationHealingBonusSystem)
 	sys.reputationHealingBonusParticleSystem.SetGenre(*genreID)
 	game.World.AddSystem(sys.reputationHealingBonusParticleSystem)
+
+	// ReputationSpellDamageBonusSystem: bridges faction reputation with spell damage
+	// Players with high faction standing gain a passive MagicPower bonus
+	sys.reputationSpellDamageBonusSystem = engine.NewReputationSpellDamageBonusSystem(game.World, *seed+5195)
+	sys.reputationSpellDamageBonusSystem.SetFactionSystem(sys.factionSystem)
+	sys.reputationSpellDamageBonusSystem.SetGenre(*genreID)
+	game.World.AddSystem(sys.reputationSpellDamageBonusSystem)
+
+	// ReputationSpellDamageBonusParticleSystem: visual feedback for reputation spell damage
+	// Spawns genre-aware arcane particles when faction reputation boosts spell damage
+	sys.reputationSpellDamageBonusParticleSystem = engine.NewReputationSpellDamageBonusParticleSystem(game.World, *seed+5200)
+	sys.reputationSpellDamageBonusParticleSystem.SetParticleSystem(sys.particleSystem)
+	sys.reputationSpellDamageBonusParticleSystem.SetSpellDamageSystem(sys.reputationSpellDamageBonusSystem)
+	sys.reputationSpellDamageBonusParticleSystem.SetGenre(*genreID)
+	game.World.AddSystem(sys.reputationSpellDamageBonusParticleSystem)
 
 	// FactionCompanionBehaviorSystem: bridges faction reputation with companion AI targeting
 	// Companions won't attack allied faction members and prioritize hostile faction enemies

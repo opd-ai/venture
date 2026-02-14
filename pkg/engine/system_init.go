@@ -156,6 +156,7 @@ type SystemInitResult struct {
 	CompanionFishingBonusSystem              *CompanionFishingBonusSystem
 	TerrainEquipmentDurabilitySystem         *TerrainEquipmentDurabilitySystem
 	TerrainEquipmentDurabilityParticleSystem *TerrainEquipmentDurabilityParticleSystem
+	TerrainRangedAccuracySystem             *TerrainRangedAccuracySystem
 	WeatherEquipmentDurabilitySystem         *WeatherEquipmentDurabilitySystem
 	SpellChannelParticleSystem               *SpellChannelParticleSystem
 	CompanionDamageLifestealSystem           *CompanionDamageLifestealSystem
@@ -634,6 +635,14 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 	terrainEquipmentDurabilityParticleSystem.SetTileSize(config.TileSize)
 	result.TerrainEquipmentDurabilityParticleSystem = terrainEquipmentDurabilityParticleSystem
 	game.World.AddSystem(terrainEquipmentDurabilityParticleSystem)
+
+	// 36b7c3. TerrainRangedAccuracySystem - modifies ranged accuracy based on terrain type
+	// Connects terrain tiles (corridors, trees, platforms) with ranged combat for tactical positioning
+	terrainRangedAccuracySystem := NewTerrainRangedAccuracySystem(game.World, config.Seed+2197)
+	terrainRangedAccuracySystem.SetGenre(config.GenreID)
+	terrainRangedAccuracySystem.SetTileSize(config.TileSize)
+	result.TerrainRangedAccuracySystem = terrainRangedAccuracySystem
+	game.World.AddSystem(terrainRangedAccuracySystem)
 
 	// 36b7d. WeatherEquipmentDurabilitySystem - degrades equipment from weather conditions
 	// Connects WeatherComponent (rain, snow, sandstorm) with EquipmentComponent durability for environmental wear

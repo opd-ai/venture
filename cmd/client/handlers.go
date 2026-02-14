@@ -215,6 +215,7 @@ type systemsContainer struct {
 	terrainSpellDamageSystem                *engine.TerrainSpellDamageSystem                 // Connects terrain tiles (lava, water) to spell damage modifiers
 	terrainEquipmentDurabilitySys           *engine.TerrainEquipmentDurabilitySystem         // Connects terrain hazards (lava, water, traps) to equipment durability
 	terrainEquipmentDurabilityParticleSys   *engine.TerrainEquipmentDurabilityParticleSystem // Connects terrain durability to visual particle feedback
+	terrainRangedAccuracySys               *engine.TerrainRangedAccuracySystem              // Connects terrain tiles to ranged combat accuracy
 	terrainCompanionBonusSystem             *engine.TerrainCompanionBonusSystem              // Connects terrain tiles to companion combat stat bonuses
 	factionCompanionBehaviorSystem          *engine.FactionCompanionBehaviorSystem           // Connects faction reputation to companion AI targeting
 	weatherCompanionBonusSystem             *engine.WeatherCompanionBonusSystem              // Connects weather conditions to companion combat stat bonuses
@@ -2450,6 +2451,10 @@ func initializeTerrainCollision(game *engine.EbitenGame, sys *systemsContainer, 
 		if terrainEquipDurabilitySys, ok := system.(*engine.TerrainEquipmentDurabilitySystem); ok {
 			terrainEquipDurabilitySys.SetTerrain(generatedTerrain)
 			sys.terrainEquipmentDurabilitySys = terrainEquipDurabilitySys
+		}
+		if terrainRangedAccSys, ok := system.(*engine.TerrainRangedAccuracySystem); ok {
+			terrainRangedAccSys.SetTerrain(generatedTerrain)
+			sys.terrainRangedAccuracySys = terrainRangedAccSys
 		}
 		if terrainCompanionBonusSys, ok := system.(*engine.TerrainCompanionBonusSystem); ok {
 			terrainCompanionBonusSys.SetTerrain(generatedTerrain)

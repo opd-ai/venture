@@ -2239,6 +2239,9 @@ func initializeTerrainCollision(game *engine.EbitenGame, sys *systemsContainer, 
 			terrainCompanionBonusSys.SetTerrain(generatedTerrain)
 			sys.terrainCompanionBonusSystem = terrainCompanionBonusSys
 		}
+		if footstepParticleSys, ok := system.(*engine.FootstepParticleSystem); ok {
+			footstepParticleSys.SetTerrain(generatedTerrain)
+		}
 	}
 
 	if *verbose {

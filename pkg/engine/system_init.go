@@ -111,6 +111,7 @@ type SystemInitResult struct {
 	FactionCompanionBehaviorSystem   *FactionCompanionBehaviorSystem
 	WeatherCompanionBonusSystem      *WeatherCompanionBonusSystem
 	EvasionParticleSystem            *EvasionParticleSystem
+	FootstepParticleSystem           *FootstepParticleSystem
 
 	// System wrappers
 	AnimationSystemWrapper            System
@@ -688,6 +689,15 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 	result.CombatSystem.SetEvasionCallback(evasionParticleSystem.OnEvasion)
 	result.EvasionParticleSystem = evasionParticleSystem
 	game.World.AddSystem(evasionParticleSystem)
+
+	// 36x. FootstepParticleSystem - visual feedback for terrain-aware movement
+	// Connects MovementSystem with ParticleSystem for genre-aware footstep effects
+	footstepParticleSystem := NewFootstepParticleSystem(game.World, config.Seed+7250)
+	footstepParticleSystem.SetParticleSystem(result.ParticleSystem)
+	footstepParticleSystem.SetGenre(config.GenreID)
+	footstepParticleSystem.SetTileSize(config.TileSize)
+	result.FootstepParticleSystem = footstepParticleSystem
+	game.World.AddSystem(footstepParticleSystem)
 
 	// 37. LifetimeSystem - temporary entities (Phase 5.3)
 	lifetimeSystem := NewLifetimeSystemWithLogger(game.World, logger)

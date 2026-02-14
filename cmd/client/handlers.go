@@ -245,6 +245,7 @@ type systemsContainer struct {
 	classProgressionSys          *engine.ClassProgressionSystem
 	specializationManaBoostSys   *engine.SpecializationManaBoostSystem   // Connects class specialization with mana regen bonuses
 	specializationHealthRegenSys *engine.SpecializationHealthRegenSystem // Connects class specialization with health regen bonuses
+	specializationSpellDamageSys *engine.SpecializationSpellDamageSystem // Connects class specialization with spell damage bonuses
 	expressionSystem             *engine.ExpressionSystem
 	expressionComboSys           *engine.ExpressionComboSystem
 	miniGameSystem               *engine.MiniGameSystem
@@ -1049,6 +1050,11 @@ func initializeV4Systems(game *engine.EbitenGame, sys *systemsContainer, clientL
 	sys.specializationHealthRegenSys.SetGenre(*genreID)
 	logging.ComponentLogger(clientLogger.Logger, "specialization_health_regen").Debug("Created specialization health regen system")
 
+	// Phase 25c: Specialization spell damage system - connects class specialization with spell damage
+	sys.specializationSpellDamageSys = engine.NewSpecializationSpellDamageSystem(game.World, *seed+seedOffsetSpecSpellDamage)
+	sys.specializationSpellDamageSys.SetGenre(*genreID)
+	logging.ComponentLogger(clientLogger.Logger, "specialization_spell_damage").Debug("Created specialization spell damage system")
+
 	// Phase 26: Expression systems (requires audio manager)
 	sys.expressionSystem = engine.NewExpressionSystem(game.World, sys.audioManager)
 	sys.expressionComboSys = engine.NewExpressionComboSystem(game.World)
@@ -1698,6 +1704,9 @@ func registerNonCriticalSystems(game *engine.EbitenGame, sys *systemsContainer) 
 
 	// Phase 25b: Specialization health regen - connects class specialization with health regen bonuses
 	game.World.AddSystem(sys.specializationHealthRegenSys)
+
+	// Phase 25c: Specialization spell damage - connects class specialization with spell damage bonuses
+	game.World.AddSystem(sys.specializationSpellDamageSys)
 
 	// Phase 26: Expression systems (use wrappers)
 	game.World.AddSystem(&expressionSystemWrapper{system: sys.expressionSystem})

@@ -87,6 +87,7 @@ type SystemInitResult struct {
 	CompanionAuraParticleSystem     *CompanionAuraParticleSystem
 	SpecializationManaBoostSystem   *SpecializationManaBoostSystem
 	SpecializationHealthRegenSystem *SpecializationHealthRegenSystem
+	SpecializationSpellDamageSystem *SpecializationSpellDamageSystem
 	ElementalComboParticleSystem    *ElementalComboParticleSystem
 	WeatherRangedAccuracySystem     *WeatherRangedAccuracySystem
 	StatusEffectEvasionSystem       *StatusEffectEvasionSystem
@@ -278,6 +279,13 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 	specializationHealthRegenSystem.SetGenre(config.GenreID)
 	result.SpecializationHealthRegenSystem = specializationHealthRegenSystem
 	game.World.AddSystem(specializationHealthRegenSystem)
+
+	// 25c. SpecializationSpellDamageSystem - passive spell damage bonuses from class specializations
+	// Connects ClassProgressionComponent with spell damage for genre-aware caster bonuses
+	specializationSpellDamageSystem := NewSpecializationSpellDamageSystem(game.World, config.Seed+6660)
+	specializationSpellDamageSystem.SetGenre(config.GenreID)
+	result.SpecializationSpellDamageSystem = specializationSpellDamageSystem
+	game.World.AddSystem(specializationSpellDamageSystem)
 
 	// 26. InventorySystem - item management
 	game.World.AddSystem(inventorySystem)

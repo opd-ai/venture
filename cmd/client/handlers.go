@@ -201,6 +201,7 @@ type systemsContainer struct {
 	terrainMovementSpeedSystem      *engine.TerrainMovementSpeedSystem       // Connects terrain tiles to movement speed modifiers
 	terrainCombatBonusSystem        *engine.TerrainCombatBonusSystem         // Connects terrain tiles to combat bonuses (high ground, cover)
 	terrainStealthSystem            *engine.TerrainStealthSystem             // Connects terrain tiles to AI detection for stealth gameplay
+	terrainStatusEffectSystem       *engine.TerrainStatusEffectSystem        // Connects terrain tiles (water, lava) to elemental status effects
 	criticalHitParticleSystem       *engine.CriticalHitParticleSystem        // Connects combat crits to particle effects
 	levelUpParticleSystem           *engine.LevelUpParticleSystem            // Connects level-ups to particle effects
 	itemPickupParticleSystem        *engine.ItemPickupParticleSystem         // Connects item pickups to particle effects
@@ -2166,6 +2167,10 @@ func initializeTerrainCollision(game *engine.EbitenGame, sys *systemsContainer, 
 		if terrainStealthSys, ok := system.(*engine.TerrainStealthSystem); ok {
 			terrainStealthSys.SetTerrain(generatedTerrain)
 			sys.terrainStealthSystem = terrainStealthSys
+		}
+		if terrainStatusSys, ok := system.(*engine.TerrainStatusEffectSystem); ok {
+			terrainStatusSys.SetTerrain(generatedTerrain)
+			sys.terrainStatusEffectSystem = terrainStatusSys
 		}
 	}
 

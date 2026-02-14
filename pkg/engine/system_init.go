@@ -84,6 +84,7 @@ type SystemInitResult struct {
 	TerrainMovementSpeedSystem       *TerrainMovementSpeedSystem
 	TerrainCombatBonusSystem         *TerrainCombatBonusSystem
 	TerrainStealthSystem             *TerrainStealthSystem
+	TerrainStatusEffectSystem        *TerrainStatusEffectSystem
 	LowHealthVFXSystem               *LowHealthVFXSystem
 	CompanionAuraParticleSystem      *CompanionAuraParticleSystem
 	SpecializationManaBoostSystem    *SpecializationManaBoostSystem
@@ -409,6 +410,14 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 	terrainStealthSystem.SetTileSize(config.TileSize)
 	result.TerrainStealthSystem = terrainStealthSystem
 	game.World.AddSystem(terrainStealthSystem)
+
+	// 36b6. TerrainStatusEffectSystem - applies elemental status effects from terrain type
+	// Connects terrain tiles (water, lava) with StatusEffectSystem for elemental combos
+	terrainStatusEffectSystem := NewTerrainStatusEffectSystem(game.World, config.Seed+2180)
+	terrainStatusEffectSystem.SetGenre(config.GenreID)
+	terrainStatusEffectSystem.SetTileSize(config.TileSize)
+	result.TerrainStatusEffectSystem = terrainStatusEffectSystem
+	game.World.AddSystem(terrainStatusEffectSystem)
 
 	// 36c. CriticalHitParticleSystem - visual feedback for critical hits
 	criticalHitParticleSystem := NewCriticalHitParticleSystem(game.World, config.Seed+3000)

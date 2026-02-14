@@ -219,6 +219,7 @@ type systemsContainer struct {
 	lifestealSystem                  *engine.LifestealSystem                  // Connects combat damage to attacker healing
 	statusEffectManaCostSystem       *engine.StatusEffectManaCostSystem       // Connects status effects to spell mana cost modifiers
 	statusEffectDamageParticleSystem *engine.StatusEffectDamageParticleSystem // Connects status effect ticks (burn, poison, regen) to particle effects
+	fearFleeParticleSystem           *engine.FearFleeParticleSystem           // Connects fear status effects with flee particle effects
 	lifetimeSystem                   *engine.LifetimeSystem
 	puzzleSystem                     *engine.PuzzleSystem
 	firePropagationSystem            *engine.FirePropagationSystem
@@ -1006,6 +1007,12 @@ func initializeEnvironmentalSystems(game *engine.EbitenGame, sys *systemsContain
 	sys.statusEffectDamageParticleSystem.SetGenre(*genreID)
 	sys.statusEffectSystem.SetTickCallback(sys.statusEffectDamageParticleSystem.OnStatusEffectTick)
 
+	// FearFleeParticleSystem - visual feedback for feared entities fleeing
+	// Connects StatusEffectAISystem flee behavior with ParticleSystem for genre-aware fear trails
+	sys.fearFleeParticleSystem = engine.NewFearFleeParticleSystem(game.World, *seed+7150)
+	sys.fearFleeParticleSystem.SetParticleSystem(sys.particleSystem)
+	sys.fearFleeParticleSystem.SetGenre(*genreID)
+
 	sys.lifetimeSystem = engine.NewLifetimeSystemWithLogger(game.World, clientLogger.Logger)
 	sys.puzzleSystem = engine.NewPuzzleSystem(game.World)
 
@@ -1711,6 +1718,7 @@ func registerNonCriticalSystems(game *engine.EbitenGame, sys *systemsContainer) 
 	game.World.AddSystem(sys.elementalCompanionSynergySystem)  // Elemental companion stat bonuses from owner effects
 	game.World.AddSystem(sys.lifestealSystem)                  // Combat lifesteal healing with visual feedback
 	game.World.AddSystem(sys.statusEffectDamageParticleSystem) // Status effect DOT tick visual feedback (burn/poison/regen)
+	game.World.AddSystem(sys.fearFleeParticleSystem)           // Fear flee particle trails for genre-aware fear feedback
 	game.World.AddSystem(sys.lifetimeSystem)
 	game.World.AddSystem(sys.puzzleSystem)
 	game.World.AddSystem(sys.firePropagationSystem)

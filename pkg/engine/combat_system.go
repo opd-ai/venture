@@ -42,6 +42,9 @@ type CombatSystem struct {
 	// Callback for when damage is dealt
 	onDamageCallback func(attacker, target *Entity, damage float64)
 
+	// Additional damage callbacks for multiple systems
+	additionalDamageCallbacks []func(attacker, target *Entity, damage float64)
+
 	// Callback for when a critical hit occurs
 	onCriticalHitCallback func(attacker, target *Entity, damage float64)
 
@@ -935,6 +938,15 @@ func (s *CombatSystem) SetDamageCallback(callback func(attacker, target *Entity,
 		s.logger.Debug("damage callback registered")
 	}
 	s.onDamageCallback = callback
+}
+
+// AddDamageCallback adds an additional callback for damage events without replacing existing ones.
+// Use this for systems that need to react to damage but shouldn't override the primary callback.
+func (s *CombatSystem) AddDamageCallback(callback func(attacker, target *Entity, damage float64)) {
+	if s.logger != nil {
+		s.logger.Debug("additional damage callback registered")
+	}
+	s.additionalDamageCallbacks = append(s.additionalDamageCallbacks, callback)
 }
 
 // SetCriticalHitCallback sets the callback function for critical hits.

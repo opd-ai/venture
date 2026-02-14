@@ -101,6 +101,8 @@ type SystemInitResult struct {
 	LifestealSystem                  *LifestealSystem
 	StatusEffectManaCostSystem       *StatusEffectManaCostSystem
 	StatusEffectDamageParticleSystem *StatusEffectDamageParticleSystem
+	WeaponSwingParticleSystem        *WeaponSwingParticleSystem
+	FearFleeParticleSystem           *FearFleeParticleSystem
 
 	// System wrappers
 	AnimationSystemWrapper            System
@@ -601,6 +603,22 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 	statusEffectSystem.SetTickCallback(statusEffectDamageParticleSystem.OnStatusEffectTick)
 	result.StatusEffectDamageParticleSystem = statusEffectDamageParticleSystem
 	game.World.AddSystem(statusEffectDamageParticleSystem)
+
+	// 36u. WeaponSwingParticleSystem - visual feedback for melee weapon attacks
+	// Connects CombatSystem damage events with ParticleSystem for rarity-aware weapon trails
+	weaponSwingParticleSystem := NewWeaponSwingParticleSystem(game.World, config.Seed+7100)
+	weaponSwingParticleSystem.SetParticleSystem(result.ParticleSystem)
+	weaponSwingParticleSystem.SetGenre(config.GenreID)
+	result.WeaponSwingParticleSystem = weaponSwingParticleSystem
+	game.World.AddSystem(weaponSwingParticleSystem)
+
+	// 36v. FearFleeParticleSystem - visual feedback for feared fleeing entities
+	// Connects StatusEffectAISystem flee behavior with ParticleSystem for genre-aware fear effects
+	fearFleeParticleSystem := NewFearFleeParticleSystem(game.World, config.Seed+7150)
+	fearFleeParticleSystem.SetParticleSystem(result.ParticleSystem)
+	fearFleeParticleSystem.SetGenre(config.GenreID)
+	result.FearFleeParticleSystem = fearFleeParticleSystem
+	game.World.AddSystem(fearFleeParticleSystem)
 
 	// 37. LifetimeSystem - temporary entities (Phase 5.3)
 	lifetimeSystem := NewLifetimeSystemWithLogger(game.World, logger)

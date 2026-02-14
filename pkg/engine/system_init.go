@@ -145,6 +145,7 @@ type SystemInitResult struct {
 	TimeOfDayBlockChanceSystem               *TimeOfDayBlockChanceSystem
 	TimeOfDayEvasionSystem                   *TimeOfDayEvasionSystem
 	TimeOfDaySpellDamageSystem               *TimeOfDaySpellDamageSystem
+	TimeOfDayAttackSpeedSystem               *TimeOfDayAttackSpeedSystem
 	TerrainCombatBonusParticleSystem         *TerrainCombatBonusParticleSystem
 	CompanionManaRegenSystem                 *CompanionManaRegenSystem
 	WeatherElementalComboBonusSystem         *WeatherElementalComboBonusSystem
@@ -1150,6 +1151,15 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 	timeOfDaySpellDamageSystem.SetGenre(config.GenreID)
 	result.TimeOfDaySpellDamageSystem = timeOfDaySpellDamageSystem
 	game.World.AddSystem(timeOfDaySpellDamageSystem)
+
+	// 43l. TimeOfDayAttackSpeedSystem - day/night melee attack speed modulation
+	// Connects TimeOfDayLightingSystem with AttackComponent.Cooldown for combat pacing
+	// Night enables faster attacks (cover), day slightly slows them (visibility aids defense)
+	timeOfDayAttackSpeedSystem := NewTimeOfDayAttackSpeedSystem(game.World, config.Seed+7775)
+	timeOfDayAttackSpeedSystem.SetLightingSystem(timeOfDayLightingSystem)
+	timeOfDayAttackSpeedSystem.SetGenre(config.GenreID)
+	result.TimeOfDayAttackSpeedSystem = timeOfDayAttackSpeedSystem
+	game.World.AddSystem(timeOfDayAttackSpeedSystem)
 
 	// Note: SpatialPartitionSystem (system #44) is initialized separately
 	// after terrain generation via InitializeSpatialPartitionSystem()

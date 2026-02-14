@@ -261,6 +261,7 @@ type systemsContainer struct {
 	timeOfDayBlockChanceSystem            *engine.TimeOfDayBlockChanceSystem    // Connects time-of-day lighting with block chance bonuses
 	timeOfDayEvasionSystem                *engine.TimeOfDayEvasionSystem        // Connects time-of-day lighting with evasion bonuses
 	timeOfDaySpellDamageSystem            *engine.TimeOfDaySpellDamageSystem    // Connects time-of-day lighting with spell damage modifiers
+	timeOfDayAttackSpeedSystem            *engine.TimeOfDayAttackSpeedSystem    // Connects time-of-day lighting with attack speed modifiers
 	spriteGenerator                       *sprites.Generator
 	spriteCache                           *cache.SpriteCache // Phase 1.2: Sprite caching for animation performance
 	itemGen                               *item.ItemGenerator
@@ -2440,6 +2441,9 @@ func initializeTerrainCollision(game *engine.EbitenGame, sys *systemsContainer, 
 		}
 		if timeOfDayEvasionSys, ok := system.(*engine.TimeOfDayEvasionSystem); ok {
 			sys.timeOfDayEvasionSystem = timeOfDayEvasionSys
+		}
+		if timeOfDayAttackSpeedSys, ok := system.(*engine.TimeOfDayAttackSpeedSystem); ok {
+			sys.timeOfDayAttackSpeedSystem = timeOfDayAttackSpeedSys
 		}
 	}
 

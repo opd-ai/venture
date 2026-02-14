@@ -164,8 +164,8 @@ type SystemInitResult struct {
 	WeatherMovementSpeedParticleSystem       *WeatherMovementSpeedParticleSystem
 	WeatherCompanionBonusParticleSystem      *WeatherCompanionBonusParticleSystem
 	CombatEquipmentDurabilityParticleSystem  *CombatEquipmentDurabilityParticleSystem
-	ReputationDefenseBonusSystem              *ReputationDefenseBonusSystem
-	ReputationDefenseBonusParticleSystem      *ReputationDefenseBonusParticleSystem
+	ReputationDefenseBonusSystem             *ReputationDefenseBonusSystem
+	ReputationDefenseBonusParticleSystem     *ReputationDefenseBonusParticleSystem
 
 	// System wrappers
 	AnimationSystemWrapper            System

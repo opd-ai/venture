@@ -82,6 +82,7 @@ type SystemInitResult struct {
 	TerrainMovementSpeedSystem     *TerrainMovementSpeedSystem
 	LowHealthVFXSystem             *LowHealthVFXSystem
 	CompanionAuraParticleSystem    *CompanionAuraParticleSystem
+	SpecializationManaBoostSystem  *SpecializationManaBoostSystem
 
 	// System wrappers
 	AnimationSystemWrapper            System
@@ -254,6 +255,13 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 	game.World.AddSystem(spellCastingSystem)
 	manaRegenSystem := &ManaRegenSystem{}
 	game.World.AddSystem(manaRegenSystem)
+
+	// 25a. SpecializationManaBoostSystem - passive mana regen bonuses from class specializations
+	// Connects ClassProgressionComponent with ManaComponent for genre-aware caster bonuses
+	specializationManaBoostSystem := NewSpecializationManaBoostSystem(game.World, config.Seed+6600)
+	specializationManaBoostSystem.SetGenre(config.GenreID)
+	result.SpecializationManaBoostSystem = specializationManaBoostSystem
+	game.World.AddSystem(specializationManaBoostSystem)
 
 	// 26. InventorySystem - item management
 	game.World.AddSystem(inventorySystem)

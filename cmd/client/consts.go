@@ -84,6 +84,7 @@ const (
 	seedOffsetNarrative          = 13000 // offset for procedural narrative arc generation (Phase 3.6)
 	seedOffsetTradeRoutes        = 14000 // offset for trade route system (Phase 4.4)
 	seedOffsetFishing            = 15000 // offset for fishing system (Phase 95-96)
+	seedOffsetSpecManaBoost      = 16000 // offset for specialization mana boost system (class-mana integration)
 
 	// Fallback positions
 	fallbackPlayerX = 400 // fallback X position if no valid spawn

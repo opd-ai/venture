@@ -244,9 +244,10 @@ type systemsContainer struct {
 	branchingNarrativeSystem          *engine.BranchingNarrativeSystem // Phase 6.1: Branching story arc system
 	worldEventsSystem                 *engine.WorldEventsSystem        // Phase 6.3: World-responsive events
 	shadowSystem                      *engine.ShadowSystem
-	timeOfDayStealthSystem            *engine.TimeOfDayStealthSystem  // Connects time-of-day lighting with AI detection for stealth
-	timeOfDayXPBonusSystem            *engine.TimeOfDayXPBonusSystem  // Connects time-of-day lighting with XP bonuses
-	timeOfDayManaCostSystem           *engine.TimeOfDayManaCostSystem // Connects time-of-day lighting with spell mana costs
+	timeOfDayStealthSystem            *engine.TimeOfDayStealthSystem        // Connects time-of-day lighting with AI detection for stealth
+	timeOfDayXPBonusSystem            *engine.TimeOfDayXPBonusSystem        // Connects time-of-day lighting with XP bonuses
+	timeOfDayManaCostSystem           *engine.TimeOfDayManaCostSystem       // Connects time-of-day lighting with spell mana costs
+	timeOfDayCriticalChanceSystem     *engine.TimeOfDayCriticalChanceSystem // Connects time-of-day lighting with crit chance bonuses
 	spriteGenerator                   *sprites.Generator
 	spriteCache                       *cache.SpriteCache // Phase 1.2: Sprite caching for animation performance
 	itemGen                           *item.ItemGenerator
@@ -2320,6 +2321,9 @@ func initializeTerrainCollision(game *engine.EbitenGame, sys *systemsContainer, 
 		}
 		if timeOfDayManaCostSys, ok := system.(*engine.TimeOfDayManaCostSystem); ok {
 			sys.timeOfDayManaCostSystem = timeOfDayManaCostSys
+		}
+		if timeOfDayCritChanceSys, ok := system.(*engine.TimeOfDayCriticalChanceSystem); ok {
+			sys.timeOfDayCriticalChanceSystem = timeOfDayCritChanceSys
 		}
 	}
 

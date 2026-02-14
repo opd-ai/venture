@@ -128,6 +128,7 @@ type SystemInitResult struct {
 	TimeOfDayStealthSystem            *TimeOfDayStealthSystem
 	TimeOfDayXPBonusSystem            *TimeOfDayXPBonusSystem
 	TimeOfDayManaCostSystem           *TimeOfDayManaCostSystem
+	TimeOfDayCriticalChanceSystem     *TimeOfDayCriticalChanceSystem
 	TerrainAmbushCritSystem           *TerrainAmbushCritSystem
 	FactionDamageBonusSystem          *FactionDamageBonusSystem
 	WeatherCritChanceSystem           *WeatherCritChanceSystem
@@ -916,6 +917,14 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 	timeOfDayManaCostSystem.SetGenre(config.GenreID)
 	result.TimeOfDayManaCostSystem = timeOfDayManaCostSystem
 	game.World.AddSystem(timeOfDayManaCostSystem)
+
+	// 43f. TimeOfDayCriticalChanceSystem - day/night critical hit chance modulation
+	// Connects TimeOfDayLightingSystem with StatsComponent.CritChance for ambush tactics
+	timeOfDayCriticalChanceSystem := NewTimeOfDayCriticalChanceSystem(game.World, config.Seed+7625)
+	timeOfDayCriticalChanceSystem.SetLightingSystem(timeOfDayLightingSystem)
+	timeOfDayCriticalChanceSystem.SetGenre(config.GenreID)
+	result.TimeOfDayCriticalChanceSystem = timeOfDayCriticalChanceSystem
+	game.World.AddSystem(timeOfDayCriticalChanceSystem)
 
 	// Note: SpatialPartitionSystem (system #44) is initialized separately
 	// after terrain generation via InitializeSpatialPartitionSystem()

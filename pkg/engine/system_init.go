@@ -107,6 +107,7 @@ type SystemInitResult struct {
 	FearFleeParticleSystem           *FearFleeParticleSystem
 	StatusEffectDamageBoostSystem    *StatusEffectDamageBoostSystem
 	TerrainCompanionBonusSystem      *TerrainCompanionBonusSystem
+	FactionCompanionBehaviorSystem   *FactionCompanionBehaviorSystem
 
 	// System wrappers
 	AnimationSystemWrapper            System
@@ -455,6 +456,13 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 	terrainCompanionBonusSystem.SetTileSize(config.TileSize)
 	result.TerrainCompanionBonusSystem = terrainCompanionBonusSystem
 	game.World.AddSystem(terrainCompanionBonusSystem)
+
+	// 36b9. FactionCompanionBehaviorSystem - modifies companion targeting based on faction reputation
+	// Connects FactionSystem reputation with companion AI targeting for faction-aware companions
+	factionCompanionBehaviorSystem := NewFactionCompanionBehaviorSystem(game.World, config.Seed+2198)
+	factionCompanionBehaviorSystem.SetGenre(config.GenreID)
+	result.FactionCompanionBehaviorSystem = factionCompanionBehaviorSystem
+	game.World.AddSystem(factionCompanionBehaviorSystem)
 
 	// 36c. CriticalHitParticleSystem - visual feedback for critical hits
 	criticalHitParticleSystem := NewCriticalHitParticleSystem(game.World, config.Seed+3000)

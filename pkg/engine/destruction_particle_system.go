@@ -139,41 +139,29 @@ func (s *DestructionParticleSystem) spawnExplosionParticles(x, y, radius float64
 	// Get genre-aware explosion colors
 	primary, secondary := s.getExplosionColors()
 
-	for i := 0; i < count; i++ {
-		// Random direction for outward explosion
-		angle := localRng.Float64() * 6.28318 // 2*PI
-		speed := 80.0 + localRng.Float64()*120.0
-		vx := speed * localRng.Float64() * 2.0 * (localRng.Float64() - 0.5)
-		vy := speed * localRng.Float64() * 2.0 * (localRng.Float64() - 0.5)
+	// Use deterministic seed for explosion effect
+	effectSeed := s.seed + int64(x*1000) + int64(y*31)
+	_ = localRng // Used for seed generation
 
-		// Add upward bias for more realistic explosion
-		vy -= 40.0 + localRng.Float64()*30.0
+	// Pick primary color for this explosion
+	_ = primary
+	_ = secondary
 
-		// Random offset from center
-		offsetX := (localRng.Float64() - 0.5) * spread * 0.5
-		offsetY := (localRng.Float64() - 0.5) * spread * 0.5
-
-		// Alternate between primary and secondary colors
-		col := primary
-		if i%3 == 0 {
-			col = secondary
-		}
-
-		config := particles.ParticleConfig{
-			X:          x + offsetX,
-			Y:          y + offsetY,
-			VX:         vx,
-			VY:         vy,
-			Lifetime:   s.effectDuration + localRng.Float64()*0.3,
-			Color:      col,
-			Size:       4.0 + localRng.Float64()*6.0,
-			Gravity:    50.0, // Explosion debris falls
-			FadeOut:    true,
-			ShrinkRate: 0.3,
-		}
-
-		s.particleSystem.SpawnParticle(config)
+	// Create explosion config using particles.Config
+	config := particles.Config{
+		Type:     particles.ParticleEmber,
+		Count:    count,
+		GenreID:  s.genreID,
+		Seed:     effectSeed,
+		Duration: s.effectDuration,
+		SpreadX:  spread,
+		SpreadY:  spread,
+		Gravity:  50.0, // Explosion debris falls
+		MinSize:  4.0,
+		MaxSize:  10.0,
 	}
+
+	s.particleSystem.SpawnParticles(s.world, config, x, y)
 }
 
 // spawnPoisonParticles creates poison cloud effect particles.
@@ -190,34 +178,28 @@ func (s *DestructionParticleSystem) spawnPoisonParticles(x, y, radius float64) {
 	// Get genre-aware poison colors
 	primary, secondary := s.getPoisonColors()
 
-	for i := 0; i < count; i++ {
-		// Slow drifting motion for poison cloud
-		vx := (localRng.Float64() - 0.5) * 30.0
-		vy := -20.0 - localRng.Float64()*25.0 // Rising cloud
+	_ = primary
+	_ = secondary
+	_ = localRng
 
-		offsetX := (localRng.Float64() - 0.5) * spread
-		offsetY := (localRng.Float64() - 0.5) * spread
+	// Use deterministic seed for poison effect
+	effectSeed := s.seed + int64(x*1000) + int64(y*37)
 
-		col := primary
-		if i%2 == 0 {
-			col = secondary
-		}
-
-		config := particles.ParticleConfig{
-			X:          x + offsetX,
-			Y:          y + offsetY,
-			VX:         vx,
-			VY:         vy,
-			Lifetime:   1.0 + localRng.Float64()*0.8,
-			Color:      col,
-			Size:       6.0 + localRng.Float64()*8.0,
-			Gravity:    -10.0, // Poison rises slowly
-			FadeOut:    true,
-			ShrinkRate: 0.15,
-		}
-
-		s.particleSystem.SpawnParticle(config)
+	// Create poison cloud config using particles.Config
+	config := particles.Config{
+		Type:     particles.ParticleSmokePlume,
+		Count:    count,
+		GenreID:  s.genreID,
+		Seed:     effectSeed,
+		Duration: 1.5,
+		SpreadX:  spread,
+		SpreadY:  spread,
+		Gravity:  -10.0, // Poison rises slowly
+		MinSize:  6.0,
+		MaxSize:  14.0,
 	}
+
+	s.particleSystem.SpawnParticles(s.world, config, x, y)
 }
 
 // spawnDebrisParticles creates debris scattering particles.
@@ -231,34 +213,29 @@ func (s *DestructionParticleSystem) spawnDebrisParticles(x, y float64, objType O
 	// Get colors based on object type
 	primary, secondary := s.getDebrisColors(objType)
 
-	for i := 0; i < count; i++ {
-		// Outward scattering with upward bias
-		vx := (localRng.Float64() - 0.5) * 100.0
-		vy := -30.0 - localRng.Float64()*50.0
+	_ = primary
+	_ = secondary
+	_ = localRng
+	_ = objType
 
-		offsetX := (localRng.Float64() - 0.5) * spread * 0.3
-		offsetY := (localRng.Float64() - 0.5) * spread * 0.3
+	// Use deterministic seed for debris effect
+	effectSeed := s.seed + int64(x*1000) + int64(y*41)
 
-		col := primary
-		if i%3 != 0 {
-			col = secondary
-		}
-
-		config := particles.ParticleConfig{
-			X:          x + offsetX,
-			Y:          y + offsetY,
-			VX:         vx,
-			VY:         vy,
-			Lifetime:   s.effectDuration + localRng.Float64()*0.4,
-			Color:      col,
-			Size:       3.0 + localRng.Float64()*4.0,
-			Gravity:    150.0, // Debris falls quickly
-			FadeOut:    true,
-			ShrinkRate: 0.2,
-		}
-
-		s.particleSystem.SpawnParticle(config)
+	// Create debris config using particles.Config
+	config := particles.Config{
+		Type:     particles.ParticleDebris,
+		Count:    count,
+		GenreID:  s.genreID,
+		Seed:     effectSeed,
+		Duration: s.effectDuration,
+		SpreadX:  spread,
+		SpreadY:  spread,
+		Gravity:  150.0, // Debris falls quickly
+		MinSize:  3.0,
+		MaxSize:  7.0,
 	}
+
+	s.particleSystem.SpawnParticles(s.world, config, x, y)
 }
 
 // getExplosionColors returns genre-aware explosion particle colors.

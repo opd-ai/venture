@@ -159,34 +159,27 @@ func (s *TimeOfDayHealthRegenSystem) Update(entities []*Entity, deltaTime float6
 }
 
 // updateEntityRegen applies health regen modifier to a single entity.
+// NOTE: Currently a no-op as HealthComponent lacks a Regen field.
+// This will be implemented when HealthComponent is extended with regeneration support.
 func (s *TimeOfDayHealthRegenSystem) updateEntityRegen(entity *Entity, multiplier float64) {
 	healthComp, ok := entity.GetComponent("health")
 	if !ok {
 		return
 	}
 
-	health, ok := healthComp.(*HealthComponent)
+	_, ok = healthComp.(*HealthComponent)
 	if !ok {
 		return
 	}
 
-	// Store original regen if not already cached
-	if _, exists := s.originalRegen[entity.ID]; !exists {
-		s.originalRegen[entity.ID] = health.Regen
-	}
-
-	// Apply modified regen rate
-	originalRegen := s.originalRegen[entity.ID]
-	health.Regen = originalRegen * multiplier
+	// Track multiplier for future implementation
 	s.activeMultipliers[entity.ID] = multiplier
 
 	if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
 		s.logger.WithFields(logrus.Fields{
-			"entity_id":      entity.ID,
-			"original_regen": originalRegen,
-			"modified_regen": health.Regen,
-			"multiplier":     multiplier,
-		}).Debug("health regen modified by time of day")
+			"entity_id":  entity.ID,
+			"multiplier": multiplier,
+		}).Debug("health regen multiplier tracked")
 	}
 }
 
@@ -256,18 +249,20 @@ func (s *TimeOfDayHealthRegenSystem) GetBonusDescription() string {
 
 // RestoreOriginalRegen restores the original health regen rate for an entity.
 // Called when entity leaves the game or system is disabled.
+// NOTE: Currently tracks state only as HealthComponent lacks a Regen field.
 func (s *TimeOfDayHealthRegenSystem) RestoreOriginalRegen(entityID uint64) {
-	if originalRegen, exists := s.originalRegen[entityID]; exists {
-		if s.world != nil {
-			entity := s.world.GetEntity(entityID)
-			if entity != nil {
-				if healthComp, ok := entity.GetComponent("health"); ok {
-					if health, ok := healthComp.(*HealthComponent); ok {
-						health.Regen = originalRegen
-					}
-				}
-			}
-		}
+	if _, exists := s.originalRegen[entityID]; exists {
+		// When HealthComponent gains Regen field, restore it here:
+		// if s.world != nil {
+		//     entity, found := s.world.GetEntity(entityID)
+		//     if found && entity != nil {
+		//         if healthComp, ok := entity.GetComponent("health"); ok {
+		//             if health, ok := healthComp.(*HealthComponent); ok {
+		//                 health.Regen = originalRegen
+		//             }
+		//         }
+		//     }
+		// }
 		delete(s.originalRegen, entityID)
 		delete(s.activeMultipliers, entityID)
 	}

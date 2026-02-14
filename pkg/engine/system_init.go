@@ -100,6 +100,7 @@ type SystemInitResult struct {
 	ElementalCompanionSynergySystem  *ElementalCompanionSynergySystem
 	LifestealSystem                  *LifestealSystem
 	StatusEffectManaCostSystem       *StatusEffectManaCostSystem
+	StatusEffectDamageParticleSystem *StatusEffectDamageParticleSystem
 
 	// System wrappers
 	AnimationSystemWrapper            System
@@ -591,6 +592,15 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 	statusEffectManaCostSystem.SetGenre(config.GenreID)
 	result.StatusEffectManaCostSystem = statusEffectManaCostSystem
 	game.World.AddSystem(statusEffectManaCostSystem)
+
+	// 36t. StatusEffectDamageParticleSystem - visual feedback for status effect damage ticks
+	// Connects StatusEffectSystem tick events (burning, poison, regen) with ParticleSystem
+	statusEffectDamageParticleSystem := NewStatusEffectDamageParticleSystem(game.World, config.Seed+7050)
+	statusEffectDamageParticleSystem.SetParticleSystem(result.ParticleSystem)
+	statusEffectDamageParticleSystem.SetGenre(config.GenreID)
+	statusEffectSystem.SetTickCallback(statusEffectDamageParticleSystem.OnStatusEffectTick)
+	result.StatusEffectDamageParticleSystem = statusEffectDamageParticleSystem
+	game.World.AddSystem(statusEffectDamageParticleSystem)
 
 	// 37. LifetimeSystem - temporary entities (Phase 5.3)
 	lifetimeSystem := NewLifetimeSystemWithLogger(game.World, logger)

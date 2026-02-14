@@ -6,6 +6,9 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+// StatusEffectTickCallback is called when a status effect ticks (deals damage/healing).
+type StatusEffectTickCallback func(entity *Entity, effectType string, magnitude float64)
+
 // StatusEffectSystem manages status effects on entities.
 type StatusEffectSystem struct {
 	world  *World
@@ -14,6 +17,9 @@ type StatusEffectSystem struct {
 
 	// Reusable buffer for expired effects to reduce per-entity allocations
 	expiredEffectsBuffer []Component
+
+	// Callback for status effect tick events (for visual feedback)
+	tickCallback StatusEffectTickCallback
 }
 
 // NewStatusEffectSystem creates a new status effect system.
@@ -30,6 +36,14 @@ func NewStatusEffectSystem(world *World, rng *rand.Rand) *StatusEffectSystem {
 		rng:                  rng,
 		logger:               logEntry,
 		expiredEffectsBuffer: make([]Component, 0, 8), // Pre-allocate for typical max expired effects per entity
+	}
+}
+
+// SetTickCallback sets the callback invoked when status effects tick (deal damage/healing).
+func (s *StatusEffectSystem) SetTickCallback(callback StatusEffectTickCallback) {
+	s.tickCallback = callback
+	if s.logger != nil {
+		s.logger.Debug("Status effect tick callback set")
 	}
 }
 
@@ -209,7 +223,7 @@ func (s *StatusEffectSystem) applyPeriodicEffect(entity *Entity, effect *StatusE
 		return
 	}
 
-	s.applyEffectToHealth(entity.ID, effect, health)
+	s.applyEffectToHealth(entity, effect, health)
 }
 
 // logPeriodicEffect logs the periodic effect application.
@@ -261,48 +275,58 @@ func (s *StatusEffectSystem) logHealthTypeError(entityID uint64) {
 }
 
 // applyEffectToHealth applies the specific effect type to health.
-func (s *StatusEffectSystem) applyEffectToHealth(entityID uint64, effect *StatusEffectComponent, health *HealthComponent) {
+func (s *StatusEffectSystem) applyEffectToHealth(entity *Entity, effect *StatusEffectComponent, health *HealthComponent) {
 	switch effect.EffectType {
 	case "burning":
-		s.applyBurning(entityID, effect.Magnitude, health)
+		s.applyBurning(entity, effect.Magnitude, health)
 	case "poisoned":
-		s.applyPoison(entityID, effect.Magnitude, health)
+		s.applyPoison(entity, effect.Magnitude, health)
 	case "regeneration":
-		s.applyRegeneration(entityID, effect.Magnitude, health)
+		s.applyRegeneration(entity, effect.Magnitude, health)
 	}
 }
 
 // applyBurning applies fire damage over time.
-func (s *StatusEffectSystem) applyBurning(entityID uint64, magnitude float64, health *HealthComponent) {
+func (s *StatusEffectSystem) applyBurning(entity *Entity, magnitude float64, health *HealthComponent) {
 	if s.logger != nil {
 		s.logger.WithFields(logrus.Fields{
-			"entity_id": entityID,
+			"entity_id": entity.ID,
 			"damage":    magnitude,
 		}).Debug("Applying burning damage")
 	}
 	health.TakeDamage(magnitude)
+	s.invokeTickCallback(entity, "burning", magnitude)
 }
 
 // applyPoison applies poison damage that ignores armor.
-func (s *StatusEffectSystem) applyPoison(entityID uint64, magnitude float64, health *HealthComponent) {
+func (s *StatusEffectSystem) applyPoison(entity *Entity, magnitude float64, health *HealthComponent) {
 	if s.logger != nil {
 		s.logger.WithFields(logrus.Fields{
-			"entity_id": entityID,
+			"entity_id": entity.ID,
 			"damage":    magnitude,
 		}).Debug("Applying poison damage")
 	}
 	health.TakeDamage(magnitude)
+	s.invokeTickCallback(entity, "poisoned", magnitude)
 }
 
 // applyRegeneration applies healing over time.
-func (s *StatusEffectSystem) applyRegeneration(entityID uint64, magnitude float64, health *HealthComponent) {
+func (s *StatusEffectSystem) applyRegeneration(entity *Entity, magnitude float64, health *HealthComponent) {
 	if s.logger != nil {
 		s.logger.WithFields(logrus.Fields{
-			"entity_id": entityID,
+			"entity_id": entity.ID,
 			"healing":   magnitude,
 		}).Debug("Applying regeneration healing")
 	}
 	health.Heal(magnitude)
+	s.invokeTickCallback(entity, "regeneration", magnitude)
+}
+
+// invokeTickCallback safely invokes the tick callback if set.
+func (s *StatusEffectSystem) invokeTickCallback(entity *Entity, effectType string, magnitude float64) {
+	if s.tickCallback != nil {
+		s.tickCallback(entity, effectType, magnitude)
+	}
 }
 
 // removeEffectModifiers removes stat modifications when effect expires.

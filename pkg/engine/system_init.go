@@ -145,6 +145,8 @@ type SystemInitResult struct {
 	CompanionManaRegenSystem            *CompanionManaRegenSystem
 	WeatherElementalComboBonusSystem    *WeatherElementalComboBonusSystem
 	TerrainFishingBonusSystem           *TerrainFishingBonusSystem
+	WeatherSpellDamageSystem            *WeatherSpellDamageSystem
+	SpecializationLifestealSystem       *SpecializationLifestealSystem
 
 	// System wrappers
 	AnimationSystemWrapper            System
@@ -381,6 +383,13 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 	specializationEvasionSystem.SetGenre(config.GenreID)
 	result.SpecializationEvasionSystem = specializationEvasionSystem
 	game.World.AddSystem(specializationEvasionSystem)
+
+	// 25j. SpecializationLifestealSystem - lifesteal bonuses from class specializations
+	// Connects ClassProgressionComponent with StatsComponent.Lifesteal for blood magic/survival bonuses
+	specializationLifestealSystem := NewSpecializationLifestealSystem(game.World, config.Seed+6720)
+	specializationLifestealSystem.SetGenre(config.GenreID)
+	result.SpecializationLifestealSystem = specializationLifestealSystem
+	game.World.AddSystem(specializationLifestealSystem)
 
 	// 25g. StatusEffectHealthRegenSystem - health regeneration modifiers from status effects
 	// Connects StatusEffectSystem with HealthComponent for genre-aware regen bonuses/penalties
@@ -681,6 +690,15 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 	weatherCooldownSystem.SetGenre(config.GenreID)
 	result.WeatherCooldownSystem = weatherCooldownSystem
 	game.World.AddSystem(weatherCooldownSystem)
+
+	// 36j2b. WeatherSpellDamageSystem - modifies spell damage based on weather-element synergies
+	// Connects WeatherSystem with SpellCastingSystem for elemental combat bonuses
+	// (e.g., lightning +25% in rain, fire -25% in rain, ice +30% in snow)
+	weatherSpellDamageSystem := NewWeatherSpellDamageSystem(game.World, config.Seed+6360)
+	weatherSpellDamageSystem.SetGenre(config.GenreID)
+	spellCastingSystem.SetWeatherSpellDamageSystem(weatherSpellDamageSystem)
+	result.WeatherSpellDamageSystem = weatherSpellDamageSystem
+	game.World.AddSystem(weatherSpellDamageSystem)
 
 	// 36j3. FishingWeatherBonusSystem - modifies fishing bonuses based on weather
 	// Connects WeatherSystem with FishingSystem for immersive fishing gameplay

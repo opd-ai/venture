@@ -65,13 +65,14 @@ func (s *SpellSlotComponent) IsCasting() bool {
 
 // SpellCastingSystem handles spell execution and cooldowns.
 type SpellCastingSystem struct {
-	world           *World
-	statusEffectSys *StatusEffectSystem
-	particleSys     *ParticleSystem         // For visual effects
-	audioMgr        *AudioManager           // For sound effects
-	tutorialSys     *EbitenTutorialSystem   // For notifications
-	comboSys        *SpellCombinationSystem // For combo detection
-	logger          *logrus.Entry
+	world                 *World
+	statusEffectSys       *StatusEffectSystem
+	particleSys           *ParticleSystem           // For visual effects
+	audioMgr              *AudioManager             // For sound effects
+	tutorialSys           *EbitenTutorialSystem     // For notifications
+	comboSys              *SpellCombinationSystem   // For combo detection
+	weatherSpellDamageSys *WeatherSpellDamageSystem // For weather-element synergies
+	logger                *logrus.Entry
 }
 
 // NewSpellCastingSystem creates a new spell casting system.
@@ -136,6 +137,16 @@ func (s *SpellCastingSystem) SetComboSystem(comboSys *SpellCombinationSystem) {
 		s.logger.Debug("SpellCombinationSystem set for spell casting system")
 	}
 	s.comboSys = comboSys
+}
+
+// SetWeatherSpellDamageSystem sets the weather-spell damage modifier system.
+// This enables elemental spell damage bonuses based on current weather conditions
+// (e.g., lightning damage +25% in rain, fire damage -25% in rain).
+func (s *SpellCastingSystem) SetWeatherSpellDamageSystem(weatherSys *WeatherSpellDamageSystem) {
+	if s.logger != nil {
+		s.logger.Debug("WeatherSpellDamageSystem set for spell casting system")
+	}
+	s.weatherSpellDamageSys = weatherSys
 }
 
 // Update processes spell casting and cooldowns.
@@ -573,10 +584,12 @@ func (s *SpellCastingSystem) getTargetHealth(target *Entity) *HealthComponent {
 	return health
 }
 
-// calculateSpellDamage computes final damage with combo multiplier.
+// calculateSpellDamage computes final damage with combo and weather multipliers.
 func (s *SpellCastingSystem) calculateSpellDamage(caster *Entity, spell *magic.Spell) (float64, float64) {
 	damage := float64(spell.Stats.Damage)
 	comboMultiplier := 1.0
+
+	// Apply combo multiplier if available
 	if s.comboSys != nil {
 		comboMultiplier = s.comboSys.GetActiveComboMultiplier(caster)
 		damage *= comboMultiplier
@@ -589,6 +602,23 @@ func (s *SpellCastingSystem) calculateSpellDamage(caster *Entity, spell *magic.S
 			}).Debug("Combo multiplier applied to spell damage")
 		}
 	}
+
+	// Apply weather-element damage modifier if available
+	if s.weatherSpellDamageSys != nil {
+		weatherMod := s.weatherSpellDamageSys.GetDamageModifier(spell.Element)
+		if weatherMod != 1.0 {
+			damage *= weatherMod
+			if s.logger != nil {
+				s.logger.WithFields(logrus.Fields{
+					"entity_id":        caster.ID,
+					"spell_element":    spell.Element.String(),
+					"weather_modifier": weatherMod,
+					"final_damage":     damage,
+				}).Debug("Weather modifier applied to spell damage")
+			}
+		}
+	}
+
 	return damage, comboMultiplier
 }
 

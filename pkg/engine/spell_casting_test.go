@@ -902,3 +902,102 @@ func TestStatusEffectSystem_StatModifiers(t *testing.T) {
 		t.Errorf("Attack after buff expired = %f, want 10.0", stats.Attack)
 	}
 }
+
+// TestSpellCastingSystem_WeatherSpellDamageIntegration tests that weather modifiers
+// are applied to spell damage when WeatherSpellDamageSystem is connected.
+func TestSpellCastingSystem_WeatherSpellDamageIntegration(t *testing.T) {
+	world := NewWorld()
+	rng := rand.New(rand.NewSource(12345))
+	statusSys := NewStatusEffectSystem(world, rng)
+	spellSys := NewSpellCastingSystem(world, statusSys)
+
+	// Create weather system and connect it
+	weatherDamageSys := NewWeatherSpellDamageSystem(world, 67890)
+	spellSys.SetWeatherSpellDamageSystem(weatherDamageSys)
+
+	// Verify system is connected
+	if spellSys.weatherSpellDamageSys == nil {
+		t.Fatal("WeatherSpellDamageSystem not connected to SpellCastingSystem")
+	}
+
+	// Create caster entity
+	caster := world.CreateEntity()
+	caster.AddComponent(&PositionComponent{X: 100, Y: 100})
+	caster.AddComponent(&ManaComponent{Current: 100, Max: 100})
+
+	// Create lightning spell
+	lightningSpell := &magic.Spell{
+		Name:    "Lightning Bolt",
+		Type:    magic.TypeOffensive,
+		Element: magic.ElementLightning,
+		Stats: magic.Stats{
+			Damage:   100,
+			ManaCost: 20,
+		},
+	}
+
+	// Without weather, damage should be base value
+	damageNoWeather, _ := spellSys.calculateSpellDamage(caster, lightningSpell)
+	if damageNoWeather != 100.0 {
+		t.Errorf("Damage without weather = %f, want 100.0", damageNoWeather)
+	}
+
+	// Add rain weather (lightning gets +25% bonus in rain)
+	weatherEntity := world.CreateEntity()
+	weatherComp := &WeatherComponent{
+		Active: true,
+		Config: WeatherConfig{
+			Type: 1, // WeatherRain
+		},
+	}
+	weatherEntity.AddComponent(weatherComp)
+
+	// Clear cache to pick up weather change
+	weatherDamageSys.ClearCache()
+
+	// With rain, lightning damage should be boosted by 25%
+	damageWithRain, _ := spellSys.calculateSpellDamage(caster, lightningSpell)
+	expectedDamage := 125.0 // 100 * 1.25
+	if damageWithRain != expectedDamage {
+		t.Errorf("Lightning damage in rain = %f, want %f (25%% bonus)", damageWithRain, expectedDamage)
+	}
+
+	// Fire spell should be reduced in rain (-25%)
+	fireSpell := &magic.Spell{
+		Name:    "Fireball",
+		Type:    magic.TypeOffensive,
+		Element: magic.ElementFire,
+		Stats: magic.Stats{
+			Damage:   100,
+			ManaCost: 25,
+		},
+	}
+
+	weatherDamageSys.ClearCache()
+	damageFireInRain, _ := spellSys.calculateSpellDamage(caster, fireSpell)
+	expectedFireDamage := 75.0 // 100 * 0.75
+	if damageFireInRain != expectedFireDamage {
+		t.Errorf("Fire damage in rain = %f, want %f (25%% penalty)", damageFireInRain, expectedFireDamage)
+	}
+}
+
+// TestSpellCastingSystem_SetWeatherSpellDamageSystem tests the setter method.
+func TestSpellCastingSystem_SetWeatherSpellDamageSystem(t *testing.T) {
+	world := NewWorld()
+	rng := rand.New(rand.NewSource(12345))
+	statusSys := NewStatusEffectSystem(world, rng)
+	spellSys := NewSpellCastingSystem(world, statusSys)
+
+	// Initially nil
+	if spellSys.weatherSpellDamageSys != nil {
+		t.Error("weatherSpellDamageSys should be nil initially")
+	}
+
+	// Set the system
+	weatherSys := NewWeatherSpellDamageSystem(world, 12345)
+	spellSys.SetWeatherSpellDamageSystem(weatherSys)
+
+	if spellSys.weatherSpellDamageSys != weatherSys {
+		t.Error("weatherSpellDamageSys not set correctly")
+	}
+}

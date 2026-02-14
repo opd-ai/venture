@@ -183,7 +183,8 @@ type systemsContainer struct {
 	factionAwareAISystem                    *engine.FactionAwareAISystem         // Bridges faction reputation with AI hostility
 	factionXPBonusSystem                    *engine.FactionXPBonusSystem         // Bridges faction reputation with XP bonus rewards
 	factionDamageBonusSystem                *engine.FactionDamageBonusSystem     // Bridges faction reputation with damage bonuses
-	reputationDefenseBonusSystem            *engine.ReputationDefenseBonusSystem // Bridges faction reputation with defense bonuses
+	reputationDefenseBonusSystem            *engine.ReputationDefenseBonusSystem            // Bridges faction reputation with defense bonuses
+	reputationDefenseBonusParticleSystem    *engine.ReputationDefenseBonusParticleSystem    // Visual feedback for reputation defense bonuses
 	statusEffectAISystem                    *engine.StatusEffectAISystem         // Bridges status effects with AI (stun/frozen disable AI)
 	reputationSystem                        *engine.ReputationSystem
 	alignmentSystem                         *engine.AlignmentSystem
@@ -1836,6 +1837,13 @@ func registerNonCriticalSystems(game *engine.EbitenGame, sys *systemsContainer) 
 	sys.reputationDefenseBonusSystem.SetFactionSystem(sys.factionSystem)
 	sys.reputationDefenseBonusSystem.SetGenre(*genreID)
 	game.World.AddSystem(sys.reputationDefenseBonusSystem)
+
+	// ReputationDefenseBonusParticleSystem: visual feedback for reputation defense bonuses
+	// Spawns genre-aware particles when faction reputation reduces incoming damage
+	sys.reputationDefenseBonusParticleSystem = engine.NewReputationDefenseBonusParticleSystem(game.World, *seed+5180)
+	sys.reputationDefenseBonusParticleSystem.SetParticleSystem(sys.particleSystem)
+	sys.reputationDefenseBonusParticleSystem.SetGenre(*genreID)
+	game.World.AddSystem(sys.reputationDefenseBonusParticleSystem)
 
 	// FactionCompanionBehaviorSystem: bridges faction reputation with companion AI targeting
 	// Companions won't attack allied faction members and prioritize hostile faction enemies

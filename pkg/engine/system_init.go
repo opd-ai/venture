@@ -164,7 +164,8 @@ type SystemInitResult struct {
 	WeatherMovementSpeedParticleSystem       *WeatherMovementSpeedParticleSystem
 	WeatherCompanionBonusParticleSystem      *WeatherCompanionBonusParticleSystem
 	CombatEquipmentDurabilityParticleSystem  *CombatEquipmentDurabilityParticleSystem
-	ReputationDefenseBonusSystem             *ReputationDefenseBonusSystem
+	ReputationDefenseBonusSystem              *ReputationDefenseBonusSystem
+	ReputationDefenseBonusParticleSystem      *ReputationDefenseBonusParticleSystem
 
 	// System wrappers
 	AnimationSystemWrapper            System
@@ -321,6 +322,14 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 	reputationDefenseBonusSystem.SetGenre(config.GenreID)
 	result.ReputationDefenseBonusSystem = reputationDefenseBonusSystem
 	game.World.AddSystem(reputationDefenseBonusSystem)
+
+	// 17d. ReputationDefenseBonusParticleSystem - visual feedback for reputation defense
+	// Connects ReputationDefenseBonusSystem damage reduction with particle effects
+	reputationDefenseBonusParticleSystem := NewReputationDefenseBonusParticleSystem(game.World, config.Seed+5180)
+	reputationDefenseBonusParticleSystem.SetParticleSystem(result.ParticleSystem)
+	reputationDefenseBonusParticleSystem.SetGenre(config.GenreID)
+	result.ReputationDefenseBonusParticleSystem = reputationDefenseBonusParticleSystem
+	game.World.AddSystem(reputationDefenseBonusParticleSystem)
 
 	// 18. SkillProgressionSystem - applies skill effects to stats
 	skillProgressionSystem := NewSkillProgressionSystem()

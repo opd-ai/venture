@@ -208,6 +208,7 @@ type systemsContainer struct {
 	lowHealthVFXSystem             *engine.LowHealthVFXSystem             // Connects low player health to warning particle effects
 	companionAuraParticleSystem    *engine.CompanionAuraParticleSystem    // Connects companion bonding perks to aura particles
 	elementalComboParticleSystem   *engine.ElementalComboParticleSystem   // Connects elemental status combos to visual effects
+	weatherRangedAccuracySystem    *engine.WeatherRangedAccuracySystem    // Connects weather to ranged attack accuracy modifiers
 	lifetimeSystem                 *engine.LifetimeSystem
 	puzzleSystem                   *engine.PuzzleSystem
 	firePropagationSystem          *engine.FirePropagationSystem
@@ -948,6 +949,10 @@ func initializeEnvironmentalSystems(game *engine.EbitenGame, sys *systemsContain
 	sys.elementalComboParticleSystem.SetParticleSystem(sys.particleSystem)
 	sys.elementalComboParticleSystem.SetGenre(*genreID)
 
+	// WeatherRangedAccuracySystem - modifies ranged attack accuracy based on weather
+	sys.weatherRangedAccuracySystem = engine.NewWeatherRangedAccuracySystem(game.World, *seed+6750)
+	sys.weatherRangedAccuracySystem.SetGenre(*genreID)
+
 	sys.lifetimeSystem = engine.NewLifetimeSystemWithLogger(game.World, clientLogger.Logger)
 	sys.puzzleSystem = engine.NewPuzzleSystem(game.World)
 
@@ -1614,6 +1619,7 @@ func registerNonCriticalSystems(game *engine.EbitenGame, sys *systemsContainer) 
 	game.World.AddSystem(sys.weatherAudioSystem)             // Weather ambient audio feedback
 	game.World.AddSystem(sys.weatherManaRegenSystem)         // Weather mana regeneration modifiers
 	game.World.AddSystem(sys.weatherCooldownSystem)          // Weather spell cooldown rate modifiers
+	game.World.AddSystem(sys.weatherRangedAccuracySystem)    // Weather ranged attack accuracy modifiers
 	game.World.AddSystem(sys.statusEffectLightingSystem)     // Status effect visual feedback via lighting
 	game.World.AddSystem(sys.statusEffectMovementSystem)     // Status effect movement speed modifiers
 	game.World.AddSystem(sys.criticalHitParticleSystem)      // Critical hit visual feedback via particles

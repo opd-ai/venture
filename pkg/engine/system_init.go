@@ -88,6 +88,7 @@ type SystemInitResult struct {
 	SpecializationManaBoostSystem   *SpecializationManaBoostSystem
 	SpecializationHealthRegenSystem *SpecializationHealthRegenSystem
 	ElementalComboParticleSystem    *ElementalComboParticleSystem
+	WeatherRangedAccuracySystem     *WeatherRangedAccuracySystem
 
 	// System wrappers
 	AnimationSystemWrapper            System
@@ -490,6 +491,13 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 	elementalComboParticleSystem.SetGenre(config.GenreID)
 	result.ElementalComboParticleSystem = elementalComboParticleSystem
 	game.World.AddSystem(elementalComboParticleSystem)
+
+	// 36n. WeatherRangedAccuracySystem - modifies ranged attack accuracy based on weather
+	// Connects WeatherSystem with ranged combat for tactical depth in poor visibility
+	weatherRangedAccuracySystem := NewWeatherRangedAccuracySystem(game.World, config.Seed+6750)
+	weatherRangedAccuracySystem.SetGenre(config.GenreID)
+	result.WeatherRangedAccuracySystem = weatherRangedAccuracySystem
+	game.World.AddSystem(weatherRangedAccuracySystem)
 
 	// 37. LifetimeSystem - temporary entities (Phase 5.3)
 	lifetimeSystem := NewLifetimeSystemWithLogger(game.World, logger)

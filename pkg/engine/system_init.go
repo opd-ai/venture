@@ -129,6 +129,7 @@ type SystemInitResult struct {
 	FactionDamageBonusSystem          *FactionDamageBonusSystem
 	WeatherCritChanceSystem           *WeatherCritChanceSystem
 	StealthIndicatorParticleSystem    *StealthIndicatorParticleSystem
+	FishingWeatherBonusSystem         *FishingWeatherBonusSystem
 
 	// System wrappers
 	AnimationSystemWrapper            System
@@ -656,6 +657,13 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 	weatherCooldownSystem.SetGenre(config.GenreID)
 	result.WeatherCooldownSystem = weatherCooldownSystem
 	game.World.AddSystem(weatherCooldownSystem)
+
+	// 36j3. FishingWeatherBonusSystem - modifies fishing bonuses based on weather
+	// Connects WeatherSystem with FishingSystem for immersive fishing gameplay
+	fishingWeatherBonusSystem := NewFishingWeatherBonusSystem(game.World, config.Seed+6375)
+	fishingWeatherBonusSystem.SetGenre(config.GenreID)
+	result.FishingWeatherBonusSystem = fishingWeatherBonusSystem
+	game.World.AddSystem(fishingWeatherBonusSystem)
 
 	// 36k. LowHealthVFXSystem - visual feedback for low player health
 	// Spawns genre-aware pulsing particles when player health is critically low

@@ -227,6 +227,7 @@ type systemsContainer struct {
 	elementalComboDamageSystem        *engine.ElementalComboDamageSystem        // Connects elemental status combos to bonus damage
 	elementalCompanionSynergySystem   *engine.ElementalCompanionSynergySystem   // Connects elemental companions to owner status effects
 	companionSpellAmplificationSystem *engine.CompanionSpellAmplificationSystem // Connects companion bonding to owner spell effectiveness
+	companionManaRegenSystem          *engine.CompanionManaRegenSystem          // Connects companion bonding to owner mana regeneration
 	weatherRangedAccuracySystem       *engine.WeatherRangedAccuracySystem       // Connects weather to ranged attack accuracy modifiers
 	weatherCritChanceSystem           *engine.WeatherCritChanceSystem           // Connects weather to critical hit chance modifiers
 	weatherXPBonusSystem              *engine.WeatherXPBonusSystem              // Connects weather to XP gain bonuses
@@ -1041,6 +1042,11 @@ func initializeEnvironmentalSystems(game *engine.EbitenGame, sys *systemsContain
 	sys.companionSpellAmplificationSystem = engine.NewCompanionSpellAmplificationSystem(game.World, *seed+6910)
 	sys.companionSpellAmplificationSystem.SetGenre(*genreID)
 
+	// CompanionManaRegenSystem - boosts owner mana regeneration based on companion bonding
+	// Magical companions (Spirit, Elemental) provide stronger mana bonuses
+	sys.companionManaRegenSystem = engine.NewCompanionManaRegenSystem(game.World, *seed+6920)
+	sys.companionManaRegenSystem.SetGenre(*genreID)
+
 	// WeatherRangedAccuracySystem - modifies ranged attack accuracy based on weather
 	sys.weatherRangedAccuracySystem = engine.NewWeatherRangedAccuracySystem(game.World, *seed+6750)
 	sys.weatherRangedAccuracySystem.SetGenre(*genreID)
@@ -1832,6 +1838,7 @@ func registerNonCriticalSystems(game *engine.EbitenGame, sys *systemsContainer) 
 	game.World.AddSystem(sys.elementalComboDamageSystem)        // Elemental status combo bonus damage
 	game.World.AddSystem(sys.elementalCompanionSynergySystem)   // Elemental companion stat bonuses from owner effects
 	game.World.AddSystem(sys.companionSpellAmplificationSystem) // Owner spell damage/healing bonuses from companion bonding
+	game.World.AddSystem(sys.companionManaRegenSystem)          // Owner mana regeneration bonuses from companion bonding
 	game.World.AddSystem(sys.lifestealSystem)                   // Combat lifesteal healing with visual feedback
 	game.World.AddSystem(sys.statusEffectDamageParticleSystem)  // Status effect DOT tick visual feedback (burn/poison/regen)
 	game.World.AddSystem(sys.fearFleeParticleSystem)            // Fear flee particle trails for genre-aware fear feedback

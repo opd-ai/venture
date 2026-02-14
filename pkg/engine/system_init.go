@@ -140,6 +140,7 @@ type SystemInitResult struct {
 	TimeOfDayHealthRegenSystem        *TimeOfDayHealthRegenSystem
 	TimeOfDayManaRegenSystem          *TimeOfDayManaRegenSystem
 	TerrainCombatBonusParticleSystem  *TerrainCombatBonusParticleSystem
+	CompanionManaRegenSystem          *CompanionManaRegenSystem
 
 	// System wrappers
 	AnimationSystemWrapper            System
@@ -758,6 +759,13 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 	companionSpellAmplificationSystem.SetGenre(config.GenreID)
 	result.CompanionSpellAmplificationSystem = companionSpellAmplificationSystem
 	game.World.AddSystem(companionSpellAmplificationSystem)
+
+	// 36q3. CompanionManaRegenSystem - boosts owner mana regeneration based on companion bonding
+	// Connects CompanionComponent (loyalty, type, perks) with ManaComponent for sustained spellcasting
+	companionManaRegenSystem := NewCompanionManaRegenSystem(game.World, config.Seed+6920)
+	companionManaRegenSystem.SetGenre(config.GenreID)
+	result.CompanionManaRegenSystem = companionManaRegenSystem
+	game.World.AddSystem(companionManaRegenSystem)
 
 	// 36r. LifestealSystem - heals attackers based on damage dealt
 	// Connects CombatSystem damage events with HealthComponent healing for sustained combat

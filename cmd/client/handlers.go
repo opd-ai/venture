@@ -203,6 +203,7 @@ type systemsContainer struct {
 	terrainStealthSystem              *engine.TerrainStealthSystem              // Connects terrain tiles to AI detection for stealth gameplay
 	terrainStatusEffectSystem         *engine.TerrainStatusEffectSystem         // Connects terrain tiles (water, lava) to elemental status effects
 	terrainManaRegenSystem            *engine.TerrainManaRegenSystem            // Connects terrain tiles (water, platforms) to mana regeneration
+	terrainSpellDamageSystem          *engine.TerrainSpellDamageSystem          // Connects terrain tiles (lava, water) to spell damage modifiers
 	terrainCompanionBonusSystem       *engine.TerrainCompanionBonusSystem       // Connects terrain tiles to companion combat stat bonuses
 	factionCompanionBehaviorSystem    *engine.FactionCompanionBehaviorSystem    // Connects faction reputation to companion AI targeting
 	weatherCompanionBonusSystem       *engine.WeatherCompanionBonusSystem       // Connects weather conditions to companion combat stat bonuses
@@ -2256,6 +2257,10 @@ func initializeTerrainCollision(game *engine.EbitenGame, sys *systemsContainer, 
 		if terrainManaRegenSys, ok := system.(*engine.TerrainManaRegenSystem); ok {
 			terrainManaRegenSys.SetTerrain(generatedTerrain)
 			sys.terrainManaRegenSystem = terrainManaRegenSys
+		}
+		if terrainSpellDamageSys, ok := system.(*engine.TerrainSpellDamageSystem); ok {
+			terrainSpellDamageSys.SetTerrain(generatedTerrain)
+			sys.terrainSpellDamageSystem = terrainSpellDamageSys
 		}
 		if terrainCompanionBonusSys, ok := system.(*engine.TerrainCompanionBonusSystem); ok {
 			terrainCompanionBonusSys.SetTerrain(generatedTerrain)

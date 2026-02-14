@@ -86,6 +86,7 @@ type SystemInitResult struct {
 	TerrainStealthSystem              *TerrainStealthSystem
 	TerrainStatusEffectSystem         *TerrainStatusEffectSystem
 	TerrainManaRegenSystem            *TerrainManaRegenSystem
+	TerrainSpellDamageSystem          *TerrainSpellDamageSystem
 	LowHealthVFXSystem                *LowHealthVFXSystem
 	ManaRegenParticleSystem           *ManaRegenParticleSystem
 	CompanionAuraParticleSystem       *CompanionAuraParticleSystem
@@ -122,6 +123,7 @@ type SystemInitResult struct {
 	DrowningParticleSystem            *DrowningParticleSystem
 	DestructionParticleSystem         *DestructionParticleSystem
 	BlockParticleSystem               *BlockParticleSystem
+	TimeOfDayLightingSystem           *TimeOfDayLightingSystem
 
 	// System wrappers
 	AnimationSystemWrapper            System
@@ -484,6 +486,14 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 	result.TerrainManaRegenSystem = terrainManaRegenSystem
 	game.World.AddSystem(terrainManaRegenSystem)
 
+	// 36b7b. TerrainSpellDamageSystem - modifies spell damage based on terrain type
+	// Connects terrain tiles (lava, water, platforms) with spell damage for tactical spellcasting
+	terrainSpellDamageSystem := NewTerrainSpellDamageSystem(game.World, config.Seed+2192)
+	terrainSpellDamageSystem.SetGenre(config.GenreID)
+	terrainSpellDamageSystem.SetTileSize(config.TileSize)
+	result.TerrainSpellDamageSystem = terrainSpellDamageSystem
+	game.World.AddSystem(terrainSpellDamageSystem)
+
 	// 36b8. TerrainCompanionBonusSystem - modifies companion stats based on terrain type
 	// Connects terrain tiles with CompanionStatsComponent for tactical companion positioning
 	terrainCompanionBonusSystem := NewTerrainCompanionBonusSystem(game.World, config.Seed+2195)
@@ -819,6 +829,13 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 	// 43. ShadowSystem - enhanced lighting (Phase 14)
 	shadowSystem := NewShadowSystemWithLogger(game.World, logger)
 	game.World.AddSystem(shadowSystem)
+
+	// 43b. TimeOfDayLightingSystem - day/night ambient light modulation (Phase 17.3)
+	// Connects palette/timeofday.go with AmbientLightComponent for dynamic lighting
+	timeOfDayLightingSystem := NewTimeOfDayLightingSystem(game.World, config.Seed+7500)
+	timeOfDayLightingSystem.SetGenre(config.GenreID)
+	result.TimeOfDayLightingSystem = timeOfDayLightingSystem
+	game.World.AddSystem(timeOfDayLightingSystem)
 
 	// Note: SpatialPartitionSystem (system #44) is initialized separately
 	// after terrain generation via InitializeSpatialPartitionSystem()

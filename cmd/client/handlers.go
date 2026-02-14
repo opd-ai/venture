@@ -190,32 +190,33 @@ type systemsContainer struct {
 	visualFeedbackSystem            *engine.VisualFeedbackSystem
 	weatherSystem                   *engine.WeatherSystem
 	weatherCombatSystem             *engine.WeatherCombatSystem
-	weatherGroundEffectSystem       *engine.WeatherGroundEffectSystem       // Connects weather to ground impact particle effects
-	weatherAudioSystem              *engine.WeatherAudioSystem              // Connects weather to ambient audio sounds
-	weatherManaRegenSystem          *engine.WeatherManaRegenSystem          // Connects weather to mana regeneration rates
-	weatherCooldownSystem           *engine.WeatherCooldownSystem           // Connects weather to spell cooldown rates
-	statusEffectLightingSystem      *engine.StatusEffectLightingSystem      // Connects status effects to lighting for visual feedback
-	statusEffectMovementSystem      *engine.StatusEffectMovementSystem      // Connects status effects to movement speed modifiers
-	statusEffectEvasionSystem       *engine.StatusEffectEvasionSystem       // Connects status effects to evasion modifiers in combat
-	terrainMovementSpeedSystem      *engine.TerrainMovementSpeedSystem      // Connects terrain tiles to movement speed modifiers
-	terrainCombatBonusSystem        *engine.TerrainCombatBonusSystem        // Connects terrain tiles to combat bonuses (high ground, cover)
-	terrainStealthSystem            *engine.TerrainStealthSystem            // Connects terrain tiles to AI detection for stealth gameplay
-	criticalHitParticleSystem       *engine.CriticalHitParticleSystem       // Connects combat crits to particle effects
-	levelUpParticleSystem           *engine.LevelUpParticleSystem           // Connects level-ups to particle effects
-	itemPickupParticleSystem        *engine.ItemPickupParticleSystem        // Connects item pickups to particle effects
-	deathParticleSystem             *engine.DeathParticleSystem             // Connects entity deaths to particle effects
-	spellEffectParticleSystem       *engine.SpellEffectParticleSystem       // Connects spell effects to particle effects
-	damageResistanceParticleSystem  *engine.DamageResistanceParticleSystem  // Connects damage resistance to particle effects
-	shieldAbsorbParticleSystem      *engine.ShieldAbsorbParticleSystem      // Connects shield absorption to particle effects
-	lowHealthVFXSystem              *engine.LowHealthVFXSystem              // Connects low player health to warning particle effects
-	companionAuraParticleSystem     *engine.CompanionAuraParticleSystem     // Connects companion bonding perks to aura particles
-	elementalComboParticleSystem    *engine.ElementalComboParticleSystem    // Connects elemental status combos to visual effects
-	elementalComboDamageSystem      *engine.ElementalComboDamageSystem      // Connects elemental status combos to bonus damage
-	elementalCompanionSynergySystem *engine.ElementalCompanionSynergySystem // Connects elemental companions to owner status effects
-	weatherRangedAccuracySystem     *engine.WeatherRangedAccuracySystem     // Connects weather to ranged attack accuracy modifiers
-	weatherXPBonusSystem            *engine.WeatherXPBonusSystem            // Connects weather to XP gain bonuses
-	lifestealSystem                 *engine.LifestealSystem                 // Connects combat damage to attacker healing
-	statusEffectManaCostSystem      *engine.StatusEffectManaCostSystem      // Connects status effects to spell mana cost modifiers
+	weatherGroundEffectSystem       *engine.WeatherGroundEffectSystem        // Connects weather to ground impact particle effects
+	weatherAudioSystem              *engine.WeatherAudioSystem               // Connects weather to ambient audio sounds
+	weatherManaRegenSystem          *engine.WeatherManaRegenSystem           // Connects weather to mana regeneration rates
+	weatherCooldownSystem           *engine.WeatherCooldownSystem            // Connects weather to spell cooldown rates
+	statusEffectLightingSystem      *engine.StatusEffectLightingSystem       // Connects status effects to lighting for visual feedback
+	statusEffectMovementSystem      *engine.StatusEffectMovementSystem       // Connects status effects to movement speed modifiers
+	statusEffectEvasionSystem       *engine.StatusEffectEvasionSystem        // Connects status effects to evasion modifiers in combat
+	statusEffectCritChanceSystem    *engine.StatusEffectCriticalChanceSystem // Connects status effects to crit chance modifiers
+	terrainMovementSpeedSystem      *engine.TerrainMovementSpeedSystem       // Connects terrain tiles to movement speed modifiers
+	terrainCombatBonusSystem        *engine.TerrainCombatBonusSystem         // Connects terrain tiles to combat bonuses (high ground, cover)
+	terrainStealthSystem            *engine.TerrainStealthSystem             // Connects terrain tiles to AI detection for stealth gameplay
+	criticalHitParticleSystem       *engine.CriticalHitParticleSystem        // Connects combat crits to particle effects
+	levelUpParticleSystem           *engine.LevelUpParticleSystem            // Connects level-ups to particle effects
+	itemPickupParticleSystem        *engine.ItemPickupParticleSystem         // Connects item pickups to particle effects
+	deathParticleSystem             *engine.DeathParticleSystem              // Connects entity deaths to particle effects
+	spellEffectParticleSystem       *engine.SpellEffectParticleSystem        // Connects spell effects to particle effects
+	damageResistanceParticleSystem  *engine.DamageResistanceParticleSystem   // Connects damage resistance to particle effects
+	shieldAbsorbParticleSystem      *engine.ShieldAbsorbParticleSystem       // Connects shield absorption to particle effects
+	lowHealthVFXSystem              *engine.LowHealthVFXSystem               // Connects low player health to warning particle effects
+	companionAuraParticleSystem     *engine.CompanionAuraParticleSystem      // Connects companion bonding perks to aura particles
+	elementalComboParticleSystem    *engine.ElementalComboParticleSystem     // Connects elemental status combos to visual effects
+	elementalComboDamageSystem      *engine.ElementalComboDamageSystem       // Connects elemental status combos to bonus damage
+	elementalCompanionSynergySystem *engine.ElementalCompanionSynergySystem  // Connects elemental companions to owner status effects
+	weatherRangedAccuracySystem     *engine.WeatherRangedAccuracySystem      // Connects weather to ranged attack accuracy modifiers
+	weatherXPBonusSystem            *engine.WeatherXPBonusSystem             // Connects weather to XP gain bonuses
+	lifestealSystem                 *engine.LifestealSystem                  // Connects combat damage to attacker healing
+	statusEffectManaCostSystem      *engine.StatusEffectManaCostSystem       // Connects status effects to spell mana cost modifiers
 	lifetimeSystem                  *engine.LifetimeSystem
 	puzzleSystem                    *engine.PuzzleSystem
 	firePropagationSystem           *engine.FirePropagationSystem
@@ -889,6 +890,10 @@ func initializeEnvironmentalSystems(game *engine.EbitenGame, sys *systemsContain
 	// StatusEffectEvasionSystem - applies evasion modifiers from status effects
 	sys.statusEffectEvasionSystem = engine.NewStatusEffectEvasionSystem(game.World, *seed+2120)
 	sys.statusEffectEvasionSystem.SetGenre(*genreID)
+
+	// StatusEffectCriticalChanceSystem - applies crit chance modifiers from status effects
+	sys.statusEffectCritChanceSystem = engine.NewStatusEffectCriticalChanceSystem(game.World, *seed+2130)
+	sys.statusEffectCritChanceSystem.SetGenre(*genreID)
 
 	// StatusEffectManaCostSystem - applies mana cost modifiers from status effects
 	sys.statusEffectManaCostSystem = engine.NewStatusEffectManaCostSystem(game.World, *seed+7000)
@@ -1638,6 +1643,10 @@ func registerNonCriticalSystems(game *engine.EbitenGame, sys *systemsContainer) 
 	// StatusEffectEvasionSystem: bridges status effects with combat evasion
 	// Modifies evasion chance based on status effects (frozen, haste, stunned, etc.)
 	game.World.AddSystem(sys.statusEffectEvasionSystem)
+
+	// StatusEffectCriticalChanceSystem: bridges status effects with critical hit chance
+	// Modifies crit chance based on status effects (blessed, cursed, focused, etc.)
+	game.World.AddSystem(sys.statusEffectCritChanceSystem)
 
 	// StatusEffectManaCostSystem: bridges status effects with spell mana costs
 	// Modifies mana costs based on status effects (haste, cursed, focused, etc.)

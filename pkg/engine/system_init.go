@@ -52,51 +52,52 @@ func DefaultSystemInitConfig(seed int64, genreID string, logger *logrus.Logger) 
 // further configuration after initialization (e.g., setting callbacks).
 type SystemInitResult struct {
 	// Systems that often need post-initialization configuration
-	InputSystem                     *InputSystem
-	CombatSystem                    *CombatSystem
-	CollisionSystem                 *CollisionSystem
-	ProjectileSystem                *ProjectileSystem
-	AudioManager                    *AudioManager
-	ObjectiveTracker                *ObjectiveTrackerSystem
-	CommerceSystem                  *CommerceSystem
-	DialogSystem                    *DialogSystem
-	CraftingSystem                  *CraftingSystem
-	InteractionSystem               *InteractionSystem
-	MiniGameSystem                  *MiniGameSystem
-	AnimationSystem                 *AnimationSystem
-	ParticleSystem                  *ParticleSystem
-	TutorialSystem                  *EbitenTutorialSystem
-	HelpSystem                      *EbitenHelpSystem
-	LevelUpParticleSystem           *LevelUpParticleSystem
-	ItemPickupParticleSystem        *ItemPickupParticleSystem
-	SpellEffectParticleSystem       *SpellEffectParticleSystem
-	DeathParticleSystem             *DeathParticleSystem
-	DamageResistanceParticleSystem  *DamageResistanceParticleSystem
-	ShieldAbsorbParticleSystem      *ShieldAbsorbParticleSystem
-	CompanionLevelUpParticleSystem  *CompanionLevelUpParticleSystem
-	ItemPickupSystem                *ItemPickupSystem
-	ProgressionSystem               *ProgressionSystem
-	CompanionProgressionSystem      *CompanionProgressionSystem
-	WeatherAudioSystem              *WeatherAudioSystem
-	FactionXPBonusSystem            *FactionXPBonusSystem
-	WeatherManaRegenSystem          *WeatherManaRegenSystem
-	WeatherCooldownSystem           *WeatherCooldownSystem
-	TerrainMovementSpeedSystem      *TerrainMovementSpeedSystem
-	TerrainCombatBonusSystem        *TerrainCombatBonusSystem
-	TerrainStealthSystem            *TerrainStealthSystem
-	LowHealthVFXSystem              *LowHealthVFXSystem
-	CompanionAuraParticleSystem     *CompanionAuraParticleSystem
-	SpecializationManaBoostSystem   *SpecializationManaBoostSystem
-	SpecializationHealthRegenSystem *SpecializationHealthRegenSystem
-	SpecializationSpellDamageSystem *SpecializationSpellDamageSystem
-	ElementalComboParticleSystem    *ElementalComboParticleSystem
-	WeatherRangedAccuracySystem     *WeatherRangedAccuracySystem
-	StatusEffectEvasionSystem       *StatusEffectEvasionSystem
-	WeatherXPBonusSystem            *WeatherXPBonusSystem
-	ElementalComboDamageSystem      *ElementalComboDamageSystem
-	ElementalCompanionSynergySystem *ElementalCompanionSynergySystem
-	LifestealSystem                 *LifestealSystem
-	StatusEffectManaCostSystem      *StatusEffectManaCostSystem
+	InputSystem                      *InputSystem
+	CombatSystem                     *CombatSystem
+	CollisionSystem                  *CollisionSystem
+	ProjectileSystem                 *ProjectileSystem
+	AudioManager                     *AudioManager
+	ObjectiveTracker                 *ObjectiveTrackerSystem
+	CommerceSystem                   *CommerceSystem
+	DialogSystem                     *DialogSystem
+	CraftingSystem                   *CraftingSystem
+	InteractionSystem                *InteractionSystem
+	MiniGameSystem                   *MiniGameSystem
+	AnimationSystem                  *AnimationSystem
+	ParticleSystem                   *ParticleSystem
+	TutorialSystem                   *EbitenTutorialSystem
+	HelpSystem                       *EbitenHelpSystem
+	LevelUpParticleSystem            *LevelUpParticleSystem
+	ItemPickupParticleSystem         *ItemPickupParticleSystem
+	SpellEffectParticleSystem        *SpellEffectParticleSystem
+	DeathParticleSystem              *DeathParticleSystem
+	DamageResistanceParticleSystem   *DamageResistanceParticleSystem
+	ShieldAbsorbParticleSystem       *ShieldAbsorbParticleSystem
+	CompanionLevelUpParticleSystem   *CompanionLevelUpParticleSystem
+	ItemPickupSystem                 *ItemPickupSystem
+	ProgressionSystem                *ProgressionSystem
+	CompanionProgressionSystem       *CompanionProgressionSystem
+	WeatherAudioSystem               *WeatherAudioSystem
+	FactionXPBonusSystem             *FactionXPBonusSystem
+	WeatherManaRegenSystem           *WeatherManaRegenSystem
+	WeatherCooldownSystem            *WeatherCooldownSystem
+	TerrainMovementSpeedSystem       *TerrainMovementSpeedSystem
+	TerrainCombatBonusSystem         *TerrainCombatBonusSystem
+	TerrainStealthSystem             *TerrainStealthSystem
+	LowHealthVFXSystem               *LowHealthVFXSystem
+	CompanionAuraParticleSystem      *CompanionAuraParticleSystem
+	SpecializationManaBoostSystem    *SpecializationManaBoostSystem
+	SpecializationHealthRegenSystem  *SpecializationHealthRegenSystem
+	SpecializationSpellDamageSystem  *SpecializationSpellDamageSystem
+	ElementalComboParticleSystem     *ElementalComboParticleSystem
+	WeatherRangedAccuracySystem      *WeatherRangedAccuracySystem
+	StatusEffectEvasionSystem        *StatusEffectEvasionSystem
+	StatusEffectCriticalChanceSystem *StatusEffectCriticalChanceSystem
+	WeatherXPBonusSystem             *WeatherXPBonusSystem
+	ElementalComboDamageSystem       *ElementalComboDamageSystem
+	ElementalCompanionSynergySystem  *ElementalCompanionSynergySystem
+	LifestealSystem                  *LifestealSystem
+	StatusEffectManaCostSystem       *StatusEffectManaCostSystem
 
 	// System wrappers
 	AnimationSystemWrapper            System
@@ -369,6 +370,13 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 	statusEffectEvasionSystem.SetGenre(config.GenreID)
 	result.StatusEffectEvasionSystem = statusEffectEvasionSystem
 	game.World.AddSystem(statusEffectEvasionSystem)
+
+	// 36b2c. StatusEffectCriticalChanceSystem - applies crit chance modifiers from status effects
+	// Connects StatusEffectSystem with CombatSystem for genre-aware critical hit bonuses/penalties
+	statusEffectCriticalChanceSystem := NewStatusEffectCriticalChanceSystem(game.World, config.Seed+2130)
+	statusEffectCriticalChanceSystem.SetGenre(config.GenreID)
+	result.StatusEffectCriticalChanceSystem = statusEffectCriticalChanceSystem
+	game.World.AddSystem(statusEffectCriticalChanceSystem)
 
 	// 36b3. TerrainMovementSpeedSystem - applies movement speed modifiers from terrain type
 	// Connects terrain generation with MovementSystem for genre-aware terrain effects

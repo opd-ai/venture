@@ -289,6 +289,7 @@ type systemsContainer struct {
 	gatheringSystem             *engine.GatheringSystem
 	fishingWeatherBonusSystem   *engine.FishingWeatherBonusSystem
 	timeOfDayFishingBonusSystem *engine.TimeOfDayFishingBonusSystem
+	fishingCatchParticleSystem  *engine.FishingCatchParticleSystem
 	// Phase 112: New Game Plus carry-over system
 	carryoverSystem *engine.CarryOverSystem
 	// Phase 30: Environmental Storytelling
@@ -1260,6 +1261,15 @@ func initializeV4Systems(game *engine.EbitenGame, sys *systemsContainer, clientL
 	sys.timeOfDayFishingBonusSystem.SetFishingSystem(sys.fishingSystem)
 	game.World.AddSystem(sys.timeOfDayFishingBonusSystem)
 	logging.ComponentLogger(clientLogger.Logger, "fishing_timeofday").Debug("Created time-of-day fishing bonus system")
+
+	// FishingCatchParticleSystem - visual feedback for fish catches
+	// Spawns genre-aware particles when fish are caught, scaled by rarity
+	sys.fishingCatchParticleSystem = engine.NewFishingCatchParticleSystem(game.World, *seed+seedOffsetFishing+150)
+	sys.fishingCatchParticleSystem.SetParticleSystem(sys.particleSystem)
+	sys.fishingCatchParticleSystem.SetFishingSystem(sys.fishingSystem)
+	sys.fishingCatchParticleSystem.SetGenre(*genre)
+	game.World.AddSystem(sys.fishingCatchParticleSystem)
+	logging.ComponentLogger(clientLogger.Logger, "fishing_particle").Debug("Created fishing catch particle system")
 
 	// AUDIT FIX: Phase 112 - CarryOverSystem for New Game Plus
 	// Gap: CarryOverSystem implemented but never initialized on client

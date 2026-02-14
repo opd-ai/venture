@@ -135,6 +135,7 @@ type SystemInitResult struct {
 	StealthIndicatorParticleSystem    *StealthIndicatorParticleSystem
 	FishingWeatherBonusSystem         *FishingWeatherBonusSystem
 	TimeOfDayFishingBonusSystem       *TimeOfDayFishingBonusSystem
+	FishingCatchParticleSystem        *FishingCatchParticleSystem
 
 	// System wrappers
 	AnimationSystemWrapper            System

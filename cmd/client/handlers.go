@@ -259,6 +259,7 @@ type systemsContainer struct {
 	timeOfDayCompanionBonusSystem         *engine.TimeOfDayCompanionBonusSystem // Connects time-of-day lighting with companion stat bonuses
 	timeOfDayManaRegenSystem              *engine.TimeOfDayManaRegenSystem      // Connects time-of-day lighting with mana regen rates
 	timeOfDayBlockChanceSystem            *engine.TimeOfDayBlockChanceSystem    // Connects time-of-day lighting with block chance bonuses
+	timeOfDayEvasionSystem                *engine.TimeOfDayEvasionSystem        // Connects time-of-day lighting with evasion bonuses
 	timeOfDaySpellDamageSystem            *engine.TimeOfDaySpellDamageSystem    // Connects time-of-day lighting with spell damage modifiers
 	spriteGenerator                       *sprites.Generator
 	spriteCache                           *cache.SpriteCache // Phase 1.2: Sprite caching for animation performance
@@ -2436,6 +2437,9 @@ func initializeTerrainCollision(game *engine.EbitenGame, sys *systemsContainer, 
 		}
 		if timeOfDayBlockChanceSys, ok := system.(*engine.TimeOfDayBlockChanceSystem); ok {
 			sys.timeOfDayBlockChanceSystem = timeOfDayBlockChanceSys
+		}
+		if timeOfDayEvasionSys, ok := system.(*engine.TimeOfDayEvasionSystem); ok {
+			sys.timeOfDayEvasionSystem = timeOfDayEvasionSys
 		}
 	}
 

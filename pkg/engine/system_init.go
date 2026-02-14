@@ -143,6 +143,7 @@ type SystemInitResult struct {
 	TimeOfDayHealthRegenSystem               *TimeOfDayHealthRegenSystem
 	TimeOfDayManaRegenSystem                 *TimeOfDayManaRegenSystem
 	TimeOfDayBlockChanceSystem               *TimeOfDayBlockChanceSystem
+	TimeOfDayEvasionSystem                   *TimeOfDayEvasionSystem
 	TimeOfDaySpellDamageSystem               *TimeOfDaySpellDamageSystem
 	TerrainCombatBonusParticleSystem         *TerrainCombatBonusParticleSystem
 	CompanionManaRegenSystem                 *CompanionManaRegenSystem
@@ -156,6 +157,10 @@ type SystemInitResult struct {
 	WeatherEquipmentDurabilitySystem         *WeatherEquipmentDurabilitySystem
 	SpellChannelParticleSystem               *SpellChannelParticleSystem
 	CompanionDamageLifestealSystem           *CompanionDamageLifestealSystem
+	TerrainCompanionHealthRegenSystem        *TerrainCompanionHealthRegenSystem
+	WeatherMovementSpeedSystem               *WeatherMovementSpeedSystem
+	WeatherMovementSpeedParticleSystem       *WeatherMovementSpeedParticleSystem
+	WeatherCompanionBonusParticleSystem      *WeatherCompanionBonusParticleSystem
 
 	// System wrappers
 	AnimationSystemWrapper            System
@@ -607,6 +612,15 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 	result.TerrainCompanionBonusSystem = terrainCompanionBonusSystem
 	game.World.AddSystem(terrainCompanionBonusSystem)
 
+	// 36b8b. TerrainCompanionHealthRegenSystem - heals companions based on terrain type
+	// Connects terrain tiles with HealthComponent for type-specific companion health regeneration
+	// Companions with PerkExtraHealth bonding perk get boosted terrain regen
+	terrainCompanionHealthRegenSystem := NewTerrainCompanionHealthRegenSystem(game.World, config.Seed+2196)
+	terrainCompanionHealthRegenSystem.SetGenre(config.GenreID)
+	terrainCompanionHealthRegenSystem.SetTileSize(config.TileSize)
+	result.TerrainCompanionHealthRegenSystem = terrainCompanionHealthRegenSystem
+	game.World.AddSystem(terrainCompanionHealthRegenSystem)
+
 	// 36b9. FactionCompanionBehaviorSystem - modifies companion targeting based on faction reputation
 	// Connects FactionSystem reputation with companion AI targeting for faction-aware companions
 	factionCompanionBehaviorSystem := NewFactionCompanionBehaviorSystem(game.World, config.Seed+2198)
@@ -620,6 +634,32 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 	weatherCompanionBonusSystem.SetGenre(config.GenreID)
 	result.WeatherCompanionBonusSystem = weatherCompanionBonusSystem
 	game.World.AddSystem(weatherCompanionBonusSystem)
+
+	// 36b10b. WeatherCompanionBonusParticleSystem - visual feedback for weather companion bonuses
+	// Connects WeatherCompanionBonusSystem with ParticleSystem for genre-aware companion particles
+	weatherCompanionBonusParticleSystem := NewWeatherCompanionBonusParticleSystem(game.World, config.Seed+2205)
+	weatherCompanionBonusParticleSystem.SetParticleSystem(result.ParticleSystem)
+	weatherCompanionBonusParticleSystem.SetWeatherCompanionBonusSystem(weatherCompanionBonusSystem)
+	weatherCompanionBonusParticleSystem.SetGenre(config.GenreID)
+	result.WeatherCompanionBonusParticleSystem = weatherCompanionBonusParticleSystem
+	game.World.AddSystem(weatherCompanionBonusParticleSystem)
+
+	// 36b11. WeatherMovementSpeedSystem - modifies entity movement speed based on weather
+	// Connects WeatherComponent with VelocityComponent for environmental movement effects
+	// Rain makes surfaces slick (+5% speed), snow creates resistance (-18%), sandstorm drags (-20%)
+	weatherMovementSpeedSystem := NewWeatherMovementSpeedSystem(game.World, config.Seed+2210)
+	weatherMovementSpeedSystem.SetGenre(config.GenreID)
+	result.WeatherMovementSpeedSystem = weatherMovementSpeedSystem
+	game.World.AddSystem(weatherMovementSpeedSystem)
+
+	// 36b11b. WeatherMovementSpeedParticleSystem - visual feedback for weather movement modifiers
+	// Connects WeatherMovementSpeedSystem with ParticleSystem for genre-aware speed effect particles
+	weatherMovementSpeedParticleSystem := NewWeatherMovementSpeedParticleSystem(game.World, config.Seed+2215)
+	weatherMovementSpeedParticleSystem.SetParticleSystem(result.ParticleSystem)
+	weatherMovementSpeedParticleSystem.SetWeatherMovementSpeedSystem(weatherMovementSpeedSystem)
+	weatherMovementSpeedParticleSystem.SetGenre(config.GenreID)
+	result.WeatherMovementSpeedParticleSystem = weatherMovementSpeedParticleSystem
+	game.World.AddSystem(weatherMovementSpeedParticleSystem)
 
 	// 36c. CriticalHitParticleSystem - visual feedback for critical hits
 	criticalHitParticleSystem := NewCriticalHitParticleSystem(game.World, config.Seed+3000)
@@ -1092,6 +1132,15 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 	timeOfDayBlockChanceSystem.SetGenre(config.GenreID)
 	result.TimeOfDayBlockChanceSystem = timeOfDayBlockChanceSystem
 	game.World.AddSystem(timeOfDayBlockChanceSystem)
+
+	// 43j2. TimeOfDayEvasionSystem - day/night evasion modulation
+	// Connects TimeOfDayLightingSystem with StatsComponent.Evasion for shadow-aided dodging
+	// Night enhances evasion (+5% base, up to +8% fantasy), day impairs it (-2% visibility penalty)
+	timeOfDayEvasionSystem := NewTimeOfDayEvasionSystem(game.World, config.Seed+7730)
+	timeOfDayEvasionSystem.SetLightingSystem(timeOfDayLightingSystem)
+	timeOfDayEvasionSystem.SetGenre(config.GenreID)
+	result.TimeOfDayEvasionSystem = timeOfDayEvasionSystem
+	game.World.AddSystem(timeOfDayEvasionSystem)
 
 	// 43k. TimeOfDaySpellDamageSystem - day/night spell damage modulation
 	// Connects TimeOfDayLightingSystem with spell damage for element-based bonuses

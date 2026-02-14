@@ -117,8 +117,8 @@ func (s *CompanionDamageLifestealSystem) OnCompanionDamageDealt(attacker, target
 	}
 
 	// Find the owner entity
-	owner := s.world.GetEntity(companion.OwnerID)
-	if owner == nil {
+	owner, exists := s.world.GetEntity(companion.OwnerID)
+	if !exists || owner == nil {
 		return
 	}
 

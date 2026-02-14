@@ -251,6 +251,7 @@ type systemsContainer struct {
 	specializationManaBoostSys   *engine.SpecializationManaBoostSystem   // Connects class specialization with mana regen bonuses
 	specializationHealthRegenSys *engine.SpecializationHealthRegenSystem // Connects class specialization with health regen bonuses
 	specializationSpellDamageSys *engine.SpecializationSpellDamageSystem // Connects class specialization with spell damage bonuses
+	specializationAttackSpeedSys *engine.SpecializationAttackSpeedSystem // Connects class specialization with attack speed bonuses
 	expressionSystem             *engine.ExpressionSystem
 	expressionComboSys           *engine.ExpressionComboSystem
 	miniGameSystem               *engine.MiniGameSystem
@@ -1079,6 +1080,11 @@ func initializeV4Systems(game *engine.EbitenGame, sys *systemsContainer, clientL
 	sys.specializationSpellDamageSys.SetGenre(*genreID)
 	logging.ComponentLogger(clientLogger.Logger, "specialization_spell_damage").Debug("Created specialization spell damage system")
 
+	// Phase 25d: Specialization attack speed system - connects class specialization with attack cooldown
+	sys.specializationAttackSpeedSys = engine.NewSpecializationAttackSpeedSystem(game.World, *seed+seedOffsetSpecAttackSpeed)
+	sys.specializationAttackSpeedSys.SetGenre(*genreID)
+	logging.ComponentLogger(clientLogger.Logger, "specialization_attack_speed").Debug("Created specialization attack speed system")
+
 	// Phase 26: Expression systems (requires audio manager)
 	sys.expressionSystem = engine.NewExpressionSystem(game.World, sys.audioManager)
 	sys.expressionComboSys = engine.NewExpressionComboSystem(game.World)
@@ -1741,6 +1747,9 @@ func registerNonCriticalSystems(game *engine.EbitenGame, sys *systemsContainer) 
 
 	// Phase 25c: Specialization spell damage - connects class specialization with spell damage bonuses
 	game.World.AddSystem(sys.specializationSpellDamageSys)
+
+	// Phase 25d: Specialization attack speed - connects class specialization with attack cooldown bonuses
+	game.World.AddSystem(sys.specializationAttackSpeedSys)
 
 	// Phase 26: Expression systems (use wrappers)
 	game.World.AddSystem(&expressionSystemWrapper{system: sys.expressionSystem})

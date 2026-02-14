@@ -87,6 +87,7 @@ const (
 	seedOffsetSpecManaBoost      = 16000 // offset for specialization mana boost system (class-mana integration)
 	seedOffsetSpecHealthRegen    = 16500 // offset for specialization health regen system (class-health integration)
 	seedOffsetSpecSpellDamage    = 17000 // offset for specialization spell damage system (class-spell damage integration)
+	seedOffsetSpecAttackSpeed    = 17500 // offset for specialization attack speed system (class-combat integration)
 
 	// Fallback positions
 	fallbackPlayerX = 400 // fallback X position if no valid spawn

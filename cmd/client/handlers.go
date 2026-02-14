@@ -204,6 +204,8 @@ type systemsContainer struct {
 	terrainStatusEffectSystem        *engine.TerrainStatusEffectSystem        // Connects terrain tiles (water, lava) to elemental status effects
 	terrainManaRegenSystem           *engine.TerrainManaRegenSystem           // Connects terrain tiles (water, platforms) to mana regeneration
 	terrainCompanionBonusSystem      *engine.TerrainCompanionBonusSystem      // Connects terrain tiles to companion combat stat bonuses
+	factionCompanionBehaviorSystem   *engine.FactionCompanionBehaviorSystem   // Connects faction reputation to companion AI targeting
+	weatherCompanionBonusSystem      *engine.WeatherCompanionBonusSystem      // Connects weather conditions to companion combat stat bonuses
 	criticalHitParticleSystem        *engine.CriticalHitParticleSystem        // Connects combat crits to particle effects
 	levelUpParticleSystem            *engine.LevelUpParticleSystem            // Connects level-ups to particle effects
 	itemPickupParticleSystem         *engine.ItemPickupParticleSystem         // Connects item pickups to particle effects
@@ -968,6 +970,11 @@ func initializeEnvironmentalSystems(game *engine.EbitenGame, sys *systemsContain
 	sys.weatherCooldownSystem = engine.NewWeatherCooldownSystem(game.World, *seed+6350)
 	sys.weatherCooldownSystem.SetGenre(*genreID)
 
+	// WeatherCompanionBonusSystem - modifies companion stats based on weather conditions
+	// Connects WeatherSystem with CompanionStatsComponent for tactical companion positioning
+	sys.weatherCompanionBonusSystem = engine.NewWeatherCompanionBonusSystem(game.World, *seed+6375)
+	sys.weatherCompanionBonusSystem.SetGenre(*genreID)
+
 	// LowHealthVFXSystem - visual feedback for low player health
 	sys.lowHealthVFXSystem = engine.NewLowHealthVFXSystem(game.World, *seed+6400)
 	sys.lowHealthVFXSystem.SetParticleSystem(sys.particleSystem)
@@ -1670,6 +1677,13 @@ func registerNonCriticalSystems(game *engine.EbitenGame, sys *systemsContainer) 
 	sys.factionXPBonusSystem.SetProgressionSystem(sys.progressionSystem)
 	game.World.AddSystem(sys.factionXPBonusSystem)
 
+	// FactionCompanionBehaviorSystem: bridges faction reputation with companion AI targeting
+	// Companions won't attack allied faction members and prioritize hostile faction enemies
+	sys.factionCompanionBehaviorSystem = engine.NewFactionCompanionBehaviorSystem(game.World, *seed+2198)
+	sys.factionCompanionBehaviorSystem.SetFactionSystem(sys.factionSystem)
+	sys.factionCompanionBehaviorSystem.SetGenre(*genre)
+	game.World.AddSystem(sys.factionCompanionBehaviorSystem)
+
 	// StatusEffectAISystem: bridges status effects with AI behavior
 	// Disables AI actions when entities are stunned, frozen, feared, or paralyzed
 	sys.statusEffectAISystem = engine.NewStatusEffectAISystem(game.World, *seed+2200)
@@ -1718,6 +1732,7 @@ func registerNonCriticalSystems(game *engine.EbitenGame, sys *systemsContainer) 
 	game.World.AddSystem(sys.weatherAudioSystem)               // Weather ambient audio feedback
 	game.World.AddSystem(sys.weatherManaRegenSystem)           // Weather mana regeneration modifiers
 	game.World.AddSystem(sys.weatherCooldownSystem)            // Weather spell cooldown rate modifiers
+	game.World.AddSystem(sys.weatherCompanionBonusSystem)      // Weather companion combat stat bonuses
 	game.World.AddSystem(sys.weatherRangedAccuracySystem)      // Weather ranged attack accuracy modifiers
 	game.World.AddSystem(sys.weatherXPBonusSystem)             // Weather XP gain bonuses
 	game.World.AddSystem(sys.statusEffectLightingSystem)       // Status effect visual feedback via lighting

@@ -108,6 +108,7 @@ type SystemInitResult struct {
 	StatusEffectDamageBoostSystem    *StatusEffectDamageBoostSystem
 	TerrainCompanionBonusSystem      *TerrainCompanionBonusSystem
 	FactionCompanionBehaviorSystem   *FactionCompanionBehaviorSystem
+	WeatherCompanionBonusSystem      *WeatherCompanionBonusSystem
 
 	// System wrappers
 	AnimationSystemWrapper            System
@@ -463,6 +464,13 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 	factionCompanionBehaviorSystem.SetGenre(config.GenreID)
 	result.FactionCompanionBehaviorSystem = factionCompanionBehaviorSystem
 	game.World.AddSystem(factionCompanionBehaviorSystem)
+
+	// 36b10. WeatherCompanionBonusSystem - modifies companion stats based on weather conditions
+	// Connects WeatherSystem with CompanionStatsComponent for tactical companion positioning
+	weatherCompanionBonusSystem := NewWeatherCompanionBonusSystem(game.World, config.Seed+2200)
+	weatherCompanionBonusSystem.SetGenre(config.GenreID)
+	result.WeatherCompanionBonusSystem = weatherCompanionBonusSystem
+	game.World.AddSystem(weatherCompanionBonusSystem)
 
 	// 36c. CriticalHitParticleSystem - visual feedback for critical hits
 	criticalHitParticleSystem := NewCriticalHitParticleSystem(game.World, config.Seed+3000)

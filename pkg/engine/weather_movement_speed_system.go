@@ -271,8 +271,8 @@ func (s *WeatherMovementSpeedSystem) ClearModifier(entityID uint64) {
 	if mult, exists := s.appliedMultipliers[entityID]; exists && mult != 1.0 {
 		// Try to restore original velocity
 		if s.world != nil {
-			entity := s.world.GetEntity(entityID)
-			if entity != nil {
+			entity, ok := s.world.GetEntity(entityID)
+			if ok && entity != nil {
 				if vel := entity.GetVelocity(); vel != nil {
 					vel.VX /= mult
 					vel.VY /= mult

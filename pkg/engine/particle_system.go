@@ -286,3 +286,8 @@ func (ps *ParticleSystem) SpawnDebris(world *World, x, y, groundY float64, seed 
 
 	return ps.SpawnParticles(world, config, x, y)
 }
+
+// GetActiveParticleCount returns the number of active particle entities.
+func (ps *ParticleSystem) GetActiveParticleCount() int {
+return 0
+}

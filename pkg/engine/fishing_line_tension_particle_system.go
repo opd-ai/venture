@@ -304,7 +304,7 @@ func (s *FishingLineTensionParticleSystem) spawnCriticalWarning(entityID uint64,
 		Gravity:  -50.0,
 		MinSize:  2.0,
 		MaxSize:  4.0,
-		ZLayer:   particles.ZLayerEffects,
+		ZLayer:   particles.ZLayerAbove,
 		Custom:   map[string]interface{}{"critical_warning": true},
 	}
 

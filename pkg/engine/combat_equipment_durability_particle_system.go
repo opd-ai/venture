@@ -104,7 +104,7 @@ func (s *CombatEquipmentDurabilityParticleSystem) OnDamageTaken(attacker, target
 	x, y := s.getEntityPosition(target)
 
 	// Process armor slots that absorb damage
-	armorSlots := []EquipmentSlot{SlotChest, SlotHelmet, SlotBoots, SlotGloves, SlotLegs}
+	armorSlots := []EquipmentSlot{SlotChest, SlotHead, SlotBoots, SlotGloves, SlotLegs}
 	equippedCount := 0
 	for _, slot := range armorSlots {
 		if equipComp.GetEquipped(slot) != nil {
@@ -187,17 +187,16 @@ func (s *CombatEquipmentDurabilityParticleSystem) spawnImpactParticles(entity *E
 	// Genre-aware color selection
 	primaryColor, secondaryColor := s.getImpactColors()
 
-	config := particles.SpawnConfig{
-		Type:           particles.ParticleSparkle,
-		Count:          count,
-		Duration:       0.3,
-		MinSize:        1.0,
-		MaxSize:        2.5,
-		Spread:         s.spreadBase,
-		Gravity:        -20.0, // Upward float for impact sparks
-		FadeOut:        true,
-		PrimaryColor:   primaryColor,
-		SecondaryColor: secondaryColor,
+	config := particles.Config{
+		Type:     particles.ParticleSparkle,
+		Count:    count,
+		Duration: 0.3,
+		MinSize:  1.0,
+		MaxSize:  2.5,
+		SpreadX:  s.spreadBase,
+		SpreadY:  s.spreadBase,
+		Gravity:  -20.0, // Upward float for impact sparks
+		Custom:   map[string]interface{}{"primary_color": primaryColor, "secondary_color": secondaryColor},
 	}
 
 	s.particleSystem.SpawnParticles(s.world, config, x, y)
@@ -209,17 +208,16 @@ func (s *CombatEquipmentDurabilityParticleSystem) spawnDegradationParticles(enti
 	spread := s.getSpread(state)
 	primaryColor, secondaryColor := s.getDegradationColors(state)
 
-	config := particles.SpawnConfig{
-		Type:           s.getParticleType(state),
-		Count:          count,
-		Duration:       s.getDuration(state),
-		MinSize:        s.getMinSize(state),
-		MaxSize:        s.getMaxSize(state),
-		Spread:         spread,
-		Gravity:        s.getGravity(state),
-		FadeOut:        true,
-		PrimaryColor:   primaryColor,
-		SecondaryColor: secondaryColor,
+	config := particles.Config{
+		Type:     s.getParticleType(state),
+		Count:    count,
+		Duration: s.getDuration(state),
+		MinSize:  s.getMinSize(state),
+		MaxSize:  s.getMaxSize(state),
+		SpreadX:  spread,
+		SpreadY:  spread,
+		Gravity:  s.getGravity(state),
+		Custom:   map[string]interface{}{"primary_color": primaryColor, "secondary_color": secondaryColor},
 	}
 
 	s.particleSystem.SpawnParticles(s.world, config, x, y)
@@ -379,7 +377,7 @@ func (s *CombatEquipmentDurabilityParticleSystem) getEquipmentComponent(entity *
 }
 
 func (s *CombatEquipmentDurabilityParticleSystem) getEntityPosition(entity *Entity) (float64, float64) {
-	if pos := entity.GetCachedPosition(); pos != nil {
+	if pos := entity.GetPosition(); pos != nil {
 		return pos.X, pos.Y
 	}
 	return 0, 0

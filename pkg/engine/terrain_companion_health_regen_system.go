@@ -309,8 +309,8 @@ func (s *TerrainCompanionHealthRegenSystem) GetRegenRate(companionID uint64) flo
 		return 0
 	}
 
-	entity := s.world.GetEntity(companionID)
-	if entity == nil {
+	entity, ok := s.world.GetEntity(companionID)
+	if !ok || entity == nil {
 		return 0
 	}
 

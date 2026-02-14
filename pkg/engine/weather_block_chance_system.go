@@ -184,21 +184,12 @@ func (s *WeatherBlockChanceSystem) getBaseModifier(weather particles.WeatherType
 	case particles.WeatherSnow:
 		// Snow slows reflexes: -12% block
 		return -0.12
-	case particles.WeatherBlizzard:
-		// Blizzard severely hampers blocking: -20% block
-		return -0.20
 	case particles.WeatherFog:
 		// Fog obscures incoming attacks: -8% block
 		return -0.08
 	case particles.WeatherDust:
 		// Dust in eyes: -6% block
 		return -0.06
-	case particles.WeatherStorm:
-		// Storm violence: -18% block
-		return -0.18
-	case particles.WeatherClear:
-		// Clear weather: no modifier
-		return 0.0
 	default:
 		return 0.0
 	}
@@ -234,8 +225,8 @@ func (s *WeatherBlockChanceSystem) clearAllBonuses() {
 	}
 
 	for entityID, originalBlock := range s.originalBlock {
-		entity := s.world.GetEntity(entityID)
-		if entity == nil {
+		entity, ok := s.world.GetEntity(entityID)
+		if !ok || entity == nil {
 			continue
 		}
 

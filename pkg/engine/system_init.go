@@ -81,6 +81,7 @@ type SystemInitResult struct {
 	WeatherManaRegenSystem         *WeatherManaRegenSystem
 	TerrainMovementSpeedSystem     *TerrainMovementSpeedSystem
 	LowHealthVFXSystem             *LowHealthVFXSystem
+	CompanionAuraParticleSystem    *CompanionAuraParticleSystem
 
 	// System wrappers
 	AnimationSystemWrapper            System
@@ -429,6 +430,14 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 	lowHealthVFXSystem.SetGenre(config.GenreID)
 	result.LowHealthVFXSystem = lowHealthVFXSystem
 	game.World.AddSystem(lowHealthVFXSystem)
+
+	// 36l. CompanionAuraParticleSystem - visual feedback for companion bonding perks
+	// Spawns genre-aware aura particles around companions with active bonding perks
+	companionAuraParticleSystem := NewCompanionAuraParticleSystem(game.World, config.Seed+6500)
+	companionAuraParticleSystem.SetParticleSystem(result.ParticleSystem)
+	companionAuraParticleSystem.SetGenre(config.GenreID)
+	result.CompanionAuraParticleSystem = companionAuraParticleSystem
+	game.World.AddSystem(companionAuraParticleSystem)
 
 	// 37. LifetimeSystem - temporary entities (Phase 5.3)
 	lifetimeSystem := NewLifetimeSystemWithLogger(game.World, logger)

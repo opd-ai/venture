@@ -203,6 +203,7 @@ type systemsContainer struct {
 	spellEffectParticleSystem      *engine.SpellEffectParticleSystem      // Connects spell effects to particle effects
 	damageResistanceParticleSystem *engine.DamageResistanceParticleSystem // Connects damage resistance to particle effects
 	lowHealthVFXSystem             *engine.LowHealthVFXSystem             // Connects low player health to warning particle effects
+	companionAuraParticleSystem    *engine.CompanionAuraParticleSystem    // Connects companion bonding perks to aura particles
 	lifetimeSystem                 *engine.LifetimeSystem
 	puzzleSystem                   *engine.PuzzleSystem
 	firePropagationSystem          *engine.FirePropagationSystem
@@ -921,6 +922,11 @@ func initializeEnvironmentalSystems(game *engine.EbitenGame, sys *systemsContain
 	sys.lowHealthVFXSystem.SetParticleSystem(sys.particleSystem)
 	sys.lowHealthVFXSystem.SetGenre(*genreID)
 
+	// CompanionAuraParticleSystem - visual feedback for companion bonding perks
+	sys.companionAuraParticleSystem = engine.NewCompanionAuraParticleSystem(game.World, *seed+6500)
+	sys.companionAuraParticleSystem.SetParticleSystem(sys.particleSystem)
+	sys.companionAuraParticleSystem.SetGenre(*genreID)
+
 	sys.lifetimeSystem = engine.NewLifetimeSystemWithLogger(game.World, clientLogger.Logger)
 	sys.puzzleSystem = engine.NewPuzzleSystem(game.World)
 
@@ -1584,6 +1590,7 @@ func registerNonCriticalSystems(game *engine.EbitenGame, sys *systemsContainer) 
 	game.World.AddSystem(sys.spellEffectParticleSystem)      // Spell effect visual feedback via particles
 	game.World.AddSystem(sys.damageResistanceParticleSystem) // Damage resistance visual feedback via particles
 	game.World.AddSystem(sys.lowHealthVFXSystem)             // Low player health warning visual feedback via particles
+	game.World.AddSystem(sys.companionAuraParticleSystem)    // Companion bonding perk aura visual feedback via particles
 	game.World.AddSystem(sys.lifetimeSystem)
 	game.World.AddSystem(sys.puzzleSystem)
 	game.World.AddSystem(sys.firePropagationSystem)

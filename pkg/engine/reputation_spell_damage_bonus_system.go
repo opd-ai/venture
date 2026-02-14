@@ -135,11 +135,11 @@ func (s *ReputationSpellDamageBonusSystem) processEntity(entity *Entity) {
 
 		if s.logger != nil && newBonus != oldBonus && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
 			s.logger.WithFields(logrus.Fields{
-				"entity_id":    entity.ID,
-				"old_bonus":    oldBonus,
-				"new_bonus":    newBonus,
-				"magic_power":  stats.MagicPower,
-				"genre":        s.genreID,
+				"entity_id":   entity.ID,
+				"old_bonus":   oldBonus,
+				"new_bonus":   newBonus,
+				"magic_power": stats.MagicPower,
+				"genre":       s.genreID,
 			}).Debug("reputation spell damage bonus updated")
 		}
 	}

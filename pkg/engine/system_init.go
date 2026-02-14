@@ -167,10 +167,10 @@ type SystemInitResult struct {
 	CombatEquipmentDurabilityParticleSystem  *CombatEquipmentDurabilityParticleSystem
 	ReputationDefenseBonusSystem             *ReputationDefenseBonusSystem
 	ReputationDefenseBonusParticleSystem     *ReputationDefenseBonusParticleSystem
-	ReputationHealingBonusSystem                *ReputationHealingBonusSystem
-	ReputationHealingBonusParticleSystem        *ReputationHealingBonusParticleSystem
-	ReputationSpellDamageBonusSystem            *ReputationSpellDamageBonusSystem
-	ReputationSpellDamageBonusParticleSystem    *ReputationSpellDamageBonusParticleSystem
+	ReputationHealingBonusSystem             *ReputationHealingBonusSystem
+	ReputationHealingBonusParticleSystem     *ReputationHealingBonusParticleSystem
+	ReputationSpellDamageBonusSystem         *ReputationSpellDamageBonusSystem
+	ReputationSpellDamageBonusParticleSystem *ReputationSpellDamageBonusParticleSystem
 
 	// System wrappers
 	AnimationSystemWrapper            System

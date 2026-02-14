@@ -215,45 +215,24 @@ func (s *CompanionDamageLifestealSystem) spawnHealParticles(owner *Entity, healA
 	}
 
 	// Deterministic seed for this heal event
-	seedOffset := int64(owner.ID) + int64(healAmount*100)
-	localRng := rand.New(rand.NewSource(s.seed + seedOffset))
+	effectSeed := s.seed + int64(owner.ID) + int64(healAmount*100)
 
-	// Genre-aware particle colors
-	var particleColor particles.ParticleColor
-	switch s.genreID {
-	case "fantasy":
-		particleColor = particles.ParticleColor{R: 0.3, G: 1.0, B: 0.5, A: 0.9} // Green healing
-	case "scifi":
-		particleColor = particles.ParticleColor{R: 0.2, G: 0.8, B: 1.0, A: 0.9} // Cyan nanites
-	case "horror":
-		particleColor = particles.ParticleColor{R: 0.8, G: 0.1, B: 0.2, A: 0.9} // Dark red blood
-	case "cyberpunk":
-		particleColor = particles.ParticleColor{R: 1.0, G: 0.4, B: 0.8, A: 0.9} // Magenta stim
-	case "postapoc":
-		particleColor = particles.ParticleColor{R: 0.7, G: 0.9, B: 0.3, A: 0.9} // Sickly green
-	default:
-		particleColor = particles.ParticleColor{R: 0.4, G: 1.0, B: 0.4, A: 0.9} // Default green
+	// Create heal particle config using SpawnParticles API
+	config := particles.Config{
+		Type:     particles.ParticleMagic,
+		Count:    count,
+		GenreID:  s.genreID,
+		Seed:     effectSeed,
+		Duration: 0.8,
+		SpreadX:  s.spreadFactor,
+		SpreadY:  s.spreadFactor,
+		Gravity:  -100.0, // Float upward for healing effect
+		MinSize:  2.0,
+		MaxSize:  4.0,
+		Custom:   map[string]interface{}{"companion_lifesteal": true},
 	}
 
-	// Spawn rising heal particles
-	for i := 0; i < count; i++ {
-		offsetX := (localRng.Float64() - 0.5) * s.spreadFactor
-		offsetY := (localRng.Float64() - 0.5) * s.spreadFactor
-
-		particle := &particles.Particle{
-			X:        pos.X + offsetX,
-			Y:        pos.Y + offsetY,
-			VX:       (localRng.Float64() - 0.5) * 15,
-			VY:       -20 - localRng.Float64()*30, // Rise upward
-			Color:    particleColor,
-			Size:     2.0 + localRng.Float64()*2,
-			Lifetime: 0.6 + localRng.Float64()*0.4,
-			Age:      0,
-			Behavior: particles.BehaviorRising,
-		}
-
-		s.particleSystem.AddParticle(particle)
-	}
+	s.particleSystem.SpawnParticles(s.world, config, pos.X, pos.Y)
 }
 
 // GetLifestealForCompanion returns the current lifesteal percentage for a companion.

@@ -139,6 +139,7 @@ type SystemInitResult struct {
 	TimeOfDayFishingBonusSystem              *TimeOfDayFishingBonusSystem
 	FishingCatchParticleSystem               *FishingCatchParticleSystem
 	TimeOfDayFishingBonusParticleSystem      *TimeOfDayFishingBonusParticleSystem
+	FishingLineTensionParticleSystem         *FishingLineTensionParticleSystem
 	TimeOfDayCompanionBonusSystem            *TimeOfDayCompanionBonusSystem
 	TimeOfDayHealthRegenSystem               *TimeOfDayHealthRegenSystem
 	TimeOfDayManaRegenSystem                 *TimeOfDayManaRegenSystem

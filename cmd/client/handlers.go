@@ -304,6 +304,7 @@ type systemsContainer struct {
 	fishingWeatherBonusSystem           *engine.FishingWeatherBonusSystem
 	timeOfDayFishingBonusSystem         *engine.TimeOfDayFishingBonusSystem
 	fishingCatchParticleSystem          *engine.FishingCatchParticleSystem
+	fishingLineTensionParticleSystem    *engine.FishingLineTensionParticleSystem
 	timeOfDayFishingBonusParticleSystem *engine.TimeOfDayFishingBonusParticleSystem
 	terrainFishingBonusSystem           *engine.TerrainFishingBonusSystem   // Connects terrain tiles to fishing catch rate bonuses
 	companionFishingBonusSystem         *engine.CompanionFishingBonusSystem // Connects companion types to fishing catch rate bonuses
@@ -1308,6 +1309,14 @@ func initializeV4Systems(game *engine.EbitenGame, sys *systemsContainer, clientL
 	sys.fishingCatchParticleSystem.SetGenre(*genreID)
 	game.World.AddSystem(sys.fishingCatchParticleSystem)
 	logging.ComponentLogger(clientLogger.Logger, "fishing_particle").Debug("Created fishing catch particle system")
+
+	// FishingLineTensionParticleSystem - visual feedback for line tension during reeling
+	// Spawns genre-aware particles based on tension level and fish struggle direction
+	sys.fishingLineTensionParticleSystem = engine.NewFishingLineTensionParticleSystem(game.World, *seed+seedOffsetFishing+160)
+	sys.fishingLineTensionParticleSystem.SetParticleSystem(sys.particleSystem)
+	sys.fishingLineTensionParticleSystem.SetGenre(*genreID)
+	game.World.AddSystem(sys.fishingLineTensionParticleSystem)
+	logging.ComponentLogger(clientLogger.Logger, "fishing_tension").Debug("Created fishing line tension particle system")
 
 	// TimeOfDayFishingBonusParticleSystem - visual feedback for time-based fishing bonuses
 	// Spawns genre-aware particles on fishing spots when dawn/dusk/night bonuses are active

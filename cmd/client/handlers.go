@@ -262,6 +262,7 @@ type systemsContainer struct {
 	specializationSpellDamageSys *engine.SpecializationSpellDamageSystem // Connects class specialization with spell damage bonuses
 	specializationAttackSpeedSys *engine.SpecializationAttackSpeedSystem // Connects class specialization with attack speed bonuses
 	specializationDefenseSys     *engine.SpecializationDefenseSystem     // Connects class specialization with defense bonuses
+	specializationCritDamageSys  *engine.SpecializationCritDamageSystem  // Connects class specialization with crit damage bonuses
 	expressionSystem             *engine.ExpressionSystem
 	expressionComboSys           *engine.ExpressionComboSystem
 	miniGameSystem               *engine.MiniGameSystem

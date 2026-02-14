@@ -5,7 +5,7 @@ import (
 )
 
 func TestNewFearFleeParticleSystem(t *testing.T) {
-	world := NewWorld(nil)
+	world := NewWorld()
 	sys := NewFearFleeParticleSystem(world, 12345)
 
 	if sys == nil {
@@ -29,7 +29,7 @@ func TestNewFearFleeParticleSystem(t *testing.T) {
 }
 
 func TestFearFleeParticleSystem_SetParticleSystem(t *testing.T) {
-	world := NewWorld(nil)
+	world := NewWorld()
 	sys := NewFearFleeParticleSystem(world, 12345)
 	ps := NewParticleSystem()
 
@@ -53,7 +53,7 @@ func TestFearFleeParticleSystem_SetGenre(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			world := NewWorld(nil)
+			world := NewWorld()
 			sys := NewFearFleeParticleSystem(world, 12345)
 			sys.SetGenre(tt.genreID)
 
@@ -65,7 +65,7 @@ func TestFearFleeParticleSystem_SetGenre(t *testing.T) {
 }
 
 func TestFearFleeParticleSystem_Update_NoParticleSystem(t *testing.T) {
-	world := NewWorld(nil)
+	world := NewWorld()
 	sys := NewFearFleeParticleSystem(world, 12345)
 
 	// Should not panic without particle system
@@ -82,7 +82,7 @@ func TestFearFleeParticleSystem_Update_NoWorld(t *testing.T) {
 }
 
 func TestFearFleeParticleSystem_Update_WithFearedEntity(t *testing.T) {
-	world := NewWorld(nil)
+	world := NewWorld()
 	sys := NewFearFleeParticleSystem(world, 12345)
 	ps := NewParticleSystem()
 	sys.SetParticleSystem(ps)
@@ -96,7 +96,6 @@ func TestFearFleeParticleSystem_Update_WithFearedEntity(t *testing.T) {
 	entity.AddComponent(&StatusEffectComponent{
 		EffectType: "fear",
 		Duration:   5.0,
-		Elapsed:    0.0,
 	})
 
 	// First update - accumulate time
@@ -116,7 +115,7 @@ func TestFearFleeParticleSystem_Update_WithFearedEntity(t *testing.T) {
 }
 
 func TestFearFleeParticleSystem_Update_NoFearEffect(t *testing.T) {
-	world := NewWorld(nil)
+	world := NewWorld()
 	sys := NewFearFleeParticleSystem(world, 12345)
 	ps := NewParticleSystem()
 	sys.SetParticleSystem(ps)
@@ -134,7 +133,7 @@ func TestFearFleeParticleSystem_Update_NoFearEffect(t *testing.T) {
 }
 
 func TestFearFleeParticleSystem_Update_NotFleeing(t *testing.T) {
-	world := NewWorld(nil)
+	world := NewWorld()
 	sys := NewFearFleeParticleSystem(world, 12345)
 	ps := NewParticleSystem()
 	sys.SetParticleSystem(ps)
@@ -147,7 +146,6 @@ func TestFearFleeParticleSystem_Update_NotFleeing(t *testing.T) {
 	entity.AddComponent(&StatusEffectComponent{
 		EffectType: "fear",
 		Duration:   5.0,
-		Elapsed:    0.0,
 	})
 
 	sys.Update([]*Entity{entity}, 0.3)
@@ -157,7 +155,7 @@ func TestFearFleeParticleSystem_Update_NotFleeing(t *testing.T) {
 }
 
 func TestFearFleeParticleSystem_Update_FearExpired(t *testing.T) {
-	world := NewWorld(nil)
+	world := NewWorld()
 	sys := NewFearFleeParticleSystem(world, 12345)
 	ps := NewParticleSystem()
 	sys.SetParticleSystem(ps)
@@ -169,7 +167,6 @@ func TestFearFleeParticleSystem_Update_FearExpired(t *testing.T) {
 	entity.AddComponent(&StatusEffectComponent{
 		EffectType: "fear",
 		Duration:   1.0,
-		Elapsed:    2.0, // Expired
 	})
 
 	sys.Update([]*Entity{entity}, 0.3)
@@ -179,7 +176,7 @@ func TestFearFleeParticleSystem_Update_FearExpired(t *testing.T) {
 }
 
 func TestFearFleeParticleSystem_Update_FearedVariant(t *testing.T) {
-	world := NewWorld(nil)
+	world := NewWorld()
 	sys := NewFearFleeParticleSystem(world, 12345)
 	ps := NewParticleSystem()
 	sys.SetParticleSystem(ps)
@@ -192,7 +189,6 @@ func TestFearFleeParticleSystem_Update_FearedVariant(t *testing.T) {
 	entity.AddComponent(&StatusEffectComponent{
 		EffectType: "feared",
 		Duration:   5.0,
-		Elapsed:    0.0,
 	})
 
 	sys.Update([]*Entity{entity}, 0.3)
@@ -202,7 +198,7 @@ func TestFearFleeParticleSystem_Update_FearedVariant(t *testing.T) {
 }
 
 func TestFearFleeParticleSystem_Update_StopFleeing(t *testing.T) {
-	world := NewWorld(nil)
+	world := NewWorld()
 	sys := NewFearFleeParticleSystem(world, 12345)
 	ps := NewParticleSystem()
 	sys.SetParticleSystem(ps)
@@ -214,7 +210,6 @@ func TestFearFleeParticleSystem_Update_StopFleeing(t *testing.T) {
 	effect := &StatusEffectComponent{
 		EffectType: "fear",
 		Duration:   5.0,
-		Elapsed:    0.0,
 	}
 	entity.AddComponent(effect)
 
@@ -249,7 +244,7 @@ func TestFearFleeParticleSystem_GetPrimaryParticleType(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.genreID, func(t *testing.T) {
-			world := NewWorld(nil)
+			world := NewWorld()
 			sys := NewFearFleeParticleSystem(world, 12345)
 			sys.SetGenre(tt.genreID)
 
@@ -265,7 +260,6 @@ func TestFearFleeParticleSystem_GetPrimaryParticleType(t *testing.T) {
 			entity.AddComponent(&StatusEffectComponent{
 				EffectType: "fear",
 				Duration:   5.0,
-				Elapsed:    0.0,
 			})
 
 			// Should not panic
@@ -275,7 +269,7 @@ func TestFearFleeParticleSystem_GetPrimaryParticleType(t *testing.T) {
 }
 
 func TestFearFleeParticleSystem_EntityNoPosition(t *testing.T) {
-	world := NewWorld(nil)
+	world := NewWorld()
 	sys := NewFearFleeParticleSystem(world, 12345)
 	ps := NewParticleSystem()
 	sys.SetParticleSystem(ps)
@@ -286,7 +280,6 @@ func TestFearFleeParticleSystem_EntityNoPosition(t *testing.T) {
 	entity.AddComponent(&StatusEffectComponent{
 		EffectType: "fear",
 		Duration:   5.0,
-		Elapsed:    0.0,
 	})
 
 	// Should not panic
@@ -297,7 +290,7 @@ func TestFearFleeParticleSystem_EntityNoPosition(t *testing.T) {
 }
 
 func TestFearFleeParticleSystem_EntityNoAI(t *testing.T) {
-	world := NewWorld(nil)
+	world := NewWorld()
 	sys := NewFearFleeParticleSystem(world, 12345)
 	ps := NewParticleSystem()
 	sys.SetParticleSystem(ps)
@@ -308,7 +301,6 @@ func TestFearFleeParticleSystem_EntityNoAI(t *testing.T) {
 	entity.AddComponent(&StatusEffectComponent{
 		EffectType: "fear",
 		Duration:   5.0,
-		Elapsed:    0.0,
 	})
 
 	// Should not panic
@@ -319,7 +311,7 @@ func TestFearFleeParticleSystem_EntityNoAI(t *testing.T) {
 }
 
 func TestFearFleeParticleSystem_MultipleEntities(t *testing.T) {
-	world := NewWorld(nil)
+	world := NewWorld()
 	sys := NewFearFleeParticleSystem(world, 12345)
 	ps := NewParticleSystem()
 	sys.SetParticleSystem(ps)
@@ -332,7 +324,6 @@ func TestFearFleeParticleSystem_MultipleEntities(t *testing.T) {
 		entity.AddComponent(&StatusEffectComponent{
 			EffectType: "fear",
 			Duration:   5.0,
-			Elapsed:    0.0,
 		})
 		entities[i] = entity
 	}
@@ -344,7 +335,7 @@ func TestFearFleeParticleSystem_MultipleEntities(t *testing.T) {
 }
 
 func BenchmarkFearFleeParticleSystem_Update(b *testing.B) {
-	world := NewWorld(nil)
+	world := NewWorld()
 	sys := NewFearFleeParticleSystem(world, 12345)
 	ps := NewParticleSystem()
 	sys.SetParticleSystem(ps)
@@ -359,7 +350,6 @@ func BenchmarkFearFleeParticleSystem_Update(b *testing.B) {
 		entity.AddComponent(&StatusEffectComponent{
 			EffectType: "fear",
 			Duration:   5.0,
-			Elapsed:    0.0,
 		})
 		entities[i] = entity
 	}
@@ -371,7 +361,7 @@ func BenchmarkFearFleeParticleSystem_Update(b *testing.B) {
 }
 
 func BenchmarkFearFleeParticleSystem_UpdateNoFear(b *testing.B) {
-	world := NewWorld(nil)
+	world := NewWorld()
 	sys := NewFearFleeParticleSystem(world, 12345)
 	ps := NewParticleSystem()
 	sys.SetParticleSystem(ps)

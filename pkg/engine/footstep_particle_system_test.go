@@ -48,7 +48,7 @@ func TestFootstepParticleSystem_SetParticleSystem(t *testing.T) {
 func TestFootstepParticleSystem_SetTerrain(t *testing.T) {
 	world := NewWorld()
 	sys := NewFootstepParticleSystem(world, 12345)
-	terr := terrain.NewTerrain(10, 10)
+	terr := terrain.NewTerrain(10, 10, 12345)
 
 	// Add some entries to lastTile to verify it gets cleared
 	sys.lastTile[1] = tileCoord{x: 1, y: 1}
@@ -112,7 +112,7 @@ func TestFootstepParticleSystem_UpdateEntityTooSlow(t *testing.T) {
 	world := NewWorld()
 	sys := NewFootstepParticleSystem(world, 12345)
 	ps := NewParticleSystem()
-	terr := terrain.NewTerrain(10, 10)
+	terr := terrain.NewTerrain(10, 10, 12345)
 	terr.SetTile(3, 3, terrain.TileFloor)
 
 	sys.SetParticleSystem(ps)
@@ -136,7 +136,7 @@ func TestFootstepParticleSystem_UpdateEntityMoving(t *testing.T) {
 	world := NewWorld()
 	sys := NewFootstepParticleSystem(world, 12345)
 	ps := NewParticleSystem()
-	terr := terrain.NewTerrain(20, 20)
+	terr := terrain.NewTerrain(20, 20, 12345)
 	// Set up floor tiles around the entity position
 	for x := 0; x < 20; x++ {
 		for y := 0; y < 20; y++ {
@@ -243,7 +243,7 @@ func TestFootstepParticleSystem_CooldownTracking(t *testing.T) {
 	world := NewWorld()
 	sys := NewFootstepParticleSystem(world, 12345)
 	ps := NewParticleSystem()
-	terr := terrain.NewTerrain(20, 20)
+	terr := terrain.NewTerrain(20, 20, 12345)
 	for x := 0; x < 20; x++ {
 		for y := 0; y < 20; y++ {
 			terr.SetTile(x, y, terrain.TileFloor)
@@ -271,14 +271,14 @@ func TestFootstepParticleSystem_CooldownTracking(t *testing.T) {
 func TestFootstepParticleSystem_TileTracking(t *testing.T) {
 	world := NewWorld()
 	sys := NewFootstepParticleSystem(world, 12345)
-	terr := terrain.NewTerrain(10, 10)
+	terr := terrain.NewTerrain(10, 10, 12345)
 
 	sys.SetTerrain(terr)
 
 	// Verify tile tracking is reset when terrain changes
 	sys.lastTile[1] = tileCoord{x: 5, y: 5}
 
-	newTerr := terrain.NewTerrain(20, 20)
+	newTerr := terrain.NewTerrain(20, 20, 12345)
 	sys.SetTerrain(newTerr)
 
 	if _, exists := sys.lastTile[1]; exists {
@@ -290,7 +290,7 @@ func TestFootstepParticleSystem_EntityWithoutPosition(t *testing.T) {
 	world := NewWorld()
 	sys := NewFootstepParticleSystem(world, 12345)
 	ps := NewParticleSystem()
-	terr := terrain.NewTerrain(10, 10)
+	terr := terrain.NewTerrain(10, 10, 12345)
 
 	sys.SetParticleSystem(ps)
 	sys.SetTerrain(terr)
@@ -307,7 +307,7 @@ func TestFootstepParticleSystem_EntityWithoutVelocity(t *testing.T) {
 	world := NewWorld()
 	sys := NewFootstepParticleSystem(world, 12345)
 	ps := NewParticleSystem()
-	terr := terrain.NewTerrain(10, 10)
+	terr := terrain.NewTerrain(10, 10, 12345)
 
 	sys.SetParticleSystem(ps)
 	sys.SetTerrain(terr)
@@ -324,7 +324,7 @@ func BenchmarkFootstepParticleSystem_Update(b *testing.B) {
 	world := NewWorld()
 	sys := NewFootstepParticleSystem(world, 12345)
 	ps := NewParticleSystem()
-	terr := terrain.NewTerrain(100, 100)
+	terr := terrain.NewTerrain(100, 100, 12345)
 	for x := 0; x < 100; x++ {
 		for y := 0; y < 100; y++ {
 			terr.SetTile(x, y, terrain.TileFloor)

@@ -112,6 +112,10 @@ type SystemInitResult struct {
 	WeatherCompanionBonusSystem      *WeatherCompanionBonusSystem
 	EvasionParticleSystem            *EvasionParticleSystem
 	FootstepParticleSystem           *FootstepParticleSystem
+	SpecializationStatusResistSystem *SpecializationStatusResistSystem
+	StatusEffectHealthRegenSystem    *StatusEffectHealthRegenSystem
+	HealingParticleSystem            *HealingParticleSystem
+	SpecializationCritDamageSystem   *SpecializationCritDamageSystem
 
 	// System wrappers
 	AnimationSystemWrapper            System
@@ -319,6 +323,27 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 	specializationDefenseSystem.SetGenre(config.GenreID)
 	result.SpecializationDefenseSystem = specializationDefenseSystem
 	game.World.AddSystem(specializationDefenseSystem)
+
+	// 25f. SpecializationStatusResistSystem - status effect duration modifiers from class specializations
+	// Connects ClassProgressionComponent with StatusEffectComponent for genre-aware debuff resistance
+	specializationStatusResistSystem := NewSpecializationStatusResistSystem(game.World, config.Seed+6690)
+	specializationStatusResistSystem.SetGenre(config.GenreID)
+	result.SpecializationStatusResistSystem = specializationStatusResistSystem
+	game.World.AddSystem(specializationStatusResistSystem)
+
+	// 25h. SpecializationCritDamageSystem - critical hit damage bonuses from class specializations
+	// Connects ClassProgressionComponent with StatsComponent.CritDamage for rogue/assassin bonuses
+	specializationCritDamageSystem := NewSpecializationCritDamageSystem(game.World, config.Seed+6700)
+	specializationCritDamageSystem.SetGenre(config.GenreID)
+	result.SpecializationCritDamageSystem = specializationCritDamageSystem
+	game.World.AddSystem(specializationCritDamageSystem)
+
+	// 25g. StatusEffectHealthRegenSystem - health regeneration modifiers from status effects
+	// Connects StatusEffectSystem with HealthComponent for genre-aware regen bonuses/penalties
+	statusEffectHealthRegenSystem := NewStatusEffectHealthRegenSystem(game.World, config.Seed+6695)
+	statusEffectHealthRegenSystem.SetGenre(config.GenreID)
+	result.StatusEffectHealthRegenSystem = statusEffectHealthRegenSystem
+	game.World.AddSystem(statusEffectHealthRegenSystem)
 
 	// 26. InventorySystem - item management
 	game.World.AddSystem(inventorySystem)
@@ -698,6 +723,15 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 	footstepParticleSystem.SetTileSize(config.TileSize)
 	result.FootstepParticleSystem = footstepParticleSystem
 	game.World.AddSystem(footstepParticleSystem)
+
+	// 36y. HealingParticleSystem - visual feedback for healing effects
+	// Connects CombatSystem heal events with ParticleSystem for genre-aware heal particles
+	healingParticleSystem := NewHealingParticleSystem(game.World, config.Seed+7300)
+	healingParticleSystem.SetParticleSystem(result.ParticleSystem)
+	healingParticleSystem.SetGenre(config.GenreID)
+	result.CombatSystem.SetHealCallback(healingParticleSystem.OnHeal)
+	result.HealingParticleSystem = healingParticleSystem
+	game.World.AddSystem(healingParticleSystem)
 
 	// 37. LifetimeSystem - temporary entities (Phase 5.3)
 	lifetimeSystem := NewLifetimeSystemWithLogger(game.World, logger)

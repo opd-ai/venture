@@ -247,9 +247,8 @@ func TestEvasionParticleSystem_ParticleCountScaling(t *testing.T) {
 func TestCombatSystem_SetEvasionCallback(t *testing.T) {
 	cs := NewCombatSystem(42)
 
-	callbackInvoked := false
 	cs.SetEvasionCallback(func(attacker, target *Entity, evasionChance float64) {
-		callbackInvoked = true
+		// Test callback - not invoked in this test
 	})
 
 	// The callback is stored but we can't easily test invocation without full combat

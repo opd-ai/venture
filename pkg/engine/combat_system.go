@@ -57,6 +57,9 @@ type CombatSystem struct {
 	// Callback for when an attack is evaded
 	onEvasionCallback func(attacker, target *Entity, evasionChance float64)
 
+	// Callback for when an entity is healed
+	onHealCallback func(healer, target *Entity, amount float64)
+
 	// Logger for combat events
 	logger *logrus.Entry
 }
@@ -902,6 +905,16 @@ func (s *CombatSystem) ApplyStatusEffect(target *Entity, effectType string, dura
 
 // Heal heals a target entity by the given amount.
 func (s *CombatSystem) Heal(target *Entity, amount float64) {
+	s.HealWithHealer(nil, target, amount)
+}
+
+// HealWithHealer heals a target entity by the given amount, tracking the healer.
+// If healer is nil, it is treated as environmental healing or self-heal.
+func (s *CombatSystem) HealWithHealer(healer, target *Entity, amount float64) {
+	if target == nil || amount <= 0 {
+		return
+	}
+
 	healthComp, ok := target.GetComponent("health")
 	if !ok {
 		if s.logger != nil {
@@ -920,11 +933,18 @@ func (s *CombatSystem) Heal(target *Entity, amount float64) {
 
 	beforeHealth := health.Current
 	health.Heal(amount)
+	actualHeal := health.Current - beforeHealth
+
+	// Invoke heal callback if meaningful healing occurred
+	if actualHeal > 0 && s.onHealCallback != nil {
+		s.onHealCallback(healer, target, actualHeal)
+	}
 
 	if s.logger != nil {
 		s.logger.WithFields(logrus.Fields{
 			"target_id":     target.ID,
 			"heal_amount":   amount,
+			"actual_healed": actualHeal,
 			"health_before": beforeHealth,
 			"health_after":  health.Current,
 		}).Debug("entity healed")
@@ -990,6 +1010,15 @@ func (s *CombatSystem) SetEvasionCallback(callback func(attacker, target *Entity
 		s.logger.Debug("evasion callback registered")
 	}
 	s.onEvasionCallback = callback
+}
+
+// SetHealCallback sets the callback function for when an entity is healed.
+// The callback receives the healer (may be nil), target, and actual amount healed.
+func (s *CombatSystem) SetHealCallback(callback func(healer, target *Entity, amount float64)) {
+	if s.logger != nil {
+		s.logger.Debug("heal callback registered")
+	}
+	s.onHealCallback = callback
 }
 
 // isValidEnemyTarget checks if entity is a valid enemy target.

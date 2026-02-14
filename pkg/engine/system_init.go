@@ -121,6 +121,7 @@ type SystemInitResult struct {
 	SpecializationEvasionSystem         *SpecializationEvasionSystem
 	ShieldRegenSystem                   *ShieldRegenSystem
 	WeatherMeleeDamageSystem            *WeatherMeleeDamageSystem
+	WeatherAttackSpeedSystem            *WeatherAttackSpeedSystem
 	DrowningParticleSystem              *DrowningParticleSystem
 	DestructionParticleSystem           *DestructionParticleSystem
 	BlockParticleSystem                 *BlockParticleSystem
@@ -912,6 +913,14 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 	weatherMeleeDamageSystem.SetGenre(config.GenreID)
 	result.WeatherMeleeDamageSystem = weatherMeleeDamageSystem
 	game.World.AddSystem(weatherMeleeDamageSystem)
+
+	// 36ab. WeatherAttackSpeedSystem - modifies melee attack cooldowns based on weather
+	// Connects WeatherSystem with AttackComponent for genre-aware attack speed modifiers
+	// Cold slows attacks, storms enable quick strikes
+	weatherAttackSpeedSystem := NewWeatherAttackSpeedSystem(game.World, config.Seed+7425)
+	weatherAttackSpeedSystem.SetGenre(config.GenreID)
+	result.WeatherAttackSpeedSystem = weatherAttackSpeedSystem
+	game.World.AddSystem(weatherAttackSpeedSystem)
 
 	// 37. LifetimeSystem - temporary entities (Phase 5.3)
 	lifetimeSystem := NewLifetimeSystemWithLogger(game.World, logger)

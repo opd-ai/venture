@@ -89,6 +89,7 @@ const (
 	seedOffsetSpecSpellDamage    = 17000 // offset for specialization spell damage system (class-spell damage integration)
 	seedOffsetSpecAttackSpeed    = 17500 // offset for specialization attack speed system (class-combat integration)
 	seedOffsetSpecDefense        = 18000 // offset for specialization defense system (class-defense integration)
+	seedOffsetSpecLifesteal      = 18500 // offset for specialization lifesteal system (class-lifesteal integration)
 
 	// Fallback positions
 	fallbackPlayerX = 400 // fallback X position if no valid spawn

@@ -195,6 +195,7 @@ type systemsContainer struct {
 	weatherAudioSystem                *engine.WeatherAudioSystem                // Connects weather to ambient audio sounds
 	weatherManaRegenSystem            *engine.WeatherManaRegenSystem            // Connects weather to mana regeneration rates
 	weatherCooldownSystem             *engine.WeatherCooldownSystem             // Connects weather to spell cooldown rates
+	weatherAttackSpeedSystem          *engine.WeatherAttackSpeedSystem          // Connects weather to melee attack speed modifiers
 	statusEffectLightingSystem        *engine.StatusEffectLightingSystem        // Connects status effects to lighting for visual feedback
 	statusEffectMovementSystem        *engine.StatusEffectMovementSystem        // Connects status effects to movement speed modifiers
 	statusEffectEvasionSystem         *engine.StatusEffectEvasionSystem         // Connects status effects to evasion modifiers in combat
@@ -283,6 +284,7 @@ type systemsContainer struct {
 	specializationDefenseSys     *engine.SpecializationDefenseSystem     // Connects class specialization with defense bonuses
 	specializationCritDamageSys  *engine.SpecializationCritDamageSystem  // Connects class specialization with crit damage bonuses
 	specializationEvasionSys     *engine.SpecializationEvasionSystem     // Connects class specialization with evasion bonuses
+	specializationLifestealSys   *engine.SpecializationLifestealSystem   // Connects class specialization with lifesteal bonuses
 	expressionSystem             *engine.ExpressionSystem
 	expressionComboSys           *engine.ExpressionComboSystem
 	miniGameSystem               *engine.MiniGameSystem
@@ -297,7 +299,8 @@ type systemsContainer struct {
 	timeOfDayFishingBonusSystem         *engine.TimeOfDayFishingBonusSystem
 	fishingCatchParticleSystem          *engine.FishingCatchParticleSystem
 	timeOfDayFishingBonusParticleSystem *engine.TimeOfDayFishingBonusParticleSystem
-	terrainFishingBonusSystem           *engine.TerrainFishingBonusSystem // Connects terrain tiles to fishing catch rate bonuses
+	terrainFishingBonusSystem           *engine.TerrainFishingBonusSystem   // Connects terrain tiles to fishing catch rate bonuses
+	companionFishingBonusSystem         *engine.CompanionFishingBonusSystem // Connects companion types to fishing catch rate bonuses
 	// Phase 112: New Game Plus carry-over system
 	carryoverSystem *engine.CarryOverSystem
 	// Phase 30: Environmental Storytelling
@@ -1009,6 +1012,11 @@ func initializeEnvironmentalSystems(game *engine.EbitenGame, sys *systemsContain
 	sys.weatherCooldownSystem = engine.NewWeatherCooldownSystem(game.World, *seed+6350)
 	sys.weatherCooldownSystem.SetGenre(*genreID)
 
+	// WeatherAttackSpeedSystem - modifies melee attack cooldowns based on weather
+	// Cold slows attacks, storms enable quick strikes
+	sys.weatherAttackSpeedSystem = engine.NewWeatherAttackSpeedSystem(game.World, *seed+7425)
+	sys.weatherAttackSpeedSystem.SetGenre(*genreID)
+
 	// WeatherCompanionBonusSystem - modifies companion stats based on weather conditions
 	// Connects WeatherSystem with CompanionStatsComponent for tactical companion positioning
 	sys.weatherCompanionBonusSystem = engine.NewWeatherCompanionBonusSystem(game.World, *seed+6375)
@@ -1185,6 +1193,11 @@ func initializeV4Systems(game *engine.EbitenGame, sys *systemsContainer, clientL
 	sys.specializationDefenseSys.SetGenre(*genreID)
 	logging.ComponentLogger(clientLogger.Logger, "specialization_defense").Debug("Created specialization defense system")
 
+	// Phase 25f: Specialization lifesteal system - connects class specialization with lifesteal bonuses
+	sys.specializationLifestealSys = engine.NewSpecializationLifestealSystem(game.World, *seed+seedOffsetSpecLifesteal)
+	sys.specializationLifestealSys.SetGenre(*genreID)
+	logging.ComponentLogger(clientLogger.Logger, "specialization_lifesteal").Debug("Created specialization lifesteal system")
+
 	// Phase 26: Expression systems (requires audio manager)
 	sys.expressionSystem = engine.NewExpressionSystem(game.World, sys.audioManager)
 	sys.expressionComboSys = engine.NewExpressionComboSystem(game.World)
@@ -1307,6 +1320,14 @@ func initializeV4Systems(game *engine.EbitenGame, sys *systemsContainer, clientL
 	sys.terrainFishingBonusSystem.SetFishingSystem(sys.fishingSystem)
 	game.World.AddSystem(sys.terrainFishingBonusSystem)
 	logging.ComponentLogger(clientLogger.Logger, "terrain_fishing").Debug("Created terrain fishing bonus system")
+
+	// CompanionFishingBonusSystem - connects companion types to fishing catch rate bonuses
+	// Water elementals +25% rare fish, spirits +20% detection, pets +15% speed, robots +30% legendary
+	sys.companionFishingBonusSystem = engine.NewCompanionFishingBonusSystem(game.World, *seed+seedOffsetFishing+250)
+	sys.companionFishingBonusSystem.SetGenre(*genreID)
+	sys.companionFishingBonusSystem.SetFishingSystem(sys.fishingSystem)
+	game.World.AddSystem(sys.companionFishingBonusSystem)
+	logging.ComponentLogger(clientLogger.Logger, "companion_fishing").Debug("Created companion fishing bonus system")
 
 	// AUDIT FIX: Phase 112 - CarryOverSystem for New Game Plus
 	// Gap: CarryOverSystem implemented but never initialized on client
@@ -1847,6 +1868,7 @@ func registerNonCriticalSystems(game *engine.EbitenGame, sys *systemsContainer) 
 	game.World.AddSystem(sys.weatherAudioSystem)                // Weather ambient audio feedback
 	game.World.AddSystem(sys.weatherManaRegenSystem)            // Weather mana regeneration modifiers
 	game.World.AddSystem(sys.weatherCooldownSystem)             // Weather spell cooldown rate modifiers
+	game.World.AddSystem(sys.weatherAttackSpeedSystem)          // Weather melee attack speed modifiers
 	game.World.AddSystem(sys.weatherCompanionBonusSystem)       // Weather companion combat stat bonuses
 	game.World.AddSystem(sys.weatherRangedAccuracySystem)       // Weather ranged attack accuracy modifiers
 	game.World.AddSystem(sys.weatherXPBonusSystem)              // Weather XP gain bonuses
@@ -1923,6 +1945,9 @@ func registerNonCriticalSystems(game *engine.EbitenGame, sys *systemsContainer) 
 
 	// Phase 25e: Specialization defense - connects class specialization with defense bonuses
 	game.World.AddSystem(sys.specializationDefenseSys)
+
+	// Phase 25f: Specialization lifesteal - connects class specialization with lifesteal bonuses
+	game.World.AddSystem(sys.specializationLifestealSys)
 
 	// Phase 26: Expression systems (use wrappers)
 	game.World.AddSystem(&expressionSystemWrapper{system: sys.expressionSystem})

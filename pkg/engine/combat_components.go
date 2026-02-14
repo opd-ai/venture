@@ -75,6 +75,9 @@ type StatsComponent struct {
 	// Evasion chance
 	Evasion float64 // 0.0 to 1.0
 
+	// Lifesteal - heals attacker for percentage of damage dealt (0.0 to 1.0)
+	Lifesteal float64
+
 	// Resistances per damage type
 	Resistances map[combat.DamageType]float64
 }

@@ -95,6 +95,7 @@ type SystemInitResult struct {
 	WeatherXPBonusSystem            *WeatherXPBonusSystem
 	ElementalComboDamageSystem      *ElementalComboDamageSystem
 	ElementalCompanionSynergySystem *ElementalCompanionSynergySystem
+	LifestealSystem                 *LifestealSystem
 
 	// System wrappers
 	AnimationSystemWrapper            System
@@ -548,6 +549,15 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 	elementalCompanionSynergySystem.SetGenre(config.GenreID)
 	result.ElementalCompanionSynergySystem = elementalCompanionSynergySystem
 	game.World.AddSystem(elementalCompanionSynergySystem)
+
+	// 36r. LifestealSystem - heals attackers based on damage dealt
+	// Connects CombatSystem damage events with HealthComponent healing for sustained combat
+	lifestealSystem := NewLifestealSystem(game.World, config.Seed+6950)
+	lifestealSystem.SetParticleSystem(result.ParticleSystem)
+	lifestealSystem.SetGenre(config.GenreID)
+	result.CombatSystem.SetDamageCallback(lifestealSystem.OnDamageDealt)
+	result.LifestealSystem = lifestealSystem
+	game.World.AddSystem(lifestealSystem)
 
 	// 37. LifetimeSystem - temporary entities (Phase 5.3)
 	lifetimeSystem := NewLifetimeSystemWithLogger(game.World, logger)

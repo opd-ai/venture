@@ -214,6 +214,7 @@ type systemsContainer struct {
 	elementalCompanionSynergySystem *engine.ElementalCompanionSynergySystem // Connects elemental companions to owner status effects
 	weatherRangedAccuracySystem     *engine.WeatherRangedAccuracySystem     // Connects weather to ranged attack accuracy modifiers
 	weatherXPBonusSystem            *engine.WeatherXPBonusSystem            // Connects weather to XP gain bonuses
+	lifestealSystem                 *engine.LifestealSystem                 // Connects combat damage to attacker healing
 	lifetimeSystem                  *engine.LifetimeSystem
 	puzzleSystem                    *engine.PuzzleSystem
 	firePropagationSystem           *engine.FirePropagationSystem
@@ -978,6 +979,13 @@ func initializeEnvironmentalSystems(game *engine.EbitenGame, sys *systemsContain
 	sys.weatherXPBonusSystem.SetGenre(*genreID)
 	sys.weatherXPBonusSystem.SetProgressionSystem(sys.progressionSystem)
 
+	// LifestealSystem - heals attackers based on damage dealt and their Lifesteal stat
+	// Connects CombatSystem damage events with HealthComponent healing for sustained combat
+	sys.lifestealSystem = engine.NewLifestealSystem(game.World, *seed+6950)
+	sys.lifestealSystem.SetParticleSystem(sys.particleSystem)
+	sys.lifestealSystem.SetGenre(*genreID)
+	sys.combatSystem.SetDamageCallback(sys.lifestealSystem.OnDamageDealt)
+
 	sys.lifetimeSystem = engine.NewLifetimeSystemWithLogger(game.World, clientLogger.Logger)
 	sys.puzzleSystem = engine.NewPuzzleSystem(game.World)
 
@@ -1668,6 +1676,7 @@ func registerNonCriticalSystems(game *engine.EbitenGame, sys *systemsContainer) 
 	game.World.AddSystem(sys.elementalComboParticleSystem)    // Elemental status combo visual feedback via particles
 	game.World.AddSystem(sys.elementalComboDamageSystem)      // Elemental status combo bonus damage
 	game.World.AddSystem(sys.elementalCompanionSynergySystem) // Elemental companion stat bonuses from owner effects
+	game.World.AddSystem(sys.lifestealSystem)                 // Combat lifesteal healing with visual feedback
 	game.World.AddSystem(sys.lifetimeSystem)
 	game.World.AddSystem(sys.puzzleSystem)
 	game.World.AddSystem(sys.firePropagationSystem)

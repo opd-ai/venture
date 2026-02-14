@@ -139,6 +139,7 @@ type SystemInitResult struct {
 	TimeOfDayCompanionBonusSystem     *TimeOfDayCompanionBonusSystem
 	TimeOfDayHealthRegenSystem        *TimeOfDayHealthRegenSystem
 	TimeOfDayManaRegenSystem          *TimeOfDayManaRegenSystem
+	TimeOfDayBlockChanceSystem        *TimeOfDayBlockChanceSystem
 	TerrainCombatBonusParticleSystem  *TerrainCombatBonusParticleSystem
 	CompanionManaRegenSystem          *CompanionManaRegenSystem
 
@@ -972,6 +973,14 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 	timeOfDayManaRegenSystem.SetGenre(config.GenreID)
 	result.TimeOfDayManaRegenSystem = timeOfDayManaRegenSystem
 	game.World.AddSystem(timeOfDayManaRegenSystem)
+
+	// 43j. TimeOfDayBlockChanceSystem - day/night block chance modulation
+	// Connects TimeOfDayLightingSystem with StatsComponent.BlockChance for defensive timing
+	timeOfDayBlockChanceSystem := NewTimeOfDayBlockChanceSystem(game.World, config.Seed+7725)
+	timeOfDayBlockChanceSystem.SetLightingSystem(timeOfDayLightingSystem)
+	timeOfDayBlockChanceSystem.SetGenre(config.GenreID)
+	result.TimeOfDayBlockChanceSystem = timeOfDayBlockChanceSystem
+	game.World.AddSystem(timeOfDayBlockChanceSystem)
 
 	// Note: SpatialPartitionSystem (system #44) is initialized separately
 	// after terrain generation via InitializeSpatialPartitionSystem()

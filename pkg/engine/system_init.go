@@ -83,6 +83,7 @@ type SystemInitResult struct {
 	WeatherCooldownSystem           *WeatherCooldownSystem
 	TerrainMovementSpeedSystem      *TerrainMovementSpeedSystem
 	TerrainCombatBonusSystem        *TerrainCombatBonusSystem
+	TerrainStealthSystem            *TerrainStealthSystem
 	LowHealthVFXSystem              *LowHealthVFXSystem
 	CompanionAuraParticleSystem     *CompanionAuraParticleSystem
 	SpecializationManaBoostSystem   *SpecializationManaBoostSystem
@@ -382,6 +383,14 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 	terrainCombatBonusSystem.SetTileSize(config.TileSize)
 	result.TerrainCombatBonusSystem = terrainCombatBonusSystem
 	game.World.AddSystem(terrainCombatBonusSystem)
+
+	// 36b5. TerrainStealthSystem - modifies AI detection based on target terrain
+	// Connects terrain generation with AISystem for tactical stealth gameplay
+	terrainStealthSystem := NewTerrainStealthSystem(game.World, config.Seed+2170)
+	terrainStealthSystem.SetGenre(config.GenreID)
+	terrainStealthSystem.SetTileSize(config.TileSize)
+	result.TerrainStealthSystem = terrainStealthSystem
+	game.World.AddSystem(terrainStealthSystem)
 
 	// 36c. CriticalHitParticleSystem - visual feedback for critical hits
 	criticalHitParticleSystem := NewCriticalHitParticleSystem(game.World, config.Seed+3000)

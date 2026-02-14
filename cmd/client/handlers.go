@@ -213,6 +213,7 @@ type systemsContainer struct {
 	spellEffectParticleSystem        *engine.SpellEffectParticleSystem        // Connects spell effects to particle effects
 	damageResistanceParticleSystem   *engine.DamageResistanceParticleSystem   // Connects damage resistance to particle effects
 	shieldAbsorbParticleSystem       *engine.ShieldAbsorbParticleSystem       // Connects shield absorption to particle effects
+	shieldRegenSystem                *engine.ShieldRegenSystem                // Connects shield regeneration to particle effects
 	lowHealthVFXSystem               *engine.LowHealthVFXSystem               // Connects low player health to warning particle effects
 	manaRegenParticleSystem          *engine.ManaRegenParticleSystem          // Connects mana regeneration to visual particle effects
 	companionAuraParticleSystem      *engine.CompanionAuraParticleSystem      // Connects companion bonding perks to aura particles
@@ -953,6 +954,12 @@ func initializeEnvironmentalSystems(game *engine.EbitenGame, sys *systemsContain
 	sys.shieldAbsorbParticleSystem.SetParticleSystem(sys.particleSystem)
 	sys.shieldAbsorbParticleSystem.SetGenre(*genreID)
 	sys.combatSystem.SetShieldAbsorbCallback(sys.shieldAbsorbParticleSystem.OnShieldAbsorb)
+
+	// ShieldRegenSystem - passive shield regeneration with visual feedback
+	// Connects ShieldComponent with ParticleSystem for genre-aware shield recovery particles
+	sys.shieldRegenSystem = engine.NewShieldRegenSystem(game.World, *seed+5775)
+	sys.shieldRegenSystem.SetParticleSystem(sys.particleSystem)
+	sys.shieldRegenSystem.SetGenre(*genreID)
 
 	// WeatherGroundEffectSystem - visual feedback for weather ground impacts
 	sys.weatherGroundEffectSystem = engine.NewWeatherGroundEffectSystem(game.World, *seed+6000)
@@ -1750,6 +1757,7 @@ func registerNonCriticalSystems(game *engine.EbitenGame, sys *systemsContainer) 
 	game.World.AddSystem(sys.spellEffectParticleSystem)        // Spell effect visual feedback via particles
 	game.World.AddSystem(sys.damageResistanceParticleSystem)   // Damage resistance visual feedback via particles
 	game.World.AddSystem(sys.shieldAbsorbParticleSystem)       // Shield absorption visual feedback via particles
+	game.World.AddSystem(sys.shieldRegenSystem)                // Shield regeneration visual feedback via particles
 	game.World.AddSystem(sys.lowHealthVFXSystem)               // Low player health warning visual feedback via particles
 	game.World.AddSystem(sys.manaRegenParticleSystem)          // Mana regeneration visual feedback via particles
 	game.World.AddSystem(sys.companionAuraParticleSystem)      // Companion bonding perk aura visual feedback via particles

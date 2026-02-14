@@ -116,6 +116,7 @@ type SystemInitResult struct {
 	StatusEffectHealthRegenSystem    *StatusEffectHealthRegenSystem
 	HealingParticleSystem            *HealingParticleSystem
 	SpecializationCritDamageSystem   *SpecializationCritDamageSystem
+	ShieldRegenSystem                *ShieldRegenSystem
 
 	// System wrappers
 	AnimationSystemWrapper            System
@@ -732,6 +733,14 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 	result.CombatSystem.SetHealCallback(healingParticleSystem.OnHeal)
 	result.HealingParticleSystem = healingParticleSystem
 	game.World.AddSystem(healingParticleSystem)
+
+	// 36z. ShieldRegenSystem - passive shield regeneration with visual feedback
+	// Connects ShieldComponent with ParticleSystem for genre-aware shield recovery particles
+	shieldRegenSystem := NewShieldRegenSystem(game.World, config.Seed+7350)
+	shieldRegenSystem.SetParticleSystem(result.ParticleSystem)
+	shieldRegenSystem.SetGenre(config.GenreID)
+	result.ShieldRegenSystem = shieldRegenSystem
+	game.World.AddSystem(shieldRegenSystem)
 
 	// 37. LifetimeSystem - temporary entities (Phase 5.3)
 	lifetimeSystem := NewLifetimeSystemWithLogger(game.World, logger)

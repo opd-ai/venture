@@ -48,6 +48,9 @@ type CombatSystem struct {
 	// Callback for when damage is significantly reduced by resistance
 	onDamageResistedCallback func(target *Entity, damageType combat.DamageType, originalDamage, finalDamage, resistance float64)
 
+	// Callback for when a shield absorbs damage
+	onShieldAbsorbCallback func(target *Entity, absorbed, remaining float64)
+
 	// Logger for combat events
 	logger *logrus.Entry
 }
@@ -654,6 +657,10 @@ func (s *CombatSystem) applyShieldAbsorption(target *Entity, damage float64) flo
 						"shield_amount":    shield.Amount,
 					}).Debug("shield absorbed damage")
 				}
+				// Trigger shield absorb callback for visual effects
+				if absorbed > 0 && s.onShieldAbsorbCallback != nil {
+					s.onShieldAbsorbCallback(target, absorbed, shield.Amount)
+				}
 			}
 		}
 	}
@@ -946,6 +953,15 @@ func (s *CombatSystem) SetDamageResistedCallback(callback func(target *Entity, d
 		s.logger.Debug("damage resisted callback registered")
 	}
 	s.onDamageResistedCallback = callback
+}
+
+// SetShieldAbsorbCallback sets the callback function for when a shield absorbs damage.
+// The callback receives the target entity, amount absorbed, and remaining shield amount.
+func (s *CombatSystem) SetShieldAbsorbCallback(callback func(target *Entity, absorbed, remaining float64)) {
+	if s.logger != nil {
+		s.logger.Debug("shield absorb callback registered")
+	}
+	s.onShieldAbsorbCallback = callback
 }
 
 // isValidEnemyTarget checks if entity is a valid enemy target.

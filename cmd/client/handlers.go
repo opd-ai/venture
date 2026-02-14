@@ -259,6 +259,7 @@ type systemsContainer struct {
 	timeOfDayCompanionBonusSystem         *engine.TimeOfDayCompanionBonusSystem // Connects time-of-day lighting with companion stat bonuses
 	timeOfDayManaRegenSystem              *engine.TimeOfDayManaRegenSystem      // Connects time-of-day lighting with mana regen rates
 	timeOfDayBlockChanceSystem            *engine.TimeOfDayBlockChanceSystem    // Connects time-of-day lighting with block chance bonuses
+	timeOfDaySpellDamageSystem            *engine.TimeOfDaySpellDamageSystem    // Connects time-of-day lighting with spell damage modifiers
 	spriteGenerator                       *sprites.Generator
 	spriteCache                           *cache.SpriteCache // Phase 1.2: Sprite caching for animation performance
 	itemGen                               *item.ItemGenerator

@@ -143,6 +143,7 @@ type SystemInitResult struct {
 	TimeOfDayHealthRegenSystem               *TimeOfDayHealthRegenSystem
 	TimeOfDayManaRegenSystem                 *TimeOfDayManaRegenSystem
 	TimeOfDayBlockChanceSystem               *TimeOfDayBlockChanceSystem
+	TimeOfDaySpellDamageSystem               *TimeOfDaySpellDamageSystem
 	TerrainCombatBonusParticleSystem         *TerrainCombatBonusParticleSystem
 	CompanionManaRegenSystem                 *CompanionManaRegenSystem
 	WeatherElementalComboBonusSystem         *WeatherElementalComboBonusSystem
@@ -154,6 +155,7 @@ type SystemInitResult struct {
 	TerrainEquipmentDurabilityParticleSystem *TerrainEquipmentDurabilityParticleSystem
 	WeatherEquipmentDurabilitySystem         *WeatherEquipmentDurabilitySystem
 	SpellChannelParticleSystem               *SpellChannelParticleSystem
+	CompanionDamageLifestealSystem           *CompanionDamageLifestealSystem
 
 	// System wrappers
 	AnimationSystemWrapper            System
@@ -869,6 +871,15 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 	result.LifestealSystem = lifestealSystem
 	game.World.AddSystem(lifestealSystem)
 
+	// 36r2. CompanionDamageLifestealSystem - heals owners when companions deal damage
+	// Connects CompanionComponent with CombatSystem damage events for pet-based sustain builds
+	companionDamageLifestealSystem := NewCompanionDamageLifestealSystem(game.World, config.Seed+6960)
+	companionDamageLifestealSystem.SetParticleSystem(result.ParticleSystem)
+	companionDamageLifestealSystem.SetGenre(config.GenreID)
+	result.CombatSystem.AddDamageCallback(companionDamageLifestealSystem.OnCompanionDamageDealt)
+	result.CompanionDamageLifestealSystem = companionDamageLifestealSystem
+	game.World.AddSystem(companionDamageLifestealSystem)
+
 	// 36s. StatusEffectManaCostSystem - modifies spell mana costs based on status effects
 	// Connects StatusEffectSystem with SpellCastingSystem for tactical spell management
 	statusEffectManaCostSystem := NewStatusEffectManaCostSystem(game.World, config.Seed+7000)
@@ -1081,6 +1092,15 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 	timeOfDayBlockChanceSystem.SetGenre(config.GenreID)
 	result.TimeOfDayBlockChanceSystem = timeOfDayBlockChanceSystem
 	game.World.AddSystem(timeOfDayBlockChanceSystem)
+
+	// 43k. TimeOfDaySpellDamageSystem - day/night spell damage modulation
+	// Connects TimeOfDayLightingSystem with spell damage for element-based bonuses
+	// Fire/Light spells stronger during day, Dark/Arcane stronger at night
+	timeOfDaySpellDamageSystem := NewTimeOfDaySpellDamageSystem(game.World, config.Seed+7750)
+	timeOfDaySpellDamageSystem.SetLightingSystem(timeOfDayLightingSystem)
+	timeOfDaySpellDamageSystem.SetGenre(config.GenreID)
+	result.TimeOfDaySpellDamageSystem = timeOfDaySpellDamageSystem
+	game.World.AddSystem(timeOfDaySpellDamageSystem)
 
 	// Note: SpatialPartitionSystem (system #44) is initialized separately
 	// after terrain generation via InitializeSpatialPartitionSystem()

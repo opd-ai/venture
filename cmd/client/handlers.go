@@ -209,6 +209,7 @@ type systemsContainer struct {
 	lowHealthVFXSystem             *engine.LowHealthVFXSystem             // Connects low player health to warning particle effects
 	companionAuraParticleSystem    *engine.CompanionAuraParticleSystem    // Connects companion bonding perks to aura particles
 	elementalComboParticleSystem   *engine.ElementalComboParticleSystem   // Connects elemental status combos to visual effects
+	elementalComboDamageSystem     *engine.ElementalComboDamageSystem     // Connects elemental status combos to bonus damage
 	weatherRangedAccuracySystem    *engine.WeatherRangedAccuracySystem    // Connects weather to ranged attack accuracy modifiers
 	weatherXPBonusSystem           *engine.WeatherXPBonusSystem           // Connects weather to XP gain bonuses
 	lifetimeSystem                 *engine.LifetimeSystem
@@ -956,6 +957,10 @@ func initializeEnvironmentalSystems(game *engine.EbitenGame, sys *systemsContain
 	sys.elementalComboParticleSystem.SetParticleSystem(sys.particleSystem)
 	sys.elementalComboParticleSystem.SetGenre(*genreID)
 
+	// ElementalComboDamageSystem - applies bonus damage when elemental status effects combine
+	sys.elementalComboDamageSystem = engine.NewElementalComboDamageSystem(game.World, *seed+6850)
+	sys.elementalComboDamageSystem.SetGenre(*genreID)
+
 	// WeatherRangedAccuracySystem - modifies ranged attack accuracy based on weather
 	sys.weatherRangedAccuracySystem = engine.NewWeatherRangedAccuracySystem(game.World, *seed+6750)
 	sys.weatherRangedAccuracySystem.SetGenre(*genreID)
@@ -1649,6 +1654,7 @@ func registerNonCriticalSystems(game *engine.EbitenGame, sys *systemsContainer) 
 	game.World.AddSystem(sys.lowHealthVFXSystem)             // Low player health warning visual feedback via particles
 	game.World.AddSystem(sys.companionAuraParticleSystem)    // Companion bonding perk aura visual feedback via particles
 	game.World.AddSystem(sys.elementalComboParticleSystem)   // Elemental status combo visual feedback via particles
+	game.World.AddSystem(sys.elementalComboDamageSystem)     // Elemental status combo bonus damage
 	game.World.AddSystem(sys.lifetimeSystem)
 	game.World.AddSystem(sys.puzzleSystem)
 	game.World.AddSystem(sys.firePropagationSystem)

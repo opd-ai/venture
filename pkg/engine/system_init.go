@@ -91,6 +91,7 @@ type SystemInitResult struct {
 	WeatherRangedAccuracySystem     *WeatherRangedAccuracySystem
 	StatusEffectEvasionSystem       *StatusEffectEvasionSystem
 	WeatherXPBonusSystem            *WeatherXPBonusSystem
+	ElementalComboDamageSystem      *ElementalComboDamageSystem
 
 	// System wrappers
 	AnimationSystemWrapper            System
@@ -515,6 +516,13 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 	weatherXPBonusSystem.SetProgressionSystem(progressionSystem)
 	result.WeatherXPBonusSystem = weatherXPBonusSystem
 	game.World.AddSystem(weatherXPBonusSystem)
+
+	// 36p. ElementalComboDamageSystem - applies bonus damage when elemental status effects combine
+	// Connects StatusEffectSystem with CombatSystem for genre-aware elemental combo damage
+	elementalComboDamageSystem := NewElementalComboDamageSystem(game.World, config.Seed+6850)
+	elementalComboDamageSystem.SetGenre(config.GenreID)
+	result.ElementalComboDamageSystem = elementalComboDamageSystem
+	game.World.AddSystem(elementalComboDamageSystem)
 
 	// 37. LifetimeSystem - temporary entities (Phase 5.3)
 	lifetimeSystem := NewLifetimeSystemWithLogger(game.World, logger)

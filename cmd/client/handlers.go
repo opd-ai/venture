@@ -185,6 +185,8 @@ type systemsContainer struct {
 	factionDamageBonusSystem                *engine.FactionDamageBonusSystem             // Bridges faction reputation with damage bonuses
 	reputationDefenseBonusSystem            *engine.ReputationDefenseBonusSystem         // Bridges faction reputation with defense bonuses
 	reputationDefenseBonusParticleSystem    *engine.ReputationDefenseBonusParticleSystem // Visual feedback for reputation defense bonuses
+	reputationHealingBonusSystem            *engine.ReputationHealingBonusSystem         // Bridges faction reputation with health regen
+	reputationHealingBonusParticleSystem    *engine.ReputationHealingBonusParticleSystem // Visual feedback for reputation healing
 	statusEffectAISystem                    *engine.StatusEffectAISystem                 // Bridges status effects with AI (stun/frozen disable AI)
 	reputationSystem                        *engine.ReputationSystem
 	alignmentSystem                         *engine.AlignmentSystem
@@ -1844,6 +1846,21 @@ func registerNonCriticalSystems(game *engine.EbitenGame, sys *systemsContainer) 
 	sys.reputationDefenseBonusParticleSystem.SetParticleSystem(sys.particleSystem)
 	sys.reputationDefenseBonusParticleSystem.SetGenre(*genreID)
 	game.World.AddSystem(sys.reputationDefenseBonusParticleSystem)
+
+	// ReputationHealingBonusSystem: bridges faction reputation with health regeneration
+	// Players with high faction standing passively regenerate health faster
+	sys.reputationHealingBonusSystem = engine.NewReputationHealingBonusSystem(game.World, *seed+5185)
+	sys.reputationHealingBonusSystem.SetFactionSystem(sys.factionSystem)
+	sys.reputationHealingBonusSystem.SetGenre(*genreID)
+	game.World.AddSystem(sys.reputationHealingBonusSystem)
+
+	// ReputationHealingBonusParticleSystem: visual feedback for reputation healing
+	// Spawns genre-aware upward healing particles when faction reputation heals the player
+	sys.reputationHealingBonusParticleSystem = engine.NewReputationHealingBonusParticleSystem(game.World, *seed+5190)
+	sys.reputationHealingBonusParticleSystem.SetParticleSystem(sys.particleSystem)
+	sys.reputationHealingBonusParticleSystem.SetHealingSystem(sys.reputationHealingBonusSystem)
+	sys.reputationHealingBonusParticleSystem.SetGenre(*genreID)
+	game.World.AddSystem(sys.reputationHealingBonusParticleSystem)
 
 	// FactionCompanionBehaviorSystem: bridges faction reputation with companion AI targeting
 	// Companions won't attack allied faction members and prioritize hostile faction enemies

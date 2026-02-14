@@ -166,6 +166,8 @@ type SystemInitResult struct {
 	CombatEquipmentDurabilityParticleSystem  *CombatEquipmentDurabilityParticleSystem
 	ReputationDefenseBonusSystem             *ReputationDefenseBonusSystem
 	ReputationDefenseBonusParticleSystem     *ReputationDefenseBonusParticleSystem
+	ReputationHealingBonusSystem             *ReputationHealingBonusSystem
+	ReputationHealingBonusParticleSystem     *ReputationHealingBonusParticleSystem
 
 	// System wrappers
 	AnimationSystemWrapper            System
@@ -330,6 +332,21 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 	reputationDefenseBonusParticleSystem.SetGenre(config.GenreID)
 	result.ReputationDefenseBonusParticleSystem = reputationDefenseBonusParticleSystem
 	game.World.AddSystem(reputationDefenseBonusParticleSystem)
+
+	// 17e. ReputationHealingBonusSystem - health regen bonus from allied faction reputation
+	reputationHealingBonusSystem := NewReputationHealingBonusSystem(game.World, config.Seed+5185)
+	reputationHealingBonusSystem.SetFactionSystem(factionSystem)
+	reputationHealingBonusSystem.SetGenre(config.GenreID)
+	result.ReputationHealingBonusSystem = reputationHealingBonusSystem
+	game.World.AddSystem(reputationHealingBonusSystem)
+
+	// 17f. ReputationHealingBonusParticleSystem - visual feedback for reputation healing
+	reputationHealingBonusParticleSystem := NewReputationHealingBonusParticleSystem(game.World, config.Seed+5190)
+	reputationHealingBonusParticleSystem.SetParticleSystem(result.ParticleSystem)
+	reputationHealingBonusParticleSystem.SetHealingSystem(reputationHealingBonusSystem)
+	reputationHealingBonusParticleSystem.SetGenre(config.GenreID)
+	result.ReputationHealingBonusParticleSystem = reputationHealingBonusParticleSystem
+	game.World.AddSystem(reputationHealingBonusParticleSystem)
 
 	// 18. SkillProgressionSystem - applies skill effects to stats
 	skillProgressionSystem := NewSkillProgressionSystem()

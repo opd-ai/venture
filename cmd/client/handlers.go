@@ -258,6 +258,7 @@ type systemsContainer struct {
 	spriteDepthShadingSystem                    *engine.SpriteDepthShadingSystem                    // Per-body-part depth shading for entity sprites
 	clothingPatternSystem                       *engine.ClothingPatternSystem                       // Seed-based clothing patterns for entity sprites
 	bodyTypeSystem                              *engine.BodyTypeSystem                              // Seed-based body type variety for entity sprites
+	creatureVisualClassifierSystem              *engine.CreatureVisualClassifierSystem               // Infers creature visual form from procgen data
 	statusEffectAISystem                        *engine.StatusEffectAISystem                        // Bridges status effects with AI (stun/frozen disable AI)
 	reputationSystem                            *engine.ReputationSystem
 	alignmentSystem                             *engine.AlignmentSystem
@@ -1867,6 +1868,9 @@ func registerCriticalSystems(game *engine.EbitenGame, sys *systemsContainer) {
 	game.World.AddSystem(sys.interactionSystem)
 
 	// Core rendering systems
+	sys.creatureVisualClassifierSystem = engine.NewCreatureVisualClassifierSystem(game.World)
+	game.World.AddSystem(sys.creatureVisualClassifierSystem)
+
 	game.World.AddSystem(&animationSystemWrapper{
 		system: sys.animationSystem,
 		logger: game.World.GetLogger(),

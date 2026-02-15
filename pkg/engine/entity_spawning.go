@@ -261,6 +261,14 @@ func addAdvancedComponents(enemy *Entity, genEntity *entity.Entity, enemySize fl
 		Reputation:      0,
 		IsPlayerFaction: false,
 	})
+
+	// Creature visual classification from procgen entity data.
+	creatureForm := ClassifyCreatureForm(genEntity.Name, genEntity.Tags)
+	enemy.AddComponent(&CreatureVisualComponent{
+		Form:       creatureForm,
+		SizeClass:  genEntity.Size.String(),
+		VisualTags: genEntity.Tags,
+	})
 }
 
 // selectEnemyArchetype determines the AI archetype based on entity properties.
@@ -448,6 +456,14 @@ func SpawnEnemyFromTemplate(world *World, genEntity *entity.Entity, x, y float64
 		IsPlayerFaction: false,
 	}
 	enemy.AddComponent(factionComp)
+
+	// Creature visual classification from procgen entity data.
+	creatureForm := ClassifyCreatureForm(genEntity.Name, genEntity.Tags)
+	enemy.AddComponent(&CreatureVisualComponent{
+		Form:       creatureForm,
+		SizeClass:  genEntity.Size.String(),
+		VisualTags: genEntity.Tags,
+	})
 
 	return enemy
 }

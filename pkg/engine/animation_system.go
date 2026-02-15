@@ -1209,6 +1209,14 @@ func (s *AnimationSystem) configurePlayerSprite(config *sprites.Config, entity *
 // configureEnemySprite configures sprite settings for enemy entities.
 func (s *AnimationSystem) configureEnemySprite(config *sprites.Config, entity *Entity, anim *AnimationComponent) {
 	entityType := s.determineEnemyType(entity, config)
+
+	// Override entity type from CreatureVisualComponent if available.
+	if cvComp, ok := entity.GetComponent("creature_visual"); ok {
+		if cv, ok := cvComp.(*CreatureVisualComponent); ok && cv.Form != FormHumanoid {
+			entityType = string(cv.Form)
+		}
+	}
+
 	config.Custom["entityType"] = entityType
 	facing := s.determineFacingDirection(entity, anim)
 	config.Custom["facing"] = facing

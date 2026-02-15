@@ -241,6 +241,7 @@ type SystemInitResult struct {
 	SpriteDepthShadingSystem                    *SpriteDepthShadingSystem
 	ClothingPatternSystem                       *ClothingPatternSystem
 	BodyTypeSystem                              *BodyTypeSystem
+	CreatureVisualClassifierSystem              *CreatureVisualClassifierSystem
 
 	// System wrappers
 	AnimationSystemWrapper            System
@@ -971,6 +972,12 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 
 	// 31-32. Animation and equipment visuals
 	spriteGenerator := sprites.NewGenerator()
+
+	// Creature visual classifier — must run before animation system so entity type
+	// is available when sprite configs are built.
+	result.CreatureVisualClassifierSystem = NewCreatureVisualClassifierSystem(game.World)
+	game.World.AddSystem(result.CreatureVisualClassifierSystem)
+
 	result.AnimationSystem = NewAnimationSystem(spriteGenerator)
 	result.AnimationSystemWrapper = &animationSystemWrapper{
 		system: result.AnimationSystem,

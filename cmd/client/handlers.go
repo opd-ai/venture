@@ -253,7 +253,7 @@ type systemsContainer struct {
 	weatherEntityWetnessSystem                  *engine.WeatherEntityWetnessSystem                  // Rain-driven entity sprite wetness
 	attackTelegraphGlowSystem                   *engine.AttackTelegraphGlowSystem                   // Genre-aware attack wind-up warning glow
 	xpGainBurstSystem                           *engine.XPGainBurstSystem                           // Genre-aware XP gain particle bursts
-	equipmentGleamSweepSystem                   *engine.EquipmentGleamSweepSystem                    // Animated specular gleam sweep on equipment
+	equipmentGleamSweepSystem                   *engine.EquipmentGleamSweepSystem                   // Animated specular gleam sweep on equipment
 	statusEffectAISystem                        *engine.StatusEffectAISystem                        // Bridges status effects with AI (stun/frozen disable AI)
 	reputationSystem                            *engine.ReputationSystem
 	alignmentSystem                             *engine.AlignmentSystem

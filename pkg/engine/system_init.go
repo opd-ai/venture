@@ -173,8 +173,10 @@ type SystemInitResult struct {
 	ReputationSpellDamageBonusParticleSystem *ReputationSpellDamageBonusParticleSystem
 	ReputationMovementSpeedSystem            *ReputationMovementSpeedSystem
 	ReputationMovementSpeedParticleSystem    *ReputationMovementSpeedParticleSystem
-	ReputationCriticalChanceBonusSystem      *ReputationCriticalChanceBonusSystem
-	ReputationCriticalChanceParticleSystem   *ReputationCriticalChanceParticleSystem
+	ReputationCriticalChanceBonusSystem            *ReputationCriticalChanceBonusSystem
+	ReputationCriticalChanceParticleSystem         *ReputationCriticalChanceParticleSystem
+	ReputationEquipmentDurabilitySystem            *ReputationEquipmentDurabilitySystem
+	ReputationEquipmentDurabilityParticleSystem    *ReputationEquipmentDurabilityParticleSystem
 
 	// System wrappers
 	AnimationSystemWrapper            System
@@ -399,6 +401,21 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 	reputationCriticalChanceParticleSystem.SetGenre(config.GenreID)
 	result.ReputationCriticalChanceParticleSystem = reputationCriticalChanceParticleSystem
 	game.World.AddSystem(reputationCriticalChanceParticleSystem)
+
+	// 17m. ReputationEquipmentDurabilitySystem - equipment preservation from allied faction reputation
+	reputationEquipmentDurabilitySystem := NewReputationEquipmentDurabilitySystem(game.World, config.Seed+5225)
+	reputationEquipmentDurabilitySystem.SetFactionSystem(factionSystem)
+	reputationEquipmentDurabilitySystem.SetGenre(config.GenreID)
+	result.ReputationEquipmentDurabilitySystem = reputationEquipmentDurabilitySystem
+	game.World.AddSystem(reputationEquipmentDurabilitySystem)
+
+	// 17n. ReputationEquipmentDurabilityParticleSystem - visual feedback for reputation durability
+	reputationEquipmentDurabilityParticleSystem := NewReputationEquipmentDurabilityParticleSystem(game.World, config.Seed+5230)
+	reputationEquipmentDurabilityParticleSystem.SetParticleSystem(result.ParticleSystem)
+	reputationEquipmentDurabilityParticleSystem.SetDurabilitySystem(reputationEquipmentDurabilitySystem)
+	reputationEquipmentDurabilityParticleSystem.SetGenre(config.GenreID)
+	result.ReputationEquipmentDurabilityParticleSystem = reputationEquipmentDurabilityParticleSystem
+	game.World.AddSystem(reputationEquipmentDurabilityParticleSystem)
 
 	// 18. SkillProgressionSystem - applies skill effects to stats
 	skillProgressionSystem := NewSkillProgressionSystem()

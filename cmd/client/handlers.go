@@ -193,6 +193,8 @@ type systemsContainer struct {
 	reputationMovementSpeedParticleSystem    *engine.ReputationMovementSpeedParticleSystem    // Visual feedback for reputation speed bonus
 	reputationCriticalChanceBonusSystem      *engine.ReputationCriticalChanceBonusSystem      // Bridges faction reputation with critical hit chance
 	reputationCriticalChanceParticleSystem   *engine.ReputationCriticalChanceParticleSystem   // Visual feedback for reputation crit bonus
+	reputationEquipmentDurabilitySystem      *engine.ReputationEquipmentDurabilitySystem      // Bridges faction reputation with equipment durability
+	reputationEquipmentDurabilityParticleSystem *engine.ReputationEquipmentDurabilityParticleSystem // Visual feedback for reputation durability
 	statusEffectAISystem                     *engine.StatusEffectAISystem                     // Bridges status effects with AI (stun/frozen disable AI)
 	reputationSystem                         *engine.ReputationSystem
 	alignmentSystem                          *engine.AlignmentSystem
@@ -1913,6 +1915,21 @@ func registerNonCriticalSystems(game *engine.EbitenGame, sys *systemsContainer) 
 	sys.reputationCriticalChanceParticleSystem.SetCritSystem(sys.reputationCriticalChanceBonusSystem)
 	sys.reputationCriticalChanceParticleSystem.SetGenre(*genreID)
 	game.World.AddSystem(sys.reputationCriticalChanceParticleSystem)
+
+	// ReputationEquipmentDurabilitySystem: bridges faction reputation with equipment durability
+	// High reputation provides durability protection, hostile reputation accelerates degradation
+	sys.reputationEquipmentDurabilitySystem = engine.NewReputationEquipmentDurabilitySystem(game.World, *seed+5225)
+	sys.reputationEquipmentDurabilitySystem.SetFactionSystem(sys.factionSystem)
+	sys.reputationEquipmentDurabilitySystem.SetGenre(*genreID)
+	game.World.AddSystem(sys.reputationEquipmentDurabilitySystem)
+
+	// ReputationEquipmentDurabilityParticleSystem: visual feedback for reputation durability
+	// Spawns protective shimmer or corrosion wisps based on reputation modifier
+	sys.reputationEquipmentDurabilityParticleSystem = engine.NewReputationEquipmentDurabilityParticleSystem(game.World, *seed+5230)
+	sys.reputationEquipmentDurabilityParticleSystem.SetParticleSystem(sys.particleSystem)
+	sys.reputationEquipmentDurabilityParticleSystem.SetDurabilitySystem(sys.reputationEquipmentDurabilitySystem)
+	sys.reputationEquipmentDurabilityParticleSystem.SetGenre(*genreID)
+	game.World.AddSystem(sys.reputationEquipmentDurabilityParticleSystem)
 
 	// FactionCompanionBehaviorSystem: bridges faction reputation with companion AI targeting
 	// Companions won't attack allied faction members and prioritize hostile faction enemies

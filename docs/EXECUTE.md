@@ -48,8 +48,8 @@ Visual & Animation:
 Player Characters (improve aggressively — current quality is unacceptable):
 - **CRITICAL: All sprites must be TOP-DOWN / AERIAL VIEW.** The camera looks straight down. You see the top of the head, the shoulders, and barely any legs. If your sprite looks like a person standing facing you, it is WRONG. Use HumanoidAerialTemplate() proportions: head ~35%, torso/shoulders ~50%, legs ~15%.
 - Use composite layered rendering (see `pkg/rendering/sprites/composite.go`). Layer order: Shadow(0) → Legs(5) → Body(10) → Armor(15) → Head(20) → Weapon(25) → Accessory(30) → Effect(40).
-- Anatomy templates (`pkg/rendering/sprites/anatomy_template.go`) define body part sizes for 32×32 top-down sprites. Proportions may be reworked freely to improve visual quality — better proportions, more detailed features, and more expressive shapes are always welcome. The default HumanoidTemplate() proportions are WRONG for top-down; fix or bypass them.
-- Support 4-direction (Up/Down/Left/Right) and 8-direction sprites. Maintain last facing direction in AnimationComponent.
+- Anatomy templates (`pkg/rendering/sprites/anatomy_template.go`) define body part sizes for 32×32 top-down sprites. Proportions may be reworked freely to improve visual quality — better proportions, more detailed features, and more expressive shapes are always welcome. **Delete all profile-view templates** (including HumanoidTemplate() and any other template that renders entities as seen from the side). Replace them with aerial-view equivalents. Do not leave incorrect profile-view code in the codebase.
+- Support full 360-degree rotation for sprite facing. Maintain facing angle in AnimationComponent.
 - Status effect overlays (burning, frozen, poisoned, stunned, blessed, cursed) render at ZIndex 40 with color-coded intensity and particle counts.
 - Player entities always animate at full rate (12 FPS) regardless of camera distance.
 - Focus on making characters look like recognizable people SEEN FROM ABOVE — visible head/hair, shoulder width indicating body type, equipment visible on the body, shadow underneath. Not blobs, not profile silhouettes.

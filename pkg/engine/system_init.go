@@ -195,6 +195,7 @@ type SystemInitResult struct {
 	WeaponMaterialImpactParticleSystem          *WeaponMaterialImpactParticleSystem
 	DamageFlashTintSystem                       *DamageFlashTintSystem
 	SprintTrailParticleSystem                   *SprintTrailParticleSystem
+	NearbyLightEntityTintSystem                 *NearbyLightEntityTintSystem
 
 	// System wrappers
 	AnimationSystemWrapper            System
@@ -565,6 +566,13 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 	sprintTrailParticleSystem.SetGenre(config.GenreID)
 	result.SprintTrailParticleSystem = sprintTrailParticleSystem
 	game.World.AddSystem(sprintTrailParticleSystem)
+
+	// 17ag. NearbyLightEntityTintSystem - tints entity sprites based on nearby light sources
+	// Uses light color, intensity, and distance-based falloff with genre-aware ambient base
+	nearbyLightEntityTintSystem := NewNearbyLightEntityTintSystem(game.World, config.Seed+9300)
+	nearbyLightEntityTintSystem.SetGenre(config.GenreID)
+	result.NearbyLightEntityTintSystem = nearbyLightEntityTintSystem
+	game.World.AddSystem(nearbyLightEntityTintSystem)
 
 	// 18. SkillProgressionSystem - applies skill effects to stats
 	skillProgressionSystem := NewSkillProgressionSystem()

@@ -161,7 +161,7 @@ func TestDamageFlashTintSystem_GenreFlashColors(t *testing.T) {
 		genreID string
 		wantR   float64 // TintR should be < 1.0 (tinted away from white)
 	}{
-		{"horror_red", "horror", 1.0},    // Red channel stays high
+		{"horror_red", "horror", 1.0},        // Red channel stays high
 		{"cyberpunk_cyan", "cyberpunk", 0.5}, // Red channel reduced (cyan = no red)
 	}
 	for _, tt := range tests {

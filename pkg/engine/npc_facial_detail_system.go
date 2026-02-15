@@ -52,13 +52,13 @@ func NewNpcFacialDetailComponent() *NpcFacialDetailComponent {
 		EyeR:           0.2,
 		EyeG:           0.2,
 		EyeB:           0.2,
-		MouthR:          0.6,
-		MouthG:          0.4,
-		MouthB:          0.4,
-		EyeSize:         2.0,
-		MouthSize:       1.0,
-		ExpressionType:  "neutral",
-		HeadShapeTag:    "circle",
+		MouthR:         0.6,
+		MouthG:         0.4,
+		MouthB:         0.4,
+		EyeSize:        2.0,
+		MouthSize:      1.0,
+		ExpressionType: "neutral",
+		HeadShapeTag:   "circle",
 	}
 }
 

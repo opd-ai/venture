@@ -49,9 +49,9 @@ func TestNpcFacialDetailSystem_SetGenre(t *testing.T) {
 
 func TestNpcFacialDetailSystem_GenrePalettes(t *testing.T) {
 	tests := []struct {
-		name    string
-		genre   string
-		wantEyeR float64
+		name      string
+		genre     string
+		wantEyeR  float64
 		wantShape string
 	}{
 		{"fantasy warm amber", "fantasy", 0.85, "circle"},
@@ -201,9 +201,9 @@ func TestNpcFacialDetailSystem_NoRecomputeWithoutGenreChange(t *testing.T) {
 
 func TestNpcFacialDetailSystem_ExpressionFromFaction(t *testing.T) {
 	tests := []struct {
-		name       string
-		factionID  string
-		wantExpr   string
+		name      string
+		factionID string
+		wantExpr  string
 	}{
 		{"boss hostile", "boss_faction", "hostile"},
 		{"neutral friendly", "neutral_faction", "friendly"},

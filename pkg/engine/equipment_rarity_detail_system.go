@@ -23,10 +23,10 @@ var rarityDetailLevel = map[item.Rarity]float64{
 
 // genreRarityPreset holds genre-specific multipliers for rarity detail scaling.
 type genreRarityPreset struct {
-	ComplexityScale  float64 // Multiplier on shape complexity
-	VibrancyScale    float64 // Multiplier on color vibrancy
-	SharpnessScale   float64 // Multiplier on border sharpness
-	FidelityScale    float64 // Multiplier on material fidelity
+	ComplexityScale float64 // Multiplier on shape complexity
+	VibrancyScale   float64 // Multiplier on color vibrancy
+	SharpnessScale  float64 // Multiplier on border sharpness
+	FidelityScale   float64 // Multiplier on material fidelity
 }
 
 // EquipmentRarityDetailSystem computes aggregate visual detail level from the

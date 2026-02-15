@@ -181,10 +181,10 @@ func (s *SprintTrailParticleSystem) Update(entities []*Entity, deltaTime float64
 		}
 
 		config := particles.Config{
-			Type:    s.preset.ParticleType,
-			Count:   count,
-			GenreID: s.genreID,
-			Seed:    s.seed + int64(entity.ID) + int64(s.rng.Intn(1000)),
+			Type:     s.preset.ParticleType,
+			Count:    count,
+			GenreID:  s.genreID,
+			Seed:     s.seed + int64(entity.ID) + int64(s.rng.Intn(1000)),
 			Duration: s.preset.Duration,
 			SpreadX:  s.preset.SpreadX,
 			SpreadY:  s.preset.SpreadY,

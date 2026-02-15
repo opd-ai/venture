@@ -212,6 +212,7 @@ type SystemInitResult struct {
 	CombatHitStaggerSystem                      *CombatHitStaggerSystem
 	FloatingDamageNumberSystem                  *FloatingDamageNumberSystem
 	EntityThreatIndicatorSystem                 *EntityThreatIndicatorSystem
+	WeaponMaterialParticleSystem                *WeaponMaterialParticleSystem
 
 	// System wrappers
 	AnimationSystemWrapper            System
@@ -704,6 +705,14 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 	entityThreatIndicatorSystem.SetGenre(config.GenreID)
 	result.EntityThreatIndicatorSystem = entityThreatIndicatorSystem
 	game.World.AddSystem(entityThreatIndicatorSystem)
+
+	// 17av. WeaponMaterialParticleSystem - genre-aware idle particles from weapon material
+	// Reads main-hand weapon material type and spawns material-appropriate ambient particles
+	weaponMaterialParticleSystem := NewWeaponMaterialParticleSystem(game.World, config.Seed+10100)
+	weaponMaterialParticleSystem.SetParticleSystem(result.ParticleSystem)
+	weaponMaterialParticleSystem.SetGenre(config.GenreID)
+	result.WeaponMaterialParticleSystem = weaponMaterialParticleSystem
+	game.World.AddSystem(weaponMaterialParticleSystem)
 
 	// 18. SkillProgressionSystem - applies skill effects to stats
 	skillProgressionSystem := NewSkillProgressionSystem()

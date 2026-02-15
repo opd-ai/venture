@@ -229,6 +229,7 @@ type systemsContainer struct {
 	combatHitStaggerSystem                      *engine.CombatHitStaggerSystem                      // Genre-aware combat hit stagger offset
 	floatingDamageNumberSystem                  *engine.FloatingDamageNumberSystem                  // Genre-aware floating damage numbers
 	entityThreatIndicatorSystem                 *engine.EntityThreatIndicatorSystem                 // Genre-aware threat level ring under AI entities
+	weaponMaterialParticleSystem                *engine.WeaponMaterialParticleSystem                // Genre-aware idle particles from weapon material type
 	statusEffectAISystem                        *engine.StatusEffectAISystem                        // Bridges status effects with AI (stun/frozen disable AI)
 	reputationSystem                            *engine.ReputationSystem
 	alignmentSystem                             *engine.AlignmentSystem
@@ -2166,6 +2167,13 @@ func registerNonCriticalSystems(game *engine.EbitenGame, sys *systemsContainer) 
 	sys.entityThreatIndicatorSystem = engine.NewEntityThreatIndicatorSystem(game.World, *seed+10050)
 	sys.entityThreatIndicatorSystem.SetGenre(*genreID)
 	game.World.AddSystem(sys.entityThreatIndicatorSystem)
+
+	// WeaponMaterialParticleSystem: genre-aware idle particles from equipped weapon material
+	// Reads main-hand weapon material type and spawns material-appropriate ambient particles
+	sys.weaponMaterialParticleSystem = engine.NewWeaponMaterialParticleSystem(game.World, *seed+10100)
+	sys.weaponMaterialParticleSystem.SetParticleSystem(sys.particleSystem)
+	sys.weaponMaterialParticleSystem.SetGenre(*genreID)
+	game.World.AddSystem(sys.weaponMaterialParticleSystem)
 
 	// FactionCompanionBehaviorSystem: bridges faction reputation with companion AI targeting
 	// Companions won't attack allied faction members and prioritize hostile faction enemies

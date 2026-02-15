@@ -223,6 +223,7 @@ type SystemInitResult struct {
 	ShieldBubbleOverlaySystem                   *ShieldBubbleOverlaySystem
 	EnvironmentalBreathVaporSystem              *EnvironmentalBreathVaporSystem
 	MovementDustSystem                          *MovementDustSystem
+	HealthRegenPulseSystem                      *HealthRegenPulseSystem
 
 	// System wrappers
 	AnimationSystemWrapper            System
@@ -1304,6 +1305,13 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 	lowHealthVFXSystem.SetGenre(config.GenreID)
 	result.LowHealthVFXSystem = lowHealthVFXSystem
 	game.World.AddSystem(lowHealthVFXSystem)
+
+	// 36k1b. HealthRegenPulseSystem - visual feedback for active health regeneration
+	healthRegenPulseSystem := NewHealthRegenPulseSystem(game.World, config.Seed+6425)
+	healthRegenPulseSystem.SetParticleSystem(result.ParticleSystem)
+	healthRegenPulseSystem.SetGenre(config.GenreID)
+	result.HealthRegenPulseSystem = healthRegenPulseSystem
+	game.World.AddSystem(healthRegenPulseSystem)
 
 	// 36k2. ManaRegenParticleSystem - visual feedback for mana regeneration
 	// Spawns genre-aware particles when entities actively regenerate mana

@@ -46,7 +46,7 @@ func (c *EntityFactionOutlineComponent) Type() string { return "entity_faction_o
 // factionOutlinePreset holds genre-specific outline parameters.
 type factionOutlinePreset struct {
 	// Per-allegiance colors
-	AllyR, AllyG, AllyB       float64
+	AllyR, AllyG, AllyB          float64
 	HostileR, HostileG, HostileB float64
 	NeutralR, NeutralG, NeutralB float64
 

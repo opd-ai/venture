@@ -18,10 +18,10 @@ import (
 
 // MovementDustComponent tracks per-entity dust spawning state.
 type MovementDustComponent struct {
-	Cooldown     float64 // Time remaining before next dust spawn
-	LastSpeedSq  float64 // Cached speed² from last frame
-	Intensity    float64 // Current dust intensity (0-1) based on speed
-	Suppressed   bool    // Temporarily suppressed (e.g. flying entities)
+	Cooldown    float64 // Time remaining before next dust spawn
+	LastSpeedSq float64 // Cached speed² from last frame
+	Intensity   float64 // Current dust intensity (0-1) based on speed
+	Suppressed  bool    // Temporarily suppressed (e.g. flying entities)
 }
 
 // Type returns the component type identifier.
@@ -74,10 +74,10 @@ func NewMovementDustSystem(world *World, seed int64) *MovementDustSystem {
 		rng:          rand.New(rand.NewSource(seed)),
 		logger:       logEntry,
 		tileSize:     32,
-		minSpeedSq:   2500.0, // 50 px/s threshold
+		minSpeedSq:   2500.0,  // 50 px/s threshold
 		maxSpeedSq:   40000.0, // 200 px/s max
-		baseCooldown: 0.06,   // ~16 spawns/sec at max speed
-		maxCooldown:  0.25,   // ~4 spawns/sec at min speed
+		baseCooldown: 0.06,    // ~16 spawns/sec at max speed
+		maxCooldown:  0.25,    // ~4 spawns/sec at min speed
 	}
 	s.preset = s.getGenrePreset("fantasy")
 	return s
@@ -215,10 +215,10 @@ func (s *MovementDustSystem) spawnDust(entityID uint64, x, y, intensity float64,
 	effectSeed := s.seed + int64(x*73) + int64(y*97) + int64(entityID)
 
 	config := particles.Config{
-		Type:    pType,
-		Count:   count,
-		GenreID: s.genreID,
-		Seed:    effectSeed,
+		Type:     pType,
+		Count:    count,
+		GenreID:  s.genreID,
+		Seed:     effectSeed,
 		Duration: duration * (0.6 + intensity*0.4),
 		SpreadX:  (3.0 + intensity*5.0) * s.preset.spreadMul,
 		SpreadY:  (3.0 + intensity*5.0) * s.preset.spreadMul,
@@ -252,31 +252,31 @@ func (s *MovementDustSystem) getGenrePreset(genreID string) movementDustGenrePre
 	case "horror":
 		return movementDustGenrePreset{
 			particleType: particles.ParticleSmoke,
-			minSize: 3.0, maxSize: 7.0,
+			minSize:      3.0, maxSize: 7.0,
 			duration: 0.8, gravity: -2.0, spreadMul: 1.3,
 		}
 	case "scifi":
 		return movementDustGenrePreset{
 			particleType: particles.ParticleSpark,
-			minSize: 2.0, maxSize: 5.0,
+			minSize:      2.0, maxSize: 5.0,
 			duration: 0.4, gravity: 0.0, spreadMul: 1.5,
 		}
 	case "cyberpunk":
 		return movementDustGenrePreset{
 			particleType: particles.ParticleSpark,
-			minSize: 2.0, maxSize: 6.0,
+			minSize:      2.0, maxSize: 6.0,
 			duration: 0.5, gravity: 3.0, spreadMul: 1.2,
 		}
 	case "postapoc":
 		return movementDustGenrePreset{
 			particleType: particles.ParticleDebris,
-			minSize: 3.0, maxSize: 8.0,
+			minSize:      3.0, maxSize: 8.0,
 			duration: 0.7, gravity: 12.0, spreadMul: 1.0,
 		}
 	default: // fantasy
 		return movementDustGenrePreset{
 			particleType: particles.ParticleDust,
-			minSize: 3.0, maxSize: 6.0,
+			minSize:      3.0, maxSize: 6.0,
 			duration: 0.6, gravity: 8.0, spreadMul: 1.0,
 		}
 	}

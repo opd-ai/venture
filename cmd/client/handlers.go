@@ -240,6 +240,7 @@ type systemsContainer struct {
 	shieldBubbleOverlaySystem                   *engine.ShieldBubbleOverlaySystem                   // Genre-aware shield bubble visual overlay
 	environmentalBreathVaporSystem              *engine.EnvironmentalBreathVaporSystem              // Cold weather breath vapor puffs
 	movementDustSystem                          *engine.MovementDustSystem                          // Speed-proportional terrain dust behind fast movers
+	healthRegenPulseSystem                      *engine.HealthRegenPulseSystem                      // Genre-aware healing pulse particles
 	statusEffectAISystem                        *engine.StatusEffectAISystem                        // Bridges status effects with AI (stun/frozen disable AI)
 	reputationSystem                            *engine.ReputationSystem
 	alignmentSystem                             *engine.AlignmentSystem
@@ -2242,6 +2243,11 @@ func registerNonCriticalSystems(game *engine.EbitenGame, sys *systemsContainer) 
 	sys.movementDustSystem = engine.NewMovementDustSystem(game.World, *seed+10650)
 	sys.movementDustSystem.SetGenre(*genreID)
 	game.World.AddSystem(sys.movementDustSystem)
+
+	// HealthRegenPulseSystem: genre-aware healing pulse particles on health increase
+	sys.healthRegenPulseSystem = engine.NewHealthRegenPulseSystem(game.World, *seed+10675)
+	sys.healthRegenPulseSystem.SetGenre(*genreID)
+	game.World.AddSystem(sys.healthRegenPulseSystem)
 
 	// FactionCompanionBehaviorSystem: bridges faction reputation with companion AI targeting
 	// Companions won't attack allied faction members and prioritize hostile faction enemies

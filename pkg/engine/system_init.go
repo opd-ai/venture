@@ -225,7 +225,7 @@ type SystemInitResult struct {
 	MovementDustSystem                          *MovementDustSystem
 	HealthRegenPulseSystem                      *HealthRegenPulseSystem
 	StatusEffectGroundTrailSystem               *StatusEffectGroundTrailSystem
-	WaterSurfaceRippleSystem                   *WaterSurfaceRippleSystem
+	WaterSurfaceRippleSystem                    *WaterSurfaceRippleSystem
 
 	// System wrappers
 	AnimationSystemWrapper            System

@@ -73,8 +73,8 @@ func TestStatusEffectGroundTrailSystem_GetPreset(t *testing.T) {
 		{"poisoned_scifi", "poisoned", "scifi", true},
 		{"bleeding_horror", "bleeding", "horror", true},
 		{"frozen_cyberpunk", "frozen", "cyberpunk", true},
-		{"unknown_effect", "stunned", "fantasy", true},    // fallback
-		{"unknown_genre", "burning", "steampunk", true},   // falls back to fantasy
+		{"unknown_effect", "stunned", "fantasy", true},  // fallback
+		{"unknown_genre", "burning", "steampunk", true}, // falls back to fantasy
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

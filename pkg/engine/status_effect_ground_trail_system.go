@@ -41,32 +41,32 @@ type groundTrailGenrePresets map[string]map[string]groundTrailEffectPreset
 func defaultGroundTrailPresets() groundTrailGenrePresets {
 	return groundTrailGenrePresets{
 		"burning": {
-			"fantasy":  {particles.ParticleEmber, 2.0, 4.0, 1.2, 2.0, 3},
-			"scifi":    {particles.ParticleSpark, 1.5, 3.5, 0.9, 1.5, 4},
-			"horror":   {particles.ParticleFlame, 2.0, 5.0, 1.5, 1.0, 3},
+			"fantasy":   {particles.ParticleEmber, 2.0, 4.0, 1.2, 2.0, 3},
+			"scifi":     {particles.ParticleSpark, 1.5, 3.5, 0.9, 1.5, 4},
+			"horror":    {particles.ParticleFlame, 2.0, 5.0, 1.5, 1.0, 3},
 			"cyberpunk": {particles.ParticleSpark, 1.5, 3.0, 0.8, 2.5, 5},
-			"postapoc": {particles.ParticleEmber, 2.5, 5.0, 1.4, 1.5, 3},
+			"postapoc":  {particles.ParticleEmber, 2.5, 5.0, 1.4, 1.5, 3},
 		},
 		"poisoned": {
-			"fantasy":  {particles.ParticleMagic, 2.0, 4.0, 1.8, 0.5, 2},
-			"scifi":    {particles.ParticleMagic, 1.5, 3.5, 1.4, 0.3, 3},
-			"horror":   {particles.ParticleSmoke, 2.5, 5.0, 2.0, 0.0, 2},
+			"fantasy":   {particles.ParticleMagic, 2.0, 4.0, 1.8, 0.5, 2},
+			"scifi":     {particles.ParticleMagic, 1.5, 3.5, 1.4, 0.3, 3},
+			"horror":    {particles.ParticleSmoke, 2.5, 5.0, 2.0, 0.0, 2},
 			"cyberpunk": {particles.ParticleMagic, 1.5, 3.0, 1.2, 0.5, 3},
-			"postapoc": {particles.ParticleDust, 2.5, 5.0, 2.2, 0.0, 2},
+			"postapoc":  {particles.ParticleDust, 2.5, 5.0, 2.2, 0.0, 2},
 		},
 		"bleeding": {
-			"fantasy":  {particles.ParticleBlood, 2.0, 4.0, 2.0, 3.0, 2},
-			"scifi":    {particles.ParticleBlood, 1.5, 3.0, 1.5, 4.0, 3},
-			"horror":   {particles.ParticleBlood, 3.0, 6.0, 2.5, 2.0, 3},
+			"fantasy":   {particles.ParticleBlood, 2.0, 4.0, 2.0, 3.0, 2},
+			"scifi":     {particles.ParticleBlood, 1.5, 3.0, 1.5, 4.0, 3},
+			"horror":    {particles.ParticleBlood, 3.0, 6.0, 2.5, 2.0, 3},
 			"cyberpunk": {particles.ParticleBlood, 1.5, 3.0, 1.5, 3.5, 2},
-			"postapoc": {particles.ParticleBlood, 2.5, 5.0, 2.2, 2.5, 2},
+			"postapoc":  {particles.ParticleBlood, 2.5, 5.0, 2.2, 2.5, 2},
 		},
 		"frozen": {
-			"fantasy":  {particles.ParticleSparkle, 2.0, 4.0, 2.5, 0.0, 3},
-			"scifi":    {particles.ParticleSpark, 1.5, 3.0, 2.0, 0.0, 4},
-			"horror":   {particles.ParticleSparkle, 2.0, 5.0, 3.0, 0.0, 2},
+			"fantasy":   {particles.ParticleSparkle, 2.0, 4.0, 2.5, 0.0, 3},
+			"scifi":     {particles.ParticleSpark, 1.5, 3.0, 2.0, 0.0, 4},
+			"horror":    {particles.ParticleSparkle, 2.0, 5.0, 3.0, 0.0, 2},
 			"cyberpunk": {particles.ParticleSpark, 1.5, 3.0, 1.8, 0.0, 4},
-			"postapoc": {particles.ParticleDust, 2.5, 5.0, 2.5, 0.0, 2},
+			"postapoc":  {particles.ParticleDust, 2.5, 5.0, 2.5, 0.0, 2},
 		},
 	}
 }
@@ -83,9 +83,9 @@ type StatusEffectGroundTrailSystem struct {
 	presets        groundTrailGenrePresets
 
 	// Tuning
-	dropInterval     float64 // Minimum seconds between drops per effect type
-	minMoveDist      float64 // Minimum pixel distance to trigger a drop
-	spreadRadius     float64 // Particle spread around drop point
+	dropInterval     float64  // Minimum seconds between drops per effect type
+	minMoveDist      float64  // Minimum pixel distance to trigger a drop
+	spreadRadius     float64  // Particle spread around drop point
 	trailEffectTypes []string // Which effect types produce ground trails
 }
 

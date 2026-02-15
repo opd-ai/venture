@@ -242,7 +242,7 @@ type systemsContainer struct {
 	movementDustSystem                          *engine.MovementDustSystem                          // Speed-proportional terrain dust behind fast movers
 	healthRegenPulseSystem                      *engine.HealthRegenPulseSystem                      // Genre-aware healing pulse particles
 	statusEffectGroundTrailSystem               *engine.StatusEffectGroundTrailSystem               // Ground-level DoT movement trails
-	waterSurfaceRippleSystem                   *engine.WaterSurfaceRippleSystem                   // Water tile ripple/splash particles
+	waterSurfaceRippleSystem                    *engine.WaterSurfaceRippleSystem                    // Water tile ripple/splash particles
 	statusEffectAISystem                        *engine.StatusEffectAISystem                        // Bridges status effects with AI (stun/frozen disable AI)
 	reputationSystem                            *engine.ReputationSystem
 	alignmentSystem                             *engine.AlignmentSystem

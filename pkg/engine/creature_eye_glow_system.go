@@ -57,11 +57,11 @@ func NewCreatureEyeGlowComponent() *CreatureEyeGlowComponent {
 		GlowB:            0.0,
 		BaseIntensity:    0.0,
 		CurrentIntensity: 0.0,
-		PulseSpeed:        0.0,
-		PulseAmplitude:    0.0,
-		PulsePhase:        0.0,
-		GlowRadius:        1.0,
-		Enabled:           false,
+		PulseSpeed:       0.0,
+		PulseAmplitude:   0.0,
+		PulsePhase:       0.0,
+		GlowRadius:       1.0,
+		Enabled:          false,
 	}
 }
 
@@ -293,11 +293,11 @@ func (s *CreatureEyeGlowSystem) getOrCreateComponent(entity *Entity) *CreatureEy
 // buildEyeGlowPalettes returns genre-specific eye glow color presets.
 func buildEyeGlowPalettes() map[string]genreEyeGlowPalette {
 	return map[string]genreEyeGlowPalette{
-		"fantasy":  {R: 0.95, G: 0.75, B: 0.20, BaseIntensity: 0.5, BasePulseSpeed: 0.4},
-		"horror":   {R: 0.95, G: 0.15, B: 0.10, BaseIntensity: 0.7, BasePulseSpeed: 0.3},
-		"scifi":    {R: 0.20, G: 0.85, B: 0.95, BaseIntensity: 0.6, BasePulseSpeed: 0.5},
+		"fantasy":   {R: 0.95, G: 0.75, B: 0.20, BaseIntensity: 0.5, BasePulseSpeed: 0.4},
+		"horror":    {R: 0.95, G: 0.15, B: 0.10, BaseIntensity: 0.7, BasePulseSpeed: 0.3},
+		"scifi":     {R: 0.20, G: 0.85, B: 0.95, BaseIntensity: 0.6, BasePulseSpeed: 0.5},
 		"cyberpunk": {R: 0.90, G: 0.20, B: 0.85, BaseIntensity: 0.65, BasePulseSpeed: 0.6},
-		"postapoc": {R: 0.40, G: 0.85, B: 0.20, BaseIntensity: 0.55, BasePulseSpeed: 0.35},
+		"postapoc":  {R: 0.40, G: 0.85, B: 0.20, BaseIntensity: 0.55, BasePulseSpeed: 0.35},
 	}
 }
 

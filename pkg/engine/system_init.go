@@ -123,6 +123,7 @@ type SystemInitResult struct {
 	WeatherMeleeDamageSystem                    *WeatherMeleeDamageSystem
 	WeatherAttackSpeedSystem                    *WeatherAttackSpeedSystem
 	DrowningParticleSystem                      *DrowningParticleSystem
+	HazardProximityWarningParticleSystem        *HazardProximityWarningParticleSystem
 	DestructionParticleSystem                   *DestructionParticleSystem
 	BlockParticleSystem                         *BlockParticleSystem
 	TimeOfDayLightingSystem                     *TimeOfDayLightingSystem
@@ -1357,6 +1358,15 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 	hazardSystem := NewHazardSystemWithLogger(logger)
 	hazardSystem.SetWorld(game.World)
 	game.World.AddSystem(hazardSystem)
+
+	// 42b. HazardProximityWarningParticleSystem - visual warning near hazard zones
+	// Connects HazardSystem zone tracker with ParticleSystem for genre-aware proximity warnings
+	hazardWarningSystem := NewHazardProximityWarningParticleSystem(game.World, config.Seed+7500)
+	hazardWarningSystem.SetHazardSystem(hazardSystem)
+	hazardWarningSystem.SetParticleSystem(result.ParticleSystem)
+	hazardWarningSystem.SetGenre(config.GenreID)
+	result.HazardProximityWarningParticleSystem = hazardWarningSystem
+	game.World.AddSystem(hazardWarningSystem)
 
 	// 43. NarrativeSystem - story progression (Phase 12.2)
 	narrativeSystem := NewNarrativeSystem(game.World)

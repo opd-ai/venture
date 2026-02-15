@@ -283,6 +283,7 @@ type systemsContainer struct {
 	destructibleSystem                          *engine.DestructibleObjectSystem
 	carrySystem                                 *engine.CarrySystem
 	hazardSystem                                *engine.HazardSystem
+	hazardProximityWarningParticleSystem        *engine.HazardProximityWarningParticleSystem
 	narrativeSystem                             *engine.NarrativeSystem
 	branchingNarrativeSystem                    *engine.BranchingNarrativeSystem // Phase 6.1: Branching story arc system
 	worldEventsSystem                           *engine.WorldEventsSystem        // Phase 6.3: World-responsive events
@@ -1158,6 +1159,12 @@ func initializeEnvironmentalSystems(game *engine.EbitenGame, sys *systemsContain
 
 	sys.hazardSystem = engine.NewHazardSystemWithLogger(clientLogger.Logger)
 	sys.hazardSystem.SetWorld(game.World)
+
+	// HazardProximityWarningParticleSystem - visual warnings near hazard zones
+	sys.hazardProximityWarningParticleSystem = engine.NewHazardProximityWarningParticleSystem(game.World, *seed+7500)
+	sys.hazardProximityWarningParticleSystem.SetHazardSystem(sys.hazardSystem)
+	sys.hazardProximityWarningParticleSystem.SetParticleSystem(sys.particleSystem)
+	sys.hazardProximityWarningParticleSystem.SetGenre(*genreID)
 
 	sys.narrativeSystem = engine.NewNarrativeSystem(game.World)
 	sys.branchingNarrativeSystem = engine.NewBranchingNarrativeSystem(game.World)                                               // Phase 6.1: Branching narratives
@@ -2173,6 +2180,7 @@ func registerNonCriticalSystems(game *engine.EbitenGame, sys *systemsContainer) 
 	game.World.AddSystem(&destructionSystemWrapper{system: sys.destructionSystem}) // Phase 1.2: Destruction physics
 	game.World.AddSystem(sys.carrySystem)
 	game.World.AddSystem(sys.hazardSystem)
+	game.World.AddSystem(sys.hazardProximityWarningParticleSystem)
 	game.World.AddSystem(sys.narrativeSystem)
 	game.World.AddSystem(sys.branchingNarrativeSystem) // Phase 6.1: Branching narratives
 	game.World.AddSystem(sys.worldEventsSystem)        // Phase 6.3: World events

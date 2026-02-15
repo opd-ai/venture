@@ -47,11 +47,11 @@ func TestCreatureEyeGlowSystemSetGenre(t *testing.T) {
 
 func TestCreatureEyeGlowGenreColors(t *testing.T) {
 	tests := []struct {
-		name    string
-		genre   string
-		wantR   float64
-		wantG   float64
-		wantB   float64
+		name  string
+		genre string
+		wantR float64
+		wantG float64
+		wantB float64
 	}{
 		{"fantasy golden", "fantasy", 0.95, 0.75, 0.20},
 		{"horror red", "horror", 0.95, 0.15, 0.10},

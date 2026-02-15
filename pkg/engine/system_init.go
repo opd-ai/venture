@@ -224,6 +224,7 @@ type SystemInitResult struct {
 	ShieldBubbleOverlaySystem                   *ShieldBubbleOverlaySystem
 	EnvironmentalBreathVaporSystem              *EnvironmentalBreathVaporSystem
 	MovementDustSystem                          *MovementDustSystem
+	DynamicExpressionSystem                     *DynamicExpressionSystem
 	HealthRegenPulseSystem                      *HealthRegenPulseSystem
 	StatusEffectGroundTrailSystem               *StatusEffectGroundTrailSystem
 	WaterSurfaceRippleSystem                    *WaterSurfaceRippleSystem
@@ -825,6 +826,13 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 	movementDustSystem.SetGenre(config.GenreID)
 	result.MovementDustSystem = movementDustSystem
 	game.World.AddSystem(movementDustSystem)
+
+	// 17bg. DynamicExpressionSystem - reactive facial expression updates
+	// Reads HealthComponent, StatusEffectComponent, and AIComponent to update
+	// NpcFacialDetailComponent.ExpressionType, then marks sprites dirty for re-render.
+	dynamicExpressionSystem := NewDynamicExpressionSystem(game.World, config.Seed+10700)
+	result.DynamicExpressionSystem = dynamicExpressionSystem
+	game.World.AddSystem(dynamicExpressionSystem)
 
 	// 18. SkillProgressionSystem - applies skill effects to stats
 	skillProgressionSystem := NewSkillProgressionSystem()

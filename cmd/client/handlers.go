@@ -209,6 +209,7 @@ type systemsContainer struct {
 	creatureSizeProportionSystem                *engine.CreatureSizeProportionSystem                // Size-based anatomy proportions for creatures
 	equipmentRarityDetailSystem                 *engine.EquipmentRarityDetailSystem                 // Rarity-based visual detail scaling for equipment
 	npcFacialDetailSystem                       *engine.NpcFacialDetailSystem                       // Genre-aware NPC facial feature parameters
+	dynamicExpressionSystem                     *engine.DynamicExpressionSystem                     // Reactive facial expression updates from game state
 	projectileTrailParticleSystem               *engine.ProjectileTrailParticleSystem               // Genre-aware projectile trail particles
 	entityIdleAmbientParticleSystem             *engine.EntityIdleAmbientParticleSystem             // Genre-aware idle entity ambient particles
 	weaponMaterialImpactParticleSystem          *engine.WeaponMaterialImpactParticleSystem          // Material-aware melee impact particles
@@ -2086,6 +2087,10 @@ func registerNonCriticalSystems(game *engine.EbitenGame, sys *systemsContainer) 
 	sys.npcFacialDetailSystem = engine.NewNpcFacialDetailSystem(game.World, *seed+9050)
 	sys.npcFacialDetailSystem.SetGenre(*genreID)
 	game.World.AddSystem(sys.npcFacialDetailSystem)
+
+	// DynamicExpressionSystem: reactive facial expression updates from health, status effects, AI state
+	sys.dynamicExpressionSystem = engine.NewDynamicExpressionSystem(game.World, *seed+10700)
+	game.World.AddSystem(sys.dynamicExpressionSystem)
 
 	// ProjectileTrailParticleSystem: genre-aware projectile trail particles
 	sys.projectileTrailParticleSystem = engine.NewProjectileTrailParticleSystem(game.World, *seed+9075)

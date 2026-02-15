@@ -367,8 +367,47 @@ func (g *Generator) renderTemplatePartsWithTraits(img *ebiten.Image, template An
 			RenderHairOverlay(hairBuf, hairParams)
 			hairImg := ebiten.NewImageFromImage(hairBuf)
 			img.DrawImage(hairImg, nil)
+
+			// Render face detail (eyes, mouth) on top of hair
+			faceBuf := image.NewRGBA(image.Rect(0, 0, config.Width, config.Height))
+			faceParams := g.buildFaceParams(config, headSpec, direction)
+			RenderFaceDetail(faceBuf, faceParams)
+			faceImg := ebiten.NewImageFromImage(faceBuf)
+			img.DrawImage(faceImg, nil)
 		}
 	}
+}
+
+// buildFaceParams constructs FaceRenderParams from config, using NPC facial
+// detail data from Custom map if available, otherwise seed-based defaults.
+func (g *Generator) buildFaceParams(config Config, headSpec PartSpec, direction Direction) FaceRenderParams {
+	if config.Custom != nil {
+		if eyeR, ok := config.Custom["faceEyeR"].(float64); ok {
+			eyeG, _ := config.Custom["faceEyeG"].(float64)
+			eyeB, _ := config.Custom["faceEyeB"].(float64)
+			mouthR, _ := config.Custom["faceMouthR"].(float64)
+			mouthG, _ := config.Custom["faceMouthG"].(float64)
+			mouthB, _ := config.Custom["faceMouthB"].(float64)
+			eyeSize := 2.0
+			if es, ok := config.Custom["faceEyeSize"].(float64); ok {
+				eyeSize = es
+			}
+			mouthSize := 1.0
+			if ms, ok := config.Custom["faceMouthSize"].(float64); ok {
+				mouthSize = ms
+			}
+			expression := "neutral"
+			if expr, ok := config.Custom["faceExpression"].(string); ok {
+				expression = expr
+			}
+			return ComputeFaceParamsFromComponent(
+				config.Width, config.Height, headSpec, direction, config.Seed,
+				eyeR, eyeG, eyeB, mouthR, mouthG, mouthB,
+				eyeSize, mouthSize, expression,
+			)
+		}
+	}
+	return ComputeFaceParams(config.Width, config.Height, headSpec, direction, config.Seed)
 }
 
 // renderTemplatePart renders a single template part to the image with depth shading.

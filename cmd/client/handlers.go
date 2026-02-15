@@ -244,6 +244,7 @@ type systemsContainer struct {
 	statusEffectGroundTrailSystem               *engine.StatusEffectGroundTrailSystem               // Ground-level DoT movement trails
 	waterSurfaceRippleSystem                    *engine.WaterSurfaceRippleSystem                    // Water tile ripple/splash particles
 	entityTargetLockIndicatorSystem             *engine.EntityTargetLockIndicatorSystem             // Genre-aware target lock reticle
+	entityDeathDissolveSystem                   *engine.EntityDeathDissolveSystem                   // Genre-aware death dissolve visuals
 	statusEffectAISystem                        *engine.StatusEffectAISystem                        // Bridges status effects with AI (stun/frozen disable AI)
 	reputationSystem                            *engine.ReputationSystem
 	alignmentSystem                             *engine.AlignmentSystem
@@ -2267,6 +2268,11 @@ func registerNonCriticalSystems(game *engine.EbitenGame, sys *systemsContainer) 
 	sys.entityTargetLockIndicatorSystem = engine.NewEntityTargetLockIndicatorSystem(game.World, *seed+10705)
 	sys.entityTargetLockIndicatorSystem.SetGenre(*genreID)
 	game.World.AddSystem(sys.entityTargetLockIndicatorSystem)
+
+	// EntityDeathDissolveSystem: genre-aware visual dissolve when entities die
+	sys.entityDeathDissolveSystem = engine.NewEntityDeathDissolveSystem(game.World, *seed+10710)
+	sys.entityDeathDissolveSystem.SetGenre(*genreID)
+	game.World.AddSystem(sys.entityDeathDissolveSystem)
 
 	// FactionCompanionBehaviorSystem: bridges faction reputation with companion AI targeting
 	// Companions won't attack allied faction members and prioritize hostile faction enemies

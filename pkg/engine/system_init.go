@@ -227,6 +227,7 @@ type SystemInitResult struct {
 	StatusEffectGroundTrailSystem               *StatusEffectGroundTrailSystem
 	WaterSurfaceRippleSystem                    *WaterSurfaceRippleSystem
 	EntityTargetLockIndicatorSystem             *EntityTargetLockIndicatorSystem
+	EntityDeathDissolveSystem                   *EntityDeathDissolveSystem
 
 	// System wrappers
 	AnimationSystemWrapper            System
@@ -1335,6 +1336,12 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 	entityTargetLockIndicatorSystem.SetGenre(config.GenreID)
 	result.EntityTargetLockIndicatorSystem = entityTargetLockIndicatorSystem
 	game.World.AddSystem(entityTargetLockIndicatorSystem)
+
+	// 36k1f. EntityDeathDissolveSystem - genre-aware visual dissolve on entity death
+	entityDeathDissolveSystem := NewEntityDeathDissolveSystem(game.World, config.Seed+6448)
+	entityDeathDissolveSystem.SetGenre(config.GenreID)
+	result.EntityDeathDissolveSystem = entityDeathDissolveSystem
+	game.World.AddSystem(entityDeathDissolveSystem)
 
 	// 36k2. ManaRegenParticleSystem - visual feedback for mana regeneration
 	// Spawns genre-aware particles when entities actively regenerate mana

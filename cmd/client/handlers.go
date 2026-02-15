@@ -227,6 +227,7 @@ type systemsContainer struct {
 	dodgeAfterimageSystem                       *engine.DodgeAfterimageSystem                       // Genre-aware dodge/dash afterimage ghosts
 	entityIdleBreathingSystem                   *engine.EntityIdleBreathingSystem                   // Genre-aware idle breathing animation
 	combatHitStaggerSystem                      *engine.CombatHitStaggerSystem                      // Genre-aware combat hit stagger offset
+	floatingDamageNumberSystem                  *engine.FloatingDamageNumberSystem                  // Genre-aware floating damage numbers
 	statusEffectAISystem                        *engine.StatusEffectAISystem                        // Bridges status effects with AI (stun/frozen disable AI)
 	reputationSystem                            *engine.ReputationSystem
 	alignmentSystem                             *engine.AlignmentSystem
@@ -2154,6 +2155,11 @@ func registerNonCriticalSystems(game *engine.EbitenGame, sys *systemsContainer) 
 	sys.combatHitStaggerSystem = engine.NewCombatHitStaggerSystem(game.World, *seed+9950)
 	sys.combatHitStaggerSystem.SetGenre(*genreID)
 	game.World.AddSystem(sys.combatHitStaggerSystem)
+
+	// FloatingDamageNumberSystem: genre-aware floating damage/heal numbers on health change
+	sys.floatingDamageNumberSystem = engine.NewFloatingDamageNumberSystem(game.World, *seed+10000)
+	sys.floatingDamageNumberSystem.SetGenre(*genreID)
+	game.World.AddSystem(sys.floatingDamageNumberSystem)
 
 	// FactionCompanionBehaviorSystem: bridges faction reputation with companion AI targeting
 	// Companions won't attack allied faction members and prioritize hostile faction enemies

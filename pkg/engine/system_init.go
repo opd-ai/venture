@@ -210,6 +210,7 @@ type SystemInitResult struct {
 	DodgeAfterimageSystem                       *DodgeAfterimageSystem
 	EntityIdleBreathingSystem                   *EntityIdleBreathingSystem
 	CombatHitStaggerSystem                      *CombatHitStaggerSystem
+	FloatingDamageNumberSystem                  *FloatingDamageNumberSystem
 
 	// System wrappers
 	AnimationSystemWrapper            System
@@ -688,6 +689,13 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 	combatHitStaggerSystem.SetGenre(config.GenreID)
 	result.CombatHitStaggerSystem = combatHitStaggerSystem
 	game.World.AddSystem(combatHitStaggerSystem)
+
+	// 17at. FloatingDamageNumberSystem - genre-aware floating damage/heal numbers
+	// Monitors HealthComponent changes and writes rising/fading numbers to FloatingDamageNumberComponent
+	floatingDamageNumberSystem := NewFloatingDamageNumberSystem(game.World, config.Seed+10000)
+	floatingDamageNumberSystem.SetGenre(config.GenreID)
+	result.FloatingDamageNumberSystem = floatingDamageNumberSystem
+	game.World.AddSystem(floatingDamageNumberSystem)
 
 	// 18. SkillProgressionSystem - applies skill effects to stats
 	skillProgressionSystem := NewSkillProgressionSystem()

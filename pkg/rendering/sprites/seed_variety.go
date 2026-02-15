@@ -34,6 +34,8 @@ type AvatarTraits struct {
 	HeadScale float64
 	// HeightScale adjusts overall vertical compression (0.92–1.08).
 	HeightScale float64
+	// BodyBuild is the seed-derived body type for silhouette variety.
+	BodyBuild BodyType
 }
 
 // Predefined skin tone palettes spanning realistic human range plus fantasy tones.
@@ -109,6 +111,9 @@ func GenerateAvatarTraits(seed int64) AvatarTraits {
 	headScale := 0.90 + rng.Float64()*0.20
 	heightScale := 0.92 + rng.Float64()*0.16
 
+	// Derive body build from seed (uses separate RNG stream to avoid disturbing above)
+	bodyBuild := DeriveBodyType(seed, "")
+
 	return AvatarTraits{
 		SkinTone:          skin,
 		HairColor:         hair,
@@ -120,6 +125,7 @@ func GenerateAvatarTraits(seed int64) AvatarTraits {
 		ShoulderScale:     shoulderScale,
 		HeadScale:         headScale,
 		HeightScale:       heightScale,
+		BodyBuild:         bodyBuild,
 	}
 }
 

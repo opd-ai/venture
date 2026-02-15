@@ -240,6 +240,7 @@ type SystemInitResult struct {
 	EquipmentGleamSweepSystem                   *EquipmentGleamSweepSystem
 	SpriteDepthShadingSystem                    *SpriteDepthShadingSystem
 	ClothingPatternSystem                       *ClothingPatternSystem
+	BodyTypeSystem                              *BodyTypeSystem
 
 	// System wrappers
 	AnimationSystemWrapper            System
@@ -1442,6 +1443,13 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 	clothingPatternSystem.SetGenre(config.GenreID)
 	result.ClothingPatternSystem = clothingPatternSystem
 	game.World.AddSystem(clothingPatternSystem)
+
+	// 36k1q. BodyTypeSystem - seed-based body type variety for entity sprites
+	// Assigns distinct body builds (stocky, lean, muscular, heavy, etc.) per entity
+	bodyTypeSystem := NewBodyTypeSystem(game.World, config.Seed+6500)
+	bodyTypeSystem.SetGenre(config.GenreID)
+	result.BodyTypeSystem = bodyTypeSystem
+	game.World.AddSystem(bodyTypeSystem)
 
 	// 36k2. ManaRegenParticleSystem - visual feedback for mana regeneration
 	// Spawns genre-aware particles when entities actively regenerate mana

@@ -233,6 +233,16 @@ func (g *Generator) generateEntityWithTemplate(config Config, entityType string,
 		t := generateTraitsForEntity(config.Seed, entityType)
 		traits = &t
 		template = applyTraitProportions(template, traits)
+
+		// Apply body type modifiers for dramatic silhouette variety.
+		// Check Config.Custom for engine-assigned body type first, fall back to trait.
+		bodyType := traits.BodyBuild
+		if config.Custom != nil {
+			if btVal, ok := config.Custom["bodyType"].(int); ok {
+				bodyType = BodyType(btVal)
+			}
+		}
+		template = ApplyBodyTypeToTemplate(template, bodyType)
 	}
 
 	g.renderTemplatePartsWithTraits(img, template, config, rng, traits)

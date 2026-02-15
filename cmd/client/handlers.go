@@ -257,6 +257,7 @@ type systemsContainer struct {
 	equipmentGleamSweepSystem                   *engine.EquipmentGleamSweepSystem                   // Animated specular gleam sweep on equipment
 	spriteDepthShadingSystem                    *engine.SpriteDepthShadingSystem                    // Per-body-part depth shading for entity sprites
 	clothingPatternSystem                       *engine.ClothingPatternSystem                       // Seed-based clothing patterns for entity sprites
+	bodyTypeSystem                              *engine.BodyTypeSystem                              // Seed-based body type variety for entity sprites
 	statusEffectAISystem                        *engine.StatusEffectAISystem                        // Bridges status effects with AI (stun/frozen disable AI)
 	reputationSystem                            *engine.ReputationSystem
 	alignmentSystem                             *engine.AlignmentSystem
@@ -2347,6 +2348,12 @@ func registerNonCriticalSystems(game *engine.EbitenGame, sys *systemsContainer) 
 	sys.clothingPatternSystem = engine.NewClothingPatternSystem(game.World, *seed+10760)
 	sys.clothingPatternSystem.SetGenre(*genreID)
 	game.World.AddSystem(sys.clothingPatternSystem)
+
+	// BodyTypeSystem: seed-based body type variety for entity sprites
+	// Assigns distinct body builds (stocky, lean, muscular, heavy, etc.) per entity
+	sys.bodyTypeSystem = engine.NewBodyTypeSystem(game.World, *seed+10770)
+	sys.bodyTypeSystem.SetGenre(*genreID)
+	game.World.AddSystem(sys.bodyTypeSystem)
 
 	// FactionCompanionBehaviorSystem: bridges faction reputation with companion AI targeting
 	// Companions won't attack allied faction members and prioritize hostile faction enemies

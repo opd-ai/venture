@@ -186,6 +186,7 @@ type SystemInitResult struct {
 	EntityDropShadowSystem                      *EntityDropShadowSystem
 	EquipmentMaterialSheenSystem                *EquipmentMaterialSheenSystem
 	EquipmentDamageStateTintSystem              *EquipmentDamageStateTintSystem
+	CreatureGenreTintSystem                     *CreatureGenreTintSystem
 
 	// System wrappers
 	AnimationSystemWrapper            System
@@ -492,6 +493,13 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 	equipmentDamageStateTintSystem.SetGenre(config.GenreID)
 	result.EquipmentDamageStateTintSystem = equipmentDamageStateTintSystem
 	game.World.AddSystem(equipmentDamageStateTintSystem)
+
+	// 17x. CreatureGenreTintSystem - genre-aware creature/NPC sprite color tinting
+	// Applies genre-specific tint presets to creature sprites for atmospheric cohesion
+	creatureGenreTintSystem := NewCreatureGenreTintSystem(game.World, config.Seed+9000)
+	creatureGenreTintSystem.SetGenre(config.GenreID)
+	result.CreatureGenreTintSystem = creatureGenreTintSystem
+	game.World.AddSystem(creatureGenreTintSystem)
 
 	// 18. SkillProgressionSystem - applies skill effects to stats
 	skillProgressionSystem := NewSkillProgressionSystem()

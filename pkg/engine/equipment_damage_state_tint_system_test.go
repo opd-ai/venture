@@ -239,10 +239,10 @@ func TestEquipmentDamageStateTintSystemMultipleItems(t *testing.T) {
 
 func TestEquipmentDamageStateTintSystemGenrePresets(t *testing.T) {
 	tests := []struct {
-		name            string
-		genreID         string
-		expectHighDirt  bool
-		expectHighDark  bool
+		name           string
+		genreID        string
+		expectHighDirt bool
+		expectHighDark bool
 	}{
 		{"horror darkens more", "horror", true, true},
 		{"scifi minimal dirt", "sci-fi", false, false},

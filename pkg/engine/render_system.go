@@ -859,6 +859,15 @@ func (r *EbitenRenderSystem) extractVisualFeedback(entity *Entity) (flashAlpha, 
 		}
 	}
 
+	// Multiply creature genre-driven tint (composes with weather and status tints)
+	if comp, ok := entity.GetComponent("creature_genre_tint"); ok {
+		if ct, ok := comp.(*CreatureGenreTintComponent); ok {
+			tintR *= ct.TintR
+			tintG *= ct.TintG
+			tintB *= ct.TintB
+		}
+	}
+
 	return flashAlpha, tintR, tintG, tintB, tintA
 }
 

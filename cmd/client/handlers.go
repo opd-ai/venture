@@ -204,6 +204,7 @@ type systemsContainer struct {
 	entityDropShadowSystem                      *engine.EntityDropShadowSystem                      // Genre-aware soft drop shadows beneath entities
 	equipmentMaterialSheenSystem                *engine.EquipmentMaterialSheenSystem                // Material-based specular highlights on equipment
 	equipmentDamageStateTintSystem              *engine.EquipmentDamageStateTintSystem              // Aggregate equipment wear visual tinting
+	creatureGenreTintSystem                     *engine.CreatureGenreTintSystem                     // Genre-aware creature/NPC sprite color tinting
 	statusEffectAISystem                        *engine.StatusEffectAISystem                        // Bridges status effects with AI (stun/frozen disable AI)
 	reputationSystem                            *engine.ReputationSystem
 	alignmentSystem                             *engine.AlignmentSystem
@@ -1998,6 +1999,12 @@ func registerNonCriticalSystems(game *engine.EbitenGame, sys *systemsContainer) 
 	sys.equipmentDamageStateTintSystem = engine.NewEquipmentDamageStateTintSystem(game.World, *seed+8975)
 	sys.equipmentDamageStateTintSystem.SetGenre(*genreID)
 	game.World.AddSystem(sys.equipmentDamageStateTintSystem)
+
+	// CreatureGenreTintSystem: genre-aware creature/NPC sprite color tinting
+	// Applies genre-specific tint presets to creature sprites for atmospheric cohesion
+	sys.creatureGenreTintSystem = engine.NewCreatureGenreTintSystem(game.World, *seed+9000)
+	sys.creatureGenreTintSystem.SetGenre(*genreID)
+	game.World.AddSystem(sys.creatureGenreTintSystem)
 
 	// FactionCompanionBehaviorSystem: bridges faction reputation with companion AI targeting
 	// Companions won't attack allied faction members and prioritize hostile faction enemies

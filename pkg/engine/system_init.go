@@ -236,6 +236,7 @@ type SystemInitResult struct {
 	WeatherEntityWetnessSystem                  *WeatherEntityWetnessSystem
 	AttackTelegraphGlowSystem                   *AttackTelegraphGlowSystem
 	XPGainBurstSystem                           *XPGainBurstSystem
+	EquipmentGleamSweepSystem                   *EquipmentGleamSweepSystem
 
 	// System wrappers
 	AnimationSystemWrapper            System
@@ -1410,6 +1411,13 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 	xpGainBurstSystem.SetGenre(config.GenreID)
 	result.XPGainBurstSystem = xpGainBurstSystem
 	game.World.AddSystem(xpGainBurstSystem)
+
+	// 36k1n. EquipmentGleamSweepSystem - animated specular gleam sweep across equipment
+	// Reads MaterialSheenComponent and animates a moving highlight band per material/rarity
+	equipmentGleamSweepSystem := NewEquipmentGleamSweepSystem(game.World, config.Seed+6480)
+	equipmentGleamSweepSystem.SetGenre(config.GenreID)
+	result.EquipmentGleamSweepSystem = equipmentGleamSweepSystem
+	game.World.AddSystem(equipmentGleamSweepSystem)
 
 	// 36k2. ManaRegenParticleSystem - visual feedback for mana regeneration
 	// Spawns genre-aware particles when entities actively regenerate mana

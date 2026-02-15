@@ -253,6 +253,7 @@ type systemsContainer struct {
 	weatherEntityWetnessSystem                  *engine.WeatherEntityWetnessSystem                  // Rain-driven entity sprite wetness
 	attackTelegraphGlowSystem                   *engine.AttackTelegraphGlowSystem                   // Genre-aware attack wind-up warning glow
 	xpGainBurstSystem                           *engine.XPGainBurstSystem                           // Genre-aware XP gain particle bursts
+	equipmentGleamSweepSystem                   *engine.EquipmentGleamSweepSystem                    // Animated specular gleam sweep on equipment
 	statusEffectAISystem                        *engine.StatusEffectAISystem                        // Bridges status effects with AI (stun/frozen disable AI)
 	reputationSystem                            *engine.ReputationSystem
 	alignmentSystem                             *engine.AlignmentSystem
@@ -2323,6 +2324,11 @@ func registerNonCriticalSystems(game *engine.EbitenGame, sys *systemsContainer) 
 	sys.xpGainBurstSystem = engine.NewXPGainBurstSystem(game.World, *seed+10745)
 	sys.xpGainBurstSystem.SetGenre(*genreID)
 	game.World.AddSystem(sys.xpGainBurstSystem)
+
+	// EquipmentGleamSweepSystem: animated specular gleam sweep across equipped items
+	sys.equipmentGleamSweepSystem = engine.NewEquipmentGleamSweepSystem(game.World, *seed+10750)
+	sys.equipmentGleamSweepSystem.SetGenre(*genreID)
+	game.World.AddSystem(sys.equipmentGleamSweepSystem)
 
 	// FactionCompanionBehaviorSystem: bridges faction reputation with companion AI targeting
 	// Companions won't attack allied faction members and prioritize hostile faction enemies

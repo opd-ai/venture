@@ -241,6 +241,7 @@ type systemsContainer struct {
 	environmentalBreathVaporSystem              *engine.EnvironmentalBreathVaporSystem              // Cold weather breath vapor puffs
 	movementDustSystem                          *engine.MovementDustSystem                          // Speed-proportional terrain dust behind fast movers
 	healthRegenPulseSystem                      *engine.HealthRegenPulseSystem                      // Genre-aware healing pulse particles
+	statusEffectGroundTrailSystem               *engine.StatusEffectGroundTrailSystem               // Ground-level DoT movement trails
 	statusEffectAISystem                        *engine.StatusEffectAISystem                        // Bridges status effects with AI (stun/frozen disable AI)
 	reputationSystem                            *engine.ReputationSystem
 	alignmentSystem                             *engine.AlignmentSystem
@@ -2248,6 +2249,12 @@ func registerNonCriticalSystems(game *engine.EbitenGame, sys *systemsContainer) 
 	sys.healthRegenPulseSystem = engine.NewHealthRegenPulseSystem(game.World, *seed+10675)
 	sys.healthRegenPulseSystem.SetGenre(*genreID)
 	game.World.AddSystem(sys.healthRegenPulseSystem)
+
+	// StatusEffectGroundTrailSystem: ground-level DoT movement trails
+	// Drops genre-aware particles behind moving entities afflicted by burning/poison/bleeding/frozen
+	sys.statusEffectGroundTrailSystem = engine.NewStatusEffectGroundTrailSystem(game.World, *seed+10690)
+	sys.statusEffectGroundTrailSystem.SetGenre(*genreID)
+	game.World.AddSystem(sys.statusEffectGroundTrailSystem)
 
 	// FactionCompanionBehaviorSystem: bridges faction reputation with companion AI targeting
 	// Companions won't attack allied faction members and prioritize hostile faction enemies

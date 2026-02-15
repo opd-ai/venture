@@ -15,10 +15,10 @@ import (
 
 // HealthRegenPulseComponent tracks per-entity previous health for delta detection.
 type HealthRegenPulseComponent struct {
-	PrevHealth   float64 // Health value last frame
-	PulseTimer   float64 // Cooldown between pulse emissions
-	Accumulator  float64 // Accumulated heal amount for intensity scaling
-	Initialized  bool    // Whether PrevHealth has been set at least once
+	PrevHealth  float64 // Health value last frame
+	PulseTimer  float64 // Cooldown between pulse emissions
+	Accumulator float64 // Accumulated heal amount for intensity scaling
+	Initialized bool    // Whether PrevHealth has been set at least once
 }
 
 // Type returns the component type identifier.

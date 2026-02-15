@@ -35,9 +35,9 @@ func TestNewHealthRegenPulseSystem_NilWorld(t *testing.T) {
 
 func TestHealthRegenPulseSystem_SetGenre(t *testing.T) {
 	tests := []struct {
-		name    string
-		genre   string
-		wantPT  string
+		name   string
+		genre  string
+		wantPT string
 	}{
 		{"fantasy", "fantasy", "sparkle"},
 		{"scifi", "scifi", "magic"},

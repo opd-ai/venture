@@ -224,6 +224,7 @@ type SystemInitResult struct {
 	EnvironmentalBreathVaporSystem              *EnvironmentalBreathVaporSystem
 	MovementDustSystem                          *MovementDustSystem
 	HealthRegenPulseSystem                      *HealthRegenPulseSystem
+	StatusEffectGroundTrailSystem               *StatusEffectGroundTrailSystem
 
 	// System wrappers
 	AnimationSystemWrapper            System
@@ -1312,6 +1313,13 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 	healthRegenPulseSystem.SetGenre(config.GenreID)
 	result.HealthRegenPulseSystem = healthRegenPulseSystem
 	game.World.AddSystem(healthRegenPulseSystem)
+
+	// 36k1c. StatusEffectGroundTrailSystem - ground-level DoT movement trails
+	statusEffectGroundTrailSystem := NewStatusEffectGroundTrailSystem(game.World, config.Seed+6435)
+	statusEffectGroundTrailSystem.SetParticleSystem(result.ParticleSystem)
+	statusEffectGroundTrailSystem.SetGenre(config.GenreID)
+	result.StatusEffectGroundTrailSystem = statusEffectGroundTrailSystem
+	game.World.AddSystem(statusEffectGroundTrailSystem)
 
 	// 36k2. ManaRegenParticleSystem - visual feedback for mana regeneration
 	// Spawns genre-aware particles when entities actively regenerate mana

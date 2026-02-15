@@ -42,8 +42,8 @@ Each audit evaluates code completeness, ECS compliance, determinism, test covera
 
 ## Audit Statistics
 - **Total Packages**: 35+
-- **Audited**: 20
-- **Pending**: 15+
+- **Audited**: 21
+- **Pending**: 14+
 - **Coverage Target**: ≥65% per package
 - **Overall Project Coverage**: 82.4%
 
@@ -62,6 +62,14 @@ Each audit evaluates code completeness, ECS compliance, determinism, test covera
 ### Network (Continued)
 - [x] `pkg/network/trade/AUDIT.md` — Needs Work — 9 issues (2 high, 3 med, 4 low)
 
+### Integration (Continued)
+- [x] `pkg/integration/choice_consequences/AUDIT.md` — Complete — 4 issues (0 high, 0 med, 4 low)
+
+### World Management (Continued)
+- [x] `pkg/world/raids/AUDIT.md` — Complete — 3 issues (0 high, 1 med, 2 low)
+
+### Procedural Generation (Continued)
+- [x] `pkg/procgen/furniture/AUDIT.md` — Complete — 4 issues (0 high, 0 med, 4 low)
+
 ## Priority Queue (Next Audits)
-1. `pkg/integration/choice_consequences/` — Choice tracking system
-2. `pkg/world/raids/` — Raid instance management
+1. `pkg/procgen/building/` — Building and structure generation

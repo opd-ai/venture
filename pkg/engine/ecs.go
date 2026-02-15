@@ -35,6 +35,7 @@ type Entity struct {
 	layer           *LayerComponent           // Cached for collision hot path (layer compatibility checks)
 	team            *TeamComponent            // Cached for AI system hot path (enemy detection)
 	particleEmitter *ParticleEmitterComponent // Cached for render system particle drawing hot path
+	dropShadow      *DropShadowComponent      // Cached for render system drop shadow hot path
 }
 
 // NewEntity creates a new entity with the given ID.
@@ -84,6 +85,8 @@ func (e *Entity) updateComponentCache(c Component) {
 		e.cacheTeam(c)
 	case "particle_emitter":
 		e.cacheParticleEmitter(c)
+	case "drop_shadow":
+		e.cacheDropShadow(c)
 	}
 }
 
@@ -245,6 +248,8 @@ func (e *Entity) RemoveComponent(componentType string) {
 		e.team = nil
 	case "particle_emitter":
 		e.particleEmitter = nil
+	case "drop_shadow":
+		e.dropShadow = nil
 	}
 }
 
@@ -356,6 +361,19 @@ func (e *Entity) GetTeam() *TeamComponent {
 // Uses cached pointer for zero-overhead access in render hot path (~93x faster than map lookup).
 func (e *Entity) GetParticleEmitter() *ParticleEmitterComponent {
 	return e.particleEmitter
+}
+
+// cacheDropShadow updates the drop shadow component cache.
+func (e *Entity) cacheDropShadow(c Component) {
+	if ds, ok := c.(*DropShadowComponent); ok {
+		e.dropShadow = ds
+	}
+}
+
+// GetDropShadow retrieves the DropShadowComponent if present.
+// Uses cached pointer for zero-overhead access in render hot path.
+func (e *Entity) GetDropShadow() *DropShadowComponent {
+	return e.dropShadow
 }
 
 // World manages all entities and systems in the game.

@@ -209,6 +209,10 @@ type EbitenRenderSystem struct {
 	// Pre-allocated DrawImageOptions to avoid per-sprite allocations in drawSpriteImage
 	drawImageOptions ebiten.DrawImageOptions
 
+	// Drop shadow rendering state
+	shadowCache    *dropShadowCache
+	shadowDrawOpts ebiten.DrawImageOptions
+
 	// Render interpolation alpha (0.0 to 1.0) for smooth position interpolation
 	// between previous tick (PrevX/PrevY) and current tick (X/Y) positions.
 	// Set by the game loop each Draw() frame based on elapsed time since last Update().
@@ -246,6 +250,7 @@ func NewRenderSystem(cameraSystem *CameraSystem) *EbitenRenderSystem {
 		drawTrianglesOptions: ebiten.DrawTrianglesOptions{
 			Filter: ebiten.FilterLinear,
 		},
+		shadowCache: newDropShadowCache(64),
 	}
 }
 
@@ -789,6 +794,9 @@ func (r *EbitenRenderSystem) drawEntity(entity *Entity) {
 	}
 
 	spriteImage := r.selectSpriteImage(sprite)
+
+	// Draw drop shadow beneath the entity sprite for top-down depth grounding
+	r.drawDropShadow(entity, screenX+layerXOffset, screenY+layerYOffset)
 
 	if spriteImage != nil {
 		r.drawSpriteImage(spriteImage, sprite, screenX+layerXOffset, screenY, layerYOffset, flashAlpha, tintR, tintG, tintB, tintA)

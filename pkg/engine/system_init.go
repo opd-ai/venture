@@ -187,6 +187,7 @@ type SystemInitResult struct {
 	EquipmentMaterialSheenSystem                *EquipmentMaterialSheenSystem
 	EquipmentDamageStateTintSystem              *EquipmentDamageStateTintSystem
 	CreatureGenreTintSystem                     *CreatureGenreTintSystem
+	CreatureSizeProportionSystem                *CreatureSizeProportionSystem
 
 	// System wrappers
 	AnimationSystemWrapper            System
@@ -500,6 +501,12 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 	creatureGenreTintSystem.SetGenre(config.GenreID)
 	result.CreatureGenreTintSystem = creatureGenreTintSystem
 	game.World.AddSystem(creatureGenreTintSystem)
+
+	// 17y. CreatureSizeProportionSystem - size-based anatomy proportions for creatures
+	creatureSizeProportionSystem := NewCreatureSizeProportionSystem(game.World, config.Seed+9001)
+	creatureSizeProportionSystem.SetGenre(config.GenreID)
+	result.CreatureSizeProportionSystem = creatureSizeProportionSystem
+	game.World.AddSystem(creatureSizeProportionSystem)
 
 	// 18. SkillProgressionSystem - applies skill effects to stats
 	skillProgressionSystem := NewSkillProgressionSystem()

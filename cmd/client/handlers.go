@@ -205,6 +205,7 @@ type systemsContainer struct {
 	equipmentMaterialSheenSystem                *engine.EquipmentMaterialSheenSystem                // Material-based specular highlights on equipment
 	equipmentDamageStateTintSystem              *engine.EquipmentDamageStateTintSystem              // Aggregate equipment wear visual tinting
 	creatureGenreTintSystem                     *engine.CreatureGenreTintSystem                     // Genre-aware creature/NPC sprite color tinting
+	creatureSizeProportionSystem                *engine.CreatureSizeProportionSystem                // Size-based anatomy proportions for creatures
 	statusEffectAISystem                        *engine.StatusEffectAISystem                        // Bridges status effects with AI (stun/frozen disable AI)
 	reputationSystem                            *engine.ReputationSystem
 	alignmentSystem                             *engine.AlignmentSystem
@@ -2005,6 +2006,12 @@ func registerNonCriticalSystems(game *engine.EbitenGame, sys *systemsContainer) 
 	sys.creatureGenreTintSystem = engine.NewCreatureGenreTintSystem(game.World, *seed+9000)
 	sys.creatureGenreTintSystem.SetGenre(*genreID)
 	game.World.AddSystem(sys.creatureGenreTintSystem)
+
+	// CreatureSizeProportionSystem: size-based anatomy proportions for creature/NPC sprites
+	// Adjusts head/torso/leg ratios and width scale based on creature size with genre modifiers
+	sys.creatureSizeProportionSystem = engine.NewCreatureSizeProportionSystem(game.World, *seed+9001)
+	sys.creatureSizeProportionSystem.SetGenre(*genreID)
+	game.World.AddSystem(sys.creatureSizeProportionSystem)
 
 	// FactionCompanionBehaviorSystem: bridges faction reputation with companion AI targeting
 	// Companions won't attack allied faction members and prioritize hostile faction enemies

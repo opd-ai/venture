@@ -235,6 +235,7 @@ type SystemInitResult struct {
 	EquipmentDamageCrackOverlaySystem           *EquipmentDamageCrackOverlaySystem
 	WeatherEntityWetnessSystem                  *WeatherEntityWetnessSystem
 	AttackTelegraphGlowSystem                   *AttackTelegraphGlowSystem
+	XPGainBurstSystem                           *XPGainBurstSystem
 
 	// System wrappers
 	AnimationSystemWrapper            System
@@ -1401,6 +1402,14 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 	attackTelegraphGlowSystem.SetGenre(config.GenreID)
 	result.AttackTelegraphGlowSystem = attackTelegraphGlowSystem
 	game.World.AddSystem(attackTelegraphGlowSystem)
+
+	// 36k1m. XPGainBurstSystem - genre-aware XP gain particle bursts
+	// Detects ExperienceComponent.TotalXP changes and spawns upward-rising particles
+	xpGainBurstSystem := NewXPGainBurstSystem(game.World, config.Seed+6475)
+	xpGainBurstSystem.SetParticleSystem(result.ParticleSystem)
+	xpGainBurstSystem.SetGenre(config.GenreID)
+	result.XPGainBurstSystem = xpGainBurstSystem
+	game.World.AddSystem(xpGainBurstSystem)
 
 	// 36k2. ManaRegenParticleSystem - visual feedback for mana regeneration
 	// Spawns genre-aware particles when entities actively regenerate mana

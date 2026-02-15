@@ -252,6 +252,7 @@ type systemsContainer struct {
 	equipmentDamageCrackOverlaySystem           *engine.EquipmentDamageCrackOverlaySystem           // Procedural crack patterns from equipment wear
 	weatherEntityWetnessSystem                  *engine.WeatherEntityWetnessSystem                  // Rain-driven entity sprite wetness
 	attackTelegraphGlowSystem                   *engine.AttackTelegraphGlowSystem                   // Genre-aware attack wind-up warning glow
+	xpGainBurstSystem                           *engine.XPGainBurstSystem                           // Genre-aware XP gain particle bursts
 	statusEffectAISystem                        *engine.StatusEffectAISystem                        // Bridges status effects with AI (stun/frozen disable AI)
 	reputationSystem                            *engine.ReputationSystem
 	alignmentSystem                             *engine.AlignmentSystem
@@ -2317,6 +2318,11 @@ func registerNonCriticalSystems(game *engine.EbitenGame, sys *systemsContainer) 
 	sys.attackTelegraphGlowSystem = engine.NewAttackTelegraphGlowSystem(game.World, *seed+10740)
 	sys.attackTelegraphGlowSystem.SetGenre(*genreID)
 	game.World.AddSystem(sys.attackTelegraphGlowSystem)
+
+	// XPGainBurstSystem: genre-aware XP gain particle bursts on experience increase
+	sys.xpGainBurstSystem = engine.NewXPGainBurstSystem(game.World, *seed+10745)
+	sys.xpGainBurstSystem.SetGenre(*genreID)
+	game.World.AddSystem(sys.xpGainBurstSystem)
 
 	// FactionCompanionBehaviorSystem: bridges faction reputation with companion AI targeting
 	// Companions won't attack allied faction members and prioritize hostile faction enemies

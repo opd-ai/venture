@@ -219,6 +219,7 @@ type systemsContainer struct {
 	meleeSwingArcSystem                         *engine.MeleeSwingArcSystem                         // Genre-aware melee attack swing arcs
 	combatReadyAuraSystem                       *engine.CombatReadyAuraSystem                       // Genre-aware AI combat readiness aura
 	aiStateBubbleSystem                         *engine.AIStateBubbleSystem                         // Genre-aware AI state indicator bubbles
+	terrainReflectionTintSystem                 *engine.TerrainReflectionTintSystem                 // Terrain-driven sprite color tinting
 	statusEffectAISystem                        *engine.StatusEffectAISystem                        // Bridges status effects with AI (stun/frozen disable AI)
 	reputationSystem                            *engine.ReputationSystem
 	alignmentSystem                             *engine.AlignmentSystem
@@ -2105,6 +2106,11 @@ func registerNonCriticalSystems(game *engine.EbitenGame, sys *systemsContainer) 
 	sys.aiStateBubbleSystem.SetGenre(*genreID)
 	game.World.AddSystem(sys.aiStateBubbleSystem)
 
+	// TerrainReflectionTintSystem: terrain-driven entity sprite color tinting
+	sys.terrainReflectionTintSystem = engine.NewTerrainReflectionTintSystem(game.World, *seed+9650)
+	sys.terrainReflectionTintSystem.SetGenre(*genreID)
+	game.World.AddSystem(sys.terrainReflectionTintSystem)
+
 	// FactionCompanionBehaviorSystem: bridges faction reputation with companion AI targeting
 	// Companions won't attack allied faction members and prioritize hostile faction enemies
 	sys.factionCompanionBehaviorSystem = engine.NewFactionCompanionBehaviorSystem(game.World, *seed+2198)
@@ -2698,6 +2704,10 @@ func initializeTerrainCollision(game *engine.EbitenGame, sys *systemsContainer, 
 		if terrainRangedAccSys, ok := system.(*engine.TerrainRangedAccuracySystem); ok {
 			terrainRangedAccSys.SetTerrain(generatedTerrain)
 			sys.terrainRangedAccuracySys = terrainRangedAccSys
+		}
+		if terrainReflectionTintSys, ok := system.(*engine.TerrainReflectionTintSystem); ok {
+			terrainReflectionTintSys.SetTerrain(generatedTerrain)
+			sys.terrainReflectionTintSystem = terrainReflectionTintSys
 		}
 		if terrainCompanionBonusSys, ok := system.(*engine.TerrainCompanionBonusSystem); ok {
 			terrainCompanionBonusSys.SetTerrain(generatedTerrain)

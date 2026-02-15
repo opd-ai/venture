@@ -202,6 +202,7 @@ type SystemInitResult struct {
 	MeleeSwingArcSystem                         *MeleeSwingArcSystem
 	CombatReadyAuraSystem                       *CombatReadyAuraSystem
 	AIStateBubbleSystem                         *AIStateBubbleSystem
+	TerrainReflectionTintSystem                 *TerrainReflectionTintSystem
 
 	// System wrappers
 	AnimationSystemWrapper            System
@@ -614,6 +615,17 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 	aiStateBubbleSystem.SetGenre(config.GenreID)
 	result.AIStateBubbleSystem = aiStateBubbleSystem
 	game.World.AddSystem(aiStateBubbleSystem)
+
+	// 17am. TerrainReflectionTintSystem - terrain-driven sprite color tinting
+	// Reads entity position, looks up terrain tile type, and writes genre-aware tint
+	// values so entities on water appear blue-tinted, lava orange, trees green, etc.
+	terrainReflectionTintSystem := NewTerrainReflectionTintSystem(game.World, config.Seed+9650)
+	terrainReflectionTintSystem.SetGenre(config.GenreID)
+	if config.TileSize > 0 {
+		terrainReflectionTintSystem.SetTileSize(config.TileSize)
+	}
+	result.TerrainReflectionTintSystem = terrainReflectionTintSystem
+	game.World.AddSystem(terrainReflectionTintSystem)
 
 	// 18. SkillProgressionSystem - applies skill effects to stats
 	skillProgressionSystem := NewSkillProgressionSystem()

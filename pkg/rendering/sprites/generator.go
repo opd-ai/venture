@@ -268,6 +268,25 @@ func (g *Generator) generateEntityWithTemplate(config Config, entityType string,
 		img.DrawImage(detailImg, nil)
 	}
 
+	// Render role-specific details for humanoid entities (arcane runes,
+	// weapon belts, shoulder plates, etc.) to make roles visually distinct.
+	if useAerial && IsHumanoidEntity(entityType) {
+		role := MapEntityTypeToRole(entityType)
+		if role != "" {
+			roleBuf := image.NewRGBA(image.Rect(0, 0, config.Width, config.Height))
+			RenderRoleDetails(roleBuf, RoleDetailParams{
+				Width:     config.Width,
+				Height:    config.Height,
+				Role:      role,
+				Direction: string(direction),
+				Seed:      config.Seed,
+				Genre:     genre,
+			})
+			roleImg := ebiten.NewImageFromImage(roleBuf)
+			img.DrawImage(roleImg, nil)
+		}
+	}
+
 	// Overlay equipment visuals (weapon, armor, helmet, shield, accessories)
 	// from config.Custom onto the template-rendered body before finalization.
 	if useAerial {

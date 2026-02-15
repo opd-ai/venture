@@ -228,6 +228,7 @@ type SystemInitResult struct {
 	WaterSurfaceRippleSystem                    *WaterSurfaceRippleSystem
 	EntityTargetLockIndicatorSystem             *EntityTargetLockIndicatorSystem
 	EntityDeathDissolveSystem                   *EntityDeathDissolveSystem
+	ArmorHitSparkSystem                         *ArmorHitSparkSystem
 
 	// System wrappers
 	AnimationSystemWrapper            System
@@ -1342,6 +1343,14 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 	entityDeathDissolveSystem.SetGenre(config.GenreID)
 	result.EntityDeathDissolveSystem = entityDeathDissolveSystem
 	game.World.AddSystem(entityDeathDissolveSystem)
+
+	// 36k1g. ArmorHitSparkSystem - material-aware armor deflection particles on damage
+	// Connects HealthComponent damage detection with EquipmentComponent armor material
+	armorHitSparkSystem := NewArmorHitSparkSystem(game.World, config.Seed+6452)
+	armorHitSparkSystem.SetParticleSystem(result.ParticleSystem)
+	armorHitSparkSystem.SetGenre(config.GenreID)
+	result.ArmorHitSparkSystem = armorHitSparkSystem
+	game.World.AddSystem(armorHitSparkSystem)
 
 	// 36k2. ManaRegenParticleSystem - visual feedback for mana regeneration
 	// Spawns genre-aware particles when entities actively regenerate mana

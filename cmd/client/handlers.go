@@ -245,6 +245,7 @@ type systemsContainer struct {
 	waterSurfaceRippleSystem                    *engine.WaterSurfaceRippleSystem                    // Water tile ripple/splash particles
 	entityTargetLockIndicatorSystem             *engine.EntityTargetLockIndicatorSystem             // Genre-aware target lock reticle
 	entityDeathDissolveSystem                   *engine.EntityDeathDissolveSystem                   // Genre-aware death dissolve visuals
+	armorHitSparkSystem                         *engine.ArmorHitSparkSystem                         // Material-aware armor deflection sparks
 	statusEffectAISystem                        *engine.StatusEffectAISystem                        // Bridges status effects with AI (stun/frozen disable AI)
 	reputationSystem                            *engine.ReputationSystem
 	alignmentSystem                             *engine.AlignmentSystem
@@ -2273,6 +2274,12 @@ func registerNonCriticalSystems(game *engine.EbitenGame, sys *systemsContainer) 
 	sys.entityDeathDissolveSystem = engine.NewEntityDeathDissolveSystem(game.World, *seed+10710)
 	sys.entityDeathDissolveSystem.SetGenre(*genreID)
 	game.World.AddSystem(sys.entityDeathDissolveSystem)
+
+	// ArmorHitSparkSystem: material-aware armor deflection sparks on damage
+	sys.armorHitSparkSystem = engine.NewArmorHitSparkSystem(game.World, *seed+10715)
+	sys.armorHitSparkSystem.SetParticleSystem(sys.particleSystem)
+	sys.armorHitSparkSystem.SetGenre(*genreID)
+	game.World.AddSystem(sys.armorHitSparkSystem)
 
 	// FactionCompanionBehaviorSystem: bridges faction reputation with companion AI targeting
 	// Companions won't attack allied faction members and prioritize hostile faction enemies

@@ -247,7 +247,33 @@ func (g *Generator) generateEntityWithTemplate(config Config, entityType string,
 
 	g.renderTemplatePartsWithTraits(img, template, config, rng, traits)
 
+	// Render creature-specific details for nonhumanoid entities
+	if useAerial && !IsHumanoidEntity(entityType) {
+		detailBuf := image.NewRGBA(image.Rect(0, 0, config.Width, config.Height))
+		RenderCreatureDetails(detailBuf, CreatureDetailParams{
+			Width:     config.Width,
+			Height:    config.Height,
+			Form:      entityType,
+			Direction: string(direction),
+			Seed:      config.Seed,
+			SizeClass: extractSizeClass(config),
+			Genre:     genre,
+		})
+		detailImg := ebiten.NewImageFromImage(detailBuf)
+		img.DrawImage(detailImg, nil)
+	}
+
 	return img, nil
+}
+
+// extractSizeClass extracts the size class from config custom data.
+func extractSizeClass(config Config) string {
+	if config.Custom != nil {
+		if sc, ok := config.Custom["sizeClass"].(string); ok {
+			return sc
+		}
+	}
+	return "medium"
 }
 
 // extractDirectionAndGenre extracts direction and genre from the config.

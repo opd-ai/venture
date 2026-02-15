@@ -189,6 +189,7 @@ type SystemInitResult struct {
 	CreatureGenreTintSystem                     *CreatureGenreTintSystem
 	CreatureSizeProportionSystem                *CreatureSizeProportionSystem
 	EquipmentRarityDetailSystem                 *EquipmentRarityDetailSystem
+	NpcFacialDetailSystem                       *NpcFacialDetailSystem
 
 	// System wrappers
 	AnimationSystemWrapper            System
@@ -514,6 +515,12 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 	equipmentRarityDetailSystem.SetGenre(config.GenreID)
 	result.EquipmentRarityDetailSystem = equipmentRarityDetailSystem
 	game.World.AddSystem(equipmentRarityDetailSystem)
+
+	// 17aa. NpcFacialDetailSystem - genre-aware NPC facial features
+	npcFacialDetailSystem := NewNpcFacialDetailSystem(game.World, config.Seed+9050)
+	npcFacialDetailSystem.SetGenre(config.GenreID)
+	result.NpcFacialDetailSystem = npcFacialDetailSystem
+	game.World.AddSystem(npcFacialDetailSystem)
 
 	// 18. SkillProgressionSystem - applies skill effects to stats
 	skillProgressionSystem := NewSkillProgressionSystem()

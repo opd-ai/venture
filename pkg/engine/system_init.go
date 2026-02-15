@@ -181,6 +181,7 @@ type SystemInitResult struct {
 	ReputationCompanionBonusParticleSystem      *ReputationCompanionBonusParticleSystem
 	AmbientEnvironmentParticleSystem            *AmbientEnvironmentParticleSystem
 	EquipmentEnchantmentGlowParticleSystem      *EquipmentEnchantmentGlowParticleSystem
+	StatusEffectVisualOverlaySystem             *StatusEffectVisualOverlaySystem
 
 	// System wrappers
 	AnimationSystemWrapper            System
@@ -452,6 +453,13 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 	equipEnchantGlowSystem.SetGenre(config.GenreID)
 	result.EquipmentEnchantmentGlowParticleSystem = equipEnchantGlowSystem
 	game.World.AddSystem(equipEnchantGlowSystem)
+
+	// 17s. StatusEffectVisualOverlaySystem - color tints on sprites from status effects
+	// Connects StatusEffectComponent data with VisualFeedbackComponent tint fields
+	statusEffectVisualOverlaySystem := NewStatusEffectVisualOverlaySystem(game.World)
+	statusEffectVisualOverlaySystem.SetGenre(config.GenreID)
+	result.StatusEffectVisualOverlaySystem = statusEffectVisualOverlaySystem
+	game.World.AddSystem(statusEffectVisualOverlaySystem)
 
 	// 18. SkillProgressionSystem - applies skill effects to stats
 	skillProgressionSystem := NewSkillProgressionSystem()

@@ -856,12 +856,66 @@ func (s *AnimationSystem) generateFrames(entity *Entity, anim *AnimationComponen
 	s.logFrameGeneration(entity, anim, sprite)
 
 	config := s.buildSpriteConfig(entity, sprite, anim)
+
+	// Check if entity uses template-based aerial rendering (supports body part animation).
+	useBodyPartAnim := false
+	if config.Custom != nil {
+		if aerial, ok := config.Custom["useAerial"].(bool); ok && aerial {
+			if _, ok := config.Custom["entityType"].(string); ok {
+				useBodyPartAnim = true
+			}
+		}
+	}
+
+	if useBodyPartAnim {
+		return s.generateBodyPartAnimatedFrames(entity, config, anim, frameCount)
+	}
+
+	// Fallback: static base sprite with geometric transforms
 	baseSprite, err := s.getOrGenerateBaseSprite(entity, config)
 	if err != nil {
 		return nil, err
 	}
-
 	return s.generateAllFrames(entity, baseSprite, config, anim, frameCount)
+}
+
+// generateBodyPartAnimatedFrames generates per-frame sprites where each frame
+// has body parts in state-specific positions (e.g., legs alternating during walk,
+// arms extending during attack). Each frame is a fully rendered template sprite
+// with per-body-part offsets baked in, producing visibly animated entity sprites
+// instead of static cutouts with geometric transforms.
+func (s *AnimationSystem) generateBodyPartAnimatedFrames(entity *Entity, baseConfig sprites.Config, anim *AnimationComponent, frameCount int) ([]*ebiten.Image, error) {
+	frames := s.getFrameSlice(frameCount)
+	state := string(anim.CurrentState)
+
+	for i := 0; i < frameCount; i++ {
+		offsets := sprites.ComputeFrameOffsets(state, i, frameCount)
+
+		// Create per-frame config with body part offsets injected
+		frameConfig := baseConfig
+		frameCustom := make(map[string]interface{}, len(baseConfig.Custom)+1)
+		for k, v := range baseConfig.Custom {
+			frameCustom[k] = v
+		}
+		frameCustom["frameOffsets"] = offsets
+		frameConfig.Custom = frameCustom
+
+		frame, err := s.spriteGenerator.Generate(frameConfig)
+		if err != nil {
+			if s.logger != nil {
+				s.logger.WithFields(logrus.Fields{
+					"entity_id":   entity.ID,
+					"frame_index": i,
+					"state":       state,
+					"error":       err.Error(),
+				}).Error("body-part animated frame generation failed")
+			}
+			return nil, fmt.Errorf("frame %d body-part generation failed: %w", i, err)
+		}
+		frames[i] = frame
+	}
+
+	return frames, nil
 }
 
 // determineFrameCount calculates the number of frames for an animation.

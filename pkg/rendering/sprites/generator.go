@@ -399,8 +399,20 @@ func (g *Generator) renderTemplateParts(img *ebiten.Image, template AnatomicalTe
 func (g *Generator) renderTemplatePartsWithTraits(img *ebiten.Image, template AnatomicalTemplate, config Config, rng *rand.Rand, traits *AvatarTraits) {
 	parts := template.GetSortedParts()
 
+	// Extract per-frame body part offsets from config for animated frame generation.
+	var frameOffsets FrameOffsetMap
+	if config.Custom != nil {
+		if fo, ok := config.Custom["frameOffsets"].(FrameOffsetMap); ok {
+			frameOffsets = fo
+		}
+	}
+
 	for _, partData := range parts {
-		g.renderTemplatePartWithTraits(img, partData.Spec, config, rng, traits)
+		spec := partData.Spec
+		if frameOffsets != nil {
+			spec = applyFrameOffsetsToSpec(spec, partData.Part, frameOffsets, config.Width, config.Height)
+		}
+		g.renderTemplatePartWithTraits(img, spec, config, rng, traits)
 	}
 
 	// Render hair overlay for humanoid entities with aerial traits

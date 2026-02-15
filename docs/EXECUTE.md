@@ -60,7 +60,7 @@ NPCs & Creatures (improve aggressively — current quality is unacceptable):
 - Use `pkg/procgen/entity/` templates for genre-aware generation. Entity types: Monster, Boss, NPC, Merchant. Sizes: Tiny, Small, Medium, Large, Huge.
 - **NONHUMANOID CREATURES NEED DEDICATED TEMPLATES.** Do not reuse humanoid body plans for creatures that are not humanoid. Build top-down anatomy templates for: quadrupeds (4 legs radiating from body center), insects (segmented body, 6+ legs), serpents (elongated sinuous body), winged creatures (wide wingspan from above), amorphous entities (irregular blobby shapes), multi-limbed horrors (radial or asymmetric limbs). Each type should be immediately recognizable from its silhouette alone.
 - Anatomy templates must scale proportionally with entity size. Larger creatures need wider torsos and legs relative to head size.
-- Silhouette quality (`pkg/rendering/sprites/silhouette.go`) should target ≥0.7 (Good-to-Excellent). Measure Coverage, Compactness (4π×area/perimeter²), and EdgeClarity.
+- Silhouette quality (`pkg/rendering/sprites/silhouette.go`) should target at least "Good" (score ≥0.7; "Excellent" is >0.8). Measure Coverage, Compactness (4π×area/perimeter²), and EdgeClarity.
 - NPCs should be visually distinct from each other — varied body shapes, hair, clothing, and facial features. No two NPCs should look the same. Seed-based generation must produce genuine variety, not trivial color swaps.
 - Apply genre-specific visual tags to influence sprite shape types (e.g., horror → Skull head shape, fantasy → Circle/Ellipse head shapes).
 

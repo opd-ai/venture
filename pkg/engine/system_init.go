@@ -242,6 +242,7 @@ type SystemInitResult struct {
 	ClothingPatternSystem                       *ClothingPatternSystem
 	BodyTypeSystem                              *BodyTypeSystem
 	CreatureVisualClassifierSystem              *CreatureVisualClassifierSystem
+	SizeSpriteScalingSystem                     *SizeSpriteScalingSystem
 	NpcRoleVisualSystem                         *NpcRoleVisualSystem
 	DirectionalSpriteSystem                     *DirectionalSpriteSystem
 	SpriteFinalizerSystem                       *SpriteFinalizerSystem
@@ -980,6 +981,12 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 	// is available when sprite configs are built.
 	result.CreatureVisualClassifierSystem = NewCreatureVisualClassifierSystem(game.World)
 	game.World.AddSystem(result.CreatureVisualClassifierSystem)
+
+	// Size sprite scaling — propagates entity size class to sprite pipeline
+	// so anatomy proportions adapt to entity size (Tiny→chibi, Huge→massive).
+	// Must run after creature visual classifier and before animation system.
+	result.SizeSpriteScalingSystem = NewSizeSpriteScalingSystem(game.World)
+	game.World.AddSystem(result.SizeSpriteScalingSystem)
 
 	// NPC role visual system — infers humanoid visual roles (mage, warrior, merchant, etc.)
 	// Must run before animation/directional systems that build sprite configs.

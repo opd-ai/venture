@@ -243,6 +243,11 @@ func (g *Generator) generateEntityWithTemplate(config Config, entityType string,
 			}
 		}
 		template = ApplyBodyTypeToTemplate(template, bodyType)
+
+		// Apply size-based anatomy scaling (Tiny→chibi, Huge→massive torso).
+		// Must run after body type so size and build stack correctly.
+		sizeClass := extractSizeClass(config)
+		template = ApplySizeScaling(template, sizeClass)
 	}
 
 	g.renderTemplatePartsWithTraits(img, template, config, rng, traits)

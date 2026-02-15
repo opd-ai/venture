@@ -1232,6 +1232,13 @@ func (s *AnimationSystem) configureEnemySprite(config *sprites.Config, entity *E
 	facing := s.determineFacingDirection(entity, anim)
 	config.Custom["facing"] = facing
 
+	// Propagate size class from CreatureVisualComponent for size-based anatomy scaling
+	if cvComp, ok := entity.GetComponent("creature_visual"); ok {
+		if cv, ok := cvComp.(*CreatureVisualComponent); ok && cv.SizeClass != "" {
+			config.Custom["sizeClass"] = cv.SizeClass
+		}
+	}
+
 	if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
 		s.logger.WithFields(logrus.Fields{
 			"entity_id":   entity.ID,

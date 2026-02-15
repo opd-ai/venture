@@ -198,6 +198,7 @@ type SystemInitResult struct {
 	NearbyLightEntityTintSystem                 *NearbyLightEntityTintSystem
 	WeatherEquipmentSheenSystem                 *WeatherEquipmentSheenSystem
 	CreatureEyeGlowSystem                       *CreatureEyeGlowSystem
+	MeleeSwingArcSystem                         *MeleeSwingArcSystem
 
 	// System wrappers
 	AnimationSystemWrapper            System
@@ -589,6 +590,13 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 	creatureEyeGlowSystem.SetGenre(config.GenreID)
 	result.CreatureEyeGlowSystem = creatureEyeGlowSystem
 	game.World.AddSystem(creatureEyeGlowSystem)
+
+	// 17aj. MeleeSwingArcSystem - genre-aware visual arc overlays during melee attacks
+	// Watches AnimationComponent attack transitions and writes MeleeSwingArcComponent
+	meleeSwingArcSystem := NewMeleeSwingArcSystem(game.World, config.Seed+9500)
+	meleeSwingArcSystem.SetGenre(config.GenreID)
+	result.MeleeSwingArcSystem = meleeSwingArcSystem
+	game.World.AddSystem(meleeSwingArcSystem)
 
 	// 18. SkillProgressionSystem - applies skill effects to stats
 	skillProgressionSystem := NewSkillProgressionSystem()

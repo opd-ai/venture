@@ -216,6 +216,7 @@ type systemsContainer struct {
 	nearbyLightEntityTintSystem                 *engine.NearbyLightEntityTintSystem                 // Light-source-based entity sprite tinting
 	weatherEquipmentSheenSystem                 *engine.WeatherEquipmentSheenSystem                 // Weather-driven equipment sheen
 	creatureEyeGlowSystem                       *engine.CreatureEyeGlowSystem                       // Genre-aware hostile creature eye glow
+	meleeSwingArcSystem                         *engine.MeleeSwingArcSystem                         // Genre-aware melee attack swing arcs
 	statusEffectAISystem                        *engine.StatusEffectAISystem                        // Bridges status effects with AI (stun/frozen disable AI)
 	reputationSystem                            *engine.ReputationSystem
 	alignmentSystem                             *engine.AlignmentSystem
@@ -2079,6 +2080,11 @@ func registerNonCriticalSystems(game *engine.EbitenGame, sys *systemsContainer) 
 	sys.creatureEyeGlowSystem = engine.NewCreatureEyeGlowSystem(game.World, *seed+9450)
 	sys.creatureEyeGlowSystem.SetGenre(*genreID)
 	game.World.AddSystem(sys.creatureEyeGlowSystem)
+
+	// MeleeSwingArcSystem: genre-aware visual arc overlays during melee attacks
+	sys.meleeSwingArcSystem = engine.NewMeleeSwingArcSystem(game.World, *seed+9500)
+	sys.meleeSwingArcSystem.SetGenre(*genreID)
+	game.World.AddSystem(sys.meleeSwingArcSystem)
 
 	// FactionCompanionBehaviorSystem: bridges faction reputation with companion AI targeting
 	// Companions won't attack allied faction members and prioritize hostile faction enemies

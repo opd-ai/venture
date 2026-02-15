@@ -4,15 +4,15 @@ STEP 1 — DISCOVER (spend ≤5 minutes here):
 - Run `git log --oneline -20` to avoid duplicating recent work.
 - Read pkg/engine/system_init.go to understand registered systems.
 - Grep for TODO, FIXME, stub, placeholder in pkg/engine/ and pkg/procgen/.
-- Pick ONE enhancement you have NOT seen in git history. Flip a coin (50/50) to decide the category:
-  - **Visual quality enhancements (pick 1/2 of the time):**
+- Pick ONE enhancement you have NOT seen in git history. Roll a dice (1/6) to decide the category:
+  - **Visual quality enhancements (pick 5/6 of the time):**
     - Improving visual detail (lighting falloff, shadow quality, sprite fidelity)
     - Enhancing visual realism (post-processing effects, color grading, ambient occlusion)
     - Animation improvements (smoother transitions, new states, distance-based LOD tuning)
     - Player character visuals (composite layering, anatomy detail, directional sprites, status overlays)
     - NPC and creature visuals (genre-aware body templates, size-based anatomy, silhouette quality, facial detail)
     - Equipment visuals (material rendering fidelity, damage-state degradation, enchantment glow/particles, rarity-based detail scaling)
-  - **Other systems (pick 1/2 of the time):**
+  - **Other systems (pick 1/6 of the time):**
     - Connecting two existing systems that don't yet interact
     - Adding depth to a system with minimal/placeholder logic
     - New visual feedback for existing gameplay mechanics

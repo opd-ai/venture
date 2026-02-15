@@ -188,6 +188,7 @@ type SystemInitResult struct {
 	EquipmentDamageStateTintSystem              *EquipmentDamageStateTintSystem
 	CreatureGenreTintSystem                     *CreatureGenreTintSystem
 	CreatureSizeProportionSystem                *CreatureSizeProportionSystem
+	EquipmentRarityDetailSystem                 *EquipmentRarityDetailSystem
 
 	// System wrappers
 	AnimationSystemWrapper            System
@@ -507,6 +508,12 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 	creatureSizeProportionSystem.SetGenre(config.GenreID)
 	result.CreatureSizeProportionSystem = creatureSizeProportionSystem
 	game.World.AddSystem(creatureSizeProportionSystem)
+
+	// 17z. EquipmentRarityDetailSystem - rarity-based visual detail scaling
+	equipmentRarityDetailSystem := NewEquipmentRarityDetailSystem(game.World, config.Seed+9025)
+	equipmentRarityDetailSystem.SetGenre(config.GenreID)
+	result.EquipmentRarityDetailSystem = equipmentRarityDetailSystem
+	game.World.AddSystem(equipmentRarityDetailSystem)
 
 	// 18. SkillProgressionSystem - applies skill effects to stats
 	skillProgressionSystem := NewSkillProgressionSystem()

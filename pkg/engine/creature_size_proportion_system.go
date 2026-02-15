@@ -69,8 +69,8 @@ type CreatureSizeProportionSystem struct {
 	genreID     string
 	lastGenreID string
 
-	tierMap     map[string]sizeTierProportions
-	genreMods   map[string]genreProportionModifier
+	tierMap   map[string]sizeTierProportions
+	genreMods map[string]genreProportionModifier
 }
 
 // NewCreatureSizeProportionSystem creates a new creature size proportion system.

@@ -191,6 +191,7 @@ type SystemInitResult struct {
 	EquipmentRarityDetailSystem                 *EquipmentRarityDetailSystem
 	NpcFacialDetailSystem                       *NpcFacialDetailSystem
 	ProjectileTrailParticleSystem               *ProjectileTrailParticleSystem
+	EntityIdleAmbientParticleSystem             *EntityIdleAmbientParticleSystem
 
 	// System wrappers
 	AnimationSystemWrapper            System
@@ -530,6 +531,14 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 	projectileTrailParticleSystem.SetGenre(config.GenreID)
 	result.ProjectileTrailParticleSystem = projectileTrailParticleSystem
 	game.World.AddSystem(projectileTrailParticleSystem)
+
+	// 17ac. EntityIdleAmbientParticleSystem - genre-aware idle entity ambient particles
+	// Connects VelocityComponent with ParticleSystem for subtle particles around stationary entities
+	entityIdleAmbientParticleSystem := NewEntityIdleAmbientParticleSystem(game.World, config.Seed+9100)
+	entityIdleAmbientParticleSystem.SetParticleSystem(result.ParticleSystem)
+	entityIdleAmbientParticleSystem.SetGenre(config.GenreID)
+	result.EntityIdleAmbientParticleSystem = entityIdleAmbientParticleSystem
+	game.World.AddSystem(entityIdleAmbientParticleSystem)
 
 	// 18. SkillProgressionSystem - applies skill effects to stats
 	skillProgressionSystem := NewSkillProgressionSystem()

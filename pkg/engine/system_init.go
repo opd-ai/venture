@@ -226,6 +226,7 @@ type SystemInitResult struct {
 	HealthRegenPulseSystem                      *HealthRegenPulseSystem
 	StatusEffectGroundTrailSystem               *StatusEffectGroundTrailSystem
 	WaterSurfaceRippleSystem                    *WaterSurfaceRippleSystem
+	EntityTargetLockIndicatorSystem             *EntityTargetLockIndicatorSystem
 
 	// System wrappers
 	AnimationSystemWrapper            System
@@ -1328,6 +1329,12 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 	waterSurfaceRippleSystem.SetGenre(config.GenreID)
 	result.WaterSurfaceRippleSystem = waterSurfaceRippleSystem
 	game.World.AddSystem(waterSurfaceRippleSystem)
+
+	// 36k1e. EntityTargetLockIndicatorSystem - genre-aware targeting reticle on closest hostile
+	entityTargetLockIndicatorSystem := NewEntityTargetLockIndicatorSystem(game.World, config.Seed+6445)
+	entityTargetLockIndicatorSystem.SetGenre(config.GenreID)
+	result.EntityTargetLockIndicatorSystem = entityTargetLockIndicatorSystem
+	game.World.AddSystem(entityTargetLockIndicatorSystem)
 
 	// 36k2. ManaRegenParticleSystem - visual feedback for mana regeneration
 	// Spawns genre-aware particles when entities actively regenerate mana

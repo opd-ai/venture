@@ -243,6 +243,7 @@ type systemsContainer struct {
 	healthRegenPulseSystem                      *engine.HealthRegenPulseSystem                      // Genre-aware healing pulse particles
 	statusEffectGroundTrailSystem               *engine.StatusEffectGroundTrailSystem               // Ground-level DoT movement trails
 	waterSurfaceRippleSystem                    *engine.WaterSurfaceRippleSystem                    // Water tile ripple/splash particles
+	entityTargetLockIndicatorSystem             *engine.EntityTargetLockIndicatorSystem             // Genre-aware target lock reticle
 	statusEffectAISystem                        *engine.StatusEffectAISystem                        // Bridges status effects with AI (stun/frozen disable AI)
 	reputationSystem                            *engine.ReputationSystem
 	alignmentSystem                             *engine.AlignmentSystem
@@ -2261,6 +2262,11 @@ func registerNonCriticalSystems(game *engine.EbitenGame, sys *systemsContainer) 
 	sys.waterSurfaceRippleSystem = engine.NewWaterSurfaceRippleSystem(game.World, *seed+10700)
 	sys.waterSurfaceRippleSystem.SetGenre(*genreID)
 	game.World.AddSystem(sys.waterSurfaceRippleSystem)
+
+	// EntityTargetLockIndicatorSystem: genre-aware targeting reticle on closest hostile
+	sys.entityTargetLockIndicatorSystem = engine.NewEntityTargetLockIndicatorSystem(game.World, *seed+10705)
+	sys.entityTargetLockIndicatorSystem.SetGenre(*genreID)
+	game.World.AddSystem(sys.entityTargetLockIndicatorSystem)
 
 	// FactionCompanionBehaviorSystem: bridges faction reputation with companion AI targeting
 	// Companions won't attack allied faction members and prioritize hostile faction enemies

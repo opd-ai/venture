@@ -222,6 +222,7 @@ type SystemInitResult struct {
 	EntityFactionOutlineSystem                  *EntityFactionOutlineSystem
 	ShieldBubbleOverlaySystem                   *ShieldBubbleOverlaySystem
 	EnvironmentalBreathVaporSystem              *EnvironmentalBreathVaporSystem
+	MovementDustSystem                          *MovementDustSystem
 
 	// System wrappers
 	AnimationSystemWrapper            System
@@ -793,6 +794,13 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 	environmentalBreathVaporSystem.SetGenre(config.GenreID)
 	result.EnvironmentalBreathVaporSystem = environmentalBreathVaporSystem
 	game.World.AddSystem(environmentalBreathVaporSystem)
+
+	// 17bf. MovementDustSystem - speed-proportional terrain dust behind fast movers
+	// Genre-aware particles: fantasy=dust, horror=ash wisps, scifi=energy sparks
+	movementDustSystem := NewMovementDustSystem(game.World, config.Seed+10650)
+	movementDustSystem.SetGenre(config.GenreID)
+	result.MovementDustSystem = movementDustSystem
+	game.World.AddSystem(movementDustSystem)
 
 	// 18. SkillProgressionSystem - applies skill effects to stats
 	skillProgressionSystem := NewSkillProgressionSystem()

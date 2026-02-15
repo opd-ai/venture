@@ -179,6 +179,7 @@ type SystemInitResult struct {
 	ReputationEquipmentDurabilityParticleSystem *ReputationEquipmentDurabilityParticleSystem
 	ReputationCompanionBonusSystem              *ReputationCompanionBonusSystem
 	ReputationCompanionBonusParticleSystem      *ReputationCompanionBonusParticleSystem
+	AmbientEnvironmentParticleSystem            *AmbientEnvironmentParticleSystem
 
 	// System wrappers
 	AnimationSystemWrapper            System
@@ -433,6 +434,15 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 	reputationCompanionBonusParticleSystem.SetGenre(config.GenreID)
 	result.ReputationCompanionBonusParticleSystem = reputationCompanionBonusParticleSystem
 	game.World.AddSystem(reputationCompanionBonusParticleSystem)
+
+	// 17q. AmbientEnvironmentParticleSystem - atmospheric particles based on terrain type
+	// Connects terrain data with ParticleSystem for genre-aware ambient effects
+	ambientEnvironmentParticleSystem := NewAmbientEnvironmentParticleSystem(game.World, config.Seed+7350)
+	ambientEnvironmentParticleSystem.SetParticleSystem(result.ParticleSystem)
+	ambientEnvironmentParticleSystem.SetGenre(config.GenreID)
+	ambientEnvironmentParticleSystem.SetTileSize(config.TileSize)
+	result.AmbientEnvironmentParticleSystem = ambientEnvironmentParticleSystem
+	game.World.AddSystem(ambientEnvironmentParticleSystem)
 
 	// 18. SkillProgressionSystem - applies skill effects to stats
 	skillProgressionSystem := NewSkillProgressionSystem()

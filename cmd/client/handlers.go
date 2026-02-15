@@ -197,6 +197,7 @@ type systemsContainer struct {
 	reputationEquipmentDurabilityParticleSystem *engine.ReputationEquipmentDurabilityParticleSystem // Visual feedback for reputation durability
 	reputationCompanionBonusSystem              *engine.ReputationCompanionBonusSystem              // Bridges faction reputation with companion stat bonuses
 	reputationCompanionBonusParticleSystem      *engine.ReputationCompanionBonusParticleSystem      // Visual feedback for reputation companion bonus
+	ambientEnvironmentParticleSystem            *engine.AmbientEnvironmentParticleSystem            // Terrain-aware atmospheric ambient particles
 	statusEffectAISystem                        *engine.StatusEffectAISystem                        // Bridges status effects with AI (stun/frozen disable AI)
 	reputationSystem                            *engine.ReputationSystem
 	alignmentSystem                             *engine.AlignmentSystem
@@ -1948,6 +1949,13 @@ func registerNonCriticalSystems(game *engine.EbitenGame, sys *systemsContainer) 
 	sys.reputationCompanionBonusParticleSystem.SetGenre(*genreID)
 	game.World.AddSystem(sys.reputationCompanionBonusParticleSystem)
 
+	// AmbientEnvironmentParticleSystem: atmospheric particles based on terrain type
+	// Spawns genre-aware ambient effects (fireflies, mist, embers, dust motes) near entities
+	sys.ambientEnvironmentParticleSystem = engine.NewAmbientEnvironmentParticleSystem(game.World, *seed+7350)
+	sys.ambientEnvironmentParticleSystem.SetParticleSystem(sys.particleSystem)
+	sys.ambientEnvironmentParticleSystem.SetGenre(*genreID)
+	game.World.AddSystem(sys.ambientEnvironmentParticleSystem)
+
 	// FactionCompanionBehaviorSystem: bridges faction reputation with companion AI targeting
 	// Companions won't attack allied faction members and prioritize hostile faction enemies
 	sys.factionCompanionBehaviorSystem = engine.NewFactionCompanionBehaviorSystem(game.World, *seed+2198)
@@ -2547,6 +2555,9 @@ func initializeTerrainCollision(game *engine.EbitenGame, sys *systemsContainer, 
 		}
 		if footstepParticleSys, ok := system.(*engine.FootstepParticleSystem); ok {
 			footstepParticleSys.SetTerrain(generatedTerrain)
+		}
+		if ambientEnvSys, ok := system.(*engine.AmbientEnvironmentParticleSystem); ok {
+			ambientEnvSys.SetTerrain(generatedTerrain)
 		}
 		if timeOfDayLightingSys, ok := system.(*engine.TimeOfDayLightingSystem); ok {
 			sys.timeOfDayLightingSystem = timeOfDayLightingSys

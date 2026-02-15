@@ -42,8 +42,8 @@ Each audit evaluates code completeness, ECS compliance, determinism, test covera
 
 ## Audit Statistics
 - **Total Packages**: 35+
-- **Audited**: 21
-- **Pending**: 14+
+- **Audited**: 22
+- **Pending**: 13+
 - **Coverage Target**: ≥65% per package
 - **Overall Project Coverage**: 82.4%
 
@@ -71,5 +71,8 @@ Each audit evaluates code completeness, ECS compliance, determinism, test covera
 ### Procedural Generation (Continued)
 - [x] `pkg/procgen/furniture/AUDIT.md` — Complete — 4 issues (0 high, 0 med, 4 low)
 
+### Procedural Generation (Continued)
+- [x] `pkg/procgen/building/AUDIT.md` — Complete — 2 issues (0 high, 0 med, 2 low)
+
 ## Priority Queue (Next Audits)
-1. `pkg/procgen/building/` — Building and structure generation
+1. `pkg/procgen/narrative/` — Narrative and story beat generation

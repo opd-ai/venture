@@ -776,12 +776,20 @@ func (r *EbitenRenderSystem) drawEntity(entity *Entity) {
 		}
 	}
 
+	// Apply movement lean horizontal offset if present
+	var layerXOffset float64
+	if comp, ok := entity.GetComponent("movement_lean"); ok {
+		if lean, ok := comp.(*MovementLeanComponent); ok {
+			layerXOffset = lean.OffsetX
+		}
+	}
+
 	spriteImage := r.selectSpriteImage(sprite)
 
 	if spriteImage != nil {
-		r.drawSpriteImage(spriteImage, sprite, screenX, screenY, layerYOffset, flashAlpha, tintR, tintG, tintB, tintA)
+		r.drawSpriteImage(spriteImage, sprite, screenX+layerXOffset, screenY, layerYOffset, flashAlpha, tintR, tintG, tintB, tintA)
 	} else {
-		r.drawFallbackRect(sprite, screenX, screenY, layerYOffset, layerAlpha, flashAlpha)
+		r.drawFallbackRect(sprite, screenX+layerXOffset, screenY, layerYOffset, layerAlpha, flashAlpha)
 	}
 
 	r.drawHealthBar(entity, screenX, screenY, sprite.Width, sprite.Height)

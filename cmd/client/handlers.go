@@ -222,6 +222,7 @@ type systemsContainer struct {
 	aiStateBubbleSystem                         *engine.AIStateBubbleSystem                         // Genre-aware AI state indicator bubbles
 	terrainReflectionTintSystem                 *engine.TerrainReflectionTintSystem                 // Terrain-driven sprite color tinting
 	movementBobSystem                           *engine.MovementBobSystem                           // Walk-cycle sprite bobbing
+	movementLeanSystem                          *engine.MovementLeanSystem                          // Directional movement lean
 	spellCastGlowSystem                         *engine.SpellCastGlowSystem                         // Genre-aware spell casting glow
 	equipmentChangeFlashSystem                  *engine.EquipmentChangeFlashSystem                  // Equipment change flash particles
 	dodgeAfterimageSystem                       *engine.DodgeAfterimageSystem                       // Genre-aware dodge/dash afterimage ghosts
@@ -2150,6 +2151,11 @@ func registerNonCriticalSystems(game *engine.EbitenGame, sys *systemsContainer) 
 	sys.movementBobSystem = engine.NewMovementBobSystem(game.World, *seed+9700)
 	sys.movementBobSystem.SetGenre(*genreID)
 	game.World.AddSystem(sys.movementBobSystem)
+
+	// MovementLeanSystem: genre-aware horizontal lean in movement direction
+	sys.movementLeanSystem = engine.NewMovementLeanSystem(game.World, *seed+9710)
+	sys.movementLeanSystem.SetGenre(*genreID)
+	game.World.AddSystem(sys.movementLeanSystem)
 
 	// SpellCastGlowSystem: genre-aware visual glow during spell casting
 	sys.spellCastGlowSystem = engine.NewSpellCastGlowSystem(game.World, *seed+9750)

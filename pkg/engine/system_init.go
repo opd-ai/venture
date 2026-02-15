@@ -205,6 +205,7 @@ type SystemInitResult struct {
 	AIStateBubbleSystem                         *AIStateBubbleSystem
 	TerrainReflectionTintSystem                 *TerrainReflectionTintSystem
 	MovementBobSystem                           *MovementBobSystem
+	MovementLeanSystem                          *MovementLeanSystem
 	SpellCastGlowSystem                         *SpellCastGlowSystem
 	EquipmentChangeFlashSystem                  *EquipmentChangeFlashSystem
 	DodgeAfterimageSystem                       *DodgeAfterimageSystem
@@ -670,6 +671,14 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 	movementBobSystem.SetGenre(config.GenreID)
 	result.MovementBobSystem = movementBobSystem
 	game.World.AddSystem(movementBobSystem)
+
+	// 17an2. MovementLeanSystem - genre-aware horizontal lean in movement direction
+	// Reads VelocityComponent and writes smoothed X offset to MovementLeanComponent
+	// so the render system displaces entities horizontally for momentum lean.
+	movementLeanSystem := NewMovementLeanSystem(game.World, config.Seed+9710)
+	movementLeanSystem.SetGenre(config.GenreID)
+	result.MovementLeanSystem = movementLeanSystem
+	game.World.AddSystem(movementLeanSystem)
 
 	// 17ao. SpellCastGlowSystem - genre-aware visual glow during spell casting
 	// Reads SpellSlotComponent casting state and writes SpellCastGlowComponent

@@ -255,6 +255,7 @@ type systemsContainer struct {
 	xpGainBurstSystem                           *engine.XPGainBurstSystem                           // Genre-aware XP gain particle bursts
 	equipmentGleamSweepSystem                   *engine.EquipmentGleamSweepSystem                   // Animated specular gleam sweep on equipment
 	spriteDepthShadingSystem                    *engine.SpriteDepthShadingSystem                    // Per-body-part depth shading for entity sprites
+	clothingPatternSystem                       *engine.ClothingPatternSystem                       // Seed-based clothing patterns for entity sprites
 	statusEffectAISystem                        *engine.StatusEffectAISystem                        // Bridges status effects with AI (stun/frozen disable AI)
 	reputationSystem                            *engine.ReputationSystem
 	alignmentSystem                             *engine.AlignmentSystem
@@ -2335,6 +2336,12 @@ func registerNonCriticalSystems(game *engine.EbitenGame, sys *systemsContainer) 
 	sys.spriteDepthShadingSystem = engine.NewSpriteDepthShadingSystem(game.World, *seed+10755)
 	sys.spriteDepthShadingSystem.SetGenre(*genreID)
 	game.World.AddSystem(sys.spriteDepthShadingSystem)
+
+	// ClothingPatternSystem: seed-based clothing patterns for entity sprites
+	// Attaches genre-aware garment patterns (stripes, checks, dots, borders) for visual variety
+	sys.clothingPatternSystem = engine.NewClothingPatternSystem(game.World, *seed+10760)
+	sys.clothingPatternSystem.SetGenre(*genreID)
+	game.World.AddSystem(sys.clothingPatternSystem)
 
 	// FactionCompanionBehaviorSystem: bridges faction reputation with companion AI targeting
 	// Companions won't attack allied faction members and prioritize hostile faction enemies

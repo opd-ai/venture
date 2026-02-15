@@ -26,6 +26,8 @@ type AvatarTraits struct {
 	ClothingSecondary color.RGBA
 	// LegColor is the lower body / pants / boots color.
 	LegColor color.RGBA
+	// ClothingPatterns holds seed-derived garment patterns for torso, arms, and legs.
+	ClothingPatterns ClothingPatternSet
 	// ShoulderScale adjusts torso width (0.85–1.15, 1.0 = normal).
 	ShoulderScale float64
 	// HeadScale adjusts head size (0.90–1.10, 1.0 = normal).
@@ -114,6 +116,7 @@ func GenerateAvatarTraits(seed int64) AvatarTraits {
 		ClothingPrimary:   clothPrimary,
 		ClothingSecondary: clothSecondary,
 		LegColor:          legColor,
+		ClothingPatterns:  GenerateClothingPatternSet(seed),
 		ShoulderScale:     shoulderScale,
 		HeadScale:         headScale,
 		HeightScale:       heightScale,

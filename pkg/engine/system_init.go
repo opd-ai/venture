@@ -238,6 +238,7 @@ type SystemInitResult struct {
 	XPGainBurstSystem                           *XPGainBurstSystem
 	EquipmentGleamSweepSystem                   *EquipmentGleamSweepSystem
 	SpriteDepthShadingSystem                    *SpriteDepthShadingSystem
+	ClothingPatternSystem                       *ClothingPatternSystem
 
 	// System wrappers
 	AnimationSystemWrapper            System
@@ -1426,6 +1427,13 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 	spriteDepthShadingSystem.SetGenre(config.GenreID)
 	result.SpriteDepthShadingSystem = spriteDepthShadingSystem
 	game.World.AddSystem(spriteDepthShadingSystem)
+
+	// 36k1p. ClothingPatternSystem - seed-based clothing patterns for entity sprites
+	// Attaches genre-aware garment patterns (stripes, checks, dots, borders, etc.)
+	clothingPatternSystem := NewClothingPatternSystem(game.World, config.Seed+6490)
+	clothingPatternSystem.SetGenre(config.GenreID)
+	result.ClothingPatternSystem = clothingPatternSystem
+	game.World.AddSystem(clothingPatternSystem)
 
 	// 36k2. ManaRegenParticleSystem - visual feedback for mana regeneration
 	// Spawns genre-aware particles when entities actively regenerate mana

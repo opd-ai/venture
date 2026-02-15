@@ -463,6 +463,10 @@ func (g *Generator) renderTemplatePartWithTraits(img *ebiten.Image, spec PartSpe
 	partCfg := ShadingConfigForPart(baseCfg, spec.ColorRole, spec.ZIndex)
 	ApplyBodyPartShading(rgbaImg, partCfg, config.Seed+int64(spec.ZIndex)*31)
 
+	// Apply clothing patterns to garment body parts (torso, arms, legs)
+	clothingPattern := traits.ClothingPatterns.PatternForBodyRegion(spec.ColorRole, spec.ZIndex)
+	ApplyClothingPattern(rgbaImg, clothingPattern, config.Seed+int64(spec.ZIndex)*17)
+
 	shape := ebiten.NewImageFromImage(rgbaImg)
 
 	opts := &ebiten.DrawImageOptions{}

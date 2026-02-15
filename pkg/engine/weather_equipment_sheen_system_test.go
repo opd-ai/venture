@@ -153,7 +153,7 @@ func TestWeatherEquipmentSheenSystem_GenreModifiers(t *testing.T) {
 		name    string
 		genre   string
 		weather particles.WeatherType
-		checkFn func(t *testing.T, mod weatherSheenModifier, baseMod weatherSheenModifier)
+		checkFn func(t *testing.T, mod, baseMod weatherSheenModifier)
 	}{
 		{
 			"cyberpunk_rain_amplified",

@@ -196,7 +196,7 @@ type SystemInitResult struct {
 	DamageFlashTintSystem                       *DamageFlashTintSystem
 	SprintTrailParticleSystem                   *SprintTrailParticleSystem
 	NearbyLightEntityTintSystem                 *NearbyLightEntityTintSystem
-	WeatherEquipmentSheenSystem                *WeatherEquipmentSheenSystem
+	WeatherEquipmentSheenSystem                 *WeatherEquipmentSheenSystem
 
 	// System wrappers
 	AnimationSystemWrapper            System

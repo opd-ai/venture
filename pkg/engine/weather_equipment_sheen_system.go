@@ -15,13 +15,13 @@ import (
 
 // weatherSheenModifier holds per-weather-type modifications to material sheen.
 type weatherSheenModifier struct {
-	SheenScale       float64 // Multiplier on SheenIntensity
-	ReflectivityAdd  float64 // Added to Reflectivity (clamped 0-1)
-	RoughnessAdd     float64 // Added to Roughness (clamped 0-1)
-	ColorTintR       float64 // Tint multiplier on highlight color
-	ColorTintG       float64
-	ColorTintB       float64
-	PulseSpeedScale  float64 // Multiplier on PulseSpeed
+	SheenScale      float64 // Multiplier on SheenIntensity
+	ReflectivityAdd float64 // Added to Reflectivity (clamped 0-1)
+	RoughnessAdd    float64 // Added to Roughness (clamped 0-1)
+	ColorTintR      float64 // Tint multiplier on highlight color
+	ColorTintG      float64
+	ColorTintB      float64
+	PulseSpeedScale float64 // Multiplier on PulseSpeed
 }
 
 // WeatherEquipmentSheenSystem adjusts MaterialSheenComponent values based on the
@@ -113,7 +113,7 @@ func (s *WeatherEquipmentSheenSystem) getWeatherModifier(weatherType particles.W
 		// Snow: frost dampens sheen, adds cold tint
 		base = weatherSheenModifier{
 			SheenScale:      1.0 - 0.2*intensityFactor,
-			ReflectivityAdd: 0.1 * intensityFactor, // Frost is slightly reflective
+			ReflectivityAdd: 0.1 * intensityFactor,  // Frost is slightly reflective
 			RoughnessAdd:    0.15 * intensityFactor, // Frost adds texture
 			ColorTintR:      0.85,
 			ColorTintG:      0.9,

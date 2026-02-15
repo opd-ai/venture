@@ -22,11 +22,11 @@ func TestNearbyLightTintComponentDefaults(t *testing.T) {
 
 func TestCalculateLightFalloff(t *testing.T) {
 	tests := []struct {
-		name     string
-		dist     float64
-		falloff  LightFalloffType
-		wantMin  float64
-		wantMax  float64
+		name    string
+		dist    float64
+		falloff LightFalloffType
+		wantMin float64
+		wantMax float64
 	}{
 		{"linear center", 0.0, FalloffLinear, 1.0, 1.0},
 		{"linear edge", 1.0, FalloffLinear, 0.0, 0.0},

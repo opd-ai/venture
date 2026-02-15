@@ -214,7 +214,7 @@ type systemsContainer struct {
 	damageFlashTintSystem                       *engine.DamageFlashTintSystem                       // Genre-aware damage flash tints
 	sprintTrailParticleSystem                   *engine.SprintTrailParticleSystem                   // Genre-aware sprint speed trail particles
 	nearbyLightEntityTintSystem                 *engine.NearbyLightEntityTintSystem                 // Light-source-based entity sprite tinting
-	weatherEquipmentSheenSystem                *engine.WeatherEquipmentSheenSystem                // Weather-driven equipment sheen
+	weatherEquipmentSheenSystem                 *engine.WeatherEquipmentSheenSystem                 // Weather-driven equipment sheen
 	statusEffectAISystem                        *engine.StatusEffectAISystem                        // Bridges status effects with AI (stun/frozen disable AI)
 	reputationSystem                            *engine.ReputationSystem
 	alignmentSystem                             *engine.AlignmentSystem

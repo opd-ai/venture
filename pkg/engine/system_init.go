@@ -204,6 +204,7 @@ type SystemInitResult struct {
 	AIStateBubbleSystem                         *AIStateBubbleSystem
 	TerrainReflectionTintSystem                 *TerrainReflectionTintSystem
 	MovementBobSystem                           *MovementBobSystem
+	SpellCastGlowSystem                         *SpellCastGlowSystem
 
 	// System wrappers
 	AnimationSystemWrapper            System
@@ -635,6 +636,14 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 	movementBobSystem.SetGenre(config.GenreID)
 	result.MovementBobSystem = movementBobSystem
 	game.World.AddSystem(movementBobSystem)
+
+	// 17ao. SpellCastGlowSystem - genre-aware visual glow during spell casting
+	// Reads SpellSlotComponent casting state and writes SpellCastGlowComponent
+	// with element-derived color, intensity that ramps with CastingBar, and pulse.
+	spellCastGlowSystem := NewSpellCastGlowSystem(game.World, config.Seed+9750)
+	spellCastGlowSystem.SetGenre(config.GenreID)
+	result.SpellCastGlowSystem = spellCastGlowSystem
+	game.World.AddSystem(spellCastGlowSystem)
 
 	// 18. SkillProgressionSystem - applies skill effects to stats
 	skillProgressionSystem := NewSkillProgressionSystem()

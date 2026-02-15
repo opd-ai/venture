@@ -207,6 +207,7 @@ type SystemInitResult struct {
 	SpellCastGlowSystem                         *SpellCastGlowSystem
 	EquipmentChangeFlashSystem                  *EquipmentChangeFlashSystem
 	DodgeAfterimageSystem                       *DodgeAfterimageSystem
+	EntityIdleBreathingSystem                   *EntityIdleBreathingSystem
 
 	// System wrappers
 	AnimationSystemWrapper            System
@@ -663,6 +664,14 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 	dodgeAfterimageSystem.SetGenre(config.GenreID)
 	result.DodgeAfterimageSystem = dodgeAfterimageSystem
 	game.World.AddSystem(dodgeAfterimageSystem)
+
+	// 17ar. EntityIdleBreathingSystem - genre-aware subtle idle breathing animation
+	// Reads VelocityComponent to detect stationary entities, writes sinusoidal Y
+	// offset to IdleBreathingComponent for a lifelike idle visual effect.
+	entityIdleBreathingSystem := NewEntityIdleBreathingSystem(game.World, config.Seed+9900)
+	entityIdleBreathingSystem.SetGenre(config.GenreID)
+	result.EntityIdleBreathingSystem = entityIdleBreathingSystem
+	game.World.AddSystem(entityIdleBreathingSystem)
 
 	// 18. SkillProgressionSystem - applies skill effects to stats
 	skillProgressionSystem := NewSkillProgressionSystem()

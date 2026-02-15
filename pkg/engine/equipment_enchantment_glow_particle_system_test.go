@@ -61,10 +61,10 @@ func TestEquipmentEnchantmentGlowParticleSystem_SetGenre(t *testing.T) {
 
 func TestEquipmentEnchantmentGlowParticleSystem_GetHighestEquippedRarity(t *testing.T) {
 	tests := []struct {
-		name         string
-		slots        map[EquipmentSlot]*item.Item
-		wantRarity   item.Rarity
-		wantHasRare  bool
+		name        string
+		slots       map[EquipmentSlot]*item.Item
+		wantRarity  item.Rarity
+		wantHasRare bool
 	}{
 		{
 			name:        "no_equipment",
@@ -182,8 +182,8 @@ func TestEquipmentEnchantmentGlowParticleSystem_CleanupCooldownOnDowngrade(t *te
 func TestEquipmentEnchantmentGlowParticleSystem_EnchantmentGlowMapping(t *testing.T) {
 	// Verify the sprites.GetEnchantmentFromRarity mapping matches expected values
 	tests := []struct {
-		rarity    string
-		wantColor string
+		rarity     string
+		wantColor  string
 		wantActive bool
 	}{
 		{"common", "white", false},

@@ -47,9 +47,9 @@ func TestWeatherSpriteTintSystem_SetGenre(t *testing.T) {
 
 func TestWeatherSpriteTintSystem_GenreIntensityScale(t *testing.T) {
 	tests := []struct {
-		genre    string
-		wantMin  float64
-		wantMax  float64
+		genre   string
+		wantMin float64
+		wantMax float64
 	}{
 		{"horror", 1.3, 1.5},
 		{"cyberpunk", 1.1, 1.3},

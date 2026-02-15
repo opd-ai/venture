@@ -382,3 +382,4 @@ MIT License. See [LICENSE](LICENSE) for the full text.
 - Built with [Ebiten](https://ebiten.org/) — a 2D game library for Go
 - Inspired by roguelikes such as Dungeon Crawl Stone Soup and Cataclysm DDA
 - Gameplay influenced by classic action-RPGs like The Legend of Zelda
+

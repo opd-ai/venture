@@ -20,8 +20,8 @@ func TestEntityDropShadowSystem_SetGenre(t *testing.T) {
 	sys := NewEntityDropShadowSystem(world, 12345)
 
 	tests := []struct {
-		genre        string
-		wantOpScale  float64
+		genre       string
+		wantOpScale float64
 	}{
 		{"horror", 1.4},
 		{"cyberpunk", 1.1},
@@ -106,7 +106,7 @@ func TestEntityDropShadowSystem_ShadowDimensions(t *testing.T) {
 	}{
 		{"normal 32x32", 32, 32, 22.4, 8.0},
 		{"large 64x64", 64, 64, 44.8, 16.0},
-		{"tiny 4x4", 4, 4, 6.0, 3.0},     // clamped minimums
+		{"tiny 4x4", 4, 4, 6.0, 3.0}, // clamped minimums
 		{"wide 48x16", 48, 16, 33.6, 4.0},
 	}
 

@@ -220,6 +220,7 @@ type systemsContainer struct {
 	combatReadyAuraSystem                       *engine.CombatReadyAuraSystem                       // Genre-aware AI combat readiness aura
 	aiStateBubbleSystem                         *engine.AIStateBubbleSystem                         // Genre-aware AI state indicator bubbles
 	terrainReflectionTintSystem                 *engine.TerrainReflectionTintSystem                 // Terrain-driven sprite color tinting
+	movementBobSystem                           *engine.MovementBobSystem                           // Walk-cycle sprite bobbing
 	statusEffectAISystem                        *engine.StatusEffectAISystem                        // Bridges status effects with AI (stun/frozen disable AI)
 	reputationSystem                            *engine.ReputationSystem
 	alignmentSystem                             *engine.AlignmentSystem
@@ -2110,6 +2111,11 @@ func registerNonCriticalSystems(game *engine.EbitenGame, sys *systemsContainer) 
 	sys.terrainReflectionTintSystem = engine.NewTerrainReflectionTintSystem(game.World, *seed+9650)
 	sys.terrainReflectionTintSystem.SetGenre(*genreID)
 	game.World.AddSystem(sys.terrainReflectionTintSystem)
+
+	// MovementBobSystem: genre-aware walk-cycle vertical sprite bobbing
+	sys.movementBobSystem = engine.NewMovementBobSystem(game.World, *seed+9700)
+	sys.movementBobSystem.SetGenre(*genreID)
+	game.World.AddSystem(sys.movementBobSystem)
 
 	// FactionCompanionBehaviorSystem: bridges faction reputation with companion AI targeting
 	// Companions won't attack allied faction members and prioritize hostile faction enemies

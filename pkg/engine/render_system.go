@@ -769,6 +769,13 @@ func (r *EbitenRenderSystem) drawEntity(entity *Entity) {
 	flashAlpha, tintR, tintG, tintB, tintA := r.extractVisualFeedback(entity)
 	tintA *= layerAlpha
 
+	// Apply movement bob vertical offset if present
+	if comp, ok := entity.GetComponent("movement_bob"); ok {
+		if bob, ok := comp.(*MovementBobComponent); ok {
+			layerYOffset += bob.OffsetY
+		}
+	}
+
 	spriteImage := r.selectSpriteImage(sprite)
 
 	if spriteImage != nil {

@@ -203,6 +203,7 @@ type SystemInitResult struct {
 	CombatReadyAuraSystem                       *CombatReadyAuraSystem
 	AIStateBubbleSystem                         *AIStateBubbleSystem
 	TerrainReflectionTintSystem                 *TerrainReflectionTintSystem
+	MovementBobSystem                           *MovementBobSystem
 
 	// System wrappers
 	AnimationSystemWrapper            System
@@ -626,6 +627,14 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 	}
 	result.TerrainReflectionTintSystem = terrainReflectionTintSystem
 	game.World.AddSystem(terrainReflectionTintSystem)
+
+	// 17an. MovementBobSystem - genre-aware walk-cycle vertical sprite bobbing
+	// Reads VelocityComponent and writes sinusoidal Y offset to MovementBobComponent
+	// so the render system displaces moving entities for visual movement weight.
+	movementBobSystem := NewMovementBobSystem(game.World, config.Seed+9700)
+	movementBobSystem.SetGenre(config.GenreID)
+	result.MovementBobSystem = movementBobSystem
+	game.World.AddSystem(movementBobSystem)
 
 	// 18. SkillProgressionSystem - applies skill effects to stats
 	skillProgressionSystem := NewSkillProgressionSystem()

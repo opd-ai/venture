@@ -226,7 +226,15 @@ func (g *Generator) generateEntityWithTemplate(config Config, entityType string,
 		template = applyBossModifications(template, bossScale, config.Complexity)
 	}
 
-	g.renderTemplateParts(img, template, config, rng)
+	// Generate seed-based avatar traits for visual variety
+	var traits *AvatarTraits
+	if useAerial {
+		t := generateTraitsForEntity(config.Seed, entityType)
+		traits = &t
+		template = applyTraitProportions(template, traits)
+	}
+
+	g.renderTemplatePartsWithTraits(img, template, config, rng, traits)
 
 	return img, nil
 }
@@ -281,23 +289,26 @@ func extractBossConfig(config Config) (bool, float64) {
 }
 
 // extractAerialFlag extracts the aerial flag from the config.
+// Aerial (top-down) view is the default since the game uses a top-down camera.
+// Set useAerial=false in Custom to opt out (legacy profile-view).
 func extractAerialFlag(config Config) bool {
 	if config.Custom != nil {
 		if aerial, ok := config.Custom["useAerial"].(bool); ok {
 			return aerial
 		}
 	}
-	return false
+	return true
 }
 
 // selectEntityTemplate selects the appropriate anatomical template based on entity type and configuration.
+// Aerial (top-down) templates are preferred since the game uses a top-down camera.
 func selectEntityTemplate(entityType, genre string, direction Direction, hasWeapon, hasShield, useAerial bool) AnatomicalTemplate {
-	isHumanoid := isHumanoidType(entityType)
-
 	if useAerial {
-		// All entity types use aerial templates when aerial flag is set
 		return SelectAerialTemplate(entityType, genre, direction)
-	} else if isHumanoid && (hasWeapon || hasShield) {
+	}
+	// Legacy fallback when useAerial is explicitly false
+	isHumanoid := isHumanoidType(entityType)
+	if isHumanoid && (hasWeapon || hasShield) {
 		return HumanoidWithEquipment(direction, hasWeapon, hasShield)
 	} else if isHumanoid && genre != "" {
 		return SelectHumanoidTemplate(genre, entityType, direction)
@@ -327,10 +338,16 @@ func applyBossModifications(template AnatomicalTemplate, bossScale, complexity f
 
 // renderTemplateParts renders all parts of the anatomical template to the image.
 func (g *Generator) renderTemplateParts(img *ebiten.Image, template AnatomicalTemplate, config Config, rng *rand.Rand) {
+	g.renderTemplatePartsWithTraits(img, template, config, rng, nil)
+}
+
+// renderTemplatePartsWithTraits renders all template parts, applying optional seed-based
+// avatar traits for color and proportion variety.
+func (g *Generator) renderTemplatePartsWithTraits(img *ebiten.Image, template AnatomicalTemplate, config Config, rng *rand.Rand, traits *AvatarTraits) {
 	parts := template.GetSortedParts()
 
 	for _, partData := range parts {
-		g.renderTemplatePart(img, partData.Spec, config, rng)
+		g.renderTemplatePartWithTraits(img, partData.Spec, config, rng, traits)
 	}
 }
 
@@ -383,7 +400,85 @@ func (g *Generator) renderTemplatePart(img *ebiten.Image, spec PartSpec, config 
 	img.DrawImage(shape, opts)
 }
 
-// selectShapeType selects a shape type from the allowed types.
+// renderTemplatePartWithTraits renders a body part with optional seed-based color variety.
+func (g *Generator) renderTemplatePartWithTraits(img *ebiten.Image, spec PartSpec, config Config, rng *rand.Rand, traits *AvatarTraits) {
+	if traits == nil {
+		g.renderTemplatePart(img, spec, config, rng)
+		return
+	}
+
+	partWidth := int(float64(config.Width) * spec.RelativeWidth)
+	partHeight := int(float64(config.Height) * spec.RelativeHeight)
+
+	if partWidth <= 0 || partHeight <= 0 {
+		return
+	}
+
+	shapeType := selectShapeType(spec.ShapeTypes, rng)
+
+	// Use trait-derived color if available, otherwise fall back to palette
+	partColor := traits.ColorForBodyPart(spec.ColorRole, spec.ZIndex)
+	if partColor == nil {
+		partColor = g.getColorForRole(spec.ColorRole, config.Palette)
+	}
+
+	shapeConfig := shapes.Config{
+		Type:      shapeType,
+		Width:     partWidth,
+		Height:    partHeight,
+		Color:     partColor,
+		Seed:      config.Seed + int64(spec.ZIndex),
+		Smoothing: 0.2,
+		Rotation:  spec.Rotation,
+		AntiAlias: config.AntiAlias,
+	}
+
+	rgbaImg, err := g.shapeGen.GenerateRGBA(shapeConfig)
+	if err != nil {
+		return
+	}
+
+	genre := config.GenreID
+	baseCfg := GenreShadingConfig(genre)
+	partCfg := ShadingConfigForPart(baseCfg, spec.ColorRole, spec.ZIndex)
+	ApplyBodyPartShading(rgbaImg, partCfg, config.Seed+int64(spec.ZIndex)*31)
+
+	shape := ebiten.NewImageFromImage(rgbaImg)
+
+	opts := &ebiten.DrawImageOptions{}
+	x := float64(config.Width)*spec.RelativeX - float64(partWidth)/2
+	y := float64(config.Height)*spec.RelativeY - float64(partHeight)/2
+	opts.GeoM.Translate(x, y)
+
+	if spec.Opacity < 1.0 {
+		opts.ColorScale.ScaleAlpha(float32(spec.Opacity))
+	}
+
+	img.DrawImage(shape, opts)
+}
+
+// generateTraitsForEntity creates seed-based visual traits for the given entity.
+func generateTraitsForEntity(seed int64, entityType string) AvatarTraits {
+	if IsHumanoidEntity(entityType) {
+		return GenerateAvatarTraits(seed)
+	}
+	return GenerateCreatureTraits(seed, entityType)
+}
+
+// applyTraitProportions adjusts template part dimensions using trait scales.
+func applyTraitProportions(template AnatomicalTemplate, traits *AvatarTraits) AnatomicalTemplate {
+	if traits == nil {
+		return template
+	}
+	adjusted := AnatomicalTemplate{
+		Name:           template.Name,
+		BodyPartLayout: make(map[BodyPart]PartSpec, len(template.BodyPartLayout)),
+	}
+	for part, spec := range template.BodyPartLayout {
+		adjusted.BodyPartLayout[part] = traits.ApplyProportions(spec, part)
+	}
+	return adjusted
+}
 func selectShapeType(shapeTypes []shapes.ShapeType, rng *rand.Rand) shapes.ShapeType {
 	if len(shapeTypes) > 0 {
 		return shapeTypes[rng.Intn(len(shapeTypes))]

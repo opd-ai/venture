@@ -205,6 +205,7 @@ type SystemInitResult struct {
 	TerrainReflectionTintSystem                 *TerrainReflectionTintSystem
 	MovementBobSystem                           *MovementBobSystem
 	SpellCastGlowSystem                         *SpellCastGlowSystem
+	EquipmentChangeFlashSystem                  *EquipmentChangeFlashSystem
 
 	// System wrappers
 	AnimationSystemWrapper            System
@@ -644,6 +645,15 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 	spellCastGlowSystem.SetGenre(config.GenreID)
 	result.SpellCastGlowSystem = spellCastGlowSystem
 	game.World.AddSystem(spellCastGlowSystem)
+
+	// 17ap. EquipmentChangeFlashSystem - genre-aware flash particles on equipment change
+	// Reads EquipmentComponent slot state, detects equip/unequip transitions, and
+	// spawns sparkle particles via ParticleSystem for immediate visual feedback.
+	equipmentChangeFlashSystem := NewEquipmentChangeFlashSystem(game.World, config.Seed+9800)
+	equipmentChangeFlashSystem.SetParticleSystem(result.ParticleSystem)
+	equipmentChangeFlashSystem.SetGenre(config.GenreID)
+	result.EquipmentChangeFlashSystem = equipmentChangeFlashSystem
+	game.World.AddSystem(equipmentChangeFlashSystem)
 
 	// 18. SkillProgressionSystem - applies skill effects to stats
 	skillProgressionSystem := NewSkillProgressionSystem()

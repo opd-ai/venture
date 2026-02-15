@@ -222,6 +222,7 @@ type systemsContainer struct {
 	terrainReflectionTintSystem                 *engine.TerrainReflectionTintSystem                 // Terrain-driven sprite color tinting
 	movementBobSystem                           *engine.MovementBobSystem                           // Walk-cycle sprite bobbing
 	spellCastGlowSystem                         *engine.SpellCastGlowSystem                         // Genre-aware spell casting glow
+	equipmentChangeFlashSystem                  *engine.EquipmentChangeFlashSystem                  // Equipment change flash particles
 	statusEffectAISystem                        *engine.StatusEffectAISystem                        // Bridges status effects with AI (stun/frozen disable AI)
 	reputationSystem                            *engine.ReputationSystem
 	alignmentSystem                             *engine.AlignmentSystem
@@ -2122,6 +2123,12 @@ func registerNonCriticalSystems(game *engine.EbitenGame, sys *systemsContainer) 
 	sys.spellCastGlowSystem = engine.NewSpellCastGlowSystem(game.World, *seed+9750)
 	sys.spellCastGlowSystem.SetGenre(*genreID)
 	game.World.AddSystem(sys.spellCastGlowSystem)
+
+	// EquipmentChangeFlashSystem: genre-aware flash particles on equipment change
+	sys.equipmentChangeFlashSystem = engine.NewEquipmentChangeFlashSystem(game.World, *seed+9800)
+	sys.equipmentChangeFlashSystem.SetParticleSystem(sys.particleSystem)
+	sys.equipmentChangeFlashSystem.SetGenre(*genreID)
+	game.World.AddSystem(sys.equipmentChangeFlashSystem)
 
 	// FactionCompanionBehaviorSystem: bridges faction reputation with companion AI targeting
 	// Companions won't attack allied faction members and prioritize hostile faction enemies

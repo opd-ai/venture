@@ -1217,6 +1217,13 @@ func (s *AnimationSystem) configureEnemySprite(config *sprites.Config, entity *E
 		}
 	}
 
+	// Override with NPC role visual for role-specific humanoid templates
+	if roleComp, ok := entity.GetComponent("npc_role_visual"); ok {
+		if npcRole, ok := roleComp.(*NpcRoleVisualComponent); ok && npcRole.Role != "" {
+			entityType = npcRole.Role
+		}
+	}
+
 	config.Custom["entityType"] = entityType
 	facing := s.determineFacingDirection(entity, anim)
 	config.Custom["facing"] = facing

@@ -291,7 +291,10 @@ func darkenRGBA(c color.RGBA, factor float64) color.RGBA {
 // IsHumanoidEntity returns true if the entity type should use humanoid avatar traits.
 func IsHumanoidEntity(entityType string) bool {
 	switch entityType {
-	case "humanoid", "player", "npc", "knight", "mage", "warrior", "merchant":
+	case "humanoid", "player", "npc", "knight", "mage", "warrior", "merchant",
+		"rogue", "ranger", "priest", "cleric", "druid", "bard",
+		"paladin", "berserker", "assassin", "ninja", "elementalist",
+		"necromancer", "enchanter":
 		return true
 	}
 	return false

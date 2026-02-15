@@ -259,6 +259,7 @@ type systemsContainer struct {
 	clothingPatternSystem                       *engine.ClothingPatternSystem                       // Seed-based clothing patterns for entity sprites
 	bodyTypeSystem                              *engine.BodyTypeSystem                              // Seed-based body type variety for entity sprites
 	creatureVisualClassifierSystem              *engine.CreatureVisualClassifierSystem              // Infers creature visual form from procgen data
+	npcRoleVisualSystem                         *engine.NpcRoleVisualSystem                         // Infers humanoid NPC visual role for template selection
 	directionalSpriteSystem                     *engine.DirectionalSpriteSystem                     // Generates 4-directional sprite variants for facing
 	spriteFinalizerSystem                       *engine.SpriteFinalizerSystem                       // Applies adaptive outline, rim lighting, edge shadow
 	statusEffectAISystem                        *engine.StatusEffectAISystem                        // Bridges status effects with AI (stun/frozen disable AI)
@@ -1872,6 +1873,10 @@ func registerCriticalSystems(game *engine.EbitenGame, sys *systemsContainer) {
 	// Core rendering systems
 	sys.creatureVisualClassifierSystem = engine.NewCreatureVisualClassifierSystem(game.World)
 	game.World.AddSystem(sys.creatureVisualClassifierSystem)
+
+	// NPC role visual: infers humanoid visual roles (mage, warrior, merchant, etc.)
+	sys.npcRoleVisualSystem = engine.NewNpcRoleVisualSystem(game.World, *seed+9050)
+	game.World.AddSystem(sys.npcRoleVisualSystem)
 
 	game.World.AddSystem(&animationSystemWrapper{
 		system: sys.animationSystem,

@@ -365,11 +365,7 @@ func selectEntityTemplate(entityType, genre string, direction Direction, hasWeap
 
 // isHumanoidType checks if the entity type is humanoid.
 func isHumanoidType(entityType string) bool {
-	switch entityType {
-	case "humanoid", "player", "npc", "knight", "mage", "warrior":
-		return true
-	}
-	return false
+	return IsHumanoidEntity(entityType)
 }
 
 // applyBossModifications applies boss scaling and enhancements to the template.

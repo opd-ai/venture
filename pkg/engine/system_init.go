@@ -242,6 +242,7 @@ type SystemInitResult struct {
 	ClothingPatternSystem                       *ClothingPatternSystem
 	BodyTypeSystem                              *BodyTypeSystem
 	CreatureVisualClassifierSystem              *CreatureVisualClassifierSystem
+	NpcRoleVisualSystem                         *NpcRoleVisualSystem
 	DirectionalSpriteSystem                     *DirectionalSpriteSystem
 	SpriteFinalizerSystem                       *SpriteFinalizerSystem
 
@@ -979,6 +980,11 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 	// is available when sprite configs are built.
 	result.CreatureVisualClassifierSystem = NewCreatureVisualClassifierSystem(game.World)
 	game.World.AddSystem(result.CreatureVisualClassifierSystem)
+
+	// NPC role visual system — infers humanoid visual roles (mage, warrior, merchant, etc.)
+	// Must run before animation/directional systems that build sprite configs.
+	result.NpcRoleVisualSystem = NewNpcRoleVisualSystem(game.World, config.Seed+9050)
+	game.World.AddSystem(result.NpcRoleVisualSystem)
 
 	result.AnimationSystem = NewAnimationSystem(spriteGenerator)
 	result.AnimationSystemWrapper = &animationSystemWrapper{

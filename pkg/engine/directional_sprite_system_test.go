@@ -307,9 +307,9 @@ func TestDirectionalSpriteSystem_BuildSpriteConfig(t *testing.T) {
 	sys.genreID = "fantasy"
 
 	tests := []struct {
-		name           string
-		setup          func(*Entity)
-		checkConfig    func(t *testing.T, cfg sprites.Config)
+		name        string
+		setup       func(*Entity)
+		checkConfig func(t *testing.T, cfg sprites.Config)
 	}{
 		{
 			name:  "basic humanoid config",

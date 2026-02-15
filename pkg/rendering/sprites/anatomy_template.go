@@ -1925,7 +1925,10 @@ func SelectAerialTemplate(entityType, genre string, direction Direction) Anatomi
 	// Check if this is a humanoid type
 	isHumanoid := false
 	switch entityType {
-	case "humanoid", "player", "npc", "knight", "mage", "warrior":
+	case "humanoid", "player", "npc", "knight", "mage", "warrior",
+		"merchant", "rogue", "ranger", "priest", "cleric", "druid", "bard",
+		"paladin", "berserker", "assassin", "ninja", "elementalist",
+		"necromancer", "enchanter":
 		isHumanoid = true
 	}
 
@@ -1934,7 +1937,14 @@ func SelectAerialTemplate(entityType, genre string, direction Direction) Anatomi
 		return SelectNonhumanoidAerialTemplate(entityType, genre, direction)
 	}
 
-	// Apply genre-specific aerial styling for humanoids
+	// Check for role-specific template first (mage, warrior, knight, etc.)
+	if role := MapEntityTypeToRole(entityType); role != "" {
+		base := SelectRoleAerialTemplate(role, direction)
+		// Apply genre variation on top of role template
+		return applyGenreToRoleTemplate(base, genre)
+	}
+
+	// Generic humanoid / player — apply genre-specific aerial styling
 	switch genre {
 	case "fantasy":
 		return FantasyHumanoidAerial(direction)
@@ -1947,8 +1957,26 @@ func SelectAerialTemplate(entityType, genre string, direction Direction) Anatomi
 	case "postapoc", "post-apocalyptic":
 		return PostApocHumanoidAerial(direction)
 	default:
-		// Use enhanced template for unknown genres (Phase 15.1)
 		return EnhancedHumanoidAerialTemplate(direction)
+	}
+}
+
+// applyGenreToRoleTemplate applies genre-specific shape modifications
+// to an already role-specialized template.
+func applyGenreToRoleTemplate(base AnatomicalTemplate, genre string) AnatomicalTemplate {
+	switch genre {
+	case "fantasy":
+		return ApplyFantasyVariation(base)
+	case "scifi", "sci-fi":
+		return ApplySciFiVariation(base)
+	case "horror":
+		return ApplyHorrorVariation(base)
+	case "cyberpunk":
+		return ApplyCyberpunkVariation(base)
+	case "postapoc", "post-apocalyptic":
+		return ApplyPostApocVariation(base)
+	default:
+		return base
 	}
 }
 

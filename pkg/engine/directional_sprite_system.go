@@ -181,6 +181,13 @@ func (s *DirectionalSpriteSystem) determineEntityType(entity *Entity) string {
 		}
 	}
 
+	// Check NPC role visual component for role-specific humanoid template
+	if roleComp, ok := entity.GetComponent("npc_role_visual"); ok {
+		if npcRole, ok := roleComp.(*NpcRoleVisualComponent); ok && npcRole.Role != "" {
+			return npcRole.Role
+		}
+	}
+
 	// Check for boss-level entities
 	if attackComp, ok := entity.GetComponent("attack"); ok {
 		if attack, ok := attackComp.(*AttackComponent); ok {

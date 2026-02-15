@@ -220,6 +220,7 @@ type SystemInitResult struct {
 	EntitySpawnMaterializeSystem                *EntitySpawnMaterializeSystem
 	NPCInteractionProximityGlowSystem           *NPCInteractionProximityGlowSystem
 	EntityFactionOutlineSystem                  *EntityFactionOutlineSystem
+	ShieldBubbleOverlaySystem                   *ShieldBubbleOverlaySystem
 
 	// System wrappers
 	AnimationSystemWrapper            System
@@ -776,6 +777,14 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 	entityFactionOutlineSystem.SetGenre(config.GenreID)
 	result.EntityFactionOutlineSystem = entityFactionOutlineSystem
 	game.World.AddSystem(entityFactionOutlineSystem)
+
+	// 17bd. ShieldBubbleOverlaySystem - genre-aware translucent bubble around
+	// entities with active ShieldComponent. Opacity scales with shield amount,
+	// flickers at low shield, fades out on expiry.
+	shieldBubbleOverlaySystem := NewShieldBubbleOverlaySystem(game.World, config.Seed+10550)
+	shieldBubbleOverlaySystem.SetGenre(config.GenreID)
+	result.ShieldBubbleOverlaySystem = shieldBubbleOverlaySystem
+	game.World.AddSystem(shieldBubbleOverlaySystem)
 
 	// 18. SkillProgressionSystem - applies skill effects to stats
 	skillProgressionSystem := NewSkillProgressionSystem()

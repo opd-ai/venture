@@ -237,6 +237,7 @@ type systemsContainer struct {
 	entitySpawnMaterializeSystem                *engine.EntitySpawnMaterializeSystem                // Genre-aware spawn fade-in visuals
 	npcInteractionProximityGlowSystem           *engine.NPCInteractionProximityGlowSystem           // Genre-aware NPC interactability glow
 	entityFactionOutlineSystem                  *engine.EntityFactionOutlineSystem                  // Genre-aware faction allegiance outlines
+	shieldBubbleOverlaySystem                   *engine.ShieldBubbleOverlaySystem                   // Genre-aware shield bubble visual overlay
 	statusEffectAISystem                        *engine.StatusEffectAISystem                        // Bridges status effects with AI (stun/frozen disable AI)
 	reputationSystem                            *engine.ReputationSystem
 	alignmentSystem                             *engine.AlignmentSystem
@@ -2224,6 +2225,11 @@ func registerNonCriticalSystems(game *engine.EbitenGame, sys *systemsContainer) 
 	sys.entityFactionOutlineSystem = engine.NewEntityFactionOutlineSystem(game.World, *seed+10500)
 	sys.entityFactionOutlineSystem.SetGenre(*genreID)
 	game.World.AddSystem(sys.entityFactionOutlineSystem)
+
+	// ShieldBubbleOverlaySystem: genre-aware translucent bubble around shielded entities
+	sys.shieldBubbleOverlaySystem = engine.NewShieldBubbleOverlaySystem(game.World, *seed+10550)
+	sys.shieldBubbleOverlaySystem.SetGenre(*genreID)
+	game.World.AddSystem(sys.shieldBubbleOverlaySystem)
 
 	// FactionCompanionBehaviorSystem: bridges faction reputation with companion AI targeting
 	// Companions won't attack allied faction members and prioritize hostile faction enemies

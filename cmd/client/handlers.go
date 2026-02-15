@@ -242,6 +242,7 @@ type systemsContainer struct {
 	movementDustSystem                          *engine.MovementDustSystem                          // Speed-proportional terrain dust behind fast movers
 	healthRegenPulseSystem                      *engine.HealthRegenPulseSystem                      // Genre-aware healing pulse particles
 	statusEffectGroundTrailSystem               *engine.StatusEffectGroundTrailSystem               // Ground-level DoT movement trails
+	waterSurfaceRippleSystem                   *engine.WaterSurfaceRippleSystem                   // Water tile ripple/splash particles
 	statusEffectAISystem                        *engine.StatusEffectAISystem                        // Bridges status effects with AI (stun/frozen disable AI)
 	reputationSystem                            *engine.ReputationSystem
 	alignmentSystem                             *engine.AlignmentSystem
@@ -2255,6 +2256,11 @@ func registerNonCriticalSystems(game *engine.EbitenGame, sys *systemsContainer) 
 	sys.statusEffectGroundTrailSystem = engine.NewStatusEffectGroundTrailSystem(game.World, *seed+10690)
 	sys.statusEffectGroundTrailSystem.SetGenre(*genreID)
 	game.World.AddSystem(sys.statusEffectGroundTrailSystem)
+
+	// WaterSurfaceRippleSystem: ripple/splash particles when entities move through water tiles
+	sys.waterSurfaceRippleSystem = engine.NewWaterSurfaceRippleSystem(game.World, *seed+10700)
+	sys.waterSurfaceRippleSystem.SetGenre(*genreID)
+	game.World.AddSystem(sys.waterSurfaceRippleSystem)
 
 	// FactionCompanionBehaviorSystem: bridges faction reputation with companion AI targeting
 	// Companions won't attack allied faction members and prioritize hostile faction enemies

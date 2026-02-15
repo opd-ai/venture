@@ -225,6 +225,7 @@ type SystemInitResult struct {
 	MovementDustSystem                          *MovementDustSystem
 	HealthRegenPulseSystem                      *HealthRegenPulseSystem
 	StatusEffectGroundTrailSystem               *StatusEffectGroundTrailSystem
+	WaterSurfaceRippleSystem                   *WaterSurfaceRippleSystem
 
 	// System wrappers
 	AnimationSystemWrapper            System
@@ -1320,6 +1321,13 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 	statusEffectGroundTrailSystem.SetGenre(config.GenreID)
 	result.StatusEffectGroundTrailSystem = statusEffectGroundTrailSystem
 	game.World.AddSystem(statusEffectGroundTrailSystem)
+
+	// 36k1d. WaterSurfaceRippleSystem - ripple/splash particles in water tiles
+	waterSurfaceRippleSystem := NewWaterSurfaceRippleSystem(game.World, config.Seed+6440)
+	waterSurfaceRippleSystem.SetParticleSystem(result.ParticleSystem)
+	waterSurfaceRippleSystem.SetGenre(config.GenreID)
+	result.WaterSurfaceRippleSystem = waterSurfaceRippleSystem
+	game.World.AddSystem(waterSurfaceRippleSystem)
 
 	// 36k2. ManaRegenParticleSystem - visual feedback for mana regeneration
 	// Spawns genre-aware particles when entities actively regenerate mana

@@ -259,6 +259,7 @@ type systemsContainer struct {
 	clothingPatternSystem                       *engine.ClothingPatternSystem                       // Seed-based clothing patterns for entity sprites
 	bodyTypeSystem                              *engine.BodyTypeSystem                              // Seed-based body type variety for entity sprites
 	creatureVisualClassifierSystem              *engine.CreatureVisualClassifierSystem              // Infers creature visual form from procgen data
+	directionalSpriteSystem                     *engine.DirectionalSpriteSystem                     // Generates 4-directional sprite variants for facing
 	spriteFinalizerSystem                       *engine.SpriteFinalizerSystem                       // Applies adaptive outline, rim lighting, edge shadow
 	statusEffectAISystem                        *engine.StatusEffectAISystem                        // Bridges status effects with AI (stun/frozen disable AI)
 	reputationSystem                            *engine.ReputationSystem
@@ -1878,6 +1879,11 @@ func registerCriticalSystems(game *engine.EbitenGame, sys *systemsContainer) {
 	})
 
 	game.World.AddSystem(sys.equipmentVisualSystem)
+
+	// Directional sprites: 4-direction variants for correct facing in top-down view
+	sys.directionalSpriteSystem = engine.NewDirectionalSpriteSystem(sys.spriteGenerator)
+	sys.directionalSpriteSystem.SetGenre(*genreID)
+	game.World.AddSystem(sys.directionalSpriteSystem)
 
 	// Sprite finalizer: adaptive outline, rim lighting, edge shadow for all entity sprites
 	sys.spriteFinalizerSystem = engine.NewSpriteFinalizerSystem(game.World, *seed+9100)

@@ -242,6 +242,7 @@ type SystemInitResult struct {
 	ClothingPatternSystem                       *ClothingPatternSystem
 	BodyTypeSystem                              *BodyTypeSystem
 	CreatureVisualClassifierSystem              *CreatureVisualClassifierSystem
+	DirectionalSpriteSystem                     *DirectionalSpriteSystem
 	SpriteFinalizerSystem                       *SpriteFinalizerSystem
 
 	// System wrappers
@@ -988,6 +989,13 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 
 	equipmentVisualSystem := NewEquipmentVisualSystem(spriteGenerator)
 	game.World.AddSystem(equipmentVisualSystem)
+
+	// Directional sprites — generates 4-directional sprite variants (up/down/left/right)
+	// so the render system displays the correct facing. Runs after animation and equipment
+	// visuals but before the sprite finalizer.
+	result.DirectionalSpriteSystem = NewDirectionalSpriteSystem(spriteGenerator)
+	result.DirectionalSpriteSystem.SetGenre(config.GenreID)
+	game.World.AddSystem(result.DirectionalSpriteSystem)
 
 	// Sprite finalizer — applies adaptive outline, rim lighting, and edge shadow
 	// to entity sprites for visual clarity in top-down view. Runs after equipment

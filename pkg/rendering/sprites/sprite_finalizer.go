@@ -308,5 +308,3 @@ func darkenColor(c color.RGBA, factor float64) color.RGBA {
 		A: c.A,
 	}
 }
-
-

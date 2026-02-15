@@ -102,11 +102,11 @@ func TestFinalizeEntitySprite_OutlineOnly(t *testing.T) {
 func TestFinalizeEntitySprite_RimLightBrightensTopEdge(t *testing.T) {
 	src := makeTestSprite(32, 32)
 	cfgNoRim := FinalizerConfig{
-		EnableOutline: false,
+		EnableOutline:  false,
 		EnableRimLight: false, Seed: 42,
 	}
 	cfgWithRim := FinalizerConfig{
-		EnableOutline: false,
+		EnableOutline:  false,
 		EnableRimLight: true, RimLightIntensity: 0.5, RimLightAngle: 315,
 		Seed: 42,
 	}

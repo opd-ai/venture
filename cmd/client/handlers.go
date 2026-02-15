@@ -232,6 +232,7 @@ type systemsContainer struct {
 	weaponMaterialParticleSystem                *engine.WeaponMaterialParticleSystem                // Genre-aware idle particles from weapon material type
 	lootRarityBeamSystem                        *engine.LootRarityBeamSystem                        // Genre-aware beam particles on ground items by rarity
 	damageTypeColorFlashSystem                  *engine.DamageTypeColorFlashSystem                  // Genre-aware elemental damage color flashes
+	companionBondTetherSystem                   *engine.CompanionBondTetherSystem                   // Genre-aware visual tether between companion and owner
 	statusEffectAISystem                        *engine.StatusEffectAISystem                        // Bridges status effects with AI (stun/frozen disable AI)
 	reputationSystem                            *engine.ReputationSystem
 	alignmentSystem                             *engine.AlignmentSystem
@@ -2190,6 +2191,12 @@ func registerNonCriticalSystems(game *engine.EbitenGame, sys *systemsContainer) 
 	sys.damageTypeColorFlashSystem.SetGenre(*genreID)
 	sys.combatSystem.AddDamageCallback(sys.damageTypeColorFlashSystem.OnDamageDealt)
 	game.World.AddSystem(sys.damageTypeColorFlashSystem)
+
+	// CompanionBondTetherSystem: genre-aware visual tether between companion and owner
+	// Draws a pulsing line connecting companion to player with loyalty-driven intensity
+	sys.companionBondTetherSystem = engine.NewCompanionBondTetherSystem(game.World, *seed+10300)
+	sys.companionBondTetherSystem.SetGenre(*genreID)
+	game.World.AddSystem(sys.companionBondTetherSystem)
 
 	// FactionCompanionBehaviorSystem: bridges faction reputation with companion AI targeting
 	// Companions won't attack allied faction members and prioritize hostile faction enemies

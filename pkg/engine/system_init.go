@@ -215,6 +215,7 @@ type SystemInitResult struct {
 	WeaponMaterialParticleSystem                *WeaponMaterialParticleSystem
 	LootRarityBeamSystem                        *LootRarityBeamSystem
 	DamageTypeColorFlashSystem                  *DamageTypeColorFlashSystem
+	CompanionBondTetherSystem                   *CompanionBondTetherSystem
 
 	// System wrappers
 	AnimationSystemWrapper            System
@@ -731,6 +732,14 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 	result.CombatSystem.AddDamageCallback(damageTypeColorFlashSystem.OnDamageDealt)
 	result.DamageTypeColorFlashSystem = damageTypeColorFlashSystem
 	game.World.AddSystem(damageTypeColorFlashSystem)
+
+	// 17ay. CompanionBondTetherSystem - genre-aware visual tether between companion and owner
+	// Reads CompanionComponent.OwnerID and PositionComponent to write tether geometry/color
+	// into CompanionBondTetherComponent for the renderer.
+	companionBondTetherSystem := NewCompanionBondTetherSystem(game.World, config.Seed+10300)
+	companionBondTetherSystem.SetGenre(config.GenreID)
+	result.CompanionBondTetherSystem = companionBondTetherSystem
+	game.World.AddSystem(companionBondTetherSystem)
 
 	// 18. SkillProgressionSystem - applies skill effects to stats
 	skillProgressionSystem := NewSkillProgressionSystem()

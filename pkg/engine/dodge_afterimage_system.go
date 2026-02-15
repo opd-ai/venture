@@ -13,9 +13,9 @@ import (
 
 // afterimageGenrePreset holds genre-specific tint and decay configuration.
 type afterimageGenrePreset struct {
-	R, G, B      float64
-	DecayRate    float64
-	MaxGhosts    int
+	R, G, B       float64
+	DecayRate     float64
+	MaxGhosts     int
 	SpawnInterval float64
 }
 
@@ -30,8 +30,8 @@ type DodgeAfterimageSystem struct {
 	preset  afterimageGenrePreset
 
 	// Throttle attachment scan for new entities
-	scanInterval   float64
-	timeSinceScan  float64
+	scanInterval  float64
+	timeSinceScan float64
 }
 
 // NewDodgeAfterimageSystem creates a dodge afterimage system.

@@ -25,10 +25,10 @@ func TestNewMovementBobSystem(t *testing.T) {
 
 func TestMovementBobSystem_SetGenre(t *testing.T) {
 	tests := []struct {
-		genre     string
-		wantAmpl  float64
-		wantFreq  float64
-		wantDamp  float64
+		genre    string
+		wantAmpl float64
+		wantFreq float64
+		wantDamp float64
 	}{
 		{"fantasy", 1.5, 1.2, 0.8},
 		{"horror", 2.5, 0.7, 0.6},

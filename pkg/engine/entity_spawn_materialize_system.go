@@ -65,9 +65,9 @@ type EntitySpawnMaterializeSystem struct {
 	knownEntities map[uint64]bool
 
 	// Throttle new-entity scanning
-	scanInterval   float64
-	timeSinceScan  float64
-	firstScanDone  bool
+	scanInterval  float64
+	timeSinceScan float64
+	firstScanDone bool
 }
 
 // NewEntitySpawnMaterializeSystem creates the system with genre defaults.

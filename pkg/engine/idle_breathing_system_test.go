@@ -31,9 +31,9 @@ func TestEntityIdleBreathingSystem_SetGenre(t *testing.T) {
 	sys := NewEntityIdleBreathingSystem(world, 42)
 
 	tests := []struct {
-		genre     string
-		wantAmp   float64
-		wantFreq  float64
+		genre      string
+		wantAmp    float64
+		wantFreq   float64
 		wantJitter float64
 	}{
 		{"fantasy", 0.5, 0.8, 0.0},

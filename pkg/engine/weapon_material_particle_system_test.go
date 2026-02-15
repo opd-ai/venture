@@ -95,10 +95,10 @@ func TestWeaponMaterialParticleSystem_UpdateSkipsWithoutEquipment(t *testing.T) 
 
 func TestWeaponMaterialParticleSystem_GetWeaponMaterial(t *testing.T) {
 	tests := []struct {
-		name     string
-		setup    func(*Entity)
-		wantMat  sprites.MaterialType
-		wantHas  bool
+		name    string
+		setup   func(*Entity)
+		wantMat sprites.MaterialType
+		wantHas bool
 	}{
 		{
 			name:    "no_equipment_component",

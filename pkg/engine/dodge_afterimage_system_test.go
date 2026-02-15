@@ -46,11 +46,11 @@ func TestNewDodgeAfterimageSystem(t *testing.T) {
 
 func TestDodgeAfterimageSystem_SetGenre(t *testing.T) {
 	tests := []struct {
-		name    string
-		genre   string
-		wantR   float64
-		wantG   float64
-		wantB   float64
+		name  string
+		genre string
+		wantR float64
+		wantG float64
+		wantB float64
 	}{
 		{"fantasy", "fantasy", 1.0, 0.85, 0.4},
 		{"horror", "horror", 0.4, 0.1, 0.1},
@@ -150,7 +150,7 @@ func TestDodgeAfterimageSystem_AttachesOnFastMovement(t *testing.T) {
 	entity := NewEntity(1)
 	entity.AddComponent(&PositionComponent{X: 10, Y: 20})
 	entity.AddComponent(&VelocityComponent{VX: 200, VY: 0}) // Fast enough
-	sys.timeSinceScan = 2.0 // Force past scan interval
+	sys.timeSinceScan = 2.0                                 // Force past scan interval
 	sys.Update([]*Entity{entity}, 0.016)
 	comp, has := entity.GetComponent("afterimage")
 	if !has {

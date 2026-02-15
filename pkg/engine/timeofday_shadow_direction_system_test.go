@@ -23,10 +23,10 @@ func TestNewTimeOfDayShadowDirectionSystem(t *testing.T) {
 
 func TestTimeOfDayShadowDirectionSystem_SetGenre(t *testing.T) {
 	tests := []struct {
-		name         string
-		genre        string
-		wantStretch  float64
-		wantNightOp  float64
+		name        string
+		genre       string
+		wantStretch float64
+		wantNightOp float64
 	}{
 		{"fantasy", "fantasy", 1.0, 0.15},
 		{"horror", "horror", 1.4, 0.30},

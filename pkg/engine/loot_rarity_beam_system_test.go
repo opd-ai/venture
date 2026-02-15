@@ -29,9 +29,9 @@ func TestNewLootRarityBeamSystem(t *testing.T) {
 
 func TestLootRarityBeamSystem_SetGenre(t *testing.T) {
 	tests := []struct {
-		name       string
-		genre      string
-		wantMult   float64
+		name     string
+		genre    string
+		wantMult float64
 	}{
 		{"fantasy", "fantasy", 1.0},
 		{"horror", "horror", 1.5},
@@ -162,10 +162,10 @@ func TestLootRarityBeamSystem_BeamConfigScaling(t *testing.T) {
 	sys := NewLootRarityBeamSystem(NewWorld(), 1)
 
 	tests := []struct {
-		rarity         item.Rarity
-		wantColor      string
-		wantMinCount   int
-		wantMinHeight  float64
+		rarity        item.Rarity
+		wantColor     string
+		wantMinCount  int
+		wantMinHeight float64
 	}{
 		{item.RarityUncommon, "green", 3, 20.0},
 		{item.RarityRare, "blue", 5, 28.0},

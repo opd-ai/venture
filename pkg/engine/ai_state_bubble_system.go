@@ -88,11 +88,11 @@ type genreBubblePalette struct {
 
 // aiStateBubbleSymbol maps AI state to display symbol and visual weight.
 type aiStateBubbleSymbol struct {
-	Symbol    string
-	Opacity   float64 // Target opacity for this state
-	Scale     float64 // Scale multiplier
-	BobSpeed  float64 // Bob speed override
-	BobAmp    float64 // Bob amplitude override
+	Symbol   string
+	Opacity  float64 // Target opacity for this state
+	Scale    float64 // Scale multiplier
+	BobSpeed float64 // Bob speed override
+	BobAmp   float64 // Bob amplitude override
 }
 
 // AIStateBubbleSystem assigns genre-aware floating indicators to NPC
@@ -293,13 +293,13 @@ func buildBubblePalettes() map[string]genreBubblePalette {
 // buildBubbleSymbols returns state-to-symbol mappings with visual parameters.
 func buildBubbleSymbols() map[AIState]aiStateBubbleSymbol {
 	return map[AIState]aiStateBubbleSymbol{
-		AIStateIdle:    {Symbol: "zzz", Opacity: 0.45, Scale: 0.7, BobSpeed: 1.5, BobAmp: 1.5},
-		AIStatePatrol:  {Symbol: "~", Opacity: 0.50, Scale: 0.8, BobSpeed: 2.0, BobAmp: 1.8},
-		AIStateDetect:  {Symbol: "!", Opacity: 0.80, Scale: 1.1, BobSpeed: 3.5, BobAmp: 2.5},
-		AIStateChase:   {Symbol: "!!", Opacity: 0.90, Scale: 1.2, BobSpeed: 4.0, BobAmp: 3.0},
-		AIStateAttack:  {Symbol: "X", Opacity: 0.95, Scale: 1.3, BobSpeed: 5.0, BobAmp: 2.0},
-		AIStateFlee:    {Symbol: "...", Opacity: 0.70, Scale: 0.9, BobSpeed: 4.5, BobAmp: 2.8},
-		AIStateReturn:  {Symbol: "<", Opacity: 0.50, Scale: 0.8, BobSpeed: 2.0, BobAmp: 1.8},
+		AIStateIdle:   {Symbol: "zzz", Opacity: 0.45, Scale: 0.7, BobSpeed: 1.5, BobAmp: 1.5},
+		AIStatePatrol: {Symbol: "~", Opacity: 0.50, Scale: 0.8, BobSpeed: 2.0, BobAmp: 1.8},
+		AIStateDetect: {Symbol: "!", Opacity: 0.80, Scale: 1.1, BobSpeed: 3.5, BobAmp: 2.5},
+		AIStateChase:  {Symbol: "!!", Opacity: 0.90, Scale: 1.2, BobSpeed: 4.0, BobAmp: 3.0},
+		AIStateAttack: {Symbol: "X", Opacity: 0.95, Scale: 1.3, BobSpeed: 5.0, BobAmp: 2.0},
+		AIStateFlee:   {Symbol: "...", Opacity: 0.70, Scale: 0.9, BobSpeed: 4.5, BobAmp: 2.8},
+		AIStateReturn: {Symbol: "<", Opacity: 0.50, Scale: 0.8, BobSpeed: 2.0, BobAmp: 1.8},
 	}
 }
 

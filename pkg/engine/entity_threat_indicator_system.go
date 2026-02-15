@@ -292,11 +292,11 @@ func (s *EntityThreatIndicatorSystem) getOrCreateComponent(entity *Entity) *Thre
 func buildThreatPalettes() map[string]genreThreatPalette {
 	return map[string]genreThreatPalette{
 		"fantasy": {Tiers: [5]threatTierPreset{
-			{R: 0.50, G: 0.50, B: 0.50, Opacity: 0.25, PulseSpeed: 0.0},  // trivial: grey
-			{R: 0.30, G: 0.80, B: 0.30, Opacity: 0.35, PulseSpeed: 0.0},  // easy: green
-			{R: 0.90, G: 0.85, B: 0.20, Opacity: 0.45, PulseSpeed: 0.0},  // fair: yellow
-			{R: 0.95, G: 0.55, B: 0.15, Opacity: 0.55, PulseSpeed: 0.6},  // challenging: orange
-			{R: 0.95, G: 0.15, B: 0.15, Opacity: 0.65, PulseSpeed: 0.9},  // dangerous: red
+			{R: 0.50, G: 0.50, B: 0.50, Opacity: 0.25, PulseSpeed: 0.0}, // trivial: grey
+			{R: 0.30, G: 0.80, B: 0.30, Opacity: 0.35, PulseSpeed: 0.0}, // easy: green
+			{R: 0.90, G: 0.85, B: 0.20, Opacity: 0.45, PulseSpeed: 0.0}, // fair: yellow
+			{R: 0.95, G: 0.55, B: 0.15, Opacity: 0.55, PulseSpeed: 0.6}, // challenging: orange
+			{R: 0.95, G: 0.15, B: 0.15, Opacity: 0.65, PulseSpeed: 0.9}, // dangerous: red
 		}},
 		"horror": {Tiers: [5]threatTierPreset{
 			{R: 0.40, G: 0.38, B: 0.35, Opacity: 0.20, PulseSpeed: 0.0},

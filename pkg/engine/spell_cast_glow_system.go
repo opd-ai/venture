@@ -55,10 +55,10 @@ func (c *SpellCastGlowComponent) Type() string {
 // NewSpellCastGlowComponent creates a component with inactive defaults.
 func NewSpellCastGlowComponent() *SpellCastGlowComponent {
 	return &SpellCastGlowComponent{
-		PulseSpeed:   1.0,
+		PulseSpeed:     1.0,
 		PulseAmplitude: 0.1,
-		GlowRadius:   3.0,
-		FadeDuration: 0.3,
+		GlowRadius:     3.0,
+		FadeDuration:   0.3,
 	}
 }
 

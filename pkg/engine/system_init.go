@@ -218,7 +218,7 @@ type SystemInitResult struct {
 	CompanionBondTetherSystem                   *CompanionBondTetherSystem
 	CriticalHitScreenShakeSystem                *CriticalHitScreenShakeSystem
 	EntitySpawnMaterializeSystem                *EntitySpawnMaterializeSystem
-	NPCInteractionProximityGlowSystem          *NPCInteractionProximityGlowSystem
+	NPCInteractionProximityGlowSystem           *NPCInteractionProximityGlowSystem
 
 	// System wrappers
 	AnimationSystemWrapper            System

@@ -235,7 +235,7 @@ type systemsContainer struct {
 	companionBondTetherSystem                   *engine.CompanionBondTetherSystem                   // Genre-aware visual tether between companion and owner
 	criticalHitScreenShakeSystem                *engine.CriticalHitScreenShakeSystem                // Genre-aware camera shake on critical hits
 	entitySpawnMaterializeSystem                *engine.EntitySpawnMaterializeSystem                // Genre-aware spawn fade-in visuals
-	npcInteractionProximityGlowSystem          *engine.NPCInteractionProximityGlowSystem          // Genre-aware NPC interactability glow
+	npcInteractionProximityGlowSystem           *engine.NPCInteractionProximityGlowSystem           // Genre-aware NPC interactability glow
 	statusEffectAISystem                        *engine.StatusEffectAISystem                        // Bridges status effects with AI (stun/frozen disable AI)
 	reputationSystem                            *engine.ReputationSystem
 	alignmentSystem                             *engine.AlignmentSystem

@@ -200,7 +200,7 @@ func TestCompanionBondTetherSystem_Update_LoyaltyModulation(t *testing.T) {
 				Loyalty: tt.loyalty,
 			})
 
-	world.FlushPendingEntities()
+			world.FlushPendingEntities()
 			sys.Update([]*Entity{owner, companion}, 0.016)
 
 			tether := getTetherComp(companion)

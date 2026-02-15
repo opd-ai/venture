@@ -310,7 +310,7 @@ func TestFloatingDamageNumberSystemGenreColors(t *testing.T) {
 			sys.Update(entities, 0.016)
 
 			fdnCompRaw, _ := entity.GetComponent("floating_damage_number")
-	comp := fdnCompRaw.(*FloatingDamageNumberComponent)
+			comp := fdnCompRaw.(*FloatingDamageNumberComponent)
 			if len(comp.Numbers) == 0 {
 				t.Fatal("expected at least 1 number")
 			}

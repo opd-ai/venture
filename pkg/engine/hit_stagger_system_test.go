@@ -133,10 +133,10 @@ func TestCombatHitStaggerSystem_DecayToZero(t *testing.T) {
 
 func TestCombatHitStaggerSystem_IntensityScaling(t *testing.T) {
 	tests := []struct {
-		name     string
-		damage   float64
-		wantMin  float64
-		wantMax  float64
+		name    string
+		damage  float64
+		wantMin float64
+		wantMax float64
 	}{
 		{"small_hit", 5, 0.5, 2.5},
 		{"medium_hit", 30, 1.5, 4.0},

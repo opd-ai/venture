@@ -80,7 +80,7 @@ func NewCompanionBondTetherSystem(world *World, seed int64) *CompanionBondTether
 		rng:         rand.New(rand.NewSource(seed)),
 		logger:      logger,
 		genreID:     "fantasy",
-		maxDistance:  250.0,
+		maxDistance: 250.0,
 		fadeStart:   150.0,
 	}
 	sys.preset = sys.getGenrePreset("fantasy")

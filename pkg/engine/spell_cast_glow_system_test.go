@@ -215,9 +215,9 @@ func TestSpellCastGlowNotCasting(t *testing.T) {
 
 func TestSpellCastGlowGenreShifts(t *testing.T) {
 	tests := []struct {
-		genre         string
-		expectBright  float64
-		expectSat     float64
+		genre        string
+		expectBright float64
+		expectSat    float64
 	}{
 		{"fantasy", 1.0, 1.0},
 		{"horror", 0.7, 0.85},

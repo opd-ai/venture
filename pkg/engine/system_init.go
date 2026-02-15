@@ -247,6 +247,7 @@ type SystemInitResult struct {
 	NpcRoleVisualSystem                         *NpcRoleVisualSystem
 	DirectionalSpriteSystem                     *DirectionalSpriteSystem
 	SpriteDepthEnhanceSystem                    *SpriteDepthEnhanceSystem
+	SpriteColorTemperatureSystem                *SpriteColorTemperatureSystem
 	SpriteFinalizerSystem                       *SpriteFinalizerSystem
 
 	// System wrappers
@@ -1018,6 +1019,12 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 	result.SpriteDepthEnhanceSystem = NewSpriteDepthEnhanceSystem(game.World, config.Seed+9050)
 	result.SpriteDepthEnhanceSystem.SetGenre(config.GenreID)
 	game.World.AddSystem(result.SpriteDepthEnhanceSystem)
+
+	// Sprite color temperature: warm/cool color grading and specular highlights.
+	// Runs after depth enhancement, before finalization, for genre-aware lighting.
+	result.SpriteColorTemperatureSystem = NewSpriteColorTemperatureSystem(game.World, config.Seed+9075)
+	result.SpriteColorTemperatureSystem.SetGenre(config.GenreID)
+	game.World.AddSystem(result.SpriteColorTemperatureSystem)
 
 	// Sprite finalizer — applies adaptive outline, rim lighting, and edge shadow
 	// to entity sprites for visual clarity in top-down view. Runs after equipment

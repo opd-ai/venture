@@ -49,6 +49,10 @@ type EbitenSprite struct {
 	// DepthProcessed indicates whether volumetric depth enhancement has been applied.
 	// Set to true by SpriteDepthEnhanceSystem; reset to false on sprite regeneration.
 	DepthProcessed bool
+
+	// ColorTempProcessed indicates whether color temperature grading has been applied.
+	// Set to true by SpriteColorTemperatureSystem; reset to false on sprite regeneration.
+	ColorTempProcessed bool
 }
 
 // Type returns the component type identifier (implements Component).

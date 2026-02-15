@@ -264,6 +264,7 @@ type systemsContainer struct {
 	npcRoleVisualSystem                         *engine.NpcRoleVisualSystem                         // Infers humanoid NPC visual role for template selection
 	directionalSpriteSystem                     *engine.DirectionalSpriteSystem                     // Generates 4-directional sprite variants for facing
 	spriteDepthEnhanceSystem                    *engine.SpriteDepthEnhanceSystem                    // Applies form-aware volumetric depth shading to sprites
+	spriteColorTemperatureSystem                *engine.SpriteColorTemperatureSystem                // Applies genre-aware color temperature grading and specular
 	spriteFinalizerSystem                       *engine.SpriteFinalizerSystem                       // Applies adaptive outline, rim lighting, edge shadow
 	statusEffectAISystem                        *engine.StatusEffectAISystem                        // Bridges status effects with AI (stun/frozen disable AI)
 	reputationSystem                            *engine.ReputationSystem
@@ -1901,6 +1902,11 @@ func registerCriticalSystems(game *engine.EbitenGame, sys *systemsContainer) {
 	sys.spriteDepthEnhanceSystem = engine.NewSpriteDepthEnhanceSystem(game.World, *seed+9050)
 	sys.spriteDepthEnhanceSystem.SetGenre(*genreID)
 	game.World.AddSystem(sys.spriteDepthEnhanceSystem)
+
+	// Sprite color temperature: warm/cool grading and specular highlights for genre-aware lighting
+	sys.spriteColorTemperatureSystem = engine.NewSpriteColorTemperatureSystem(game.World, *seed+9075)
+	sys.spriteColorTemperatureSystem.SetGenre(*genreID)
+	game.World.AddSystem(sys.spriteColorTemperatureSystem)
 
 	// Sprite finalizer: adaptive outline, rim lighting, edge shadow for all entity sprites
 	sys.spriteFinalizerSystem = engine.NewSpriteFinalizerSystem(game.World, *seed+9100)

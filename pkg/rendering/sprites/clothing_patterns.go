@@ -122,7 +122,7 @@ func generateOnePattern(rng *rand.Rand) ClothingPattern {
 	lum := 0.30 + rng.Float64()*0.40
 	pcolor := hslToRGBA(hue, sat, lum)
 
-	scale := 0.7 + rng.Float64()*0.6  // 0.7–1.3
+	scale := 0.7 + rng.Float64()*0.6     // 0.7–1.3
 	intensity := 0.3 + rng.Float64()*0.5 // 0.3–0.8
 
 	return ClothingPattern{

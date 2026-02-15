@@ -10,14 +10,14 @@ import "strings"
 type CreatureForm string
 
 const (
-	FormHumanoid    CreatureForm = "humanoid"
-	FormQuadruped   CreatureForm = "quadruped"
-	FormArachnid    CreatureForm = "arachnid"
-	FormSerpentine  CreatureForm = "serpentine"
-	FormFlying      CreatureForm = "flying"
-	FormBlob        CreatureForm = "blob"
-	FormMechanical  CreatureForm = "mechanical"
-	FormUndead      CreatureForm = "undead"
+	FormHumanoid   CreatureForm = "humanoid"
+	FormQuadruped  CreatureForm = "quadruped"
+	FormArachnid   CreatureForm = "arachnid"
+	FormSerpentine CreatureForm = "serpentine"
+	FormFlying     CreatureForm = "flying"
+	FormBlob       CreatureForm = "blob"
+	FormMechanical CreatureForm = "mechanical"
+	FormUndead     CreatureForm = "undead"
 )
 
 // CreatureVisualComponent is a pure-data ECS component that carries visual

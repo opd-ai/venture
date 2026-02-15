@@ -147,15 +147,15 @@ func GetBodyTypeModifiers(bt BodyType) BodyTypeModifiers {
 		}
 	case BodyTypePetite:
 		return BodyTypeModifiers{
-			TorsoWidthScale:  0.82,
-			TorsoHeightScale: 0.85,
-			HeadWidthScale:   1.10,
-			HeadHeightScale:  1.10,
-			ArmWidthScale:    0.80,
-			ArmHeightScale:   0.85,
-			LegWidthScale:    0.80,
-			LegHeightScale:   0.85,
-			ShadowWidthScale: 0.80,
+			TorsoWidthScale:     0.82,
+			TorsoHeightScale:    0.85,
+			HeadWidthScale:      1.10,
+			HeadHeightScale:     1.10,
+			ArmWidthScale:       0.80,
+			ArmHeightScale:      0.85,
+			LegWidthScale:       0.80,
+			LegHeightScale:      0.85,
+			ShadowWidthScale:    0.80,
 			PreferredHeadShapes: []shapes.ShapeType{shapes.ShapeCircle},
 		}
 	case BodyTypeBroad:

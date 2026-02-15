@@ -45,13 +45,13 @@ type FaceRenderParams struct {
 
 // Predefined eye color palette for seed-based selection.
 var eyeColors = []color.RGBA{
-	{R: 80, G: 50, B: 25, A: 255},   // brown
-	{R: 50, G: 35, B: 18, A: 255},   // dark brown
-	{R: 45, G: 90, B: 160, A: 255},  // blue
-	{R: 40, G: 120, B: 70, A: 255},  // green
-	{R: 120, G: 95, B: 45, A: 255},  // hazel
+	{R: 80, G: 50, B: 25, A: 255},    // brown
+	{R: 50, G: 35, B: 18, A: 255},    // dark brown
+	{R: 45, G: 90, B: 160, A: 255},   // blue
+	{R: 40, G: 120, B: 70, A: 255},   // green
+	{R: 120, G: 95, B: 45, A: 255},   // hazel
 	{R: 110, G: 120, B: 130, A: 255}, // grey
-	{R: 155, G: 105, B: 35, A: 255}, // amber
+	{R: 155, G: 105, B: 35, A: 255},  // amber
 }
 
 // ComputeFaceParams builds FaceRenderParams from seed-based traits and template data.
@@ -82,7 +82,8 @@ func ComputeFaceParams(spriteW, spriteH int, headSpec PartSpec, direction Direct
 // ComputeFaceParamsFromComponent builds FaceRenderParams from NPC facial detail
 // component data (EyeR/G/B, MouthR/G/B, EyeSize, MouthSize, ExpressionType).
 func ComputeFaceParamsFromComponent(spriteW, spriteH int, headSpec PartSpec, direction Direction, seed int64,
-	eyeR, eyeG, eyeB, mouthR, mouthG, mouthB, eyeSize, mouthSize float64, expression string) FaceRenderParams {
+	eyeR, eyeG, eyeB, mouthR, mouthG, mouthB, eyeSize, mouthSize float64, expression string,
+) FaceRenderParams {
 	clamp8 := func(v float64) uint8 {
 		c := int(v * 255)
 		if c < 0 {

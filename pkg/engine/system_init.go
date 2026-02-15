@@ -177,6 +177,8 @@ type SystemInitResult struct {
 	ReputationCriticalChanceParticleSystem      *ReputationCriticalChanceParticleSystem
 	ReputationEquipmentDurabilitySystem         *ReputationEquipmentDurabilitySystem
 	ReputationEquipmentDurabilityParticleSystem *ReputationEquipmentDurabilityParticleSystem
+	ReputationCompanionBonusSystem              *ReputationCompanionBonusSystem
+	ReputationCompanionBonusParticleSystem      *ReputationCompanionBonusParticleSystem
 
 	// System wrappers
 	AnimationSystemWrapper            System
@@ -416,6 +418,21 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 	reputationEquipmentDurabilityParticleSystem.SetGenre(config.GenreID)
 	result.ReputationEquipmentDurabilityParticleSystem = reputationEquipmentDurabilityParticleSystem
 	game.World.AddSystem(reputationEquipmentDurabilityParticleSystem)
+
+	// 17o. ReputationCompanionBonusSystem - companion stat boosts from allied faction reputation
+	reputationCompanionBonusSystem := NewReputationCompanionBonusSystem(game.World, config.Seed+5235)
+	reputationCompanionBonusSystem.SetFactionSystem(factionSystem)
+	reputationCompanionBonusSystem.SetGenre(config.GenreID)
+	result.ReputationCompanionBonusSystem = reputationCompanionBonusSystem
+	game.World.AddSystem(reputationCompanionBonusSystem)
+
+	// 17p. ReputationCompanionBonusParticleSystem - visual feedback for reputation companion bonus
+	reputationCompanionBonusParticleSystem := NewReputationCompanionBonusParticleSystem(game.World, config.Seed+5240)
+	reputationCompanionBonusParticleSystem.SetParticleSystem(result.ParticleSystem)
+	reputationCompanionBonusParticleSystem.SetBonusSystem(reputationCompanionBonusSystem)
+	reputationCompanionBonusParticleSystem.SetGenre(config.GenreID)
+	result.ReputationCompanionBonusParticleSystem = reputationCompanionBonusParticleSystem
+	game.World.AddSystem(reputationCompanionBonusParticleSystem)
 
 	// 18. SkillProgressionSystem - applies skill effects to stats
 	skillProgressionSystem := NewSkillProgressionSystem()

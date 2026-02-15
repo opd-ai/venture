@@ -195,6 +195,8 @@ type systemsContainer struct {
 	reputationCriticalChanceParticleSystem      *engine.ReputationCriticalChanceParticleSystem      // Visual feedback for reputation crit bonus
 	reputationEquipmentDurabilitySystem         *engine.ReputationEquipmentDurabilitySystem         // Bridges faction reputation with equipment durability
 	reputationEquipmentDurabilityParticleSystem *engine.ReputationEquipmentDurabilityParticleSystem // Visual feedback for reputation durability
+	reputationCompanionBonusSystem              *engine.ReputationCompanionBonusSystem              // Bridges faction reputation with companion stat bonuses
+	reputationCompanionBonusParticleSystem      *engine.ReputationCompanionBonusParticleSystem      // Visual feedback for reputation companion bonus
 	statusEffectAISystem                        *engine.StatusEffectAISystem                        // Bridges status effects with AI (stun/frozen disable AI)
 	reputationSystem                            *engine.ReputationSystem
 	alignmentSystem                             *engine.AlignmentSystem
@@ -1930,6 +1932,21 @@ func registerNonCriticalSystems(game *engine.EbitenGame, sys *systemsContainer) 
 	sys.reputationEquipmentDurabilityParticleSystem.SetDurabilitySystem(sys.reputationEquipmentDurabilitySystem)
 	sys.reputationEquipmentDurabilityParticleSystem.SetGenre(*genreID)
 	game.World.AddSystem(sys.reputationEquipmentDurabilityParticleSystem)
+
+	// ReputationCompanionBonusSystem: bridges faction reputation with companion stat bonuses
+	// High reputation passively boosts companion attack, defense, and speed
+	sys.reputationCompanionBonusSystem = engine.NewReputationCompanionBonusSystem(game.World, *seed+5235)
+	sys.reputationCompanionBonusSystem.SetFactionSystem(sys.factionSystem)
+	sys.reputationCompanionBonusSystem.SetGenre(*genreID)
+	game.World.AddSystem(sys.reputationCompanionBonusSystem)
+
+	// ReputationCompanionBonusParticleSystem: visual feedback for reputation companion bonus
+	// Spawns genre-aware aura particles around companions buffed by owner reputation
+	sys.reputationCompanionBonusParticleSystem = engine.NewReputationCompanionBonusParticleSystem(game.World, *seed+5240)
+	sys.reputationCompanionBonusParticleSystem.SetParticleSystem(sys.particleSystem)
+	sys.reputationCompanionBonusParticleSystem.SetBonusSystem(sys.reputationCompanionBonusSystem)
+	sys.reputationCompanionBonusParticleSystem.SetGenre(*genreID)
+	game.World.AddSystem(sys.reputationCompanionBonusParticleSystem)
 
 	// FactionCompanionBehaviorSystem: bridges faction reputation with companion AI targeting
 	// Companions won't attack allied faction members and prioritize hostile faction enemies

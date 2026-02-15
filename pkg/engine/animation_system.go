@@ -888,8 +888,16 @@ func (s *AnimationSystem) generateBodyPartAnimatedFrames(entity *Entity, baseCon
 	frames := s.getFrameSlice(frameCount)
 	state := string(anim.CurrentState)
 
+	// Extract entity type for creature-aware animation offsets.
+	entityType := ""
+	if baseConfig.Custom != nil {
+		if et, ok := baseConfig.Custom["entityType"].(string); ok {
+			entityType = et
+		}
+	}
+
 	for i := 0; i < frameCount; i++ {
-		offsets := sprites.ComputeFrameOffsets(state, i, frameCount)
+		offsets := sprites.ComputeCreatureFrameOffsets(state, i, frameCount, entityType)
 
 		// Create per-frame config with body part offsets injected
 		frameConfig := baseConfig

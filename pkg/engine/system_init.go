@@ -209,6 +209,7 @@ type SystemInitResult struct {
 	EquipmentChangeFlashSystem                  *EquipmentChangeFlashSystem
 	DodgeAfterimageSystem                       *DodgeAfterimageSystem
 	EntityIdleBreathingSystem                   *EntityIdleBreathingSystem
+	CombatHitStaggerSystem                      *CombatHitStaggerSystem
 
 	// System wrappers
 	AnimationSystemWrapper            System
@@ -680,6 +681,13 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 	entityIdleBreathingSystem.SetGenre(config.GenreID)
 	result.EntityIdleBreathingSystem = entityIdleBreathingSystem
 	game.World.AddSystem(entityIdleBreathingSystem)
+
+	// 17as. CombatHitStaggerSystem - genre-aware positional stagger on damage
+	// Monitors HealthComponent changes and writes decaying X/Y offsets to HitStaggerComponent
+	combatHitStaggerSystem := NewCombatHitStaggerSystem(game.World, config.Seed+9950)
+	combatHitStaggerSystem.SetGenre(config.GenreID)
+	result.CombatHitStaggerSystem = combatHitStaggerSystem
+	game.World.AddSystem(combatHitStaggerSystem)
 
 	// 18. SkillProgressionSystem - applies skill effects to stats
 	skillProgressionSystem := NewSkillProgressionSystem()

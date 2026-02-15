@@ -231,6 +231,7 @@ type systemsContainer struct {
 	entityThreatIndicatorSystem                 *engine.EntityThreatIndicatorSystem                 // Genre-aware threat level ring under AI entities
 	weaponMaterialParticleSystem                *engine.WeaponMaterialParticleSystem                // Genre-aware idle particles from weapon material type
 	lootRarityBeamSystem                        *engine.LootRarityBeamSystem                        // Genre-aware beam particles on ground items by rarity
+	damageTypeColorFlashSystem                  *engine.DamageTypeColorFlashSystem                  // Genre-aware elemental damage color flashes
 	statusEffectAISystem                        *engine.StatusEffectAISystem                        // Bridges status effects with AI (stun/frozen disable AI)
 	reputationSystem                            *engine.ReputationSystem
 	alignmentSystem                             *engine.AlignmentSystem
@@ -2182,6 +2183,13 @@ func registerNonCriticalSystems(game *engine.EbitenGame, sys *systemsContainer) 
 	sys.lootRarityBeamSystem.SetParticleSystem(sys.particleSystem)
 	sys.lootRarityBeamSystem.SetGenre(*genreID)
 	game.World.AddSystem(sys.lootRarityBeamSystem)
+
+	// DamageTypeColorFlashSystem: genre-aware elemental damage color flashes on hit
+	// Reads attacker DamageType and tints the target sprite with per-element colors
+	sys.damageTypeColorFlashSystem = engine.NewDamageTypeColorFlashSystem(game.World, *seed+10250)
+	sys.damageTypeColorFlashSystem.SetGenre(*genreID)
+	sys.combatSystem.AddDamageCallback(sys.damageTypeColorFlashSystem.OnDamageDealt)
+	game.World.AddSystem(sys.damageTypeColorFlashSystem)
 
 	// FactionCompanionBehaviorSystem: bridges faction reputation with companion AI targeting
 	// Companions won't attack allied faction members and prioritize hostile faction enemies

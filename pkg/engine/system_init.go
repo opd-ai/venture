@@ -214,6 +214,7 @@ type SystemInitResult struct {
 	EntityThreatIndicatorSystem                 *EntityThreatIndicatorSystem
 	WeaponMaterialParticleSystem                *WeaponMaterialParticleSystem
 	LootRarityBeamSystem                        *LootRarityBeamSystem
+	DamageTypeColorFlashSystem                  *DamageTypeColorFlashSystem
 
 	// System wrappers
 	AnimationSystemWrapper            System
@@ -722,6 +723,14 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 	lootRarityBeamSystem.SetGenre(config.GenreID)
 	result.LootRarityBeamSystem = lootRarityBeamSystem
 	game.World.AddSystem(lootRarityBeamSystem)
+
+	// 17ax. DamageTypeColorFlashSystem - genre-aware elemental damage color flashes
+	// Hooks into CombatSystem damage callbacks and tints sprites by damage type
+	damageTypeColorFlashSystem := NewDamageTypeColorFlashSystem(game.World, config.Seed+10250)
+	damageTypeColorFlashSystem.SetGenre(config.GenreID)
+	result.CombatSystem.AddDamageCallback(damageTypeColorFlashSystem.OnDamageDealt)
+	result.DamageTypeColorFlashSystem = damageTypeColorFlashSystem
+	game.World.AddSystem(damageTypeColorFlashSystem)
 
 	// 18. SkillProgressionSystem - applies skill effects to stats
 	skillProgressionSystem := NewSkillProgressionSystem()

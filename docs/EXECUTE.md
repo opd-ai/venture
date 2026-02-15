@@ -11,8 +11,8 @@ STEP 1 — DISCOVER (spend ≤5 minutes here):
 - Run `git log --oneline -20` to avoid duplicating recent work.
 - Read pkg/engine/system_init.go to understand registered systems.
 - Grep for TODO, FIXME, stub, placeholder in pkg/engine/ and pkg/procgen/.
-- Pick ONE enhancement you have NOT seen in git history. Roll a dice (1/20) to decide the category:
-  - **Avatar overhaul (pick 19/20 of the time — address the KNOWN AVATAR PROBLEMS above):**
+- Pick ONE enhancement you have NOT seen in git history. Roll a d20 to decide the category:
+  - **Avatar overhaul (roll of 2–20 — address the KNOWN AVATAR PROBLEMS above):**
     - **Perspective fixes** — convert any profile/side-view sprites to proper top-down aerial view. This is the single most impactful fix.
     - **Nonhumanoid templates** — build dedicated top-down anatomy templates for creature types that are not humanoid (quadrupeds, insects, serpents, flying creatures, amorphous entities, multi-limbed creatures). Every creature type deserves its own body plan.
     - **Player character visuals** — composite layering, anatomy detail, directional sprites, proportions, body shapes, facial features, skin/hair color variety, idle poses, shading, clothing detail
@@ -20,12 +20,12 @@ STEP 1 — DISCOVER (spend ≤5 minutes here):
     - **Equipment visuals** — material rendering fidelity, damage-state degradation, enchantment glow/particles, rarity-based detail scaling, weapon silhouettes, armor shaping
     - **Sprite detail** — sub-pixel shading, color gradients, dithering, material textures, highlight/shadow, edge definition, anti-aliasing
     - **Animation improvements** — smoother transitions, new states, expressive movement, attack/cast/hurt animations, idle breathing/fidget
-  - **Other systems (pick 1/20 of the time, avoid visual changes):**
+  - **Other systems (roll of 1 only, avoid visual changes):**
     - Connecting two existing systems that don't yet interact
     - Adding depth to a system with minimal/placeholder logic
     - New gameplay mechanics, customization
     - Genre-aware variation in procgen outputs
-- If multiple candidates exist, pick the one that most improves avatar quality. Perspective fixes and nonhumanoid templates take priority over everything else.
+- If multiple avatar candidates exist, pick the one that most improves avatar quality. Within avatar work, perspective fixes and nonhumanoid templates are the highest-value targets.
 
 STEP 2 — IMPLEMENT (this is the bulk of the work):
 Follow these rules strictly. Violations are build failures.
@@ -80,7 +80,7 @@ Integration (mandatory — this is where past attempts fail):
 - Persistent component data must integrate with SerializeEntity/DeserializeEntity, or be explicitly transient.
 
 Constraints:
-- <800 lines total new/modified code (more is acceptable for avatar quality improvements if needed).
+- No fixed line limit. Keep changes focused, but do not cut corners on avatar quality to stay under an arbitrary line count.
 - `go build ./...` and `go vet ./...` must pass.
 - Write table-driven tests. Target ≥65% coverage on new code.
 - No breaking changes to saves, network protocol, or configs.

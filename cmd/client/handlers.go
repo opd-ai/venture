@@ -198,6 +198,7 @@ type systemsContainer struct {
 	reputationCompanionBonusSystem              *engine.ReputationCompanionBonusSystem              // Bridges faction reputation with companion stat bonuses
 	reputationCompanionBonusParticleSystem      *engine.ReputationCompanionBonusParticleSystem      // Visual feedback for reputation companion bonus
 	ambientEnvironmentParticleSystem            *engine.AmbientEnvironmentParticleSystem            // Terrain-aware atmospheric ambient particles
+	equipmentEnchantmentGlowParticleSystem      *engine.EquipmentEnchantmentGlowParticleSystem      // Rarity-driven enchantment glow particles
 	statusEffectAISystem                        *engine.StatusEffectAISystem                        // Bridges status effects with AI (stun/frozen disable AI)
 	reputationSystem                            *engine.ReputationSystem
 	alignmentSystem                             *engine.AlignmentSystem
@@ -1955,6 +1956,13 @@ func registerNonCriticalSystems(game *engine.EbitenGame, sys *systemsContainer) 
 	sys.ambientEnvironmentParticleSystem.SetParticleSystem(sys.particleSystem)
 	sys.ambientEnvironmentParticleSystem.SetGenre(*genreID)
 	game.World.AddSystem(sys.ambientEnvironmentParticleSystem)
+
+	// EquipmentEnchantmentGlowParticleSystem: ambient glow particles for rare+ equipped items
+	// Reads highest equipped rarity and spawns rarity-colored enchantment aura particles
+	sys.equipmentEnchantmentGlowParticleSystem = engine.NewEquipmentEnchantmentGlowParticleSystem(game.World, *seed+7420)
+	sys.equipmentEnchantmentGlowParticleSystem.SetParticleSystem(sys.particleSystem)
+	sys.equipmentEnchantmentGlowParticleSystem.SetGenre(*genreID)
+	game.World.AddSystem(sys.equipmentEnchantmentGlowParticleSystem)
 
 	// FactionCompanionBehaviorSystem: bridges faction reputation with companion AI targeting
 	// Companions won't attack allied faction members and prioritize hostile faction enemies

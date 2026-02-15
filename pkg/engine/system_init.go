@@ -180,6 +180,7 @@ type SystemInitResult struct {
 	ReputationCompanionBonusSystem              *ReputationCompanionBonusSystem
 	ReputationCompanionBonusParticleSystem      *ReputationCompanionBonusParticleSystem
 	AmbientEnvironmentParticleSystem            *AmbientEnvironmentParticleSystem
+	EquipmentEnchantmentGlowParticleSystem      *EquipmentEnchantmentGlowParticleSystem
 
 	// System wrappers
 	AnimationSystemWrapper            System
@@ -443,6 +444,14 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 	ambientEnvironmentParticleSystem.SetTileSize(config.TileSize)
 	result.AmbientEnvironmentParticleSystem = ambientEnvironmentParticleSystem
 	game.World.AddSystem(ambientEnvironmentParticleSystem)
+
+	// 17r. EquipmentEnchantmentGlowParticleSystem - ambient glow for rare+ equipment
+	// Connects EquipmentComponent rarity with ParticleSystem for rarity-colored enchantment aura
+	equipEnchantGlowSystem := NewEquipmentEnchantmentGlowParticleSystem(game.World, config.Seed+7420)
+	equipEnchantGlowSystem.SetParticleSystem(result.ParticleSystem)
+	equipEnchantGlowSystem.SetGenre(config.GenreID)
+	result.EquipmentEnchantmentGlowParticleSystem = equipEnchantGlowSystem
+	game.World.AddSystem(equipEnchantGlowSystem)
 
 	// 18. SkillProgressionSystem - applies skill effects to stats
 	skillProgressionSystem := NewSkillProgressionSystem()

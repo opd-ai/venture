@@ -184,12 +184,12 @@ func TestAttackTelegraphGlowSystem_IntensityRamping(t *testing.T) {
 		wantActive    bool
 		wantHigher    bool // true if intensity should be > 0.5
 	}{
-		{"just_attacked", 1.0, 1.0, false, false},     // 100% remaining
-		{"mid_cooldown", 0.6, 1.0, false, false},       // 60% remaining
-		{"threshold_edge", 0.4, 1.0, true, false},        // exactly at threshold → just enters telegraph
-		{"below_threshold", 0.3, 1.0, true, false},      // 30% remaining → 25% through telegraph
-		{"near_ready", 0.1, 1.0, true, false},            // 10% remaining → 75% through telegraph
-		{"ready", 0.0, 1.0, true, true},                  // fully ready → max intensity
+		{"just_attacked", 1.0, 1.0, false, false},  // 100% remaining
+		{"mid_cooldown", 0.6, 1.0, false, false},   // 60% remaining
+		{"threshold_edge", 0.4, 1.0, true, false},  // exactly at threshold → just enters telegraph
+		{"below_threshold", 0.3, 1.0, true, false}, // 30% remaining → 25% through telegraph
+		{"near_ready", 0.1, 1.0, true, false},      // 10% remaining → 75% through telegraph
+		{"ready", 0.0, 1.0, true, true},            // fully ready → max intensity
 	}
 
 	for _, tt := range tests {

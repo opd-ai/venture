@@ -30,9 +30,9 @@ func TestNewXPGainBurstSystem(t *testing.T) {
 
 func TestXPGainBurstSystem_SetGenre(t *testing.T) {
 	tests := []struct {
-		name    string
-		genre   string
-		wantPT  string
+		name   string
+		genre  string
+		wantPT string
 	}{
 		{"fantasy", "fantasy", "sparkle"},
 		{"scifi", "scifi", "magic"},

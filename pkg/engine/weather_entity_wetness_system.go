@@ -52,10 +52,10 @@ type WeatherEntityWetnessSystem struct {
 	preset  wetnessGenrePreset
 
 	// Cached rain state to avoid scanning every frame
-	rainActive        bool
-	timeSinceCheck    float64
-	checkInterval     float64
-	rainWeatherTypes  map[particles.WeatherType]bool
+	rainActive       bool
+	timeSinceCheck   float64
+	checkInterval    float64
+	rainWeatherTypes map[particles.WeatherType]bool
 }
 
 // NewWeatherEntityWetnessSystem creates a wetness system with default fantasy preset.
@@ -72,7 +72,7 @@ func NewWeatherEntityWetnessSystem(world *World, seed int64) *WeatherEntityWetne
 		genreID:       "fantasy",
 		checkInterval: 0.5,
 		rainWeatherTypes: map[particles.WeatherType]bool{
-			particles.WeatherRain:     true,
+			particles.WeatherRain:      true,
 			particles.WeatherBloodRain: true,
 			particles.WeatherNeonRain:  true,
 		},

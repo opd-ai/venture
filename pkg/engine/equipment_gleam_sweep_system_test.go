@@ -213,8 +213,8 @@ func TestEquipmentGleamSweepSystemCooldownCycle(t *testing.T) {
 
 func TestEquipmentGleamSweepSystemGenreIntensity(t *testing.T) {
 	tests := []struct {
-		genre         string
-		expectHigher  bool // Relative to horror (dim)
+		genre        string
+		expectHigher bool // Relative to horror (dim)
 	}{
 		{"cyberpunk", true},
 		{"horror", false},

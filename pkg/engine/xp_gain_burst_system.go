@@ -210,5 +210,3 @@ func (s *XPGainBurstSystem) spawnXPBurst(x, y float64, entityID uint64, xpRatio 
 
 	s.particleSystem.SpawnParticles(s.world, config, x, y)
 }
-
-

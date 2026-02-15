@@ -62,9 +62,9 @@ func NewReputationEquipmentDurabilitySystem(world *World, seed int64) *Reputatio
 	}
 
 	return &ReputationEquipmentDurabilitySystem{
-		world:          world,
-		rng:            rand.New(rand.NewSource(seed)),
-		updateInterval: 2.0, // Check every 2 seconds
+		world:            world,
+		rng:              rand.New(rand.NewSource(seed)),
+		updateInterval:   2.0, // Check every 2 seconds
 		appliedModifiers: make(map[uint64]float64),
 		genreMultipliers: map[string]float64{
 			"fantasy":   1.0,

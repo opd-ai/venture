@@ -16,16 +16,16 @@ import (
 // produces a gentle protective glow around the player's armor, while negative
 // reputation produces corrosion/decay wisps.
 type ReputationEquipmentDurabilityParticleSystem struct {
-	world      *World
-	durabSys   *ReputationEquipmentDurabilitySystem
-	partSys    *ParticleSystem
-	genreID    string
-	seed       int64
-	rng        *rand.Rand
-	logger     *logrus.Entry
+	world    *World
+	durabSys *ReputationEquipmentDurabilitySystem
+	partSys  *ParticleSystem
+	genreID  string
+	seed     int64
+	rng      *rand.Rand
+	logger   *logrus.Entry
 
-	particleCount int
-	spreadFactor  float64
+	particleCount  int
+	spreadFactor   float64
 	minModifierPct float64 // Minimum |modifier| % to trigger particles
 	emitInterval   float64 // Seconds between particle bursts
 	timeSinceEmit  float64

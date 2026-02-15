@@ -251,6 +251,7 @@ type systemsContainer struct {
 	battleWoundOverlaySystem                    *engine.BattleWoundOverlaySystem                    // Genre-aware battle wound overlays
 	equipmentDamageCrackOverlaySystem           *engine.EquipmentDamageCrackOverlaySystem           // Procedural crack patterns from equipment wear
 	weatherEntityWetnessSystem                  *engine.WeatherEntityWetnessSystem                  // Rain-driven entity sprite wetness
+	attackTelegraphGlowSystem                   *engine.AttackTelegraphGlowSystem                   // Genre-aware attack wind-up warning glow
 	statusEffectAISystem                        *engine.StatusEffectAISystem                        // Bridges status effects with AI (stun/frozen disable AI)
 	reputationSystem                            *engine.ReputationSystem
 	alignmentSystem                             *engine.AlignmentSystem
@@ -2311,6 +2312,11 @@ func registerNonCriticalSystems(game *engine.EbitenGame, sys *systemsContainer) 
 	sys.weatherEntityWetnessSystem = engine.NewWeatherEntityWetnessSystem(game.World, *seed+10735)
 	sys.weatherEntityWetnessSystem.SetGenre(*genreID)
 	game.World.AddSystem(sys.weatherEntityWetnessSystem)
+
+	// AttackTelegraphGlowSystem: genre-aware attack wind-up warning glow on hostile AI
+	sys.attackTelegraphGlowSystem = engine.NewAttackTelegraphGlowSystem(game.World, *seed+10740)
+	sys.attackTelegraphGlowSystem.SetGenre(*genreID)
+	game.World.AddSystem(sys.attackTelegraphGlowSystem)
 
 	// FactionCompanionBehaviorSystem: bridges faction reputation with companion AI targeting
 	// Companions won't attack allied faction members and prioritize hostile faction enemies

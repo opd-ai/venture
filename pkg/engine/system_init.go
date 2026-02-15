@@ -234,6 +234,7 @@ type SystemInitResult struct {
 	BattleWoundOverlaySystem                    *BattleWoundOverlaySystem
 	EquipmentDamageCrackOverlaySystem           *EquipmentDamageCrackOverlaySystem
 	WeatherEntityWetnessSystem                  *WeatherEntityWetnessSystem
+	AttackTelegraphGlowSystem                   *AttackTelegraphGlowSystem
 
 	// System wrappers
 	AnimationSystemWrapper            System
@@ -1393,6 +1394,13 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 	weatherEntityWetnessSystem.SetGenre(config.GenreID)
 	result.WeatherEntityWetnessSystem = weatherEntityWetnessSystem
 	game.World.AddSystem(weatherEntityWetnessSystem)
+
+	// 36k1l. AttackTelegraphGlowSystem - genre-aware attack wind-up warning glow
+	// Reads AIComponent state and AttackComponent cooldown to ramp a visual telegraph
+	attackTelegraphGlowSystem := NewAttackTelegraphGlowSystem(game.World, config.Seed+6470)
+	attackTelegraphGlowSystem.SetGenre(config.GenreID)
+	result.AttackTelegraphGlowSystem = attackTelegraphGlowSystem
+	game.World.AddSystem(attackTelegraphGlowSystem)
 
 	// 36k2. ManaRegenParticleSystem - visual feedback for mana regeneration
 	// Spawns genre-aware particles when entities actively regenerate mana

@@ -190,6 +190,7 @@ type SystemInitResult struct {
 	CreatureSizeProportionSystem                *CreatureSizeProportionSystem
 	EquipmentRarityDetailSystem                 *EquipmentRarityDetailSystem
 	NpcFacialDetailSystem                       *NpcFacialDetailSystem
+	ProjectileTrailParticleSystem               *ProjectileTrailParticleSystem
 
 	// System wrappers
 	AnimationSystemWrapper            System
@@ -521,6 +522,14 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 	npcFacialDetailSystem.SetGenre(config.GenreID)
 	result.NpcFacialDetailSystem = npcFacialDetailSystem
 	game.World.AddSystem(npcFacialDetailSystem)
+
+	// 17ab. ProjectileTrailParticleSystem - genre-aware projectile trail particles
+	// Connects ProjectileComponent with ParticleSystem for visual trails behind projectiles
+	projectileTrailParticleSystem := NewProjectileTrailParticleSystem(game.World, config.Seed+9075)
+	projectileTrailParticleSystem.SetParticleSystem(result.ParticleSystem)
+	projectileTrailParticleSystem.SetGenre(config.GenreID)
+	result.ProjectileTrailParticleSystem = projectileTrailParticleSystem
+	game.World.AddSystem(projectileTrailParticleSystem)
 
 	// 18. SkillProgressionSystem - applies skill effects to stats
 	skillProgressionSystem := NewSkillProgressionSystem()

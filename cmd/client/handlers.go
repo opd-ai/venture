@@ -208,6 +208,7 @@ type systemsContainer struct {
 	creatureSizeProportionSystem                *engine.CreatureSizeProportionSystem                // Size-based anatomy proportions for creatures
 	equipmentRarityDetailSystem                 *engine.EquipmentRarityDetailSystem                 // Rarity-based visual detail scaling for equipment
 	npcFacialDetailSystem                       *engine.NpcFacialDetailSystem                       // Genre-aware NPC facial feature parameters
+	projectileTrailParticleSystem               *engine.ProjectileTrailParticleSystem               // Genre-aware projectile trail particles
 	statusEffectAISystem                        *engine.StatusEffectAISystem                        // Bridges status effects with AI (stun/frozen disable AI)
 	reputationSystem                            *engine.ReputationSystem
 	alignmentSystem                             *engine.AlignmentSystem
@@ -2025,6 +2026,12 @@ func registerNonCriticalSystems(game *engine.EbitenGame, sys *systemsContainer) 
 	sys.npcFacialDetailSystem = engine.NewNpcFacialDetailSystem(game.World, *seed+9050)
 	sys.npcFacialDetailSystem.SetGenre(*genreID)
 	game.World.AddSystem(sys.npcFacialDetailSystem)
+
+	// ProjectileTrailParticleSystem: genre-aware projectile trail particles
+	sys.projectileTrailParticleSystem = engine.NewProjectileTrailParticleSystem(game.World, *seed+9075)
+	sys.projectileTrailParticleSystem.SetParticleSystem(sys.particleSystem)
+	sys.projectileTrailParticleSystem.SetGenre(*genreID)
+	game.World.AddSystem(sys.projectileTrailParticleSystem)
 
 	// FactionCompanionBehaviorSystem: bridges faction reputation with companion AI targeting
 	// Companions won't attack allied faction members and prioritize hostile faction enemies

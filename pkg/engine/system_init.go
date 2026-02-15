@@ -194,6 +194,7 @@ type SystemInitResult struct {
 	EntityIdleAmbientParticleSystem             *EntityIdleAmbientParticleSystem
 	WeaponMaterialImpactParticleSystem          *WeaponMaterialImpactParticleSystem
 	DamageFlashTintSystem                       *DamageFlashTintSystem
+	SprintTrailParticleSystem                   *SprintTrailParticleSystem
 
 	// System wrappers
 	AnimationSystemWrapper            System
@@ -556,6 +557,14 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 	damageFlashTintSystem.SetGenre(config.GenreID)
 	result.DamageFlashTintSystem = damageFlashTintSystem
 	game.World.AddSystem(damageFlashTintSystem)
+
+	// 17af. SprintTrailParticleSystem - genre-aware speed trail particles for sprinting entities
+	// Monitors VelocityComponent and spawns trail particles behind fast-moving entities
+	sprintTrailParticleSystem := NewSprintTrailParticleSystem(game.World, config.Seed+9200)
+	sprintTrailParticleSystem.SetParticleSystem(result.ParticleSystem)
+	sprintTrailParticleSystem.SetGenre(config.GenreID)
+	result.SprintTrailParticleSystem = sprintTrailParticleSystem
+	game.World.AddSystem(sprintTrailParticleSystem)
 
 	// 18. SkillProgressionSystem - applies skill effects to stats
 	skillProgressionSystem := NewSkillProgressionSystem()

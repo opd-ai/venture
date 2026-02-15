@@ -167,64 +167,23 @@ func (g *Generator) compositeLayer(base, layer *ebiten.Image, layerCfg LayerConf
 	base.DrawImage(layer, opts)
 }
 
-// generateEquipmentLayer creates a visual for equipped items with Phase 15.3 enhancements.
+// generateEquipmentLayer creates a visual for equipped items using the dedicated
+// EquipmentRenderer for recognizable top-down weapon/armor/accessory silhouettes
+// with material textures, damage wear, and enchantment glow.
 func (g *Generator) generateEquipmentLayer(equip EquipmentVisual, baseConfig Config) (*ebiten.Image, error) {
 	rng := rand.New(rand.NewSource(equip.Seed))
 
-	// Determine equipment shape based on slot
-	shapeType := g.getEquipmentShapeType(equip.Slot, rng)
-
-	// Get material visual properties for Phase 15.3
-	materialProps := GetMaterialVisualProperties(equip.Material)
-
-	// Get damage visual effects for Phase 15.3
-	damageEffects := GetDamageVisualEffects(equip.DamageState)
-
-	// Base equipment color (from palette or material)
-	equipColor := baseConfig.Palette.Accent1
-	if baseConfig.Palette != nil {
-		equipColor = baseConfig.Palette.Accent1
-	}
-
-	// Apply material properties to color (adjust based on material)
-	equipColor = g.applyMaterialColor(equipColor, materialProps, rng)
-
-	// Apply damage darkening
-	equipColor = g.applyDamageDarkening(equipColor, damageEffects.ColorDarken)
-
-	// Size based on detail level (Phase 15.3)
+	// Size based on detail level
 	baseSize := 0.5
 	if equip.DetailLevel > 0 {
-		baseSize = 0.4 + (equip.DetailLevel * 0.3) // Range: 0.4 to 0.7
+		baseSize = 0.4 + (equip.DetailLevel * 0.3)
 	}
 
-	config := shapes.Config{
-		Type:      shapeType,
-		Width:     int(float64(baseConfig.Width) * baseSize),
-		Height:    int(float64(baseConfig.Height) * baseSize),
-		Color:     equipColor,
-		Seed:      equip.Seed,
-		Smoothing: 0.15 * (1.0 - damageEffects.EdgeRoughness), // Rougher edges for damaged items
-		AntiAlias: baseConfig.AntiAlias,
-	}
+	w := maxInt(4, int(float64(baseConfig.Width)*baseSize))
+	h := maxInt(4, int(float64(baseConfig.Height)*baseSize))
 
-	// Generate base equipment shape
-	equipImg, err := g.shapeGen.Generate(config)
-	if err != nil {
-		return nil, err
-	}
-
-	// Apply enchantment glow if active (Phase 15.3)
-	if equip.Enchantment.Active {
-		equipImg = g.applyEnchantmentGlow(equipImg, equip.Enchantment, rng)
-	}
-
-	// Apply damage effects (cracks, dirt) if damaged (Phase 15.3)
-	if damageEffects.CrackDensity > 0 {
-		equipImg = g.applyDamageEffects(equipImg, damageEffects, rng)
-	}
-
-	return equipImg, nil
+	renderer := NewEquipmentRenderer()
+	return renderer.RenderEquipment(w, h, equip, rng), nil
 }
 
 // getEquipmentShapeType returns appropriate shape for equipment slot.

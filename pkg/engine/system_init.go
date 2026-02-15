@@ -221,6 +221,7 @@ type SystemInitResult struct {
 	NPCInteractionProximityGlowSystem           *NPCInteractionProximityGlowSystem
 	EntityFactionOutlineSystem                  *EntityFactionOutlineSystem
 	ShieldBubbleOverlaySystem                   *ShieldBubbleOverlaySystem
+	EnvironmentalBreathVaporSystem              *EnvironmentalBreathVaporSystem
 
 	// System wrappers
 	AnimationSystemWrapper            System
@@ -785,6 +786,13 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 	shieldBubbleOverlaySystem.SetGenre(config.GenreID)
 	result.ShieldBubbleOverlaySystem = shieldBubbleOverlaySystem
 	game.World.AddSystem(shieldBubbleOverlaySystem)
+
+	// 17be. EnvironmentalBreathVaporSystem - cold weather breath vapor puffs
+	// Spawns genre-aware vapor particles near entity faces during cold weather (snow, fog, ash)
+	environmentalBreathVaporSystem := NewEnvironmentalBreathVaporSystem(game.World, config.Seed+10600)
+	environmentalBreathVaporSystem.SetGenre(config.GenreID)
+	result.EnvironmentalBreathVaporSystem = environmentalBreathVaporSystem
+	game.World.AddSystem(environmentalBreathVaporSystem)
 
 	// 18. SkillProgressionSystem - applies skill effects to stats
 	skillProgressionSystem := NewSkillProgressionSystem()

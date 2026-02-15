@@ -268,6 +268,23 @@ func (g *Generator) generateEntityWithTemplate(config Config, entityType string,
 		img.DrawImage(detailImg, nil)
 	}
 
+	// Render garment structure lines for humanoid entities (collars, belts,
+	// hems, seams, fasteners) to make clothing look like actual garments.
+	if useAerial && IsHumanoidEntity(entityType) {
+		readBuf := image.NewRGBA(image.Rect(0, 0, config.Width, config.Height))
+		img.ReadPixels(readBuf.Pix)
+		RenderGarmentDetail(readBuf, GarmentDetailParams{
+			Width:     config.Width,
+			Height:    config.Height,
+			Seed:      config.Seed,
+			Genre:     genre,
+			Direction: string(direction),
+		})
+		garmentImg := ebiten.NewImageFromImage(readBuf)
+		img.Clear()
+		img.DrawImage(garmentImg, nil)
+	}
+
 	// Render role-specific details for humanoid entities (arcane runes,
 	// weapon belts, shoulder plates, etc.) to make roles visually distinct.
 	if useAerial && IsHumanoidEntity(entityType) {

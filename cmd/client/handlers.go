@@ -223,6 +223,7 @@ type systemsContainer struct {
 	movementBobSystem                           *engine.MovementBobSystem                           // Walk-cycle sprite bobbing
 	spellCastGlowSystem                         *engine.SpellCastGlowSystem                         // Genre-aware spell casting glow
 	equipmentChangeFlashSystem                  *engine.EquipmentChangeFlashSystem                  // Equipment change flash particles
+	dodgeAfterimageSystem                       *engine.DodgeAfterimageSystem                       // Genre-aware dodge/dash afterimage ghosts
 	statusEffectAISystem                        *engine.StatusEffectAISystem                        // Bridges status effects with AI (stun/frozen disable AI)
 	reputationSystem                            *engine.ReputationSystem
 	alignmentSystem                             *engine.AlignmentSystem
@@ -2129,6 +2130,11 @@ func registerNonCriticalSystems(game *engine.EbitenGame, sys *systemsContainer) 
 	sys.equipmentChangeFlashSystem.SetParticleSystem(sys.particleSystem)
 	sys.equipmentChangeFlashSystem.SetGenre(*genreID)
 	game.World.AddSystem(sys.equipmentChangeFlashSystem)
+
+	// DodgeAfterimageSystem: genre-aware translucent ghost copies on dodge/dash
+	sys.dodgeAfterimageSystem = engine.NewDodgeAfterimageSystem(game.World, *seed+9850)
+	sys.dodgeAfterimageSystem.SetGenre(*genreID)
+	game.World.AddSystem(sys.dodgeAfterimageSystem)
 
 	// FactionCompanionBehaviorSystem: bridges faction reputation with companion AI targeting
 	// Companions won't attack allied faction members and prioritize hostile faction enemies

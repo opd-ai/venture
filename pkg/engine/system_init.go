@@ -206,6 +206,7 @@ type SystemInitResult struct {
 	MovementBobSystem                           *MovementBobSystem
 	SpellCastGlowSystem                         *SpellCastGlowSystem
 	EquipmentChangeFlashSystem                  *EquipmentChangeFlashSystem
+	DodgeAfterimageSystem                       *DodgeAfterimageSystem
 
 	// System wrappers
 	AnimationSystemWrapper            System
@@ -654,6 +655,14 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 	equipmentChangeFlashSystem.SetGenre(config.GenreID)
 	result.EquipmentChangeFlashSystem = equipmentChangeFlashSystem
 	game.World.AddSystem(equipmentChangeFlashSystem)
+
+	// 17aq. DodgeAfterimageSystem - genre-aware translucent ghost copies on fast movement
+	// Reads VelocityComponent speed, spawns fading ghost positions in AfterimageComponent
+	// for a motion trail effect distinct from particle-based sprint trails.
+	dodgeAfterimageSystem := NewDodgeAfterimageSystem(game.World, config.Seed+9850)
+	dodgeAfterimageSystem.SetGenre(config.GenreID)
+	result.DodgeAfterimageSystem = dodgeAfterimageSystem
+	game.World.AddSystem(dodgeAfterimageSystem)
 
 	// 18. SkillProgressionSystem - applies skill effects to stats
 	skillProgressionSystem := NewSkillProgressionSystem()

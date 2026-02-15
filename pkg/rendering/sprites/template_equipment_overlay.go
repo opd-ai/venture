@@ -103,38 +103,36 @@ func equipmentSlotBounds(slot string, spriteW, spriteH int) (w, h, offsetX, offs
 		w = max(spriteW*40/100, 4)
 		h = max(spriteH*55/100, 4)
 		offsetX = spriteW*60/100 - w/4
-		offsetY = spriteH*20/100
+		offsetY = spriteH * 20 / 100
 	case "armor":
 		// Armor covers the torso area — shoulders and chest from above
 		w = max(spriteW*65/100, 4)
 		h = max(spriteH*45/100, 4)
 		offsetX = (spriteW - w) / 2
-		offsetY = spriteH*30/100
+		offsetY = spriteH * 30 / 100
 	case "helmet":
 		// Helmet covers the top of the head
 		w = max(spriteW*40/100, 4)
 		h = max(spriteH*35/100, 4)
 		offsetX = (spriteW - w) / 2
-		offsetY = spriteH*5/100
+		offsetY = spriteH * 5 / 100
 	case "shield":
 		// Shield on the left side, opposite the weapon
 		w = max(spriteW*30/100, 4)
 		h = max(spriteH*35/100, 4)
-		offsetX = spriteW*5/100
-		offsetY = spriteH*30/100
+		offsetX = spriteW * 5 / 100
+		offsetY = spriteH * 30 / 100
 	case "accessory":
 		// Accessories float near the head/shoulders
 		w = max(spriteW*20/100, 3)
 		h = max(spriteH*20/100, 3)
-		offsetX = spriteW*10/100
-		offsetY = spriteH*10/100
+		offsetX = spriteW * 10 / 100
+		offsetY = spriteH * 10 / 100
 	default:
 		w = max(spriteW*25/100, 3)
 		h = max(spriteH*25/100, 3)
 		offsetX = (spriteW - w) / 2
 		offsetY = (spriteH - h) / 2
 	}
-	return
+	return w, h, offsetX, offsetY
 }
-
-

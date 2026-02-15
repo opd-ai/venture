@@ -86,7 +86,7 @@ func quadrupedOffsets(state string, t float64) FrameOffsetMap {
 func quadrupedIdle(t float64) FrameOffsetMap {
 	phase := t * 2 * math.Pi
 	breath := math.Sin(phase)
-	tailWag := math.Sin(phase*2.5) // Tail wags faster than breathing
+	tailWag := math.Sin(phase * 2.5) // Tail wags faster than breathing
 
 	return FrameOffsetMap{
 		PartTorso: {
@@ -209,10 +209,10 @@ func quadrupedHit(t float64) FrameOffsetMap {
 func quadrupedDeath(t float64) FrameOffsetMap {
 	collapse := t * t
 	return FrameOffsetMap{
-		PartTorso: {DX: collapse * 0.03, DY: collapse * 0.02, Scale: 1.0 + collapse*0.15},
-		PartHead:  {DX: collapse * 0.04, DY: collapse * 0.03, Scale: 1.0 - collapse*0.2},
-		PartLegs:  {DX: collapse * 0.05, DY: collapse * 0.01, Scale: 1.0 + collapse*0.1},
-		PartTail:  {DX: -collapse * 0.03, DY: collapse * 0.02, Scale: 1.0 - collapse*0.3},
+		PartTorso:  {DX: collapse * 0.03, DY: collapse * 0.02, Scale: 1.0 + collapse*0.15},
+		PartHead:   {DX: collapse * 0.04, DY: collapse * 0.03, Scale: 1.0 - collapse*0.2},
+		PartLegs:   {DX: collapse * 0.05, DY: collapse * 0.01, Scale: 1.0 + collapse*0.1},
+		PartTail:   {DX: -collapse * 0.03, DY: collapse * 0.02, Scale: 1.0 - collapse*0.3},
 		PartShadow: {DX: 0, DY: 0, Scale: 1.0 + collapse*0.2},
 	}
 }
@@ -414,8 +414,8 @@ func arachnidAttack(t float64) FrameOffsetMap {
 	if t < 0.3 {
 		p := t / 0.3
 		torsoScale = 1.0 + p*0.08 // Body rears up
-		headDY = -p * 0.04         // Head lifts
-		legDX = p * 0.03           // Legs spread
+		headDY = -p * 0.04        // Head lifts
+		legDX = p * 0.03          // Legs spread
 	} else if t < 0.5 {
 		p := (t - 0.3) / 0.2
 		torsoScale = 1.08 - p*0.04
@@ -454,9 +454,9 @@ func arachnidDeath(t float64) FrameOffsetMap {
 	collapse := t * t
 	// Legs curl inward (classic dead-bug pose from above)
 	return FrameOffsetMap{
-		PartTorso: {DX: 0, DY: collapse * 0.01, Scale: 1.0 - collapse*0.1},
-		PartHead:  {DX: 0, DY: collapse * 0.02, Scale: 1.0 - collapse*0.2},
-		PartLegs:  {DX: 0, DY: 0, Scale: 1.0 - collapse*0.35}, // Legs contract inward
+		PartTorso:  {DX: 0, DY: collapse * 0.01, Scale: 1.0 - collapse*0.1},
+		PartHead:   {DX: 0, DY: collapse * 0.02, Scale: 1.0 - collapse*0.2},
+		PartLegs:   {DX: 0, DY: 0, Scale: 1.0 - collapse*0.35}, // Legs contract inward
 		PartShadow: {DX: 0, DY: 0, Scale: 1.0 - collapse*0.3},
 	}
 }
@@ -501,7 +501,7 @@ func flyingHover(t float64) FrameOffsetMap {
 		},
 		PartLegs: { // Talons/feet dangle
 			DX:    0,
-			DY:    bob * 0.5 + math.Abs(bob)*0.3,
+			DY:    bob*0.5 + math.Abs(bob)*0.3,
 			Scale: 1.0,
 		},
 		PartTail: {
@@ -608,7 +608,7 @@ func flyingHit(t float64) FrameOffsetMap {
 
 func flyingFall(t float64) FrameOffsetMap {
 	fall := t * t
-	tumble := math.Sin(t * math.Pi * 3) * (1.0 - fall)
+	tumble := math.Sin(t*math.Pi*3) * (1.0 - fall)
 	return FrameOffsetMap{
 		PartWings:  {DX: tumble * 0.04, DY: 0, Scale: 1.0 - fall*0.5},
 		PartTorso:  {DX: tumble * 0.02, DY: fall * 0.04, Scale: 1.0},
@@ -1010,10 +1010,10 @@ func undeadCollapse(t float64) FrameOffsetMap {
 	// Crumbling apart: limbs splay, body deflates
 	collapse := t * t
 	return FrameOffsetMap{
-		PartTorso: {DX: collapse * 0.02, DY: collapse * 0.03, Scale: 1.0 - collapse*0.15},
-		PartHead:  {DX: collapse * 0.05, DY: collapse * 0.04, Scale: 1.0 - collapse*0.3},
-		PartArms:  {DX: collapse * 0.06, DY: collapse * 0.02, Scale: 1.0 - collapse*0.25},
-		PartLegs:  {DX: -collapse * 0.04, DY: collapse * 0.01, Scale: 1.0 + collapse*0.1},
+		PartTorso:  {DX: collapse * 0.02, DY: collapse * 0.03, Scale: 1.0 - collapse*0.15},
+		PartHead:   {DX: collapse * 0.05, DY: collapse * 0.04, Scale: 1.0 - collapse*0.3},
+		PartArms:   {DX: collapse * 0.06, DY: collapse * 0.02, Scale: 1.0 - collapse*0.25},
+		PartLegs:   {DX: -collapse * 0.04, DY: collapse * 0.01, Scale: 1.0 + collapse*0.1},
 		PartShadow: {DX: 0, DY: 0, Scale: 1.0 - collapse*0.5},
 	}
 }

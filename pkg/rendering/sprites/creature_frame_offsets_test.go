@@ -132,9 +132,9 @@ func TestComputeCreatureFrameOffsets_DifferentFromHumanoid(t *testing.T) {
 func TestComputeCreatureFrameOffsets_OffsetsInRange(t *testing.T) {
 	types := []string{"wolf", "snake", "spider", "dragon", "slime", "robot", "zombie"}
 	states := []string{"idle", "walk", "run", "attack", "hit", "death"}
-	const maxDelta = 0.2  // Max positional offset as fraction of sprite
-	const maxScale = 1.5  // Max scale multiplier
-	const minScale = 0.3  // Min scale multiplier
+	const maxDelta = 0.2 // Max positional offset as fraction of sprite
+	const maxScale = 1.5 // Max scale multiplier
+	const minScale = 0.3 // Min scale multiplier
 
 	for _, et := range types {
 		for _, state := range states {

@@ -68,7 +68,7 @@ func DefaultDepthEnhanceConfig(seed int64) DepthEnhanceConfig {
 // DepthZone describes a rectangular region of the sprite and its 3D form.
 type DepthZone struct {
 	X, Y, W, H int
-	Form        DepthFormType
+	Form       DepthFormType
 	// BaseHeight is the base height above ground (0.0-1.0). Higher parts cast shadows.
 	BaseHeight float64
 }

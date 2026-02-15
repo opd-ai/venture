@@ -226,7 +226,7 @@ func castOffsets(t float64) FrameOffsetMap {
 		torsoScale = 1.02
 	} else {
 		p := (t - 0.7) / 0.3
-		ease := p * p // Quadratic ease in for snap release
+		ease := p * p             // Quadratic ease in for snap release
 		armDY = -0.06 + ease*0.08 // Arms thrust down past neutral
 		headDY = -0.01 + ease*0.015
 		torsoScale = 1.02 - ease*0.03
@@ -289,7 +289,7 @@ func deathOffsets(t float64, frameIndex, frameCount int) FrameOffsetMap {
 	headScale := 1.0 - collapse*0.3
 	torsoScaleX := 1.0 + collapse*0.2 // Widen
 	torsoScaleY := 1.0 - collapse*0.4 // Flatten
-	_ = torsoScaleY                    // Y scale applied via DY
+	_ = torsoScaleY                   // Y scale applied via DY
 
 	legSpread := collapse * 0.08
 

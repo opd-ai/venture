@@ -107,7 +107,7 @@ func GenerateSurfaceTextureSet(seed int64, form, genre string) SurfaceTextureSet
 	}
 
 	baseIntensity := 0.25 + rng.Float64()*0.25 // 0.25-0.50
-	baseScale := 0.8 + rng.Float64()*0.4        // 0.8-1.2
+	baseScale := 0.8 + rng.Float64()*0.4       // 0.8-1.2
 
 	primary, secondary := textureColors(texType, genre, rng)
 

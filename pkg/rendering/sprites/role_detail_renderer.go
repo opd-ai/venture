@@ -503,7 +503,7 @@ func knightEmblemColor(genre string, rng *rand.Rand) color.RGBA {
 		return color.RGBA{R: 255, G: 200, B: 0, A: 180} // gold-yellow
 	default:
 		heraldic := []color.RGBA{
-			{R: 200, G: 50, B: 50, A: 180},  // red
+			{R: 200, G: 50, B: 50, A: 180},   // red
 			{R: 50, G: 80, B: 200, A: 180},   // blue
 			{R: 220, G: 200, B: 50, A: 180},  // gold
 			{R: 200, G: 200, B: 210, A: 180}, // silver

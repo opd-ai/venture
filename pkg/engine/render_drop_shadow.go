@@ -79,7 +79,7 @@ func (c *dropShadowCache) put(bw, bh int, img *ebiten.Image) {
 // generateShadowImage creates a soft elliptical shadow with radial gradient falloff.
 // The shadow is an axis-aligned ellipse filling the given dimensions, with
 // quadratic alpha falloff from center (fully opaque) to edge (transparent).
-func generateShadowImage(w, h int, r, g, b float64, baseOpacity float64) *ebiten.Image {
+func generateShadowImage(w, h int, r, g, b, baseOpacity float64) *ebiten.Image {
 	buf := image.NewRGBA(image.Rect(0, 0, w, h))
 
 	cx := float64(w) / 2.0

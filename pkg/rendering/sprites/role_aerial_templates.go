@@ -81,7 +81,7 @@ func MageAerialTemplate(direction Direction) AnatomicalTemplate {
 		RelativeX: 0.5, RelativeY: 0.88,
 		RelativeWidth: 0.44, RelativeHeight: 0.13,
 		ShapeTypes: []shapes.ShapeType{shapes.ShapeEllipse},
-		ZIndex: 0, ColorRole: "shadow", Opacity: 0.35,
+		ZIndex:     0, ColorRole: "shadow", Opacity: 0.35,
 	}
 
 	// Robes visible as a wide lower shape beneath the torso
@@ -89,8 +89,8 @@ func MageAerialTemplate(direction Direction) AnatomicalTemplate {
 		RelativeX: 0.5, RelativeY: 0.78,
 		RelativeWidth: 0.28, RelativeHeight: 0.09,
 		PreferredPixelSize: &PixelDimensions{Width: 9, Height: 3},
-		ShapeTypes: []shapes.ShapeType{shapes.ShapeEllipse, shapes.ShapeCapsule},
-		ZIndex: 5, ColorRole: "primary", Opacity: 0.85,
+		ShapeTypes:         []shapes.ShapeType{shapes.ShapeEllipse, shapes.ShapeCapsule},
+		ZIndex:             5, ColorRole: "primary", Opacity: 0.85,
 	}
 
 	// Narrow torso — the body is hidden under layered robes
@@ -98,8 +98,8 @@ func MageAerialTemplate(direction Direction) AnatomicalTemplate {
 		RelativeX: 0.5, RelativeY: 0.52,
 		RelativeWidth: 0.19, RelativeHeight: 0.22,
 		PreferredPixelSize: &PixelDimensions{Width: 6, Height: 7},
-		ShapeTypes: []shapes.ShapeType{shapes.ShapeEllipse, shapes.ShapeBean},
-		ZIndex: 10, ColorRole: "primary", Opacity: 1.0,
+		ShapeTypes:         []shapes.ShapeType{shapes.ShapeEllipse, shapes.ShapeBean},
+		ZIndex:             10, ColorRole: "primary", Opacity: 1.0,
 	}
 
 	// Large hat brim — the most distinctive feature from above
@@ -107,16 +107,16 @@ func MageAerialTemplate(direction Direction) AnatomicalTemplate {
 		RelativeX: 0.5, RelativeY: 0.22,
 		RelativeWidth: 0.31, RelativeHeight: 0.22,
 		PreferredPixelSize: &PixelDimensions{Width: 10, Height: 7},
-		ShapeTypes: []shapes.ShapeType{shapes.ShapeCircle, shapes.ShapeHexagon},
-		ZIndex: 15, ColorRole: "secondary", Opacity: 1.0,
+		ShapeTypes:         []shapes.ShapeType{shapes.ShapeCircle, shapes.ShapeHexagon},
+		ZIndex:             15, ColorRole: "secondary", Opacity: 1.0,
 	}
 
 	// Thin arms holding staff — asymmetric placement hints at held item
 	armSpec := PartSpec{
 		RelativeWidth: 0.13, RelativeHeight: 0.09,
 		PreferredPixelSize: &PixelDimensions{Width: 4, Height: 3},
-		ShapeTypes: []shapes.ShapeType{shapes.ShapeCapsule},
-		ZIndex: 8, ColorRole: "secondary", Opacity: 1.0,
+		ShapeTypes:         []shapes.ShapeType{shapes.ShapeCapsule},
+		ZIndex:             8, ColorRole: "secondary", Opacity: 1.0,
 	}
 
 	switch direction {
@@ -157,7 +157,7 @@ func WarriorAerialTemplate(direction Direction) AnatomicalTemplate {
 		RelativeX: 0.5, RelativeY: 0.88,
 		RelativeWidth: 0.56, RelativeHeight: 0.14,
 		ShapeTypes: []shapes.ShapeType{shapes.ShapeEllipse},
-		ZIndex: 0, ColorRole: "shadow", Opacity: 0.35,
+		ZIndex:     0, ColorRole: "shadow", Opacity: 0.35,
 	}
 
 	// Sturdy legs, wider stance visible from above
@@ -165,8 +165,8 @@ func WarriorAerialTemplate(direction Direction) AnatomicalTemplate {
 		RelativeX: 0.5, RelativeY: 0.80,
 		RelativeWidth: 0.19, RelativeHeight: 0.09,
 		PreferredPixelSize: &PixelDimensions{Width: 6, Height: 3},
-		ShapeTypes: []shapes.ShapeType{shapes.ShapeCapsule, shapes.ShapeRectangle},
-		ZIndex: 5, ColorRole: "primary", Opacity: 0.9,
+		ShapeTypes:         []shapes.ShapeType{shapes.ShapeCapsule, shapes.ShapeRectangle},
+		ZIndex:             5, ColorRole: "primary", Opacity: 0.9,
 	}
 
 	// Wide, muscular torso
@@ -174,24 +174,24 @@ func WarriorAerialTemplate(direction Direction) AnatomicalTemplate {
 		RelativeX: 0.5, RelativeY: 0.50,
 		RelativeWidth: 0.31, RelativeHeight: 0.22,
 		PreferredPixelSize: &PixelDimensions{Width: 10, Height: 7},
-		ShapeTypes: []shapes.ShapeType{shapes.ShapeRectangle, shapes.ShapeCapsule, shapes.ShapeEllipse},
-		ZIndex: 10, ColorRole: "primary", Opacity: 1.0,
+		ShapeTypes:         []shapes.ShapeType{shapes.ShapeRectangle, shapes.ShapeCapsule, shapes.ShapeEllipse},
+		ZIndex:             10, ColorRole: "primary", Opacity: 1.0,
 	}
 
 	headSpec := PartSpec{
 		RelativeX: 0.5, RelativeY: 0.22,
 		RelativeWidth: 0.19, RelativeHeight: 0.16,
 		PreferredPixelSize: &PixelDimensions{Width: 6, Height: 5},
-		ShapeTypes: []shapes.ShapeType{shapes.ShapeCircle, shapes.ShapeEllipse},
-		ZIndex: 15, ColorRole: "secondary", Opacity: 1.0,
+		ShapeTypes:         []shapes.ShapeType{shapes.ShapeCircle, shapes.ShapeEllipse},
+		ZIndex:             15, ColorRole: "secondary", Opacity: 1.0,
 	}
 
 	// Broad arms — wider than normal, muscular
 	armSpec := PartSpec{
 		RelativeWidth: 0.28, RelativeHeight: 0.09,
 		PreferredPixelSize: &PixelDimensions{Width: 9, Height: 3},
-		ShapeTypes: []shapes.ShapeType{shapes.ShapeCapsule, shapes.ShapeRectangle},
-		ZIndex: 9, ColorRole: "secondary", Opacity: 1.0,
+		ShapeTypes:         []shapes.ShapeType{shapes.ShapeCapsule, shapes.ShapeRectangle},
+		ZIndex:             9, ColorRole: "secondary", Opacity: 1.0,
 	}
 
 	switch direction {
@@ -228,7 +228,7 @@ func KnightAerialTemplate(direction Direction) AnatomicalTemplate {
 		RelativeX: 0.5, RelativeY: 0.88,
 		RelativeWidth: 0.59, RelativeHeight: 0.16,
 		ShapeTypes: []shapes.ShapeType{shapes.ShapeEllipse},
-		ZIndex: 0, ColorRole: "shadow", Opacity: 0.4,
+		ZIndex:     0, ColorRole: "shadow", Opacity: 0.4,
 	}
 
 	// Heavy armored legs
@@ -236,8 +236,8 @@ func KnightAerialTemplate(direction Direction) AnatomicalTemplate {
 		RelativeX: 0.5, RelativeY: 0.80,
 		RelativeWidth: 0.19, RelativeHeight: 0.09,
 		PreferredPixelSize: &PixelDimensions{Width: 6, Height: 3},
-		ShapeTypes: []shapes.ShapeType{shapes.ShapeRectangle, shapes.ShapeCapsule},
-		ZIndex: 5, ColorRole: "primary", Opacity: 0.9,
+		ShapeTypes:         []shapes.ShapeType{shapes.ShapeRectangle, shapes.ShapeCapsule},
+		ZIndex:             5, ColorRole: "primary", Opacity: 0.9,
 	}
 
 	// Massive armored torso with pauldrons
@@ -245,8 +245,8 @@ func KnightAerialTemplate(direction Direction) AnatomicalTemplate {
 		RelativeX: 0.5, RelativeY: 0.48,
 		RelativeWidth: 0.34, RelativeHeight: 0.25,
 		PreferredPixelSize: &PixelDimensions{Width: 11, Height: 8},
-		ShapeTypes: []shapes.ShapeType{shapes.ShapeRectangle, shapes.ShapeOctagon},
-		ZIndex: 10, ColorRole: "primary", Opacity: 1.0,
+		ShapeTypes:         []shapes.ShapeType{shapes.ShapeRectangle, shapes.ShapeOctagon},
+		ZIndex:             10, ColorRole: "primary", Opacity: 1.0,
 	}
 
 	// Large helmet — distinctive from above
@@ -254,16 +254,16 @@ func KnightAerialTemplate(direction Direction) AnatomicalTemplate {
 		RelativeX: 0.5, RelativeY: 0.20,
 		RelativeWidth: 0.22, RelativeHeight: 0.19,
 		PreferredPixelSize: &PixelDimensions{Width: 7, Height: 6},
-		ShapeTypes: []shapes.ShapeType{shapes.ShapeCircle, shapes.ShapeOctagon},
-		ZIndex: 15, ColorRole: "secondary", Opacity: 1.0,
+		ShapeTypes:         []shapes.ShapeType{shapes.ShapeCircle, shapes.ShapeOctagon},
+		ZIndex:             15, ColorRole: "secondary", Opacity: 1.0,
 	}
 
 	// Armored arms, very wide — pauldron-like extension
 	armSpec := PartSpec{
 		RelativeWidth: 0.34, RelativeHeight: 0.13,
 		PreferredPixelSize: &PixelDimensions{Width: 11, Height: 4},
-		ShapeTypes: []shapes.ShapeType{shapes.ShapeRectangle, shapes.ShapeCapsule},
-		ZIndex: 11, ColorRole: "accent1", Opacity: 1.0,
+		ShapeTypes:         []shapes.ShapeType{shapes.ShapeRectangle, shapes.ShapeCapsule},
+		ZIndex:             11, ColorRole: "accent1", Opacity: 1.0,
 	}
 
 	switch direction {
@@ -300,7 +300,7 @@ func RogueAerialTemplate(direction Direction) AnatomicalTemplate {
 		RelativeX: 0.5, RelativeY: 0.88,
 		RelativeWidth: 0.38, RelativeHeight: 0.11,
 		ShapeTypes: []shapes.ShapeType{shapes.ShapeEllipse},
-		ZIndex: 0, ColorRole: "shadow", Opacity: 0.30,
+		ZIndex:     0, ColorRole: "shadow", Opacity: 0.30,
 	}
 
 	// Nimble legs, narrow
@@ -308,8 +308,8 @@ func RogueAerialTemplate(direction Direction) AnatomicalTemplate {
 		RelativeX: 0.5, RelativeY: 0.80,
 		RelativeWidth: 0.13, RelativeHeight: 0.06,
 		PreferredPixelSize: &PixelDimensions{Width: 4, Height: 2},
-		ShapeTypes: []shapes.ShapeType{shapes.ShapeEllipse},
-		ZIndex: 5, ColorRole: "primary", Opacity: 0.8,
+		ShapeTypes:         []shapes.ShapeType{shapes.ShapeEllipse},
+		ZIndex:             5, ColorRole: "primary", Opacity: 0.8,
 	}
 
 	// Compact lean torso
@@ -317,8 +317,8 @@ func RogueAerialTemplate(direction Direction) AnatomicalTemplate {
 		RelativeX: 0.5, RelativeY: 0.50,
 		RelativeWidth: 0.19, RelativeHeight: 0.19,
 		PreferredPixelSize: &PixelDimensions{Width: 6, Height: 6},
-		ShapeTypes: []shapes.ShapeType{shapes.ShapeEllipse, shapes.ShapeBean},
-		ZIndex: 10, ColorRole: "primary", Opacity: 1.0,
+		ShapeTypes:         []shapes.ShapeType{shapes.ShapeEllipse, shapes.ShapeBean},
+		ZIndex:             10, ColorRole: "primary", Opacity: 1.0,
 	}
 
 	// Hooded head — slightly pointed/triangular from above
@@ -326,16 +326,16 @@ func RogueAerialTemplate(direction Direction) AnatomicalTemplate {
 		RelativeX: 0.5, RelativeY: 0.22,
 		RelativeWidth: 0.19, RelativeHeight: 0.19,
 		PreferredPixelSize: &PixelDimensions{Width: 6, Height: 6},
-		ShapeTypes: []shapes.ShapeType{shapes.ShapeWedge, shapes.ShapeTriangle, shapes.ShapeCircle},
-		ZIndex: 15, ColorRole: "secondary", Opacity: 1.0,
+		ShapeTypes:         []shapes.ShapeType{shapes.ShapeWedge, shapes.ShapeTriangle, shapes.ShapeCircle},
+		ZIndex:             15, ColorRole: "secondary", Opacity: 1.0,
 	}
 
 	// Thin arms, close to body
 	armSpec := PartSpec{
 		RelativeWidth: 0.16, RelativeHeight: 0.06,
 		PreferredPixelSize: &PixelDimensions{Width: 5, Height: 2},
-		ShapeTypes: []shapes.ShapeType{shapes.ShapeCapsule},
-		ZIndex: 8, ColorRole: "secondary", Opacity: 1.0,
+		ShapeTypes:         []shapes.ShapeType{shapes.ShapeCapsule},
+		ZIndex:             8, ColorRole: "secondary", Opacity: 1.0,
 	}
 
 	switch direction {
@@ -370,7 +370,7 @@ func MerchantAerialTemplate(direction Direction) AnatomicalTemplate {
 		RelativeX: 0.5, RelativeY: 0.88,
 		RelativeWidth: 0.53, RelativeHeight: 0.16,
 		ShapeTypes: []shapes.ShapeType{shapes.ShapeEllipse},
-		ZIndex: 0, ColorRole: "shadow", Opacity: 0.35,
+		ZIndex:     0, ColorRole: "shadow", Opacity: 0.35,
 	}
 
 	// Short legs beneath rotund body
@@ -378,8 +378,8 @@ func MerchantAerialTemplate(direction Direction) AnatomicalTemplate {
 		RelativeX: 0.5, RelativeY: 0.82,
 		RelativeWidth: 0.13, RelativeHeight: 0.06,
 		PreferredPixelSize: &PixelDimensions{Width: 4, Height: 2},
-		ShapeTypes: []shapes.ShapeType{shapes.ShapeEllipse},
-		ZIndex: 5, ColorRole: "primary", Opacity: 0.8,
+		ShapeTypes:         []shapes.ShapeType{shapes.ShapeEllipse},
+		ZIndex:             5, ColorRole: "primary", Opacity: 0.8,
 	}
 
 	// Wide, round torso — distinctive rotund build
@@ -387,8 +387,8 @@ func MerchantAerialTemplate(direction Direction) AnatomicalTemplate {
 		RelativeX: 0.5, RelativeY: 0.50,
 		RelativeWidth: 0.31, RelativeHeight: 0.28,
 		PreferredPixelSize: &PixelDimensions{Width: 10, Height: 9},
-		ShapeTypes: []shapes.ShapeType{shapes.ShapeCircle, shapes.ShapeEllipse},
-		ZIndex: 10, ColorRole: "primary", Opacity: 1.0,
+		ShapeTypes:         []shapes.ShapeType{shapes.ShapeCircle, shapes.ShapeEllipse},
+		ZIndex:             10, ColorRole: "primary", Opacity: 1.0,
 	}
 
 	// Normal head, maybe with hat
@@ -396,24 +396,24 @@ func MerchantAerialTemplate(direction Direction) AnatomicalTemplate {
 		RelativeX: 0.5, RelativeY: 0.20,
 		RelativeWidth: 0.19, RelativeHeight: 0.16,
 		PreferredPixelSize: &PixelDimensions{Width: 6, Height: 5},
-		ShapeTypes: []shapes.ShapeType{shapes.ShapeCircle, shapes.ShapeEllipse},
-		ZIndex: 15, ColorRole: "secondary", Opacity: 1.0,
+		ShapeTypes:         []shapes.ShapeType{shapes.ShapeCircle, shapes.ShapeEllipse},
+		ZIndex:             15, ColorRole: "secondary", Opacity: 1.0,
 	}
 
 	// Arms out — holding or gesturing
 	armSpec := PartSpec{
 		RelativeWidth: 0.22, RelativeHeight: 0.09,
 		PreferredPixelSize: &PixelDimensions{Width: 7, Height: 3},
-		ShapeTypes: []shapes.ShapeType{shapes.ShapeCapsule, shapes.ShapeEllipse},
-		ZIndex: 8, ColorRole: "secondary", Opacity: 1.0,
+		ShapeTypes:         []shapes.ShapeType{shapes.ShapeCapsule, shapes.ShapeEllipse},
+		ZIndex:             8, ColorRole: "secondary", Opacity: 1.0,
 	}
 
 	// Backpack — small rectangle/ellipse offset behind the body
 	packSpec := PartSpec{
 		RelativeWidth: 0.13, RelativeHeight: 0.13,
 		PreferredPixelSize: &PixelDimensions{Width: 4, Height: 4},
-		ShapeTypes: []shapes.ShapeType{shapes.ShapeRectangle, shapes.ShapeCapsule},
-		ZIndex: 12, ColorRole: "accent1", Opacity: 0.9,
+		ShapeTypes:         []shapes.ShapeType{shapes.ShapeRectangle, shapes.ShapeCapsule},
+		ZIndex:             12, ColorRole: "accent1", Opacity: 0.9,
 	}
 
 	switch direction {
@@ -455,7 +455,7 @@ func RangerAerialTemplate(direction Direction) AnatomicalTemplate {
 		RelativeX: 0.5, RelativeY: 0.88,
 		RelativeWidth: 0.47, RelativeHeight: 0.13,
 		ShapeTypes: []shapes.ShapeType{shapes.ShapeEllipse},
-		ZIndex: 0, ColorRole: "shadow", Opacity: 0.33,
+		ZIndex:     0, ColorRole: "shadow", Opacity: 0.33,
 	}
 
 	// Active-stance legs
@@ -463,8 +463,8 @@ func RangerAerialTemplate(direction Direction) AnatomicalTemplate {
 		RelativeX: 0.5, RelativeY: 0.80,
 		RelativeWidth: 0.16, RelativeHeight: 0.09,
 		PreferredPixelSize: &PixelDimensions{Width: 5, Height: 3},
-		ShapeTypes: []shapes.ShapeType{shapes.ShapeCapsule, shapes.ShapeEllipse},
-		ZIndex: 5, ColorRole: "primary", Opacity: 0.85,
+		ShapeTypes:         []shapes.ShapeType{shapes.ShapeCapsule, shapes.ShapeEllipse},
+		ZIndex:             5, ColorRole: "primary", Opacity: 0.85,
 	}
 
 	// Athletic torso
@@ -472,8 +472,8 @@ func RangerAerialTemplate(direction Direction) AnatomicalTemplate {
 		RelativeX: 0.5, RelativeY: 0.50,
 		RelativeWidth: 0.22, RelativeHeight: 0.22,
 		PreferredPixelSize: &PixelDimensions{Width: 7, Height: 7},
-		ShapeTypes: []shapes.ShapeType{shapes.ShapeEllipse, shapes.ShapeCapsule},
-		ZIndex: 10, ColorRole: "primary", Opacity: 1.0,
+		ShapeTypes:         []shapes.ShapeType{shapes.ShapeEllipse, shapes.ShapeCapsule},
+		ZIndex:             10, ColorRole: "primary", Opacity: 1.0,
 	}
 
 	// Hooded head
@@ -481,23 +481,23 @@ func RangerAerialTemplate(direction Direction) AnatomicalTemplate {
 		RelativeX: 0.5, RelativeY: 0.22,
 		RelativeWidth: 0.19, RelativeHeight: 0.16,
 		PreferredPixelSize: &PixelDimensions{Width: 6, Height: 5},
-		ShapeTypes: []shapes.ShapeType{shapes.ShapeCircle, shapes.ShapeWedge},
-		ZIndex: 15, ColorRole: "secondary", Opacity: 1.0,
+		ShapeTypes:         []shapes.ShapeType{shapes.ShapeCircle, shapes.ShapeWedge},
+		ZIndex:             15, ColorRole: "secondary", Opacity: 1.0,
 	}
 
 	armSpec := PartSpec{
 		RelativeWidth: 0.22, RelativeHeight: 0.09,
 		PreferredPixelSize: &PixelDimensions{Width: 7, Height: 3},
-		ShapeTypes: []shapes.ShapeType{shapes.ShapeCapsule},
-		ZIndex: 8, ColorRole: "secondary", Opacity: 1.0,
+		ShapeTypes:         []shapes.ShapeType{shapes.ShapeCapsule},
+		ZIndex:             8, ColorRole: "secondary", Opacity: 1.0,
 	}
 
 	// Quiver — narrow rectangle offset to one side
 	quiverSpec := PartSpec{
 		RelativeWidth: 0.06, RelativeHeight: 0.16,
 		PreferredPixelSize: &PixelDimensions{Width: 2, Height: 5},
-		ShapeTypes: []shapes.ShapeType{shapes.ShapeRectangle, shapes.ShapeCapsule},
-		ZIndex: 12, ColorRole: "accent1", Opacity: 0.85,
+		ShapeTypes:         []shapes.ShapeType{shapes.ShapeRectangle, shapes.ShapeCapsule},
+		ZIndex:             12, ColorRole: "accent1", Opacity: 0.85,
 	}
 
 	switch direction {
@@ -539,7 +539,7 @@ func PriestAerialTemplate(direction Direction) AnatomicalTemplate {
 		RelativeX: 0.5, RelativeY: 0.88,
 		RelativeWidth: 0.47, RelativeHeight: 0.13,
 		ShapeTypes: []shapes.ShapeType{shapes.ShapeEllipse},
-		ZIndex: 0, ColorRole: "shadow", Opacity: 0.35,
+		ZIndex:     0, ColorRole: "shadow", Opacity: 0.35,
 	}
 
 	// Robes cover legs almost entirely
@@ -547,8 +547,8 @@ func PriestAerialTemplate(direction Direction) AnatomicalTemplate {
 		RelativeX: 0.5, RelativeY: 0.82,
 		RelativeWidth: 0.09, RelativeHeight: 0.06,
 		PreferredPixelSize: &PixelDimensions{Width: 3, Height: 2},
-		ShapeTypes: []shapes.ShapeType{shapes.ShapeEllipse},
-		ZIndex: 5, ColorRole: "primary", Opacity: 0.7,
+		ShapeTypes:         []shapes.ShapeType{shapes.ShapeEllipse},
+		ZIndex:             5, ColorRole: "primary", Opacity: 0.7,
 	}
 
 	// Tall flowing torso/vestments
@@ -556,8 +556,8 @@ func PriestAerialTemplate(direction Direction) AnatomicalTemplate {
 		RelativeX: 0.5, RelativeY: 0.50,
 		RelativeWidth: 0.22, RelativeHeight: 0.28,
 		PreferredPixelSize: &PixelDimensions{Width: 7, Height: 9},
-		ShapeTypes: []shapes.ShapeType{shapes.ShapeEllipse, shapes.ShapeBean, shapes.ShapeCapsule},
-		ZIndex: 10, ColorRole: "primary", Opacity: 1.0,
+		ShapeTypes:         []shapes.ShapeType{shapes.ShapeEllipse, shapes.ShapeBean, shapes.ShapeCapsule},
+		ZIndex:             10, ColorRole: "primary", Opacity: 1.0,
 	}
 
 	// Head with halo — slightly larger circle to suggest aureole
@@ -565,16 +565,16 @@ func PriestAerialTemplate(direction Direction) AnatomicalTemplate {
 		RelativeX: 0.5, RelativeY: 0.18,
 		RelativeWidth: 0.22, RelativeHeight: 0.19,
 		PreferredPixelSize: &PixelDimensions{Width: 7, Height: 6},
-		ShapeTypes: []shapes.ShapeType{shapes.ShapeCircle},
-		ZIndex: 15, ColorRole: "secondary", Opacity: 1.0,
+		ShapeTypes:         []shapes.ShapeType{shapes.ShapeCircle},
+		ZIndex:             15, ColorRole: "secondary", Opacity: 1.0,
 	}
 
 	// Wide sleeves
 	armSpec := PartSpec{
 		RelativeWidth: 0.25, RelativeHeight: 0.13,
 		PreferredPixelSize: &PixelDimensions{Width: 8, Height: 4},
-		ShapeTypes: []shapes.ShapeType{shapes.ShapeEllipse, shapes.ShapeCapsule},
-		ZIndex: 9, ColorRole: "accent1", Opacity: 0.95,
+		ShapeTypes:         []shapes.ShapeType{shapes.ShapeEllipse, shapes.ShapeCapsule},
+		ZIndex:             9, ColorRole: "accent1", Opacity: 0.95,
 	}
 
 	switch direction {

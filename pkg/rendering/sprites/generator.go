@@ -310,6 +310,26 @@ func (g *Generator) generateEntityWithTemplate(config Config, entityType string,
 		overlayEquipmentVisuals(img, config)
 	}
 
+	// Render seed-based headgear overlay for humanoid entities that don't have
+	// an explicit equipment helmet. Headgear is role- and genre-aware, producing
+	// crowns, hoods, wizard hats, circlets, etc. visible from above.
+	if useAerial && IsHumanoidEntity(entityType) && !hasEquipmentHelmet(config) {
+		headSpec, hasHead := template.BodyPartLayout[PartHead]
+		if hasHead {
+			hgType := resolveHeadgearType(config)
+			if hgType != HeadgearNone {
+				hgParams := ComputeHeadgearParams(
+					config.Width, config.Height, headSpec,
+					hgType, direction, config.Seed, genre,
+				)
+				hgBuf := image.NewRGBA(image.Rect(0, 0, config.Width, config.Height))
+				RenderHeadgearOverlay(hgBuf, hgParams)
+				hgImg := ebiten.NewImageFromImage(hgBuf)
+				img.DrawImage(hgImg, nil)
+			}
+		}
+	}
+
 	// Apply sprite finalization: adaptive outline, rim lighting, edge shadow
 	if useAerial {
 		finalized := FinalizeEntitySprite(img, DefaultFinalizerConfig(config.Seed))
@@ -322,6 +342,51 @@ func (g *Generator) generateEntityWithTemplate(config Config, entityType string,
 }
 
 // extractSizeClass extracts the size class from config custom data.
+// hasEquipmentHelmet returns true if the config contains an explicit helmet
+// equipment visual, in which case the default headgear overlay is skipped.
+func hasEquipmentHelmet(config Config) bool {
+	if config.Custom == nil {
+		return false
+	}
+	slots, ok := config.Custom["equipmentVisuals"].([]EquipmentVisual)
+	if !ok {
+		return false
+	}
+	for _, s := range slots {
+		if s.Slot == "helmet" {
+			return true
+		}
+	}
+	return false
+}
+
+// resolveHeadgearType extracts the headgear type from Config.Custom or
+// derives one from the entity seed and role. Returns HeadgearNone if no
+// headgear should be drawn.
+func resolveHeadgearType(config Config) HeadgearType {
+	if config.Custom != nil {
+		if ht, ok := config.Custom["headgearType"].(int); ok {
+			return HeadgearType(ht)
+		}
+	}
+	// Derive from seed + entity type
+	entityType := ""
+	genre := ""
+	if config.Custom != nil {
+		if et, ok := config.Custom["entityType"].(string); ok {
+			entityType = et
+		}
+		if g, ok := config.Custom["genre"].(string); ok {
+			genre = g
+		}
+	}
+	role := string(MapEntityTypeToRole(entityType))
+	if role == "" {
+		role = "npc"
+	}
+	return SelectHeadgearForRole(role, genre, config.Seed)
+}
+
 func extractSizeClass(config Config) string {
 	if config.Custom != nil {
 		if sc, ok := config.Custom["sizeClass"].(string); ok {

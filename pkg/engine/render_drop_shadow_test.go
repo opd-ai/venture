@@ -161,9 +161,9 @@ func TestDropShadowCache_GetOrCreate(t *testing.T) {
 // TestClampFShadow verifies clamping behavior.
 func TestClampFShadow(t *testing.T) {
 	tests := []struct {
-		name       string
-		v, lo, hi  float64
-		want       float64
+		name      string
+		v, lo, hi float64
+		want      float64
 	}{
 		{"in_range", 0.5, 0, 1, 0.5},
 		{"below", -1, 0, 1, 0},

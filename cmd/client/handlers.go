@@ -259,6 +259,7 @@ type systemsContainer struct {
 	clothingPatternSystem                       *engine.ClothingPatternSystem                       // Seed-based clothing patterns for entity sprites
 	surfaceTextureSystem                        *engine.SurfaceTextureSystem                        // Creature-form surface textures (fur, scales, etc.)
 	bodyTypeSystem                              *engine.BodyTypeSystem                              // Seed-based body type variety for entity sprites
+	headgearAssignmentSystem                    *engine.HeadgearAssignmentSystem                    // Seed-based headgear variety for humanoid entities
 	creatureVisualClassifierSystem              *engine.CreatureVisualClassifierSystem              // Infers creature visual form from procgen data
 	sizeSpriteScalingSystem                     *engine.SizeSpriteScalingSystem                     // Propagates entity size to sprite proportions
 	npcRoleVisualSystem                         *engine.NpcRoleVisualSystem                         // Infers humanoid NPC visual role for template selection
@@ -2399,6 +2400,12 @@ func registerNonCriticalSystems(game *engine.EbitenGame, sys *systemsContainer) 
 	sys.bodyTypeSystem = engine.NewBodyTypeSystem(game.World, *seed+10770)
 	sys.bodyTypeSystem.SetGenre(*genreID)
 	game.World.AddSystem(sys.bodyTypeSystem)
+
+	// HeadgearAssignmentSystem: seed-based headgear variety for humanoid entities
+	// Assigns genre- and role-aware headgear types (crowns, hoods, wizard hats, etc.)
+	sys.headgearAssignmentSystem = engine.NewHeadgearAssignmentSystem(game.World, *seed+10775)
+	sys.headgearAssignmentSystem.SetGenre(*genreID)
+	game.World.AddSystem(sys.headgearAssignmentSystem)
 
 	// FactionCompanionBehaviorSystem: bridges faction reputation with companion AI targeting
 	// Companions won't attack allied faction members and prioritize hostile faction enemies

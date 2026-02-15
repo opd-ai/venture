@@ -242,6 +242,7 @@ type SystemInitResult struct {
 	ClothingPatternSystem                       *ClothingPatternSystem
 	SurfaceTextureSystem                        *SurfaceTextureSystem
 	BodyTypeSystem                              *BodyTypeSystem
+	HeadgearAssignmentSystem                    *HeadgearAssignmentSystem
 	CreatureVisualClassifierSystem              *CreatureVisualClassifierSystem
 	SizeSpriteScalingSystem                     *SizeSpriteScalingSystem
 	NpcRoleVisualSystem                         *NpcRoleVisualSystem
@@ -1509,6 +1510,13 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 	bodyTypeSystem.SetGenre(config.GenreID)
 	result.BodyTypeSystem = bodyTypeSystem
 	game.World.AddSystem(bodyTypeSystem)
+
+	// 36k1r. HeadgearAssignmentSystem - seed-based headgear variety for humanoid entities
+	// Assigns genre- and role-aware headgear types (crowns, hoods, wizard hats, circlets, etc.)
+	headgearSystem := NewHeadgearAssignmentSystem(game.World, config.Seed+6510)
+	headgearSystem.SetGenre(config.GenreID)
+	result.HeadgearAssignmentSystem = headgearSystem
+	game.World.AddSystem(headgearSystem)
 
 	// 36k2. ManaRegenParticleSystem - visual feedback for mana regeneration
 	// Spawns genre-aware particles when entities actively regenerate mana

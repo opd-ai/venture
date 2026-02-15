@@ -307,7 +307,7 @@ func TestBlendPixel(t *testing.T) {
 func TestBlendPixel_TransparentSkip(t *testing.T) {
 	buf := image.NewRGBA(image.Rect(0, 0, 4, 4))
 	// Pixel (1,1) has alpha=0
-	original := buf.Pix[(1*buf.Stride + 1*4) : (1*buf.Stride + 1*4 + 4)]
+	original := buf.Pix[(1*buf.Stride + 1*4):(1*buf.Stride + 1*4 + 4)]
 	origCopy := make([]uint8, 4)
 	copy(origCopy, original)
 

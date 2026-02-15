@@ -358,13 +358,13 @@ func renderArmorDetails(buf *image.RGBA, p GarmentDetailParams, light, dark, sub
 	shoulderW := garmentMax(2, w/5)
 	// Left pauldron arc
 	for i := 0; i < shoulderW; i++ {
-		arc := int(math.Sqrt(float64(shoulderW*shoulderW - i*i)) * 0.4)
+		arc := int(math.Sqrt(float64(shoulderW*shoulderW-i*i)) * 0.4)
 		blendPixelSafe(buf, cx-w/4-i, shoulderY+arc, dark)
 		blendPixelSafe(buf, cx-w/4-i, shoulderY+arc-1, light)
 	}
 	// Right pauldron arc
 	for i := 0; i < shoulderW; i++ {
-		arc := int(math.Sqrt(float64(shoulderW*shoulderW - i*i)) * 0.4)
+		arc := int(math.Sqrt(float64(shoulderW*shoulderW-i*i)) * 0.4)
 		blendPixelSafe(buf, cx+w/4+i, shoulderY+arc, dark)
 		blendPixelSafe(buf, cx+w/4+i, shoulderY+arc-1, light)
 	}

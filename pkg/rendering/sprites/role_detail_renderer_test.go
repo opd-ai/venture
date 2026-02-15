@@ -72,8 +72,10 @@ func TestRenderRoleDetails_UnknownRole(t *testing.T) {
 
 // TestRenderRoleDetails_Deterministic verifies same seed produces same output.
 func TestRenderRoleDetails_Deterministic(t *testing.T) {
-	roles := []VisualRole{RoleMage, RoleWarrior, RoleKnight, RoleRogue,
-		RoleMerchant, RoleRanger, RolePriest}
+	roles := []VisualRole{
+		RoleMage, RoleWarrior, RoleKnight, RoleRogue,
+		RoleMerchant, RoleRanger, RolePriest,
+	}
 
 	for _, role := range roles {
 		t.Run(string(role), func(t *testing.T) {
@@ -281,8 +283,10 @@ func TestPriestHolyColor(t *testing.T) {
 
 // TestRenderRoleDetails_SmallSprite verifies rendering on small sprites (16x16).
 func TestRenderRoleDetails_SmallSprite(t *testing.T) {
-	roles := []VisualRole{RoleMage, RoleWarrior, RoleKnight, RoleRogue,
-		RoleMerchant, RoleRanger, RolePriest}
+	roles := []VisualRole{
+		RoleMage, RoleWarrior, RoleKnight, RoleRogue,
+		RoleMerchant, RoleRanger, RolePriest,
+	}
 
 	for _, role := range roles {
 		t.Run(string(role), func(t *testing.T) {
@@ -363,4 +367,3 @@ func bytesEqual(a, b []byte) bool {
 	}
 	return true
 }
-

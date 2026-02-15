@@ -184,6 +184,7 @@ type SystemInitResult struct {
 	StatusEffectVisualOverlaySystem             *StatusEffectVisualOverlaySystem
 	WeatherSpriteTintSystem                     *WeatherSpriteTintSystem
 	EntityDropShadowSystem                      *EntityDropShadowSystem
+	EquipmentMaterialSheenSystem                *EquipmentMaterialSheenSystem
 
 	// System wrappers
 	AnimationSystemWrapper            System
@@ -476,6 +477,13 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 	entityDropShadowSystem.SetGenre(config.GenreID)
 	result.EntityDropShadowSystem = entityDropShadowSystem
 	game.World.AddSystem(entityDropShadowSystem)
+
+	// 17v. EquipmentMaterialSheenSystem - specular highlights from material properties
+	// Bridges sprites.GetMaterialVisualProperties (Sheen/Reflectivity/Roughness) with per-entity visual state
+	equipmentMaterialSheenSystem := NewEquipmentMaterialSheenSystem(game.World, config.Seed+8950)
+	equipmentMaterialSheenSystem.SetGenre(config.GenreID)
+	result.EquipmentMaterialSheenSystem = equipmentMaterialSheenSystem
+	game.World.AddSystem(equipmentMaterialSheenSystem)
 
 	// 18. SkillProgressionSystem - applies skill effects to stats
 	skillProgressionSystem := NewSkillProgressionSystem()

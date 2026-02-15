@@ -213,6 +213,7 @@ type SystemInitResult struct {
 	FloatingDamageNumberSystem                  *FloatingDamageNumberSystem
 	EntityThreatIndicatorSystem                 *EntityThreatIndicatorSystem
 	WeaponMaterialParticleSystem                *WeaponMaterialParticleSystem
+	LootRarityBeamSystem                        *LootRarityBeamSystem
 
 	// System wrappers
 	AnimationSystemWrapper            System
@@ -713,6 +714,14 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 	weaponMaterialParticleSystem.SetGenre(config.GenreID)
 	result.WeaponMaterialParticleSystem = weaponMaterialParticleSystem
 	game.World.AddSystem(weaponMaterialParticleSystem)
+
+	// 17aw. LootRarityBeamSystem - genre-aware beam particles on ground items by rarity
+	// Items with Uncommon+ rarity emit colored upward-flowing beam particles for loot visibility
+	lootRarityBeamSystem := NewLootRarityBeamSystem(game.World, config.Seed+10200)
+	lootRarityBeamSystem.SetParticleSystem(result.ParticleSystem)
+	lootRarityBeamSystem.SetGenre(config.GenreID)
+	result.LootRarityBeamSystem = lootRarityBeamSystem
+	game.World.AddSystem(lootRarityBeamSystem)
 
 	// 18. SkillProgressionSystem - applies skill effects to stats
 	skillProgressionSystem := NewSkillProgressionSystem()

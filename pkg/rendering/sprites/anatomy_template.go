@@ -163,36 +163,35 @@ func (t *AnatomicalTemplate) GetSortedParts() []struct {
 }
 
 // HumanoidTemplate returns the default humanoid anatomical template.
-// This is optimized for 32x32 pixel sprites with Phase 45 top-down proportions.
-// The PreferredPixelSize values define pixel-perfect dimensions that override
-// RelativeWidth/RelativeHeight, enabling precise body part sizing.
-// Proportions: Head 12%, Torso 40%, Legs 48% (top-down perspective).
-// Target: head visible from above, feet/shadow at bottom.
+// This is optimized for 32x32 pixel sprites with aerial/top-down proportions.
+// The camera looks straight down, so the head and shoulders dominate the sprite
+// while legs are barely visible beneath the body.
+// Proportions: Head ~35%, Torso ~50%, Legs ~15% (aerial top-down perspective).
 func HumanoidTemplate() AnatomicalTemplate {
 	return AnatomicalTemplate{
 		Name: "humanoid",
 		BodyPartLayout: map[BodyPart]PartSpec{
 			PartShadow: {
 				RelativeX:      0.5,
-				RelativeY:      0.93,
-				RelativeWidth:  0.40,
-				RelativeHeight: 0.08, // 8% height: slim ellipse for grounding without obscuring feet
+				RelativeY:      0.90,
+				RelativeWidth:  0.70,
+				RelativeHeight: 0.20,
 				ShapeTypes:     []shapes.ShapeType{shapes.ShapeEllipse},
 				ZIndex:         0,
 				ColorRole:      "shadow",
-				Opacity:        0.3,
+				Opacity:        0.35,
 				Rotation:       0,
 			},
 			PartLegs: {
 				RelativeX:      0.5,
-				RelativeY:      0.72, // Positioned for 48% height proportion
-				RelativeWidth:  0.188,
-				RelativeHeight: 0.48, // 48% of sprite height for legs
+				RelativeY:      0.825,
+				RelativeWidth:  0.50,
+				RelativeHeight: 0.15, // 15% — barely visible from above
 				PreferredPixelSize: &PixelDimensions{
-					Width:  6,
-					Height: 15, // Phase 45: 6×15 pixel legs (48% of 32px)
+					Width:  16,
+					Height: 5, // 15% of 32px
 				},
-				ShapeTypes: []shapes.ShapeType{shapes.ShapeCapsule, shapes.ShapeRectangle},
+				ShapeTypes: []shapes.ShapeType{shapes.ShapeEllipse, shapes.ShapeCapsule},
 				ZIndex:     5,
 				ColorRole:  "primary",
 				Opacity:    1.0,
@@ -200,14 +199,14 @@ func HumanoidTemplate() AnatomicalTemplate {
 			},
 			PartTorso: {
 				RelativeX:      0.5,
-				RelativeY:      0.36, // Centered in upper body
-				RelativeWidth:  0.25,
-				RelativeHeight: 0.40, // 40% of sprite height for torso
+				RelativeY:      0.50,
+				RelativeWidth:  0.75,
+				RelativeHeight: 0.50, // 50% — wide shoulders seen from above
 				PreferredPixelSize: &PixelDimensions{
-					Width:  8,
-					Height: 13, // Phase 45: 8×13 pixel torso (40% of 32px)
+					Width:  24,
+					Height: 16, // 50% of 32px
 				},
-				ShapeTypes: []shapes.ShapeType{shapes.ShapeBean, shapes.ShapeRectangle, shapes.ShapeEllipse},
+				ShapeTypes: []shapes.ShapeType{shapes.ShapeEllipse, shapes.ShapeBean, shapes.ShapeRectangle},
 				ZIndex:     10,
 				ColorRole:  "primary",
 				Opacity:    1.0,
@@ -215,12 +214,12 @@ func HumanoidTemplate() AnatomicalTemplate {
 			},
 			PartArms: {
 				RelativeX:      0.5,
-				RelativeY:      0.40, // Shoulder level
-				RelativeWidth:  0.375,
-				RelativeHeight: 0.25,
+				RelativeY:      0.55,
+				RelativeWidth:  0.80,
+				RelativeHeight: 0.30,
 				PreferredPixelSize: &PixelDimensions{
-					Width:  12, // Wider for arm reach
-					Height: 8,
+					Width:  26,
+					Height: 10,
 				},
 				ShapeTypes: []shapes.ShapeType{shapes.ShapeCapsule},
 				ZIndex:     8,
@@ -230,12 +229,12 @@ func HumanoidTemplate() AnatomicalTemplate {
 			},
 			PartHead: {
 				RelativeX:      0.5,
-				RelativeY:      0.12, // Upper 12% - visible from above
-				RelativeWidth:  0.188,
-				RelativeHeight: 0.12, // 12% of sprite height for head
+				RelativeY:      0.175,
+				RelativeWidth:  0.45,
+				RelativeHeight: 0.35, // 35% — dominant from above
 				PreferredPixelSize: &PixelDimensions{
-					Width:  6,
-					Height: 4, // Phase 45: 6×4 pixel head (12% of 32px)
+					Width:  14,
+					Height: 11, // 35% of 32px
 				},
 				ShapeTypes: []shapes.ShapeType{shapes.ShapeCircle, shapes.ShapeEllipse, shapes.ShapeSkull},
 				ZIndex:     15,
@@ -254,32 +253,35 @@ func HumanoidTemplate() AnatomicalTemplate {
 //
 // This template demonstrates Phase 15.1 enhanced proportional scaling,
 // providing clearer silhouettes and better player recognition at a glance.
+// EnhancedHumanoidTemplate returns a Phase 15.1 enhanced humanoid template
+// with pixel-perfect dimensions for improved anatomical accuracy.
+// Uses aerial/top-down proportions: head ~35%, torso ~50%, legs ~15%.
+// Optimized for 28x28 pixel sprites with enhanced anatomical detail.
 func EnhancedHumanoidTemplate() AnatomicalTemplate {
 	return AnatomicalTemplate{
 		Name: "enhanced_humanoid",
 		BodyPartLayout: map[BodyPart]PartSpec{
 			PartShadow: {
 				RelativeX:      0.5,
-				RelativeY:      0.93,
-				RelativeWidth:  0.40,
-				RelativeHeight: 0.12,
+				RelativeY:      0.90,
+				RelativeWidth:  0.65,
+				RelativeHeight: 0.18,
 				ShapeTypes:     []shapes.ShapeType{shapes.ShapeEllipse},
 				ZIndex:         0,
 				ColorRole:      "shadow",
-				Opacity:        0.3,
+				Opacity:        0.35,
 				Rotation:       0,
-				// Shadow doesn't use pixel dimensions - scales with sprite
 			},
 			PartLegs: {
 				RelativeX:      0.5,
-				RelativeY:      0.75,
-				RelativeWidth:  0.286, // 8/28 for 8 pixel height on 28px sprite
-				RelativeHeight: 0.286,
+				RelativeY:      0.825,
+				RelativeWidth:  0.45,
+				RelativeHeight: 0.15, // 15% — aerial view, legs barely visible
 				PreferredPixelSize: &PixelDimensions{
-					Width:  4,
-					Height: 8, // Phase 15.1: 4×8 pixel legs
+					Width:  12,
+					Height: 4, // ~15% of 28px
 				},
-				ShapeTypes: []shapes.ShapeType{shapes.ShapeCapsule, shapes.ShapeRectangle},
+				ShapeTypes: []shapes.ShapeType{shapes.ShapeEllipse, shapes.ShapeCapsule},
 				ZIndex:     5,
 				ColorRole:  "primary",
 				Opacity:    1.0,
@@ -288,11 +290,11 @@ func EnhancedHumanoidTemplate() AnatomicalTemplate {
 			PartTorso: {
 				RelativeX:      0.5,
 				RelativeY:      0.50,
-				RelativeWidth:  0.214, // 6/28 for 6 pixel height on 28px sprite
-				RelativeHeight: 0.214,
+				RelativeWidth:  0.70,
+				RelativeHeight: 0.50, // 50% — broad shoulders from above
 				PreferredPixelSize: &PixelDimensions{
-					Width:  4,
-					Height: 6, // Phase 15.1: 4×6 pixel torso
+					Width:  20,
+					Height: 14, // ~50% of 28px
 				},
 				ShapeTypes: []shapes.ShapeType{shapes.ShapeBean, shapes.ShapeRectangle, shapes.ShapeEllipse},
 				ZIndex:     10,
@@ -302,12 +304,12 @@ func EnhancedHumanoidTemplate() AnatomicalTemplate {
 			},
 			PartArms: {
 				RelativeX:      0.5,
-				RelativeY:      0.50,
-				RelativeWidth:  0.214, // Arms proportional to torso
-				RelativeHeight: 0.179, // 5/28 for arm length
+				RelativeY:      0.55,
+				RelativeWidth:  0.75,
+				RelativeHeight: 0.28,
 				PreferredPixelSize: &PixelDimensions{
-					Width:  6, // Slightly wider for arm reach
-					Height: 5,
+					Width:  22,
+					Height: 8,
 				},
 				ShapeTypes: []shapes.ShapeType{shapes.ShapeCapsule},
 				ZIndex:     8,
@@ -317,12 +319,12 @@ func EnhancedHumanoidTemplate() AnatomicalTemplate {
 			},
 			PartHead: {
 				RelativeX:      0.5,
-				RelativeY:      0.25,
-				RelativeWidth:  0.143, // 4/28 for 4 pixel dimensions on 28px sprite
-				RelativeHeight: 0.143,
+				RelativeY:      0.175,
+				RelativeWidth:  0.42,
+				RelativeHeight: 0.35, // 35% — prominent from above
 				PreferredPixelSize: &PixelDimensions{
-					Width:  4,
-					Height: 4, // Phase 15.1: 4×4 pixel head
+					Width:  12,
+					Height: 10, // ~35% of 28px
 				},
 				ShapeTypes: []shapes.ShapeType{shapes.ShapeCircle, shapes.ShapeEllipse, shapes.ShapeSkull},
 				ZIndex:     15,
@@ -674,7 +676,7 @@ func FlyingTemplate() AnatomicalTemplate {
 
 // SelectTemplate chooses an appropriate template based on entity type.
 // entityType should be provided in Config.Custom["entityType"].
-// Returns HumanoidTemplate as default fallback.
+// Returns HumanoidTemplate (aerial proportions) as default fallback.
 func SelectTemplate(entityType string) AnatomicalTemplate {
 	switch entityType {
 	case "humanoid", "player", "npc", "knight", "mage", "warrior":
@@ -694,7 +696,6 @@ func SelectTemplate(entityType string) AnatomicalTemplate {
 	case "undead", "skeleton", "ghost", "zombie", "lich":
 		return UndeadTemplate()
 	default:
-		// Default to humanoid for unknown types
 		return HumanoidTemplate()
 	}
 }
@@ -990,78 +991,9 @@ func ApplyBossEnhancements(template AnatomicalTemplate) AnatomicalTemplate {
 
 // HumanoidDirectionalTemplate returns a humanoid template with directional facing.
 // Direction should be provided in Config.Custom["facing"] ("up", "down", "left", "right").
-// This creates asymmetry to indicate facing direction.
+// Delegates to HumanoidAerialTemplate for proper top-down perspective.
 func HumanoidDirectionalTemplate(direction Direction) AnatomicalTemplate {
-	base := HumanoidTemplate()
-	base.Name = "humanoid_" + string(direction)
-
-	switch direction {
-	case DirUp:
-		// Facing away - head at top, arms spread slightly
-		base.BodyPartLayout[PartArms] = PartSpec{
-			RelativeX:      0.5,
-			RelativeY:      0.48,
-			RelativeWidth:  0.70,
-			RelativeHeight: 0.30,
-			ShapeTypes:     []shapes.ShapeType{shapes.ShapeCapsule},
-			ZIndex:         8,
-			ColorRole:      "secondary",
-			Opacity:        1.0,
-			Rotation:       0,
-		}
-
-	case DirDown:
-		// Facing toward viewer - head at top, arms slightly forward
-		base.BodyPartLayout[PartArms] = PartSpec{
-			RelativeX:      0.5,
-			RelativeY:      0.52,
-			RelativeWidth:  0.60,
-			RelativeHeight: 0.35,
-			ShapeTypes:     []shapes.ShapeType{shapes.ShapeCapsule},
-			ZIndex:         12, // Arms in front
-			ColorRole:      "secondary",
-			Opacity:        1.0,
-			Rotation:       0,
-		}
-
-	case DirLeft:
-		// Facing left - asymmetric arm positioning
-		base.BodyPartLayout[PartArms] = PartSpec{
-			RelativeX:      0.45,
-			RelativeY:      0.50,
-			RelativeWidth:  0.40,
-			RelativeHeight: 0.35,
-			ShapeTypes:     []shapes.ShapeType{shapes.ShapeCapsule},
-			ZIndex:         8,
-			ColorRole:      "secondary",
-			Opacity:        1.0,
-			Rotation:       270,
-		}
-		// Shift head slightly left
-		headSpec := base.BodyPartLayout[PartHead]
-		headSpec.RelativeX = 0.45
-		base.BodyPartLayout[PartHead] = headSpec
-
-	case DirRight:
-		// Facing right - asymmetric arm positioning
-		base.BodyPartLayout[PartArms] = PartSpec{
-			RelativeX:      0.55,
-			RelativeY:      0.50,
-			RelativeWidth:  0.40,
-			RelativeHeight: 0.35,
-			ShapeTypes:     []shapes.ShapeType{shapes.ShapeCapsule},
-			ZIndex:         8,
-			ColorRole:      "secondary",
-			Opacity:        1.0,
-			Rotation:       90,
-		}
-		// Shift head slightly right
-		headSpec := base.BodyPartLayout[PartHead]
-		headSpec.RelativeX = 0.55
-		base.BodyPartLayout[PartHead] = headSpec
-	}
-
-	return base
+	return HumanoidAerialTemplate(direction)
 }
 
 // HumanoidWithEquipment returns a humanoid template with weapon and shield positioning.
@@ -1236,12 +1168,12 @@ func SciFiHumanoidTemplate(direction Direction) AnatomicalTemplate {
 }
 
 // HorrorHumanoidTemplate returns a humanoid with horror aesthetic.
-// Distorted proportions, unnatural shapes.
+// Distorted proportions, unnatural shapes — still aerial/top-down perspective.
 func HorrorHumanoidTemplate(direction Direction) AnatomicalTemplate {
 	base := HumanoidDirectionalTemplate(direction)
 	base.Name = "horror_humanoid_" + string(direction)
 
-	// Elongated head
+	// Elongated head — eerie from above
 	headSpec := base.BodyPartLayout[PartHead]
 	headSpec.RelativeHeight = 0.42
 	headSpec.RelativeWidth = 0.30
@@ -1250,13 +1182,15 @@ func HorrorHumanoidTemplate(direction Direction) AnatomicalTemplate {
 
 	// Thin, elongated limbs
 	armsSpec := base.BodyPartLayout[PartArms]
-	armsSpec.RelativeHeight = 0.45
+	armsSpec.RelativeHeight = 0.35
 	armsSpec.RelativeWidth = 0.55
 	base.BodyPartLayout[PartArms] = armsSpec
 
+	// Legs still minimal from above — horror distortion via shape, not size
 	legsSpec := base.BodyPartLayout[PartLegs]
-	legsSpec.RelativeHeight = 0.40
+	legsSpec.RelativeHeight = 0.18
 	legsSpec.RelativeWidth = 0.28
+	legsSpec.ShapeTypes = []shapes.ShapeType{shapes.ShapeOrganic, shapes.ShapeCapsule}
 	base.BodyPartLayout[PartLegs] = legsSpec
 
 	// Distorted torso
@@ -2499,18 +2433,15 @@ func NewPartSpecFromPixels(width, height int, shapeType shapes.ShapeType, zIndex
 // --- Phase 45: Enhanced 64x64 Sprite Templates ---
 
 // Enhanced64HumanoidTemplate returns a high-detail humanoid template for 64x64 sprites.
-// Implements Phase 45 enhanced proportions: head 12%, torso 40%, legs 48% of sprite height.
-// Includes secondary details (shoulders, neck, feet) for improved anatomical accuracy.
+// Uses aerial/top-down proportions: head ~35%, torso ~50%, legs ~15% of sprite height.
+// Includes secondary details (shoulders, neck) for improved anatomical accuracy.
 // Target silhouette score: 0.85+ (up from 0.75).
 //
-// Body part breakdown:
-// - Head: 8×8 pixels (12% of 64px height)
-// - Neck: 4×2 pixels (connector detail)
-// - Shoulders: 12×4 pixels (broadens upper body)
-// - Torso: 10×14 pixels (40% height proportion)
-// - Arms: 12×10 pixels (reach and articulation)
-// - Legs: 8×16 pixels (48% height proportion)
-// - Feet: 6×3 pixels (grounding detail)
+// Body part breakdown for 64×64 aerial view:
+// - Head: 28×22 pixels (~35% of 64px height) — dominant from above
+// - Torso: 48×32 pixels (~50% height) — wide shoulders seen from above
+// - Arms: 52×20 pixels — flanking torso
+// - Legs: 32×10 pixels (~15% height) — barely visible beneath body
 //
 // Use this template for:
 // - Player characters at 1920x1080 resolution
@@ -2523,25 +2454,25 @@ func Enhanced64HumanoidTemplate() AnatomicalTemplate {
 		BodyPartLayout: map[BodyPart]PartSpec{
 			PartShadow: {
 				RelativeX:      0.5,
-				RelativeY:      0.93,
-				RelativeWidth:  0.40,
-				RelativeHeight: 0.08,
+				RelativeY:      0.90,
+				RelativeWidth:  0.70,
+				RelativeHeight: 0.20,
 				ShapeTypes:     []shapes.ShapeType{shapes.ShapeEllipse},
 				ZIndex:         0,
 				ColorRole:      "shadow",
-				Opacity:        0.3,
+				Opacity:        0.35,
 				Rotation:       0,
 			},
 			PartLegs: {
 				RelativeX:      0.5,
-				RelativeY:      0.72, // Positioned for 48% height proportion
-				RelativeWidth:  0.125,
-				RelativeHeight: 0.25, // 16/64 = 48% proportion
+				RelativeY:      0.825,
+				RelativeWidth:  0.50,
+				RelativeHeight: 0.15, // 15% — barely visible from above
 				PreferredPixelSize: &PixelDimensions{
-					Width:  8,
-					Height: 16, // Phase 45: 8×16 pixel legs (48%)
+					Width:  32,
+					Height: 10, // ~15% of 64px
 				},
-				ShapeTypes: []shapes.ShapeType{shapes.ShapeCapsule, shapes.ShapeRectangle},
+				ShapeTypes: []shapes.ShapeType{shapes.ShapeEllipse, shapes.ShapeCapsule},
 				ZIndex:     5,
 				ColorRole:  "primary",
 				Opacity:    1.0,
@@ -2549,12 +2480,12 @@ func Enhanced64HumanoidTemplate() AnatomicalTemplate {
 			},
 			PartTorso: {
 				RelativeX:      0.5,
-				RelativeY:      0.40, // Centered in upper body
-				RelativeWidth:  0.156,
-				RelativeHeight: 0.219, // 14/64 = 40% proportion
+				RelativeY:      0.50,
+				RelativeWidth:  0.75,
+				RelativeHeight: 0.50, // 50% — wide shoulders from above
 				PreferredPixelSize: &PixelDimensions{
-					Width:  10,
-					Height: 14, // Phase 45: 10×14 pixel torso (40%)
+					Width:  48,
+					Height: 32, // ~50% of 64px
 				},
 				ShapeTypes: []shapes.ShapeType{shapes.ShapeBean, shapes.ShapeRectangle, shapes.ShapeEllipse},
 				ZIndex:     10,
@@ -2564,12 +2495,12 @@ func Enhanced64HumanoidTemplate() AnatomicalTemplate {
 			},
 			PartArms: {
 				RelativeX:      0.5,
-				RelativeY:      0.42, // Shoulder level
-				RelativeWidth:  0.188,
-				RelativeHeight: 0.156,
+				RelativeY:      0.55,
+				RelativeWidth:  0.80,
+				RelativeHeight: 0.30,
 				PreferredPixelSize: &PixelDimensions{
-					Width:  12,
-					Height: 10, // Phase 45: 12×10 pixel arms (wider reach)
+					Width:  52,
+					Height: 20,
 				},
 				ShapeTypes: []shapes.ShapeType{shapes.ShapeCapsule},
 				ZIndex:     8,
@@ -2579,12 +2510,12 @@ func Enhanced64HumanoidTemplate() AnatomicalTemplate {
 			},
 			PartHead: {
 				RelativeX:      0.5,
-				RelativeY:      0.18, // Upper 12%
-				RelativeWidth:  0.125,
-				RelativeHeight: 0.125, // 8/64 = 12% proportion
+				RelativeY:      0.175,
+				RelativeWidth:  0.45,
+				RelativeHeight: 0.35, // 35% — dominant from above
 				PreferredPixelSize: &PixelDimensions{
-					Width:  8,
-					Height: 8, // Phase 45: 8×8 pixel head (12%)
+					Width:  28,
+					Height: 22, // ~35% of 64px
 				},
 				ShapeTypes: []shapes.ShapeType{shapes.ShapeCircle, shapes.ShapeEllipse, shapes.ShapeSkull},
 				ZIndex:     15,

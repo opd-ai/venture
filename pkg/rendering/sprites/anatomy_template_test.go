@@ -81,24 +81,24 @@ func TestHumanoidTemplate(t *testing.T) {
 		t.Errorf("Shadow Y position too high: %v, want > 0.8 (bottom)", shadowY)
 	}
 
-	// Verify Phase 45 proportions (head 12%, torso 40%, legs 48%)
+	// Verify aerial top-down proportions (head ~35%, torso ~50%, legs ~15%)
 	headSpec := template.BodyPartLayout[PartHead]
 	if headSpec.PreferredPixelSize == nil {
-		t.Error("Head should have PreferredPixelSize for Phase 45 proportions")
-	} else if headSpec.PreferredPixelSize.Height > 6 {
-		t.Errorf("Head height too large for 12%% proportion: %d, want <= 6", headSpec.PreferredPixelSize.Height)
+		t.Error("Head should have PreferredPixelSize for aerial proportions")
+	} else if headSpec.PreferredPixelSize.Height < 8 {
+		t.Errorf("Head height too small for ~35%% aerial proportion: %d, want >= 8", headSpec.PreferredPixelSize.Height)
 	}
 
 	legsSpec := template.BodyPartLayout[PartLegs]
 	if legsSpec.PreferredPixelSize == nil {
-		t.Error("Legs should have PreferredPixelSize for Phase 45 proportions")
-	} else if legsSpec.PreferredPixelSize.Height < 10 {
-		t.Errorf("Legs height too small for 48%% proportion: %d, want >= 10", legsSpec.PreferredPixelSize.Height)
+		t.Error("Legs should have PreferredPixelSize for aerial proportions")
+	} else if legsSpec.PreferredPixelSize.Height > 8 {
+		t.Errorf("Legs height too large for ~15%% aerial proportion: %d, want <= 8", legsSpec.PreferredPixelSize.Height)
 	}
 
 	torsoSpec := template.BodyPartLayout[PartTorso]
 	if torsoSpec.PreferredPixelSize == nil {
-		t.Error("Torso should have PreferredPixelSize for Phase 45 proportions")
+		t.Error("Torso should have PreferredPixelSize for aerial proportions")
 	}
 }
 
@@ -130,41 +130,41 @@ func TestEnhancedHumanoidTemplate(t *testing.T) {
 			shadowZ, legsZ, armsZ, torsoZ, headZ)
 	}
 
-	// Verify Phase 15.1 pixel dimensions are set correctly
-	// Head should be 4×4 pixels
+	// Verify aerial pixel dimensions are set correctly
+	// Head should be 12×10 pixels (aerial: ~35% of 28px)
 	headSpec := template.BodyPartLayout[PartHead]
 	if headSpec.PreferredPixelSize == nil {
 		t.Fatal("Head PreferredPixelSize should not be nil")
 	}
-	if headSpec.PreferredPixelSize.Width != 4 {
-		t.Errorf("Head width = %d, want 4", headSpec.PreferredPixelSize.Width)
+	if headSpec.PreferredPixelSize.Width != 12 {
+		t.Errorf("Head width = %d, want 12", headSpec.PreferredPixelSize.Width)
 	}
-	if headSpec.PreferredPixelSize.Height != 4 {
-		t.Errorf("Head height = %d, want 4", headSpec.PreferredPixelSize.Height)
+	if headSpec.PreferredPixelSize.Height != 10 {
+		t.Errorf("Head height = %d, want 10", headSpec.PreferredPixelSize.Height)
 	}
 
-	// Torso should be 4×6 pixels
+	// Torso should be 20×14 pixels (aerial: ~50% of 28px)
 	torsoSpec := template.BodyPartLayout[PartTorso]
 	if torsoSpec.PreferredPixelSize == nil {
 		t.Fatal("Torso PreferredPixelSize should not be nil")
 	}
-	if torsoSpec.PreferredPixelSize.Width != 4 {
-		t.Errorf("Torso width = %d, want 4", torsoSpec.PreferredPixelSize.Width)
+	if torsoSpec.PreferredPixelSize.Width != 20 {
+		t.Errorf("Torso width = %d, want 20", torsoSpec.PreferredPixelSize.Width)
 	}
-	if torsoSpec.PreferredPixelSize.Height != 6 {
-		t.Errorf("Torso height = %d, want 6", torsoSpec.PreferredPixelSize.Height)
+	if torsoSpec.PreferredPixelSize.Height != 14 {
+		t.Errorf("Torso height = %d, want 14", torsoSpec.PreferredPixelSize.Height)
 	}
 
-	// Legs should be 4×8 pixels
+	// Legs should be 12×4 pixels (aerial: ~15% of 28px)
 	legsSpec := template.BodyPartLayout[PartLegs]
 	if legsSpec.PreferredPixelSize == nil {
 		t.Fatal("Legs PreferredPixelSize should not be nil")
 	}
-	if legsSpec.PreferredPixelSize.Width != 4 {
-		t.Errorf("Legs width = %d, want 4", legsSpec.PreferredPixelSize.Width)
+	if legsSpec.PreferredPixelSize.Width != 12 {
+		t.Errorf("Legs width = %d, want 12", legsSpec.PreferredPixelSize.Width)
 	}
-	if legsSpec.PreferredPixelSize.Height != 8 {
-		t.Errorf("Legs height = %d, want 8", legsSpec.PreferredPixelSize.Height)
+	if legsSpec.PreferredPixelSize.Height != 4 {
+		t.Errorf("Legs height = %d, want 4", legsSpec.PreferredPixelSize.Height)
 	}
 
 	// Arms should have pixel dimensions set
@@ -186,40 +186,40 @@ func TestEnhancedHumanoidTemplate(t *testing.T) {
 	const spriteSize = 28
 	headWidth := headSpec.GetEffectiveWidth(spriteSize)
 	headHeight := headSpec.GetEffectiveHeight(spriteSize)
-	if headWidth != 4 {
-		t.Errorf("Head effective width = %d, want 4", headWidth)
+	if headWidth != 12 {
+		t.Errorf("Head effective width = %d, want 12", headWidth)
 	}
-	if headHeight != 4 {
-		t.Errorf("Head effective height = %d, want 4", headHeight)
+	if headHeight != 10 {
+		t.Errorf("Head effective height = %d, want 10", headHeight)
 	}
 
 	torsoWidth := torsoSpec.GetEffectiveWidth(spriteSize)
 	torsoHeight := torsoSpec.GetEffectiveHeight(spriteSize)
-	if torsoWidth != 4 {
-		t.Errorf("Torso effective width = %d, want 4", torsoWidth)
+	if torsoWidth != 20 {
+		t.Errorf("Torso effective width = %d, want 20", torsoWidth)
 	}
-	if torsoHeight != 6 {
-		t.Errorf("Torso effective height = %d, want 6", torsoHeight)
+	if torsoHeight != 14 {
+		t.Errorf("Torso effective height = %d, want 14", torsoHeight)
 	}
 
 	legsWidth := legsSpec.GetEffectiveWidth(spriteSize)
 	legsHeight := legsSpec.GetEffectiveHeight(spriteSize)
-	if legsWidth != 4 {
-		t.Errorf("Legs effective width = %d, want 4", legsWidth)
+	if legsWidth != 12 {
+		t.Errorf("Legs effective width = %d, want 12", legsWidth)
 	}
-	if legsHeight != 8 {
-		t.Errorf("Legs effective height = %d, want 8", legsHeight)
+	if legsHeight != 4 {
+		t.Errorf("Legs effective height = %d, want 4", legsHeight)
 	}
 
 	// Verify proportions remain constant across different sprite sizes
 	const largeSpriteSize = 64
 	headWidthLarge := headSpec.GetEffectiveWidth(largeSpriteSize)
 	headHeightLarge := headSpec.GetEffectiveHeight(largeSpriteSize)
-	if headWidthLarge != 4 {
-		t.Errorf("Head effective width at 64x64 = %d, want 4 (pixel-perfect should be constant)", headWidthLarge)
+	if headWidthLarge != 12 {
+		t.Errorf("Head effective width at 64x64 = %d, want 12 (pixel-perfect should be constant)", headWidthLarge)
 	}
-	if headHeightLarge != 4 {
-		t.Errorf("Head effective height at 64x64 = %d, want 4 (pixel-perfect should be constant)", headHeightLarge)
+	if headHeightLarge != 10 {
+		t.Errorf("Head effective height at 64x64 = %d, want 10 (pixel-perfect should be constant)", headHeightLarge)
 	}
 }
 
@@ -302,20 +302,20 @@ func TestDetailedHumanoidTemplate(t *testing.T) {
 		t.Errorf("Mouth effective height = %d, want 1", mouthHeight)
 	}
 
-	// Verify base template dimensions are preserved (head, torso, legs)
+	// Verify base template dimensions are preserved (head, torso, legs from EnhancedHumanoidTemplate)
 	headSpec := template.BodyPartLayout[PartHead]
-	if headSpec.PreferredPixelSize == nil || headSpec.PreferredPixelSize.Width != 4 || headSpec.PreferredPixelSize.Height != 4 {
-		t.Error("Head dimensions should be preserved from EnhancedHumanoidTemplate (4×4)")
+	if headSpec.PreferredPixelSize == nil || headSpec.PreferredPixelSize.Width != 12 || headSpec.PreferredPixelSize.Height != 10 {
+		t.Error("Head dimensions should be preserved from EnhancedHumanoidTemplate (12×10)")
 	}
 
 	torsoSpec := template.BodyPartLayout[PartTorso]
-	if torsoSpec.PreferredPixelSize == nil || torsoSpec.PreferredPixelSize.Width != 4 || torsoSpec.PreferredPixelSize.Height != 6 {
-		t.Error("Torso dimensions should be preserved from EnhancedHumanoidTemplate (4×6)")
+	if torsoSpec.PreferredPixelSize == nil || torsoSpec.PreferredPixelSize.Width != 20 || torsoSpec.PreferredPixelSize.Height != 14 {
+		t.Error("Torso dimensions should be preserved from EnhancedHumanoidTemplate (20×14)")
 	}
 
 	legsSpec := template.BodyPartLayout[PartLegs]
-	if legsSpec.PreferredPixelSize == nil || legsSpec.PreferredPixelSize.Width != 4 || legsSpec.PreferredPixelSize.Height != 8 {
-		t.Error("Legs dimensions should be preserved from EnhancedHumanoidTemplate (4×8)")
+	if legsSpec.PreferredPixelSize == nil || legsSpec.PreferredPixelSize.Width != 12 || legsSpec.PreferredPixelSize.Height != 4 {
+		t.Error("Legs dimensions should be preserved from EnhancedHumanoidTemplate (12×4)")
 	}
 }
 
@@ -563,26 +563,26 @@ func TestPartSpecValidation(t *testing.T) {
 }
 
 // TestTemplateProportions tests that body part proportions are reasonable.
-// Updated for Phase 45 top-down proportions: head 12%, torso 40%, legs 48%.
+// Updated for aerial top-down proportions: head ~35%, torso ~50%, legs ~15%.
 func TestTemplateProportions(t *testing.T) {
 	template := HumanoidTemplate()
 
-	// Check head proportions (Phase 45: ~10-15% of height)
+	// Check head proportions (aerial: ~30-40% of height)
 	headHeight := template.BodyPartLayout[PartHead].RelativeHeight
-	if headHeight < 0.08 || headHeight > 0.20 {
-		t.Errorf("Head height proportion out of reasonable range: %v, want 0.08-0.20", headHeight)
+	if headHeight < 0.28 || headHeight > 0.42 {
+		t.Errorf("Head height proportion out of aerial range: %v, want 0.28-0.42", headHeight)
 	}
 
-	// Check torso proportions (Phase 45: ~30-50% of height)
+	// Check torso proportions (aerial: ~45-55% of height)
 	torsoHeight := template.BodyPartLayout[PartTorso].RelativeHeight
-	if torsoHeight < 0.30 || torsoHeight > 0.50 {
-		t.Errorf("Torso height proportion out of reasonable range: %v, want 0.30-0.50", torsoHeight)
+	if torsoHeight < 0.42 || torsoHeight > 0.58 {
+		t.Errorf("Torso height proportion out of aerial range: %v, want 0.42-0.58", torsoHeight)
 	}
 
-	// Check legs proportions (Phase 45: ~40-55% of height)
+	// Check legs proportions (aerial: ~10-20% of height — barely visible from above)
 	legsHeight := template.BodyPartLayout[PartLegs].RelativeHeight
-	if legsHeight < 0.35 || legsHeight > 0.55 {
-		t.Errorf("Legs height proportion out of reasonable range: %v, want 0.35-0.55", legsHeight)
+	if legsHeight < 0.10 || legsHeight > 0.22 {
+		t.Errorf("Legs height proportion out of aerial range: %v, want 0.10-0.22", legsHeight)
 	}
 }
 

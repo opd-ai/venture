@@ -69,7 +69,7 @@ func TestPhase45_ShadowAtGroundLevel(t *testing.T) {
 }
 
 // TestPhase45_HeadInUpperPortion validates entity heads are in upper portion of sprite.
-// Validation criteria: Entity heads in upper 25%, legs at 48% height.
+// Validation criteria: Entity heads in upper 25%, legs minimal in aerial view.
 func TestPhase45_HeadInUpperPortion(t *testing.T) {
 	templates := []struct {
 		name     string
@@ -97,27 +97,27 @@ func TestPhase45_HeadInUpperPortion(t *testing.T) {
 	}
 }
 
-// TestPhase45_Proportions validates Phase 45 body proportions (head 12%, torso 40%, legs 48%).
-// Validation criteria: Phase 45 proportions - head 12%, torso 40%, legs 48%.
+// TestPhase45_Proportions validates aerial top-down body proportions (head ~35%, torso ~50%, legs ~15%).
+// Validation criteria: aerial proportions with head dominant and legs minimal.
 func TestPhase45_Proportions(t *testing.T) {
 	template := HumanoidTemplate()
 
-	// Check head proportion (should be ~12% of sprite height)
+	// Check head proportion (should be ~35% of sprite height — dominant in aerial view)
 	head := template.BodyPartLayout[PartHead]
 	if head.PreferredPixelSize != nil {
-		// Head should be small relative to body (max 8 pixels height for 64×64 sprites)
-		if head.PreferredPixelSize.Height > 8 {
-			t.Errorf("head height %d pixels too large for 12%% proportion",
+		// Head should be prominent (min 8 pixels height for 32×32 sprites)
+		if head.PreferredPixelSize.Height < 8 {
+			t.Errorf("head height %d pixels too small for ~35%% aerial proportion",
 				head.PreferredPixelSize.Height)
 		}
 	}
 
-	// Check legs proportion (should be ~48% of sprite height)
+	// Check legs proportion (should be ~15% of sprite height — barely visible from above)
 	legs := template.BodyPartLayout[PartLegs]
 	if legs.PreferredPixelSize != nil {
-		// Legs should be substantial (min 10 pixels height for 64×64 sprites)
-		if legs.PreferredPixelSize.Height < 10 {
-			t.Errorf("legs height %d pixels too small for 48%% proportion",
+		// Legs should be minimal (max 8 pixels height for 32×32 sprites)
+		if legs.PreferredPixelSize.Height > 8 {
+			t.Errorf("legs height %d pixels too large for ~15%% aerial proportion",
 				legs.PreferredPixelSize.Height)
 		}
 	}

@@ -23,44 +23,44 @@ func TestEnhanced64HumanoidTemplate(t *testing.T) {
 		}
 	}
 
-	// Verify pixel dimensions for Phase 45 specifications
+	// Verify pixel dimensions for aerial top-down specifications
 	const spriteSize = 64
 
-	// Head: 8×8 pixels (12% of height)
+	// Head: 28×22 pixels (~35% of height — dominant from above)
 	headSpec := template.BodyPartLayout[PartHead]
 	if headSpec.PreferredPixelSize == nil {
 		t.Fatal("head PreferredPixelSize should not be nil")
 	}
-	if headSpec.PreferredPixelSize.Width != 8 || headSpec.PreferredPixelSize.Height != 8 {
-		t.Errorf("head expected 8×8 pixels, got %d×%d", headSpec.PreferredPixelSize.Width, headSpec.PreferredPixelSize.Height)
+	if headSpec.PreferredPixelSize.Width != 28 || headSpec.PreferredPixelSize.Height != 22 {
+		t.Errorf("head expected 28×22 pixels, got %d×%d", headSpec.PreferredPixelSize.Width, headSpec.PreferredPixelSize.Height)
 	}
 
-	// Torso: 10×14 pixels (40% proportion)
+	// Torso: 48×32 pixels (~50% proportion — wide shoulders from above)
 	torsoSpec := template.BodyPartLayout[PartTorso]
 	if torsoSpec.PreferredPixelSize == nil {
 		t.Fatal("torso PreferredPixelSize should not be nil")
 	}
-	if torsoSpec.PreferredPixelSize.Width != 10 || torsoSpec.PreferredPixelSize.Height != 14 {
-		t.Errorf("torso expected 10×14 pixels, got %d×%d", torsoSpec.PreferredPixelSize.Width, torsoSpec.PreferredPixelSize.Height)
+	if torsoSpec.PreferredPixelSize.Width != 48 || torsoSpec.PreferredPixelSize.Height != 32 {
+		t.Errorf("torso expected 48×32 pixels, got %d×%d", torsoSpec.PreferredPixelSize.Width, torsoSpec.PreferredPixelSize.Height)
 	}
 
-	// Legs: 8×16 pixels (48% proportion)
+	// Legs: 32×10 pixels (~15% proportion — barely visible from above)
 	legsSpec := template.BodyPartLayout[PartLegs]
 	if legsSpec.PreferredPixelSize == nil {
 		t.Fatal("legs PreferredPixelSize should not be nil")
 	}
-	if legsSpec.PreferredPixelSize.Width != 8 || legsSpec.PreferredPixelSize.Height != 16 {
-		t.Errorf("legs expected 8×16 pixels, got %d×%d", legsSpec.PreferredPixelSize.Width, legsSpec.PreferredPixelSize.Height)
+	if legsSpec.PreferredPixelSize.Width != 32 || legsSpec.PreferredPixelSize.Height != 10 {
+		t.Errorf("legs expected 32×10 pixels, got %d×%d", legsSpec.PreferredPixelSize.Width, legsSpec.PreferredPixelSize.Height)
 	}
 
-	// Verify proportions sum to approximately 100% (12% + 40% + 48% = 100%)
+	// Verify proportions sum: head + torso + legs should cover most of sprite height
 	headHeight := headSpec.PreferredPixelSize.Height
 	torsoHeight := torsoSpec.PreferredPixelSize.Height
 	legsHeight := legsSpec.PreferredPixelSize.Height
 	totalProportion := float64(headHeight+torsoHeight+legsHeight) / float64(spriteSize)
 
-	if totalProportion < 0.55 || totalProportion > 0.65 {
-		t.Errorf("total body proportion should be ~60%%, got %.1f%%", totalProportion*100)
+	if totalProportion < 0.85 || totalProportion > 1.15 {
+		t.Errorf("total body proportion should be ~100%%, got %.1f%%", totalProportion*100)
 	}
 
 	// Verify Z-index ordering (legs < arms < torso < head)
@@ -291,20 +291,20 @@ func TestPhase45ProportionAccuracy(t *testing.T) {
 			name:     "Enhanced64Humanoid",
 			template: Enhanced64HumanoidTemplate(),
 			expected: map[BodyPart]PixelDimensions{
-				PartHead:  {Width: 8, Height: 8},
-				PartTorso: {Width: 10, Height: 14},
-				PartLegs:  {Width: 8, Height: 16},
-				PartArms:  {Width: 12, Height: 10},
+				PartHead:  {Width: 28, Height: 22},
+				PartTorso: {Width: 48, Height: 32},
+				PartLegs:  {Width: 32, Height: 10},
+				PartArms:  {Width: 52, Height: 20},
 			},
 		},
 		{
 			name:     "Detailed64Humanoid",
 			template: Detailed64HumanoidTemplate(),
 			expected: map[BodyPart]PixelDimensions{
-				PartHead:  {Width: 8, Height: 8},
-				PartTorso: {Width: 10, Height: 14},
-				PartLegs:  {Width: 8, Height: 16},
-				PartArms:  {Width: 12, Height: 10},
+				PartHead:  {Width: 28, Height: 22},
+				PartTorso: {Width: 48, Height: 32},
+				PartLegs:  {Width: 32, Height: 10},
+				PartArms:  {Width: 52, Height: 20},
 				PartEyes:  {Width: 4, Height: 2},
 				PartMouth: {Width: 4, Height: 2},
 			},

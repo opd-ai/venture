@@ -82,8 +82,8 @@
 // # Phase 45: Enhanced 64x64 Sprite Templates
 //
 // Phase 45 introduces high-detail 64x64 sprite templates for 1920x1080 resolution.
-// These templates provide superior anatomical accuracy with improved proportions:
-// head 12%, torso 40%, legs 48% (vs 30%/40%/30% for 32x32 sprites).
+// These templates use aerial/top-down proportions consistent with all other templates:
+// head ~35%, torso ~50%, legs ~15% (the camera looks straight down).
 // Target silhouette recognition: 0.85+ (up from 0.75).
 //
 //	// Automatically select appropriate template based on sprite size
@@ -92,7 +92,7 @@
 //
 //	// Manual selection for specific needs
 //	template := sprites.Enhanced64HumanoidTemplate()
-//	// Head: 8×8 pixels (12%), Torso: 10×14 pixels (40%), Legs: 8×16 pixels (48%)
+//	// Head: dominant from above, Torso: wide shoulders, Legs: barely visible
 //	// Arms: 12×10 pixels for wider reach and articulation
 //
 //	// Detailed variant with facial features and secondary details
@@ -256,7 +256,7 @@
 //
 //	config := sprites.GenerationConfig{
 //	    UseAerial: true,   // Top-down aerial view (recommended for top-down gameplay)
-//	    UseAerial: false,  // Side-view profile (default, traditional roguelike style)
+//	    UseAerial: false,  // Side-view profile (legacy; all default templates now use aerial)
 //	}
 //
 // When UseAerial is true:

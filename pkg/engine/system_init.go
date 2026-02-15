@@ -200,6 +200,7 @@ type SystemInitResult struct {
 	WeatherEquipmentSheenSystem                 *WeatherEquipmentSheenSystem
 	CreatureEyeGlowSystem                       *CreatureEyeGlowSystem
 	MeleeSwingArcSystem                         *MeleeSwingArcSystem
+	CombatReadyAuraSystem                       *CombatReadyAuraSystem
 
 	// System wrappers
 	AnimationSystemWrapper            System
@@ -598,6 +599,13 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 	meleeSwingArcSystem.SetGenre(config.GenreID)
 	result.MeleeSwingArcSystem = meleeSwingArcSystem
 	game.World.AddSystem(meleeSwingArcSystem)
+
+	// 17ak. CombatReadyAuraSystem - genre-aware aura when AI entities enter hostile states
+	// Connects AIComponent state with visual aura overlay for combat readiness feedback
+	combatReadyAuraSystem := NewCombatReadyAuraSystem(game.World, config.Seed+9550)
+	combatReadyAuraSystem.SetGenre(config.GenreID)
+	result.CombatReadyAuraSystem = combatReadyAuraSystem
+	game.World.AddSystem(combatReadyAuraSystem)
 
 	// 18. SkillProgressionSystem - applies skill effects to stats
 	skillProgressionSystem := NewSkillProgressionSystem()

@@ -217,6 +217,7 @@ type systemsContainer struct {
 	weatherEquipmentSheenSystem                 *engine.WeatherEquipmentSheenSystem                 // Weather-driven equipment sheen
 	creatureEyeGlowSystem                       *engine.CreatureEyeGlowSystem                       // Genre-aware hostile creature eye glow
 	meleeSwingArcSystem                         *engine.MeleeSwingArcSystem                         // Genre-aware melee attack swing arcs
+	combatReadyAuraSystem                       *engine.CombatReadyAuraSystem                       // Genre-aware AI combat readiness aura
 	statusEffectAISystem                        *engine.StatusEffectAISystem                        // Bridges status effects with AI (stun/frozen disable AI)
 	reputationSystem                            *engine.ReputationSystem
 	alignmentSystem                             *engine.AlignmentSystem
@@ -2092,6 +2093,11 @@ func registerNonCriticalSystems(game *engine.EbitenGame, sys *systemsContainer) 
 	sys.meleeSwingArcSystem = engine.NewMeleeSwingArcSystem(game.World, *seed+9500)
 	sys.meleeSwingArcSystem.SetGenre(*genreID)
 	game.World.AddSystem(sys.meleeSwingArcSystem)
+
+	// CombatReadyAuraSystem: genre-aware aura when AI entities enter hostile states
+	sys.combatReadyAuraSystem = engine.NewCombatReadyAuraSystem(game.World, *seed+9550)
+	sys.combatReadyAuraSystem.SetGenre(*genreID)
+	game.World.AddSystem(sys.combatReadyAuraSystem)
 
 	// FactionCompanionBehaviorSystem: bridges faction reputation with companion AI targeting
 	// Companions won't attack allied faction members and prioritize hostile faction enemies

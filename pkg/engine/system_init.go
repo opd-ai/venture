@@ -185,6 +185,7 @@ type SystemInitResult struct {
 	WeatherSpriteTintSystem                     *WeatherSpriteTintSystem
 	EntityDropShadowSystem                      *EntityDropShadowSystem
 	EquipmentMaterialSheenSystem                *EquipmentMaterialSheenSystem
+	EquipmentDamageStateTintSystem              *EquipmentDamageStateTintSystem
 
 	// System wrappers
 	AnimationSystemWrapper            System
@@ -484,6 +485,13 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 	equipmentMaterialSheenSystem.SetGenre(config.GenreID)
 	result.EquipmentMaterialSheenSystem = equipmentMaterialSheenSystem
 	game.World.AddSystem(equipmentMaterialSheenSystem)
+
+	// 17w. EquipmentDamageStateTintSystem - aggregate equipment wear visual tinting
+	// Bridges sprites.GetDamageVisualEffects with per-entity render state for darkening/opacity
+	equipmentDamageStateTintSystem := NewEquipmentDamageStateTintSystem(game.World, config.Seed+8975)
+	equipmentDamageStateTintSystem.SetGenre(config.GenreID)
+	result.EquipmentDamageStateTintSystem = equipmentDamageStateTintSystem
+	game.World.AddSystem(equipmentDamageStateTintSystem)
 
 	// 18. SkillProgressionSystem - applies skill effects to stats
 	skillProgressionSystem := NewSkillProgressionSystem()

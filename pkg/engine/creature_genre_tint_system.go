@@ -144,7 +144,7 @@ func (s *CreatureGenreTintSystem) applyTints(entities []*Entity) {
 
 	if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
 		s.logger.WithFields(logrus.Fields{
-			"genre":          s.genreID,
+			"genre":           s.genreID,
 			"entities_tinted": count,
 		}).Debug("creature genre tints applied")
 	}
@@ -187,11 +187,11 @@ func (s *CreatureGenreTintSystem) getEntityTypeModifier(entity *Entity) entityTy
 // buildCreatureGenrePresets returns the genre-specific tint presets.
 func buildCreatureGenrePresets() map[string]creatureGenreTintPreset {
 	return map[string]creatureGenreTintPreset{
-		"fantasy":  {R: 1.00, G: 0.97, B: 0.88},
-		"horror":   {R: 0.82, G: 0.75, B: 0.80},
-		"scifi":    {R: 0.88, G: 0.92, B: 1.00},
+		"fantasy":   {R: 1.00, G: 0.97, B: 0.88},
+		"horror":    {R: 0.82, G: 0.75, B: 0.80},
+		"scifi":     {R: 0.88, G: 0.92, B: 1.00},
 		"cyberpunk": {R: 1.00, G: 0.85, B: 0.95},
-		"postapoc": {R: 0.95, G: 0.88, B: 0.75},
+		"postapoc":  {R: 0.95, G: 0.88, B: 0.75},
 	}
 }
 

@@ -68,9 +68,9 @@ func (c *BattleWoundOverlayComponent) Type() string {
 
 // genreWoundPalette holds genre-specific wound visual parameters.
 type genreWoundPalette struct {
-	R, G, B       float64 // Primary wound color
+	R, G, B             float64 // Primary wound color
 	CritR, CritG, CritB float64 // Critical wound glow color
-	PulseSpeed    float64 // Critical pulse speed (cycles/sec)
+	PulseSpeed          float64 // Critical pulse speed (cycles/sec)
 }
 
 // BattleWoundOverlaySystem assigns and updates genre-aware wound overlays

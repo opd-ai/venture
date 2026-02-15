@@ -248,6 +248,7 @@ type systemsContainer struct {
 	armorHitSparkSystem                         *engine.ArmorHitSparkSystem                         // Material-aware armor deflection sparks
 	meleeEnchantmentArcParticleSystem           *engine.MeleeEnchantmentArcParticleSystem           // Rarity-colored enchantment arc particles
 	battleWoundOverlaySystem                    *engine.BattleWoundOverlaySystem                    // Genre-aware battle wound overlays
+	equipmentDamageCrackOverlaySystem           *engine.EquipmentDamageCrackOverlaySystem           // Procedural crack patterns from equipment wear
 	statusEffectAISystem                        *engine.StatusEffectAISystem                        // Bridges status effects with AI (stun/frozen disable AI)
 	reputationSystem                            *engine.ReputationSystem
 	alignmentSystem                             *engine.AlignmentSystem
@@ -2293,6 +2294,11 @@ func registerNonCriticalSystems(game *engine.EbitenGame, sys *systemsContainer) 
 	sys.battleWoundOverlaySystem = engine.NewBattleWoundOverlaySystem(game.World, *seed+10725)
 	sys.battleWoundOverlaySystem.SetGenre(*genreID)
 	game.World.AddSystem(sys.battleWoundOverlaySystem)
+
+	// EquipmentDamageCrackOverlaySystem: procedural crack patterns from equipment wear
+	sys.equipmentDamageCrackOverlaySystem = engine.NewEquipmentDamageCrackOverlaySystem(game.World, *seed+10730)
+	sys.equipmentDamageCrackOverlaySystem.SetGenre(*genreID)
+	game.World.AddSystem(sys.equipmentDamageCrackOverlaySystem)
 
 	// FactionCompanionBehaviorSystem: bridges faction reputation with companion AI targeting
 	// Companions won't attack allied faction members and prioritize hostile faction enemies

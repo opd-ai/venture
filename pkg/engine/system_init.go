@@ -231,6 +231,7 @@ type SystemInitResult struct {
 	ArmorHitSparkSystem                         *ArmorHitSparkSystem
 	MeleeEnchantmentArcParticleSystem           *MeleeEnchantmentArcParticleSystem
 	BattleWoundOverlaySystem                    *BattleWoundOverlaySystem
+	EquipmentDamageCrackOverlaySystem           *EquipmentDamageCrackOverlaySystem
 
 	// System wrappers
 	AnimationSystemWrapper            System
@@ -1368,6 +1369,13 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 	battleWoundOverlaySystem.SetGenre(config.GenreID)
 	result.BattleWoundOverlaySystem = battleWoundOverlaySystem
 	game.World.AddSystem(battleWoundOverlaySystem)
+
+	// 36k1j. EquipmentDamageCrackOverlaySystem - procedural crack patterns from equipment wear
+	// Reads EquipmentWearTintComponent crack density and generates genre-aware crack segments
+	equipmentDamageCrackOverlaySystem := NewEquipmentDamageCrackOverlaySystem(game.World, config.Seed+6460)
+	equipmentDamageCrackOverlaySystem.SetGenre(config.GenreID)
+	result.EquipmentDamageCrackOverlaySystem = equipmentDamageCrackOverlaySystem
+	game.World.AddSystem(equipmentDamageCrackOverlaySystem)
 
 	// 36k2. ManaRegenParticleSystem - visual feedback for mana regeneration
 	// Spawns genre-aware particles when entities actively regenerate mana

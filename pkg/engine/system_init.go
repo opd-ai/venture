@@ -197,6 +197,7 @@ type SystemInitResult struct {
 	SprintTrailParticleSystem                   *SprintTrailParticleSystem
 	NearbyLightEntityTintSystem                 *NearbyLightEntityTintSystem
 	WeatherEquipmentSheenSystem                 *WeatherEquipmentSheenSystem
+	CreatureEyeGlowSystem                       *CreatureEyeGlowSystem
 
 	// System wrappers
 	AnimationSystemWrapper            System
@@ -581,6 +582,13 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 	weatherEquipmentSheenSystem.SetGenre(config.GenreID)
 	result.WeatherEquipmentSheenSystem = weatherEquipmentSheenSystem
 	game.World.AddSystem(weatherEquipmentSheenSystem)
+
+	// 17ai. CreatureEyeGlowSystem - genre-aware glowing eyes for hostile creatures
+	// Uses threat level (health, faction, detection range) to scale glow intensity and pulse
+	creatureEyeGlowSystem := NewCreatureEyeGlowSystem(game.World, config.Seed+9450)
+	creatureEyeGlowSystem.SetGenre(config.GenreID)
+	result.CreatureEyeGlowSystem = creatureEyeGlowSystem
+	game.World.AddSystem(creatureEyeGlowSystem)
 
 	// 18. SkillProgressionSystem - applies skill effects to stats
 	skillProgressionSystem := NewSkillProgressionSystem()

@@ -237,6 +237,7 @@ type SystemInitResult struct {
 	AttackTelegraphGlowSystem                   *AttackTelegraphGlowSystem
 	XPGainBurstSystem                           *XPGainBurstSystem
 	EquipmentGleamSweepSystem                   *EquipmentGleamSweepSystem
+	SpriteDepthShadingSystem                    *SpriteDepthShadingSystem
 
 	// System wrappers
 	AnimationSystemWrapper            System
@@ -1418,6 +1419,13 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 	equipmentGleamSweepSystem.SetGenre(config.GenreID)
 	result.EquipmentGleamSweepSystem = equipmentGleamSweepSystem
 	game.World.AddSystem(equipmentGleamSweepSystem)
+
+	// 36k1o. SpriteDepthShadingSystem - per-body-part depth shading for entity sprites
+	// Attaches genre-aware shading parameters (highlight, edge darkening, AO, dithering)
+	spriteDepthShadingSystem := NewSpriteDepthShadingSystem(game.World, config.Seed+6485)
+	spriteDepthShadingSystem.SetGenre(config.GenreID)
+	result.SpriteDepthShadingSystem = spriteDepthShadingSystem
+	game.World.AddSystem(spriteDepthShadingSystem)
 
 	// 36k2. ManaRegenParticleSystem - visual feedback for mana regeneration
 	// Spawns genre-aware particles when entities actively regenerate mana

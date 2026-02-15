@@ -333,7 +333,7 @@ func (g *Generator) renderTemplateParts(img *ebiten.Image, template AnatomicalTe
 	}
 }
 
-// renderTemplatePart renders a single template part to the image.
+// renderTemplatePart renders a single template part to the image with depth shading.
 func (g *Generator) renderTemplatePart(img *ebiten.Image, spec PartSpec, config Config, rng *rand.Rand) {
 	partWidth := int(float64(config.Width) * spec.RelativeWidth)
 	partHeight := int(float64(config.Height) * spec.RelativeHeight)
@@ -356,10 +356,19 @@ func (g *Generator) renderTemplatePart(img *ebiten.Image, spec PartSpec, config 
 		AntiAlias: config.AntiAlias,
 	}
 
-	shape, err := g.shapeGen.Generate(shapeConfig)
+	// Generate as raw RGBA for pixel-level shading
+	rgbaImg, err := g.shapeGen.GenerateRGBA(shapeConfig)
 	if err != nil {
 		return
 	}
+
+	// Apply per-body-part depth shading
+	genre := config.GenreID
+	baseCfg := GenreShadingConfig(genre)
+	partCfg := ShadingConfigForPart(baseCfg, spec.ColorRole, spec.ZIndex)
+	ApplyBodyPartShading(rgbaImg, partCfg, config.Seed+int64(spec.ZIndex)*31)
+
+	shape := ebiten.NewImageFromImage(rgbaImg)
 
 	opts := &ebiten.DrawImageOptions{}
 	x := float64(config.Width)*spec.RelativeX - float64(partWidth)/2

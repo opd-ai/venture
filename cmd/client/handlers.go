@@ -254,6 +254,7 @@ type systemsContainer struct {
 	attackTelegraphGlowSystem                   *engine.AttackTelegraphGlowSystem                   // Genre-aware attack wind-up warning glow
 	xpGainBurstSystem                           *engine.XPGainBurstSystem                           // Genre-aware XP gain particle bursts
 	equipmentGleamSweepSystem                   *engine.EquipmentGleamSweepSystem                   // Animated specular gleam sweep on equipment
+	spriteDepthShadingSystem                    *engine.SpriteDepthShadingSystem                    // Per-body-part depth shading for entity sprites
 	statusEffectAISystem                        *engine.StatusEffectAISystem                        // Bridges status effects with AI (stun/frozen disable AI)
 	reputationSystem                            *engine.ReputationSystem
 	alignmentSystem                             *engine.AlignmentSystem
@@ -2329,6 +2330,11 @@ func registerNonCriticalSystems(game *engine.EbitenGame, sys *systemsContainer) 
 	sys.equipmentGleamSweepSystem = engine.NewEquipmentGleamSweepSystem(game.World, *seed+10750)
 	sys.equipmentGleamSweepSystem.SetGenre(*genreID)
 	game.World.AddSystem(sys.equipmentGleamSweepSystem)
+
+	// SpriteDepthShadingSystem: per-body-part depth shading for entity sprites
+	sys.spriteDepthShadingSystem = engine.NewSpriteDepthShadingSystem(game.World, *seed+10755)
+	sys.spriteDepthShadingSystem.SetGenre(*genreID)
+	game.World.AddSystem(sys.spriteDepthShadingSystem)
 
 	// FactionCompanionBehaviorSystem: bridges faction reputation with companion AI targeting
 	// Companions won't attack allied faction members and prioritize hostile faction enemies

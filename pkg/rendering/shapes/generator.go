@@ -32,8 +32,18 @@ func (g *Generator) Generate(config Config) (*ebiten.Image, error) {
 	return img, nil
 }
 
+// GenerateRGBA creates a shape as a raw *image.RGBA for pixel-level post-processing.
+func (g *Generator) GenerateRGBA(config Config) (*image.RGBA, error) {
+	return g.generateShapeRGBA(config), nil
+}
+
 // generateShape creates the shape as an image.
 func (g *Generator) generateShape(config Config) *ebiten.Image {
+	return ebiten.NewImageFromImage(g.generateShapeRGBA(config))
+}
+
+// generateShapeRGBA creates the shape as a raw RGBA image.
+func (g *Generator) generateShapeRGBA(config Config) *image.RGBA {
 	img := image.NewRGBA(image.Rect(0, 0, config.Width, config.Height))
 
 	centerX := float64(config.Width) / 2.0
@@ -55,7 +65,7 @@ func (g *Generator) generateShape(config Config) *ebiten.Image {
 		g.generateWithoutAntiAlias(img, config, centerX, centerY)
 	}
 
-	return ebiten.NewImageFromImage(img)
+	return img
 }
 
 // generateWithoutAntiAlias generates shapes with hard edges (fastest rendering mode).

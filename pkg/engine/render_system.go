@@ -45,6 +45,10 @@ type EbitenSprite struct {
 	// Finalized indicates whether post-processing (outline, rim lighting) has been applied.
 	// Set to true by SpriteFinalizerSystem after processing; reset to false on sprite regeneration.
 	Finalized bool
+
+	// DepthProcessed indicates whether volumetric depth enhancement has been applied.
+	// Set to true by SpriteDepthEnhanceSystem; reset to false on sprite regeneration.
+	DepthProcessed bool
 }
 
 // Type returns the component type identifier (implements Component).

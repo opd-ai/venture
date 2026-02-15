@@ -245,6 +245,7 @@ type SystemInitResult struct {
 	SizeSpriteScalingSystem                     *SizeSpriteScalingSystem
 	NpcRoleVisualSystem                         *NpcRoleVisualSystem
 	DirectionalSpriteSystem                     *DirectionalSpriteSystem
+	SpriteDepthEnhanceSystem                    *SpriteDepthEnhanceSystem
 	SpriteFinalizerSystem                       *SpriteFinalizerSystem
 
 	// System wrappers
@@ -1009,6 +1010,13 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 	result.DirectionalSpriteSystem = NewDirectionalSpriteSystem(spriteGenerator)
 	result.DirectionalSpriteSystem.SetGenre(config.GenreID)
 	game.World.AddSystem(result.DirectionalSpriteSystem)
+
+	// Sprite depth enhance — applies form-aware volumetric shading (spherical
+	// heads, cylindrical torsos, tubular limbs) for 3D depth perception.
+	// Runs after directional sprites, before finalization.
+	result.SpriteDepthEnhanceSystem = NewSpriteDepthEnhanceSystem(game.World, config.Seed+9050)
+	result.SpriteDepthEnhanceSystem.SetGenre(config.GenreID)
+	game.World.AddSystem(result.SpriteDepthEnhanceSystem)
 
 	// Sprite finalizer — applies adaptive outline, rim lighting, and edge shadow
 	// to entity sprites for visual clarity in top-down view. Runs after equipment

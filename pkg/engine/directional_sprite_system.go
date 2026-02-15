@@ -124,6 +124,8 @@ func (s *DirectionalSpriteSystem) generateDirectionalSprites(entity *Entity, spr
 
 	// Reset finalized flag so SpriteFinalizerSystem re-processes these sprites
 	spriteComp.Finalized = false
+	// Reset depth flag so SpriteDepthEnhanceSystem re-processes
+	spriteComp.DepthProcessed = false
 
 	// Track this entity as processed
 	s.processed[entity.ID] = animComp.Seed

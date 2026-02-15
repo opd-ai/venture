@@ -201,6 +201,7 @@ type systemsContainer struct {
 	equipmentEnchantmentGlowParticleSystem      *engine.EquipmentEnchantmentGlowParticleSystem      // Rarity-driven enchantment glow particles
 	statusEffectVisualOverlaySystem             *engine.StatusEffectVisualOverlaySystem             // Status effect color tints on sprites
 	weatherSpriteTintSystem                     *engine.WeatherSpriteTintSystem                     // Weather-driven sprite color tints
+	entityDropShadowSystem                      *engine.EntityDropShadowSystem                      // Genre-aware soft drop shadows beneath entities
 	statusEffectAISystem                        *engine.StatusEffectAISystem                        // Bridges status effects with AI (stun/frozen disable AI)
 	reputationSystem                            *engine.ReputationSystem
 	alignmentSystem                             *engine.AlignmentSystem
@@ -1977,6 +1978,12 @@ func registerNonCriticalSystems(game *engine.EbitenGame, sys *systemsContainer) 
 	sys.weatherSpriteTintSystem = engine.NewWeatherSpriteTintSystem(game.World, *seed+8800)
 	sys.weatherSpriteTintSystem.SetGenre(*genreID)
 	game.World.AddSystem(sys.weatherSpriteTintSystem)
+
+	// EntityDropShadowSystem: genre-aware soft elliptical drop shadows beneath entities
+	// Reads entity collider/sprite size and applies genre-tinted shadow parameters
+	sys.entityDropShadowSystem = engine.NewEntityDropShadowSystem(game.World, *seed+8900)
+	sys.entityDropShadowSystem.SetGenre(*genreID)
+	game.World.AddSystem(sys.entityDropShadowSystem)
 
 	// FactionCompanionBehaviorSystem: bridges faction reputation with companion AI targeting
 	// Companions won't attack allied faction members and prioritize hostile faction enemies

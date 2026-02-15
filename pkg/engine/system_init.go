@@ -183,6 +183,7 @@ type SystemInitResult struct {
 	EquipmentEnchantmentGlowParticleSystem      *EquipmentEnchantmentGlowParticleSystem
 	StatusEffectVisualOverlaySystem             *StatusEffectVisualOverlaySystem
 	WeatherSpriteTintSystem                     *WeatherSpriteTintSystem
+	EntityDropShadowSystem                      *EntityDropShadowSystem
 
 	// System wrappers
 	AnimationSystemWrapper            System
@@ -468,6 +469,13 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 	weatherSpriteTintSystem.SetGenre(config.GenreID)
 	result.WeatherSpriteTintSystem = weatherSpriteTintSystem
 	game.World.AddSystem(weatherSpriteTintSystem)
+
+	// 17u. EntityDropShadowSystem - soft elliptical drop shadows beneath entities
+	// Reads entity collider/sprite size and genre to compute genre-aware shadow parameters
+	entityDropShadowSystem := NewEntityDropShadowSystem(game.World, config.Seed+8900)
+	entityDropShadowSystem.SetGenre(config.GenreID)
+	result.EntityDropShadowSystem = entityDropShadowSystem
+	game.World.AddSystem(entityDropShadowSystem)
 
 	// 18. SkillProgressionSystem - applies skill effects to stats
 	skillProgressionSystem := NewSkillProgressionSystem()

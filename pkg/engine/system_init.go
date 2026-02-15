@@ -217,6 +217,7 @@ type SystemInitResult struct {
 	DamageTypeColorFlashSystem                  *DamageTypeColorFlashSystem
 	CompanionBondTetherSystem                   *CompanionBondTetherSystem
 	CriticalHitScreenShakeSystem                *CriticalHitScreenShakeSystem
+	EntitySpawnMaterializeSystem                *EntitySpawnMaterializeSystem
 
 	// System wrappers
 	AnimationSystemWrapper            System
@@ -751,6 +752,13 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 	result.CombatSystem.AddCriticalHitCallback(criticalHitScreenShakeSystem.OnCriticalHit)
 	result.CriticalHitScreenShakeSystem = criticalHitScreenShakeSystem
 	game.World.AddSystem(criticalHitScreenShakeSystem)
+
+	// 17ba. EntitySpawnMaterializeSystem - genre-aware fade-in and particle burst
+	// when entities first appear in the world, providing visual spawn feedback.
+	entitySpawnMaterializeSystem := NewEntitySpawnMaterializeSystem(game.World, config.Seed+10400)
+	entitySpawnMaterializeSystem.SetGenre(config.GenreID)
+	result.EntitySpawnMaterializeSystem = entitySpawnMaterializeSystem
+	game.World.AddSystem(entitySpawnMaterializeSystem)
 
 	// 18. SkillProgressionSystem - applies skill effects to stats
 	skillProgressionSystem := NewSkillProgressionSystem()

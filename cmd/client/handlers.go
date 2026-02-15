@@ -234,6 +234,7 @@ type systemsContainer struct {
 	damageTypeColorFlashSystem                  *engine.DamageTypeColorFlashSystem                  // Genre-aware elemental damage color flashes
 	companionBondTetherSystem                   *engine.CompanionBondTetherSystem                   // Genre-aware visual tether between companion and owner
 	criticalHitScreenShakeSystem                *engine.CriticalHitScreenShakeSystem                // Genre-aware camera shake on critical hits
+	entitySpawnMaterializeSystem                *engine.EntitySpawnMaterializeSystem                // Genre-aware spawn fade-in visuals
 	statusEffectAISystem                        *engine.StatusEffectAISystem                        // Bridges status effects with AI (stun/frozen disable AI)
 	reputationSystem                            *engine.ReputationSystem
 	alignmentSystem                             *engine.AlignmentSystem
@@ -2206,6 +2207,11 @@ func registerNonCriticalSystems(game *engine.EbitenGame, sys *systemsContainer) 
 	sys.criticalHitScreenShakeSystem.SetGenre(*genreID)
 	sys.combatSystem.AddCriticalHitCallback(sys.criticalHitScreenShakeSystem.OnCriticalHit)
 	game.World.AddSystem(sys.criticalHitScreenShakeSystem)
+
+	// EntitySpawnMaterializeSystem: genre-aware visual fade-in when entities spawn
+	sys.entitySpawnMaterializeSystem = engine.NewEntitySpawnMaterializeSystem(game.World, *seed+10400)
+	sys.entitySpawnMaterializeSystem.SetGenre(*genreID)
+	game.World.AddSystem(sys.entitySpawnMaterializeSystem)
 
 	// FactionCompanionBehaviorSystem: bridges faction reputation with companion AI targeting
 	// Companions won't attack allied faction members and prioritize hostile faction enemies

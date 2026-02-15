@@ -257,6 +257,7 @@ type systemsContainer struct {
 	equipmentGleamSweepSystem                   *engine.EquipmentGleamSweepSystem                   // Animated specular gleam sweep on equipment
 	spriteDepthShadingSystem                    *engine.SpriteDepthShadingSystem                    // Per-body-part depth shading for entity sprites
 	clothingPatternSystem                       *engine.ClothingPatternSystem                       // Seed-based clothing patterns for entity sprites
+	surfaceTextureSystem                        *engine.SurfaceTextureSystem                        // Creature-form surface textures (fur, scales, etc.)
 	bodyTypeSystem                              *engine.BodyTypeSystem                              // Seed-based body type variety for entity sprites
 	creatureVisualClassifierSystem              *engine.CreatureVisualClassifierSystem              // Infers creature visual form from procgen data
 	sizeSpriteScalingSystem                     *engine.SizeSpriteScalingSystem                     // Propagates entity size to sprite proportions
@@ -2380,6 +2381,12 @@ func registerNonCriticalSystems(game *engine.EbitenGame, sys *systemsContainer) 
 	sys.clothingPatternSystem = engine.NewClothingPatternSystem(game.World, *seed+10760)
 	sys.clothingPatternSystem.SetGenre(*genreID)
 	game.World.AddSystem(sys.clothingPatternSystem)
+
+	// SurfaceTextureSystem: creature-form surface textures (fur, scales, chitin, metal, etc.)
+	// Assigns form-appropriate procedural micro-textures to nonhumanoid entities
+	sys.surfaceTextureSystem = engine.NewSurfaceTextureSystem(game.World, *seed+10765)
+	sys.surfaceTextureSystem.SetGenre(*genreID)
+	game.World.AddSystem(sys.surfaceTextureSystem)
 
 	// BodyTypeSystem: seed-based body type variety for entity sprites
 	// Assigns distinct body builds (stocky, lean, muscular, heavy, etc.) per entity

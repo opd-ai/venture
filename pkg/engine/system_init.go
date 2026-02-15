@@ -240,6 +240,7 @@ type SystemInitResult struct {
 	EquipmentGleamSweepSystem                   *EquipmentGleamSweepSystem
 	SpriteDepthShadingSystem                    *SpriteDepthShadingSystem
 	ClothingPatternSystem                       *ClothingPatternSystem
+	SurfaceTextureSystem                        *SurfaceTextureSystem
 	BodyTypeSystem                              *BodyTypeSystem
 	CreatureVisualClassifierSystem              *CreatureVisualClassifierSystem
 	SizeSpriteScalingSystem                     *SizeSpriteScalingSystem
@@ -1486,6 +1487,14 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 	clothingPatternSystem.SetGenre(config.GenreID)
 	result.ClothingPatternSystem = clothingPatternSystem
 	game.World.AddSystem(clothingPatternSystem)
+
+	// 36k1p2. SurfaceTextureSystem - creature-form-specific procedural surface textures
+	// Assigns fur, scales, chitin, metal, bone, ooze, feather, bark textures to
+	// nonhumanoid entities based on their CreatureVisualComponent form.
+	surfaceTextureSystem := NewSurfaceTextureSystem(game.World, config.Seed+6495)
+	surfaceTextureSystem.SetGenre(config.GenreID)
+	result.SurfaceTextureSystem = surfaceTextureSystem
+	game.World.AddSystem(surfaceTextureSystem)
 
 	// 36k1q. BodyTypeSystem - seed-based body type variety for entity sprites
 	// Assigns distinct body builds (stocky, lean, muscular, heavy, etc.) per entity

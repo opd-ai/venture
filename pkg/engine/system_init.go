@@ -233,6 +233,7 @@ type SystemInitResult struct {
 	MeleeEnchantmentArcParticleSystem           *MeleeEnchantmentArcParticleSystem
 	BattleWoundOverlaySystem                    *BattleWoundOverlaySystem
 	EquipmentDamageCrackOverlaySystem           *EquipmentDamageCrackOverlaySystem
+	WeatherEntityWetnessSystem                  *WeatherEntityWetnessSystem
 
 	// System wrappers
 	AnimationSystemWrapper            System
@@ -1385,6 +1386,13 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 	equipmentDamageCrackOverlaySystem.SetGenre(config.GenreID)
 	result.EquipmentDamageCrackOverlaySystem = equipmentDamageCrackOverlaySystem
 	game.World.AddSystem(equipmentDamageCrackOverlaySystem)
+
+	// 36k1k. WeatherEntityWetnessSystem - rain-driven entity sprite wetness darkening + sheen
+	// Reads WeatherComponent rain state and writes WetnessComponent with darken/tint values
+	weatherEntityWetnessSystem := NewWeatherEntityWetnessSystem(game.World, config.Seed+6465)
+	weatherEntityWetnessSystem.SetGenre(config.GenreID)
+	result.WeatherEntityWetnessSystem = weatherEntityWetnessSystem
+	game.World.AddSystem(weatherEntityWetnessSystem)
 
 	// 36k2. ManaRegenParticleSystem - visual feedback for mana regeneration
 	// Spawns genre-aware particles when entities actively regenerate mana

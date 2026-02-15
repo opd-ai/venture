@@ -250,6 +250,7 @@ type systemsContainer struct {
 	meleeEnchantmentArcParticleSystem           *engine.MeleeEnchantmentArcParticleSystem           // Rarity-colored enchantment arc particles
 	battleWoundOverlaySystem                    *engine.BattleWoundOverlaySystem                    // Genre-aware battle wound overlays
 	equipmentDamageCrackOverlaySystem           *engine.EquipmentDamageCrackOverlaySystem           // Procedural crack patterns from equipment wear
+	weatherEntityWetnessSystem                  *engine.WeatherEntityWetnessSystem                  // Rain-driven entity sprite wetness
 	statusEffectAISystem                        *engine.StatusEffectAISystem                        // Bridges status effects with AI (stun/frozen disable AI)
 	reputationSystem                            *engine.ReputationSystem
 	alignmentSystem                             *engine.AlignmentSystem
@@ -2305,6 +2306,11 @@ func registerNonCriticalSystems(game *engine.EbitenGame, sys *systemsContainer) 
 	sys.equipmentDamageCrackOverlaySystem = engine.NewEquipmentDamageCrackOverlaySystem(game.World, *seed+10730)
 	sys.equipmentDamageCrackOverlaySystem.SetGenre(*genreID)
 	game.World.AddSystem(sys.equipmentDamageCrackOverlaySystem)
+
+	// WeatherEntityWetnessSystem: rain-driven sprite darkening and genre-aware sheen tint
+	sys.weatherEntityWetnessSystem = engine.NewWeatherEntityWetnessSystem(game.World, *seed+10735)
+	sys.weatherEntityWetnessSystem.SetGenre(*genreID)
+	game.World.AddSystem(sys.weatherEntityWetnessSystem)
 
 	// FactionCompanionBehaviorSystem: bridges faction reputation with companion AI targeting
 	// Companions won't attack allied faction members and prioritize hostile faction enemies

@@ -1930,8 +1930,8 @@ func SelectAerialTemplate(entityType, genre string, direction Direction) Anatomi
 	}
 
 	if !isHumanoid {
-		// Fall back to existing templates for non-humanoid entities
-		return SelectTemplate(entityType)
+		// Use dedicated aerial nonhumanoid templates with genre support
+		return SelectNonhumanoidAerialTemplate(entityType, genre, direction)
 	}
 
 	// Apply genre-specific aerial styling for humanoids

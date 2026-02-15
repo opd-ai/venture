@@ -294,7 +294,8 @@ func extractAerialFlag(config Config) bool {
 func selectEntityTemplate(entityType, genre string, direction Direction, hasWeapon, hasShield, useAerial bool) AnatomicalTemplate {
 	isHumanoid := isHumanoidType(entityType)
 
-	if useAerial && isHumanoid {
+	if useAerial {
+		// All entity types use aerial templates when aerial flag is set
 		return SelectAerialTemplate(entityType, genre, direction)
 	} else if isHumanoid && (hasWeapon || hasShield) {
 		return HumanoidWithEquipment(direction, hasWeapon, hasShield)

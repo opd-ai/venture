@@ -192,6 +192,7 @@ type SystemInitResult struct {
 	NpcFacialDetailSystem                       *NpcFacialDetailSystem
 	ProjectileTrailParticleSystem               *ProjectileTrailParticleSystem
 	EntityIdleAmbientParticleSystem             *EntityIdleAmbientParticleSystem
+	WeaponMaterialImpactParticleSystem          *WeaponMaterialImpactParticleSystem
 
 	// System wrappers
 	AnimationSystemWrapper            System
@@ -539,6 +540,14 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 	entityIdleAmbientParticleSystem.SetGenre(config.GenreID)
 	result.EntityIdleAmbientParticleSystem = entityIdleAmbientParticleSystem
 	game.World.AddSystem(entityIdleAmbientParticleSystem)
+
+	// 17ad. WeaponMaterialImpactParticleSystem - material-aware melee impact particles
+	// Connects EquipmentComponent weapon material with ParticleSystem for distinct impact visuals
+	weaponMaterialImpactParticleSystem := NewWeaponMaterialImpactParticleSystem(game.World, config.Seed+9150)
+	weaponMaterialImpactParticleSystem.SetParticleSystem(result.ParticleSystem)
+	weaponMaterialImpactParticleSystem.SetGenre(config.GenreID)
+	result.WeaponMaterialImpactParticleSystem = weaponMaterialImpactParticleSystem
+	game.World.AddSystem(weaponMaterialImpactParticleSystem)
 
 	// 18. SkillProgressionSystem - applies skill effects to stats
 	skillProgressionSystem := NewSkillProgressionSystem()

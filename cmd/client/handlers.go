@@ -210,6 +210,7 @@ type systemsContainer struct {
 	npcFacialDetailSystem                       *engine.NpcFacialDetailSystem                       // Genre-aware NPC facial feature parameters
 	projectileTrailParticleSystem               *engine.ProjectileTrailParticleSystem               // Genre-aware projectile trail particles
 	entityIdleAmbientParticleSystem             *engine.EntityIdleAmbientParticleSystem             // Genre-aware idle entity ambient particles
+	weaponMaterialImpactParticleSystem          *engine.WeaponMaterialImpactParticleSystem          // Material-aware melee impact particles
 	statusEffectAISystem                        *engine.StatusEffectAISystem                        // Bridges status effects with AI (stun/frozen disable AI)
 	reputationSystem                            *engine.ReputationSystem
 	alignmentSystem                             *engine.AlignmentSystem
@@ -2039,6 +2040,12 @@ func registerNonCriticalSystems(game *engine.EbitenGame, sys *systemsContainer) 
 	sys.entityIdleAmbientParticleSystem.SetParticleSystem(sys.particleSystem)
 	sys.entityIdleAmbientParticleSystem.SetGenre(*genreID)
 	game.World.AddSystem(sys.entityIdleAmbientParticleSystem)
+
+	// WeaponMaterialImpactParticleSystem: material-aware melee impact particles
+	sys.weaponMaterialImpactParticleSystem = engine.NewWeaponMaterialImpactParticleSystem(game.World, *seed+9150)
+	sys.weaponMaterialImpactParticleSystem.SetParticleSystem(sys.particleSystem)
+	sys.weaponMaterialImpactParticleSystem.SetGenre(*genreID)
+	game.World.AddSystem(sys.weaponMaterialImpactParticleSystem)
 
 	// FactionCompanionBehaviorSystem: bridges faction reputation with companion AI targeting
 	// Companions won't attack allied faction members and prioritize hostile faction enemies

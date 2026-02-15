@@ -229,6 +229,7 @@ type SystemInitResult struct {
 	EntityTargetLockIndicatorSystem             *EntityTargetLockIndicatorSystem
 	EntityDeathDissolveSystem                   *EntityDeathDissolveSystem
 	ArmorHitSparkSystem                         *ArmorHitSparkSystem
+	MeleeEnchantmentArcParticleSystem           *MeleeEnchantmentArcParticleSystem
 
 	// System wrappers
 	AnimationSystemWrapper            System
@@ -1351,6 +1352,14 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 	armorHitSparkSystem.SetGenre(config.GenreID)
 	result.ArmorHitSparkSystem = armorHitSparkSystem
 	game.World.AddSystem(armorHitSparkSystem)
+
+	// 36k1h. MeleeEnchantmentArcParticleSystem - rarity-colored particles along swing arcs
+	// Bridges MeleeSwingArcComponent active state with equipment enchantment rarity
+	meleeEnchantmentArcParticleSystem := NewMeleeEnchantmentArcParticleSystem(game.World, config.Seed+6455)
+	meleeEnchantmentArcParticleSystem.SetParticleSystem(result.ParticleSystem)
+	meleeEnchantmentArcParticleSystem.SetGenre(config.GenreID)
+	result.MeleeEnchantmentArcParticleSystem = meleeEnchantmentArcParticleSystem
+	game.World.AddSystem(meleeEnchantmentArcParticleSystem)
 
 	// 36k2. ManaRegenParticleSystem - visual feedback for mana regeneration
 	// Spawns genre-aware particles when entities actively regenerate mana

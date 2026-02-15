@@ -246,6 +246,7 @@ type systemsContainer struct {
 	entityTargetLockIndicatorSystem             *engine.EntityTargetLockIndicatorSystem             // Genre-aware target lock reticle
 	entityDeathDissolveSystem                   *engine.EntityDeathDissolveSystem                   // Genre-aware death dissolve visuals
 	armorHitSparkSystem                         *engine.ArmorHitSparkSystem                         // Material-aware armor deflection sparks
+	meleeEnchantmentArcParticleSystem           *engine.MeleeEnchantmentArcParticleSystem           // Rarity-colored enchantment arc particles
 	statusEffectAISystem                        *engine.StatusEffectAISystem                        // Bridges status effects with AI (stun/frozen disable AI)
 	reputationSystem                            *engine.ReputationSystem
 	alignmentSystem                             *engine.AlignmentSystem
@@ -2280,6 +2281,12 @@ func registerNonCriticalSystems(game *engine.EbitenGame, sys *systemsContainer) 
 	sys.armorHitSparkSystem.SetParticleSystem(sys.particleSystem)
 	sys.armorHitSparkSystem.SetGenre(*genreID)
 	game.World.AddSystem(sys.armorHitSparkSystem)
+
+	// MeleeEnchantmentArcParticleSystem: rarity-colored particles along melee swing arcs
+	sys.meleeEnchantmentArcParticleSystem = engine.NewMeleeEnchantmentArcParticleSystem(game.World, *seed+10720)
+	sys.meleeEnchantmentArcParticleSystem.SetParticleSystem(sys.particleSystem)
+	sys.meleeEnchantmentArcParticleSystem.SetGenre(*genreID)
+	game.World.AddSystem(sys.meleeEnchantmentArcParticleSystem)
 
 	// FactionCompanionBehaviorSystem: bridges faction reputation with companion AI targeting
 	// Companions won't attack allied faction members and prioritize hostile faction enemies

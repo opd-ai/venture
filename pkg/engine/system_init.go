@@ -201,6 +201,7 @@ type SystemInitResult struct {
 	CreatureEyeGlowSystem                       *CreatureEyeGlowSystem
 	MeleeSwingArcSystem                         *MeleeSwingArcSystem
 	CombatReadyAuraSystem                       *CombatReadyAuraSystem
+	AIStateBubbleSystem                         *AIStateBubbleSystem
 
 	// System wrappers
 	AnimationSystemWrapper            System
@@ -606,6 +607,13 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 	combatReadyAuraSystem.SetGenre(config.GenreID)
 	result.CombatReadyAuraSystem = combatReadyAuraSystem
 	game.World.AddSystem(combatReadyAuraSystem)
+
+	// 17al. AIStateBubbleSystem - genre-aware floating state indicator bubbles above NPCs
+	// Connects AIComponent state with floating symbol overlay for AI behavior feedback
+	aiStateBubbleSystem := NewAIStateBubbleSystem(game.World, config.Seed+9600)
+	aiStateBubbleSystem.SetGenre(config.GenreID)
+	result.AIStateBubbleSystem = aiStateBubbleSystem
+	game.World.AddSystem(aiStateBubbleSystem)
 
 	// 18. SkillProgressionSystem - applies skill effects to stats
 	skillProgressionSystem := NewSkillProgressionSystem()

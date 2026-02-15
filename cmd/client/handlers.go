@@ -218,6 +218,7 @@ type systemsContainer struct {
 	creatureEyeGlowSystem                       *engine.CreatureEyeGlowSystem                       // Genre-aware hostile creature eye glow
 	meleeSwingArcSystem                         *engine.MeleeSwingArcSystem                         // Genre-aware melee attack swing arcs
 	combatReadyAuraSystem                       *engine.CombatReadyAuraSystem                       // Genre-aware AI combat readiness aura
+	aiStateBubbleSystem                         *engine.AIStateBubbleSystem                         // Genre-aware AI state indicator bubbles
 	statusEffectAISystem                        *engine.StatusEffectAISystem                        // Bridges status effects with AI (stun/frozen disable AI)
 	reputationSystem                            *engine.ReputationSystem
 	alignmentSystem                             *engine.AlignmentSystem
@@ -2098,6 +2099,11 @@ func registerNonCriticalSystems(game *engine.EbitenGame, sys *systemsContainer) 
 	sys.combatReadyAuraSystem = engine.NewCombatReadyAuraSystem(game.World, *seed+9550)
 	sys.combatReadyAuraSystem.SetGenre(*genreID)
 	game.World.AddSystem(sys.combatReadyAuraSystem)
+
+	// AIStateBubbleSystem: genre-aware floating state indicator bubbles above NPCs
+	sys.aiStateBubbleSystem = engine.NewAIStateBubbleSystem(game.World, *seed+9600)
+	sys.aiStateBubbleSystem.SetGenre(*genreID)
+	game.World.AddSystem(sys.aiStateBubbleSystem)
 
 	// FactionCompanionBehaviorSystem: bridges faction reputation with companion AI targeting
 	// Companions won't attack allied faction members and prioritize hostile faction enemies

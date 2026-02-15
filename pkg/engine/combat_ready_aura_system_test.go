@@ -94,12 +94,12 @@ func TestCombatReadyAuraSkipsPlayers(t *testing.T) {
 
 func TestCombatReadyAuraHostileStates(t *testing.T) {
 	tests := []struct {
-		name           string
-		state          AIState
-		wantEnabled    bool
-		minRadius      float64
-		maxRadius      float64
-		minOpacityTgt  float64
+		name          string
+		state         AIState
+		wantEnabled   bool
+		minRadius     float64
+		maxRadius     float64
+		minOpacityTgt float64
 	}{
 		{"detect", AIStateDetect, true, 2.5, 4.0, 0.3},
 		{"chase", AIStateChase, true, 4.0, 6.0, 0.5},

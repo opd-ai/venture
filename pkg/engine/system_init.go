@@ -218,6 +218,7 @@ type SystemInitResult struct {
 	CompanionBondTetherSystem                   *CompanionBondTetherSystem
 	CriticalHitScreenShakeSystem                *CriticalHitScreenShakeSystem
 	EntitySpawnMaterializeSystem                *EntitySpawnMaterializeSystem
+	NPCInteractionProximityGlowSystem          *NPCInteractionProximityGlowSystem
 
 	// System wrappers
 	AnimationSystemWrapper            System
@@ -759,6 +760,13 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 	entitySpawnMaterializeSystem.SetGenre(config.GenreID)
 	result.EntitySpawnMaterializeSystem = entitySpawnMaterializeSystem
 	game.World.AddSystem(entitySpawnMaterializeSystem)
+
+	// 17bb. NPCInteractionProximityGlowSystem - genre-aware glow tint on interactable
+	// NPCs (dialog/merchant) when a player entity is within proximity range.
+	npcInteractionProximityGlowSystem := NewNPCInteractionProximityGlowSystem(game.World, config.Seed+10450)
+	npcInteractionProximityGlowSystem.SetGenre(config.GenreID)
+	result.NPCInteractionProximityGlowSystem = npcInteractionProximityGlowSystem
+	game.World.AddSystem(npcInteractionProximityGlowSystem)
 
 	// 18. SkillProgressionSystem - applies skill effects to stats
 	skillProgressionSystem := NewSkillProgressionSystem()

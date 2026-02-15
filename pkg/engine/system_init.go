@@ -196,6 +196,7 @@ type SystemInitResult struct {
 	DamageFlashTintSystem                       *DamageFlashTintSystem
 	SprintTrailParticleSystem                   *SprintTrailParticleSystem
 	NearbyLightEntityTintSystem                 *NearbyLightEntityTintSystem
+	WeatherEquipmentSheenSystem                *WeatherEquipmentSheenSystem
 
 	// System wrappers
 	AnimationSystemWrapper            System
@@ -573,6 +574,13 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 	nearbyLightEntityTintSystem.SetGenre(config.GenreID)
 	result.NearbyLightEntityTintSystem = nearbyLightEntityTintSystem
 	game.World.AddSystem(nearbyLightEntityTintSystem)
+
+	// 17ah. WeatherEquipmentSheenSystem - weather-driven equipment sheen modifications
+	// Bridges WeatherComponent with MaterialSheenComponent for wet/frost/dust effects
+	weatherEquipmentSheenSystem := NewWeatherEquipmentSheenSystem(game.World, config.Seed+9400)
+	weatherEquipmentSheenSystem.SetGenre(config.GenreID)
+	result.WeatherEquipmentSheenSystem = weatherEquipmentSheenSystem
+	game.World.AddSystem(weatherEquipmentSheenSystem)
 
 	// 18. SkillProgressionSystem - applies skill effects to stats
 	skillProgressionSystem := NewSkillProgressionSystem()

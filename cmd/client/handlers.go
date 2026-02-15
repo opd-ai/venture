@@ -214,6 +214,7 @@ type systemsContainer struct {
 	damageFlashTintSystem                       *engine.DamageFlashTintSystem                       // Genre-aware damage flash tints
 	sprintTrailParticleSystem                   *engine.SprintTrailParticleSystem                   // Genre-aware sprint speed trail particles
 	nearbyLightEntityTintSystem                 *engine.NearbyLightEntityTintSystem                 // Light-source-based entity sprite tinting
+	weatherEquipmentSheenSystem                *engine.WeatherEquipmentSheenSystem                // Weather-driven equipment sheen
 	statusEffectAISystem                        *engine.StatusEffectAISystem                        // Bridges status effects with AI (stun/frozen disable AI)
 	reputationSystem                            *engine.ReputationSystem
 	alignmentSystem                             *engine.AlignmentSystem
@@ -2067,6 +2068,11 @@ func registerNonCriticalSystems(game *engine.EbitenGame, sys *systemsContainer) 
 	sys.nearbyLightEntityTintSystem = engine.NewNearbyLightEntityTintSystem(game.World, *seed+9300)
 	sys.nearbyLightEntityTintSystem.SetGenre(*genreID)
 	game.World.AddSystem(sys.nearbyLightEntityTintSystem)
+
+	// WeatherEquipmentSheenSystem: modifies equipment sheen based on weather conditions
+	sys.weatherEquipmentSheenSystem = engine.NewWeatherEquipmentSheenSystem(game.World, *seed+9400)
+	sys.weatherEquipmentSheenSystem.SetGenre(*genreID)
+	game.World.AddSystem(sys.weatherEquipmentSheenSystem)
 
 	// FactionCompanionBehaviorSystem: bridges faction reputation with companion AI targeting
 	// Companions won't attack allied faction members and prioritize hostile faction enemies

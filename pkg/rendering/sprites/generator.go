@@ -330,6 +330,50 @@ func (g *Generator) generateEntityWithTemplate(config Config, entityType string,
 		}
 	}
 
+	// Apply surface textures to nonhumanoid creatures (fur, scales, chitin, etc.).
+	// This runs after all detail overlays so textures cover the full body.
+	if useAerial && !IsHumanoidEntity(entityType) {
+		form := EntityTypeToCreatureForm(entityType)
+		texSet := GenerateSurfaceTextureSet(config.Seed, form, genre)
+		if texSet.TorsoTexture.Type != TexNone {
+			texBuf := image.NewRGBA(image.Rect(0, 0, config.Width, config.Height))
+			img.ReadPixels(texBuf.Pix)
+			ApplySurfaceTexture(texBuf, texBuf.Bounds(), texSet.TorsoTexture, config.Seed)
+			texImg := ebiten.NewImageFromImage(texBuf)
+			img.Clear()
+			img.DrawImage(texImg, nil)
+		}
+	}
+
+	// Apply volumetric depth enhancement (form-aware shading, specular, contact shadows).
+	// Must run after surface textures and before color temperature grading.
+	if useAerial {
+		depthBuf := image.NewRGBA(image.Rect(0, 0, config.Width, config.Height))
+		img.ReadPixels(depthBuf.Pix)
+		depthCfg := DefaultDepthEnhanceConfig(config.Seed)
+		if !IsHumanoidEntity(entityType) {
+			form := EntityTypeToCreatureForm(entityType)
+			ApplyDepthEnhancementForCreature(depthBuf, form, depthCfg)
+		} else {
+			ApplyDepthEnhancement(depthBuf, depthCfg)
+		}
+		depthImg := ebiten.NewImageFromImage(depthBuf)
+		img.Clear()
+		img.DrawImage(depthImg, nil)
+	}
+
+	// Apply genre-aware color temperature grading and specular highlights.
+	// Must run after depth enhancement and before sprite finalization.
+	if useAerial {
+		ctBuf := image.NewRGBA(image.Rect(0, 0, config.Width, config.Height))
+		img.ReadPixels(ctBuf.Pix)
+		ctCfg := GenreColorTemperatureConfig(genre, config.Seed)
+		ApplyColorTemperature(ctBuf, ctCfg)
+		ctImg := ebiten.NewImageFromImage(ctBuf)
+		img.Clear()
+		img.DrawImage(ctImg, nil)
+	}
+
 	// Apply sprite finalization: adaptive outline, rim lighting, edge shadow
 	if useAerial {
 		finalized := FinalizeEntitySprite(img, DefaultFinalizerConfig(config.Seed))

@@ -797,7 +797,7 @@ func headgearColorsForGenre(rng *rand.Rand, genre string) (primary, accent, gem 
 		accent = hslToRGBA(rng.Float64()*360, 0.4+rng.Float64()*0.4, 0.45+rng.Float64()*0.25)
 		gem = hslToRGBA(rng.Float64()*360, 0.7+rng.Float64()*0.3, 0.5+rng.Float64()*0.2)
 	}
-	return
+	return primary, accent, gem
 }
 
 func directionAngleOffset(d Direction) float64 {

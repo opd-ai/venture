@@ -299,3 +299,26 @@ func IsHumanoidEntity(entityType string) bool {
 	}
 	return false
 }
+
+// EntityTypeToCreatureForm maps an entity type string to its standardized
+// creature form key used by depth enhancement and surface texture systems.
+func EntityTypeToCreatureForm(entityType string) string {
+	switch entityType {
+	case "quadruped", "wolf", "bear", "animal", "beast", "horse":
+		return "quadruped"
+	case "blob", "slime", "amoeba", "ooze":
+		return "blob"
+	case "mechanical", "robot", "golem", "construct", "android":
+		return "mechanical"
+	case "flying", "bird", "dragon", "bat", "wyvern":
+		return "flying"
+	case "serpentine", "snake", "worm", "tentacle", "wyrm":
+		return "serpentine"
+	case "arachnid", "spider", "insect", "beetle", "scorpion":
+		return "arachnid"
+	case "undead", "skeleton", "ghost", "zombie", "lich":
+		return "undead"
+	default:
+		return "quadruped"
+	}
+}

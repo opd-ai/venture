@@ -230,6 +230,7 @@ type SystemInitResult struct {
 	EntityDeathDissolveSystem                   *EntityDeathDissolveSystem
 	ArmorHitSparkSystem                         *ArmorHitSparkSystem
 	MeleeEnchantmentArcParticleSystem           *MeleeEnchantmentArcParticleSystem
+	BattleWoundOverlaySystem                    *BattleWoundOverlaySystem
 
 	// System wrappers
 	AnimationSystemWrapper            System
@@ -1360,6 +1361,13 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 	meleeEnchantmentArcParticleSystem.SetGenre(config.GenreID)
 	result.MeleeEnchantmentArcParticleSystem = meleeEnchantmentArcParticleSystem
 	game.World.AddSystem(meleeEnchantmentArcParticleSystem)
+
+	// 36k1i. BattleWoundOverlaySystem - genre-aware wound marks based on health percentage
+	// Bridges HealthComponent damage events with per-entity wound visual overlays
+	battleWoundOverlaySystem := NewBattleWoundOverlaySystem(game.World, config.Seed+6458)
+	battleWoundOverlaySystem.SetGenre(config.GenreID)
+	result.BattleWoundOverlaySystem = battleWoundOverlaySystem
+	game.World.AddSystem(battleWoundOverlaySystem)
 
 	// 36k2. ManaRegenParticleSystem - visual feedback for mana regeneration
 	// Spawns genre-aware particles when entities actively regenerate mana

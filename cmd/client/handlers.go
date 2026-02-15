@@ -247,6 +247,7 @@ type systemsContainer struct {
 	entityDeathDissolveSystem                   *engine.EntityDeathDissolveSystem                   // Genre-aware death dissolve visuals
 	armorHitSparkSystem                         *engine.ArmorHitSparkSystem                         // Material-aware armor deflection sparks
 	meleeEnchantmentArcParticleSystem           *engine.MeleeEnchantmentArcParticleSystem           // Rarity-colored enchantment arc particles
+	battleWoundOverlaySystem                    *engine.BattleWoundOverlaySystem                    // Genre-aware battle wound overlays
 	statusEffectAISystem                        *engine.StatusEffectAISystem                        // Bridges status effects with AI (stun/frozen disable AI)
 	reputationSystem                            *engine.ReputationSystem
 	alignmentSystem                             *engine.AlignmentSystem
@@ -2287,6 +2288,11 @@ func registerNonCriticalSystems(game *engine.EbitenGame, sys *systemsContainer) 
 	sys.meleeEnchantmentArcParticleSystem.SetParticleSystem(sys.particleSystem)
 	sys.meleeEnchantmentArcParticleSystem.SetGenre(*genreID)
 	game.World.AddSystem(sys.meleeEnchantmentArcParticleSystem)
+
+	// BattleWoundOverlaySystem: genre-aware wound marks based on health percentage
+	sys.battleWoundOverlaySystem = engine.NewBattleWoundOverlaySystem(game.World, *seed+10725)
+	sys.battleWoundOverlaySystem.SetGenre(*genreID)
+	game.World.AddSystem(sys.battleWoundOverlaySystem)
 
 	// FactionCompanionBehaviorSystem: bridges faction reputation with companion AI targeting
 	// Companions won't attack allied faction members and prioritize hostile faction enemies

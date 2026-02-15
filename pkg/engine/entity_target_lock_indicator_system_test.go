@@ -325,10 +325,10 @@ func TestEntityTargetLockIndicatorSystemComputeReticleRadius(t *testing.T) {
 	sys := NewEntityTargetLockIndicatorSystem(world, 42)
 
 	tests := []struct {
-		name      string
-		collider  *ColliderComponent
-		wantMin   float64
-		wantMax   float64
+		name     string
+		collider *ColliderComponent
+		wantMin  float64
+		wantMax  float64
 	}{
 		{"no collider", nil, 11.0, 13.0},
 		{"small collider", &ColliderComponent{Width: 8, Height: 8}, 8.0, 10.0},

@@ -25,11 +25,11 @@ type enchantArcGenrePreset struct {
 
 // enchantArcGenrePresets defines how different genres modify arc particles.
 var enchantArcGenrePresets = map[string]enchantArcGenrePreset{
-	"fantasy":  {ParticleType: particles.ParticleSparkle, GravityMul: 1.0, SizeMul: 1.0, DurationMul: 1.0},
-	"scifi":    {ParticleType: particles.ParticleSpark, GravityMul: 0.5, SizeMul: 0.8, DurationMul: 1.2},
-	"horror":   {ParticleType: particles.ParticleSmoke, GravityMul: 1.5, SizeMul: 1.2, DurationMul: 0.8},
+	"fantasy":   {ParticleType: particles.ParticleSparkle, GravityMul: 1.0, SizeMul: 1.0, DurationMul: 1.0},
+	"scifi":     {ParticleType: particles.ParticleSpark, GravityMul: 0.5, SizeMul: 0.8, DurationMul: 1.2},
+	"horror":    {ParticleType: particles.ParticleSmoke, GravityMul: 1.5, SizeMul: 1.2, DurationMul: 0.8},
 	"cyberpunk": {ParticleType: particles.ParticleSpark, GravityMul: 0.3, SizeMul: 0.9, DurationMul: 1.1},
-	"postapoc": {ParticleType: particles.ParticleEmber, GravityMul: 1.3, SizeMul: 1.1, DurationMul: 0.9},
+	"postapoc":  {ParticleType: particles.ParticleEmber, GravityMul: 1.3, SizeMul: 1.1, DurationMul: 0.9},
 }
 
 // enchantArcRarityConfig maps rarity to particle intensity for arc trails.
@@ -210,10 +210,10 @@ func (s *MeleeEnchantmentArcParticleSystem) spawnArcParticles(
 		effectSeed := s.seed + int64(entityID) + int64(i)*7
 
 		config := particles.Config{
-			Type:    preset.ParticleType,
-			Count:   1,
-			GenreID: s.genreID,
-			Seed:    effectSeed,
+			Type:     preset.ParticleType,
+			Count:    1,
+			GenreID:  s.genreID,
+			Seed:     effectSeed,
 			Duration: 0.4 * preset.DurationMul,
 			SpreadX:  conf.SpreadFactor,
 			SpreadY:  conf.SpreadFactor,

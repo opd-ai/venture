@@ -48,6 +48,9 @@ type CombatSystem struct {
 	// Callback for when a critical hit occurs
 	onCriticalHitCallback func(attacker, target *Entity, damage float64)
 
+	// Additional critical hit callbacks for multiple systems
+	additionalCriticalHitCallbacks []func(attacker, target *Entity, damage float64)
+
 	// Callback for when damage is significantly reduced by resistance
 	onDamageResistedCallback func(target *Entity, damageType combat.DamageType, originalDamage, finalDamage, resistance float64)
 
@@ -501,6 +504,13 @@ func (s *CombatSystem) applyDamageAndFeedback(attacker, target *Entity, health *
 	// Trigger critical hit callback for visual effects
 	if isCrit && s.onCriticalHitCallback != nil {
 		s.onCriticalHitCallback(attacker, target, finalDamage)
+	}
+
+	// Trigger additional critical hit callbacks
+	if isCrit {
+		for _, cb := range s.additionalCriticalHitCallbacks {
+			cb(attacker, target, finalDamage)
+		}
 	}
 }
 
@@ -1012,6 +1022,15 @@ func (s *CombatSystem) SetCriticalHitCallback(callback func(attacker, target *En
 		s.logger.Debug("critical hit callback registered")
 	}
 	s.onCriticalHitCallback = callback
+}
+
+// AddCriticalHitCallback adds an additional callback for critical hit events without replacing existing ones.
+// Use this for systems that need to react to critical hits but shouldn't override the primary callback.
+func (s *CombatSystem) AddCriticalHitCallback(callback func(attacker, target *Entity, damage float64)) {
+	if s.logger != nil {
+		s.logger.Debug("additional critical hit callback registered")
+	}
+	s.additionalCriticalHitCallbacks = append(s.additionalCriticalHitCallbacks, callback)
 }
 
 // SetDamageResistedCallback sets the callback function for when damage is resisted.

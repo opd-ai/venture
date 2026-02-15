@@ -233,6 +233,7 @@ type systemsContainer struct {
 	lootRarityBeamSystem                        *engine.LootRarityBeamSystem                        // Genre-aware beam particles on ground items by rarity
 	damageTypeColorFlashSystem                  *engine.DamageTypeColorFlashSystem                  // Genre-aware elemental damage color flashes
 	companionBondTetherSystem                   *engine.CompanionBondTetherSystem                   // Genre-aware visual tether between companion and owner
+	criticalHitScreenShakeSystem                *engine.CriticalHitScreenShakeSystem                // Genre-aware camera shake on critical hits
 	statusEffectAISystem                        *engine.StatusEffectAISystem                        // Bridges status effects with AI (stun/frozen disable AI)
 	reputationSystem                            *engine.ReputationSystem
 	alignmentSystem                             *engine.AlignmentSystem
@@ -2197,6 +2198,14 @@ func registerNonCriticalSystems(game *engine.EbitenGame, sys *systemsContainer) 
 	sys.companionBondTetherSystem = engine.NewCompanionBondTetherSystem(game.World, *seed+10300)
 	sys.companionBondTetherSystem.SetGenre(*genreID)
 	game.World.AddSystem(sys.companionBondTetherSystem)
+
+	// CriticalHitScreenShakeSystem: genre-aware camera shake on critical hits
+	// Connects CombatSystem critical hit callback with CameraSystem.ShakeAdvanced
+	sys.criticalHitScreenShakeSystem = engine.NewCriticalHitScreenShakeSystem(game.World, *seed+10350)
+	sys.criticalHitScreenShakeSystem.SetCameraSystem(game.CameraSystem)
+	sys.criticalHitScreenShakeSystem.SetGenre(*genreID)
+	sys.combatSystem.AddCriticalHitCallback(sys.criticalHitScreenShakeSystem.OnCriticalHit)
+	game.World.AddSystem(sys.criticalHitScreenShakeSystem)
 
 	// FactionCompanionBehaviorSystem: bridges faction reputation with companion AI targeting
 	// Companions won't attack allied faction members and prioritize hostile faction enemies

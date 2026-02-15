@@ -216,6 +216,7 @@ type SystemInitResult struct {
 	LootRarityBeamSystem                        *LootRarityBeamSystem
 	DamageTypeColorFlashSystem                  *DamageTypeColorFlashSystem
 	CompanionBondTetherSystem                   *CompanionBondTetherSystem
+	CriticalHitScreenShakeSystem                *CriticalHitScreenShakeSystem
 
 	// System wrappers
 	AnimationSystemWrapper            System
@@ -740,6 +741,16 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 	companionBondTetherSystem.SetGenre(config.GenreID)
 	result.CompanionBondTetherSystem = companionBondTetherSystem
 	game.World.AddSystem(companionBondTetherSystem)
+
+	// 17az. CriticalHitScreenShakeSystem - genre-aware camera shake on critical hits
+	// Connects CombatSystem critical hit callback with CameraSystem.ShakeAdvanced
+	// for visceral combat feedback with distance attenuation and genre-tuned intensity.
+	criticalHitScreenShakeSystem := NewCriticalHitScreenShakeSystem(game.World, config.Seed+10350)
+	criticalHitScreenShakeSystem.SetCameraSystem(game.CameraSystem)
+	criticalHitScreenShakeSystem.SetGenre(config.GenreID)
+	result.CombatSystem.AddCriticalHitCallback(criticalHitScreenShakeSystem.OnCriticalHit)
+	result.CriticalHitScreenShakeSystem = criticalHitScreenShakeSystem
+	game.World.AddSystem(criticalHitScreenShakeSystem)
 
 	// 18. SkillProgressionSystem - applies skill effects to stats
 	skillProgressionSystem := NewSkillProgressionSystem()

@@ -41,6 +41,10 @@ type EbitenSprite struct {
 
 	// Layer for rendering order (higher = drawn on top)
 	Layer int
+
+	// Finalized indicates whether post-processing (outline, rim lighting) has been applied.
+	// Set to true by SpriteFinalizerSystem after processing; reset to false on sprite regeneration.
+	Finalized bool
 }
 
 // Type returns the component type identifier (implements Component).

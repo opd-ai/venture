@@ -259,6 +259,7 @@ type systemsContainer struct {
 	clothingPatternSystem                       *engine.ClothingPatternSystem                       // Seed-based clothing patterns for entity sprites
 	bodyTypeSystem                              *engine.BodyTypeSystem                              // Seed-based body type variety for entity sprites
 	creatureVisualClassifierSystem              *engine.CreatureVisualClassifierSystem              // Infers creature visual form from procgen data
+	spriteFinalizerSystem                       *engine.SpriteFinalizerSystem                       // Applies adaptive outline, rim lighting, edge shadow
 	statusEffectAISystem                        *engine.StatusEffectAISystem                        // Bridges status effects with AI (stun/frozen disable AI)
 	reputationSystem                            *engine.ReputationSystem
 	alignmentSystem                             *engine.AlignmentSystem
@@ -1877,6 +1878,11 @@ func registerCriticalSystems(game *engine.EbitenGame, sys *systemsContainer) {
 	})
 
 	game.World.AddSystem(sys.equipmentVisualSystem)
+
+	// Sprite finalizer: adaptive outline, rim lighting, edge shadow for all entity sprites
+	sys.spriteFinalizerSystem = engine.NewSpriteFinalizerSystem(game.World, *seed+9100)
+	game.World.AddSystem(sys.spriteFinalizerSystem)
+
 	game.World.AddSystem(sys.particleSystem)
 
 	// Phase 2.2: Core Rendering Systems (PLAN.md)

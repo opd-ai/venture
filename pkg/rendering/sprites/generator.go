@@ -263,6 +263,14 @@ func (g *Generator) generateEntityWithTemplate(config Config, entityType string,
 		img.DrawImage(detailImg, nil)
 	}
 
+	// Apply sprite finalization: adaptive outline, rim lighting, edge shadow
+	if useAerial {
+		finalized := FinalizeEntitySprite(img, DefaultFinalizerConfig(config.Seed))
+		finalImg := ebiten.NewImageFromImage(finalized)
+		img.Clear()
+		img.DrawImage(finalImg, nil)
+	}
+
 	return img, nil
 }
 

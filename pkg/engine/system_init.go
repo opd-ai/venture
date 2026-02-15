@@ -242,6 +242,7 @@ type SystemInitResult struct {
 	ClothingPatternSystem                       *ClothingPatternSystem
 	BodyTypeSystem                              *BodyTypeSystem
 	CreatureVisualClassifierSystem              *CreatureVisualClassifierSystem
+	SpriteFinalizerSystem                       *SpriteFinalizerSystem
 
 	// System wrappers
 	AnimationSystemWrapper            System
@@ -987,6 +988,12 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 
 	equipmentVisualSystem := NewEquipmentVisualSystem(spriteGenerator)
 	game.World.AddSystem(equipmentVisualSystem)
+
+	// Sprite finalizer — applies adaptive outline, rim lighting, and edge shadow
+	// to entity sprites for visual clarity in top-down view. Runs after equipment
+	// visuals so finalization covers equipment overlays.
+	result.SpriteFinalizerSystem = NewSpriteFinalizerSystem(game.World, config.Seed+9100)
+	game.World.AddSystem(result.SpriteFinalizerSystem)
 
 	// 33-34. UI systems
 	result.TutorialSystem = NewTutorialSystem()

@@ -845,12 +845,20 @@ func (r *EbitenRenderSystem) extractVisualFeedback(entity *Entity) (flashAlpha, 
 	tintR, tintG, tintB, tintA = 1.0, 1.0, 1.0, 1.0
 
 	feedback := entity.GetVisualFeedback()
-	if feedback == nil {
-		return flashAlpha, tintR, tintG, tintB, tintA
+	if feedback != nil {
+		flashAlpha = feedback.GetFlashAlpha()
+		tintR, tintG, tintB, tintA = feedback.TintR, feedback.TintG, feedback.TintB, feedback.TintA
 	}
 
-	flashAlpha = feedback.GetFlashAlpha()
-	tintR, tintG, tintB, tintA = feedback.TintR, feedback.TintG, feedback.TintB, feedback.TintA
+	// Multiply weather-driven tint (composes with status effect tints)
+	if comp, ok := entity.GetComponent("weather_sprite_tint"); ok {
+		if wt, ok := comp.(*WeatherSpriteTintComponent); ok {
+			tintR *= wt.TintR
+			tintG *= wt.TintG
+			tintB *= wt.TintB
+		}
+	}
+
 	return flashAlpha, tintR, tintG, tintB, tintA
 }
 

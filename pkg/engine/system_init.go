@@ -182,6 +182,7 @@ type SystemInitResult struct {
 	AmbientEnvironmentParticleSystem            *AmbientEnvironmentParticleSystem
 	EquipmentEnchantmentGlowParticleSystem      *EquipmentEnchantmentGlowParticleSystem
 	StatusEffectVisualOverlaySystem             *StatusEffectVisualOverlaySystem
+	WeatherSpriteTintSystem                     *WeatherSpriteTintSystem
 
 	// System wrappers
 	AnimationSystemWrapper            System
@@ -460,6 +461,13 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 	statusEffectVisualOverlaySystem.SetGenre(config.GenreID)
 	result.StatusEffectVisualOverlaySystem = statusEffectVisualOverlaySystem
 	game.World.AddSystem(statusEffectVisualOverlaySystem)
+
+	// 17t. WeatherSpriteTintSystem - weather-driven sprite color tints
+	// Reads active weather and applies subtle multiplicative tints to entity sprites
+	weatherSpriteTintSystem := NewWeatherSpriteTintSystem(game.World, config.Seed+8800)
+	weatherSpriteTintSystem.SetGenre(config.GenreID)
+	result.WeatherSpriteTintSystem = weatherSpriteTintSystem
+	game.World.AddSystem(weatherSpriteTintSystem)
 
 	// 18. SkillProgressionSystem - applies skill effects to stats
 	skillProgressionSystem := NewSkillProgressionSystem()

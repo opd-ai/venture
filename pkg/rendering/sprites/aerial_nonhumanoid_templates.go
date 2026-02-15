@@ -89,8 +89,8 @@ func QuadrupedAerialTemplate(direction Direction) AnatomicalTemplate {
 			RelativeX: 0.5, RelativeY: 0.15,
 			RelativeWidth: 0.15, RelativeHeight: 0.18,
 			PreferredPixelSize: &PixelDimensions{Width: 5, Height: 6},
-			ShapeTypes: []shapes.ShapeType{shapes.ShapeCapsule, shapes.ShapeBean},
-			ZIndex: 8, ColorRole: "secondary", Opacity: 0.9,
+			ShapeTypes:         []shapes.ShapeType{shapes.ShapeCapsule, shapes.ShapeBean},
+			ZIndex:             8, ColorRole: "secondary", Opacity: 0.9,
 		}
 	case DirLeft:
 		headX, headY = 0.20, 0.45
@@ -99,8 +99,8 @@ func QuadrupedAerialTemplate(direction Direction) AnatomicalTemplate {
 			RelativeX: 0.80, RelativeY: 0.45,
 			RelativeWidth: 0.18, RelativeHeight: 0.15,
 			PreferredPixelSize: &PixelDimensions{Width: 6, Height: 5},
-			ShapeTypes: []shapes.ShapeType{shapes.ShapeCapsule, shapes.ShapeBean},
-			ZIndex: 8, ColorRole: "secondary", Opacity: 0.9,
+			ShapeTypes:         []shapes.ShapeType{shapes.ShapeCapsule, shapes.ShapeBean},
+			ZIndex:             8, ColorRole: "secondary", Opacity: 0.9,
 		}
 	case DirRight:
 		headX, headY = 0.80, 0.45
@@ -109,8 +109,8 @@ func QuadrupedAerialTemplate(direction Direction) AnatomicalTemplate {
 			RelativeX: 0.20, RelativeY: 0.45,
 			RelativeWidth: 0.18, RelativeHeight: 0.15,
 			PreferredPixelSize: &PixelDimensions{Width: 6, Height: 5},
-			ShapeTypes: []shapes.ShapeType{shapes.ShapeCapsule, shapes.ShapeBean},
-			ZIndex: 8, ColorRole: "secondary", Opacity: 0.9,
+			ShapeTypes:         []shapes.ShapeType{shapes.ShapeCapsule, shapes.ShapeBean},
+			ZIndex:             8, ColorRole: "secondary", Opacity: 0.9,
 		}
 	}
 

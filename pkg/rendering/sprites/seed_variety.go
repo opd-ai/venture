@@ -18,6 +18,8 @@ type AvatarTraits struct {
 	SkinTone color.RGBA
 	// HairColor is the head/top color.
 	HairColor color.RGBA
+	// HairStyle is the seed-derived hairstyle type for aerial-view rendering.
+	HairStyle HairStyle
 	// ClothingPrimary is the main clothing/torso color.
 	ClothingPrimary color.RGBA
 	// ClothingSecondary is the accent clothing color (arms, trim).
@@ -79,6 +81,9 @@ func GenerateAvatarTraits(seed int64) AvatarTraits {
 	hairIdx := rng.Intn(len(hairColors))
 	hair := varyColor(hairColors[hairIdx], rng, 18)
 
+	// Select hair style deterministically from seed
+	hairStyle := HairStyle(rng.Intn(int(HairStyleCount)))
+
 	// Generate clothing colors from hue wheel
 	hueIdx := rng.Intn(len(clothingHues))
 	baseHue := clothingHues[hueIdx] + rng.Float64()*20 - 10
@@ -105,6 +110,7 @@ func GenerateAvatarTraits(seed int64) AvatarTraits {
 	return AvatarTraits{
 		SkinTone:          skin,
 		HairColor:         hair,
+		HairStyle:         hairStyle,
 		ClothingPrimary:   clothPrimary,
 		ClothingSecondary: clothSecondary,
 		LegColor:          legColor,

@@ -5,6 +5,7 @@ package sprites
 
 import (
 	"fmt"
+	"image"
 	"image/color"
 	"math/rand"
 
@@ -342,12 +343,31 @@ func (g *Generator) renderTemplateParts(img *ebiten.Image, template AnatomicalTe
 }
 
 // renderTemplatePartsWithTraits renders all template parts, applying optional seed-based
-// avatar traits for color and proportion variety.
+// avatar traits for color and proportion variety. For humanoid entities with traits,
+// a hair overlay is rendered after the head part for visual distinctness.
 func (g *Generator) renderTemplatePartsWithTraits(img *ebiten.Image, template AnatomicalTemplate, config Config, rng *rand.Rand, traits *AvatarTraits) {
 	parts := template.GetSortedParts()
 
 	for _, partData := range parts {
 		g.renderTemplatePartWithTraits(img, partData.Spec, config, rng, traits)
+	}
+
+	// Render hair overlay for humanoid entities with aerial traits
+	if traits != nil && traits.HairStyle >= 0 {
+		headSpec, hasHead := template.BodyPartLayout[PartHead]
+		if hasHead {
+			direction := DirDown
+			if config.Custom != nil {
+				if dir, ok := config.Custom["facing"].(string); ok {
+					direction = Direction(dir)
+				}
+			}
+			hairParams := ComputeHairRenderParams(config.Width, config.Height, headSpec, traits, direction, config.Seed)
+			hairBuf := image.NewRGBA(image.Rect(0, 0, config.Width, config.Height))
+			RenderHairOverlay(hairBuf, hairParams)
+			hairImg := ebiten.NewImageFromImage(hairBuf)
+			img.DrawImage(hairImg, nil)
+		}
 	}
 }
 
@@ -479,6 +499,7 @@ func applyTraitProportions(template AnatomicalTemplate, traits *AvatarTraits) An
 	}
 	return adjusted
 }
+
 func selectShapeType(shapeTypes []shapes.ShapeType, rng *rand.Rand) shapes.ShapeType {
 	if len(shapeTypes) > 0 {
 		return shapeTypes[rng.Intn(len(shapeTypes))]

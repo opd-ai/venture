@@ -193,6 +193,7 @@ type SystemInitResult struct {
 	ProjectileTrailParticleSystem               *ProjectileTrailParticleSystem
 	EntityIdleAmbientParticleSystem             *EntityIdleAmbientParticleSystem
 	WeaponMaterialImpactParticleSystem          *WeaponMaterialImpactParticleSystem
+	DamageFlashTintSystem                       *DamageFlashTintSystem
 
 	// System wrappers
 	AnimationSystemWrapper            System
@@ -548,6 +549,13 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 	weaponMaterialImpactParticleSystem.SetGenre(config.GenreID)
 	result.WeaponMaterialImpactParticleSystem = weaponMaterialImpactParticleSystem
 	game.World.AddSystem(weaponMaterialImpactParticleSystem)
+
+	// 17ae. DamageFlashTintSystem - genre-aware damage flash tints on health decrease
+	// Monitors HealthComponent changes and triggers VisualFeedbackComponent flashes
+	damageFlashTintSystem := NewDamageFlashTintSystem(game.World)
+	damageFlashTintSystem.SetGenre(config.GenreID)
+	result.DamageFlashTintSystem = damageFlashTintSystem
+	game.World.AddSystem(damageFlashTintSystem)
 
 	// 18. SkillProgressionSystem - applies skill effects to stats
 	skillProgressionSystem := NewSkillProgressionSystem()

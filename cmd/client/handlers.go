@@ -211,6 +211,7 @@ type systemsContainer struct {
 	projectileTrailParticleSystem               *engine.ProjectileTrailParticleSystem               // Genre-aware projectile trail particles
 	entityIdleAmbientParticleSystem             *engine.EntityIdleAmbientParticleSystem             // Genre-aware idle entity ambient particles
 	weaponMaterialImpactParticleSystem          *engine.WeaponMaterialImpactParticleSystem          // Material-aware melee impact particles
+	damageFlashTintSystem                       *engine.DamageFlashTintSystem                       // Genre-aware damage flash tints
 	statusEffectAISystem                        *engine.StatusEffectAISystem                        // Bridges status effects with AI (stun/frozen disable AI)
 	reputationSystem                            *engine.ReputationSystem
 	alignmentSystem                             *engine.AlignmentSystem
@@ -2046,6 +2047,12 @@ func registerNonCriticalSystems(game *engine.EbitenGame, sys *systemsContainer) 
 	sys.weaponMaterialImpactParticleSystem.SetParticleSystem(sys.particleSystem)
 	sys.weaponMaterialImpactParticleSystem.SetGenre(*genreID)
 	game.World.AddSystem(sys.weaponMaterialImpactParticleSystem)
+
+	// DamageFlashTintSystem: triggers genre-aware flash tints when entities take damage
+	// Monitors HealthComponent changes and writes to VisualFeedbackComponent
+	sys.damageFlashTintSystem = engine.NewDamageFlashTintSystem(game.World)
+	sys.damageFlashTintSystem.SetGenre(*genreID)
+	game.World.AddSystem(sys.damageFlashTintSystem)
 
 	// FactionCompanionBehaviorSystem: bridges faction reputation with companion AI targeting
 	// Companions won't attack allied faction members and prioritize hostile faction enemies

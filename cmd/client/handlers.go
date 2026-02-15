@@ -236,6 +236,7 @@ type systemsContainer struct {
 	criticalHitScreenShakeSystem                *engine.CriticalHitScreenShakeSystem                // Genre-aware camera shake on critical hits
 	entitySpawnMaterializeSystem                *engine.EntitySpawnMaterializeSystem                // Genre-aware spawn fade-in visuals
 	npcInteractionProximityGlowSystem           *engine.NPCInteractionProximityGlowSystem           // Genre-aware NPC interactability glow
+	entityFactionOutlineSystem                  *engine.EntityFactionOutlineSystem                  // Genre-aware faction allegiance outlines
 	statusEffectAISystem                        *engine.StatusEffectAISystem                        // Bridges status effects with AI (stun/frozen disable AI)
 	reputationSystem                            *engine.ReputationSystem
 	alignmentSystem                             *engine.AlignmentSystem
@@ -2218,6 +2219,11 @@ func registerNonCriticalSystems(game *engine.EbitenGame, sys *systemsContainer) 
 	sys.npcInteractionProximityGlowSystem = engine.NewNPCInteractionProximityGlowSystem(game.World, *seed+10450)
 	sys.npcInteractionProximityGlowSystem.SetGenre(*genreID)
 	game.World.AddSystem(sys.npcInteractionProximityGlowSystem)
+
+	// EntityFactionOutlineSystem: genre-aware colored outlines based on team/faction allegiance
+	sys.entityFactionOutlineSystem = engine.NewEntityFactionOutlineSystem(game.World, *seed+10500)
+	sys.entityFactionOutlineSystem.SetGenre(*genreID)
+	game.World.AddSystem(sys.entityFactionOutlineSystem)
 
 	// FactionCompanionBehaviorSystem: bridges faction reputation with companion AI targeting
 	// Companions won't attack allied faction members and prioritize hostile faction enemies

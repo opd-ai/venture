@@ -219,6 +219,7 @@ type SystemInitResult struct {
 	CriticalHitScreenShakeSystem                *CriticalHitScreenShakeSystem
 	EntitySpawnMaterializeSystem                *EntitySpawnMaterializeSystem
 	NPCInteractionProximityGlowSystem           *NPCInteractionProximityGlowSystem
+	EntityFactionOutlineSystem                  *EntityFactionOutlineSystem
 
 	// System wrappers
 	AnimationSystemWrapper            System
@@ -767,6 +768,14 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 	npcInteractionProximityGlowSystem.SetGenre(config.GenreID)
 	result.NPCInteractionProximityGlowSystem = npcInteractionProximityGlowSystem
 	game.World.AddSystem(npcInteractionProximityGlowSystem)
+
+	// 17bc. EntityFactionOutlineSystem - genre-aware colored outlines around entities
+	// based on TeamComponent allegiance and FactionComponent reputation.
+	// Allies show green, hostiles pulsing red, neutrals amber.
+	entityFactionOutlineSystem := NewEntityFactionOutlineSystem(game.World, config.Seed+10500)
+	entityFactionOutlineSystem.SetGenre(config.GenreID)
+	result.EntityFactionOutlineSystem = entityFactionOutlineSystem
+	game.World.AddSystem(entityFactionOutlineSystem)
 
 	// 18. SkillProgressionSystem - applies skill effects to stats
 	skillProgressionSystem := NewSkillProgressionSystem()

@@ -59,6 +59,9 @@ Each audit evaluates code completeness, ECS compliance, determinism, test covera
 ### Skills
 - [x] `pkg/procgen/skills/AUDIT.md` — Complete — 3 issues (0 high, 1 med, 2 low)
 
+### Network (Continued)
+- [x] `pkg/network/trade/AUDIT.md` — Needs Work — 9 issues (2 high, 3 med, 4 low)
+
 ## Priority Queue (Next Audits)
-1. `pkg/network/trade/` — Trade system foundation
-2. `pkg/integration/choice_consequences/` — Choice tracking system
+1. `pkg/integration/choice_consequences/` — Choice tracking system
+2. `pkg/world/raids/` — Raid instance management

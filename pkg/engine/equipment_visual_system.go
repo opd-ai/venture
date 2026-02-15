@@ -56,21 +56,70 @@ func (s *EquipmentVisualSystem) Update(entities []*Entity, deltaTime float64) {
 	}
 }
 
-// regenerateEquipmentLayers creates new equipment visual layers.
+// regenerateEquipmentLayers regenerates the entity sprite using the template
+// pipeline with equipment overlay data, producing a high-quality aerial sprite
+// that includes visible equipment.
 func (s *EquipmentVisualSystem) regenerateEquipmentLayers(entity *Entity, equipComp *EquipmentVisualComponent, spriteComp *EbitenSprite) error {
-	// Build composite config
-	compositeConfig := s.buildCompositeConfig(entity, equipComp, spriteComp)
+	entitySeed := s.getEntitySeed(entity)
+	genreID := s.getGenreID(entity)
 
-	// Generate composite sprite
-	compositeImg, err := s.spriteGenerator.GenerateComposite(compositeConfig)
-	if err != nil {
-		return fmt.Errorf("failed to generate composite: %w", err)
+	config := sprites.Config{
+		Type:       sprites.SpriteEntity,
+		Width:      int(spriteComp.Width),
+		Height:     int(spriteComp.Height),
+		Seed:       entitySeed,
+		Complexity: 0.7,
+		GenreID:    genreID,
+		Custom:     make(map[string]interface{}),
 	}
 
-	// Update sprite component with composite image
-	spriteComp.Image = compositeImg
+	config.Custom["useAerial"] = true
+	config.Custom["entityType"] = s.resolveEntityType(entity)
+	config.Custom["facing"] = s.resolveEntityFacing(entity)
 
+	// Build equipment visuals for template pipeline overlay
+	equipment := s.buildEquipmentLayers(entity, equipComp, genreID)
+	if len(equipment) > 0 {
+		config.Custom["equipmentVisuals"] = equipment
+		config.Custom["hasWeapon"] = equipComp.HasWeapon()
+		config.Custom["hasShield"] = false
+	}
+
+	img, err := s.spriteGenerator.Generate(config)
+	if err != nil {
+		return fmt.Errorf("failed to generate template sprite with equipment: %w", err)
+	}
+
+	spriteComp.Image = img
 	return nil
+}
+
+// resolveEntityType determines the entity type string for template selection.
+func (s *EquipmentVisualSystem) resolveEntityType(entity *Entity) string {
+	if entity.HasComponent("input") {
+		return "humanoid"
+	}
+	if cvComp, ok := entity.GetComponent("creature_visual"); ok {
+		if cv, ok := cvComp.(*CreatureVisualComponent); ok && cv.Form != FormHumanoid {
+			return string(cv.Form)
+		}
+	}
+	if roleComp, ok := entity.GetComponent("npc_role_visual"); ok {
+		if npcRole, ok := roleComp.(*NpcRoleVisualComponent); ok && npcRole.Role != "" {
+			return npcRole.Role
+		}
+	}
+	return "humanoid"
+}
+
+// resolveEntityFacing returns the current facing direction for an entity.
+func (s *EquipmentVisualSystem) resolveEntityFacing(entity *Entity) string {
+	if animComp, ok := entity.GetComponent("animation"); ok {
+		if anim, ok := animComp.(*AnimationComponent); ok && anim.LastFacing != "" {
+			return anim.LastFacing
+		}
+	}
+	return "down"
 }
 
 // buildCompositeConfig creates a composite configuration from components.

@@ -1196,6 +1196,10 @@ func (s *AnimationSystem) configurePlayerSprite(config *sprites.Config, entity *
 	if entity.HasComponent("equipment") {
 		config.Custom["hasWeapon"] = true
 		config.Custom["hasShield"] = false
+
+		// Pass equipment visual data for template pipeline overlay rendering
+		s.attachEquipmentVisuals(config, entity)
+
 		if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
 			s.logger.WithFields(logrus.Fields{
 				"entity_id":  entity.ID,
@@ -1303,6 +1307,93 @@ func (s *AnimationSystem) logEntityType(entityID uint64, entityType string, widt
 			"collider_width": width,
 		}).Debug("entity type detected")
 	}
+}
+
+// attachEquipmentVisuals reads the entity's EquipmentVisualComponent and
+// EquipmentComponent to build a slice of sprites.EquipmentVisual, storing it
+// in config.Custom["equipmentVisuals"] for the template pipeline's equipment
+// overlay renderer.
+func (s *AnimationSystem) attachEquipmentVisuals(config *sprites.Config, entity *Entity) {
+	equipVisComp, ok := entity.GetComponent("equipment_visual")
+	if !ok {
+		return
+	}
+	evc, ok := equipVisComp.(*EquipmentVisualComponent)
+	if !ok || evc == nil {
+		return
+	}
+
+	equipComp, _ := entity.GetComponent("equipment")
+	ec, _ := equipComp.(*EquipmentComponent)
+
+	var visuals []sprites.EquipmentVisual
+
+	if evc.HasWeapon() && evc.ShowWeapon {
+		v := sprites.EquipmentVisual{
+			Slot:   "weapon",
+			ItemID: evc.WeaponID,
+			Seed:   evc.WeaponSeed,
+			Layer:  sprites.LayerWeapon,
+		}
+		s.enrichEquipmentVisual(&v, ec, SlotMainHand)
+		visuals = append(visuals, v)
+	}
+
+	if evc.HasArmor() && evc.ShowArmor {
+		v := sprites.EquipmentVisual{
+			Slot:   "armor",
+			ItemID: evc.ArmorID,
+			Seed:   evc.ArmorSeed,
+			Layer:  sprites.LayerArmor,
+		}
+		s.enrichEquipmentVisual(&v, ec, SlotChest)
+		visuals = append(visuals, v)
+	}
+
+	if evc.HasAccessories() && evc.ShowAccessories {
+		for i, accID := range evc.AccessoryIDs {
+			accSlot := SlotAccessory1
+			if i == 1 {
+				accSlot = SlotAccessory2
+			} else if i >= 2 {
+				accSlot = SlotAccessory3
+			}
+			v := sprites.EquipmentVisual{
+				Slot:   "accessory",
+				ItemID: accID,
+				Seed:   evc.AccessorySeeds[i],
+				Layer:  sprites.LayerAccessory,
+			}
+			s.enrichEquipmentVisual(&v, ec, accSlot)
+			visuals = append(visuals, v)
+		}
+	}
+
+	if len(visuals) > 0 {
+		config.Custom["equipmentVisuals"] = visuals
+	}
+}
+
+// enrichEquipmentVisual populates material, damage state, and enchantment
+// from the actual equipped item data when available.
+func (s *AnimationSystem) enrichEquipmentVisual(v *sprites.EquipmentVisual, ec *EquipmentComponent, slot EquipmentSlot) {
+	v.Material = sprites.MaterialMetal
+	v.DamageState = sprites.DamageStatePristine
+	v.Enchantment = sprites.EnchantmentGlow{Active: false}
+	v.DetailLevel = 0.5
+
+	if ec == nil {
+		return
+	}
+	itm := ec.GetEquipped(slot)
+	if itm == nil {
+		return
+	}
+
+	v.Material = sprites.GetMaterialTypeFromTags(itm.Tags, "")
+	v.DamageState = sprites.GetDamageStateFromDurability(itm.Stats.Durability, itm.Stats.DurabilityMax)
+	v.Enchantment = sprites.GetEnchantmentFromRarity(itm.Rarity.String())
+	v.DetailLevel = sprites.GetDetailLevelFromRarity(itm.Rarity.String())
 }
 
 // determineFacingDirection calculates entity facing direction from velocity.

@@ -263,6 +263,12 @@ func (g *Generator) generateEntityWithTemplate(config Config, entityType string,
 		img.DrawImage(detailImg, nil)
 	}
 
+	// Overlay equipment visuals (weapon, armor, helmet, shield, accessories)
+	// from config.Custom onto the template-rendered body before finalization.
+	if useAerial {
+		overlayEquipmentVisuals(img, config)
+	}
+
 	// Apply sprite finalization: adaptive outline, rim lighting, edge shadow
 	if useAerial {
 		finalized := FinalizeEntitySprite(img, DefaultFinalizerConfig(config.Seed))

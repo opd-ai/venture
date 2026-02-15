@@ -400,3 +400,72 @@ func createTestAccessory(id string, seed int64) *item.Item {
 		},
 	}
 }
+
+// TestResolveEntityType_Default tests that a bare entity resolves to humanoid.
+func TestResolveEntityType_Default(t *testing.T) {
+gen := sprites.NewGenerator()
+sys := NewEquipmentVisualSystem(gen)
+
+entity := NewEntity(100)
+got := sys.resolveEntityType(entity)
+if got != "humanoid" {
+t.Errorf("resolveEntityType = %q, want %q", got, "humanoid")
+}
+}
+
+// TestResolveEntityType_WithCreatureVisual tests nonhumanoid entity type resolution.
+func TestResolveEntityType_WithCreatureVisual(t *testing.T) {
+gen := sprites.NewGenerator()
+sys := NewEquipmentVisualSystem(gen)
+
+entity := NewEntity(101)
+cv := &CreatureVisualComponent{Form: FormQuadruped}
+entity.AddComponent(cv)
+
+got := sys.resolveEntityType(entity)
+if got != string(FormQuadruped) {
+t.Errorf("resolveEntityType = %q, want %q", got, FormQuadruped)
+}
+}
+
+// TestResolveEntityType_WithNpcRole tests NPC role-based entity type resolution.
+func TestResolveEntityType_WithNpcRole(t *testing.T) {
+gen := sprites.NewGenerator()
+sys := NewEquipmentVisualSystem(gen)
+
+entity := NewEntity(102)
+npc := &NpcRoleVisualComponent{Role: "merchant"}
+entity.AddComponent(npc)
+
+got := sys.resolveEntityType(entity)
+if got != "merchant" {
+t.Errorf("resolveEntityType = %q, want %q", got, "merchant")
+}
+}
+
+// TestResolveEntityFacing_Default tests default facing direction.
+func TestResolveEntityFacing_Default(t *testing.T) {
+gen := sprites.NewGenerator()
+sys := NewEquipmentVisualSystem(gen)
+
+entity := NewEntity(103)
+got := sys.resolveEntityFacing(entity)
+if got != "down" {
+t.Errorf("resolveEntityFacing = %q, want %q", got, "down")
+}
+}
+
+// TestResolveEntityFacing_WithAnimation tests facing from animation component.
+func TestResolveEntityFacing_WithAnimation(t *testing.T) {
+gen := sprites.NewGenerator()
+sys := NewEquipmentVisualSystem(gen)
+
+entity := NewEntity(104)
+anim := &AnimationComponent{LastFacing: "left"}
+entity.AddComponent(anim)
+
+got := sys.resolveEntityFacing(entity)
+if got != "left" {
+t.Errorf("resolveEntityFacing = %q, want %q", got, "left")
+}
+}

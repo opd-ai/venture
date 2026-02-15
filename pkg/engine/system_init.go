@@ -211,6 +211,7 @@ type SystemInitResult struct {
 	EntityIdleBreathingSystem                   *EntityIdleBreathingSystem
 	CombatHitStaggerSystem                      *CombatHitStaggerSystem
 	FloatingDamageNumberSystem                  *FloatingDamageNumberSystem
+	EntityThreatIndicatorSystem                 *EntityThreatIndicatorSystem
 
 	// System wrappers
 	AnimationSystemWrapper            System
@@ -696,6 +697,13 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 	floatingDamageNumberSystem.SetGenre(config.GenreID)
 	result.FloatingDamageNumberSystem = floatingDamageNumberSystem
 	game.World.AddSystem(floatingDamageNumberSystem)
+
+	// 17au. EntityThreatIndicatorSystem - genre-aware threat level rings under AI entities
+	// Compares entity level to player level and assigns colored ring indicators
+	entityThreatIndicatorSystem := NewEntityThreatIndicatorSystem(game.World, config.Seed+10050)
+	entityThreatIndicatorSystem.SetGenre(config.GenreID)
+	result.EntityThreatIndicatorSystem = entityThreatIndicatorSystem
+	game.World.AddSystem(entityThreatIndicatorSystem)
 
 	// 18. SkillProgressionSystem - applies skill effects to stats
 	skillProgressionSystem := NewSkillProgressionSystem()

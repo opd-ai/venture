@@ -202,6 +202,7 @@ type systemsContainer struct {
 	statusEffectVisualOverlaySystem             *engine.StatusEffectVisualOverlaySystem             // Status effect color tints on sprites
 	weatherSpriteTintSystem                     *engine.WeatherSpriteTintSystem                     // Weather-driven sprite color tints
 	entityDropShadowSystem                      *engine.EntityDropShadowSystem                      // Genre-aware soft drop shadows beneath entities
+	timeOfDayShadowDirectionSystem              *engine.TimeOfDayShadowDirectionSystem              // Time-of-day directional shadow offset from sun arc
 	equipmentMaterialSheenSystem                *engine.EquipmentMaterialSheenSystem                // Material-based specular highlights on equipment
 	equipmentDamageStateTintSystem              *engine.EquipmentDamageStateTintSystem              // Aggregate equipment wear visual tinting
 	creatureGenreTintSystem                     *engine.CreatureGenreTintSystem                     // Genre-aware creature/NPC sprite color tinting
@@ -2015,6 +2016,12 @@ func registerNonCriticalSystems(game *engine.EbitenGame, sys *systemsContainer) 
 	sys.entityDropShadowSystem.SetGenre(*genreID)
 	game.World.AddSystem(sys.entityDropShadowSystem)
 
+	// TimeOfDayShadowDirectionSystem: directional shadow offset from simulated sun position
+	// Connects TimeOfDayLightingSystem with DropShadowComponent for sun-arc shadow direction
+	sys.timeOfDayShadowDirectionSystem = engine.NewTimeOfDayShadowDirectionSystem(game.World, *seed+8925)
+	sys.timeOfDayShadowDirectionSystem.SetGenre(*genreID)
+	game.World.AddSystem(sys.timeOfDayShadowDirectionSystem)
+
 	// EquipmentMaterialSheenSystem: material-based specular highlights on equipment
 	// Bridges sprites.GetMaterialVisualProperties with per-entity visual state
 	sys.equipmentMaterialSheenSystem = engine.NewEquipmentMaterialSheenSystem(game.World, *seed+8950)
@@ -2780,11 +2787,19 @@ func initializeTerrainCollision(game *engine.EbitenGame, sys *systemsContainer, 
 		if timeOfDayAttackSpeedSys, ok := system.(*engine.TimeOfDayAttackSpeedSystem); ok {
 			sys.timeOfDayAttackSpeedSystem = timeOfDayAttackSpeedSys
 		}
+		if timeOfDayShadowDirSys, ok := system.(*engine.TimeOfDayShadowDirectionSystem); ok {
+			sys.timeOfDayShadowDirectionSystem = timeOfDayShadowDirSys
+		}
 	}
 
 	// Connect TimeOfDayFishingBonusSystem to extracted TimeOfDayLightingSystem
 	if sys.timeOfDayFishingBonusSystem != nil && sys.timeOfDayLightingSystem != nil {
 		sys.timeOfDayFishingBonusSystem.SetLightingSystem(sys.timeOfDayLightingSystem)
+	}
+
+	// Connect TimeOfDayShadowDirectionSystem to extracted TimeOfDayLightingSystem
+	if sys.timeOfDayShadowDirectionSystem != nil && sys.timeOfDayLightingSystem != nil {
+		sys.timeOfDayShadowDirectionSystem.SetLightingSystem(sys.timeOfDayLightingSystem)
 	}
 
 	if *verbose {

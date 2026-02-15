@@ -185,6 +185,7 @@ type SystemInitResult struct {
 	StatusEffectVisualOverlaySystem             *StatusEffectVisualOverlaySystem
 	WeatherSpriteTintSystem                     *WeatherSpriteTintSystem
 	EntityDropShadowSystem                      *EntityDropShadowSystem
+	TimeOfDayShadowDirectionSystem              *TimeOfDayShadowDirectionSystem
 	EquipmentMaterialSheenSystem                *EquipmentMaterialSheenSystem
 	EquipmentDamageStateTintSystem              *EquipmentDamageStateTintSystem
 	CreatureGenreTintSystem                     *CreatureGenreTintSystem
@@ -500,6 +501,13 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 	entityDropShadowSystem.SetGenre(config.GenreID)
 	result.EntityDropShadowSystem = entityDropShadowSystem
 	game.World.AddSystem(entityDropShadowSystem)
+
+	// 17u2. TimeOfDayShadowDirectionSystem - directional shadow offset from sun position
+	// Connects TimeOfDayLightingSystem with DropShadowComponent for sun-arc shadow direction
+	timeOfDayShadowDirectionSystem := NewTimeOfDayShadowDirectionSystem(game.World, config.Seed+8925)
+	timeOfDayShadowDirectionSystem.SetGenre(config.GenreID)
+	result.TimeOfDayShadowDirectionSystem = timeOfDayShadowDirectionSystem
+	game.World.AddSystem(timeOfDayShadowDirectionSystem)
 
 	// 17v. EquipmentMaterialSheenSystem - specular highlights from material properties
 	// Bridges sprites.GetMaterialVisualProperties (Sheen/Reflectivity/Roughness) with per-entity visual state
@@ -1548,6 +1556,9 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 	timeOfDayAttackSpeedSystem.SetGenre(config.GenreID)
 	result.TimeOfDayAttackSpeedSystem = timeOfDayAttackSpeedSystem
 	game.World.AddSystem(timeOfDayAttackSpeedSystem)
+
+	// 43m. Connect TimeOfDayShadowDirectionSystem to TimeOfDayLightingSystem
+	timeOfDayShadowDirectionSystem.SetLightingSystem(timeOfDayLightingSystem)
 
 	// Note: SpatialPartitionSystem (system #44) is initialized separately
 	// after terrain generation via InitializeSpatialPartitionSystem()

@@ -8,15 +8,15 @@ import (
 // EconomySystem integrates the economy package managers into the ECS architecture.
 // It handles marketplace updates, guild bank interest calculation, and listing expiration.
 type EconomySystem struct {
-	world                *World
-	marketplace          *economy.FederatedMarketplace
-	guildBank            *economy.GuildBankManager
-	serverID             string
-	updateInterval       float64 // seconds between marketplace updates
-	updateAccumulator    float64
-	interestInterval     float64 // seconds between interest calculations
-	interestAccumulator  float64
-	logger               *logrus.Entry
+	world               *World
+	marketplace         *economy.FederatedMarketplace
+	guildBank           *economy.GuildBankManager
+	serverID            string
+	updateInterval      float64 // seconds between marketplace updates
+	updateAccumulator   float64
+	interestInterval    float64 // seconds between interest calculations
+	interestAccumulator float64
+	logger              *logrus.Entry
 }
 
 // NewEconomySystem creates a new economy system.
@@ -93,7 +93,7 @@ func (es *EconomySystem) CreateListing(listing *economy.Listing) error {
 
 // PurchaseItem handles a marketplace purchase transaction.
 func (es *EconomySystem) PurchaseItem(listingID, buyerID string, quantity int) error {
-	err := es.marketplace.PurchaseItem(listingID, buyerID, quantity)
+	_, err := es.marketplace.PurchaseItem(listingID, buyerID, quantity)
 	if err != nil {
 		es.logger.WithError(err).WithFields(logrus.Fields{
 			"listingID": listingID,

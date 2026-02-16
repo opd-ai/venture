@@ -8,18 +8,27 @@ import (
 	"os"
 	"sync"
 	"time"
+
+	log "github.com/sirupsen/logrus"
 )
 
 // GuildBankManager manages guild bank vaults with cross-server treasury sync.
 type GuildBankManager struct {
-	vaults map[string]*GuildVault // guildID -> vault
-	mu     sync.RWMutex
+	vaults       map[string]*GuildVault // guildID -> vault
+	timeProvider TimeProvider
+	mu           sync.RWMutex
 }
 
 // NewGuildBankManager creates a new guild bank manager.
 func NewGuildBankManager() *GuildBankManager {
+	return NewGuildBankManagerWithTime(DefaultTimeProvider())
+}
+
+// NewGuildBankManagerWithTime creates a new guild bank manager with a custom time provider.
+func NewGuildBankManagerWithTime(tp TimeProvider) *GuildBankManager {
 	return &GuildBankManager{
-		vaults: make(map[string]*GuildVault),
+		vaults:       make(map[string]*GuildVault),
+		timeProvider: tp,
 	}
 }
 
@@ -114,7 +123,7 @@ func (m *GuildBankManager) CreateVault(guildID string, interestRate float64) err
 		return fmt.Errorf("interest rate must be between 0.001 and 0.01, got %f", interestRate)
 	}
 
-	now := time.Now()
+	now := m.timeProvider.Now()
 	m.vaults[guildID] = &GuildVault{
 		GuildID:           guildID,
 		Items:             make(map[string]*VaultItem),
@@ -173,9 +182,10 @@ func (m *GuildBankManager) DepositGold(guildID, memberID, memberName string, amo
 	vault.GoldBalance += amount
 
 	// Add audit entry
+	now := m.timeProvider.Now()
 	m.addAuditEntry(vault, &AuditEntry{
-		EntryID:       fmt.Sprintf("%s-%d", memberID, time.Now().UnixNano()),
-		Timestamp:     time.Now(),
+		EntryID:       fmt.Sprintf("%s-%d", memberID, now.UnixNano()),
+		Timestamp:     now,
 		MemberID:      memberID,
 		MemberName:    memberName,
 		ActionType:    AuditDeposit,
@@ -184,6 +194,14 @@ func (m *GuildBankManager) DepositGold(guildID, memberID, memberName string, amo
 		BalanceAfter:  vault.GoldBalance,
 		Notes:         "Gold deposit",
 	})
+
+	log.WithFields(log.Fields{
+		"guildID":       guildID,
+		"memberID":      memberID,
+		"amount":        amount,
+		"balanceBefore": balanceBefore,
+		"balanceAfter":  vault.GoldBalance,
+	}).Debug("gold deposited into guild vault")
 
 	return nil
 }
@@ -210,7 +228,7 @@ func (m *GuildBankManager) WithdrawGold(guildID, memberID, memberName, rankID st
 	limit, hasLimit := vault.WithdrawalLimits[rankID]
 	if hasLimit {
 		// Check today's withdrawals
-		today := time.Now().Truncate(24 * time.Hour)
+		today := m.timeProvider.Now().Truncate(24 * time.Hour)
 		withdrawal, exists := vault.MemberWithdrawals[memberID]
 
 		if !exists || !withdrawal.Date.Equal(today) {
@@ -234,9 +252,10 @@ func (m *GuildBankManager) WithdrawGold(guildID, memberID, memberName, rankID st
 	vault.GoldBalance -= amount
 
 	// Add audit entry
+	withdrawNow := m.timeProvider.Now()
 	m.addAuditEntry(vault, &AuditEntry{
-		EntryID:       fmt.Sprintf("%s-%d", memberID, time.Now().UnixNano()),
-		Timestamp:     time.Now(),
+		EntryID:       fmt.Sprintf("%s-%d", memberID, withdrawNow.UnixNano()),
+		Timestamp:     withdrawNow,
 		MemberID:      memberID,
 		MemberName:    memberName,
 		ActionType:    AuditWithdraw,
@@ -245,6 +264,14 @@ func (m *GuildBankManager) WithdrawGold(guildID, memberID, memberName, rankID st
 		BalanceAfter:  vault.GoldBalance,
 		Notes:         "Gold withdrawal",
 	})
+
+	log.WithFields(log.Fields{
+		"guildID":       guildID,
+		"memberID":      memberID,
+		"amount":        amount,
+		"balanceBefore": balanceBefore,
+		"balanceAfter":  vault.GoldBalance,
+	}).Debug("gold withdrawn from guild vault")
 
 	return nil
 }
@@ -270,7 +297,7 @@ func (m *GuildBankManager) DepositItem(guildID, memberID, memberName, itemID, it
 		}
 	}
 
-	now := time.Now()
+	now := m.timeProvider.Now()
 	if item, exists := vault.Items[itemID]; exists {
 		item.Quantity += quantity
 		item.ContributedBy = memberID
@@ -289,7 +316,7 @@ func (m *GuildBankManager) DepositItem(guildID, memberID, memberName, itemID, it
 
 	// Add audit entry
 	m.addAuditEntry(vault, &AuditEntry{
-		EntryID:       fmt.Sprintf("%s-%d", memberID, time.Now().UnixNano()),
+		EntryID:       fmt.Sprintf("%s-%d", memberID, now.UnixNano()),
 		Timestamp:     now,
 		MemberID:      memberID,
 		MemberName:    memberName,
@@ -329,7 +356,7 @@ func (m *GuildBankManager) WithdrawItem(guildID, memberID, memberName, itemID st
 	}
 
 	item.Quantity -= quantity
-	item.LastModified = time.Now()
+	item.LastModified = m.timeProvider.Now()
 
 	// Remove item if quantity reaches zero
 	if item.Quantity == 0 {
@@ -337,9 +364,10 @@ func (m *GuildBankManager) WithdrawItem(guildID, memberID, memberName, itemID st
 	}
 
 	// Add audit entry
+	withdrawItemNow := m.timeProvider.Now()
 	m.addAuditEntry(vault, &AuditEntry{
-		EntryID:       fmt.Sprintf("%s-%d", memberID, time.Now().UnixNano()),
-		Timestamp:     time.Now(),
+		EntryID:       fmt.Sprintf("%s-%d", memberID, withdrawItemNow.UnixNano()),
+		Timestamp:     withdrawItemNow,
 		MemberID:      memberID,
 		MemberName:    memberName,
 		ActionType:    AuditWithdraw,
@@ -382,7 +410,7 @@ func (m *GuildBankManager) CalculateInterest(guildID string) error {
 		return fmt.Errorf("vault not found for guild %s", guildID)
 	}
 
-	now := time.Now()
+	now := m.timeProvider.Now()
 	daysSinceLastInterest := now.Sub(vault.LastInterestTime).Hours() / 24.0
 
 	// Only apply interest if at least 1 day has passed
@@ -401,7 +429,7 @@ func (m *GuildBankManager) CalculateInterest(guildID string) error {
 
 			// Add audit entry for interest
 			m.addAuditEntry(vault, &AuditEntry{
-				EntryID:       fmt.Sprintf("interest-%d", time.Now().UnixNano()),
+				EntryID:       fmt.Sprintf("interest-%d", now.UnixNano()+int64(i)),
 				Timestamp:     now,
 				MemberID:      "system",
 				MemberName:    "Guild Bank",
@@ -499,7 +527,7 @@ func (m *GuildBankManager) UpdateSyncTime(guildID string) error {
 		return fmt.Errorf("vault not found for guild %s", guildID)
 	}
 
-	vault.LastSyncTime = time.Now()
+	vault.LastSyncTime = m.timeProvider.Now()
 	return nil
 }
 

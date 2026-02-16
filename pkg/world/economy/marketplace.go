@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	log "github.com/sirupsen/logrus"
 )
 
 // FederatedMarketplace manages cross-server item listings and transactions.
@@ -17,18 +18,25 @@ type FederatedMarketplace struct {
 	pricingEngine    *PricingEngine
 	transactions     []*Transaction
 	maxListingsLocal int
+	timeProvider     TimeProvider
 	mu               sync.RWMutex
 }
 
 // NewFederatedMarketplace creates a new federated marketplace.
 func NewFederatedMarketplace(serverID string) *FederatedMarketplace {
+	return NewFederatedMarketplaceWithTime(serverID, DefaultTimeProvider())
+}
+
+// NewFederatedMarketplaceWithTime creates a new federated marketplace with a custom time provider.
+func NewFederatedMarketplaceWithTime(serverID string, tp TimeProvider) *FederatedMarketplace {
 	return &FederatedMarketplace{
 		localServerID:    serverID,
 		localListings:    make(map[string]*Listing),
 		remoteCache:      make(map[string][]*Listing),
-		pricingEngine:    NewPricingEngine(),
+		pricingEngine:    NewPricingEngineWithTime(tp),
 		transactions:     make([]*Transaction, 0),
 		maxListingsLocal: 10000,
+		timeProvider:     tp,
 	}
 }
 
@@ -63,10 +71,11 @@ func (fm *FederatedMarketplace) CreateListing(listing *Listing) error {
 
 	// Set server ID and timestamps
 	listing.ServerID = fm.localServerID
-	listing.CreatedAt = time.Now()
+	now := fm.timeProvider.Now()
+	listing.CreatedAt = now
 	if listing.ExpiresAt.IsZero() {
 		// Default 7-day expiration
-		listing.ExpiresAt = time.Now().Add(7 * 24 * time.Hour)
+		listing.ExpiresAt = now.Add(7 * 24 * time.Hour)
 	}
 
 	// Set delivery method based on item properties
@@ -81,6 +90,15 @@ func (fm *FederatedMarketplace) CreateListing(listing *Listing) error {
 
 	// Update pricing engine
 	fm.pricingEngine.RecordListing(listing)
+
+	log.WithFields(log.Fields{
+		"listingID": listing.ListingID,
+		"itemID":    listing.ItemID,
+		"sellerID":  listing.SellerID,
+		"price":     listing.Price,
+		"quantity":  listing.Quantity,
+		"serverID":  listing.ServerID,
+	}).Debug("marketplace listing created")
 
 	return nil
 }
@@ -117,7 +135,7 @@ func (fm *FederatedMarketplace) SearchItems(query ItemQuery) ([]*Listing, error)
 	defer fm.mu.RUnlock()
 
 	results := fm.collectMatchingListings(query)
-	validResults := filterExpiredListings(results)
+	validResults := fm.filterExpiredListings(results)
 	fm.sortListings(validResults, query.SortBy)
 	return applyResultLimit(validResults, query.Limit), nil
 }
@@ -161,10 +179,11 @@ func (fm *FederatedMarketplace) searchRemoteListings(query ItemQuery) []*Listing
 }
 
 // filterExpiredListings removes expired listings from results.
-func filterExpiredListings(listings []*Listing) []*Listing {
+func (fm *FederatedMarketplace) filterExpiredListings(listings []*Listing) []*Listing {
+	now := fm.timeProvider.Now()
 	validResults := make([]*Listing, 0)
 	for _, listing := range listings {
-		if !listing.IsExpired() {
+		if !listing.IsExpiredAt(now) {
 			validResults = append(validResults, listing)
 		}
 	}
@@ -271,28 +290,28 @@ func (fm *FederatedMarketplace) sortListings(listings []*Listing, sortBy SortCri
 }
 
 // PurchaseItem executes a purchase transaction.
-func (fm *FederatedMarketplace) PurchaseItem(listingID, buyerID string, quantity int) error {
+// Returns the transaction record on success for the engine to process
+// (e.g., deducting gold from buyer, transferring to seller, delivering items).
+func (fm *FederatedMarketplace) PurchaseItem(listingID, buyerID string, quantity int) (*Transaction, error) {
 	fm.mu.Lock()
 	defer fm.mu.Unlock()
 
 	// Find listing
 	listing, exists := fm.localListings[listingID]
 	if !exists {
-		return fmt.Errorf("listing not found: %s", listingID)
+		return nil, fmt.Errorf("listing not found: %s", listingID)
 	}
 
 	// Check expiration
-	if listing.IsExpired() {
-		return fmt.Errorf("listing has expired")
+	now := fm.timeProvider.Now()
+	if listing.IsExpiredAt(now) {
+		return nil, fmt.Errorf("listing has expired")
 	}
 
 	// Check quantity
 	if quantity > listing.Quantity {
-		return fmt.Errorf("insufficient quantity (requested: %d, available: %d)", quantity, listing.Quantity)
+		return nil, fmt.Errorf("insufficient quantity (requested: %d, available: %d)", quantity, listing.Quantity)
 	}
-
-	// Calculate cost and fee
-	totalCost := listing.GetTotalCost(quantity)
 
 	// Create transaction record
 	transaction := &Transaction{
@@ -304,7 +323,7 @@ func (fm *FederatedMarketplace) PurchaseItem(listingID, buyerID string, quantity
 		Quantity:       quantity,
 		Price:          listing.Price * quantity,
 		TransactionFee: CalculateTransactionFee(listing.Price*quantity, listing.EstimatedHops),
-		Timestamp:      time.Now(),
+		Timestamp:      now,
 		OriginServer:   listing.ServerID,
 		DestServer:     fm.localServerID,
 	}
@@ -320,14 +339,17 @@ func (fm *FederatedMarketplace) PurchaseItem(listingID, buyerID string, quantity
 		delete(fm.localListings, listingID)
 	}
 
-	// In real implementation:
-	// - Deduct gold from buyer
-	// - Transfer gold to seller
-	// - Deliver item via mail/courier
-	// For now, just log the total cost
-	_ = totalCost
+	log.WithFields(log.Fields{
+		"transactionID": transaction.TransactionID,
+		"listingID":     listingID,
+		"buyerID":       buyerID,
+		"sellerID":      listing.SellerID,
+		"quantity":      quantity,
+		"price":         transaction.Price,
+		"fee":           transaction.TransactionFee,
+	}).Debug("marketplace purchase completed")
 
-	return nil
+	return transaction, nil
 }
 
 // GetPriceTrend returns price statistics for an item type.
@@ -386,12 +408,20 @@ func (fm *FederatedMarketplace) CleanupExpiredListings() int {
 	fm.mu.Lock()
 	defer fm.mu.Unlock()
 
+	now := fm.timeProvider.Now()
 	removed := 0
 	for listingID, listing := range fm.localListings {
-		if listing.IsExpired() {
+		if listing.IsExpiredAt(now) {
 			delete(fm.localListings, listingID)
 			removed++
 		}
+	}
+
+	if removed > 0 {
+		log.WithFields(log.Fields{
+			"removed":  removed,
+			"serverID": fm.localServerID,
+		}).Debug("expired marketplace listings cleaned up")
 	}
 
 	return removed

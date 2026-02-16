@@ -293,7 +293,7 @@ func TestFederatedMarketplace_PurchaseItem(t *testing.T) {
 	}
 
 	// Purchase partial quantity
-	err = marketplace.PurchaseItem(listing.ListingID, "buyer1", 2)
+	_, err = marketplace.PurchaseItem(listing.ListingID, "buyer1", 2)
 	if err != nil {
 		t.Errorf("PurchaseItem() error = %v", err)
 	}
@@ -305,7 +305,7 @@ func TestFederatedMarketplace_PurchaseItem(t *testing.T) {
 	}
 
 	// Purchase remaining quantity
-	err = marketplace.PurchaseItem(listing.ListingID, "buyer2", 3)
+	_, err = marketplace.PurchaseItem(listing.ListingID, "buyer2", 3)
 	if err != nil {
 		t.Errorf("PurchaseItem() error = %v", err)
 	}
@@ -317,7 +317,7 @@ func TestFederatedMarketplace_PurchaseItem(t *testing.T) {
 	}
 
 	// Purchase from non-existent listing
-	err = marketplace.PurchaseItem("nonexistent", "buyer3", 1)
+	_, err = marketplace.PurchaseItem("nonexistent", "buyer3", 1)
 	if err == nil {
 		t.Error("Expected error for non-existent listing")
 	}
@@ -331,7 +331,7 @@ func TestFederatedMarketplace_PurchaseItem(t *testing.T) {
 	}
 	marketplace.CreateListing(listing2)
 
-	err = marketplace.PurchaseItem(listing2.ListingID, "buyer4", 5)
+	_, err = marketplace.PurchaseItem(listing2.ListingID, "buyer4", 5)
 	if err == nil {
 		t.Error("Expected error for insufficient quantity")
 	}

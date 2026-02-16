@@ -7,14 +7,21 @@ import (
 
 // PricingEngine tracks price trends and market dynamics.
 type PricingEngine struct {
-	trends map[string]*PriceTrend
-	mu     sync.RWMutex
+	trends       map[string]*PriceTrend
+	timeProvider TimeProvider
+	mu           sync.RWMutex
 }
 
 // NewPricingEngine creates a new pricing engine.
 func NewPricingEngine() *PricingEngine {
+	return NewPricingEngineWithTime(DefaultTimeProvider())
+}
+
+// NewPricingEngineWithTime creates a new pricing engine with a custom time provider.
+func NewPricingEngineWithTime(tp TimeProvider) *PricingEngine {
 	return &PricingEngine{
-		trends: make(map[string]*PriceTrend),
+		trends:       make(map[string]*PriceTrend),
+		timeProvider: tp,
 	}
 }
 
@@ -32,7 +39,7 @@ func (pe *PricingEngine) RecordListing(listing *Listing) {
 			MaxPrice:      listing.Price,
 			TotalVolume:   listing.Quantity,
 			TotalListings: 1,
-			LastUpdated:   time.Now(),
+			LastUpdated:   pe.timeProvider.Now(),
 		}
 		pe.trends[listing.ItemType] = trend
 		return
@@ -53,7 +60,7 @@ func (pe *PricingEngine) RecordListing(listing *Listing) {
 	// Recalculate average (weighted by quantity)
 	totalValue := trend.AveragePrice*trend.TotalVolume + listing.Price*listing.Quantity
 	trend.AveragePrice = totalValue / (trend.TotalVolume + listing.Quantity)
-	trend.LastUpdated = time.Now()
+	trend.LastUpdated = pe.timeProvider.Now()
 }
 
 // RecordTransaction updates price trends when a transaction occurs.
@@ -71,7 +78,7 @@ func (pe *PricingEngine) RecordTransaction(listing *Listing, quantity int) {
 			MaxPrice:      listing.Price,
 			TotalVolume:   quantity,
 			TotalListings: 0,
-			LastUpdated:   time.Now(),
+			LastUpdated:   pe.timeProvider.Now(),
 		}
 		pe.trends[listing.ItemType] = trend
 		return
@@ -79,7 +86,7 @@ func (pe *PricingEngine) RecordTransaction(listing *Listing, quantity int) {
 
 	// Update volume (transaction volume is separate from listing volume)
 	trend.TotalVolume += quantity
-	trend.LastUpdated = time.Now()
+	trend.LastUpdated = pe.timeProvider.Now()
 
 	// Transactions influence average price more heavily (2x weight)
 	totalValue := trend.AveragePrice*trend.TotalVolume + listing.Price*quantity*2
@@ -149,7 +156,7 @@ func (pe *PricingEngine) ApplyTradeImpact(itemType string, priceChange float64, 
 			MaxPrice:      100,
 			TotalVolume:   0,
 			TotalListings: 0,
-			LastUpdated:   time.Now(),
+			LastUpdated:   pe.timeProvider.Now(),
 		}
 		pe.trends[itemType] = trend
 	}
@@ -178,5 +185,5 @@ func (pe *PricingEngine) ApplyTradeImpact(itemType string, priceChange float64, 
 	}
 
 	trend.TotalVolume += volume
-	trend.LastUpdated = time.Now()
+	trend.LastUpdated = pe.timeProvider.Now()
 }

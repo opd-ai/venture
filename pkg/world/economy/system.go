@@ -3,6 +3,8 @@ package economy
 import (
 	"sync"
 	"time"
+
+	log "github.com/sirupsen/logrus"
 )
 
 // System is an ECS system that manages the federated marketplace.
@@ -13,28 +15,28 @@ type System struct {
 	cleanupInterval   time.Duration
 	lastCleanup       time.Time
 	priceUpdateTicker float64
+	timeProvider      TimeProvider
 	mu                sync.RWMutex
 }
 
 // NewSystem creates a new economy system with the given world.
 func NewSystem(world World) *System {
-	// Generate server ID from world pointer to ensure uniqueness
-	serverID := "local-server"
-	return &System{
-		world:           world,
-		marketplace:     NewFederatedMarketplace(serverID),
-		cleanupInterval: 5 * time.Minute,
-		lastCleanup:     time.Now(),
-	}
+	return NewSystemWithServerID(world, "local-server")
 }
 
 // NewSystemWithServerID creates a new economy system with a specific server ID.
 func NewSystemWithServerID(world World, serverID string) *System {
+	return NewSystemWithTimeProvider(world, serverID, DefaultTimeProvider())
+}
+
+// NewSystemWithTimeProvider creates a new economy system with a custom time provider.
+func NewSystemWithTimeProvider(world World, serverID string, tp TimeProvider) *System {
 	return &System{
 		world:           world,
-		marketplace:     NewFederatedMarketplace(serverID),
+		marketplace:     NewFederatedMarketplaceWithTime(serverID, tp),
 		cleanupInterval: 5 * time.Minute,
-		lastCleanup:     time.Now(),
+		lastCleanup:     tp.Now(),
+		timeProvider:    tp,
 	}
 }
 
@@ -47,9 +49,15 @@ func (s *System) Update(deltaTime float64) {
 	s.priceUpdateTicker += deltaTime
 	if s.priceUpdateTicker >= 60.0 { // Every 60 seconds
 		s.priceUpdateTicker = 0
-		if time.Since(s.lastCleanup) >= s.cleanupInterval {
-			s.marketplace.CleanupExpiredListings()
-			s.lastCleanup = time.Now()
+		if s.timeProvider.Now().Sub(s.lastCleanup) >= s.cleanupInterval {
+			removed := s.marketplace.CleanupExpiredListings()
+			s.lastCleanup = s.timeProvider.Now()
+			if removed > 0 {
+				log.WithFields(log.Fields{
+					"system_name": "economy",
+					"removed":     removed,
+				}).Debug("economy system cleanup cycle")
+			}
 		}
 	}
 }
@@ -75,8 +83,8 @@ func (s *System) SearchItems(query ItemQuery) ([]*Listing, error) {
 	return s.marketplace.SearchItems(query)
 }
 
-// PurchaseItem executes a purchase transaction.
-func (s *System) PurchaseItem(listingID, buyerID string, quantity int) error {
+// PurchaseItem executes a purchase transaction and returns the transaction record.
+func (s *System) PurchaseItem(listingID, buyerID string, quantity int) (*Transaction, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	return s.marketplace.PurchaseItem(listingID, buyerID, quantity)

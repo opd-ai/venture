@@ -119,7 +119,7 @@ func TestSystem_PurchaseItem(t *testing.T) {
 
 	sys.CreateListing(listing)
 
-	err := sys.PurchaseItem(listing.ListingID, "buyer_001", 3)
+	_, err := sys.PurchaseItem(listing.ListingID, "buyer_001", 3)
 	if err != nil {
 		t.Fatalf("PurchaseItem failed: %v", err)
 	}

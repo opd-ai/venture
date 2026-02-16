@@ -2,7 +2,28 @@ package economy
 
 import (
 	"time"
+
+	log "github.com/sirupsen/logrus"
 )
+
+// TimeProvider abstracts time access for deterministic testing and replay.
+// In production, use RealTimeProvider; in tests, use a mock implementation.
+type TimeProvider interface {
+	Now() time.Time
+}
+
+// RealTimeProvider implements TimeProvider using the actual system clock.
+type RealTimeProvider struct{}
+
+// Now returns the current system time.
+func (RealTimeProvider) Now() time.Time {
+	return time.Now()
+}
+
+// DefaultTimeProvider returns the default TimeProvider (real system time).
+func DefaultTimeProvider() TimeProvider {
+	return RealTimeProvider{}
+}
 
 // SortCriteria defines how search results are sorted.
 type SortCriteria int
@@ -108,9 +129,26 @@ func CalculateTransactionFee(price, hops int) int {
 	return int(float64(price) * totalFee)
 }
 
-// IsExpired returns true if the listing has expired.
+// IsExpired returns true if the listing has expired relative to the given time.
+// If now is zero, uses current system time as fallback.
 func (l *Listing) IsExpired() bool {
 	return time.Now().After(l.ExpiresAt)
+}
+
+// IsExpiredAt returns true if the listing has expired relative to the given time.
+func (l *Listing) IsExpiredAt(now time.Time) bool {
+	return now.After(l.ExpiresAt)
+}
+
+// logger returns a logrus entry with common listing fields.
+func (l *Listing) logger() *log.Entry {
+	return log.WithFields(log.Fields{
+		"listingID": l.ListingID,
+		"itemID":    l.ItemID,
+		"sellerID":  l.SellerID,
+		"price":     l.Price,
+		"quantity":  l.Quantity,
+	})
 }
 
 // GetDeliveryTime estimates delivery time in seconds.

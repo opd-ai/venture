@@ -288,74 +288,82 @@ func (rm *RelayManager) SelectRelay() (*RelayNode, error) {
 }
 
 // selectLowestLatency finds the relay with lowest latency.
+// Snapshots each node's latency individually to avoid holding multiple locks.
 func (rm *RelayManager) selectLowestLatency(candidates []*RelayNode) *RelayNode {
 	if len(candidates) == 0 {
 		return nil
 	}
 
 	best := candidates[0]
+	best.mu.RLock()
+	bestLatency := best.latency
+	best.mu.RUnlock()
+
 	for _, node := range candidates[1:] {
 		node.mu.RLock()
-		best.mu.RLock()
-		if node.latency < best.latency && node.latency > 0 {
-			best.mu.RUnlock()
-			node.mu.RUnlock()
+		nodeLatency := node.latency
+		node.mu.RUnlock()
+
+		if nodeLatency < bestLatency && nodeLatency > 0 {
 			best = node
-		} else {
-			best.mu.RUnlock()
-			node.mu.RUnlock()
+			bestLatency = nodeLatency
 		}
 	}
 	return best
 }
 
 // selectHighestBandwidth finds the relay with highest bandwidth.
+// Snapshots each node's bandwidth individually to avoid holding multiple locks.
 func (rm *RelayManager) selectHighestBandwidth(candidates []*RelayNode) *RelayNode {
 	if len(candidates) == 0 {
 		return nil
 	}
 
 	best := candidates[0]
+	best.mu.RLock()
+	bestBandwidth := best.bandwidth
+	best.mu.RUnlock()
+
 	for _, node := range candidates[1:] {
 		node.mu.RLock()
-		best.mu.RLock()
-		if node.bandwidth > best.bandwidth {
-			best.mu.RUnlock()
-			node.mu.RUnlock()
+		nodeBandwidth := node.bandwidth
+		node.mu.RUnlock()
+
+		if nodeBandwidth > bestBandwidth {
 			best = node
-		} else {
-			best.mu.RUnlock()
-			node.mu.RUnlock()
+			bestBandwidth = nodeBandwidth
 		}
 	}
 	return best
 }
 
 // selectLowestUtilization finds the relay with most available capacity.
+// Snapshots each node's utilization individually to avoid holding multiple locks.
 func (rm *RelayManager) selectLowestUtilization(candidates []*RelayNode) *RelayNode {
 	if len(candidates) == 0 {
 		return nil
 	}
 
 	best := candidates[0]
+	best.mu.RLock()
+	bestUtil := float64(best.activeConnections) / float64(best.MaxConnections)
+	best.mu.RUnlock()
+
 	for _, node := range candidates[1:] {
 		node.mu.RLock()
-		best.mu.RLock()
 		nodeUtil := float64(node.activeConnections) / float64(node.MaxConnections)
-		bestUtil := float64(best.activeConnections) / float64(best.MaxConnections)
+		node.mu.RUnlock()
+
 		if nodeUtil < bestUtil {
-			best.mu.RUnlock()
-			node.mu.RUnlock()
 			best = node
-		} else {
-			best.mu.RUnlock()
-			node.mu.RUnlock()
+			bestUtil = nodeUtil
 		}
 	}
 	return best
 }
 
 // selectRoundRobin rotates through available relays.
+// Resets counter on overflow to prevent negative modulo results.
 func (rm *RelayManager) selectRoundRobin(candidates []*RelayNode) *RelayNode {
 	if len(candidates) == 0 {
 		return nil
@@ -363,6 +371,9 @@ func (rm *RelayManager) selectRoundRobin(candidates []*RelayNode) *RelayNode {
 
 	idx := rm.rrCounter % len(candidates)
 	rm.rrCounter++
+	if rm.rrCounter < 0 {
+		rm.rrCounter = 0
+	}
 	return candidates[idx]
 }
 

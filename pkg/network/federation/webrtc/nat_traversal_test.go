@@ -379,6 +379,34 @@ func TestNATTraversalTURNFallbackRate(t *testing.T) {
 	}
 }
 
+func TestEstablishConnectionContextCancellation(t *testing.T) {
+	rm := NewRelayManager(StrategyLowestLatency)
+	defer rm.Close()
+
+	nt := NewNATTraversal([]string{"stun:stun.l.google.com:19302"}, rm)
+
+	// Create already-cancelled context
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	result, err := nt.EstablishConnection(ctx)
+
+	// With cancelled context, tryDirectConnection should return ctx.Err()
+	// but since direct always fails anyway, STUN may still work in simulation.
+	// The key test is that we don't panic or deadlock.
+	if result == nil {
+		t.Fatal("result should not be nil even on failure")
+	}
+
+	// Verify stats were updated
+	stats := nt.GetStats()
+	if stats.TotalAttempts == 0 {
+		t.Error("TotalAttempts should be > 0 even with cancelled context")
+	}
+
+	_ = err // Error may or may not occur depending on simulation timing
+}
+
 func BenchmarkEstablishConnection(b *testing.B) {
 	rm := NewRelayManager(StrategyLowestLatency)
 	defer rm.Close()

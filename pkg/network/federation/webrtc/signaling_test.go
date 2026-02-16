@@ -386,6 +386,44 @@ func TestSignalingMessage_JSON_InvalidTimestamp(t *testing.T) {
 	}
 }
 
+func TestNewSignalingClientWithCapacity(t *testing.T) {
+	tests := []struct {
+		name     string
+		capacity int
+		wantCap  int
+	}{
+		{"default capacity", 0, DefaultSignalingChannelCapacity},
+		{"negative capacity", -1, DefaultSignalingChannelCapacity},
+		{"custom capacity", 100, 100},
+		{"small capacity", 1, 1},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			client := NewSignalingClientWithCapacity("ws://localhost:8080", "peer-1", tt.capacity)
+			if client == nil {
+				t.Fatal("expected non-nil client")
+			}
+			if cap(client.sendChan) != tt.wantCap {
+				t.Errorf("sendChan capacity = %d, want %d", cap(client.sendChan), tt.wantCap)
+			}
+			if cap(client.recvChan) != tt.wantCap {
+				t.Errorf("recvChan capacity = %d, want %d", cap(client.recvChan), tt.wantCap)
+			}
+		})
+	}
+}
+
+func TestNewSignalingClientDefaultCapacity(t *testing.T) {
+	client := NewSignalingClient("ws://localhost:8080", "peer-1")
+	if cap(client.sendChan) != DefaultSignalingChannelCapacity {
+		t.Errorf("sendChan capacity = %d, want %d", cap(client.sendChan), DefaultSignalingChannelCapacity)
+	}
+	if cap(client.recvChan) != DefaultSignalingChannelCapacity {
+		t.Errorf("recvChan capacity = %d, want %d", cap(client.recvChan), DefaultSignalingChannelCapacity)
+	}
+}
+
 // Benchmark tests
 func BenchmarkSignalingClient_SendOffer(b *testing.B) {
 	client := NewSignalingClient("ws://localhost:8080", "peer-alice")

@@ -391,3 +391,81 @@ func BenchmarkRelayManagerSelectRelay(b *testing.B) {
 		rm.SelectRelay()
 	}
 }
+
+func TestRelayManagerRoundRobinOverflowProtection(t *testing.T) {
+	rm := NewRelayManager(StrategyRoundRobin)
+	defer rm.Close()
+
+	node1 := NewRelayNode("relay1", "turn:relay1.example.com:3478", "user", "pass", "us-east", 10)
+	node2 := NewRelayNode("relay2", "turn:relay2.example.com:3478", "user", "pass", "us-west", 10)
+	rm.AddRelay(node1)
+	rm.AddRelay(node2)
+
+	// Simulate counter near max int to verify overflow reset
+	rm.mu.Lock()
+	rm.rrCounter = int(^uint(0) >> 1) // max int
+	rm.mu.Unlock()
+
+	// Should not panic or produce negative index
+	for i := 0; i < 5; i++ {
+		selected, err := rm.SelectRelay()
+		if err != nil {
+			t.Fatalf("SelectRelay() after overflow failed: %v", err)
+		}
+		if selected == nil {
+			t.Fatal("SelectRelay() returned nil")
+		}
+	}
+
+	// Verify counter was reset after overflow
+	rm.mu.RLock()
+	if rm.rrCounter < 0 {
+		t.Errorf("rrCounter = %d, should be non-negative after overflow protection", rm.rrCounter)
+	}
+	rm.mu.RUnlock()
+}
+
+func TestRelayManagerSelectionSnapshotLocking(t *testing.T) {
+	rm := NewRelayManager(StrategyLowestLatency)
+	defer rm.Close()
+
+	// Create nodes with different latencies
+	for i := 0; i < 5; i++ {
+		node := NewRelayNode(
+			fmt.Sprintf("relay%d", i),
+			fmt.Sprintf("turn:relay%d.example.com:3478", i),
+			"user", "pass", "us-east", 100,
+		)
+		node.UpdateLatency(time.Duration((i+1)*10) * time.Millisecond)
+		rm.AddRelay(node)
+	}
+
+	// Concurrent selection and updates should not deadlock
+	done := make(chan bool, 10)
+	for i := 0; i < 5; i++ {
+		go func() {
+			for j := 0; j < 100; j++ {
+				rm.SelectRelay()
+			}
+			done <- true
+		}()
+		go func(idx int) {
+			for j := 0; j < 100; j++ {
+				rm.mu.RLock()
+				for _, node := range rm.nodes {
+					node.UpdateLatency(time.Duration(idx*10+j) * time.Millisecond)
+				}
+				rm.mu.RUnlock()
+			}
+			done <- true
+		}(i)
+	}
+
+	for i := 0; i < 10; i++ {
+		select {
+		case <-done:
+		case <-time.After(5 * time.Second):
+			t.Fatal("deadlock detected: concurrent selection and updates timed out")
+		}
+	}
+}

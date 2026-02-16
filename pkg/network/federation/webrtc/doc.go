@@ -156,6 +156,33 @@
 // Existing federation code (handshake, sync, transfer, auth) works unchanged.
 // Only the transport layer is replaced with WebRTC data channels.
 //
+// # Stub Implementation Boundaries
+//
+// This package follows Venture's minimal-dependency philosophy by providing a
+// complete simulation layer for testing without requiring github.com/pion/webrtc/v3.
+// The following clearly delineates production-ready logic from stub behavior:
+//
+// Production-ready (fully functional without external dependencies):
+//   - NAT traversal coordination (Direct → STUN → TURN fallback logic)
+//   - Relay management (health checks, load balancing, selection strategies)
+//   - STUN client (public address discovery, NAT type detection, caching)
+//   - Signaling protocol (SDP/ICE message exchange, peer registry, cleanup)
+//   - Connection state machine (state transitions, statistics, lifecycle)
+//   - TimeProvider abstraction (deterministic testing support)
+//
+// Stub behavior (requires pion/webrtc/v3 or equivalent for production):
+//   - Peer.Connect: Simulates connection with 10ms delay instead of real SDP negotiation
+//   - Peer.Send: Updates statistics but does not transmit via WebRTC data channel
+//   - Peer.processMessages: Drains send channel without actual data channel I/O
+//   - STUNClient.GetPublicAddress: Returns simulated IP/port, not actual STUN binding
+//   - STUNClient.DetectNATType: Returns simulated NAT type classification
+//   - RelayConnection.Send: Counts bytes but does not relay via TURN allocation
+//   - SignalingClient.Connect: Simulates WebSocket connection establishment
+//
+// To integrate a real WebRTC backend, implement the stub methods using
+// pion/webrtc/v3 PeerConnection and DataChannel APIs. The existing interfaces
+// and state management remain unchanged.
+//
 // # Thread Safety
 //
 // All public methods are thread-safe. Internal state is protected by sync.RWMutex.

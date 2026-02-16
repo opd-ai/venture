@@ -22,7 +22,9 @@ type SignalingClient struct {
 	peerID    string
 	connected bool
 
-	// Message channels
+	// Message channels with bounded capacity for backpressure.
+	// Senders use select with timeout to avoid blocking indefinitely
+	// when the channel is full (see SendOffer, SendAnswer, etc.).
 	sendChan  chan *SignalingMessage
 	recvChan  chan *SignalingMessage
 	closeChan chan struct{}
@@ -34,13 +36,26 @@ type SignalingClient struct {
 	timeProvider TimeProvider
 }
 
+// DefaultSignalingChannelCapacity is the default capacity for signaling message channels.
+// Senders apply backpressure via select-with-timeout when channels are full.
+const DefaultSignalingChannelCapacity = 50
+
 // NewSignalingClient creates a new signaling client.
 func NewSignalingClient(url, peerID string) *SignalingClient {
+	return NewSignalingClientWithCapacity(url, peerID, DefaultSignalingChannelCapacity)
+}
+
+// NewSignalingClientWithCapacity creates a new signaling client with configurable channel capacity.
+// Higher capacity absorbs message bursts; lower capacity detects backpressure sooner.
+func NewSignalingClientWithCapacity(url, peerID string, channelCapacity int) *SignalingClient {
+	if channelCapacity <= 0 {
+		channelCapacity = DefaultSignalingChannelCapacity
+	}
 	return &SignalingClient{
 		url:          url,
 		peerID:       peerID,
-		sendChan:     make(chan *SignalingMessage, 50),
-		recvChan:     make(chan *SignalingMessage, 50),
+		sendChan:     make(chan *SignalingMessage, channelCapacity),
+		recvChan:     make(chan *SignalingMessage, channelCapacity),
 		closeChan:    make(chan struct{}),
 		peers:        make(map[string]time.Time),
 		timeProvider: DefaultTimeProvider(),

@@ -178,6 +178,11 @@ func (n *NATTraversal) EstablishConnection(ctx context.Context) (*TraversalResul
 
 // tryDirectConnection attempts a direct P2P connection.
 func (n *NATTraversal) tryDirectConnection(ctx context.Context) error {
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	default:
+	}
 	// In a real implementation, this would attempt to establish
 	// a direct connection without any NAT traversal assistance.
 	// For testing, we simulate a failure (most connections need NAT traversal).
@@ -209,6 +214,12 @@ func (n *NATTraversal) trySTUNConnection(ctx context.Context) (*STUNResponse, er
 
 // tryTURNConnection attempts TURN relay connection.
 func (n *NATTraversal) tryTURNConnection(ctx context.Context) (*RelayNode, error) {
+	select {
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	default:
+	}
+
 	if n.relayManager == nil {
 		return nil, ErrNoRelayAvailable
 	}

@@ -307,6 +307,15 @@ func (rm *RouteManager) AddEscort(routeID string, playerID uint64) error {
 	rm.mu.Lock()
 	defer rm.mu.Unlock()
 
+	if playerID == 0 {
+		log.WithFields(log.Fields{
+			"routeID":  routeID,
+			"playerID": playerID,
+			"serverID": rm.serverID,
+		}).Warn("AddEscort: player ID cannot be zero")
+		return fmt.Errorf("player ID cannot be zero")
+	}
+
 	route, exists := rm.routes[routeID]
 	if !exists {
 		log.WithFields(log.Fields{
@@ -424,6 +433,10 @@ func (rm *RouteManager) GetRouteByCaravan(caravanID uint64) (*TradeRoute, error)
 
 // OptimizeRoute calculates the most profitable path and cargo configuration.
 func (rm *RouteManager) OptimizeRoute(route *TradeRoute) *RouteOptimization {
+	if route == nil {
+		return nil
+	}
+
 	rm.mu.RLock()
 	defer rm.mu.RUnlock()
 
@@ -454,6 +467,25 @@ func (rm *RouteManager) OptimizeRoute(route *TradeRoute) *RouteOptimization {
 func (rm *RouteManager) CreateEscortMission(routeID string, playerID uint64, baseReward float64) (*EscortMission, error) {
 	rm.mu.Lock()
 	defer rm.mu.Unlock()
+
+	if playerID == 0 {
+		log.WithFields(log.Fields{
+			"routeID":  routeID,
+			"playerID": playerID,
+			"serverID": rm.serverID,
+		}).Warn("CreateEscortMission: player ID cannot be zero")
+		return nil, fmt.Errorf("player ID cannot be zero")
+	}
+
+	if baseReward <= 0 {
+		log.WithFields(log.Fields{
+			"routeID":    routeID,
+			"playerID":   playerID,
+			"baseReward": baseReward,
+			"serverID":   rm.serverID,
+		}).Warn("CreateEscortMission: base reward must be positive")
+		return nil, fmt.Errorf("base reward must be positive, got %.2f", baseReward)
+	}
 
 	route, exists := rm.routes[routeID]
 	if !exists {

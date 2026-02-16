@@ -1,12 +1,14 @@
 package trade_routes
 
 import (
+	"sync"
 	"testing"
 	"time"
 )
 
 // mockPriceUpdateHandler implements PriceUpdateHandler for testing.
 type mockPriceUpdateHandler struct {
+	mu      sync.Mutex
 	updates []priceUpdate
 }
 
@@ -17,11 +19,22 @@ type priceUpdate struct {
 }
 
 func (m *mockPriceUpdateHandler) ApplyTradeImpact(itemType string, priceChange float64, volume int) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
 	m.updates = append(m.updates, priceUpdate{
 		itemType:    itemType,
 		priceChange: priceChange,
 		volume:      volume,
 	})
+}
+
+// getUpdates returns a snapshot of all updates (thread-safe).
+func (m *mockPriceUpdateHandler) getUpdates() []priceUpdate {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	result := make([]priceUpdate, len(m.updates))
+	copy(result, m.updates)
+	return result
 }
 
 // TestSetPriceUpdateHandler verifies handler injection.
@@ -188,11 +201,14 @@ func TestCompleteRouteThreadSafety(t *testing.T) {
 		routes[i] = route
 	}
 
-	// Complete all routes concurrently
+	// Complete all routes concurrently (hold lock for each call since
+	// completeRoute is an internal method that expects caller to hold lock)
 	done := make(chan bool, 10)
 	for i := 0; i < 10; i++ {
 		go func(route *TradeRoute) {
+			rm.mu.Lock()
 			rm.completeRoute(route)
+			rm.mu.Unlock()
 			done <- true
 		}(routes[i])
 	}
@@ -209,7 +225,8 @@ func TestCompleteRouteThreadSafety(t *testing.T) {
 	}
 
 	// Verify all updates were received (no data races)
-	if len(handler.updates) == 0 {
+	updates := handler.getUpdates()
+	if len(updates) == 0 {
 		t.Error("Expected price updates from concurrent completions")
 	}
 }

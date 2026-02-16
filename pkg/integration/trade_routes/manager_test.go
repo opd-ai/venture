@@ -170,6 +170,12 @@ func TestAddEscort(t *testing.T) {
 	if err == nil {
 		t.Error("Expected error when adding duplicate escort")
 	}
+
+	// Try to add escort with zero player ID
+	err = rm.AddEscort(route.ID, 0)
+	if err == nil {
+		t.Error("Expected error when adding escort with zero player ID")
+	}
 }
 
 func TestRemoveEscort(t *testing.T) {
@@ -287,6 +293,14 @@ func TestOptimizeRoute(t *testing.T) {
 	}
 }
 
+func TestOptimizeRouteNil(t *testing.T) {
+	rm := NewRouteManager("test-server", 12345)
+	result := rm.OptimizeRoute(nil)
+	if result != nil {
+		t.Error("Expected nil for nil route input")
+	}
+}
+
 func TestCreateEscortMission(t *testing.T) {
 	rm := NewRouteManager("test-server", 12345)
 	route, _ := rm.CreateRoute("region-a", "region-b", 1000.0)
@@ -315,6 +329,34 @@ func TestCreateEscortMission(t *testing.T) {
 
 	if mission.BonusReward <= 0 {
 		t.Error("Expected positive bonus reward")
+	}
+}
+
+func TestCreateEscortMissionValidation(t *testing.T) {
+	rm := NewRouteManager("test-server", 12345)
+	route, _ := rm.CreateRoute("region-a", "region-b", 1000.0)
+	rm.StartRoute(route.ID, 12345)
+
+	tests := []struct {
+		name       string
+		routeID    string
+		playerID   uint64
+		baseReward float64
+		wantErr    bool
+	}{
+		{"valid", route.ID, 100, 50.0, false},
+		{"zero player ID", route.ID, 0, 50.0, true},
+		{"zero reward", route.ID, 100, 0.0, true},
+		{"negative reward", route.ID, 100, -10.0, true},
+		{"nonexistent route", "fake", 100, 50.0, true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := rm.CreateEscortMission(tt.routeID, tt.playerID, tt.baseReward)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("CreateEscortMission() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
 	}
 }
 

@@ -225,6 +225,9 @@ type EbitenRenderSystem struct {
 	// between previous tick (PrevX/PrevY) and current tick (X/Y) positions.
 	// Set by the game loop each Draw() frame based on elapsed time since last Update().
 	renderAlpha float64
+
+	// Pre-allocated buffer for particle emitter entities to avoid iterating all entities
+	particleEntityBuffer []*Entity
 }
 
 // RenderStats tracks rendering performance metrics.
@@ -252,9 +255,10 @@ func NewRenderSystem(cameraSystem *CameraSystem) *EbitenRenderSystem {
 		indexBuffer:         make([]uint16, 0, 12000),       // Pre-allocate for 2000 entities * 6 indices
 		playerBuffer:        make([]*Entity, 0, 4),          // Pre-allocate for typical player count (1-4)
 		viewportQueryBuffer: make([]*Entity, 0, 256),        // Pre-allocate for typical visible entity count
-		visibleEntityIDs:    make(map[uint64]struct{}, 256), // Pre-allocate for O(1) visible lookup
-		ShowColliders:       false,
-		ShowGrid:            false,
+		visibleEntityIDs:     make(map[uint64]struct{}, 256), // Pre-allocate for O(1) visible lookup
+		ShowColliders:        false,
+		ShowGrid:             false,
+		particleEntityBuffer: make([]*Entity, 0, 64), // Pre-allocate for typical particle emitter count
 		drawTrianglesOptions: ebiten.DrawTrianglesOptions{
 			Filter: ebiten.FilterLinear,
 		},
@@ -350,7 +354,7 @@ func (r *EbitenRenderSystem) Draw(screen interface{}, entities []*Entity) {
 	visibleEntities := r.applyCulling(entities)
 	sortedEntities := r.sortEntitiesByLayer(visibleEntities)
 	r.renderEntities(sortedEntities)
-	r.drawParticles(entities)
+	r.drawParticles(r.filterParticleEntities(entities))
 
 	if r.ShowColliders {
 		r.drawColliders(sortedEntities)
@@ -886,21 +890,19 @@ func (r *EbitenRenderSystem) extractVisualFeedback(entity *Entity) (flashAlpha, 
 	}
 
 	// Multiply weather-driven tint (composes with status effect tints)
-	if comp, ok := entity.GetComponent("weather_sprite_tint"); ok {
-		if wt, ok := comp.(*WeatherSpriteTintComponent); ok {
-			tintR *= wt.TintR
-			tintG *= wt.TintG
-			tintB *= wt.TintB
-		}
+	// Uses cached getter for zero-overhead access (~93x faster than map lookup)
+	if wt := entity.GetWeatherSpriteTint(); wt != nil {
+		tintR *= wt.TintR
+		tintG *= wt.TintG
+		tintB *= wt.TintB
 	}
 
 	// Multiply creature genre-driven tint (composes with weather and status tints)
-	if comp, ok := entity.GetComponent("creature_genre_tint"); ok {
-		if ct, ok := comp.(*CreatureGenreTintComponent); ok {
-			tintR *= ct.TintR
-			tintG *= ct.TintG
-			tintB *= ct.TintB
-		}
+	// Uses cached getter for zero-overhead access (~93x faster than map lookup)
+	if ct := entity.GetCreatureGenreTint(); ct != nil {
+		tintR *= ct.TintR
+		tintG *= ct.TintG
+		tintB *= ct.TintB
 	}
 
 	return flashAlpha, tintR, tintG, tintB, tintA
@@ -1086,8 +1088,20 @@ func (r *EbitenRenderSystem) drawHealthBarBorder(barX, barY, barWidth, barHeight
 		float32(barWidth), float32(barHeight), 1, borderColor, false)
 }
 
+// filterParticleEntities returns only entities with particle emitters,
+// using a pre-allocated buffer to avoid allocations in the render hot path.
+func (r *EbitenRenderSystem) filterParticleEntities(entities []*Entity) []*Entity {
+	r.particleEntityBuffer = r.particleEntityBuffer[:0]
+	for _, entity := range entities {
+		if entity.GetParticleEmitter() != nil {
+			r.particleEntityBuffer = append(r.particleEntityBuffer, entity)
+		}
+	}
+	return r.particleEntityBuffer
+}
+
 // GAP-016 REPAIR: drawParticles renders all particle effects to the screen.
-// Uses cached GetParticleEmitter() getter for ~93x faster access in render hot path.
+// Receives pre-filtered entities with particle emitters for efficient iteration.
 func (r *EbitenRenderSystem) drawParticles(entities []*Entity) {
 	// Safety check: ensure screen is available
 	if r.screen == nil {

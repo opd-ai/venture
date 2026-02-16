@@ -34,8 +34,10 @@ type Entity struct {
 	visualFeedback  *VisualFeedbackComponent  // Cached for render system hot path (visual effects)
 	layer           *LayerComponent           // Cached for collision hot path (layer compatibility checks)
 	team            *TeamComponent            // Cached for AI system hot path (enemy detection)
-	particleEmitter *ParticleEmitterComponent // Cached for render system particle drawing hot path
-	dropShadow      *DropShadowComponent      // Cached for render system drop shadow hot path
+	particleEmitter  *ParticleEmitterComponent  // Cached for render system particle drawing hot path
+	dropShadow       *DropShadowComponent       // Cached for render system drop shadow hot path
+	weatherTint      *WeatherSpriteTintComponent // Cached for render system tint composition hot path
+	creatureGenreTint *CreatureGenreTintComponent // Cached for render system tint composition hot path
 }
 
 // NewEntity creates a new entity with the given ID.
@@ -87,6 +89,10 @@ func (e *Entity) updateComponentCache(c Component) {
 		e.cacheParticleEmitter(c)
 	case "drop_shadow":
 		e.cacheDropShadow(c)
+	case "weather_sprite_tint":
+		e.cacheWeatherSpriteTint(c)
+	case "creature_genre_tint":
+		e.cacheCreatureGenreTint(c)
 	}
 }
 
@@ -195,6 +201,20 @@ func (e *Entity) cacheParticleEmitter(c Component) {
 	}
 }
 
+// cacheWeatherSpriteTint updates the weather sprite tint component cache.
+func (e *Entity) cacheWeatherSpriteTint(c Component) {
+	if wt, ok := c.(*WeatherSpriteTintComponent); ok {
+		e.weatherTint = wt
+	}
+}
+
+// cacheCreatureGenreTint updates the creature genre tint component cache.
+func (e *Entity) cacheCreatureGenreTint(c Component) {
+	if ct, ok := c.(*CreatureGenreTintComponent); ok {
+		e.creatureGenreTint = ct
+	}
+}
+
 // AddComponentWithLogger adds a component to this entity with logging.
 func (e *Entity) AddComponentWithLogger(c Component, logger *logrus.Entry) {
 	e.Components[c.Type()] = c
@@ -250,6 +270,10 @@ func (e *Entity) RemoveComponent(componentType string) {
 		e.particleEmitter = nil
 	case "drop_shadow":
 		e.dropShadow = nil
+	case "weather_sprite_tint":
+		e.weatherTint = nil
+	case "creature_genre_tint":
+		e.creatureGenreTint = nil
 	}
 }
 
@@ -374,6 +398,18 @@ func (e *Entity) cacheDropShadow(c Component) {
 // Uses cached pointer for zero-overhead access in render hot path.
 func (e *Entity) GetDropShadow() *DropShadowComponent {
 	return e.dropShadow
+}
+
+// GetWeatherSpriteTint retrieves the WeatherSpriteTintComponent if present.
+// Uses cached pointer for zero-overhead access in render hot path (~93x faster than map lookup).
+func (e *Entity) GetWeatherSpriteTint() *WeatherSpriteTintComponent {
+	return e.weatherTint
+}
+
+// GetCreatureGenreTint retrieves the CreatureGenreTintComponent if present.
+// Uses cached pointer for zero-overhead access in render hot path (~93x faster than map lookup).
+func (e *Entity) GetCreatureGenreTint() *CreatureGenreTintComponent {
+	return e.creatureGenreTint
 }
 
 // World manages all entities and systems in the game.

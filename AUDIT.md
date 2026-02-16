@@ -346,11 +346,13 @@ The frame time tracker (`frame_time_tracker.go`) correctly identifies stuttering
 
 ### Priority 3 (Improves Frame Pacing)
 5. **[V2] Cache Weather/Genre Tint Component Getters**: Add `GetWeatherSpriteTint()` and `GetCreatureGenreTint()` cached getters like existing position/sprite getters
+   - ✅ **COMPLETED**: Added `weatherTint` and `creatureGenreTint` cached fields to Entity struct with `cacheWeatherSpriteTint()`/`cacheCreatureGenreTint()` methods, `GetWeatherSpriteTint()`/`GetCreatureGenreTint()` getters, and proper cache invalidation in `RemoveComponent()`. Updated `extractVisualFeedback()` in render_system.go to use cached getters instead of `GetComponent()` + type assertion.
    - Expected improvement: ~2ms reduction for tinted entities
    - Visual quality: More consistent frame times
    - Implementation complexity: Low
 
 6. **[V5] Track Particle Emitter Entities Separately**: Maintain separate list of entities with ParticleEmitter component
+   - ✅ **COMPLETED**: Added `particleEntityBuffer` pre-allocated buffer to `EbitenRenderSystem` and `filterParticleEntities()` method that builds a filtered list of particle emitter entities before passing to `drawParticles()`. This avoids iterating all entities in the particle draw loop.
    - Expected improvement: ~1ms reduction with many entities
    - Visual quality: Smoother particle-heavy scenes
    - Implementation complexity: Low
@@ -366,7 +368,7 @@ The frame time tracker (`frame_time_tracker.go`) correctly identifies stuttering
 ## RENDERING BEST PRACTICES VIOLATIONS
 
 - ☐ **Allocations in Draw() paths** - Minimal due to pre-allocated buffers (good)
-- ☑ **Synchronous texture generation during render** - V1, V3: Sprite cache misses
+- ~~☑ **Synchronous texture generation during render** - V1, V3: Sprite cache misses~~ ✅ Fixed via pre-generation and predictive warming
 - ☐ **Unsorted draw calls** - Batching groups by texture (good)
 - ☐ **Shader compilation in hot path** - V7: ~~Post-processing first use~~ ✅ Fixed via PrecompileShaders()
 - ☐ **Excessive state changes** - Minimal due to batching (good)

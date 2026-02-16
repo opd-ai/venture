@@ -29,9 +29,12 @@ const (
 
 // ChatSystem manages chat messages and channels with validation and rate limiting
 type ChatSystem struct {
-	world     *engine.World
+	// world is the ECS world used to look up sender entities and attach chat components
+	world *engine.World
+	// validator sanitizes and validates chat message content before delivery
 	validator *validation.ChatValidator
-	limiter   *validation.RateLimiter
+	// limiter enforces per-player message rate limits to prevent spam and DoS
+	limiter *validation.RateLimiter
 }
 
 // NewChatSystem creates a new chat system with validation and rate limiting
@@ -57,7 +60,7 @@ func (s *ChatSystem) SendMessage(senderID uint64, channel engine.ChatChannel, co
 			"channel":   channel,
 			"limit":     ChatRateLimit,
 		}).Warn("chat rate limit exceeded")
-		return fmt.Errorf("rate limit exceeded (maximum 10 messages per second)")
+		return fmt.Errorf("rate limit exceeded (maximum %d messages per second)", ChatRateLimit)
 	}
 
 	// Validate and sanitize message

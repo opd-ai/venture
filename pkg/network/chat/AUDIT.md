@@ -6,9 +6,9 @@
 The chat package provides network-layer chat functionality with validation and rate limiting. Overall health is good with comprehensive test coverage (estimated 95%+ based on 7 test functions covering all 4 exported methods and 4 benchmarks). The package is well-integrated into the client via system wrappers and uses proper structured logging. No critical issues found.
 
 ## Issues Found
-- [ ] low documentation — `ChatSystem` struct fields lack godoc comments (`system.go:31-35`)
-- [ ] low documentation — `generateMessageID` function is unexported but complex enough to warrant a comment explaining collision resistance (`system.go:130`)
-- [ ] low error handling — Rate limit error at `system.go:60` hard-codes the limit value "10" instead of using `ChatRateLimit` constant
+- [x] low documentation — `ChatSystem` struct fields lack godoc comments (`system.go:31-35`) — **Fixed 2026-02-16**: Added godoc comments to `world`, `validator`, and `limiter` fields
+- [x] low documentation — `generateMessageID` function is unexported but complex enough to warrant a comment explaining collision resistance (`system.go:130`) — **Fixed**: Comment already present at lines 131-132
+- [x] low error handling — Rate limit error at `system.go:60` hard-codes the limit value "10" instead of using `ChatRateLimit` constant — **Fixed 2026-02-16**: Now uses `fmt.Errorf("...%d...", ChatRateLimit)`
 
 ## Test Coverage
 95% (estimated; target: 65%)

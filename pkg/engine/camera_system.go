@@ -3,7 +3,11 @@
 // and viewport calculations for rendering.
 package engine
 
-import "math"
+import (
+	"math"
+
+	log "github.com/sirupsen/logrus"
+)
 
 // CameraComponent represents a camera that follows an entity.
 type CameraComponent struct {
@@ -56,6 +60,46 @@ func NewCameraComponent() *CameraComponent {
 		ShakeOffsetX:   0,
 		ShakeOffsetY:   0,
 	}
+}
+
+// SetBoundsFromTerrain computes and sets camera bounds so the viewport cannot
+// scroll past the terrain edges. terrainWidthPx and terrainHeightPx are the
+// terrain dimensions in pixels. screenWidth and screenHeight are the viewport
+// dimensions. When the terrain is smaller than the viewport (at the current
+// Zoom), the camera is centred on the terrain.
+func SetCameraBoundsFromTerrain(camera *CameraComponent, terrainWidthPx, terrainHeightPx float64, screenWidth, screenHeight int) {
+	halfViewW := float64(screenWidth) / (2 * camera.Zoom)
+	halfViewH := float64(screenHeight) / (2 * camera.Zoom)
+
+	camera.MinX = halfViewW
+	camera.MaxX = terrainWidthPx - halfViewW
+	camera.MinY = halfViewH
+	camera.MaxY = terrainHeightPx - halfViewH
+
+	// Edge case: terrain smaller than viewport – centre the camera.
+	if camera.MinX > camera.MaxX {
+		centre := terrainWidthPx / 2
+		camera.MinX = centre
+		camera.MaxX = centre
+	}
+	if camera.MinY > camera.MaxY {
+		centre := terrainHeightPx / 2
+		camera.MinY = centre
+		camera.MaxY = centre
+	}
+
+	log.WithFields(log.Fields{
+		"system_name":       "camera",
+		"min_x":             camera.MinX,
+		"max_x":             camera.MaxX,
+		"min_y":             camera.MinY,
+		"max_y":             camera.MaxY,
+		"terrain_width_px":  terrainWidthPx,
+		"terrain_height_px": terrainHeightPx,
+		"screen_width":      screenWidth,
+		"screen_height":     screenHeight,
+		"zoom":              camera.Zoom,
+	}).Debug("Camera bounds set from terrain")
 }
 
 // CameraSystem manages camera positioning and viewport.

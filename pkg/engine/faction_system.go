@@ -172,7 +172,7 @@ func (fs *FactionSystem) GetPlayerReputation(factionID string) int {
 	}
 
 	if comp, ok := playerEntity.GetComponent("faction"); ok {
-		fc := comp.(FactionComponent)
+		fc := comp.(*FactionComponent)
 		if fc.FactionID == factionID && fc.IsPlayerFaction {
 			return fc.Reputation
 		}

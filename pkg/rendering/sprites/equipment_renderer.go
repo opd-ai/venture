@@ -866,7 +866,12 @@ func (r *EquipmentRenderer) setPixel(img *ebiten.Image, x, y int, c color.RGBA) 
 	img.Set(x, y, c)
 }
 
-func (r *EquipmentRenderer) getPixel(img *ebiten.Image, x, y int) color.RGBA {
+func (r *EquipmentRenderer) getPixel(img *ebiten.Image, x, y int) (result color.RGBA) {
+	defer func() {
+		if r := recover(); r != nil {
+			result = color.RGBA{}
+		}
+	}()
 	c := img.At(x, y)
 	rr, gg, bb, aa := c.RGBA()
 	return color.RGBA{R: uint8(rr >> 8), G: uint8(gg >> 8), B: uint8(bb >> 8), A: uint8(aa >> 8)}

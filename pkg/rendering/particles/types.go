@@ -13,7 +13,7 @@ type ParticleType int
 
 const (
 	// ParticleSpark represents quick, bright particles for impacts
-	ParticleSpark ParticleType = iota
+	ParticleSpark ParticleType = iota + 1
 	// ParticleSmoke represents soft, fading smoke particles
 	ParticleSmoke
 	// ParticleMagic represents glowing magical particles

@@ -719,7 +719,7 @@ func renderWingCape(buf *image.RGBA, p BackAccessoryParams) {
 // directionOffsetX shifts accessory rendering opposite to facing direction
 // so the cape/cloak appears to trail behind the entity.
 func directionOffsetX(dir Direction, t float64, spriteW int) int {
-	trail := int(t * float64(spriteW) * 0.05)
+	trail := int(math.Ceil(t * float64(spriteW) * 0.05))
 	switch dir {
 	case DirLeft:
 		return trail

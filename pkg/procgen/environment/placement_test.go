@@ -302,7 +302,7 @@ func TestSelectDecorationPool(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.genre, func(t *testing.T) {
-			pool := placer.selectDecorationPool(tt.genre, nil)
+			pool := placer.selectDecorationPool(tt.genre)
 
 			hasExpected := false
 
@@ -316,6 +316,97 @@ func TestSelectDecorationPool(t *testing.T) {
 				t.Errorf("Genre %s pool should contain %v", tt.genre, tt.shouldHave)
 			}
 		})
+	}
+}
+
+func TestPlacementConfig_Validate(t *testing.T) {
+	tests := []struct {
+		name    string
+		config  PlacementConfig
+		wantErr bool
+	}{
+		{
+			name:    "valid config",
+			config:  DefaultPlacementConfig(),
+			wantErr: false,
+		},
+		{
+			name: "zero room width",
+			config: PlacementConfig{
+				RoomWidth: 0, RoomHeight: 10, Density: 0.5,
+				GenreID: "fantasy", MinSpacing: 2,
+			},
+			wantErr: true,
+		},
+		{
+			name: "room width too small",
+			config: PlacementConfig{
+				RoomWidth: 2, RoomHeight: 10, Density: 0.5,
+				GenreID: "fantasy", MinSpacing: 2,
+			},
+			wantErr: true,
+		},
+		{
+			name: "zero room height",
+			config: PlacementConfig{
+				RoomWidth: 10, RoomHeight: 0, Density: 0.5,
+				GenreID: "fantasy", MinSpacing: 2,
+			},
+			wantErr: true,
+		},
+		{
+			name: "negative density",
+			config: PlacementConfig{
+				RoomWidth: 10, RoomHeight: 10, Density: -0.1,
+				GenreID: "fantasy", MinSpacing: 2,
+			},
+			wantErr: true,
+		},
+		{
+			name: "density above 1",
+			config: PlacementConfig{
+				RoomWidth: 10, RoomHeight: 10, Density: 1.5,
+				GenreID: "fantasy", MinSpacing: 2,
+			},
+			wantErr: true,
+		},
+		{
+			name: "empty genre",
+			config: PlacementConfig{
+				RoomWidth: 10, RoomHeight: 10, Density: 0.5,
+				GenreID: "", MinSpacing: 2,
+			},
+			wantErr: true,
+		},
+		{
+			name: "negative min spacing",
+			config: PlacementConfig{
+				RoomWidth: 10, RoomHeight: 10, Density: 0.5,
+				GenreID: "fantasy", MinSpacing: -1,
+			},
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := tt.config.Validate()
+			if (err != nil) != tt.wantErr {
+				t.Errorf("PlacementConfig.Validate() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func TestPlacer_PlaceDecorations_InvalidConfig(t *testing.T) {
+	placer := NewPlacer()
+
+	_, err := placer.PlaceDecorations(PlacementConfig{
+		RoomWidth: 1, RoomHeight: 10, Density: 0.5,
+		GenreID: "fantasy", MinSpacing: 2,
+	})
+	if err == nil {
+		t.Error("Expected error for invalid config with small room width")
 	}
 }
 

@@ -1065,7 +1065,7 @@ func (g *Generator) drawWeb(img *image.RGBA, width, height int, base, accent col
 	// Draw radial threads
 	numRadial := 8
 	for i := 0; i < numRadial; i++ {
-		angle := float64(i) * 2.0 * 3.14159 / float64(numRadial)
+		angle := float64(i) * 2.0 * math.Pi / float64(numRadial)
 		endX := centerX + int(float64(width/2)*math.Cos(angle))
 		endY := centerY + int(float64(height/2)*math.Sin(angle))
 		g.drawLine(img, centerX, centerY, endX, endY, base)
@@ -1077,7 +1077,7 @@ func (g *Generator) drawWeb(img *image.RGBA, width, height int, base, accent col
 		radius := int(float64(min(width, height)) * float64(i) / float64(numSpirals*2))
 		steps := 32
 		for j := 0; j < steps; j++ {
-			angle := float64(j) * 2.0 * 3.14159 / float64(steps)
+			angle := float64(j) * 2.0 * math.Pi / float64(steps)
 			x := centerX + int(float64(radius)*math.Cos(angle))
 			y := centerY + int(float64(radius)*math.Sin(angle))
 			if x >= 0 && x < width && y >= 0 && y < height {
@@ -1176,13 +1176,6 @@ func abs(x int) int {
 		return -x
 	}
 	return x
-}
-
-func min(a, b int) int {
-	if a < b {
-		return a
-	}
-	return b
 }
 
 // logDebug logs a debug message if logger and level are configured.

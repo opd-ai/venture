@@ -2,6 +2,7 @@
 package environment
 
 import (
+	"fmt"
 	"math/rand"
 
 	"github.com/sirupsen/logrus"
@@ -130,8 +131,32 @@ func NewPlacerWithLogger(logger *logrus.Logger) *Placer {
 	}
 }
 
+// Validate checks if the placement configuration is valid.
+func (c PlacementConfig) Validate() error {
+	if c.RoomWidth < 3 {
+		return fmt.Errorf("room width must be at least 3, got %d", c.RoomWidth)
+	}
+	if c.RoomHeight < 3 {
+		return fmt.Errorf("room height must be at least 3, got %d", c.RoomHeight)
+	}
+	if c.Density < 0 || c.Density > 1 {
+		return fmt.Errorf("density must be between 0.0 and 1.0, got %f", c.Density)
+	}
+	if c.GenreID == "" {
+		return fmt.Errorf("genreID cannot be empty")
+	}
+	if c.MinSpacing < 0 {
+		return fmt.Errorf("min spacing must be non-negative, got %d", c.MinSpacing)
+	}
+	return nil
+}
+
 // PlaceDecorations generates and places decorations in a room.
 func (p *Placer) PlaceDecorations(config PlacementConfig) ([]*PlacedObject, error) {
+	if err := config.Validate(); err != nil {
+		return nil, fmt.Errorf("invalid placement config: %w", err)
+	}
+
 	p.logDebug("placing decorations", logrus.Fields{
 		"roomSize": config.RoomWidth * config.RoomHeight,
 		"density":  config.Density,
@@ -154,7 +179,7 @@ func (p *Placer) PlaceDecorations(config PlacementConfig) ([]*PlacedObject, erro
 	occupied := make(map[int]map[int]bool) // Track occupied positions
 
 	// Select decoration types for this room
-	decorationPool := p.selectDecorationPool(config.GenreID, rng)
+	decorationPool := p.selectDecorationPool(config.GenreID)
 
 	failureCount := 0
 	maxFailures := targetCount * 3 // Allow some failures before giving up
@@ -255,7 +280,7 @@ func (p *Placer) calculateDecorationCount(roomArea int, density float64, rng *ra
 }
 
 // selectDecorationPool returns suitable decoration types for a genre.
-func (p *Placer) selectDecorationPool(genreID string, rng *rand.Rand) []SubType {
+func (p *Placer) selectDecorationPool(genreID string) []SubType {
 	// Base decorations available in all genres
 	base := []SubType{
 		SubTypePlant, SubTypeStatue, SubTypePainting, SubTypeBanner,

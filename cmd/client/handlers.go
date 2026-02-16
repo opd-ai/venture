@@ -1041,19 +1041,25 @@ func initializeEnvironmentalSystems(game *engine.EbitenGame, sys *systemsContain
 	sys.criticalHitParticleSystem = engine.NewCriticalHitParticleSystem(game.World, *seed+3000)
 	sys.criticalHitParticleSystem.SetParticleSystem(sys.particleSystem)
 	sys.criticalHitParticleSystem.SetGenre(*genreID)
-	sys.combatSystem.SetCriticalHitCallback(sys.criticalHitParticleSystem.OnCriticalHit)
+	if sys.combatSystem != nil {
+		sys.combatSystem.SetCriticalHitCallback(sys.criticalHitParticleSystem.OnCriticalHit)
+	}
 
 	// LevelUpParticleSystem - visual feedback for level-ups
 	sys.levelUpParticleSystem = engine.NewLevelUpParticleSystem(game.World, *seed+4000)
 	sys.levelUpParticleSystem.SetParticleSystem(sys.particleSystem)
 	sys.levelUpParticleSystem.SetGenre(*genreID)
-	sys.progressionSystem.AddLevelUpCallback(sys.levelUpParticleSystem.OnLevelUp)
+	if sys.progressionSystem != nil {
+		sys.progressionSystem.AddLevelUpCallback(sys.levelUpParticleSystem.OnLevelUp)
+	}
 
 	// ItemPickupParticleSystem - visual feedback for item pickups
 	sys.itemPickupParticleSystem = engine.NewItemPickupParticleSystem(game.World, *seed+4500)
 	sys.itemPickupParticleSystem.SetParticleSystem(sys.particleSystem)
 	sys.itemPickupParticleSystem.SetGenre(*genreID)
-	sys.itemPickupSystem.SetPickupCallback(sys.itemPickupParticleSystem.OnItemPickup)
+	if sys.itemPickupSystem != nil {
+		sys.itemPickupSystem.SetPickupCallback(sys.itemPickupParticleSystem.OnItemPickup)
+	}
 
 	// SpellEffectParticleSystem - visual feedback for spell effects
 	sys.spellEffectParticleSystem = engine.NewSpellEffectParticleSystem(game.World, *seed+5500)
@@ -1069,13 +1075,17 @@ func initializeEnvironmentalSystems(game *engine.EbitenGame, sys *systemsContain
 	sys.damageResistanceParticleSystem = engine.NewDamageResistanceParticleSystem(game.World, *seed+5700)
 	sys.damageResistanceParticleSystem.SetParticleSystem(sys.particleSystem)
 	sys.damageResistanceParticleSystem.SetGenre(*genreID)
-	sys.combatSystem.SetDamageResistedCallback(sys.damageResistanceParticleSystem.OnDamageResisted)
+	if sys.combatSystem != nil {
+		sys.combatSystem.SetDamageResistedCallback(sys.damageResistanceParticleSystem.OnDamageResisted)
+	}
 
 	// ShieldAbsorbParticleSystem - visual feedback for shield absorption
 	sys.shieldAbsorbParticleSystem = engine.NewShieldAbsorbParticleSystem(game.World, *seed+5750)
 	sys.shieldAbsorbParticleSystem.SetParticleSystem(sys.particleSystem)
 	sys.shieldAbsorbParticleSystem.SetGenre(*genreID)
-	sys.combatSystem.SetShieldAbsorbCallback(sys.shieldAbsorbParticleSystem.OnShieldAbsorb)
+	if sys.combatSystem != nil {
+		sys.combatSystem.SetShieldAbsorbCallback(sys.shieldAbsorbParticleSystem.OnShieldAbsorb)
+	}
 
 	// ShieldRegenSystem - passive shield regeneration with visual feedback
 	// Connects ShieldComponent with ParticleSystem for genre-aware shield recovery particles
@@ -1180,14 +1190,18 @@ func initializeEnvironmentalSystems(game *engine.EbitenGame, sys *systemsContain
 	sys.lifestealSystem = engine.NewLifestealSystem(game.World, *seed+6950)
 	sys.lifestealSystem.SetParticleSystem(sys.particleSystem)
 	sys.lifestealSystem.SetGenre(*genreID)
-	sys.combatSystem.SetDamageCallback(sys.lifestealSystem.OnDamageDealt)
+	if sys.combatSystem != nil {
+		sys.combatSystem.SetDamageCallback(sys.lifestealSystem.OnDamageDealt)
+	}
 
 	// StatusEffectDamageParticleSystem - visual feedback for status effect damage ticks
 	// Connects StatusEffectSystem tick events with ParticleSystem for burn/poison/regen particles
 	sys.statusEffectDamageParticleSystem = engine.NewStatusEffectDamageParticleSystem(game.World, *seed+7050)
 	sys.statusEffectDamageParticleSystem.SetParticleSystem(sys.particleSystem)
 	sys.statusEffectDamageParticleSystem.SetGenre(*genreID)
-	sys.statusEffectSystem.SetTickCallback(sys.statusEffectDamageParticleSystem.OnStatusEffectTick)
+	if sys.statusEffectSystem != nil {
+		sys.statusEffectSystem.SetTickCallback(sys.statusEffectDamageParticleSystem.OnStatusEffectTick)
+	}
 
 	// FearFleeParticleSystem - visual feedback for feared entities fleeing
 	// Connects StatusEffectAISystem flee behavior with ParticleSystem for genre-aware fear trails
@@ -2264,7 +2278,9 @@ func registerNonCriticalSystems(game *engine.EbitenGame, sys *systemsContainer) 
 	// Reads attacker DamageType and tints the target sprite with per-element colors
 	sys.damageTypeColorFlashSystem = engine.NewDamageTypeColorFlashSystem(game.World, *seed+10250)
 	sys.damageTypeColorFlashSystem.SetGenre(*genreID)
-	sys.combatSystem.AddDamageCallback(sys.damageTypeColorFlashSystem.OnDamageDealt)
+	if sys.combatSystem != nil {
+		sys.combatSystem.AddDamageCallback(sys.damageTypeColorFlashSystem.OnDamageDealt)
+	}
 	game.World.AddSystem(sys.damageTypeColorFlashSystem)
 
 	// CompanionBondTetherSystem: genre-aware visual tether between companion and owner
@@ -2278,7 +2294,9 @@ func registerNonCriticalSystems(game *engine.EbitenGame, sys *systemsContainer) 
 	sys.criticalHitScreenShakeSystem = engine.NewCriticalHitScreenShakeSystem(game.World, *seed+10350)
 	sys.criticalHitScreenShakeSystem.SetCameraSystem(game.CameraSystem)
 	sys.criticalHitScreenShakeSystem.SetGenre(*genreID)
-	sys.combatSystem.AddCriticalHitCallback(sys.criticalHitScreenShakeSystem.OnCriticalHit)
+	if sys.combatSystem != nil {
+		sys.combatSystem.AddCriticalHitCallback(sys.criticalHitScreenShakeSystem.OnCriticalHit)
+	}
 	game.World.AddSystem(sys.criticalHitScreenShakeSystem)
 
 	// EntitySpawnMaterializeSystem: genre-aware visual fade-in when entities spawn

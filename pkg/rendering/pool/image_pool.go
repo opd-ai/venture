@@ -63,8 +63,16 @@ func NewImagePool() *ImagePool {
 // GetImage retrieves an image from the appropriate pool.
 // Returns a pooled image for standard sizes (28, 32, 64, 128),
 // or creates a new image for non-standard sizes.
+// Width and height must be positive; values <= 0 default to 1.
 func (p *ImagePool) GetImage(width, height int) *ebiten.Image {
 	atomic.AddUint64(&p.gets, 1)
+
+	if width <= 0 {
+		width = 1
+	}
+	if height <= 0 {
+		height = 1
+	}
 
 	// Use pooled images for square sprites of common sizes
 	if width == height {

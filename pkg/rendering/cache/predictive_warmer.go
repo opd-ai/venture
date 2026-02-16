@@ -155,6 +155,12 @@ func (w *PredictiveCacheWarmer) PredictNext() []CacheKey {
 	w.mu.RLock()
 	defer w.mu.RUnlock()
 
+	return w.predictNextLocked()
+}
+
+// predictNextLocked is the lock-free implementation of PredictNext.
+// Caller must hold at least a read lock on w.mu.
+func (w *PredictiveCacheWarmer) predictNextLocked() []CacheKey {
 	if len(w.accessLog) == 0 {
 		return nil
 	}
@@ -225,7 +231,7 @@ func (w *PredictiveCacheWarmer) Stats() WarmerStats {
 		AccessLogSize:   len(w.accessLog),
 		PatternCount:    len(w.patterns),
 		HotSpriteCount:  hotCount,
-		PredictionCount: len(w.PredictNext()),
+		PredictionCount: len(w.predictNextLocked()),
 		WindowHitRate:   hitRate,
 		WindowMissRate:  missRate,
 	}

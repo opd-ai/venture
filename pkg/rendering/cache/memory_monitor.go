@@ -25,8 +25,9 @@ type MemoryMonitor struct {
 	stats MemoryStats
 
 	// Stop channel
-	stopCh chan struct{}
-	doneCh chan struct{}
+	stopCh   chan struct{}
+	doneCh   chan struct{}
+	stopOnce sync.Once
 }
 
 // MemoryStats tracks memory monitoring metrics.
@@ -53,10 +54,14 @@ func NewMemoryMonitor(cache *SpriteCache) *MemoryMonitor {
 }
 
 // SetLimits configures memory limits in bytes.
+// If softLimit > hardLimit, softLimit is clamped to hardLimit.
 func (m *MemoryMonitor) SetLimits(softLimit, hardLimit int64) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
+	if softLimit > hardLimit {
+		softLimit = hardLimit
+	}
 	m.softLimit = softLimit
 	m.hardLimit = hardLimit
 }
@@ -74,10 +79,12 @@ func (m *MemoryMonitor) Start() {
 	go m.monitor()
 }
 
-// Stop terminates background monitoring.
+// Stop terminates background monitoring. Safe to call multiple times.
 func (m *MemoryMonitor) Stop() {
-	close(m.stopCh)
-	<-m.doneCh
+	m.stopOnce.Do(func() {
+		close(m.stopCh)
+		<-m.doneCh
+	})
 }
 
 // monitor runs periodic memory checks.

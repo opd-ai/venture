@@ -111,7 +111,7 @@ func TestReputationDefenseBonusSystem_GetDefenseMultiplier_PlayerFaction(t *test
 	sys := NewReputationDefenseBonusSystem(world, 12345)
 
 	attacker := NewEntity(0)
-	attacker.AddComponent(FactionComponent{
+	attacker.AddComponent(&FactionComponent{
 		FactionID:       "player_allies",
 		Reputation:      100,
 		IsPlayerFaction: true,
@@ -166,7 +166,7 @@ func TestReputationDefenseBonusSystem_GetDefenseMultiplier_WithBonus(t *testing.
 	world.AddEntity(player)
 
 	bandit := NewEntity(0)
-	bandit.AddComponent(FactionComponent{
+	bandit.AddComponent(&FactionComponent{
 		FactionID:       "bandits",
 		Reputation:      0,
 		IsPlayerFaction: false,
@@ -247,7 +247,7 @@ func TestReputationDefenseBonusSystem_OnDefend_WithBonus(t *testing.T) {
 	world.AddEntity(defender)
 
 	bandit := NewEntity(0)
-	bandit.AddComponent(FactionComponent{
+	bandit.AddComponent(&FactionComponent{
 		FactionID:       "bandits",
 		Reputation:      0,
 		IsPlayerFaction: false,
@@ -410,7 +410,7 @@ func BenchmarkReputationDefenseBonusSystem_GetDefenseMultiplier(b *testing.B) {
 	world.AddEntity(player)
 
 	attacker := NewEntity(0)
-	attacker.AddComponent(FactionComponent{FactionID: "bandits"})
+	attacker.AddComponent(&FactionComponent{FactionID: "bandits"})
 	world.AddEntity(attacker)
 
 	sys.Update([]*Entity{player}, 0.016)

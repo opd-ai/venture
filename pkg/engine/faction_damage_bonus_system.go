@@ -177,7 +177,7 @@ func (s *FactionDamageBonusSystem) GetDamageMultiplier(attackerID uint64, target
 		return 1.0
 	}
 
-	fc := factionComp.(FactionComponent)
+	fc := factionComp.(*FactionComponent)
 	if fc.IsPlayerFaction {
 		return 1.0 // Don't boost damage against player-aligned entities
 	}
@@ -212,7 +212,7 @@ func (s *FactionDamageBonusSystem) OnAttack(attacker, target *Entity, baseDamage
 
 	if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
 		factionComp, _ := target.GetComponent("faction")
-		fc := factionComp.(FactionComponent)
+		fc := factionComp.(*FactionComponent)
 		s.logger.WithFields(logrus.Fields{
 			"attackerID":    attacker.ID,
 			"targetID":      target.ID,

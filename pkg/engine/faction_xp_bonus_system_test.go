@@ -60,7 +60,7 @@ func TestFactionXPBonusSystem_OnEnemyKilled_NoFactionSystem(t *testing.T) {
 	killer.AddComponent(NewStubInput())
 
 	victim := world.CreateEntity()
-	victim.AddComponent(FactionComponent{FactionID: "bandits"})
+	victim.AddComponent(&FactionComponent{FactionID: "bandits"})
 
 	// Should not panic without faction system
 	system.OnEnemyKilled(killer, victim, 100)
@@ -79,7 +79,7 @@ func TestFactionXPBonusSystem_OnEnemyKilled_NonPlayer(t *testing.T) {
 	// Killer without input component (NPC)
 	killer := world.CreateEntity()
 	victim := world.CreateEntity()
-	victim.AddComponent(FactionComponent{FactionID: "bandits"})
+	victim.AddComponent(&FactionComponent{FactionID: "bandits"})
 
 	system.OnEnemyKilled(killer, victim, 100)
 
@@ -106,7 +106,7 @@ func TestFactionXPBonusSystem_OnEnemyKilled_WithAlliedFaction(t *testing.T) {
 	// Create player with good reputation with merchant guild
 	player := world.CreateEntity()
 	player.AddComponent(NewStubInput())
-	player.AddComponent(FactionComponent{
+	player.AddComponent(&FactionComponent{
 		FactionID:       "merchant_guild",
 		Reputation:      75, // Friendly
 		IsPlayerFaction: true,
@@ -114,7 +114,7 @@ func TestFactionXPBonusSystem_OnEnemyKilled_WithAlliedFaction(t *testing.T) {
 
 	// Create bandit victim
 	victim := world.CreateEntity()
-	victim.AddComponent(FactionComponent{
+	victim.AddComponent(&FactionComponent{
 		FactionID:       "bandits",
 		IsPlayerFaction: false,
 	})
@@ -144,7 +144,7 @@ func TestFactionXPBonusSystem_OnEnemyKilled_HostileFaction(t *testing.T) {
 	// Player is hostile with guards
 	player := world.CreateEntity()
 	player.AddComponent(NewStubInput())
-	player.AddComponent(FactionComponent{
+	player.AddComponent(&FactionComponent{
 		FactionID:       "guards",
 		Reputation:      -60, // Hostile
 		IsPlayerFaction: true,
@@ -152,7 +152,7 @@ func TestFactionXPBonusSystem_OnEnemyKilled_HostileFaction(t *testing.T) {
 
 	// Kill a bandit
 	victim := world.CreateEntity()
-	victim.AddComponent(FactionComponent{
+	victim.AddComponent(&FactionComponent{
 		FactionID:       "bandits",
 		IsPlayerFaction: false,
 	})
@@ -267,7 +267,7 @@ func TestFactionXPBonusSystem_MultipleFactions(t *testing.T) {
 
 	// Kill a bandit
 	victim := world.CreateEntity()
-	victim.AddComponent(FactionComponent{
+	victim.AddComponent(&FactionComponent{
 		FactionID:       "bandits",
 		IsPlayerFaction: false,
 	})
@@ -315,14 +315,14 @@ func BenchmarkFactionXPBonusSystem_OnEnemyKilled(b *testing.B) {
 
 	player := world.CreateEntity()
 	player.AddComponent(NewStubInput())
-	player.AddComponent(FactionComponent{
+	player.AddComponent(&FactionComponent{
 		FactionID:       "merchant_guild",
 		Reputation:      75,
 		IsPlayerFaction: true,
 	})
 
 	victim := world.CreateEntity()
-	victim.AddComponent(FactionComponent{
+	victim.AddComponent(&FactionComponent{
 		FactionID:       "bandits",
 		IsPlayerFaction: false,
 	})

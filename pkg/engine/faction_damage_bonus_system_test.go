@@ -112,7 +112,7 @@ func TestFactionDamageBonusSystem_GetDamageMultiplier_PlayerFaction(t *testing.T
 	sys := NewFactionDamageBonusSystem(world, 12345)
 
 	target := NewEntity(0)
-	target.AddComponent(FactionComponent{
+	target.AddComponent(&FactionComponent{
 		FactionID:       "player_allies",
 		Reputation:      100,
 		IsPlayerFaction: true,
@@ -177,7 +177,7 @@ func TestFactionDamageBonusSystem_GetDamageMultiplier_WithBonus(t *testing.T) {
 
 	// Create bandit target
 	bandit := NewEntity(0)
-	bandit.AddComponent(FactionComponent{
+	bandit.AddComponent(&FactionComponent{
 		FactionID:       "bandits",
 		Reputation:      0,
 		IsPlayerFaction: false,
@@ -263,7 +263,7 @@ func TestFactionDamageBonusSystem_OnAttack_WithBonus(t *testing.T) {
 	world.AddEntity(player)
 
 	bandit := NewEntity(0)
-	bandit.AddComponent(FactionComponent{
+	bandit.AddComponent(&FactionComponent{
 		FactionID:       "bandits",
 		Reputation:      0,
 		IsPlayerFaction: false,
@@ -424,7 +424,7 @@ func BenchmarkFactionDamageBonusSystem_GetDamageMultiplier(b *testing.B) {
 	world.AddEntity(player)
 
 	target := NewEntity(0)
-	target.AddComponent(FactionComponent{FactionID: "bandits"})
+	target.AddComponent(&FactionComponent{FactionID: "bandits"})
 	world.AddEntity(target)
 
 	sys.Update([]*Entity{player}, 0.016)

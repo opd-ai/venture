@@ -91,9 +91,9 @@ func (fs *FactionSystem) applyReputationChange(change ReputationChange) {
 		// Player has faction components, find the right one
 		// Note: In the ECS, we'll need to handle multiple faction components
 		// For now, we assume one component per faction via a different approach
-		fc := comp.(FactionComponent)
+		fc := comp.(*FactionComponent)
 		if fc.FactionID == change.FactionID && fc.IsPlayerFaction {
-			factionComp = &fc
+			factionComp = fc
 		}
 	}
 
@@ -204,7 +204,7 @@ func (fs *FactionSystem) ShouldAttackPlayer(factionID string) bool {
 func (fs *FactionSystem) UpdateNPCHostility(entity *Entity) {
 	// Get NPC's faction
 	if comp, ok := entity.GetComponent("faction"); ok {
-		fc := comp.(FactionComponent)
+		fc := comp.(*FactionComponent)
 		if !fc.IsPlayerFaction {
 			// This is an NPC faction member
 			if fs.ShouldAttackPlayer(fc.FactionID) {
@@ -229,7 +229,7 @@ func (fs *FactionSystem) ProcessKillReputation(killerEntity, victimEntity *Entit
 		return // Victim has no faction
 	}
 
-	victimFaction := comp.(FactionComponent)
+	victimFaction := comp.(*FactionComponent)
 	if victimFaction.IsPlayerFaction {
 		return // Don't process if victim is player
 	}

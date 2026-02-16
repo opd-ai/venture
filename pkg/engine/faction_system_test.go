@@ -277,7 +277,7 @@ func TestFactionSystem_ProcessKillReputation_PlayerVictim(t *testing.T) {
 
 	victim := world.CreateEntity()
 	victim.AddComponent(&EbitenInput{})
-	victim.AddComponent(FactionComponent{
+	victim.AddComponent(&FactionComponent{
 		FactionID:       "test_faction",
 		IsPlayerFaction: true,
 	})
@@ -308,7 +308,7 @@ func TestFactionSystem_ProcessKillReputation_PlayerKillsMember(t *testing.T) {
 	killer.AddComponent(&EbitenInput{})
 
 	victim := world.CreateEntity()
-	victim.AddComponent(FactionComponent{
+	victim.AddComponent(&FactionComponent{
 		FactionID:       "test_faction",
 		IsPlayerFaction: false,
 	})
@@ -357,7 +357,7 @@ func TestFactionSystem_ProcessKillReputation_EnemyFaction(t *testing.T) {
 	killer.AddComponent(&EbitenInput{})
 
 	victim := world.CreateEntity()
-	victim.AddComponent(FactionComponent{
+	victim.AddComponent(&FactionComponent{
 		FactionID:       "faction2",
 		IsPlayerFaction: false,
 	})

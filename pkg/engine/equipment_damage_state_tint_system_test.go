@@ -127,9 +127,10 @@ func TestEquipmentDamageStateTintSystemWorn(t *testing.T) {
 	entity := NewEntity(1)
 	equipComp := NewEquipmentComponent()
 	armor := &item.Item{
-		ID:   "armor-1",
-		Seed: 200,
-		Type: item.TypeArmor,
+		ID:        "armor-1",
+		Seed:      200,
+		Type:      item.TypeArmor,
+		ArmorType: item.ArmorChest,
 		Stats: item.Stats{
 			Durability:    60,
 			DurabilityMax: 100,
@@ -212,7 +213,7 @@ func TestEquipmentDamageStateTintSystemMultipleItems(t *testing.T) {
 		Stats: item.Stats{Durability: 100, DurabilityMax: 100},
 	}
 	damagedArmor := &item.Item{
-		ID: "armor-d", Seed: 200, Type: item.TypeArmor,
+		ID: "armor-d", Seed: 200, Type: item.TypeArmor, ArmorType: item.ArmorChest,
 		Stats: item.Stats{Durability: 30, DurabilityMax: 100},
 	}
 	equipComp.Equip(pristineSword, SlotMainHand)

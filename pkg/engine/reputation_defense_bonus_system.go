@@ -170,7 +170,7 @@ func (s *ReputationDefenseBonusSystem) GetDefenseMultiplier(defenderID uint64, a
 		return 1.0
 	}
 
-	fc := factionComp.(FactionComponent)
+	fc := factionComp.(*FactionComponent)
 	if fc.IsPlayerFaction {
 		return 1.0
 	}
@@ -205,7 +205,7 @@ func (s *ReputationDefenseBonusSystem) OnDefend(defender, attacker *Entity, inco
 
 	if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
 		factionComp, _ := attacker.GetComponent("faction")
-		fc := factionComp.(FactionComponent)
+		fc := factionComp.(*FactionComponent)
 		s.logger.WithFields(logrus.Fields{
 			"defenderID":      defender.ID,
 			"attackerID":      attacker.ID,

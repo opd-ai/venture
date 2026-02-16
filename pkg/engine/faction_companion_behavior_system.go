@@ -217,6 +217,11 @@ func (s *FactionCompanionBehaviorSystem) findPriorityTarget(pos *PositionCompone
 			continue
 		}
 
+		// High loyalty companions also skip neutral faction members
+		if loyalty >= 80 && playerRep >= 1 {
+			continue
+		}
+
 		if priority > bestPriority {
 			bestPriority = priority
 			bestTarget = entity
@@ -247,7 +252,7 @@ func (s *FactionCompanionBehaviorSystem) calculateTargetPriority(reputation int,
 	}
 
 	// Distance bonus: closer enemies have higher priority
-	distBonus := int(10000 / (distSq + 100))
+	distBonus := int(1000 / (distSq + 100))
 
 	// Genre-specific modifiers
 	genreBonus := 0

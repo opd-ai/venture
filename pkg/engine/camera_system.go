@@ -25,6 +25,10 @@ type CameraComponent struct {
 	// recalculated when the screen is resized (e.g. orientation change).
 	TerrainWidthPx, TerrainHeightPx float64
 
+	// BoundsZoom records the zoom level used when bounds were last calculated.
+	// When Zoom differs from BoundsZoom, bounds are recalculated automatically.
+	BoundsZoom float64
+
 	// Smoothing factor for camera movement (0.0 = instant, 1.0 = very smooth)
 	Smoothing float64
 
@@ -95,6 +99,9 @@ func SetCameraBoundsFromTerrain(camera *CameraComponent, terrainWidthPx, terrain
 	camera.MaxX = terrainWidthPx - halfViewW
 	camera.MinY = halfViewH
 	camera.MaxY = terrainHeightPx - halfViewH
+
+	// Record the zoom level these bounds were calculated for.
+	camera.BoundsZoom = camera.Zoom
 
 	// Edge case: terrain smaller than viewport – centre the camera.
 	if camera.MinX > camera.MaxX {
@@ -233,7 +240,16 @@ func (s *CameraSystem) applyCameraSmoothing(camera *CameraComponent, targetX, ta
 }
 
 // applyCameraBounds clamps camera position to configured bounds.
+// If the zoom level has changed since bounds were last calculated,
+// the bounds are recalculated first so the viewport stays clamped.
+// PrevX/PrevY are also clamped to prevent interpolation overshoot.
 func (s *CameraSystem) applyCameraBounds(camera *CameraComponent) {
+	// Recalculate bounds when zoom has changed since last calculation.
+	if camera.TerrainWidthPx > 0 && camera.TerrainHeightPx > 0 &&
+		camera.BoundsZoom > 0 && camera.Zoom != camera.BoundsZoom {
+		SetCameraBoundsFromTerrain(camera, camera.TerrainWidthPx, camera.TerrainHeightPx, s.ScreenWidth, s.ScreenHeight)
+	}
+
 	if camera.X < camera.MinX {
 		camera.X = camera.MinX
 	}
@@ -245,6 +261,21 @@ func (s *CameraSystem) applyCameraBounds(camera *CameraComponent) {
 	}
 	if camera.Y > camera.MaxY {
 		camera.Y = camera.MaxY
+	}
+
+	// Clamp PrevX/PrevY so render interpolation between PrevX→X
+	// never produces a camera position outside the valid bounds.
+	if camera.PrevX < camera.MinX {
+		camera.PrevX = camera.MinX
+	}
+	if camera.PrevX > camera.MaxX {
+		camera.PrevX = camera.MaxX
+	}
+	if camera.PrevY < camera.MinY {
+		camera.PrevY = camera.MinY
+	}
+	if camera.PrevY > camera.MaxY {
+		camera.PrevY = camera.MaxY
 	}
 }
 
@@ -385,6 +416,21 @@ func (s *CameraSystem) WorldToScreenInterpolated(worldX, worldY, alpha float64) 
 	// Interpolate camera position between previous and current tick
 	camX := camera.PrevX + (camera.X-camera.PrevX)*alpha
 	camY := camera.PrevY + (camera.Y-camera.PrevY)*alpha
+
+	// Clamp interpolated position to bounds so the viewport never
+	// shows out-of-bounds void during render interpolation.
+	if camX < camera.MinX {
+		camX = camera.MinX
+	}
+	if camX > camera.MaxX {
+		camX = camera.MaxX
+	}
+	if camY < camera.MinY {
+		camY = camera.MinY
+	}
+	if camY > camera.MaxY {
+		camY = camera.MaxY
+	}
 
 	// Apply camera transform with interpolated position
 	screenX = (worldX - camX) * camera.Zoom

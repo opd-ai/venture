@@ -829,3 +829,462 @@ func TestCameraSystem_RecalculateBoundsNoTerrainDims(t *testing.T) {
 		t.Errorf("bounds changed without terrain dimensions: MinX was %v, now %v", origMinX, cam.MinX)
 	}
 }
+
+// TestCameraSystem_CornerClamping verifies that when the player is at any map
+// corner the camera clamps so zero void pixels are visible.
+func TestCameraSystem_CornerClamping(t *testing.T) {
+	tests := []struct {
+		name     string
+		zoom     float64
+		terrainW float64
+		terrainH float64
+		screenW  int
+		screenH  int
+		// Player position at a corner
+		playerX float64
+		playerY float64
+		// Expected screen coordinate of the terrain corner closest to the player
+		cornerWorldX float64
+		cornerWorldY float64
+		wantScreenX  float64
+		wantScreenY  float64
+	}{
+		// All 4 corners × zoom 0.5
+		{
+			name: "top-left corner zoom 0.5",
+			zoom: 0.5, terrainW: 2560, terrainH: 1600, screenW: 800, screenH: 600,
+			playerX: 0, playerY: 0,
+			cornerWorldX: 0, cornerWorldY: 0,
+			wantScreenX: 0, wantScreenY: 0,
+		},
+		{
+			name: "top-right corner zoom 0.5",
+			zoom: 0.5, terrainW: 2560, terrainH: 1600, screenW: 800, screenH: 600,
+			playerX: 2560, playerY: 0,
+			cornerWorldX: 2560, cornerWorldY: 0,
+			wantScreenX: 800, wantScreenY: 0,
+		},
+		{
+			name: "bottom-left corner zoom 0.5",
+			zoom: 0.5, terrainW: 2560, terrainH: 1600, screenW: 800, screenH: 600,
+			playerX: 0, playerY: 1600,
+			cornerWorldX: 0, cornerWorldY: 1600,
+			wantScreenX: 0, wantScreenY: 600,
+		},
+		{
+			name: "bottom-right corner zoom 0.5",
+			zoom: 0.5, terrainW: 2560, terrainH: 1600, screenW: 800, screenH: 600,
+			playerX: 2560, playerY: 1600,
+			cornerWorldX: 2560, cornerWorldY: 1600,
+			wantScreenX: 800, wantScreenY: 600,
+		},
+		// All 4 corners × zoom 1.0
+		{
+			name: "top-left corner zoom 1.0",
+			zoom: 1.0, terrainW: 2560, terrainH: 1600, screenW: 800, screenH: 600,
+			playerX: 0, playerY: 0,
+			cornerWorldX: 0, cornerWorldY: 0,
+			wantScreenX: 0, wantScreenY: 0,
+		},
+		{
+			name: "top-right corner zoom 1.0",
+			zoom: 1.0, terrainW: 2560, terrainH: 1600, screenW: 800, screenH: 600,
+			playerX: 2560, playerY: 0,
+			cornerWorldX: 2560, cornerWorldY: 0,
+			wantScreenX: 800, wantScreenY: 0,
+		},
+		{
+			name: "bottom-left corner zoom 1.0",
+			zoom: 1.0, terrainW: 2560, terrainH: 1600, screenW: 800, screenH: 600,
+			playerX: 0, playerY: 1600,
+			cornerWorldX: 0, cornerWorldY: 1600,
+			wantScreenX: 0, wantScreenY: 600,
+		},
+		{
+			name: "bottom-right corner zoom 1.0",
+			zoom: 1.0, terrainW: 2560, terrainH: 1600, screenW: 800, screenH: 600,
+			playerX: 2560, playerY: 1600,
+			cornerWorldX: 2560, cornerWorldY: 1600,
+			wantScreenX: 800, wantScreenY: 600,
+		},
+		// All 4 corners × zoom 2.0
+		{
+			name: "top-left corner zoom 2.0",
+			zoom: 2.0, terrainW: 2560, terrainH: 1600, screenW: 800, screenH: 600,
+			playerX: 0, playerY: 0,
+			cornerWorldX: 0, cornerWorldY: 0,
+			wantScreenX: 0, wantScreenY: 0,
+		},
+		{
+			name: "top-right corner zoom 2.0",
+			zoom: 2.0, terrainW: 2560, terrainH: 1600, screenW: 800, screenH: 600,
+			playerX: 2560, playerY: 0,
+			cornerWorldX: 2560, cornerWorldY: 0,
+			wantScreenX: 800, wantScreenY: 0,
+		},
+		{
+			name: "bottom-left corner zoom 2.0",
+			zoom: 2.0, terrainW: 2560, terrainH: 1600, screenW: 800, screenH: 600,
+			playerX: 0, playerY: 1600,
+			cornerWorldX: 0, cornerWorldY: 1600,
+			wantScreenX: 0, wantScreenY: 600,
+		},
+		{
+			name: "bottom-right corner zoom 2.0",
+			zoom: 2.0, terrainW: 2560, terrainH: 1600, screenW: 800, screenH: 600,
+			playerX: 2560, playerY: 1600,
+			cornerWorldX: 2560, cornerWorldY: 1600,
+			wantScreenX: 800, wantScreenY: 600,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			sys := NewCameraSystem(tt.screenW, tt.screenH)
+			entity := NewEntity(1)
+			cam := NewCameraComponent()
+			cam.Zoom = tt.zoom
+			cam.Smoothing = 0 // instant follow
+			entity.AddComponent(cam)
+			entity.AddComponent(&PositionComponent{X: tt.playerX, Y: tt.playerY})
+			sys.SetActiveCamera(entity)
+
+			SetCameraBoundsFromTerrain(cam, tt.terrainW, tt.terrainH, tt.screenW, tt.screenH)
+
+			// Run one update to position the camera
+			sys.Update([]*Entity{entity}, 1.0/60.0)
+
+			sx, sy := sys.WorldToScreen(tt.cornerWorldX, tt.cornerWorldY)
+			if math.Abs(sx-tt.wantScreenX) > 0.5 {
+				t.Errorf("WorldToScreen X for corner (%v,%v) = %v, want %v",
+					tt.cornerWorldX, tt.cornerWorldY, sx, tt.wantScreenX)
+			}
+			if math.Abs(sy-tt.wantScreenY) > 0.5 {
+				t.Errorf("WorldToScreen Y for corner (%v,%v) = %v, want %v",
+					tt.cornerWorldX, tt.cornerWorldY, sy, tt.wantScreenY)
+			}
+		})
+	}
+}
+
+// TestCameraSystem_EdgeClamping verifies that when the player is along a single
+// edge, that edge aligns flush with the corresponding screen edge.
+func TestCameraSystem_EdgeClamping(t *testing.T) {
+	tests := []struct {
+		name       string
+		zoom       float64
+		playerX    float64
+		playerY    float64
+		probeX     float64 // world X to probe
+		probeY     float64 // world Y to probe
+		wantEdge   string  // which screen edge should align
+		wantScreen float64 // expected screen coordinate on that axis
+	}{
+		{"left edge zoom 1.0", 1.0, 0, 800, 0, 800, "left", 0},
+		{"right edge zoom 1.0", 1.0, 2560, 800, 2560, 800, "right", 800},
+		{"top edge zoom 1.0", 1.0, 1280, 0, 1280, 0, "top", 0},
+		{"bottom edge zoom 1.0", 1.0, 1280, 1600, 1280, 1600, "bottom", 600},
+		{"left edge zoom 2.0", 2.0, 0, 800, 0, 800, "left", 0},
+		{"right edge zoom 0.5", 0.5, 2560, 800, 2560, 800, "right", 800},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			sys := NewCameraSystem(800, 600)
+			entity := NewEntity(1)
+			cam := NewCameraComponent()
+			cam.Zoom = tt.zoom
+			cam.Smoothing = 0
+			entity.AddComponent(cam)
+			entity.AddComponent(&PositionComponent{X: tt.playerX, Y: tt.playerY})
+			sys.SetActiveCamera(entity)
+
+			SetCameraBoundsFromTerrain(cam, 2560, 1600, 800, 600)
+			sys.Update([]*Entity{entity}, 1.0/60.0)
+
+			sx, sy := sys.WorldToScreen(tt.probeX, tt.probeY)
+
+			switch tt.wantEdge {
+			case "left", "right":
+				if math.Abs(sx-tt.wantScreen) > 0.5 {
+					t.Errorf("%s: screenX = %v, want %v", tt.wantEdge, sx, tt.wantScreen)
+				}
+			case "top", "bottom":
+				if math.Abs(sy-tt.wantScreen) > 0.5 {
+					t.Errorf("%s: screenY = %v, want %v", tt.wantEdge, sy, tt.wantScreen)
+				}
+			}
+		})
+	}
+}
+
+// TestCameraSystem_ZoomChangedRecalculatesBounds verifies that camera bounds
+// are automatically recalculated when the zoom level changes.
+func TestCameraSystem_ZoomChangedRecalculatesBounds(t *testing.T) {
+	tests := []struct {
+		name       string
+		initialZ   float64
+		newZ       float64
+		terrainW   float64
+		terrainH   float64
+		screenW    int
+		screenH    int
+		wantMinX   float64
+		wantMaxX   float64
+	}{
+		{
+			name: "zoom in from 1.0 to 2.0",
+			initialZ: 1.0, newZ: 2.0,
+			terrainW: 2560, terrainH: 1600, screenW: 800, screenH: 600,
+			wantMinX: 200, wantMaxX: 2360,
+		},
+		{
+			name: "zoom out from 1.0 to 0.5",
+			initialZ: 1.0, newZ: 0.5,
+			terrainW: 2560, terrainH: 1600, screenW: 800, screenH: 600,
+			wantMinX: 800, wantMaxX: 1760,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			sys := NewCameraSystem(tt.screenW, tt.screenH)
+			entity := NewEntity(1)
+			cam := NewCameraComponent()
+			cam.Zoom = tt.initialZ
+			cam.Smoothing = 0
+			entity.AddComponent(cam)
+			entity.AddComponent(&PositionComponent{X: 1280, Y: 800})
+			sys.SetActiveCamera(entity)
+
+			SetCameraBoundsFromTerrain(cam, tt.terrainW, tt.terrainH, tt.screenW, tt.screenH)
+			sys.Update([]*Entity{entity}, 1.0/60.0)
+
+			// Change zoom and update
+			cam.Zoom = tt.newZ
+			sys.Update([]*Entity{entity}, 1.0/60.0)
+
+			if math.Abs(cam.MinX-tt.wantMinX) > 0.001 {
+				t.Errorf("after zoom change: MinX = %v, want %v", cam.MinX, tt.wantMinX)
+			}
+			if math.Abs(cam.MaxX-tt.wantMaxX) > 0.001 {
+				t.Errorf("after zoom change: MaxX = %v, want %v", cam.MaxX, tt.wantMaxX)
+			}
+		})
+	}
+}
+
+// TestCameraSystem_InterpolationClamped verifies that interpolated camera
+// positions (used in WorldToScreenInterpolated) are clamped to bounds.
+func TestCameraSystem_InterpolationClamped(t *testing.T) {
+	tests := []struct {
+		name  string
+		zoom  float64
+		prevX float64
+		prevY float64
+		curX  float64
+		curY  float64
+		alpha float64
+	}{
+		{"prev outside bounds zoom 1.0", 1.0, 0, 0, 400, 300, 0.5},
+		{"prev outside bounds zoom 2.0", 2.0, 0, 0, 200, 150, 0.5},
+		{"prev outside bounds zoom 0.5", 0.5, 0, 0, 800, 600, 0.5},
+		{"alpha near zero", 1.0, 0, 0, 400, 300, 0.1},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			sys := NewCameraSystem(800, 600)
+			entity := NewEntity(1)
+			cam := NewCameraComponent()
+			cam.Zoom = tt.zoom
+			cam.X = tt.curX
+			cam.Y = tt.curY
+			cam.PrevX = tt.prevX
+			cam.PrevY = tt.prevY
+			entity.AddComponent(cam)
+			entity.AddComponent(&PositionComponent{X: tt.curX, Y: tt.curY})
+			sys.SetActiveCamera(entity)
+
+			SetCameraBoundsFromTerrain(cam, 2560, 1600, 800, 600)
+
+			// Probe the top-left terrain corner. If interpolation is properly
+			// clamped, the corner should appear at screen (0,0) or to the right/below.
+			sx, sy := sys.WorldToScreenInterpolated(0, 0, tt.alpha)
+			if sx < -0.5 {
+				t.Errorf("terrain origin mapped to screenX=%v, expected >= 0 (no void)", sx)
+			}
+			if sy < -0.5 {
+				t.Errorf("terrain origin mapped to screenY=%v, expected >= 0 (no void)", sy)
+			}
+		})
+	}
+}
+
+// TestCameraSystem_BoundsZoomStored verifies that SetCameraBoundsFromTerrain
+// stores the zoom level used for the bounds calculation.
+func TestCameraSystem_BoundsZoomStored(t *testing.T) {
+	cam := NewCameraComponent()
+	cam.Zoom = 2.0
+	SetCameraBoundsFromTerrain(cam, 2560, 1600, 800, 600)
+
+	if cam.BoundsZoom != 2.0 {
+		t.Errorf("BoundsZoom = %v, want 2.0", cam.BoundsZoom)
+	}
+}
+
+// TestCameraSystem_SpawnInCorner verifies that camera clamping is applied
+// immediately on the first frame when a player spawns at (0,0), before any
+// input. The terrain origin must map to screen (0,0) — no void pixels.
+func TestCameraSystem_SpawnInCorner(t *testing.T) {
+	tests := []struct {
+		name    string
+		spawnX  float64
+		spawnY  float64
+		zoom    float64
+		probeWX float64 // world X to probe (terrain corner)
+		probeWY float64 // world Y to probe (terrain corner)
+		wantSX  float64 // expected screen X
+		wantSY  float64 // expected screen Y
+	}{
+		{
+			name: "spawn at origin zoom 1.0",
+			spawnX: 0, spawnY: 0, zoom: 1.0,
+			probeWX: 0, probeWY: 0,
+			wantSX: 0, wantSY: 0,
+		},
+		{
+			name: "spawn at origin zoom 2.0",
+			spawnX: 0, spawnY: 0, zoom: 2.0,
+			probeWX: 0, probeWY: 0,
+			wantSX: 0, wantSY: 0,
+		},
+		{
+			name: "spawn at max corner zoom 1.0",
+			spawnX: 2560, spawnY: 1600, zoom: 1.0,
+			probeWX: 2560, probeWY: 1600,
+			wantSX: 800, wantSY: 600,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			sys := NewCameraSystem(800, 600)
+			entity := NewEntity(1)
+			cam := NewCameraComponent()
+			cam.Zoom = tt.zoom
+			cam.Smoothing = 0 // instant follow, no delay
+			entity.AddComponent(cam)
+			entity.AddComponent(&PositionComponent{X: tt.spawnX, Y: tt.spawnY})
+			sys.SetActiveCamera(entity)
+
+			// Bounds are set before the first update, as setupCompletePlayerEntity does.
+			SetCameraBoundsFromTerrain(cam, 2560, 1600, 800, 600)
+
+			// First frame update — no prior player input.
+			sys.Update([]*Entity{entity}, 1.0/60.0)
+
+			sx, sy := sys.WorldToScreen(tt.probeWX, tt.probeWY)
+			if math.Abs(sx-tt.wantSX) > 0.5 {
+				t.Errorf("first frame: WorldToScreen X = %v, want %v", sx, tt.wantSX)
+			}
+			if math.Abs(sy-tt.wantSY) > 0.5 {
+				t.Errorf("first frame: WorldToScreen Y = %v, want %v", sy, tt.wantSY)
+			}
+		})
+	}
+}
+
+// TestCameraSystem_CenterOfMap verifies that when the player is near the
+// center of a large map, the camera follows freely without any clamping
+// distortion — the player maps to screen center.
+func TestCameraSystem_CenterOfMap(t *testing.T) {
+	tests := []struct {
+		name    string
+		playerX float64
+		playerY float64
+		zoom    float64
+	}{
+		{"exact center zoom 1.0", 1280, 800, 1.0},
+		{"offset from center zoom 1.0", 1000, 700, 1.0},
+		{"center zoom 2.0", 1280, 800, 2.0},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			sys := NewCameraSystem(800, 600)
+			entity := NewEntity(1)
+			cam := NewCameraComponent()
+			cam.Zoom = tt.zoom
+			cam.Smoothing = 0
+			entity.AddComponent(cam)
+			entity.AddComponent(&PositionComponent{X: tt.playerX, Y: tt.playerY})
+			sys.SetActiveCamera(entity)
+
+			SetCameraBoundsFromTerrain(cam, 2560, 1600, 800, 600)
+			sys.Update([]*Entity{entity}, 1.0/60.0)
+
+			// The player's world position should map to screen center.
+			sx, sy := sys.WorldToScreen(tt.playerX, tt.playerY)
+			halfW := float64(800) / 2
+			halfH := float64(600) / 2
+			if math.Abs(sx-halfW) > 0.5 {
+				t.Errorf("player at center: screenX = %v, want %v", sx, halfW)
+			}
+			if math.Abs(sy-halfH) > 0.5 {
+				t.Errorf("player at center: screenY = %v, want %v", sy, halfH)
+			}
+		})
+	}
+}
+
+// TestCameraSystem_MapSmallerThanViewport verifies that when the map is smaller
+// than the viewport on one or both axes, the camera centres the map and the
+// player stays visible on screen regardless of position.
+func TestCameraSystem_MapSmallerThanViewport(t *testing.T) {
+	tests := []struct {
+		name     string
+		terrainW float64
+		terrainH float64
+		playerX  float64
+		playerY  float64
+	}{
+		{"small map both axes, player at origin", 400, 300, 0, 0},
+		{"small map both axes, player at max", 400, 300, 400, 300},
+		{"small map X only, player at origin", 400, 1600, 0, 0},
+		{"small map Y only, player mid", 2560, 300, 1280, 150},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			sys := NewCameraSystem(800, 600)
+			entity := NewEntity(1)
+			cam := NewCameraComponent()
+			cam.Zoom = 1.0
+			cam.Smoothing = 0
+			entity.AddComponent(cam)
+			entity.AddComponent(&PositionComponent{X: tt.playerX, Y: tt.playerY})
+			sys.SetActiveCamera(entity)
+
+			SetCameraBoundsFromTerrain(cam, tt.terrainW, tt.terrainH, 800, 600)
+			sys.Update([]*Entity{entity}, 1.0/60.0)
+
+			// For a small-map axis the camera should centre on the terrain.
+			// The terrain midpoint should be at screen centre on that axis.
+			if tt.terrainW < 800 {
+				midX := tt.terrainW / 2
+				sx, _ := sys.WorldToScreen(midX, 0)
+				if math.Abs(sx-400) > 0.5 {
+					t.Errorf("small X: terrain midpoint at screenX=%v, want 400", sx)
+				}
+			}
+			if tt.terrainH < 600 {
+				midY := tt.terrainH / 2
+				_, sy := sys.WorldToScreen(0, midY)
+				if math.Abs(sy-300) > 0.5 {
+					t.Errorf("small Y: terrain midpoint at screenY=%v, want 300", sy)
+				}
+			}
+		})
+	}
+}

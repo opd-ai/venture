@@ -10,6 +10,7 @@ import (
 	"math/rand"
 
 	"github.com/hajimehoshi/ebiten/v2"
+	"github.com/sirupsen/logrus"
 )
 
 // EquipmentRenderer produces pixel-level top-down equipment overlays.
@@ -868,7 +869,8 @@ func (r *EquipmentRenderer) setPixel(img *ebiten.Image, x, y int, c color.RGBA) 
 
 func (r *EquipmentRenderer) getPixel(img *ebiten.Image, x, y int) (result color.RGBA) {
 	defer func() {
-		if r := recover(); r != nil {
+		if recov := recover(); recov != nil {
+			logrus.WithField("panic", recov).Debug("getPixel: recovered from panic (expected in tests without game loop)")
 			result = color.RGBA{}
 		}
 	}()

@@ -20,7 +20,8 @@ import (
 // Returns false if ReadPixels is not available (e.g., game not started in tests).
 func safeReadPixels(img *ebiten.Image, pix []byte) (ok bool) {
 	defer func() {
-		if r := recover(); r != nil {
+		if recov := recover(); recov != nil {
+			logrus.WithField("panic", recov).Debug("safeReadPixels: recovered from panic (expected in tests without game loop)")
 			ok = false
 		}
 	}()

@@ -21,6 +21,10 @@ type CameraComponent struct {
 	MinX, MinY float64
 	MaxX, MaxY float64
 
+	// Terrain dimensions in pixels, stored so camera bounds can be
+	// recalculated when the screen is resized (e.g. orientation change).
+	TerrainWidthPx, TerrainHeightPx float64
+
 	// Smoothing factor for camera movement (0.0 = instant, 1.0 = very smooth)
 	Smoothing float64
 
@@ -68,6 +72,10 @@ func NewCameraComponent() *CameraComponent {
 // dimensions. When the terrain is smaller than the viewport (at the current
 // Zoom), the camera is centred on the terrain.
 func SetCameraBoundsFromTerrain(camera *CameraComponent, terrainWidthPx, terrainHeightPx float64, screenWidth, screenHeight int) {
+	// Store terrain dimensions so bounds can be recalculated on screen resize.
+	camera.TerrainWidthPx = terrainWidthPx
+	camera.TerrainHeightPx = terrainHeightPx
+
 	// Validate zoom to avoid division by zero or negative values.
 	if camera.Zoom <= 0 {
 		log.WithFields(log.Fields{
@@ -134,6 +142,29 @@ func NewCameraSystem(screenWidth, screenHeight int) *CameraSystem {
 		ScreenHeight:  screenHeight,
 		Accessibility: NewAccessibilitySettings(), // Phase 10.3: Default accessibility
 	}
+}
+
+// RecalculateBounds recomputes camera bounds for the active camera using its
+// stored terrain dimensions and the current screen size. This must be called
+// after ScreenWidth/ScreenHeight are updated (e.g. on orientation change) so
+// the viewport stays clamped to the terrain edges.
+func (s *CameraSystem) RecalculateBounds() {
+	if s.activeCamera == nil {
+		return
+	}
+	cameraComp, ok := s.activeCamera.GetComponent("camera")
+	if !ok {
+		return
+	}
+	cam, ok := cameraComp.(*CameraComponent)
+	if !ok {
+		return
+	}
+	// Only recalculate if terrain dimensions were previously set.
+	if cam.TerrainWidthPx <= 0 || cam.TerrainHeightPx <= 0 {
+		return
+	}
+	SetCameraBoundsFromTerrain(cam, cam.TerrainWidthPx, cam.TerrainHeightPx, s.ScreenWidth, s.ScreenHeight)
 }
 
 // Update updates camera positions to follow their target entities.

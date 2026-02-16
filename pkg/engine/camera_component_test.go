@@ -707,3 +707,125 @@ func TestPlayerBoundsClamp(t *testing.T) {
 		})
 	}
 }
+
+// TestSetCameraBoundsFromTerrain_StoresTerrainDimensions verifies that
+// SetCameraBoundsFromTerrain stores terrain pixel dimensions on the component.
+func TestSetCameraBoundsFromTerrain_StoresTerrainDimensions(t *testing.T) {
+	cam := NewCameraComponent()
+	SetCameraBoundsFromTerrain(cam, 2560, 1600, 800, 600)
+
+	if cam.TerrainWidthPx != 2560 {
+		t.Errorf("TerrainWidthPx = %v, want 2560", cam.TerrainWidthPx)
+	}
+	if cam.TerrainHeightPx != 1600 {
+		t.Errorf("TerrainHeightPx = %v, want 1600", cam.TerrainHeightPx)
+	}
+}
+
+// TestCameraSystem_RecalculateBoundsOnResize tests that camera bounds are
+// recalculated when screen dimensions change, as happens on mobile orientation
+// changes. Uses table-driven tests for various zoom levels and resize scenarios.
+func TestCameraSystem_RecalculateBoundsOnResize(t *testing.T) {
+	tests := []struct {
+		name          string
+		terrainW      float64
+		terrainH      float64
+		initialW      int
+		initialH      int
+		newW          int
+		newH          int
+		zoom          float64
+		wantMinX      float64
+		wantMaxX      float64
+		wantMinY      float64
+		wantMaxY      float64
+	}{
+		{
+			name:     "landscape to portrait orientation",
+			terrainW: 2560, terrainH: 1600,
+			initialW: 800, initialH: 600,
+			newW: 600, newH: 800,
+			zoom:     1.0,
+			wantMinX: 300, wantMaxX: 2260,
+			wantMinY: 400, wantMaxY: 1200,
+		},
+		{
+			name:     "resize with zoom 2.0",
+			terrainW: 2560, terrainH: 1600,
+			initialW: 800, initialH: 600,
+			newW: 1024, newH: 768,
+			zoom:     2.0,
+			wantMinX: 256, wantMaxX: 2304,
+			wantMinY: 192, wantMaxY: 1408,
+		},
+		{
+			name:     "terrain smaller than new viewport centres",
+			terrainW: 400, terrainH: 300,
+			initialW: 300, initialH: 200,
+			newW: 800, newH: 600,
+			zoom:     1.0,
+			wantMinX: 200, wantMaxX: 200,
+			wantMinY: 150, wantMaxY: 150,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			sys := NewCameraSystem(tt.initialW, tt.initialH)
+			entity := NewEntity(1)
+			cam := NewCameraComponent()
+			cam.Zoom = tt.zoom
+			cam.Smoothing = 0
+			entity.AddComponent(cam)
+			entity.AddComponent(&PositionComponent{X: 0, Y: 0})
+			sys.SetActiveCamera(entity)
+
+			// Set initial bounds.
+			SetCameraBoundsFromTerrain(cam, tt.terrainW, tt.terrainH, tt.initialW, tt.initialH)
+
+			// Simulate screen resize.
+			sys.ScreenWidth = tt.newW
+			sys.ScreenHeight = tt.newH
+			sys.RecalculateBounds()
+
+			if math.Abs(cam.MinX-tt.wantMinX) > 0.001 {
+				t.Errorf("MinX = %v, want %v", cam.MinX, tt.wantMinX)
+			}
+			if math.Abs(cam.MaxX-tt.wantMaxX) > 0.001 {
+				t.Errorf("MaxX = %v, want %v", cam.MaxX, tt.wantMaxX)
+			}
+			if math.Abs(cam.MinY-tt.wantMinY) > 0.001 {
+				t.Errorf("MinY = %v, want %v", cam.MinY, tt.wantMinY)
+			}
+			if math.Abs(cam.MaxY-tt.wantMaxY) > 0.001 {
+				t.Errorf("MaxY = %v, want %v", cam.MaxY, tt.wantMaxY)
+			}
+		})
+	}
+}
+
+// TestCameraSystem_RecalculateBoundsNoActiveCamera verifies that
+// RecalculateBounds is safe to call when there is no active camera.
+func TestCameraSystem_RecalculateBoundsNoActiveCamera(t *testing.T) {
+	sys := NewCameraSystem(800, 600)
+	// Should not panic.
+	sys.RecalculateBounds()
+}
+
+// TestCameraSystem_RecalculateBoundsNoTerrainDims verifies that
+// RecalculateBounds is a no-op when terrain dimensions were never set.
+func TestCameraSystem_RecalculateBoundsNoTerrainDims(t *testing.T) {
+	sys := NewCameraSystem(800, 600)
+	entity := NewEntity(1)
+	cam := NewCameraComponent()
+	entity.AddComponent(cam)
+	entity.AddComponent(&PositionComponent{X: 0, Y: 0})
+	sys.SetActiveCamera(entity)
+
+	origMinX := cam.MinX
+	sys.RecalculateBounds()
+
+	if cam.MinX != origMinX {
+		t.Errorf("bounds changed without terrain dimensions: MinX was %v, now %v", origMinX, cam.MinX)
+	}
+}

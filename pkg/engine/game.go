@@ -1641,6 +1641,10 @@ func (g *EbitenGame) propagateScreenResize() {
 	if g.CameraSystem != nil {
 		g.CameraSystem.ScreenWidth = g.ScreenWidth
 		g.CameraSystem.ScreenHeight = g.ScreenHeight
+
+		// Recalculate camera bounds for the new screen dimensions so the
+		// viewport stays clamped to terrain edges after orientation changes.
+		g.CameraSystem.RecalculateBounds()
 	}
 
 	if g.World == nil {

@@ -531,6 +531,11 @@ type SkillBonuses struct {
 // RecalculateSkillBonuses immediately recalculates skill bonuses for an entity.
 // Call this after learning/unlearning skills to update stats immediately.
 func RecalculateSkillBonuses(entity *Entity) {
+	if entity == nil {
+		log.Warn("RecalculateSkillBonuses called with nil entity")
+		return
+	}
+
 	log.WithFields(log.Fields{
 		"entity_id": entity.ID,
 		"operation": "recalculate_skill_bonuses",

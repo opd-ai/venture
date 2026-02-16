@@ -15,6 +15,7 @@ This file tracks the audit status of all Go sub-packages in the Venture project.
   - [x] `pkg/engine/AUDIT_MOVEMENT_PHYSICS.md` — Movement & physics sub-audit complete — 4 issues fixed (0 high, 1 med, 3 low)
   - [x] `pkg/engine/AUDIT_AI_BEHAVIOR.md` — AI & behavior systems sub-audit complete — 3 issues fixed (0 high, 2 med, 1 low)
   - [x] `pkg/engine/AUDIT_RENDERING.md` — Rendering systems sub-audit complete — 3 issues fixed (2 high, 1 med, 0 low); 2 low remaining
+  - [x] `pkg/engine/AUDIT_PROGRESSION.md` — Progression systems sub-audit complete — 6 issues fixed (0 high, 3 med, 3 low)
 
 ### Procedural Generation (`pkg/procgen/`)
 - [x] `pkg/procgen/building/AUDIT.md` — Complete — 0 issues
@@ -116,8 +117,8 @@ This file tracks the audit status of all Go sub-packages in the Venture project.
 
 ## Audit Statistics
 - **Total Packages Identified**: ~70+
-- **Audited**: 47
-- **Completion Rate**: ~67.1%
+- **Audited**: 48
+- **Completion Rate**: ~68.6%
 
 ## Priority Queue (High Integration Surface)
 1. `pkg/procgen/genre/` — Genre system affects all procgen

@@ -238,7 +238,11 @@ func (ps *ProgressionSystem) GetLevel(entity *Entity) int {
 		return 1
 	}
 
-	return expComp.(*ExperienceComponent).Level
+	exp, ok := expComp.(*ExperienceComponent)
+	if !ok {
+		return 1
+	}
+	return exp.Level
 }
 
 // GetXPProgress returns the XP progress as a value between 0.0 and 1.0.

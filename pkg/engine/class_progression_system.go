@@ -110,7 +110,10 @@ func (cps *ClassProgressionSystem) applyNewStats(entity *Entity, newStats, baseS
 func (cps *ClassProgressionSystem) updateHealthComponent(entity *Entity, newHP float64) {
 	if healthComp, ok := entity.GetComponent("health"); ok {
 		if health, ok := healthComp.(*HealthComponent); ok {
-			healthPercent := health.Current / health.Max
+			healthPercent := 1.0
+			if health.Max > 0 {
+				healthPercent = health.Current / health.Max
+			}
 			health.Max = newHP
 			health.Current = newHP * healthPercent
 			if health.Current < 1 && healthPercent > 0 {
@@ -350,7 +353,10 @@ func (cps *ClassProgressionSystem) applySecondaryGrowth(entity *Entity, growth s
 func (cps *ClassProgressionSystem) applyHealthGrowth(entity *Entity, hpGrowth float64) {
 	if healthComp, ok := entity.GetComponent("health"); ok {
 		if health, ok := healthComp.(*HealthComponent); ok {
-			healthPercent := health.Current / health.Max
+			healthPercent := 1.0
+			if health.Max > 0 {
+				healthPercent = health.Current / health.Max
+			}
 			health.Max += hpGrowth
 			health.Current = health.Max * healthPercent
 		}

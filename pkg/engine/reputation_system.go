@@ -1,8 +1,6 @@
 package engine
 
 import (
-	"time"
-
 	"github.com/sirupsen/logrus"
 )
 
@@ -58,10 +56,10 @@ func (s *ReputationSystem) RecordAction(
 	// Get or create reputation component
 	reputationComp := s.getOrCreateReputationComponent(entity)
 
-	// Create deed
+	// Create deed using the game clock for deterministic timestamps
 	deed := Deed{
 		Description:   description,
-		Timestamp:     time.Now(),
+		Timestamp:     s.world.Clock.Now(),
 		FactionImpact: factionImpact,
 		LawImpact:     lawImpact,
 		GoodImpact:    goodImpact,
@@ -259,15 +257,17 @@ func (s *ReputationSystem) getOrCreateReputationComponent(entity *Entity) *Reput
 }
 
 // getEntityFaction returns the faction of an entity (if any).
-// This checks for a FactionComponent or similar.
+// Returns the FactionID from the entity's FactionComponent, or empty string.
 func (s *ReputationSystem) getEntityFaction(entity *Entity) string {
-	// Check for faction component (if it exists in the system)
 	comp, ok := entity.GetComponent("faction")
-	if ok && comp != nil {
-		// For now, return empty string
-		// Future: Implement FactionComponent with Faction field
+	if !ok || comp == nil {
 		return ""
 	}
 
-	return ""
+	factionComp, ok := comp.(*FactionComponent)
+	if !ok {
+		return ""
+	}
+
+	return factionComp.FactionID
 }

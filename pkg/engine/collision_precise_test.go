@@ -600,7 +600,7 @@ func TestGetCollisionAlignment_StandardCollider(t *testing.T) {
 	entity.AddComponent(&ColliderComponent{
 		Width: 32, Height: 32,
 		OffsetX: -16, OffsetY: -16, // Centered
-		Solid:   true,
+		Solid: true,
 	})
 
 	alignmentError := GetCollisionAlignment(entity)
@@ -618,7 +618,7 @@ func TestGetCollisionAlignment_StandardColliderOffset(t *testing.T) {
 	entity.AddComponent(&ColliderComponent{
 		Width: 32, Height: 32,
 		OffsetX: 0, OffsetY: 0, // Not centered — offset from position
-		Solid:   true,
+		Solid: true,
 	})
 
 	alignmentError := GetCollisionAlignment(entity)

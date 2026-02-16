@@ -590,6 +590,45 @@ func TestGetCollisionAlignment(t *testing.T) {
 	}
 }
 
+// TestGetCollisionAlignment_StandardCollider verifies alignment calculation with standard ColliderComponent.
+// This test specifically exercises the code path that had a variable shadowing bug (hasCollider)
+// where the inner `:=` in `else if cComp, hasCollider := ...` shadowed the outer `hasCollider`,
+// causing the function to incorrectly report 0 alignment error for standard colliders.
+func TestGetCollisionAlignment_StandardCollider(t *testing.T) {
+	entity := NewEntity(1)
+	entity.AddComponent(&PositionComponent{X: 100, Y: 100})
+	entity.AddComponent(&ColliderComponent{
+		Width: 32, Height: 32,
+		OffsetX: -16, OffsetY: -16, // Centered
+		Solid:   true,
+	})
+
+	alignmentError := GetCollisionAlignment(entity)
+
+	// With centered collider (offset = -half-width/height), error should be ~0
+	if alignmentError > 0.5 {
+		t.Errorf("GetCollisionAlignment() with standard collider = %v, want <0.5", alignmentError)
+	}
+}
+
+// TestGetCollisionAlignment_StandardColliderOffset verifies alignment with offset standard collider.
+func TestGetCollisionAlignment_StandardColliderOffset(t *testing.T) {
+	entity := NewEntity(2)
+	entity.AddComponent(&PositionComponent{X: 100, Y: 100})
+	entity.AddComponent(&ColliderComponent{
+		Width: 32, Height: 32,
+		OffsetX: 0, OffsetY: 0, // Not centered — offset from position
+		Solid:   true,
+	})
+
+	alignmentError := GetCollisionAlignment(entity)
+
+	// With non-centered collider, alignment error should be > 0
+	if alignmentError == 0 {
+		t.Error("GetCollisionAlignment() with offset standard collider = 0, expected non-zero alignment error")
+	}
+}
+
 // TestCollisionPrecision verifies the 0.1px precision constant.
 func TestCollisionPrecision(t *testing.T) {
 	if CollisionPrecision != 0.1 {

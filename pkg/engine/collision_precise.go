@@ -457,18 +457,22 @@ func ApplyWallSlide(vx, vy float64, normal EdgeNormal) (newVX, newVY float64) {
 // Updates entity position to slide along wall instead of stopping.
 // Returns the adjusted position.
 func ResolveWallCollision(entity *Entity, normal EdgeNormal) (adjustedX, adjustedY float64) {
-	collisionLog.WithFields(logrus.Fields{
-		"operation": "resolve_wall_collision",
-		"entity_id": entity.ID,
-		"normal_x":  normal.NX,
-		"normal_y":  normal.NY,
-	}).Debug("Resolving wall collision for entity")
+	if collisionDebugEnabled {
+		collisionLog.WithFields(logrus.Fields{
+			"operation": "resolve_wall_collision",
+			"entity_id": entity.ID,
+			"normal_x":  normal.NX,
+			"normal_y":  normal.NY,
+		}).Debug("Resolving wall collision for entity")
+	}
 
 	posComp, hasPoscomp := entity.GetComponent("position")
 	if !hasPoscomp {
-		collisionLog.WithFields(logrus.Fields{
-			"entity_id": entity.ID,
-		}).Warn("Entity missing position component, cannot resolve wall collision")
+		if collisionDebugEnabled {
+			collisionLog.WithFields(logrus.Fields{
+				"entity_id": entity.ID,
+			}).Warn("Entity missing position component, cannot resolve wall collision")
+		}
 		return 0, 0
 	}
 	pos, ok := posComp.(*PositionComponent)
@@ -491,13 +495,15 @@ func ResolveWallCollision(entity *Entity, normal EdgeNormal) (adjustedX, adjuste
 			oldVY := vel.VY
 			// Apply wall slide to velocity
 			vel.VX, vel.VY = ApplyWallSlide(vel.VX, vel.VY, normal)
-			collisionLog.WithFields(logrus.Fields{
-				"entity_id":      entity.ID,
-				"old_velocity_x": oldVX,
-				"old_velocity_y": oldVY,
-				"new_velocity_x": vel.VX,
-				"new_velocity_y": vel.VY,
-			}).Debug("Applied wall slide to entity velocity")
+			if collisionDebugEnabled {
+				collisionLog.WithFields(logrus.Fields{
+					"entity_id":      entity.ID,
+					"old_velocity_x": oldVX,
+					"old_velocity_y": oldVY,
+					"new_velocity_x": vel.VX,
+					"new_velocity_y": vel.VY,
+				}).Debug("Applied wall slide to entity velocity")
+			}
 		}
 	}
 
@@ -509,14 +515,16 @@ func ResolveWallCollision(entity *Entity, normal EdgeNormal) (adjustedX, adjuste
 	// Quantize to maintain precision
 	adjustedX, adjustedY = QuantizePosition(adjustedX, adjustedY)
 
-	collisionLog.WithFields(logrus.Fields{
-		"entity_id":     entity.ID,
-		"original_x":    originalX,
-		"original_y":    originalY,
-		"adjusted_x":    adjustedX,
-		"adjusted_y":    adjustedY,
-		"push_distance": pushDistance,
-	}).Debug("Wall collision resolved with position adjustment")
+	if collisionDebugEnabled {
+		collisionLog.WithFields(logrus.Fields{
+			"entity_id":     entity.ID,
+			"original_x":    originalX,
+			"original_y":    originalY,
+			"adjusted_x":    adjustedX,
+			"adjusted_y":    adjustedY,
+			"push_distance": pushDistance,
+		}).Debug("Wall collision resolved with position adjustment")
+	}
 
 	return adjustedX, adjustedY
 }
@@ -524,11 +532,13 @@ func ResolveWallCollision(entity *Entity, normal EdgeNormal) (adjustedX, adjuste
 // CheckPreciseCollision performs pixel-perfect collision check between two entities.
 // Returns true if entities collide at sub-pixel precision (0.1px).
 func CheckPreciseCollision(e1, e2 *Entity) bool {
-	collisionLog.WithFields(logrus.Fields{
-		"operation":  "check_precise_collision",
-		"entity1_id": e1.ID,
-		"entity2_id": e2.ID,
-	}).Debug("Checking precise collision between entities")
+	if collisionDebugEnabled {
+		collisionLog.WithFields(logrus.Fields{
+			"operation":  "check_precise_collision",
+			"entity1_id": e1.ID,
+			"entity2_id": e2.ID,
+		}).Debug("Checking precise collision between entities")
+	}
 
 	if result, ok := checkPreciseColliders(e1, e2); ok {
 		return result
@@ -546,10 +556,12 @@ func checkPreciseColliders(e1, e2 *Entity) (result, ok bool) {
 		return false, false
 	}
 
-	collisionLog.WithFields(logrus.Fields{
-		"entity1_id": e1.ID,
-		"entity2_id": e2.ID,
-	}).Debug("Both entities have precise colliders, using precise collision")
+	if collisionDebugEnabled {
+		collisionLog.WithFields(logrus.Fields{
+			"entity1_id": e1.ID,
+			"entity2_id": e2.ID,
+		}).Debug("Both entities have precise colliders, using precise collision")
+	}
 
 	pc1, ok1 := pc1Comp.(*PreciseColliderComponent)
 	pc2, ok2 := pc2Comp.(*PreciseColliderComponent)
@@ -568,12 +580,14 @@ func checkPreciseColliders(e1, e2 *Entity) (result, ok bool) {
 	pos2Comp, hasPos2 := e2.GetComponent("position")
 
 	if !hasPos1 || !hasPos2 {
-		collisionLog.WithFields(logrus.Fields{
-			"entity1_id": e1.ID,
-			"entity2_id": e2.ID,
-			"has_pos1":   hasPos1,
-			"has_pos2":   hasPos2,
-		}).Warn("Entities missing position components for precise collision")
+		if collisionDebugEnabled {
+			collisionLog.WithFields(logrus.Fields{
+				"entity1_id": e1.ID,
+				"entity2_id": e2.ID,
+				"has_pos1":   hasPos1,
+				"has_pos2":   hasPos2,
+			}).Warn("Entities missing position components for precise collision")
+		}
 		return false, false
 	}
 
@@ -585,30 +599,36 @@ func checkPreciseColliders(e1, e2 *Entity) (result, ok bool) {
 	}
 
 	result = pc1.Intersects(p1.X, p1.Y, pc2, p2.X, p2.Y)
-	collisionLog.WithFields(logrus.Fields{
-		"entity1_id": e1.ID,
-		"entity2_id": e2.ID,
-		"collides":   result,
-	}).Debug("Precise collision check completed")
+	if collisionDebugEnabled {
+		collisionLog.WithFields(logrus.Fields{
+			"entity1_id": e1.ID,
+			"entity2_id": e2.ID,
+			"collides":   result,
+		}).Debug("Precise collision check completed")
+	}
 	return result, true
 }
 
 // checkStandardColliders tests collision using standard collider components.
 func checkStandardColliders(e1, e2 *Entity) bool {
-	collisionLog.WithFields(logrus.Fields{
-		"entity1_id": e1.ID,
-		"entity2_id": e2.ID,
-	}).Debug("Falling back to standard collider")
+	if collisionDebugEnabled {
+		collisionLog.WithFields(logrus.Fields{
+			"entity1_id": e1.ID,
+			"entity2_id": e2.ID,
+		}).Debug("Falling back to standard collider")
+	}
 
 	c1Comp, has1 := e1.GetComponent("collider")
 	c2Comp, has2 := e2.GetComponent("collider")
 
 	if !has1 || !has2 {
-		collisionLog.WithFields(logrus.Fields{
-			"entity1_id": e1.ID,
-			"entity2_id": e2.ID,
-			"result":     false,
-		}).Debug("No valid colliders found, returning false")
+		if collisionDebugEnabled {
+			collisionLog.WithFields(logrus.Fields{
+				"entity1_id": e1.ID,
+				"entity2_id": e2.ID,
+				"result":     false,
+			}).Debug("No valid colliders found, returning false")
+		}
 		return false
 	}
 
@@ -629,12 +649,14 @@ func checkStandardColliders(e1, e2 *Entity) bool {
 	pos2Comp, hasPos2 := e2.GetComponent("position")
 
 	if !hasPos1 || !hasPos2 {
-		collisionLog.WithFields(logrus.Fields{
-			"entity1_id": e1.ID,
-			"entity2_id": e2.ID,
-			"has_pos1":   hasPos1,
-			"has_pos2":   hasPos2,
-		}).Warn("Entities missing position components for standard collision")
+		if collisionDebugEnabled {
+			collisionLog.WithFields(logrus.Fields{
+				"entity1_id": e1.ID,
+				"entity2_id": e2.ID,
+				"has_pos1":   hasPos1,
+				"has_pos2":   hasPos2,
+			}).Warn("Entities missing position components for standard collision")
+		}
 		return false
 	}
 
@@ -646,11 +668,13 @@ func checkStandardColliders(e1, e2 *Entity) bool {
 	}
 
 	result := c1.Intersects(p1.X, p1.Y, c2, p2.X, p2.Y)
-	collisionLog.WithFields(logrus.Fields{
-		"entity1_id": e1.ID,
-		"entity2_id": e2.ID,
-		"collides":   result,
-	}).Debug("Standard collision check completed")
+	if collisionDebugEnabled {
+		collisionLog.WithFields(logrus.Fields{
+			"entity1_id": e1.ID,
+			"entity2_id": e2.ID,
+			"collides":   result,
+		}).Debug("Standard collision check completed")
+	}
 	return result
 }
 
@@ -658,16 +682,20 @@ func checkStandardColliders(e1, e2 *Entity) bool {
 // Returns the distance between visual center and collision center.
 // Used for debug visualization to ensure <0.5px alignment.
 func GetCollisionAlignment(entity *Entity) (alignmentError float64) {
-	collisionLog.WithFields(logrus.Fields{
-		"operation": "get_collision_alignment",
-		"entity_id": entity.ID,
-	}).Debug("Calculating collision alignment error")
+	if collisionDebugEnabled {
+		collisionLog.WithFields(logrus.Fields{
+			"operation": "get_collision_alignment",
+			"entity_id": entity.ID,
+		}).Debug("Calculating collision alignment error")
+	}
 
 	posComp, hasPos := entity.GetComponent("position")
 	if !hasPos {
-		collisionLog.WithFields(logrus.Fields{
-			"entity_id": entity.ID,
-		}).Warn("Entity missing position component, cannot calculate alignment")
+		if collisionDebugEnabled {
+			collisionLog.WithFields(logrus.Fields{
+				"entity_id": entity.ID,
+			}).Warn("Entity missing position component, cannot calculate alignment")
+		}
 		return 0
 	}
 	pos, ok := posComp.(*PositionComponent)
@@ -689,32 +717,38 @@ func GetCollisionAlignment(entity *Entity) (alignmentError float64) {
 			collisionCenterX = (minX + maxX) / 2.0
 			collisionCenterY = (minY + maxY) / 2.0
 			hasCollider = true
-			collisionLog.WithFields(logrus.Fields{
-				"entity_id":          entity.ID,
-				"collider_type":      "precise",
-				"collision_center_x": collisionCenterX,
-				"collision_center_y": collisionCenterY,
-			}).Debug("Using precise collider bounds")
+			if collisionDebugEnabled {
+				collisionLog.WithFields(logrus.Fields{
+					"entity_id":          entity.ID,
+					"collider_type":      "precise",
+					"collision_center_x": collisionCenterX,
+					"collision_center_y": collisionCenterY,
+				}).Debug("Using precise collider bounds")
+			}
 		}
-	} else if cComp, hasCollider := entity.GetComponent("collider"); hasCollider {
+	} else if cComp, hasStandard := entity.GetComponent("collider"); hasStandard {
 		if c, ok := cComp.(*ColliderComponent); ok {
 			minX, minY, maxX, maxY := c.GetBounds(pos.X, pos.Y)
 			collisionCenterX = (minX + maxX) / 2.0
 			collisionCenterY = (minY + maxY) / 2.0
 			hasCollider = true
-			collisionLog.WithFields(logrus.Fields{
-				"entity_id":          entity.ID,
-				"collider_type":      "standard",
-				"collision_center_x": collisionCenterX,
-				"collision_center_y": collisionCenterY,
-			}).Debug("Using standard collider bounds")
+			if collisionDebugEnabled {
+				collisionLog.WithFields(logrus.Fields{
+					"entity_id":          entity.ID,
+					"collider_type":      "standard",
+					"collision_center_x": collisionCenterX,
+					"collision_center_y": collisionCenterY,
+				}).Debug("Using standard collider bounds")
+			}
 		}
 	}
 
 	if !hasCollider {
-		collisionLog.WithFields(logrus.Fields{
-			"entity_id": entity.ID,
-		}).Debug("Entity has no collider, alignment error is 0")
+		if collisionDebugEnabled {
+			collisionLog.WithFields(logrus.Fields{
+				"entity_id": entity.ID,
+			}).Debug("Entity has no collider, alignment error is 0")
+		}
 		return 0
 	}
 
@@ -727,15 +761,17 @@ func GetCollisionAlignment(entity *Entity) (alignmentError float64) {
 	dy := collisionCenterY - visualCenterY
 	alignmentError = math.Sqrt(dx*dx + dy*dy)
 
-	collisionLog.WithFields(logrus.Fields{
-		"entity_id":          entity.ID,
-		"visual_center_x":    visualCenterX,
-		"visual_center_y":    visualCenterY,
-		"collision_center_x": collisionCenterX,
-		"collision_center_y": collisionCenterY,
-		"alignment_error":    alignmentError,
-		"within_threshold":   alignmentError < 0.5,
-	}).Debug("Collision alignment calculated")
+	if collisionDebugEnabled {
+		collisionLog.WithFields(logrus.Fields{
+			"entity_id":          entity.ID,
+			"visual_center_x":    visualCenterX,
+			"visual_center_y":    visualCenterY,
+			"collision_center_x": collisionCenterX,
+			"collision_center_y": collisionCenterY,
+			"alignment_error":    alignmentError,
+			"within_threshold":   alignmentError < 0.5,
+		}).Debug("Collision alignment calculated")
+	}
 
 	return alignmentError
 }

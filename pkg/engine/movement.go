@@ -311,7 +311,7 @@ func (s *MovementSystem) applySpeedLimit(vel *VelocityComponent) bool {
 
 	speed := math.Sqrt(vel.VX*vel.VX + vel.VY*vel.VY)
 	if speed > s.MaxSpeed {
-		if log.GetLevel() >= log.DebugLevel {
+		if movementDebugEnabled {
 			log.WithFields(log.Fields{
 				"operation":     "speed_limit",
 				"current_speed": speed,
@@ -331,7 +331,7 @@ func (s *MovementSystem) applySpeedLimit(vel *VelocityComponent) bool {
 // Implements wall sliding by trying X-only and Y-only movement when diagonal movement is blocked.
 // Returns the validated newX, newY coordinates.
 func (s *MovementSystem) calculateValidPosition(entity *Entity, pos *PositionComponent, vel *VelocityComponent, newX, newY float64, entities []*Entity) (float64, float64) {
-	if log.GetLevel() >= log.DebugLevel {
+	if movementDebugEnabled {
 		log.WithFields(log.Fields{
 			"entity_id": entity.ID,
 			"operation": "collision_check",
@@ -377,7 +377,7 @@ func (s *MovementSystem) handleTerrainCollision(entity *Entity, pos *PositionCom
 		return newX, newY, false
 	}
 
-	if log.GetLevel() >= log.DebugLevel {
+	if movementDebugEnabled {
 		log.WithFields(log.Fields{
 			"entity_id": entity.ID,
 			"x":         newX,
@@ -391,7 +391,7 @@ func (s *MovementSystem) handleTerrainCollision(entity *Entity, pos *PositionCom
 // tryTerrainWallSlide attempts to slide along walls when blocked by terrain.
 func (s *MovementSystem) tryTerrainWallSlide(entity *Entity, pos *PositionComponent, vel *VelocityComponent, newX, newY float64) (float64, float64, bool) {
 	if !s.collisionSystem.WouldCollideWithTerrain(entity, newX, pos.Y) {
-		if log.GetLevel() >= log.DebugLevel {
+		if movementDebugEnabled {
 			log.WithFields(log.Fields{
 				"entity_id":  entity.ID,
 				"slide_type": "horizontal",
@@ -402,7 +402,7 @@ func (s *MovementSystem) tryTerrainWallSlide(entity *Entity, pos *PositionCompon
 	}
 
 	if !s.collisionSystem.WouldCollideWithTerrain(entity, pos.X, newY) {
-		if log.GetLevel() >= log.DebugLevel {
+		if movementDebugEnabled {
 			log.WithFields(log.Fields{
 				"entity_id":  entity.ID,
 				"slide_type": "vertical",
@@ -412,7 +412,7 @@ func (s *MovementSystem) tryTerrainWallSlide(entity *Entity, pos *PositionCompon
 		return pos.X, newY, true
 	}
 
-	if log.GetLevel() >= log.DebugLevel {
+	if movementDebugEnabled {
 		log.WithFields(log.Fields{
 			"entity_id": entity.ID,
 		}).Debug("Movement completely blocked by terrain")
@@ -433,7 +433,7 @@ func (s *MovementSystem) handleEntityCollisions(entity *Entity, pos *PositionCom
 			continue
 		}
 		if s.collisionSystem.WouldCollideWithEntity(entity, newX, newY, other) {
-			if log.GetLevel() >= log.DebugLevel {
+			if movementDebugEnabled {
 				log.WithFields(log.Fields{
 					"entity_id": entity.ID,
 					"other_id":  other.ID,
@@ -458,7 +458,7 @@ func (s *MovementSystem) tryEntityWallSlide(entity *Entity, pos *PositionCompone
 		return pos.X, newY
 	}
 
-	if log.GetLevel() >= log.DebugLevel {
+	if movementDebugEnabled {
 		log.WithFields(log.Fields{
 			"entity_id": entity.ID,
 		}).Debug("Movement completely blocked by entity")
@@ -488,7 +488,7 @@ func (s *MovementSystem) applyBoundsConstraints(entity *Entity, pos *PositionCom
 	pos.X, pos.Y = bounds.Clamp(pos.X, pos.Y)
 
 	if pos.X != oldX || pos.Y != oldY {
-		if log.GetLevel() >= log.DebugLevel {
+		if movementDebugEnabled {
 			log.WithFields(log.Fields{
 				"entity_id": entity.ID,
 				"old_x":     oldX,
@@ -540,7 +540,7 @@ func (s *MovementSystem) applyFriction(entity *Entity, vel *VelocityComponent, d
 		vel.VX = 0
 		vel.VY = 0
 
-		if (oldVX != 0 || oldVY != 0) && log.GetLevel() >= log.DebugLevel {
+		if (oldVX != 0 || oldVY != 0) && movementDebugEnabled {
 			log.WithFields(log.Fields{
 				"entity_id": entity.ID,
 			}).Debug("Velocity stopped by friction threshold")
@@ -556,7 +556,7 @@ func (s *MovementSystem) updateAnimationState(entity *Entity, vel *VelocityCompo
 		return
 	}
 
-	debugEnabled := log.GetLevel() >= log.DebugLevel
+	debugEnabled := movementDebugEnabled
 	speed := s.calculateSpeed(vel)
 
 	if speed > 0.1 {
@@ -691,7 +691,7 @@ func (s *MovementSystem) updateFacingDirection(anim *AnimationComponent, vel *Ve
 		}
 	}
 
-	if oldFacing != anim.Facing && log.GetLevel() >= log.DebugLevel {
+	if oldFacing != anim.Facing && movementDebugEnabled {
 		log.WithFields(log.Fields{
 			"old_facing": oldFacing,
 			"new_facing": anim.Facing,
@@ -705,7 +705,7 @@ func (s *MovementSystem) updateFacingDirection(anim *AnimationComponent, vel *Ve
 func SetVelocity(entity *Entity, vx, vy float64) {
 	if velComp, hasVel := entity.GetComponent("velocity"); hasVel {
 		if vel, ok := velComp.(*VelocityComponent); ok {
-			if log.GetLevel() >= log.DebugLevel {
+			if movementDebugEnabled {
 				log.WithFields(log.Fields{
 					"entity_id": entity.ID,
 					"vel_x":     vx,
@@ -722,7 +722,7 @@ func SetVelocity(entity *Entity, vx, vy float64) {
 func GetPosition(entity *Entity) (x, y float64, ok bool) {
 	if posComp, hasPos := entity.GetComponent("position"); hasPos {
 		if pos, ok := posComp.(*PositionComponent); ok {
-			if log.GetLevel() >= log.DebugLevel {
+			if movementDebugEnabled {
 				log.WithFields(log.Fields{
 					"entity_id": entity.ID,
 					"x":         pos.X,
@@ -739,7 +739,7 @@ func GetPosition(entity *Entity) (x, y float64, ok bool) {
 func SetPosition(entity *Entity, x, y float64) {
 	if posComp, hasPos := entity.GetComponent("position"); hasPos {
 		if pos, ok := posComp.(*PositionComponent); ok {
-			if log.GetLevel() >= log.DebugLevel {
+			if movementDebugEnabled {
 				log.WithFields(log.Fields{
 					"entity_id": entity.ID,
 					"x":         x,
@@ -771,7 +771,7 @@ func GetDistance(e1, e2 *Entity) float64 {
 	dy := y2 - y1
 	distance := math.Sqrt(dx*dx + dy*dy)
 
-	if log.GetLevel() >= log.DebugLevel {
+	if movementDebugEnabled {
 		log.WithFields(log.Fields{
 			"entity1_id": e1.ID,
 			"entity2_id": e2.ID,
@@ -785,7 +785,7 @@ func GetDistance(e1, e2 *Entity) float64 {
 // MoveTowards moves an entity towards a target position.
 // Returns true if the entity reached the target.
 func MoveTowards(entity *Entity, targetX, targetY, speed, deltaTime float64) bool {
-	debugEnabled := log.GetLevel() >= log.DebugLevel
+	debugEnabled := movementDebugEnabled
 	if debugEnabled {
 		log.WithFields(log.Fields{
 			"entity_id": entity.ID,

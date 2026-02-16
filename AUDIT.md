@@ -49,7 +49,7 @@ This file tracks the audit status of all Go sub-packages in the Venture project.
 - [ ] `pkg/rendering/tiles/` — Not audited
 - [ ] `pkg/rendering/lighting/` — Not audited
 - [ ] `pkg/rendering/postprocess/` — Not audited
-- [ ] `pkg/rendering/particles/` — Not audited
+- [x] `pkg/rendering/particles/AUDIT.md` — Complete — 2 issues (0 high, 0 med, 2 low)
 - [ ] `pkg/rendering/ui/` — Not audited
 - [ ] `pkg/rendering/palette/` — Not audited
 - [ ] `pkg/rendering/cache/` — Not audited
@@ -111,8 +111,8 @@ This file tracks the audit status of all Go sub-packages in the Venture project.
 
 ## Audit Statistics
 - **Total Packages Identified**: ~70+
-- **Audited**: 19
-- **Completion Rate**: ~27.1%
+- **Audited**: 20
+- **Completion Rate**: ~28.6%
 
 ## Priority Queue (High Integration Surface)
 1. `pkg/procgen/genre/` — Genre system affects all procgen

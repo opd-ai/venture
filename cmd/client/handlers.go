@@ -745,8 +745,8 @@ func (sys *systemsContainer) scheduleLazyInit(game *engine.EbitenGame, logger *l
 		warmCommonSprites(sys, seed, genreID, clientLogger)
 
 		sys.lazyInitMutex.Lock()
+		defer sys.lazyInitMutex.Unlock()
 		sys.lazyInitCompleted = true
-		sys.lazyInitMutex.Unlock()
 
 		elapsed := time.Since(startTime)
 		clientLogger.WithField("duration_ms", elapsed.Milliseconds()).Info("lazy initialization completed")
@@ -1183,7 +1183,9 @@ func initializeEnvironmentalSystems(game *engine.EbitenGame, sys *systemsContain
 	// Grants bonus XP when players earn experience during specific weather conditions
 	sys.weatherXPBonusSystem = engine.NewWeatherXPBonusSystem(game.World, *seed+6800)
 	sys.weatherXPBonusSystem.SetGenre(*genreID)
-	sys.weatherXPBonusSystem.SetProgressionSystem(sys.progressionSystem)
+	if sys.progressionSystem != nil {
+		sys.weatherXPBonusSystem.SetProgressionSystem(sys.progressionSystem)
+	}
 
 	// LifestealSystem - heals attackers based on damage dealt and their Lifesteal stat
 	// Connects CombatSystem damage events with HealthComponent healing for sustained combat
@@ -3587,11 +3589,13 @@ func addPlayerComponents(player *engine.Entity, logger *logrus.Logger, clientLog
 	}
 	if *verbose {
 		if comp, ok := player.GetComponent("skill_tree"); ok {
-			treeComp := comp.(*engine.SkillTreeComponent)
-			clientLogger.WithFields(logrus.Fields{
-				"treeName":   treeComp.Tree.Name,
-				"skillCount": len(treeComp.Tree.Nodes),
-			}).Info("skill tree loaded (press K)")
+			treeComp, ok := comp.(*engine.SkillTreeComponent)
+			if ok {
+				clientLogger.WithFields(logrus.Fields{
+					"treeName":   treeComp.Tree.Name,
+					"skillCount": len(treeComp.Tree.Nodes),
+				}).Info("skill tree loaded (press K)")
+			}
 		}
 	}
 
@@ -3834,7 +3838,10 @@ func findNearestNPC(game *engine.EbitenGame, player *engine.Entity) *engine.Enti
 	if !ok {
 		return nil
 	}
-	pos := posComp.(*engine.PositionComponent)
+	pos, ok := posComp.(*engine.PositionComponent)
+	if !ok {
+		return nil
+	}
 
 	var nearestNPC *engine.Entity
 	minDist := 5.0 * 32.0
@@ -3849,7 +3856,10 @@ func findNearestNPC(game *engine.EbitenGame, player *engine.Entity) *engine.Enti
 		}
 
 		if ePos, ok := entity.GetComponent("position"); ok {
-			entityPos := ePos.(*engine.PositionComponent)
+			entityPos, ok := ePos.(*engine.PositionComponent)
+			if !ok {
+				continue
+			}
 			dx := entityPos.X - pos.X
 			dy := entityPos.Y - pos.Y
 			distSquared := dx*dx + dy*dy
@@ -3874,7 +3884,10 @@ func setupMerchantInteraction(player *engine.Entity, game *engine.EbitenGame, di
 		if !ok {
 			return
 		}
-		pos := posComp.(*engine.PositionComponent)
+		pos, ok := posComp.(*engine.PositionComponent)
+		if !ok {
+			return
+		}
 
 		merchant, dist := engine.FindClosestMerchant(game.World, pos.X, pos.Y, merchantInteractionRange)
 		if merchant == nil {

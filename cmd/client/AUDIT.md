@@ -9,7 +9,7 @@
 | Severity | Found | Fixed | Remaining |
 |----------|-------|-------|-----------|
 | High     | 1     | 1     | 0         |
-| Medium   | 4     | 0     | 4         |
+| Medium   | 4     | 4     | 0         |
 | Low      | 2     | 0     | 2         |
 
 ## Issues
@@ -31,30 +31,27 @@
   - `sys.combatSystem.AddCriticalHitCallback` → guarded (registerNonCriticalSystems)
 - **Impact**: Tests now pass (previously panic with SIGSEGV)
 
-### MEDIUM — Remaining (Low Risk)
+### MEDIUM — Fixed
 
 #### M1: Unchecked type assertions on Generator results (util.go)
 - **Location**: Lines 928, 962, 993, 1270
-- **Description**: `itemGen.Generate()` returns `interface{}`, and results are asserted to `[]*item.Item` or `*item.Item` without the `ok` check pattern.
-- **Risk**: Low in practice — the Generator API contract guarantees the return type, but a defensive `ok` check would prevent panics if the contract changes.
-- **Recommendation**: Add safe type assertion pattern: `weapons, ok := result.([]*item.Item); if !ok { return }`
+- **Description**: `itemGen.Generate()` returns `interface{}`, and results were asserted to `[]*item.Item` or `*item.Item` without the `ok` check pattern.
+- **Fix**: Added safe type assertion pattern (`value, ok := result.(Type); if !ok { return }`) at all 4 locations.
 
 #### M2: Unsafe component type assertions (util.go, handlers.go)
 - **Location**: Multiple locations after `GetComponent()` calls
-- **Description**: Pattern `comp.(*engine.SomeComponent)` used without `ok` check after `GetComponent()` returns true. If wrong component type registered under same key, panic occurs.
-- **Risk**: Very low — component type keys are unique and never reused for different types.
-- **Recommendation**: Use safe assertion pattern for defense-in-depth.
+- **Description**: Pattern `comp.(*engine.SomeComponent)` used without `ok` check after `GetComponent()` returns true.
+- **Fix**: Added safe assertion pattern with `ok` check at all component type assertion sites in both util.go (~20 locations) and handlers.go (4 locations). Returns early or continues loop on assertion failure.
 
 #### M3: Mutex unlock without defer in lazy init (handlers.go:747-749)
 - **Location**: `scheduleLazyInit()` completion handler
 - **Description**: `sys.lazyInitMutex.Lock()` / `sys.lazyInitCompleted = true` / `sys.lazyInitMutex.Unlock()` pattern without `defer`.
-- **Risk**: Minimal — the assignment `sys.lazyInitCompleted = true` cannot panic.
-- **Recommendation**: Use `defer sys.lazyInitMutex.Unlock()` for consistency with `isLazyInitCompleted()`.
+- **Fix**: Changed to `defer sys.lazyInitMutex.Unlock()` for consistency with `isLazyInitCompleted()`.
 
 #### M4: WeatherXPBonusSystem receives nil progressionSystem (handlers.go:1186)
 - **Location**: `initializeEnvironmentalSystems()` line 1186
-- **Description**: `sys.weatherXPBonusSystem.SetProgressionSystem(sys.progressionSystem)` stores a nil reference when progressionSystem hasn't been initialized (in test context).
-- **Risk**: Low — `SetProgressionSystem` just stores the reference. The system gracefully handles nil by skipping XP bonus calculation.
+- **Description**: `sys.weatherXPBonusSystem.SetProgressionSystem(sys.progressionSystem)` stores a nil reference when progressionSystem hasn't been initialized.
+- **Fix**: Added nil guard: `if sys.progressionSystem != nil { ... }`.
 
 ### LOW — Remaining
 

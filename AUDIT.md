@@ -115,7 +115,7 @@ This file tracks the audit status of all Go sub-packages in the Venture project.
 - [x] `pkg/audit/AUDIT.md` — Complete — 0 issues fixed; 2 low remaining; 99.2% coverage
 
 ## Command Packages
-- [x] `cmd/client/AUDIT.md` — Complete — 1 high fixed (nil pointer dereference in lazy init); 4 med remaining; 32.6% coverage
+- [x] `cmd/client/AUDIT.md` — Complete — 1 high fixed (nil pointer dereference in lazy init); 4 med fixed (safe type assertions, defer mutex, nil guard); 32.6% coverage
 - [x] `cmd/server/AUDIT.md` — Complete — 3 issues fixed (2 high, 1 med); 1 low remaining; 65.6% coverage
 - [x] `cmd/mobile/AUDIT.md` — Complete — 0 issues fixed; 3 low remaining
 

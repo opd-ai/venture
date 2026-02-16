@@ -799,7 +799,10 @@ func findValidSpawnLocation(room *terrain.Room, terrainMap *terrain.Terrain, wor
 		tooClose := false
 		for _, entity := range entities {
 			if posComp, ok := entity.GetComponent("position"); ok {
-				pos := posComp.(*engine.PositionComponent)
+				pos, ok := posComp.(*engine.PositionComponent)
+				if !ok {
+					continue
+				}
 				dx := pos.X - worldX
 				dy := pos.Y - worldY
 				dist := math.Sqrt(dx*dx + dy*dy)
@@ -925,7 +928,11 @@ func generateStarterWeapon(inventory *engine.InventoryComponent, itemGen *item.I
 		return
 	}
 
-	weapons := weaponResult.([]*item.Item)
+	weapons, ok := weaponResult.([]*item.Item)
+	if !ok {
+		logger.Warn("unexpected type from weapon generator")
+		return
+	}
 	if len(weapons) > 0 {
 		weapon := weapons[0]
 		weapon.Name = "Rusty " + weapon.Name // Make it clearly a starter item
@@ -959,7 +966,11 @@ func generateStarterPotions(inventory *engine.InventoryComponent, itemGen *item.
 		return
 	}
 
-	potions := potionResult.([]*item.Item)
+	potions, ok := potionResult.([]*item.Item)
+	if !ok {
+		logger.Warn("unexpected type from potion generator")
+		return
+	}
 	for _, potion := range potions {
 		potion.Name = "Minor Health Potion"
 		potion.Stats.Value = 10
@@ -990,7 +1001,11 @@ func generateStarterArmor(inventory *engine.InventoryComponent, itemGen *item.It
 		return
 	}
 
-	armors := armorResult.([]*item.Item)
+	armors, ok := armorResult.([]*item.Item)
+	if !ok {
+		logger.Warn("unexpected type from armor generator")
+		return
+	}
 	if len(armors) > 0 {
 		armor := armors[0]
 		armor.Name = "Worn " + armor.Name
@@ -1152,7 +1167,10 @@ func dropInventoryItems(
 	if !hasInv {
 		return
 	}
-	inventory := invComp.(*engine.InventoryComponent)
+	inventory, ok := invComp.(*engine.InventoryComponent)
+	if !ok {
+		return
+	}
 
 	// Spawn each item in the inventory with scatter physics
 	for i, itm := range inventory.Items {
@@ -1200,7 +1218,10 @@ func dropEquippedItems(
 	if !hasEquip {
 		return
 	}
-	equipment := equipComp.(*engine.EquipmentComponent)
+	equipment, ok := equipComp.(*engine.EquipmentComponent)
+	if !ok {
+		return
+	}
 	equippedItems := equipment.UnequipAll()
 
 	// Spawn equipped items with additional scatter
@@ -1238,7 +1259,10 @@ func generateLegendaryItemDrop(world *engine.World, enemy *engine.Entity, x, y f
 	statsComp, hasStats := enemy.GetComponent("stats")
 	baseDropChance := 0.01 // 1% base chance
 	if hasStats {
-		stats := statsComp.(*engine.StatsComponent)
+		stats, ok := statsComp.(*engine.StatsComponent)
+		if !ok {
+			return nil
+		}
 		// Bosses/elites (high attack/defense) have 5% chance
 		if stats.Attack > 20 || stats.Defense > 20 {
 			baseDropChance = 0.05
@@ -1267,7 +1291,10 @@ func generateLegendaryItemDrop(world *engine.World, enemy *engine.Entity, x, y f
 		return nil
 	}
 
-	itm := generatedItem.(*item.Item)
+	itm, ok := generatedItem.(*item.Item)
+	if !ok {
+		return nil
+	}
 
 	// Override to ensure legendary rarity
 	itm.Rarity = item.RarityLegendary
@@ -1492,7 +1519,10 @@ func serializeStats(player *engine.Entity, state *saveload.PlayerState) {
 // serializeExperience extracts player level and XP to state.
 func serializeExperience(player *engine.Entity, state *saveload.PlayerState) {
 	if expComp, ok := player.GetComponent("experience"); ok {
-		exp := expComp.(*engine.ExperienceComponent)
+		exp, ok := expComp.(*engine.ExperienceComponent)
+		if !ok {
+			return
+		}
 		state.Level = exp.Level
 		state.Experience = exp.CurrentXP
 	}
@@ -1501,7 +1531,10 @@ func serializeExperience(player *engine.Entity, state *saveload.PlayerState) {
 // serializeInventory extracts inventory data to state.
 func serializeInventory(player *engine.Entity, state *saveload.PlayerState) {
 	if invComp, ok := player.GetComponent("inventory"); ok {
-		inv := invComp.(*engine.InventoryComponent)
+		inv, ok := invComp.(*engine.InventoryComponent)
+		if !ok {
+			return
+		}
 		state.Gold = inv.Gold
 		state.Items = make([]saveload.ItemData, 0, len(inv.Items))
 		for _, itm := range inv.Items {
@@ -1513,7 +1546,10 @@ func serializeInventory(player *engine.Entity, state *saveload.PlayerState) {
 // serializeEquipment extracts equipped items to state.
 func serializeEquipment(player *engine.Entity, state *saveload.PlayerState) {
 	if equip, hasEquip := player.GetComponent("equipment"); hasEquip {
-		equipment := equip.(*engine.EquipmentComponent)
+		equipment, ok := equip.(*engine.EquipmentComponent)
+		if !ok {
+			return
+		}
 		if weapon := equipment.Slots[engine.SlotMainHand]; weapon != nil {
 			weaponData := saveload.ItemToData(weapon)
 			state.EquippedItems.Weapon = &weaponData
@@ -1532,13 +1568,19 @@ func serializeEquipment(player *engine.Entity, state *saveload.PlayerState) {
 // serializeManaAndSpells extracts mana and spell data to state.
 func serializeManaAndSpells(player *engine.Entity, state *saveload.PlayerState) {
 	if manaComp, hasMana := player.GetComponent("mana"); hasMana {
-		mana := manaComp.(*engine.ManaComponent)
+		mana, ok := manaComp.(*engine.ManaComponent)
+		if !ok {
+			return
+		}
 		state.CurrentMana = mana.Current
 		state.MaxMana = mana.Max
 	}
 
 	if slotsComp, hasSlots := player.GetComponent("spell_slots"); hasSlots {
-		slots := slotsComp.(*engine.SpellSlotComponent)
+		slots, ok := slotsComp.(*engine.SpellSlotComponent)
+		if !ok {
+			return
+		}
 		state.Spells = make([]saveload.SpellData, 0, 5)
 		for i := 0; i < 5; i++ {
 			if spell := slots.GetSlot(i); spell != nil {
@@ -1576,7 +1618,10 @@ func deserializePlayerState(player *engine.Entity, playerState *saveload.PlayerS
 // deserializePosition restores player position from state.
 func deserializePosition(player *engine.Entity, state *saveload.PlayerState) {
 	if posComp, ok := player.GetComponent("position"); ok {
-		pos := posComp.(*engine.PositionComponent)
+		pos, ok := posComp.(*engine.PositionComponent)
+		if !ok {
+			return
+		}
 		pos.X, pos.Y = state.X, state.Y
 	}
 }
@@ -1584,7 +1629,10 @@ func deserializePosition(player *engine.Entity, state *saveload.PlayerState) {
 // deserializeHealth restores player health from state.
 func deserializeHealth(player *engine.Entity, state *saveload.PlayerState) {
 	if healthComp, ok := player.GetComponent("health"); ok {
-		health := healthComp.(*engine.HealthComponent)
+		health, ok := healthComp.(*engine.HealthComponent)
+		if !ok {
+			return
+		}
 		health.Current, health.Max = state.CurrentHealth, state.MaxHealth
 	}
 }
@@ -1592,7 +1640,10 @@ func deserializeHealth(player *engine.Entity, state *saveload.PlayerState) {
 // deserializeStats restores player stats from state.
 func deserializeStats(player *engine.Entity, state *saveload.PlayerState) {
 	if statsComp, ok := player.GetComponent("stats"); ok {
-		stats := statsComp.(*engine.StatsComponent)
+		stats, ok := statsComp.(*engine.StatsComponent)
+		if !ok {
+			return
+		}
 		stats.Attack = state.Attack
 		stats.Defense = state.Defense
 		stats.MagicPower = state.MagicPower
@@ -1602,7 +1653,10 @@ func deserializeStats(player *engine.Entity, state *saveload.PlayerState) {
 // deserializeExperience restores player level and XP from state.
 func deserializeExperience(player *engine.Entity, state *saveload.PlayerState) {
 	if expComp, ok := player.GetComponent("experience"); ok {
-		exp := expComp.(*engine.ExperienceComponent)
+		exp, ok := expComp.(*engine.ExperienceComponent)
+		if !ok {
+			return
+		}
 		exp.Level = state.Level
 		exp.CurrentXP = state.Experience
 	}
@@ -1611,7 +1665,10 @@ func deserializeExperience(player *engine.Entity, state *saveload.PlayerState) {
 // deserializeInventory restores inventory from state.
 func deserializeInventory(player *engine.Entity, state *saveload.PlayerState) {
 	if invComp, ok := player.GetComponent("inventory"); ok {
-		inv := invComp.(*engine.InventoryComponent)
+		inv, ok := invComp.(*engine.InventoryComponent)
+		if !ok {
+			return
+		}
 		inv.Items = make([]*item.Item, 0, len(state.Items))
 		for _, itemData := range state.Items {
 			restoredItem := saveload.DataToItem(itemData)
@@ -1624,7 +1681,10 @@ func deserializeInventory(player *engine.Entity, state *saveload.PlayerState) {
 // deserializeEquipment restores equipped items from state.
 func deserializeEquipment(player *engine.Entity, state *saveload.PlayerState) {
 	if equipComp, ok := player.GetComponent("equipment"); ok {
-		equipment := equipComp.(*engine.EquipmentComponent)
+		equipment, ok := equipComp.(*engine.EquipmentComponent)
+		if !ok {
+			return
+		}
 		equipment.Slots = make(map[engine.EquipmentSlot]*item.Item)
 
 		if state.EquippedItems.Weapon != nil {
@@ -1646,12 +1706,18 @@ func deserializeEquipment(player *engine.Entity, state *saveload.PlayerState) {
 // deserializeManaAndSpells restores mana and spells from state.
 func deserializeManaAndSpells(player *engine.Entity, state *saveload.PlayerState) {
 	if manaComp, ok := player.GetComponent("mana"); ok {
-		mana := manaComp.(*engine.ManaComponent)
+		mana, ok := manaComp.(*engine.ManaComponent)
+		if !ok {
+			return
+		}
 		mana.Current, mana.Max = state.CurrentMana, state.MaxMana
 	}
 
 	if slotsComp, ok := player.GetComponent("spell_slots"); ok {
-		slots := slotsComp.(*engine.SpellSlotComponent)
+		slots, ok := slotsComp.(*engine.SpellSlotComponent)
+		if !ok {
+			return
+		}
 		for i := 0; i < 5; i++ {
 			slots.Slots[i] = nil
 		}

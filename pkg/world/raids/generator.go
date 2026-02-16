@@ -8,6 +8,8 @@ import (
 	"math/rand"
 	"time"
 
+	log "github.com/sirupsen/logrus"
+
 	"github.com/opd-ai/venture/pkg/procgen"
 	"github.com/opd-ai/venture/pkg/procgen/entity"
 	"github.com/opd-ai/venture/pkg/procgen/terrain"
@@ -36,6 +38,12 @@ func NewGenerator(baseSeed int64) *Generator {
 // Generate implements the procgen.Generator interface.
 func (g *Generator) Generate(seed int64, params procgen.GenerationParams) (interface{}, error) {
 	if err := validateGenerationParams(params); err != nil {
+		log.WithFields(log.Fields{
+			"system_name": "raids",
+			"seed":        seed,
+			"difficulty":  params.Difficulty,
+			"depth":       params.Depth,
+		}).Warn("invalid generation parameters")
 		return nil, err
 	}
 
@@ -46,6 +54,12 @@ func (g *Generator) Generate(seed int64, params procgen.GenerationParams) (inter
 
 	raid, err := g.generateRaid(rng, tier, params, instanceSeed, groupSize)
 	if err != nil {
+		log.WithFields(log.Fields{
+			"system_name": "raids",
+			"seed":        instanceSeed,
+			"tier":        tier.String(),
+			"genre":       params.GenreID,
+		}).WithError(err).Error("failed to generate raid")
 		return nil, fmt.Errorf("generate raid: %w", err)
 	}
 
@@ -233,7 +247,7 @@ func (g *Generator) generateRaid(rng *rand.Rand, tier RaidTier, params procgen.G
 		Terrain:     raidTerrain,
 		Bosses:      bosses,
 		Rooms:       rooms,
-		CreatedAt:   time.Now(),
+		CreatedAt:   time.Time{}, // Set at instance creation, not generation (deterministic)
 		Seed:        seed,
 	}
 
@@ -334,10 +348,19 @@ func (g *Generator) generateBoss(rng *rand.Rand, tier RaidTier, params procgen.G
 	entitySeed := g.baseSeed + int64(index)*1000
 	entityResult, err := g.entityGen.Generate(entitySeed, entityParams)
 	if err != nil {
+		log.WithFields(log.Fields{
+			"system_name": "raids",
+			"boss_index":  index,
+			"tier":        tier.String(),
+		}).WithError(err).Error("failed to generate boss entity")
 		return nil, fmt.Errorf("generate entity: %w", err)
 	}
 	entities := entityResult.([]*entity.Entity)
 	if len(entities) == 0 {
+		log.WithFields(log.Fields{
+			"system_name": "raids",
+			"boss_index":  index,
+		}).Error("entity generator returned empty slice")
 		return nil, fmt.Errorf("entity generator returned empty slice")
 	}
 	bossEntity := entities[0]
@@ -345,6 +368,9 @@ func (g *Generator) generateBoss(rng *rand.Rand, tier RaidTier, params procgen.G
 	// Scale boss health for group size
 	bossEntity.Stats.Health = int(float64(bossEntity.Stats.Health) * (1.0 + float64(groupSize-5)*0.1))
 	bossEntity.Stats.MaxHealth = bossEntity.Stats.Health
+
+	// Give boss a thematic procedural name
+	bossEntity.Name = g.bossNameGen.GenerateBossName(rng, params.GenreID, index)
 
 	// Generate boss mechanics (3-7 based on tier)
 	mechanicCount := 3 + int(tier)

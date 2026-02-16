@@ -6,12 +6,12 @@
 The raids package provides procedural raid dungeon generation and instance management with 91.8% test coverage (exceeds 65% target). The implementation is production-ready with excellent ECS compliance, deterministic generation, and robust integration with the engine. One medium-severity issue identified around time.Now() usage in generation code, and two low-severity documentation/logging enhancements.
 
 ## Issues Found
-- [ ] **medium** Deterministic procgen — `time.Now()` used in raid creation timestamp (`generator.go:236`)
-- [ ] **low** Error handling — No structured logging with logrus.WithFields on error paths; errors returned but not logged
-- [ ] **low** Doc coverage — GenerateBossName method not used by generator.go (names.go:103); consider removal or integration
+- [x] **medium** Deterministic procgen — `time.Now()` used in raid creation timestamp (`generator.go:236`) — **FIXED**: replaced with `time.Time{}` zero value; CreatedAt set at instance creation
+- [x] **low** Error handling — No structured logging with logrus.WithFields on error paths; errors returned but not logged — **FIXED**: added `logrus.WithFields` logging to all error paths in generator.go, instance.go, and manager.go
+- [x] **low** Doc coverage — GenerateBossName method not used by generator.go (names.go:103); consider removal or integration — **FIXED**: integrated `GenerateBossName` into `generateBoss()` to give bosses thematic procedural names
 
 ## Test Coverage
-91.8% (target: 65%) ✅
+90.4% (target: 65%) ✅
 
 ### Coverage Breakdown
 - `generator.go`: 94.2%
@@ -73,7 +73,7 @@ Raids is a domain package, not a system. Engine's RaidSystem handles system regi
 - Table-driven tests for validation (`generator_test.go`)
 
 ## Recommendations
-1. **MEDIUM PRIORITY**: Replace `time.Now()` at `generator.go:236` with seed-based timestamp or remove CreatedAt field from RaidDungeon (use instance creation time instead)
-2. **LOW PRIORITY**: Add structured logging on error paths using `logrus.WithFields` for better observability
-3. **LOW PRIORITY**: Either integrate `GenerateBossName()` into boss generation or remove unused method (currently generates raid names but not individual boss names)
-4. **OPTIONAL**: Consider adding benchmarks for generation performance (current target: <5s per raid, no benchmark validation)
+1. ~~**MEDIUM PRIORITY**: Replace `time.Now()` at `generator.go:236` with seed-based timestamp or remove CreatedAt field from RaidDungeon (use instance creation time instead)~~ — **DONE**
+2. ~~**LOW PRIORITY**: Add structured logging on error paths using `logrus.WithFields` for better observability~~ — **DONE**
+3. ~~**LOW PRIORITY**: Either integrate `GenerateBossName()` into boss generation or remove unused method (currently generates raid names but not individual boss names)~~ — **DONE**
+4. ~~**OPTIONAL**: Consider adding benchmarks for generation performance (current target: <5s per raid, no benchmark validation)~~ — Already present in test files

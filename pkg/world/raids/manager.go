@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"sync"
 
+	log "github.com/sirupsen/logrus"
+
 	"github.com/opd-ai/venture/pkg/procgen"
 )
 
@@ -43,11 +45,20 @@ func (m *Manager) GenerateRaid(tier RaidTier, depth int) (*RaidDungeon, error) {
 
 	result, err := m.generator.Generate(m.generator.baseSeed+int64(tier), params)
 	if err != nil {
+		log.WithFields(log.Fields{
+			"system_name": "raids",
+			"tier":        tier.String(),
+			"depth":       depth,
+		}).WithError(err).Error("failed to generate raid dungeon")
 		return nil, fmt.Errorf("failed to generate raid: %w", err)
 	}
 
 	raid, ok := result.(*RaidDungeon)
 	if !ok {
+		log.WithFields(log.Fields{
+			"system_name": "raids",
+			"result_type": fmt.Sprintf("%T", result),
+		}).Error("generator returned invalid type")
 		return nil, fmt.Errorf("generator returned invalid type")
 	}
 
@@ -62,6 +73,11 @@ func (m *Manager) CreateInstance(tier RaidTier, depth int, groupID string, playe
 	// Check lockouts for all players
 	for _, playerID := range playerIDs {
 		if m.lockoutManager.IsLockedOut(playerID, tier) {
+			log.WithFields(log.Fields{
+				"system_name": "raids",
+				"playerID":    playerID,
+				"tier":        tier.String(),
+			}).Warn("player locked out from raid")
 			return nil, fmt.Errorf("player %s is locked out from %s raids", playerID, tier.String())
 		}
 	}
@@ -80,17 +96,32 @@ func (m *Manager) CreateInstance(tier RaidTier, depth int, groupID string, playe
 
 	result, err := m.generator.Generate(m.generator.baseSeed+int64(tier)+int64(depth), params)
 	if err != nil {
+		log.WithFields(log.Fields{
+			"system_name": "raids",
+			"tier":        tier.String(),
+			"depth":       depth,
+			"group_id":    groupID,
+		}).WithError(err).Error("failed to generate raid for instance")
 		return nil, fmt.Errorf("failed to generate raid: %w", err)
 	}
 
 	raid, ok := result.(*RaidDungeon)
 	if !ok {
+		log.WithFields(log.Fields{
+			"system_name": "raids",
+			"result_type": fmt.Sprintf("%T", result),
+		}).Error("generator returned invalid type for instance")
 		return nil, fmt.Errorf("generator returned invalid type")
 	}
 
 	// Create instance
 	instance, err := m.instanceManager.CreateInstance(raid, groupID, playerIDs)
 	if err != nil {
+		log.WithFields(log.Fields{
+			"system_name": "raids",
+			"group_id":    groupID,
+			"tier":        tier.String(),
+		}).WithError(err).Error("failed to create raid instance")
 		return nil, fmt.Errorf("failed to create instance: %w", err)
 	}
 
@@ -112,15 +143,27 @@ func (m *Manager) CompleteRaid(instanceID string) error {
 
 	instance, exists := m.instanceManager.GetInstance(instanceID)
 	if !exists {
+		log.WithFields(log.Fields{
+			"system_name": "raids",
+			"instance_id": instanceID,
+		}).Warn("attempt to complete non-existent raid instance")
 		return fmt.Errorf("instance not found: %s", instanceID)
 	}
 
 	if instance.Completed {
+		log.WithFields(log.Fields{
+			"system_name": "raids",
+			"instance_id": instanceID,
+		}).Warn("attempt to complete already completed raid")
 		return fmt.Errorf("instance already completed")
 	}
 
 	// Mark instance as completed
 	if err := m.instanceManager.CompleteInstance(instanceID); err != nil {
+		log.WithFields(log.Fields{
+			"system_name": "raids",
+			"instance_id": instanceID,
+		}).WithError(err).Error("failed to mark instance as completed")
 		return fmt.Errorf("failed to complete instance: %w", err)
 	}
 

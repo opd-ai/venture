@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"sync"
 	"time"
+
+	log "github.com/sirupsen/logrus"
 )
 
 // InstanceManager manages active raid instances.
@@ -39,9 +41,21 @@ func (im *InstanceManager) CreateInstance(raid *RaidDungeon, groupID string, pla
 
 	// Validate group size
 	if len(playerIDs) < raid.Tier.MinPlayers() {
+		log.WithFields(log.Fields{
+			"system_name": "raids",
+			"group_id":    groupID,
+			"players":     len(playerIDs),
+			"min_players": raid.Tier.MinPlayers(),
+		}).Warn("insufficient players for raid")
 		return nil, fmt.Errorf("insufficient players: need %d, got %d", raid.Tier.MinPlayers(), len(playerIDs))
 	}
 	if len(playerIDs) > raid.Tier.MaxPlayers() {
+		log.WithFields(log.Fields{
+			"system_name": "raids",
+			"group_id":    groupID,
+			"players":     len(playerIDs),
+			"max_players": raid.Tier.MaxPlayers(),
+		}).Warn("too many players for raid")
 		return nil, fmt.Errorf("too many players: max %d, got %d", raid.Tier.MaxPlayers(), len(playerIDs))
 	}
 
@@ -112,10 +126,18 @@ func (im *InstanceManager) CompleteInstance(instanceID string) error {
 
 	instance, exists := im.instances[instanceID]
 	if !exists {
+		log.WithFields(log.Fields{
+			"system_name": "raids",
+			"instance_id": instanceID,
+		}).Warn("attempt to complete non-existent instance")
 		return fmt.Errorf("instance not found: %s", instanceID)
 	}
 
 	if instance.Completed {
+		log.WithFields(log.Fields{
+			"system_name": "raids",
+			"instance_id": instanceID,
+		}).Warn("attempt to complete already completed instance")
 		return fmt.Errorf("instance already completed")
 	}
 

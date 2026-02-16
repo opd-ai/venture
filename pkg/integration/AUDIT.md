@@ -7,9 +7,9 @@ The integration package coordinates cross-system features across 10 sub-packages
 
 ## Issues Found
 - [ ] <severity:high> deterministic procgen — Non-deterministic `time.Now()` used for ID generation in guild housing, breaking multiplayer synchronization requirements (`guild_housing/guild_housing_manager.go:78,246,355,443,568`)
-- [ ] <severity:high> deterministic procgen — Non-deterministic `time.Now()` used for route timing in trade routes, creating desync potential (`trade_routes/manager.go:216,217,261,262,273,524`)
+- [x] <severity:high> deterministic procgen — Non-deterministic `time.Now()` used for route timing in trade routes, creating desync potential (`trade_routes/manager.go:216,217,261,262,273,524`) — **FIXED**: Replaced with injectable TimeProvider pattern.
 - [ ] <severity:high> deterministic procgen — Non-deterministic `time.Now()` used for war timing and embargo tracking in political warfare (`political_warfare/manager.go:105,148,153,158,212,252,284,338,371,420,455,557`)
-- [ ] <severity:high> deterministic procgen — Non-deterministic `time.Now()` used for event timing in world events (`world_events/manager.go:32,44,87,111,173,426`)
+- [x] <severity:high> deterministic procgen — Non-deterministic `time.Now()` used for event timing in world events (`world_events/manager.go:32,44,87,111,173,426`) — **FIXED**: Replaced with injectable TimeProvider pattern.
 - [ ] <severity:high> deterministic procgen — Non-deterministic `time.Now()` used for fleet management timestamps (`guild_vehicle/fleet_manager.go:48,49,80,81,99,100,104,125,143,164,202,219`)
 - [ ] <severity:high> test coverage — 4 packages fail in headless/CI environments due to Ebiten init requirement via engine.World dependency: guild_housing, narrative_world, political_warfare, trade_routes (causes panic: "GLFW library is not initialized")
 - [ ] <severity:med> integration points — No clear system registration pattern documented; systems appear manually wired in client/server initialization

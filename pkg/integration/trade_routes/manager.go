@@ -213,8 +213,8 @@ func (rm *RouteManager) CreateRoute(startRegion, endRegion string, cargoValue fl
 		DangerLevel:      dangerLevel,
 		Progress:         0.0,
 		TravelTime:       travelTime,
-		StartTime:        time.Now(),
-		EstimatedArrival: time.Now().Add(travelTime),
+		StartTime:        now(),
+		EstimatedArrival: now().Add(travelTime),
 		EscortPlayers:    []uint64{},
 		BanditAttacks:    0,
 		SuccessRate:      0.75, // Historical baseline
@@ -258,8 +258,8 @@ func (rm *RouteManager) StartRoute(routeID string, caravanID uint64) error {
 
 	route.CaravanID = caravanID
 	route.Status = StatusActive
-	route.StartTime = time.Now()
-	route.EstimatedArrival = time.Now().Add(route.TravelTime)
+	route.StartTime = now()
+	route.EstimatedArrival = now().Add(route.TravelTime)
 
 	rm.activeCaravans[caravanID] = route
 	return nil
@@ -270,7 +270,7 @@ func (rm *RouteManager) UpdateRoutes() {
 	rm.mu.Lock()
 	defer rm.mu.Unlock()
 
-	now := time.Now()
+	currentTime := now()
 
 	for _, route := range rm.routes {
 		if route.Status != StatusActive {
@@ -278,7 +278,7 @@ func (rm *RouteManager) UpdateRoutes() {
 		}
 
 		// Update progress
-		elapsed := now.Sub(route.StartTime)
+		elapsed := currentTime.Sub(route.StartTime)
 		route.Progress = math.Min(1.0, float64(elapsed)/float64(route.TravelTime))
 
 		// Check for completion
@@ -289,15 +289,15 @@ func (rm *RouteManager) UpdateRoutes() {
 		}
 
 		// Spawn bandit encounters based on danger level
-		if rm.shouldSpawnBandit(route, now) {
-			rm.spawnBanditEncounter(route, now)
+		if rm.shouldSpawnBandit(route, currentTime) {
+			rm.spawnBanditEncounter(route, currentTime)
 		}
 	}
 
 	// Update active encounters
 	for _, encounter := range rm.encounters {
 		if encounter.Outcome == OutcomePending {
-			rm.updateEncounter(encounter, now)
+			rm.updateEncounter(encounter, currentTime)
 		}
 	}
 }
@@ -521,7 +521,7 @@ func (rm *RouteManager) CreateEscortMission(routeID string, playerID uint64, bas
 		Reward:      reward,
 		BonusReward: bonusReward,
 		Status:      MissionAvailable,
-		AcceptedAt:  time.Now(),
+		AcceptedAt:  now(),
 	}
 
 	rm.missions[missionID] = mission

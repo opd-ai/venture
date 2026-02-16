@@ -29,7 +29,7 @@ func NewEventManager(seed int64) *EventManager {
 		config:        DefaultEventManagerConfig(),
 		activeEvents:  make(map[string]*WorldEvent),
 		eventChains:   make(map[string]*EventChain),
-		lastEventTime: time.Now(),
+		lastEventTime: now(),
 	}
 }
 
@@ -41,7 +41,7 @@ func NewEventManagerWithConfig(seed int64, config EventManagerConfig) *EventMana
 		config:        config,
 		activeEvents:  make(map[string]*WorldEvent),
 		eventChains:   make(map[string]*EventChain),
-		lastEventTime: time.Now(),
+		lastEventTime: now(),
 	}
 }
 
@@ -84,7 +84,7 @@ func (m *EventManager) GenerateEvent(trigger TriggerType, params TriggerParams) 
 		Severity:    params.Severity,
 		Location:    params.Location,
 		ServerID:    params.ServerID,
-		StartTime:   time.Now().Add(m.getResponseDelay()),
+		StartTime:   now().Add(m.getResponseDelay()),
 		Duration:    m.getDuration(params.Severity),
 		Impacts:     m.generateImpacts(eventType, params),
 		ChainEvents: []string{},
@@ -108,7 +108,7 @@ func (m *EventManager) GenerateEvent(trigger TriggerType, params TriggerParams) 
 	}
 
 	m.activeEvents[eventID] = event
-	m.lastEventTime = time.Now()
+	m.lastEventTime = now()
 
 	return event, nil
 }
@@ -170,7 +170,7 @@ func (m *EventManager) Update(deltaTime float64) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	currentTime := time.Now()
+	currentTime := now()
 	for chainID, chain := range m.eventChains {
 		if chain.CurrentIndex >= len(chain.Events) {
 			continue
@@ -423,7 +423,7 @@ func (m *EventManager) generateChainEvents(eventID string, params TriggerParams)
 			Severity:    followUpSeverity,
 			Location:    params.Location,
 			ServerID:    params.ServerID,
-			StartTime:   time.Now().Add(time.Duration(i+1) * time.Hour),
+			StartTime:   now().Add(time.Duration(i+1) * time.Hour),
 			Duration:    m.getDuration(followUpSeverity),
 			Impacts:     m.generateImpacts(EventChained, followUpParams),
 			ChainEvents: []string{},

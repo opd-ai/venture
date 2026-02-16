@@ -951,3 +951,107 @@ func TestGetRouteByCaravan(t *testing.T) {
 		t.Error("Expected error for non-existent caravan")
 	}
 }
+
+func TestTimeProvider(t *testing.T) {
+	fixedTime := time.Date(2026, 1, 15, 12, 0, 0, 0, time.UTC)
+	SetTimeProvider(FixedTimeProvider{FixedTime: fixedTime})
+	defer ResetTimeProvider()
+
+	rm := NewRouteManager("test-server", 12345)
+	route, err := rm.CreateRoute("region-a", "region-b", 1000.0)
+	if err != nil {
+		t.Fatalf("Failed to create route: %v", err)
+	}
+
+	if !route.StartTime.Equal(fixedTime) {
+		t.Errorf("Expected StartTime %v, got %v", fixedTime, route.StartTime)
+	}
+
+	if !route.EstimatedArrival.Equal(fixedTime.Add(route.TravelTime)) {
+		t.Errorf("Expected EstimatedArrival %v, got %v",
+			fixedTime.Add(route.TravelTime), route.EstimatedArrival)
+	}
+}
+
+func TestRealTimeProvider(t *testing.T) {
+	rtp := RealTimeProvider{}
+	before := time.Now()
+	ts := rtp.Now()
+	after := time.Now()
+
+	if ts.Before(before) || ts.After(after) {
+		t.Errorf("RealTimeProvider.Now() = %v, expected between %v and %v", ts, before, after)
+	}
+}
+
+func TestFixedTimeProvider(t *testing.T) {
+	fixedTime := time.Date(2026, 6, 15, 10, 30, 0, 0, time.UTC)
+	ftp := FixedTimeProvider{FixedTime: fixedTime}
+
+	if !ftp.Now().Equal(fixedTime) {
+		t.Errorf("FixedTimeProvider.Now() = %v, expected %v", ftp.Now(), fixedTime)
+	}
+
+	if !ftp.Now().Equal(ftp.Now()) {
+		t.Error("FixedTimeProvider should return consistent values")
+	}
+}
+
+func TestRouteDeterminismWithFixedTime(t *testing.T) {
+	fixedTime := time.Date(2026, 1, 15, 12, 0, 0, 0, time.UTC)
+	SetTimeProvider(FixedTimeProvider{FixedTime: fixedTime})
+	defer ResetTimeProvider()
+
+	rm1 := NewRouteManager("test-server", 54321)
+	rm2 := NewRouteManager("test-server", 54321)
+
+	route1, _ := rm1.CreateRoute("region-a", "region-b", 1000.0)
+	route2, _ := rm2.CreateRoute("region-a", "region-b", 1000.0)
+
+	if !route1.StartTime.Equal(route2.StartTime) {
+		t.Errorf("StartTime not deterministic: %v vs %v", route1.StartTime, route2.StartTime)
+	}
+
+	if !route1.EstimatedArrival.Equal(route2.EstimatedArrival) {
+		t.Errorf("EstimatedArrival not deterministic: %v vs %v", route1.EstimatedArrival, route2.EstimatedArrival)
+	}
+}
+
+func TestStartRouteDeterminismWithFixedTime(t *testing.T) {
+	fixedTime := time.Date(2026, 1, 15, 12, 0, 0, 0, time.UTC)
+	SetTimeProvider(FixedTimeProvider{FixedTime: fixedTime})
+	defer ResetTimeProvider()
+
+	rm := NewRouteManager("test-server", 12345)
+	route, _ := rm.CreateRoute("region-a", "region-b", 1000.0)
+	rm.StartRoute(route.ID, 12345)
+
+	updatedRoute, _ := rm.GetRoute(route.ID)
+	if !updatedRoute.StartTime.Equal(fixedTime) {
+		t.Errorf("Expected StartTime %v after StartRoute, got %v", fixedTime, updatedRoute.StartTime)
+	}
+
+	if !updatedRoute.EstimatedArrival.Equal(fixedTime.Add(updatedRoute.TravelTime)) {
+		t.Errorf("Expected EstimatedArrival %v after StartRoute, got %v",
+			fixedTime.Add(updatedRoute.TravelTime), updatedRoute.EstimatedArrival)
+	}
+}
+
+func TestEscortMissionDeterminismWithFixedTime(t *testing.T) {
+	fixedTime := time.Date(2026, 1, 15, 12, 0, 0, 0, time.UTC)
+	SetTimeProvider(FixedTimeProvider{FixedTime: fixedTime})
+	defer ResetTimeProvider()
+
+	rm := NewRouteManager("test-server", 12345)
+	route, _ := rm.CreateRoute("region-a", "region-b", 1000.0)
+	rm.StartRoute(route.ID, 12345)
+
+	mission, err := rm.CreateEscortMission(route.ID, 100, 50.0)
+	if err != nil {
+		t.Fatalf("Failed to create escort mission: %v", err)
+	}
+
+	if !mission.AcceptedAt.Equal(fixedTime) {
+		t.Errorf("Expected AcceptedAt %v, got %v", fixedTime, mission.AcceptedAt)
+	}
+}

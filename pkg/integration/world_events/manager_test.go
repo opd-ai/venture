@@ -6,6 +6,122 @@ import (
 	"time"
 )
 
+func TestTimeProvider(t *testing.T) {
+	fixedTime := time.Date(2026, 1, 15, 12, 0, 0, 0, time.UTC)
+	SetTimeProvider(FixedTimeProvider{FixedTime: fixedTime})
+	defer ResetTimeProvider()
+
+	config := EventManagerConfig{
+		MaxActiveEvents:      50,
+		EventFrequency:       2.0,
+		ChainProbability:     0.0,
+		CrossServerPropDelay: 30 * time.Second,
+		ResponseTimeMin:      0 * time.Millisecond,
+		ResponseTimeMax:      0 * time.Millisecond,
+	}
+
+	manager := NewEventManagerWithConfig(12345, config)
+
+	params := TriggerParams{
+		TriggerType: TriggerGuildWar,
+		Severity:    SeverityMajor,
+		Location:    "zone_1",
+		ServerID:    "server_1",
+		GuildID:     "guild_a",
+	}
+	event, err := manager.GenerateEvent(TriggerGuildWar, params)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if !event.StartTime.Equal(fixedTime) {
+		t.Errorf("expected StartTime %v, got %v", fixedTime, event.StartTime)
+	}
+
+	// Verify determinism: same seed + same TimeProvider = same result
+	manager2 := NewEventManagerWithConfig(12345, config)
+	event2, err := manager2.GenerateEvent(TriggerGuildWar, params)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if !event2.StartTime.Equal(event.StartTime) {
+		t.Errorf("expected deterministic StartTime, got %v vs %v", event.StartTime, event2.StartTime)
+	}
+}
+
+func TestRealTimeProvider(t *testing.T) {
+	rtp := RealTimeProvider{}
+	before := time.Now()
+	ts := rtp.Now()
+	after := time.Now()
+
+	if ts.Before(before) || ts.After(after) {
+		t.Errorf("RealTimeProvider.Now() = %v, expected between %v and %v", ts, before, after)
+	}
+}
+
+func TestFixedTimeProvider(t *testing.T) {
+	fixedTime := time.Date(2026, 6, 15, 10, 30, 0, 0, time.UTC)
+	ftp := FixedTimeProvider{FixedTime: fixedTime}
+
+	if !ftp.Now().Equal(fixedTime) {
+		t.Errorf("FixedTimeProvider.Now() = %v, expected %v", ftp.Now(), fixedTime)
+	}
+
+	// Calling multiple times returns same value
+	if !ftp.Now().Equal(ftp.Now()) {
+		t.Error("FixedTimeProvider should return consistent values")
+	}
+}
+
+func TestEventDeterminismWithFixedTime(t *testing.T) {
+	fixedTime := time.Date(2026, 1, 15, 12, 0, 0, 0, time.UTC)
+	SetTimeProvider(FixedTimeProvider{FixedTime: fixedTime})
+	defer ResetTimeProvider()
+
+	config := EventManagerConfig{
+		MaxActiveEvents:      50,
+		EventFrequency:       2.0,
+		ChainProbability:     1.0, // Force chains
+		CrossServerPropDelay: 30 * time.Second,
+		ResponseTimeMin:      0 * time.Millisecond,
+		ResponseTimeMax:      0 * time.Millisecond,
+	}
+
+	params := TriggerParams{
+		TriggerType: TriggerGuildWar,
+		Severity:    SeverityMajor,
+		Location:    "zone_1",
+		ServerID:    "server_1",
+		GuildID:     "guild_a",
+	}
+
+	// Generate events with two managers using the same seed
+	m1 := NewEventManagerWithConfig(99999, config)
+	e1, _ := m1.GenerateEvent(TriggerGuildWar, params)
+
+	m2 := NewEventManagerWithConfig(99999, config)
+	e2, _ := m2.GenerateEvent(TriggerGuildWar, params)
+
+	if !e1.StartTime.Equal(e2.StartTime) {
+		t.Errorf("StartTime not deterministic: %v vs %v", e1.StartTime, e2.StartTime)
+	}
+
+	if len(e1.ChainEvents) != len(e2.ChainEvents) {
+		t.Errorf("chain length not deterministic: %d vs %d", len(e1.ChainEvents), len(e2.ChainEvents))
+	}
+
+	// Verify chain event start times are deterministic
+	for i, chainID := range e1.ChainEvents {
+		ce1, _ := m1.GetEvent(chainID)
+		ce2, _ := m2.GetEvent(e2.ChainEvents[i])
+		if ce1 != nil && ce2 != nil && !ce1.StartTime.Equal(ce2.StartTime) {
+			t.Errorf("chain event %d StartTime not deterministic: %v vs %v", i, ce1.StartTime, ce2.StartTime)
+		}
+	}
+}
+
 func TestEventManagerCreation(t *testing.T) {
 	tests := []struct {
 		name   string

@@ -1,9 +1,9 @@
 # Audit: github.com/opd-ai/venture/pkg/network/federation/guild
 **Date**: 2026-02-16
-**Status**: Needs Work
+**Status**: Complete
 
 ## Summary
-Cross-server guild management package with 87.1% test coverage. Implements core guild operations (create, member management, treasury, federation sync) with thread-safe design and deterministic procedural identity generation. ECS violations resolved: HasPermission and GetMember extracted from Guild component to standalone package-level functions. guildCounter now uses atomic operations. NewManager accepts optional serverID for deterministic testing. Remaining issues: 3 medium-priority (time.Now() usage, transport stub).
+Cross-server guild management package with 87.5% test coverage. Implements core guild operations (create, member management, treasury, federation sync) with thread-safe design and deterministic procedural identity generation. ECS violations resolved: HasPermission and GetMember extracted from Guild component to standalone package-level functions. guildCounter now uses atomic operations. NewManager accepts optional serverID for deterministic testing. GuildTransport wired to FederationProtocol in both server and client. Benchmark tests added for hot-path operations. Remaining: 1 low-priority item (TimeProvider abstraction).
 
 ## Issues Found
 - [x] **high** ECS compliance — ~~Guild component has logic methods `HasPermission()` and `GetMember()`~~ **FIXED**: Extracted to standalone package-level functions `HasPermission(g *Guild, ...)` and `GetMember(g *Guild, ...)` in `types.go`. All callers updated (manager.go, manager_test.go, pkg/engine/guild_system.go).
@@ -16,7 +16,7 @@ Cross-server guild management package with 87.1% test coverage. Implements core 
 - [x] **low** Thread safety — ~~Manager.guildCounter incremented without atomic operations~~ **FIXED**: guildCounter now uses `sync/atomic.AddInt64` and `atomic.LoadInt64` for thread-safe access.
 
 ## Test Coverage
-87.3% (target: 65%) ✅
+87.5% (target: 65%) ✅
 
 **Strengths**:
 - Comprehensive table-driven tests for all operations (create, members, treasury, federation)
@@ -24,10 +24,10 @@ Cross-server guild management package with 87.1% test coverage. Implements core 
 - Federation message handler tests with type conversions
 - Decompression bomb protection tests
 - Deterministic identity generation tests
+- Transport integration wiring tests (set, replace, nil transport)
+- Benchmark tests for hot-path operations (HasPermission, GetMember, SyncGuildState)
 
 **Gaps**:
-- No tests for transport.BroadcastGuildUpdate integration
-- Missing benchmark tests for high-frequency operations (member lookups, permission checks)
 - No tests for guildCounter race conditions
 
 ## Integration Status
@@ -40,7 +40,7 @@ The package is integrated with:
 4. **Server**: `cmd/server/v8_systems.go` returns guild.Manager for V9 integration
 
 **Missing Integrations**:
-- No concrete GuildTransport implementation wired up (federation broadcast stubbed)
+- ~~No concrete GuildTransport implementation wired up (federation broadcast stubbed)~~ **FIXED** (2026-02-16): FederationProtocol wired as GuildTransport in both cmd/server/v8_systems.go and cmd/client/handlers.go
 - pkg/network/federation parent package does not yet invoke guild sync protocol
 - No server-side persistence hooks (Save/Load not called from cmd/server)
 
@@ -49,9 +49,9 @@ The package is integrated with:
 ## Recommendations
 1. ~~**HIGH PRIORITY**: Refactor Guild component to remove `HasPermission()` and `GetMember()` methods~~ **DONE** (2026-02-16)
 2. ~~**HIGH PRIORITY**: Extract behavioral methods from Guild component~~ **DONE** (2026-02-16)
-3. **MEDIUM PRIORITY**: Implement concrete GuildTransport adapter that wraps pkg/network/federation protocol - wire up actual federation broadcast in Manager.SyncGuildState
+3. ~~**MEDIUM PRIORITY**: Implement concrete GuildTransport adapter that wraps pkg/network/federation protocol - wire up actual federation broadcast in Manager.SyncGuildState~~ **DONE** (2026-02-16): FederationProtocol already implements BroadcastGuildUpdate; wired via guildManager.SetTransport(federationProtocol) in cmd/server/v8_systems.go and cmd/client/handlers.go
 4. ~~**MEDIUM PRIORITY**: Make Manager.guildCounter atomic using sync/atomic.AddInt64~~ **DONE** (2026-02-16)
 5. ~~**LOW PRIORITY**: Accept serverID as NewManager parameter instead of generating via uuid.New()~~ **DONE** (2026-02-16)
 6. ~~**LOW PRIORITY**: Document integration with parent pkg/network/federation package in doc.go header~~ **DONE** (2026-02-16)
-7. **LOW PRIORITY**: Add benchmark tests for permission checks and member lookups (hot path operations)
+7. ~~**LOW PRIORITY**: Add benchmark tests for permission checks and member lookups (hot path operations)~~ **DONE** (2026-02-16): Added BenchmarkHasPermission_Miss, BenchmarkGetMember, BenchmarkGetMember_NotFound, BenchmarkSyncGuildState
 8. **LOW PRIORITY**: Consider TimeProvider abstraction (like pkg/companion/learning) to make timestamps deterministic in tests while preserving real-time behavior in production

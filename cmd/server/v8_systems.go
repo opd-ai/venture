@@ -58,7 +58,8 @@ func initializeV8SystemsServer(world *engine.World, seed int64, serverName strin
 	// Initialize federation protocol for cross-server guild sync
 	federationProtocol := federation.NewFederationProtocol(serverIdentity.ServerID, serverIdentity)
 	guildSystem.SetFederation(federationProtocol)
-	_ = federationProtocol // Available for future cross-server features
+	guildManager.SetTransport(federationProtocol)
+	serverLogger.Debug("Guild transport wired to federation protocol")
 
 	// Phase 56.1: Guild Vehicle Fleet Combat (ROADMAP_V9.md)
 	// FleetManager coordinates guild vehicle fleets with formations, siege engines, and maintenance

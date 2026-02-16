@@ -1817,6 +1817,7 @@ func initializePhase3Systems(game *engine.EbitenGame, sys *systemsContainer, cli
 	// Connect guild system to federation protocol for cross-server sync
 	if sys.federationProtocol != nil {
 		sys.guildSystem.SetFederation(sys.federationProtocol)
+		guildManager.SetTransport(sys.federationProtocol)
 		clientLogger.Debug("guild system connected to federation protocol")
 	}
 

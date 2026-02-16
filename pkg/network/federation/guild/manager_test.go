@@ -1370,3 +1370,105 @@ func TestCreateGuildDeterminism(t *testing.T) {
 		t.Log("Warning: Different seeds produced identical name and symbol (rare but possible)")
 	}
 }
+
+// Benchmark tests for hot-path operations (Recommendation #7)
+
+func BenchmarkHasPermission_Miss(b *testing.B) {
+	g := &Guild{
+		Permissions: map[Rank][]Permission{
+			RankRecruit: {PermissionDeposit},
+		},
+	}
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		HasPermission(g, RankRecruit, PermissionKick)
+	}
+}
+
+func BenchmarkGetMember(b *testing.B) {
+	members := make([]Member, 50)
+	for i := range members {
+		members[i] = Member{
+			PlayerID: fmt.Sprintf("player-%d", i),
+			Rank:     RankMember,
+			JoinedAt: time.Now(),
+		}
+	}
+	g := &Guild{Members: members}
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		GetMember(g, "player-25")
+	}
+}
+
+func BenchmarkGetMember_NotFound(b *testing.B) {
+	members := make([]Member, 50)
+	for i := range members {
+		members[i] = Member{
+			PlayerID: fmt.Sprintf("player-%d", i),
+			Rank:     RankMember,
+		}
+	}
+	g := &Guild{Members: members}
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		GetMember(g, "nonexistent")
+	}
+}
+
+func BenchmarkSyncGuildState(b *testing.B) {
+	m := NewManager("bench-server")
+	guildID, _ := m.CreateGuild("fantasy", "leader-1", 42)
+	mt := &mockGuildTransport{}
+	m.SetTransport(mt)
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_ = m.SyncGuildState(guildID)
+	}
+}
+
+// TestTransportIntegrationWiring verifies transport can be set and used for sync
+func TestTransportIntegrationWiring(t *testing.T) {
+	m := NewManager("test-server")
+	guildID, err := m.CreateGuild("fantasy", "leader-1", 42)
+	if err != nil {
+		t.Fatalf("CreateGuild failed: %v", err)
+	}
+
+	mt := &mockGuildTransport{}
+	m.SetTransport(mt)
+
+	// Sync should use the transport
+	if err := m.SyncGuildState(guildID); err != nil {
+		t.Fatalf("SyncGuildState failed: %v", err)
+	}
+	if mt.callCount != 1 {
+		t.Errorf("expected 1 broadcast call, got %d", mt.callCount)
+	}
+	if mt.lastGuildID != guildID {
+		t.Errorf("expected guildID %s, got %s", guildID, mt.lastGuildID)
+	}
+	if len(mt.lastData) == 0 {
+		t.Error("expected non-empty broadcast data")
+	}
+
+	// Replace transport
+	mt2 := &mockGuildTransport{}
+	m.SetTransport(mt2)
+	if err := m.SyncGuildState(guildID); err != nil {
+		t.Fatalf("SyncGuildState with new transport failed: %v", err)
+	}
+	if mt2.callCount != 1 {
+		t.Errorf("expected 1 call on new transport, got %d", mt2.callCount)
+	}
+	// Original transport should not have been called again
+	if mt.callCount != 1 {
+		t.Errorf("original transport should still have 1 call, got %d", mt.callCount)
+	}
+
+	// Nil transport should not error
+	m.SetTransport(nil)
+	if err := m.SyncGuildState(guildID); err != nil {
+		t.Fatalf("SyncGuildState with nil transport should not error: %v", err)
+	}
+}

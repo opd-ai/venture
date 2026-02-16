@@ -1,9 +1,9 @@
 # Audit: github.com/opd-ai/venture/pkg/integration
 **Date**: 2026-02-16
-**Status**: Needs Work
+**Status**: Complete
 
 ## Summary
-The integration package coordinates cross-system features across 10 sub-packages (51 production Go files, ~15K LOC total). All nine sub-packages demonstrate excellent test coverage (87-98%) with proper deterministic design via TimeProvider abstraction. All previously identified `time.Now()` violations have been resolved. Headless testing requires xvfb-run due to transitive Ebiten dependencies.
+The integration package coordinates cross-system features across 10 sub-packages (51 production Go files, ~15K LOC total). All nine sub-packages demonstrate excellent test coverage (87-98%) with proper deterministic design via TimeProvider abstraction. All previously identified `time.Now()` violations have been resolved. Headless testing is supported via `scripts/test-integration.sh` (DISPLAY=:99 fallback or xvfb-run). System registration patterns and package scope are documented in `doc.go`.
 
 ## Issues Found
 - [x] <severity:high> deterministic procgen — Non-deterministic `time.Now()` used for house/storage/transaction IDs in guild_housing, creating multiplayer desync risk (`guild_housing/guild_housing_manager.go:78,246,355,443,568`) — **FIXED**: Replaced all 15 `time.Now()` calls with injectable TimeProvider pattern. Added `time_provider.go` with `SetTimeProvider`/`ResetTimeProvider` for testing. 7 determinism validation tests added.
@@ -12,8 +12,8 @@ The integration package coordinates cross-system features across 10 sub-packages
 - [x] <severity:high> deterministic procgen — Non-deterministic `time.Now()` used extensively in political warfare for war timing, treaty expiration, embargo tracking (32+ usages), breaking multiplayer political systems (`political_warfare/manager.go:105,148,153,158,212,252,284,338,371,420,455,557` + 20 more) — **FIXED**: Replaced all 12 `time.Now()` calls with injectable TimeProvider pattern. Added `time_provider.go` with `SetTimeProvider`/`ResetTimeProvider` for testing. 7 determinism validation tests added.
 - [x] <severity:high> deterministic procgen — Non-deterministic `time.Now()` used for fleet management timestamps (DeployedAt, LastMaintenance, NextMaintenance, mission timing), causing guild vehicle desync (`guild_vehicle/fleet_manager.go:48,49,80,81,99,100,104,125,143,164,202,219`) — **FIXED**: Replaced all 12 `time.Now()` calls with injectable TimeProvider pattern. Added `time_provider.go` with `SetTimeProvider`/`ResetTimeProvider` for testing. 7 determinism validation tests added.
 - [x] <severity:high> deterministic procgen — Non-deterministic `time.Now()` used for event scheduling and timing in world_events, breaking event synchronization across clients (`world_events/manager.go:32,44,87,111,173,426`) — **FIXED**: Replaced all 6 `time.Now()` calls with injectable TimeProvider pattern. Added `time_provider.go` with `SetTimeProvider`/`ResetTimeProvider` for testing. 4 determinism validation tests added.
-- [ ] <severity:med> integration points — No centralized system registration pattern documented; integration systems manually wired in client/server initialization without registry or discovery mechanism
-- [ ] <severity:low> doc coverage — Root `doc.go` describes integration *tests* only but package contains production integration systems (8 sub-packages with Manager/System implementations) — misleading scope statement (`doc.go:1-12`)
+- [x] <severity:med> integration points — No centralized system registration pattern documented; integration systems manually wired in client/server initialization without registry or discovery mechanism — **FIXED**: Documented three registration patterns (ECS System, Manager-Only, Pure Integration) in `pkg/integration/doc.go` with examples and guidance.
+- [x] <severity:low> doc coverage — Root `doc.go` describes integration *tests* only but package contains production integration systems (8 sub-packages with Manager/System implementations) — misleading scope statement (`doc.go:1-12`) — **FIXED**: Rewrote doc.go to describe all 9 production sub-packages, registration patterns, determinism approach, and testing requirements.
 
 ## Test Coverage
 **Average**: 92.0% across testable packages (target: 65%) ✅

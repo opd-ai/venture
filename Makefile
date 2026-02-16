@@ -1,6 +1,6 @@
 # Makefile for Venture
 
-.PHONY: help all build test clean deps lint fmt build-all \
+.PHONY: help all build test test-integration clean deps lint fmt build-all \
         build-linux build-windows build-macos \
         build-server build-client build-wasm \
         android ios mobile-deps \
@@ -87,6 +87,10 @@ test-race: ## Run tests with race detection
 bench: ## Run benchmarks
 	@echo "Running benchmarks..."
 	go test -bench=. -benchmem ./...
+
+test-integration: ## Run integration tests (handles headless display)
+	@echo "Running integration tests..."
+	@bash scripts/test-integration.sh -v
 
 audit: ## Run audit tests for procedural generators
 	@echo "Running audit tests..."

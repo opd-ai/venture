@@ -51,9 +51,16 @@ func writeString(buf []byte, s string) int {
 
 // readString reads a length-prefixed string from the buffer.
 // Returns the string and the number of bytes consumed.
+// Returns an error via empty string if buffer is too small or length is invalid.
 func readString(buf []byte) (string, int) {
+	if len(buf) < 4 {
+		return "", 0
+	}
 	length := int(readInt32(buf))
-	if length == 0 {
+	if length <= 0 {
+		return "", 4
+	}
+	if len(buf) < 4+length {
 		return "", 4
 	}
 	return string(buf[4 : 4+length]), 4 + length

@@ -134,7 +134,7 @@
 // All systems must implement this interface to participate in the game loop:
 //
 //	type System interface {
-//	    Update(deltaTime float64)
+//	    Update(entities []*Entity, deltaTime float64)
 //	}
 //
 // ## Component Interface

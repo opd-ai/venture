@@ -218,6 +218,7 @@ func (e *Entity) cacheCreatureGenreTint(c Component) {
 // AddComponentWithLogger adds a component to this entity with logging.
 func (e *Entity) AddComponentWithLogger(c Component, logger *logrus.Entry) {
 	e.Components[c.Type()] = c
+	e.updateComponentCache(c)
 	if logger != nil {
 		logger.WithFields(logrus.Fields{
 			"entityID":      e.ID,
@@ -279,7 +280,7 @@ func (e *Entity) RemoveComponent(componentType string) {
 
 // RemoveComponentWithLogger removes a component from this entity with logging.
 func (e *Entity) RemoveComponentWithLogger(componentType string, logger *logrus.Entry) {
-	delete(e.Components, componentType)
+	e.RemoveComponent(componentType)
 	if logger != nil {
 		logger.WithFields(logrus.Fields{
 			"entityID":      e.ID,

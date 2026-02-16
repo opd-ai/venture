@@ -300,3 +300,56 @@ func TestGameStructure(t *testing.T) {
 	// This will be tested in integration tests with a virtual display
 	t.Skip("Game tests require display - skipped for unit tests")
 }
+
+// TestAddComponentWithLoggerUpdatesCache verifies that AddComponentWithLogger
+// populates the fast-path component cache (MED-1 fix).
+func TestAddComponentWithLoggerUpdatesCache(t *testing.T) {
+	entity := NewEntity(1)
+
+	pos := &PositionComponent{X: 10, Y: 20}
+	entity.AddComponentWithLogger(pos, nil)
+
+	// Cache should be populated
+	cached := entity.GetPosition()
+	if cached == nil {
+		t.Fatal("Expected position cache to be populated via AddComponentWithLogger")
+	}
+	if cached.X != 10 || cached.Y != 20 {
+		t.Errorf("Cached position = (%f, %f), want (10, 20)", cached.X, cached.Y)
+	}
+
+	// Also test with velocity
+	vel := &VelocityComponent{VX: 5, VY: -3}
+	entity.AddComponentWithLogger(vel, nil)
+
+	cachedVel := entity.GetVelocity()
+	if cachedVel == nil {
+		t.Fatal("Expected velocity cache to be populated via AddComponentWithLogger")
+	}
+	if cachedVel.VX != 5 || cachedVel.VY != -3 {
+		t.Errorf("Cached velocity = (%f, %f), want (5, -3)", cachedVel.VX, cachedVel.VY)
+	}
+}
+
+// TestRemoveComponentWithLoggerClearsCache verifies that RemoveComponentWithLogger
+// clears the fast-path component cache (MED-2 fix).
+func TestRemoveComponentWithLoggerClearsCache(t *testing.T) {
+	entity := NewEntity(1)
+
+	// Add via normal path (known to work)
+	entity.AddComponent(&PositionComponent{X: 10, Y: 20})
+	if entity.GetPosition() == nil {
+		t.Fatal("Precondition: position cache should be set")
+	}
+
+	// Remove via logger path
+	entity.RemoveComponentWithLogger("position", nil)
+
+	// Cache should be cleared
+	if entity.GetPosition() != nil {
+		t.Error("Expected position cache to be cleared via RemoveComponentWithLogger")
+	}
+	if entity.HasComponent("position") {
+		t.Error("Expected position component to be removed from map")
+	}
+}

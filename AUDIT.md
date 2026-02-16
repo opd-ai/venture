@@ -24,7 +24,7 @@ This file tracks the audit status of all Go sub-packages in the Venture project.
 - [x] `pkg/procgen/terrain/AUDIT.md` — Complete — 0 issues
 - [ ] `pkg/procgen/book/` — Not audited
 - [ ] `pkg/procgen/class/` — Not audited
-- [ ] `pkg/procgen/companion/` — Not audited
+- [x] `pkg/procgen/companion/AUDIT.md` — Complete — 1 issue (0 high, 0 med, 1 low)
 - [ ] `pkg/procgen/environment/` — Not audited
 - [x] `pkg/procgen/genre/AUDIT.md` — Complete — 1 issue (0 high, 0 med, 1 low)
 - [x] `pkg/procgen/legendary/AUDIT.md` — Complete — 0 issues

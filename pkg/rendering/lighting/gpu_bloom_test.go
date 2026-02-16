@@ -1,3 +1,5 @@
+//go:build !headless
+
 // Package lighting provides dynamic lighting effects for rendered scenes.
 // gpu_bloom_test.go tests the GPU-accelerated bloom functionality.
 package lighting

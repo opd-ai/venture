@@ -113,7 +113,9 @@ type LightingConfig struct {
 	// GammaCorrection applies gamma correction (typically 2.2)
 	GammaCorrection float64
 
-	// EnableShadows enables shadow casting (not implemented yet)
+	// EnableShadows is reserved for future shadow casting support.
+	// This field is currently a no-op; setting it to true has no effect.
+	// Shadow casting may be implemented in a future release.
 	EnableShadows bool
 
 	// BloomConfig configures bloom/glow effects (Phase 17.1)

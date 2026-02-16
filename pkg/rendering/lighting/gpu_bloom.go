@@ -1,3 +1,5 @@
+//go:build !headless
+
 // Package lighting provides dynamic lighting effects for rendered scenes.
 // gpu_bloom.go provides GPU-accelerated bloom using Ebiten Kage shaders.
 // This eliminates CPU-side pixel iteration that was causing 15-50ms overhead (V2 fix).

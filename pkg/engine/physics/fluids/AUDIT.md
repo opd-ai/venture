@@ -1,16 +1,16 @@
 # Audit: github.com/opd-ai/venture/pkg/engine/physics/fluids
 **Date**: 2026-02-16
-**Status**: Needs Work
+**Status**: Complete
 
 ## Summary
 Physics subsystem implementing grid-based fluid dynamics simulation with buoyancy, swimming, and flooding mechanics. The package demonstrates excellent architecture with clean separation of concerns (Simulator, BuoyancyCalculator, SwimmingManager, FloodingManager), comprehensive documentation, and proper ECS component design. One medium-severity error handling issue and one low-severity documentation gap identified.
 
 ## Issues Found
-- [ ] **medium** Error handling — Swallowed error from `AddFluid` in `FloodingManager.UpdateFlooding` (`flooding.go:31`)
-- [ ] **low** Doc coverage — Missing godoc comment on exported function `UpdateDensity` (`buoyancy_calculator.go:54`)
+- [x] **medium** Error handling — Swallowed error from `AddFluid` in `FloodingManager.UpdateFlooding` (`flooding.go:31`) — **FIXED**: Added error check with structured logrus warning including system_name, coordinates, and flow_rate fields
+- [x] **low** Doc coverage — Missing godoc comment on exported function `UpdateDensity` (`buoyancy_calculator.go:54`) — **FIXED**: Godoc comment already present (verified 2026-02-16)
 
 ## Test Coverage
-95.1% (target: 65%) ✓
+95.2% (target: 65%) ✓
 
 Test structure:
 - `buoyancy_test.go`: 24 tests (buoyancy calculations, swimming, flooding)
@@ -43,5 +43,5 @@ Test structure:
 **Network Interfaces**: N/A (No network code in package)
 
 ## Recommendations
-1. **MEDIUM PRIORITY**: Fix error handling in `FloodingManager.UpdateFlooding` (line 31) — check and handle error from `f.simulator.AddFluid()`, log with structured logging if out-of-bounds
-2. **LOW PRIORITY**: Add godoc comment to `UpdateDensity` function (line 54 in buoyancy_calculator.go) — should explain "Recalculates entity density from mass and volume"
+1. ~~**MEDIUM PRIORITY**: Fix error handling in `FloodingManager.UpdateFlooding` (line 31) — check and handle error from `f.simulator.AddFluid()`, log with structured logging if out-of-bounds~~ **DONE** (2026-02-16)
+2. ~~**LOW PRIORITY**: Add godoc comment to `UpdateDensity` function (line 54 in buoyancy_calculator.go) — should explain "Recalculates entity density from mass and volume"~~ **DONE** (verified 2026-02-16, comment already present)

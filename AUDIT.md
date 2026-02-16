@@ -101,11 +101,11 @@ This file tracks the audit status of all packages in the Venture codebase.
 
 ### Physics Subsystems
 - [x] `pkg/engine/physics/destruction/AUDIT.md` — Complete — 0 issues (0 high, 0 med, 0 low)
-- [x] `pkg/engine/physics/fluids/AUDIT.md` — Needs Work — 2 issues (0 high, 1 med, 1 low)
+- [x] `pkg/engine/physics/fluids/AUDIT.md` — Complete — 0 issues (0 high, 0 med, 0 low)
 
 ### Other Engine Subsystems
 - [x] `pkg/engine/performance/AUDIT.md` — Complete — 3 issues (0 high, 0 med, 3 low)
-- [x] `pkg/engine/prestige/AUDIT.md` — Needs Work — 2 issues (0 high, 1 med, 1 low)
+- [x] `pkg/engine/prestige/AUDIT.md` — Complete — 0 issues (0 high, 0 med, 0 low)
 - [x] `pkg/engine/qol/AUDIT.md` — Complete — 0 issues (0 high, 0 med, 0 low)
 - [x] `pkg/engine/saves/AUDIT.md` — Incomplete — 4 issues (2 high, 1 med, 1 low)
 
@@ -163,10 +163,10 @@ This file tracks the audit status of all packages in the Venture codebase.
 - **Total Packages**: 116
 - **Audited**: 116 (100.0%)
 - **Pending**: 0 (0.0%)
-- **Issues Found**: 55
+- **Issues Found**: 51
   - High: 11
-  - Medium: 11
-  - Low: 33
+  - Medium: 9
+  - Low: 31
 
 ## Notes
 - Most core packages have been audited and are in good shape

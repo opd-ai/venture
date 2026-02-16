@@ -372,6 +372,28 @@ func TestUpdateFlooding(t *testing.T) {
 	}
 }
 
+func TestUpdateFlooding_OutOfBounds(t *testing.T) {
+	config := DefaultSimulationConfig()
+	config.GridWidth = 10
+	config.GridHeight = 10
+	sim := NewSimulator(config)
+	mgr := NewFloodingManager(sim)
+
+	flooding := &FloodingComponent{
+		FloodLevel:    0.0,
+		FloodRate:     0.1,
+		MaxFloodLevel: 1.0,
+	}
+	// Add source at out-of-bounds position; should log warning, not panic
+	mgr.AddFloodSource(flooding, 999, 999, 0.05)
+	mgr.UpdateFlooding(flooding, 0.1)
+
+	// Flood level should still update from FloodRate even though AddFluid fails
+	if flooding.FloodLevel <= 0.0 {
+		t.Error("Flood level should increase from FloodRate despite out-of-bounds source")
+	}
+}
+
 func TestIsFullyFlooded(t *testing.T) {
 	config := DefaultSimulationConfig()
 	sim := NewSimulator(config)

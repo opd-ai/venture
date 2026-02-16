@@ -150,6 +150,16 @@ func (p PrestigeComponent) Type() string {
 	return "prestige"
 }
 
+// Serialize converts the prestige component to bytes for persistence.
+func (p *PrestigeComponent) Serialize() ([]byte, error) {
+	return json.Marshal(p)
+}
+
+// Deserialize restores the prestige component from bytes.
+func (p *PrestigeComponent) Deserialize(data []byte) error {
+	return json.Unmarshal(data, p)
+}
+
 // Constants for prestige system configuration
 const (
 	// BasePrestigeXP is the XP required for prestige level 1

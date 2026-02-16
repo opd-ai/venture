@@ -12,6 +12,9 @@ import (
 )
 
 // Manager handles prestige system operations.
+// NOTE: Uses time.Now() for LastUpdated metadata timestamps on PlayerPrestige and
+// AccountPrestige records. These timestamps are for audit/debugging purposes only
+// and do not affect gameplay logic or deterministic generation.
 type Manager struct {
 	mu       sync.RWMutex
 	players  map[string]*PlayerPrestige

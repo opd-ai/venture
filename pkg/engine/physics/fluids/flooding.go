@@ -6,6 +6,8 @@ package fluids
 
 import (
 	"math"
+
+	log "github.com/sirupsen/logrus"
 )
 
 // FloodingManager handles flooding mechanics for enclosed areas
@@ -28,7 +30,14 @@ func (f *FloodingManager) UpdateFlooding(component *FloodingComponent, deltaTime
 		totalInflow += source.FlowRate * deltaTime
 
 		// Add water to simulation grid
-		f.simulator.AddFluid(source.X, source.Y, source.FlowRate*deltaTime, FluidWater)
+		if err := f.simulator.AddFluid(source.X, source.Y, source.FlowRate*deltaTime, FluidWater); err != nil {
+			log.WithFields(log.Fields{
+				"system_name": "flooding",
+				"x":           source.X,
+				"y":           source.Y,
+				"flow_rate":   source.FlowRate,
+			}).Warn("Failed to add flood fluid: ", err)
+		}
 	}
 
 	// Update flood level

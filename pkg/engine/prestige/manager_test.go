@@ -475,6 +475,70 @@ func TestPrestigeComponent_Type(t *testing.T) {
 	}
 }
 
+func TestPrestigeComponent_SerializeDeserialize(t *testing.T) {
+	tests := []struct {
+		name string
+		comp PrestigeComponent
+	}{
+		{
+			name: "full component",
+			comp: PrestigeComponent{
+				PlayerID:        "player1",
+				PrestigeLevel:   42,
+				VisualTier:      VisualIntense,
+				ActiveAbilities: []string{"power_strike", "divine_shield"},
+			},
+		},
+		{
+			name: "empty component",
+			comp: PrestigeComponent{},
+		},
+		{
+			name: "max prestige",
+			comp: PrestigeComponent{
+				PlayerID:        "player_max",
+				PrestigeLevel:   100,
+				VisualTier:      VisualRadiant,
+				ActiveAbilities: []string{},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			data, err := tt.comp.Serialize()
+			if err != nil {
+				t.Fatalf("Serialize failed: %v", err)
+			}
+			if len(data) == 0 {
+				t.Fatal("Serialize returned empty data")
+			}
+
+			var restored PrestigeComponent
+			if err := restored.Deserialize(data); err != nil {
+				t.Fatalf("Deserialize failed: %v", err)
+			}
+
+			if restored.PlayerID != tt.comp.PlayerID {
+				t.Errorf("PlayerID: got %s, want %s", restored.PlayerID, tt.comp.PlayerID)
+			}
+			if restored.PrestigeLevel != tt.comp.PrestigeLevel {
+				t.Errorf("PrestigeLevel: got %d, want %d", restored.PrestigeLevel, tt.comp.PrestigeLevel)
+			}
+			if restored.VisualTier != tt.comp.VisualTier {
+				t.Errorf("VisualTier: got %d, want %d", restored.VisualTier, tt.comp.VisualTier)
+			}
+		})
+	}
+}
+
+func TestPrestigeComponent_DeserializeInvalid(t *testing.T) {
+	var comp PrestigeComponent
+	if err := comp.Deserialize([]byte("invalid json")); err == nil {
+		t.Error("expected error for invalid JSON, got nil")
+	}
+}
+
 func TestPlayerPrestige_MarshalJSON(t *testing.T) {
 	player := &PlayerPrestige{
 		PlayerID:           "player1",

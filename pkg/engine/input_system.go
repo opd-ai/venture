@@ -2024,3 +2024,10 @@ func (s *InputSystem) ResizeVirtualControls(screenWidth, screenHeight int) {
 		s.virtualControls.Resize(screenWidth, screenHeight)
 	}
 }
+
+// OnScreenResize implements the screenDimensionConsumer interface so that
+// virtual controls are repositioned whenever the window or device orientation
+// changes. This is called by EbitenGame.propagateScreenResize.
+func (s *InputSystem) OnScreenResize(width, height int) {
+	s.ResizeVirtualControls(width, height)
+}

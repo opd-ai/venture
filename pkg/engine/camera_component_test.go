@@ -558,3 +558,152 @@ func TestCameraSystem_IsVisible_NoComponent(t *testing.T) {
 		t.Error("IsVisible should return true when camera entity has no component")
 	}
 }
+
+// TestSetCameraBoundsFromTerrain tests camera bounds calculation from terrain dimensions.
+func TestSetCameraBoundsFromTerrain(t *testing.T) {
+	tests := []struct {
+		name            string
+		terrainW        float64
+		terrainH        float64
+		screenW         int
+		screenH         int
+		zoom            float64
+		wantMinX        float64
+		wantMaxX        float64
+		wantMinY        float64
+		wantMaxY        float64
+	}{
+		{
+			name:     "normal terrain zoom 1.0",
+			terrainW: 2560, terrainH: 1600,
+			screenW: 800, screenH: 600,
+			zoom:     1.0,
+			wantMinX: 400, wantMaxX: 2160,
+			wantMinY: 300, wantMaxY: 1300,
+		},
+		{
+			name:     "zoom 2.0 shrinks visible area",
+			terrainW: 2560, terrainH: 1600,
+			screenW: 800, screenH: 600,
+			zoom:     2.0,
+			wantMinX: 200, wantMaxX: 2360,
+			wantMinY: 150, wantMaxY: 1450,
+		},
+		{
+			name:     "terrain smaller than viewport in X centres",
+			terrainW: 400, terrainH: 1600,
+			screenW: 800, screenH: 600,
+			zoom:     1.0,
+			wantMinX: 200, wantMaxX: 200, // centred
+			wantMinY: 300, wantMaxY: 1300,
+		},
+		{
+			name:     "terrain smaller than viewport in both axes",
+			terrainW: 400, terrainH: 300,
+			screenW: 800, screenH: 600,
+			zoom:     1.0,
+			wantMinX: 200, wantMaxX: 200,
+			wantMinY: 150, wantMaxY: 150,
+		},
+		{
+			name:     "terrain exactly matches viewport",
+			terrainW: 800, terrainH: 600,
+			screenW: 800, screenH: 600,
+			zoom:     1.0,
+			wantMinX: 400, wantMaxX: 400, // centred
+			wantMinY: 300, wantMaxY: 300,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			camera := NewCameraComponent()
+			camera.Zoom = tt.zoom
+			SetCameraBoundsFromTerrain(camera, tt.terrainW, tt.terrainH, tt.screenW, tt.screenH)
+
+			if math.Abs(camera.MinX-tt.wantMinX) > 0.001 {
+				t.Errorf("MinX = %v, want %v", camera.MinX, tt.wantMinX)
+			}
+			if math.Abs(camera.MaxX-tt.wantMaxX) > 0.001 {
+				t.Errorf("MaxX = %v, want %v", camera.MaxX, tt.wantMaxX)
+			}
+			if math.Abs(camera.MinY-tt.wantMinY) > 0.001 {
+				t.Errorf("MinY = %v, want %v", camera.MinY, tt.wantMinY)
+			}
+			if math.Abs(camera.MaxY-tt.wantMaxY) > 0.001 {
+				t.Errorf("MaxY = %v, want %v", camera.MaxY, tt.wantMaxY)
+			}
+		})
+	}
+}
+
+// TestCameraSystem_BoundsClampingWithTerrain tests that camera position is clamped
+// after setting terrain bounds.
+func TestCameraSystem_BoundsClampingWithTerrain(t *testing.T) {
+	cameraSystem := NewCameraSystem(800, 600)
+
+	entity := NewEntity(1)
+	cam := NewCameraComponent()
+	cam.Zoom = 1.0
+	cam.Smoothing = 0 // instant follow
+	entity.AddComponent(cam)
+	entity.AddComponent(&PositionComponent{X: 0, Y: 0})
+
+	cameraSystem.SetActiveCamera(entity)
+
+	// Set terrain bounds for an 80×50 tile map at 32px/tile = 2560×1600
+	SetCameraBoundsFromTerrain(cam, 2560, 1600, 800, 600)
+
+	// Position at origin should be clamped to MinX/MinY
+	cameraSystem.Update([]*Entity{entity}, 1.0/60.0)
+	if cam.X < cam.MinX || cam.Y < cam.MinY {
+		t.Errorf("camera not clamped to min bounds: got (%v, %v), min (%v, %v)",
+			cam.X, cam.Y, cam.MinX, cam.MinY)
+	}
+
+	// Position past max should be clamped
+	pos := entity.GetPosition()
+	pos.X = 3000
+	pos.Y = 2000
+	cameraSystem.Update([]*Entity{entity}, 1.0/60.0)
+	if cam.X > cam.MaxX || cam.Y > cam.MaxY {
+		t.Errorf("camera not clamped to max bounds: got (%v, %v), max (%v, %v)",
+			cam.X, cam.Y, cam.MaxX, cam.MaxY)
+	}
+}
+
+// TestPlayerBoundsClamp tests that BoundsComponent clamps player position to terrain.
+func TestPlayerBoundsClamp(t *testing.T) {
+	tests := []struct {
+		name       string
+		inputX     float64
+		inputY     float64
+		boundsMinX float64
+		boundsMinY float64
+		boundsMaxX float64
+		boundsMaxY float64
+		wantX      float64
+		wantY      float64
+	}{
+		{"inside bounds", 100, 100, 0, 0, 2560, 1600, 100, 100},
+		{"at min edge", 0, 0, 0, 0, 2560, 1600, 0, 0},
+		{"at max edge", 2560, 1600, 0, 0, 2560, 1600, 2560, 1600},
+		{"past min X", -50, 100, 0, 0, 2560, 1600, 0, 100},
+		{"past max X", 3000, 100, 0, 0, 2560, 1600, 2560, 100},
+		{"past both max", 3000, 2000, 0, 0, 2560, 1600, 2560, 1600},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			bounds := &BoundsComponent{
+				MinX: tt.boundsMinX, MinY: tt.boundsMinY,
+				MaxX: tt.boundsMaxX, MaxY: tt.boundsMaxY,
+			}
+			gotX, gotY := bounds.Clamp(tt.inputX, tt.inputY)
+			if gotX != tt.wantX || gotY != tt.wantY {
+				t.Errorf("Clamp(%v, %v) = (%v, %v), want (%v, %v)",
+					tt.inputX, tt.inputY, gotX, gotY, tt.wantX, tt.wantY)
+			}
+		})
+	}
+}

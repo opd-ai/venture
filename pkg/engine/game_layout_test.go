@@ -166,3 +166,14 @@ func TestEbitenGame_Layout_SkipsRedundantResize(t *testing.T) {
 		t.Error("sceneBuffer was reallocated despite no dimension change")
 	}
 }
+
+// TestInputSystem_OnScreenResize verifies that InputSystem implements
+// screenDimensionConsumer so propagateScreenResize repositions virtual controls.
+func TestInputSystem_OnScreenResize(t *testing.T) {
+	inputSystem := NewInputSystem()
+	// Verify the interface is satisfied at compile time.
+	var _ screenDimensionConsumer = inputSystem
+
+	// OnScreenResize should not panic even without virtual controls.
+	inputSystem.OnScreenResize(1366, 768)
+}

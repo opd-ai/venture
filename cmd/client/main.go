@@ -249,6 +249,25 @@ func setupCompletePlayerEntity(game *engine.EbitenGame, generatedTerrain *terrai
 	playerX, playerY := calculatePlayerSpawnPosition(generatedTerrain, clientLogger)
 	player := createPlayerEntity(game, playerX, playerY, sys.animationSystem, clientLogger)
 
+	// Set camera bounds to terrain pixel dimensions so the viewport never
+	// scrolls past the terrain edges into void.
+	terrainWidthPx := float64(generatedTerrain.Width * tileSize)
+	terrainHeightPx := float64(generatedTerrain.Height * tileSize)
+
+	if cameraComp, ok := player.GetComponent("camera"); ok {
+		if cam, ok := cameraComp.(*engine.CameraComponent); ok {
+			engine.SetCameraBoundsFromTerrain(cam, terrainWidthPx, terrainHeightPx, game.ScreenWidth, game.ScreenHeight)
+		}
+	}
+
+	// Add player movement bounds so the player cannot walk off the terrain.
+	player.AddComponent(&engine.BoundsComponent{
+		MinX: 0,
+		MinY: 0,
+		MaxX: terrainWidthPx,
+		MaxY: terrainHeightPx,
+	})
+
 	addPlayerComponents(player, logger, clientLogger)
 	applyCharacterClass(player, game, clientLogger)
 	initializePlayerAdvancedClass(player, game, clientLogger)

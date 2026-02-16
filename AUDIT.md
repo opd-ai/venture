@@ -29,7 +29,7 @@ This file tracks the audit status of all Go sub-packages in the Venture project.
 - [x] `pkg/procgen/genre/AUDIT.md` — Complete — 1 issue (0 high, 0 med, 1 low)
 - [x] `pkg/procgen/legendary/AUDIT.md` — Complete — 0 issues
 - [ ] `pkg/procgen/minigame/` — Not audited
-- [ ] `pkg/procgen/narrative/` — Not audited
+- [x] `pkg/procgen/narrative/AUDIT.md` — Complete — 2 issues (0 high, 0 med, 2 low)
 - [ ] `pkg/procgen/puzzle/` — Not audited
 - [ ] `pkg/procgen/recipe/` — Not audited
 - [ ] `pkg/procgen/station/` — Not audited
@@ -111,8 +111,8 @@ This file tracks the audit status of all Go sub-packages in the Venture project.
 
 ## Audit Statistics
 - **Total Packages Identified**: ~70+
-- **Audited**: 18
-- **Completion Rate**: ~25.7%
+- **Audited**: 19
+- **Completion Rate**: ~27.1%
 
 ## Priority Queue (High Integration Surface)
 1. `pkg/procgen/genre/` — Genre system affects all procgen

@@ -68,6 +68,18 @@ func NewCameraComponent() *CameraComponent {
 // dimensions. When the terrain is smaller than the viewport (at the current
 // Zoom), the camera is centred on the terrain.
 func SetCameraBoundsFromTerrain(camera *CameraComponent, terrainWidthPx, terrainHeightPx float64, screenWidth, screenHeight int) {
+	// Validate zoom to avoid division by zero or negative values.
+	if camera.Zoom <= 0 {
+		log.WithFields(log.Fields{
+			"system_name":       "camera",
+			"terrain_width_px":  terrainWidthPx,
+			"terrain_height_px": terrainHeightPx,
+			"screen_width":      screenWidth,
+			"screen_height":     screenHeight,
+			"zoom":              camera.Zoom,
+		}).Warn("Invalid camera zoom detected in SetCameraBoundsFromTerrain; resetting to 1.0")
+		camera.Zoom = 1.0
+	}
 	halfViewW := float64(screenWidth) / (2 * camera.Zoom)
 	halfViewH := float64(screenHeight) / (2 * camera.Zoom)
 

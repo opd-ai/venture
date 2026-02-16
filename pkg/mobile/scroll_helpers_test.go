@@ -23,25 +23,25 @@ func TestMobileMenu_CalculateMaxScroll(t *testing.T) {
 			name:       "empty_menu",
 			menuHeight: 400,
 			itemCount:  0,
-			wantValue:  -400, // 0 items * 50 height - 400 = -400
+			wantValue:  0, // 0 items = no scrollable content
 		},
 		{
 			name:       "single_item_fits",
 			menuHeight: 400,
 			itemCount:  1,
-			wantValue:  -350, // 1 item * 50 height - 400 = -350 (no scroll needed)
+			wantValue:  0, // 1 item stretches to fill menu, no scroll needed
 		},
 		{
 			name:       "many_items_scrollable",
 			menuHeight: 200,
 			itemCount:  20,
-			wantValue:  800, // 20 items * 50 height - 200 = 800 (scrollable)
+			wantValue:  760, // 20 items * 48px min height - 200 = 760 (scrollable)
 		},
 		{
 			name:       "items_exactly_fit",
 			menuHeight: 400,
 			itemCount:  8,
-			wantValue:  0, // 8 items * 50 height - 400 = 0 (exactly fits)
+			wantValue:  0, // 8 items * 50px dynamic - 400 = 0 (exactly fits)
 		},
 	}
 
@@ -55,6 +55,68 @@ func TestMobileMenu_CalculateMaxScroll(t *testing.T) {
 			maxScroll := menu.calculateMaxScroll()
 			if maxScroll != tt.wantValue {
 				t.Errorf("calculateMaxScroll() = %.2f, want %.2f", maxScroll, tt.wantValue)
+			}
+		})
+	}
+}
+
+// TestMobileMenu_GetItemHeight tests consistent item height calculation.
+func TestMobileMenu_GetItemHeight(t *testing.T) {
+	tests := []struct {
+		name       string
+		menuHeight float64
+		itemCount  int
+		want       float64
+	}{
+		{"empty_menu", 400, 0, minMenuItemHeight},
+		{"few_items_stretch", 400, 2, 200},             // 400/2=200 > 48
+		{"many_items_use_min", 200, 20, minMenuItemHeight}, // 200/20=10 < 48
+		{"exact_min_boundary", 480, 10, minMenuItemHeight}, // 480/10=48 == 48
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			menu := NewMobileMenu(0, 0, 300, tt.menuHeight)
+			for i := 0; i < tt.itemCount; i++ {
+				menu.AddItem("Item", true, nil)
+			}
+			got := menu.getItemHeight()
+			if got != tt.want {
+				t.Errorf("getItemHeight() = %.2f, want %.2f", got, tt.want)
+			}
+		})
+	}
+}
+
+// TestMobileMenu_HandleTapEmptyMenu tests that tap input on empty menu doesn't panic.
+func TestMobileMenu_HandleTapEmptyMenu(t *testing.T) {
+	menu := NewMobileMenu(0, 0, 300, 400)
+	// Should not panic with no items
+	menu.handleTapInput()
+	menu.handleLongPressInput()
+}
+
+// TestMobileMenu_SwipeVerticalDetection tests swipe direction classification.
+func TestMobileMenu_SwipeVerticalDetection(t *testing.T) {
+	// Verify the swipe angle check: abs(direction) must be between π/4 and 3π/4
+	// for vertical classification
+	tests := []struct {
+		name       string
+		angle      float64
+		isVertical bool
+	}{
+		{"right_horizontal", 0.0, false},
+		{"up_vertical", -1.5708, true},  // -π/2
+		{"down_vertical", 1.5708, true}, // π/2
+		{"left_horizontal", 3.1416, false},   // π
+		{"neg_left_horizontal", -3.1416, false}, // -π
+		{"diagonal_45", 0.7854, false},  // π/4 boundary
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			absDir := absFloatVal(tt.angle)
+			got := absDir > 0.7854 && absDir < 2.3562 // π/4 and 3π/4
+			if got != tt.isVertical {
+				t.Errorf("angle=%.4f: isVertical=%v, want %v", tt.angle, got, tt.isVertical)
 			}
 		})
 	}

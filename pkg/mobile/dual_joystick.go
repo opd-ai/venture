@@ -300,8 +300,9 @@ func (j *VirtualJoystick) updateDirection(touchX, touchY float64) {
 	j.Magnitude = (distance - j.DeadZone) / (j.Radius - j.DeadZone)
 
 	// Calculate normalized direction (-1.0 to 1.0)
-	j.DirectionX = (dx / j.Radius) * math.Max(1.0, j.Magnitude)
-	j.DirectionY = (dy / j.Radius) * math.Max(1.0, j.Magnitude)
+	// DirectionX/Y represent raw stick position; Magnitude gives dead-zone-adjusted intensity
+	j.DirectionX = dx / j.Radius
+	j.DirectionY = dy / j.Radius
 
 	// Clamp to [-1.0, 1.0] range
 	j.DirectionX = math.Max(-1.0, math.Min(1.0, j.DirectionX))

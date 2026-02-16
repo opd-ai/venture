@@ -3,6 +3,7 @@ package mobile
 import (
 	"image"
 	"image/color"
+	"math"
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
@@ -108,6 +109,22 @@ func (m *MobileMenu) AddItem(label string, enabled bool, onSelect func()) {
 	})
 }
 
+// minMenuItemHeight is the minimum item height for touch-friendly targets.
+const minMenuItemHeight = 48.0
+
+// getItemHeight returns a consistent item height for layout and hit testing.
+// Uses the larger of dynamic height (items fill menu) or minimum touch target.
+func (m *MobileMenu) getItemHeight() float64 {
+	if len(m.Items) == 0 {
+		return minMenuItemHeight
+	}
+	dynamic := m.Height / float64(len(m.Items))
+	if dynamic < minMenuItemHeight {
+		return minMenuItemHeight
+	}
+	return dynamic
+}
+
 // Update processes touch input for the menu.
 // Platform parity fix: Enhanced with momentum scrolling, long-press context menu, and drag-and-drop
 func (m *MobileMenu) Update() {
@@ -129,8 +146,12 @@ func (m *MobileMenu) handleTapInput() {
 		return
 	}
 
+	if len(m.Items) == 0 {
+		return
+	}
+
 	tapX, tapY := m.touchHandler.GetTapPosition()
-	itemHeight := m.Height / float64(len(m.Items))
+	itemHeight := m.getItemHeight()
 
 	for i := range m.Items {
 		itemY := m.Y + float64(i)*itemHeight + m.scrollOffset
@@ -153,8 +174,12 @@ func (m *MobileMenu) handleLongPressInput() {
 		return
 	}
 
+	if len(m.Items) == 0 {
+		return
+	}
+
 	longX, longY := m.touchHandler.gestureDetector.GetLongPressPosition()
-	itemHeight := m.Height / float64(len(m.Items))
+	itemHeight := m.getItemHeight()
 
 	for i := range m.Items {
 		itemY := m.Y + float64(i)*itemHeight + m.scrollOffset
@@ -203,7 +228,9 @@ func (m *MobileMenu) handleSwipeInput() {
 		return
 	}
 
-	isVertical := (direction > 1.0 || direction < -1.0)
+	// direction is in radians from math.Atan2: 0=right, ±π=left, π/2=down, -π/2=up
+	absDir := math.Abs(direction)
+	isVertical := absDir > math.Pi/4 && absDir < 3*math.Pi/4
 	if isVertical {
 		velocity := m.touchHandler.gestureDetector.GetLastVelocity()
 		m.scrollVelocity = -velocity * 10.0
@@ -228,7 +255,10 @@ func (m *MobileMenu) drawBackground(screen *ebiten.Image) {
 
 // drawMenuItems renders all visible menu items.
 func (m *MobileMenu) drawMenuItems(screen *ebiten.Image) {
-	itemHeight := m.Height / float64(len(m.Items))
+	if len(m.Items) == 0 {
+		return
+	}
+	itemHeight := m.getItemHeight()
 	for i, item := range m.Items {
 		itemY := m.Y + float64(i)*itemHeight + m.scrollOffset
 		if !m.isItemVisible(itemY, itemHeight) {
@@ -332,9 +362,12 @@ func (m *MobileMenu) updateMomentumScrolling() {
 }
 
 // calculateMaxScroll returns the maximum scroll offset for the menu.
-// Uses a fixed item height (50px) to allow scrollable content when items exceed viewport.
+// Uses getItemHeight for consistent sizing with tap detection and rendering.
 func (m *MobileMenu) calculateMaxScroll() float64 {
-	itemHeight := 50.0 // Fixed height per item for consistent scroll behavior
+	if len(m.Items) == 0 {
+		return 0
+	}
+	itemHeight := m.getItemHeight()
 	contentHeight := float64(len(m.Items)) * itemHeight
 	return contentHeight - m.Height
 }

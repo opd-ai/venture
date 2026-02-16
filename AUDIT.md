@@ -102,8 +102,8 @@ This file tracks the audit status of all Go sub-packages in the Venture project.
 - [x] `pkg/migration/AUDIT.md` — Complete — 1 issue fixed (0 high, 0 med, 1 low); 91.3% coverage
 - [x] `pkg/modding/AUDIT.md` — Complete — 3 issues (0 high, 1 med, 2 low)
 - [x] `pkg/narrative/AUDIT.md` — Complete — 1 issue fixed (0 high, 1 med, 0 low); 1 low remaining; 91.2% coverage
-- [ ] `pkg/ux/` — Not audited
-- [ ] `pkg/balance/` — Not audited
+- [x] `pkg/ux/AUDIT.md` — Complete — 1 issue fixed (0 high, 0 med, 1 low); 96.5% coverage
+- [x] `pkg/balance/AUDIT_2026-02-13_COMPREHENSIVE.md` — Complete — 2 high fixed, 1 med fixed, 1 low remaining; ~90% estimated coverage
 - [ ] `pkg/class/` — Not audited
 - [ ] `pkg/companion/` — Not audited
 - [ ] `pkg/social/` — Not audited
@@ -120,8 +120,8 @@ This file tracks the audit status of all Go sub-packages in the Venture project.
 
 ## Audit Statistics
 - **Total Packages Identified**: ~70+
-- **Audited**: 73
-- **Completion Rate**: ~97.3%
+- **Audited**: 75
+- **Completion Rate**: ~97.4%
 
 ## Priority Queue (High Integration Surface)
 1. `pkg/procgen/genre/` — Genre system affects all procgen

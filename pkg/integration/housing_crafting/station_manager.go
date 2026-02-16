@@ -104,20 +104,34 @@ func (sm *StationManager) GetStation(stationID string) (*CraftingStation, error)
 	return station, nil
 }
 
-// GetStationsByOwner retrieves all stations owned by a player
+// GetStationsByOwner retrieves all stations owned by a player.
+// Returns a copy of the internal slice to prevent concurrent modification.
 func (sm *StationManager) GetStationsByOwner(ownerID string) []*CraftingStation {
 	sm.mu.RLock()
 	defer sm.mu.RUnlock()
 
-	return sm.stationsByOwner[ownerID]
+	src := sm.stationsByOwner[ownerID]
+	if len(src) == 0 {
+		return nil
+	}
+	result := make([]*CraftingStation, len(src))
+	copy(result, src)
+	return result
 }
 
-// GetStationsByHouse retrieves all stations in a house
+// GetStationsByHouse retrieves all stations in a house.
+// Returns a copy of the internal slice to prevent concurrent modification.
 func (sm *StationManager) GetStationsByHouse(houseID string) []*CraftingStation {
 	sm.mu.RLock()
 	defer sm.mu.RUnlock()
 
-	return sm.stationsByHouse[houseID]
+	src := sm.stationsByHouse[houseID]
+	if len(src) == 0 {
+		return nil
+	}
+	result := make([]*CraftingStation, len(src))
+	copy(result, src)
+	return result
 }
 
 // GetCraftingBonus calculates the crafting bonus for a player crafting a specific recipe
@@ -178,6 +192,9 @@ func (sm *StationManager) RegisterFacility(facility *SkillTrainingFacility) erro
 	if facility.OwnerID == "" {
 		return fmt.Errorf("facility OwnerID cannot be empty")
 	}
+	if facility.HouseID == "" {
+		return fmt.Errorf("facility HouseID cannot be empty")
+	}
 
 	sm.mu.Lock()
 	defer sm.mu.Unlock()
@@ -190,6 +207,31 @@ func (sm *StationManager) RegisterFacility(facility *SkillTrainingFacility) erro
 	// Register facility
 	sm.facilities[facility.ID] = facility
 	sm.facilitiesByOwner[facility.OwnerID] = append(sm.facilitiesByOwner[facility.OwnerID], facility)
+
+	return nil
+}
+
+// UnregisterFacility removes a skill training facility
+func (sm *StationManager) UnregisterFacility(facilityID string) error {
+	sm.mu.Lock()
+	defer sm.mu.Unlock()
+
+	facility, exists := sm.facilities[facilityID]
+	if !exists {
+		return fmt.Errorf("facility with ID %s not found", facilityID)
+	}
+
+	// Remove from main map
+	delete(sm.facilities, facilityID)
+
+	// Remove from owner map
+	ownerFacilities := sm.facilitiesByOwner[facility.OwnerID]
+	for i, f := range ownerFacilities {
+		if f.ID == facilityID {
+			sm.facilitiesByOwner[facility.OwnerID] = append(ownerFacilities[:i], ownerFacilities[i+1:]...)
+			break
+		}
+	}
 
 	return nil
 }

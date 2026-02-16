@@ -69,8 +69,24 @@ func (s *HousingCraftingSystem) SyncFromStation(c *HousingCraftingComponent) err
 
 	c.StationType = station.Type
 	c.BonusMultiplier = station.Quality.Multiplier()
-	c.SkillBonus = station.SkillBonus
-	c.ActiveRecipes = station.ActiveRecipes
+
+	// Deep copy map to avoid sharing mutable references with the station
+	if station.SkillBonus != nil {
+		c.SkillBonus = make(map[string]int, len(station.SkillBonus))
+		for k, v := range station.SkillBonus {
+			c.SkillBonus[k] = v
+		}
+	} else {
+		c.SkillBonus = nil
+	}
+
+	// Deep copy slice to avoid sharing mutable references with the station
+	if station.ActiveRecipes != nil {
+		c.ActiveRecipes = make([]string, len(station.ActiveRecipes))
+		copy(c.ActiveRecipes, station.ActiveRecipes)
+	} else {
+		c.ActiveRecipes = nil
+	}
 
 	return nil
 }

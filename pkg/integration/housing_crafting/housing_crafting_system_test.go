@@ -291,6 +291,42 @@ func TestHousingCraftingSystemSyncFromStation(t *testing.T) {
 	})
 }
 
+// TestHousingCraftingSystemSyncFromStationDeepCopy verifies SyncFromStation makes deep copies
+func TestHousingCraftingSystemSyncFromStationDeepCopy(t *testing.T) {
+	manager := NewStationManager()
+	system := NewHousingCraftingSystem(manager)
+
+	station := &CraftingStation{
+		ID:      "station1",
+		Type:    StationTypeForge,
+		Quality: QualityMaster,
+		OwnerID: "player1",
+		HouseID: "house1",
+		SkillBonus: map[string]int{
+			"smithing": 75,
+		},
+		ActiveRecipes: []string{"master_sword", "legendary_axe"},
+	}
+	manager.RegisterStation(station)
+
+	component := &HousingCraftingComponent{StationID: "station1"}
+	if err := system.SyncFromStation(component); err != nil {
+		t.Fatalf("SyncFromStation() error = %v", err)
+	}
+
+	// Modify the station's data after sync
+	station.SkillBonus["smithing"] = 999
+	station.ActiveRecipes[0] = "changed_recipe"
+
+	// Component should retain original values (deep copy)
+	if component.SkillBonus["smithing"] != 75 {
+		t.Errorf("SyncFromStation did not deep copy SkillBonus: got %d, want 75", component.SkillBonus["smithing"])
+	}
+	if component.ActiveRecipes[0] != "master_sword" {
+		t.Errorf("SyncFromStation did not deep copy ActiveRecipes: got %s, want master_sword", component.ActiveRecipes[0])
+	}
+}
+
 // TestHousingCraftingComponentType tests the component Type method
 func TestHousingCraftingComponentType(t *testing.T) {
 	component := &HousingCraftingComponent{}

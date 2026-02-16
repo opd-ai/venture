@@ -306,6 +306,7 @@ func TestRegisterFacility(t *testing.T) {
 	invalidFacility := &SkillTrainingFacility{
 		ID:      "",
 		OwnerID: "player1",
+		HouseID: "house1",
 	}
 	if err := sm.RegisterFacility(invalidFacility); err == nil {
 		t.Error("RegisterFacility() should error on empty ID")
@@ -316,6 +317,96 @@ func TestRegisterFacility(t *testing.T) {
 	invalidFacility.OwnerID = ""
 	if err := sm.RegisterFacility(invalidFacility); err == nil {
 		t.Error("RegisterFacility() should error on empty OwnerID")
+	}
+
+	// Test empty HouseID
+	invalidFacility.OwnerID = "player1"
+	invalidFacility.HouseID = ""
+	if err := sm.RegisterFacility(invalidFacility); err == nil {
+		t.Error("RegisterFacility() should error on empty HouseID")
+	}
+}
+
+// TestUnregisterFacility tests facility removal
+func TestUnregisterFacility(t *testing.T) {
+	sm := NewStationManager()
+
+	facility := &SkillTrainingFacility{
+		ID:              "facility1",
+		OwnerID:         "player1",
+		HouseID:         "house1",
+		TrainableSkills: []string{"smithing"},
+		XPMultiplier:    1.5,
+	}
+
+	// Register then unregister
+	sm.RegisterFacility(facility)
+	if err := sm.UnregisterFacility("facility1"); err != nil {
+		t.Errorf("UnregisterFacility() error = %v", err)
+	}
+
+	// Test unregister non-existent
+	if err := sm.UnregisterFacility("facility1"); err == nil {
+		t.Error("UnregisterFacility() should error on non-existent facility")
+	}
+
+	// Verify facility removed: skill training bonus should be 1.0
+	bonus := sm.GetSkillTrainingBonus("player1", "smithing")
+	if bonus != 1.0 {
+		t.Errorf("GetSkillTrainingBonus after unregister = %v, want 1.0", bonus)
+	}
+}
+
+// TestGetStationsByOwnerReturnsCopy tests that returned slice is a copy
+func TestGetStationsByOwnerReturnsCopy(t *testing.T) {
+	sm := NewStationManager()
+
+	station := &CraftingStation{
+		ID:      "station1",
+		Type:    StationTypeForge,
+		Quality: QualityMaster,
+		OwnerID: "player1",
+		HouseID: "house1",
+	}
+	sm.RegisterStation(station)
+
+	// Get copy, modify it, and verify original is unaffected
+	stations := sm.GetStationsByOwner("player1")
+	if len(stations) != 1 {
+		t.Fatalf("Expected 1 station, got %d", len(stations))
+	}
+	stations[0] = nil // Modify returned slice
+
+	// Original should be unaffected
+	stationsAgain := sm.GetStationsByOwner("player1")
+	if stationsAgain[0] == nil {
+		t.Error("GetStationsByOwner returned internal slice reference, not a copy")
+	}
+}
+
+// TestGetStationsByHouseReturnsCopy tests that returned slice is a copy
+func TestGetStationsByHouseReturnsCopy(t *testing.T) {
+	sm := NewStationManager()
+
+	station := &CraftingStation{
+		ID:      "station1",
+		Type:    StationTypeForge,
+		Quality: QualityMaster,
+		OwnerID: "player1",
+		HouseID: "house1",
+	}
+	sm.RegisterStation(station)
+
+	// Get copy, modify it, and verify original is unaffected
+	stations := sm.GetStationsByHouse("house1")
+	if len(stations) != 1 {
+		t.Fatalf("Expected 1 station, got %d", len(stations))
+	}
+	stations[0] = nil
+
+	stationsAgain := sm.GetStationsByHouse("house1")
+	if stationsAgain[0] == nil {
+		t.Error("GetStationsByHouse returned internal slice reference, not a copy")
 	}
 }
 

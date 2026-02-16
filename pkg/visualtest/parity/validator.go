@@ -113,7 +113,10 @@ func (v *Validator) CompareImages(img1, img2 *image.RGBA) (float64, []string) {
 		}
 	}
 
-	diffPct := float64(differentPixels) / float64(totalPixels) * 100.0
+	var diffPct float64
+	if totalPixels > 0 {
+		diffPct = float64(differentPixels) / float64(totalPixels) * 100.0
+	}
 
 	// Report error if too many pixels differ, regardless of how much they differ
 	if diffPct > v.tolerance.MaxPercentDiff {
@@ -166,7 +169,9 @@ func (v *Validator) CompareColors(colors1, colors2 []color.RGBA) (float64, []str
 	return diffPct, errors
 }
 
-// CompareFrameRate compares frame rates and returns the percentage difference
+// CompareFrameRate compares frame rates and returns the percentage difference.
+// The first return value is the difference percentage, the second contains error
+// messages if the difference meets or exceeds the 20% threshold.
 func (v *Validator) CompareFrameRate(fps1, fps2 float64) (float64, []string) {
 	if fps1 <= 0 || fps2 <= 0 {
 		return 100.0, []string{"invalid frame rate values"}

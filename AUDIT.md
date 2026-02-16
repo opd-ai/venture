@@ -111,8 +111,8 @@ This file tracks the audit status of all Go sub-packages in the Venture project.
 - [x] `pkg/hostplay/AUDIT.md` — Complete — 3 issues fixed (0 high, 1 med, 2 low); 89.7% coverage
 - [x] `pkg/mobile/AUDIT.md` — Complete — 4 issues fixed (0 high, 4 med); 2 low remaining; 65.4% coverage
 - [x] `pkg/vr/AUDIT.md` — Complete — 0 issues; 76.8% coverage
-- [ ] `pkg/visualtest/` — Not audited (test infrastructure)
-- [ ] `pkg/audit/` — Not audited (audit infrastructure)
+- [x] `pkg/visualtest/AUDIT.md` — Complete — 4 issues fixed (0 high, 4 med); 3 low remaining; 88.1% coverage (parity)
+- [x] `pkg/audit/AUDIT.md` — Complete — 0 issues fixed; 2 low remaining; 99.2% coverage
 
 ## Command Packages
 - [ ] `cmd/client/` — Not audited
@@ -121,7 +121,7 @@ This file tracks the audit status of all Go sub-packages in the Venture project.
 
 ## Audit Statistics
 - **Total Packages Identified**: ~70+
-- **Audited**: 80
+- **Audited**: 82
 - **Completion Rate**: ~99%
 
 ## Priority Queue (High Integration Surface)

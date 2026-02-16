@@ -94,7 +94,10 @@ func RunBenchmark(name, phase string, iterations int, fn func()) BenchmarkResult
 	var memStatsAfter runtime.MemStats
 	runtime.ReadMemStats(&memStatsAfter)
 
-	// Calculate metrics
+	// Calculate metrics (guard against zero iterations)
+	if iterations < 1 {
+		iterations = 1
+	}
 	nsPerOp := duration.Nanoseconds() / int64(iterations)
 	allocDiff := memStatsAfter.TotalAlloc - memStatsBefore.TotalAlloc
 	bytesPerOp := int64(allocDiff) / int64(iterations)
@@ -437,7 +440,11 @@ func (suite *BenchmarkSuite) PrintResults() {
 			passed++
 		}
 	}
-	fmt.Printf("\nPassed: %d/%d (%.1f%%)\n", passed, len(suite.Results), float64(passed)*100/float64(len(suite.Results)))
+	passRate := 0.0
+	if len(suite.Results) > 0 {
+		passRate = float64(passed) * 100 / float64(len(suite.Results))
+	}
+	fmt.Printf("\nPassed: %d/%d (%.1f%%)\n", passed, len(suite.Results), passRate)
 }
 
 // formatDuration formats nanoseconds into a human-readable string.

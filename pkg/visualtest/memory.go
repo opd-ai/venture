@@ -97,8 +97,13 @@ func (p *MemoryProfile) detectLeaks() {
 
 	// If allocation and object count both grew significantly, suspect leak
 	// Allow 10% growth as normal variation
-	allocGrowthPercent := float64(allocGrowth) / float64(first.Alloc) * 100.0
-	objectGrowthPercent := float64(objectGrowth) / float64(first.LiveObjects) * 100.0
+	var allocGrowthPercent, objectGrowthPercent float64
+	if first.Alloc > 0 {
+		allocGrowthPercent = float64(allocGrowth) / float64(first.Alloc) * 100.0
+	}
+	if first.LiveObjects > 0 {
+		objectGrowthPercent = float64(objectGrowth) / float64(first.LiveObjects) * 100.0
+	}
 
 	// Consider it a leak if:
 	// 1. Both alloc and objects grew by >10%

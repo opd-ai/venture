@@ -9,6 +9,8 @@ import (
 	"net"
 	"sync"
 	"time"
+
+	log "github.com/sirupsen/logrus"
 )
 
 // STUNClient handles STUN protocol for NAT traversal.
@@ -25,6 +27,9 @@ type STUNClient struct {
 	totalRequests      int
 	successfulRequests int
 	failedRequests     int
+
+	// timeProvider abstracts time access for deterministic testing.
+	timeProvider TimeProvider
 }
 
 // NewSTUNClient creates a new STUN client with the given servers.
@@ -34,7 +39,8 @@ func NewSTUNClient(servers []string) *STUNClient {
 	}
 
 	return &STUNClient{
-		servers: servers,
+		servers:      servers,
+		timeProvider: DefaultTimeProvider(),
 	}
 }
 
@@ -78,7 +84,7 @@ func (t NATType) String() string {
 // GetPublicAddress discovers the public IP and port using STUN.
 func (s *STUNClient) GetPublicAddress(ctx context.Context) (*STUNResponse, error) {
 	s.mu.RLock()
-	if s.cachedPublicIP != nil && time.Now().Before(s.cacheExpiry) {
+	if s.cachedPublicIP != nil && s.timeProvider.Now().Before(s.cacheExpiry) {
 		cached := &STUNResponse{
 			PublicIP:   s.cachedPublicIP,
 			PublicPort: s.cachedPublicPort,
@@ -103,8 +109,15 @@ func (s *STUNClient) GetPublicAddress(ctx context.Context) (*STUNResponse, error
 		s.successfulRequests++
 		s.cachedPublicIP = resp.PublicIP
 		s.cachedPublicPort = resp.PublicPort
-		s.cacheExpiry = time.Now().Add(5 * time.Minute)
+		s.cacheExpiry = s.timeProvider.Now().Add(5 * time.Minute)
 		s.mu.Unlock()
+
+		log.WithFields(log.Fields{
+			"server":      server,
+			"public_ip":   resp.PublicIP,
+			"public_port": resp.PublicPort,
+			"rtt":         resp.RTT,
+		}).Debug("STUN public address discovered")
 
 		return resp, nil
 	}
@@ -118,7 +131,7 @@ func (s *STUNClient) GetPublicAddress(ctx context.Context) (*STUNResponse, error
 
 // querySTUNServer sends a STUN binding request to a specific server.
 func (s *STUNClient) querySTUNServer(ctx context.Context, server string) (*STUNResponse, error) {
-	start := time.Now()
+	start := s.timeProvider.Now()
 
 	// Parse STUN URL: stun:host:port
 	if len(server) < 6 || server[:5] != "stun:" {
@@ -155,7 +168,7 @@ func (s *STUNClient) querySTUNServer(ctx context.Context, server string) (*STUNR
 	publicIP := net.ParseIP("203.0.113.42") // TEST-NET-3 range
 	publicPort := localPort + 10000         // Simulated NAT mapping
 
-	rtt := time.Since(start)
+	rtt := s.timeProvider.Now().Sub(start)
 
 	return &STUNResponse{
 		PublicIP:   publicIP,
@@ -212,7 +225,7 @@ func (s *STUNClient) GetStats() STUNStats {
 		FailedRequests:     s.failedRequests,
 		SuccessRate:        successRate,
 		CachedPublicIP:     s.cachedPublicIP,
-		CacheValid:         time.Now().Before(s.cacheExpiry),
+		CacheValid:         s.timeProvider.Now().Before(s.cacheExpiry),
 	}
 }
 

@@ -9,6 +9,8 @@ import (
 	"fmt"
 	"sync"
 	"time"
+
+	log "github.com/sirupsen/logrus"
 )
 
 // NATTraversal coordinates STUN/TURN for establishing P2P connections.
@@ -17,6 +19,9 @@ type NATTraversal struct {
 
 	stunClient   *STUNClient
 	relayManager *RelayManager
+
+	// timeProvider abstracts time access for deterministic testing.
+	timeProvider TimeProvider
 
 	// Statistics
 	totalAttempts    int
@@ -33,6 +38,7 @@ func NewNATTraversal(stunServers []string, relayManager *RelayManager) *NATTrave
 	return &NATTraversal{
 		stunClient:   NewSTUNClient(stunServers),
 		relayManager: relayManager,
+		timeProvider: DefaultTimeProvider(),
 	}
 }
 
@@ -77,7 +83,7 @@ func (m TraversalMethod) String() string {
 
 // EstablishConnection attempts NAT traversal using multiple methods.
 func (n *NATTraversal) EstablishConnection(ctx context.Context) (*TraversalResult, error) {
-	start := time.Now()
+	start := n.timeProvider.Now()
 
 	n.mu.Lock()
 	n.totalAttempts++
@@ -92,13 +98,18 @@ func (n *NATTraversal) EstablishConnection(ctx context.Context) (*TraversalResul
 	if err := n.tryDirectConnection(ctx); err == nil {
 		result.Success = true
 		result.Method = MethodDirect
-		result.SetupTime = time.Since(start)
+		result.SetupTime = n.timeProvider.Now().Sub(start)
 		result.NATType = NATTypeNone
 
 		n.mu.Lock()
 		n.directSuccess++
 		n.updateAverageSetupTime(result.SetupTime)
 		n.mu.Unlock()
+
+		log.WithFields(log.Fields{
+			"traversal_method": "direct",
+			"setup_time":       result.SetupTime,
+		}).Debug("NAT traversal succeeded")
 
 		return result, nil
 	}
@@ -111,12 +122,19 @@ func (n *NATTraversal) EstablishConnection(ctx context.Context) (*TraversalResul
 		result.PublicIP = stunResp.PublicIP.String()
 		result.PublicPort = stunResp.PublicPort
 		result.NATType = stunResp.NATType
-		result.SetupTime = time.Since(start)
+		result.SetupTime = n.timeProvider.Now().Sub(start)
 
 		n.mu.Lock()
 		n.stunSuccess++
 		n.updateAverageSetupTime(result.SetupTime)
 		n.mu.Unlock()
+
+		log.WithFields(log.Fields{
+			"traversal_method": "stun",
+			"public_ip":        result.PublicIP,
+			"public_port":      result.PublicPort,
+			"setup_time":       result.SetupTime,
+		}).Debug("NAT traversal succeeded")
 
 		return result, nil
 	}
@@ -127,23 +145,33 @@ func (n *NATTraversal) EstablishConnection(ctx context.Context) (*TraversalResul
 		result.Success = true
 		result.Method = MethodTURN
 		result.RelayNode = relay
-		result.SetupTime = time.Since(start)
+		result.SetupTime = n.timeProvider.Now().Sub(start)
 
 		n.mu.Lock()
 		n.turnSuccess++
 		n.updateAverageSetupTime(result.SetupTime)
 		n.mu.Unlock()
 
+		log.WithFields(log.Fields{
+			"traversal_method": "turn",
+			"relay_id":         relay.ID,
+			"setup_time":       result.SetupTime,
+		}).Debug("NAT traversal succeeded")
+
 		return result, nil
 	}
 
 	// All methods failed
 	result.Error = ErrAllMethodsFailed
-	result.SetupTime = time.Since(start)
+	result.SetupTime = n.timeProvider.Now().Sub(start)
 
 	n.mu.Lock()
 	n.failures++
 	n.mu.Unlock()
+
+	log.WithFields(log.Fields{
+		"setup_time": result.SetupTime,
+	}).Warn("NAT traversal failed: all methods exhausted")
 
 	return result, ErrNATTraversalFailed
 }
@@ -260,22 +288,25 @@ type NATTraversalStats struct {
 type RelayConnection struct {
 	mu sync.RWMutex
 
-	relay      *RelayNode
-	localAddr  string
-	relayAddr  string
-	expiry     time.Time
-	active     bool
-	bytesRelay uint64
+	relay        *RelayNode
+	localAddr    string
+	relayAddr    string
+	expiry       time.Time
+	active       bool
+	bytesRelay   uint64
+	timeProvider TimeProvider
 }
 
 // NewRelayConnection creates a new relay connection.
 func NewRelayConnection(relay *RelayNode, localAddr, relayAddr string, lifetime time.Duration) *RelayConnection {
+	tp := DefaultTimeProvider()
 	return &RelayConnection{
-		relay:     relay,
-		localAddr: localAddr,
-		relayAddr: relayAddr,
-		expiry:    time.Now().Add(lifetime),
-		active:    true,
+		relay:        relay,
+		localAddr:    localAddr,
+		relayAddr:    relayAddr,
+		expiry:       tp.Now().Add(lifetime),
+		active:       true,
+		timeProvider: tp,
 	}
 }
 
@@ -288,7 +319,7 @@ func (r *RelayConnection) Send(data []byte) error {
 		return errors.New("relay connection inactive")
 	}
 
-	if time.Now().After(r.expiry) {
+	if r.timeProvider.Now().After(r.expiry) {
 		r.active = false
 		return errors.New("relay allocation expired")
 	}
@@ -309,7 +340,7 @@ func (r *RelayConnection) Refresh(lifetime time.Duration) error {
 		return errors.New("relay connection inactive")
 	}
 
-	r.expiry = time.Now().Add(lifetime)
+	r.expiry = r.timeProvider.Now().Add(lifetime)
 	return nil
 }
 

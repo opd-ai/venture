@@ -10,6 +10,8 @@ import (
 	"sync"
 	"time"
 
+	log "github.com/sirupsen/logrus"
+
 	"github.com/opd-ai/venture/pkg/recovery"
 )
 
@@ -27,17 +29,21 @@ type SignalingClient struct {
 
 	// Peer registry (for signaling server)
 	peers map[string]time.Time // peerID -> last seen
+
+	// timeProvider abstracts time access for deterministic testing.
+	timeProvider TimeProvider
 }
 
 // NewSignalingClient creates a new signaling client.
 func NewSignalingClient(url, peerID string) *SignalingClient {
 	return &SignalingClient{
-		url:       url,
-		peerID:    peerID,
-		sendChan:  make(chan *SignalingMessage, 50),
-		recvChan:  make(chan *SignalingMessage, 50),
-		closeChan: make(chan struct{}),
-		peers:     make(map[string]time.Time),
+		url:          url,
+		peerID:       peerID,
+		sendChan:     make(chan *SignalingMessage, 50),
+		recvChan:     make(chan *SignalingMessage, 50),
+		closeChan:    make(chan struct{}),
+		peers:        make(map[string]time.Time),
+		timeProvider: DefaultTimeProvider(),
 	}
 }
 
@@ -84,7 +90,7 @@ func (s *SignalingClient) processMessages() {
 func (s *SignalingClient) handleSend(msg *SignalingMessage) {
 	// Simulate message relay to recipient
 	// In production, this goes through WebSocket to server
-	msg.Timestamp = time.Now()
+	msg.Timestamp = s.timeProvider.Now()
 
 	// Validate recipient exists
 	s.mu.RLock()
@@ -102,7 +108,7 @@ func (s *SignalingClient) cleanupPeers() {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	threshold := time.Now().Add(-5 * time.Minute)
+	threshold := s.timeProvider.Now().Add(-5 * time.Minute)
 	for peerID, lastSeen := range s.peers {
 		if lastSeen.Before(threshold) {
 			delete(s.peers, peerID)
@@ -218,7 +224,11 @@ func (s *SignalingClient) Receive() <-chan *SignalingMessage {
 func (s *SignalingClient) RegisterPeer(peerID string) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	s.peers[peerID] = time.Now()
+	s.peers[peerID] = s.timeProvider.Now()
+	log.WithFields(log.Fields{
+		"peer_id":     s.peerID,
+		"register_id": peerID,
+	}).Debug("peer registered on signaling server")
 }
 
 // UnregisterPeer removes a peer from the active registry.

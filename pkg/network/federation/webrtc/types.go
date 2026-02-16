@@ -218,6 +218,9 @@ type Peer struct {
 	// stateChangeChan signals state changes.
 	stateChangeChan chan ConnectionState
 
+	// timeProvider abstracts time access for deterministic testing.
+	timeProvider TimeProvider
+
 	// This is a stub implementation. In a real WebRTC implementation,
 	// this struct would also hold:
 	// - *webrtc.PeerConnection (from github.com/pion/webrtc/v3)

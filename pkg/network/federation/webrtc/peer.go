@@ -10,6 +10,8 @@ import (
 	"fmt"
 	"time"
 
+	log "github.com/sirupsen/logrus"
+
 	"github.com/opd-ai/venture/pkg/recovery"
 )
 
@@ -30,6 +32,7 @@ func NewPeer(id string, config *Config) (*Peer, error) {
 		recvChan:        make(chan []byte, 100),
 		closeChan:       make(chan struct{}),
 		stateChangeChan: make(chan ConnectionState, 10),
+		timeProvider:    DefaultTimeProvider(),
 		stats: PeerStats{
 			State: StateNew,
 		},
@@ -77,11 +80,19 @@ func (p *Peer) Connect(remotePeerID string) error {
 		case newState := <-p.stateChangeChan:
 			if newState == StateConnected {
 				p.mu.Lock()
-				p.stats.ConnectedAt = time.Now()
+				p.stats.ConnectedAt = p.timeProvider.Now()
 				p.mu.Unlock()
+				log.WithFields(log.Fields{
+					"peer_id":        p.ID,
+					"remote_peer_id": remotePeerID,
+				}).Debug("peer connected")
 				return nil
 			}
 			if newState == StateFailed {
+				log.WithFields(log.Fields{
+					"peer_id":        p.ID,
+					"remote_peer_id": remotePeerID,
+				}).Warn("peer connection failed")
 				return fmt.Errorf("connection failed")
 			}
 			// Continue waiting for StateConnected
@@ -160,7 +171,7 @@ func (p *Peer) Send(data []byte) error {
 	p.mu.Lock()
 	p.stats.BytesSent += uint64(len(data))
 	p.stats.MessagesSent++
-	p.stats.LastActivity = time.Now()
+	p.stats.LastActivity = p.timeProvider.Now()
 	p.mu.Unlock()
 
 	select {
@@ -227,6 +238,11 @@ func (p *Peer) Close() error {
 	p.state = StateClosed
 	p.stats.State = StateClosed
 	p.mu.Unlock()
+
+	log.WithFields(log.Fields{
+		"peer_id":        p.ID,
+		"was_connected":  wasConnected,
+	}).Debug("peer connection closed")
 
 	// Only close closeChan if processMessages goroutine is running
 	if wasConnected {

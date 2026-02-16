@@ -10,6 +10,8 @@ import (
 	"sync"
 	"time"
 
+	log "github.com/sirupsen/logrus"
+
 	"github.com/opd-ai/venture/pkg/recovery"
 )
 
@@ -44,6 +46,8 @@ type RelayNode struct {
 	lastHealthCheck time.Time
 	// healthy indicates if the relay is currently healthy.
 	healthy bool
+	// timeProvider abstracts time access for deterministic testing.
+	timeProvider TimeProvider
 }
 
 // NewRelayNode creates a new relay node with the given configuration.
@@ -56,6 +60,7 @@ func NewRelayNode(id, url, username, credential, region string, maxConn int) *Re
 		Region:         region,
 		MaxConnections: maxConn,
 		healthy:        true,
+		timeProvider:   DefaultTimeProvider(),
 	}
 }
 
@@ -113,7 +118,7 @@ func (r *RelayNode) SetHealthy(healthy bool) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	r.healthy = healthy
-	r.lastHealthCheck = time.Now()
+	r.lastHealthCheck = r.timeProvider.Now()
 }
 
 // GetStats returns current statistics for this relay.
@@ -170,6 +175,9 @@ type RelayManager struct {
 	// Health check interval
 	healthCheckInterval time.Duration
 
+	// timeProvider abstracts time access for deterministic testing.
+	timeProvider TimeProvider
+
 	// Context for health checks
 	ctx    context.Context
 	cancel context.CancelFunc
@@ -201,6 +209,7 @@ func NewRelayManager(strategy SelectionStrategy) *RelayManager {
 		nodes:               make(map[string]*RelayNode),
 		strategy:            strategy,
 		healthCheckInterval: 30 * time.Second,
+		timeProvider:        DefaultTimeProvider(),
 		ctx:                 ctx,
 		cancel:              cancel,
 	}
@@ -406,14 +415,20 @@ func (rm *RelayManager) checkRelayHealth(node *RelayNode) {
 	ctx, cancel := context.WithTimeout(rm.ctx, 5*time.Second)
 	defer cancel()
 
-	start := time.Now()
+	start := rm.timeProvider.Now()
 	healthy := rm.pingRelay(ctx, node.URL)
-	latency := time.Since(start)
+	latency := rm.timeProvider.Now().Sub(start)
 
 	node.SetHealthy(healthy)
 	if healthy {
 		node.UpdateLatency(latency)
 	}
+
+	log.WithFields(log.Fields{
+		"relay_id": node.ID,
+		"healthy":  healthy,
+		"latency":  latency,
+	}).Debug("relay health check completed")
 }
 
 // pingRelay attempts to connect to a relay to verify it's reachable.

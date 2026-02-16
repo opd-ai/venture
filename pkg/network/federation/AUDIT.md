@@ -1,34 +1,42 @@
 # Audit: pkg/network/federation
-**Date**: 2026-02-15
-**Status**: Complete
+**Date**: 2026-02-16
+**Status**: Needs Work
 
 ## Summary
-The federation package implements server-to-server communication with 35 Go files (17 main + 18 subdirs). Overall code quality is high with strong security (ed25519 auth), comprehensive error handling, and thread-safe design. Test coverage at 43.1% falls below 65% target. Primary concerns: incomplete gossip transmission (`discovery.go:460`), incomplete guild broadcast (`guild/federation.go:184`), and low test coverage.
+The federation package implements server-to-server communication with 35 Go files (20,554 LOC). Overall code quality is high with strong security (ed25519 auth), comprehensive error handling, and thread-safe design. Main package test coverage cannot be measured due to Ebiten test initialization failure; subdirectories have excellent coverage (80-87%). Primary concerns: Ebiten test dependency blocking main package tests, incomplete gossip/guild transmission stubs, and deterministic RNG usage in retry logic differs from project procgen standards.
 
 ## Issues Found
-- [ ] **high** Stub/incomplete code — Gossip propagation builds message but doesn't transmit (architecture note documents this) (`discovery.go:460`)
-- [ ] **high** Stub/incomplete code — Guild federation broadcast builds message but doesn't send (comment acknowledges missing transport) (`guild/federation.go:184`)
-- [ ] **high** Test coverage — Package coverage 43.1% is below 65% target (main package only; subdirs have 80-87%)
-- [ ] **med** Network interfaces — `discovery.go:292` uses concrete `net.ResolveUDPAddr` then assigns to interface (acceptable pattern but could use `net.Addr` directly)
-- [ ] **med** Deterministic procgen — `retry.go:63` uses `time.Now()` for RNG seed, but documented as intentional for production (Seed=0 convention)
-- [ ] **low** Doc coverage — All exported types/functions have godoc; `doc.go` is comprehensive (268 lines) - no issues
-- [ ] **low** Integration points — Portal system update loop (`protocol.go:336-371`) checks collision but doesn't trigger transfers (incomplete implementation)
+- [ ] **high** Test coverage — Main package tests fail with Ebiten GLFW initialization panic; cannot measure coverage (subdirs: 80-87% ✅) (`federation_test.go` imports cause UI init)
+- [ ] **high** Stub/incomplete code — Gossip propagation builds message but doesn't transmit; documented as incomplete (`discovery.go:423-463`)
+- [ ] **high** Stub/incomplete code — Guild federation broadcast builds message but doesn't send; documented as missing transport integration (`guild/federation.go:184`)
+- [ ] **med** Deterministic procgen — `retry.go:63` uses `time.Now().UnixNano()` for RNG seed when config.Seed=0; violates project standard of deterministic generation (`retry.go:63`)
+- [ ] **med** Network interfaces — `discovery.go:292` uses concrete `*net.UDPAddr` via `ResolveUDPAddr`, then assigns to `net.Addr` interface; acceptable but could be cleaner (`discovery.go:292`)
+- [ ] **low** Integration points — Portal system update loop checks collision radius but doesn't trigger transfers; incomplete activation logic (`protocol.go:336-371`)
+- [ ] **low** Error handling — `auth.go` uses crypto/rand for security tokens (correct usage; not procgen context) (`auth.go:196,216`)
 
 ## Test Coverage
-43.1% (target: 65%)
+**Main package: BLOCKED** (Ebiten dependency prevents test execution)  
+**Subdirectories: 84.0% average** (target: 65%) ✅
 
 Subdirectory breakdown:
-- `guild/`: 87.2% ✅
-- `webrtc/`: 83.9% ✅
-- `mobile/`: 80.8% ✅
-- Main package: 43.1% ❌
+- `guild/`: 87.2% ✅ (27 tests)
+- `webrtc/`: 83.9% ✅ (23 tests)
+- `mobile/`: 80.8% ✅ (18 tests)
+- **Main package: FAIL** — Tests panic during init: `glfw: The GLFW library is not initialized`
 
-Coverage gaps in main package require table-driven tests for:
-- `DiscoverySystem` gossip propagation
-- `FederationProtocol` transfer workflows
-- `TransferManager` rollback/restore scenarios
-- `FederatedMarket` price calculation edge cases
-- `PortalSystem` activation logic
+**Root Cause**: Test files in main package import types that transitively depend on Ebiten UI initialization. The test suite cannot run in headless environments.
+
+**Test Infrastructure**:
+- 27 test files total (`*_test.go`)
+- Subdirectories use build tags correctly and pass
+- Main package needs Ebiten test mocking or refactoring to remove UI dependencies from testable code paths
+
+**Coverage Gaps** (cannot verify due to test failure):
+- `DiscoverySystem` gossip propagation edge cases
+- `FederationProtocol` transfer workflow rollback scenarios
+- `TransferManager` state machine transitions
+- `FederatedMarket` price calculation boundary conditions
+- `PortalSystem` activation and collision detection
 
 ## Integration Status
 **Excellent integration surface** - connects to 9+ packages:
@@ -50,12 +58,12 @@ Coverage gaps in main package require table-driven tests for:
 - Hand-rolled JSON encoding via `json.Marshal` instead of component pattern
 
 ## Recommendations
-1. **Increase test coverage to 65%+** — Add table-driven tests for discovery, protocol, transfer, market (estimated +30-40 tests needed)
-2. **Complete gossip transmission** — Integrate FederationProtocol.SendGossip() with DiscoverySystem.PropagateGossip() (`discovery.go:460`)
-3. **Complete guild broadcast** — Add transport layer to GuildFederationManager.BroadcastGuildUpdate() (`guild/federation.go:184`)
-4. **Implement portal activation** — Complete PortalSystem.Update() to trigger transfers on collision (`protocol.go:336-371`)
-5. **Add serialization methods** — Implement Serialize/Deserialize for persistence-eligible types (ServerInfo, FederationState, PlayerTransfer)
-6. **Document retry RNG behavior** — Clarify in godoc that Seed=0 uses time-based seed for production randomness (not procgen determinism requirement)
+1. **Fix Ebiten test dependency (CRITICAL)** — Refactor main package tests to avoid Ebiten UI imports; use test doubles/interfaces or move UI-dependent code to separate testable package
+2. **Complete gossip transmission** — Integrate `FederationProtocol.SendGossip()` method with `DiscoverySystem.PropagateGossip()` to enable multi-hop server discovery (`discovery.go:423-463`)
+3. **Complete guild broadcast** — Add TCP/TLS transport layer to `GuildFederationManager.BroadcastGuildUpdate()` for cross-server guild sync (`guild/federation.go:184`)
+4. **Implement portal activation** — Complete `PortalSystem.Update()` collision detection to trigger `ActivatePortal()` on player proximity (`protocol.go:336-371`)
+5. **Fix retry RNG non-determinism** — Change `retry.go:63` to require explicit seed parameter or document why network retry jitter doesn't need determinism (unlike procgen)
+6. **Add structured logging** — Main package uses only 5 `logrus.WithFields` calls; add contextual logging to discovery, protocol, and transfer operations for better observability
 
 ## Architecture Strengths
 - **Security**: ed25519 signatures, nonce-based replay prevention, fingerprint verification

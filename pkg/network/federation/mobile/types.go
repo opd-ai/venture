@@ -106,25 +106,33 @@ func DefaultConfig() *Config {
 // State represents the current adapter state
 type State struct {
 	mu              sync.RWMutex
-	BatteryLevel    float64     // Current battery level (0.0-1.0)
-	BatteryMode     BatteryMode // Current battery optimization mode
-	SyncStatus      SyncStatus  // Current sync status
-	LastSyncTime    time.Time   // Last successful sync time
-	SyncErrors      int         // Consecutive sync errors
-	BytesSent       int64       // Total bytes sent
-	BytesReceived   int64       // Total bytes received
-	SyncCount       int64       // Total sync operations
-	BackgroundCount int64       // Total background syncs
-	bytesAvailable  int64       // Token bucket: available bandwidth tokens
+	BatteryLevel    float64      // Current battery level (0.0-1.0)
+	BatteryMode     BatteryMode  // Current battery optimization mode
+	SyncStatus      SyncStatus   // Current sync status
+	LastSyncTime    time.Time    // Last successful sync time
+	SyncErrors      int          // Consecutive sync errors
+	BytesSent       int64        // Total bytes sent
+	BytesReceived   int64        // Total bytes received
+	SyncCount       int64        // Total sync operations
+	BackgroundCount int64        // Total background syncs
+	bytesAvailable  int64        // Token bucket: available bandwidth tokens
+	timeProvider    TimeProvider // injected time source for deterministic timestamps
 }
 
-// NewState creates a new adapter state
+// NewState creates a new adapter state with real system time.
+// For deterministic behavior, use NewStateWithTimeProvider instead.
 func NewState() *State {
+	return NewStateWithTimeProvider(DefaultTimeProvider())
+}
+
+// NewStateWithTimeProvider creates a new adapter state with a custom time source.
+func NewStateWithTimeProvider(tp TimeProvider) *State {
 	return &State{
 		BatteryLevel: 1.0,
 		BatteryMode:  BatteryModeNormal,
 		SyncStatus:   SyncStatusIdle,
 		LastSyncTime: time.Time{},
+		timeProvider: tp,
 	}
 }
 
@@ -174,7 +182,7 @@ func (s *State) SetSyncStatus(status SyncStatus) {
 func (s *State) RecordSyncSuccess(bytesSent, bytesReceived int64) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	s.LastSyncTime = time.Now()
+	s.LastSyncTime = s.timeProvider.Now()
 	s.SyncErrors = 0
 	s.BytesSent += bytesSent
 	s.BytesReceived += bytesReceived

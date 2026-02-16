@@ -2,6 +2,7 @@ package mobile
 
 import (
 	"context"
+	"fmt"
 	"sync"
 	"testing"
 	"time"
@@ -164,12 +165,14 @@ func TestAdapter_PerformSync(t *testing.T) {
 }
 
 func TestAdapter_ScheduleBackgroundTask(t *testing.T) {
+	fixedTime := time.Date(2026, 1, 1, 12, 0, 0, 0, time.UTC)
+
 	tests := []struct {
 		name             string
 		enableBackground bool
 		batteryMode      BatteryMode
 		wantErr          bool
-		minDelay         time.Duration
+		wantDelay        time.Duration
 	}{
 		{"disabled", false, BatteryModeNormal, true, 0},
 		{"normal battery", true, BatteryModeNormal, false, time.Minute},
@@ -181,7 +184,8 @@ func TestAdapter_ScheduleBackgroundTask(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			config := DefaultConfig()
 			config.EnableBackground = tt.enableBackground
-			adapter := NewAdapter(config)
+			tp := &MockTimeProvider{CurrentTime: fixedTime}
+			adapter := NewAdapterWithTimeProvider(config, tp)
 
 			adapter.state.SetBatteryMode(tt.batteryMode)
 
@@ -206,20 +210,27 @@ func TestAdapter_ScheduleBackgroundTask(t *testing.T) {
 				t.Error("task.ID is empty")
 			}
 
+			wantID := fmt.Sprintf("bg-%d", fixedTime.Unix())
+			if task.ID != wantID {
+				t.Errorf("task.ID = %v, want %v", task.ID, wantID)
+			}
+
 			if task.Status != "scheduled" {
 				t.Errorf("task.Status = %v, want scheduled", task.Status)
 			}
 
-			delay := task.ScheduledAt.Sub(time.Now())
-			if delay < tt.minDelay-time.Second || delay > tt.minDelay+time.Second {
-				t.Errorf("delay = %v, want ~%v", delay, tt.minDelay)
+			wantScheduledAt := fixedTime.Add(tt.wantDelay)
+			if !task.ScheduledAt.Equal(wantScheduledAt) {
+				t.Errorf("ScheduledAt = %v, want %v", task.ScheduledAt, wantScheduledAt)
 			}
 		})
 	}
 }
 
 func TestAdapter_ExecuteBackgroundTask(t *testing.T) {
-	adapter := NewAdapter(DefaultConfig())
+	fixedTime := time.Date(2026, 1, 1, 12, 0, 0, 0, time.UTC)
+	tp := &MockTimeProvider{CurrentTime: fixedTime}
+	adapter := NewAdapterWithTimeProvider(DefaultConfig(), tp)
 
 	called := false
 	adapter.RegisterSyncHandler(func(ctx context.Context) error {
@@ -229,7 +240,7 @@ func TestAdapter_ExecuteBackgroundTask(t *testing.T) {
 
 	task := &BackgroundTask{
 		ID:          "test-task",
-		ScheduledAt: time.Now(),
+		ScheduledAt: fixedTime,
 		Status:      "scheduled",
 	}
 
@@ -245,8 +256,8 @@ func TestAdapter_ExecuteBackgroundTask(t *testing.T) {
 		t.Errorf("task.Status = %v, want completed", task.Status)
 	}
 
-	if task.ExecutedAt.IsZero() {
-		t.Error("task.ExecutedAt is zero")
+	if !task.ExecutedAt.Equal(fixedTime) {
+		t.Errorf("task.ExecutedAt = %v, want %v", task.ExecutedAt, fixedTime)
 	}
 
 	// Verify background sync was recorded
@@ -269,7 +280,7 @@ func TestAdapter_ExecuteBackgroundTask_NoHandler(t *testing.T) {
 
 	task := &BackgroundTask{
 		ID:          "test-task",
-		ScheduledAt: time.Now(),
+		ScheduledAt: time.Date(2026, 1, 1, 12, 0, 0, 0, time.UTC),
 		Status:      "scheduled",
 	}
 
@@ -758,5 +769,70 @@ func TestAdapter_SyncLoop_BatteryModeChanges(t *testing.T) {
 	// Verify final battery mode
 	if adapter.state.GetBatteryMode() != BatteryModeCritical {
 		t.Errorf("BatteryMode = %v, want %v", adapter.state.GetBatteryMode(), BatteryModeCritical)
+	}
+}
+
+// Test TimeProvider determinism
+func TestAdapter_TimeProvider_Determinism(t *testing.T) {
+	fixedTime := time.Date(2026, 6, 15, 10, 30, 0, 0, time.UTC)
+	tp := &MockTimeProvider{CurrentTime: fixedTime}
+	adapter := NewAdapterWithTimeProvider(DefaultConfig(), tp)
+
+	adapter.RegisterSyncHandler(func(ctx context.Context) error {
+		return nil
+	})
+
+	// Perform sync and verify LastSyncTime uses mock time
+	adapter.performSync()
+	state := adapter.GetState()
+
+	if !state.LastSyncTime.Equal(fixedTime) {
+		t.Errorf("LastSyncTime = %v, want %v", state.LastSyncTime, fixedTime)
+	}
+
+	// Advance time and schedule a background task
+	tp.Advance(5 * time.Minute)
+
+	task, err := adapter.ScheduleBackgroundTask()
+	if err != nil {
+		t.Fatalf("ScheduleBackgroundTask() failed: %v", err)
+	}
+
+	wantID := fmt.Sprintf("bg-%d", fixedTime.Add(5*time.Minute).Unix())
+	if task.ID != wantID {
+		t.Errorf("task.ID = %v, want %v", task.ID, wantID)
+	}
+}
+
+// Test NewAdapterWithTimeProvider nil safety
+func TestNewAdapterWithTimeProvider_NilTimeProvider(t *testing.T) {
+	adapter := NewAdapterWithTimeProvider(nil, nil)
+	if adapter == nil {
+		t.Fatal("NewAdapterWithTimeProvider(nil, nil) returned nil")
+	}
+	if adapter.timeProvider == nil {
+		t.Error("timeProvider should default to RealTimeProvider when nil")
+	}
+}
+
+// Test RecordSyncSuccess uses TimeProvider
+func TestState_RecordSyncSuccess_TimeProvider(t *testing.T) {
+	fixedTime := time.Date(2026, 3, 1, 8, 0, 0, 0, time.UTC)
+	tp := &MockTimeProvider{CurrentTime: fixedTime}
+	state := NewStateWithTimeProvider(tp)
+
+	state.RecordSyncSuccess(512, 1024)
+
+	if !state.GetLastSyncTime().Equal(fixedTime) {
+		t.Errorf("LastSyncTime = %v, want %v", state.GetLastSyncTime(), fixedTime)
+	}
+
+	// Advance time and record again
+	tp.Advance(10 * time.Second)
+	state.RecordSyncSuccess(256, 512)
+
+	expected := fixedTime.Add(10 * time.Second)
+	if !state.GetLastSyncTime().Equal(expected) {
+		t.Errorf("LastSyncTime = %v, want %v", state.GetLastSyncTime(), expected)
 	}
 }

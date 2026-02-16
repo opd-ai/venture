@@ -12,32 +12,43 @@ import (
 
 // Adapter manages mobile federation with battery optimization
 type Adapter struct {
-	config      *Config
-	state       *State
-	syncHandler SyncHandler
-	syncTicker  *time.Ticker
-	stopChan    chan struct{}
-	wg          sync.WaitGroup
-	mu          sync.RWMutex
-	running     bool
-	ctx         context.Context
-	cancel      context.CancelFunc
+	config       *Config
+	state        *State
+	syncHandler  SyncHandler
+	syncTicker   *time.Ticker
+	stopChan     chan struct{}
+	wg           sync.WaitGroup
+	mu           sync.RWMutex
+	running      bool
+	ctx          context.Context
+	cancel       context.CancelFunc
+	timeProvider TimeProvider
 }
 
-// NewAdapter creates a new mobile federation adapter
+// NewAdapter creates a new mobile federation adapter with real system time.
+// For deterministic behavior, use NewAdapterWithTimeProvider instead.
 func NewAdapter(config *Config) *Adapter {
+	return NewAdapterWithTimeProvider(config, DefaultTimeProvider())
+}
+
+// NewAdapterWithTimeProvider creates a new mobile federation adapter with a custom time source.
+func NewAdapterWithTimeProvider(config *Config, tp TimeProvider) *Adapter {
 	if config == nil {
 		config = DefaultConfig()
+	}
+	if tp == nil {
+		tp = DefaultTimeProvider()
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
 
 	return &Adapter{
-		config:   config,
-		state:    NewState(),
-		stopChan: make(chan struct{}),
-		ctx:      ctx,
-		cancel:   cancel,
+		config:       config,
+		state:        NewStateWithTimeProvider(tp),
+		stopChan:     make(chan struct{}),
+		ctx:          ctx,
+		cancel:       cancel,
+		timeProvider: tp,
 	}
 }
 
@@ -192,7 +203,8 @@ func (a *Adapter) performSync() {
 	}
 }
 
-// executeSyncWithBandwidthLimit executes sync with bandwidth limits
+// executeSyncWithBandwidthLimit executes sync with bandwidth limits using
+// an iterative token bucket algorithm to avoid recursive stack growth.
 func (a *Adapter) executeSyncWithBandwidthLimit(ctx context.Context, handler SyncHandler) error {
 	// If no bandwidth limit, execute directly
 	if a.config.MaxBandwidth == 0 {
@@ -207,44 +219,44 @@ func (a *Adapter) executeSyncWithBandwidthLimit(ctx context.Context, handler Syn
 	// Estimate data transfer size (conservative estimate: 10KB per sync)
 	estimatedBytes := int64(10 * 1024)
 
-	// Calculate token refill based on time since last sync
-	a.mu.Lock()
-	now := time.Now()
-	lastSync := a.state.GetLastSyncTime()
-	timeDelta := now.Sub(lastSync)
+	for {
+		// Calculate token refill based on time since last sync
+		a.mu.Lock()
+		now := a.timeProvider.Now()
+		lastSync := a.state.GetLastSyncTime()
+		timeDelta := now.Sub(lastSync)
 
-	// Refill tokens based on elapsed time
-	tokensToAdd := int64(timeDelta.Seconds() * float64(a.config.MaxBandwidth))
-	currentTokens := a.state.GetBytesAvailable() + tokensToAdd
+		// Refill tokens based on elapsed time
+		tokensToAdd := int64(timeDelta.Seconds() * float64(a.config.MaxBandwidth))
+		currentTokens := a.state.GetBytesAvailable() + tokensToAdd
 
-	// Cap tokens at bucket capacity (MaxBandwidth)
-	if currentTokens > int64(a.config.MaxBandwidth) {
-		currentTokens = int64(a.config.MaxBandwidth)
-	}
+		// Cap tokens at bucket capacity (MaxBandwidth)
+		if currentTokens > int64(a.config.MaxBandwidth) {
+			currentTokens = int64(a.config.MaxBandwidth)
+		}
 
-	// Check if we have enough tokens
-	if currentTokens < estimatedBytes {
+		// Check if we have enough tokens
+		if currentTokens >= estimatedBytes {
+			// Consume tokens and execute
+			a.state.SetBytesAvailable(currentTokens - estimatedBytes)
+			a.mu.Unlock()
+			return handler(ctx)
+		}
+
 		a.mu.Unlock()
+
 		// Not enough bandwidth available - calculate wait time
 		tokensNeeded := estimatedBytes - currentTokens
 		waitTime := time.Duration(float64(tokensNeeded)/float64(a.config.MaxBandwidth)) * time.Second
 
-		// Wait or return error if context deadline would be exceeded
+		// Wait for tokens to refill or context cancellation
 		select {
 		case <-time.After(waitTime):
-			// Retry after waiting
-			return a.executeSyncWithBandwidthLimit(ctx, handler)
+			continue // retry with iterative loop
 		case <-ctx.Done():
 			return ctx.Err()
 		}
 	}
-
-	// Consume tokens
-	a.state.SetBytesAvailable(currentTokens - estimatedBytes)
-	a.mu.Unlock()
-
-	// Execute sync handler
-	return handler(ctx)
 }
 
 // getSyncTimeout returns appropriate timeout based on battery mode and config
@@ -282,8 +294,8 @@ func (a *Adapter) ScheduleBackgroundTask() (*BackgroundTask, error) {
 	}
 
 	task := &BackgroundTask{
-		ID:          fmt.Sprintf("bg-%d", time.Now().Unix()),
-		ScheduledAt: time.Now().Add(delay),
+		ID:          fmt.Sprintf("bg-%d", a.timeProvider.Now().Unix()),
+		ScheduledAt: a.timeProvider.Now().Add(delay),
 		Status:      "scheduled",
 	}
 
@@ -304,7 +316,7 @@ func (a *Adapter) ExecuteBackgroundTask(task *BackgroundTask) error {
 		return fmt.Errorf("no sync handler registered")
 	}
 
-	task.ExecutedAt = time.Now()
+	task.ExecutedAt = a.timeProvider.Now()
 	task.Status = "executing"
 
 	// Use shorter timeout for background tasks

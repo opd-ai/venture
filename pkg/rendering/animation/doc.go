@@ -30,9 +30,13 @@
 //
 // Integration with ECS:
 //
-// The animation system integrates with the existing engine.AnimationComponent
-// but enhances it with:
-//   - ArticulatedAnimationComponent for body part articulation
-//   - Direction8Component for 8-directional movement
-//   - AnimationCacheComponent for per-entity cache keys
+// The animation system integrates with the engine via AnimationAdapter
+// (pkg/engine/animation_adapter.go), which wraps animation.Controller as
+// a System-level adapter. The adapter provides:
+//   - On-demand frame generation with articulation and direction support
+//   - LRU-cached animation frames via AnimationCache
+//   - Feature toggle via SetEnabled/IsEnabled for optional activation
+//
+// The adapter pattern allows enhanced animation features without modifying
+// the core AnimationSystem or requiring additional entity-level components.
 package animation

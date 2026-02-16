@@ -336,3 +336,21 @@ func BenchmarkCachePut(b *testing.B) {
 		cache.Put(key, img)
 	}
 }
+
+func BenchmarkCacheEviction(b *testing.B) {
+	// Small cache that forces frequent evictions
+	cache := NewAnimationCache(64*64*4*5, 5) // 5 entries max
+	img := ebiten.NewImage(64, 64)
+
+	// Pre-fill cache
+	for i := 0; i < 5; i++ {
+		key := CacheKey{Seed: int64(i), State: "walk", Direction: Dir8North, FrameIndex: 0}
+		cache.Put(key, img)
+	}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		key := CacheKey{Seed: int64(i + 1000), State: "walk", Direction: Dir8South, FrameIndex: i % 8}
+		cache.Put(key, img)
+	}
+}

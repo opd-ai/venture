@@ -782,6 +782,231 @@ func UndeadAerialTemplate(direction Direction) AnatomicalTemplate {
 	return template
 }
 
+// InsectAerialTemplate returns a top-down insect template (beetles, ants, mantises).
+// From above: three distinct body segments (head/thorax/abdomen) arranged vertically,
+// six legs (three per side) radiating from the thorax, and two antennae from the head.
+// This is visually distinct from the arachnid template (8 legs, 2 segments).
+func InsectAerialTemplate(direction Direction) AnatomicalTemplate {
+	template := AnatomicalTemplate{
+		Name:           "insect_aerial_" + string(direction),
+		BodyPartLayout: make(map[BodyPart]PartSpec),
+	}
+
+	// Shadow beneath the elongated body
+	template.BodyPartLayout[PartShadow] = PartSpec{
+		RelativeX:      0.5,
+		RelativeY:      0.88,
+		RelativeWidth:  0.70,
+		RelativeHeight: 0.14,
+		ShapeTypes:     []shapes.ShapeType{shapes.ShapeEllipse},
+		ZIndex:         0,
+		ColorRole:      "shadow",
+		Opacity:        0.35,
+	}
+
+	// Six legs — three pairs radiating from the thorax region, narrower than arachnid
+	template.BodyPartLayout[PartLegs] = PartSpec{
+		RelativeX:      0.5,
+		RelativeY:      0.50,
+		RelativeWidth:  0.85,
+		RelativeHeight: 0.40,
+		PreferredPixelSize: &PixelDimensions{
+			Width:  27,
+			Height: 13,
+		},
+		ShapeTypes: []shapes.ShapeType{shapes.ShapeStar, shapes.ShapeCross},
+		ZIndex:     3,
+		ColorRole:  "secondary",
+		Opacity:    0.80,
+	}
+
+	// Abdomen — large rounded segment at the rear, the biggest body segment from above
+	abdomenY := 0.65
+	switch direction {
+	case DirUp:
+		abdomenY = 0.35
+	case DirLeft, DirRight:
+		abdomenY = 0.60
+	}
+	template.BodyPartLayout[PartTorso] = PartSpec{
+		RelativeX:      0.5,
+		RelativeY:      abdomenY,
+		RelativeWidth:  0.50,
+		RelativeHeight: 0.35,
+		PreferredPixelSize: &PixelDimensions{
+			Width:  16,
+			Height: 11,
+		},
+		ShapeTypes: []shapes.ShapeType{shapes.ShapeEllipse, shapes.ShapeOrganic},
+		ZIndex:     10,
+		ColorRole:  "primary",
+		Opacity:    1.0,
+	}
+
+	// Thorax — smaller middle segment connecting head and abdomen
+	thoraxY := 0.42
+	switch direction {
+	case DirUp:
+		thoraxY = 0.55
+	case DirLeft:
+		thoraxY = 0.45
+	case DirRight:
+		thoraxY = 0.45
+	}
+	template.BodyPartLayout[PartArms] = PartSpec{
+		RelativeX:      0.5,
+		RelativeY:      thoraxY,
+		RelativeWidth:  0.35,
+		RelativeHeight: 0.20,
+		PreferredPixelSize: &PixelDimensions{
+			Width:  11,
+			Height: 6,
+		},
+		ShapeTypes: []shapes.ShapeType{shapes.ShapeEllipse, shapes.ShapeRectangle},
+		ZIndex:     12,
+		ColorRole:  "primary",
+		Opacity:    1.0,
+	}
+
+	// Head — small rounded head with mandibles visible as shape edge
+	headY := 0.22
+	switch direction {
+	case DirUp:
+		headY = 0.75
+	case DirLeft:
+		headY = 0.28
+	case DirRight:
+		headY = 0.28
+	}
+	template.BodyPartLayout[PartHead] = PartSpec{
+		RelativeX:      0.5,
+		RelativeY:      headY,
+		RelativeWidth:  0.30,
+		RelativeHeight: 0.22,
+		PreferredPixelSize: &PixelDimensions{
+			Width:  10,
+			Height: 7,
+		},
+		ShapeTypes: []shapes.ShapeType{shapes.ShapeCircle, shapes.ShapeEllipse},
+		ZIndex:     15,
+		ColorRole:  "secondary",
+		Opacity:    1.0,
+	}
+
+	return template
+}
+
+// MultiLimbedAerialTemplate returns a top-down multi-limbed horror template
+// (krakens, shoggoths, aberrations, hydras). From above: a central amorphous
+// mass with 5-8 tentacles/arms radiating outward in an asymmetric pattern.
+// The silhouette should be immediately recognizable as "something with many limbs."
+func MultiLimbedAerialTemplate(direction Direction) AnatomicalTemplate {
+	template := AnatomicalTemplate{
+		Name:           "multi_limbed_aerial_" + string(direction),
+		BodyPartLayout: make(map[BodyPart]PartSpec),
+	}
+
+	// Shadow — wide and irregular beneath the sprawling body
+	template.BodyPartLayout[PartShadow] = PartSpec{
+		RelativeX:      0.5,
+		RelativeY:      0.85,
+		RelativeWidth:  0.90,
+		RelativeHeight: 0.20,
+		ShapeTypes:     []shapes.ShapeType{shapes.ShapeOrganic, shapes.ShapeEllipse},
+		ZIndex:         0,
+		ColorRole:      "shadow",
+		Opacity:        0.40,
+	}
+
+	// Tentacles/limbs — sprawling radially from center, rendered as a star/organic shape
+	template.BodyPartLayout[PartLegs] = PartSpec{
+		RelativeX:      0.5,
+		RelativeY:      0.50,
+		RelativeWidth:  0.95,
+		RelativeHeight: 0.90,
+		PreferredPixelSize: &PixelDimensions{
+			Width:  30,
+			Height: 29,
+		},
+		ShapeTypes: []shapes.ShapeType{shapes.ShapeStar, shapes.ShapeOrganic},
+		ZIndex:     3,
+		ColorRole:  "secondary",
+		Opacity:    0.75,
+	}
+
+	// Central body mass — bulbous, irregular, dominates the center
+	template.BodyPartLayout[PartTorso] = PartSpec{
+		RelativeX:      0.5,
+		RelativeY:      0.48,
+		RelativeWidth:  0.55,
+		RelativeHeight: 0.50,
+		PreferredPixelSize: &PixelDimensions{
+			Width:  18,
+			Height: 16,
+		},
+		ShapeTypes: []shapes.ShapeType{shapes.ShapeOrganic, shapes.ShapeOrganic, shapes.ShapeEllipse},
+		ZIndex:     10,
+		ColorRole:  "primary",
+		Opacity:    1.0,
+	}
+
+	// Secondary mass / maw — off-center bulge suggesting asymmetry
+	mawX := 0.48
+	mawY := 0.38
+	switch direction {
+	case DirUp:
+		mawY = 0.58
+	case DirLeft:
+		mawX = 0.40
+	case DirRight:
+		mawX = 0.60
+	}
+	template.BodyPartLayout[PartArms] = PartSpec{
+		RelativeX:      mawX,
+		RelativeY:      mawY,
+		RelativeWidth:  0.30,
+		RelativeHeight: 0.25,
+		PreferredPixelSize: &PixelDimensions{
+			Width:  10,
+			Height: 8,
+		},
+		ShapeTypes: []shapes.ShapeType{shapes.ShapeOrganic, shapes.ShapeOrganic},
+		ZIndex:     12,
+		ColorRole:  "accent1",
+		Opacity:    0.90,
+	}
+
+	// Head / primary sensory cluster — smaller, positioned toward facing direction
+	headX := 0.5
+	headY := 0.25
+	switch direction {
+	case DirUp:
+		headY = 0.72
+	case DirLeft:
+		headX = 0.30
+		headY = 0.40
+	case DirRight:
+		headX = 0.70
+		headY = 0.40
+	}
+	template.BodyPartLayout[PartHead] = PartSpec{
+		RelativeX:      headX,
+		RelativeY:      headY,
+		RelativeWidth:  0.28,
+		RelativeHeight: 0.22,
+		PreferredPixelSize: &PixelDimensions{
+			Width:  9,
+			Height: 7,
+		},
+		ShapeTypes: []shapes.ShapeType{shapes.ShapeOrganic, shapes.ShapeCircle, shapes.ShapeSkull},
+		ZIndex:     15,
+		ColorRole:  "secondary",
+		Opacity:    1.0,
+	}
+
+	return template
+}
+
 // SelectNonhumanoidAerialTemplate selects the appropriate aerial template for
 // a nonhumanoid entity type with optional genre variation.
 func SelectNonhumanoidAerialTemplate(entityType, genre string, direction Direction) AnatomicalTemplate {
@@ -798,8 +1023,13 @@ func SelectNonhumanoidAerialTemplate(entityType, genre string, direction Directi
 		template = FlyingAerialTemplate(direction)
 	case "serpentine", "snake", "worm", "tentacle", "wyrm":
 		template = SerpentineAerialTemplate(direction)
-	case "arachnid", "spider", "insect", "beetle", "scorpion":
+	case "arachnid", "spider", "scorpion":
 		template = ArachnidAerialTemplate(direction)
+	case "insect", "beetle", "ant", "centipede", "mantis", "wasp", "moth", "crawler":
+		template = InsectAerialTemplate(direction)
+	case "multi_limbed", "kraken", "octopus", "squid", "shoggoth", "abomination",
+		"horror", "eldritch", "aberration", "hydra", "chimera":
+		template = MultiLimbedAerialTemplate(direction)
 	case "undead", "skeleton", "ghost", "zombie", "lich":
 		template = UndeadAerialTemplate(direction)
 	default:

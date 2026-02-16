@@ -49,6 +49,10 @@ func RenderCreatureDetails(buf *image.RGBA, params CreatureDetailParams) {
 		renderMechanicalDetails(buf, params, rng)
 	case "undead":
 		renderUndeadDetails(buf, params, rng)
+	case "insect":
+		renderInsectDetails(buf, params, rng)
+	case "multi_limbed":
+		renderMultiLimbedDetails(buf, params, rng)
 	}
 }
 
@@ -634,4 +638,212 @@ func clampU8(v float64) uint8 {
 		return 255
 	}
 	return uint8(v)
+}
+
+// ----------------------------------------------------------------------------
+// Insect details — compound eyes, antennae, wing covers, leg joints
+// ----------------------------------------------------------------------------
+
+func renderInsectDetails(buf *image.RGBA, p CreatureDetailParams, rng *rand.Rand) {
+	w, h := p.Width, p.Height
+	cx, cy := w/2, h/2
+
+	// Head center depends on facing direction
+	hx, hy := headOffset(cx, cy, p.Direction, w, h)
+
+	// --- Compound eyes: two large colored dots flanking the head ---
+	eyeBase := color.RGBA{
+		R: uint8(80 + rng.Intn(120)),
+		G: uint8(40 + rng.Intn(80)),
+		B: uint8(20 + rng.Intn(60)),
+		A: 255,
+	}
+	eyeHighlight := color.RGBA{R: 240, G: 240, B: 220, A: 160}
+	eyeSpread := max(2, w/8)
+
+	// Left compound eye (2px cluster)
+	setPixelSafe(buf, hx-eyeSpread, hy, eyeBase)
+	setPixelSafe(buf, hx-eyeSpread-1, hy, eyeBase)
+	setPixelSafe(buf, hx-eyeSpread, hy-1, eyeBase)
+	setPixelSafe(buf, hx-eyeSpread, hy+1, eyeHighlight)
+	// Right compound eye
+	setPixelSafe(buf, hx+eyeSpread, hy, eyeBase)
+	setPixelSafe(buf, hx+eyeSpread+1, hy, eyeBase)
+	setPixelSafe(buf, hx+eyeSpread, hy-1, eyeBase)
+	setPixelSafe(buf, hx+eyeSpread, hy+1, eyeHighlight)
+
+	// --- Antennae: two thin lines extending from the head ---
+	antennaColor := color.RGBA{R: 90, G: 70, B: 50, A: 200}
+	antennaTip := color.RGBA{R: 120, G: 100, B: 70, A: 230}
+	antLen := max(3, h/5)
+	adx, ady := antennaDir(p.Direction)
+	for i := 0; i < antLen; i++ {
+		// Left antenna curves outward
+		lx := hx - eyeSpread + adx*i - i/2
+		ly := hy + ady*i
+		c := antennaColor
+		if i == antLen-1 {
+			c = antennaTip
+		}
+		setPixelSafe(buf, lx, ly, c)
+		// Right antenna curves outward (mirrored)
+		rx := hx + eyeSpread + adx*i + i/2
+		setPixelSafe(buf, rx, ly, c)
+	}
+
+	// --- Mandibles: two small dark pincers in front of the head ---
+	mandColor := color.RGBA{R: 50, G: 35, B: 25, A: 240}
+	mx, my := noseOffset(hx, hy, p.Direction)
+	setPixelSafe(buf, mx-1, my, mandColor)
+	setPixelSafe(buf, mx+1, my, mandColor)
+	setPixelSafe(buf, mx-2, my+intSign(ady), mandColor)
+	setPixelSafe(buf, mx+2, my+intSign(ady), mandColor)
+
+	// --- Wing covers (elytra): two faint lines on the abdomen ---
+	elytraColor := color.RGBA{R: 140, G: 120, B: 80, A: 100}
+	abdY := cy + h/6
+	if p.Direction == "up" {
+		abdY = cy - h/6
+	}
+	for i := -2; i <= 2; i++ {
+		setPixelSafe(buf, cx, abdY+i, elytraColor)
+	}
+
+	// --- Leg joints: small dots at leg attachment points ---
+	jointColor := color.RGBA{R: 70, G: 55, B: 40, A: 180}
+	legPairY := [3]int{cy - h/6, cy, cy + h/6}
+	legSpreadX := max(3, w*3/10)
+	for _, ly := range legPairY {
+		setPixelSafe(buf, cx-legSpreadX, ly, jointColor)
+		setPixelSafe(buf, cx+legSpreadX, ly, jointColor)
+	}
+
+	// --- Segmentation line between thorax and abdomen ---
+	segColor := color.RGBA{R: 40, G: 30, B: 20, A: 120}
+	segY := cy + 1
+	segW := max(2, w/6)
+	for dx := -segW; dx <= segW; dx++ {
+		setPixelSafe(buf, cx+dx, segY, segColor)
+	}
+}
+
+// antennaDir returns the primary direction offsets for antennae extension.
+func antennaDir(direction string) (dx, dy int) {
+	switch direction {
+	case "up":
+		return 0, 1
+	case "left":
+		return -1, 0
+	case "right":
+		return 1, 0
+	default: // down
+		return 0, -1
+	}
+}
+
+// intSign returns -1, 0, or 1.
+func intSign(v int) int {
+	if v < 0 {
+		return -1
+	}
+	if v > 0 {
+		return 1
+	}
+	return 0
+}
+
+// ----------------------------------------------------------------------------
+// Multi-limbed horror details — multiple eyes, sucker patterns, tendril tips
+// ----------------------------------------------------------------------------
+
+func renderMultiLimbedDetails(buf *image.RGBA, p CreatureDetailParams, rng *rand.Rand) {
+	w, h := p.Width, p.Height
+	cx, cy := w/2, h/2
+
+	// --- Multiple eyes: 3-7 eyes scattered across the central mass ---
+	numEyes := 3 + rng.Intn(5)
+	eyeRadius := max(2, w/8)
+	for i := 0; i < numEyes; i++ {
+		angle := float64(i) * 2.0 * math.Pi / float64(numEyes)
+		r := float64(eyeRadius) * (0.4 + rng.Float64()*0.6)
+		ex := cx + int(r*math.Cos(angle))
+		ey := cy + int(r*math.Sin(angle)) - h/8
+
+		// Each eye has a unique color
+		eyeColor := color.RGBA{
+			R: uint8(100 + rng.Intn(155)),
+			G: uint8(rng.Intn(100)),
+			B: uint8(rng.Intn(80)),
+			A: 255,
+		}
+		pupilColor := color.RGBA{R: 10, G: 10, B: 10, A: 255}
+		glintColor := color.RGBA{R: 255, G: 255, B: 240, A: 200}
+
+		setPixelSafe(buf, ex, ey, eyeColor)
+		setPixelSafe(buf, ex+1, ey, eyeColor)
+		setPixelSafe(buf, ex, ey+1, pupilColor)
+		if rng.Float64() > 0.4 {
+			setPixelSafe(buf, ex+1, ey-1, glintColor) // specular glint
+		}
+	}
+
+	// --- Tentacle suckers: small circular dots along radial arms ---
+	suckerColor := color.RGBA{R: 160, G: 120, B: 140, A: 140}
+	suckerHighlight := color.RGBA{R: 200, G: 170, B: 180, A: 100}
+	numTentacles := 5 + rng.Intn(3)
+	for t := 0; t < numTentacles; t++ {
+		angle := float64(t)*2.0*math.Pi/float64(numTentacles) + rng.Float64()*0.3
+		tentLen := max(4, w/3)
+		for s := 2; s < tentLen; s += 2 {
+			sx := cx + int(float64(s)*math.Cos(angle))
+			sy := cy + int(float64(s)*math.Sin(angle))
+			setPixelSafe(buf, sx, sy, suckerColor)
+			if s%4 == 0 {
+				setPixelSafe(buf, sx+1, sy, suckerHighlight)
+			}
+		}
+
+		// Tendril tip — slightly brighter/different colored point
+		tipDist := float64(tentLen)
+		tx := cx + int(tipDist*math.Cos(angle))
+		ty := cy + int(tipDist*math.Sin(angle))
+		tipColor := color.RGBA{
+			R: uint8(180 + rng.Intn(75)),
+			G: uint8(80 + rng.Intn(60)),
+			B: uint8(100 + rng.Intn(60)),
+			A: 220,
+		}
+		setPixelSafe(buf, tx, ty, tipColor)
+		setPixelSafe(buf, tx-1, ty, tipColor)
+		setPixelSafe(buf, tx+1, ty, tipColor)
+	}
+
+	// --- Central maw: a dark opening in the center ---
+	mawColor := color.RGBA{R: 30, G: 15, B: 20, A: 230}
+	mawRing := color.RGBA{R: 100, G: 50, B: 60, A: 180}
+	setPixelSafe(buf, cx, cy, mawColor)
+	setPixelSafe(buf, cx+1, cy, mawColor)
+	setPixelSafe(buf, cx, cy+1, mawColor)
+	setPixelSafe(buf, cx+1, cy+1, mawColor)
+	// Ring around maw
+	for _, d := range [][2]int{{-1, -1}, {0, -1}, {1, -1}, {2, -1},
+		{-1, 0}, {2, 0}, {-1, 1}, {2, 1},
+		{-1, 2}, {0, 2}, {1, 2}, {2, 2}} {
+		setPixelSafe(buf, cx+d[0], cy+d[1], mawRing)
+	}
+
+	// --- Veiny texture: faint irregular lines radiating from center ---
+	veinColor := color.RGBA{R: 80, G: 40, B: 50, A: 70}
+	numVeins := 4 + rng.Intn(4)
+	for v := 0; v < numVeins; v++ {
+		angle := rng.Float64() * 2 * math.Pi
+		veinLen := 3 + rng.Intn(max(1, w/4))
+		for i := 2; i < veinLen; i++ {
+			vx := cx + int(float64(i)*math.Cos(angle))
+			vy := cy + int(float64(i)*math.Sin(angle))
+			// Wobble the vein path
+			vx += rng.Intn(3) - 1
+			setPixelSafe(buf, vx, vy, veinColor)
+		}
+	}
 }

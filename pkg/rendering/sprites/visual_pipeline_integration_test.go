@@ -28,6 +28,14 @@ func TestEntityTypeToCreatureForm(t *testing.T) {
 		{"scorpion is arachnid", "scorpion", "arachnid"},
 		{"skeleton is undead", "skeleton", "undead"},
 		{"zombie is undead", "zombie", "undead"},
+		{"beetle is insect", "beetle", "insect"},
+		{"mantis is insect", "mantis", "insect"},
+		{"ant is insect", "ant", "insect"},
+		{"insect literal", "insect", "insect"},
+		{"kraken is multi_limbed", "kraken", "multi_limbed"},
+		{"octopus is multi_limbed", "octopus", "multi_limbed"},
+		{"abomination is multi_limbed", "abomination", "multi_limbed"},
+		{"multi_limbed literal", "multi_limbed", "multi_limbed"},
 		{"unknown defaults to quadruped", "unknown_creature", "quadruped"},
 	}
 

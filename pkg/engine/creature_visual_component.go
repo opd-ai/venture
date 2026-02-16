@@ -10,14 +10,16 @@ import "strings"
 type CreatureForm string
 
 const (
-	FormHumanoid   CreatureForm = "humanoid"
-	FormQuadruped  CreatureForm = "quadruped"
-	FormArachnid   CreatureForm = "arachnid"
-	FormSerpentine CreatureForm = "serpentine"
-	FormFlying     CreatureForm = "flying"
-	FormBlob       CreatureForm = "blob"
-	FormMechanical CreatureForm = "mechanical"
-	FormUndead     CreatureForm = "undead"
+	FormHumanoid    CreatureForm = "humanoid"
+	FormQuadruped   CreatureForm = "quadruped"
+	FormArachnid    CreatureForm = "arachnid"
+	FormSerpentine  CreatureForm = "serpentine"
+	FormFlying      CreatureForm = "flying"
+	FormBlob        CreatureForm = "blob"
+	FormMechanical  CreatureForm = "mechanical"
+	FormUndead      CreatureForm = "undead"
+	FormInsect      CreatureForm = "insect"
+	FormMultiLimbed CreatureForm = "multi_limbed"
 )
 
 // CreatureVisualComponent is a pure-data ECS component that carries visual
@@ -44,10 +46,14 @@ var creatureFormKeywords = map[string]CreatureForm{
 	"lion": FormQuadruped, "tiger": FormQuadruped, "beast": FormQuadruped,
 	"cat": FormQuadruped, "stag": FormQuadruped, "deer": FormQuadruped,
 	"rat": FormQuadruped, "fox": FormQuadruped,
-	// Arachnids / insects
-	"spider": FormArachnid, "scorpion": FormArachnid, "insect": FormArachnid,
-	"beetle": FormArachnid, "ant": FormArachnid, "centipede": FormArachnid,
-	"crawler": FormArachnid, "tick": FormArachnid,
+	// Arachnids
+	"spider": FormArachnid, "scorpion": FormArachnid,
+	"tick": FormArachnid, "tarantula": FormArachnid,
+	// Insects (distinct 6-legged segmented body)
+	"insect": FormInsect, "beetle": FormInsect, "ant": FormInsect,
+	"centipede": FormInsect, "crawler": FormInsect, "mantis": FormInsect,
+	"wasp": FormInsect, "moth": FormInsect, "fly": FormInsect,
+	"cockroach": FormInsect, "locust": FormInsect, "cricket": FormInsect,
 	// Serpentine
 	"snake": FormSerpentine, "serpent": FormSerpentine, "worm": FormSerpentine,
 	"tentacle": FormSerpentine, "wyrm": FormSerpentine, "naga": FormSerpentine,
@@ -59,7 +65,13 @@ var creatureFormKeywords = map[string]CreatureForm{
 	// Blobs / amorphous
 	"slime": FormBlob, "ooze": FormBlob, "blob": FormBlob,
 	"amoeba": FormBlob, "jelly": FormBlob, "pudding": FormBlob,
-	"thing": FormBlob, "abomination": FormBlob,
+	"thing": FormBlob,
+	// Multi-limbed horrors (tentacles, radial arms, eldritch)
+	"abomination": FormMultiLimbed, "kraken": FormMultiLimbed,
+	"octopus": FormMultiLimbed, "squid": FormMultiLimbed,
+	"shoggoth": FormMultiLimbed, "horror": FormMultiLimbed,
+	"eldritch": FormMultiLimbed, "aberration": FormMultiLimbed,
+	"hydra": FormMultiLimbed, "chimera": FormMultiLimbed,
 	// Mechanical
 	"robot": FormMechanical, "golem": FormMechanical, "construct": FormMechanical,
 	"android": FormMechanical, "mech": FormMechanical, "drone": FormMechanical,
@@ -94,6 +106,10 @@ func ClassifyCreatureForm(name string, tags []string) CreatureForm {
 			return FormMechanical
 		case lower == "wild" || lower == "feral" || lower == "mutant":
 			return FormQuadruped
+		case lower == "eldritch" || lower == "tentacled" || lower == "multi-armed":
+			return FormMultiLimbed
+		case lower == "insectoid" || lower == "chitinous" || lower == "segmented":
+			return FormInsect
 		case lower == "augmented":
 			return FormHumanoid
 		case lower == "human":

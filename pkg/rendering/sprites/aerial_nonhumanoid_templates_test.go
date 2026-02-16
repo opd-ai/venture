@@ -42,6 +42,14 @@ func TestAerialNonhumanoidTemplates_AllTypes(t *testing.T) {
 		{"undead_down", UndeadAerialTemplate, DirDown, "undead_aerial_down", PartTorso},
 		{"undead_left", UndeadAerialTemplate, DirLeft, "undead_aerial_left", PartArms},
 		{"undead_right", UndeadAerialTemplate, DirRight, "undead_aerial_right", PartShadow},
+		{"insect_up", InsectAerialTemplate, DirUp, "insect_aerial_up", PartTorso},
+		{"insect_down", InsectAerialTemplate, DirDown, "insect_aerial_down", PartHead},
+		{"insect_left", InsectAerialTemplate, DirLeft, "insect_aerial_left", PartLegs},
+		{"insect_right", InsectAerialTemplate, DirRight, "insect_aerial_right", PartArms},
+		{"multi_limbed_up", MultiLimbedAerialTemplate, DirUp, "multi_limbed_aerial_up", PartTorso},
+		{"multi_limbed_down", MultiLimbedAerialTemplate, DirDown, "multi_limbed_aerial_down", PartHead},
+		{"multi_limbed_left", MultiLimbedAerialTemplate, DirLeft, "multi_limbed_aerial_left", PartLegs},
+		{"multi_limbed_right", MultiLimbedAerialTemplate, DirRight, "multi_limbed_aerial_right", PartArms},
 	}
 
 	for _, tt := range tests {
@@ -81,6 +89,8 @@ func TestAerialNonhumanoidTemplates_ZIndexOrdering(t *testing.T) {
 		{"flying", FlyingAerialTemplate},
 		{"mechanical", MechanicalAerialTemplate},
 		{"undead", UndeadAerialTemplate},
+		{"insect", InsectAerialTemplate},
+		{"multi_limbed", MultiLimbedAerialTemplate},
 	}
 
 	for _, f := range factories {
@@ -116,6 +126,8 @@ func TestAerialNonhumanoidTemplates_Proportions(t *testing.T) {
 		{"flying", FlyingAerialTemplate},
 		{"mechanical", MechanicalAerialTemplate},
 		{"undead", UndeadAerialTemplate},
+		{"insect", InsectAerialTemplate},
+		{"multi_limbed", MultiLimbedAerialTemplate},
 	}
 
 	for _, f := range factories {
@@ -165,7 +177,10 @@ func TestSelectNonhumanoidAerialTemplate(t *testing.T) {
 		{"ghost", "", "undead_aerial"},
 		{"unknown_creature", "", "quadruped_aerial"},
 		{"bear", "fantasy", "fantasy_quadruped_aerial"},
-		{"beetle", "horror", "horror_arachnid_aerial"},
+		{"beetle", "horror", "horror_insect_aerial"},
+		{"mantis", "", "insect_aerial"},
+		{"kraken", "fantasy", "fantasy_multi_limbed_aerial"},
+		{"octopus", "horror", "horror_multi_limbed_aerial"},
 		{"wyvern", "", "flying_aerial"},
 		{"golem", "scifi", "scifi_mechanical_aerial"},
 	}

@@ -139,9 +139,18 @@ func GenerateCreatureTraits(seed int64, entityType string) AvatarTraits {
 	var baseHue float64
 	var satRange, lumRange [2]float64
 	switch entityType {
-	case "spider", "arachnid", "insect":
+	case "spider", "arachnid":
 		baseHue = 25 + rng.Float64()*30 // brown-ish
 		satRange = [2]float64{0.20, 0.50}
+		lumRange = [2]float64{0.15, 0.35}
+	case "insect", "beetle", "ant", "centipede", "mantis", "wasp", "moth", "crawler":
+		baseHue = 30 + rng.Float64()*50 // amber-brown to olive
+		satRange = [2]float64{0.30, 0.65}
+		lumRange = [2]float64{0.20, 0.40}
+	case "multi_limbed", "kraken", "octopus", "squid", "shoggoth", "abomination",
+		"horror", "eldritch", "aberration", "hydra", "chimera":
+		baseHue = 270 + rng.Float64()*60 // purple to magenta, eldritch tones
+		satRange = [2]float64{0.25, 0.55}
 		lumRange = [2]float64{0.15, 0.35}
 	case "serpent", "snake":
 		baseHue = 80 + rng.Float64()*60 // green-ish
@@ -314,8 +323,13 @@ func EntityTypeToCreatureForm(entityType string) string {
 		return "flying"
 	case "serpentine", "snake", "worm", "tentacle", "wyrm":
 		return "serpentine"
-	case "arachnid", "spider", "insect", "beetle", "scorpion":
+	case "arachnid", "spider", "scorpion":
 		return "arachnid"
+	case "insect", "beetle", "ant", "centipede", "mantis", "wasp", "moth", "crawler":
+		return "insect"
+	case "multi_limbed", "kraken", "octopus", "squid", "shoggoth", "abomination",
+		"horror", "eldritch", "aberration", "hydra", "chimera":
+		return "multi_limbed"
 	case "undead", "skeleton", "ghost", "zombie", "lich":
 		return "undead"
 	default:

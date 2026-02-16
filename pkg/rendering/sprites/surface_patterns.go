@@ -81,11 +81,15 @@ func TextureForCreatureForm(form string) SurfaceTextureType {
 		return TexScales
 	case "arachnid":
 		return TexChitin
+	case "insect":
+		return TexChitin
 	case "mechanical":
 		return TexMetal
 	case "undead":
 		return TexBone
 	case "blob":
+		return TexOoze
+	case "multi_limbed":
 		return TexOoze
 	case "flying":
 		return TexFeathers

@@ -39,6 +39,10 @@ func ComputeCreatureFrameOffsets(state string, frameIndex, frameCount int, entit
 		return mechanicalOffsets(state, t)
 	case "undead":
 		return undeadOffsets(state, t)
+	case "insect":
+		return insectOffsets(state, t)
+	case "multi_limbed":
+		return multiLimbedOffsets(state, t)
 	default:
 		return ComputeFrameOffsets(state, frameIndex, frameCount)
 	}
@@ -51,12 +55,17 @@ func creatureCategory(entityType string) string {
 		return "quadruped"
 	case "serpentine", "snake", "worm", "tentacle", "wyrm":
 		return "serpentine"
-	case "arachnid", "spider", "insect", "beetle", "scorpion":
+	case "arachnid", "spider", "scorpion":
 		return "arachnid"
+	case "insect", "beetle", "ant", "centipede", "mantis", "wasp", "moth", "crawler":
+		return "insect"
 	case "flying", "bird", "dragon", "bat", "wyvern":
 		return "flying"
 	case "blob", "slime", "amoeba", "ooze":
 		return "blob"
+	case "multi_limbed", "kraken", "octopus", "squid", "shoggoth", "abomination",
+		"horror", "eldritch", "aberration", "hydra", "chimera":
+		return "multi_limbed"
 	case "mechanical", "robot", "golem", "construct", "android":
 		return "mechanical"
 	case "undead", "skeleton", "ghost", "zombie", "lich":
@@ -1015,5 +1024,182 @@ func undeadCollapse(t float64) FrameOffsetMap {
 		PartArms:   {DX: collapse * 0.06, DY: collapse * 0.02, Scale: 1.0 - collapse*0.25},
 		PartLegs:   {DX: -collapse * 0.04, DY: collapse * 0.01, Scale: 1.0 + collapse*0.1},
 		PartShadow: {DX: 0, DY: 0, Scale: 1.0 - collapse*0.5},
+	}
+}
+
+// --- Insect offsets: scuttling legs, antennae bob, abdomen sway ---
+
+func insectOffsets(state string, t float64) FrameOffsetMap {
+	switch state {
+	case "walk", "run":
+		return insectScuttle(t, state == "run")
+	case "attack":
+		return insectBite(t)
+	case "hit":
+		return insectFlinch(t)
+	case "death":
+		return insectFlip(t)
+	default:
+		return insectIdle(t)
+	}
+}
+
+func insectIdle(t float64) FrameOffsetMap {
+	phase := t * 2 * math.Pi
+	// Antennae (head) bob and legs twitch subtly
+	return FrameOffsetMap{
+		PartHead:   {DX: math.Sin(phase*2) * 0.01, DY: math.Sin(phase) * 0.005, Scale: 1.0},
+		PartArms:   {DX: 0, DY: 0, Scale: 1.0}, // thorax stays still
+		PartTorso:  {DX: 0, DY: math.Sin(phase*0.5) * 0.003, Scale: 1.0 + math.Sin(phase)*0.01},
+		PartLegs:   {DX: math.Sin(phase*3) * 0.008, DY: 0, Scale: 1.0},
+		PartShadow: {DX: 0, DY: 0, Scale: 1.0},
+	}
+}
+
+func insectScuttle(t float64, fast bool) FrameOffsetMap {
+	phase := t * 2 * math.Pi
+	amp := 0.03
+	if fast {
+		amp = 0.05
+	}
+	// Rapid alternating leg movement
+	legPhase := math.Sin(phase * 4)
+	return FrameOffsetMap{
+		PartHead:   {DX: math.Sin(phase*2) * amp * 0.3, DY: -amp * 0.2, Scale: 1.0},
+		PartArms:   {DX: 0, DY: math.Sin(phase) * amp * 0.2, Scale: 1.0},
+		PartTorso:  {DX: 0, DY: math.Sin(phase*2) * amp * 0.15, Scale: 1.0},
+		PartLegs:   {DX: legPhase * amp, DY: math.Cos(phase*4) * amp * 0.5, Scale: 1.0},
+		PartShadow: {DX: 0, DY: 0, Scale: 1.0},
+	}
+}
+
+func insectBite(t float64) FrameOffsetMap {
+	// Head lunges forward, mandibles open
+	lunge := math.Sin(t * math.Pi)
+	return FrameOffsetMap{
+		PartHead:   {DX: 0, DY: -lunge * 0.06, Scale: 1.0 + lunge*0.05},
+		PartArms:   {DX: 0, DY: -lunge * 0.02, Scale: 1.0},
+		PartTorso:  {DX: 0, DY: 0, Scale: 1.0},
+		PartLegs:   {DX: lunge * 0.02, DY: 0, Scale: 1.0 + lunge*0.02},
+		PartShadow: {DX: 0, DY: 0, Scale: 1.0},
+	}
+}
+
+func insectFlinch(t float64) FrameOffsetMap {
+	recoil := math.Sin(t * math.Pi) * math.Exp(-t * 2)
+	return FrameOffsetMap{
+		PartHead:   {DX: recoil * 0.03, DY: recoil * 0.02, Scale: 1.0 - recoil*0.05},
+		PartArms:   {DX: 0, DY: recoil * 0.01, Scale: 1.0},
+		PartTorso:  {DX: 0, DY: recoil * 0.02, Scale: 1.0},
+		PartLegs:   {DX: -recoil * 0.02, DY: 0, Scale: 1.0 + math.Abs(recoil)*0.03},
+		PartShadow: {DX: 0, DY: 0, Scale: 1.0},
+	}
+}
+
+func insectFlip(t float64) FrameOffsetMap {
+	// Insect flips over on death, legs curl inward
+	flip := t * t
+	return FrameOffsetMap{
+		PartHead:   {DX: flip * 0.04, DY: flip * 0.03, Scale: 1.0 - flip*0.2},
+		PartArms:   {DX: 0, DY: flip * 0.02, Scale: 1.0 - flip*0.15},
+		PartTorso:  {DX: 0, DY: flip * 0.01, Scale: 1.0 - flip*0.1},
+		PartLegs:   {DX: 0, DY: 0, Scale: 1.0 - flip*0.4},
+		PartShadow: {DX: 0, DY: 0, Scale: 1.0 - flip*0.3},
+	}
+}
+
+// --- Multi-limbed offsets: writhing tentacles, pulsing mass, asymmetric motion ---
+
+func multiLimbedOffsets(state string, t float64) FrameOffsetMap {
+	switch state {
+	case "walk", "run":
+		return multiLimbedCrawl(t, state == "run")
+	case "attack":
+		return multiLimbedGrab(t)
+	case "hit":
+		return multiLimbedRecoil(t)
+	case "death":
+		return multiLimbedCollapse(t)
+	default:
+		return multiLimbedWrithe(t)
+	}
+}
+
+func multiLimbedWrithe(t float64) FrameOffsetMap {
+	phase := t * 2 * math.Pi
+	// Constant asymmetric writhing — each part moves on a different cycle
+	return FrameOffsetMap{
+		PartHead: {
+			DX:    math.Sin(phase*1.7) * 0.015,
+			DY:    math.Cos(phase*1.3) * 0.012,
+			Scale: 1.0 + math.Sin(phase*0.8)*0.02,
+		},
+		PartArms: { // secondary mass
+			DX:    math.Sin(phase*2.1+0.5) * 0.02,
+			DY:    math.Cos(phase*1.9) * 0.018,
+			Scale: 1.0 + math.Sin(phase*1.2)*0.03,
+		},
+		PartTorso: { // central body pulsates
+			DX:    math.Sin(phase*0.7) * 0.008,
+			DY:    math.Cos(phase*0.9) * 0.008,
+			Scale: 1.0 + math.Sin(phase)*0.025,
+		},
+		PartLegs: { // tentacles sway
+			DX:    math.Sin(phase*2.5) * 0.03,
+			DY:    math.Cos(phase*2.3+0.7) * 0.025,
+			Scale: 1.0 + math.Sin(phase*1.5)*0.02,
+		},
+		PartShadow: {DX: 0, DY: 0, Scale: 1.0 + math.Sin(phase*0.5)*0.015},
+	}
+}
+
+func multiLimbedCrawl(t float64, fast bool) FrameOffsetMap {
+	phase := t * 2 * math.Pi
+	amp := 0.04
+	if fast {
+		amp = 0.07
+	}
+	return FrameOffsetMap{
+		PartHead:   {DX: math.Sin(phase*1.5) * amp * 0.4, DY: -amp * 0.3, Scale: 1.0},
+		PartArms:   {DX: math.Cos(phase*2) * amp * 0.5, DY: math.Sin(phase*1.7) * amp * 0.3, Scale: 1.0},
+		PartTorso:  {DX: 0, DY: math.Sin(phase) * amp * 0.2, Scale: 1.0 + math.Sin(phase)*0.02},
+		PartLegs:   {DX: math.Sin(phase*3) * amp, DY: math.Cos(phase*2.5) * amp * 0.8, Scale: 1.0},
+		PartShadow: {DX: 0, DY: 0, Scale: 1.0},
+	}
+}
+
+func multiLimbedGrab(t float64) FrameOffsetMap {
+	// Tentacles lash outward then retract
+	strike := math.Sin(t * math.Pi)
+	retract := math.Max(0, math.Sin(t*math.Pi*2-math.Pi/2))
+	return FrameOffsetMap{
+		PartHead:   {DX: 0, DY: -strike * 0.03, Scale: 1.0 + strike*0.05},
+		PartArms:   {DX: strike * 0.04, DY: -strike * 0.02, Scale: 1.0 + strike*0.08},
+		PartTorso:  {DX: 0, DY: retract * 0.02, Scale: 1.0 + retract*0.04},
+		PartLegs:   {DX: strike * 0.06, DY: strike * 0.05, Scale: 1.0 + strike*0.1},
+		PartShadow: {DX: 0, DY: 0, Scale: 1.0 + strike*0.05},
+	}
+}
+
+func multiLimbedRecoil(t float64) FrameOffsetMap {
+	shock := math.Sin(t*math.Pi) * math.Exp(-t*1.5)
+	return FrameOffsetMap{
+		PartHead:   {DX: shock * 0.04, DY: shock * 0.03, Scale: 1.0 - math.Abs(shock)*0.05},
+		PartArms:   {DX: -shock * 0.03, DY: shock * 0.02, Scale: 1.0},
+		PartTorso:  {DX: shock * 0.02, DY: shock * 0.02, Scale: 1.0 - math.Abs(shock)*0.03},
+		PartLegs:   {DX: -shock * 0.05, DY: -shock * 0.03, Scale: 1.0 - math.Abs(shock)*0.04},
+		PartShadow: {DX: 0, DY: 0, Scale: 1.0},
+	}
+}
+
+func multiLimbedCollapse(t float64) FrameOffsetMap {
+	// Tentacles splay and go limp, body deflates
+	collapse := t * t
+	return FrameOffsetMap{
+		PartHead:   {DX: collapse * 0.06, DY: collapse * 0.04, Scale: 1.0 - collapse*0.35},
+		PartArms:   {DX: -collapse * 0.04, DY: collapse * 0.03, Scale: 1.0 - collapse*0.2},
+		PartTorso:  {DX: 0, DY: collapse * 0.02, Scale: 1.0 - collapse*0.25},
+		PartLegs:   {DX: collapse * 0.03, DY: collapse * 0.05, Scale: 1.0 + collapse*0.15},
+		PartShadow: {DX: 0, DY: 0, Scale: 1.0 - collapse*0.4},
 	}
 }

@@ -538,10 +538,14 @@ func ApplyDepthEnhancementForCreature(img *image.RGBA, form string, cfg DepthEnh
 		return applySerpentDepth(img, cfg)
 	case "arachnid":
 		return applyArachnidDepth(img, cfg)
+	case "insect":
+		return applyInsectDepth(img, cfg)
 	case "flying":
 		return applyFlyingDepth(img, cfg)
 	case "blob":
 		return applyBlobDepth(img, cfg)
+	case "multi_limbed":
+		return applyMultiLimbedDepth(img, cfg)
 	default:
 		return ApplyDepthEnhancement(img, cfg)
 	}
@@ -625,6 +629,46 @@ func applyBlobDepth(img *image.RGBA, cfg DepthEnhanceConfig) int {
 	// Blob: one large sphere
 	zones := []DepthZone{
 		{X: bb.X, Y: bb.Y, W: bb.W, H: bb.H, Form: FormSphere, BaseHeight: 0.4},
+	}
+	return applyZonedDepth(img, zones, cfg, w, h)
+}
+
+func applyInsectDepth(img *image.RGBA, cfg DepthEnhanceConfig) int {
+	bounds := img.Bounds()
+	w, h := bounds.Dx(), bounds.Dy()
+	bb := opaqueBounds(img, w, h)
+	if bb.W == 0 {
+		return 0
+	}
+
+	// Insect from above: three domed segments (head, thorax, abdomen)
+	segH := bb.H / 3
+	zones := []DepthZone{
+		// Head — small dome at front
+		{X: bb.X + bb.W/4, Y: bb.Y, W: bb.W / 2, H: segH, Form: FormDome, BaseHeight: 0.7},
+		// Thorax — slightly raised middle
+		{X: bb.X + bb.W/6, Y: bb.Y + segH, W: bb.W * 2 / 3, H: segH, Form: FormDome, BaseHeight: 0.5},
+		// Abdomen — large dome at rear
+		{X: bb.X, Y: bb.Y + 2*segH, W: bb.W, H: bb.H - 2*segH, Form: FormDome, BaseHeight: 0.6},
+	}
+	return applyZonedDepth(img, zones, cfg, w, h)
+}
+
+func applyMultiLimbedDepth(img *image.RGBA, cfg DepthEnhanceConfig) int {
+	bounds := img.Bounds()
+	w, h := bounds.Dx(), bounds.Dy()
+	bb := opaqueBounds(img, w, h)
+	if bb.W == 0 {
+		return 0
+	}
+
+	// Multi-limbed horror: bulging central sphere, flat radial tentacles
+	inset := bb.W / 4
+	zones := []DepthZone{
+		// Central mass — high sphere
+		{X: bb.X + inset, Y: bb.Y + inset, W: bb.W - 2*inset, H: bb.H - 2*inset, Form: FormSphere, BaseHeight: 0.7},
+		// Tentacles — flat sprawl around center
+		{X: bb.X, Y: bb.Y, W: bb.W, H: bb.H, Form: FormFlat, BaseHeight: 0.15},
 	}
 	return applyZonedDepth(img, zones, cfg, w, h)
 }

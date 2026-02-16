@@ -1156,8 +1156,8 @@ func TestSelectTemplate_Phase53(t *testing.T) {
 		{"wyrm", "serpentine"},
 		{"arachnid", "arachnid"},
 		{"spider", "arachnid"},
-		{"insect", "arachnid"},
-		{"beetle", "arachnid"},
+		{"insect", "insect_aerial_down"},
+		{"beetle", "insect_aerial_down"},
 		{"undead", "undead"},
 		{"skeleton", "undead"},
 		{"ghost", "undead"},
@@ -2565,7 +2565,8 @@ func TestSelectTemplateWithGenre(t *testing.T) {
 
 		// Post-apoc variations
 		{"postapoc_blob", "slime", "postapoc", "postapoc_blob"},
-		{"postapoc_arachnid", "insect", "post-apocalyptic", "postapoc_arachnid"},
+		{"postapoc_arachnid", "spider", "post-apocalyptic", "postapoc_arachnid"},
+		{"postapoc_insect", "insect", "post-apocalyptic", "postapoc_insect_aerial_down"},
 
 		// No genre (base templates)
 		{"base_quadruped", "quadruped", "", "quadruped"},

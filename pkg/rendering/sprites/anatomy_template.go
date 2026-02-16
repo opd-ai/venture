@@ -691,8 +691,13 @@ func SelectTemplate(entityType string) AnatomicalTemplate {
 		return FlyingTemplate()
 	case "serpentine", "snake", "worm", "tentacle", "wyrm":
 		return SerpentineTemplate()
-	case "arachnid", "spider", "insect", "beetle":
+	case "arachnid", "spider", "scorpion":
 		return ArachnidTemplate()
+	case "insect", "beetle", "ant", "centipede", "mantis", "wasp", "moth", "crawler":
+		return InsectAerialTemplate(DirDown) // Use aerial template as legacy fallback
+	case "multi_limbed", "kraken", "octopus", "squid", "shoggoth", "abomination",
+		"horror", "eldritch", "aberration", "hydra", "chimera":
+		return MultiLimbedAerialTemplate(DirDown) // Use aerial template as legacy fallback
 	case "undead", "skeleton", "ghost", "zombie", "lich":
 		return UndeadTemplate()
 	default:
@@ -2260,8 +2265,13 @@ func SelectTemplateWithGenre(entityType, genre string) AnatomicalTemplate {
 		baseTemplate = FlyingTemplate()
 	case "serpentine", "snake", "worm", "tentacle", "wyrm":
 		baseTemplate = SerpentineTemplate()
-	case "arachnid", "spider", "insect", "beetle":
+	case "arachnid", "spider", "scorpion":
 		baseTemplate = ArachnidTemplate()
+	case "insect", "beetle", "ant", "centipede", "mantis", "wasp", "moth", "crawler":
+		baseTemplate = InsectAerialTemplate(DirDown)
+	case "multi_limbed", "kraken", "octopus", "squid", "shoggoth", "abomination",
+		"horror", "eldritch", "aberration", "hydra", "chimera":
+		baseTemplate = MultiLimbedAerialTemplate(DirDown)
 	case "undead", "skeleton", "ghost", "zombie", "lich":
 		baseTemplate = UndeadTemplate()
 	default:

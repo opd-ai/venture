@@ -243,6 +243,7 @@ type SystemInitResult struct {
 	SurfaceTextureSystem                        *SurfaceTextureSystem
 	BodyTypeSystem                              *BodyTypeSystem
 	HeadgearAssignmentSystem                    *HeadgearAssignmentSystem
+	BackAccessorySystem                         *BackAccessorySystem
 	CreatureVisualClassifierSystem              *CreatureVisualClassifierSystem
 	SizeSpriteScalingSystem                     *SizeSpriteScalingSystem
 	NpcRoleVisualSystem                         *NpcRoleVisualSystem
@@ -1517,6 +1518,13 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 	headgearSystem.SetGenre(config.GenreID)
 	result.HeadgearAssignmentSystem = headgearSystem
 	game.World.AddSystem(headgearSystem)
+
+	// 36k1s. BackAccessorySystem - seed-based back accessories for humanoid entities
+	// Assigns genre- and role-aware back accessories (capes, cloaks, quivers, backpacks, etc.)
+	backAccessorySystem := NewBackAccessorySystem(game.World, config.Seed+6520)
+	backAccessorySystem.SetGenre(config.GenreID)
+	result.BackAccessorySystem = backAccessorySystem
+	game.World.AddSystem(backAccessorySystem)
 
 	// 36k2. ManaRegenParticleSystem - visual feedback for mana regeneration
 	// Spawns genre-aware particles when entities actively regenerate mana

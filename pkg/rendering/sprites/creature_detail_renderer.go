@@ -826,9 +826,20 @@ func renderMultiLimbedDetails(buf *image.RGBA, p CreatureDetailParams, rng *rand
 	setPixelSafe(buf, cx, cy+1, mawColor)
 	setPixelSafe(buf, cx+1, cy+1, mawColor)
 	// Ring around maw
-	for _, d := range [][2]int{{-1, -1}, {0, -1}, {1, -1}, {2, -1},
-		{-1, 0}, {2, 0}, {-1, 1}, {2, 1},
-		{-1, 2}, {0, 2}, {1, 2}, {2, 2}} {
+	for _, d := range [][2]int{
+		{-1, -1},
+		{0, -1},
+		{1, -1},
+		{2, -1},
+		{-1, 0},
+		{2, 0},
+		{-1, 1},
+		{2, 1},
+		{-1, 2},
+		{0, 2},
+		{1, 2},
+		{2, 2},
+	} {
 		setPixelSafe(buf, cx+d[0], cy+d[1], mawRing)
 	}
 

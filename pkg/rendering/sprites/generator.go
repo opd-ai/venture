@@ -310,6 +310,26 @@ func (g *Generator) generateEntityWithTemplate(config Config, entityType string,
 		overlayEquipmentVisuals(img, config)
 	}
 
+	// Render seed-based back accessory overlay for humanoid entities (capes,
+	// cloaks, quivers, backpacks, banners, scarves, wing-capes) visible from
+	// above, draped over shoulders and extending behind the body.
+	if useAerial && IsHumanoidEntity(entityType) {
+		torsoSpec, hasTorso := template.BodyPartLayout[PartTorso]
+		if hasTorso {
+			baType := resolveBackAccessoryType(config)
+			if baType != BackAccessoryNone {
+				baParams := ComputeBackAccessoryParams(
+					config.Width, config.Height, torsoSpec,
+					baType, direction, config.Seed, genre,
+				)
+				baBuf := image.NewRGBA(image.Rect(0, 0, config.Width, config.Height))
+				RenderBackAccessoryOverlay(baBuf, baParams)
+				baImg := ebiten.NewImageFromImage(baBuf)
+				img.DrawImage(baImg, nil)
+			}
+		}
+	}
+
 	// Render seed-based headgear overlay for humanoid entities that don't have
 	// an explicit equipment helmet. Headgear is role- and genre-aware, producing
 	// crowns, hoods, wizard hats, circlets, etc. visible from above.
@@ -429,6 +449,32 @@ func resolveHeadgearType(config Config) HeadgearType {
 		role = "npc"
 	}
 	return SelectHeadgearForRole(role, genre, config.Seed)
+}
+
+// resolveBackAccessoryType extracts the back accessory type from Config.Custom
+// or derives one from the entity seed and role. Returns BackAccessoryNone if
+// no back accessory should be drawn.
+func resolveBackAccessoryType(config Config) BackAccessoryType {
+	if config.Custom != nil {
+		if bat, ok := config.Custom["backAccessoryType"].(int); ok {
+			return BackAccessoryType(bat)
+		}
+	}
+	entityType := ""
+	genre := ""
+	if config.Custom != nil {
+		if et, ok := config.Custom["entityType"].(string); ok {
+			entityType = et
+		}
+		if g, ok := config.Custom["genre"].(string); ok {
+			genre = g
+		}
+	}
+	role := string(MapEntityTypeToRole(entityType))
+	if role == "" {
+		role = "npc"
+	}
+	return SelectBackAccessoryForRole(role, genre, config.Seed)
 }
 
 func extractSizeClass(config Config) string {

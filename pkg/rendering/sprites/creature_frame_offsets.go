@@ -1086,7 +1086,7 @@ func insectBite(t float64) FrameOffsetMap {
 }
 
 func insectFlinch(t float64) FrameOffsetMap {
-	recoil := math.Sin(t * math.Pi) * math.Exp(-t * 2)
+	recoil := math.Sin(t*math.Pi) * math.Exp(-t*2)
 	return FrameOffsetMap{
 		PartHead:   {DX: recoil * 0.03, DY: recoil * 0.02, Scale: 1.0 - recoil*0.05},
 		PartArms:   {DX: 0, DY: recoil * 0.01, Scale: 1.0},

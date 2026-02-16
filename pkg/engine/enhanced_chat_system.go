@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"time"
 
+	log "github.com/sirupsen/logrus"
+
 	"github.com/opd-ai/venture/pkg/social/persistence"
 )
 
@@ -186,7 +188,11 @@ func (ecs *EnhancedChatSystem) persistMessage(senderID, recipientID uint64, chan
 	}
 
 	if err := hist.AddMessage(persistMsg); err != nil {
-		fmt.Printf("failed to persist message: %v\n", err)
+		log.WithFields(log.Fields{
+			"system_name": "enhanced_chat",
+			"sender_id":   senderID,
+			"message_id":  msg.ID,
+		}).WithError(err).Warn("failed to persist message")
 	}
 }
 

@@ -89,7 +89,10 @@ func (s *MailSystem) SendMail(senderID, recipientID, subject, body string, attac
 	if !ok {
 		return nil, fmt.Errorf("sender has no mail component")
 	}
-	mailCompTyped := mailComp.(*MailComponent)
+	mailCompTyped, ok := mailComp.(*MailComponent)
+	if !ok {
+		return nil, fmt.Errorf("invalid mail component type")
+	}
 
 	mailCompTyped.AddToOutbox(msg)
 
@@ -125,7 +128,10 @@ func (s *MailSystem) DeliverMail(msg *MailMessage, recipientID string) error {
 	if !ok {
 		return fmt.Errorf("recipient has no mail component")
 	}
-	mailCompTyped := mailComp.(*MailComponent)
+	mailCompTyped, ok := mailComp.(*MailComponent)
+	if !ok {
+		return fmt.Errorf("invalid mail component type")
+	}
 
 	msg.DeliveredAt = time.Now().Unix()
 	if !mailCompTyped.AddToInbox(msg) {
@@ -165,7 +171,10 @@ func (s *MailSystem) findMessageByID(messageID string) *MailMessage {
 		if !ok {
 			continue
 		}
-		mailCompTyped := mailComp.(*MailComponent)
+		mailCompTyped, ok := mailComp.(*MailComponent)
+		if !ok {
+			continue
+		}
 		for _, msg := range mailCompTyped.Outbox {
 			if msg.ID == messageID {
 				return msg

@@ -153,6 +153,36 @@ func TestFactionSystem_Update_ClearsPendingChanges(t *testing.T) {
 	}
 }
 
+func TestFactionSystem_ApplyReputationChange_PointerConsistency(t *testing.T) {
+	world := NewWorld()
+	fs := NewFactionSystem(world, logrus.New())
+
+	// Create player entity with input component (marks it as player)
+	player := world.CreateEntity()
+	player.AddComponent(&EbitenInput{})
+
+	fs.AddFaction(&Faction{ID: "guards", Name: "Guards", Type: FactionTypeKingdom})
+
+	// First reputation change creates a new FactionComponent
+	fs.QueueReputationChange(ReputationChange{FactionID: "guards", Amount: 15, Reason: "quest"})
+	fs.Update(nil, 0.016)
+
+	rep := fs.GetPlayerReputation("guards")
+	if rep != 15 {
+		t.Errorf("Expected reputation 15 after first change, got %d", rep)
+	}
+
+	// Second reputation change must retrieve the stored component as *FactionComponent.
+	// Before the fix, this would panic because the component was stored as a value.
+	fs.QueueReputationChange(ReputationChange{FactionID: "guards", Amount: 10, Reason: "donation"})
+	fs.Update(nil, 0.016)
+
+	rep = fs.GetPlayerReputation("guards")
+	if rep != 25 {
+		t.Errorf("Expected reputation 25 after second change, got %d", rep)
+	}
+}
+
 func TestFactionSystem_GetPlayerReputation_NoPlayer(t *testing.T) {
 	world := NewWorld()
 	fs := NewFactionSystem(world, logrus.New())

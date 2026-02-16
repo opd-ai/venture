@@ -88,12 +88,10 @@ func (fs *FactionSystem) applyReputationChange(change ReputationChange) {
 	// Find or create player's faction component for this faction
 	var factionComp *FactionComponent
 	if comp, ok := playerEntity.GetComponent("faction"); ok {
-		// Player has faction components, find the right one
-		// Note: In the ECS, we'll need to handle multiple faction components
-		// For now, we assume one component per faction via a different approach
-		fc := comp.(*FactionComponent)
-		if fc.FactionID == change.FactionID && fc.IsPlayerFaction {
-			factionComp = fc
+		if fc, ok := comp.(*FactionComponent); ok {
+			if fc.FactionID == change.FactionID && fc.IsPlayerFaction {
+				factionComp = fc
+			}
 		}
 	}
 
@@ -118,8 +116,8 @@ func (fs *FactionSystem) applyReputationChange(change ReputationChange) {
 	factionComp.Reputation = newReputation
 	newLevel := factionComp.GetReputationLevel()
 
-	// Update player entity
-	playerEntity.AddComponent(*factionComp)
+	// Update player entity (must pass pointer to match *FactionComponent assertions)
+	playerEntity.AddComponent(factionComp)
 
 	// Log reputation change
 	fs.logger.WithFields(logrus.Fields{
@@ -172,9 +170,10 @@ func (fs *FactionSystem) GetPlayerReputation(factionID string) int {
 	}
 
 	if comp, ok := playerEntity.GetComponent("faction"); ok {
-		fc := comp.(*FactionComponent)
-		if fc.FactionID == factionID && fc.IsPlayerFaction {
-			return fc.Reputation
+		if fc, ok := comp.(*FactionComponent); ok {
+			if fc.FactionID == factionID && fc.IsPlayerFaction {
+				return fc.Reputation
+			}
 		}
 	}
 
@@ -204,8 +203,8 @@ func (fs *FactionSystem) ShouldAttackPlayer(factionID string) bool {
 func (fs *FactionSystem) UpdateNPCHostility(entity *Entity) {
 	// Get NPC's faction
 	if comp, ok := entity.GetComponent("faction"); ok {
-		fc := comp.(*FactionComponent)
-		if !fc.IsPlayerFaction {
+		fc, ok := comp.(*FactionComponent)
+		if ok && !fc.IsPlayerFaction {
 			// This is an NPC faction member
 			if fs.ShouldAttackPlayer(fc.FactionID) {
 				// Set NPC as hostile
@@ -229,7 +228,10 @@ func (fs *FactionSystem) ProcessKillReputation(killerEntity, victimEntity *Entit
 		return // Victim has no faction
 	}
 
-	victimFaction := comp.(*FactionComponent)
+	victimFaction, ok := comp.(*FactionComponent)
+	if !ok {
+		return
+	}
 	if victimFaction.IsPlayerFaction {
 		return // Don't process if victim is player
 	}

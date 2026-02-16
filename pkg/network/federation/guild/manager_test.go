@@ -1,6 +1,7 @@
 package guild
 
 import (
+	"fmt"
 	"sync"
 	"testing"
 	"time"
@@ -793,7 +794,7 @@ func TestSyncGuildState(t *testing.T) {
 	m := NewManager()
 	guildID, _ := m.CreateGuild("fantasy", "leader", 12345)
 
-	t.Run("sync existing guild", func(t *testing.T) {
+	t.Run("sync existing guild without transport", func(t *testing.T) {
 		err := m.SyncGuildState(guildID)
 		if err != nil {
 			t.Fatalf("SyncGuildState failed: %v", err)
@@ -804,6 +805,91 @@ func TestSyncGuildState(t *testing.T) {
 		err := m.SyncGuildState("nonexistent")
 		if err == nil {
 			t.Error("SyncGuildState should fail for non-existing guild")
+		}
+	})
+
+	t.Run("sync with transport success", func(t *testing.T) {
+		mt := &mockGuildTransport{}
+		m.SetTransport(mt)
+		defer m.SetTransport(nil)
+
+		err := m.SyncGuildState(guildID)
+		if err != nil {
+			t.Fatalf("SyncGuildState with transport failed: %v", err)
+		}
+		if mt.callCount != 1 {
+			t.Errorf("transport called %d times, want 1", mt.callCount)
+		}
+		if mt.lastGuildID != guildID {
+			t.Errorf("transport guildID = %s, want %s", mt.lastGuildID, guildID)
+		}
+		if len(mt.lastData) == 0 {
+			t.Error("transport received empty data")
+		}
+	})
+
+	t.Run("sync with transport error", func(t *testing.T) {
+		mt := &mockGuildTransport{err: fmt.Errorf("connection refused")}
+		m.SetTransport(mt)
+		defer m.SetTransport(nil)
+
+		err := m.SyncGuildState(guildID)
+		if err == nil {
+			t.Error("SyncGuildState should propagate transport error")
+		}
+		if mt.callCount != 1 {
+			t.Errorf("transport called %d times, want 1", mt.callCount)
+		}
+	})
+}
+
+// mockGuildTransport implements GuildTransport for testing
+type mockGuildTransport struct {
+	callCount   int
+	lastGuildID string
+	lastData    []byte
+	err         error
+}
+
+func (m *mockGuildTransport) BroadcastGuildUpdate(guildID string, data []byte) error {
+	m.callCount++
+	m.lastGuildID = guildID
+	m.lastData = data
+	return m.err
+}
+
+func TestSetTransport(t *testing.T) {
+	m := NewManager()
+
+	t.Run("set nil transport", func(t *testing.T) {
+		m.SetTransport(nil)
+		if m.transport != nil {
+			t.Error("transport should be nil")
+		}
+	})
+
+	t.Run("set mock transport", func(t *testing.T) {
+		mt := &mockGuildTransport{}
+		m.SetTransport(mt)
+		if m.transport == nil {
+			t.Error("transport should not be nil")
+		}
+	})
+
+	t.Run("replace transport", func(t *testing.T) {
+		mt1 := &mockGuildTransport{}
+		mt2 := &mockGuildTransport{}
+		m.SetTransport(mt1)
+		m.SetTransport(mt2)
+
+		guildID, _ := m.CreateGuild("fantasy", "leader", 99999)
+		_ = m.SyncGuildState(guildID)
+
+		if mt1.callCount != 0 {
+			t.Error("old transport should not be called")
+		}
+		if mt2.callCount != 1 {
+			t.Errorf("new transport called %d times, want 1", mt2.callCount)
 		}
 	})
 }

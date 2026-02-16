@@ -618,3 +618,181 @@ func BenchmarkDiscoverySystem_AddManualPeer(b *testing.B) {
 		)
 	}
 }
+
+// mockGossipTransport implements GossipTransport for testing
+type mockGossipTransport struct {
+	callCount  int
+	lastPeerID string
+	lastMsg    *GossipMessage
+	err        error
+}
+
+func (m *mockGossipTransport) SendGossip(peerID string, msg *GossipMessage) error {
+	m.callCount++
+	m.lastPeerID = peerID
+	m.lastMsg = msg
+	return m.err
+}
+
+func TestSetGossipTransport(t *testing.T) {
+	identity, err := NewServerIdentity("TestServer")
+	if err != nil {
+		t.Fatalf("Failed to create identity: %v", err)
+	}
+	ds, err := NewDiscoverySystem(identity, ":0", "localhost:8080")
+	if err != nil {
+		t.Fatalf("Failed to create discovery system: %v", err)
+	}
+
+	t.Run("set nil transport", func(t *testing.T) {
+		ds.SetGossipTransport(nil)
+		if ds.gossipTransport != nil {
+			t.Error("transport should be nil")
+		}
+	})
+
+	t.Run("set mock transport", func(t *testing.T) {
+		mt := &mockGossipTransport{}
+		ds.SetGossipTransport(mt)
+		if ds.gossipTransport == nil {
+			t.Error("transport should not be nil")
+		}
+	})
+}
+
+func TestPropagateGossip(t *testing.T) {
+	identity, err := NewServerIdentity("TestServer")
+	if err != nil {
+		t.Fatalf("Failed to create identity: %v", err)
+	}
+
+	t.Run("no peers returns nil", func(t *testing.T) {
+		ds, _ := NewDiscoverySystem(identity, ":0", "localhost:8080")
+		mt := &mockGossipTransport{}
+		ds.SetGossipTransport(mt)
+
+		err := ds.PropagateGossip("target-server")
+		if err != nil {
+			t.Fatalf("PropagateGossip with no peers failed: %v", err)
+		}
+		if mt.callCount != 0 {
+			t.Error("transport should not be called when no peers exist")
+		}
+	})
+
+	t.Run("skips target peer", func(t *testing.T) {
+		ds, _ := NewDiscoverySystem(identity, ":0", "localhost:8080")
+		mt := &mockGossipTransport{}
+		ds.SetGossipTransport(mt)
+
+		// Add only the target peer
+		ds.AddManualPeer("target-server", "Target", "10.0.0.1:8080", "6.0.0", nil)
+
+		err := ds.PropagateGossip("target-server")
+		if err != nil {
+			t.Fatalf("PropagateGossip failed: %v", err)
+		}
+		if mt.callCount != 0 {
+			t.Error("transport should not be called when only peer is the target")
+		}
+	})
+
+	t.Run("sends gossip with transport", func(t *testing.T) {
+		ds, _ := NewDiscoverySystem(identity, ":0", "localhost:8080")
+		mt := &mockGossipTransport{}
+		ds.SetGossipTransport(mt)
+
+		ds.AddManualPeer("other-server", "Other", "10.0.0.2:8080", "6.0.0", []string{"travel"})
+
+		err := ds.PropagateGossip("target-server")
+		if err != nil {
+			t.Fatalf("PropagateGossip failed: %v", err)
+		}
+		if mt.callCount != 1 {
+			t.Errorf("transport called %d times, want 1", mt.callCount)
+		}
+		if mt.lastPeerID != "target-server" {
+			t.Errorf("peerID = %s, want target-server", mt.lastPeerID)
+		}
+		if mt.lastMsg == nil {
+			t.Fatal("gossip message is nil")
+		}
+		if len(mt.lastMsg.Servers) != 1 {
+			t.Errorf("servers count = %d, want 1", len(mt.lastMsg.Servers))
+		}
+		if mt.lastMsg.Servers[0].ServerID != "other-server" {
+			t.Errorf("server ID = %s, want other-server", mt.lastMsg.Servers[0].ServerID)
+		}
+		if mt.lastMsg.Servers[0].Hops != 1 {
+			t.Errorf("hops = %d, want 1", mt.lastMsg.Servers[0].Hops)
+		}
+	})
+
+	t.Run("nil transport gracefully skips", func(t *testing.T) {
+		ds, _ := NewDiscoverySystem(identity, ":0", "localhost:8080")
+
+		ds.AddManualPeer("other-server", "Other", "10.0.0.2:8080", "6.0.0", nil)
+
+		err := ds.PropagateGossip("target-server")
+		if err != nil {
+			t.Fatalf("PropagateGossip without transport should not error: %v", err)
+		}
+	})
+
+	t.Run("transport error propagates", func(t *testing.T) {
+		ds, _ := NewDiscoverySystem(identity, ":0", "localhost:8080")
+		mt := &mockGossipTransport{err: fmt.Errorf("connection refused")}
+		ds.SetGossipTransport(mt)
+
+		ds.AddManualPeer("other-server", "Other", "10.0.0.2:8080", "6.0.0", nil)
+
+		err := ds.PropagateGossip("target-server")
+		if err == nil {
+			t.Error("PropagateGossip should propagate transport error")
+		}
+	})
+
+	t.Run("skips peers exceeding max hops", func(t *testing.T) {
+		ds, _ := NewDiscoverySystem(identity, ":0", "localhost:8080")
+		mt := &mockGossipTransport{}
+		ds.SetGossipTransport(mt)
+
+		// Add a peer with hops at the max
+		ds.mu.Lock()
+		ds.knownPeers["far-server"] = &DiscoveredPeer{
+			ServerID: "far-server",
+			Address:  "10.0.0.3:8080",
+			Hops:     MaxGossipHops,
+			LastSeen: time.Now(),
+		}
+		ds.mu.Unlock()
+
+		err := ds.PropagateGossip("target-server")
+		if err != nil {
+			t.Fatalf("PropagateGossip failed: %v", err)
+		}
+		if mt.callCount != 0 {
+			t.Error("should not send gossip for peers at max hops")
+		}
+	})
+
+	t.Run("multiple peers gossiped", func(t *testing.T) {
+		ds, _ := NewDiscoverySystem(identity, ":0", "localhost:8080")
+		mt := &mockGossipTransport{}
+		ds.SetGossipTransport(mt)
+
+		ds.AddManualPeer("server-a", "A", "10.0.0.1:8080", "6.0.0", nil)
+		ds.AddManualPeer("server-b", "B", "10.0.0.2:8080", "6.0.0", nil)
+
+		err := ds.PropagateGossip("target-server")
+		if err != nil {
+			t.Fatalf("PropagateGossip failed: %v", err)
+		}
+		if mt.lastMsg == nil {
+			t.Fatal("message is nil")
+		}
+		if len(mt.lastMsg.Servers) != 2 {
+			t.Errorf("servers count = %d, want 2", len(mt.lastMsg.Servers))
+		}
+	})
+}

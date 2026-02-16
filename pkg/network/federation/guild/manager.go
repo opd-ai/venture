@@ -43,7 +43,8 @@ type Manager struct {
 	messageHandlers  map[MessageType]func(msg GuildMessage) error
 	serverID         string // This server's ID
 	logger           *logrus.Entry
-	guildCounter     int64 // Counter for deterministic guild ID generation
+	guildCounter     int64          // Counter for deterministic guild ID generation
+	transport        GuildTransport // Transport for broadcasting guild updates to peers
 }
 
 // NewManager creates a new guild manager

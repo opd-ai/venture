@@ -45,6 +45,13 @@ type GossipMessage struct {
 	OriginID  string            `json:"origin_id"`  // Original sender
 }
 
+// GossipTransport defines the interface for sending gossip messages to peer servers.
+// Implementations handle the actual network transport (TCP/TLS) for multi-hop discovery.
+type GossipTransport interface {
+	// SendGossip sends a gossip message to the specified peer server.
+	SendGossip(peerID string, msg *GossipMessage) error
+}
+
 // DiscoverySystem handles peer discovery and gossip protocol
 type DiscoverySystem struct {
 	identity         *ServerIdentity
@@ -60,6 +67,7 @@ type DiscoverySystem struct {
 	cleanupTicker    *time.Ticker
 	broadcastTicker  *time.Ticker
 	onPeerDiscovered func(*DiscoveredPeer) // Callback for new peers
+	gossipTransport  GossipTransport       // Transport for sending gossip to peers
 }
 
 // DiscoveredPeer represents a peer discovered via LAN or gossip
@@ -419,6 +427,15 @@ func (ds *DiscoverySystem) OnPeerDiscovered(callback func(*DiscoveredPeer)) {
 	ds.onPeerDiscovered = callback
 }
 
+// SetGossipTransport sets the transport used for sending gossip messages to peers.
+// When set, PropagateGossip will transmit messages via the transport layer.
+// If nil, PropagateGossip will prepare messages but skip transmission.
+func (ds *DiscoverySystem) SetGossipTransport(transport GossipTransport) {
+	ds.mu.Lock()
+	defer ds.mu.Unlock()
+	ds.gossipTransport = transport
+}
+
 // PropagateGossip forwards discovery information to connected peers
 func (ds *DiscoverySystem) PropagateGossip(targetPeer string) error {
 	ds.mu.RLock()
@@ -429,6 +446,11 @@ func (ds *DiscoverySystem) PropagateGossip(targetPeer string) error {
 	for _, peer := range ds.knownPeers {
 		// Don't gossip about the target peer to itself
 		if peer.ServerID == targetPeer {
+			continue
+		}
+
+		// Skip peers that have exceeded max gossip hops
+		if peer.Hops >= MaxGossipHops {
 			continue
 		}
 
@@ -444,20 +466,39 @@ func (ds *DiscoverySystem) PropagateGossip(targetPeer string) error {
 		})
 	}
 
-	// ARCHITECTURE NOTE: Gossip message transmission over TCP/TLS
-	// This method currently builds the gossip message but does not transmit it.
-	// Actual transmission requires integration with the FederationProtocol layer
-	// which handles TCP/TLS connections and message routing between federated servers.
-	//
-	// Implementation roadmap:
-	// 1. FederationProtocol must provide a SendGossip(peerID, message) method
-	// 2. This discovery system should accept a FederationProtocol dependency
-	// 3. The gossip message should be serialized and sent via the protocol layer
-	//
-	// Current behavior: The method prepares the gossip message but returns success
-	// without transmission. This allows the discovery system to track peers via
-	// LAN broadcasts while federation transport is being developed.
-	_ = servers // Gossip message prepared but not yet transmitted
+	if len(servers) == 0 {
+		return nil
+	}
+
+	msg := &GossipMessage{
+		MessageID: fmt.Sprintf("gossip-%s-%d", ds.identity.ServerID, time.Now().UnixNano()),
+		Servers:   servers,
+		Timestamp: time.Now().UnixMilli(),
+		MaxHops:   MaxGossipHops,
+		OriginID:  ds.identity.ServerID,
+	}
+
+	if ds.gossipTransport == nil {
+		log.WithFields(log.Fields{
+			"target_peer": targetPeer,
+			"server_count": len(servers),
+		}).Debug("gossip transport not configured, skipping transmission")
+		return nil
+	}
+
+	if err := ds.gossipTransport.SendGossip(targetPeer, msg); err != nil {
+		log.WithFields(log.Fields{
+			"target_peer": targetPeer,
+			"error":       err,
+		}).Warn("failed to send gossip message")
+		return fmt.Errorf("gossip transmission to %s failed: %w", targetPeer, err)
+	}
+
+	log.WithFields(log.Fields{
+		"target_peer":  targetPeer,
+		"server_count": len(servers),
+		"message_id":   msg.MessageID,
+	}).Debug("gossip message propagated")
 
 	return nil
 }

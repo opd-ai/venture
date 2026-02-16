@@ -12,10 +12,26 @@ import (
 // multiple game servers. Includes server registration, guild state broadcasting,
 // and message handling for member changes and territory updates.
 //
-// Note: Actual network transport integration is pending. Messages are prepared
-// but not yet broadcast (see ARCHITECTURE NOTE in SyncGuildState).
+// Guild state is broadcast via a GuildTransport interface, allowing the Manager
+// to send updates over any transport layer (TCP/TLS, WebRTC, etc).
 //
 // Code relocated from: manager.go
+
+// GuildTransport defines the interface for broadcasting guild updates to federated servers.
+// Implementations handle the actual network transport for cross-server guild synchronization.
+type GuildTransport interface {
+	// BroadcastGuildUpdate sends a guild state update to all connected peer servers.
+	BroadcastGuildUpdate(guildID string, data []byte) error
+}
+
+// SetTransport sets the transport used for broadcasting guild updates to federated servers.
+// When set, SyncGuildState will transmit messages via the transport layer.
+// If nil, SyncGuildState will prepare messages but skip transmission.
+func (m *Manager) SetTransport(transport GuildTransport) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.transport = transport
+}
 
 // SetServerID sets this manager's server ID for federation
 // Originally defined in: manager.go
@@ -59,6 +75,7 @@ func (m *Manager) RemoveFederatedServer(serverID string) {
 func (m *Manager) SyncGuildState(guildID string) error {
 	m.mu.RLock()
 	guild, ok := m.guilds[guildID]
+	transport := m.transport
 	m.mu.RUnlock()
 
 	if !ok {
@@ -74,23 +91,19 @@ func (m *Manager) SyncGuildState(guildID string) error {
 		Data:      guild,
 	}
 
-	// ARCHITECTURE NOTE: Guild message broadcast over federation network
-	// This method currently creates the guild sync message but does not broadcast it.
-	// Actual broadcast requires integration with the federation transport layer which
-	// handles authenticated connections and message routing between federated servers.
-	//
-	// Implementation roadmap:
-	// 1. Federation transport layer must provide a Broadcast(message) method
-	// 2. Manager should accept a FederationTransport dependency in constructor
-	// 3. Guild messages should be serialized and broadcast via the transport layer
-	// 4. Transport layer handles encryption, authentication, and reliable delivery
-	//
-	// Current behavior: The method prepares guild sync messages for broadcast but
-	// returns success without transmission. This allows guild state to be managed
-	// locally while the federation transport layer is being developed. When the
-	// transport layer is ready, this will be a one-line change to call
-	// m.transport.Broadcast(msg) instead of discarding it.
-	_ = msg // Guild message prepared but not yet broadcast
+	if transport == nil {
+		_ = msg // Guild message prepared but transport not configured
+		return nil
+	}
+
+	data, err := json.Marshal(msg)
+	if err != nil {
+		return fmt.Errorf("failed to serialize guild state for %s: %w", guildID, err)
+	}
+
+	if err := transport.BroadcastGuildUpdate(guildID, data); err != nil {
+		return fmt.Errorf("failed to broadcast guild update for %s: %w", guildID, err)
+	}
 
 	return nil
 }

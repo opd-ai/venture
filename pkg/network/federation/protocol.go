@@ -501,6 +501,29 @@ func (f *FederationProtocol) GetHealth() *FederationHealth {
 	return f.health
 }
 
+// SendGossip sends a gossip message to a specific peer server via its TCP/TLS connection.
+// This implements the GossipTransport interface for integration with DiscoverySystem.
+func (f *FederationProtocol) SendGossip(peerID string, msg *GossipMessage) error {
+	f.mu.RLock()
+	defer f.mu.RUnlock()
+
+	peer, exists := f.peers[peerID]
+	if !exists {
+		return fmt.Errorf("unknown peer: %s", peerID)
+	}
+
+	conn, hasConn := f.connections[peer.Address]
+	if !hasConn {
+		return fmt.Errorf("no connection to peer %s at %s", peerID, peer.Address)
+	}
+
+	if err := json.NewEncoder(conn).Encode(msg); err != nil {
+		return fmt.Errorf("failed to encode gossip for peer %s: %w", peerID, err)
+	}
+
+	return nil
+}
+
 // GetConnectionPool returns the connection pool
 func (f *FederationProtocol) GetConnectionPool() *ConnectionPool {
 	return f.connectionPool

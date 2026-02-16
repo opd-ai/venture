@@ -6,7 +6,7 @@
 The `pkg/modding` package provides a server-side mod framework for Venture. Overall health is excellent with 5 implementation files (~880 LOC), 3 test files (~2,100 LOC), comprehensive sandbox security system, and 90.8% test coverage. The package enables JSON-based rule modifications without compromising zero-asset architecture. Critical risk: No structured logging (logs errors but doesn't use logrus.WithFields); time.Now() usage for timestamps is acceptable (non-deterministic but not procgen-related).
 
 ## Issues Found
-- [ ] **severity:med** Error handling — No structured logging with logrus.WithFields; errors returned but not logged with context for observability (`loader.go`, `manager.go`, `sandbox.go`)
+- [x] **severity:med** Error handling — No structured logging with logrus.WithFields; errors returned but not logged with context for observability (`loader.go`, `manager.go`, `sandbox.go`) — **RESOLVED**: Added 16 structured logrus.WithFields statements across loader.go (8), manager.go (6), and sandbox.go (2) covering mod load/save/add/remove, rule application, rate limiting, event handler failures, and sandbox violations
 - [ ] **severity:low** Deterministic procgen — time.Now() used for metadata timestamps in LoadedAt (`loader.go:88`), AppliedAt (`manager.go:232`), and rate limiting (`manager.go:323`). Acceptable for non-procgen metadata.
 
 
@@ -157,7 +157,7 @@ func (l *Loader) LoadFromFile(path string) (*Mod, error) {
 - Clear function decomposition (e.g., `loader.go` has 15+ small focused functions)
 
 ## Recommendations
-1. **Add structured logging (Medium Priority)** — Import `logrus` and add `WithFields` logging at key points: mod load/unload, rule application, sandbox violations, dependency resolution. Target 10-15 log statements across loader/manager.
+1. **~~Add structured logging (Medium Priority)~~** — **COMPLETED**: Added `logrus.WithFields` logging at key points across loader.go, manager.go, and sandbox.go. 16 log statements cover: mod load/save (Debug entry, Info success, Error failure), mod add/remove (Info success, Warn limits), rule application (Info with count), rate limiting (Warn on exceed), event handler failures (Error with context), and sandbox validation (Debug entry, Warn violations).
 
 2. **Document time.Now() exception (Low Priority)** — Add comment to package doc explaining time.Now() is acceptable for metadata timestamps (not procgen), distinguishing from procgen determinism requirements.
 

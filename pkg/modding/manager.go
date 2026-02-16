@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"sync"
 	"time"
+
+	logrus "github.com/sirupsen/logrus"
 )
 
 // handlerWithOwner associates an event handler with the mod that registered it.
@@ -64,6 +66,10 @@ func (m *Manager) AddMod(mod *Mod) error {
 
 	// Check max mods limit
 	if len(m.mods) >= m.config.MaxMods {
+		logrus.WithFields(logrus.Fields{
+			"mod_id":   mod.ID,
+			"max_mods": m.config.MaxMods,
+		}).Warn("maximum mod limit reached")
 		return fmt.Errorf("maximum number of mods (%d) reached", m.config.MaxMods)
 	}
 
@@ -87,6 +93,13 @@ func (m *Manager) AddMod(mod *Mod) error {
 		}
 	}
 
+	logrus.WithFields(logrus.Fields{
+		"mod_id":   mod.ID,
+		"mod_name": mod.Name,
+		"version":  mod.Version,
+		"type":     mod.Type,
+	}).Info("mod added to manager")
+
 	return nil
 }
 
@@ -106,6 +119,10 @@ func (m *Manager) RemoveMod(modID string) error {
 
 	m.removeModEventHandlers(mod, modID)
 	delete(m.mods, modID)
+
+	logrus.WithFields(logrus.Fields{
+		"mod_id": modID,
+	}).Info("mod removed from manager")
 
 	return nil
 }
@@ -238,6 +255,10 @@ func (m *Manager) ApplyRules() error {
 		}
 	}
 
+	logrus.WithFields(logrus.Fields{
+		"active_rules": len(m.activeRules),
+	}).Info("mod rules applied")
+
 	return nil
 }
 
@@ -299,6 +320,11 @@ func (m *Manager) TriggerEvent(event Event) error {
 	// Call handlers (in order of registration)
 	for _, h := range handlers {
 		if err := h.handler(event); err != nil {
+			logrus.WithFields(logrus.Fields{
+				"event_type": event.Type,
+				"mod_id":     h.modID,
+				"error":      err,
+			}).Error("event handler failed")
 			return fmt.Errorf("event handler failed for %s: %w", event.Type, err)
 		}
 	}
@@ -332,6 +358,10 @@ func (m *Manager) checkRateLimit() error {
 
 	// Check if rate limit exceeded
 	if float64(m.changeCount) > m.config.RuleChangeRateLimit {
+		logrus.WithFields(logrus.Fields{
+			"change_count": m.changeCount,
+			"rate_limit":   m.config.RuleChangeRateLimit,
+		}).Warn("mod rule change rate limit exceeded")
 		return fmt.Errorf("rate limit exceeded: %d changes per second (max %.0f)",
 			m.changeCount, m.config.RuleChangeRateLimit)
 	}

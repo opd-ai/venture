@@ -8,6 +8,8 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+
+	logrus "github.com/sirupsen/logrus"
 )
 
 // Loader handles loading mods from disk.
@@ -31,12 +33,20 @@ func NewLoaderWithConfig(config ModConfig) *Loader {
 
 // LoadFromFile loads a single mod from a JSON file.
 func (l *Loader) LoadFromFile(path string) (*Mod, error) {
+	logrus.WithFields(logrus.Fields{
+		"path": path,
+	}).Debug("loading mod from file")
+
 	if err := l.validateSandboxPath(path); err != nil {
 		return nil, &LoadError{ModID: path, Err: err}
 	}
 
 	data, err := os.ReadFile(path)
 	if err != nil {
+		logrus.WithFields(logrus.Fields{
+			"path":  path,
+			"error": err,
+		}).Error("failed to read mod file")
 		return nil, &LoadError{ModID: path, Err: err}
 	}
 
@@ -52,6 +62,12 @@ func (l *Loader) LoadFromFile(path string) (*Mod, error) {
 	if err := l.validateModContent(mod); err != nil {
 		return nil, err
 	}
+
+	logrus.WithFields(logrus.Fields{
+		"mod_id":   mod.ID,
+		"mod_name": mod.Name,
+		"version":  mod.Version,
+	}).Info("mod loaded successfully")
 
 	return mod, nil
 }
@@ -124,6 +140,10 @@ func buildSandboxErrorMessages(errors []SandboxError) string {
 
 // LoadAll loads all mods from the mods directory.
 func (l *Loader) LoadAll() ([]*Mod, error) {
+	logrus.WithFields(logrus.Fields{
+		"directory": l.config.ModsDirectory,
+	}).Debug("loading all mods from directory")
+
 	if err := l.ensureModsDirectoryExists(); err != nil {
 		return nil, err
 	}
@@ -167,6 +187,10 @@ func (l *Loader) loadModsFromEntries(entries []os.DirEntry) ([]*Mod, error) {
 
 		mod, err := l.loadModFromEntry(entry)
 		if err != nil {
+			logrus.WithFields(logrus.Fields{
+				"file":  entry.Name(),
+				"error": err,
+			}).Warn("failed to load mod file")
 			loadErrors = append(loadErrors, err)
 			continue
 		}
@@ -207,6 +231,11 @@ func (l *Loader) validateLoadResults(mods []*Mod, loadErrors []error) ([]*Mod, e
 
 // SaveToFile saves a mod to a JSON file.
 func (l *Loader) SaveToFile(mod *Mod, path string) error {
+	logrus.WithFields(logrus.Fields{
+		"mod_id": mod.ID,
+		"path":   path,
+	}).Debug("saving mod to file")
+
 	if err := mod.Validate(); err != nil {
 		return &LoadError{ModID: mod.ID, Err: err}
 	}
@@ -221,8 +250,18 @@ func (l *Loader) SaveToFile(mod *Mod, path string) error {
 	}
 
 	if err := os.WriteFile(path, data, 0o644); err != nil {
+		logrus.WithFields(logrus.Fields{
+			"mod_id": mod.ID,
+			"path":   path,
+			"error":  err,
+		}).Error("failed to write mod file")
 		return &LoadError{ModID: mod.ID, Err: err}
 	}
+
+	logrus.WithFields(logrus.Fields{
+		"mod_id": mod.ID,
+		"path":   path,
+	}).Info("mod saved successfully")
 
 	return nil
 }

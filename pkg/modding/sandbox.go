@@ -6,6 +6,8 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+
+	logrus "github.com/sirupsen/logrus"
 )
 
 // Sandbox provides security enforcement for the mod system.
@@ -133,6 +135,10 @@ func (s *Sandbox) ValidatePath(path string) error {
 
 // ValidateMod performs comprehensive security validation on a mod.
 func (s *Sandbox) ValidateMod(mod *Mod) SandboxValidation {
+	logrus.WithFields(logrus.Fields{
+		"mod_id": mod.ID,
+	}).Debug("validating mod against sandbox rules")
+
 	result := SandboxValidation{
 		Valid:  true,
 		Errors: []SandboxError{},
@@ -178,6 +184,13 @@ func (s *Sandbox) ValidateMod(mod *Mod) SandboxValidation {
 				Message: err.Error(),
 			})
 		}
+	}
+
+	if !result.Valid {
+		logrus.WithFields(logrus.Fields{
+			"mod_id":     mod.ID,
+			"violations": len(result.Errors),
+		}).Warn("mod failed sandbox validation")
 	}
 
 	return result

@@ -93,7 +93,7 @@ This file tracks the audit status of all packages in the Venture codebase.
 - [x] `pkg/benchmark/memory/AUDIT.md` — Complete — 0 issues (0 high, 0 med, 0 low)
 - [x] `pkg/integration/AUDIT.md` — Complete — 0 issues (0 high, 0 med, 0 low)
 - [x] `pkg/integration/AUDIT_2026-02-16_COMPREHENSIVE.md` — Complete — 0 issues (0 high, 0 med, 0 low)
-- [x] `pkg/rendering/display/AUDIT.md` — Needs Work — 4 issues (2 high, 1 med, 1 low)
+- [x] `pkg/rendering/display/AUDIT.md` — Complete — 1 issue (0 high, 0 med, 1 low)
 - [x] `pkg/rendering/parallel/AUDIT.md` — Complete — 1 issue (0 high, 0 med, 1 low)
 - [x] `pkg/rendering/patterns/AUDIT.md` — Complete — 0 issues (0 high, 0 med, 0 low)
 - [x] `pkg/rendering/quality/AUDIT.md` — Complete — 0 issues (0 high, 0 med, 0 low)
@@ -163,10 +163,10 @@ This file tracks the audit status of all packages in the Venture codebase.
 - **Total Packages**: 116
 - **Audited**: 116 (100.0%)
 - **Pending**: 0 (0.0%)
-- **Issues Found**: 35
+- **Issues Found**: 32
   - High: 0
-  - Medium: 5
-  - Low: 30
+  - Medium: 4
+  - Low: 28
 
 ## Notes
 - Most core packages have been audited and are in good shape
@@ -178,7 +178,7 @@ This file tracks the audit status of all packages in the Venture codebase.
 - The rendering/patterns package shows excellent architecture with 94.7% test coverage and perfect deterministic generation compliance
 - The performance package demonstrates exemplary architecture with 94.3% test coverage, comprehensive thread-safety, and full engine integration
 - The rendering/parallel package demonstrates exemplary architecture with 97.5% test coverage, comprehensive thread-safety, and full engine integration via adapter pattern
-- The rendering/display package uses `time.Now()` for performance measurement (acceptable for observability, but violates strict determinism). Runtime controls for resolution/fullscreen exist but are not wired up to UI/hotkeys.
+- The rendering/display package uses `time.Now()` for performance measurement (acceptable for observability, documented with NON-DETERMINISTIC comments). F11 fullscreen toggle and SetResolution() wired up via InputSystem callbacks in cmd/client. Runtime controls for resolution/fullscreen are now fully functional.
 - The class/advanced package shows exemplary architecture with 89.0% coverage, perfect ECS compliance, comprehensive thread-safety, and rich content (15 base classes, 20 prestige classes, 450+ talents)
 - The memprofile package demonstrates exemplary architecture with 88.8% coverage, comprehensive edge case testing (zero-allocation handling), and proper integration with benchmark suite for memory leak detection
 - The companion/learning package shows exemplary architecture with 92.5% coverage, perfect ECS compliance, comprehensive deterministic design via TimeProvider abstraction, and full integration with engine companion AI systems

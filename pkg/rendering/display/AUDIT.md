@@ -1,6 +1,6 @@
 # Audit: github.com/opd-ai/venture/pkg/rendering/display
 **Date**: 2026-02-16
-**Status**: Needs Work
+**Status**: Complete (high and medium issues resolved)
 
 ## Summary
 Display package provides resolution management and UI scaling for cross-platform support (1280x720 to 3840x2160). Architecture is clean with proper separation (Config/Manager/Scaler), but has one critical issue: uses `time.Now()` for performance measurement, violating determinism requirements. No ECS compliance needed (utility package). Integration is minimal but functional (client handlers only).
@@ -30,45 +30,14 @@ This is a utility package for display configuration, not an ECS system. Manager 
 
 ## Recommendations
 
-### 1. **HIGH PRIORITY**: Fix non-deterministic time usage
-**Problem**: `manager.go:27` and `manager.go:33` use `time.Now()` and `time.Since()` for performance measurement, violating deterministic procgen requirements.
+### 1. ~~**HIGH PRIORITY**: Fix non-deterministic time usage~~ **DONE** (2026-02-16)
+Added `NON-DETERMINISTIC: performance measurement only` comments to `manager.go:27` and `manager.go:33` documenting that `time.Now()` is intentionally used for observability, not game logic (Option C from audit).
 
-**Why it matters**: Even though this is a utility package (not procgen), using `time.Now()` violates codebase standards. The `switchDuration` tracking is for performance metrics, not gameplay, but should use a deterministic alternative or be clearly marked as non-deterministic.
-
-**Fix options**:
-- Option A: Remove performance timing entirely (simplest)
-- Option B: Accept a clock interface for testing (allows deterministic tests)
-- Option C: Document that timing is intentionally non-deterministic for performance monitoring (add comment exception)
-
-**Recommended fix** (Option C):
-```go
-// ApplyResolution applies current config to Ebiten window.
-// Returns time taken for the switch operation.
-// NOTE: Uses time.Now() for performance measurement (non-deterministic by design).
-// This is acceptable as it's for observability, not game logic.
-func (m *Manager) ApplyResolution() time.Duration {
-    m.switchStarted = time.Now() // NON-DETERMINISTIC: performance measurement only
-    
-    ebiten.SetWindowSize(m.config.Width, m.config.Height)
-    ebiten.SetFullscreen(m.config.Fullscreen)
-    ebiten.SetVsyncEnabled(m.config.VSync)
-    
-    m.switchDuration = time.Since(m.switchStarted) // NON-DETERMINISTIC: performance measurement only
-    return m.switchDuration
-}
-```
-
-### 2. **MEDIUM PRIORITY**: Wire up runtime resolution/fullscreen controls
-**Problem**: `SetResolution()` and `ToggleFullscreen()` methods exist but are never called.
-
-**Fix**: Add key bindings and/or settings UI in client:
-```go
-// In cmd/client/input.go or handlers.go Update() method:
-if ebiten.IsKeyPressed(ebiten.KeyF11) {
-    sys.displayManager.ToggleFullscreen()
-    logger.Info("Toggled fullscreen mode")
-}
-```
+### 2. ~~**MEDIUM PRIORITY**: Wire up runtime resolution/fullscreen controls~~ **DONE** (2026-02-16)
+Added F11 fullscreen toggle support:
+- `pkg/engine/input_system.go`: Added `KeyFullscreen` field (default F11), `onFullscreenToggle` callback, `SetFullscreenToggleCallback()` method, and handling in `handleQuickSaveLoad()`
+- `cmd/client/handlers.go`: Wired callback in `initializeV7Systems()` to call `display.Manager.ToggleFullscreen()`
+- Added to `RebindKey()`, `GetKeyBinding()`, `GetAllKeyBindings()` for full key binding support
 
 ### 3. **LOW PRIORITY**: Add headless test mode
 **Problem**: Tests fail without DISPLAY/GLFW (CI/CD environments).

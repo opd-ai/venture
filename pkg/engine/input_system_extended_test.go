@@ -206,6 +206,7 @@ func TestInputSystem_SetKeyBinding(t *testing.T) {
 		{"help", ebiten.KeyEscape, true},
 		{"quicksave", ebiten.KeyF5, true},
 		{"quickload", ebiten.KeyF9, true},
+		{"fullscreen", ebiten.KeyF11, true},
 		{"cycletargets", ebiten.KeyTab, true},
 		// Invalid action
 		{"invalid", ebiten.Key0, false},
@@ -256,6 +257,7 @@ func TestInputSystem_GetKeyBinding(t *testing.T) {
 		{"help", true},
 		{"quicksave", true},
 		{"quickload", true},
+		{"fullscreen", true},
 		{"cycletargets", true},
 		{"invalid_action", false},
 	}
@@ -283,7 +285,7 @@ func TestInputSystem_GetAllKeyBindings(t *testing.T) {
 		"up", "down", "left", "right",
 		"action", "useitem",
 		"inventory", "character", "skills", "quests", "map", "crafting",
-		"help", "quicksave", "quickload", "cycletargets",
+		"help", "quicksave", "quickload", "fullscreen", "cycletargets",
 	}
 
 	if len(bindings) != len(expectedActions) {
@@ -413,6 +415,7 @@ func TestInputSystem_OriginalFunctionalityIntact(t *testing.T) {
 	// inputSys.SetHelpSystem(&EbitenHelpSystem{})
 	inputSys.SetQuickSaveCallback(func() error { return nil })
 	inputSys.SetQuickLoadCallback(func() error { return nil })
+	inputSys.SetFullscreenToggleCallback(func() error { return nil })
 	inputSys.SetInventoryCallback(func() {})
 	inputSys.SetCharacterCallback(func() {})
 	inputSys.SetSkillsCallback(func() {})

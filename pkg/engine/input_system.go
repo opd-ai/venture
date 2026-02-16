@@ -277,6 +277,7 @@ type InputSystem struct {
 	KeyHelp         ebiten.Key // ESC key for help menu
 	KeyQuickSave    ebiten.Key // F5 key for quick save
 	KeyQuickLoad    ebiten.Key // F9 key for quick load
+	KeyFullscreen   ebiten.Key // F11 key for fullscreen toggle
 	KeyCycleTargets ebiten.Key // Tab key for cycling targets
 
 	// References to game systems for special key handling
@@ -316,8 +317,9 @@ type InputSystem struct {
 	mouseDeltaX, mouseDeltaY int
 
 	// Callbacks for UI and save/load operations
-	onQuickSave     func() error
-	onQuickLoad     func() error
+	onQuickSave        func() error
+	onQuickLoad        func() error
+	onFullscreenToggle func() error
 	onInventoryOpen func()
 	onCharacterOpen func()
 	onSkillsOpen    func()
@@ -395,6 +397,7 @@ func NewInputSystem() *InputSystem {
 		KeyHelp:         ebiten.KeyEscape,
 		KeyQuickSave:    ebiten.KeyF5,
 		KeyQuickLoad:    ebiten.KeyF9,
+		KeyFullscreen:   ebiten.KeyF11,
 		KeyCycleTargets: ebiten.KeyTab,
 
 		// Mobile input
@@ -710,7 +713,7 @@ func (s *InputSystem) togglePauseMenu() {
 	}
 }
 
-// handleQuickSaveLoad processes F5 quick save and F9 quick load operations.
+// handleQuickSaveLoad processes F5 quick save, F9 quick load, and F11 fullscreen toggle.
 func (s *InputSystem) handleQuickSaveLoad() {
 	if inpututil.IsKeyJustPressed(s.KeyQuickSave) && s.onQuickSave != nil {
 		s.executeQuickSave()
@@ -718,6 +721,10 @@ func (s *InputSystem) handleQuickSaveLoad() {
 
 	if inpututil.IsKeyJustPressed(s.KeyQuickLoad) && s.onQuickLoad != nil {
 		s.executeQuickLoad()
+	}
+
+	if inpututil.IsKeyJustPressed(s.KeyFullscreen) && s.onFullscreenToggle != nil {
+		s.executeFullscreenToggle()
 	}
 }
 
@@ -736,6 +743,13 @@ func (s *InputSystem) executeQuickLoad() {
 		s.showNotification("Load Failed: " + err.Error())
 	} else {
 		s.showNotification("Game Loaded!")
+	}
+}
+
+// executeFullscreenToggle performs fullscreen toggle with notification feedback.
+func (s *InputSystem) executeFullscreenToggle() {
+	if err := s.onFullscreenToggle(); err != nil {
+		s.showNotification("Fullscreen Toggle Failed: " + err.Error())
 	}
 }
 
@@ -1475,6 +1489,11 @@ func (s *InputSystem) SetQuickLoadCallback(callback func() error) {
 	s.onQuickLoad = callback
 }
 
+// SetFullscreenToggleCallback sets the callback function for fullscreen toggle (F11).
+func (s *InputSystem) SetFullscreenToggleCallback(callback func() error) {
+	s.onFullscreenToggle = callback
+}
+
 // SetInventoryCallback sets the callback function for opening inventory (I key).
 // H-008 FIX: Returns error if callback is nil to catch initialization order bugs.
 func (s *InputSystem) SetInventoryCallback(callback func()) error {
@@ -1896,6 +1915,8 @@ func (s *InputSystem) SetKeyBinding(action string, key ebiten.Key) bool {
 		s.KeyQuickSave = key
 	case "quickload":
 		s.KeyQuickLoad = key
+	case "fullscreen":
+		s.KeyFullscreen = key
 	case "cycletargets":
 		s.KeyCycleTargets = key
 	default:
@@ -1943,6 +1964,8 @@ func (s *InputSystem) GetKeyBinding(action string) (ebiten.Key, bool) {
 		return s.KeyQuickSave, true
 	case "quickload":
 		return s.KeyQuickLoad, true
+	case "fullscreen":
+		return s.KeyFullscreen, true
 	case "cycletargets":
 		return s.KeyCycleTargets, true
 	default:
@@ -1973,6 +1996,7 @@ func (s *InputSystem) GetAllKeyBindings() map[string]ebiten.Key {
 		"help":         s.KeyHelp,
 		"quicksave":    s.KeyQuickSave,
 		"quickload":    s.KeyQuickLoad,
+		"fullscreen":   s.KeyFullscreen,
 		"cycletargets": s.KeyCycleTargets,
 	}
 }

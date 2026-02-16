@@ -1639,6 +1639,18 @@ func initializeV7Systems(game *engine.EbitenGame, sys *systemsContainer, clientL
 	sys.viewportOptimizer.SetTileSize(32.0) // Standard tile size
 	sys.viewportOptimizer.SetMarginTiles(1) // 1-tile margin for smooth scrolling
 
+	// Wire up F11 fullscreen toggle to display manager
+	if sys.inputSystem != nil && sys.displayManager != nil {
+		dm := sys.displayManager
+		sys.inputSystem.SetFullscreenToggleCallback(func() error {
+			dm.ToggleFullscreen()
+			clientLogger.WithFields(logrus.Fields{
+				"fullscreen": dm.GetConfig().Fullscreen,
+			}).Info("fullscreen toggled (F11)")
+			return nil
+		})
+	}
+
 	if *verbose {
 		clientLogger.Info("V7.0 systems initialized (display manager, viewport optimizer)")
 	}

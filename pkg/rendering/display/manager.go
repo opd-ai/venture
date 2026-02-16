@@ -23,14 +23,16 @@ func NewManager(cfg *Config) *Manager {
 
 // ApplyResolution applies current config to Ebiten window.
 // Returns time taken for the switch operation.
+// NOTE: Uses time.Now() for performance measurement (non-deterministic by design).
+// This is acceptable as it's for observability, not game logic or procgen.
 func (m *Manager) ApplyResolution() time.Duration {
-	m.switchStarted = time.Now()
+	m.switchStarted = time.Now() // NON-DETERMINISTIC: performance measurement only
 
 	ebiten.SetWindowSize(m.config.Width, m.config.Height)
 	ebiten.SetFullscreen(m.config.Fullscreen)
 	ebiten.SetVsyncEnabled(m.config.VSync)
 
-	m.switchDuration = time.Since(m.switchStarted)
+	m.switchDuration = time.Since(m.switchStarted) // NON-DETERMINISTIC: performance measurement only
 	return m.switchDuration
 }
 

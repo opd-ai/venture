@@ -54,8 +54,9 @@ type Stats struct {
 	Resistances map[DamageType]float64
 }
 
-// NewStats creates a new Stats struct with default values.
-// Originally from: interfaces.go
+// NewStats creates a new Stats struct with balanced default values suitable for
+// a fresh level-1 entity: 100 HP, 50 Mana, 10 Attack, 5 Defense, 100 Speed,
+// and an empty resistance map. Callers should adjust fields for specific entity types.
 func NewStats() *Stats {
 	return &Stats{
 		HP:          100,

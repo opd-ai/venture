@@ -26,10 +26,13 @@ type EntityStatsProvider interface {
 	// GetStats returns the Stats for an entity, or nil if not found.
 	GetStats(entityID uint64) *Stats
 	// GetAttackDamage returns the base damage for an entity's attack.
+	// Returns a zero-value Damage if the entity is not found.
 	GetAttackDamage(entityID uint64) Damage
 }
 
-// NewDefaultCombatResolver creates a new DefaultCombatResolver with sensible defaults.
+// NewDefaultCombatResolver creates a new DefaultCombatResolver with a
+// MinDamageMultiplier of 0.1 (10% of base damage). The lookup parameter
+// provides entity stats for combat resolution and must not be nil.
 func NewDefaultCombatResolver(lookup EntityStatsProvider) *DefaultCombatResolver {
 	return &DefaultCombatResolver{
 		MinDamageMultiplier: 0.1,

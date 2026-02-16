@@ -106,7 +106,9 @@ func (b *StateBroadcaster) CreateSnapshot() (*WorldState, error) {
 	b.lastBroadcast = now
 
 	return snapshot, nil
-} // SerializeSnapshot serializes a world state to JSON bytes.
+}
+
+// SerializeSnapshot serializes a world state to JSON bytes.
 func (b *StateBroadcaster) SerializeSnapshot(snapshot *WorldState) ([]byte, error) {
 	return json.Marshal(snapshot)
 }

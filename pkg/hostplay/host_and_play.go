@@ -11,7 +11,6 @@ import (
 	"context"
 	"fmt"
 	"net"
-	"time"
 )
 
 // Config contains configuration for host-and-play mode
@@ -83,20 +82,11 @@ func (s *Server) GetContext() context.Context {
 	return s.ctx
 }
 
-// Shutdown gracefully stops the server
-// Blocks until shutdown completes or timeout (5 seconds)
+// Shutdown gracefully stops the server by cancelling the context.
+// Returns nil immediately since context cancellation is synchronous.
 func (s *Server) Shutdown() error {
 	s.cancel()
-
-	// Wait for cleanup with timeout
-	select {
-	case <-time.After(5 * time.Second):
-		return fmt.Errorf("shutdown timeout after 5 seconds")
-	case <-s.ctx.Done():
-		// Additional small delay to ensure goroutine cleanup completes
-		time.Sleep(100 * time.Millisecond)
-		return nil
-	}
+	return nil
 }
 
 // GetAddress returns the actual server address (e.g., "localhost:8080")

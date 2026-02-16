@@ -230,7 +230,7 @@ func (sm *ServerManager) bindToPort(bindAddr string) error {
 			sm.address = fmt.Sprintf("localhost:%d", port)
 			return nil
 		}
-		sm.logger.Debug("Port in use, trying next", "port", port)
+		sm.logger.WithField("port", port).Debug("Port in use, trying next")
 	}
 
 	return fmt.Errorf("failed to bind to any port in range %d-%d: %w",
@@ -247,7 +247,7 @@ func (sm *ServerManager) tryBindToPort(bindAddr string, port int, lastErr *error
 
 	sm.server = network.NewServerWithLogger(serverConfig, sm.logger)
 	if err := sm.server.Start(); err == nil {
-		sm.logger.Info("Server bound to port", "address", addr, "port", port)
+		sm.logger.WithFields(logrus.Fields{"address": addr, "port": port}).Info("Server bound to port")
 		return true
 	} else {
 		*lastErr = err
@@ -315,7 +315,7 @@ func (sm *ServerManager) serverLoop(ctx context.Context) {
 			sm.handleInputCommand(inputCmd)
 
 		case err := <-errors:
-			sm.logger.Error("Network error", "error", err)
+			sm.logger.WithField("error", err).Error("Network error")
 
 		case <-ticker.C:
 			sm.handleWorldUpdate()
@@ -325,19 +325,22 @@ func (sm *ServerManager) serverLoop(ctx context.Context) {
 
 // handlePlayerJoin spawns a player entity when a player joins.
 func (sm *ServerManager) handlePlayerJoin(playerID uint64) {
-	sm.logger.Info("Player joined", "player_id", playerID)
+	sm.logger.WithField("player_id", playerID).Info("Player joined")
 	sm.spawnPlayer(playerID)
 }
 
 // handlePlayerLeave removes a player entity when a player leaves.
 func (sm *ServerManager) handlePlayerLeave(playerID uint64) {
-	sm.logger.Info("Player left", "player_id", playerID)
+	sm.logger.WithField("player_id", playerID).Info("Player left")
 	sm.removePlayer(playerID)
 }
 
 // handleInputCommand processes player input through the InputHandler.
 func (sm *ServerManager) handleInputCommand(inputCmd *network.InputCommand) {
-	sm.logger.Debug("Received input command", "player_id", inputCmd.PlayerID, "type", inputCmd.InputType)
+	sm.logger.WithFields(logrus.Fields{
+		"player_id": inputCmd.PlayerID,
+		"type":      inputCmd.InputType,
+	}).Debug("Received input command")
 	sm.inputHandler.ProcessInputRaw(inputCmd.PlayerID, inputCmd.InputType, inputCmd.Data)
 }
 
@@ -418,7 +421,7 @@ func (sm *ServerManager) removePlayer(playerID uint64) {
 		}
 	}
 
-	sm.logger.Warn("Could not find entity for player", "player_id", playerID)
+	sm.logger.WithField("player_id", playerID).Warn("Could not find entity for player")
 }
 
 // broadcastEntityStates sends entity state updates to all connected clients.
@@ -648,7 +651,7 @@ func (sm *ServerManager) GetLANAddress() string {
 	// Get local IP addresses
 	addrs, err := net.InterfaceAddrs()
 	if err != nil {
-		sm.logger.Warn("Failed to get interface addresses", "error", err)
+		sm.logger.WithField("error", err).Warn("Failed to get interface addresses")
 		return ""
 	}
 

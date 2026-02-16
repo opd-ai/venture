@@ -245,3 +245,46 @@ func TestVignetteConfig_Color(t *testing.T) {
 			r, g, b, expectedR, expectedG, expectedB)
 	}
 }
+
+func TestConfig_Validate(t *testing.T) {
+	tests := []struct {
+		name    string
+		modify  func(*Config)
+		wantErr bool
+	}{
+		{"default config valid", func(c *Config) {}, false},
+		{"negative motion blur intensity", func(c *Config) { c.MotionBlur.Intensity = -0.1 }, true},
+		{"motion blur intensity too high", func(c *Config) { c.MotionBlur.Intensity = 1.5 }, true},
+		{"motion blur samples too low", func(c *Config) { c.MotionBlur.Samples = 1 }, true},
+		{"negative depth blur strength", func(c *Config) { c.DepthBlur.BlurStrength = -0.1 }, true},
+		{"depth blur samples zero", func(c *Config) { c.DepthBlur.Samples = 0 }, true},
+		{"depth blur focal out of range", func(c *Config) { c.DepthBlur.FocalDistance = 1.5 }, true},
+		{"chromatic intensity negative", func(c *Config) { c.ChromaticAberration.Intensity = -1 }, true},
+		{"chromatic samples too low", func(c *Config) { c.ChromaticAberration.Samples = 1 }, true},
+		{"vignette intensity out of range", func(c *Config) { c.Vignette.Intensity = 2.0 }, true},
+		{"vignette inner >= outer", func(c *Config) {
+			c.Vignette.Enabled = true
+			c.Vignette.InnerRadius = 1.5
+			c.Vignette.OuterRadius = 1.0
+		}, true},
+		{"valid custom config", func(c *Config) {
+			c.MotionBlur.Intensity = 0.5
+			c.MotionBlur.Samples = 5
+			c.DepthBlur.BlurStrength = 0.8
+			c.DepthBlur.Samples = 7
+			c.ChromaticAberration.Intensity = 0.3
+			c.ChromaticAberration.Samples = 4
+		}, false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cfg := DefaultConfig()
+			tt.modify(&cfg)
+			err := cfg.Validate()
+			if (err != nil) != tt.wantErr {
+				t.Errorf("Config.Validate() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}

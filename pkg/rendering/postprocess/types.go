@@ -300,6 +300,63 @@ func (v *VelocityMap) SetVelocity(x, y int, vx, vy float64) {
 	v.VelocityY[localY][localX] = vy
 }
 
+// Validate checks that all configuration values are within valid ranges.
+// Returns nil if the configuration is valid.
+func (c *Config) Validate() error {
+	if err := c.MotionBlur.Validate(); err != nil {
+		return err
+	}
+	if err := c.DepthBlur.Validate(); err != nil {
+		return err
+	}
+	if err := c.ChromaticAberration.Validate(); err != nil {
+		return err
+	}
+	if c.Vignette.Intensity < 0 || c.Vignette.Intensity > 1 {
+		return &ValidationError{Field: "Vignette.Intensity", Message: "must be between 0.0 and 1.0"}
+	}
+	if c.Vignette.InnerRadius >= c.Vignette.OuterRadius && c.Vignette.Enabled {
+		return &ValidationError{Field: "Vignette.InnerRadius", Message: "must be less than OuterRadius"}
+	}
+	return nil
+}
+
+// Validate checks that motion blur configuration values are within valid ranges.
+func (c *MotionBlurConfig) Validate() error {
+	if c.Intensity < 0 || c.Intensity > 1 {
+		return &ValidationError{Field: "MotionBlur.Intensity", Message: "must be between 0.0 and 1.0"}
+	}
+	if c.Samples < 2 {
+		return &ValidationError{Field: "MotionBlur.Samples", Message: "must be at least 2"}
+	}
+	return nil
+}
+
+// Validate checks that depth blur configuration values are within valid ranges.
+func (c *DepthBlurConfig) Validate() error {
+	if c.BlurStrength < 0 || c.BlurStrength > 1 {
+		return &ValidationError{Field: "DepthBlur.BlurStrength", Message: "must be between 0.0 and 1.0"}
+	}
+	if c.Samples < 1 {
+		return &ValidationError{Field: "DepthBlur.Samples", Message: "must be at least 1"}
+	}
+	if c.FocalDistance < 0 || c.FocalDistance > 1 {
+		return &ValidationError{Field: "DepthBlur.FocalDistance", Message: "must be between 0.0 and 1.0"}
+	}
+	return nil
+}
+
+// Validate checks that chromatic aberration configuration values are within valid ranges.
+func (c *ChromaticAberrationConfig) Validate() error {
+	if c.Intensity < 0 || c.Intensity > 1 {
+		return &ValidationError{Field: "ChromaticAberration.Intensity", Message: "must be between 0.0 and 1.0"}
+	}
+	if c.Samples < 2 {
+		return &ValidationError{Field: "ChromaticAberration.Samples", Message: "must be at least 2"}
+	}
+	return nil
+}
+
 // ValidationError represents a post-processing configuration validation error.
 type ValidationError struct {
 	Field   string

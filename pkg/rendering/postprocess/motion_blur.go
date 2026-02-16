@@ -14,7 +14,7 @@ func (p *Processor) ApplyMotionBlur(img *image.RGBA, velocityMap *VelocityMap) *
 	}
 
 	config := p.config.MotionBlur
-	if config.Intensity <= 0 || config.Samples < 1 {
+	if config.Intensity <= 0 || config.Samples < 2 {
 		return img
 	}
 

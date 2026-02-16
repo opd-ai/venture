@@ -1,3 +1,5 @@
+//go:build !headless
+
 // Package postprocess provides post-processing effects for rendered scenes.
 // gpu_processor.go provides GPU-accelerated post-processing using Ebiten shaders.
 package postprocess

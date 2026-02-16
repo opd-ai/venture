@@ -35,14 +35,18 @@
 //	processor := postprocess.NewProcessor()
 //
 //	// Apply color grading
-//	processor.config.ColorGrading.Enabled = true
-//	processor.config.ColorGrading.Saturation = 1.2
-//	processor.config.ColorGrading.Temperature = 0.1
+//	cfg := processor.GetConfig()
+//	cfg.ColorGrading.Enabled = true
+//	cfg.ColorGrading.Saturation = 1.2
+//	cfg.ColorGrading.Temperature = 0.1
+//	processor.SetConfig(cfg)
 //	gradedImage := processor.ApplyColorGrading(baseImage)
 //
 //	// Apply vignette
-//	processor.config.Vignette.Enabled = true
-//	processor.config.Vignette.Intensity = 0.6
+//	cfg = processor.GetConfig()
+//	cfg.Vignette.Enabled = true
+//	cfg.Vignette.Intensity = 0.6
+//	processor.SetConfig(cfg)
 //	finalImage := processor.ApplyVignette(gradedImage)
 //
 // Genre presets:

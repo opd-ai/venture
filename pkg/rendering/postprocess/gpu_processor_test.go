@@ -1,3 +1,5 @@
+//go:build !headless
+
 // Package postprocess provides post-processing effects for rendered scenes.
 package postprocess
 

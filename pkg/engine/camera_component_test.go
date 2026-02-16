@@ -562,16 +562,16 @@ func TestCameraSystem_IsVisible_NoComponent(t *testing.T) {
 // TestSetCameraBoundsFromTerrain tests camera bounds calculation from terrain dimensions.
 func TestSetCameraBoundsFromTerrain(t *testing.T) {
 	tests := []struct {
-		name            string
-		terrainW        float64
-		terrainH        float64
-		screenW         int
-		screenH         int
-		zoom            float64
-		wantMinX        float64
-		wantMaxX        float64
-		wantMinY        float64
-		wantMaxY        float64
+		name     string
+		terrainW float64
+		terrainH float64
+		screenW  int
+		screenH  int
+		zoom     float64
+		wantMinX float64
+		wantMaxX float64
+		wantMinY float64
+		wantMaxY float64
 	}{
 		{
 			name:     "normal terrain zoom 1.0",
@@ -727,18 +727,18 @@ func TestSetCameraBoundsFromTerrain_StoresTerrainDimensions(t *testing.T) {
 // changes. Uses table-driven tests for various zoom levels and resize scenarios.
 func TestCameraSystem_RecalculateBoundsOnResize(t *testing.T) {
 	tests := []struct {
-		name          string
-		terrainW      float64
-		terrainH      float64
-		initialW      int
-		initialH      int
-		newW          int
-		newH          int
-		zoom          float64
-		wantMinX      float64
-		wantMaxX      float64
-		wantMinY      float64
-		wantMaxY      float64
+		name     string
+		terrainW float64
+		terrainH float64
+		initialW int
+		initialH int
+		newW     int
+		newH     int
+		zoom     float64
+		wantMinX float64
+		wantMaxX float64
+		wantMinY float64
+		wantMaxY float64
 	}{
 		{
 			name:     "landscape to portrait orientation",
@@ -1022,24 +1022,24 @@ func TestCameraSystem_EdgeClamping(t *testing.T) {
 // are automatically recalculated when the zoom level changes.
 func TestCameraSystem_ZoomChangedRecalculatesBounds(t *testing.T) {
 	tests := []struct {
-		name       string
-		initialZ   float64
-		newZ       float64
-		terrainW   float64
-		terrainH   float64
-		screenW    int
-		screenH    int
-		wantMinX   float64
-		wantMaxX   float64
+		name     string
+		initialZ float64
+		newZ     float64
+		terrainW float64
+		terrainH float64
+		screenW  int
+		screenH  int
+		wantMinX float64
+		wantMaxX float64
 	}{
 		{
-			name: "zoom in from 1.0 to 2.0",
+			name:     "zoom in from 1.0 to 2.0",
 			initialZ: 1.0, newZ: 2.0,
 			terrainW: 2560, terrainH: 1600, screenW: 800, screenH: 600,
 			wantMinX: 200, wantMaxX: 2360,
 		},
 		{
-			name: "zoom out from 1.0 to 0.5",
+			name:     "zoom out from 1.0 to 0.5",
 			initialZ: 1.0, newZ: 0.5,
 			terrainW: 2560, terrainH: 1600, screenW: 800, screenH: 600,
 			wantMinX: 800, wantMaxX: 1760,
@@ -1148,19 +1148,19 @@ func TestCameraSystem_SpawnInCorner(t *testing.T) {
 		wantSY  float64 // expected screen Y
 	}{
 		{
-			name: "spawn at origin zoom 1.0",
+			name:   "spawn at origin zoom 1.0",
 			spawnX: 0, spawnY: 0, zoom: 1.0,
 			probeWX: 0, probeWY: 0,
 			wantSX: 0, wantSY: 0,
 		},
 		{
-			name: "spawn at origin zoom 2.0",
+			name:   "spawn at origin zoom 2.0",
 			spawnX: 0, spawnY: 0, zoom: 2.0,
 			probeWX: 0, probeWY: 0,
 			wantSX: 0, wantSY: 0,
 		},
 		{
-			name: "spawn at max corner zoom 1.0",
+			name:   "spawn at max corner zoom 1.0",
 			spawnX: 2560, spawnY: 1600, zoom: 1.0,
 			probeWX: 2560, probeWY: 1600,
 			wantSX: 800, wantSY: 600,

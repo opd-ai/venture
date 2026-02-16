@@ -68,7 +68,7 @@ This file tracks the audit status of all Go sub-packages in the Venture project.
 - [ ] `pkg/audio/synthesis/` — Not audited
 
 ### Integration (`pkg/integration/`)
-- [ ] `pkg/integration/companion_housing/` — Not audited
+- [x] `pkg/integration/companion_housing/AUDIT.md` — Needs Work — 4 issues (1 high, 1 med, 2 low)
 - [ ] `pkg/integration/guild_housing/` — Not audited
 - [ ] `pkg/integration/guild_vehicle/` — Not audited
 - [ ] `pkg/integration/housing_crafting/` — Not audited
@@ -111,8 +111,8 @@ This file tracks the audit status of all Go sub-packages in the Venture project.
 
 ## Audit Statistics
 - **Total Packages Identified**: ~70+
-- **Audited**: 27
-- **Completion Rate**: ~38.6%
+- **Audited**: 28
+- **Completion Rate**: ~40.0%
 
 ## Priority Queue (High Integration Surface)
 1. `pkg/procgen/genre/` — Genre system affects all procgen

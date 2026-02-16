@@ -152,7 +152,7 @@ func TestUpdateCaptureProgress_Defenders(t *testing.T) {
 	territory, _ := m.CreateTerritory("terr-1", coords)
 	m.AssignOwner("terr-1", "guild-123")
 
-	territory, _ = m.GetTerritory("terr-1")
+	// Set up internal state via CreateTerritory pointer
 	territory.CaptureProgress = 0.5
 	territory.CapturingGuild = "guild-456"
 	territory.Status = StatusContested
@@ -163,8 +163,8 @@ func TestUpdateCaptureProgress_Defenders(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	territory, _ = m.GetTerritory("terr-1")
-	if territory.CaptureProgress > 0.5 {
+	result, _ := m.GetTerritory("terr-1")
+	if result.CaptureProgress > 0.5 {
 		t.Error("expected capture progress to decay with more defenders")
 	}
 }
@@ -539,6 +539,68 @@ func TestGetGuildWars(t *testing.T) {
 	wars = m.GetGuildWars("guild-999")
 	if len(wars) != 0 {
 		t.Errorf("expected 0 wars for guild-999, got %d", len(wars))
+	}
+}
+
+func TestDeclareWar_Duration(t *testing.T) {
+	fixedTime := time.Date(2026, 1, 1, 12, 0, 0, 0, time.UTC)
+	tp := &MockTimeProvider{fixedTime: fixedTime}
+	m := NewManagerWithTimeProvider(tp)
+
+	war, err := m.DeclareWar("guild-123", "guild-456")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	expectedEnd := fixedTime.Add(time.Duration(WarDurationDays) * 24 * time.Hour)
+	if !war.EndsAt.Equal(expectedEnd) {
+		t.Errorf("expected EndsAt %v, got %v", expectedEnd, war.EndsAt)
+	}
+
+	// Verify duration is exactly 7 days
+	duration := war.EndsAt.Sub(war.DeclaredAt)
+	if duration != 7*24*time.Hour {
+		t.Errorf("expected war duration 7 days, got %v", duration)
+	}
+}
+
+func TestGetTerritory_DefensiveCopy(t *testing.T) {
+	m := NewManager()
+	m.CreateTerritory("terr-1", TerritoryCoords{ChunkX: 10, ChunkZ: 20})
+	m.AssignOwner("terr-1", "guild-123")
+	m.BuildDefensiveStructure("terr-1", StructureTypeWall, 100.0, 100.0)
+
+	// Get a copy and mutate it
+	copy1, _ := m.GetTerritory("terr-1")
+	copy1.OwnerGuildID = "mutated"
+	copy1.Status = StatusContested
+	copy1.Structures[0].HP = 0
+
+	// Get another copy and verify internal state was not affected
+	copy2, _ := m.GetTerritory("terr-1")
+	if copy2.OwnerGuildID != "guild-123" {
+		t.Errorf("internal state mutated: OwnerGuildID = %s, want guild-123", copy2.OwnerGuildID)
+	}
+	if copy2.Status != StatusOwned {
+		t.Errorf("internal state mutated: Status = %s, want Owned", copy2.Status)
+	}
+	if copy2.Structures[0].HP == 0 {
+		t.Error("internal state mutated: structure HP should not be 0")
+	}
+}
+
+func TestGetActiveWars_DefensiveCopy(t *testing.T) {
+	m := NewManager()
+	m.DeclareWar("guild-123", "guild-456")
+
+	// Get a copy and mutate it
+	wars := m.GetActiveWars()
+	wars[0].Active = false
+
+	// Verify internal state was not affected
+	wars2 := m.GetActiveWars()
+	if len(wars2) != 1 {
+		t.Errorf("expected 1 active war after mutating copy, got %d", len(wars2))
 	}
 }
 

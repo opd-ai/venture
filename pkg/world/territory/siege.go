@@ -99,12 +99,6 @@ type Siege struct {
 	LootDistributed  bool
 }
 
-// NewSiege creates a new siege instance.
-// Deprecated: Use NewSiegeWithTime for deterministic siege creation.
-func NewSiege(territoryID, attackerGuild, defenderGuild string, defenderTreasury int) *Siege {
-	return NewSiegeWithTime(territoryID, attackerGuild, defenderGuild, defenderTreasury, time.Now())
-}
-
 // NewSiegeWithTime creates a new siege instance with a specified start time.
 // This enables deterministic siege creation for testing and state replication.
 func NewSiegeWithTime(territoryID, attackerGuild, defenderGuild string, defenderTreasury int, startTime time.Time) *Siege {
@@ -216,12 +210,6 @@ func (s *Siege) AddReinforcements(guildID string, playerIDs []string) error {
 	}
 
 	return nil
-}
-
-// AdvancePhase moves the siege to the next phase.
-// Deprecated: Use AdvancePhaseWithTime for deterministic phase transitions.
-func (s *Siege) AdvancePhase() error {
-	return s.AdvancePhaseWithTime(time.Now())
 }
 
 // AdvancePhaseWithTime moves the siege to the next phase using a specified time.
@@ -389,6 +377,7 @@ func (sm *SiegeManager) CreateSiege(territoryID, attackerGuild, defenderGuild st
 }
 
 // GetSiege retrieves a siege by ID.
+// Returns a defensive copy; mutations to the returned value do not affect internal state.
 func (sm *SiegeManager) GetSiege(siegeID string) (*Siege, error) {
 	sm.mu.RLock()
 	defer sm.mu.RUnlock()
@@ -401,10 +390,11 @@ func (sm *SiegeManager) GetSiege(siegeID string) (*Siege, error) {
 		return nil, fmt.Errorf("siege not found: %s", siegeID)
 	}
 
-	return siege, nil
+	return copySiege(siege), nil
 }
 
 // GetActiveSieges returns all active sieges.
+// Returns defensive copies; mutations to returned values do not affect internal state.
 func (sm *SiegeManager) GetActiveSieges() []*Siege {
 	sm.mu.RLock()
 	defer sm.mu.RUnlock()
@@ -412,7 +402,7 @@ func (sm *SiegeManager) GetActiveSieges() []*Siege {
 	active := make([]*Siege, 0)
 	for _, siege := range sm.sieges {
 		if siege.Phase != PhaseEnded {
-			active = append(active, siege)
+			active = append(active, copySiege(siege))
 		}
 	}
 
@@ -420,17 +410,38 @@ func (sm *SiegeManager) GetActiveSieges() []*Siege {
 }
 
 // GetSiegeForTerritory returns the active siege for a territory, if any.
+// Returns a defensive copy; mutations to the returned value do not affect internal state.
 func (sm *SiegeManager) GetSiegeForTerritory(territoryID string) (*Siege, bool) {
 	sm.mu.RLock()
 	defer sm.mu.RUnlock()
 
 	for _, siege := range sm.sieges {
 		if siege.TerritoryID == territoryID && siege.Phase != PhaseEnded {
-			return siege, true
+			return copySiege(siege), true
 		}
 	}
 
 	return nil, false
+}
+
+// copySiege returns a deep copy of a Siege.
+func copySiege(s *Siege) *Siege {
+	cp := *s
+	cp.Attackers = make(map[string]bool, len(s.Attackers))
+	for k, v := range s.Attackers {
+		cp.Attackers[k] = v
+	}
+	cp.Defenders = make(map[string]bool, len(s.Defenders))
+	for k, v := range s.Defenders {
+		cp.Defenders[k] = v
+	}
+	cp.Reinforcements = make(map[string][]string, len(s.Reinforcements))
+	for k, v := range s.Reinforcements {
+		playersCopy := make([]string, len(v))
+		copy(playersCopy, v)
+		cp.Reinforcements[k] = playersCopy
+	}
+	return &cp
 }
 
 // Update processes all active sieges and advances phases as needed.
@@ -469,12 +480,6 @@ func (sm *SiegeManager) Update(deltaTime float64) {
 			}
 		}
 	}
-}
-
-// GenerateDefensiveStructures procedurally generates defensive structures for a territory.
-// Deprecated: Use GenerateDefensiveStructuresWithTime for deterministic structure generation.
-func GenerateDefensiveStructures(territoryID string, seed int64, count int) []*DefensiveStructure {
-	return GenerateDefensiveStructuresWithTime(territoryID, seed, count, time.Now())
 }
 
 // GenerateDefensiveStructuresWithTime procedurally generates defensive structures with a specified construction time.

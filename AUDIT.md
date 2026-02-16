@@ -59,7 +59,7 @@ This file tracks the audit status of all Go sub-packages in the Venture project.
 - [ ] `pkg/world/` — Not audited
 - [x] `pkg/world/housing/AUDIT.md` — Complete — 2 issues (0 high, 0 med, 2 low)
 - [ ] `pkg/world/economy/` — Not audited
-- [x] `pkg/world/territory/AUDIT.md` — Complete — 5 issues (3 high, 1 med, 1 low)
+- [x] `pkg/world/territory/AUDIT.md` — Complete — 5 issues (3 high fixed, 1 med fixed, 1 low remaining)
 - [ ] `pkg/world/raids/` — Not audited
 
 ### Audio (`pkg/audio/`)

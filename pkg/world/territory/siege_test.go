@@ -49,7 +49,8 @@ func TestVictoryConditionString(t *testing.T) {
 }
 
 func TestNewSiege(t *testing.T) {
-	siege := NewSiege("territory1", "guild_attack", "guild_defend", 10000)
+	fixedTime := time.Date(2026, 1, 1, 12, 0, 0, 0, time.UTC)
+	siege := NewSiegeWithTime("territory1", "guild_attack", "guild_defend", 10000, fixedTime)
 
 	if siege.ID == "" {
 		t.Error("Siege ID should not be empty")
@@ -81,7 +82,7 @@ func TestNewSiege(t *testing.T) {
 }
 
 func TestSiegeJoinAndParticipants(t *testing.T) {
-	siege := NewSiege("territory1", "guild_attack", "guild_defend", 10000)
+	siege := NewSiegeWithTime("territory1", "guild_attack", "guild_defend", 10000, time.Now())
 
 	// Test joining as attacker
 	err := siege.JoinSiege("player1", true)
@@ -109,7 +110,7 @@ func TestSiegeJoinAndParticipants(t *testing.T) {
 }
 
 func TestSiegeParticipantCap(t *testing.T) {
-	siege := NewSiege("territory1", "guild_attack", "guild_defend", 10000)
+	siege := NewSiegeWithTime("territory1", "guild_attack", "guild_defend", 10000, time.Now())
 
 	// Fill to capacity (100 players)
 	for i := 0; i < 50; i++ {
@@ -127,7 +128,7 @@ func TestSiegeParticipantCap(t *testing.T) {
 }
 
 func TestSiegeReinforcements(t *testing.T) {
-	siege := NewSiege("territory1", "guild_attack", "guild_defend", 10000)
+	siege := NewSiegeWithTime("territory1", "guild_attack", "guild_defend", 10000, time.Now())
 
 	// Add reinforcements
 	players := []string{"ally1", "ally2", "ally3"}
@@ -156,7 +157,7 @@ func TestSiegeReinforcements(t *testing.T) {
 }
 
 func TestSiegeReinforcementsCap(t *testing.T) {
-	siege := NewSiege("territory1", "guild_attack", "guild_defend", 10000)
+	siege := NewSiegeWithTime("territory1", "guild_attack", "guild_defend", 10000, time.Now())
 
 	// Add 5 guilds
 	for i := 0; i < 5; i++ {
@@ -175,19 +176,20 @@ func TestSiegeReinforcementsCap(t *testing.T) {
 }
 
 func TestSiegePhaseAdvancement(t *testing.T) {
-	siege := NewSiege("territory1", "guild_attack", "guild_defend", 10000)
+	now := time.Now()
+	siege := NewSiegeWithTime("territory1", "guild_attack", "guild_defend", 10000, now)
 
 	// Cannot advance immediately
-	err := siege.AdvancePhase()
+	err := siege.AdvancePhaseWithTime(now)
 	if err == nil {
 		t.Error("Expected error advancing phase before 1 hour")
 	}
 
 	// Simulate 1 hour passing
-	siege.PhaseStartTime = time.Now().Add(-1 * time.Hour)
+	siege.PhaseStartTime = now.Add(-1 * time.Hour)
 
 	// Should advance to assault
-	err = siege.AdvancePhase()
+	err = siege.AdvancePhaseWithTime(now)
 	if err != nil {
 		t.Fatalf("AdvancePhase failed: %v", err)
 	}
@@ -196,7 +198,7 @@ func TestSiegePhaseAdvancement(t *testing.T) {
 	}
 
 	// Cannot advance assault immediately
-	err = siege.AdvancePhase()
+	err = siege.AdvancePhaseWithTime(now)
 	if err == nil {
 		t.Error("Expected error advancing assault phase before 2 hours")
 	}
@@ -205,7 +207,7 @@ func TestSiegePhaseAdvancement(t *testing.T) {
 	siege.WinnerGuildID = "guild_attack"
 
 	// Should advance to resolution
-	err = siege.AdvancePhase()
+	err = siege.AdvancePhaseWithTime(now)
 	if err != nil {
 		t.Fatalf("AdvancePhase failed: %v", err)
 	}
@@ -214,7 +216,7 @@ func TestSiegePhaseAdvancement(t *testing.T) {
 	}
 
 	// Should advance to ended
-	err = siege.AdvancePhase()
+	err = siege.AdvancePhaseWithTime(now)
 	if err != nil {
 		t.Fatalf("AdvancePhase failed: %v", err)
 	}
@@ -224,7 +226,7 @@ func TestSiegePhaseAdvancement(t *testing.T) {
 }
 
 func TestSiegeCaptureControlPoint(t *testing.T) {
-	siege := NewSiege("territory1", "guild_attack", "guild_defend", 10000)
+	siege := NewSiegeWithTime("territory1", "guild_attack", "guild_defend", 10000, time.Now())
 
 	// Cannot capture during preparation
 	err := siege.CaptureControlPoint()
@@ -264,7 +266,7 @@ func TestSiegeCaptureControlPoint(t *testing.T) {
 }
 
 func TestSiegeDamageGuildHall(t *testing.T) {
-	siege := NewSiege("territory1", "guild_attack", "guild_defend", 10000)
+	siege := NewSiegeWithTime("territory1", "guild_attack", "guild_defend", 10000, time.Now())
 
 	// Cannot damage during preparation
 	err := siege.DamageGuildHall(100)
@@ -308,7 +310,7 @@ func TestSiegeDamageGuildHall(t *testing.T) {
 }
 
 func TestSiegeDistributeLoot(t *testing.T) {
-	siege := NewSiege("territory1", "guild_attack", "guild_defend", 10000)
+	siege := NewSiegeWithTime("territory1", "guild_attack", "guild_defend", 10000, time.Now())
 
 	// Cannot distribute during preparation
 	_, err := siege.DistributeLoot()
@@ -450,7 +452,8 @@ func TestSiegeManagerUpdate(t *testing.T) {
 }
 
 func TestGenerateDefensiveStructures(t *testing.T) {
-	structures := GenerateDefensiveStructures("territory1", 12345, 10)
+	fixedTime := time.Date(2026, 1, 1, 12, 0, 0, 0, time.UTC)
+	structures := GenerateDefensiveStructuresWithTime("territory1", 12345, 10, fixedTime)
 
 	// Verify count
 	if len(structures) != 10 {
@@ -475,8 +478,9 @@ func TestGenerateDefensiveStructures(t *testing.T) {
 }
 
 func TestGenerateDefensiveStructuresDeterminism(t *testing.T) {
-	structures1 := GenerateDefensiveStructures("territory1", 12345, 10)
-	structures2 := GenerateDefensiveStructures("territory1", 12345, 10)
+	fixedTime := time.Date(2026, 1, 1, 12, 0, 0, 0, time.UTC)
+	structures1 := GenerateDefensiveStructuresWithTime("territory1", 12345, 10, fixedTime)
+	structures2 := GenerateDefensiveStructuresWithTime("territory1", 12345, 10, fixedTime)
 
 	// Verify determinism
 	for i := range structures1 {
@@ -493,28 +497,65 @@ func TestGenerateDefensiveStructuresDeterminism(t *testing.T) {
 }
 
 func TestGenerateDefensiveStructuresCount(t *testing.T) {
+	fixedTime := time.Date(2026, 1, 1, 12, 0, 0, 0, time.UTC)
+
 	// Test minimum count (should clamp to 5)
-	structures := GenerateDefensiveStructures("territory1", 12345, 2)
+	structures := GenerateDefensiveStructuresWithTime("territory1", 12345, 2, fixedTime)
 	if len(structures) != 5 {
 		t.Errorf("Structure count = %v, want 5 (minimum)", len(structures))
 	}
 
 	// Test maximum count (should clamp to 15)
-	structures = GenerateDefensiveStructures("territory1", 12345, 20)
+	structures = GenerateDefensiveStructuresWithTime("territory1", 12345, 20, fixedTime)
 	if len(structures) != 15 {
 		t.Errorf("Structure count = %v, want 15 (maximum)", len(structures))
 	}
 }
 
+func TestGetSiege_DefensiveCopy(t *testing.T) {
+	sm := NewSiegeManager()
+	created, _ := sm.CreateSiege("territory1", "guild_attack", "guild_defend", 10000)
+
+	// Get a copy and mutate it
+	copy1, _ := sm.GetSiege(created.ID)
+	copy1.Phase = PhaseEnded
+	copy1.Attackers["mutated_player"] = true
+
+	// Get another copy and verify internal state was not affected
+	copy2, _ := sm.GetSiege(created.ID)
+	if copy2.Phase == PhaseEnded {
+		t.Error("internal state mutated: Phase should not be Ended")
+	}
+	if copy2.Attackers["mutated_player"] {
+		t.Error("internal state mutated: mutated_player should not be in Attackers")
+	}
+}
+
+func TestGetActiveSieges_DefensiveCopy(t *testing.T) {
+	sm := NewSiegeManager()
+	sm.CreateSiege("territory1", "guild_attack", "guild_defend", 10000)
+
+	// Get copies and mutate
+	active := sm.GetActiveSieges()
+	active[0].Phase = PhaseEnded
+
+	// Verify internal state was not affected
+	active2 := sm.GetActiveSieges()
+	if len(active2) != 1 {
+		t.Errorf("expected 1 active siege after mutating copy, got %d", len(active2))
+	}
+}
+
 // Benchmark tests
 func BenchmarkSiegeCreate(b *testing.B) {
+	now := time.Now()
 	for i := 0; i < b.N; i++ {
-		NewSiege("territory1", "guild_attack", "guild_defend", 10000)
+		NewSiegeWithTime("territory1", "guild_attack", "guild_defend", 10000, now)
 	}
 }
 
 func BenchmarkSiegeJoin(b *testing.B) {
-	siege := NewSiege("territory1", "guild_attack", "guild_defend", 10000)
+	siege := NewSiegeWithTime("territory1", "guild_attack", "guild_defend", 10000, time.Now())
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
@@ -536,8 +577,9 @@ func BenchmarkSiegeManagerUpdate(b *testing.B) {
 }
 
 func BenchmarkGenerateDefensiveStructures(b *testing.B) {
+	fixedTime := time.Date(2026, 1, 1, 12, 0, 0, 0, time.UTC)
 	for i := 0; i < b.N; i++ {
-		GenerateDefensiveStructures("territory1", int64(i), 10)
+		GenerateDefensiveStructuresWithTime("territory1", int64(i), 10, fixedTime)
 	}
 }
 

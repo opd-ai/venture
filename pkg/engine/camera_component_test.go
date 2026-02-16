@@ -849,19 +849,42 @@ func TestCameraSystem_CornerClamping(t *testing.T) {
 		wantScreenX  float64
 		wantScreenY  float64
 	}{
+		// All 4 corners × zoom 0.5
+		{
+			name: "top-left corner zoom 0.5",
+			zoom: 0.5, terrainW: 2560, terrainH: 1600, screenW: 800, screenH: 600,
+			playerX: 0, playerY: 0,
+			cornerWorldX: 0, cornerWorldY: 0,
+			wantScreenX: 0, wantScreenY: 0,
+		},
+		{
+			name: "top-right corner zoom 0.5",
+			zoom: 0.5, terrainW: 2560, terrainH: 1600, screenW: 800, screenH: 600,
+			playerX: 2560, playerY: 0,
+			cornerWorldX: 2560, cornerWorldY: 0,
+			wantScreenX: 800, wantScreenY: 0,
+		},
+		{
+			name: "bottom-left corner zoom 0.5",
+			zoom: 0.5, terrainW: 2560, terrainH: 1600, screenW: 800, screenH: 600,
+			playerX: 0, playerY: 1600,
+			cornerWorldX: 0, cornerWorldY: 1600,
+			wantScreenX: 0, wantScreenY: 600,
+		},
+		{
+			name: "bottom-right corner zoom 0.5",
+			zoom: 0.5, terrainW: 2560, terrainH: 1600, screenW: 800, screenH: 600,
+			playerX: 2560, playerY: 1600,
+			cornerWorldX: 2560, cornerWorldY: 1600,
+			wantScreenX: 800, wantScreenY: 600,
+		},
+		// All 4 corners × zoom 1.0
 		{
 			name: "top-left corner zoom 1.0",
 			zoom: 1.0, terrainW: 2560, terrainH: 1600, screenW: 800, screenH: 600,
 			playerX: 0, playerY: 0,
 			cornerWorldX: 0, cornerWorldY: 0,
 			wantScreenX: 0, wantScreenY: 0,
-		},
-		{
-			name: "bottom-right corner zoom 1.0",
-			zoom: 1.0, terrainW: 2560, terrainH: 1600, screenW: 800, screenH: 600,
-			playerX: 2560, playerY: 1600,
-			cornerWorldX: 2560, cornerWorldY: 1600,
-			wantScreenX: 800, wantScreenY: 600,
 		},
 		{
 			name: "top-right corner zoom 1.0",
@@ -878,11 +901,33 @@ func TestCameraSystem_CornerClamping(t *testing.T) {
 			wantScreenX: 0, wantScreenY: 600,
 		},
 		{
-			name: "top-left corner zoom 0.5",
-			zoom: 0.5, terrainW: 2560, terrainH: 1600, screenW: 800, screenH: 600,
+			name: "bottom-right corner zoom 1.0",
+			zoom: 1.0, terrainW: 2560, terrainH: 1600, screenW: 800, screenH: 600,
+			playerX: 2560, playerY: 1600,
+			cornerWorldX: 2560, cornerWorldY: 1600,
+			wantScreenX: 800, wantScreenY: 600,
+		},
+		// All 4 corners × zoom 2.0
+		{
+			name: "top-left corner zoom 2.0",
+			zoom: 2.0, terrainW: 2560, terrainH: 1600, screenW: 800, screenH: 600,
 			playerX: 0, playerY: 0,
 			cornerWorldX: 0, cornerWorldY: 0,
 			wantScreenX: 0, wantScreenY: 0,
+		},
+		{
+			name: "top-right corner zoom 2.0",
+			zoom: 2.0, terrainW: 2560, terrainH: 1600, screenW: 800, screenH: 600,
+			playerX: 2560, playerY: 0,
+			cornerWorldX: 2560, cornerWorldY: 0,
+			wantScreenX: 800, wantScreenY: 0,
+		},
+		{
+			name: "bottom-left corner zoom 2.0",
+			zoom: 2.0, terrainW: 2560, terrainH: 1600, screenW: 800, screenH: 600,
+			playerX: 0, playerY: 1600,
+			cornerWorldX: 0, cornerWorldY: 1600,
+			wantScreenX: 0, wantScreenY: 600,
 		},
 		{
 			name: "bottom-right corner zoom 2.0",

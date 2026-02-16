@@ -249,7 +249,7 @@ func (km *KeybindManager) registerDefaultBindings() {
 
 		// Vehicle (consolidated bindings)
 		{ActionVehicleMount, KeyV, "", "Mount/dismount vehicle"},
-		{ActionVehicleDismount, KeyV, "", "Dismount vehicle"},
+		{ActionVehicleDismount, NumPad5, "", "Dismount vehicle"},
 		{ActionVehicleBoost, KeyControl, "", "Vehicle boost"},
 		{ActionVehicleBrake, KeyAlt, "", "Vehicle brake"},
 
@@ -404,8 +404,9 @@ func (km *KeybindManager) Save(filename string) error {
 	data := make(map[string]map[string]string)
 	for action, kb := range km.bindings {
 		data[string(action)] = map[string]string{
-			"primary":   string(kb.PrimaryKey),
-			"secondary": string(kb.SecondaryKey),
+			"primary":     string(kb.PrimaryKey),
+			"secondary":   string(kb.SecondaryKey),
+			"description": kb.Description,
 		}
 	}
 
@@ -454,6 +455,7 @@ func (km *KeybindManager) Load(filename string) error {
 			Action:       action,
 			PrimaryKey:   primary,
 			SecondaryKey: secondary,
+			Description:  keys["description"],
 		}
 
 		km.bindings[action] = kb

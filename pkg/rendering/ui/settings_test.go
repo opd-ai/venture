@@ -232,6 +232,39 @@ func TestSettingsManager_AccessibilitySettings(t *testing.T) {
 	}
 }
 
+func TestSettingsManager_SaveClearsModified(t *testing.T) {
+	sm := NewSettingsManager()
+	filename := "test_settings_modified.json"
+	defer os.Remove(filename)
+
+	sm.SetValue("graphics.fullscreen", true)
+	if !sm.IsModified() {
+		t.Fatal("expected modified=true after setting value")
+	}
+
+	if err := sm.Save(filename); err != nil {
+		t.Fatalf("failed to save: %v", err)
+	}
+
+	if sm.IsModified() {
+		t.Error("expected modified=false after save")
+	}
+}
+
+func TestSettingsManager_NonexistentSetting(t *testing.T) {
+	sm := NewSettingsManager()
+
+	_, err := sm.GetSetting("nonexistent")
+	if err == nil {
+		t.Error("expected error for nonexistent setting")
+	}
+
+	err = sm.SetValue("nonexistent", 42)
+	if err == nil {
+		t.Error("expected error for setting nonexistent value")
+	}
+}
+
 func BenchmarkSettingsManager_GetValue(b *testing.B) {
 	sm := NewSettingsManager()
 	b.ResetTimer()

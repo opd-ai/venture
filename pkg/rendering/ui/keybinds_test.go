@@ -377,6 +377,83 @@ func TestCreateStationTooltip(t *testing.T) {
 	}
 }
 
+func TestKeybindManager_NoDefaultConflicts(t *testing.T) {
+	km := NewKeybindManager()
+
+	// After fixing VehicleMount/VehicleDismount, there should be no conflicts
+	conflicts := km.DetectConflicts()
+	if len(conflicts) > 0 {
+		t.Errorf("default bindings should have no conflicts, got: %v", conflicts)
+	}
+}
+
+func TestKeybindManager_SaveLoadPreservesDescription(t *testing.T) {
+	km := NewKeybindManager()
+	filename := "test_keybinds_desc.json"
+	defer os.Remove(filename)
+
+	// Verify description exists before save
+	kb, err := km.GetBinding(ActionAttack)
+	if err != nil {
+		t.Fatalf("failed to get binding: %v", err)
+	}
+	if kb.Description == "" {
+		t.Fatal("expected description before save")
+	}
+
+	// Save and load
+	if err := km.Save(filename); err != nil {
+		t.Fatalf("failed to save: %v", err)
+	}
+
+	km2 := NewKeybindManager()
+	if err := km2.Load(filename); err != nil {
+		t.Fatalf("failed to load: %v", err)
+	}
+
+	// Verify description preserved after load
+	kb2, err := km2.GetBinding(ActionAttack)
+	if err != nil {
+		t.Fatalf("failed to get binding after load: %v", err)
+	}
+	if kb2.Description != kb.Description {
+		t.Errorf("description lost after save/load: expected %q, got %q", kb.Description, kb2.Description)
+	}
+}
+
+func TestQuickTravelManager_LockedDestination(t *testing.T) {
+	qtm := NewQuickTravelManager()
+
+	dest := &TravelDestination{
+		ID:       "locked",
+		Name:     "Locked City",
+		X:        500,
+		Y:        500,
+		Unlocked: false,
+	}
+	qtm.RegisterDestination(dest)
+
+	gold := 1000
+	_, err := qtm.CanTravel(0, 0, "locked", gold)
+	if err == nil {
+		t.Error("expected error for locked destination")
+	}
+}
+
+func TestQuickTravelManager_NotFoundDestination(t *testing.T) {
+	qtm := NewQuickTravelManager()
+
+	_, err := qtm.CalculateCost(0, 0, "nonexistent")
+	if err == nil {
+		t.Error("expected error for nonexistent destination")
+	}
+
+	err = qtm.UnlockDestination("nonexistent")
+	if err == nil {
+		t.Error("expected error for unlocking nonexistent destination")
+	}
+}
+
 func BenchmarkKeybindManager_GetBinding(b *testing.B) {
 	km := NewKeybindManager()
 	b.ResetTimer()

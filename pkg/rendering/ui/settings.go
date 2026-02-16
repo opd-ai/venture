@@ -618,8 +618,8 @@ func (sm *SettingsManager) IsModified() bool {
 
 // Save persists settings to a file
 func (sm *SettingsManager) Save(filename string) error {
-	sm.mu.RLock()
-	defer sm.mu.RUnlock()
+	sm.mu.Lock()
+	defer sm.mu.Unlock()
 
 	// Create settings data map
 	data := make(map[string]interface{})

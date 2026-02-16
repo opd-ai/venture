@@ -328,6 +328,31 @@ func TestGenerateGroupContainer_Determinism(t *testing.T) {
 	}
 }
 
+// TestCalculateGradientAlpha_SmallWidth verifies no division by zero with small widths.
+func TestCalculateGradientAlpha_SmallWidth(t *testing.T) {
+	tests := []struct {
+		name  string
+		width int
+	}{
+		{"zero", 0},
+		{"one", 1},
+		{"two", 2},
+		{"three", 3},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Should not panic
+			for x := 0; x < tt.width; x++ {
+				alpha := calculateGradientAlpha(x, tt.width)
+				if alpha < 0 || alpha > 1.0 {
+					t.Errorf("alpha out of range [0,1]: got %f for x=%d, width=%d", alpha, x, tt.width)
+				}
+			}
+		})
+	}
+}
+
 // Helper function to compare two images for equality
 func imagesEqual(img1, img2 *image.RGBA) bool {
 	if img1 == nil || img2 == nil {

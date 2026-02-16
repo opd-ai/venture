@@ -272,6 +272,9 @@ func (g *Generator) drawGradientSeparator(img *image.RGBA, width, height int, co
 func calculateGradientAlpha(x, width int) float64 {
 	alpha := 1.0
 	fadeWidth := width / 4
+	if fadeWidth == 0 {
+		return alpha
+	}
 	if x < fadeWidth {
 		alpha = float64(x) / float64(fadeWidth)
 	} else if x > width-fadeWidth {

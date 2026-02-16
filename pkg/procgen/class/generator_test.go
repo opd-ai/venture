@@ -117,9 +117,13 @@ func TestClassGenerator_Validate(t *testing.T) {
 			name: "valid warrior",
 			preset: &ClassPreset{
 				Type:              engine.ClassWarrior,
+				Name:              "Warrior",
+				Description:       "A mighty combatant.",
 				StartingHP:        100,
 				StartingMana:      30,
 				StartingAttack:    15,
+				StartingDefense:   12,
+				StartingSpeed:     5,
 				StartingAbilities: []string{"power_strike"},
 				Specializations:   []engine.SpecializationType{engine.SpecializationBerserker},
 			},
@@ -129,9 +133,13 @@ func TestClassGenerator_Validate(t *testing.T) {
 			name: "invalid HP",
 			preset: &ClassPreset{
 				Type:              engine.ClassWarrior,
+				Name:              "Warrior",
+				Description:       "A mighty combatant.",
 				StartingHP:        0,
 				StartingMana:      30,
 				StartingAttack:    15,
+				StartingDefense:   12,
+				StartingSpeed:     5,
 				StartingAbilities: []string{"power_strike"},
 				Specializations:   []engine.SpecializationType{engine.SpecializationBerserker},
 			},
@@ -141,9 +149,13 @@ func TestClassGenerator_Validate(t *testing.T) {
 			name: "no abilities",
 			preset: &ClassPreset{
 				Type:              engine.ClassWarrior,
+				Name:              "Warrior",
+				Description:       "A mighty combatant.",
 				StartingHP:        100,
 				StartingMana:      30,
 				StartingAttack:    15,
+				StartingDefense:   12,
+				StartingSpeed:     5,
 				StartingAbilities: []string{},
 				Specializations:   []engine.SpecializationType{engine.SpecializationBerserker},
 			},
@@ -153,19 +165,93 @@ func TestClassGenerator_Validate(t *testing.T) {
 			name: "no specializations",
 			preset: &ClassPreset{
 				Type:              engine.ClassWarrior,
+				Name:              "Warrior",
+				Description:       "A mighty combatant.",
 				StartingHP:        100,
 				StartingMana:      30,
 				StartingAttack:    15,
+				StartingDefense:   12,
+				StartingSpeed:     5,
 				StartingAbilities: []string{"power_strike"},
 				Specializations:   []engine.SpecializationType{},
 			},
+			wantErr: true,
+		},
+		{
+			name: "empty name",
+			preset: &ClassPreset{
+				Name:              "",
+				Description:       "A mighty combatant.",
+				StartingHP:        100,
+				StartingMana:      30,
+				StartingAttack:    15,
+				StartingDefense:   12,
+				StartingSpeed:     5,
+				StartingAbilities: []string{"power_strike"},
+				Specializations:   []engine.SpecializationType{engine.SpecializationBerserker},
+			},
+			wantErr: true,
+		},
+		{
+			name: "empty description",
+			preset: &ClassPreset{
+				Name:              "Warrior",
+				Description:       "",
+				StartingHP:        100,
+				StartingMana:      30,
+				StartingAttack:    15,
+				StartingDefense:   12,
+				StartingSpeed:     5,
+				StartingAbilities: []string{"power_strike"},
+				Specializations:   []engine.SpecializationType{engine.SpecializationBerserker},
+			},
+			wantErr: true,
+		},
+		{
+			name: "invalid defense",
+			preset: &ClassPreset{
+				Name:              "Warrior",
+				Description:       "A mighty combatant.",
+				StartingHP:        100,
+				StartingMana:      30,
+				StartingAttack:    15,
+				StartingDefense:   0,
+				StartingSpeed:     5,
+				StartingAbilities: []string{"power_strike"},
+				Specializations:   []engine.SpecializationType{engine.SpecializationBerserker},
+			},
+			wantErr: true,
+		},
+		{
+			name: "invalid speed",
+			preset: &ClassPreset{
+				Name:              "Warrior",
+				Description:       "A mighty combatant.",
+				StartingHP:        100,
+				StartingMana:      30,
+				StartingAttack:    15,
+				StartingDefense:   12,
+				StartingSpeed:     0,
+				StartingAbilities: []string{"power_strike"},
+				Specializations:   []engine.SpecializationType{engine.SpecializationBerserker},
+			},
+			wantErr: true,
+		},
+		{
+			name:    "wrong type",
+			preset:  nil,
 			wantErr: true,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := gen.Validate(tt.preset)
+			var err error
+			if tt.preset == nil {
+				err = gen.Validate("not a preset")
+			} else {
+				err = gen.Validate(tt.preset)
+			}
 			if (err != nil) != tt.wantErr {
 				t.Errorf("Validate() error = %v, wantErr %v", err, tt.wantErr)
 			}
@@ -211,8 +297,9 @@ func TestGetAllPresets(t *testing.T) {
 	gen := NewClassGenerator()
 	presets := gen.GetAllPresets()
 
-	if len(presets) != 21 {
-		t.Errorf("GetAllPresets() returned %d presets, want 21 (6 base + 15 hybrid)", len(presets))
+	// Verify count matches the number of initialized presets
+	if len(presets) != len(gen.presets) {
+		t.Errorf("GetAllPresets() returned %d presets, want %d", len(presets), len(gen.presets))
 	}
 
 	// Check all class types are present
@@ -234,6 +321,43 @@ func TestGetAllPresets(t *testing.T) {
 		if !types[expectedType] {
 			t.Errorf("GetAllPresets() missing class type: %v", expectedType)
 		}
+	}
+}
+
+func TestGetPreset(t *testing.T) {
+	gen := NewClassGenerator()
+
+	preset, ok := gen.GetPreset(engine.ClassWarrior)
+	if !ok {
+		t.Fatal("GetPreset() failed for ClassWarrior")
+	}
+	if preset.Name != "Warrior" {
+		t.Errorf("GetPreset() name = %q, want %q", preset.Name, "Warrior")
+	}
+
+	_, ok = gen.GetPreset(engine.CharacterClass(999))
+	if ok {
+		t.Error("GetPreset() should return false for invalid class type")
+	}
+}
+
+func TestGenerateAndValidateAllClasses(t *testing.T) {
+	gen := NewClassGenerator()
+	for _, preset := range gen.GetAllPresets() {
+		t.Run(preset.Name, func(t *testing.T) {
+			params := procgen.GenerationParams{
+				Difficulty: 0.5,
+				Depth:      1,
+				Custom:     map[string]interface{}{"class_type": preset.Type},
+			}
+			result, err := gen.Generate(42, params)
+			if err != nil {
+				t.Fatalf("Generate() error = %v", err)
+			}
+			if err := gen.Validate(result); err != nil {
+				t.Errorf("Validate() error = %v", err)
+			}
+		})
 	}
 }
 

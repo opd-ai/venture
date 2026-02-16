@@ -329,16 +329,16 @@ func (g *ClassGenerator) initializePresets() {
 func (g *ClassGenerator) Generate(seed int64, params procgen.GenerationParams) (interface{}, error) {
 	rng := rand.New(rand.NewSource(seed))
 
-	// Determine class type from params or random
+	// Determine class type from params or random selection from available presets
 	var classType engine.CharacterClass
 	if classTypeRaw, ok := params.Custom["class_type"]; ok {
 		if ct, ok := classTypeRaw.(engine.CharacterClass); ok {
 			classType = ct
 		} else {
-			classType = engine.CharacterClass(rng.Intn(21)) // 21 total classes (6 base + 15 hybrid)
+			classType = g.randomClassType(rng)
 		}
 	} else {
-		classType = engine.CharacterClass(rng.Intn(21)) // 21 total classes
+		classType = g.randomClassType(rng)
 	}
 
 	// Get base preset
@@ -379,6 +379,14 @@ func (g *ClassGenerator) Validate(result interface{}) error {
 		return fmt.Errorf("invalid result type: expected *ClassPreset")
 	}
 
+	if preset.Name == "" {
+		return fmt.Errorf("class name must not be empty")
+	}
+
+	if preset.Description == "" {
+		return fmt.Errorf("class description must not be empty")
+	}
+
 	if preset.StartingHP <= 0 {
 		return fmt.Errorf("invalid starting HP: %f", preset.StartingHP)
 	}
@@ -389,6 +397,14 @@ func (g *ClassGenerator) Validate(result interface{}) error {
 
 	if preset.StartingAttack <= 0 {
 		return fmt.Errorf("invalid starting attack: %f", preset.StartingAttack)
+	}
+
+	if preset.StartingDefense <= 0 {
+		return fmt.Errorf("invalid starting defense: %f", preset.StartingDefense)
+	}
+
+	if preset.StartingSpeed <= 0 {
+		return fmt.Errorf("invalid starting speed: %f", preset.StartingSpeed)
 	}
 
 	if len(preset.StartingAbilities) == 0 {
@@ -408,10 +424,19 @@ func (g *ClassGenerator) GetPreset(classType engine.CharacterClass) (ClassPreset
 	return preset, ok
 }
 
-// GetAllPresets returns all available class presets.
+// randomClassType selects a random class from the available presets.
+func (g *ClassGenerator) randomClassType(rng *rand.Rand) engine.CharacterClass {
+	keys := make([]engine.CharacterClass, 0, len(g.presets))
+	for k := range g.presets {
+		keys = append(keys, k)
+	}
+	return keys[rng.Intn(len(keys))]
+}
+
+// GetAllPresets returns all available class presets in enum order.
 func (g *ClassGenerator) GetAllPresets() []ClassPreset {
 	presets := make([]ClassPreset, 0, len(g.presets))
-	for i := 0; i < 21; i++ { // 21 total classes (6 base + 15 hybrid)
+	for i := 0; i < len(g.presets); i++ {
 		if preset, ok := g.presets[engine.CharacterClass(i)]; ok {
 			presets = append(presets, preset)
 		}

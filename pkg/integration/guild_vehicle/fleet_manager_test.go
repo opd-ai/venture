@@ -45,6 +45,18 @@ func TestFleetManager_CreateFleet(t *testing.T) {
 	if err == nil {
 		t.Error("expected error when creating duplicate fleet")
 	}
+
+	// Test empty guildID
+	err = manager.CreateFleet("", "fleet2", "player1")
+	if err == nil {
+		t.Error("expected error when creating fleet with empty guildID")
+	}
+
+	// Test empty fleetID
+	err = manager.CreateFleet("guild2", "", "player1")
+	if err == nil {
+		t.Error("expected error when creating fleet with empty fleetID")
+	}
 }
 
 func TestFleetManager_AddVehicle(t *testing.T) {
@@ -94,6 +106,16 @@ func TestFleetManager_AddVehicleWithType(t *testing.T) {
 	}
 	if vehicle.MaintenanceCost != 500 {
 		t.Errorf("vehicle.MaintenanceCost = %v, want 500", vehicle.MaintenanceCost)
+	}
+
+	// Test empty IDs validation
+	err = manager.AddVehicleWithType("", 2, "fleet1", SiegeNone, 100)
+	if err == nil {
+		t.Error("expected error when adding vehicle with empty guildID")
+	}
+	err = manager.AddVehicleWithType("guild1", 2, "", SiegeNone, 100)
+	if err == nil {
+		t.Error("expected error when adding vehicle with empty fleetID")
 	}
 }
 

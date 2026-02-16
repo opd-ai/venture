@@ -25,6 +25,10 @@ func NewFleetManager() *FleetManager {
 
 // CreateFleet creates a new fleet for a guild
 func (m *FleetManager) CreateFleet(guildID, fleetID, commanderID string) error {
+	if guildID == "" || fleetID == "" {
+		return fmt.Errorf("guildID and fleetID must not be empty")
+	}
+
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -56,6 +60,10 @@ func (m *FleetManager) AddVehicle(guildID string, vehicleID uint64, fleetID stri
 
 // AddVehicleWithType adds a vehicle with specified siege type and maintenance cost
 func (m *FleetManager) AddVehicleWithType(guildID string, vehicleID uint64, fleetID string, siegeType SiegeEngineType, maintenanceCost int) error {
+	if guildID == "" || fleetID == "" {
+		return fmt.Errorf("guildID and fleetID must not be empty")
+	}
+
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -320,14 +328,23 @@ func (m *FleetManager) Save(filename string) error {
 	if err != nil {
 		return fmt.Errorf("failed to create file: %w", err)
 	}
-	defer file.Close()
 
 	gzWriter := gzip.NewWriter(file)
-	defer gzWriter.Close()
 
 	encoder := json.NewEncoder(gzWriter)
 	if err := encoder.Encode(m.fleets); err != nil {
+		gzWriter.Close()
+		file.Close()
 		return fmt.Errorf("failed to encode fleets: %w", err)
+	}
+
+	if err := gzWriter.Close(); err != nil {
+		file.Close()
+		return fmt.Errorf("failed to close gzip writer: %w", err)
+	}
+
+	if err := file.Close(); err != nil {
+		return fmt.Errorf("failed to close file: %w", err)
 	}
 
 	return nil

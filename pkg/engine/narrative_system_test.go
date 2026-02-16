@@ -368,3 +368,87 @@ func TestNarrativeSystem_getRecentEvents(t *testing.T) {
 		t.Errorf("getRecentEvents() on empty history length = %v, want 0", len(empty))
 	}
 }
+
+// TestNarrativeSystem_Update tests the main update loop processing entities.
+func TestNarrativeSystem_Update(t *testing.T) {
+	world := NewWorld()
+	ns := NewNarrativeSystem(world)
+
+	// Create entity with narrative component that has triggers ready to fire
+	entity := world.CreateEntity()
+	narrative := NewNarrativeComponent()
+	narrative.SetWorldFlag("boss_defeated", true)
+	narrative.TriggerConditions = append(narrative.TriggerConditions, TriggerCondition{
+		TriggerType:   "combat_victory",
+		RequiredFlags: []string{"boss_defeated"},
+		EventToTrigger: NarrativeEvent{
+			Type:        EventVictory,
+			Description: "The boss has been defeated",
+			Importance:  0.8,
+		},
+		Activated: false,
+	})
+	entity.AddComponent(narrative)
+	world.Update(0.0) // Commit entity
+
+	// Run update - should process trigger and add event
+	ns.Update(world.GetEntities(), 0.016)
+
+	if len(narrative.EventHistory) != 1 {
+		t.Fatalf("Update() should have triggered 1 event, got %d", len(narrative.EventHistory))
+	}
+	if narrative.EventHistory[0].Type != EventVictory {
+		t.Errorf("Update() triggered wrong event type: %v", narrative.EventHistory[0].Type)
+	}
+}
+
+// TestNarrativeSystem_Update_ActProgression tests act advancement through Update.
+func TestNarrativeSystem_Update_ActProgression(t *testing.T) {
+	world := NewWorld()
+	ns := NewNarrativeSystem(world)
+
+	entity := world.CreateEntity()
+	narrative := NewNarrativeComponent()
+	narrative.StoryProgress = 0.40 // Above ActTwoThreshold (0.33)
+	entity.AddComponent(narrative)
+	world.Update(0.0)
+
+	ns.Update(world.GetEntities(), 0.016)
+
+	if narrative.CurrentAct != ActConfrontation {
+		t.Errorf("Update() should have progressed to ActConfrontation, got %v", narrative.CurrentAct)
+	}
+}
+
+// TestNarrativeSystem_Update_SkipsNonNarrative tests that entities without narrative are skipped.
+func TestNarrativeSystem_Update_SkipsNonNarrative(t *testing.T) {
+	world := NewWorld()
+	ns := NewNarrativeSystem(world)
+
+	entity := world.CreateEntity()
+	entity.AddComponent(&PositionComponent{X: 10, Y: 20})
+	world.Update(0.0)
+
+	// Should not panic or error
+	ns.Update(world.GetEntities(), 0.016)
+}
+
+// TestStoryAct_AllStrings tests all StoryAct string representations including default.
+func TestStoryAct_AllStrings(t *testing.T) {
+	tests := []struct {
+		act      StoryAct
+		expected string
+	}{
+		{ActSetup, "Setup"},
+		{ActConfrontation, "Confrontation"},
+		{ActResolution, "Resolution"},
+		{StoryAct(99), "Unknown"},
+	}
+
+	for _, tt := range tests {
+		result := tt.act.String()
+		if result != tt.expected {
+			t.Errorf("StoryAct(%d).String() = %q, want %q", tt.act, result, tt.expected)
+		}
+	}
+}

@@ -644,17 +644,17 @@ func TestPropagateEventCrossServer_NilEvent(t *testing.T) {
 
 func TestPropagateEventCrossServer_CoordinatePropagation(t *testing.T) {
 	originalEvent := &WorldEvent{
-		ID:       "event_1",
-		Type:     EventWeatherDisaster,
-		Trigger:  TriggerWeatherChange,
-		Severity: SeverityMajor,
-		Title:    "Storm",
-		ServerID: "server_1",
-		CenterX:  150.5,
-		CenterY:  275.3,
+		ID:        "event_1",
+		Type:      EventWeatherDisaster,
+		Trigger:   TriggerWeatherChange,
+		Severity:  SeverityMajor,
+		Title:     "Storm",
+		ServerID:  "server_1",
+		CenterX:   150.5,
+		CenterY:   275.3,
 		StartTime: time.Now(),
 		Duration:  2 * time.Hour,
-		Impacts:  []Impact{{Type: ImpactWeather, Target: "zone_1", Modifier: 0.8}},
+		Impacts:   []Impact{{Type: ImpactWeather, Target: "zone_1", Modifier: 0.8}},
 	}
 
 	propagated := PropagateEventCrossServer(originalEvent, []string{"server_2"}, 30*time.Second)

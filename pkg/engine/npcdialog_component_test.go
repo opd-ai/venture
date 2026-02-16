@@ -285,3 +285,93 @@ func TestNPCDialogComponentGeneratorField(t *testing.T) {
 		t.Error("Generator not set correctly")
 	}
 }
+
+// TestNPCDialogComponent_TopicMemory tests topic tracking methods.
+func TestNPCDialogComponent_TopicMemory(t *testing.T) {
+	comp := NewNPCDialogComponent("fantasy", nil, 42)
+
+	if comp.HasDiscussedTopic("weather") {
+		t.Error("Should not have discussed topic initially")
+	}
+
+	comp.RememberTopic("weather")
+
+	if !comp.HasDiscussedTopic("weather") {
+		t.Error("Should have discussed topic after remembering")
+	}
+}
+
+// TestNPCDialogComponent_ConversationState tests conversation state methods.
+func TestNPCDialogComponent_ConversationState(t *testing.T) {
+	comp := NewNPCDialogComponent("fantasy", nil, 42)
+
+	if !comp.IsFirstInteraction() {
+		t.Error("Should be first interaction initially")
+	}
+	if comp.GetConversationLength() != 0 {
+		t.Errorf("Expected conversation length 0, got %d", comp.GetConversationLength())
+	}
+
+	comp.AddPlayerInput("hello")
+
+	if comp.IsFirstInteraction() {
+		t.Error("Should not be first interaction after input")
+	}
+	if comp.GetConversationLength() != 1 {
+		t.Errorf("Expected conversation length 1, got %d", comp.GetConversationLength())
+	}
+}
+
+// TestNPCDialogComponent_DeterministicMode tests deterministic mode toggle.
+func TestNPCDialogComponent_DeterministicMode(t *testing.T) {
+	comp := NewNPCDialogComponent("fantasy", nil, 42)
+
+	if comp.IsDeterministicMode() {
+		t.Error("Should not be deterministic initially")
+	}
+
+	comp.SetDeterministicMode(true)
+
+	if !comp.IsDeterministicMode() {
+		t.Error("Should be deterministic after enabling")
+	}
+}
+
+// TestNPCDialogComponent_ClearHistory tests complete history clearing.
+func TestNPCDialogComponent_ClearHistory(t *testing.T) {
+	comp := NewNPCDialogComponent("fantasy", nil, 42)
+
+	comp.AddPlayerInput("test input")
+	comp.AddNPCResponse("test response")
+	comp.RememberTopic("weather")
+
+	comp.ClearHistory()
+
+	if len(comp.ConversationHistory) != 0 {
+		t.Error("ConversationHistory should be empty after clear")
+	}
+	if len(comp.ResponseHistory) != 0 {
+		t.Error("ResponseHistory should be empty after clear")
+	}
+	if comp.HasDiscussedTopic("weather") {
+		t.Error("TopicMemory should be cleared")
+	}
+}
+
+// TestNPCDialogComponent_TimeSinceLastInteraction tests interaction timing.
+func TestNPCDialogComponent_TimeSinceLastInteraction(t *testing.T) {
+	comp := NewNPCDialogComponent("fantasy", nil, 42)
+
+	// No interaction yet - should return zero duration
+	duration := comp.GetTimeSinceLastInteraction()
+	if duration != 0 {
+		t.Errorf("Expected zero duration for no interactions, got %v", duration)
+	}
+
+	// After an input, should return non-zero duration
+	comp.AddPlayerInput("hello")
+	duration = comp.GetTimeSinceLastInteraction()
+	if duration < 0 {
+		t.Error("Duration should be non-negative after interaction")
+	}
+}

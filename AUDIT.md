@@ -19,6 +19,7 @@ This file tracks the audit status of all Go sub-packages in the Venture project.
   - [x] `pkg/engine/AUDIT_UI_SYSTEMS.md` — UI systems sub-audit complete — 8 issues fixed (6 high, 2 med, 0 low)
   - [x] `pkg/engine/AUDIT_SOCIAL.md` — Social systems sub-audit complete — 4 issues fixed (1 high, 2 med, 1 low); 1 low remaining
   - [x] `pkg/engine/AUDIT_WORLD_SYSTEMS.md` — World systems sub-audit complete — 4 issues fixed (0 high, 2 med, 2 low); 2 low remaining
+  - [x] `pkg/engine/AUDIT_NARRATIVE.md` — Narrative & dialog systems sub-audit complete — 5 issues fixed (0 high, 2 med, 3 low); 3 low remaining
 
 ### Procedural Generation (`pkg/procgen/`)
 - [x] `pkg/procgen/building/AUDIT.md` — Complete — 0 issues

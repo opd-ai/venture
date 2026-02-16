@@ -262,5 +262,3 @@ type Summary struct {
 	AverageErrorRate      float64
 	PassRate              float64
 }
-
-

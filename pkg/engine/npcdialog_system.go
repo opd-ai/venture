@@ -2,7 +2,6 @@ package engine
 
 import (
 	"fmt"
-	"time"
 
 	"github.com/opd-ai/venture/pkg/procgen/dialog"
 )
@@ -118,9 +117,9 @@ func (s *NPCDialogSystem) GenerateResponse(entity *Entity, playerInput string) (
 	// Record player input
 	dialogComp.AddPlayerInput(playerInput)
 
-	// Generate conversation ID if not set
+	// Generate conversation ID if not set (deterministic from entity ID and interaction count)
 	if dialogComp.CurrentConversationID == "" {
-		dialogComp.CurrentConversationID = fmt.Sprintf("npc-%d-%d", entity.ID, time.Now().UnixNano())
+		dialogComp.CurrentConversationID = fmt.Sprintf("npc-%d-%d", entity.ID, dialogComp.GetConversationLength())
 	}
 
 	// Prepare generation parameters

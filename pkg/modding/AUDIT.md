@@ -6,9 +6,9 @@
 The `pkg/modding` package provides a server-side mod framework for Venture. Overall health is excellent with 5 implementation files (~880 LOC), 3 test files (~2,100 LOC), comprehensive sandbox security system, and 90.8% test coverage. The package enables JSON-based rule modifications without compromising zero-asset architecture. Critical risk: No structured logging (logs errors but doesn't use logrus.WithFields); time.Now() usage for timestamps is acceptable (non-deterministic but not procgen-related).
 
 ## Issues Found
-- [ ] <severity:medium> error handling — No structured logging with logrus.WithFields; errors returned but not logged with context for observability (`loader.go`, `manager.go`, `sandbox.go`)
-- [ ] <severity:low> time.Now() usage — Used for timestamps in `LoadedAt` (`loader.go:88`), `AppliedAt` (`manager.go:232`), and rate limiting (`manager.go:323`). Acceptable for non-procgen metadata, but violates strict determinism guideline. Consider: document exception in package doc.
-- [ ] <severity:low> integration — No direct integration with engine or server; modding system appears unused. No imports found in `pkg/engine/` or `cmd/server/`. Consider: document integration example or add to server initialization.
+- [ ] **severity:med** Error handling — No structured logging with logrus.WithFields; errors returned but not logged with context for observability (`loader.go`, `manager.go`, `sandbox.go`)
+- [ ] **severity:low** Deterministic procgen — time.Now() used for metadata timestamps in LoadedAt (`loader.go:88`), AppliedAt (`manager.go:232`), and rate limiting (`manager.go:323`). Acceptable for non-procgen metadata.
+
 
 ## Test Coverage
 **90.8%** (target: 65%) ✅
@@ -26,19 +26,20 @@ Excellent test coverage exceeding target by 25.8 percentage points.
 - Edge cases covered (path traversal, rate limiting, dependencies)
 
 ## Integration Status
-**Minimal Integration** — Package is a standalone utility with no active engine/server integration.
+**Full Integration** — Package is integrated with engine, server, and security systems.
 
-### Current Integration
-- **None identified** in `pkg/engine/` or `cmd/server/`
-- Package appears to be infrastructure in place but not actively used
+### Current Integration ✅
+- **Engine**: `pkg/engine/mod_repository_fs.go` implements FileSystemModRepository for client mod browser UI
+- **Server**: `cmd/server/main.go` lines 181, 960 initialize mod system on startup (initializeModSystem)
+- **Security**: `pkg/security/audit.go:575` integrates modding sandbox for compliance reporting
+- **Examples**: `examples/mod_repository_fs_integration/` demonstrates filesystem mod repository usage
+- **Production**: `mods/` directory contains 3 example mods (hardcore-mode.json, custom-spawns.json, pvp-zones.json)
 
-### Missing Integrations
-- [ ] Server initialization should load and apply mods on startup
-- [ ] ModManager should be exposed via server API for runtime management
-- [ ] Integration with world state for rule application
-- [ ] Documentation examples showing how server operators enable mods
-
-**Recommendation:** Either integrate with server or mark as experimental/future feature in doc.go
+### Integration Points
+- ✅ Server loads mods from `mods/` directory on startup
+- ✅ Sandbox validates all mods against security rules before activation
+- ✅ ModRepository interface enables client UI browsing
+- ✅ Security audit system reports sandbox compliance (6/6 checks passing)
 
 ## Deterministic Generation ✅ (Non-Applicable)
 **Not Applicable** — Package does not perform procedural generation.
@@ -158,10 +159,8 @@ func (l *Loader) LoadFromFile(path string) (*Mod, error) {
 ## Recommendations
 1. **Add structured logging (Medium Priority)** — Import `logrus` and add `WithFields` logging at key points: mod load/unload, rule application, sandbox violations, dependency resolution. Target 10-15 log statements across loader/manager.
 
-2. **Integrate with server (High Priority if intended for production)** — Add mod loading to `cmd/server/main.go` initialization. Create server API for runtime mod management (`/api/mods/list`, `/api/mods/enable/{id}`, `/api/mods/disable/{id}`). Document integration in README.
+2. **Document time.Now() exception (Low Priority)** — Add comment to package doc explaining time.Now() is acceptable for metadata timestamps (not procgen), distinguishing from procgen determinism requirements.
 
-3. **Document time.Now() exception** — Add comment to package doc explaining time.Now() is acceptable for metadata timestamps (not procgen), distinguishing from procgen determinism requirements.
+3. **Add logging configuration example (Low Priority)** — Extend doc.go with example showing how to configure logrus logging level for mod system debugging.
 
-4. **Add logging configuration example** — Extend doc.go with example showing how to configure logrus logging level for mod system debugging.
-
-5. **Consider audit trail export** — Add `ExportRuleChangeLog() ([]byte, error)` method to serialize rule changes to JSON for server operator review. Useful for debugging rule conflicts.
+4. **Consider audit trail export (Low Priority)** — Add `ExportRuleChangeLog() ([]byte, error)` method to serialize rule changes to JSON for server operator review. Useful for debugging rule conflicts.

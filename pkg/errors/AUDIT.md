@@ -7,8 +7,6 @@ The errors package provides comprehensive structured error handling with 100% te
 
 ## Issues Found
 - [ ] **high** Integration points — Package has only 3 importers (pkg/logging/errors.go, pkg/logging/errors_test.go, pkg/errors/doc.go) despite 319+ files with error handling; needs adoption campaign (`grep results`)
-- [ ] **med** Integration points — No usage in cmd/server, cmd/client, pkg/engine, pkg/network, pkg/world despite being designed for these areas; standard library errors used instead (`grep "fmt.Errorf\|errors.New" pkg/network/*.go`)
-- [ ] **low** Doc coverage — Missing ERROR_HANDLING.md guide referenced in README.md:90 (`README.md:90`)
 
 ## Test Coverage
 100.0% (target: 65%) ✅

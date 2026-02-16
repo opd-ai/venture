@@ -148,6 +148,8 @@ func TestCalculateDifficulty(t *testing.T) {
 		{"medium", 0.5, 5, 4, 7},
 		{"hard", 0.8, 8, 7, 10},
 		{"very_hard", 1.0, 10, 9, 10},
+		{"clamp_low", -1.0, 0, 1, 1},
+		{"clamp_high", 2.0, 100, 10, 10},
 	}
 
 	for _, tt := range tests {

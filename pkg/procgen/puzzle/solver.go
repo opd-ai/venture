@@ -7,7 +7,6 @@ package puzzle
 
 import (
 	"fmt"
-	"math/rand"
 )
 
 // Variable represents a decision point in the puzzle.
@@ -38,9 +37,6 @@ type CSP struct {
 
 	// Constraints on variables
 	Constraints []*Constraint
-
-	// Random number generator for variable ordering
-	rng *rand.Rand
 }
 
 // NewCSP creates a new constraint satisfaction problem.
@@ -48,7 +44,6 @@ func NewCSP(seed int64) *CSP {
 	return &CSP{
 		Variables:   make(map[string]*Variable),
 		Constraints: []*Constraint{},
-		rng:         rand.New(rand.NewSource(seed)),
 	}
 }
 

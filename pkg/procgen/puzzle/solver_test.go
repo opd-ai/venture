@@ -17,9 +17,6 @@ func TestNewCSP(t *testing.T) {
 	if csp.Constraints == nil {
 		t.Error("Constraints slice is nil")
 	}
-	if csp.rng == nil {
-		t.Error("RNG is nil")
-	}
 }
 
 func TestCSPAddVariable(t *testing.T) {

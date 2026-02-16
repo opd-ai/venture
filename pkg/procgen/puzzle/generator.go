@@ -308,6 +308,9 @@ func (g *Generator) calculateDifficulty(params procgen.GenerationParams) int {
 	}
 
 	difficulty := int(baseDiff + depthBonus + 1.0) // +1 ensures minimum 1
+	if difficulty < 1 {
+		difficulty = 1
+	}
 	if difficulty > 10 {
 		difficulty = 10
 	}

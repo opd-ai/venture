@@ -320,21 +320,21 @@ type InputSystem struct {
 	onQuickSave        func() error
 	onQuickLoad        func() error
 	onFullscreenToggle func() error
-	onInventoryOpen func()
-	onCharacterOpen func()
-	onSkillsOpen    func()
-	onQuestsOpen    func()
-	onMapOpen       func()
-	onCraftingOpen  func() // Callback for crafting UI toggle
-	onMailboxOpen   func() // Callback for mailbox UI toggle (Phase 40.3)
-	onTradeOpen     func() // Callback for trade UI toggle (Phase 3.3)
-	onClassesOpen   func() // Callback for advanced class UI toggle (Phase 4.2)
-	onTerritoryOpen func() // Callback for territory UI toggle (Phase 4.3)
-	onGuildOpen     func() // Callback for guild UI toggle (Phase 3.2)
-	onDialogOpen    func() // Callback for dialog UI toggle (Phase 6.2)
-	onCycleTargets  func()
-	onMenuToggle    func() // Callback for ESC menu toggle
-	onInteract      func() // Callback for F key NPC/merchant interaction
+	onInventoryOpen    func()
+	onCharacterOpen    func()
+	onSkillsOpen       func()
+	onQuestsOpen       func()
+	onMapOpen          func()
+	onCraftingOpen     func() // Callback for crafting UI toggle
+	onMailboxOpen      func() // Callback for mailbox UI toggle (Phase 40.3)
+	onTradeOpen        func() // Callback for trade UI toggle (Phase 3.3)
+	onClassesOpen      func() // Callback for advanced class UI toggle (Phase 4.2)
+	onTerritoryOpen    func() // Callback for territory UI toggle (Phase 4.3)
+	onGuildOpen        func() // Callback for guild UI toggle (Phase 3.2)
+	onDialogOpen       func() // Callback for dialog UI toggle (Phase 6.2)
+	onCycleTargets     func()
+	onMenuToggle       func() // Callback for ESC menu toggle
+	onInteract         func() // Callback for F key NPC/merchant interaction
 
 	// INTEGRATION FIX [Category B]: V8.0 UI callbacks
 	// Gap: Housing and Gallery UIs created but no callback fields for key bindings

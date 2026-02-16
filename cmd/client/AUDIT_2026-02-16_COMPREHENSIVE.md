@@ -3,7 +3,7 @@
 **Status**: Needs Work
 
 ## Summary
-The cmd/client package serves as the desktop game client entry point with extremely high integration surface, coordinating 200+ systems across engine, rendering, network, audio, and procgen domains. Overall health is good with proper ECS architecture adherence and deterministic generation patterns, but test coverage is critically low at 32.0% (below 65% target) due to Ebiten display server dependency. The package contains 7,191 lines of code across 15 files with 154 structured logging calls. Critical risks include 5 non-deterministic time.Now() usages in gameplay code and large file sizes (handlers.go at 4,476 lines) that impact maintainability.
+The cmd/client package serves as the desktop game client entry point with extremely high integration surface, coordinating 200+ systems across engine, rendering, network, audio, and procgen domains. Overall health is good with proper ECS architecture adherence and deterministic generation patterns, but test coverage is critically low at 32.0% (below 65% target) due to Ebiten display server dependency. The package contains 7,191 lines of code across 15 files with 154 structured logging calls. The 3 non-deterministic time.Now() usages in gameplay code have been resolved via TimeProvider abstraction (time_provider.go). Remaining performance-measurement time.Now() calls (handlers.go:595, 691, 774) are acceptable non-procgen usage. Large file sizes (handlers.go at 4,476 lines) still impact maintainability.
 
 ## Issues Found
 - [x] **low** stub/incomplete — Save manager initialization returns nil on error without fallback (`handlers.go:3686`)
@@ -88,10 +88,14 @@ The client is the central integration hub for the entire game:
 None identified. All systems are properly registered with the World and connected via dependency injection through systemsContainer.
 
 ## Recommendations
-1. **[HIGH PRIORITY]** Abstract time.Now() calls into TimeProvider interface for deterministic testing
-   - Create TimeProvider with RealTime and MockTime implementations
-   - Replace util.go:1447, util.go:1467, handlers.go:4381 with provider calls
-   - Inject provider during initialization to enable deterministic tests
+1. **[COMPLETED]** ~~Abstract time.Now() calls into TimeProvider interface for deterministic testing~~
+   - Created `time_provider.go` with TimeProvider interface, RealTimeProvider, MockTimeProvider, DefaultTimeProvider()
+   - Created `time_provider_test.go` with table-driven tests covering determinism, interface compliance, and edge cases
+   - Added `timeProvider` field to systemsContainer, initialized with DefaultTimeProvider()
+   - Replaced util.go DeadComponent timestamp (line 1447) with tp.Now().Unix()
+   - Replaced util.go death SFX seed (line 1467) with tp.Now().UnixNano()
+   - Replaced handlers.go narrative event timestamp (line 4394) with tp.Now()
+   - All 3 non-deterministic gameplay time.Now() calls now use injectable TimeProvider
    
 2. **[MEDIUM PRIORITY]** Split handlers.go (4,476 lines) into domain-specific files
    - `init_audio.go` — Audio system initialization

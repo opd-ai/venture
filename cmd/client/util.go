@@ -1429,6 +1429,7 @@ func createDeathCallback(
 	seed int64,
 	genreID string,
 	logger *logrus.Logger,
+	tp TimeProvider,
 ) func(*engine.Entity) {
 	return func(enemy *engine.Entity) {
 		// Priority 1.4: Only process death once (callback called every frame while entity is dead)
@@ -1444,7 +1445,7 @@ func createDeathCallback(
 		pos := posComp.(*engine.PositionComponent)
 
 		// Priority 1.4: Add DeadComponent to mark entity as dead
-		gameTime := float64(time.Now().Unix()) // Use game time if available
+		gameTime := float64(tp.Now().Unix())
 		deadComp := engine.NewDeadComponent(gameTime)
 		enemy.AddComponent(deadComp)
 
@@ -1464,7 +1465,7 @@ func createDeathCallback(
 
 		// GAP-010 REPAIR: Play death sound effect
 		if *audioManager != nil {
-			if err := (*audioManager).PlaySFX("death", time.Now().UnixNano()); err != nil {
+			if err := (*audioManager).PlaySFX("death", tp.Now().UnixNano()); err != nil {
 				if logger.GetLevel() >= logrus.WarnLevel {
 					logging.ComponentLogger(logger, "audio").WithError(err).Warn("failed to play death SFX")
 				}

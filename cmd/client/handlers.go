@@ -584,6 +584,9 @@ type systemsContainer struct {
 	vrControllerSystem *engine.VRControllerSystem // VR controller input system
 	vrUISystem         *engine.VRUISystem         // VR-optimized UI rendering
 
+	// Time abstraction for deterministic testing of gameplay code
+	timeProvider TimeProvider
+
 	// Lazy initialization tracking (Performance Audit S4)
 	lazyInitStarted   bool // Tracks whether lazy initialization has been triggered
 	lazyInitCompleted bool // Tracks whether lazy initialization has finished
@@ -595,7 +598,9 @@ func initializeCoreSystems(game *engine.EbitenGame, logger *logrus.Logger, clien
 	startTime := time.Now()
 	clientLogger.Info("initializing game systems with parallel optimization")
 
-	sys := &systemsContainer{}
+	sys := &systemsContainer{
+		timeProvider: DefaultTimeProvider(),
+	}
 
 	// Phase 1: Critical systems (must be sequential)
 	sys.performanceSystem = engine.NewPerformanceMonitoringSystem()
@@ -3220,7 +3225,7 @@ func spawnWorldEntities(game *engine.EbitenGame, generatedTerrain *terrain.Terra
 	spawnCompanionsWithLogging(game.World, generatedTerrain, params, clientLogger, sys.companionLearningSys)
 	spawnBookshelvesWithLogging(game.World, generatedTerrain, params, clientLogger)
 	spawnStoryFragmentsWithLogging(game.World, generatedTerrain, params, clientLogger)
-	generateNarrativeArcWithLogging(game.World, sys.narrativeGenerator, params, clientLogger)
+	generateNarrativeArcWithLogging(game.World, sys.narrativeGenerator, params, clientLogger, sys.timeProvider)
 }
 
 // spawnEnemiesWithLogging spawns enemies in terrain with optional verbose logging.
@@ -4266,7 +4271,7 @@ func configureDeathCallback(sys *systemsContainer, game *engine.EbitenGame, logg
 	var playerEntity *engine.Entity
 	sys.combatSystem.SetDeathCallback(createDeathCallback(
 		game, &playerEntity, sys.objectiveTracker, &sys.audioManager,
-		sys.recipeGen, sys.magicGenerator, sys.skillGenerator, sys.deathParticleSystem, *seed, *genreID, logger,
+		sys.recipeGen, sys.magicGenerator, sys.skillGenerator, sys.deathParticleSystem, *seed, *genreID, logger, sys.timeProvider,
 	))
 }
 
@@ -4313,7 +4318,7 @@ func runGameLoop(game *engine.EbitenGame, clientLogger *logrus.Entry) {
 
 // generateNarrativeArcWithLogging generates a procedural story arc for the world narrative with optional verbose logging.
 // Phase 3.6 (PLAN.md): Integrates pkg/procgen/narrative to create overarching world story
-func generateNarrativeArcWithLogging(w *engine.World, narrativeGen *narrative.StoryArcGenerator, params procgen.GenerationParams, clientLogger *logrus.Entry) {
+func generateNarrativeArcWithLogging(w *engine.World, narrativeGen *narrative.StoryArcGenerator, params procgen.GenerationParams, clientLogger *logrus.Entry, tp TimeProvider) {
 	if narrativeGen == nil {
 		clientLogger.Warn("narrative generator is nil, skipping story arc generation")
 		return
@@ -4335,7 +4340,7 @@ func generateNarrativeArcWithLogging(w *engine.World, narrativeGen *narrative.St
 	}
 
 	narrativeComp := setupNarrativeComponent(worldNarrativeEntity, arc)
-	addInitialNarrativeEvent(narrativeComp, arc)
+	addInitialNarrativeEvent(narrativeComp, arc, tp)
 	addPlotPointsAsThreads(narrativeComp, arc)
 	logNarrativeArcSuccess(arc, clientLogger)
 }
@@ -4388,10 +4393,10 @@ func setupNarrativeComponent(worldNarrativeEntity *engine.Entity, arc *narrative
 }
 
 // addInitialNarrativeEvent adds the initial narrative event for the story arc.
-func addInitialNarrativeEvent(narrativeComp *engine.NarrativeComponent, arc *narrative.StoryArc) {
+func addInitialNarrativeEvent(narrativeComp *engine.NarrativeComponent, arc *narrative.StoryArc, tp TimeProvider) {
 	initialEvent := engine.NarrativeEvent{
 		Type:        engine.EventDiscovery,
-		Timestamp:   time.Now(),
+		Timestamp:   tp.Now(),
 		Description: fmt.Sprintf("The story begins: %s", arc.Title),
 		Importance:  1.0,
 		Act:         engine.ActSetup,

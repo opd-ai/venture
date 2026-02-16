@@ -91,7 +91,7 @@ This file tracks the audit status of all Go sub-packages in the Venture project.
 - [ ] `pkg/security/` — Not audited
 - [ ] `pkg/version/` — Not audited
 - [ ] `pkg/migration/` — Not audited
-- [ ] `pkg/modding/` — Not audited
+- [x] `pkg/modding/AUDIT.md` — Complete — 3 issues (0 high, 1 med, 2 low)
 - [ ] `pkg/narrative/` — Not audited
 - [ ] `pkg/ux/` — Not audited
 - [ ] `pkg/balance/` — Not audited

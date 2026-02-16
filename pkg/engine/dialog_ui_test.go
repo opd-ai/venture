@@ -321,3 +321,56 @@ func TestDialogUIHandleOptionSelectGoodbye(t *testing.T) {
 		t.Errorf("Should have one option ([Close]), got %d", len(ui.playerOptions))
 	}
 }
+
+// TestDialogUI_HandleOptionSelect_OutOfBounds verifies selectedOption bounds check.
+func TestDialogUI_HandleOptionSelect_OutOfBounds(t *testing.T) {
+	world := NewWorld()
+	dialogSys := NewDialogSystem(world)
+	npcDialogSys := NewNPCDialogSystem(world, 12345)
+	ui := NewDialogUI(world, dialogSys, npcDialogSys, 800, 600)
+
+	ui.playerOptions = []string{"Hello", "Goodbye"}
+	ui.selectedOption = 5 // Out of bounds
+
+	// Should not panic, should reset selectedOption
+	err := ui.handleOptionSelect()
+	if err != nil {
+		t.Errorf("handleOptionSelect with out-of-bounds should not return error, got: %v", err)
+	}
+	if ui.selectedOption != 0 {
+		t.Errorf("selectedOption should be reset to 0, got %d", ui.selectedOption)
+	}
+}
+
+// TestDialogUI_HandleOptionSelect_EmptyOptions verifies empty options are handled.
+func TestDialogUI_HandleOptionSelect_EmptyOptions(t *testing.T) {
+	world := NewWorld()
+	dialogSys := NewDialogSystem(world)
+	npcDialogSys := NewNPCDialogSystem(world, 12345)
+	ui := NewDialogUI(world, dialogSys, npcDialogSys, 800, 600)
+
+	ui.playerOptions = []string{}
+	ui.selectedOption = 0
+
+	err := ui.handleOptionSelect()
+	if err != nil {
+		t.Errorf("handleOptionSelect with empty options should return nil, got: %v", err)
+	}
+}
+
+// TestDialogUI_HandleOptionSelect_NegativeIndex verifies negative index is handled.
+func TestDialogUI_HandleOptionSelect_NegativeIndex(t *testing.T) {
+	world := NewWorld()
+	dialogSys := NewDialogSystem(world)
+	npcDialogSys := NewNPCDialogSystem(world, 12345)
+	ui := NewDialogUI(world, dialogSys, npcDialogSys, 800, 600)
+
+	ui.playerOptions = []string{"Hello"}
+	ui.selectedOption = -1 // Negative index
+
+	// Should not panic
+	err := ui.handleOptionSelect()
+	if err != nil {
+		t.Errorf("handleOptionSelect with negative index should not return error, got: %v", err)
+	}
+}

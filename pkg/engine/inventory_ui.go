@@ -369,7 +369,7 @@ func (ui *EbitenInventoryUI) calculateHoveredSlot(mouseX, mouseY, windowX, windo
 
 // handleSlotClick initiates drag-and-drop for the clicked inventory slot.
 func (ui *EbitenInventoryUI) handleSlotClick(slotIndex int, inventory *InventoryComponent) {
-	if slotIndex >= len(inventory.Items) {
+	if inventory == nil || slotIndex >= len(inventory.Items) {
 		return
 	}
 
@@ -595,7 +595,7 @@ func (ui *EbitenInventoryUI) drawInventorySlot(img *ebiten.Image, slotX, slotY, 
 
 	if slotIndex < len(inventory.Items) {
 		item := inventory.Items[slotIndex]
-		if item != nil {
+		if item != nil && len(item.Name) > 0 {
 			itemText := string(item.Name[0])
 			ebitenutil.DebugPrintAt(img, itemText, slotX+16, slotY+16)
 

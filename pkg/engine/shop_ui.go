@@ -750,6 +750,9 @@ func (ui *ShopUI) getSelectionColor(slotIndex int, currentInventory []*item.Item
 // drawItemContent renders the item icon, price label, and tooltip for a populated slot.
 // Handles mode-specific pricing and affordability indicators.
 func (ui *ShopUI) drawItemContent(img *ebiten.Image, itm *item.Item, merchant *MerchantComponent, playerInv *InventoryComponent, slotIndex, slotX, slotY, windowY int) {
+	if len(itm.Name) == 0 {
+		return
+	}
 	itemText := string(itm.Name[0])
 	ebitenutil.DebugPrintAt(img, itemText, slotX+24, slotY+24)
 

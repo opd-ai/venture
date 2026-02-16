@@ -393,6 +393,9 @@ func calculateTileScale(ui *EbitenMapUI) float64 {
 
 // drawMinimapTerrain renders explored terrain tiles on the minimap.
 func drawMinimapTerrain(screen *ebiten.Image, ui *EbitenMapUI, mapX, mapY int, tileScale float64) {
+	if ui.fogOfWar == nil {
+		return
+	}
 	for y := 0; y < ui.terrain.Height; y++ {
 		for x := 0; x < ui.terrain.Width; x++ {
 			if !ui.fogOfWar[y][x] {
@@ -528,7 +531,7 @@ func (ui *EbitenMapUI) renderMapTiles(screen *ebiten.Image, mapAreaX, mapAreaY i
 				continue
 			}
 
-			explored := ui.fogOfWar[y][x]
+			explored := ui.fogOfWar != nil && ui.fogOfWar[y][x]
 			tileType := ui.terrain.GetTile(x, y)
 
 			screenX := float32(mapAreaX) + float32((float64(x)*tileSize)-(ui.offsetX))
@@ -636,6 +639,9 @@ func (ui *EbitenMapUI) shouldRevealTile(dx, dy, radius, centerX, centerY int) bo
 
 // revealTile marks a tile as explored and triggers map update if needed.
 func (ui *EbitenMapUI) revealTile(tileX, tileY int) {
+	if ui.fogOfWar == nil {
+		return
+	}
 	if !ui.fogOfWar[tileY][tileX] {
 		ui.fogOfWar[tileY][tileX] = true
 		ui.mapNeedsUpdate = true
@@ -767,6 +773,9 @@ func (ui *EbitenMapUI) getEntityPosition(entity *Entity) *PositionComponent {
 // isEntityVisible checks if entity tile is explored in fog of war.
 func (ui *EbitenMapUI) isEntityVisible(tileX, tileY int) bool {
 	if tileX < 0 || tileX >= ui.terrain.Width || tileY < 0 || tileY >= ui.terrain.Height {
+		return false
+	}
+	if ui.fogOfWar == nil {
 		return false
 	}
 	return ui.fogOfWar[tileY][tileX]

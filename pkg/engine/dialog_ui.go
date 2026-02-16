@@ -313,6 +313,11 @@ func (ui *DialogUI) handleOptionSelect() error {
 		return nil
 	}
 
+	if ui.selectedOption < 0 || ui.selectedOption >= len(ui.playerOptions) {
+		ui.selectedOption = 0
+		return nil
+	}
+
 	selectedText := ui.playerOptions[ui.selectedOption]
 
 	// Add to history

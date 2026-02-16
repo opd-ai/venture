@@ -618,6 +618,9 @@ func (ui *EbitenQuestUI) drawScrollbar(img *ebiten.Image, windowX, windowWidth, 
 	// PERF: Use vector drawing instead of creating new images
 	vector.DrawFilledRect(img, float32(scrollbarX), float32(scrollbarY), 10, float32(scrollbarHeight), color.RGBA{60, 60, 70, 255}, true)
 
+	if totalContentHeight <= 0 {
+		return
+	}
 	handleHeight := max(20, (contentHeight*contentHeight)/totalContentHeight)
 	handleY := scrollbarY + (ui.scrollOffset*scrollbarHeight)/totalContentHeight
 	vector.DrawFilledRect(img, float32(scrollbarX), float32(handleY), 10, float32(handleHeight), color.RGBA{150, 150, 170, 255}, true)

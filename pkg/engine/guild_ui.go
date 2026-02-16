@@ -172,7 +172,10 @@ func (ui *GuildUI) validateAndGetGuildData() (*guild.Guild, *GuildComponent, err
 		return nil, nil, fmt.Errorf("no guild component")
 	}
 
-	gc := guildComp.(*GuildComponent)
+	gc, ok := guildComp.(*GuildComponent)
+	if !ok {
+		return nil, nil, fmt.Errorf("invalid guild component type")
+	}
 	if gc.GuildID == "" {
 		return nil, nil, fmt.Errorf("no guild assigned")
 	}

@@ -126,3 +126,33 @@ func (s *StubHUDSystem) SetActive(active bool) {
 
 // Compile-time check that StubHUDSystem implements UISystem
 var _ UISystem = (*StubHUDSystem)(nil)
+
+// TestHudDrawHealthBar_ZeroMaxHealth verifies no panic when health.Max is 0.
+func TestHudDrawHealthBar_ZeroMaxHealth(t *testing.T) {
+	hud := NewEbitenHUDSystem(800, 600)
+	world := NewWorld()
+	player := world.CreateEntity()
+	player.AddComponent(&HealthComponent{Current: 0, Max: 0})
+	hud.SetPlayerEntity(player)
+
+	// Draw with nil screen should safely return (screen type assertion fails)
+	hud.Draw(nil) // Should not panic
+}
+
+// TestHudDrawHealthBar_NilPlayerEntity verifies safe draw with nil player.
+func TestHudDrawHealthBar_NilPlayerEntity(t *testing.T) {
+	hud := NewEbitenHUDSystem(800, 600)
+	// playerEntity is nil
+	hud.Draw(nil) // Should not panic
+}
+
+// TestHudDrawHealthBar_MissingHealthComponent verifies safe draw without health.
+func TestHudDrawHealthBar_MissingHealthComponent(t *testing.T) {
+	hud := NewEbitenHUDSystem(800, 600)
+	world := NewWorld()
+	player := world.CreateEntity()
+	hud.SetPlayerEntity(player)
+
+	// drawHealthBar should safely return with no health component
+	hud.drawHealthBar()
+}

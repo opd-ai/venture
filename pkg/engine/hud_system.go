@@ -102,6 +102,9 @@ func (h *EbitenHUDSystem) drawHealthBar() {
 		color.RGBA{40, 40, 40, 255}, false)
 
 	// Health fill (red to green based on health %)
+	if health.Max == 0 {
+		return
+	}
 	healthPct := float32(health.Current / health.Max)
 	fillWidth := barWidth * healthPct
 

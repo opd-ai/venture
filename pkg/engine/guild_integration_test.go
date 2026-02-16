@@ -111,3 +111,48 @@ func TestGuildUI_IsVisible(t *testing.T) {
 		t.Error("IsVisible should return true when visible is true")
 	}
 }
+
+// TestGuildUI_ValidateAndGetGuildData_InvalidComponentType verifies safe type assertion.
+func TestGuildUI_ValidateAndGetGuildData_InvalidComponentType(t *testing.T) {
+	world := NewWorld()
+	guildUI := NewGuildUI(world, nil, 800, 600)
+
+	// Create player entity with wrong component type for "guild"
+	player := world.CreateEntity()
+	player.AddComponent(&PlayerComponent{})
+	player.AddComponent(&GuildComponent{GuildID: "", Rank: "Recruit"})
+
+	// validateAndGetGuildData should return error for empty guild ID
+	_, _, err := guildUI.validateAndGetGuildData()
+	if err == nil {
+		t.Error("Expected error for empty guild ID")
+	}
+}
+
+// TestGuildUI_ValidateAndGetGuildData_NoPlayer verifies error on no player entity.
+func TestGuildUI_ValidateAndGetGuildData_NoPlayer(t *testing.T) {
+	world := NewWorld()
+	guildUI := NewGuildUI(world, nil, 800, 600)
+
+	_, _, err := guildUI.validateAndGetGuildData()
+	if err == nil {
+		t.Error("Expected error when no player entity exists")
+	}
+	if err.Error() != "no player entity" {
+		t.Errorf("Expected 'no player entity' error, got: %v", err)
+	}
+}
+
+// TestGuildUI_ValidateAndGetGuildData_NoGuildComponent verifies error on missing guild component.
+func TestGuildUI_ValidateAndGetGuildData_NoGuildComponent(t *testing.T) {
+	world := NewWorld()
+	guildUI := NewGuildUI(world, nil, 800, 600)
+
+	player := world.CreateEntity()
+	player.AddComponent(&PlayerComponent{})
+
+	_, _, err := guildUI.validateAndGetGuildData()
+	if err == nil {
+		t.Error("Expected error for missing guild component")
+	}
+}

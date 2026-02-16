@@ -238,3 +238,21 @@ func formatFloat(f float64) string {
 	}
 	return "unknown"
 }
+
+// TestHandleSlotClick_NilInventory verifies no panic when inventory is nil.
+func TestHandleSlotClick_NilInventory(t *testing.T) {
+	ui := &EbitenInventoryUI{}
+	// Should not panic on nil inventory
+	ui.handleSlotClick(0, nil)
+}
+
+// TestHandleSlotClick_OutOfBounds verifies no panic on out-of-bounds slot index.
+func TestHandleSlotClick_OutOfBounds(t *testing.T) {
+	ui := &EbitenInventoryUI{}
+	inv := NewInventoryComponent(5, 50.0)
+	// slot index exceeds items length
+	ui.handleSlotClick(10, inv)
+	if ui.dragging {
+		t.Error("Should not start dragging on out-of-bounds slot")
+	}
+}

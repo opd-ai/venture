@@ -7,7 +7,6 @@ import (
 	"io"
 	"os"
 	"sync"
-	"time"
 )
 
 // FleetManager manages guild vehicle fleets with thread-safe operations
@@ -45,8 +44,8 @@ func (m *FleetManager) CreateFleet(guildID, fleetID, commanderID string) error {
 		Vehicles:    make(map[uint64]*GuildVehicle),
 		Formation:   FormationNone,
 		CommanderID: commanderID,
-		CreatedAt:   time.Now(),
-		UpdatedAt:   time.Now(),
+		CreatedAt:   now(),
+		UpdatedAt:   now(),
 	}
 
 	m.fleets[key] = fleet
@@ -77,8 +76,8 @@ func (m *FleetManager) AddVehicleWithType(guildID string, vehicleID uint64, flee
 			Vehicles:    make(map[uint64]*GuildVehicle),
 			Formation:   FormationNone,
 			CommanderID: "", // No commander yet
-			CreatedAt:   time.Now(),
-			UpdatedAt:   time.Now(),
+			CreatedAt:   now(),
+			UpdatedAt:   now(),
 		}
 		m.fleets[key] = fleet
 	}
@@ -96,12 +95,12 @@ func (m *FleetManager) AddVehicleWithType(guildID string, vehicleID uint64, flee
 		SiegeType:       siegeType,
 		SharedAccess:    make(map[string]bool),
 		MaintenanceCost: maintenanceCost,
-		AddedAt:         time.Now(),
-		LastMaintenance: time.Now(),
+		AddedAt:         now(),
+		LastMaintenance: now(),
 	}
 
 	fleet.Vehicles[vehicleID] = vehicle
-	fleet.UpdatedAt = time.Now()
+	fleet.UpdatedAt = now()
 
 	return nil
 }
@@ -122,7 +121,7 @@ func (m *FleetManager) RemoveVehicle(guildID string, vehicleID uint64, fleetID s
 	}
 
 	delete(fleet.Vehicles, vehicleID)
-	fleet.UpdatedAt = time.Now()
+	fleet.UpdatedAt = now()
 
 	return nil
 }
@@ -140,7 +139,7 @@ func (m *FleetManager) GrantAccess(guildID string, vehicleID uint64, playerID st
 
 		if vehicle, exists := fleet.Vehicles[vehicleID]; exists {
 			vehicle.SharedAccess[playerID] = true
-			fleet.UpdatedAt = time.Now()
+			fleet.UpdatedAt = now()
 			return nil
 		}
 	}
@@ -161,7 +160,7 @@ func (m *FleetManager) RevokeAccess(guildID string, vehicleID uint64, playerID s
 
 		if vehicle, exists := fleet.Vehicles[vehicleID]; exists {
 			delete(vehicle.SharedAccess, playerID)
-			fleet.UpdatedAt = time.Now()
+			fleet.UpdatedAt = now()
 			return nil
 		}
 	}
@@ -199,7 +198,7 @@ func (m *FleetManager) SetFormation(guildID, fleetID string, formation Formation
 	}
 
 	fleet.Formation = formation
-	fleet.UpdatedAt = time.Now()
+	fleet.UpdatedAt = now()
 
 	return nil
 }
@@ -216,7 +215,7 @@ func (m *FleetManager) SetCommander(guildID, fleetID, commanderID string) error 
 	}
 
 	fleet.CommanderID = commanderID
-	fleet.UpdatedAt = time.Now()
+	fleet.UpdatedAt = now()
 
 	return nil
 }

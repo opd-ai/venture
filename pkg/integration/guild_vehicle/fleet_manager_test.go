@@ -5,6 +5,7 @@ import (
 	"os"
 	"sync"
 	"testing"
+	"time"
 )
 
 func TestNewFleetManager(t *testing.T) {
@@ -660,5 +661,170 @@ func BenchmarkFleetManager_GetFleet(b *testing.B) {
 
 	for i := 0; i < b.N; i++ {
 		manager.GetFleet("guild1", "fleet1")
+	}
+}
+
+// TimeProvider determinism validation tests
+
+func TestTimeProvider_RealTimeProvider(t *testing.T) {
+	rtp := RealTimeProvider{}
+	before := time.Now()
+	got := rtp.Now()
+	after := time.Now()
+
+	if got.Before(before) || got.After(after) {
+		t.Errorf("RealTimeProvider.Now() = %v, want between %v and %v", got, before, after)
+	}
+}
+
+func TestTimeProvider_FixedTimeProvider(t *testing.T) {
+	fixedTime := time.Date(2026, 1, 15, 12, 0, 0, 0, time.UTC)
+	ftp := FixedTimeProvider{FixedTime: fixedTime}
+
+	for i := 0; i < 10; i++ {
+		got := ftp.Now()
+		if !got.Equal(fixedTime) {
+			t.Errorf("FixedTimeProvider.Now() call %d = %v, want %v", i, got, fixedTime)
+		}
+	}
+}
+
+func TestTimeProvider_SetAndReset(t *testing.T) {
+	fixedTime := time.Date(2026, 1, 15, 12, 0, 0, 0, time.UTC)
+	SetTimeProvider(FixedTimeProvider{FixedTime: fixedTime})
+	defer ResetTimeProvider()
+
+	got := now()
+	if !got.Equal(fixedTime) {
+		t.Errorf("now() with FixedTimeProvider = %v, want %v", got, fixedTime)
+	}
+
+	ResetTimeProvider()
+	got = now()
+	if got.Equal(fixedTime) {
+		t.Error("now() after ResetTimeProvider should not return fixed time")
+	}
+}
+
+func TestFleetDeterminism_CreateFleet(t *testing.T) {
+	fixedTime := time.Date(2026, 1, 15, 12, 0, 0, 0, time.UTC)
+	SetTimeProvider(FixedTimeProvider{FixedTime: fixedTime})
+	defer ResetTimeProvider()
+
+	// Create two managers with same operations - timestamps must match
+	m1 := NewFleetManager()
+	m2 := NewFleetManager()
+
+	m1.CreateFleet("guild1", "fleet1", "cmd1")
+	m2.CreateFleet("guild1", "fleet1", "cmd1")
+
+	f1, _ := m1.GetFleet("guild1", "fleet1")
+	f2, _ := m2.GetFleet("guild1", "fleet1")
+
+	if !f1.CreatedAt.Equal(f2.CreatedAt) {
+		t.Errorf("CreatedAt mismatch: %v vs %v", f1.CreatedAt, f2.CreatedAt)
+	}
+	if !f1.UpdatedAt.Equal(f2.UpdatedAt) {
+		t.Errorf("UpdatedAt mismatch: %v vs %v", f1.UpdatedAt, f2.UpdatedAt)
+	}
+	if !f1.CreatedAt.Equal(fixedTime) {
+		t.Errorf("CreatedAt = %v, want fixed time %v", f1.CreatedAt, fixedTime)
+	}
+}
+
+func TestFleetDeterminism_AddVehicle(t *testing.T) {
+	fixedTime := time.Date(2026, 6, 1, 8, 30, 0, 0, time.UTC)
+	SetTimeProvider(FixedTimeProvider{FixedTime: fixedTime})
+	defer ResetTimeProvider()
+
+	m1 := NewFleetManager()
+	m2 := NewFleetManager()
+
+	m1.AddVehicleWithType("guild1", 1, "fleet1", SiegeCatapult, 500)
+	m2.AddVehicleWithType("guild1", 1, "fleet1", SiegeCatapult, 500)
+
+	f1, _ := m1.GetFleet("guild1", "fleet1")
+	f2, _ := m2.GetFleet("guild1", "fleet1")
+
+	v1 := f1.Vehicles[1]
+	v2 := f2.Vehicles[1]
+
+	if !v1.AddedAt.Equal(v2.AddedAt) {
+		t.Errorf("AddedAt mismatch: %v vs %v", v1.AddedAt, v2.AddedAt)
+	}
+	if !v1.LastMaintenance.Equal(v2.LastMaintenance) {
+		t.Errorf("LastMaintenance mismatch: %v vs %v", v1.LastMaintenance, v2.LastMaintenance)
+	}
+	if !v1.AddedAt.Equal(fixedTime) {
+		t.Errorf("AddedAt = %v, want fixed time %v", v1.AddedAt, fixedTime)
+	}
+}
+
+func TestFleetDeterminism_UpdatedAtConsistency(t *testing.T) {
+	fixedTime := time.Date(2026, 3, 10, 14, 0, 0, 0, time.UTC)
+	SetTimeProvider(FixedTimeProvider{FixedTime: fixedTime})
+	defer ResetTimeProvider()
+
+	m1 := NewFleetManager()
+	m2 := NewFleetManager()
+
+	// Perform identical sequences of operations
+	ops := func(m *FleetManager) {
+		m.CreateFleet("g1", "f1", "p1")
+		m.AddVehicle("g1", 1, "f1")
+		m.AddVehicle("g1", 2, "f1")
+		m.GrantAccess("g1", 1, "p2")
+		m.SetFormation("g1", "f1", FormationWedge)
+		m.SetCommander("g1", "f1", "p2")
+		m.RevokeAccess("g1", 1, "p2")
+		m.RemoveVehicle("g1", 2, "f1")
+	}
+
+	ops(m1)
+	ops(m2)
+
+	f1, _ := m1.GetFleet("g1", "f1")
+	f2, _ := m2.GetFleet("g1", "f1")
+
+	if !f1.UpdatedAt.Equal(f2.UpdatedAt) {
+		t.Errorf("UpdatedAt after identical ops: %v vs %v", f1.UpdatedAt, f2.UpdatedAt)
+	}
+	if !f1.UpdatedAt.Equal(fixedTime) {
+		t.Errorf("UpdatedAt = %v, want fixed time %v", f1.UpdatedAt, fixedTime)
+	}
+}
+
+func TestFleetDeterminism_SaveLoadWithFixedTime(t *testing.T) {
+	fixedTime := time.Date(2026, 7, 4, 10, 0, 0, 0, time.UTC)
+	SetTimeProvider(FixedTimeProvider{FixedTime: fixedTime})
+	defer ResetTimeProvider()
+
+	manager := NewFleetManager()
+	manager.CreateFleet("guild1", "fleet1", "player1")
+	manager.AddVehicleWithType("guild1", 1, "fleet1", SiegeBatteringRam, 300)
+
+	filename := "test_determinism_save.json.gz"
+	defer os.Remove(filename)
+
+	if err := manager.Save(filename); err != nil {
+		t.Fatalf("Save() error = %v", err)
+	}
+
+	loaded := NewFleetManager()
+	if err := loaded.Load(filename); err != nil {
+		t.Fatalf("Load() error = %v", err)
+	}
+
+	fleet, _ := loaded.GetFleet("guild1", "fleet1")
+	if !fleet.CreatedAt.Equal(fixedTime) {
+		t.Errorf("Loaded CreatedAt = %v, want %v", fleet.CreatedAt, fixedTime)
+	}
+
+	vehicle := fleet.Vehicles[1]
+	if !vehicle.AddedAt.Equal(fixedTime) {
+		t.Errorf("Loaded AddedAt = %v, want %v", vehicle.AddedAt, fixedTime)
+	}
+	if !vehicle.LastMaintenance.Equal(fixedTime) {
+		t.Errorf("Loaded LastMaintenance = %v, want %v", vehicle.LastMaintenance, fixedTime)
 	}
 }

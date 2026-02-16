@@ -4,6 +4,8 @@
 // gpu_bloom_headless.go provides stub GPUBloom for headless (no display) environments.
 package lighting
 
+import "github.com/hajimehoshi/ebiten/v2"
+
 // GPUBloom is a stub for headless builds where GPU shaders are unavailable.
 type GPUBloom struct {
 	config BloomConfig
@@ -28,6 +30,9 @@ func (b *GPUBloom) SetConfig(config BloomConfig) {
 func (b *GPUBloom) GetConfig() BloomConfig {
 	return b.config
 }
+
+// ApplyToBuffer is a no-op in headless mode.
+func (b *GPUBloom) ApplyToBuffer(buffer *ebiten.Image) {}
 
 // Dispose is a no-op in headless mode.
 func (b *GPUBloom) Dispose() {}

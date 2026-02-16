@@ -4,6 +4,8 @@
 package engine
 
 import (
+	log "github.com/sirupsen/logrus"
+
 	"github.com/opd-ai/venture/pkg/rendering/particles"
 )
 
@@ -78,6 +80,7 @@ func (ps *ParticleSystem) emitNewParticles(emitter *ParticleEmitterComponent, en
 
 		system, err := ps.generator.Generate(emitter.EmitConfig)
 		if err != nil {
+			log.WithField("error", err.Error()).Warn("particle generation failed")
 			continue
 		}
 

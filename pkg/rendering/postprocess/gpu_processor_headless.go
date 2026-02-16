@@ -4,6 +4,8 @@
 // gpu_processor_headless.go provides stub GPUProcessor for headless (no display) environments.
 package postprocess
 
+import "github.com/hajimehoshi/ebiten/v2"
+
 // GPUProcessor is a stub for headless builds where GPU shaders are unavailable.
 type GPUProcessor struct {
 	config Config
@@ -27,6 +29,11 @@ func (p *GPUProcessor) SetConfig(config Config) {
 // GetConfig returns the current configuration.
 func (p *GPUProcessor) GetConfig() Config {
 	return p.config
+}
+
+// ApplyAll is a no-op in headless mode; returns input unchanged.
+func (p *GPUProcessor) ApplyAll(input *ebiten.Image) *ebiten.Image {
+	return input
 }
 
 // PrecompileShaders is a no-op in headless mode.

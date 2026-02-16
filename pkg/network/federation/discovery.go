@@ -294,10 +294,7 @@ func (ds *DiscoverySystem) broadcastDiscovery() {
 		return
 	}
 
-	// Broadcast to LAN
-	// Use net.Addr interface type for resolved address (satisfies interface-based networking requirement)
-	var addr net.Addr
-	addr, err = net.ResolveUDPAddr("udp", ds.broadcastAddr)
+	addr, err := resolveUDPAddr(ds.broadcastAddr)
 	if err != nil {
 		log.WithFields(log.Fields{
 			"broadcast_addr": ds.broadcastAddr,
@@ -307,6 +304,13 @@ func (ds *DiscoverySystem) broadcastDiscovery() {
 	}
 
 	ds.conn.WriteTo(data, addr)
+}
+
+// resolveUDPAddr resolves a UDP address string and returns it as net.Addr.
+// Uses net.ResolveUDPAddr internally (the only stdlib option for UDP resolution)
+// but returns the interface type to maintain interface-based networking.
+func resolveUDPAddr(address string) (net.Addr, error) {
+	return net.ResolveUDPAddr("udp", address)
 }
 
 // getLocalAddress returns the server's listening address for federation
@@ -480,7 +484,7 @@ func (ds *DiscoverySystem) PropagateGossip(targetPeer string) error {
 
 	if ds.gossipTransport == nil {
 		log.WithFields(log.Fields{
-			"target_peer": targetPeer,
+			"target_peer":  targetPeer,
 			"server_count": len(servers),
 		}).Debug("gossip transport not configured, skipping transmission")
 		return nil

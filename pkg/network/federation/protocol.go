@@ -10,6 +10,7 @@ import (
 
 	"github.com/opd-ai/venture/pkg/engine"
 	"github.com/opd-ai/venture/pkg/version"
+	log "github.com/sirupsen/logrus"
 )
 
 const (
@@ -320,8 +321,10 @@ func (f *FederationProtocol) extractRejectionReason(response map[string]interfac
 
 // PortalSystem manages cross-server portals
 type PortalSystem struct {
-	world      *engine.World
-	federation *FederationProtocol
+	world       *engine.World
+	federation  *FederationProtocol
+	authMgr     *AuthManager
+	transferMgr *TransferManager
 }
 
 // NewPortalSystem creates a new portal system
@@ -332,7 +335,16 @@ func NewPortalSystem(world *engine.World, federation *FederationProtocol) *Porta
 	}
 }
 
-// Update processes portal interactions
+// SetManagers configures the auth and transfer managers needed for portal activation.
+// Must be called before Update() can trigger automatic portal transfers.
+func (s *PortalSystem) SetManagers(authMgr *AuthManager, transferMgr *TransferManager) {
+	s.authMgr = authMgr
+	s.transferMgr = transferMgr
+}
+
+// Update processes portal interactions. When a player is within activation
+// range (distance < 2.0) and the portal does not require manual activation,
+// the portal is activated automatically.
 func (s *PortalSystem) Update(deltaTime float64) {
 	portals := s.world.GetEntitiesWith("portal", "position")
 	players := s.world.GetEntitiesWith("player", "position")
@@ -359,11 +371,23 @@ func (s *PortalSystem) Update(deltaTime float64) {
 
 			dx := playerPos.X - portalPos.X
 			dy := playerPos.Y - portalPos.Y
-			distance := dx*dx + dy*dy
+			distSq := dx*dx + dy*dy
 
-			if distance < 4.0 {
+			if distSq < 4.0 {
 				if portalComp.RequiresActivation {
+					// Portal requires manual activation via ActivatePortal
 					continue
+				}
+				// Auto-activate portal for players in range
+				if s.authMgr == nil || s.transferMgr == nil {
+					continue
+				}
+				if err := s.ActivatePortal(player.ID, portal.ID, s.authMgr, s.transferMgr); err != nil {
+					log.WithFields(log.Fields{
+						"player_id": player.ID,
+						"portal_id": portal.ID,
+						"error":     err.Error(),
+					}).Warn("Auto portal activation failed")
 				}
 			}
 		}

@@ -796,3 +796,30 @@ func TestPropagateGossip(t *testing.T) {
 		}
 	})
 }
+
+func TestResolveUDPAddr(t *testing.T) {
+	tests := []struct {
+		name    string
+		address string
+		wantErr bool
+	}{
+		{"valid address", "127.0.0.1:8080", false},
+		{"valid broadcast", "255.255.255.255:8090", false},
+		{"invalid address", "not-an-address", true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			addr, err := resolveUDPAddr(tt.address)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("resolveUDPAddr(%q) error = %v, wantErr %v", tt.address, err, tt.wantErr)
+			}
+			if err == nil && addr == nil {
+				t.Error("resolveUDPAddr() returned nil addr without error")
+			}
+			if err == nil && addr.Network() != "udp" {
+				t.Errorf("addr.Network() = %v, want udp", addr.Network())
+			}
+		})
+	}
+}

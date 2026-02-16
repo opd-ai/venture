@@ -2,6 +2,8 @@
 package federation
 
 import (
+	crand "crypto/rand"
+	"encoding/binary"
 	"fmt"
 	"math"
 	"math/rand"
@@ -53,16 +55,16 @@ type RetryStrategy struct {
 	logger *logrus.Entry
 }
 
-// NewRetryStrategy creates a new retry strategy with the given configuration
-// If config.Seed is 0, uses time-based seed for production (non-deterministic).
+// NewRetryStrategy creates a new retry strategy with the given configuration.
+// If config.Seed is 0, uses a cryptographically random seed for production.
+// Network retry jitter is intentionally non-deterministic (unlike procgen) to
+// prevent thundering herd problems across federated servers.
 // For testing or deterministic behavior, provide a non-zero seed value.
 func NewRetryStrategy(config RetryConfig) *RetryStrategy {
 	seed := config.Seed
 	if seed == 0 {
-		// Production: use time-based seed for true randomness
-		seed = time.Now().UnixNano()
+		seed = cryptoRandSeed()
 	}
-	// Testing/deterministic: use provided seed
 
 	return &RetryStrategy{
 		config: config,
@@ -71,6 +73,16 @@ func NewRetryStrategy(config RetryConfig) *RetryStrategy {
 			"component": "retry_strategy",
 		}),
 	}
+}
+
+// cryptoRandSeed generates a random seed using crypto/rand.
+// Falls back to time-based seed if crypto/rand fails.
+func cryptoRandSeed() int64 {
+	var b [8]byte
+	if _, err := crand.Read(b[:]); err != nil {
+		return time.Now().UnixNano()
+	}
+	return int64(binary.LittleEndian.Uint64(b[:]))
 }
 
 // Execute executes the given function with retry logic

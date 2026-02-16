@@ -41,8 +41,15 @@ func (s *CompanionLearningSystem) Update(deltaTime float64) {
 
 	s.lastUpdate = now
 
-	// Process each companion
-	for companionID, comp := range s.manager.companions {
+	// Acquire read lock to safely iterate over companions map
+	s.manager.mu.RLock()
+	snapshot := make(map[string]*CompanionLearningComponent, len(s.manager.companions))
+	for k, v := range s.manager.companions {
+		snapshot[k] = v
+	}
+	s.manager.mu.RUnlock()
+
+	for companionID, comp := range snapshot {
 		s.updateCompanion(companionID, comp, deltaTime)
 	}
 }

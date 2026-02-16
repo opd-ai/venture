@@ -1,6 +1,7 @@
 package learning
 
 import (
+	"fmt"
 	"testing"
 	"time"
 )
@@ -475,4 +476,75 @@ func BenchmarkProcessCombatAction(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		ProcessCombatAction(comp, true, true)
 	}
+}
+
+// TestProcessCombatAction_NilComponent verifies nil safety.
+func TestProcessCombatAction_NilComponent(t *testing.T) {
+	// Should not panic
+	ProcessCombatAction(nil, true, true)
+	ProcessCombatAction(nil, false, false)
+}
+
+// TestProcessSocialInteraction_NilComponent verifies nil safety.
+func TestProcessSocialInteraction_NilComponent(t *testing.T) {
+	ProcessSocialInteraction(nil, "player1", true)
+	ProcessSocialInteraction(nil, "player1", false)
+}
+
+// TestProcessExploration_NilComponent verifies nil safety.
+func TestProcessExploration_NilComponent(t *testing.T) {
+	ProcessExploration(nil, true)
+	ProcessExploration(nil, false)
+}
+
+// TestAdaptBehaviorToCombatStyle_NilComponent verifies nil safety.
+func TestAdaptBehaviorToCombatStyle_NilComponent(t *testing.T) {
+	AdaptBehaviorToCombatStyle(nil, 42)
+}
+
+// TestGeneratePersonalityDescription_NilPersonality verifies nil safety.
+func TestGeneratePersonalityDescription_NilPersonality(t *testing.T) {
+	result := GeneratePersonalityDescription(nil)
+	if result != "No personality data" {
+		t.Errorf("expected 'No personality data', got %q", result)
+	}
+}
+
+// TestConcurrentUpdateAndModify verifies Update is safe during concurrent Add/Remove.
+func TestConcurrentUpdateAndModify(t *testing.T) {
+	system := NewCompanionLearningSystem(time.Millisecond)
+	manager := system.GetManager()
+
+	// Pre-populate some companions
+	for i := 0; i < 5; i++ {
+		comp := manager.AddCompanion(string(rune('A'+i)), 1.0)
+		_ = comp.SkillTree.AddExperience("Basic Attack", 50.0, 1.0)
+		comp.LastSkillUse["Basic Attack"] = time.Now().Add(-48 * time.Hour)
+	}
+
+	done := make(chan struct{})
+
+	// Concurrent Update calls
+	go func() {
+		defer func() { done <- struct{}{} }()
+		for i := 0; i < 100; i++ {
+			time.Sleep(time.Millisecond)
+			system.Update(0.016)
+		}
+	}()
+
+	// Concurrent Add/Remove of different companions (not modifying pre-existing ones)
+	go func() {
+		defer func() { done <- struct{}{} }()
+		for i := 0; i < 100; i++ {
+			id := fmt.Sprintf("dynamic-%d", i)
+			manager.AddCompanion(id, 1.0)
+			if i%3 == 0 {
+				manager.RemoveCompanion(id)
+			}
+		}
+	}()
+
+	<-done
+	<-done
 }

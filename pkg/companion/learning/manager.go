@@ -655,7 +655,11 @@ func (em *EventMemory) GetEventsByType(eventType EventType) []MemorableEvent {
 
 // ProcessCombatAction updates skills and personality based on combat behavior.
 // Uses the companion's internal time provider for deterministic timestamps.
+// Safe to call with nil comp (returns immediately).
 func ProcessCombatAction(comp *CompanionLearningComponent, aggressive, successful bool) {
+	if comp == nil {
+		return
+	}
 	log.WithFields(logrus.Fields{
 		"companion_id": comp.CompanionID,
 		"aggressive":   aggressive,
@@ -718,7 +722,11 @@ func getTimeProviderFromPersonality(pe *PersonalityEvolution) TimeProvider {
 
 // ProcessSocialInteraction updates skills and personality based on social behavior.
 // Uses the companion's internal time provider for deterministic timestamps.
+// Safe to call with nil comp (returns immediately).
 func ProcessSocialInteraction(comp *CompanionLearningComponent, playerID string, positive bool) {
+	if comp == nil {
+		return
+	}
 	log.WithFields(logrus.Fields{
 		"companion_id": comp.CompanionID,
 		"player_id":    playerID,
@@ -763,7 +771,11 @@ func ProcessSocialInteraction(comp *CompanionLearningComponent, playerID string,
 
 // ProcessExploration updates skills and personality based on exploration behavior.
 // Uses the companion's internal time provider for deterministic timestamps.
+// Safe to call with nil comp (returns immediately).
 func ProcessExploration(comp *CompanionLearningComponent, discovered bool) {
+	if comp == nil {
+		return
+	}
 	log.WithFields(logrus.Fields{
 		"companion_id": comp.CompanionID,
 		"discovered":   discovered,
@@ -803,6 +815,9 @@ func ProcessExploration(comp *CompanionLearningComponent, discovered bool) {
 
 // GeneratePersonalityDescription creates a text description of personality.
 func GeneratePersonalityDescription(pe *PersonalityEvolution) string {
+	if pe == nil {
+		return "No personality data"
+	}
 	log.Debug("Generating personality description")
 
 	dominant := pe.GetDominantTrait()
@@ -818,6 +833,9 @@ func GeneratePersonalityDescription(pe *PersonalityEvolution) string {
 
 // AdaptBehaviorToCombatStyle learns from player's combat preferences.
 func AdaptBehaviorToCombatStyle(comp *CompanionLearningComponent, seed int64) {
+	if comp == nil {
+		return
+	}
 	log.WithFields(logrus.Fields{
 		"companion_id": comp.CompanionID,
 		"seed":         seed,

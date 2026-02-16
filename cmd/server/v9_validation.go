@@ -303,7 +303,18 @@ func (v *V9ValidationService) GetGuildHousingManager() *guildhousing.Manager {
 }
 
 // Global V9 validation service instance (set during server initialization)
-var v9ValidationService *V9ValidationService
+var (
+	v9ValidationService     *V9ValidationService
+	v9ValidationServiceOnce sync.Once
+)
+
+// SetV9ValidationService sets the global V9 validation service.
+// Safe for concurrent access; only the first call takes effect.
+func SetV9ValidationService(svc *V9ValidationService) {
+	v9ValidationServiceOnce.Do(func() {
+		v9ValidationService = svc
+	})
+}
 
 // GetV9ValidationService returns the global V9 validation service.
 // Returns nil if the server has not been initialized.

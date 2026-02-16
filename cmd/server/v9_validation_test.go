@@ -266,7 +266,10 @@ func TestV9ValidationService_ValidateTrainingBonus(t *testing.T) {
 func TestV9ValidationService_ValidateGuildPermission(t *testing.T) {
 	guildMgr := guildhousing.NewManager()
 	// Create a guild house for testing
-	house := guildMgr.CreateGuildHouse("guild1", "owner1", 1)
+	house, err := guildMgr.CreateGuildHouse("guild1", "owner1", 1)
+	if err != nil {
+		t.Fatalf("failed to create guild house: %v", err)
+	}
 
 	tests := []struct {
 		name                string
@@ -326,7 +329,10 @@ func TestV9ValidationService_ValidateGuildPermission(t *testing.T) {
 
 func TestV9ValidationService_GetGuildUpgradeBonus(t *testing.T) {
 	guildMgr := guildhousing.NewManager()
-	house := guildMgr.CreateGuildHouse("guild1", "owner1", 1)
+	house, err := guildMgr.CreateGuildHouse("guild1", "owner1", 1)
+	if err != nil {
+		t.Fatalf("failed to create guild house: %v", err)
+	}
 
 	tests := []struct {
 		name         string
@@ -464,7 +470,10 @@ func BenchmarkV9ValidationService_ValidateCraftingBonus(b *testing.B) {
 
 func BenchmarkV9ValidationService_ValidateGuildPermission(b *testing.B) {
 	guildMgr := guildhousing.NewManager()
-	house := guildMgr.CreateGuildHouse("guild1", "owner1", 1)
+	house, err := guildMgr.CreateGuildHouse("guild1", "owner1", 1)
+	if err != nil {
+		b.Fatalf("failed to create guild house: %v", err)
+	}
 	service := NewV9ValidationService(nil, nil, guildMgr, nil)
 
 	b.ResetTimer()

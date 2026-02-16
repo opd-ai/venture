@@ -5,11 +5,14 @@ package main
 
 import (
 	"bytes"
+	"encoding/binary"
+	"math"
 	"os"
 	"testing"
 	"time"
 
 	"github.com/opd-ai/venture/pkg/engine"
+	"github.com/opd-ai/venture/pkg/network"
 	"github.com/sirupsen/logrus"
 )
 
@@ -781,4 +784,167 @@ func TestSystemWrappers_MoralChoiceSystemWrapper(t *testing.T) {
 
 	// Should not panic when called
 	wrapper.Update([]*engine.Entity{}, 0.016)
+}
+
+// TestPutFloat64_BinaryRoundtrip tests float64 serialization using encoding/binary.
+func TestPutFloat64_BinaryRoundtrip(t *testing.T) {
+	tests := []struct {
+		name  string
+		value float64
+	}{
+		{"zero", 0.0},
+		{"positive", 123.456},
+		{"negative", -789.012},
+		{"large", 1e18},
+		{"small", 1e-18},
+		{"max_float64", math.MaxFloat64},
+		{"min_float64", math.SmallestNonzeroFloat64},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			buf := make([]byte, 8)
+			putFloat64(buf, tt.value)
+
+			// Read back using encoding/binary
+			result := math.Float64frombits(binary.LittleEndian.Uint64(buf))
+			if result != tt.value {
+				t.Errorf("putFloat64(%v) roundtrip = %v", tt.value, result)
+			}
+		})
+	}
+}
+
+// TestSerializePosition_Roundtrip tests position serialization roundtrip.
+func TestSerializePosition_Roundtrip(t *testing.T) {
+	pos := network.Position{X: 100.5, Y: 200.75}
+	data := serializePosition(pos)
+
+	if len(data) != 16 {
+		t.Fatalf("Expected 16 bytes, got %d", len(data))
+	}
+
+	// Verify roundtrip
+	x := math.Float64frombits(binary.LittleEndian.Uint64(data[0:8]))
+	y := math.Float64frombits(binary.LittleEndian.Uint64(data[8:16]))
+
+	if x != 100.5 {
+		t.Errorf("X = %v, want 100.5", x)
+	}
+	if y != 200.75 {
+		t.Errorf("Y = %v, want 200.75", y)
+	}
+}
+
+// TestSerializeVelocity_Roundtrip tests velocity serialization roundtrip.
+func TestSerializeVelocity_Roundtrip(t *testing.T) {
+	vel := network.Velocity{VX: 5.5, VY: -3.3}
+	data := serializeVelocity(vel)
+
+	if len(data) != 16 {
+		t.Fatalf("Expected 16 bytes, got %d", len(data))
+	}
+
+	// Verify roundtrip
+	vx := math.Float64frombits(binary.LittleEndian.Uint64(data[0:8]))
+	vy := math.Float64frombits(binary.LittleEndian.Uint64(data[8:16]))
+
+	if vx != 5.5 {
+		t.Errorf("VX = %v, want 5.5", vx)
+	}
+	if vy != -3.3 {
+		t.Errorf("VY = %v, want -3.3", vy)
+	}
+}
+
+// TestConvertSnapshotToStateUpdates tests snapshot-to-update conversion.
+func TestConvertSnapshotToStateUpdates(t *testing.T) {
+	snapshot := network.WorldSnapshot{
+		Timestamp: time.Unix(1000, 0),
+		Entities: map[uint64]network.EntitySnapshot{
+			1: {
+				EntityID: 1,
+				Position: network.Position{X: 10, Y: 20},
+				Velocity: network.Velocity{VX: 1, VY: 2},
+				Components: map[string][]byte{
+					"vehicle": {1, 2, 3},
+				},
+			},
+		},
+	}
+
+	updates := convertSnapshotToStateUpdates(snapshot)
+
+	if len(updates) != 1 {
+		t.Fatalf("Expected 1 update, got %d", len(updates))
+	}
+
+	update := updates[0]
+	if update.EntityID != 1 {
+		t.Errorf("EntityID = %d, want 1", update.EntityID)
+	}
+
+	// Should have position + velocity + vehicle = 3 components
+	if len(update.Components) != 3 {
+		t.Errorf("Component count = %d, want 3", len(update.Components))
+	}
+
+	if update.Priority != network.PriorityNormal {
+		t.Errorf("Priority = %v, want PriorityNormal", update.Priority)
+	}
+}
+
+// TestGetEnvOrDefault tests environment variable retrieval with default.
+func TestGetEnvOrDefault(t *testing.T) {
+	tests := []struct {
+		name         string
+		key          string
+		defaultValue string
+		envValue     string
+		setEnv       bool
+		expected     string
+	}{
+		{"returns_default_when_unset", "TEST_UNSET_KEY_12345", "default_val", "", false, "default_val"},
+		{"returns_env_when_set", "TEST_SET_KEY_12345", "default_val", "env_val", true, "env_val"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if tt.setEnv {
+				os.Setenv(tt.key, tt.envValue)
+				defer os.Unsetenv(tt.key)
+			} else {
+				os.Unsetenv(tt.key)
+			}
+
+			result := getEnvOrDefault(tt.key, tt.defaultValue)
+			if result != tt.expected {
+				t.Errorf("got %q, want %q", result, tt.expected)
+			}
+		})
+	}
+}
+
+// TestCreatePlayerEntity_NilTerrain tests player entity creation with nil terrain.
+func TestCreatePlayerEntity_NilTerrain(t *testing.T) {
+	world := engine.NewWorld()
+	logger := createTestLogger()
+
+	// Should not panic with nil terrain
+	entity := createPlayerEntity(world, nil, 1001, 12345, "fantasy", false, logger)
+
+	if entity == nil {
+		t.Fatal("createPlayerEntity returned nil with nil terrain")
+	}
+
+	// Should use default spawn position
+	posComp, ok := entity.GetComponent("position")
+	if !ok {
+		t.Fatal("expected entity to have position component")
+	}
+	pos := posComp.(*engine.PositionComponent)
+
+	if pos.X != 400.0 || pos.Y != 300.0 {
+		t.Errorf("Expected default spawn (400, 300), got (%v, %v)", pos.X, pos.Y)
+	}
 }

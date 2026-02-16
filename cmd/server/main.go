@@ -7,6 +7,7 @@ package main
 
 import (
 	"context"
+	"encoding/binary"
 	"flag"
 	"fmt"
 	"math"
@@ -370,7 +371,7 @@ func createGameWorld(logger *logrus.Logger) (*engine.World, *engine.EnhancedChat
 	// Fix: Added V9.0 manager initialization and V9ValidationService for server-authoritative validation
 	// Roadmap: ROADMAP_V9.md (Phase 55.1-55.3, Phase 56.3, Phase 58.1)
 	stationMgr, petHomeMgr, guildHousingMgr, narrativeWorldSys, politicalWarfareSys := initializeV9SystemsServer(world, *seed, guildManager, logger)
-	v9ValidationService = NewV9ValidationService(stationMgr, petHomeMgr, guildHousingMgr, logger)
+	SetV9ValidationService(NewV9ValidationService(stationMgr, petHomeMgr, guildHousingMgr, logger))
 
 	// INTEGRATION FIX [AUDIT.md Task #6]: Wire HousingCraftingSystem into CraftingSystem
 	// Gap: Station bonuses required manual registration, no auto-discovery
@@ -860,15 +861,7 @@ func serializeVelocity(vel network.Velocity) []byte {
 
 // putFloat64 encodes a float64 to bytes using little-endian IEEE 754 format.
 func putFloat64(b []byte, v float64) {
-	bits := math.Float64bits(v)
-	b[0] = byte(bits)
-	b[1] = byte(bits >> 8)
-	b[2] = byte(bits >> 16)
-	b[3] = byte(bits >> 24)
-	b[4] = byte(bits >> 32)
-	b[5] = byte(bits >> 40)
-	b[6] = byte(bits >> 48)
-	b[7] = byte(bits >> 56)
+	binary.LittleEndian.PutUint64(b, math.Float64bits(v))
 }
 
 // startStabilityMonitoring initializes and starts the stability monitor for production validation.

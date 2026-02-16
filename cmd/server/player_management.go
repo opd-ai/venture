@@ -25,7 +25,7 @@ func createPlayerEntity(world *engine.World, terrain *terrain.Terrain, playerID 
 
 	// Find valid spawn position in first room
 	spawnX, spawnY := 400.0, 300.0 // Default spawn
-	if len(terrain.Rooms) > 0 {
+	if terrain != nil && len(terrain.Rooms) > 0 {
 		room := terrain.Rooms[0]
 		// Spawn in center of first room
 		spawnX = float64(room.X+room.Width/2) * 32 // Convert to pixel coordinates (32px tiles)

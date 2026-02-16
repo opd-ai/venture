@@ -9,7 +9,7 @@ This file tracks the audit status of all Go sub-packages in the Venture project.
 ## Core Packages
 
 ### Engine
-- [ ] `pkg/engine/` — Core ECS (400+ files, needs scoped sub-audits)
+- [x] `pkg/engine/` — Core ECS (400+ files, scoped sub-audits all complete)
   - [x] `pkg/engine/AUDIT_CORE_ECS.md` — Core ECS sub-audit complete — 4 issues fixed (0 high, 2 med, 2 low)
   - [x] `pkg/engine/AUDIT_COMBAT.md` — Combat systems sub-audit complete — 5 issues fixed (0 high, 3 med, 2 low)
   - [x] `pkg/engine/AUDIT_MOVEMENT_PHYSICS.md` — Movement & physics sub-audit complete — 4 issues fixed (0 high, 1 med, 3 low)
@@ -116,13 +116,13 @@ This file tracks the audit status of all Go sub-packages in the Venture project.
 
 ## Command Packages
 - [x] `cmd/client/AUDIT.md` — Complete — 1 high fixed (nil pointer dereference in lazy init); 4 med remaining; 32.6% coverage
-- [ ] `cmd/server/` — Not audited
-- [ ] `cmd/mobile/` — Not audited
+- [x] `cmd/server/AUDIT.md` — Complete — 3 issues fixed (2 high, 1 med); 1 low remaining; 65.6% coverage
+- [x] `cmd/mobile/AUDIT.md` — Complete — 0 issues fixed; 3 low remaining
 
 ## Audit Statistics
 - **Total Packages Identified**: ~70+
-- **Audited**: 82
-- **Completion Rate**: ~99%
+- **Audited**: 84
+- **Completion Rate**: 100%
 
 ## Priority Queue (High Integration Surface)
 1. `pkg/procgen/genre/` — Genre system affects all procgen

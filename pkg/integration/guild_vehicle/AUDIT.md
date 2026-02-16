@@ -9,7 +9,7 @@ The guild_vehicle package provides guild fleet management with formations, siege
 - [x] <severity:med> persistence — `Save()` used deferred `gzWriter.Close()` and `file.Close()` which silently dropped errors, risking data corruption on flush failures. Fixed: explicit close with error checking. (`fleet_manager.go:315-345`)
 - [x] <severity:low> validation — `CreateFleet()` and `AddVehicleWithType()` accepted empty guildID/fleetID strings. Fixed: added input validation. (`fleet_manager.go:27,62`)
 - [x] <severity:low> testability — `time.Now()` used directly in fleet/vehicle creation instead of injectable time provider. **FIXED 2026-02-16**: Replaced all 12 `time.Now()` calls with injectable TimeProvider pattern. Added `time_provider.go` with `SetTimeProvider`/`ResetTimeProvider` for testing. 7 determinism validation tests added. (`fleet_manager.go`)
-- [ ] <severity:low> persistence — `Load()` uses `err != io.EOF` check which is non-standard for JSON decoding; could mask certain decode errors. (`fleet_manager.go:355`)
+- [x] <severity:low> persistence — `Load()` uses `err != io.EOF` check which is non-standard for JSON decoding; could mask certain decode errors. **FIXED**: Replaced with `errors.Is(err, io.EOF)` for proper error chain handling. (`fleet_manager.go:371`)
 
 ## Test Coverage
 94.6% (target: 65%) ✅ **EXCEEDS TARGET**

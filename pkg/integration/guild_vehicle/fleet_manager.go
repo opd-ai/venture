@@ -3,6 +3,7 @@ package guild_vehicle
 import (
 	"compress/gzip"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -368,7 +369,12 @@ func (m *FleetManager) Load(filename string) error {
 
 	decoder := json.NewDecoder(gzReader)
 	fleets := make(map[string]*Fleet)
-	if err := decoder.Decode(&fleets); err != nil && err != io.EOF {
+	if err := decoder.Decode(&fleets); err != nil {
+		if errors.Is(err, io.EOF) {
+			// Empty file treated as empty fleet state
+			m.fleets = fleets
+			return nil
+		}
 		return fmt.Errorf("failed to decode fleets: %w", err)
 	}
 

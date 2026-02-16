@@ -165,7 +165,12 @@ func GenerateWeatherDisaster(seed int64, centerX, centerY float64, severity Seve
 }
 
 // PropagateEventCrossServer simulates event propagation to federated servers.
+// Returns nil if event is nil.
 func PropagateEventCrossServer(event *WorldEvent, targetServers []string, delay time.Duration) []*WorldEvent {
+	if event == nil {
+		return nil
+	}
+
 	propagatedEvents := make([]*WorldEvent, len(targetServers))
 
 	for i, serverID := range targetServers {
@@ -183,6 +188,8 @@ func PropagateEventCrossServer(event *WorldEvent, targetServers []string, delay 
 			Impacts:     make([]Impact, len(event.Impacts)),
 			ChainEvents: []string{},
 			Permanent:   false,
+			CenterX:     event.CenterX,
+			CenterY:     event.CenterY,
 		}
 
 		for j, impact := range event.Impacts {
@@ -213,7 +220,12 @@ func CalculateEventFrequency(baseFrequency, activityLevel float64) float64 {
 }
 
 // ShouldSpawnEvent checks if an event should spawn based on time and frequency.
+// Returns false if frequency is zero or negative.
 func ShouldSpawnEvent(lastEventTime time.Time, frequency float64) bool {
+	if frequency <= 0 {
+		return false
+	}
+
 	elapsed := time.Since(lastEventTime)
 	expectedInterval := time.Duration(60.0/frequency) * time.Minute
 

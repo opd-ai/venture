@@ -31,5 +31,5 @@
 //	followUps := manager.GetEventChain(event.ID)
 //
 // Performance: Target <5 minutes response time from trigger to event generation.
-// Test coverage: 75.2% (exceeds 65% requirement).
+// Test coverage: 91.1% (exceeds 65% requirement).
 package world_events

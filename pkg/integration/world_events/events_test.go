@@ -634,3 +634,47 @@ func TestEventWithCoordinates(t *testing.T) {
 		t.Errorf("expected radius %f, got %f", expectedRadius, radius)
 	}
 }
+
+func TestPropagateEventCrossServer_NilEvent(t *testing.T) {
+	result := PropagateEventCrossServer(nil, []string{"server_2"}, 30*time.Second)
+	if result != nil {
+		t.Errorf("expected nil result for nil event, got %v", result)
+	}
+}
+
+func TestPropagateEventCrossServer_CoordinatePropagation(t *testing.T) {
+	originalEvent := &WorldEvent{
+		ID:       "event_1",
+		Type:     EventWeatherDisaster,
+		Trigger:  TriggerWeatherChange,
+		Severity: SeverityMajor,
+		Title:    "Storm",
+		ServerID: "server_1",
+		CenterX:  150.5,
+		CenterY:  275.3,
+		StartTime: time.Now(),
+		Duration:  2 * time.Hour,
+		Impacts:  []Impact{{Type: ImpactWeather, Target: "zone_1", Modifier: 0.8}},
+	}
+
+	propagated := PropagateEventCrossServer(originalEvent, []string{"server_2"}, 30*time.Second)
+	if len(propagated) != 1 {
+		t.Fatalf("expected 1 propagated event, got %d", len(propagated))
+	}
+
+	if propagated[0].CenterX != 150.5 {
+		t.Errorf("expected CenterX 150.5, got %f", propagated[0].CenterX)
+	}
+	if propagated[0].CenterY != 275.3 {
+		t.Errorf("expected CenterY 275.3, got %f", propagated[0].CenterY)
+	}
+}
+
+func TestShouldSpawnEvent_ZeroFrequency(t *testing.T) {
+	if ShouldSpawnEvent(time.Now().Add(-24*time.Hour), 0) {
+		t.Error("expected false for zero frequency")
+	}
+	if ShouldSpawnEvent(time.Now().Add(-24*time.Hour), -1.0) {
+		t.Error("expected false for negative frequency")
+	}
+}

@@ -680,3 +680,86 @@ func BenchmarkGenerateNewRecipeTypes(b *testing.B) {
 		gen.Generate(int64(i), params)
 	}
 }
+
+// TestRecipeGenerator_HighDepthRarity tests rarity distribution at extreme depth values.
+func TestRecipeGenerator_HighDepthRarity(t *testing.T) {
+	gen := NewRecipeGenerator()
+	params := procgen.GenerationParams{
+		Difficulty: 1.0,
+		Depth:      100,
+		GenreID:    "fantasy",
+		Custom:     map[string]interface{}{"count": 50},
+	}
+
+	result, err := gen.Generate(12345, params)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	recipes := result.([]*engine.Recipe)
+	for _, recipe := range recipes {
+		if recipe.BaseSuccessChance < 0 || recipe.BaseSuccessChance > 1.0 {
+			t.Errorf("Recipe %s has invalid success chance: %f", recipe.Name, recipe.BaseSuccessChance)
+		}
+	}
+}
+
+// TestRecipeGenerator_ZeroCount tests that zero/negative count defaults to 5.
+func TestRecipeGenerator_ZeroCount(t *testing.T) {
+	gen := NewRecipeGenerator()
+
+	tests := []struct {
+		name      string
+		count     int
+		wantCount int
+	}{
+		{"zero count", 0, 5},
+		{"negative count", -1, 5},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			params := procgen.GenerationParams{
+				Difficulty: 0.5,
+				Depth:      1,
+				GenreID:    "fantasy",
+				Custom:     map[string]interface{}{"count": tt.count},
+			}
+
+			result, err := gen.Generate(12345, params)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			recipes := result.([]*engine.Recipe)
+			if len(recipes) != tt.wantCount {
+				t.Errorf("Generate() returned %d recipes, want %d", len(recipes), tt.wantCount)
+			}
+		})
+	}
+}
+
+// TestRecipeGenerator_UnknownGenreFallback tests that unknown genre falls back gracefully.
+func TestRecipeGenerator_UnknownGenreFallback(t *testing.T) {
+	gen := NewRecipeGenerator()
+	params := procgen.GenerationParams{
+		Difficulty: 0.5,
+		Depth:      1,
+		GenreID:    "nonexistent_genre",
+		Custom:     map[string]interface{}{"count": 5},
+	}
+
+	result, err := gen.Generate(12345, params)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	recipes := result.([]*engine.Recipe)
+	if len(recipes) != 5 {
+		t.Errorf("Generate() returned %d recipes, want 5", len(recipes))
+	}
+
+	if err := gen.Validate(result); err != nil {
+		t.Errorf("Validate() failed: %v", err)
+	}
+}

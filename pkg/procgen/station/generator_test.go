@@ -403,7 +403,7 @@ func TestAllGenresHaveTemplates(t *testing.T) {
 	gen := NewStationGenerator()
 
 	genres := []string{"fantasy", "scifi", "horror", "cyberpunk", "postapoc"}
-	stationTypes := []StationType{StationAlchemyTable, StationForge, StationWorkbench}
+	stationTypes := []StationType{StationAlchemyTable, StationForge, StationWorkbench, StationKitchen, StationAnvil}
 
 	for _, genre := range genres {
 		t.Run(genre, func(t *testing.T) {
@@ -465,5 +465,42 @@ func BenchmarkValidate(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		_ = gen.Validate(stations)
+	}
+}
+
+// TestGenerateStationName_EmptyNoun tests that empty Noun slice returns fallback name.
+func TestGenerateStationName_EmptyNoun(t *testing.T) {
+	gen := NewStationGenerator()
+
+	template := StationNameTemplate{
+		Prefix:    []string{"Ancient"},
+		Adjective: []string{"Magical"},
+		Noun:      []string{},
+	}
+
+	rng := newRNG(42)
+	name := gen.generateStationName(rng, template)
+	if name != "Station" {
+		t.Errorf("generateStationName() with empty Noun = %q, want %q", name, "Station")
+	}
+}
+
+// TestStationTypeString_KitchenAnvil tests String for Kitchen and Anvil types.
+func TestStationTypeString_KitchenAnvil(t *testing.T) {
+	tests := []struct {
+		stationType StationType
+		want        string
+	}{
+		{StationKitchen, "Kitchen"},
+		{StationAnvil, "Anvil"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.want, func(t *testing.T) {
+			got := tt.stationType.String()
+			if got != tt.want {
+				t.Errorf("String() = %q, want %q", got, tt.want)
+			}
+		})
 	}
 }

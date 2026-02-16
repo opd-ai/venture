@@ -202,8 +202,9 @@ func (g *StationGenerator) Validate(result interface{}) error {
 
 // generateStationName creates a station name from a template.
 func (g *StationGenerator) generateStationName(rng *rand.Rand, template StationNameTemplate) string {
-	// Combine prefix + adjective + noun
-	// Example: "Ancient Arcane Table" or "Corrupted Forge"
+	if len(template.Noun) == 0 {
+		return "Station"
+	}
 
 	var name string
 

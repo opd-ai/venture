@@ -11,6 +11,7 @@ package recipe
 
 import (
 	"fmt"
+	"math"
 	"math/rand"
 
 	"github.com/opd-ai/venture/pkg/engine"
@@ -136,10 +137,22 @@ func (g *RecipeGenerator) Validate(result interface{}) error {
 
 // generateRecipe creates a single recipe from a template.
 func (g *RecipeGenerator) generateRecipe(rng *rand.Rand, params procgen.GenerationParams, recipeType engine.RecipeType, index int) *engine.Recipe {
-	// Get templates for genre and recipe type
+	// Get templates for genre and recipe type, with fantasy fallback
 	templates := g.getTemplatesForType(params.GenreID, recipeType)
 	if len(templates) == 0 {
-		templates = g.getTemplatesForType("fantasy", recipeType) // Fallback
+		templates = g.getTemplatesForType("fantasy", recipeType)
+	}
+	if len(templates) == 0 {
+		templates = g.getTemplatesForType("", recipeType)
+	}
+	if len(templates) == 0 {
+		// Last resort: use any available potion template to avoid panic
+		for _, tmplList := range g.potionTemplates {
+			if len(tmplList) > 0 {
+				templates = tmplList
+				break
+			}
+		}
 	}
 
 	// Select random template
@@ -175,8 +188,9 @@ func (g *RecipeGenerator) generateRecipe(rng *rand.Rand, params procgen.Generati
 	goldCost = int(float64(goldCost) * (1.0 + float64(rarity)*0.5)) // Scale with rarity
 
 	baseSuccess := template.BaseSuccessRange[0] + rng.Float64()*(template.BaseSuccessRange[1]-template.BaseSuccessRange[0])
-	// Higher rarity = lower base success (more challenging)
+	// Higher rarity = lower base success (more challenging), clamped to valid range
 	baseSuccess -= float64(rarity) * 0.05
+	baseSuccess = math.Max(0.05, math.Min(1.0, baseSuccess))
 
 	craftTime := template.CraftTimeRange[0] + rng.Float64()*(template.CraftTimeRange[1]-template.CraftTimeRange[0])
 
@@ -215,7 +229,7 @@ func (g *RecipeGenerator) logGenerationStart(seed int64, params procgen.Generati
 func (g *RecipeGenerator) extractRecipeCount(params procgen.GenerationParams) int {
 	count := 5
 	if params.Custom != nil {
-		if c, ok := params.Custom["count"].(int); ok {
+		if c, ok := params.Custom["count"].(int); ok && c > 0 {
 			count = c
 		}
 	}
@@ -300,8 +314,8 @@ func (g *RecipeGenerator) calculateRarity(rng *rand.Rand, depth int, difficulty 
 	// Modified by depth and difficulty
 	roll := rng.Float64()
 
-	// Adjust thresholds based on depth and difficulty
-	rarityBonus := (float64(depth) * 0.02) + (difficulty * 0.1)
+	// Adjust thresholds based on depth and difficulty, clamped to prevent inversion
+	rarityBonus := math.Min(0.45, (float64(depth)*0.02)+(difficulty*0.1))
 
 	if roll < 0.50-rarityBonus {
 		return engine.RecipeCommon

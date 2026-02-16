@@ -1132,3 +1132,159 @@ func TestCameraSystem_BoundsZoomStored(t *testing.T) {
 		t.Errorf("BoundsZoom = %v, want 2.0", cam.BoundsZoom)
 	}
 }
+
+// TestCameraSystem_SpawnInCorner verifies that camera clamping is applied
+// immediately on the first frame when a player spawns at (0,0), before any
+// input. The terrain origin must map to screen (0,0) — no void pixels.
+func TestCameraSystem_SpawnInCorner(t *testing.T) {
+	tests := []struct {
+		name    string
+		spawnX  float64
+		spawnY  float64
+		zoom    float64
+		probeWX float64 // world X to probe (terrain corner)
+		probeWY float64 // world Y to probe (terrain corner)
+		wantSX  float64 // expected screen X
+		wantSY  float64 // expected screen Y
+	}{
+		{
+			name: "spawn at origin zoom 1.0",
+			spawnX: 0, spawnY: 0, zoom: 1.0,
+			probeWX: 0, probeWY: 0,
+			wantSX: 0, wantSY: 0,
+		},
+		{
+			name: "spawn at origin zoom 2.0",
+			spawnX: 0, spawnY: 0, zoom: 2.0,
+			probeWX: 0, probeWY: 0,
+			wantSX: 0, wantSY: 0,
+		},
+		{
+			name: "spawn at max corner zoom 1.0",
+			spawnX: 2560, spawnY: 1600, zoom: 1.0,
+			probeWX: 2560, probeWY: 1600,
+			wantSX: 800, wantSY: 600,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			sys := NewCameraSystem(800, 600)
+			entity := NewEntity(1)
+			cam := NewCameraComponent()
+			cam.Zoom = tt.zoom
+			cam.Smoothing = 0 // instant follow, no delay
+			entity.AddComponent(cam)
+			entity.AddComponent(&PositionComponent{X: tt.spawnX, Y: tt.spawnY})
+			sys.SetActiveCamera(entity)
+
+			// Bounds are set before the first update, as setupCompletePlayerEntity does.
+			SetCameraBoundsFromTerrain(cam, 2560, 1600, 800, 600)
+
+			// First frame update — no prior player input.
+			sys.Update([]*Entity{entity}, 1.0/60.0)
+
+			sx, sy := sys.WorldToScreen(tt.probeWX, tt.probeWY)
+			if math.Abs(sx-tt.wantSX) > 0.5 {
+				t.Errorf("first frame: WorldToScreen X = %v, want %v", sx, tt.wantSX)
+			}
+			if math.Abs(sy-tt.wantSY) > 0.5 {
+				t.Errorf("first frame: WorldToScreen Y = %v, want %v", sy, tt.wantSY)
+			}
+		})
+	}
+}
+
+// TestCameraSystem_CenterOfMap verifies that when the player is near the
+// center of a large map, the camera follows freely without any clamping
+// distortion — the player maps to screen center.
+func TestCameraSystem_CenterOfMap(t *testing.T) {
+	tests := []struct {
+		name    string
+		playerX float64
+		playerY float64
+		zoom    float64
+	}{
+		{"exact center zoom 1.0", 1280, 800, 1.0},
+		{"offset from center zoom 1.0", 1000, 700, 1.0},
+		{"center zoom 2.0", 1280, 800, 2.0},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			sys := NewCameraSystem(800, 600)
+			entity := NewEntity(1)
+			cam := NewCameraComponent()
+			cam.Zoom = tt.zoom
+			cam.Smoothing = 0
+			entity.AddComponent(cam)
+			entity.AddComponent(&PositionComponent{X: tt.playerX, Y: tt.playerY})
+			sys.SetActiveCamera(entity)
+
+			SetCameraBoundsFromTerrain(cam, 2560, 1600, 800, 600)
+			sys.Update([]*Entity{entity}, 1.0/60.0)
+
+			// The player's world position should map to screen center.
+			sx, sy := sys.WorldToScreen(tt.playerX, tt.playerY)
+			halfW := float64(800) / 2
+			halfH := float64(600) / 2
+			if math.Abs(sx-halfW) > 0.5 {
+				t.Errorf("player at center: screenX = %v, want %v", sx, halfW)
+			}
+			if math.Abs(sy-halfH) > 0.5 {
+				t.Errorf("player at center: screenY = %v, want %v", sy, halfH)
+			}
+		})
+	}
+}
+
+// TestCameraSystem_MapSmallerThanViewport verifies that when the map is smaller
+// than the viewport on one or both axes, the camera centres the map and the
+// player stays visible on screen regardless of position.
+func TestCameraSystem_MapSmallerThanViewport(t *testing.T) {
+	tests := []struct {
+		name     string
+		terrainW float64
+		terrainH float64
+		playerX  float64
+		playerY  float64
+	}{
+		{"small map both axes, player at origin", 400, 300, 0, 0},
+		{"small map both axes, player at max", 400, 300, 400, 300},
+		{"small map X only, player at origin", 400, 1600, 0, 0},
+		{"small map Y only, player mid", 2560, 300, 1280, 150},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			sys := NewCameraSystem(800, 600)
+			entity := NewEntity(1)
+			cam := NewCameraComponent()
+			cam.Zoom = 1.0
+			cam.Smoothing = 0
+			entity.AddComponent(cam)
+			entity.AddComponent(&PositionComponent{X: tt.playerX, Y: tt.playerY})
+			sys.SetActiveCamera(entity)
+
+			SetCameraBoundsFromTerrain(cam, tt.terrainW, tt.terrainH, 800, 600)
+			sys.Update([]*Entity{entity}, 1.0/60.0)
+
+			// For a small-map axis the camera should centre on the terrain.
+			// The terrain midpoint should be at screen centre on that axis.
+			if tt.terrainW < 800 {
+				midX := tt.terrainW / 2
+				sx, _ := sys.WorldToScreen(midX, 0)
+				if math.Abs(sx-400) > 0.5 {
+					t.Errorf("small X: terrain midpoint at screenX=%v, want 400", sx)
+				}
+			}
+			if tt.terrainH < 600 {
+				midY := tt.terrainH / 2
+				_, sy := sys.WorldToScreen(0, midY)
+				if math.Abs(sy-300) > 0.5 {
+					t.Errorf("small Y: terrain midpoint at screenY=%v, want 300", sy)
+				}
+			}
+		})
+	}
+}

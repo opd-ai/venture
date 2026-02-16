@@ -118,6 +118,10 @@ func (g *Generator) Validate(result interface{}) error {
 		return fmt.Errorf("game rules are empty")
 	}
 
+	if game.State == nil {
+		return fmt.Errorf("game state is nil")
+	}
+
 	return nil
 }
 
@@ -364,6 +368,9 @@ func (g *Generator) generateLockPickingGameName(rng *rand.Rand, genreID string) 
 
 func (g *Generator) generateHackingGameName(rng *rand.Rand, genreID string) string {
 	names := []string{"Code Breaker", "System Hack", "Terminal Access", "Network Infiltration", "Data Breach"}
+	if genreID == "cyberpunk" {
+		names = []string{"ICE Breaker", "Netrun Protocol", "Black ICE Bypass", "Cortex Hack", "Data Heist"}
+	}
 	return names[rng.Intn(len(names))]
 }
 

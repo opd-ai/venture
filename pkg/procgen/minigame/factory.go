@@ -3,6 +3,8 @@ package minigame
 import (
 	"fmt"
 
+	log "github.com/sirupsen/logrus"
+
 	"github.com/opd-ai/venture/pkg/engine"
 	"github.com/opd-ai/venture/pkg/procgen"
 	"github.com/opd-ai/venture/pkg/procgen/minigame/games"
@@ -52,6 +54,10 @@ func GameTypeToEngineType(gameType GameType) engine.MiniGameType {
 	case GameTypeRitual:
 		return engine.MiniGameRitual
 	default:
+		log.WithFields(log.Fields{
+			"game_type":   gameType,
+			"system_name": "minigame",
+		}).Warn("Unknown GameType in GameTypeToEngineType, falling back to Card")
 		return engine.MiniGameCard // fallback
 	}
 }
@@ -74,6 +80,10 @@ func EngineTypeToGameType(engineType engine.MiniGameType) GameType {
 	case engine.MiniGameRitual:
 		return GameTypeRitual
 	default:
+		log.WithFields(log.Fields{
+			"engine_type": engineType,
+			"system_name": "minigame",
+		}).Warn("Unknown engine MiniGameType in EngineTypeToGameType, falling back to Card")
 		return GameTypeCard // fallback
 	}
 }

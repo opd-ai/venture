@@ -195,6 +195,18 @@ func TestValidate(t *testing.T) {
 			},
 			wantErr: true,
 		},
+		{
+			name: "nil state",
+			game: &MiniGame{
+				Type:       GameTypeCard,
+				Name:       "Test Game",
+				Difficulty: 0.5,
+				TimeLimit:  300.0,
+				Rules:      "Test rules",
+				State:      nil,
+			},
+			wantErr: true,
+		},
 	}
 
 	for _, tt := range tests {
@@ -204,6 +216,14 @@ func TestValidate(t *testing.T) {
 				t.Errorf("Validate() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
+	}
+}
+
+func TestValidateNonMiniGameType(t *testing.T) {
+	gen := NewGenerator()
+	err := gen.Validate("not a minigame")
+	if err == nil {
+		t.Error("Validate() should error for non-*MiniGame type")
 	}
 }
 

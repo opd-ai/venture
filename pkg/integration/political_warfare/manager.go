@@ -102,12 +102,12 @@ func (m *Manager) DeclareWar(attackerGuildID, defenderGuildID string, preparatio
 	}
 
 	// Create war declaration
-	now := time.Now()
+	currentTime := now()
 	war := &WarDeclaration{
 		AttackerGuildID:   attackerGuildID,
 		DefenderGuildID:   defenderGuildID,
-		DeclaredAt:        now,
-		PreparationEnds:   now.Add(preparationPeriod),
+		DeclaredAt:        currentTime,
+		PreparationEnds:   currentTime.Add(preparationPeriod),
 		PreparationPeriod: preparationPeriod,
 		Active:            false, // Becomes active after preparation
 		Ended:             false,
@@ -143,19 +143,19 @@ func (m *Manager) SignPeaceTreaty(guildID1, guildID2 string, duration time.Durat
 	warKey := fmt.Sprintf("%s_%s", guildID1, guildID2)
 	reverseWarKey := fmt.Sprintf("%s_%s", guildID2, guildID1)
 
+	currentTime := now()
 	if war, exists := m.wars[warKey]; exists && !war.Ended {
 		war.Ended = true
-		war.EndedAt = time.Now()
+		war.EndedAt = currentTime
 		war.Active = false
 	}
 	if war, exists := m.wars[reverseWarKey]; exists && !war.Ended {
 		war.Ended = true
-		war.EndedAt = time.Now()
+		war.EndedAt = currentTime
 		war.Active = false
 	}
 
 	// Create peace treaty
-	now := time.Now()
 	treatyKey := m.makeTreatyKey(guildID1, guildID2)
 
 	// Default cooldown period: 7-14 days
@@ -167,9 +167,9 @@ func (m *Manager) SignPeaceTreaty(guildID1, guildID2 string, duration time.Durat
 	treaty := &PeaceTreaty{
 		GuildID1:     guildID1,
 		GuildID2:     guildID2,
-		SignedAt:     now,
-		ExpiresAt:    now.Add(duration),
-		CooldownEnds: now.Add(cooldownPeriod),
+		SignedAt:     currentTime,
+		ExpiresAt:    currentTime.Add(duration),
+		CooldownEnds: currentTime.Add(cooldownPeriod),
 		Duration:     duration,
 		Active:       true,
 	}
@@ -209,12 +209,11 @@ func (m *Manager) ImposeEmbargo(imposingGuildID, targetGuildID string, priceIncr
 	}
 
 	// Create embargo
-	now := time.Now()
 	embargo := &TradeEmbargo{
 		ImposingGuildID: imposingGuildID,
 		TargetGuildID:   targetGuildID,
 		PriceIncrease:   priceIncreasePercent,
-		ImposedAt:       now,
+		ImposedAt:       now(),
 		Active:          true,
 	}
 
@@ -249,7 +248,7 @@ func (m *Manager) CallReinforcementAllies(callingGuildID, targetGuildID string) 
 	call := &AllianceCall{
 		CallingGuildID:  callingGuildID,
 		TargetGuildID:   targetGuildID,
-		CalledAt:        time.Now(),
+		CalledAt:        now(),
 		ResponingAllies: make([]AllianceResponse, 0),
 		Completed:       false,
 	}
@@ -281,7 +280,7 @@ func (m *Manager) CallReinforcementAllies(callingGuildID, targetGuildID string) 
 		response := AllianceResponse{
 			AllyGuildID: allyGuildID,
 			Accepted:    accepted,
-			RespondedAt: time.Now(),
+			RespondedAt: now(),
 			SuccessRate: successRate,
 		}
 
@@ -335,7 +334,7 @@ func (m *Manager) NegotiateDiplomaticVictory(attackerGuildID, defenderGuildID st
 	if success {
 		// End war with diplomatic victory
 		war.Ended = true
-		war.EndedAt = time.Now()
+		war.EndedAt = now()
 		war.Active = false
 		war.Victor = attackerGuildID
 		war.VictoryType = VictoryTypeDiplomatic
@@ -368,25 +367,25 @@ func (m *Manager) Update(deltaTime float64) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	now := time.Now()
+	currentTime := now()
 
 	// Activate wars after preparation period
 	for _, war := range m.wars {
-		if !war.Active && !war.Ended && now.After(war.PreparationEnds) {
+		if !war.Active && !war.Ended && currentTime.After(war.PreparationEnds) {
 			war.Active = true
 		}
 	}
 
 	// Expire peace treaties
 	for _, treaty := range m.treaties {
-		if treaty.Active && now.After(treaty.ExpiresAt) {
+		if treaty.Active && currentTime.After(treaty.ExpiresAt) {
 			treaty.Active = false
 		}
 	}
 
 	// Expire trade embargoes
 	for _, embargo := range m.embargoes {
-		if embargo.Active && !embargo.ExpiresAt.IsZero() && now.After(embargo.ExpiresAt) {
+		if embargo.Active && !embargo.ExpiresAt.IsZero() && currentTime.After(embargo.ExpiresAt) {
 			embargo.Active = false
 		}
 	}
@@ -417,7 +416,7 @@ func (m *Manager) applyReputationPenaltyInternal(guildID, action string, penalty
 		GuildID:   guildID,
 		Action:    action,
 		Penalty:   penalty,
-		AppliedAt: time.Now(),
+		AppliedAt: now(),
 		FactionID: "all", // Simplified: apply to all factions
 	}
 
@@ -452,10 +451,10 @@ func (m *Manager) calculateConcessionValue(concessions []DiplomaticConcession, d
 }
 
 func (m *Manager) applyConcessions(attackerGuildID, defenderGuildID string, concessions []DiplomaticConcession, defenderGuild *guild.Guild) {
-	now := time.Now()
+	currentTime := now()
 	for _, concession := range concessions {
-		applied := m.createAppliedConcession(concession, attackerGuildID, defenderGuildID, now)
-		m.processConcessionType(concession, &applied, defenderGuild, attackerGuildID, now)
+		applied := m.createAppliedConcession(concession, attackerGuildID, defenderGuildID, currentTime)
+		m.processConcessionType(concession, &applied, defenderGuild, attackerGuildID, currentTime)
 		m.appliedConcessions = append(m.appliedConcessions, applied)
 	}
 }
@@ -554,12 +553,12 @@ func (m *Manager) GetTradeDiscount(attackerGuildID, defenderGuildID string) floa
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
-	now := time.Now()
+	currentTime := now()
 	for _, c := range m.appliedConcessions {
 		if c.Type == ConcessionTrade &&
 			c.AttackerGuildID == attackerGuildID &&
 			c.DefenderGuildID == defenderGuildID &&
-			(c.TradeDiscountEnds.IsZero() || c.TradeDiscountEnds.After(now)) {
+			(c.TradeDiscountEnds.IsZero() || c.TradeDiscountEnds.After(currentTime)) {
 			return c.TradeDiscountPct
 		}
 	}

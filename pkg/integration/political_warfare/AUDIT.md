@@ -6,7 +6,11 @@
 
 ## Issues Found and Fixed
 
-### Medium
+### High (Fixed)
+
+1. **Non-deterministic `time.Now()` usage** — All 12 `time.Now()` calls in `manager.go` replaced with injectable TimeProvider pattern for multiplayer determinism and save/load stability. Added `time_provider.go` with `TimeProvider` interface, `RealTimeProvider`, `FixedTimeProvider`, and package-level `SetTimeProvider`/`ResetTimeProvider` functions. 7 determinism validation tests added in `time_provider_test.go`.
+
+### Medium (Fixed)
 
 1. **Missing self-guild validation** — `DeclareWar`, `SignPeaceTreaty`, `ImposeEmbargo`, and `CallReinforcementAllies` did not check if both guild IDs were the same, allowing a guild to declare war on itself, embargo itself, etc. Added early validation to all four methods.
 
@@ -24,6 +28,6 @@
 
 ## Test Coverage
 
-- 40 tests, all passing
+- 47 tests, all passing
 - 94.7% statement coverage
-- Includes unit tests, edge cases, benchmarks, save/load round-trip, and integration tests
+- Includes unit tests, edge cases, benchmarks, save/load round-trip, integration tests, and determinism validation tests

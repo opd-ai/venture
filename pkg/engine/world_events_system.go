@@ -47,7 +47,7 @@ func (s *WorldEventsSystem) Update(entities []*Entity, deltaTime float64) {
 		return
 	}
 
-	s.updateTimer = 0
+	s.updateTimer -= s.updateInterval
 
 	// Check for event triggers based on world state
 	s.checkGuildWarfareTriggers()
@@ -60,15 +60,10 @@ func (s *WorldEventsSystem) Update(entities []*Entity, deltaTime float64) {
 
 // checkGuildWarfareTriggers looks for guild warfare events.
 func (s *WorldEventsSystem) checkGuildWarfareTriggers() {
-	// Count guilds in warfare
-	guildWarCount := 0
-	for _, entity := range s.world.GetEntitiesWith("guild") {
-		// Guild warfare is tracked in GuildSystem
-		// This is a placeholder for future integration
-		_ = entity
-	}
+	// Count guilds present; multiple guilds in the same world suggest warfare potential
+	guildCount := len(s.world.GetEntitiesWith("guild"))
 
-	if guildWarCount > 0 {
+	if guildCount > 1 {
 		params := world_events.TriggerParams{
 			TriggerType: world_events.TriggerGuildWar,
 			Severity:    world_events.SeverityMajor,

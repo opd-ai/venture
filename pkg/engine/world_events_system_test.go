@@ -62,10 +62,15 @@ func TestWorldEventsSystemUpdate(t *testing.T) {
 		t.Errorf("expected timer 10.0, got %f", system.updateTimer)
 	}
 
-	// Update past interval
+	// Update past interval — timer should subtract interval, not reset to 0
 	system.Update([]*Entity{}, 25.0)
 	if system.updateTimer >= 30.0 {
-		t.Error("timer should have reset after passing interval")
+		t.Error("timer should have been reduced after passing interval")
+	}
+	// With 10+25=35 accumulated and interval=30, remainder should be 5.0
+	expected := 35.0 - 30.0
+	if system.updateTimer != expected {
+		t.Errorf("expected timer %f (carried over remainder), got %f", expected, system.updateTimer)
 	}
 }
 
@@ -149,17 +154,18 @@ func TestWorldEventsSystemCheckGuildWarfareTriggers(t *testing.T) {
 	seed := int64(12345)
 	system := NewWorldEventsSystem(world, seed)
 
-	// Add some guild entities
-	guild1 := world.CreateEntity()
-	guild1.AddComponent(&stubGuildComponent{})
-
-	guild2 := world.CreateEntity()
-	guild2.AddComponent(&stubGuildComponent{})
-
-	// Check triggers (should not error)
+	// With no guilds, should not crash
 	system.checkGuildWarfareTriggers()
 
-	// Verify no crash
+	// With one guild, should not trigger (need >1)
+	guild1 := world.CreateEntity()
+	guild1.AddComponent(&stubGuildComponent{})
+	system.checkGuildWarfareTriggers()
+
+	// With two guilds, should trigger warfare event
+	guild2 := world.CreateEntity()
+	guild2.AddComponent(&stubGuildComponent{})
+	system.checkGuildWarfareTriggers()
 }
 
 func TestWorldEventsSystemCheckEconomicTriggers(t *testing.T) {

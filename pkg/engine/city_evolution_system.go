@@ -41,7 +41,7 @@ func (s *CityEvolutionSystem) Update(entities []*Entity, deltaTime float64) {
 	if s.timeAccumulator < s.updateInterval {
 		return
 	}
-	s.timeAccumulator = 0.0
+	s.timeAccumulator -= s.updateInterval
 
 	for _, entity := range entities {
 		if !entity.HasComponent("city_state") {

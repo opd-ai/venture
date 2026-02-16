@@ -1,8 +1,6 @@
 package engine
 
 import (
-	"time"
-
 	"github.com/opd-ai/venture/pkg/world/economy"
 	"github.com/sirupsen/logrus"
 )
@@ -10,47 +8,47 @@ import (
 // EconomySystem integrates the economy package managers into the ECS architecture.
 // It handles marketplace updates, guild bank interest calculation, and listing expiration.
 type EconomySystem struct {
-	world            *World
-	marketplace      *economy.FederatedMarketplace
-	guildBank        *economy.GuildBankManager
-	serverID         string
-	updateInterval   time.Duration
-	lastUpdate       time.Time
-	interestInterval time.Duration
-	lastInterest     time.Time
-	logger           *logrus.Entry
+	world                *World
+	marketplace          *economy.FederatedMarketplace
+	guildBank            *economy.GuildBankManager
+	serverID             string
+	updateInterval       float64 // seconds between marketplace updates
+	updateAccumulator    float64
+	interestInterval     float64 // seconds between interest calculations
+	interestAccumulator  float64
+	logger               *logrus.Entry
 }
 
 // NewEconomySystem creates a new economy system.
 func NewEconomySystem(world *World, serverID string) *EconomySystem {
 	logger := logrus.WithField("system_name", "economy")
 	return &EconomySystem{
-		world:            world,
-		marketplace:      economy.NewFederatedMarketplace(serverID),
-		guildBank:        economy.NewGuildBankManager(),
-		serverID:         serverID,
-		updateInterval:   5 * time.Minute, // Update marketplace every 5 minutes
-		interestInterval: 24 * time.Hour,  // Calculate interest daily
-		lastUpdate:       time.Now(),
-		lastInterest:     time.Now(),
-		logger:           logger,
+		world:               world,
+		marketplace:         economy.NewFederatedMarketplace(serverID),
+		guildBank:           economy.NewGuildBankManager(),
+		serverID:            serverID,
+		updateInterval:      300.0, // Update marketplace every 300 seconds (5 minutes)
+		updateAccumulator:   0,
+		interestInterval:    86400.0, // Calculate interest every 86400 seconds (24 hours)
+		interestAccumulator: 0,
+		logger:              logger,
 	}
 }
 
 // Update processes marketplace listings and guild bank operations.
 func (es *EconomySystem) Update(entities []*Entity, deltaTime float64) {
-	now := time.Now()
-
 	// Update marketplace (expire old listings, update pricing)
-	if now.Sub(es.lastUpdate) >= es.updateInterval {
+	es.updateAccumulator += deltaTime
+	if es.updateAccumulator >= es.updateInterval {
 		es.updateMarketplace()
-		es.lastUpdate = now
+		es.updateAccumulator -= es.updateInterval
 	}
 
 	// Calculate daily interest on guild vaults
-	if now.Sub(es.lastInterest) >= es.interestInterval {
+	es.interestAccumulator += deltaTime
+	if es.interestAccumulator >= es.interestInterval {
 		es.calculateInterest()
-		es.lastInterest = now
+		es.interestAccumulator -= es.interestInterval
 	}
 }
 

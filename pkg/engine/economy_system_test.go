@@ -2,7 +2,6 @@ package engine
 
 import (
 	"testing"
-	"time"
 
 	"github.com/opd-ai/venture/pkg/world/economy"
 )
@@ -41,27 +40,24 @@ func TestEconomySystemUpdate(t *testing.T) {
 	// Should not panic
 	sys.Update(entities, 0.016)
 
-	// Verify update intervals don't trigger immediately
-	if time.Since(sys.lastUpdate) >= sys.updateInterval {
-		t.Error("update interval should not have elapsed yet")
-	}
-	if time.Since(sys.lastInterest) >= sys.interestInterval {
-		t.Error("interest interval should not have elapsed yet")
+	// Verify accumulators track deltaTime
+	if sys.updateAccumulator < 0.016 {
+		t.Error("update accumulator should have increased")
 	}
 
-	// Force update intervals to trigger
-	sys.lastUpdate = time.Now().Add(-6 * time.Minute)
-	sys.lastInterest = time.Now().Add(-25 * time.Hour)
+	// Force marketplace update by accumulating enough time
+	sys.updateAccumulator = sys.updateInterval + 1.0
+	sys.interestAccumulator = sys.interestInterval + 1.0
 
 	// Update should trigger marketplace update and interest calculation
 	sys.Update(entities, 0.016)
 
-	// Verify intervals were reset
-	if time.Since(sys.lastUpdate) >= 1*time.Second {
-		t.Error("update interval should have been reset")
+	// Accumulators should have been reduced by subtracting interval
+	if sys.updateAccumulator >= sys.updateInterval {
+		t.Error("update accumulator should have been reduced after triggering")
 	}
-	if time.Since(sys.lastInterest) >= 1*time.Second {
-		t.Error("interest interval should have been reset")
+	if sys.interestAccumulator >= sys.interestInterval {
+		t.Error("interest accumulator should have been reduced after triggering")
 	}
 }
 

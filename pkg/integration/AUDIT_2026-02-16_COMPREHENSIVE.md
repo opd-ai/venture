@@ -6,8 +6,8 @@
 The integration package coordinates cross-system features across 10 sub-packages (51 production Go files, ~15K LOC total). Five sub-packages (choice_consequences, companion_housing, housing_crafting, narrative_world, world_events) demonstrate excellent test coverage (87-91%) with proper deterministic design via TimeProvider abstraction. However, **critical deterministic generation violations remain unresolved** with 57 `time.Now()` calls across guild_housing, trade_routes, political_warfare, guild_vehicle, and world_events packages. These violations create multiplayer desync risk and break the project's core deterministic generation requirement. Headless testing requires xvfb-run due to transitive Ebiten dependencies.
 
 ## Issues Found
-- [ ] <severity:high> deterministic procgen — Non-deterministic `time.Now()` used for house/storage/transaction IDs in guild_housing, creating multiplayer desync risk (`guild_housing/guild_housing_manager.go:78,246,355,443,568`)
-- [ ] <severity:high> deterministic procgen — Non-deterministic `time.Now()` used for 15 timestamp fields in guild_housing (CreatedAt, UpdatedAt, AddedAt, Timestamp on houses/storage/transactions), breaking save/load determinism (`guild_housing/guild_housing_manager.go:88,89,150,203,253,350,360,448,527,573`)
+- [x] <severity:high> deterministic procgen — Non-deterministic `time.Now()` used for house/storage/transaction IDs in guild_housing, creating multiplayer desync risk (`guild_housing/guild_housing_manager.go:78,246,355,443,568`) — **FIXED**: Replaced all 15 `time.Now()` calls with injectable TimeProvider pattern. Added `time_provider.go` with `SetTimeProvider`/`ResetTimeProvider` for testing. 7 determinism validation tests added.
+- [x] <severity:high> deterministic procgen — Non-deterministic `time.Now()` used for 15 timestamp fields in guild_housing (CreatedAt, UpdatedAt, AddedAt, Timestamp on houses/storage/transactions), breaking save/load determinism (`guild_housing/guild_housing_manager.go:88,89,150,203,253,350,360,448,527,573`) — **FIXED**: All timestamp fields now use injectable TimeProvider. Same fix as above.
 - [x] <severity:high> deterministic procgen — Non-deterministic `time.Now()` used for trade route timing (StartTime, EstimatedArrival, mission timing), causing desync in multiplayer trade (`trade_routes/manager.go:216,217,261,262,273,524`) — **FIXED**: Replaced all 6 `time.Now()` calls with injectable TimeProvider pattern. Added `time_provider.go` with `SetTimeProvider`/`ResetTimeProvider` for testing. 6 determinism validation tests added.
 - [ ] <severity:high> deterministic procgen — Non-deterministic `time.Now()` used extensively in political warfare for war timing, treaty expiration, embargo tracking (32+ usages), breaking multiplayer political systems (`political_warfare/manager.go:105,148,153,158,212,252,284,338,371,420,455,557` + 20 more)
 - [ ] <severity:high> deterministic procgen — Non-deterministic `time.Now()` used for fleet management timestamps (DeployedAt, LastMaintenance, NextMaintenance, mission timing), causing guild vehicle desync (`guild_vehicle/fleet_manager.go:48,49,80,81,99,100,104,125,143,164,202,219`)
@@ -21,7 +21,7 @@ The integration package coordinates cross-system features across 10 sub-packages
 **Per-Package Coverage** (xvfb-run required for all):
 - `choice_consequences`: 87.1% — Excellent table-driven tests, TimeProvider-based determinism
 - `companion_housing`: 93.5% — Comprehensive edge case coverage, proper ECS compliance
-- `guild_housing`: 91.8% — High coverage but tests don't validate determinism violations
+- `guild_housing`: 92.0% — High coverage with determinism validation via TimeProvider
 - `guild_vehicle`: 94.6% — Strong coverage but time.Now() violations untested
 - `housing_crafting`: 98.5% — Exemplary coverage, deterministic seed-based generation
 - `narrative_world`: 90.7% — Good coverage, TimeProvider abstraction validated
@@ -48,11 +48,11 @@ The integration package coordinates cross-system features across 10 sub-packages
 
 ### World Integration (`pkg/world/`)
 - `companion_housing` ✅ — Integrates housing blueprints, deterministic via TimeProvider
-- `guild_housing` ❌ — Integrates housing + guild federation but non-deterministic IDs/timestamps
+- `guild_housing` ✅ — Integrates housing + guild federation, deterministic via TimeProvider (fixed 2026-02-16)
 - `housing_crafting` ✅ — Integrates housing furniture, fully deterministic seed-based
 
 ### Network Integration (`pkg/network/`)
-- `guild_housing` ❌ — Integrates federation/guild for shared spaces, non-deterministic
+- `guild_housing` ✅ — Integrates federation/guild for shared spaces, deterministic via TimeProvider (fixed 2026-02-16)
 - `guild_vehicle` ❌ — Integrates federation/guild for fleet management, non-deterministic timestamps
 - `political_warfare` ❌ — Integrates guild federation for wars/treaties, extensive time.Now() usage
 
@@ -70,7 +70,7 @@ The integration package coordinates cross-system features across 10 sub-packages
 **No Centralized Registry** — All registration happens manually in `cmd/client/handlers.go` and `cmd/server/main.go` without discovery mechanism or documented pattern.
 
 ## Recommendations
-1. **CRITICAL**: Replace remaining 45 `time.Now()` calls with injectable TimeProvider pattern across guild_housing (15 calls), political_warfare (32 calls), guild_vehicle (12 calls). Use existing TimeProvider implementations from choice_consequences/narrative_world/world_events/trade_routes as reference. This is required for multiplayer determinism and save/load stability. (world_events and trade_routes already fixed.)
+1. **CRITICAL**: Replace remaining 44 `time.Now()` calls with injectable TimeProvider pattern across political_warfare (32 calls), guild_vehicle (12 calls). Use existing TimeProvider implementations from choice_consequences/narrative_world/world_events/trade_routes/guild_housing as reference. This is required for multiplayer determinism and save/load stability. (world_events, trade_routes, and guild_housing already fixed.)
 
 2. **CRITICAL**: Add determinism validation tests for all time-dependent packages. Create test cases that:
    - Generate IDs/timestamps with fixed TimeProvider
@@ -91,14 +91,14 @@ The integration package coordinates cross-system features across 10 sub-packages
 6. **LOW**: Consider xvfb-run wrapper script (`scripts/test-integration.sh`) to simplify CI testing of packages with transitive Ebiten dependencies.
 
 ## Deterministic Generation Compliance ❌
-**Non-Compliant** — 45 `time.Now()` violations across 3 packages create multiplayer desync risk.
+**Non-Compliant** — 44 `time.Now()` violations across 2 packages create multiplayer desync risk.
 
 ### Violations by Package:
-- `guild_housing/guild_housing_manager.go`: **15 violations** (lines 78,88,89,150,203,246,253,350,355,360,443,448,527,568,573)
 - `political_warfare/manager.go`: **32 violations** (partial list: 105,148,153,158,212,252,284,338,371,420,455,557 + 20 more)
 - `guild_vehicle/fleet_manager.go`: **12 violations** (lines 48,49,80,81,99,100,104,125,143,164,202,219)
 
 ### Recently Fixed Packages:
+- ✅ `guild_housing/guild_housing_manager.go`: **0 violations** — Fixed 2026-02-16 (15 time.Now() → TimeProvider)
 - ✅ `trade_routes/manager.go`: **0 violations** — Fixed 2026-02-16 (6 time.Now() → TimeProvider)
 - ✅ `world_events/manager.go`: **0 violations** — Fixed 2026-02-16 (6 time.Now() → TimeProvider)
 
@@ -107,6 +107,7 @@ The integration package coordinates cross-system features across 10 sub-packages
 - ✅ `narrative_world` — Uses injectable TimeProvider for all time operations
 - ✅ `companion_housing` — Uses injectable TimeProvider for all time operations
 - ✅ `housing_crafting` — No time dependency, purely seed-based generation
+- ✅ `guild_housing` — Uses injectable TimeProvider for all time operations (fixed 2026-02-16)
 - ✅ `world_events` — Uses injectable TimeProvider for all time operations (fixed 2026-02-16)
 - ✅ `trade_routes` — Uses injectable TimeProvider for all time operations (fixed 2026-02-16)
 
@@ -249,9 +250,9 @@ pkg/integration/<feature>/
 | housing_crafting | 98.5% | ✅ Seed-based | 0 | Complete |
 | narrative_world | 90.7% | ✅ TimeProvider | 0 | Complete |
 | world_events | 91.2% | ✅ TimeProvider | 0 | Complete |
-| guild_housing | 91.8% | ❌ time.Now() | 15 | Needs Work |
+| guild_housing | 92.0% | ✅ TimeProvider | 0 | Complete |
 | trade_routes | 92.4% | ✅ TimeProvider | 0 | Complete |
 | political_warfare | 94.7% | ❌ time.Now() | 32 | Needs Work |
 | guild_vehicle | 94.6% | ❌ time.Now() | 12 | Needs Work |
 
-**Overall**: 6/9 packages production-ready, 3/9 require TimeProvider migration for multiplayer determinism.
+**Overall**: 7/9 packages production-ready, 2/9 require TimeProvider migration for multiplayer determinism.

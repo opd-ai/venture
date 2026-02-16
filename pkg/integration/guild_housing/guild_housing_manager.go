@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"sync"
-	"time"
 
 	"github.com/opd-ai/venture/pkg/network/federation/guild"
 	"github.com/opd-ai/venture/pkg/world/housing"
@@ -75,7 +74,7 @@ func (m *Manager) CreateGuildHouse(guildID, ownerID string, size housing.Buildin
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	houseID := fmt.Sprintf("ghouse-%s-%d", guildID, time.Now().UnixNano())
+	houseID := fmt.Sprintf("ghouse-%s-%d", guildID, now().UnixNano())
 	house := &GuildHouse{
 		HouseID:     houseID,
 		GuildID:     guildID,
@@ -85,8 +84,8 @@ func (m *Manager) CreateGuildHouse(guildID, ownerID string, size housing.Buildin
 		Tier:        TierBasic,
 		Stations:    []string{},
 		Storage:     nil,
-		CreatedAt:   time.Now(),
-		UpdatedAt:   time.Now(),
+		CreatedAt:   now(),
+		UpdatedAt:   now(),
 	}
 
 	m.houses[houseID] = house
@@ -147,7 +146,7 @@ func (m *Manager) SetPermission(houseID string, rank guild.Rank, permission Perm
 	}
 
 	house.Permissions[rank] = permission
-	house.UpdatedAt = time.Now()
+	house.UpdatedAt = now()
 	return nil
 }
 
@@ -200,7 +199,7 @@ func (m *Manager) AddCraftingStation(houseID, stationID string) error {
 	}
 
 	house.Stations = append(house.Stations, stationID)
-	house.UpdatedAt = time.Now()
+	house.UpdatedAt = now()
 	return nil
 }
 
@@ -243,14 +242,14 @@ func (m *Manager) CreateGuildStorage(guildID string, capacity int) (*GuildStorag
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	storageID := fmt.Sprintf("gstorage-%s-%d", guildID, time.Now().UnixNano())
+	storageID := fmt.Sprintf("gstorage-%s-%d", guildID, now().UnixNano())
 	storage := &GuildStorage{
 		StorageID:    storageID,
 		GuildID:      guildID,
 		Capacity:     capacity,
 		Items:        make(map[string]*StoredItem),
 		Transactions: []*Transaction{},
-		CreatedAt:    time.Now(),
+		CreatedAt:    now(),
 	}
 
 	m.storage[storageID] = storage
@@ -347,17 +346,17 @@ func (m *Manager) DepositItem(storageID, playerID, itemID string, quantity int) 
 			ItemID:   itemID,
 			Quantity: quantity,
 			AddedBy:  playerID,
-			AddedAt:  time.Now(),
+			AddedAt:  now(),
 		}
 	}
 
 	transaction := &Transaction{
-		TransactionID: fmt.Sprintf("tx-%d", time.Now().UnixNano()),
+		TransactionID: fmt.Sprintf("tx-%d", now().UnixNano()),
 		PlayerID:      playerID,
 		ItemID:        itemID,
 		Quantity:      quantity,
 		Action:        TransactionDeposit,
-		Timestamp:     time.Now(),
+		Timestamp:     now(),
 	}
 	storage.Transactions = append(storage.Transactions, transaction)
 
@@ -440,12 +439,12 @@ func (m *Manager) WithdrawItem(storageID, playerID, itemID string, quantity int)
 	}
 
 	transaction := &Transaction{
-		TransactionID: fmt.Sprintf("tx-%d", time.Now().UnixNano()),
+		TransactionID: fmt.Sprintf("tx-%d", now().UnixNano()),
 		PlayerID:      playerID,
 		ItemID:        itemID,
 		Quantity:      withdrawn,
 		Action:        TransactionWithdraw,
-		Timestamp:     time.Now(),
+		Timestamp:     now(),
 	}
 	storage.Transactions = append(storage.Transactions, transaction)
 
@@ -524,7 +523,7 @@ func (m *Manager) UpgradeHouse(houseID string, goldSpent int) error {
 	}
 
 	house.Tier = nextTier
-	house.UpdatedAt = time.Now()
+	house.UpdatedAt = now()
 	return nil
 }
 
@@ -565,12 +564,12 @@ func (m *Manager) CreateMeetingHall(guildID string, maxCapacity int) (*MeetingHa
 	}
 
 	hall := &MeetingHall{
-		HallID:      fmt.Sprintf("hall-%s-%d", guildID, time.Now().UnixNano()),
+		HallID:      fmt.Sprintf("hall-%s-%d", guildID, now().UnixNano()),
 		GuildID:     guildID,
 		ChatRadius:  150.0, // +50% from base 100.0
 		MaxCapacity: maxCapacity,
 		Members:     []string{},
-		CreatedAt:   time.Now(),
+		CreatedAt:   now(),
 	}
 	return hall, nil
 }

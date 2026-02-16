@@ -3,6 +3,7 @@ package guild_housing
 import (
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/opd-ai/venture/pkg/network/federation/guild"
 	"github.com/opd-ai/venture/pkg/world/housing"
@@ -993,5 +994,177 @@ func BenchmarkAddMemberToHall(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		manager.AddMemberToHall(hall, "player-001")
 		hall.Members = hall.Members[:len(hall.Members)-1]
+	}
+}
+
+// Determinism validation tests
+
+func TestTimeProviderSetReset(t *testing.T) {
+	fixedTime := time.Date(2026, 1, 1, 12, 0, 0, 0, time.UTC)
+	SetTimeProvider(FixedTimeProvider{FixedTime: fixedTime})
+	defer ResetTimeProvider()
+
+	got := now()
+	if !got.Equal(fixedTime) {
+		t.Errorf("now() = %v, want %v", got, fixedTime)
+	}
+
+	ResetTimeProvider()
+	got = now()
+	if got.Equal(fixedTime) {
+		t.Error("now() should return real time after ResetTimeProvider()")
+	}
+}
+
+func TestCreateGuildHouseDeterminism(t *testing.T) {
+	fixedTime := time.Date(2026, 6, 15, 10, 30, 0, 123456789, time.UTC)
+	SetTimeProvider(FixedTimeProvider{FixedTime: fixedTime})
+	defer ResetTimeProvider()
+
+	m1 := NewManager()
+	house1, err := m1.CreateGuildHouse("guild-001", "player-001", housing.SizeMedium)
+	if err != nil {
+		t.Fatalf("CreateGuildHouse() error = %v", err)
+	}
+
+	m2 := NewManager()
+	house2, err := m2.CreateGuildHouse("guild-001", "player-001", housing.SizeMedium)
+	if err != nil {
+		t.Fatalf("CreateGuildHouse() error = %v", err)
+	}
+
+	if house1.HouseID != house2.HouseID {
+		t.Errorf("HouseID not deterministic: %v != %v", house1.HouseID, house2.HouseID)
+	}
+	if !house1.CreatedAt.Equal(house2.CreatedAt) {
+		t.Errorf("CreatedAt not deterministic: %v != %v", house1.CreatedAt, house2.CreatedAt)
+	}
+	if !house1.UpdatedAt.Equal(house2.UpdatedAt) {
+		t.Errorf("UpdatedAt not deterministic: %v != %v", house1.UpdatedAt, house2.UpdatedAt)
+	}
+	if !house1.CreatedAt.Equal(fixedTime) {
+		t.Errorf("CreatedAt = %v, want %v", house1.CreatedAt, fixedTime)
+	}
+}
+
+func TestCreateGuildStorageDeterminism(t *testing.T) {
+	fixedTime := time.Date(2026, 6, 15, 10, 30, 0, 123456789, time.UTC)
+	SetTimeProvider(FixedTimeProvider{FixedTime: fixedTime})
+	defer ResetTimeProvider()
+
+	m1 := NewManager()
+	s1, err := m1.CreateGuildStorage("guild-001", 500)
+	if err != nil {
+		t.Fatalf("CreateGuildStorage() error = %v", err)
+	}
+
+	m2 := NewManager()
+	s2, err := m2.CreateGuildStorage("guild-001", 500)
+	if err != nil {
+		t.Fatalf("CreateGuildStorage() error = %v", err)
+	}
+
+	if s1.StorageID != s2.StorageID {
+		t.Errorf("StorageID not deterministic: %v != %v", s1.StorageID, s2.StorageID)
+	}
+	if !s1.CreatedAt.Equal(s2.CreatedAt) {
+		t.Errorf("CreatedAt not deterministic: %v != %v", s1.CreatedAt, s2.CreatedAt)
+	}
+}
+
+func TestDepositItemDeterminism(t *testing.T) {
+	fixedTime := time.Date(2026, 6, 15, 10, 30, 0, 123456789, time.UTC)
+	SetTimeProvider(FixedTimeProvider{FixedTime: fixedTime})
+	defer ResetTimeProvider()
+
+	m1 := NewManager()
+	s1, _ := m1.CreateGuildStorage("guild-001", 500)
+	m1.DepositItem(s1.StorageID, "player-001", "item-001", 10)
+
+	m2 := NewManager()
+	s2, _ := m2.CreateGuildStorage("guild-001", 500)
+	m2.DepositItem(s2.StorageID, "player-001", "item-001", 10)
+
+	txns1, _ := m1.GetTransactions(s1.StorageID)
+	txns2, _ := m2.GetTransactions(s2.StorageID)
+
+	if txns1[0].TransactionID != txns2[0].TransactionID {
+		t.Errorf("TransactionID not deterministic: %v != %v", txns1[0].TransactionID, txns2[0].TransactionID)
+	}
+	if !txns1[0].Timestamp.Equal(txns2[0].Timestamp) {
+		t.Errorf("Timestamp not deterministic: %v != %v", txns1[0].Timestamp, txns2[0].Timestamp)
+	}
+	if !txns1[0].Timestamp.Equal(fixedTime) {
+		t.Errorf("Timestamp = %v, want %v", txns1[0].Timestamp, fixedTime)
+	}
+}
+
+func TestWithdrawItemDeterminism(t *testing.T) {
+	fixedTime := time.Date(2026, 6, 15, 10, 30, 0, 123456789, time.UTC)
+	SetTimeProvider(FixedTimeProvider{FixedTime: fixedTime})
+	defer ResetTimeProvider()
+
+	m1 := NewManager()
+	s1, _ := m1.CreateGuildStorage("guild-001", 500)
+	m1.DepositItem(s1.StorageID, "player-001", "item-001", 10)
+	m1.WithdrawItem(s1.StorageID, "player-002", "item-001", 5)
+
+	m2 := NewManager()
+	s2, _ := m2.CreateGuildStorage("guild-001", 500)
+	m2.DepositItem(s2.StorageID, "player-001", "item-001", 10)
+	m2.WithdrawItem(s2.StorageID, "player-002", "item-001", 5)
+
+	txns1, _ := m1.GetTransactions(s1.StorageID)
+	txns2, _ := m2.GetTransactions(s2.StorageID)
+
+	// Verify withdraw transaction (index 1) is deterministic
+	if txns1[1].TransactionID != txns2[1].TransactionID {
+		t.Errorf("Withdraw TransactionID not deterministic: %v != %v", txns1[1].TransactionID, txns2[1].TransactionID)
+	}
+	if !txns1[1].Timestamp.Equal(txns2[1].Timestamp) {
+		t.Errorf("Withdraw Timestamp not deterministic: %v != %v", txns1[1].Timestamp, txns2[1].Timestamp)
+	}
+}
+
+func TestCreateMeetingHallDeterminism(t *testing.T) {
+	fixedTime := time.Date(2026, 6, 15, 10, 30, 0, 123456789, time.UTC)
+	SetTimeProvider(FixedTimeProvider{FixedTime: fixedTime})
+	defer ResetTimeProvider()
+
+	m1 := NewManager()
+	hall1, err := m1.CreateMeetingHall("guild-001", 50)
+	if err != nil {
+		t.Fatalf("CreateMeetingHall() error = %v", err)
+	}
+
+	m2 := NewManager()
+	hall2, err := m2.CreateMeetingHall("guild-001", 50)
+	if err != nil {
+		t.Fatalf("CreateMeetingHall() error = %v", err)
+	}
+
+	if hall1.HallID != hall2.HallID {
+		t.Errorf("HallID not deterministic: %v != %v", hall1.HallID, hall2.HallID)
+	}
+	if !hall1.CreatedAt.Equal(hall2.CreatedAt) {
+		t.Errorf("CreatedAt not deterministic: %v != %v", hall1.CreatedAt, hall2.CreatedAt)
+	}
+	if !hall1.CreatedAt.Equal(fixedTime) {
+		t.Errorf("CreatedAt = %v, want %v", hall1.CreatedAt, fixedTime)
+	}
+}
+
+func TestUpgradeHouseDeterminism(t *testing.T) {
+	fixedTime := time.Date(2026, 6, 15, 10, 30, 0, 123456789, time.UTC)
+	SetTimeProvider(FixedTimeProvider{FixedTime: fixedTime})
+	defer ResetTimeProvider()
+
+	manager := NewManager()
+	house, _ := manager.CreateGuildHouse("guild-001", "player-001", housing.SizeMedium)
+	manager.UpgradeHouse(house.HouseID, 10000)
+
+	retrieved, _ := manager.GetGuildHouse(house.HouseID)
+	if !retrieved.UpdatedAt.Equal(fixedTime) {
+		t.Errorf("UpdatedAt after upgrade = %v, want %v", retrieved.UpdatedAt, fixedTime)
 	}
 }

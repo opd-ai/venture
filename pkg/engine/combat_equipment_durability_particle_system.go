@@ -8,6 +8,7 @@
 package engine
 
 import (
+	"math"
 	"math/rand"
 
 	"github.com/opd-ai/venture/pkg/rendering/particles"
@@ -138,9 +139,9 @@ func (s *CombatEquipmentDurabilityParticleSystem) OnDamageTaken(attacker, target
 			s.lastStateCache[target.ID][slot] = oldState
 		}
 
-		// Apply durability loss
+		// Apply durability loss (use ceiling to ensure at least 1 point lost when there is damage)
 		oldDurability := item.Stats.Durability
-		item.Stats.Durability -= int(lossPerPiece)
+		item.Stats.Durability -= int(math.Ceil(lossPerPiece))
 		if item.Stats.Durability < 0 {
 			item.Stats.Durability = 0
 		}

@@ -218,6 +218,22 @@ type TeamComponent struct {
 	TeamID int
 }
 
+// StatusEffectSetComponent holds multiple concurrent status effects on an entity.
+// Use this when an entity needs to have multiple status effects active simultaneously.
+type StatusEffectSetComponent struct {
+	Effects []*StatusEffectComponent
+}
+
+// Type returns the component type identifier.
+func (s *StatusEffectSetComponent) Type() string {
+	return "status_effect_set"
+}
+
+// AddEffect adds a status effect to the set.
+func (s *StatusEffectSetComponent) AddEffect(effect *StatusEffectComponent) {
+	s.Effects = append(s.Effects, effect)
+}
+
 // Type returns the component type identifier.
 func (t *TeamComponent) Type() string {
 	return "team"

@@ -9,7 +9,8 @@ import (
 
 // ParticleSystem manages particle emitters and updates particle effects.
 type ParticleSystem struct {
-	generator *particles.Generator
+	generator    *particles.Generator
+	spawnedCount int
 }
 
 // NewParticleSystem creates a new particle system.
@@ -137,6 +138,8 @@ func (ps *ParticleSystem) SpawnParticles(world *World, config particles.Config, 
 	emitter := NewParticleEmitterComponent(0, config, 1) // One-shot (rate = 0)
 	emitter.AddSystem(system)
 	entity.AddComponent(emitter)
+
+	ps.spawnedCount++
 
 	return entity
 }
@@ -289,5 +292,5 @@ func (ps *ParticleSystem) SpawnDebris(world *World, x, y, groundY float64, seed 
 
 // GetActiveParticleCount returns the number of active particle entities.
 func (ps *ParticleSystem) GetActiveParticleCount() int {
-	return 0
+	return ps.spawnedCount
 }

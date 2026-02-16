@@ -829,3 +829,261 @@ func TestCameraSystem_RecalculateBoundsNoTerrainDims(t *testing.T) {
 		t.Errorf("bounds changed without terrain dimensions: MinX was %v, now %v", origMinX, cam.MinX)
 	}
 }
+
+// TestCameraSystem_CornerClamping verifies that when the player is at any map
+// corner the camera clamps so zero void pixels are visible.
+func TestCameraSystem_CornerClamping(t *testing.T) {
+	tests := []struct {
+		name     string
+		zoom     float64
+		terrainW float64
+		terrainH float64
+		screenW  int
+		screenH  int
+		// Player position at a corner
+		playerX float64
+		playerY float64
+		// Expected screen coordinate of the terrain corner closest to the player
+		cornerWorldX float64
+		cornerWorldY float64
+		wantScreenX  float64
+		wantScreenY  float64
+	}{
+		{
+			name: "top-left corner zoom 1.0",
+			zoom: 1.0, terrainW: 2560, terrainH: 1600, screenW: 800, screenH: 600,
+			playerX: 0, playerY: 0,
+			cornerWorldX: 0, cornerWorldY: 0,
+			wantScreenX: 0, wantScreenY: 0,
+		},
+		{
+			name: "bottom-right corner zoom 1.0",
+			zoom: 1.0, terrainW: 2560, terrainH: 1600, screenW: 800, screenH: 600,
+			playerX: 2560, playerY: 1600,
+			cornerWorldX: 2560, cornerWorldY: 1600,
+			wantScreenX: 800, wantScreenY: 600,
+		},
+		{
+			name: "top-right corner zoom 1.0",
+			zoom: 1.0, terrainW: 2560, terrainH: 1600, screenW: 800, screenH: 600,
+			playerX: 2560, playerY: 0,
+			cornerWorldX: 2560, cornerWorldY: 0,
+			wantScreenX: 800, wantScreenY: 0,
+		},
+		{
+			name: "bottom-left corner zoom 1.0",
+			zoom: 1.0, terrainW: 2560, terrainH: 1600, screenW: 800, screenH: 600,
+			playerX: 0, playerY: 1600,
+			cornerWorldX: 0, cornerWorldY: 1600,
+			wantScreenX: 0, wantScreenY: 600,
+		},
+		{
+			name: "top-left corner zoom 0.5",
+			zoom: 0.5, terrainW: 2560, terrainH: 1600, screenW: 800, screenH: 600,
+			playerX: 0, playerY: 0,
+			cornerWorldX: 0, cornerWorldY: 0,
+			wantScreenX: 0, wantScreenY: 0,
+		},
+		{
+			name: "bottom-right corner zoom 2.0",
+			zoom: 2.0, terrainW: 2560, terrainH: 1600, screenW: 800, screenH: 600,
+			playerX: 2560, playerY: 1600,
+			cornerWorldX: 2560, cornerWorldY: 1600,
+			wantScreenX: 800, wantScreenY: 600,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			sys := NewCameraSystem(tt.screenW, tt.screenH)
+			entity := NewEntity(1)
+			cam := NewCameraComponent()
+			cam.Zoom = tt.zoom
+			cam.Smoothing = 0 // instant follow
+			entity.AddComponent(cam)
+			entity.AddComponent(&PositionComponent{X: tt.playerX, Y: tt.playerY})
+			sys.SetActiveCamera(entity)
+
+			SetCameraBoundsFromTerrain(cam, tt.terrainW, tt.terrainH, tt.screenW, tt.screenH)
+
+			// Run one update to position the camera
+			sys.Update([]*Entity{entity}, 1.0/60.0)
+
+			sx, sy := sys.WorldToScreen(tt.cornerWorldX, tt.cornerWorldY)
+			if math.Abs(sx-tt.wantScreenX) > 0.5 {
+				t.Errorf("WorldToScreen X for corner (%v,%v) = %v, want %v",
+					tt.cornerWorldX, tt.cornerWorldY, sx, tt.wantScreenX)
+			}
+			if math.Abs(sy-tt.wantScreenY) > 0.5 {
+				t.Errorf("WorldToScreen Y for corner (%v,%v) = %v, want %v",
+					tt.cornerWorldX, tt.cornerWorldY, sy, tt.wantScreenY)
+			}
+		})
+	}
+}
+
+// TestCameraSystem_EdgeClamping verifies that when the player is along a single
+// edge, that edge aligns flush with the corresponding screen edge.
+func TestCameraSystem_EdgeClamping(t *testing.T) {
+	tests := []struct {
+		name       string
+		zoom       float64
+		playerX    float64
+		playerY    float64
+		probeX     float64 // world X to probe
+		probeY     float64 // world Y to probe
+		wantEdge   string  // which screen edge should align
+		wantScreen float64 // expected screen coordinate on that axis
+	}{
+		{"left edge zoom 1.0", 1.0, 0, 800, 0, 800, "left", 0},
+		{"right edge zoom 1.0", 1.0, 2560, 800, 2560, 800, "right", 800},
+		{"top edge zoom 1.0", 1.0, 1280, 0, 1280, 0, "top", 0},
+		{"bottom edge zoom 1.0", 1.0, 1280, 1600, 1280, 1600, "bottom", 600},
+		{"left edge zoom 2.0", 2.0, 0, 800, 0, 800, "left", 0},
+		{"right edge zoom 0.5", 0.5, 2560, 800, 2560, 800, "right", 800},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			sys := NewCameraSystem(800, 600)
+			entity := NewEntity(1)
+			cam := NewCameraComponent()
+			cam.Zoom = tt.zoom
+			cam.Smoothing = 0
+			entity.AddComponent(cam)
+			entity.AddComponent(&PositionComponent{X: tt.playerX, Y: tt.playerY})
+			sys.SetActiveCamera(entity)
+
+			SetCameraBoundsFromTerrain(cam, 2560, 1600, 800, 600)
+			sys.Update([]*Entity{entity}, 1.0/60.0)
+
+			sx, sy := sys.WorldToScreen(tt.probeX, tt.probeY)
+
+			switch tt.wantEdge {
+			case "left", "right":
+				if math.Abs(sx-tt.wantScreen) > 0.5 {
+					t.Errorf("%s: screenX = %v, want %v", tt.wantEdge, sx, tt.wantScreen)
+				}
+			case "top", "bottom":
+				if math.Abs(sy-tt.wantScreen) > 0.5 {
+					t.Errorf("%s: screenY = %v, want %v", tt.wantEdge, sy, tt.wantScreen)
+				}
+			}
+		})
+	}
+}
+
+// TestCameraSystem_ZoomChangedRecalculatesBounds verifies that camera bounds
+// are automatically recalculated when the zoom level changes.
+func TestCameraSystem_ZoomChangedRecalculatesBounds(t *testing.T) {
+	tests := []struct {
+		name       string
+		initialZ   float64
+		newZ       float64
+		terrainW   float64
+		terrainH   float64
+		screenW    int
+		screenH    int
+		wantMinX   float64
+		wantMaxX   float64
+	}{
+		{
+			name: "zoom in from 1.0 to 2.0",
+			initialZ: 1.0, newZ: 2.0,
+			terrainW: 2560, terrainH: 1600, screenW: 800, screenH: 600,
+			wantMinX: 200, wantMaxX: 2360,
+		},
+		{
+			name: "zoom out from 1.0 to 0.5",
+			initialZ: 1.0, newZ: 0.5,
+			terrainW: 2560, terrainH: 1600, screenW: 800, screenH: 600,
+			wantMinX: 800, wantMaxX: 1760,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			sys := NewCameraSystem(tt.screenW, tt.screenH)
+			entity := NewEntity(1)
+			cam := NewCameraComponent()
+			cam.Zoom = tt.initialZ
+			cam.Smoothing = 0
+			entity.AddComponent(cam)
+			entity.AddComponent(&PositionComponent{X: 1280, Y: 800})
+			sys.SetActiveCamera(entity)
+
+			SetCameraBoundsFromTerrain(cam, tt.terrainW, tt.terrainH, tt.screenW, tt.screenH)
+			sys.Update([]*Entity{entity}, 1.0/60.0)
+
+			// Change zoom and update
+			cam.Zoom = tt.newZ
+			sys.Update([]*Entity{entity}, 1.0/60.0)
+
+			if math.Abs(cam.MinX-tt.wantMinX) > 0.001 {
+				t.Errorf("after zoom change: MinX = %v, want %v", cam.MinX, tt.wantMinX)
+			}
+			if math.Abs(cam.MaxX-tt.wantMaxX) > 0.001 {
+				t.Errorf("after zoom change: MaxX = %v, want %v", cam.MaxX, tt.wantMaxX)
+			}
+		})
+	}
+}
+
+// TestCameraSystem_InterpolationClamped verifies that interpolated camera
+// positions (used in WorldToScreenInterpolated) are clamped to bounds.
+func TestCameraSystem_InterpolationClamped(t *testing.T) {
+	tests := []struct {
+		name  string
+		zoom  float64
+		prevX float64
+		prevY float64
+		curX  float64
+		curY  float64
+		alpha float64
+	}{
+		{"prev outside bounds zoom 1.0", 1.0, 0, 0, 400, 300, 0.5},
+		{"prev outside bounds zoom 2.0", 2.0, 0, 0, 200, 150, 0.5},
+		{"prev outside bounds zoom 0.5", 0.5, 0, 0, 800, 600, 0.5},
+		{"alpha near zero", 1.0, 0, 0, 400, 300, 0.1},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			sys := NewCameraSystem(800, 600)
+			entity := NewEntity(1)
+			cam := NewCameraComponent()
+			cam.Zoom = tt.zoom
+			cam.X = tt.curX
+			cam.Y = tt.curY
+			cam.PrevX = tt.prevX
+			cam.PrevY = tt.prevY
+			entity.AddComponent(cam)
+			entity.AddComponent(&PositionComponent{X: tt.curX, Y: tt.curY})
+			sys.SetActiveCamera(entity)
+
+			SetCameraBoundsFromTerrain(cam, 2560, 1600, 800, 600)
+
+			// Probe the top-left terrain corner. If interpolation is properly
+			// clamped, the corner should appear at screen (0,0) or to the right/below.
+			sx, sy := sys.WorldToScreenInterpolated(0, 0, tt.alpha)
+			if sx < -0.5 {
+				t.Errorf("terrain origin mapped to screenX=%v, expected >= 0 (no void)", sx)
+			}
+			if sy < -0.5 {
+				t.Errorf("terrain origin mapped to screenY=%v, expected >= 0 (no void)", sy)
+			}
+		})
+	}
+}
+
+// TestCameraSystem_BoundsZoomStored verifies that SetCameraBoundsFromTerrain
+// stores the zoom level used for the bounds calculation.
+func TestCameraSystem_BoundsZoomStored(t *testing.T) {
+	cam := NewCameraComponent()
+	cam.Zoom = 2.0
+	SetCameraBoundsFromTerrain(cam, 2560, 1600, 800, 600)
+
+	if cam.BoundsZoom != 2.0 {
+		t.Errorf("BoundsZoom = %v, want 2.0", cam.BoundsZoom)
+	}
+}

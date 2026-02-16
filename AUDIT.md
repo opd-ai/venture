@@ -11,6 +11,7 @@ This file tracks the audit status of all Go sub-packages in the Venture project.
 ### Engine
 - [ ] `pkg/engine/` — Core ECS (400+ files, needs scoped sub-audits)
   - [x] `pkg/engine/AUDIT_CORE_ECS.md` — Core ECS sub-audit complete — 4 issues fixed (0 high, 2 med, 2 low)
+  - [x] `pkg/engine/AUDIT_COMBAT.md` — Combat systems sub-audit complete — 5 issues fixed (0 high, 3 med, 2 low)
 
 ### Procedural Generation (`pkg/procgen/`)
 - [x] `pkg/procgen/building/AUDIT.md` — Complete — 0 issues

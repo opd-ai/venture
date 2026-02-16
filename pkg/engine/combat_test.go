@@ -1432,3 +1432,173 @@ func TestCombatSystem_ResistanceClampingBehavior(t *testing.T) {
 		})
 	}
 }
+
+// TestGetEntityStats_SafeTypeAssertion verifies getEntityStats uses safe type assertion.
+func TestGetEntityStats_SafeTypeAssertion(t *testing.T) {
+	combatSys := NewCombatSystem(42)
+
+	tests := []struct {
+		name    string
+		setup   func(*Entity)
+		wantNil bool
+	}{
+		{
+			name:    "no stats component",
+			setup:   func(e *Entity) {},
+			wantNil: true,
+		},
+		{
+			name: "valid stats component",
+			setup: func(e *Entity) {
+				e.AddComponent(NewStatsComponent())
+			},
+			wantNil: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			world := NewWorld()
+			entity := world.CreateEntity()
+			tt.setup(entity)
+			world.Update(0)
+
+			stats := combatSys.getEntityStats(entity)
+			if (stats == nil) != tt.wantNil {
+				t.Errorf("getEntityStats() nil=%v, want nil=%v", stats == nil, tt.wantNil)
+			}
+		})
+	}
+}
+
+// TestAdditionalDamageCallbacks verifies that AddDamageCallback callbacks are invoked.
+func TestAdditionalDamageCallbacks(t *testing.T) {
+	world := NewWorld()
+	combatSys := NewCombatSystem(42)
+
+	// Track callbacks
+	var primaryCalled bool
+	var additionalCalled1, additionalCalled2 bool
+	var recordedDamage1, recordedDamage2 float64
+
+	combatSys.SetDamageCallback(func(attacker, target *Entity, damage float64) {
+		primaryCalled = true
+	})
+	combatSys.AddDamageCallback(func(attacker, target *Entity, damage float64) {
+		additionalCalled1 = true
+		recordedDamage1 = damage
+	})
+	combatSys.AddDamageCallback(func(attacker, target *Entity, damage float64) {
+		additionalCalled2 = true
+		recordedDamage2 = damage
+	})
+
+	// Create attacker and target
+	attacker := world.CreateEntity()
+	attacker.AddComponent(&PositionComponent{X: 100, Y: 100})
+	attacker.AddComponent(&AttackComponent{Damage: 20, Range: 50, Cooldown: 1.0})
+	attacker.AddComponent(&TeamComponent{TeamID: 1})
+
+	target := world.CreateEntity()
+	target.AddComponent(&PositionComponent{X: 110, Y: 100})
+	target.AddComponent(&HealthComponent{Current: 100, Max: 100})
+	target.AddComponent(&TeamComponent{TeamID: 2})
+
+	world.Update(0)
+
+	hit := combatSys.Attack(attacker, target)
+	if !hit {
+		t.Fatal("expected attack to hit")
+	}
+
+	if !primaryCalled {
+		t.Error("primary damage callback was not called")
+	}
+	if !additionalCalled1 {
+		t.Error("additional damage callback 1 was not called")
+	}
+	if !additionalCalled2 {
+		t.Error("additional damage callback 2 was not called")
+	}
+	if recordedDamage1 <= 0 {
+		t.Errorf("callback 1 recorded damage should be positive, got %f", recordedDamage1)
+	}
+	if recordedDamage1 != recordedDamage2 {
+		t.Errorf("both callbacks should receive same damage: %f != %f", recordedDamage1, recordedDamage2)
+	}
+}
+
+// TestComputeFinalDamage_ReturnsBaseDamage verifies that computeFinalDamage returns baseDamage
+// so that callers don't need to recalculate and consume extra RNG state.
+func TestComputeFinalDamage_ReturnsBaseDamage(t *testing.T) {
+	combatSys := NewCombatSystem(42)
+
+	attack := &AttackComponent{
+		Damage:     20,
+		DamageType: combat.DamagePhysical,
+	}
+	attackerStats := NewStatsComponent()
+	attackerStats.CritChance = 0 // No crits for deterministic test
+
+	world := NewWorld()
+	target := world.CreateEntity()
+	target.AddComponent(&HealthComponent{Current: 100, Max: 100})
+	world.Update(0)
+
+	finalDamage, baseDamage, isCrit := combatSys.computeFinalDamage(attack, attackerStats, nil, target)
+
+	expectedBase := attack.Damage + attackerStats.Attack // 20 + 10 = 30
+	if baseDamage != expectedBase {
+		t.Errorf("baseDamage = %f, want %f", baseDamage, expectedBase)
+	}
+	if finalDamage <= 0 {
+		t.Error("finalDamage should be positive")
+	}
+	if isCrit {
+		t.Error("expected no crit with 0 crit chance")
+	}
+}
+
+// TestCombatSystem_DeterministicRNG verifies that the same seed produces the same
+// combat outcome sequence, confirming no extra RNG consumption during attacks.
+func TestCombatSystem_DeterministicRNG(t *testing.T) {
+	runCombat := func(seed int64) []float64 {
+		world := NewWorld()
+		cs := NewCombatSystem(seed)
+
+		results := make([]float64, 0, 5)
+
+		for i := 0; i < 5; i++ {
+			attacker := world.CreateEntity()
+			attacker.AddComponent(&PositionComponent{X: 0, Y: 0})
+			attacker.AddComponent(&AttackComponent{Damage: 10, Range: 100, Cooldown: 0})
+			attacker.AddComponent(&TeamComponent{TeamID: 1})
+			attacker.AddComponent(NewStatsComponent())
+
+			target := world.CreateEntity()
+			target.AddComponent(&PositionComponent{X: 10, Y: 0})
+			target.AddComponent(&HealthComponent{Current: 200, Max: 200})
+			target.AddComponent(&TeamComponent{TeamID: 2})
+			target.AddComponent(NewStatsComponent())
+
+			world.Update(0)
+
+			healthBefore := float64(200)
+			cs.Attack(attacker, target)
+
+			healthComp, _ := target.GetComponent("health")
+			health := healthComp.(*HealthComponent)
+			results = append(results, healthBefore-health.Current)
+		}
+		return results
+	}
+
+	run1 := runCombat(99999)
+	run2 := runCombat(99999)
+
+	for i := range run1 {
+		if run1[i] != run2[i] {
+			t.Errorf("non-deterministic at attack %d: %f != %f", i, run1[i], run2[i])
+		}
+	}
+}

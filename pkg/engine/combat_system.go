@@ -448,7 +448,7 @@ func (s *CombatSystem) executeMeleeAttack(attacker, target *Entity, attack *Atta
 	// Check for block - reduces damage by 50% if successful
 	blocked := s.checkBlock(attacker, target, targetStats)
 
-	finalDamage, isCrit := s.computeFinalDamage(attack, attackerStats, targetStats, target)
+	finalDamage, baseDamage, isCrit := s.computeFinalDamage(attack, attackerStats, targetStats, target)
 	if finalDamage <= 0 {
 		attack.ResetCooldown()
 		s.logDamageAbsorbed(attacker, target)
@@ -464,12 +464,13 @@ func (s *CombatSystem) executeMeleeAttack(attacker, target *Entity, attack *Atta
 		}
 	}
 
-	s.applyDamageAndFeedback(attacker, target, health, attack, finalDamage, isCrit)
+	s.applyDamageAndFeedback(attacker, target, health, attack, finalDamage, baseDamage, isCrit)
 	return true
 }
 
 // computeFinalDamage calculates the final damage after all modifiers.
-func (s *CombatSystem) computeFinalDamage(attack *AttackComponent, attackerStats, targetStats *StatsComponent, target *Entity) (float64, bool) {
+// Returns (finalDamage, baseDamage, isCrit) to avoid redundant RNG-consuming recalculation.
+func (s *CombatSystem) computeFinalDamage(attack *AttackComponent, attackerStats, targetStats *StatsComponent, target *Entity) (float64, float64, bool) {
 	baseDamage, isCrit := s.calculateDamage(attack, attackerStats)
 	damageAfterResist := s.applyDefenseAndResistance(baseDamage, attack.DamageType, targetStats)
 
@@ -487,18 +488,22 @@ func (s *CombatSystem) computeFinalDamage(attack *AttackComponent, attackerStats
 	}
 
 	finalDamage = s.applyShieldAbsorption(target, finalDamage)
-	return finalDamage, isCrit
+	return finalDamage, baseDamage, isCrit
 }
 
 // applyDamageAndFeedback applies damage to target and triggers all feedback.
-func (s *CombatSystem) applyDamageAndFeedback(attacker, target *Entity, health *HealthComponent, attack *AttackComponent, finalDamage float64, isCrit bool) {
-	baseDamage, _ := s.calculateDamage(attack, s.getEntityStats(attacker))
+func (s *CombatSystem) applyDamageAndFeedback(attacker, target *Entity, health *HealthComponent, attack *AttackComponent, finalDamage, baseDamage float64, isCrit bool) {
 	health.TakeDamage(finalDamage)
 	s.applyAttackFeedback(attacker, target, finalDamage, baseDamage, attack.DamageType, isCrit, health.Current)
 	attack.ResetCooldown()
 
 	if s.onDamageCallback != nil {
 		s.onDamageCallback(attacker, target, finalDamage)
+	}
+
+	// Trigger additional damage callbacks
+	for _, cb := range s.additionalDamageCallbacks {
+		cb(attacker, target, finalDamage)
 	}
 
 	// Trigger critical hit callback for visual effects
@@ -544,7 +549,6 @@ func (s *CombatSystem) logDamageAbsorbed(attacker, target *Entity) {
 	}
 }
 
-// getEntityStats retrieves the stats component from an entity, returns nil if not present.
 // applyAttackFeedback triggers all visual and audio feedback for an attack.
 func (s *CombatSystem) applyAttackFeedback(attacker, target *Entity, finalDamage, baseDamage float64, damageType combat.DamageType, isCrit bool, targetHealth float64) {
 	s.triggerAttackAnimation(attacker)
@@ -586,12 +590,17 @@ func (s *CombatSystem) playCombatSFX(target *Entity, damageType combat.DamageTyp
 	}
 }
 
+// getEntityStats retrieves the stats component from an entity, returns nil if not present.
 func (s *CombatSystem) getEntityStats(entity *Entity) *StatsComponent {
-	statsComp, _ := entity.GetComponent("stats")
-	if statsComp != nil {
-		return statsComp.(*StatsComponent)
+	statsComp, ok := entity.GetComponent("stats")
+	if !ok || statsComp == nil {
+		return nil
 	}
-	return nil
+	stats, ok := statsComp.(*StatsComponent)
+	if !ok {
+		return nil
+	}
+	return stats
 }
 
 // checkEvasion determines if an attack is evaded based on target evasion stats.
@@ -850,7 +859,9 @@ func (s *CombatSystem) triggerScreenShake(target *Entity, finalDamage float64, i
 		targetHealthComp, _ := target.GetComponent("health")
 		var maxHP float64 = 100 // Default
 		if targetHealthComp != nil {
-			maxHP = targetHealthComp.(*HealthComponent).Max
+			if health, ok := targetHealthComp.(*HealthComponent); ok {
+				maxHP = health.Max
+			}
 		}
 
 		// Calculate shake intensity based on damage relative to max HP

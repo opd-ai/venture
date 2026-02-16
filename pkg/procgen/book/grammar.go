@@ -27,9 +27,23 @@ func (g *Grammar) AddRule(symbol string, expansions []string) {
 	g.Rules[symbol] = expansions
 }
 
+// maxExpansionDepth limits recursive grammar expansion to prevent stack overflow
+// from circular rule references.
+const maxExpansionDepth = 20
+
 // Expand recursively expands a rule to generate text.
 // Originally from: content.go
 func (g *Grammar) Expand(symbol string) string {
+	return g.expandWithDepth(symbol, 0)
+}
+
+// expandWithDepth recursively expands a rule with depth tracking to prevent
+// infinite recursion from circular rule references.
+func (g *Grammar) expandWithDepth(symbol string, depth int) string {
+	if depth > maxExpansionDepth {
+		return symbol
+	}
+
 	// Check if it's a rule reference (surrounded by #)
 	if !strings.HasPrefix(symbol, "#") || !strings.HasSuffix(symbol, "#") {
 		return symbol
@@ -56,7 +70,7 @@ func (g *Grammar) Expand(symbol string) string {
 		if ch == '#' {
 			if inRule {
 				// End of rule - expand it
-				result.WriteString(g.Expand("#" + current.String() + "#"))
+				result.WriteString(g.expandWithDepth("#"+current.String()+"#", depth+1))
 				current.Reset()
 				inRule = false
 			} else {

@@ -500,6 +500,22 @@ func BenchmarkGenerateRecipeBook(b *testing.B) {
 	}
 }
 
+// TestGrammarExpandCircularRules tests that circular grammar rules don't cause
+// infinite recursion by verifying the depth limit terminates expansion.
+func TestGrammarExpandCircularRules(t *testing.T) {
+	rng := &testRng{value: 0}
+	grammar := NewGrammar(rng)
+	grammar.AddRule("a", []string{"#b# text"})
+	grammar.AddRule("b", []string{"#a# more"})
+
+	// Should not panic or hang; returns with unexpanded reference at depth limit
+	result := grammar.Expand("#a#")
+	if result == "" {
+		t.Error("Expected non-empty result from circular grammar expansion")
+	}
+	t.Logf("Circular expansion result: %s", result)
+}
+
 // BenchmarkGenerateHistoryBook benchmarks history book generation.
 func BenchmarkGenerateHistoryBook(b *testing.B) {
 	gen := NewGenerator()

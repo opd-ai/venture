@@ -240,8 +240,8 @@ func (p *Peer) Close() error {
 	p.mu.Unlock()
 
 	log.WithFields(log.Fields{
-		"peer_id":        p.ID,
-		"was_connected":  wasConnected,
+		"peer_id":       p.ID,
+		"was_connected": wasConnected,
 	}).Debug("peer connection closed")
 
 	// Only close closeChan if processMessages goroutine is running

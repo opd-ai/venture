@@ -68,11 +68,13 @@ func (g *Guild) Type() string {
 	return "guild"
 }
 
-// HasPermission checks if a rank has a specific permission.
+// HasPermission checks if a rank has a specific permission in the given guild.
 // It returns true if the given rank is granted the specified permission
 // according to the guild's permission configuration. Returns false if
 // the rank has no permissions configured or lacks the specific permission.
-func (g *Guild) HasPermission(rank Rank, perm Permission) bool {
+// This is a standalone function (not a method on Guild) to maintain ECS purity:
+// Guild is a pure data component with no behavior methods beyond Type().
+func HasPermission(g *Guild, rank Rank, perm Permission) bool {
 	perms, exists := g.Permissions[rank]
 	if !exists {
 		return false
@@ -85,11 +87,13 @@ func (g *Guild) HasPermission(rank Rank, perm Permission) bool {
 	return false
 }
 
-// GetMember returns a pointer to the Member with the given player ID.
+// GetMember returns a pointer to the Member with the given player ID in the guild.
 // Returns nil if no member with that ID exists in the guild.
 // The returned pointer points directly to the member in the guild's slice,
 // so modifications will affect the guild state.
-func (g *Guild) GetMember(playerID string) *Member {
+// This is a standalone function (not a method on Guild) to maintain ECS purity:
+// Guild is a pure data component with no behavior methods beyond Type().
+func GetMember(g *Guild, playerID string) *Member {
 	for i := range g.Members {
 		if g.Members[i].PlayerID == playerID {
 			return &g.Members[i]

@@ -1,5 +1,9 @@
 // Package guild provides cross-server guild management with federation sync.
 //
+// This package integrates with the parent pkg/network/federation package for
+// cross-server communication. Guild state is synchronized via the GuildTransport
+// interface, which should be implemented by the federation transport layer.
+//
 // # INTEGRATION FIX [Category G]: Guild Federation Package Creation
 //
 // Gap: ROADMAP_V8.md Phase 50.1 specifies pkg/network/federation/guild/ but package did not exist

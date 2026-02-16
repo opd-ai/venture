@@ -20,6 +20,7 @@ import (
 	"errors"
 	"fmt"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/google/uuid"
@@ -47,13 +48,19 @@ type Manager struct {
 	transport        GuildTransport // Transport for broadcasting guild updates to peers
 }
 
-// NewManager creates a new guild manager
-func NewManager() *Manager {
+// NewManager creates a new guild manager.
+// An optional serverID may be provided for deterministic testing.
+// If omitted, a random UUID-based server ID is generated.
+func NewManager(serverID ...string) *Manager {
+	sid := fmt.Sprintf("server-%s", uuid.New().String())
+	if len(serverID) > 0 && serverID[0] != "" {
+		sid = serverID[0]
+	}
 	m := &Manager{
 		guilds:           make(map[string]*Guild),
 		federatedServers: make([]string, 0),
 		messageHandlers:  make(map[MessageType]func(msg GuildMessage) error),
-		serverID:         fmt.Sprintf("server-%s", uuid.New().String()),
+		serverID:         sid,
 		logger:           logrus.WithField("component", "guild_manager"),
 		guildCounter:     0,
 	}
@@ -75,8 +82,8 @@ func (m *Manager) CreateGuild(genre, leaderID string, seed int64) (string, error
 	defer m.mu.Unlock()
 
 	// Generate deterministic guild ID using seed and counter
-	m.guildCounter++
-	guildID := fmt.Sprintf("guild-%d-%s-%d", seed, leaderID, m.guildCounter)
+	atomic.AddInt64(&m.guildCounter, 1)
+	guildID := fmt.Sprintf("guild-%d-%s-%d", seed, leaderID, atomic.LoadInt64(&m.guildCounter))
 
 	// Generate procedural guild identity using the provided seed
 	identity := GenerateIdentity(genre, seed)
@@ -246,11 +253,11 @@ func (m *Manager) getGuildUnsafe(guildID string) (*Guild, error) {
 
 // validatePromoterPermissions checks if promoter has permission to promote.
 func (m *Manager) validatePromoterPermissions(guild *Guild, promoterID string) (*Member, error) {
-	promoter := guild.GetMember(promoterID)
+	promoter := GetMember(guild, promoterID)
 	if promoter == nil {
 		return nil, fmt.Errorf("promoter not a member of guild")
 	}
-	if !guild.HasPermission(promoter.Rank, PermissionPromote) {
+	if !HasPermission(guild, promoter.Rank, PermissionPromote) {
 		return nil, fmt.Errorf("insufficient permissions to promote")
 	}
 	return promoter, nil

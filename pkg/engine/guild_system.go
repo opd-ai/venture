@@ -221,7 +221,7 @@ func (s *GuildSystem) PromoteMember(promoterEntity *Entity, targetPlayerID strin
 
 			// Get updated rank from manager
 			targetGuild, _ := s.manager.GetGuild(guildID)
-			member := targetGuild.GetMember(targetPlayerID)
+			member := guild.GetMember(targetGuild, targetPlayerID)
 			if member != nil {
 				gc.Rank = string(member.Rank)
 			}
@@ -381,7 +381,7 @@ func (s *GuildSystem) ApplyGuildUpdate(guildID string, guildData []byte) error {
 		if gc.GuildID == guildID {
 			// Find member in updated guild data
 			playerID := strconv.FormatUint(entity.ID, 10)
-			member := guildObj.GetMember(playerID)
+			member := guild.GetMember(guildObj, playerID)
 			if member != nil {
 				// Update rank if changed
 				gc.Rank = string(member.Rank)

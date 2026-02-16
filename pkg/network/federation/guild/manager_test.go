@@ -108,7 +108,7 @@ func TestAddMember(t *testing.T) {
 		}
 
 		// Verify member exists
-		member := guild.GetMember("player1")
+		member := GetMember(guild, "player1")
 		if member == nil {
 			t.Fatal("Member not found")
 		}
@@ -183,7 +183,7 @@ func TestPromoteMember(t *testing.T) {
 		}
 
 		guild, _ := m.GetGuild(guildID)
-		member := guild.GetMember("player1")
+		member := GetMember(guild, "player1")
 		if member == nil {
 			t.Fatal("Member not found")
 		}
@@ -199,7 +199,7 @@ func TestPromoteMember(t *testing.T) {
 		}
 
 		guild, _ := m.GetGuild(guildID)
-		member := guild.GetMember("player1")
+		member := GetMember(guild, "player1")
 		if member.Rank != RankOfficer {
 			t.Errorf("Rank = %s, want %s", member.Rank, RankOfficer)
 		}
@@ -217,7 +217,7 @@ func TestPromoteMember(t *testing.T) {
 		}
 
 		// Old leader should be demoted to officer
-		oldLeader := guild.GetMember("leader")
+		oldLeader := GetMember(guild, "leader")
 		if oldLeader == nil {
 			t.Fatal("Old leader not found")
 		}
@@ -490,7 +490,7 @@ func TestGuildHasPermission(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := guild.HasPermission(tt.rank, tt.perm)
+			got := HasPermission(guild, tt.rank, tt.perm)
 			if got != tt.want {
 				t.Errorf("HasPermission(%s, %s) = %v, want %v", tt.rank, tt.perm, got, tt.want)
 			}
@@ -505,7 +505,7 @@ func TestGetMember(t *testing.T) {
 	guild, _ := m.GetGuild(guildID)
 
 	t.Run("existing member", func(t *testing.T) {
-		member := guild.GetMember("player1")
+		member := GetMember(guild, "player1")
 		if member == nil {
 			t.Fatal("GetMember returned nil for existing member")
 		}
@@ -515,7 +515,7 @@ func TestGetMember(t *testing.T) {
 	})
 
 	t.Run("non-existing member", func(t *testing.T) {
-		member := guild.GetMember("nonexistent")
+		member := GetMember(guild, "nonexistent")
 		if member != nil {
 			t.Error("GetMember should return nil for non-existing member")
 		}
@@ -592,7 +592,7 @@ func BenchmarkHasPermission(b *testing.B) {
 	guild, _ := m.GetGuild(guildID)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		guild.HasPermission(RankLeader, PermissionInvite)
+		HasPermission(guild, RankLeader, PermissionInvite)
 	}
 }
 
@@ -963,7 +963,7 @@ func TestHandleGuildMessage_MemberJoin(t *testing.T) {
 
 	// Verify member was added
 	guild, _ := m.GetGuild(guildID)
-	member := guild.GetMember("new-player")
+	member := GetMember(guild, "new-player")
 	if member == nil {
 		t.Fatal("New member not found after join message")
 	}
@@ -996,7 +996,7 @@ func TestHandleGuildMessage_MemberLeave(t *testing.T) {
 
 	// Verify member was removed
 	guild, _ := m.GetGuild(guildID)
-	member := guild.GetMember("leaving-player")
+	member := GetMember(guild, "leaving-player")
 	if member != nil {
 		t.Error("Member should be removed after leave message")
 	}
@@ -1105,7 +1105,7 @@ func TestHandleGuildMessage_JSONDeserialization(t *testing.T) {
 
 	// Verify member was added
 	guild, _ := m.GetGuild(guildID)
-	member := guild.GetMember("json-player")
+	member := GetMember(guild, "json-player")
 	if member == nil {
 		t.Fatal("Member not found after JSON join message")
 	}
@@ -1239,8 +1239,8 @@ func TestCrossFederationScenario(t *testing.T) {
 		t.Error("Member count mismatch across servers")
 	}
 
-	member1 := guild1Updated.GetMember("player-on-server-2")
-	member2 := guild2Updated.GetMember("player-on-server-2")
+	member1 := GetMember(guild1Updated, "player-on-server-2")
+	member2 := GetMember(guild2Updated, "player-on-server-2")
 
 	if member1 == nil || member2 == nil {
 		t.Fatal("Member not found on one or both servers")

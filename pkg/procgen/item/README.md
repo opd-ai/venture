@@ -181,7 +181,7 @@ go test -cover ./pkg/procgen/item/
 go test -v ./pkg/procgen/item/
 ```
 
-Current test coverage: **93.8%**
+Current test coverage: **92.0%**
 
 ## Integration
 

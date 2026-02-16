@@ -505,7 +505,19 @@ func (v *CombatValidator) playerDefeatsBoss(playerStats, boss struct{ Attack, De
 	return false
 }
 
-// calculateRSquared computes the coefficient of determination for linear regression.
+// calculateRSquared computes the coefficient of determination (R²) for
+// ordinary least squares linear regression. R² measures how well the
+// regression line fits the observed data.
+//
+// Formula: R² = 1 - (SS_res / SS_tot)
+//
+//	SS_res = Σ(yᵢ - ŷᵢ)²  (residual sum of squares)
+//	SS_tot = Σ(yᵢ - ȳ)²   (total sum of squares)
+//	ŷᵢ = m·xᵢ + b         (predicted value from regression line)
+//
+// Returns a value in [0, 1] where 1 indicates a perfect linear fit and
+// 0 indicates no linear relationship. Returns 0.0 if fewer than 2 data
+// points are provided or if x and y have different lengths.
 func (v *CombatValidator) calculateRSquared(x, y []float64) float64 {
 	if len(x) != len(y) || len(x) < 2 {
 		return 0.0

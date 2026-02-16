@@ -27,9 +27,9 @@ This file tracks the audit status of all Go sub-packages in the Venture project.
 - [x] `pkg/procgen/entity/AUDIT.md` — Complete — 0 issues
 - [x] `pkg/procgen/faction/AUDIT.md` — Complete — 3 issues (0 high, 0 med, 3 low)
 - [x] `pkg/procgen/furniture/AUDIT.md` — Complete — 0 issues
-- [x] `pkg/procgen/item/AUDIT_2026-02-13_COMPREHENSIVE.md` — Complete — Multiple issues documented
+- [x] `pkg/procgen/item/AUDIT_2026-02-13_COMPREHENSIVE.md` — Complete — All issues fixed
 - [x] `pkg/procgen/magic/AUDIT.md` — Complete — 0 issues
-- [x] `pkg/procgen/quest/AUDIT.md` — Complete — 0 issues
+- [x] `pkg/procgen/quest/AUDIT.md` — Complete — 5 issues fixed (2 high, 1 med, 2 low); 90.7% coverage
 - [x] `pkg/procgen/skills/AUDIT.md` — Complete — 0 issues
 - [x] `pkg/procgen/terrain/AUDIT.md` — Complete — 0 issues
 - [x] `pkg/procgen/book/AUDIT.md` — Complete — 5 issues (0 high, 1 med fixed, 4 low)
@@ -104,7 +104,7 @@ This file tracks the audit status of all Go sub-packages in the Venture project.
 - [x] `pkg/modding/AUDIT.md` — Complete — 3 issues (0 high, 1 med, 2 low)
 - [x] `pkg/narrative/AUDIT.md` — Complete — 1 issue fixed (0 high, 1 med, 0 low); 1 low remaining; 91.2% coverage
 - [x] `pkg/ux/AUDIT.md` — Complete — 1 issue fixed (0 high, 0 med, 1 low); 96.5% coverage
-- [x] `pkg/balance/AUDIT_2026-02-13_COMPREHENSIVE.md` — Complete — 2 high fixed, 1 med fixed, 1 low remaining; ~90% estimated coverage
+- [x] `pkg/balance/AUDIT_2026-02-13_COMPREHENSIVE.md` — Complete — 2 high fixed, 1 med fixed, 1 low fixed; ~90% estimated coverage
 - [x] `pkg/class/AUDIT.md` — Complete — 3 issues (0 high, 0 med, 3 low); 89.0% coverage
 - [x] `pkg/companion/AUDIT.md` — Complete — 2 issues fixed (0 high, 1 med, 1 low); 2 low remaining; 92.5% coverage
 - [x] `pkg/social/AUDIT.md` — Complete — 3 issues (0 high, 0 med, 3 low); 98.0%/92.5% coverage

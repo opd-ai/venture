@@ -9,7 +9,7 @@ The balance package provides automated statistical validation of game balance ac
 - [x] **high** Stub/incomplete — 6 validators documented but not implemented: ProgressionValidator, SocialValidator, HousingValidator, VehicleValidator, CompanionValidator, QuestValidator are referenced in `doc.go:3-12`, simulation counts defined in `types.go:58-67`, acceptance thresholds in `types.go:68-96`, but no implementation files exist (`combat.go` and `economic.go` exist, but `progression.go`, `social.go`, `housing.go`, `vehicle.go`, `companion.go`, `quest.go` do not) — **FIXED 2026-02-13**: All 6 validators implemented with full simulation logic, metrics collection, and structured logging
 - [x] **high** Missing functionality — No progress logging during 10K combat simulations which take ~30 seconds; long-running validations run silently without feedback — **FIXED 2026-02-13**: Added progress logging with logrus.WithFields in all simulation loops (combat class balance, weapon balance, boss difficulty, economic loot value, crafting profit, gold balance)
 - [x] **med** Logging — Zero usage of `logrus.WithFields` structured logging throughout package — **FIXED 2026-02-13**: Added logrus import and structured logging to both combat.go and economic.go with domain, test, progress, duration, and error fields
-- [ ] **low** Documentation — Statistical helper functions lack detailed godoc explaining formulas: `calculateRSquared` (`combat.go:438-471`) and `calculateCorrelation` (`economic.go:177-206`) should document the mathematical formulas (coefficient of determination, Pearson correlation) for maintainability
+- [x] **low** Documentation — Statistical helper functions lack detailed godoc explaining formulas: `calculateRSquared` (`combat.go:438-471`) and `calculateCorrelation` (`economic.go:177-206`) should document the mathematical formulas (coefficient of determination, Pearson correlation) for maintainability — **FIXED 2026-02-16**: Added comprehensive godoc with formulas, return value ranges, and edge case documentation
 
 ## Test Coverage
 **Unable to measure** — Tests fail with Ebiten GUI initialization error (`glfw: X11: The DISPLAY environment variable is missing`) due to transitive dependency via `pkg/engine` import for `CharacterClass` enum (`combat.go:10`).
@@ -123,7 +123,7 @@ Target: 65% — **LIKELY EXCEEDS** (pending test infrastructure fix to avoid Ebi
 - ✅ Excellent package-level documentation (`doc.go`: 108 lines with examples, acceptance criteria, performance notes)
 - ✅ All exported types have godoc comments
 - ✅ All exported functions have godoc comments
-- ⚠️ **MINOR**: Unexported statistical helpers could use more detailed mathematical documentation
+- ✅ **MINOR**: Unexported statistical helpers now have detailed mathematical documentation
 
 ### Integration Points ✅
 - ✅ **INTEGRATED**: Used by `cmd/server/validation.go:41-75` at server startup

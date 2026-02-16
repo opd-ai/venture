@@ -69,7 +69,7 @@ func TestMobileMenu_GetItemHeight(t *testing.T) {
 		want       float64
 	}{
 		{"empty_menu", 400, 0, minMenuItemHeight},
-		{"few_items_stretch", 400, 2, 200},             // 400/2=200 > 48
+		{"few_items_stretch", 400, 2, 200},                 // 400/2=200 > 48
 		{"many_items_use_min", 200, 20, minMenuItemHeight}, // 200/20=10 < 48
 		{"exact_min_boundary", 480, 10, minMenuItemHeight}, // 480/10=48 == 48
 	}
@@ -105,11 +105,11 @@ func TestMobileMenu_SwipeVerticalDetection(t *testing.T) {
 		isVertical bool
 	}{
 		{"right_horizontal", 0.0, false},
-		{"up_vertical", -1.5708, true},  // -π/2
-		{"down_vertical", 1.5708, true}, // π/2
-		{"left_horizontal", 3.1416, false},   // π
+		{"up_vertical", -1.5708, true},          // -π/2
+		{"down_vertical", 1.5708, true},         // π/2
+		{"left_horizontal", 3.1416, false},      // π
 		{"neg_left_horizontal", -3.1416, false}, // -π
-		{"diagonal_45", 0.7854, false},  // π/4 boundary
+		{"diagonal_45", 0.7854, false},          // π/4 boundary
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

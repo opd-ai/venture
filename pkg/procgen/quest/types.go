@@ -133,13 +133,20 @@ type Objective struct {
 	Current int
 }
 
-// IsComplete returns true if the objective is met.
-func (o *Objective) IsComplete() bool {
+// ObjectiveIsComplete returns true if the objective's current progress
+// meets or exceeds its required amount.
+func ObjectiveIsComplete(o *Objective) bool {
 	return o.Current >= o.Required
 }
 
-// Progress returns completion percentage (0.0-1.0).
-func (o *Objective) Progress() float64 {
+// IsComplete returns true if the objective is met.
+// Delegates to ObjectiveIsComplete for ECS-compliant usage.
+func (o *Objective) IsComplete() bool {
+	return ObjectiveIsComplete(o)
+}
+
+// ObjectiveProgress returns the objective's completion percentage (0.0-1.0).
+func ObjectiveProgress(o *Objective) float64 {
 	if o.Required == 0 {
 		return 1.0
 	}
@@ -148,6 +155,12 @@ func (o *Objective) Progress() float64 {
 		return 1.0
 	}
 	return progress
+}
+
+// Progress returns completion percentage (0.0-1.0).
+// Delegates to ObjectiveProgress for ECS-compliant usage.
+func (o *Objective) Progress() float64 {
+	return ObjectiveProgress(o)
 }
 
 // Reward represents rewards given upon quest completion.
@@ -200,36 +213,54 @@ type Quest struct {
 	HasMoralConsequences bool
 }
 
-// IsComplete returns true if all objectives are met.
-func (q *Quest) IsComplete() bool {
-	for _, obj := range q.Objectives {
-		if !obj.IsComplete() {
+// QuestIsComplete returns true if all objectives in the quest are met.
+func QuestIsComplete(q *Quest) bool {
+	for i := range q.Objectives {
+		if !ObjectiveIsComplete(&q.Objectives[i]) {
 			return false
 		}
 	}
 	return len(q.Objectives) > 0
 }
 
-// Progress returns overall completion percentage (0.0-1.0).
-func (q *Quest) Progress() float64 {
+// IsComplete returns true if all objectives are met.
+// Delegates to QuestIsComplete for ECS-compliant usage.
+func (q *Quest) IsComplete() bool {
+	return QuestIsComplete(q)
+}
+
+// QuestProgress returns the quest's overall completion percentage (0.0-1.0).
+func QuestProgress(q *Quest) float64 {
 	if len(q.Objectives) == 0 {
 		return 1.0
 	}
 
 	totalProgress := 0.0
-	for _, obj := range q.Objectives {
-		totalProgress += obj.Progress()
+	for i := range q.Objectives {
+		totalProgress += ObjectiveProgress(&q.Objectives[i])
 	}
 	return totalProgress / float64(len(q.Objectives))
 }
 
-// GetRewardValue estimates total reward value.
-func (q *Quest) GetRewardValue() int {
+// Progress returns overall completion percentage (0.0-1.0).
+// Delegates to QuestProgress for ECS-compliant usage.
+func (q *Quest) Progress() float64 {
+	return QuestProgress(q)
+}
+
+// QuestRewardValue estimates the total reward value of a quest.
+func QuestRewardValue(q *Quest) int {
 	value := q.Reward.XP
 	value += q.Reward.Gold * 2
 	value += len(q.Reward.Items) * 100
 	value += q.Reward.SkillPoints * 500
 	return value
+}
+
+// GetRewardValue estimates total reward value.
+// Delegates to QuestRewardValue for ECS-compliant usage.
+func (q *Quest) GetRewardValue() int {
+	return QuestRewardValue(q)
 }
 
 // QuestTemplate defines a template for generating quests.
@@ -380,6 +411,28 @@ func GetSciFiCollectTemplates() []QuestTemplate {
 	}
 }
 
+// GetSciFiExploreTemplates returns explore quest templates for sci-fi genre.
+func GetSciFiExploreTemplates() []QuestTemplate {
+	return []QuestTemplate{
+		{
+			BaseType:     TypeExplore,
+			NamePrefixes: []string{"Scan", "Survey", "Investigate", "Recon", "Map"},
+			NameSuffixes: []string{"the Derelict Station", "the Anomaly Zone", "the Abandoned Colony", "the Nebula Rift", "the Signal Source"},
+			DescTemplates: []string{
+				"Sensors detected activity near %s. Investigate and report findings.",
+				"Command requests a full survey of %s. Proceed with caution.",
+				"An uncharted region near %s requires exploration. Map the area.",
+			},
+			Tags:             []string{"exploration", "recon"},
+			TargetTypes:      []string{"Derelict Station", "Anomaly Zone", "Abandoned Colony", "Nebula Rift", "Signal Source"},
+			RequiredRange:    [2]int{1, 1},
+			XPRewardRange:    [2]int{40, 180},
+			GoldRewardRange:  [2]int{20, 80},
+			ItemRewardChance: 0.35,
+		},
+	}
+}
+
 // GetSciFiBossTemplates returns boss quest templates for sci-fi genre.
 func GetSciFiBossTemplates() []QuestTemplate {
 	return []QuestTemplate{
@@ -399,6 +452,184 @@ func GetSciFiBossTemplates() []QuestTemplate {
 			GoldRewardRange:  [2]int{200, 1000},
 			ItemRewardChance: 0.9,
 			SkillPointChance: 0.5,
+		},
+	}
+}
+
+// GetHorrorKillTemplates returns kill quest templates for horror genre.
+func GetHorrorKillTemplates() []QuestTemplate {
+	return []QuestTemplate{
+		{
+			BaseType:     TypeKill,
+			NamePrefixes: []string{"Purge", "Banish", "Exorcise", "Cleanse", "Destroy"},
+			NameSuffixes: []string{"the Abominations", "the Possessed", "the Revenants", "the Nightmares", "the Cultists"},
+			DescTemplates: []string{
+				"Twisted %s lurk in the shadows. Destroy %d of them before they spread.",
+				"The darkness has spawned %s. Purge %d of these horrors from the land.",
+				"Unholy %s have risen. Banish %d of them back to the void.",
+			},
+			Tags:             []string{"combat", "horror"},
+			TargetTypes:      []string{"Wraith", "Ghoul", "Cultist", "Wendigo", "Shadow Fiend", "Possessed Villager", "Flesh Golem"},
+			RequiredRange:    [2]int{3, 15},
+			XPRewardRange:    [2]int{60, 220},
+			GoldRewardRange:  [2]int{10, 40},
+			ItemRewardChance: 0.35,
+		},
+	}
+}
+
+// GetHorrorCollectTemplates returns collect quest templates for horror genre.
+func GetHorrorCollectTemplates() []QuestTemplate {
+	return []QuestTemplate{
+		{
+			BaseType:     TypeCollect,
+			NamePrefixes: []string{"Recover", "Retrieve", "Salvage", "Secure", "Gather"},
+			NameSuffixes: []string{"Cursed Relics", "Forbidden Tomes", "Ritual Components", "Soul Fragments", "Warding Sigils"},
+			DescTemplates: []string{
+				"We need %d %s to complete the ritual of protection. Find them quickly.",
+				"Scattered %s hold the key to stopping the darkness. Recover %d of them.",
+				"The ward is failing. Collect %d %s to restore the seal.",
+			},
+			Tags:             []string{"gather", "occult"},
+			TargetTypes:      []string{"Cursed Relic", "Forbidden Tome", "Ritual Component", "Soul Fragment", "Warding Sigil"},
+			RequiredRange:    [2]int{3, 10},
+			XPRewardRange:    [2]int{40, 160},
+			GoldRewardRange:  [2]int{10, 50},
+			ItemRewardChance: 0.45,
+		},
+	}
+}
+
+// GetHorrorBossTemplates returns boss quest templates for horror genre.
+func GetHorrorBossTemplates() []QuestTemplate {
+	return []QuestTemplate{
+		{
+			BaseType:     TypeBoss,
+			NamePrefixes: []string{"Confront", "Banish", "Seal", "Destroy", "Exorcise"},
+			NameSuffixes: []string{"the Elder Horror", "the Plague Mother", "the Shadow King", "the Bone Collector", "the Whispering Dread"},
+			DescTemplates: []string{
+				"The source of the corruption is %s. You must face this horror alone.",
+				"All signs point to %s as the architect of this nightmare. End it.",
+				"Only by destroying %s can the tormented souls find peace.",
+			},
+			Tags:             []string{"boss", "horror", "nightmare"},
+			TargetTypes:      []string{"Elder Horror", "Plague Mother", "Shadow King", "Bone Collector", "Whispering Dread"},
+			RequiredRange:    [2]int{1, 1},
+			XPRewardRange:    [2]int{500, 2000},
+			GoldRewardRange:  [2]int{150, 800},
+			ItemRewardChance: 0.9,
+			SkillPointChance: 0.5,
+		},
+	}
+}
+
+// GetHorrorExploreTemplates returns explore quest templates for horror genre.
+func GetHorrorExploreTemplates() []QuestTemplate {
+	return []QuestTemplate{
+		{
+			BaseType:     TypeExplore,
+			NamePrefixes: []string{"Investigate", "Search", "Explore", "Uncover", "Delve into"},
+			NameSuffixes: []string{"the Abandoned Asylum", "the Haunted Manor", "the Catacombs", "the Blighted Village", "the Cursed Graveyard"},
+			DescTemplates: []string{
+				"People have gone missing near %s. Investigate what lurks within.",
+				"Strange sounds echo from %s. Someone must explore the depths.",
+				"The darkness emanating from %s grows stronger. Uncover its source.",
+			},
+			Tags:             []string{"exploration", "investigation"},
+			TargetTypes:      []string{"Abandoned Asylum", "Haunted Manor", "Catacombs", "Blighted Village", "Cursed Graveyard"},
+			RequiredRange:    [2]int{1, 1},
+			XPRewardRange:    [2]int{50, 200},
+			GoldRewardRange:  [2]int{15, 70},
+			ItemRewardChance: 0.4,
+		},
+	}
+}
+
+// GetCyberpunkKillTemplates returns kill quest templates for cyberpunk genre.
+func GetCyberpunkKillTemplates() []QuestTemplate {
+	return []QuestTemplate{
+		{
+			BaseType:     TypeKill,
+			NamePrefixes: []string{"Flatline", "Zero", "Brick", "Ice", "Smoke"},
+			NameSuffixes: []string{"the Gangers", "the Corpos", "the Netrunners", "the Cyberpsychos", "the Boostergangs"},
+			DescTemplates: []string{
+				"A crew of %s is causing havoc in the district. Take out %d of them.",
+				"Contract posted: Neutralize %d %s operating in the sector.",
+				"The %s have overstepped. Flatline %d of their operatives.",
+			},
+			Tags:             []string{"combat", "street"},
+			TargetTypes:      []string{"Ganger", "Corpo Agent", "Rogue Netrunner", "Cyberpsycho", "Boosterganger", "Maelstrom", "Scav"},
+			RequiredRange:    [2]int{4, 18},
+			XPRewardRange:    [2]int{55, 210},
+			GoldRewardRange:  [2]int{15, 60},
+			ItemRewardChance: 0.35,
+		},
+	}
+}
+
+// GetCyberpunkCollectTemplates returns collect quest templates for cyberpunk genre.
+func GetCyberpunkCollectTemplates() []QuestTemplate {
+	return []QuestTemplate{
+		{
+			BaseType:     TypeCollect,
+			NamePrefixes: []string{"Jack", "Acquire", "Boost", "Swipe", "Extract"},
+			NameSuffixes: []string{"Neural Chips", "Cyberdecks", "Black ICE", "Bioware Samples", "Encrypted Shards"},
+			DescTemplates: []string{
+				"Client needs %d %s from the black market. No questions asked.",
+				"High-value %s detected in the area. Acquire %d units.",
+				"A fixer wants %d %s delivered. Payment on completion.",
+			},
+			Tags:             []string{"gather", "hustle"},
+			TargetTypes:      []string{"Neural Chip", "Cyberdeck", "Black ICE Module", "Bioware Sample", "Encrypted Shard"},
+			RequiredRange:    [2]int{2, 12},
+			XPRewardRange:    [2]int{35, 160},
+			GoldRewardRange:  [2]int{20, 75},
+			ItemRewardChance: 0.4,
+		},
+	}
+}
+
+// GetCyberpunkBossTemplates returns boss quest templates for cyberpunk genre.
+func GetCyberpunkBossTemplates() []QuestTemplate {
+	return []QuestTemplate{
+		{
+			BaseType:     TypeBoss,
+			NamePrefixes: []string{"Flatline", "Terminate", "Breach", "Override", "Takedown"},
+			NameSuffixes: []string{"the Corp Director", "the AI Construct", "the Chrome Warlord", "the Ghost in the Net", "the Syndicate Boss"},
+			DescTemplates: []string{
+				"Top-priority target: %s. Maximum force authorized.",
+				"The streets won't be safe until %s is taken down. Make it happen.",
+				"Highest-paying gig of the year: eliminate %s.",
+			},
+			Tags:             []string{"boss", "high-value", "gig"},
+			TargetTypes:      []string{"Corp Director", "AI Construct", "Chrome Warlord", "Ghost in the Net", "Syndicate Boss"},
+			RequiredRange:    [2]int{1, 1},
+			XPRewardRange:    [2]int{500, 2000},
+			GoldRewardRange:  [2]int{250, 1200},
+			ItemRewardChance: 0.9,
+			SkillPointChance: 0.5,
+		},
+	}
+}
+
+// GetCyberpunkExploreTemplates returns explore quest templates for cyberpunk genre.
+func GetCyberpunkExploreTemplates() []QuestTemplate {
+	return []QuestTemplate{
+		{
+			BaseType:     TypeExplore,
+			NamePrefixes: []string{"Scout", "Infiltrate", "Recon", "Case", "Breach"},
+			NameSuffixes: []string{"the Corp Tower", "the Underground Lab", "the Data Haven", "the Blacksite", "the Abandoned Arcology"},
+			DescTemplates: []string{
+				"Intel suggests something big at %s. Scout the location.",
+				"A client needs eyes on %s. Get in, gather intel, get out.",
+				"The location known as %s has gone dark. Investigate.",
+			},
+			Tags:             []string{"exploration", "infiltration"},
+			TargetTypes:      []string{"Corp Tower", "Underground Lab", "Data Haven", "Blacksite", "Abandoned Arcology"},
+			RequiredRange:    [2]int{1, 1},
+			XPRewardRange:    [2]int{45, 190},
+			GoldRewardRange:  [2]int{25, 90},
+			ItemRewardChance: 0.4,
 		},
 	}
 }

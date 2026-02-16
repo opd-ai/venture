@@ -93,6 +93,17 @@ func (g *QuestGenerator) selectTemplates(genreID string) ([]QuestTemplate, error
 		templates = append(templates, GetSciFiKillTemplates()...)
 		templates = append(templates, GetSciFiCollectTemplates()...)
 		templates = append(templates, GetSciFiBossTemplates()...)
+		templates = append(templates, GetSciFiExploreTemplates()...)
+	case "horror":
+		templates = append(templates, GetHorrorKillTemplates()...)
+		templates = append(templates, GetHorrorCollectTemplates()...)
+		templates = append(templates, GetHorrorBossTemplates()...)
+		templates = append(templates, GetHorrorExploreTemplates()...)
+	case "cyberpunk":
+		templates = append(templates, GetCyberpunkKillTemplates()...)
+		templates = append(templates, GetCyberpunkCollectTemplates()...)
+		templates = append(templates, GetCyberpunkBossTemplates()...)
+		templates = append(templates, GetCyberpunkExploreTemplates()...)
 	case "fantasy":
 		fallthrough
 	default:
@@ -275,15 +286,27 @@ func (g *QuestGenerator) generateQuestDescription(rng *rand.Rand, template Quest
 
 	switch template.BaseType {
 	case TypeKill:
-		if params.GenreID == "scifi" && descIdx == 2 {
+		switch {
+		case params.GenreID == "scifi" && descIdx == 2:
 			return fmt.Sprintf(descTemplate, required, targetType)
-		}
-		return fmt.Sprintf(descTemplate, targetType, required)
-	case TypeCollect:
-		if (params.GenreID == "fantasy" && descIdx == 2) || (params.GenreID == "scifi" && descIdx == 1) {
+		case params.GenreID == "cyberpunk" && descIdx == 1:
+			return fmt.Sprintf(descTemplate, required, targetType)
+		default:
 			return fmt.Sprintf(descTemplate, targetType, required)
 		}
-		return fmt.Sprintf(descTemplate, required, targetType)
+	case TypeCollect:
+		switch {
+		case params.GenreID == "fantasy" && descIdx == 2:
+			return fmt.Sprintf(descTemplate, targetType, required)
+		case params.GenreID == "scifi" && descIdx == 1:
+			return fmt.Sprintf(descTemplate, targetType, required)
+		case params.GenreID == "horror" && descIdx == 1:
+			return fmt.Sprintf(descTemplate, targetType, required)
+		case params.GenreID == "cyberpunk" && descIdx == 1:
+			return fmt.Sprintf(descTemplate, targetType, required)
+		default:
+			return fmt.Sprintf(descTemplate, required, targetType)
+		}
 	case TypeBoss, TypeExplore, TypeEscort, TypeTalk:
 		return fmt.Sprintf(descTemplate, targetType)
 	default:
@@ -439,6 +462,9 @@ func validateQuestObjectives(quest *Quest, index int) error {
 func validateQuestRewards(quest *Quest, index int) error {
 	if quest.Reward.XP <= 0 {
 		return fmt.Errorf("quest %d has no XP reward", index)
+	}
+	if quest.Reward.Gold < 0 {
+		return fmt.Errorf("quest %d has negative gold reward", index)
 	}
 	return nil
 }

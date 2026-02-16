@@ -8,9 +8,9 @@ The `pkg/network` package implements multiplayer networking with client-server a
 ## Issues Found
 *(No critical issues found - all items below are informational or exempt)*
 
-- [ ] low Deterministic procgen — `time.Now()` used extensively for network timestamps, message IDs, expiry tracking, session tokens (`images.go:61`, `chat.go:18`, `helpers.go:127`, `client.go:253`, `server.go:369`, etc.) — **EXEMPT**: Network/auth packages explicitly allowed to use `time.Now()` per AUDIT.md guidelines line 76
-- [ ] low Error handling — Type assertion comments document intentional safe casts from known types (`priority_queue.go:51`, `priority_queue.go:146`, `buffer_pool.go:33`) — Not swallowed errors, properly documented design
-- [ ] low Integration points — Chat and trade systems in subdirectories (`chat/`, `trade/`) implement `engine.System` interface for registration; not centrally registered in main package by design (modular subsystems)
+- [x] low Deterministic procgen — `time.Now()` used extensively for network timestamps, message IDs, expiry tracking, session tokens (`images.go:61`, `chat.go:18`, `helpers.go:127`, `client.go:253`, `server.go:369`, etc.) — **EXEMPT**: Network/auth packages explicitly allowed to use `time.Now()` per AUDIT.md guidelines line 76
+- [x] low Error handling — Type assertion comments document intentional safe casts from known types (`priority_queue.go:51`, `priority_queue.go:146`, `buffer_pool.go:33`) — Not swallowed errors, properly documented design
+- [x] low Integration points — Chat and trade systems in subdirectories (`chat/`, `trade/`) implement `engine.System` interface for registration; not centrally registered in main package by design (modular subsystems)
 
 ## Test Coverage
 82.6% (documented in README.md and existing AUDIT.md from 2026-02-09)

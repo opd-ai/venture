@@ -164,7 +164,7 @@ func (s *ElementalCompanionSynergySystem) applySynergyBonus(companion *Entity, c
 	}
 
 	// Try to boost companion stats
-	statsComp, ok := companion.GetComponent("companion_stats")
+	statsComp, ok := companion.GetComponent("companionstats")
 	if !ok {
 		// Try regular stats component
 		statsComp, ok = companion.GetComponent("stats")
@@ -200,7 +200,7 @@ func (s *ElementalCompanionSynergySystem) removeSynergyBonus(companion *Entity) 
 		genreMult = 1.0
 	}
 
-	statsComp, ok := companion.GetComponent("companion_stats")
+	statsComp, ok := companion.GetComponent("companionstats")
 	if !ok {
 		statsComp, ok = companion.GetComponent("stats")
 	}

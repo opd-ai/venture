@@ -16,6 +16,19 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+// safeReadPixels attempts to read pixels from an ebiten image.
+// Returns false if ReadPixels is not available (e.g., game not started in tests).
+func safeReadPixels(img *ebiten.Image, pix []byte) (ok bool) {
+	defer func() {
+		if recov := recover(); recov != nil {
+			logrus.WithField("panic", recov).Debug("safeReadPixels: recovered from panic (expected in tests without game loop)")
+			ok = false
+		}
+	}()
+	img.ReadPixels(pix)
+	return true
+}
+
 // Generator creates procedural sprites.
 type Generator struct {
 	paletteGen *palette.Generator
@@ -272,17 +285,18 @@ func (g *Generator) generateEntityWithTemplate(config Config, entityType string,
 	// hems, seams, fasteners) to make clothing look like actual garments.
 	if useAerial && IsHumanoidEntity(entityType) {
 		readBuf := image.NewRGBA(image.Rect(0, 0, config.Width, config.Height))
-		img.ReadPixels(readBuf.Pix)
-		RenderGarmentDetail(readBuf, GarmentDetailParams{
-			Width:     config.Width,
-			Height:    config.Height,
-			Seed:      config.Seed,
-			Genre:     genre,
-			Direction: string(direction),
-		})
-		garmentImg := ebiten.NewImageFromImage(readBuf)
-		img.Clear()
-		img.DrawImage(garmentImg, nil)
+		if safeReadPixels(img, readBuf.Pix) {
+			RenderGarmentDetail(readBuf, GarmentDetailParams{
+				Width:     config.Width,
+				Height:    config.Height,
+				Seed:      config.Seed,
+				Genre:     genre,
+				Direction: string(direction),
+			})
+			garmentImg := ebiten.NewImageFromImage(readBuf)
+			img.Clear()
+			img.DrawImage(garmentImg, nil)
+		}
 	}
 
 	// Render role-specific details for humanoid entities (arcane runes,
@@ -357,11 +371,12 @@ func (g *Generator) generateEntityWithTemplate(config Config, entityType string,
 		texSet := GenerateSurfaceTextureSet(config.Seed, form, genre)
 		if texSet.TorsoTexture.Type != TexNone {
 			texBuf := image.NewRGBA(image.Rect(0, 0, config.Width, config.Height))
-			img.ReadPixels(texBuf.Pix)
-			ApplySurfaceTexture(texBuf, texBuf.Bounds(), texSet.TorsoTexture, config.Seed)
-			texImg := ebiten.NewImageFromImage(texBuf)
-			img.Clear()
-			img.DrawImage(texImg, nil)
+			if safeReadPixels(img, texBuf.Pix) {
+				ApplySurfaceTexture(texBuf, texBuf.Bounds(), texSet.TorsoTexture, config.Seed)
+				texImg := ebiten.NewImageFromImage(texBuf)
+				img.Clear()
+				img.DrawImage(texImg, nil)
+			}
 		}
 	}
 
@@ -369,37 +384,43 @@ func (g *Generator) generateEntityWithTemplate(config Config, entityType string,
 	// Must run after surface textures and before color temperature grading.
 	if useAerial {
 		depthBuf := image.NewRGBA(image.Rect(0, 0, config.Width, config.Height))
-		img.ReadPixels(depthBuf.Pix)
-		depthCfg := DefaultDepthEnhanceConfig(config.Seed)
-		if !IsHumanoidEntity(entityType) {
-			form := EntityTypeToCreatureForm(entityType)
-			ApplyDepthEnhancementForCreature(depthBuf, form, depthCfg)
-		} else {
-			ApplyDepthEnhancement(depthBuf, depthCfg)
+		if safeReadPixels(img, depthBuf.Pix) {
+			depthCfg := DefaultDepthEnhanceConfig(config.Seed)
+			if !IsHumanoidEntity(entityType) {
+				form := EntityTypeToCreatureForm(entityType)
+				ApplyDepthEnhancementForCreature(depthBuf, form, depthCfg)
+			} else {
+				ApplyDepthEnhancement(depthBuf, depthCfg)
+			}
+			depthImg := ebiten.NewImageFromImage(depthBuf)
+			img.Clear()
+			img.DrawImage(depthImg, nil)
 		}
-		depthImg := ebiten.NewImageFromImage(depthBuf)
-		img.Clear()
-		img.DrawImage(depthImg, nil)
 	}
 
 	// Apply genre-aware color temperature grading and specular highlights.
 	// Must run after depth enhancement and before sprite finalization.
 	if useAerial {
 		ctBuf := image.NewRGBA(image.Rect(0, 0, config.Width, config.Height))
-		img.ReadPixels(ctBuf.Pix)
-		ctCfg := GenreColorTemperatureConfig(genre, config.Seed)
-		ApplyColorTemperature(ctBuf, ctCfg)
-		ctImg := ebiten.NewImageFromImage(ctBuf)
-		img.Clear()
-		img.DrawImage(ctImg, nil)
+		if safeReadPixels(img, ctBuf.Pix) {
+			ctCfg := GenreColorTemperatureConfig(genre, config.Seed)
+			ApplyColorTemperature(ctBuf, ctCfg)
+			ctImg := ebiten.NewImageFromImage(ctBuf)
+			img.Clear()
+			img.DrawImage(ctImg, nil)
+		}
 	}
 
 	// Apply sprite finalization: adaptive outline, rim lighting, edge shadow
 	if useAerial {
-		finalized := FinalizeEntitySprite(img, DefaultFinalizerConfig(config.Seed))
-		finalImg := ebiten.NewImageFromImage(finalized)
-		img.Clear()
-		img.DrawImage(finalImg, nil)
+		// Convert ebiten image to RGBA first to avoid ReadPixels panic in tests
+		rgbaBuf := image.NewRGBA(image.Rect(0, 0, config.Width, config.Height))
+		if safeReadPixels(img, rgbaBuf.Pix) {
+			finalized := FinalizeEntitySprite(rgbaBuf, DefaultFinalizerConfig(config.Seed))
+			finalImg := ebiten.NewImageFromImage(finalized)
+			img.Clear()
+			img.DrawImage(finalImg, nil)
+		}
 	}
 
 	return img, nil

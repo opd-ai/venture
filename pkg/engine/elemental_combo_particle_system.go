@@ -152,6 +152,7 @@ func (s *ElementalComboParticleSystem) detectElementalCombo(entity *Entity) *Ele
 	// Collect all active elemental effects
 	var activeEffects []string
 
+	// Check for individual status effect component
 	for _, comp := range entity.Components {
 		effect, ok := comp.(*StatusEffectComponent)
 		if !ok || effect.IsExpired() {
@@ -161,6 +162,17 @@ func (s *ElementalComboParticleSystem) detectElementalCombo(entity *Entity) *Ele
 		// Only track elemental effects
 		if s.isElementalEffect(effect.EffectType) {
 			activeEffects = append(activeEffects, effect.EffectType)
+		}
+	}
+
+	// Check for status effect set component (multiple concurrent effects)
+	if setComp, ok := entity.GetComponent("status_effect_set"); ok {
+		if effectSet, ok := setComp.(*StatusEffectSetComponent); ok {
+			for _, effect := range effectSet.Effects {
+				if effect != nil && !effect.IsExpired() && s.isElementalEffect(effect.EffectType) {
+					activeEffects = append(activeEffects, effect.EffectType)
+				}
+			}
 		}
 	}
 

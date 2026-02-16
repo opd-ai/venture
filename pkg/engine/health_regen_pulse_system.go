@@ -117,10 +117,6 @@ func (s *HealthRegenPulseSystem) applyGenrePreset(genreID string) {
 
 // Update checks all entities for health increases and emits healing particles.
 func (s *HealthRegenPulseSystem) Update(entities []*Entity, deltaTime float64) {
-	if s.particleSystem == nil || s.world == nil {
-		return
-	}
-
 	for _, entity := range entities {
 		health := entity.GetHealth()
 		if health == nil || health.Max <= 0 {
@@ -155,7 +151,7 @@ func (s *HealthRegenPulseSystem) Update(entities []*Entity, deltaTime float64) {
 
 		// Emit pulse when accumulated heal is meaningful and cooldown elapsed
 		healRatio := comp.Accumulator / health.Max
-		if healRatio >= 0.02 && comp.PulseTimer <= 0 {
+		if healRatio >= 0.02 && comp.PulseTimer <= 0 && s.particleSystem != nil && s.world != nil {
 			s.spawnHealPulse(pos.X, pos.Y, entity.ID, healRatio)
 			comp.Accumulator = 0
 			comp.PulseTimer = s.pulseInterval
@@ -175,6 +171,10 @@ func (s *HealthRegenPulseSystem) ensureComponent(entity *Entity) *HealthRegenPul
 
 // spawnHealPulse creates genre-aware upward-drifting healing particles.
 func (s *HealthRegenPulseSystem) spawnHealPulse(x, y float64, entityID uint64, healRatio float64) {
+	if s.particleSystem == nil || s.world == nil {
+		return
+	}
+
 	// Scale particle count by heal magnitude (clamped 1x-2x base)
 	intensityMul := 1.0
 	if healRatio > 0.1 {

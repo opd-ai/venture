@@ -150,14 +150,17 @@ func TestElementalComboParticleSystem_DetectElementalCombo(t *testing.T) {
 			entity := NewEntity(uint64(100))
 			entity.AddComponent(&PositionComponent{X: 100, Y: 100})
 
-			// Add status effects
-			for _, effectType := range tt.effects {
-				effect := &StatusEffectComponent{
-					EffectType: effectType,
-					Duration:   5.0,
-					Magnitude:  10.0,
+			// Add status effects using set component for multiple concurrent effects
+			if len(tt.effects) > 0 {
+				effectSet := &StatusEffectSetComponent{}
+				for _, effectType := range tt.effects {
+					effectSet.AddEffect(&StatusEffectComponent{
+						EffectType: effectType,
+						Duration:   5.0,
+						Magnitude:  10.0,
+					})
 				}
-				entity.AddComponent(effect)
+				entity.AddComponent(effectSet)
 			}
 
 			combo := sys.detectElementalCombo(entity)
@@ -291,19 +294,21 @@ func TestElementalComboParticleSystem_Update_WithCombo(t *testing.T) {
 	sys.SetParticleSystem(ps)
 	sys.SetGenre("fantasy")
 
-	// Create entity with fire+ice combo
+	// Create entity with fire+ice combo using set component
 	entity := NewEntity(uint64(1))
 	entity.AddComponent(&PositionComponent{X: 100, Y: 100})
-	entity.AddComponent(&StatusEffectComponent{
+	effectSet := &StatusEffectSetComponent{}
+	effectSet.AddEffect(&StatusEffectComponent{
 		EffectType: "burning",
 		Duration:   5.0,
 		Magnitude:  10.0,
 	})
-	entity.AddComponent(&StatusEffectComponent{
+	effectSet.AddEffect(&StatusEffectComponent{
 		EffectType: "frozen",
 		Duration:   5.0,
 		Magnitude:  10.0,
 	})
+	entity.AddComponent(effectSet)
 
 	entities := []*Entity{entity}
 

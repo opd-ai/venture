@@ -154,12 +154,12 @@ func TestFactionAwareAISystem_ValueTypeFactionComponent(t *testing.T) {
 
 	player := NewEntity(1)
 	player.AddComponent(NewStubInput())
-	player.AddComponent(FactionComponent{FactionID: "bandits", Reputation: -60, IsPlayerFaction: true})
+	player.AddComponent(&FactionComponent{FactionID: "bandits", Reputation: -60, IsPlayerFaction: true})
 	world.AddEntity(player)
 
 	npc := NewEntity(2)
 	npc.AddComponent(&AIComponent{})
-	npc.AddComponent(FactionComponent{FactionID: "bandits", IsPlayerFaction: false})
+	npc.AddComponent(&FactionComponent{FactionID: "bandits", IsPlayerFaction: false})
 	npc.AddComponent(&TeamComponent{TeamID: 0})
 	world.AddEntity(npc)
 

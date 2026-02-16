@@ -998,7 +998,20 @@ func ApplyBossEnhancements(template AnatomicalTemplate) AnatomicalTemplate {
 // Direction should be provided in Config.Custom["facing"] ("up", "down", "left", "right").
 // Delegates to HumanoidAerialTemplate for proper top-down perspective.
 func HumanoidDirectionalTemplate(direction Direction) AnatomicalTemplate {
-	return HumanoidAerialTemplate(direction)
+	t := HumanoidAerialTemplate(direction)
+	t.Name = "humanoid_" + string(direction)
+	// Adjust head positions for directional (non-aerial) template
+	if head, ok := t.BodyPartLayout[PartHead]; ok {
+		switch direction {
+		case DirLeft:
+			head.RelativeX = 0.45
+			t.BodyPartLayout[PartHead] = head
+		case DirRight:
+			head.RelativeX = 0.55
+			t.BodyPartLayout[PartHead] = head
+		}
+	}
+	return t
 }
 
 // HumanoidWithEquipment returns a humanoid template with weapon and shield positioning.
@@ -1876,14 +1889,7 @@ func SelectAerialTemplate(entityType, genre string, direction Direction) Anatomi
 		return SelectNonhumanoidAerialTemplate(entityType, genre, direction)
 	}
 
-	// Check for role-specific template first (mage, warrior, knight, etc.)
-	if role := MapEntityTypeToRole(entityType); role != "" {
-		base := SelectRoleAerialTemplate(role, direction)
-		// Apply genre variation on top of role template
-		return applyGenreToRoleTemplate(base, genre)
-	}
-
-	// Generic humanoid / player — apply genre-specific aerial styling
+	// Genre-specific aerial styling takes priority over role
 	switch genre {
 	case "fantasy":
 		return FantasyHumanoidAerial(direction)
@@ -1896,6 +1902,10 @@ func SelectAerialTemplate(entityType, genre string, direction Direction) Anatomi
 	case "postapoc", "post-apocalyptic":
 		return PostApocHumanoidAerial(direction)
 	default:
+		// For unknown genre, check for role-specific template
+		if role := MapEntityTypeToRole(entityType); role != "" {
+			return SelectRoleAerialTemplate(role, direction)
+		}
 		return EnhancedHumanoidAerialTemplate(direction)
 	}
 }

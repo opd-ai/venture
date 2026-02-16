@@ -105,7 +105,7 @@ func TestElementalCompanionSynergySystem_Update_ElementalCompanionWithOwnerEffec
 	}
 
 	// Check stats were boosted
-	statsComp, _ := companion.GetComponent("companion_stats")
+	statsComp, _ := companion.GetComponent("companionstats")
 	stats := statsComp.(*CompanionStatsComponent)
 	expectedAttack := 100.0 * (1.0 + 0.25) // 25% bonus
 	if stats.Attack != expectedAttack {
@@ -150,7 +150,7 @@ func TestElementalCompanionSynergySystem_Update_NonElementalCompanion(t *testing
 	}
 
 	// Stats should be unchanged
-	statsComp, _ := companion.GetComponent("companion_stats")
+	statsComp, _ := companion.GetComponent("companionstats")
 	stats := statsComp.(*CompanionStatsComponent)
 	if stats.Attack != 100.0 {
 		t.Errorf("Attack = %f, want 100.0 (unchanged)", stats.Attack)
@@ -236,7 +236,7 @@ func TestElementalCompanionSynergySystem_Update_SynergyRemoval(t *testing.T) {
 	}
 
 	// Stats should be back to original
-	statsComp, _ := companion.GetComponent("companion_stats")
+	statsComp, _ := companion.GetComponent("companionstats")
 	stats := statsComp.(*CompanionStatsComponent)
 	if stats.Attack < 99.9 || stats.Attack > 100.1 {
 		t.Errorf("Attack = %f, want ~100.0 (restored)", stats.Attack)
@@ -284,7 +284,7 @@ func TestElementalCompanionSynergySystem_GenreMultipliers(t *testing.T) {
 			entities := []*Entity{owner, companion}
 			system.Update(entities, 0.016)
 
-			statsComp, _ := companion.GetComponent("companion_stats")
+			statsComp, _ := companion.GetComponent("companionstats")
 			stats := statsComp.(*CompanionStatsComponent)
 
 			expectedAttack := 100.0 * (1.0 + 0.25*tt.expectedMult)

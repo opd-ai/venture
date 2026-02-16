@@ -245,9 +245,11 @@ func TestSpecializationStatusResistSystem_MultipleDebuffs(t *testing.T) {
 		{EffectType: "slow", Duration: 6.0, Magnitude: 0.5},
 	}
 
+	effectSet := &StatusEffectSetComponent{}
 	for _, e := range effects {
-		entity.AddComponent(e)
+		effectSet.AddEffect(e)
 	}
+	entity.AddComponent(effectSet)
 
 	system.Update([]*Entity{entity}, 0.5)
 

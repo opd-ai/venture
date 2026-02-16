@@ -112,7 +112,7 @@ func (s *FactionXPBonusSystem) OnEnemyKilled(killer, victim *Entity, baseXP int)
 		return
 	}
 
-	victimFaction := victimFactionComp.(FactionComponent)
+	victimFaction := victimFactionComp.(*FactionComponent)
 	if victimFaction.IsPlayerFaction {
 		return // Victim is player - no faction bonus
 	}

@@ -1507,8 +1507,8 @@ func TestSelectAerialTemplate(t *testing.T) {
 		{"humanoid_cyberpunk", "knight", "cyberpunk", DirRight, "cyberpunk_aerial_right", true},
 		{"humanoid_postapoc", "npc", "postapoc", DirDown, "postapoc_aerial_down", true},
 		{"humanoid_unknown_genre", "player", "unknown", DirDown, "enhanced_humanoid_aerial_down", true}, // Phase 15.1: Uses enhanced template
-		{"non_humanoid_blob", "blob", "fantasy", DirDown, "blob", false},
-		{"non_humanoid_quadruped", "wolf", "scifi", DirUp, "quadruped", false},
+		{"non_humanoid_blob", "blob", "fantasy", DirDown, "fantasy_blob_aerial_down", false},
+		{"non_humanoid_quadruped", "wolf", "scifi", DirUp, "scifi_quadruped_aerial_up", false},
 	}
 
 	for _, tt := range tests {

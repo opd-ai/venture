@@ -503,7 +503,16 @@ func (w *World) RemoveEntity(entityID uint64) {
 // GetEntity retrieves an entity by ID.
 func (w *World) GetEntity(entityID uint64) (*Entity, bool) {
 	entity, ok := w.entities[entityID]
-	return entity, ok
+	if ok {
+		return entity, true
+	}
+	// Also check pending additions
+	for _, e := range w.entitiesToAdd {
+		if e.ID == entityID {
+			return e, true
+		}
+	}
+	return nil, false
 }
 
 // AddSystem adds a system to the world.

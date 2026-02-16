@@ -218,6 +218,56 @@ type TeamComponent struct {
 	TeamID int
 }
 
+// StatusEffectSetComponent holds multiple concurrent status effects on an entity.
+// Use this when an entity needs to have multiple status effects active simultaneously.
+type StatusEffectSetComponent struct {
+	Effects []*StatusEffectComponent
+}
+
+// Type returns the component type identifier.
+func (s *StatusEffectSetComponent) Type() string {
+	return "status_effect_set"
+}
+
+// AddEffect adds a status effect to the set.
+func (s *StatusEffectSetComponent) AddEffect(effect *StatusEffectComponent) {
+	s.Effects = append(s.Effects, effect)
+}
+
+// Update advances all contained status effects by the given delta time
+// and removes any that have expired.
+func (s *StatusEffectSetComponent) Update(deltaTime float64) {
+	if s == nil {
+		return
+	}
+	for _, effect := range s.Effects {
+		if effect == nil {
+			continue
+		}
+		effect.Update(deltaTime)
+	}
+	s.RemoveExpired()
+}
+
+// RemoveExpired removes all expired status effects from the set.
+func (s *StatusEffectSetComponent) RemoveExpired() {
+	if s == nil {
+		return
+	}
+	j := 0
+	for _, effect := range s.Effects {
+		if effect == nil {
+			continue
+		}
+		if effect.IsExpired() {
+			continue
+		}
+		s.Effects[j] = effect
+		j++
+	}
+	s.Effects = s.Effects[:j]
+}
+
 // Type returns the component type identifier.
 func (t *TeamComponent) Type() string {
 	return "team"

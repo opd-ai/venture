@@ -132,7 +132,7 @@ func renderWarriorDetails(buf *image.RGBA, p RoleDetailParams, rng *rand.Rand) {
 	beltColor := color.RGBA{R: 90, G: 60, B: 30, A: 200}
 	buckleColor := color.RGBA{R: 200, G: 180, B: 100, A: 230}
 	wrapColor := color.RGBA{R: 120, G: 90, B: 60, A: 160}
-	scarColor := color.RGBA{R: 180, G: 80, B: 70, A: 130}
+	scarColor := color.RGBA{R: uint8(160 + rng.Intn(40)), G: uint8(60 + rng.Intn(40)), B: uint8(50 + rng.Intn(40)), A: 130}
 
 	// --- Weapon belt across torso (horizontal dark line with buckle) ---
 	beltY := cy + 2

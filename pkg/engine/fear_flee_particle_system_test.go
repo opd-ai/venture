@@ -166,7 +166,7 @@ func TestFearFleeParticleSystem_Update_FearExpired(t *testing.T) {
 	entity.AddComponent(aiComp)
 	entity.AddComponent(&StatusEffectComponent{
 		EffectType: "fear",
-		Duration:   1.0,
+		Duration:   0.0,
 	})
 
 	sys.Update([]*Entity{entity}, 0.3)

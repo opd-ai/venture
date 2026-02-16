@@ -28,6 +28,9 @@ func (c *ChunkCompressionSystem) CompressChunk(chunk *Chunk) ([]byte, float64, e
 	if err := binary.Write(&buf, binary.LittleEndian, int32(len(chunk.Terrain))); err != nil {
 		return nil, 0, fmt.Errorf("failed to write height: %w", err)
 	}
+	if len(chunk.Terrain[0]) == 0 {
+		return nil, 1.0, nil // No columns to compress
+	}
 	if err := binary.Write(&buf, binary.LittleEndian, int32(len(chunk.Terrain[0]))); err != nil {
 		return nil, 0, fmt.Errorf("failed to write width: %w", err)
 	}

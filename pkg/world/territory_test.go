@@ -272,3 +272,23 @@ func TestGetAllZones(t *testing.T) {
 		t.Errorf("expected 3 zones, got %d", len(zones))
 	}
 }
+
+func TestUpdateControlPoint_NegativeAttackers(t *testing.T) {
+	tm := NewTerritoryManager()
+	tm.CreateBorderZone("zone1", "serverA", "serverB", 3)
+
+	err := tm.UpdateControlPoint("zone1", 0, -1, 0, "factionA")
+	if err == nil {
+		t.Error("expected error for negative attackers")
+	}
+}
+
+func TestUpdateControlPoint_NegativeDefenders(t *testing.T) {
+	tm := NewTerritoryManager()
+	tm.CreateBorderZone("zone1", "serverA", "serverB", 3)
+
+	err := tm.UpdateControlPoint("zone1", 0, 1, -1, "factionA")
+	if err == nil {
+		t.Error("expected error for negative defenders")
+	}
+}

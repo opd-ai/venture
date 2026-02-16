@@ -295,6 +295,27 @@ func terrainEqual(a, b [][]TileType) bool {
 	return true
 }
 
+func TestChunkCompressionSystem_EmptyRows(t *testing.T) {
+	system := NewChunkCompressionSystem()
+
+	// Chunk with rows but empty columns
+	chunk := &Chunk{
+		Terrain:       [][]TileType{{}},
+		Modifications: []TerrainMod{},
+	}
+
+	compressed, ratio, err := system.CompressChunk(chunk)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if compressed != nil {
+		t.Error("expected nil compressed data for empty-column terrain")
+	}
+	if ratio != 1.0 {
+		t.Errorf("expected ratio 1.0, got %f", ratio)
+	}
+}
+
 // Benchmarks
 
 func BenchmarkCompressUniform(b *testing.B) {

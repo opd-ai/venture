@@ -457,8 +457,11 @@ func (w *WorldPersistence) ListBackups() []string {
 
 	// Sort by modification time (newest first)
 	sort.Slice(backups, func(i, j int) bool {
-		infoI, _ := os.Stat(backups[i])
-		infoJ, _ := os.Stat(backups[j])
+		infoI, errI := os.Stat(backups[i])
+		infoJ, errJ := os.Stat(backups[j])
+		if errI != nil || errJ != nil {
+			return errI == nil // files that can be stat'd sort first
+		}
 		return infoI.ModTime().After(infoJ.ModTime())
 	})
 

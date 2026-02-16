@@ -198,8 +198,8 @@ func TestUpdateProgress(t *testing.T) {
 		t.Errorf("unexpected error: %v", err)
 	}
 
-	if event.Progress["server1"] != 5 {
-		t.Errorf("expected progress 5, got %d", event.Progress["server1"])
+	if event.Progress["server1:wins"] != 5 {
+		t.Errorf("expected progress 5, got %d", event.Progress["server1:wins"])
 	}
 }
 
@@ -211,8 +211,8 @@ func TestUpdateProgress_MultipleUpdates(t *testing.T) {
 	em.UpdateProgress(event.ID, "server1", "wins", 3)
 	em.UpdateProgress(event.ID, "server1", "wins", 2)
 
-	if event.Progress["server1"] != 5 {
-		t.Errorf("expected cumulative progress 5, got %d", event.Progress["server1"])
+	if event.Progress["server1:wins"] != 5 {
+		t.Errorf("expected cumulative progress 5, got %d", event.Progress["server1:wins"])
 	}
 }
 
@@ -414,8 +414,8 @@ func TestMultipleServersProgress(t *testing.T) {
 	}
 
 	for _, server := range servers {
-		if event.Progress[server] != 5 {
-			t.Errorf("expected progress 5 for %s, got %d", server, event.Progress[server])
+		if event.Progress[server+":wins"] != 5 {
+			t.Errorf("expected progress 5 for %s, got %d", server, event.Progress[server+":wins"])
 		}
 	}
 }
@@ -441,17 +441,34 @@ func TestCheckCompletion_SeasonalChallenge(t *testing.T) {
 	event := em.CreateSeasonalChallenge("Test", 3600)
 	em.RegisterParticipant(event.ID, "server1")
 
-	em.UpdateProgress(event.ID, "server1", "quests", 50)
-	em.UpdateProgress(event.ID, "server1", "bosses", 5)
-
-	event.Progress["server1"] = 50
+	// Update each goal independently using per-goal tracking
+	em.UpdateProgress(event.ID, "server1", "quests_completed", 50)
+	em.UpdateProgress(event.ID, "server1", "bosses_defeated", 5)
 
 	completed, err := em.CheckCompletion(event.ID)
 	if err != nil {
 		t.Errorf("unexpected error: %v", err)
 	}
+	if !completed {
+		t.Error("expected seasonal challenge to be completed when all goals met")
+	}
+}
 
-	_ = completed
+func TestCheckCompletion_SeasonalChallenge_Partial(t *testing.T) {
+	em := NewEventManager(12345)
+	event := em.CreateSeasonalChallenge("Test", 3600)
+	em.RegisterParticipant(event.ID, "server1")
+
+	// Only complete one of two goals
+	em.UpdateProgress(event.ID, "server1", "quests_completed", 50)
+
+	completed, err := em.CheckCompletion(event.ID)
+	if err != nil {
+		t.Errorf("unexpected error: %v", err)
+	}
+	if completed {
+		t.Error("expected seasonal challenge to NOT be completed with only one goal met")
+	}
 }
 
 func TestCheckCompletion_NonExistent(t *testing.T) {

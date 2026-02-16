@@ -239,9 +239,15 @@ func (em *EventManager) UpdateProgress(eventID, serverID, goalKey string, amount
 		return fmt.Errorf("server not registered for event: %s", serverID)
 	}
 
-	progressKey := serverID
-	if event.Type == EventWorldThreat {
+	var progressKey string
+	switch event.Type {
+	case EventWorldThreat:
 		progressKey = goalKey
+	case EventServerVsServer:
+		progressKey = serverID
+	default:
+		// Use compound key for per-participant per-goal tracking
+		progressKey = serverID + ":" + goalKey
 	}
 
 	event.Progress[progressKey] += amount
@@ -303,23 +309,22 @@ func (em *EventManager) checkServerVsServerGoals(event *MetaGameEvent) bool {
 }
 
 // checkDefaultGoals checks if any participant met all goals.
+// Uses compound keys (serverID:goalKey) for per-participant per-goal tracking.
 func (em *EventManager) checkDefaultGoals(event *MetaGameEvent) bool {
-	for _, progress := range event.Progress {
-		if em.allGoalsMet(progress, event.Goals) {
+	for _, participant := range event.Participants {
+		allMet := true
+		for goalKey, goalValue := range event.Goals {
+			progressKey := participant + ":" + goalKey
+			if event.Progress[progressKey] < goalValue {
+				allMet = false
+				break
+			}
+		}
+		if allMet {
 			return true
 		}
 	}
 	return false
-}
-
-// allGoalsMet checks if progress meets all goal requirements.
-func (em *EventManager) allGoalsMet(progress int, goals map[string]int) bool {
-	for _, goalValue := range goals {
-		if progress < goalValue {
-			return false
-		}
-	}
-	return true
 }
 
 // GetActiveEvents returns all currently active events.

@@ -100,6 +100,10 @@ func (tm *TerritoryManager) UpdateControlPoint(zoneID string, cpIndex, attackers
 		return fmt.Errorf("invalid control point index: %d", cpIndex)
 	}
 
+	if attackers < 0 || defenders < 0 {
+		return fmt.Errorf("attackers (%d) and defenders (%d) must be non-negative", attackers, defenders)
+	}
+
 	cp := zone.ControlPoints[cpIndex]
 	now := time.Now().Unix()
 	elapsed := now - cp.LastUpdateTime

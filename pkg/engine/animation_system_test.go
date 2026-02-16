@@ -506,20 +506,20 @@ func TestAnimationSystem_SetMaxRegenPerFrame(t *testing.T) {
 	spriteGen := sprites.NewGenerator()
 	sys := NewAnimationSystem(spriteGen)
 
-	// Verify default limit (8)
-	if sys.maxRegenPerFrame != 8 {
-		t.Errorf("Expected default maxRegenPerFrame 8, got %d", sys.maxRegenPerFrame)
+	// Verify default limit (16, increased from 8 in V1 performance fix)
+	if sys.maxRegenPerFrame != 16 {
+		t.Errorf("Expected default maxRegenPerFrame 16, got %d", sys.maxRegenPerFrame)
 	}
 
 	// Test GetMaxRegenPerFrame
-	if sys.GetMaxRegenPerFrame() != 8 {
-		t.Errorf("Expected GetMaxRegenPerFrame() to return 8, got %d", sys.GetMaxRegenPerFrame())
+	if sys.GetMaxRegenPerFrame() != 16 {
+		t.Errorf("Expected GetMaxRegenPerFrame() to return 16, got %d", sys.GetMaxRegenPerFrame())
 	}
 
 	// Test setting custom limit
-	sys.SetMaxRegenPerFrame(16)
-	if sys.maxRegenPerFrame != 16 {
-		t.Errorf("Expected maxRegenPerFrame 16, got %d", sys.maxRegenPerFrame)
+	sys.SetMaxRegenPerFrame(24)
+	if sys.maxRegenPerFrame != 24 {
+		t.Errorf("Expected maxRegenPerFrame 24, got %d", sys.maxRegenPerFrame)
 	}
 
 	// Test disabling limit (0 = unlimited)

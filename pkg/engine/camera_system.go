@@ -161,7 +161,7 @@ func (s *CameraSystem) RecalculateBounds() {
 		return
 	}
 	// Only recalculate if terrain dimensions were previously set.
-	if cam.TerrainWidthPx <= 0 && cam.TerrainHeightPx <= 0 {
+	if cam.TerrainWidthPx <= 0 || cam.TerrainHeightPx <= 0 {
 		return
 	}
 	SetCameraBoundsFromTerrain(cam, cam.TerrainWidthPx, cam.TerrainHeightPx, s.ScreenWidth, s.ScreenHeight)

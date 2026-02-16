@@ -200,16 +200,12 @@ Current coverage: **82.2%**
 ## Implementation Status
 
 ✅ **Complete**:
-- Migration rule validation
-- Synthetic save generation
-- Data integrity checks
+- Migration rule validation using real `pkg/saveload.Migrator`
+- Synthetic save generation for testing without real save files
+- Data integrity checks (required fields, nested types, version matching)
 - Component preservation tracking
-
-⚠️ **Simulated**:
-- Migration timing (hardcoded)
-- Migration logic (simplified, not using real pkg/saveload)
-
-See [AUDIT.md](./AUDIT.md) for detailed analysis and recommendations.
+- Real migration timing measurement via `time.Since()`
+- Fallback migration for unsupported versions
 
 ## Supported Versions
 

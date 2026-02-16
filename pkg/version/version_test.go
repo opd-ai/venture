@@ -243,6 +243,21 @@ func TestParseVersion(t *testing.T) {
 			version: "1.2.c",
 			wantErr: true,
 		},
+		{
+			name:    "negative major",
+			version: "-1.0.0",
+			wantErr: true,
+		},
+		{
+			name:    "negative minor",
+			version: "1.-2.0",
+			wantErr: true,
+		},
+		{
+			name:    "negative patch",
+			version: "1.0.-3",
+			wantErr: true,
+		},
 	}
 
 	for _, tt := range tests {

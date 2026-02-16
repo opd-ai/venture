@@ -19,7 +19,7 @@ Comprehensive security validation across 6 domains with 30 automated checks:
 ```go
 import "github.com/opd-ai/venture/pkg/security"
 
-auditor := security.NewAuditor()
+auditor := security.NewAuditor(nil)
 results := auditor.RunFullAudit()
 
 if results.HasCritical() {

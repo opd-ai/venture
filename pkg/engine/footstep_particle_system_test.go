@@ -160,11 +160,11 @@ func TestFootstepParticleSystem_UpdateEntityMoving(t *testing.T) {
 	entity.GetPosition().X = 192                    // Move to tile (6, 5)
 	sys.lastFootstep[entity.ID] = sys.spawnInterval // Ensure cooldown passed
 
-	initialEntities := len(world.entities)
+	initialCount := ps.GetActiveParticleCount()
 	sys.Update([]*Entity{entity}, sys.spawnInterval+0.01)
 
 	// Should spawn particles when crossing tile boundary
-	if len(world.entities) <= initialEntities {
+	if ps.GetActiveParticleCount() <= initialCount {
 		t.Error("expected particles to spawn when entity crosses tile boundary")
 	}
 }

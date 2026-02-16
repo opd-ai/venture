@@ -398,7 +398,7 @@ func (ai *AISystem) moveTowardWaypoint(entity *Entity, aiComp *AIComponent, pos 
 
 // processDetect handles the detect state - confirm target and start chase.
 func (ai *AISystem) processDetect(entity *Entity, aiComp *AIComponent, pos *PositionComponent) {
-	if ai.logger != nil && aiDebugEnabled {
+	if ai.logger != nil && aiDebugEnabled && aiComp.Target != nil {
 		ai.logger.WithFields(logrus.Fields{
 			"entity_id":    entity.ID,
 			"state":        aiComp.State.String(),
@@ -474,7 +474,7 @@ func (ai *AISystem) processChase(entity *Entity, aiComp *AIComponent, pos *Posit
 
 // logChaseState logs current chase state information.
 func (ai *AISystem) logChaseState(entityID uint64, aiComp *AIComponent, pos *PositionComponent) {
-	if ai.logger != nil && aiDebugEnabled {
+	if ai.logger != nil && aiDebugEnabled && aiComp.Target != nil {
 		ai.logger.WithFields(logrus.Fields{
 			"entity_id":    entityID,
 			"state":        aiComp.State.String(),

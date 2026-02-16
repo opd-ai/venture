@@ -109,12 +109,6 @@ func (f *FactionAwareAISystem) getPlayerFactionStandings(player *Entity) map[str
 				standings[factionComp.FactionID] = factionComp.Reputation
 			}
 		}
-		// Also handle non-pointer faction components
-		if factionComp, ok := comp.(*FactionComponent); ok {
-			if factionComp.IsPlayerFaction {
-				standings[factionComp.FactionID] = factionComp.Reputation
-			}
-		}
 	}
 
 	return standings
@@ -173,14 +167,6 @@ func (f *FactionAwareAISystem) getEntityFaction(entity *Entity) *FactionComponen
 		return nil
 	}
 
-	// Handle pointer type
-	if fc, ok := comp.(*FactionComponent); ok {
-		if !fc.IsPlayerFaction {
-			return fc
-		}
-	}
-
-	// Handle value type
 	if fc, ok := comp.(*FactionComponent); ok {
 		if !fc.IsPlayerFaction {
 			return fc

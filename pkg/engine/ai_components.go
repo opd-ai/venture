@@ -241,8 +241,8 @@ func (a *AIComponent) GetCurrentWaypoint() *PatrolWaypoint {
 // AdvanceToNextWaypoint moves to the next waypoint in the patrol route.
 // Handles looping and reversing behavior based on PatrolReverse setting.
 func (a *AIComponent) AdvanceToNextWaypoint() {
-	if len(a.PatrolWaypoints) == 0 {
-		return
+	if len(a.PatrolWaypoints) <= 1 {
+		return // Single waypoint or empty: stay in place
 	}
 
 	// Reset wait timer for current waypoint

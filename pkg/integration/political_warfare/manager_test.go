@@ -1276,3 +1276,59 @@ func TestSaveLoadReputationPenalties(t *testing.T) {
 		t.Errorf("Penalty count mismatch: expected %d, got %d", len(originalPenalties), len(loadedPenalties))
 	}
 }
+
+// Test self-guild validation
+
+func TestDeclareWarSelfGuild(t *testing.T) {
+	manager, _, guild1, _, _ := setupTestManager(t)
+
+	_, err := manager.DeclareWar(guild1, guild1, 24*time.Hour)
+	if err == nil {
+		t.Error("Expected error when guild declares war on itself")
+	}
+}
+
+func TestSignPeaceTreatySelfGuild(t *testing.T) {
+	manager, _, guild1, _, _ := setupTestManager(t)
+
+	_, err := manager.SignPeaceTreaty(guild1, guild1, 7*24*time.Hour)
+	if err == nil {
+		t.Error("Expected error when guild signs treaty with itself")
+	}
+}
+
+func TestImposeEmbargoSelfGuild(t *testing.T) {
+	manager, _, guild1, _, _ := setupTestManager(t)
+
+	_, err := manager.ImposeEmbargo(guild1, guild1, 0.75)
+	if err == nil {
+		t.Error("Expected error when guild embargoes itself")
+	}
+}
+
+func TestCallReinforcementAlliesSelfGuild(t *testing.T) {
+	manager, _, guild1, _, _ := setupTestManager(t)
+
+	_, err := manager.CallReinforcementAllies(guild1, guild1)
+	if err == nil {
+		t.Error("Expected error when guild calls reinforcements against itself")
+	}
+}
+
+// Test reverse war check
+
+func TestDeclareWarReverseDirection(t *testing.T) {
+	manager, _, guild1, guild2, _ := setupTestManager(t)
+
+	// Guild1 declares war on Guild2
+	_, err := manager.DeclareWar(guild1, guild2, 24*time.Hour)
+	if err != nil {
+		t.Fatalf("DeclareWar failed: %v", err)
+	}
+
+	// Guild2 tries to declare war on Guild1 (reverse) - should fail
+	_, err = manager.DeclareWar(guild2, guild1, 24*time.Hour)
+	if err == nil {
+		t.Error("Expected error when declaring reverse war while war already active")
+	}
+}

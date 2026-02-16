@@ -73,6 +73,11 @@ func (m *Manager) DeclareWar(attackerGuildID, defenderGuildID string, preparatio
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
+	// Validate guilds are different
+	if attackerGuildID == defenderGuildID {
+		return nil, fmt.Errorf("a guild cannot declare war on itself")
+	}
+
 	// Validate guilds exist
 	if _, err := m.guildManager.GetGuild(attackerGuildID); err != nil {
 		return nil, fmt.Errorf("attacker guild not found: %w", err)
@@ -81,9 +86,13 @@ func (m *Manager) DeclareWar(attackerGuildID, defenderGuildID string, preparatio
 		return nil, fmt.Errorf("defender guild not found: %w", err)
 	}
 
-	// Check for existing war
+	// Check for existing war in either direction
 	warKey := fmt.Sprintf("%s_%s", attackerGuildID, defenderGuildID)
+	reverseWarKey := fmt.Sprintf("%s_%s", defenderGuildID, attackerGuildID)
 	if existingWar, exists := m.wars[warKey]; exists && !existingWar.Ended {
+		return nil, fmt.Errorf("war already declared between these guilds")
+	}
+	if existingWar, exists := m.wars[reverseWarKey]; exists && !existingWar.Ended {
 		return nil, fmt.Errorf("war already declared between these guilds")
 	}
 
@@ -116,6 +125,11 @@ func (m *Manager) DeclareWar(attackerGuildID, defenderGuildID string, preparatio
 func (m *Manager) SignPeaceTreaty(guildID1, guildID2 string, duration time.Duration) (*PeaceTreaty, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
+
+	// Validate guilds are different
+	if guildID1 == guildID2 {
+		return nil, fmt.Errorf("a guild cannot sign a peace treaty with itself")
+	}
 
 	// Validate guilds exist
 	if _, err := m.guildManager.GetGuild(guildID1); err != nil {
@@ -170,6 +184,11 @@ func (m *Manager) ImposeEmbargo(imposingGuildID, targetGuildID string, priceIncr
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
+	// Validate guilds are different
+	if imposingGuildID == targetGuildID {
+		return nil, fmt.Errorf("a guild cannot impose an embargo on itself")
+	}
+
 	// Validate guilds exist
 	if _, err := m.guildManager.GetGuild(imposingGuildID); err != nil {
 		return nil, fmt.Errorf("imposing guild not found: %w", err)
@@ -211,6 +230,11 @@ func (m *Manager) ImposeEmbargo(imposingGuildID, targetGuildID string, priceIncr
 func (m *Manager) CallReinforcementAllies(callingGuildID, targetGuildID string) (*AllianceCall, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
+
+	// Validate guilds are different
+	if callingGuildID == targetGuildID {
+		return nil, fmt.Errorf("a guild cannot call reinforcements against itself")
+	}
 
 	// Validate guilds exist
 	callingGuild, err := m.guildManager.GetGuild(callingGuildID)

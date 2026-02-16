@@ -31,8 +31,8 @@
 //	// Call allies for siege reinforcements
 //	allies, err := manager.CallReinforcementAllies("guild1", "guild2")
 //
-//	// Impose trade embargo on enemy guild
-//	embargo, err := manager.ImposeEmbargo("guild1", "guild2", 90 /* % markup */)
+//	// Impose trade embargo on enemy guild (0.5 = 50% to 0.9 = 90% price markup)
+//	embargo, err := manager.ImposeEmbargo("guild1", "guild2", 0.9)
 //
 //	// Attempt diplomatic victory
 //	success, err := manager.NegotiateDiplomaticVictory("guild1", "guild2", concessions)

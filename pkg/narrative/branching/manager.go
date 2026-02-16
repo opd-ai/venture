@@ -113,8 +113,15 @@ func (m *Manager) validateChoiceContext(playerID, arcID string) (*PlayerProgress
 		return nil, nil, nil, fmt.Errorf("arc %s already completed", arcID)
 	}
 
-	arc := m.graph.Arcs[arcID]
-	currentNode := arc.Nodes[progress.CurrentNodeID]
+	arc, exists := m.graph.Arcs[arcID]
+	if !exists {
+		return nil, nil, nil, fmt.Errorf("arc %s not found", arcID)
+	}
+
+	currentNode, exists := arc.Nodes[progress.CurrentNodeID]
+	if !exists {
+		return nil, nil, nil, fmt.Errorf("current node %s not found in arc %s", progress.CurrentNodeID, arcID)
+	}
 
 	if currentNode.Type != NodeTypeChoice {
 		return nil, nil, nil, fmt.Errorf("current node %s is not a choice node", progress.CurrentNodeID)
@@ -180,8 +187,15 @@ func (m *Manager) AdvanceStory(playerID, arcID string) error {
 		return fmt.Errorf("arc %s already completed", arcID)
 	}
 
-	arc := m.graph.Arcs[arcID]
-	currentNode := arc.Nodes[progress.CurrentNodeID]
+	arc, exists := m.graph.Arcs[arcID]
+	if !exists {
+		return fmt.Errorf("arc %s not found", arcID)
+	}
+
+	currentNode, exists := arc.Nodes[progress.CurrentNodeID]
+	if !exists {
+		return fmt.Errorf("current node %s not found in arc %s", progress.CurrentNodeID, arcID)
+	}
 
 	if currentNode.Type == NodeTypeChoice {
 		return fmt.Errorf("current node %s is a choice node, use MakeChoice instead", progress.CurrentNodeID)
@@ -212,8 +226,17 @@ func (m *Manager) GetCurrentNode(playerID, arcID string) (*StoryNode, error) {
 		return nil, err
 	}
 
-	arc := m.graph.Arcs[arcID]
-	return arc.Nodes[progress.CurrentNodeID], nil
+	arc, exists := m.graph.Arcs[arcID]
+	if !exists {
+		return nil, fmt.Errorf("arc %s not found", arcID)
+	}
+
+	node, exists := arc.Nodes[progress.CurrentNodeID]
+	if !exists {
+		return nil, fmt.Errorf("current node %s not found in arc %s", progress.CurrentNodeID, arcID)
+	}
+
+	return node, nil
 }
 
 // GetAlignment returns a player's current alignment

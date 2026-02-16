@@ -327,6 +327,37 @@ func TestManagerCheckRequirements(t *testing.T) {
 }
 
 func TestManagerAlignmentClamping(t *testing.T) {
+	tests := []struct {
+		name     string
+		initial  float64
+		shift    float64
+		expected float64
+	}{
+		{"clamp to max", 0.95, 0.2, 1.0},
+		{"clamp to min", -0.95, -0.2, -1.0},
+		{"no clamping needed", 0.0, 0.1, 0.1},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			progress := &PlayerProgress{
+				Alignment: map[AlignmentAxis]float64{
+					AlignmentGoodEvil: tt.initial,
+				},
+			}
+
+			applyAlignmentShifts(progress, map[AlignmentAxis]float64{
+				AlignmentGoodEvil: tt.shift,
+			})
+
+			if progress.Alignment[AlignmentGoodEvil] != tt.expected {
+				t.Errorf("Alignment = %f, want %f", progress.Alignment[AlignmentGoodEvil], tt.expected)
+			}
+		})
+	}
+}
+
+func TestManagerArcRemovedAfterStart(t *testing.T) {
 	manager := NewManager()
 	gen := NewGenerator()
 
@@ -340,31 +371,25 @@ func TestManagerAlignmentClamping(t *testing.T) {
 	manager.RegisterArc(arc)
 	manager.StartArc("player1", arc.ID)
 
-	// Manually set high alignment
-	progress, _ := manager.GetProgress("player1", arc.ID)
-	progress.Alignment[AlignmentGoodEvil] = 0.95
+	// Remove the arc from the graph to simulate a missing arc
+	delete(manager.graph.Arcs, arc.ID)
 
-	// Create a choice with positive shift
-	choice := Choice{
-		ID:   "test_choice",
-		Text: "Test",
-		AlignmentShift: map[AlignmentAxis]float64{
-			AlignmentGoodEvil: 0.2,
-		},
-		NextNodeID: arc.StartNodeID,
+	// GetCurrentNode should return error, not panic
+	_, err := manager.GetCurrentNode("player1", arc.ID)
+	if err == nil {
+		t.Error("GetCurrentNode() should fail when arc is missing")
 	}
 
-	// Apply the shift manually
-	for axis, shift := range choice.AlignmentShift {
-		progress.Alignment[axis] += shift
-		if progress.Alignment[axis] > 1.0 {
-			progress.Alignment[axis] = 1.0
-		}
+	// AdvanceStory should return error, not panic
+	err = manager.AdvanceStory("player1", arc.ID)
+	if err == nil {
+		t.Error("AdvanceStory() should fail when arc is missing")
 	}
 
-	// Verify clamped to 1.0
-	if progress.Alignment[AlignmentGoodEvil] != 1.0 {
-		t.Errorf("Alignment = %f, want 1.0 (clamped)", progress.Alignment[AlignmentGoodEvil])
+	// MakeChoice should return error, not panic
+	err = manager.MakeChoice("player1", arc.ID, "some_choice")
+	if err == nil {
+		t.Error("MakeChoice() should fail when arc is missing")
 	}
 }
 

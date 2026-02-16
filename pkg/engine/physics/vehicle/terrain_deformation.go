@@ -7,11 +7,10 @@
 package vehicle
 
 import (
-	"math"
 	"math/rand"
 )
 
-// TerrainDeformationComponent manages tire tracks and terrain deformation.
+// TerrainDeformationComponent manages tire tracks and terrain deformation data.
 type TerrainDeformationComponent struct {
 	// Track marks left by vehicle
 	Tracks []TrackMark
@@ -63,90 +62,6 @@ func NewTerrainDeformationComponent(seed int64) *TerrainDeformationComponent {
 			TerrainSnow:  60.0,  // 1 minute in snow
 			TerrainWater: 1.0,   // 1 second in water (wake effect)
 		},
-	}
-}
-
-// AddTrack creates a new track mark at the specified position.
-// wheelLoad: force on wheel (affects depth), vehicleAngle: direction of travel
-func (t *TerrainDeformationComponent) AddTrack(x, y, vehicleAngle, wheelLoad float64, terrainType TerrainType) {
-	// Check spacing to avoid too many close tracks
-	dx := x - t.LastTrackX
-	dy := y - t.LastTrackY
-	distance := math.Sqrt(dx*dx + dy*dy)
-
-	if distance < t.MinTrackSpacing {
-		return // Too close to last track
-	}
-
-	// Get deformation parameters for this terrain
-	baseDepth := t.DeformationDepth[terrainType]
-	fadeTime := t.FadeTime[terrainType]
-
-	if baseDepth <= 0 || fadeTime <= 0 {
-		return // No tracks on this terrain
-	}
-
-	// Calculate depth based on wheel load
-	// Higher load = deeper tracks
-	// Normalize load to reasonable range (assume 0-10000 N)
-	loadFactor := math.Min(wheelLoad/5000.0, 2.0)
-	depth := baseDepth * loadFactor
-	if depth > 1.0 {
-		depth = 1.0
-	}
-
-	// Add some noise to depth for realism
-	depthNoise := t.rng.Float64()*0.1 - 0.05 // ±5%
-	depth = math.Max(0.0, math.Min(1.0, depth+depthNoise))
-
-	// Track width varies slightly (8-12 pixels)
-	width := 10.0 + t.rng.Float64()*4.0 - 2.0
-
-	// Create track mark
-	track := TrackMark{
-		X:           x,
-		Y:           y,
-		Angle:       vehicleAngle,
-		Depth:       depth,
-		Width:       width,
-		Age:         0.0,
-		TerrainType: terrainType,
-		FadeTime:    fadeTime,
-	}
-
-	// Add to collection
-	t.Tracks = append(t.Tracks, track)
-
-	// Update last track position
-	t.LastTrackX = x
-	t.LastTrackY = y
-
-	// Enforce max tracks limit (remove oldest)
-	if len(t.Tracks) > t.MaxTracks {
-		// Remove oldest 10% to avoid frequent reallocations
-		removeCount := t.MaxTracks / 10
-		if removeCount < 1 {
-			removeCount = 1
-		}
-		t.Tracks = t.Tracks[removeCount:]
-	}
-}
-
-// Update ages existing tracks and removes faded ones.
-func (t *TerrainDeformationComponent) Update(deltaTime float64) {
-	// Age all tracks
-	for i := range t.Tracks {
-		t.Tracks[i].Age += deltaTime
-	}
-
-	// Remove fully faded tracks
-	// Work backwards to safely remove elements
-	for i := len(t.Tracks) - 1; i >= 0; i-- {
-		track := &t.Tracks[i]
-		if track.Age >= track.FadeTime {
-			// Remove this track
-			t.Tracks = append(t.Tracks[:i], t.Tracks[i+1:]...)
-		}
 	}
 }
 

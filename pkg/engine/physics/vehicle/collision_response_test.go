@@ -24,10 +24,11 @@ func TestNewCollisionResponseComponent(t *testing.T) {
 }
 
 func TestCollisionResponseComponent_ProcessCollision_BelowThreshold(t *testing.T) {
+	sys := NewEnhancedVehicleSystem()
 	comp := NewCollisionResponseComponent(1000.0)
 
 	// Low velocity collision (below damage threshold of 50 px/s)
-	result := comp.ProcessCollision(30.0, 0.0, -1.0, 0.0)
+	result := sys.ProcessCollisionResponse(comp, 30.0, 0.0, -1.0, 0.0)
 
 	if result.DamageDealt != 0.0 {
 		t.Errorf("low velocity collision should deal no damage, got %f", result.DamageDealt)
@@ -41,10 +42,11 @@ func TestCollisionResponseComponent_ProcessCollision_BelowThreshold(t *testing.T
 }
 
 func TestCollisionResponseComponent_ProcessCollision_AboveThreshold(t *testing.T) {
+	sys := NewEnhancedVehicleSystem()
 	comp := NewCollisionResponseComponent(1000.0)
 
 	// High velocity head-on collision
-	result := comp.ProcessCollision(100.0, 0.0, -1.0, 0.0)
+	result := sys.ProcessCollisionResponse(comp, 100.0, 0.0, -1.0, 0.0)
 
 	if result.DamageDealt <= 0.0 {
 		t.Error("high velocity collision should deal damage")
@@ -58,11 +60,12 @@ func TestCollisionResponseComponent_ProcessCollision_AboveThreshold(t *testing.T
 }
 
 func TestCollisionResponseComponent_ProcessCollision_HeadOn(t *testing.T) {
+	sys := NewEnhancedVehicleSystem()
 	comp := NewCollisionResponseComponent(1000.0)
 
 	// Head-on collision (velocity opposite to normal)
 	// Velocity: (100, 0), Normal: (-1, 0)
-	result := comp.ProcessCollision(100.0, 0.0, -1.0, 0.0)
+	result := sys.ProcessCollisionResponse(comp, 100.0, 0.0, -1.0, 0.0)
 
 	// Check bounce velocity is opposite direction
 	if result.BounceVelocityX >= 0.0 {
@@ -76,15 +79,16 @@ func TestCollisionResponseComponent_ProcessCollision_HeadOn(t *testing.T) {
 }
 
 func TestCollisionResponseComponent_ProcessCollision_GlancingBlow(t *testing.T) {
+	sys := NewEnhancedVehicleSystem()
 	comp1 := NewCollisionResponseComponent(1000.0)
 	comp2 := NewCollisionResponseComponent(1000.0)
 
 	// Head-on collision
-	headOn := comp1.ProcessCollision(100.0, 0.0, -1.0, 0.0)
+	headOn := sys.ProcessCollisionResponse(comp1, 100.0, 0.0, -1.0, 0.0)
 
 	// Glancing blow (45 degree angle)
 	// Velocity: (100, 0), Normal: (-0.707, -0.707)
-	glancing := comp2.ProcessCollision(100.0, 0.0, -0.707, -0.707)
+	glancing := sys.ProcessCollisionResponse(comp2, 100.0, 0.0, -0.707, -0.707)
 
 	// Glancing blow should deal less damage than head-on
 	if glancing.DamageDealt >= headOn.DamageDealt {
@@ -155,11 +159,12 @@ func TestCollisionResponseComponent_Repair(t *testing.T) {
 }
 
 func TestCollisionResponseComponent_Reset(t *testing.T) {
+	sys := NewEnhancedVehicleSystem()
 	comp := NewCollisionResponseComponent(1000.0)
 
 	// Process some collisions
-	comp.ProcessCollision(100.0, 0.0, -1.0, 0.0)
-	comp.ProcessCollision(80.0, 0.0, -1.0, 0.0)
+	sys.ProcessCollisionResponse(comp, 100.0, 0.0, -1.0, 0.0)
+	sys.ProcessCollisionResponse(comp, 80.0, 0.0, -1.0, 0.0)
 
 	if comp.CollisionCount != 2 {
 		t.Fatalf("expected 2 collisions, got %d", comp.CollisionCount)
@@ -180,6 +185,7 @@ func TestCollisionResponseComponent_Reset(t *testing.T) {
 }
 
 func TestCollisionResponseComponent_VelocityReflection(t *testing.T) {
+	sys := NewEnhancedVehicleSystem()
 	comp := NewCollisionResponseComponent(1000.0)
 
 	tests := []struct {
@@ -200,7 +206,7 @@ func TestCollisionResponseComponent_VelocityReflection(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			comp.Reset() // Reset between tests
-			result := comp.ProcessCollision(tt.velX, tt.velY, tt.normalX, tt.normalY)
+			result := sys.ProcessCollisionResponse(comp, tt.velX, tt.velY, tt.normalX, tt.normalY)
 
 			// Check sign of bounce velocity
 			if tt.expectX != 0.0 {
@@ -227,11 +233,12 @@ func TestCollisionResponseComponent_VelocityReflection(t *testing.T) {
 }
 
 func TestCollisionResponseComponent_RestitutionEffect(t *testing.T) {
+	sys := NewEnhancedVehicleSystem()
 	comp := NewCollisionResponseComponent(1000.0)
 
 	// Process collision
 	velX := 100.0
-	result := comp.ProcessCollision(velX, 0.0, -1.0, 0.0)
+	result := sys.ProcessCollisionResponse(comp, velX, 0.0, -1.0, 0.0)
 
 	// Bounce velocity should be less than original (due to restitution < 1.0)
 	bounceSpeed := math.Sqrt(result.BounceVelocityX*result.BounceVelocityX + result.BounceVelocityY*result.BounceVelocityY)
@@ -269,6 +276,7 @@ func TestCollisionResponseComponent_ShouldCauseDamage(t *testing.T) {
 
 // Benchmark tests
 func BenchmarkCollisionResponseComponent_ProcessCollision(b *testing.B) {
+	sys := NewEnhancedVehicleSystem()
 	comp := NewCollisionResponseComponent(1000.0)
 	velX, velY := 100.0, 50.0
 	normalX, normalY := -1.0, 0.0
@@ -276,7 +284,7 @@ func BenchmarkCollisionResponseComponent_ProcessCollision(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		comp.Reset() // Reset to avoid accumulating damage
-		_ = comp.ProcessCollision(velX, velY, normalX, normalY)
+		_ = sys.ProcessCollisionResponse(comp, velX, velY, normalX, normalY)
 	}
 }
 

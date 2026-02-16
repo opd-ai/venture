@@ -1,10 +1,6 @@
 // Package vehicle provides vehicle-specific physics including suspension and weight transfer.
 package vehicle
 
-import (
-	"math"
-)
-
 // CollisionResponseComponent handles realistic vehicle damage from impacts.
 type CollisionResponseComponent struct {
 	// Impact tracking
@@ -39,108 +35,6 @@ func NewCollisionResponseComponent(mass float64) *CollisionResponseComponent {
 		Restitution:         0.2, // Low bounce (20% energy retained)
 		CollisionCount:      0,
 	}
-}
-
-// ProcessCollision calculates damage and response from a collision.
-// velocityX, velocityY: vehicle velocity before impact
-// normalX, normalY: surface normal at collision point (unit vector)
-// Returns: impact result with damage and velocity changes
-func (c *CollisionResponseComponent) ProcessCollision(velocityX, velocityY, normalX, normalY float64) ImpactResult {
-	// Calculate impact velocity magnitude
-	impactSpeed := math.Sqrt(velocityX*velocityX + velocityY*velocityY)
-	c.LastImpactVelocity = impactSpeed
-	c.CollisionCount++
-
-	// No damage below threshold
-	if impactSpeed < c.DamageThreshold {
-		// Just reflect velocity with restitution
-		reflectedVel := c.reflectVelocity(velocityX, velocityY, normalX, normalY)
-		return ImpactResult{
-			DamageDealt:       0.0,
-			VelocityReduction: impactSpeed * (1.0 - c.Restitution),
-			BounceVelocityX:   reflectedVel[0],
-			BounceVelocityY:   reflectedVel[1],
-			IntegrityLoss:     0.0,
-		}
-	}
-
-	// Calculate impact force (F = m * Δv)
-	// Approximate collision time as 0.1 seconds
-	collisionTime := 0.1
-	deltaV := impactSpeed // Assuming full stop then bounce
-	force := (c.MassForCalculation * deltaV) / collisionTime
-	c.LastImpactForce = force
-
-	// Calculate angle of impact (affects damage)
-	// Head-on collision = max damage, glancing blow = less damage
-	velocityMag := math.Sqrt(velocityX*velocityX + velocityY*velocityY)
-	if velocityMag == 0 {
-		velocityMag = 1.0 // Avoid division by zero
-	}
-
-	// Dot product gives cosine of angle between velocity and normal
-	// cos(0°) = 1.0 (head-on), cos(90°) = 0.0 (glancing)
-	dotProduct := (velocityX*normalX + velocityY*normalY) / velocityMag
-	dotProduct = math.Abs(dotProduct) // Magnitude only
-	c.LastImpactAngle = math.Acos(math.Max(-1.0, math.Min(1.0, dotProduct)))
-
-	// Damage scales with impact speed and angle
-	// Formula: damage = (speed - threshold)² * angleFactor * damageCoeff
-	speedFactor := (impactSpeed - c.DamageThreshold) / 100.0 // Normalize
-	angleFactor := dotProduct                                // More damage for head-on (closer to 1.0)
-	damageCoeff := 0.5                                       // Base damage coefficient
-
-	damage := speedFactor * speedFactor * angleFactor * damageCoeff
-	damage = math.Max(0.0, math.Min(damage, 100.0)) // Clamp to [0, 100]
-
-	c.TotalImpactDamage += damage
-
-	// Structural integrity loss (permanent)
-	integrityLoss := damage * 0.01 // 1% per point of damage
-	c.StructuralIntegrity -= integrityLoss
-	if c.StructuralIntegrity < 0.0 {
-		c.StructuralIntegrity = 0.0
-	}
-
-	// Calculate bounce velocity (reflect and apply restitution)
-	reflectedVel := c.reflectVelocity(velocityX, velocityY, normalX, normalY)
-
-	// Apply restitution (scaled by structural integrity)
-	// Damaged vehicles bounce less
-	effectiveRestitution := c.Restitution * c.StructuralIntegrity
-	bounceVelX := reflectedVel[0] * effectiveRestitution
-	bounceVelY := reflectedVel[1] * effectiveRestitution
-
-	// Velocity reduction is difference between original and bounce
-	velocityReduction := impactSpeed - math.Sqrt(bounceVelX*bounceVelX+bounceVelY*bounceVelY)
-
-	return ImpactResult{
-		DamageDealt:       damage,
-		VelocityReduction: velocityReduction,
-		BounceVelocityX:   bounceVelX,
-		BounceVelocityY:   bounceVelY,
-		IntegrityLoss:     integrityLoss,
-	}
-}
-
-// reflectVelocity calculates the reflected velocity vector given a surface normal.
-// Formula: v' = v - 2(v·n)n
-func (c *CollisionResponseComponent) reflectVelocity(vx, vy, nx, ny float64) [2]float64 {
-	// Normalize normal vector (should already be normalized, but safety check)
-	nMag := math.Sqrt(nx*nx + ny*ny)
-	if nMag > 0 {
-		nx /= nMag
-		ny /= nMag
-	}
-
-	// Dot product: v · n
-	dotProduct := vx*nx + vy*ny
-
-	// Reflection: v - 2(v·n)n
-	reflectX := vx - 2.0*dotProduct*nx
-	reflectY := vy - 2.0*dotProduct*ny
-
-	return [2]float64{reflectX, reflectY}
 }
 
 // GetDamageMultiplier returns a multiplier based on structural integrity.

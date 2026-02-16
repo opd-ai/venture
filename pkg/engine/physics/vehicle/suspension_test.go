@@ -37,6 +37,7 @@ func TestNewSuspensionComponent(t *testing.T) {
 }
 
 func TestSuspensionComponent_Update(t *testing.T) {
+	sys := NewEnhancedVehicleSystem()
 	tests := []struct {
 		name           string
 		wheelCount     int
@@ -74,7 +75,7 @@ func TestSuspensionComponent_Update(t *testing.T) {
 			// Run multiple frames to stabilize
 			var offset float64
 			for i := 0; i < 10; i++ {
-				offset = comp.Update(tt.deltaTime, tt.terrainHeights)
+				offset = sys.UpdateSuspensionPhysics(comp, tt.deltaTime, tt.terrainHeights)
 			}
 
 			if tt.wantOffset && math.Abs(offset) < 0.01 {
@@ -85,11 +86,12 @@ func TestSuspensionComponent_Update(t *testing.T) {
 }
 
 func TestSuspensionComponent_GetWheelLoad(t *testing.T) {
+	sys := NewEnhancedVehicleSystem()
 	comp := NewSuspensionComponent(4)
 	terrainHeights := []float64{0, 0, 0, 0}
 
 	// Update to calculate loads
-	comp.Update(0.016, terrainHeights)
+	sys.UpdateSuspensionPhysics(comp, 0.016, terrainHeights)
 
 	tests := []struct {
 		name       string
@@ -203,20 +205,22 @@ func TestSuspensionComponent_SetWheelLoad(t *testing.T) {
 
 // Benchmark tests
 func BenchmarkSuspensionComponent_Update(b *testing.B) {
+	sys := NewEnhancedVehicleSystem()
 	comp := NewSuspensionComponent(4)
 	terrainHeights := []float64{0, 0, 0, 0}
 	deltaTime := 0.016
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		comp.Update(deltaTime, terrainHeights)
+		sys.UpdateSuspensionPhysics(comp, deltaTime, terrainHeights)
 	}
 }
 
 func BenchmarkSuspensionComponent_GetWheelLoad(b *testing.B) {
+	sys := NewEnhancedVehicleSystem()
 	comp := NewSuspensionComponent(4)
 	terrainHeights := []float64{0, 0, 0, 0}
-	comp.Update(0.016, terrainHeights)
+	sys.UpdateSuspensionPhysics(comp, 0.016, terrainHeights)
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {

@@ -6,6 +6,7 @@ import (
 )
 
 // EnhancedVehicleSystem integrates suspension, weight transfer, terrain deformation, and collision response.
+// All physics logic lives in this system; components are pure data structures.
 type EnhancedVehicleSystem struct {
 	// System configuration
 	enabled bool
@@ -51,7 +52,7 @@ func (evs *EnhancedVehicleSystem) updateWeightTransfer(
 		return
 	}
 
-	weightTransfer.Update(state.VelocityX, state.VelocityY, state.AngularVel, deltaTime)
+	evs.UpdateWeightDistribution(weightTransfer, state.VelocityX, state.VelocityY, state.AngularVel, deltaTime)
 
 	if suspension != nil {
 		evs.applyWeightToSuspension(suspension, weightTransfer)
@@ -73,12 +74,12 @@ func (evs *EnhancedVehicleSystem) applyWeightToSuspension(suspension *Suspension
 // updateSuspension updates suspension physics and grounding state.
 func (evs *EnhancedVehicleSystem) updateSuspension(
 	suspension *SuspensionComponent,
-	weightTransfer *WeightTransferComponent,
+	_ *WeightTransferComponent,
 	state VehicleState,
 	deltaTime float64,
 ) VehicleState {
 	if suspension != nil && len(state.TerrainHeight) == len(suspension.Wheels) {
-		_ = suspension.Update(deltaTime, state.TerrainHeight)
+		_ = evs.UpdateSuspensionPhysics(suspension, deltaTime, state.TerrainHeight)
 		groundedCount := suspension.GetGroundedWheelCount()
 		state.IsGrounded = groundedCount >= 2
 	}
@@ -104,7 +105,7 @@ func (evs *EnhancedVehicleSystem) updateTireTracks(
 		}
 	}
 
-	deformation.Update(deltaTime)
+	evs.UpdateTerrainTracks(deformation, deltaTime)
 }
 
 // addWheelTrack adds a single wheel track to terrain deformation.
@@ -125,7 +126,7 @@ func (evs *EnhancedVehicleSystem) addWheelTrack(
 	}
 
 	wheelLoad := suspension.GetWheelLoad(wheelIndex)
-	deformation.AddTrack(wheelWorldX, wheelWorldY, state.Rotation, wheelLoad, terrainType)
+	evs.AddTerrainTrack(deformation, wheelWorldX, wheelWorldY, state.Rotation, wheelLoad, terrainType)
 }
 
 // applyCollisionDamage applies damage multiplier to vehicle performance.
@@ -154,10 +155,8 @@ func (evs *EnhancedVehicleSystem) ProcessVehicleCollision(
 		return state.VelocityX, state.VelocityY, 0.0
 	}
 
-	// Process the collision
-	result := collision.ProcessCollision(state.VelocityX, state.VelocityY, normalX, normalY)
+	result := evs.ProcessCollisionResponse(collision, state.VelocityX, state.VelocityY, normalX, normalY)
 
-	// Return new velocity and damage dealt
 	return result.BounceVelocityX, result.BounceVelocityY, result.DamageDealt
 }
 
@@ -174,4 +173,334 @@ func (evs *EnhancedVehicleSystem) Disable() {
 // IsEnabled returns whether the system is enabled.
 func (evs *EnhancedVehicleSystem) IsEnabled() bool {
 	return evs.enabled
+}
+
+// --- Suspension physics logic (moved from SuspensionComponent) ---
+
+// UpdateSuspensionPhysics simulates suspension physics for one frame.
+// Returns the average vertical offset to apply to vehicle rendering.
+func (evs *EnhancedVehicleSystem) UpdateSuspensionPhysics(s *SuspensionComponent, deltaTime float64, terrainHeights []float64) float64 {
+	if len(terrainHeights) != len(s.Wheels) {
+		return 0.0
+	}
+
+	s.LastUpdateTime += deltaTime
+
+	totalVerticalOffset := 0.0
+	groundedWheels := 0
+
+	for i := range s.Wheels {
+		wheel := &s.Wheels[i]
+		_ = terrainHeights[i]
+
+		compressionDistance := wheel.Compression * s.SuspensionTravel
+		springForce := -wheel.SpringStiffness * compressionDistance
+		damperForce := -wheel.DamperStrength * wheel.CompressionRate
+		totalForce := springForce + damperForce
+
+		wheelWeight := (s.TotalMass * 9.81) / float64(len(s.Wheels))
+		netForce := wheelWeight + totalForce
+
+		wheelMass := s.TotalMass / (10.0 * float64(len(s.Wheels)))
+		compressionAccel := netForce / wheelMass
+
+		wheel.CompressionRate += compressionAccel * deltaTime
+		wheel.Compression += wheel.CompressionRate * deltaTime
+
+		if wheel.Compression < 0.0 {
+			wheel.Compression = 0.0
+			wheel.CompressionRate = 0.0
+			wheel.IsGrounded = false
+		} else if wheel.Compression > 1.0 {
+			wheel.Compression = 1.0
+			wheel.CompressionRate = 0.0
+			wheel.IsGrounded = true
+		} else {
+			wheel.IsGrounded = true
+		}
+
+		wheel.Load = math.Abs(springForce + damperForce)
+
+		if wheel.IsGrounded {
+			verticalOffset := (1.0 - wheel.Compression) * s.SuspensionTravel
+			totalVerticalOffset += verticalOffset
+			groundedWheels++
+		}
+	}
+
+	if groundedWheels > 0 {
+		return totalVerticalOffset / float64(groundedWheels)
+	}
+	return 0.0
+}
+
+// --- Collision response logic (moved from CollisionResponseComponent) ---
+
+// ProcessCollisionResponse calculates damage and response from a collision.
+// velocityX, velocityY: vehicle velocity before impact
+// normalX, normalY: surface normal at collision point (unit vector)
+// Returns: impact result with damage and velocity changes
+func (evs *EnhancedVehicleSystem) ProcessCollisionResponse(c *CollisionResponseComponent, velocityX, velocityY, normalX, normalY float64) ImpactResult {
+	impactSpeed := math.Sqrt(velocityX*velocityX + velocityY*velocityY)
+	c.LastImpactVelocity = impactSpeed
+	c.CollisionCount++
+
+	if impactSpeed < c.DamageThreshold {
+		reflectedVel := reflectVelocity(velocityX, velocityY, normalX, normalY)
+		return ImpactResult{
+			DamageDealt:       0.0,
+			VelocityReduction: impactSpeed * (1.0 - c.Restitution),
+			BounceVelocityX:   reflectedVel[0],
+			BounceVelocityY:   reflectedVel[1],
+			IntegrityLoss:     0.0,
+		}
+	}
+
+	collisionTime := 0.1
+	deltaV := impactSpeed
+	force := (c.MassForCalculation * deltaV) / collisionTime
+	c.LastImpactForce = force
+
+	velocityMag := math.Sqrt(velocityX*velocityX + velocityY*velocityY)
+	if velocityMag == 0 {
+		velocityMag = 1.0
+	}
+
+	dotProduct := (velocityX*normalX + velocityY*normalY) / velocityMag
+	dotProduct = math.Abs(dotProduct)
+	c.LastImpactAngle = math.Acos(math.Max(-1.0, math.Min(1.0, dotProduct)))
+
+	speedFactor := (impactSpeed - c.DamageThreshold) / 100.0
+	angleFactor := dotProduct
+	damageCoeff := 0.5
+
+	damage := speedFactor * speedFactor * angleFactor * damageCoeff
+	damage = math.Max(0.0, math.Min(damage, 100.0))
+
+	c.TotalImpactDamage += damage
+
+	integrityLoss := damage * 0.01
+	c.StructuralIntegrity -= integrityLoss
+	if c.StructuralIntegrity < 0.0 {
+		c.StructuralIntegrity = 0.0
+	}
+
+	reflectedVel := reflectVelocity(velocityX, velocityY, normalX, normalY)
+
+	effectiveRestitution := c.Restitution * c.StructuralIntegrity
+	bounceVelX := reflectedVel[0] * effectiveRestitution
+	bounceVelY := reflectedVel[1] * effectiveRestitution
+
+	velocityReduction := impactSpeed - math.Sqrt(bounceVelX*bounceVelX+bounceVelY*bounceVelY)
+
+	return ImpactResult{
+		DamageDealt:       damage,
+		VelocityReduction: velocityReduction,
+		BounceVelocityX:   bounceVelX,
+		BounceVelocityY:   bounceVelY,
+		IntegrityLoss:     integrityLoss,
+	}
+}
+
+// reflectVelocity calculates the reflected velocity vector given a surface normal.
+// Formula: v' = v - 2(v·n)n
+func reflectVelocity(vx, vy, nx, ny float64) [2]float64 {
+	nMag := math.Sqrt(nx*nx + ny*ny)
+	if nMag > 0 {
+		nx /= nMag
+		ny /= nMag
+	}
+
+	dotProduct := vx*nx + vy*ny
+
+	reflectX := vx - 2.0*dotProduct*nx
+	reflectY := vy - 2.0*dotProduct*ny
+
+	return [2]float64{reflectX, reflectY}
+}
+
+// --- Terrain deformation logic (moved from TerrainDeformationComponent) ---
+
+// AddTerrainTrack creates a new track mark at the specified position.
+// wheelLoad: force on wheel (affects depth), vehicleAngle: direction of travel
+func (evs *EnhancedVehicleSystem) AddTerrainTrack(t *TerrainDeformationComponent, x, y, vehicleAngle, wheelLoad float64, terrainType TerrainType) {
+	dx := x - t.LastTrackX
+	dy := y - t.LastTrackY
+	distance := math.Sqrt(dx*dx + dy*dy)
+
+	if distance < t.MinTrackSpacing {
+		return
+	}
+
+	baseDepth := t.DeformationDepth[terrainType]
+	fadeTime := t.FadeTime[terrainType]
+
+	if baseDepth <= 0 || fadeTime <= 0 {
+		return
+	}
+
+	loadFactor := math.Min(wheelLoad/5000.0, 2.0)
+	depth := baseDepth * loadFactor
+	if depth > 1.0 {
+		depth = 1.0
+	}
+
+	depthNoise := t.rng.Float64()*0.1 - 0.05
+	depth = math.Max(0.0, math.Min(1.0, depth+depthNoise))
+
+	width := 10.0 + t.rng.Float64()*4.0 - 2.0
+
+	track := TrackMark{
+		X:           x,
+		Y:           y,
+		Angle:       vehicleAngle,
+		Depth:       depth,
+		Width:       width,
+		Age:         0.0,
+		TerrainType: terrainType,
+		FadeTime:    fadeTime,
+	}
+
+	t.Tracks = append(t.Tracks, track)
+
+	t.LastTrackX = x
+	t.LastTrackY = y
+
+	if len(t.Tracks) > t.MaxTracks {
+		removeCount := t.MaxTracks / 10
+		if removeCount < 1 {
+			removeCount = 1
+		}
+		t.Tracks = t.Tracks[removeCount:]
+	}
+}
+
+// UpdateTerrainTracks ages existing tracks and removes faded ones.
+func (evs *EnhancedVehicleSystem) UpdateTerrainTracks(t *TerrainDeformationComponent, deltaTime float64) {
+	for i := range t.Tracks {
+		t.Tracks[i].Age += deltaTime
+	}
+
+	for i := len(t.Tracks) - 1; i >= 0; i-- {
+		track := &t.Tracks[i]
+		if track.Age >= track.FadeTime {
+			t.Tracks = append(t.Tracks[:i], t.Tracks[i+1:]...)
+		}
+	}
+}
+
+// --- Weight transfer logic (moved from WeightTransferComponent) ---
+
+// UpdateWeightDistribution calculates weight transfer based on current vehicle dynamics.
+// velocityX, velocityY: current velocity (pixels/s)
+// angularVel: current angular velocity (radians/s)
+// deltaTime: time step (seconds)
+func (evs *EnhancedVehicleSystem) UpdateWeightDistribution(w *WeightTransferComponent, velocityX, velocityY, angularVel, deltaTime float64) {
+	if deltaTime <= 0 {
+		return
+	}
+
+	w.AccelerationX = (velocityX - w.PrevVelocityX) / deltaTime
+	w.AccelerationY = (velocityY - w.PrevVelocityY) / deltaTime
+	w.AngularAccel = (angularVel - w.PrevAngularVel) / deltaTime
+
+	w.PrevVelocityX = velocityX
+	w.PrevVelocityY = velocityY
+	w.PrevAngularVel = angularVel
+
+	longitudinalTransfer := calculateLongitudinalTransfer(w)
+	lateralTransfer := calculateLateralTransfer(w)
+
+	applyWeightTransfers(w, longitudinalTransfer, lateralTransfer)
+
+	w.LastTransferMagnitude = math.Sqrt(longitudinalTransfer*longitudinalTransfer + lateralTransfer*lateralTransfer)
+}
+
+// calculateLongitudinalTransfer computes front-rear weight shift.
+func calculateLongitudinalTransfer(w *WeightTransferComponent) float64 {
+	if w.Wheelbase <= 0 {
+		return 0.0
+	}
+
+	accelMagnitude := math.Sqrt(w.AccelerationX*w.AccelerationX + w.AccelerationY*w.AccelerationY)
+
+	isAccelerating := w.AccelerationX > 0 || w.AccelerationY > 0
+
+	transfer := (accelMagnitude * w.CenterOfMassHeight) / w.Wheelbase
+
+	if isAccelerating {
+		transfer = -transfer
+	}
+
+	if transfer > 0.3 {
+		transfer = 0.3
+	} else if transfer < -0.3 {
+		transfer = -0.3
+	}
+
+	return transfer
+}
+
+// calculateLateralTransfer computes left-right weight shift during turning.
+func calculateLateralTransfer(w *WeightTransferComponent) float64 {
+	if w.TrackWidth <= 0 {
+		return 0.0
+	}
+
+	lateralAccel := math.Abs(w.AngularAccel) * w.TrackWidth
+
+	transfer := (lateralAccel * w.CenterOfMassHeight) / w.TrackWidth
+
+	if transfer > 0.25 {
+		transfer = 0.25
+	}
+
+	return transfer
+}
+
+// applyWeightTransfers distributes weight to individual wheels based on transfers.
+func applyWeightTransfers(w *WeightTransferComponent, longitudinal, lateral float64) {
+	frontWeight := w.StaticFrontWeight
+	rearWeight := 1.0 - w.StaticFrontWeight
+
+	frontWeight += longitudinal
+	rearWeight -= longitudinal
+
+	if frontWeight < 0.1 {
+		frontWeight = 0.1
+	} else if frontWeight > 0.9 {
+		frontWeight = 0.9
+	}
+	rearWeight = 1.0 - frontWeight
+
+	leftRatio := 0.5
+	rightRatio := 0.5
+
+	if w.AngularAccel > 0 {
+		rightRatio += lateral
+		leftRatio -= lateral
+	} else if w.AngularAccel < 0 {
+		leftRatio += lateral
+		rightRatio -= lateral
+	}
+
+	if leftRatio < 0.1 {
+		leftRatio = 0.1
+	} else if leftRatio > 0.9 {
+		leftRatio = 0.9
+	}
+	rightRatio = 1.0 - leftRatio
+
+	w.FrontLeftWeight = frontWeight * leftRatio
+	w.FrontRightWeight = frontWeight * rightRatio
+	w.RearLeftWeight = rearWeight * leftRatio
+	w.RearRightWeight = rearWeight * rightRatio
+
+	total := w.FrontLeftWeight + w.FrontRightWeight + w.RearLeftWeight + w.RearRightWeight
+	if total > 0 {
+		w.FrontLeftWeight /= total
+		w.FrontRightWeight /= total
+		w.RearLeftWeight /= total
+		w.RearRightWeight /= total
+	}
 }

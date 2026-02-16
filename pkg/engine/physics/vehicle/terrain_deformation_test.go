@@ -23,6 +23,7 @@ func TestNewTerrainDeformationComponent(t *testing.T) {
 }
 
 func TestTerrainDeformationComponent_AddTrack(t *testing.T) {
+	sys := NewEnhancedVehicleSystem()
 	tests := []struct {
 		name         string
 		terrainType  TerrainType
@@ -41,7 +42,7 @@ func TestTerrainDeformationComponent_AddTrack(t *testing.T) {
 			comp := NewTerrainDeformationComponent(12345)
 
 			// Add track
-			comp.AddTrack(100.0, 100.0, 0.0, tt.wheelLoad, tt.terrainType)
+			sys.AddTerrainTrack(comp, 100.0, 100.0, 0.0, tt.wheelLoad, tt.terrainType)
 
 			trackCount := comp.GetTrackCount()
 			if tt.shouldCreate && trackCount == 0 {
@@ -55,33 +56,35 @@ func TestTerrainDeformationComponent_AddTrack(t *testing.T) {
 }
 
 func TestTerrainDeformationComponent_TrackSpacing(t *testing.T) {
+	sys := NewEnhancedVehicleSystem()
 	comp := NewTerrainDeformationComponent(12345)
 
 	// Add first track
-	comp.AddTrack(100.0, 100.0, 0.0, 1000.0, TerrainSoft)
+	sys.AddTerrainTrack(comp, 100.0, 100.0, 0.0, 1000.0, TerrainSoft)
 	if comp.GetTrackCount() != 1 {
 		t.Fatalf("first track not created")
 	}
 
 	// Try to add track too close (should be rejected)
-	comp.AddTrack(101.0, 101.0, 0.0, 1000.0, TerrainSoft) // Distance ~1.4 pixels
+	sys.AddTerrainTrack(comp, 101.0, 101.0, 0.0, 1000.0, TerrainSoft) // Distance ~1.4 pixels
 	if comp.GetTrackCount() != 1 {
 		t.Error("track should not be created when too close to previous track")
 	}
 
 	// Add track far enough away (should succeed)
-	comp.AddTrack(110.0, 110.0, 0.0, 1000.0, TerrainSoft) // Distance ~14.1 pixels
+	sys.AddTerrainTrack(comp, 110.0, 110.0, 0.0, 1000.0, TerrainSoft) // Distance ~14.1 pixels
 	if comp.GetTrackCount() != 2 {
 		t.Error("track should be created when far enough from previous track")
 	}
 }
 
 func TestTerrainDeformationComponent_Update(t *testing.T) {
+	sys := NewEnhancedVehicleSystem()
 	comp := NewTerrainDeformationComponent(12345)
 
 	// Add tracks with different fade times
-	comp.AddTrack(100.0, 100.0, 0.0, 1000.0, TerrainFirm) // 30s fade
-	comp.AddTrack(200.0, 200.0, 0.0, 1000.0, TerrainSoft) // 120s fade
+	sys.AddTerrainTrack(comp, 100.0, 100.0, 0.0, 1000.0, TerrainFirm) // 30s fade
+	sys.AddTerrainTrack(comp, 200.0, 200.0, 0.0, 1000.0, TerrainSoft) // 120s fade
 
 	initialCount := comp.GetTrackCount()
 	if initialCount != 2 {
@@ -89,7 +92,7 @@ func TestTerrainDeformationComponent_Update(t *testing.T) {
 	}
 
 	// Age tracks
-	comp.Update(1.0) // 1 second
+	sys.UpdateTerrainTracks(comp, 1.0) // 1 second
 
 	// Check ages
 	for i := range comp.Tracks {
@@ -99,7 +102,7 @@ func TestTerrainDeformationComponent_Update(t *testing.T) {
 	}
 
 	// Age past fade time for firm terrain (30s)
-	comp.Update(30.0)
+	sys.UpdateTerrainTracks(comp, 30.0)
 
 	// Firm track should be removed, soft track should remain
 	if comp.GetTrackCount() != 1 {
@@ -108,12 +111,13 @@ func TestTerrainDeformationComponent_Update(t *testing.T) {
 }
 
 func TestTerrainDeformationComponent_GetVisibleTracks(t *testing.T) {
+	sys := NewEnhancedVehicleSystem()
 	comp := NewTerrainDeformationComponent(12345)
 
 	// Add tracks at different positions
-	comp.AddTrack(50.0, 50.0, 0.0, 1000.0, TerrainSoft)
-	comp.AddTrack(150.0, 150.0, 0.0, 1000.0, TerrainSoft)
-	comp.AddTrack(250.0, 250.0, 0.0, 1000.0, TerrainSoft)
+	sys.AddTerrainTrack(comp, 50.0, 50.0, 0.0, 1000.0, TerrainSoft)
+	sys.AddTerrainTrack(comp, 150.0, 150.0, 0.0, 1000.0, TerrainSoft)
+	sys.AddTerrainTrack(comp, 250.0, 250.0, 0.0, 1000.0, TerrainSoft)
 
 	// Query viewport (100, 100) to (200, 200)
 	visible := comp.GetVisibleTracks(100.0, 100.0, 200.0, 200.0)
@@ -151,11 +155,12 @@ func TestTerrainDeformationComponent_GetTrackAlpha(t *testing.T) {
 }
 
 func TestTerrainDeformationComponent_Clear(t *testing.T) {
+	sys := NewEnhancedVehicleSystem()
 	comp := NewTerrainDeformationComponent(12345)
 
 	// Add some tracks
-	comp.AddTrack(100.0, 100.0, 0.0, 1000.0, TerrainSoft)
-	comp.AddTrack(200.0, 200.0, 0.0, 1000.0, TerrainSoft)
+	sys.AddTerrainTrack(comp, 100.0, 100.0, 0.0, 1000.0, TerrainSoft)
+	sys.AddTerrainTrack(comp, 200.0, 200.0, 0.0, 1000.0, TerrainSoft)
 
 	if comp.GetTrackCount() != 2 {
 		t.Fatalf("expected 2 tracks, got %d", comp.GetTrackCount())
@@ -170,13 +175,14 @@ func TestTerrainDeformationComponent_Clear(t *testing.T) {
 }
 
 func TestTerrainDeformationComponent_MaxTracksLimit(t *testing.T) {
+	sys := NewEnhancedVehicleSystem()
 	comp := NewTerrainDeformationComponent(12345)
 	comp.MaxTracks = 10 // Set low limit for testing
 
 	// Add more tracks than the limit
 	for i := 0; i < 15; i++ {
 		x := float64(i * 10)
-		comp.AddTrack(x, 100.0, 0.0, 1000.0, TerrainSoft)
+		sys.AddTerrainTrack(comp, x, 100.0, 0.0, 1000.0, TerrainSoft)
 	}
 
 	// Should not exceed max
@@ -186,6 +192,7 @@ func TestTerrainDeformationComponent_MaxTracksLimit(t *testing.T) {
 }
 
 func TestTerrainDeformationComponent_Determinism(t *testing.T) {
+	sys := NewEnhancedVehicleSystem()
 	seed := int64(42)
 
 	// Create two components with same seed
@@ -195,8 +202,8 @@ func TestTerrainDeformationComponent_Determinism(t *testing.T) {
 	// Add same tracks
 	for i := 0; i < 5; i++ {
 		x := float64(i * 20)
-		comp1.AddTrack(x, 100.0, 0.0, 1000.0, TerrainSoft)
-		comp2.AddTrack(x, 100.0, 0.0, 1000.0, TerrainSoft)
+		sys.AddTerrainTrack(comp1, x, 100.0, 0.0, 1000.0, TerrainSoft)
+		sys.AddTerrainTrack(comp2, x, 100.0, 0.0, 1000.0, TerrainSoft)
 	}
 
 	// Tracks should be identical
@@ -247,39 +254,42 @@ func TestGetTerrainTypeFromTile(t *testing.T) {
 
 // Benchmark tests
 func BenchmarkTerrainDeformationComponent_AddTrack(b *testing.B) {
+	sys := NewEnhancedVehicleSystem()
 	comp := NewTerrainDeformationComponent(12345)
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		x := float64(i % 100 * 10)
 		y := float64(i / 100 * 10)
-		comp.AddTrack(x, y, 0.0, 1000.0, TerrainSoft)
+		sys.AddTerrainTrack(comp, x, y, 0.0, 1000.0, TerrainSoft)
 	}
 }
 
 func BenchmarkTerrainDeformationComponent_Update(b *testing.B) {
+	sys := NewEnhancedVehicleSystem()
 	comp := NewTerrainDeformationComponent(12345)
 
 	// Add some tracks
 	for i := 0; i < 100; i++ {
 		x := float64(i * 10)
-		comp.AddTrack(x, 100.0, 0.0, 1000.0, TerrainSoft)
+		sys.AddTerrainTrack(comp, x, 100.0, 0.0, 1000.0, TerrainSoft)
 	}
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		comp.Update(0.016)
+		sys.UpdateTerrainTracks(comp, 0.016)
 	}
 }
 
 func BenchmarkTerrainDeformationComponent_GetVisibleTracks(b *testing.B) {
+	sys := NewEnhancedVehicleSystem()
 	comp := NewTerrainDeformationComponent(12345)
 
 	// Add many tracks
 	for i := 0; i < 200; i++ {
 		x := float64(i * 10)
 		y := float64(i * 10)
-		comp.AddTrack(x, y, 0.0, 1000.0, TerrainSoft)
+		sys.AddTerrainTrack(comp, x, y, 0.0, 1000.0, TerrainSoft)
 	}
 
 	b.ResetTimer()

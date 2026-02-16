@@ -33,6 +33,7 @@ func TestNewWeightTransferComponent(t *testing.T) {
 }
 
 func TestWeightTransferComponent_Update(t *testing.T) {
+	sys := NewEnhancedVehicleSystem()
 	tests := []struct {
 		name       string
 		velX       float64
@@ -52,8 +53,8 @@ func TestWeightTransferComponent_Update(t *testing.T) {
 			comp := NewWeightTransferComponent()
 
 			// Run update twice to calculate acceleration
-			comp.Update(0, 0, 0, tt.deltaTime)
-			comp.Update(tt.velX, tt.velY, tt.angularVel, tt.deltaTime)
+			sys.UpdateWeightDistribution(comp, 0, 0, 0, tt.deltaTime)
+			sys.UpdateWeightDistribution(comp, tt.velX, tt.velY, tt.angularVel, tt.deltaTime)
 
 			// Check that weights still sum to 1.0
 			total := comp.FrontLeftWeight + comp.FrontRightWeight + comp.RearLeftWeight + comp.RearRightWeight
@@ -73,8 +74,9 @@ func TestWeightTransferComponent_Update(t *testing.T) {
 }
 
 func TestWeightTransferComponent_GetWheelWeights(t *testing.T) {
+	sys := NewEnhancedVehicleSystem()
 	comp := NewWeightTransferComponent()
-	comp.Update(0, 0, 0, 0.016)
+	sys.UpdateWeightDistribution(comp, 0, 0, 0, 0.016)
 
 	weights := comp.GetWheelWeights()
 	if len(weights) != 4 {
@@ -92,8 +94,9 @@ func TestWeightTransferComponent_GetWheelWeights(t *testing.T) {
 }
 
 func TestWeightTransferComponent_GetAxleWeights(t *testing.T) {
+	sys := NewEnhancedVehicleSystem()
 	comp := NewWeightTransferComponent()
-	comp.Update(0, 0, 0, 0.016)
+	sys.UpdateWeightDistribution(comp, 0, 0, 0, 0.016)
 
 	frontWeight := comp.GetFrontAxleWeight()
 	rearWeight := comp.GetRearAxleWeight()
@@ -114,8 +117,9 @@ func TestWeightTransferComponent_GetAxleWeights(t *testing.T) {
 }
 
 func TestWeightTransferComponent_GetSideWeights(t *testing.T) {
+	sys := NewEnhancedVehicleSystem()
 	comp := NewWeightTransferComponent()
-	comp.Update(0, 0, 0, 0.016)
+	sys.UpdateWeightDistribution(comp, 0, 0, 0, 0.016)
 
 	leftWeight := comp.GetLeftSideWeight()
 	rightWeight := comp.GetRightSideWeight()
@@ -136,11 +140,12 @@ func TestWeightTransferComponent_GetSideWeights(t *testing.T) {
 }
 
 func TestWeightTransferComponent_Acceleration(t *testing.T) {
+	sys := NewEnhancedVehicleSystem()
 	comp := NewWeightTransferComponent()
 
 	// Simulate acceleration
-	comp.Update(0, 0, 0, 0.016)
-	comp.Update(100, 0, 0, 0.016) // Accelerate to 100 px/s
+	sys.UpdateWeightDistribution(comp, 0, 0, 0, 0.016)
+	sys.UpdateWeightDistribution(comp, 100, 0, 0, 0.016) // Accelerate to 100 px/s
 
 	// During acceleration, weight should shift rearward
 	rearWeight := comp.GetRearAxleWeight()
@@ -152,11 +157,12 @@ func TestWeightTransferComponent_Acceleration(t *testing.T) {
 }
 
 func TestWeightTransferComponent_Braking(t *testing.T) {
+	sys := NewEnhancedVehicleSystem()
 	comp := NewWeightTransferComponent()
 
 	// Simulate braking
-	comp.Update(100, 0, 0, 0.016) // Moving at 100 px/s
-	comp.Update(50, 0, 0, 0.016)  // Decelerate to 50 px/s
+	sys.UpdateWeightDistribution(comp, 100, 0, 0, 0.016) // Moving at 100 px/s
+	sys.UpdateWeightDistribution(comp, 50, 0, 0, 0.016)  // Decelerate to 50 px/s
 
 	// During braking, weight should shift forward
 	frontWeight := comp.GetFrontAxleWeight()
@@ -168,11 +174,12 @@ func TestWeightTransferComponent_Braking(t *testing.T) {
 }
 
 func TestWeightTransferComponent_Turning(t *testing.T) {
+	sys := NewEnhancedVehicleSystem()
 	comp := NewWeightTransferComponent()
 
 	// Simulate left turn
-	comp.Update(50, 0, 0, 0.016)
-	comp.Update(50, 0, 0.5, 0.016) // Add positive angular velocity
+	sys.UpdateWeightDistribution(comp, 50, 0, 0, 0.016)
+	sys.UpdateWeightDistribution(comp, 50, 0, 0.5, 0.016) // Add positive angular velocity
 
 	// During left turn, weight should shift right
 	_ = comp.GetRightSideWeight()
@@ -186,11 +193,12 @@ func TestWeightTransferComponent_Turning(t *testing.T) {
 }
 
 func TestWeightTransferComponent_Reset(t *testing.T) {
+	sys := NewEnhancedVehicleSystem()
 	comp := NewWeightTransferComponent()
 
 	// Apply some dynamics
-	comp.Update(0, 0, 0, 0.016)
-	comp.Update(100, 50, 0.5, 0.016)
+	sys.UpdateWeightDistribution(comp, 0, 0, 0, 0.016)
+	sys.UpdateWeightDistribution(comp, 100, 50, 0.5, 0.016)
 
 	// Reset
 	comp.Reset()
@@ -215,19 +223,21 @@ func TestWeightTransferComponent_Reset(t *testing.T) {
 
 // Benchmark tests
 func BenchmarkWeightTransferComponent_Update(b *testing.B) {
+	sys := NewEnhancedVehicleSystem()
 	comp := NewWeightTransferComponent()
 	velX, velY, angularVel := 100.0, 50.0, 0.5
 	deltaTime := 0.016
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		comp.Update(velX, velY, angularVel, deltaTime)
+		sys.UpdateWeightDistribution(comp, velX, velY, angularVel, deltaTime)
 	}
 }
 
 func BenchmarkWeightTransferComponent_GetWheelWeights(b *testing.B) {
+	sys := NewEnhancedVehicleSystem()
 	comp := NewWeightTransferComponent()
-	comp.Update(100, 50, 0.5, 0.016)
+	sys.UpdateWeightDistribution(comp, 100, 50, 0.5, 0.016)
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {

@@ -254,6 +254,20 @@ func TestPostProcessorAdapter_DisableAll(t *testing.T) {
 	}
 }
 
+func TestPostProcessorAdapter_PrecompileShaders(t *testing.T) {
+	// Test with logger
+	logger := logrus.NewEntry(logrus.New())
+	adapter := NewPostProcessorAdapter(logger)
+
+	// PrecompileShaders should not panic and may return error in test environment
+	// (Ebiten shaders may need a running game loop to compile)
+	_ = adapter.PrecompileShaders()
+
+	// Test with nil logger - should not panic
+	adapter2 := NewPostProcessorAdapter(nil)
+	_ = adapter2.PrecompileShaders()
+}
+
 func TestPostProcessorAdapter_Dispose(t *testing.T) {
 	adapter := NewPostProcessorAdapter(nil)
 

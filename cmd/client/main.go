@@ -223,6 +223,9 @@ func completeWorldInitialization(game *engine.EbitenGame, sys *systemsContainer,
 
 	// Phase 5.3: Initialize and configure post-processing system
 	game.PostProcessor = engine.NewPostProcessorAdapter(clientLogger)
+	if err := game.PostProcessor.PrecompileShaders(); err != nil {
+		clientLogger.WithField("error", err.Error()).Warn("shader pre-compilation failed, will compile on first use")
+	}
 	configurePostProcessing(game, clientLogger)
 
 	// Phase 5.4: Configure palette options for sprite generation

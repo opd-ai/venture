@@ -233,6 +233,14 @@ func (p *GPUProcessor) GetConfig() Config {
 	return p.config
 }
 
+// PrecompileShaders eagerly compiles all GPU shaders during initialization.
+// Call this during startup (e.g., loading screen) to avoid a 50-200ms stutter
+// when post-processing effects are first activated during gameplay.
+// Thread-safe; subsequent calls are no-ops if shaders are already compiled.
+func (p *GPUProcessor) PrecompileShaders() error {
+	return p.ensureShaders()
+}
+
 // ensureShaders compiles shaders if not already done. Thread-safe.
 func (p *GPUProcessor) ensureShaders() error {
 	p.mu.Lock()

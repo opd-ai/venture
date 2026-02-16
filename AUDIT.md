@@ -338,7 +338,8 @@ The frame time tracker (`frame_time_tracker.go`) correctly identifies stuttering
    - Visual quality: Smoother frame pacing in lit areas
    - Implementation complexity: Medium
 
-4. **[V7] Post-Processing Shader Pre-compilation**: Call shader Apply() methods with dummy image during initialization
+4. ~~**[V7] Post-Processing Shader Pre-compilation**: Call shader Apply() methods with dummy image during initialization~~
+   - ✅ **COMPLETED**: Added `PrecompileShaders()` method to both `GPUProcessor` and `PostProcessorAdapter` that eagerly calls `ensureShaders()` during initialization. Integrated into `cmd/client/main.go` right after `PostProcessorAdapter` creation, before `configurePostProcessing()`. Gracefully handles compilation failures with logged warning and fallback to lazy compilation.
    - Expected improvement: Eliminates 50-200ms first-use spike
    - Visual quality: No stutter when enabling visual effects
    - Implementation complexity: Low
@@ -367,7 +368,7 @@ The frame time tracker (`frame_time_tracker.go`) correctly identifies stuttering
 - ☐ **Allocations in Draw() paths** - Minimal due to pre-allocated buffers (good)
 - ☑ **Synchronous texture generation during render** - V1, V3: Sprite cache misses
 - ☐ **Unsorted draw calls** - Batching groups by texture (good)
-- ☑ **Shader compilation in hot path** - V7: Post-processing first use
+- ☐ **Shader compilation in hot path** - V7: ~~Post-processing first use~~ ✅ Fixed via PrecompileShaders()
 - ☐ **Excessive state changes** - Minimal due to batching (good)
 - ☐ **Overdraw without depth sorting** - Z-layer system handles this (good)
 - ☐ **Full-screen post-processing every frame without dirty checking** - Acceptable (GPU-accelerated)

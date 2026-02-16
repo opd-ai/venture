@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/hajimehoshi/ebiten/v2"
+	"github.com/sirupsen/logrus"
 )
 
 // TestGPUProcessorConfig tests configuration get/set.
@@ -188,6 +189,31 @@ func TestGPUProcessorEnsureBuffer(t *testing.T) {
 	if p.bufferWidth != 200 || p.bufferHeight != 150 {
 		t.Errorf("expected 200x150, got %dx%d", p.bufferWidth, p.bufferHeight)
 	}
+
+	p.Dispose()
+}
+
+// TestGPUProcessorPrecompileShaders tests eager shader pre-compilation.
+func TestGPUProcessorPrecompileShaders(t *testing.T) {
+	p := NewGPUProcessor()
+
+	// PrecompileShaders should not panic; may return error in test environment
+	// since Ebiten shader compilation may require a graphics context
+	_ = p.PrecompileShaders()
+
+	// Calling again should be a no-op (idempotent)
+	_ = p.PrecompileShaders()
+
+	p.Dispose()
+}
+
+// TestGPUProcessorPrecompileShadersWithLogger tests pre-compilation with logger.
+func TestGPUProcessorPrecompileShadersWithLogger(t *testing.T) {
+	logger := logrus.New()
+	logger.SetLevel(logrus.DebugLevel)
+	p := NewGPUProcessorWithLogger(DefaultConfig(), logger)
+
+	_ = p.PrecompileShaders()
 
 	p.Dispose()
 }

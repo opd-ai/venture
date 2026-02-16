@@ -119,6 +119,28 @@ func (p *PostProcessorAdapter) DisableAll() {
 	p.gpuProcessor.SetConfig(config)
 }
 
+// PrecompileShaders eagerly compiles all post-processing GPU shaders.
+// Call this during initialization (e.g., loading screen) to eliminate the
+// 50-200ms stutter that occurs when shaders are first used during gameplay.
+// Returns an error if shader compilation fails; post-processing will still
+// function but with a delayed compilation on first use.
+func (p *PostProcessorAdapter) PrecompileShaders() error {
+	if p.logger != nil {
+		p.logger.Debug("pre-compiling post-processing shaders")
+	}
+	err := p.gpuProcessor.PrecompileShaders()
+	if err != nil {
+		if p.logger != nil {
+			p.logger.WithField("error", err.Error()).Warn("shader pre-compilation failed")
+		}
+		return err
+	}
+	if p.logger != nil {
+		p.logger.Info("post-processing shaders pre-compiled successfully")
+	}
+	return nil
+}
+
 // Dispose releases GPU resources held by the adapter.
 // Call this when the adapter is no longer needed.
 func (p *PostProcessorAdapter) Dispose() {

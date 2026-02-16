@@ -4,10 +4,10 @@ go 1.24.5
 
 require (
 	github.com/google/uuid v1.6.0
-	github.com/hajimehoshi/ebiten/v2 v2.9.3
+	github.com/hajimehoshi/ebiten/v2 v2.9.8
 	github.com/ncruces/zenity v0.10.14
-	github.com/sirupsen/logrus v1.9.3
-	golang.org/x/image v0.32.0
+	github.com/sirupsen/logrus v1.9.4
+	golang.org/x/image v0.36.0
 )
 
 require (
@@ -22,7 +22,7 @@ require (
 	github.com/randall77/makefat v0.0.0-20210315173500-7ddd0e42c844 // indirect
 	github.com/rivo/uniseg v0.4.7 // indirect
 	github.com/stretchr/testify v1.11.1 // indirect
-	golang.org/x/sync v0.17.0 // indirect
+	golang.org/x/sync v0.19.0 // indirect
 	golang.org/x/sys v0.37.0 // indirect
-	golang.org/x/text v0.30.0 // indirect
+	golang.org/x/text v0.34.0 // indirect
 )

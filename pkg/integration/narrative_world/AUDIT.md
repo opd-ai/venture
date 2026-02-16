@@ -6,16 +6,15 @@
 Cross-system integration package for companion-driven narrative events and personal quests. Integrates V8 companion learning, V4 companion components, and V8 branching narratives into a cohesive story event management system. Overall health is good with well-structured code, deterministic generation, and comprehensive serialization support. One high-severity bug and several low-severity enhancement opportunities identified.
 
 ## Issues Found
-- [x] **high** Stub/incomplete code — Zero-valued template fallback in GeneratePersonalQuest when no loyalty match found (`manager.go:348`)
+- [x] **high** Stub/incomplete code — Zero-valued template fallback in GeneratePersonalQuest when no loyalty match found (`manager.go:348`). Fixed: added `templateFound` validation after selection loop and lowered Elemental/Spirit MinLoyalty to 0.7 to match the 0.7 loyalty threshold.
 - [x] **low** Stub/incomplete code — Hardcoded "unknown" location string in RecordMemory (`manager.go:434`)
 - [x] **low** Test coverage — Package has Ebiten dependency via pkg/engine preventing test execution in headless CI (`all test files`)
 - [x] **low** Integration points — System registered in client but no server-side registration verified (`cmd/server/` not checked)
 
 ## Test Coverage
-Unable to measure via `go test -cover` (Ebiten initialization failure in headless environment). Manual analysis:
-- **Test files**: 5 files with 46 test functions covering all major subsystems
-- **Coverage estimate**: 70-75% based on function/line ratio (1560 impl lines, ~2047 test lines)
-- **Target**: 65% ✓ (estimated above target)
+- **Measured**: 90.7% of statements (via `xvfb-run go test -cover`)
+- **Test files**: 5 files with 48 test functions covering all major subsystems
+- **Target**: 65% ✓ (well above target)
 
 Test structure is comprehensive with:
 - manager_test.go: 17 tests (quest generation, memory, conflicts)

@@ -185,7 +185,7 @@ func (m *StoryEventManager) initializeQuestTemplates() {
 			ObjectiveTypes:  []ObjectiveType{ObjectiveVisit, ObjectiveDefeat},
 			ConsequenceType: ConsequenceSkillUnlock,
 			PersonalityFit:  []learning.PersonalityTrait{learning.TraitBrave},
-			MinLoyalty:      0.75,
+			MinLoyalty:      0.7,
 		},
 		{
 			TitlePattern:    "Pure Element",
@@ -282,7 +282,7 @@ func (m *StoryEventManager) addRemainingTemplates() {
 			ObjectiveTypes:  []ObjectiveType{ObjectiveCollect, ObjectiveVisit},
 			ConsequenceType: ConsequenceDeparture,
 			PersonalityFit:  []learning.PersonalityTrait{learning.TraitCautious},
-			MinLoyalty:      0.75,
+			MinLoyalty:      0.7,
 		},
 		{
 			TitlePattern:    "Ethereal Vision",
@@ -346,13 +346,19 @@ func (m *StoryEventManager) GeneratePersonalQuest(companionID uint64, companion 
 
 	// Select template based on loyalty (higher loyalty = more severe quests)
 	var selectedTemplate QuestTemplate
+	templateFound := false
 	for _, template := range templates {
 		if companion.Loyalty >= template.MinLoyalty {
 			selectedTemplate = template
+			templateFound = true
 			if rng.Float64() < 0.7 { // 70% chance to use first matching
 				break
 			}
 		}
+	}
+
+	if !templateFound {
+		return nil, fmt.Errorf("no matching quest template for companion type %d at loyalty %.2f", companion.CompanionType, companion.Loyalty)
 	}
 
 	// Generate branching narrative for quest

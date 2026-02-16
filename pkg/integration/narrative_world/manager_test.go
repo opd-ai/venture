@@ -82,6 +82,26 @@ func TestGeneratePersonalQuest(t *testing.T) {
 			expectError:   true,
 			errorContains: "below minimum 0.7",
 		},
+		{
+			name: "valid elemental quest at minimum loyalty",
+			companion: &engine.CompanionComponent{
+				CompanionType: engine.CompanionTypeElemental,
+				Loyalty:       0.7,
+				Level:         5,
+			},
+			seed:        33333,
+			expectError: false,
+		},
+		{
+			name: "valid spirit quest at minimum loyalty",
+			companion: &engine.CompanionComponent{
+				CompanionType: engine.CompanionTypeSpirit,
+				Loyalty:       0.7,
+				Level:         5,
+			},
+			seed:        44444,
+			expectError: false,
+		},
 	}
 
 	for _, tt := range tests {

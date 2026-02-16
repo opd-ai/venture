@@ -109,7 +109,7 @@ func TestGenerateShadowImage_CenterBrightest(t *testing.T) {
 // TestDropShadowCache_GetMiss verifies cache miss returns nil.
 func TestDropShadowCache_GetMiss(t *testing.T) {
 	c := newDropShadowCache(10)
-	if c.get(20, 8) != nil {
+	if c.get(20, 8, 0, 0, 0, 0.35) != nil {
 		t.Error("expected nil on cache miss")
 	}
 }
@@ -118,9 +118,9 @@ func TestDropShadowCache_GetMiss(t *testing.T) {
 func TestDropShadowCache_PutGet(t *testing.T) {
 	c := newDropShadowCache(10)
 	img := generateShadowImage(8, 4, 0, 0, 0, 0.35)
-	c.put(8, 4, img)
+	c.put(8, 4, 0, 0, 0, 0.35, img)
 
-	got := c.get(8, 4)
+	got := c.get(8, 4, 0, 0, 0, 0.35)
 	if got != img {
 		t.Error("expected same image from cache")
 	}
@@ -131,7 +131,7 @@ func TestDropShadowCache_Eviction(t *testing.T) {
 	c := newDropShadowCache(3)
 	for i := 0; i < 5; i++ {
 		img := generateShadowImage(4+i*4, 4, 0, 0, 0, 0.3)
-		c.put(4+i*4, 4, img)
+		c.put(4+i*4, 4, 0, 0, 0, 0.3, img)
 	}
 	// After inserting 5 items into a cache of size 3, at most 3 should remain
 	count := 0
@@ -324,6 +324,51 @@ func TestDropShadowComponent_RenderDefaults(t *testing.T) {
 	}
 	if ds.Type() != "drop_shadow" {
 		t.Errorf("type = %q, want drop_shadow", ds.Type())
+	}
+}
+
+// TestShadowColorKey verifies cache keys include color differentiation.
+func TestShadowColorKey(t *testing.T) {
+	// Same dimensions, different colors should produce different keys
+	k1 := shadowColorKey(20, 8, 0, 0, 0, 0.35)
+	k2 := shadowColorKey(20, 8, 0.5, 0, 0, 0.35)
+	if k1 == k2 {
+		t.Error("different colors should produce different keys")
+	}
+
+	// Same dimensions and color should produce same key
+	k3 := shadowColorKey(20, 8, 0, 0, 0, 0.35)
+	if k1 != k3 {
+		t.Error("same parameters should produce same key")
+	}
+
+	// Different dimensions should produce different keys
+	k4 := shadowColorKey(20, 12, 0, 0, 0, 0.35)
+	if k1 == k4 {
+		t.Error("different dimensions should produce different keys")
+	}
+
+	// Asymmetric dimensions should differ
+	k5 := shadowColorKey(4, 8, 0, 0, 0, 0.35)
+	k6 := shadowColorKey(8, 4, 0, 0, 0, 0.35)
+	if k5 == k6 {
+		t.Error("asymmetric dimensions should produce different keys")
+	}
+}
+
+// TestDropShadowCache_DifferentColors verifies different colors are cached separately.
+func TestDropShadowCache_DifferentColors(t *testing.T) {
+	c := newDropShadowCache(10)
+	black := c.getOrCreate(20, 8, 0, 0, 0, 0.35)
+	red := c.getOrCreate(20, 8, 0.8, 0, 0, 0.35)
+	if black == red {
+		t.Error("different colored shadows should be different images")
+	}
+
+	// Re-fetching black shadow should return original cached image
+	blackAgain := c.getOrCreate(20, 8, 0, 0, 0, 0.35)
+	if blackAgain != black {
+		t.Error("expected same cached image for same color")
 	}
 }
 

@@ -242,19 +242,19 @@ type RenderStats struct {
 // NewRenderSystem creates a new render system.
 func NewRenderSystem(cameraSystem *CameraSystem) *EbitenRenderSystem {
 	return &EbitenRenderSystem{
-		cameraSystem:        cameraSystem,
-		spatialPartition:    nil,  // Will be set when world bounds are known
-		enableCulling:       true, // Culling enabled by default (spatial partition bug fixed)
-		enableBatching:      true, // Batching enabled by default
-		batches:             make(map[*ebiten.Image][]*Entity),
-		batchPool:           make([]map[*ebiten.Image][]*Entity, 0, 2),
-		nonSpriteBuffer:     make([]*Entity, 0, 64),         // Pre-allocate for typical non-sprite entity count
-		sortBuffer:          make([]*Entity, 0, 2000),       // Pre-allocate for typical entity count
-		sortCacheBuffer:     make([]entitySprite, 0, 2000),  // Pre-allocate for typical entity count
-		vertexBuffer:        make([]ebiten.Vertex, 0, 8000), // Pre-allocate for 2000 entities * 4 vertices
-		indexBuffer:         make([]uint16, 0, 12000),       // Pre-allocate for 2000 entities * 6 indices
-		playerBuffer:        make([]*Entity, 0, 4),          // Pre-allocate for typical player count (1-4)
-		viewportQueryBuffer: make([]*Entity, 0, 256),        // Pre-allocate for typical visible entity count
+		cameraSystem:         cameraSystem,
+		spatialPartition:     nil,  // Will be set when world bounds are known
+		enableCulling:        true, // Culling enabled by default (spatial partition bug fixed)
+		enableBatching:       true, // Batching enabled by default
+		batches:              make(map[*ebiten.Image][]*Entity),
+		batchPool:            make([]map[*ebiten.Image][]*Entity, 0, 2),
+		nonSpriteBuffer:      make([]*Entity, 0, 64),         // Pre-allocate for typical non-sprite entity count
+		sortBuffer:           make([]*Entity, 0, 2000),       // Pre-allocate for typical entity count
+		sortCacheBuffer:      make([]entitySprite, 0, 2000),  // Pre-allocate for typical entity count
+		vertexBuffer:         make([]ebiten.Vertex, 0, 8000), // Pre-allocate for 2000 entities * 4 vertices
+		indexBuffer:          make([]uint16, 0, 12000),       // Pre-allocate for 2000 entities * 6 indices
+		playerBuffer:         make([]*Entity, 0, 4),          // Pre-allocate for typical player count (1-4)
+		viewportQueryBuffer:  make([]*Entity, 0, 256),        // Pre-allocate for typical visible entity count
 		visibleEntityIDs:     make(map[uint64]struct{}, 256), // Pre-allocate for O(1) visible lookup
 		ShowColliders:        false,
 		ShowGrid:             false,
@@ -942,6 +942,7 @@ func (r *EbitenRenderSystem) drawSpriteImage(img *ebiten.Image, sprite *EbitenSp
 }
 
 // drawFallbackRect renders a colored rectangle when no sprite image exists.
+// Pre-extracts RGBA bytes once via type assertion to avoid repeated col.RGBA() overhead.
 func (r *EbitenRenderSystem) drawFallbackRect(sprite *EbitenSprite, screenX, screenY, layerYOffset, layerAlpha, flashAlpha float64) {
 	col := sprite.Color
 	// Safety check: default to opaque magenta if no color is set (makes missing colors obvious)
@@ -949,28 +950,27 @@ func (r *EbitenRenderSystem) drawFallbackRect(sprite *EbitenSprite, screenX, scr
 		col = color.RGBA{R: 255, G: 0, B: 255, A: 255}
 	}
 
+	// Extract RGBA bytes once to avoid repeated col.RGBA() → uint32 → uint8 roundtrips.
+	var cr, cg, cb, ca uint8
+	if rgba, ok := col.(color.RGBA); ok {
+		cr, cg, cb, ca = rgba.R, rgba.G, rgba.B, rgba.A
+	} else {
+		rr, gg, bb, aa := col.RGBA()
+		cr, cg, cb, ca = uint8(rr>>8), uint8(gg>>8), uint8(bb>>8), uint8(aa>>8)
+	}
+
 	if flashAlpha > 0 {
-		red, green, blue, alpha := col.RGBA()
-		col = color.RGBA{
-			R: uint8((float64(red>>8) + flashAlpha*255) / 2),
-			G: uint8((float64(green>>8) + flashAlpha*255) / 2),
-			B: uint8((float64(blue>>8) + flashAlpha*255) / 2),
-			A: uint8(alpha >> 8),
-		}
+		cr = uint8((float64(cr) + flashAlpha*255) / 2)
+		cg = uint8((float64(cg) + flashAlpha*255) / 2)
+		cb = uint8((float64(cb) + flashAlpha*255) / 2)
 	}
 
 	if layerAlpha < 1.0 {
-		red, green, blue, alpha := col.RGBA()
-		col = color.RGBA{
-			R: uint8(red >> 8),
-			G: uint8(green >> 8),
-			B: uint8(blue >> 8),
-			A: uint8(float64(alpha>>8) * layerAlpha),
-		}
+		ca = uint8(float64(ca) * layerAlpha)
 	}
 
 	r.drawRect(screenX-sprite.Width/2, screenY-sprite.Height/2+layerYOffset,
-		sprite.Width, sprite.Height, col)
+		sprite.Width, sprite.Height, color.RGBA{R: cr, G: cg, B: cb, A: ca})
 }
 
 // drawHealthBar renders a health bar above an entity if appropriate.

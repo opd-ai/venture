@@ -38,8 +38,19 @@ func newDropShadowCache(maxSize int) *dropShadowCache {
 }
 
 // bucketKey produces a cache key from bucketed width and height.
+// Retained for backward compatibility; shadow cache uses shadowColorKey instead.
 func bucketKey(w, h int) uint64 {
 	return uint64(w)<<32 | uint64(h)
+}
+
+// shadowColorKey produces a cache key from bucketed dimensions and quantized color.
+// Encodes bw (16 bits), bh (16 bits), R, G, B, opacity (8 bits each) into uint64.
+func shadowColorKey(bw, bh int, r, g, b, opacity float64) uint64 {
+	cr := uint8(clampFShadow(r*255, 0, 255))
+	cg := uint8(clampFShadow(g*255, 0, 255))
+	cb := uint8(clampFShadow(b*255, 0, 255))
+	co := uint8(clampFShadow(opacity*255, 0, 255))
+	return uint64(uint16(bw))<<48 | uint64(uint16(bh))<<32 | uint64(cr)<<24 | uint64(cg)<<16 | uint64(cb)<<8 | uint64(co)
 }
 
 // bucketSize rounds a dimension up to the nearest 4-pixel boundary.
@@ -51,10 +62,11 @@ func bucketSize(v int) int {
 }
 
 // get retrieves a cached shadow image or nil if not present.
-func (c *dropShadowCache) get(bw, bh int) *ebiten.Image {
+// Uses shadowColorKey to distinguish shadows of different colors at the same size.
+func (c *dropShadowCache) get(bw, bh int, r, g, b, opacity float64) *ebiten.Image {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	key := bucketKey(bw, bh)
+	key := shadowColorKey(bw, bh, r, g, b, opacity)
 	if entry, ok := c.entries[key]; ok {
 		return entry.img
 	}
@@ -62,10 +74,11 @@ func (c *dropShadowCache) get(bw, bh int) *ebiten.Image {
 }
 
 // put stores a shadow image in the cache, evicting the oldest entry if full.
-func (c *dropShadowCache) put(bw, bh int, img *ebiten.Image) {
+// The key includes quantized color so differently-colored shadows are cached separately.
+func (c *dropShadowCache) put(bw, bh int, r, g, b, opacity float64, img *ebiten.Image) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	key := bucketKey(bw, bh)
+	key := shadowColorKey(bw, bh, r, g, b, opacity)
 	if len(c.entries) >= c.maxSize {
 		// Simple eviction: remove one arbitrary entry
 		for k := range c.entries {
@@ -129,12 +142,13 @@ func clampFShadow(v, lo, hi float64) float64 {
 }
 
 // getOrCreateShadow returns a cached shadow image or generates and caches one.
+// Cache key includes both dimensions and color so different-colored shadows are stored separately.
 func (c *dropShadowCache) getOrCreate(bw, bh int, r, g, b, opacity float64) *ebiten.Image {
-	if img := c.get(bw, bh); img != nil {
+	if img := c.get(bw, bh, r, g, b, opacity); img != nil {
 		return img
 	}
 	img := generateShadowImage(bw, bh, r, g, b, opacity)
-	c.put(bw, bh, img)
+	c.put(bw, bh, r, g, b, opacity, img)
 	return img
 }
 

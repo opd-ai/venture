@@ -20,23 +20,23 @@ type Entity struct {
 
 	// Fast-path cache for frequently accessed components
 	// These eliminate map lookups in hot paths
-	position        *PositionComponent
-	velocity        *VelocityComponent
-	health          *HealthComponent
-	collider        *ColliderComponent
-	inventory       *InventoryComponent
-	stats           *StatsComponent
-	animation       *AnimationComponent
-	attack          *AttackComponent
-	experience      *ExperienceComponent
-	sprite          *EbitenSprite             // Cached for render system hot path (~93x faster access)
-	rotation        *RotationComponent        // Cached for render and collision hot paths
-	visualFeedback  *VisualFeedbackComponent  // Cached for render system hot path (visual effects)
-	layer           *LayerComponent           // Cached for collision hot path (layer compatibility checks)
-	team            *TeamComponent            // Cached for AI system hot path (enemy detection)
-	particleEmitter  *ParticleEmitterComponent  // Cached for render system particle drawing hot path
-	dropShadow       *DropShadowComponent       // Cached for render system drop shadow hot path
-	weatherTint      *WeatherSpriteTintComponent // Cached for render system tint composition hot path
+	position          *PositionComponent
+	velocity          *VelocityComponent
+	health            *HealthComponent
+	collider          *ColliderComponent
+	inventory         *InventoryComponent
+	stats             *StatsComponent
+	animation         *AnimationComponent
+	attack            *AttackComponent
+	experience        *ExperienceComponent
+	sprite            *EbitenSprite               // Cached for render system hot path (~93x faster access)
+	rotation          *RotationComponent          // Cached for render and collision hot paths
+	visualFeedback    *VisualFeedbackComponent    // Cached for render system hot path (visual effects)
+	layer             *LayerComponent             // Cached for collision hot path (layer compatibility checks)
+	team              *TeamComponent              // Cached for AI system hot path (enemy detection)
+	particleEmitter   *ParticleEmitterComponent   // Cached for render system particle drawing hot path
+	dropShadow        *DropShadowComponent        // Cached for render system drop shadow hot path
+	weatherTint       *WeatherSpriteTintComponent // Cached for render system tint composition hot path
 	creatureGenreTint *CreatureGenreTintComponent // Cached for render system tint composition hot path
 }
 

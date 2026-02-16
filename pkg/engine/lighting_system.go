@@ -66,6 +66,12 @@ type LightingSystem struct {
 	// GPU bloom processor for hardware-accelerated bloom effects (V2 fix)
 	// Uses Kage shaders instead of CPU pixel iteration, reducing bloom from 15-50ms to <2ms
 	gpuBloom *lighting.GPUBloom
+
+	// Tracked light entities for dirty-marked collection (V4 optimization).
+	// Populated during Update() to avoid O(N_all_entities) scan in CollectVisibleLights.
+	// When available, CollectVisibleLights iterates only these entities instead of all.
+	trackedLightEntities []*Entity
+	lightTrackingValid   bool
 }
 
 // lightWithPosition combines a light component with its world position.
@@ -105,11 +111,12 @@ func NewLightingSystemWithLogger(world *World, config *LightingConfig, logger *l
 	}
 
 	system := &LightingSystem{
-		world:            world,
-		config:           config,
-		logger:           logEntry,
-		visibleLights:    make([]lightWithPosition, 0, config.MaxLights),
-		lightCircleCache: make(map[lightCacheKey]*ebiten.Image), // Initialize light circle cache to avoid per-frame allocations
+		world:                world,
+		config:               config,
+		logger:               logEntry,
+		visibleLights:        make([]lightWithPosition, 0, config.MaxLights),
+		lightCircleCache:     make(map[lightCacheKey]*ebiten.Image), // Initialize light circle cache to avoid per-frame allocations
+		trackedLightEntities: make([]*Entity, 0, 16),
 	}
 
 	// Initialize shadow system if shadows are enabled
@@ -237,7 +244,10 @@ func (s *LightingSystem) Update(entities []*Entity, deltaTime float64) {
 	}
 
 	// Update animation times for flickering/pulsing lights
+	// Also build tracked light entity list (V4 optimization) to avoid
+	// O(N_all_entities) scan in CollectVisibleLights
 	updatedLights := 0
+	s.trackedLightEntities = s.trackedLightEntities[:0]
 	for _, entity := range entities {
 		comp, ok := entity.GetComponent("light")
 		if !ok {
@@ -248,6 +258,8 @@ func (s *LightingSystem) Update(entities []*Entity, deltaTime float64) {
 		if !ok {
 			continue
 		}
+
+		s.trackedLightEntities = append(s.trackedLightEntities, entity)
 
 		previousTime := light.internalTime
 		light.internalTime += deltaTime
@@ -262,6 +274,7 @@ func (s *LightingSystem) Update(entities []*Entity, deltaTime float64) {
 			}).Debug("Updated light animation time")
 		}
 	}
+	s.lightTrackingValid = true
 
 	if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
 		s.logger.WithFields(logrus.Fields{
@@ -274,6 +287,8 @@ func (s *LightingSystem) Update(entities []*Entity, deltaTime float64) {
 
 // CollectVisibleLights gathers lights within viewport for rendering.
 // Returns the collected lights sorted by priority (closest first).
+// Uses tracked light entities from Update() when available (V4 optimization),
+// reducing iteration from O(N_all_entities) to O(N_light_entities).
 func (s *LightingSystem) CollectVisibleLights(entities []*Entity) []lightWithPosition {
 	startTime := time.Now()
 
@@ -284,7 +299,14 @@ func (s *LightingSystem) CollectVisibleLights(entities []*Entity) []lightWithPos
 	s.visibleLights = s.visibleLights[:0]
 	metrics := s.initLightMetrics()
 
-	for _, entity := range entities {
+	// V4 optimization: use tracked light entities if available,
+	// avoiding O(N) scan of all entities in the render hot path
+	scanEntities := entities
+	if s.lightTrackingValid && len(s.trackedLightEntities) > 0 {
+		scanEntities = s.trackedLightEntities
+	}
+
+	for _, entity := range scanEntities {
 		if len(s.visibleLights) >= s.config.MaxLights {
 			s.logMaxLightsReached(metrics)
 			break
@@ -516,6 +538,17 @@ func (s *LightingSystem) ClearAmbientLightCache() {
 
 	if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
 		s.logger.Debug("Ambient light cache cleared")
+	}
+}
+
+// MarkLightsDirty invalidates the tracked light entity list.
+// Call this when light entities are added or removed outside of the normal Update cycle.
+// The next CollectVisibleLights call will fall back to scanning all entities
+// until the next Update() repopulates the tracked list.
+func (s *LightingSystem) MarkLightsDirty() {
+	s.lightTrackingValid = false
+	if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.DebugLevel {
+		s.logger.Debug("Light tracking invalidated")
 	}
 }
 

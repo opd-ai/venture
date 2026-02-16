@@ -804,3 +804,120 @@ func TestBloomIntensityZero(t *testing.T) {
 		t.Errorf("BloomIntensity = %v, want 0", system.config.BloomIntensity)
 	}
 }
+
+// TestLightingSystem_TrackedLightEntities tests that Update populates the tracked
+// light entity list used by CollectVisibleLights (V4 dirty-marked optimization).
+func TestLightingSystem_TrackedLightEntities(t *testing.T) {
+	world := NewWorld()
+	system := NewLightingSystem(world, nil)
+
+	// Create 3 light entities and 5 non-light entities
+	lightEntities := make([]*Entity, 0, 3)
+	allEntities := make([]*Entity, 0, 8)
+	for i := 0; i < 3; i++ {
+		e := world.CreateEntity()
+		light := NewLightComponent(100, color.RGBA{255, 255, 255, 255}, 1.0)
+		e.AddComponent(light)
+		e.AddComponent(&PositionComponent{X: float64(i * 100), Y: 100})
+		lightEntities = append(lightEntities, e)
+		allEntities = append(allEntities, e)
+	}
+	for i := 0; i < 5; i++ {
+		e := world.CreateEntity()
+		e.AddComponent(&PositionComponent{X: float64(i * 50), Y: 200})
+		allEntities = append(allEntities, e)
+	}
+
+	// Before Update, tracking should be invalid
+	if system.lightTrackingValid {
+		t.Error("Light tracking should be invalid before first Update")
+	}
+
+	// Update populates tracked entities
+	system.Update(allEntities, 0.016)
+
+	if !system.lightTrackingValid {
+		t.Error("Light tracking should be valid after Update")
+	}
+	if len(system.trackedLightEntities) != 3 {
+		t.Errorf("trackedLightEntities = %d, want 3", len(system.trackedLightEntities))
+	}
+
+	// CollectVisibleLights should use tracked entities and find all 3
+	lights := system.CollectVisibleLights(allEntities)
+	if len(lights) != 3 {
+		t.Errorf("CollectVisibleLights returned %d lights, want 3", len(lights))
+	}
+}
+
+// TestLightingSystem_MarkLightsDirty tests that MarkLightsDirty invalidates tracking.
+func TestLightingSystem_MarkLightsDirty(t *testing.T) {
+	world := NewWorld()
+	system := NewLightingSystem(world, nil)
+
+	// Create entity with light
+	entity := world.CreateEntity()
+	light := NewLightComponent(100, color.RGBA{255, 255, 255, 255}, 1.0)
+	entity.AddComponent(light)
+	entity.AddComponent(&PositionComponent{X: 100, Y: 100})
+
+	entities := []*Entity{entity}
+
+	// Build tracking
+	system.Update(entities, 0.016)
+	if !system.lightTrackingValid {
+		t.Error("Light tracking should be valid after Update")
+	}
+
+	// Invalidate
+	system.MarkLightsDirty()
+	if system.lightTrackingValid {
+		t.Error("Light tracking should be invalid after MarkLightsDirty")
+	}
+
+	// CollectVisibleLights should still work (falls back to full scan)
+	lights := system.CollectVisibleLights(entities)
+	if len(lights) != 1 {
+		t.Errorf("CollectVisibleLights returned %d lights after dirty, want 1", len(lights))
+	}
+}
+
+// TestLightingSystem_TrackedLightsWithCulling tests tracked entities with viewport culling.
+func TestLightingSystem_TrackedLightsWithCulling(t *testing.T) {
+	world := NewWorld()
+	system := NewLightingSystem(world, nil)
+	system.SetViewport(0, 0, 800, 600)
+
+	// Light in viewport
+	e1 := world.CreateEntity()
+	e1.AddComponent(NewLightComponent(100, color.RGBA{255, 255, 255, 255}, 1.0))
+	e1.AddComponent(&PositionComponent{X: 400, Y: 300})
+
+	// Light outside viewport
+	e2 := world.CreateEntity()
+	e2.AddComponent(NewLightComponent(100, color.RGBA{255, 0, 0, 255}, 1.0))
+	e2.AddComponent(&PositionComponent{X: 5000, Y: 5000})
+
+	// Many non-light entities
+	allEntities := []*Entity{e1, e2}
+	for i := 0; i < 100; i++ {
+		e := world.CreateEntity()
+		e.AddComponent(&PositionComponent{X: float64(i), Y: float64(i)})
+		allEntities = append(allEntities, e)
+	}
+
+	// Update builds tracking of 2 light entities
+	system.Update(allEntities, 0.016)
+	if len(system.trackedLightEntities) != 2 {
+		t.Errorf("trackedLightEntities = %d, want 2", len(system.trackedLightEntities))
+	}
+
+	// CollectVisibleLights only iterates 2 tracked entities, not 102
+	lights := system.CollectVisibleLights(allEntities)
+	if len(lights) != 1 {
+		t.Errorf("CollectVisibleLights with culling returned %d lights, want 1", len(lights))
+	}
+	if lights[0].x != 400 || lights[0].y != 300 {
+		t.Error("Wrong light collected")
+	}
+}

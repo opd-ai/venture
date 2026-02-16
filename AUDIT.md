@@ -332,7 +332,8 @@ The frame time tracker (`frame_time_tracker.go`) correctly identifies stuttering
    - Implementation complexity: Medium (infrastructure exists)
 
 ### Priority 2 (Reduces Noticeable Jitter)
-3. **[V4] Dirty-Marked Light Collection**: Track light entity additions/removals; only recollect on world changes
+3. ~~**[V4] Dirty-Marked Light Collection**: Track light entity additions/removals; only recollect on world changes~~
+   - ✅ **COMPLETED**: Added `trackedLightEntities` list populated during `Update()` to avoid O(N_all_entities) scan in `CollectVisibleLights()`. Now iterates only tracked light entities (O(N_lights)). Added `MarkLightsDirty()` for external invalidation with automatic fallback to full scan.
    - Expected improvement: 1-5ms per frame reduction
    - Visual quality: Smoother frame pacing in lit areas
    - Implementation complexity: Medium

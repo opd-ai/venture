@@ -464,6 +464,29 @@ func TestDepositItem(t *testing.T) {
 	}
 }
 
+func TestDepositItemQuantityValidation(t *testing.T) {
+	manager := NewManager()
+	storage, err := manager.CreateGuildStorage("guild-001", 500)
+	if err != nil {
+		t.Fatalf("CreateGuildStorage() error = %v", err)
+	}
+
+	// Test zero quantity
+	err = manager.DepositItem(storage.StorageID, "player-001", "item-001", 0)
+	if err == nil {
+		t.Error("DepositItem() expected error for zero quantity")
+	}
+	if err != nil && !strings.Contains(err.Error(), "quantity must be positive") {
+		t.Errorf("DepositItem() error = %v, want error containing 'quantity must be positive'", err)
+	}
+
+	// Test negative quantity
+	err = manager.DepositItem(storage.StorageID, "player-001", "item-001", -5)
+	if err == nil {
+		t.Error("DepositItem() expected error for negative quantity")
+	}
+}
+
 func TestDepositItemCapacity(t *testing.T) {
 	manager := NewManager()
 	// Create storage with capacity of 2 unique item types
@@ -551,6 +574,30 @@ func TestWithdrawItem(t *testing.T) {
 	_, err = manager.WithdrawItem(storage.StorageID, "player-001", "nonexistent", 1)
 	if err == nil {
 		t.Error("WithdrawItem() expected error for nonexistent item")
+	}
+}
+
+func TestWithdrawItemQuantityValidation(t *testing.T) {
+	manager := NewManager()
+	storage, err := manager.CreateGuildStorage("guild-001", 500)
+	if err != nil {
+		t.Fatalf("CreateGuildStorage() error = %v", err)
+	}
+	manager.DepositItem(storage.StorageID, "player-001", "item-001", 10)
+
+	// Test zero quantity
+	_, err = manager.WithdrawItem(storage.StorageID, "player-001", "item-001", 0)
+	if err == nil {
+		t.Error("WithdrawItem() expected error for zero quantity")
+	}
+	if err != nil && !strings.Contains(err.Error(), "quantity must be positive") {
+		t.Errorf("WithdrawItem() error = %v, want error containing 'quantity must be positive'", err)
+	}
+
+	// Test negative quantity
+	_, err = manager.WithdrawItem(storage.StorageID, "player-001", "item-001", -5)
+	if err == nil {
+		t.Error("WithdrawItem() expected error for negative quantity")
 	}
 }
 
@@ -687,7 +734,10 @@ func TestGetUpgradeBonus(t *testing.T) {
 
 func TestCreateMeetingHall(t *testing.T) {
 	manager := NewManager()
-	hall := manager.CreateMeetingHall("guild-001", 50)
+	hall, err := manager.CreateMeetingHall("guild-001", 50)
+	if err != nil {
+		t.Fatalf("CreateMeetingHall() error = %v", err)
+	}
 
 	if hall.GuildID != "guild-001" {
 		t.Errorf("GuildID = %v, want %v", hall.GuildID, "guild-001")
@@ -703,11 +753,42 @@ func TestCreateMeetingHall(t *testing.T) {
 	}
 }
 
+func TestCreateMeetingHallValidation(t *testing.T) {
+	manager := NewManager()
+
+	// Test empty guildID
+	_, err := manager.CreateMeetingHall("", 50)
+	if err == nil {
+		t.Error("CreateMeetingHall() expected error for empty guildID")
+	}
+	if err != nil && !strings.Contains(err.Error(), "guildID cannot be empty") {
+		t.Errorf("CreateMeetingHall() error = %v, want error containing 'guildID cannot be empty'", err)
+	}
+
+	// Test zero capacity
+	_, err = manager.CreateMeetingHall("guild-001", 0)
+	if err == nil {
+		t.Error("CreateMeetingHall() expected error for zero maxCapacity")
+	}
+	if err != nil && !strings.Contains(err.Error(), "maxCapacity must be positive") {
+		t.Errorf("CreateMeetingHall() error = %v, want error containing 'maxCapacity must be positive'", err)
+	}
+
+	// Test negative capacity
+	_, err = manager.CreateMeetingHall("guild-001", -1)
+	if err == nil {
+		t.Error("CreateMeetingHall() expected error for negative maxCapacity")
+	}
+}
+
 func TestAddMemberToHall(t *testing.T) {
 	manager := NewManager()
-	hall := manager.CreateMeetingHall("guild-001", 2)
+	hall, err := manager.CreateMeetingHall("guild-001", 2)
+	if err != nil {
+		t.Fatalf("CreateMeetingHall() error = %v", err)
+	}
 
-	err := manager.AddMemberToHall(hall, "player-001")
+	err = manager.AddMemberToHall(hall, "player-001")
 	if err != nil {
 		t.Fatalf("AddMemberToHall() error = %v", err)
 	}
@@ -733,7 +814,10 @@ func TestAddMemberToHall(t *testing.T) {
 
 func TestRemoveMemberFromHall(t *testing.T) {
 	manager := NewManager()
-	hall := manager.CreateMeetingHall("guild-001", 10)
+	hall, err := manager.CreateMeetingHall("guild-001", 10)
+	if err != nil {
+		t.Fatalf("CreateMeetingHall() error = %v", err)
+	}
 
 	manager.AddMemberToHall(hall, "player-001")
 	manager.AddMemberToHall(hall, "player-002")
@@ -904,7 +988,7 @@ func BenchmarkGetUpgradeBonus(b *testing.B) {
 
 func BenchmarkAddMemberToHall(b *testing.B) {
 	manager := NewManager()
-	hall := manager.CreateMeetingHall("guild-001", 100000)
+	hall, _ := manager.CreateMeetingHall("guild-001", 100000)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		manager.AddMemberToHall(hall, "player-001")

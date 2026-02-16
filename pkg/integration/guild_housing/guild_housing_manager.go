@@ -303,6 +303,16 @@ func (m *Manager) DepositItem(storageID, playerID, itemID string, quantity int) 
 		}).Error("DepositItem validation failed: ", err)
 		return err
 	}
+	if quantity <= 0 {
+		err := fmt.Errorf("quantity must be positive, got %d", quantity)
+		logger.WithFields(logrus.Fields{
+			"storageID": storageID,
+			"playerID":  playerID,
+			"itemID":    itemID,
+			"quantity":  quantity,
+		}).Error("DepositItem validation failed: ", err)
+		return err
+	}
 
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -375,6 +385,16 @@ func (m *Manager) WithdrawItem(storageID, playerID, itemID string, quantity int)
 		return 0, err
 	}
 	if err := validateID("itemID", itemID); err != nil {
+		logger.WithFields(logrus.Fields{
+			"storageID": storageID,
+			"playerID":  playerID,
+			"itemID":    itemID,
+			"quantity":  quantity,
+		}).Error("WithdrawItem validation failed: ", err)
+		return 0, err
+	}
+	if quantity <= 0 {
+		err := fmt.Errorf("quantity must be positive, got %d", quantity)
 		logger.WithFields(logrus.Fields{
 			"storageID": storageID,
 			"playerID":  playerID,
@@ -526,7 +546,24 @@ func (m *Manager) GetUpgradeBonus(houseID string) (float64, error) {
 }
 
 // CreateMeetingHall creates a meeting hall for a guild house.
-func (m *Manager) CreateMeetingHall(guildID string, maxCapacity int) *MeetingHall {
+// Returns an error if guildID is empty or maxCapacity is not positive.
+func (m *Manager) CreateMeetingHall(guildID string, maxCapacity int) (*MeetingHall, error) {
+	if err := validateID("guildID", guildID); err != nil {
+		logger.WithFields(logrus.Fields{
+			"guildID":     guildID,
+			"maxCapacity": maxCapacity,
+		}).Error("CreateMeetingHall validation failed: ", err)
+		return nil, err
+	}
+	if maxCapacity <= 0 {
+		err := fmt.Errorf("maxCapacity must be positive, got %d", maxCapacity)
+		logger.WithFields(logrus.Fields{
+			"guildID":     guildID,
+			"maxCapacity": maxCapacity,
+		}).Error("CreateMeetingHall validation failed: ", err)
+		return nil, err
+	}
+
 	hall := &MeetingHall{
 		HallID:      fmt.Sprintf("hall-%s-%d", guildID, time.Now().UnixNano()),
 		GuildID:     guildID,
@@ -535,11 +572,14 @@ func (m *Manager) CreateMeetingHall(guildID string, maxCapacity int) *MeetingHal
 		Members:     []string{},
 		CreatedAt:   time.Now(),
 	}
-	return hall
+	return hall, nil
 }
 
 // AddMemberToHall adds a member to the meeting hall.
 func (m *Manager) AddMemberToHall(hall *MeetingHall, playerID string) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
 	if len(hall.Members) >= hall.MaxCapacity {
 		return fmt.Errorf("meeting hall at capacity: %d", hall.MaxCapacity)
 	}
@@ -556,6 +596,9 @@ func (m *Manager) AddMemberToHall(hall *MeetingHall, playerID string) error {
 
 // RemoveMemberFromHall removes a member from the meeting hall.
 func (m *Manager) RemoveMemberFromHall(hall *MeetingHall, playerID string) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
 	for i, member := range hall.Members {
 		if member == playerID {
 			hall.Members = append(hall.Members[:i], hall.Members[i+1:]...)

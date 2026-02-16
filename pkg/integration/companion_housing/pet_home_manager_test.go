@@ -471,6 +471,75 @@ func TestPetHomeManager_GetHouseCounts(t *testing.T) {
 	}
 }
 
+func TestPetHomeManager_RemoveBedding_UpdatesHouseSlice(t *testing.T) {
+	manager := NewPetHomeManager()
+	manager.AddBedding("house_1", "bed_1", BeddingStandard)
+	manager.AddBedding("house_1", "bed_2", BeddingLuxury)
+
+	if len(manager.houseBedding["house_1"]) != 2 {
+		t.Fatalf("houseBedding slice = %d, want 2", len(manager.houseBedding["house_1"]))
+	}
+
+	manager.RemoveBedding("bed_1")
+
+	if len(manager.houseBedding["house_1"]) != 1 {
+		t.Errorf("houseBedding slice = %d after removal, want 1", len(manager.houseBedding["house_1"]))
+	}
+	if manager.houseBedding["house_1"][0] != "bed_2" {
+		t.Errorf("houseBedding[0] = %s, want bed_2", manager.houseBedding["house_1"][0])
+	}
+
+	manager.RemoveBedding("bed_2")
+
+	if len(manager.houseBedding["house_1"]) != 0 {
+		t.Errorf("houseBedding slice = %d after removing all, want 0", len(manager.houseBedding["house_1"]))
+	}
+}
+
+func TestPetHomeManager_RemoveTrainingArea_UpdatesHouseSlice(t *testing.T) {
+	manager := NewPetHomeManager()
+	manager.AddTrainingArea("house_1", "train_1", TrainingCombat)
+	manager.AddTrainingArea("house_1", "train_2", TrainingMagic)
+
+	if len(manager.houseTraining["house_1"]) != 2 {
+		t.Fatalf("houseTraining slice = %d, want 2", len(manager.houseTraining["house_1"]))
+	}
+
+	manager.RemoveTrainingArea("train_1")
+
+	if len(manager.houseTraining["house_1"]) != 1 {
+		t.Errorf("houseTraining slice = %d after removal, want 1", len(manager.houseTraining["house_1"]))
+	}
+	if manager.houseTraining["house_1"][0] != "train_2" {
+		t.Errorf("houseTraining[0] = %s, want train_2", manager.houseTraining["house_1"][0])
+	}
+}
+
+func TestPetHomeManager_RemoveStorageChest_UpdatesHouseSlice(t *testing.T) {
+	manager := NewPetHomeManager()
+	manager.AddStorageChest("house_1", "chest_1", 50, true)
+	manager.AddStorageChest("house_1", "chest_2", 75, false)
+
+	if len(manager.houseStorage["house_1"]) != 2 {
+		t.Fatalf("houseStorage slice = %d, want 2", len(manager.houseStorage["house_1"]))
+	}
+
+	manager.RemoveStorageChest("chest_1")
+
+	if len(manager.houseStorage["house_1"]) != 1 {
+		t.Errorf("houseStorage slice = %d after removal, want 1", len(manager.houseStorage["house_1"]))
+	}
+	if manager.houseStorage["house_1"][0] != "chest_2" {
+		t.Errorf("houseStorage[0] = %s, want chest_2", manager.houseStorage["house_1"][0])
+	}
+
+	// Verify capacity reflects removal
+	total := manager.GetSharedStorageCapacity("house_1")
+	if total != 0 { // chest_2 is not shared
+		t.Errorf("GetSharedStorageCapacity() = %d after removing shared chest, want 0", total)
+	}
+}
+
 func TestPetHomeManager_ConcurrentAccess(t *testing.T) {
 	manager := NewPetHomeManager()
 	manager.AddBedding("house_1", "bed_1", BeddingStandard)

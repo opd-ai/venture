@@ -60,7 +60,7 @@ func (m *PetHomeManager) RemoveBedding(furnitureID string) {
 			delete(m.companionHomes, bedding.CompanionID)
 		}
 		// Remove from house list
-		m.removeFromSlice(m.houseBedding[bedding.HouseID], furnitureID)
+		m.houseBedding[bedding.HouseID] = m.removeFromSlice(m.houseBedding[bedding.HouseID], furnitureID)
 		delete(m.bedding, furnitureID)
 	}
 }
@@ -168,7 +168,7 @@ func (m *PetHomeManager) RemoveTrainingArea(furnitureID string) {
 	defer m.mu.Unlock()
 
 	if area, ok := m.trainingAreas[furnitureID]; ok {
-		m.removeFromSlice(m.houseTraining[area.HouseID], furnitureID)
+		m.houseTraining[area.HouseID] = m.removeFromSlice(m.houseTraining[area.HouseID], furnitureID)
 		delete(m.trainingAreas, furnitureID)
 	}
 }
@@ -243,7 +243,7 @@ func (m *PetHomeManager) RemoveStorageChest(furnitureID string) {
 	defer m.mu.Unlock()
 
 	if chest, ok := m.storageChests[furnitureID]; ok {
-		m.removeFromSlice(m.houseStorage[chest.HouseID], furnitureID)
+		m.houseStorage[chest.HouseID] = m.removeFromSlice(m.houseStorage[chest.HouseID], furnitureID)
 		delete(m.storageChests, furnitureID)
 	}
 }
@@ -298,7 +298,9 @@ func (m *PetHomeManager) GetHouseTrainingCount(houseID string) int {
 	return len(m.houseTraining[houseID])
 }
 
-// removeFromSlice removes a string from a slice (helper function).
+// removeFromSlice removes the first occurrence of item from slice.
+// Returns a new slice without the item, or the original slice if not found.
+// Caller must assign the return value to update the slice reference.
 func (m *PetHomeManager) removeFromSlice(slice []string, item string) []string {
 	for i, v := range slice {
 		if v == item {

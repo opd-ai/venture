@@ -1,15 +1,15 @@
 # Audit: github.com/opd-ai/venture/pkg/integration/companion_housing
 **Date**: 2026-02-16
-**Status**: Needs Work
+**Status**: Complete
 
 ## Summary
 Integration package for companion AI + player housing, enabling companions to rest in bedding for loyalty bonuses, train in areas for XP multipliers, and access shared storage. High code quality with 93.5% test coverage, excellent ECS compliance, and proper deterministic design. Critical bug found: `removeFromSlice` calls don't assign results back to maps, causing stale slice references.
 
 ## Issues Found
-- [ ] **high** error-handling — `removeFromSlice` return value not assigned in `RemoveBedding`, `RemoveTrainingArea`, `RemoveStorageChest` (`pet_home_manager.go:63,171,246`) — causes houseBedding/houseTraining/houseStorage slices to retain deleted furniture IDs
-- [ ] **med** test-coverage — Remove tests don't verify houseBedding/houseTraining/houseStorage slices are updated (`pet_home_manager_test.go:187-208`) — bug would be caught with slice verification
-- [ ] **low** documentation — `CompanionHousingSystem` deprecation warning could be clearer about migration path (`companion_housing_system.go:11-15`)
-- [ ] **low** documentation — `removeFromSlice` helper lacks godoc comment explaining it returns a new slice (`pet_home_manager.go:301`)
+- [x] **high** error-handling — `removeFromSlice` return value not assigned in `RemoveBedding`, `RemoveTrainingArea`, `RemoveStorageChest` (`pet_home_manager.go:63,171,246`) — **FIXED**: assigned return values back to maps
+- [x] **med** test-coverage — Remove tests don't verify houseBedding/houseTraining/houseStorage slices are updated (`pet_home_manager_test.go:187-208`) — **FIXED**: added 3 dedicated slice verification tests
+- [x] **low** documentation — `CompanionHousingSystem` deprecation warning could be clearer about migration path (`companion_housing_system.go:11-15`) — **FIXED**: added migration example in godoc
+- [x] **low** documentation — `removeFromSlice` helper lacks godoc comment explaining it returns a new slice (`pet_home_manager.go:301`) — **FIXED**: added comprehensive godoc
 
 ## Test Coverage
 93.5% (target: 65%) — **EXCELLENT**

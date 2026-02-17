@@ -1,0 +1,178 @@
+---
+name: Build
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+  workflow_call:
+
+permissions:
+  contents: write
+
+jobs:
+  build-linux:
+    name: Build Linux
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        arch: [amd64]
+        #, arm64]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install build dependencies
+        run: sudo apt-get update && sudo apt-get install -y libc6-dev libgl1-mesa-dev libglfw3-dev libxcursor-dev libxi-dev libxinerama-dev libxrandr-dev libxxf86vm-dev libasound2-dev pkg-config libx11-dev xorg-dev
+
+      - name: Install cross-compilation tools for ARM64
+        run: sudo apt-get install -y gcc-aarch64-linux-gnu g++-aarch64-linux-gnu libc6-dev-arm64-cross
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24.x'
+          cache: true
+
+      - name: Download dependencies
+        run: go mod download
+
+      - name: Build server
+        env:
+          GOARCH: ${{ matrix.arch }}
+        run: |
+          mkdir -p build
+          go build -ldflags="-s -w" -o "build/venture-server-linux-${{ matrix.arch }}" ./cmd/server
+
+      - name: Build client
+        env:
+          GOARCH: ${{ matrix.arch }}
+        run: |
+          go build -ldflags="-s -w" -o "build/venture-client-linux-${{ matrix.arch }}" ./cmd/client
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-${{ matrix.arch }}
+          path: build/venture-*
+          retention-days: 7
+
+  build-windows:
+    name: Build Windows
+    runs-on: windows-latest
+    strategy:
+      matrix:
+        arch: [amd64]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24.x'
+          cache: true
+
+      - name: Download dependencies
+        run: go mod download
+
+      - name: Build server
+        env:
+          GOARCH: ${{ matrix.arch }}
+        run: |
+          New-Item -ItemType Directory -Force -Path build
+          go build -ldflags="-s -w" -o "build/venture-server-windows-${{ matrix.arch }}.exe" ./cmd/server
+
+      - name: Build client
+        env:
+          GOARCH: ${{ matrix.arch }}
+        run: |
+          go build -ldflags="-s -w" -o "build/venture-client-windows-${{ matrix.arch }}.exe" ./cmd/client
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-${{ matrix.arch }}
+          path: build/venture-*
+          retention-days: 7
+
+  build-macos:
+    name: Build macOS
+    runs-on: macos-latest
+    strategy:
+      matrix:
+        arch: [amd64, arm64]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Homebrew deps (GLFW)
+        run: |
+          set -e
+          brew update
+          brew install glfw pkg-config
+
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24.x'
+          cache: true
+
+      - name: Download dependencies
+        run: go mod download
+
+      - name: Build server
+        env:
+          GOARCH: ${{ matrix.arch }}
+          CGO_ENABLED: 1
+        run: |
+          mkdir -p build
+          go build -ldflags="-s -w" -o "build/venture-server-darwin-${{ matrix.arch }}" ./cmd/server
+
+      - name: Build client
+        env:
+          GOARCH: ${{ matrix.arch }}
+          CGO_ENABLED: 1
+        run: |
+          go build -ldflags="-s -w" -o "build/venture-client-darwin-${{ matrix.arch }}" ./cmd/client
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: darwin-${{ matrix.arch }}
+          path: build/venture-*
+          retention-days: 7
+
+  build-wasm:
+    name: Build WebAssembly
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24.x'
+          cache: true
+
+      - name: Download dependencies
+        run: go mod download
+
+      - name: Build WebAssembly
+        run: |
+          mkdir -p build/wasm
+          GOOS=js GOARCH=wasm go build -ldflags="-s -w" -o build/wasm/venture.wasm ./cmd/client
+          cp "$(go env GOROOT)/lib/wasm/wasm_exec.js" build/wasm/ 2>/dev/null || cp "$(go env GOROOT)/misc/wasm/wasm_exec.js" build/wasm/ 2>/dev/null || curl -fsSL -o build/wasm/wasm_exec.js "https://raw.githubusercontent.com/golang/go/$(go env GOVERSION)/misc/wasm/wasm_exec.js"
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: wasm
+          path: build/wasm/*
+          retention-days: 7

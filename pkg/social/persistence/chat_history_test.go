@@ -695,3 +695,129 @@ func BenchmarkApplyDelta(b *testing.B) {
 		history.ApplyDelta(delta)
 	}
 }
+
+// TimeProvider Tests
+
+// chatMockTimeProvider implements TimeProvider for deterministic testing
+type chatMockTimeProvider struct {
+	fixedTime time.Time
+}
+
+func (m *chatMockTimeProvider) Now() time.Time {
+	return m.fixedTime
+}
+
+func TestNewChatHistoryWithTimeProvider(t *testing.T) {
+	fixedTime := time.Date(2026, 2, 17, 12, 0, 0, 0, time.UTC)
+	mockTP := &chatMockTimeProvider{fixedTime: fixedTime}
+
+	history := NewChatHistoryWithTimeProvider("player1", mockTP)
+
+	if history == nil {
+		t.Fatal("NewChatHistoryWithTimeProvider returned nil")
+	}
+	if history.PlayerID != "player1" {
+		t.Errorf("expected PlayerID \"player1\", got %q", history.PlayerID)
+	}
+	if history.timeProvider != mockTP {
+		t.Error("TimeProvider not set correctly")
+	}
+}
+
+func TestChatHistorySetTimeProvider(t *testing.T) {
+	history := NewChatHistory("player1")
+
+	// Verify default time provider is set
+	if history.timeProvider == nil {
+		t.Fatal("Default timeProvider not set")
+	}
+
+	// Set a mock time provider
+	fixedTime := time.Date(2026, 2, 17, 15, 0, 0, 0, time.UTC)
+	mockTP := &chatMockTimeProvider{fixedTime: fixedTime}
+	history.SetTimeProvider(mockTP)
+
+	// Verify the time provider was set
+	if history.timeProvider != mockTP {
+		t.Error("TimeProvider not set correctly after SetTimeProvider")
+	}
+}
+
+func TestChatHistoryTimeProviderAfterLoad(t *testing.T) {
+	// Create history with mock time provider
+	fixedTime := time.Date(2026, 2, 17, 12, 0, 0, 0, time.UTC)
+	mockTP := &chatMockTimeProvider{fixedTime: fixedTime}
+
+	history := NewChatHistoryWithTimeProvider("player1", mockTP)
+	history.AddMessage(&Message{
+		ID:        "msg1",
+		Sender:    "player1",
+		Content:   "Hello",
+		Timestamp: fixedTime,
+	})
+
+	// Save history
+	data, err := history.Save()
+	if err != nil {
+		t.Fatalf("Save failed: %v", err)
+	}
+
+	// Load into new history with different time provider
+	newTime := time.Date(2026, 2, 18, 12, 0, 0, 0, time.UTC)
+	newMockTP := &chatMockTimeProvider{fixedTime: newTime}
+	newHistory := NewChatHistoryWithTimeProvider("player2", newMockTP)
+
+	err = newHistory.Load(data)
+	if err != nil {
+		t.Fatalf("Load failed: %v", err)
+	}
+
+	// Verify loaded data
+	if newHistory.PlayerID != "player1" {
+		t.Errorf("expected PlayerID \"player1\" after load, got %q", newHistory.PlayerID)
+	}
+
+	// Verify time provider was preserved (not overwritten by JSON unmarshal)
+	if newHistory.timeProvider != newMockTP {
+		t.Error("TimeProvider was not preserved after Load")
+	}
+}
+
+func TestChatHistoryDeleteOldMessagesDeterministic(t *testing.T) {
+	// Create two histories with same mock time
+	fixedTime := time.Date(2026, 2, 17, 12, 0, 0, 0, time.UTC)
+	mockTP1 := &chatMockTimeProvider{fixedTime: fixedTime}
+	mockTP2 := &chatMockTimeProvider{fixedTime: fixedTime}
+
+	history1 := NewChatHistoryWithTimeProvider("player1", mockTP1)
+	history2 := NewChatHistoryWithTimeProvider("player2", mockTP2)
+
+	// Add identical messages with old timestamps
+	oldTime := fixedTime.Add(-40 * 24 * time.Hour) // 40 days ago (beyond MaxMessageAge)
+	for i := 0; i < 5; i++ {
+		msg := &Message{
+			ID:        fmt.Sprintf("msg%d", i),
+			Sender:    "sender",
+			Content:   "Old message",
+			Timestamp: oldTime,
+		}
+		history1.AddMessage(msg)
+		history2.AddMessage(msg)
+	}
+
+	// Delete old messages with same time
+	deleted1 := history1.DeleteOldMessages(fixedTime)
+	deleted2 := history2.DeleteOldMessages(fixedTime)
+
+	// Deleted counts should be identical
+	if deleted1 != deleted2 {
+		t.Errorf("Expected deterministic deletion: h1=%d, h2=%d", deleted1, deleted2)
+	}
+
+	// Message counts should be identical
+	msgs1 := history1.GetMessages(nil)
+	msgs2 := history2.GetMessages(nil)
+	if len(msgs1) != len(msgs2) {
+		t.Errorf("Expected same message count: h1=%d, h2=%d", len(msgs1), len(msgs2))
+	}
+}

@@ -22,18 +22,26 @@ type Message struct {
 
 // ChatHistory manages persistent chat messages for a player
 type ChatHistory struct {
-	PlayerID string     `json:"player_id"`
-	Messages []*Message `json:"messages"`
-	Version  int        `json:"version"`
-	mu       sync.RWMutex
+	PlayerID     string       `json:"player_id"`
+	Messages     []*Message   `json:"messages"`
+	Version      int          `json:"version"`
+	mu           sync.RWMutex `json:"-"`
+	timeProvider TimeProvider `json:"-"` // TimeProvider for deterministic timestamps
 }
 
-// NewChatHistory creates a new chat history manager
+// NewChatHistory creates a new chat history manager using real system time.
 func NewChatHistory(playerID string) *ChatHistory {
+	return NewChatHistoryWithTimeProvider(playerID, DefaultTimeProvider())
+}
+
+// NewChatHistoryWithTimeProvider creates a new chat history manager with a custom TimeProvider.
+// Use this constructor in tests to inject a mock TimeProvider for deterministic timestamps.
+func NewChatHistoryWithTimeProvider(playerID string, tp TimeProvider) *ChatHistory {
 	return &ChatHistory{
-		PlayerID: playerID,
-		Messages: make([]*Message, 0, MaxMessagesPerPlayer),
-		Version:  1,
+		PlayerID:     playerID,
+		Messages:     make([]*Message, 0, MaxMessagesPerPlayer),
+		Version:      1,
+		timeProvider: tp,
 	}
 }
 
@@ -164,8 +172,18 @@ func (c *ChatHistory) Load(data []byte) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
+	// Preserve existing timeProvider before unmarshal overwrites
+	existingTP := c.timeProvider
+
 	if err := json.Unmarshal(buf.Bytes(), c); err != nil {
 		return fmt.Errorf("failed to unmarshal chat history: %w", err)
+	}
+
+	// Restore or initialize timeProvider (not serialized)
+	if existingTP != nil {
+		c.timeProvider = existingTP
+	} else {
+		c.timeProvider = DefaultTimeProvider()
 	}
 
 	return nil
@@ -286,4 +304,12 @@ func (f *MessageFilter) Matches(msg *Message) bool {
 		return false
 	}
 	return true
+}
+
+// SetTimeProvider sets the time provider for the chat history.
+// This is useful when loading a history from JSON and needing to inject a mock time provider.
+func (c *ChatHistory) SetTimeProvider(tp TimeProvider) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.timeProvider = tp
 }

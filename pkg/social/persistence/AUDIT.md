@@ -6,9 +6,9 @@
 The social/persistence package provides persistent social data structures (trust scores, reputation tracking, chat history, image galleries) with excellent architecture and 92.5% test coverage. All systems are thread-safe, use compression for efficient storage, and support save/load via gzipped JSON. The implementation is production-ready with no critical issues. Minor improvements identified relate to documentation and optional TimeProvider abstraction for chat/reputation.
 
 ## Issues Found
-- [ ] low doc — `TimeProvider` abstraction only used in `ImageGallery`; `ChatHistory`, `TrustManager`, and `ReputationManager` use real time directly. Consider adding `TimeProvider` support for fully deterministic testing across all managers (`chat_history.go:1-290`, `trust_manager.go:1-291`, `reputation_manager.go:1-240`)
+- [x] low doc — `TimeProvider` abstraction added to all managers; `ChatHistory`, `TrustManager`, and `ReputationManager` now support injectable TimeProvider via constructors (`NewXWithTimeProvider()`) and `SetTimeProvider()` methods for deterministic testing
 - [ ] low test — Delta synchronization in `ChatHistory.GetDelta()` uses version-based heuristic rather than true changelog. Production comment acknowledges limitation but could be enhanced for better sync accuracy (`chat_history.go:187-211`)
-- [ ] med doc — `trust_manager.go:275-280` documents `time.Now()` exception for decay loop, but same pattern exists in `types.go:23` (RealTimeProvider) without explicit justification comment (`types.go:22-24`)
+- [x] med doc — `types.go` TimeProvider documentation updated to explain intentional time.Now() usage for server-side operations (decay, timestamps) as acceptable non-procgen usage per project guidelines
 
 ## Test Coverage
 92.5% (target: 65%) ✅
@@ -81,11 +81,11 @@ The social/persistence package provides persistent social data structures (trust
 5. **Graceful Defaults**: Missing records return sensible defaults (0.5 neutral trust, 0.0 reputation)
 
 ## Recommendations
-1. **[Low Priority] Add TimeProvider to all managers** — Currently only `ImageGallery` supports `TimeProvider` abstraction. Consider adding to `ChatHistory`, `TrustManager`, and `ReputationManager` for fully deterministic testing. Would require constructor variants like `NewChatHistoryWithTimeProvider()`. Benefits: enables time-travel testing, replay scenarios, and deterministic unit tests without real wall-clock dependency.
+1. **[COMPLETED 2026-02-17] ~~Add TimeProvider to all managers~~** — TimeProvider abstraction added to all managers via `NewXWithTimeProvider()` constructors and `SetTimeProvider()` methods. Enables deterministic testing for ChatHistory, TrustManager, and ReputationManager.
 
 2. **[Low Priority] Enhance chat delta sync** — `ChatHistory.GetDelta()` uses version-based heuristic (lines 187-211) instead of tracking actual changes. Production comment acknowledges this limitation. Consider adding changelog tracking if delta sync accuracy becomes critical for reconnection UX.
 
-3. **[Medium Priority] Document TimeProvider pattern** — `types.go:23` (`RealTimeProvider.Now()`) uses `time.Now()` but lacks the explicit justification comment found in `trust_manager.go:275-280`. Add comment explaining this is intentional for production time source and tests should use mock `TimeProvider`.
+3. **[COMPLETED 2026-02-17] ~~Document TimeProvider pattern~~** — Added comprehensive documentation to `types.go` explaining TimeProvider usage across all managers and the intentional time.Now() usage for server-side operations (decay, audit timestamps) per project determinism guidelines.
 
 4. **[Documentation] Add cross-reference to saveload package** — The `social/persistence` types are serialized independently but could integrate with `pkg/saveload` for unified save format. Document relationship (or intentional separation) in `doc.go`.
 

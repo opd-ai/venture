@@ -27,14 +27,22 @@ type ReputationRecord struct {
 
 // ReputationManager manages persistent reputation scores for players
 type ReputationManager struct {
-	mu      sync.RWMutex
-	records map[string]*ReputationRecord // key: playerID
+	mu           sync.RWMutex
+	records      map[string]*ReputationRecord // key: playerID
+	timeProvider TimeProvider                 // TimeProvider for deterministic timestamps
 }
 
-// NewReputationManager creates a new ReputationManager
+// NewReputationManager creates a new ReputationManager using real system time.
 func NewReputationManager() *ReputationManager {
+	return NewReputationManagerWithTimeProvider(DefaultTimeProvider())
+}
+
+// NewReputationManagerWithTimeProvider creates a new ReputationManager with a custom TimeProvider.
+// Use this constructor in tests to inject a mock TimeProvider for deterministic timestamps.
+func NewReputationManagerWithTimeProvider(tp TimeProvider) *ReputationManager {
 	return &ReputationManager{
-		records: make(map[string]*ReputationRecord),
+		records:      make(map[string]*ReputationRecord),
+		timeProvider: tp,
 	}
 }
 
@@ -236,4 +244,12 @@ func (rm *ReputationManager) Clear() {
 	rm.mu.Lock()
 	defer rm.mu.Unlock()
 	rm.records = make(map[string]*ReputationRecord)
+}
+
+// SetTimeProvider sets the time provider for the manager.
+// This is useful when loading a manager from JSON and needing to inject a mock time provider.
+func (rm *ReputationManager) SetTimeProvider(tp TimeProvider) {
+	rm.mu.Lock()
+	defer rm.mu.Unlock()
+	rm.timeProvider = tp
 }

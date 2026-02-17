@@ -15,6 +15,9 @@ type TrustManager struct {
 	mu      sync.RWMutex
 	records map[string]*TrustRecord // key: "playerA:playerB" (sorted)
 
+	// TimeProvider for deterministic timestamps in tests
+	timeProvider TimeProvider
+
 	// Automatic decay scheduling
 	decayMu       sync.Mutex
 	decayTicker   *time.Ticker
@@ -22,10 +25,17 @@ type TrustManager struct {
 	decayRunning  bool
 }
 
-// NewTrustManager creates a new TrustManager
+// NewTrustManager creates a new TrustManager using real system time.
 func NewTrustManager() *TrustManager {
+	return NewTrustManagerWithTimeProvider(DefaultTimeProvider())
+}
+
+// NewTrustManagerWithTimeProvider creates a new TrustManager with a custom TimeProvider.
+// Use this constructor in tests to inject a mock TimeProvider for deterministic timestamps.
+func NewTrustManagerWithTimeProvider(tp TimeProvider) *TrustManager {
 	return &TrustManager{
-		records: make(map[string]*TrustRecord),
+		records:      make(map[string]*TrustRecord),
+		timeProvider: tp,
 	}
 }
 
@@ -272,19 +282,25 @@ func (tm *TrustManager) IsAutomaticDecayRunning() bool {
 }
 
 // runDecayLoop is the background goroutine that applies decay at regular intervals.
-// NOTE: Uses time.Now() intentionally - this is a server-side background operation
-// that requires real wall-clock time for trust decay scheduling. The ApplyDecay
-// method accepts a currentTime parameter for deterministic testing, but the
-// production background loop needs actual time for server coordination.
-// This is exempt from seed-based determinism per AUDIT.md guidelines for
-// network/auth/server operations.
+// NOTE: Uses TimeProvider instead of raw time.Now() for deterministic testing.
+// In production, DefaultTimeProvider() returns real wall-clock time.
+// The ApplyDecay method accepts a currentTime parameter for deterministic testing,
+// and the background loop uses the injected TimeProvider for consistency.
 func (tm *TrustManager) runDecayLoop() {
 	for {
 		select {
 		case <-tm.decayStopChan:
 			return
 		case <-tm.decayTicker.C:
-			tm.ApplyDecay(time.Now())
+			tm.ApplyDecay(tm.timeProvider.Now())
 		}
 	}
+}
+
+// SetTimeProvider sets the time provider for the manager.
+// This is useful when loading a manager from JSON and needing to inject a mock time provider.
+func (tm *TrustManager) SetTimeProvider(tp TimeProvider) {
+	tm.mu.Lock()
+	defer tm.mu.Unlock()
+	tm.timeProvider = tp
 }

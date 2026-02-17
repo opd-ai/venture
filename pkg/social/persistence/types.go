@@ -9,13 +9,26 @@ import (
 
 // TimeProvider is an interface for obtaining the current time.
 // This enables deterministic timestamps for testing and reproducible ID generation.
-// In production, use RealTimeProvider; in tests, use a mock implementation.
+// In production, use RealTimeProvider (via DefaultTimeProvider()); in tests, use
+// a mock implementation that returns a fixed time.
+//
+// The TimeProvider pattern is used consistently across all managers in this package:
+// - ImageGallery: Uses TimeProvider for image timestamp and ID generation
+// - TrustManager: Uses TimeProvider in automatic decay loop
+// - ReputationManager: Supports TimeProvider for consistency (via constructor injection)
+// - ChatHistory: Supports TimeProvider for deterministic testing (via constructor injection)
+//
+// Note: This is intentionally used for non-procgen metadata (timestamps, IDs, decay)
+// rather than procedural content generation. Per the project's determinism guidelines,
+// time.Now() is acceptable for server-side operations like trust decay and audit
+// timestamps, but the TimeProvider abstraction allows deterministic testing.
 type TimeProvider interface {
 	// Now returns the current time
 	Now() time.Time
 }
 
 // RealTimeProvider implements TimeProvider using the actual system clock.
+// This is the default implementation used in production.
 type RealTimeProvider struct{}
 
 // Now returns the current system time.

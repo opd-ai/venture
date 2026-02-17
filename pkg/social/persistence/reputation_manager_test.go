@@ -480,3 +480,85 @@ func BenchmarkReputationSave(b *testing.B) {
 		}
 	}
 }
+
+// TimeProvider Tests
+
+// reputationMockTimeProvider implements TimeProvider for deterministic testing
+type reputationMockTimeProvider struct {
+	fixedTime time.Time
+}
+
+func (m *reputationMockTimeProvider) Now() time.Time {
+	return m.fixedTime
+}
+
+func TestNewReputationManagerWithTimeProvider(t *testing.T) {
+	fixedTime := time.Date(2026, 2, 17, 12, 0, 0, 0, time.UTC)
+	mockTP := &reputationMockTimeProvider{fixedTime: fixedTime}
+
+	rm := NewReputationManagerWithTimeProvider(mockTP)
+
+	if rm == nil {
+		t.Fatal("NewReputationManagerWithTimeProvider returned nil")
+	}
+	if rm.records == nil {
+		t.Error("ReputationManager.records not initialized")
+	}
+	if rm.timeProvider != mockTP {
+		t.Error("TimeProvider not set correctly")
+	}
+}
+
+func TestReputationManagerSetTimeProvider(t *testing.T) {
+	rm := NewReputationManager()
+
+	// Verify default time provider is set
+	if rm.timeProvider == nil {
+		t.Fatal("Default timeProvider not set")
+	}
+
+	// Set a mock time provider
+	fixedTime := time.Date(2026, 2, 17, 15, 0, 0, 0, time.UTC)
+	mockTP := &reputationMockTimeProvider{fixedTime: fixedTime}
+	rm.SetTimeProvider(mockTP)
+
+	// Verify the time provider was set
+	if rm.timeProvider != mockTP {
+		t.Error("TimeProvider not set correctly after SetTimeProvider")
+	}
+}
+
+func TestReputationManagerDeterministicDecay(t *testing.T) {
+	// Create two managers with same mock time
+	fixedTime := time.Date(2026, 2, 17, 12, 0, 0, 0, time.UTC)
+	mockTP1 := &reputationMockTimeProvider{fixedTime: fixedTime}
+	mockTP2 := &reputationMockTimeProvider{fixedTime: fixedTime}
+
+	rm1 := NewReputationManagerWithTimeProvider(mockTP1)
+	rm2 := NewReputationManagerWithTimeProvider(mockTP2)
+
+	// Set up identical records with old timestamps
+	oldTime := fixedTime.Add(-10 * 24 * time.Hour)
+	rm1.UpdateReputation("alice", ReputationTrade, 50.0, oldTime)
+	rm2.UpdateReputation("alice", ReputationTrade, 50.0, oldTime)
+
+	// Apply decay with same time
+	rm1.ApplyDecay(fixedTime)
+	rm2.ApplyDecay(fixedTime)
+
+	// Reputation scores should be identical
+	rep1 := rm1.GetReputation("alice", ReputationTrade)
+	rep2 := rm2.GetReputation("alice", ReputationTrade)
+
+	if rep1 != rep2 {
+		t.Errorf("Expected deterministic decay results: rm1=%f, rm2=%f", rep1, rep2)
+	}
+
+	// Also verify total reputation
+	total1 := rm1.GetTotalReputation("alice")
+	total2 := rm2.GetTotalReputation("alice")
+
+	if total1 != total2 {
+		t.Errorf("Expected deterministic total: rm1=%f, rm2=%f", total1, total2)
+	}
+}

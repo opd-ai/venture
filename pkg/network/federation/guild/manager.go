@@ -21,7 +21,6 @@ import (
 	"fmt"
 	"sync"
 	"sync/atomic"
-	"time"
 
 	"github.com/google/uuid"
 	"github.com/sirupsen/logrus"
@@ -46,23 +45,52 @@ type Manager struct {
 	logger           *logrus.Entry
 	guildCounter     int64          // Counter for deterministic guild ID generation
 	transport        GuildTransport // Transport for broadcasting guild updates to peers
+	timeProvider     TimeProvider   // Time provider for deterministic timestamps
+}
+
+// ManagerOption is a functional option for configuring Manager.
+type ManagerOption func(*Manager)
+
+// WithServerID sets a specific server ID for the Manager.
+func WithServerID(serverID string) ManagerOption {
+	return func(m *Manager) {
+		if serverID != "" {
+			m.serverID = serverID
+		}
+	}
+}
+
+// WithTimeProvider sets a custom TimeProvider for the Manager.
+// Use MockTimeProvider for deterministic testing.
+func WithTimeProvider(tp TimeProvider) ManagerOption {
+	return func(m *Manager) {
+		if tp != nil {
+			m.timeProvider = tp
+		}
+	}
 }
 
 // NewManager creates a new guild manager.
-// An optional serverID may be provided for deterministic testing.
-// If omitted, a random UUID-based server ID is generated.
-func NewManager(serverID ...string) *Manager {
-	sid := fmt.Sprintf("server-%s", uuid.New().String())
-	if len(serverID) > 0 && serverID[0] != "" {
-		sid = serverID[0]
-	}
+// Optional ManagerOption functions may be provided to customize behavior:
+//   - WithServerID(id): sets a specific server ID for deterministic testing
+//   - WithTimeProvider(tp): sets a custom TimeProvider for deterministic timestamps
+//
+// If no serverID is provided, a random UUID-based server ID is generated.
+// If no TimeProvider is provided, RealTimeProvider (system clock) is used.
+func NewManager(opts ...ManagerOption) *Manager {
 	m := &Manager{
 		guilds:           make(map[string]*Guild),
 		federatedServers: make([]string, 0),
 		messageHandlers:  make(map[MessageType]func(msg GuildMessage) error),
-		serverID:         sid,
+		serverID:         fmt.Sprintf("server-%s", uuid.New().String()),
 		logger:           logrus.WithField("component", "guild_manager"),
 		guildCounter:     0,
+		timeProvider:     DefaultTimeProvider(),
+	}
+
+	// Apply options
+	for _, opt := range opts {
+		opt(m)
 	}
 
 	// Register message handlers
@@ -101,18 +129,19 @@ func (m *Manager) CreateGuild(genre, leaderID string, seed int64) (string, error
 	permissions[RankMember] = []Permission{PermissionDeposit}
 	permissions[RankRecruit] = []Permission{PermissionDeposit}
 
+	now := m.timeProvider.Now()
 	guild := &Guild{
 		ID:           guildID,
 		Name:         identity.Name,
 		Emblem:       identity.Emblem,
 		LeaderID:     leaderID,
-		Members:      []Member{{PlayerID: leaderID, Rank: RankLeader, JoinedAt: time.Now(), LastLogin: time.Now()}},
+		Members:      []Member{{PlayerID: leaderID, Rank: RankLeader, JoinedAt: now, LastLogin: now}},
 		Permissions:  permissions,
 		Treasury:     0,
 		Transactions: []TreasuryTransaction{},
 		MOTD:         fmt.Sprintf("Welcome to %s!", identity.Name),
-		CreatedAt:    time.Now(),
-		UpdatedAt:    time.Now(),
+		CreatedAt:    now,
+		UpdatedAt:    now,
 		Reputation:   make(map[string]float64),
 	}
 
@@ -166,13 +195,14 @@ func (m *Manager) AddMember(guildID, playerID string, rank Rank) error {
 		}
 	}
 
+	now := m.timeProvider.Now()
 	guild.Members = append(guild.Members, Member{
 		PlayerID:  playerID,
 		Rank:      rank,
-		JoinedAt:  time.Now(),
-		LastLogin: time.Now(),
+		JoinedAt:  now,
+		LastLogin: now,
 	})
-	guild.UpdatedAt = time.Now()
+	guild.UpdatedAt = now
 	return nil
 }
 
@@ -202,7 +232,7 @@ func (m *Manager) RemoveMember(guildID, playerID string) error {
 	for i, member := range guild.Members {
 		if member.PlayerID == playerID {
 			guild.Members = append(guild.Members[:i], guild.Members[i+1:]...)
-			guild.UpdatedAt = time.Now()
+			guild.UpdatedAt = m.timeProvider.Now()
 			return nil
 		}
 	}
@@ -286,7 +316,7 @@ func (m *Manager) promoteToNextRank(guild *Guild, memberIdx int, promoter *Membe
 	}
 
 	guild.Members[memberIdx].Rank = newRank
-	guild.UpdatedAt = time.Now()
+	guild.UpdatedAt = m.timeProvider.Now()
 	return nil
 }
 
@@ -332,6 +362,6 @@ func (m *Manager) SetMOTD(guildID, motd string) error {
 	}
 
 	guild.MOTD = motd
-	guild.UpdatedAt = time.Now()
+	guild.UpdatedAt = m.timeProvider.Now()
 	return nil
 }

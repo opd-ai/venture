@@ -3,7 +3,6 @@ package guild
 import (
 	"encoding/json"
 	"fmt"
-	"time"
 )
 
 // Cross-server guild federation and synchronization.
@@ -87,7 +86,7 @@ func (m *Manager) SyncGuildState(guildID string) error {
 		Type:      MsgTypeGuildSync,
 		GuildID:   guildID,
 		ServerID:  m.serverID,
-		Timestamp: time.Now(),
+		Timestamp: m.timeProvider.Now(),
 		Data:      guild,
 	}
 

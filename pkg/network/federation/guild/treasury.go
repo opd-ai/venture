@@ -2,7 +2,6 @@ package guild
 
 import (
 	"fmt"
-	"time"
 )
 
 // Guild treasury operations.
@@ -28,14 +27,15 @@ func (m *Manager) DepositTreasury(guildID, playerID string, amount int) error {
 		return fmt.Errorf("guild not found: %s", guildID)
 	}
 
+	now := m.timeProvider.Now()
 	guild.Treasury += amount
 	guild.Transactions = append(guild.Transactions, TreasuryTransaction{
 		PlayerID:  playerID,
 		Amount:    amount,
-		Timestamp: time.Now(),
+		Timestamp: now,
 		Reason:    "deposit",
 	})
-	guild.UpdatedAt = time.Now()
+	guild.UpdatedAt = now
 	return nil
 }
 
@@ -58,13 +58,14 @@ func (m *Manager) WithdrawTreasury(guildID, playerID string, amount int) error {
 		return fmt.Errorf("insufficient treasury funds")
 	}
 
+	now := m.timeProvider.Now()
 	guild.Treasury -= amount
 	guild.Transactions = append(guild.Transactions, TreasuryTransaction{
 		PlayerID:  playerID,
 		Amount:    -amount,
-		Timestamp: time.Now(),
+		Timestamp: now,
 		Reason:    "withdrawal",
 	})
-	guild.UpdatedAt = time.Now()
+	guild.UpdatedAt = now
 	return nil
 }

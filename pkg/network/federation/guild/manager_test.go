@@ -1417,7 +1417,7 @@ func BenchmarkGetMember_NotFound(b *testing.B) {
 }
 
 func BenchmarkSyncGuildState(b *testing.B) {
-	m := NewManager("bench-server")
+	m := NewManager(WithServerID("bench-server"))
 	guildID, _ := m.CreateGuild("fantasy", "leader-1", 42)
 	mt := &mockGuildTransport{}
 	m.SetTransport(mt)
@@ -1429,7 +1429,7 @@ func BenchmarkSyncGuildState(b *testing.B) {
 
 // TestTransportIntegrationWiring verifies transport can be set and used for sync
 func TestTransportIntegrationWiring(t *testing.T) {
-	m := NewManager("test-server")
+	m := NewManager(WithServerID("test-server"))
 	guildID, err := m.CreateGuild("fantasy", "leader-1", 42)
 	if err != nil {
 		t.Fatalf("CreateGuild failed: %v", err)
@@ -1470,5 +1470,160 @@ func TestTransportIntegrationWiring(t *testing.T) {
 	m.SetTransport(nil)
 	if err := m.SyncGuildState(guildID); err != nil {
 		t.Fatalf("SyncGuildState with nil transport should not error: %v", err)
+	}
+}
+
+// TestTimeProviderDefault verifies that NewManager uses RealTimeProvider by default
+func TestTimeProviderDefault(t *testing.T) {
+	m := NewManager()
+	if m.timeProvider == nil {
+		t.Fatal("timeProvider should not be nil")
+	}
+	// Verify it's a RealTimeProvider by checking the type
+	if _, ok := m.timeProvider.(RealTimeProvider); !ok {
+		t.Errorf("expected RealTimeProvider, got %T", m.timeProvider)
+	}
+}
+
+// TestTimeProviderMock verifies that MockTimeProvider produces deterministic timestamps
+func TestTimeProviderMock(t *testing.T) {
+	fixedTime := time.Date(2026, 2, 17, 12, 0, 0, 0, time.UTC)
+	mockTP := &MockTimeProvider{CurrentTime: fixedTime}
+
+	m := NewManager(WithTimeProvider(mockTP))
+	guildID, err := m.CreateGuild("fantasy", "leader-1", 12345)
+	if err != nil {
+		t.Fatalf("CreateGuild failed: %v", err)
+	}
+
+	guild, _ := m.GetGuild(guildID)
+	if !guild.CreatedAt.Equal(fixedTime) {
+		t.Errorf("CreatedAt = %v, want %v", guild.CreatedAt, fixedTime)
+	}
+	if !guild.UpdatedAt.Equal(fixedTime) {
+		t.Errorf("UpdatedAt = %v, want %v", guild.UpdatedAt, fixedTime)
+	}
+	if len(guild.Members) == 0 {
+		t.Fatal("expected at least one member")
+	}
+	if !guild.Members[0].JoinedAt.Equal(fixedTime) {
+		t.Errorf("Member JoinedAt = %v, want %v", guild.Members[0].JoinedAt, fixedTime)
+	}
+}
+
+// TestTimeProviderAdvance verifies that advancing MockTimeProvider updates timestamps correctly
+func TestTimeProviderAdvance(t *testing.T) {
+	startTime := time.Date(2026, 2, 17, 12, 0, 0, 0, time.UTC)
+	mockTP := &MockTimeProvider{CurrentTime: startTime}
+
+	m := NewManager(WithTimeProvider(mockTP))
+	guildID, err := m.CreateGuild("fantasy", "leader-1", 12345)
+	if err != nil {
+		t.Fatalf("CreateGuild failed: %v", err)
+	}
+
+	// Advance time by 1 hour
+	mockTP.Advance(time.Hour)
+	expectedTime := startTime.Add(time.Hour)
+
+	// Add a member - should use the advanced time
+	if err := m.AddMember(guildID, "player-2", RankRecruit); err != nil {
+		t.Fatalf("AddMember failed: %v", err)
+	}
+
+	guild, _ := m.GetGuild(guildID)
+	if !guild.UpdatedAt.Equal(expectedTime) {
+		t.Errorf("UpdatedAt after AddMember = %v, want %v", guild.UpdatedAt, expectedTime)
+	}
+	// Find the new member and check their join time
+	for _, member := range guild.Members {
+		if member.PlayerID == "player-2" {
+			if !member.JoinedAt.Equal(expectedTime) {
+				t.Errorf("New member JoinedAt = %v, want %v", member.JoinedAt, expectedTime)
+			}
+		}
+	}
+}
+
+// TestTimeProviderTreasury verifies treasury operations use TimeProvider
+func TestTimeProviderTreasury(t *testing.T) {
+	fixedTime := time.Date(2026, 2, 17, 14, 30, 0, 0, time.UTC)
+	mockTP := &MockTimeProvider{CurrentTime: fixedTime}
+
+	m := NewManager(WithTimeProvider(mockTP))
+	guildID, _ := m.CreateGuild("fantasy", "leader-1", 12345)
+
+	// Advance time before deposit
+	mockTP.Advance(30 * time.Minute)
+	depositTime := fixedTime.Add(30 * time.Minute)
+
+	if err := m.DepositTreasury(guildID, "leader-1", 100); err != nil {
+		t.Fatalf("DepositTreasury failed: %v", err)
+	}
+
+	guild, _ := m.GetGuild(guildID)
+	if len(guild.Transactions) != 1 {
+		t.Fatalf("expected 1 transaction, got %d", len(guild.Transactions))
+	}
+	if !guild.Transactions[0].Timestamp.Equal(depositTime) {
+		t.Errorf("Transaction timestamp = %v, want %v", guild.Transactions[0].Timestamp, depositTime)
+	}
+
+	// Advance time again for withdrawal
+	mockTP.Advance(15 * time.Minute)
+	withdrawTime := depositTime.Add(15 * time.Minute)
+
+	if err := m.WithdrawTreasury(guildID, "leader-1", 50); err != nil {
+		t.Fatalf("WithdrawTreasury failed: %v", err)
+	}
+
+	guild, _ = m.GetGuild(guildID)
+	if len(guild.Transactions) != 2 {
+		t.Fatalf("expected 2 transactions, got %d", len(guild.Transactions))
+	}
+	if !guild.Transactions[1].Timestamp.Equal(withdrawTime) {
+		t.Errorf("Withdrawal timestamp = %v, want %v", guild.Transactions[1].Timestamp, withdrawTime)
+	}
+}
+
+// TestTimeProviderFederation verifies federation sync uses TimeProvider
+func TestTimeProviderFederation(t *testing.T) {
+	fixedTime := time.Date(2026, 2, 17, 16, 0, 0, 0, time.UTC)
+	mockTP := &MockTimeProvider{CurrentTime: fixedTime}
+
+	m := NewManager(WithServerID("test-server"), WithTimeProvider(mockTP))
+	guildID, _ := m.CreateGuild("fantasy", "leader-1", 12345)
+
+	// Setup mock transport to capture sync data
+	mt := &mockGuildTransport{}
+	m.SetTransport(mt)
+
+	// Advance time before sync
+	mockTP.Advance(time.Hour)
+
+	if err := m.SyncGuildState(guildID); err != nil {
+		t.Fatalf("SyncGuildState failed: %v", err)
+	}
+
+	if mt.callCount != 1 {
+		t.Errorf("expected 1 broadcast, got %d", mt.callCount)
+	}
+}
+
+// TestWithServerIDAndTimeProvider verifies both options work together
+func TestWithServerIDAndTimeProvider(t *testing.T) {
+	fixedTime := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
+	mockTP := &MockTimeProvider{CurrentTime: fixedTime}
+
+	m := NewManager(
+		WithServerID("custom-server-id"),
+		WithTimeProvider(mockTP),
+	)
+
+	if m.serverID != "custom-server-id" {
+		t.Errorf("serverID = %s, want custom-server-id", m.serverID)
+	}
+	if m.timeProvider != mockTP {
+		t.Errorf("timeProvider not set correctly")
 	}
 }

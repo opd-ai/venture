@@ -1,22 +1,23 @@
 # Audit: github.com/opd-ai/venture/pkg/network/federation/guild
-**Date**: 2026-02-16
+**Date**: 2026-02-17
 **Status**: Complete
 
 ## Summary
-Cross-server guild management package with 87.5% test coverage. Implements core guild operations (create, member management, treasury, federation sync) with thread-safe design and deterministic procedural identity generation. ECS violations resolved: HasPermission and GetMember extracted from Guild component to standalone package-level functions. guildCounter now uses atomic operations. NewManager accepts optional serverID for deterministic testing. GuildTransport wired to FederationProtocol in both server and client. Benchmark tests added for hot-path operations. Remaining: 1 low-priority item (TimeProvider abstraction).
+Cross-server guild management package with 88.0% test coverage. Implements core guild operations (create, member management, treasury, federation sync) with thread-safe design and deterministic procedural identity generation. ECS violations resolved: HasPermission and GetMember extracted from Guild component to standalone package-level functions. guildCounter now uses atomic operations. NewManager accepts functional options for serverID and TimeProvider. GuildTransport wired to FederationProtocol in both server and client. All timestamps now use TimeProvider abstraction for deterministic testing. All issues resolved — 0 remaining.
 
 ## Issues Found
 - [x] **high** ECS compliance — ~~Guild component has logic methods `HasPermission()` and `GetMember()`~~ **FIXED**: Extracted to standalone package-level functions `HasPermission(g *Guild, ...)` and `GetMember(g *Guild, ...)` in `types.go`. All callers updated (manager.go, manager_test.go, pkg/engine/guild_system.go).
 - [x] **high** ECS compliance — ~~Guild component implements `Type() string` correctly but also has behavior methods~~ **FIXED**: Guild component now only has `Type() string` method. All logic moved to standalone functions.
-- [x] **med** Deterministic procgen — Uses `time.Now()` for timestamps in non-procgen context (member joins, treasury txns, guild updates) - acceptable for metadata but inconsistent with strict determinism (`manager.go:102`, `manager.go:107-108`, `manager.go:165-166`, `manager.go:168`, `manager.go:198`, `manager.go:282`, `manager.go:328`, `federation.go:90`, `treasury.go:35`, `treasury.go:66`)
+- [x] **med** Deterministic procgen — ~~Uses `time.Now()` for timestamps in non-procgen context~~ **FIXED** (2026-02-17): All `time.Now()` calls replaced with `m.timeProvider.Now()` via TimeProvider abstraction. MockTimeProvider enables deterministic timestamp testing.
 - [x] **med** Integration status — GuildTransport interface defined but no concrete implementation provided - transport layer stubbed (`federation.go:22-25`)
 - [x] **med** Integration status — Manager.transport field optional (nil check at federation.go:94) - federation sync messages prepared but not transmitted without transport wiring
-- [x] **low** Error handling — ~~Manager uses uuid.New() for serverID generation which is non-deterministic~~ **FIXED**: NewManager now accepts optional `serverID ...string` parameter for deterministic testing, falls back to uuid.New() when not provided.
+- [x] **low** Error handling — ~~Manager uses uuid.New() for serverID generation which is non-deterministic~~ **FIXED**: NewManager now accepts `WithServerID(id)` option for deterministic testing, falls back to uuid.New() when not provided.
 - [x] **low** Documentation — ~~Missing package-level doc comment explaining integration with pkg/network/federation parent package~~ **FIXED**: Updated doc.go with federation integration documentation.
 - [x] **low** Thread safety — ~~Manager.guildCounter incremented without atomic operations~~ **FIXED**: guildCounter now uses `sync/atomic.AddInt64` and `atomic.LoadInt64` for thread-safe access.
+- [x] **low** TimeProvider abstraction — **FIXED** (2026-02-17): Added `TimeProvider` interface with `RealTimeProvider` (production) and `MockTimeProvider` (testing). NewManager accepts `WithTimeProvider(tp)` option. All 10 `time.Now()` usages in manager.go, federation.go, and treasury.go replaced with `m.timeProvider.Now()`. Comprehensive tests added for deterministic timestamps.
 
 ## Test Coverage
-87.5% (target: 65%) ✅
+88.0% (target: 65%) ✅
 
 **Strengths**:
 - Comprehensive table-driven tests for all operations (create, members, treasury, federation)
@@ -26,6 +27,7 @@ Cross-server guild management package with 87.5% test coverage. Implements core 
 - Deterministic identity generation tests
 - Transport integration wiring tests (set, replace, nil transport)
 - Benchmark tests for hot-path operations (HasPermission, GetMember, SyncGuildState)
+- TimeProvider tests (default, mock, advance, treasury, federation, combined options)
 
 **Gaps**:
 - No tests for guildCounter race conditions
@@ -35,7 +37,7 @@ Cross-server guild management package with 87.5% test coverage. Implements core 
 
 The package is integrated with:
 1. **Engine**: `pkg/engine/guild_system.go` uses guild.Manager, `pkg/engine/guild_ui.go` renders guild interfaces
-2. **Client**: `cmd/client/handlers.go` instantiates guild.NewManager() for client-side guild management
+2. **Client**: `cmd/client/init_versions.go` instantiates guild.NewManager() for client-side guild management
 3. **Integration**: `pkg/integration/political_warfare/` uses guild.Manager for political warfare features
 4. **Server**: `cmd/server/v8_systems.go` returns guild.Manager for V9 integration
 
@@ -54,4 +56,4 @@ The package is integrated with:
 5. ~~**LOW PRIORITY**: Accept serverID as NewManager parameter instead of generating via uuid.New()~~ **DONE** (2026-02-16)
 6. ~~**LOW PRIORITY**: Document integration with parent pkg/network/federation package in doc.go header~~ **DONE** (2026-02-16)
 7. ~~**LOW PRIORITY**: Add benchmark tests for permission checks and member lookups (hot path operations)~~ **DONE** (2026-02-16): Added BenchmarkHasPermission_Miss, BenchmarkGetMember, BenchmarkGetMember_NotFound, BenchmarkSyncGuildState
-8. **LOW PRIORITY**: Consider TimeProvider abstraction (like pkg/companion/learning) to make timestamps deterministic in tests while preserving real-time behavior in production
+8. ~~**LOW PRIORITY**: TimeProvider abstraction (like pkg/companion/learning) to make timestamps deterministic in tests while preserving real-time behavior in production~~ **DONE** (2026-02-17): Added time_provider.go with TimeProvider interface, RealTimeProvider, MockTimeProvider. Comprehensive tests in time_provider_test.go.

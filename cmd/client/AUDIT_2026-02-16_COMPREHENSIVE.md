@@ -16,7 +16,7 @@ The cmd/client package serves as the desktop game client entry point with extrem
 - [x] **low** maintainability — ~~handlers.go is 4,476 lines with 60+ functions~~ Split into handlers.go (3,894 lines) and init_versions.go (643 lines)
 
 ## Test Coverage
-32.0% (target: 65%)
+38.0% (target: 65%, improved from 32.0% via util helper tests)
 
 **Analysis**: Coverage is artificially low because most code paths require Ebiten display server initialization (runs with xvfb-run in CI). Core game logic in pkg/ packages averages 82.4%. Test suite includes 7 test files with comprehensive integration tests:
 - `integration_test.go` — Host-and-play flag integration, default behavior, port fallback (4 tests)
@@ -111,11 +111,17 @@ None identified. All systems are properly registered with the World and connecte
    - `handlers.go` reduced from 4,494 to 3,894 lines (600 line reduction)
    - Further splitting into init_audio.go, init_combat.go, etc. can be done incrementally as needed
 
-3. **[MEDIUM PRIORITY]** Improve test coverage to 50%+ by adding unit tests
-   - Test helper functions in util.go that don't require Ebiten (spawnWallTorches, calculateHazardPosition, selectHazardSubType, etc.)
-   - Add table-driven tests for flag validation (validateClientConfiguration)
-   - Test getGenreTheme determinism with multiple seeds
-   - Benchmark critical paths (system initialization, lazy init scheduling)
+3. **[IN PROGRESS]** Improve test coverage to 50%+ by adding unit tests
+   - **[COMPLETED 2026-02-17]** Added tests for `getGenreTheme` with determinism validation (2 tests)
+   - **[COMPLETED 2026-02-17]** Added comprehensive tests for `generateCompanionColor` all types/genres (1 test, 216 sub-tests)
+   - **[COMPLETED 2026-02-17]** Added comprehensive tests for `generateBookshelfColor` all genres (2 tests)
+   - **[COMPLETED 2026-02-17]** Added edge case tests for `validateClientConfiguration` (1 test, 7 sub-tests)
+   - **[COMPLETED 2026-02-17]** Added field validation tests for `getLightConfig` and `getObjectConfig` (2 tests)
+   - **[COMPLETED 2026-02-17]** Added `determineHazardType` mapping test for all subtypes (1 test)
+   - **[COMPLETED 2026-02-17]** Added benchmarks for `parsePaletteOptions`, `validateClientConfiguration`, `getGenreTheme`, `generateBookshelfColor`, `selectBookType` (5 benchmarks)
+   - **[REMAINING]** Test remaining helper functions (spawnWallTorches, etc.) - requires mocked World
+   - **Coverage improved from 32.0% to 38.0%** due to Ebiten display dependency constraints
+   - Note: Many functions in util.go require engine.World which has Ebiten dependencies, limiting unit test coverage without xvfb
 
 4. **[LOW PRIORITY]** Add fallback behavior when save manager fails to initialize
    - Current: returns nil and logs warning

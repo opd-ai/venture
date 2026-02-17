@@ -246,17 +246,22 @@ func TestSelectObjectType(t *testing.T) {
 		}
 	}
 
-	// Verify we got some objects and some misses
+	// Verify we got some objects
+	// Note: Fantasy config has combined chance > 1.0 (0.6+0.5+0.4+0.05 = 1.55)
+	// so objects will almost always spawn (only ~0% chance of no spawn)
 	if spawned == 0 {
 		t.Error("no objects spawned in 1000 attempts")
 	}
-	if spawned == total {
-		t.Error("all 1000 attempts spawned objects (expected some misses)")
-	}
 
-	// Verify crates are most common (highest chance)
+	// Verify crates are most common (highest individual chance at 60%)
 	if counts[engine.ObjectCrate] == 0 {
 		t.Error("no crates spawned despite having highest chance")
+	}
+
+	// Crates should be approximately 60% of spawns
+	crateRatio := float64(counts[engine.ObjectCrate]) / float64(spawned)
+	if crateRatio < 0.5 || crateRatio > 0.7 {
+		t.Logf("crate ratio %.2f%% outside expected 50-70%% range (may be RNG variance)", crateRatio*100)
 	}
 }
 
@@ -756,5 +761,337 @@ func BenchmarkConvertColorToRGBA(b *testing.B) {
 func BenchmarkGenerateCompanionColor(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		generateCompanionColor(engine.CompanionTypePet, "fantasy", int64(i))
+	}
+}
+
+// TestGetGenreTheme validates deterministic genre selection via world seed.
+func TestGetGenreTheme(t *testing.T) {
+	// Save original flag values
+	origGenreID := *genreID
+	origSeed := *seed
+	defer func() {
+		*genreID = origGenreID
+		*seed = origSeed
+	}()
+
+	tests := []struct {
+		name    string
+		genre   string
+		seed    int64
+		wantNil bool
+	}{
+		{"fantasy explicit", "fantasy", 12345, false},
+		{"scifi explicit", "scifi", 12345, false},
+		{"horror explicit", "horror", 12345, false},
+		{"cyberpunk explicit", "cyberpunk", 12345, false},
+		{"postapoc explicit", "postapoc", 12345, false},
+		{"random with seed", "random", 42, false},
+		{"random different seed", "random", 99999, false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			*genreID = tt.genre
+			*seed = tt.seed
+
+			theme := getGenreTheme()
+			if tt.wantNil && theme != nil {
+				t.Errorf("expected nil theme, got %v", theme)
+			}
+			if !tt.wantNil && theme == nil {
+				t.Error("expected non-nil theme, got nil")
+			}
+		})
+	}
+}
+
+// TestGetGenreThemeDeterminism validates that same seed + genre produces same result.
+func TestGetGenreThemeDeterminism(t *testing.T) {
+	origGenreID := *genreID
+	origSeed := *seed
+	defer func() {
+		*genreID = origGenreID
+		*seed = origSeed
+	}()
+
+	seeds := []int64{0, 1, 42, 12345, 999999}
+	genres := []string{"fantasy", "scifi", "horror", "random"}
+
+	for _, seedVal := range seeds {
+		for _, genre := range genres {
+			t.Run(genre, func(t *testing.T) {
+				*genreID = genre
+				*seed = seedVal
+
+				theme1 := getGenreTheme()
+				theme2 := getGenreTheme()
+
+				if theme1 == nil || theme2 == nil {
+					t.Fatal("theme should not be nil")
+				}
+
+				// Both calls should produce the same ID
+				if theme1.ID != theme2.ID {
+					t.Errorf("non-deterministic theme ID: %s vs %s", theme1.ID, theme2.ID)
+				}
+			})
+		}
+	}
+}
+
+// TestGenerateCompanionColorAllTypes tests all companion types for color generation.
+func TestGenerateCompanionColorAllTypes(t *testing.T) {
+	// Test all defined companion types produce valid colors with full alpha
+	types := []engine.CompanionType{
+		engine.CompanionTypePet, engine.CompanionTypeSummon, engine.CompanionTypeHireling,
+		engine.CompanionTypeElemental, engine.CompanionTypeUndead, engine.CompanionTypeRobot,
+		engine.CompanionTypeSpirit, engine.CompanionTypeInsect, engine.CompanionType(99), // unknown
+	}
+	genres := []string{"fantasy", "scifi", "horror", "cyberpunk", "postapoc", "unknown"}
+	seeds := []int64{0, 42, 12345, 999999}
+
+	for _, compType := range types {
+		for _, genre := range genres {
+			for _, seed := range seeds {
+				t.Run("", func(t *testing.T) {
+					c := generateCompanionColor(compType, genre, seed)
+					if c.A != 255 {
+						t.Errorf("alpha = %d, want 255", c.A)
+					}
+					// Verify colors are within valid range (0-255)
+					// These checks are implicit in uint8 type, but validate anyways
+					if c.R > 255 || c.G > 255 || c.B > 255 {
+						t.Errorf("invalid color values: R=%d G=%d B=%d", c.R, c.G, c.B)
+					}
+				})
+			}
+		}
+	}
+}
+
+// TestGenerateBookshelfColorAllGenres tests all genres for bookshelf color generation.
+func TestGenerateBookshelfColorAllGenres(t *testing.T) {
+	genres := []string{"fantasy", "sci-fi", "horror", "cyberpunk", "post-apocalyptic", "unknown", ""}
+	seeds := []int64{0, 42, 12345, 999999}
+
+	for _, genre := range genres {
+		for _, seed := range seeds {
+			t.Run(genre, func(t *testing.T) {
+				c := generateBookshelfColor(genre, seed)
+				if c.A != 255 {
+					t.Errorf("alpha = %d, want 255", c.A)
+				}
+			})
+		}
+	}
+}
+
+// TestGenerateBookshelfColorVariation verifies different seeds produce variation.
+func TestGenerateBookshelfColorVariation(t *testing.T) {
+	// Test that different seeds produce different colors (statistical test)
+	uniqueColors := make(map[color.RGBA]bool)
+	for seed := int64(0); seed < 100; seed++ {
+		c := generateBookshelfColor("fantasy", seed)
+		uniqueColors[c] = true
+	}
+	// Expect at least some variation (not all same color)
+	if len(uniqueColors) < 10 {
+		t.Errorf("expected more color variation, got only %d unique colors", len(uniqueColors))
+	}
+}
+
+// TestValidateClientConfigurationEdgeCases tests edge cases for validation.
+func TestValidateClientConfigurationEdgeCases(t *testing.T) {
+	origGenre := *genreID
+	origHostPlay := *hostAndPlay
+	origPort := *serverPort
+	origPlayers := *serverPlayers
+	origTick := *serverTick
+	defer func() {
+		*genreID = origGenre
+		*hostAndPlay = origHostPlay
+		*serverPort = origPort
+		*serverPlayers = origPlayers
+		*serverTick = origTick
+	}()
+
+	tests := []struct {
+		name    string
+		genre   string
+		host    bool
+		port    int
+		players int
+		tick    int
+		wantErr bool
+	}{
+		// Additional edge cases
+		{"cyberpunk genre", "cyberpunk", false, 8080, 4, 30, false},
+		{"postapoc genre", "postapoc", false, 8080, 4, 30, false},
+		{"empty genre defaults", "", false, 8080, 4, 30, false},
+		{"host with different port", "fantasy", true, 9000, 4, 30, false},
+		{"host with max players", "fantasy", true, 8080, 8, 30, false},
+		{"host with different tick", "fantasy", true, 8080, 4, 60, false},
+		{"host with min tick", "fantasy", true, 8080, 4, 10, false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			*genreID = tt.genre
+			*hostAndPlay = tt.host
+			*serverPort = tt.port
+			*serverPlayers = tt.players
+			*serverTick = tt.tick
+
+			err := validateClientConfiguration()
+			if (err != nil) != tt.wantErr {
+				t.Errorf("error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+// TestLightConfigAllFields verifies all fields are properly set for each genre.
+func TestLightConfigAllFields(t *testing.T) {
+	genres := []string{"fantasy", "scifi", "horror", "cyberpunk", "postapoc"}
+	for _, genre := range genres {
+		t.Run(genre, func(t *testing.T) {
+			config := getLightConfig(genre)
+
+			// Verify all fields have sensible values
+			if config.torchInterval < 1 || config.torchInterval > 10 {
+				t.Errorf("torchInterval = %d, want 1-10", config.torchInterval)
+			}
+			if config.crystalChance < 0 || config.crystalChance > 1 {
+				t.Errorf("crystalChance = %f, want 0-1", config.crystalChance)
+			}
+			if config.torchRadius < 50 || config.torchRadius > 300 {
+				t.Errorf("torchRadius = %f, want 50-300", config.torchRadius)
+			}
+			if config.crystalRadius < 50 || config.crystalRadius > 300 {
+				t.Errorf("crystalRadius = %f, want 50-300", config.crystalRadius)
+			}
+			// Verify colors are opaque
+			if config.torchColor.A != 255 {
+				t.Errorf("torchColor alpha = %d, want 255", config.torchColor.A)
+			}
+			if config.crystalColor.A != 255 {
+				t.Errorf("crystalColor alpha = %d, want 255", config.crystalColor.A)
+			}
+		})
+	}
+}
+
+// TestObjectConfigAllFields verifies all fields are properly set for each genre.
+func TestObjectConfigAllFields(t *testing.T) {
+	genres := []string{"fantasy", "scifi", "horror", "cyberpunk", "postapocalyptic"}
+	for _, genre := range genres {
+		t.Run(genre, func(t *testing.T) {
+			config := getObjectConfig(genre)
+
+			// Verify probabilities are in valid range
+			if config.crateChance < 0 || config.crateChance > 1 {
+				t.Errorf("crateChance = %f, want 0-1", config.crateChance)
+			}
+			if config.barrelChance < 0 || config.barrelChance > 1 {
+				t.Errorf("barrelChance = %f, want 0-1", config.barrelChance)
+			}
+			if config.furnitureChance < 0 || config.furnitureChance > 1 {
+				t.Errorf("furnitureChance = %f, want 0-1", config.furnitureChance)
+			}
+			if config.explosiveBarrelChance < 0 || config.explosiveBarrelChance > 1 {
+				t.Errorf("explosiveBarrelChance = %f, want 0-1", config.explosiveBarrelChance)
+			}
+			if config.poisonContainerChance < 0 || config.poisonContainerChance > 1 {
+				t.Errorf("poisonContainerChance = %f, want 0-1", config.poisonContainerChance)
+			}
+			if config.objectsPerRoom < 1 || config.objectsPerRoom > 10 {
+				t.Errorf("objectsPerRoom = %d, want 1-10", config.objectsPerRoom)
+			}
+		})
+	}
+}
+
+// TestHazardTypeMapping verifies all hazard subtypes map correctly.
+func TestHazardTypeMapping(t *testing.T) {
+	// All subtypes should return a valid hazard type (not panic)
+	for subType := environment.SubType(0); subType < 20; subType++ {
+		result := determineHazardType(subType)
+		// Result should be one of the valid hazard types
+		validTypes := map[engine.HazardType]bool{
+			engine.HazardPoison: true,
+			engine.HazardWater:  true,
+		}
+		if !validTypes[result] {
+			t.Errorf("determineHazardType(%d) returned invalid type: %v", subType, result)
+		}
+	}
+}
+
+// BenchmarkParsePaletteOptions benchmarks palette option parsing.
+func BenchmarkParsePaletteOptions(b *testing.B) {
+	origHarmony := *paletteHarmony
+	origMood := *paletteMood
+	origRarity := *paletteRarity
+	defer func() {
+		*paletteHarmony = origHarmony
+		*paletteMood = origMood
+		*paletteRarity = origRarity
+	}()
+
+	*paletteHarmony = "triadic"
+	*paletteMood = "vibrant"
+	*paletteRarity = "epic"
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_, _ = parsePaletteOptions()
+	}
+}
+
+// BenchmarkValidateClientConfiguration benchmarks configuration validation.
+func BenchmarkValidateClientConfiguration(b *testing.B) {
+	origGenre := *genreID
+	origHostPlay := *hostAndPlay
+	defer func() {
+		*genreID = origGenre
+		*hostAndPlay = origHostPlay
+	}()
+
+	*genreID = "fantasy"
+	*hostAndPlay = false
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_ = validateClientConfiguration()
+	}
+}
+
+// BenchmarkGetGenreTheme benchmarks genre theme retrieval.
+func BenchmarkGetGenreTheme(b *testing.B) {
+	origGenre := *genreID
+	origSeed := *seed
+	defer func() {
+		*genreID = origGenre
+		*seed = origSeed
+	}()
+
+	*genreID = "fantasy"
+	*seed = 12345
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_ = getGenreTheme()
+	}
+}
+
+// BenchmarkGenerateBookshelfColor benchmarks bookshelf color generation.
+func BenchmarkGenerateBookshelfColor(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		generateBookshelfColor("fantasy", int64(i))
+	}
+}
+
+// BenchmarkSelectBookType benchmarks book type selection.
+func BenchmarkSelectBookType(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		selectBookType(int64(i))
 	}
 }

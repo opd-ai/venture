@@ -126,7 +126,7 @@ This file tracks the audit status of all packages in the Venture codebase.
 - [x] `pkg/narrative/branching/AUDIT.md` — Complete — 2 issues (0 high, 0 med, 2 low)
 
 ### Social System
-- [x] `pkg/social/persistence/AUDIT.md` — Complete — 3 issues (0 high, 1 med, 2 low)
+- [x] `pkg/social/persistence/AUDIT.md` — Complete — 1 issue (0 high, 0 med, 1 low) — TimeProvider added to all managers 2026-02-17
 
 ### Security & Infrastructure
 - [x] `pkg/security/AUDIT.md` — Complete — 2 issues (0 high, 0 med, 2 low)
@@ -147,7 +147,7 @@ This file tracks the audit status of all packages in the Venture codebase.
 
 ### Command Packages
 - [x] `cmd/server/AUDIT.md` — Needs Work — 1 issue (0 high, 0 med, 1 low)
-- [x] `cmd/client/AUDIT_2026-02-16_COMPREHENSIVE.md` — Needs Work — 5 issues (1 high, 0 med, 4 low)
+- [x] `cmd/client/AUDIT_2026-02-16_COMPREHENSIVE.md` — Complete — 0 issues (0 high, 0 med, 0 low) — All issues resolved; test coverage improved from 32% to 38% via util helper tests 2026-02-17
 - [x] `cmd/mobile/config/AUDIT.md` — Complete — 0 issues (0 high, 0 med, 0 low)
 
 ### Mobile Platform

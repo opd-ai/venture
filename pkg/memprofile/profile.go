@@ -1,4 +1,3 @@
-// Package memprofile provides memory profiling utilities for detecting leaks and monitoring allocation.
 package memprofile
 
 import (

@@ -88,7 +88,7 @@ This file tracks the audit status of all packages in the Venture codebase.
 ### Core Domains
 - [x] `pkg/audio/AUDIT.md` — Complete — 0 issues (0 high, 0 med, 0 low)
 - [x] `pkg/audio/synthesis/AUDIT.md` — Complete — 0 issues (0 high, 0 med, 0 low)
-- [x] `pkg/benchmark/AUDIT.md` — Complete — 1 issue (0 high, 0 med, 1 low)
+- [x] `pkg/benchmark/AUDIT.md` — Complete — 0 issues (0 high, 0 med, 0 low) — doc.go added 2026-02-17
 - [x] `pkg/benchmark/fps/AUDIT.md` — Complete — 0 issues (0 high, 0 med, 0 low)
 - [x] `pkg/benchmark/memory/AUDIT.md` — Complete — 0 issues (0 high, 0 med, 0 low)
 - [x] `pkg/integration/AUDIT.md` — Complete — 0 issues (0 high, 0 med, 0 low)
@@ -120,7 +120,7 @@ This file tracks the audit status of all packages in the Venture codebase.
 
 ### Observability & Profiling
 - [x] `pkg/observability/AUDIT.md` — Complete — 0 issues (0 high, 0 med, 0 low)
-- [x] `pkg/memprofile/AUDIT.md` — Complete — 1 issue (0 high, 0 med, 1 low)
+- [x] `pkg/memprofile/AUDIT.md` — Complete — 0 issues (0 high, 0 med, 0 low) — duplicate package comment removed 2026-02-17
 
 ### Narrative System
 - [x] `pkg/narrative/branching/AUDIT.md` — Complete — 2 issues (0 high, 0 med, 2 low)
@@ -163,10 +163,10 @@ This file tracks the audit status of all packages in the Venture codebase.
 - **Total Packages**: 116
 - **Audited**: 116 (100.0%)
 - **Pending**: 0 (0.0%)
-- **Issues Found**: 25
+- **Issues Found**: 23
   - High: 0
   - Medium: 0
-  - Low: 25
+  - Low: 23
 
 ## Notes
 - Most core packages have been audited and are in good shape

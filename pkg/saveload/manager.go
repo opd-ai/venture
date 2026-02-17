@@ -9,7 +9,6 @@ package saveload
 
 import (
 	"encoding/json"
-	"fmt"
 	"io"
 	"os"
 	"path/filepath"
@@ -17,6 +16,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/opd-ai/venture/pkg/errors"
 	"github.com/sirupsen/logrus"
 )
 
@@ -58,7 +58,8 @@ func NewSaveManagerWithMigrator(saveDir string, logger *logrus.Logger, migrator 
 		if logEntry != nil {
 			logEntry.WithError(err).Error("failed to create save directory")
 		}
-		return nil, fmt.Errorf("failed to create save directory: %w", err)
+		return nil, errors.FileSystemWrap(err, "failed to create save directory").
+			WithContext("saveDir", saveDir)
 	}
 
 	if logEntry != nil {
@@ -84,7 +85,7 @@ func (m *SaveManager) SaveGame(name string, save *GameSave) error {
 	m.logDebug("saving game", logrus.Fields{"name": name})
 
 	if save == nil {
-		return fmt.Errorf("save cannot be nil")
+		return errors.Validation("save cannot be nil")
 	}
 
 	if err := m.validateSaveName(name); err != nil {
@@ -134,7 +135,8 @@ func (m *SaveManager) LoadGame(name string) (*GameSave, error) {
 
 	if err := m.validateAndMigrate(save); err != nil {
 		m.logError("failed to validate/migrate save", err, logrus.Fields{"name": name})
-		return nil, fmt.Errorf("failed to validate/migrate save: %w", err)
+		return nil, errors.SerializationWrap(err, "failed to validate/migrate save").
+			WithContext("name", name)
 	}
 
 	m.logInfo("game loaded successfully", logrus.Fields{
@@ -156,9 +158,12 @@ func (m *SaveManager) DeleteSave(name string) error {
 	filename := m.getFilePath(name)
 	if err := os.Remove(filename); err != nil {
 		if os.IsNotExist(err) {
-			return fmt.Errorf("save file not found: %s", name)
+			return errors.FileSystem("save file not found").
+				WithContext("name", name)
 		}
-		return fmt.Errorf("failed to delete save file: %w", err)
+		return errors.FileSystemWrap(err, "failed to delete save file").
+			WithContext("name", name).
+			WithContext("filename", filename)
 	}
 
 	return nil
@@ -169,7 +174,8 @@ func (m *SaveManager) ListSaves() ([]*SaveMetadata, error) {
 	// Read directory
 	entries, err := os.ReadDir(m.saveDir)
 	if err != nil {
-		return nil, fmt.Errorf("failed to read save directory: %w", err)
+		return nil, errors.FileSystemWrap(err, "failed to read save directory").
+			WithContext("saveDir", m.saveDir)
 	}
 
 	// Collect metadata for each save file
@@ -215,15 +221,20 @@ func (m *SaveManager) GetSaveMetadata(name string) (*SaveMetadata, error) {
 	fileInfo, err := os.Stat(filename)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return nil, fmt.Errorf("save file not found: %s", name)
+			return nil, errors.FileSystem("save file not found").
+				WithContext("name", name)
 		}
-		return nil, fmt.Errorf("failed to stat save file: %w", err)
+		return nil, errors.FileSystemWrap(err, "failed to stat save file").
+			WithContext("name", name).
+			WithContext("filename", filename)
 	}
 
 	// Open and read file
 	file, err := os.Open(filename)
 	if err != nil {
-		return nil, fmt.Errorf("failed to open save file: %w", err)
+		return nil, errors.FileSystemWrap(err, "failed to open save file").
+			WithContext("name", name).
+			WithContext("filename", filename)
 	}
 	defer file.Close()
 
@@ -232,9 +243,11 @@ func (m *SaveManager) GetSaveMetadata(name string) (*SaveMetadata, error) {
 	decoder := json.NewDecoder(file)
 	if err := decoder.Decode(&save); err != nil {
 		if err == io.EOF {
-			return nil, fmt.Errorf("empty save file: %s", name)
+			return nil, errors.Serialization("empty save file").
+				WithContext("name", name)
 		}
-		return nil, fmt.Errorf("failed to decode save file: %w", err)
+		return nil, errors.SerializationWrap(err, "failed to decode save file").
+			WithContext("name", name)
 	}
 
 	// Build metadata
@@ -286,12 +299,12 @@ func (m *SaveManager) validateSaveName(name string) error {
 // validateAndMigrate validates a save file and migrates it if necessary.
 func (m *SaveManager) validateAndMigrate(save *GameSave) error {
 	if save == nil {
-		return fmt.Errorf("save cannot be nil")
+		return errors.Validation("save cannot be nil")
 	}
 
 	// Check version
 	if save.Version == "" {
-		return fmt.Errorf("save file has no version")
+		return errors.Validation("save file has no version")
 	}
 
 	// If version matches current, no migration needed
@@ -311,7 +324,9 @@ func (m *SaveManager) validateAndMigrate(save *GameSave) error {
 			m.logError("migration failed", err, logrus.Fields{
 				"from_version": save.Version,
 			})
-			return fmt.Errorf("failed to migrate save: %w", err)
+			return errors.SerializationWrap(err, "failed to migrate save").
+				WithContext("from_version", save.Version).
+				WithContext("to_version", SaveVersion)
 		}
 
 		// Copy migrated data back to original save
@@ -322,7 +337,9 @@ func (m *SaveManager) validateAndMigrate(save *GameSave) error {
 		})
 	} else {
 		// No migrator or unsupported version
-		return fmt.Errorf("save file version %s is not supported (current version: %s) - no migration available", save.Version, SaveVersion)
+		return errors.Validation("save file version not supported - no migration available").
+			WithContext("save_version", save.Version).
+			WithContext("current_version", SaveVersion)
 	}
 
 	return m.validateRequiredFields(save)
@@ -331,13 +348,13 @@ func (m *SaveManager) validateAndMigrate(save *GameSave) error {
 // validateRequiredFields checks that a save has all required data.
 func (m *SaveManager) validateRequiredFields(save *GameSave) error {
 	if save.PlayerState == nil {
-		return fmt.Errorf("save file missing player state")
+		return errors.Validation("save file missing player state")
 	}
 	if save.WorldState == nil {
-		return fmt.Errorf("save file missing world state")
+		return errors.Validation("save file missing world state")
 	}
 	if save.Settings == nil {
-		return fmt.Errorf("save file missing settings")
+		return errors.Validation("save file missing settings")
 	}
 	return nil
 }
@@ -347,7 +364,8 @@ func (m *SaveManager) marshalSave(save *GameSave, name string) ([]byte, error) {
 	data, err := json.MarshalIndent(save, "", "  ")
 	if err != nil {
 		m.logError("failed to marshal save data", err, logrus.Fields{"name": name})
-		return nil, fmt.Errorf("failed to marshal save data: %w", err)
+		return nil, errors.SerializationWrap(err, "failed to marshal save data").
+			WithContext("name", name)
 	}
 	return data, nil
 }
@@ -360,7 +378,9 @@ func (m *SaveManager) writeSaveFile(name string, data []byte) error {
 			"name":     name,
 			"filename": filename,
 		})
-		return fmt.Errorf("failed to write save file: %w", err)
+		return errors.FileSystemWrap(err, "failed to write save file").
+			WithContext("name", name).
+			WithContext("filename", filename)
 	}
 	return nil
 }
@@ -372,10 +392,13 @@ func (m *SaveManager) readSaveFile(name string) ([]byte, error) {
 	if err != nil {
 		if os.IsNotExist(err) {
 			m.logWarn("save file not found", err, logrus.Fields{"name": name})
-			return nil, fmt.Errorf("save file not found: %s", name)
+			return nil, errors.FileSystem("save file not found").
+				WithContext("name", name)
 		}
 		m.logError("failed to read save file", err, logrus.Fields{"name": name})
-		return nil, fmt.Errorf("failed to read save file: %w", err)
+		return nil, errors.FileSystemWrap(err, "failed to read save file").
+			WithContext("name", name).
+			WithContext("filename", filename)
 	}
 	return data, nil
 }
@@ -385,7 +408,8 @@ func (m *SaveManager) unmarshalSave(data []byte, name string) (*GameSave, error)
 	var save GameSave
 	if err := json.Unmarshal(data, &save); err != nil {
 		m.logError("failed to parse save file", err, logrus.Fields{"name": name})
-		return nil, fmt.Errorf("failed to parse save file: %w", err)
+		return nil, errors.SerializationWrap(err, "failed to parse save file").
+			WithContext("name", name)
 	}
 	return &save, nil
 }

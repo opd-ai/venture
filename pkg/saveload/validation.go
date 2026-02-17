@@ -2,8 +2,9 @@
 package saveload
 
 import (
-	"fmt"
 	"strings"
+
+	"github.com/opd-ai/venture/pkg/errors"
 )
 
 // ValidateSaveName validates that a save name is acceptable for use.
@@ -17,7 +18,7 @@ import (
 // Returns an error if the name is invalid, nil otherwise.
 func ValidateSaveName(name string) error {
 	if name == "" {
-		return fmt.Errorf("save name cannot be empty")
+		return errors.Validation("save name cannot be empty")
 	}
 
 	// Remove extension for validation (if present)
@@ -25,12 +26,14 @@ func ValidateSaveName(name string) error {
 
 	// Check for path separators (security check)
 	if strings.ContainsAny(name, "/\\") {
-		return fmt.Errorf("save name cannot contain path separators")
+		return errors.Validation("save name cannot contain path separators").
+			WithContext("name", name)
 	}
 
 	// Check for special characters
 	if strings.ContainsAny(name, "<>:\"|?*") {
-		return fmt.Errorf("save name contains invalid characters")
+		return errors.Validation("save name contains invalid characters").
+			WithContext("name", name)
 	}
 
 	return nil

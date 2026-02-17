@@ -79,9 +79,9 @@ This file tracks the audit status of all packages in the Venture codebase.
 - [x] `pkg/logging/AUDIT.md` — Complete — 0 issues (0 high, 0 med, 0 low)
 - [x] `pkg/modding/AUDIT.md` — Complete — 1 issue (0 high, 0 med, 1 low)
 - [x] `pkg/procgen/minigame/games/AUDIT.md` — Complete — 4 issues (0 high, 0 med, 4 low)
-- [x] `pkg/saveload/AUDIT.md` — Complete — 3 issues (0 high, 0 med, 3 low)
+- [x] `pkg/saveload/AUDIT.md` — Complete — 3 issues (0 high, 0 med, 3 low) — pkg/errors adopted 2026-02-17
 - [x] `pkg/recovery/AUDIT.md` — Complete — 0 issues (0 high, 0 med, 0 low)
-- [x] `pkg/errors/AUDIT.md` — Complete — 1 issue (1 high, 0 med, 0 low)
+- [x] `pkg/errors/AUDIT.md` — Complete — 0 issues (0 high, 0 med, 0 low) — Adoption started via pkg/saveload 2026-02-17
 
 ## Pending Audits
 
@@ -163,10 +163,10 @@ This file tracks the audit status of all packages in the Venture codebase.
 - **Total Packages**: 116
 - **Audited**: 116 (100.0%)
 - **Pending**: 0 (0.0%)
-- **Issues Found**: 26
+- **Issues Found**: 25
   - High: 0
   - Medium: 0
-  - Low: 26
+  - Low: 25
 
 ## Notes
 - Most core packages have been audited and are in good shape

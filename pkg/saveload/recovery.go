@@ -6,12 +6,12 @@ package saveload
 import (
 	"crypto/sha256"
 	"encoding/hex"
-	"fmt"
 	"io"
 	"os"
 	"strings"
 	"time"
 
+	"github.com/opd-ai/venture/pkg/errors"
 	"github.com/sirupsen/logrus"
 )
 
@@ -19,13 +19,15 @@ import (
 func checksumFile(filepath string) (string, error) {
 	file, err := os.Open(filepath)
 	if err != nil {
-		return "", fmt.Errorf("failed to open file for checksum: %w", err)
+		return "", errors.FileSystemWrap(err, "failed to open file for checksum").
+			WithContext("filepath", filepath)
 	}
 	defer file.Close()
 
 	hash := sha256.New()
 	if _, err := io.Copy(hash, file); err != nil {
-		return "", fmt.Errorf("failed to compute checksum: %w", err)
+		return "", errors.FileSystemWrap(err, "failed to compute checksum").
+			WithContext("filepath", filepath)
 	}
 
 	return hex.EncodeToString(hash.Sum(nil)), nil
@@ -48,18 +50,22 @@ func (m *SaveManager) createBackup(name string) (string, error) {
 	// Copy file to backup
 	source, err := os.Open(sourcePath)
 	if err != nil {
-		return "", fmt.Errorf("failed to open source file for backup: %w", err)
+		return "", errors.FileSystemWrap(err, "failed to open source file for backup").
+			WithContext("sourcePath", sourcePath)
 	}
 	defer source.Close()
 
 	backup, err := os.Create(backupPath)
 	if err != nil {
-		return "", fmt.Errorf("failed to create backup file: %w", err)
+		return "", errors.FileSystemWrap(err, "failed to create backup file").
+			WithContext("backupPath", backupPath)
 	}
 	defer backup.Close()
 
 	if _, err := io.Copy(backup, source); err != nil {
-		return "", fmt.Errorf("failed to copy to backup: %w", err)
+		return "", errors.FileSystemWrap(err, "failed to copy to backup").
+			WithContext("sourcePath", sourcePath).
+			WithContext("backupPath", backupPath)
 	}
 
 	m.logDebug("created backup", logrus.Fields{
@@ -117,7 +123,8 @@ func (m *SaveManager) saveChecksum(name string) error {
 
 	// Write checksum to file
 	if err := os.WriteFile(checksumPath, []byte(checksum), 0o644); err != nil {
-		return fmt.Errorf("failed to write checksum file: %w", err)
+		return errors.FileSystemWrap(err, "failed to write checksum file").
+			WithContext("checksumPath", checksumPath)
 	}
 
 	m.logDebug("saved checksum", logrus.Fields{
@@ -150,7 +157,8 @@ func (m *SaveManager) recoverFromBackup(name string) (bool, error) {
 	// Validate backup by trying to load it
 	backupData, err := os.ReadFile(backupPath)
 	if err != nil {
-		return false, fmt.Errorf("failed to read backup: %w", err)
+		return false, errors.FileSystemWrap(err, "failed to read backup").
+			WithContext("backupPath", backupPath)
 	}
 
 	// Try to unmarshal backup to validate it
@@ -164,7 +172,9 @@ func (m *SaveManager) recoverFromBackup(name string) (bool, error) {
 
 	// Backup is valid, restore it
 	if err := os.WriteFile(savePath, backupData, 0o644); err != nil {
-		return false, fmt.Errorf("failed to restore from backup: %w", err)
+		return false, errors.FileSystemWrap(err, "failed to restore from backup").
+			WithContext("savePath", savePath).
+			WithContext("backupPath", backupPath)
 	}
 
 	// Update checksum for restored file
@@ -209,7 +219,7 @@ func (m *SaveManager) SaveGameWithBackup(name string, save *GameSave) error {
 // validateSaveRequest validates the save name and data.
 func (m *SaveManager) validateSaveRequest(name string, save *GameSave) error {
 	if save == nil {
-		return fmt.Errorf("save cannot be nil")
+		return errors.Validation("save cannot be nil")
 	}
 
 	if err := m.validateSaveName(name); err != nil {
@@ -305,7 +315,8 @@ func (m *SaveManager) LoadGameWithRecovery(name string) (*GameSave, error) {
 
 	if err := m.validateAndMigrate(save); err != nil {
 		m.logError("failed to validate/migrate save", err, logrus.Fields{"name": name})
-		return nil, fmt.Errorf("failed to validate/migrate save: %w", err)
+		return nil, errors.SerializationWrap(err, "failed to validate/migrate save").
+			WithContext("name", name)
 	}
 
 	m.logInfo("game loaded successfully", logrus.Fields{
@@ -321,7 +332,8 @@ func (m *SaveManager) LoadGameWithRecovery(name string) (*GameSave, error) {
 func (m *SaveManager) verifySaveFileExists(name string) error {
 	savePath := m.getFilePath(name)
 	if _, err := os.Stat(savePath); os.IsNotExist(err) {
-		return fmt.Errorf("save file not found: %s", name)
+		return errors.FileSystem("save file not found").
+			WithContext("name", name)
 	}
 	return nil
 }
@@ -336,7 +348,8 @@ func (m *SaveManager) handleChecksumValidation(name string) error {
 	m.logWarn("checksum validation failed, save may be corrupted", nil, logrus.Fields{"name": name})
 	recovered, recErr := m.recoverFromBackup(name)
 	if recErr != nil {
-		return fmt.Errorf("failed to recover from backup: %w", recErr)
+		return errors.FileSystemWrap(recErr, "failed to recover from backup").
+			WithContext("name", name)
 	}
 	if !recovered {
 		m.logWarn("recovery failed, attempting to load corrupted file", nil, logrus.Fields{"name": name})
@@ -365,20 +378,24 @@ func (m *SaveManager) recoverAndRetryLoad(name string, originalErr error) (*Game
 
 	recovered, recErr := m.recoverFromBackup(name)
 	if recErr != nil {
-		return nil, fmt.Errorf("failed to recover from backup: %w", recErr)
+		return nil, errors.FileSystemWrap(recErr, "failed to recover from backup").
+			WithContext("name", name)
 	}
 	if !recovered {
-		return nil, fmt.Errorf("save corrupted and no valid backup available: %w", originalErr)
+		return nil, errors.SerializationWrap(originalErr, "save corrupted and no valid backup available").
+			WithContext("name", name)
 	}
 
 	data, err := m.readSaveFile(name)
 	if err != nil {
-		return nil, fmt.Errorf("failed to load after recovery: %w", err)
+		return nil, errors.FileSystemWrap(err, "failed to load after recovery").
+			WithContext("name", name)
 	}
 
 	save, err := m.unmarshalSave(data, name)
 	if err != nil {
-		return nil, fmt.Errorf("failed to parse after recovery: %w", err)
+		return nil, errors.SerializationWrap(err, "failed to parse after recovery").
+			WithContext("name", name)
 	}
 
 	m.logInfo("successfully loaded after recovery", logrus.Fields{"name": name})
@@ -397,7 +414,8 @@ func (m *SaveManager) CleanupBackups(name string) error {
 	// Remove backup file if it exists
 	if _, err := os.Stat(backupPath); err == nil {
 		if err := os.Remove(backupPath); err != nil {
-			return fmt.Errorf("failed to remove backup: %w", err)
+			return errors.FileSystemWrap(err, "failed to remove backup").
+				WithContext("backupPath", backupPath)
 		}
 		m.logDebug("removed backup", logrus.Fields{
 			"name":   name,
@@ -409,7 +427,8 @@ func (m *SaveManager) CleanupBackups(name string) error {
 	checksumPath := savePath + ".sha256"
 	if _, err := os.Stat(checksumPath); err == nil {
 		if err := os.Remove(checksumPath); err != nil {
-			return fmt.Errorf("failed to remove checksum: %w", err)
+			return errors.FileSystemWrap(err, "failed to remove checksum").
+				WithContext("checksumPath", checksumPath)
 		}
 		m.logDebug("removed checksum", logrus.Fields{
 			"name":     name,
@@ -424,7 +443,8 @@ func (m *SaveManager) CleanupBackups(name string) error {
 func (m *SaveManager) ListBackups() ([]string, error) {
 	entries, err := os.ReadDir(m.saveDir)
 	if err != nil {
-		return nil, fmt.Errorf("failed to read save directory: %w", err)
+		return nil, errors.FileSystemWrap(err, "failed to read save directory").
+			WithContext("saveDir", m.saveDir)
 	}
 
 	var backups []string

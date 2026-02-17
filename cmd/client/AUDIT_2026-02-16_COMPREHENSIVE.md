@@ -1,9 +1,9 @@
 # Audit: github.com/opd-ai/venture/cmd/client
-**Date**: 2026-02-16
+**Date**: 2026-02-17 (updated)
 **Status**: Needs Work
 
 ## Summary
-The cmd/client package serves as the desktop game client entry point with extremely high integration surface, coordinating 200+ systems across engine, rendering, network, audio, and procgen domains. Overall health is good with proper ECS architecture adherence and deterministic generation patterns, but test coverage is critically low at 32.0% (below 65% target) due to Ebiten display server dependency. The package contains 7,191 lines of code across 15 files with 154 structured logging calls. The 3 non-deterministic time.Now() usages in gameplay code have been resolved via TimeProvider abstraction (time_provider.go). Remaining performance-measurement time.Now() calls (handlers.go:595, 691, 774) are acceptable non-procgen usage. Large file sizes (handlers.go at 4,476 lines) still impact maintainability.
+The cmd/client package serves as the desktop game client entry point with extremely high integration surface, coordinating 200+ systems across engine, rendering, network, audio, and procgen domains. Overall health is good with proper ECS architecture adherence and deterministic generation patterns, but test coverage is critically low at 32.0% (below 65% target) due to Ebiten display server dependency. The package contains 7,191 lines of code across 16 files with 154 structured logging calls. The 3 non-deterministic time.Now() usages in gameplay code have been resolved via TimeProvider abstraction (time_provider.go). Remaining performance-measurement time.Now() calls (handlers.go:595, 691, 774) are acceptable non-procgen usage. Version-specific initialization functions (V4-V19, VR, Phase 3) have been extracted to init_versions.go, reducing handlers.go from 4,494 to 3,894 lines.
 
 ## Issues Found
 - [x] **low** stub/incomplete — Save manager initialization returns nil on error without fallback (`handlers.go:3686`)
@@ -13,7 +13,7 @@ The cmd/client package serves as the desktop game client entry point with extrem
 - [x] **low** error handling — Save manager init error logged as warning but functionality remains unavailable silently (`handlers.go:3685-3686`)
 - [x] **high** test coverage — 32.0% coverage significantly below 65% target (critical gap)
 - [x] **low** doc coverage — Main package has excellent doc.go (159 lines) but no exported functions requiring docs
-- [x] **low** maintainability — handlers.go is 4,476 lines with 60+ functions (should split into domain-specific files)
+- [x] **low** maintainability — ~~handlers.go is 4,476 lines with 60+ functions~~ Split into handlers.go (3,894 lines) and init_versions.go (643 lines)
 
 ## Test Coverage
 32.0% (target: 65%)
@@ -97,14 +97,19 @@ None identified. All systems are properly registered with the World and connecte
    - Replaced handlers.go narrative event timestamp (line 4394) with tp.Now()
    - All 3 non-deterministic gameplay time.Now() calls now use injectable TimeProvider
    
-2. **[MEDIUM PRIORITY]** Split handlers.go (4,476 lines) into domain-specific files
-   - `init_audio.go` — Audio system initialization
-   - `init_combat.go` — Combat and spell systems
-   - `init_procgen.go` — Procedural generator initialization
-   - `init_rendering.go` — Rendering and sprite systems
-   - `init_network.go` — Network and federation systems
-   - `init_v4.go`, `init_v5.go`, `init_v6.go`, etc. — Version-specific systems
-   - Keep `handlers.go` as coordinator for core systems only
+2. **[COMPLETED]** ~~Split handlers.go (4,476 lines) into domain-specific files~~
+   - Created `init_versions.go` (643 lines) with all version-specific initialization functions:
+     - `initializeV4Systems` — Vehicle, companion, spell, class, expression, minigame systems
+     - `initializeV5Systems` — Chat, trade, terrain modification, mail, courier, QoL systems
+     - `initializeV6Systems` — Federation, portals, bounty, politics, territory systems
+     - `initializeV7Systems` — Display manager, viewport optimizer
+     - `initializeV8Systems` — Housing, trust, vehicle physics, fluid dynamics, building/furniture
+     - `initializeV9Systems` — Integration managers (crafting stations, companion housing, guild housing)
+     - `initializeV19Systems` — Entity/dialog generators, legendary/economy, choice tracker, fleet manager
+     - `initializeVRSystems` — VR hardware detection, stereoscopic, head tracking, controller systems
+     - `initializePhase3Systems` — Guild federation, political warfare, territory siege, trade routes
+   - `handlers.go` reduced from 4,494 to 3,894 lines (600 line reduction)
+   - Further splitting into init_audio.go, init_combat.go, etc. can be done incrementally as needed
 
 3. **[MEDIUM PRIORITY]** Improve test coverage to 50%+ by adding unit tests
    - Test helper functions in util.go that don't require Ebiten (spawnWallTorches, calculateHazardPosition, selectHazardSubType, etc.)

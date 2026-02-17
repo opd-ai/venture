@@ -36,14 +36,14 @@ STEP 1 — DISCOVER (spend ≤5 minutes here):
     - **Sprite detail** — sub-pixel shading, color gradients, dithering, material textures, highlight/shadow, edge definition, anti-aliasing
     - **Animation improvements** — smoother transitions, new states, expressive movement, attack/cast/hurt animations, idle breathing/fidget
   - **Character Customization (roll of 15–20):**
-    - **Appearance customization** — facial features (eyes, nose, mouth, ears), body proportions (height, build, muscle definition), skin tone palette expansion, hair styles and colors, age indicators (wrinkles, scars)
-    - **Cosmetic layering** — clothing dye systems, pattern overlays, emblems and insignias, armor tinting, weapon skins, particle effect customization
-    - **Character creation UI** — preview system with rotation, randomization options, preset templates by genre, saved appearance profiles, import/export character appearance
-    - **Runtime customization** — barber shops, cosmetic vendors, appearance change items, transmogrification systems, wardrobe collections
-    - **Cultural customization** — faction-specific appearance options, genre-themed cosmetics, cultural clothing and accessories, regional hair/skin variations
-    - **Expression and emotes** — facial expression system, emote animations, idle pose variations, victory/defeat poses, social gesture animations
-    - **Advanced features** — tattoos and body art, jewelry and piercings, makeup and face paint, battle scars and wounds, prosthetics and augmentations
-- If multiple candidates exist within your category, pick the one that most improves the game experience. Within system work, integration and progression depth are highest-value. Within avatar work, perspective fixes and nonhumanoid templates are highest-value. Within character customization work, appearance customization and character creation UI are highest-value.
+    - **Custom equipment generation** — procedural unique weapon types, armor set bonuses, accessory effects, equipment mod systems, upgrade paths, legendary item properties
+    - **Character class systems** — class specializations, multiclass combinations, class-specific abilities and resources, prestige class unlocks, hybrid class mechanics
+    - **Skill customization** — custom skill creation, skill mutation systems, skill combination mechanics, passive skill effects, skill tree variations per class
+    - **Build archetypes** — tank/DPS/support/hybrid build templates, role-specific stat distributions, playstyle-driven ability unlocks, build presets and templates
+    - **Talent systems** — talent point allocation, talent tree branching, talent synergies, talent reset mechanics, talent specialization paths
+    - **Loadout management** — quick-swap loadout systems, situational gear sets, ability bar customization, saved build configurations
+    - **Character advancement** — alternative progression paths, mastery systems, prestige mechanics, respec options, character specialization choices
+- If multiple candidates exist within your category, pick the one that most improves the game experience. Within system work, integration and progression depth are highest-value. Within avatar work, perspective fixes and nonhumanoid templates are highest-value. Within character customization work, custom equipment generation and character class systems are highest-value.
 
 STEP 2 — IMPLEMENT (this is the bulk of the work):
 Follow these rules strictly. Violations are build failures.

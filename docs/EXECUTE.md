@@ -19,15 +19,7 @@ STEP 1 — DISCOVER (spend ≤5 minutes here):
 - Read pkg/engine/system_init.go to understand registered systems.
 - Grep for TODO, FIXME, stub, placeholder in pkg/engine/ and pkg/procgen/.
 - Pick ONE enhancement you have NOT seen in git history. Roll a d20 to decide the category:
-  - **Avatar improvements (roll of 11–20 — address the KNOWN AVATAR PROBLEMS above):**
-    - **Perspective fixes** — convert any profile/side-view sprites to proper top-down aerial view. This is the single most impactful fix.
-    - **Nonhumanoid templates** — build dedicated top-down anatomy templates for creature types that are not humanoid (quadrupeds, insects, serpents, flying creatures, amorphous entities, multi-limbed creatures). Every creature type deserves its own body plan.
-    - **Player character visuals** — composite layering, anatomy detail, directional sprites, proportions, body shapes, facial features, skin/hair color variety, idle poses, shading, clothing detail
-    - **NPC variety** — genre-aware body templates, size-based anatomy, silhouette quality, visual personality, distinctive appearance per NPC, varied clothing and coloring
-    - **Equipment visuals** — material rendering fidelity, damage-state degradation, enchantment glow/particles, rarity-based detail scaling, weapon silhouettes, armor shaping
-    - **Sprite detail** — sub-pixel shading, color gradients, dithering, material textures, highlight/shadow, edge definition, anti-aliasing
-    - **Animation improvements** — smoother transitions, new states, expressive movement, attack/cast/hurt animations, idle breathing/fidget
-  - **System improvements (roll of 1–10 — address the KNOWN SYSTEM PROBLEMS above):**
+  - **System improvements (roll of 1–7 — address the KNOWN SYSTEM PROBLEMS above):**
     - **Progression depth** — skill tree branching, class synergies, reputation consequence systems, achievement chains, prestige mechanics
     - **System integration** — economy↔territory, faction↔quest, weather↔combat, housing↔crafting, companion↔skills, guild↔raids
     - **Genre variation** — genre-specific AI personalities, quest objective variety, loot table customization, dungeon layout algorithms, NPC behavior patterns
@@ -35,7 +27,23 @@ STEP 1 — DISCOVER (spend ≤5 minutes here):
     - **AI improvements** — squad tactics, companion learning, enemy adaptation, merchant pricing strategies, NPC schedules and routines
     - **World systems** — city evolution, economy simulation, faction warfare, territory sieges, world events, environmental destruction
     - **Social features** — guild progression, trade mechanics, mail system depth, chat channels, player housing interactions
-- If multiple candidates exist within your category, pick the one that most improves the game experience. Within avatar work, perspective fixes and nonhumanoid templates are highest-value. Within systems work, integration and progression depth are highest-value.
+  - **Avatar improvements (roll of 8–14 — address the KNOWN AVATAR PROBLEMS above):**
+    - **Perspective fixes** — convert any profile/side-view sprites to proper top-down aerial view. This is the single most impactful fix.
+    - **Nonhumanoid templates** — build dedicated top-down anatomy templates for creature types that are not humanoid (quadrupeds, insects, serpents, flying creatures, amorphous entities, multi-limbed creatures). Every creature type deserves its own body plan.
+    - **Player character visuals** — composite layering, anatomy detail, directional sprites, proportions, body shapes, facial features, skin/hair color variety, idle poses, shading, clothing detail
+    - **NPC variety** — genre-aware body templates, size-based anatomy, silhouette quality, visual personality, distinctive appearance per NPC, varied clothing and coloring
+    - **Equipment visuals** — material rendering fidelity, damage-state degradation, enchantment glow/particles, rarity-based detail scaling, weapon silhouettes, armor shaping
+    - **Sprite detail** — sub-pixel shading, color gradients, dithering, material textures, highlight/shadow, edge definition, anti-aliasing
+    - **Animation improvements** — smoother transitions, new states, expressive movement, attack/cast/hurt animations, idle breathing/fidget
+  - **Character Customization (roll of 15–20):**
+    - **Custom equipment generation** — procedural unique weapon types, armor set bonuses, accessory effects, equipment mod systems, upgrade paths, legendary item properties
+    - **Character class systems** — class specializations, multiclass combinations, class-specific abilities and resources, prestige class unlocks, hybrid class mechanics
+    - **Skill customization** — custom skill creation, skill mutation systems, skill combination mechanics, passive skill effects, skill tree variations per class
+    - **Build archetypes** — tank/DPS/support/hybrid build templates, role-specific stat distributions, playstyle-driven ability unlocks, build presets and templates
+    - **Talent systems** — talent point allocation, talent tree branching, talent synergies, talent reset mechanics, talent specialization paths
+    - **Loadout management** — quick-swap loadout systems, situational gear sets, ability bar customization, saved build configurations
+    - **Character advancement** — alternative progression paths, mastery systems, prestige mechanics, respec options, character specialization choices
+- If multiple candidates exist within your category, pick the one that most improves the game experience. Within system work, integration and progression depth are highest-value. Within avatar work, perspective fixes and nonhumanoid templates are highest-value. Within character customization work, custom equipment generation and character class systems are highest-value.
 
 STEP 2 — IMPLEMENT (this is the bulk of the work):
 Follow these rules strictly. Violations are build failures.

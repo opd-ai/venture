@@ -104,7 +104,7 @@ AI & Behavior (system improvements):
 - Behavior trees (`pkg/engine/behavior_tree_system.go`, `pkg/engine/behavior_tree_nodes.go`) need more node types. Add: patrol routes, cover-seeking, flanking, retreating, calling for help, using items, environmental interaction.
 - Squad tactics (`pkg/engine/squad_system.go`) should coordinate actions. Enemies in groups should focus-fire, protect wounded allies, use formations, and combine abilities.
 - Companion AI (`pkg/engine/companion_ai_system.go`) should learn from player behavior. Track preferred tactics, adapt to player playstyle, suggest strategies.
-- Merchant pricing (`pkg/world/economy/pricing.go`) should respond to supply/demand, player reputation, and market trends. Prices should feel dynamic, not static.
+- Merchant pricing (`pkg/world/economy/pricing_engine.go`) should respond to supply/demand, player reputation, and market trends. Prices should feel dynamic, not static.
 
 World Systems (system improvements):
 - City evolution (`pkg/engine/city_evolution_system.go`) should reflect player actions. Completed quests improve infrastructure, economic activity attracts merchants, faction control changes city appearance.

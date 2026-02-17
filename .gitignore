@@ -17,6 +17,8 @@
 *.out
 coverage.*
 *.coverprofile
+*.coverage
+*.tmp
 profile.cov
 
 # Dependency directories (remove the comment below to include it)
@@ -61,9 +63,14 @@ go.work.sum
 /*test*
 /dist
 /run.sh
+/validate_build.sh
+/l.sh
+/loop.sh
+/cmd.sh
 /perfprofile*
 /complete_dungeon_generation
 /terrain_entity_integration
+/mod_repository_fs_integration
 *.backup
 *.gz
 /*.md

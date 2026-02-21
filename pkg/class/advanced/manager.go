@@ -3,7 +3,12 @@ package advanced
 import (
 	"fmt"
 	"sync"
+
+	"github.com/sirupsen/logrus"
 )
+
+// logger is the package-level logger for advanced class management.
+var logger = logrus.WithField("package", "class/advanced")
 
 // Manager handles multi-classing, prestige classes, and talent trees
 type Manager struct {
@@ -282,6 +287,8 @@ func (m *Manager) CalculateTotalStats(playerID string) (StatBonuses, error) {
 }
 
 // addPrimaryClassStats adds primary class base stats to the total.
+// If the class definition is not found, it logs a debug warning and returns
+// the total unchanged (fail-soft behavior).
 func (m *Manager) addPrimaryClassStats(total StatBonuses, player *AdvancedClassComponent) StatBonuses {
 	if player.PrimaryClass == "" {
 		return total
@@ -289,6 +296,10 @@ func (m *Manager) addPrimaryClassStats(total StatBonuses, player *AdvancedClassC
 
 	primaryDef, err := GetClassDefinition(player.PrimaryClass)
 	if err != nil {
+		logger.WithFields(logrus.Fields{
+			"class_id":    player.PrimaryClass,
+			"system_name": "advanced_class",
+		}).Debug("primary class definition not found, skipping stats")
 		return total
 	}
 
@@ -296,6 +307,8 @@ func (m *Manager) addPrimaryClassStats(total StatBonuses, player *AdvancedClassC
 }
 
 // addSecondaryClassStats adds secondary class base stats (at 50%) to the total.
+// If the class definition is not found, it logs a debug warning and returns
+// the total unchanged (fail-soft behavior).
 func (m *Manager) addSecondaryClassStats(total StatBonuses, player *AdvancedClassComponent) StatBonuses {
 	if player.SecondaryClass == "" {
 		return total
@@ -303,6 +316,10 @@ func (m *Manager) addSecondaryClassStats(total StatBonuses, player *AdvancedClas
 
 	secondaryDef, err := GetClassDefinition(player.SecondaryClass)
 	if err != nil {
+		logger.WithFields(logrus.Fields{
+			"class_id":    player.SecondaryClass,
+			"system_name": "advanced_class",
+		}).Debug("secondary class definition not found, skipping stats")
 		return total
 	}
 
@@ -310,6 +327,8 @@ func (m *Manager) addSecondaryClassStats(total StatBonuses, player *AdvancedClas
 }
 
 // addPrestigeClassStats adds prestige class base stats to the total.
+// If the prestige class definition is not found, it logs a debug warning and returns
+// the total unchanged (fail-soft behavior).
 func (m *Manager) addPrestigeClassStats(total StatBonuses, player *AdvancedClassComponent) StatBonuses {
 	if player.PrestigeClass == "" {
 		return total
@@ -317,6 +336,10 @@ func (m *Manager) addPrestigeClassStats(total StatBonuses, player *AdvancedClass
 
 	prestigeDef, err := GetPrestigeClassDefinition(player.PrestigeClass)
 	if err != nil {
+		logger.WithFields(logrus.Fields{
+			"prestige_class_id": player.PrestigeClass,
+			"system_name":       "advanced_class",
+		}).Debug("prestige class definition not found, skipping stats")
 		return total
 	}
 

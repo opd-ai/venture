@@ -170,22 +170,24 @@ func checkWelcomeCondition(world *World) bool {
 	return inputProvider.IsAnyKeyPressed()
 }
 
-// checkMovementCondition verifies the player has moved at least 50 units from spawn.
+// checkMovementCondition verifies the player has moved at least 50 units total.
+// Uses the player_statistics component to track distance traveled during the session,
+// which works correctly regardless of screen resolution or spawn position.
 func checkMovementCondition(world *World) bool {
 	player := findPlayerEntity(world)
-	if player == nil || !player.HasComponent("position") {
+	if player == nil || !player.HasComponent("player_statistics") {
 		return false
 	}
-	comp, ok := player.GetComponent("position")
+	comp, ok := player.GetComponent("player_statistics")
 	if !ok {
 		return false
 	}
-	pos, ok := comp.(*PositionComponent)
+	stats, ok := comp.(*PlayerStatisticsComponent)
 	if !ok {
 		return false
 	}
-	distFromStart := (pos.X-400)*(pos.X-400) + (pos.Y-300)*(pos.Y-300)
-	return distFromStart > 2500
+	// Check if player has moved at least 50 units total this session
+	return stats.GetSessionStat("explore_distance_traveled") >= 50
 }
 
 // checkCombatCondition verifies the player has attacked at least once.

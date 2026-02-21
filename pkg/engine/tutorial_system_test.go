@@ -839,3 +839,77 @@ func TestCheckExplorationCondition_NoPlayer(t *testing.T) {
 		t.Error("checkExplorationCondition() should return false with no player")
 	}
 }
+
+// TestCheckMovementCondition tests the movement tutorial condition.
+func TestCheckMovementCondition(t *testing.T) {
+	tests := []struct {
+		name             string
+		hasStats         bool
+		distanceTraveled int64
+		want             bool
+	}{
+		{
+			name:             "no player statistics component",
+			hasStats:         false,
+			distanceTraveled: 0,
+			want:             false,
+		},
+		{
+			name:             "zero distance traveled",
+			hasStats:         true,
+			distanceTraveled: 0,
+			want:             false,
+		},
+		{
+			name:             "less than 50 units traveled",
+			hasStats:         true,
+			distanceTraveled: 49,
+			want:             false,
+		},
+		{
+			name:             "exactly 50 units traveled",
+			hasStats:         true,
+			distanceTraveled: 50,
+			want:             true,
+		},
+		{
+			name:             "more than 50 units traveled",
+			hasStats:         true,
+			distanceTraveled: 100,
+			want:             true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Create world with player
+			world := NewWorld()
+			player := world.CreateEntity()
+			player.AddComponent(&stubTutorialInputComponent{})
+
+			if tt.hasStats {
+				stats := NewPlayerStatisticsComponent()
+				// Start session to enable stat tracking
+				stats.StartSession(1000)
+				if tt.distanceTraveled > 0 {
+					stats.IncrementStat("explore_distance_traveled", tt.distanceTraveled)
+				}
+				player.AddComponent(stats)
+			}
+
+			got := checkMovementCondition(world)
+			if got != tt.want {
+				t.Errorf("checkMovementCondition() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+// TestCheckMovementCondition_NoPlayer tests movement with no player.
+func TestCheckMovementCondition_NoPlayer(t *testing.T) {
+	world := NewWorld()
+	// No player entity
+	if checkMovementCondition(world) {
+		t.Error("checkMovementCondition() should return false with no player")
+	}
+}

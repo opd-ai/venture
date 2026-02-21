@@ -125,7 +125,12 @@ func setupAllGameSystems(game *engine.EbitenGame, logger *logrus.Logger, clientL
 	initializeProgressionSystems(game, sys, logger)
 	initializeCombatSystems(game, sys)
 
-	tutorialSystem, helpSystem := initializeTutorialAndHelp(sys.inputSystem, game.CameraSystem)
+	// Read ShowTutorials setting to wire it into tutorial initialization
+	showTutorials := true
+	if game.SettingsManager != nil {
+		showTutorials = game.SettingsManager.GetSettings().ShowTutorials
+	}
+	tutorialSystem, helpSystem := initializeTutorialAndHelp(sys.inputSystem, game.CameraSystem, showTutorials)
 
 	// Register critical systems immediately for first frame
 	registerCriticalSystems(game, sys)

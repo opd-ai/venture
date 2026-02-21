@@ -360,6 +360,10 @@ func TestIntegration_TutorialWorkflow(t *testing.T) {
 	input := NewStubInput()
 	player.AddComponent(input)
 	player.AddComponent(&PositionComponent{X: 400, Y: 300})
+	// Add statistics component for movement tracking
+	stats := NewPlayerStatisticsComponent()
+	stats.StartSession(1000)
+	player.AddComponent(stats)
 	world.AddEntity(player)
 	world.Update(0.016)
 
@@ -381,11 +385,8 @@ func TestIntegration_TutorialWorkflow(t *testing.T) {
 	// Step 2: Movement - move far enough
 	input.AnyKeyPressed = false // Reset for next frame
 
-	// Simulate movement
-	if posComp, ok := player.GetComponent("position"); ok {
-		pos := posComp.(*PositionComponent)
-		pos.X = 500 // Moved 100 units from spawn (400, 300)
-	}
+	// Simulate movement by incrementing distance traveled stat
+	stats.IncrementStat("explore_distance_traveled", 100) // Moved 100 units
 
 	ts.Update(entities, 0.016)
 

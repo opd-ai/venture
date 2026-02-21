@@ -165,8 +165,8 @@ _All medium-priority issues have been resolved._
   - [x] `ChatHistory.GetDelta()` uses a simple heuristic for delta sync rather than true change tracking — **DOCUMENTED 2026-02-21**: Documented as known limitation in persistence/doc.go "Delta Synchronization" section. Heuristic trades accuracy for lower memory overhead.
   - [x] No concurrent Save/Load tests — while thread-safety via `RWMutex` is present, no stress tests validate concurrent persistence operations. — **DOCUMENTED 2026-02-21**: Thread-safety guarantees documented in persistence/doc.go. All public types use sync.RWMutex for concurrent access.
   - [x] Missing explicit thread-safety guarantees in documentation for public types. — **FIXED 2026-02-21**: Added "Thread Safety" section to persistence/doc.go documenting RWMutex protection for ChatHistory, TrustManager, ReputationManager, and ImageGallery.
-- **pkg/social/persistence** (1 issue)
-  - [ ] test — Delta synchronization in `ChatHistory.GetDelta()` uses version-based heuristic rather than true changelog. Production comment acknowledges limitation but could be enhanced for better sync accuracy (`chat_history.go:187-211`)
+- **pkg/social/persistence** (0 open, 1 resolved)
+  - [x] test — Delta synchronization in `ChatHistory.GetDelta()` uses version-based heuristic rather than true changelog. Production comment acknowledges limitation but could be enhanced for better sync accuracy (`chat_history.go:187-211`) — **DOCUMENTED 2026-02-21**: Enhanced GetDelta godoc to explicitly document heuristic behavior, limitations (no deletion tracking, potential imprecision), and interaction with ApplyDelta deduplication. Also documented in persistence/doc.go "Delta Synchronization" section.
 - **pkg/visualtest/parity** (0 open, 1 resolved)
   - [x] documentation — Platform type methods (String, IsDesktop, IsMobile, IsWeb) lack godoc comments (`platform.go:10,30,35,40`) — **FIXED 2026-02-21**: Added comprehensive godoc comments to all four methods
 - **pkg/world/housing** (0 open, 2 resolved)

@@ -189,7 +189,16 @@ func (c *ChatHistory) Load(data []byte) error {
 	return nil
 }
 
-// GetDelta computes the delta between this history and a given version
+// GetDelta computes the delta between this history and a given version.
+//
+// This method uses a version-based heuristic: it estimates the number of new
+// messages as the difference between the current version and fromVersion, then
+// returns the last N messages. This is not a true changelog — message deletions
+// are not tracked, and the estimate may be imprecise if non-message operations
+// incremented the version counter. For version 0, all messages are returned.
+//
+// The caller should use [ApplyDelta] to merge results, which deduplicates by
+// message ID to handle over-estimation gracefully.
 func (c *ChatHistory) GetDelta(fromVersion int) []*Message {
 	c.mu.RLock()
 	defer c.mu.RUnlock()

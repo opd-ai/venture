@@ -66,6 +66,11 @@
 //
 // # Usage Example
 //
+//	import (
+//		"github.com/opd-ai/venture/pkg/procgen"
+//		"github.com/opd-ai/venture/pkg/procgen/magic"
+//	)
+//
 //	gen := magic.NewSpellGenerator()
 //	params := procgen.GenerationParams{
 //		Difficulty: 0.5,
@@ -105,21 +110,22 @@
 //   - DPS/HPS targets ensure combat pacing is balanced
 //   - Level scaling provides smooth power progression
 //
-// Balance formulas:
-//   - Offensive: Base 0.4 mana per damage point
-//   - Healing: Base 0.35 mana per healing point
-//   - Area spells: 30% mana cost increase
-//   - Buffs/Debuffs: 0.6 mana per power point
-//   - Cooldown minimum: 2x cast time
-//   - Power per level: 5% increase per level
+// Balance formulas (see [BalanceConfig] for implementation):
+//   - Offensive: Base 0.4 mana per damage point (see [BalanceConfig.balanceManaCost])
+//   - Healing: Base 0.35 mana per healing point (see [BalanceConfig.balanceManaCost])
+//   - Area spells: 30% mana cost increase (see [BalanceConfig.balanceManaCost])
+//   - Buffs/Debuffs: 0.6 mana per power point (see [BalanceConfig.balanceManaCost])
+//   - Cooldown minimum: 2x cast time (see [BalanceConfig.balanceCooldown])
+//   - Power per level: 5% increase per level (see [BalanceConfig.scalePowerWithLevel])
 //
 // Target metrics (level 1):
-//   - DPS: 15 ± 40% (9-21 DPS)
-//   - HPS: 12 ± 40% (7.2-16.8 HPS)
-//   - Mana efficiency: 1.0-4.5 power per mana point
+//   - DPS: 15 ± 40% (9-21 DPS) — validated by [BalanceConfig.ValidateDPS]
+//   - HPS: 12 ± 40% (7.2-16.8 HPS) — validated by [BalanceConfig.ValidateHPS]
+//   - Mana efficiency: 1.0-4.5 power per mana point — see [BalanceConfig.ValidateManaCostEfficiency]
 //
 // The balance system validates generated spells and logs warnings
 // for spells that deviate significantly from target metrics.
+// Use [DefaultBalanceConfig] to get the standard balance configuration.
 //
 // # Genre Differences
 //

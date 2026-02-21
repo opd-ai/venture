@@ -633,7 +633,14 @@ func TestBlendThemes(t *testing.T) {
 	}
 }
 
-// Benchmark tests
+// Benchmark tests for genre blending operations.
+// Performance targets: <100μs per blend operation for real-time game use.
+// These benchmarks validate that blending remains efficient even with
+// complex genre combinations and varying seed values.
+
+// BenchmarkBlend measures the performance of blending two genres with a
+// custom ratio. This is the most common blending operation used during
+// procedural content generation. Expected performance: <50μs per operation.
 func BenchmarkBlend(b *testing.B) {
 	blender := NewGenreBlender(DefaultRegistry())
 	for i := 0; i < b.N; i++ {
@@ -641,6 +648,9 @@ func BenchmarkBlend(b *testing.B) {
 	}
 }
 
+// BenchmarkCreatePresetBlend measures the performance of creating a
+// preset genre blend by name. Preset blends use cached configurations
+// for common genre combinations. Expected performance: <75μs per operation.
 func BenchmarkCreatePresetBlend(b *testing.B) {
 	blender := NewGenreBlender(DefaultRegistry())
 	for i := 0; i < b.N; i++ {

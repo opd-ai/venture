@@ -1,9 +1,11 @@
 package narrative
 
 import (
+	"bytes"
 	"testing"
 
 	"github.com/opd-ai/venture/pkg/procgen"
+	"github.com/sirupsen/logrus"
 )
 
 func TestNewStoryArcGenerator(t *testing.T) {
@@ -542,5 +544,65 @@ func BenchmarkStoryArcGenerator_Generate(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		_, _ = gen.Generate(int64(i), params)
+	}
+}
+
+// TestStoryArcGenerator_SetLogger verifies that structured logging works correctly.
+func TestStoryArcGenerator_SetLogger(t *testing.T) {
+	// Create a buffer to capture log output
+	var buf bytes.Buffer
+	logger := logrus.New()
+	logger.SetOutput(&buf)
+	logger.SetLevel(logrus.DebugLevel)
+	entry := logger.WithField("test", "set_logger")
+
+	gen := NewStoryArcGenerator()
+	gen.SetLogger(entry)
+
+	// Generate should produce log output
+	params := procgen.GenerationParams{
+		Difficulty: 0.5,
+		Depth:      5,
+		GenreID:    "fantasy",
+	}
+	_, err := gen.Generate(12345, params)
+	if err != nil {
+		t.Fatalf("Generate() error = %v", err)
+	}
+
+	output := buf.String()
+	if output == "" {
+		t.Error("expected log output from generator, got empty string")
+	}
+	if !bytes.Contains(buf.Bytes(), []byte("story arc generated")) {
+		t.Errorf("expected 'story arc generated' in log output, got: %s", output)
+	}
+}
+
+// TestStoryArcGenerator_SetLogger_ValidationFailure verifies logging on validation errors.
+func TestStoryArcGenerator_SetLogger_ValidationFailure(t *testing.T) {
+	var buf bytes.Buffer
+	logger := logrus.New()
+	logger.SetOutput(&buf)
+	logger.SetLevel(logrus.DebugLevel)
+	entry := logger.WithField("test", "validation_failure")
+
+	gen := NewStoryArcGenerator()
+	gen.SetLogger(entry)
+
+	// Invalid params should produce error log
+	params := procgen.GenerationParams{
+		Difficulty: 1.5, // Invalid: > 1.0
+		Depth:      5,
+		GenreID:    "fantasy",
+	}
+	_, err := gen.Generate(12345, params)
+	if err == nil {
+		t.Fatal("Generate() expected error for invalid difficulty")
+	}
+
+	output := buf.String()
+	if !bytes.Contains(buf.Bytes(), []byte("invalid difficulty")) {
+		t.Errorf("expected 'invalid difficulty' in log output, got: %s", output)
 	}
 }

@@ -5,6 +5,7 @@ import (
 	"math/rand"
 
 	"github.com/opd-ai/venture/pkg/procgen"
+	"github.com/sirupsen/logrus"
 )
 
 // StoryArc represents a complete narrative sequence with three-act structure.
@@ -83,6 +84,8 @@ type PlayerChoice struct {
 type StoryArcGenerator struct {
 	// Random number generator for deterministic generation
 	rng *rand.Rand
+	// Optional logger for debugging and observability
+	logger *logrus.Entry
 }
 
 // NewStoryArcGenerator creates a new story arc generator.
@@ -90,15 +93,35 @@ func NewStoryArcGenerator() *StoryArcGenerator {
 	return &StoryArcGenerator{}
 }
 
+// SetLogger sets an optional logger for the generator.
+// When set, the generator logs generation events and validation failures.
+func (g *StoryArcGenerator) SetLogger(logger *logrus.Entry) {
+	g.logger = logger
+}
+
 // Generate creates a new story arc based on the provided seed and parameters.
 // Returns a *StoryArc or an error if generation fails.
 func (g *StoryArcGenerator) Generate(seed int64, params procgen.GenerationParams) (interface{}, error) {
 	// Validate parameters
 	if params.Difficulty < 0.0 || params.Difficulty > 1.0 {
-		return nil, fmt.Errorf("difficulty must be between 0.0 and 1.0, got %.2f", params.Difficulty)
+		err := fmt.Errorf("difficulty must be between 0.0 and 1.0, got %.2f", params.Difficulty)
+		if g.logger != nil {
+			g.logger.WithFields(logrus.Fields{
+				"seed":       seed,
+				"difficulty": params.Difficulty,
+			}).WithError(err).Debug("story arc generation failed: invalid difficulty")
+		}
+		return nil, err
 	}
 	if params.Depth < 1 {
-		return nil, fmt.Errorf("depth must be at least 1, got %d", params.Depth)
+		err := fmt.Errorf("depth must be at least 1, got %d", params.Depth)
+		if g.logger != nil {
+			g.logger.WithFields(logrus.Fields{
+				"seed":  seed,
+				"depth": params.Depth,
+			}).WithError(err).Debug("story arc generation failed: invalid depth")
+		}
+		return nil, err
 	}
 
 	// Create seeded RNG for deterministic generation
@@ -130,6 +153,17 @@ func (g *StoryArcGenerator) Generate(seed int64, params procgen.GenerationParams
 	// Generate possible endings
 	arc.PossibleEndings = g.generateEndings(params.GenreID, params.Difficulty)
 
+	if g.logger != nil {
+		g.logger.WithFields(logrus.Fields{
+			"seed":        seed,
+			"genre":       params.GenreID,
+			"difficulty":  params.Difficulty,
+			"title":       arc.Title,
+			"plot_points": len(arc.PlotPoints),
+			"endings":     len(arc.PossibleEndings),
+		}).Debug("story arc generated successfully")
+	}
+
 	return arc, nil
 }
 
@@ -137,14 +171,36 @@ func (g *StoryArcGenerator) Generate(seed int64, params procgen.GenerationParams
 func (g *StoryArcGenerator) Validate(result interface{}) error {
 	arc, ok := result.(*StoryArc)
 	if !ok {
-		return fmt.Errorf("result is not a *StoryArc")
-	}
-
-	if err := g.validateRequiredFields(arc); err != nil {
+		err := fmt.Errorf("result is not a *StoryArc")
+		if g.logger != nil {
+			g.logger.WithError(err).Debug("story arc validation failed: type assertion")
+		}
 		return err
 	}
 
-	return g.validateThreeActStructure(arc)
+	if err := g.validateRequiredFields(arc); err != nil {
+		if g.logger != nil {
+			g.logger.WithFields(logrus.Fields{
+				"title": arc.Title,
+				"seed":  arc.Seed,
+				"genre": arc.Genre,
+			}).WithError(err).Debug("story arc validation failed: missing required fields")
+		}
+		return err
+	}
+
+	if err := g.validateThreeActStructure(arc); err != nil {
+		if g.logger != nil {
+			g.logger.WithFields(logrus.Fields{
+				"title":       arc.Title,
+				"seed":        arc.Seed,
+				"plot_points": len(arc.PlotPoints),
+			}).WithError(err).Debug("story arc validation failed: three-act structure")
+		}
+		return err
+	}
+
+	return nil
 }
 
 // validateRequiredFields checks that all required story arc fields are populated.

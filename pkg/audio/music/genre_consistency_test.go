@@ -1,3 +1,9 @@
+// genre_consistency_test.go tests that genre naming is consistent across all music
+// subsystems (scale selection, waveform assignment, adaptive composition).
+//
+// These tests prevent regression of a bug where "scifi" and "sci-fi" were used
+// inconsistently across different music components, causing fallback behavior
+// instead of genre-specific customization.
 package music
 
 import (

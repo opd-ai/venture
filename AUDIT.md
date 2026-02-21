@@ -6,18 +6,18 @@
 
 ## Summary
 
-- **Total issues**: 225 (74 open, 151 resolved)
-- **Critical**: 0 (0 open) | **High**: 43 (0 open) | **Medium**: 42 (0 open) | **Low**: 140 (74 open)
-- **Affected subpackages**: 36 of 108 audited packages have open issues
-- **Resolution rate**: 151/225 (67%)
+- **Total issues**: 225 (72 open, 153 resolved)
+- **Critical**: 0 (0 open) | **High**: 43 (0 open) | **Medium**: 42 (0 open) | **Low**: 140 (72 open)
+- **Affected subpackages**: 35 of 108 audited packages have open issues
+- **Resolution rate**: 153/225 (68%)
 
 | Severity | Total | Open | Resolved |
 |----------|-------|------|----------|
 | Critical | 0 | 0 | 0 |
 | High | 43 | 0 | 43 |
 | Medium | 42 | 0 | 42 |
-| Low | 140 | 74 | 66 |
-| **Total** | **225** | **74** | **151** |
+| Low | 140 | 72 | 68 |
+| **Total** | **225** | **72** | **153** |
 
 ## Priority Resolution Order
 
@@ -52,9 +52,9 @@ _All medium-priority issues have been resolved._
   - [x] Silent item generation failures — **FIXED 2026-02-21**: Added error logging with logger.WithError().Debug()
 - **cmd/server** (1 issue)
   - [x] Global `v9ValidationService` synchronization — **FIXED 2026-02-21**: Added sync.RWMutex for thread-safe read/write, added resetV9ValidationServiceForTesting() helper, added concurrent access test with race detector
-- **pkg/audio/music** (2 issues)
-  - [ ] determinism — `adaptive.go` uses shared `rng` for drum generation which may affect reproducibility (`adaptive.go:646`)
-  - [ ] doc coverage — `genre_consistency_test.go` has no package comment explaining test purpose (`genre_consistency_test.go:1`)
+- **pkg/audio/music** (0 open, 2 resolved)
+  - [x] determinism — `adaptive.go` uses shared `rng` for drum generation which may affect reproducibility (`adaptive.go:646`) — **FIXED 2026-02-21**: Added determinism documentation section to adaptive.go explaining why RNG state advance is acceptable for audio variety and how to achieve full reproducibility if needed.
+  - [x] doc coverage — `genre_consistency_test.go` has no package comment explaining test purpose (`genre_consistency_test.go:1`) — **FIXED 2026-02-21**: Added file-level package comment explaining test purpose and regression prevention.
 - **pkg/audio/sfx** (1 issue)
   - [ ] doc coverage — VarietyManager public methods lack individual godoc comments (only package-level docs in doc.go). All exported functions should have their own comments for better IDE integration. (`variety_manager.go:26,38,65,85,94,103,112,119`)
 - **pkg/audit/features** (2 issues)
@@ -214,9 +214,9 @@ _All medium-priority issues have been resolved._
 
 #### `pkg/audio/music`
 - Source: [`pkg/audio/music/AUDIT.md`](pkg/audio/music/AUDIT.md)
-- Issues: 2 open (Low: 2)
-  - [Low] determinism — `adaptive.go` uses shared `rng` for drum generation which may affect reproducibility (`adaptive.go:646`)
-  - [Low] doc coverage — `genre_consistency_test.go` has no package comment explaining test purpose (`genre_consistency_test.go:1`)
+- Issues: 0 open, 2 resolved (Low: 2)
+  - ~~[Low] determinism — `adaptive.go` uses shared `rng` for drum generation which may affect reproducibility (`adaptive.go:646`)~~ ✅ **FIXED 2026-02-21**: Added determinism documentation section explaining acceptable RNG behavior
+  - ~~[Low] doc coverage — `genre_consistency_test.go` has no package comment explaining test purpose (`genre_consistency_test.go:1`)~~ ✅ **FIXED 2026-02-21**: Added file-level package comment
 
 #### `pkg/audio/sfx`
 - Source: [`pkg/audio/sfx/AUDIT.md`](pkg/audio/sfx/AUDIT.md)

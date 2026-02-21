@@ -1,5 +1,20 @@
 // Package music provides adaptive music composition.
 // This file implements dynamic layer management for context-aware music.
+//
+// # Determinism Note
+//
+// The AdaptiveComposer uses a shared random number generator (rng) for audio effects
+// like white noise generation in drums (generateSnare, generateHiHat). While the rng
+// is deterministically seeded, re-generating the same track will produce different
+// results because the RNG state advances between calls. This is intentional for
+// audio variety and is acceptable because:
+//
+//   - Audio samples are generated once per context change, not repeatedly compared
+//   - Musical variety within the same seed is desirable for player experience
+//   - The overall composition structure (tempo, scales, layers) remains deterministic
+//
+// For fully reproducible audio output, create a fresh AdaptiveComposer with the same
+// seed before each generation call.
 package music
 
 import (

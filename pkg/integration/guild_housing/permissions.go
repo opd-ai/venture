@@ -18,6 +18,11 @@ const (
 	PermissionAdmin                    // Full control
 )
 
+// Valid returns true if the permission value is within the defined range (0-4).
+func (p Permission) Valid() bool {
+	return p >= PermissionNone && p <= PermissionAdmin
+}
+
 // String returns human-readable permission name.
 func (p Permission) String() string {
 	switch p {
@@ -44,4 +49,10 @@ func DefaultPermissions() map[guild.Rank]Permission {
 		guild.RankMember:  PermissionUse,
 		guild.RankRecruit: PermissionView,
 	}
+}
+
+// ValidPermission returns true if the permission value is within the valid range
+// (PermissionNone through PermissionAdmin).
+func ValidPermission(p Permission) bool {
+	return p >= PermissionNone && p <= PermissionAdmin
 }

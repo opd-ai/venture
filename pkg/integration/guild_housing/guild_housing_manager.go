@@ -123,7 +123,17 @@ func (m *Manager) GetGuildHouses(guildID string) []*GuildHouse {
 }
 
 // SetPermission sets rank-based permission for a guild house.
+// The permission value must be in the valid range (PermissionNone through PermissionAdmin, 0-4).
 func (m *Manager) SetPermission(houseID string, rank guild.Rank, permission Permission) error {
+	if !permission.Valid() {
+		err := fmt.Errorf("invalid permission value: %d (must be 0-%d)", permission, PermissionAdmin)
+		logger.WithFields(logrus.Fields{
+			"houseID":    houseID,
+			"rank":       rank,
+			"permission": permission,
+		}).Error("SetPermission validation failed: ", err)
+		return err
+	}
 	if err := validateID("houseID", houseID); err != nil {
 		logger.WithFields(logrus.Fields{
 			"houseID":    houseID,
@@ -620,6 +630,11 @@ func (m *Manager) Save() ([]byte, error) {
 }
 
 // Load deserializes manager state from JSON.
+//
+// Implementation note: Load uses a two-pass approach (unmarshal to map[string]interface{},
+// then re-marshal/unmarshal per field) to support forward compatibility. This allows
+// loading saves that may contain extra fields from newer versions without failing.
+// The overhead is negligible for the expected data sizes (typically <1MB).
 func (m *Manager) Load(data []byte) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()

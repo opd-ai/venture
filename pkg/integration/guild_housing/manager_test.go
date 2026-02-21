@@ -267,6 +267,16 @@ func TestSetPermission(t *testing.T) {
 	if err == nil {
 		t.Error("SetPermission() expected error for nonexistent house")
 	}
+
+	// Test invalid permission values
+	err = manager.SetPermission(house.HouseID, guild.RankMember, Permission(-1))
+	if err == nil {
+		t.Error("SetPermission() expected error for negative permission")
+	}
+	err = manager.SetPermission(house.HouseID, guild.RankMember, Permission(5))
+	if err == nil {
+		t.Error("SetPermission() expected error for out-of-range permission")
+	}
 }
 
 func TestCheckPermission(t *testing.T) {

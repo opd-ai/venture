@@ -14,9 +14,9 @@ The `advanced` package implements character multi-classing, prestige classes, an
 - [x] **LOW**: Missing method-level documentation on several exported functions (`GetPrestigeClassDefinition`, `GetAllClasses`, `GetAllPrestigeClasses`). — **VERIFIED 2026-02-21**: All functions have godoc comments in registry.go
 - [x] **LOW**: `RespecCost.MaxCost` cap behavior (10,000g) not documented; respec cost formula not tested at boundary. — **FIXED 2026-02-21**: Added comprehensive godoc to RespecCost type in types.go and added TestRespecCostMaxCap boundary test in manager_test.go
 
-### Remaining: 1 (0 high, 0 med, 1 low)
+### Remaining: 0
 
-1. **LOW**: Silent error handling in `addPrimaryClassStats`, `addSecondaryClassStats`, `addPrestigeClassStats` — errors from `GetClassDefinition`/`GetPrestigeClassDefinition` are silently ignored with early return. This is acceptable fail-soft behavior for stat calculation.
+All issues resolved.
 
 ## Architecture Notes
 

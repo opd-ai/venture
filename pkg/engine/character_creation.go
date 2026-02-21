@@ -282,7 +282,7 @@ func (cd *CharacterData) Validate() error {
 	if len(cd.Name) > 20 {
 		return fmt.Errorf("character name too long (max 20 characters)")
 	}
-	if cd.Class < ClassWarrior || cd.Class > ClassNecromancer {
+	if cd.Class < ClassWarrior || cd.Class > ClassNinja {
 		return fmt.Errorf("invalid character class")
 	}
 	return nil

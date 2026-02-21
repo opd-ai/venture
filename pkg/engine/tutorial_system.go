@@ -202,7 +202,7 @@ func checkCombatCondition(world *World) bool {
 	if !ok {
 		return false
 	}
-	return attack.CooldownTimer > 0 || attack.CooldownTimer < attack.Cooldown
+	return attack.CooldownTimer > 0 && attack.CooldownTimer < attack.Cooldown
 }
 
 // checkHealthCondition verifies the player has taken damage but remains above 50% health.
@@ -632,7 +632,7 @@ func (ts *EbitenTutorialSystem) drawPanelContent(screen *ebiten.Image, step *Tut
 	text.Draw(screen, "Objective: "+step.Objective, basicfont.Face7x13, x+10, y+120, objColor)
 
 	hintColor := color.RGBA{150, 150, 150, 255}
-	text.Draw(screen, "Press ESC to skip current step", basicfont.Face7x13, x+10, y+140, hintColor)
+	text.Draw(screen, "Press ESC to minimize tutorial", basicfont.Face7x13, x+10, y+140, hintColor)
 }
 
 // drawTutorialButtons renders the touch buttons.

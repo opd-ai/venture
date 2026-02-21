@@ -77,6 +77,31 @@ func TestCharacterData_Validate(t *testing.T) {
 			wantErr: false,
 		},
 		{
+			name:    "valid ranger",
+			data:    CharacterData{Name: "Hunter", Class: ClassRanger},
+			wantErr: false,
+		},
+		{
+			name:    "valid cleric",
+			data:    CharacterData{Name: "Healer", Class: ClassCleric},
+			wantErr: false,
+		},
+		{
+			name:    "valid necromancer",
+			data:    CharacterData{Name: "DarkOne", Class: ClassNecromancer},
+			wantErr: false,
+		},
+		{
+			name:    "valid battlemage hybrid",
+			data:    CharacterData{Name: "Spellsword", Class: ClassBattlemage},
+			wantErr: false,
+		},
+		{
+			name:    "valid ninja hybrid",
+			data:    CharacterData{Name: "Shinobi", Class: ClassNinja},
+			wantErr: false,
+		},
+		{
 			name:    "empty name",
 			data:    CharacterData{Name: "", Class: ClassWarrior},
 			wantErr: true,

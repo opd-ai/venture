@@ -6,18 +6,18 @@
 
 ## Summary
 
-- **Total issues**: 225 (80 open, 145 resolved)
-- **Critical**: 0 (0 open) | **High**: 43 (0 open) | **Medium**: 42 (0 open) | **Low**: 140 (80 open)
+- **Total issues**: 225 (79 open, 146 resolved)
+- **Critical**: 0 (0 open) | **High**: 43 (0 open) | **Medium**: 42 (0 open) | **Low**: 140 (79 open)
 - **Affected subpackages**: 38 of 108 audited packages have open issues
-- **Resolution rate**: 145/225 (64%)
+- **Resolution rate**: 146/225 (65%)
 
 | Severity | Total | Open | Resolved |
 |----------|-------|------|----------|
 | Critical | 0 | 0 | 0 |
 | High | 43 | 0 | 43 |
 | Medium | 42 | 0 | 42 |
-| Low | 140 | 80 | 60 |
-| **Total** | **225** | **80** | **145** |
+| Low | 140 | 79 | 61 |
+| **Total** | **225** | **79** | **146** |
 
 ## Priority Resolution Order
 
@@ -44,7 +44,7 @@ _All medium-priority issues have been resolved._
 ### Phase 4: Low Priority
 
 - **cmd/client** (2 issues)
-  - [ ] doc.go references Go 1.24 and Ebiten 2.9 (doc.go)
+  - [x] doc.go references Go 1.24 and Ebiten 2.9 (doc.go) — **FIXED 2026-02-21**: Updated to Go 1.24.5+ and Ebiten 2.9.3
   - [ ] Large function count in handlers.go
 - **cmd/mobile** (3 issues)
   - [ ] Nil terrain access
@@ -178,8 +178,8 @@ _All medium-priority issues have been resolved._
 
 #### `cmd/client`
 - Source: [`cmd/client/AUDIT.md`](cmd/client/AUDIT.md)
-- Issues: 2 open, 5 resolved (Low: 2)
-  - [Low] doc.go references Go 1.24 and Ebiten 2.9 (doc.go)
+- Issues: 1 open, 6 resolved (Low: 1)
+  - ~~[Low] doc.go references Go 1.24 and Ebiten 2.9 (doc.go)~~ ✅ **FIXED 2026-02-21**: Updated to Go 1.24.5+ and Ebiten 2.9.3
   - [Low] Large function count in handlers.go
   - ~~[High] Nil pointer dereference in lazy initialization (handlers.go)~~ ✅ Resolved
   - ~~[Medium] Unchecked type assertions on Generator results (util.go)~~ ✅ Resolved

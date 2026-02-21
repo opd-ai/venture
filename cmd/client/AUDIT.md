@@ -10,7 +10,7 @@
 |----------|-------|-------|-----------|
 | High     | 1     | 1     | 0         |
 | Medium   | 4     | 4     | 0         |
-| Low      | 2     | 0     | 2         |
+| Low      | 2     | 1     | 1         |
 
 ## Issues
 
@@ -57,6 +57,7 @@
 
 #### L1: doc.go references Go 1.24 and Ebiten 2.9 (doc.go)
 - **Description**: Version references may become stale. Consider referencing go.mod versions.
+- **Status**: ✅ **FIXED 2026-02-21** — Updated to Go 1.24.5+ and Ebiten 2.9.3
 
 #### L2: Large function count in handlers.go
 - **Description**: handlers.go is ~4800 lines with 60+ functions. Consider splitting into domain-specific files (e.g., `init_audio.go`, `init_combat.go`, `init_v4.go`).

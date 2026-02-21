@@ -1,6 +1,6 @@
 /*
 Package main provides the desktop client application for Venture, a fully procedural
-multiplayer action-RPG built with Go 1.24 and the Ebiten 2.9 game engine.
+multiplayer action-RPG built with Go 1.24.5+ and the Ebiten 2.9.3 game engine.
 
 # Purpose
 

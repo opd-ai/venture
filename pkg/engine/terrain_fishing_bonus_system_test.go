@@ -286,7 +286,7 @@ func TestTerrainFishingBonusSystem_GenreModifiers(t *testing.T) {
 						tiles[i][j] = terrain.TileWaterShallow
 					}
 				}
-				tiles[1][1] = terrain.TileBridge
+				tiles[2][2] = terrain.TileBridge
 				return tiles
 			},
 			checkSpeedBonus: true,

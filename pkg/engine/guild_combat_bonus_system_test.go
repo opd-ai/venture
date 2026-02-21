@@ -1,6 +1,7 @@
 package engine
 
 import (
+	"math"
 	"testing"
 )
 
@@ -509,21 +510,21 @@ func TestGuildCombatBonusComponent_GetTotalMultipliers(t *testing.T) {
 	// Attack: 1.0 + 0.15 + 0.05*0.5 = 1.175
 	attackMult := comp.GetTotalAttackMultiplier()
 	expected := 1.175
-	if attackMult != expected {
+	if math.Abs(attackMult-expected) > 1e-9 {
 		t.Errorf("GetTotalAttackMultiplier() = %v, want %v", attackMult, expected)
 	}
 
 	// Defense: 1.0 + 0.09 + 0.05*0.3 = 1.105
 	defenseMult := comp.GetTotalDefenseMultiplier()
 	expectedDef := 1.105
-	if defenseMult != expectedDef {
+	if math.Abs(defenseMult-expectedDef) > 1e-9 {
 		t.Errorf("GetTotalDefenseMultiplier() = %v, want %v", defenseMult, expectedDef)
 	}
 
 	// Crit: 0.06 + 0.05*0.05 = 0.0625
 	critBonus := comp.GetTotalCritBonus()
 	expectedCrit := 0.0625
-	if critBonus != expectedCrit {
+	if math.Abs(critBonus-expectedCrit) > 1e-9 {
 		t.Errorf("GetTotalCritBonus() = %v, want %v", critBonus, expectedCrit)
 	}
 }

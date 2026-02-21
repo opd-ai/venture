@@ -280,6 +280,14 @@ func TestFactionTerritoryInfluenceSystem_HostilePenalty(t *testing.T) {
 	}
 	factionSystem.AddFaction(enemyFaction)
 
+	// Add player faction so inter-faction lookups work
+	playerFaction := &Faction{
+		ID:            "player_faction",
+		Name:          "Player",
+		Relationships: map[string]int{"enemy_faction": -75},
+	}
+	factionSystem.AddFaction(playerFaction)
+
 	// Create player with hostile reputation
 	player := world.CreateEntity()
 	player.AddComponent(&PositionComponent{X: 0, Y: 0})

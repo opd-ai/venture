@@ -405,7 +405,7 @@ func (c *SkillMutationComponent) AddMutation(skillID string, mutation *SkillMuta
 	if !ms.CanAddMutation() {
 		return false
 	}
-	if ms.HasMutation(mutation.ID) {
+	if mutation.ID != "" && ms.HasMutation(mutation.ID) {
 		return false
 	}
 	if !ms.IsMutationCompatible(mutation) {

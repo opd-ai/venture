@@ -307,7 +307,7 @@ func TestTerrainStealthSystem_AIDetectionModification(t *testing.T) {
 
 	// Create AI entity
 	aiEntity := world.CreateEntity()
-	aiEntity.AddComponent(&PositionComponent{X: 320, Y: 320}) // (10, 10) in tiles
+	aiEntity.AddComponent(&PositionComponent{X: 192, Y: 192}) // (6, 6) in tiles - within detection range
 	aiEntity.AddComponent(&AIComponent{DetectionRange: 200})
 
 	// Create target entity with cover

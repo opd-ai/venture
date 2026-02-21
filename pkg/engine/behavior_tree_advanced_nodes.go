@@ -815,7 +815,7 @@ func (n *IsOutnumberedNode) Tick(entity *Entity, blackboard *Blackboard, deltaTi
 		return NodeFailure
 	}
 
-	allyCount := 1 // Count self
+	allyCount := 0
 	enemyCount := 0
 
 	for _, other := range nearbyEntities {

@@ -43,6 +43,10 @@ type NPCDialogComponent struct {
 
 	// DeterministicMode forces template-based responses (for testing).
 	DeterministicMode bool
+
+	// ConversationCount tracks the total number of conversations started.
+	// Used to ensure unique conversation IDs across resets.
+	ConversationCount int
 }
 
 // Type returns the component type identifier.
@@ -130,6 +134,7 @@ func (d *NPCDialogComponent) ResetConversation() {
 	d.ResponseHistory = make([]string, 0, 10)
 	d.DialogState = "greeting"
 	d.CurrentConversationID = ""
+	d.ConversationCount++
 	// TopicMemory persists across conversations (NPC remembers previous discussions)
 }
 

@@ -119,7 +119,7 @@ func (s *NPCDialogSystem) GenerateResponse(entity *Entity, playerInput string) (
 
 	// Generate conversation ID if not set (deterministic from entity ID and interaction count)
 	if dialogComp.CurrentConversationID == "" {
-		dialogComp.CurrentConversationID = fmt.Sprintf("npc-%d-%d", entity.ID, dialogComp.GetConversationLength())
+		dialogComp.CurrentConversationID = fmt.Sprintf("npc-%d-%d-%d", entity.ID, dialogComp.ConversationCount, dialogComp.GetConversationLength())
 	}
 
 	// Prepare generation parameters

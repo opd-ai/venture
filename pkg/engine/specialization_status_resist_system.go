@@ -96,37 +96,53 @@ func (s *SpecializationStatusResistSystem) processEntity(entity *Entity) {
 	// Process all status effect components
 	for _, comp := range entity.Components {
 		effect, ok := comp.(*StatusEffectComponent)
-		if !ok {
+		if ok {
+			s.applyResistToEffect(entity, effect, resistMod, progression)
 			continue
 		}
 
-		// Skip already processed effects
-		if s.processedEffects[entity.ID][effect] {
-			continue
+		// Also check StatusEffectSetComponent which holds multiple effects
+		effectSet, ok := comp.(*StatusEffectSetComponent)
+		if ok {
+			for _, effect := range effectSet.Effects {
+				s.applyResistToEffect(entity, effect, resistMod, progression)
+			}
 		}
+	}
+}
 
-		// Mark as processed
-		s.processedEffects[entity.ID][effect] = true
+// applyResistToEffect applies resistance modifier to a single status effect.
+func (s *SpecializationStatusResistSystem) applyResistToEffect(entity *Entity, effect *StatusEffectComponent, resistMod float64, progression *ClassProgressionComponent) {
+	if effect == nil {
+		return
+	}
 
-		// Only modify debuffs (negative effects)
-		if !s.isDebuff(effect.EffectType) {
-			continue
-		}
+	// Skip already processed effects
+	if s.processedEffects[entity.ID][effect] {
+		return
+	}
 
-		// Apply resistance modifier to duration
-		originalDuration := effect.Duration
-		effect.Duration *= resistMod
+	// Mark as processed
+	s.processedEffects[entity.ID][effect] = true
 
-		if s.logger != nil && resistMod != 1.0 {
-			s.logger.WithFields(logrus.Fields{
-				"entity_id":         entity.ID,
-				"effect_type":       effect.EffectType,
-				"specialization":    progression.Specialization.String(),
-				"resist_modifier":   resistMod,
-				"original_duration": originalDuration,
-				"new_duration":      effect.Duration,
-			}).Debug("Status effect duration modified by specialization")
-		}
+	// Only modify debuffs (negative effects)
+	if !s.isDebuff(effect.EffectType) {
+		return
+	}
+
+	// Apply resistance modifier to duration
+	originalDuration := effect.Duration
+	effect.Duration *= resistMod
+
+	if s.logger != nil && resistMod != 1.0 {
+		s.logger.WithFields(logrus.Fields{
+			"entity_id":         entity.ID,
+			"effect_type":       effect.EffectType,
+			"specialization":    progression.Specialization.String(),
+			"resist_modifier":   resistMod,
+			"original_duration": originalDuration,
+			"new_duration":      effect.Duration,
+		}).Debug("Status effect duration modified by specialization")
 	}
 }
 

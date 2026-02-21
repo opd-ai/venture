@@ -152,7 +152,7 @@ func buildKeywordMap() map[string]AnatomyType {
 		"beetle": AnatomyInsect, "ant": AnatomyInsect, "centipede": AnatomyInsect,
 		"mantis": AnatomyInsect, "wasp": AnatomyInsect, "moth": AnatomyInsect,
 		"bee": AnatomyInsect, "fly": AnatomyInsect, "roach": AnatomyInsect,
-		"crawler": AnatomyInsect, "bug": AnatomyInsect, "locust": AnatomyInsect,
+		"bug": AnatomyInsect, "locust": AnatomyInsect,
 
 		// Flying
 		"dragon": AnatomyFlying, "bat": AnatomyFlying, "bird": AnatomyFlying,
@@ -172,7 +172,7 @@ func buildKeywordMap() map[string]AnatomyType {
 		"sentinel": AnatomyMechanical, "machine": AnatomyMechanical,
 
 		// Undead (skeletal/ghostly variants)
-		"skeleton": AnatomyUndead, "ghost": AnatomyUndead, "specter": AnatomyUndead,
+		"skeleton": AnatomyUndead, "skeletal": AnatomyUndead, "ghost": AnatomyUndead, "specter": AnatomyUndead,
 		"wraith": AnatomyUndead, "lich": AnatomyUndead, "phantom": AnatomyUndead,
 		"shade": AnatomyUndead, "banshee": AnatomyUndead,
 
@@ -186,7 +186,7 @@ func buildKeywordMap() map[string]AnatomyType {
 
 		// Humanoid indicators (fallback)
 		"orc": AnatomyHumanoid, "goblin": AnatomyHumanoid, "troll": AnatomyHumanoid,
-		"ogre": AnatomyHumanoid, "giant": AnatomyHumanoid, "minotaur": AnatomyHumanoid,
+		"ogre": AnatomyHumanoid, "minotaur": AnatomyHumanoid,
 		"zombie": AnatomyHumanoid, "ghoul": AnatomyHumanoid, "vampire": AnatomyHumanoid,
 		"demon": AnatomyHumanoid, "imp": AnatomyHumanoid, "kobold": AnatomyHumanoid,
 		"merchant": AnatomyHumanoid, "guard": AnatomyHumanoid, "priest": AnatomyHumanoid,
@@ -300,7 +300,7 @@ func (s *CreatureAnatomySystem) matchAnatomy(keywords []string, seed int64) Anat
 	bestScore := 0
 
 	for anatomy, score := range scores {
-		if score > bestScore {
+		if score > bestScore || (score == bestScore && bestType == AnatomyHumanoid && anatomy != AnatomyHumanoid) {
 			bestScore = score
 			bestType = anatomy
 		}

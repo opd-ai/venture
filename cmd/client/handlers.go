@@ -369,6 +369,7 @@ type systemsContainer struct {
 	vehicleCombatSystem          *engine.VehicleCombatSystem
 	companionAISystem            *engine.CompanionAISystem
 	companionProgressionSys      *engine.CompanionProgressionSystem
+	companionQuestSynergySys     *engine.CompanionQuestSynergySystem // Companion skill-quest integration bonuses
 	companionLoyaltySys          *engine.CompanionLoyaltySystem
 	companionInventorySys        *engine.CompanionInventorySystem
 	companionLearningSys         *engine.CompanionLearningSystem // Phase 4.1: Companion AI skill progression and personality evolution
@@ -2038,6 +2039,7 @@ func registerNonCriticalSystems(game *engine.EbitenGame, sys *systemsContainer) 
 	// Phase 22: Companion systems (use wrappers for incompatible signatures)
 	game.World.AddSystem(&companionAISystemWrapper{system: sys.companionAISystem})
 	game.World.AddSystem(&companionProgressionSystemWrapper{system: sys.companionProgressionSys})
+	game.World.AddSystem(sys.companionQuestSynergySys) // Companion-quest synergy bonuses
 	game.World.AddSystem(&companionLoyaltySystemWrapper{system: sys.companionLoyaltySys})
 	game.World.AddSystem(&companionInventorySystemWrapper{system: sys.companionInventorySys})
 	game.World.AddSystem(sys.companionLearningSys) // Phase 4.1: Companion learning (compatible signature)

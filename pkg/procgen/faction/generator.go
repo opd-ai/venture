@@ -11,7 +11,11 @@ import (
 
 	"github.com/opd-ai/venture/pkg/engine"
 	"github.com/opd-ai/venture/pkg/procgen"
+	"github.com/sirupsen/logrus"
 )
+
+// logger is the package-level logger for faction generation
+var logger = logrus.WithField("package", "procgen/faction")
 
 // Generator procedurally generates factions for a game world
 type Generator struct {
@@ -27,6 +31,13 @@ func NewGenerator() *Generator {
 func (g *Generator) Generate(seed int64, params procgen.GenerationParams) (interface{}, error) {
 	// Validate parameters
 	if err := g.Validate(params); err != nil {
+		logger.WithFields(logrus.Fields{
+			"seed":       seed,
+			"depth":      params.Depth,
+			"difficulty": params.Difficulty,
+			"genre":      params.GenreID,
+			"error":      err.Error(),
+		}).Debug("faction generation validation failed")
 		return nil, fmt.Errorf("faction generation validation failed: %w", err)
 	}
 
@@ -70,14 +81,17 @@ func (g *Generator) Generate(seed int64, params procgen.GenerationParams) (inter
 func (g *Generator) Validate(params interface{}) error {
 	p, ok := params.(procgen.GenerationParams)
 	if !ok {
+		logger.WithField("params_type", fmt.Sprintf("%T", params)).Debug("invalid params type for faction validation")
 		return fmt.Errorf("invalid params type, expected GenerationParams")
 	}
 
 	if p.Depth < 0 {
+		logger.WithField("depth", p.Depth).Debug("faction validation failed: negative depth")
 		return fmt.Errorf("depth cannot be negative")
 	}
 
 	if p.Difficulty < 0.0 || p.Difficulty > 1.0 {
+		logger.WithField("difficulty", p.Difficulty).Debug("faction validation failed: difficulty out of range")
 		return fmt.Errorf("difficulty must be between 0.0 and 1.0")
 	}
 

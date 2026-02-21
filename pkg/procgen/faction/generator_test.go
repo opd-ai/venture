@@ -517,3 +517,84 @@ func TestGenerator_TerritoryColors(t *testing.T) {
 		}
 	}
 }
+
+// Benchmark tests to validate performance claims in doc.go
+// Small worlds (depth 0-10): <1ms
+// Medium worlds (depth 11-30): <2ms
+// Large worlds (depth 31+): <3ms
+
+func BenchmarkGenerator_SmallWorld(b *testing.B) {
+	gen := NewGenerator()
+	params := procgen.GenerationParams{
+		Depth:      5,
+		Difficulty: 0.5,
+		GenreID:    "fantasy",
+	}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_, _ = gen.Generate(int64(i), params)
+	}
+}
+
+func BenchmarkGenerator_MediumWorld(b *testing.B) {
+	gen := NewGenerator()
+	params := procgen.GenerationParams{
+		Depth:      20,
+		Difficulty: 0.5,
+		GenreID:    "fantasy",
+	}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_, _ = gen.Generate(int64(i), params)
+	}
+}
+
+func BenchmarkGenerator_LargeWorld(b *testing.B) {
+	gen := NewGenerator()
+	params := procgen.GenerationParams{
+		Depth:      50,
+		Difficulty: 0.5,
+		GenreID:    "fantasy",
+	}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_, _ = gen.Generate(int64(i), params)
+	}
+}
+
+func BenchmarkGenerator_AllGenres(b *testing.B) {
+	gen := NewGenerator()
+	genres := []string{"fantasy", "sci-fi", "horror", "cyberpunk", "post-apocalyptic"}
+
+	for _, genre := range genres {
+		b.Run(genre, func(b *testing.B) {
+			params := procgen.GenerationParams{
+				Depth:      20,
+				Difficulty: 0.5,
+				GenreID:    genre,
+			}
+
+			b.ResetTimer()
+			for i := 0; i < b.N; i++ {
+				_, _ = gen.Generate(int64(i), params)
+			}
+		})
+	}
+}
+
+func BenchmarkGenerator_Validate(b *testing.B) {
+	gen := NewGenerator()
+	params := procgen.GenerationParams{
+		Depth:      10,
+		Difficulty: 0.5,
+		GenreID:    "fantasy",
+	}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_ = gen.Validate(params)
+	}
+}

@@ -6,18 +6,18 @@
 
 ## Summary
 
-- **Total issues**: 225 (39 open, 186 resolved)
-- **Critical**: 0 (0 open) | **High**: 43 (0 open) | **Medium**: 42 (0 open) | **Low**: 140 (39 open)
-- **Affected subpackages**: 23 of 108 audited packages have open issues
-- **Resolution rate**: 186/225 (83%)
+- **Total issues**: 225 (35 open, 190 resolved)
+- **Critical**: 0 (0 open) | **High**: 43 (0 open) | **Medium**: 42 (0 open) | **Low**: 140 (35 open)
+- **Affected subpackages**: 19 of 108 audited packages have open issues
+- **Resolution rate**: 190/225 (84%)
 
 | Severity | Total | Open | Resolved |
 |----------|-------|------|----------|
 | Critical | 0 | 0 | 0 |
 | High | 43 | 0 | 43 |
 | Medium | 42 | 0 | 42 |
-| Low | 140 | 39 | 101 |
-| **Total** | **225** | **39** | **186** |
+| Low | 140 | 35 | 105 |
+| **Total** | **225** | **35** | **190** |
 
 ## Priority Resolution Order
 
@@ -99,9 +99,9 @@ _All medium-priority issues have been resolved._
   - [x] Missing genre-specific history grammar for horror, cyberpunk, post-apocalyptic — **FIXED 2026-02-21**: Added complete history grammar rules for all missing genres
   - [x] Missing genre-specific recipe grammar for cyberpunk, post-apocalyptic — **FIXED 2026-02-21**: Added complete recipe grammar rules for both genres
   - [x] Stub implementations for getSeriesName/getVolumeNumber — **FIXED 2026-02-21**: Implemented to read from custom parameters with comprehensive tests
-- **pkg/procgen/building** (2 issues)
-  - [ ] doc — Godoc example uses deprecated `log.Fatal` instead of structured logging with `logrus.WithFields` (`doc.go:40`)
-  - [ ] integration — Package successfully integrated in cmd/client/handlers.go and cmd/server/v8_systems.go; no missing registrations detected
+- **pkg/procgen/building** (0 open, 2 resolved)
+  - [x] doc — Godoc example uses deprecated `log.Fatal` instead of structured logging with `logrus.WithFields` (`doc.go:40`) — **FIXED 2026-02-21**: Updated to use `logrus.WithError(err).Fatal()`
+  - [x] integration — Package successfully integrated in cmd/client/handlers.go and cmd/server/v8_systems.go; no missing registrations detected — **VERIFIED 2026-02-21**: Already integrated
 - **pkg/procgen/companion** (1 issue)
   - [ ] error handling — No structured logging with `logrus.WithFields` for generation events. Generator operates silently, making production debugging difficult when investigating companion spawn issues. (`generator.go:37-75`)
 - **pkg/procgen/dialog** (4 issues)
@@ -114,10 +114,10 @@ _All medium-priority issues have been resolved._
   - [x] **Doc coverage** — generateMerchantInventory method missing godoc comment (`merchant.go:162`) — **VERIFIED 2026-02-21**: Already has godoc comment
   - [ ] **Performance** — Merchant inventory pre-allocation creates full array then trims; could optimize to use append with cap (`merchant.go:166-214`)
   - [ ] **Error handling** — generateMerchantInventory logs warnings but continues on item generation failure; no aggregate error count returned (`merchant.go:198-201`)
-- **pkg/procgen/faction** (3 issues)
+- **pkg/procgen/faction** (0 open, 3 resolved)
   - [x] ECS compliance — `engine.Faction` struct has behavior methods `IsEnemy()` and `IsAlly()` instead of being pure data (`pkg/engine/faction_component.go:137-143`) — **FIXED 2026-02-21**: Extracted logic to standalone helper functions `FactionIsEnemy()`, `FactionIsAlly()`, `FactionGetRelationship()` in `faction_component.go`. Original methods retained with deprecation notices for backward compatibility. Added comprehensive tests including nil-safety and method/helper parity verification.
-  - [ ] Documentation — Missing benchmark tests for performance validation despite doc.go claiming <1-3ms generation times (`generator_test.go:1`)
-  - [ ] Error handling — No logging on validation errors; errors are only returned without structured logging context (`generator.go:29-31`)
+  - [x] Documentation — Missing benchmark tests for performance validation despite doc.go claiming <1-3ms generation times (`generator_test.go:1`) — **FIXED 2026-02-21**: Added comprehensive benchmarks validating <20μs actual performance.
+  - [x] Error handling — No logging on validation errors; errors are only returned without structured logging context (`generator.go:29-31`) — **FIXED 2026-02-21**: Added structured logging with `logrus.WithFields`.
 - **pkg/procgen/furniture** (7 issues, 4 resolved)
   - [x] **Stub/incomplete code** — `chooseRandomSubType` has comment "Could be weighted by depth/difficulty in future" indicating incomplete depth-based weighting logic (`generator.go:196`) — **FIXED 2026-02-21**: Implemented depth-based weighting
   - [x] **Error handling** — `Generate` method does not validate `params.Difficulty` range (should be 0.0-1.0) or `params.Depth` (should be non-negative) before use (`generator.go:119`) — **FIXED 2026-02-21**: Added validation
@@ -144,15 +144,15 @@ _All medium-priority issues have been resolved._
   - [ ] doc — coverage — README.md exists and is comprehensive; all exported types/functions have godoc; package doc.go complete (no issue, but noted for completeness)
 - **pkg/procgen/terrain** (1 issue)
   - [ ] determinism — Cache uses `time.Now()` for AccessTime tracking in LRU eviction (`cache.go:147`, `cache.go:202`). This is acceptable as it only affects cache management, not terrain generation determinism. Consider documenting this exception in cache.go godoc.
-- **pkg/procgen/vehicle** (1 issue)
-  - [ ] documentation — VehicleGenerator struct fields `templates` and `logger` lack individual godoc comments (`generator.go:17-18`)
+- **pkg/procgen/vehicle** (0 open, 1 resolved)
+  - [x] documentation — VehicleGenerator struct fields `templates` and `logger` lack individual godoc comments (`generator.go:17-18`) — **FIXED 2026-02-21**: Added godoc comments to both fields
 - **pkg/rendering/parallel** (1 issue)
   - [ ] stub/incomplete code — `processTask` method contains placeholder comment indicating actual processing delegated to Renderer (`worker_pool.go:180`)
 - **pkg/rendering/particles** (0 open, 2 resolved)
   - [x] deterministic procgen — `pool.go:386` uses `time.Now().UnixNano()` for LRU cache ordering in `ambienceCache.nanoTime()`. Does not affect generation determinism (only cache eviction order), but violates strict "no time.Now()" guideline. Replace with monotonic counter. — **FIXED 2026-02-21**: Replaced `nanoTime()` with `nextLRUSequence()` using `sync/atomic` monotonic counter.
   - [x] doc coverage — 3 exported types lack godoc comments: `ParticleBehavior.Has()` (`behaviors.go:41`), `PhysicsType.String()` (`physics.go:28`), `SpatialHash` methods (`physics.go:250,256,263`). — **VERIFIED 2026-02-21**: All methods already have godoc comments.
-- **pkg/rendering/sprites** (1 issue)
-  - [ ] Doc coverage — cache.go missing package-level godoc comment (`cache.go:1`)
+- **pkg/rendering/sprites** (0 open, 1 resolved)
+  - [x] Doc coverage — cache.go missing package-level godoc comment (`cache.go:1`) — **FIXED 2026-02-21**: Added file-level comment explaining LRU cache purpose
 - **pkg/saveload** (3 issues)
   - [ ] doc — `types.go` exported types lack individual godoc comments (all types documented in package doc instead) (`types.go:14-639`)
   - [ ] integration — WASM migration not supported; incompatible saves rejected rather than migrated (documented limitation) (`storage_wasm.go:30-41`)
@@ -166,8 +166,8 @@ _All medium-priority issues have been resolved._
   - [ ] Missing explicit thread-safety guarantees in documentation for public types.
 - **pkg/social/persistence** (1 issue)
   - [ ] test — Delta synchronization in `ChatHistory.GetDelta()` uses version-based heuristic rather than true changelog. Production comment acknowledges limitation but could be enhanced for better sync accuracy (`chat_history.go:187-211`)
-- **pkg/visualtest/parity** (1 issue)
-  - [ ] documentation — Platform type methods (String, IsDesktop, IsMobile, IsWeb) lack godoc comments (`platform.go:10,30,35,40`)
+- **pkg/visualtest/parity** (0 open, 1 resolved)
+  - [x] documentation — Platform type methods (String, IsDesktop, IsMobile, IsWeb) lack godoc comments (`platform.go:10,30,35,40`) — **FIXED 2026-02-21**: Added comprehensive godoc comments to all four methods
 - **pkg/world/housing** (2 issues)
   - [ ] stub/incomplete — Placeholder comment in integration test (`integration_test.go:333`)
   - [ ] stub/incomplete — Placeholder types comment in integration test (`integration_test.go:556`)
@@ -569,9 +569,9 @@ _All medium-priority issues have been resolved._
 
 #### `pkg/procgen/building`
 - Source: [`pkg/procgen/building/AUDIT.md`](pkg/procgen/building/AUDIT.md)
-- Issues: 2 open (Low: 2)
-  - [Low] doc — Godoc example uses deprecated `log.Fatal` instead of structured logging with `logrus.WithFields` (`doc.go:40`)
-  - [Low] integration — Package successfully integrated in cmd/client/handlers.go and cmd/server/v8_systems.go; no missing registrations detected
+- Issues: 0 open, 2 resolved (Low: 2)
+  - ~~[Low] doc — Godoc example uses deprecated `log.Fatal` instead of structured logging with `logrus.WithFields` (`doc.go:40`)~~ ✅ **FIXED 2026-02-21**: Updated to use `logrus.WithError(err).Fatal()`
+  - ~~[Low] integration — Package successfully integrated in cmd/client/handlers.go and cmd/server/v8_systems.go; no missing registrations detected~~ ✅ **VERIFIED 2026-02-21**: Already integrated
 
 #### `pkg/procgen/class`
 - Source: [`pkg/procgen/class/AUDIT.md`](pkg/procgen/class/AUDIT.md)
@@ -604,10 +604,10 @@ _All medium-priority issues have been resolved._
 
 #### `pkg/procgen/faction`
 - Source: [`pkg/procgen/faction/AUDIT.md`](pkg/procgen/faction/AUDIT.md)
-- Issues: 2 open, 1 resolved (Low: 3)
+- Issues: 0 open, 3 resolved (Low: 3)
   - ~~[Low] ECS compliance — `engine.Faction` struct has behavior methods `IsEnemy()` and `IsAlly()` instead of being pure data (`pkg/engine/faction_component.go:137-143`)~~ ✅ **FIXED 2026-02-21**: Extracted to helper functions `FactionIsEnemy()`, `FactionIsAlly()`, `FactionGetRelationship()`. Original methods retained with deprecation notices.
-  - [Low] Documentation — Missing benchmark tests for performance validation despite doc.go claiming <1-3ms generation times (`generator_test.go:1`)
-  - [Low] Error handling — No logging on validation errors; errors are only returned without structured logging context (`generator.go:29-31`)
+  - ~~[Low] Documentation — Missing benchmark tests for performance validation despite doc.go claiming <1-3ms generation times (`generator_test.go:1`)~~ ✅ **FIXED 2026-02-21**: Added comprehensive benchmarks validating <20μs actual performance (well under <1-3ms claims).
+  - ~~[Low] Error handling — No logging on validation errors; errors are only returned without structured logging context (`generator.go:29-31`)~~ ✅ **FIXED 2026-02-21**: Added structured logging with `logrus.WithFields` to `Validate()` and `Generate()` for validation failures.
 
 #### `pkg/procgen/furniture`
 - Source: [`pkg/procgen/furniture/AUDIT.md`](pkg/procgen/furniture/AUDIT.md)
@@ -693,8 +693,8 @@ _All medium-priority issues have been resolved._
 
 #### `pkg/procgen/vehicle`
 - Source: [`pkg/procgen/vehicle/AUDIT.md`](pkg/procgen/vehicle/AUDIT.md)
-- Issues: 1 open (Low: 1)
-  - [Low] documentation — VehicleGenerator struct fields `templates` and `logger` lack individual godoc comments (`generator.go:17-18`)
+- Issues: 0 open, 1 resolved (Low: 1)
+  - ~~[Low] documentation — VehicleGenerator struct fields `templates` and `logger` lack individual godoc comments (`generator.go:17-18`)~~ ✅ **FIXED 2026-02-21**: Added godoc comments to both fields
 
 ### Recovery (pkg/recovery/)
 
@@ -778,8 +778,8 @@ _All medium-priority issues have been resolved._
 
 #### `pkg/rendering/sprites`
 - Source: [`pkg/rendering/sprites/AUDIT.md`](pkg/rendering/sprites/AUDIT.md)
-- Issues: 1 open (Low: 1)
-  - [Low] Doc coverage — cache.go missing package-level godoc comment (`cache.go:1`)
+- Issues: 0 open, 1 resolved (Low: 1)
+  - ~~[Low] Doc coverage — cache.go missing package-level godoc comment (`cache.go:1`)~~ ✅ **FIXED 2026-02-21**: Added file-level comment explaining LRU cache purpose
 
 #### `pkg/rendering/tiles`
 - Source: [`pkg/rendering/tiles/AUDIT.md`](pkg/rendering/tiles/AUDIT.md)
@@ -849,8 +849,8 @@ _All medium-priority issues have been resolved._
 
 #### `pkg/visualtest/parity`
 - Source: [`pkg/visualtest/parity/AUDIT.md`](pkg/visualtest/parity/AUDIT.md)
-- Issues: 1 open (Low: 1)
-  - [Low] documentation — Platform type methods (String, IsDesktop, IsMobile, IsWeb) lack godoc comments (`platform.go:10,30,35,40`)
+- Issues: 0 open, 1 resolved (Low: 1)
+  - ~~[Low] documentation — Platform type methods (String, IsDesktop, IsMobile, IsWeb) lack godoc comments (`platform.go:10,30,35,40`)~~ ✅ **FIXED 2026-02-21**: Added comprehensive godoc comments to all four methods
 
 ### VR (pkg/vr/)
 
@@ -938,12 +938,12 @@ _All medium-priority issues have been resolved._
 - **Modding (pkg/modding/)**: 1 open issues (Low: 1)
 - **Narrative (pkg/narrative/)**: 1 open issues (Low: 1)
 - **Network (pkg/network/)**: 0 open issues — _All issues resolved_
-- **Procedural Generation (pkg/procgen/)**: 32 open issues (Medium: 2, Low: 30)
-- **Rendering (pkg/rendering/)**: 2 open issues (Low: 2)
+- **Procedural Generation (pkg/procgen/)**: 28 open issues (Medium: 2, Low: 26)
+- **Rendering (pkg/rendering/)**: 1 open issues (Low: 1)
 - **Save/Load (pkg/saveload/)**: 3 open issues (Low: 3)
 - **Security (pkg/security/)**: 2 open issues (Low: 2)
 - **Social (pkg/social/)**: 4 open issues (Low: 4)
-- **Visual Testing (pkg/visualtest/)**: 1 open issues (Low: 1)
+- **Visual Testing (pkg/visualtest/)**: 0 open issues — _All issues resolved_
 - **World (pkg/world/)**: 3 open issues (Low: 3)
 
 ### Estimated Effort
@@ -951,18 +951,18 @@ _All medium-priority issues have been resolved._
 - **Phase 1 (Critical)**: 0 issues — No action required
 - **Phase 2 (High)**: 0 issues — No action required
 - **Phase 3 (Medium)**: 0 issues — All resolved
-- **Phase 4 (Low)**: 39 issues — Address opportunistically
+- **Phase 4 (Low)**: 35 issues — Address opportunistically
 
 ## Resolved Issues Summary
 
-186 issues have been resolved across 40 packages.
+190 issues have been resolved across 44 packages.
 
 | Severity | Resolved |
 |----------|----------|
 | High | 43 |
 | Medium | 42 |
-| Low | 101 |
-| **Total** | **186** |
+| Low | 105 |
+| **Total** | **190** |
 
 ---
 

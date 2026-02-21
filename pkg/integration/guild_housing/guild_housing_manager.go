@@ -616,30 +616,36 @@ func (m *Manager) RemoveMemberFromHall(hall *MeetingHall, playerID string) {
 	}
 }
 
+// managerState is a typed helper struct for direct JSON serialization/deserialization
+// of Manager state. Using a typed struct instead of map[string]interface{} provides
+// type safety and avoids the double marshal/unmarshal overhead. Unknown fields from
+// newer versions are silently ignored by json.Unmarshal, preserving forward compatibility.
+type managerState struct {
+	Houses  map[string]*GuildHouse   `json:"houses"`
+	Storage map[string]*GuildStorage `json:"storage"`
+}
+
 // Save serializes the manager state to JSON.
 func (m *Manager) Save() ([]byte, error) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
-	data := map[string]interface{}{
-		"houses":  m.houses,
-		"storage": m.storage,
+	state := managerState{
+		Houses:  m.houses,
+		Storage: m.storage,
 	}
 
-	return json.Marshal(data)
+	return json.Marshal(state)
 }
 
 // Load deserializes manager state from JSON.
-//
-// Implementation note: Load uses a two-pass approach (unmarshal to map[string]interface{},
-// then re-marshal/unmarshal per field) to support forward compatibility. This allows
-// loading saves that may contain extra fields from newer versions without failing.
-// The overhead is negligible for the expected data sizes (typically <1MB).
+// Unknown fields from newer save formats are silently ignored, providing
+// forward compatibility without requiring migration logic.
 func (m *Manager) Load(data []byte) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	var state map[string]interface{}
+	var state managerState
 	if err := json.Unmarshal(data, &state); err != nil {
 		logger.WithFields(logrus.Fields{
 			"error": err.Error(),
@@ -647,36 +653,11 @@ func (m *Manager) Load(data []byte) error {
 		return err
 	}
 
-	if houses, ok := state["houses"].(map[string]interface{}); ok {
-		housesData, err := json.Marshal(houses)
-		if err != nil {
-			logger.WithFields(logrus.Fields{
-				"error": err.Error(),
-			}).Error("Load failed to marshal houses")
-			return fmt.Errorf("failed to marshal houses: %w", err)
-		}
-		if err := json.Unmarshal(housesData, &m.houses); err != nil {
-			logger.WithFields(logrus.Fields{
-				"error": err.Error(),
-			}).Error("Load failed to unmarshal houses")
-			return fmt.Errorf("failed to unmarshal houses: %w", err)
-		}
+	if state.Houses != nil {
+		m.houses = state.Houses
 	}
-
-	if storage, ok := state["storage"].(map[string]interface{}); ok {
-		storageData, err := json.Marshal(storage)
-		if err != nil {
-			logger.WithFields(logrus.Fields{
-				"error": err.Error(),
-			}).Error("Load failed to marshal storage")
-			return fmt.Errorf("failed to marshal storage: %w", err)
-		}
-		if err := json.Unmarshal(storageData, &m.storage); err != nil {
-			logger.WithFields(logrus.Fields{
-				"error": err.Error(),
-			}).Error("Load failed to unmarshal storage")
-			return fmt.Errorf("failed to unmarshal storage: %w", err)
-		}
+	if state.Storage != nil {
+		m.storage = state.Storage
 	}
 
 	return nil

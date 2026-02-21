@@ -98,6 +98,16 @@
 //
 // All generation is deterministic (same seed = identical story arc).
 //
+// # Determinism Exception
+//
+// This package uses time.Now() for progress tracking timestamps:
+//   - StartTime: when a player begins a story arc (manager.go)
+//   - LastUpdate: when a player makes a choice or advances (manager.go)
+//
+// These are non-procgen metadata used for analytics and debugging only.
+// They do not affect story generation, choice outcomes, or any gameplay logic.
+// Story arc generation and choice processing remain fully deterministic.
+//
 // # ECS Integration
 //
 // For integration with the engine's ECS:

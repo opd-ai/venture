@@ -108,6 +108,17 @@
 //	    }
 //	}
 //
+// # Determinism Exception
+//
+// This package uses time.Now() in the following non-procgen contexts:
+//   - LoadedAt timestamp when loading mods (loader.go) — metadata for debugging
+//   - AppliedAt timestamp when applying rules (manager.go) — audit trail
+//   - Rate limiting for mod application (manager.go) — server-side throttling
+//
+// These usages are acceptable because they affect only metadata and operational
+// behavior, not procedural content generation. Game content remains fully
+// deterministic regardless of when mods are loaded or applied.
+//
 // # Performance
 //
 // The mod system is designed for minimal overhead:
@@ -124,4 +135,14 @@
 //	if report.AllChecksPassed() {
 //	    log.Print("All 6 sandbox security checks passed")
 //	}
+//
+// # Determinism Exemption
+//
+// This package uses time.Now() for non-procgen metadata timestamps:
+//   - LoadedAt: Records when a mod was loaded (loader.go)
+//   - AppliedAt: Records when rules were applied (manager.go)
+//   - Rate limiting: Throttles rapid mod operations (manager.go)
+//
+// These usages are acceptable because they track operational metadata only
+// and do not affect procedural generation determinism or gameplay state.
 package modding

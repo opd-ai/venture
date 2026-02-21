@@ -2,6 +2,12 @@
 // This file implements a disk-based terrain cache with hash validation
 // for near-instant restarts when using the same seed/params combination.
 //
+// Determinism Note: The cache uses time.Now() for AccessTime tracking in LRU
+// eviction (cachedTerrain.AccessTime). This does NOT affect terrain generation
+// determinism — the same seed and params always produce identical terrain.
+// time.Now() is used only for cache management (determining which entries to
+// evict when the memory cache is full).
+//
 // Performance Optimization (2026-01-23):
 // Added PrewarmCache() function to preload commonly-used terrain configurations
 // into the cache during startup. This reduces initial terrain generation latency

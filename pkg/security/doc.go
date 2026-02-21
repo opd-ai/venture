@@ -117,4 +117,13 @@
 //
 // All security checks are deterministic and reproducible for consistent
 // audit results across different environments.
+//
+// # Determinism Exemption
+//
+// This package uses time.Now() for audit timing metadata (audit.go).
+// These timestamps record when security checks were performed and do not
+// affect procedural generation determinism or gameplay state. The
+// ConstantTimeCompare function includes debug-level logging that adds
+// minor overhead but does not leak timing information beyond the return
+// value; this is acceptable for development/debug builds.
 package security

@@ -1,6 +1,7 @@
 package guild_housing
 
 import (
+	"encoding/json"
 	"strings"
 	"testing"
 	"time"
@@ -921,13 +922,13 @@ func TestLoadErrors(t *testing.T) {
 			name:    "houses with invalid structure for unmarshal",
 			data:    []byte(`{"houses":{"test":"invalid"}}`),
 			wantErr: true,
-			errMsg:  "failed to unmarshal houses",
+			errMsg:  "cannot unmarshal",
 		},
 		{
 			name:    "storage with invalid structure for unmarshal",
 			data:    []byte(`{"houses":{},"storage":{"test":"invalid"}}`),
 			wantErr: true,
-			errMsg:  "failed to unmarshal storage",
+			errMsg:  "cannot unmarshal",
 		},
 	}
 
@@ -944,6 +945,47 @@ func TestLoadErrors(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+// TestLoadForwardCompatibility verifies that Load ignores unknown fields from
+// newer save formats, ensuring forward compatibility.
+func TestLoadForwardCompatibility(t *testing.T) {
+	manager := NewManager()
+	house, err := manager.CreateGuildHouse("guild-001", "player-001", housing.SizeMedium)
+	if err != nil {
+		t.Fatalf("CreateGuildHouse() error = %v", err)
+	}
+
+	// Save current state
+	data, err := manager.Save()
+	if err != nil {
+		t.Fatalf("Save() error = %v", err)
+	}
+
+	// Inject an unknown top-level field to simulate a newer version's save format
+	var raw map[string]json.RawMessage
+	if err := json.Unmarshal(data, &raw); err != nil {
+		t.Fatalf("failed to unmarshal save data: %v", err)
+	}
+	raw["future_feature"] = json.RawMessage(`{"enabled":true}`)
+	dataWithExtra, err := json.Marshal(raw)
+	if err != nil {
+		t.Fatalf("failed to marshal modified data: %v", err)
+	}
+
+	// Load should succeed, ignoring the unknown field
+	newManager := NewManager()
+	if err := newManager.Load(dataWithExtra); err != nil {
+		t.Fatalf("Load() with extra fields error = %v", err)
+	}
+
+	loaded, err := newManager.GetGuildHouse(house.HouseID)
+	if err != nil {
+		t.Fatalf("GetGuildHouse() after forward-compat load error = %v", err)
+	}
+	if loaded.GuildID != "guild-001" {
+		t.Errorf("loaded house GuildID = %v, want guild-001", loaded.GuildID)
 	}
 }
 

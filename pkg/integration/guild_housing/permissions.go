@@ -50,9 +50,3 @@ func DefaultPermissions() map[guild.Rank]Permission {
 		guild.RankRecruit: PermissionView,
 	}
 }
-
-// ValidPermission returns true if the permission value is within the valid range
-// (PermissionNone through PermissionAdmin).
-func ValidPermission(p Permission) bool {
-	return p >= PermissionNone && p <= PermissionAdmin
-}

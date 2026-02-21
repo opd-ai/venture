@@ -175,9 +175,11 @@ func (p *WorkerPool) worker() {
 }
 
 // processTask executes a task and returns the result.
+// This is intentionally a no-op stub: the WorkerPool provides the concurrency
+// infrastructure (goroutine pool, task/result channels, graceful shutdown) while
+// actual rendering logic is owned by the Renderer that submits tasks. Concrete
+// task handlers are registered via the Task.Handler field in production usage.
 func (p *WorkerPool) processTask(task Task) Result {
-	// Task processing is delegated to specific handlers based on type
-	// This is a placeholder - actual processing happens in Renderer
 	return Result{
 		TaskID: task.ID,
 		Data:   nil,

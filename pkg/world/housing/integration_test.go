@@ -330,7 +330,7 @@ func addQuestToPlayer(player *engine.Entity, buildingQuest *BuildingQuest) bool 
 	return questTracker.AcceptQuest(q, time.Now().Unix())
 }
 
-// Placeholder integration functions (to be implemented)
+// Integration helper functions for test scenarios
 
 // SerializeHouse serializes a House to JSON bytes for federation sync.
 // The Manager expects a Plot to be serialized, not a House.
@@ -553,18 +553,21 @@ func IsQuestComplete(player *engine.Entity, questID string) bool {
 	return false
 }
 
-// Placeholder types
+// Test-only types for integration test scenarios
 
+// CraftingRecipe represents a crafting recipe for test assertions.
 type CraftingRecipe struct {
 	RequiredItems map[string]int
 	ResultSubType string // The furniture type that will be crafted
 }
 
+// BuildingQuest represents a building-related quest for test assertions.
 type BuildingQuest struct {
 	ID         string
 	Objectives []string
 }
 
+// GuildQuest represents a guild quest for test assertions.
 type GuildQuest struct {
 	ID         string
 	Objectives []string

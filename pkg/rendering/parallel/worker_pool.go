@@ -17,10 +17,11 @@ type WorkerPool struct {
 
 // Task represents a unit of rendering work to be processed by a worker.
 type Task struct {
-	ID       int         // Unique task identifier
-	Type     TaskType    // Type of rendering task
-	Data     interface{} // Task-specific data
-	Priority int         // Higher priority tasks processed first (future: priority queue)
+	ID       int               // Unique task identifier
+	Type     TaskType          // Type of rendering task
+	Data     interface{}       // Task-specific data
+	Priority int               // Higher priority tasks processed first (future: priority queue)
+	Handler  func(Task) Result // Optional task handler; if nil, returns empty Result
 }
 
 // TaskType identifies the type of rendering operation.
@@ -175,11 +176,15 @@ func (p *WorkerPool) worker() {
 }
 
 // processTask executes a task and returns the result.
-// This is intentionally a no-op stub: the WorkerPool provides the concurrency
-// infrastructure (goroutine pool, task/result channels, graceful shutdown) while
-// actual rendering logic is owned by the Renderer that submits tasks. Concrete
-// task handlers are registered via the Task.Handler field in production usage.
+// If the task has a Handler function set, it delegates to that handler.
+// Otherwise, it returns an empty successful Result. This allows the WorkerPool
+// to provide concurrency infrastructure (goroutine pool, task/result channels,
+// graceful shutdown) while actual rendering logic is owned by the caller.
 func (p *WorkerPool) processTask(task Task) Result {
+	if task.Handler != nil {
+		return task.Handler(task)
+	}
+	// No handler registered; return empty result
 	return Result{
 		TaskID: task.ID,
 		Data:   nil,

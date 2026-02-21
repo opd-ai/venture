@@ -91,4 +91,19 @@
 //	ioutil.WriteFile("chat.json.gz", chatData, 0644)
 //	galleryData, _ := gallery.Save()
 //	ioutil.WriteFile("gallery.json.gz", galleryData, 0644)
+//
+// # Thread Safety
+//
+// All public types in this package are safe for concurrent use:
+//   - [ChatHistory]: Protected by sync.RWMutex; concurrent AddMessage/GetMessages/Save/Load are safe.
+//   - [TrustManager]: Protected by sync.RWMutex; concurrent UpdateTrust/GetTrustLevel/Save/Load are safe.
+//   - [ReputationManager]: Protected by sync.RWMutex; concurrent UpdateReputation/Save/Load are safe.
+//   - [ImageGallery]: Protected by sync.RWMutex; concurrent AddImage/GetImage/Save/Load are safe.
+//
+// # Delta Synchronization
+//
+// [ChatHistory.GetDelta] uses a version-based heuristic to estimate which messages
+// are new since a given version. This is a known limitation: it does not maintain
+// a true changelog. For large version gaps, it returns all messages. This approach
+// trades perfect accuracy for lower memory overhead and simpler implementation.
 package persistence

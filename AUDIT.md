@@ -143,12 +143,12 @@ _All medium-priority issues have been resolved._
 - **pkg/procgen/skills** (2 issues)
   - [x] deprecated — api — Uses deprecated `strings.Title` which should be replaced with `cases.Title(language.English)` from golang.org/x/text/cases (`generator.go:355`) — **FIXED 2026-02-21**
   - [x] doc — coverage — README.md exists and is comprehensive; all exported types/functions have godoc; package doc.go complete (no issue, but noted for completeness) — **VERIFIED 2026-02-21**: No action needed. All documentation is complete.
-- **pkg/procgen/terrain** (1 issue)
-  - [ ] determinism — Cache uses `time.Now()` for AccessTime tracking in LRU eviction (`cache.go:147`, `cache.go:202`). This is acceptable as it only affects cache management, not terrain generation determinism. Consider documenting this exception in cache.go godoc.
+- **pkg/procgen/terrain** (0 open, 1 resolved)
+  - [x] determinism — Cache uses `time.Now()` for AccessTime tracking in LRU eviction (`cache.go:147`, `cache.go:202`). This is acceptable as it only affects cache management, not terrain generation determinism. Consider documenting this exception in cache.go godoc. — **VERIFIED 2026-02-21**: cache.go already has a comprehensive "Determinism Note" in the package comment (lines 5-9) explaining that time.Now() is used only for cache management and does not affect terrain generation determinism.
 - **pkg/procgen/vehicle** (0 open, 1 resolved)
   - [x] documentation — VehicleGenerator struct fields `templates` and `logger` lack individual godoc comments (`generator.go:17-18`) — **FIXED 2026-02-21**: Added godoc comments to both fields
-- **pkg/rendering/parallel** (1 issue)
-  - [ ] stub/incomplete code — `processTask` method contains placeholder comment indicating actual processing delegated to Renderer (`worker_pool.go:180`)
+- **pkg/rendering/parallel** (0 open, 1 resolved)
+  - [x] stub/incomplete code — `processTask` method contains placeholder comment indicating actual processing delegated to Renderer (`worker_pool.go:180`) — **FIXED 2026-02-21**: Added `Handler func(Task) Result` field to Task struct. processTask now delegates to task.Handler when set, providing a complete extensible task processing pipeline. The WorkerPool provides concurrency infrastructure while callers own rendering logic.
 - **pkg/rendering/particles** (0 open, 2 resolved)
   - [x] deterministic procgen — `pool.go:386` uses `time.Now().UnixNano()` for LRU cache ordering in `ambienceCache.nanoTime()`. Does not affect generation determinism (only cache eviction order), but violates strict "no time.Now()" guideline. Replace with monotonic counter. — **FIXED 2026-02-21**: Replaced `nanoTime()` with `nextLRUSequence()` using `sync/atomic` monotonic counter.
   - [x] doc coverage — 3 exported types lack godoc comments: `ParticleBehavior.Has()` (`behaviors.go:41`), `PhysicsType.String()` (`physics.go:28`), `SpatialHash` methods (`physics.go:250,256,263`). — **VERIFIED 2026-02-21**: All methods already have godoc comments.

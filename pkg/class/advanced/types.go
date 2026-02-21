@@ -136,9 +136,15 @@ type SynergyBonus struct {
 	Bonuses   StatBonuses
 }
 
-// RespecCost calculates the gold cost to reset talents
+// RespecCost defines the gold cost formula for talent resets.
+// The cost increases linearly with each respec: BaseGold + (respecCount * PerRespec).
+// When the calculated cost exceeds MaxCost, the cost is capped at MaxCost.
+// Default values: BaseGold=1000, PerRespec=500, MaxCost=10000.
 type RespecCost struct {
-	BaseGold  int
+	// BaseGold is the initial gold cost for the first respec.
+	BaseGold int
+	// PerRespec is the additional gold cost added per previous respec.
 	PerRespec int
-	MaxCost   int
+	// MaxCost is the maximum gold cost cap. Respec cost never exceeds this value.
+	MaxCost int
 }

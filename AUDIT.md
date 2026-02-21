@@ -6,18 +6,18 @@
 
 ## Summary
 
-- **Total issues**: 225 (72 open, 153 resolved)
-- **Critical**: 0 (0 open) | **High**: 43 (0 open) | **Medium**: 42 (0 open) | **Low**: 140 (72 open)
-- **Affected subpackages**: 35 of 108 audited packages have open issues
-- **Resolution rate**: 153/225 (68%)
+- **Total issues**: 225 (68 open, 157 resolved)
+- **Critical**: 0 (0 open) | **High**: 43 (0 open) | **Medium**: 42 (0 open) | **Low**: 140 (68 open)
+- **Affected subpackages**: 33 of 108 audited packages have open issues
+- **Resolution rate**: 157/225 (70%)
 
 | Severity | Total | Open | Resolved |
 |----------|-------|------|----------|
 | Critical | 0 | 0 | 0 |
 | High | 43 | 0 | 43 |
 | Medium | 42 | 0 | 42 |
-| Low | 140 | 72 | 68 |
-| **Total** | **225** | **72** | **153** |
+| Low | 140 | 68 | 72 |
+| **Total** | **225** | **68** | **157** |
 
 ## Priority Resolution Order
 
@@ -55,15 +55,15 @@ _All medium-priority issues have been resolved._
 - **pkg/audio/music** (0 open, 2 resolved)
   - [x] determinism — `adaptive.go` uses shared `rng` for drum generation which may affect reproducibility (`adaptive.go:646`) — **FIXED 2026-02-21**: Added determinism documentation section to adaptive.go explaining why RNG state advance is acceptable for audio variety and how to achieve full reproducibility if needed.
   - [x] doc coverage — `genre_consistency_test.go` has no package comment explaining test purpose (`genre_consistency_test.go:1`) — **FIXED 2026-02-21**: Added file-level package comment explaining test purpose and regression prevention.
-- **pkg/audio/sfx** (1 issue)
-  - [ ] doc coverage — VarietyManager public methods lack individual godoc comments (only package-level docs in doc.go). All exported functions should have their own comments for better IDE integration. (`variety_manager.go:26,38,65,85,94,103,112,119`)
-- **pkg/audit/features** (2 issues)
-  - [ ] Doc coverage — `RegisterCoreFeatures()` lacks godoc comment (`core_features.go:6`)
-  - [ ] Doc coverage — `RegisterAdvancedFeatures()` lacks godoc comment (`advanced_features.go:6`)
-- **pkg/class** (3 issues)
+- **pkg/audio/sfx** (0 open, 1 resolved)
+  - [x] doc coverage — VarietyManager public methods lack individual godoc comments (only package-level docs in doc.go). All exported functions should have their own comments for better IDE integration. (`variety_manager.go:26,38,65,85,94,103,112,119`) — **VERIFIED 2026-02-21**: All exported methods already have godoc comments
+- **pkg/audit/features** (0 open, 2 resolved)
+  - [x] Doc coverage — `RegisterCoreFeatures()` lacks godoc comment (`core_features.go:6`) — **VERIFIED 2026-02-21**: Already has godoc comment on line 5
+  - [x] Doc coverage — `RegisterAdvancedFeatures()` lacks godoc comment (`advanced_features.go:6`) — **VERIFIED 2026-02-21**: Already has godoc comment on line 5
+- **pkg/class** (1 open, 2 resolved)
   - [ ] Silent error handling in `addPrimaryClassStats`, `addSecondaryClassStats`, `addPrestigeClassStats` — errors from `GetClassDefinition`/`GetPrestigeClassDefinition` are silently ignored with early return. This is acceptable fail-soft behavior for stat calculation.
-  - [ ] Missing method-level documentation on several exported functions (`GetPrestigeClassDefinition`, `GetAllClasses`, `GetAllPrestigeClasses`).
-  - [ ] `RespecCost.MaxCost` cap behavior (10,000g) not documented; respec cost formula not tested at boundary.
+  - [x] Missing method-level documentation on several exported functions (`GetPrestigeClassDefinition`, `GetAllClasses`, `GetAllPrestigeClasses`). — **VERIFIED 2026-02-21**: All functions already have godoc comments in registry.go
+  - [x] `RespecCost.MaxCost` cap behavior (10,000g) not documented; respec cost formula not tested at boundary. — **FIXED 2026-02-21**: Added comprehensive godoc to RespecCost type and added TestRespecCostMaxCap boundary test
 - **pkg/companion** (2 issues)
   - [ ] Hardcoded magic numbers for skill decay (0.1), trait clamping (0.0-1.0), LRU limits (1000), and XP values are not configurable.
   - [ ] `Deserialize()` rebuilds prerequisites as empty and defaults cost to 1 — deserialized skill trees have incomplete structure.
@@ -220,8 +220,8 @@ _All medium-priority issues have been resolved._
 
 #### `pkg/audio/sfx`
 - Source: [`pkg/audio/sfx/AUDIT.md`](pkg/audio/sfx/AUDIT.md)
-- Issues: 1 open (Low: 1)
-  - [Low] doc coverage — VarietyManager public methods lack individual godoc comments (only package-level docs in doc.go). All exported functions should have their own comments for better IDE integration. (`variety_manager.go:26,38,65,85,94,103,112,119`)
+- Issues: 0 open, 1 resolved (Low: 1)
+  - ~~[Low] doc coverage — VarietyManager public methods lack individual godoc comments (only package-level docs in doc.go). All exported functions should have their own comments for better IDE integration. (`variety_manager.go:26,38,65,85,94,103,112,119`)~~ ✅ **VERIFIED 2026-02-21**: All exported methods already have godoc comments
 
 #### `pkg/audio/synthesis`
 - Source: [`pkg/audio/synthesis/AUDIT.md`](pkg/audio/synthesis/AUDIT.md)
@@ -235,9 +235,9 @@ _All medium-priority issues have been resolved._
 
 #### `pkg/audit/features`
 - Source: [`pkg/audit/features/AUDIT.md`](pkg/audit/features/AUDIT.md)
-- Issues: 2 open (Low: 2)
-  - [Low] Doc coverage — `RegisterCoreFeatures()` lacks godoc comment (`core_features.go:6`)
-  - [Low] Doc coverage — `RegisterAdvancedFeatures()` lacks godoc comment (`advanced_features.go:6`)
+- Issues: 0 open, 2 resolved (Low: 2)
+  - ~~[Low] Doc coverage — `RegisterCoreFeatures()` lacks godoc comment (`core_features.go:6`)~~ ✅ **VERIFIED 2026-02-21**: Already has godoc comment
+  - ~~[Low] Doc coverage — `RegisterAdvancedFeatures()` lacks godoc comment (`advanced_features.go:6`)~~ ✅ **VERIFIED 2026-02-21**: Already has godoc comment
 
 ### Benchmark (pkg/benchmark/)
 
@@ -257,10 +257,10 @@ _All medium-priority issues have been resolved._
 
 #### `pkg/class`
 - Source: [`pkg/class/AUDIT.md`](pkg/class/AUDIT.md)
-- Issues: 3 open (Low: 3)
+- Issues: 1 open, 2 resolved (Low: 3)
   - [Low] Silent error handling in `addPrimaryClassStats`, `addSecondaryClassStats`, `addPrestigeClassStats` — errors from `GetClassDefinition`/`GetPrestigeClassDefinition` are silently ignored with early return. This is acceptable fail-soft behavior for stat calculation.
-  - [Low] Missing method-level documentation on several exported functions (`GetPrestigeClassDefinition`, `GetAllClasses`, `GetAllPrestigeClasses`).
-  - [Low] `RespecCost.MaxCost` cap behavior (10,000g) not documented; respec cost formula not tested at boundary.
+  - ~~[Low] Missing method-level documentation on several exported functions (`GetPrestigeClassDefinition`, `GetAllClasses`, `GetAllPrestigeClasses`).~~ ✅ **VERIFIED 2026-02-21**: All functions have godoc comments
+  - ~~[Low] `RespecCost.MaxCost` cap behavior (10,000g) not documented; respec cost formula not tested at boundary.~~ ✅ **FIXED 2026-02-21**: Added comprehensive godoc and boundary test
 
 #### `pkg/class/advanced`
 - Source: [`pkg/class/advanced/AUDIT.md`](pkg/class/advanced/AUDIT.md)

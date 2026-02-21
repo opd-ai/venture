@@ -1,6 +1,7 @@
 package advanced
 
 import (
+	"fmt"
 	"testing"
 )
 
@@ -220,6 +221,45 @@ func TestRespecTalents(t *testing.T) {
 	cost = m.GetRespecCost("player1")
 	if cost != 1500 {
 		t.Errorf("GetRespecCost() after respec = %v, want 1500", cost)
+	}
+}
+
+// TestRespecCostMaxCap verifies the MaxCost cap at 10,000 gold boundary.
+// Cost formula: BaseGold(1000) + (respecCount * PerRespec(500)), capped at MaxCost(10000).
+// At 18 respecs: 1000 + (18 * 500) = 10,000 (exactly at cap)
+// At 19+ respecs: should remain capped at 10,000
+func TestRespecCostMaxCap(t *testing.T) {
+	m := NewManager()
+	m.SetPrimaryClass("player1", ClassWarrior)
+	m.SetLevel("player1", 100)
+
+	// Default: BaseGold=1000, PerRespec=500, MaxCost=10000
+	// Cost reaches cap at: (MaxCost - BaseGold) / PerRespec = 18 respecs
+
+	tests := []struct {
+		respecCount int
+		wantCost    int
+	}{
+		{0, 1000},                             // Initial cost
+		{17, 1000 + 17*500},                   // 9500, just before cap
+		{18, 10000},                           // 10000, exactly at cap
+		{19, 10000},                           // capped
+		{100, 10000},                          // remains capped at high respec count
+	}
+
+	for _, tt := range tests {
+		t.Run(fmt.Sprintf("respec_%d", tt.respecCount), func(t *testing.T) {
+			m.mu.Lock()
+			if _, exists := m.players["player1"]; exists {
+				m.players["player1"].RespecCount = tt.respecCount
+			}
+			m.mu.Unlock()
+
+			cost := m.GetRespecCost("player1")
+			if cost != tt.wantCost {
+				t.Errorf("GetRespecCost() at respecCount=%d = %d, want %d", tt.respecCount, cost, tt.wantCost)
+			}
+		})
 	}
 }
 

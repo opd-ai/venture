@@ -129,13 +129,13 @@ Integration (mandatory — this is where past attempts fail):
 
 Constraints:
 - Keep changes focused and targeted. Avatar improvements should focus on visual quality. System improvements should focus on gameplay depth.
-- `go build ./...` and `go vet ./...` must pass.
+- `go build ./...`, `go test -race ./...`, and `go vet ./...` must pass.
 - Write table-driven tests. Target ≥65% coverage on new code.
 - No breaking changes to saves, network protocol, or configs.
 - Maintain 60+ FPS. Cache/pool on hot paths.
 
 STEP 3 — VERIFY:
-Run `go build ./...` and `go vet ./...`. Fix any errors before reporting.
+Run `go build ./...`, `go test -race ./...`, and `go vet ./...`. Fix any errors before reporting.
 
 STEP 4 — REPORT (keep concise):
 1. **Enhancement**: What and why, 2-3 sentences.

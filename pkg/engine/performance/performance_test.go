@@ -1146,3 +1146,64 @@ func TestNetworkBatcherGetQueueSize(t *testing.T) {
 		t.Errorf("Queue size unexpectedly large: %d", queueSize)
 	}
 }
+
+// TestTypeAliases tests that the type aliases work correctly
+// and don't introduce any regressions
+func TestTypeAliases(t *testing.T) {
+	// Test Config alias
+	config := DefaultConfig()
+	if config == nil {
+		t.Fatal("DefaultConfig() returned nil")
+	}
+	if config.MaxMemoryMB != 550 {
+		t.Errorf("Expected MaxMemoryMB 550, got %d", config.MaxMemoryMB)
+	}
+
+	// Test Monitor alias
+	monitor := NewMonitor()
+	if monitor == nil {
+		t.Fatal("NewMonitor() returned nil")
+	}
+
+	// Verify Config and PerformanceConfig are the same type
+	var _ *PerformanceConfig = config
+	var _ *Config = config
+
+	// Verify Monitor and PerformanceMonitor are the same type
+	var _ *PerformanceMonitor = monitor
+	var _ *Monitor = monitor
+
+	// Test that monitor methods work with alias type
+	monitor.UpdateFrameTime(16.67)
+	if monitor.GetFPS() < 59 || monitor.GetFPS() > 61 {
+		t.Errorf("Expected FPS ~60, got %.2f", monitor.GetFPS())
+	}
+}
+
+// TestLODLevelDocumentation validates LOD level constants
+func TestLODLevelDocumentation(t *testing.T) {
+	tests := []struct {
+		level    LODLevel
+		expected string
+	}{
+		{LODVeryHigh, "VeryHigh"},
+		{LODHigh, "High"},
+		{LODMedium, "Medium"},
+		{LODLow, "Low"},
+		{LODVeryLow, "VeryLow"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.expected, func(t *testing.T) {
+			if tt.level.String() != tt.expected {
+				t.Errorf("Expected %s, got %s", tt.expected, tt.level.String())
+			}
+		})
+	}
+
+	// Test unknown level
+	unknown := LODLevel(999)
+	if unknown.String() != "Unknown" {
+		t.Errorf("Expected Unknown for invalid level, got %s", unknown.String())
+	}
+}

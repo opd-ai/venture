@@ -5,15 +5,23 @@ import (
 	"time"
 )
 
-// LODLevel represents level of detail quality
+// LODLevel represents level of detail quality for adaptive rendering.
+// Higher LOD levels provide more visual detail at the cost of performance.
 type LODLevel int
 
+// LOD (Level of Detail) constants define quality tiers for distance-based
+// rendering optimization. Objects farther from the camera use lower LOD
+// levels to reduce GPU load while maintaining visual quality for nearby
+// objects.
+//
+// Distance thresholds are configured in Config (LODDistanceHigh,
+// LODDistanceMedium, LODDistanceLow).
 const (
-	LODVeryHigh LODLevel = iota
-	LODHigh
-	LODMedium
-	LODLow
-	LODVeryLow
+	LODVeryHigh LODLevel = iota // Full detail, closest objects
+	LODHigh                     // High detail, near objects
+	LODMedium                   // Balanced detail, mid-range
+	LODLow                      // Reduced detail, distant objects
+	LODVeryLow                  // Minimal detail, far objects
 )
 
 func (l LODLevel) String() string {
@@ -308,4 +316,24 @@ func (pm *PerformanceMonitor) SetConfig(config *PerformanceConfig) {
 	pm.mu.Lock()
 	defer pm.mu.Unlock()
 	pm.config = config
+}
+
+// Config is an alias for PerformanceConfig to avoid package name stutter.
+// New code should use performance.Config instead of performance.PerformanceConfig.
+type Config = PerformanceConfig
+
+// Monitor is an alias for PerformanceMonitor to avoid package name stutter.
+// New code should use performance.Monitor instead of performance.PerformanceMonitor.
+type Monitor = PerformanceMonitor
+
+// DefaultConfig is an alias for DefaultPerformanceConfig.
+// New code should use performance.DefaultConfig() instead of performance.DefaultPerformanceConfig().
+func DefaultConfig() *Config {
+	return DefaultPerformanceConfig()
+}
+
+// NewMonitor is an alias for NewPerformanceMonitor.
+// New code should use performance.NewMonitor() instead of performance.NewPerformanceMonitor().
+func NewMonitor() *Monitor {
+	return NewPerformanceMonitor()
 }

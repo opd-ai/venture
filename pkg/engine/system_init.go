@@ -77,6 +77,8 @@ type SystemInitResult struct {
 	ItemPickupSystem                            *ItemPickupSystem
 	ProgressionSystem                           *ProgressionSystem
 	SkillLoadoutSystem                          *SkillLoadoutSystem
+	WeaponMasterySystem                         *WeaponMasterySystem
+	AttributeAllocationSystem                   *AttributeAllocationSystem
 	CompanionProgressionSystem                  *CompanionProgressionSystem
 	WeatherAudioSystem                          *WeatherAudioSystem
 	FactionXPBonusSystem                        *FactionXPBonusSystem
@@ -864,6 +866,52 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 	skillLoadoutSystem := NewSkillLoadoutSystem(game.World)
 	result.SkillLoadoutSystem = skillLoadoutSystem
 	game.World.AddSystem(skillLoadoutSystem)
+
+	// 18b. WeaponMasterySystem - tracks weapon proficiency and awards combat bonuses
+	// Players gain XP with each weapon type, unlocking damage/speed/crit bonuses
+	weaponMasterySystem := NewWeaponMasterySystem(game.World)
+	result.WeaponMasterySystem = weaponMasterySystem
+	game.World.AddSystem(weaponMasterySystem)
+
+	// Wire up weapon mastery to combat callbacks
+	result.CombatSystem.AddDamageCallback(func(attacker, target *Entity, damage float64) {
+		weaponType := weaponMasterySystem.GetEquippedWeaponType(attacker)
+		if weaponType != "" {
+			weaponMasterySystem.OnHit(attacker, weaponType, damage)
+		}
+	})
+	result.CombatSystem.AddCriticalHitCallback(func(attacker, target *Entity, damage float64) {
+		weaponType := weaponMasterySystem.GetEquippedWeaponType(attacker)
+		if weaponType != "" {
+			weaponMasterySystem.OnCriticalHit(attacker, weaponType)
+		}
+	})
+	result.CombatSystem.SetKillCallback(func(attacker, target *Entity) {
+		weaponType := weaponMasterySystem.GetEquippedWeaponType(attacker)
+		if weaponType != "" {
+			weaponMasterySystem.OnKill(attacker, weaponType)
+		}
+	})
+
+	// 18c. AttributeAllocationSystem - manages core attribute point allocation
+	// Players spend attribute points on STR/AGI/INT/VIT/END/LCK to customize builds
+	attributeAllocationSystem := NewAttributeAllocationSystem(game.World, config.Seed)
+	result.AttributeAllocationSystem = attributeAllocationSystem
+	game.World.AddSystem(attributeAllocationSystem)
+
+	// Wire attribute allocation to progression level-ups
+	result.ProgressionSystem.AddLevelUpCallback(func(entity *Entity, newLevel int) {
+		// Award attribute points per level (default 3)
+		comp, ok := entity.GetComponent("attribute_allocation")
+		if !ok {
+			return
+		}
+		attrComp, ok := comp.(*AttributeAllocationComponent)
+		if !ok {
+			return
+		}
+		attributeAllocationSystem.AwardPoints(entity, attrComp.PointsPerLevel)
+	})
 
 	// 19. VisualFeedbackSystem - hit flashes and tints
 	visualFeedbackSystem := NewVisualFeedbackSystem()

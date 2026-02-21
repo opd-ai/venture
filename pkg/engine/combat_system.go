@@ -66,6 +66,9 @@ type CombatSystem struct {
 	// Callback for when an attack is blocked (damage reduced)
 	onBlockCallback func(attacker, target *Entity, blockChance, originalDamage, reducedDamage float64)
 
+	// Callback for when an entity is killed by another entity (with attacker info)
+	onKillCallback func(attacker, target *Entity)
+
 	// Logger for combat events
 	logger *logrus.Entry
 }
@@ -516,6 +519,11 @@ func (s *CombatSystem) applyDamageAndFeedback(attacker, target *Entity, health *
 		for _, cb := range s.additionalCriticalHitCallbacks {
 			cb(attacker, target, finalDamage)
 		}
+	}
+
+	// Check if target died from this attack and trigger kill callback
+	if health.IsDead() && s.onKillCallback != nil {
+		s.onKillCallback(attacker, target)
 	}
 }
 
@@ -1008,6 +1016,15 @@ func (s *CombatSystem) SetDeathCallback(callback func(entity *Entity)) {
 		s.logger.Debug("death callback registered")
 	}
 	s.onDeathCallback = callback
+}
+
+// SetKillCallback sets the callback function for kills (includes attacker).
+// Called when an entity is killed by an attack, with both attacker and target info.
+func (s *CombatSystem) SetKillCallback(callback func(attacker, target *Entity)) {
+	if s.logger != nil {
+		s.logger.Debug("kill callback registered")
+	}
+	s.onKillCallback = callback
 }
 
 // SetDamageCallback sets the callback function for damage dealt.

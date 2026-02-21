@@ -267,7 +267,8 @@ type systemsContainer struct {
 	alignmentSystem                             *engine.AlignmentSystem
 	factionReactionSystem                       *engine.FactionReactionSystem
 	skillProgressionSystem                      *engine.SkillProgressionSystem
-	skillLoadoutSystem                          *engine.SkillLoadoutSystem // Manages saved skill loadouts for build swapping
+	skillLoadoutSystem                          *engine.SkillLoadoutSystem        // Manages saved skill loadouts for build swapping
+	attributeAllocationSystem                   *engine.AttributeAllocationSystem // Manages core attribute point allocation
 	visualFeedbackSystem                        *engine.VisualFeedbackSystem
 	weatherSystem                               *engine.WeatherSystem
 	weatherCombatSystem                         *engine.WeatherCombatSystem
@@ -1902,6 +1903,9 @@ func registerNonCriticalSystems(game *engine.EbitenGame, sys *systemsContainer) 
 
 	sys.skillLoadoutSystem = engine.NewSkillLoadoutSystem(game.World)
 	game.World.AddSystem(sys.skillLoadoutSystem)
+
+	sys.attributeAllocationSystem = engine.NewAttributeAllocationSystem(game.World, *seed)
+	game.World.AddSystem(sys.attributeAllocationSystem)
 
 	sys.visualFeedbackSystem = engine.NewVisualFeedbackSystem()
 	game.World.AddSystem(sys.visualFeedbackSystem)

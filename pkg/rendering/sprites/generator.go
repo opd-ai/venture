@@ -279,6 +279,28 @@ func (g *Generator) generateEntityWithTemplate(config Config, entityType string,
 		})
 		detailImg := ebiten.NewImageFromImage(detailBuf)
 		img.DrawImage(detailImg, nil)
+
+		// Apply seed-based creature markings (spots, stripes, patches, etc.)
+		// to make each creature visually unique and immediately distinguishable.
+		creatureForm := EntityTypeToCreatureForm(entityType)
+		markings := GenerateCreatureMarkings(config.Seed, creatureForm)
+		if markings.Type != MarkingNone {
+			// Read current sprite pixels to apply markings on existing content
+			markingBuf := image.NewRGBA(image.Rect(0, 0, config.Width, config.Height))
+			if safeReadPixels(img, markingBuf.Pix) {
+				RenderCreatureMarkings(markingBuf, CreatureMarkingParams{
+					Width:     config.Width,
+					Height:    config.Height,
+					Form:      creatureForm,
+					Direction: string(direction),
+					Seed:      config.Seed,
+					Markings:  markings,
+				})
+				markingImg := ebiten.NewImageFromImage(markingBuf)
+				img.Clear()
+				img.DrawImage(markingImg, nil)
+			}
+		}
 	}
 
 	// Render garment structure lines for humanoid entities (collars, belts,

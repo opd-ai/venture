@@ -4,6 +4,7 @@
 package main
 
 import (
+	"sync"
 	"testing"
 
 	companionhousing "github.com/opd-ai/venture/pkg/integration/companion_housing"
@@ -438,9 +439,9 @@ func TestV9ValidationService_ManagerGetters(t *testing.T) {
 }
 
 func TestGetV9ValidationService_GlobalInstance(t *testing.T) {
-	// Initially nil
-	oldService := v9ValidationService
-	v9ValidationService = nil
+	// Save and reset for isolated test
+	oldService := GetV9ValidationService()
+	resetV9ValidationServiceForTesting(nil)
 
 	if GetV9ValidationService() != nil {
 		t.Error("expected nil before initialization")
@@ -448,14 +449,40 @@ func TestGetV9ValidationService_GlobalInstance(t *testing.T) {
 
 	// Set and verify
 	service := NewV9ValidationService(nil, nil, nil, nil)
-	v9ValidationService = service
+	resetV9ValidationServiceForTesting(service)
 
 	if GetV9ValidationService() != service {
 		t.Error("GetV9ValidationService returned wrong instance")
 	}
 
 	// Restore
-	v9ValidationService = oldService
+	resetV9ValidationServiceForTesting(oldService)
+}
+
+// TestGetV9ValidationService_ConcurrentAccess verifies thread-safe concurrent access.
+func TestGetV9ValidationService_ConcurrentAccess(t *testing.T) {
+	oldService := GetV9ValidationService()
+	defer resetV9ValidationServiceForTesting(oldService)
+
+	service := NewV9ValidationService(nil, nil, nil, nil)
+	resetV9ValidationServiceForTesting(service)
+
+	var wg sync.WaitGroup
+	const numGoroutines = 100
+
+	// Spawn multiple goroutines reading concurrently
+	for i := 0; i < numGoroutines; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			got := GetV9ValidationService()
+			if got != service {
+				t.Errorf("concurrent read returned wrong service")
+			}
+		}()
+	}
+
+	wg.Wait()
 }
 
 func BenchmarkV9ValidationService_ValidateCraftingBonus(b *testing.B) {

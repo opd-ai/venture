@@ -3,7 +3,7 @@
 ## Summary
 
 Audited all source files in `cmd/server/` (11 source files, ~2800 LOC). Found 4 issues:
-2 high, 1 medium, 1 low. Fixed 3 issues (2 high, 1 medium). 1 low remaining.
+2 high, 1 medium, 1 low. **All 4 issues fixed.**
 
 **Coverage**: 65.6% of statements
 
@@ -28,10 +28,15 @@ Audited all source files in `cmd/server/` (11 source files, ~2800 LOC). Found 4 
 
 ### Remaining
 
-4. **[LOW] Global `v9ValidationService` synchronization** (`v9_validation.go:306`)
+_All issues resolved._
+
+### Fixed (Previously Remaining)
+
+4. **[LOW] Global `v9ValidationService` synchronization** (`v9_validation.go:306`) — **FIXED 2026-02-21**
    - Global mutable variable set once during init, read concurrently
-   - Added `sync.Once` wrapper and `SetV9ValidationService()` setter for safe initialization
-   - Low risk since assignment happens once at startup before concurrent access begins
+   - Added `sync.RWMutex` for thread-safe reads and writes
+   - Added `resetV9ValidationServiceForTesting()` helper for thread-safe test isolation
+   - Added `TestGetV9ValidationService_ConcurrentAccess` test with race detector validation
 
 ## Pre-existing Test Failures (Not Related to Audit)
 

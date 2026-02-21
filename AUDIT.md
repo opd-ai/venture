@@ -6,18 +6,18 @@
 
 ## Summary
 
-- **Total issues**: 225 (75 open, 150 resolved)
-- **Critical**: 0 (0 open) | **High**: 43 (0 open) | **Medium**: 42 (0 open) | **Low**: 140 (75 open)
-- **Affected subpackages**: 37 of 108 audited packages have open issues
-- **Resolution rate**: 150/225 (67%)
+- **Total issues**: 225 (74 open, 151 resolved)
+- **Critical**: 0 (0 open) | **High**: 43 (0 open) | **Medium**: 42 (0 open) | **Low**: 140 (74 open)
+- **Affected subpackages**: 36 of 108 audited packages have open issues
+- **Resolution rate**: 151/225 (67%)
 
 | Severity | Total | Open | Resolved |
 |----------|-------|------|----------|
 | Critical | 0 | 0 | 0 |
 | High | 43 | 0 | 43 |
 | Medium | 42 | 0 | 42 |
-| Low | 140 | 75 | 65 |
-| **Total** | **225** | **75** | **150** |
+| Low | 140 | 74 | 66 |
+| **Total** | **225** | **74** | **151** |
 
 ## Priority Resolution Order
 
@@ -51,7 +51,7 @@ _All medium-priority issues have been resolved._
   - [x] Hardcoded screen dimensions — **FIXED 2026-02-21**: Extracted to DefaultScreenWidth/DefaultScreenHeight constants
   - [x] Silent item generation failures — **FIXED 2026-02-21**: Added error logging with logger.WithError().Debug()
 - **cmd/server** (1 issue)
-  - [ ] Global `v9ValidationService` synchronization
+  - [x] Global `v9ValidationService` synchronization — **FIXED 2026-02-21**: Added sync.RWMutex for thread-safe read/write, added resetV9ValidationServiceForTesting() helper, added concurrent access test with race detector
 - **pkg/audio/music** (2 issues)
   - [ ] determinism — `adaptive.go` uses shared `rng` for drum generation which may affect reproducibility (`adaptive.go:646`)
   - [ ] doc coverage — `genre_consistency_test.go` has no package comment explaining test purpose (`genre_consistency_test.go:1`)

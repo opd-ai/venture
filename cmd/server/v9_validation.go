@@ -306,18 +306,35 @@ func (v *V9ValidationService) GetGuildHousingManager() *guildhousing.Manager {
 var (
 	v9ValidationService     *V9ValidationService
 	v9ValidationServiceOnce sync.Once
+	v9ValidationServiceMu   sync.RWMutex // Protects reads and writes for thread safety
 )
 
 // SetV9ValidationService sets the global V9 validation service.
 // Safe for concurrent access; only the first call takes effect.
 func SetV9ValidationService(svc *V9ValidationService) {
 	v9ValidationServiceOnce.Do(func() {
+		v9ValidationServiceMu.Lock()
+		defer v9ValidationServiceMu.Unlock()
 		v9ValidationService = svc
 	})
 }
 
 // GetV9ValidationService returns the global V9 validation service.
 // Returns nil if the server has not been initialized.
+// Thread-safe for concurrent access.
 func GetV9ValidationService() *V9ValidationService {
+	v9ValidationServiceMu.RLock()
+	defer v9ValidationServiceMu.RUnlock()
 	return v9ValidationService
+}
+
+// resetV9ValidationServiceForTesting resets the global service for testing.
+// This function is only for use in tests - it bypasses the sync.Once protection.
+// NOT exported to prevent misuse in production code.
+func resetV9ValidationServiceForTesting(svc *V9ValidationService) {
+	v9ValidationServiceMu.Lock()
+	defer v9ValidationServiceMu.Unlock()
+	v9ValidationService = svc
+	// Reset sync.Once by creating a new instance
+	v9ValidationServiceOnce = sync.Once{}
 }

@@ -59,6 +59,7 @@ func initializeV4Systems(game *engine.EbitenGame, sys *systemsContainer, clientL
 	// Phase 22: Companion systems
 	sys.companionAISystem = engine.NewCompanionAISystem(game.World)
 	sys.companionProgressionSys = engine.NewCompanionProgressionSystem(game.World)
+	sys.companionQuestSynergySys = engine.NewCompanionQuestSynergySystem(game.World)
 	sys.companionLoyaltySys = engine.NewCompanionLoyaltySystem(game.World, clientLogger.Logger)
 	sys.companionInventorySys = engine.NewCompanionInventorySystem(game.World)
 	sys.companionLearningSys = engine.NewCompanionLearningSystem(game.World) // Phase 4.1: Companion learning

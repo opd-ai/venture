@@ -35,6 +35,9 @@ func NewCompanionQuestSynergySystem(world *World) *CompanionQuestSynergySystem {
 
 // Update processes companion-quest synergies for all player entities.
 func (s *CompanionQuestSynergySystem) Update(entities []*Entity, deltaTime float64) {
+	if s == nil {
+		return
+	}
 	s.updateTimer += deltaTime
 	if s.updateTimer < s.updateInterval {
 		return

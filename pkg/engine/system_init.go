@@ -202,6 +202,7 @@ type SystemInitResult struct {
 	EquipmentDamageStateTintSystem              *EquipmentDamageStateTintSystem
 	CreatureGenreTintSystem                     *CreatureGenreTintSystem
 	CreatureSizeProportionSystem                *CreatureSizeProportionSystem
+	CreatureAnatomySystem                       *CreatureAnatomySystem
 	EquipmentRarityDetailSystem                 *EquipmentRarityDetailSystem
 	NpcFacialDetailSystem                       *NpcFacialDetailSystem
 	ProjectileTrailParticleSystem               *ProjectileTrailParticleSystem
@@ -611,6 +612,12 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 	creatureSizeProportionSystem.SetGenre(config.GenreID)
 	result.CreatureSizeProportionSystem = creatureSizeProportionSystem
 	game.World.AddSystem(creatureSizeProportionSystem)
+
+	// 17y1. CreatureAnatomySystem - assigns anatomy types (quadruped, arachnid, etc.) to creatures
+	creatureAnatomySystem := NewCreatureAnatomySystem(game.World, config.Seed+9010)
+	creatureAnatomySystem.SetGenre(config.GenreID)
+	result.CreatureAnatomySystem = creatureAnatomySystem
+	game.World.AddSystem(creatureAnatomySystem)
 
 	// 17z. EquipmentRarityDetailSystem - rarity-based visual detail scaling
 	equipmentRarityDetailSystem := NewEquipmentRarityDetailSystem(game.World, config.Seed+9025)

@@ -203,6 +203,7 @@ type systemsContainer struct {
 	equipmentDamageStateTintSystem              *engine.EquipmentDamageStateTintSystem              // Aggregate equipment wear visual tinting
 	creatureGenreTintSystem                     *engine.CreatureGenreTintSystem                     // Genre-aware creature/NPC sprite color tinting
 	creatureSizeProportionSystem                *engine.CreatureSizeProportionSystem                // Size-based anatomy proportions for creatures
+	creatureAnatomySystem                       *engine.CreatureAnatomySystem                       // Assigns anatomy types (quadruped, arachnid, etc.) to creatures
 	equipmentRarityDetailSystem                 *engine.EquipmentRarityDetailSystem                 // Rarity-based visual detail scaling for equipment
 	npcFacialDetailSystem                       *engine.NpcFacialDetailSystem                       // Genre-aware NPC facial feature parameters
 	dynamicExpressionSystem                     *engine.DynamicExpressionSystem                     // Reactive facial expression updates from game state
@@ -477,8 +478,9 @@ type systemsContainer struct {
 	guildHousingManager *guildhousing.Manager            // Phase 55.3: Guild housing and communal spaces
 
 	// Phase 3.2: Guild Federation (PLAN.md)
-	guildSystem *engine.GuildSystem // Cross-server guild management and sync
-	guildUI     *engine.GuildUI     // Guild UI for player interaction
+	guildSystem            *engine.GuildSystem            // Cross-server guild management and sync
+	guildUI                *engine.GuildUI                // Guild UI for player interaction
+	guildCombatBonusSystem *engine.GuildCombatBonusSystem // Guild proximity combat bonuses
 
 	// Phase 4.3: Territory Control (PLAN.md)
 	territorySystem *engine.TerritorySystem // Territory capture and guild warfare mechanics
@@ -1581,6 +1583,12 @@ func registerNonCriticalSystems(game *engine.EbitenGame, sys *systemsContainer) 
 	sys.creatureSizeProportionSystem = engine.NewCreatureSizeProportionSystem(game.World, *seed+9001)
 	sys.creatureSizeProportionSystem.SetGenre(*genreID)
 	game.World.AddSystem(sys.creatureSizeProportionSystem)
+
+	// CreatureAnatomySystem: assigns anatomy types (quadruped, arachnid, etc.) to creatures
+	// Maps entity names/tags to appropriate nonhumanoid aerial sprite templates
+	sys.creatureAnatomySystem = engine.NewCreatureAnatomySystem(game.World, *seed+9010)
+	sys.creatureAnatomySystem.SetGenre(*genreID)
+	game.World.AddSystem(sys.creatureAnatomySystem)
 
 	// EquipmentRarityDetailSystem: rarity-based visual detail scaling for equipment
 	// Scales shape complexity, color vibrancy, border sharpness, and material fidelity by rarity

@@ -610,6 +610,12 @@ func initializePhase3Systems(game *engine.EbitenGame, sys *systemsContainer, cli
 	sys.guildSystem = engine.NewGuildSystem(game.World, guildManager)
 	sys.guildUI = engine.NewGuildUI(game.World, sys.guildSystem, *width, *height)
 
+	// Phase 3.2b: Guild Combat Bonus System - proximity-based combat bonuses for guild members
+	sys.guildCombatBonusSystem = engine.NewGuildCombatBonusSystem(game.World, *seed+5152)
+	sys.guildCombatBonusSystem.SetGenre(*genreID)
+	game.World.AddSystem(sys.guildCombatBonusSystem)
+	logging.ComponentLogger(clientLogger.Logger, "guild_combat_bonus").Debug("Created guild combat bonus system")
+
 	// Connect guild system to federation protocol for cross-server sync
 	if sys.federationProtocol != nil {
 		sys.guildSystem.SetFederation(sys.federationProtocol)

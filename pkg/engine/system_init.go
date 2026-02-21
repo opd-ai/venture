@@ -84,6 +84,7 @@ type SystemInitResult struct {
 	SkillMutationSystem                         *SkillMutationSystem
 	BuildTemplateSystem                         *BuildTemplateSystem
 	EquipmentSetBonusSystem                     *EquipmentSetBonusSystem
+	ElementalWeaponEffectSystem                 *ElementalWeaponEffectSystem
 	CompanionProgressionSystem                  *CompanionProgressionSystem
 	WeatherAudioSystem                          *WeatherAudioSystem
 	FactionXPBonusSystem                        *FactionXPBonusSystem
@@ -1029,6 +1030,13 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 	equipmentSetBonusSystem := NewEquipmentSetBonusSystem(config.Seed, config.GenreID, config.Logger)
 	result.EquipmentSetBonusSystem = equipmentSetBonusSystem
 	game.World.AddSystem(equipmentSetBonusSystem)
+
+	// 18f. ElementalWeaponEffectSystem - animates elemental weapon visual effects
+	// Weapons with fire, ice, lightning, poison, holy, or shadow enchantments display
+	// animated visual effects (flames, frost, sparks, etc.) that update each frame
+	elementalWeaponEffectSystem := NewElementalWeaponEffectSystem(game.World)
+	result.ElementalWeaponEffectSystem = elementalWeaponEffectSystem
+	game.World.AddSystem(elementalWeaponEffectSystem)
 
 	// 19. VisualFeedbackSystem - hit flashes and tints
 	visualFeedbackSystem := NewVisualFeedbackSystem()

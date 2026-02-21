@@ -105,7 +105,7 @@ Phases 1 and 2 can proceed in parallel. Phase 3 depends on both. Phase 4 depends
 - **Fix**: Accept a seed parameter (or use the world seed stored in defaults) and generate via `rand.New(rand.NewSource(seed))`. Example: `rng := rand.New(rand.NewSource(seed)); prefix := prefixes[rng.Intn(len(prefixes))]`.
 - **Acceptance**: Same seed always produces same name. No `time.Now()` or global `rand` usage.
 
-- [ ] Refactor `generateRandomName()` to use seed-based RNG at `pkg/engine/character_creation.go:1029`
+- [x] Refactor `generateRandomName()` to use seed-based RNG at `pkg/engine/character_creation.go:1029`
 
 ### 1.9 `ImportState` Clamp Bug (S)
 

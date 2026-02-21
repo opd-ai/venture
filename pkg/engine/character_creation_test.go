@@ -965,3 +965,110 @@ func TestSetDefaultNameFromSeed_Integration(t *testing.T) {
 		t.Errorf("After Reset(), nameInput = %q, want default %q", cc.nameInput, defaultName)
 	}
 }
+
+// TestGenerateRandomName_Deterministic verifies that generateRandomName produces deterministic results.
+// Same seed + counter + class should always produce the same name.
+func TestGenerateRandomName_Deterministic(t *testing.T) {
+	tests := []struct {
+		name  string
+		seed  int64
+		class CharacterClass
+	}{
+		{"seed12345_warrior", 12345, ClassWarrior},
+		{"seed0_mage", 0, ClassMage},
+		{"seed999999_rogue", 999999, ClassRogue},
+		{"negative_seed", -12345, ClassWarrior},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Create first character creation instance
+			cc1 := NewCharacterCreation(800, 600)
+			cc1.SetDefaultNameFromSeed(tt.seed)
+			cc1.selectedClass = tt.class
+
+			// Generate name with first instance
+			name1 := cc1.generateRandomName()
+
+			// Create second character creation instance with same seed
+			cc2 := NewCharacterCreation(800, 600)
+			cc2.SetDefaultNameFromSeed(tt.seed)
+			cc2.selectedClass = tt.class
+
+			// Generate name with second instance
+			name2 := cc2.generateRandomName()
+
+			// Should be identical
+			if name1 != name2 {
+				t.Errorf("generateRandomName() not deterministic: got %q and %q for seed %d",
+					name1, name2, tt.seed)
+			}
+
+			// Name should not be empty
+			if name1 == "" {
+				t.Error("generateRandomName() returned empty string")
+			}
+		})
+	}
+}
+
+// TestGenerateRandomName_DifferentSeeds verifies that different seeds produce different names.
+func TestGenerateRandomName_DifferentSeeds(t *testing.T) {
+	cc1 := NewCharacterCreation(800, 600)
+	cc1.SetDefaultNameFromSeed(12345)
+	cc1.selectedClass = ClassWarrior
+	name1 := cc1.generateRandomName()
+
+	cc2 := NewCharacterCreation(800, 600)
+	cc2.SetDefaultNameFromSeed(67890)
+	cc2.selectedClass = ClassWarrior
+	name2 := cc2.generateRandomName()
+
+	// Different seeds should produce different names (high probability)
+	if name1 == name2 {
+		t.Logf("Warning: different seeds produced same name (possible but unlikely): %q", name1)
+	}
+}
+
+// TestGenerateRandomName_MultipleCallsVary verifies that multiple calls produce varied names.
+func TestGenerateRandomName_MultipleCallsVary(t *testing.T) {
+	cc := NewCharacterCreation(800, 600)
+	cc.SetDefaultNameFromSeed(12345)
+	cc.selectedClass = ClassWarrior
+
+	// Generate multiple names
+	names := make(map[string]bool)
+	for i := 0; i < 10; i++ {
+		name := cc.generateRandomName()
+		names[name] = true
+	}
+
+	// Should have at least 2 unique names from 10 generations
+	if len(names) < 2 {
+		t.Errorf("generateRandomName() should vary across calls: got only %d unique names from 10 calls",
+			len(names))
+	}
+}
+
+// TestGenerateRandomName_NoUIStateDependency verifies name generation doesn't depend on UI state.
+func TestGenerateRandomName_NoUIStateDependency(t *testing.T) {
+	// Create two instances with same seed but different UI state
+	cc1 := NewCharacterCreation(800, 600)
+	cc1.SetDefaultNameFromSeed(12345)
+	cc1.selectedClass = ClassWarrior
+	cc1.nameInput = ""
+
+	cc2 := NewCharacterCreation(800, 600)
+	cc2.SetDefaultNameFromSeed(12345)
+	cc2.selectedClass = ClassWarrior
+	cc2.nameInput = "SomePreviousName"
+
+	// Both should produce same name since seed and counter are the same
+	name1 := cc1.generateRandomName()
+	name2 := cc2.generateRandomName()
+
+	if name1 != name2 {
+		t.Errorf("generateRandomName() depends on UI state: empty input=%q, with input=%q",
+			name1, name2)
+	}
+}

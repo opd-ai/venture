@@ -8,6 +8,7 @@ import (
 	"image"
 	"image/color"
 	"image/png"
+	"math/rand"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -400,6 +401,10 @@ type EbitenCharacterCreation struct {
 
 	// Preset name buttons for WASM/mobile fallback
 	presetNameButtons []*mobile.TouchButton
+
+	// Deterministic name generation
+	worldSeed      int64 // World seed for deterministic name generation
+	nameGenCounter int   // Counter to allow multiple unique name generations per seed
 }
 
 // NewCharacterCreation creates a new character creation system
@@ -485,6 +490,7 @@ func (cc *EbitenCharacterCreation) SetDefaults(defaults CharacterCreationDefault
 // SetDefaultNameFromSeed sets the default character name based on world seed.
 // Uses deterministic selection to ensure the same seed always produces the same name.
 func (cc *EbitenCharacterCreation) SetDefaultNameFromSeed(seed int64) {
+	cc.worldSeed = seed // Store seed for generateRandomName
 	defaultName := procgen.SelectDefaultName(seed)
 	cc.defaults.DefaultName = defaultName
 	// Apply to current state if we're in name input step
@@ -1022,17 +1028,20 @@ func (cc *EbitenCharacterCreation) handlePresetName(preset string) {
 	cc.errorMsg = "Name set to: " + cc.nameInput
 }
 
-// generateRandomName generates a random character name based on selected class
-// Provides fallback for WASM/mobile if keyboard isn't working
+// generateRandomName generates a random character name deterministically.
+// Uses the stored world seed combined with a counter for reproducible but varied names.
 func (cc *EbitenCharacterCreation) generateRandomName() string {
-	// Simple name generation - combine prefix and suffix
 	prefixes := []string{"Brave", "Swift", "Dark", "Elder", "Noble", "Shadow", "Storm", "Iron", "Silver", "Golden"}
 	suffixes := []string{"blade", "heart", "fist", "eye", "soul", "wind", "fire", "steel", "wing", "star"}
 
-	// Use simple randomization based on current time-like value
-	// For true randomness, would need proper seeding
-	prefix := prefixes[len(cc.nameInput)%len(prefixes)]
-	suffix := suffixes[cc.selectedClass%CharacterClass(len(suffixes))]
+	// Combine world seed with counter for deterministic but varied generation
+	// Each call produces a different name, but same seed+counter always produces same name
+	combinedSeed := cc.worldSeed + int64(cc.nameGenCounter)*1000 + int64(cc.selectedClass)*100
+	cc.nameGenCounter++
+
+	rng := rand.New(rand.NewSource(combinedSeed))
+	prefix := prefixes[rng.Intn(len(prefixes))]
+	suffix := suffixes[rng.Intn(len(suffixes))]
 
 	return prefix + suffix
 }

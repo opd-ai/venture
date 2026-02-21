@@ -1,12 +1,13 @@
 # Audit: github.com/opd-ai/venture/pkg/procgen/faction
 **Date**: 2026-02-16
 **Status**: Complete
+**Last Updated**: 2026-02-21
 
 ## Summary
-The faction package generates procedurally generated factions with relationships, member counts, and genre-appropriate characteristics. Code quality is high with 93% test coverage, deterministic generation, and comprehensive validation. One notable issue: `engine.Faction` has behavior methods (`IsEnemy`, `IsAlly`) which technically violates ECS purity principles, though this is a shared data structure, not a Component.
+The faction package generates procedurally generated factions with relationships, member counts, and genre-appropriate characteristics. Code quality is high with 93% test coverage, deterministic generation, and comprehensive validation. One notable issue: `engine.Faction` has behavior methods (`IsEnemy`, `IsAlly`) which technically violates ECS purity principles, though this is a shared data structure, not a Component. **Update 2026-02-21**: ECS compliance issue resolved by extracting logic to helper functions.
 
 ## Issues Found
-- [ ] <severity:low> ECS compliance — `engine.Faction` struct has behavior methods `IsEnemy()` and `IsAlly()` instead of being pure data (`pkg/engine/faction_component.go:137-143`)
+- [x] <severity:low> ECS compliance — `engine.Faction` struct has behavior methods `IsEnemy()` and `IsAlly()` instead of being pure data (`pkg/engine/faction_component.go:137-143`) — **FIXED 2026-02-21**: Extracted logic to standalone helper functions `FactionIsEnemy()`, `FactionIsAlly()`, `FactionGetRelationship()` in `faction_component.go`. Original methods retained with deprecation notices for backward compatibility. Added comprehensive tests including nil-safety and method/helper parity verification.
 - [ ] <severity:low> Documentation — Missing benchmark tests for performance validation despite doc.go claiming <1-3ms generation times (`generator_test.go:1`)
 - [ ] <severity:low> Error handling — No logging on validation errors; errors are only returned without structured logging context (`generator.go:29-31`)
 

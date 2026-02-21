@@ -306,3 +306,146 @@ func TestReputationChange_Constants(t *testing.T) {
 		})
 	}
 }
+
+// Tests for ECS-compliant helper functions
+
+func TestFactionIsEnemy_Helper(t *testing.T) {
+	faction := &Faction{
+		ID: "faction1",
+		Relationships: map[string]int{
+			"faction2": 75,
+			"faction3": -60,
+			"faction4": -50,
+			"faction5": -49,
+		},
+	}
+
+	tests := []struct {
+		name     string
+		faction  *Faction
+		otherID  string
+		expected bool
+	}{
+		{"Allied faction is not enemy", faction, "faction2", false},
+		{"Enemy faction", faction, "faction3", true},
+		{"Enemy at boundary", faction, "faction4", true},
+		{"Not enemy at -49", faction, "faction5", false},
+		{"Unknown faction is not enemy", faction, "unknown", false},
+		{"Nil faction is not enemy", nil, "faction2", false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := FactionIsEnemy(tt.faction, tt.otherID); got != tt.expected {
+				t.Errorf("FactionIsEnemy() = %v, want %v", got, tt.expected)
+			}
+		})
+	}
+}
+
+func TestFactionIsAlly_Helper(t *testing.T) {
+	faction := &Faction{
+		ID: "faction1",
+		Relationships: map[string]int{
+			"faction2": 75,
+			"faction3": 51,
+			"faction4": 50,
+			"faction5": -60,
+		},
+	}
+
+	tests := []struct {
+		name     string
+		faction  *Faction
+		otherID  string
+		expected bool
+	}{
+		{"Allied faction", faction, "faction2", true},
+		{"Allied at boundary", faction, "faction3", true},
+		{"Not allied at 50", faction, "faction4", false},
+		{"Enemy is not ally", faction, "faction5", false},
+		{"Unknown faction is not ally", faction, "unknown", false},
+		{"Nil faction is not ally", nil, "faction2", false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := FactionIsAlly(tt.faction, tt.otherID); got != tt.expected {
+				t.Errorf("FactionIsAlly() = %v, want %v", got, tt.expected)
+			}
+		})
+	}
+}
+
+func TestFactionGetRelationship_Helper(t *testing.T) {
+	faction := &Faction{
+		ID: "faction1",
+		Relationships: map[string]int{
+			"faction2": 75,
+			"faction3": -60,
+		},
+	}
+
+	tests := []struct {
+		name     string
+		faction  *Faction
+		otherID  string
+		expected int
+	}{
+		{"Allied faction relationship", faction, "faction2", 75},
+		{"Enemy faction relationship", faction, "faction3", -60},
+		{"Unknown faction defaults to neutral", faction, "unknown", 0},
+		{"Nil faction returns neutral", nil, "faction2", 0},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := FactionGetRelationship(tt.faction, tt.otherID); got != tt.expected {
+				t.Errorf("FactionGetRelationship() = %v, want %v", got, tt.expected)
+			}
+		})
+	}
+}
+
+func TestFactionHelpers_MatchMethodBehavior(t *testing.T) {
+	// Verify that helper functions and methods produce identical results
+	faction := &Faction{
+		ID: "faction1",
+		Relationships: map[string]int{
+			"ally":    75,
+			"enemy":   -75,
+			"neutral": 0,
+		},
+	}
+
+	otherIDs := []string{"ally", "enemy", "neutral", "unknown"}
+
+	for _, otherID := range otherIDs {
+		t.Run("IsEnemy_"+otherID, func(t *testing.T) {
+			methodResult := faction.IsEnemy(otherID)
+			helperResult := FactionIsEnemy(faction, otherID)
+			if methodResult != helperResult {
+				t.Errorf("IsEnemy mismatch for %s: method=%v, helper=%v",
+					otherID, methodResult, helperResult)
+			}
+		})
+
+		t.Run("IsAlly_"+otherID, func(t *testing.T) {
+			methodResult := faction.IsAlly(otherID)
+			helperResult := FactionIsAlly(faction, otherID)
+			if methodResult != helperResult {
+				t.Errorf("IsAlly mismatch for %s: method=%v, helper=%v",
+					otherID, methodResult, helperResult)
+			}
+		})
+
+		t.Run("GetRelationship_"+otherID, func(t *testing.T) {
+			methodResult := faction.GetRelationship(otherID)
+			helperResult := FactionGetRelationship(faction, otherID)
+			if methodResult != helperResult {
+				t.Errorf("GetRelationship mismatch for %s: method=%v, helper=%v",
+					otherID, methodResult, helperResult)
+			}
+		})
+	}
+}

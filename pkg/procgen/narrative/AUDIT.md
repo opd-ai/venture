@@ -7,7 +7,7 @@ The `pkg/procgen/narrative` package provides procedural generation of three-act 
 
 ## Issues Found
 - [ ] <severity:low> error handling — No structured logging in generator; errors returned but not logged with context. Adding logrus integration would improve debugging. (`generator.go:95-133`)
-- [ ] <severity:low> documentation — Missing godoc comments for exported types `PlotPoint` and `PlayerChoice`. Only `StoryArc` and `StoryArcGenerator` are documented. (`generator.go:40,67`)
+- [x] <severity:low> documentation — Missing godoc comments for exported types `PlotPoint` and `PlayerChoice`. Only `StoryArc` and `StoryArcGenerator` are documented. (`generator.go:40,67`) — **VERIFIED 2026-02-21**: Both types now have godoc comments ("PlotPoint represents a significant story beat within the narrative." and "PlayerChoice represents a decision point in the narrative.")
 
 ## Test Coverage
 93.9% (target: 65%)

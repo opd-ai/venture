@@ -6,18 +6,18 @@
 
 ## Summary
 
-- **Total issues**: 225 (46 open, 179 resolved)
-- **Critical**: 0 (0 open) | **High**: 43 (0 open) | **Medium**: 42 (0 open) | **Low**: 140 (46 open)
-- **Affected subpackages**: 25 of 108 audited packages have open issues
-- **Resolution rate**: 179/225 (80%)
+- **Total issues**: 225 (39 open, 186 resolved)
+- **Critical**: 0 (0 open) | **High**: 43 (0 open) | **Medium**: 42 (0 open) | **Low**: 140 (39 open)
+- **Affected subpackages**: 23 of 108 audited packages have open issues
+- **Resolution rate**: 186/225 (83%)
 
 | Severity | Total | Open | Resolved |
 |----------|-------|------|----------|
 | Critical | 0 | 0 | 0 |
 | High | 43 | 0 | 43 |
 | Medium | 42 | 0 | 42 |
-| Low | 140 | 46 | 94 |
-| **Total** | **225** | **46** | **179** |
+| Low | 140 | 39 | 101 |
+| **Total** | **225** | **39** | **186** |
 
 ## Priority Resolution Order
 
@@ -109,9 +109,9 @@ _All medium-priority issues have been resolved._
   - [ ] performance — `selectWeightedWord` temperature weighting could use cached power calculations for common temperatures (`utils.go:126-153`)
   - [ ] doc — `hash64` function lacks godoc comment explaining fallback usage (`utils.go:184`)
   - [ ] testing — No benchmark for `GenerateWithPersonality` method (only benchmarks for Generate, GenerateDeterministic) (`markov_test.go:396-444`)
-- **pkg/procgen/entity** (4 issues)
-  - [ ] **Doc coverage** — MerchantData type missing godoc comment (`merchant.go:17`)
-  - [ ] **Doc coverage** — generateMerchantInventory method missing godoc comment (`merchant.go:162`)
+- **pkg/procgen/entity** (2 open, 2 resolved)
+  - [x] **Doc coverage** — MerchantData type missing godoc comment (`merchant.go:17`) — **VERIFIED 2026-02-21**: Already has godoc comment
+  - [x] **Doc coverage** — generateMerchantInventory method missing godoc comment (`merchant.go:162`) — **VERIFIED 2026-02-21**: Already has godoc comment
   - [ ] **Performance** — Merchant inventory pre-allocation creates full array then trims; could optimize to use append with cap (`merchant.go:166-214`)
   - [ ] **Error handling** — generateMerchantInventory logs warnings but continues on item generation failure; no aggregate error count returned (`merchant.go:198-201`)
 - **pkg/procgen/faction** (3 issues)
@@ -136,9 +136,9 @@ _All medium-priority issues have been resolved._
   - [ ] test coverage — `System.Update()` method 0% coverage; documented as no-op but should have explicit test (`system.go:30`)
   - [ ] test coverage — `determineGameStatus()` function 40% coverage; not all game state transitions tested (`memory.go:151`)
   - [ ] test coverage — `GetRenderOutput()` methods 66.7% coverage across all games; nil LastRender edge case undertested (all game files)
-- **pkg/procgen/narrative** (2 issues)
+- **pkg/procgen/narrative** (1 open, 1 resolved)
   - [ ] error handling — No structured logging in generator; errors returned but not logged with context. Adding logrus integration would improve debugging. (`generator.go:95-133`)
-  - [ ] documentation — Missing godoc comments for exported types `PlotPoint` and `PlayerChoice`. Only `StoryArc` and `StoryArcGenerator` are documented. (`generator.go:40,67`)
+  - [x] documentation — Missing godoc comments for exported types `PlotPoint` and `PlayerChoice`. Only `StoryArc` and `StoryArcGenerator` are documented. (`generator.go:40,67`) — **VERIFIED 2026-02-21**: Both types now have godoc comments
 - **pkg/procgen/skills** (2 issues)
   - [x] deprecated — api — Uses deprecated `strings.Title` which should be replaced with `cases.Title(language.English)` from golang.org/x/text/cases (`generator.go:355`) — **FIXED 2026-02-21**
   - [ ] doc — coverage — README.md exists and is comprehensive; all exported types/functions have godoc; package doc.go complete (no issue, but noted for completeness)
@@ -148,9 +148,9 @@ _All medium-priority issues have been resolved._
   - [ ] documentation — VehicleGenerator struct fields `templates` and `logger` lack individual godoc comments (`generator.go:17-18`)
 - **pkg/rendering/parallel** (1 issue)
   - [ ] stub/incomplete code — `processTask` method contains placeholder comment indicating actual processing delegated to Renderer (`worker_pool.go:180`)
-- **pkg/rendering/particles** (2 issues)
-  - [ ] deterministic procgen — `pool.go:386` uses `time.Now().UnixNano()` for LRU cache ordering in `ambienceCache.nanoTime()`. Does not affect generation determinism (only cache eviction order), but violates strict "no time.Now()" guideline. Replace with monotonic counter.
-  - [ ] doc coverage — 3 exported types lack godoc comments: `ParticleBehavior.Has()` (`behaviors.go:41`), `PhysicsType.String()` (`physics.go:28`), `SpatialHash` methods (`physics.go:250,256,263`).
+- **pkg/rendering/particles** (0 open, 2 resolved)
+  - [x] deterministic procgen — `pool.go:386` uses `time.Now().UnixNano()` for LRU cache ordering in `ambienceCache.nanoTime()`. Does not affect generation determinism (only cache eviction order), but violates strict "no time.Now()" guideline. Replace with monotonic counter. — **FIXED 2026-02-21**: Replaced `nanoTime()` with `nextLRUSequence()` using `sync/atomic` monotonic counter.
+  - [x] doc coverage — 3 exported types lack godoc comments: `ParticleBehavior.Has()` (`behaviors.go:41`), `PhysicsType.String()` (`physics.go:28`), `SpatialHash` methods (`physics.go:250,256,263`). — **VERIFIED 2026-02-21**: All methods already have godoc comments.
 - **pkg/rendering/sprites** (1 issue)
   - [ ] Doc coverage — cache.go missing package-level godoc comment (`cache.go:1`)
 - **pkg/saveload** (3 issues)
@@ -592,9 +592,9 @@ _All medium-priority issues have been resolved._
 
 #### `pkg/procgen/entity`
 - Source: [`pkg/procgen/entity/AUDIT.md`](pkg/procgen/entity/AUDIT.md)
-- Issues: 4 open (Low: 4)
-  - [Low] **Doc coverage** — MerchantData type missing godoc comment (`merchant.go:17`)
-  - [Low] **Doc coverage** — generateMerchantInventory method missing godoc comment (`merchant.go:162`)
+- Issues: 2 open, 2 resolved (Low: 4)
+  - ~~[Low] **Doc coverage** — MerchantData type missing godoc comment (`merchant.go:17`)~~ ✅ **VERIFIED 2026-02-21**: Already has godoc comment
+  - ~~[Low] **Doc coverage** — generateMerchantInventory method missing godoc comment (`merchant.go:162`)~~ ✅ **VERIFIED 2026-02-21**: Already has godoc comment
   - [Low] **Performance** — Merchant inventory pre-allocation creates full array then trims; could optimize to use append with cap (`merchant.go:166-214`)
   - [Low] **Error handling** — generateMerchantInventory logs warnings but continues on item generation failure; no aggregate error count returned (`merchant.go:198-201`)
 
@@ -649,9 +649,9 @@ _All medium-priority issues have been resolved._
 
 #### `pkg/procgen/narrative`
 - Source: [`pkg/procgen/narrative/AUDIT.md`](pkg/procgen/narrative/AUDIT.md)
-- Issues: 2 open (Low: 2)
+- Issues: 1 open, 1 resolved (Low: 2)
   - [Low] error handling — No structured logging in generator; errors returned but not logged with context. Adding logrus integration would improve debugging. (`generator.go:95-133`)
-  - [Low] documentation — Missing godoc comments for exported types `PlotPoint` and `PlayerChoice`. Only `StoryArc` and `StoryArcGenerator` are documented. (`generator.go:40,67`)
+  - ~~[Low] documentation — Missing godoc comments for exported types `PlotPoint` and `PlayerChoice`. Only `StoryArc` and `StoryArcGenerator` are documented. (`generator.go:40,67`)~~ ✅ **VERIFIED 2026-02-21**: Both types now have godoc comments
 
 #### `pkg/procgen/puzzle`
 - Source: [`pkg/procgen/puzzle/AUDIT.md`](pkg/procgen/puzzle/AUDIT.md)
@@ -749,9 +749,9 @@ _All medium-priority issues have been resolved._
 
 #### `pkg/rendering/particles`
 - Source: [`pkg/rendering/particles/AUDIT.md`](pkg/rendering/particles/AUDIT.md)
-- Issues: 2 open (Low: 2)
-  - [Low] deterministic procgen — `pool.go:386` uses `time.Now().UnixNano()` for LRU cache ordering in `ambienceCache.nanoTime()`. Does not affect generation determinism (only cache eviction order), but violates strict "no time.Now()" guideline. Replace with monotonic counter.
-  - [Low] doc coverage — 3 exported types lack godoc comments: `ParticleBehavior.Has()` (`behaviors.go:41`), `PhysicsType.String()` (`physics.go:28`), `SpatialHash` methods (`physics.go:250,256,263`).
+- Issues: 0 open, 2 resolved (Low: 2)
+  - ~~[Low] deterministic procgen — `pool.go:386` uses `time.Now().UnixNano()` for LRU cache ordering in `ambienceCache.nanoTime()`. Does not affect generation determinism (only cache eviction order), but violates strict "no time.Now()" guideline. Replace with monotonic counter.~~ ✅ **FIXED 2026-02-21**: Replaced with atomic counter
+  - ~~[Low] doc coverage — 3 exported types lack godoc comments: `ParticleBehavior.Has()` (`behaviors.go:41`), `PhysicsType.String()` (`physics.go:28`), `SpatialHash` methods (`physics.go:250,256,263`).~~ ✅ **VERIFIED 2026-02-21**: All methods already have godoc comments
 
 #### `pkg/rendering/patterns`
 - Source: [`pkg/rendering/patterns/AUDIT.md`](pkg/rendering/patterns/AUDIT.md)
@@ -938,8 +938,8 @@ _All medium-priority issues have been resolved._
 - **Modding (pkg/modding/)**: 1 open issues (Low: 1)
 - **Narrative (pkg/narrative/)**: 1 open issues (Low: 1)
 - **Network (pkg/network/)**: 0 open issues — _All issues resolved_
-- **Procedural Generation (pkg/procgen/)**: 35 open issues (Medium: 2, Low: 33)
-- **Rendering (pkg/rendering/)**: 4 open issues (Low: 4)
+- **Procedural Generation (pkg/procgen/)**: 32 open issues (Medium: 2, Low: 30)
+- **Rendering (pkg/rendering/)**: 2 open issues (Low: 2)
 - **Save/Load (pkg/saveload/)**: 3 open issues (Low: 3)
 - **Security (pkg/security/)**: 2 open issues (Low: 2)
 - **Social (pkg/social/)**: 4 open issues (Low: 4)
@@ -951,18 +951,18 @@ _All medium-priority issues have been resolved._
 - **Phase 1 (Critical)**: 0 issues — No action required
 - **Phase 2 (High)**: 0 issues — No action required
 - **Phase 3 (Medium)**: 0 issues — All resolved
-- **Phase 4 (Low)**: 46 issues — Address opportunistically
+- **Phase 4 (Low)**: 39 issues — Address opportunistically
 
 ## Resolved Issues Summary
 
-179 issues have been resolved across 40 packages.
+186 issues have been resolved across 40 packages.
 
 | Severity | Resolved |
 |----------|----------|
 | High | 43 |
 | Medium | 42 |
-| Low | 94 |
-| **Total** | **179** |
+| Low | 101 |
+| **Total** | **186** |
 
 ---
 

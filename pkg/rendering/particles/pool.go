@@ -6,7 +6,7 @@ package particles
 import (
 	"math/rand"
 	"sync"
-	"time"
+	"sync/atomic"
 )
 
 // particleSystemPool provides reusable ParticleSystem instances.
@@ -320,6 +320,11 @@ var globalAmbienceCache = &ambienceCache{
 	maxSize: 16, // Cache up to 16 different ambience configurations
 }
 
+// lruCounter is a monotonic counter for LRU ordering.
+// Using a counter instead of time.Now() ensures deterministic cache behavior
+// and avoids time-related issues in tests or cross-platform scenarios.
+var lruCounter int64
+
 // makeAmbienceCacheKey creates a cache key from an AmbienceConfig.
 func makeAmbienceCacheKey(config AmbienceConfig) ambienceCacheKey {
 	return ambienceCacheKey{
@@ -343,7 +348,7 @@ func (c *ambienceCache) get(key ambienceCacheKey) *AmbienceSystem {
 	}
 
 	c.hitCount++
-	entry.lastUsed = nanoTime()
+	entry.lastUsed = nextLRUSequence()
 	entry.accessCnt++
 	return entry.system
 }
@@ -360,7 +365,7 @@ func (c *ambienceCache) put(key ambienceCacheKey, system *AmbienceSystem) {
 
 	c.entries[key] = &ambienceCacheEntry{
 		system:    system,
-		lastUsed:  nanoTime(),
+		lastUsed:  nextLRUSequence(),
 		accessCnt: 1,
 	}
 }
@@ -381,9 +386,11 @@ func (c *ambienceCache) evictOldest() {
 	delete(c.entries, oldestKey)
 }
 
-// nanoTime returns current time in nanoseconds for LRU ordering.
-func nanoTime() int64 {
-	return time.Now().UnixNano()
+// nextLRUSequence returns a monotonically increasing sequence number for LRU ordering.
+// This replaces time.Now().UnixNano() to ensure deterministic cache behavior and
+// avoid time-related issues in testing. Higher values indicate more recent access.
+func nextLRUSequence() int64 {
+	return atomic.AddInt64(&lruCounter, 1)
 }
 
 // Stats returns cache hit/miss statistics.

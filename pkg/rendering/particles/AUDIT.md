@@ -6,8 +6,8 @@
 The `pkg/rendering/particles` package provides comprehensive procedural particle effect generation for the Venture game, including basic particles (sparks, smoke, magic, flame, blood, dust), advanced physics simulations (SPH fluids, fire propagation, smoke turbulence, debris collisions), weather systems (rain, snow, fog, genre-specific effects), and environmental ambience (10 environment types). Package health is excellent with 10 Go files (~6.6K production LOC), 9 test files (~3.8K test LOC), 91.8% test coverage, and full documentation. One low-severity determinism issue found: `nanoTime()` uses `time.Now()` for LRU cache ordering, which is acceptable for non-gameplay cache management but violates strict determinism guidelines. Critical risk: minimal, as the time usage is isolated to performance optimization (cache eviction) and does not affect particle generation reproducibility.
 
 ## Issues Found
-- [ ] <severity:low> deterministic procgen — `pool.go:386` uses `time.Now().UnixNano()` for LRU cache ordering in `ambienceCache.nanoTime()`. Does not affect generation determinism (only cache eviction order), but violates strict "no time.Now()" guideline. Replace with monotonic counter.
-- [ ] <severity:low> doc coverage — 3 exported types lack godoc comments: `ParticleBehavior.Has()` (`behaviors.go:41`), `PhysicsType.String()` (`physics.go:28`), `SpatialHash` methods (`physics.go:250,256,263`).
+- [x] <severity:low> deterministic procgen — `pool.go:386` uses `time.Now().UnixNano()` for LRU cache ordering in `ambienceCache.nanoTime()`. Does not affect generation determinism (only cache eviction order), but violates strict "no time.Now()" guideline. Replace with monotonic counter. — **FIXED 2026-02-21**: Replaced `nanoTime()` with `nextLRUSequence()` using `sync/atomic` monotonic counter.
+- [x] <severity:low> doc coverage — 3 exported types lack godoc comments: `ParticleBehavior.Has()` (`behaviors.go:41`), `PhysicsType.String()` (`physics.go:28`), `SpatialHash` methods (`physics.go:250,256,263`). — **VERIFIED 2026-02-21**: All methods already have godoc comments.
 
 ## Test Coverage
 **91.8%** (target: 65% ✅)

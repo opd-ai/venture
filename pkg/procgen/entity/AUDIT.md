@@ -6,8 +6,8 @@
 The `pkg/procgen/entity` package implements procedural entity generation for monsters, NPCs, bosses, and merchants with full genre support (fantasy, sci-fi, horror, cyberpunk, post-apocalyptic). The package demonstrates excellent ECS compliance with pure data structures, deterministic generation via seed-based RNG, comprehensive test coverage (92.4%), and strong integration with the engine layer. No critical issues found; only minor documentation and optimization opportunities identified.
 
 ## Issues Found
-- [ ] <severity:low> **Doc coverage** — MerchantData type missing godoc comment (`merchant.go:17`)
-- [ ] <severity:low> **Doc coverage** — generateMerchantInventory method missing godoc comment (`merchant.go:162`)
+- [x] <severity:low> **Doc coverage** — MerchantData type missing godoc comment (`merchant.go:17`) — **VERIFIED 2026-02-21**: Already has godoc comment: "MerchantData holds merchant-specific generation data that will be converted to engine components at runtime."
+- [x] <severity:low> **Doc coverage** — generateMerchantInventory method missing godoc comment (`merchant.go:162`) — **VERIFIED 2026-02-21**: Already has godoc comment: "generateMerchantInventory creates merchant stock using the item generator."
 - [ ] <severity:low> **Performance** — Merchant inventory pre-allocation creates full array then trims; could optimize to use append with cap (`merchant.go:166-214`)
 - [ ] <severity:low> **Error handling** — generateMerchantInventory logs warnings but continues on item generation failure; no aggregate error count returned (`merchant.go:198-201`)
 

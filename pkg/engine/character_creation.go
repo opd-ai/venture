@@ -405,6 +405,9 @@ type EbitenCharacterCreation struct {
 	// Deterministic name generation
 	worldSeed      int64 // World seed for deterministic name generation
 	nameGenCounter int   // Counter to allow multiple unique name generations per seed
+
+	// Class pagination - allows viewing hybrid classes via PageUp/PageDown or Tab
+	classPage int // 0 = base classes (1-6), 1+ = hybrid class pages
 }
 
 // NewCharacterCreation creates a new character creation system
@@ -711,41 +714,115 @@ var baseClasses = []CharacterClass{
 	ClassWarrior, ClassMage, ClassRogue, ClassRanger, ClassCleric, ClassNecromancer,
 }
 
+// hybridClasses contains the 15 hybrid classes split into pages of 6
+var hybridClassPages = [][]CharacterClass{
+	// Page 1 (index 1): First 6 hybrids
+	{ClassBattlemage, ClassSpellblade, ClassPaladin, ClassMonk, ClassDeathKnight, ClassWitchHunter},
+	// Page 2 (index 2): Next 6 hybrids
+	{ClassBeastlord, ClassArcaneArcher, ClassShadowPriest, ClassDruid, ClassInquisitor, ClassBloodKnight},
+	// Page 3 (index 3): Final 3 hybrids (Mystic, Warlock, Ninja)
+	{ClassMystic, ClassWarlock, ClassNinja},
+}
+
+// totalClassPages returns the total number of class pages (1 base + N hybrid pages)
+func totalClassPages() int {
+	return 1 + len(hybridClassPages)
+}
+
+// getClassesForPage returns the classes to display on the given page
+func getClassesForPage(page int) []CharacterClass {
+	if page == 0 {
+		return baseClasses
+	}
+	if page > 0 && page <= len(hybridClassPages) {
+		return hybridClassPages[page-1]
+	}
+	return nil
+}
+
+// getPageTitle returns a descriptive title for the given class page
+func getPageTitle(page int) string {
+	if page == 0 {
+		return "Base Classes"
+	}
+	return "Advanced Classes"
+}
+
 // handleArrowKeySelection processes arrow key navigation for class selection
+// Up/Down navigate within the current page, PageUp/PageDown or Tab switch pages
 func (cc *EbitenCharacterCreation) handleArrowKeySelection() {
+	currentClasses := getClassesForPage(cc.classPage)
+	if len(currentClasses) == 0 {
+		return
+	}
+
+	// Find current position in the page
+	currentIdx := -1
+	for i, class := range currentClasses {
+		if class == cc.selectedClass {
+			currentIdx = i
+			break
+		}
+	}
+
+	// Handle up/down within page
 	if inpututil.IsKeyJustPressed(ebiten.KeyArrowUp) {
-		cc.selectedClass--
-		if cc.selectedClass < ClassWarrior {
-			cc.selectedClass = ClassNecromancer
+		if currentIdx <= 0 {
+			// Wrap to last item on this page
+			cc.selectedClass = currentClasses[len(currentClasses)-1]
+		} else {
+			cc.selectedClass = currentClasses[currentIdx-1]
 		}
 	}
 	if inpututil.IsKeyJustPressed(ebiten.KeyArrowDown) {
-		cc.selectedClass++
-		if cc.selectedClass > ClassNecromancer {
-			cc.selectedClass = ClassWarrior
+		if currentIdx < 0 || currentIdx >= len(currentClasses)-1 {
+			// Wrap to first item on this page
+			cc.selectedClass = currentClasses[0]
+		} else {
+			cc.selectedClass = currentClasses[currentIdx+1]
+		}
+	}
+
+	// Handle page navigation: Tab, PageUp, PageDown
+	if inpututil.IsKeyJustPressed(ebiten.KeyTab) ||
+		inpututil.IsKeyJustPressed(ebiten.KeyPageDown) {
+		cc.classPage++
+		if cc.classPage >= totalClassPages() {
+			cc.classPage = 0
+		}
+		// Select first class on new page
+		newClasses := getClassesForPage(cc.classPage)
+		if len(newClasses) > 0 {
+			cc.selectedClass = newClasses[0]
+		}
+	}
+	if inpututil.IsKeyJustPressed(ebiten.KeyPageUp) {
+		cc.classPage--
+		if cc.classPage < 0 {
+			cc.classPage = totalClassPages() - 1
+		}
+		// Select first class on new page
+		newClasses := getClassesForPage(cc.classPage)
+		if len(newClasses) > 0 {
+			cc.selectedClass = newClasses[0]
 		}
 	}
 }
 
 // handleNumberKeySelection processes numeric key shortcuts for direct class selection
+// Numbers 1-6 select the corresponding class on the current page
 func (cc *EbitenCharacterCreation) handleNumberKeySelection() {
-	if inpututil.IsKeyJustPressed(ebiten.Key1) {
-		cc.selectedClass = ClassWarrior
+	currentClasses := getClassesForPage(cc.classPage)
+	if len(currentClasses) == 0 {
+		return
 	}
-	if inpututil.IsKeyJustPressed(ebiten.Key2) {
-		cc.selectedClass = ClassMage
-	}
-	if inpututil.IsKeyJustPressed(ebiten.Key3) {
-		cc.selectedClass = ClassRogue
-	}
-	if inpututil.IsKeyJustPressed(ebiten.Key4) {
-		cc.selectedClass = ClassRanger
-	}
-	if inpututil.IsKeyJustPressed(ebiten.Key5) {
-		cc.selectedClass = ClassCleric
-	}
-	if inpututil.IsKeyJustPressed(ebiten.Key6) {
-		cc.selectedClass = ClassNecromancer
+
+	keys := []ebiten.Key{ebiten.Key1, ebiten.Key2, ebiten.Key3, ebiten.Key4, ebiten.Key5, ebiten.Key6}
+	for i, key := range keys {
+		if inpututil.IsKeyJustPressed(key) && i < len(currentClasses) {
+			cc.selectedClass = currentClasses[i]
+			break
+		}
 	}
 }
 
@@ -755,9 +832,10 @@ func (cc *EbitenCharacterCreation) handleTouchOrMouseClick() bool {
 		return false
 	}
 	mouseX, mouseY, _ := GetTouchOrMousePosition()
-	startY := cc.panelY + 140
+	startY := cc.panelY + 160 // Adjusted for page indicator
 
-	for i, class := range baseClasses {
+	currentClasses := getClassesForPage(cc.classPage)
+	for i, class := range currentClasses {
 		if cc.isClassBoxClicked(mouseX, mouseY, startY, i) {
 			cc.selectedClass = class
 			cc.characterData.Class = cc.selectedClass
@@ -778,9 +856,10 @@ func (cc *EbitenCharacterCreation) isClassBoxClicked(mouseX, mouseY, startY, cla
 // handleTouchOrMouseHover updates selection based on mouse/touch hover position
 func (cc *EbitenCharacterCreation) handleTouchOrMouseHover() {
 	mouseX, mouseY, _ := GetTouchOrMousePosition()
-	startY := cc.panelY + 140
+	startY := cc.panelY + 160 // Adjusted for page indicator
 
-	for i, class := range baseClasses {
+	currentClasses := getClassesForPage(cc.classPage)
+	for i, class := range currentClasses {
 		if cc.isClassBoxClicked(mouseX, mouseY, startY, i) {
 			cc.selectedClass = class
 			break
@@ -1392,10 +1471,18 @@ func (cc *EbitenCharacterCreation) drawClassSelection(screen *ebiten.Image, x, y
 	text.Draw(screen, nameText, basicfont.Face7x13, nameX, y+100,
 		color.RGBA{200, 200, 255, 255})
 
-	// Class options (6 base classes with compact layout)
-	startY := y + 120
+	// Page indicator and category title
+	pageTitle := getPageTitle(cc.classPage)
+	pageInfo := fmt.Sprintf("%s (Page %d/%d)", pageTitle, cc.classPage+1, totalClassPages())
+	pageInfoX := x + w/2 - len(pageInfo)*3
+	text.Draw(screen, pageInfo, basicfont.Face7x13, pageInfoX, y+120,
+		color.RGBA{100, 200, 255, 255})
 
-	for i, class := range baseClasses {
+	// Get classes for current page
+	currentClasses := getClassesForPage(cc.classPage)
+	startY := y + 140
+
+	for i, class := range currentClasses {
 		classY := startY + i*55
 		isSelected := class == cc.selectedClass
 
@@ -1428,26 +1515,30 @@ func (cc *EbitenCharacterCreation) drawClassSelection(screen *ebiten.Image, x, y
 	if cc.defaults.DefaultName != "" {
 		defaultText := fmt.Sprintf("Current default: %s", cc.defaults.DefaultClass.String())
 		defaultX := x + w/2 - len(defaultText)*3
-		text.Draw(screen, defaultText, basicfont.Face7x13, defaultX, y+h-110,
+		text.Draw(screen, defaultText, basicfont.Face7x13, defaultX, y+h-130,
 			color.RGBA{150, 150, 150, 255})
 	}
 
-	// Help text
+	// Help text with page navigation hint
 	helpText1 := "Use ARROW KEYS or 1-6 to select"
-	helpText2 := "TAP/CLICK a class to select and continue"
-	helpText3 := "Press ENTER or click NEXT to continue"
-	helpText4 := "BACKSPACE or click BACK to go back | F2 to save default"
+	helpText2 := "TAB/PageUp/PageDown to switch class pages"
+	helpText3 := "TAP/CLICK a class to select and continue"
+	helpText4 := "Press ENTER or click NEXT to continue"
+	helpText5 := "BACKSPACE or click BACK to go back | F2 to save default"
 	helpX1 := x + w/2 - len(helpText1)*3
 	helpX2 := x + w/2 - len(helpText2)*3
 	helpX3 := x + w/2 - len(helpText3)*3
 	helpX4 := x + w/2 - len(helpText4)*3
+	helpX5 := x + w/2 - len(helpText5)*3
 	text.Draw(screen, helpText1, basicfont.Face7x13, helpX1, y+h-105,
 		color.RGBA{150, 200, 150, 255})
-	text.Draw(screen, helpText2, basicfont.Face7x13, helpX2, y+h-85,
+	text.Draw(screen, helpText2, basicfont.Face7x13, helpX2, y+h-90,
+		color.RGBA{100, 180, 255, 255}) // Blue to highlight page nav
+	text.Draw(screen, helpText3, basicfont.Face7x13, helpX3, y+h-75,
 		color.RGBA{150, 200, 150, 255})
-	text.Draw(screen, helpText3, basicfont.Face7x13, helpX3, y+h-65,
+	text.Draw(screen, helpText4, basicfont.Face7x13, helpX4, y+h-60,
 		color.RGBA{150, 200, 150, 255})
-	text.Draw(screen, helpText4, basicfont.Face7x13, helpX4, y+h-45,
+	text.Draw(screen, helpText5, basicfont.Face7x13, helpX5, y+h-45,
 		color.RGBA{150, 200, 150, 255})
 }
 

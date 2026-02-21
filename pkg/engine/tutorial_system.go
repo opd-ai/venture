@@ -489,12 +489,28 @@ func (ts *EbitenTutorialSystem) ImportState(enabled, showUI bool, currentStepIdx
 		}
 	}
 
+	// Check if all steps are completed - if so, keep tutorial disabled
+	allComplete := len(ts.Steps) > 0
+	for _, step := range ts.Steps {
+		if !step.Completed {
+			allComplete = false
+			break
+		}
+	}
+	if allComplete {
+		// Tutorial was completed - don't re-enable or clamp the index
+		ts.Enabled = false
+		ts.ShowUI = false
+		ts.CurrentStepIdx = len(ts.Steps)
+		return
+	}
+
 	// Validate currentStepIdx (in case tutorial steps changed between save/load)
 	// Clamp negative values to 0
 	if ts.CurrentStepIdx < 0 {
 		ts.CurrentStepIdx = 0
 	}
-	// Clamp values beyond step count to last step
+	// Clamp values beyond step count to last step (only for incomplete tutorials)
 	if ts.CurrentStepIdx >= len(ts.Steps) {
 		ts.CurrentStepIdx = len(ts.Steps) - 1
 		if ts.CurrentStepIdx < 0 {

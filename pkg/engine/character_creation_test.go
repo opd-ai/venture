@@ -1285,3 +1285,91 @@ func TestGetClassStats_AllBaseClasses(t *testing.T) {
 		}
 	})
 }
+
+// TestClassPagination verifies that class pagination correctly organizes all 21 classes
+func TestClassPagination(t *testing.T) {
+	t.Run("total pages is 4", func(t *testing.T) {
+		if totalClassPages() != 4 {
+			t.Errorf("totalClassPages() = %d, want 4", totalClassPages())
+		}
+	})
+
+	t.Run("page 0 returns base classes", func(t *testing.T) {
+		classes := getClassesForPage(0)
+		if len(classes) != 6 {
+			t.Errorf("page 0 has %d classes, want 6", len(classes))
+		}
+		if classes[0] != ClassWarrior {
+			t.Errorf("first class on page 0 is %v, want ClassWarrior", classes[0])
+		}
+		if classes[5] != ClassNecromancer {
+			t.Errorf("last class on page 0 is %v, want ClassNecromancer", classes[5])
+		}
+	})
+
+	t.Run("page 1 returns first hybrid classes", func(t *testing.T) {
+		classes := getClassesForPage(1)
+		if len(classes) != 6 {
+			t.Errorf("page 1 has %d classes, want 6", len(classes))
+		}
+		if classes[0] != ClassBattlemage {
+			t.Errorf("first class on page 1 is %v, want ClassBattlemage", classes[0])
+		}
+	})
+
+	t.Run("page 3 returns final hybrid classes", func(t *testing.T) {
+		classes := getClassesForPage(3)
+		if len(classes) != 3 {
+			t.Errorf("page 3 has %d classes, want 3", len(classes))
+		}
+		if classes[len(classes)-1] != ClassNinja {
+			t.Errorf("last class on page 3 is %v, want ClassNinja", classes[len(classes)-1])
+		}
+	})
+
+	t.Run("invalid page returns nil", func(t *testing.T) {
+		classes := getClassesForPage(99)
+		if classes != nil {
+			t.Errorf("page 99 should return nil, got %v", classes)
+		}
+	})
+
+	t.Run("all 21 classes are reachable", func(t *testing.T) {
+		allClasses := make(map[CharacterClass]bool)
+		for page := 0; page < totalClassPages(); page++ {
+			for _, class := range getClassesForPage(page) {
+				allClasses[class] = true
+			}
+		}
+		if len(allClasses) != 21 {
+			t.Errorf("total unique classes across pages = %d, want 21", len(allClasses))
+		}
+	})
+}
+
+// TestClassPageNavigation verifies the EbitenCharacterCreation pagination field
+func TestClassPageNavigation(t *testing.T) {
+	cc := NewCharacterCreation(800, 600)
+
+	t.Run("initial page is 0", func(t *testing.T) {
+		if cc.classPage != 0 {
+			t.Errorf("initial classPage = %d, want 0", cc.classPage)
+		}
+	})
+
+	t.Run("can switch pages", func(t *testing.T) {
+		cc.classPage = 1
+		if cc.classPage != 1 {
+			t.Errorf("classPage = %d, want 1", cc.classPage)
+		}
+	})
+
+	t.Run("page title changes per page", func(t *testing.T) {
+		if getPageTitle(0) != "Base Classes" {
+			t.Errorf("page 0 title = %q, want 'Base Classes'", getPageTitle(0))
+		}
+		if getPageTitle(1) != "Advanced Classes" {
+			t.Errorf("page 1 title = %q, want 'Advanced Classes'", getPageTitle(1))
+		}
+	})
+}

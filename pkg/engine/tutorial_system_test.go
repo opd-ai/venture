@@ -1009,3 +1009,36 @@ func TestTutorialSystem_Resize_MultipleResolutions(t *testing.T) {
 		})
 	}
 }
+
+// TestTutorialSystem_ImportState_CompletedTutorial verifies completed tutorials stay completed
+func TestTutorialSystem_ImportState_CompletedTutorial(t *testing.T) {
+	ts := NewTutorialSystem()
+	numSteps := len(ts.Steps)
+
+	// Mark all steps as completed
+	completedSteps := make(map[string]bool)
+	for _, step := range ts.Steps {
+		completedSteps[step.ID] = true
+	}
+
+	// Import state simulating a completed tutorial load
+	ts.ImportState(true, true, numSteps, completedSteps)
+
+	// Verify tutorial is disabled and stays completed
+	if ts.Enabled {
+		t.Error("Completed tutorial should be disabled after import")
+	}
+	if ts.ShowUI {
+		t.Error("Completed tutorial should not show UI after import")
+	}
+	if ts.CurrentStepIdx != numSteps {
+		t.Errorf("CurrentStepIdx = %d, want %d (all steps complete)", ts.CurrentStepIdx, numSteps)
+	}
+
+	// Verify all steps remain completed
+	for i, step := range ts.Steps {
+		if !step.Completed {
+			t.Errorf("Step %d (%s) should remain completed", i, step.ID)
+		}
+	}
+}

@@ -7,7 +7,7 @@ The skills package provides procedural generation of skill trees with excellent 
 
 ## Issues Found
 - [x] med ECS-compliance — `Skill` and `SkillTree` types have business logic methods (IsUnlocked, CanLevelUp, TotalPoints, GetSkillByID, GetTierSkills) which should be in a System or helper package (`types.go:186,215,220,231,241`) — **FIXED**: Extracted logic to helper functions `IsSkillUnlocked`, `CanSkillLevelUp`, `CalculateTreeTotalPoints`, `FindSkillByID`, `GetSkillsByTier` in `skills_helpers.go`. Original methods now delegate to helpers with deprecation notices for backward compatibility.
-- [ ] low deprecated-api — Uses deprecated `strings.Title` which should be replaced with `cases.Title(language.English)` from golang.org/x/text/cases (`generator.go:355`)
+- [x] low deprecated-api — Uses deprecated `strings.Title` which should be replaced with `cases.Title(language.English)` from golang.org/x/text/cases (`generator.go:355`) — **FIXED 2026-02-21**: Replaced with `cases.Title(language.English).String()`.
 - [ ] low doc-coverage — README.md exists and is comprehensive; all exported types/functions have godoc; package doc.go complete (no issue, but noted for completeness)
 
 ## Test Coverage
@@ -50,7 +50,7 @@ Coverage breakdown:
 ## Recommendations
 1. ~~**Medium Priority**: Refactor business logic methods on `Skill` and `SkillTree` types to a separate helper package or system to maintain strict ECS compliance.~~ ✅ **COMPLETED**: Helper functions added to `skills_helpers.go`.
 
-2. **Low Priority**: Replace `strings.Title` at `generator.go:355` with `cases.Title(language.English)` to use non-deprecated API. Current usage is functional but may trigger warnings in future Go versions.
+2. ~~**Low Priority**: Replace `strings.Title` at `generator.go:355` with `cases.Title(language.English)` to use non-deprecated API. Current usage is functional but may trigger warnings in future Go versions.~~ ✅ **COMPLETED 2026-02-21**
 
 3. **Optional Enhancement**: Consider adding benchmark tests for generation performance to ensure skill tree generation stays within acceptable bounds for runtime generation.
 

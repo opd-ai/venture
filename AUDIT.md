@@ -6,18 +6,18 @@
 
 ## Summary
 
-- **Total issues**: 223 (90 open, 133 resolved)
-- **Critical**: 0 (0 open) | **High**: 43 (0 open) | **Medium**: 42 (2 open) | **Low**: 138 (88 open)
+- **Total issues**: 225 (88 open, 137 resolved)
+- **Critical**: 0 (0 open) | **High**: 43 (0 open) | **Medium**: 42 (1 open) | **Low**: 140 (87 open)
 - **Affected subpackages**: 40 of 108 audited packages have open issues
-- **Resolution rate**: 133/223 (60%)
+- **Resolution rate**: 137/225 (61%)
 
 | Severity | Total | Open | Resolved |
 |----------|-------|------|----------|
 | Critical | 0 | 0 | 0 |
 | High | 43 | 0 | 43 |
-| Medium | 42 | 2 | 40 |
-| Low | 138 | 88 | 50 |
-| **Total** | **223** | **90** | **133** |
+| Medium | 42 | 1 | 41 |
+| Low | 140 | 87 | 53 |
+| **Total** | **225** | **88** | **137** |
 
 ## Priority Resolution Order
 
@@ -33,10 +33,11 @@ _No open high-priority issues._
 
 - **pkg/network/resilience** (1 issue)
   - [ ] deterministic procgen — Uses `time.Now()` for non-generation purposes (metrics timestamps, bandwidth tracking). While acceptable for testing infrastructure, violates strict project rule. Consider adding comment explaining exemption. (`simulator.go:53,68,75`, `metrics.go:48,53,127,146,313,321`, `scenario.go:67`)
-- **pkg/procgen/skills** (1 issue)
+- **pkg/procgen/skills** (2 issues)
   - [x] ECS — compliance — `Skill` and `SkillTree` types have business logic methods (IsUnlocked, CanLevelUp, TotalPoints, GetSkillByID, GetTierSkills) which should be in a System or helper package (`types.go:186,215,220,231,241`) — **FIXED**: Extracted logic to helper functions `IsSkillUnlocked`, `CanSkillLevelUp`, `CalculateTreeTotalPoints`, `FindSkillByID`, `GetSkillsByTier` in `skills_helpers.go`. Original methods now delegate to helpers with deprecation notices for backward compatibility.
+  - [x] deprecated — api — Uses deprecated `strings.Title` which should be replaced with `cases.Title(language.English)` from golang.org/x/text/cases (`generator.go:355`) — **FIXED 2026-02-21**: Replaced with `cases.Title(language.English).String()`.
 - **pkg/procgen/story** (1 issue)
-  - [ ] ECS compliance — `StoryJournalComponent` in `pkg/engine/story_fragment_component.go` has behavior methods (`AddDiscovery`, `IsDiscovered`, `IsSeriesComplete`, `MarkSeriesComplete`, `GetDiscoveryCount`) violating ECS pure data principle (`pkg/engine/story_fragment_component.go:52-98`)
+  - [x] ECS compliance — `StoryJournalComponent` in `pkg/engine/story_fragment_component.go` had behavior methods (`AddDiscovery`, `IsDiscovered`, `IsSeriesComplete`, `MarkSeriesComplete`, `GetDiscoveryCount`) violating ECS pure data principle — **FIXED**: Refactored to ECS-compliant helper functions (`JournalAddDiscovery`, `JournalIsDiscovered`, `JournalIsSeriesComplete`, `JournalMarkSeriesComplete`, `JournalGetDiscoveryCount`). Original methods retained with deprecation notices.
 
 ### Phase 4: Low Priority
 
@@ -135,7 +136,7 @@ _No open high-priority issues._
   - [ ] error handling — No structured logging in generator; errors returned but not logged with context. Adding logrus integration would improve debugging. (`generator.go:95-133`)
   - [ ] documentation — Missing godoc comments for exported types `PlotPoint` and `PlayerChoice`. Only `StoryArc` and `StoryArcGenerator` are documented. (`generator.go:40,67`)
 - **pkg/procgen/skills** (2 issues)
-  - [ ] deprecated — api — Uses deprecated `strings.Title` which should be replaced with `cases.Title(language.English)` from golang.org/x/text/cases (`generator.go:355`)
+  - [x] deprecated — api — Uses deprecated `strings.Title` which should be replaced with `cases.Title(language.English)` from golang.org/x/text/cases (`generator.go:355`) — **FIXED 2026-02-21**
   - [ ] doc — coverage — README.md exists and is comprehensive; all exported types/functions have godoc; package doc.go complete (no issue, but noted for completeness)
 - **pkg/procgen/terrain** (1 issue)
   - [ ] determinism — Cache uses `time.Now()` for AccessTime tracking in LRU eviction (`cache.go:147`, `cache.go:202`). This is acceptable as it only affects cache management, not terrain generation determinism. Consider documenting this exception in cache.go godoc.

@@ -11,6 +11,8 @@ import (
 
 	"github.com/opd-ai/venture/pkg/procgen"
 	"github.com/sirupsen/logrus"
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
 )
 
 // SkillTreeGenerator implements the Generator interface for procedural skill tree creation.
@@ -352,7 +354,7 @@ func (g *SkillTreeGenerator) formatEffectDescription(effectType string, value fl
 
 	// Clean up effect type for display
 	displayType := strings.ReplaceAll(effectType, "_", " ")
-	displayType = strings.Title(displayType)
+	displayType = cases.Title(language.English).String(displayType)
 
 	if value >= 0 {
 		return fmt.Sprintf("+"+format+" %s", value, displayType)

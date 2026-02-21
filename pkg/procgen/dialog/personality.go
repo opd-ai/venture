@@ -200,11 +200,53 @@ func (p *Personality) ApplyToGenerator(params *GenerateParams) {
 // GetGreeting returns a personality-appropriate greeting.
 //
 // This provides template-based greetings that can be used as fallback
-// or starting points for Markov generation.
+// or starting points for Markov generation. Always returns the first
+// greeting for consistency. Use GetGreetingWithSeed for randomized selection.
 func (p *Personality) GetGreeting(genreID string) string {
+	greetings := p.buildGreetingsMap()
+
+	// Get greeting for this personality and genre
+	if genreGreetings, ok := greetings[p.Type]; ok {
+		if greetingList, ok := genreGreetings[genreID]; ok && len(greetingList) > 0 {
+			// Return first greeting for backward compatibility
+			// Use GetGreetingWithSeed for randomized selection
+			return greetingList[0]
+		}
+	}
+
+	// Fallback generic greeting
+	return "Hello."
+}
+
+// GetGreetingWithSeed returns a deterministically randomized personality-appropriate greeting.
+//
+// Uses the provided seed to select from available greetings for this personality
+// and genre combination. Same seed always produces the same greeting, ensuring
+// deterministic behavior required for multiplayer synchronization.
+//
+// Example:
+//
+//	p := NewPersonality(PersonalityMerchant)
+//	greeting := p.GetGreetingWithSeed("fantasy", npcSeed)
+func (p *Personality) GetGreetingWithSeed(genreID string, seed int64) string {
+	greetings := p.buildGreetingsMap()
+
+	// Get greeting for this personality and genre
+	if genreGreetings, ok := greetings[p.Type]; ok {
+		if greetingList, ok := genreGreetings[genreID]; ok && len(greetingList) > 0 {
+			rng := rand.New(rand.NewSource(seed))
+			return greetingList[rng.Intn(len(greetingList))]
+		}
+	}
+
+	// Fallback generic greeting
+	return "Hello."
+}
+
+// buildGreetingsMap returns the full greeting database for all personality types.
+func (p *Personality) buildGreetingsMap() map[PersonalityType]map[string][]string {
 	greetings := make(map[PersonalityType]map[string][]string)
 
-	// Fantasy greetings
 	greetings[PersonalityHelpful] = map[string][]string{
 		"fantasy":   {"Greetings, friend!", "Welcome, traveler!", "Well met!"},
 		"scifi":     {"Hello there, citizen.", "Greetings, traveler.", "Welcome to the station."},
@@ -269,16 +311,7 @@ func (p *Personality) GetGreeting(genreID string) string {
 		"postapoc":  {"I've survived this long for a reason.", "Know your place.", "I've seen worse than you."},
 	}
 
-	// Get greeting for this personality and genre
-	if genreGreetings, ok := greetings[p.Type]; ok {
-		if greetingList, ok := genreGreetings[genreID]; ok && len(greetingList) > 0 {
-			// Return first greeting (could randomize in future)
-			return greetingList[0]
-		}
-	}
-
-	// Fallback generic greeting
-	return "Hello."
+	return greetings
 }
 
 // String returns a human-readable description of the personality.

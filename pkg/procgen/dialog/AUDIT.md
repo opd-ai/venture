@@ -6,10 +6,10 @@
 Dialog package provides Markov chain-based NPC dialog generation with genre-specific corpora and personality traits. Overall health is excellent with 87.2% test coverage, comprehensive benchmarks, and strong adherence to deterministic procgen standards. No critical risks identified; all issues are low-severity documentation or minor code improvements.
 
 ## Issues Found
-- [ ] low doc — `GetGreeting()` method in personality.go does not randomize greetings (returns first greeting), comment says "could randomize in future" (`personality.go:275`)
+- [x] low doc — `GetGreeting()` method in personality.go does not randomize greetings (returns first greeting), comment says "could randomize in future" (`personality.go:275`) — **FIXED 2026-02-21**: Added `GetGreetingWithSeed(genreID string, seed int64)` method for deterministic randomized greeting selection. Original `GetGreeting()` preserved for backward compatibility. Comprehensive tests added.
 - [ ] low performance — `selectWeightedWord` temperature weighting could use cached power calculations for common temperatures (`utils.go:126-153`)
-- [ ] low doc — `hash64` function lacks godoc comment explaining fallback usage (`utils.go:184`)
-- [ ] low testing — No benchmark for `GenerateWithPersonality` method (only benchmarks for Generate, GenerateDeterministic) (`markov_test.go:396-444`)
+- [x] low doc — `hash64` function lacks godoc comment explaining fallback usage (`utils.go:184`) — **VERIFIED 2026-02-21**: Function already has godoc comment at lines 182-183 explaining purpose.
+- [x] low testing — No benchmark for `GenerateWithPersonality` method (only benchmarks for Generate, GenerateDeterministic) (`markov_test.go:396-444`) — **FIXED 2026-02-21**: Added `BenchmarkGenerateWithPersonality` and `BenchmarkGetGreetingWithSeed` benchmarks.
 
 ## Test Coverage
 87.2% (target: 65%) ✅
@@ -28,6 +28,8 @@ Dialog package provides Markov chain-based NPC dialog generation with genre-spec
 - `BenchmarkGenerate` — measures non-deterministic generation
 - `BenchmarkMarkovGenerator_Generate` — interface method performance
 - `BenchmarkMarkovGenerator_Validate` — validation performance
+- `BenchmarkGenerateWithPersonality` — measures generation with personality traits applied
+- `BenchmarkGetGreetingWithSeed` — measures deterministic greeting selection
 
 ## Integration Status
 **Fully Integrated** ✅
@@ -62,6 +64,7 @@ The dialog package is deeply integrated into the engine and client systems:
 - ✅ Deterministic mode (`GenerateDeterministic`) for testing
 - ✅ Runtime seed derivation uses SHA256 hash of seed + context (deterministic given same inputs)
 - ✅ Same seed + params = same output (verified by tests)
+- ✅ `GetGreetingWithSeed()` uses seeded RNG for deterministic greeting selection
 
 **Non-Determinism Scope**: Dialog text content varies with player input/conversation history (presentation only, doesn't affect gameplay mechanics).
 
@@ -98,8 +101,8 @@ The actual ECS component (`NPCDialogComponent`) is in `pkg/engine/`, which has a
 **Godoc Quality**: Excellent with examples, architecture diagrams, and usage patterns.
 
 ## Recommendations
-1. **Add randomization to `GetGreeting()`** — Implement the "could randomize in future" comment to select random greeting from list instead of always returning first one (low priority, doesn't affect correctness)
+1. ~~**Add randomization to `GetGreeting()`**~~ ✅ **DONE 2026-02-21**: `GetGreetingWithSeed()` provides deterministic randomized greeting selection
 2. **Cache temperature power calculations** — Pre-compute common temperature values (0.5, 0.7, 1.0) to improve weighted word selection performance (low priority, <5% perf gain)
-3. **Add godoc to `hash64`** — Document that this is a fallback for seed derivation when binary.Write fails (low priority, internal function)
-4. **Add benchmark for personality-adjusted generation** — Create `BenchmarkGenerateWithPersonality` to measure impact of personality trait adjustments on generation performance (low priority, good-to-have)
+3. ~~**Add godoc to `hash64`**~~ ✅ **VERIFIED 2026-02-21**: Already documented
+4. ~~**Add benchmark for personality-adjusted generation**~~ ✅ **DONE 2026-02-21**: `BenchmarkGenerateWithPersonality` added
 5. **Consider adding corpus quality metrics** — Add vocabulary diversity metrics (unique words, average sentence length, genre-specific term density) to validate corpus quality (optional enhancement)

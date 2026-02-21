@@ -443,6 +443,37 @@ func BenchmarkGenerate(b *testing.B) {
 	}
 }
 
+// BenchmarkGenerateWithPersonality measures generation performance with personality traits applied.
+func BenchmarkGenerateWithPersonality(b *testing.B) {
+	corpus := GetFantasyCorpus()
+	gen := NewMarkovGenerator(12345, "fantasy", Order2)
+	gen.TrainFromCorpus(corpus.Sentences)
+
+	personality := &Personality{
+		Type:         PersonalityMerchant,
+		Friendliness: 0.7,
+		Verbosity:    0.5,
+		Formality:    0.6,
+		Humor:        0.3,
+		Knowledge:    0.4,
+	}
+
+	params := GenerateParams{
+		PlayerInput:    "Where is the dungeon?",
+		ConversationID: "bench-test",
+		MaxWords:       30,
+		MinWords:       10,
+		Temperature:    0.7,
+	}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		// Apply personality traits to params
+		personality.ApplyToGenerator(&params)
+		gen.GenerateDeterministic(params)
+	}
+}
+
 // ============================================================================
 // Generator Interface Tests
 // ============================================================================

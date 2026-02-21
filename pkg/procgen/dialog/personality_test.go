@@ -344,3 +344,71 @@ func TestMaxMin(t *testing.T) {
 		t.Error("min(5, 5) should be 5")
 	}
 }
+
+// TestGetGreetingWithSeed verifies deterministic greeting selection.
+func TestGetGreetingWithSeed(t *testing.T) {
+	p := NewPersonality(PersonalityMerchant)
+
+	// Test determinism: same seed produces same greeting
+	greeting1 := p.GetGreetingWithSeed("fantasy", 12345)
+	greeting2 := p.GetGreetingWithSeed("fantasy", 12345)
+
+	if greeting1 != greeting2 {
+		t.Errorf("GetGreetingWithSeed not deterministic: %q != %q", greeting1, greeting2)
+	}
+
+	// Test variety: different seeds can produce different greetings
+	seen := make(map[string]bool)
+	for seed := int64(0); seed < 100; seed++ {
+		greeting := p.GetGreetingWithSeed("fantasy", seed)
+		seen[greeting] = true
+	}
+
+	// Should see at least 2 different greetings from 100 tries
+	if len(seen) < 2 {
+		t.Errorf("GetGreetingWithSeed not producing variety: only %d unique greetings", len(seen))
+	}
+
+	// Test fallback for unknown genre
+	unknownGreeting := p.GetGreetingWithSeed("unknown-genre", 12345)
+	if unknownGreeting != "Hello." {
+		t.Errorf("Expected fallback greeting 'Hello.', got %q", unknownGreeting)
+	}
+}
+
+// TestGetGreetingWithSeedAllPersonalities verifies all personality types work.
+func TestGetGreetingWithSeedAllPersonalities(t *testing.T) {
+	personalities := []PersonalityType{
+		PersonalityHelpful, PersonalityMerchant, PersonalityHostile,
+		PersonalityMysterious, PersonalityScholarly, PersonalityWarrior,
+		PersonalityTimid, PersonalityArrogant,
+	}
+
+	genres := []string{"fantasy", "scifi", "horror", "cyberpunk", "postapoc"}
+
+	for _, ptype := range personalities {
+		for _, genre := range genres {
+			t.Run(string(ptype)+"_"+genre, func(t *testing.T) {
+				p := NewPersonality(ptype)
+				greeting := p.GetGreetingWithSeed(genre, 42)
+
+				if greeting == "" {
+					t.Error("GetGreetingWithSeed returned empty string")
+				}
+				if len(greeting) < 3 {
+					t.Errorf("greeting too short: %q", greeting)
+				}
+			})
+		}
+	}
+}
+
+// BenchmarkGetGreetingWithSeed measures deterministic greeting selection performance.
+func BenchmarkGetGreetingWithSeed(b *testing.B) {
+	p := NewPersonality(PersonalityMerchant)
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		p.GetGreetingWithSeed("fantasy", int64(i))
+	}
+}

@@ -32,6 +32,8 @@ const (
 	FormationNone FormationType = iota
 	// FormationLine means squad members form a horizontal line.
 	FormationLine
+	// FormationColumn means squad members form a vertical column behind leader.
+	FormationColumn
 	// FormationWedge means squad members form a V-shape with leader at front.
 	FormationWedge
 	// FormationCircle means squad members form a circle around center.
@@ -47,6 +49,8 @@ func (f FormationType) String() string {
 		return "None"
 	case FormationLine:
 		return "Line"
+	case FormationColumn:
+		return "Column"
 	case FormationWedge:
 		return "Wedge"
 	case FormationCircle:

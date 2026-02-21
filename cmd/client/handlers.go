@@ -212,6 +212,7 @@ type systemsContainer struct {
 	nearbyLightEntityTintSystem                 *engine.NearbyLightEntityTintSystem                 // Light-source-based entity sprite tinting
 	weatherEquipmentSheenSystem                 *engine.WeatherEquipmentSheenSystem                 // Weather-driven equipment sheen
 	creatureEyeGlowSystem                       *engine.CreatureEyeGlowSystem                       // Genre-aware hostile creature eye glow
+	creatureElementalAuraSystem                 *engine.CreatureElementalAuraSystem                 // Elemental creature aura visuals
 	meleeSwingArcSystem                         *engine.MeleeSwingArcSystem                         // Genre-aware melee attack swing arcs
 	combatReadyAuraSystem                       *engine.CombatReadyAuraSystem                       // Genre-aware AI combat readiness aura
 	aiStateBubbleSystem                         *engine.AIStateBubbleSystem                         // Genre-aware AI state indicator bubbles
@@ -1625,6 +1626,11 @@ func registerNonCriticalSystems(game *engine.EbitenGame, sys *systemsContainer) 
 	sys.creatureEyeGlowSystem = engine.NewCreatureEyeGlowSystem(game.World, *seed+9450)
 	sys.creatureEyeGlowSystem.SetGenre(*genreID)
 	game.World.AddSystem(sys.creatureEyeGlowSystem)
+
+	// CreatureElementalAuraSystem: persistent elemental aura visuals for creatures
+	sys.creatureElementalAuraSystem = engine.NewCreatureElementalAuraSystem(game.World, *seed+9475)
+	sys.creatureElementalAuraSystem.SetGenre(*genreID)
+	game.World.AddSystem(sys.creatureElementalAuraSystem)
 
 	// MeleeSwingArcSystem: genre-aware visual arc overlays during melee attacks
 	sys.meleeSwingArcSystem = engine.NewMeleeSwingArcSystem(game.World, *seed+9500)

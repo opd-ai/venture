@@ -208,6 +208,7 @@ type SystemInitResult struct {
 	NearbyLightEntityTintSystem                 *NearbyLightEntityTintSystem
 	WeatherEquipmentSheenSystem                 *WeatherEquipmentSheenSystem
 	CreatureEyeGlowSystem                       *CreatureEyeGlowSystem
+	CreatureElementalAuraSystem                 *CreatureElementalAuraSystem
 	MeleeSwingArcSystem                         *MeleeSwingArcSystem
 	CombatReadyAuraSystem                       *CombatReadyAuraSystem
 	AIStateBubbleSystem                         *AIStateBubbleSystem
@@ -664,6 +665,13 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 	creatureEyeGlowSystem.SetGenre(config.GenreID)
 	result.CreatureEyeGlowSystem = creatureEyeGlowSystem
 	game.World.AddSystem(creatureEyeGlowSystem)
+
+	// 17ai2. CreatureElementalAuraSystem - persistent elemental aura visuals for creatures
+	// Infers elemental affinity from name/tags/attack and assigns colored aura overlays
+	creatureElementalAuraSystem := NewCreatureElementalAuraSystem(game.World, config.Seed+9475)
+	creatureElementalAuraSystem.SetGenre(config.GenreID)
+	result.CreatureElementalAuraSystem = creatureElementalAuraSystem
+	game.World.AddSystem(creatureElementalAuraSystem)
 
 	// 17aj. MeleeSwingArcSystem - genre-aware visual arc overlays during melee attacks
 	// Watches AnimationComponent attack transitions and writes MeleeSwingArcComponent

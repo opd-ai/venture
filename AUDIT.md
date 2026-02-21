@@ -6,18 +6,18 @@
 
 ## Summary
 
-- **Total issues**: 225 (56 open, 169 resolved)
-- **Critical**: 0 (0 open) | **High**: 43 (0 open) | **Medium**: 42 (0 open) | **Low**: 140 (56 open)
-- **Affected subpackages**: 29 of 108 audited packages have open issues
-- **Resolution rate**: 169/225 (75%)
+- **Total issues**: 225 (54 open, 171 resolved)
+- **Critical**: 0 (0 open) | **High**: 43 (0 open) | **Medium**: 42 (0 open) | **Low**: 140 (54 open)
+- **Affected subpackages**: 28 of 108 audited packages have open issues
+- **Resolution rate**: 171/225 (76%)
 
 | Severity | Total | Open | Resolved |
 |----------|-------|------|----------|
 | Critical | 0 | 0 | 0 |
 | High | 43 | 0 | 43 |
 | Medium | 42 | 0 | 42 |
-| Low | 140 | 56 | 84 |
-| **Total** | **225** | **56** | **169** |
+| Low | 140 | 54 | 86 |
+| **Total** | **225** | **54** | **171** |
 
 ## Priority Resolution Order
 
@@ -69,9 +69,9 @@ _All medium-priority issues have been resolved._
   - [x] `Deserialize()` rebuilds prerequisites as empty and defaults cost to 1 — deserialized skill trees have incomplete structure. — **FIXED 2026-02-21**: Updated serialization to include `Prerequisites` and `Cost` fields in `skillData`. Added preservation test.
 - **pkg/companion/learning** (1 issue)
   - [x] Documentation — Missing example for Serialize/Deserialize in doc.go (`doc.go:1`) — **FIXED 2026-02-21**: Added "Persistence / Serialization" section to doc.go with complete Serialize/Deserialize usage example
-- **pkg/config** (2 open, 1 resolved)
-  - [ ] documentation — Missing benchmark tests for validation performance (`validator_test.go:N/A`)
-  - [ ] architecture — Genre list dependency on pkg/procgen/dialog creates coupling; consider extracting genre definitions to shared constants package (`validator.go:16`)
+- **pkg/config** (0 open, 3 resolved)
+  - [x] documentation — Missing benchmark tests for validation performance (`validator_test.go:N/A`) — **FIXED 2026-02-21**: Added comprehensive benchmark tests for all validation methods.
+  - [x] architecture — Genre list dependency on pkg/procgen/dialog creates coupling; consider extracting genre definitions to shared constants package (`validator.go:16`) — **RESOLVED 2026-02-21**: Added documentation explaining intentional coupling for consistency.
   - [x] maintainability — Magic numbers (1024, 65535, 100, 60) could be extracted as named constants for clarity (`validator.go:46,60,72`) — **FIXED 2026-02-21**: Extracted to named constants in `constants.go`
 - **pkg/engine/performance** (0 open, 3 resolved)
   - [x] doc — style — LOD constants lack block comment (`types.go:12`) — **FIXED 2026-02-21**: Added comprehensive block comment explaining LOD levels, distance-based rendering optimization, and per-constant documentation
@@ -285,9 +285,9 @@ _All medium-priority issues have been resolved._
 
 #### `pkg/config`
 - Source: [`pkg/config/AUDIT.md`](pkg/config/AUDIT.md)
-- Issues: 2 open, 1 resolved (Low: 3)
-  - [Low] documentation — Missing benchmark tests for validation performance (`validator_test.go:N/A`)
-  - [Low] architecture — Genre list dependency on pkg/procgen/dialog creates coupling; consider extracting genre definitions to shared constants package (`validator.go:16`)
+- Issues: 0 open, 3 resolved (Low: 3)
+  - ~~[Low] documentation — Missing benchmark tests for validation performance (`validator_test.go:N/A`)~~ ✅ **FIXED 2026-02-21**: Added comprehensive benchmark tests.
+  - ~~[Low] architecture — Genre list dependency on pkg/procgen/dialog creates coupling; consider extracting genre definitions to shared constants package (`validator.go:16`)~~ ✅ **RESOLVED 2026-02-21**: Documented intentional coupling.
   - ~~[Low] maintainability — Magic numbers (1024, 65535, 100, 60) could be extracted as named constants for clarity (`validator.go:46,60,72`)~~ ✅ **FIXED 2026-02-21**: Extracted to named constants in `constants.go` (`MinPort`, `MaxPort`, `MinPlayers`, `MaxPlayersLimit`, `MinTickRate`, `MaxTickRate`). Added tests to verify constants.
 
 ### Engine (pkg/engine/)
@@ -930,7 +930,7 @@ _All medium-priority issues have been resolved._
 - **Audit (pkg/audit/)**: 2 open issues (Low: 2)
 - **Class System (pkg/class/)**: 3 open issues (Low: 3)
 - **Companion (pkg/companion/)**: 0 open issues — _All issues resolved_
-- **Configuration (pkg/config/)**: 2 open issues (Low: 2)
+- **Configuration (pkg/config/)**: 0 open issues — _All issues resolved_
 - **Engine (pkg/engine/)**: 0 open issues — _All issues resolved_
 - **Integration (pkg/integration/)**: 6 open issues (Low: 6)
 - **Modding (pkg/modding/)**: 1 open issues (Low: 1)
@@ -949,18 +949,18 @@ _All medium-priority issues have been resolved._
 - **Phase 1 (Critical)**: 0 issues — No action required
 - **Phase 2 (High)**: 0 issues — No action required
 - **Phase 3 (Medium)**: 3 issues — Ongoing improvement backlog
-- **Phase 4 (Low)**: 61 issues — Address opportunistically
+- **Phase 4 (Low)**: 51 issues — Address opportunistically
 
 ## Resolved Issues Summary
 
-169 issues have been resolved across 37 packages.
+171 issues have been resolved across 38 packages.
 
 | Severity | Resolved |
 |----------|----------|
 | High | 43 |
 | Medium | 42 |
-| Low | 84 |
-| **Total** | **169** |
+| Low | 86 |
+| **Total** | **171** |
 
 ---
 

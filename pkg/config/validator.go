@@ -22,6 +22,11 @@ type Validator struct {
 }
 
 // NewValidator creates a new configuration validator with default settings.
+// The validator retrieves valid genres from pkg/procgen/dialog which serves as
+// the single source of truth for genre definitions. This coupling is intentional:
+// genres must be consistent across dialog generation, config validation, and
+// other genre-aware systems. If genre definitions were duplicated in a shared
+// constants package, changes could easily become inconsistent.
 func NewValidator() *Validator {
 	// Get valid genres from dialog package (centralized genre list)
 	genres := dialog.GetAvailableGenres()

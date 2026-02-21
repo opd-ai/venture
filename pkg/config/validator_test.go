@@ -474,3 +474,79 @@ func TestValidatorUsesConstants(t *testing.T) {
 		t.Error("ValidateTickRate(MaxTickRate+1) should be invalid")
 	}
 }
+
+// Benchmark tests for validation performance.
+// These benchmarks measure the overhead of validation operations
+// to ensure they remain efficient for hot-path usage.
+
+// BenchmarkValidatePort measures port validation performance.
+func BenchmarkValidatePort(b *testing.B) {
+	validator := NewValidator()
+	ports := []string{"8080", "3000", "9999", "65535", "1024"}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_ = validator.ValidatePort(ports[i%len(ports)])
+	}
+}
+
+// BenchmarkValidateMaxPlayers measures max players validation performance.
+func BenchmarkValidateMaxPlayers(b *testing.B) {
+	validator := NewValidator()
+	players := []int{1, 4, 16, 50, 100}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_ = validator.ValidateMaxPlayers(players[i%len(players)])
+	}
+}
+
+// BenchmarkValidateTickRate measures tick rate validation performance.
+func BenchmarkValidateTickRate(b *testing.B) {
+	validator := NewValidator()
+	rates := []int{1, 20, 30, 60}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_ = validator.ValidateTickRate(rates[i%len(rates)])
+	}
+}
+
+// BenchmarkValidateGenre measures genre validation performance.
+func BenchmarkValidateGenre(b *testing.B) {
+	validator := NewValidator()
+	genres := []string{"fantasy", "scifi", "horror", "cyberpunk", "postapoc"}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_ = validator.ValidateGenre(genres[i%len(genres)])
+	}
+}
+
+// BenchmarkValidateAll measures full configuration validation performance.
+func BenchmarkValidateAll(b *testing.B) {
+	validator := NewValidator()
+	tmpDir := b.TempDir()
+	cfg := &Config{
+		Port:               "8080",
+		MaxPlayers:         4,
+		ValidateMaxPlayers: true,
+		TickRate:           20,
+		ValidateTickRate:   true,
+		Genre:              "fantasy",
+		SaveDir:            tmpDir,
+		CreateDirs:         false,
+	}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_ = validator.ValidateAll(cfg)
+	}
+}
+
+// BenchmarkNewValidator measures validator creation performance.
+func BenchmarkNewValidator(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		_ = NewValidator()
+	}
+}

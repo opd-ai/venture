@@ -6,8 +6,8 @@
 The config package provides configuration validation for server and client settings (ports, players, tick rate, genres, directories). The implementation is complete with excellent test coverage (100%), comprehensive error handling, and proper integration with cmd/server and cmd/client. No critical issues found; package is production-ready with minor enhancement opportunities.
 
 ## Issues Found
-- [ ] low documentation — Missing benchmark tests for validation performance (`validator_test.go:N/A`)
-- [ ] low architecture — Genre list dependency on pkg/procgen/dialog creates coupling; consider extracting genre definitions to shared constants package (`validator.go:16`)
+- [x] low documentation — Missing benchmark tests for validation performance (`validator_test.go:N/A`) — **FIXED 2026-02-21**: Added comprehensive benchmark tests: `BenchmarkValidatePort`, `BenchmarkValidateMaxPlayers`, `BenchmarkValidateTickRate`, `BenchmarkValidateGenre`, `BenchmarkValidateAll`, `BenchmarkNewValidator`. Results show efficient validation (<15ns for individual validations, ~1.8µs for full config).
+- [x] low architecture — Genre list dependency on pkg/procgen/dialog creates coupling; consider extracting genre definitions to shared constants package (`validator.go:16`) — **RESOLVED 2026-02-21**: Added documentation to `NewValidator()` explaining why the coupling is intentional: genres must be consistent across dialog generation, config validation, and other genre-aware systems. Extracting to a separate package would risk inconsistency.
 - [x] low maintainability — Magic numbers (1024, 65535, 100, 60) could be extracted as named constants for clarity (`validator.go:46,60,72`) — **FIXED 2026-02-21**: Extracted to named constants in `constants.go` (`MinPort`, `MaxPort`, `MinPlayers`, `MaxPlayersLimit`, `MinTickRate`, `MaxTickRate`). Added tests `TestConstants` and `TestValidatorUsesConstants` to verify constants.
 
 ## Test Coverage

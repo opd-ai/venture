@@ -6,7 +6,7 @@ import (
 	"strings"
 )
 
-// String returns the human-readable platform name
+// String returns the human-readable platform name for this Platform constant.
 func (p Platform) String() string {
 	switch p {
 	case PlatformLinux:
@@ -26,17 +26,20 @@ func (p Platform) String() string {
 	}
 }
 
-// IsDesktop returns true for desktop platforms
+// IsDesktop returns true if this Platform represents a desktop operating system
+// (Linux, macOS, or Windows).
 func (p Platform) IsDesktop() bool {
 	return p == PlatformLinux || p == PlatformMacOS || p == PlatformWindows
 }
 
-// IsMobile returns true for mobile platforms
+// IsMobile returns true if this Platform represents a mobile operating system
+// (iOS or Android).
 func (p Platform) IsMobile() bool {
 	return p == PlatformIOS || p == PlatformAndroid
 }
 
-// IsWeb returns true for web platforms
+// IsWeb returns true if this Platform represents a web/browser environment
+// (WebAssembly).
 func (p Platform) IsWeb() bool {
 	return p == PlatformWASM
 }

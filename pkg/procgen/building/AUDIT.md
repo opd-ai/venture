@@ -6,8 +6,8 @@
 The building package provides procedural generation of building structures with floor plans. Excellent implementation with 92.2% test coverage, comprehensive validation, and full deterministic generation compliance. No critical issues found.
 
 ## Issues Found
-- [ ] **low** doc — Godoc example uses deprecated `log.Fatal` instead of structured logging with `logrus.WithFields` (`doc.go:40`)
-- [ ] **low** integration — Package successfully integrated in cmd/client/handlers.go and cmd/server/v8_systems.go; no missing registrations detected
+- [x] **low** doc — Godoc example uses deprecated `log.Fatal` instead of structured logging with `logrus.WithFields` (`doc.go:40`) — **FIXED 2026-02-21**: Updated to use `logrus.WithError(err).Fatal()`
+- [x] **low** integration — Package successfully integrated in cmd/client/handlers.go and cmd/server/v8_systems.go; no missing registrations detected — **VERIFIED 2026-02-21**: Already integrated
 
 ## Test Coverage
 92.2% (target: 65%) ✅

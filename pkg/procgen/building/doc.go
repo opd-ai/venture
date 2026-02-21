@@ -37,7 +37,7 @@
 //
 //	result, err := gen.Generate(12345, params)
 //	if err != nil {
-//	    log.Fatal(err)
+//	    logrus.WithError(err).Fatal("building generation failed")
 //	}
 //
 //	building := result.(*building.Building)

@@ -14,8 +14,10 @@ import (
 
 // VehicleGenerator generates procedural vehicles.
 type VehicleGenerator struct {
+	// templates maps genre IDs to their available vehicle templates.
 	templates map[string][]VehicleTemplate
-	logger    *logrus.Entry
+	// logger is an optional logrus entry for structured logging.
+	logger *logrus.Entry
 }
 
 // NewVehicleGenerator creates a new vehicle generator.

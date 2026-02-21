@@ -6,7 +6,7 @@
 The `pkg/rendering/sprites` package provides procedural sprite generation for game entities, items, tiles, particles, and UI elements. Overall health is excellent with 76 Go files (34 source, 42 test), 81.9% test coverage, comprehensive documentation, and deterministic generation. The package is foundational to the visual rendering pipeline and well-integrated with the engine. Only one minor documentation issue identified (cache.go missing package-level comment).
 
 ## Issues Found
-- [ ] **low** Doc coverage — cache.go missing package-level godoc comment (`cache.go:1`)
+- [x] **low** Doc coverage — cache.go missing package-level godoc comment (`cache.go:1`) — **FIXED 2026-02-21**: Added file-level comment explaining LRU cache purpose
 
 ## Test Coverage
 **81.9%** (target: 65%) ✅ **EXCEEDS TARGET**

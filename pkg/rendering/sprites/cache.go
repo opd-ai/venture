@@ -1,3 +1,7 @@
+// cache.go implements LRU caching for generated sprites.
+// It provides thread-safe storage and retrieval of sprites keyed by their
+// configuration hash, eliminating redundant regeneration of identical sprites.
+// The cache uses zero-allocation hashing via FNV-64a hasher pools.
 package sprites
 
 import (

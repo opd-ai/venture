@@ -6,7 +6,7 @@
 The vehicle package provides deterministic procedural generation of vehicles with genre-specific templates, combat capabilities, visual variation, and component conversion for engine integration. Overall health is excellent with comprehensive test coverage (18 test functions, 781 test LOC), deterministic generation, proper ECS integration, and thorough documentation. No critical issues found.
 
 ## Issues Found
-- [ ] low documentation — VehicleGenerator struct fields `templates` and `logger` lack individual godoc comments (`generator.go:17-18`)
+- [x] low documentation — VehicleGenerator struct fields `templates` and `logger` lack individual godoc comments (`generator.go:17-18`) — **FIXED 2026-02-21**: Added godoc comments to both fields
 
 ## Test Coverage
 **Cannot measure** (target: 65%)

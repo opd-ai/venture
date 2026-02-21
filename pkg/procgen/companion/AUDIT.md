@@ -1,12 +1,12 @@
 # Audit: pkg/procgen/companion
-**Date**: 2026-02-16
+**Date**: 2026-02-16 (Updated: 2026-02-21)
 **Status**: Complete
 
 ## Summary
-The `pkg/procgen/companion` package provides procedural generation of companion entities (AI followers). Excellent overall health with 753 LOC (213 production, 445 test, 95 doc), comprehensive test coverage, deterministic generation, and strong engine integration. Critical risk: None. Minor observability issue: no structured logging for generation events, reducing debuggability in production.
+The `pkg/procgen/companion` package provides procedural generation of companion entities (AI followers). Excellent overall health with 753 LOC (213 production, 445 test, 95 doc), comprehensive test coverage, deterministic generation, and strong engine integration. All issues resolved.
 
 ## Issues Found
-- [ ] <severity:low> error handling — No structured logging with `logrus.WithFields` for generation events. Generator operates silently, making production debugging difficult when investigating companion spawn issues. (`generator.go:37-75`)
+- [x] <severity:low> error handling — No structured logging with `logrus.WithFields` for generation events. Generator operates silently, making production debugging difficult when investigating companion spawn issues. (`generator.go:37-75`) — **FIXED 2026-02-21**: Added package-level logger with `logrus.WithField("package", "procgen/companion")`. Added structured logging to `Generate()` (success and validation failure) and `Validate()` (all error cases) with appropriate context fields (seed, genre, difficulty, depth, companion stats).
 
 ## Test Coverage
 79.4% (target: 65%) ✅

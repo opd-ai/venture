@@ -8,7 +8,11 @@ import (
 
 	"github.com/opd-ai/venture/pkg/engine"
 	"github.com/opd-ai/venture/pkg/procgen"
+	"github.com/sirupsen/logrus"
 )
+
+// logger is the package-level logger for companion generation
+var logger = logrus.WithField("package", "procgen/companion")
 
 // Companion represents a generated companion
 type Companion struct {
@@ -39,6 +43,10 @@ func (g *Generator) Generate(seed int64, params procgen.GenerationParams) (inter
 
 	// Validate parameters
 	if params.Difficulty < 0.0 || params.Difficulty > 1.0 {
+		logger.WithFields(logrus.Fields{
+			"seed":       seed,
+			"difficulty": params.Difficulty,
+		}).Debug("companion generation failed: invalid difficulty")
 		return nil, fmt.Errorf("difficulty must be between 0.0 and 1.0, got %f", params.Difficulty)
 	}
 
@@ -71,6 +79,20 @@ func (g *Generator) Generate(seed int64, params procgen.GenerationParams) (inter
 
 	companion.SpritePattern = g.generateSpritePattern(companionType, params.GenreID)
 
+	logger.WithFields(logrus.Fields{
+		"seed":        seed,
+		"genre":       params.GenreID,
+		"depth":       params.Depth,
+		"difficulty":  params.Difficulty,
+		"name":        companion.Name,
+		"type":        companionType,
+		"level":       companion.Level,
+		"attack":      companion.Attack,
+		"defense":     companion.Defense,
+		"max_hp":      companion.MaxHP,
+		"command_cnt": len(companion.Commands),
+	}).Debug("companion generated successfully")
+
 	return companion, nil
 }
 
@@ -78,22 +100,36 @@ func (g *Generator) Generate(seed int64, params procgen.GenerationParams) (inter
 func (g *Generator) Validate(result interface{}) error {
 	companion, ok := result.(*Companion)
 	if !ok {
+		logger.WithField("result_type", fmt.Sprintf("%T", result)).Debug("companion validation failed: wrong type")
 		return fmt.Errorf("result is not a Companion")
 	}
 
 	if companion.Attack <= 0 {
+		logger.WithFields(logrus.Fields{
+			"name":   companion.Name,
+			"attack": companion.Attack,
+		}).Debug("companion validation failed: invalid attack")
 		return fmt.Errorf("companion has invalid attack: %f", companion.Attack)
 	}
 
 	if companion.MaxHP <= 0 {
+		logger.WithFields(logrus.Fields{
+			"name":   companion.Name,
+			"max_hp": companion.MaxHP,
+		}).Debug("companion validation failed: invalid max HP")
 		return fmt.Errorf("companion has invalid max HP: %f", companion.MaxHP)
 	}
 
 	if companion.Loyalty < 0 || companion.Loyalty > 100 {
+		logger.WithFields(logrus.Fields{
+			"name":    companion.Name,
+			"loyalty": companion.Loyalty,
+		}).Debug("companion validation failed: invalid loyalty")
 		return fmt.Errorf("companion has invalid loyalty: %f", companion.Loyalty)
 	}
 
 	if len(companion.Commands) == 0 {
+		logger.WithField("name", companion.Name).Debug("companion validation failed: no commands")
 		return fmt.Errorf("companion has no commands")
 	}
 

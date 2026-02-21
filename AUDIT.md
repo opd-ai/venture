@@ -6,18 +6,18 @@
 
 ## Summary
 
-- **Total issues**: 229 (29 open, 200 resolved)
-- **Critical**: 0 (0 open) | **High**: 43 (0 open) | **Medium**: 42 (0 open) | **Low**: 144 (29 open)
-- **Affected subpackages**: 17 of 108 audited packages have open issues
-- **Resolution rate**: 200/229 (87%)
+- **Total issues**: 229 (28 open, 201 resolved)
+- **Critical**: 0 (0 open) | **High**: 43 (0 open) | **Medium**: 42 (0 open) | **Low**: 144 (28 open)
+- **Affected subpackages**: 16 of 108 audited packages have open issues
+- **Resolution rate**: 201/229 (88%)
 
 | Severity | Total | Open | Resolved |
 |----------|-------|------|----------|
 | Critical | 0 | 0 | 0 |
 | High | 43 | 0 | 43 |
 | Medium | 42 | 0 | 42 |
-| Low | 144 | 29 | 115 |
-| **Total** | **229** | **29** | **200** |
+| Low | 144 | 28 | 116 |
+| **Total** | **229** | **28** | **201** |
 
 ## Priority Resolution Order
 
@@ -103,8 +103,8 @@ _All medium-priority issues have been resolved._
 - **pkg/procgen/building** (0 open, 2 resolved)
   - [x] doc — Godoc example uses deprecated `log.Fatal` instead of structured logging with `logrus.WithFields` (`doc.go:40`) — **FIXED 2026-02-21**: Updated to use `logrus.WithError(err).Fatal()`
   - [x] integration — Package successfully integrated in cmd/client/handlers.go and cmd/server/v8_systems.go; no missing registrations detected — **VERIFIED 2026-02-21**: Already integrated
-- **pkg/procgen/companion** (1 issue)
-  - [ ] error handling — No structured logging with `logrus.WithFields` for generation events. Generator operates silently, making production debugging difficult when investigating companion spawn issues. (`generator.go:37-75`)
+- **pkg/procgen/companion** (0 open, 1 resolved)
+  - [x] error handling — No structured logging with `logrus.WithFields` for generation events. Generator operates silently, making production debugging difficult when investigating companion spawn issues. (`generator.go:37-75`) — **FIXED 2026-02-21**: Added package-level logger and structured logging to Generate() and Validate() methods with seed, genre, difficulty, depth, and companion stat context fields.
 - **pkg/procgen/dialog** (1 open, 3 resolved)
   - [x] doc — `GetGreeting()` method in personality.go does not randomize greetings (returns first greeting), comment says "could randomize in future" (`personality.go:275`) — **FIXED 2026-02-21**: Added `GetGreetingWithSeed(genreID string, seed int64)` for deterministic randomized greeting selection. Original method preserved for backward compatibility.
   - [ ] performance — `selectWeightedWord` temperature weighting could use cached power calculations for common temperatures (`utils.go:126-153`)
@@ -580,8 +580,8 @@ _All medium-priority issues have been resolved._
 
 #### `pkg/procgen/companion`
 - Source: [`pkg/procgen/companion/AUDIT.md`](pkg/procgen/companion/AUDIT.md)
-- Issues: 1 open (Low: 1)
-  - [Low] error handling — No structured logging with `logrus.WithFields` for generation events. Generator operates silently, making production debugging difficult when investigating companion spawn issues. (`generator.go:37-75`)
+- Issues: 0 open, 1 resolved (Low: 1)
+  - ~~[Low] error handling — No structured logging with `logrus.WithFields` for generation events. Generator operates silently, making production debugging difficult when investigating companion spawn issues. (`generator.go:37-75`)~~ ✅ **FIXED 2026-02-21**: Added package-level logger and structured logging
 
 #### `pkg/procgen/dialog`
 - Source: [`pkg/procgen/dialog/AUDIT.md`](pkg/procgen/dialog/AUDIT.md)
@@ -939,7 +939,7 @@ _All medium-priority issues have been resolved._
 - **Modding (pkg/modding/)**: 1 open issues (Low: 1)
 - **Narrative (pkg/narrative/)**: 0 open issues — _All issues resolved_
 - **Network (pkg/network/)**: 0 open issues — _All issues resolved_
-- **Procedural Generation (pkg/procgen/)**: 23 open issues (Low: 23)
+- **Procedural Generation (pkg/procgen/)**: 22 open issues (Low: 22)
 - **Rendering (pkg/rendering/)**: 1 open issues (Low: 1)
 - **Save/Load (pkg/saveload/)**: 3 open issues (Low: 3)
 - **Security (pkg/security/)**: 2 open issues (Low: 2)
@@ -952,18 +952,18 @@ _All medium-priority issues have been resolved._
 - **Phase 1 (Critical)**: 0 issues — No action required
 - **Phase 2 (High)**: 0 issues — No action required
 - **Phase 3 (Medium)**: 0 issues — All resolved
-- **Phase 4 (Low)**: 29 issues — Address opportunistically
+- **Phase 4 (Low)**: 28 issues — Address opportunistically
 
 ## Resolved Issues Summary
 
-200 issues have been resolved across 45 packages.
+201 issues have been resolved across 46 packages.
 
 | Severity | Resolved |
 |----------|----------|
 | High | 43 |
 | Medium | 42 |
-| Low | 115 |
-| **Total** | **200** |
+| Low | 116 |
+| **Total** | **201** |
 
 ---
 

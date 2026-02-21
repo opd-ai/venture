@@ -80,6 +80,7 @@ type SystemInitResult struct {
 	WeaponMasterySystem                         *WeaponMasterySystem
 	AttributeAllocationSystem                   *AttributeAllocationSystem
 	TalentSystem                                *TalentSystem
+	EquipmentSetBonusSystem                     *EquipmentSetBonusSystem
 	CompanionProgressionSystem                  *CompanionProgressionSystem
 	WeatherAudioSystem                          *WeatherAudioSystem
 	FactionXPBonusSystem                        *FactionXPBonusSystem
@@ -933,6 +934,12 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 			talentComp.AddTalentPoints(1)
 		}
 	})
+
+	// 18e. EquipmentSetBonusSystem - tracks equipped set pieces and applies tiered bonuses
+	// Players wearing multiple pieces from the same equipment set receive cumulative stat bonuses
+	equipmentSetBonusSystem := NewEquipmentSetBonusSystem(config.Seed, config.GenreID, config.Logger)
+	result.EquipmentSetBonusSystem = equipmentSetBonusSystem
+	game.World.AddSystem(equipmentSetBonusSystem)
 
 	// 19. VisualFeedbackSystem - hit flashes and tints
 	visualFeedbackSystem := NewVisualFeedbackSystem()

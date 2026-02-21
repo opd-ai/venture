@@ -270,6 +270,7 @@ type systemsContainer struct {
 	skillLoadoutSystem                          *engine.SkillLoadoutSystem        // Manages saved skill loadouts for build swapping
 	attributeAllocationSystem                   *engine.AttributeAllocationSystem // Manages core attribute point allocation
 	talentSystem                                *engine.TalentSystem              // Manages talent point allocation and passive bonuses
+	equipmentSetBonusSystem                     *engine.EquipmentSetBonusSystem   // Manages equipment set piece tracking and tiered bonuses
 	visualFeedbackSystem                        *engine.VisualFeedbackSystem
 	weatherSystem                               *engine.WeatherSystem
 	weatherCombatSystem                         *engine.WeatherCombatSystem
@@ -1910,6 +1911,11 @@ func registerNonCriticalSystems(game *engine.EbitenGame, sys *systemsContainer) 
 
 	sys.talentSystem = engine.NewTalentSystem(game.World)
 	game.World.AddSystem(sys.talentSystem)
+
+	// EquipmentSetBonusSystem: tracks equipped set pieces and applies tiered bonuses
+	// Players wearing multiple pieces from the same equipment set receive cumulative stat bonuses
+	sys.equipmentSetBonusSystem = engine.NewEquipmentSetBonusSystem(*seed+seedOffsetDualClassSynergy+100, *genreID, game.World.GetLogger().Logger)
+	game.World.AddSystem(sys.equipmentSetBonusSystem)
 
 	sys.visualFeedbackSystem = engine.NewVisualFeedbackSystem()
 	game.World.AddSystem(sys.visualFeedbackSystem)

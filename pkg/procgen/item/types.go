@@ -83,6 +83,11 @@ type Item struct {
 	// SpellRadius is the effect radius for area-targeting spells (0 = use default)
 	// Integration: Gap A2 - Consumable Spell Effect Activation
 	SpellRadius float64
+	// SetID identifies which equipment set this item belongs to (empty = no set)
+	// Items with matching SetID grant cumulative bonuses when multiple pieces are equipped
+	SetID string
+	// SetPieceIndex identifies which piece of the set this is (0-5 for 6-piece sets)
+	SetPieceIndex int
 }
 
 // IsEquippable returns true if the item can be equipped.

@@ -2799,8 +2799,9 @@ func addPlayerComponents(player *engine.Entity, logger *logrus.Logger, clientLog
 
 // initializeTutorialAndHelp creates and configures tutorial and help systems.
 // The showTutorials parameter comes from GameSettings.ShowTutorials.
-func initializeTutorialAndHelp(inputSystem *engine.InputSystem, cameraSystem *engine.CameraSystem, showTutorials bool) (*engine.EbitenTutorialSystem, *engine.EbitenHelpSystem) {
-	tutorialSystem := engine.NewTutorialSystem()
+// The screenWidth and screenHeight parameters ensure correct button positioning.
+func initializeTutorialAndHelp(inputSystem *engine.InputSystem, cameraSystem *engine.CameraSystem, showTutorials bool, screenWidth, screenHeight int) (*engine.EbitenTutorialSystem, *engine.EbitenHelpSystem) {
+	tutorialSystem := engine.NewTutorialSystemWithSize(screenWidth, screenHeight)
 	// Disable tutorials if either --no-tutorial flag is set OR ShowTutorials setting is false
 	if *noTutorial || !showTutorials {
 		tutorialSystem.Enabled = false

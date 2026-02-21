@@ -34,9 +34,9 @@ Phases 1 and 2 can proceed in parallel. Phase 3 depends on both. Phase 4 depends
   3. Call `Resize()` at the start of `Draw()` using `screen.Bounds().Dx()` / `Dy()` so the panel and buttons always match the actual screen.
 - **Acceptance**: Tutorial panel and touch buttons render correctly on 1920×1080, 1280×720, and 800×600 resolutions. No hardcoded 800/600 remains in `NewTutorialSystem()`.
 
-- [ ] Pass actual screen size to `NewTutorialSystemWithSize()` in `cmd/client/handlers.go`
-- [ ] Add `Resize()` method to `EbitenTutorialSystem` in `pkg/engine/tutorial_system.go`
-- [ ] Call `Resize()` from `Draw()` using actual screen bounds
+- [x] Pass actual screen size to `NewTutorialSystemWithSize()` in `cmd/client/handlers.go`
+- [x] Add `Resize()` method to `EbitenTutorialSystem` in `pkg/engine/tutorial_system.go`
+- [x] Call `Resize()` from `Draw()` using actual screen bounds
 
 ### 1.2 Step Skipping — Exploration Always True (S)
 

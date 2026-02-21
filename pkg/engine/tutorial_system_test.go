@@ -1,6 +1,7 @@
 package engine
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 )
@@ -911,5 +912,100 @@ func TestCheckMovementCondition_NoPlayer(t *testing.T) {
 	// No player entity
 	if checkMovementCondition(world) {
 		t.Error("checkMovementCondition() should return false with no player")
+	}
+}
+
+// TestNewTutorialSystemWithSize tests tutorial system creation with explicit dimensions.
+func TestNewTutorialSystemWithSize(t *testing.T) {
+	ts := NewTutorialSystemWithSize(1920, 1080)
+
+	if ts == nil {
+		t.Fatal("NewTutorialSystemWithSize returned nil")
+	}
+
+	if ts.screenWidth != 1920 {
+		t.Errorf("screenWidth = %d, want 1920", ts.screenWidth)
+	}
+	if ts.screenHeight != 1080 {
+		t.Errorf("screenHeight = %d, want 1080", ts.screenHeight)
+	}
+
+	// Verify buttons are created at correct positions
+	if ts.nextButton == nil {
+		t.Fatal("nextButton should not be nil")
+	}
+	if ts.skipButton == nil {
+		t.Fatal("skipButton should not be nil")
+	}
+}
+
+// TestTutorialSystem_Resize tests that button positions update after resize.
+func TestTutorialSystem_Resize(t *testing.T) {
+	// Create at 800x600
+	ts := NewTutorialSystemWithSize(800, 600)
+
+	// Verify initial dimensions
+	if ts.screenWidth != 800 || ts.screenHeight != 600 {
+		t.Errorf("Initial dimensions = %dx%d, want 800x600", ts.screenWidth, ts.screenHeight)
+	}
+
+	// Resize to 1920x1080
+	ts.Resize(1920, 1080)
+
+	if ts.screenWidth != 1920 {
+		t.Errorf("After resize screenWidth = %d, want 1920", ts.screenWidth)
+	}
+	if ts.screenHeight != 1080 {
+		t.Errorf("After resize screenHeight = %d, want 1080", ts.screenHeight)
+	}
+
+	// Verify calling Resize with same dimensions is a no-op (no error)
+	ts.Resize(1920, 1080)
+	if ts.screenWidth != 1920 || ts.screenHeight != 1080 {
+		t.Error("Resize with same dimensions should not change anything")
+	}
+}
+
+// TestTutorialSystem_Resize_WithNilButtons tests Resize handles nil buttons gracefully.
+func TestTutorialSystem_Resize_WithNilButtons(t *testing.T) {
+	ts := NewTutorialSystemWithSize(800, 600)
+	ts.nextButton = nil
+	ts.skipButton = nil
+
+	// Should not panic
+	ts.Resize(1920, 1080)
+
+	if ts.screenWidth != 1920 || ts.screenHeight != 1080 {
+		t.Error("Resize should still update dimensions with nil buttons")
+	}
+}
+
+// TestTutorialSystem_Resize_MultipleResolutions tests resize across various resolutions.
+func TestTutorialSystem_Resize_MultipleResolutions(t *testing.T) {
+	resolutions := []struct {
+		width, height int
+	}{
+		{320, 480},   // Mobile portrait
+		{480, 320},   // Mobile landscape
+		{800, 600},   // Small desktop
+		{1280, 720},  // 720p
+		{1920, 1080}, // 1080p
+		{2560, 1440}, // 1440p
+		{3840, 2160}, // 4K
+	}
+
+	ts := NewTutorialSystemWithSize(800, 600)
+
+	for _, res := range resolutions {
+		t.Run(fmt.Sprintf("%dx%d", res.width, res.height), func(t *testing.T) {
+			ts.Resize(res.width, res.height)
+
+			if ts.screenWidth != res.width {
+				t.Errorf("screenWidth = %d, want %d", ts.screenWidth, res.width)
+			}
+			if ts.screenHeight != res.height {
+				t.Errorf("screenHeight = %d, want %d", ts.screenHeight, res.height)
+			}
+		})
 	}
 }

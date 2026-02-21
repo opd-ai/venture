@@ -544,6 +544,25 @@ func (ts *EbitenTutorialSystem) ShowNotification(msg string, duration float64) {
 	ts.NotificationTTL = duration
 }
 
+// Resize updates the tutorial system's screen dimensions and repositions touch buttons.
+// This should be called when the screen size changes to ensure buttons remain correctly positioned.
+func (ts *EbitenTutorialSystem) Resize(screenWidth, screenHeight int) {
+	if ts.screenWidth == screenWidth && ts.screenHeight == screenHeight {
+		return // No change needed
+	}
+
+	ts.screenWidth = screenWidth
+	ts.screenHeight = screenHeight
+
+	// Reposition buttons based on new screen dimensions
+	if ts.nextButton != nil {
+		ts.nextButton.SetPosition(float64(screenWidth-164), float64(screenHeight-64))
+	}
+	if ts.skipButton != nil {
+		ts.skipButton.SetPosition(44, float64(screenHeight-64))
+	}
+}
+
 // Draw renders the tutorial UI overlay (implements UISystem interface).
 // The screen parameter should be *ebiten.Image in production.
 func (ts *EbitenTutorialSystem) Draw(screen interface{}) {
@@ -551,6 +570,9 @@ func (ts *EbitenTutorialSystem) Draw(screen interface{}) {
 	if !ok || !ts.shouldDrawTutorialUI() {
 		return
 	}
+
+	// Update button positions to match actual screen size
+	ts.Resize(ebitenScreen.Bounds().Dx(), ebitenScreen.Bounds().Dy())
 
 	step := ts.GetCurrentStep()
 	if step == nil {

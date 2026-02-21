@@ -7,7 +7,7 @@ EXECUTION MODE: Autonomous action — select package, audit, write files, report
 ## Phase 0: Pre-Audit Preparation
 
 1. **Read root `AUDIT.md`** to identify already-audited packages.
-2. **Read `pkg/engine/interfaces.go`** to understand all registered `System`, `Component`, and `Input` interfaces.
+2. **Read `pkg/engine/interfaces.go`** to understand all defined `System`, `Component`, and `Input` interfaces.
 3. **Read `pkg/engine/ecs.go`** to understand `World`, `Entity`, component caching, and system registration.
 4. **Read `cmd/client/` entry point** to understand `EbitenGame` state machine, system initialization order, and lazy-init patterns.
 5. **Read `cmd/server/` entry point** to understand server-side system registration and validation layers.
@@ -32,7 +32,7 @@ For every input subsystem the codebase supports, verify the audited package corr
 
 | Input Source | What to verify | Files to inspect |
 |---|---|---|
-| **Keyboard** | Key bindings registered; `ebiten.IsKeyPressed` / `inpututil.IsKeyJustPressed` routed through the `Input` interface (not called directly in systems); rebindable key map honored | `pkg/engine/interfaces.go` (`Input` interface), `cmd/client/` key handling, `pkg/engine/input_*.go` |
+| **Keyboard** | - Key bindings registered<br>- `ebiten.IsKeyPressed` / `inpututil.IsKeyJustPressed` routed through the `Input` interface (not called directly in systems)<br>- Rebindable key map honored | `pkg/engine/interfaces.go` (`Input` interface), `cmd/client/` key handling, `pkg/engine/input_*.go` |
 | **Mouse** | Click, drag, scroll events consumed via `Input` interface; UI hit-testing uses screen-to-world coordinate conversion; cursor state (default, pointer, crosshair) set correctly | `cmd/client/`, `pkg/engine/menu_system.go`, `pkg/rendering/ui/` |
 | **Gamepad / Controller** | `ebiten.GamepadIDs()` enumerated; axis dead-zones applied; button mappings abstracted behind `Input` interface; hot-plug handled (gamepad connect/disconnect) | `pkg/engine/interfaces.go`, `cmd/client/`, any `gamepad*.go` or `controller*.go` |
 | **Touch (Mobile)** | Touch IDs tracked; dual-joystick virtual controls (`pkg/mobile/`) route through `Input` interface; gesture recognition (tap, long-press, swipe, pinch) present | `pkg/mobile/`, `examples/virtual_controls_wasm_demo/`, `cmd/mobile/` |
@@ -41,7 +41,7 @@ For every input subsystem the codebase supports, verify the audited package corr
 | **Stub/Test Input** | `StubInput` implementation exists and covers every method of `Input` interface; used in all system unit tests that require input | `pkg/engine/*_test.go`, `StubInput` definition |
 
 **Flag as issues:**
-- Direct `ebiten.IsKeyPressed` / `ebiten.IsMouseButtonPressed` calls inside `System.Update()` instead of going through the `Input` interface.
+- Any direct Ebiten input or `inpututil` calls (e.g., `ebiten.IsKeyPressed`, `ebiten.IsMouseButtonPressed`, `ebiten.Gamepad*`, `inpututil.IsKeyJustPressed`) inside `System.Update()` or other systems instead of going through the `Input` interface (violates coding guideline #2, CodingGuidelineID: 2, Input interface abstraction).
 - Missing dead-zone or sensitivity configuration.
 - Touch input not falling back gracefully on desktop builds.
 - `StubInput` missing methods added to the `Input` interface after stub was written.
@@ -95,7 +95,7 @@ Evaluate each item below. **Cite `file.go:LINE` for every issue found.**
 |---|---|
 | **Stub / incomplete code** | Functions returning only `nil`/zero with no real logic; `TODO`/`FIXME`/`HACK`/`PLACEHOLDER`/`XXX` comments; empty method bodies; commented-out logic blocks > 10 lines; functions that only call `log.Warn("not implemented")` |
 | **ECS compliance** | Components must be pure data + `Type() string` only; no logic methods on components (no `Move()`, `TakeDamage()`, `Calculate()`, etc.); systems must own all behavior; `Entity` hot-path component cache fields populated for performance-critical components; no direct `World` mutation from inside components |
-| **Deterministic procgen** | All randomness via `rand.New(rand.NewSource(seed))`; no global `rand.*()` calls; no `time.Now()` for seed derivation; no `crypto/rand` for gameplay randomness; no `map` iteration order dependence for deterministic output (use sorted keys); verify same seed → same output in tests |
+| **Deterministic procgen** | Verify all randomness follows Coding Guideline #2 (Deterministic Generation): seed-based `rand.New(rand.NewSource(seed))` usage only, no global or time-based seeding, and tests confirming same seed ⇒ same output. Do not restate the guideline here; treat it as the single source of truth. |
 | **Network interfaces** | Variables declared as `net.Addr` / `net.PacketConn` / `net.Conn` / `net.Listener` — never `*net.UDPConn`, `*net.TCPConn`, `*net.UDPAddr`, `*net.TCPAddr`, `*net.IPAddr`; no type assertions or type switches to concrete `net.*` types; verify mock-ability in tests |
 | **Error handling** | No swallowed errors (`_ = someFunc()` where error matters); all returned errors checked; no bare `fmt.Println` or `log.Println` on error paths — use `logrus.WithFields(logrus.Fields{...}).Error(...)` with standard field names (`entityID`, `system_name`, `seed`, `playerID`, `component_type`); `errors.Wrap` or `fmt.Errorf("context: %w", err)` for error chain preservation |
 | **Concurrency safety** | Shared mutable state protected by `sync.Mutex` / `sync.RWMutex` or channels; no data races in system `Update()` (systems should not write to entities another system is reading in the same tick); `go vet -race` clean |
@@ -151,7 +151,7 @@ GOOS=js GOARCH=wasm go vet ./path/to/pkg/...
 
 # 5. Search for common anti-patterns
 grep -rn 'TODO\|FIXME\|HACK\|PLACEHOLDER\|XXX\|not implemented' ./path/to/pkg/
-grep -rn 'rand\.Intn\|rand\.Float\|rand\.Int31\|rand\.Seed' ./path/to/pkg/ | grep -v 'rand\.New'
+grep -rn '\<rand\.\(Intn\|Float\|Int31\|Seed\)' ./path/to/pkg/ | grep -v '\<rand\.New\('
 grep -rn 'time\.Now' ./path/to/pkg/
 grep -rn 'net\.UDPConn\|net\.TCPConn\|net\.UDPAddr\|net\.TCPAddr\|net\.IPAddr' ./path/to/pkg/
 grep -rn 'fmt\.Print\|log\.Print\|log\.Fatal' ./path/to/pkg/ | grep -v '_test\.go'
@@ -167,9 +167,15 @@ Use this exact template:
 
 ```markdown
 # Audit: <package-import-path>
-**Date**: YYYY-MM-DD
+**Date**: YYYY-MM-DD (ISO 8601, e.g., 2026-02-21)
 **Auditor**: GitHub Copilot (META_AUDIT v2)
 **Status**: Complete | Incomplete | Needs Work
+<!--
+Status criteria:
+- Complete: All automated checks passed and fewer than 5 non-critical issues identified.
+- Incomplete: Audit was stopped early or one or more required checks (e.g., go test, go vet, race) were not run.
+- Needs Work: 5 or more issues identified, or any critical/priority-0 failure (e.g., panics, data corruption, security issues).
+-->
 
 ## Summary
 <2-3 sentences: scope, overall health, critical risk.>

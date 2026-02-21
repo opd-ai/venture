@@ -6,18 +6,18 @@
 
 ## Summary
 
-- **Total issues**: 225 (33 open, 192 resolved)
-- **Critical**: 0 (0 open) | **High**: 43 (0 open) | **Medium**: 42 (0 open) | **Low**: 140 (33 open)
+- **Total issues**: 228 (30 open, 198 resolved)
+- **Critical**: 0 (0 open) | **High**: 43 (0 open) | **Medium**: 42 (0 open) | **Low**: 143 (30 open)
 - **Affected subpackages**: 18 of 108 audited packages have open issues
-- **Resolution rate**: 192/225 (85%)
+- **Resolution rate**: 198/228 (87%)
 
 | Severity | Total | Open | Resolved |
 |----------|-------|------|----------|
 | Critical | 0 | 0 | 0 |
 | High | 43 | 0 | 43 |
 | Medium | 42 | 0 | 42 |
-| Low | 140 | 33 | 107 |
-| **Total** | **225** | **33** | **192** |
+| Low | 143 | 30 | 113 |
+| **Total** | **228** | **30** | **198** |
 
 ## Priority Resolution Order
 
@@ -104,11 +104,11 @@ _All medium-priority issues have been resolved._
   - [x] integration — Package successfully integrated in cmd/client/handlers.go and cmd/server/v8_systems.go; no missing registrations detected — **VERIFIED 2026-02-21**: Already integrated
 - **pkg/procgen/companion** (1 issue)
   - [ ] error handling — No structured logging with `logrus.WithFields` for generation events. Generator operates silently, making production debugging difficult when investigating companion spawn issues. (`generator.go:37-75`)
-- **pkg/procgen/dialog** (4 issues)
-  - [ ] doc — `GetGreeting()` method in personality.go does not randomize greetings (returns first greeting), comment says "could randomize in future" (`personality.go:275`)
+- **pkg/procgen/dialog** (1 open, 3 resolved)
+  - [x] doc — `GetGreeting()` method in personality.go does not randomize greetings (returns first greeting), comment says "could randomize in future" (`personality.go:275`) — **FIXED 2026-02-21**: Added `GetGreetingWithSeed(genreID string, seed int64)` for deterministic randomized greeting selection. Original method preserved for backward compatibility.
   - [ ] performance — `selectWeightedWord` temperature weighting could use cached power calculations for common temperatures (`utils.go:126-153`)
-  - [ ] doc — `hash64` function lacks godoc comment explaining fallback usage (`utils.go:184`)
-  - [ ] testing — No benchmark for `GenerateWithPersonality` method (only benchmarks for Generate, GenerateDeterministic) (`markov_test.go:396-444`)
+  - [x] doc — `hash64` function lacks godoc comment explaining fallback usage (`utils.go:184`) — **VERIFIED 2026-02-21**: Function already has godoc comment at lines 182-183.
+  - [x] testing — No benchmark for `GenerateWithPersonality` method (only benchmarks for Generate, GenerateDeterministic) (`markov_test.go:396-444`) — **FIXED 2026-02-21**: Added `BenchmarkGenerateWithPersonality` and `BenchmarkGetGreetingWithSeed`.
 - **pkg/procgen/entity** (2 open, 2 resolved)
   - [x] **Doc coverage** — MerchantData type missing godoc comment (`merchant.go:17`) — **VERIFIED 2026-02-21**: Already has godoc comment
   - [x] **Doc coverage** — generateMerchantInventory method missing godoc comment (`merchant.go:162`) — **VERIFIED 2026-02-21**: Already has godoc comment
@@ -584,11 +584,11 @@ _All medium-priority issues have been resolved._
 
 #### `pkg/procgen/dialog`
 - Source: [`pkg/procgen/dialog/AUDIT.md`](pkg/procgen/dialog/AUDIT.md)
-- Issues: 4 open (Low: 4)
-  - [Low] doc — `GetGreeting()` method in personality.go does not randomize greetings (returns first greeting), comment says "could randomize in future" (`personality.go:275`)
+- Issues: 1 open, 3 resolved (Low: 4)
+  - ~~[Low] doc — `GetGreeting()` method in personality.go does not randomize greetings (returns first greeting), comment says "could randomize in future" (`personality.go:275`)~~ ✅ **FIXED 2026-02-21**: Added `GetGreetingWithSeed()` for deterministic randomized greeting selection
   - [Low] performance — `selectWeightedWord` temperature weighting could use cached power calculations for common temperatures (`utils.go:126-153`)
-  - [Low] doc — `hash64` function lacks godoc comment explaining fallback usage (`utils.go:184`)
-  - [Low] testing — No benchmark for `GenerateWithPersonality` method (only benchmarks for Generate, GenerateDeterministic) (`markov_test.go:396-444`)
+  - ~~[Low] doc — `hash64` function lacks godoc comment explaining fallback usage (`utils.go:184`)~~ ✅ **VERIFIED 2026-02-21**: Already has godoc comment
+  - ~~[Low] testing — No benchmark for `GenerateWithPersonality` method (only benchmarks for Generate, GenerateDeterministic) (`markov_test.go:396-444`)~~ ✅ **FIXED 2026-02-21**: Added `BenchmarkGenerateWithPersonality` and `BenchmarkGetGreetingWithSeed`
 
 #### `pkg/procgen/entity`
 - Source: [`pkg/procgen/entity/AUDIT.md`](pkg/procgen/entity/AUDIT.md)
@@ -938,7 +938,7 @@ _All medium-priority issues have been resolved._
 - **Modding (pkg/modding/)**: 1 open issues (Low: 1)
 - **Narrative (pkg/narrative/)**: 1 open issues (Low: 1)
 - **Network (pkg/network/)**: 0 open issues — _All issues resolved_
-- **Procedural Generation (pkg/procgen/)**: 26 open issues (Low: 26)
+- **Procedural Generation (pkg/procgen/)**: 23 open issues (Low: 23)
 - **Rendering (pkg/rendering/)**: 1 open issues (Low: 1)
 - **Save/Load (pkg/saveload/)**: 3 open issues (Low: 3)
 - **Security (pkg/security/)**: 2 open issues (Low: 2)
@@ -951,18 +951,18 @@ _All medium-priority issues have been resolved._
 - **Phase 1 (Critical)**: 0 issues — No action required
 - **Phase 2 (High)**: 0 issues — No action required
 - **Phase 3 (Medium)**: 0 issues — All resolved
-- **Phase 4 (Low)**: 33 issues — Address opportunistically
+- **Phase 4 (Low)**: 30 issues — Address opportunistically
 
 ## Resolved Issues Summary
 
-192 issues have been resolved across 44 packages.
+198 issues have been resolved across 44 packages.
 
 | Severity | Resolved |
 |----------|----------|
 | High | 43 |
 | Medium | 42 |
-| Low | 107 |
-| **Total** | **192** |
+| Low | 113 |
+| **Total** | **198** |
 
 ---
 

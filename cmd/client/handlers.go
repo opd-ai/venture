@@ -268,6 +268,7 @@ type systemsContainer struct {
 	factionReactionSystem                       *engine.FactionReactionSystem
 	skillProgressionSystem                      *engine.SkillProgressionSystem
 	skillLoadoutSystem                          *engine.SkillLoadoutSystem        // Manages saved skill loadouts for build swapping
+	classAffinitySystem                         *engine.ClassAffinitySystem       // Tracks playstyle progression and combat archetypes
 	attributeAllocationSystem                   *engine.AttributeAllocationSystem // Manages core attribute point allocation
 	talentSystem                                *engine.TalentSystem              // Manages talent point allocation and passive bonuses
 	equipmentSetBonusSystem                     *engine.EquipmentSetBonusSystem   // Manages equipment set piece tracking and tiered bonuses
@@ -1905,6 +1906,11 @@ func registerNonCriticalSystems(game *engine.EbitenGame, sys *systemsContainer) 
 
 	sys.skillLoadoutSystem = engine.NewSkillLoadoutSystem(game.World)
 	game.World.AddSystem(sys.skillLoadoutSystem)
+
+	// ClassAffinitySystem: tracks playstyle progression and combat archetypes
+	// Players build affinity XP by using abilities, unlocking passive bonuses for their preferred playstyle
+	sys.classAffinitySystem = engine.NewClassAffinitySystem(game.World)
+	game.World.AddSystem(sys.classAffinitySystem)
 
 	sys.attributeAllocationSystem = engine.NewAttributeAllocationSystem(game.World, *seed)
 	game.World.AddSystem(sys.attributeAllocationSystem)

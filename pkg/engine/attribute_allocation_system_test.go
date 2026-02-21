@@ -247,7 +247,7 @@ func TestAttributeAllocationSystem_AllocatePoints(t *testing.T) {
 	world := NewWorld()
 	system := NewAttributeAllocationSystem(world, 12345)
 
-	entity := NewEntity()
+	entity := NewEntity(1)
 	attrComp := NewAttributeAllocationComponent()
 	attrComp.UnspentPoints = 10
 	entity.AddComponent(attrComp)
@@ -274,7 +274,7 @@ func TestAttributeAllocationSystem_AllocatePoints_InsufficientPoints(t *testing.
 	world := NewWorld()
 	system := NewAttributeAllocationSystem(world, 12345)
 
-	entity := NewEntity()
+	entity := NewEntity(1)
 	attrComp := NewAttributeAllocationComponent()
 	attrComp.UnspentPoints = 3
 	entity.AddComponent(attrComp)
@@ -289,7 +289,7 @@ func TestAttributeAllocationSystem_AwardPoints(t *testing.T) {
 	world := NewWorld()
 	system := NewAttributeAllocationSystem(world, 12345)
 
-	entity := NewEntity()
+	entity := NewEntity(1)
 	attrComp := NewAttributeAllocationComponent()
 	entity.AddComponent(attrComp)
 
@@ -310,7 +310,7 @@ func TestAttributeAllocationSystem_Respec(t *testing.T) {
 	world := NewWorld()
 	system := NewAttributeAllocationSystem(world, 12345)
 
-	entity := NewEntity()
+	entity := NewEntity(1)
 	attrComp := NewAttributeAllocationComponent()
 	attrComp.AllocatedPoints[AttrStrength] = 10
 	attrComp.AllocatedPoints[AttrAgility] = 5
@@ -347,7 +347,7 @@ func TestAttributeAllocationSystem_Respec_InsufficientGold(t *testing.T) {
 	world := NewWorld()
 	system := NewAttributeAllocationSystem(world, 12345)
 
-	entity := NewEntity()
+	entity := NewEntity(1)
 	attrComp := NewAttributeAllocationComponent()
 	attrComp.AllocatedPoints[AttrStrength] = 10
 	entity.AddComponent(attrComp)
@@ -363,7 +363,7 @@ func TestAttributeAllocationSystem_GetRespecCost(t *testing.T) {
 	world := NewWorld()
 	system := NewAttributeAllocationSystem(world, 12345)
 
-	entity := NewEntity()
+	entity := NewEntity(1)
 	attrComp := NewAttributeAllocationComponent()
 	entity.AddComponent(attrComp)
 
@@ -395,7 +395,7 @@ func TestAttributeAllocationSystem_Update_AppliesBonuses(t *testing.T) {
 	world := NewWorld()
 	system := NewAttributeAllocationSystem(world, 12345)
 
-	entity := NewEntity()
+	entity := NewEntity(1)
 	attrComp := NewAttributeAllocationComponent()
 	attrComp.AllocatedPoints[AttrStrength] = 10 // 10 extra STR
 	attrComp.Dirty = true
@@ -435,7 +435,7 @@ func TestAttributeAllocationSystem_Update_SkipsClean(t *testing.T) {
 	world := NewWorld()
 	system := NewAttributeAllocationSystem(world, 12345)
 
-	entity := NewEntity()
+	entity := NewEntity(1)
 	attrComp := NewAttributeAllocationComponent()
 	attrComp.AllocatedPoints[AttrStrength] = 10
 	attrComp.Dirty = false // Not dirty
@@ -457,7 +457,7 @@ func TestAttributeAllocationSystem_SetBonusPoints(t *testing.T) {
 	world := NewWorld()
 	system := NewAttributeAllocationSystem(world, 12345)
 
-	entity := NewEntity()
+	entity := NewEntity(1)
 	attrComp := NewAttributeAllocationComponent()
 	entity.AddComponent(attrComp)
 
@@ -532,7 +532,7 @@ func TestAttributeAllocationSystem_NoComponent(t *testing.T) {
 	world := NewWorld()
 	system := NewAttributeAllocationSystem(world, 12345)
 
-	entity := NewEntity()
+	entity := NewEntity(1)
 	// No attribute_allocation component
 
 	err := system.AllocatePoints(entity, AttrStrength, 1)
@@ -557,7 +557,7 @@ func BenchmarkAttributeAllocationSystem_Update(b *testing.B) {
 	// Create 100 entities
 	entities := make([]*Entity, 100)
 	for i := 0; i < 100; i++ {
-		entity := NewEntity()
+		entity := NewEntity(1)
 		attrComp := NewAttributeAllocationComponent()
 		attrComp.Dirty = true
 		attrComp.AllocatedPoints[AttrStrength] = 10

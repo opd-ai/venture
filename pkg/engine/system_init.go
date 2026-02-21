@@ -78,6 +78,7 @@ type SystemInitResult struct {
 	ProgressionSystem                           *ProgressionSystem
 	SkillLoadoutSystem                          *SkillLoadoutSystem
 	WeaponMasterySystem                         *WeaponMasterySystem
+	ClassAffinitySystem                         *ClassAffinitySystem
 	AttributeAllocationSystem                   *AttributeAllocationSystem
 	TalentSystem                                *TalentSystem
 	EquipmentSetBonusSystem                     *EquipmentSetBonusSystem
@@ -888,10 +889,37 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 			weaponMasterySystem.OnCriticalHit(attacker, weaponType)
 		}
 	})
+
+	// 18b2. ClassAffinitySystem - tracks playstyle progression and combat archetypes
+	// Players build affinity XP by using abilities, unlocking passive bonuses for their preferred playstyle
+	classAffinitySystem := NewClassAffinitySystem(game.World)
+	result.ClassAffinitySystem = classAffinitySystem
+	game.World.AddSystem(classAffinitySystem)
+
+	// Wire class affinity to combat callbacks for damage tracking
+	result.CombatSystem.AddDamageCallback(func(attacker, target *Entity, damage float64) {
+		// Track damage dealt for affinity XP (ability used is determined by last action)
+		if classAffinitySystem != nil {
+			comp, hasComp := attacker.GetComponent("class_affinity")
+			if hasComp {
+				affinity := comp.(*ClassAffinityComponent)
+				if affinity.TotalAffinityXP > 0 {
+					// Award bonus XP for high damage hits
+					if damage >= 100 {
+						classAffinitySystem.OnAbilityUsed(attacker, "power_strike", damage, 0)
+					}
+				}
+			}
+		}
+	})
 	result.CombatSystem.SetKillCallback(func(attacker, target *Entity) {
 		weaponType := weaponMasterySystem.GetEquippedWeaponType(attacker)
 		if weaponType != "" {
 			weaponMasterySystem.OnKill(attacker, weaponType)
+		}
+		// Also award affinity XP for kills
+		if classAffinitySystem != nil {
+			classAffinitySystem.OnKill(attacker, "power_strike")
 		}
 	})
 

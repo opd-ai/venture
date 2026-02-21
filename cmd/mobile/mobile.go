@@ -13,6 +13,14 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+// Default mobile screen dimensions (portrait orientation)
+const (
+	// DefaultScreenWidth is the default logical width for mobile devices (portrait)
+	DefaultScreenWidth = 720
+	// DefaultScreenHeight is the default logical height for mobile devices (portrait)
+	DefaultScreenHeight = 1280
+)
+
 // Game is the mobile game instance
 var (
 	gameInstance      *engine.EbitenGame
@@ -64,7 +72,7 @@ func initializeGame() {
 
 // initializeGameInstance creates the game instance and initializes all game systems.
 func initializeGameInstance() {
-	gameInstance = engine.NewEbitenGameWithLogger(720, 1280, logger)
+	gameInstance = engine.NewEbitenGameWithLogger(DefaultScreenWidth, DefaultScreenHeight, logger)
 
 	config := engine.DefaultSystemInitConfig(worldSeed, genreID, logger)
 	config.EnableVerboseLogging = true
@@ -161,8 +169,10 @@ func createAndConfigurePlayer(generatedTerrain *terrain.Terrain) {
 }
 
 // calculatePlayerSpawnPosition determines the player's starting position.
+// If terrain has rooms, spawns player in the center of the first room.
+// Otherwise, uses a safe default position in the middle of the screen.
 func calculatePlayerSpawnPosition(generatedTerrain *terrain.Terrain) (float64, float64) {
-	if len(generatedTerrain.Rooms) > 0 {
+	if generatedTerrain != nil && len(generatedTerrain.Rooms) > 0 {
 		firstRoom := generatedTerrain.Rooms[0]
 		cx, cy := firstRoom.Center()
 		return float64(cx * 32), float64(cy * 32)
@@ -323,7 +333,9 @@ func addStarterItems(inventory *engine.InventoryComponent, seed int64, genreID s
 	}
 
 	weaponResult, err := itemGen.Generate(seed+1, weaponParams)
-	if err == nil {
+	if err != nil {
+		logger.WithError(err).Debug("starter weapon generation failed, skipping")
+	} else {
 		weapons := weaponResult.([]*item.Item)
 		if len(weapons) > 0 {
 			weapon := weapons[0]
@@ -345,7 +357,9 @@ func addStarterItems(inventory *engine.InventoryComponent, seed int64, genreID s
 	}
 
 	potionResult, err := itemGen.Generate(seed+2, potionParams)
-	if err == nil {
+	if err != nil {
+		logger.WithError(err).Debug("starter potion generation failed, skipping")
+	} else {
 		potions := potionResult.([]*item.Item)
 		for _, potion := range potions {
 			potion.Name = "Minor Health Potion"
@@ -375,21 +389,21 @@ func Update() bool {
 }
 
 // GetScreenWidth returns the game's logical screen width in pixels.
-// For mobile, this is fixed at 720 pixels (portrait orientation).
+// For mobile, this defaults to DefaultScreenWidth (portrait orientation).
 // Returns 0 if the game instance has not been initialized.
 func GetScreenWidth() int {
 	if gameInstance == nil {
 		return 0
 	}
-	return 720
+	return DefaultScreenWidth
 }
 
 // GetScreenHeight returns the game's logical screen height in pixels.
-// For mobile, this is fixed at 1280 pixels (portrait orientation).
+// For mobile, this defaults to DefaultScreenHeight (portrait orientation).
 // Returns 0 if the game instance has not been initialized.
 func GetScreenHeight() int {
 	if gameInstance == nil {
 		return 0
 	}
-	return 1280
+	return DefaultScreenHeight
 }

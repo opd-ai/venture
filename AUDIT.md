@@ -6,18 +6,18 @@
 
 ## Summary
 
-- **Total issues**: 225 (78 open, 147 resolved)
-- **Critical**: 0 (0 open) | **High**: 43 (0 open) | **Medium**: 42 (0 open) | **Low**: 140 (78 open)
-- **Affected subpackages**: 38 of 108 audited packages have open issues
-- **Resolution rate**: 147/225 (65%)
+- **Total issues**: 225 (75 open, 150 resolved)
+- **Critical**: 0 (0 open) | **High**: 43 (0 open) | **Medium**: 42 (0 open) | **Low**: 140 (75 open)
+- **Affected subpackages**: 37 of 108 audited packages have open issues
+- **Resolution rate**: 150/225 (67%)
 
 | Severity | Total | Open | Resolved |
 |----------|-------|------|----------|
 | Critical | 0 | 0 | 0 |
 | High | 43 | 0 | 43 |
 | Medium | 42 | 0 | 42 |
-| Low | 140 | 78 | 62 |
-| **Total** | **225** | **78** | **147** |
+| Low | 140 | 75 | 65 |
+| **Total** | **225** | **75** | **150** |
 
 ## Priority Resolution Order
 
@@ -47,9 +47,9 @@ _All medium-priority issues have been resolved._
   - [x] doc.go references Go 1.24 and Ebiten 2.9 (doc.go) — **FIXED 2026-02-21**: Updated to Go 1.24.5+ and Ebiten 2.9.3
   - [x] Large function count in handlers.go — **FIXED 2026-02-21**: Extracted performance monitoring (8 functions, ~100 lines) to `init_monitoring.go`. Extracted spawn/entity generation (16 functions, ~260 lines) to `init_spawning.go`. handlers.go reduced from 82 to 66 functions.
 - **cmd/mobile** (3 issues)
-  - [ ] Nil terrain access
-  - [ ] Hardcoded screen dimensions
-  - [ ] Silent item generation failures
+  - [x] Nil terrain access — **FIXED 2026-02-21**: Added nil check for terrain before accessing Rooms
+  - [x] Hardcoded screen dimensions — **FIXED 2026-02-21**: Extracted to DefaultScreenWidth/DefaultScreenHeight constants
+  - [x] Silent item generation failures — **FIXED 2026-02-21**: Added error logging with logger.WithError().Debug()
 - **cmd/server** (1 issue)
   - [ ] Global `v9ValidationService` synchronization
 - **pkg/audio/music** (2 issues)
@@ -189,10 +189,10 @@ _All medium-priority issues have been resolved._
 
 #### `cmd/mobile`
 - Source: [`cmd/mobile/AUDIT.md`](cmd/mobile/AUDIT.md)
-- Issues: 3 open (Low: 3)
-  - [Low] Nil terrain access
-  - [Low] Hardcoded screen dimensions
-  - [Low] Silent item generation failures
+- Issues: 0 open, 3 resolved (Low: 3)
+  - ~~[Low] Nil terrain access~~ ✅ **FIXED 2026-02-21**: Added nil check for terrain
+  - ~~[Low] Hardcoded screen dimensions~~ ✅ **FIXED 2026-02-21**: Extracted to DefaultScreenWidth/DefaultScreenHeight constants
+  - ~~[Low] Silent item generation failures~~ ✅ **FIXED 2026-02-21**: Added error logging
 
 #### `cmd/mobile/config`
 - Source: [`cmd/mobile/config/AUDIT.md`](cmd/mobile/config/AUDIT.md)

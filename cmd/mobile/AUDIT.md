@@ -3,7 +3,7 @@
 ## Summary
 
 Audited all source files in `cmd/mobile/` (3 source files, ~400 LOC).
-Found 0 actionable issues requiring fixes.
+All issues resolved.
 
 **Coverage**: Config sub-package has tests (`config/seed_test.go`, `config/integration_test.go`).
 Main `mobile.go` is untestable without mobile device/emulator (ebitenmobile entry point).
@@ -25,20 +25,19 @@ Main `mobile.go` is untestable without mobile device/emulator (ebitenmobile entr
 - Global state is necessary for mobile framework integration
 - Nil logger checks in config package follow defensive patterns
 
-### Low-Risk Items (No Fix Required)
+### Resolved Issues
 
-1. **[LOW] Nil terrain access** (`mobile.go:165`)
-   - `generatedTerrain.Rooms` accessed without nil check
-   - Low risk: terrain generation `Fatal()`s on error, so nil path is unreachable
-   - Pattern mirrors server code where it was fixed
+1. **[LOW] Nil terrain access** (`mobile.go:165`) — **FIXED 2026-02-21**
+   - Added nil check for `generatedTerrain` before accessing `Rooms`
+   - Now safely falls back to default position (400, 300) if terrain is nil
 
-2. **[LOW] Hardcoded screen dimensions** (`mobile.go:67-68`)
-   - 720x1280 hardcoded for mobile
-   - Acceptable for mobile targets (standard portrait resolution)
+2. **[LOW] Hardcoded screen dimensions** (`mobile.go:67-68`) — **FIXED 2026-02-21**
+   - Extracted to named constants `DefaultScreenWidth` (720) and `DefaultScreenHeight` (1280)
+   - Constants are now used throughout the package for consistency
 
-3. **[LOW] Silent item generation failures** (`mobile.go:326, 334, 347`)
-   - Uses `if err == nil` pattern (inverted) to skip failed items
-   - Acceptable: items are optional content, failure is non-critical
+3. **[LOW] Silent item generation failures** (`mobile.go:326, 334, 347`) — **FIXED 2026-02-21**
+   - Changed from `if err == nil` pattern to explicit error logging with `logger.WithError(err).Debug()`
+   - Item generation failures are now logged for observability while maintaining non-blocking behavior
 
 ## Test Coverage
 

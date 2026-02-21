@@ -349,15 +349,17 @@ func (sm *ServerManager) handleWorldUpdate() {
 	dt := float64(1.0 / float64(sm.config.TickRate))
 	sm.world.Update(dt)
 
+	if !sm.stateBroadcaster.ShouldBroadcast() {
+		return
+	}
+
 	snapshot, err := sm.stateBroadcaster.CreateSnapshot()
 	if err != nil {
 		sm.logger.Error("Failed to create snapshot", "error", err)
 		return
 	}
 
-	if sm.stateBroadcaster.ShouldBroadcast() {
-		sm.broadcastEntityStates(snapshot)
-	}
+	sm.broadcastEntityStates(snapshot)
 }
 
 // spawnPlayer spawns a player entity at a spawn location.

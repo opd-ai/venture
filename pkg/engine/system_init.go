@@ -269,6 +269,7 @@ type SystemInitResult struct {
 	SpriteDepthEnhanceSystem                    *SpriteDepthEnhanceSystem
 	SpriteColorTemperatureSystem                *SpriteColorTemperatureSystem
 	SpriteFinalizerSystem                       *SpriteFinalizerSystem
+	CompanionQuestSynergySystem                 *CompanionQuestSynergySystem
 
 	// System wrappers
 	AnimationSystemWrapper            System
@@ -1463,6 +1464,12 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 	result.CompanionProgressionSystem = companionProgressionSystem
 	result.CompanionProgressionSystemWrapper = &companionProgressionSystemWrapper{system: companionProgressionSystem}
 	game.World.AddSystem(result.CompanionProgressionSystemWrapper)
+
+	// 36d2b. CompanionQuestSynergySystem - integrates companion skills with quest bonuses
+	// Connects CompanionComponent skills with QuestTrackerComponent for objective and reward multipliers
+	companionQuestSynergySystem := NewCompanionQuestSynergySystem(game.World)
+	result.CompanionQuestSynergySystem = companionQuestSynergySystem
+	game.World.AddSystem(companionQuestSynergySystem)
 
 	// 36d3. CompanionLevelUpParticleSystem - visual feedback for companion level-ups
 	companionLevelUpParticleSystem := NewCompanionLevelUpParticleSystem(game.World, config.Seed+4100)

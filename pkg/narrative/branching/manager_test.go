@@ -1079,3 +1079,22 @@ func BenchmarkGetAlignment(b *testing.B) {
 		manager.GetAlignment("player1", arc.ID)
 	}
 }
+
+func TestManagerSetLogger(t *testing.T) {
+	manager := NewManager()
+
+	// Ensure logger is not nil by default
+	if manager.logger == nil {
+		t.Error("expected default logger to be non-nil")
+	}
+
+	// Test that SetLogger accepts custom logger
+	customLogger := manager.logger.WithField("custom", "value")
+	manager.SetLogger(customLogger)
+
+	// Test that SetLogger ignores nil
+	manager.SetLogger(nil)
+	if manager.logger == nil {
+		t.Error("SetLogger(nil) should not set logger to nil")
+	}
+}

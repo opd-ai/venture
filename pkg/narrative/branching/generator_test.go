@@ -504,3 +504,22 @@ func BenchmarkValidate(b *testing.B) {
 func newRNG(seed int64) *rand.Rand {
 	return rand.New(rand.NewSource(seed))
 }
+
+func TestGeneratorSetLogger(t *testing.T) {
+	gen := NewGenerator()
+
+	// Ensure logger is not nil by default
+	if gen.logger == nil {
+		t.Error("expected default logger to be non-nil")
+	}
+
+	// Test that SetLogger accepts custom logger
+	customLogger := gen.logger.WithField("custom", "value")
+	gen.SetLogger(customLogger)
+
+	// Test that SetLogger ignores nil
+	gen.SetLogger(nil)
+	if gen.logger == nil {
+		t.Error("SetLogger(nil) should not set logger to nil")
+	}
+}

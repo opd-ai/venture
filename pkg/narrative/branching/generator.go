@@ -5,19 +5,36 @@ import (
 	"math/rand"
 
 	"github.com/opd-ai/venture/pkg/procgen"
+	"github.com/sirupsen/logrus"
 )
 
 // Generator implements the procgen.Generator interface for story arcs
-type Generator struct{}
+type Generator struct {
+	logger *logrus.Entry
+}
 
 // NewGenerator creates a new story arc generator
 func NewGenerator() *Generator {
-	return &Generator{}
+	return &Generator{
+		logger: logrus.WithField("system_name", "branching_generator"),
+	}
+}
+
+// SetLogger sets a custom logger for the generator
+func (g *Generator) SetLogger(logger *logrus.Entry) {
+	if logger != nil {
+		g.logger = logger
+	}
 }
 
 // Generate creates a procedural story arc
 func (g *Generator) Generate(seed int64, params procgen.GenerationParams) (interface{}, error) {
 	if err := validateGenerationParams(params); err != nil {
+		g.logger.WithFields(logrus.Fields{
+			"seed":  seed,
+			"depth": params.Depth,
+			"error": err.Error(),
+		}).Debug("generation parameter validation failed")
 		return nil, err
 	}
 
@@ -31,6 +48,14 @@ func (g *Generator) Generate(seed int64, params procgen.GenerationParams) (inter
 
 	endingNodes := g.buildStoryGraph(arc, rng, startNode.ID, nodeCount)
 	g.ensureStoryEnding(arc, rng, endingNodes)
+
+	g.logger.WithFields(logrus.Fields{
+		"seed":       seed,
+		"arc_id":     arc.ID,
+		"node_count": len(arc.Nodes),
+		"endings":    len(arc.Endings),
+		"genre_id":   arc.GenreID,
+	}).Debug("story arc generated successfully")
 
 	return arc, nil
 }
@@ -168,20 +193,43 @@ func (g *Generator) ensureStoryEnding(arc *StoryArc, rng *rand.Rand, endingNodes
 func (g *Generator) Validate(result interface{}) error {
 	arc, ok := result.(*StoryArc)
 	if !ok {
-		return fmt.Errorf("expected *StoryArc, got %T", result)
+		err := fmt.Errorf("expected *StoryArc, got %T", result)
+		g.logger.WithFields(logrus.Fields{
+			"expected_type": "*StoryArc",
+			"actual_type":   fmt.Sprintf("%T", result),
+			"error":         err.Error(),
+		}).Debug("validation failed: type mismatch")
+		return err
 	}
 
 	if err := validateBasicArcProperties(arc); err != nil {
+		g.logger.WithFields(logrus.Fields{
+			"arc_id": arc.ID,
+			"error":  err.Error(),
+		}).Debug("validation failed: basic properties")
 		return err
 	}
 
 	if err := validateArcNodeReferences(arc); err != nil {
+		g.logger.WithFields(logrus.Fields{
+			"arc_id": arc.ID,
+			"error":  err.Error(),
+		}).Debug("validation failed: node references")
 		return err
 	}
 
 	if err := validateArcConnections(arc); err != nil {
+		g.logger.WithFields(logrus.Fields{
+			"arc_id": arc.ID,
+			"error":  err.Error(),
+		}).Debug("validation failed: arc connections")
 		return err
 	}
+
+	g.logger.WithFields(logrus.Fields{
+		"arc_id":     arc.ID,
+		"node_count": len(arc.Nodes),
+	}).Debug("story arc validated successfully")
 
 	return nil
 }

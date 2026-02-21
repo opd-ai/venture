@@ -6,18 +6,18 @@
 
 ## Summary
 
-- **Total issues**: 228 (30 open, 198 resolved)
-- **Critical**: 0 (0 open) | **High**: 43 (0 open) | **Medium**: 42 (0 open) | **Low**: 143 (30 open)
-- **Affected subpackages**: 18 of 108 audited packages have open issues
-- **Resolution rate**: 198/228 (87%)
+- **Total issues**: 229 (29 open, 200 resolved)
+- **Critical**: 0 (0 open) | **High**: 43 (0 open) | **Medium**: 42 (0 open) | **Low**: 144 (29 open)
+- **Affected subpackages**: 17 of 108 audited packages have open issues
+- **Resolution rate**: 200/229 (87%)
 
 | Severity | Total | Open | Resolved |
 |----------|-------|------|----------|
 | Critical | 0 | 0 | 0 |
 | High | 43 | 0 | 43 |
 | Medium | 42 | 0 | 42 |
-| Low | 143 | 30 | 113 |
-| **Total** | **228** | **30** | **198** |
+| Low | 144 | 29 | 115 |
+| **Total** | **229** | **29** | **200** |
 
 ## Priority Resolution Order
 
@@ -89,8 +89,9 @@ _All medium-priority issues have been resolved._
   - [ ] API design — SetPermission does not validate that permission value is within valid range (0-4) — **ACKNOWLEDGED**: Out-of-range values don't cause errors but have no defined behavior
 - **pkg/modding** (1 issue)
   - [ ] Deterministic procgen — time.Now() used for metadata timestamps in LoadedAt (`loader.go:88`), AppliedAt (`manager.go:232`), and rate limiting (`manager.go:323`). Acceptable for non-procgen metadata.
-- **pkg/narrative/branching** (1 issue)
-  - [ ] error handling — No structured logging with `logrus.WithFields`; package has no logging at all (acceptable for pure data layer, but would aid debugging) (`generator.go`, `manager.go`)
+- **pkg/narrative/branching** (1 open, 1 resolved)
+  - [x] error handling — No structured logging with `logrus.WithFields`; package has no logging at all (acceptable for pure data layer, but would aid debugging) (`generator.go`, `manager.go`) — **FIXED 2026-02-21**: Added optional `logger *logrus.Entry` field to `Generator` and `Manager`. Added `SetLogger()` methods. Added structured logging with `logrus.WithFields` to key operations.
+  - [ ] time.Now() usage — Used for progress timestamps (`StartTime`, `LastUpdate` in `manager.go:65-66,386`). Acceptable for non-procgen metadata tracking.
 - **pkg/network/resilience** (2 issues)
   - [ ] error handling — No structured logging in package; scenarios log via optional logger but core types (simulator, metrics) have no logging. Reduces observability for production use. (`simulator.go`, `metrics.go`)
   - [ ] doc coverage — Missing package-level comment on `metrics.go` explaining metrics collection architecture. Only `doc.go` has comprehensive package documentation. (`metrics.go:1`)
@@ -463,8 +464,8 @@ _All medium-priority issues have been resolved._
 
 #### `pkg/narrative/branching`
 - Source: [`pkg/narrative/branching/AUDIT.md`](pkg/narrative/branching/AUDIT.md)
-- Issues: 1 open (Low: 1)
-  - [Low] error handling — No structured logging with `logrus.WithFields`; package has no logging at all (acceptable for pure data layer, but would aid debugging) (`generator.go`, `manager.go`)
+- Issues: 0 open, 1 resolved (Low: 1)
+  - ~~[Low] error handling — No structured logging with `logrus.WithFields`; package has no logging at all (acceptable for pure data layer, but would aid debugging) (`generator.go`, `manager.go`)~~ ✅ **FIXED 2026-02-21**: Added optional `logger *logrus.Entry` to `Generator` and `Manager` with `SetLogger()` methods
 
 ### Network (pkg/network/)
 
@@ -936,7 +937,7 @@ _All medium-priority issues have been resolved._
 - **Engine (pkg/engine/)**: 0 open issues — _All issues resolved_
 - **Integration (pkg/integration/)**: 5 open issues (Low: 5)
 - **Modding (pkg/modding/)**: 1 open issues (Low: 1)
-- **Narrative (pkg/narrative/)**: 1 open issues (Low: 1)
+- **Narrative (pkg/narrative/)**: 0 open issues — _All issues resolved_
 - **Network (pkg/network/)**: 0 open issues — _All issues resolved_
 - **Procedural Generation (pkg/procgen/)**: 23 open issues (Low: 23)
 - **Rendering (pkg/rendering/)**: 1 open issues (Low: 1)
@@ -951,18 +952,18 @@ _All medium-priority issues have been resolved._
 - **Phase 1 (Critical)**: 0 issues — No action required
 - **Phase 2 (High)**: 0 issues — No action required
 - **Phase 3 (Medium)**: 0 issues — All resolved
-- **Phase 4 (Low)**: 30 issues — Address opportunistically
+- **Phase 4 (Low)**: 29 issues — Address opportunistically
 
 ## Resolved Issues Summary
 
-198 issues have been resolved across 44 packages.
+200 issues have been resolved across 45 packages.
 
 | Severity | Resolved |
 |----------|----------|
 | High | 43 |
 | Medium | 42 |
-| Low | 113 |
-| **Total** | **198** |
+| Low | 115 |
+| **Total** | **200** |
 
 ---
 

@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"sync"
 	"time"
+
+	"github.com/sirupsen/logrus"
 )
 
 // Manager handles narrative progression and player choices
@@ -11,6 +13,7 @@ type Manager struct {
 	mu             sync.RWMutex
 	graph          *StoryGraph
 	playerProgress map[string]map[string]*PlayerProgress // playerID -> arcID -> progress
+	logger         *logrus.Entry
 }
 
 // NewManager creates a new narrative manager
@@ -21,6 +24,16 @@ func NewManager() *Manager {
 			Consequences: make(map[string]*Consequence),
 		},
 		playerProgress: make(map[string]map[string]*PlayerProgress),
+		logger:         logrus.WithField("system_name", "branching_manager"),
+	}
+}
+
+// SetLogger sets a custom logger for the manager
+func (m *Manager) SetLogger(logger *logrus.Entry) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if logger != nil {
+		m.logger = logger
 	}
 }
 
@@ -47,7 +60,13 @@ func (m *Manager) StartArc(playerID, arcID string) (*PlayerProgress, error) {
 
 	arc, exists := m.graph.Arcs[arcID]
 	if !exists {
-		return nil, fmt.Errorf("arc %s not found", arcID)
+		err := fmt.Errorf("arc %s not found", arcID)
+		m.logger.WithFields(logrus.Fields{
+			"player_id": playerID,
+			"arc_id":    arcID,
+			"error":     err.Error(),
+		}).Debug("failed to start arc: not found")
+		return nil, err
 	}
 
 	if _, exists := m.playerProgress[playerID]; !exists {
@@ -74,6 +93,12 @@ func (m *Manager) StartArc(playerID, arcID string) (*PlayerProgress, error) {
 
 	m.playerProgress[playerID][arcID] = progress
 
+	m.logger.WithFields(logrus.Fields{
+		"player_id":     playerID,
+		"arc_id":        arcID,
+		"start_node_id": arc.StartNodeID,
+	}).Debug("player started story arc")
+
 	return progress, nil
 }
 
@@ -84,20 +109,46 @@ func (m *Manager) MakeChoice(playerID, arcID, choiceID string) error {
 
 	progress, arc, currentNode, err := m.validateChoiceContext(playerID, arcID)
 	if err != nil {
+		m.logger.WithFields(logrus.Fields{
+			"player_id": playerID,
+			"arc_id":    arcID,
+			"choice_id": choiceID,
+			"error":     err.Error(),
+		}).Debug("failed to make choice: invalid context")
 		return err
 	}
 
 	selectedChoice, err := m.findChoice(currentNode, choiceID)
 	if err != nil {
+		m.logger.WithFields(logrus.Fields{
+			"player_id": playerID,
+			"arc_id":    arcID,
+			"choice_id": choiceID,
+			"node_id":   currentNode.ID,
+			"error":     err.Error(),
+		}).Debug("failed to make choice: choice not found")
 		return err
 	}
 
 	if err := m.checkRequirements(progress, selectedChoice.Requirements); err != nil {
+		m.logger.WithFields(logrus.Fields{
+			"player_id": playerID,
+			"arc_id":    arcID,
+			"choice_id": choiceID,
+			"error":     err.Error(),
+		}).Debug("failed to make choice: requirements not met")
 		return fmt.Errorf("requirements not met: %w", err)
 	}
 
 	m.applyChoiceEffects(progress, selectedChoice)
 	progress.ChoicesMade[progress.CurrentNodeID] = choiceID
+
+	m.logger.WithFields(logrus.Fields{
+		"player_id":    playerID,
+		"arc_id":       arcID,
+		"choice_id":    choiceID,
+		"next_node_id": selectedChoice.NextNodeID,
+	}).Debug("player made choice")
 
 	return m.advanceToNode(progress, arc, selectedChoice.NextNodeID)
 }
@@ -180,30 +231,75 @@ func (m *Manager) AdvanceStory(playerID, arcID string) error {
 
 	progress, err := m.getProgress(playerID, arcID)
 	if err != nil {
+		m.logger.WithFields(logrus.Fields{
+			"player_id": playerID,
+			"arc_id":    arcID,
+			"error":     err.Error(),
+		}).Debug("failed to advance story: no progress found")
 		return err
 	}
 
 	if progress.Completed {
-		return fmt.Errorf("arc %s already completed", arcID)
+		err := fmt.Errorf("arc %s already completed", arcID)
+		m.logger.WithFields(logrus.Fields{
+			"player_id": playerID,
+			"arc_id":    arcID,
+			"error":     err.Error(),
+		}).Debug("failed to advance story: arc completed")
+		return err
 	}
 
 	arc, exists := m.graph.Arcs[arcID]
 	if !exists {
-		return fmt.Errorf("arc %s not found", arcID)
+		err := fmt.Errorf("arc %s not found", arcID)
+		m.logger.WithFields(logrus.Fields{
+			"player_id": playerID,
+			"arc_id":    arcID,
+			"error":     err.Error(),
+		}).Debug("failed to advance story: arc not found")
+		return err
 	}
 
 	currentNode, exists := arc.Nodes[progress.CurrentNodeID]
 	if !exists {
-		return fmt.Errorf("current node %s not found in arc %s", progress.CurrentNodeID, arcID)
+		err := fmt.Errorf("current node %s not found in arc %s", progress.CurrentNodeID, arcID)
+		m.logger.WithFields(logrus.Fields{
+			"player_id": playerID,
+			"arc_id":    arcID,
+			"node_id":   progress.CurrentNodeID,
+			"error":     err.Error(),
+		}).Debug("failed to advance story: node not found")
+		return err
 	}
 
 	if currentNode.Type == NodeTypeChoice {
-		return fmt.Errorf("current node %s is a choice node, use MakeChoice instead", progress.CurrentNodeID)
+		err := fmt.Errorf("current node %s is a choice node, use MakeChoice instead", progress.CurrentNodeID)
+		m.logger.WithFields(logrus.Fields{
+			"player_id": playerID,
+			"arc_id":    arcID,
+			"node_id":   progress.CurrentNodeID,
+			"error":     err.Error(),
+		}).Debug("failed to advance story: is choice node")
+		return err
 	}
 
 	if currentNode.NextNodeID == "" {
-		return fmt.Errorf("current node %s has no next node", progress.CurrentNodeID)
+		err := fmt.Errorf("current node %s has no next node", progress.CurrentNodeID)
+		m.logger.WithFields(logrus.Fields{
+			"player_id": playerID,
+			"arc_id":    arcID,
+			"node_id":   progress.CurrentNodeID,
+			"error":     err.Error(),
+		}).Debug("failed to advance story: no next node")
+		return err
 	}
+
+	m.logger.WithFields(logrus.Fields{
+		"player_id":    playerID,
+		"arc_id":       arcID,
+		"from_node_id": progress.CurrentNodeID,
+		"to_node_id":   currentNode.NextNodeID,
+	}).Debug("player advancing story")
 
 	return m.advanceToNode(progress, arc, currentNode.NextNodeID)
 }

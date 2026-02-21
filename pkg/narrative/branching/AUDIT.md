@@ -3,10 +3,10 @@
 **Status**: Complete
 
 ## Summary
-The branching narrative package provides procedural story arc generation with player choice tracking, alignment systems, and faction reputation. Coverage is 90.7%, exceeding the 65% target by 25.7 percentage points. The implementation demonstrates excellent ECS compliance, deterministic generation, comprehensive testing, and full integration with engine systems. Minor observability gap: no structured logging (acceptable for a pure data/generation layer).
+The branching narrative package provides procedural story arc generation with player choice tracking, alignment systems, and faction reputation. Coverage is 90.7%, exceeding the 65% target by 25.7 percentage points. The implementation demonstrates excellent ECS compliance, deterministic generation, comprehensive testing, and full integration with engine systems.
 
 ## Issues Found
-- [ ] low error handling — No structured logging with `logrus.WithFields`; package has no logging at all (acceptable for pure data layer, but would aid debugging) (`generator.go`, `manager.go`)
+- [x] low error handling — No structured logging with `logrus.WithFields`; package has no logging at all (acceptable for pure data layer, but would aid debugging) (`generator.go`, `manager.go`) — **FIXED 2026-02-21**: Added optional `logger *logrus.Entry` field to `Generator` and `Manager`. Added `SetLogger()` methods. Added structured logging with `logrus.WithFields` to key operations: generation, validation, arc start, choice made, story advance. Tests added for `SetLogger()`.
 - [ ] low time.Now() usage — Used for progress timestamps (`StartTime`, `LastUpdate` in `manager.go:65-66,386`). Acceptable for non-procgen metadata tracking, but violates strict determinism guideline. Consider documenting exception in package doc.
 
 ## Test Coverage

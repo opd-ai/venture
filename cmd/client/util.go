@@ -4,9 +4,11 @@
 package main
 
 import (
+	"errors"
 	"flag"
 	"fmt"
 	"image/color"
+	"io"
 	"math"
 	"math/rand"
 	"os"
@@ -148,7 +150,12 @@ func initializeNetworkClient(logger *logrus.Logger, clientLogger *logrus.Entry) 
 	// Handle network errors in background
 	go func() {
 		for err := range networkClient.ReceiveError() {
-			clientLogger.WithError(err).Error("network error")
+			// Check if error is due to normal disconnection (EOF, connection closed)
+			if errors.Is(err, io.EOF) || strings.Contains(err.Error(), "use of closed") {
+				clientLogger.WithError(err).Debug("connection closed")
+			} else {
+				clientLogger.WithError(err).Error("network error")
+			}
 		}
 	}()
 

@@ -3,8 +3,11 @@ package hostplay
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"io"
 	"net"
+	"strings"
 	"sync"
 	"time"
 
@@ -292,7 +295,7 @@ func (sm *ServerManager) serverLoop(ctx context.Context) {
 	inputCommands := sm.server.ReceiveInputCommand()
 	playerJoins := sm.server.ReceivePlayerJoin()
 	playerLeaves := sm.server.ReceivePlayerLeave()
-	errors := sm.server.ReceiveError()
+	errorChan := sm.server.ReceiveError()
 
 	// Signal that server loop is fully initialized and ready to process events.
 	// This unblocks the Start() method which waits for this signal.
@@ -314,8 +317,13 @@ func (sm *ServerManager) serverLoop(ctx context.Context) {
 		case inputCmd := <-inputCommands:
 			sm.handleInputCommand(inputCmd)
 
-		case err := <-errors:
-			sm.logger.WithField("error", err).Error("Network error")
+		case err := <-errorChan:
+			// Check if error is due to normal disconnection (EOF, connection closed, timeout during shutdown)
+			if errors.Is(err, io.EOF) || strings.Contains(err.Error(), "use of closed") || strings.Contains(err.Error(), "i/o timeout") {
+				sm.logger.WithField("error", err).Debug("client disconnected")
+			} else {
+				sm.logger.WithField("error", err).Error("Network error")
+			}
 
 		case <-ticker.C:
 			sm.handleWorldUpdate()

@@ -4,11 +4,16 @@
 package sprites
 
 import (
+	"image"
 	"sort"
 
 	"github.com/opd-ai/venture/pkg/rendering/palette"
 	"github.com/opd-ai/venture/pkg/rendering/shapes"
 )
+
+// TextureBuffer is an alias for *image.RGBA used by texture application functions.
+// This provides a consistent interface for applying textures to sprite buffers.
+type TextureBuffer = *image.RGBA
 
 // SpriteType represents different categories of sprites.
 type SpriteType int

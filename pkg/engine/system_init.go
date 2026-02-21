@@ -252,6 +252,7 @@ type SystemInitResult struct {
 	SpriteDepthShadingSystem                    *SpriteDepthShadingSystem
 	ClothingPatternSystem                       *ClothingPatternSystem
 	SurfaceTextureSystem                        *SurfaceTextureSystem
+	HumanoidTextureSystem                       *HumanoidTextureSystem
 	BodyTypeSystem                              *BodyTypeSystem
 	HeadgearAssignmentSystem                    *HeadgearAssignmentSystem
 	BackAccessorySystem                         *BackAccessorySystem
@@ -1653,6 +1654,15 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 	surfaceTextureSystem.SetGenre(config.GenreID)
 	result.SurfaceTextureSystem = surfaceTextureSystem
 	game.World.AddSystem(surfaceTextureSystem)
+
+	// 36k1p3. HumanoidTextureSystem - humanoid-specific surface textures
+	// Assigns skin textures (freckled, scarred, weathered, tattooed), clothing
+	// fabric textures (linen, leather, silk, wool, chainmail, plate), and hair
+	// textures (straight, wavy, curly, braided) to humanoid entities.
+	humanoidTextureSystem := NewHumanoidTextureSystem(game.World, config.Seed+6497)
+	humanoidTextureSystem.SetGenre(config.GenreID)
+	result.HumanoidTextureSystem = humanoidTextureSystem
+	game.World.AddSystem(humanoidTextureSystem)
 
 	// 36k1q. BodyTypeSystem - seed-based body type variety for entity sprites
 	// Assigns distinct body builds (stocky, lean, muscular, heavy, etc.) per entity

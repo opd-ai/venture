@@ -211,6 +211,7 @@ type SystemInitResult struct {
 	NearbyLightEntityTintSystem                 *NearbyLightEntityTintSystem
 	WeatherEquipmentSheenSystem                 *WeatherEquipmentSheenSystem
 	CreatureEyeGlowSystem                       *CreatureEyeGlowSystem
+	CreatureEyePatternSystem                    *CreatureEyePatternSystem
 	CreatureElementalAuraSystem                 *CreatureElementalAuraSystem
 	MeleeSwingArcSystem                         *MeleeSwingArcSystem
 	CombatReadyAuraSystem                       *CombatReadyAuraSystem
@@ -675,6 +676,13 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 	creatureEyeGlowSystem.SetGenre(config.GenreID)
 	result.CreatureEyeGlowSystem = creatureEyeGlowSystem
 	game.World.AddSystem(creatureEyeGlowSystem)
+
+	// 17ai1. CreatureEyePatternSystem - creature-type-specific eye patterns for nonhumanoids
+	// Assigns 8-eye spider patterns, slit-pupil serpent eyes, compound insect eyes, etc.
+	creatureEyePatternSystem := NewCreatureEyePatternSystem(game.World, config.Seed+9460)
+	creatureEyePatternSystem.SetGenre(config.GenreID)
+	result.CreatureEyePatternSystem = creatureEyePatternSystem
+	game.World.AddSystem(creatureEyePatternSystem)
 
 	// 17ai2. CreatureElementalAuraSystem - persistent elemental aura visuals for creatures
 	// Infers elemental affinity from name/tags/attack and assigns colored aura overlays

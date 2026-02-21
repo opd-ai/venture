@@ -157,7 +157,7 @@ func (s *CreatureElementalAuraSystem) updateAuraPulse(aura *CreatureElementalAur
 	}
 
 	pulse := math.Sin(aura.PulsePhase) * aura.PulseAmplitude
-	aura.CurrentIntensity = clampFloat(aura.BaseIntensity+pulse, 0, 1)
+	aura.CurrentIntensity = clampFloatAura(aura.BaseIntensity+pulse, 0, 1)
 }
 
 // inferElement determines elemental affinity from entity name, tags, and faction.
@@ -307,10 +307,10 @@ func (s *CreatureElementalAuraSystem) createAuraComponent(entity *Entity, elemen
 
 	comp := &CreatureElementalAuraComponent{
 		Element:          element,
-		AuraR:            clampFloat(preset.PrimaryR*(1+seedVar), 0, 1),
-		AuraG:            clampFloat(preset.PrimaryG*(1+seedVar), 0, 1),
-		AuraB:            clampFloat(preset.PrimaryB*(1+seedVar), 0, 1),
-		BaseIntensity:    clampFloat(preset.BaseIntensity*genreMod.IntensityMult, 0, 1),
+		AuraR:            clampFloatAura(preset.PrimaryR*(1+seedVar), 0, 1),
+		AuraG:            clampFloatAura(preset.PrimaryG*(1+seedVar), 0, 1),
+		AuraB:            clampFloatAura(preset.PrimaryB*(1+seedVar), 0, 1),
+		BaseIntensity:    clampFloatAura(preset.BaseIntensity*genreMod.IntensityMult, 0, 1),
 		CurrentIntensity: preset.BaseIntensity * genreMod.IntensityMult,
 		PulseSpeed:       preset.PulseSpeed * genreMod.PulseMult,
 		PulseAmplitude:   preset.PulseAmplitude,
@@ -454,8 +454,8 @@ func buildGenreElementModifiers() map[string]genreElementModifier {
 	}
 }
 
-// clampFloat clamps a float64 to [min, max].
-func clampFloat(v, min, max float64) float64 {
+// clampFloatAura clamps a float64 to [min, max].
+func clampFloatAura(v, min, max float64) float64 {
 	if v < min {
 		return min
 	}

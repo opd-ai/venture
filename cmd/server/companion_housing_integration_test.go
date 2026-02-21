@@ -4,6 +4,7 @@
 package main
 
 import (
+	"math"
 	"testing"
 
 	"github.com/opd-ai/venture/pkg/engine"
@@ -75,7 +76,7 @@ func TestCompanionHousingIntegration_ServerWiring(t *testing.T) {
 	// Basic bedding has 0.05 bonus/day, base is 0.5, so total should be 0.55
 	expectedGain := 0.55
 	actualGain := finalLoyalty - initialLoyalty
-	if actualGain != expectedGain {
+	if math.Abs(actualGain-expectedGain) > 0.001 {
 		t.Errorf("Expected loyalty gain of %.2f, got %.2f", expectedGain, actualGain)
 	}
 }
@@ -204,7 +205,7 @@ func TestCompanionHousingIntegration_MultipleMinutes(t *testing.T) {
 
 	// 5 minutes * (0.5 base + 0.1 housing) = 3.0 gain
 	expectedLoyalty := 53.0
-	if finalLoyalty != expectedLoyalty {
+	if math.Abs(finalLoyalty-expectedLoyalty) > 0.001 {
 		t.Errorf("After 5 minutes: expected %.2f, got %.2f", expectedLoyalty, finalLoyalty)
 	}
 }

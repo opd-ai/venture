@@ -133,14 +133,48 @@ func (f *Faction) GetRelationship(otherFactionID string) int {
 	return 0 // Default neutral
 }
 
-// IsEnemy returns true if this faction is at war with another
+// IsEnemy returns true if this faction is at war with another.
+// Deprecated: For ECS compliance, prefer using FactionIsEnemy(f, otherFactionID) helper function.
+// This method is retained for backward compatibility.
 func (f *Faction) IsEnemy(otherFactionID string) bool {
+	return FactionIsEnemy(f, otherFactionID)
+}
+
+// IsAlly returns true if this faction is allied with another.
+// Deprecated: For ECS compliance, prefer using FactionIsAlly(f, otherFactionID) helper function.
+// This method is retained for backward compatibility.
+func (f *Faction) IsAlly(otherFactionID string) bool {
+	return FactionIsAlly(f, otherFactionID)
+}
+
+// FactionIsEnemy returns true if the faction is at war with another faction.
+// This is the ECS-compliant standalone function for checking faction enemy status.
+// A faction is considered an enemy if the relationship value is -50 or below.
+func FactionIsEnemy(f *Faction, otherFactionID string) bool {
+	if f == nil {
+		return false
+	}
 	return f.GetRelationship(otherFactionID) <= -50
 }
 
-// IsAlly returns true if this faction is allied with another
-func (f *Faction) IsAlly(otherFactionID string) bool {
+// FactionIsAlly returns true if the faction is allied with another faction.
+// This is the ECS-compliant standalone function for checking faction ally status.
+// A faction is considered an ally if the relationship value is 51 or above.
+func FactionIsAlly(f *Faction, otherFactionID string) bool {
+	if f == nil {
+		return false
+	}
 	return f.GetRelationship(otherFactionID) >= 51
+}
+
+// FactionGetRelationship returns the relationship value with another faction.
+// This is the ECS-compliant standalone function for getting faction relationships.
+// Returns 0 (neutral) if the faction is nil or no relationship exists.
+func FactionGetRelationship(f *Faction, otherFactionID string) int {
+	if f == nil {
+		return 0
+	}
+	return f.GetRelationship(otherFactionID)
 }
 
 // ReputationChange represents an event that modifies faction reputation

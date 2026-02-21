@@ -523,3 +523,75 @@ func TestTotalTalentCount(t *testing.T) {
 		t.Errorf("Total talents = %d, want %d", totalTalents, expectedTotal)
 	}
 }
+
+// TestCalculateTotalStatsWithInvalidClasses verifies that stat calculation
+// gracefully handles invalid or unregistered class IDs without returning errors.
+// This validates the fail-soft behavior: unknown classes are skipped with debug
+// logging rather than causing stat calculation failures.
+func TestCalculateTotalStatsWithInvalidClasses(t *testing.T) {
+	tests := []struct {
+		name           string
+		primaryClass   ClassID
+		secondaryClass ClassID
+		prestigeClass  PrestigeClassID
+		wantZeroStats  bool
+	}{
+		{
+			name:           "invalid primary class",
+			primaryClass:   "nonexistent_class",
+			secondaryClass: "",
+			prestigeClass:  "",
+			wantZeroStats:  true,
+		},
+		{
+			name:           "valid primary, invalid secondary",
+			primaryClass:   ClassWarrior,
+			secondaryClass: "fake_secondary",
+			prestigeClass:  "",
+			wantZeroStats:  false,
+		},
+		{
+			name:           "valid primary, invalid prestige",
+			primaryClass:   ClassWarrior,
+			secondaryClass: "",
+			prestigeClass:  "fake_prestige",
+			wantZeroStats:  false,
+		},
+		{
+			name:           "all invalid classes",
+			primaryClass:   "bad_primary",
+			secondaryClass: "bad_secondary",
+			prestigeClass:  "bad_prestige",
+			wantZeroStats:  true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			m := NewManager()
+
+			// Directly inject player with potentially invalid class IDs
+			m.players["testplayer"] = &AdvancedClassComponent{
+				PrimaryClass:   tt.primaryClass,
+				SecondaryClass: tt.secondaryClass,
+				PrestigeClass:  tt.prestigeClass,
+				Level:          10,
+				TalentPoints:   TalentAllocation{Talents: make(map[TalentID]int)},
+			}
+
+			stats, err := m.CalculateTotalStats("testplayer")
+			if err != nil {
+				t.Fatalf("CalculateTotalStats() returned unexpected error: %v", err)
+			}
+
+			isZero := stats.Health == 0 && stats.Strength == 0 && stats.Mana == 0 &&
+				stats.Defense == 0 && stats.Stamina == 0
+			if tt.wantZeroStats && !isZero {
+				t.Errorf("expected zero stats for invalid classes, got %+v", stats)
+			}
+			if !tt.wantZeroStats && isZero {
+				t.Errorf("expected non-zero stats with valid primary class, got zero")
+			}
+		})
+	}
+}

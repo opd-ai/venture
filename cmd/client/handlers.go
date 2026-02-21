@@ -364,6 +364,7 @@ type systemsContainer struct {
 	spellEffectSystem            *engine.SpellEffectSystem
 	spellCombinationSys          *engine.SpellCombinationSystem
 	classProgressionSys          *engine.ClassProgressionSystem
+	dualClassSynergySys          *engine.DualClassSynergySystem          // Connects dual-class combinations with passive stat bonuses
 	specializationManaBoostSys   *engine.SpecializationManaBoostSystem   // Connects class specialization with mana regen bonuses
 	specializationHealthRegenSys *engine.SpecializationHealthRegenSystem // Connects class specialization with health regen bonuses
 	specializationSpellDamageSys *engine.SpecializationSpellDamageSystem // Connects class specialization with spell damage bonuses
@@ -1969,6 +1970,9 @@ func registerNonCriticalSystems(game *engine.EbitenGame, sys *systemsContainer) 
 
 	// Phase 25: Class progression
 	game.World.AddSystem(sys.classProgressionSys)
+
+	// Phase 25.2a: Dual-class synergy - connects dual-class combinations with passive stat bonuses
+	game.World.AddSystem(sys.dualClassSynergySys)
 
 	// Phase 25a: Specialization mana boost - connects class specialization with mana regen bonuses
 	game.World.AddSystem(sys.specializationManaBoostSys)

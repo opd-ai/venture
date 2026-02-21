@@ -76,6 +76,11 @@ func initializeV4Systems(game *engine.EbitenGame, sys *systemsContainer, clientL
 	// Phase 25: Class progression system
 	sys.classProgressionSys = engine.NewClassProgressionSystem()
 
+	// Phase 25.2a: Dual-class synergy system - connects dual-class combinations with passive bonuses
+	sys.dualClassSynergySys = engine.NewDualClassSynergySystem(game.World, *seed+seedOffsetDualClassSynergy)
+	sys.dualClassSynergySys.SetGenre(*genreID)
+	logging.ComponentLogger(clientLogger.Logger, "dual_class_synergy").Debug("Created dual-class synergy system")
+
 	// Phase 25a: Specialization mana boost system - connects class specialization with mana regen
 	sys.specializationManaBoostSys = engine.NewSpecializationManaBoostSystem(game.World, *seed+seedOffsetSpecManaBoost)
 	sys.specializationManaBoostSys.SetGenre(*genreID)

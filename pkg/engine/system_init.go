@@ -95,6 +95,7 @@ type SystemInitResult struct {
 	SpecializationSpellDamageSystem             *SpecializationSpellDamageSystem
 	SpecializationAttackSpeedSystem             *SpecializationAttackSpeedSystem
 	SpecializationDefenseSystem                 *SpecializationDefenseSystem
+	DualClassSynergySystem                      *DualClassSynergySystem
 	ElementalComboParticleSystem                *ElementalComboParticleSystem
 	WeatherRangedAccuracySystem                 *WeatherRangedAccuracySystem
 	StatusEffectEvasionSystem                   *StatusEffectEvasionSystem
@@ -911,6 +912,13 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 	specializationDefenseSystem.SetGenre(config.GenreID)
 	result.SpecializationDefenseSystem = specializationDefenseSystem
 	game.World.AddSystem(specializationDefenseSystem)
+
+	// 25.2a. DualClassSynergySystem - passive bonuses for dual-classed characters
+	// Connects ClassProgressionComponent.SecondaryClass with stat bonuses based on class combination
+	dualClassSynergySystem := NewDualClassSynergySystem(game.World, config.Seed+6685)
+	dualClassSynergySystem.SetGenre(config.GenreID)
+	result.DualClassSynergySystem = dualClassSynergySystem
+	game.World.AddSystem(dualClassSynergySystem)
 
 	// 25f. SpecializationStatusResistSystem - status effect duration modifiers from class specializations
 	// Connects ClassProgressionComponent with StatusEffectComponent for genre-aware debuff resistance

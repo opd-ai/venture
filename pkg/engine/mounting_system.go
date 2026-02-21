@@ -46,6 +46,11 @@ func (ms *MountingSystem) Update(entities []*Entity, deltaTime float64) {
 			continue
 		}
 
+		// Skip vehicles (entities with VehicleComponent) - only process riders
+		if entity.HasComponent("vehicle") {
+			continue
+		}
+
 		ms.processMountedEntity(entity, mount, entities)
 	}
 }

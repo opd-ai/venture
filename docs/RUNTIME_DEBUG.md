@@ -20,7 +20,7 @@ Eliminate all runtime errors and harmful warnings from the Venture game client b
    ```
 2. Extract errors:
    ```bash
-   grep 'ERRO' venture.log
+   grep -i 'ERRO' venture.log
    ```
 3. If errors exist:
    - For each unique error, trace it to its source file and line using the log context fields (`system_name`, `component_type`, etc.) and stack traces.
@@ -33,7 +33,7 @@ Eliminate all runtime errors and harmful warnings from the Venture game client b
 
 1. Extract warnings from the most recent `venture.log`:
    ```bash
-   grep 'WARN' venture.log
+   grep -i 'WARN' venture.log
    ```
 2. For each unique warning, evaluate whether it indicates:
    - **A real problem** (nil components, missing registrations, failed initialization, data corruption, resource leaks) → Fix the root cause.
@@ -48,7 +48,7 @@ Eliminate all runtime errors and harmful warnings from the Venture game client b
    timeout 60s go run ./cmd/client 2>&1 | tee venture.log
    ```
 2. Confirm:
-   - `grep 'ERRO' venture.log` returns zero results.
+   - `grep -i 'ERRO' venture.log` returns zero results.
    - All remaining `WARN` lines are benign (list them with justification).
    - `go build ./...` succeeds.
    - `go vet ./...` passes.

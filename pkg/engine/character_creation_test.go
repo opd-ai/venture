@@ -1373,3 +1373,124 @@ func TestClassPageNavigation(t *testing.T) {
 		}
 	})
 }
+
+// TestEquipmentLoadout_Generation verifies deterministic loadout generation per class.
+func TestEquipmentLoadout_Generation(t *testing.T) {
+	seed := int64(12345)
+
+	t.Run("generates 3 loadouts per class", func(t *testing.T) {
+		classes := []CharacterClass{
+			ClassWarrior, ClassMage, ClassRogue,
+			ClassRanger, ClassCleric, ClassNecromancer,
+		}
+		for _, class := range classes {
+			loadouts := generateClassLoadouts(class, seed)
+			if len(loadouts) != 3 {
+				t.Errorf("generateClassLoadouts(%s) returned %d loadouts, want 3",
+					class.String(), len(loadouts))
+			}
+		}
+	})
+
+	t.Run("deterministic - same seed same loadouts", func(t *testing.T) {
+		loadouts1 := generateClassLoadouts(ClassWarrior, seed)
+		loadouts2 := generateClassLoadouts(ClassWarrior, seed)
+
+		for i := range loadouts1 {
+			if loadouts1[i].Name != loadouts2[i].Name {
+				t.Errorf("loadout %d name differs: %q vs %q", i, loadouts1[i].Name, loadouts2[i].Name)
+			}
+			if loadouts1[i].MainHand != loadouts2[i].MainHand {
+				t.Errorf("loadout %d mainhand differs: %q vs %q", i, loadouts1[i].MainHand, loadouts2[i].MainHand)
+			}
+		}
+	})
+
+	t.Run("different classes have different loadouts", func(t *testing.T) {
+		warriorLoadouts := generateClassLoadouts(ClassWarrior, seed)
+		mageLoadouts := generateClassLoadouts(ClassMage, seed)
+
+		if warriorLoadouts[0].Name == mageLoadouts[0].Name {
+			t.Errorf("warrior and mage have same loadout name: %q", warriorLoadouts[0].Name)
+		}
+	})
+
+	t.Run("loadouts have required fields", func(t *testing.T) {
+		loadouts := generateClassLoadouts(ClassWarrior, seed)
+		for i, loadout := range loadouts {
+			if loadout.Name == "" {
+				t.Errorf("loadout %d has empty Name", i)
+			}
+			if loadout.Description == "" {
+				t.Errorf("loadout %d has empty Description", i)
+			}
+			if loadout.MainHand == "" {
+				t.Errorf("loadout %d has empty MainHand", i)
+			}
+			if loadout.Armor == "" {
+				t.Errorf("loadout %d has empty Armor", i)
+			}
+		}
+	})
+
+	t.Run("hybrid classes get generated loadouts", func(t *testing.T) {
+		loadouts := generateClassLoadouts(ClassBattlemage, seed)
+		if len(loadouts) != 3 {
+			t.Errorf("hybrid class loadouts = %d, want 3", len(loadouts))
+		}
+		// Hybrid loadouts should reference the class name
+		found := false
+		for _, l := range loadouts {
+			if strings.Contains(l.Name, "Battlemage") {
+				found = true
+				break
+			}
+		}
+		if !found {
+			t.Errorf("no hybrid loadout mentions class name")
+		}
+	})
+}
+
+// TestCharacterCreation_EquipmentStep verifies equipment step integration.
+func TestCharacterCreation_EquipmentStep(t *testing.T) {
+	t.Run("stepEquipmentSelection exists in enum", func(t *testing.T) {
+		// Verify the enum order is correct
+		if stepNameInput != 0 {
+			t.Errorf("stepNameInput = %d, want 0", stepNameInput)
+		}
+		if stepClassSelection != 1 {
+			t.Errorf("stepClassSelection = %d, want 1", stepClassSelection)
+		}
+		if stepEquipmentSelection != 2 {
+			t.Errorf("stepEquipmentSelection = %d, want 2", stepEquipmentSelection)
+		}
+		if stepPortraitSelection != 3 {
+			t.Errorf("stepPortraitSelection = %d, want 3", stepPortraitSelection)
+		}
+		if stepConfirmation != 4 {
+			t.Errorf("stepConfirmation = %d, want 4", stepConfirmation)
+		}
+	})
+
+	t.Run("CharacterData includes StartingLoadout", func(t *testing.T) {
+		loadout := EquipmentLoadout{
+			Name:        "Test",
+			MainHand:    "Sword",
+			Armor:       "Plate",
+			BonusHP:     10,
+			BonusAttack: 2,
+		}
+		data := CharacterData{
+			Name:            "TestChar",
+			Class:           ClassWarrior,
+			StartingLoadout: &loadout,
+		}
+		if data.StartingLoadout == nil {
+			t.Error("StartingLoadout is nil")
+		}
+		if data.StartingLoadout.Name != "Test" {
+			t.Errorf("StartingLoadout.Name = %q, want 'Test'", data.StartingLoadout.Name)
+		}
+	})
+}

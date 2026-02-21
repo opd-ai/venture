@@ -259,10 +259,26 @@ func (c CharacterClass) LowerName() string {
 
 // CharacterData holds the player's character creation choices
 type CharacterData struct {
-	Name         string
-	Class        CharacterClass
-	PortraitPath string        // Path to user's custom portrait image (optional)
-	Portrait     *ebiten.Image // Loaded portrait image (optional, max 512x512)
+	Name            string
+	Class           CharacterClass
+	PortraitPath    string            // Path to user's custom portrait image (optional)
+	Portrait        *ebiten.Image     // Loaded portrait image (optional, max 512x512)
+	StartingLoadout *EquipmentLoadout // Selected starting equipment loadout
+}
+
+// EquipmentLoadout represents a starting equipment set for a character class.
+// Each class has 3 distinct loadout options generated deterministically from the world seed.
+type EquipmentLoadout struct {
+	Name        string // Display name (e.g., "Heavy Armor", "Balanced", "Berserker")
+	Description string // Brief description of the loadout style
+	MainHand    string // Main weapon name
+	OffHand     string // Off-hand item name (shield, second weapon, etc.)
+	Armor       string // Primary armor piece name
+	Accessory   string // Starting accessory name
+	// Stats modifiers for this loadout (applied on top of class base stats)
+	BonusHP      int
+	BonusAttack  int
+	BonusDefense int
 }
 
 // CharacterCreationDefaults holds custom default values for character creation
@@ -352,6 +368,7 @@ type creationStep int
 const (
 	stepNameInput creationStep = iota
 	stepClassSelection
+	stepEquipmentSelection // New step between class and portrait
 	stepPortraitSelection
 	stepConfirmation
 )
@@ -408,6 +425,11 @@ type EbitenCharacterCreation struct {
 
 	// Class pagination - allows viewing hybrid classes via PageUp/PageDown or Tab
 	classPage int // 0 = base classes (1-6), 1+ = hybrid class pages
+
+	// Equipment selection - starting loadout options per class
+	equipmentLoadouts []EquipmentLoadout // Generated loadout options for current class
+	selectedLoadout   int                // Currently selected loadout index (0-2)
+	loadoutsGenerated bool               // Whether loadouts have been generated for current class
 }
 
 // NewCharacterCreation creates a new character creation system
@@ -555,6 +577,8 @@ func (cc *EbitenCharacterCreation) processCurrentStep() {
 		cc.updateNameInput()
 	case stepClassSelection:
 		cc.updateClassSelection()
+	case stepEquipmentSelection:
+		cc.updateEquipmentSelection()
 	case stepPortraitSelection:
 		cc.updatePortraitSelection()
 	case stepConfirmation:
@@ -839,7 +863,8 @@ func (cc *EbitenCharacterCreation) handleTouchOrMouseClick() bool {
 		if cc.isClassBoxClicked(mouseX, mouseY, startY, i) {
 			cc.selectedClass = class
 			cc.characterData.Class = cc.selectedClass
-			cc.currentStep = stepPortraitSelection
+			cc.loadoutsGenerated = false // Force regeneration for new class
+			cc.currentStep = stepEquipmentSelection
 			return true
 		}
 	}
@@ -871,7 +896,8 @@ func (cc *EbitenCharacterCreation) handleTouchOrMouseHover() {
 func (cc *EbitenCharacterCreation) handleConfirmationKeys() {
 	if inpututil.IsKeyJustPressed(ebiten.KeyEnter) && !cc.stepChangedThisFrame {
 		cc.characterData.Class = cc.selectedClass
-		cc.currentStep = stepPortraitSelection
+		cc.loadoutsGenerated = false // Force regeneration for new class
+		cc.currentStep = stepEquipmentSelection
 		cc.stepChangedThisFrame = true
 	}
 }
@@ -890,6 +916,217 @@ func (cc *EbitenCharacterCreation) handleDefaultSave() {
 		cc.defaults.DefaultClass = cc.selectedClass
 		cc.errorMsg = fmt.Sprintf("Default class saved: %s", cc.selectedClass.String())
 	}
+}
+
+// updateEquipmentSelection handles the equipment loadout selection step.
+// Generates loadout options for the selected class and handles user input.
+func (cc *EbitenCharacterCreation) updateEquipmentSelection() {
+	// Generate loadouts on first entry or when class changes
+	if !cc.loadoutsGenerated {
+		cc.equipmentLoadouts = generateClassLoadouts(cc.selectedClass, cc.worldSeed)
+		cc.selectedLoadout = 0
+		cc.loadoutsGenerated = true
+	}
+
+	// Arrow key navigation
+	if inpututil.IsKeyJustPressed(ebiten.KeyUp) || inpututil.IsKeyJustPressed(ebiten.KeyW) {
+		cc.selectedLoadout--
+		if cc.selectedLoadout < 0 {
+			cc.selectedLoadout = len(cc.equipmentLoadouts) - 1
+		}
+	}
+	if inpututil.IsKeyJustPressed(ebiten.KeyDown) || inpututil.IsKeyJustPressed(ebiten.KeyS) {
+		cc.selectedLoadout++
+		if cc.selectedLoadout >= len(cc.equipmentLoadouts) {
+			cc.selectedLoadout = 0
+		}
+	}
+
+	// Number key selection (1, 2, 3)
+	if inpututil.IsKeyJustPressed(ebiten.Key1) && len(cc.equipmentLoadouts) > 0 {
+		cc.selectedLoadout = 0
+	}
+	if inpututil.IsKeyJustPressed(ebiten.Key2) && len(cc.equipmentLoadouts) > 1 {
+		cc.selectedLoadout = 1
+	}
+	if inpututil.IsKeyJustPressed(ebiten.Key3) && len(cc.equipmentLoadouts) > 2 {
+		cc.selectedLoadout = 2
+	}
+
+	// Mouse/touch click selection
+	if IsTouchOrMouseJustPressed() {
+		mouseX, mouseY, _ := GetTouchOrMousePosition()
+		startY := cc.panelY + 130
+
+		for i := 0; i < len(cc.equipmentLoadouts); i++ {
+			loadoutY := startY + i*80
+			if mouseX >= cc.panelX+40 && mouseX <= cc.panelX+cc.panelWidth-40 &&
+				mouseY >= loadoutY-5 && mouseY <= loadoutY+70 {
+				cc.selectedLoadout = i
+				// Double-click or tap to proceed
+				if cc.characterData.StartingLoadout != nil &&
+					cc.characterData.StartingLoadout.Name == cc.equipmentLoadouts[i].Name {
+					cc.handleNextButton()
+					return
+				}
+				break
+			}
+		}
+	}
+
+	// Enter to proceed
+	if inpututil.IsKeyJustPressed(ebiten.KeyEnter) && !cc.stepChangedThisFrame {
+		cc.handleNextButton()
+	}
+
+	// Backspace/Escape to go back
+	if inpututil.IsKeyJustPressed(ebiten.KeyBackspace) || inpututil.IsKeyJustPressed(ebiten.KeyEscape) {
+		cc.currentStep = stepClassSelection
+	}
+}
+
+// generateClassLoadouts creates 3 deterministic equipment loadouts for a class.
+// Uses seed-based RNG for reproducibility: same seed always produces same loadouts.
+func generateClassLoadouts(class CharacterClass, seed int64) []EquipmentLoadout {
+	// Combine seed with class for unique loadouts per class
+	rng := rand.New(rand.NewSource(seed + int64(class)*1000))
+
+	// Class-specific loadout templates
+	switch class {
+	case ClassWarrior:
+		return []EquipmentLoadout{
+			{
+				Name: "Heavy Armor", Description: "Maximum defense, slower attacks",
+				MainHand: "Greatsword", OffHand: "None (2H)", Armor: "Plate Mail", Accessory: "Iron Ring",
+				BonusHP: 20, BonusAttack: -1, BonusDefense: 4,
+			},
+			{
+				Name: "Balanced", Description: "Versatile sword and shield combo",
+				MainHand: "Longsword", OffHand: "Tower Shield", Armor: "Chain Mail", Accessory: "Leather Gloves",
+				BonusHP: 10, BonusAttack: 1, BonusDefense: 2,
+			},
+			{
+				Name: "Berserker", Description: "High damage, lower defense",
+				MainHand: "Battle Axe", OffHand: "Throwing Axes", Armor: "Hide Armor", Accessory: "Wolf Fang",
+				BonusHP: 5, BonusAttack: 3, BonusDefense: 0,
+			},
+		}
+	case ClassMage:
+		return []EquipmentLoadout{
+			{
+				Name: "Elementalist", Description: "Balanced elemental magic",
+				MainHand: "Oak Staff", OffHand: "Spell Focus", Armor: "Silk Robes", Accessory: "Crystal Orb",
+				BonusHP: 0, BonusAttack: 2, BonusDefense: 1,
+			},
+			{
+				Name: "Battle Mage", Description: "Combat-focused spellcaster",
+				MainHand: "War Staff", OffHand: "Buckler", Armor: "Leather Robes", Accessory: "Combat Amulet",
+				BonusHP: 15, BonusAttack: 1, BonusDefense: 2,
+			},
+			{
+				Name: "Scholar", Description: "Maximum mana regeneration",
+				MainHand: "Elder Wand", OffHand: "Tome of Wisdom", Armor: "Scholar's Robes", Accessory: "Mana Ring",
+				BonusHP: -5, BonusAttack: 3, BonusDefense: 0,
+			},
+		}
+	case ClassRogue:
+		return []EquipmentLoadout{
+			{
+				Name: "Assassin", Description: "High critical hit chance",
+				MainHand: "Shadow Dagger", OffHand: "Throwing Knives", Armor: "Shadow Leather", Accessory: "Poison Vial",
+				BonusHP: 0, BonusAttack: 3, BonusDefense: 0,
+			},
+			{
+				Name: "Duelist", Description: "Quick strikes with parrying",
+				MainHand: "Rapier", OffHand: "Parrying Dagger", Armor: "Studded Leather", Accessory: "Swift Boots",
+				BonusHP: 5, BonusAttack: 2, BonusDefense: 1,
+			},
+			{
+				Name: "Brigand", Description: "Versatile combat rogue",
+				MainHand: "Short Sword", OffHand: "Buckler", Armor: "Traveler's Garb", Accessory: "Lockpicks",
+				BonusHP: 10, BonusAttack: 1, BonusDefense: 2,
+			},
+		}
+	case ClassRanger:
+		return []EquipmentLoadout{
+			{
+				Name: "Sharpshooter", Description: "Maximum ranged damage",
+				MainHand: "Longbow", OffHand: "Quiver", Armor: "Camouflage Cloak", Accessory: "Eagle Eye",
+				BonusHP: 0, BonusAttack: 3, BonusDefense: 0,
+			},
+			{
+				Name: "Beastmaster", Description: "Enhanced pet bonding",
+				MainHand: "Hunting Bow", OffHand: "Beast Whistle", Armor: "Fur Cloak", Accessory: "Pet Collar",
+				BonusHP: 10, BonusAttack: 1, BonusDefense: 1,
+			},
+			{
+				Name: "Survivalist", Description: "Balanced wilderness warrior",
+				MainHand: "Composite Bow", OffHand: "Hunting Knife", Armor: "Scout Armor", Accessory: "Trap Kit",
+				BonusHP: 5, BonusAttack: 2, BonusDefense: 1,
+			},
+		}
+	case ClassCleric:
+		return []EquipmentLoadout{
+			{
+				Name: "Battle Priest", Description: "Melee-focused healer",
+				MainHand: "War Mace", OffHand: "Holy Shield", Armor: "Blessed Plate", Accessory: "Holy Symbol",
+				BonusHP: 15, BonusAttack: 1, BonusDefense: 2,
+			},
+			{
+				Name: "Divine Healer", Description: "Maximum healing power",
+				MainHand: "Healing Staff", OffHand: "Prayer Book", Armor: "Priest Robes", Accessory: "Ankh",
+				BonusHP: 5, BonusAttack: 0, BonusDefense: 1,
+			},
+			{
+				Name: "Crusader", Description: "Offensive holy warrior",
+				MainHand: "Morning Star", OffHand: "Blessed Banner", Armor: "Chain Mail", Accessory: "Sun Pendant",
+				BonusHP: 10, BonusAttack: 2, BonusDefense: 1,
+			},
+		}
+	case ClassNecromancer:
+		return []EquipmentLoadout{
+			{
+				Name: "Summoner", Description: "Enhanced undead minions",
+				MainHand: "Bone Staff", OffHand: "Skull Talisman", Armor: "Death Shroud", Accessory: "Soul Gem",
+				BonusHP: 5, BonusAttack: 1, BonusDefense: 1,
+			},
+			{
+				Name: "Blood Mage", Description: "Life drain focused",
+				MainHand: "Blood Dagger", OffHand: "Vampire Cloak", Armor: "Crimson Robes", Accessory: "Blood Ruby",
+				BonusHP: 10, BonusAttack: 2, BonusDefense: 0,
+			},
+			{
+				Name: "Plague Bearer", Description: "Disease and debuffs",
+				MainHand: "Plague Staff", OffHand: "Poison Flask", Armor: "Tattered Robes", Accessory: "Rat Skull",
+				BonusHP: 0, BonusAttack: 3, BonusDefense: 0,
+			},
+		}
+	default:
+		// Hybrid and other classes get generic loadouts with randomized bonuses
+		prefixes := []string{"Light", "Balanced", "Heavy"}
+		return generateGenericLoadouts(class, rng, prefixes)
+	}
+}
+
+// generateGenericLoadouts creates loadouts for hybrid classes using randomized stats.
+func generateGenericLoadouts(class CharacterClass, rng *rand.Rand, prefixes []string) []EquipmentLoadout {
+	loadouts := make([]EquipmentLoadout, 3)
+	className := class.String()
+
+	for i := 0; i < 3; i++ {
+		loadouts[i] = EquipmentLoadout{
+			Name:         fmt.Sprintf("%s %s", prefixes[i], className),
+			Description:  fmt.Sprintf("A %s loadout suited for %s", strings.ToLower(prefixes[i]), className),
+			MainHand:     fmt.Sprintf("%s Weapon", className),
+			OffHand:      fmt.Sprintf("%s Off-Hand", className),
+			Armor:        fmt.Sprintf("%s Armor", prefixes[i]),
+			Accessory:    fmt.Sprintf("%s Trinket", className),
+			BonusHP:      rng.Intn(15) - 5,
+			BonusAttack:  rng.Intn(4),
+			BonusDefense: rng.Intn(3),
+		}
+	}
+	return loadouts
 }
 
 // updatePortraitSelection handles portrait file selection via dialog
@@ -1153,8 +1390,17 @@ func (cc *EbitenCharacterCreation) handleNextButton() {
 			cc.errorMsg = "Name cannot be empty"
 		}
 	case stepClassSelection:
-		// Proceed to portrait selection
+		// Proceed to equipment selection
 		cc.characterData.Class = cc.selectedClass
+		cc.loadoutsGenerated = false // Force regeneration for new class
+		cc.currentStep = stepEquipmentSelection
+		cc.stepChangedThisFrame = true // Mark that we changed steps this frame
+		cc.errorMsg = ""
+	case stepEquipmentSelection:
+		// Store selected loadout and proceed to portrait selection
+		if len(cc.equipmentLoadouts) > cc.selectedLoadout {
+			cc.characterData.StartingLoadout = &cc.equipmentLoadouts[cc.selectedLoadout]
+		}
 		cc.currentStep = stepPortraitSelection
 		cc.stepChangedThisFrame = true // Mark that we changed steps this frame
 		cc.errorMsg = ""
@@ -1192,8 +1438,11 @@ func (cc *EbitenCharacterCreation) handleBackButton() {
 	case stepClassSelection:
 		cc.currentStep = stepNameInput
 		cc.keyboardShown = false // Will trigger keyboard on re-entry
-	case stepPortraitSelection:
+	case stepEquipmentSelection:
 		cc.currentStep = stepClassSelection
+		cc.hideKeyboardIfNeeded()
+	case stepPortraitSelection:
+		cc.currentStep = stepEquipmentSelection
 		cc.hideKeyboardIfNeeded()
 	case stepConfirmation:
 		cc.currentStep = stepPortraitSelection
@@ -1315,6 +1564,8 @@ func (cc *EbitenCharacterCreation) Draw(screen *ebiten.Image) {
 		cc.drawNameInput(screen, cc.panelX, cc.panelY, cc.panelWidth, cc.panelHeight)
 	case stepClassSelection:
 		cc.drawClassSelection(screen, cc.panelX, cc.panelY, cc.panelWidth, cc.panelHeight)
+	case stepEquipmentSelection:
+		cc.drawEquipmentSelection(screen, cc.panelX, cc.panelY, cc.panelWidth, cc.panelHeight)
 	case stepPortraitSelection:
 		cc.drawPortraitSelection(screen, cc.panelX, cc.panelY, cc.panelWidth, cc.panelHeight)
 	case stepConfirmation:
@@ -1399,7 +1650,7 @@ func (cc *EbitenCharacterCreation) drawNameInput(screen *ebiten.Image, x, y, w, 
 		color.RGBA{255, 255, 100, 255})
 
 	// Step indicator
-	stepText := "Step 1 of 4: Choose Your Name"
+	stepText := "Step 1 of 5: Choose Your Name"
 	stepX := x + w/2 - len(stepText)*3
 	text.Draw(screen, stepText, basicfont.Face7x13, stepX, y+70,
 		color.RGBA{200, 200, 200, 255})
@@ -1460,7 +1711,7 @@ func (cc *EbitenCharacterCreation) drawClassSelection(screen *ebiten.Image, x, y
 		color.RGBA{255, 255, 100, 255})
 
 	// Step indicator
-	stepText := "Step 2 of 4: Choose Your Class"
+	stepText := "Step 2 of 5: Choose Your Class"
 	stepX := x + w/2 - len(stepText)*3
 	text.Draw(screen, stepText, basicfont.Face7x13, stepX, y+70,
 		color.RGBA{200, 200, 200, 255})
@@ -1551,7 +1802,7 @@ func (cc *EbitenCharacterCreation) drawPortraitSelection(screen *ebiten.Image, x
 		color.RGBA{255, 255, 100, 255})
 
 	// Step indicator
-	stepText := "Step 3 of 4: Choose Portrait (Optional)"
+	stepText := "Step 4 of 5: Choose Portrait (Optional)"
 	stepX := x + w/2 - len(stepText)*3
 	text.Draw(screen, stepText, basicfont.Face7x13, stepX, y+70,
 		color.RGBA{200, 200, 200, 255})
@@ -1667,6 +1918,91 @@ func (cc *EbitenCharacterCreation) drawPortraitSelection(screen *ebiten.Image, x
 		color.RGBA{255, 255, 255, 255})
 }
 
+// drawEquipmentSelection renders the equipment loadout selection screen.
+func (cc *EbitenCharacterCreation) drawEquipmentSelection(screen *ebiten.Image, x, y, w, h int) {
+	// Title
+	title := "CHARACTER CREATION"
+	titleX := x + w/2 - len(title)*3
+	text.Draw(screen, title, basicfont.Face7x13, titleX, y+40,
+		color.RGBA{255, 255, 100, 255})
+
+	// Step indicator
+	stepText := "Step 3 of 5: Choose Starting Equipment"
+	stepX := x + w/2 - len(stepText)*3
+	text.Draw(screen, stepText, basicfont.Face7x13, stepX, y+70,
+		color.RGBA{200, 200, 200, 255})
+
+	// Class label
+	classLabel := fmt.Sprintf("Loadouts for: %s", cc.selectedClass.String())
+	classX := x + w/2 - len(classLabel)*3
+	text.Draw(screen, classLabel, basicfont.Face7x13, classX, y+100,
+		color.RGBA{180, 200, 255, 255})
+
+	// Draw loadout options
+	startY := y + 130
+	loadoutHeight := 80
+
+	for i, loadout := range cc.equipmentLoadouts {
+		loadoutY := startY + i*loadoutHeight
+		isSelected := i == cc.selectedLoadout
+
+		// Background
+		bgColor := color.RGBA{40, 40, 50, 255}
+		if isSelected {
+			bgColor = color.RGBA{60, 80, 100, 255}
+		}
+		vector.DrawFilledRect(screen, float32(x+40), float32(loadoutY),
+			float32(w-80), float32(loadoutHeight-5), bgColor, false)
+
+		// Selection border
+		if isSelected {
+			vector.StrokeRect(screen, float32(x+40), float32(loadoutY),
+				float32(w-80), float32(loadoutHeight-5), 2,
+				color.RGBA{100, 200, 255, 255}, false)
+		}
+
+		// Number indicator
+		numText := fmt.Sprintf("%d.", i+1)
+		text.Draw(screen, numText, basicfont.Face7x13, x+50, loadoutY+20,
+			color.RGBA{150, 150, 150, 255})
+
+		// Loadout name
+		nameColor := color.RGBA{255, 255, 255, 255}
+		if isSelected {
+			nameColor = color.RGBA{255, 255, 100, 255}
+		}
+		text.Draw(screen, loadout.Name, basicfont.Face7x13, x+75, loadoutY+20, nameColor)
+
+		// Description
+		text.Draw(screen, loadout.Description, basicfont.Face7x13, x+75, loadoutY+38,
+			color.RGBA{180, 180, 180, 255})
+
+		// Equipment list (abbreviated)
+		equipText := fmt.Sprintf("%s + %s", loadout.MainHand, loadout.Armor)
+		text.Draw(screen, equipText, basicfont.Face7x13, x+75, loadoutY+56,
+			color.RGBA{150, 200, 150, 255})
+
+		// Stat bonuses (right side)
+		bonusText := fmt.Sprintf("HP:%+d ATK:%+d DEF:%+d",
+			loadout.BonusHP, loadout.BonusAttack, loadout.BonusDefense)
+		bonusX := x + w - 150
+		text.Draw(screen, bonusText, basicfont.Face7x13, bonusX, loadoutY+38,
+			color.RGBA{200, 200, 100, 255})
+	}
+
+	// Help text
+	helpY := y + h - 60
+	helpText := "Use UP/DOWN or 1-3 to select, ENTER to confirm"
+	helpX := x + w/2 - len(helpText)*3
+	text.Draw(screen, helpText, basicfont.Face7x13, helpX, helpY,
+		color.RGBA{150, 150, 150, 255})
+
+	helpText2 := "Press BACKSPACE to go back"
+	helpX2 := x + w/2 - len(helpText2)*3
+	text.Draw(screen, helpText2, basicfont.Face7x13, helpX2, helpY+20,
+		color.RGBA{150, 150, 150, 255})
+}
+
 // drawConfirmation renders the confirmation screen
 func (cc *EbitenCharacterCreation) drawConfirmation(screen *ebiten.Image, x, y, w, h int) {
 	// Title
@@ -1676,7 +2012,7 @@ func (cc *EbitenCharacterCreation) drawConfirmation(screen *ebiten.Image, x, y, 
 		color.RGBA{255, 255, 100, 255})
 
 	// Step indicator
-	stepText := "Step 4 of 4: Confirm Your Character"
+	stepText := "Step 5 of 5: Confirm Your Character"
 	stepX := x + w/2 - len(stepText)*3
 	text.Draw(screen, stepText, basicfont.Face7x13, stepX, y+70,
 		color.RGBA{200, 200, 200, 255})
@@ -1692,21 +2028,32 @@ func (cc *EbitenCharacterCreation) drawConfirmation(screen *ebiten.Image, x, y, 
 	text.Draw(screen, classText, basicfont.Face7x13, x+w/2-len(classText)*3, summaryY+30,
 		color.RGBA{255, 255, 255, 255})
 
+	// Equipment loadout preview
+	if cc.characterData.StartingLoadout != nil {
+		loadoutText := fmt.Sprintf("Loadout: %s", cc.characterData.StartingLoadout.Name)
+		text.Draw(screen, loadoutText, basicfont.Face7x13, x+w/2-len(loadoutText)*3, summaryY+60,
+			color.RGBA{180, 200, 255, 255})
+	} else {
+		loadoutText := "Loadout: Default"
+		text.Draw(screen, loadoutText, basicfont.Face7x13, x+w/2-len(loadoutText)*3, summaryY+60,
+			color.RGBA{180, 180, 180, 255})
+	}
+
 	// Portrait preview (if set)
 	if cc.characterData.Portrait != nil {
 		portraitText := fmt.Sprintf("Portrait: Custom (%dx%d)",
 			cc.characterData.Portrait.Bounds().Dx(),
 			cc.characterData.Portrait.Bounds().Dy())
-		text.Draw(screen, portraitText, basicfont.Face7x13, x+w/2-len(portraitText)*3, summaryY+60,
+		text.Draw(screen, portraitText, basicfont.Face7x13, x+w/2-len(portraitText)*3, summaryY+90,
 			color.RGBA{255, 255, 255, 255})
 
 		// Show small preview
-		previewSize := 64
+		previewSize := 48
 		previewX := x + w/2 - previewSize/2
-		previewY := summaryY + 80
+		previewY := summaryY + 110
 
 		opts := &ebiten.DrawImageOptions{}
-		// Scale down to 64x64 preview
+		// Scale down to 48x48 preview
 		scaleX := float64(previewSize) / float64(cc.characterData.Portrait.Bounds().Dx())
 		scaleY := float64(previewSize) / float64(cc.characterData.Portrait.Bounds().Dy())
 		scale := scaleX
@@ -1718,7 +2065,7 @@ func (cc *EbitenCharacterCreation) drawConfirmation(screen *ebiten.Image, x, y, 
 		screen.DrawImage(cc.characterData.Portrait, opts)
 	} else {
 		portraitText := "Portrait: None"
-		text.Draw(screen, portraitText, basicfont.Face7x13, x+w/2-len(portraitText)*3, summaryY+60,
+		text.Draw(screen, portraitText, basicfont.Face7x13, x+w/2-len(portraitText)*3, summaryY+90,
 			color.RGBA{180, 180, 180, 255})
 	}
 
@@ -1850,6 +2197,11 @@ func (cc *EbitenCharacterCreation) Reset() {
 	cc.characterData = CharacterData{}
 	cc.confirmed = false
 	cc.errorMsg = ""
+
+	// Reset equipment selection state
+	cc.equipmentLoadouts = nil
+	cc.selectedLoadout = 0
+	cc.loadoutsGenerated = false
 
 	// MOBILE/WASM KEYBOARD FIX: Reset keyboard state flag to false.
 	// The keyboard will be shown automatically on the first Update() call

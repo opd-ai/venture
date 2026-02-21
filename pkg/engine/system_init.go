@@ -82,6 +82,7 @@ type SystemInitResult struct {
 	AttributeAllocationSystem                   *AttributeAllocationSystem
 	TalentSystem                                *TalentSystem
 	SkillMutationSystem                         *SkillMutationSystem
+	BuildTemplateSystem                         *BuildTemplateSystem
 	EquipmentSetBonusSystem                     *EquipmentSetBonusSystem
 	CompanionProgressionSystem                  *CompanionProgressionSystem
 	WeatherAudioSystem                          *WeatherAudioSystem
@@ -985,6 +986,13 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 	skillMutationSystem := NewSkillMutationSystemWithLogger(game.World, config.Logger)
 	result.SkillMutationSystem = skillMutationSystem
 	game.World.AddSystem(skillMutationSystem)
+
+	// 18d3. BuildTemplateSystem - manages complete character build presets
+	// Players can save and load full character builds (attributes + talents + skills) as templates
+	// Includes predefined archetype presets (Tank, DPS, Support, Hybrid, etc.)
+	buildTemplateSystem := NewBuildTemplateSystem(game.World, config.Seed)
+	result.BuildTemplateSystem = buildTemplateSystem
+	game.World.AddSystem(buildTemplateSystem)
 
 	// 18e. EquipmentSetBonusSystem - tracks equipped set pieces and applies tiered bonuses
 	// Players wearing multiple pieces from the same equipment set receive cumulative stat bonuses

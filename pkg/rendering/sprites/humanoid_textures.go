@@ -217,13 +217,13 @@ func generateHairTexture(rng *rand.Rand, genre string) HumanoidTextureParams {
 	var hairType HumanoidTextureType
 	switch {
 	case roll < 0.35:
-		hairType = HairStraight
+		hairType = HumTexHairStraight
 	case roll < 0.60:
-		hairType = HairWavy
+		hairType = HumTexHairWavy
 	case roll < 0.85:
-		hairType = HairCurly
+		hairType = HumTexHairCurly
 	default:
-		hairType = HairBraided
+		hairType = HumTexHairBraided
 	}
 
 	// Hair colors: 60% dark, 25% medium, 15% light/red
@@ -303,13 +303,13 @@ func ApplyHumanoidTexture(buf *image.RGBA, region image.Rectangle, params Humano
 		applyFabricChainmailTexture(buf, region, params, rng)
 	case FabricPlate:
 		applyFabricPlateTexture(buf, region, params, rng)
-	case HairStraight:
+	case HumTexHairStraight:
 		applyHairStraightTexture(buf, region, params, rng)
-	case HairWavy:
+	case HumTexHairWavy:
 		applyHairWavyTexture(buf, region, params, rng)
-	case HairCurly:
+	case HumTexHairCurly:
 		applyHairCurlyTexture(buf, region, params, rng)
-	case HairBraided:
+	case HumTexHairBraided:
 		applyHairBraidedTexture(buf, region, params, rng)
 	}
 }
@@ -393,7 +393,7 @@ func applySkinScarredTexture(buf *image.RGBA, r image.Rectangle, p HumanoidTextu
 		sy := r.Min.Y + rng.Intn(r.Dy())
 		// Random direction and length
 		angle := rng.Float64() * math.Pi
-		length := 3 + rng.Intn(maxInt(1, r.Dx()/2))
+		length := 3 + rng.Intn(humTexMaxInt(1, r.Dx()/2))
 
 		// Scar is slightly lighter (healed tissue)
 		scarColor := color.RGBA{
@@ -424,7 +424,7 @@ func applySkinWeatheredTexture(buf *image.RGBA, r image.Rectangle, p HumanoidTex
 	applySkinSmoothTexture(buf, r, p, rng)
 
 	// Add horizontal wrinkle lines (forehead, etc.)
-	wSpacing := maxInt(2, int(3*p.Scale))
+	wSpacing := humTexMaxInt(2, int(3*p.Scale))
 	for y := r.Min.Y; y < r.Max.Y; y++ {
 		isWrinkleLine := (y-r.Min.Y)%wSpacing == 0
 		for x := r.Min.X; x < r.Max.X; x++ {
@@ -469,16 +469,16 @@ func applySkinTattooedTexture(buf *image.RGBA, r image.Rectangle, p HumanoidText
 			draw := false
 			switch patternType {
 			case 0: // Diagonal stripes
-				if (x+y)%(maxInt(1, int(4*p.Scale))) == 0 {
+				if (x+y)%(humTexMaxInt(1, int(4*p.Scale))) == 0 {
 					draw = true
 				}
 			case 1: // Circles
 				dist := math.Sqrt(float64((x-cx)*(x-cx) + (y-cy)*(y-cy)))
-				if int(dist)%(maxInt(1, int(3*p.Scale))) == 0 {
+				if int(dist)%(humTexMaxInt(1, int(3*p.Scale))) == 0 {
 					draw = true
 				}
 			case 2: // Crosshatch
-				if (x-r.Min.X)%(maxInt(1, int(3*p.Scale))) == 0 || (y-r.Min.Y)%(maxInt(1, int(3*p.Scale))) == 0 {
+				if (x-r.Min.X)%(humTexMaxInt(1, int(3*p.Scale))) == 0 || (y-r.Min.Y)%(humTexMaxInt(1, int(3*p.Scale))) == 0 {
 					draw = true
 				}
 			}
@@ -494,7 +494,7 @@ func applySkinTattooedTexture(buf *image.RGBA, r image.Rectangle, p HumanoidText
 
 // applyFabricLinenTexture adds fine crosshatch weave pattern.
 func applyFabricLinenTexture(buf *image.RGBA, r image.Rectangle, p HumanoidTextureParams, rng *rand.Rand) {
-	spacing := maxInt(2, int(2*p.Scale))
+	spacing := humTexMaxInt(2, int(2*p.Scale))
 	for y := r.Min.Y; y < r.Max.Y; y++ {
 		for x := r.Min.X; x < r.Max.X; x++ {
 			idx := y*buf.Stride + x*4
@@ -541,13 +541,13 @@ func applyFabricLeatherTexture(buf *image.RGBA, r image.Rectangle, p HumanoidTex
 
 	// Add edge wear (lighter at fold points)
 	for y := r.Min.Y; y < r.Max.Y; y++ {
-		for x := r.Min.X; x < minInt(r.Min.X+2, r.Max.X); x++ {
+		for x := r.Min.X; x < humTexMinInt(r.Min.X+2, r.Max.X); x++ {
 			idx := y*buf.Stride + x*4
 			if idx+3 < len(buf.Pix) && buf.Pix[idx+3] > 30 {
 				blendHumanoidPixel(buf, x, y, p.SecondaryColor, p.Intensity*0.35)
 			}
 		}
-		for x := maxInt(r.Min.X, r.Max.X-2); x < r.Max.X; x++ {
+		for x := humTexMaxInt(r.Min.X, r.Max.X-2); x < r.Max.X; x++ {
 			idx := y*buf.Stride + x*4
 			if idx+3 < len(buf.Pix) && buf.Pix[idx+3] > 30 {
 				blendHumanoidPixel(buf, x, y, p.SecondaryColor, p.Intensity*0.35)
@@ -600,7 +600,7 @@ func applyFabricWoolTexture(buf *image.RGBA, r image.Rectangle, p HumanoidTextur
 
 // applyFabricChainmailTexture adds repeating ring pattern.
 func applyFabricChainmailTexture(buf *image.RGBA, r image.Rectangle, p HumanoidTextureParams, rng *rand.Rand) {
-	ringSize := maxInt(2, int(3*p.Scale))
+	ringSize := humTexMaxInt(2, int(3*p.Scale))
 	halfRing := ringSize / 2
 
 	for y := r.Min.Y; y < r.Max.Y; y++ {
@@ -632,7 +632,7 @@ func applyFabricChainmailTexture(buf *image.RGBA, r image.Rectangle, p HumanoidT
 
 // applyFabricPlateTexture adds brushed metal sheen.
 func applyFabricPlateTexture(buf *image.RGBA, r image.Rectangle, p HumanoidTextureParams, rng *rand.Rand) {
-	streakSpacing := maxInt(3, int(4*p.Scale))
+	streakSpacing := humTexMaxInt(3, int(4*p.Scale))
 
 	for y := r.Min.Y; y < r.Max.Y; y++ {
 		for x := r.Min.X; x < r.Max.X; x++ {
@@ -660,7 +660,7 @@ func applyFabricPlateTexture(buf *image.RGBA, r image.Rectangle, p HumanoidTextu
 
 // applyHairStraightTexture adds directional parallel strokes.
 func applyHairStraightTexture(buf *image.RGBA, r image.Rectangle, p HumanoidTextureParams, rng *rand.Rand) {
-	spacing := maxInt(2, int(2*p.Scale))
+	spacing := humTexMaxInt(2, int(2*p.Scale))
 	dx := math.Cos(p.Direction)
 	dy := math.Sin(p.Direction)
 
@@ -687,8 +687,8 @@ func applyHairStraightTexture(buf *image.RGBA, r image.Rectangle, p HumanoidText
 
 // applyHairWavyTexture adds sinusoidal wave pattern.
 func applyHairWavyTexture(buf *image.RGBA, r image.Rectangle, p HumanoidTextureParams, rng *rand.Rand) {
-	wavelength := float64(maxInt(4, int(5*p.Scale)))
-	amplitude := float64(maxInt(1, int(2*p.Scale)))
+	wavelength := float64(humTexMaxInt(4, int(5*p.Scale)))
+	amplitude := float64(humTexMaxInt(1, int(2*p.Scale)))
 
 	for y := r.Min.Y; y < r.Max.Y; y++ {
 		for x := r.Min.X; x < r.Max.X; x++ {
@@ -716,7 +716,7 @@ func applyHairWavyTexture(buf *image.RGBA, r image.Rectangle, p HumanoidTextureP
 
 // applyHairCurlyTexture adds tight spiral pattern.
 func applyHairCurlyTexture(buf *image.RGBA, r image.Rectangle, p HumanoidTextureParams, rng *rand.Rand) {
-	curlSize := maxInt(2, int(3*p.Scale))
+	curlSize := humTexMaxInt(2, int(3*p.Scale))
 
 	for y := r.Min.Y; y < r.Max.Y; y++ {
 		for x := r.Min.X; x < r.Max.X; x++ {
@@ -749,7 +749,7 @@ func applyHairCurlyTexture(buf *image.RGBA, r image.Rectangle, p HumanoidTexture
 
 // applyHairBraidedTexture adds interlocking diagonal patterns.
 func applyHairBraidedTexture(buf *image.RGBA, r image.Rectangle, p HumanoidTextureParams, rng *rand.Rand) {
-	braidWidth := maxInt(3, int(4*p.Scale))
+	braidWidth := humTexMaxInt(3, int(4*p.Scale))
 
 	for y := r.Min.Y; y < r.Max.Y; y++ {
 		for x := r.Min.X; x < r.Max.X; x++ {
@@ -845,14 +845,14 @@ func max0(v int) int {
 	return v
 }
 
-func maxInt(a, b int) int {
+func humTexMaxInt(a, b int) int {
 	if a > b {
 		return a
 	}
 	return b
 }
 
-func minInt(a, b int) int {
+func humTexMinInt(a, b int) int {
 	if a < b {
 		return a
 	}

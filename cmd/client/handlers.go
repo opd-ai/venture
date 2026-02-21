@@ -254,6 +254,7 @@ type systemsContainer struct {
 	spriteDepthShadingSystem                    *engine.SpriteDepthShadingSystem                    // Per-body-part depth shading for entity sprites
 	clothingPatternSystem                       *engine.ClothingPatternSystem                       // Seed-based clothing patterns for entity sprites
 	surfaceTextureSystem                        *engine.SurfaceTextureSystem                        // Creature-form surface textures (fur, scales, etc.)
+	humanoidTextureSystem                       *engine.HumanoidTextureSystem                       // Humanoid-specific surface textures (skin, fabric, hair)
 	bodyTypeSystem                              *engine.BodyTypeSystem                              // Seed-based body type variety for entity sprites
 	headgearAssignmentSystem                    *engine.HeadgearAssignmentSystem                    // Seed-based headgear variety for humanoid entities
 	backAccessorySystem                         *engine.BackAccessorySystem                         // Seed-based back accessories (capes, cloaks, quivers, etc.)
@@ -274,6 +275,7 @@ type systemsContainer struct {
 	attributeAllocationSystem                   *engine.AttributeAllocationSystem // Manages core attribute point allocation
 	talentSystem                                *engine.TalentSystem              // Manages talent point allocation and passive bonuses
 	skillMutationSystem                         *engine.SkillMutationSystem       // Manages skill mutations for ability customization
+	buildTemplateSystem                         *engine.BuildTemplateSystem       // Manages complete character build presets
 	equipmentSetBonusSystem                     *engine.EquipmentSetBonusSystem   // Manages equipment set piece tracking and tiered bonuses
 	visualFeedbackSystem                        *engine.VisualFeedbackSystem
 	weatherSystem                               *engine.WeatherSystem
@@ -1859,6 +1861,12 @@ func registerNonCriticalSystems(game *engine.EbitenGame, sys *systemsContainer) 
 	sys.surfaceTextureSystem.SetGenre(*genreID)
 	game.World.AddSystem(sys.surfaceTextureSystem)
 
+	// HumanoidTextureSystem: humanoid-specific surface textures
+	// Assigns skin textures, clothing fabric textures, and hair textures to humanoid entities
+	sys.humanoidTextureSystem = engine.NewHumanoidTextureSystem(game.World, *seed+10767)
+	sys.humanoidTextureSystem.SetGenre(*genreID)
+	game.World.AddSystem(sys.humanoidTextureSystem)
+
 	// BodyTypeSystem: seed-based body type variety for entity sprites
 	// Assigns distinct body builds (stocky, lean, muscular, heavy, etc.) per entity
 	sys.bodyTypeSystem = engine.NewBodyTypeSystem(game.World, *seed+10770)
@@ -1935,6 +1943,11 @@ func registerNonCriticalSystems(game *engine.EbitenGame, sys *systemsContainer) 
 	// Players collect mutations as loot and apply them for stat/effect modifications
 	sys.skillMutationSystem = engine.NewSkillMutationSystemWithLogger(game.World, game.World.GetLogger().Logger)
 	game.World.AddSystem(sys.skillMutationSystem)
+
+	// BuildTemplateSystem: manages complete character build presets
+	// Players can save and load full builds (attributes + talents + skills) as templates
+	sys.buildTemplateSystem = engine.NewBuildTemplateSystem(game.World, *seed)
+	game.World.AddSystem(sys.buildTemplateSystem)
 
 	// EquipmentSetBonusSystem: tracks equipped set pieces and applies tiered bonuses
 	// Players wearing multiple pieces from the same equipment set receive cumulative stat bonuses

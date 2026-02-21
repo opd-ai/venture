@@ -3584,7 +3584,7 @@ func initializePlayerNarrative(player *engine.Entity, narrativeSystem *engine.Br
 	// Generate a story arc for the player
 	params := procgen.GenerationParams{
 		Difficulty: 0.5,
-		Depth:      0,
+		Depth:      1,
 		GenreID:    genreID,
 		Custom: map[string]interface{}{
 			"theme": getGenreTheme(),

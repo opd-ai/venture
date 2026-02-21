@@ -90,7 +90,9 @@ func (l *LightingAdapter) processEntityLight(entity *Entity) {
 	light := l.convertToLight(lightComp, posComp)
 	if err := l.system.AddLight(light); err != nil {
 		if l.logger != nil {
-			l.logger.WithError(err).Warn("failed to add light from entity")
+			// Maximum lights reached is an expected operational condition during culling
+			// Log at debug level to avoid flooding logs
+			l.logger.WithError(err).Debug("failed to add light from entity")
 		}
 	}
 }

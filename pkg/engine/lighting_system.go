@@ -452,7 +452,7 @@ func (s *LightingSystem) logMaxLightsReached(metrics *lightMetrics) {
 			"total_lights":   metrics.totalLights,
 			"culled_lights":  metrics.culledLights,
 			"visible_lights": len(s.visibleLights),
-		}).Warn("Reached maximum light limit")
+		}).Debug("Reached maximum light limit")
 	}
 }
 

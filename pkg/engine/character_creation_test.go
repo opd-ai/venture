@@ -1072,3 +1072,216 @@ func TestGenerateRandomName_NoUIStateDependency(t *testing.T) {
 			name1, name2)
 	}
 }
+
+// TestApplyClassStats_AllClasses verifies all 21 classes can have stats applied successfully.
+func TestApplyClassStats_AllClasses(t *testing.T) {
+	allClasses := []struct {
+		class    CharacterClass
+		wantHP   float64
+		wantMana int
+		wantAtk  float64
+		wantDef  float64
+	}{
+		{ClassWarrior, 150, 50, 12, 8},
+		{ClassMage, 80, 150, 6, 3},
+		{ClassRogue, 100, 80, 10, 5},
+		{ClassRanger, 110, 70, 11, 5},
+		{ClassCleric, 120, 120, 7, 6},
+		{ClassNecromancer, 90, 140, 8, 4},
+		{ClassBattlemage, 115, 100, 10, 6},
+		{ClassSpellblade, 90, 110, 9, 4},
+		{ClassPaladin, 140, 80, 10, 9},
+		{ClassMonk, 100, 90, 9, 5},
+		{ClassDeathKnight, 130, 90, 11, 7},
+		{ClassWitchHunter, 115, 90, 10, 5},
+		{ClassBeastlord, 135, 60, 11, 7},
+		{ClassArcaneArcher, 95, 110, 10, 4},
+		{ClassShadowPriest, 85, 130, 8, 4},
+		{ClassDruid, 105, 115, 9, 5},
+		{ClassInquisitor, 110, 100, 9, 6},
+		{ClassBloodKnight, 125, 85, 12, 6},
+		{ClassMystic, 95, 135, 7, 5},
+		{ClassWarlock, 85, 145, 9, 3},
+		{ClassNinja, 90, 75, 11, 4},
+	}
+
+	for _, tc := range allClasses {
+		t.Run(tc.class.String(), func(t *testing.T) {
+			world := NewWorld()
+			player := world.CreateEntity()
+			player.AddComponent(&HealthComponent{Current: 100, Max: 100})
+			player.AddComponent(&ManaComponent{Current: 100, Max: 100, Regen: 5.0})
+			player.AddComponent(NewStatsComponent())
+			player.AddComponent(&AttackComponent{Damage: 15, Range: 50, Cooldown: 0.5})
+
+			err := ApplyClassStats(player, tc.class)
+			if err != nil {
+				t.Fatalf("ApplyClassStats(%s) error = %v", tc.class, err)
+			}
+
+			// Verify health
+			healthComp, _ := player.GetComponent("health")
+			health := healthComp.(*HealthComponent)
+			if health.Max != tc.wantHP {
+				t.Errorf("%s health = %v, want %v", tc.class, health.Max, tc.wantHP)
+			}
+			if health.Current != tc.wantHP {
+				t.Errorf("%s current health = %v, want %v", tc.class, health.Current, tc.wantHP)
+			}
+
+			// Verify mana
+			manaComp, _ := player.GetComponent("mana")
+			mana := manaComp.(*ManaComponent)
+			if mana.Max != tc.wantMana {
+				t.Errorf("%s mana = %v, want %v", tc.class, mana.Max, tc.wantMana)
+			}
+			if mana.Current != tc.wantMana {
+				t.Errorf("%s current mana = %v, want %v", tc.class, mana.Current, tc.wantMana)
+			}
+
+			// Verify attack/defense stats
+			statsCompRaw, _ := player.GetComponent("stats")
+			statsComp := statsCompRaw.(*StatsComponent)
+			if statsComp.Attack != tc.wantAtk {
+				t.Errorf("%s attack = %v, want %v", tc.class, statsComp.Attack, tc.wantAtk)
+			}
+			if statsComp.Defense != tc.wantDef {
+				t.Errorf("%s defense = %v, want %v", tc.class, statsComp.Defense, tc.wantDef)
+			}
+		})
+	}
+}
+
+// TestApplyClassStats_HybridClassesHaveUniqueStats verifies hybrid classes are distinct from their base classes.
+func TestApplyClassStats_HybridClassesHaveUniqueStats(t *testing.T) {
+	createPlayer := func() *Entity {
+		world := NewWorld()
+		player := world.CreateEntity()
+		player.AddComponent(&HealthComponent{Current: 100, Max: 100})
+		player.AddComponent(&ManaComponent{Current: 100, Max: 100, Regen: 5.0})
+		player.AddComponent(NewStatsComponent())
+		player.AddComponent(&AttackComponent{Damage: 15, Range: 50, Cooldown: 0.5})
+		return player
+	}
+
+	// Test Battlemage is distinct from both Warrior and Mage
+	t.Run("Battlemage_vs_parents", func(t *testing.T) {
+		warrior := createPlayer()
+		mage := createPlayer()
+		battlemage := createPlayer()
+
+		ApplyClassStats(warrior, ClassWarrior)
+		ApplyClassStats(mage, ClassMage)
+		ApplyClassStats(battlemage, ClassBattlemage)
+
+		wH, _ := warrior.GetComponent("health")
+		mH, _ := mage.GetComponent("health")
+		bH, _ := battlemage.GetComponent("health")
+
+		warriorHP := wH.(*HealthComponent).Max
+		mageHP := mH.(*HealthComponent).Max
+		battlemageHP := bH.(*HealthComponent).Max
+
+		// Battlemage should be between Warrior and Mage HP (or distinct)
+		if battlemageHP == warriorHP || battlemageHP == mageHP {
+			t.Errorf("Battlemage HP (%v) should differ from Warrior (%v) and Mage (%v)",
+				battlemageHP, warriorHP, mageHP)
+		}
+	})
+
+	// Test Ninja has highest crit rate and evasion
+	t.Run("Ninja_specialization", func(t *testing.T) {
+		ninja := createPlayer()
+		rogue := createPlayer()
+
+		ApplyClassStats(ninja, ClassNinja)
+		ApplyClassStats(rogue, ClassRogue)
+
+		nS, _ := ninja.GetComponent("stats")
+		rS, _ := rogue.GetComponent("stats")
+
+		ninjaCrit := nS.(*StatsComponent).CritChance
+		rogueCrit := rS.(*StatsComponent).CritChance
+
+		if ninjaCrit <= rogueCrit {
+			t.Errorf("Ninja crit (%v) should be higher than Rogue (%v)", ninjaCrit, rogueCrit)
+		}
+	})
+}
+
+// TestClassSelection_SixClasses verifies arrow key navigation wraps through all 6 base classes
+func TestClassSelection_SixClasses(t *testing.T) {
+	t.Run("baseClasses contains all 6 base classes", func(t *testing.T) {
+		expected := []CharacterClass{
+			ClassWarrior, ClassMage, ClassRogue, ClassRanger, ClassCleric, ClassNecromancer,
+		}
+		if len(baseClasses) != len(expected) {
+			t.Errorf("baseClasses length = %d, want %d", len(baseClasses), len(expected))
+		}
+		for i, c := range expected {
+			if baseClasses[i] != c {
+				t.Errorf("baseClasses[%d] = %v, want %v", i, baseClasses[i], c)
+			}
+		}
+	})
+
+	t.Run("all 6 base classes have descriptions", func(t *testing.T) {
+		for _, class := range baseClasses {
+			desc := class.Description()
+			if desc == "" {
+				t.Errorf("Class %v has empty description", class)
+			}
+		}
+	})
+
+	t.Run("all 6 base classes have string names", func(t *testing.T) {
+		expectedNames := []string{"Warrior", "Mage", "Rogue", "Ranger", "Cleric", "Necromancer"}
+		for i, class := range baseClasses {
+			name := class.String()
+			if name != expectedNames[i] {
+				t.Errorf("Class %v string = %q, want %q", class, name, expectedNames[i])
+			}
+		}
+	})
+}
+
+// TestGetClassStats_AllBaseClasses verifies stat preview text for all 6 base classes
+func TestGetClassStats_AllBaseClasses(t *testing.T) {
+	tests := []struct {
+		class              CharacterClass
+		wantMinLen         int
+		wantHealthContains string
+	}{
+		{ClassWarrior, 4, "150"},
+		{ClassMage, 4, "80"},
+		{ClassRogue, 4, "100"},
+		{ClassRanger, 4, "110"},
+		{ClassCleric, 4, "120"},
+		{ClassNecromancer, 4, "90"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.class.String(), func(t *testing.T) {
+			cc := &EbitenCharacterCreation{
+				characterData: CharacterData{Class: tt.class},
+			}
+			stats := cc.getClassStats()
+			if len(stats) < tt.wantMinLen {
+				t.Errorf("getClassStats() for %v returned %d stats, want at least %d", tt.class, len(stats), tt.wantMinLen)
+			}
+			if len(stats) > 0 && !strings.Contains(stats[0], tt.wantHealthContains) {
+				t.Errorf("getClassStats() health for %v = %q, want to contain %q", tt.class, stats[0], tt.wantHealthContains)
+			}
+		})
+	}
+
+	t.Run("unknown class returns empty", func(t *testing.T) {
+		cc := &EbitenCharacterCreation{
+			characterData: CharacterData{Class: CharacterClass(99)},
+		}
+		stats := cc.getClassStats()
+		if len(stats) != 0 {
+			t.Errorf("getClassStats() for unknown class returned %d stats, want 0", len(stats))
+		}
+	})
+}

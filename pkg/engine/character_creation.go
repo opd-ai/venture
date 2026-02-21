@@ -706,17 +706,22 @@ func (cc *EbitenCharacterCreation) updateClassSelection() {
 	cc.handleDefaultSave()
 }
 
+// baseClasses contains the 6 selectable base classes in character creation
+var baseClasses = []CharacterClass{
+	ClassWarrior, ClassMage, ClassRogue, ClassRanger, ClassCleric, ClassNecromancer,
+}
+
 // handleArrowKeySelection processes arrow key navigation for class selection
 func (cc *EbitenCharacterCreation) handleArrowKeySelection() {
 	if inpututil.IsKeyJustPressed(ebiten.KeyArrowUp) {
 		cc.selectedClass--
 		if cc.selectedClass < ClassWarrior {
-			cc.selectedClass = ClassRogue
+			cc.selectedClass = ClassNecromancer
 		}
 	}
 	if inpututil.IsKeyJustPressed(ebiten.KeyArrowDown) {
 		cc.selectedClass++
-		if cc.selectedClass > ClassRogue {
+		if cc.selectedClass > ClassNecromancer {
 			cc.selectedClass = ClassWarrior
 		}
 	}
@@ -733,6 +738,15 @@ func (cc *EbitenCharacterCreation) handleNumberKeySelection() {
 	if inpututil.IsKeyJustPressed(ebiten.Key3) {
 		cc.selectedClass = ClassRogue
 	}
+	if inpututil.IsKeyJustPressed(ebiten.Key4) {
+		cc.selectedClass = ClassRanger
+	}
+	if inpututil.IsKeyJustPressed(ebiten.Key5) {
+		cc.selectedClass = ClassCleric
+	}
+	if inpututil.IsKeyJustPressed(ebiten.Key6) {
+		cc.selectedClass = ClassNecromancer
+	}
 }
 
 // handleTouchOrMouseClick processes touch and mouse click events for class selection
@@ -742,9 +756,8 @@ func (cc *EbitenCharacterCreation) handleTouchOrMouseClick() bool {
 	}
 	mouseX, mouseY, _ := GetTouchOrMousePosition()
 	startY := cc.panelY + 140
-	classes := []CharacterClass{ClassWarrior, ClassMage, ClassRogue}
 
-	for i, class := range classes {
+	for i, class := range baseClasses {
 		if cc.isClassBoxClicked(mouseX, mouseY, startY, i) {
 			cc.selectedClass = class
 			cc.characterData.Class = cc.selectedClass
@@ -757,18 +770,17 @@ func (cc *EbitenCharacterCreation) handleTouchOrMouseClick() bool {
 
 // isClassBoxClicked checks if coordinates are within a class option box
 func (cc *EbitenCharacterCreation) isClassBoxClicked(mouseX, mouseY, startY, classIndex int) bool {
-	classY := startY + classIndex*80
+	classY := startY + classIndex*55
 	return mouseX >= cc.panelX+40 && mouseX <= cc.panelX+cc.panelWidth-40 &&
-		mouseY >= classY-5 && mouseY <= classY+65
+		mouseY >= classY-5 && mouseY <= classY+45
 }
 
 // handleTouchOrMouseHover updates selection based on mouse/touch hover position
 func (cc *EbitenCharacterCreation) handleTouchOrMouseHover() {
 	mouseX, mouseY, _ := GetTouchOrMousePosition()
 	startY := cc.panelY + 140
-	classes := []CharacterClass{ClassWarrior, ClassMage, ClassRogue}
 
-	for i, class := range classes {
+	for i, class := range baseClasses {
 		if cc.isClassBoxClicked(mouseX, mouseY, startY, i) {
 			cc.selectedClass = class
 			break
@@ -1380,17 +1392,16 @@ func (cc *EbitenCharacterCreation) drawClassSelection(screen *ebiten.Image, x, y
 	text.Draw(screen, nameText, basicfont.Face7x13, nameX, y+100,
 		color.RGBA{200, 200, 255, 255})
 
-	// Class options
-	classes := []CharacterClass{ClassWarrior, ClassMage, ClassRogue}
-	startY := y + 140
+	// Class options (6 base classes with compact layout)
+	startY := y + 120
 
-	for i, class := range classes {
-		classY := startY + i*80
+	for i, class := range baseClasses {
+		classY := startY + i*55
 		isSelected := class == cc.selectedClass
 
 		// Selection indicator
 		if isSelected {
-			vector.DrawFilledRect(screen, float32(x+40), float32(classY-5), float32(w-80), 70,
+			vector.DrawFilledRect(screen, float32(x+40), float32(classY-5), float32(w-80), 50,
 				color.RGBA{50, 80, 120, 255}, false)
 		}
 
@@ -1403,11 +1414,11 @@ func (cc *EbitenCharacterCreation) drawClassSelection(screen *ebiten.Image, x, y
 		className := fmt.Sprintf("%d. %s", i+1, class.String())
 		text.Draw(screen, className, basicfont.Face7x13, x+50, classY+15, classColor)
 
-		// Class description (wrapped)
+		// Class description (compact - single line)
 		desc := class.Description()
-		descLines := wrapText(desc, 60)
-		for j, line := range descLines {
-			text.Draw(screen, line, basicfont.Face7x13, x+70, classY+35+j*15,
+		descLines := wrapText(desc, 55)
+		if len(descLines) > 0 {
+			text.Draw(screen, descLines[0], basicfont.Face7x13, x+70, classY+32,
 				color.RGBA{180, 180, 180, 255})
 		}
 	}
@@ -1422,7 +1433,7 @@ func (cc *EbitenCharacterCreation) drawClassSelection(screen *ebiten.Image, x, y
 	}
 
 	// Help text
-	helpText1 := "Use ARROW KEYS or 1-3 to select"
+	helpText1 := "Use ARROW KEYS or 1-6 to select"
 	helpText2 := "TAP/CLICK a class to select and continue"
 	helpText3 := "Press ENTER or click NEXT to continue"
 	helpText4 := "BACKSPACE or click BACK to go back | F2 to save default"
@@ -1690,6 +1701,30 @@ func (cc *EbitenCharacterCreation) getClassStats() []string {
 			"Attack: 10 (Medium)",
 			"Defense: 5 (Medium)",
 		}
+	case ClassRanger:
+		return []string{
+			"Health: 110 (Medium)",
+			"Mana: 70 (Low)",
+			"Attack: 11 (Medium)",
+			"Defense: 5 (Medium)",
+			"Crit: 12% (High)",
+		}
+	case ClassCleric:
+		return []string{
+			"Health: 120 (Medium)",
+			"Mana: 120 (High)",
+			"Attack: 7 (Low)",
+			"Defense: 6 (Medium)",
+			"Mana Regen: 6.0 (High)",
+		}
+	case ClassNecromancer:
+		return []string{
+			"Health: 90 (Low)",
+			"Mana: 140 (High)",
+			"Attack: 8 (Low)",
+			"Defense: 4 (Low)",
+			"Mana Regen: 7.0 (High)",
+		}
 	default:
 		return []string{}
 	}
@@ -1896,6 +1931,271 @@ func applyRogueStats(comps *classComponents) {
 	comps.stats.Evasion = 0.15
 }
 
+// applyRangerStats configures a player entity with ranger class statistics
+func applyRangerStats(comps *classComponents) {
+	comps.health.Max = 110
+	comps.health.Current = 110
+	comps.mana.Max = 70
+	comps.mana.Current = 70
+	comps.stats.Attack = 11
+	comps.stats.Defense = 5
+	comps.attack.Damage = 16
+	comps.attack.Cooldown = 0.4
+	comps.stats.CritChance = 0.12
+	comps.stats.CritDamage = 2.2
+	comps.stats.Evasion = 0.10
+}
+
+// applyClericStats configures a player entity with cleric class statistics
+func applyClericStats(comps *classComponents) {
+	comps.health.Max = 120
+	comps.health.Current = 120
+	comps.mana.Max = 120
+	comps.mana.Current = 120
+	comps.mana.Regen = 6.0
+	comps.stats.Attack = 7
+	comps.stats.Defense = 6
+	comps.attack.Damage = 12
+	comps.stats.CritChance = 0.08
+	comps.stats.CritDamage = 1.6
+}
+
+// applyNecromancerStats configures a player entity with necromancer class statistics
+func applyNecromancerStats(comps *classComponents) {
+	comps.health.Max = 90
+	comps.health.Current = 90
+	comps.mana.Max = 140
+	comps.mana.Current = 140
+	comps.mana.Regen = 7.0
+	comps.stats.Attack = 8
+	comps.stats.Defense = 4
+	comps.attack.Damage = 14
+	comps.stats.CritChance = 0.10
+	comps.stats.CritDamage = 1.9
+}
+
+// applyBattlemageStats configures a player entity with battlemage class statistics
+func applyBattlemageStats(comps *classComponents) {
+	comps.health.Max = 115
+	comps.health.Current = 115
+	comps.mana.Max = 100
+	comps.mana.Current = 100
+	comps.mana.Regen = 5.0
+	comps.stats.Attack = 10
+	comps.stats.Defense = 6
+	comps.attack.Damage = 16
+	comps.stats.CritChance = 0.08
+	comps.stats.CritDamage = 1.9
+}
+
+// applySpellbladeStats configures a player entity with spellblade class statistics
+func applySpellbladeStats(comps *classComponents) {
+	comps.health.Max = 90
+	comps.health.Current = 90
+	comps.mana.Max = 110
+	comps.mana.Current = 110
+	comps.mana.Regen = 6.0
+	comps.stats.Attack = 9
+	comps.stats.Defense = 4
+	comps.attack.Damage = 14
+	comps.attack.Cooldown = 0.35
+	comps.stats.CritChance = 0.12
+	comps.stats.CritDamage = 2.1
+	comps.stats.Evasion = 0.10
+}
+
+// applyPaladinStats configures a player entity with paladin class statistics
+func applyPaladinStats(comps *classComponents) {
+	comps.health.Max = 140
+	comps.health.Current = 140
+	comps.mana.Max = 80
+	comps.mana.Current = 80
+	comps.mana.Regen = 4.0
+	comps.stats.Attack = 10
+	comps.stats.Defense = 9
+	comps.attack.Damage = 17
+	comps.stats.CritChance = 0.06
+	comps.stats.CritDamage = 1.8
+}
+
+// applyMonkStats configures a player entity with monk class statistics
+func applyMonkStats(comps *classComponents) {
+	comps.health.Max = 100
+	comps.health.Current = 100
+	comps.mana.Max = 90
+	comps.mana.Current = 90
+	comps.mana.Regen = 5.0
+	comps.stats.Attack = 9
+	comps.stats.Defense = 5
+	comps.attack.Damage = 13
+	comps.attack.Cooldown = 0.25
+	comps.stats.CritChance = 0.14
+	comps.stats.CritDamage = 2.3
+	comps.stats.Evasion = 0.18
+}
+
+// applyDeathKnightStats configures a player entity with death knight class statistics
+func applyDeathKnightStats(comps *classComponents) {
+	comps.health.Max = 130
+	comps.health.Current = 130
+	comps.mana.Max = 90
+	comps.mana.Current = 90
+	comps.mana.Regen = 4.0
+	comps.stats.Attack = 11
+	comps.stats.Defense = 7
+	comps.attack.Damage = 19
+	comps.stats.CritChance = 0.07
+	comps.stats.CritDamage = 2.0
+}
+
+// applyWitchHunterStats configures a player entity with witch hunter class statistics
+func applyWitchHunterStats(comps *classComponents) {
+	comps.health.Max = 115
+	comps.health.Current = 115
+	comps.mana.Max = 90
+	comps.mana.Current = 90
+	comps.mana.Regen = 5.0
+	comps.stats.Attack = 10
+	comps.stats.Defense = 5
+	comps.attack.Damage = 15
+	comps.attack.Cooldown = 0.4
+	comps.stats.CritChance = 0.11
+	comps.stats.CritDamage = 2.1
+}
+
+// applyBeastlordStats configures a player entity with beastlord class statistics
+func applyBeastlordStats(comps *classComponents) {
+	comps.health.Max = 135
+	comps.health.Current = 135
+	comps.mana.Max = 60
+	comps.mana.Current = 60
+	comps.stats.Attack = 11
+	comps.stats.Defense = 7
+	comps.attack.Damage = 18
+	comps.stats.CritChance = 0.08
+	comps.stats.CritDamage = 2.0
+	comps.stats.Evasion = 0.05
+}
+
+// applyArcaneArcherStats configures a player entity with arcane archer class statistics
+func applyArcaneArcherStats(comps *classComponents) {
+	comps.health.Max = 95
+	comps.health.Current = 95
+	comps.mana.Max = 110
+	comps.mana.Current = 110
+	comps.mana.Regen = 6.0
+	comps.stats.Attack = 10
+	comps.stats.Defense = 4
+	comps.attack.Damage = 15
+	comps.attack.Cooldown = 0.4
+	comps.stats.CritChance = 0.12
+	comps.stats.CritDamage = 2.1
+}
+
+// applyShadowPriestStats configures a player entity with shadow priest class statistics
+func applyShadowPriestStats(comps *classComponents) {
+	comps.health.Max = 85
+	comps.health.Current = 85
+	comps.mana.Max = 130
+	comps.mana.Current = 130
+	comps.mana.Regen = 7.0
+	comps.stats.Attack = 8
+	comps.stats.Defense = 4
+	comps.attack.Damage = 13
+	comps.stats.CritChance = 0.13
+	comps.stats.CritDamage = 2.2
+	comps.stats.Evasion = 0.08
+}
+
+// applyDruidStats configures a player entity with druid class statistics
+func applyDruidStats(comps *classComponents) {
+	comps.health.Max = 105
+	comps.health.Current = 105
+	comps.mana.Max = 115
+	comps.mana.Current = 115
+	comps.mana.Regen = 6.0
+	comps.stats.Attack = 9
+	comps.stats.Defense = 5
+	comps.attack.Damage = 14
+	comps.stats.CritChance = 0.10
+	comps.stats.CritDamage = 1.9
+	comps.stats.Evasion = 0.05
+}
+
+// applyInquisitorStats configures a player entity with inquisitor class statistics
+func applyInquisitorStats(comps *classComponents) {
+	comps.health.Max = 110
+	comps.health.Current = 110
+	comps.mana.Max = 100
+	comps.mana.Current = 100
+	comps.mana.Regen = 5.0
+	comps.stats.Attack = 9
+	comps.stats.Defense = 6
+	comps.attack.Damage = 14
+	comps.attack.Cooldown = 0.35
+	comps.stats.CritChance = 0.11
+	comps.stats.CritDamage = 2.0
+	comps.stats.Evasion = 0.08
+}
+
+// applyBloodKnightStats configures a player entity with blood knight class statistics
+func applyBloodKnightStats(comps *classComponents) {
+	comps.health.Max = 125
+	comps.health.Current = 125
+	comps.mana.Max = 85
+	comps.mana.Current = 85
+	comps.mana.Regen = 4.0
+	comps.stats.Attack = 12
+	comps.stats.Defense = 6
+	comps.attack.Damage = 21
+	comps.stats.CritChance = 0.09
+	comps.stats.CritDamage = 2.1
+}
+
+// applyMysticStats configures a player entity with mystic class statistics
+func applyMysticStats(comps *classComponents) {
+	comps.health.Max = 95
+	comps.health.Current = 95
+	comps.mana.Max = 135
+	comps.mana.Current = 135
+	comps.mana.Regen = 8.0
+	comps.stats.Attack = 7
+	comps.stats.Defense = 5
+	comps.attack.Damage = 11
+	comps.stats.CritChance = 0.10
+	comps.stats.CritDamage = 1.8
+}
+
+// applyWarlockStats configures a player entity with warlock class statistics
+func applyWarlockStats(comps *classComponents) {
+	comps.health.Max = 85
+	comps.health.Current = 85
+	comps.mana.Max = 145
+	comps.mana.Current = 145
+	comps.mana.Regen = 7.0
+	comps.stats.Attack = 9
+	comps.stats.Defense = 3
+	comps.attack.Damage = 16
+	comps.stats.CritChance = 0.11
+	comps.stats.CritDamage = 2.0
+}
+
+// applyNinjaStats configures a player entity with ninja class statistics
+func applyNinjaStats(comps *classComponents) {
+	comps.health.Max = 90
+	comps.health.Current = 90
+	comps.mana.Max = 75
+	comps.mana.Current = 75
+	comps.stats.Attack = 11
+	comps.stats.Defense = 4
+	comps.attack.Damage = 17
+	comps.attack.Cooldown = 0.25
+	comps.stats.CritChance = 0.18
+	comps.stats.CritDamage = 2.8
+	comps.stats.Evasion = 0.20
+}
+
+// ApplyClassStats configures a player entity with stats appropriate for the given class
 func ApplyClassStats(player *Entity, class CharacterClass) error {
 	comps, err := extractPlayerComponents(player)
 	if err != nil {
@@ -1909,6 +2209,42 @@ func ApplyClassStats(player *Entity, class CharacterClass) error {
 		applyMageStats(comps)
 	case ClassRogue:
 		applyRogueStats(comps)
+	case ClassRanger:
+		applyRangerStats(comps)
+	case ClassCleric:
+		applyClericStats(comps)
+	case ClassNecromancer:
+		applyNecromancerStats(comps)
+	case ClassBattlemage:
+		applyBattlemageStats(comps)
+	case ClassSpellblade:
+		applySpellbladeStats(comps)
+	case ClassPaladin:
+		applyPaladinStats(comps)
+	case ClassMonk:
+		applyMonkStats(comps)
+	case ClassDeathKnight:
+		applyDeathKnightStats(comps)
+	case ClassWitchHunter:
+		applyWitchHunterStats(comps)
+	case ClassBeastlord:
+		applyBeastlordStats(comps)
+	case ClassArcaneArcher:
+		applyArcaneArcherStats(comps)
+	case ClassShadowPriest:
+		applyShadowPriestStats(comps)
+	case ClassDruid:
+		applyDruidStats(comps)
+	case ClassInquisitor:
+		applyInquisitorStats(comps)
+	case ClassBloodKnight:
+		applyBloodKnightStats(comps)
+	case ClassMystic:
+		applyMysticStats(comps)
+	case ClassWarlock:
+		applyWarlockStats(comps)
+	case ClassNinja:
+		applyNinjaStats(comps)
 	default:
 		return fmt.Errorf("unknown character class: %v", class)
 	}

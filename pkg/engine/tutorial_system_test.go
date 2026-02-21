@@ -760,3 +760,82 @@ func TestTutorialSystem_MultipleResets(t *testing.T) {
 		}
 	}
 }
+
+// TestCheckExplorationCondition tests the exploration tutorial condition.
+func TestCheckExplorationCondition(t *testing.T) {
+	tests := []struct {
+		name         string
+		hasStats     bool
+		areasVisited int64
+		want         bool
+	}{
+		{
+			name:         "no player statistics component",
+			hasStats:     false,
+			areasVisited: 0,
+			want:         false,
+		},
+		{
+			name:         "zero areas visited",
+			hasStats:     true,
+			areasVisited: 0,
+			want:         false,
+		},
+		{
+			name:         "less than 3 areas visited",
+			hasStats:     true,
+			areasVisited: 2,
+			want:         false,
+		},
+		{
+			name:         "exactly 3 areas visited",
+			hasStats:     true,
+			areasVisited: 3,
+			want:         true,
+		},
+		{
+			name:         "more than 3 areas visited",
+			hasStats:     true,
+			areasVisited: 10,
+			want:         true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Create world with player
+			world := NewWorld()
+			player := world.CreateEntity()
+			player.AddComponent(&stubTutorialInputComponent{})
+
+			if tt.hasStats {
+				stats := NewPlayerStatisticsComponent()
+				// Start session to enable stat tracking
+				stats.StartSession(1000)
+				if tt.areasVisited > 0 {
+					stats.IncrementStat("explore_areas_visited", tt.areasVisited)
+				}
+				player.AddComponent(stats)
+			}
+
+			got := checkExplorationCondition(world)
+			if got != tt.want {
+				t.Errorf("checkExplorationCondition() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+// stubTutorialInputComponent is a tag component identifying the player entity for tests.
+type stubTutorialInputComponent struct{}
+
+func (s *stubTutorialInputComponent) Type() string { return "input" }
+
+// TestCheckExplorationCondition_NoPlayer tests exploration with no player.
+func TestCheckExplorationCondition_NoPlayer(t *testing.T) {
+	world := NewWorld()
+	// No player entity
+	if checkExplorationCondition(world) {
+		t.Error("checkExplorationCondition() should return false with no player")
+	}
+}

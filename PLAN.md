@@ -54,7 +54,7 @@ Phases 1 and 2 can proceed in parallel. Phase 3 depends on both. Phase 4 depends
 - **Fix**: Change to `attack.CooldownTimer > 0 && attack.CooldownTimer < attack.Cooldown` (AND), or better: add a `TotalAttacks int` field to `AttackComponent` and check `attack.TotalAttacks > 0`. Since adding a field to a component is a data change, the simpler AND fix is preferred for Phase 1; a richer condition can follow in Phase 4.
 - **Acceptance**: Combat tutorial step only completes after the player has actually attacked (cooldown timer entered active state).
 
-- [ ] Fix OR→AND logic in `checkCombatCondition()` at `pkg/engine/tutorial_system.go:203-206`
+- [x] Fix OR→AND logic in `checkCombatCondition()` at `pkg/engine/tutorial_system.go:203-206`
 
 ### 1.4 Step Skipping — Hardcoded Spawn Position (S)
 
@@ -73,7 +73,7 @@ Phases 1 and 2 can proceed in parallel. Phase 3 depends on both. Phase 4 depends
 - **Fix**: Change the hint text at line 642 from `"Press ESC to skip current step"` to `"Press ESC to minimize tutorial"` to match actual behavior. Alternatively, add a separate key hint for advancing (e.g., "Press N for next step"). The text-change approach is simplest and least risky.
 - **Acceptance**: Hint text accurately describes ESC behavior. No user confusion about ESC skipping vs. hiding.
 
-- [ ] Update hint text in `drawPanelContent()` at `pkg/engine/tutorial_system.go:642`
+- [x] Update hint text in `drawPanelContent()` at `pkg/engine/tutorial_system.go:642`
 
 ### 1.6 Class Selection Limited to 3/21 (M)
 
@@ -96,7 +96,7 @@ Phases 1 and 2 can proceed in parallel. Phase 3 depends on both. Phase 4 depends
 - **Fix**: Change the upper bound to `ClassNinja` (the last defined class constant). Update to: `if cd.Class < ClassWarrior || cd.Class > ClassNinja`.
 - **Acceptance**: `Validate()` accepts all 21 defined classes. Existing tests updated to cover hybrid class validation.
 
-- [ ] Change `ClassNecromancer` to `ClassNinja` in `Validate()` at `pkg/engine/character_creation.go:285`
+- [x] Change `ClassNecromancer` to `ClassNinja` in `Validate()` at `pkg/engine/character_creation.go:285`
 
 ### 1.8 Non-Deterministic Name Generation (S)
 

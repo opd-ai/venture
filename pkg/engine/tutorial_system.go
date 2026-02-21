@@ -136,7 +136,7 @@ func createDefaultTutorialSteps() []TutorialStep {
 			ID:          "exploration",
 			Title:       "Dungeon Exploration",
 			Description: "Explore the dungeon to find treasure, secrets, and the stairs to deeper levels.",
-			Objective:   "Continue your adventure! Tutorial complete.",
+			Objective:   "Visit 3 different areas to complete the tutorial",
 			Completed:   false,
 			Condition:   checkExplorationCondition,
 		},
@@ -256,9 +256,21 @@ func checkSkillsCondition(world *World) bool {
 	return exp.Level >= 2
 }
 
-// checkExplorationCondition marks tutorial as complete.
+// checkExplorationCondition verifies the player has visited at least 3 areas.
 func checkExplorationCondition(world *World) bool {
-	return true
+	player := findPlayerEntity(world)
+	if player == nil || !player.HasComponent("player_statistics") {
+		return false
+	}
+	comp, ok := player.GetComponent("player_statistics")
+	if !ok {
+		return false
+	}
+	stats, ok := comp.(*PlayerStatisticsComponent)
+	if !ok {
+		return false
+	}
+	return stats.GetSessionStat("explore_areas_visited") >= 3
 }
 
 // Update processes the tutorial system each frame

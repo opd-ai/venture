@@ -222,12 +222,14 @@ type skillProgressionData struct {
 }
 
 type skillData struct {
-	Type        int     `json:"type"`
-	Name        string  `json:"name"`
-	Description string  `json:"description"`
-	Level       int     `json:"level"`
-	Experience  float64 `json:"experience"`
-	MaxLevel    int     `json:"max_level"`
+	Type          int      `json:"type"`
+	Name          string   `json:"name"`
+	Description   string   `json:"description"`
+	Level         int      `json:"level"`
+	Experience    float64  `json:"experience"`
+	MaxLevel      int      `json:"max_level"`
+	Prerequisites []string `json:"prerequisites,omitempty"` // Skill names that must be learned first
+	Cost          int      `json:"cost,omitempty"`          // Skill points required (0 means use default)
 }
 
 type personalityData struct {
@@ -277,7 +279,7 @@ func (c *CompanionLearningComponent) Serialize() ([]byte, error) {
 			TotalXP:         c.SkillTree.TotalXP,
 		}
 		for name, skill := range c.SkillTree.Skills {
-			data.SkillTree.Skills[name] = &skillData{
+			sd := &skillData{
 				Type:        int(skill.Type),
 				Name:        skill.Name,
 				Description: skill.Description,
@@ -285,6 +287,12 @@ func (c *CompanionLearningComponent) Serialize() ([]byte, error) {
 				Experience:  skill.Experience,
 				MaxLevel:    skill.MaxLevel,
 			}
+			// Include skill node data if available
+			if node, ok := c.SkillTree.SkillTree[name]; ok {
+				sd.Prerequisites = node.Prerequisites
+				sd.Cost = node.Cost
+			}
+			data.SkillTree.Skills[name] = sd
 		}
 	}
 
@@ -370,11 +378,15 @@ func (c *CompanionLearningComponent) Deserialize(data []byte) error {
 				MaxLevel:    sd.MaxLevel,
 			}
 			c.SkillTree.Skills[name] = skill
-			// Rebuild skill tree nodes (prerequisites reconstructed from default tree)
+			// Restore skill tree nodes with prerequisites and cost from serialized data
+			cost := sd.Cost
+			if cost == 0 {
+				cost = DefaultSkillCost // Use default if not serialized (backward compat)
+			}
 			c.SkillTree.SkillTree[name] = &SkillNode{
 				Skill:         skill,
-				Prerequisites: []string{}, // Reconstructed by initializeSkillTree if needed
-				Cost:          1,          // Default cost
+				Prerequisites: sd.Prerequisites,
+				Cost:          cost,
 			}
 		}
 	}

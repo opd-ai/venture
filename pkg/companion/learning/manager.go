@@ -80,16 +80,16 @@ func (m *Manager) AddCompanion(companionID string, learningRate float64) *Compan
 		log.WithFields(logrus.Fields{
 			"companion_id":          companionID,
 			"invalid_learning_rate": learningRate,
-			"default_learning_rate": 1.0,
+			"default_learning_rate": DefaultLearningRate,
 		}).Warn("Invalid learning rate provided, using default")
-		learningRate = 1.0
+		learningRate = DefaultLearningRate
 	}
 
 	comp := &CompanionLearningComponent{
 		CompanionID:  companionID,
 		SkillTree:    NewSkillProgression(),
 		Personality:  NewPersonalityEvolutionWithTimeProvider(m.timeProvider),
-		Memory:       NewEventMemoryWithTimeProvider(1000, m.timeProvider),
+		Memory:       NewEventMemoryWithTimeProvider(DefaultMaxEvents, m.timeProvider),
 		LearningRate: learningRate,
 		LastSkillUse: make(map[string]time.Time),
 	}
@@ -301,13 +301,13 @@ func (sp *SkillProgression) AddExperience(skillName string, xp, learningRate flo
 	skill.Experience += adjustedXP
 
 	levelsGained := 0
-	xpNeeded := float64(skill.Level+1) * 100.0
+	xpNeeded := float64(skill.Level+1) * SkillXPPerLevel
 	for skill.Experience >= xpNeeded && skill.Level < skill.MaxLevel {
 		skill.Experience -= xpNeeded
 		skill.Level++
 		sp.AvailablePoints++
 		levelsGained++
-		xpNeeded = float64(skill.Level+1) * 100.0
+		xpNeeded = float64(skill.Level+1) * SkillXPPerLevel
 	}
 
 	if levelsGained > 0 {
@@ -429,26 +429,26 @@ func NewPersonalityEvolutionWithTimeProvider(timeProvider TimeProvider) *Persona
 	pe := &PersonalityEvolution{
 		Traits:       make(map[PersonalityTrait]float64),
 		Changes:      []PersonalityChange{},
-		MaxChanges:   1000, // Limit personality change history (LRU eviction)
+		MaxChanges:   DefaultMaxPersonalityChanges,
 		LastUpdate:   timeProvider.Now(),
 		timeProvider: timeProvider,
 	}
 
 	// Initialize traits with neutral values
-	pe.Traits[TraitCautious] = 0.5
-	pe.Traits[TraitBrave] = 0.5
-	pe.Traits[TraitShy] = 0.5
-	pe.Traits[TraitOutgoing] = 0.5
-	pe.Traits[TraitAggressive] = 0.5
-	pe.Traits[TraitPacifist] = 0.5
-	pe.Traits[TraitLoyal] = 0.5
-	pe.Traits[TraitIndependent] = 0.5
-	pe.Traits[TraitCurious] = 0.5
-	pe.Traits[TraitPractical] = 0.5
+	pe.Traits[TraitCautious] = TraitDefaultValue
+	pe.Traits[TraitBrave] = TraitDefaultValue
+	pe.Traits[TraitShy] = TraitDefaultValue
+	pe.Traits[TraitOutgoing] = TraitDefaultValue
+	pe.Traits[TraitAggressive] = TraitDefaultValue
+	pe.Traits[TraitPacifist] = TraitDefaultValue
+	pe.Traits[TraitLoyal] = TraitDefaultValue
+	pe.Traits[TraitIndependent] = TraitDefaultValue
+	pe.Traits[TraitCurious] = TraitDefaultValue
+	pe.Traits[TraitPractical] = TraitDefaultValue
 
 	log.WithFields(logrus.Fields{
 		"trait_count":   len(pe.Traits),
-		"default_value": 0.5,
+		"default_value": TraitDefaultValue,
 	}).Info("Personality evolution system created")
 
 	return pe
@@ -466,21 +466,21 @@ func (pe *PersonalityEvolution) AdjustTrait(trait PersonalityTrait, delta float6
 	oldValue := pe.Traits[trait]
 	newValue := oldValue + delta
 
-	// Clamp to [0.0, 1.0]
-	if newValue < 0.0 {
-		newValue = 0.0
+	// Clamp to [TraitMinValue, TraitMaxValue]
+	if newValue < TraitMinValue {
+		newValue = TraitMinValue
 		log.WithFields(logrus.Fields{
 			"trait":      trait.String(),
 			"attempted":  oldValue + delta,
-			"clamped_to": 0.0,
+			"clamped_to": TraitMinValue,
 		}).Debug("Trait value clamped to minimum")
 	}
-	if newValue > 1.0 {
-		newValue = 1.0
+	if newValue > TraitMaxValue {
+		newValue = TraitMaxValue
 		log.WithFields(logrus.Fields{
 			"trait":      trait.String(),
 			"attempted":  oldValue + delta,
-			"clamped_to": 1.0,
+			"clamped_to": TraitMaxValue,
 		}).Debug("Trait value clamped to maximum")
 	}
 

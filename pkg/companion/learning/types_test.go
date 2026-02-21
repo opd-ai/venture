@@ -220,3 +220,68 @@ func TestCompanionLearningComponent_Serialize_EmptyComponent(t *testing.T) {
 		t.Errorf("CompanionID = %q, want %q", restored.CompanionID, comp.CompanionID)
 	}
 }
+
+// TestCompanionLearningComponent_PrerequisitesAndCostPreservation verifies that
+// skill prerequisites and costs are correctly preserved through serialization.
+func TestCompanionLearningComponent_PrerequisitesAndCostPreservation(t *testing.T) {
+	manager := NewManager()
+	original := manager.AddCompanion("prereq-test", 1.0)
+
+	// Verify initial prerequisites exist for "Power Strike" (requires "Basic Attack")
+	powerStrikeNode := original.SkillTree.SkillTree["Power Strike"]
+	if powerStrikeNode == nil {
+		t.Fatal("Power Strike skill node not found")
+	}
+	if len(powerStrikeNode.Prerequisites) == 0 {
+		t.Fatal("Power Strike should have prerequisites")
+	}
+	if powerStrikeNode.Prerequisites[0] != "Basic Attack" {
+		t.Errorf("Power Strike prerequisite = %q, want %q", powerStrikeNode.Prerequisites[0], "Basic Attack")
+	}
+
+	// Verify cost for Combat Mastery (should be 2)
+	combatMasteryNode := original.SkillTree.SkillTree["Combat Mastery"]
+	if combatMasteryNode == nil {
+		t.Fatal("Combat Mastery skill node not found")
+	}
+	if combatMasteryNode.Cost != 2 {
+		t.Errorf("Combat Mastery cost = %d, want %d", combatMasteryNode.Cost, 2)
+	}
+
+	// Serialize
+	data, err := original.Serialize()
+	if err != nil {
+		t.Fatalf("Serialize() error = %v", err)
+	}
+
+	// Deserialize into new component
+	restored := &CompanionLearningComponent{}
+	err = restored.Deserialize(data)
+	if err != nil {
+		t.Fatalf("Deserialize() error = %v", err)
+	}
+
+	// Verify prerequisites are preserved
+	restoredPowerStrike := restored.SkillTree.SkillTree["Power Strike"]
+	if restoredPowerStrike == nil {
+		t.Fatal("Power Strike skill node not found after restore")
+	}
+	if len(restoredPowerStrike.Prerequisites) != len(powerStrikeNode.Prerequisites) {
+		t.Errorf("Restored prerequisites count = %d, want %d",
+			len(restoredPowerStrike.Prerequisites), len(powerStrikeNode.Prerequisites))
+	}
+	if len(restoredPowerStrike.Prerequisites) > 0 && restoredPowerStrike.Prerequisites[0] != "Basic Attack" {
+		t.Errorf("Restored Power Strike prerequisite = %q, want %q",
+			restoredPowerStrike.Prerequisites[0], "Basic Attack")
+	}
+
+	// Verify cost is preserved
+	restoredCombatMastery := restored.SkillTree.SkillTree["Combat Mastery"]
+	if restoredCombatMastery == nil {
+		t.Fatal("Combat Mastery skill node not found after restore")
+	}
+	if restoredCombatMastery.Cost != combatMasteryNode.Cost {
+		t.Errorf("Restored Combat Mastery cost = %d, want %d",
+			restoredCombatMastery.Cost, combatMasteryNode.Cost)
+	}
+}

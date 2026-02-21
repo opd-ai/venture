@@ -66,7 +66,7 @@ func (s *CompanionLearningSystem) updateCompanion(companionID string, comp *Comp
 			// Very slow skill decay for unused skills
 			// Using deltaTime makes decay frame-rate independent
 			if skill.Experience > 0 {
-				skill.Experience -= 0.1 * deltaTime
+				skill.Experience -= SkillDecayRate * deltaTime
 				if skill.Experience < 0 {
 					skill.Experience = 0
 				}
@@ -102,14 +102,14 @@ func (s *CompanionLearningSystem) balanceTraits(pe *PersonalityEvolution, trait1
 	val2 := pe.Traits[trait2]
 
 	sum := val1 + val2
-	if sum > 1.2 || sum < 0.8 {
+	if sum > TraitBalanceMaxSum || sum < TraitBalanceMinSum {
 		// Normalize to sum of 1.0 while preserving ratio
 		if sum > 0 {
 			pe.Traits[trait1] = val1 / sum
 			pe.Traits[trait2] = val2 / sum
 		} else {
-			pe.Traits[trait1] = 0.5
-			pe.Traits[trait2] = 0.5
+			pe.Traits[trait1] = TraitDefaultValue
+			pe.Traits[trait2] = TraitDefaultValue
 		}
 	}
 }
@@ -134,20 +134,20 @@ func RecordSkillUse(comp *CompanionLearningComponent, skillName string, timeProv
 // GetSkillBonus calculates a bonus multiplier based on skill level.
 func GetSkillBonus(comp *CompanionLearningComponent, skillName string) float64 {
 	if comp == nil || comp.SkillTree == nil {
-		return 1.0
+		return DefaultLearningRate
 	}
 	skill, ok := comp.SkillTree.Skills[skillName]
 	if !ok {
-		return 1.0
+		return DefaultLearningRate
 	}
 
-	return 1.0 + (float64(skill.Level) * 0.1)
+	return DefaultLearningRate + (float64(skill.Level) * SkillBonusPerLevel)
 }
 
 // GetPersonalityInfluence returns how much a trait influences behavior.
 func GetPersonalityInfluence(comp *CompanionLearningComponent, trait PersonalityTrait) float64 {
 	if comp == nil || comp.Personality == nil {
-		return 0.5
+		return TraitDefaultValue
 	}
 	value, ok := comp.Personality.Traits[trait]
 	if !ok {

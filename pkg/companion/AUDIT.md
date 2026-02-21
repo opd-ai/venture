@@ -1,7 +1,7 @@
 # Audit: pkg/companion/learning
 
-**Date**: 2026-02-16
-**Coverage**: 92.5%
+**Date**: 2026-02-21
+**Coverage**: 92.4%
 **Status**: Complete
 
 ## Summary
@@ -10,20 +10,23 @@ The `learning` package implements companion AI skill progression (24 skills acro
 
 ## Issues Found
 
-### Fixed: 2 (1 med, 1 low)
+### Fixed: 4 (1 med, 3 low)
 
 1. **MED** (fixed): Race condition in `CompanionLearningSystem.Update()` — accessed `s.manager.companions` map without holding a lock while `AddCompanion`/`RemoveCompanion` could mutate it concurrently. Fixed by taking a snapshot under `RLock` before iterating.
 
 2. **LOW** (fixed): Nil pointer dereference risk in `ProcessCombatAction`, `ProcessSocialInteraction`, `ProcessExploration`, `AdaptBehaviorToCombatStyle`, and `GeneratePersonalityDescription` — functions accessed `comp` fields without nil checks. Added nil guards with early return.
 
-### Remaining: 2 (0 high, 0 med, 2 low)
+3. **LOW** (fixed 2026-02-21): Hardcoded magic numbers for skill decay (0.1), trait clamping (0.0-1.0), LRU limits (1000), and XP values are not configurable. — **FIXED**: Extracted all magic numbers to named constants in `constants.go`: `SkillDecayRate`, `TraitMinValue`, `TraitMaxValue`, `TraitDefaultValue`, `DefaultMaxEvents`, `DefaultMaxPersonalityChanges`, `SkillXPPerLevel`, `SkillBonusPerLevel`, `TraitBalanceMinSum`, `TraitBalanceMaxSum`, `DefaultSkillCost`, `DefaultLearningRate`.
 
-1. **LOW**: Hardcoded magic numbers for skill decay (0.1), trait clamping (0.0-1.0), LRU limits (1000), and XP values are not configurable.
+4. **LOW** (fixed 2026-02-21): `Deserialize()` rebuilds prerequisites as empty and defaults cost to 1 — deserialized skill trees have incomplete structure. — **FIXED**: Updated `skillData` to include `Prerequisites` and `Cost` fields. `Serialize()` now persists skill node prerequisites and costs. `Deserialize()` restores them correctly. Added `TestCompanionLearningComponent_PrerequisitesAndCostPreservation` test.
 
-2. **LOW**: `Deserialize()` rebuilds prerequisites as empty and defaults cost to 1 — deserialized skill trees have incomplete structure.
+### Remaining: 0
+
+All issues resolved.
 
 ## Test Coverage
 
 - Concurrency test added for Update + Add/Remove races
 - Nil guard tests added for all Process* functions
 - Nil guard tests for GeneratePersonalityDescription and AdaptBehaviorToCombatStyle
+- Prerequisites and cost preservation test added

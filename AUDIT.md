@@ -6,18 +6,18 @@
 
 ## Summary
 
-- **Total issues**: 225 (68 open, 157 resolved)
-- **Critical**: 0 (0 open) | **High**: 43 (0 open) | **Medium**: 42 (0 open) | **Low**: 140 (68 open)
-- **Affected subpackages**: 33 of 108 audited packages have open issues
-- **Resolution rate**: 157/225 (70%)
+- **Total issues**: 225 (66 open, 159 resolved)
+- **Critical**: 0 (0 open) | **High**: 43 (0 open) | **Medium**: 42 (0 open) | **Low**: 140 (66 open)
+- **Affected subpackages**: 32 of 108 audited packages have open issues
+- **Resolution rate**: 159/225 (71%)
 
 | Severity | Total | Open | Resolved |
 |----------|-------|------|----------|
 | Critical | 0 | 0 | 0 |
 | High | 43 | 0 | 43 |
 | Medium | 42 | 0 | 42 |
-| Low | 140 | 68 | 72 |
-| **Total** | **225** | **68** | **157** |
+| Low | 140 | 66 | 74 |
+| **Total** | **225** | **66** | **159** |
 
 ## Priority Resolution Order
 
@@ -65,8 +65,8 @@ _All medium-priority issues have been resolved._
   - [x] Missing method-level documentation on several exported functions (`GetPrestigeClassDefinition`, `GetAllClasses`, `GetAllPrestigeClasses`). — **VERIFIED 2026-02-21**: All functions already have godoc comments in registry.go
   - [x] `RespecCost.MaxCost` cap behavior (10,000g) not documented; respec cost formula not tested at boundary. — **FIXED 2026-02-21**: Added comprehensive godoc to RespecCost type and added TestRespecCostMaxCap boundary test
 - **pkg/companion** (2 issues)
-  - [ ] Hardcoded magic numbers for skill decay (0.1), trait clamping (0.0-1.0), LRU limits (1000), and XP values are not configurable.
-  - [ ] `Deserialize()` rebuilds prerequisites as empty and defaults cost to 1 — deserialized skill trees have incomplete structure.
+  - [x] Hardcoded magic numbers for skill decay (0.1), trait clamping (0.0-1.0), LRU limits (1000), and XP values are not configurable. — **FIXED 2026-02-21**: Extracted all magic numbers to named constants in `constants.go` (`SkillDecayRate`, `TraitMinValue`, `TraitMaxValue`, `TraitDefaultValue`, `DefaultMaxEvents`, `DefaultMaxPersonalityChanges`, `SkillXPPerLevel`, `SkillBonusPerLevel`, etc.)
+  - [x] `Deserialize()` rebuilds prerequisites as empty and defaults cost to 1 — deserialized skill trees have incomplete structure. — **FIXED 2026-02-21**: Updated serialization to include `Prerequisites` and `Cost` fields in `skillData`. Added preservation test.
 - **pkg/companion/learning** (1 issue)
   - [ ] Documentation — Missing example for Serialize/Deserialize in doc.go (`doc.go:1`)
 - **pkg/config** (3 issues)
@@ -270,9 +270,9 @@ _All medium-priority issues have been resolved._
 
 #### `pkg/companion`
 - Source: [`pkg/companion/AUDIT.md`](pkg/companion/AUDIT.md)
-- Issues: 2 open, 2 resolved (Low: 2)
-  - [Low] Hardcoded magic numbers for skill decay (0.1), trait clamping (0.0-1.0), LRU limits (1000), and XP values are not configurable.
-  - [Low] `Deserialize()` rebuilds prerequisites as empty and defaults cost to 1 — deserialized skill trees have incomplete structure.
+- Issues: 0 open, 4 resolved (Low: 2)
+  - ~~[Low] Hardcoded magic numbers for skill decay (0.1), trait clamping (0.0-1.0), LRU limits (1000), and XP values are not configurable.~~ ✅ **FIXED 2026-02-21**: Extracted to named constants
+  - ~~[Low] `Deserialize()` rebuilds prerequisites as empty and defaults cost to 1 — deserialized skill trees have incomplete structure.~~ ✅ **FIXED 2026-02-21**: Updated serialization format
   - ~~[Medium] Race condition in `CompanionLearningSystem.Update()` — accessed `s.manager.companions` map without holding a lock while `AddCompanion`/`RemoveCompanion` could mutate it concurrently. Fixed by taking a snapshot under `RLock` before iterating.~~ ✅ Resolved
   - ~~[Low] Nil pointer dereference risk in `ProcessCombatAction`, `ProcessSocialInteraction`, `ProcessExploration`, `AdaptBehaviorToCombatStyle`, and `GeneratePersonalityDescription` — functions accessed `comp` fields without nil checks. Added nil guards with early return.~~ ✅ Resolved
 
@@ -929,7 +929,7 @@ _All medium-priority issues have been resolved._
 - **Audio (pkg/audio/)**: 3 open issues (Low: 3)
 - **Audit (pkg/audit/)**: 2 open issues (Low: 2)
 - **Class System (pkg/class/)**: 3 open issues (Low: 3)
-- **Companion (pkg/companion/)**: 3 open issues (Low: 3)
+- **Companion (pkg/companion/)**: 1 open issue (Low: 1) — learning subpackage only
 - **Configuration (pkg/config/)**: 3 open issues (Low: 3)
 - **Engine (pkg/engine/)**: 3 open issues (Low: 3)
 - **Integration (pkg/integration/)**: 6 open issues (Low: 6)
@@ -949,18 +949,18 @@ _All medium-priority issues have been resolved._
 - **Phase 1 (Critical)**: 0 issues — No action required
 - **Phase 2 (High)**: 0 issues — No action required
 - **Phase 3 (Medium)**: 3 issues — Ongoing improvement backlog
-- **Phase 4 (Low)**: 88 issues — Address opportunistically
+- **Phase 4 (Low)**: 66 issues — Address opportunistically
 
 ## Resolved Issues Summary
 
-132 issues have been resolved across 33 packages.
+159 issues have been resolved across 33 packages.
 
 | Severity | Resolved |
 |----------|----------|
 | High | 43 |
-| Medium | 39 |
-| Low | 50 |
-| **Total** | **132** |
+| Medium | 42 |
+| Low | 74 |
+| **Total** | **159** |
 
 ---
 

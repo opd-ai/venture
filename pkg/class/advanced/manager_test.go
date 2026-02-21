@@ -240,11 +240,11 @@ func TestRespecCostMaxCap(t *testing.T) {
 		respecCount int
 		wantCost    int
 	}{
-		{0, 1000},                             // Initial cost
-		{17, 1000 + 17*500},                   // 9500, just before cap
-		{18, 10000},                           // 10000, exactly at cap
-		{19, 10000},                           // capped
-		{100, 10000},                          // remains capped at high respec count
+		{0, 1000},           // Initial cost
+		{17, 1000 + 17*500}, // 9500, just before cap
+		{18, 10000},         // 10000, exactly at cap
+		{19, 10000},         // capped
+		{100, 10000},        // remains capped at high respec count
 	}
 
 	for _, tt := range tests {

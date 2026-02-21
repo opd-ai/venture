@@ -191,6 +191,7 @@ type systemsContainer struct {
 	reputationEquipmentDurabilityParticleSystem *engine.ReputationEquipmentDurabilityParticleSystem // Visual feedback for reputation durability
 	reputationCompanionBonusSystem              *engine.ReputationCompanionBonusSystem              // Bridges faction reputation with companion stat bonuses
 	reputationCompanionBonusParticleSystem      *engine.ReputationCompanionBonusParticleSystem      // Visual feedback for reputation companion bonus
+	reputationQuestGatingSystem                 *engine.ReputationQuestGatingSystem                 // Gates quests behind faction reputation requirements
 	ambientEnvironmentParticleSystem            *engine.AmbientEnvironmentParticleSystem            // Terrain-aware atmospheric ambient particles
 	equipmentEnchantmentGlowParticleSystem      *engine.EquipmentEnchantmentGlowParticleSystem      // Rarity-driven enchantment glow particles
 	statusEffectVisualOverlaySystem             *engine.StatusEffectVisualOverlaySystem             // Status effect color tints on sprites
@@ -1503,6 +1504,11 @@ func registerNonCriticalSystems(game *engine.EbitenGame, sys *systemsContainer) 
 	sys.reputationCompanionBonusParticleSystem.SetBonusSystem(sys.reputationCompanionBonusSystem)
 	sys.reputationCompanionBonusParticleSystem.SetGenre(*genreID)
 	game.World.AddSystem(sys.reputationCompanionBonusParticleSystem)
+
+	// ReputationQuestGatingSystem: gates quests behind faction reputation requirements
+	// Integrates reputation standings with quest availability for meaningful progression
+	sys.reputationQuestGatingSystem = engine.NewReputationQuestGatingSystem(game.World, logger, *seed+5245)
+	game.World.AddSystem(sys.reputationQuestGatingSystem)
 
 	// AmbientEnvironmentParticleSystem: atmospheric particles based on terrain type
 	// Spawns genre-aware ambient effects (fireflies, mist, embers, dust motes) near entities

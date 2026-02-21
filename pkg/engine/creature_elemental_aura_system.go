@@ -194,7 +194,7 @@ func (s *CreatureElementalAuraSystem) inferElement(entity *Entity) magic.Element
 	// Check attack component for elemental damage type
 	if attackComp, ok := entity.GetComponent("attack"); ok {
 		if ac, ok := attackComp.(*AttackComponent); ok {
-			if elem := s.elementFromDamageType(ac.DamageType); elem != magic.ElementNone {
+			if elem := s.elementFromDamageType(ac.DamageType.String()); elem != magic.ElementNone {
 				return elem
 			}
 		}

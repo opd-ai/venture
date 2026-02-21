@@ -61,6 +61,7 @@
 
 #### L2: Large function count in handlers.go
 - **Description**: handlers.go is ~4800 lines with 60+ functions. Consider splitting into domain-specific files (e.g., `init_audio.go`, `init_combat.go`, `init_v4.go`).
+- **Status**: 🔄 **IN PROGRESS 2026-02-21** — Extracted performance monitoring functions (8 functions, ~100 lines) to `init_monitoring.go`. handlers.go reduced from 3982 to 3880 lines. Further domain-specific extractions remain.
 
 ## Architecture Notes
 

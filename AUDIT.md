@@ -45,7 +45,7 @@ _All medium-priority issues have been resolved._
 
 - **cmd/client** (2 issues)
   - [x] doc.go references Go 1.24 and Ebiten 2.9 (doc.go) — **FIXED 2026-02-21**: Updated to Go 1.24.5+ and Ebiten 2.9.3
-  - [ ] Large function count in handlers.go
+  - [~] Large function count in handlers.go — **IN PROGRESS 2026-02-21**: Extracted performance monitoring (8 functions, ~100 lines) to `init_monitoring.go`. Further extractions remain.
 - **cmd/mobile** (3 issues)
   - [ ] Nil terrain access
   - [ ] Hardcoded screen dimensions
@@ -180,7 +180,7 @@ _All medium-priority issues have been resolved._
 - Source: [`cmd/client/AUDIT.md`](cmd/client/AUDIT.md)
 - Issues: 1 open, 6 resolved (Low: 1)
   - ~~[Low] doc.go references Go 1.24 and Ebiten 2.9 (doc.go)~~ ✅ **FIXED 2026-02-21**: Updated to Go 1.24.5+ and Ebiten 2.9.3
-  - [Low] Large function count in handlers.go
+  - [Low] Large function count in handlers.go — **IN PROGRESS 2026-02-21**: Extracted performance monitoring (8 functions, ~100 lines) to `init_monitoring.go`. Further extractions remain.
   - ~~[High] Nil pointer dereference in lazy initialization (handlers.go)~~ ✅ Resolved
   - ~~[Medium] Unchecked type assertions on Generator results (util.go)~~ ✅ Resolved
   - ~~[Medium] Unsafe component type assertions (util.go, handlers.go)~~ ✅ Resolved

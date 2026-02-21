@@ -6,18 +6,18 @@
 
 ## Summary
 
-- **Total issues**: 225 (79 open, 146 resolved)
-- **Critical**: 0 (0 open) | **High**: 43 (0 open) | **Medium**: 42 (0 open) | **Low**: 140 (79 open)
+- **Total issues**: 225 (78 open, 147 resolved)
+- **Critical**: 0 (0 open) | **High**: 43 (0 open) | **Medium**: 42 (0 open) | **Low**: 140 (78 open)
 - **Affected subpackages**: 38 of 108 audited packages have open issues
-- **Resolution rate**: 146/225 (65%)
+- **Resolution rate**: 147/225 (65%)
 
 | Severity | Total | Open | Resolved |
 |----------|-------|------|----------|
 | Critical | 0 | 0 | 0 |
 | High | 43 | 0 | 43 |
 | Medium | 42 | 0 | 42 |
-| Low | 140 | 79 | 61 |
-| **Total** | **225** | **79** | **146** |
+| Low | 140 | 78 | 62 |
+| **Total** | **225** | **78** | **147** |
 
 ## Priority Resolution Order
 
@@ -45,7 +45,7 @@ _All medium-priority issues have been resolved._
 
 - **cmd/client** (2 issues)
   - [x] doc.go references Go 1.24 and Ebiten 2.9 (doc.go) — **FIXED 2026-02-21**: Updated to Go 1.24.5+ and Ebiten 2.9.3
-  - [~] Large function count in handlers.go — **IN PROGRESS 2026-02-21**: Extracted performance monitoring (8 functions, ~100 lines) to `init_monitoring.go`. Further extractions remain.
+  - [x] Large function count in handlers.go — **FIXED 2026-02-21**: Extracted performance monitoring (8 functions, ~100 lines) to `init_monitoring.go`. Extracted spawn/entity generation (16 functions, ~260 lines) to `init_spawning.go`. handlers.go reduced from 82 to 66 functions.
 - **cmd/mobile** (3 issues)
   - [ ] Nil terrain access
   - [ ] Hardcoded screen dimensions
@@ -178,9 +178,9 @@ _All medium-priority issues have been resolved._
 
 #### `cmd/client`
 - Source: [`cmd/client/AUDIT.md`](cmd/client/AUDIT.md)
-- Issues: 1 open, 6 resolved (Low: 1)
+- Issues: 0 open, 7 resolved (Low: 0)
   - ~~[Low] doc.go references Go 1.24 and Ebiten 2.9 (doc.go)~~ ✅ **FIXED 2026-02-21**: Updated to Go 1.24.5+ and Ebiten 2.9.3
-  - [Low] Large function count in handlers.go — **IN PROGRESS 2026-02-21**: Extracted performance monitoring (8 functions, ~100 lines) to `init_monitoring.go`. Further extractions remain.
+  - ~~[Low] Large function count in handlers.go~~ ✅ **FIXED 2026-02-21**: Extracted performance monitoring (8 functions, ~100 lines) to `init_monitoring.go`. Extracted spawn/entity generation (16 functions, ~260 lines) to `init_spawning.go`. handlers.go reduced from 82 to 66 functions.
   - ~~[High] Nil pointer dereference in lazy initialization (handlers.go)~~ ✅ Resolved
   - ~~[Medium] Unchecked type assertions on Generator results (util.go)~~ ✅ Resolved
   - ~~[Medium] Unsafe component type assertions (util.go, handlers.go)~~ ✅ Resolved

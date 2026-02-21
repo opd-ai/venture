@@ -10,7 +10,7 @@
 |----------|-------|-------|-----------|
 | High     | 1     | 1     | 0         |
 | Medium   | 4     | 4     | 0         |
-| Low      | 2     | 1     | 1         |
+| Low      | 2     | 2     | 0         |
 
 ## Issues
 
@@ -53,15 +53,15 @@
 - **Description**: `sys.weatherXPBonusSystem.SetProgressionSystem(sys.progressionSystem)` stores a nil reference when progressionSystem hasn't been initialized.
 - **Fix**: Added nil guard: `if sys.progressionSystem != nil { ... }`.
 
-### LOW — Remaining
+### LOW — Fixed
 
 #### L1: doc.go references Go 1.24 and Ebiten 2.9 (doc.go)
 - **Description**: Version references may become stale. Consider referencing go.mod versions.
 - **Status**: ✅ **FIXED 2026-02-21** — Updated to Go 1.24.5+ and Ebiten 2.9.3
 
 #### L2: Large function count in handlers.go
-- **Description**: handlers.go is ~4800 lines with 60+ functions. Consider splitting into domain-specific files (e.g., `init_audio.go`, `init_combat.go`, `init_v4.go`).
-- **Status**: 🔄 **IN PROGRESS 2026-02-21** — Extracted performance monitoring functions (8 functions, ~100 lines) to `init_monitoring.go`. handlers.go reduced from 3982 to 3880 lines. Further domain-specific extractions remain.
+- **Description**: handlers.go was ~4800 lines with 80+ functions. Consider splitting into domain-specific files.
+- **Status**: ✅ **FIXED 2026-02-21** — Extracted performance monitoring functions (8 functions, ~100 lines) to `init_monitoring.go`. Extracted spawn/entity generation functions (16 functions, ~260 lines) to `init_spawning.go`. handlers.go reduced from 82 to 66 functions (3617 lines).
 
 ## Architecture Notes
 

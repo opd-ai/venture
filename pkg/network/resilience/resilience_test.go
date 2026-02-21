@@ -3,6 +3,8 @@ package resilience
 import (
 	"testing"
 	"time"
+
+	"github.com/sirupsen/logrus"
 )
 
 // Test network configuration validation
@@ -853,5 +855,124 @@ func TestNetworkSimulator_CalculateDelay_Jitter(t *testing.T) {
 				t.Error("Expected non-zero bytes processed")
 			}
 		})
+	}
+}
+
+// Test MetricsCollector with logger
+func TestMetricsCollector_WithLogger(t *testing.T) {
+	logger := logrus.New()
+	logger.SetLevel(logrus.DebugLevel)
+	entry := logger.WithField("test", "metrics_collector")
+
+	mc := NewMetricsCollectorWithLogger(entry)
+
+	// Should not panic when recording with logger
+	mc.RecordDesync()
+	mc.RecordReconnect(100 * time.Millisecond)
+	mc.RecordLatency(50 * time.Millisecond)
+	mc.RecordPacketSent(256)
+	mc.RecordPacketLoss()
+	mc.RecordPrediction(true)
+
+	stats := mc.GetStats()
+	if stats.DesyncCount != 1 {
+		t.Errorf("DesyncCount = %d, want 1", stats.DesyncCount)
+	}
+	if stats.ReconnectCount != 1 {
+		t.Errorf("ReconnectCount = %d, want 1", stats.ReconnectCount)
+	}
+}
+
+// Test MetricsCollector SetLogger
+func TestMetricsCollector_SetLogger(t *testing.T) {
+	mc := NewMetricsCollector()
+
+	// Initially no logger
+	mc.RecordDesync() // Should not panic
+
+	// Set logger
+	logger := logrus.New()
+	logger.SetLevel(logrus.DebugLevel)
+	entry := logger.WithField("test", "set_logger")
+	mc.SetLogger(entry)
+
+	mc.RecordDesync()
+	mc.RecordReconnect(200 * time.Millisecond)
+
+	stats := mc.GetStats()
+	if stats.DesyncCount != 2 {
+		t.Errorf("DesyncCount = %d, want 2", stats.DesyncCount)
+	}
+
+	// Clear logger
+	mc.SetLogger(nil)
+	mc.RecordDesync() // Should not panic
+
+	stats = mc.GetStats()
+	if stats.DesyncCount != 3 {
+		t.Errorf("DesyncCount = %d, want 3", stats.DesyncCount)
+	}
+}
+
+// Test NetworkSimulator with logger
+func TestNetworkSimulator_SetLogger(t *testing.T) {
+	sim := NewNetworkSimulator()
+
+	// Set logger
+	logger := logrus.New()
+	logger.SetLevel(logrus.DebugLevel)
+	entry := logger.WithField("test", "simulator")
+	sim.SetLogger(entry)
+
+	// Configure for packet loss
+	sim.SetPacketLoss(0.5) // 50% loss rate
+
+	// Send packets - some will be dropped and logged
+	droppedCount := 0
+	for i := 0; i < 20; i++ {
+		err := sim.Send([]byte("test packet"))
+		if err == ErrPacketDropped {
+			droppedCount++
+		}
+	}
+
+	// Should have dropped some packets
+	if droppedCount == 0 {
+		t.Log("No packets dropped (possible but unlikely with 50% loss rate)")
+	}
+
+	// Clear logger
+	sim.SetLogger(nil)
+
+	// Should continue to work without logger
+	err := sim.Send([]byte("test"))
+	if err != nil && err != ErrPacketDropped {
+		t.Errorf("Send() error = %v, want nil or ErrPacketDropped", err)
+	}
+}
+
+// Test NetworkSimulator bandwidth exceeded logging
+func TestNetworkSimulator_SetLogger_Bandwidth(t *testing.T) {
+	sim := NewNetworkSimulator()
+	sim.SetBandwidthLimit(1000) // 1000 bytes per second
+
+	// Set logger
+	logger := logrus.New()
+	logger.SetLevel(logrus.DebugLevel)
+	entry := logger.WithField("test", "bandwidth")
+	sim.SetLogger(entry)
+
+	// Send large packets to exceed bandwidth
+	exceededCount := 0
+	for i := 0; i < 10; i++ {
+		err := sim.Send(make([]byte, 500))
+		if err == ErrBandwidthExceeded {
+			exceededCount++
+		}
+	}
+
+	// Should have exceeded bandwidth
+	if exceededCount == 0 {
+		t.Error("Expected some packets to exceed bandwidth limit")
 	}
 }

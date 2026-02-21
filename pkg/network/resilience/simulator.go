@@ -1,6 +1,13 @@
 // Package resilience simulator implements network impairment simulation
 // for testing including latency injection, packet loss, jitter simulation,
 // and bandwidth limiting with delayed packet delivery queues.
+//
+// # Determinism Note
+//
+// This file uses time.Now() for bandwidth rate limiting and packet delivery
+// timing. This is intentional for real-world simulation, not procedural generation.
+// For deterministic random behavior, use NewNetworkSimulatorWithSeed().
+// See doc.go "Determinism Exemption" section for rationale.
 package resilience
 
 import (
@@ -8,6 +15,8 @@ import (
 	"math/rand"
 	"sync"
 	"time"
+
+	"github.com/sirupsen/logrus"
 )
 
 var (
@@ -38,6 +47,10 @@ type NetworkSimulator struct {
 	packetsSent    uint64
 	packetsDropped uint64
 	bytesProcessed uint64
+
+	// logger is optional structured logging for production observability.
+	// If nil, logging is disabled.
+	logger *logrus.Entry
 }
 
 // delayedPacket represents a packet waiting to be delivered.
@@ -84,6 +97,14 @@ func NewNetworkSimulatorWithConfigAndSeed(config NetworkConfig, seed int64) (*Ne
 	sim := NewNetworkSimulatorWithSeed(seed)
 	sim.config = config
 	return sim, nil
+}
+
+// SetLogger sets or clears the optional logger for observability.
+// The logger is used to emit events for packet drops and bandwidth throttling.
+func (ns *NetworkSimulator) SetLogger(logger *logrus.Entry) {
+	ns.mu.Lock()
+	ns.logger = logger
+	ns.mu.Unlock()
 }
 
 // SetConfig updates the simulator configuration.
@@ -153,19 +174,37 @@ func (ns *NetworkSimulator) Send(data []byte) error {
 	latency := ns.config.Latency
 	jitter := ns.config.Jitter
 	bandwidthLimit := ns.config.BandwidthLimit
+	logger := ns.logger
 	ns.mu.Unlock()
 
 	// Simulate packet loss
 	if ns.shouldDropPacket(packetLossRate) {
 		ns.mu.Lock()
 		ns.packetsDropped++
+		dropped := ns.packetsDropped
 		ns.mu.Unlock()
+
+		if logger != nil {
+			logger.WithFields(logrus.Fields{
+				"component":     "network_simulator",
+				"packet_size":   packetSize,
+				"loss_rate":     packetLossRate,
+				"dropped_count": dropped,
+			}).Debug("Packet dropped (simulated loss)")
+		}
 		return ErrPacketDropped
 	}
 
 	// Check bandwidth limit
 	if bandwidthLimit > 0 {
 		if err := ns.checkBandwidth(packetSize, bandwidthLimit); err != nil {
+			if logger != nil {
+				logger.WithFields(logrus.Fields{
+					"component":       "network_simulator",
+					"packet_size":     packetSize,
+					"bandwidth_limit": bandwidthLimit,
+				}).Debug("Packet throttled (bandwidth exceeded)")
+			}
 			return err
 		}
 	}

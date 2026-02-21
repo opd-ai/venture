@@ -7,8 +7,8 @@ The `pkg/network/resilience` package provides network impairment simulation and 
 
 ## Issues Found
 - [x] <severity:med> deterministic procgen — Uses `time.Now()` for non-generation purposes (metrics timestamps, bandwidth tracking). While acceptable for testing infrastructure, violates strict project rule. Consider adding comment explaining exemption. (`simulator.go:53,68,75`, `metrics.go:48,53,127,146,313,321`, `scenario.go:67`) — **FIXED 2026-02-21**: Added "Determinism Exemption" section to doc.go explaining why time.Now() is acceptable in this testing infrastructure package.
-- [ ] <severity:low> error handling — No structured logging in package; scenarios log via optional logger but core types (simulator, metrics) have no logging. Reduces observability for production use. (`simulator.go`, `metrics.go`)
-- [ ] <severity:low> doc coverage — Missing package-level comment on `metrics.go` explaining metrics collection architecture. Only `doc.go` has comprehensive package documentation. (`metrics.go:1`)
+- [x] <severity:low> error handling — No structured logging in package; scenarios log via optional logger but core types (simulator, metrics) have no logging. Reduces observability for production use. (`simulator.go`, `metrics.go`) — **FIXED 2026-02-21**: Added optional `logger *logrus.Entry` field to `NetworkSimulator` and `MetricsCollector`. Added `SetLogger()` methods and `NewMetricsCollectorWithLogger()` constructor. Logging added for packet drops, bandwidth throttling, desyncs, and reconnections with structured logrus fields.
+- [x] <severity:low> doc coverage — Missing package-level comment on `metrics.go` explaining metrics collection architecture. Only `doc.go` has comprehensive package documentation. (`metrics.go:1`) — **FIXED 2026-02-21**: Added comprehensive package comment to `metrics.go` explaining architecture (time-windowed sampling, percentile calculation, thread-safety) and determinism note.
 
 ## Test Coverage
 88.8% (target: 65%) ✅

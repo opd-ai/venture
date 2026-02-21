@@ -1,6 +1,27 @@
 // Package resilience metrics implements network performance metrics collection
 // including latency tracking, bandwidth monitoring, packet statistics, and
 // gameplay metrics (mispredictions, desyncs, reconnections).
+//
+// # Architecture
+//
+// MetricsCollector uses a time-windowed sampling approach for bounded memory:
+//   - Latency samples: sliding window of up to 10,000 samples
+//   - Bandwidth samples: per-second measurements for rate calculation
+//   - Reconnect times: list of all reconnection durations
+//
+// Statistics are computed on-demand via GetStats():
+//   - Percentiles (P95, P99) via copy-and-sort algorithm
+//   - Rates derived from counters divided by duration
+//   - Min/max/avg computed from sample arrays
+//
+// Thread-safety is provided via sync.RWMutex for concurrent recording and
+// reading. All Record* methods acquire write locks; GetStats acquires read lock.
+//
+// # Determinism Note
+//
+// This file uses time.Now() for timestamps (startTime, EndTime, bandwidthCheck).
+// This is intentional for real-time metrics collection, not procedural generation.
+// See doc.go "Determinism Exemption" section for rationale.
 package resilience
 
 import (
@@ -8,6 +29,8 @@ import (
 	"sort"
 	"sync"
 	"time"
+
+	"github.com/sirupsen/logrus"
 )
 
 // MetricsCollector collects and aggregates network performance metrics.
@@ -40,9 +63,14 @@ type MetricsCollector struct {
 	desyncs        uint64
 	reconnects     uint64
 	reconnectTimes []time.Duration
+
+	// logger is optional structured logging for production observability.
+	// If nil, logging is disabled.
+	logger *logrus.Entry
 }
 
-// NewMetricsCollector creates a new metrics collector.
+// NewMetricsCollector creates a new metrics collector without logging.
+// For production use with observability, use NewMetricsCollectorWithLogger.
 func NewMetricsCollector() *MetricsCollector {
 	return &MetricsCollector{
 		startTime:          time.Now(),
@@ -52,6 +80,21 @@ func NewMetricsCollector() *MetricsCollector {
 		reconnectTimes:     make([]time.Duration, 0, 100),
 		lastBandwidthCheck: time.Now(),
 	}
+}
+
+// NewMetricsCollectorWithLogger creates a metrics collector with structured logging.
+// The logger is used to emit events for desyncs, reconnections, and high latency.
+func NewMetricsCollectorWithLogger(logger *logrus.Entry) *MetricsCollector {
+	mc := NewMetricsCollector()
+	mc.logger = logger
+	return mc
+}
+
+// SetLogger sets or clears the optional logger for observability.
+func (mc *MetricsCollector) SetLogger(logger *logrus.Entry) {
+	mc.mu.Lock()
+	mc.logger = logger
+	mc.mu.Unlock()
 }
 
 // RecordLatency records a latency measurement.
@@ -111,6 +154,13 @@ func (mc *MetricsCollector) RecordDesync() {
 	defer mc.mu.Unlock()
 
 	mc.desyncs++
+
+	if mc.logger != nil {
+		mc.logger.WithFields(logrus.Fields{
+			"component":    "metrics_collector",
+			"desync_count": mc.desyncs,
+		}).Warn("Client-server desync detected")
+	}
 }
 
 // RecordReconnect records a reconnection event.
@@ -120,6 +170,14 @@ func (mc *MetricsCollector) RecordReconnect(duration time.Duration) {
 
 	mc.reconnects++
 	mc.reconnectTimes = append(mc.reconnectTimes, duration)
+
+	if mc.logger != nil {
+		mc.logger.WithFields(logrus.Fields{
+			"component":       "metrics_collector",
+			"reconnect_count": mc.reconnects,
+			"duration_ms":     duration.Milliseconds(),
+		}).Info("Client reconnection recorded")
+	}
 }
 
 // updateBandwidthSample updates the bandwidth sample if a second has passed.

@@ -192,6 +192,7 @@ type systemsContainer struct {
 	reputationCompanionBonusSystem              *engine.ReputationCompanionBonusSystem              // Bridges faction reputation with companion stat bonuses
 	reputationCompanionBonusParticleSystem      *engine.ReputationCompanionBonusParticleSystem      // Visual feedback for reputation companion bonus
 	reputationQuestGatingSystem                 *engine.ReputationQuestGatingSystem                 // Gates quests behind faction reputation requirements
+	factionTerritoryInfluenceSystem             *engine.FactionTerritoryInfluenceSystem             // Faction zones provide combat/progression bonuses based on reputation
 	ambientEnvironmentParticleSystem            *engine.AmbientEnvironmentParticleSystem            // Terrain-aware atmospheric ambient particles
 	equipmentEnchantmentGlowParticleSystem      *engine.EquipmentEnchantmentGlowParticleSystem      // Rarity-driven enchantment glow particles
 	statusEffectVisualOverlaySystem             *engine.StatusEffectVisualOverlaySystem             // Status effect color tints on sprites
@@ -213,6 +214,7 @@ type systemsContainer struct {
 	nearbyLightEntityTintSystem                 *engine.NearbyLightEntityTintSystem                 // Light-source-based entity sprite tinting
 	weatherEquipmentSheenSystem                 *engine.WeatherEquipmentSheenSystem                 // Weather-driven equipment sheen
 	creatureEyeGlowSystem                       *engine.CreatureEyeGlowSystem                       // Genre-aware hostile creature eye glow
+	creatureEyePatternSystem                    *engine.CreatureEyePatternSystem                    // Creature-type-specific eye patterns for nonhumanoids
 	creatureElementalAuraSystem                 *engine.CreatureElementalAuraSystem                 // Elemental creature aura visuals
 	meleeSwingArcSystem                         *engine.MeleeSwingArcSystem                         // Genre-aware melee attack swing arcs
 	combatReadyAuraSystem                       *engine.CombatReadyAuraSystem                       // Genre-aware AI combat readiness aura
@@ -1510,8 +1512,13 @@ func registerNonCriticalSystems(game *engine.EbitenGame, sys *systemsContainer) 
 
 	// ReputationQuestGatingSystem: gates quests behind faction reputation requirements
 	// Integrates reputation standings with quest availability for meaningful progression
-	sys.reputationQuestGatingSystem = engine.NewReputationQuestGatingSystem(game.World, logger, *seed+5245)
+	sys.reputationQuestGatingSystem = engine.NewReputationQuestGatingSystem(game.World, game.World.GetLogger().Logger, *seed+5245)
 	game.World.AddSystem(sys.reputationQuestGatingSystem)
+
+	// FactionTerritoryInfluenceSystem: faction zones provide combat/progression bonuses
+	// Applies damage/defense/XP modifiers based on player reputation in faction-controlled territories
+	sys.factionTerritoryInfluenceSystem = engine.NewFactionTerritoryInfluenceSystem(game.World, sys.factionSystem)
+	game.World.AddSystem(sys.factionTerritoryInfluenceSystem)
 
 	// AmbientEnvironmentParticleSystem: atmospheric particles based on terrain type
 	// Spawns genre-aware ambient effects (fireflies, mist, embers, dust motes) near entities
@@ -1635,6 +1642,12 @@ func registerNonCriticalSystems(game *engine.EbitenGame, sys *systemsContainer) 
 	sys.creatureEyeGlowSystem = engine.NewCreatureEyeGlowSystem(game.World, *seed+9450)
 	sys.creatureEyeGlowSystem.SetGenre(*genreID)
 	game.World.AddSystem(sys.creatureEyeGlowSystem)
+
+	// CreatureEyePatternSystem: creature-type-specific eye patterns for nonhumanoids
+	// Assigns 8-eye spider patterns, slit-pupil serpent eyes, compound insect eyes, etc.
+	sys.creatureEyePatternSystem = engine.NewCreatureEyePatternSystem(game.World, *seed+9460)
+	sys.creatureEyePatternSystem.SetGenre(*genreID)
+	game.World.AddSystem(sys.creatureEyePatternSystem)
 
 	// CreatureElementalAuraSystem: persistent elemental aura visuals for creatures
 	sys.creatureElementalAuraSystem = engine.NewCreatureElementalAuraSystem(game.World, *seed+9475)

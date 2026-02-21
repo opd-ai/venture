@@ -83,6 +83,17 @@ func (p *PositionComponent) String() string {
 	return fmt.Sprintf("(%.2f, %.2f)", p.X, p.Y)
 }
 
+// NameComponent stores an entity's display name.
+// Used for UI display, logging, and elemental affinity inference from name keywords.
+type NameComponent struct {
+	Name string
+}
+
+// Type returns the component type identifier.
+func (n *NameComponent) Type() string {
+	return "name"
+}
+
 // VelocityComponent represents an entity's velocity in 2D space.
 type VelocityComponent struct {
 	VX, VY float64

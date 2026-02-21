@@ -37,13 +37,13 @@ func TestBuildTemplateSystemArchetypePresets(t *testing.T) {
 		archetype BuildArchetype
 		wantID    string
 	}{
-		{ArchetypeTank, "preset_tank"},
-		{ArchetypeDPS, "preset_dps"},
-		{ArchetypeSupport, "preset_support"},
-		{ArchetypeHybrid, "preset_hybrid"},
-		{ArchetypeBattlemage, "preset_battlemage"},
-		{ArchetypeAssassin, "preset_assassin"},
-		{ArchetypePaladin, "preset_paladin"},
+		{BuildArchetypeTank, "preset_tank"},
+		{BuildArchetypeDPS, "preset_dps"},
+		{BuildArchetypeSupport, "preset_support"},
+		{BuildArchetypeHybrid, "preset_hybrid"},
+		{BuildArchetypeBattlemage, "preset_battlemage"},
+		{BuildArchetypeAssassin, "preset_assassin"},
+		{BuildArchetypePaladin, "preset_paladin"},
 	}
 
 	for _, tt := range tests {
@@ -73,8 +73,8 @@ func TestBuildTemplateSystemGetPresetClone(t *testing.T) {
 	world := NewWorld()
 	sys := NewBuildTemplateSystem(world, 12345)
 
-	preset1 := sys.GetArchetypePreset(ArchetypeTank)
-	preset2 := sys.GetArchetypePreset(ArchetypeTank)
+	preset1 := sys.GetArchetypePreset(BuildArchetypeTank)
+	preset2 := sys.GetArchetypePreset(BuildArchetypeTank)
 
 	if preset1 == preset2 {
 		t.Error("GetArchetypePreset should return clones, not same instance")

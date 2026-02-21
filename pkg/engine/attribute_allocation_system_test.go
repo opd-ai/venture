@@ -337,7 +337,8 @@ func TestAttributeAllocationSystem_Respec(t *testing.T) {
 	}
 
 	// Gold should be deducted
-	inv := entity.GetComponentFast(&InventoryComponent{}).(*InventoryComponent)
+	invComp, _ := entity.GetComponent("inventory")
+	inv := invComp.(*InventoryComponent)
 	if inv.Gold != 500 {
 		t.Errorf("Gold after respec = %d, want 500", inv.Gold)
 	}

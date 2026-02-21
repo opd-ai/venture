@@ -191,6 +191,7 @@ type SystemInitResult struct {
 	ReputationCompanionBonusSystem              *ReputationCompanionBonusSystem
 	ReputationCompanionBonusParticleSystem      *ReputationCompanionBonusParticleSystem
 	ReputationQuestGatingSystem                 *ReputationQuestGatingSystem
+	FactionTerritoryInfluenceSystem             *FactionTerritoryInfluenceSystem
 	AmbientEnvironmentParticleSystem            *AmbientEnvironmentParticleSystem
 	EquipmentEnchantmentGlowParticleSystem      *EquipmentEnchantmentGlowParticleSystem
 	StatusEffectVisualOverlaySystem             *StatusEffectVisualOverlaySystem
@@ -532,6 +533,12 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 	reputationQuestGatingSystem := NewReputationQuestGatingSystem(game.World, logger, config.Seed+5245)
 	result.ReputationQuestGatingSystem = reputationQuestGatingSystem
 	game.World.AddSystem(reputationQuestGatingSystem)
+
+	// 17q-c. FactionTerritoryInfluenceSystem - faction zones provide combat/progression bonuses
+	// Integrates faction reputation with territory mechanics for zone-based buffs/debuffs
+	factionTerritoryInfluenceSystem := NewFactionTerritoryInfluenceSystem(game.World, factionSystem)
+	result.FactionTerritoryInfluenceSystem = factionTerritoryInfluenceSystem
+	game.World.AddSystem(factionTerritoryInfluenceSystem)
 
 	// 17q. AmbientEnvironmentParticleSystem - atmospheric particles based on terrain type
 	// Connects terrain data with ParticleSystem for genre-aware ambient effects

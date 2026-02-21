@@ -443,7 +443,7 @@ func TestBuildGenreElementModifiers(t *testing.T) {
 	}
 }
 
-func TestClampFloat(t *testing.T) {
+func TestClampFloatAura(t *testing.T) {
 	tests := []struct {
 		v, min, max, expected float64
 	}{

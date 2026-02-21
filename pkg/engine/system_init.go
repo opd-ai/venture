@@ -142,6 +142,7 @@ type SystemInitResult struct {
 	TimeOfDayCriticalChanceSystem               *TimeOfDayCriticalChanceSystem
 	TerrainAmbushCritSystem                     *TerrainAmbushCritSystem
 	FactionDamageBonusSystem                    *FactionDamageBonusSystem
+	GuildCombatBonusSystem                      *GuildCombatBonusSystem
 	WeatherFactionResistanceSystem              *WeatherFactionResistanceSystem
 	WeatherCritChanceSystem                     *WeatherCritChanceSystem
 	WeatherBlockChanceSystem                    *WeatherBlockChanceSystem
@@ -415,6 +416,13 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 	factionDamageBonusSystem.SetGenre(config.GenreID)
 	result.FactionDamageBonusSystem = factionDamageBonusSystem
 	game.World.AddSystem(factionDamageBonusSystem)
+
+	// 17b1. GuildCombatBonusSystem - proximity-based combat bonuses for guild members
+	// Connects GuildComponent membership with combat stats when guild members fight together
+	guildCombatBonusSystem := NewGuildCombatBonusSystem(game.World, config.Seed+5152)
+	guildCombatBonusSystem.SetGenre(config.GenreID)
+	result.GuildCombatBonusSystem = guildCombatBonusSystem
+	game.World.AddSystem(guildCombatBonusSystem)
 
 	// 17b2. WeatherFactionResistanceSystem - weather affects faction combat stats
 	// Connects WeatherComponent with FactionComponent for elemental affinity bonuses/penalties

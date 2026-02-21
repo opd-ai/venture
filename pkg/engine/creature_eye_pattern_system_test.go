@@ -7,7 +7,7 @@ import (
 )
 
 func TestNewCreatureEyePatternSystem(t *testing.T) {
-	world := newTestWorld()
+	world := NewWorld()
 	sys := NewCreatureEyePatternSystem(world, 12345)
 
 	if sys == nil {
@@ -45,7 +45,7 @@ func TestCreatureEyePatternComponent(t *testing.T) {
 }
 
 func TestCreatureEyePatternSystemSetGenre(t *testing.T) {
-	world := newTestWorld()
+	world := NewWorld()
 	sys := NewCreatureEyePatternSystem(world, 12345)
 
 	sys.SetGenre("horror")
@@ -60,7 +60,7 @@ func TestCreatureEyePatternSystemSetGenre(t *testing.T) {
 }
 
 func TestCreatureEyePatternSystemUpdate(t *testing.T) {
-	world := newTestWorld()
+	world := NewWorld()
 	sys := NewCreatureEyePatternSystem(world, 12345)
 	sys.SetGenre("fantasy")
 
@@ -83,7 +83,7 @@ func TestCreatureEyePatternSystemUpdate(t *testing.T) {
 
 	entities := make([]*Entity, len(tests))
 	for i, tt := range tests {
-		entity := NewEntity()
+		entity := world.CreateEntity()
 		entity.AddComponent(&CreatureVisualComponent{
 			Form:      tt.form,
 			SizeClass: "medium",
@@ -122,10 +122,10 @@ func TestCreatureEyePatternSystemUpdate(t *testing.T) {
 }
 
 func TestCreatureEyePatternSystemSkipsHumanoids(t *testing.T) {
-	world := newTestWorld()
+	world := NewWorld()
 	sys := NewCreatureEyePatternSystem(world, 12345)
 
-	entity := NewEntity()
+	entity := world.CreateEntity()
 	entity.AddComponent(&CreatureVisualComponent{
 		Form:      FormHumanoid,
 		SizeClass: "medium",
@@ -141,7 +141,7 @@ func TestCreatureEyePatternSystemSkipsHumanoids(t *testing.T) {
 }
 
 func TestCreatureEyePatternSystemGenreColors(t *testing.T) {
-	world := newTestWorld()
+	world := NewWorld()
 
 	genres := []string{"fantasy", "horror", "scifi", "cyberpunk", "postapoc"}
 
@@ -150,7 +150,7 @@ func TestCreatureEyePatternSystemGenreColors(t *testing.T) {
 			sys := NewCreatureEyePatternSystem(world, 12345)
 			sys.SetGenre(genre)
 
-			entity := NewEntity()
+			entity := world.CreateEntity()
 			entity.AddComponent(&CreatureVisualComponent{
 				Form:      FormQuadruped,
 				SizeClass: "medium",
@@ -180,7 +180,7 @@ func TestCreatureEyePatternSystemGenreColors(t *testing.T) {
 }
 
 func TestCreatureEyePatternSystemMultiLimbedRandomization(t *testing.T) {
-	world := newTestWorld()
+	world := NewWorld()
 
 	// Run multiple times to verify randomization
 	eyeCounts := make(map[int]int)
@@ -189,7 +189,7 @@ func TestCreatureEyePatternSystemMultiLimbedRandomization(t *testing.T) {
 		sys := NewCreatureEyePatternSystem(world, int64(i*1000))
 		sys.SetGenre("horror")
 
-		entity := NewEntity()
+		entity := world.CreateEntity()
 		entity.AddComponent(&CreatureVisualComponent{
 			Form:      FormMultiLimbed,
 			SizeClass: "large",
@@ -221,10 +221,10 @@ func TestCreatureEyePatternSystemMultiLimbedRandomization(t *testing.T) {
 }
 
 func TestCreatureEyePatternSystemArachnidEyes(t *testing.T) {
-	world := newTestWorld()
+	world := NewWorld()
 	sys := NewCreatureEyePatternSystem(world, 12345)
 
-	entity := NewEntity()
+	entity := world.CreateEntity()
 	entity.AddComponent(&CreatureVisualComponent{
 		Form:      FormArachnid,
 		SizeClass: "medium",
@@ -258,10 +258,10 @@ func TestCreatureEyePatternSystemArachnidEyes(t *testing.T) {
 }
 
 func TestCreatureEyePatternSystemSerpentSlitPupils(t *testing.T) {
-	world := newTestWorld()
+	world := NewWorld()
 	sys := NewCreatureEyePatternSystem(world, 12345)
 
-	entity := NewEntity()
+	entity := world.CreateEntity()
 	entity.AddComponent(&CreatureVisualComponent{
 		Form:      FormSerpentine,
 		SizeClass: "medium",
@@ -285,10 +285,10 @@ func TestCreatureEyePatternSystemSerpentSlitPupils(t *testing.T) {
 }
 
 func TestCreatureEyePatternSystemMechanicalGlow(t *testing.T) {
-	world := newTestWorld()
+	world := NewWorld()
 	sys := NewCreatureEyePatternSystem(world, 12345)
 
-	entity := NewEntity()
+	entity := world.CreateEntity()
 	entity.AddComponent(&CreatureVisualComponent{
 		Form:      FormMechanical,
 		SizeClass: "medium",
@@ -327,7 +327,7 @@ func TestClampEyePattern(t *testing.T) {
 }
 
 func BenchmarkCreatureEyePatternSystemUpdate(b *testing.B) {
-	world := newTestWorld()
+	world := NewWorld()
 	sys := NewCreatureEyePatternSystem(world, 12345)
 	sys.SetGenre("fantasy")
 
@@ -340,7 +340,7 @@ func BenchmarkCreatureEyePatternSystemUpdate(b *testing.B) {
 	entities := make([]*Entity, 100)
 	rng := rand.New(rand.NewSource(12345))
 	for i := range entities {
-		entity := NewEntity()
+		entity := world.CreateEntity()
 		entity.AddComponent(&CreatureVisualComponent{
 			Form:      forms[rng.Intn(len(forms))],
 			SizeClass: "medium",

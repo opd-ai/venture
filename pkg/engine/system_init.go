@@ -134,6 +134,7 @@ type SystemInitResult struct {
 	TimeOfDayCriticalChanceSystem               *TimeOfDayCriticalChanceSystem
 	TerrainAmbushCritSystem                     *TerrainAmbushCritSystem
 	FactionDamageBonusSystem                    *FactionDamageBonusSystem
+	WeatherFactionResistanceSystem              *WeatherFactionResistanceSystem
 	WeatherCritChanceSystem                     *WeatherCritChanceSystem
 	WeatherBlockChanceSystem                    *WeatherBlockChanceSystem
 	StealthIndicatorParticleSystem              *StealthIndicatorParticleSystem
@@ -400,6 +401,13 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 	factionDamageBonusSystem.SetGenre(config.GenreID)
 	result.FactionDamageBonusSystem = factionDamageBonusSystem
 	game.World.AddSystem(factionDamageBonusSystem)
+
+	// 17b2. WeatherFactionResistanceSystem - weather affects faction combat stats
+	// Connects WeatherComponent with FactionComponent for elemental affinity bonuses/penalties
+	weatherFactionResistanceSystem := NewWeatherFactionResistanceSystem(game.World, config.Seed+5155)
+	weatherFactionResistanceSystem.SetGenre(config.GenreID)
+	result.WeatherFactionResistanceSystem = weatherFactionResistanceSystem
+	game.World.AddSystem(weatherFactionResistanceSystem)
 
 	// 17c. ReputationDefenseBonusSystem - defense bonus against enemies of allied factions
 	// Connects FactionComponent reputation with StatsComponent.Defense for damage reduction

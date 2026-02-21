@@ -176,6 +176,7 @@ type systemsContainer struct {
 	factionAwareAISystem                        *engine.FactionAwareAISystem                        // Bridges faction reputation with AI hostility
 	factionXPBonusSystem                        *engine.FactionXPBonusSystem                        // Bridges faction reputation with XP bonus rewards
 	factionDamageBonusSystem                    *engine.FactionDamageBonusSystem                    // Bridges faction reputation with damage bonuses
+	weatherFactionResistanceSystem              *engine.WeatherFactionResistanceSystem              // Bridges weather with faction elemental affinities
 	reputationDefenseBonusSystem                *engine.ReputationDefenseBonusSystem                // Bridges faction reputation with defense bonuses
 	reputationDefenseBonusParticleSystem        *engine.ReputationDefenseBonusParticleSystem        // Visual feedback for reputation defense bonuses
 	reputationHealingBonusSystem                *engine.ReputationHealingBonusSystem                // Bridges faction reputation with health regen
@@ -1386,6 +1387,12 @@ func registerNonCriticalSystems(game *engine.EbitenGame, sys *systemsContainer) 
 	sys.factionDamageBonusSystem.SetFactionSystem(sys.factionSystem)
 	sys.factionDamageBonusSystem.SetGenre(*genreID)
 	game.World.AddSystem(sys.factionDamageBonusSystem)
+
+	// WeatherFactionResistanceSystem: bridges weather with faction elemental affinities
+	// Fire factions weakened by rain, ice factions buffed by snow, etc.
+	sys.weatherFactionResistanceSystem = engine.NewWeatherFactionResistanceSystem(game.World, *seed+5155)
+	sys.weatherFactionResistanceSystem.SetGenre(*genreID)
+	game.World.AddSystem(sys.weatherFactionResistanceSystem)
 
 	// ReputationDefenseBonusSystem: bridges faction reputation with defense bonuses
 	// Reduces incoming damage when player is attacked by enemies of allied factions

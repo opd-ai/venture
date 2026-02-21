@@ -6,18 +6,18 @@
 
 ## Summary
 
-- **Total issues**: 225 (54 open, 171 resolved)
-- **Critical**: 0 (0 open) | **High**: 43 (0 open) | **Medium**: 42 (0 open) | **Low**: 140 (54 open)
-- **Affected subpackages**: 28 of 108 audited packages have open issues
-- **Resolution rate**: 171/225 (76%)
+- **Total issues**: 225 (50 open, 175 resolved)
+- **Critical**: 0 (0 open) | **High**: 43 (0 open) | **Medium**: 42 (0 open) | **Low**: 140 (50 open)
+- **Affected subpackages**: 27 of 108 audited packages have open issues
+- **Resolution rate**: 175/225 (78%)
 
 | Severity | Total | Open | Resolved |
 |----------|-------|------|----------|
 | Critical | 0 | 0 | 0 |
 | High | 43 | 0 | 43 |
 | Medium | 42 | 0 | 42 |
-| Low | 140 | 54 | 86 |
-| **Total** | **225** | **54** | **171** |
+| Low | 140 | 50 | 90 |
+| **Total** | **225** | **50** | **175** |
 
 ## Priority Resolution Order
 
@@ -92,11 +92,11 @@ _All medium-priority issues have been resolved._
 - **pkg/network/resilience** (2 issues)
   - [ ] error handling — No structured logging in package; scenarios log via optional logger but core types (simulator, metrics) have no logging. Reduces observability for production use. (`simulator.go`, `metrics.go`)
   - [ ] doc coverage — Missing package-level comment on `metrics.go` explaining metrics collection architecture. Only `doc.go` has comprehensive package documentation. (`metrics.go:1`)
-- **pkg/procgen/book** (4 issues)
-  - [ ] Missing genre-specific quest grammar for horror, cyberpunk, post-apocalyptic
-  - [ ] Missing genre-specific history grammar for horror, cyberpunk, post-apocalyptic
-  - [ ] Missing genre-specific recipe grammar for cyberpunk, post-apocalyptic
-  - [ ] Stub implementations for getSeriesName/getVolumeNumber
+- **pkg/procgen/book** (0 open, 4 resolved)
+  - [x] Missing genre-specific quest grammar for horror, cyberpunk, post-apocalyptic — **FIXED 2026-02-21**: Added complete quest grammar rules for all missing genres
+  - [x] Missing genre-specific history grammar for horror, cyberpunk, post-apocalyptic — **FIXED 2026-02-21**: Added complete history grammar rules for all missing genres
+  - [x] Missing genre-specific recipe grammar for cyberpunk, post-apocalyptic — **FIXED 2026-02-21**: Added complete recipe grammar rules for both genres
+  - [x] Stub implementations for getSeriesName/getVolumeNumber — **FIXED 2026-02-21**: Implemented to read from custom parameters with comprehensive tests
 - **pkg/procgen/building** (2 issues)
   - [ ] doc — Godoc example uses deprecated `log.Fatal` instead of structured logging with `logrus.WithFields` (`doc.go:40`)
   - [ ] integration — Package successfully integrated in cmd/client/handlers.go and cmd/server/v8_systems.go; no missing registrations detected
@@ -558,11 +558,11 @@ _All medium-priority issues have been resolved._
 
 #### `pkg/procgen/book`
 - Source: [`pkg/procgen/book/AUDIT.md`](pkg/procgen/book/AUDIT.md)
-- Issues: 4 open, 1 resolved (Low: 4)
-  - [Low] Missing genre-specific quest grammar for horror, cyberpunk, post-apocalyptic
-  - [Low] Missing genre-specific history grammar for horror, cyberpunk, post-apocalyptic
-  - [Low] Missing genre-specific recipe grammar for cyberpunk, post-apocalyptic
-  - [Low] Stub implementations for getSeriesName/getVolumeNumber
+- Issues: 0 open, 5 resolved (Low: 4, Medium: 1)
+  - ~~[Low] Missing genre-specific quest grammar for horror, cyberpunk, post-apocalyptic~~ ✅ **FIXED 2026-02-21**: Added complete quest grammar rules
+  - ~~[Low] Missing genre-specific history grammar for horror, cyberpunk, post-apocalyptic~~ ✅ **FIXED 2026-02-21**: Added complete history grammar rules
+  - ~~[Low] Missing genre-specific recipe grammar for cyberpunk, post-apocalyptic~~ ✅ **FIXED 2026-02-21**: Added complete recipe grammar rules
+  - ~~[Low] Stub implementations for getSeriesName/getVolumeNumber~~ ✅ **FIXED 2026-02-21**: Implemented with custom parameters support
   - ~~[Medium] No recursion depth limit in Grammar.Expand~~ ✅ Resolved
 
 #### `pkg/procgen/building`
@@ -936,7 +936,7 @@ _All medium-priority issues have been resolved._
 - **Modding (pkg/modding/)**: 1 open issues (Low: 1)
 - **Narrative (pkg/narrative/)**: 1 open issues (Low: 1)
 - **Network (pkg/network/)**: 3 open issues (Medium: 1, Low: 2)
-- **Procedural Generation (pkg/procgen/)**: 40 open issues (Medium: 2, Low: 38)
+- **Procedural Generation (pkg/procgen/)**: 36 open issues (Medium: 2, Low: 34)
 - **Rendering (pkg/rendering/)**: 4 open issues (Low: 4)
 - **Save/Load (pkg/saveload/)**: 3 open issues (Low: 3)
 - **Security (pkg/security/)**: 2 open issues (Low: 2)
@@ -949,18 +949,18 @@ _All medium-priority issues have been resolved._
 - **Phase 1 (Critical)**: 0 issues — No action required
 - **Phase 2 (High)**: 0 issues — No action required
 - **Phase 3 (Medium)**: 3 issues — Ongoing improvement backlog
-- **Phase 4 (Low)**: 51 issues — Address opportunistically
+- **Phase 4 (Low)**: 47 issues — Address opportunistically
 
 ## Resolved Issues Summary
 
-171 issues have been resolved across 38 packages.
+175 issues have been resolved across 39 packages.
 
 | Severity | Resolved |
 |----------|----------|
 | High | 43 |
 | Medium | 42 |
-| Low | 86 |
-| **Total** | **171** |
+| Low | 90 |
+| **Total** | **175** |
 
 ---
 

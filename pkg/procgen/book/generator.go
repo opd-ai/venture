@@ -12,8 +12,9 @@ import (
 
 // Generator creates procedural books with grammar-based text generation.
 type Generator struct {
-	mu  sync.Mutex
-	rng *rand.Rand
+	mu     sync.Mutex
+	rng    *rand.Rand
+	custom map[string]interface{} // current generation's custom parameters
 }
 
 // NewGenerator creates a new book generator.
@@ -45,6 +46,9 @@ func (g *Generator) Generate(seed int64, params procgen.GenerationParams) (inter
 
 	// Create seeded RNG for deterministic generation
 	g.rng = rand.New(rand.NewSource(seed))
+
+	// Store custom parameters for access by helper methods
+	g.custom = params.Custom
 
 	// Extract book type from custom parameters
 	bookTypeRaw, ok := params.Custom["book_type"]
@@ -374,19 +378,32 @@ func (g *Generator) pickRandom(options []string) string {
 }
 
 // getSeriesName checks if the book is part of a series and returns the series name.
-// Returns (seriesName, true) if it's a series book, ("", false) otherwise.
+// Returns (seriesName, true) if "series_name" is provided in custom parameters.
+// This allows library/bookshelf generators to create coherent multi-volume series.
 func (g *Generator) getSeriesName() (string, bool) {
-	// Check custom parameters for series information
-	// This would be set by a library/bookshelf generator
-	// Series name format expected in custom["series_name"]
-	return "", false // For now, return false - can be extended later
+	if g.custom == nil {
+		return "", false
+	}
+	if seriesName, ok := g.custom["series_name"].(string); ok && seriesName != "" {
+		return seriesName, true
+	}
+	return "", false
 }
 
 // getVolumeNumber returns the volume number for a series book.
-// Defaults to 1 if not specified.
+// Reads from "volume_number" in custom parameters if available.
+// Defaults to 1 if not specified or if the value is invalid.
 func (g *Generator) getVolumeNumber() int {
-	// Check custom parameters for volume number
-	// This would be set by a library/bookshelf generator
-	// Volume number format expected in custom["volume_number"]
-	return 1 // Default to volume 1
+	if g.custom == nil {
+		return 1
+	}
+	// Try int first (most common)
+	if volume, ok := g.custom["volume_number"].(int); ok && volume > 0 {
+		return volume
+	}
+	// Also accept float64 (JSON unmarshaling converts numbers to float64)
+	if volume, ok := g.custom["volume_number"].(float64); ok && volume > 0 {
+		return int(volume)
+	}
+	return 1
 }

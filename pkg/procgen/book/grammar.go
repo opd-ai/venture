@@ -775,6 +775,168 @@ func (g *Generator) loadQuestGrammar(grammar *Grammar, genre string) {
 			"command notification",
 		})
 
+	case "horror":
+		grammar.AddRule("quest_entry", []string{
+			"Day #quest_day#: #quest_horror_progress# I am #quest_horror_state#",
+			"Found #quest_horror_clue# #quest_horror_dread# I must #quest_horror_action#",
+			"#quest_horror_event# happened. #quest_horror_reaction# There is no turning back now.",
+		})
+		grammar.AddRule("quest_day", []string{
+			"???", "3 (I think)", "unknown", "7", "lost count",
+		})
+		grammar.AddRule("quest_horror_progress", []string{
+			"The trail of disappearances led here.",
+			"Found evidence of the ritual site.",
+			"The whispers grow louder each night.",
+			"Something watches from the shadows.",
+		})
+		grammar.AddRule("quest_horror_state", []string{
+			"no longer certain what is real",
+			"afraid to sleep",
+			"running out of time",
+			"beginning to understand the horror",
+		})
+		grammar.AddRule("quest_horror_clue", []string{
+			"bloody symbols on the walls",
+			"a journal written in madness",
+			"photographs that shouldn't exist",
+			"a recording that makes no sense",
+		})
+		grammar.AddRule("quest_horror_dread", []string{
+			"I wish I hadn't looked.",
+			"The truth is worse than I imagined.",
+			"Now I cannot unsee what I've seen.",
+			"Part of me died reading it.",
+		})
+		grammar.AddRule("quest_horror_action", []string{
+			"continue before I lose my nerve",
+			"find the source before it finds me",
+			"end this nightmare somehow",
+			"warn the others if I can",
+		})
+		grammar.AddRule("quest_horror_event", []string{
+			"Something impossible",
+			"The creature appeared",
+			"Reality shifted",
+			"They came for me",
+		})
+		grammar.AddRule("quest_horror_reaction", []string{
+			"I barely escaped with my sanity.",
+			"I ran until I couldn't breathe.",
+			"The screaming still echoes in my head.",
+			"I can never forget what I witnessed.",
+		})
+
+	case "cyberpunk":
+		grammar.AddRule("quest_entry", []string{
+			"Day #quest_day#, logged: #quest_cyber_status# The job #quest_cyber_complication#",
+			"Intel update: #quest_cyber_intel# #quest_cyber_analysis# Next steps: #quest_cyber_plan#",
+			"#quest_cyber_contact# sent word. #quest_cyber_news# Time to #quest_cyber_action#",
+		})
+		grammar.AddRule("quest_day", []string{
+			"5", "9", "14", "21", "28",
+		})
+		grammar.AddRule("quest_cyber_status", []string{
+			"Made contact with the fixer.",
+			"Security protocols bypassed.",
+			"Target location confirmed.",
+			"Extraction route mapped.",
+		})
+		grammar.AddRule("quest_cyber_complication", []string{
+			"just got more complicated",
+			"hit a snag - corp security",
+			"has rival crews interested",
+			"pays better than expected",
+		})
+		grammar.AddRule("quest_cyber_intel", []string{
+			"Corp defenses heavier than briefed.",
+			"There's a mole in the crew.",
+			"The package isn't what we thought.",
+			"Timeline moved up - we go tonight.",
+		})
+		grammar.AddRule("quest_cyber_analysis", []string{
+			"Could be a setup.",
+			"Risk level: extreme.",
+			"Payout justifies the danger.",
+			"Trust nobody on this one.",
+		})
+		grammar.AddRule("quest_cyber_plan", []string{
+			"jack in and recon the system",
+			"meet with the netrunner contact",
+			"acquire better gear",
+			"find an alternate route in",
+		})
+		grammar.AddRule("quest_cyber_contact", []string{
+			"The fixer",
+			"My netrunner",
+			"Street contact",
+			"Anonymous source",
+		})
+		grammar.AddRule("quest_cyber_news", []string{
+			"Corp knows we're coming.",
+			"The target moved locations.",
+			"Payment's been doubled.",
+			"We lost another crew member.",
+		})
+		grammar.AddRule("quest_cyber_action", []string{
+			"improvise",
+			"change the plan",
+			"go dark",
+			"make the grab",
+		})
+
+	case "post-apocalyptic":
+		grammar.AddRule("quest_entry", []string{
+			"Day #quest_day# since leaving: #quest_wasteland_progress# Supplies #quest_wasteland_supplies#",
+			"Scouted #quest_wasteland_location# #quest_wasteland_finding# Need to #quest_wasteland_decision#",
+			"#quest_wasteland_event# today. #quest_wasteland_consequence# Must keep moving.",
+		})
+		grammar.AddRule("quest_day", []string{
+			"12", "23", "31", "45", "67",
+		})
+		grammar.AddRule("quest_wasteland_progress", []string{
+			"Found signs of the settlement.",
+			"The radiation is getting worse.",
+			"Crossed into new territory.",
+			"Lost the trail, had to backtrack.",
+		})
+		grammar.AddRule("quest_wasteland_supplies", []string{
+			"running dangerously low",
+			"should last another week",
+			"found some in an old store",
+			"need to find water soon",
+		})
+		grammar.AddRule("quest_wasteland_location", []string{
+			"an abandoned bunker",
+			"the ruins of a town",
+			"a raider camp from distance",
+			"an old military base",
+		})
+		grammar.AddRule("quest_wasteland_finding", []string{
+			"Picked clean already.",
+			"Too dangerous to enter alone.",
+			"Found useful salvage.",
+			"Others have been here recently.",
+		})
+		grammar.AddRule("quest_wasteland_decision", []string{
+			"find another route",
+			"wait for nightfall",
+			"trade with locals if any",
+			"push on despite the risk",
+		})
+		grammar.AddRule("quest_wasteland_event", []string{
+			"Ran into survivors",
+			"Rad storm forced shelter",
+			"Found a working vehicle",
+			"Lost gear crossing a river",
+		})
+		grammar.AddRule("quest_wasteland_consequence", []string{
+			"Traded some supplies for information.",
+			"Lost half a day hiding.",
+			"Changed everything - can travel faster now.",
+			"Set me back but I'm alive.",
+		})
+
 	default:
 		grammar.AddRule("quest_entry", []string{
 			"Progress update: #quest_generic# Continuing forward.",
@@ -1053,6 +1215,212 @@ func (g *Generator) loadRecipeGrammar(grammar *Grammar, genre string) {
 			"Something follows those who craft these things",
 		})
 
+	case "cyberpunk":
+		grammar.AddRule("recipe_intro", []string{
+			"Street tech guide for building #recipe_cyber_item# Not corp-approved. Not legal. Works better anyway.",
+			"Underground blueprints: #recipe_cyber_device# Stolen from #recipe_cyber_source# Use at your own risk.",
+			"How to mod #recipe_cyber_tech# without a ripperdoc taking half your savings. Results may vary.",
+		})
+		grammar.AddRule("recipe_requirements", []string{
+			"Parts needed: #recipe_cyber_parts# Check the grey markets or strip it from corp hardware. Either works.",
+			"You'll need: #recipe_cyber_components# Don't ask where to find these - you either know or you don't.",
+			"Required gear: #recipe_cyber_materials# Quality matters. Cheap out and you'll fry your nervous system.",
+		})
+		grammar.AddRule("recipe_steps", []string{
+			"Step: #recipe_cyber_step# #recipe_cyber_warning# Seriously, don't skip this.",
+			"Next: #recipe_cyber_process# #recipe_cyber_tip# Learned this the hard way.",
+			"Then: #recipe_cyber_action# #recipe_cyber_result# Test before you install.",
+		})
+		grammar.AddRule("recipe_notes", []string{
+			"Pro tip: #recipe_cyber_advice# This separates the chooms from the choombas.",
+			"Warning: #recipe_cyber_danger# Corps don't like people building their own tech. Watch your back.",
+			"Street wisdom: #recipe_cyber_street# Pass it on.",
+		})
+		grammar.AddRule("recipe_cyber_item", []string{
+			"neural interface bypass",
+			"reflex enhancer mod",
+			"optical camouflage unit",
+			"ICE breaker software",
+		})
+		grammar.AddRule("recipe_cyber_device", []string{
+			"military-grade cyberdeck",
+			"autonomous security drone",
+			"biometric spoofing module",
+			"signal jamming implant",
+		})
+		grammar.AddRule("recipe_cyber_source", []string{
+			"OmniCorp R&D",
+			"military black budget project",
+			"a dead netrunner's files",
+			"the dark net's most secure node",
+		})
+		grammar.AddRule("recipe_cyber_tech", []string{
+			"standard cyberarms",
+			"basic optical implants",
+			"factory neural link",
+			"consumer-grade synthskin",
+		})
+		grammar.AddRule("recipe_cyber_parts", []string{
+			"processor chips (military surplus works best), quantum RAM sticks, neural threading",
+			"synthetic muscle fibers, microhydraulics, bioelectric converters",
+			"optical sensors (Japanese preferred), crystal matrices, coolant microtubes",
+		})
+		grammar.AddRule("recipe_cyber_components", []string{
+			"a working power cell, signal amplifiers, shielded cabling",
+			"biometric readers, neural bridges, firmware chips",
+			"encryption modules, wireless transceivers, heat sinks",
+		})
+		grammar.AddRule("recipe_cyber_materials", []string{
+			"carbon fiber housing, conductive gel, sterile surgical tools",
+			"EMP shielding, thermal paste, diagnostic software",
+			"backup batteries, grounding wire, biocompatible sealant",
+		})
+		grammar.AddRule("recipe_cyber_step", []string{
+			"Disable factory lockouts first",
+			"Flash the firmware with the patched version",
+			"Isolate the neural feedback circuit",
+		})
+		grammar.AddRule("recipe_cyber_warning", []string{
+			"Fry the failsafe and you fry your brain.",
+			"Corp tech phones home. Kill that first.",
+			"Wrong sequence causes rejection. Painful rejection.",
+		})
+		grammar.AddRule("recipe_cyber_process", []string{
+			"Splice the secondary connections manually",
+			"Calibrate using the pirated diagnostic suite",
+			"Install the cracked drivers before hardware",
+		})
+		grammar.AddRule("recipe_cyber_tip", []string{
+			"Military versions have hidden backdoors.",
+			"Japanese components last longer.",
+			"Older models are actually more reliable.",
+		})
+		grammar.AddRule("recipe_cyber_action", []string{
+			"Run the integration sequence",
+			"Test each subsystem independently",
+			"Verify bioelectric synchronization",
+		})
+		grammar.AddRule("recipe_cyber_result", []string{
+			"Should read green across the board.",
+			"Any error codes mean start over.",
+			"Nominal means you're ready to jack in.",
+		})
+		grammar.AddRule("recipe_cyber_advice", []string{
+			"keep spare parts. Everything breaks eventually",
+			"find a trustworthy ripperdoc for the install",
+			"run cold for a week after major mods",
+		})
+		grammar.AddRule("recipe_cyber_danger", []string{
+			"building unlicensed tech carries mandatory sentences",
+			"some of these mods trigger auto-defense systems",
+			"black ICE can follow you back through your hardware",
+		})
+		grammar.AddRule("recipe_cyber_street", []string{
+			"Corps don't care about warranties in the gutter",
+			"best tech comes from those with nothing left to lose",
+			"your chrome is only as good as the choom who maintains it",
+		})
+
+	case "post-apocalyptic":
+		grammar.AddRule("recipe_intro", []string{
+			"How to build #recipe_wasteland_item# from scrap. Old world wouldn't believe what we make with garbage now.",
+			"Survival crafting: #recipe_wasteland_tool# My grandfather taught me this. Kept our family alive.",
+			"Instructions for creating #recipe_wasteland_gear# Everything you need can be found in the ruins.",
+		})
+		grammar.AddRule("recipe_requirements", []string{
+			"Materials: #recipe_wasteland_materials# Scavenge carefully. Check for radiation before you touch anything.",
+			"You'll need: #recipe_wasteland_parts# Trade for what you can't find. Some settlements specialize.",
+			"Gather: #recipe_wasteland_supplies# Take your time. Rushing gets you killed or poisoned.",
+		})
+		grammar.AddRule("recipe_steps", []string{
+			"First: #recipe_wasteland_step# #recipe_wasteland_tip# Learned this from survivors who didn't make it.",
+			"Then: #recipe_wasteland_process# #recipe_wasteland_caution# One mistake can be your last.",
+			"Finally: #recipe_wasteland_action# #recipe_wasteland_test# Never trust a first build completely.",
+		})
+		grammar.AddRule("recipe_notes", []string{
+			"Wasteland wisdom: #recipe_wasteland_wisdom# This knowledge keeps people alive.",
+			"Warning: #recipe_wasteland_danger# The old world left plenty of traps for the unwary.",
+			"Remember: #recipe_wasteland_reminder# Share what you know. We survive together or not at all.",
+		})
+		grammar.AddRule("recipe_wasteland_item", []string{
+			"a water purifier",
+			"a rad-counter",
+			"a makeshift generator",
+			"protective armor",
+		})
+		grammar.AddRule("recipe_wasteland_tool", []string{
+			"multi-purpose survival kit",
+			"radiation treatment supplies",
+			"signal beacon",
+			"shelter components",
+		})
+		grammar.AddRule("recipe_wasteland_gear", []string{
+			"gas mask with working filters",
+			"portable water collector",
+			"emergency medical supplies",
+			"crossbow and bolts",
+		})
+		grammar.AddRule("recipe_wasteland_materials", []string{
+			"scrap metal (avoid the rusted kind), rubber tubing, intact glass bottles",
+			"car batteries (test before taking), copper wire, leather scraps",
+			"plastic containers, charcoal, clean sand for filtering",
+		})
+		grammar.AddRule("recipe_wasteland_parts", []string{
+			"working gauges from old machines, springs, valves",
+			"magnets, circuit boards (pre-war preferred), sealing compound",
+			"fabric, bone or wood for handles, cordage from any source",
+		})
+		grammar.AddRule("recipe_wasteland_supplies", []string{
+			"fuel (any kind), lubricant, heat source",
+			"clean water for cooling, binding agents, sharpening stones",
+			"containers for storage, marking tools, testing materials",
+		})
+		grammar.AddRule("recipe_wasteland_step", []string{
+			"Clean everything thoroughly - contamination kills slow",
+			"Test each component before assembly",
+			"Build the frame sturdy - replacement parts are hard to find",
+		})
+		grammar.AddRule("recipe_wasteland_tip", []string{
+			"Pre-war plastics are more durable than anything we make now.",
+			"Old car parts are goldmines of useful components.",
+			"Hospital ruins have the best medical supplies if you can handle the danger.",
+		})
+		grammar.AddRule("recipe_wasteland_process", []string{
+			"Join the pieces using whatever binding method you have",
+			"Heat-treat metal components over a controlled fire",
+			"Test seals with water before trusting them with your life",
+		})
+		grammar.AddRule("recipe_wasteland_caution", []string{
+			"Bad seals mean slow death from contamination.",
+			"Unstable constructs fail when you need them most.",
+			"Always have a backup. Always.",
+		})
+		grammar.AddRule("recipe_wasteland_action", []string{
+			"Assemble the final product in a clean space",
+			"Make adjustments based on what actually works",
+			"Label everything clearly for others who might need it",
+		})
+		grammar.AddRule("recipe_wasteland_test", []string{
+			"Field test before your life depends on it.",
+			"Have someone watch in case something goes wrong.",
+			"Document what works for the next generation.",
+		})
+		grammar.AddRule("recipe_wasteland_wisdom", []string{
+			"Nothing is garbage until you've checked it twice",
+			"The old world was wasteful - their trash is our treasure",
+			"Skill matters more than materials",
+		})
+		grammar.AddRule("recipe_wasteland_danger", []string{
+			"Some chemicals from before are still deadly",
+			"Radiation hides in unexpected places",
+			"Not everything should be scavenged, no matter how useful it looks",
+		})
+		grammar.AddRule("recipe_wasteland_reminder", []string{
+			"teach the young ones. They're the future",
+			"trade knowledge as freely as you trade goods",
+			"what you know might save someone else's life tomorrow",
+		})
+
 	default:
 		grammar.AddRule("recipe_intro", []string{
 			"This guide explains how to craft useful items. Follow instructions carefully.",
@@ -1207,6 +1575,216 @@ func (g *Generator) loadHistoryGrammar(grammar *Grammar, genre, location string)
 			"first contact negotiations",
 			"classified military operations",
 			"civilian life over generations",
+		})
+
+	case "horror":
+		grammar.AddRule("history_paragraph", []string{
+			fmt.Sprintf("%s was built #history_horror_when# The original purpose was #history_horror_purpose# but something went terribly wrong.", location),
+			fmt.Sprintf("Records of %s are incomplete. #history_horror_mystery# The few surviving witnesses #history_horror_witnesses#", location),
+			fmt.Sprintf("In #history_horror_year# %s became known for #history_horror_event# Since then, #history_horror_since#", location),
+			fmt.Sprintf("Those who research the history of %s often #history_horror_researchers# The pattern is #history_horror_pattern#", location),
+		})
+		grammar.AddRule("history_horror_when", []string{
+			"on ground that should have remained untouched",
+			"atop an older, darker structure",
+			"during a time no one speaks of",
+			"by men whose names have been erased from all records",
+		})
+		grammar.AddRule("history_horror_purpose", []string{
+			"an asylum for those society wished to forget",
+			"a site for experiments beyond ethical bounds",
+			"a prison for things not entirely human",
+			"a temple to gods better left unnamed",
+		})
+		grammar.AddRule("history_horror_mystery", []string{
+			"Entire pages have been torn out.",
+			"The ink fades when you try to read it.",
+			"What remains makes no sense.",
+			"The handwriting changes to something inhuman.",
+		})
+		grammar.AddRule("history_horror_witnesses", []string{
+			"refused to speak of what they saw",
+			"died under mysterious circumstances",
+			"were committed to institutions",
+			"disappeared one by one",
+		})
+		grammar.AddRule("history_horror_year", []string{
+			"1873", "1924", "1967", "1989",
+		})
+		grammar.AddRule("history_horror_event", []string{
+			"the disappearance of all residents in a single night",
+			"a massacre that defied explanation",
+			"phenomena that broke the minds of investigators",
+			"sounds that drove nearby residents mad",
+		})
+		grammar.AddRule("history_horror_since", []string{
+			"no one has spent a full night there and remained unchanged",
+			"the surrounding area has slowly died",
+			"children dare each other to approach",
+			"even animals refuse to enter",
+		})
+		grammar.AddRule("history_horror_researchers", []string{
+			"abandon their work without explanation",
+			"report nightmares that follow them",
+			"find their notes have changed overnight",
+			"begin to hear whispers in empty rooms",
+		})
+		grammar.AddRule("history_horror_pattern", []string{
+			"too consistent to be coincidence",
+			"impossible to ignore",
+			"spreading to those who learn too much",
+			"repeating through generations",
+		})
+
+	case "cyberpunk":
+		grammar.AddRule("history_paragraph", []string{
+			fmt.Sprintf("%s was constructed in #history_cyber_year# by #history_cyber_builder# The official story: #history_cyber_official# The truth: #history_cyber_truth#", location),
+			fmt.Sprintf("Net archives show %s changed ownership #history_cyber_times# Each time, #history_cyber_change# The current owners #history_cyber_current#", location),
+			fmt.Sprintf("Before the #history_cyber_event# %s was #history_cyber_before# After, it became #history_cyber_after#", location),
+			fmt.Sprintf("Street legend says %s hides #history_cyber_secret# Those who've tried to verify this #history_cyber_fate#", location),
+		})
+		grammar.AddRule("history_cyber_year", []string{
+			"2045", "2051", "2058", "2063",
+		})
+		grammar.AddRule("history_cyber_builder", []string{
+			"OmniCorp's construction division",
+			"a shell company with erased records",
+			"the city itself under emergency powers",
+			"an AI-directed construction program",
+		})
+		grammar.AddRule("history_cyber_official", []string{
+			"corporate residential complex",
+			"data processing center",
+			"research and development facility",
+			"community improvement project",
+		})
+		grammar.AddRule("history_cyber_truth", []string{
+			"black site for illegal experiments",
+			"server farm for AI development",
+			"front for data laundering operations",
+			"much darker than public records show",
+		})
+		grammar.AddRule("history_cyber_times", []string{
+			"seven times in twenty years",
+			"more times than records can track",
+			"through hostile acquisition twice",
+			"only on paper - same corp every time",
+		})
+		grammar.AddRule("history_cyber_change", []string{
+			"data was purged from the nets",
+			"workers were reassigned without notice",
+			"security protocols were reset",
+			"bodies washed up in the harbor",
+		})
+		grammar.AddRule("history_cyber_current", []string{
+			"deny its existence publicly",
+			"have increased security tenfold",
+			"are unknown to net searches",
+			"eliminated everyone who knew the old owners",
+		})
+		grammar.AddRule("history_cyber_event", []string{
+			"Great Net Crash",
+			"Corporate Wars",
+			"AI Uprising of '58",
+			"Market Collapse",
+		})
+		grammar.AddRule("history_cyber_before", []string{
+			"a symbol of corporate success",
+			"home to thousands of workers",
+			"connected to everything",
+			"just another building",
+		})
+		grammar.AddRule("history_cyber_after", []string{
+			"a fortress of secrets",
+			"a dead zone on every map",
+			"a place where people disappear",
+			"something the corps won't talk about",
+		})
+		grammar.AddRule("history_cyber_secret", []string{
+			"servers containing pre-crash data",
+			"prototype tech worth killing for",
+			"evidence of corp atrocities",
+			"the real AI - the original",
+		})
+		grammar.AddRule("history_cyber_fate", []string{
+			"are never seen again",
+			"come back changed, silent",
+			"end up flatlined in alleys",
+			"find their entire lives erased",
+		})
+
+	case "post-apocalyptic":
+		grammar.AddRule("history_paragraph", []string{
+			fmt.Sprintf("Before the Fall, %s was #history_postapoc_before# Now it stands as #history_postapoc_now# Survivors #history_postapoc_survivors#", location),
+			fmt.Sprintf("The old-timers say %s #history_postapoc_legend# Whether true or not, #history_postapoc_effect# People still #history_postapoc_behavior#", location),
+			fmt.Sprintf("In the #history_postapoc_era# %s became #history_postapoc_role# The marks of that time #history_postapoc_marks#", location),
+			fmt.Sprintf("Records from before show %s was #history_postapoc_original# Hard to imagine now, when #history_postapoc_contrast#", location),
+		})
+		grammar.AddRule("history_postapoc_before", []string{
+			"a thriving city center",
+			"home to thousands of families",
+			"a symbol of progress",
+			"just an ordinary place",
+		})
+		grammar.AddRule("history_postapoc_now", []string{
+			"a skeleton of its former self",
+			"shelter for those with nowhere else",
+			"a reminder of what was lost",
+			"valuable scavenging territory",
+		})
+		grammar.AddRule("history_postapoc_survivors", []string{
+			"avoid it after dark",
+			"fight over its resources",
+			"tell stories of what happened here",
+			"have built a community in its ruins",
+		})
+		grammar.AddRule("history_postapoc_legend", []string{
+			"held out longer than anywhere else",
+			"was where the bombs first fell",
+			"sheltered the last government officials",
+			"has supplies buried deep beneath",
+		})
+		grammar.AddRule("history_postapoc_effect", []string{
+			"it shapes how people treat this place",
+			"it draws scavengers and worse",
+			"it keeps some away forever",
+			"it matters to those who remember",
+		})
+		grammar.AddRule("history_postapoc_behavior", []string{
+			"search for what was buried",
+			"mark the walls with warnings",
+			"avoid the deeper levels",
+			"tell their children to stay away",
+		})
+		grammar.AddRule("history_postapoc_era", []string{
+			"first years after the Fall",
+			"time of the raiders",
+			"great sickness",
+			"winter that killed thousands",
+		})
+		grammar.AddRule("history_postapoc_role", []string{
+			"a fortress for survivors",
+			"territory of a brutal warlord",
+			"neutral ground for trade",
+			"a hospital for the dying",
+		})
+		grammar.AddRule("history_postapoc_marks", []string{
+			"are still visible on every wall",
+			"tell stories too sad to repeat",
+			"serve as warnings to newcomers",
+			"have been mostly scavenged away",
+		})
+		grammar.AddRule("history_postapoc_original", []string{
+			"a hospital saving thousands",
+			"a school teaching the future",
+			"a government building running everything",
+			"a mall where families shopped",
+		})
+		grammar.AddRule("history_postapoc_contrast", []string{
+			"we fight for clean water here",
+			"mutants nest in the upper floors",
+			"the radiation still glows at night",
+			"the bones of the dead still litter the halls",
 		})
 
 	default:

@@ -238,24 +238,61 @@ func TestPickRandomEmptySlice(t *testing.T) {
 	}
 }
 
-// TestGetVolumeNumber tests the getVolumeNumber function.
+// TestGetVolumeNumber tests the getVolumeNumber function with various inputs.
 func TestGetVolumeNumber(t *testing.T) {
-	gen := NewGenerator()
-	volume := gen.getVolumeNumber()
-	if volume != 1 {
-		t.Errorf("getVolumeNumber() = %d, want 1 (default)", volume)
+	tests := []struct {
+		name     string
+		custom   map[string]interface{}
+		expected int
+	}{
+		{"nil custom", nil, 1},
+		{"empty custom", map[string]interface{}{}, 1},
+		{"int volume", map[string]interface{}{"volume_number": 5}, 5},
+		{"float64 volume", map[string]interface{}{"volume_number": 3.0}, 3},
+		{"zero volume defaults to 1", map[string]interface{}{"volume_number": 0}, 1},
+		{"negative volume defaults to 1", map[string]interface{}{"volume_number": -1}, 1},
+		{"string volume defaults to 1", map[string]interface{}{"volume_number": "three"}, 1},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			gen := NewGenerator()
+			gen.custom = tt.custom
+			volume := gen.getVolumeNumber()
+			if volume != tt.expected {
+				t.Errorf("getVolumeNumber() = %d, want %d", volume, tt.expected)
+			}
+		})
 	}
 }
 
-// TestGetSeriesName tests the getSeriesName function.
+// TestGetSeriesName tests the getSeriesName function with various inputs.
 func TestGetSeriesName(t *testing.T) {
-	gen := NewGenerator()
-	name, ok := gen.getSeriesName()
-	if ok {
-		t.Error("getSeriesName() should return false")
+	tests := []struct {
+		name         string
+		custom       map[string]interface{}
+		expectedName string
+		expectedOk   bool
+	}{
+		{"nil custom", nil, "", false},
+		{"empty custom", map[string]interface{}{}, "", false},
+		{"valid series name", map[string]interface{}{"series_name": "Chronicles of the Lost"}, "Chronicles of the Lost", true},
+		{"empty series name", map[string]interface{}{"series_name": ""}, "", false},
+		{"non-string series name", map[string]interface{}{"series_name": 123}, "", false},
 	}
-	if name != "" {
-		t.Errorf("getSeriesName() name = %q, want empty", name)
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			gen := NewGenerator()
+			gen.custom = tt.custom
+			name, ok := gen.getSeriesName()
+			if name != tt.expectedName {
+				t.Errorf("getSeriesName() name = %q, want %q", name, tt.expectedName)
+			}
+			if ok != tt.expectedOk {
+				t.Errorf("getSeriesName() ok = %v, want %v", ok, tt.expectedOk)
+			}
+		})
 	}
 }
 
@@ -532,5 +569,63 @@ func BenchmarkGenerateHistoryBook(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		_, _ = gen.Generate(int64(i), params)
+	}
+}
+
+// TestGenerateLoreBookWithSeries tests lore book generation with series parameters.
+func TestGenerateLoreBookWithSeries(t *testing.T) {
+	gen := NewGenerator()
+	params := procgen.GenerationParams{
+		Difficulty: 0.5,
+		Depth:      5,
+		GenreID:    "fantasy",
+		Custom: map[string]interface{}{
+			"book_type":     engine.BookTypeLore,
+			"series_name":   "Chronicles of the Lost Kingdom",
+			"volume_number": 3,
+		},
+	}
+
+	result, err := gen.Generate(12345, params)
+	if err != nil {
+		t.Fatalf("Generate() error = %v", err)
+	}
+
+	book := result.(*engine.BookComponent)
+
+	expectedTitle := "Chronicles of the Lost Kingdom - Volume 3"
+	if book.Title != expectedTitle {
+		t.Errorf("Title = %q, want %q", book.Title, expectedTitle)
+	}
+
+	if book.BookType != engine.BookTypeLore {
+		t.Errorf("BookType = %v, want %v", book.BookType, engine.BookTypeLore)
+	}
+}
+
+// TestGenerateLoreBookWithSeriesFloat64Volume tests series with float64 volume (JSON behavior).
+func TestGenerateLoreBookWithSeriesFloat64Volume(t *testing.T) {
+	gen := NewGenerator()
+	params := procgen.GenerationParams{
+		Difficulty: 0.5,
+		Depth:      5,
+		GenreID:    "sci-fi",
+		Custom: map[string]interface{}{
+			"book_type":     engine.BookTypeLore,
+			"series_name":   "The AI Chronicles",
+			"volume_number": 2.0, // JSON often unmarshals numbers as float64
+		},
+	}
+
+	result, err := gen.Generate(12345, params)
+	if err != nil {
+		t.Fatalf("Generate() error = %v", err)
+	}
+
+	book := result.(*engine.BookComponent)
+
+	expectedTitle := "The AI Chronicles - Volume 2"
+	if book.Title != expectedTitle {
+		t.Errorf("Title = %q, want %q", book.Title, expectedTitle)
 	}
 }

@@ -118,6 +118,24 @@
 // All security checks are deterministic and reproducible for consistent
 // audit results across different environments.
 //
+// # Determinism Exception
+//
+// This package uses time.Now() for audit timing metadata:
+//   - StartTime: marks when RunFullAudit begins (audit.go)
+//   - EndTime: marks when RunFullAudit completes (audit.go)
+//
+// These are observability timestamps for measuring audit execution duration.
+// They do not affect audit check logic, pass/fail results, or any procedural
+// generation. Audit outcomes are fully deterministic regardless of timing.
+//
+// # Debug Logging in Cryptographic Functions
+//
+// ConstantTimeCompare includes debug-level logging (logrus.Debug) to aid
+// development troubleshooting. This logging only activates when LOG_LEVEL=debug
+// and does not affect constant-time behavior — the actual comparison uses
+// crypto/subtle.ConstantTimeCompare which is immune to log-induced timing
+// variation. The debug log overhead is negligible at non-debug levels.
+//
 // # Determinism Exemption
 //
 // This package uses time.Now() for audit timing metadata (audit.go).

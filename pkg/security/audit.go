@@ -1015,7 +1015,10 @@ func validateCoordinateBounds() (bool, string) {
 	return true, "Coordinate validation operational"
 }
 
-// ConstantTimeCompare performs constant-time comparison to prevent timing attacks
+// ConstantTimeCompare performs constant-time comparison to prevent timing attacks.
+// Debug-level logging is included for development troubleshooting but does not
+// affect the constant-time guarantee — crypto/subtle.ConstantTimeCompare handles
+// the actual comparison. Logging only activates at LOG_LEVEL=debug.
 func ConstantTimeCompare(a, b []byte) bool {
 	log.WithFields(logrus.Fields{
 		"len_a": len(a),

@@ -145,6 +145,38 @@ func TestCharacterCreationTutorial_SkipTutorial(t *testing.T) {
 	}
 }
 
+// TestCharacterCreationTutorial_SetEnabled tests the SetEnabled method.
+// This validates the fix for Task 3.3 from PLAN.md (ShowTutorials Setting Not Wired).
+func TestCharacterCreationTutorial_SetEnabled(t *testing.T) {
+	cct := NewCharacterCreationTutorial()
+
+	// Verify initial state
+	if !cct.Enabled {
+		t.Error("Expected tutorial to be enabled by default")
+	}
+	if !cct.ShowUI {
+		t.Error("Expected ShowUI to be true by default")
+	}
+
+	// Disable via SetEnabled
+	cct.SetEnabled(false)
+	if cct.Enabled {
+		t.Error("Expected tutorial to be disabled after SetEnabled(false)")
+	}
+	if cct.ShowUI {
+		t.Error("Expected ShowUI to be false after SetEnabled(false)")
+	}
+
+	// Re-enable via SetEnabled
+	cct.SetEnabled(true)
+	if !cct.Enabled {
+		t.Error("Expected tutorial to be re-enabled after SetEnabled(true)")
+	}
+	if !cct.ShowUI {
+		t.Error("Expected ShowUI to be true after SetEnabled(true)")
+	}
+}
+
 // TestCharacterCreationTutorial_Reset tests resetting the tutorial.
 func TestCharacterCreationTutorial_Reset(t *testing.T) {
 	cct := NewCharacterCreationTutorial()

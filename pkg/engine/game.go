@@ -1869,15 +1869,25 @@ func (g *EbitenGame) ApplySettings() error {
 		ebiten.SetFullscreen(settings.Fullscreen)
 	}
 
+	// Apply ShowTutorials setting to active tutorial systems (Task 3.3 from PLAN.md)
+	if g.TutorialSystem != nil {
+		g.TutorialSystem.Enabled = settings.ShowTutorials
+		g.TutorialSystem.ShowUI = settings.ShowTutorials
+	}
+	if g.CharacterCreationTutorial != nil {
+		g.CharacterCreationTutorial.SetEnabled(settings.ShowTutorials)
+	}
+
 	// Graphics quality and ShowFPS are informational for now
 	// Future: could affect particle counts, sprite quality, etc.
 
 	if g.logger != nil {
 		g.logger.WithFields(logrus.Fields{
-			"vsync":      settings.VSync,
-			"fullscreen": settings.Fullscreen,
-			"quality":    settings.GraphicsQuality,
-			"showFPS":    settings.ShowFPS,
+			"vsync":         settings.VSync,
+			"fullscreen":    settings.Fullscreen,
+			"quality":       settings.GraphicsQuality,
+			"showFPS":       settings.ShowFPS,
+			"showTutorials": settings.ShowTutorials,
 		}).Debug("applied display settings")
 	}
 

@@ -278,6 +278,100 @@ func TestSettingsUI_IntegrationWithGame(t *testing.T) {
 	}
 }
 
+// TestApplySettings_ShowTutorials tests that ShowTutorials setting is applied to tutorial systems.
+// This validates the fix for Task 3.3 from PLAN.md (ShowTutorials Setting Not Wired).
+func TestApplySettings_ShowTutorials(t *testing.T) {
+	tempDir := t.TempDir()
+	sm := &SettingsManager{
+		settings:     DefaultSettings(),
+		settingsPath: filepath.Join(tempDir, "settings.json"),
+	}
+
+	// Create tutorial systems
+	tutorialSystem := NewTutorialSystem()
+	charCreationTutorial := NewCharacterCreationTutorial()
+
+	game := &EbitenGame{
+		SettingsManager:           sm,
+		TutorialSystem:            tutorialSystem,
+		CharacterCreationTutorial: charCreationTutorial,
+	}
+
+	// Verify initial state (tutorials enabled by default)
+	if !tutorialSystem.Enabled {
+		t.Error("Expected TutorialSystem to be enabled by default")
+	}
+	if !charCreationTutorial.Enabled {
+		t.Error("Expected CharacterCreationTutorial to be enabled by default")
+	}
+
+	// Disable tutorials via settings
+	settings := sm.GetSettings()
+	settings.ShowTutorials = false
+	sm.UpdateSettings(settings)
+
+	// Apply settings
+	err := game.ApplySettings()
+	if err != nil {
+		t.Fatalf("ApplySettings failed: %v", err)
+	}
+
+	// Verify tutorials were disabled
+	if tutorialSystem.Enabled {
+		t.Error("Expected TutorialSystem to be disabled after ShowTutorials=false")
+	}
+	if tutorialSystem.ShowUI {
+		t.Error("Expected TutorialSystem.ShowUI to be disabled after ShowTutorials=false")
+	}
+	if charCreationTutorial.Enabled {
+		t.Error("Expected CharacterCreationTutorial to be disabled after ShowTutorials=false")
+	}
+	if charCreationTutorial.ShowUI {
+		t.Error("Expected CharacterCreationTutorial.ShowUI to be disabled after ShowTutorials=false")
+	}
+
+	// Re-enable tutorials via settings
+	settings.ShowTutorials = true
+	sm.UpdateSettings(settings)
+	err = game.ApplySettings()
+	if err != nil {
+		t.Fatalf("ApplySettings failed on re-enable: %v", err)
+	}
+
+	// Verify tutorials were re-enabled
+	if !tutorialSystem.Enabled {
+		t.Error("Expected TutorialSystem to be re-enabled after ShowTutorials=true")
+	}
+	if !charCreationTutorial.Enabled {
+		t.Error("Expected CharacterCreationTutorial to be re-enabled after ShowTutorials=true")
+	}
+}
+
+// TestApplySettings_ShowTutorials_NilTutorialSystems tests graceful handling when tutorial systems are nil.
+func TestApplySettings_ShowTutorials_NilTutorialSystems(t *testing.T) {
+	tempDir := t.TempDir()
+	sm := &SettingsManager{
+		settings:     DefaultSettings(),
+		settingsPath: filepath.Join(tempDir, "settings.json"),
+	}
+
+	game := &EbitenGame{
+		SettingsManager:           sm,
+		TutorialSystem:            nil, // Explicitly nil
+		CharacterCreationTutorial: nil, // Explicitly nil
+	}
+
+	// Should not panic when tutorial systems are nil
+	settings := sm.GetSettings()
+	settings.ShowTutorials = false
+	sm.UpdateSettings(settings)
+
+	err := game.ApplySettings()
+	if err != nil {
+		t.Fatalf("ApplySettings should not fail with nil tutorial systems: %v", err)
+	}
+}
+
 // Benchmark applying settings
 func BenchmarkApplySettings(b *testing.B) {
 	tempDir := b.TempDir()

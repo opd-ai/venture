@@ -209,6 +209,13 @@ func (cct *CharacterCreationTutorial) SkipTutorial() {
 	cct.NotificationTTL = 2.0
 }
 
+// SetEnabled enables or disables the character creation tutorial.
+// This is called when the ShowTutorials setting is changed (Task 3.3 from PLAN.md).
+func (cct *CharacterCreationTutorial) SetEnabled(enabled bool) {
+	cct.Enabled = enabled
+	cct.ShowUI = enabled
+}
+
 // Draw renders the tutorial overlay on top of the character creation UI.
 func (cct *CharacterCreationTutorial) Draw(screen *ebiten.Image) {
 	if !cct.Enabled || !cct.ShowUI || cct.Completed {

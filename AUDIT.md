@@ -6,18 +6,18 @@
 
 ## Summary
 
-- **Total issues**: 229 (28 open, 201 resolved)
-- **Critical**: 0 (0 open) | **High**: 43 (0 open) | **Medium**: 42 (0 open) | **Low**: 144 (28 open)
-- **Affected subpackages**: 16 of 108 audited packages have open issues
-- **Resolution rate**: 201/229 (88%)
+- **Total issues**: 229 (25 open, 204 resolved)
+- **Critical**: 0 (0 open) | **High**: 43 (0 open) | **Medium**: 42 (0 open) | **Low**: 144 (25 open)
+- **Affected subpackages**: 15 of 108 audited packages have open issues
+- **Resolution rate**: 204/229 (89%)
 
 | Severity | Total | Open | Resolved |
 |----------|-------|------|----------|
 | Critical | 0 | 0 | 0 |
 | High | 43 | 0 | 43 |
 | Medium | 42 | 0 | 42 |
-| Low | 144 | 28 | 116 |
-| **Total** | **229** | **28** | **201** |
+| Low | 144 | 25 | 119 |
+| **Total** | **229** | **25** | **204** |
 
 ## Priority Resolution Order
 
@@ -132,11 +132,11 @@ _All medium-priority issues have been resolved._
 - **pkg/procgen/magic** (2 issues)
   - [ ] documentation — Missing package-level doc.go example import path (`pkg/procgen/magic` should be `github.com/opd-ai/venture/pkg/procgen/magic`) (`doc.go:68-88`)
   - [ ] documentation — Balance system formulas in doc.go could reference specific functions for easier navigation (`doc.go:108-122`)
-- **pkg/procgen/minigame/games** (4 issues)
+- **pkg/procgen/minigame/games** (1 open, 3 resolved)
   - [ ] error handling — No structured logging with logrus.WithFields; errors returned but not logged for observability (`card.go`, `dice.go`, `hacking.go`, `lockpicking.go`, `memory.go`, `puzzle.go`, `ritual.go`)
-  - [ ] test coverage — `System.Update()` method 0% coverage; documented as no-op but should have explicit test (`system.go:30`)
-  - [ ] test coverage — `determineGameStatus()` function 40% coverage; not all game state transitions tested (`memory.go:151`)
-  - [ ] test coverage — `GetRenderOutput()` methods 66.7% coverage across all games; nil LastRender edge case undertested (all game files)
+  - [x] test coverage — `System.Update()` method 0% coverage; documented as no-op but should have explicit test (`system.go:30`) — **FIXED 2026-02-21**: Added `TestSystemUpdate_NoOp` in `coverage_test.go`
+  - [x] test coverage — `determineGameStatus()` function 40% coverage; not all game state transitions tested (`memory.go:151`) — **FIXED 2026-02-21**: Added comprehensive tests for all 7 games in `coverage_test.go`
+  - [x] test coverage — `GetRenderOutput()` methods 66.7% coverage across all games; nil LastRender edge case undertested (all game files) — **FIXED 2026-02-21**: Added nil edge case tests in `coverage_test.go`
 - **pkg/procgen/narrative** (1 open, 1 resolved)
   - [ ] error handling — No structured logging in generator; errors returned but not logged with context. Adding logrus integration would improve debugging. (`generator.go:95-133`)
   - [x] documentation — Missing godoc comments for exported types `PlotPoint` and `PlayerChoice`. Only `StoryArc` and `StoryArcGenerator` are documented. (`generator.go:40,67`) — **VERIFIED 2026-02-21**: Both types now have godoc comments
@@ -642,11 +642,11 @@ _All medium-priority issues have been resolved._
 
 #### `pkg/procgen/minigame/games`
 - Source: [`pkg/procgen/minigame/games/AUDIT.md`](pkg/procgen/minigame/games/AUDIT.md)
-- Issues: 4 open (Low: 4)
+- Issues: 1 open, 3 resolved (Low: 4)
   - [Low] error handling — No structured logging with logrus.WithFields; errors returned but not logged for observability (`card.go`, `dice.go`, `hacking.go`, `lockpicking.go`, `memory.go`, `puzzle.go`, `ritual.go`)
-  - [Low] test coverage — `System.Update()` method 0% coverage; documented as no-op but should have explicit test (`system.go:30`)
-  - [Low] test coverage — `determineGameStatus()` function 40% coverage; not all game state transitions tested (`memory.go:151`)
-  - [Low] test coverage — `GetRenderOutput()` methods 66.7% coverage across all games; nil LastRender edge case undertested (all game files)
+  - ~~[Low] test coverage — `System.Update()` method 0% coverage; documented as no-op but should have explicit test (`system.go:30`)~~ ✅ **FIXED 2026-02-21**: Added `TestSystemUpdate_NoOp` in `coverage_test.go`
+  - ~~[Low] test coverage — `determineGameStatus()` function 40% coverage; not all game state transitions tested (`memory.go:151`)~~ ✅ **FIXED 2026-02-21**: Added tests for all 7 games in `coverage_test.go`
+  - ~~[Low] test coverage — `GetRenderOutput()` methods 66.7% coverage across all games; nil LastRender edge case undertested (all game files)~~ ✅ **FIXED 2026-02-21**: Added nil edge case tests in `coverage_test.go`
 
 #### `pkg/procgen/narrative`
 - Source: [`pkg/procgen/narrative/AUDIT.md`](pkg/procgen/narrative/AUDIT.md)
@@ -939,7 +939,7 @@ _All medium-priority issues have been resolved._
 - **Modding (pkg/modding/)**: 1 open issues (Low: 1)
 - **Narrative (pkg/narrative/)**: 0 open issues — _All issues resolved_
 - **Network (pkg/network/)**: 0 open issues — _All issues resolved_
-- **Procedural Generation (pkg/procgen/)**: 22 open issues (Low: 22)
+- **Procedural Generation (pkg/procgen/)**: 19 open issues (Low: 19)
 - **Rendering (pkg/rendering/)**: 1 open issues (Low: 1)
 - **Save/Load (pkg/saveload/)**: 3 open issues (Low: 3)
 - **Security (pkg/security/)**: 2 open issues (Low: 2)
@@ -952,18 +952,18 @@ _All medium-priority issues have been resolved._
 - **Phase 1 (Critical)**: 0 issues — No action required
 - **Phase 2 (High)**: 0 issues — No action required
 - **Phase 3 (Medium)**: 0 issues — All resolved
-- **Phase 4 (Low)**: 28 issues — Address opportunistically
+- **Phase 4 (Low)**: 25 issues — Address opportunistically
 
 ## Resolved Issues Summary
 
-201 issues have been resolved across 46 packages.
+204 issues have been resolved across 46 packages.
 
 | Severity | Resolved |
 |----------|----------|
 | High | 43 |
 | Medium | 42 |
-| Low | 116 |
-| **Total** | **201** |
+| Low | 119 |
+| **Total** | **204** |
 
 ---
 

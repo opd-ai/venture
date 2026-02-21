@@ -1,33 +1,33 @@
 # Audit: github.com/opd-ai/venture/pkg/procgen/minigame/games
-**Date**: 2026-02-16
+**Date**: 2026-02-16 (Updated: 2026-02-21)
 **Status**: Complete
 
 ## Summary
-The `pkg/procgen/minigame/games` package implements 7 complete mini-game types (card, dice, puzzle, memory, lockpicking, hacking, ritual) with deterministic gameplay and engine.MiniGame interface compliance. Package health is excellent with 93.5% test coverage (target: 65%), comprehensive documentation, and full client integration. Critical risk: Low — No stub code, all implementations complete, proper deterministic generation. Only minor documentation/logging improvements recommended.
+The `pkg/procgen/minigame/games` package implements 7 complete mini-game types (card, dice, puzzle, memory, lockpicking, hacking, ritual) with deterministic gameplay and engine.MiniGame interface compliance. Package health is excellent with 97.5% test coverage (target: 65%), comprehensive documentation, and full client integration. Critical risk: Low — No stub code, all implementations complete, proper deterministic generation. Only minor documentation/logging improvements recommended.
 
 ## Issues Found
 - [ ] low error handling — No structured logging with logrus.WithFields; errors returned but not logged for observability (`card.go`, `dice.go`, `hacking.go`, `lockpicking.go`, `memory.go`, `puzzle.go`, `ritual.go`)
-- [ ] low test coverage — `System.Update()` method 0% coverage; documented as no-op but should have explicit test (`system.go:30`)
-- [ ] low test coverage — `determineGameStatus()` function 40% coverage; not all game state transitions tested (`memory.go:151`)
-- [ ] low test coverage — `GetRenderOutput()` methods 66.7% coverage across all games; nil LastRender edge case undertested (all game files)
+- [x] low test coverage — `System.Update()` method coverage; documented as no-op but should have explicit test (`system.go:30`) — **FIXED 2026-02-21**: Added `TestSystemUpdate_NoOp` in `coverage_test.go` with tests for nil, empty, and populated entity lists across various delta times.
+- [x] low test coverage — `determineGameStatus()` function coverage; not all game state transitions tested (`memory.go:151`) — **FIXED 2026-02-21**: Added comprehensive tests for all 7 games covering Playing, Won, and Lost states in `coverage_test.go`.
+- [x] low test coverage — `GetRenderOutput()` methods coverage across all games; nil LastRender edge case undertested (all game files) — **FIXED 2026-02-21**: Added `TestGetRenderOutput_NilBeforePrepare`, `TestGetRenderOutput_NilWithoutInit`, and `TestGetRenderOutput_AfterPrepareRender` in `coverage_test.go`.
 
 ## Test Coverage
-93.5% (target: 65%) ✅
+97.5% (target: 65%) ✅
 
 ### Coverage Breakdown
-- **Overall**: 93.5% (28.5% above target)
+- **Overall**: 97.5% (32.5% above target) — **Improved from 93.5%**
 - **Source LOC**: ~2,010 lines (7 game implementations + system + render)
-- **Test LOC**: ~2,050 lines (comprehensive test suite)
-- **Files at 100% coverage**: `card.go` (Update 90%), `dice.go` (PrepareRender 76.2%), render.go, system.go (Update 0%)
-- **Lowest coverage areas**:
-  - `System.Update()`: 0% (documented no-op)
-  - `memory.go determineGameStatus()`: 40%
-  - All `GetRenderOutput()`: 66.7% (nil check edge case)
-  - All `PrepareRender()`: 76-88% (validation paths)
+- **Test LOC**: ~2,400 lines (comprehensive test suite)
+- **Files at 100% coverage**: `card.go` (Update 90%), `dice.go` (PrepareRender 76.2%), render.go, system.go
+- **Covered areas** (previously low):
+  - `System.Update()`: Now tested via `TestSystemUpdate_NoOp`
+  - `memory.go determineGameStatus()`: Now tested via all `*_DetermineGameStatus` tests
+  - All `GetRenderOutput()`: Now tested for nil edge cases
 
 ### Test Files
 - `card_test.go` (227 lines) — Card game unit tests
 - `games_test.go` (270 lines) — Integration tests for all games
+- `coverage_test.go` (350 lines) — Audit coverage tests for edge cases (Added 2026-02-21)
 - `interface_alignment_test.go` (215 lines) — MiniGame interface compliance
 - `loss_condition_test.go` (525 lines) — Loss condition edge cases for all games
 - `render_test.go` (533 lines) — PrepareRender/GetRenderOutput validation (Phase 27.3)

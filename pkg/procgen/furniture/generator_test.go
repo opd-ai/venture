@@ -423,3 +423,176 @@ func BenchmarkValidate(b *testing.B) {
 		gen.Validate(furniture)
 	}
 }
+
+// TestGenerateInputValidation tests that Generate properly validates input parameters
+func TestGenerateInputValidation(t *testing.T) {
+	gen := NewGenerator()
+
+	tests := []struct {
+		name       string
+		params     procgen.GenerationParams
+		wantErr    bool
+		errContent string
+	}{
+		{
+			name: "valid params",
+			params: procgen.GenerationParams{
+				Difficulty: 0.5,
+				Depth:      5,
+				GenreID:    "fantasy",
+				Custom:     map[string]interface{}{"SubType": "Chair"},
+			},
+			wantErr: false,
+		},
+		{
+			name: "negative difficulty",
+			params: procgen.GenerationParams{
+				Difficulty: -0.1,
+				Depth:      5,
+			},
+			wantErr:    true,
+			errContent: "invalid difficulty",
+		},
+		{
+			name: "difficulty over 1.0",
+			params: procgen.GenerationParams{
+				Difficulty: 1.5,
+				Depth:      5,
+			},
+			wantErr:    true,
+			errContent: "invalid difficulty",
+		},
+		{
+			name: "negative depth",
+			params: procgen.GenerationParams{
+				Difficulty: 0.5,
+				Depth:      -1,
+			},
+			wantErr:    true,
+			errContent: "invalid depth",
+		},
+		{
+			name: "zero difficulty is valid",
+			params: procgen.GenerationParams{
+				Difficulty: 0.0,
+				Depth:      0,
+				Custom:     map[string]interface{}{"SubType": "Table"},
+			},
+			wantErr: false,
+		},
+		{
+			name: "max difficulty is valid",
+			params: procgen.GenerationParams{
+				Difficulty: 1.0,
+				Depth:      100,
+				Custom:     map[string]interface{}{"SubType": "Chest"},
+			},
+			wantErr: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result, err := gen.Generate(12345, tt.params)
+			if tt.wantErr {
+				if err == nil {
+					t.Errorf("Generate() expected error containing %q, got nil", tt.errContent)
+				} else if tt.errContent != "" && !contains(err.Error(), tt.errContent) {
+					t.Errorf("Generate() error = %v, want error containing %q", err, tt.errContent)
+				}
+			} else {
+				if err != nil {
+					t.Errorf("Generate() unexpected error = %v", err)
+				}
+				if result == nil {
+					t.Error("Generate() returned nil result for valid params")
+				}
+			}
+		})
+	}
+}
+
+// TestDepthBasedFurnitureWeighting tests that furniture selection varies by depth
+func TestDepthBasedFurnitureWeighting(t *testing.T) {
+	gen := NewGenerator()
+
+	// Generate many items at different depths and check distribution
+	depths := []int{0, 5, 10}
+	categoryCounts := make(map[int]map[FurnitureType]int)
+
+	for _, depth := range depths {
+		categoryCounts[depth] = make(map[FurnitureType]int)
+		params := procgen.GenerationParams{
+			Difficulty: 0.5,
+			Depth:      depth,
+		}
+
+		// Generate 100 items at each depth
+		for i := 0; i < 100; i++ {
+			seed := int64(depth*1000 + i)
+			result, err := gen.Generate(seed, params)
+			if err != nil {
+				t.Fatalf("Generate() failed at depth %d, seed %d: %v", depth, seed, err)
+			}
+			furniture := result.(*Furniture)
+			categoryCounts[depth][furniture.Type]++
+		}
+	}
+
+	// At depth 0, Seating and Storage should dominate
+	lowDepthSeating := categoryCounts[0][TypeSeating] + categoryCounts[0][TypeStorage] + categoryCounts[0][TypeTable]
+	if lowDepthSeating < 40 {
+		t.Errorf("At depth 0, expected common furniture (Seating/Storage/Table) to be dominant, got %d/100", lowDepthSeating)
+	}
+
+	// At depth 10, Decoration and Lighting should be more common than at depth 0
+	highDepthDecor := categoryCounts[10][TypeDecoration] + categoryCounts[10][TypeLighting]
+	lowDepthDecor := categoryCounts[0][TypeDecoration] + categoryCounts[0][TypeLighting]
+	if highDepthDecor <= lowDepthDecor {
+		t.Errorf("Expected more decorative items at depth 10 (%d) than depth 0 (%d)", highDepthDecor, lowDepthDecor)
+	}
+}
+
+// TestCalculateCategoryWeights tests the weight calculation function directly
+func TestCalculateCategoryWeights(t *testing.T) {
+	gen := NewGenerator()
+
+	tests := []struct {
+		name       string
+		depth      int
+		difficulty float64
+		checkType  FurnitureType
+		wantMin    int
+	}{
+		{"early game seating weight", 1, 0.2, TypeSeating, 3},
+		{"early game decoration weight", 1, 0.2, TypeDecoration, 1},
+		{"late game decoration weight", 10, 0.8, TypeDecoration, 4},
+		{"late game seating weight", 10, 0.8, TypeSeating, 1},
+		{"high difficulty boosts decoration", 5, 0.8, TypeDecoration, 2},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			weights := gen.calculateCategoryWeights(tt.depth, tt.difficulty)
+			if weights[tt.checkType] < tt.wantMin {
+				t.Errorf("calculateCategoryWeights(%d, %.1f)[%v] = %d, want >= %d",
+					tt.depth, tt.difficulty, tt.checkType, weights[tt.checkType], tt.wantMin)
+			}
+		})
+	}
+}
+
+// contains checks if s contains substr (helper for error checking)
+func contains(s, substr string) bool {
+	return len(s) >= len(substr) && (s == substr || len(substr) == 0 ||
+		(len(s) > 0 && len(substr) > 0 && findSubstring(s, substr)))
+}
+
+func findSubstring(s, substr string) bool {
+	for i := 0; i <= len(s)-len(substr); i++ {
+		if s[i:i+len(substr)] == substr {
+			return true
+		}
+	}
+	return false
+}

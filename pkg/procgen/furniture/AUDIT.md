@@ -6,13 +6,13 @@
 The furniture package implements procedural generation of 30+ furniture types across 8 categories with deterministic seed-based algorithms, placement validation, and genre-specific theming. Overall code quality is high with 89.5% test coverage (exceeding 65% target), proper ECS-compliant architecture (pure data types, no behavioral methods), comprehensive documentation, and excellent determinism enforcement. Minor issues identified relate to future enhancement comments and missing input parameter validation.
 
 ## Issues Found
-- [ ] <severity:low> **Stub/incomplete code** — `chooseRandomSubType` has comment "Could be weighted by depth/difficulty in future" indicating incomplete depth-based weighting logic (`generator.go:196`)
-- [ ] <severity:low> **Error handling** — `Generate` method does not validate `params.Difficulty` range (should be 0.0-1.0) or `params.Depth` (should be non-negative) before use (`generator.go:119`)
-- [ ] <severity:low> **Error handling** — `Generate` method does not validate `params.GenreID` is non-empty before using in genre-specific logic (`generator.go:119`)
-- [ ] <severity:low> **Doc coverage** — Unexported helper functions lack godoc comments: `generateDimensions`, `calculateCollisionBox`, `calculateCapacity`, `calculateLightIntensity`, `buildFurniture` (`generator.go:35-117`)
+- [x] <severity:low> **Stub/incomplete code** — `chooseRandomSubType` has comment "Could be weighted by depth/difficulty in future" indicating incomplete depth-based weighting logic (`generator.go:196`) — **FIXED 2026-02-21**: Implemented depth-based weighting via `calculateCategoryWeights()` function with early/mid/late game distribution.
+- [x] <severity:low> **Error handling** — `Generate` method does not validate `params.Difficulty` range (should be 0.0-1.0) or `params.Depth` (should be non-negative) before use (`generator.go:119`) — **FIXED 2026-02-21**: Added input validation at start of Generate() method.
+- [x] <severity:low> **Error handling** — `Generate` method does not validate `params.GenreID` is non-empty before using in genre-specific logic (`generator.go:119`) — **ACKNOWLEDGED**: GenreID empty is acceptable; defaults to neutral/fantasy styling.
+- [x] <severity:low> **Doc coverage** — Unexported helper functions lack godoc comments: `generateDimensions`, `calculateCollisionBox`, `calculateCapacity`, `calculateLightIntensity`, `buildFurniture` (`generator.go:35-117`) — **FIXED 2026-02-21**: All helper functions now have proper godoc comments.
 
 ## Test Coverage
-89.5% (target: 65%) ✅
+92.5% (target: 65%) ✅
 
 **Test files**: 3 files, 1,329 LOC
 - `generator_test.go` — 13 test functions, 2 benchmarks
@@ -49,7 +49,7 @@ The furniture package implements procedural generation of 30+ furniture types ac
 **No serialization methods** — `Furniture` and `PlacedFurniture` lack `Serialize()`/`Deserialize()` methods. This may be needed if furniture state needs persistence in save files. Current integration suggests furniture is regenerated on demand rather than persisted.
 
 ## Recommendations
-1. **[LOW] Implement depth-based furniture weighting** — Complete the `chooseRandomSubType` logic to prefer common furniture at low depth and decorative/rare types at high depth as documented (`generator.go:186-197`)
-2. **[LOW] Add input parameter validation** — Validate `params.Difficulty` (0.0-1.0), `params.Depth` (≥0), and `params.GenreID` (non-empty) at the start of `Generate()` for defensive programming
-3. **[LOW] Document helper functions** — Add godoc comments to unexported helper functions for code maintainability
+1. ~~**[LOW] Implement depth-based furniture weighting** — Complete the `chooseRandomSubType` logic to prefer common furniture at low depth and decorative/rare types at high depth as documented (`generator.go:186-197`)~~ ✅ DONE
+2. ~~**[LOW] Add input parameter validation** — Validate `params.Difficulty` (0.0-1.0), `params.Depth` (≥0), and `params.GenreID` (non-empty) at the start of `Generate()` for defensive programming~~ ✅ DONE (GenreID validation skipped - empty defaults work correctly)
+3. ~~**[LOW] Document helper functions** — Add godoc comments to unexported helper functions for code maintainability~~ ✅ DONE
 4. **[OPTIONAL] Consider serialization** — Evaluate if `Furniture` needs `Serialize()`/`Deserialize()` methods for save file persistence; current regeneration approach may be sufficient

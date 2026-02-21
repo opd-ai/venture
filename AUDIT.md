@@ -6,18 +6,18 @@
 
 ## Summary
 
-- **Total issues**: 225 (87 open, 138 resolved)
-- **Critical**: 0 (0 open) | **High**: 43 (0 open) | **Medium**: 42 (0 open) | **Low**: 140 (87 open)
-- **Affected subpackages**: 39 of 108 audited packages have open issues
-- **Resolution rate**: 138/225 (61%)
+- **Total issues**: 225 (80 open, 145 resolved)
+- **Critical**: 0 (0 open) | **High**: 43 (0 open) | **Medium**: 42 (0 open) | **Low**: 140 (80 open)
+- **Affected subpackages**: 38 of 108 audited packages have open issues
+- **Resolution rate**: 145/225 (64%)
 
 | Severity | Total | Open | Resolved |
 |----------|-------|------|----------|
 | Critical | 0 | 0 | 0 |
 | High | 43 | 0 | 43 |
 | Medium | 42 | 0 | 42 |
-| Low | 140 | 87 | 53 |
-| **Total** | **225** | **87** | **138** |
+| Low | 140 | 80 | 60 |
+| **Total** | **225** | **80** | **145** |
 
 ## Priority Resolution Order
 
@@ -116,14 +116,14 @@ _All medium-priority issues have been resolved._
   - [ ] ECS compliance — `engine.Faction` struct has behavior methods `IsEnemy()` and `IsAlly()` instead of being pure data (`pkg/engine/faction_component.go:137-143`)
   - [ ] Documentation — Missing benchmark tests for performance validation despite doc.go claiming <1-3ms generation times (`generator_test.go:1`)
   - [ ] Error handling — No logging on validation errors; errors are only returned without structured logging context (`generator.go:29-31`)
-- **pkg/procgen/furniture** (7 issues)
-  - [ ] **Stub/incomplete code** — `chooseRandomSubType` has comment "Could be weighted by depth/difficulty in future" indicating incomplete depth-based weighting logic (`generator.go:196`)
-  - [ ] **Error handling** — `Generate` method does not validate `params.Difficulty` range (should be 0.0-1.0) or `params.Depth` (should be non-negative) before use (`generator.go:119`)
-  - [ ] **Error handling** — `Generate` method does not validate `params.GenreID` is non-empty before using in genre-specific logic (`generator.go:119`)
-  - [ ] **Doc coverage** — Unexported helper functions lack godoc comments: `generateDimensions`, `calculateCollisionBox`, `calculateCapacity`, `calculateLightIntensity`, `buildFurniture` (`generator.go:35-117`)
-  - [ ] Implement depth-based furniture weighting
-  - [ ] Add input parameter validation
-  - [ ] Document helper functions
+- **pkg/procgen/furniture** (7 issues, 4 resolved)
+  - [x] **Stub/incomplete code** — `chooseRandomSubType` has comment "Could be weighted by depth/difficulty in future" indicating incomplete depth-based weighting logic (`generator.go:196`) — **FIXED 2026-02-21**: Implemented depth-based weighting
+  - [x] **Error handling** — `Generate` method does not validate `params.Difficulty` range (should be 0.0-1.0) or `params.Depth` (should be non-negative) before use (`generator.go:119`) — **FIXED 2026-02-21**: Added validation
+  - [x] **Error handling** — `Generate` method does not validate `params.GenreID` is non-empty before using in genre-specific logic (`generator.go:119`) — **ACKNOWLEDGED**: Empty GenreID defaults to neutral styling, acceptable behavior
+  - [x] **Doc coverage** — Unexported helper functions lack godoc comments: `generateDimensions`, `calculateCollisionBox`, `calculateCapacity`, `calculateLightIntensity`, `buildFurniture` (`generator.go:35-117`) — **FIXED 2026-02-21**: All functions now have godoc
+  - [x] Implement depth-based furniture weighting — **FIXED 2026-02-21**
+  - [x] Add input parameter validation — **FIXED 2026-02-21**
+  - [x] Document helper functions — **FIXED 2026-02-21**
 - **pkg/procgen/genre** (1 issue)
   - [ ] doc — coverage — Missing benchmark documentation for blend operations (`blender_test.go:637-649`)
 - **pkg/procgen/magic** (2 issues)
@@ -609,14 +609,14 @@ _All medium-priority issues have been resolved._
 
 #### `pkg/procgen/furniture`
 - Source: [`pkg/procgen/furniture/AUDIT.md`](pkg/procgen/furniture/AUDIT.md)
-- Issues: 7 open (Low: 7)
-  - [Low] **Stub/incomplete code** — `chooseRandomSubType` has comment "Could be weighted by depth/difficulty in future" indicating incomplete depth-based weighting logic (`generator.go:196`)
-  - [Low] **Error handling** — `Generate` method does not validate `params.Difficulty` range (should be 0.0-1.0) or `params.Depth` (should be non-negative) before use (`generator.go:119`)
-  - [Low] **Error handling** — `Generate` method does not validate `params.GenreID` is non-empty before using in genre-specific logic (`generator.go:119`)
-  - [Low] **Doc coverage** — Unexported helper functions lack godoc comments: `generateDimensions`, `calculateCollisionBox`, `calculateCapacity`, `calculateLightIntensity`, `buildFurniture` (`generator.go:35-117`)
-  - [Low] Implement depth-based furniture weighting
-  - [Low] Add input parameter validation
-  - [Low] Document helper functions
+- Issues: 0 open, 7 resolved (Low: 7)
+  - ~~[Low] **Stub/incomplete code** — `chooseRandomSubType` has comment "Could be weighted by depth/difficulty in future" indicating incomplete depth-based weighting logic (`generator.go:196`)~~ ✅ **FIXED 2026-02-21**
+  - ~~[Low] **Error handling** — `Generate` method does not validate `params.Difficulty` range (should be 0.0-1.0) or `params.Depth` (should be non-negative) before use (`generator.go:119`)~~ ✅ **FIXED 2026-02-21**
+  - ~~[Low] **Error handling** — `Generate` method does not validate `params.GenreID` is non-empty before using in genre-specific logic (`generator.go:119`)~~ ✅ **ACKNOWLEDGED**: Empty defaults work correctly
+  - ~~[Low] **Doc coverage** — Unexported helper functions lack godoc comments: `generateDimensions`, `calculateCollisionBox`, `calculateCapacity`, `calculateLightIntensity`, `buildFurniture` (`generator.go:35-117`)~~ ✅ **FIXED 2026-02-21**
+  - ~~[Low] Implement depth-based furniture weighting~~ ✅ **FIXED 2026-02-21**
+  - ~~[Low] Add input parameter validation~~ ✅ **FIXED 2026-02-21**
+  - ~~[Low] Document helper functions~~ ✅ **FIXED 2026-02-21**
 
 #### `pkg/procgen/genre`
 - Source: [`pkg/procgen/genre/AUDIT.md`](pkg/procgen/genre/AUDIT.md)

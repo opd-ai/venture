@@ -22,8 +22,8 @@ func NewGenerator() *Generator {
 	return &Generator{}
 }
 
-// Generate creates a furniture item with deterministic seed-based generation
-// resolveSubType determines the furniture subtype from params or random selection
+// resolveSubType determines the furniture subtype from params or random selection.
+// If params.Custom["SubType"] is set, uses that; otherwise randomly selects one.
 func (gen *Generator) resolveSubType(rng *rand.Rand, params procgen.GenerationParams) string {
 	if st, ok := params.Custom["SubType"].(string); ok && st != "" {
 		return st
@@ -116,7 +116,18 @@ func buildFurniture(seed int64, tmpl *Template, material MaterialType, rarity Ra
 	return furniture
 }
 
+// Generate creates a furniture item with deterministic seed-based generation.
+// Validates input parameters and generates furniture based on seed and params.
+// Returns error if params are invalid or template cannot be found.
 func (gen *Generator) Generate(seed int64, params procgen.GenerationParams) (interface{}, error) {
+	// Validate input parameters
+	if params.Difficulty < 0.0 || params.Difficulty > 1.0 {
+		return nil, fmt.Errorf("invalid difficulty %.2f: must be between 0.0 and 1.0", params.Difficulty)
+	}
+	if params.Depth < 0 {
+		return nil, fmt.Errorf("invalid depth %d: must be non-negative", params.Depth)
+	}
+
 	rng := rand.New(rand.NewSource(seed))
 
 	subType := gen.resolveSubType(rng, params)
@@ -182,19 +193,89 @@ func (gen *Generator) Validate(result interface{}) error {
 	return nil
 }
 
-// chooseRandomSubType selects a random furniture subtype weighted by depth/difficulty
+// chooseRandomSubType selects a random furniture subtype weighted by depth/difficulty.
+// At low depth (0-3), prefers common furniture types like Seating, Storage, and Tables.
+// At medium depth (4-7), includes more variety with Crafting and Bedding.
+// At high depth (8+), prefers Decoration and Lighting types for interesting finds.
 func (gen *Generator) chooseRandomSubType(rng *rand.Rand, params procgen.GenerationParams) string {
-	// At low depth, prefer common furniture types
-	// At high depth, prefer rare/decorative types
-
 	allSubTypes := GetAllSubTypes()
 	if len(allSubTypes) == 0 {
 		return "Chair" // Fallback
 	}
 
-	// Simple random selection for now
-	// Could be weighted by depth/difficulty in future
-	return allSubTypes[rng.Intn(len(allSubTypes))]
+	// Calculate category weights based on depth
+	// Low depth: common furniture, High depth: decorative/rare
+	weights := gen.calculateCategoryWeights(params.Depth, params.Difficulty)
+
+	// Build weighted list of subtypes
+	weightedSubTypes := make([]string, 0, len(allSubTypes))
+	for _, subType := range allSubTypes {
+		tmpl := GetTemplate(subType)
+		if tmpl == nil {
+			continue
+		}
+		// Get weight for this category
+		weight := weights[tmpl.Type]
+		// Add subtype to list 'weight' times for weighted selection
+		for i := 0; i < weight; i++ {
+			weightedSubTypes = append(weightedSubTypes, subType)
+		}
+	}
+
+	if len(weightedSubTypes) == 0 {
+		return allSubTypes[rng.Intn(len(allSubTypes))]
+	}
+
+	return weightedSubTypes[rng.Intn(len(weightedSubTypes))]
+}
+
+// calculateCategoryWeights returns weights for each furniture category based on depth.
+// Higher weights mean more likely selection. Returns map of FurnitureType to weight (1-4).
+func (gen *Generator) calculateCategoryWeights(depth int, difficulty float64) map[FurnitureType]int {
+	weights := make(map[FurnitureType]int)
+
+	// Base weights for each category
+	// Seating/Storage/Tables are common everywhere
+	// Decoration/Lighting become more common at higher depths
+	// Crafting/Bedding are mid-tier
+
+	switch {
+	case depth <= 3: // Early game - basic furniture
+		weights[TypeSeating] = 4
+		weights[TypeStorage] = 4
+		weights[TypeTable] = 3
+		weights[TypeUtility] = 2
+		weights[TypeBedding] = 1
+		weights[TypeCrafting] = 1
+		weights[TypeDecoration] = 1
+		weights[TypeLighting] = 1
+	case depth <= 7: // Mid game - more variety
+		weights[TypeSeating] = 2
+		weights[TypeStorage] = 3
+		weights[TypeTable] = 2
+		weights[TypeUtility] = 2
+		weights[TypeBedding] = 3
+		weights[TypeCrafting] = 3
+		weights[TypeDecoration] = 2
+		weights[TypeLighting] = 2
+	default: // Late game - decorative/rare items
+		weights[TypeSeating] = 1
+		weights[TypeStorage] = 2
+		weights[TypeTable] = 1
+		weights[TypeUtility] = 2
+		weights[TypeBedding] = 2
+		weights[TypeCrafting] = 2
+		weights[TypeDecoration] = 4
+		weights[TypeLighting] = 4
+	}
+
+	// Difficulty can slightly boost decoration/lighting weights
+	if difficulty > 0.5 {
+		weights[TypeDecoration]++
+		weights[TypeLighting]++
+	}
+
+	return weights
 }
 
 // determineRarity calculates rarity tier based on difficulty and depth

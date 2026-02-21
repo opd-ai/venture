@@ -79,6 +79,7 @@ type SystemInitResult struct {
 	SkillLoadoutSystem                          *SkillLoadoutSystem
 	WeaponMasterySystem                         *WeaponMasterySystem
 	AttributeAllocationSystem                   *AttributeAllocationSystem
+	TalentSystem                                *TalentSystem
 	CompanionProgressionSystem                  *CompanionProgressionSystem
 	WeatherAudioSystem                          *WeatherAudioSystem
 	FactionXPBonusSystem                        *FactionXPBonusSystem
@@ -911,6 +912,26 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 			return
 		}
 		attributeAllocationSystem.AwardPoints(entity, attrComp.PointsPerLevel)
+	})
+
+	// 18d. TalentSystem - manages talent point allocation and passive bonuses
+	// Players spend talent points earned on level-up across 4 categories: Offense, Defense, Utility, Mastery
+	talentSystem := NewTalentSystem(game.World)
+	result.TalentSystem = talentSystem
+	game.World.AddSystem(talentSystem)
+
+	// Wire talent system to progression level-ups (1 talent point per level)
+	result.ProgressionSystem.AddLevelUpCallback(func(entity *Entity, newLevel int) {
+		comp, ok := entity.GetComponent("talent")
+		if !ok {
+			// Auto-create talent component on first level up
+			talentComp := NewTalentComponent()
+			entity.AddComponent(talentComp)
+			comp = talentComp
+		}
+		if talentComp, ok := comp.(*TalentComponent); ok {
+			talentComp.AddTalentPoints(1)
+		}
 	})
 
 	// 19. VisualFeedbackSystem - hit flashes and tints

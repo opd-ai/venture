@@ -273,6 +273,7 @@ type systemsContainer struct {
 	classAffinitySystem                         *engine.ClassAffinitySystem       // Tracks playstyle progression and combat archetypes
 	attributeAllocationSystem                   *engine.AttributeAllocationSystem // Manages core attribute point allocation
 	talentSystem                                *engine.TalentSystem              // Manages talent point allocation and passive bonuses
+	skillMutationSystem                         *engine.SkillMutationSystem       // Manages skill mutations for ability customization
 	equipmentSetBonusSystem                     *engine.EquipmentSetBonusSystem   // Manages equipment set piece tracking and tiered bonuses
 	visualFeedbackSystem                        *engine.VisualFeedbackSystem
 	weatherSystem                               *engine.WeatherSystem
@@ -1929,6 +1930,11 @@ func registerNonCriticalSystems(game *engine.EbitenGame, sys *systemsContainer) 
 
 	sys.talentSystem = engine.NewTalentSystem(game.World)
 	game.World.AddSystem(sys.talentSystem)
+
+	// SkillMutationSystem: allows players to customize skills with mutation effects
+	// Players collect mutations as loot and apply them for stat/effect modifications
+	sys.skillMutationSystem = engine.NewSkillMutationSystemWithLogger(game.World, game.World.GetLogger().Logger)
+	game.World.AddSystem(sys.skillMutationSystem)
 
 	// EquipmentSetBonusSystem: tracks equipped set pieces and applies tiered bonuses
 	// Players wearing multiple pieces from the same equipment set receive cumulative stat bonuses

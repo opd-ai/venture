@@ -81,6 +81,7 @@ type SystemInitResult struct {
 	ClassAffinitySystem                         *ClassAffinitySystem
 	AttributeAllocationSystem                   *AttributeAllocationSystem
 	TalentSystem                                *TalentSystem
+	SkillMutationSystem                         *SkillMutationSystem
 	EquipmentSetBonusSystem                     *EquipmentSetBonusSystem
 	CompanionProgressionSystem                  *CompanionProgressionSystem
 	WeatherAudioSystem                          *WeatherAudioSystem
@@ -977,6 +978,12 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 			talentComp.AddTalentPoints(1)
 		}
 	})
+
+	// 18d2. SkillMutationSystem - allows players to customize skills with mutation effects
+	// Players collect mutations as loot and apply them to skills for stat/effect modifications
+	skillMutationSystem := NewSkillMutationSystemWithLogger(game.World, config.Logger)
+	result.SkillMutationSystem = skillMutationSystem
+	game.World.AddSystem(skillMutationSystem)
 
 	// 18e. EquipmentSetBonusSystem - tracks equipped set pieces and applies tiered bonuses
 	// Players wearing multiple pieces from the same equipment set receive cumulative stat bonuses

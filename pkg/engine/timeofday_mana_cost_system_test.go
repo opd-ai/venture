@@ -51,15 +51,15 @@ func TestTimeOfDayManaCostSystem_BaseMultipliers(t *testing.T) {
 		wantLow   float64
 		wantHigh  float64
 	}{
-		// Fire empowered by day
-		{"fire_day", magic.ElementFire, palette.TimeOfDayDay, 0.84, 0.86},
-		{"fire_night", magic.ElementFire, palette.TimeOfDayNight, 1.14, 1.16},
-		// Light empowered by day
-		{"light_day", magic.ElementLight, palette.TimeOfDayDay, 0.84, 0.86},
-		{"light_night", magic.ElementLight, palette.TimeOfDayNight, 1.19, 1.21},
-		// Dark empowered by night
-		{"dark_night", magic.ElementDark, palette.TimeOfDayNight, 0.84, 0.86},
-		{"dark_day", magic.ElementDark, palette.TimeOfDayDay, 1.14, 1.16},
+		// Fire empowered by day (base + fantasy genre modifier -0.02)
+		{"fire_day", magic.ElementFire, palette.TimeOfDayDay, 0.82, 0.84},
+		{"fire_night", magic.ElementFire, palette.TimeOfDayNight, 1.12, 1.14},
+		// Light empowered by day (base + fantasy genre modifier -0.02)
+		{"light_day", magic.ElementLight, palette.TimeOfDayDay, 0.82, 0.84},
+		{"light_night", magic.ElementLight, palette.TimeOfDayNight, 1.17, 1.19},
+		// Dark empowered by night (base + fantasy genre modifier -0.02)
+		{"dark_night", magic.ElementDark, palette.TimeOfDayNight, 0.82, 0.84},
+		{"dark_day", magic.ElementDark, palette.TimeOfDayDay, 1.12, 1.14},
 		// Earth empowered by dawn/dusk
 		{"earth_dawn", magic.ElementEarth, palette.TimeOfDayDawn, 0.89, 0.91},
 		{"earth_dusk", magic.ElementEarth, palette.TimeOfDayDusk, 0.89, 0.91},

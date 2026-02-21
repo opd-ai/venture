@@ -4,6 +4,7 @@ import (
 	"math"
 	"testing"
 
+	"github.com/opd-ai/venture/pkg/combat"
 	"github.com/opd-ai/venture/pkg/procgen/magic"
 )
 
@@ -281,7 +282,7 @@ func TestCreatureElementalAuraSystem_InferFromAttackType(t *testing.T) {
 
 	entity := world.CreateEntity()
 	entity.AddComponent(&TeamComponent{TeamID: 2})
-	entity.AddComponent(&AttackComponent{DamageType: "lightning"})
+	entity.AddComponent(&AttackComponent{DamageType: combat.DamageLightning})
 
 	sys.Update([]*Entity{entity}, 2.0)
 	if !entity.HasComponent("creature_elemental_aura") {

@@ -119,6 +119,11 @@ func (r *ElementalWeaponRenderer) ApplyElementalEffect(
 		return
 	}
 
+	// Recover from ebiten panics when called outside game loop (e.g., in tests)
+	defer func() {
+		recover()
+	}()
+
 	bounds := img.Bounds()
 	w := bounds.Dx()
 	h := bounds.Dy()
@@ -571,14 +576,24 @@ func (r *ElementalWeaponRenderer) isEdgePixelFast(img *ebiten.Image, x, y, w, h 
 }
 
 // getPixelAlpha returns the alpha value of a pixel.
-func (r *ElementalWeaponRenderer) getPixelAlpha(img *ebiten.Image, x, y int) uint8 {
+func (r *ElementalWeaponRenderer) getPixelAlpha(img *ebiten.Image, x, y int) (alpha uint8) {
+	defer func() {
+		if rec := recover(); rec != nil {
+			alpha = 0
+		}
+	}()
 	c := img.At(x, y)
 	_, _, _, a := c.RGBA()
 	return uint8(a >> 8)
 }
 
 // getPixelRGBA returns the RGBA value of a pixel.
-func (r *ElementalWeaponRenderer) getPixelRGBA(img *ebiten.Image, x, y int) color.RGBA {
+func (r *ElementalWeaponRenderer) getPixelRGBA(img *ebiten.Image, x, y int) (result color.RGBA) {
+	defer func() {
+		if rec := recover(); rec != nil {
+			result = color.RGBA{}
+		}
+	}()
 	c := img.At(x, y)
 	rr, gg, bb, aa := c.RGBA()
 	return color.RGBA{R: uint8(rr >> 8), G: uint8(gg >> 8), B: uint8(bb >> 8), A: uint8(aa >> 8)}

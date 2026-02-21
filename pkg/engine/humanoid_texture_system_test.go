@@ -39,7 +39,7 @@ func TestNewHumanoidTextureComponent_Defaults(t *testing.T) {
 }
 
 func TestNewHumanoidTextureSystem(t *testing.T) {
-	world := NewWorld(nil)
+	world := NewWorld()
 	sys := NewHumanoidTextureSystem(world, 12345)
 
 	if sys == nil {
@@ -57,7 +57,7 @@ func TestNewHumanoidTextureSystem(t *testing.T) {
 }
 
 func TestHumanoidTextureSystem_SetGenre(t *testing.T) {
-	world := NewWorld(nil)
+	world := NewWorld()
 	sys := NewHumanoidTextureSystem(world, 12345)
 
 	sys.SetGenre("horror")
@@ -72,7 +72,7 @@ func TestHumanoidTextureSystem_SetGenre(t *testing.T) {
 }
 
 func TestHumanoidTextureSystem_Update_NilEntities(t *testing.T) {
-	world := NewWorld(nil)
+	world := NewWorld()
 	sys := NewHumanoidTextureSystem(world, 12345)
 
 	// Should not panic with nil entities
@@ -80,7 +80,7 @@ func TestHumanoidTextureSystem_Update_NilEntities(t *testing.T) {
 }
 
 func TestHumanoidTextureSystem_Update_EmptyEntities(t *testing.T) {
-	world := NewWorld(nil)
+	world := NewWorld()
 	sys := NewHumanoidTextureSystem(world, 12345)
 
 	// Should not panic with empty entities
@@ -88,7 +88,7 @@ func TestHumanoidTextureSystem_Update_EmptyEntities(t *testing.T) {
 }
 
 func TestHumanoidTextureSystem_Update_ScanInterval(t *testing.T) {
-	world := NewWorld(nil)
+	world := NewWorld()
 	sys := NewHumanoidTextureSystem(world, 12345)
 
 	entity := world.CreateEntity()
@@ -110,7 +110,7 @@ func TestHumanoidTextureSystem_Update_ScanInterval(t *testing.T) {
 }
 
 func TestHumanoidTextureSystem_Update_PlayerEntity(t *testing.T) {
-	world := NewWorld(nil)
+	world := NewWorld()
 	sys := NewHumanoidTextureSystem(world, 42)
 
 	entity := world.CreateEntity()
@@ -138,7 +138,7 @@ func TestHumanoidTextureSystem_Update_PlayerEntity(t *testing.T) {
 }
 
 func TestHumanoidTextureSystem_Update_NPCEntity(t *testing.T) {
-	world := NewWorld(nil)
+	world := NewWorld()
 	sys := NewHumanoidTextureSystem(world, 42)
 
 	entity := world.CreateEntity()
@@ -154,7 +154,7 @@ func TestHumanoidTextureSystem_Update_NPCEntity(t *testing.T) {
 }
 
 func TestHumanoidTextureSystem_Update_HumanoidCreature(t *testing.T) {
-	world := NewWorld(nil)
+	world := NewWorld()
 	sys := NewHumanoidTextureSystem(world, 42)
 
 	entity := world.CreateEntity()
@@ -170,7 +170,7 @@ func TestHumanoidTextureSystem_Update_HumanoidCreature(t *testing.T) {
 }
 
 func TestHumanoidTextureSystem_Update_NonHumanoidCreature(t *testing.T) {
-	world := NewWorld(nil)
+	world := NewWorld()
 	sys := NewHumanoidTextureSystem(world, 42)
 
 	entity := world.CreateEntity()
@@ -186,7 +186,7 @@ func TestHumanoidTextureSystem_Update_NonHumanoidCreature(t *testing.T) {
 }
 
 func TestHumanoidTextureSystem_Update_MerchantEntity(t *testing.T) {
-	world := NewWorld(nil)
+	world := NewWorld()
 	sys := NewHumanoidTextureSystem(world, 42)
 
 	entity := world.CreateEntity()
@@ -202,7 +202,7 @@ func TestHumanoidTextureSystem_Update_MerchantEntity(t *testing.T) {
 }
 
 func TestHumanoidTextureSystem_Update_GenreChange(t *testing.T) {
-	world := NewWorld(nil)
+	world := NewWorld()
 	sys := NewHumanoidTextureSystem(world, 42)
 	sys.SetGenre("fantasy")
 
@@ -231,7 +231,7 @@ func TestHumanoidTextureSystem_Update_GenreChange(t *testing.T) {
 }
 
 func TestHumanoidTextureSystem_GetActiveTextureCount(t *testing.T) {
-	world := NewWorld(nil)
+	world := NewWorld()
 	sys := NewHumanoidTextureSystem(world, 42)
 
 	// No entities yet
@@ -259,7 +259,7 @@ func TestHumanoidTextureSystem_GetActiveTextureCount(t *testing.T) {
 }
 
 func TestHumanoidTextureSystem_GetTextureBreakdown(t *testing.T) {
-	world := NewWorld(nil)
+	world := NewWorld()
 	sys := NewHumanoidTextureSystem(world, 42)
 
 	entity := world.CreateEntity()
@@ -325,13 +325,13 @@ func TestResolveTextureColor(t *testing.T) {
 func TestHumanoidTextureSystem_DeterministicGeneration(t *testing.T) {
 	seed := int64(12345)
 
-	world1 := NewWorld(nil)
+	world1 := NewWorld()
 	sys1 := NewHumanoidTextureSystem(world1, seed)
 	entity1 := world1.CreateEntity()
 	entity1.AddComponent(&PlayerComponent{})
 	sys1.Update([]*Entity{entity1}, 3.0)
 
-	world2 := NewWorld(nil)
+	world2 := NewWorld()
 	sys2 := NewHumanoidTextureSystem(world2, seed)
 	entity2 := world2.CreateEntity()
 	entity2.AddComponent(&PlayerComponent{})
@@ -356,7 +356,7 @@ func TestHumanoidTextureSystem_DeterministicGeneration(t *testing.T) {
 }
 
 func BenchmarkHumanoidTextureSystem_Update(b *testing.B) {
-	world := NewWorld(nil)
+	world := NewWorld()
 	sys := NewHumanoidTextureSystem(world, 42)
 
 	entities := make([]*Entity, 100)

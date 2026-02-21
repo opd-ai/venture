@@ -3,6 +3,7 @@ package sprites
 
 import (
 	"image"
+	"image/color"
 	"testing"
 )
 
@@ -335,7 +336,7 @@ func TestClampCEP(t *testing.T) {
 	}
 }
 
-func TestDarkenColorCEP(t *testing.T) {
+func TestDarkencolorCEP(t *testing.T) {
 	c := color.RGBA{R: 200, G: 100, B: 50, A: 255}
 	darkened := darkenColorCEP(c, 0.5)
 
@@ -350,7 +351,7 @@ func TestDarkenColorCEP(t *testing.T) {
 	}
 }
 
-func TestBrightenColorCEP(t *testing.T) {
+func TestBrightencolorCEP(t *testing.T) {
 	c := color.RGBA{R: 100, G: 50, B: 25, A: 255}
 	brightened := brightenColorCEP(c, 2.0)
 

@@ -97,7 +97,7 @@ func GenerateCreatureMarkings(seed int64, creatureForm string) CreatureMarkings 
 
 	// Base chance of having any markings (most creatures should)
 	if rng.Float64() > 0.85 {
-		return CreatureMarkings{Type: MarkingNone}
+		return CreatureMarkings{Type: MarkingNone, Scale: 1.0, Density: 0, Intensity: 0}
 	}
 
 	markings := CreatureMarkings{

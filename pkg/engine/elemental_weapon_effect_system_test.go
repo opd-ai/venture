@@ -140,7 +140,7 @@ func TestNewElementalWeaponComponent(t *testing.T) {
 }
 
 func TestNewElementalWeaponEffectSystem(t *testing.T) {
-	world := NewWorld(12345)
+	world := NewWorld()
 	system := NewElementalWeaponEffectSystem(world)
 
 	if system == nil {
@@ -155,11 +155,11 @@ func TestNewElementalWeaponEffectSystem(t *testing.T) {
 }
 
 func TestElementalWeaponEffectSystem_Update(t *testing.T) {
-	world := NewWorld(12345)
+	world := NewWorld()
 	system := NewElementalWeaponEffectSystem(world)
 
 	// Create entity with elemental weapon component
-	entity := NewEntity(world.GenerateEntityID())
+	entity := world.CreateEntity()
 	comp := NewElementalWeaponComponent(ElementalFire, 0.7, 54321)
 	comp.AnimationPhase = 0.0
 	entity.AddComponent(comp)
@@ -177,10 +177,10 @@ func TestElementalWeaponEffectSystem_Update(t *testing.T) {
 }
 
 func TestElementalWeaponEffectSystem_Update_PhaseWrap(t *testing.T) {
-	world := NewWorld(12345)
+	world := NewWorld()
 	system := NewElementalWeaponEffectSystem(world)
 
-	entity := NewEntity(world.GenerateEntityID())
+	entity := world.CreateEntity()
 	comp := NewElementalWeaponComponent(ElementalIce, 0.8, 11111)
 	comp.AnimationPhase = 0.9
 	entity.AddComponent(comp)
@@ -197,7 +197,7 @@ func TestElementalWeaponEffectSystem_Update_PhaseWrap(t *testing.T) {
 }
 
 func TestElementalWeaponEffectSystem_Update_NilEntity(t *testing.T) {
-	world := NewWorld(12345)
+	world := NewWorld()
 	system := NewElementalWeaponEffectSystem(world)
 
 	entities := []*Entity{nil}
@@ -207,10 +207,10 @@ func TestElementalWeaponEffectSystem_Update_NilEntity(t *testing.T) {
 }
 
 func TestElementalWeaponEffectSystem_Update_NoComponent(t *testing.T) {
-	world := NewWorld(12345)
+	world := NewWorld()
 	system := NewElementalWeaponEffectSystem(world)
 
-	entity := NewEntity(world.GenerateEntityID())
+	entity := world.CreateEntity()
 	// No elemental weapon component added
 
 	entities := []*Entity{entity}
@@ -220,10 +220,10 @@ func TestElementalWeaponEffectSystem_Update_NoComponent(t *testing.T) {
 }
 
 func TestElementalWeaponEffectSystem_Update_ZeroDelta(t *testing.T) {
-	world := NewWorld(12345)
+	world := NewWorld()
 	system := NewElementalWeaponEffectSystem(world)
 
-	entity := NewEntity(world.GenerateEntityID())
+	entity := world.CreateEntity()
 	comp := NewElementalWeaponComponent(ElementalLightning, 0.6, 22222)
 	comp.AnimationPhase = 0.5
 	entity.AddComponent(comp)
@@ -242,10 +242,10 @@ func TestElementalWeaponEffectSystem_Update_ZeroDelta(t *testing.T) {
 }
 
 func TestGetElementalParamsForEntity(t *testing.T) {
-	world := NewWorld(12345)
+	world := NewWorld()
 
 	t.Run("entity_with_component", func(t *testing.T) {
-		entity := NewEntity(world.GenerateEntityID())
+		entity := world.CreateEntity()
 		comp := NewElementalWeaponComponent(ElementalPoison, 0.75, 33333)
 		entity.AddComponent(comp)
 
@@ -259,7 +259,7 @@ func TestGetElementalParamsForEntity(t *testing.T) {
 	})
 
 	t.Run("entity_without_component", func(t *testing.T) {
-		entity := NewEntity(world.GenerateEntityID())
+		entity := world.CreateEntity()
 
 		result := GetElementalParamsForEntity(entity)
 		if result != nil {
@@ -321,10 +321,10 @@ func TestCreateElementalWeaponFromItem(t *testing.T) {
 }
 
 func TestApplyElementalEnchantmentToEntity(t *testing.T) {
-	world := NewWorld(12345)
+	world := NewWorld()
 
 	t.Run("apply_to_new_entity", func(t *testing.T) {
-		entity := NewEntity(world.GenerateEntityID())
+		entity := world.CreateEntity()
 
 		success := ApplyElementalEnchantmentToEntity(entity, "fire", "rare", 54321)
 
@@ -332,8 +332,8 @@ func TestApplyElementalEnchantmentToEntity(t *testing.T) {
 			t.Error("Expected success")
 		}
 
-		comp := entity.GetComponent("elemental_weapon")
-		if comp == nil {
+		comp, has := entity.GetComponent("elemental_weapon")
+		if !has {
 			t.Fatal("Component not added")
 		}
 
@@ -347,7 +347,7 @@ func TestApplyElementalEnchantmentToEntity(t *testing.T) {
 	})
 
 	t.Run("update_existing_component", func(t *testing.T) {
-		entity := NewEntity(world.GenerateEntityID())
+		entity := world.CreateEntity()
 		entity.AddComponent(NewElementalWeaponComponent(ElementalIce, 0.5, 11111))
 
 		success := ApplyElementalEnchantmentToEntity(entity, "lightning", "epic", 22222)
@@ -356,7 +356,7 @@ func TestApplyElementalEnchantmentToEntity(t *testing.T) {
 			t.Error("Expected success")
 		}
 
-		comp := entity.GetComponent("elemental_weapon")
+		comp, _ := entity.GetComponent("elemental_weapon")
 		ewc, _ := comp.(*ElementalWeaponComponent)
 		if ewc.ElementType != ElementalLightning {
 			t.Errorf("ElementType = %v, want %v", ewc.ElementType, ElementalLightning)
@@ -374,7 +374,7 @@ func TestApplyElementalEnchantmentToEntity(t *testing.T) {
 	})
 
 	t.Run("invalid_element", func(t *testing.T) {
-		entity := NewEntity(world.GenerateEntityID())
+		entity := world.CreateEntity()
 		success := ApplyElementalEnchantmentToEntity(entity, "physical", "common", 12345)
 		if success {
 			t.Error("Expected failure for invalid element")
@@ -468,7 +468,7 @@ func TestElementalEffectColors(t *testing.T) {
 }
 
 func BenchmarkElementalWeaponEffectSystem_Update(b *testing.B) {
-	world := NewWorld(12345)
+	world := NewWorld()
 	system := NewElementalWeaponEffectSystem(world)
 
 	// Create entities with elemental weapon components
@@ -479,7 +479,7 @@ func BenchmarkElementalWeaponEffectSystem_Update(b *testing.B) {
 	}
 
 	for i := range entities {
-		entity := NewEntity(world.GenerateEntityID())
+		entity := world.CreateEntity()
 		element := elements[i%len(elements)]
 		entity.AddComponent(NewElementalWeaponComponent(element, 0.7, int64(i)))
 		entities[i] = entity

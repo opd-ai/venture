@@ -546,7 +546,7 @@ func BenchmarkFactionTerritoryInfluenceSystem_Update(b *testing.B) {
 	// Create 100 entities
 	entities := make([]*Entity, 110)
 	for i := 0; i < 10; i++ {
-		entities[i] = world.GetEntity(uint64(i + 1))
+		entities[i], _ = world.GetEntity(uint64(i + 1))
 	}
 	for i := 0; i < 100; i++ {
 		entity := world.CreateEntity()

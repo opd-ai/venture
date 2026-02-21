@@ -207,7 +207,7 @@ func TestPoliticalWarfareSystem_TradeEmbargo(t *testing.T) {
 
 	// Impose embargo
 	manager := politicalWarfareSys.GetManager()
-	embargo, err := manager.ImposeEmbargo(guildID1, guildID2, 75) // 75% price increase
+	embargo, err := manager.ImposeEmbargo(guildID1, guildID2, 0.75) // 75% price increase
 	if err != nil {
 		t.Fatalf("Failed to impose embargo: %v", err)
 	}
@@ -328,8 +328,16 @@ func TestPoliticalWarfareSystem_DiplomaticVictory(t *testing.T) {
 	guildID1, _ := guildManager.CreateGuild("fantasy", "Player1", 12345)
 	guildID2, _ := guildManager.CreateGuild("fantasy", "Player2", 23456)
 
-	// Attempt diplomatic victory with concessions
+	// Declare war first (required for diplomatic victory)
 	manager := politicalWarfareSys.GetManager()
+	_, err := manager.DeclareWar(guildID1, guildID2, 1*time.Millisecond)
+	if err != nil {
+		t.Fatalf("Failed to declare war: %v", err)
+	}
+	time.Sleep(10 * time.Millisecond)
+	manager.Update(0)
+
+	// Attempt diplomatic victory with concessions
 	concessions := []politicalwarfare.DiplomaticConcession{
 		{Type: politicalwarfare.ConcessionTerritory, Value: "territory1"},
 		{Type: politicalwarfare.ConcessionGold, Value: 5000},

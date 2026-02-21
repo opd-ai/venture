@@ -142,7 +142,7 @@ func TestBuildTemplateSystemSaveCurrentBuild(t *testing.T) {
 	if template.IsPreset {
 		t.Error("User-saved template should not be preset")
 	}
-	if template.Archetype != ArchetypeCustom {
+	if template.Archetype != BuildArchetypeCustom {
 		t.Errorf("User template archetype = %v, want Custom", template.Archetype)
 	}
 
@@ -213,7 +213,7 @@ func TestBuildTemplateSystemRequestApplyPreset(t *testing.T) {
 	entity := createTestEntityWithProgression(world, 15)
 
 	// Request apply preset (Tank build needs 30 attribute points, level 10)
-	if !sys.RequestApplyPreset(entity, ArchetypeTank) {
+	if !sys.RequestApplyPreset(entity, BuildArchetypeTank) {
 		t.Error("RequestApplyPreset should succeed")
 	}
 
@@ -252,7 +252,7 @@ func TestBuildTemplateSystemUpdateProcessing(t *testing.T) {
 	template := &BuildTemplate{
 		ID:            "test_template",
 		Name:          "Test",
-		Archetype:     ArchetypeCustom,
+		Archetype:     BuildArchetypeCustom,
 		Attributes:    map[int]int{int(AttrStrength): 5},
 		Talents:       make(map[string]int),
 		Skills:        make(map[string]int),
@@ -435,8 +435,8 @@ func TestBuildTemplateSystemDeterministicPresets(t *testing.T) {
 	sys1 := NewBuildTemplateSystem(NewWorld(), 12345)
 	sys2 := NewBuildTemplateSystem(NewWorld(), 12345)
 
-	preset1 := sys1.GetArchetypePreset(ArchetypeTank)
-	preset2 := sys2.GetArchetypePreset(ArchetypeTank)
+	preset1 := sys1.GetArchetypePreset(BuildArchetypeTank)
+	preset2 := sys2.GetArchetypePreset(BuildArchetypeTank)
 
 	if preset1.Name != preset2.Name {
 		t.Errorf("Non-deterministic preset names: %v vs %v", preset1.Name, preset2.Name)

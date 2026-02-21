@@ -89,7 +89,7 @@ func TestCreatureEyePatternSystemUpdate(t *testing.T) {
 			SizeClass: "medium",
 		})
 		entity.AddComponent(&AnimationComponent{
-			SpriteID: "test_sprite",
+			Seed: 12345,
 		})
 		entities[i] = entity
 	}

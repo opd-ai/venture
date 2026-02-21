@@ -374,12 +374,38 @@ func (s *WeatherFactionResistanceSystem) processEntity(entity *Entity, weatherTy
 // getFactionAffinity determines elemental affinity from faction ID via pattern matching.
 func (s *WeatherFactionResistanceSystem) getFactionAffinity(factionID string) factionAffinityType {
 	lowerID := toLowerSimple(factionID)
+
+	// First pass: match on word boundaries (split by "_", "-", " ")
+	// This prevents partial substring matches like "night" in "knights"
+	words := splitFactionWords(lowerID)
+	for _, word := range words {
+		if affinity, ok := s.factionAffinities[word]; ok {
+			return affinity
+		}
+	}
+
+	// Second pass: substring matching as fallback
 	for pattern, affinity := range s.factionAffinities {
 		if containsSimple(lowerID, pattern) {
 			return affinity
 		}
 	}
 	return affinityNeutral
+}
+
+// splitFactionWords splits a string on common separators ("_", "-", " ").
+func splitFactionWords(s string) []string {
+	var words []string
+	start := 0
+	for i := 0; i <= len(s); i++ {
+		if i == len(s) || s[i] == '_' || s[i] == '-' || s[i] == ' ' {
+			if i > start {
+				words = append(words, s[start:i])
+			}
+			start = i + 1
+		}
+	}
+	return words
 }
 
 // getWeatherInteraction returns the interaction modifiers for affinity+weather combo.

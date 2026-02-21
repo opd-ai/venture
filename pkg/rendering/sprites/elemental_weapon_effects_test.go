@@ -172,7 +172,7 @@ func TestApplyElementalEffect_AllElements(t *testing.T) {
 
 			// Draw a simple weapon shape (diagonal line)
 			for i := 0; i < 20; i++ {
-				img.Set(6+i, 6+i, color{R: 180, G: 180, B: 190, A: 255})
+				img.Set(6+i, 6+i, Color{R: 180, G: 180, B: 190, A: 255})
 			}
 
 			params := ElementalEffectParams{
@@ -200,7 +200,7 @@ func TestApplyElementalEffect_DifferentAnimationPhases(t *testing.T) {
 
 			// Draw weapon shape
 			for i := 0; i < 16; i++ {
-				img.Set(16, i+8, color{R: 150, G: 150, B: 160, A: 255})
+				img.Set(16, i+8, Color{R: 150, G: 150, B: 160, A: 255})
 			}
 
 			params := ElementalEffectParams{
@@ -249,7 +249,7 @@ func TestElementalWeaponRenderer_DeterministicOutput(t *testing.T) {
 	createWeaponImage := func() *ebiten.Image {
 		img := ebiten.NewImage(32, 32)
 		for i := 0; i < 20; i++ {
-			img.Set(6+i, 16, color{R: 180, G: 180, B: 190, A: 255})
+			img.Set(6+i, 16, Color{R: 180, G: 180, B: 190, A: 255})
 		}
 		return img
 	}
@@ -284,7 +284,7 @@ func TestElementalWeaponRenderer_IntensityScaling(t *testing.T) {
 
 			// Draw weapon
 			for i := 0; i < 16; i++ {
-				img.Set(16, 8+i, color{R: 160, G: 160, B: 170, A: 255})
+				img.Set(16, 8+i, Color{R: 160, G: 160, B: 170, A: 255})
 			}
 
 			params := ElementalEffectParams{
@@ -301,12 +301,12 @@ func TestElementalWeaponRenderer_IntensityScaling(t *testing.T) {
 	}
 }
 
-// color is a simple helper type for test pixel values
-type color struct {
+// Color is a simple helper type for test pixel values
+type Color struct {
 	R, G, B, A uint8
 }
 
-func (c color) RGBA() (r, g, b, a uint32) {
+func (c Color) RGBA() (r, g, b, a uint32) {
 	return uint32(c.R) << 8, uint32(c.G) << 8, uint32(c.B) << 8, uint32(c.A) << 8
 }
 
@@ -316,7 +316,7 @@ func BenchmarkApplyElementalEffect_Fire(b *testing.B) {
 
 	// Draw weapon shape
 	for i := 0; i < 20; i++ {
-		img.Set(6+i, 6+i, color{R: 180, G: 180, B: 190, A: 255})
+		img.Set(6+i, 6+i, Color{R: 180, G: 180, B: 190, A: 255})
 	}
 
 	params := ElementalEffectParams{
@@ -355,7 +355,7 @@ func BenchmarkApplyElementalEffect_AllElements(b *testing.B) {
 
 		// Draw weapon
 		for j := 0; j < 20; j++ {
-			img.Set(6+j, 16, color{R: 180, G: 180, B: 190, A: 255})
+			img.Set(6+j, 16, Color{R: 180, G: 180, B: 190, A: 255})
 		}
 
 		params := ElementalEffectParams{

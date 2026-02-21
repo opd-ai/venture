@@ -23,10 +23,10 @@ func TestHumanoidTextureType_String(t *testing.T) {
 		{FabricWool, "fabric_wool"},
 		{FabricChainmail, "fabric_chainmail"},
 		{FabricPlate, "fabric_plate"},
-		{HairStraight, "hair_straight"},
-		{HairWavy, "hair_wavy"},
-		{HairCurly, "hair_curly"},
-		{HairBraided, "hair_braided"},
+		{HumTexHairStraight, "hair_straight"},
+		{HumTexHairWavy, "hair_wavy"},
+		{HumTexHairCurly, "hair_curly"},
+		{HumTexHairBraided, "hair_braided"},
 		{HumanoidTextureType(100), "unknown"},
 	}
 
@@ -169,7 +169,7 @@ func TestApplyHumanoidTexture_AllTypes(t *testing.T) {
 	types := []HumanoidTextureType{
 		SkinSmooth, SkinFreckled, SkinScarred, SkinWeathered, SkinTattooed,
 		FabricLinen, FabricLeather, FabricSilk, FabricWool, FabricChainmail, FabricPlate,
-		HairStraight, HairWavy, HairCurly, HairBraided,
+		HumTexHairStraight, HumTexHairWavy, HumTexHairCurly, HumTexHairBraided,
 	}
 
 	for _, texType := range types {
@@ -330,7 +330,7 @@ func TestGenerateHairTexture_Distribution(t *testing.T) {
 	}
 
 	// All hair types should appear
-	for _, ht := range []HumanoidTextureType{HairStraight, HairWavy, HairCurly, HairBraided} {
+	for _, ht := range []HumanoidTextureType{HumTexHairStraight, HumTexHairWavy, HumTexHairCurly, HumTexHairBraided} {
 		if counts[ht] == 0 {
 			t.Errorf("Hair type %s never generated", ht.String())
 		}
@@ -423,7 +423,7 @@ func BenchmarkApplyHumanoidTexture_HairWavy(b *testing.B) {
 		buf.Pix[i], buf.Pix[i+1], buf.Pix[i+2], buf.Pix[i+3] = 128, 100, 80, 255
 	}
 	params := HumanoidTextureParams{
-		Type:           HairWavy,
+		Type:           HumTexHairWavy,
 		Intensity:      0.4,
 		Scale:          1.0,
 		PrimaryColor:   color.RGBA{R: 60, G: 40, B: 20, A: 180},
@@ -445,7 +445,7 @@ func BenchmarkGenerateHumanoidTextureSet(b *testing.B) {
 	}
 }
 
-func abs(x int) int {
+func absHumTex(x int) int {
 	if x < 0 {
 		return -x
 	}

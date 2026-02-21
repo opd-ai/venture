@@ -6,18 +6,18 @@
 
 ## Summary
 
-- **Total issues**: 225 (61 open, 164 resolved)
-- **Critical**: 0 (0 open) | **High**: 43 (0 open) | **Medium**: 42 (0 open) | **Low**: 140 (61 open)
-- **Affected subpackages**: 30 of 108 audited packages have open issues
-- **Resolution rate**: 164/225 (73%)
+- **Total issues**: 225 (56 open, 169 resolved)
+- **Critical**: 0 (0 open) | **High**: 43 (0 open) | **Medium**: 42 (0 open) | **Low**: 140 (56 open)
+- **Affected subpackages**: 29 of 108 audited packages have open issues
+- **Resolution rate**: 169/225 (75%)
 
 | Severity | Total | Open | Resolved |
 |----------|-------|------|----------|
 | Critical | 0 | 0 | 0 |
 | High | 43 | 0 | 43 |
 | Medium | 42 | 0 | 42 |
-| Low | 140 | 61 | 79 |
-| **Total** | **225** | **61** | **164** |
+| Low | 140 | 56 | 84 |
+| **Total** | **225** | **56** | **169** |
 
 ## Priority Resolution Order
 
@@ -77,10 +77,10 @@ _All medium-priority issues have been resolved._
   - [x] doc — style — LOD constants lack block comment (`types.go:12`) — **FIXED 2026-02-21**: Added comprehensive block comment explaining LOD levels, distance-based rendering optimization, and per-constant documentation
   - [x] naming — style — PerformanceConfig stutters with package name; consider renaming to Config (`types.go:108`) — **FIXED 2026-02-21**: Added `Config` type alias with godoc comment; existing code unaffected, new code can use `performance.Config`
   - [x] naming — style — PerformanceMonitor stutters with package name; consider renaming to Monitor (`types.go:157`) — **FIXED 2026-02-21**: Added `Monitor` type alias with `NewMonitor()` constructor; existing code unaffected, new code can use `performance.Monitor`
-- **pkg/integration/choice_consequences** (4 issues)
-  - [ ] doc coverage — Exported types in `alignment.go` lack godoc comments (`AlignmentShift`, `PlayerAlignment`, `AlignmentRequirement` types missing comments) (`alignment.go:10,17,25`)
-  - [ ] doc coverage — Exported types in `time_provider.go` lack package context comments (`RealTimeProvider`, `FixedTimeProvider` struct declarations missing comments) (`time_provider.go:16,24`)
-  - [ ] test coverage — Helper function `abs()` has no direct test coverage (note: tested indirectly via `sortEventsByImpact`) (`helpers.go:20`)
+- **pkg/integration/choice_consequences** (1 issue)
+  - [x] doc coverage — Exported types in `alignment.go` lack godoc comments (`AlignmentShift`, `PlayerAlignment`, `AlignmentRequirement` types missing comments) (`alignment.go:10,17,25`) — **VERIFIED 2026-02-21**: All types already have godoc comments
+  - [x] doc coverage — Exported types in `time_provider.go` lack package context comments (`RealTimeProvider`, `FixedTimeProvider` struct declarations missing comments) (`time_provider.go:16,24`) — **VERIFIED 2026-02-21**: Both types already have godoc comments
+  - [x] test coverage — Helper function `abs()` has no direct test coverage (note: tested indirectly via `sortEventsByImpact`) (`helpers.go:20`) — **FIXED 2026-02-21**: Added direct table-driven tests in `helpers_test.go`
   - [ ] integration — No explicit registration in `pkg/engine/system_init.go`; system exists (`choice_consequences_system.go`) but may not be auto-initialized in World
 - **pkg/integration/guild_housing** (2 issues)
   - [ ] Serialization — Load method uses double marshal/unmarshal through map[string]interface{} intermediary; could be simplified with typed struct deserialization — **ACKNOWLEDGED**: Works correctly; refactoring would be low-risk improvement
@@ -363,10 +363,10 @@ _All medium-priority issues have been resolved._
 
 #### `pkg/integration/choice_consequences`
 - Source: [`pkg/integration/choice_consequences/AUDIT.md`](pkg/integration/choice_consequences/AUDIT.md)
-- Issues: 4 open (Low: 4)
-  - [Low] doc coverage — Exported types in `alignment.go` lack godoc comments (`AlignmentShift`, `PlayerAlignment`, `AlignmentRequirement` types missing comments) (`alignment.go:10,17,25`)
-  - [Low] doc coverage — Exported types in `time_provider.go` lack package context comments (`RealTimeProvider`, `FixedTimeProvider` struct declarations missing comments) (`time_provider.go:16,24`)
-  - [Low] test coverage — Helper function `abs()` has no direct test coverage (note: tested indirectly via `sortEventsByImpact`) (`helpers.go:20`)
+- Issues: 1 open, 3 resolved (Low: 4)
+  - ~~[Low] doc coverage — Exported types in `alignment.go` lack godoc comments (`AlignmentShift`, `PlayerAlignment`, `AlignmentRequirement` types missing comments) (`alignment.go:10,17,25`)~~ ✅ **VERIFIED 2026-02-21**: All types already have godoc comments
+  - ~~[Low] doc coverage — Exported types in `time_provider.go` lack package context comments (`RealTimeProvider`, `FixedTimeProvider` struct declarations missing comments) (`time_provider.go:16,24`)~~ ✅ **VERIFIED 2026-02-21**: Both types already have godoc comments
+  - ~~[Low] test coverage — Helper function `abs()` has no direct test coverage (note: tested indirectly via `sortEventsByImpact`) (`helpers.go:20`)~~ ✅ **FIXED 2026-02-21**: Added direct table-driven tests in `helpers_test.go`
   - [Low] integration — No explicit registration in `pkg/engine/system_init.go`; system exists (`choice_consequences_system.go`) but may not be auto-initialized in World
 
 #### `pkg/integration/companion_housing`
@@ -670,9 +670,9 @@ _All medium-priority issues have been resolved._
 
 #### `pkg/procgen/skills`
 - Source: [`pkg/procgen/skills/AUDIT.md`](pkg/procgen/skills/AUDIT.md)
-- Issues: 2 open, 1 resolved (Low: 2)
+- Issues: 1 open, 2 resolved (Low: 1, Medium: 1)
   - ~~[Medium] ECS — compliance — `Skill` and `SkillTree` types have business logic methods (IsUnlocked, CanLevelUp, TotalPoints, GetSkillByID, GetTierSkills) which should be in a System or helper package (`types.go:186,215,220,231,241`) — **FIXED**: Extracted logic to helper functions in `skills_helpers.go`. Original methods delegate to helpers with deprecation notices.~~ ✅ Resolved
-  - [Low] deprecated — api — Uses deprecated `strings.Title` which should be replaced with `cases.Title(language.English)` from golang.org/x/text/cases (`generator.go:355`)
+  - ~~[Low] deprecated — api — Uses deprecated `strings.Title` which should be replaced with `cases.Title(language.English)` from golang.org/x/text/cases (`generator.go:355`)~~ ✅ **FIXED 2026-02-21**: Replaced with `cases.Title(language.English).String()`
   - [Low] doc — coverage — README.md exists and is comprehensive; all exported types/functions have godoc; package doc.go complete (no issue, but noted for completeness)
 
 #### `pkg/procgen/station`
@@ -681,8 +681,8 @@ _All medium-priority issues have been resolved._
 
 #### `pkg/procgen/story`
 - Source: [`pkg/procgen/story/AUDIT.md`](pkg/procgen/story/AUDIT.md)
-- Issues: 1 open (Medium: 1)
-  - [Medium] ECS compliance — `StoryJournalComponent` in `pkg/engine/story_fragment_component.go` has behavior methods (`AddDiscovery`, `IsDiscovered`, `IsSeriesComplete`, `MarkSeriesComplete`, `GetDiscoveryCount`) violating ECS pure data principle (`pkg/engine/story_fragment_component.go:52-98`)
+- Issues: 0 open, 1 resolved (Medium: 1)
+  - ~~[Medium] ECS compliance — `StoryJournalComponent` in `pkg/engine/story_fragment_component.go` has behavior methods (`AddDiscovery`, `IsDiscovered`, `IsSeriesComplete`, `MarkSeriesComplete`, `GetDiscoveryCount`) violating ECS pure data principle (`pkg/engine/story_fragment_component.go:52-98`)~~ ✅ **FIXED 2026-02-21**: Refactored to ECS-compliant helper functions with deprecation notices on original methods
 
 #### `pkg/procgen/terrain`
 - Source: [`pkg/procgen/terrain/AUDIT.md`](pkg/procgen/terrain/AUDIT.md)
@@ -953,14 +953,14 @@ _All medium-priority issues have been resolved._
 
 ## Resolved Issues Summary
 
-164 issues have been resolved across 35 packages.
+169 issues have been resolved across 37 packages.
 
 | Severity | Resolved |
 |----------|----------|
 | High | 43 |
 | Medium | 42 |
-| Low | 79 |
-| **Total** | **164** |
+| Low | 84 |
+| **Total** | **169** |
 
 ---
 

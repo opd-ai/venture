@@ -826,6 +826,68 @@ _No open high-priority issues._
   - ~~[High] data race~~ ✅ Resolved
   - ~~[Medium] deterministic procgen~~ ✅ Resolved
 
+### Benchmark (pkg/benchmark/)
+
+#### `pkg/benchmark`
+- Source: `pkg/benchmark/AUDIT.md`
+- Issues: 0 — _No issues found_
+
+#### `pkg/benchmark/fps`
+- Source: `pkg/benchmark/fps/AUDIT.md`
+- Issues: 0 — _No issues found_
+
+#### `pkg/benchmark/memory`
+- Source: `pkg/benchmark/memory/AUDIT.md`
+- Issues: 0 — _No issues found_
+
+### Logging (pkg/logging/)
+
+#### `pkg/logging`
+- Source: `pkg/logging/AUDIT.md`
+- Issues: 0 — _No issues found_
+
+### Migration (pkg/migration/)
+
+#### `pkg/migration`
+- Source: `pkg/migration/AUDIT.md`
+- Issues: 0 — _No issues found_
+
+### Mobile (pkg/mobile/)
+
+#### `pkg/mobile`
+- Source: `pkg/mobile/AUDIT.md`
+- Issues: 0 — _No issues found_
+
+### Observability (pkg/observability/)
+
+#### `pkg/observability`
+- Source: `pkg/observability/AUDIT.md`
+- Issues: 0 — _No issues found_
+
+### Recovery (pkg/recovery/)
+
+#### `pkg/recovery`
+- Source: `pkg/recovery/AUDIT.md`
+- Issues: 0 — _No issues found_
+
+### Stability (pkg/stability/)
+
+#### `pkg/stability`
+- Source: `pkg/stability/AUDIT.md`
+- Issues: 0 — _No issues found_
+
+### Version (pkg/version/)
+
+#### `pkg/version`
+- Source: `pkg/version/AUDIT.md`
+- Issues: 0 — _No issues found_
+
+### VR (pkg/vr/)
+
+#### `pkg/vr`
+- Source: `pkg/vr/AUDIT.md`
+- Issues: 0 — _No issues found_
+
 ## Cross-Package Dependencies
 
 - Issues in **pkg/config** should be resolved before **cmd/client** — Configuration validation fixes in pkg/config must land before client consumption

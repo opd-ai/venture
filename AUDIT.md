@@ -6,18 +6,18 @@
 
 ## Summary
 
-- **Total issues**: 225 (50 open, 175 resolved)
-- **Critical**: 0 (0 open) | **High**: 43 (0 open) | **Medium**: 42 (0 open) | **Low**: 140 (50 open)
-- **Affected subpackages**: 27 of 108 audited packages have open issues
-- **Resolution rate**: 175/225 (78%)
+- **Total issues**: 225 (46 open, 179 resolved)
+- **Critical**: 0 (0 open) | **High**: 43 (0 open) | **Medium**: 42 (0 open) | **Low**: 140 (46 open)
+- **Affected subpackages**: 25 of 108 audited packages have open issues
+- **Resolution rate**: 179/225 (80%)
 
 | Severity | Total | Open | Resolved |
 |----------|-------|------|----------|
 | Critical | 0 | 0 | 0 |
 | High | 43 | 0 | 43 |
 | Medium | 42 | 0 | 42 |
-| Low | 140 | 50 | 90 |
-| **Total** | **225** | **50** | **175** |
+| Low | 140 | 46 | 94 |
+| **Total** | **225** | **46** | **179** |
 
 ## Priority Resolution Order
 
@@ -33,8 +33,10 @@ _No open high-priority issues._
 
 _All medium-priority issues have been resolved._
 
-- **pkg/network/resilience** (1 issue)
+- **pkg/network/resilience** (0 open, 3 resolved)
   - [x] deterministic procgen — Uses `time.Now()` for non-generation purposes (metrics timestamps, bandwidth tracking). While acceptable for testing infrastructure, violates strict project rule. Consider adding comment explaining exemption. (`simulator.go:53,68,75`, `metrics.go:48,53,127,146,313,321`, `scenario.go:67`) — **FIXED 2026-02-21**: Added "Determinism Exemption" section to doc.go explaining why time.Now() is acceptable in this testing infrastructure package.
+  - [x] error handling — No structured logging in package; scenarios log via optional logger but core types (simulator, metrics) have no logging. Reduces observability for production use. (`simulator.go`, `metrics.go`) — **FIXED 2026-02-21**: Added optional `logger *logrus.Entry` field to `NetworkSimulator` and `MetricsCollector`. Added `SetLogger()` methods and `NewMetricsCollectorWithLogger()` constructor.
+  - [x] doc coverage — Missing package-level comment on `metrics.go` explaining metrics collection architecture. Only `doc.go` has comprehensive package documentation. (`metrics.go:1`) — **FIXED 2026-02-21**: Added comprehensive package comment explaining architecture and determinism note.
 - **pkg/procgen/skills** (2 issues)
   - [x] ECS — compliance — `Skill` and `SkillTree` types have business logic methods (IsUnlocked, CanLevelUp, TotalPoints, GetSkillByID, GetTierSkills) which should be in a System or helper package (`types.go:186,215,220,231,241`) — **FIXED**: Extracted logic to helper functions `IsSkillUnlocked`, `CanSkillLevelUp`, `CalculateTreeTotalPoints`, `FindSkillByID`, `GetSkillsByTier` in `skills_helpers.go`. Original methods now delegate to helpers with deprecation notices for backward compatibility.
   - [x] deprecated — api — Uses deprecated `strings.Title` which should be replaced with `cases.Title(language.English)` from golang.org/x/text/cases (`generator.go:355`) — **FIXED 2026-02-21**: Replaced with `cases.Title(language.English).String()`.
@@ -81,7 +83,7 @@ _All medium-priority issues have been resolved._
   - [x] doc coverage — Exported types in `alignment.go` lack godoc comments (`AlignmentShift`, `PlayerAlignment`, `AlignmentRequirement` types missing comments) (`alignment.go:10,17,25`) — **VERIFIED 2026-02-21**: All types already have godoc comments
   - [x] doc coverage — Exported types in `time_provider.go` lack package context comments (`RealTimeProvider`, `FixedTimeProvider` struct declarations missing comments) (`time_provider.go:16,24`) — **VERIFIED 2026-02-21**: Both types already have godoc comments
   - [x] test coverage — Helper function `abs()` has no direct test coverage (note: tested indirectly via `sortEventsByImpact`) (`helpers.go:20`) — **FIXED 2026-02-21**: Added direct table-driven tests in `helpers_test.go`
-  - [ ] integration — No explicit registration in `pkg/engine/system_init.go`; system exists (`choice_consequences_system.go`) but may not be auto-initialized in World
+  - [x] integration — No explicit registration in `pkg/engine/system_init.go`; system exists (`choice_consequences_system.go`) but may not be auto-initialized in World — **VERIFIED 2026-02-21**: System IS registered via `cmd/client/handlers.go:2101` and `cmd/server/v4_systems.go:143`. Registration happens through version-specific initialization, not system_init.go. This is the intended pattern.
 - **pkg/integration/guild_housing** (2 issues)
   - [ ] Serialization — Load method uses double marshal/unmarshal through map[string]interface{} intermediary; could be simplified with typed struct deserialization — **ACKNOWLEDGED**: Works correctly; refactoring would be low-risk improvement
   - [ ] API design — SetPermission does not validate that permission value is within valid range (0-4) — **ACKNOWLEDGED**: Out-of-range values don't cause errors but have no defined behavior
@@ -113,7 +115,7 @@ _All medium-priority issues have been resolved._
   - [ ] **Performance** — Merchant inventory pre-allocation creates full array then trims; could optimize to use append with cap (`merchant.go:166-214`)
   - [ ] **Error handling** — generateMerchantInventory logs warnings but continues on item generation failure; no aggregate error count returned (`merchant.go:198-201`)
 - **pkg/procgen/faction** (3 issues)
-  - [ ] ECS compliance — `engine.Faction` struct has behavior methods `IsEnemy()` and `IsAlly()` instead of being pure data (`pkg/engine/faction_component.go:137-143`)
+  - [x] ECS compliance — `engine.Faction` struct has behavior methods `IsEnemy()` and `IsAlly()` instead of being pure data (`pkg/engine/faction_component.go:137-143`) — **FIXED 2026-02-21**: Extracted logic to standalone helper functions `FactionIsEnemy()`, `FactionIsAlly()`, `FactionGetRelationship()` in `faction_component.go`. Original methods retained with deprecation notices for backward compatibility. Added comprehensive tests including nil-safety and method/helper parity verification.
   - [ ] Documentation — Missing benchmark tests for performance validation despite doc.go claiming <1-3ms generation times (`generator_test.go:1`)
   - [ ] Error handling — No logging on validation errors; errors are only returned without structured logging context (`generator.go:29-31`)
 - **pkg/procgen/furniture** (7 issues, 4 resolved)
@@ -363,11 +365,11 @@ _All medium-priority issues have been resolved._
 
 #### `pkg/integration/choice_consequences`
 - Source: [`pkg/integration/choice_consequences/AUDIT.md`](pkg/integration/choice_consequences/AUDIT.md)
-- Issues: 1 open, 3 resolved (Low: 4)
+- Issues: 0 open, 4 resolved (Low: 4)
   - ~~[Low] doc coverage — Exported types in `alignment.go` lack godoc comments (`AlignmentShift`, `PlayerAlignment`, `AlignmentRequirement` types missing comments) (`alignment.go:10,17,25`)~~ ✅ **VERIFIED 2026-02-21**: All types already have godoc comments
   - ~~[Low] doc coverage — Exported types in `time_provider.go` lack package context comments (`RealTimeProvider`, `FixedTimeProvider` struct declarations missing comments) (`time_provider.go:16,24`)~~ ✅ **VERIFIED 2026-02-21**: Both types already have godoc comments
   - ~~[Low] test coverage — Helper function `abs()` has no direct test coverage (note: tested indirectly via `sortEventsByImpact`) (`helpers.go:20`)~~ ✅ **FIXED 2026-02-21**: Added direct table-driven tests in `helpers_test.go`
-  - [Low] integration — No explicit registration in `pkg/engine/system_init.go`; system exists (`choice_consequences_system.go`) but may not be auto-initialized in World
+  - ~~[Low] integration — No explicit registration in `pkg/engine/system_init.go`; system exists (`choice_consequences_system.go`) but may not be auto-initialized in World~~ ✅ **VERIFIED 2026-02-21**: System IS registered via `cmd/client/handlers.go:2101` and `cmd/server/v4_systems.go:143`
 
 #### `pkg/integration/companion_housing`
 - Source: [`pkg/integration/companion_housing/AUDIT.md`](pkg/integration/companion_housing/AUDIT.md)
@@ -522,10 +524,10 @@ _All medium-priority issues have been resolved._
 
 #### `pkg/network/resilience`
 - Source: [`pkg/network/resilience/AUDIT.md`](pkg/network/resilience/AUDIT.md)
-- Issues: 3 open (Medium: 1, Low: 2)
-  - [Medium] deterministic procgen — Uses `time.Now()` for non-generation purposes (metrics timestamps, bandwidth tracking). While acceptable for testing infrastructure, violates strict project rule. Consider adding comment explaining exemption. (`simulator.go:53,68,75`, `metrics.go:48,53,127,146,313,321`, `scenario.go:67`)
-  - [Low] error handling — No structured logging in package; scenarios log via optional logger but core types (simulator, metrics) have no logging. Reduces observability for production use. (`simulator.go`, `metrics.go`)
-  - [Low] doc coverage — Missing package-level comment on `metrics.go` explaining metrics collection architecture. Only `doc.go` has comprehensive package documentation. (`metrics.go:1`)
+- Issues: 0 open, 3 resolved (Medium: 1, Low: 2)
+  - ~~[Medium] deterministic procgen — Uses `time.Now()` for non-generation purposes (metrics timestamps, bandwidth tracking). While acceptable for testing infrastructure, violates strict project rule. Consider adding comment explaining exemption. (`simulator.go:53,68,75`, `metrics.go:48,53,127,146,313,321`, `scenario.go:67`)~~ ✅ **FIXED 2026-02-21**: Added "Determinism Exemption" section to doc.go
+  - ~~[Low] error handling — No structured logging in package; scenarios log via optional logger but core types (simulator, metrics) have no logging. Reduces observability for production use. (`simulator.go`, `metrics.go`)~~ ✅ **FIXED 2026-02-21**: Added optional `logger *logrus.Entry` to NetworkSimulator and MetricsCollector with SetLogger() methods
+  - ~~[Low] doc coverage — Missing package-level comment on `metrics.go` explaining metrics collection architecture. Only `doc.go` has comprehensive package documentation. (`metrics.go:1`)~~ ✅ **FIXED 2026-02-21**: Added comprehensive package comment explaining architecture
 
 #### `pkg/network/trade`
 - Source: [`pkg/network/trade/AUDIT.md`](pkg/network/trade/AUDIT.md)
@@ -602,8 +604,8 @@ _All medium-priority issues have been resolved._
 
 #### `pkg/procgen/faction`
 - Source: [`pkg/procgen/faction/AUDIT.md`](pkg/procgen/faction/AUDIT.md)
-- Issues: 3 open (Low: 3)
-  - [Low] ECS compliance — `engine.Faction` struct has behavior methods `IsEnemy()` and `IsAlly()` instead of being pure data (`pkg/engine/faction_component.go:137-143`)
+- Issues: 2 open, 1 resolved (Low: 3)
+  - ~~[Low] ECS compliance — `engine.Faction` struct has behavior methods `IsEnemy()` and `IsAlly()` instead of being pure data (`pkg/engine/faction_component.go:137-143`)~~ ✅ **FIXED 2026-02-21**: Extracted to helper functions `FactionIsEnemy()`, `FactionIsAlly()`, `FactionGetRelationship()`. Original methods retained with deprecation notices.
   - [Low] Documentation — Missing benchmark tests for performance validation despite doc.go claiming <1-3ms generation times (`generator_test.go:1`)
   - [Low] Error handling — No logging on validation errors; errors are only returned without structured logging context (`generator.go:29-31`)
 
@@ -932,11 +934,11 @@ _All medium-priority issues have been resolved._
 - **Companion (pkg/companion/)**: 0 open issues — _All issues resolved_
 - **Configuration (pkg/config/)**: 0 open issues — _All issues resolved_
 - **Engine (pkg/engine/)**: 0 open issues — _All issues resolved_
-- **Integration (pkg/integration/)**: 6 open issues (Low: 6)
+- **Integration (pkg/integration/)**: 5 open issues (Low: 5)
 - **Modding (pkg/modding/)**: 1 open issues (Low: 1)
 - **Narrative (pkg/narrative/)**: 1 open issues (Low: 1)
-- **Network (pkg/network/)**: 3 open issues (Medium: 1, Low: 2)
-- **Procedural Generation (pkg/procgen/)**: 36 open issues (Medium: 2, Low: 34)
+- **Network (pkg/network/)**: 0 open issues — _All issues resolved_
+- **Procedural Generation (pkg/procgen/)**: 35 open issues (Medium: 2, Low: 33)
 - **Rendering (pkg/rendering/)**: 4 open issues (Low: 4)
 - **Save/Load (pkg/saveload/)**: 3 open issues (Low: 3)
 - **Security (pkg/security/)**: 2 open issues (Low: 2)
@@ -948,19 +950,19 @@ _All medium-priority issues have been resolved._
 
 - **Phase 1 (Critical)**: 0 issues — No action required
 - **Phase 2 (High)**: 0 issues — No action required
-- **Phase 3 (Medium)**: 3 issues — Ongoing improvement backlog
-- **Phase 4 (Low)**: 47 issues — Address opportunistically
+- **Phase 3 (Medium)**: 0 issues — All resolved
+- **Phase 4 (Low)**: 46 issues — Address opportunistically
 
 ## Resolved Issues Summary
 
-175 issues have been resolved across 39 packages.
+179 issues have been resolved across 40 packages.
 
 | Severity | Resolved |
 |----------|----------|
 | High | 43 |
 | Medium | 42 |
-| Low | 90 |
-| **Total** | **175** |
+| Low | 94 |
+| **Total** | **179** |
 
 ---
 

@@ -1,12 +1,12 @@
 # Audit: pkg/procgen/story
-**Date**: 2026-02-16
+**Date**: 2026-02-21
 **Status**: Complete
 
 ## Summary
-The `pkg/procgen/story` package implements deterministic procedural generation for environmental storytelling, branching narratives, cross-dungeon story arcs, historical timelines, and archaeological sites. Package health is excellent with 88.7% test coverage (target: 65%), comprehensive validation, and consistent seed-based generation. One medium-severity issue exists in an external engine component that violates ECS purity principles.
+The `pkg/procgen/story` package implements deterministic procedural generation for environmental storytelling, branching narratives, cross-dungeon story arcs, historical timelines, and archaeological sites. Package health is excellent with 88.7% test coverage (target: 65%), comprehensive validation, and consistent seed-based generation. ECS compliance issue in external engine component has been resolved.
 
 ## Issues Found
-- [ ] med ECS compliance — `StoryJournalComponent` in `pkg/engine/story_fragment_component.go` has behavior methods (`AddDiscovery`, `IsDiscovered`, `IsSeriesComplete`, `MarkSeriesComplete`, `GetDiscoveryCount`) violating ECS pure data principle (`pkg/engine/story_fragment_component.go:52-98`)
+- [x] med ECS compliance — `StoryJournalComponent` in `pkg/engine/story_fragment_component.go` had behavior methods (`AddDiscovery`, `IsDiscovered`, `IsSeriesComplete`, `MarkSeriesComplete`, `GetDiscoveryCount`) violating ECS pure data principle — **FIXED 2026-02-21**: Refactored to ECS-compliant helper functions (`JournalAddDiscovery`, `JournalIsDiscovered`, `JournalIsSeriesComplete`, `JournalMarkSeriesComplete`, `JournalGetDiscoveryCount`) that operate on component data. Original methods retained with deprecation notices for backward compatibility. `time.Now()` moved from component to system level for deterministic timestamps.
 
 ## Test Coverage
 88.7% (target: 65%) — **EXCEEDS TARGET**
@@ -39,7 +39,7 @@ Coverage breakdown:
 **Serialization**: No persistence requirements for procgen output (runtime-only data structures)
 
 ## Recommendations
-1. **High Priority**: Refactor `StoryJournalComponent.AddDiscovery()`, `IsDiscovered()`, `IsSeriesComplete()`, `MarkSeriesComplete()`, and `GetDiscoveryCount()` methods from `pkg/engine/story_fragment_component.go` into a dedicated system (e.g., `StoryDiscoverySystem`). Components must be pure data with only `Type() string` method.
+1. ~~**High Priority**: Refactor `StoryJournalComponent.AddDiscovery()`, `IsDiscovered()`, `IsSeriesComplete()`, `MarkSeriesComplete()`, and `GetDiscoveryCount()` methods from `pkg/engine/story_fragment_component.go` into a dedicated system (e.g., `StoryDiscoverySystem`). Components must be pure data with only `Type() string` method.~~ **COMPLETED 2026-02-21**
 
 2. **Optional Enhancement**: Add structured logging with `logrus.WithFields()` in generator `Generate()` methods for debugging (pattern used in `pkg/procgen/class/generator.go` and `pkg/procgen/entity/generator.go`). Not critical but improves observability.
 

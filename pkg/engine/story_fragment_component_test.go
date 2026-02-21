@@ -280,3 +280,174 @@ func TestStoryJournalComponent_MultipleSeries(t *testing.T) {
 		t.Errorf("TotalSeriesComplete = %d, want 1", journal.TotalSeriesComplete)
 	}
 }
+
+// --- Tests for ECS-Compliant Helper Functions ---
+
+func TestJournalAddDiscovery(t *testing.T) {
+	journal := NewStoryJournalComponent()
+	fixedTime := time.Date(2026, 2, 21, 10, 0, 0, 0, time.UTC)
+
+	// First discovery should return true
+	isNew := JournalAddDiscovery(journal, "series1", 0, fixedTime)
+	if !isNew {
+		t.Error("JournalAddDiscovery() returned false for new discovery, want true")
+	}
+
+	if journal.TotalDiscoveries != 1 {
+		t.Errorf("TotalDiscoveries = %d, want 1", journal.TotalDiscoveries)
+	}
+
+	if !journal.LastDiscoveryTime.Equal(fixedTime) {
+		t.Errorf("LastDiscoveryTime = %v, want %v", journal.LastDiscoveryTime, fixedTime)
+	}
+
+	// Duplicate discovery should return false
+	isNew = JournalAddDiscovery(journal, "series1", 0, fixedTime.Add(time.Hour))
+	if isNew {
+		t.Error("JournalAddDiscovery() returned true for duplicate, want false")
+	}
+
+	// Time should not be updated for duplicate
+	if !journal.LastDiscoveryTime.Equal(fixedTime) {
+		t.Errorf("LastDiscoveryTime changed for duplicate discovery")
+	}
+
+	// Nil journal should return false
+	isNew = JournalAddDiscovery(nil, "series1", 0, fixedTime)
+	if isNew {
+		t.Error("JournalAddDiscovery(nil) returned true, want false")
+	}
+}
+
+func TestJournalIsDiscovered(t *testing.T) {
+	journal := NewStoryJournalComponent()
+	fixedTime := time.Date(2026, 2, 21, 10, 0, 0, 0, time.UTC)
+
+	// Should not be discovered initially
+	if JournalIsDiscovered(journal, "series1", 0) {
+		t.Error("JournalIsDiscovered() returned true before discovery")
+	}
+
+	// Add discovery
+	JournalAddDiscovery(journal, "series1", 0, fixedTime)
+
+	// Should be discovered now
+	if !JournalIsDiscovered(journal, "series1", 0) {
+		t.Error("JournalIsDiscovered() returned false after discovery")
+	}
+
+	// Nil journal should return false
+	if JournalIsDiscovered(nil, "series1", 0) {
+		t.Error("JournalIsDiscovered(nil) returned true, want false")
+	}
+}
+
+func TestJournalIsSeriesComplete(t *testing.T) {
+	journal := NewStoryJournalComponent()
+	seriesID := "test-series"
+	totalFragments := 3
+	fixedTime := time.Date(2026, 2, 21, 10, 0, 0, 0, time.UTC)
+
+	// Empty series should not be complete
+	if JournalIsSeriesComplete(journal, seriesID, totalFragments) {
+		t.Error("JournalIsSeriesComplete() returned true for empty series")
+	}
+
+	// Add all fragments
+	JournalAddDiscovery(journal, seriesID, 0, fixedTime)
+	JournalAddDiscovery(journal, seriesID, 1, fixedTime)
+	JournalAddDiscovery(journal, seriesID, 2, fixedTime)
+
+	if !JournalIsSeriesComplete(journal, seriesID, totalFragments) {
+		t.Error("JournalIsSeriesComplete() returned false with all fragments")
+	}
+
+	// Nil journal should return false
+	if JournalIsSeriesComplete(nil, seriesID, totalFragments) {
+		t.Error("JournalIsSeriesComplete(nil) returned true, want false")
+	}
+}
+
+func TestJournalMarkSeriesComplete(t *testing.T) {
+	journal := NewStoryJournalComponent()
+	seriesID := "test-series"
+
+	// Mark series complete
+	JournalMarkSeriesComplete(journal, seriesID)
+
+	if journal.TotalSeriesComplete != 1 {
+		t.Errorf("TotalSeriesComplete = %d, want 1", journal.TotalSeriesComplete)
+	}
+
+	if !journal.CompletedSeries[seriesID] {
+		t.Error("CompletedSeries does not contain marked series")
+	}
+
+	// Mark same series again (should not increment)
+	JournalMarkSeriesComplete(journal, seriesID)
+	if journal.TotalSeriesComplete != 1 {
+		t.Errorf("TotalSeriesComplete = %d after duplicate mark, want 1", journal.TotalSeriesComplete)
+	}
+
+	// Nil journal should not panic
+	JournalMarkSeriesComplete(nil, seriesID) // Just verify no panic
+}
+
+func TestJournalGetDiscoveryCount(t *testing.T) {
+	journal := NewStoryJournalComponent()
+	seriesID := "test-series"
+	totalFragments := 5
+	fixedTime := time.Date(2026, 2, 21, 10, 0, 0, 0, time.UTC)
+
+	// Empty series
+	count := JournalGetDiscoveryCount(journal, seriesID, totalFragments)
+	if count != 0 {
+		t.Errorf("JournalGetDiscoveryCount() = %d for empty series, want 0", count)
+	}
+
+	// Add 3 fragments
+	JournalAddDiscovery(journal, seriesID, 0, fixedTime)
+	JournalAddDiscovery(journal, seriesID, 2, fixedTime)
+	JournalAddDiscovery(journal, seriesID, 4, fixedTime)
+
+	count = JournalGetDiscoveryCount(journal, seriesID, totalFragments)
+	if count != 3 {
+		t.Errorf("JournalGetDiscoveryCount() = %d, want 3", count)
+	}
+
+	// Nil journal should return 0
+	count = JournalGetDiscoveryCount(nil, seriesID, totalFragments)
+	if count != 0 {
+		t.Errorf("JournalGetDiscoveryCount(nil) = %d, want 0", count)
+	}
+}
+
+func TestJournalHelpersDeterministic(t *testing.T) {
+	// Verify that helper functions produce deterministic results with fixed time
+	fixedTime := time.Date(2026, 2, 21, 10, 0, 0, 0, time.UTC)
+
+	journal1 := NewStoryJournalComponent()
+	journal2 := NewStoryJournalComponent()
+
+	// Apply same operations
+	JournalAddDiscovery(journal1, "series1", 0, fixedTime)
+	JournalAddDiscovery(journal1, "series1", 1, fixedTime)
+	JournalMarkSeriesComplete(journal1, "series1")
+
+	JournalAddDiscovery(journal2, "series1", 0, fixedTime)
+	JournalAddDiscovery(journal2, "series1", 1, fixedTime)
+	JournalMarkSeriesComplete(journal2, "series1")
+
+	// Both journals should be identical
+	if journal1.TotalDiscoveries != journal2.TotalDiscoveries {
+		t.Errorf("TotalDiscoveries mismatch: %d vs %d", journal1.TotalDiscoveries, journal2.TotalDiscoveries)
+	}
+
+	if journal1.TotalSeriesComplete != journal2.TotalSeriesComplete {
+		t.Errorf("TotalSeriesComplete mismatch: %d vs %d", journal1.TotalSeriesComplete, journal2.TotalSeriesComplete)
+	}
+
+	if !journal1.LastDiscoveryTime.Equal(journal2.LastDiscoveryTime) {
+		t.Errorf("LastDiscoveryTime mismatch: %v vs %v", journal1.LastDiscoveryTime, journal2.LastDiscoveryTime)
+	}
+}

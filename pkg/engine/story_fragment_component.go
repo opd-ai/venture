@@ -49,7 +49,57 @@ func NewStoryJournalComponent() *StoryJournalComponent {
 
 // AddDiscovery records a fragment discovery in the journal.
 // Returns true if this is a new discovery, false if already discovered.
+//
+// Deprecated: Use JournalAddDiscovery helper function instead for ECS compliance.
+// This method exists for backward compatibility but will be removed in future versions.
 func (j *StoryJournalComponent) AddDiscovery(seriesID string, sequenceNum int) bool {
+	return JournalAddDiscovery(j, seriesID, sequenceNum, time.Now())
+}
+
+// IsDiscovered checks if a fragment has been discovered.
+//
+// Deprecated: Use JournalIsDiscovered helper function instead for ECS compliance.
+// This method exists for backward compatibility but will be removed in future versions.
+func (j *StoryJournalComponent) IsDiscovered(seriesID string, sequenceNum int) bool {
+	return JournalIsDiscovered(j, seriesID, sequenceNum)
+}
+
+// IsSeriesComplete checks if all fragments in a series have been discovered.
+//
+// Deprecated: Use JournalIsSeriesComplete helper function instead for ECS compliance.
+// This method exists for backward compatibility but will be removed in future versions.
+func (j *StoryJournalComponent) IsSeriesComplete(seriesID string, totalFragments int) bool {
+	return JournalIsSeriesComplete(j, seriesID, totalFragments)
+}
+
+// MarkSeriesComplete marks a story series as complete.
+// Should be called after verifying IsSeriesComplete returns true.
+//
+// Deprecated: Use JournalMarkSeriesComplete helper function instead for ECS compliance.
+// This method exists for backward compatibility but will be removed in future versions.
+func (j *StoryJournalComponent) MarkSeriesComplete(seriesID string) {
+	JournalMarkSeriesComplete(j, seriesID)
+}
+
+// GetDiscoveryCount returns the number of discovered fragments in a series.
+//
+// Deprecated: Use JournalGetDiscoveryCount helper function instead for ECS compliance.
+// This method exists for backward compatibility but will be removed in future versions.
+func (j *StoryJournalComponent) GetDiscoveryCount(seriesID string, totalFragments int) int {
+	return JournalGetDiscoveryCount(j, seriesID, totalFragments)
+}
+
+// --- ECS-Compliant Helper Functions ---
+// These functions operate on StoryJournalComponent data without embedding behavior
+// in the component itself, following ECS pure-data component principles.
+
+// JournalAddDiscovery records a fragment discovery in the journal.
+// Returns true if this is a new discovery, false if already discovered.
+// The discoveryTime parameter enables deterministic testing and replay.
+func JournalAddDiscovery(j *StoryJournalComponent, seriesID string, sequenceNum int, discoveryTime time.Time) bool {
+	if j == nil {
+		return false
+	}
 	key := fragmentKey(seriesID, sequenceNum)
 	if j.DiscoveredFragments[key] {
 		return false // Already discovered
@@ -57,40 +107,52 @@ func (j *StoryJournalComponent) AddDiscovery(seriesID string, sequenceNum int) b
 
 	j.DiscoveredFragments[key] = true
 	j.TotalDiscoveries++
-	j.LastDiscoveryTime = time.Now()
+	j.LastDiscoveryTime = discoveryTime
 	return true
 }
 
-// IsDiscovered checks if a fragment has been discovered.
-func (j *StoryJournalComponent) IsDiscovered(seriesID string, sequenceNum int) bool {
+// JournalIsDiscovered checks if a fragment has been discovered.
+func JournalIsDiscovered(j *StoryJournalComponent, seriesID string, sequenceNum int) bool {
+	if j == nil {
+		return false
+	}
 	key := fragmentKey(seriesID, sequenceNum)
 	return j.DiscoveredFragments[key]
 }
 
-// IsSeriesComplete checks if all fragments in a series have been discovered.
-func (j *StoryJournalComponent) IsSeriesComplete(seriesID string, totalFragments int) bool {
+// JournalIsSeriesComplete checks if all fragments in a series have been discovered.
+func JournalIsSeriesComplete(j *StoryJournalComponent, seriesID string, totalFragments int) bool {
+	if j == nil {
+		return false
+	}
 	for i := 0; i < totalFragments; i++ {
-		if !j.IsDiscovered(seriesID, i) {
+		if !JournalIsDiscovered(j, seriesID, i) {
 			return false
 		}
 	}
 	return true
 }
 
-// MarkSeriesComplete marks a story series as complete.
-// Should be called after verifying IsSeriesComplete returns true.
-func (j *StoryJournalComponent) MarkSeriesComplete(seriesID string) {
+// JournalMarkSeriesComplete marks a story series as complete.
+// Should be called after verifying JournalIsSeriesComplete returns true.
+func JournalMarkSeriesComplete(j *StoryJournalComponent, seriesID string) {
+	if j == nil {
+		return
+	}
 	if !j.CompletedSeries[seriesID] {
 		j.CompletedSeries[seriesID] = true
 		j.TotalSeriesComplete++
 	}
 }
 
-// GetDiscoveryCount returns the number of discovered fragments in a series.
-func (j *StoryJournalComponent) GetDiscoveryCount(seriesID string, totalFragments int) int {
+// JournalGetDiscoveryCount returns the number of discovered fragments in a series.
+func JournalGetDiscoveryCount(j *StoryJournalComponent, seriesID string, totalFragments int) int {
+	if j == nil {
+		return 0
+	}
 	count := 0
 	for i := 0; i < totalFragments; i++ {
-		if j.IsDiscovered(seriesID, i) {
+		if JournalIsDiscovered(j, seriesID, i) {
 			count++
 		}
 	}

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"hash/fnv"
 	"math"
+	"time"
 
 	"github.com/opd-ai/venture/pkg/procgen"
 	"github.com/opd-ai/venture/pkg/procgen/quest"
@@ -225,8 +226,8 @@ func (s *DiscoverySystem) discoverFragment(player, fragment *Entity, fragComp *S
 	// Mark fragment as discovered
 	fragComp.Discovered = true
 
-	// Add to journal
-	isNew := journal.AddDiscovery(fragComp.SeriesID, fragComp.SequenceNum)
+	// Add to journal using ECS-compliant helper function with current time
+	isNew := JournalAddDiscovery(journal, fragComp.SeriesID, fragComp.SequenceNum, time.Now())
 	if !isNew {
 		log.WithFields(log.Fields{
 			"system_name":  "discovery",
@@ -250,7 +251,7 @@ func (s *DiscoverySystem) discoverFragment(player, fragment *Entity, fragComp *S
 	// Award discovery XP
 	s.awardDiscoveryXP(player, fragComp.Fragment.DiscoveryXP)
 
-	// Check if series is complete
+	// Check if series is complete using ECS-compliant helper function
 	totalFragments := s.getSeriesFragmentCount(fragComp.SeriesID)
 
 	log.WithFields(log.Fields{
@@ -260,9 +261,9 @@ func (s *DiscoverySystem) discoverFragment(player, fragment *Entity, fragComp *S
 		"total_fragments": totalFragments,
 	}).Debug("Checking series completion")
 
-	if journal.IsSeriesComplete(fragComp.SeriesID, totalFragments) {
-		// Mark series complete
-		journal.MarkSeriesComplete(fragComp.SeriesID)
+	if JournalIsSeriesComplete(journal, fragComp.SeriesID, totalFragments) {
+		// Mark series complete using ECS-compliant helper function
+		JournalMarkSeriesComplete(journal, fragComp.SeriesID)
 
 		log.WithFields(log.Fields{
 			"system_name":     "discovery",

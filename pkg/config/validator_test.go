@@ -399,3 +399,78 @@ func TestValidator_ValidateAll_ModsDir(t *testing.T) {
 		})
 	}
 }
+
+// TestConstants verifies that exported validation constants have expected values.
+func TestConstants(t *testing.T) {
+	// Port constants
+	if MinPort != 1024 {
+		t.Errorf("MinPort = %d, want 1024", MinPort)
+	}
+	if MaxPort != 65535 {
+		t.Errorf("MaxPort = %d, want 65535", MaxPort)
+	}
+
+	// Player limit constants
+	if MinPlayers != 1 {
+		t.Errorf("MinPlayers = %d, want 1", MinPlayers)
+	}
+	if MaxPlayersLimit != 100 {
+		t.Errorf("MaxPlayersLimit = %d, want 100", MaxPlayersLimit)
+	}
+
+	// Tick rate constants
+	if MinTickRate != 1 {
+		t.Errorf("MinTickRate = %d, want 1", MinTickRate)
+	}
+	if MaxTickRate != 60 {
+		t.Errorf("MaxTickRate = %d, want 60", MaxTickRate)
+	}
+}
+
+// TestValidatorUsesConstants verifies that validation uses the exported constants.
+func TestValidatorUsesConstants(t *testing.T) {
+	validator := NewValidator()
+
+	// Test boundary values match constants
+	// Port: MinPort should be valid, MinPort-1 should be invalid
+	if err := validator.ValidatePort("1024"); err != nil {
+		t.Errorf("ValidatePort(MinPort) should be valid: %v", err)
+	}
+	if err := validator.ValidatePort("1023"); err == nil {
+		t.Error("ValidatePort(MinPort-1) should be invalid")
+	}
+	if err := validator.ValidatePort("65535"); err != nil {
+		t.Errorf("ValidatePort(MaxPort) should be valid: %v", err)
+	}
+	if err := validator.ValidatePort("65536"); err == nil {
+		t.Error("ValidatePort(MaxPort+1) should be invalid")
+	}
+
+	// MaxPlayers: MinPlayers should be valid, MinPlayers-1 should be invalid
+	if err := validator.ValidateMaxPlayers(MinPlayers); err != nil {
+		t.Errorf("ValidateMaxPlayers(MinPlayers) should be valid: %v", err)
+	}
+	if err := validator.ValidateMaxPlayers(MinPlayers - 1); err == nil {
+		t.Error("ValidateMaxPlayers(MinPlayers-1) should be invalid")
+	}
+	if err := validator.ValidateMaxPlayers(MaxPlayersLimit); err != nil {
+		t.Errorf("ValidateMaxPlayers(MaxPlayersLimit) should be valid: %v", err)
+	}
+	if err := validator.ValidateMaxPlayers(MaxPlayersLimit + 1); err == nil {
+		t.Error("ValidateMaxPlayers(MaxPlayersLimit+1) should be invalid")
+	}
+
+	// TickRate: MinTickRate should be valid, MinTickRate-1 should be invalid
+	if err := validator.ValidateTickRate(MinTickRate); err != nil {
+		t.Errorf("ValidateTickRate(MinTickRate) should be valid: %v", err)
+	}
+	if err := validator.ValidateTickRate(MinTickRate - 1); err == nil {
+		t.Error("ValidateTickRate(MinTickRate-1) should be invalid")
+	}
+	if err := validator.ValidateTickRate(MaxTickRate); err != nil {
+		t.Errorf("ValidateTickRate(MaxTickRate) should be valid: %v", err)
+	}
+	if err := validator.ValidateTickRate(MaxTickRate + 1); err == nil {
+		t.Error("ValidateTickRate(MaxTickRate+1) should be invalid")
+	}
+}

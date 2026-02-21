@@ -43,8 +43,8 @@ func (v *Validator) ValidatePort(portStr string) error {
 		return fmt.Errorf("port must be a number: %w", err)
 	}
 
-	if port < 1024 || port > 65535 {
-		return fmt.Errorf("port must be between 1024 and 65535, got %d (ports < 1024 require root privileges)", port)
+	if port < MinPort || port > MaxPort {
+		return fmt.Errorf("port must be between %d and %d, got %d (ports < %d require root privileges)", MinPort, MaxPort, port, MinPort)
 	}
 
 	return nil
@@ -52,12 +52,12 @@ func (v *Validator) ValidatePort(portStr string) error {
 
 // ValidateMaxPlayers validates that max players is within reasonable range (1-100).
 func (v *Validator) ValidateMaxPlayers(maxPlayers int) error {
-	if maxPlayers < 1 {
-		return fmt.Errorf("max-players must be at least 1, got %d", maxPlayers)
+	if maxPlayers < MinPlayers {
+		return fmt.Errorf("max-players must be at least %d, got %d", MinPlayers, maxPlayers)
 	}
 
-	if maxPlayers > 100 {
-		return fmt.Errorf("max-players must be at most 100, got %d (performance degrades with >100 players)", maxPlayers)
+	if maxPlayers > MaxPlayersLimit {
+		return fmt.Errorf("max-players must be at most %d, got %d (performance degrades with >%d players)", MaxPlayersLimit, maxPlayers, MaxPlayersLimit)
 	}
 
 	return nil
@@ -65,12 +65,12 @@ func (v *Validator) ValidateMaxPlayers(maxPlayers int) error {
 
 // ValidateTickRate validates that tick rate is within reasonable range (1-60 Hz).
 func (v *Validator) ValidateTickRate(tickRate int) error {
-	if tickRate < 1 {
-		return fmt.Errorf("tick-rate must be at least 1 Hz, got %d", tickRate)
+	if tickRate < MinTickRate {
+		return fmt.Errorf("tick-rate must be at least %d Hz, got %d", MinTickRate, tickRate)
 	}
 
-	if tickRate > 60 {
-		return fmt.Errorf("tick-rate must be at most 60 Hz, got %d (diminishing returns above 60 Hz)", tickRate)
+	if tickRate > MaxTickRate {
+		return fmt.Errorf("tick-rate must be at most %d Hz, got %d (diminishing returns above %d Hz)", MaxTickRate, tickRate, MaxTickRate)
 	}
 
 	return nil

@@ -8,7 +8,7 @@ The config package provides configuration validation for server and client setti
 ## Issues Found
 - [ ] low documentation — Missing benchmark tests for validation performance (`validator_test.go:N/A`)
 - [ ] low architecture — Genre list dependency on pkg/procgen/dialog creates coupling; consider extracting genre definitions to shared constants package (`validator.go:16`)
-- [ ] low maintainability — Magic numbers (1024, 65535, 100, 60) could be extracted as named constants for clarity (`validator.go:46,60,72`)
+- [x] low maintainability — Magic numbers (1024, 65535, 100, 60) could be extracted as named constants for clarity (`validator.go:46,60,72`) — **FIXED 2026-02-21**: Extracted to named constants in `constants.go` (`MinPort`, `MaxPort`, `MinPlayers`, `MaxPlayersLimit`, `MinTickRate`, `MaxTickRate`). Added tests `TestConstants` and `TestValidatorUsesConstants` to verify constants.
 
 ## Test Coverage
 100.0% (target: 65%)

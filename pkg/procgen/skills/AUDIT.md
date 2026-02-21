@@ -6,7 +6,7 @@
 The skills package provides procedural generation of skill trees with excellent test coverage (86.3%), comprehensive genre support (5 genres), and strong deterministic generation. The package follows generator interface patterns correctly but has minor ECS compliance concerns with business logic methods on data types and one deprecated API usage.
 
 ## Issues Found
-- [ ] med ECS-compliance — `Skill` and `SkillTree` types have business logic methods (IsUnlocked, CanLevelUp, TotalPoints, GetSkillByID, GetTierSkills) which should be in a System or helper package (`types.go:186,215,220,231,241`)
+- [x] med ECS-compliance — `Skill` and `SkillTree` types have business logic methods (IsUnlocked, CanLevelUp, TotalPoints, GetSkillByID, GetTierSkills) which should be in a System or helper package (`types.go:186,215,220,231,241`) — **FIXED**: Extracted logic to helper functions `IsSkillUnlocked`, `CanSkillLevelUp`, `CalculateTreeTotalPoints`, `FindSkillByID`, `GetSkillsByTier` in `skills_helpers.go`. Original methods now delegate to helpers with deprecation notices for backward compatibility.
 - [ ] low deprecated-api — Uses deprecated `strings.Title` which should be replaced with `cases.Title(language.English)` from golang.org/x/text/cases (`generator.go:355`)
 - [ ] low doc-coverage — README.md exists and is comprehensive; all exported types/functions have godoc; package doc.go complete (no issue, but noted for completeness)
 
@@ -48,7 +48,7 @@ Coverage breakdown:
 **Serialization**: Not implemented (acceptable for procgen package; persistence handled at component level)
 
 ## Recommendations
-1. **Medium Priority**: Refactor business logic methods on `Skill` and `SkillTree` types to a separate helper package or system to maintain strict ECS compliance. While these are procgen types (not components), consistency with ECS patterns would improve maintainability. Consider creating `pkg/procgen/skills/query` package with functions like `IsSkillUnlocked(*Skill, playerLevel, skillPoints, ...)` and `GetSkillByID(*SkillTree, id)`.
+1. ~~**Medium Priority**: Refactor business logic methods on `Skill` and `SkillTree` types to a separate helper package or system to maintain strict ECS compliance.~~ ✅ **COMPLETED**: Helper functions added to `skills_helpers.go`.
 
 2. **Low Priority**: Replace `strings.Title` at `generator.go:355` with `cases.Title(language.English)` to use non-deprecated API. Current usage is functional but may trigger warnings in future Go versions.
 

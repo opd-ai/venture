@@ -183,67 +183,36 @@ type SkillTreeTemplate struct {
 }
 
 // IsUnlocked checks if a skill can be unlocked given current state.
+// Deprecated: Use IsSkillUnlocked helper function for ECS compliance.
+// This method is retained for backward compatibility.
 func (s *Skill) IsUnlocked(playerLevel, skillPoints int, learnedSkills map[string]bool, attributes map[string]int) bool {
-	// Check player level
-	if playerLevel < s.Requirements.PlayerLevel {
-		return false
-	}
-
-	// Check skill points
-	if skillPoints < s.Requirements.SkillPoints {
-		return false
-	}
-
-	// Check prerequisites
-	for _, prereqID := range s.Requirements.PrerequisiteIDs {
-		if !learnedSkills[prereqID] {
-			return false
-		}
-	}
-
-	// Check attribute minimums
-	for attr, minValue := range s.Requirements.AttributeMinimums {
-		if attributes[attr] < minValue {
-			return false
-		}
-	}
-
-	return true
+	return IsSkillUnlocked(s, playerLevel, skillPoints, learnedSkills, attributes)
 }
 
 // CanLevelUp checks if skill can be leveled up further.
+// Deprecated: Use CanSkillLevelUp helper function for ECS compliance.
+// This method is retained for backward compatibility.
 func (s *Skill) CanLevelUp() bool {
-	return s.Level > 0 && s.Level < s.MaxLevel
+	return CanSkillLevelUp(s)
 }
 
 // TotalPoints calculates total skill points in a tree.
+// Deprecated: Use CalculateTreeTotalPoints helper function for ECS compliance.
+// This method is retained for backward compatibility.
 func (st *SkillTree) TotalPoints() int {
-	total := 0
-	for _, node := range st.Nodes {
-		if node.Skill.Level > 0 {
-			total += node.Skill.Level * node.Skill.Requirements.SkillPoints
-		}
-	}
-	return total
+	return CalculateTreeTotalPoints(st)
 }
 
 // GetSkillByID finds a skill by its ID.
+// Deprecated: Use FindSkillByID helper function for ECS compliance.
+// This method is retained for backward compatibility.
 func (st *SkillTree) GetSkillByID(id string) *Skill {
-	for _, node := range st.Nodes {
-		if node.Skill.ID == id {
-			return node.Skill
-		}
-	}
-	return nil
+	return FindSkillByID(st, id)
 }
 
 // GetTierSkills returns all skills in a specific tier.
+// Deprecated: Use GetSkillsByTier helper function for ECS compliance.
+// This method is retained for backward compatibility.
 func (st *SkillTree) GetTierSkills(tier Tier) []*Skill {
-	skills := make([]*Skill, 0)
-	for _, node := range st.Nodes {
-		if node.Skill.Tier == tier {
-			skills = append(skills, node.Skill)
-		}
-	}
-	return skills
+	return GetSkillsByTier(st, tier)
 }

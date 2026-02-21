@@ -6,18 +6,18 @@
 
 ## Summary
 
-- **Total issues**: 223 (91 open, 132 resolved)
-- **Critical**: 0 (0 open) | **High**: 43 (0 open) | **Medium**: 42 (3 open) | **Low**: 138 (88 open)
-- **Affected subpackages**: 41 of 108 audited packages have open issues
-- **Resolution rate**: 132/223 (59%)
+- **Total issues**: 223 (90 open, 133 resolved)
+- **Critical**: 0 (0 open) | **High**: 43 (0 open) | **Medium**: 42 (2 open) | **Low**: 138 (88 open)
+- **Affected subpackages**: 40 of 108 audited packages have open issues
+- **Resolution rate**: 133/223 (60%)
 
 | Severity | Total | Open | Resolved |
 |----------|-------|------|----------|
 | Critical | 0 | 0 | 0 |
 | High | 43 | 0 | 43 |
-| Medium | 42 | 3 | 39 |
+| Medium | 42 | 2 | 40 |
 | Low | 138 | 88 | 50 |
-| **Total** | **223** | **91** | **132** |
+| **Total** | **223** | **90** | **133** |
 
 ## Priority Resolution Order
 
@@ -34,7 +34,7 @@ _No open high-priority issues._
 - **pkg/network/resilience** (1 issue)
   - [ ] deterministic procgen — Uses `time.Now()` for non-generation purposes (metrics timestamps, bandwidth tracking). While acceptable for testing infrastructure, violates strict project rule. Consider adding comment explaining exemption. (`simulator.go:53,68,75`, `metrics.go:48,53,127,146,313,321`, `scenario.go:67`)
 - **pkg/procgen/skills** (1 issue)
-  - [ ] ECS — compliance — `Skill` and `SkillTree` types have business logic methods (IsUnlocked, CanLevelUp, TotalPoints, GetSkillByID, GetTierSkills) which should be in a System or helper package (`types.go:186,215,220,231,241`)
+  - [x] ECS — compliance — `Skill` and `SkillTree` types have business logic methods (IsUnlocked, CanLevelUp, TotalPoints, GetSkillByID, GetTierSkills) which should be in a System or helper package (`types.go:186,215,220,231,241`) — **FIXED**: Extracted logic to helper functions `IsSkillUnlocked`, `CanSkillLevelUp`, `CalculateTreeTotalPoints`, `FindSkillByID`, `GetSkillsByTier` in `skills_helpers.go`. Original methods now delegate to helpers with deprecation notices for backward compatibility.
 - **pkg/procgen/story** (1 issue)
   - [ ] ECS compliance — `StoryJournalComponent` in `pkg/engine/story_fragment_component.go` has behavior methods (`AddDiscovery`, `IsDiscovered`, `IsSeriesComplete`, `MarkSeriesComplete`, `GetDiscoveryCount`) violating ECS pure data principle (`pkg/engine/story_fragment_component.go:52-98`)
 
@@ -667,8 +667,8 @@ _No open high-priority issues._
 
 #### `pkg/procgen/skills`
 - Source: [`pkg/procgen/skills/AUDIT.md`](pkg/procgen/skills/AUDIT.md)
-- Issues: 3 open (Medium: 1, Low: 2)
-  - [Medium] ECS — compliance — `Skill` and `SkillTree` types have business logic methods (IsUnlocked, CanLevelUp, TotalPoints, GetSkillByID, GetTierSkills) which should be in a System or helper package (`types.go:186,215,220,231,241`)
+- Issues: 2 open, 1 resolved (Low: 2)
+  - ~~[Medium] ECS — compliance — `Skill` and `SkillTree` types have business logic methods (IsUnlocked, CanLevelUp, TotalPoints, GetSkillByID, GetTierSkills) which should be in a System or helper package (`types.go:186,215,220,231,241`) — **FIXED**: Extracted logic to helper functions in `skills_helpers.go`. Original methods delegate to helpers with deprecation notices.~~ ✅ Resolved
   - [Low] deprecated — api — Uses deprecated `strings.Title` which should be replaced with `cases.Title(language.English)` from golang.org/x/text/cases (`generator.go:355`)
   - [Low] doc — coverage — README.md exists and is comprehensive; all exported types/functions have godoc; package doc.go complete (no issue, but noted for completeness)
 

@@ -943,8 +943,8 @@ _No open high-priority issues._
 
 ### Estimated Effort
 
-- **Phase 1 (Critical)**: 0 issues — Immediate attention required
-- **Phase 2 (High)**: 0 issues — Target for next sprint
+- **Phase 1 (Critical)**: 0 issues — No action required
+- **Phase 2 (High)**: 0 issues — No action required
 - **Phase 3 (Medium)**: 3 issues — Ongoing improvement backlog
 - **Phase 4 (Low)**: 88 issues — Address opportunistically
 

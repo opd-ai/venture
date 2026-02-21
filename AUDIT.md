@@ -6,18 +6,18 @@
 
 ## Summary
 
-- **Total issues**: 225 (35 open, 190 resolved)
-- **Critical**: 0 (0 open) | **High**: 43 (0 open) | **Medium**: 42 (0 open) | **Low**: 140 (35 open)
-- **Affected subpackages**: 19 of 108 audited packages have open issues
-- **Resolution rate**: 190/225 (84%)
+- **Total issues**: 225 (33 open, 192 resolved)
+- **Critical**: 0 (0 open) | **High**: 43 (0 open) | **Medium**: 42 (0 open) | **Low**: 140 (33 open)
+- **Affected subpackages**: 18 of 108 audited packages have open issues
+- **Resolution rate**: 192/225 (85%)
 
 | Severity | Total | Open | Resolved |
 |----------|-------|------|----------|
 | Critical | 0 | 0 | 0 |
 | High | 43 | 0 | 43 |
 | Medium | 42 | 0 | 42 |
-| Low | 140 | 35 | 105 |
-| **Total** | **225** | **35** | **190** |
+| Low | 140 | 33 | 107 |
+| **Total** | **225** | **33** | **192** |
 
 ## Priority Resolution Order
 
@@ -938,7 +938,7 @@ _All medium-priority issues have been resolved._
 - **Modding (pkg/modding/)**: 1 open issues (Low: 1)
 - **Narrative (pkg/narrative/)**: 1 open issues (Low: 1)
 - **Network (pkg/network/)**: 0 open issues — _All issues resolved_
-- **Procedural Generation (pkg/procgen/)**: 28 open issues (Medium: 2, Low: 26)
+- **Procedural Generation (pkg/procgen/)**: 26 open issues (Low: 26)
 - **Rendering (pkg/rendering/)**: 1 open issues (Low: 1)
 - **Save/Load (pkg/saveload/)**: 3 open issues (Low: 3)
 - **Security (pkg/security/)**: 2 open issues (Low: 2)
@@ -951,18 +951,18 @@ _All medium-priority issues have been resolved._
 - **Phase 1 (Critical)**: 0 issues — No action required
 - **Phase 2 (High)**: 0 issues — No action required
 - **Phase 3 (Medium)**: 0 issues — All resolved
-- **Phase 4 (Low)**: 35 issues — Address opportunistically
+- **Phase 4 (Low)**: 33 issues — Address opportunistically
 
 ## Resolved Issues Summary
 
-190 issues have been resolved across 44 packages.
+192 issues have been resolved across 44 packages.
 
 | Severity | Resolved |
 |----------|----------|
 | High | 43 |
 | Medium | 42 |
-| Low | 105 |
-| **Total** | **190** |
+| Low | 107 |
+| **Total** | **192** |
 
 ---
 

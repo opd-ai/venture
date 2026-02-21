@@ -64,6 +64,25 @@ Older events are evicted using LRU when the limit is reached.
 	// Retrieve recent memories
 	recent := comp.Memory.GetRecentEvents(5)
 
+# Persistence / Serialization
+
+CompanionLearningComponent supports JSON serialization for save/load workflows:
+
+	// Save companion state
+	data, err := comp.Serialize()
+	if err != nil {
+		log.Printf("Failed to serialize companion: %v", err)
+	}
+	// data is a []byte that can be written to a save file
+
+	// Load companion state
+	restoredComp := &learning.CompanionLearningComponent{}
+	err = restoredComp.Deserialize(data)
+	if err != nil {
+		log.Printf("Failed to restore companion: %v", err)
+	}
+	// restoredComp now has skill tree, personality, memory, and LastSkillUse restored
+
 # ECS Integration
 
 CompanionLearningComponent implements the component interface and can be attached to companion

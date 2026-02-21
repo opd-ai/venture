@@ -6,18 +6,18 @@
 
 ## Summary
 
-- **Total issues**: 225 (66 open, 159 resolved)
-- **Critical**: 0 (0 open) | **High**: 43 (0 open) | **Medium**: 42 (0 open) | **Low**: 140 (66 open)
-- **Affected subpackages**: 32 of 108 audited packages have open issues
-- **Resolution rate**: 159/225 (71%)
+- **Total issues**: 225 (65 open, 160 resolved)
+- **Critical**: 0 (0 open) | **High**: 43 (0 open) | **Medium**: 42 (0 open) | **Low**: 140 (65 open)
+- **Affected subpackages**: 31 of 108 audited packages have open issues
+- **Resolution rate**: 160/225 (71%)
 
 | Severity | Total | Open | Resolved |
 |----------|-------|------|----------|
 | Critical | 0 | 0 | 0 |
 | High | 43 | 0 | 43 |
 | Medium | 42 | 0 | 42 |
-| Low | 140 | 66 | 74 |
-| **Total** | **225** | **66** | **159** |
+| Low | 140 | 65 | 75 |
+| **Total** | **225** | **65** | **160** |
 
 ## Priority Resolution Order
 
@@ -68,7 +68,7 @@ _All medium-priority issues have been resolved._
   - [x] Hardcoded magic numbers for skill decay (0.1), trait clamping (0.0-1.0), LRU limits (1000), and XP values are not configurable. — **FIXED 2026-02-21**: Extracted all magic numbers to named constants in `constants.go` (`SkillDecayRate`, `TraitMinValue`, `TraitMaxValue`, `TraitDefaultValue`, `DefaultMaxEvents`, `DefaultMaxPersonalityChanges`, `SkillXPPerLevel`, `SkillBonusPerLevel`, etc.)
   - [x] `Deserialize()` rebuilds prerequisites as empty and defaults cost to 1 — deserialized skill trees have incomplete structure. — **FIXED 2026-02-21**: Updated serialization to include `Prerequisites` and `Cost` fields in `skillData`. Added preservation test.
 - **pkg/companion/learning** (1 issue)
-  - [ ] Documentation — Missing example for Serialize/Deserialize in doc.go (`doc.go:1`)
+  - [x] Documentation — Missing example for Serialize/Deserialize in doc.go (`doc.go:1`) — **FIXED 2026-02-21**: Added "Persistence / Serialization" section to doc.go with complete Serialize/Deserialize usage example
 - **pkg/config** (3 issues)
   - [ ] documentation — Missing benchmark tests for validation performance (`validator_test.go:N/A`)
   - [ ] architecture — Genre list dependency on pkg/procgen/dialog creates coupling; consider extracting genre definitions to shared constants package (`validator.go:16`)
@@ -278,8 +278,8 @@ _All medium-priority issues have been resolved._
 
 #### `pkg/companion/learning`
 - Source: [`pkg/companion/learning/AUDIT.md`](pkg/companion/learning/AUDIT.md)
-- Issues: 1 open (Low: 1)
-  - [Low] Documentation — Missing example for Serialize/Deserialize in doc.go (`doc.go:1`)
+- Issues: 0 open, 1 resolved (Low: 1)
+  - ~~[Low] Documentation — Missing example for Serialize/Deserialize in doc.go (`doc.go:1`)~~ ✅ **FIXED 2026-02-21**: Added "Persistence / Serialization" section to doc.go
 
 ### Configuration (pkg/config/)
 
@@ -929,7 +929,7 @@ _All medium-priority issues have been resolved._
 - **Audio (pkg/audio/)**: 3 open issues (Low: 3)
 - **Audit (pkg/audit/)**: 2 open issues (Low: 2)
 - **Class System (pkg/class/)**: 3 open issues (Low: 3)
-- **Companion (pkg/companion/)**: 1 open issue (Low: 1) — learning subpackage only
+- **Companion (pkg/companion/)**: 0 open issues — _All issues resolved_
 - **Configuration (pkg/config/)**: 3 open issues (Low: 3)
 - **Engine (pkg/engine/)**: 3 open issues (Low: 3)
 - **Integration (pkg/integration/)**: 6 open issues (Low: 6)
@@ -949,18 +949,18 @@ _All medium-priority issues have been resolved._
 - **Phase 1 (Critical)**: 0 issues — No action required
 - **Phase 2 (High)**: 0 issues — No action required
 - **Phase 3 (Medium)**: 3 issues — Ongoing improvement backlog
-- **Phase 4 (Low)**: 66 issues — Address opportunistically
+- **Phase 4 (Low)**: 65 issues — Address opportunistically
 
 ## Resolved Issues Summary
 
-159 issues have been resolved across 33 packages.
+160 issues have been resolved across 34 packages.
 
 | Severity | Resolved |
 |----------|----------|
 | High | 43 |
 | Medium | 42 |
-| Low | 74 |
-| **Total** | **159** |
+| Low | 75 |
+| **Total** | **160** |
 
 ---
 

@@ -92,4 +92,20 @@
 //
 // All types in this package are thread-safe and can be used concurrently
 // from multiple goroutines.
+//
+// # Determinism Exemption
+//
+// This package uses time.Now() for metrics timestamps, bandwidth tracking,
+// and simulation timing (simulator.go, metrics.go, scenario.go). This is
+// an intentional exemption from the project's strict deterministic procgen
+// rule because:
+//
+//  1. This is testing infrastructure, not game content generation
+//  2. Timestamps measure real-world elapsed time for performance metrics
+//  3. Bandwidth limiting requires wall-clock time to enforce rate limits
+//  4. Scenario execution needs real duration measurement for acceptance criteria
+//
+// For deterministic random behavior in packet drop/jitter simulation, use
+// NewNetworkSimulatorWithSeed() which accepts a fixed seed for reproducible
+// test scenarios.
 package resilience

@@ -6,18 +6,18 @@
 
 ## Summary
 
-- **Total issues**: 225 (88 open, 137 resolved)
-- **Critical**: 0 (0 open) | **High**: 43 (0 open) | **Medium**: 42 (1 open) | **Low**: 140 (87 open)
-- **Affected subpackages**: 40 of 108 audited packages have open issues
-- **Resolution rate**: 137/225 (61%)
+- **Total issues**: 225 (87 open, 138 resolved)
+- **Critical**: 0 (0 open) | **High**: 43 (0 open) | **Medium**: 42 (0 open) | **Low**: 140 (87 open)
+- **Affected subpackages**: 39 of 108 audited packages have open issues
+- **Resolution rate**: 138/225 (61%)
 
 | Severity | Total | Open | Resolved |
 |----------|-------|------|----------|
 | Critical | 0 | 0 | 0 |
 | High | 43 | 0 | 43 |
-| Medium | 42 | 1 | 41 |
+| Medium | 42 | 0 | 42 |
 | Low | 140 | 87 | 53 |
-| **Total** | **225** | **88** | **137** |
+| **Total** | **225** | **87** | **138** |
 
 ## Priority Resolution Order
 
@@ -31,8 +31,10 @@ _No open high-priority issues._
 
 ### Phase 3: Medium Priority
 
+_All medium-priority issues have been resolved._
+
 - **pkg/network/resilience** (1 issue)
-  - [ ] deterministic procgen — Uses `time.Now()` for non-generation purposes (metrics timestamps, bandwidth tracking). While acceptable for testing infrastructure, violates strict project rule. Consider adding comment explaining exemption. (`simulator.go:53,68,75`, `metrics.go:48,53,127,146,313,321`, `scenario.go:67`)
+  - [x] deterministic procgen — Uses `time.Now()` for non-generation purposes (metrics timestamps, bandwidth tracking). While acceptable for testing infrastructure, violates strict project rule. Consider adding comment explaining exemption. (`simulator.go:53,68,75`, `metrics.go:48,53,127,146,313,321`, `scenario.go:67`) — **FIXED 2026-02-21**: Added "Determinism Exemption" section to doc.go explaining why time.Now() is acceptable in this testing infrastructure package.
 - **pkg/procgen/skills** (2 issues)
   - [x] ECS — compliance — `Skill` and `SkillTree` types have business logic methods (IsUnlocked, CanLevelUp, TotalPoints, GetSkillByID, GetTierSkills) which should be in a System or helper package (`types.go:186,215,220,231,241`) — **FIXED**: Extracted logic to helper functions `IsSkillUnlocked`, `CanSkillLevelUp`, `CalculateTreeTotalPoints`, `FindSkillByID`, `GetSkillsByTier` in `skills_helpers.go`. Original methods now delegate to helpers with deprecation notices for backward compatibility.
   - [x] deprecated — api — Uses deprecated `strings.Title` which should be replaced with `cases.Title(language.English)` from golang.org/x/text/cases (`generator.go:355`) — **FIXED 2026-02-21**: Replaced with `cases.Title(language.English).String()`.

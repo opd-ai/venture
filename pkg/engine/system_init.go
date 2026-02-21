@@ -76,6 +76,7 @@ type SystemInitResult struct {
 	CompanionLevelUpParticleSystem              *CompanionLevelUpParticleSystem
 	ItemPickupSystem                            *ItemPickupSystem
 	ProgressionSystem                           *ProgressionSystem
+	SkillLoadoutSystem                          *SkillLoadoutSystem
 	CompanionProgressionSystem                  *CompanionProgressionSystem
 	WeatherAudioSystem                          *WeatherAudioSystem
 	FactionXPBonusSystem                        *FactionXPBonusSystem
@@ -857,6 +858,12 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 	// 18. SkillProgressionSystem - applies skill effects to stats
 	skillProgressionSystem := NewSkillProgressionSystem()
 	game.World.AddSystem(skillProgressionSystem)
+
+	// 18a. SkillLoadoutSystem - manages saved skill configurations and loadout swapping
+	// Connects SkillTreeComponent with SkillLoadoutComponent for build management
+	skillLoadoutSystem := NewSkillLoadoutSystem(game.World)
+	result.SkillLoadoutSystem = skillLoadoutSystem
+	game.World.AddSystem(skillLoadoutSystem)
 
 	// 19. VisualFeedbackSystem - hit flashes and tints
 	visualFeedbackSystem := NewVisualFeedbackSystem()

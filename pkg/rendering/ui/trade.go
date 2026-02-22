@@ -121,6 +121,8 @@ func (t *TradeUI) Show() {
 }
 
 // Update handles input and updates the trade UI state.
+// Deprecated: Use UpdateWithInput for testability and input abstraction.
+// This method calls ebiten.CursorPosition() directly.
 func (t *TradeUI) Update() {
 	if !t.IsVisible() {
 		return
@@ -129,6 +131,17 @@ func (t *TradeUI) Update() {
 	// Update hover state based on mouse position
 	mx, my := ebiten.CursorPosition()
 	t.HoveredButton = t.getHoveredButton(mx, my)
+}
+
+// UpdateWithInput handles input and updates the trade UI state using provided input.
+// This method should be preferred over Update() for testability.
+func (t *TradeUI) UpdateWithInput(mouseX, mouseY int) {
+	if !t.IsVisible() {
+		return
+	}
+
+	// Update hover state based on mouse position
+	t.HoveredButton = t.getHoveredButton(mouseX, mouseY)
 }
 
 // Draw renders the trade UI to the screen.
@@ -313,6 +326,8 @@ func (t *TradeUI) getHoveredButton(mx, my int) string {
 }
 
 // IsButtonClicked returns true if the specified button is clicked.
+// Deprecated: Use IsButtonClickedWithInput for testability and input abstraction.
+// This method calls ebiten.IsMouseButtonPressed() directly.
 func (t *TradeUI) IsButtonClicked(button string) bool {
 	if !t.IsVisible() {
 		return false
@@ -320,12 +335,35 @@ func (t *TradeUI) IsButtonClicked(button string) bool {
 	return t.HoveredButton == button && ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft)
 }
 
+// IsButtonClickedWithInput returns true if the specified button is clicked with given input state.
+// This method should be preferred over IsButtonClicked() for testability.
+func (t *TradeUI) IsButtonClickedWithInput(button string, mousePressed bool) bool {
+	if !t.IsVisible() {
+		return false
+	}
+	return t.HoveredButton == button && mousePressed
+}
+
 // GetClickedButton returns which button was clicked, or empty string.
+// Deprecated: Use GetClickedButtonWithInput for testability and input abstraction.
+// This method calls ebiten.IsMouseButtonPressed() directly.
 func (t *TradeUI) GetClickedButton() string {
 	if !t.IsVisible() {
 		return ""
 	}
 	if ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft) {
+		return t.HoveredButton
+	}
+	return ""
+}
+
+// GetClickedButtonWithInput returns which button was clicked with given input state, or empty string.
+// This method should be preferred over GetClickedButton() for testability.
+func (t *TradeUI) GetClickedButtonWithInput(mousePressed bool) string {
+	if !t.IsVisible() {
+		return ""
+	}
+	if mousePressed {
 		return t.HoveredButton
 	}
 	return ""

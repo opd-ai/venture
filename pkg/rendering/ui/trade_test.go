@@ -354,6 +354,134 @@ func TestTradeUIHideShow(t *testing.T) {
 	}
 }
 
+func TestTradeUIUpdateWithInput(t *testing.T) {
+	ui := NewTradeUI(100, 100, 400, 500)
+
+	proposal := &TradeProposal{
+		ProposerName:  "Alice",
+		RecipientName: "Bob",
+		Status:        "pending",
+		ProposalTime:  time.Now(),
+	}
+	ui.SetProposal(proposal)
+
+	// Calculate accept button position
+	acceptX := 100 + 400/2 - 100 - 5
+	acceptY := 100 + 500 - 30 - 10
+
+	// Test hovering over accept button
+	ui.UpdateWithInput(acceptX+50, acceptY+15)
+	if ui.HoveredButton != "accept" {
+		t.Errorf("HoveredButton = %q, want %q", ui.HoveredButton, "accept")
+	}
+
+	// Test hovering over reject button
+	rejectX := 100 + 400/2 + 5
+	ui.UpdateWithInput(rejectX+50, acceptY+15)
+	if ui.HoveredButton != "reject" {
+		t.Errorf("HoveredButton = %q, want %q", ui.HoveredButton, "reject")
+	}
+
+	// Test hovering over neither button
+	ui.UpdateWithInput(0, 0)
+	if ui.HoveredButton != "" {
+		t.Errorf("HoveredButton = %q, want %q", ui.HoveredButton, "")
+	}
+
+	// Test with invisible UI
+	ui.Hide()
+	ui.UpdateWithInput(acceptX+50, acceptY+15)
+	if ui.HoveredButton != "" {
+		t.Errorf("HoveredButton should remain unchanged when UI is hidden, got %q", ui.HoveredButton)
+	}
+}
+
+func TestTradeUIIsButtonClickedWithInput(t *testing.T) {
+	ui := NewTradeUI(100, 100, 400, 500)
+
+	proposal := &TradeProposal{
+		ProposerName:  "Alice",
+		RecipientName: "Bob",
+		Status:        "pending",
+		ProposalTime:  time.Now(),
+	}
+	ui.SetProposal(proposal)
+
+	// Set hover state to accept
+	ui.HoveredButton = "accept"
+
+	tests := []struct {
+		name         string
+		button       string
+		mousePressed bool
+		want         bool
+	}{
+		{"accept clicked", "accept", true, true},
+		{"accept not clicked", "accept", false, false},
+		{"reject clicked when hovering accept", "reject", true, false},
+		{"wrong button", "cancel", true, false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := ui.IsButtonClickedWithInput(tt.button, tt.mousePressed)
+			if got != tt.want {
+				t.Errorf("IsButtonClickedWithInput(%q, %v) = %v, want %v",
+					tt.button, tt.mousePressed, got, tt.want)
+			}
+		})
+	}
+
+	// Test with invisible UI
+	ui.Hide()
+	if ui.IsButtonClickedWithInput("accept", true) {
+		t.Error("IsButtonClickedWithInput should return false when UI is hidden")
+	}
+}
+
+func TestTradeUIGetClickedButtonWithInput(t *testing.T) {
+	ui := NewTradeUI(100, 100, 400, 500)
+
+	proposal := &TradeProposal{
+		ProposerName:  "Alice",
+		RecipientName: "Bob",
+		Status:        "pending",
+		ProposalTime:  time.Now(),
+	}
+	ui.SetProposal(proposal)
+
+	tests := []struct {
+		name         string
+		hoveredBtn   string
+		mousePressed bool
+		want         string
+	}{
+		{"accept hovered and clicked", "accept", true, "accept"},
+		{"reject hovered and clicked", "reject", true, "reject"},
+		{"accept hovered not clicked", "accept", false, ""},
+		{"no hover and clicked", "", true, ""},
+		{"no hover and not clicked", "", false, ""},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ui.HoveredButton = tt.hoveredBtn
+			got := ui.GetClickedButtonWithInput(tt.mousePressed)
+			if got != tt.want {
+				t.Errorf("GetClickedButtonWithInput(%v) with HoveredButton=%q = %q, want %q",
+					tt.mousePressed, tt.hoveredBtn, got, tt.want)
+			}
+		})
+	}
+
+	// Test with invisible UI
+	ui.HoveredButton = "accept"
+	ui.Hide()
+	if ui.GetClickedButtonWithInput(true) != "" {
+		t.Error("GetClickedButtonWithInput should return empty string when UI is hidden")
+	}
+}
+
 // Benchmark tests
 func BenchmarkTradeUISetProposal(b *testing.B) {
 	ui := NewTradeUI(0, 0, 400, 500)

@@ -23,8 +23,8 @@ The `pkg/rendering/ui` package provides procedural UI element generation, chat r
 _(None)_
 
 ### Medium Severity
-- [ ] **Direct Ebiten input** — `trade.go:130` calls `ebiten.CursorPosition()` directly instead of through `Input` interface. UI systems should receive input state from callers, not query Ebiten directly.
-- [ ] **Direct Ebiten input** — `trade.go:321` and `trade.go:329` call `ebiten.IsMouseButtonPressed()` directly instead of through `Input` interface.
+- [x] **Direct Ebiten input** — `trade.go:130` calls `ebiten.CursorPosition()` directly instead of through `Input` interface. UI systems should receive input state from callers, not query Ebiten directly. **FIXED**: Added `UpdateWithInput(mouseX, mouseY int)` method for testable input handling. Original `Update()` preserved for backward compatibility but marked deprecated.
+- [x] **Direct Ebiten input** — `trade.go:321` and `trade.go:329` call `ebiten.IsMouseButtonPressed()` directly instead of through `Input` interface. **FIXED**: Added `IsButtonClickedWithInput(button string, mousePressed bool)` and `GetClickedButtonWithInput(mousePressed bool)` methods for testable input handling. Original methods preserved for backward compatibility but marked deprecated.
 - [ ] **time.Now() in non-test code** — `chat.go:109` and `chat.go:269` call `time.Now()` for cursor blinking and system messages. While acceptable for pure UI timing, consider injecting a clock for deterministic replay/testing.
 
 ### Low Severity
@@ -35,11 +35,11 @@ _(None)_
 | Input Source | Status | Notes |
 |---|---|---|
 | Keyboard | N/A | Package is a rendering/data layer; input handled by engine systems |
-| Mouse | ⚠️ Partial | `trade.go` directly queries `ebiten.CursorPosition()` and `ebiten.IsMouseButtonPressed()` |
+| Mouse | ✅ | `trade.go` now has `UpdateWithInput()`, `IsButtonClickedWithInput()`, `GetClickedButtonWithInput()` methods for input abstraction. Legacy methods preserved for backward compatibility. |
 | Gamepad | N/A | No gamepad handling in this package |
 | Touch | N/A | No touch handling in this package |
 | VR | N/A | No VR handling in this package |
-| Stub/Test | ✅ | Tests don't require input mocking since most UI is data-only |
+| Stub/Test | ✅ | Tests use new input abstraction methods; don't require Ebiten runtime |
 
 ## Menu/UI Integration
 | Menu | Reachable | Input-Complete | Backing System Wired | Notes |
@@ -47,16 +47,17 @@ _(None)_
 | ChatUI | ✅ | N/A | ✅ | Data structure for chat rendering; wired via `pkg/engine/chat_system.go` |
 | NotificationManager | ✅ | N/A | ✅ | Data structure for notifications; used by client systems |
 | TutorialManager | ✅ | N/A | ✅ | Implements `ContextualTutorialProvider` interface |
-| TradeUI | ✅ | ⚠️ | ✅ | Has direct Ebiten input calls (see issues) |
+| TradeUI | ✅ | ✅ | ✅ | Input abstraction via `*WithInput()` methods |
 | SettingsManager | ✅ | N/A | ✅ | Data/persistence for settings; UI rendering in engine |
 | KeybindManager | ✅ | N/A | ✅ | Data/persistence for keybinds; used by input system |
 | QuickTravelManager | ✅ | N/A | ✅ | Data structure for quick travel destinations |
 
 ## Test Coverage
-**Coverage**: 80.0% (target: 65%) ✅
+**Coverage**: 80.1% (target: 65%) ✅
 - Missing test areas: `story_journal.go` and `image_preview.go` have lower coverage based on file names
 - Missing benchmarks: No benchmarks for UI generation performance (would be useful for `generator.go`)
 - Table-driven test compliance: ✅ Tests use table-driven patterns
+- Input abstraction tests: ✅ New `*WithInput()` methods have comprehensive table-driven tests
 
 ## Documentation Coverage
 - Package `doc.go`: ✅ Comprehensive documentation with examples

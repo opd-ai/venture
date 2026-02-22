@@ -3256,6 +3256,40 @@ func applyCharacterClass(player *engine.Entity, game *engine.EbitenGame, clientL
 	if err := engine.ApplyClassStats(player, charData.Class); err != nil {
 		clientLogger.WithError(err).Fatal("failed to apply character class stats")
 	}
+
+	// Apply equipment loadout bonuses if a loadout was selected
+	applyEquipmentLoadout(player, charData, clientLogger)
+}
+
+// applyEquipmentLoadout applies the selected starting equipment loadout bonuses.
+func applyEquipmentLoadout(player *engine.Entity, charData *engine.CharacterData, clientLogger *logrus.Entry) {
+	if charData.StartingLoadout == nil {
+		return
+	}
+
+	loadout := charData.StartingLoadout
+	clientLogger.WithFields(logrus.Fields{
+		"loadout":      loadout.Name,
+		"bonusHP":      loadout.BonusHP,
+		"bonusAttack":  loadout.BonusAttack,
+		"bonusDefense": loadout.BonusDefense,
+	}).Info("applying equipment loadout bonuses")
+
+	// Apply HP bonus
+	if comp, exists := player.GetComponent("health"); exists {
+		if healthComp, ok := comp.(*engine.HealthComponent); ok && healthComp != nil {
+			healthComp.Max += float64(loadout.BonusHP)
+			healthComp.Current += float64(loadout.BonusHP)
+		}
+	}
+
+	// Apply Attack and Defense bonuses
+	if comp, exists := player.GetComponent("stats"); exists {
+		if statsComp, ok := comp.(*engine.StatsComponent); ok && statsComp != nil {
+			statsComp.Attack += float64(loadout.BonusAttack)
+			statsComp.Defense += float64(loadout.BonusDefense)
+		}
+	}
 }
 
 // initializePlayerAdvancedClass initializes the advanced class system for the player.

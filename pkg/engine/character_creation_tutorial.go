@@ -82,6 +82,13 @@ func createCharacterCreationTutorialSteps() []CharacterCreationTutorialStep {
 			Completed:   false,
 		},
 		{
+			ID:          "equipment_selection",
+			Title:       "Choose Your Equipment",
+			Description: "Select a starting loadout for your class. Each loadout offers different gear suited to various playstyles.",
+			Hint:        "Use arrow keys or number keys 1-3 to select, then press ENTER to confirm",
+			Completed:   false,
+		},
+		{
 			ID:          "portrait_selection",
 			Title:       "Choose a Portrait (Optional)",
 			Description: "You can upload a custom portrait image or skip this step. Portraits are purely cosmetic.",

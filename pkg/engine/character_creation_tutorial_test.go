@@ -27,7 +27,7 @@ func TestNewCharacterCreationTutorial(t *testing.T) {
 		t.Error("Tutorial should not be skipped initially")
 	}
 
-	expectedSteps := []string{"welcome_creation", "name_input", "class_selection", "portrait_selection", "confirmation"}
+	expectedSteps := []string{"welcome_creation", "name_input", "class_selection", "equipment_selection", "portrait_selection", "confirmation"}
 	if len(cct.Steps) != len(expectedSteps) {
 		t.Fatalf("Expected %d steps, got %d", len(expectedSteps), len(cct.Steps))
 	}
@@ -96,9 +96,9 @@ func TestCharacterCreationTutorial_GetProgress(t *testing.T) {
 		wantMax float64
 	}{
 		{"Start", 0, 0.0, 0.01},
-		{"Mid", 2, 0.39, 0.41},
-		{"Near end", 4, 0.79, 0.81},
-		{"Complete", 5, 1.0, 1.0},
+		{"Mid", 3, 0.49, 0.51},      // 3/6 = 0.5
+		{"Near end", 5, 0.82, 0.84}, // 5/6 ≈ 0.833
+		{"Complete", 6, 1.0, 1.0},   // 6/6 = 1.0
 	}
 
 	for _, tt := range tests {
@@ -368,16 +368,17 @@ func TestCharacterCreationTutorial_CompleteTutorial(t *testing.T) {
 	cct.CurrentStepIdx = 1
 	cct.Steps[0].Completed = true
 
-	// Simulate progressing through all creation steps (1=class, 2=portrait, 3=confirmation)
-	for step := 1; step <= 3; step++ {
+	// Simulate progressing through all creation steps (0=name, 1=class, 2=equipment, 3=portrait, 4=confirmation)
+	// Tutorial steps are: 0=welcome, 1=name, 2=class, 3=equipment, 4=portrait, 5=confirmation
+	for step := 1; step <= 4; step++ {
 		cct.Update(step, 0.016)
 	}
 
-	// After stepping through creation steps 1-3, the tutorial should be at the
-	// confirmation step (index 4). The confirmation step is completed externally
+	// After stepping through creation steps 1-4, the tutorial should be at the
+	// confirmation step (index 5). The confirmation step is completed externally
 	// when character creation is confirmed (via CompleteTutorial in the game loop).
-	if cct.CurrentStepIdx != 4 {
-		t.Fatalf("expected CurrentStepIdx=4 before final completion, got %d", cct.CurrentStepIdx)
+	if cct.CurrentStepIdx != 5 {
+		t.Fatalf("expected CurrentStepIdx=5 before final completion, got %d", cct.CurrentStepIdx)
 	}
 
 	// Simulate the game loop marking the tutorial as complete on character creation confirm
@@ -387,7 +388,7 @@ func TestCharacterCreationTutorial_CompleteTutorial(t *testing.T) {
 		t.Fatalf("tutorial should be completed: Completed=false, CurrentStepIdx=%d, len(Steps)=%d",
 			cct.CurrentStepIdx, len(cct.Steps))
 	}
-	if !cct.Steps[4].Completed {
+	if !cct.Steps[5].Completed {
 		t.Error("confirmation step should not be left incomplete after CompleteTutorial")
 	}
 }
@@ -668,10 +669,11 @@ func TestCharacterCreationTutorial_AllCharacterOptions(t *testing.T) {
 
 	// Verify that all character creation steps have corresponding tutorial steps
 	requiredSteps := map[string]bool{
-		"name_input":         false, // stepNameInput
-		"class_selection":    false, // stepClassSelection
-		"portrait_selection": false, // stepPortraitSelection
-		"confirmation":       false, // stepConfirmation
+		"name_input":          false, // stepNameInput
+		"class_selection":     false, // stepClassSelection
+		"equipment_selection": false, // stepEquipmentSelection
+		"portrait_selection":  false, // stepPortraitSelection
+		"confirmation":        false, // stepConfirmation
 	}
 
 	for _, step := range cct.Steps {
@@ -684,5 +686,63 @@ func TestCharacterCreationTutorial_AllCharacterOptions(t *testing.T) {
 		if !found {
 			t.Errorf("Character creation step '%s' not covered by tutorial", stepID)
 		}
+	}
+}
+
+// TestCharacterCreationTutorial_EquipmentStep tests that the equipment tutorial step
+// exists and syncs correctly with the character creation flow.
+func TestCharacterCreationTutorial_EquipmentStep(t *testing.T) {
+	cct := NewCharacterCreationTutorial()
+
+	// Verify equipment step exists at correct position (after class_selection)
+	equipmentStep := cct.GetStepByID("equipment_selection")
+	if equipmentStep == nil {
+		t.Fatal("equipment_selection step not found in tutorial")
+	}
+
+	// Verify step index (should be at index 3: welcome=0, name=1, class=2, equipment=3)
+	expectedIndex := 3
+	for i, step := range cct.Steps {
+		if step.ID == "equipment_selection" {
+			if i != expectedIndex {
+				t.Errorf("equipment_selection at index %d, want %d", i, expectedIndex)
+			}
+			break
+		}
+	}
+
+	// Verify step has proper content
+	if equipmentStep.Title == "" {
+		t.Error("equipment_selection step has empty title")
+	}
+	if equipmentStep.Description == "" {
+		t.Error("equipment_selection step has empty description")
+	}
+	if equipmentStep.Hint == "" {
+		t.Error("equipment_selection step has empty hint")
+	}
+
+	// Test synchronization: when character creation reaches equipment step (step 2),
+	// tutorial should advance to equipment tutorial step (step 3)
+	cct.Reset()
+	cct.CurrentStepIdx = 1 // Start at name_input step
+	cct.Steps[0].Completed = true
+
+	// Simulate progression to class selection (creation step 1)
+	cct.Update(1, 0.016) // creation step 1 -> tutorial step 2 (class_selection)
+	if cct.CurrentStepIdx != 2 {
+		t.Errorf("After class step, CurrentStepIdx = %d, want 2", cct.CurrentStepIdx)
+	}
+
+	// Simulate progression to equipment selection (creation step 2)
+	cct.Update(2, 0.016) // creation step 2 -> tutorial step 3 (equipment_selection)
+	if cct.CurrentStepIdx != 3 {
+		t.Errorf("After equipment step, CurrentStepIdx = %d, want 3", cct.CurrentStepIdx)
+	}
+
+	// Verify equipment step is now current
+	currentStep := cct.GetCurrentStep()
+	if currentStep == nil || currentStep.ID != "equipment_selection" {
+		t.Errorf("Current step should be equipment_selection, got %v", currentStep)
 	}
 }

@@ -45,7 +45,7 @@ Phases 1 and 2 can proceed in parallel. Phase 3 depends on both. Phase 4 depends
 - **Fix**: Replace the body with a meaningful condition — e.g., check that the player has visited at least 3 distinct tile regions (using spatial partition cell IDs) or has moved a total distance of ≥500 units from their starting position. Track cumulative distance in a tutorial-local variable (not a component) by summing position deltas across `Update` calls.
 - **Acceptance**: The exploration step does not auto-complete. The player must actually explore before the tutorial finishes.
 
-- [ ] Implement real exploration condition in `checkExplorationCondition()` at `pkg/engine/tutorial_system.go:260`
+- [x] Implement real exploration condition in `checkExplorationCondition()` at `pkg/engine/tutorial_system.go:260`
 
 ### 1.3 Step Skipping — Combat Condition OR Bug (S)
 
@@ -63,8 +63,8 @@ Phases 1 and 2 can proceed in parallel. Phase 3 depends on both. Phase 4 depends
 - **Fix**: Record the player's initial position on the first call to `checkMovementCondition()` (store in a package-level or struct-level variable keyed by entity ID) and measure distance from that recorded origin instead of `(400, 300)`.
 - **Acceptance**: Movement step works correctly regardless of screen size or spawn location.
 
-- [ ] Remove hardcoded `(400, 300)` in `checkMovementCondition()` at `pkg/engine/tutorial_system.go:188`
-- [ ] Record initial player position on first condition check
+- [x] Remove hardcoded `(400, 300)` in `checkMovementCondition()` at `pkg/engine/tutorial_system.go:188`
+- [x] Record initial player position on first condition check
 
 ### 1.5 ESC Hint Misleading (S)
 
@@ -75,7 +75,7 @@ Phases 1 and 2 can proceed in parallel. Phase 3 depends on both. Phase 4 depends
 
 - [x] Update hint text in `drawPanelContent()` at `pkg/engine/tutorial_system.go:642`
 
-### 1.6 Class Selection Limited to 3/21 (M)
+### 1.6 Class Selection Limited to 3/21 (M) ✅ COMPLETE (via Task 2.1)
 
 - **Files**:
   - `pkg/engine/character_creation.go:703-728` — `handleArrowKeySelection()` wraps between `ClassWarrior` and `ClassRogue`
@@ -87,7 +87,7 @@ Phases 1 and 2 can proceed in parallel. Phase 3 depends on both. Phase 4 depends
 - **Fix**: Detailed in Phase 2 (Section 2.1). This bug entry documents the scope; the actual fix is in Phase 2.
 - **Acceptance**: All 6 base classes are selectable via arrow keys, number keys, touch, and mouse.
 
-- [ ] Expand class arrays in all 5 locations (deferred to Phase 2, task 2.1)
+- [x] Expand class arrays in all 5 locations (deferred to Phase 2, task 2.1)
 
 ### 1.7 `Validate()` Rejects Valid Classes (S)
 
@@ -114,7 +114,7 @@ Phases 1 and 2 can proceed in parallel. Phase 3 depends on both. Phase 4 depends
 - **Fix**: Add a guard: if all steps are marked completed in `completedSteps`, set `ts.Enabled = false` and keep `ts.CurrentStepIdx = len(ts.Steps)` (don't clamp it down). Only clamp when not all steps are complete.
 - **Acceptance**: Loading a save with completed tutorial does not re-display tutorial UI. `ImportState` round-trips correctly with `ExportState`.
 
-- [ ] Fix clamp logic in `ImportState()` at `pkg/engine/tutorial_system.go:477-483`
+- [x] Fix clamp logic in `ImportState()` at `pkg/engine/tutorial_system.go:477-483`
 
 ### 1.10 `ShowTutorials` Setting Unwired (M)
 
@@ -129,7 +129,7 @@ Phases 1 and 2 can proceed in parallel. Phase 3 depends on both. Phase 4 depends
 
 ## Phase 2 — Character Creation Overhaul
 
-### 2.1 Expand Class Selection UI to 6 Base Classes (M)
+### 2.1 Expand Class Selection UI to 6 Base Classes (M) ✅ COMPLETE
 
 - **File**: `pkg/engine/character_creation.go`
 - **Description**: Replace every hardcoded `[]CharacterClass{ClassWarrior, ClassMage, ClassRogue}` with a shared constant or variable containing all 6 base classes: `{ClassWarrior, ClassMage, ClassRogue, ClassRanger, ClassCleric, ClassNecromancer}`.
@@ -142,15 +142,15 @@ Phases 1 and 2 can proceed in parallel. Phase 3 depends on both. Phase 4 depends
   - Help text at line ~1404: change "1-3" to "1-6"
 - **Acceptance**: All 6 base classes visible and selectable. Arrow keys wrap through all 6. Number keys 1-6 select directly. Touch/click works for all 6.
 
-- [ ] Define `baseClasses` variable with 6 classes
-- [ ] Update `handleArrowKeySelection()` wrap bounds
-- [ ] Update `handleNumberKeySelection()` with keys 4-6
-- [ ] Update `handleTouchOrMouseClick()` with 6-class slice
-- [ ] Update `handleTouchOrMouseHover()` with 6-class slice
-- [ ] Update `drawClassSelection()` layout for 6 classes
-- [ ] Update help text strings
+- [x] Define `baseClasses` variable with 6 classes
+- [x] Update `handleArrowKeySelection()` wrap bounds
+- [x] Update `handleNumberKeySelection()` with keys 4-6
+- [x] Update `handleTouchOrMouseClick()` with 6-class slice
+- [x] Update `handleTouchOrMouseHover()` with 6-class slice
+- [x] Update `drawClassSelection()` layout for 6 classes
+- [x] Update help text strings
 
-### 2.2 Add Hybrid Class Visibility (Paginated/Scrollable) (L)
+### 2.2 Add Hybrid Class Visibility (Paginated/Scrollable) (L) ✅ COMPLETE
 
 - **File**: `pkg/engine/character_creation.go`
 - **Description**: Add a "Show Advanced Classes" toggle or a second page/tab in class selection that reveals the 15 hybrid classes. Use page-up/page-down or a tab key to switch between base and hybrid views. Each page shows up to 6 classes at a time.
@@ -161,11 +161,11 @@ Phases 1 and 2 can proceed in parallel. Phase 3 depends on both. Phase 4 depends
   - Touch buttons for page navigation on mobile
 - **Acceptance**: All 21 classes reachable through pagination. Page indicator visible. Touch-friendly navigation.
 
-- [ ] Add `classPage` field and page navigation logic
-- [ ] Draw paginated class list with page indicators
-- [ ] Add touch buttons for page navigation
+- [x] Add `classPage` field and page navigation logic
+- [x] Draw paginated class list with page indicators
+- [x] Add touch buttons for page navigation (keyboard shortcuts: Tab, PageUp/PageDown)
 
-### 2.3 Implement `ApplyClassStats()` for All 6 Base Classes (M)
+### 2.3 Implement `ApplyClassStats()` for All 6 Base Classes (M) ✅ COMPLETE (via AUDIT.md)
 
 - **File**: `pkg/engine/character_creation.go:1891` (`ApplyClassStats`), `:1853-1889` (stat functions)
 - **Description**: The `switch` in `ApplyClassStats()` only handles Warrior, Mage, Rogue and falls through to `default: return error`. Add `applyRangerStats()`, `applyClericStats()`, `applyNecromancerStats()` functions and wire them into the switch.
@@ -174,18 +174,19 @@ Phases 1 and 2 can proceed in parallel. Phase 3 depends on both. Phase 4 depends
   - **Cleric**: HP 120, Mana 120, Attack 7, Defense 6, ManaRegen 6.0, CritDamage 1.5
   - **Necromancer**: HP 90, Mana 130, Attack 8, Defense 4, ManaRegen 5.0, CritChance 0.08
 - **Acceptance**: `ApplyClassStats()` succeeds for all 6 base classes. Stats match design spec. Unit tests validate each class.
+- **Note**: Already implemented for all 21 classes as documented in AUDIT.md.
 
-- [ ] Add `applyRangerStats()`, `applyClericStats()`, `applyNecromancerStats()` functions
-- [ ] Add cases to `ApplyClassStats()` switch for Ranger, Cleric, Necromancer
-- [ ] Consider stub/fallback stats for hybrid classes (can return base-class-average stats with a log warning for now)
+- [x] Add `applyRangerStats()`, `applyClericStats()`, `applyNecromancerStats()` functions
+- [x] Add cases to `ApplyClassStats()` switch for Ranger, Cleric, Necromancer
+- [x] Consider stub/fallback stats for hybrid classes (can return base-class-average stats with a log warning for now)
 
-### 2.4 Implement `getClassStats()` for All 6 Base Classes (S)
+### 2.4 Implement `getClassStats()` for All 6 Base Classes (S) ✅ COMPLETE
 
 - **File**: `pkg/engine/character_creation.go:1662` (`getClassStats`)
 - **Description**: The confirmation screen's stat preview only works for 3 classes. Add cases for Ranger, Cleric, Necromancer to return human-readable stat strings matching the values from task 2.3.
 - **Acceptance**: Confirmation screen shows correct stats for all 6 base classes. No empty stats array for Ranger/Cleric/Necromancer.
 
-- [ ] Add Ranger, Cleric, Necromancer cases to `getClassStats()`
+- [x] Add Ranger, Cleric, Necromancer cases to `getClassStats()`
 
 ### 2.5 Add Starting Equipment Selection Step (L)
 
@@ -202,23 +203,23 @@ Phases 1 and 2 can proceed in parallel. Phase 3 depends on both. Phase 4 depends
   8. Update all navigation handlers (`handleNextButton`, `handleBackButton`, step transitions) to include the new step
 - **Acceptance**: Equipment step appears between class and portrait. Each class shows 3 distinct loadout options. Loadouts are deterministic (same seed = same options). Selected equipment is applied to `CharacterData` and carried to gameplay.
 
-- [ ] Add `stepEquipmentSelection` to `creationStep` enum
-- [ ] Define `EquipmentLoadout` struct
-- [ ] Implement `generateClassLoadouts()` with seed-based RNG
-- [ ] Add `updateEquipmentSelection()` input handler
-- [ ] Add `drawEquipmentSelection()` renderer
-- [ ] Update step count in all step indicator text ("Step N of 5")
-- [ ] Update navigation handlers for new step ordering
-- [ ] Wire selected equipment into player entity creation in `cmd/client/handlers.go`
+- [x] Add `stepEquipmentSelection` to `creationStep` enum
+- [x] Define `EquipmentLoadout` struct
+- [x] Implement `generateClassLoadouts()` with seed-based RNG
+- [x] Add `updateEquipmentSelection()` input handler
+- [x] Add `drawEquipmentSelection()` renderer
+- [x] Update step count in all step indicator text ("Step N of 5")
+- [x] Update navigation handlers for new step ordering
+- [x] Wire selected equipment into player entity creation in `cmd/client/handlers.go`
 
-### 2.6 Update Character Creation Tutorial Steps (S)
+### 2.6 Update Character Creation Tutorial Steps (S) ✅ COMPLETE
 
 - **File**: `pkg/engine/character_creation_tutorial.go:63-100`
 - **Description**: The `CharacterCreationTutorial` defines 5 steps (welcome, name, class, portrait, confirmation) that map to the 4 creation steps. With the new equipment step, add a 6th tutorial step "Choose Your Equipment" after the class selection tutorial step.
 - **Acceptance**: Tutorial step count matches creation step count. Equipment tutorial step provides relevant guidance text.
 
-- [ ] Add equipment tutorial step to `createCharacterCreationTutorialSteps()`
-- [ ] Update `synchronizeTutorialProgress()` mapping if needed
+- [x] Add equipment tutorial step to `createCharacterCreationTutorialSteps()`
+- [x] Update `synchronizeTutorialProgress()` mapping if needed (mapping works correctly - creation step N maps to tutorial step N+1)
 
 ---
 
@@ -391,7 +392,7 @@ Phases 1 and 2 can proceed in parallel. Phase 3 depends on both. Phase 4 depends
 - [ ] `TestGetClassStats_AllBaseClasses` — verify stat preview text for all 6 base classes
 - [ ] `TestGenerateRandomName_Deterministic` — verify same seed produces same name (regression for bug 1.8)
 - [ ] `TestClassSelection_SixClasses` — verify arrow key navigation wraps through 6 classes
-- [ ] `TestEquipmentLoadoutGeneration` — verify deterministic loadout generation per class
+- [x] `TestEquipmentLoadoutGeneration` — verify deterministic loadout generation per class (implemented as `TestEquipmentLoadout_Generation`)
 
 ### 5.4 Update `character_creation_tutorial_test.go` (S)
 
@@ -399,7 +400,7 @@ Phases 1 and 2 can proceed in parallel. Phase 3 depends on both. Phase 4 depends
 - **Existing tests**: 12+ test functions covering creation, steps, progress, skip, export/import, update, completion
 - **New tests needed**:
 
-- [ ] `TestCharacterCreationTutorial_EquipmentStep` — verify 6th tutorial step exists and syncs correctly
+- [x] `TestCharacterCreationTutorial_EquipmentStep` — verify 6th tutorial step exists and syncs correctly
 - [ ] `TestCharacterCreationTutorial_OnboardingTransition` — verify completion triggers onboarding state transition
 
 ### 5.5 New Test File: `onboarding_test.go` (M)

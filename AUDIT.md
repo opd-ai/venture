@@ -30,12 +30,12 @@ The following packages have not yet been audited:
 - [ ] `pkg/rendering/tiles/` — Tile generation
 - [ ] `pkg/rendering/lighting/` — Lighting system
 - [ ] `pkg/rendering/particles/` — Particle system
-- [ ] `pkg/rendering/ui/` — UI generation
+- [x] `pkg/rendering/ui/AUDIT.md` — Complete — 5 issues (0 high, 3 med, 2 low) — Coverage: 80.0%
 - [x] `pkg/rendering/cache/AUDIT.md` — Complete — 2 issues (0 high, 1 med, 1 low) — Coverage: 98.2%
 
 ### Network
 - [ ] `pkg/network/` — Core networking
-- [ ] `pkg/network/federation/` — Cross-server federation
+- [x] `pkg/network/federation/AUDIT.md` — Complete — 2 issues (0 high, 1 med, 1 low) — Coverage: 87.3%
 - [ ] `pkg/network/chat/` — Chat system
 - [ ] `pkg/network/trade/` — Trade system
 
@@ -48,7 +48,7 @@ The following packages have not yet been audited:
 
 ### Supporting
 - [x] `pkg/mobile/AUDIT_2026-02-16.md` — Complete — 0 issues (0 high, 0 med, 0 low) — Coverage: 65.4%
-- [ ] `pkg/saveload/` — Save/load system
+- [x] `pkg/saveload/AUDIT.md` — Complete — 2 issues (0 high, 0 med, 2 low) — Coverage: 83.8%
 - [ ] `pkg/config/` — Configuration
 - [ ] `pkg/validation/` — Input validation
 - [ ] `pkg/modding/` — Mod system

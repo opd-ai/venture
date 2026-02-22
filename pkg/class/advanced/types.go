@@ -1,7 +1,10 @@
 // Package advanced provides multi-classing, prestige classes, and talent tree systems.
 package advanced
 
-import "image/color"
+import (
+	"encoding/json"
+	"image/color"
+)
 
 // ClassDefinition describes a base class
 type ClassDefinition struct {
@@ -147,4 +150,77 @@ type RespecCost struct {
 	PerRespec int
 	// MaxCost is the maximum gold cost cap. Respec cost never exceeds this value.
 	MaxCost int
+}
+
+// advancedClassData is the JSON serialization format for AdvancedClassComponent.
+type advancedClassData struct {
+	PrimaryClass   string                  `json:"primary_class"`
+	SecondaryClass string                  `json:"secondary_class"`
+	PrestigeClass  string                  `json:"prestige_class"`
+	TalentPoints   talentAllocationData    `json:"talent_points"`
+	Level          int                     `json:"level"`
+	RespecCount    int                     `json:"respec_count"`
+}
+
+// talentAllocationData is the JSON serialization format for TalentAllocation.
+type talentAllocationData struct {
+	Talents     map[string]int `json:"talents"`
+	PointsSpent int            `json:"points_spent"`
+	PointsTotal int            `json:"points_total"`
+}
+
+// Serialize converts the AdvancedClassComponent to JSON bytes for persistence.
+// This enables save/load functionality for player class configuration,
+// talent allocations, and prestige unlocks across game sessions.
+func (a *AdvancedClassComponent) Serialize() ([]byte, error) {
+	data := advancedClassData{
+		PrimaryClass:   string(a.PrimaryClass),
+		SecondaryClass: string(a.SecondaryClass),
+		PrestigeClass:  string(a.PrestigeClass),
+		Level:          a.Level,
+		RespecCount:    a.RespecCount,
+		TalentPoints: talentAllocationData{
+			PointsSpent: a.TalentPoints.PointsSpent,
+			PointsTotal: a.TalentPoints.PointsTotal,
+		},
+	}
+
+	// Serialize talents map (TalentID -> int becomes string -> int)
+	if a.TalentPoints.Talents != nil {
+		data.TalentPoints.Talents = make(map[string]int, len(a.TalentPoints.Talents))
+		for talentID, rank := range a.TalentPoints.Talents {
+			data.TalentPoints.Talents[string(talentID)] = rank
+		}
+	}
+
+	return json.Marshal(data)
+}
+
+// Deserialize restores the AdvancedClassComponent from JSON bytes.
+// Returns an error if the data is invalid or cannot be parsed.
+func (a *AdvancedClassComponent) Deserialize(data []byte) error {
+	var d advancedClassData
+	if err := json.Unmarshal(data, &d); err != nil {
+		return err
+	}
+
+	a.PrimaryClass = ClassID(d.PrimaryClass)
+	a.SecondaryClass = ClassID(d.SecondaryClass)
+	a.PrestigeClass = PrestigeClassID(d.PrestigeClass)
+	a.Level = d.Level
+	a.RespecCount = d.RespecCount
+	a.TalentPoints.PointsSpent = d.TalentPoints.PointsSpent
+	a.TalentPoints.PointsTotal = d.TalentPoints.PointsTotal
+
+	// Deserialize talents map (string -> int becomes TalentID -> int)
+	if d.TalentPoints.Talents != nil {
+		a.TalentPoints.Talents = make(map[TalentID]int, len(d.TalentPoints.Talents))
+		for talentStr, rank := range d.TalentPoints.Talents {
+			a.TalentPoints.Talents[TalentID(talentStr)] = rank
+		}
+	} else {
+		a.TalentPoints.Talents = nil
+	}
+
+	return nil
 }

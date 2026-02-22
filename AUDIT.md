@@ -13,9 +13,9 @@ This report consolidates 110 individual audit files across all packages in the V
 | Severity | Open Issues |
 |----------|-------------|
 | High     | 1           |
-| Medium   | ~65         |
+| Medium   | ~64         |
 | Low      | ~162        |
-| **Total**| **~228**    |
+| **Total**| **~227**    |
 
 **Historical totals (including fixed):** ~32 High, ~95 Medium, ~225 Low issues were identified across all audits. The vast majority have been resolved, resulting in an overall codebase health status of **Good**.
 
@@ -114,9 +114,9 @@ This report consolidates 110 individual audit files across all packages in the V
 ### pkg/class/advanced — Advanced Multiclassing & Talent Trees
 - **Source:** `pkg/class/advanced/AUDIT.md`
 - **High Issues:** 0
-- **Medium Issues:** 1
+- **Medium Issues:** 0 (1 fixed)
 - **Low Issues:** 2
-- **Details:** 91.1% coverage; 450 talents initialized at startup. `AdvancedClassComponent` lacks `Serialize()` and `Deserialize()` methods, meaning class configuration is not persisted across sessions. No benchmark for `initializeTalentTrees()` startup cost. Package-level logger prevents injection of custom logger.
+- **Details:** 91.8% coverage; 450 talents initialized at startup. **RESOLVED 2026-02-22**: `AdvancedClassComponent` now has `Serialize()` and `Deserialize()` methods, enabling class configuration persistence across sessions. No benchmark for `initializeTalentTrees()` startup cost. Package-level logger prevents injection of custom logger.
 
 ---
 
@@ -1124,8 +1124,8 @@ The following patterns affect multiple packages and represent systemic concerns:
 **Pattern:** Systems marked `@deprecated` remain in the public API and are still tested. They should either be removed from exports or receive proper replacement documentation with migration guides.
 
 ### 7. Missing Serialize/Deserialize on Persisted Components
-**Affected:** `pkg/class/advanced` (`AdvancedClassComponent`), ~~`pkg/engine/qol` (`QoLComponent`)~~ (**RESOLVED 2026-02-22**), `pkg/integration/housing_crafting` (`CraftingStation`, `SkillTrainingFacility`)
-**Pattern:** Several components that represent persistent player data (class configuration, crafting station state) implement `Type() string` correctly but lack `Serialize()`/`Deserialize()` methods, meaning their data is lost across sessions. Note: `QoLComponent` now has save/load integration.
+**Affected:** ~~`pkg/class/advanced` (`AdvancedClassComponent`)~~ (**RESOLVED 2026-02-22**), ~~`pkg/engine/qol` (`QoLComponent`)~~ (**RESOLVED 2026-02-22**), `pkg/integration/housing_crafting` (`CraftingStation`, `SkillTrainingFacility`)
+**Pattern:** Several components that represent persistent player data (class configuration, crafting station state) implement `Type() string` correctly but lack `Serialize()`/`Deserialize()` methods, meaning their data is lost across sessions. Note: `QoLComponent` and `AdvancedClassComponent` now have save/load integration.
 
 ### 8. System Registration Inconsistency
 **Affected:** `pkg/integration` (all sub-packages), `pkg/engine/prestige`, `pkg/engine/qol`

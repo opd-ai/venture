@@ -461,6 +461,9 @@ func (ts *EbitenTutorialSystem) updateNotificationTTL(deltaTime float64) {
 
 // checkStepCompletion checks if the current step is completed and advances tutorial.
 func (ts *EbitenTutorialSystem) checkStepCompletion(world *World) {
+	if ts.CurrentStepIdx >= len(ts.Steps) {
+		return
+	}
 	currentStep := &ts.Steps[ts.CurrentStepIdx]
 	if !currentStep.Completed && currentStep.Condition(world) {
 		currentStep.Completed = true

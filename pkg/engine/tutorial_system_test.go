@@ -1260,3 +1260,89 @@ func TestTutorialSystem_HintText(t *testing.T) {
 		t.Error("AdvanceStep should advance to next step")
 	}
 }
+
+// TestCheckCombatCondition_RequiresAttack verifies combat condition fails before attack and passes after.
+func TestCheckCombatCondition_RequiresAttack(t *testing.T) {
+	tests := []struct {
+		name          string
+		hasAttack     bool
+		cooldownTimer float64
+		cooldown      float64
+		want          bool
+	}{
+		{
+			name:          "no attack component",
+			hasAttack:     false,
+			cooldownTimer: 0,
+			cooldown:      0.5,
+			want:          false,
+		},
+		{
+			name:          "before attack - timer at 0",
+			hasAttack:     true,
+			cooldownTimer: 0,
+			cooldown:      0.5,
+			want:          false,
+		},
+		{
+			name:          "after attack - timer in cooldown",
+			hasAttack:     true,
+			cooldownTimer: 0.3,
+			cooldown:      0.5,
+			want:          true,
+		},
+		{
+			name:          "cooldown complete - timer equals cooldown",
+			hasAttack:     true,
+			cooldownTimer: 0.5,
+			cooldown:      0.5,
+			want:          false,
+		},
+		{
+			name:          "timer exceeds cooldown",
+			hasAttack:     true,
+			cooldownTimer: 0.6,
+			cooldown:      0.5,
+			want:          false,
+		},
+		{
+			name:          "timer barely started",
+			hasAttack:     true,
+			cooldownTimer: 0.01,
+			cooldown:      0.5,
+			want:          true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			world := NewWorld()
+			player := world.CreateEntity()
+			player.AddComponent(&stubTutorialInputComponent{})
+
+			if tt.hasAttack {
+				player.AddComponent(&AttackComponent{
+					CooldownTimer: tt.cooldownTimer,
+					Cooldown:      tt.cooldown,
+					Damage:        10,
+					Range:         50,
+				})
+			}
+
+			got := checkCombatCondition(world)
+			if got != tt.want {
+				t.Errorf("checkCombatCondition() = %v, want %v (timer=%v, cooldown=%v)",
+					got, tt.want, tt.cooldownTimer, tt.cooldown)
+			}
+		})
+	}
+}
+
+// TestCheckCombatCondition_NoPlayer verifies combat condition returns false with no player.
+func TestCheckCombatCondition_NoPlayer(t *testing.T) {
+	world := NewWorld()
+	// No player entity
+	if checkCombatCondition(world) {
+		t.Error("checkCombatCondition() should return false with no player")
+	}
+}

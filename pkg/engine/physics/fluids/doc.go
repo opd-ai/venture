@@ -112,7 +112,7 @@ Buoyancy calculation for an entity:
 
 	if buoyancy.Buoyant {
 		// Boat floats (water density 1000 kg/m³ > boat density 250 kg/m³)
-		fmt.Println("Floating!")
+		logrus.Info("Floating!")
 	}
 
 Swimming mechanics:
@@ -157,7 +157,7 @@ Flooding system:
 
 	// Check flood status
 	if floodMgr.IsFullyFlooded(flooding) {
-		fmt.Println("Room completely flooded!")
+		logrus.Info("Room completely flooded!")
 	}
 
 # Integration with ECS

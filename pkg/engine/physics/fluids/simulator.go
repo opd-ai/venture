@@ -322,7 +322,19 @@ func (s *Simulator) GetFluidAt(x, y int) (float64, FluidType, error) {
 	return cell.Amount, cell.Type, nil
 }
 
-// GetGrid returns a read-only copy of the simulation grid
+// GetGrid returns a shallow copy of the simulation grid for read-only inspection.
+//
+// WARNING: The returned Grid shares its underlying Cells backing array with the
+// simulator's internal grid. Callers must NOT:
+//   - Retain references to the returned Grid across simulation steps (it may change)
+//   - Mutate the Cells without their own external synchronization
+//   - Assume the data remains stable between GetGrid() calls
+//
+// For safe iteration, callers should copy the data they need immediately or
+// use GetFluidAt() for individual cell access which provides proper locking.
+//
+// This method acquires a read lock for the duration of the copy operation,
+// ensuring consistency within a single call, but not across multiple calls.
 func (s *Simulator) GetGrid() *Grid {
 	s.grid.mu.RLock()
 	defer s.grid.mu.RUnlock()
@@ -355,7 +367,15 @@ func (s *Simulator) Reset() {
 	s.time = 0.0
 }
 
-// GetConfig returns the simulator configuration.
+// GetConfig returns a copy of the simulator's configuration.
+//
+// The returned SimulationConfig is a value copy, so modifications to it will
+// not affect the simulator's internal configuration. This provides safe access
+// to configuration values for debugging, logging, or validation purposes.
+//
+// Configuration includes grid dimensions, gravity, viscosity factor, pressure
+// factor, and update rate settings. These values are set at simulator creation
+// time and remain constant throughout the simulator's lifetime.
 func (s *Simulator) GetConfig() SimulationConfig {
 	return s.config
 }

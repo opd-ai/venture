@@ -13,9 +13,9 @@ This report consolidates 110 individual audit files across all packages in the V
 | Severity | Open Issues |
 |----------|-------------|
 | High     | 1           |
-| Medium   | ~42         |
-| Low      | ~140        |
-| **Total**| **~183**    |
+| Medium   | ~41         |
+| Low      | ~138        |
+| **Total**| **~180**    |
 
 **Historical totals (including fixed):** ~32 High, ~95 Medium, ~227 Low issues were identified across all audits. The vast majority have been resolved, resulting in an overall codebase health status of **Good**.
 
@@ -249,9 +249,9 @@ This report consolidates 110 individual audit files across all packages in the V
 ### pkg/engine/physics/fluids — Fluid Dynamics & Buoyancy
 - **Source:** `pkg/engine/physics/fluids/AUDIT.md`
 - **High Issues:** 0
-- **Medium Issues:** 1
-- **Low Issues:** 2
-- **Details:** 95.2% coverage; all three components (`BuoyancyComponent`, `SwimmingComponent`, `FloodingComponent`) implement serialization with versioning. `doc.go` examples use `fmt.Println` which could confuse linters. `Simulator.GetConfig()` lacks a godoc comment. `GetGrid()` returns a shallow copy with shared `Cells` backing array but lacks a godoc warning about this.
+- **Medium Issues:** 0 (1 fixed)
+- **Low Issues:** 0 (2 fixed)
+- **Details:** 95.2% coverage; all three components (`BuoyancyComponent`, `SwimmingComponent`, `FloodingComponent`) implement serialization with versioning. **RESOLVED 2026-02-22**: `doc.go` examples updated from `fmt.Println` to `logrus.Info()` per structured logging guidelines. **RESOLVED 2026-02-22**: `Simulator.GetConfig()` now has comprehensive godoc comment explaining return value semantics. **RESOLVED 2026-02-22**: `GetGrid()` now has godoc warning about shallow copy behavior, thread safety, and recommended alternatives.
 
 ---
 

@@ -23,11 +23,11 @@ The fluids package provides a well-implemented, grid-based fluid dynamics simula
 None.
 
 ### Medium Severity
-- [ ] **Doc example code** — `fmt.Println` calls in doc.go examples (lines 115, 160) could confuse linters. These are example snippets, not runtime code, but should ideally use comment-style output. (`doc.go:115`, `doc.go:160`)
+- [x] **Doc example code** — `fmt.Println` calls in doc.go examples (lines 115, 160) could confuse linters. **RESOLVED 2026-02-22**: Updated to use `logrus.Info()` instead of `fmt.Println()` per project structured logging guidelines. (`doc.go:115`, `doc.go:160`)
 
 ### Low Severity
-- [ ] **Missing GetConfig godoc** — The `Simulator.GetConfig()` method lacks a godoc comment explaining its purpose. (`simulator.go:359`)
-- [ ] **Shallow copy warning** — `GetGrid()` returns a shallow copy with shared `Cells` backing array; callers must not modify. The inline comment notes this but no godoc warning exists. (`simulator.go:325-336`)
+- [x] **Missing GetConfig godoc** — The `Simulator.GetConfig()` method lacks a godoc comment explaining its purpose. **RESOLVED 2026-02-22**: Added comprehensive godoc comment explaining return value semantics, copy behavior, and available configuration fields. (`simulator.go:358-368`)
+- [x] **Shallow copy warning** — `GetGrid()` returns a shallow copy with shared `Cells` backing array; callers must not modify. **RESOLVED 2026-02-22**: Added comprehensive godoc warning explaining the shallow copy behavior, thread safety considerations, and recommended alternatives for safe access. (`simulator.go:325-337`)
 
 ## Input Integration
 | Input Source | Status | Notes |
@@ -74,6 +74,6 @@ The package integrates correctly with the engine via `FluidPhysicsSystem` in `pk
 | Mobile | ✅ | No platform-specific code; works via ECS integration |
 
 ## Recommendations
-1. **[LOW]** Add godoc comment to `Simulator.GetConfig()` explaining return value semantics.
-2. **[LOW]** Add godoc warning to `GetGrid()` about shallow copy behavior and thread safety.
+1. ~~**[LOW]** Add godoc comment to `Simulator.GetConfig()` explaining return value semantics.~~ **RESOLVED 2026-02-22**
+2. ~~**[LOW]** Add godoc warning to `GetGrid()` about shallow copy behavior and thread safety.~~ **RESOLVED 2026-02-22**
 3. **[LOW]** Consider moving doc.go examples to testable example functions in `*_test.go` files for better verification.

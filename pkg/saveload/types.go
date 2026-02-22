@@ -10,6 +10,26 @@ import (
 // SaveVersion represents the save file format version.
 const SaveVersion = "1.0.0"
 
+// Manager defines the interface for save/load operations.
+// Both SaveManager (file-based) and MemorySaveManager (in-memory fallback)
+// implement this interface.
+type Manager interface {
+	// SaveGame saves the game state with the given name.
+	SaveGame(name string, save *GameSave) error
+	// LoadGame loads the game state with the given name.
+	LoadGame(name string) (*GameSave, error)
+	// DeleteSave deletes a save with the given name.
+	DeleteSave(name string) error
+	// ListSaves returns metadata for all saves.
+	ListSaves() ([]*SaveMetadata, error)
+	// GetSaveMetadata returns metadata for a specific save.
+	GetSaveMetadata(name string) (*SaveMetadata, error)
+	// SaveExists checks if a save exists.
+	SaveExists(name string) bool
+	// SetMigrator sets the migrator for version upgrades.
+	SetMigrator(migrator Migrator)
+}
+
 // GameSave represents a complete save file with all game state.
 type GameSave struct {
 	// Version of the save file format

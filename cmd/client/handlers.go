@@ -2828,17 +2828,21 @@ func initializeTutorialAndHelp(inputSystem *engine.InputSystem, cameraSystem *en
 }
 
 // configureSaveLoadSystem initializes the save/load manager and registers callbacks.
-func configureSaveLoadSystem(player *engine.Entity, game *engine.EbitenGame, generatedTerrain *terrain.Terrain, inputSystem *engine.InputSystem, clientLogger *logrus.Entry) *saveload.SaveManager {
+func configureSaveLoadSystem(player *engine.Entity, game *engine.EbitenGame, generatedTerrain *terrain.Terrain, inputSystem *engine.InputSystem, clientLogger *logrus.Entry) saveload.Manager {
 	clientLogger.Info("initializing save/load system")
 
 	// BUG FIX: Phase 7 - SaveManager auto-selects storage backend based on platform
 	// - Desktop/mobile: file-based storage in ./saves directory
 	// - WASM: localStorage with 5MB limit, fallback to in-memory
 	// Platform: All (conditional compilation selects correct implementation)
-	saveManager, err := saveload.NewSaveManager("./saves")
+	var saveManager saveload.Manager
+	fileManager, err := saveload.NewSaveManager("./saves")
 	if err != nil {
-		clientLogger.WithError(err).Warn("failed to initialize save manager, save/load functionality will be unavailable")
-		return nil
+		// Fall back to in-memory storage to prevent nil pointer dereference
+		clientLogger.WithError(err).Warn("failed to initialize file-based save manager, falling back to in-memory storage")
+		saveManager = saveload.NewMemorySaveManager()
+	} else {
+		saveManager = fileManager
 	}
 
 	if *verbose {
@@ -2876,7 +2880,7 @@ func configureSaveLoadSystem(player *engine.Entity, game *engine.EbitenGame, gen
 }
 
 // setupUICallbacks configures all UI input callbacks and menu system integrations.
-func setupUICallbacks(game *engine.EbitenGame, player *engine.Entity, generatedTerrain *terrain.Terrain, inputSystem *engine.InputSystem, objectiveTracker *engine.ObjectiveTrackerSystem, dialogSystem *engine.DialogSystem, shopUI *engine.ShopUI, saveManager *saveload.SaveManager, clientLogger *logrus.Entry) error {
+func setupUICallbacks(game *engine.EbitenGame, player *engine.Entity, generatedTerrain *terrain.Terrain, inputSystem *engine.InputSystem, objectiveTracker *engine.ObjectiveTrackerSystem, dialogSystem *engine.DialogSystem, shopUI *engine.ShopUI, saveManager saveload.Manager, clientLogger *logrus.Entry) error {
 	if *verbose {
 		clientLogger.Info("setting up UI input callbacks")
 	}
@@ -3074,7 +3078,7 @@ func setupMerchantInteraction(player *engine.Entity, game *engine.EbitenGame, di
 }
 
 // connectMenuSaveLoad wires save/load callbacks to the menu system.
-func connectMenuSaveLoad(game *engine.EbitenGame, player *engine.Entity, generatedTerrain *terrain.Terrain, saveManager *saveload.SaveManager, clientLogger *logrus.Entry) error {
+func connectMenuSaveLoad(game *engine.EbitenGame, player *engine.Entity, generatedTerrain *terrain.Terrain, saveManager saveload.Manager, clientLogger *logrus.Entry) error {
 	if game.MenuSystem == nil || saveManager == nil {
 		return nil
 	}

@@ -17,12 +17,12 @@ The following packages have not yet been audited:
 ### Procedural Generation
 - [x] `pkg/procgen/terrain/AUDIT.md` — Complete — 3 issues (0 high, 1 med, 2 low) — Coverage: 94.0%
 - [x] `pkg/procgen/entity/AUDIT.md` — Complete — 3 issues (0 high, 1 med, 2 low) — Coverage: 92.4%
-- [ ] `pkg/procgen/item/` — Item generation
-- [ ] `pkg/procgen/quest/` — Quest generation
-- [ ] `pkg/procgen/dialog/` — Dialog generation
-- [ ] `pkg/procgen/narrative/` — Narrative generation
-- [ ] `pkg/procgen/magic/` — Magic system generation
-- [ ] `pkg/procgen/skills/` — Skill tree generation
+- [x] `pkg/procgen/item/AUDIT.md` — Complete — 1 issue (0 high, 0 med, 1 low) — Coverage: 92.2%
+- [x] `pkg/procgen/quest/AUDIT.md` — Complete — 3 issues (0 high, 1 med, 2 low) — Coverage: 92.3%
+- [x] `pkg/procgen/dialog/AUDIT.md` — Complete — 4 issues (0 high, 1 med, 3 low) — Coverage: 87.5%
+- [x] `pkg/procgen/narrative/AUDIT.md` — Complete — 0 issues (0 high, 0 med, 0 low) — Coverage: 91.9%
+- [x] `pkg/procgen/magic/AUDIT.md` — Complete — 3 issues (0 high, 0 med, 3 low) — Coverage: 89.8%
+- [x] `pkg/procgen/skills/AUDIT.md` — Complete — 0 issues (0 high, 0 med, 0 low) — Coverage: 87.0%
 
 ### Rendering
 - [ ] `pkg/rendering/sprites/` — Sprite generation
@@ -31,7 +31,7 @@ The following packages have not yet been audited:
 - [ ] `pkg/rendering/lighting/` — Lighting system
 - [ ] `pkg/rendering/particles/` — Particle system
 - [ ] `pkg/rendering/ui/` — UI generation
-- [ ] `pkg/rendering/cache/` — Sprite caching
+- [x] `pkg/rendering/cache/AUDIT.md` — Complete — 2 issues (0 high, 1 med, 1 low) — Coverage: 98.2%
 
 ### Network
 - [ ] `pkg/network/` — Core networking
@@ -41,7 +41,7 @@ The following packages have not yet been audited:
 
 ### World
 - [ ] `pkg/world/` — World state management
-- [ ] `pkg/world/housing/` — Housing system
+- [x] `pkg/world/housing/AUDIT.md` — Needs Work — 6 issues (1 high, 2 med, 3 low) — Coverage: 74.8%
 - [ ] `pkg/world/economy/` — Economy system
 - [ ] `pkg/world/territory/` — Territory control
 - [ ] `pkg/world/raids/` — Raid system

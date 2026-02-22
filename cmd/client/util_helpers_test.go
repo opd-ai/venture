@@ -10,6 +10,7 @@ import (
 
 	"github.com/opd-ai/venture/pkg/engine"
 	"github.com/opd-ai/venture/pkg/procgen"
+	"github.com/opd-ai/venture/pkg/procgen/companion"
 	"github.com/opd-ai/venture/pkg/procgen/environment"
 	"github.com/opd-ai/venture/pkg/procgen/terrain"
 	"github.com/opd-ai/venture/pkg/procgen/vehicle"
@@ -1093,5 +1094,582 @@ func BenchmarkGenerateBookshelfColor(b *testing.B) {
 func BenchmarkSelectBookType(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		selectBookType(int64(i))
+	}
+}
+
+// TestCreateVehicleSpawnData verifies vehicle spawn data creation from vehicle instances.
+func TestCreateVehicleSpawnData(t *testing.T) {
+	tests := []struct {
+		name         string
+		vehicle      *vehicle.Vehicle
+		wantType     engine.VehicleType
+		wantSizeMin  int
+		wantCollider float64
+	}{
+		{
+			name: "mount vehicle",
+			vehicle: &vehicle.Vehicle{
+				Name:        "Test Mount",
+				VehicleType: vehicle.TypeMount,
+				Color:       0xFF5500,
+			},
+			wantType:     engine.VehicleMount,
+			wantSizeMin:  32,
+			wantCollider: 28.0,
+		},
+		{
+			name: "cart vehicle",
+			vehicle: &vehicle.Vehicle{
+				Name:        "Test Cart",
+				VehicleType: vehicle.TypeCart,
+				Color:       0x00FF00,
+			},
+			wantType:     engine.VehicleCart,
+			wantSizeMin:  40,
+			wantCollider: 36.0,
+		},
+		{
+			name: "boat vehicle",
+			vehicle: &vehicle.Vehicle{
+				Name:        "Test Boat",
+				VehicleType: vehicle.TypeBoat,
+				Color:       0x0000FF,
+			},
+			wantType:     engine.VehicleBoat,
+			wantSizeMin:  48,
+			wantCollider: 44.0,
+		},
+		{
+			name: "glider vehicle",
+			vehicle: &vehicle.Vehicle{
+				Name:        "Test Glider",
+				VehicleType: vehicle.TypeGlider,
+				Color:       0xFFFF00,
+			},
+			wantType:     engine.VehicleGlider,
+			wantSizeMin:  36,
+			wantCollider: 32.0,
+		},
+		{
+			name: "mech vehicle",
+			vehicle: &vehicle.Vehicle{
+				Name:        "Test Mech",
+				VehicleType: vehicle.TypeMech,
+				Color:       0x888888,
+			},
+			wantType:     engine.VehicleMech,
+			wantSizeMin:  44,
+			wantCollider: 40.0,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			spawnData := createVehicleSpawnData(tt.vehicle)
+
+			if spawnData.Name != tt.vehicle.Name {
+				t.Errorf("Name = %q, want %q", spawnData.Name, tt.vehicle.Name)
+			}
+			if spawnData.VehicleType != tt.wantType {
+				t.Errorf("VehicleType = %v, want %v", spawnData.VehicleType, tt.wantType)
+			}
+			if spawnData.Size != tt.wantSizeMin {
+				t.Errorf("Size = %d, want %d", spawnData.Size, tt.wantSizeMin)
+			}
+			if spawnData.ColliderSize != tt.wantCollider {
+				t.Errorf("ColliderSize = %f, want %f", spawnData.ColliderSize, tt.wantCollider)
+			}
+			// Verify color conversion
+			expectedColor := convertColorToRGBA(tt.vehicle.Color)
+			if spawnData.Color != expectedColor {
+				t.Errorf("Color = %v, want %v", spawnData.Color, expectedColor)
+			}
+			// Verify components are not nil
+			if spawnData.Components == nil {
+				t.Error("Components should not be nil")
+			}
+		})
+	}
+}
+
+// TestCreateVehicleSpawnDataDeterminism verifies spawn data is consistent.
+func TestCreateVehicleSpawnDataDeterminism(t *testing.T) {
+	v := &vehicle.Vehicle{
+		Name:        "Determinism Test",
+		VehicleType: vehicle.TypeMech,
+		Color:       0x112233,
+	}
+
+	first := createVehicleSpawnData(v)
+	second := createVehicleSpawnData(v)
+
+	if first.Name != second.Name {
+		t.Errorf("Name mismatch: %q vs %q", first.Name, second.Name)
+	}
+	if first.VehicleType != second.VehicleType {
+		t.Errorf("VehicleType mismatch: %v vs %v", first.VehicleType, second.VehicleType)
+	}
+	if first.Size != second.Size {
+		t.Errorf("Size mismatch: %d vs %d", first.Size, second.Size)
+	}
+	if first.ColliderSize != second.ColliderSize {
+		t.Errorf("ColliderSize mismatch: %f vs %f", first.ColliderSize, second.ColliderSize)
+	}
+	if first.Color != second.Color {
+		t.Errorf("Color mismatch: %v vs %v", first.Color, second.Color)
+	}
+}
+
+// TestCreateCompanionSpawnData verifies companion spawn data creation.
+func TestCreateCompanionSpawnData(t *testing.T) {
+	tests := []struct {
+		name            string
+		companionType   engine.CompanionType
+		level           int
+		genreID         string
+		seed            int64
+		wantSizeMin     int
+		wantColliderMin float64
+	}{
+		{
+			name:            "pet companion",
+			companionType:   engine.CompanionTypePet,
+			level:           5,
+			genreID:         "fantasy",
+			seed:            12345,
+			wantSizeMin:     24,
+			wantColliderMin: 20.0,
+		},
+		{
+			name:            "summon companion",
+			companionType:   engine.CompanionTypeSummon,
+			level:           10,
+			genreID:         "scifi",
+			seed:            67890,
+			wantSizeMin:     28,
+			wantColliderMin: 24.0,
+		},
+		{
+			name:            "elemental companion",
+			companionType:   engine.CompanionTypeElemental,
+			level:           15,
+			genreID:         "horror",
+			seed:            11111,
+			wantSizeMin:     32,
+			wantColliderMin: 28.0,
+		},
+		{
+			name:            "robot companion",
+			companionType:   engine.CompanionTypeRobot,
+			level:           8,
+			genreID:         "cyberpunk",
+			seed:            22222,
+			wantSizeMin:     30,
+			wantColliderMin: 26.0,
+		},
+		{
+			name:            "spirit companion",
+			companionType:   engine.CompanionTypeSpirit,
+			level:           12,
+			genreID:         "fantasy",
+			seed:            33333,
+			wantSizeMin:     26,
+			wantColliderMin: 22.0,
+		},
+		{
+			name:            "insect companion",
+			companionType:   engine.CompanionTypeInsect,
+			level:           3,
+			genreID:         "postapoc",
+			seed:            44444,
+			wantSizeMin:     22,
+			wantColliderMin: 18.0,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Create a mock companion
+			comp := &companion.Companion{
+				Name:     "Test " + tt.name,
+				Type:     tt.companionType,
+				Level:    tt.level,
+				Attack:   10.0,
+				Defense:  8.0,
+				Speed:    15.0,
+				HP:       100.0,
+				MaxHP:    100.0,
+				Loyalty:  50.0,
+				Commands: []engine.CommandType{engine.CommandFollow, engine.CommandAttack},
+			}
+
+			spawnData := createCompanionSpawnData(comp, tt.seed, tt.genreID)
+
+			if spawnData.Name != comp.Name {
+				t.Errorf("Name = %q, want %q", spawnData.Name, comp.Name)
+			}
+			if spawnData.CompanionType != tt.companionType {
+				t.Errorf("CompanionType = %v, want %v", spawnData.CompanionType, tt.companionType)
+			}
+			if spawnData.Level != tt.level {
+				t.Errorf("Level = %d, want %d", spawnData.Level, tt.level)
+			}
+			if spawnData.Size != tt.wantSizeMin {
+				t.Errorf("Size = %d, want %d", spawnData.Size, tt.wantSizeMin)
+			}
+			if spawnData.ColliderSize != tt.wantColliderMin {
+				t.Errorf("ColliderSize = %f, want %f", spawnData.ColliderSize, tt.wantColliderMin)
+			}
+			if spawnData.Attack != comp.Attack {
+				t.Errorf("Attack = %f, want %f", spawnData.Attack, comp.Attack)
+			}
+			if spawnData.Defense != comp.Defense {
+				t.Errorf("Defense = %f, want %f", spawnData.Defense, comp.Defense)
+			}
+			if spawnData.Speed != comp.Speed {
+				t.Errorf("Speed = %f, want %f", spawnData.Speed, comp.Speed)
+			}
+			if spawnData.HP != comp.HP {
+				t.Errorf("HP = %f, want %f", spawnData.HP, comp.HP)
+			}
+			if spawnData.MaxHP != comp.MaxHP {
+				t.Errorf("MaxHP = %f, want %f", spawnData.MaxHP, comp.MaxHP)
+			}
+			if spawnData.Loyalty != comp.Loyalty {
+				t.Errorf("Loyalty = %f, want %f", spawnData.Loyalty, comp.Loyalty)
+			}
+			if len(spawnData.Commands) != len(comp.Commands) {
+				t.Errorf("Commands length = %d, want %d", len(spawnData.Commands), len(comp.Commands))
+			}
+			// Verify color is generated (non-zero alpha)
+			if spawnData.Color.A == 0 {
+				t.Error("Color.A should not be 0")
+			}
+		})
+	}
+}
+
+// TestCreateCompanionSpawnDataDeterminism verifies spawn data consistency.
+func TestCreateCompanionSpawnDataDeterminism(t *testing.T) {
+	comp := &companion.Companion{
+		Name:     "Determinism Pet",
+		Type:     engine.CompanionTypePet,
+		Level:    5,
+		Attack:   10.0,
+		Defense:  8.0,
+		Speed:    15.0,
+		HP:       100.0,
+		MaxHP:    100.0,
+		Loyalty:  50.0,
+		Commands: []engine.CommandType{engine.CommandFollow},
+	}
+
+	seed := int64(99999)
+	genreID := "fantasy"
+
+	first := createCompanionSpawnData(comp, seed, genreID)
+	second := createCompanionSpawnData(comp, seed, genreID)
+
+	if first.Name != second.Name {
+		t.Errorf("Name mismatch: %q vs %q", first.Name, second.Name)
+	}
+	if first.CompanionType != second.CompanionType {
+		t.Errorf("CompanionType mismatch")
+	}
+	if first.Size != second.Size {
+		t.Errorf("Size mismatch: %d vs %d", first.Size, second.Size)
+	}
+	if first.Color != second.Color {
+		t.Errorf("Color mismatch: %v vs %v", first.Color, second.Color)
+	}
+}
+
+// TestSeededRandom verifies seededRandom returns valid int64 values.
+func TestSeededRandom(t *testing.T) {
+	// Run multiple times to ensure no panics and values are reasonable
+	for i := 0; i < 10; i++ {
+		result := seededRandom()
+		if result < 0 {
+			t.Errorf("seededRandom returned negative value: %d", result)
+		}
+	}
+}
+
+// TestSeededRandomVariation ensures different calls produce different values.
+func TestSeededRandomVariation(t *testing.T) {
+	// Generate several values and check they're not all identical
+	results := make(map[int64]bool)
+	for i := 0; i < 10; i++ {
+		results[seededRandom()] = true
+	}
+
+	// With 10 random calls, we should have at least 2 different values
+	if len(results) < 2 {
+		t.Errorf("seededRandom produced %d unique values in 10 calls, expected variation", len(results))
+	}
+}
+
+// BenchmarkCreateVehicleSpawnData benchmarks vehicle spawn data creation.
+func BenchmarkCreateVehicleSpawnData(b *testing.B) {
+	v := &vehicle.Vehicle{
+		Name:        "Benchmark Vehicle",
+		VehicleType: vehicle.TypeMech,
+		Color:       0xFF5500,
+	}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		createVehicleSpawnData(v)
+	}
+}
+
+// BenchmarkCreateCompanionSpawnData benchmarks companion spawn data creation.
+func BenchmarkCreateCompanionSpawnData(b *testing.B) {
+	comp := &companion.Companion{
+		Name:     "Benchmark Companion",
+		Type:     engine.CompanionTypePet,
+		Level:    5,
+		Attack:   10.0,
+		Defense:  8.0,
+		Speed:    15.0,
+		HP:       100.0,
+		MaxHP:    100.0,
+		Loyalty:  50.0,
+		Commands: []engine.CommandType{engine.CommandFollow, engine.CommandAttack},
+	}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		createCompanionSpawnData(comp, int64(i), "fantasy")
+	}
+}
+
+// TestInitializeLogger verifies logger initialization with various configurations.
+func TestInitializeLogger(t *testing.T) {
+	// Save original flag values
+	origVerbose := *verbose
+	origGenreID := *genreID
+	origSeed := *seed
+	defer func() {
+		*verbose = origVerbose
+		*genreID = origGenreID
+		*seed = origSeed
+	}()
+
+	tests := []struct {
+		name       string
+		verbose    bool
+		genreID    string
+		seed       int64
+		envFormat  string
+		envLevel   string
+		wantLogger bool
+		wantEntry  bool
+	}{
+		{
+			name:       "default verbose mode",
+			verbose:    true,
+			genreID:    "fantasy",
+			seed:       12345,
+			wantLogger: true,
+			wantEntry:  true,
+		},
+		{
+			name:       "non-verbose mode",
+			verbose:    false,
+			genreID:    "scifi",
+			seed:       67890,
+			wantLogger: true,
+			wantEntry:  true,
+		},
+		{
+			name:       "json format from env",
+			verbose:    false,
+			genreID:    "horror",
+			seed:       11111,
+			envFormat:  "json",
+			wantLogger: true,
+			wantEntry:  true,
+		},
+		{
+			name:       "custom log level from env",
+			verbose:    false,
+			genreID:    "cyberpunk",
+			seed:       22222,
+			envLevel:   "warn",
+			wantLogger: true,
+			wantEntry:  true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Set flags
+			*verbose = tt.verbose
+			*genreID = tt.genreID
+			*seed = tt.seed
+
+			// Set environment variables if specified
+			if tt.envFormat != "" {
+				t.Setenv("LOG_FORMAT", tt.envFormat)
+			}
+			if tt.envLevel != "" {
+				t.Setenv("LOG_LEVEL", tt.envLevel)
+			}
+
+			logger, entry := initializeLogger()
+
+			if (logger != nil) != tt.wantLogger {
+				t.Errorf("logger nil = %v, want nil = %v", logger == nil, !tt.wantLogger)
+			}
+			if (entry != nil) != tt.wantEntry {
+				t.Errorf("entry nil = %v, want nil = %v", entry == nil, !tt.wantEntry)
+			}
+
+			// Verify entry has expected fields
+			if entry != nil {
+				// Entry should have component, genre, and seed fields set
+				// These are added in initializeLogger
+				if entry.Data["component"] != "client" {
+					t.Errorf("expected component=client, got %v", entry.Data["component"])
+				}
+			}
+		})
+	}
+}
+
+// TestInitializeLoggerDeterminism verifies logger is consistent across calls.
+func TestInitializeLoggerDeterminism(t *testing.T) {
+	origVerbose := *verbose
+	origGenreID := *genreID
+	origSeed := *seed
+	defer func() {
+		*verbose = origVerbose
+		*genreID = origGenreID
+		*seed = origSeed
+	}()
+
+	*verbose = true
+	*genreID = "fantasy"
+	*seed = 12345
+
+	logger1, entry1 := initializeLogger()
+	logger2, entry2 := initializeLogger()
+
+	if (logger1 == nil) != (logger2 == nil) {
+		t.Error("logger consistency mismatch")
+	}
+	if (entry1 == nil) != (entry2 == nil) {
+		t.Error("entry consistency mismatch")
+	}
+
+	// Both should have same seed in data
+	if entry1 != nil && entry2 != nil {
+		if entry1.Data["seed"] != entry2.Data["seed"] {
+			t.Errorf("seed mismatch: %v vs %v", entry1.Data["seed"], entry2.Data["seed"])
+		}
+	}
+}
+
+// TestResolveSeedAndGenre verifies seed and genre resolution logic.
+func TestResolveSeedAndGenre(t *testing.T) {
+	tests := []struct {
+		name       string
+		seed       *int64
+		genre      *string
+		wantSeed   int64
+		wantGenre  string
+	}{
+		{
+			name:       "both nil uses defaults",
+			seed:       nil,
+			genre:      nil,
+			wantSeed:   12345,
+			wantGenre:  "fantasy",
+		},
+		{
+			name:       "custom seed with nil genre",
+			seed:       ptrInt64(99999),
+			genre:      nil,
+			wantSeed:   99999,
+			wantGenre:  "fantasy",
+		},
+		{
+			name:       "nil seed with custom genre",
+			seed:       nil,
+			genre:      ptrString("horror"),
+			wantSeed:   12345,
+			wantGenre:  "horror",
+		},
+		{
+			name:       "both custom values",
+			seed:       ptrInt64(54321),
+			genre:      ptrString("scifi"),
+			wantSeed:   54321,
+			wantGenre:  "scifi",
+		},
+		{
+			name:       "zero seed is valid",
+			seed:       ptrInt64(0),
+			genre:      ptrString("cyberpunk"),
+			wantSeed:   0,
+			wantGenre:  "cyberpunk",
+		},
+		{
+			name:       "negative seed is valid",
+			seed:       ptrInt64(-12345),
+			genre:      ptrString("postapoc"),
+			wantSeed:   -12345,
+			wantGenre:  "postapoc",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			gotSeed, gotGenre := resolveSeedAndGenre(tt.seed, tt.genre)
+
+			if gotSeed != tt.wantSeed {
+				t.Errorf("seed = %d, want %d", gotSeed, tt.wantSeed)
+			}
+			if gotGenre != tt.wantGenre {
+				t.Errorf("genre = %q, want %q", gotGenre, tt.wantGenre)
+			}
+		})
+	}
+}
+
+// Helper functions for pointer creation
+func ptrInt64(v int64) *int64 {
+	return &v
+}
+
+func ptrString(v string) *string {
+	return &v
+}
+
+// TestResolveSeedAndGenreDeterminism verifies consistent results.
+func TestResolveSeedAndGenreDeterminism(t *testing.T) {
+	seed := ptrInt64(12345)
+	genre := ptrString("fantasy")
+
+	seed1, genre1 := resolveSeedAndGenre(seed, genre)
+	seed2, genre2 := resolveSeedAndGenre(seed, genre)
+
+	if seed1 != seed2 {
+		t.Errorf("seed mismatch: %d vs %d", seed1, seed2)
+	}
+	if genre1 != genre2 {
+		t.Errorf("genre mismatch: %q vs %q", genre1, genre2)
+	}
+}
+
+// BenchmarkResolveSeedAndGenre benchmarks seed/genre resolution.
+func BenchmarkResolveSeedAndGenre(b *testing.B) {
+	seed := ptrInt64(12345)
+	genre := ptrString("fantasy")
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		resolveSeedAndGenre(seed, genre)
 	}
 }

@@ -32,10 +32,10 @@ This report consolidates 110 individual audit files across all packages in the V
 
 ### cmd/client — Desktop Game Client Entry Point
 - **Source:** `cmd/client/AUDIT_2026-02-16_COMPREHENSIVE.md`
-- **High Issues:** 1
+- **High Issues:** 1 (partially improved)
 - **Medium Issues:** 1
 - **Low Issues:** 4
-- **Details:** Test coverage stands at 38% (below the 65% target) due to Ebiten display server dependency; most code paths require `xvfb-run` in CI. Three `time.Now()` usages in gameplay code were resolved via `TimeProvider` abstraction. `handlers.go` was split from 4,476 lines into `handlers.go` (3,894 lines) and `init_versions.go` (643 lines). Remaining low issues include save manager returning `nil` without a fallback on error and hard-coded doc version references.
+- **Details:** Test coverage improved from 38% to 39.1% (still below 65% target) due to Ebiten display server dependency; most code paths require `xvfb-run` in CI. Added unit tests for `createVehicleSpawnData`, `createCompanionSpawnData`, `initializeLogger`, `resolveSeedAndGenre`, and `seededRandom`. Three `time.Now()` usages in gameplay code were resolved via `TimeProvider` abstraction. `handlers.go` was split from 4,476 lines into `handlers.go` (3,894 lines) and `init_versions.go` (643 lines). Remaining low issues include save manager returning `nil` without a fallback on error and hard-coded doc version references.
 
 ---
 
@@ -1042,8 +1042,9 @@ This report consolidates 110 individual audit files across all packages in the V
 
 ### Priority 1: High Issues
 
-1. **cmd/client — Test Coverage (38% < 65% target)**
+1. **cmd/client — Test Coverage (39.1% < 65% target) - PARTIALLY IMPROVED 2026-02-22**
    - Most paths require Ebiten display server; improvement constrained to helper functions not needing `xvfb-run`. Target: 50%+ coverage by adding unit tests for pure-Go helpers in `util.go`.
+   - **Progress 2026-02-22**: Added tests for `createVehicleSpawnData`, `createCompanionSpawnData`, `initializeLogger`, `resolveSeedAndGenre`, and `seededRandom`. Coverage improved from 38.4% to 39.1%. Additional tests require Ebiten display server (constrained by CI environment).
 
 2. **pkg/rendering (root) — Dead Code / Type Duplication (RESOLVED 2026-02-22)**
    - ~~`Palette` and `SpriteConfig` types are defined but have 0 imports.~~ Dead code removed. Package now serves as namespace documentation only. Users should import from `pkg/rendering/palette/` and `pkg/rendering/sprites/` directly.

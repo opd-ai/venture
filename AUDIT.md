@@ -15,7 +15,7 @@ The following packages have not yet been audited:
 - [ ] `pkg/engine/` — Core ECS implementation (400+ files)
 
 ### Procedural Generation
-- [ ] `pkg/procgen/terrain/` — Terrain generation
+- [x] `pkg/procgen/terrain/AUDIT.md` — Complete — 3 issues (0 high, 1 med, 2 low) — Coverage: 94.0%
 - [ ] `pkg/procgen/entity/` — NPC/creature generation
 - [ ] `pkg/procgen/item/` — Item generation
 - [ ] `pkg/procgen/quest/` — Quest generation
@@ -47,11 +47,11 @@ The following packages have not yet been audited:
 - [ ] `pkg/world/raids/` — Raid system
 
 ### Supporting
+- [x] `pkg/mobile/AUDIT_2026-02-16.md` — Complete — 0 issues (0 high, 0 med, 0 low) — Coverage: 65.4%
 - [ ] `pkg/saveload/` — Save/load system
 - [ ] `pkg/config/` — Configuration
 - [ ] `pkg/validation/` — Input validation
 - [ ] `pkg/modding/` — Mod system
-- [ ] `pkg/mobile/` — Mobile platform support
 
 ## Audit Guidelines
 

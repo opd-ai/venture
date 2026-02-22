@@ -27,19 +27,19 @@
 //	// Create a new trade route
 //	route, err := rm.CreateRoute("region-a", "region-b", 1000.0)
 //	if err != nil {
-//	    log.Fatal(err)
+//	    logrus.WithError(err).Fatal("failed to create trade route")
 //	}
 //
 //	// Generate a caravan vehicle
 //	caravan, err := rm.CreateCaravan(54321, "fantasy")
 //	if err != nil {
-//	    log.Fatal(err)
+//	    logrus.WithError(err).Fatal("failed to create caravan")
 //	}
 //
 //	// Start the route
 //	err = rm.StartRoute(route.ID, caravan.ID)
 //	if err != nil {
-//	    log.Fatal(err)
+//	    logrus.WithError(err).Fatal("failed to start route")
 //	}
 //
 //	// Add player escorts
@@ -50,8 +50,10 @@
 //
 //	// Optimize route for profitability
 //	optimization := rm.OptimizeRoute(route)
-//	fmt.Printf("Expected profit: %.2f gold\n", optimization.ExpectedProfit)
-//	fmt.Printf("Danger zones: %d\n", len(optimization.DangerZones))
+//	logrus.WithFields(logrus.Fields{
+//	    "expected_profit": optimization.ExpectedProfit,
+//	    "danger_zones":    len(optimization.DangerZones),
+//	}).Info("route optimization complete")
 //
 // # Route Lifecycle
 //

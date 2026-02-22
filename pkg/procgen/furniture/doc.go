@@ -45,11 +45,11 @@ Generate furniture using the Generator with seed-based parameters:
 
 	result, err := gen.Generate(12345, params)
 	if err != nil {
-		log.Fatal(err)
+		logrus.WithError(err).Fatal("failed to generate furniture")
 	}
 
 	furniture := result.(*furniture.Furniture)
-	fmt.Printf("Generated: %s\n", furniture.Name)
+	logrus.WithField("name", furniture.Name).Info("generated furniture")
 	// Output: "Fine Wood Chair" or "Legendary Metal Throne of Power"
 
 # Placement Validation
@@ -173,11 +173,15 @@ This package integrates with:
 		x, y, dir, ok := validator.FindValidPlacement(item, furniture.DirNorth)
 		if ok {
 			validator.PlaceFurniture(item, x, y, dir)
-			fmt.Printf("Placed %s at (%.1f, %.1f)\n", item.Name, x, y)
+			logrus.WithFields(logrus.Fields{
+				"name": item.Name,
+				"x":    x,
+				"y":    y,
+			}).Info("placed furniture")
 		}
 	}
 
-	fmt.Printf("Room occupancy: %.1f%%\n", validator.GetOccupancy())
+	logrus.WithField("occupancy_percent", validator.GetOccupancy()).Info("room furnishing complete")
 
 # Future Enhancements
 

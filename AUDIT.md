@@ -14,15 +14,15 @@ This report consolidates 110 individual audit files across all packages in the V
 |----------|-------------|
 | High     | 1           |
 | Medium   | ~35         |
-| Low      | ~137        |
-| **Total**| **~173**    |
+| Low      | ~134        |
+| **Total**| **~170**    |
 
 **Historical totals (including fixed):** ~32 High, ~95 Medium, ~227 Low issues were identified across all audits. The vast majority have been resolved, resulting in an overall codebase health status of **Good**.
 
 **Strengths:** The codebase demonstrates high quality with average test coverage of 82.4% (target 65%), deterministic generation via seed-based RNG throughout, ECS architectural compliance, and comprehensive documentation. All critical runtime panics, data corruption risks, and non-determinism violations in production paths have been resolved.
 
 **Remaining issues** fall into three categories:
-- *Documentation inconsistencies:* doc examples using `log.Fatal` instead of logrus (~9 packages, down from ~14 after 2026-02-22 fixes)
+- *Documentation inconsistencies:* ~~doc examples using `log.Fatal` instead of logrus (~9 packages, down from ~14 after 2026-02-22 fixes)~~ **RESOLVED 2026-02-22**: All doc examples now use logrus structured logging
 - *API consistency gaps:* missing godoc on some exported symbols (~17 packages)
 - *Integration gaps:* (prestige, modding, QoL, companion_housing, housing_crafting, and guild_housing system integration gaps resolved 2026-02-22)
 
@@ -1082,7 +1082,7 @@ The following low-severity issues appear repeatedly across 30+ packages and repr
 
 **Documentation Examples Using Non-Standard Patterns** (affects ~15 packages):
 - ~~README/doc.go examples use `time.Now().UnixNano()` for seeds (should use fixed seeds per determinism guidelines): `pkg/audio`, `pkg/procgen/entity`, `pkg/procgen/quest`, `pkg/rendering/particles`~~ **RESOLVED 2026-02-22**: `pkg/audio` already used deterministic seeds; `pkg/procgen/entity`, `pkg/procgen/quest`, and `pkg/rendering/particles` README.md examples updated to use deterministic seed parameters. `pkg/rendering/particles` doc.go examples updated to use logrus instead of log.Fatal.
-- Examples use `log.Fatal`/`fmt.Printf` instead of logrus: `pkg/engine/physics/destruction`, `pkg/procgen/furniture`, `pkg/integration/trade_routes`, `pkg/network/federation/mobile`, `pkg/hostplay`, `pkg/world/events`
+- ~~Examples use `log.Fatal`/`fmt.Printf` instead of logrus: `pkg/engine/physics/destruction`, `pkg/procgen/furniture`, `pkg/integration/trade_routes`, `pkg/network/federation/mobile`, `pkg/hostplay`, `pkg/world/events`~~ **RESOLVED 2026-02-22**: `pkg/engine/physics/destruction` and `pkg/network/federation/mobile` already used logrus; `pkg/procgen/furniture`, `pkg/integration/trade_routes`, and `pkg/hostplay` doc.go examples updated to use logrus with structured fields; `pkg/world/events` does not exist.
 
 **Missing Godoc Comments** (affects ~20 packages):
 - Exported functions/types without godoc in: `pkg/audit/features`, `pkg/narrative/branching`, `pkg/procgen/recipe`, `pkg/procgen/story`, `pkg/network/federation`, and others
@@ -1116,8 +1116,8 @@ The following patterns affect multiple packages and represent systemic concerns:
 **Pattern:** Several systems used bare type assertions (e.g., `comp.(*FactionComponent)`) without comma-ok pattern. These have been fixed in the audited systems but the pattern may recur in unaudited code.
 
 ### 5. Documentation Examples Violating Coding Guidelines
-**Affected:** ~15 packages (audio, procgen, rendering, integration)
-**Pattern:** `doc.go` and README.md examples across the codebase use `time.Now().UnixNano()` for seeds, `log.Fatal`, and `fmt.Printf` instead of following logrus guidelines. These are documentation-only issues with no runtime impact but could mislead contributors.
+**Affected:** ~~~15 packages (audio, procgen, rendering, integration)~~ **RESOLVED 2026-02-22**
+**Pattern:** ~~`doc.go` and README.md examples across the codebase use `time.Now().UnixNano()` for seeds, `log.Fatal`, and `fmt.Printf` instead of following logrus guidelines.~~ All doc examples now use deterministic seeds and logrus structured logging. Resolved through multiple audit cycles ending 2026-02-22.
 
 ### 6. Deprecated Systems Still Exported
 **Affected:** ~~`pkg/integration/companion_housing`, `pkg/integration/housing_crafting`~~ (**RESOLVED 2026-02-22**)

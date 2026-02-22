@@ -39,17 +39,17 @@
 //
 //	manager, err := hostplay.NewServerManager(config, logger)
 //	if err != nil {
-//		log.Fatal(err)
+//		logrus.WithError(err).Fatal("failed to create server manager")
 //	}
 //
 //	// Start server and wait for ready
 //	if err := manager.Start(); err != nil {
-//		log.Fatal(err)
+//		logrus.WithError(err).Fatal("failed to start server")
 //	}
 //
 //	// Get connection details
 //	addr := manager.Address()
-//	fmt.Printf("Server ready at %s\n", addr)
+//	logrus.WithField("address", addr).Info("server ready")
 //
 //	// Ensure cleanup on exit
 //	defer manager.Stop()

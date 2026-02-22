@@ -56,9 +56,9 @@ func (s *ChatSystem) SendMessage(senderID uint64, channel engine.ChatChannel, co
 	// Check rate limit
 	if !s.limiter.Allow(senderID) {
 		log.WithFields(log.Fields{
-			"sender_id": senderID,
-			"channel":   channel,
-			"limit":     ChatRateLimit,
+			"playerID": senderID,
+			"channel":  channel,
+			"limit":    ChatRateLimit,
 		}).Warn("chat rate limit exceeded")
 		return fmt.Errorf("rate limit exceeded (maximum %d messages per second)", ChatRateLimit)
 	}
@@ -67,9 +67,9 @@ func (s *ChatSystem) SendMessage(senderID uint64, channel engine.ChatChannel, co
 	sanitized, err := s.validator.ValidateAndSanitize(content)
 	if err != nil {
 		log.WithFields(log.Fields{
-			"sender_id": senderID,
-			"channel":   channel,
-			"error":     err.Error(),
+			"playerID": senderID,
+			"channel":  channel,
+			"error":    err.Error(),
 		}).Warn("chat message validation failed")
 		return fmt.Errorf("message validation failed: %w", err)
 	}
@@ -78,8 +78,8 @@ func (s *ChatSystem) SendMessage(senderID uint64, channel engine.ChatChannel, co
 	msgID, err := generateMessageID()
 	if err != nil {
 		log.WithFields(log.Fields{
-			"sender_id": senderID,
-			"error":     err.Error(),
+			"playerID": senderID,
+			"error":    err.Error(),
 		}).Error("failed to generate message ID")
 		return fmt.Errorf("failed to generate message ID: %w", err)
 	}
@@ -99,7 +99,7 @@ func (s *ChatSystem) SendMessage(senderID uint64, channel engine.ChatChannel, co
 	sender, ok := s.world.GetEntity(senderID)
 	if !ok || sender == nil {
 		log.WithFields(log.Fields{
-			"sender_id": senderID,
+			"playerID": senderID,
 		}).Error("chat sender entity not found")
 		return fmt.Errorf("sender entity not found")
 	}
@@ -115,7 +115,7 @@ func (s *ChatSystem) SendMessage(senderID uint64, channel engine.ChatChannel, co
 		chatComp, ok = chatCompRaw.(*engine.ChatComponent)
 		if !ok {
 			log.WithFields(log.Fields{
-				"sender_id": senderID,
+				"playerID": senderID,
 			}).Error("chat component type assertion failed")
 			return fmt.Errorf("invalid chat component type")
 		}

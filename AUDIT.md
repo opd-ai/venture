@@ -13,16 +13,16 @@ This report consolidates 110 individual audit files across all packages in the V
 | Severity | Open Issues |
 |----------|-------------|
 | High     | 1           |
-| Medium   | ~40         |
+| Medium   | ~37         |
 | Low      | ~137        |
-| **Total**| **~178**    |
+| **Total**| **~175**    |
 
 **Historical totals (including fixed):** ~32 High, ~95 Medium, ~227 Low issues were identified across all audits. The vast majority have been resolved, resulting in an overall codebase health status of **Good**.
 
 **Strengths:** The codebase demonstrates high quality with average test coverage of 82.4% (target 65%), deterministic generation via seed-based RNG throughout, ECS architectural compliance, and comprehensive documentation. All critical runtime panics, data corruption risks, and non-determinism violations in production paths have been resolved.
 
 **Remaining issues** fall into three categories:
-- *Documentation inconsistencies:* doc examples using `log.Fatal` instead of logrus (~10 packages, down from ~14 after 2026-02-22 fixes)
+- *Documentation inconsistencies:* doc examples using `log.Fatal` instead of logrus (~9 packages, down from ~14 after 2026-02-22 fixes)
 - *API consistency gaps:* missing godoc on some exported symbols (~17 packages)
 - *Integration gaps:* (prestige, modding, QoL, companion_housing, housing_crafting, and guild_housing system integration gaps resolved 2026-02-22)
 
@@ -456,9 +456,9 @@ This report consolidates 110 individual audit files across all packages in the V
 ### pkg/network/chat — Chat System
 - **Source:** `pkg/network/chat/AUDIT.md`
 - **High Issues:** 0
-- **Medium Issues:** 1
+- **Medium Issues:** 0 (1 fixed)
 - **Low Issues:** 1
-- **Details:** 79.4% coverage. Logging field names use `sender_id` inconsistent with project convention (`playerID`/`entityID`). Minor test coverage gaps in some chat filter edge cases.
+- **Details:** 79.4% coverage. **RESOLVED 2026-02-22**: Logging field names updated from `sender_id` to `playerID` to match project convention. Minor test coverage gaps in some chat filter edge cases.
 
 ---
 
@@ -483,9 +483,9 @@ This report consolidates 110 individual audit files across all packages in the V
 ### pkg/network/federation/mobile — Mobile Federation
 - **Source:** `pkg/network/federation/mobile/AUDIT.md`
 - **High Issues:** 0
-- **Medium Issues:** 1
+- **Medium Issues:** 0 (1 fixed)
 - **Low Issues:** 1
-- **Details:** 82.0% coverage. `doc.go` example uses `log.Fatalf` which violates structured logging guidelines. All functionality works correctly; purely a documentation consistency issue.
+- **Details:** 82.0% coverage. **RESOLVED 2026-02-22**: `doc.go` example updated to use `logrus.WithError(err).Fatal()` instead of `log.Fatalf`. All functionality works correctly.
 
 ---
 
@@ -564,9 +564,9 @@ This report consolidates 110 individual audit files across all packages in the V
 ### pkg/procgen/companion — Companion/Pet Generation
 - **Source:** `pkg/procgen/companion/AUDIT.md`
 - **High Issues:** 0
-- **Medium Issues:** 1
+- **Medium Issues:** 0 (1 fixed)
 - **Low Issues:** 1
-- **Details:** 98.7% coverage. `doc.go` incorrectly states 75% coverage (actual: 98.7%)—documentation outdated. No functional issues.
+- **Details:** 98.7% coverage. **RESOLVED 2026-02-22**: `doc.go` coverage documentation corrected from 75% to 98.7%. No functional issues.
 
 ---
 

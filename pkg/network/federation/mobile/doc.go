@@ -40,7 +40,7 @@
 //
 //	// Start federation
 //	if err := adapter.Start(); err != nil {
-//	    log.Fatalf("Failed to start: %v", err)
+//	    logrus.WithError(err).Fatal("Failed to start mobile federation adapter")
 //	}
 //	defer adapter.Stop()
 //

@@ -89,7 +89,7 @@
 //
 // # Testing
 //
-// Test coverage: 75% (exceeds 65% requirement)
+// Test coverage: 98.7% (exceeds 65% requirement)
 // All tests pass with race detection enabled
 // CLI test tool available: cmd/companiontest
 package companion

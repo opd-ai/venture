@@ -23,11 +23,11 @@ The `pkg/audio` package provides procedural audio synthesis for music, sound eff
 *None identified*
 
 ### Medium Severity
-- [ ] **Documentation** — README.md example uses non-deterministic seeding: `time.Now().UnixNano()` (`README.md:184`) — violates determinism guideline
-- [ ] **API Consistency** — `MusicTriggerSystem.Update(deltaTime)` does not match `System` interface signature `Update(entities []*Entity, deltaTime float64)` (`music_trigger_system.go:30`) — not registered as ECS system in World
+- [x] **Documentation** — README.md example uses non-deterministic seeding: `time.Now().UnixNano()` (`README.md:184`) — violates determinism guideline **FIXED 2026-02-22**: Updated example to use seed-based approach
+- [x] **API Consistency** — `MusicTriggerSystem.Update(deltaTime)` does not match `System` interface signature `Update(entities []*Entity, deltaTime float64)` (`music_trigger_system.go:30`) — not registered as ECS system in World **FIXED 2026-02-22**: MusicTriggerSystem now implements System interface
 
 ### Low Severity
-- [ ] **Documentation** — `VoiceProcessor` missing godoc on `ProcessInput` explaining channelID semantic (`voice.go:242`)
+- [x] **Documentation** — `VoiceProcessor` missing godoc on `ProcessInput` explaining channelID semantic (`voice.go:242`) **FIXED 2026-02-22**: Added comprehensive godoc
 - [ ] **Code Organization** — `synthesis` sub-package already audited separately (2026-02-13) with all issues resolved; this audit covers parent package only
 - [ ] **Test Structure** — Some tests in `music/genre_consistency_test.go` could benefit from table-driven patterns for improved maintainability
 
@@ -75,7 +75,7 @@ The `pkg/audio` package connects to the engine via:
 | Mobile | ✅ | Same synthesis engine; no platform-specific code |
 
 ## Recommendations
-1. **[MED]** Fix README.md example at line 184: replace `time.Now().UnixNano()` with seed-based approach for consistency with determinism guidelines
-2. **[MED]** Consider adapting `MusicTriggerSystem.Update()` to match ECS `System` interface if it needs World registration, or document why it uses custom signature
-3. **[LOW]** Add godoc to `VoiceProcessor.ProcessInput()` explaining channelID parameter
+1. ~~**[MED]** Fix README.md example at line 184: replace `time.Now().UnixNano()` with seed-based approach for consistency with determinism guidelines~~ **DONE 2026-02-22**
+2. ~~**[MED]** Consider adapting `MusicTriggerSystem.Update()` to match ECS `System` interface if it needs World registration, or document why it uses custom signature~~ **DONE 2026-02-22**: MusicTriggerSystem in pkg/engine now implements System interface
+3. ~~**[LOW]** Add godoc to `VoiceProcessor.ProcessInput()` explaining channelID parameter~~ **DONE 2026-02-22**
 4. **[LOW]** Add benchmark tests for `Manager` methods to track performance alongside sub-package benchmarks

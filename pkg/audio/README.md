@@ -179,9 +179,9 @@ entity.AddComponent(&AudioComponent{
 ### With Game Events
 
 ```go
-// Play sound on hit
-func onEnemyHit(x, y float64) {
-    hitSound := sfxGen.Generate("hit", time.Now().UnixNano())
+// Play sound on hit using deterministic seed
+func onEnemyHit(x, y float64, eventSeed int64) {
+    hitSound := sfxGen.Generate("hit", eventSeed)
     audioSystem.Play(hitSound)
 }
 

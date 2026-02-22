@@ -286,7 +286,7 @@ func TestMusicTriggerSystem_OnCombatStart(t *testing.T) {
 	}
 
 	// Process events (processes immediately now)
-	system.Update(0.001)
+	system.Update(nil, 0.001)
 
 	// Check queue was cleared
 	if system.GetEventQueueLength() != 0 {
@@ -313,7 +313,7 @@ func TestMusicTriggerSystem_OnBossAppear(t *testing.T) {
 	world.Update(0.0)
 
 	system.OnBossAppear(entity.ID)
-	system.Update(0.001)
+	system.Update(nil, 0.001)
 
 	if !comp.BossNearby {
 		t.Error("BossNearby should be true after processing boss appear event")
@@ -338,7 +338,7 @@ func TestMusicTriggerSystem_OnQuestComplete(t *testing.T) {
 	world.Update(0.0)
 
 	system.OnQuestComplete(entity.ID)
-	system.Update(0.001)
+	system.Update(nil, 0.001)
 
 	if comp.PendingContext == nil {
 		t.Error("PendingContext should be set after quest completion")
@@ -368,7 +368,7 @@ func TestMusicTriggerSystem_OnCombatEnd(t *testing.T) {
 
 	// End combat
 	system.OnCombatEnd(entity.ID)
-	system.Update(0.001)
+	system.Update(nil, 0.001)
 
 	if comp.CombatActive {
 		t.Error("CombatActive should be false after combat end")
@@ -398,7 +398,7 @@ func TestMusicTriggerSystem_OnBossDefeated(t *testing.T) {
 
 	// Defeat boss
 	system.OnBossDefeated(entity.ID)
-	system.Update(0.001)
+	system.Update(nil, 0.001)
 
 	if comp.BossNearby {
 		t.Error("BossNearby should be false after boss defeated")
@@ -424,7 +424,7 @@ func TestMusicTriggerSystem_OnExplorationMilestone(t *testing.T) {
 
 	// Trigger exploration milestone (new area)
 	system.OnExplorationMilestone(entity.ID, true)
-	system.Update(0.001)
+	system.Update(nil, 0.001)
 
 	if comp.ExplorationMilestones != initialMilestones+1 {
 		t.Errorf("ExplorationMilestones = %d, want %d", comp.ExplorationMilestones, initialMilestones+1)
@@ -444,7 +444,7 @@ func TestMusicTriggerSystem_OnReputationChange(t *testing.T) {
 
 	// Change to revered reputation
 	system.OnReputationChange(entity.ID, "revered")
-	system.Update(0.001)
+	system.Update(nil, 0.001)
 
 	if comp.ReputationTier != "revered" {
 		t.Errorf("ReputationTier = %s, want revered", comp.ReputationTier)

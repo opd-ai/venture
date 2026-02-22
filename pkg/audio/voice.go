@@ -239,6 +239,10 @@ func (p *VoiceProcessor) IsEnabled() bool {
 }
 
 // ProcessInput processes input audio samples and sends them if ready.
+// channelID identifies the voice channel (e.g., "team", "proximity", "guild")
+// that the encoded audio will be transmitted to via the transport layer.
+// Samples are accumulated in an internal buffer and encoded into frames
+// when enough data is available.
 func (p *VoiceProcessor) ProcessInput(channelID string, samples []float64) error {
 	if !p.enabled || len(samples) == 0 {
 		return nil

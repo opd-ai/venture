@@ -27,7 +27,10 @@ func NewMusicTriggerSystem(world *World, musicManager audio.AdaptiveMusicSystem)
 }
 
 // Update processes music triggers and updates the music system.
-func (mts *MusicTriggerSystem) Update(deltaTime float64) {
+// Implements the System interface for ECS registration with World.
+// The entities parameter contains entities with "music_trigger" components
+// when registered via World.AddSystem().
+func (mts *MusicTriggerSystem) Update(entities []*Entity, deltaTime float64) {
 	if mts.world == nil || mts.musicManager == nil {
 		return
 	}
@@ -50,10 +53,14 @@ func (mts *MusicTriggerSystem) Update(deltaTime float64) {
 
 	mts.timeSinceUpdate = 0.0
 
-	// Get all entities with music trigger components
-	entities := mts.world.GetEntitiesWith("music_trigger")
+	// Use provided entities if available, otherwise fetch from world
+	// This supports both ECS registration and direct usage patterns
+	entitiesToProcess := entities
+	if len(entitiesToProcess) == 0 && mts.world != nil {
+		entitiesToProcess = mts.world.GetEntitiesWith("music_trigger")
+	}
 
-	for _, entity := range entities {
+	for _, entity := range entitiesToProcess {
 		comp, ok := entity.GetComponent("music_trigger")
 		if !ok {
 			continue

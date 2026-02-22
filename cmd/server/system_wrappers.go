@@ -122,7 +122,7 @@ type musicTriggerSystemWrapper struct {
 }
 
 func (w *musicTriggerSystemWrapper) Update(entities []*engine.Entity, deltaTime float64) {
-	w.system.Update(deltaTime)
+	w.system.Update(entities, deltaTime)
 }
 
 type discoverySystemWrapper struct {

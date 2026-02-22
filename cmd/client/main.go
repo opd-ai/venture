@@ -130,7 +130,7 @@ func setupAllGameSystems(game *engine.EbitenGame, logger *logrus.Logger, clientL
 	if game.SettingsManager != nil {
 		showTutorials = game.SettingsManager.GetSettings().ShowTutorials
 	}
-	tutorialSystem, helpSystem := initializeTutorialAndHelp(sys.inputSystem, game.CameraSystem, showTutorials, *width, *height)
+	tutorialSystem, helpSystem, contextualTutorial := initializeTutorialAndHelp(sys.inputSystem, game.CameraSystem, showTutorials, *width, *height)
 
 	// Register critical systems immediately for first frame
 	registerCriticalSystems(game, sys)
@@ -141,6 +141,9 @@ func setupAllGameSystems(game *engine.EbitenGame, logger *logrus.Logger, clientL
 	// Phase 3.2: Wire tutorial system to onboarding manager for seamless transitions
 	game.SetTutorialSystemForOnboarding(tutorialSystem)
 	game.HelpSystem = helpSystem
+
+	// Phase 3.3: Wire context-sensitive tutorial manager to game for settings propagation
+	game.SetContextualTutorial(contextualTutorial)
 
 	configureSystemConnections(game, sys)
 

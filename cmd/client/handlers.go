@@ -2800,7 +2800,8 @@ func addPlayerComponents(player *engine.Entity, logger *logrus.Logger, clientLog
 // initializeTutorialAndHelp creates and configures tutorial and help systems.
 // The showTutorials parameter comes from GameSettings.ShowTutorials.
 // The screenWidth and screenHeight parameters ensure correct button positioning.
-func initializeTutorialAndHelp(inputSystem *engine.InputSystem, cameraSystem *engine.CameraSystem, showTutorials bool, screenWidth, screenHeight int) (*engine.EbitenTutorialSystem, *engine.EbitenHelpSystem) {
+// Phase 3.3: Also creates and configures TutorialManager for context-sensitive help.
+func initializeTutorialAndHelp(inputSystem *engine.InputSystem, cameraSystem *engine.CameraSystem, showTutorials bool, screenWidth, screenHeight int) (*engine.EbitenTutorialSystem, *engine.EbitenHelpSystem, *ui.TutorialManager) {
 	tutorialSystem := engine.NewTutorialSystemWithSize(screenWidth, screenHeight)
 	// Disable tutorials if either --no-tutorial flag is set OR ShowTutorials setting is false
 	if *noTutorial || !showTutorials {
@@ -2809,11 +2810,17 @@ func initializeTutorialAndHelp(inputSystem *engine.InputSystem, cameraSystem *en
 	}
 	helpSystem := engine.NewHelpSystem()
 
+	// Phase 3.3: Create context-sensitive tutorial manager
+	contextualTutorial := ui.NewTutorialManager()
+	if *noTutorial || !showTutorials {
+		contextualTutorial.Disable()
+	}
+
 	inputSystem.SetHelpSystem(helpSystem)
 	inputSystem.SetTutorialSystem(tutorialSystem)
 	inputSystem.SetCameraSystem(cameraSystem)
 
-	return tutorialSystem, helpSystem
+	return tutorialSystem, helpSystem, contextualTutorial
 }
 
 // configureSaveLoadSystem initializes the save/load manager and registers callbacks.

@@ -123,7 +123,7 @@ Phases 1 and 2 can proceed in parallel. Phase 3 depends on both. Phase 4 depends
 - **Fix**: In `initializeTutorialAndHelp()` (or its caller), load `GameSettings` and check `settings.ShowTutorials`. If false, disable all three tutorial layers. This requires passing the settings instance (or the `ShowTutorials` bool) into the function. Full wiring is in Phase 3, task 3.3; Phase 1 documents the bug.
 - **Acceptance**: Toggling "Show Tutorials" in settings and restarting correctly enables/disables all tutorials.
 
-- [ ] Wire `ShowTutorials` into tutorial initialization (deferred to Phase 3, task 3.3)
+- [x] Wire `ShowTutorials` into tutorial initialization (deferred to Phase 3, task 3.3)
 
 ---
 
@@ -253,7 +253,7 @@ Phases 1 and 2 can proceed in parallel. Phase 3 depends on both. Phase 4 depends
 - [x] Add transition call after character creation completion in client handlers
 - [x] Update `TutorialCompletionComponent` to track onboarding state
 
-### 3.3 Wire `ShowTutorials` Setting to All Three Layers (M)
+### 3.3 Wire `ShowTutorials` Setting to All Three Layers (M) ✅ COMPLETE
 
 - **Files**: `cmd/client/handlers.go`, `pkg/engine/tutorial_system.go`, `pkg/engine/character_creation_tutorial.go`, `pkg/rendering/ui/tutorial.go`
 - **Description**: The `GameSettings.ShowTutorials` field (settings.go:31) is toggled in settings UI but never read by any tutorial system. The `--no-tutorial` CLI flag only disables the in-game tutorial.
@@ -267,9 +267,9 @@ Phases 1 and 2 can proceed in parallel. Phase 3 depends on both. Phase 4 depends
   4. When user toggles `ShowTutorials` in settings UI at runtime, propagate to active tutorial systems
 - **Acceptance**: Setting "Show Tutorials = OFF" disables character creation tutorial, in-game tutorial, and contextual help. `--no-tutorial` flag has the same effect. Both are consistent.
 
-- [ ] Read `ShowTutorials` from `GameSettings` in `initializeTutorialAndHelp()`
-- [ ] Propagate setting to `CharacterCreationTutorial` and `TutorialManager`
-- [ ] Support runtime toggle from settings UI
+- [x] Read `ShowTutorials` from `GameSettings` in `initializeTutorialAndHelp()`
+- [x] Propagate setting to `CharacterCreationTutorial` and `TutorialManager`
+- [x] Support runtime toggle from settings UI
 
 ### 3.4 Make In-Game Tutorial Class-Aware (M)
 
@@ -376,7 +376,7 @@ Phases 1 and 2 can proceed in parallel. Phase 3 depends on both. Phase 4 depends
 - **Existing tests**: 10 test functions covering GAP-001 through GAP-006 repairs
 - **New tests needed**:
 
-- [ ] `TestGAP007_ShowTutorialsSettingWired` — verify `ShowTutorials=false` disables tutorial system
+- [x] `TestGAP007_ShowTutorialsSettingWired` — verify `ShowTutorials=false` disables tutorial system (implemented as `TestApplySettings_AllTutorialSystems` in `settings_integration_test.go`)
 - [ ] `TestGAP008_ESCBehaviorMatchesHint` — verify ESC hides (not skips) and hint text says "minimize"
 
 ### 5.3 Update `character_creation_test.go` (M)

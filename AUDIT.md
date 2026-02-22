@@ -14,8 +14,8 @@ This report consolidates 110 individual audit files across all packages in the V
 |----------|-------------|
 | High     | 1           |
 | Medium   | ~62         |
-| Low      | ~162        |
-| **Total**| **~225**    |
+| Low      | ~160        |
+| **Total**| **~223**    |
 
 **Historical totals (including fixed):** ~32 High, ~95 Medium, ~225 Low issues were identified across all audits. The vast majority have been resolved, resulting in an overall codebase health status of **Good**.
 
@@ -151,8 +151,8 @@ This report consolidates 110 individual audit files across all packages in the V
 - **Source:** `pkg/engine/AUDIT_AI_BEHAVIOR.md`
 - **High Issues:** 0
 - **Medium Issues:** 0 (2 fixed)
-- **Low Issues:** 2
-- **Details:** Overall ~70% AI subsystem coverage. Fixed: duplicate code blocks in `faction_aware_ai_system.go` and nil pointer dereference in `ai_system.go` debug logging. Remaining: `NewBehaviorTreeComponent` defaults blackboard seed to 0 making all entity behavior identical unless explicitly seeded; `companion_ai_system.go` has 0% test coverage. `behavior_tree_archetypes.go` has only ~5% coverage.
+- **Low Issues:** 0 (2 fixed 2026-02-22)
+- **Details:** Overall ~72% AI subsystem coverage. Fixed: duplicate code blocks in `faction_aware_ai_system.go` and nil pointer dereference in `ai_system.go` debug logging. **RESOLVED 2026-02-22**: Added `NewBehaviorTreeComponentWithSeed(root, treeName, seed)` constructor to enable deterministic per-entity AI behavior; added comprehensive test suite for `companion_ai_system.go` covering all three behavior modes, owner following, enemy detection, and edge cases. `behavior_tree_archetypes.go` has only ~5% coverage (acceptable for archetype builder functions).
 
 ---
 

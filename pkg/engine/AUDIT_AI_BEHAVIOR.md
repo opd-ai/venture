@@ -1,6 +1,6 @@
 # AI & Behavior Systems Sub-Audit
 
-**Date**: 2026-02-16
+**Date**: 2026-02-22 (updated)
 **Scope**: AI state machine, behavior trees, squad coordination, and AI bridge systems
 **Status**: Complete
 
@@ -27,6 +27,9 @@
 - `status_effect_ai_system.go` — Status effects → AI disabling
 - `weather_aware_ai_system.go` — Weather → AI detection range
 
+### Companion AI
+- `companion_ai_system.go` — Companion behavior: aggressive, defensive, passive modes
+
 ## Issues Found & Fixed
 
 ### MED-1: Duplicate code blocks in `faction_aware_ai_system.go` (FIXED)
@@ -41,13 +44,19 @@
 
 With a single-waypoint patrol route and `PatrolReverse=true`, the index arithmetic would produce out-of-bounds indices (-1 or 1 for a len-1 slice), causing `GetCurrentWaypoint()` to return nil on subsequent calls. Fixed by returning early when `len(PatrolWaypoints) <= 1`.
 
-## Remaining Notes (No Action Required)
+### LOW-2: `NewBehaviorTreeComponent` defaults blackboard seed to 0 (FIXED 2026-02-22)
 
-### LOW: `NewBlackboard()` defaults to seed 0
-All behavior trees created via `NewBehaviorTreeComponent` get a blackboard with seed 0, making random behavior identical across all entities unless the caller explicitly sets a seed via `NewBlackboardWithSeed`. This is documented in the code comments but callers should be aware.
+Added `NewBehaviorTreeComponentWithSeed(root, treeName, seed)` constructor that creates a behavior tree with a seeded RNG. This ensures deterministic yet varied AI behavior when unique seeds are provided per entity. Updated `NewBehaviorTreeComponent` documentation to clarify the seed=0 default and recommend `NewBehaviorTreeComponentWithSeed` for deterministic per-entity behavior.
 
-### LOW: `companion_ai_system.go` has 0% test coverage
-The companion AI system exists but has no test coverage. It was excluded from this audit scope (companion systems are a separate domain).
+### LOW-3: `companion_ai_system.go` has 0% test coverage (FIXED 2026-02-22)
+
+Added comprehensive test suite in `companion_ai_system_test.go` covering:
+- All three behavior modes (aggressive, defensive, passive)
+- Owner following with distance thresholds
+- Speed-based movement using CompanionStatsComponent
+- Enemy detection and targeting for aggressive mode
+- Edge cases: missing owner, missing components
+- Helper functions: distance(), findNearbyEnemies()
 
 ## Test Coverage Summary
 
@@ -66,5 +75,6 @@ The companion AI system exists but has no test coverage. It was excluded from th
 | `faction_aware_ai_system.go` | ~75% |
 | `status_effect_ai_system.go` | ~92% |
 | `weather_aware_ai_system.go` | ~88% |
+| `companion_ai_system.go` | ~85% (NEW 2026-02-22) |
 
-**Overall AI subsystem coverage**: ~70% (meets 65% minimum threshold)
+**Overall AI subsystem coverage**: ~72% (meets 65% minimum threshold)

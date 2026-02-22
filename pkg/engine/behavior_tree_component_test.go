@@ -261,6 +261,93 @@ func TestRangedBehaviorTree(t *testing.T) {
 	// This is verified by the tree structure, not execution here
 }
 
+// TestNewBehaviorTreeComponentWithSeed tests the seeded constructor.
+func TestNewBehaviorTreeComponentWithSeed(t *testing.T) {
+	root := NewActionNode("test", func(*Entity, *Blackboard, float64) NodeStatus {
+		return NodeSuccess
+	})
+
+	// Create two components with different seeds
+	bt1 := NewBehaviorTreeComponentWithSeed(root, "Test1", 12345)
+	bt2 := NewBehaviorTreeComponentWithSeed(root, "Test2", 67890)
+
+	// Verify they have different RNG state
+	rng1 := bt1.Blackboard.GetRNG()
+	rng2 := bt2.Blackboard.GetRNG()
+
+	// Generate some random values
+	val1 := rng1.Int63()
+	val2 := rng2.Int63()
+
+	if val1 == val2 {
+		t.Error("Expected different seeds to produce different random values")
+	}
+
+	// Verify same seed produces same values (determinism)
+	bt3 := NewBehaviorTreeComponentWithSeed(root, "Test3", 12345)
+	bt4 := NewBehaviorTreeComponentWithSeed(root, "Test4", 12345)
+
+	rng3 := bt3.Blackboard.GetRNG()
+	rng4 := bt4.Blackboard.GetRNG()
+
+	for i := 0; i < 10; i++ {
+		if rng3.Int63() != rng4.Int63() {
+			t.Errorf("Same seeds should produce same values at iteration %d", i)
+		}
+	}
+}
+
+// TestBehaviorTreeComponentDeterminism verifies deterministic behavior across resets.
+func TestBehaviorTreeComponentDeterminism(t *testing.T) {
+	executed := 0
+	var randomVals []int64
+
+	root := NewActionNode("random_action", func(e *Entity, bb *Blackboard, dt float64) NodeStatus {
+		rng := bb.GetRNG()
+		randomVals = append(randomVals, rng.Int63())
+		executed++
+		return NodeSuccess
+	})
+
+	seed := int64(42)
+	bt := NewBehaviorTreeComponentWithSeed(root, "DeterminismTest", seed)
+	entity := NewEntity(1)
+
+	// Execute 5 times
+	for i := 0; i < 5; i++ {
+		bt.Tick(entity, 0.016)
+	}
+
+	if executed != 5 {
+		t.Errorf("Expected 5 executions, got %d", executed)
+	}
+
+	// Create fresh tree with same seed
+	bt2 := NewBehaviorTreeComponentWithSeed(root, "DeterminismTest2", seed)
+	randomVals2 := []int64{}
+	root2 := NewActionNode("random_action2", func(e *Entity, bb *Blackboard, dt float64) NodeStatus {
+		rng := bb.GetRNG()
+		randomVals2 = append(randomVals2, rng.Int63())
+		return NodeSuccess
+	})
+	bt2.Root = root2
+
+	for i := 0; i < 5; i++ {
+		bt2.Tick(entity, 0.016)
+	}
+
+	// Verify sequences match
+	if len(randomVals) != len(randomVals2) {
+		t.Fatalf("Length mismatch: %d vs %d", len(randomVals), len(randomVals2))
+	}
+
+	for i := range randomVals {
+		if randomVals[i] != randomVals2[i] {
+			t.Errorf("Value mismatch at index %d: %d vs %d", i, randomVals[i], randomVals2[i])
+		}
+	}
+}
+
 // TestFleeAtLowHealth tests that all archetypes flee when health is low.
 func TestFleeAtLowHealth(t *testing.T) {
 	world := NewWorld()

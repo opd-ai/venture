@@ -23,10 +23,25 @@ func (b BehaviorTreeComponent) Type() string {
 }
 
 // NewBehaviorTreeComponent creates a new behavior tree component.
+// Note: Uses seed=0 for the blackboard RNG. For deterministic behavior with unique
+// seeds per entity, use NewBehaviorTreeComponentWithSeed instead.
 func NewBehaviorTreeComponent(root BehaviorNode, treeName string) *BehaviorTreeComponent {
 	return &BehaviorTreeComponent{
 		Root:       root,
 		Blackboard: NewBlackboard(),
+		Enabled:    true,
+		TreeName:   treeName,
+	}
+}
+
+// NewBehaviorTreeComponentWithSeed creates a behavior tree component with a seeded RNG.
+// Using a unique seed per entity ensures deterministic yet varied AI behavior.
+// The seed should typically be derived from the entity's unique ID combined with
+// a world seed to ensure consistent behavior across save/load cycles.
+func NewBehaviorTreeComponentWithSeed(root BehaviorNode, treeName string, seed int64) *BehaviorTreeComponent {
+	return &BehaviorTreeComponent{
+		Root:       root,
+		Blackboard: NewBlackboardWithSeed(seed),
 		Enabled:    true,
 		TreeName:   treeName,
 	}

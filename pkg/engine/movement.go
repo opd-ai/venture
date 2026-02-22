@@ -37,11 +37,17 @@ type MovementSystem struct {
 	// SpatialPartitionSystem for dirty tracking (optional)
 	spatialPartition *SpatialPartitionSystem
 
+	// StatisticsSystem for tracking player movement stats (optional)
+	statisticsSystem *StatisticsSystem
+
 	// Track if any entity moved this frame
 	entitiesMoved bool
 
 	// Reusable buffer for nearby entity queries (reduces allocations)
 	nearbyBuffer []*Entity
+
+	// Track visited grid cells per entity for area exploration (grid cell size: 200x200)
+	visitedCells map[uint64]map[int64]bool
 }
 
 // NewMovementSystem creates a new movement system.
@@ -59,6 +65,7 @@ func NewMovementSystem(maxSpeed float64) *MovementSystem {
 	return &MovementSystem{
 		MaxSpeed:     maxSpeed,
 		nearbyBuffer: make([]*Entity, 0, 64), // Pre-allocate for typical nearby count
+		visitedCells: make(map[uint64]map[int64]bool),
 	}
 }
 
@@ -86,6 +93,19 @@ func (s *MovementSystem) SetSpatialPartition(spatialPartition *SpatialPartitionS
 	}
 
 	s.spatialPartition = spatialPartition
+}
+
+// SetStatisticsSystem sets the statistics system for tracking player movement stats.
+// When set, player movement distance and area exploration will be tracked.
+func (s *MovementSystem) SetStatisticsSystem(statisticsSystem *StatisticsSystem) {
+	if movementDebugEnabled {
+		log.WithFields(log.Fields{
+			"system_name":        "movement",
+			"statistics_enabled": statisticsSystem != nil,
+		}).Debug("Setting statistics system")
+	}
+
+	s.statisticsSystem = statisticsSystem
 }
 
 // Update applies velocity to position for all entities with both components.
@@ -203,6 +223,10 @@ func (s *MovementSystem) validateAndUpdatePosition(entity *Entity, pos *Position
 	s.entitiesMoved = true
 	s.logMovement(entity, oldX, oldY, pos.X, pos.Y, debugEnabled)
 	s.checkLayerTransition(entity, pos)
+
+	// Track statistics for player entities (entities with input component)
+	s.trackPlayerMovementStats(entity, oldX, oldY, newX, newY)
+
 	return true
 }
 
@@ -218,6 +242,71 @@ func (s *MovementSystem) logMovement(entity *Entity, fromX, fromY, toX, toY floa
 		"to_x":      toX,
 		"to_y":      toY,
 	}).Debug("Entity moved")
+}
+
+// areaCellSize defines the size of grid cells used for area exploration tracking.
+// Each 200x200 pixel region counts as a distinct "area" for tutorial purposes.
+const areaCellSize = 200.0
+
+// trackPlayerMovementStats updates statistics for player entities when they move.
+// Tracks distance traveled and unique areas visited for tutorial conditions.
+func (s *MovementSystem) trackPlayerMovementStats(entity *Entity, oldX, oldY, newX, newY float64) {
+	// Only track stats if statistics system is set and entity is a player
+	if s.statisticsSystem == nil || !entity.HasComponent("input") {
+		return
+	}
+
+	// Calculate distance traveled (Euclidean distance)
+	dx := newX - oldX
+	dy := newY - oldY
+	distance := math.Sqrt(dx*dx + dy*dy)
+
+	// Track distance traveled (convert to int64, minimum 1 if moved)
+	if distance > 0 {
+		distInt := int64(distance)
+		if distInt < 1 {
+			distInt = 1
+		}
+		s.statisticsSystem.OnDistanceTraveled(entity.ID, distInt)
+	}
+
+	// Track unique area visits using grid cells
+	s.trackAreaVisit(entity, newX, newY)
+}
+
+// trackAreaVisit tracks whether the entity has entered a new grid cell area.
+// Uses a 200x200 pixel grid to define areas for exploration tracking.
+func (s *MovementSystem) trackAreaVisit(entity *Entity, x, y float64) {
+	// Calculate grid cell coordinates
+	cellX := int64(x / areaCellSize)
+	cellY := int64(y / areaCellSize)
+	cellKey := cellX<<32 | (cellY & 0xFFFFFFFF)
+
+	// Get or create visited cells map for this entity
+	if s.visitedCells[entity.ID] == nil {
+		s.visitedCells[entity.ID] = make(map[int64]bool)
+	}
+
+	// Check if this is a new cell
+	if !s.visitedCells[entity.ID][cellKey] {
+		s.visitedCells[entity.ID][cellKey] = true
+		s.statisticsSystem.OnAreaVisited(entity.ID)
+
+		if movementDebugEnabled {
+			log.WithFields(log.Fields{
+				"entity_id":   entity.ID,
+				"cell_x":      cellX,
+				"cell_y":      cellY,
+				"total_areas": len(s.visitedCells[entity.ID]),
+			}).Debug("New area visited")
+		}
+	}
+}
+
+// ClearVisitedCells clears the visited cells tracking for an entity.
+// Call this when starting a new session or when the tutorial is reset.
+func (s *MovementSystem) ClearVisitedCells(entityID uint64) {
+	delete(s.visitedCells, entityID)
 }
 
 // handlePostMovement applies bounds, friction, and animation updates after movement.

@@ -1493,6 +1493,8 @@ func serializePlayerState(player *engine.Entity, game *engine.EbitenGame) *savel
 	serializeEquipment(player, playerState)
 	serializeManaAndSpells(player, playerState)
 	serializeTutorialState(game, playerState)
+	serializeOnboardingState(game, playerState)
+	serializeContextTutorialState(game, playerState)
 
 	playerState.Speed = 1.0
 	return playerState
@@ -1611,6 +1613,32 @@ func serializeTutorialState(game *engine.EbitenGame, state *saveload.PlayerState
 	}
 }
 
+// serializeOnboardingState extracts onboarding manager state to state.
+// Phase 4.5: Enables persistence of onboarding flow progress.
+func serializeOnboardingState(game *engine.EbitenGame, state *saveload.PlayerState) {
+	if game.OnboardingManager != nil {
+		data := game.OnboardingManager.ExportState()
+		state.OnboardingState = &saveload.OnboardingStateData{
+			CurrentState: data.CurrentState,
+			Enabled:      data.Enabled,
+			Skipped:      data.Skipped,
+			PlayerClass:  data.PlayerClass,
+		}
+	}
+}
+
+// serializeContextTutorialState extracts context-sensitive tutorial state to state.
+// Phase 4.5: Enables persistence of viewed tutorial topics.
+func serializeContextTutorialState(game *engine.EbitenGame, state *saveload.PlayerState) {
+	if game.ContextualTutorial != nil {
+		data := game.ContextualTutorial.ExportState()
+		state.ContextTutorialState = &saveload.ContextTutorialStateData{
+			Enabled:      data.Enabled,
+			ViewedTopics: data.ViewedTopics,
+		}
+	}
+}
+
 // deserializePlayerState restores all player state from a save.
 func deserializePlayerState(player *engine.Entity, playerState *saveload.PlayerState, game *engine.EbitenGame) {
 	deserializePosition(player, playerState)
@@ -1621,6 +1649,8 @@ func deserializePlayerState(player *engine.Entity, playerState *saveload.PlayerS
 	deserializeEquipment(player, playerState)
 	deserializeManaAndSpells(player, playerState)
 	deserializeTutorialState(game, playerState)
+	deserializeOnboardingState(game, playerState)
+	deserializeContextTutorialState(game, playerState)
 }
 
 // deserializePosition restores player position from state.
@@ -1748,6 +1778,32 @@ func deserializeTutorialState(game *engine.EbitenGame, state *saveload.PlayerSta
 			tutState.CurrentStepIdx,
 			tutState.CompletedSteps,
 		)
+	}
+}
+
+// deserializeOnboardingState restores onboarding manager state from state.
+// Phase 4.5: Restores onboarding flow progress after load.
+func deserializeOnboardingState(game *engine.EbitenGame, state *saveload.PlayerState) {
+	if game.OnboardingManager != nil && state.OnboardingState != nil {
+		data := engine.OnboardingStateData{
+			CurrentState: state.OnboardingState.CurrentState,
+			Enabled:      state.OnboardingState.Enabled,
+			Skipped:      state.OnboardingState.Skipped,
+			PlayerClass:  state.OnboardingState.PlayerClass,
+		}
+		game.OnboardingManager.ImportState(data)
+	}
+}
+
+// deserializeContextTutorialState restores context-sensitive tutorial state from state.
+// Phase 4.5: Restores viewed tutorial topics after load.
+func deserializeContextTutorialState(game *engine.EbitenGame, state *saveload.PlayerState) {
+	if game.ContextualTutorial != nil && state.ContextTutorialState != nil {
+		data := saveload.ContextTutorialStateData{
+			Enabled:      state.ContextTutorialState.Enabled,
+			ViewedTopics: state.ContextTutorialState.ViewedTopics,
+		}
+		game.ContextualTutorial.ImportState(data)
 	}
 }
 

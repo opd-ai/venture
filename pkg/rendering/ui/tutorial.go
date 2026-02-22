@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"sync"
 	"time"
+
+	"github.com/opd-ai/venture/pkg/saveload"
 )
 
 // TutorialTopic represents a feature with tutorial content
@@ -319,6 +321,43 @@ func (tm *TutorialManager) ResetProgress() {
 	for _, t := range tm.tutorials {
 		t.Viewed = false
 		t.ViewedAt = time.Time{}
+	}
+}
+
+// ExportState serializes the tutorial manager state for save/load.
+// Phase 4.5: Enables persistence of viewed context-sensitive tutorials.
+func (tm *TutorialManager) ExportState() saveload.ContextTutorialStateData {
+	tm.mu.RLock()
+	defer tm.mu.RUnlock()
+
+	viewedTopics := make(map[string]int64)
+	for topic, tutorial := range tm.tutorials {
+		if tutorial.Viewed {
+			viewedTopics[string(topic)] = tutorial.ViewedAt.Unix()
+		}
+	}
+
+	return saveload.ContextTutorialStateData{
+		Enabled:      tm.enabled,
+		ViewedTopics: viewedTopics,
+	}
+}
+
+// ImportState restores tutorial manager state from saved data.
+// Phase 4.5: Restores viewed context-sensitive tutorials after load.
+func (tm *TutorialManager) ImportState(data saveload.ContextTutorialStateData) {
+	tm.mu.Lock()
+	defer tm.mu.Unlock()
+
+	tm.enabled = data.Enabled
+
+	// Restore viewed status for each topic
+	for topicStr, timestamp := range data.ViewedTopics {
+		topic := TutorialTopic(topicStr)
+		if tutorial, exists := tm.tutorials[topic]; exists {
+			tutorial.Viewed = true
+			tutorial.ViewedAt = time.Unix(timestamp, 0)
+		}
 	}
 }
 

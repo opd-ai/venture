@@ -16,6 +16,7 @@ import (
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/opd-ai/venture/pkg/procgen"
+	"github.com/opd-ai/venture/pkg/saveload"
 )
 
 // Component represents a data container attached to an Entity.
@@ -644,6 +645,7 @@ type VRControllerAdapter interface {
 //   - TutorialManager (pkg/rendering/ui/tutorial.go): Production implementation
 //
 // Phase 3.3 (PLAN.md): ShowTutorials Setting Wiring
+// Phase 4.5 (PLAN.md): Tutorial Save/Load
 type ContextualTutorialProvider interface {
 	// Enable enables tutorial popups
 	Enable()
@@ -653,4 +655,12 @@ type ContextualTutorialProvider interface {
 
 	// IsEnabled returns tutorial enabled state
 	IsEnabled() bool
+
+	// ExportState serializes the tutorial state for save/load.
+	// Phase 4.5: Enables persistence of viewed context-sensitive tutorials.
+	ExportState() saveload.ContextTutorialStateData
+
+	// ImportState restores tutorial state from saved data.
+	// Phase 4.5: Restores viewed context-sensitive tutorials after load.
+	ImportState(data saveload.ContextTutorialStateData)
 }

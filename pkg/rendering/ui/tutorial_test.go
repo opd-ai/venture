@@ -119,6 +119,122 @@ func TestTutorialManager_ResetProgress(t *testing.T) {
 	}
 }
 
+// TestTutorialManager_ExportImportState tests save/load of tutorial state.
+// Phase 4.5: Enables persistence of viewed context-sensitive tutorials.
+func TestTutorialManager_ExportImportState(t *testing.T) {
+	// Create first manager and view some tutorials
+	tm1 := NewTutorialManager()
+	tm1.ShowTutorial(TutorialMovement)
+	tm1.ShowTutorial(TutorialCombat)
+	tm1.Disable()
+
+	// Export state
+	exported := tm1.ExportState()
+
+	// Verify exported data
+	if exported.Enabled {
+		t.Error("expected exported enabled to be false")
+	}
+	if len(exported.ViewedTopics) != 2 {
+		t.Errorf("expected 2 viewed topics, got %d", len(exported.ViewedTopics))
+	}
+	if _, ok := exported.ViewedTopics[string(TutorialMovement)]; !ok {
+		t.Error("expected movement tutorial in viewed topics")
+	}
+	if _, ok := exported.ViewedTopics[string(TutorialCombat)]; !ok {
+		t.Error("expected combat tutorial in viewed topics")
+	}
+
+	// Create new manager and import state
+	tm2 := NewTutorialManager()
+	tm2.ImportState(exported)
+
+	// Verify imported state
+	if tm2.IsEnabled() {
+		t.Error("expected imported enabled to be false")
+	}
+
+	movement, _ := tm2.GetTutorial(TutorialMovement)
+	if !movement.Viewed {
+		t.Error("expected movement tutorial to be viewed after import")
+	}
+
+	combat, _ := tm2.GetTutorial(TutorialCombat)
+	if !combat.Viewed {
+		t.Error("expected combat tutorial to be viewed after import")
+	}
+
+	// Unviewed tutorials should remain unviewed
+	inventory, _ := tm2.GetTutorial(TutorialInventory)
+	if inventory.Viewed {
+		t.Error("expected inventory tutorial to remain unviewed after import")
+	}
+}
+
+// TestTutorialManager_ExportImportState_Empty tests export/import with no viewed tutorials.
+func TestTutorialManager_ExportImportState_Empty(t *testing.T) {
+	tm1 := NewTutorialManager()
+
+	// Export with no viewed tutorials
+	exported := tm1.ExportState()
+
+	if !exported.Enabled {
+		t.Error("expected enabled to be true")
+	}
+	if len(exported.ViewedTopics) != 0 {
+		t.Errorf("expected 0 viewed topics, got %d", len(exported.ViewedTopics))
+	}
+
+	// Import empty state
+	tm2 := NewTutorialManager()
+	tm2.ShowTutorial(TutorialMovement) // View one first
+	tm2.ImportState(exported)
+
+	// Imported empty state should override (but movement was viewed before import,
+	// so we need to check if import properly handles topics not in the map)
+	// The import only sets viewed for topics IN the map, so movement stays viewed
+	// This is correct behavior - we don't reset topics not mentioned in import
+}
+
+// TestTutorialManager_ExportImportState_RoundTrip tests complete round-trip.
+func TestTutorialManager_ExportImportState_RoundTrip(t *testing.T) {
+	tm1 := NewTutorialManager()
+
+	// View multiple tutorials
+	tm1.ShowTutorial(TutorialCrafting)
+	tm1.ShowTutorial(TutorialHousing)
+	tm1.ShowTutorial(TutorialGuilds)
+	tm1.Disable()
+
+	// Export
+	exported := tm1.ExportState()
+
+	// Create new manager and import
+	tm2 := NewTutorialManager()
+	tm2.ImportState(exported)
+
+	// Export from second manager
+	reexported := tm2.ExportState()
+
+	// Compare
+	if exported.Enabled != reexported.Enabled {
+		t.Error("enabled state mismatch after round-trip")
+	}
+	if len(exported.ViewedTopics) != len(reexported.ViewedTopics) {
+		t.Errorf("viewed topics count mismatch: %d vs %d",
+			len(exported.ViewedTopics), len(reexported.ViewedTopics))
+	}
+	for topic, ts1 := range exported.ViewedTopics {
+		ts2, ok := reexported.ViewedTopics[topic]
+		if !ok {
+			t.Errorf("topic %s missing after round-trip", topic)
+		}
+		if ts1 != ts2 {
+			t.Errorf("timestamp mismatch for topic %s: %d vs %d", topic, ts1, ts2)
+		}
+	}
+}
+
 func TestTutorialManager_AllTopics(t *testing.T) {
 	tm := NewTutorialManager()
 

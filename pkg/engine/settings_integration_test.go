@@ -4,6 +4,8 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/opd-ai/venture/pkg/saveload"
 )
 
 // TestApplySettings_AudioVolumes tests that settings are correctly applied to AudioManager.
@@ -412,12 +414,24 @@ func BenchmarkSetAudioManager(b *testing.B) {
 
 // stubContextualTutorial is a test stub implementing ContextualTutorialProvider.
 type stubContextualTutorial struct {
-	enabled bool
+	enabled      bool
+	viewedTopics map[string]int64
 }
 
 func (s *stubContextualTutorial) Enable()         { s.enabled = true }
 func (s *stubContextualTutorial) Disable()        { s.enabled = false }
 func (s *stubContextualTutorial) IsEnabled() bool { return s.enabled }
+func (s *stubContextualTutorial) ExportState() saveload.ContextTutorialStateData {
+	return saveload.ContextTutorialStateData{
+		Enabled:      s.enabled,
+		ViewedTopics: s.viewedTopics,
+	}
+}
+
+func (s *stubContextualTutorial) ImportState(data saveload.ContextTutorialStateData) {
+	s.enabled = data.Enabled
+	s.viewedTopics = data.ViewedTopics
+}
 
 // TestApplySettings_ContextualTutorial tests that ShowTutorials setting is applied to ContextualTutorial.
 // This validates the Phase 3.3 implementation for context-sensitive help (TutorialManager).

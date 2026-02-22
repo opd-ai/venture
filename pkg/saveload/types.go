@@ -89,6 +89,12 @@ type PlayerState struct {
 	// GAP-003 REPAIR: Tutorial progress persistence
 	TutorialState *TutorialStateData `json:"tutorial_state,omitempty"`
 
+	// Phase 4.5: Onboarding flow persistence
+	OnboardingState *OnboardingStateData `json:"onboarding_state,omitempty"`
+
+	// Phase 4.5: Context-sensitive tutorial persistence
+	ContextTutorialState *ContextTutorialStateData `json:"context_tutorial_state,omitempty"`
+
 	// Phase 7.2: Animation state persistence
 	AnimationState *AnimationStateData `json:"animation_state,omitempty"`
 
@@ -118,6 +124,22 @@ type TutorialStateData struct {
 	ShowUI         bool            `json:"show_ui"`
 	CurrentStepIdx int             `json:"current_step_idx"`
 	CompletedSteps map[string]bool `json:"completed_steps"` // Step ID -> completed
+}
+
+// OnboardingStateData represents saved onboarding flow progress.
+// Phase 4.5: Allows onboarding state to persist across saves/loads.
+type OnboardingStateData struct {
+	CurrentState int  `json:"current_state"` // OnboardingState enum value
+	Enabled      bool `json:"enabled"`
+	Skipped      bool `json:"skipped"`
+	PlayerClass  int  `json:"player_class"` // CharacterClass enum value
+}
+
+// ContextTutorialStateData represents saved context-sensitive tutorial progress.
+// Phase 4.5: Allows TutorialManager viewed topics to persist across saves/loads.
+type ContextTutorialStateData struct {
+	Enabled      bool             `json:"enabled"`
+	ViewedTopics map[string]int64 `json:"viewed_topics"` // Topic string -> Unix timestamp when viewed
 }
 
 // AnimationStateData represents saved animation state for entities

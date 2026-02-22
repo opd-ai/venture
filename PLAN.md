@@ -347,10 +347,17 @@ Phases 1 and 2 can proceed in parallel. Phase 3 depends on both. Phase 4 depends
   3. Add serialization for `TutorialManager` viewed-topic set (map topic→bool)
   4. Integrate all three into the save/load pipeline in `pkg/saveload/`
 - **Acceptance**: Full round-trip: save game mid-tutorial → load → resume at exact same tutorial state. Completed tutorials stay completed.
+- **Implementation Notes**: 
+  - `OnboardingManager.ExportState()`/`ImportState()` already existed in `pkg/engine/onboarding.go`
+  - Added `TutorialManager.ExportState()`/`ImportState()` methods in `pkg/rendering/ui/tutorial.go`
+  - Added `OnboardingStateData` and `ContextTutorialStateData` types to `pkg/saveload/types.go`
+  - Added `OnboardingState` and `ContextTutorialState` fields to `PlayerState` in `pkg/saveload/types.go`
+  - Extended `ContextualTutorialProvider` interface with `ExportState`/`ImportState` methods
+  - Added `serializeOnboardingState()`, `serializeContextTutorialState()`, `deserializeOnboardingState()`, `deserializeContextTutorialState()` functions in `cmd/client/util.go`
 
-- [ ] Add `ExportState`/`ImportState` to `OnboardingManager`
-- [ ] Add serialization to `TutorialManager` for viewed topics
-- [ ] Integrate into save/load pipeline
+- [x] Add `ExportState`/`ImportState` to `OnboardingManager` (already existed)
+- [x] Add serialization to `TutorialManager` for viewed topics
+- [x] Integrate into save/load pipeline
 
 ---
 

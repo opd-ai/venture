@@ -1,8 +1,11 @@
-// Package rendering provides shared type definitions for the rendering subsystem.
+// Package rendering provides namespace organization for the rendering subsystem.
 // All graphics are generated at runtime without external asset files.
 //
-// This package defines common types (Palette, SpriteConfig) used across the
-// rendering subdirectories. Actual rendering implementations live in subdirectories:
+// This package serves as a namespace; actual rendering implementations live in subdirectories.
+// For color palettes, use [github.com/opd-ai/venture/pkg/rendering/palette.Palette].
+// For sprite configuration, use [github.com/opd-ai/venture/pkg/rendering/sprites.Config].
+//
+// Subdirectories:
 //   - sprites: Procedural sprite generation with equipment overlays
 //   - animation: Animation system with articulation and caching
 //   - tiles: Tile generation with parallax and transitions

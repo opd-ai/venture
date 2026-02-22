@@ -10,13 +10,13 @@ Status criteria:
 -->
 
 ## Summary
-The `pkg/rendering/` root package defines shared type definitions (`Palette`, `SpriteConfig`) intended for use across the rendering subsystem. However, the audit reveals this package is **completely unused** (0 imports) and contains **duplicated types** that conflict with the actually-used types in subdirectories. This package represents dead code that should either be removed or properly integrated.
+The `pkg/rendering/` root package serves as a namespace organization package for the rendering subsystem. All dead code (unused `Palette`, `SpriteConfig` types) has been removed. The package now contains only `doc.go` for documentation purposes, correctly pointing users to the actual types in subdirectories (`palette.Palette`, `sprites.Config`).
 
 ## Automated Check Results
 | Check | Result |
 |---|---|
 | `go vet` | ✅ Pass |
-| `go test -cover` | [no statements] (0% - types only, no executable code) |
+| `go test -cover` | N/A (documentation-only package, no executable code) |
 | `go test -race` | ✅ Pass |
 | WASM vet | ✅ Pass |
 | TODO/FIXME count | 0 |
@@ -26,17 +26,17 @@ The `pkg/rendering/` root package defines shared type definitions (`Palette`, `S
 ## Issues Found
 
 ### High Severity
-- [x] **Dead code** — Package has 0 imports across entire codebase; `Palette` and `SpriteConfig` types are never used (`types.go:11`, `types.go:29`)
-- [x] **Type duplication** — `Palette` struct defined here duplicates `pkg/rendering/palette/types.go:11` which is the version actually imported 59 times (`types.go:11`)
+- [x] **Dead code (RESOLVED)** — `Palette` and `SpriteConfig` types in `types.go` were never used and have been removed.
+- [x] **Type duplication (RESOLVED)** — Duplicate types removed; users should use `pkg/rendering/palette.Palette` and `pkg/rendering/sprites.Config` instead.
 
 ### Medium Severity
-- [x] **Misleading documentation** — `doc.go:4` claims "This package defines common types used across the rendering subdirectories" but no subdirectory imports this package (`doc.go:4`)
-- [x] **Test coverage gap** — Tests exist for unused types (`types_test.go`), inflating test line counts without providing value
-- [x] **API inconsistency** — `SpriteConfig` here differs from `sprites.Config` in `pkg/rendering/sprites/` which is the actually-used config type (`types.go:29`)
+- [x] **Misleading documentation (RESOLVED)** — `doc.go` has been updated to accurately describe the package as a namespace organization package.
+- [x] **Test coverage gap (RESOLVED)** — Tests for unused types removed along with the dead code.
+- [x] **API inconsistency (RESOLVED)** — Duplicate types removed; canonical types are in subdirectories.
 
 ### Low Severity
-- [x] **Missing validation** — `SpriteConfig` has no validation for negative dimensions or invalid seed values (`types.go:29-45`)
-- [x] **No constructor functions** — Types are direct structs without `NewPalette()` or `NewSpriteConfig()` constructors following project patterns (`types.go`)
+- [x] **Missing validation (RESOLVED)** — Removed along with dead code.
+- [x] **No constructor functions (RESOLVED)** — Removed along with dead code.
 
 ## Input Integration
 | Input Source | Status | Notes |
@@ -54,37 +54,37 @@ The `pkg/rendering/` root package defines shared type definitions (`Palette`, `S
 | N/A | N/A | N/A | N/A | Package defines data structures only, no UI responsibilities |
 
 ## Test Coverage
-**Coverage**: 0% (no executable statements - types only)
-- Missing test areas: N/A (package contains only struct definitions)
-- Missing benchmarks: N/A (no performance-critical code)
-- Table-driven test compliance: ✅ Tests use table-driven patterns
+**Coverage**: N/A (documentation-only package, no executable code)
+- Missing test areas: None - package is now documentation only
+- Missing benchmarks: None - package is now documentation only
+- Table-driven test compliance: N/A
 
 ## Documentation Coverage
-- Package `doc.go`: ✅ Present but misleading (claims usage that doesn't exist)
-- Exported symbols documented: 2/2 (100%)
+- Package `doc.go`: ✅ Present and accurate
+- Exported symbols documented: N/A (no exported symbols)
 - Complex algorithms commented: N/A (no algorithms)
 
 ## Integration Status
-**CRITICAL: This package has ZERO integration with the rest of the codebase.**
+This package is now a documentation-only namespace package with no code to integrate.
 
 - System registration: N/A — Not a system
 - Component registration: N/A — Not a component
 - Serialize/Deserialize: N/A — No persistence requirements
 - Network sync: N/A — Not networked
-- Genre theming: ❌ — `Palette` type has no genre awareness unlike `palette.Palette`
+- Genre theming: N/A — Use `palette.Palette` from subdirectory
 - Mod compatibility: N/A — No moddable data
 - Event bus: N/A — No events
 
 ### Import Analysis
 ```
-pkg/rendering/ imports: 0
-pkg/rendering/palette/ imports: 59
-pkg/rendering/sprites/ imports: 32
+pkg/rendering/ exports: 0 (documentation only)
+pkg/rendering/palette/ imports: 59 (use Palette from here)
+pkg/rendering/sprites/ imports: 32 (use Config from here)
 ```
 
-The intended types are duplicated in and superseded by:
-- `Palette` → use `pkg/rendering/palette.Palette` instead
-- `SpriteConfig` → use `pkg/rendering/sprites.Config` instead
+Use subdirectories for actual types:
+- `Palette` → `pkg/rendering/palette.Palette`
+- `SpriteConfig` → `pkg/rendering/sprites.Config`
 
 ## Platform Status
 | Platform | Status | Notes |
@@ -94,21 +94,12 @@ The intended types are duplicated in and superseded by:
 | Mobile | ✅ Pass | No platform-specific code |
 
 ## Recommendations
-1. **[HIGH]** Remove or deprecate `pkg/rendering/types.go` and `pkg/rendering/types_test.go` — these define unused types that duplicate types in subdirectories
-2. **[HIGH]** Update `pkg/rendering/doc.go` to accurately describe the package as a namespace/organization package only if types are removed, or remove the package entirely
-3. **[MED]** If types are kept, add imports in subdirectories to use these shared types instead of their local duplicates (requires refactoring `pkg/rendering/palette/` and potentially others)
-4. **[LOW]** If `SpriteConfig` is meant to be a shared interface, define it as an interface type that `sprites.Config` can implement
+All recommendations have been implemented:
+1. ~~**[HIGH]** Remove `pkg/rendering/types.go` and `pkg/rendering/types_test.go`~~ ✅ Done
+2. ~~**[HIGH]** Update `pkg/rendering/doc.go` to accurately describe the package~~ ✅ Done
+3. ~~**[MED]** Dead code and test inflation removed~~ ✅ Done
 
-## Resolution Options
+## Resolution
+**Resolution: Option A (Remove Dead Code) implemented 2026-02-22**
 
-### Option A: Remove Dead Code (Recommended)
-Delete `types.go` and `types_test.go`, keeping only `doc.go` as a namespace documentation file. This is the simplest fix with no risk of breaking existing code since nothing imports these types.
-
-### Option B: Unify Types
-Refactor `pkg/rendering/palette/` to import and use `rendering.Palette` instead of defining its own. This requires:
-1. Moving the `pkg/rendering/palette/types.go` `Palette` definition here
-2. Updating 59 files that import `palette.Palette`
-3. Risk: Higher change volume, potential for introducing bugs
-
-### Option C: Formal Deprecation
-Add deprecation comments and a migration guide, then remove in a future version.
+Deleted `types.go` and `types_test.go`, keeping only `doc.go` as namespace documentation. This was the simplest fix with no risk of breaking existing code since nothing imported these types.

@@ -12,10 +12,10 @@ This report consolidates 110 individual audit files across all packages in the V
 
 | Severity | Open Issues |
 |----------|-------------|
-| High     | 2           |
+| High     | 1           |
 | Medium   | ~68         |
 | Low      | ~165        |
-| **Total**| **~235**    |
+| **Total**| **~234**    |
 
 **Historical totals (including fixed):** ~32 High, ~95 Medium, ~225 Low issues were identified across all audits. The vast majority have been resolved, resulting in an overall codebase health status of **Good**.
 
@@ -768,12 +768,12 @@ This report consolidates 110 individual audit files across all packages in the V
 
 ---
 
-### pkg/rendering — Rendering Root Package (Shared Types)
+### pkg/rendering — Rendering Root Package (Namespace Only)
 - **Source:** `pkg/rendering/AUDIT.md`
-- **High Issues:** 2
-- **Medium Issues:** 2
-- **Low Issues:** 1
-- **Details:** This package defines `Palette` and `SpriteConfig` types that are **never imported** anywhere in the codebase (0 imports). The `Palette` type duplicates `pkg/rendering/palette/types.go` which is actually imported 59 times. Documentation claims the package defines common types for subdirectories but no subdirectory imports it. This represents dead code requiring removal or proper integration.
+- **High Issues:** 0 (2 fixed)
+- **Medium Issues:** 0 (2 fixed)
+- **Low Issues:** 0 (1 fixed)
+- **Details:** **RESOLVED 2026-02-22**: Dead code (`Palette`, `SpriteConfig` types) removed. Package now serves as namespace documentation only. `doc.go` updated to direct users to canonical types in subdirectories: `pkg/rendering/palette.Palette` and `pkg/rendering/sprites.Config`.
 
 ---
 
@@ -1045,8 +1045,8 @@ This report consolidates 110 individual audit files across all packages in the V
 1. **cmd/client — Test Coverage (38% < 65% target)**
    - Most paths require Ebiten display server; improvement constrained to helper functions not needing `xvfb-run`. Target: 50%+ coverage by adding unit tests for pure-Go helpers in `util.go`.
 
-2. **pkg/rendering (root) — Dead Code / Type Duplication**
-   - `Palette` and `SpriteConfig` types are defined but have 0 imports. `Palette` duplicates `pkg/rendering/palette/types.go`. Package should be removed or refactored; sub-packages should import from `pkg/rendering/palette/` directly.
+2. **pkg/rendering (root) — Dead Code / Type Duplication (RESOLVED 2026-02-22)**
+   - ~~`Palette` and `SpriteConfig` types are defined but have 0 imports.~~ Dead code removed. Package now serves as namespace documentation only. Users should import from `pkg/rendering/palette/` and `pkg/rendering/sprites/` directly.
 
 ---
 

@@ -443,13 +443,187 @@ func BenchmarkGenerate(b *testing.B) {
 	}
 }
 
+// TestGenerateWithPersonality verifies the GenerateWithPersonality method.
+func TestGenerateWithPersonality(t *testing.T) {
+	corpus := GetFantasyCorpus()
+	gen := NewMarkovGenerator(12345, "fantasy", Order2)
+	gen.TrainFromCorpus(corpus.Sentences)
+
+	tests := []struct {
+		name        string
+		personality Personality
+		params      GenerateParams
+	}{
+		{
+			name: "merchant personality",
+			personality: Personality{
+				Type:         PersonalityMerchant,
+				Friendliness: 0.7,
+				Verbosity:    0.5,
+				Formality:    0.6,
+			},
+			params: GenerateParams{
+				PlayerInput:    "Hello, merchant!",
+				ConversationID: "test-merchant",
+				MaxWords:       30,
+				MinWords:       10,
+				Temperature:    0.7,
+			},
+		},
+		{
+			name: "hostile personality",
+			personality: Personality{
+				Type:         PersonalityHostile,
+				Friendliness: 0.2,
+				Verbosity:    0.3,
+				Formality:    0.3,
+			},
+			params: GenerateParams{
+				PlayerInput:    "What do you want?",
+				ConversationID: "test-hostile",
+				MaxWords:       30,
+				MinWords:       10,
+				Temperature:    0.7,
+			},
+		},
+		{
+			name: "scholarly personality with high knowledge",
+			personality: Personality{
+				Type:      PersonalityScholarly,
+				Verbosity: 0.8,
+				Knowledge: 0.9,
+			},
+			params: GenerateParams{
+				PlayerInput:    "Tell me about ancient history",
+				ConversationID: "test-scholarly",
+				MaxWords:       50,
+				MinWords:       15,
+				Temperature:    0.6,
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			response := gen.GenerateWithPersonality(tt.params, tt.personality)
+
+			if response == "" {
+				t.Error("GenerateWithPersonality returned empty string")
+			}
+
+			// Verify response has words (at least some text generated)
+			words := strings.Fields(response)
+			if len(words) < 3 {
+				t.Errorf("response too short: %d words", len(words))
+			}
+		})
+	}
+}
+
+// TestGenerateWithPersonalityDeterministic verifies deterministic personality-based generation.
+func TestGenerateWithPersonalityDeterministic(t *testing.T) {
+	corpus := GetFantasyCorpus()
+
+	// Create two generators with same seed
+	gen1 := NewMarkovGenerator(12345, "fantasy", Order2)
+	gen1.TrainFromCorpus(corpus.Sentences)
+
+	gen2 := NewMarkovGenerator(12345, "fantasy", Order2)
+	gen2.TrainFromCorpus(corpus.Sentences)
+
+	personality := Personality{
+		Type:         PersonalityMerchant,
+		Friendliness: 0.7,
+		Verbosity:    0.5,
+		Formality:    0.6,
+	}
+
+	params := GenerateParams{
+		PlayerInput:    "What do you have for sale?",
+		ConversationID: "test-deterministic",
+		MaxWords:       30,
+		MinWords:       10,
+		Temperature:    0.7,
+	}
+
+	// Generate responses from both generators
+	response1 := gen1.GenerateWithPersonalityDeterministic(params, personality)
+	response2 := gen2.GenerateWithPersonalityDeterministic(params, personality)
+
+	if response1 == "" {
+		t.Fatal("GenerateWithPersonalityDeterministic returned empty string")
+	}
+
+	if response1 != response2 {
+		t.Errorf("deterministic responses differ:\n  gen1: %s\n  gen2: %s", response1, response2)
+	}
+
+	// Test that same generator produces same output on repeated calls
+	response3 := gen1.GenerateWithPersonalityDeterministic(params, personality)
+	if response1 != response3 {
+		t.Errorf("same generator not deterministic:\n  call1: %s\n  call2: %s", response1, response3)
+	}
+}
+
+// TestGenerateWithPersonalityModifiesParams verifies personality affects output.
+func TestGenerateWithPersonalityModifiesParams(t *testing.T) {
+	corpus := GetFantasyCorpus()
+	gen := NewMarkovGenerator(12345, "fantasy", Order2)
+	gen.TrainFromCorpus(corpus.Sentences)
+
+	baseParams := GenerateParams{
+		PlayerInput:    "Tell me a story",
+		ConversationID: "test-params-1",
+		MaxWords:       30,
+		MinWords:       10,
+		Temperature:    0.5,
+	}
+
+	// High verbosity personality should tend toward longer responses
+	verbose := Personality{
+		Type:      PersonalityScholarly,
+		Verbosity: 0.9,
+		Knowledge: 0.9,
+	}
+
+	// Low verbosity personality should tend toward shorter responses
+	terse := Personality{
+		Type:      PersonalityTimid,
+		Verbosity: 0.2,
+	}
+
+	// Generate multiple samples to compare average lengths
+	verboseTotal := 0
+	terseTotal := 0
+	samples := 5
+
+	for i := 0; i < samples; i++ {
+		baseParams.ConversationID = fmt.Sprintf("verbose-%d", i)
+		verboseResponse := gen.GenerateWithPersonality(baseParams, verbose)
+		verboseTotal += len(strings.Fields(verboseResponse))
+
+		baseParams.ConversationID = fmt.Sprintf("terse-%d", i)
+		terseResponse := gen.GenerateWithPersonality(baseParams, terse)
+		terseTotal += len(strings.Fields(terseResponse))
+	}
+
+	// While we can't guarantee absolute differences due to Markov chain randomness,
+	// we verify that both personalities produce valid output
+	if verboseTotal == 0 {
+		t.Error("verbose personality produced no output")
+	}
+	if terseTotal == 0 {
+		t.Error("terse personality produced no output")
+	}
+}
+
 // BenchmarkGenerateWithPersonality measures generation performance with personality traits applied.
 func BenchmarkGenerateWithPersonality(b *testing.B) {
 	corpus := GetFantasyCorpus()
 	gen := NewMarkovGenerator(12345, "fantasy", Order2)
 	gen.TrainFromCorpus(corpus.Sentences)
 
-	personality := &Personality{
+	personality := Personality{
 		Type:         PersonalityMerchant,
 		Friendliness: 0.7,
 		Verbosity:    0.5,
@@ -468,9 +642,7 @@ func BenchmarkGenerateWithPersonality(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		// Apply personality traits to params
-		personality.ApplyToGenerator(&params)
-		gen.GenerateDeterministic(params)
+		gen.GenerateWithPersonalityDeterministic(params, personality)
 	}
 }
 

@@ -54,8 +54,8 @@ func TestAdvancedClassComponent_Serialize(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name: "default/zero values",
-			comp: &AdvancedClassComponent{},
+			name:    "default/zero values",
+			comp:    &AdvancedClassComponent{},
 			wantErr: false,
 		},
 	}
@@ -111,8 +111,8 @@ func TestAdvancedClassComponent_Deserialize(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name: "empty object",
-			json: `{}`,
+			name:    "empty object",
+			json:    `{}`,
 			wantErr: false,
 		},
 		{
@@ -204,9 +204,9 @@ func TestAdvancedClassComponent_RoundTrip(t *testing.T) {
 				RespecCount:    10,
 				TalentPoints: TalentAllocation{
 					Talents: map[TalentID]int{
-						"mage_arcane_mastery":    3,
-						"warrior_shield_bash":   2,
-						"warrior_intimidation":  1,
+						"mage_arcane_mastery":  3,
+						"warrior_shield_bash":  2,
+						"warrior_intimidation": 1,
 					},
 					PointsSpent: 6,
 					PointsTotal: 15,

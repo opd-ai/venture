@@ -23,7 +23,7 @@ The `pkg/procgen/dialog` package provides runtime NPC dialog generation using Ma
 _None identified._
 
 ### Medium Severity
-- [ ] **Documentation** — Missing `GenerateWithPersonality` method shown in doc.go example but not implemented (`doc.go:108`)
+- [x] **Documentation** — ~~Missing `GenerateWithPersonality` method shown in doc.go example but not implemented~~ **RESOLVED 2026-02-22**: Implemented `GenerateWithPersonality()` and `GenerateWithPersonalityDeterministic()` methods on `MarkovGenerator`
 
 ### Low Severity
 - [ ] **API consistency** — `tokenize()` in `utils.go:157` could be enhanced with punctuation handling as noted in comment (`utils.go:158-159`)
@@ -95,17 +95,17 @@ The dialog package integrates with the engine through several consumption points
 ✅ Package does not perform logging (appropriate for a library package). Consumers log at appropriate levels.
 
 ## Recommendations
-1. **[MED]** Implement `GenerateWithPersonality(params, personality)` method to match doc.go example, or update example in doc.go to show current API usage pattern (apply personality to params before calling GenerateDeterministic)
+1. ~~**[MED]** Implement `GenerateWithPersonality(params, personality)` method to match doc.go example, or update example in doc.go to show current API usage pattern (apply personality to params before calling GenerateDeterministic)~~ **DONE 2026-02-22**
 2. **[LOW]** Consider adding direct unit test for `hash64()` function in utils_test.go for completeness
 3. **[LOW]** Enhance `tokenize()` to handle punctuation attached to words (e.g., "Hello," → "Hello" + ",")
 4. **[LOW]** Add inline comment to `buildGreetingsMap()` explaining structure
 
 ## Files Reviewed
 - `doc.go` (116 lines) — Package documentation with examples
-- `markov.go` (439 lines) — Core Markov chain generator implementing procgen.Generator
+- `markov.go` (~480 lines) — Core Markov chain generator implementing procgen.Generator, including `GenerateWithPersonality` methods
 - `personality.go` (322 lines) — NPC personality traits and generation parameter modification
 - `corpus.go` (698 lines) — Genre-specific training data for 5 genres
 - `utils.go` (191 lines) — Shared utility functions
-- `markov_test.go` (842 lines) — Comprehensive tests with benchmarks
+- `markov_test.go` (~970 lines) — Comprehensive tests with benchmarks including GenerateWithPersonality tests
 - `personality_test.go` (415 lines) — Personality trait tests
 - `corpus_test.go` (260 lines) — Corpus validation tests

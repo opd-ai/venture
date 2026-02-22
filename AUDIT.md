@@ -13,9 +13,9 @@ This report consolidates 110 individual audit files across all packages in the V
 | Severity | Open Issues |
 |----------|-------------|
 | High     | 1           |
-| Medium   | ~64         |
+| Medium   | ~63         |
 | Low      | ~162        |
-| **Total**| **~227**    |
+| **Total**| **~226**    |
 
 **Historical totals (including fixed):** ~32 High, ~95 Medium, ~225 Low issues were identified across all audits. The vast majority have been resolved, resulting in an overall codebase health status of **Good**.
 
@@ -573,9 +573,9 @@ This report consolidates 110 individual audit files across all packages in the V
 ### pkg/procgen/dialog — Dialog Generation (Markov Chains)
 - **Source:** `pkg/procgen/dialog/AUDIT.md`
 - **High Issues:** 0
-- **Medium Issues:** 1
+- **Medium Issues:** 0 (1 fixed)
 - **Low Issues:** 1
-- **Details:** 87.5% coverage. `doc.go` example shows `GenerateWithPersonality` method that is not implemented—a documentation/API gap. Minor missing godoc on some corpus management functions.
+- **Details:** 87.5% coverage. **RESOLVED 2026-02-22**: `GenerateWithPersonality` and `GenerateWithPersonalityDeterministic` methods implemented on `MarkovGenerator` to match `doc.go` examples. The methods combine `Personality.ApplyToGenerator()` with text generation for convenient use. Minor missing godoc on some corpus management functions.
 
 ---
 
@@ -1062,7 +1062,7 @@ The following medium-priority issues appear across multiple packages and should 
 
 **API & Documentation Inconsistencies:**
 - `pkg/network/federation`: Only 26% of exported functions have godoc comments (79/304)
-- `pkg/procgen/dialog`: `GenerateWithPersonality` shown in `doc.go` example but not implemented
+- ~~`pkg/procgen/dialog`: `GenerateWithPersonality` shown in `doc.go` example but not implemented~~ **RESOLVED 2026-02-22**: Method implemented on `MarkovGenerator`
 - `pkg/procgen/environment`: Does not implement standard `procgen.Generator` interface
 - `pkg/rendering/parallel`: `doc.go` references non-existent `NewRenderer(8)` API
 

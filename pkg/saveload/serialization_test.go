@@ -750,88 +750,88 @@ func TestParseMagicRarity(t *testing.T) {
 
 // TestQoLStateData tests QoL state data serialization.
 func TestQoLStateData(t *testing.T) {
-// Test basic QoL state data
-qolData := &QoLStateData{
-PlayerID:        1234,
-AutoLootEnabled: true,
-AutoLootRadius:  7.5,
-CraftQueueJSON:  []byte(`[{"recipe_id":"iron_sword","quantity":5}]`),
-SortPreset:      "by_rarity",
-MountWhistle:    true,
-RecipeTracking:  false,
-}
+	// Test basic QoL state data
+	qolData := &QoLStateData{
+		PlayerID:        1234,
+		AutoLootEnabled: true,
+		AutoLootRadius:  7.5,
+		CraftQueueJSON:  []byte(`[{"recipe_id":"iron_sword","quantity":5}]`),
+		SortPreset:      "by_rarity",
+		MountWhistle:    true,
+		RecipeTracking:  false,
+	}
 
-// Verify values are correctly stored
-if qolData.PlayerID != 1234 {
-t.Errorf("PlayerID = %d, want 1234", qolData.PlayerID)
-}
-if !qolData.AutoLootEnabled {
-t.Error("AutoLootEnabled should be true")
-}
-if qolData.AutoLootRadius != 7.5 {
-t.Errorf("AutoLootRadius = %f, want 7.5", qolData.AutoLootRadius)
-}
-if qolData.SortPreset != "by_rarity" {
-t.Errorf("SortPreset = %s, want 'by_rarity'", qolData.SortPreset)
-}
-if !qolData.MountWhistle {
-t.Error("MountWhistle should be true")
-}
-if qolData.RecipeTracking {
-t.Error("RecipeTracking should be false")
-}
-if len(qolData.CraftQueueJSON) == 0 {
-t.Error("CraftQueueJSON should not be empty")
-}
+	// Verify values are correctly stored
+	if qolData.PlayerID != 1234 {
+		t.Errorf("PlayerID = %d, want 1234", qolData.PlayerID)
+	}
+	if !qolData.AutoLootEnabled {
+		t.Error("AutoLootEnabled should be true")
+	}
+	if qolData.AutoLootRadius != 7.5 {
+		t.Errorf("AutoLootRadius = %f, want 7.5", qolData.AutoLootRadius)
+	}
+	if qolData.SortPreset != "by_rarity" {
+		t.Errorf("SortPreset = %s, want 'by_rarity'", qolData.SortPreset)
+	}
+	if !qolData.MountWhistle {
+		t.Error("MountWhistle should be true")
+	}
+	if qolData.RecipeTracking {
+		t.Error("RecipeTracking should be false")
+	}
+	if len(qolData.CraftQueueJSON) == 0 {
+		t.Error("CraftQueueJSON should not be empty")
+	}
 }
 
 // TestPlayerStateQoLDataSerialization tests QoL data in PlayerState serialization.
 func TestPlayerStateQoLDataSerialization(t *testing.T) {
-tests := []struct {
-name      string
-qolData   *QoLStateData
-expectNil bool
-}{
-{
-name: "with_qol_data",
-qolData: &QoLStateData{
-PlayerID:        100,
-AutoLootEnabled: true,
-AutoLootRadius:  10.0,
-SortPreset:      "default",
-MountWhistle:    false,
-RecipeTracking:  true,
-},
-expectNil: false,
-},
-{
-name:      "without_qol_data",
-qolData:   nil,
-expectNil: true,
-},
-}
+	tests := []struct {
+		name      string
+		qolData   *QoLStateData
+		expectNil bool
+	}{
+		{
+			name: "with_qol_data",
+			qolData: &QoLStateData{
+				PlayerID:        100,
+				AutoLootEnabled: true,
+				AutoLootRadius:  10.0,
+				SortPreset:      "default",
+				MountWhistle:    false,
+				RecipeTracking:  true,
+			},
+			expectNil: false,
+		},
+		{
+			name:      "without_qol_data",
+			qolData:   nil,
+			expectNil: true,
+		},
+	}
 
-for _, tt := range tests {
-t.Run(tt.name, func(t *testing.T) {
-state := &PlayerState{
-EntityID: 1,
-X:        100,
-Y:        200,
-QoLData:  tt.qolData,
-}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			state := &PlayerState{
+				EntityID: 1,
+				X:        100,
+				Y:        200,
+				QoLData:  tt.qolData,
+			}
 
-if (state.QoLData == nil) != tt.expectNil {
-t.Errorf("QoLData nil = %v, want %v", state.QoLData == nil, tt.expectNil)
-}
+			if (state.QoLData == nil) != tt.expectNil {
+				t.Errorf("QoLData nil = %v, want %v", state.QoLData == nil, tt.expectNil)
+			}
 
-if !tt.expectNil && state.QoLData != nil {
-if state.QoLData.PlayerID != tt.qolData.PlayerID {
-t.Errorf("PlayerID = %d, want %d", state.QoLData.PlayerID, tt.qolData.PlayerID)
-}
-if state.QoLData.AutoLootEnabled != tt.qolData.AutoLootEnabled {
-t.Errorf("AutoLootEnabled = %v, want %v", state.QoLData.AutoLootEnabled, tt.qolData.AutoLootEnabled)
-}
-}
-})
-}
+			if !tt.expectNil && state.QoLData != nil {
+				if state.QoLData.PlayerID != tt.qolData.PlayerID {
+					t.Errorf("PlayerID = %d, want %d", state.QoLData.PlayerID, tt.qolData.PlayerID)
+				}
+				if state.QoLData.AutoLootEnabled != tt.qolData.AutoLootEnabled {
+					t.Errorf("AutoLootEnabled = %v, want %v", state.QoLData.AutoLootEnabled, tt.qolData.AutoLootEnabled)
+				}
+			}
+		})
+	}
 }

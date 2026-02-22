@@ -154,12 +154,12 @@ type RespecCost struct {
 
 // advancedClassData is the JSON serialization format for AdvancedClassComponent.
 type advancedClassData struct {
-	PrimaryClass   string                  `json:"primary_class"`
-	SecondaryClass string                  `json:"secondary_class"`
-	PrestigeClass  string                  `json:"prestige_class"`
-	TalentPoints   talentAllocationData    `json:"talent_points"`
-	Level          int                     `json:"level"`
-	RespecCount    int                     `json:"respec_count"`
+	PrimaryClass   string               `json:"primary_class"`
+	SecondaryClass string               `json:"secondary_class"`
+	PrestigeClass  string               `json:"prestige_class"`
+	TalentPoints   talentAllocationData `json:"talent_points"`
+	Level          int                  `json:"level"`
+	RespecCount    int                  `json:"respec_count"`
 }
 
 // talentAllocationData is the JSON serialization format for TalentAllocation.

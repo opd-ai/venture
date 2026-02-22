@@ -338,6 +338,47 @@ func (m *MarkovGenerator) Reset() {
 	m.prefixStarts = make([]string, 0, 100)
 }
 
+// GenerateWithPersonality generates dialog text with personality-modified parameters.
+//
+// This method applies the personality traits to adjust generation parameters
+// (verbosity affects word count, friendliness affects temperature, etc.)
+// before generating the response. It's a convenience method that combines
+// Personality.ApplyToGenerator() and GenerateText() in a single call.
+//
+// Example:
+//
+//	personality := dialog.Personality{
+//	    Type:        dialog.PersonalityMerchant,
+//	    Friendliness: 0.7,
+//	    Verbosity:    0.5,
+//	}
+//	response := gen.GenerateWithPersonality(dialog.GenerateParams{
+//	    PlayerInput:    "Hello, merchant!",
+//	    ConversationID: "npc-merchant-001",
+//	    MaxWords:       20,
+//	}, personality)
+func (m *MarkovGenerator) GenerateWithPersonality(params GenerateParams, personality Personality) string {
+	// Apply personality modifiers to params (creates a copy internally)
+	personality.ApplyToGenerator(&params)
+
+	// Generate with modified parameters
+	return m.GenerateText(params)
+}
+
+// GenerateWithPersonalityDeterministic generates dialog text with personality-modified
+// parameters using deterministic (seeded) generation.
+//
+// This is the deterministic variant of GenerateWithPersonality, useful for testing
+// and when the -deterministic-dialog=true flag is set. Same seed and parameters
+// always produce the same output.
+func (m *MarkovGenerator) GenerateWithPersonalityDeterministic(params GenerateParams, personality Personality) string {
+	// Apply personality modifiers to params
+	personality.ApplyToGenerator(&params)
+
+	// Generate deterministically with modified parameters
+	return m.GenerateDeterministic(params)
+}
+
 // String returns a human-readable description of the generator.
 func (m *MarkovGenerator) String() string {
 	return fmt.Sprintf("MarkovGenerator{genre=%s, order=%d, chainSize=%d, prefixStarts=%d}",

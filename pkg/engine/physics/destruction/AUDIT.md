@@ -26,8 +26,8 @@ _None identified._
 - [ ] **ECS compliance** — `DestructibleObjectComponent.TakeDamage()` method contains logic that mutates component state and returns a value; while acceptable for simple health tracking, this pattern could be moved to a system for stricter ECS compliance (`destructible_object_component.go:144` in `pkg/engine/`, not this package, but relevant to integration)
 
 ### Low Severity
-- [ ] **Documentation** — Example code in `doc.go:42-47` uses `log.Fatalf`/`log.Printf` which contradicts the project's structured logging standard using `logrus.WithFields` (`doc.go:42-58`)
-- [ ] **API consistency** — `SpawnFallingObject` does not accept a seed parameter for deterministic initial velocity, though debris generation does use seeded RNG; velocity is currently hardcoded to zero (`system.go:470-476`)
+- [x] **Documentation** — Example code in `doc.go:42-47` uses `log.Fatalf`/`log.Printf` which contradicts the project's structured logging standard using `logrus.WithFields` (`doc.go:42-58`) — **RESOLVED 2026-02-22**: Updated examples to use `logrus.WithFields` pattern
+- [x] **API consistency** — `SpawnFallingObject` does not accept a seed parameter for deterministic initial velocity, though debris generation does use seeded RNG; velocity is currently hardcoded to zero (`system.go:470-476`) — **RESOLVED 2026-02-22**: Added `SpawnFallingObjectWithSeed(seed int64)` method for deterministic initial velocity in network sync scenarios
 
 ## Input Integration
 | Input Source | Status | Notes |
@@ -45,7 +45,7 @@ _None identified._
 | N/A | — | — | — | This is a physics backend package; UI integration is handled by renderer systems |
 
 ## Test Coverage
-**Coverage**: 96.2% (target: 65%)
+**Coverage**: 96.3% (target: 65%)
 - Missing test areas: None significant
 - Missing benchmarks: None — `BenchmarkSystem_Update`, `BenchmarkSystem_ApplyDamage`, `BenchmarkSystem_RegisterBuilding` present
 - Table-driven test compliance: ✅ All tests use table-driven patterns
@@ -72,6 +72,6 @@ _None identified._
 | Mobile | ✅ | No platform-specific code; performance targets met |
 
 ## Recommendations
-1. **[LOW]** Update `doc.go` examples to use `logrus.WithFields` instead of `log.Fatalf`/`log.Printf` for consistency with project logging standards
-2. **[LOW]** Consider adding deterministic initial velocity option to `SpawnFallingObject` for network sync scenarios
+1. ~~**[LOW]** Update `doc.go` examples to use `logrus.WithFields` instead of `log.Fatalf`/`log.Printf` for consistency with project logging standards~~ **RESOLVED 2026-02-22**
+2. ~~**[LOW]** Consider adding deterministic initial velocity option to `SpawnFallingObject` for network sync scenarios~~ **RESOLVED 2026-02-22**: Added `SpawnFallingObjectWithSeed(seed int64)`
 3. **[LOW]** Consider emitting collapse events via engine event system for achievement tracking and audio feedback integration

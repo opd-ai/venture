@@ -39,12 +39,18 @@
 //
 //	// Register a building
 //	if err := sys.RegisterBuilding("house1", 16, 16, 2, destruction.MaterialWood); err != nil {
-//	    log.Fatalf("failed to register building: %v", err)
+//	    logrus.WithFields(logrus.Fields{
+//	        "building_id": "house1",
+//	        "error":       err,
+//	    }).Fatal("failed to register building")
 //	}
 //
 //	// Apply damage (explosion at x=8, y=8, radius=5.0, amount=0.6)
 //	if err := sys.ApplyDamage("house1", 8, 8, 0, 0.6, 5.0); err != nil {
-//	    log.Printf("failed to apply damage: %v", err)
+//	    logrus.WithFields(logrus.Fields{
+//	        "building_id": "house1",
+//	        "error":       err,
+//	    }).Warn("failed to apply damage")
 //	}
 //
 //	// Update system each frame

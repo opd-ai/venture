@@ -14,10 +14,10 @@ This report consolidates 110 individual audit files across all packages in the V
 |----------|-------------|
 | High     | 1           |
 | Medium   | ~52         |
-| Low      | ~152        |
-| **Total**| **~205**    |
+| Low      | ~150        |
+| **Total**| **~203**    |
 
-**Historical totals (including fixed):** ~32 High, ~95 Medium, ~225 Low issues were identified across all audits. The vast majority have been resolved, resulting in an overall codebase health status of **Good**.
+**Historical totals (including fixed):** ~32 High, ~95 Medium, ~227 Low issues were identified across all audits. The vast majority have been resolved, resulting in an overall codebase health status of **Good**.
 
 **Strengths:** The codebase demonstrates high quality with average test coverage of 82.4% (target 65%), deterministic generation via seed-based RNG throughout, ECS architectural compliance, and comprehensive documentation. All critical runtime panics, data corruption risks, and non-determinism violations in production paths have been resolved.
 
@@ -241,8 +241,8 @@ This report consolidates 110 individual audit files across all packages in the V
 - **Source:** `pkg/engine/physics/destruction/AUDIT.md`
 - **High Issues:** 0
 - **Medium Issues:** 1
-- **Low Issues:** 3
-- **Details:** 96.2% coverage; deterministic debris generation with seeded RNG. `DestructibleObjectComponent.TakeDamage()` contains logic within the component (borderline ECS compliance). `doc.go` examples use `log.Fatalf`/`log.Printf` instead of logrus. `SpawnFallingObject` does not accept a seed parameter for deterministic initial velocity.
+- **Low Issues:** 1 (2 fixed)
+- **Details:** 96.3% coverage; deterministic debris generation with seeded RNG. `DestructibleObjectComponent.TakeDamage()` contains logic within the component (borderline ECS compliance). **RESOLVED 2026-02-22**: `doc.go` examples updated to use `logrus.WithFields` instead of `log.Fatalf`/`log.Printf`. **RESOLVED 2026-02-22**: Added `SpawnFallingObjectWithSeed(seed int64)` for deterministic initial velocity in network sync scenarios.
 
 ---
 

@@ -458,9 +458,30 @@ func (s *System) updateFallingObjects(deltaTime float64) {
 	s.fallingObjects, s.fallingBuffer = s.fallingBuffer, s.fallingObjects
 }
 
-// SpawnFallingObject adds a falling object to the simulation.
+// SpawnFallingObject adds a falling object to the simulation with zero initial velocity.
+// For deterministic initial velocity, use SpawnFallingObjectWithSeed.
 // Returns an error if the maximum number of falling objects has been reached.
 func (s *System) SpawnFallingObject(x, y, z float64, material MaterialType, width, height float64) error {
+	return s.spawnFallingObjectInternal(x, y, z, material, width, height, 0, 0, 0, 0)
+}
+
+// SpawnFallingObjectWithSeed adds a falling object with deterministic random initial velocity.
+// The seed is combined with the system's config seed for reproducible results across runs.
+// This is useful for network sync scenarios where client and server must produce identical physics.
+// Returns an error if the maximum number of falling objects has been reached.
+func (s *System) SpawnFallingObjectWithSeed(x, y, z float64, material MaterialType, width, height float64, seed int64) error {
+	// Derive deterministic velocity from seed
+	rng := rand.New(rand.NewSource(s.config.Seed ^ seed))
+	velX := (rng.Float64() - 0.5) * 100 // -50 to 50 initial horizontal velocity
+	velY := (rng.Float64() - 0.5) * 100
+	velZ := rng.Float64() * 50 // 0 to 50 initial upward velocity (will fall due to gravity)
+	rotVel := (rng.Float64() - 0.5) * 3.14 // -π/2 to π/2 rotation
+
+	return s.spawnFallingObjectInternal(x, y, z, material, width, height, velX, velY, velZ, rotVel)
+}
+
+// spawnFallingObjectInternal is the internal implementation for spawning falling objects.
+func (s *System) spawnFallingObjectInternal(x, y, z float64, material MaterialType, width, height, velX, velY, velZ, rotVel float64) error {
 	if len(s.fallingObjects) >= s.config.MaxFallingObjects {
 		return fmt.Errorf("cannot spawn falling object: limit reached (%d/%d)",
 			len(s.fallingObjects), s.config.MaxFallingObjects)
@@ -470,10 +491,10 @@ func (s *System) SpawnFallingObject(x, y, z float64, material MaterialType, widt
 		X:          x,
 		Y:          y,
 		Z:          z,
-		VelX:       0,
-		VelY:       0,
-		VelZ:       0,
-		RotVel:     0,
+		VelX:       velX,
+		VelY:       velY,
+		VelZ:       velZ,
+		RotVel:     rotVel,
 		Angle:      0,
 		Mass:       width * height * GetMaterialProperties(material).Density,
 		Width:      width,

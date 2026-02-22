@@ -689,3 +689,122 @@ func TestHashBuildingID(t *testing.T) {
 		t.Error("Different IDs should produce different hashes")
 	}
 }
+
+func TestSystem_SpawnFallingObjectWithSeed(t *testing.T) {
+	tests := []struct {
+		name    string
+		seed    int64
+		wantErr bool
+	}{
+		{"seed_12345", 12345, false},
+		{"seed_0", 0, false},
+		{"seed_negative", -42, false},
+		{"seed_large", 9999999999, false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			sys := NewSystem(nil)
+
+			err := sys.SpawnFallingObjectWithSeed(100, 100, 200, MaterialStone, 16, 16, tt.seed)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("SpawnFallingObjectWithSeed() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+
+			if sys.GetFallingObjectCount() != 1 {
+				t.Errorf("Falling object count = %v, want 1", sys.GetFallingObjectCount())
+			}
+
+			objs := sys.GetFallingObjects()
+			if len(objs) == 0 {
+				t.Fatal("No falling objects returned")
+			}
+
+			obj := objs[0]
+			// Verify that seeded spawn has non-zero velocity (unlike regular spawn)
+			if obj.VelX == 0 && obj.VelY == 0 && obj.VelZ == 0 && obj.RotVel == 0 {
+				t.Error("Seeded spawn should have non-zero initial velocity")
+			}
+		})
+	}
+}
+
+func TestSystem_SpawnFallingObjectWithSeed_Deterministic(t *testing.T) {
+	// Test that same seed produces identical initial velocities
+	cfg1 := DefaultConfig()
+	cfg1.Seed = 12345
+	cfg2 := DefaultConfig()
+	cfg2.Seed = 12345
+
+	sys1 := NewSystem(cfg1)
+	sys2 := NewSystem(cfg2)
+
+	objSeed := int64(999)
+
+	err1 := sys1.SpawnFallingObjectWithSeed(100, 100, 200, MaterialStone, 16, 16, objSeed)
+	err2 := sys2.SpawnFallingObjectWithSeed(100, 100, 200, MaterialStone, 16, 16, objSeed)
+
+	if err1 != nil || err2 != nil {
+		t.Fatalf("Spawn errors: %v, %v", err1, err2)
+	}
+
+	objs1 := sys1.GetFallingObjects()
+	objs2 := sys2.GetFallingObjects()
+
+	if len(objs1) != 1 || len(objs2) != 1 {
+		t.Fatal("Expected 1 object in each system")
+	}
+
+	obj1 := objs1[0]
+	obj2 := objs2[0]
+
+	if obj1.VelX != obj2.VelX {
+		t.Errorf("VelX mismatch: %v vs %v", obj1.VelX, obj2.VelX)
+	}
+	if obj1.VelY != obj2.VelY {
+		t.Errorf("VelY mismatch: %v vs %v", obj1.VelY, obj2.VelY)
+	}
+	if obj1.VelZ != obj2.VelZ {
+		t.Errorf("VelZ mismatch: %v vs %v", obj1.VelZ, obj2.VelZ)
+	}
+	if obj1.RotVel != obj2.RotVel {
+		t.Errorf("RotVel mismatch: %v vs %v", obj1.RotVel, obj2.RotVel)
+	}
+}
+
+func TestSystem_SpawnFallingObjectWithSeed_DifferentSeeds(t *testing.T) {
+	// Test that different seeds produce different velocities
+	sys := NewSystem(nil)
+
+	_ = sys.SpawnFallingObjectWithSeed(100, 100, 200, MaterialStone, 16, 16, 111)
+	_ = sys.SpawnFallingObjectWithSeed(100, 100, 200, MaterialStone, 16, 16, 222)
+
+	objs := sys.GetFallingObjects()
+	if len(objs) != 2 {
+		t.Fatalf("Expected 2 objects, got %d", len(objs))
+	}
+
+	obj1 := objs[0]
+	obj2 := objs[1]
+
+	// At least one velocity component should differ between seeds
+	if obj1.VelX == obj2.VelX && obj1.VelY == obj2.VelY && obj1.VelZ == obj2.VelZ {
+		t.Error("Different seeds should produce different velocities")
+	}
+}
+
+func TestSystem_SpawnFallingObjectWithSeed_LimitReached(t *testing.T) {
+	cfg := DefaultConfig()
+	cfg.MaxFallingObjects = 2
+	sys := NewSystem(cfg)
+
+	_ = sys.SpawnFallingObjectWithSeed(100, 100, 200, MaterialStone, 16, 16, 1)
+	_ = sys.SpawnFallingObjectWithSeed(200, 200, 200, MaterialStone, 16, 16, 2)
+
+	// Third should fail
+	err := sys.SpawnFallingObjectWithSeed(300, 300, 200, MaterialStone, 16, 16, 3)
+	if err == nil {
+		t.Error("Expected error when limit reached")
+	}
+}

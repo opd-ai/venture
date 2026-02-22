@@ -184,11 +184,11 @@ func TestSerializePositionNoComponent(t *testing.T) {
 // TestSerializeHealth tests health serialization.
 func TestSerializeHealth(t *testing.T) {
 	tests := []struct {
-		name      string
-		current   float64
-		max       float64
-		wantCurr  float64
-		wantMax   float64
+		name     string
+		current  float64
+		max      float64
+		wantCurr float64
+		wantMax  float64
 	}{
 		{"full health", 100, 100, 100, 100},
 		{"partial health", 50, 100, 50, 100},

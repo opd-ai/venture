@@ -1574,53 +1574,53 @@ func TestInitializeLoggerDeterminism(t *testing.T) {
 // TestResolveSeedAndGenre verifies seed and genre resolution logic.
 func TestResolveSeedAndGenre(t *testing.T) {
 	tests := []struct {
-		name       string
-		seed       *int64
-		genre      *string
-		wantSeed   int64
-		wantGenre  string
+		name      string
+		seed      *int64
+		genre     *string
+		wantSeed  int64
+		wantGenre string
 	}{
 		{
-			name:       "both nil uses defaults",
-			seed:       nil,
-			genre:      nil,
-			wantSeed:   12345,
-			wantGenre:  "fantasy",
+			name:      "both nil uses defaults",
+			seed:      nil,
+			genre:     nil,
+			wantSeed:  12345,
+			wantGenre: "fantasy",
 		},
 		{
-			name:       "custom seed with nil genre",
-			seed:       ptrInt64(99999),
-			genre:      nil,
-			wantSeed:   99999,
-			wantGenre:  "fantasy",
+			name:      "custom seed with nil genre",
+			seed:      ptrInt64(99999),
+			genre:     nil,
+			wantSeed:  99999,
+			wantGenre: "fantasy",
 		},
 		{
-			name:       "nil seed with custom genre",
-			seed:       nil,
-			genre:      ptrString("horror"),
-			wantSeed:   12345,
-			wantGenre:  "horror",
+			name:      "nil seed with custom genre",
+			seed:      nil,
+			genre:     ptrString("horror"),
+			wantSeed:  12345,
+			wantGenre: "horror",
 		},
 		{
-			name:       "both custom values",
-			seed:       ptrInt64(54321),
-			genre:      ptrString("scifi"),
-			wantSeed:   54321,
-			wantGenre:  "scifi",
+			name:      "both custom values",
+			seed:      ptrInt64(54321),
+			genre:     ptrString("scifi"),
+			wantSeed:  54321,
+			wantGenre: "scifi",
 		},
 		{
-			name:       "zero seed is valid",
-			seed:       ptrInt64(0),
-			genre:      ptrString("cyberpunk"),
-			wantSeed:   0,
-			wantGenre:  "cyberpunk",
+			name:      "zero seed is valid",
+			seed:      ptrInt64(0),
+			genre:     ptrString("cyberpunk"),
+			wantSeed:  0,
+			wantGenre: "cyberpunk",
 		},
 		{
-			name:       "negative seed is valid",
-			seed:       ptrInt64(-12345),
-			genre:      ptrString("postapoc"),
-			wantSeed:   -12345,
-			wantGenre:  "postapoc",
+			name:      "negative seed is valid",
+			seed:      ptrInt64(-12345),
+			genre:     ptrString("postapoc"),
+			wantSeed:  -12345,
+			wantGenre: "postapoc",
 		},
 	}
 

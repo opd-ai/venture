@@ -16,7 +16,7 @@ The following packages have not yet been audited:
 
 ### Procedural Generation
 - [x] `pkg/procgen/terrain/AUDIT.md` — Complete — 3 issues (0 high, 1 med, 2 low) — Coverage: 94.0%
-- [ ] `pkg/procgen/entity/` — NPC/creature generation
+- [x] `pkg/procgen/entity/AUDIT.md` — Complete — 3 issues (0 high, 1 med, 2 low) — Coverage: 92.4%
 - [ ] `pkg/procgen/item/` — Item generation
 - [ ] `pkg/procgen/quest/` — Quest generation
 - [ ] `pkg/procgen/dialog/` — Dialog generation

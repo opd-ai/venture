@@ -282,9 +282,9 @@ Phases 1 and 2 can proceed in parallel. Phase 3 depends on both. Phase 4 depends
   4. Can use a map `CharacterClass → step overrides` for combat, inventory, and skills steps
 - **Acceptance**: Combat/skills tutorial text changes based on selected class. Each of the 6 base classes has appropriate hints.
 
-- [ ] Add `PlayerClass` field to `EbitenTutorialSystem`
-- [ ] Define class-specific tutorial text overrides
-- [ ] Apply overrides in step creation or display logic
+- [x] Add `PlayerClass` field to `EbitenTutorialSystem`
+- [x] Define class-specific tutorial text overrides
+- [x] Apply overrides in step creation or display logic
 
 ---
 
@@ -368,7 +368,7 @@ Phases 1 and 2 can proceed in parallel. Phase 3 depends on both. Phase 4 depends
 - [ ] `TestCheckCombatCondition_RequiresAttack` — verify combat condition fails before attack, passes after
 - [ ] `TestCheckExplorationCondition_NotAlwaysTrue` — verify exploration requires actual movement
 - [ ] `TestImportState_CompletedTutorial` — verify completed tutorial stays completed after import (regression for bug 1.9)
-- [ ] `TestTutorialSystem_ClassAwareText` — verify step descriptions change per class
+- [x] `TestTutorialSystem_ClassAwareText` — verify step descriptions change per class
 
 ### 5.2 Update `tutorial_system_gaps_test.go` (S)
 

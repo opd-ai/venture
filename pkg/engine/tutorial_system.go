@@ -41,6 +41,9 @@ type EbitenTutorialSystem struct {
 	skipButton   *mobile.TouchButton
 	screenWidth  int
 	screenHeight int
+
+	// Class-aware tutorial content (Phase 3.4)
+	PlayerClass CharacterClass
 }
 
 // NewTutorialSystem creates a new tutorial system with default steps.
@@ -79,6 +82,98 @@ func NewTutorialSystemWithSize(screenWidth, screenHeight int) *EbitenTutorialSys
 	)
 
 	return ts
+}
+
+// SetPlayerClass sets the player's class for class-aware tutorial content.
+// This allows the tutorial to display class-specific hints and descriptions.
+func (ts *EbitenTutorialSystem) SetPlayerClass(class CharacterClass) {
+	ts.PlayerClass = class
+}
+
+// GetPlayerClass returns the currently set player class.
+func (ts *EbitenTutorialSystem) GetPlayerClass() CharacterClass {
+	return ts.PlayerClass
+}
+
+// classStepOverrides defines class-specific description overrides for tutorial steps.
+// Key format is "stepID:classConstant". If no override exists, uses default text.
+var classStepOverrides = map[string]map[CharacterClass]string{
+	"combat": {
+		ClassWarrior:      "Press SPACE near an enemy to strike with your sword. Warriors excel at close combat!",
+		ClassMage:         "Press 1-5 to cast spells at enemies from a safe distance. Mana regenerates over time.",
+		ClassRogue:        "Press SPACE near an enemy to attack. Get behind foes for critical backstab damage!",
+		ClassRanger:       "Click on enemies to fire arrows. Keep your distance for maximum effectiveness!",
+		ClassCleric:       "Press SPACE to strike enemies. As a Cleric, you can also heal yourself with spells!",
+		ClassNecromancer:  "Press 1-5 to cast dark magic. Summon minions to fight alongside you!",
+		ClassBattlemage:   "Combine SPACE attacks with spells (1-5). You have both martial and magical prowess!",
+		ClassSpellblade:   "Use SPACE for quick strikes, then 1-5 for spell combos. Agility meets arcane!",
+		ClassPaladin:      "Press SPACE for holy strikes. Your attacks can smite evil and heal allies!",
+		ClassMonk:         "Press SPACE for rapid martial arts strikes. Channel spiritual energy for special moves!",
+		ClassDeathKnight:  "Press SPACE for devastating dark strikes. Your attacks drain life from enemies!",
+		ClassWitchHunter:  "Click to fire blessed bolts. Your shots deal extra damage to magical foes!",
+		ClassBeastlord:    "Press SPACE while your beast companion attacks. Command your ally with number keys!",
+		ClassArcaneArcher: "Click to fire arcane arrows that explode on impact. Combine shots with spell effects!",
+		ClassShadowPriest: "Use stealth and dark magic together. Strike from shadows, then curse your foes!",
+		ClassDruid:        "Shape-shift forms with number keys. Each form offers unique combat abilities!",
+		ClassInquisitor:   "Press SPACE for precise strikes. Your holy power reveals hidden enemies!",
+		ClassBloodKnight:  "Press SPACE for blood-powered attacks. Damage heals you through blood magic!",
+		ClassMystic:       "Press 1-5 to cast combined arcane and divine spells. Balance offense and support!",
+		ClassWarlock:      "Press 1-5 to unleash pact magic. Your dark patron grants powerful abilities!",
+		ClassNinja:        "Press SPACE for swift strikes. Use stealth (Shift) and thrown weapons for combos!",
+	},
+	"skills": {
+		ClassWarrior:      "Level up to unlock new combat stances and powerful weapon techniques!",
+		ClassMage:         "Level up to learn new spells and increase your mana pool!",
+		ClassRogue:        "Level up to improve stealth abilities and unlock deadly finishing moves!",
+		ClassRanger:       "Level up to gain new arrow types and improve your companion bond!",
+		ClassCleric:       "Level up to unlock more powerful healing spells and holy buffs!",
+		ClassNecromancer:  "Level up to summon stronger undead and learn devastating curses!",
+		ClassBattlemage:   "Level up to unlock spell-sword combos and battle enchantments!",
+		ClassSpellblade:   "Level up to chain magic and melee into devastating combo attacks!",
+		ClassPaladin:      "Level up to strengthen your auras and unlock divine smite powers!",
+		ClassMonk:         "Level up to master new ki techniques and unlock powerful stances!",
+		ClassDeathKnight:  "Level up to strengthen your dark powers and raise more powerful minions!",
+		ClassWitchHunter:  "Level up to gain blessed ammunition and track magical enemies better!",
+		ClassBeastlord:    "Level up to evolve your beast companion and unlock pack tactics!",
+		ClassArcaneArcher: "Level up to imbue arrows with new elemental effects!",
+		ClassShadowPriest: "Level up to deepen shadow magic and strengthen curse effects!",
+		ClassDruid:        "Level up to unlock new animal forms and nature spells!",
+		ClassInquisitor:   "Level up to strengthen holy interrogation and gain truth-seeing powers!",
+		ClassBloodKnight:  "Level up to increase blood magic potency and life drain effects!",
+		ClassMystic:       "Level up to unlock deeper arcane-divine spell fusions!",
+		ClassWarlock:      "Level up to strengthen your pact bond and unlock new dark gifts!",
+		ClassNinja:        "Level up to learn new ninjutsu techniques and shadow arts!",
+	},
+	"inventory": {
+		ClassWarrior:     "Press I to open your inventory. Warriors benefit most from armor and weapons!",
+		ClassMage:        "Press I to open your inventory. Look for staffs, robes, and mana-boosting items!",
+		ClassRogue:       "Press I to open your inventory. Daggers and light armor improve your stealth!",
+		ClassRanger:      "Press I to open your inventory. Bows, arrows, and pet gear are your priorities!",
+		ClassCleric:      "Press I to open your inventory. Maces and holy symbols boost your healing!",
+		ClassNecromancer: "Press I to open your inventory. Dark tomes and cursed items empower you!",
+	},
+}
+
+// getClassAwareDescription returns the class-specific description for a step,
+// or the default description if no override exists for the current class.
+func (ts *EbitenTutorialSystem) getClassAwareDescription(step *TutorialStep) string {
+	if step == nil {
+		return ""
+	}
+
+	// Check if there are overrides for this step
+	stepOverrides, hasStepOverrides := classStepOverrides[step.ID]
+	if !hasStepOverrides {
+		return step.Description
+	}
+
+	// Check if there's an override for this specific class
+	if classDesc, hasClassOverride := stepOverrides[ts.PlayerClass]; hasClassOverride {
+		return classDesc
+	}
+
+	// Fall back to default description
+	return step.Description
 }
 
 // createDefaultTutorialSteps generates the default tutorial sequence
@@ -677,8 +772,10 @@ func (ts *EbitenTutorialSystem) drawPanelContent(screen *ebiten.Image, step *Tut
 
 	text.Draw(screen, step.Title, basicfont.Face7x13, x+10, y+55, color.White)
 
+	// Use class-aware description for personalized hints
 	descColor := color.RGBA{200, 200, 200, 255}
-	ts.drawWrappedText(screen, step.Description, x+10, y+75, width-20, descColor)
+	description := ts.getClassAwareDescription(step)
+	ts.drawWrappedText(screen, description, x+10, y+75, width-20, descColor)
 
 	objColor := color.RGBA{100, 255, 100, 255}
 	text.Draw(screen, "Objective: "+step.Objective, basicfont.Face7x13, x+10, y+120, objColor)

@@ -144,10 +144,16 @@ func (om *OnboardingManager) SetEnabled(enabled bool) {
 }
 
 // SetPlayerClass stores the selected class for class-aware tutorial content.
+// Propagates the class to the in-game tutorial system for class-specific hints.
 func (om *OnboardingManager) SetPlayerClass(class CharacterClass) {
 	om.mu.Lock()
 	defer om.mu.Unlock()
 	om.playerClass = class
+
+	// Propagate class to tutorial system for class-aware content (Phase 3.4)
+	if om.tutorialSystem != nil {
+		om.tutorialSystem.SetPlayerClass(class)
+	}
 
 	if om.logger != nil {
 		om.logger.WithField("class", class.String()).Debug("player class set for onboarding")

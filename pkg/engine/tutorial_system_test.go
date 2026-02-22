@@ -1042,3 +1042,114 @@ func TestTutorialSystem_ImportState_CompletedTutorial(t *testing.T) {
 		}
 	}
 }
+
+// TestTutorialSystem_ClassAwareText verifies that tutorial step descriptions
+// change based on the player's selected class.
+func TestTutorialSystem_ClassAwareText(t *testing.T) {
+	ts := NewTutorialSystem()
+
+	// Find combat step
+	var combatStep *TutorialStep
+	for i := range ts.Steps {
+		if ts.Steps[i].ID == "combat" {
+			combatStep = &ts.Steps[i]
+			break
+		}
+	}
+
+	if combatStep == nil {
+		t.Fatal("Combat step not found in tutorial")
+	}
+
+	defaultDesc := combatStep.Description
+
+	testCases := []struct {
+		class      CharacterClass
+		shouldDiff bool // Should the description differ from default?
+		contains   string
+	}{
+		{ClassWarrior, true, "sword"},
+		{ClassMage, true, "spells"},
+		{ClassRogue, true, "backstab"},
+		{ClassRanger, true, "arrows"},
+		{ClassCleric, true, "heal"},
+		{ClassNecromancer, true, "Summon"},
+		{ClassBattlemage, true, "martial and magical"},
+		{ClassPaladin, true, "holy"},
+		{ClassNinja, true, "stealth"},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.class.String(), func(t *testing.T) {
+			ts.SetPlayerClass(tc.class)
+
+			desc := ts.getClassAwareDescription(combatStep)
+
+			if tc.shouldDiff && desc == defaultDesc {
+				t.Errorf("Expected class-specific description for %s, got default", tc.class)
+			}
+
+			if tc.contains != "" && !strings.Contains(strings.ToLower(desc), strings.ToLower(tc.contains)) {
+				t.Errorf("Expected description for %s to contain %q, got %q", tc.class, tc.contains, desc)
+			}
+		})
+	}
+}
+
+// TestTutorialSystem_GetSetPlayerClass tests the PlayerClass getter/setter.
+func TestTutorialSystem_GetSetPlayerClass(t *testing.T) {
+	ts := NewTutorialSystem()
+
+	// Default should be ClassWarrior (zero value)
+	if ts.GetPlayerClass() != ClassWarrior {
+		t.Errorf("Default PlayerClass should be ClassWarrior, got %v", ts.GetPlayerClass())
+	}
+
+	// Test setting different classes
+	classes := []CharacterClass{ClassMage, ClassRogue, ClassRanger, ClassNecromancer, ClassPaladin}
+	for _, class := range classes {
+		ts.SetPlayerClass(class)
+		if ts.GetPlayerClass() != class {
+			t.Errorf("SetPlayerClass(%v) failed, GetPlayerClass() returned %v", class, ts.GetPlayerClass())
+		}
+	}
+}
+
+// TestTutorialSystem_ClassAwareDescription_FallsBackToDefault tests that
+// the class-aware description falls back to default when no override exists.
+func TestTutorialSystem_ClassAwareDescription_FallsBackToDefault(t *testing.T) {
+	ts := NewTutorialSystem()
+
+	// Find welcome step (which has no class-specific overrides)
+	var welcomeStep *TutorialStep
+	for i := range ts.Steps {
+		if ts.Steps[i].ID == "welcome" {
+			welcomeStep = &ts.Steps[i]
+			break
+		}
+	}
+
+	if welcomeStep == nil {
+		t.Fatal("Welcome step not found")
+	}
+
+	// Set various classes and verify default description is used
+	classes := []CharacterClass{ClassWarrior, ClassMage, ClassRogue, ClassRanger}
+	for _, class := range classes {
+		ts.SetPlayerClass(class)
+		desc := ts.getClassAwareDescription(welcomeStep)
+		if desc != welcomeStep.Description {
+			t.Errorf("For %s, expected default description for welcome step, got %q", class, desc)
+		}
+	}
+}
+
+// TestTutorialSystem_ClassAwareDescription_NilStep tests handling of nil step.
+func TestTutorialSystem_ClassAwareDescription_NilStep(t *testing.T) {
+	ts := NewTutorialSystem()
+
+	desc := ts.getClassAwareDescription(nil)
+	if desc != "" {
+		t.Errorf("Expected empty string for nil step, got %q", desc)
+	}
+}

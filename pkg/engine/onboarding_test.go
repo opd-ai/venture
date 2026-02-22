@@ -272,3 +272,22 @@ func TestOnboardingManager_TutorialSystemActivation(t *testing.T) {
 		t.Error("expected tutorialSystem.ShowUI = true after TransitionToInGameTutorial()")
 	}
 }
+
+// TestOnboardingManager_ClassPropagation tests that player class is propagated to tutorial system.
+func TestOnboardingManager_ClassPropagation(t *testing.T) {
+	om := NewOnboardingManager(nil)
+
+	tutorialSystem := NewTutorialSystem()
+	om.SetTutorialSystem(tutorialSystem)
+
+	// Set class on onboarding manager and verify it propagates to tutorial system
+	testCases := []CharacterClass{ClassWarrior, ClassMage, ClassRogue, ClassRanger, ClassNecromancer, ClassPaladin}
+	for _, class := range testCases {
+		om.SetPlayerClass(class)
+
+		if tutorialSystem.GetPlayerClass() != class {
+			t.Errorf("Expected tutorialSystem.GetPlayerClass() = %s after om.SetPlayerClass(%s), got %s",
+				class.String(), class.String(), tutorialSystem.GetPlayerClass().String())
+		}
+	}
+}

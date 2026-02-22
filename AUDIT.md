@@ -13,9 +13,9 @@ This report consolidates 110 individual audit files across all packages in the V
 | Severity | Open Issues |
 |----------|-------------|
 | High     | 1           |
-| Medium   | ~63         |
+| Medium   | ~62         |
 | Low      | ~162        |
-| **Total**| **~226**    |
+| **Total**| **~225**    |
 
 **Historical totals (including fixed):** ~32 High, ~95 Medium, ~225 Low issues were identified across all audits. The vast majority have been resolved, resulting in an overall codebase health status of **Good**.
 
@@ -825,9 +825,9 @@ This report consolidates 110 individual audit files across all packages in the V
 ### pkg/rendering/parallel — Parallel Rendering Utilities
 - **Source:** `pkg/rendering/parallel/AUDIT.md`
 - **High Issues:** 0
-- **Medium Issues:** 1
+- **Medium Issues:** 0 (1 fixed)
 - **Low Issues:** 1
-- **Details:** 96.7% coverage. `doc.go` references `NewRenderer(8)` API that does not exist; only `NewWorkerPool(int)` is implemented. Documentation-only issue with no functional impact.
+- **Details:** 96.7% coverage. **RESOLVED 2026-02-22**: Updated `doc.go` usage example to show correct `NewWorkerPool(8)` API with proper task submission pattern and result collection. Remaining low-severity: unused Task.Priority field.
 
 ---
 
@@ -1064,7 +1064,7 @@ The following medium-priority issues appear across multiple packages and should 
 - `pkg/network/federation`: Only 26% of exported functions have godoc comments (79/304)
 - ~~`pkg/procgen/dialog`: `GenerateWithPersonality` shown in `doc.go` example but not implemented~~ **RESOLVED 2026-02-22**: Method implemented on `MarkovGenerator`
 - `pkg/procgen/environment`: Does not implement standard `procgen.Generator` interface
-- `pkg/rendering/parallel`: `doc.go` references non-existent `NewRenderer(8)` API
+- ~~`pkg/rendering/parallel`: `doc.go` references non-existent `NewRenderer(8)` API~~ **RESOLVED 2026-02-22**: Updated doc.go with correct `NewWorkerPool(8)` example
 
 **Determinism Concerns:**
 - `pkg/integration/narrative_world`: Production memory event timestamps vary across runs

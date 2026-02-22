@@ -23,7 +23,7 @@ The `pkg/rendering/parallel` package provides thread-safe parallel rendering inf
 (None)
 
 ### Medium Severity
-- [ ] **Doc coverage** — Package doc.go references `NewRenderer(8)` API which does not exist; only `NewWorkerPool(int)` is implemented (`doc.go:18-19`)
+- [x] **Doc coverage** — Package doc.go references `NewRenderer(8)` API which does not exist; only `NewWorkerPool(int)` is implemented (`doc.go:18-19`) — **RESOLVED 2026-02-22**: Updated doc.go usage example to show correct `NewWorkerPool(8)` API with proper task submission pattern and result collection
 
 ### Low Severity
 - [ ] **Feature gap** — Priority queue for tasks mentioned in comments but not implemented; Priority field in Task struct is unused (`worker_pool.go:24`)
@@ -75,7 +75,7 @@ The package integrates with the engine through the `ParallelRendererProvider` in
 | Mobile | ✅ | No platform-specific dependencies |
 
 ## Recommendations
-1. **[MED]** Update doc.go usage example to match actual API: replace `NewRenderer(8)` with `NewWorkerPool(8)` and update render example to show proper task submission pattern
+1. ~~**[MED]** Update doc.go usage example to match actual API: replace `NewRenderer(8)` with `NewWorkerPool(8)` and update render example to show proper task submission pattern~~ **RESOLVED 2026-02-22**
 2. **[LOW]** Consider implementing priority queue for Task.Priority field or remove unused field
 3. **[LOW]** Document that GetOrCompute is optimized for read-heavy workloads; for write-heavy scenarios with expensive compute, consider async computation pattern
 4. **[LOW]** Clarify GPU upload feature status in documentation (planned vs. implemented)

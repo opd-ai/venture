@@ -14,19 +14,33 @@
 //
 // # Usage
 //
-//	// Create parallel renderer
-//	renderer := parallel.NewRenderer(8) // 8 worker goroutines
+//	// Create and start worker pool
+//	pool := parallel.NewWorkerPool(8) // 8 worker goroutines
+//	pool.Start()
+//	defer pool.Stop()
 //
-//	// Render sprites in parallel
-//	results := renderer.RenderSprites(entities)
-//
-//	// Wait for completion
-//	sprites := results.Wait()
-//
-//	// Draw to screen
-//	for _, sprite := range sprites {
-//	    screen.DrawImage(sprite.Image, sprite.Options)
+//	// Submit rendering tasks
+//	for i, entity := range entities {
+//	    pool.Submit(parallel.Task{
+//	        ID:   i,
+//	        Type: parallel.TaskSpriteGeneration,
+//	        Data: entity,
+//	        Handler: func(t parallel.Task) parallel.Result {
+//	            // Generate sprite from entity data
+//	            sprite := generateSprite(t.Data)
+//	            return parallel.Result{TaskID: t.ID, Data: sprite}
+//	        },
+//	    })
 //	}
+//
+//	// Collect results (drain in separate goroutine for large batches)
+//	go func() {
+//	    for result := range pool.Results() {
+//	        if result.Error == nil {
+//	            screen.DrawImage(result.Data.(*ebiten.Image), nil)
+//	        }
+//	    }
+//	}()
 //
 // # Performance
 //

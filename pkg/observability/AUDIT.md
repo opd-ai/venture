@@ -29,8 +29,8 @@ The `pkg/observability` package provides Prometheus-compatible metrics export, h
 _(none)_
 
 ### Medium Severity
-- [ ] **Doc/Implementation Mismatch** — Documentation in `doc.go:2` claims "distributed tracing support" but no tracing implementation exists (`doc.go:2`)
-- [ ] **Naming Inconsistency** — Documentation says "player count" metric but implementation uses `venture_players_connected` measuring clients (`doc.go:8`, `metrics.go:258`)
+- [x] **Doc/Implementation Mismatch** — Documentation in `doc.go:2` claims "distributed tracing support" but no tracing implementation exists (`doc.go:2`) — **RESOLVED 2026-02-22**: Removed claim; documentation now accurately describes "readiness endpoints" instead
+- [x] **Naming Inconsistency** — Documentation says "player count" metric but implementation uses `venture_players_connected` measuring clients (`doc.go:8`, `metrics.go:258`) — **RESOLVED 2026-02-22**: Updated documentation to say "connected players" to match metric name
 
 ### Low Severity
 - [ ] **Edge Case Race** — Potential race between `Start()` goroutine launch and immediate `Stop()` call; server reference should be captured before goroutine (`metrics.go:179-184`)
@@ -80,8 +80,8 @@ Infrastructure package providing metrics export for server monitoring.
 | Mobile | N/A | Server-side package; mobile platforms connect as clients |
 
 ## Recommendations
-1. **[MED]** Update `doc.go:2` to remove "distributed tracing support" claim or implement tracing (e.g., OpenTelemetry)
-2. **[MED]** Rename metric to `venture_player_count` or update documentation to match `venture_players_connected`
+1. ~~**[MED]** Update `doc.go:2` to remove "distributed tracing support" claim or implement tracing (e.g., OpenTelemetry)~~ **RESOLVED 2026-02-22**
+2. ~~**[MED]** Rename metric to `venture_player_count` or update documentation to match `venture_players_connected`~~ **RESOLVED 2026-02-22**
 3. **[LOW]** Capture server reference before goroutine launch in `Start()` to prevent theoretical race
 4. **[LOW]** Add sync.WaitGroup to ensure server goroutine exits before `Stop()` returns
 

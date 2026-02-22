@@ -1,11 +1,11 @@
 // Package observability provides monitoring and observability infrastructure for Venture.
-// It includes Prometheus metrics export, health checks, and distributed tracing support.
+// It includes Prometheus metrics export, health checks, and readiness endpoints.
 //
 // # Metrics Export
 //
 // The package exports key performance metrics in Prometheus format via HTTP endpoint.
 // Core metrics include FPS, entity count, memory usage, and network traffic.
-// Game-specific metrics include player count, active quests, and trade volume.
+// Game-specific metrics include connected players, active quests, and trade volume.
 //
 // Usage:
 //

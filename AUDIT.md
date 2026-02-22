@@ -13,9 +13,9 @@ This report consolidates 110 individual audit files across all packages in the V
 | Severity | Open Issues |
 |----------|-------------|
 | High     | 1           |
-| Medium   | ~47         |
+| Medium   | ~45         |
 | Low      | ~143        |
-| **Total**| **~191**    |
+| **Total**| **~189**    |
 
 **Historical totals (including fixed):** ~32 High, ~95 Medium, ~227 Low issues were identified across all audits. The vast majority have been resolved, resulting in an overall codebase health status of **Good**.
 
@@ -519,9 +519,9 @@ This report consolidates 110 individual audit files across all packages in the V
 ### pkg/observability — Metrics & Observability
 - **Source:** `pkg/observability/AUDIT.md`
 - **High Issues:** 0
-- **Medium Issues:** 2
-- **Low Issues:** 1
-- **Details:** 97.3% coverage. `doc.go` claims "distributed tracing support" but no tracing implementation exists. Naming inconsistency: documentation says "player count" but implementation measures `venture_players_connected` (connected clients). Minor missing godoc on some metrics helpers.
+- **Medium Issues:** 0 (2 fixed)
+- **Low Issues:** 2
+- **Details:** 97.3% coverage. **RESOLVED 2026-02-22**: Removed false "distributed tracing support" claim from `doc.go`; documentation now accurately describes "readiness endpoints". Updated "player count" to "connected players" to match the `venture_players_connected` metric name. Remaining low-severity: edge case race in Start() and goroutine lifecycle in Stop().
 
 ---
 

@@ -24,6 +24,12 @@ const (
 	SettingsOptionShowFPS
 	SettingsOptionFullscreen
 	SettingsOptionShowTutorials // H-004: Tutorial enable/disable option
+	// Quality of Life settings
+	SettingsOptionQoLAutoLoot       // Enable/disable auto-loot
+	SettingsOptionQoLAutoLootRadius // Auto-loot radius (5-10 tiles)
+	SettingsOptionQoLMountWhistle   // Enable/disable mount whistle
+	SettingsOptionQoLRecipeTracking // Enable/disable recipe tracking
+	SettingsOptionQoLSortPreset     // Storage sort preset
 	SettingsOptionBack
 )
 
@@ -46,6 +52,16 @@ func (o SettingsOption) String() string {
 		return "Fullscreen"
 	case SettingsOptionShowTutorials:
 		return "Show Tutorials"
+	case SettingsOptionQoLAutoLoot:
+		return "Auto-Loot"
+	case SettingsOptionQoLAutoLootRadius:
+		return "Loot Radius"
+	case SettingsOptionQoLMountWhistle:
+		return "Mount Whistle"
+	case SettingsOptionQoLRecipeTracking:
+		return "Recipe Tracking"
+	case SettingsOptionQoLSortPreset:
+		return "Sort Preset"
 	case SettingsOptionBack:
 		return "Back"
 	default:
@@ -101,6 +117,12 @@ func NewSettingsUI(screenWidth, screenHeight int, settingsManager *SettingsManag
 			SettingsOptionShowFPS,
 			SettingsOptionFullscreen,
 			SettingsOptionShowTutorials, // H-004: Tutorial option
+			// Quality of Life options
+			SettingsOptionQoLAutoLoot,
+			SettingsOptionQoLAutoLootRadius,
+			SettingsOptionQoLMountWhistle,
+			SettingsOptionQoLRecipeTracking,
+			SettingsOptionQoLSortPreset,
 			SettingsOptionBack,
 		},
 		visible:      false,
@@ -310,6 +332,31 @@ func (s *SettingsUI) decreaseValue(option SettingsOption) {
 		s.currentSettings.Fullscreen = !s.currentSettings.Fullscreen
 	case SettingsOptionShowTutorials:
 		s.currentSettings.ShowTutorials = !s.currentSettings.ShowTutorials
+	case SettingsOptionQoLAutoLoot:
+		s.currentSettings.QoLAutoLoot = !s.currentSettings.QoLAutoLoot
+	case SettingsOptionQoLAutoLootRadius:
+		s.currentSettings.QoLAutoLootRadius -= 1.0
+		if s.currentSettings.QoLAutoLootRadius < 5.0 {
+			s.currentSettings.QoLAutoLootRadius = 5.0
+		}
+	case SettingsOptionQoLMountWhistle:
+		s.currentSettings.QoLMountWhistle = !s.currentSettings.QoLMountWhistle
+	case SettingsOptionQoLRecipeTracking:
+		s.currentSettings.QoLRecipeTracking = !s.currentSettings.QoLRecipeTracking
+	case SettingsOptionQoLSortPreset:
+		// Cycle backward: type -> value -> name -> rarity -> type
+		switch s.currentSettings.QoLSortPreset {
+		case "type":
+			s.currentSettings.QoLSortPreset = "value"
+		case "rarity":
+			s.currentSettings.QoLSortPreset = "type"
+		case "name":
+			s.currentSettings.QoLSortPreset = "rarity"
+		case "value":
+			s.currentSettings.QoLSortPreset = "name"
+		default:
+			s.currentSettings.QoLSortPreset = "type"
+		}
 	}
 }
 
@@ -349,6 +396,31 @@ func (s *SettingsUI) increaseValue(option SettingsOption) {
 		s.currentSettings.Fullscreen = !s.currentSettings.Fullscreen
 	case SettingsOptionShowTutorials:
 		s.currentSettings.ShowTutorials = !s.currentSettings.ShowTutorials
+	case SettingsOptionQoLAutoLoot:
+		s.currentSettings.QoLAutoLoot = !s.currentSettings.QoLAutoLoot
+	case SettingsOptionQoLAutoLootRadius:
+		s.currentSettings.QoLAutoLootRadius += 1.0
+		if s.currentSettings.QoLAutoLootRadius > 10.0 {
+			s.currentSettings.QoLAutoLootRadius = 10.0
+		}
+	case SettingsOptionQoLMountWhistle:
+		s.currentSettings.QoLMountWhistle = !s.currentSettings.QoLMountWhistle
+	case SettingsOptionQoLRecipeTracking:
+		s.currentSettings.QoLRecipeTracking = !s.currentSettings.QoLRecipeTracking
+	case SettingsOptionQoLSortPreset:
+		// Cycle forward: type -> rarity -> name -> value -> type
+		switch s.currentSettings.QoLSortPreset {
+		case "type":
+			s.currentSettings.QoLSortPreset = "rarity"
+		case "rarity":
+			s.currentSettings.QoLSortPreset = "name"
+		case "name":
+			s.currentSettings.QoLSortPreset = "value"
+		case "value":
+			s.currentSettings.QoLSortPreset = "type"
+		default:
+			s.currentSettings.QoLSortPreset = "type"
+		}
 	}
 }
 
@@ -368,6 +440,12 @@ func (s *SettingsUI) activateOption(option SettingsOption) {
 		s.currentSettings.Fullscreen = !s.currentSettings.Fullscreen
 	case SettingsOptionShowTutorials:
 		s.currentSettings.ShowTutorials = !s.currentSettings.ShowTutorials
+	case SettingsOptionQoLAutoLoot:
+		s.currentSettings.QoLAutoLoot = !s.currentSettings.QoLAutoLoot
+	case SettingsOptionQoLMountWhistle:
+		s.currentSettings.QoLMountWhistle = !s.currentSettings.QoLMountWhistle
+	case SettingsOptionQoLRecipeTracking:
+		s.currentSettings.QoLRecipeTracking = !s.currentSettings.QoLRecipeTracking
 	}
 }
 
@@ -496,6 +574,25 @@ func (s *SettingsUI) getValueString(option SettingsOption) string {
 			return "ON"
 		}
 		return "OFF"
+	case SettingsOptionQoLAutoLoot:
+		if s.currentSettings.QoLAutoLoot {
+			return "ON"
+		}
+		return "OFF"
+	case SettingsOptionQoLAutoLootRadius:
+		return fmt.Sprintf("%.0f tiles", s.currentSettings.QoLAutoLootRadius)
+	case SettingsOptionQoLMountWhistle:
+		if s.currentSettings.QoLMountWhistle {
+			return "ON"
+		}
+		return "OFF"
+	case SettingsOptionQoLRecipeTracking:
+		if s.currentSettings.QoLRecipeTracking {
+			return "ON"
+		}
+		return "OFF"
+	case SettingsOptionQoLSortPreset:
+		return s.currentSettings.QoLSortPreset
 	case SettingsOptionBack:
 		return ""
 	default:

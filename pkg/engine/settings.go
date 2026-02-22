@@ -29,6 +29,13 @@ type GameSettings struct {
 
 	// Gameplay settings
 	ShowTutorials bool `json:"show_tutorials"`
+
+	// Quality of Life settings
+	QoLAutoLoot       bool    `json:"qol_auto_loot"`        // Enable auto-loot companion feature
+	QoLAutoLootRadius float64 `json:"qol_auto_loot_radius"` // Auto-loot radius in tiles (5.0-10.0)
+	QoLMountWhistle   bool    `json:"qol_mount_whistle"`    // Enable mount whistle summon feature
+	QoLRecipeTracking bool    `json:"qol_recipe_tracking"`  // Enable recipe ingredient tracking
+	QoLSortPreset     string  `json:"qol_sort_preset"`      // Storage sort preset: "type", "rarity", "name", "value"
 }
 
 // DefaultSettings returns game settings with default values.
@@ -52,6 +59,13 @@ func DefaultSettings() GameSettings {
 
 		// Gameplay defaults
 		ShowTutorials: true,
+
+		// Quality of Life defaults - enabled with sensible values
+		QoLAutoLoot:       true,
+		QoLAutoLootRadius: 7.0, // 7 tiles (mid-range)
+		QoLMountWhistle:   true,
+		QoLRecipeTracking: true,
+		QoLSortPreset:     "type", // Default sort by type
 	}
 }
 
@@ -88,6 +102,19 @@ func (s *GameSettings) Validate() bool {
 	validQualities := map[string]bool{"low": true, "medium": true, "high": true}
 	if !validQualities[s.GraphicsQuality] {
 		s.GraphicsQuality = "medium"
+		corrected = true
+	}
+
+	// Validate QoL auto-loot radius (5.0-10.0 tiles)
+	if s.QoLAutoLootRadius < 5.0 || s.QoLAutoLootRadius > 10.0 {
+		s.QoLAutoLootRadius = 7.0
+		corrected = true
+	}
+
+	// Validate QoL sort preset
+	validSortPresets := map[string]bool{"type": true, "rarity": true, "name": true, "value": true}
+	if !validSortPresets[s.QoLSortPreset] {
+		s.QoLSortPreset = "type"
 		corrected = true
 	}
 

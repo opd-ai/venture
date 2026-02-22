@@ -277,8 +277,8 @@ This report consolidates 110 individual audit files across all packages in the V
 - **Source:** `pkg/engine/qol/AUDIT.md`
 - **High Issues:** 0
 - **Medium Issues:** 0 (1 fixed)
-- **Low Issues:** 3
-- **Details:** 94.0% coverage; auto-loot, craft queues, guild invitations, mount whistles, storage sorting, and recipe tracking are all thread-safe. **RESOLVED 2026-02-22**: `QoLComponent` save/load now wired via `QoLStateData` in `pkg/saveload/types.go:PlayerState`. Player QoL preferences now persist across sessions. Remaining: QoL settings have no integration with the Settings UI. Benchmark causes excessive "queue full" log warnings.
+- **Low Issues:** 2 (1 fixed)
+- **Details:** 94.0% coverage; auto-loot, craft queues, guild invitations, mount whistles, storage sorting, and recipe tracking are all thread-safe. **RESOLVED 2026-02-22**: `QoLComponent` save/load now wired via `QoLStateData` in `pkg/saveload/types.go:PlayerState`. Player QoL preferences now persist across sessions. **RESOLVED 2026-02-22**: QoL settings (Auto-Loot, Loot Radius, Mount Whistle, Recipe Tracking, Sort Preset) now integrated into Settings UI via `GameSettings` struct and `SettingsUI` options in `pkg/engine/settings.go` and `pkg/engine/settings_ui.go`. Remaining: Benchmark causes excessive "queue full" log warnings.
 
 ---
 

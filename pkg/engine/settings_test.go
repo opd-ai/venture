@@ -47,6 +47,23 @@ func TestDefaultSettings(t *testing.T) {
 	if settings.ShowTutorials != true {
 		t.Error("Expected ShowTutorials to be true")
 	}
+
+	// Test QoL defaults
+	if settings.QoLAutoLoot != true {
+		t.Error("Expected QoLAutoLoot to be true")
+	}
+	if settings.QoLAutoLootRadius != 7.0 {
+		t.Errorf("Expected QoLAutoLootRadius 7.0, got %f", settings.QoLAutoLootRadius)
+	}
+	if settings.QoLMountWhistle != true {
+		t.Error("Expected QoLMountWhistle to be true")
+	}
+	if settings.QoLRecipeTracking != true {
+		t.Error("Expected QoLRecipeTracking to be true")
+	}
+	if settings.QoLSortPreset != "type" {
+		t.Errorf("Expected QoLSortPreset 'type', got %s", settings.QoLSortPreset)
+	}
 }
 
 func TestGameSettingsValidate(t *testing.T) {
@@ -183,6 +200,82 @@ func TestGameSettingsValidate(t *testing.T) {
 				}
 			},
 		},
+		{
+			name: "QoL auto-loot radius too low corrected",
+			settings: GameSettings{
+				MasterVolume:      0.7,
+				MusicVolume:       0.6,
+				SFXVolume:         0.8,
+				WindowWidth:       1280,
+				WindowHeight:      720,
+				GraphicsQuality:   "medium",
+				QoLAutoLootRadius: 3.0, // Below minimum of 5.0
+			},
+			shouldFix: true,
+			checkFunc: func(t *testing.T, s GameSettings) {
+				if s.QoLAutoLootRadius != 7.0 {
+					t.Errorf("Expected corrected QoLAutoLootRadius 7.0, got %f", s.QoLAutoLootRadius)
+				}
+			},
+		},
+		{
+			name: "QoL auto-loot radius too high corrected",
+			settings: GameSettings{
+				MasterVolume:      0.7,
+				MusicVolume:       0.6,
+				SFXVolume:         0.8,
+				WindowWidth:       1280,
+				WindowHeight:      720,
+				GraphicsQuality:   "medium",
+				QoLAutoLootRadius: 15.0, // Above maximum of 10.0
+			},
+			shouldFix: true,
+			checkFunc: func(t *testing.T, s GameSettings) {
+				if s.QoLAutoLootRadius != 7.0 {
+					t.Errorf("Expected corrected QoLAutoLootRadius 7.0, got %f", s.QoLAutoLootRadius)
+				}
+			},
+		},
+		{
+			name: "QoL sort preset invalid corrected",
+			settings: GameSettings{
+				MasterVolume:    0.7,
+				MusicVolume:     0.6,
+				SFXVolume:       0.8,
+				WindowWidth:     1280,
+				WindowHeight:    720,
+				GraphicsQuality: "medium",
+				QoLSortPreset:   "invalid_preset",
+			},
+			shouldFix: true,
+			checkFunc: func(t *testing.T, s GameSettings) {
+				if s.QoLSortPreset != "type" {
+					t.Errorf("Expected corrected QoLSortPreset 'type', got %s", s.QoLSortPreset)
+				}
+			},
+		},
+		{
+			name: "QoL settings valid unchanged",
+			settings: GameSettings{
+				MasterVolume:      0.7,
+				MusicVolume:       0.6,
+				SFXVolume:         0.8,
+				WindowWidth:       1280,
+				WindowHeight:      720,
+				GraphicsQuality:   "medium",
+				QoLAutoLootRadius: 8.0,
+				QoLSortPreset:     "rarity",
+			},
+			shouldFix: false,
+			checkFunc: func(t *testing.T, s GameSettings) {
+				if s.QoLAutoLootRadius != 8.0 {
+					t.Errorf("Valid QoLAutoLootRadius should not change, got %f", s.QoLAutoLootRadius)
+				}
+				if s.QoLSortPreset != "rarity" {
+					t.Errorf("Valid QoLSortPreset should not change, got %s", s.QoLSortPreset)
+				}
+			},
+		},
 	}
 
 	for _, tt := range tests {
@@ -251,18 +344,23 @@ func TestSettingsManager_SaveAndLoad(t *testing.T) {
 		settingsPath: filepath.Join(tempDir, "settings.json"),
 	}
 
-	// Create custom settings
+	// Create custom settings including QoL
 	customSettings := GameSettings{
-		MasterVolume:    0.5,
-		MusicVolume:     0.3,
-		SFXVolume:       0.9,
-		WindowWidth:     1920,
-		WindowHeight:    1080,
-		Fullscreen:      true,
-		GraphicsQuality: "high",
-		VSync:           false,
-		ShowFPS:         true,
-		ShowTutorials:   false,
+		MasterVolume:      0.5,
+		MusicVolume:       0.3,
+		SFXVolume:         0.9,
+		WindowWidth:       1920,
+		WindowHeight:      1080,
+		Fullscreen:        true,
+		GraphicsQuality:   "high",
+		VSync:             false,
+		ShowFPS:           true,
+		ShowTutorials:     false,
+		QoLAutoLoot:       false,
+		QoLAutoLootRadius: 9.0,
+		QoLMountWhistle:   false,
+		QoLRecipeTracking: false,
+		QoLSortPreset:     "value",
 	}
 	sm.settings = customSettings
 
@@ -298,6 +396,28 @@ func TestSettingsManager_SaveAndLoad(t *testing.T) {
 	if sm2.settings.GraphicsQuality != customSettings.GraphicsQuality {
 		t.Errorf("GraphicsQuality mismatch: expected %s, got %s",
 			customSettings.GraphicsQuality, sm2.settings.GraphicsQuality)
+	}
+
+	// Verify QoL settings persisted
+	if sm2.settings.QoLAutoLoot != customSettings.QoLAutoLoot {
+		t.Errorf("QoLAutoLoot mismatch: expected %v, got %v",
+			customSettings.QoLAutoLoot, sm2.settings.QoLAutoLoot)
+	}
+	if sm2.settings.QoLAutoLootRadius != customSettings.QoLAutoLootRadius {
+		t.Errorf("QoLAutoLootRadius mismatch: expected %f, got %f",
+			customSettings.QoLAutoLootRadius, sm2.settings.QoLAutoLootRadius)
+	}
+	if sm2.settings.QoLMountWhistle != customSettings.QoLMountWhistle {
+		t.Errorf("QoLMountWhistle mismatch: expected %v, got %v",
+			customSettings.QoLMountWhistle, sm2.settings.QoLMountWhistle)
+	}
+	if sm2.settings.QoLRecipeTracking != customSettings.QoLRecipeTracking {
+		t.Errorf("QoLRecipeTracking mismatch: expected %v, got %v",
+			customSettings.QoLRecipeTracking, sm2.settings.QoLRecipeTracking)
+	}
+	if sm2.settings.QoLSortPreset != customSettings.QoLSortPreset {
+		t.Errorf("QoLSortPreset mismatch: expected %s, got %s",
+			customSettings.QoLSortPreset, sm2.settings.QoLSortPreset)
 	}
 }
 

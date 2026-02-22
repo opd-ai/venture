@@ -409,3 +409,226 @@ func BenchmarkSetAudioManager(b *testing.B) {
 		game.SetAudioManager(audioManager)
 	}
 }
+
+// stubContextualTutorial is a test stub implementing ContextualTutorialProvider.
+type stubContextualTutorial struct {
+	enabled bool
+}
+
+func (s *stubContextualTutorial) Enable()         { s.enabled = true }
+func (s *stubContextualTutorial) Disable()        { s.enabled = false }
+func (s *stubContextualTutorial) IsEnabled() bool { return s.enabled }
+
+// TestApplySettings_ContextualTutorial tests that ShowTutorials setting is applied to ContextualTutorial.
+// This validates the Phase 3.3 implementation for context-sensitive help (TutorialManager).
+func TestApplySettings_ContextualTutorial(t *testing.T) {
+	tempDir := t.TempDir()
+	sm := &SettingsManager{
+		settings:     DefaultSettings(),
+		settingsPath: filepath.Join(tempDir, "settings.json"),
+	}
+
+	// Create contextual tutorial stub
+	contextualTutorial := &stubContextualTutorial{enabled: true}
+
+	game := &EbitenGame{
+		SettingsManager:    sm,
+		ContextualTutorial: contextualTutorial,
+	}
+
+	// Verify initial state (enabled)
+	if !contextualTutorial.IsEnabled() {
+		t.Error("Expected ContextualTutorial to be enabled initially")
+	}
+
+	// Disable tutorials via settings
+	settings := sm.GetSettings()
+	settings.ShowTutorials = false
+	sm.UpdateSettings(settings)
+
+	err := game.ApplySettings()
+	if err != nil {
+		t.Fatalf("ApplySettings failed: %v", err)
+	}
+
+	// Verify contextual tutorial was disabled
+	if contextualTutorial.IsEnabled() {
+		t.Error("Expected ContextualTutorial to be disabled after ShowTutorials=false")
+	}
+
+	// Re-enable tutorials via settings
+	settings.ShowTutorials = true
+	sm.UpdateSettings(settings)
+	err = game.ApplySettings()
+	if err != nil {
+		t.Fatalf("ApplySettings failed on re-enable: %v", err)
+	}
+
+	// Verify contextual tutorial was re-enabled
+	if !contextualTutorial.IsEnabled() {
+		t.Error("Expected ContextualTutorial to be re-enabled after ShowTutorials=true")
+	}
+}
+
+// TestApplySettings_OnboardingManager tests that ShowTutorials setting is applied to OnboardingManager.
+// This validates the Phase 3.3 implementation for coordinated tutorial control.
+func TestApplySettings_OnboardingManager(t *testing.T) {
+	tempDir := t.TempDir()
+	sm := &SettingsManager{
+		settings:     DefaultSettings(),
+		settingsPath: filepath.Join(tempDir, "settings.json"),
+	}
+
+	// Create onboarding manager
+	onboardingManager := NewOnboardingManager(nil)
+
+	game := &EbitenGame{
+		SettingsManager:   sm,
+		OnboardingManager: onboardingManager,
+	}
+
+	// Verify initial state (enabled)
+	if !onboardingManager.IsEnabled() {
+		t.Error("Expected OnboardingManager to be enabled initially")
+	}
+
+	// Disable tutorials via settings
+	settings := sm.GetSettings()
+	settings.ShowTutorials = false
+	sm.UpdateSettings(settings)
+
+	err := game.ApplySettings()
+	if err != nil {
+		t.Fatalf("ApplySettings failed: %v", err)
+	}
+
+	// Verify onboarding was disabled
+	if onboardingManager.IsEnabled() {
+		t.Error("Expected OnboardingManager to be disabled after ShowTutorials=false")
+	}
+
+	// Re-enable tutorials via settings
+	settings.ShowTutorials = true
+	sm.UpdateSettings(settings)
+	err = game.ApplySettings()
+	if err != nil {
+		t.Fatalf("ApplySettings failed on re-enable: %v", err)
+	}
+
+	// Verify onboarding was re-enabled
+	if !onboardingManager.IsEnabled() {
+		t.Error("Expected OnboardingManager to be re-enabled after ShowTutorials=true")
+	}
+}
+
+// TestSetContextualTutorial tests the SetContextualTutorial method applies settings immediately.
+func TestSetContextualTutorial(t *testing.T) {
+	tempDir := t.TempDir()
+	sm := &SettingsManager{
+		settings:     DefaultSettings(),
+		settingsPath: filepath.Join(tempDir, "settings.json"),
+	}
+
+	// Disable tutorials before setting contextual tutorial
+	settings := sm.GetSettings()
+	settings.ShowTutorials = false
+	sm.UpdateSettings(settings)
+
+	game := &EbitenGame{
+		SettingsManager: sm,
+	}
+
+	// Create contextual tutorial stub (enabled by default)
+	contextualTutorial := &stubContextualTutorial{enabled: true}
+
+	// Setting contextual tutorial should immediately apply the ShowTutorials setting
+	game.SetContextualTutorial(contextualTutorial)
+
+	// Verify contextual tutorial was disabled based on settings
+	if contextualTutorial.IsEnabled() {
+		t.Error("Expected ContextualTutorial to be disabled after SetContextualTutorial with ShowTutorials=false")
+	}
+}
+
+// TestApplySettings_AllTutorialSystems tests that all three tutorial layers are controlled together.
+// This is the comprehensive test for Phase 3.3 (PLAN.md).
+func TestApplySettings_AllTutorialSystems(t *testing.T) {
+	tempDir := t.TempDir()
+	sm := &SettingsManager{
+		settings:     DefaultSettings(),
+		settingsPath: filepath.Join(tempDir, "settings.json"),
+	}
+
+	// Create all tutorial systems
+	tutorialSystem := NewTutorialSystem()
+	charCreationTutorial := NewCharacterCreationTutorial()
+	contextualTutorial := &stubContextualTutorial{enabled: true}
+	onboardingManager := NewOnboardingManager(nil)
+
+	game := &EbitenGame{
+		SettingsManager:           sm,
+		TutorialSystem:            tutorialSystem,
+		CharacterCreationTutorial: charCreationTutorial,
+		ContextualTutorial:        contextualTutorial,
+		OnboardingManager:         onboardingManager,
+	}
+
+	// Verify all systems start enabled
+	if !tutorialSystem.Enabled {
+		t.Error("Expected TutorialSystem to be enabled initially")
+	}
+	if !charCreationTutorial.Enabled {
+		t.Error("Expected CharacterCreationTutorial to be enabled initially")
+	}
+	if !contextualTutorial.IsEnabled() {
+		t.Error("Expected ContextualTutorial to be enabled initially")
+	}
+	if !onboardingManager.IsEnabled() {
+		t.Error("Expected OnboardingManager to be enabled initially")
+	}
+
+	// Disable tutorials
+	settings := sm.GetSettings()
+	settings.ShowTutorials = false
+	sm.UpdateSettings(settings)
+	err := game.ApplySettings()
+	if err != nil {
+		t.Fatalf("ApplySettings failed: %v", err)
+	}
+
+	// Verify ALL systems were disabled
+	if tutorialSystem.Enabled {
+		t.Error("TutorialSystem should be disabled")
+	}
+	if charCreationTutorial.Enabled {
+		t.Error("CharacterCreationTutorial should be disabled")
+	}
+	if contextualTutorial.IsEnabled() {
+		t.Error("ContextualTutorial should be disabled")
+	}
+	if onboardingManager.IsEnabled() {
+		t.Error("OnboardingManager should be disabled")
+	}
+
+	// Re-enable tutorials
+	settings.ShowTutorials = true
+	sm.UpdateSettings(settings)
+	err = game.ApplySettings()
+	if err != nil {
+		t.Fatalf("ApplySettings failed on re-enable: %v", err)
+	}
+
+	// Verify ALL systems were re-enabled
+	if !tutorialSystem.Enabled {
+		t.Error("TutorialSystem should be re-enabled")
+	}
+	if !charCreationTutorial.Enabled {
+		t.Error("CharacterCreationTutorial should be re-enabled")
+	}
+	if !contextualTutorial.IsEnabled() {
+		t.Error("ContextualTutorial should be re-enabled")
+	}
+	if !onboardingManager.IsEnabled() {
+		t.Error("OnboardingManager should be re-enabled")
+	}
+}

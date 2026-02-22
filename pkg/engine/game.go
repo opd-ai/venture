@@ -56,6 +56,9 @@ type EbitenGame struct {
 	HelpSystem          *EbitenHelpSystem
 	MenuSystem          *EbitenMenuSystem
 
+	// Context-sensitive tutorial manager (Phase 3.3 - ShowTutorials wiring)
+	ContextualTutorial ContextualTutorialProvider
+
 	// UI systems
 	InventoryUI *EbitenInventoryUI
 	QuestUI     *EbitenQuestUI
@@ -456,6 +459,24 @@ func (g *EbitenGame) SetTutorialSystemForOnboarding(tutorialSystem *EbitenTutori
 	g.TutorialSystem = tutorialSystem
 	if g.OnboardingManager != nil {
 		g.OnboardingManager.SetTutorialSystem(tutorialSystem)
+	}
+}
+
+// SetContextualTutorial sets the context-sensitive tutorial manager.
+// Phase 3.3: Wires ShowTutorials setting to TutorialManager from pkg/rendering/ui.
+func (g *EbitenGame) SetContextualTutorial(provider ContextualTutorialProvider) {
+	g.ContextualTutorial = provider
+
+	// Apply current ShowTutorials setting immediately
+	if g.SettingsManager != nil {
+		settings := g.SettingsManager.GetSettings()
+		if provider != nil {
+			if settings.ShowTutorials {
+				provider.Enable()
+			} else {
+				provider.Disable()
+			}
+		}
 	}
 }
 
@@ -1895,12 +1916,24 @@ func (g *EbitenGame) ApplySettings() error {
 	}
 
 	// Apply ShowTutorials setting to active tutorial systems (Task 3.3 from PLAN.md)
+	// Wire all three tutorial layers: EbitenTutorialSystem, CharacterCreationTutorial, ContextualTutorial
 	if g.TutorialSystem != nil {
 		g.TutorialSystem.Enabled = settings.ShowTutorials
 		g.TutorialSystem.ShowUI = settings.ShowTutorials
 	}
 	if g.CharacterCreationTutorial != nil {
 		g.CharacterCreationTutorial.SetEnabled(settings.ShowTutorials)
+	}
+	if g.ContextualTutorial != nil {
+		if settings.ShowTutorials {
+			g.ContextualTutorial.Enable()
+		} else {
+			g.ContextualTutorial.Disable()
+		}
+	}
+	// Wire OnboardingManager to coordinate all tutorial systems
+	if g.OnboardingManager != nil {
+		g.OnboardingManager.SetEnabled(settings.ShowTutorials)
 	}
 
 	// Graphics quality and ShowFPS are informational for now

@@ -635,3 +635,22 @@ type VRControllerAdapter interface {
 	// SetHaptic triggers haptic feedback
 	SetHaptic(hand string, intensity, duration float64)
 }
+
+// ContextualTutorialProvider manages context-sensitive tutorial popups.
+// This interface allows the game to control tutorial visibility based on
+// settings without creating circular imports with rendering/ui package.
+//
+// Implementations:
+//   - TutorialManager (pkg/rendering/ui/tutorial.go): Production implementation
+//
+// Phase 3.3 (PLAN.md): ShowTutorials Setting Wiring
+type ContextualTutorialProvider interface {
+	// Enable enables tutorial popups
+	Enable()
+
+	// Disable disables tutorial popups
+	Disable()
+
+	// IsEnabled returns tutorial enabled state
+	IsEnabled() bool
+}

@@ -13,9 +13,9 @@ This report consolidates 110 individual audit files across all packages in the V
 | Severity | Open Issues |
 |----------|-------------|
 | High     | 1           |
-| Medium   | ~48         |
-| Low      | ~146        |
-| **Total**| **~195**    |
+| Medium   | ~47         |
+| Low      | ~143        |
+| **Total**| **~191**    |
 
 **Historical totals (including fixed):** ~32 High, ~95 Medium, ~227 Low issues were identified across all audits. The vast majority have been resolved, resulting in an overall codebase health status of **Good**.
 
@@ -24,7 +24,7 @@ This report consolidates 110 individual audit files across all packages in the V
 **Remaining issues** fall into three categories:
 - *Documentation inconsistencies:* doc examples using non-deterministic seeding or `log.Fatal` instead of logrus (~14 packages)
 - *API consistency gaps:* missing godoc on some exported symbols (~17 packages)
-- *Integration gaps:* (prestige, modding, QoL, companion_housing, and housing_crafting system integration gaps resolved 2026-02-22)
+- *Integration gaps:* (prestige, modding, QoL, companion_housing, housing_crafting, and guild_housing system integration gaps resolved 2026-02-22)
 
 ---
 
@@ -330,9 +330,9 @@ This report consolidates 110 individual audit files across all packages in the V
 ### pkg/integration/guild_housing — Guild Housing Integration
 - **Source:** `pkg/integration/guild_housing/AUDIT.md`
 - **High Issues:** 0
-- **Medium Issues:** 1
-- **Low Issues:** 2
-- **Details:** 93.2% coverage; all `time.Now()` violations resolved via `TimeProvider`. `Permission.Valid()` method lacks godoc comment. `CreateMeetingHall` does not store the hall in the manager's internal state. `AddMemberToHall` and `RemoveMemberFromHall` do not validate nil hall parameters.
+- **Medium Issues:** 0 (1 fixed)
+- **Low Issues:** 0 (2 fixed)
+- **Details:** 93.7% coverage; all `time.Now()` violations resolved via `TimeProvider`. **RESOLVED 2026-02-22**: `Permission.Valid()` method now has comprehensive godoc comment. `CreateMeetingHall` now stores halls in manager via `halls` map with `GetMeetingHall(hallID)` and `GetMeetingHallsByGuild(guildID)` retrieval methods. `AddMemberToHall` and `RemoveMemberFromHall` now validate nil hall parameters.
 
 ---
 

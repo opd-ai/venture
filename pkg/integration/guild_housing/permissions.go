@@ -18,7 +18,9 @@ const (
 	PermissionAdmin                    // Full control
 )
 
-// Valid returns true if the permission value is within the defined range (0-4).
+// Valid reports whether the permission value is within the defined range.
+// A permission is valid if it is between PermissionNone (0) and PermissionAdmin (4) inclusive.
+// This method is used to validate permission values before applying them to guild house access control.
 func (p Permission) Valid() bool {
 	return p >= PermissionNone && p <= PermissionAdmin
 }

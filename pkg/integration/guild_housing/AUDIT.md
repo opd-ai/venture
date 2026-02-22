@@ -29,11 +29,11 @@ The guild_housing package provides a well-structured integration layer between V
 (None)
 
 ### Medium Severity
-- [ ] **Doc coverage** — `Permission.Valid()` method lacks godoc comment (`permissions.go:22`)
+- [x] **Doc coverage** — ~~`Permission.Valid()` method lacks godoc comment (`permissions.go:22`)~~ **RESOLVED 2026-02-22**: Comprehensive godoc comment added explaining the permission validation range and usage.
 
 ### Low Severity
-- [ ] **API consistency** — `CreateMeetingHall` does not store hall in manager's internal state; hall is returned but not persisted in manager for lookup (`guild_housing_manager.go:559-585`)
-- [ ] **Error handling** — `AddMemberToHall` and `RemoveMemberFromHall` do not validate nil hall parameter, could panic (`guild_housing_manager.go:588-617`)
+- [x] **API consistency** — ~~`CreateMeetingHall` does not store hall in manager's internal state; hall is returned but not persisted in manager for lookup (`guild_housing_manager.go:559-585`)~~ **RESOLVED 2026-02-22**: Added `halls` map to Manager struct; `CreateMeetingHall` now stores halls in manager. Added `GetMeetingHall(hallID)` and `GetMeetingHallsByGuild(guildID)` methods for retrieval. Halls are persisted via Save/Load.
+- [x] **Error handling** — ~~`AddMemberToHall` and `RemoveMemberFromHall` do not validate nil hall parameter, could panic (`guild_housing_manager.go:588-617`)~~ **RESOLVED 2026-02-22**: Added nil checks to both methods. `AddMemberToHall` returns error, `RemoveMemberFromHall` returns early without action.
 
 ## Input Integration
 | Input Source | Status | Notes |
@@ -51,14 +51,14 @@ The guild_housing package provides a well-structured integration layer between V
 | Guild UI | N/A | N/A | ✅ | This package provides backend data; Guild UI in `pkg/engine/guild_ui.go` consumes Manager |
 
 ## Test Coverage
-**Coverage**: 93.2% (target: 65%) ✅
+**Coverage**: 93.7% (target: 65%) ✅
 - Missing test areas: None significant
 - Missing benchmarks: None (6 benchmarks present: CreateGuildHouse, CheckPermission, DepositItem, WithdrawItem, GetUpgradeBonus, AddMemberToHall)
 - Table-driven test compliance: ✅ Comprehensive table-driven tests throughout
 
 ## Documentation Coverage
 - Package `doc.go`: ✅ Present with comprehensive overview, features, usage examples, and integration notes
-- Exported symbols documented: 37/38 (97%) - Missing: `Permission.Valid()` method
+- Exported symbols documented: 40/40 (100%)
 - Complex algorithms commented: ✅ Capacity handling in DepositItem, permission hierarchy clearly documented
 
 ## Integration Status
@@ -78,6 +78,6 @@ How this package connects to engine, client, server:
 | Mobile | ✅ | No platform-specific imports; pure Go data structures |
 
 ## Recommendations
-1. **[MED]** Add godoc comment to `Permission.Valid()` method (`permissions.go:22`)
-2. **[LOW]** Consider storing `MeetingHall` in manager's internal map for consistent lookup patterns
-3. **[LOW]** Add nil checks to `AddMemberToHall`/`RemoveMemberFromHall` to prevent potential panics
+1. ~~**[MED]** Add godoc comment to `Permission.Valid()` method (`permissions.go:22`)~~ **COMPLETED 2026-02-22**
+2. ~~**[LOW]** Consider storing `MeetingHall` in manager's internal map for consistent lookup patterns~~ **COMPLETED 2026-02-22**: Added `halls` map, `GetMeetingHall()` and `GetMeetingHallsByGuild()` methods
+3. ~~**[LOW]** Add nil checks to `AddMemberToHall`/`RemoveMemberFromHall` to prevent potential panics~~ **COMPLETED 2026-02-22**

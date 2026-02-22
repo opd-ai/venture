@@ -848,6 +848,80 @@ func TestRemoveMemberFromHall(t *testing.T) {
 	}
 }
 
+func TestGetMeetingHall(t *testing.T) {
+	manager := NewManager()
+	hall, err := manager.CreateMeetingHall("guild-001", 50)
+	if err != nil {
+		t.Fatalf("CreateMeetingHall() error = %v", err)
+	}
+
+	// Retrieve the hall by ID
+	retrieved, err := manager.GetMeetingHall(hall.HallID)
+	if err != nil {
+		t.Fatalf("GetMeetingHall() error = %v", err)
+	}
+	if retrieved.GuildID != "guild-001" {
+		t.Errorf("GuildID = %v, want %v", retrieved.GuildID, "guild-001")
+	}
+	if retrieved.MaxCapacity != 50 {
+		t.Errorf("MaxCapacity = %v, want 50", retrieved.MaxCapacity)
+	}
+
+	// Test non-existent hall
+	_, err = manager.GetMeetingHall("nonexistent")
+	if err == nil {
+		t.Error("GetMeetingHall() expected error for nonexistent hall")
+	}
+}
+
+func TestGetMeetingHallsByGuild(t *testing.T) {
+	manager := NewManager()
+
+	// Create multiple halls for different guilds
+	_, _ = manager.CreateMeetingHall("guild-001", 50)
+	_, _ = manager.CreateMeetingHall("guild-001", 100)
+	_, _ = manager.CreateMeetingHall("guild-002", 25)
+
+	// Get halls for guild-001
+	halls := manager.GetMeetingHallsByGuild("guild-001")
+	if len(halls) != 2 {
+		t.Errorf("GetMeetingHallsByGuild() count = %v, want 2", len(halls))
+	}
+
+	// Get halls for guild-002
+	halls = manager.GetMeetingHallsByGuild("guild-002")
+	if len(halls) != 1 {
+		t.Errorf("GetMeetingHallsByGuild() count = %v, want 1", len(halls))
+	}
+
+	// Get halls for non-existent guild
+	halls = manager.GetMeetingHallsByGuild("nonexistent")
+	if len(halls) != 0 {
+		t.Errorf("GetMeetingHallsByGuild() count = %v, want 0", len(halls))
+	}
+}
+
+func TestAddMemberToHallNil(t *testing.T) {
+	manager := NewManager()
+
+	// Test nil hall parameter
+	err := manager.AddMemberToHall(nil, "player-001")
+	if err == nil {
+		t.Error("AddMemberToHall() expected error for nil hall")
+	}
+	if err != nil && !strings.Contains(err.Error(), "hall cannot be nil") {
+		t.Errorf("AddMemberToHall() error = %v, want error containing 'hall cannot be nil'", err)
+	}
+}
+
+func TestRemoveMemberFromHallNil(t *testing.T) {
+	manager := NewManager()
+
+	// Test nil hall parameter - should not panic
+	manager.RemoveMemberFromHall(nil, "player-001")
+	// If we reach here without panic, the test passes
+}
+
 func TestSaveLoad(t *testing.T) {
 	manager := NewManager()
 	size := housing.SizeMedium
@@ -856,6 +930,8 @@ func TestSaveLoad(t *testing.T) {
 	house2, _ := manager.CreateGuildHouse("guild-002", "player-002", size)
 	storage, _ := manager.CreateGuildStorage("guild-001", 500)
 	manager.DepositItem(storage.StorageID, "player-001", "item-001", 10)
+	hall, _ := manager.CreateMeetingHall("guild-001", 50)
+	manager.AddMemberToHall(hall, "player-001")
 
 	data, err := manager.Save()
 	if err != nil {
@@ -890,6 +966,21 @@ func TestSaveLoad(t *testing.T) {
 	}
 	if loadedStorage.GuildID != "guild-001" {
 		t.Errorf("loaded storage GuildID = %v, want %v", loadedStorage.GuildID, "guild-001")
+	}
+
+	// Test hall persistence
+	loadedHall, err := newManager.GetMeetingHall(hall.HallID)
+	if err != nil {
+		t.Fatalf("GetMeetingHall() error = %v", err)
+	}
+	if loadedHall.GuildID != "guild-001" {
+		t.Errorf("loaded hall GuildID = %v, want %v", loadedHall.GuildID, "guild-001")
+	}
+	if loadedHall.MaxCapacity != 50 {
+		t.Errorf("loaded hall MaxCapacity = %v, want 50", loadedHall.MaxCapacity)
+	}
+	if len(loadedHall.Members) != 1 {
+		t.Errorf("loaded hall Members count = %v, want 1", len(loadedHall.Members))
 	}
 }
 

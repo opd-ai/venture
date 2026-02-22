@@ -33,6 +33,7 @@ func validateID(fieldName, value string) error {
 type Manager struct {
 	houses  map[string]*GuildHouse
 	storage map[string]*GuildStorage
+	halls   map[string]*MeetingHall
 	mu      sync.RWMutex
 }
 
@@ -41,6 +42,7 @@ func NewManager() *Manager {
 	return &Manager{
 		houses:  make(map[string]*GuildHouse),
 		storage: make(map[string]*GuildStorage),
+		halls:   make(map[string]*MeetingHall),
 	}
 }
 
@@ -556,6 +558,7 @@ func (m *Manager) GetUpgradeBonus(houseID string) (float64, error) {
 
 // CreateMeetingHall creates a meeting hall for a guild house.
 // Returns an error if guildID is empty or maxCapacity is not positive.
+// The created hall is stored in the manager's internal state for lookup via GetMeetingHall.
 func (m *Manager) CreateMeetingHall(guildID string, maxCapacity int) (*MeetingHall, error) {
 	if err := validateID("guildID", guildID); err != nil {
 		logger.WithFields(logrus.Fields{
@@ -573,6 +576,9 @@ func (m *Manager) CreateMeetingHall(guildID string, maxCapacity int) (*MeetingHa
 		return nil, err
 	}
 
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
 	hall := &MeetingHall{
 		HallID:      fmt.Sprintf("hall-%s-%d", guildID, now().UnixNano()),
 		GuildID:     guildID,
@@ -581,11 +587,47 @@ func (m *Manager) CreateMeetingHall(guildID string, maxCapacity int) (*MeetingHa
 		Members:     []string{},
 		CreatedAt:   now(),
 	}
+	m.halls[hall.HallID] = hall
 	return hall, nil
 }
 
+// GetMeetingHall retrieves a meeting hall by ID.
+func (m *Manager) GetMeetingHall(hallID string) (*MeetingHall, error) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
+	hall, exists := m.halls[hallID]
+	if !exists {
+		err := fmt.Errorf("meeting hall not found: %s", hallID)
+		logger.WithFields(logrus.Fields{
+			"hallID": hallID,
+		}).Warn(err.Error())
+		return nil, err
+	}
+	return hall, nil
+}
+
+// GetMeetingHallsByGuild returns all meeting halls for a guild.
+func (m *Manager) GetMeetingHallsByGuild(guildID string) []*MeetingHall {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
+	var halls []*MeetingHall
+	for _, hall := range m.halls {
+		if hall.GuildID == guildID {
+			halls = append(halls, hall)
+		}
+	}
+	return halls
+}
+
 // AddMemberToHall adds a member to the meeting hall.
+// Returns an error if hall is nil, at capacity, or the player is already present.
 func (m *Manager) AddMemberToHall(hall *MeetingHall, playerID string) error {
+	if hall == nil {
+		return fmt.Errorf("hall cannot be nil")
+	}
+
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -604,7 +646,12 @@ func (m *Manager) AddMemberToHall(hall *MeetingHall, playerID string) error {
 }
 
 // RemoveMemberFromHall removes a member from the meeting hall.
+// If hall is nil, the function returns without action.
 func (m *Manager) RemoveMemberFromHall(hall *MeetingHall, playerID string) {
+	if hall == nil {
+		return
+	}
+
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -623,6 +670,7 @@ func (m *Manager) RemoveMemberFromHall(hall *MeetingHall, playerID string) {
 type managerState struct {
 	Houses  map[string]*GuildHouse   `json:"houses"`
 	Storage map[string]*GuildStorage `json:"storage"`
+	Halls   map[string]*MeetingHall  `json:"halls,omitempty"`
 }
 
 // Save serializes the manager state to JSON.
@@ -633,6 +681,7 @@ func (m *Manager) Save() ([]byte, error) {
 	state := managerState{
 		Houses:  m.houses,
 		Storage: m.storage,
+		Halls:   m.halls,
 	}
 
 	return json.Marshal(state)
@@ -658,6 +707,9 @@ func (m *Manager) Load(data []byte) error {
 	}
 	if state.Storage != nil {
 		m.storage = state.Storage
+	}
+	if state.Halls != nil {
+		m.halls = state.Halls
 	}
 
 	return nil

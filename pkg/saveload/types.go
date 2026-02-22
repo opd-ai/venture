@@ -135,6 +135,10 @@ type PlayerState struct {
 
 	// Phase 114: NG+ Reward persistence (V22.0)
 	NGPlusRewardData *NGPlusRewardStateData `json:"ngplus_reward_data,omitempty"`
+
+	// QoL preferences persistence (AUDIT.md fix)
+	// Allows player QoL settings (auto-loot, craft queue, sort preset, etc.) to persist across saves
+	QoLData *QoLStateData `json:"qol_data,omitempty"`
 }
 
 // TutorialStateData represents saved tutorial progress
@@ -318,6 +322,25 @@ type NGPlusRewardStateData struct {
 	NoDeathRunProgressJSON []byte `json:"no_death_run_progress_json,omitempty"`
 	// NPCDialogVariationsUnlocked tracks unlocked dialog variations
 	NPCDialogVariationsUnlocked []string `json:"npc_dialog_variations_unlocked,omitempty"`
+}
+
+// QoLStateData represents saved QoL (Quality of Life) preferences.
+// AUDIT.md fix: Allows player QoL settings to persist across saves/loads.
+type QoLStateData struct {
+	// PlayerID for the player entity
+	PlayerID uint64 `json:"player_id"`
+	// AutoLootEnabled toggles automatic item collection
+	AutoLootEnabled bool `json:"auto_loot_enabled"`
+	// AutoLootRadius is the collection radius in tiles
+	AutoLootRadius float64 `json:"auto_loot_radius"`
+	// CraftQueue is the list of recipes in the crafting queue (serialized as JSON)
+	CraftQueueJSON []byte `json:"craft_queue_json,omitempty"`
+	// SortPreset is the selected inventory sort preset name
+	SortPreset string `json:"sort_preset,omitempty"`
+	// MountWhistle enables one-button mount summoning
+	MountWhistle bool `json:"mount_whistle"`
+	// RecipeTracking enables recipe ingredient tracking UI
+	RecipeTracking bool `json:"recipe_tracking"`
 }
 
 // INTEGRATION FIX [Category D]: V8/V9 Save Data Types

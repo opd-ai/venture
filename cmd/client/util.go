@@ -4,6 +4,7 @@
 package main
 
 import (
+	"encoding/json"
 	"errors"
 	"flag"
 	"fmt"
@@ -17,6 +18,7 @@ import (
 
 	"github.com/opd-ai/venture/pkg/config"
 	"github.com/opd-ai/venture/pkg/engine"
+	"github.com/opd-ai/venture/pkg/engine/qol"
 	"github.com/opd-ai/venture/pkg/hostplay"
 	"github.com/opd-ai/venture/pkg/logging"
 	"github.com/opd-ai/venture/pkg/network"
@@ -1495,6 +1497,7 @@ func serializePlayerState(player *engine.Entity, game *engine.EbitenGame) *savel
 	serializeTutorialState(game, playerState)
 	serializeOnboardingState(game, playerState)
 	serializeContextTutorialState(game, playerState)
+	serializeQoLState(player, playerState)
 
 	playerState.Speed = 1.0
 	return playerState
@@ -1651,6 +1654,7 @@ func deserializePlayerState(player *engine.Entity, playerState *saveload.PlayerS
 	deserializeTutorialState(game, playerState)
 	deserializeOnboardingState(game, playerState)
 	deserializeContextTutorialState(game, playerState)
+	deserializeQoLState(player, playerState)
 }
 
 // deserializePosition restores player position from state.
@@ -1804,6 +1808,75 @@ func deserializeContextTutorialState(game *engine.EbitenGame, state *saveload.Pl
 			ViewedTopics: state.ContextTutorialState.ViewedTopics,
 		}
 		game.ContextualTutorial.ImportState(data)
+	}
+}
+
+// serializeQoLState extracts QoL preferences to state.
+// AUDIT.md fix: Allows QoL settings to persist across saves/loads.
+func serializeQoLState(player *engine.Entity, state *saveload.PlayerState) {
+	qolComp, ok := player.GetComponent("qol")
+	if !ok {
+		return
+	}
+	q, ok := qolComp.(*qol.QoLComponent)
+	if !ok {
+		return
+	}
+
+	// Serialize craft queue to JSON
+	var craftQueueJSON []byte
+	if len(q.CraftQueue) > 0 {
+		craftQueueJSON, _ = json.Marshal(q.CraftQueue)
+	}
+
+	state.QoLData = &saveload.QoLStateData{
+		PlayerID:        q.PlayerID,
+		AutoLootEnabled: q.AutoLootEnabled,
+		AutoLootRadius:  q.AutoLootRadius,
+		CraftQueueJSON:  craftQueueJSON,
+		SortPreset:      q.SortPreset,
+		MountWhistle:    q.MountWhistle,
+		RecipeTracking:  q.RecipeTracking,
+	}
+}
+
+// deserializeQoLState restores QoL preferences from state.
+// AUDIT.md fix: Restores QoL settings after load.
+func deserializeQoLState(player *engine.Entity, state *saveload.PlayerState) {
+	if state.QoLData == nil {
+		return
+	}
+
+	// Get or create QoL component
+	qolComp, ok := player.GetComponent("qol")
+	var q *qol.QoLComponent
+	if ok {
+		q, ok = qolComp.(*qol.QoLComponent)
+		if !ok {
+			return
+		}
+	} else {
+		// Create new QoL component if it doesn't exist
+		q = &qol.QoLComponent{
+			PlayerID: player.ID,
+		}
+		player.AddComponent(q)
+	}
+
+	// Restore QoL settings
+	q.PlayerID = state.QoLData.PlayerID
+	q.AutoLootEnabled = state.QoLData.AutoLootEnabled
+	q.AutoLootRadius = state.QoLData.AutoLootRadius
+	q.SortPreset = state.QoLData.SortPreset
+	q.MountWhistle = state.QoLData.MountWhistle
+	q.RecipeTracking = state.QoLData.RecipeTracking
+
+	// Deserialize craft queue from JSON
+	if len(state.QoLData.CraftQueueJSON) > 0 {
+		var craftQueue []*qol.CraftQueueEntry
+		if err := json.Unmarshal(state.QoLData.CraftQueueJSON, &craftQueue); err == nil {
+			q.CraftQueue = craftQueue
+		}
 	}
 }
 

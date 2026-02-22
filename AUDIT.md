@@ -13,9 +13,9 @@ This report consolidates 110 individual audit files across all packages in the V
 | Severity | Open Issues |
 |----------|-------------|
 | High     | 1           |
-| Medium   | ~67         |
+| Medium   | ~66         |
 | Low      | ~165        |
-| **Total**| **~233**    |
+| **Total**| **~232**    |
 
 **Historical totals (including fixed):** ~32 High, ~95 Medium, ~225 Low issues were identified across all audits. The vast majority have been resolved, resulting in an overall codebase health status of **Good**.
 
@@ -24,7 +24,7 @@ This report consolidates 110 individual audit files across all packages in the V
 **Remaining issues** fall into three categories:
 - *Documentation inconsistencies:* doc examples using non-deterministic seeding or `log.Fatal` instead of logrus (~15 packages)
 - *API consistency gaps:* missing godoc on some exported symbols, deprecated systems still exported (~20 packages)
-- *Integration gaps:* QoL preferences not persisted across sessions (prestige and modding system integration gaps resolved 2026-02-22)
+- *Integration gaps:* (prestige, modding, and QoL system integration gaps resolved 2026-02-22)
 
 ---
 
@@ -276,9 +276,9 @@ This report consolidates 110 individual audit files across all packages in the V
 ### pkg/engine/qol — Quality of Life Features
 - **Source:** `pkg/engine/qol/AUDIT.md`
 - **High Issues:** 0
-- **Medium Issues:** 1
+- **Medium Issues:** 0 (1 fixed)
 - **Low Issues:** 3
-- **Details:** 94.0% coverage; auto-loot, craft queues, guild invitations, mount whistles, storage sorting, and recipe tracking are all thread-safe. `QoLComponent` implements `Serialize/Deserialize` but is not registered in the save/load system—player preferences are lost on restart. QoL settings have no integration with the Settings UI. Benchmark causes excessive "queue full" log warnings.
+- **Details:** 94.0% coverage; auto-loot, craft queues, guild invitations, mount whistles, storage sorting, and recipe tracking are all thread-safe. **RESOLVED 2026-02-22**: `QoLComponent` save/load now wired via `QoLStateData` in `pkg/saveload/types.go:PlayerState`. Player QoL preferences now persist across sessions. Remaining: QoL settings have no integration with the Settings UI. Benchmark causes excessive "queue full" log warnings.
 
 ---
 
@@ -1057,7 +1057,7 @@ The following medium-priority issues appear across multiple packages and should 
 
 **Integration Gaps:**
 - ~~`pkg/engine/prestige`: Server-side prestige system not registered—prestige data will not sync in multiplayer~~ **RESOLVED 2026-02-22**: Prestige system now registered in `cmd/server/main.go` via `prestigeSystemWrapper` for multiplayer synchronization
-- `pkg/engine/qol`: `QoLComponent` save/load not wired—player QoL preferences lost on restart
+- ~~`pkg/engine/qol`: `QoLComponent` save/load not wired—player QoL preferences lost on restart~~ **RESOLVED 2026-02-22**: Added `QoLStateData` to `pkg/saveload/types.go:PlayerState`, wired serialize/deserialize in `cmd/client/util.go`, and QoLComponent added to player entities in `cmd/client/handlers.go:addPlayerComponents()`
 - ~~`pkg/modding`: `modManager` in `cmd/server/main.go` discarded immediately~~ **RESOLVED 2026-02-22**: ModManager now wired to World via ProviderAdapter implementing engine.ModRuleProvider
 
 **API & Documentation Inconsistencies:**
@@ -1124,8 +1124,8 @@ The following patterns affect multiple packages and represent systemic concerns:
 **Pattern:** Systems marked `@deprecated` remain in the public API and are still tested. They should either be removed from exports or receive proper replacement documentation with migration guides.
 
 ### 7. Missing Serialize/Deserialize on Persisted Components
-**Affected:** `pkg/class/advanced` (`AdvancedClassComponent`), `pkg/engine/qol` (`QoLComponent`), `pkg/integration/housing_crafting` (`CraftingStation`, `SkillTrainingFacility`)
-**Pattern:** Several components that represent persistent player data (class configuration, QoL preferences, crafting station state) implement `Type() string` correctly but lack `Serialize()`/`Deserialize()` methods, meaning their data is lost across sessions.
+**Affected:** `pkg/class/advanced` (`AdvancedClassComponent`), ~~`pkg/engine/qol` (`QoLComponent`)~~ (**RESOLVED 2026-02-22**), `pkg/integration/housing_crafting` (`CraftingStation`, `SkillTrainingFacility`)
+**Pattern:** Several components that represent persistent player data (class configuration, crafting station state) implement `Type() string` correctly but lack `Serialize()`/`Deserialize()` methods, meaning their data is lost across sessions. Note: `QoLComponent` now has save/load integration.
 
 ### 8. System Registration Inconsistency
 **Affected:** `pkg/integration` (all sub-packages), `pkg/engine/prestige`, `pkg/engine/qol`

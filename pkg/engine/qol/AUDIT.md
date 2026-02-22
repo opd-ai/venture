@@ -23,7 +23,7 @@ The `pkg/engine/qol` package provides Quality of Life features including auto-lo
 _None identified._
 
 ### Medium Severity
-- [ ] **Missing QoLComponent save/load registration** — QoLComponent implements Serialize/Deserialize but is not registered in save/load system for persistence (`types.go:144-170`). Player QoL preferences will not persist across sessions.
+- [x] **Missing QoLComponent save/load registration** — QoLComponent implements Serialize/Deserialize but is not registered in save/load system for persistence (`types.go:144-170`). Player QoL preferences will not persist across sessions. **RESOLVED 2026-02-22**: Added `QoLStateData` to `pkg/saveload/types.go:PlayerState`, added `serializeQoLState`/`deserializeQoLState` functions to `cmd/client/util.go`, and QoLComponent is now added to player entities in `cmd/client/handlers.go:addPlayerComponents()`.
 
 ### Low Severity
 - [ ] **Benchmark log spam** — CraftQueueManager benchmark causes excessive "queue full" log warnings due to not clearing queue between iterations (`manager_test.go:634-640`). Consider adding queue clear or using unique player IDs.
@@ -60,8 +60,8 @@ _None identified._
 
 ## Integration Status
 - **System registration**: ✅ — QoLSystemWrapper registered in `cmd/client/handlers.go:1375` via `game.World.AddSystem(sys.qolSystem)`
-- **Component registration**: ❌ — QoLComponent defines Type() "qol" but is not registered in entity persistence system
-- **Serialize/Deserialize**: ⚠️ — QoLComponent implements Serialize/Deserialize but is not wired to save/load system
+- **Component registration**: ✅ — QoLComponent added to player entities in `addPlayerComponents()` (RESOLVED 2026-02-22)
+- **Serialize/Deserialize**: ✅ — QoLComponent wired to save/load system via `QoLStateData` in `pkg/saveload/types.go` (RESOLVED 2026-02-22)
 - **Network sync**: N/A — QoL state is client-local (player preferences)
 - **Genre theming**: N/A — QoL features are genre-agnostic
 - **Mod compatibility**: N/A — QoL settings are not moddable
@@ -74,7 +74,7 @@ _None identified._
 | Mobile | ✅ | No platform-specific code; thread-safe for all platforms |
 
 ## Recommendations
-1. **[MED]** Register QoLComponent in save/load system to persist player preferences across sessions. Add to `pkg/saveload/` component registry.
+1. ~~**[MED]** Register QoLComponent in save/load system to persist player preferences across sessions. Add to `pkg/saveload/` component registry.~~ **RESOLVED 2026-02-22**
 2. **[LOW]** Fix benchmark log spam by using unique player IDs per benchmark iteration or clearing queue state.
 3. **[LOW]** Add QoL settings section to Settings UI for player-configurable auto-loot, sorting, and queue preferences.
 4. **[LOW]** Consider adding QoL system to server for authoritative craft queue validation in multiplayer.

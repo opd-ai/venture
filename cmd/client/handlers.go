@@ -2790,6 +2790,16 @@ func addPlayerComponents(player *engine.Entity, logger *logrus.Logger, clientLog
 	// Add adaptive soundtrack component for dynamic music (Phase 29)
 	player.AddComponent(engine.NewAdaptiveSoundtrackComponent(*genreID))
 
+	// Add QoL component for quality of life features persistence (AUDIT.md fix)
+	player.AddComponent(&qol.QoLComponent{
+		PlayerID:        player.ID,
+		AutoLootEnabled: true,
+		AutoLootRadius:  7.0,
+		SortPreset:      "default",
+		MountWhistle:    false,
+		RecipeTracking:  false,
+	})
+
 	// Add starter items
 	clientLogger.Info("adding starter items to inventory")
 	addStarterItems(playerInventory, *seed, *genreID, logger)

@@ -8,6 +8,7 @@ import (
 	"math"
 	"math/rand"
 
+	"github.com/opd-ai/venture/pkg/procgen"
 	"github.com/opd-ai/venture/pkg/rendering/palette"
 	"github.com/sirupsen/logrus"
 )
@@ -37,8 +38,10 @@ func NewGeneratorWithLogger(logger *logrus.Logger) *Generator {
 	}
 }
 
-// Generate creates a single environmental object.
-func (g *Generator) Generate(config Config) (*EnvironmentalObject, error) {
+// GenerateFromConfig creates a single environmental object using a Config.
+// This method is the original generation method that provides type-safe access
+// to the generated EnvironmentalObject.
+func (g *Generator) GenerateFromConfig(config Config) (*EnvironmentalObject, error) {
 	g.logDebug("generating environmental object", logrus.Fields{
 		"subType": config.SubType,
 		"genreID": config.GenreID,
@@ -1202,3 +1205,92 @@ func (g *Generator) logError(msg string, err error, fields ...logrus.Fields) {
 		entry.Error(msg)
 	}
 }
+
+// Generate implements the procgen.Generator interface.
+// It creates an environmental object based on the seed and generation parameters.
+// Custom parameters supported:
+//   - "subType" (int or SubType): The SubType to generate (default: SubTypeTable)
+//   - "width" (int): Width of the sprite in pixels (default: 32)
+//   - "height" (int): Height of the sprite in pixels (default: 32)
+func (g *Generator) Generate(seed int64, params procgen.GenerationParams) (interface{}, error) {
+	g.logDebug("generating with params", logrus.Fields{
+		"seed":       seed,
+		"genreID":    params.GenreID,
+		"difficulty": params.Difficulty,
+		"depth":      params.Depth,
+	})
+
+	// Validate generation params
+	if err := procgen.ValidateParams(params); err != nil {
+		return nil, fmt.Errorf("invalid generation params: %w", err)
+	}
+
+	// Build config from params
+	config := DefaultConfig()
+	config.Seed = seed
+	config.GenreID = params.GenreID
+
+	// Extract custom parameters
+	if params.Custom != nil {
+		// SubType
+		if st, ok := params.Custom["subType"].(SubType); ok {
+			config.SubType = st
+		} else if sti, ok := params.Custom["subType"].(int); ok {
+			config.SubType = SubType(sti)
+		}
+
+		// Width
+		if w, ok := params.Custom["width"].(int); ok && w > 0 {
+			config.Width = w
+		}
+
+		// Height
+		if h, ok := params.Custom["height"].(int); ok && h > 0 {
+			config.Height = h
+		}
+
+		// Copy other custom params
+		config.Custom = params.Custom
+	}
+
+	// Generate using the config-based method
+	return g.GenerateFromConfig(config)
+}
+
+// Validate implements the procgen.Generator interface.
+// It checks if the generated environmental object is valid.
+func (g *Generator) Validate(result interface{}) error {
+	obj, ok := result.(*EnvironmentalObject)
+	if !ok {
+		return fmt.Errorf("invalid result type: expected *EnvironmentalObject, got %T", result)
+	}
+
+	if obj == nil {
+		return fmt.Errorf("environmental object is nil")
+	}
+
+	if obj.Sprite == nil {
+		return fmt.Errorf("environmental object has nil sprite")
+	}
+
+	if obj.Width <= 0 {
+		return fmt.Errorf("environmental object has invalid width: %d", obj.Width)
+	}
+
+	if obj.Height <= 0 {
+		return fmt.Errorf("environmental object has invalid height: %d", obj.Height)
+	}
+
+	if obj.GenreID == "" {
+		return fmt.Errorf("environmental object has empty genre ID")
+	}
+
+	if obj.Name == "" {
+		return fmt.Errorf("environmental object has empty name")
+	}
+
+	return nil
+}
+
+// Ensure Generator implements procgen.Generator interface.
+var _ procgen.Generator = (*Generator)(nil)

@@ -3,6 +3,8 @@ package environment
 
 import (
 	"testing"
+
+	"github.com/opd-ai/venture/pkg/procgen"
 )
 
 // TestObjectType_String tests ObjectType string conversion.
@@ -300,7 +302,7 @@ func TestGenerator_Generate(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			obj, err := gen.Generate(tt.config)
+			obj, err := gen.GenerateFromConfig(tt.config)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("Generator.Generate() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -364,7 +366,7 @@ func TestGenerator_GenerateAllSubTypes(t *testing.T) {
 				Seed:    12345,
 			}
 
-			obj, err := gen.Generate(config)
+			obj, err := gen.GenerateFromConfig(config)
 			if err != nil {
 				t.Errorf("Generator.Generate(%v) error = %v", subType, err)
 				return
@@ -396,12 +398,12 @@ func TestGenerator_GenerateDeterminism(t *testing.T) {
 	}
 
 	// Generate twice with same seed
-	obj1, err1 := gen.Generate(config)
+	obj1, err1 := gen.GenerateFromConfig(config)
 	if err1 != nil {
 		t.Fatalf("First generation failed: %v", err1)
 	}
 
-	obj2, err2 := gen.Generate(config)
+	obj2, err2 := gen.GenerateFromConfig(config)
 	if err2 != nil {
 		t.Fatalf("Second generation failed: %v", err2)
 	}
@@ -457,7 +459,7 @@ func TestGenerator_GenerateGenres(t *testing.T) {
 				Seed:    12345,
 			}
 
-			obj, err := gen.Generate(config)
+			obj, err := gen.GenerateFromConfig(config)
 			if err != nil {
 				t.Errorf("Generation failed for genre %s: %v", genre, err)
 				return
@@ -502,7 +504,7 @@ func TestGenerator_GenerateSizes(t *testing.T) {
 				Seed:    12345,
 			}
 
-			obj, err := gen.Generate(config)
+			obj, err := gen.GenerateFromConfig(config)
 			if err != nil {
 				t.Errorf("Generation failed for size %dx%d: %v", size.width, size.height, err)
 				return
@@ -554,7 +556,7 @@ func TestGenerator_GenerateProperties(t *testing.T) {
 				Seed:    12345,
 			}
 
-			obj, err := gen.Generate(config)
+			obj, err := gen.GenerateFromConfig(config)
 			if err != nil {
 				t.Fatalf("Generation failed: %v", err)
 			}
@@ -585,7 +587,7 @@ func BenchmarkGenerator_Generate(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		_, _ = gen.Generate(config)
+		_, _ = gen.GenerateFromConfig(config)
 	}
 }
 
@@ -608,7 +610,272 @@ func BenchmarkGenerator_GenerateAllTypes(b *testing.B) {
 				GenreID: "fantasy",
 				Seed:    int64(12345 + j),
 			}
-			_, _ = gen.Generate(config)
+			_, _ = gen.GenerateFromConfig(config)
 		}
 	}
+}
+
+// TestGenerator_GenerateInterface tests the procgen.Generator interface implementation.
+func TestGenerator_GenerateInterface(t *testing.T) {
+	gen := NewGenerator()
+
+	tests := []struct {
+		name    string
+		seed    int64
+		params  procgen.GenerationParams
+		wantErr bool
+	}{
+		{
+			name: "basic generation",
+			seed: 12345,
+			params: procgen.GenerationParams{
+				Difficulty: 0.5,
+				Depth:      1,
+				GenreID:    "fantasy",
+			},
+			wantErr: false,
+		},
+		{
+			name: "with custom subType",
+			seed: 67890,
+			params: procgen.GenerationParams{
+				Difficulty: 0.7,
+				Depth:      2,
+				GenreID:    "horror",
+				Custom: map[string]interface{}{
+					"subType": SubTypeSpikes,
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "with custom dimensions",
+			seed: 11111,
+			params: procgen.GenerationParams{
+				Difficulty: 0.3,
+				Depth:      3,
+				GenreID:    "scifi",
+				Custom: map[string]interface{}{
+					"width":  64,
+					"height": 64,
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "with int subType",
+			seed: 22222,
+			params: procgen.GenerationParams{
+				Difficulty: 0.5,
+				Depth:      1,
+				GenreID:    "fantasy",
+				Custom: map[string]interface{}{
+					"subType": int(SubTypeBarrel),
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "empty genre ID",
+			seed: 33333,
+			params: procgen.GenerationParams{
+				Difficulty: 0.5,
+				Depth:      1,
+				GenreID:    "",
+			},
+			wantErr: true,
+		},
+		{
+			name: "invalid difficulty negative",
+			seed: 44444,
+			params: procgen.GenerationParams{
+				Difficulty: -0.1,
+				Depth:      1,
+				GenreID:    "fantasy",
+			},
+			wantErr: true,
+		},
+		{
+			name: "invalid difficulty over 1",
+			seed: 55555,
+			params: procgen.GenerationParams{
+				Difficulty: 1.1,
+				Depth:      1,
+				GenreID:    "fantasy",
+			},
+			wantErr: true,
+		},
+		{
+			name: "invalid depth negative",
+			seed: 66666,
+			params: procgen.GenerationParams{
+				Difficulty: 0.5,
+				Depth:      -1,
+				GenreID:    "fantasy",
+			},
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result, err := gen.Generate(tt.seed, tt.params)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("Generator.Generate() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !tt.wantErr {
+				obj, ok := result.(*EnvironmentalObject)
+				if !ok {
+					t.Error("Generator.Generate() did not return *EnvironmentalObject")
+					return
+				}
+				if obj == nil {
+					t.Error("Generator.Generate() returned nil object")
+				}
+			}
+		})
+	}
+}
+
+// TestGenerator_Generate_Determinism tests that Generate with same seed produces same output.
+func TestGenerator_Generate_Determinism(t *testing.T) {
+	gen := NewGenerator()
+	params := procgen.GenerationParams{
+		Difficulty: 0.5,
+		Depth:      1,
+		GenreID:    "fantasy",
+		Custom: map[string]interface{}{
+			"subType": SubTypePlant,
+		},
+	}
+
+	result1, err1 := gen.Generate(12345, params)
+	if err1 != nil {
+		t.Fatalf("First generate failed: %v", err1)
+	}
+
+	result2, err2 := gen.Generate(12345, params)
+	if err2 != nil {
+		t.Fatalf("Second generate failed: %v", err2)
+	}
+
+	obj1 := result1.(*EnvironmentalObject)
+	obj2 := result2.(*EnvironmentalObject)
+
+	if obj1.Name != obj2.Name {
+		t.Errorf("Determinism failed: names differ: %s vs %s", obj1.Name, obj2.Name)
+	}
+	if obj1.SubType != obj2.SubType {
+		t.Errorf("Determinism failed: subtypes differ: %v vs %v", obj1.SubType, obj2.SubType)
+	}
+}
+
+// TestGenerator_Validate tests the Validate method.
+func TestGenerator_Validate(t *testing.T) {
+	gen := NewGenerator()
+
+	// Generate a valid object
+	config := DefaultConfig()
+	config.Seed = 12345
+	validObj, err := gen.GenerateFromConfig(config)
+	if err != nil {
+		t.Fatalf("Failed to generate valid object: %v", err)
+	}
+
+	tests := []struct {
+		name    string
+		result  interface{}
+		wantErr bool
+	}{
+		{
+			name:    "valid object",
+			result:  validObj,
+			wantErr: false,
+		},
+		{
+			name:    "nil object",
+			result:  (*EnvironmentalObject)(nil),
+			wantErr: true,
+		},
+		{
+			name:    "wrong type string",
+			result:  "not an object",
+			wantErr: true,
+		},
+		{
+			name:    "wrong type int",
+			result:  42,
+			wantErr: true,
+		},
+		{
+			name: "nil sprite",
+			result: &EnvironmentalObject{
+				Sprite:  nil,
+				Width:   32,
+				Height:  32,
+				GenreID: "fantasy",
+				Name:    "Test",
+			},
+			wantErr: true,
+		},
+		{
+			name: "zero width",
+			result: &EnvironmentalObject{
+				Sprite:  validObj.Sprite,
+				Width:   0,
+				Height:  32,
+				GenreID: "fantasy",
+				Name:    "Test",
+			},
+			wantErr: true,
+		},
+		{
+			name: "zero height",
+			result: &EnvironmentalObject{
+				Sprite:  validObj.Sprite,
+				Width:   32,
+				Height:  0,
+				GenreID: "fantasy",
+				Name:    "Test",
+			},
+			wantErr: true,
+		},
+		{
+			name: "empty genre",
+			result: &EnvironmentalObject{
+				Sprite:  validObj.Sprite,
+				Width:   32,
+				Height:  32,
+				GenreID: "",
+				Name:    "Test",
+			},
+			wantErr: true,
+		},
+		{
+			name: "empty name",
+			result: &EnvironmentalObject{
+				Sprite:  validObj.Sprite,
+				Width:   32,
+				Height:  32,
+				GenreID: "fantasy",
+				Name:    "",
+			},
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := gen.Validate(tt.result)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("Generator.Validate() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+// TestGenerator_InterfaceCompliance verifies the Generator implements procgen.Generator.
+func TestGenerator_InterfaceCompliance(t *testing.T) {
+	var _ procgen.Generator = (*Generator)(nil)
 }

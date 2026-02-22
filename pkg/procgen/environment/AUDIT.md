@@ -10,7 +10,7 @@ The `environment` package provides procedural generation of environmental object
 | Check | Result |
 |---|---|
 | `go vet` | ✅ Pass |
-| `go test -cover` | 95.3% (target: 65%) |
+| `go test -cover` | 95.5% (target: 65%) |
 | `go test -race` | ✅ Pass |
 | WASM vet | ✅ Pass |
 | TODO/FIXME count | 0 |
@@ -23,7 +23,7 @@ The `environment` package provides procedural generation of environmental object
 None identified.
 
 ### Medium Severity
-- [ ] **API Consistency** — `Generator` does not implement `procgen.Generator` interface (lacks `Generate(seed int64, params GenerationParams)` and `Validate()` methods); uses custom `Config` struct instead (`generator.go:41`)
+- [x] **API Consistency** — **RESOLVED 2026-02-22**: `Generator` now implements `procgen.Generator` interface via `Generate(seed int64, params GenerationParams) (interface{}, error)` and `Validate(result interface{}) error` methods. The original `Generate(Config)` method was renamed to `GenerateFromConfig(Config)` for backward compatibility.
 
 ### Low Severity
 - [ ] **Documentation** — `generateSprite`, `createObject`, `selectColors`, and `drawObjectSprite` methods lack godoc comments (`generator.go:76-204`)
@@ -75,7 +75,7 @@ This package connects to the engine via `cmd/client/util.go` for spawning hazard
 | Mobile | ✅ Pass | No platform-specific dependencies |
 
 ## Recommendations
-1. **[MED]** Implement `procgen.Generator` interface for consistency with other generators, wrapping existing `Generate(Config)` method with `Generate(seed int64, params GenerationParams) (interface{}, error)` and adding `Validate(result interface{}) error`
+1. ~~**[MED]** Implement `procgen.Generator` interface for consistency with other generators, wrapping existing `Generate(Config)` method with `Generate(seed int64, params GenerationParams) (interface{}, error)` and adding `Validate(result interface{}) error`~~ **DONE 2026-02-22**
 2. **[LOW]** Add godoc comments to unexported helper methods for maintainability
-3. **[LOW]** Consider adding exported `Validate(*EnvironmentalObject) error` method to support the standard generator pattern
+3. ~~**[LOW]** Consider adding exported `Validate(*EnvironmentalObject) error` method to support the standard generator pattern~~ **DONE 2026-02-22** (now `Validate(interface{}) error` per interface)
 4. **[LOW]** Add inline comments to complex drawing functions (e.g., `drawCrystal`, `drawWeb`) explaining the geometric algorithms used

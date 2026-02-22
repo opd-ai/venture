@@ -27,7 +27,7 @@
 //	    GenreID: "horror",
 //	    Seed:    12345,
 //	}
-//	obj, err := gen.Generate(config)
+//	obj, err := gen.GenerateFromConfig(config)
 //
 //	// Place decorations in a room
 //	placer := environment.NewPlacer()

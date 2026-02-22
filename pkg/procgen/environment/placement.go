@@ -207,7 +207,7 @@ func (p *Placer) PlaceDecorations(config PlacementConfig) ([]*PlacedObject, erro
 			Seed:    rng.Int63(),
 		}
 
-		obj, err := p.generator.Generate(objConfig)
+		obj, err := p.generator.GenerateFromConfig(objConfig)
 		if err != nil {
 			p.logError("failed to generate decoration", err, logrus.Fields{
 				"subType": subType,

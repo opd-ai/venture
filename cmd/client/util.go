@@ -554,7 +554,7 @@ func spawnEnvironmentalHazards(world *engine.World, terrain *terrain.Terrain, se
 				Height:  64,
 			}
 
-			envObj, err := envGen.Generate(config)
+			envObj, err := envGen.GenerateFromConfig(config)
 			if err != nil {
 				if logger != nil && logger.Logger.GetLevel() >= logrus.DebugLevel {
 					logger.WithError(err).Debug("failed to generate environmental hazard")

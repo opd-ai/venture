@@ -24,12 +24,12 @@ The `pkg/audio/music` package provides procedural music composition with adaptiv
 None identified.
 
 ### Medium Severity
-- [ ] **Documentation** — Package has local `MusicLayer` struct shadowing `audio.MusicLayer` type, could confuse developers (`adaptive.go:31`)
+- [x] **Documentation** — ~~Package has local `MusicLayer` struct shadowing `audio.MusicLayer` type~~ **RESOLVED 2026-02-22**: Struct is named `CompositionLayer` (not `MusicLayer`) with explicit godoc comment clarifying it is distinct from `audio.MusicLayer` enum type (`adaptive.go:29-33`)
 
 ### Low Severity
 - [ ] **Code Style** — Generator's `generateMelody` and `generateHarmony` use inline envelope parameters that could be extracted to constants for clarity (`generator.go:132-137`, `generator.go:183-188`)
 - [ ] **Performance** — `normalizeTrack` iterates twice over the track (once for max, once for scaling); could be combined or optimized for very long tracks (`adaptive.go:692-707`)
-- [ ] **Documentation** — Several exported helper functions lack godoc comments: `GetScaleForGenre`, `GetChordProgression`, `GetRhythmForContext`, `GetTempoForContext` have minimal documentation (`theory.go:47`, `theory.go:80`, `theory.go:120`, `theory.go:151`)
+- [x] **Documentation** — ~~Several exported helper functions lack godoc comments~~ **RESOLVED 2026-02-22**: `GetScaleForGenre`, `GetChordProgression`, `GetRhythmForContext`, `GetTempoForContext` all have comprehensive godoc comments explaining genre/context behavior and default values (`theory.go:46-54`, `87-95`, `134-142`, `173-181`)
 
 ## Input Integration
 | Input Source | Status | Notes |
@@ -73,6 +73,5 @@ None identified.
 | Mobile | ✅ | No platform-specific restrictions |
 
 ## Recommendations
-1. **[LOW]** Add godoc comments to helper functions in `theory.go` (lines 47, 80, 120, 151) for improved API documentation
-2. **[LOW]** Extract ADSR envelope constants from `generator.go` to package-level consts for clarity and potential mod support
-3. **[LOW]** Optimize `normalizeTrack` to single-pass algorithm if profiling shows performance impact on long tracks
+1. **[LOW]** Extract ADSR envelope constants from `generator.go` to package-level consts for clarity and potential mod support
+2. **[LOW]** Optimize `normalizeTrack` to single-pass algorithm if profiling shows performance impact on long tracks

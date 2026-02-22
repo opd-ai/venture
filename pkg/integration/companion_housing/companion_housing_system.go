@@ -4,14 +4,17 @@ import (
 	"time"
 )
 
-// CompanionHousingSystem provides operations on CompanionHousingComponent.
+// companionHousingSystem provides operations on CompanionHousingComponent.
 // Following ECS pattern, all logic that was previously in component methods
 // is now in this system. Components remain pure data structures.
 //
-// Deprecated: Use PetHomeManager directly instead. Migration example:
+// This type is unexported and kept for internal test coverage only.
+// External code should use PetHomeManager directly instead.
+//
+// Migration example:
 //
 //	// Old (deprecated):
-//	system := NewCompanionHousingSystem(manager)
+//	system := newCompanionHousingSystem(manager)
 //	system.IsInHouse(component)
 //
 //	// New (recommended):
@@ -20,43 +23,43 @@ import (
 //	isInHouse := houseID != ""
 //
 // PetHomeManager is injected into CompanionLoyaltySystem and other systems
-// that need companion housing functionality. This struct is kept for backward
-// compatibility with existing tests but may be removed in a future version.
-type CompanionHousingSystem struct {
+// that need companion housing functionality.
+type companionHousingSystem struct {
 	manager *PetHomeManager
 }
 
-// NewCompanionHousingSystem creates a new companion housing system.
-func NewCompanionHousingSystem(manager *PetHomeManager) *CompanionHousingSystem {
-	return &CompanionHousingSystem{
+// newCompanionHousingSystem creates a new companion housing system.
+// This is unexported - use PetHomeManager directly for new code.
+func newCompanionHousingSystem(manager *PetHomeManager) *companionHousingSystem {
+	return &companionHousingSystem{
 		manager: manager,
 	}
 }
 
 // IsInHouse returns true if companion is assigned to a house.
-func (s *CompanionHousingSystem) IsInHouse(c *CompanionHousingComponent) bool {
+func (s *companionHousingSystem) IsInHouse(c *CompanionHousingComponent) bool {
 	return c.OwnerHouseID != ""
 }
 
 // HasBedding returns true if companion has assigned bedding.
-func (s *CompanionHousingSystem) HasBedding(c *CompanionHousingComponent) bool {
+func (s *companionHousingSystem) HasBedding(c *CompanionHousingComponent) bool {
 	return c.BeddingID != ""
 }
 
 // IsTraining returns true if companion has active training session.
-func (s *CompanionHousingSystem) IsTraining(c *CompanionHousingComponent) bool {
+func (s *companionHousingSystem) IsTraining(c *CompanionHousingComponent) bool {
 	return c.ActiveTraining != ""
 }
 
 // HasSharedStorage returns true if companion can access shared chests.
-func (s *CompanionHousingSystem) HasSharedStorage(c *CompanionHousingComponent) bool {
+func (s *companionHousingSystem) HasSharedStorage(c *CompanionHousingComponent) bool {
 	return len(c.SharedChestAccess) > 0
 }
 
 // DaysSinceRest calculates days since last rest using the provided current time.
 // This allows deterministic testing by injecting a fixed "now" time.
 // Returns 0.0 if never rested (LastRestTime is zero).
-func (s *CompanionHousingSystem) DaysSinceRest(c *CompanionHousingComponent, now time.Time) float64 {
+func (s *companionHousingSystem) DaysSinceRest(c *CompanionHousingComponent, now time.Time) float64 {
 	if c.LastRestTime.IsZero() {
 		return 0.0
 	}
@@ -66,7 +69,7 @@ func (s *CompanionHousingSystem) DaysSinceRest(c *CompanionHousingComponent, now
 
 // UpdateFromManager syncs component state from PetHomeManager.
 // Should be called during system update cycles.
-func (s *CompanionHousingSystem) UpdateFromManager(c *CompanionHousingComponent, companionID uint64) {
+func (s *companionHousingSystem) UpdateFromManager(c *CompanionHousingComponent, companionID uint64) {
 	houseID := s.manager.GetCompanionHome(companionID)
 	c.OwnerHouseID = houseID
 

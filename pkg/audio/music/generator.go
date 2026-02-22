@@ -11,6 +11,26 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+// ADSR envelope constants for melody generation.
+// These define the attack-decay-sustain-release characteristics
+// for melodic notes, producing a plucked/picked sound quality.
+const (
+	MelodyEnvAttack  = 0.01 // Fast attack for percussive onset
+	MelodyEnvDecay   = 0.1  // Quick decay to sustain level
+	MelodyEnvSustain = 0.6  // Moderate sustain for note body
+	MelodyEnvRelease = 0.2  // Short release for separation
+)
+
+// ADSR envelope constants for harmony generation.
+// These define the attack-decay-sustain-release characteristics
+// for harmonic chords, producing a smooth pad-like sound quality.
+const (
+	HarmonyEnvAttack  = 0.05 // Slower attack for smooth entry
+	HarmonyEnvDecay   = 0.1  // Quick decay to sustain level
+	HarmonyEnvSustain = 0.7  // Higher sustain for full chords
+	HarmonyEnvRelease = 0.3  // Longer release for chord blending
+)
+
 // Generator creates procedural music tracks.
 type Generator struct {
 	sampleRate int

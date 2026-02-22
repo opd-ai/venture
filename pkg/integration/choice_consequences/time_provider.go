@@ -34,7 +34,13 @@ func (p FixedTimeProvider) Now() int64 {
 var defaultTimeProvider TimeProvider = RealTimeProvider{}
 
 // SetTimeProvider sets the package-level time provider for testing.
-// Not thread-safe; should only be called during test setup.
+//
+// WARNING: This function is NOT thread-safe. It modifies a package-level
+// variable without synchronization. Callers must ensure this function is
+// only invoked during test setup (before any concurrent goroutines access
+// the time provider) or within a single-threaded initialization context.
+// Using this function concurrently with other package functions may cause
+// data races.
 func SetTimeProvider(tp TimeProvider) {
 	defaultTimeProvider = tp
 }

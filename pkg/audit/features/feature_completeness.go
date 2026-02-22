@@ -16,6 +16,17 @@ import (
 	"time"
 )
 
+// Validation thresholds for feature completeness criteria.
+const (
+	// TutorialCompletenessThreshold is the minimum tutorial coverage required
+	// for a feature to pass validation (70%).
+	TutorialCompletenessThreshold = 0.7
+
+	// AcceptancePassRateThreshold is the minimum pass rate required for
+	// the overall feature set to be acceptable per Phase 65.1 criteria (90%).
+	AcceptancePassRateThreshold = 0.90
+)
+
 // Feature represents a single game feature
 type Feature struct {
 	ID          string
@@ -51,7 +62,7 @@ func (f *Feature) Validate() (bool, []string) {
 		issues = append(issues, "not accessible within 30 minutes")
 	}
 
-	if !f.HasTutorial || f.TutorialCompleteness < 0.7 {
+	if !f.HasTutorial || f.TutorialCompleteness < TutorialCompletenessThreshold {
 		issues = append(issues, fmt.Sprintf("tutorial incomplete (%.1f%%)", f.TutorialCompleteness*100))
 	}
 
@@ -197,5 +208,5 @@ type FeatureIssue struct {
 
 // IsAcceptable returns true if pass rate meets acceptance criteria (90%)
 func (r *ValidationReport) IsAcceptable() bool {
-	return r.PassRate >= 0.90
+	return r.PassRate >= AcceptancePassRateThreshold
 }

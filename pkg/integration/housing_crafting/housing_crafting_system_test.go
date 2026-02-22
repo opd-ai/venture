@@ -7,10 +7,10 @@ import (
 // TestNewHousingCraftingSystem tests system creation
 func TestNewHousingCraftingSystem(t *testing.T) {
 	manager := NewStationManager()
-	system := NewHousingCraftingSystem(manager)
+	system := newHousingCraftingSystem(manager)
 
 	if system == nil {
-		t.Fatal("NewHousingCraftingSystem() returned nil")
+		t.Fatal("newHousingCraftingSystem() returned nil")
 	}
 	if system.manager != manager {
 		t.Error("system.manager not set correctly")
@@ -20,7 +20,7 @@ func TestNewHousingCraftingSystem(t *testing.T) {
 // TestHousingCraftingSystemGetCraftingBonus tests crafting bonus retrieval
 func TestHousingCraftingSystemGetCraftingBonus(t *testing.T) {
 	manager := NewStationManager()
-	system := NewHousingCraftingSystem(manager)
+	system := newHousingCraftingSystem(manager)
 
 	tests := []struct {
 		name      string
@@ -75,7 +75,7 @@ func TestHousingCraftingSystemGetCraftingBonus(t *testing.T) {
 // TestHousingCraftingSystemGetSkillBonus tests skill bonus retrieval
 func TestHousingCraftingSystemGetSkillBonus(t *testing.T) {
 	manager := NewStationManager()
-	system := NewHousingCraftingSystem(manager)
+	system := newHousingCraftingSystem(manager)
 
 	tests := []struct {
 		name      string
@@ -143,7 +143,7 @@ func TestHousingCraftingSystemGetSkillBonus(t *testing.T) {
 // TestHousingCraftingSystemHasRecipe tests recipe checking
 func TestHousingCraftingSystemHasRecipe(t *testing.T) {
 	manager := NewStationManager()
-	system := NewHousingCraftingSystem(manager)
+	system := newHousingCraftingSystem(manager)
 
 	tests := []struct {
 		name      string
@@ -220,7 +220,7 @@ func TestHousingCraftingSystemHasRecipe(t *testing.T) {
 // TestHousingCraftingSystemSyncFromStation tests syncing from station manager
 func TestHousingCraftingSystemSyncFromStation(t *testing.T) {
 	manager := NewStationManager()
-	system := NewHousingCraftingSystem(manager)
+	system := newHousingCraftingSystem(manager)
 
 	// Register a station
 	station := &CraftingStation{
@@ -294,7 +294,7 @@ func TestHousingCraftingSystemSyncFromStation(t *testing.T) {
 // TestHousingCraftingSystemSyncFromStationDeepCopy verifies SyncFromStation makes deep copies
 func TestHousingCraftingSystemSyncFromStationDeepCopy(t *testing.T) {
 	manager := NewStationManager()
-	system := NewHousingCraftingSystem(manager)
+	system := newHousingCraftingSystem(manager)
 
 	station := &CraftingStation{
 		ID:      "station1",
@@ -338,7 +338,7 @@ func TestHousingCraftingComponentType(t *testing.T) {
 // TestHousingCraftingSystemConsistency validates ECS pattern compliance
 func TestHousingCraftingSystemConsistency(t *testing.T) {
 	manager := NewStationManager()
-	system := NewHousingCraftingSystem(manager)
+	system := newHousingCraftingSystem(manager)
 
 	// Register a station
 	station := &CraftingStation{
@@ -382,7 +382,7 @@ func TestHousingCraftingSystemConsistency(t *testing.T) {
 
 func BenchmarkHousingCraftingSystemGetCraftingBonus(b *testing.B) {
 	manager := NewStationManager()
-	system := NewHousingCraftingSystem(manager)
+	system := newHousingCraftingSystem(manager)
 	component := &HousingCraftingComponent{
 		BonusMultiplier: 1.5,
 	}
@@ -395,7 +395,7 @@ func BenchmarkHousingCraftingSystemGetCraftingBonus(b *testing.B) {
 
 func BenchmarkHousingCraftingSystemGetSkillBonus(b *testing.B) {
 	manager := NewStationManager()
-	system := NewHousingCraftingSystem(manager)
+	system := newHousingCraftingSystem(manager)
 	component := &HousingCraftingComponent{
 		SkillBonus: map[string]int{
 			"smithing": 50,
@@ -412,7 +412,7 @@ func BenchmarkHousingCraftingSystemGetSkillBonus(b *testing.B) {
 
 func BenchmarkHousingCraftingSystemHasRecipe(b *testing.B) {
 	manager := NewStationManager()
-	system := NewHousingCraftingSystem(manager)
+	system := newHousingCraftingSystem(manager)
 	component := &HousingCraftingComponent{
 		ActiveRecipes: []string{"recipe1", "recipe2", "recipe3", "recipe4", "recipe5"},
 	}
@@ -425,7 +425,7 @@ func BenchmarkHousingCraftingSystemHasRecipe(b *testing.B) {
 
 func BenchmarkHousingCraftingSystemSyncFromStation(b *testing.B) {
 	manager := NewStationManager()
-	system := NewHousingCraftingSystem(manager)
+	system := newHousingCraftingSystem(manager)
 
 	station := &CraftingStation{
 		ID:      "station1",

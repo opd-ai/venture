@@ -1,28 +1,27 @@
 package housing_crafting
 
-// HousingCraftingSystem provides operations on HousingCraftingComponent.
+// housingCraftingSystem provides operations on HousingCraftingComponent.
 // Following ECS pattern, all logic that was previously in component methods
 // is now in this system. Components remain pure data structures.
 //
-// Deprecated: This system is a thin wrapper around StationManager and is not
-// used in runtime code. Use StationManager directly instead, which is injected
+// This type is unexported and kept for internal test coverage only.
+// External code should use StationManager directly instead, which is injected
 // into CraftingSystem and other systems that need crafting station functionality.
-// This struct is kept for backward compatibility with existing tests but may be
-// removed in a future version.
-type HousingCraftingSystem struct {
+type housingCraftingSystem struct {
 	manager *StationManager
 }
 
-// NewHousingCraftingSystem creates a new housing crafting system.
-func NewHousingCraftingSystem(manager *StationManager) *HousingCraftingSystem {
-	return &HousingCraftingSystem{
+// newHousingCraftingSystem creates a new housing crafting system.
+// This is unexported - use StationManager directly for new code.
+func newHousingCraftingSystem(manager *StationManager) *housingCraftingSystem {
+	return &housingCraftingSystem{
 		manager: manager,
 	}
 }
 
 // GetCraftingBonus returns the bonus multiplier for this station.
 // Returns 1.0 (no bonus) if the multiplier is not set or is invalid.
-func (s *HousingCraftingSystem) GetCraftingBonus(c *HousingCraftingComponent) float64 {
+func (s *housingCraftingSystem) GetCraftingBonus(c *HousingCraftingComponent) float64 {
 	if c == nil || c.BonusMultiplier <= 0 {
 		return 1.0
 	}
@@ -31,7 +30,7 @@ func (s *HousingCraftingSystem) GetCraftingBonus(c *HousingCraftingComponent) fl
 
 // GetSkillBonus returns the skill XP bonus percentage for a skill.
 // Returns 0 if the skill is not found or the bonus map is nil.
-func (s *HousingCraftingSystem) GetSkillBonus(c *HousingCraftingComponent, skillName string) int {
+func (s *housingCraftingSystem) GetSkillBonus(c *HousingCraftingComponent, skillName string) int {
 	if c == nil || c.SkillBonus == nil {
 		return 0
 	}
@@ -40,7 +39,7 @@ func (s *HousingCraftingSystem) GetSkillBonus(c *HousingCraftingComponent, skill
 
 // HasRecipe checks if a recipe is unlocked at this station.
 // Returns false if the component is nil or the recipe is not found.
-func (s *HousingCraftingSystem) HasRecipe(c *HousingCraftingComponent, recipeID string) bool {
+func (s *housingCraftingSystem) HasRecipe(c *HousingCraftingComponent, recipeID string) bool {
 	if c == nil {
 		return false
 	}
@@ -54,7 +53,7 @@ func (s *HousingCraftingSystem) HasRecipe(c *HousingCraftingComponent, recipeID 
 
 // SyncFromStation updates the component state from a registered CraftingStation.
 // This should be called during system update cycles to keep the component in sync.
-func (s *HousingCraftingSystem) SyncFromStation(c *HousingCraftingComponent) error {
+func (s *housingCraftingSystem) SyncFromStation(c *HousingCraftingComponent) error {
 	if c == nil {
 		return nil
 	}

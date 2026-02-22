@@ -7,19 +7,19 @@ import (
 
 func TestNewCompanionHousingSystem(t *testing.T) {
 	manager := NewPetHomeManager()
-	system := NewCompanionHousingSystem(manager)
+	system := newCompanionHousingSystem(manager)
 
 	if system == nil {
-		t.Fatal("NewCompanionHousingSystem() returned nil")
+		t.Fatal("newCompanionHousingSystem() returned nil")
 	}
 	if system.manager != manager {
-		t.Error("NewCompanionHousingSystem() did not set manager correctly")
+		t.Error("newCompanionHousingSystem() did not set manager correctly")
 	}
 }
 
 func TestCompanionHousingSystem_IsInHouse(t *testing.T) {
 	manager := NewPetHomeManager()
-	system := NewCompanionHousingSystem(manager)
+	system := newCompanionHousingSystem(manager)
 
 	tests := []struct {
 		name         string
@@ -43,7 +43,7 @@ func TestCompanionHousingSystem_IsInHouse(t *testing.T) {
 
 func TestCompanionHousingSystem_HasBedding(t *testing.T) {
 	manager := NewPetHomeManager()
-	system := NewCompanionHousingSystem(manager)
+	system := newCompanionHousingSystem(manager)
 
 	tests := []struct {
 		name      string
@@ -67,7 +67,7 @@ func TestCompanionHousingSystem_HasBedding(t *testing.T) {
 
 func TestCompanionHousingSystem_IsTraining(t *testing.T) {
 	manager := NewPetHomeManager()
-	system := NewCompanionHousingSystem(manager)
+	system := newCompanionHousingSystem(manager)
 
 	tests := []struct {
 		name           string
@@ -91,7 +91,7 @@ func TestCompanionHousingSystem_IsTraining(t *testing.T) {
 
 func TestCompanionHousingSystem_HasSharedStorage(t *testing.T) {
 	manager := NewPetHomeManager()
-	system := NewCompanionHousingSystem(manager)
+	system := newCompanionHousingSystem(manager)
 
 	tests := []struct {
 		name              string
@@ -116,7 +116,7 @@ func TestCompanionHousingSystem_HasSharedStorage(t *testing.T) {
 
 func TestCompanionHousingSystem_DaysSinceRest(t *testing.T) {
 	manager := NewPetHomeManager()
-	system := NewCompanionHousingSystem(manager)
+	system := newCompanionHousingSystem(manager)
 
 	baseTime := time.Date(2026, 1, 20, 12, 0, 0, 0, time.UTC)
 
@@ -147,7 +147,7 @@ func TestCompanionHousingSystem_DaysSinceRest(t *testing.T) {
 
 func TestCompanionHousingSystem_DaysSinceRest_Determinism(t *testing.T) {
 	manager := NewPetHomeManager()
-	system := NewCompanionHousingSystem(manager)
+	system := newCompanionHousingSystem(manager)
 
 	// Fixed times for determinism
 	restTime := time.Date(2026, 1, 18, 12, 0, 0, 0, time.UTC)
@@ -171,7 +171,7 @@ func TestCompanionHousingSystem_DaysSinceRest_Determinism(t *testing.T) {
 
 func TestCompanionHousingSystem_UpdateFromManager(t *testing.T) {
 	manager := NewPetHomeManager()
-	system := NewCompanionHousingSystem(manager)
+	system := newCompanionHousingSystem(manager)
 
 	// Set up housing
 	manager.AddBedding("house_1", "bed_1", BeddingAdvanced)

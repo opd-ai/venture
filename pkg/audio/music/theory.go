@@ -43,7 +43,15 @@ func NoteToFrequency(note int) float64 {
 	return 440.0 * math.Pow(2.0, float64(note-69)/12.0)
 }
 
-// GetScaleForGenre returns an appropriate scale for the given genre.
+// GetScaleForGenre returns an appropriate musical scale for the given genre.
+// Each genre has a characteristic scale that defines its tonal character:
+//   - fantasy: Major scale for bright, heroic themes
+//   - scifi: Chromatic scale for futuristic, alien sounds
+//   - horror: Minor scale for dark, ominous tones
+//   - cyberpunk: Blues scale for gritty, urban atmosphere
+//   - postapoc: Pentatonic scale for sparse, desolate feeling
+//
+// Unknown genres default to Major scale.
 func GetScaleForGenre(genre string) Scale {
 	switch genre {
 	case "fantasy":
@@ -77,6 +85,13 @@ var (
 )
 
 // GetChordProgression returns a chord progression for a genre.
+// The progression defines the harmonic movement of a piece:
+//   - fantasy: I-IV-V-I progression for uplifting, triumphant feel
+//   - horror: i-viidim-III-iv progression for unsettling tension
+//   - scifi: I-V7-iii-VII progression for otherworldly ambience
+//
+// Unknown genres default to a simple I-V-I-IV progression.
+// rootNote specifies the MIDI note number for the tonic.
 func GetChordProgression(genre string, rootNote int) []Chord {
 	switch genre {
 	case "fantasy":
@@ -116,7 +131,15 @@ type Rhythm struct {
 	Velocity []float64 // velocity for each note
 }
 
-// GetRhythmForContext returns a rhythm pattern for the given context.
+// GetRhythmForContext returns a rhythm pattern appropriate for gameplay context.
+// Each context has a characteristic rhythmic feel:
+//   - combat: Fast sixteenth-note pulse (0.25 beats) with strong accents
+//   - exploration: Medium eighth/quarter pattern for relaxed movement
+//   - ambient: Slow half-note durations for atmospheric backgrounds
+//   - victory: Building pattern from fast to sustained for triumphant climax
+//
+// Pattern contains note durations in beats, Velocity contains dynamics (0.0-1.0).
+// Unknown contexts default to steady quarter notes.
 func GetRhythmForContext(context string) Rhythm {
 	switch context {
 	case "combat":
@@ -147,7 +170,14 @@ func GetRhythmForContext(context string) Rhythm {
 	}
 }
 
-// GetTempoForContext returns BPM for the given context.
+// GetTempoForContext returns BPM (beats per minute) for the given context.
+// Each context has an appropriate tempo range:
+//   - combat: 140 BPM for intense, fast-paced action
+//   - exploration: 90 BPM for relaxed, curious movement
+//   - ambient: 60 BPM for calm, atmospheric backgrounds
+//   - victory: 120 BPM for upbeat, celebratory themes
+//
+// Unknown contexts default to 100 BPM (moderate tempo).
 func GetTempoForContext(context string) float64 {
 	switch context {
 	case "combat":

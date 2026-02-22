@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"sort"
 	"strings"
 	"sync"
 
@@ -225,15 +226,11 @@ func (ct *ChoiceTracker) enforceMemoryLimit(rel *NPCRelationship) {
 	rel.MemorableEvents = rel.MemorableEvents[:ct.npcMemoryLimit]
 }
 
-// sortEventsByImpact sorts events by absolute impact (bubble sort for simplicity).
+// sortEventsByImpact sorts events by absolute impact in descending order.
 func (ct *ChoiceTracker) sortEventsByImpact(events []MemorableEvent) {
-	for i := 0; i < len(events)-1; i++ {
-		for j := i + 1; j < len(events); j++ {
-			if abs(events[i].Impact) < abs(events[j].Impact) {
-				events[i], events[j] = events[j], events[i]
-			}
-		}
-	}
+	sort.Slice(events, func(i, j int) bool {
+		return abs(events[i].Impact) > abs(events[j].Impact)
+	})
 }
 
 // updateRelationshipValues updates attitude and trust based on choice impact.

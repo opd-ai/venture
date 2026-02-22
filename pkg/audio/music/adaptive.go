@@ -26,9 +26,11 @@ import (
 	"github.com/opd-ai/venture/pkg/audio/synthesis"
 )
 
-// MusicLayer represents a distinct audio layer in adaptive composition.
+// CompositionLayer represents a distinct audio layer in adaptive composition.
 // Layers can be dynamically added or removed based on gameplay context.
-type MusicLayer struct {
+// Note: This is an internal struct, distinct from audio.MusicLayer which is
+// the public enum type for layer identification in the audio package API.
+type CompositionLayer struct {
 	// Name identifies the layer (e.g., "percussion", "melody", "harmony")
 	Name string
 	// Active indicates if the layer is currently playing
@@ -52,8 +54,8 @@ type AdaptiveComposer struct {
 	osc        *synthesis.Oscillator
 	rng        *rand.Rand
 
-	// Layers contains all available music layers
-	layers map[string]*MusicLayer
+	// Layers contains all available composition layers
+	layers map[string]*CompositionLayer
 
 	// Current composition state
 	currentGenre   string
@@ -126,7 +128,7 @@ func NewAdaptiveComposer(sampleRate int, seed int64) *AdaptiveComposer {
 		seed:       seed,
 		osc:        synthesis.NewOscillator(sampleRate, seed),
 		rng:        rand.New(rand.NewSource(seed)),
-		layers:     make(map[string]*MusicLayer),
+		layers:     make(map[string]*CompositionLayer),
 	}
 }
 
@@ -137,7 +139,7 @@ func (ac *AdaptiveComposer) Initialize(genre string, rootNote int) {
 	ac.tempo = 120.0 // Default tempo
 
 	// Initialize base layers
-	ac.layers["base"] = &MusicLayer{
+	ac.layers["base"] = &CompositionLayer{
 		Name:         "base",
 		Active:       true,
 		Volume:       0.3,
@@ -145,7 +147,7 @@ func (ac *AdaptiveComposer) Initialize(genre string, rootNote int) {
 		Waveform:     audio.WaveformSine,
 	}
 
-	ac.layers["melody"] = &MusicLayer{
+	ac.layers["melody"] = &CompositionLayer{
 		Name:         "melody",
 		Active:       true,
 		Volume:       0.4,
@@ -153,7 +155,7 @@ func (ac *AdaptiveComposer) Initialize(genre string, rootNote int) {
 		Waveform:     audio.WaveformTriangle,
 	}
 
-	ac.layers["harmony"] = &MusicLayer{
+	ac.layers["harmony"] = &CompositionLayer{
 		Name:         "harmony",
 		Active:       false,
 		Volume:       0.0,
@@ -161,7 +163,7 @@ func (ac *AdaptiveComposer) Initialize(genre string, rootNote int) {
 		Waveform:     audio.WaveformSine,
 	}
 
-	ac.layers["percussion"] = &MusicLayer{
+	ac.layers["percussion"] = &CompositionLayer{
 		Name:         "percussion",
 		Active:       false,
 		Volume:       0.0,
@@ -169,7 +171,7 @@ func (ac *AdaptiveComposer) Initialize(genre string, rootNote int) {
 		Waveform:     audio.WaveformSquare,
 	}
 
-	ac.layers["intensity"] = &MusicLayer{
+	ac.layers["intensity"] = &CompositionLayer{
 		Name:         "intensity",
 		Active:       false,
 		Volume:       0.0,
@@ -290,7 +292,7 @@ func (ac *AdaptiveComposer) GenerateAdaptiveTrack(duration float64) *audio.Audio
 }
 
 // generateLayer creates audio data for a specific layer.
-func (ac *AdaptiveComposer) generateLayer(layer *MusicLayer, duration float64) []float64 {
+func (ac *AdaptiveComposer) generateLayer(layer *CompositionLayer, duration float64) []float64 {
 	numSamples := int(float64(ac.sampleRate) * duration)
 	data := make([]float64, numSamples)
 
@@ -689,6 +691,9 @@ func (ac *AdaptiveComposer) generateIntensityLayer(data []float64, beatDuration 
 }
 
 // normalizeTrack prevents clipping by scaling amplitude.
+// Note: This requires two passes when normalization is needed:
+// one to find max amplitude, one to scale. This is unavoidable
+// for correct peak detection. When maxAmp <= 1.0, we skip scaling.
 func (ac *AdaptiveComposer) normalizeTrack(track []float64) {
 	maxAmp := 0.0
 	for _, sample := range track {

@@ -1,9 +1,9 @@
 # Audit: github.com/opd-ai/venture/cmd/client
-**Date**: 2026-02-17 (updated)
+**Date**: 2026-02-22 (updated)
 **Status**: Needs Work
 
 ## Summary
-The cmd/client package serves as the desktop game client entry point with extremely high integration surface, coordinating 200+ systems across engine, rendering, network, audio, and procgen domains. Overall health is good with proper ECS architecture adherence and deterministic generation patterns, but test coverage is critically low at 32.0% (below 65% target) due to Ebiten display server dependency. The package contains 7,191 lines of code across 16 files with 154 structured logging calls. The 3 non-deterministic time.Now() usages in gameplay code have been resolved via TimeProvider abstraction (time_provider.go). Remaining performance-measurement time.Now() calls (handlers.go:595, 691, 774) are acceptable non-procgen usage. Version-specific initialization functions (V4-V19, VR, Phase 3) have been extracted to init_versions.go, reducing handlers.go from 4,494 to 3,894 lines.
+The cmd/client package serves as the desktop game client entry point with extremely high integration surface, coordinating 200+ systems across engine, rendering, network, audio, and procgen domains. Overall health is good with proper ECS architecture adherence and deterministic generation patterns, but test coverage is critically low at 41.7% (below 65% target) due to Ebiten display server dependency. The package contains 7,191 lines of code across 16 files with 154 structured logging calls. The 3 non-deterministic time.Now() usages in gameplay code have been resolved via TimeProvider abstraction (time_provider.go). Remaining performance-measurement time.Now() calls (handlers.go:595, 691, 774) are acceptable non-procgen usage. Version-specific initialization functions (V4-V19, VR, Phase 3) have been extracted to init_versions.go, reducing handlers.go from 4,494 to 3,894 lines.
 
 ## Issues Found
 - [x] **low** stub/incomplete — Save manager initialization returns nil on error without fallback (`handlers.go:3686`)
@@ -11,14 +11,14 @@ The cmd/client package serves as the desktop game client entry point with extrem
 - [x] **low** deterministic procgen — time.Now() used for death SFX seed in gameplay code (`util.go:1467`)
 - [x] **medium** deterministic procgen — time.Now() used for narrative event timestamp in gameplay code (`handlers.go:4381`)
 - [x] **low** error handling — Save manager init error logged as warning but functionality remains unavailable silently (`handlers.go:3685-3686`)
-- [x] **high** test coverage — 32.0% coverage significantly below 65% target (critical gap)
+- [x] **high** test coverage — 41.7% coverage significantly below 65% target (improved from 32.0%, continuing progress)
 - [x] **low** doc coverage — Main package has excellent doc.go (159 lines) but no exported functions requiring docs
 - [x] **low** maintainability — ~~handlers.go is 4,476 lines with 60+ functions~~ Split into handlers.go (3,894 lines) and init_versions.go (643 lines)
 
 ## Test Coverage
-38.0% (target: 65%, improved from 32.0% via util helper tests)
+41.7% (target: 65%, improved from 38.7% via handlers_test.go additions 2026-02-22)
 
-**Analysis**: Coverage is artificially low because most code paths require Ebiten display server initialization (runs with xvfb-run in CI). Core game logic in pkg/ packages averages 82.4%. Test suite includes 7 test files with comprehensive integration tests:
+**Analysis**: Coverage is artificially low because most code paths require Ebiten display server initialization (runs with xvfb-run in CI). Core game logic in pkg/ packages averages 82.4%. Test suite includes 8 test files with comprehensive integration tests:
 - `integration_test.go` — Host-and-play flag integration, default behavior, port fallback (4 tests)
 - `high_latency_test.go` — High-latency config validation, server parity (4 tests)
 - `lazy_init_test.go` — Lazy initialization patterns, thread safety (3 tests + 1 benchmark)
@@ -26,8 +26,9 @@ The cmd/client package serves as the desktop game client entry point with extrem
 - `minigame_systems_test.go` — Minigame system registration and determinism (6 tests)
 - `sprite_warming_test.go` — Sprite cache warming performance
 - `performance_monitoring_test.go` — Performance tracking integration
+- `handlers_test.go` — Class mapping, generation params, serialization functions (30+ tests, 3 benchmarks)
 
-**Recommendation**: Coverage is acceptable given Ebiten dependency constraints, but adding more unit tests for helper functions in util.go (that don't require Ebiten) would help reach 50%+ coverage.
+**Recommendation**: Coverage is acceptable given Ebiten dependency constraints. Continued progress toward 50%+ by testing additional helper functions in util.go and handlers.go that don't require Ebiten context.
 
 ## Integration Status
 The client is the central integration hub for the entire game:

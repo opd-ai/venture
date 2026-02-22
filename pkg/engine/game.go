@@ -35,6 +35,7 @@ type EbitenGame struct {
 	SettingsManager           *SettingsManager
 	CharacterCreation         *EbitenCharacterCreation
 	CharacterCreationTutorial *CharacterCreationTutorial // Tutorial overlay for character creation
+	OnboardingManager         *OnboardingManager         // Coordinates all tutorial layers (Phase 3.2)
 	LoadingUI                 *LoadingUI                 // World generation loading screen (Phase Performance Audit)
 	pendingCharData           *CharacterData
 	isMultiplayerMode         bool   // Track if character creation is for multiplayer
@@ -340,6 +341,7 @@ func buildGameInstance(screenWidth, screenHeight int, world *World, logEntry *lo
 		SettingsManager:           core.settingsManager,
 		CharacterCreation:         ui.characterCreation,
 		CharacterCreationTutorial: NewCharacterCreationTutorial(),
+		OnboardingManager:         NewOnboardingManager(logEntry),
 		LoadingUI:                 NewLoadingUI(screenWidth, screenHeight),
 		CameraSystem:              core.cameraSystem,
 		RenderSystem:              core.renderSystem,
@@ -394,6 +396,12 @@ func setupGameCallbacks(game *EbitenGame, logEntry *logrus.Entry) {
 			}
 		}
 	})
+
+	// Wire onboarding manager to tutorial systems (Phase 3.2)
+	if game.OnboardingManager != nil {
+		game.OnboardingManager.SetCreationTutorial(game.CharacterCreationTutorial)
+		// TutorialSystem is set later after initializeTutorialAndHelp in cmd/client
+	}
 }
 
 // SetNewGameCallback sets the callback function called when New Game is selected.
@@ -440,6 +448,15 @@ func (g *EbitenGame) SetWorldSeed(seed int64) {
 // GetWorldSeed returns the current world generation seed.
 func (g *EbitenGame) GetWorldSeed() int64 {
 	return g.worldSeed
+}
+
+// SetTutorialSystemForOnboarding wires the tutorial system to the onboarding manager.
+// Phase 3.2: Call this after initializeTutorialAndHelp in cmd/client to complete the wiring.
+func (g *EbitenGame) SetTutorialSystemForOnboarding(tutorialSystem *EbitenTutorialSystem) {
+	g.TutorialSystem = tutorialSystem
+	if g.OnboardingManager != nil {
+		g.OnboardingManager.SetTutorialSystem(tutorialSystem)
+	}
 }
 
 // handleMainMenuSelection processes main menu option selections and triggers state transitions.
@@ -973,6 +990,14 @@ func (g *EbitenGame) handleCharacterCreation() error {
 	}
 
 	charData := g.CharacterCreation.GetCharacterData()
+
+	// Transition onboarding to in-game tutorial phase (Phase 3.2)
+	// Store player class for class-aware tutorial content
+	if g.OnboardingManager != nil {
+		g.OnboardingManager.SetPlayerClass(charData.Class)
+		g.OnboardingManager.TransitionToInGameTutorial()
+	}
+
 	g.pendingCharData = &charData
 	g.CharacterCreation.Cleanup()
 

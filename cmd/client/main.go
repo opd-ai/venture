@@ -138,7 +138,8 @@ func setupAllGameSystems(game *engine.EbitenGame, logger *logrus.Logger, clientL
 	game.World.AddSystem(tutorialSystem)
 	game.World.AddSystem(helpSystem)
 
-	game.TutorialSystem = tutorialSystem
+	// Phase 3.2: Wire tutorial system to onboarding manager for seamless transitions
+	game.SetTutorialSystemForOnboarding(tutorialSystem)
 	game.HelpSystem = helpSystem
 
 	configureSystemConnections(game, sys)

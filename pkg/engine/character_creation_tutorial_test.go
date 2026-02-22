@@ -746,3 +746,126 @@ func TestCharacterCreationTutorial_EquipmentStep(t *testing.T) {
 		t.Errorf("Current step should be equipment_selection, got %v", currentStep)
 	}
 }
+
+// TestUpdateOnboardingState tests updating onboarding state on player entity.
+// Phase 3.2: Verify onboarding state persistence through TutorialCompletionComponent.
+func TestUpdateOnboardingState(t *testing.T) {
+	world := NewWorld()
+	player := world.CreateEntity()
+
+	// Initially should return defaults
+	state, class := GetOnboardingStateFromPlayer(player)
+	if state != StateCharacterCreation {
+		t.Errorf("Initial state = %v, want StateCharacterCreation", state)
+	}
+	if class != ClassWarrior {
+		t.Errorf("Initial class = %v, want ClassWarrior", class)
+	}
+
+	// Update onboarding state
+	UpdateOnboardingState(player, StateInGameTutorial, ClassMage)
+
+	// Verify state was stored
+	state, class = GetOnboardingStateFromPlayer(player)
+	if state != StateInGameTutorial {
+		t.Errorf("After update, state = %v, want StateInGameTutorial", state)
+	}
+	if class != ClassMage {
+		t.Errorf("After update, class = %v, want ClassMage", class)
+	}
+
+	// Update again to verify modification works
+	UpdateOnboardingState(player, StateComplete, ClassRogue)
+
+	state, class = GetOnboardingStateFromPlayer(player)
+	if state != StateComplete {
+		t.Errorf("After second update, state = %v, want StateComplete", state)
+	}
+	if class != ClassRogue {
+		t.Errorf("After second update, class = %v, want ClassRogue", class)
+	}
+}
+
+// TestGetOnboardingStateFromPlayer_NilPlayer tests that nil player returns defaults.
+func TestGetOnboardingStateFromPlayer_NilPlayer(t *testing.T) {
+	state, class := GetOnboardingStateFromPlayer(nil)
+	if state != StateCharacterCreation {
+		t.Errorf("Nil player state = %v, want StateCharacterCreation", state)
+	}
+	if class != ClassWarrior {
+		t.Errorf("Nil player class = %v, want ClassWarrior", class)
+	}
+}
+
+// TestUpdateOnboardingState_NilPlayer tests that nil player is handled safely.
+func TestUpdateOnboardingState_NilPlayer(t *testing.T) {
+	// Should not panic
+	UpdateOnboardingState(nil, StateComplete, ClassMage)
+}
+
+// TestTutorialCompletionComponent_OnboardingFields tests the new onboarding fields.
+func TestTutorialCompletionComponent_OnboardingFields(t *testing.T) {
+	tc := &TutorialCompletionComponent{
+		CreationTutorialDone: true,
+		CreationTutorialSkip: false,
+		OnboardingState:      int(StateContextHelp),
+		PlayerClass:          int(ClassRanger),
+	}
+
+	if tc.OnboardingState != int(StateContextHelp) {
+		t.Errorf("OnboardingState = %d, want %d", tc.OnboardingState, int(StateContextHelp))
+	}
+	if tc.PlayerClass != int(ClassRanger) {
+		t.Errorf("PlayerClass = %d, want %d", tc.PlayerClass, int(ClassRanger))
+	}
+}
+
+// TestCharacterCreationTutorial_OnboardingTransition tests that completing
+// character creation triggers the onboarding manager transition.
+// Phase 3.2: Verify creation completion -> in-game tutorial transition.
+func TestCharacterCreationTutorial_OnboardingTransition(t *testing.T) {
+	// Create onboarding manager with tutorial systems
+	om := NewOnboardingManager(nil)
+	cct := NewCharacterCreationTutorial()
+	ts := NewTutorialSystemWithSize(800, 600)
+
+	// Initially disable the in-game tutorial (will be enabled on transition)
+	ts.Enabled = false
+	ts.ShowUI = false
+
+	// Wire up systems
+	om.SetCreationTutorial(cct)
+	om.SetTutorialSystem(ts)
+
+	// Verify initial state
+	if om.GetState() != StateCharacterCreation {
+		t.Errorf("Initial state = %v, want StateCharacterCreation", om.GetState())
+	}
+	if ts.Enabled {
+		t.Error("Tutorial system should be disabled initially")
+	}
+
+	// Complete character creation tutorial
+	cct.CompleteTutorial()
+	if !cct.IsComplete() {
+		t.Error("Character creation tutorial should be complete")
+	}
+
+	// Set player class and transition (simulating game.go handleCharacterCreation)
+	om.SetPlayerClass(ClassMage)
+	om.TransitionToInGameTutorial()
+
+	// Verify transition occurred
+	if om.GetState() != StateInGameTutorial {
+		t.Errorf("After transition, state = %v, want StateInGameTutorial", om.GetState())
+	}
+	if !ts.Enabled {
+		t.Error("Tutorial system should be enabled after transition")
+	}
+	if !ts.ShowUI {
+		t.Error("Tutorial system ShowUI should be true after transition")
+	}
+	if om.GetPlayerClass() != ClassMage {
+		t.Errorf("Player class = %v, want ClassMage", om.GetPlayerClass())
+	}
+}

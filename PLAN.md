@@ -250,8 +250,8 @@ Phases 1 and 2 can proceed in parallel. Phase 3 depends on both. Phase 4 depends
   4. Store onboarding state in the `TutorialCompletionComponent` for save/load
 - **Acceptance**: Completing character creation seamlessly transitions to in-game tutorial. No manual activation needed. Save/load preserves onboarding state.
 
-- [ ] Add transition call after character creation completion in client handlers
-- [ ] Update `TutorialCompletionComponent` to track onboarding state
+- [x] Add transition call after character creation completion in client handlers
+- [x] Update `TutorialCompletionComponent` to track onboarding state
 
 ### 3.3 Wire `ShowTutorials` Setting to All Three Layers (M)
 
@@ -401,7 +401,7 @@ Phases 1 and 2 can proceed in parallel. Phase 3 depends on both. Phase 4 depends
 - **New tests needed**:
 
 - [x] `TestCharacterCreationTutorial_EquipmentStep` — verify 6th tutorial step exists and syncs correctly
-- [ ] `TestCharacterCreationTutorial_OnboardingTransition` — verify completion triggers onboarding state transition
+- [x] `TestCharacterCreationTutorial_OnboardingTransition` — verify completion triggers onboarding state transition
 
 ### 5.5 New Test File: `onboarding_test.go` (M) ✅ COMPLETE
 

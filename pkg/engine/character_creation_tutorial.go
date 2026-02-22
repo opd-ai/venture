@@ -433,9 +433,12 @@ func (cct *CharacterCreationTutorial) IsStepCompleted(stepID string) bool {
 // TutorialCompletionComponent tracks whether the character creation tutorial
 // has been completed for a player entity. This component is persisted with
 // the save system to ensure returning players skip the tutorial.
+// Phase 3.2: Extended to track onboarding state for seamless tutorial progression.
 type TutorialCompletionComponent struct {
-	CreationTutorialDone bool // Whether character creation tutorial was completed
-	CreationTutorialSkip bool // Whether character creation tutorial was skipped
+	CreationTutorialDone bool `json:"creation_tutorial_done"` // Whether character creation tutorial was completed
+	CreationTutorialSkip bool `json:"creation_tutorial_skip"` // Whether character creation tutorial was skipped
+	OnboardingState      int  `json:"onboarding_state"`       // Current onboarding phase (Phase 3.2)
+	PlayerClass          int  `json:"player_class"`           // Selected class for class-aware tutorials (Phase 3.2)
 }
 
 // Type returns the component type identifier for ECS registration.
@@ -480,4 +483,47 @@ func MarkCreationTutorialComplete(player *Entity, skipped bool) {
 		CreationTutorialDone: true,
 		CreationTutorialSkip: skipped,
 	})
+}
+
+// UpdateOnboardingState updates the onboarding state stored on the player entity.
+// Phase 3.2: Enables save/load to preserve onboarding progress.
+func UpdateOnboardingState(player *Entity, onboardingState OnboardingState, playerClass CharacterClass) {
+	if player == nil {
+		return
+	}
+
+	comp, ok := player.GetComponent("tutorial_completion")
+	if ok {
+		if tc, ok := comp.(*TutorialCompletionComponent); ok {
+			tc.OnboardingState = int(onboardingState)
+			tc.PlayerClass = int(playerClass)
+			return
+		}
+	}
+
+	// Add new component if it doesn't exist
+	player.AddComponent(&TutorialCompletionComponent{
+		OnboardingState: int(onboardingState),
+		PlayerClass:     int(playerClass),
+	})
+}
+
+// GetOnboardingStateFromPlayer retrieves the stored onboarding state from a player entity.
+// Returns StateCharacterCreation and ClassWarrior if no state is stored.
+func GetOnboardingStateFromPlayer(player *Entity) (OnboardingState, CharacterClass) {
+	if player == nil {
+		return StateCharacterCreation, ClassWarrior
+	}
+
+	comp, ok := player.GetComponent("tutorial_completion")
+	if !ok {
+		return StateCharacterCreation, ClassWarrior
+	}
+
+	tc, ok := comp.(*TutorialCompletionComponent)
+	if !ok {
+		return StateCharacterCreation, ClassWarrior
+	}
+
+	return OnboardingState(tc.OnboardingState), CharacterClass(tc.PlayerClass)
 }

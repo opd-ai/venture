@@ -8,6 +8,8 @@ import (
 	"io"
 	"os"
 	"sync"
+
+	"github.com/sirupsen/logrus"
 )
 
 // FleetManager manages guild vehicle fleets with thread-safe operations
@@ -18,6 +20,9 @@ type FleetManager struct {
 
 // NewFleetManager creates a new fleet manager instance
 func NewFleetManager() *FleetManager {
+	logrus.WithFields(logrus.Fields{
+		"system_name": "fleet_manager",
+	}).Debug("fleet manager created")
 	return &FleetManager{
 		fleets: make(map[string]*Fleet),
 	}

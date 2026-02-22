@@ -13,9 +13,9 @@ This report consolidates 110 individual audit files across all packages in the V
 | Severity | Open Issues |
 |----------|-------------|
 | High     | 1           |
-| Medium   | ~41         |
-| Low      | ~138        |
-| **Total**| **~180**    |
+| Medium   | ~40         |
+| Low      | ~137        |
+| **Total**| **~178**    |
 
 **Historical totals (including fixed):** ~32 High, ~95 Medium, ~227 Low issues were identified across all audits. The vast majority have been resolved, resulting in an overall codebase health status of **Good**.
 
@@ -339,9 +339,9 @@ This report consolidates 110 individual audit files across all packages in the V
 ### pkg/integration/guild_vehicle — Guild Fleet Management
 - **Source:** `pkg/integration/guild_vehicle/AUDIT.md`
 - **High Issues:** 0
-- **Medium Issues:** 1
-- **Low Issues:** 1 (1 fixed)
-- **Details:** 93.9% coverage; all 12 `time.Now()` calls replaced with `TimeProvider`. `NewFleetManager()` does not log creation with `system_name` field per project convention. `time_provider.go` functions lack godoc. ~~`GuildVehicleFleetComponent` is not in the Entity hot-path cache.~~ **RESOLVED 2026-02-22**: `GuildVehicleFleetComponent` added to Entity hot-path cache with `GetGuildVehicleFleet()` getter.
+- **Medium Issues:** 0 (1 fixed)
+- **Low Issues:** 1 (2 fixed)
+- **Details:** 94.0% coverage; all 12 `time.Now()` calls replaced with `TimeProvider`. **RESOLVED 2026-02-22**: `NewFleetManager()` now logs creation with `system_name: "fleet_manager"` field per project convention. **RESOLVED 2026-02-22**: `time_provider.go` functions (`SetTimeProvider`, `ResetTimeProvider`, `now`) now have comprehensive godoc comments explaining purpose and thread-safety. ~~`GuildVehicleFleetComponent` is not in the Entity hot-path cache.~~ **RESOLVED 2026-02-22**: `GuildVehicleFleetComponent` added to Entity hot-path cache with `GetGuildVehicleFleet()` getter.
 
 ---
 
@@ -1087,8 +1087,8 @@ The following low-severity issues appear repeatedly across 30+ packages and repr
 **Missing Godoc Comments** (affects ~20 packages):
 - Exported functions/types without godoc in: `pkg/audit/features`, `pkg/narrative/branching`, `pkg/procgen/recipe`, `pkg/procgen/story`, `pkg/network/federation`, and others
 
-**Global Logger Instead of Injected Logger** (affects ~6 packages):
-- `pkg/companion/learning`, `pkg/procgen/class`, ~~`pkg/integration/companion_housing`~~ (**RESOLVED 2026-02-22**), `pkg/integration/guild_vehicle`
+**Global Logger Instead of Injected Logger** (affects ~5 packages):
+- `pkg/companion/learning`, `pkg/procgen/class`, ~~`pkg/integration/companion_housing`~~ (**RESOLVED 2026-02-22**), ~~`pkg/integration/guild_vehicle`~~ (**RESOLVED 2026-02-22**)
 
 **`time.Now()` in Non-Production Paths** (affects ~10 packages):
 - Mostly for UI timing, cache access times, performance monitoring, or profiling—all documented as acceptable exceptions

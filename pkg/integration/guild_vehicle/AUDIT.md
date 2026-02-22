@@ -23,10 +23,10 @@ The guild_vehicle package provides thread-safe guild fleet management with forma
 _None identified._
 
 ### Medium Severity
-- [ ] **API consistency** — `NewFleetManager()` does not log creation with `system_name` field per project convention (`fleet_manager.go:19`)
+- [x] **API consistency** — ~~`NewFleetManager()` does not log creation with `system_name` field per project convention (`fleet_manager.go:19`)~~ **RESOLVED 2026-02-22**: Added logrus debug logging with `system_name: "fleet_manager"` field in constructor.
 
 ### Low Severity
-- [ ] **Documentation** — `time_provider.go` functions `SetTimeProvider`, `ResetTimeProvider`, and `now` lack godoc comments explaining their purpose and thread-safety (`time_provider.go:34-45`)
+- [x] **Documentation** — ~~`time_provider.go` functions `SetTimeProvider`, `ResetTimeProvider`, and `now` lack godoc comments explaining their purpose and thread-safety (`time_provider.go:34-45`)~~ **RESOLVED 2026-02-22**: Added comprehensive godoc comments explaining purpose, thread-safety characteristics, and usage patterns for all three functions.
 - [ ] **ECS integration** — `GuildVehicleFleetComponent.Type()` returns `"guild_vehicle_fleet"` but the component is not registered in Entity hot-path cache in `ecs.go` (minor performance consideration if heavily used) (`types.go:226`)
 
 ## Input Integration
@@ -72,6 +72,6 @@ Package connects to engine, client, and server appropriately.
 | Mobile | ✅ | No platform-specific code |
 
 ## Recommendations
-1. **[MED]** Add constructor logging to `NewFleetManager()` using `logrus.WithFields(logrus.Fields{"system_name": "fleet_manager"}).Debug("fleet manager created")` to match project conventions.
-2. **[LOW]** Add godoc comments to `SetTimeProvider`, `ResetTimeProvider`, and `now` functions in `time_provider.go` explaining their purpose and thread-safety characteristics.
+1. ~~**[MED]** Add constructor logging to `NewFleetManager()` using `logrus.WithFields(logrus.Fields{"system_name": "fleet_manager"}).Debug("fleet manager created")` to match project conventions.~~ **COMPLETED 2026-02-22**
+2. ~~**[LOW]** Add godoc comments to `SetTimeProvider`, `ResetTimeProvider`, and `now` functions in `time_provider.go` explaining their purpose and thread-safety characteristics.~~ **COMPLETED 2026-02-22**
 3. **[LOW]** Consider adding `GuildVehicleFleetComponent` to Entity hot-path cache in `ecs.go` if fleet components become frequently accessed in update loops.

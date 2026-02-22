@@ -30,17 +30,25 @@ func (p FixedTimeProvider) Now() time.Time {
 // defaultTimeProvider is the package-level time provider instance.
 var defaultTimeProvider TimeProvider = RealTimeProvider{}
 
-// SetTimeProvider sets the package-level time provider for testing.
+// SetTimeProvider sets the package-level time provider.
+// This is primarily used for testing to inject a FixedTimeProvider for deterministic timestamps.
+// It is NOT thread-safe; call only during test setup or initialization, not concurrently.
+// Use ResetTimeProvider to restore default behavior after tests.
 func SetTimeProvider(tp TimeProvider) {
 	defaultTimeProvider = tp
 }
 
-// ResetTimeProvider resets to the default real time provider.
+// ResetTimeProvider resets the package-level time provider to the default RealTimeProvider.
+// Call this in test cleanup (e.g., defer ResetTimeProvider()) to avoid test pollution.
+// It is NOT thread-safe; call only during test teardown, not concurrently.
 func ResetTimeProvider() {
 	defaultTimeProvider = RealTimeProvider{}
 }
 
 // now returns the current time from the configured time provider.
+// This is an internal helper used by FleetManager operations for timestamp generation.
+// In production, it returns real wall-clock time; in tests with FixedTimeProvider,
+// it returns the configured fixed timestamp for deterministic behavior.
 func now() time.Time {
 	return defaultTimeProvider.Now()
 }

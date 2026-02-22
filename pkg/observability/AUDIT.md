@@ -1,136 +1,133 @@
-# Observability Package Audit Report
+# Audit: github.com/opd-ai/venture/pkg/observability
+**Date**: 2026-02-22
+**Auditor**: GitHub Copilot (META_AUDIT v2)
+**Status**: Complete
+<!--
+Status criteria:
+- Complete: All automated checks passed and fewer than 5 non-critical issues identified.
+- Incomplete: Audit was stopped early or one or more required checks (e.g., go test, go vet, race) were not run.
+- Needs Work: 5 or more issues identified, or any critical/priority-0 failure (e.g., panics, data corruption, security issues).
+-->
 
-**Package:** `pkg/observability`  
-**Audit Date:** 2026-02-21  
-**Auditor:** Automated Code Audit  
-**Test Coverage:** 97.3%  
+## Summary
+The `pkg/observability` package provides Prometheus-compatible metrics export, health/readiness endpoints, and JSON status reporting for production monitoring. Test coverage is excellent at 97.3% with all automated checks passing. Four low-severity issues were identified, primarily documentation/naming mismatches and minor edge cases in goroutine lifecycle management.
 
-## AUDIT SUMMARY
+## Automated Check Results
+| Check | Result |
+|---|---|
+| `go vet` | ✅ Pass |
+| `go test -cover` | 97.3% (target: 65%) ✅ |
+| `go test -race` | ✅ Pass |
+| WASM vet | ✅ Pass |
+| TODO/FIXME count | 0 |
+| Non-deterministic rand | 0 occurrences |
+| Concrete net types | 0 occurrences |
 
-| Category | Count |
-|----------|-------|
-| CRITICAL BUG | 0 |
-| FUNCTIONAL MISMATCH | 1 |
-| MISSING FEATURE | 1 |
-| EDGE CASE BUG | 2 |
-| PERFORMANCE ISSUE | 0 |
-| **TOTAL** | **4** |
+## Issues Found
 
-The `observability` package is well-implemented with excellent test coverage (97.3%). All documented features are present and functional. The issues identified are minor edge cases and one documentation discrepancy. The package correctly implements Prometheus-compatible metrics export, health/readiness endpoints, and JSON status reporting.
+### High Severity
+_(none)_
+
+### Medium Severity
+- [ ] **Doc/Implementation Mismatch** — Documentation in `doc.go:2` claims "distributed tracing support" but no tracing implementation exists (`doc.go:2`)
+- [ ] **Naming Inconsistency** — Documentation says "player count" metric but implementation uses `venture_players_connected` measuring clients (`doc.go:8`, `metrics.go:258`)
+
+### Low Severity
+- [ ] **Edge Case Race** — Potential race between `Start()` goroutine launch and immediate `Stop()` call; server reference should be captured before goroutine (`metrics.go:179-184`)
+- [ ] **Goroutine Lifecycle** — `Stop()` does not wait for server goroutine to fully exit; logging may occur after Stop returns (`metrics.go:189-217`)
+
+## Input Integration
+| Input Source | Status | Notes |
+|---|---|---|
+| Keyboard | N/A | Package handles HTTP requests, no direct user input |
+| Mouse | N/A | Package handles HTTP requests, no direct user input |
+| Gamepad | N/A | Package handles HTTP requests, no direct user input |
+| Touch | N/A | Package handles HTTP requests, no direct user input |
+| VR | N/A | Package handles HTTP requests, no direct user input |
+| Stub/Test | ✅ | Mock implementations provided for all interfaces (PerformanceMonitor, NetworkServer, World, ReadinessChecker) |
+
+## Menu/UI Integration
+| Menu | Reachable | Input-Complete | Backing System Wired | Notes |
+|---|---|---|---|---|
+| N/A | N/A | N/A | N/A | Package is server-side infrastructure, no UI components |
+
+## Test Coverage
+**Coverage**: 97.3% (target: 65%) ✅
+- Missing test areas: None significant; all endpoints and edge cases covered
+- Missing benchmarks: No benchmarks for concurrent access patterns
+- Table-driven test compliance: ✅ Uses table-driven tests in `TestMetricsEndpoint` and `TestStatusEndpoint`
+
+## Documentation Coverage
+- Package `doc.go`: ✅ Present with comprehensive usage examples
+- Exported symbols documented: 19/19 (100%)
+- Complex algorithms commented: ✅ (minimal complexity in this package)
+
+## Integration Status
+Infrastructure package providing metrics export for server monitoring.
+- System registration: ✅ — Registered via `initializeMetricsExporter()` in `cmd/server/main.go:1060`
+- Component registration: N/A — No ECS components defined
+- Serialize/Deserialize: N/A — Stateless metrics export
+- Network sync: N/A — Server-side only, no client replication needed
+- Genre theming: N/A — Infrastructure package, not content generation
+- Mod compatibility: N/A — Not data-driven content
+- Event bus: N/A — Uses HTTP request/response pattern
+
+## Platform Status
+| Platform | Status | Notes |
+|---|---|---|
+| Desktop | ✅ | Full support via HTTP server |
+| WASM | N/A | Server-side package; WASM vet passes but package not used in browser |
+| Mobile | N/A | Server-side package; mobile platforms connect as clients |
+
+## Recommendations
+1. **[MED]** Update `doc.go:2` to remove "distributed tracing support" claim or implement tracing (e.g., OpenTelemetry)
+2. **[MED]** Rename metric to `venture_player_count` or update documentation to match `venture_players_connected`
+3. **[LOW]** Capture server reference before goroutine launch in `Start()` to prevent theoretical race
+4. **[LOW]** Add sync.WaitGroup to ensure server goroutine exits before `Stop()` returns
 
 ---
 
-## DETAILED FINDINGS
+## Detailed Findings (Legacy Format)
 
-~~~~
 ### MISSING FEATURE: Distributed Tracing Support Not Implemented
 **File:** doc.go:2
-**Severity:** Low
-**Description:** The package documentation in `doc.go` line 2 states the package "includes Prometheus metrics export, health checks, and distributed tracing support." However, no distributed tracing functionality is implemented in the codebase.
-**Expected Behavior:** The package should include distributed tracing support as documented (e.g., OpenTelemetry, Jaeger, or Zipkin integration).
-**Actual Behavior:** Only Prometheus metrics export, health checks, and readiness checks are implemented. No tracing interfaces, span creation, or trace context propagation exist.
-**Impact:** Users expecting distributed tracing functionality based on documentation will find it absent. This is a documentation/implementation mismatch rather than a bug.
-**Reproduction:** Search for any tracing-related code (span, trace, context propagation) - none exists.
-**Code Reference:**
-```go
-// doc.go:1-3
-// Package observability provides monitoring and observability infrastructure for Venture.
-// It includes Prometheus metrics export, health checks, and distributed tracing support.
-```
-~~~~
+**Severity:** Medium
+**Description:** The package documentation claims "distributed tracing support" but no tracing functionality exists.
+**Impact:** Documentation/implementation mismatch; users expecting tracing will find it absent.
 
-~~~~
-### FUNCTIONAL MISMATCH: Player Count Metric Documented But Named Differently
+### FUNCTIONAL MISMATCH: Player Count Metric Named Differently
 **File:** doc.go:8, metrics.go:258-260
-**Severity:** Low
-**Description:** The documentation in `doc.go` line 8 states "Game-specific metrics include player count, active quests, and trade volume." However, the actual metric is named `venture_players_connected` rather than `venture_player_count`, and the value comes from `GetConnectedClients()` rather than a player count method.
-**Expected Behavior:** Metric should be named `venture_player_count` per documentation.
-**Actual Behavior:** Metric is named `venture_players_connected` and measures connected clients.
-**Impact:** Minor naming inconsistency that could cause confusion when setting up monitoring dashboards. Functionally equivalent but semantically different (connected clients vs players).
-**Reproduction:** Query the `/metrics` endpoint and observe the metric name.
-**Code Reference:**
-```go
-// metrics.go:258-260
-fmt.Fprintf(w, "# HELP venture_players_connected Number of connected players\n")
-fmt.Fprintf(w, "# TYPE venture_players_connected gauge\n")
-fmt.Fprintf(w, "venture_players_connected %d\n", clients)
-```
-~~~~
+**Severity:** Medium
+**Description:** Documentation says "player count" but metric is `venture_players_connected`.
+**Impact:** Minor naming confusion for monitoring dashboard setup.
 
-~~~~
-### EDGE CASE BUG: Potential Race Condition in Start() Server Assignment
-**File:** metrics.go:157-187
+### EDGE CASE BUG: Potential Race in Start() Goroutine
+**File:** metrics.go:179-184
 **Severity:** Low
-**Description:** The `Start()` function holds the mutex during HTTP server creation and goroutine launch, but the goroutine started at line 179 captures `m.server` after the lock is released. If `Stop()` is called immediately after `Start()` returns, the goroutine may access an inconsistent server state.
-**Expected Behavior:** Server reference should be captured before starting the goroutine or under mutex protection.
-**Actual Behavior:** The goroutine reads `m.server.ListenAndServe()` after mutex is released. While `m.server` is assigned before the goroutine starts, a very fast `Stop()` call could set `m.server = nil` before `ListenAndServe()` begins.
-**Impact:** Extremely rare race condition that could cause a nil pointer panic in edge cases with immediate start/stop sequences. The existing test `TestStartStop` passes but uses a 100ms sleep that masks this issue.
-**Reproduction:** Call `Start()` then `Stop()` in rapid succession without sleep.
-**Code Reference:**
-```go
-// metrics.go:179-184
-go func() {
-    m.logger.WithField("address", m.addr).Info("Starting metrics HTTP server")
-    if err := m.server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-        m.logger.WithError(err).Error("Metrics server error")
-    }
-}()
-```
-~~~~
+**Description:** Goroutine captures `m.server` after mutex release; rapid Start/Stop could cause nil panic.
+**Impact:** Extremely rare; existing tests mask with 100ms sleep.
 
-~~~~
-### EDGE CASE BUG: Stop() Does Not Wait for Goroutine to Exit
+### EDGE CASE BUG: Stop() Does Not Join Goroutine
 **File:** metrics.go:189-217
-**Severity:** Low  
-**Description:** The `Stop()` and `StopWithTimeout()` functions call `server.Shutdown()` which gracefully closes the HTTP server, but they do not synchronize with the goroutine started in `Start()`. The goroutine may still be executing logging statements after `Stop()` returns.
-**Expected Behavior:** `Stop()` should ensure the server goroutine has fully exited before returning.
-**Actual Behavior:** `Stop()` returns after `Shutdown()` completes, but the goroutine logging and error handling may still be in progress.
-**Impact:** Minor - could cause log messages to appear after `Stop()` returns, or cause issues if the logger is closed immediately after `Stop()`. The race detector does not flag this because there's no data race, just a synchronization gap.
-**Reproduction:** Call `Stop()` then immediately close the logger - may see errors or lost log messages.
-**Code Reference:**
-```go
-// metrics.go:189-217
-func (m *MetricsExporter) Stop() error {
-    return m.StopWithTimeout(30 * time.Second)
-}
-
-func (m *MetricsExporter) StopWithTimeout(timeout time.Duration) error {
-    // ... server.Shutdown() called but goroutine from Start() not joined
-}
-```
-~~~~
+**Severity:** Low
+**Description:** Server.Shutdown() returns but goroutine may still be logging.
+**Impact:** Minor; log messages may appear after Stop() returns.
 
 ---
 
-## VERIFICATION NOTES
+## Verification Notes
 
 ### Dependency Analysis
-
-This package has **no internal dependencies** (Level 0) - it only imports standard library packages and logrus:
-- `context`
-- `encoding/json`
-- `fmt`
-- `net/http`
-- `runtime`
-- `sync`
-- `time`
+This package has **no internal Venture dependencies** (Level 0) - only standard library and logrus:
+- `context`, `encoding/json`, `fmt`, `net/http`, `runtime`, `sync`, `time`
 - `github.com/sirupsen/logrus`
 
 ### Features Verified as Correct
-
-1. **Prometheus Metrics Export** - Correctly implements Prometheus exposition format with proper HELP/TYPE annotations
-2. **Health Check Endpoint** (`/health`) - Simple liveness probe working correctly
-3. **Readiness Check Endpoint** (`/ready`) - Extensible via `ReadinessChecker` interface, returns proper HTTP status codes
-4. **Status Endpoint** (`/status`) - Comprehensive JSON status response with performance, network, and game metrics
-5. **Thread Safety** - Proper use of `sync.RWMutex` for concurrent access protection
-6. **Graceful Shutdown** - `StopWithTimeout()` correctly uses context with deadline
-7. **Interface-Based Design** - All metrics sources are interfaces allowing easy mocking/testing
-8. **Error Handling** - Appropriate error returns and logging
-
-### Test Coverage Analysis
-
-- 97.3% statement coverage
-- All endpoints tested with mock implementations
-- Concurrent access testing included
-- Both success and failure paths for readiness checks tested
-- Edge cases (no sources registered, already started, not started) covered
+1. **Prometheus Metrics Export** — Correct exposition format with HELP/TYPE annotations
+2. **Health Check** (`/health`) — Simple liveness probe
+3. **Readiness Check** (`/ready`) — Extensible via `ReadinessChecker` interface
+4. **Status Endpoint** (`/status`) — Comprehensive JSON status
+5. **Thread Safety** — Proper `sync.RWMutex` usage
+6. **Graceful Shutdown** — `StopWithTimeout()` with context deadline
+7. **Interface-Based Design** — All sources are interfaces for testability
+8. **Structured Logging** — Uses `logrus.WithField()` and `logrus.WithError()` correctly

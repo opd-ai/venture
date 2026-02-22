@@ -45,7 +45,7 @@ func TestServerIdentityGeneration(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// Call should not panic and should return valid managers
-			guildManager, fleetManager := initializeV8SystemsServer(world, seed, tt.serverName, logger)
+			guildManager, fleetManager, _ := initializeV8SystemsServer(world, seed, tt.serverName, logger)
 
 			if guildManager == nil {
 				t.Error("initializeV8SystemsServer returned nil guildManager")
@@ -85,8 +85,8 @@ func TestServerIdentityUniqueness(t *testing.T) {
 	world2 := engine.NewWorld()
 
 	// Initialize two servers with same name
-	_, _ = initializeV8SystemsServer(world1, seed, "test-server", logger1)
-	_, _ = initializeV8SystemsServer(world2, seed, "test-server", logger2)
+	_, _, _ = initializeV8SystemsServer(world1, seed, "test-server", logger1)
+	_, _, _ = initializeV8SystemsServer(world2, seed, "test-server", logger2)
 
 	// Verify both initializations logged server identity
 	if buf1.Len() == 0 {
@@ -156,7 +156,7 @@ func TestServerIdentityKeyLength(t *testing.T) {
 	seed := int64(12345)
 	serverName := "key-test-server"
 
-	_, _ = initializeV8SystemsServer(world, seed, serverName, logger)
+	_, _, _ = initializeV8SystemsServer(world, seed, serverName, logger)
 
 	// Verify log contains expected fields
 	logOutput := buf.String()
@@ -191,7 +191,7 @@ func TestServerIdentityWithMultipleSystems(t *testing.T) {
 	initializeV4Systems(world, seed, logger, nil)
 	initializeV5SystemsServer(world, logger)
 	initializeV6SystemsServer(world, seed, logger, nil)
-	guildManager, _ := initializeV8SystemsServer(world, seed, serverName, logger)
+	guildManager, _, _ := initializeV8SystemsServer(world, seed, serverName, logger)
 
 	if guildManager == nil {
 		t.Fatal("guildManager is nil after full system initialization")

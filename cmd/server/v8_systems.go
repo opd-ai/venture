@@ -7,6 +7,7 @@ import (
 	"github.com/opd-ai/venture/pkg/engine"
 	"github.com/opd-ai/venture/pkg/engine/physics/fluids"
 	guildvehicle "github.com/opd-ai/venture/pkg/integration/guild_vehicle"
+	"github.com/opd-ai/venture/pkg/integration/trade_routes"
 	"github.com/opd-ai/venture/pkg/network/federation"
 	"github.com/opd-ai/venture/pkg/network/federation/guild"
 	"github.com/sirupsen/logrus"
@@ -21,9 +22,9 @@ import (
 // initializeV8SystemsServer initializes Version 8.0 systems on the server.
 // Server-side systems include: housing infrastructure, trust/reputation tracking,
 // chat history persistence, image galleries, guild halls, fluid simulation,
-// enhanced vehicle physics, and building/furniture generation.
-// Returns the guild.Manager and FleetManager for use by V9 political warfare integration.
-func initializeV8SystemsServer(world *engine.World, seed int64, serverName string, logger *logrus.Logger) (*guild.Manager, *guildvehicle.FleetManager) {
+// enhanced vehicle physics, building/furniture generation, and trade routes.
+// Returns the guild.Manager, FleetManager, and RouteManager for use by V9 integration.
+func initializeV8SystemsServer(world *engine.World, seed int64, serverName string, logger *logrus.Logger) (*guild.Manager, *guildvehicle.FleetManager, *trade_routes.RouteManager) {
 	serverLogger := logger.WithField("component", "v8_systems")
 
 	// Phase 49.1-49.2: Housing, Trust & Reputation Infrastructure
@@ -67,6 +68,15 @@ func initializeV8SystemsServer(world *engine.World, seed int64, serverName strin
 	fleetManager := guildvehicle.NewFleetManager()
 	serverLogger.Debug("FleetManager initialized for guild vehicle coordination")
 
+	// INTEGRATION FIX [AUDIT.md]: Trade Routes Server Registration
+	// Gap: Server did not call Start() on RouteManager, unlike the client pattern
+	// Fix: Initialize RouteManager with server name and seed, call Start() for background updates
+	// Impact: AI merchant caravans now sync across multiplayer sessions
+	tradeRouteManager := trade_routes.NewRouteManager(serverName, seed)
+	tradeRouteManager.Start()
+	world.AddSystem(&tradeRouteManagerWrapper{system: tradeRouteManager})
+	serverLogger.Debug("RouteManager initialized and started for trade route synchronization")
+
 	// Phase 50.3: Enhanced Vehicle Physics
 	// NOTE: EnhancedVehicleSystem is client-side only (handles visual physics).
 	// Server uses basic physics for authoritative position updates.
@@ -104,8 +114,8 @@ func initializeV8SystemsServer(world *engine.World, seed int64, serverName strin
 	// - furniture.NewGenerator() for interior furniture
 
 	if logger.GetLevel() >= logrus.DebugLevel {
-		serverLogger.Info("V8.0 systems initialized (guild federation, fleet management, housing, trust, reputation, fluid dynamics, vehicle physics, building/furniture)")
+		serverLogger.Info("V8.0 systems initialized (guild federation, fleet management, trade routes, housing, trust, reputation, fluid dynamics, vehicle physics, building/furniture)")
 	}
 
-	return guildManager, fleetManager
+	return guildManager, fleetManager, tradeRouteManager
 }

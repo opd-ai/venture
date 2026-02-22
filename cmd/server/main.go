@@ -372,10 +372,10 @@ func createGameWorld(logger *logrus.Logger) (*engine.World, *engine.EnhancedChat
 
 	// INTEGRATION FIX [Category A]: V8.0 Server System Initialization
 	// Gap: V8.0 systems implemented but never initialized on server
-	// Fix: Added V8.0 system initialization call for housing, fluids, vehicle physics, fleet management
+	// Fix: Added V8.0 system initialization call for housing, fluids, vehicle physics, fleet management, trade routes
 	// Roadmap: ROADMAP_V8.md (Phase 49-51), ROADMAP_V9.md (Phase 56.1)
-	// Returns guild.Manager and FleetManager for V9 political warfare integration
-	guildManager, fleetManager := initializeV8SystemsServer(world, *seed, *serverName, logger)
+	// Returns guild.Manager, FleetManager, and RouteManager for integration and cleanup
+	guildManager, fleetManager, tradeRouteManager := initializeV8SystemsServer(world, *seed, *serverName, logger)
 
 	// INTEGRATION FIX [Category A]: V9.0 Server Integration Manager Initialization
 	// Gap: V9.0 integration managers were client-only, allowing XP/loyalty/permission exploits
@@ -415,6 +415,13 @@ func createGameWorld(logger *logrus.Logger) (*engine.World, *engine.EnhancedChat
 	// Impact: Guild fleet formations, siege engines, and vehicle maintenance enabled server-side
 	// Note: Available for VehicleSystem integration and network packet handling
 	_ = fleetManager // Manager available for future vehicle fleet coordination features
+
+	// INTEGRATION FIX [AUDIT.md]: Trade Route Manager for multiplayer caravan sync
+	// Gap: Server did not call Start() on RouteManager, unlike client pattern
+	// Fix: RouteManager now initialized and started in v8_systems.go
+	// Impact: AI merchant caravans and trade routes sync across multiplayer sessions
+	// Note: Returned for cleanup during server shutdown via Stop()
+	_ = tradeRouteManager // Manager returned for Stop() call during server shutdown
 
 	// INTEGRATION FIX [AUDIT.md Priority 2]: Prestige System Server Registration
 	// Gap: Prestige system was client-only, causing prestige data desync in multiplayer

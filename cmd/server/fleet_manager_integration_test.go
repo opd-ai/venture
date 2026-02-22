@@ -21,7 +21,7 @@ func TestFleetManager_Integration(t *testing.T) {
 	seed := int64(12345)
 
 	// Initialize V8 systems to get FleetManager
-	guildManager, fleetManager := initializeV8SystemsServer(world, seed, "test-server", logger)
+	guildManager, fleetManager, _ := initializeV8SystemsServer(world, seed, "test-server", logger)
 
 	if guildManager == nil {
 		t.Fatal("guildManager is nil")
@@ -70,7 +70,7 @@ func TestFleetManager_VehicleOperations(t *testing.T) {
 	logger.SetOutput(bytes.NewBuffer(nil))
 	seed := int64(12345)
 
-	_, fleetManager := initializeV8SystemsServer(world, seed, "test-server", logger)
+	_, fleetManager, _ := initializeV8SystemsServer(world, seed, "test-server", logger)
 
 	guildID := "test_guild"
 	fleetID := "siege_fleet"
@@ -140,7 +140,7 @@ func TestFleetManager_FormationBonuses(t *testing.T) {
 	logger.SetOutput(bytes.NewBuffer(nil))
 	seed := int64(12345)
 
-	_, fleetManager := initializeV8SystemsServer(world, seed, "test-server", logger)
+	_, fleetManager, _ := initializeV8SystemsServer(world, seed, "test-server", logger)
 
 	guildID := "test_guild"
 	fleetID := "combat_fleet"
@@ -198,7 +198,7 @@ func TestFleetManager_MaintenanceCost(t *testing.T) {
 	logger.SetOutput(bytes.NewBuffer(nil))
 	seed := int64(12345)
 
-	_, fleetManager := initializeV8SystemsServer(world, seed, "test-server", logger)
+	_, fleetManager, _ := initializeV8SystemsServer(world, seed, "test-server", logger)
 
 	guildID := "test_guild"
 	fleetID := "expensive_fleet"
@@ -239,7 +239,7 @@ func TestFleetManager_MultipleFleets(t *testing.T) {
 	logger.SetOutput(bytes.NewBuffer(nil))
 	seed := int64(12345)
 
-	_, fleetManager := initializeV8SystemsServer(world, seed, "test-server", logger)
+	_, fleetManager, _ := initializeV8SystemsServer(world, seed, "test-server", logger)
 
 	guildID := "test_guild"
 	fleetIDs := []string{"fleet_alpha", "fleet_beta", "fleet_gamma"}
@@ -281,7 +281,7 @@ func TestFleetManager_ThreadSafety(t *testing.T) {
 	logger.SetOutput(bytes.NewBuffer(nil))
 	seed := int64(12345)
 
-	_, fleetManager := initializeV8SystemsServer(world, seed, "test-server", logger)
+	_, fleetManager, _ := initializeV8SystemsServer(world, seed, "test-server", logger)
 
 	guildID := "concurrent_guild"
 	fleetID := "concurrent_fleet"
@@ -337,7 +337,7 @@ func BenchmarkFleetManager_AddVehicle(b *testing.B) {
 	logger.SetOutput(bytes.NewBuffer(nil))
 	seed := int64(12345)
 
-	_, fleetManager := initializeV8SystemsServer(world, seed, "test-server", logger)
+	_, fleetManager, _ := initializeV8SystemsServer(world, seed, "test-server", logger)
 
 	guildID := "bench_guild"
 	fleetID := "bench_fleet"
@@ -356,7 +356,7 @@ func BenchmarkFleetManager_GetFleetBonuses(b *testing.B) {
 	logger.SetOutput(bytes.NewBuffer(nil))
 	seed := int64(12345)
 
-	_, fleetManager := initializeV8SystemsServer(world, seed, "test-server", logger)
+	_, fleetManager, _ := initializeV8SystemsServer(world, seed, "test-server", logger)
 
 	guildID := "bench_guild"
 	fleetID := "bench_fleet"

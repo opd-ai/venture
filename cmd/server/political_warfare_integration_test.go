@@ -21,7 +21,7 @@ func TestPoliticalWarfareSystem_ServerInitialization(t *testing.T) {
 	seed := int64(12345)
 
 	// Initialize V8 to get guild manager
-	guildManager, _ := initializeV8SystemsServer(world, seed, "test-server", logger)
+	guildManager, _, _ := initializeV8SystemsServer(world, seed, "test-server", logger)
 	if guildManager == nil {
 		t.Fatal("Failed to initialize guild manager")
 	}
@@ -58,7 +58,7 @@ func TestPoliticalWarfareSystem_WarDeclaration(t *testing.T) {
 	seed := int64(12345)
 
 	// Setup
-	guildManager, _ := initializeV8SystemsServer(world, seed, "test-server", logger)
+	guildManager, _, _ := initializeV8SystemsServer(world, seed, "test-server", logger)
 	_, _, _, _, politicalWarfareSys := initializeV9SystemsServer(world, seed, guildManager, logger)
 
 	// Create test guilds
@@ -109,7 +109,7 @@ func TestPoliticalWarfareSystem_Update(t *testing.T) {
 	seed := int64(12345)
 
 	// Setup
-	guildManager, _ := initializeV8SystemsServer(world, seed, "test-server", logger)
+	guildManager, _, _ := initializeV8SystemsServer(world, seed, "test-server", logger)
 	_, _, _, _, politicalWarfareSys := initializeV9SystemsServer(world, seed, guildManager, logger)
 
 	// Create test guilds
@@ -158,7 +158,7 @@ func TestPoliticalWarfareSystem_PeaceTreaty(t *testing.T) {
 	seed := int64(12345)
 
 	// Setup
-	guildManager, _ := initializeV8SystemsServer(world, seed, "test-server", logger)
+	guildManager, _, _ := initializeV8SystemsServer(world, seed, "test-server", logger)
 	_, _, _, _, politicalWarfareSys := initializeV9SystemsServer(world, seed, guildManager, logger)
 
 	// Create test guilds
@@ -198,7 +198,7 @@ func TestPoliticalWarfareSystem_TradeEmbargo(t *testing.T) {
 	seed := int64(12345)
 
 	// Setup
-	guildManager, _ := initializeV8SystemsServer(world, seed, "test-server", logger)
+	guildManager, _, _ := initializeV8SystemsServer(world, seed, "test-server", logger)
 	_, _, _, _, politicalWarfareSys := initializeV9SystemsServer(world, seed, guildManager, logger)
 
 	// Create test guilds
@@ -236,7 +236,7 @@ func TestPoliticalWarfareSystem_AllianceCall(t *testing.T) {
 	seed := int64(77777) // Fixed seed for deterministic alliance check
 
 	// Setup
-	guildManager, _ := initializeV8SystemsServer(world, seed, "test-server", logger)
+	guildManager, _, _ := initializeV8SystemsServer(world, seed, "test-server", logger)
 	_, _, _, _, politicalWarfareSys := initializeV9SystemsServer(world, seed, guildManager, logger)
 
 	// Create test guilds
@@ -282,7 +282,7 @@ func TestPoliticalWarfareSystem_ReputationPenalty(t *testing.T) {
 	seed := int64(12345)
 
 	// Setup
-	guildManager, _ := initializeV8SystemsServer(world, seed, "test-server", logger)
+	guildManager, _, _ := initializeV8SystemsServer(world, seed, "test-server", logger)
 	_, _, _, _, politicalWarfareSys := initializeV9SystemsServer(world, seed, guildManager, logger)
 
 	// Create test guild
@@ -321,7 +321,7 @@ func TestPoliticalWarfareSystem_DiplomaticVictory(t *testing.T) {
 	seed := int64(55555) // Fixed seed for deterministic outcome
 
 	// Setup
-	guildManager, _ := initializeV8SystemsServer(world, seed, "test-server", logger)
+	guildManager, _, _ := initializeV8SystemsServer(world, seed, "test-server", logger)
 	_, _, _, _, politicalWarfareSys := initializeV9SystemsServer(world, seed, guildManager, logger)
 
 	// Create test guilds
@@ -375,7 +375,7 @@ func BenchmarkPoliticalWarfareSystem_Update(b *testing.B) {
 	logger.SetLevel(logrus.WarnLevel)
 	seed := int64(12345)
 
-	guildManager, _ := initializeV8SystemsServer(world, seed, "test-server", logger)
+	guildManager, _, _ := initializeV8SystemsServer(world, seed, "test-server", logger)
 	_, _, _, _, politicalWarfareSys := initializeV9SystemsServer(world, seed, guildManager, logger)
 
 	// Setup test data
@@ -395,7 +395,7 @@ func BenchmarkPoliticalWarfareSystem_WarDeclaration(b *testing.B) {
 	logger.SetLevel(logrus.WarnLevel)
 	seed := int64(12345)
 
-	guildManager, _ := initializeV8SystemsServer(world, seed, "test-server", logger)
+	guildManager, _, _ := initializeV8SystemsServer(world, seed, "test-server", logger)
 	_, _, _, _, politicalWarfareSys := initializeV9SystemsServer(world, seed, guildManager, logger)
 
 	// Create test guilds

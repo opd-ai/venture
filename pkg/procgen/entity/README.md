@@ -245,7 +245,9 @@ for i, room := range terr.Rooms {
 ### Dynamic Encounter Generation
 
 ```go
-func generateEncounter(depth int, difficulty float64) []*entity.Entity {
+// generateEncounter creates entities for a room. The roomSeed should be
+// derived from the world seed and room index for deterministic generation.
+func generateEncounter(depth int, difficulty float64, roomSeed int64) []*entity.Entity {
     gen := entity.NewEntityGenerator()
     
     // More entities at higher depths
@@ -258,8 +260,7 @@ func generateEncounter(depth int, difficulty float64) []*entity.Entity {
         Custom:     map[string]interface{}{"count": count},
     }
     
-    seed := time.Now().UnixNano()
-    result, _ := gen.Generate(seed, params)
+    result, _ := gen.Generate(roomSeed, params)
     
     return result.([]*entity.Entity)
 }

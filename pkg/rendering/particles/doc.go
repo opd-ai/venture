@@ -110,7 +110,9 @@
 //	}
 //	system, err := gen.Generate(config)
 //	if err != nil {
-//	    log.Fatal(err)
+//	    // Handle error appropriately in production (log.Fatal is for examples only)
+//	    logrus.WithError(err).Error("Failed to generate particle system")
+//	    return
 //	}
 //
 // # Weather Usage
@@ -127,7 +129,8 @@
 //	}
 //	ws, err := particles.GenerateWeather(config)
 //	if err != nil {
-//	    log.Fatal(err)
+//	    logrus.WithError(err).Error("Failed to generate weather")
+//	    return
 //	}
 //
 //	// Simulate weather
@@ -175,7 +178,8 @@
 //	}
 //	ambience, err := particles.GenerateAmbience(config)
 //	if err != nil {
-//	    log.Fatal(err)
+//	    logrus.WithError(err).Error("Failed to generate ambience")
+//	    return
 //	}
 //
 //	// Update ambience particles each frame

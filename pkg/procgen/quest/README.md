@@ -366,7 +366,9 @@ combatSystem.SetDeathCallback(func(victim *Entity) {
 
 ### Quest Board
 ```go
-func GenerateQuestBoard(depth, playerLevel int) []*quest.Quest {
+// GenerateQuestBoard generates quests for a location. The locationSeed should be
+// derived from the world seed and location index for deterministic generation.
+func GenerateQuestBoard(depth, playerLevel int, locationSeed int64) []*quest.Quest {
     generator := quest.NewQuestGenerator()
     params := procgen.GenerationParams{
         Difficulty: 0.5,
@@ -375,7 +377,7 @@ func GenerateQuestBoard(depth, playerLevel int) []*quest.Quest {
         Custom:     map[string]interface{}{"count": 5},
     }
     
-    result, _ := generator.Generate(time.Now().Unix(), params)
+    result, _ := generator.Generate(locationSeed, params)
     quests := result.([]*quest.Quest)
     
     // Filter by player level

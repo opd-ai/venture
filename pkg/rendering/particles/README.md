@@ -102,12 +102,13 @@ if system.IsAlive() {
 ### Advanced Configuration
 
 ```go
-// Explosion effect with gravity
+// Explosion effect with gravity. The eventSeed should be derived from
+// the world seed and event ID for deterministic multiplayer synchronization.
 config := particles.Config{
     Type:     particles.ParticleSpark,
     Count:    200,
     GenreID:  "scifi",
-    Seed:     time.Now().UnixNano(), // Random seed
+    Seed:     eventSeed, // Deterministic seed from event
     Duration: 0.5,
     SpreadX:  20.0,
     SpreadY:  20.0,

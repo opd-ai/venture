@@ -13,16 +13,16 @@ This report consolidates 110 individual audit files across all packages in the V
 | Severity | Open Issues |
 |----------|-------------|
 | High     | 1           |
-| Medium   | ~45         |
-| Low      | ~143        |
-| **Total**| **~189**    |
+| Medium   | ~42         |
+| Low      | ~140        |
+| **Total**| **~183**    |
 
 **Historical totals (including fixed):** ~32 High, ~95 Medium, ~227 Low issues were identified across all audits. The vast majority have been resolved, resulting in an overall codebase health status of **Good**.
 
 **Strengths:** The codebase demonstrates high quality with average test coverage of 82.4% (target 65%), deterministic generation via seed-based RNG throughout, ECS architectural compliance, and comprehensive documentation. All critical runtime panics, data corruption risks, and non-determinism violations in production paths have been resolved.
 
 **Remaining issues** fall into three categories:
-- *Documentation inconsistencies:* doc examples using non-deterministic seeding or `log.Fatal` instead of logrus (~14 packages)
+- *Documentation inconsistencies:* doc examples using `log.Fatal` instead of logrus (~10 packages, down from ~14 after 2026-02-22 fixes)
 - *API consistency gaps:* missing godoc on some exported symbols (~17 packages)
 - *Integration gaps:* (prestige, modding, QoL, companion_housing, housing_crafting, and guild_housing system integration gaps resolved 2026-02-22)
 
@@ -582,9 +582,9 @@ This report consolidates 110 individual audit files across all packages in the V
 ### pkg/procgen/entity — NPC & Creature Generation
 - **Source:** `pkg/procgen/entity/AUDIT.md`
 - **High Issues:** 0
-- **Medium Issues:** 1
+- **Medium Issues:** 0 (1 fixed)
 - **Low Issues:** 1
-- **Details:** 92.4% coverage. `README.md` example uses `time.Now().UnixNano()` as a seed, contradicting deterministic generation guidelines. No functional issues.
+- **Details:** 92.4% coverage. **RESOLVED 2026-02-22**: `README.md` example updated to use deterministic seed parameter (`roomSeed`) instead of `time.Now().UnixNano()`. No functional issues.
 
 ---
 
@@ -699,9 +699,9 @@ This report consolidates 110 individual audit files across all packages in the V
 ### pkg/procgen/quest — Quest Generation
 - **Source:** `pkg/procgen/quest/AUDIT.md`
 - **High Issues:** 0
-- **Medium Issues:** 1
+- **Medium Issues:** 0 (1 fixed)
 - **Low Issues:** 1
-- **Details:** 92.3% coverage. `README.md` example uses `time.Now().Unix()` as a seed, contradicting deterministic generation best practices. No functional issues; all generation correctly uses `rand.New(rand.NewSource(seed))`.
+- **Details:** 92.3% coverage. **RESOLVED 2026-02-22**: `README.md` example updated to use deterministic seed parameter (`locationSeed`) instead of `time.Now().Unix()`. No functional issues; all generation correctly uses `rand.New(rand.NewSource(seed))`.
 
 ---
 
@@ -834,9 +834,9 @@ This report consolidates 110 individual audit files across all packages in the V
 ### pkg/rendering/particles — Particle System (Behaviors, Physics, LOD)
 - **Source:** `pkg/rendering/particles/AUDIT.md`
 - **High Issues:** 0
-- **Medium Issues:** 1
-- **Low Issues:** 2
-- **Details:** 91.8% coverage. `README.md` example uses `time.Now().UnixNano()` as a seed, contradicting determinism guidelines. `doc.go` examples use `log.Fatal` instead of logrus. Minor performance consideration for particle pool recycling under high load.
+- **Medium Issues:** 0 (1 fixed)
+- **Low Issues:** 1 (1 fixed)
+- **Details:** 91.8% coverage. **RESOLVED 2026-02-22**: `README.md` example updated to use deterministic seed parameter (`eventSeed`) instead of `time.Now().UnixNano()`. `doc.go` examples updated to use `logrus.WithError(err).Error()` instead of `log.Fatal`. Remaining low-severity: minor performance consideration for particle pool recycling under high load.
 
 ---
 
@@ -1081,7 +1081,7 @@ The following medium-priority issues appear across multiple packages and should 
 The following low-severity issues appear repeatedly across 30+ packages and represent systemic improvement opportunities:
 
 **Documentation Examples Using Non-Standard Patterns** (affects ~15 packages):
-- README/doc.go examples use `time.Now().UnixNano()` for seeds (should use fixed seeds per determinism guidelines): `pkg/audio`, `pkg/procgen/entity`, `pkg/procgen/quest`, `pkg/rendering/particles`
+- ~~README/doc.go examples use `time.Now().UnixNano()` for seeds (should use fixed seeds per determinism guidelines): `pkg/audio`, `pkg/procgen/entity`, `pkg/procgen/quest`, `pkg/rendering/particles`~~ **RESOLVED 2026-02-22**: `pkg/audio` already used deterministic seeds; `pkg/procgen/entity`, `pkg/procgen/quest`, and `pkg/rendering/particles` README.md examples updated to use deterministic seed parameters. `pkg/rendering/particles` doc.go examples updated to use logrus instead of log.Fatal.
 - Examples use `log.Fatal`/`fmt.Printf` instead of logrus: `pkg/engine/physics/destruction`, `pkg/procgen/furniture`, `pkg/integration/trade_routes`, `pkg/network/federation/mobile`, `pkg/hostplay`, `pkg/world/events`
 
 **Missing Godoc Comments** (affects ~20 packages):

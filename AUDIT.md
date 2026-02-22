@@ -14,8 +14,8 @@ This report consolidates 110 individual audit files across all packages in the V
 |----------|-------------|
 | High     | 1           |
 | Medium   | ~59         |
-| Low      | ~159        |
-| **Total**| **~219**    |
+| Low      | ~157        |
+| **Total**| **~217**    |
 
 **Historical totals (including fixed):** ~32 High, ~95 Medium, ~225 Low issues were identified across all audits. The vast majority have been resolved, resulting in an overall codebase health status of **Good**.
 
@@ -133,8 +133,8 @@ This report consolidates 110 individual audit files across all packages in the V
 - **Source:** `pkg/companion/learning/AUDIT.md`
 - **High Issues:** 0
 - **Medium Issues:** 1
-- **Low Issues:** 2
-- **Details:** 92.4% coverage; full JSON serialization with round-trip tests, `TimeProvider` injection for determinism, and proper LRU eviction. Global `logrus.New()` logger in `manager.go` prevents structured log integration with the engine logger. `CompanionLearningComponent` is not in the Entity hot-path cache (potential performance concern). Doc example uses `log.Printf` instead of `logrus.WithFields`.
+- **Low Issues:** 1 (1 fixed)
+- **Details:** 92.4% coverage; full JSON serialization with round-trip tests, `TimeProvider` injection for determinism, and proper LRU eviction. Global `logrus.New()` logger in `manager.go` prevents structured log integration with the engine logger. ~~`CompanionLearningComponent` is not in the Entity hot-path cache (potential performance concern).~~ **RESOLVED 2026-02-22**: `CompanionLearningComponent` added to Entity hot-path cache with `GetCompanionLearning()` getter. Doc example uses `log.Printf` instead of `logrus.WithFields`.
 
 ---
 
@@ -340,8 +340,8 @@ This report consolidates 110 individual audit files across all packages in the V
 - **Source:** `pkg/integration/guild_vehicle/AUDIT.md`
 - **High Issues:** 0
 - **Medium Issues:** 1
-- **Low Issues:** 2
-- **Details:** 93.9% coverage; all 12 `time.Now()` calls replaced with `TimeProvider`. `NewFleetManager()` does not log creation with `system_name` field per project convention. `time_provider.go` functions lack godoc. `GuildVehicleFleetComponent` is not in the Entity hot-path cache.
+- **Low Issues:** 1 (1 fixed)
+- **Details:** 93.9% coverage; all 12 `time.Now()` calls replaced with `TimeProvider`. `NewFleetManager()` does not log creation with `system_name` field per project convention. `time_provider.go` functions lack godoc. ~~`GuildVehicleFleetComponent` is not in the Entity hot-path cache.~~ **RESOLVED 2026-02-22**: `GuildVehicleFleetComponent` added to Entity hot-path cache with `GetGuildVehicleFleet()` getter.
 
 ---
 
@@ -1107,9 +1107,9 @@ The following patterns affect multiple packages and represent systemic concerns:
 **Affected:** `cmd/client`, `pkg/balance`, `pkg/engine` (all sub-audits), `pkg/world/housing`, integration packages
 **Pattern:** Packages with transitive Ebiten dependencies fail in headless CI without `xvfb-run`. Several packages cannot measure actual test coverage. The `cmd/client` package reports 38% coverage because Ebiten UI code cannot be unit-tested without a display server.
 
-### 3. ECS Component Cache Not Updated for New Components
-**Affected:** `pkg/companion/learning`, `pkg/integration/guild_vehicle`
-**Pattern:** New ECS components (`CompanionLearningComponent`, `GuildVehicleFleetComponent`) are not added to the Entity hot-path cache in `pkg/engine/ecs.go`. This means `GetComponent()` falls back to map lookups (~93x slower) for these types.
+### 3. ECS Component Cache Not Updated for New Components (RESOLVED 2026-02-22)
+**Affected:** ~~`pkg/companion/learning`, `pkg/integration/guild_vehicle`~~
+**Pattern:** ~~New ECS components (`CompanionLearningComponent`, `GuildVehicleFleetComponent`) are not added to the Entity hot-path cache in `pkg/engine/ecs.go`. This means `GetComponent()` falls back to map lookups (~93x slower) for these types.~~ **RESOLVED**: Added hot-path caching for both `CompanionLearningComponent` and `GuildVehicleFleetComponent` in `pkg/engine/ecs.go`. New getter methods `GetCompanionLearning()` and `GetGuildVehicleFleet()` provide zero-overhead access (~93x faster than map lookup). Caches are properly updated on add/remove via both standard and logger methods.
 
 ### 4. Unsafe Type Assertions (Partially Resolved)
 **Affected:** Multiple engine systems (fixed in AUDIT_COMBAT, AUDIT_CORE_ECS, AUDIT_SOCIAL, AUDIT_PROGRESSION)

@@ -3,6 +3,10 @@ package engine
 import (
 	"os"
 	"testing"
+	"time"
+
+	"github.com/opd-ai/venture/pkg/companion/learning"
+	"github.com/opd-ai/venture/pkg/integration/guild_vehicle"
 )
 
 func TestNewEntity(t *testing.T) {
@@ -351,5 +355,106 @@ func TestRemoveComponentWithLoggerClearsCache(t *testing.T) {
 	}
 	if entity.HasComponent("position") {
 		t.Error("Expected position component to be removed from map")
+	}
+}
+
+// TestCompanionLearningCache verifies that CompanionLearningComponent is cached.
+func TestCompanionLearningCache(t *testing.T) {
+	entity := NewEntity(1)
+
+	comp := &learning.CompanionLearningComponent{
+		CompanionID:  "companion-123",
+		LearningRate: 1.5,
+		LastSkillUse: make(map[string]time.Time),
+	}
+
+	// Add component
+	entity.AddComponent(comp)
+
+	// Verify cache is populated
+	cached := entity.GetCompanionLearning()
+	if cached == nil {
+		t.Fatal("Expected companion learning cache to be populated")
+	}
+	if cached.CompanionID != "companion-123" {
+		t.Errorf("Cached CompanionID = %q, want %q", cached.CompanionID, "companion-123")
+	}
+	if cached.LearningRate != 1.5 {
+		t.Errorf("Cached LearningRate = %f, want 1.5", cached.LearningRate)
+	}
+
+	// Remove and verify cache is cleared
+	entity.RemoveComponent("companion_learning")
+	if entity.GetCompanionLearning() != nil {
+		t.Error("Expected companion learning cache to be cleared after removal")
+	}
+}
+
+// TestGuildVehicleFleetCache verifies that GuildVehicleFleetComponent is cached.
+func TestGuildVehicleFleetCache(t *testing.T) {
+	entity := NewEntity(1)
+
+	comp := &guild_vehicle.GuildVehicleFleetComponent{
+		GuildID:           "guild-456",
+		FleetID:           "fleet-789",
+		FormationPosition: 2,
+	}
+
+	// Add component
+	entity.AddComponent(comp)
+
+	// Verify cache is populated
+	cached := entity.GetGuildVehicleFleet()
+	if cached == nil {
+		t.Fatal("Expected guild vehicle fleet cache to be populated")
+	}
+	if cached.GuildID != "guild-456" {
+		t.Errorf("Cached GuildID = %q, want %q", cached.GuildID, "guild-456")
+	}
+	if cached.FleetID != "fleet-789" {
+		t.Errorf("Cached FleetID = %q, want %q", cached.FleetID, "fleet-789")
+	}
+	if cached.FormationPosition != 2 {
+		t.Errorf("Cached FormationPosition = %d, want 2", cached.FormationPosition)
+	}
+
+	// Remove and verify cache is cleared
+	entity.RemoveComponent("guild_vehicle_fleet")
+	if entity.GetGuildVehicleFleet() != nil {
+		t.Error("Expected guild vehicle fleet cache to be cleared after removal")
+	}
+}
+
+// TestCacheWithLoggerMethods verifies new components are cached via logger methods.
+func TestCacheWithLoggerMethods(t *testing.T) {
+	entity := NewEntity(1)
+
+	// Test AddComponentWithLogger for CompanionLearningComponent
+	clComp := &learning.CompanionLearningComponent{
+		CompanionID: "test-companion",
+	}
+	entity.AddComponentWithLogger(clComp, nil)
+	if entity.GetCompanionLearning() == nil {
+		t.Error("Expected CompanionLearningComponent to be cached via AddComponentWithLogger")
+	}
+
+	// Test AddComponentWithLogger for GuildVehicleFleetComponent
+	gvfComp := &guild_vehicle.GuildVehicleFleetComponent{
+		GuildID: "test-guild",
+	}
+	entity.AddComponentWithLogger(gvfComp, nil)
+	if entity.GetGuildVehicleFleet() == nil {
+		t.Error("Expected GuildVehicleFleetComponent to be cached via AddComponentWithLogger")
+	}
+
+	// Test RemoveComponentWithLogger clears cache
+	entity.RemoveComponentWithLogger("companion_learning", nil)
+	if entity.GetCompanionLearning() != nil {
+		t.Error("Expected CompanionLearningComponent cache to be cleared via RemoveComponentWithLogger")
+	}
+
+	entity.RemoveComponentWithLogger("guild_vehicle_fleet", nil)
+	if entity.GetGuildVehicleFleet() != nil {
+		t.Error("Expected GuildVehicleFleetComponent cache to be cleared via RemoveComponentWithLogger")
 	}
 }

@@ -9,6 +9,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/opd-ai/venture/pkg/companion/learning"
+	"github.com/opd-ai/venture/pkg/integration/guild_vehicle"
 	"github.com/sirupsen/logrus"
 )
 
@@ -38,6 +40,10 @@ type Entity struct {
 	dropShadow        *DropShadowComponent        // Cached for render system drop shadow hot path
 	weatherTint       *WeatherSpriteTintComponent // Cached for render system tint composition hot path
 	creatureGenreTint *CreatureGenreTintComponent // Cached for render system tint composition hot path
+
+	// Integration component caches for cross-system hot paths
+	companionLearning  *learning.CompanionLearningComponent    // Cached for companion AI learning system hot path
+	guildVehicleFleet  *guild_vehicle.GuildVehicleFleetComponent // Cached for guild vehicle fleet system hot path
 }
 
 // NewEntity creates a new entity with the given ID.
@@ -93,6 +99,10 @@ func (e *Entity) updateComponentCache(c Component) {
 		e.cacheWeatherSpriteTint(c)
 	case "creature_genre_tint":
 		e.cacheCreatureGenreTint(c)
+	case "companion_learning":
+		e.cacheCompanionLearning(c)
+	case "guild_vehicle_fleet":
+		e.cacheGuildVehicleFleet(c)
 	}
 }
 
@@ -215,6 +225,20 @@ func (e *Entity) cacheCreatureGenreTint(c Component) {
 	}
 }
 
+// cacheCompanionLearning updates the companion learning component cache.
+func (e *Entity) cacheCompanionLearning(c Component) {
+	if cl, ok := c.(*learning.CompanionLearningComponent); ok {
+		e.companionLearning = cl
+	}
+}
+
+// cacheGuildVehicleFleet updates the guild vehicle fleet component cache.
+func (e *Entity) cacheGuildVehicleFleet(c Component) {
+	if gvf, ok := c.(*guild_vehicle.GuildVehicleFleetComponent); ok {
+		e.guildVehicleFleet = gvf
+	}
+}
+
 // AddComponentWithLogger adds a component to this entity with logging.
 func (e *Entity) AddComponentWithLogger(c Component, logger *logrus.Entry) {
 	e.Components[c.Type()] = c
@@ -275,6 +299,10 @@ func (e *Entity) RemoveComponent(componentType string) {
 		e.weatherTint = nil
 	case "creature_genre_tint":
 		e.creatureGenreTint = nil
+	case "companion_learning":
+		e.companionLearning = nil
+	case "guild_vehicle_fleet":
+		e.guildVehicleFleet = nil
 	}
 }
 
@@ -411,6 +439,18 @@ func (e *Entity) GetWeatherSpriteTint() *WeatherSpriteTintComponent {
 // Uses cached pointer for zero-overhead access in render hot path (~93x faster than map lookup).
 func (e *Entity) GetCreatureGenreTint() *CreatureGenreTintComponent {
 	return e.creatureGenreTint
+}
+
+// GetCompanionLearning retrieves the CompanionLearningComponent if present.
+// Uses cached pointer for zero-overhead access in companion AI learning hot path (~93x faster than map lookup).
+func (e *Entity) GetCompanionLearning() *learning.CompanionLearningComponent {
+	return e.companionLearning
+}
+
+// GetGuildVehicleFleet retrieves the GuildVehicleFleetComponent if present.
+// Uses cached pointer for zero-overhead access in guild vehicle fleet hot path (~93x faster than map lookup).
+func (e *Entity) GetGuildVehicleFleet() *guild_vehicle.GuildVehicleFleetComponent {
+	return e.guildVehicleFleet
 }
 
 // World manages all entities and systems in the game.

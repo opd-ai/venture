@@ -19,7 +19,12 @@ This report consolidates 110 individual audit files across all packages in the V
 
 **Historical totals (including fixed):** ~32 High, ~95 Medium, ~225 Low issues were identified across all audits. The vast majority have been resolved, resulting in an overall codebase health status of **Good**.
 
-The codebase demonstrates high quality with average test coverage of 82.4% (target 65%), deterministic generation via seed-based RNG throughout, ECS architectural compliance, and comprehensive documentation. The most prevalent remaining issues are minor: documentation inconsistencies (doc examples using non-deterministic seeding or `log.Fatal` instead of logrus), API consistency gaps (missing godoc on some exported symbols), and a handful of integration gaps (QoL preferences not persisted, prestige system not registered server-side). All critical runtime panics, data corruption risks, and non-determinism violations in production paths have been resolved.
+**Strengths:** The codebase demonstrates high quality with average test coverage of 82.4% (target 65%), deterministic generation via seed-based RNG throughout, ECS architectural compliance, and comprehensive documentation. All critical runtime panics, data corruption risks, and non-determinism violations in production paths have been resolved.
+
+**Remaining issues** fall into three categories:
+- *Documentation inconsistencies:* doc examples using non-deterministic seeding or `log.Fatal` instead of logrus (~15 packages)
+- *API consistency gaps:* missing godoc on some exported symbols, deprecated systems still exported (~20 packages)
+- *Integration gaps:* QoL preferences not persisted across sessions, prestige system not registered server-side, modding system silently discarded at server startup
 
 ---
 

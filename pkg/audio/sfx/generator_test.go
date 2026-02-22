@@ -1,7 +1,10 @@
 package sfx
 
 import (
+	"bytes"
 	"testing"
+
+	"github.com/sirupsen/logrus"
 )
 
 func TestGenerator_Generate(t *testing.T) {
@@ -73,6 +76,32 @@ func TestGenerator_UnknownEffect(t *testing.T) {
 	// Should default to impact sound
 	if len(sample.Data) == 0 {
 		t.Error("unknown effect produced empty sample")
+	}
+}
+
+func TestGenerator_UnknownEffect_WarningLog(t *testing.T) {
+	// Create a logger with a buffer to capture output
+	var buf bytes.Buffer
+	logger := logrus.New()
+	logger.SetOutput(&buf)
+	logger.SetLevel(logrus.WarnLevel)
+
+	gen := NewGeneratorWithLogger(44100, 12345, logger)
+	sample := gen.Generate("nonexistent_effect", 12345)
+
+	if sample == nil {
+		t.Fatal("Generate returned nil for unknown effect")
+	}
+
+	// Verify that a warning was logged
+	logOutput := buf.String()
+	if logOutput == "" {
+		t.Error("expected warning log for unknown effect type, got none")
+	}
+
+	// Verify the warning mentions the unknown effect type
+	if !bytes.Contains(buf.Bytes(), []byte("unknown effect type")) {
+		t.Errorf("expected log to contain 'unknown effect type', got: %s", logOutput)
 	}
 }
 

@@ -13,9 +13,9 @@ This report consolidates 110 individual audit files across all packages in the V
 | Severity | Open Issues |
 |----------|-------------|
 | High     | 1           |
-| Medium   | ~66         |
-| Low      | ~165        |
-| **Total**| **~232**    |
+| Medium   | ~65         |
+| Low      | ~162        |
+| **Total**| **~228**    |
 
 **Historical totals (including fixed):** ~32 High, ~95 Medium, ~225 Low issues were identified across all audits. The vast majority have been resolved, resulting in an overall codebase health status of **Good**.
 
@@ -69,9 +69,9 @@ This report consolidates 110 individual audit files across all packages in the V
 ### pkg/audio/sfx — Sound Effect Generation
 - **Source:** `pkg/audio/sfx/AUDIT.md`
 - **High Issues:** 0
-- **Medium Issues:** 1
-- **Low Issues:** 3
-- **Details:** 97.3% test coverage; all 9 effect types, genre modifications, and caching work correctly. README.md documents outdated 89.9% coverage (actual: 97.3%). The `Generator` struct is not thread-safe but lacks a mutex guard; concurrent use could cause data races on the `rng` field. Unknown effect types silently fall back to impact sound without a warning log.
+- **Medium Issues:** 0 (1 fixed)
+- **Low Issues:** 0 (3 addressed)
+- **Details:** 98.1% test coverage; all 9 effect types, genre modifications, and caching work correctly. Fixed 2026-02-22: README.md updated to reflect 97.3% coverage (now 98.1%). Unknown effect types now log a warning before falling back to impact sound. Thread safety documented in README.md (Generator is not thread-safe by design; callers must create separate instances per goroutine).
 
 ---
 

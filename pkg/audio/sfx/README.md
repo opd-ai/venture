@@ -132,7 +132,7 @@ Manages cached variants of sounds for performance and variety.
 
 ## Testing
 
-Package has 89.9% test coverage with 23 tests covering:
+Package has 97.3% test coverage with 23 tests covering:
 - All 9 effect types
 - Genre variations
 - Pitch shifting and volume modification

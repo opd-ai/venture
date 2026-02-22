@@ -85,6 +85,12 @@ func (g *Generator) GenerateWithGenre(effectType string, seed int64, genre strin
 	case EffectPowerup:
 		sample = g.generatePowerup(localRng)
 	default:
+		if g.logger != nil {
+			g.logger.WithFields(logrus.Fields{
+				"effectType": effectType,
+				"seed":       seed,
+			}).Warn("unknown effect type, falling back to impact sound")
+		}
 		sample = g.generateImpact(localRng)
 	}
 

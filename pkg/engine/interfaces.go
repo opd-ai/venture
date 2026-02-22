@@ -215,6 +215,24 @@ type InputProvider interface {
 
 	// SetActionPressed sets the action button state (primarily for testing)
 	SetActionPressed(pressed bool)
+
+	// Menu navigation methods for UI abstraction
+	// These allow UI components to handle input without direct Ebiten dependencies
+
+	// IsMenuUpJustPressed returns whether the menu up key was just pressed
+	IsMenuUpJustPressed() bool
+
+	// IsMenuDownJustPressed returns whether the menu down key was just pressed
+	IsMenuDownJustPressed() bool
+
+	// IsMenuConfirmJustPressed returns whether the menu confirm key was just pressed
+	IsMenuConfirmJustPressed() bool
+
+	// IsMenuBackJustPressed returns whether the menu back/cancel key was just pressed (ESC)
+	IsMenuBackJustPressed() bool
+
+	// IsMenuTabJustPressed returns whether the menu tab key was just pressed
+	IsMenuTabJustPressed() bool
 }
 
 // RenderingSystem handles visual rendering of entities.

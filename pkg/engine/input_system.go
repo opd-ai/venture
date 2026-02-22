@@ -145,6 +145,13 @@ type EbitenInput struct {
 	// Mouse delta (movement since last frame)
 	// Gap #8 fix: Expose mouse delta for camera control and aiming
 	MouseDeltaX, MouseDeltaY int
+
+	// Menu navigation input (for UI abstraction)
+	MenuUpJustPressed      bool
+	MenuDownJustPressed    bool
+	MenuConfirmJustPressed bool
+	MenuBackJustPressed    bool
+	MenuTabJustPressed     bool
 }
 
 // Type returns the component type identifier (implements Component).
@@ -225,6 +232,31 @@ func (i *EbitenInput) SetActionPressed(pressed bool) {
 // Useful for camera controls, aiming, and mouse-based interactions.
 func (i *EbitenInput) GetMouseDelta() (dx, dy int) {
 	return i.MouseDeltaX, i.MouseDeltaY
+}
+
+// IsMenuUpJustPressed implements InputProvider interface.
+func (i *EbitenInput) IsMenuUpJustPressed() bool {
+	return i.MenuUpJustPressed
+}
+
+// IsMenuDownJustPressed implements InputProvider interface.
+func (i *EbitenInput) IsMenuDownJustPressed() bool {
+	return i.MenuDownJustPressed
+}
+
+// IsMenuConfirmJustPressed implements InputProvider interface.
+func (i *EbitenInput) IsMenuConfirmJustPressed() bool {
+	return i.MenuConfirmJustPressed
+}
+
+// IsMenuBackJustPressed implements InputProvider interface.
+func (i *EbitenInput) IsMenuBackJustPressed() bool {
+	return i.MenuBackJustPressed
+}
+
+// IsMenuTabJustPressed implements InputProvider interface.
+func (i *EbitenInput) IsMenuTabJustPressed() bool {
+	return i.MenuTabJustPressed
 }
 
 // Compile-time interface check
@@ -998,6 +1030,12 @@ func (s *InputSystem) resetInputFlags(input *EbitenInput) {
 	input.ActionJustPressed = false
 	input.UseItemJustPressed = false
 	input.AnyKeyPressed = false
+	// Menu navigation flags
+	input.MenuUpJustPressed = false
+	input.MenuDownJustPressed = false
+	input.MenuConfirmJustPressed = false
+	input.MenuBackJustPressed = false
+	input.MenuTabJustPressed = false
 }
 
 // detectInputMethod auto-detects whether to use touch or keyboard/mouse input.
@@ -1222,6 +1260,7 @@ func (s *InputSystem) processTouchMousePosition(input *EbitenInput) {
 func (s *InputSystem) processKeyboardInput(input *EbitenInput) {
 	s.processMovementKeys(input)
 	s.processActionKeys(input)
+	s.processMenuNavigationKeys(input)
 	s.detectAnyKeyPress(input)
 	s.processMouseState(input)
 }
@@ -1289,6 +1328,26 @@ func (s *InputSystem) processSpellKeys(input *EbitenInput) {
 			*spell.pressed = true
 			input.AnyKeyPressed = true
 		}
+	}
+}
+
+// processMenuNavigationKeys handles menu navigation keys for UI abstraction.
+// This allows UI components to use InputProvider instead of direct Ebiten calls.
+func (s *InputSystem) processMenuNavigationKeys(input *EbitenInput) {
+	if inpututil.IsKeyJustPressed(ebiten.KeyUp) {
+		input.MenuUpJustPressed = true
+	}
+	if inpututil.IsKeyJustPressed(ebiten.KeyDown) {
+		input.MenuDownJustPressed = true
+	}
+	if inpututil.IsKeyJustPressed(ebiten.KeyEnter) || inpututil.IsKeyJustPressed(ebiten.KeySpace) {
+		input.MenuConfirmJustPressed = true
+	}
+	if inpututil.IsKeyJustPressed(ebiten.KeyEscape) {
+		input.MenuBackJustPressed = true
+	}
+	if inpututil.IsKeyJustPressed(ebiten.KeyTab) {
+		input.MenuTabJustPressed = true
 	}
 }
 

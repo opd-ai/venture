@@ -11,6 +11,16 @@ import (
 	"github.com/opd-ai/venture/pkg/procgen/furniture"
 )
 
+// MenuInputProvider abstracts menu navigation input for testability.
+// This interface allows HousingUI to be tested without Ebiten runtime dependencies.
+type MenuInputProvider interface {
+	IsMenuUpJustPressed() bool
+	IsMenuDownJustPressed() bool
+	IsMenuConfirmJustPressed() bool
+	IsMenuBackJustPressed() bool
+	IsMenuTabJustPressed() bool
+}
+
 // HousingUI represents a player housing management interface.
 // Phase 49.1, 51.2, 51.3
 type HousingUI struct {
@@ -41,6 +51,9 @@ type HousingUI struct {
 	selectedFurnitureType int // Index into furniture types list
 	guildID               string
 	tabCooldown           int // Prevent rapid tab switching
+
+	// Input provider for menu navigation (abstracts Ebiten dependencies)
+	inputProvider MenuInputProvider
 }
 
 // NewHousingUI creates a new housing UI instance.
@@ -86,6 +99,12 @@ func (h *HousingUI) IsVisible() bool {
 	return h.Visible
 }
 
+// SetInput sets the input provider for menu navigation.
+// This allows the UI to be tested without Ebiten runtime dependencies.
+func (h *HousingUI) SetInput(input MenuInputProvider) {
+	h.inputProvider = input
+}
+
 // Update updates the housing UI state.
 // Returns true if the UI consumed the input (blocking pass-through).
 func (h *HousingUI) Update() bool {
@@ -95,37 +114,35 @@ func (h *HousingUI) Update() bool {
 
 	// INTEGRATION FIX [Category B]: V8.0 Housing UI Input Handling
 	// Gap: No input handling for housing management
-	// Fix: Added keyboard navigation and menu state management
+	// Fix: Added keyboard navigation and menu state management using InputProvider
 	// Roadmap: ROADMAP_V8.md Phase 49.1
-	if ebiten.IsKeyPressed(ebiten.KeyEscape) {
-		h.Hide()
-		return true
-	}
 
-	// Cooldown for tab switching to prevent rapid cycling
-	if h.tabCooldown > 0 {
-		h.tabCooldown--
-	}
-
-	// Navigation between menu states
-	if ebiten.IsKeyPressed(ebiten.KeyTab) && h.tabCooldown == 0 {
-		h.tabCooldown = 15 // ~250ms at 60 FPS
-		switch h.menuState {
-		case "main":
-			h.menuState = "build"
-		case "build":
-			h.menuState = "furniture"
-		case "furniture":
-			h.menuState = "guildhall"
-		case "guildhall":
-			h.menuState = "main"
-		default:
-			h.menuState = "main"
+	// Use input provider if available, otherwise no-op (for backwards compatibility)
+	if h.inputProvider != nil {
+		if h.inputProvider.IsMenuBackJustPressed() {
+			h.Hide()
+			return true
 		}
-	}
 
-	// Handle submenu navigation with Up/Down arrows
-	h.handleSubmenuInput()
+		// Navigation between menu states
+		if h.inputProvider.IsMenuTabJustPressed() {
+			switch h.menuState {
+			case "main":
+				h.menuState = "build"
+			case "build":
+				h.menuState = "furniture"
+			case "furniture":
+				h.menuState = "guildhall"
+			case "guildhall":
+				h.menuState = "main"
+			default:
+				h.menuState = "main"
+			}
+		}
+
+		// Handle submenu navigation with Up/Down arrows
+		h.handleSubmenuInput()
+	}
 
 	// Consume input when UI is visible
 	return true
@@ -225,16 +242,17 @@ func (h *HousingUI) SetGuildID(guildID string) {
 
 // handleSubmenuInput handles Up/Down arrow navigation within submenus.
 func (h *HousingUI) handleSubmenuInput() {
-	// Simple cooldown using static variable pattern via field check
+	if h.inputProvider == nil {
+		return
+	}
+
 	switch h.menuState {
 	case "build":
 		buildingTypes := h.getBuildingTypesList()
-		if ebiten.IsKeyPressed(ebiten.KeyDown) && h.tabCooldown == 0 {
-			h.tabCooldown = 10
+		if h.inputProvider.IsMenuDownJustPressed() {
 			h.selectedBuildingType = (h.selectedBuildingType + 1) % len(buildingTypes)
 		}
-		if ebiten.IsKeyPressed(ebiten.KeyUp) && h.tabCooldown == 0 {
-			h.tabCooldown = 10
+		if h.inputProvider.IsMenuUpJustPressed() {
 			h.selectedBuildingType--
 			if h.selectedBuildingType < 0 {
 				h.selectedBuildingType = len(buildingTypes) - 1
@@ -242,12 +260,10 @@ func (h *HousingUI) handleSubmenuInput() {
 		}
 	case "furniture":
 		furnitureTypes := h.getFurnitureTypesList()
-		if ebiten.IsKeyPressed(ebiten.KeyDown) && h.tabCooldown == 0 {
-			h.tabCooldown = 10
+		if h.inputProvider.IsMenuDownJustPressed() {
 			h.selectedFurnitureType = (h.selectedFurnitureType + 1) % len(furnitureTypes)
 		}
-		if ebiten.IsKeyPressed(ebiten.KeyUp) && h.tabCooldown == 0 {
-			h.tabCooldown = 10
+		if h.inputProvider.IsMenuUpJustPressed() {
 			h.selectedFurnitureType--
 			if h.selectedFurnitureType < 0 {
 				h.selectedFurnitureType = len(furnitureTypes) - 1

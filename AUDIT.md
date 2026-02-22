@@ -50,8 +50,11 @@ The following packages have not yet been audited:
 - [x] `pkg/procgen/book/AUDIT.md` — Complete — 4 issues (0 high, 1 med, 3 low) — Coverage: 99.5%
 - [x] `pkg/procgen/recipe/AUDIT.md` — Complete — 3 issues (0 high, 1 med, 2 low) — Coverage: 90.2%
 - [x] `pkg/procgen/station/AUDIT.md` — Complete — 3 issues (0 high, 1 med, 2 low) — Coverage: 89.0%
+- [x] `pkg/procgen/environment/AUDIT.md` — Complete — 4 issues (0 high, 1 med, 3 low) — Coverage: 95.3%
+- [x] `pkg/procgen/audit/AUDIT.md` — Complete — 4 issues (0 high, 1 med, 3 low) — Coverage: 89.5%
 
 ### Rendering
+- [x] `pkg/rendering/AUDIT.md` — Complete — 7 issues (2 high, 3 med, 2 low) — Coverage: 0% (dead code, all resolved)
 - [x] `pkg/rendering/sprites/AUDIT.md` — Complete — 1 issue (0 high, 0 med, 1 low) — Coverage: 82.4%
 - [x] `pkg/rendering/animation/AUDIT.md` — Complete — 3 issues (0 high, 1 med, 2 low) — Coverage: 68.4%
 - [x] `pkg/rendering/tiles/AUDIT.md` — Complete — 3 issues (0 high, 1 med, 2 low) — Coverage: 91.5%
@@ -64,6 +67,9 @@ The following packages have not yet been audited:
 - [x] `pkg/rendering/display/AUDIT.md` — Complete — 3 issues (0 high, 1 med, 2 low) — Coverage: 96.6%
 - [x] `pkg/rendering/parallel/AUDIT.md` — Complete — 4 issues (0 high, 1 med, 3 low) — Coverage: 96.7%
 - [x] `pkg/rendering/shapes/AUDIT.md` — Complete — 4 issues (0 high, 1 med, 3 low) — Coverage: 98.4%
+- [x] `pkg/rendering/quality/AUDIT.md` — Complete — 4 issues (0 high, 1 med, 3 low) — Coverage: 96.8%
+- [x] `pkg/rendering/palette/AUDIT.md` — Complete — 2 issues (0 high, 0 med, 2 low) — Coverage: 97.0%
+- [x] `pkg/rendering/postprocess/AUDIT.md` — Complete — 3 issues (0 high, 1 med, 2 low) — Coverage: 97.8%
 
 ### Network
 - [x] `pkg/network/AUDIT_COMPLETE.md` — Complete — 0 issues (0 high, 0 med, 0 low) — Coverage: 73.0%
@@ -73,10 +79,11 @@ The following packages have not yet been audited:
 - [x] `pkg/network/chat/AUDIT.md` — Complete — 3 issues (0 high, 1 med, 2 low) — Coverage: 79.4%
 - [x] `pkg/network/trade/AUDIT.md` — Complete — 3 issues (0 high, 1 med, 2 low) — Coverage: 75.4%
 - [x] `pkg/network/federation/mobile/AUDIT.md` — Complete — 3 issues (0 high, 1 med, 2 low) — Coverage: 82.0%
+- [x] `pkg/network/resilience/AUDIT_2026-02-16_COMPREHENSIVE.md` — Complete — 0 issues (0 high, 0 med, 0 low) — Coverage: 88.8%
 
 ### World
 - [x] `pkg/world/AUDIT.md` — Complete — 3 issues (0 high, 0 med, 3 low) — Coverage: 88.8%
-- [x] `pkg/world/housing/AUDIT.md` — Needs Work — 6 issues (1 high, 2 med, 3 low) — Coverage: 74.8%
+- [x] `pkg/world/housing/AUDIT.md` — Complete — 3 issues (0 high, 1 med, 2 low) — Coverage: 78.6%
 - [x] `pkg/world/economy/AUDIT.md` — Complete — 2 issues (0 high, 0 med, 2 low) — Coverage: 88.4%
 - [x] `pkg/world/territory/AUDIT.md` — Complete — 1 issue (0 high, 0 med, 1 low) — Coverage: 90.8%
 - [x] `pkg/world/raids/AUDIT.md` — Complete — 3 issues (0 high, 1 med, 2 low) — Coverage: 90.4%
@@ -121,6 +128,9 @@ The following packages have not yet been audited:
 
 ### Visual Testing
 - [x] `pkg/visualtest/AUDIT.md` — Complete — 4 issues (0 high, 1 med, 3 low) — Coverage: 83.0-88.1%
+
+### Audit Infrastructure
+- [x] `pkg/audit/features/AUDIT.md` — Complete — 4 issues (0 high, 1 med, 3 low) — Coverage: 99.2%
 
 ## Audit Guidelines
 

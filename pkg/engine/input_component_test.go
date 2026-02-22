@@ -26,6 +26,13 @@ type StubInput struct {
 
 	// Mouse delta (Gap #8 fix)
 	MouseDeltaX, MouseDeltaY int
+
+	// Menu navigation input (for UI abstraction)
+	MenuUpJustPressed      bool
+	MenuDownJustPressed    bool
+	MenuConfirmJustPressed bool
+	MenuBackJustPressed    bool
+	MenuTabJustPressed     bool
 }
 
 // Type implements Component interface.
@@ -104,6 +111,31 @@ func (i *StubInput) SetActionPressed(pressed bool) {
 // GetMouseDelta implements InputProvider interface (Gap #8 fix).
 func (i *StubInput) GetMouseDelta() (dx, dy int) {
 	return i.MouseDeltaX, i.MouseDeltaY
+}
+
+// IsMenuUpJustPressed implements InputProvider interface.
+func (i *StubInput) IsMenuUpJustPressed() bool {
+	return i.MenuUpJustPressed
+}
+
+// IsMenuDownJustPressed implements InputProvider interface.
+func (i *StubInput) IsMenuDownJustPressed() bool {
+	return i.MenuDownJustPressed
+}
+
+// IsMenuConfirmJustPressed implements InputProvider interface.
+func (i *StubInput) IsMenuConfirmJustPressed() bool {
+	return i.MenuConfirmJustPressed
+}
+
+// IsMenuBackJustPressed implements InputProvider interface.
+func (i *StubInput) IsMenuBackJustPressed() bool {
+	return i.MenuBackJustPressed
+}
+
+// IsMenuTabJustPressed implements InputProvider interface.
+func (i *StubInput) IsMenuTabJustPressed() bool {
+	return i.MenuTabJustPressed
 }
 
 // NewStubInput creates a new test input component.

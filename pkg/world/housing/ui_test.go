@@ -289,3 +289,147 @@ func TestHousingUI_Update_NotVisible(t *testing.T) {
 		t.Error("Update should return false when UI is not visible")
 	}
 }
+
+// StubMenuInput implements MenuInputProvider for testing.
+type StubMenuInput struct {
+	MenuUpJustPressed      bool
+	MenuDownJustPressed    bool
+	MenuConfirmJustPressed bool
+	MenuBackJustPressed    bool
+	MenuTabJustPressed     bool
+}
+
+func (s *StubMenuInput) IsMenuUpJustPressed() bool      { return s.MenuUpJustPressed }
+func (s *StubMenuInput) IsMenuDownJustPressed() bool    { return s.MenuDownJustPressed }
+func (s *StubMenuInput) IsMenuConfirmJustPressed() bool { return s.MenuConfirmJustPressed }
+func (s *StubMenuInput) IsMenuBackJustPressed() bool    { return s.MenuBackJustPressed }
+func (s *StubMenuInput) IsMenuTabJustPressed() bool     { return s.MenuTabJustPressed }
+
+func TestHousingUI_SetInput(t *testing.T) {
+	ui := NewHousingUI(800, 600)
+	input := &StubMenuInput{}
+
+	ui.SetInput(input)
+
+	if ui.inputProvider != input {
+		t.Error("SetInput did not set input provider")
+	}
+}
+
+func TestHousingUI_Update_WithInputProvider_Back(t *testing.T) {
+	ui := NewHousingUI(800, 600)
+	input := &StubMenuInput{MenuBackJustPressed: true}
+	ui.SetInput(input)
+	ui.Show()
+
+	consumed := ui.Update()
+	if !consumed {
+		t.Error("Update should consume input when visible")
+	}
+	if ui.IsVisible() {
+		t.Error("UI should be hidden after back pressed")
+	}
+}
+
+func TestHousingUI_Update_WithInputProvider_Tab(t *testing.T) {
+	ui := NewHousingUI(800, 600)
+	input := &StubMenuInput{MenuTabJustPressed: true}
+	ui.SetInput(input)
+	ui.menuState = "main"
+	ui.Show()
+
+	ui.Update()
+	if ui.menuState != "build" {
+		t.Errorf("menuState = %s, want build after tab from main", ui.menuState)
+	}
+
+	ui.Update()
+	if ui.menuState != "furniture" {
+		t.Errorf("menuState = %s, want furniture after tab from build", ui.menuState)
+	}
+
+	ui.Update()
+	if ui.menuState != "guildhall" {
+		t.Errorf("menuState = %s, want guildhall after tab from furniture", ui.menuState)
+	}
+
+	ui.Update()
+	if ui.menuState != "main" {
+		t.Errorf("menuState = %s, want main after tab from guildhall", ui.menuState)
+	}
+}
+
+func TestHousingUI_HandleSubmenuInput_WithInputProvider_Build(t *testing.T) {
+	ui := NewHousingUI(800, 600)
+	input := &StubMenuInput{}
+	ui.SetInput(input)
+	ui.menuState = "build"
+	ui.selectedBuildingType = 0
+	ui.Show()
+
+	// Test down navigation
+	input.MenuDownJustPressed = true
+	ui.handleSubmenuInput()
+	if ui.selectedBuildingType != 1 {
+		t.Errorf("selectedBuildingType = %d, want 1 after down", ui.selectedBuildingType)
+	}
+
+	// Test up navigation
+	input.MenuDownJustPressed = false
+	input.MenuUpJustPressed = true
+	ui.handleSubmenuInput()
+	if ui.selectedBuildingType != 0 {
+		t.Errorf("selectedBuildingType = %d, want 0 after up", ui.selectedBuildingType)
+	}
+
+	// Test wrap-around (up from 0)
+	ui.handleSubmenuInput()
+	buildingTypes := ui.getBuildingTypesList()
+	if ui.selectedBuildingType != len(buildingTypes)-1 {
+		t.Errorf("selectedBuildingType = %d, want %d after wrap-around", ui.selectedBuildingType, len(buildingTypes)-1)
+	}
+}
+
+func TestHousingUI_HandleSubmenuInput_WithInputProvider_Furniture(t *testing.T) {
+	ui := NewHousingUI(800, 600)
+	input := &StubMenuInput{}
+	ui.SetInput(input)
+	ui.menuState = "furniture"
+	ui.selectedFurnitureType = 0
+	ui.Show()
+
+	// Test down navigation
+	input.MenuDownJustPressed = true
+	ui.handleSubmenuInput()
+	if ui.selectedFurnitureType != 1 {
+		t.Errorf("selectedFurnitureType = %d, want 1 after down", ui.selectedFurnitureType)
+	}
+
+	// Test up navigation
+	input.MenuDownJustPressed = false
+	input.MenuUpJustPressed = true
+	ui.handleSubmenuInput()
+	if ui.selectedFurnitureType != 0 {
+		t.Errorf("selectedFurnitureType = %d, want 0 after up", ui.selectedFurnitureType)
+	}
+
+	// Test wrap-around (up from 0)
+	ui.handleSubmenuInput()
+	furnitureTypes := ui.getFurnitureTypesList()
+	if ui.selectedFurnitureType != len(furnitureTypes)-1 {
+		t.Errorf("selectedFurnitureType = %d, want %d after wrap-around", ui.selectedFurnitureType, len(furnitureTypes)-1)
+	}
+}
+
+func TestHousingUI_HandleSubmenuInput_NoInputProvider(t *testing.T) {
+	ui := NewHousingUI(800, 600)
+	ui.menuState = "build"
+	ui.selectedBuildingType = 0
+	// No input provider set
+
+	// Should not panic and should not change selection
+	ui.handleSubmenuInput()
+	if ui.selectedBuildingType != 0 {
+		t.Errorf("selectedBuildingType changed without input provider")
+	}
+}

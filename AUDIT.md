@@ -42,16 +42,16 @@ The following packages have not yet been audited:
 ### World
 - [ ] `pkg/world/` — World state management
 - [x] `pkg/world/housing/AUDIT.md` — Needs Work — 6 issues (1 high, 2 med, 3 low) — Coverage: 74.8%
-- [ ] `pkg/world/economy/` — Economy system
+- [x] `pkg/world/economy/AUDIT.md` — Complete — 2 issues (0 high, 0 med, 2 low) — Coverage: 88.4%
 - [ ] `pkg/world/territory/` — Territory control
-- [ ] `pkg/world/raids/` — Raid system
+- [x] `pkg/world/raids/AUDIT.md` — Complete — 3 issues (0 high, 1 med, 2 low) — Coverage: 90.4%
 
 ### Supporting
 - [x] `pkg/mobile/AUDIT_2026-02-16.md` — Complete — 0 issues (0 high, 0 med, 0 low) — Coverage: 65.4%
 - [x] `pkg/saveload/AUDIT.md` — Complete — 2 issues (0 high, 0 med, 2 low) — Coverage: 83.8%
 - [ ] `pkg/config/` — Configuration
 - [ ] `pkg/validation/` — Input validation
-- [ ] `pkg/modding/` — Mod system
+- [x] `pkg/modding/AUDIT.md` — Complete — 3 issues (0 high, 1 med, 2 low) — Coverage: 90.4%
 
 ## Audit Guidelines
 

@@ -5,7 +5,7 @@
 
 ## Summary
 
-The modding package provides a secure, data-driven mod framework for server-side game rule customization. It implements comprehensive sandbox security with 6 passing checks, strong test coverage at 90.4%, and proper structured logging. One medium-severity integration gap exists where the Manager is initialized but not wired to consume rules at runtime.
+The modding package provides a secure, data-driven mod framework for server-side game rule customization. It implements comprehensive sandbox security with 6 passing checks, strong test coverage at 90.4%, and proper structured logging. The integration gap has been resolved with the addition of `ProviderAdapter` that implements `engine.ModRuleProvider`.
 
 ## Automated Check Results
 | Check | Result |
@@ -24,7 +24,7 @@ The modding package provides a secure, data-driven mod framework for server-side
 *(none)*
 
 ### Medium Severity
-- [ ] **Integration gap** — `modManager` created in `cmd/server/main.go` but immediately discarded with `_ = modManager` at line 105, preventing rule application to game systems (`cmd/server/main.go:105`)
+- [x] **Integration gap (RESOLVED 2026-02-22)** — `modManager` was created in `cmd/server/main.go` but immediately discarded. Now wired to World via `ProviderAdapter` that implements `engine.ModRuleProvider`. Game systems can query mod rules through `world.GetModRuleFloat64()` and `world.GetModRuleBool()`.
 
 ### Low Severity
 - [ ] **Documentation duplication** — Determinism exemption section appears twice in `doc.go` (lines 113-120 and 141-148) (`doc.go:141`)
@@ -57,7 +57,7 @@ The modding package provides a secure, data-driven mod framework for server-side
 - Complex algorithms commented: ✅ Sandbox validation and security report generation documented
 
 ## Integration Status
-- System registration: ❌ — Manager initialized but discarded; rules never applied to game state
+- System registration: ✅ — Manager wired to World via `ProviderAdapter` implementing `engine.ModRuleProvider`
 - Component registration: N/A — Package defines no ECS components
 - Serialize/Deserialize: ✅ — `Mod` struct supports JSON marshaling for persistence
 - Network sync: N/A — Rules are server-authoritative, no client sync needed
@@ -72,6 +72,6 @@ The modding package provides a secure, data-driven mod framework for server-side
 | Mobile | ✅ | No platform-specific restrictions |
 
 ## Recommendations
-1. **[MED]** Wire `modManager` to game systems by passing it to `createGameWorld()` and having systems like `CombatSystem`, `EconomySystem`, and `SpawnSystem` query rules via `manager.GetRuleFloat64()` during initialization or update cycles
+1. ~~**[MED]** Wire `modManager` to game systems~~ ✅ Done - ProviderAdapter wired to World
 2. **[LOW]** Remove duplicate determinism exemption section in `doc.go` (lines 141-148)
 3. **[LOW]** Consider replacing `time.Sleep` in rate limit test with a test-injectable clock to improve CI reliability

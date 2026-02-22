@@ -445,6 +445,10 @@ type World struct {
 	// GameClock provides deterministic or real-time clock services
 	Clock GameClock
 
+	// ModRules provides access to mod-defined rule values
+	// Phase 6.3 (PLAN.md): Modding System Integration
+	ModRules ModRuleProvider
+
 	// Logger for ECS operations
 	logger *logrus.Entry
 
@@ -788,6 +792,38 @@ func (w *World) GetSystems() []System {
 // GetLogger returns the world's logger entry.
 func (w *World) GetLogger() *logrus.Entry {
 	return w.logger
+}
+
+// SetModRules sets the mod rule provider for the world.
+// Phase 6.3 (PLAN.md): Modding System Integration
+func (w *World) SetModRules(provider ModRuleProvider) {
+	w.ModRules = provider
+}
+
+// GetModRules returns the mod rule provider, or nil if not set.
+// Phase 6.3 (PLAN.md): Modding System Integration
+func (w *World) GetModRules() ModRuleProvider {
+	return w.ModRules
+}
+
+// GetModRuleFloat64 is a convenience method to get a mod rule as float64.
+// Returns the default value if no mod provider is set or the rule doesn't exist.
+// Phase 6.3 (PLAN.md): Modding System Integration
+func (w *World) GetModRuleFloat64(ruleName string, defaultValue float64) float64 {
+	if w.ModRules == nil {
+		return defaultValue
+	}
+	return w.ModRules.GetRuleFloat64(ruleName, defaultValue)
+}
+
+// GetModRuleBool is a convenience method to get a mod rule as bool.
+// Returns the default value if no mod provider is set or the rule doesn't exist.
+// Phase 6.3 (PLAN.md): Modding System Integration
+func (w *World) GetModRuleBool(ruleName string, defaultValue bool) bool {
+	if w.ModRules == nil {
+		return defaultValue
+	}
+	return w.ModRules.GetRuleBool(ruleName, defaultValue)
 }
 
 // GetEntityCount returns the total number of entities in the world.

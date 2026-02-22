@@ -102,9 +102,19 @@ func main() {
 	runStartupValidations(serverLogger)
 
 	modManager, stabilityMon, networkSim, metricsCollector := initializeOptionalSystems(serverLogger)
-	_ = modManager
 
 	world, enhancedChatSystem := createGameWorld(logger)
+
+	// Wire mod system to world for game system access
+	// Phase 6.3 (PLAN.md): Modding System Integration
+	if modManager != nil {
+		adapter := modding.NewProviderAdapter(modManager)
+		world.SetModRules(adapter)
+		serverLogger.WithFields(logrus.Fields{
+			"active_rules": len(modManager.ListMods()),
+		}).Info("mod system wired to game world")
+	}
+
 	generatedTerrain := generateWorldTerrain(logger, serverLogger)
 	spawnV4Entities(world, generatedTerrain, logger)
 

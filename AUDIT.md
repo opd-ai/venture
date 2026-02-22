@@ -13,9 +13,9 @@ This report consolidates 110 individual audit files across all packages in the V
 | Severity | Open Issues |
 |----------|-------------|
 | High     | 1           |
-| Medium   | ~68         |
+| Medium   | ~67         |
 | Low      | ~165        |
-| **Total**| **~234**    |
+| **Total**| **~233**    |
 
 **Historical totals (including fixed):** ~32 High, ~95 Medium, ~225 Low issues were identified across all audits. The vast majority have been resolved, resulting in an overall codebase health status of **Good**.
 
@@ -429,9 +429,9 @@ This report consolidates 110 individual audit files across all packages in the V
 ### pkg/modding — Mod System & Sandboxed Execution
 - **Source:** `pkg/modding/AUDIT.md`
 - **High Issues:** 0
-- **Medium Issues:** 1
+- **Medium Issues:** 0 (1 fixed)
 - **Low Issues:** 2
-- **Details:** 90.4% coverage. `modManager` in `cmd/server/main.go` is created but immediately discarded (`_ = modManager`), preventing mod rules from being applied to game systems—a silent integration failure. Documentation section on determinism exemptions is duplicated in `doc.go`. `TestManager_RateLimit` uses `time.Sleep(1100ms)` which may be flaky on slow CI.
+- **Details:** 90.4% coverage. **RESOLVED 2026-02-22**: `modManager` integration gap fixed by adding `ProviderAdapter` that implements `engine.ModRuleProvider`. ModManager now wired to World in `cmd/server/main.go`. Game systems can query mod rules via `world.GetModRuleFloat64()` and `world.GetModRuleBool()`. Remaining: documentation section on determinism exemptions duplicated in `doc.go`; `TestManager_RateLimit` uses `time.Sleep(1100ms)` which may be flaky on slow CI.
 
 ---
 
@@ -1057,7 +1057,7 @@ The following medium-priority issues appear across multiple packages and should 
 **Integration Gaps:**
 - `pkg/engine/prestige`: Server-side prestige system not registered—prestige data will not sync in multiplayer
 - `pkg/engine/qol`: `QoLComponent` save/load not wired—player QoL preferences lost on restart
-- `pkg/modding`: `modManager` in `cmd/server/main.go` discarded immediately (`_ = modManager`)—mod rules never applied
+- ~~`pkg/modding`: `modManager` in `cmd/server/main.go` discarded immediately~~ **RESOLVED 2026-02-22**: ModManager now wired to World via ProviderAdapter implementing engine.ModRuleProvider
 
 **API & Documentation Inconsistencies:**
 - `pkg/network/federation`: Only 26% of exported functions have godoc comments (79/304)

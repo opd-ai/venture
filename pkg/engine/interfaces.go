@@ -682,3 +682,27 @@ type ContextualTutorialProvider interface {
 	// Phase 4.5: Restores viewed context-sensitive tutorials after load.
 	ImportState(data saveload.ContextTutorialStateData)
 }
+
+// ModRuleProvider provides access to mod rules for game systems.
+// This interface enables systems to query mod-defined rule values without
+// creating a circular import with pkg/modding.
+//
+// Implementations:
+//   - modding.ProviderAdapter (pkg/modding/adapter.go): Production implementation
+//
+// Phase 6.3 (PLAN.md): Modding System Integration
+type ModRuleProvider interface {
+	// GetRule retrieves the current value of a rule. Returns false if not found.
+	GetRule(ruleName string) (interface{}, bool)
+
+	// GetRuleFloat64 retrieves a rule as float64 with a default value.
+	GetRuleFloat64(ruleName string, defaultValue float64) float64
+
+	// GetRuleBool retrieves a rule as bool with a default value.
+	GetRuleBool(ruleName string, defaultValue bool) bool
+
+	// TriggerEvent triggers a mod event that registered handlers can respond to.
+	// eventType is the event kind (e.g., "entity_spawn", "item_pickup").
+	// eventData contains event-specific information.
+	TriggerEvent(eventType string, eventData map[string]interface{}) error
+}

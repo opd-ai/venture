@@ -225,7 +225,7 @@ Phases 1 and 2 can proceed in parallel. Phase 3 depends on both. Phase 4 depends
 
 ## Phase 3 — Onboarding Flow Unification
 
-### 3.1 Define Overall Onboarding Flow (S)
+### 3.1 Define Overall Onboarding Flow (S) ✅ COMPLETE
 
 - **File**: New section in `pkg/engine/tutorial_system.go` or new file `pkg/engine/onboarding.go`
 - **Description**: Define the canonical onboarding sequence as a state machine:
@@ -236,8 +236,8 @@ Phases 1 and 2 can proceed in parallel. Phase 3 depends on both. Phase 4 depends
 - **Implementation**: Create an `OnboardingState` enum (`StateCharacterCreation`, `StateInGameTutorial`, `StateContextHelp`, `StateComplete`) and an `OnboardingManager` struct that tracks the current state and coordinates transitions.
 - **Acceptance**: Clear state machine definition. Transitions are triggered by completion callbacks, not polling.
 
-- [ ] Define `OnboardingState` enum and `OnboardingManager` struct
-- [ ] Implement state transition logic with completion callbacks
+- [x] Define `OnboardingState` enum and `OnboardingManager` struct
+- [x] Implement state transition logic with completion callbacks
 
 ### 3.2 Connect Character Creation Completion to In-Game Tutorial (M)
 
@@ -403,15 +403,15 @@ Phases 1 and 2 can proceed in parallel. Phase 3 depends on both. Phase 4 depends
 - [x] `TestCharacterCreationTutorial_EquipmentStep` — verify 6th tutorial step exists and syncs correctly
 - [ ] `TestCharacterCreationTutorial_OnboardingTransition` — verify completion triggers onboarding state transition
 
-### 5.5 New Test File: `onboarding_test.go` (M)
+### 5.5 New Test File: `onboarding_test.go` (M) ✅ COMPLETE
 
 - **File**: `pkg/engine/onboarding_test.go` (new)
 - **New tests needed**:
 
-- [ ] `TestOnboardingManager_StateTransitions` — verify state machine transitions (creation → in-game → contextual → complete)
-- [ ] `TestOnboardingManager_SkipAll` — verify `ShowTutorials=false` skips entire onboarding
-- [ ] `TestOnboardingManager_ExportImportState` — verify save/load preserves onboarding state
-- [ ] `TestOnboardingManager_ClassPropagation` — verify selected class propagates to in-game tutorial
+- [x] `TestOnboardingManager_StateTransitions` — verify state machine transitions (creation → in-game → contextual → complete)
+- [x] `TestOnboardingManager_SkipAll` — verify `ShowTutorials=false` skips entire onboarding
+- [x] `TestOnboardingManager_ExportImportState` — verify save/load preserves onboarding state
+- [x] `TestOnboardingManager_ClassPropagation` — verify selected class propagates to in-game tutorial (via `TestOnboardingManager_PlayerClass`)
 
 ### 5.6 Coverage Targets
 
@@ -421,7 +421,7 @@ Phases 1 and 2 can proceed in parallel. Phase 3 depends on both. Phase 4 depends
 | `character_creation.go` | ~65% | ≥70% |
 | `character_creation_tutorial.go` | ~80% | ≥80% |
 | `rendering/ui/tutorial.go` | ~60% | ≥65% |
-| `onboarding.go` (new) | 0% | ≥65% |
+| `onboarding.go` (new) | ~85% | ≥65% |
 
 - [ ] Run `go test -cover ./pkg/engine/... -run Tutorial` and verify all files meet targets
 - [ ] Run `go test -cover ./pkg/rendering/ui/... -run Tutorial` and verify target met

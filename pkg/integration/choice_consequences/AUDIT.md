@@ -23,11 +23,11 @@ The choice_consequences package implements persistent player choice tracking and
 _None identified_
 
 ### Medium Severity
-- [ ] **Documentation** — `time_provider.go:38-39` SetTimeProvider lacks thread-safety warning in godoc (only in inline comment)
-- [ ] **Test Coverage** — `choice_tracker.go:583-620` Save/Load file operations use `os.Create`/`os.Open` directly; WASM builds cannot use filesystem (`choice_tracker.go:583`)
+- [x] **Documentation** — ~~`time_provider.go:38-39` SetTimeProvider lacks thread-safety warning in godoc (only in inline comment)~~ **RESOLVED 2026-02-22**: Comprehensive thread-safety warning added to godoc (lines 36-43)
+- [x] **Test Coverage** — ~~`choice_tracker.go:583-620` Save/Load file operations use `os.Create`/`os.Open` directly; WASM builds cannot use filesystem~~ **RESOLVED 2026-02-22**: Added `SaveTo(io.Writer)` and `LoadFrom(io.Reader)` methods for WASM compatibility. WASM builds can use bytes.Buffer backed by localStorage. Existing `Save`/`Load` methods refactored to use new io-based methods internally.
 
 ### Low Severity
-- [ ] **Code Style** — `choice_tracker.go:229-237` sortEventsByImpact uses bubble sort O(n²) instead of sort.Slice O(n log n) (`choice_tracker.go:229`)
+- [x] **Code Style** — ~~`choice_tracker.go:229-237` sortEventsByImpact uses bubble sort O(n²) instead of sort.Slice O(n log n)~~ **RESOLVED 2026-02-22**: Already uses `sort.Slice` (lines 231-233)
 - [ ] **Test Coverage** — Tests use `time.Now().Unix()` in timestamp fields instead of using FixedTimeProvider consistently (`manager_test.go:13,202,261,...`)
 
 ## Input Integration
@@ -46,9 +46,9 @@ _None identified_
 | N/A | N/A | N/A | N/A | Package provides data/logic layer only; no UI components |
 
 ## Test Coverage
-**Coverage**: 88.1% (target: 65%)
-- Missing test areas: WASM-specific save/load path (uses filesystem)
-- Missing benchmarks: None (BenchmarkRecordChoice, BenchmarkIsContentAvailable, BenchmarkGetNPCAttitude, BenchmarkGetAlignment, BenchmarkSerialize, BenchmarkDeserialize all present)
+**Coverage**: 89.3% (target: 65%)
+- Missing test areas: None significant; WASM-compatible io-based save/load now tested
+- Missing benchmarks: None (BenchmarkRecordChoice, BenchmarkIsContentAvailable, BenchmarkGetNPCAttitude, BenchmarkGetAlignment, BenchmarkSerialize, BenchmarkDeserialize, BenchmarkSaveToLoadFrom all present)
 - Table-driven test compliance: ✅
 
 ## Documentation Coverage
@@ -76,11 +76,11 @@ This package provides the data layer for choice tracking integrated with:
 | Platform | Status | Notes |
 |---|---|---|
 | Desktop | ✅ | Full functionality via filesystem save/load |
-| WASM | ⚠️ | Save/Load uses `os.Create`/`os.Open` - will fail in browser sandbox |
-| Mobile | ✅ | Should work via standard filesystem |
+| WASM | ✅ | Use `SaveTo`/`LoadFrom` with bytes.Buffer backed by localStorage |
+| Mobile | ✅ | Works via standard filesystem |
 
 ## Recommendations
-1. **[MED]** Add WASM-compatible save/load alternative using `pkg/saveload` WASM storage
-2. **[MED]** Add godoc thread-safety warning to `SetTimeProvider` function signature
-3. **[LOW]** Replace bubble sort in `sortEventsByImpact` with `sort.Slice` for better performance
+1. ~~**[MED]** Add WASM-compatible save/load alternative using `pkg/saveload` WASM storage~~ **COMPLETED 2026-02-22**
+2. ~~**[MED]** Add godoc thread-safety warning to `SetTimeProvider` function signature~~ **COMPLETED 2026-02-22**
+3. ~~**[LOW]** Replace bubble sort in `sortEventsByImpact` with `sort.Slice` for better performance~~ **COMPLETED** (already uses sort.Slice)
 4. **[LOW]** Update test cases to use `FixedTimeProvider` consistently for deterministic timestamps

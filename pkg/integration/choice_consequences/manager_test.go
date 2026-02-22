@@ -1,6 +1,7 @@
 package choice_consequences
 
 import (
+	"bytes"
 	"os"
 	"testing"
 	"time"
@@ -1118,5 +1119,139 @@ func BenchmarkDeserialize(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		newComp := &ChoiceTrackerComponent{}
 		newComp.Deserialize(data)
+	}
+}
+
+// TestSaveToLoadFrom tests the WASM-compatible io.Reader/io.Writer based save/load methods.
+func TestSaveToLoadFrom(t *testing.T) {
+	tracker := NewChoiceTracker()
+	playerID := "player_io_test"
+
+	// Record some data
+	for i := 0; i < 5; i++ {
+		choice := &PlayerChoice{
+			ChoiceID:    "choice_io_" + string(rune('a'+i)),
+			StoryNodeID: "node_io",
+			Timestamp:   int64(1700000000 + i), // Fixed timestamp for determinism
+			MoralAlignment: &AlignmentShift{
+				GoodEvil:  0.1 * float64(i),
+				LawChaos:  0.05 * float64(i),
+			},
+			NPCsAffected: []string{"npc_io_" + string(rune('a'+i))},
+		}
+		tracker.RecordChoice(playerID, choice)
+	}
+
+	// Save to bytes.Buffer (simulating WASM localStorage)
+	var buf bytes.Buffer
+	err := tracker.SaveTo(&buf)
+	if err != nil {
+		t.Fatalf("SaveTo failed: %v", err)
+	}
+
+	// Verify buffer has content
+	if buf.Len() == 0 {
+		t.Fatal("SaveTo produced empty buffer")
+	}
+
+	// Create new tracker and load from buffer
+	newTracker := NewChoiceTracker()
+	err = newTracker.LoadFrom(bytes.NewReader(buf.Bytes()))
+	if err != nil {
+		t.Fatalf("LoadFrom failed: %v", err)
+	}
+
+	// Verify data
+	count := newTracker.GetChoiceCount(playerID)
+	if count != 5 {
+		t.Errorf("Expected 5 choices after LoadFrom, got %d", count)
+	}
+
+	npcCount := newTracker.GetNPCRelationshipCount(playerID)
+	if npcCount != 5 {
+		t.Errorf("Expected 5 NPC relationships after LoadFrom, got %d", npcCount)
+	}
+
+	alignment := newTracker.GetAlignment(playerID)
+	if alignment.GoodEvil != 1.0 { // Sum of 0.0 + 0.1 + 0.2 + 0.3 + 0.4 = 1.0 (clamped)
+		t.Errorf("Expected GoodEvil 1.0 after LoadFrom, got %f", alignment.GoodEvil)
+	}
+}
+
+// TestSaveToLoadFromEmptyTracker verifies SaveTo/LoadFrom work with empty tracker.
+func TestSaveToLoadFromEmptyTracker(t *testing.T) {
+	tracker := NewChoiceTracker()
+
+	// Save empty tracker
+	var buf bytes.Buffer
+	err := tracker.SaveTo(&buf)
+	if err != nil {
+		t.Fatalf("SaveTo empty tracker failed: %v", err)
+	}
+
+	// Load into new tracker
+	newTracker := NewChoiceTracker()
+	err = newTracker.LoadFrom(bytes.NewReader(buf.Bytes()))
+	if err != nil {
+		t.Fatalf("LoadFrom empty data failed: %v", err)
+	}
+
+	// Verify empty state
+	if newTracker.GetChoiceCount("any") != 0 {
+		t.Error("Expected 0 choices for empty tracker")
+	}
+}
+
+// TestLoadFromInvalidData verifies LoadFrom handles corrupt data gracefully.
+func TestLoadFromInvalidData(t *testing.T) {
+	tracker := NewChoiceTracker()
+
+	tests := []struct {
+		name string
+		data []byte
+	}{
+		{"empty", []byte{}},
+		{"garbage", []byte("not gzip data at all")},
+		{"truncated_gzip", []byte{0x1f, 0x8b, 0x08}}, // Valid gzip header, truncated
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			err := tracker.LoadFrom(bytes.NewReader(tc.data))
+			if err == nil {
+				t.Error("Expected error for invalid data, got nil")
+			}
+		})
+	}
+}
+
+// BenchmarkSaveToLoadFrom benchmarks the io-based save/load cycle.
+func BenchmarkSaveToLoadFrom(b *testing.B) {
+	tracker := NewChoiceTracker()
+
+	// Populate with data
+	for p := 0; p < 10; p++ {
+		playerID := "player_" + string(rune('a'+p))
+		for i := 0; i < 50; i++ {
+			choice := &PlayerChoice{
+				ChoiceID:    "choice_" + string(rune('a'+i%26)),
+				StoryNodeID: "node_bench",
+				Timestamp:   int64(1700000000 + i),
+				MoralAlignment: &AlignmentShift{
+					GoodEvil: 0.1,
+				},
+				NPCsAffected: []string{"npc_" + string(rune('a'+i%26))},
+			}
+			tracker.RecordChoice(playerID, choice)
+		}
+	}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		var buf bytes.Buffer
+		tracker.SaveTo(&buf)
+
+		newTracker := NewChoiceTracker()
+		newTracker.LoadFrom(bytes.NewReader(buf.Bytes()))
 	}
 }

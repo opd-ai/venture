@@ -4,6 +4,7 @@ import (
 	"compress/gzip"
 	"encoding/json"
 	"fmt"
+	"io"
 	"os"
 	"sort"
 	"strings"
@@ -576,15 +577,42 @@ func (ct *ChoiceTracker) GetCompanionReactions(playerID, companionID string) []*
 	return reactions
 }
 
-// Save saves all player choice data to a file.
-func (ct *ChoiceTracker) Save(filename string) error {
+// SaveTo writes all player choice data to the provided io.Writer as gzip-compressed JSON.
+// This method is WASM-compatible as it accepts any io.Writer implementation, enabling
+// callers to provide platform-specific storage backends (e.g., localStorage via bytes.Buffer
+// on WASM, or file-based storage on desktop).
+func (ct *ChoiceTracker) SaveTo(w io.Writer) error {
 	ct.mu.RLock()
 	defer ct.mu.RUnlock()
 
 	trackerLogger.WithFields(log.Fields{
-		"filename":     filename,
 		"player_count": len(ct.players),
-	}).Debug("Saving choice tracker data")
+	}).Debug("Saving choice tracker data to writer")
+
+	gzWriter := gzip.NewWriter(w)
+	defer gzWriter.Close()
+
+	encoder := json.NewEncoder(gzWriter)
+	if err := encoder.Encode(ct.players); err != nil {
+		trackerLogger.WithFields(log.Fields{
+			"error": err.Error(),
+		}).Error("Failed to encode choice tracker data")
+		return fmt.Errorf("failed to encode data: %w", err)
+	}
+
+	trackerLogger.WithFields(log.Fields{
+		"player_count": len(ct.players),
+	}).Debug("Choice tracker data serialized successfully")
+
+	return nil
+}
+
+// Save saves all player choice data to a file.
+// For WASM builds, use SaveTo with a bytes.Buffer and persist via localStorage.
+func (ct *ChoiceTracker) Save(filename string) error {
+	trackerLogger.WithFields(log.Fields{
+		"filename": filename,
+	}).Debug("Saving choice tracker data to file")
 
 	file, err := os.Create(filename)
 	if err != nil {
@@ -596,45 +624,28 @@ func (ct *ChoiceTracker) Save(filename string) error {
 	}
 	defer file.Close()
 
-	gzWriter := gzip.NewWriter(file)
-	defer gzWriter.Close()
-
-	encoder := json.NewEncoder(gzWriter)
-	if err := encoder.Encode(ct.players); err != nil {
-		trackerLogger.WithFields(log.Fields{
-			"filename": filename,
-			"error":    err.Error(),
-		}).Error("Failed to encode choice tracker data")
-		return fmt.Errorf("failed to encode data: %w", err)
+	if err := ct.SaveTo(file); err != nil {
+		return err
 	}
 
 	trackerLogger.WithFields(log.Fields{
-		"filename":     filename,
-		"player_count": len(ct.players),
+		"filename": filename,
 	}).Info("Choice tracker data saved successfully")
 
 	return nil
 }
 
-// Load loads player choice data from a file.
-func (ct *ChoiceTracker) Load(filename string) error {
-	trackerLogger.WithField("filename", filename).Debug("Loading choice tracker data")
+// LoadFrom loads player choice data from the provided io.Reader containing gzip-compressed JSON.
+// This method is WASM-compatible as it accepts any io.Reader implementation, enabling
+// callers to provide platform-specific storage backends (e.g., bytes.Reader backed by
+// localStorage on WASM, or file-based storage on desktop).
+func (ct *ChoiceTracker) LoadFrom(r io.Reader) error {
+	trackerLogger.Debug("Loading choice tracker data from reader")
 
-	file, err := os.Open(filename)
+	gzReader, err := gzip.NewReader(r)
 	if err != nil {
 		trackerLogger.WithFields(log.Fields{
-			"filename": filename,
-			"error":    err.Error(),
-		}).Error("Failed to open save file")
-		return fmt.Errorf("failed to open file: %w", err)
-	}
-	defer file.Close()
-
-	gzReader, err := gzip.NewReader(file)
-	if err != nil {
-		trackerLogger.WithFields(log.Fields{
-			"filename": filename,
-			"error":    err.Error(),
+			"error": err.Error(),
 		}).Error("Failed to create gzip reader")
 		return fmt.Errorf("failed to create gzip reader: %w", err)
 	}
@@ -646,15 +657,39 @@ func (ct *ChoiceTracker) Load(filename string) error {
 	decoder := json.NewDecoder(gzReader)
 	if err := decoder.Decode(&ct.players); err != nil {
 		trackerLogger.WithFields(log.Fields{
-			"filename": filename,
-			"error":    err.Error(),
+			"error": err.Error(),
 		}).Error("Failed to decode choice tracker data")
 		return fmt.Errorf("failed to decode data: %w", err)
 	}
 
 	trackerLogger.WithFields(log.Fields{
-		"filename":     filename,
 		"player_count": len(ct.players),
+	}).Debug("Choice tracker data deserialized successfully")
+
+	return nil
+}
+
+// Load loads player choice data from a file.
+// For WASM builds, use LoadFrom with a bytes.Reader backed by localStorage data.
+func (ct *ChoiceTracker) Load(filename string) error {
+	trackerLogger.WithField("filename", filename).Debug("Loading choice tracker data from file")
+
+	file, err := os.Open(filename)
+	if err != nil {
+		trackerLogger.WithFields(log.Fields{
+			"filename": filename,
+			"error":    err.Error(),
+		}).Error("Failed to open save file")
+		return fmt.Errorf("failed to open file: %w", err)
+	}
+	defer file.Close()
+
+	if err := ct.LoadFrom(file); err != nil {
+		return err
+	}
+
+	trackerLogger.WithFields(log.Fields{
+		"filename": filename,
 	}).Info("Choice tracker data loaded successfully")
 
 	return nil

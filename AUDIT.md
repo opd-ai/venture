@@ -13,9 +13,9 @@ This report consolidates 110 individual audit files across all packages in the V
 | Severity | Open Issues |
 |----------|-------------|
 | High     | 1           |
-| Medium   | ~57         |
-| Low      | ~156        |
-| **Total**| **~214**    |
+| Medium   | ~54         |
+| Low      | ~155        |
+| **Total**| **~210**    |
 
 **Historical totals (including fixed):** ~32 High, ~95 Medium, ~225 Low issues were identified across all audits. The vast majority have been resolved, resulting in an overall codebase health status of **Good**.
 
@@ -312,9 +312,9 @@ This report consolidates 110 individual audit files across all packages in the V
 ### pkg/integration/choice_consequences — Choice & Consequence Tracking
 - **Source:** `pkg/integration/choice_consequences/AUDIT.md`
 - **High Issues:** 0
-- **Medium Issues:** 2
-- **Low Issues:** 1
-- **Details:** 88.1% coverage. `SetTimeProvider` lacks thread-safety warning in godoc (only in inline comment). `choice_tracker.go` Save/Load uses `os.Create`/`os.Open` directly, making it incompatible with WASM builds (no filesystem). `sortEventsByImpact` uses O(n²) bubble sort instead of `sort.Slice`.
+- **Medium Issues:** 0 (2 fixed)
+- **Low Issues:** 1 (1 fixed)
+- **Details:** 89.3% coverage. **RESOLVED 2026-02-22**: Added `SaveTo(io.Writer)` and `LoadFrom(io.Reader)` methods for WASM compatibility; SetTimeProvider godoc now has comprehensive thread-safety warning; sortEventsByImpact already uses sort.Slice. Remaining: tests use `time.Now()` for timestamps.
 
 ---
 

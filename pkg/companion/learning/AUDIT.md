@@ -23,11 +23,11 @@ The companion learning package implements AI skill progression, personality evol
 None.
 
 ### Medium Severity
-- [ ] **Logging** — Global `logrus.New()` logger instance in `manager.go:14` prevents structured log integration with engine logger (`manager.go:14`)
+- [x] **Logging** — Global `logrus.New()` logger instance in `manager.go:14` prevents structured log integration with engine logger (`manager.go:14`) — **RESOLVED 2026-02-22**: Added `NewManagerWithOptions(timeProvider, logger)` constructor. Manager methods now use injectable `m.logger` field. Default logger renamed to `defaultLogger` for clarity.
 
 ### Low Severity
-- [ ] **Documentation** — Example code in `doc.go` uses `log.Printf` instead of structured logging; should use `logrus.WithFields` for consistency (`doc.go:74`, `doc.go:82`)
-- [ ] **ECS Component Cache** — `CompanionLearningComponent` is not added to `Entity` hot-path cache in `pkg/engine/ecs.go`; may impact performance for frequently accessed companion learning data (`types.go:192-205`)
+- [x] **Documentation** — Example code in `doc.go` uses `log.Printf` instead of structured logging; should use `logrus.WithFields` for consistency (`doc.go:74`, `doc.go:82`) — **RESOLVED 2026-02-22**: Updated doc.go examples to use `logrus.WithFields` with proper field context.
+- [x] **ECS Component Cache** — `CompanionLearningComponent` is not added to `Entity` hot-path cache in `pkg/engine/ecs.go`; may impact performance for frequently accessed companion learning data (`types.go:192-205`) — **RESOLVED 2026-02-22**: `CompanionLearningComponent` added to Entity hot-path cache with `GetCompanionLearning()` getter.
 
 ## Input Integration
 | Input Source | Status | Notes |

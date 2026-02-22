@@ -71,7 +71,10 @@ CompanionLearningComponent supports JSON serialization for save/load workflows:
 	// Save companion state
 	data, err := comp.Serialize()
 	if err != nil {
-		log.Printf("Failed to serialize companion: %v", err)
+		logrus.WithFields(logrus.Fields{
+			"companion_id": comp.CompanionID,
+			"error":        err,
+		}).Error("Failed to serialize companion")
 	}
 	// data is a []byte that can be written to a save file
 
@@ -79,7 +82,9 @@ CompanionLearningComponent supports JSON serialization for save/load workflows:
 	restoredComp := &learning.CompanionLearningComponent{}
 	err = restoredComp.Deserialize(data)
 	if err != nil {
-		log.Printf("Failed to restore companion: %v", err)
+		logrus.WithFields(logrus.Fields{
+			"error": err,
+		}).Error("Failed to restore companion")
 	}
 	// restoredComp now has skill tree, personality, memory, and LastSkillUse restored
 

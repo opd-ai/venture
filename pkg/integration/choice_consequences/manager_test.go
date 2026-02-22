@@ -1134,8 +1134,8 @@ func TestSaveToLoadFrom(t *testing.T) {
 			StoryNodeID: "node_io",
 			Timestamp:   int64(1700000000 + i), // Fixed timestamp for determinism
 			MoralAlignment: &AlignmentShift{
-				GoodEvil:  0.1 * float64(i),
-				LawChaos:  0.05 * float64(i),
+				GoodEvil: 0.1 * float64(i),
+				LawChaos: 0.05 * float64(i),
 			},
 			NPCsAffected: []string{"npc_io_" + string(rune('a'+i))},
 		}

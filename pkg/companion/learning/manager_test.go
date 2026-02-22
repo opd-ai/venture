@@ -1,9 +1,12 @@
 package learning
 
 import (
+	"bytes"
 	"fmt"
 	"testing"
 	"time"
+
+	"github.com/sirupsen/logrus"
 )
 
 func TestNewManager(t *testing.T) {
@@ -13,6 +16,65 @@ func TestNewManager(t *testing.T) {
 	}
 	if manager.companions == nil {
 		t.Error("companions map not initialized")
+	}
+}
+
+func TestNewManagerWithOptions(t *testing.T) {
+	tests := []struct {
+		name         string
+		timeProvider TimeProvider
+		logger       *logrus.Logger
+	}{
+		{
+			name:         "nil logger uses default",
+			timeProvider: DefaultTimeProvider(),
+			logger:       nil,
+		},
+		{
+			name:         "custom logger",
+			timeProvider: DefaultTimeProvider(),
+			logger:       logrus.New(),
+		},
+		{
+			name:         "custom time provider and logger",
+			timeProvider: &MockTimeProvider{CurrentTime: time.Unix(1000000, 0)},
+			logger:       logrus.New(),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			manager := NewManagerWithOptions(tt.timeProvider, tt.logger)
+			if manager == nil {
+				t.Fatal("NewManagerWithOptions returned nil")
+			}
+			if manager.companions == nil {
+				t.Error("companions map not initialized")
+			}
+			if manager.logger == nil {
+				t.Error("logger not initialized")
+			}
+			if tt.logger != nil && manager.logger != tt.logger {
+				t.Error("custom logger not set")
+			}
+		})
+	}
+}
+
+func TestManagerWithCustomLogger(t *testing.T) {
+	// Create a custom logger that writes to a buffer
+	var buf bytes.Buffer
+	customLogger := logrus.New()
+	customLogger.SetOutput(&buf)
+	customLogger.SetLevel(logrus.DebugLevel)
+
+	manager := NewManagerWithOptions(DefaultTimeProvider(), customLogger)
+	manager.AddCompanion("test_companion", 1.0)
+
+	// Verify logs were written to our custom logger
+	output := buf.String()
+	if len(output) == 0 {
+		t.Error("expected log output from custom logger")
 	}
 }
 

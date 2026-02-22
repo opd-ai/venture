@@ -13,9 +13,9 @@ This report consolidates 110 individual audit files across all packages in the V
 | Severity | Open Issues |
 |----------|-------------|
 | High     | 1           |
-| Medium   | ~54         |
-| Low      | ~155        |
-| **Total**| **~210**    |
+| Medium   | ~53         |
+| Low      | ~153        |
+| **Total**| **~207**    |
 
 **Historical totals (including fixed):** ~32 High, ~95 Medium, ~225 Low issues were identified across all audits. The vast majority have been resolved, resulting in an overall codebase health status of **Good**.
 
@@ -132,9 +132,9 @@ This report consolidates 110 individual audit files across all packages in the V
 ### pkg/companion/learning — Companion AI Learning System
 - **Source:** `pkg/companion/learning/AUDIT.md`
 - **High Issues:** 0
-- **Medium Issues:** 1
-- **Low Issues:** 1 (1 fixed)
-- **Details:** 92.4% coverage; full JSON serialization with round-trip tests, `TimeProvider` injection for determinism, and proper LRU eviction. Global `logrus.New()` logger in `manager.go` prevents structured log integration with the engine logger. ~~`CompanionLearningComponent` is not in the Entity hot-path cache (potential performance concern).~~ **RESOLVED 2026-02-22**: `CompanionLearningComponent` added to Entity hot-path cache with `GetCompanionLearning()` getter. Doc example uses `log.Printf` instead of `logrus.WithFields`.
+- **Medium Issues:** 0 (1 fixed)
+- **Low Issues:** 0 (2 fixed)
+- **Details:** 92.5% coverage; full JSON serialization with round-trip tests, `TimeProvider` injection for determinism, and proper LRU eviction. **RESOLVED 2026-02-22**: Added `NewManagerWithOptions(timeProvider, logger)` constructor for injectable logging integration; Manager methods now use `m.logger` field. Doc.go examples updated to use `logrus.WithFields`. `CompanionLearningComponent` added to Entity hot-path cache with `GetCompanionLearning()` getter.
 
 ---
 

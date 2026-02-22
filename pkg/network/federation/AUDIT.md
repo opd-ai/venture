@@ -27,7 +27,7 @@ Cross-server federation protocol for peer-to-peer server networking. Package imp
 (None)
 
 ### Medium Severity
-- [ ] **Doc coverage** — Only 79/304 (26%) exported functions have godoc comments preceding them (`handshake.go`, `sync.go`, `market.go`, various files)
+- [x] **Doc coverage** — **RESOLVED 2026-02-22**: All 415 exported symbols now have godoc comments. Previously reported as 79/304 (26%) but subsequent updates added comprehensive documentation to all public API surfaces.
 
 ### Low Severity
 - [ ] **time.Now usage** — `time.Now()` used extensively throughout the package for network timestamps, heartbeats, session tokens, circuit breaker timing (`auth.go:62`, `auth.go:70`, `auth.go:85`, `circuitbreaker.go:121`, `discovery.go:288`, etc.) — **EXEMPT per project guidelines**: Network/auth packages explicitly allowed to use `time.Now()` for time-sensitive operations
@@ -56,7 +56,7 @@ Cross-server federation protocol for peer-to-peer server networking. Package imp
 
 ## Documentation Coverage
 - Package `doc.go`: ✅ Comprehensive 268-line documentation with examples, architecture, security model
-- Exported symbols documented: 79/304 (26%) — medium severity gap
+- Exported symbols documented: 415/415 (100%) — all public API documented
 - Complex algorithms commented: ✅ Pricing formulas, handshake protocol, circuit breaker states documented
 
 ## Integration Status
@@ -76,7 +76,7 @@ How this package connects to engine, client, server:
 | Mobile | ✅ | `mobile/` subpackage (82.4% coverage) handles mobile-specific federation |
 
 ## Recommendations
-1. **[MED]** Add godoc comments to remaining 225 exported functions, focusing on public API surface (`sync.go`, `market.go`, `circuitbreaker.go`)
+1. ~~**[MED]** Add godoc comments to remaining 225 exported functions, focusing on public API surface (`sync.go`, `market.go`, `circuitbreaker.go`)~~ **DONE 2026-02-22**: All 415 exported symbols now documented
 2. **[LOW]** Consider extracting time interface for deterministic testing of time-sensitive logic (circuit breaker timeouts, token expiry)
 3. **[LOW]** Document the protocol version compatibility requirements more prominently (currently in `handshake.go:328`)
 4. **[LOW]** Remove or clarify "not implemented" comment in `protocol_test.go:46`

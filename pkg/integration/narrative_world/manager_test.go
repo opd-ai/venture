@@ -41,6 +41,47 @@ func TestNewStoryEventManager(t *testing.T) {
 	}
 }
 
+func TestNewStoryEventManagerWithTimeProvider(t *testing.T) {
+	fixedTime := int64(1000000)
+	tp := &FixedTimeProvider{Timestamp: fixedTime}
+
+	manager := NewStoryEventManager(12345, WithTimeProvider(tp))
+
+	if manager == nil {
+		t.Fatal("expected non-nil manager")
+	}
+
+	if manager.timeProvider != tp {
+		t.Error("expected custom TimeProvider to be set")
+	}
+
+	// Verify the manager uses the custom time provider
+	companionID := uint64(100)
+	manager.RecordMemory(companionID, EventTypeCombat, "Test event")
+
+	memories := manager.GetDialogueContext(companionID, 1)
+	if len(memories) == 0 {
+		t.Fatal("expected at least one memory")
+	}
+
+	if memories[0].Timestamp != fixedTime {
+		t.Errorf("expected timestamp %d, got %d", fixedTime, memories[0].Timestamp)
+	}
+}
+
+func TestNewStoryEventManagerWithNilTimeProvider(t *testing.T) {
+	// Passing nil TimeProvider should not crash and should use default
+	manager := NewStoryEventManager(12345, WithTimeProvider(nil))
+
+	if manager == nil {
+		t.Fatal("expected non-nil manager")
+	}
+
+	if manager.timeProvider != nil {
+		t.Error("expected nil TimeProvider (use package default)")
+	}
+}
+
 func TestGeneratePersonalQuest(t *testing.T) {
 	manager := NewStoryEventManager(12345)
 

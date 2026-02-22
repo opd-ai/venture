@@ -42,8 +42,8 @@ type Entity struct {
 	creatureGenreTint *CreatureGenreTintComponent // Cached for render system tint composition hot path
 
 	// Integration component caches for cross-system hot paths
-	companionLearning  *learning.CompanionLearningComponent    // Cached for companion AI learning system hot path
-	guildVehicleFleet  *guild_vehicle.GuildVehicleFleetComponent // Cached for guild vehicle fleet system hot path
+	companionLearning *learning.CompanionLearningComponent      // Cached for companion AI learning system hot path
+	guildVehicleFleet *guild_vehicle.GuildVehicleFleetComponent // Cached for guild vehicle fleet system hot path
 }
 
 // NewEntity creates a new entity with the given ID.

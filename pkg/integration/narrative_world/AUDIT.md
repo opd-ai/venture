@@ -23,7 +23,7 @@ The `narrative_world` package implements companion-driven story event management
 None identified.
 
 ### Medium Severity
-- [ ] **Deterministic procgen** — `time_provider.go:22`: `RealTimeProvider.Now()` uses `time.Now().Unix()` which is non-deterministic. While the package provides `TimeProvider` abstraction and fixed/incrementing providers for testing, the default `RealTimeProvider` is used in production. Memory event timestamps will vary across runs even with same seed.
+- [x] **Deterministic procgen** — **RESOLVED 2026-02-22**: `StoryEventManager` now supports `WithTimeProvider(tp)` functional option in `NewStoryEventManager()`. Callers can inject a deterministic `TimeProvider` (e.g., game clock) for consistent memory event timestamps. The manager uses its own `TimeProvider` if set, otherwise falls back to package default.
 
 ### Low Severity
 - [ ] **Doc coverage** — `serialization.go`: Several helper functions (`serializeMemoryEvent`, `deserializeMemoryEvent`, etc.) lack godoc comments. While they are unexported and straightforward, adding brief comments would improve maintainability.
@@ -75,6 +75,6 @@ The package properly integrates with the engine via ECS System pattern and depen
 | Mobile | ✅ | No mobile-specific code; pure Go logic |
 
 ## Recommendations
-1. **[MED]** Consider making the `TimeProvider` configurable at `StoryEventManager` level rather than package-global, to support multiple managers with different time sources in tests or federated multiplayer scenarios.
+1. ~~**[MED]** Consider making the `TimeProvider` configurable at `StoryEventManager` level rather than package-global, to support multiple managers with different time sources in tests or federated multiplayer scenarios.~~ **DONE 2026-02-22**: `WithTimeProvider(tp)` functional option added to `NewStoryEventManager()`.
 2. **[LOW]** Add godoc comments to unexported serialization helper functions for code clarity.
 3. **[LOW]** Document the relationship between `MemoryEvent.Timestamp` (Unix seconds) and `CompanionConflict.TimeSinceStart` (Go Duration) to clarify time representation choices.

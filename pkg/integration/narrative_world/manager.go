@@ -21,6 +21,7 @@ type StoryEventManager struct {
 	questTemplates  map[engine.CompanionType][]QuestTemplate
 	conflictChance  float64 // 0.10-0.20 (10-20% of interactions)
 	maxMemoryEvents int     // 50-100 per companion
+	timeProvider    TimeProvider
 }
 
 // QuestTemplate defines quest generation parameters
@@ -33,8 +34,26 @@ type QuestTemplate struct {
 	MinLoyalty      float64
 }
 
-// NewStoryEventManager creates a new story event manager
-func NewStoryEventManager(seed int64) *StoryEventManager {
+// ManagerOption is a functional option for configuring StoryEventManager.
+type ManagerOption func(*StoryEventManager)
+
+// WithTimeProvider sets a custom TimeProvider for deterministic timestamps.
+// Use FixedTimeProvider or IncrementingTimeProvider for testing,
+// or a game-clock-based provider for deterministic multiplayer.
+func WithTimeProvider(tp TimeProvider) ManagerOption {
+	return func(m *StoryEventManager) {
+		if tp != nil {
+			m.timeProvider = tp
+		}
+	}
+}
+
+// NewStoryEventManager creates a new story event manager.
+// Optional ManagerOption functions may be provided to customize behavior:
+//   - WithTimeProvider(tp): sets a custom TimeProvider for deterministic timestamps
+//
+// If no TimeProvider is provided, the package-level defaultTimeProvider is used.
+func NewStoryEventManager(seed int64, opts ...ManagerOption) *StoryEventManager {
 	manager := &StoryEventManager{
 		seed:            seed,
 		memories:        make(map[uint64]*CompanionMemory),
@@ -45,10 +64,25 @@ func NewStoryEventManager(seed int64) *StoryEventManager {
 		questTemplates:  make(map[engine.CompanionType][]QuestTemplate),
 		conflictChance:  0.15, // 15% default
 		maxMemoryEvents: 75,   // Default 75 events
+		timeProvider:    nil,  // Use package default if not set
+	}
+
+	// Apply options
+	for _, opt := range opts {
+		opt(manager)
 	}
 
 	manager.initializeQuestTemplates()
 	return manager
+}
+
+// now returns the current timestamp using the manager's TimeProvider if set,
+// otherwise falls back to the package-level defaultTimeProvider.
+func (m *StoryEventManager) now() int64 {
+	if m.timeProvider != nil {
+		return m.timeProvider.Now()
+	}
+	return now()
 }
 
 // initializeQuestTemplates creates 3-5 quest templates per companion type
@@ -433,7 +467,7 @@ func (m *StoryEventManager) RecordMemory(companionID uint64, eventType EventType
 	}
 
 	event := MemoryEvent{
-		Timestamp:    now(), // Deterministic via TimeProvider
+		Timestamp:    m.now(), // Deterministic via manager's TimeProvider
 		Type:         eventType,
 		Description:  description,
 		Participants: []uint64{companionID},
@@ -477,7 +511,7 @@ func (m *StoryEventManager) pruneOldMemories(memory *CompanionMemory) {
 	}
 
 	scored := make([]scoredEvent, len(memory.Events))
-	currentTime := now() // Deterministic via TimeProvider
+	currentTime := m.now() // Deterministic via manager's TimeProvider
 
 	// Seconds in a year for recency calculation
 	const secondsPerYear = 365 * 24 * 3600

@@ -25,8 +25,8 @@ The following packages have not yet been audited:
 - [x] `pkg/procgen/skills/AUDIT.md` — Complete — 0 issues (0 high, 0 med, 0 low) — Coverage: 87.0%
 
 ### Rendering
-- [ ] `pkg/rendering/sprites/` — Sprite generation
-- [ ] `pkg/rendering/animation/` — Animation system
+- [x] `pkg/rendering/sprites/AUDIT.md` — Complete — 1 issue (0 high, 0 med, 1 low) — Coverage: 82.4%
+- [x] `pkg/rendering/animation/AUDIT.md` — Complete — 3 issues (0 high, 1 med, 2 low) — Coverage: 68.4%
 - [ ] `pkg/rendering/tiles/` — Tile generation
 - [ ] `pkg/rendering/lighting/` — Lighting system
 - [ ] `pkg/rendering/particles/` — Particle system
@@ -49,8 +49,8 @@ The following packages have not yet been audited:
 ### Supporting
 - [x] `pkg/mobile/AUDIT_2026-02-16.md` — Complete — 0 issues (0 high, 0 med, 0 low) — Coverage: 65.4%
 - [x] `pkg/saveload/AUDIT.md` — Complete — 2 issues (0 high, 0 med, 2 low) — Coverage: 83.8%
-- [ ] `pkg/config/` — Configuration
-- [ ] `pkg/validation/` — Input validation
+- [x] `pkg/config/AUDIT.md` — Complete — 0 issues (0 high, 0 med, 0 low) — Coverage: 100.0%
+- [x] `pkg/validation/AUDIT_2026-02-13.md` — Complete — 0 issues (0 high, 0 med, 0 low) — Coverage: 98.5%
 - [x] `pkg/modding/AUDIT.md` — Complete — 3 issues (0 high, 1 med, 2 low) — Coverage: 90.4%
 
 ## Audit Guidelines

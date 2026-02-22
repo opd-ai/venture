@@ -70,14 +70,24 @@ type TradeSystem struct {
 	world     *engine.World
 	validator *validation.TradeValidator
 	limiter   *validation.RateLimiter
+	clock     TimeProvider
 }
 
-// NewTradeSystem creates a new trade system with validation and rate limiting
+// NewTradeSystem creates a new trade system with validation and rate limiting.
+// Uses real system time for timestamps. For deterministic testing,
+// use NewTradeSystemWithTimeProvider with a MockTimeProvider.
 func NewTradeSystem(world *engine.World) *TradeSystem {
+	return NewTradeSystemWithTimeProvider(world, DefaultTimeProvider())
+}
+
+// NewTradeSystemWithTimeProvider creates a trade system with a custom time provider.
+// This allows deterministic testing by injecting a MockTimeProvider.
+func NewTradeSystemWithTimeProvider(world *engine.World, clock TimeProvider) *TradeSystem {
 	return &TradeSystem{
 		world:     world,
 		validator: validation.NewTradeValidator(),
 		limiter:   validation.NewRateLimiter(TradeRateLimit, TradeRateLimitWindow),
+		clock:     clock,
 	}
 }
 
@@ -89,7 +99,7 @@ func (s *TradeSystem) Update(deltaTime float64) {
 
 	// Get all entities with trade components
 	entities := s.world.GetEntitiesWith("trade")
-	now := time.Now()
+	now := s.clock.Now()
 
 	for _, entity := range entities {
 		tradeComp := s.getTradeComponent(entity)
@@ -231,7 +241,7 @@ func (s *TradeSystem) resolveAndValidateTradeItems(proposerInv, recipientInv *en
 
 // createTradeProposal creates a new trade proposal with current timestamp.
 func (s *TradeSystem) createTradeProposal(proposerID, recipientID uint64, offeredItems, requestedItems []string) *engine.TradeProposal {
-	now := time.Now()
+	now := s.clock.Now()
 	return &engine.TradeProposal{
 		ProposerID:     proposerID,
 		RecipientID:    recipientID,
@@ -737,7 +747,7 @@ func (s *TradeSystem) updateTrustScore(tradeComp *engine.TradeComponent, success
 
 func (s *TradeSystem) recordTrade(tradeComp *engine.TradeComponent, partnerID uint64, success bool) {
 	record := engine.TradeRecord{
-		Timestamp: time.Now().Unix(),
+		Timestamp: s.clock.Now().Unix(),
 		PartnerID: partnerID,
 		Success:   success,
 	}

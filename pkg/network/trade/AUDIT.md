@@ -4,13 +4,13 @@
 **Status**: Complete
 
 ## Summary
-The `pkg/network/trade` package implements player-to-player item trading with two-phase commit protocol, proximity validation, trust mechanics, and atomic rollback. The package is well-designed with proper validation, rate limiting, and trust score mechanics. Coverage is 75.4% (above 65% target). Uses `time.Now()` appropriately for trade timestamps and timeouts (not for randomness).
+The `pkg/network/trade` package implements player-to-player item trading with two-phase commit protocol, proximity validation, trust mechanics, and atomic rollback. The package is well-designed with proper validation, rate limiting, and trust score mechanics. Coverage is 79.2% (above 65% target). All `time.Now()` calls replaced with injectable `TimeProvider` for deterministic testing.
 
 ## Automated Check Results
 | Check | Result |
 |---|---|
 | `go vet` | ✅ Pass |
-| `go test -cover` | 75.4% (target: 65%) |
+| `go test -cover` | 79.2% (target: 65%) |
 | `go test -race` | ✅ Pass |
 | WASM vet | ✅ Pass |
 | TODO/FIXME count | 0 |
@@ -23,7 +23,7 @@ The `pkg/network/trade` package implements player-to-player item trading with tw
 (None)
 
 ### Medium Severity
-- [ ] **Determinism** — Uses `time.Now()` for trade timestamps (`system.go:92`, `system.go:234`, `system.go:740`). While appropriate for timeout/timestamp purposes, this introduces non-determinism in trade record timestamps that could complicate replay/testing scenarios. Consider accepting a `GameClock` interface for deterministic testing.
+- [x] **Determinism** — ~~Uses `time.Now()` for trade timestamps (`system.go:92`, `system.go:234`, `system.go:740`).~~ **RESOLVED 2026-02-22**: Added `TimeProvider` interface with `RealTimeProvider` and `MockTimeProvider` implementations. `NewTradeSystemWithTimeProvider()` constructor accepts custom clock for deterministic testing. All 3 `time.Now()` calls replaced with `s.clock.Now()`.
 
 ### Low Severity
 - [ ] **Structured Logging** — Package does not use logrus for logging trade events. Success/failure of trades is not logged with structured fields (`system_name`, `entityID`, `playerID`). (`system.go:499-519` trade finalization has no logging).
@@ -45,13 +45,13 @@ The `pkg/network/trade` package implements player-to-player item trading with tw
 | Trade UI | ✅ | ✅ | ✅ | `pkg/engine/trade_ui.go` uses `engine.TradeSystem`; `pkg/network/trade.TradeSystem` registered via wrapper in `cmd/client/handlers.go:2125` |
 
 ## Test Coverage
-**Coverage**: 75.4% (target: 65%)
+**Coverage**: 79.2% (target: 65%)
 - Missing test areas: 
-  - Trade timeout during Update() loop
+  - ~~Trade timeout during Update() loop~~ **RESOLVED 2026-02-22**: Added `TestTimeProvider_TimeoutDeterminism`
   - Proximity validation failure during active trade
   - Full rollback path coverage for concurrent failures
 - Missing benchmarks: `BenchmarkUpdate` for timeout processing loop
-- Table-driven test compliance: ✅ (see `system_test.go`, `coverage_improvement_test.go`)
+- Table-driven test compliance: ✅ (see `system_test.go`, `coverage_improvement_test.go`, `time_provider_test.go`)
 
 ## Documentation Coverage
 - Package `doc.go`: ✅ (comprehensive 95-line doc.go with examples and workflow)
@@ -75,7 +75,7 @@ The `pkg/network/trade` package implements player-to-player item trading with tw
 | Mobile | ✅ | No platform-specific code; UI handled by `pkg/engine/trade_ui.go` |
 
 ## Recommendations
-1. **[MED]** Add `GameClock` interface parameter to `NewTradeSystem()` for deterministic timestamp generation in tests and replay scenarios.
+1. ~~**[MED]** Add `GameClock` interface parameter to `NewTradeSystem()` for deterministic timestamp generation in tests and replay scenarios.~~ **RESOLVED 2026-02-22**
 2. **[LOW]** Add structured logging with logrus for trade events (propose, accept, reject, commit, cancel) with fields: `proposer_id`, `recipient_id`, `item_count`, `status`.
 3. **[LOW]** Implement `Serialize()/Deserialize()` on `TradeProposal` for persistence across server restarts (active trades lost on restart).
 4. **[LOW]** Emit events to engine event bus for trade completion (enables achievements like "Complete 100 trades").

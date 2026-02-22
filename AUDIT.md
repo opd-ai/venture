@@ -9,12 +9,22 @@ This file tracks completed package audits for the Venture codebase.
 - [x] `pkg/audio/music/AUDIT.md` — Complete — 4 issues (0 high, 1 med, 3 low) — Coverage: 94.3%
 - [x] `pkg/audio/sfx/AUDIT.md` — Complete — 4 issues (0 high, 1 med, 3 low) — Coverage: 97.3%
 
-## Pending Audits
+## All Audits Complete
 
-The following packages have not yet been audited:
+All packages have been audited:
 
 ### Core Engine
-- [ ] `pkg/engine/` — Core ECS implementation (400+ files)
+- [x] `pkg/engine/` — Complete — 51 issues (9 high, 20 med, 22 low) across 10 sub-audits — Coverage: 67.2%
+  - `AUDIT_AI_BEHAVIOR.md` — 3 issues (0 high, 2 med, 1 low)
+  - `AUDIT_COMBAT.md` — 5 issues (0 high, 3 med, 2 low)
+  - `AUDIT_CORE_ECS.md` — 4 issues (0 high, 2 med, 2 low)
+  - `AUDIT_MOVEMENT_PHYSICS.md` — 4 issues (0 high, 1 med, 3 low)
+  - `AUDIT_NARRATIVE.md` — 5 issues (0 high, 2 med, 3 low)
+  - `AUDIT_PROGRESSION.md` — 6 issues (0 high, 3 med, 3 low)
+  - `AUDIT_RENDERING.md` — 5 issues (2 high, 1 med, 2 low)
+  - `AUDIT_SOCIAL.md` — 5 issues (1 high, 2 med, 2 low)
+  - `AUDIT_UI_SYSTEMS.md` — 8 issues (6 high, 2 med, 0 low)
+  - `AUDIT_WORLD_SYSTEMS.md` — 6 issues (0 high, 2 med, 4 low)
 - [x] `pkg/engine/qol/AUDIT.md` — Complete — 4 issues (0 high, 1 med, 3 low) — Coverage: 94.0%
 
 ### Combat

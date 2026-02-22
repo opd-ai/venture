@@ -17,6 +17,7 @@ import (
 
 	"github.com/opd-ai/venture/pkg/config"
 	"github.com/opd-ai/venture/pkg/engine"
+	"github.com/opd-ai/venture/pkg/engine/prestige"
 	"github.com/opd-ai/venture/pkg/logging"
 	"github.com/opd-ai/venture/pkg/modding"
 	"github.com/opd-ai/venture/pkg/network"
@@ -414,6 +415,14 @@ func createGameWorld(logger *logrus.Logger) (*engine.World, *engine.EnhancedChat
 	// Impact: Guild fleet formations, siege engines, and vehicle maintenance enabled server-side
 	// Note: Available for VehicleSystem integration and network packet handling
 	_ = fleetManager // Manager available for future vehicle fleet coordination features
+
+	// INTEGRATION FIX [AUDIT.md Priority 2]: Prestige System Server Registration
+	// Gap: Prestige system was client-only, causing prestige data desync in multiplayer
+	// Fix: Initialize and register prestige.System on server for authoritative prestige tracking
+	// Impact: Prestige levels, paragon points, and prestige abilities sync across multiplayer sessions
+	prestigeSystem := prestige.NewSystemWithLogger(logger)
+	world.AddSystem(&prestigeSystemWrapper{system: prestigeSystem})
+	worldLogger.Debug("prestige system initialized for multiplayer sync")
 
 	if logger.GetLevel() >= logrus.DebugLevel {
 		worldLogger.Debug("game systems initialized")

@@ -9,8 +9,11 @@
 package main
 
 import (
+	"fmt"
+
 	"github.com/opd-ai/venture/pkg/engine"
 	"github.com/opd-ai/venture/pkg/engine/physics/fluids"
+	"github.com/opd-ai/venture/pkg/engine/prestige"
 	"github.com/opd-ai/venture/pkg/integration/trade_routes"
 	"github.com/opd-ai/venture/pkg/network/federation"
 )
@@ -276,4 +279,59 @@ type tradeRouteManagerWrapper struct {
 
 func (w *tradeRouteManagerWrapper) Update(entities []*engine.Entity, deltaTime float64) {
 	w.system.UpdateRoutes()
+}
+
+// =============================================================================
+// Prestige System Wrappers (server-side multiplayer sync)
+// AUDIT.md Priority 2: Server-side prestige system registration for multiplayer
+// =============================================================================
+
+// prestigeSystemWrapper adapts prestige.System to the engine.System interface.
+// This enables prestige data synchronization in multiplayer sessions.
+type prestigeSystemWrapper struct {
+	system *prestige.System
+}
+
+func (w *prestigeSystemWrapper) Update(entities []*engine.Entity, deltaTime float64) {
+	// Convert []*engine.Entity to []prestige.Entity using adapters
+	prestigeEntities := make([]prestige.Entity, len(entities))
+	for i, e := range entities {
+		prestigeEntities[i] = &prestigeEntityAdapter{entity: e}
+	}
+	w.system.Update(prestigeEntities, deltaTime)
+}
+
+// GetSystem returns the underlying prestige.System for direct API access.
+// Used for player initialization, XP awards, and paragon point allocation.
+func (w *prestigeSystemWrapper) GetSystem() *prestige.System {
+	return w.system
+}
+
+// prestigeEntityAdapter adapts engine.Entity to prestige.Entity interface.
+type prestigeEntityAdapter struct {
+	entity *engine.Entity
+}
+
+func (a *prestigeEntityAdapter) GetID() string {
+	return fmt.Sprintf("%d", a.entity.ID)
+}
+
+func (a *prestigeEntityAdapter) HasComponent(componentType string) bool {
+	return a.entity.HasComponent(componentType)
+}
+
+func (a *prestigeEntityAdapter) GetComponent(componentType string) interface{} {
+	comp, _ := a.entity.GetComponent(componentType)
+	return comp
+}
+
+func (a *prestigeEntityAdapter) AddComponent(component interface{ Type() string }) {
+	// Convert to engine.Component (they have the same interface)
+	if c, ok := component.(engine.Component); ok {
+		a.entity.AddComponent(c)
+	}
+}
+
+func (a *prestigeEntityAdapter) RemoveComponent(componentType string) {
+	a.entity.RemoveComponent(componentType)
 }

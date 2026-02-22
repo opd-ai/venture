@@ -24,7 +24,7 @@ This report consolidates 110 individual audit files across all packages in the V
 **Remaining issues** fall into three categories:
 - *Documentation inconsistencies:* doc examples using non-deterministic seeding or `log.Fatal` instead of logrus (~15 packages)
 - *API consistency gaps:* missing godoc on some exported symbols, deprecated systems still exported (~20 packages)
-- *Integration gaps:* QoL preferences not persisted across sessions, prestige system not registered server-side, modding system silently discarded at server startup
+- *Integration gaps:* QoL preferences not persisted across sessions (prestige and modding system integration gaps resolved 2026-02-22)
 
 ---
 
@@ -1055,7 +1055,7 @@ This report consolidates 110 individual audit files across all packages in the V
 The following medium-priority issues appear across multiple packages and should be addressed:
 
 **Integration Gaps:**
-- `pkg/engine/prestige`: Server-side prestige system not registered—prestige data will not sync in multiplayer
+- ~~`pkg/engine/prestige`: Server-side prestige system not registered—prestige data will not sync in multiplayer~~ **RESOLVED 2026-02-22**: Prestige system now registered in `cmd/server/main.go` via `prestigeSystemWrapper` for multiplayer synchronization
 - `pkg/engine/qol`: `QoLComponent` save/load not wired—player QoL preferences lost on restart
 - ~~`pkg/modding`: `modManager` in `cmd/server/main.go` discarded immediately~~ **RESOLVED 2026-02-22**: ModManager now wired to World via ProviderAdapter implementing engine.ModRuleProvider
 

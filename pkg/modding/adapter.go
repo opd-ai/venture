@@ -51,4 +51,3 @@ func (p *ProviderAdapter) TriggerEvent(eventType string, eventData map[string]in
 	}
 	return p.manager.TriggerEvent(event)
 }
-

@@ -19,7 +19,7 @@
 //		CompanionID:       companionEntityID,
 //		HouseID:           playerHouseID,
 //		AssignedBeddingID: "bedding_001",
-//		LastRestTime:      time.Now(),
+//		LastRestTime:      gameTime, // Use game time from TimeProvider for determinism
 //		TrainingAreaID:    "training_001",
 //		IsTraining:        true,
 //		SharedStorageIDs:  []string{"chest_001", "chest_002"},

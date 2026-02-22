@@ -23,11 +23,11 @@ Package provides housing-crafting integration for player-owned crafting stations
 None identified.
 
 ### Medium Severity
-- [ ] **Deprecation Notice** — `HousingCraftingSystem` is marked deprecated but still exported and has tests; consider removing or making internal (`housing_crafting_system.go:12`)
+- [x] **Deprecation Notice** — ~~`HousingCraftingSystem` is marked deprecated but still exported and has tests~~ **Note 2026-02-22**: System is already unexported (`housingCraftingSystem`), kept for internal test coverage only as documented
 
 ### Low Severity
 - [x] **Documentation** — ~~`CraftingStation` and `SkillTrainingFacility` lack serialization methods~~ **RESOLVED 2026-02-22**: Added `Serialize()`/`Deserialize()` methods with JSON encoding and structured logrus logging
-- [ ] **Missing Logging** — `StationManager` methods don't use structured logging with logrus; error returns only use `fmt.Errorf` (`station_manager.go:31-57`)
+- [x] **Missing Logging** — ~~`StationManager` methods don't use structured logging with logrus~~ **RESOLVED 2026-02-22**: Added `NewStationManagerWithLogger(logger *logrus.Entry)` constructor; registration and error paths now use structured logging via `logWarn()` and `logDebug()` helpers
 
 ## Input Integration
 | Input Source | Status | Notes |
@@ -74,5 +74,5 @@ None identified.
 
 ## Recommendations
 1. ~~**[MED]** Add `Serialize/Deserialize` methods to `CraftingStation` and `SkillTrainingFacility` for save/load integration with `pkg/saveload/`~~ **DONE 2026-02-22**
-2. **[LOW]** Add optional `*logrus.Entry` parameter to `NewStationManager()` for structured logging in registration operations
-3. **[LOW]** Consider removing deprecated `HousingCraftingSystem` or marking it internal since `StationManager` is the preferred API
+2. ~~**[LOW]** Add optional `*logrus.Entry` parameter to `NewStationManager()` for structured logging in registration operations~~ **DONE 2026-02-22**
+3. **[LOW]** Consider removing deprecated `HousingCraftingSystem` or marking it internal since `StationManager` is the preferred API (Note: already unexported)

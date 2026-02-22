@@ -13,18 +13,18 @@ This report consolidates 110 individual audit files across all packages in the V
 | Severity | Open Issues |
 |----------|-------------|
 | High     | 1           |
-| Medium   | ~52         |
-| Low      | ~150        |
-| **Total**| **~203**    |
+| Medium   | ~50         |
+| Low      | ~147        |
+| **Total**| **~198**    |
 
 **Historical totals (including fixed):** ~32 High, ~95 Medium, ~227 Low issues were identified across all audits. The vast majority have been resolved, resulting in an overall codebase health status of **Good**.
 
 **Strengths:** The codebase demonstrates high quality with average test coverage of 82.4% (target 65%), deterministic generation via seed-based RNG throughout, ECS architectural compliance, and comprehensive documentation. All critical runtime panics, data corruption risks, and non-determinism violations in production paths have been resolved.
 
 **Remaining issues** fall into three categories:
-- *Documentation inconsistencies:* doc examples using non-deterministic seeding or `log.Fatal` instead of logrus (~15 packages)
-- *API consistency gaps:* missing godoc on some exported symbols, deprecated systems still exported (~20 packages)
-- *Integration gaps:* (prestige, modding, and QoL system integration gaps resolved 2026-02-22)
+- *Documentation inconsistencies:* doc examples using non-deterministic seeding or `log.Fatal` instead of logrus (~14 packages)
+- *API consistency gaps:* missing godoc on some exported symbols (~18 packages)
+- *Integration gaps:* (prestige, modding, QoL, companion_housing, and housing_crafting system integration gaps resolved 2026-02-22)
 
 ---
 
@@ -321,9 +321,9 @@ This report consolidates 110 individual audit files across all packages in the V
 ### pkg/integration/companion_housing — Companion/Pet Housing Integration
 - **Source:** `pkg/integration/companion_housing/AUDIT.md`
 - **High Issues:** 0
-- **Medium Issues:** 1
-- **Low Issues:** 2
-- **Details:** 93.5% coverage. `doc.go` example uses `time.Now()` which could mislead developers. `CompanionHousingSystem` is marked deprecated but still exported and used in tests. `NewPetHomeManager()` uses global logrus logger instead of an injectable logger parameter.
+- **Medium Issues:** 0 (1 fixed)
+- **Low Issues:** 0 (2 fixed)
+- **Details:** 93.5% coverage. **RESOLVED 2026-02-22**: `doc.go` example updated to use `gameTime` from TimeProvider instead of `time.Now()`. `companionHousingSystem` is unexported (already internal). Added `NewPetHomeManagerWithLogger(logger *logrus.Entry)` constructor for injectable logging.
 
 ---
 
@@ -349,8 +349,8 @@ This report consolidates 110 individual audit files across all packages in the V
 - **Source:** `pkg/integration/housing_crafting/AUDIT.md`
 - **High Issues:** 0
 - **Medium Issues:** 0 (1 fixed)
-- **Low Issues:** 2
-- **Details:** 96.9% coverage; exemplary coverage with deterministic seed-based generation. `HousingCraftingSystem` is marked deprecated but remains exported and tested. **RESOLVED 2026-02-22**: `CraftingStation` and `SkillTrainingFacility` now have `Serialize()` and `Deserialize()` methods for JSON-based persistence with structured logrus logging. `StationManager` methods use `fmt.Errorf` without structured logrus logging.
+- **Low Issues:** 0 (2 fixed)
+- **Details:** 96.9% coverage; exemplary coverage with deterministic seed-based generation. `housingCraftingSystem` is unexported (already internal). **RESOLVED 2026-02-22**: `CraftingStation` and `SkillTrainingFacility` now have `Serialize()` and `Deserialize()` methods for JSON-based persistence with structured logrus logging. Added `NewStationManagerWithLogger(logger *logrus.Entry)` constructor for injectable logging.
 
 ---
 
@@ -1071,8 +1071,8 @@ The following medium-priority issues appear across multiple packages and should 
 - ~~`pkg/network/trade`: Trade record timestamps use `time.Now()` without GameClock abstraction~~ **RESOLVED 2026-02-22**: Added `TimeProvider` interface
 
 **Deprecated Code Still Exported:**
-- `pkg/integration/companion_housing`: `CompanionHousingSystem` deprecated but still exported
-- `pkg/integration/housing_crafting`: `HousingCraftingSystem` deprecated but still exported
+- ~~`pkg/integration/companion_housing`: `CompanionHousingSystem` deprecated but still exported~~ **RESOLVED 2026-02-22**: Type is already unexported (`companionHousingSystem`), kept for internal test coverage only
+- ~~`pkg/integration/housing_crafting`: `HousingCraftingSystem` deprecated but still exported~~ **RESOLVED 2026-02-22**: Type is already unexported (`housingCraftingSystem`), kept for internal test coverage only
 
 ---
 
@@ -1087,8 +1087,8 @@ The following low-severity issues appear repeatedly across 30+ packages and repr
 **Missing Godoc Comments** (affects ~20 packages):
 - Exported functions/types without godoc in: `pkg/audit/features`, `pkg/narrative/branching`, `pkg/procgen/recipe`, `pkg/procgen/story`, `pkg/network/federation`, and others
 
-**Global Logger Instead of Injected Logger** (affects ~8 packages):
-- `pkg/companion/learning`, `pkg/procgen/class`, `pkg/integration/companion_housing`, `pkg/integration/guild_vehicle`
+**Global Logger Instead of Injected Logger** (affects ~6 packages):
+- `pkg/companion/learning`, `pkg/procgen/class`, ~~`pkg/integration/companion_housing`~~ (**RESOLVED 2026-02-22**), `pkg/integration/guild_vehicle`
 
 **`time.Now()` in Non-Production Paths** (affects ~10 packages):
 - Mostly for UI timing, cache access times, performance monitoring, or profiling—all documented as acceptable exceptions
@@ -1120,8 +1120,8 @@ The following patterns affect multiple packages and represent systemic concerns:
 **Pattern:** `doc.go` and README.md examples across the codebase use `time.Now().UnixNano()` for seeds, `log.Fatal`, and `fmt.Printf` instead of following logrus guidelines. These are documentation-only issues with no runtime impact but could mislead contributors.
 
 ### 6. Deprecated Systems Still Exported
-**Affected:** `pkg/integration/companion_housing`, `pkg/integration/housing_crafting`
-**Pattern:** Systems marked `@deprecated` remain in the public API and are still tested. They should either be removed from exports or receive proper replacement documentation with migration guides.
+**Affected:** ~~`pkg/integration/companion_housing`, `pkg/integration/housing_crafting`~~ (**RESOLVED 2026-02-22**)
+**Pattern:** Systems marked `@deprecated` remain in the public API and are still tested. They should either be removed from exports or receive proper replacement documentation with migration guides. **Note 2026-02-22**: Both `companionHousingSystem` and `housingCraftingSystem` are already unexported (lowercase) and kept for internal test coverage only. Migration guides exist in godoc comments.
 
 ### 7. Missing Serialize/Deserialize on Persisted Components
 **Affected:** ~~`pkg/class/advanced` (`AdvancedClassComponent`)~~ (**RESOLVED 2026-02-22**), ~~`pkg/engine/qol` (`QoLComponent`)~~ (**RESOLVED 2026-02-22**), ~~`pkg/integration/housing_crafting` (`CraftingStation`, `SkillTrainingFacility`)~~ (**RESOLVED 2026-02-22**)

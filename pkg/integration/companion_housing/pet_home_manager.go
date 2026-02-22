@@ -19,6 +19,7 @@ type PetHomeManager struct {
 	houseBedding   map[string][]string          // houseID → furnitureIDs of bedding
 	houseTraining  map[string][]string          // houseID → furnitureIDs of training
 	houseStorage   map[string][]string          // houseID → furnitureIDs of storage
+	logger         *logrus.Entry                // optional logger for structured logging
 }
 
 // NewPetHomeManager creates a new pet home manager.
@@ -32,6 +33,14 @@ func NewPetHomeManager() *PetHomeManager {
 		houseTraining:  make(map[string][]string),
 		houseStorage:   make(map[string][]string),
 	}
+}
+
+// NewPetHomeManagerWithLogger creates a new pet home manager with injectable logger.
+// The logger is used for structured logging of operations and warnings.
+func NewPetHomeManagerWithLogger(logger *logrus.Entry) *PetHomeManager {
+	m := NewPetHomeManager()
+	m.logger = logger
+	return m
 }
 
 // AddBedding registers companion bedding furniture in a house.
@@ -73,18 +82,18 @@ func (m *PetHomeManager) AssignCompanionToBed(companionID uint64, furnitureID st
 
 	bedding, ok := m.bedding[furnitureID]
 	if !ok {
-		logrus.WithFields(logrus.Fields{
+		m.logWarn("bedding furniture not found", logrus.Fields{
 			"companionID": companionID,
 			"furnitureID": furnitureID,
-		}).Warn("bedding furniture not found")
+		})
 		return fmt.Errorf("bedding furniture %s not found", furnitureID)
 	}
 	if bedding.CompanionID != 0 && bedding.CompanionID != companionID {
-		logrus.WithFields(logrus.Fields{
+		m.logWarn("bedding already occupied", logrus.Fields{
 			"companionID":         companionID,
 			"furnitureID":         furnitureID,
 			"existingCompanionID": bedding.CompanionID,
-		}).Warn("bedding already occupied")
+		})
 		return fmt.Errorf("bedding %s already occupied by companion %d", furnitureID, bedding.CompanionID)
 	}
 
@@ -141,9 +150,9 @@ func (m *PetHomeManager) RecordRest(companionID uint64, now time.Time) error {
 			return nil
 		}
 	}
-	logrus.WithFields(logrus.Fields{
+	m.logWarn("companion has no assigned bedding", logrus.Fields{
 		"companionID": companionID,
-	}).Warn("companion has no assigned bedding")
+	})
 	return fmt.Errorf("companion %d has no assigned bedding", companionID)
 }
 
@@ -182,10 +191,10 @@ func (m *PetHomeManager) StartTrainingSession(companionID uint64, furnitureID st
 
 	area, ok := m.trainingAreas[furnitureID]
 	if !ok {
-		logrus.WithFields(logrus.Fields{
+		m.logWarn("training area not found", logrus.Fields{
 			"companionID": companionID,
 			"furnitureID": furnitureID,
-		}).Warn("training area not found")
+		})
 		return fmt.Errorf("training area %s not found", furnitureID)
 	}
 
@@ -308,4 +317,14 @@ func (m *PetHomeManager) removeFromSlice(slice []string, item string) []string {
 		}
 	}
 	return slice
+}
+
+// logWarn logs a warning message using the injectable logger if available,
+// otherwise falls back to global logrus.
+func (m *PetHomeManager) logWarn(msg string, fields logrus.Fields) {
+	if m.logger != nil {
+		m.logger.WithFields(fields).Warn(msg)
+	} else {
+		logrus.WithFields(fields).Warn(msg)
+	}
 }

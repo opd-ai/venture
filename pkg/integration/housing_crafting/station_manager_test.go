@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"sync"
 	"testing"
+
+	"github.com/sirupsen/logrus"
 )
 
 // TestNewStationManager tests station manager creation
@@ -26,6 +28,24 @@ func TestNewStationManager(t *testing.T) {
 	}
 	if sm.facilitiesByOwner == nil {
 		t.Error("facilitiesByOwner map is nil")
+	}
+}
+
+// TestNewStationManagerWithLogger tests station manager creation with logger
+func TestNewStationManagerWithLogger(t *testing.T) {
+	logger := logrus.New().WithField("test", "housing_crafting")
+	sm := NewStationManagerWithLogger(logger)
+	if sm == nil {
+		t.Fatal("NewStationManagerWithLogger() returned nil")
+	}
+	if sm.logger != logger {
+		t.Error("NewStationManagerWithLogger() did not set logger")
+	}
+	if sm.stations == nil {
+		t.Error("stations map is nil")
+	}
+	if sm.facilities == nil {
+		t.Error("facilities map is nil")
 	}
 }
 

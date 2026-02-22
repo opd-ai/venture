@@ -3,6 +3,8 @@ package housing_crafting
 import (
 	"fmt"
 	"sync"
+
+	"github.com/sirupsen/logrus"
 )
 
 // StationManager manages all crafting stations and skill training facilities
@@ -13,6 +15,7 @@ type StationManager struct {
 	stationsByHouse   map[string][]*CraftingStation       // House ID → stations
 	facilities        map[string]*SkillTrainingFacility   // Facility ID → facility
 	facilitiesByOwner map[string][]*SkillTrainingFacility // Owner ID → facilities
+	logger            *logrus.Entry                       // optional logger for structured logging
 }
 
 // NewStationManager creates a new station manager
@@ -24,6 +27,14 @@ func NewStationManager() *StationManager {
 		facilities:        make(map[string]*SkillTrainingFacility),
 		facilitiesByOwner: make(map[string][]*SkillTrainingFacility),
 	}
+}
+
+// NewStationManagerWithLogger creates a new station manager with injectable logger.
+// The logger is used for structured logging of registration operations and warnings.
+func NewStationManagerWithLogger(logger *logrus.Entry) *StationManager {
+	sm := NewStationManager()
+	sm.logger = logger
+	return sm
 }
 
 // RegisterStation registers a new crafting station
@@ -46,6 +57,9 @@ func (sm *StationManager) RegisterStation(station *CraftingStation) error {
 
 	// Check for duplicate ID
 	if _, exists := sm.stations[station.ID]; exists {
+		sm.logWarn("station with duplicate ID", logrus.Fields{
+			"stationID": station.ID,
+		})
 		return fmt.Errorf("station with ID %s already exists", station.ID)
 	}
 
@@ -53,6 +67,13 @@ func (sm *StationManager) RegisterStation(station *CraftingStation) error {
 	sm.stations[station.ID] = station
 	sm.stationsByOwner[station.OwnerID] = append(sm.stationsByOwner[station.OwnerID], station)
 	sm.stationsByHouse[station.HouseID] = append(sm.stationsByHouse[station.HouseID], station)
+
+	sm.logDebug("station registered", logrus.Fields{
+		"stationID": station.ID,
+		"ownerID":   station.OwnerID,
+		"houseID":   station.HouseID,
+		"type":      station.Type,
+	})
 
 	return nil
 }
@@ -64,6 +85,9 @@ func (sm *StationManager) UnregisterStation(stationID string) error {
 
 	station, exists := sm.stations[stationID]
 	if !exists {
+		sm.logWarn("station not found for unregistration", logrus.Fields{
+			"stationID": stationID,
+		})
 		return fmt.Errorf("station with ID %s not found", stationID)
 	}
 
@@ -77,6 +101,10 @@ func (sm *StationManager) UnregisterStation(stationID string) error {
 	// Remove from house map
 	houseStations := sm.stationsByHouse[station.HouseID]
 	sm.stationsByHouse[station.HouseID] = sm.removeStationFromSliceValue(houseStations, stationID)
+
+	sm.logDebug("station unregistered", logrus.Fields{
+		"stationID": stationID,
+	})
 
 	return nil
 }
@@ -98,6 +126,9 @@ func (sm *StationManager) GetStation(stationID string) (*CraftingStation, error)
 
 	station, exists := sm.stations[stationID]
 	if !exists {
+		sm.logDebug("station not found", logrus.Fields{
+			"stationID": stationID,
+		})
 		return nil, fmt.Errorf("station with ID %s not found", stationID)
 	}
 
@@ -201,12 +232,21 @@ func (sm *StationManager) RegisterFacility(facility *SkillTrainingFacility) erro
 
 	// Check for duplicate ID
 	if _, exists := sm.facilities[facility.ID]; exists {
+		sm.logWarn("facility with duplicate ID", logrus.Fields{
+			"facilityID": facility.ID,
+		})
 		return fmt.Errorf("facility with ID %s already exists", facility.ID)
 	}
 
 	// Register facility
 	sm.facilities[facility.ID] = facility
 	sm.facilitiesByOwner[facility.OwnerID] = append(sm.facilitiesByOwner[facility.OwnerID], facility)
+
+	sm.logDebug("facility registered", logrus.Fields{
+		"facilityID": facility.ID,
+		"ownerID":    facility.OwnerID,
+		"houseID":    facility.HouseID,
+	})
 
 	return nil
 }
@@ -218,6 +258,9 @@ func (sm *StationManager) UnregisterFacility(facilityID string) error {
 
 	facility, exists := sm.facilities[facilityID]
 	if !exists {
+		sm.logWarn("facility not found for unregistration", logrus.Fields{
+			"facilityID": facilityID,
+		})
 		return fmt.Errorf("facility with ID %s not found", facilityID)
 	}
 
@@ -232,6 +275,10 @@ func (sm *StationManager) UnregisterFacility(facilityID string) error {
 			break
 		}
 	}
+
+	sm.logDebug("facility unregistered", logrus.Fields{
+		"facilityID": facilityID,
+	})
 
 	return nil
 }
@@ -259,4 +306,20 @@ func (sm *StationManager) GetSkillTrainingBonus(playerID, skillName string) floa
 	}
 
 	return 1.0 // No bonus
+}
+
+// logWarn logs a warning message using the injectable logger if available,
+// otherwise this is a no-op (warnings are optional for callers without logger).
+func (sm *StationManager) logWarn(msg string, fields logrus.Fields) {
+	if sm.logger != nil {
+		sm.logger.WithFields(fields).Warn(msg)
+	}
+}
+
+// logDebug logs a debug message using the injectable logger if available,
+// otherwise this is a no-op.
+func (sm *StationManager) logDebug(msg string, fields logrus.Fields) {
+	if sm.logger != nil {
+		sm.logger.WithFields(fields).Debug(msg)
+	}
 }

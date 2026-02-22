@@ -3,6 +3,8 @@ package companion_housing
 import (
 	"testing"
 	"time"
+
+	"github.com/sirupsen/logrus"
 )
 
 func TestBeddingQuality_LoyaltyBonus(t *testing.T) {
@@ -181,6 +183,25 @@ func TestNewPetHomeManager(t *testing.T) {
 	// Verify all maps initialized
 	if manager.bedding == nil || manager.trainingAreas == nil || manager.storageChests == nil {
 		t.Error("NewPetHomeManager() did not initialize maps")
+	}
+}
+
+func TestNewPetHomeManagerWithLogger(t *testing.T) {
+	logger := logrus.New().WithField("test", "companion_housing")
+	manager := NewPetHomeManagerWithLogger(logger)
+
+	if manager == nil {
+		t.Fatal("NewPetHomeManagerWithLogger() returned nil")
+	}
+
+	// Verify logger is set
+	if manager.logger != logger {
+		t.Error("NewPetHomeManagerWithLogger() did not set logger")
+	}
+
+	// Verify all maps initialized
+	if manager.bedding == nil || manager.trainingAreas == nil || manager.storageChests == nil {
+		t.Error("NewPetHomeManagerWithLogger() did not initialize maps")
 	}
 }
 

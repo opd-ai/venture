@@ -474,7 +474,7 @@ func (s *System) SpawnFallingObjectWithSeed(x, y, z float64, material MaterialTy
 	rng := rand.New(rand.NewSource(s.config.Seed ^ seed))
 	velX := (rng.Float64() - 0.5) * 100 // -50 to 50 initial horizontal velocity
 	velY := (rng.Float64() - 0.5) * 100
-	velZ := rng.Float64() * 50 // 0 to 50 initial upward velocity (will fall due to gravity)
+	velZ := rng.Float64() * 50             // 0 to 50 initial upward velocity (will fall due to gravity)
 	rotVel := (rng.Float64() - 0.5) * 3.14 // -π/2 to π/2 rotation
 
 	return s.spawnFallingObjectInternal(x, y, z, material, width, height, velX, velY, velZ, rotVel)

@@ -23,11 +23,11 @@ The companion_housing package provides integration between companion AI systems 
 None identified.
 
 ### Medium Severity
-- [ ] **Doc comment** — Example in doc.go uses `time.Now()` which could mislead developers into using non-deterministic time (`doc.go:22`)
+- [x] **Doc comment** — ~~Example in doc.go uses `time.Now()` which could mislead developers into using non-deterministic time~~ **RESOLVED 2026-02-22**: Updated example to use `gameTime` from TimeProvider
 
 ### Low Severity
-- [ ] **Deprecated API** — `CompanionHousingSystem` is marked deprecated but still used in tests; consider adding deprecation warning log or removing from public API (`companion_housing_system.go:11-25`)
-- [ ] **Missing logger injection** — `NewPetHomeManager()` creates manager without logger parameter; logrus calls use global logger instead of injected logger (`pet_home_manager.go:77`, `pet_home_manager.go:145`, `pet_home_manager.go:186`)
+- [x] **Deprecated API** — ~~`CompanionHousingSystem` is marked deprecated but still used in tests~~ **Note 2026-02-22**: System is already unexported (`companionHousingSystem`), kept for internal test coverage only as documented
+- [x] **Missing logger injection** — ~~`NewPetHomeManager()` creates manager without logger parameter~~ **RESOLVED 2026-02-22**: Added `NewPetHomeManagerWithLogger(logger *logrus.Entry)` constructor; internal log calls now use injectable logger via `logWarn()` helper
 
 ## Input Integration
 | Input Source | Status | Notes |
@@ -74,6 +74,6 @@ This package provides integration managers between companion AI (V4) and housing
 | Mobile | ✅ | No mobile-specific imports; uses standard Go types |
 
 ## Recommendations
-1. **[MED]** Update doc.go example at line 22 to use explicit time parameter instead of `time.Now()` to align with deterministic coding guidelines
-2. **[LOW]** Add logger injection to `NewPetHomeManager()` constructor: `NewPetHomeManagerWithLogger(logger *logrus.Logger) *PetHomeManager`
-3. **[LOW]** Consider removing deprecated `CompanionHousingSystem` in a future major version, as `PetHomeManager` is the recommended API
+1. ~~**[MED]** Update doc.go example at line 22 to use explicit time parameter instead of `time.Now()` to align with deterministic coding guidelines~~ **DONE 2026-02-22**
+2. ~~**[LOW]** Add logger injection to `NewPetHomeManager()` constructor: `NewPetHomeManagerWithLogger(logger *logrus.Logger) *PetHomeManager`~~ **DONE 2026-02-22**
+3. **[LOW]** Consider removing deprecated `CompanionHousingSystem` in a future major version, as `PetHomeManager` is the recommended API (Note: already unexported)

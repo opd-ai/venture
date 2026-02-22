@@ -239,7 +239,7 @@ Phases 1 and 2 can proceed in parallel. Phase 3 depends on both. Phase 4 depends
 - [x] Define `OnboardingState` enum and `OnboardingManager` struct
 - [x] Implement state transition logic with completion callbacks
 
-### 3.2 Connect Character Creation Completion to In-Game Tutorial (M)
+### 3.2 Connect Character Creation Completion to In-Game Tutorial (M) ✅ COMPLETE
 
 - **File**: `cmd/client/handlers.go` (where character creation completes and game state transitions)
 - **Description**: Currently, `CharacterCreationTutorial` completion and `EbitenTutorialSystem` activation are independent. After character creation finishes (confirmed or skipped), the `OnboardingManager` should transition to the in-game tutorial state and activate `EbitenTutorialSystem`.
@@ -249,6 +249,7 @@ Phases 1 and 2 can proceed in parallel. Phase 3 depends on both. Phase 4 depends
   3. If the creation tutorial was skipped, still show the in-game tutorial (separate skip decisions)
   4. Store onboarding state in the `TutorialCompletionComponent` for save/load
 - **Acceptance**: Completing character creation seamlessly transitions to in-game tutorial. No manual activation needed. Save/load preserves onboarding state.
+- **Implementation Notes**: Added `SetPlayerEntity()` method to `OnboardingManager` which is called from `EbitenGame.SetPlayerEntity()`. All state transitions (`TransitionToInGameTutorial`, `TransitionToContextHelp`, `Complete`) now call `UpdateOnboardingState()` to persist the onboarding state to the player entity's `TutorialCompletionComponent`.
 
 - [x] Add transition call after character creation completion in client handlers
 - [x] Update `TutorialCompletionComponent` to track onboarding state

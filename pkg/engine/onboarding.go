@@ -54,6 +54,7 @@ type OnboardingManager struct {
 	enabled          bool
 	skipped          bool
 	playerClass      CharacterClass
+	playerEntity     *Entity // Player entity for saving onboarding state (Phase 3.2)
 	completionCb     OnboardingCompletionCallback
 	stateChangeCb    OnboardingCompletionCallback
 	logger           *logrus.Entry
@@ -82,6 +83,23 @@ func (om *OnboardingManager) SetCreationTutorial(cct *CharacterCreationTutorial)
 	om.mu.Lock()
 	defer om.mu.Unlock()
 	om.creationTutorial = cct
+}
+
+// SetPlayerEntity sets the player entity for persisting onboarding state.
+// Phase 3.2: Enables save/load to preserve onboarding progress via TutorialCompletionComponent.
+func (om *OnboardingManager) SetPlayerEntity(player *Entity) {
+	om.mu.Lock()
+	defer om.mu.Unlock()
+	om.playerEntity = player
+
+	// Sync current state to player entity on attachment
+	if player != nil {
+		UpdateOnboardingState(player, om.currentState, om.playerClass)
+	}
+
+	if om.logger != nil {
+		om.logger.WithField("player_attached", player != nil).Debug("player entity set for onboarding")
+	}
 }
 
 // SetCompletionCallback sets the callback called when onboarding fully completes.
@@ -206,6 +224,11 @@ func (om *OnboardingManager) TransitionToInGameTutorial() {
 		om.tutorialSystem.ShowUI = true
 	}
 
+	// Persist onboarding state to player entity (Phase 3.2)
+	if om.playerEntity != nil {
+		UpdateOnboardingState(om.playerEntity, om.currentState, om.playerClass)
+	}
+
 	// Capture callbacks before unlocking
 	stateChangeCb := om.stateChangeCb
 	logger := om.logger
@@ -237,6 +260,11 @@ func (om *OnboardingManager) TransitionToContextHelp() {
 
 	previousState := om.currentState
 	om.currentState = StateContextHelp
+
+	// Persist onboarding state to player entity (Phase 3.2)
+	if om.playerEntity != nil {
+		UpdateOnboardingState(om.playerEntity, om.currentState, om.playerClass)
+	}
 
 	// Capture callbacks before unlocking
 	stateChangeCb := om.stateChangeCb
@@ -270,6 +298,11 @@ func (om *OnboardingManager) Complete() {
 
 	previousState := om.currentState
 	om.currentState = StateComplete
+
+	// Persist onboarding state to player entity (Phase 3.2)
+	if om.playerEntity != nil {
+		UpdateOnboardingState(om.playerEntity, om.currentState, om.playerClass)
+	}
 
 	// Capture callbacks before unlocking
 	completionCb := om.completionCb

@@ -291,3 +291,63 @@ func TestOnboardingManager_ClassPropagation(t *testing.T) {
 		}
 	}
 }
+
+// TestOnboardingManager_PlayerEntityPersistence tests that onboarding state is persisted to player entity.
+// Phase 3.2: Verifies save/load persistence through TutorialCompletionComponent.
+func TestOnboardingManager_PlayerEntityPersistence(t *testing.T) {
+	om := NewOnboardingManager(nil)
+
+	// Create a player entity
+	world := NewWorld()
+	player := world.CreateEntity()
+
+	// Set player class first (before attaching entity)
+	om.SetPlayerClass(ClassMage)
+
+	// Attach player entity - should sync current state immediately
+	om.SetPlayerEntity(player)
+
+	// Verify initial state was persisted
+	state, class := GetOnboardingStateFromPlayer(player)
+	if state != StateCharacterCreation {
+		t.Errorf("expected StateCharacterCreation, got %s", state)
+	}
+	if class != ClassMage {
+		t.Errorf("expected ClassMage, got %s", class)
+	}
+
+	// Transition to in-game tutorial and verify persistence
+	om.TransitionToInGameTutorial()
+	state, class = GetOnboardingStateFromPlayer(player)
+	if state != StateInGameTutorial {
+		t.Errorf("expected StateInGameTutorial after transition, got %s", state)
+	}
+
+	// Transition to context help and verify persistence
+	om.TransitionToContextHelp()
+	state, class = GetOnboardingStateFromPlayer(player)
+	if state != StateContextHelp {
+		t.Errorf("expected StateContextHelp after transition, got %s", state)
+	}
+
+	// Complete and verify persistence
+	om.Complete()
+	state, class = GetOnboardingStateFromPlayer(player)
+	if state != StateComplete {
+		t.Errorf("expected StateComplete after completion, got %s", state)
+	}
+}
+
+// TestOnboardingManager_SetPlayerEntityNil tests that nil player entity is handled safely.
+func TestOnboardingManager_SetPlayerEntityNil(t *testing.T) {
+	om := NewOnboardingManager(nil)
+
+	// Should not panic
+	om.SetPlayerEntity(nil)
+
+	// Transitions should still work (but not persist)
+	om.TransitionToInGameTutorial()
+	if om.GetState() != StateInGameTutorial {
+		t.Errorf("expected StateInGameTutorial, got %s", om.GetState())
+	}
+}

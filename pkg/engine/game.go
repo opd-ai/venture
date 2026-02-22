@@ -1729,6 +1729,11 @@ func (g *EbitenGame) SetPlayerEntity(entity *Entity) {
 	if g.TradeUI != nil {
 		g.TradeUI.SetPlayerEntity(entity)
 	}
+
+	// Phase 3.2: Set player for onboarding manager to enable save/load persistence
+	if g.OnboardingManager != nil {
+		g.OnboardingManager.SetPlayerEntity(entity)
+	}
 }
 
 // SetAudioManager sets the audio manager for the game.

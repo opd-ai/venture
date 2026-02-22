@@ -3,6 +3,8 @@ package vehicle
 
 import (
 	"math"
+
+	log "github.com/sirupsen/logrus"
 )
 
 // EnhancedVehicleSystem integrates suspension, weight transfer, terrain deformation, and collision response.
@@ -14,6 +16,9 @@ type EnhancedVehicleSystem struct {
 
 // NewEnhancedVehicleSystem creates a new enhanced vehicle physics system.
 func NewEnhancedVehicleSystem() *EnhancedVehicleSystem {
+	log.WithFields(log.Fields{
+		"system_name": "enhanced_vehicle",
+	}).Debug("Creating enhanced vehicle physics system")
 	return &EnhancedVehicleSystem{
 		enabled: true,
 	}

@@ -106,12 +106,11 @@
 // The package supports different terrain characteristics:
 //
 //	const (
-//		TerrainRoad     vehicle.TerrainType = 0  // Firm, no deformation
-//		TerrainGrass    vehicle.TerrainType = 1  // Light deformation
-//		TerrainMud      vehicle.TerrainType = 2  // Heavy deformation, low grip
-//		TerrainSand     vehicle.TerrainType = 3  // Medium deformation, low grip
-//		TerrainSnow     vehicle.TerrainType = 4  // Light deformation, reduced grip
-//		TerrainGravel   vehicle.TerrainType = 5  // Minimal deformation, good grip
+//		TerrainHard  vehicle.TerrainType = 0  // Stone, concrete - no deformation
+//		TerrainFirm  vehicle.TerrainType = 1  // Packed dirt - minimal deformation
+//		TerrainSoft  vehicle.TerrainType = 2  // Mud, sand - significant deformation
+//		TerrainSnow  vehicle.TerrainType = 3  // Snow - deep tracks
+//		TerrainWater vehicle.TerrainType = 4  // Water - no permanent tracks
 //	)
 //
 // Each terrain type affects:

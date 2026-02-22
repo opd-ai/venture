@@ -13,9 +13,9 @@ This report consolidates 110 individual audit files across all packages in the V
 | Severity | Open Issues |
 |----------|-------------|
 | High     | 1           |
-| Medium   | ~53         |
-| Low      | ~153        |
-| **Total**| **~207**    |
+| Medium   | ~52         |
+| Low      | ~152        |
+| **Total**| **~205**    |
 
 **Historical totals (including fixed):** ~32 High, ~95 Medium, ~225 Low issues were identified across all audits. The vast majority have been resolved, resulting in an overall codebase health status of **Good**.
 
@@ -258,9 +258,9 @@ This report consolidates 110 individual audit files across all packages in the V
 ### pkg/engine/physics/vehicle — Vehicle Physics (Suspension, Collision)
 - **Source:** `pkg/engine/physics/vehicle/AUDIT.md`
 - **High Issues:** 0
-- **Medium Issues:** 1
-- **Low Issues:** 2
-- **Details:** 94.1% coverage; spring-damper, weight transfer, and terrain deformation all correct. `NewEnhancedVehicleSystem()` does not log creation with `system_name` field per project convention. `EnhancedVehicleSystem` does not implement the ECS `System` interface and is called manually rather than registered with World. `doc.go` terrain type constants do not match actual values in `types.go`.
+- **Medium Issues:** 0 (1 fixed)
+- **Low Issues:** 1 (1 fixed)
+- **Details:** 94.1% coverage; spring-damper, weight transfer, and terrain deformation all correct. **RESOLVED 2026-02-22**: `NewEnhancedVehicleSystem()` now logs creation with `system_name: "enhanced_vehicle"` field per project convention; `doc.go` terrain type constants updated to match actual values in `types.go` (TerrainHard/Firm/Soft/Snow/Water). `EnhancedVehicleSystem` does not implement the ECS `System` interface and is called manually rather than registered with World (remaining low-severity).
 
 ---
 

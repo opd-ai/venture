@@ -23,11 +23,11 @@ High-quality physics subsystem implementing suspension dynamics, weight transfer
 _None identified._
 
 ### Medium Severity
-- [ ] **API consistency** — `EnhancedVehicleSystem` constructor does not log creation with `system_name` field per project guidelines (`system.go:16`)
+- [x] **API consistency** — `EnhancedVehicleSystem` constructor does not log creation with `system_name` field per project guidelines (`system.go:16`) **RESOLVED 2026-02-22**: Added logrus.WithFields logging with `system_name: "enhanced_vehicle"` field in constructor.
 
 ### Low Severity
 - [ ] **ECS compliance** — `EnhancedVehicleSystem` does not implement the `System` interface (`Update(entities []*Entity, deltaTime float64)`) and is not registered with World; operates as a standalone utility called manually by client-side systems (`system.go:10`)
-- [ ] **Documentation** — TerrainType constants in `doc.go:109-115` don't match the actual values defined in `types.go:8-14` (doc shows `TerrainRoad/Grass/Mud/Sand/Snow/Gravel` but code has `TerrainHard/Firm/Soft/Snow/Water`)
+- [x] **Documentation** — TerrainType constants in `doc.go:109-115` don't match the actual values defined in `types.go:8-14` (doc shows `TerrainRoad/Grass/Mud/Sand/Snow/Gravel` but code has `TerrainHard/Firm/Soft/Snow/Water`) **RESOLVED 2026-02-22**: Updated doc.go terrain type documentation to match actual constants in types.go.
 
 ## Input Integration
 | Input Source | Status | Notes |
@@ -72,6 +72,6 @@ How this package connects to engine, client, server:
 | Mobile | ✅ | No platform-specific dependencies |
 
 ## Recommendations
-1. **[MED]** Add structured logging to `NewEnhancedVehicleSystem()` with `system_name: "enhanced_vehicle"` field per project logging guidelines
+1. ~~**[MED]** Add structured logging to `NewEnhancedVehicleSystem()` with `system_name: "enhanced_vehicle"` field per project logging guidelines~~ **COMPLETED 2026-02-22**
 2. **[LOW]** Consider implementing `System` interface so `EnhancedVehicleSystem` can be registered with World and update automatically, improving consistency with other systems
-3. **[LOW]** Update `doc.go` terrain type documentation (lines 109-115) to match actual constants in `types.go`
+3. ~~**[LOW]** Update `doc.go` terrain type documentation (lines 109-115) to match actual constants in `types.go`~~ **COMPLETED 2026-02-22**

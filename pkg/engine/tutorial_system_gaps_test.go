@@ -460,3 +460,79 @@ func Benchmark_TutorialExportImport(b *testing.B) {
 		ts.ImportState(enabled, showUI, idx, steps)
 	}
 }
+
+// TestGAP008_ESCBehaviorMatchesHint verifies ESC hides (not skips) and N advances.
+// GAP-008 REPAIR: ESC minimizes tutorial UI, N key advances to next step.
+// Hint text updated to "ESC: minimize | N: next step" to accurately describe behavior.
+func TestGAP008_ESCBehaviorMatchesHint(t *testing.T) {
+	ts := NewTutorialSystem()
+
+	// Verify initial state
+	if !ts.ShowUI {
+		t.Fatal("ShowUI should be true initially")
+	}
+	if !ts.Enabled {
+		t.Fatal("Enabled should be true initially")
+	}
+	initialStep := ts.CurrentStepIdx
+
+	// Test ESC behavior: should hide UI without disabling or advancing
+	ts.HideTutorialUI()
+
+	if ts.ShowUI {
+		t.Error("ESC (HideTutorialUI) should hide the UI")
+	}
+	if !ts.Enabled {
+		t.Error("ESC should NOT disable the tutorial, only hide UI")
+	}
+	if ts.CurrentStepIdx != initialStep {
+		t.Error("ESC should NOT advance the step")
+	}
+	if ts.NotificationMsg == "" {
+		t.Error("ESC should show a notification about minimized state")
+	}
+
+	// Reset UI for N key test
+	ts.ShowUI = true
+
+	// Test N behavior: should advance to next step
+	ts.AdvanceStep()
+
+	if ts.CurrentStepIdx != initialStep+1 {
+		t.Errorf("N (AdvanceStep) should advance step from %d to %d, got %d",
+			initialStep, initialStep+1, ts.CurrentStepIdx)
+	}
+	if !ts.Steps[initialStep].Completed {
+		t.Error("N should mark the previous step as completed")
+	}
+}
+
+// TestGAP008_ESCAndNKeyBehaviors tests the documented keyboard shortcuts in combination.
+func TestGAP008_ESCAndNKeyBehaviors(t *testing.T) {
+	ts := NewTutorialSystem()
+
+	// Simulate typical user workflow:
+	// 1. User presses N to advance through steps
+	// 2. User presses ESC to minimize
+	// 3. User can still advance via touch button (AdvanceStep call)
+
+	// Advance through 2 steps
+	ts.AdvanceStep()
+	ts.AdvanceStep()
+
+	if ts.CurrentStepIdx != 2 {
+		t.Errorf("After 2 advances, step should be 2, got %d", ts.CurrentStepIdx)
+	}
+
+	// Minimize with ESC
+	ts.HideTutorialUI()
+	if ts.ShowUI {
+		t.Error("UI should be hidden after HideTutorialUI")
+	}
+
+	// Even with UI hidden, AdvanceStep should work (touch button callback)
+	ts.AdvanceStep()
+	if ts.CurrentStepIdx != 3 {
+		t.Errorf("AdvanceStep should work even with UI hidden, expected step 3, got %d", ts.CurrentStepIdx)
+	}
+}

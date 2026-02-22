@@ -1153,3 +1153,110 @@ func TestTutorialSystem_ClassAwareDescription_NilStep(t *testing.T) {
 		t.Errorf("Expected empty string for nil step, got %q", desc)
 	}
 }
+
+// TestTutorialSystem_AdvanceStep tests manual step advancement via AdvanceStep.
+func TestTutorialSystem_AdvanceStep(t *testing.T) {
+	ts := NewTutorialSystem()
+
+	// Verify initial state
+	if ts.CurrentStepIdx != 0 {
+		t.Fatalf("Expected initial step index 0, got %d", ts.CurrentStepIdx)
+	}
+
+	// Advance step
+	ts.AdvanceStep()
+
+	// Verify step was advanced
+	if ts.CurrentStepIdx != 1 {
+		t.Errorf("Expected step index 1 after advance, got %d", ts.CurrentStepIdx)
+	}
+
+	// Verify previous step was marked completed
+	if !ts.Steps[0].Completed {
+		t.Error("Previous step should be marked completed after advance")
+	}
+
+	// Verify notification was set
+	if ts.NotificationMsg == "" {
+		t.Error("Expected notification message after advance")
+	}
+	if ts.NotificationTTL <= 0 {
+		t.Error("Expected notification TTL > 0 after advance")
+	}
+}
+
+// TestTutorialSystem_AdvanceStep_CompleteTutorial tests advancing through all steps.
+func TestTutorialSystem_AdvanceStep_CompleteTutorial(t *testing.T) {
+	ts := NewTutorialSystem()
+
+	// Advance through all steps
+	for i := 0; i < len(ts.Steps); i++ {
+		ts.AdvanceStep()
+	}
+
+	// Verify tutorial is complete
+	if ts.CurrentStepIdx != len(ts.Steps) {
+		t.Errorf("Expected step index %d after completing all steps, got %d", len(ts.Steps), ts.CurrentStepIdx)
+	}
+
+	// Verify tutorial is disabled
+	if ts.Enabled {
+		t.Error("Tutorial should be disabled after completing all steps")
+	}
+
+	// Verify UI is hidden
+	if ts.ShowUI {
+		t.Error("UI should be hidden after completing all steps")
+	}
+
+	// Verify completion notification
+	if ts.NotificationMsg != "Tutorial completed!" {
+		t.Errorf("Expected 'Tutorial completed!' notification, got %q", ts.NotificationMsg)
+	}
+}
+
+// TestTutorialSystem_AdvanceStep_NoOpWhenComplete tests advancing when already complete.
+func TestTutorialSystem_AdvanceStep_NoOpWhenComplete(t *testing.T) {
+	ts := NewTutorialSystem()
+
+	// Complete all steps
+	for i := 0; i < len(ts.Steps); i++ {
+		ts.AdvanceStep()
+	}
+
+	finalIdx := ts.CurrentStepIdx
+
+	// Try advancing again
+	ts.AdvanceStep()
+
+	// Should not change
+	if ts.CurrentStepIdx != finalIdx {
+		t.Errorf("Expected step index to remain %d, got %d", finalIdx, ts.CurrentStepIdx)
+	}
+}
+
+// TestTutorialSystem_HintText verifies the hint text includes both ESC and N shortcuts.
+func TestTutorialSystem_HintText(t *testing.T) {
+	// Note: The actual hint text "ESC: minimize | N: next step" is rendered in drawPanelContent.
+	// This test verifies the AdvanceStep and HideTutorialUI methods work as documented.
+	ts := NewTutorialSystem()
+
+	// Test ESC behavior (minimize)
+	ts.HideTutorialUI()
+	if ts.ShowUI {
+		t.Error("HideTutorialUI should hide the UI")
+	}
+	if ts.Enabled == false {
+		t.Error("HideTutorialUI should not disable the tutorial, only hide UI")
+	}
+
+	// Reset for next test
+	ts.ShowUI = true
+
+	// Test N behavior (advance)
+	initialStep := ts.CurrentStepIdx
+	ts.AdvanceStep()
+	if ts.CurrentStepIdx != initialStep+1 {
+		t.Error("AdvanceStep should advance to next step")
+	}
+}

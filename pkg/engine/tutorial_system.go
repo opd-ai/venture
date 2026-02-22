@@ -382,6 +382,10 @@ func (ts *EbitenTutorialSystem) Update(entities []*Entity, deltaTime float64) {
 		return
 	}
 
+	if ts.handleNextStepKey() {
+		return
+	}
+
 	world := ts.createTemporaryWorld(entities)
 	ts.updateNotificationTTL(deltaTime)
 	ts.checkStepCompletion(world)
@@ -407,6 +411,33 @@ func (ts *EbitenTutorialSystem) handleEscapeKey() bool {
 		return true
 	}
 	return false
+}
+
+// handleNextStepKey checks for N key press to advance to the next tutorial step.
+func (ts *EbitenTutorialSystem) handleNextStepKey() bool {
+	if ts.ShowUI && inpututil.IsKeyJustPressed(ebiten.KeyN) {
+		ts.AdvanceStep()
+		return true
+	}
+	return false
+}
+
+// AdvanceStep manually advances the tutorial to the next step.
+// This allows users to skip a step using the N key.
+func (ts *EbitenTutorialSystem) AdvanceStep() {
+	if ts.CurrentStepIdx < len(ts.Steps) {
+		ts.Steps[ts.CurrentStepIdx].Completed = true
+		ts.CurrentStepIdx++
+		if ts.CurrentStepIdx < len(ts.Steps) {
+			ts.NotificationMsg = "Step skipped - " + ts.Steps[ts.CurrentStepIdx].Title
+			ts.NotificationTTL = 2.0
+		} else {
+			ts.Enabled = false
+			ts.ShowUI = false
+			ts.NotificationMsg = "Tutorial completed!"
+			ts.NotificationTTL = 3.0
+		}
+	}
 }
 
 // createTemporaryWorld creates a temporary world for condition checking.
@@ -781,7 +812,7 @@ func (ts *EbitenTutorialSystem) drawPanelContent(screen *ebiten.Image, step *Tut
 	text.Draw(screen, "Objective: "+step.Objective, basicfont.Face7x13, x+10, y+120, objColor)
 
 	hintColor := color.RGBA{150, 150, 150, 255}
-	text.Draw(screen, "Press ESC to minimize tutorial", basicfont.Face7x13, x+10, y+140, hintColor)
+	text.Draw(screen, "ESC: minimize | N: next step", basicfont.Face7x13, x+10, y+140, hintColor)
 }
 
 // drawTutorialButtons renders the touch buttons.

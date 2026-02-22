@@ -141,6 +141,7 @@ import (
 type systemsContainer struct {
 	inputSystem                                 *engine.InputSystem
 	movementSystem                              *engine.MovementSystem
+	statisticsSystem                            *engine.StatisticsSystem // Tracks player movement and exploration statistics
 	collisionSystem                             *engine.CollisionSystem
 	combatSystem                                *engine.CombatSystem
 	interactionSystem                           *engine.InteractionSystem
@@ -615,8 +616,10 @@ func initializeCoreSystems(game *engine.EbitenGame, logger *logrus.Logger, clien
 
 	sys.inputSystem = engine.NewInputSystem()
 	sys.movementSystem = engine.NewMovementSystem(playerMaxSpeed)
+	sys.statisticsSystem = engine.NewStatisticsSystem(game.World)
 	sys.collisionSystem = engine.NewCollisionSystem(collisionGridCellSize)
 	sys.movementSystem.SetCollisionSystem(sys.collisionSystem)
+	sys.movementSystem.SetStatisticsSystem(sys.statisticsSystem)
 
 	// Phase 2: Parallel initialization of independent systems
 	var wg sync.WaitGroup
@@ -1288,6 +1291,7 @@ func registerCriticalSystems(game *engine.EbitenGame, sys *systemsContainer) {
 	game.World.AddSystem(sys.playerSpellCasting)
 	game.World.AddSystem(sys.movementSystem)
 	game.World.AddSystem(sys.collisionSystem)
+	game.World.AddSystem(sys.statisticsSystem) // Track player movement and exploration statistics
 
 	sys.projectileSystem = engine.NewProjectileSystem(game.World)
 	game.World.AddSystem(sys.projectileSystem)

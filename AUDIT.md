@@ -13,9 +13,9 @@ This report consolidates 110 individual audit files across all packages in the V
 | Severity | Open Issues |
 |----------|-------------|
 | High     | 1           |
-| Medium   | ~50         |
-| Low      | ~147        |
-| **Total**| **~198**    |
+| Medium   | ~48         |
+| Low      | ~146        |
+| **Total**| **~195**    |
 
 **Historical totals (including fixed):** ~32 High, ~95 Medium, ~227 Low issues were identified across all audits. The vast majority have been resolved, resulting in an overall codebase health status of **Good**.
 
@@ -23,7 +23,7 @@ This report consolidates 110 individual audit files across all packages in the V
 
 **Remaining issues** fall into three categories:
 - *Documentation inconsistencies:* doc examples using non-deterministic seeding or `log.Fatal` instead of logrus (~14 packages)
-- *API consistency gaps:* missing godoc on some exported symbols (~18 packages)
+- *API consistency gaps:* missing godoc on some exported symbols (~17 packages)
 - *Integration gaps:* (prestige, modding, QoL, companion_housing, and housing_crafting system integration gaps resolved 2026-02-22)
 
 ---
@@ -438,9 +438,9 @@ This report consolidates 110 individual audit files across all packages in the V
 ### pkg/narrative/branching — Branching Narrative Types
 - **Source:** `pkg/narrative/branching/AUDIT.md`
 - **High Issues:** 0
-- **Medium Issues:** 2
-- **Low Issues:** 1
-- **Details:** 88.3% coverage. `Consequence` and `StoryGraph` structs both lack godoc comments. `time.Now()` for progress timestamps is documented as an acceptable exception for analytics metadata. No functional issues.
+- **Medium Issues:** 0 (2 fixed)
+- **Low Issues:** 1 (1 fixed)
+- **Details:** 88.3% coverage. ~~`Consequence` and `StoryGraph` structs both lack godoc comments.~~ **RESOLVED 2026-02-22**: Added comprehensive godoc comments to `Consequence`, `StoryGraph`, and `NarrativeComponent` structs explaining their purposes, field meanings, and usage patterns. `time.Now()` for progress timestamps is documented as an acceptable exception for analytics metadata. No functional issues.
 
 ---
 

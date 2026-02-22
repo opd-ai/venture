@@ -24,12 +24,12 @@ The `pkg/narrative/branching` package implements procedural branching narrative 
 None found.
 
 ### Medium Severity
-- [ ] **Doc coverage** — `Consequence` struct missing godoc comment (`types.go:59`)
-- [ ] **Doc coverage** — `StoryGraph` struct missing godoc comment (`types.go:69`)
+- [x] **Doc coverage** — `Consequence` struct missing godoc comment (`types.go:59`) — **RESOLVED 2026-02-22**: Added comprehensive godoc explaining delayed/cascading effects, trigger conditions, and example usage
+- [x] **Doc coverage** — `StoryGraph` struct missing godoc comment (`types.go:69`) — **RESOLVED 2026-02-22**: Added comprehensive godoc explaining narrative structure, arc containment, and cross-arc consequences
 
 ### Low Severity
 - [ ] **Time usage** — Uses `time.Now()` for progress timestamps (documented exception in `doc.go:103-109`, `manager.go:84-85,482`). This is non-procgen metadata for analytics only and does not affect determinism.
-- [ ] **Doc coverage** — `NarrativeComponent` struct missing godoc comment (`types.go:76`)
+- [x] **Doc coverage** — `NarrativeComponent` struct missing godoc comment (`types.go:76`) — **RESOLVED 2026-02-22**: Added comprehensive godoc explaining ECS integration and field purposes
 
 ## Input Integration
 | Input Source | Status | Notes |
@@ -54,7 +54,7 @@ None found.
 
 ## Documentation Coverage
 - Package `doc.go`: ✅ Comprehensive (122 lines of documentation)
-- Exported symbols documented: 18/21 (86%)
+- Exported symbols documented: 21/21 (100%) — **Improved 2026-02-22** from 18/21 (86%)
 - Complex algorithms commented: ✅ Story graph building, alignment clamping well-documented
 
 ## Integration Status
@@ -74,5 +74,5 @@ None found.
 | Mobile | ✅ | No platform-specific dependencies |
 
 ## Recommendations
-1. **[LOW]** Add godoc comments to `Consequence`, `StoryGraph`, and `NarrativeComponent` structs in `types.go`
+1. ~~**[LOW]** Add godoc comments to `Consequence`, `StoryGraph`, and `NarrativeComponent` structs in `types.go`~~ — **RESOLVED 2026-02-22**
 2. **[LOW]** Consider adding `Serialize`/`Deserialize` methods to `PlayerProgress` for direct save/load support (currently handled via engine component)

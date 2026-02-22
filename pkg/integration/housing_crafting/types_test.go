@@ -206,3 +206,192 @@ func BenchmarkSkillTrainingFacility_GetXPBonus(b *testing.B) {
 		_ = facility.GetXPBonus(100.0)
 	}
 }
+
+// TestCraftingStation_Serialize tests serialization of crafting station
+func TestCraftingStation_Serialize(t *testing.T) {
+	station := &CraftingStation{
+		ID:          "station-1",
+		Type:        StationTypeForge,
+		Quality:     QualityAdvanced,
+		OwnerID:     "player-123",
+		HouseID:     "house-456",
+		FurnitureID: 789,
+		SkillBonus: map[string]int{
+			"smithing": 50,
+			"alchemy":  30,
+		},
+		ActiveRecipes: []string{"recipe1", "recipe2"},
+	}
+
+	data, err := station.Serialize()
+	if err != nil {
+		t.Fatalf("Serialize() error = %v", err)
+	}
+
+	if len(data) == 0 {
+		t.Error("Serialize() returned empty data")
+	}
+
+	// Verify it's valid JSON
+	var restored CraftingStation
+	if err := restored.Deserialize(data); err != nil {
+		t.Fatalf("Deserialize() error = %v", err)
+	}
+
+	// Verify fields
+	if restored.ID != station.ID {
+		t.Errorf("ID = %v, want %v", restored.ID, station.ID)
+	}
+	if restored.Type != station.Type {
+		t.Errorf("Type = %v, want %v", restored.Type, station.Type)
+	}
+	if restored.Quality != station.Quality {
+		t.Errorf("Quality = %v, want %v", restored.Quality, station.Quality)
+	}
+	if restored.OwnerID != station.OwnerID {
+		t.Errorf("OwnerID = %v, want %v", restored.OwnerID, station.OwnerID)
+	}
+	if restored.HouseID != station.HouseID {
+		t.Errorf("HouseID = %v, want %v", restored.HouseID, station.HouseID)
+	}
+	if restored.FurnitureID != station.FurnitureID {
+		t.Errorf("FurnitureID = %v, want %v", restored.FurnitureID, station.FurnitureID)
+	}
+	if restored.SkillBonus["smithing"] != 50 {
+		t.Errorf("SkillBonus[smithing] = %v, want 50", restored.SkillBonus["smithing"])
+	}
+	if len(restored.ActiveRecipes) != 2 {
+		t.Errorf("ActiveRecipes length = %v, want 2", len(restored.ActiveRecipes))
+	}
+}
+
+// TestCraftingStation_Deserialize_Invalid tests deserialization with invalid data
+func TestCraftingStation_Deserialize_Invalid(t *testing.T) {
+	station := &CraftingStation{}
+	err := station.Deserialize([]byte("invalid json"))
+	if err == nil {
+		t.Error("Deserialize() expected error for invalid JSON")
+	}
+}
+
+// TestCraftingStation_SerializeEmpty tests serialization of empty station
+func TestCraftingStation_SerializeEmpty(t *testing.T) {
+	station := &CraftingStation{}
+
+	data, err := station.Serialize()
+	if err != nil {
+		t.Fatalf("Serialize() error = %v", err)
+	}
+
+	var restored CraftingStation
+	if err := restored.Deserialize(data); err != nil {
+		t.Fatalf("Deserialize() error = %v", err)
+	}
+}
+
+// TestSkillTrainingFacility_Serialize tests serialization of skill training facility
+func TestSkillTrainingFacility_Serialize(t *testing.T) {
+	facility := &SkillTrainingFacility{
+		ID:              "facility-1",
+		OwnerID:         "player-123",
+		HouseID:         "house-456",
+		FurnitureID:     789,
+		TrainableSkills: []string{"smithing", "alchemy", "enchanting"},
+		XPMultiplier:    1.5,
+	}
+
+	data, err := facility.Serialize()
+	if err != nil {
+		t.Fatalf("Serialize() error = %v", err)
+	}
+
+	if len(data) == 0 {
+		t.Error("Serialize() returned empty data")
+	}
+
+	// Verify it's valid JSON
+	var restored SkillTrainingFacility
+	if err := restored.Deserialize(data); err != nil {
+		t.Fatalf("Deserialize() error = %v", err)
+	}
+
+	// Verify fields
+	if restored.ID != facility.ID {
+		t.Errorf("ID = %v, want %v", restored.ID, facility.ID)
+	}
+	if restored.OwnerID != facility.OwnerID {
+		t.Errorf("OwnerID = %v, want %v", restored.OwnerID, facility.OwnerID)
+	}
+	if restored.HouseID != facility.HouseID {
+		t.Errorf("HouseID = %v, want %v", restored.HouseID, facility.HouseID)
+	}
+	if restored.FurnitureID != facility.FurnitureID {
+		t.Errorf("FurnitureID = %v, want %v", restored.FurnitureID, facility.FurnitureID)
+	}
+	if restored.XPMultiplier != facility.XPMultiplier {
+		t.Errorf("XPMultiplier = %v, want %v", restored.XPMultiplier, facility.XPMultiplier)
+	}
+	if len(restored.TrainableSkills) != 3 {
+		t.Errorf("TrainableSkills length = %v, want 3", len(restored.TrainableSkills))
+	}
+}
+
+// TestSkillTrainingFacility_Deserialize_Invalid tests deserialization with invalid data
+func TestSkillTrainingFacility_Deserialize_Invalid(t *testing.T) {
+	facility := &SkillTrainingFacility{}
+	err := facility.Deserialize([]byte("invalid json"))
+	if err == nil {
+		t.Error("Deserialize() expected error for invalid JSON")
+	}
+}
+
+// TestSkillTrainingFacility_SerializeEmpty tests serialization of empty facility
+func TestSkillTrainingFacility_SerializeEmpty(t *testing.T) {
+	facility := &SkillTrainingFacility{}
+
+	data, err := facility.Serialize()
+	if err != nil {
+		t.Fatalf("Serialize() error = %v", err)
+	}
+
+	var restored SkillTrainingFacility
+	if err := restored.Deserialize(data); err != nil {
+		t.Fatalf("Deserialize() error = %v", err)
+	}
+}
+
+// Benchmark for serialization
+func BenchmarkCraftingStation_Serialize(b *testing.B) {
+	station := &CraftingStation{
+		ID:          "station-1",
+		Type:        StationTypeForge,
+		Quality:     QualityAdvanced,
+		OwnerID:     "player-123",
+		HouseID:     "house-456",
+		FurnitureID: 789,
+		SkillBonus: map[string]int{
+			"smithing": 50,
+			"alchemy":  30,
+		},
+		ActiveRecipes: []string{"recipe1", "recipe2"},
+	}
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_, _ = station.Serialize()
+	}
+}
+
+func BenchmarkSkillTrainingFacility_Serialize(b *testing.B) {
+	facility := &SkillTrainingFacility{
+		ID:              "facility-1",
+		OwnerID:         "player-123",
+		HouseID:         "house-456",
+		FurnitureID:     789,
+		TrainableSkills: []string{"smithing", "alchemy", "enchanting"},
+		XPMultiplier:    1.5,
+	}
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_, _ = facility.Serialize()
+	}
+}

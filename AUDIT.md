@@ -13,9 +13,9 @@ This report consolidates 110 individual audit files across all packages in the V
 | Severity | Open Issues |
 |----------|-------------|
 | High     | 1           |
-| Medium   | ~60         |
+| Medium   | ~59         |
 | Low      | ~159        |
-| **Total**| **~220**    |
+| **Total**| **~219**    |
 
 **Historical totals (including fixed):** ~32 High, ~95 Medium, ~225 Low issues were identified across all audits. The vast majority have been resolved, resulting in an overall codebase health status of **Good**.
 
@@ -348,9 +348,9 @@ This report consolidates 110 individual audit files across all packages in the V
 ### pkg/integration/housing_crafting — Housing & Crafting Integration
 - **Source:** `pkg/integration/housing_crafting/AUDIT.md`
 - **High Issues:** 0
-- **Medium Issues:** 1
+- **Medium Issues:** 0 (1 fixed)
 - **Low Issues:** 2
-- **Details:** 98.5% coverage; exemplary coverage with deterministic seed-based generation. `HousingCraftingSystem` is marked deprecated but remains exported and tested. `CraftingStation` and `SkillTrainingFacility` lack `Serialize/Deserialize` methods for persistence. `StationManager` methods use `fmt.Errorf` without structured logrus logging.
+- **Details:** 96.9% coverage; exemplary coverage with deterministic seed-based generation. `HousingCraftingSystem` is marked deprecated but remains exported and tested. **RESOLVED 2026-02-22**: `CraftingStation` and `SkillTrainingFacility` now have `Serialize()` and `Deserialize()` methods for JSON-based persistence with structured logrus logging. `StationManager` methods use `fmt.Errorf` without structured logrus logging.
 
 ---
 
@@ -1124,8 +1124,8 @@ The following patterns affect multiple packages and represent systemic concerns:
 **Pattern:** Systems marked `@deprecated` remain in the public API and are still tested. They should either be removed from exports or receive proper replacement documentation with migration guides.
 
 ### 7. Missing Serialize/Deserialize on Persisted Components
-**Affected:** ~~`pkg/class/advanced` (`AdvancedClassComponent`)~~ (**RESOLVED 2026-02-22**), ~~`pkg/engine/qol` (`QoLComponent`)~~ (**RESOLVED 2026-02-22**), `pkg/integration/housing_crafting` (`CraftingStation`, `SkillTrainingFacility`)
-**Pattern:** Several components that represent persistent player data (class configuration, crafting station state) implement `Type() string` correctly but lack `Serialize()`/`Deserialize()` methods, meaning their data is lost across sessions. Note: `QoLComponent` and `AdvancedClassComponent` now have save/load integration.
+**Affected:** ~~`pkg/class/advanced` (`AdvancedClassComponent`)~~ (**RESOLVED 2026-02-22**), ~~`pkg/engine/qol` (`QoLComponent`)~~ (**RESOLVED 2026-02-22**), ~~`pkg/integration/housing_crafting` (`CraftingStation`, `SkillTrainingFacility`)~~ (**RESOLVED 2026-02-22**)
+**Pattern:** Several components that represent persistent player data (class configuration, crafting station state) implement `Type() string` correctly but lack `Serialize()`/`Deserialize()` methods, meaning their data is lost across sessions. Note: `QoLComponent`, `AdvancedClassComponent`, `CraftingStation`, and `SkillTrainingFacility` now have save/load integration.
 
 ### 8. System Registration Inconsistency
 **Affected:** `pkg/integration` (all sub-packages), `pkg/engine/prestige`, `pkg/engine/qol`

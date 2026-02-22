@@ -1,5 +1,11 @@
 package housing_crafting
 
+import (
+	"encoding/json"
+
+	"github.com/sirupsen/logrus"
+)
+
 // CraftingStation represents a crafting station placed in a player's house.
 // This file contains the CraftingStation type and its methods for querying
 // skill bonuses and recipe availability.
@@ -38,4 +44,57 @@ func (cs *CraftingStation) HasRecipe(recipeID string) bool {
 		}
 	}
 	return false
+}
+
+// Serialize encodes the crafting station to JSON bytes for persistence.
+// Returns the encoded bytes and any error encountered during marshaling.
+func (cs *CraftingStation) Serialize() ([]byte, error) {
+	logrus.WithFields(logrus.Fields{
+		"type":       "crafting_station",
+		"station_id": cs.ID,
+		"owner_id":   cs.OwnerID,
+		"house_id":   cs.HouseID,
+	}).Debug("Serializing crafting station")
+
+	data, err := json.Marshal(cs)
+	if err != nil {
+		logrus.WithFields(logrus.Fields{
+			"type":  "crafting_station",
+			"error": err.Error(),
+		}).Error("Failed to serialize crafting station")
+		return nil, err
+	}
+
+	logrus.WithFields(logrus.Fields{
+		"type":  "crafting_station",
+		"bytes": len(data),
+	}).Debug("Crafting station serialized successfully")
+
+	return data, nil
+}
+
+// Deserialize decodes the crafting station from JSON bytes.
+// Returns any error encountered during unmarshaling.
+func (cs *CraftingStation) Deserialize(data []byte) error {
+	logrus.WithFields(logrus.Fields{
+		"type":  "crafting_station",
+		"bytes": len(data),
+	}).Debug("Deserializing crafting station")
+
+	if err := json.Unmarshal(data, cs); err != nil {
+		logrus.WithFields(logrus.Fields{
+			"type":  "crafting_station",
+			"error": err.Error(),
+		}).Error("Failed to deserialize crafting station")
+		return err
+	}
+
+	logrus.WithFields(logrus.Fields{
+		"type":       "crafting_station",
+		"station_id": cs.ID,
+		"owner_id":   cs.OwnerID,
+		"house_id":   cs.HouseID,
+	}).Debug("Crafting station deserialized successfully")
+
+	return nil
 }

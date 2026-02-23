@@ -29,7 +29,7 @@ The `pkg/security` package provides a comprehensive security audit framework for
 (none)
 
 ### Medium Severity
-- [ ] **Determinism Exception Documentation** — The `time.Now()` usage in `audit.go:195,242` is for observability timestamps only. This is already documented in `doc.go:123-129` and `doc.go:141-146` but the exemption could be clearer with a code comment inline. (`audit.go:195`)
+- [x] **Determinism Exception Documentation** — The `time.Now()` usage in `audit.go:195,242` is for observability timestamps only. This is already documented in `doc.go:123-129` and `doc.go:141-146`. **RESOLVED 2026-02-23**: Added inline code comments at both `time.Now()` locations referencing doc.go and clarifying these are for timing metadata only, not affecting audit logic or determinism.
 
 ### Low Severity
 - [ ] **Documentation Comments in Code** — The README.md and doc.go contain `log.Fatalf` and `fmt.Println` in example code snippets. While these are documentation examples (not runtime code), they don't follow the structured logging pattern recommended by the codebase guidelines. (`README.md:26`, `doc.go:57-64`)
@@ -78,6 +78,6 @@ How this package connects to engine, client, server:
 | Mobile | N/A | Build tags exclude server-side code on mobile; security audit is server-only |
 
 ## Recommendations
-1. **[LOW]** Add inline code comment at `audit.go:195` explaining `time.Now()` usage is for observability only and does not affect determinism
+1. ~~**[LOW]** Add inline code comment at `audit.go:195` explaining `time.Now()` usage is for observability only and does not affect determinism~~ **RESOLVED 2026-02-23**: Added inline comments at both locations
 2. **[LOW]** Consider replacing package-level `init()` logger with lazy initialization for easier testing
 3. **[LOW]** Update README.md examples to show structured logrus logging instead of `log.Fatalf`

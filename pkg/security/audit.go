@@ -192,6 +192,9 @@ func NewAuditor(logger *logrus.Logger) *Auditor {
 func (a *Auditor) RunFullAudit() *AuditResults {
 	a.logger.Info("Starting full security audit")
 	results := &AuditResults{
+		// Note: time.Now() is for observability/timing metadata only.
+		// Does not affect audit logic, pass/fail results, or determinism.
+		// See doc.go "Determinism Exception" section for rationale.
 		StartTime: time.Now(),
 		Checks:    make([]SecurityCheck, 0, 30),
 	}
@@ -239,6 +242,8 @@ func (a *Auditor) RunFullAudit() *AuditResults {
 	a.auditPrivacy(results)
 
 	// Calculate summary statistics
+	// Note: time.Now() is for observability/timing metadata only.
+	// Does not affect audit logic or determinism (see doc.go).
 	results.EndTime = time.Now()
 	results.TotalChecks = len(results.Checks)
 	a.logger.WithFields(logrus.Fields{

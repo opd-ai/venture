@@ -1597,3 +1597,247 @@ func BenchmarkConnectUIComponents(b *testing.B) {
 		connectUIComponents(connections)
 	}
 }
+
+// TestSerializeQoLStateWithCraftQueue tests QoL state serialization with craft queue items.
+func TestSerializeQoLStateWithCraftQueue(t *testing.T) {
+	player := engine.NewEntity(1)
+	player.AddComponent(&qol.QoLComponent{
+		PlayerID:        12345,
+		AutoLootEnabled: true,
+		AutoLootRadius:  150.0,
+		SortPreset:      "type",
+		MountWhistle:    true,
+		RecipeTracking:  true,
+		CraftQueue: []*qol.CraftQueueEntry{
+			{RecipeID: "sword_iron", Quantity: 2, MaterialsReady: true, Position: 0},
+			{RecipeID: "potion_health", Quantity: 5, MaterialsReady: false, Position: 1},
+		},
+	})
+
+	state := &saveload.PlayerState{}
+	serializeQoLState(player, state)
+
+	if state.QoLData == nil {
+		t.Fatal("QoLData should not be nil")
+	}
+	if len(state.QoLData.CraftQueueJSON) == 0 {
+		t.Error("CraftQueueJSON should not be empty when craft queue has items")
+	}
+	// Verify JSON is valid by checking it contains expected recipe IDs
+	jsonStr := string(state.QoLData.CraftQueueJSON)
+	if !contains(jsonStr, "sword_iron") {
+		t.Error("CraftQueueJSON should contain 'sword_iron'")
+	}
+	if !contains(jsonStr, "potion_health") {
+		t.Error("CraftQueueJSON should contain 'potion_health'")
+	}
+}
+
+// contains is a helper function to check if a string contains a substring.
+func contains(s, substr string) bool {
+	return len(s) >= len(substr) && (s == substr || len(s) > 0 && containsHelper(s, substr))
+}
+
+func containsHelper(s, substr string) bool {
+	for i := 0; i <= len(s)-len(substr); i++ {
+		if s[i:i+len(substr)] == substr {
+			return true
+		}
+	}
+	return false
+}
+
+// TestDeserializeQoLStateWithCraftQueue tests QoL deserialization with craft queue JSON.
+func TestDeserializeQoLStateWithCraftQueue(t *testing.T) {
+	player := engine.NewEntity(1)
+	craftQueueJSON := []byte(`[{"RecipeID":"sword_iron","Quantity":2,"MaterialsReady":true,"Position":0},{"RecipeID":"potion_health","Quantity":5,"MaterialsReady":false,"Position":1}]`)
+
+	state := &saveload.PlayerState{
+		QoLData: &saveload.QoLStateData{
+			PlayerID:        99999,
+			AutoLootEnabled: true,
+			AutoLootRadius:  200.0,
+			SortPreset:      "rarity",
+			MountWhistle:    true,
+			RecipeTracking:  true,
+			CraftQueueJSON:  craftQueueJSON,
+		},
+	}
+
+	deserializeQoLState(player, state)
+
+	qolComp, ok := player.GetComponent("qol")
+	if !ok {
+		t.Fatal("QoL component should be created")
+	}
+	q, ok := qolComp.(*qol.QoLComponent)
+	if !ok {
+		t.Fatal("Component should be QoLComponent type")
+	}
+
+	if len(q.CraftQueue) != 2 {
+		t.Errorf("CraftQueue should have 2 items, got %d", len(q.CraftQueue))
+	}
+	if len(q.CraftQueue) > 0 && q.CraftQueue[0].RecipeID != "sword_iron" {
+		t.Errorf("First recipe should be 'sword_iron', got %q", q.CraftQueue[0].RecipeID)
+	}
+	if len(q.CraftQueue) > 1 && q.CraftQueue[1].Quantity != 5 {
+		t.Errorf("Second recipe quantity should be 5, got %d", q.CraftQueue[1].Quantity)
+	}
+}
+
+// TestDeserializeQoLStateExistingComponent tests deserialization when entity already has QoL component.
+func TestDeserializeQoLStateExistingComponent(t *testing.T) {
+	player := engine.NewEntity(1)
+	// Pre-add QoL component with different values
+	existingQoL := &qol.QoLComponent{
+		PlayerID:        11111,
+		AutoLootEnabled: false,
+		AutoLootRadius:  50.0,
+		SortPreset:      "name",
+		MountWhistle:    false,
+		RecipeTracking:  false,
+	}
+	player.AddComponent(existingQoL)
+
+	state := &saveload.PlayerState{
+		QoLData: &saveload.QoLStateData{
+			PlayerID:        99999,
+			AutoLootEnabled: true,
+			AutoLootRadius:  200.0,
+			SortPreset:      "rarity",
+			MountWhistle:    true,
+			RecipeTracking:  true,
+		},
+	}
+
+	deserializeQoLState(player, state)
+
+	qolComp, ok := player.GetComponent("qol")
+	if !ok {
+		t.Fatal("QoL component should exist")
+	}
+	q, ok := qolComp.(*qol.QoLComponent)
+	if !ok {
+		t.Fatal("Component should be QoLComponent type")
+	}
+
+	// Values should be overwritten from state
+	if q.PlayerID != 99999 {
+		t.Errorf("PlayerID = %d, want 99999", q.PlayerID)
+	}
+	if !q.AutoLootEnabled {
+		t.Error("AutoLootEnabled should be true after deserialization")
+	}
+	if q.AutoLootRadius != 200.0 {
+		t.Errorf("AutoLootRadius = %f, want 200.0", q.AutoLootRadius)
+	}
+	if q.SortPreset != "rarity" {
+		t.Errorf("SortPreset = %q, want 'rarity'", q.SortPreset)
+	}
+}
+
+// TestDeserializeQoLStateInvalidCraftQueue tests deserialization with invalid JSON gracefully ignores bad data.
+func TestDeserializeQoLStateInvalidCraftQueue(t *testing.T) {
+	player := engine.NewEntity(1)
+	// Invalid JSON should not cause panic, just skip craft queue restoration
+	invalidJSON := []byte(`[{"invalid json missing closing bracket`)
+
+	state := &saveload.PlayerState{
+		QoLData: &saveload.QoLStateData{
+			PlayerID:        99999,
+			AutoLootEnabled: true,
+			CraftQueueJSON:  invalidJSON,
+		},
+	}
+
+	// Should not panic
+	deserializeQoLState(player, state)
+
+	qolComp, ok := player.GetComponent("qol")
+	if !ok {
+		t.Fatal("QoL component should be created")
+	}
+	q, ok := qolComp.(*qol.QoLComponent)
+	if !ok {
+		t.Fatal("Component should be QoLComponent type")
+	}
+
+	// Other fields should still be set
+	if q.PlayerID != 99999 {
+		t.Errorf("PlayerID = %d, want 99999", q.PlayerID)
+	}
+	// CraftQueue should be nil/empty due to invalid JSON
+	if len(q.CraftQueue) != 0 {
+		t.Errorf("CraftQueue should be empty with invalid JSON, got %d items", len(q.CraftQueue))
+	}
+}
+
+// TestSerializeQoLStateEmptyCraftQueue tests serialization with empty craft queue.
+func TestSerializeQoLStateEmptyCraftQueue(t *testing.T) {
+	player := engine.NewEntity(1)
+	player.AddComponent(&qol.QoLComponent{
+		PlayerID:        12345,
+		AutoLootEnabled: true,
+		CraftQueue:      []*qol.CraftQueueEntry{}, // Empty slice
+	})
+
+	state := &saveload.PlayerState{}
+	serializeQoLState(player, state)
+
+	if state.QoLData == nil {
+		t.Fatal("QoLData should not be nil")
+	}
+	// Empty craft queue should not produce JSON
+	if len(state.QoLData.CraftQueueJSON) != 0 {
+		t.Errorf("CraftQueueJSON should be empty for empty craft queue, got %d bytes", len(state.QoLData.CraftQueueJSON))
+	}
+}
+
+// wrongTypeComponent is a component with wrong type for testing type assertion failures.
+type wrongTypeComponent struct{}
+
+func (w *wrongTypeComponent) Type() string { return "qol" }
+
+// TestSerializeQoLStateWrongComponentType tests serialization with wrong component type.
+func TestSerializeQoLStateWrongComponentType(t *testing.T) {
+	player := engine.NewEntity(1)
+	// Add a component that returns "qol" type but isn't actually a QoLComponent
+	player.AddComponent(&wrongTypeComponent{})
+
+	state := &saveload.PlayerState{}
+	serializeQoLState(player, state)
+
+	// Should return early and not set QoLData
+	if state.QoLData != nil {
+		t.Error("QoLData should be nil when component type assertion fails")
+	}
+}
+
+// TestDeserializeQoLStateWrongComponentType tests deserialization with wrong component type.
+func TestDeserializeQoLStateWrongComponentType(t *testing.T) {
+	player := engine.NewEntity(1)
+	// Add a component that returns "qol" type but isn't actually a QoLComponent
+	player.AddComponent(&wrongTypeComponent{})
+
+	state := &saveload.PlayerState{
+		QoLData: &saveload.QoLStateData{
+			PlayerID:        99999,
+			AutoLootEnabled: true,
+		},
+	}
+
+	// Should not panic, just return early
+	deserializeQoLState(player, state)
+
+	// The wrong component should still be there (not replaced)
+	comp, ok := player.GetComponent("qol")
+	if !ok {
+		t.Fatal("Component should still exist")
+	}
+	// Should still be the wrong type
+	_, isWrong := comp.(*wrongTypeComponent)
+	if !isWrong {
+		t.Error("Component should still be wrong type (not replaced)")
+	}
+}

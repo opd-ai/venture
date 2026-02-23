@@ -576,7 +576,8 @@ func TestBlendColors(t *testing.T) {
 	}
 }
 
-// TestMinMax tests min and max functions.
+// TestMinMax tests built-in min and max functions.
+// NOTE: As of 2026-02-23, these now use Go 1.21+ built-in min/max.
 func TestMinMax(t *testing.T) {
 	if min(5, 10) != 5 {
 		t.Errorf("min(5, 10) = %v, want 5", min(5, 10))

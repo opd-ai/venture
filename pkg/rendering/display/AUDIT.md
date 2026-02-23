@@ -23,7 +23,7 @@ The `pkg/rendering/display` package provides resolution management and UI scalin
 None identified.
 
 ### Medium Severity
-- [ ] **Documentation** — Scaler type missing godoc comment explaining scaling methodology (`scaler.go:7`)
+- [x] **Documentation** — Scaler type now has godoc comment explaining scaling methodology (`scaler.go:5-10`): "Scaler provides UI scaling calculations based on resolution. Uses 1920x1080 as baseline (scale factor 1.0)." — **RESOLVED 2026-02-23**
 
 ### Low Severity
 - [ ] **Integration** — Display manager not wired to Settings UI for runtime resolution changes; currently only accessible via F11 fullscreen toggle or command-line flags (`manager.go:40`, `cmd/client/init_versions.go:362-402`)
@@ -52,7 +52,7 @@ None identified.
 
 ## Documentation Coverage
 - Package `doc.go`: ✅ Present with comprehensive usage examples
-- Exported symbols documented: 24/25 (96%) — Scaler type missing godoc
+- Exported symbols documented: 25/25 (100%) — All types and functions documented
 - Complex algorithms commented: ✅ Scaling calculations well-documented
 
 ## Integration Status
@@ -71,6 +71,6 @@ None identified.
 | Mobile | N/A | Mobile uses fixed viewport; display package for desktop |
 
 ## Recommendations
-1. **[LOW]** Add godoc comment to Scaler type explaining the 1920x1080 baseline scaling methodology (`scaler.go:7`)
+1. **[DONE]** Add godoc comment to Scaler type explaining the 1920x1080 baseline scaling methodology (`scaler.go:5-10`) — already present
 2. **[LOW]** Consider exposing resolution selection in Settings UI menu for runtime resolution changes without restart
 3. **[LOW]** Consider creating DisplayConfigComponent for ECS-based persistence of display preferences

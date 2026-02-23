@@ -23,7 +23,7 @@ The tiles package provides procedural tile image generation for terrain renderin
 *None identified.*
 
 ### Medium Severity
-- [ ] **ECS compliance** — `min()` and `max()` utility functions in `utils.go:41-55` shadow Go 1.21+ builtins which may cause confusion in future maintenance (`utils.go:41-55`)
+- [x] **ECS compliance** — `min()` and `max()` utility functions removed from `utils.go`; now using Go 1.21+ built-in `min()` and `max()` functions — **RESOLVED 2026-02-23**
 
 ### Low Severity
 - [ ] **Doc coverage** — `generator.go` internal helper methods (`fillSolid`, `fillCheckerboard`, etc.) lack godoc comments explaining their pattern algorithms (`generator.go:262-376`)
@@ -74,7 +74,7 @@ The tiles package connects to the engine via `TerrainRenderSystem`, `TileCache`,
 | Mobile | ✅ | No platform-specific imports; pure Go image generation |
 
 ## Recommendations
-1. **[LOW]** Consider renaming `min`/`max` functions in `utils.go` to `minInt`/`maxInt` to avoid shadowing Go 1.21+ builtins
+1. **[DONE]** Local `min`/`max` functions removed; now using Go 1.21+ built-in functions — **RESOLVED 2026-02-23**
 2. **[LOW]** Add godoc comments to internal fill pattern functions for maintainability
 3. **[LOW]** Consider unifying enhanced wall config into the main `Config` struct with optional fields
 

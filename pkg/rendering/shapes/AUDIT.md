@@ -24,7 +24,7 @@ The shapes package provides deterministic procedural geometric shape generation 
 None.
 
 ### Medium Severity
-- [ ] **Doc coverage** — `Shape` struct (types.go:132) is exported but not actively used by the public API; consider making it private or documenting its intended usage (`types.go:132`)
+- [x] **Doc coverage** — `Shape` struct (types.go:132) IS actively used by the public API via `sprites.Layer` struct which embeds `shapes.Shape`. The struct has comprehensive godoc documentation explaining each field (`types.go:132-145`). — **RESOLVED 2026-02-23**
 
 ### Low Severity
 - [ ] **API consistency** — `Generator` struct is empty (no fields); could be replaced with package-level functions but current pattern allows future expansion (`generator.go:16`)
@@ -76,7 +76,7 @@ This is a pure utility package providing shape primitives for the sprite generat
 | Mobile | ✅ Pass | No platform-specific code; relies on Ebiten cross-platform support |
 
 ## Recommendations
-1. **[LOW]** Consider documenting or privatizing the unused `Shape` struct to clarify API surface
+1. **[DONE]** Shape struct is actively used via `sprites.Layer` and has comprehensive godoc — no changes needed
 2. **[LOW]** Add explicit tests for edge cases (zero dimensions, extreme rotation values)
 3. **[LOW]** Add individual benchmarks for more shape types to track performance regressions
 

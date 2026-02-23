@@ -13,9 +13,9 @@ This report consolidates 110 individual audit files across all packages in the V
 | Severity | Open Issues |
 |----------|-------------|
 | High     | 1           |
-| Medium   | ~26         |
-| Low      | ~120        |
-| **Total**| **~147**    |
+| Medium   | ~22         |
+| Low      | ~115        |
+| **Total**| **~138**    |
 
 **Historical totals (including fixed):** ~32 High, ~95 Medium, ~227 Low issues were identified across all audits. The vast majority have been resolved, resulting in an overall codebase health status of **Good**.
 
@@ -753,9 +753,9 @@ This report consolidates 110 individual audit files across all packages in the V
 ### pkg/procgen/vehicle — Vehicle Generation
 - **Source:** `pkg/procgen/vehicle/AUDIT.md`
 - **High Issues:** 0
-- **Medium Issues:** 1
-- **Low Issues:** 1
-- **Details:** 91.4% coverage. `clamp` unexported helper function lacks godoc comment. All generation is seed-based; combat and visual variants properly implemented.
+- **Medium Issues:** 0 (1 fixed)
+- **Low Issues:** 0 (1 fixed)
+- **Details:** 91.4% coverage. **RESOLVED 2026-02-23**: `clamp` helper function already had godoc comment; `calculateAvgInt` test helper already had comment; `ToComponent()`/`ToComponents()` design is intentional for simple vs full component access patterns. All generation is seed-based; combat and visual variants properly implemented.
 
 ---
 
@@ -798,9 +798,9 @@ This report consolidates 110 individual audit files across all packages in the V
 ### pkg/rendering/display — Display Configuration
 - **Source:** `pkg/rendering/display/AUDIT.md`
 - **High Issues:** 0
-- **Medium Issues:** 1
+- **Medium Issues:** 0 (1 fixed)
 - **Low Issues:** 1
-- **Details:** 96.6% coverage. `Scaler` type lacks a godoc comment explaining its scaling methodology. All display management functionality correct and well-tested.
+- **Details:** 96.6% coverage. **RESOLVED 2026-02-23**: `Scaler` type already has comprehensive godoc comment explaining its scaling methodology and 1920x1080 baseline. All display management functionality correct and well-tested.
 
 ---
 
@@ -879,9 +879,9 @@ This report consolidates 110 individual audit files across all packages in the V
 ### pkg/rendering/shapes — Shape Drawing Utilities
 - **Source:** `pkg/rendering/shapes/AUDIT.md`
 - **High Issues:** 0
-- **Medium Issues:** 1
+- **Medium Issues:** 0 (1 fixed)
 - **Low Issues:** 1
-- **Details:** 98.4% coverage. `Shape` struct is exported but not actively used by the public API; consider making it private or documenting its intended usage. No functional issues.
+- **Details:** 98.4% coverage. **RESOLVED 2026-02-23**: `Shape` struct IS actively used via `sprites.Layer` struct embedding and has comprehensive godoc documentation. No functional issues.
 
 ---
 
@@ -897,9 +897,9 @@ This report consolidates 110 individual audit files across all packages in the V
 ### pkg/rendering/tiles — Tile Generation (Parallax, Walls, Transitions)
 - **Source:** `pkg/rendering/tiles/AUDIT.md`
 - **High Issues:** 0
-- **Medium Issues:** 1
+- **Medium Issues:** 0 (1 fixed)
 - **Low Issues:** 1
-- **Details:** 91.5% coverage. `min()` and `max()` utility functions in `utils.go` shadow Go 1.21+ builtins, which may cause maintenance confusion in future Go version upgrades.
+- **Details:** 91.5% coverage. **RESOLVED 2026-02-23**: Local `min()` and `max()` functions removed; now using Go 1.21+ built-in functions, eliminating shadowing confusion.
 
 ---
 

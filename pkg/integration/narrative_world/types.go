@@ -165,7 +165,7 @@ type CompanionConflict struct {
 	Severity        float64        // 0.0-1.0
 	ResolutionQuest *PersonalQuest // Optional quest to resolve
 	Active          bool
-	TimeSinceStart  time.Duration  // Elapsed time since conflict began (updated via deltaTime)
+	TimeSinceStart  time.Duration // Elapsed time since conflict began (updated via deltaTime)
 }
 
 // ConflictType categorizes companion conflicts

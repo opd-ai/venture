@@ -36,20 +36,5 @@ func blendColors(c1, c2 color.Color, blend float64) color.Color {
 	}
 }
 
-// min returns the minimum of two integers.
-// Originally from: phase11_rendering.go
-func min(a, b int) int {
-	if a < b {
-		return a
-	}
-	return b
-}
-
-// max returns the maximum of two integers.
-// Originally from: phase11_rendering.go
-func max(a, b int) int {
-	if a > b {
-		return a
-	}
-	return b
-}
+// NOTE: Go 1.21+ provides built-in min() and max() functions for comparable types.
+// Previous local definitions were removed in 2026-02-23 cleanup to use builtins.

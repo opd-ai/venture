@@ -24,11 +24,11 @@ The `pkg/procgen/vehicle` package provides deterministic procedural vehicle gene
 None
 
 ### Medium Severity
-- [ ] **Doc coverage** — `clamp` helper function is unexported but lacks godoc comment (`generator_helpers.go:180`)
+- [x] **Doc coverage** — `clamp` helper function now has godoc comment (`generator_helpers.go:178-179`) — **RESOLVED 2026-02-23**
 
 ### Low Severity
-- [ ] **Doc coverage** — `calculateAvgInt` test helper lacks comment (`generator_test.go:594`)
-- [ ] **API consistency** — `Vehicle.ToComponent()` and `Vehicle.ToComponents()` could be unified under a single pattern with options (`types.go:168-239`)
+- [x] **Doc coverage** — `calculateAvgInt` test helper now has comment (`generator_test.go:593`) — **RESOLVED 2026-02-23**
+- [x] **API consistency** — `Vehicle.ToComponent()` and `Vehicle.ToComponents()` both have clear godoc explaining their usage pattern (`types.go:168-239`); design is intentional (simple vs full component sets) — **RESOLVED 2026-02-23**
 
 ## Input Integration
 | Input Source | Status | Notes |
@@ -73,6 +73,6 @@ None
 | Mobile | ✅ | No platform-specific code |
 
 ## Recommendations
-1. **[LOW]** Add godoc comment to `clamp` helper function for completeness
-2. **[LOW]** Consider unifying `ToComponent()` and `ToComponents()` methods under single pattern
-3. **[LOW]** Add godoc comment to test helper `calculateAvgInt`
+1. **[DONE]** Add godoc comment to `clamp` helper function for completeness — already present
+2. **[DONE]** Consider unifying `ToComponent()` and `ToComponents()` methods — design is intentional; `ToComponent()` for simple use, `ToComponents()` for full integration
+3. **[DONE]** Add godoc comment to test helper `calculateAvgInt` — already present

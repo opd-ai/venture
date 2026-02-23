@@ -31,18 +31,31 @@ type RecipeGenerator struct {
 }
 
 // RecipeTemplate defines a pattern for generating recipes.
+// Templates are used to create procedurally generated recipes with appropriate
+// naming, materials, costs, and requirements for different genres.
 type RecipeTemplate struct {
-	NamePrefix       string
-	NameSuffix       string
-	RecipeType       engine.RecipeType
-	RecipeRarity     engine.RecipeRarity
-	OutputType       item.ItemType
-	MaterialNames    []string   // Pool of possible material names
-	MaterialCount    [2]int     // Min and max materials required
-	GoldCostRange    [2]int     // Min and max gold cost
-	SkillRange       [2]int     // Min and max skill requirement
-	BaseSuccessRange [2]float64 // Min and max base success chance
-	CraftTimeRange   [2]float64 // Min and max craft time in seconds
+	// NamePrefix is prepended to the generated recipe name (e.g., "Mystic" in "Mystic Healing Potion")
+	NamePrefix string
+	// NameSuffix is appended to the generated recipe name (e.g., "of Power" in "Elixir of Power")
+	NameSuffix string
+	// RecipeType categorizes the recipe (potion, enchanting, magic_item, cooking, smithing)
+	RecipeType engine.RecipeType
+	// RecipeRarity determines the rarity tier (common, uncommon, rare, epic, legendary)
+	RecipeRarity engine.RecipeRarity
+	// OutputType specifies the item type produced by the recipe
+	OutputType item.ItemType
+	// MaterialNames is the pool of possible material names for ingredient selection
+	MaterialNames []string
+	// MaterialCount specifies [min, max] number of materials required (inclusive)
+	MaterialCount [2]int
+	// GoldCostRange specifies [min, max] gold cost for crafting (inclusive)
+	GoldCostRange [2]int
+	// SkillRange specifies [min, max] skill requirement to attempt crafting (inclusive)
+	SkillRange [2]int
+	// BaseSuccessRange specifies [min, max] base success chance (0.0-1.0, inclusive)
+	BaseSuccessRange [2]float64
+	// CraftTimeRange specifies [min, max] craft time in seconds (inclusive)
+	CraftTimeRange [2]float64
 }
 
 // NewRecipeGenerator creates a new recipe generator.

@@ -23,7 +23,7 @@ The `pkg/procgen/story` package provides procedural generation of environmental 
 None
 
 ### Medium Severity
-- [ ] **Doc coverage** — `FragmentType.String()` method missing godoc comment (`generator.go:12`)
+- [x] **Doc coverage** — `FragmentType.String()` method missing godoc comment (`generator.go:12`) **NOTE 2026-02-23**: Upon inspection, godoc comment already present at line 11: `// String returns the string representation of FragmentType`
 
 ### Low Severity
 - [ ] **Doc coverage** — `Vector2` struct fields missing godoc comments (`types.go:20-24`)
@@ -73,6 +73,6 @@ The package is well-integrated with the engine and rendering layers:
 | Mobile | ✅ | No platform-specific code |
 
 ## Recommendations
-1. **[LOW]** Add godoc comment to `FragmentType.String()` method for documentation completeness
+1. **[LOW]** ~~Add godoc comment to `FragmentType.String()` method for documentation completeness~~ **NOTE 2026-02-23**: Already present
 2. **[LOW]** Add field-level godoc comments to `Vector2` struct
 3. **[LOW]** Consider refactoring `fragmentKey` in `story_fragment_component.go` to handle sequenceNum > 9 correctly (not in this package but uses its types)

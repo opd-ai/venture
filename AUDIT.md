@@ -13,9 +13,9 @@ This report consolidates 110 individual audit files across all packages in the V
 | Severity | Open Issues |
 |----------|-------------|
 | High     | 1           |
-| Medium   | ~30         |
-| Low      | ~128        |
-| **Total**| **~159**    |
+| Medium   | ~27         |
+| Low      | ~126        |
+| **Total**| **~154**    |
 
 **Historical totals (including fixed):** ~32 High, ~95 Medium, ~227 Low issues were identified across all audits. The vast majority have been resolved, resulting in an overall codebase health status of **Good**.
 
@@ -23,7 +23,7 @@ This report consolidates 110 individual audit files across all packages in the V
 
 **Remaining issues** fall into three categories:
 - *Documentation inconsistencies:* ~~doc examples using `log.Fatal` instead of logrus (~9 packages, down from ~14 after 2026-02-22 fixes)~~ **RESOLVED 2026-02-22**: All doc examples now use logrus structured logging
-- *API consistency gaps:* missing godoc on some exported symbols (~17 packages)
+- *API consistency gaps:* missing godoc on some exported symbols (~15 packages, down from ~17 after 2026-02-23 fixes)
 - *Integration gaps:* (prestige, modding, QoL, companion_housing, housing_crafting, and guild_housing system integration gaps resolved 2026-02-22)
 
 ---
@@ -708,9 +708,9 @@ This report consolidates 110 individual audit files across all packages in the V
 ### pkg/procgen/recipe — Recipe Generation
 - **Source:** `pkg/procgen/recipe/AUDIT.md`
 - **High Issues:** 0
-- **Medium Issues:** 1
+- **Medium Issues:** 0 (1 fixed)
 - **Low Issues:** 1
-- **Details:** 90.2% coverage. `RecipeTemplate` struct fields lack individual godoc comments explaining their purpose. No functional issues.
+- **Details:** 90.2% coverage. **RESOLVED 2026-02-23**: Added comprehensive godoc comments to all `RecipeTemplate` struct fields explaining purpose, constraints, and value ranges. No functional issues.
 
 ---
 
@@ -726,18 +726,18 @@ This report consolidates 110 individual audit files across all packages in the V
 ### pkg/procgen/station — Crafting Station Generation
 - **Source:** `pkg/procgen/station/AUDIT.md`
 - **High Issues:** 0
-- **Medium Issues:** 1
-- **Low Issues:** 1
-- **Details:** 89.0% coverage. `doc.go` states 3 station types but `generator.go` implements 5 (includes Kitchen and Anvil); bonus values in docs don't match implementation. Documentation-only inconsistency with no functional impact.
+- **Medium Issues:** 0 (1 fixed)
+- **Low Issues:** 0 (1 fixed)
+- **Details:** 89.0% coverage. **RESOLVED 2026-02-23**: `doc.go` updated to document all 5 station types (Alchemy Table, Forge, Workbench, Kitchen, Anvil) and correct station counts in documentation. Performance section updated to reflect 5 stations per generation. Determinism section updated to list all 5 station types in order.
 
 ---
 
 ### pkg/procgen/story — Story Arc Generation
 - **Source:** `pkg/procgen/story/AUDIT.md`
 - **High Issues:** 0
-- **Medium Issues:** 1
+- **Medium Issues:** 0 (1 was false positive)
 - **Low Issues:** 1
-- **Details:** 88.7% coverage. `FragmentType.String()` method lacks godoc comment. All generation algorithms are deterministic.
+- **Details:** 88.7% coverage. `FragmentType.String()` method already has godoc comment at line 11 - audit finding was incorrect. All generation algorithms are deterministic.
 
 ---
 

@@ -23,7 +23,7 @@ The recipe package provides deterministic procedural recipe generation for craft
 *None identified*
 
 ### Medium Severity
-- [ ] **Doc coverage** — `RecipeTemplate` struct fields lack individual godoc comments explaining their purpose (`generator.go:34-46`)
+- [x] **Doc coverage** — `RecipeTemplate` struct fields lack individual godoc comments explaining their purpose (`generator.go:34-46`) **RESOLVED 2026-02-23**: Added comprehensive godoc comments to all RecipeTemplate struct fields explaining purpose, constraints, and value ranges
 
 ### Low Severity
 - [ ] **API consistency** — `RecipeTemplate` is exported but has no constructor function `NewRecipeTemplate()` — users must construct manually with struct literals (`generator.go:34`)
@@ -77,6 +77,6 @@ The recipe package provides deterministic procedural recipe generation for craft
 | Mobile | ✅ | No platform-specific code |
 
 ## Recommendations
-1. **[MED]** Add godoc comments to `RecipeTemplate` struct fields explaining each field's purpose and constraints (`generator.go:34-46`)
+1. **[MED]** ~~Add godoc comments to `RecipeTemplate` struct fields explaining each field's purpose and constraints (`generator.go:34-46`)~~ **RESOLVED 2026-02-23**
 2. **[LOW]** Consider adding a `NewRecipeTemplate()` constructor or builder for cleaner API, though struct literals work fine
 3. **[LOW]** Consider exposing template registration for mod support via `RegisterGenreTemplates(genreID string, templates []RecipeTemplate)` method

@@ -2,16 +2,18 @@
 //
 // # Overview
 //
-// This package generates crafting stations (alchemy tables, forges, workbenches) with
-// genre-appropriate names and properties. Stations provide bonuses to crafting success
+// This package generates crafting stations (alchemy tables, forges, workbenches, kitchens, anvils)
+// with genre-appropriate names and properties. Stations provide bonuses to crafting success
 // and speed when used by players.
 //
 // # Station Types
 //
-// Three station types are supported:
+// Five station types are supported:
 //   - Alchemy Table: For potion brewing (+5% success, 25% faster)
 //   - Forge: For enchanting equipment (+5% success, 25% faster)
 //   - Workbench: For crafting magic items (+5% success, 25% faster)
+//   - Kitchen: For cooking food (+5% success, 25% faster)
+//   - Anvil: For smithing weapons and armor (+5% success, 25% faster)
 //
 // # Generation
 //
@@ -62,7 +64,7 @@
 //
 // All generation is deterministic based on seed:
 //   - Same seed + parameters always produces same station names
-//   - Station types are always generated in same order (alchemy, forge, workbench)
+//   - Station types are always generated in same order (alchemy, forge, workbench, kitchen, anvil)
 //   - Name variations come from seed-based RNG, not system randomness
 //
 // This ensures multiplayer synchronization and reproducible worlds.
@@ -70,7 +72,7 @@
 // # Performance
 //
 // Station generation is fast:
-//   - <1ms to generate 3 stations
+//   - <1ms to generate 5 stations
 //   - No external I/O or heavy computation
 //   - Suitable for real-time world generation
 package station

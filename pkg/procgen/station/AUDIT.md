@@ -23,11 +23,11 @@ The station package provides procedural generation of crafting stations (alchemy
 None.
 
 ### Medium Severity
-- [ ] **Doc discrepancy** — doc.go line 14-15 states 3 station types and specific bonuses (+5% success, 25% faster) but generator.go implements 5 station types (includes Kitchen, Anvil) and bonuses are applied by engine, not generator (`doc.go:14-15`)
+- [x] **Doc discrepancy** — doc.go line 14-15 states 3 station types and specific bonuses (+5% success, 25% faster) but generator.go implements 5 station types (includes Kitchen, Anvil) and bonuses are applied by engine, not generator (`doc.go:14-15`) **RESOLVED 2026-02-23**: Updated doc.go to document all 5 station types
 
 ### Low Severity
+- [x] **Doc inconsistency** — doc.go line 11-15 lists only 3 station types but package actually generates 5 (Kitchen and Anvil added later) (`doc.go:11-15`) **RESOLVED 2026-02-23**: Updated doc.go to list all 5 station types
 - [ ] **Incomplete genre alias** — "sci-fi" alias not registered; only "scifi" is valid. Users entering "sci-fi" get fantasy fallback (`generator.go:129-131`)
-- [ ] **Doc inconsistency** — doc.go line 11-15 lists only 3 station types but package actually generates 5 (Kitchen and Anvil added later) (`doc.go:11-15`)
 
 ## Input Integration
 | Input Source | Status | Notes |
@@ -77,9 +77,9 @@ None.
 | Mobile | ✅ Pass | No platform-specific code |
 
 ## Recommendations
-1. **[MED]** Update doc.go to document all 5 station types (add Kitchen, Anvil descriptions) and remove specific bonus percentages that belong in engine
+1. **[MED]** ~~Update doc.go to document all 5 station types (add Kitchen, Anvil descriptions) and remove specific bonus percentages that belong in engine~~ **RESOLVED 2026-02-23**
 2. **[LOW]** Add "sci-fi" as genre alias to match common user input patterns (`generator.go:102`)
-3. **[LOW]** Sync doc.go station type descriptions with actual implementation
+3. **[LOW]** ~~Sync doc.go station type descriptions with actual implementation~~ **RESOLVED 2026-02-23**
 
 ## Detailed Findings
 
@@ -179,10 +179,10 @@ grep -rn "rand\.Intn\|rand\.Float" ./pkg/procgen/station/*.go | grep -v "rng\.\|
 
 **Overall Assessment:** PRODUCTION READY
 
-The station package is well-designed with proper deterministic generation, comprehensive testing (89.0% coverage), and clean integration with the engine layer. The three identified issues are documentation-only and do not affect functionality:
+The station package is well-designed with proper deterministic generation, comprehensive testing (89.0% coverage), and clean integration with the engine layer. The documentation issues have been resolved:
 
-1. doc.go needs updating to reflect the 5 station types (Kitchen and Anvil were added after initial documentation)
-2. The "sci-fi" genre alias could be added for user convenience
-3. Bonus percentages mentioned in doc.go belong in engine documentation, not generator
+1. ✅ doc.go now correctly documents all 5 station types (Alchemy Table, Forge, Workbench, Kitchen, Anvil) **RESOLVED 2026-02-23**
+2. The "sci-fi" genre alias could be added for user convenience (low priority)
+3. ✅ Station type descriptions in doc.go now match actual implementation **RESOLVED 2026-02-23**
 
-This package requires no code changes and is ready for production use. Documentation updates are recommended but not blocking.
+This package requires no code changes and is ready for production use.

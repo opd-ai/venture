@@ -75,8 +75,8 @@ Errors can provide both technical and user-friendly messages:
 	// For display to users
 	fmt.Println(err.GetUserMessage()) // "Cannot connect to game server..."
 
-	// For logs
-	log.Error(err.Error()) // "[Network] TCP connection refused..."
+	// For logs (using logrus structured logging)
+	logrus.WithError(err).Error("network connection failed") // "[Network] TCP connection refused..."
 
 # Retryability
 
@@ -104,7 +104,7 @@ The package fully supports Go 1.13+ error wrapping:
 
 	// Extract VentureError
 	if ventureErr, ok := errors.AsVentureError(networkErr); ok {
-		log.WithFields(ventureErr.Context).Error(ventureErr.Message)
+		logrus.WithFields(ventureErr.Context).Error(ventureErr.Message)
 	}
 
 	// Check wrapped error

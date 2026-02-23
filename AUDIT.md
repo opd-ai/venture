@@ -286,8 +286,8 @@ This report consolidates 110 individual audit files across all packages in the V
 - **Source:** `pkg/errors/AUDIT.md`
 - **High Issues:** 0
 - **Medium Issues:** 0
-- **Low Issues:** 3
-- **Details:** 100% coverage; foundational package with correlation ID support for distributed tracing. README claims performance metrics (~100 ns/op for error creation) but no benchmarks exist to verify them. `doc.go` example uses `log.Error()` (not from logrus). All other aspects are exemplary including `errors.Is`/`errors.As` chain support and atomic correlation ID generation.
+- **Low Issues:** 2 (1 fixed)
+- **Details:** 100% coverage; foundational package with correlation ID support for distributed tracing. README claims performance metrics (~100 ns/op for error creation) but no benchmarks exist to verify them. **RESOLVED 2026-02-23**: `doc.go` examples updated to use `logrus.WithError()` and `logrus.WithFields()` instead of `log.Error()`. All other aspects are exemplary including `errors.Is`/`errors.As` chain support and atomic correlation ID generation.
 
 ---
 
@@ -672,9 +672,9 @@ This report consolidates 110 individual audit files across all packages in the V
 ### pkg/procgen/minigame — Mini-Game Generation
 - **Source:** `pkg/procgen/minigame/AUDIT.md`
 - **High Issues:** 0
-- **Medium Issues:** 1
+- **Medium Issues:** 0 (1 fixed)
 - **Low Issues:** 2
-- **Details:** 90.8% (minigame) / 97.5% (games) coverage. `games/README.md` references deprecated `Render()` method examples instead of the current `PrepareRender()` / `GetRenderOutput()` API. Minor factory and state machine documentation gaps.
+- **Details:** 90.8% (minigame) / 97.5% (games) coverage. **RESOLVED 2026-02-23**: `games/README.md` updated to reference current `PrepareRender()` / `GetRenderOutput()` API instead of deprecated `Render()` method. Minor factory and state machine documentation gaps remain.
 
 ---
 
@@ -1088,8 +1088,8 @@ The following low-severity issues appear repeatedly across 30+ packages and repr
 **Missing Godoc Comments** (affects ~20 packages):
 - Exported functions/types without godoc in: `pkg/audit/features`, `pkg/narrative/branching`, `pkg/procgen/recipe`, `pkg/procgen/story`, `pkg/network/federation`, and others
 
-**Global Logger Instead of Injected Logger** (affects ~4 packages):
-- `pkg/companion/learning`, ~~`pkg/procgen/class`~~ (**RESOLVED 2026-02-23**), ~~`pkg/integration/companion_housing`~~ (**RESOLVED 2026-02-22**), ~~`pkg/integration/guild_vehicle`~~ (**RESOLVED 2026-02-22**)
+**Global Logger Instead of Injected Logger** (affects ~1 package):
+- ~~`pkg/companion/learning`~~ (**RESOLVED 2026-02-22**), ~~`pkg/procgen/class`~~ (**RESOLVED 2026-02-23**), ~~`pkg/integration/companion_housing`~~ (**RESOLVED 2026-02-22**), ~~`pkg/integration/guild_vehicle`~~ (**RESOLVED 2026-02-22**)
 
 **`time.Now()` in Non-Production Paths** (affects ~10 packages):
 - Mostly for UI timing, cache access times, performance monitoring, or profiling—all documented as acceptable exceptions

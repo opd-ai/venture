@@ -56,7 +56,8 @@ Each file contains exactly one game implementation with its related types and me
 - `NewCardGame()` - Constructor
 - `Initialize(seed, difficulty)` - Setup with difficulty 0.0-1.0
 - `Update(deltaTime)` - Play one round per update
-- `Render(screen)` - Stub for Phase 27.3
+- `PrepareRender(screenWidth, screenHeight)` - Prepare visual state (stub for Phase 27.3)
+- `GetRenderOutput()` - Get computed render data
 - `IsComplete()` - Check if game finished
 - `GetReward()` - Return gold/XP rewards
 
@@ -155,8 +156,14 @@ for !game.IsComplete() {
         log.Fatal(err)
     }
     
-    // Render game (stub in Phase 27.2)
-    game.Render(screen)
+    // Prepare render state (stub in Phase 27.2)
+    if err := game.PrepareRender(screenWidth, screenHeight); err != nil {
+        log.Fatal(err)
+    }
+    
+    // Get render output for drawing
+    renderOutput := game.GetRenderOutput()
+    // Use renderOutput for drawing...
 }
 
 // Award rewards
@@ -190,7 +197,7 @@ go test -v ./pkg/procgen/minigame/games  # verbose output
 
 - **Well-tested** (>90%): Initialize, Update, IsComplete, factory methods
 - **Partially tested** (25-40%): GetReward (loss conditions)
-- **Intentionally untested** (0%): Render methods (stubs for Phase 27.3)
+- **Intentionally untested** (0%): PrepareRender/GetRenderOutput methods (stubs for Phase 27.3)
 
 ## Design Patterns
 
@@ -248,7 +255,7 @@ Designed for 60 FPS gameplay with minimal overhead.
 ## Future Work (Phase 27.3)
 
 ### Render Implementations
-All Render() methods are currently stubs returning nil. Phase 27.3 will implement:
+All PrepareRender()/GetRenderOutput() methods are currently stubs. Phase 27.3 will implement:
 - Visual representation for each game type
 - Genre-appropriate styling (fantasy, sci-fi, horror themes)
 - Animation and effects

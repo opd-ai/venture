@@ -1,11 +1,11 @@
 # Audit: github.com/opd-ai/venture/pkg/errors
-**Date**: 2026-02-22
+**Date**: 2026-02-23 (updated)
 **Auditor**: GitHub Copilot (META_AUDIT v2)
 **Status**: Complete
 
 ## Summary
 
-The `pkg/errors` package provides comprehensive structured error handling with correlation ID support for distributed tracing. The package achieves 100% test coverage and passes all automated checks. Three low-severity documentation/enhancement issues identified.
+The `pkg/errors` package provides comprehensive structured error handling with correlation ID support for distributed tracing. The package achieves 100% test coverage and passes all automated checks. Two low-severity documentation/enhancement issues remain.
 
 ## Automated Check Results
 | Check | Result |
@@ -29,7 +29,7 @@ None.
 ### Low Severity
 - [ ] **Documentation** — README claims performance metrics (Error creation: ~100 ns/op, Error wrapping: ~150 ns/op, UUID generation: ~500 ns/op) but no benchmarks exist to verify or maintain these claims (`README.md:177-180`)
 - [ ] **Test coverage** — Missing benchmarks for performance-critical code paths despite README performance claims. Should add `BenchmarkNew`, `BenchmarkWrap`, `BenchmarkNewCorrelationID` (`errors_test.go`, `correlation_test.go`)
-- [ ] **Documentation** — Package doc.go example uses `log.Error()` which is not from logrus and may confuse users expecting structured logging pattern (`doc.go:79`)
+- [x] **Documentation** — **RESOLVED 2026-02-23**: Package doc.go examples updated to use `logrus.WithError()` and `logrus.WithFields()` instead of `log.Error()` for consistency with structured logging patterns (`doc.go:79,107`)
 
 ## Input Integration
 | Input Source | Status | Notes |
@@ -115,7 +115,7 @@ N/A — This package does not define ECS components or systems. It provides erro
        }
    }
    ```
-2. **[LOW]** Update doc.go example at line 79 to use `logger.Error()` instead of `log.Error()` to match logrus patterns.
+2. ~~**[LOW]** Update doc.go example at line 79 to use `logger.Error()` instead of `log.Error()` to match logrus patterns.~~ **RESOLVED 2026-02-23**
 3. **[LOW]** Consider adding a `README.md` update noting that performance metrics should be re-verified with benchmarks.
 
 ## Verification Notes

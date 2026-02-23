@@ -1,5 +1,5 @@
 # Audit: github.com/opd-ai/venture/pkg/procgen/minigame
-**Date**: 2026-02-22
+**Date**: 2026-02-23 (updated)
 **Auditor**: GitHub Copilot (META_AUDIT v2)
 **Status**: Complete
 
@@ -23,7 +23,7 @@ The minigame package provides procedural generation for 7 embedded mini-game typ
 (None)
 
 ### Medium Severity
-- [ ] **Documentation** — `games/README.md` references deprecated `Render()` method in examples instead of `PrepareRender()` / `GetRenderOutput()` (`games/README.md:various`)
+- [x] **Documentation** — **RESOLVED 2026-02-23**: `games/README.md` updated to reference `PrepareRender()` / `GetRenderOutput()` API instead of deprecated `Render()` method
 
 ### Low Severity
 - [ ] **Deprecated API** — `Render()` method is deprecated but still present for backward compatibility; consider removal timeline (`games/card.go:240`, `games/dice.go:186`, `games/puzzle.go:214`, etc.)
@@ -72,6 +72,6 @@ The minigame package provides procedural generation for 7 embedded mini-game typ
 | Mobile | ✅ | No platform-specific code; touch support via ECS Input layer |
 
 ## Recommendations
-1. **[MED]** Update `games/README.md` examples to use `PrepareRender()` / `GetRenderOutput()` instead of deprecated `Render()`
+1. ~~**[MED]** Update `games/README.md` examples to use `PrepareRender()` / `GetRenderOutput()` instead of deprecated `Render()`~~ **RESOLVED 2026-02-23**
 2. **[LOW]** Establish deprecation timeline for `Render()` methods; add `// Deprecated: Remove in v2.0` comments
 3. **[LOW]** Update doc.go examples to use `logrus.WithFields().Fatal()` pattern for consistency with codebase standards

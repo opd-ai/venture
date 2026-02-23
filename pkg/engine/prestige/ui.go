@@ -111,11 +111,11 @@ type PrestigeUI struct {
 	inputProvider MenuInputProvider
 
 	// Touch support
-	touchHandler  *mobile.TouchInputHandler
-	closeButton   *mobile.TouchButton
-	allocButtons  []*mobile.TouchButton // Allocate point buttons
-	respecButton  *mobile.TouchButton
-	backButton    *mobile.TouchButton
+	touchHandler *mobile.TouchInputHandler
+	closeButton  *mobile.TouchButton
+	allocButtons []*mobile.TouchButton // Allocate point buttons
+	respecButton *mobile.TouchButton
+	backButton   *mobile.TouchButton
 }
 
 // NewPrestigeUI creates a new prestige UI with the provided manager.

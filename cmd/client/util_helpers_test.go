@@ -2582,11 +2582,11 @@ func TestGenerateBooksForShelf(t *testing.T) {
 	logger := createTestLogger().WithField("test", "books_for_shelf")
 
 	tests := []struct {
-		name           string
-		shelfIndex     int
-		seed           int64
-		genreID        string
-		wantBookCount  int // expected: 3 + (shelfIndex % 6)
+		name          string
+		shelfIndex    int
+		seed          int64
+		genreID       string
+		wantBookCount int // expected: 3 + (shelfIndex % 6)
 	}{
 		{"first shelf", 0, 12345, "fantasy", 3},
 		{"second shelf", 1, 12345, "scifi", 4},

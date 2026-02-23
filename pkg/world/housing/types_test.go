@@ -3,6 +3,7 @@ package housing
 import (
 	"image/color"
 	"testing"
+	"time"
 )
 
 func TestBuildingSizeString(t *testing.T) {
@@ -223,5 +224,95 @@ func TestPlotColor(t *testing.T) {
 	plot.Color = newColor
 	if plot.Color != newColor {
 		t.Errorf("Color = %v, want %v", plot.Color, newColor)
+	}
+}
+
+func TestSetDefaultTimeProvider(t *testing.T) {
+	// Save original and restore after test
+	defer ResetDefaultTimeProvider()
+
+	fixedTime := time.Date(2026, 6, 15, 10, 30, 0, 0, time.UTC)
+	mockTP := &MockTimeProvider{CurrentTime: fixedTime}
+	SetDefaultTimeProvider(mockTP)
+
+	// NewPlot should use the mock time provider
+	plot := NewPlot("player1", Vector2{X: 100, Y: 100}, SizeSmall)
+	if !plot.CreatedAt.Equal(fixedTime) {
+		t.Errorf("CreatedAt = %v, want %v", plot.CreatedAt, fixedTime)
+	}
+	if !plot.ModifiedAt.Equal(fixedTime) {
+		t.Errorf("ModifiedAt = %v, want %v", plot.ModifiedAt, fixedTime)
+	}
+
+	// NewBlueprint should also use the mock time provider
+	bp := NewBlueprint("Test Blueprint", "Author", "fantasy", nil)
+	if !bp.CreatedAt.Equal(fixedTime) {
+		t.Errorf("Blueprint CreatedAt = %v, want %v", bp.CreatedAt, fixedTime)
+	}
+	if !bp.ModifiedAt.Equal(fixedTime) {
+		t.Errorf("Blueprint ModifiedAt = %v, want %v", bp.ModifiedAt, fixedTime)
+	}
+}
+
+func TestResetDefaultTimeProvider(t *testing.T) {
+	// Set a mock provider
+	fixedTime := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
+	SetDefaultTimeProvider(&MockTimeProvider{CurrentTime: fixedTime})
+
+	// Reset to real time
+	ResetDefaultTimeProvider()
+
+	// NewPlot should use real time (not the fixed time)
+	plot := NewPlot("player1", Vector2{X: 100, Y: 100}, SizeSmall)
+	if plot.CreatedAt.Equal(fixedTime) {
+		t.Error("CreatedAt should not equal fixed time after reset")
+	}
+
+	// CreatedAt should be close to now (within 1 second)
+	if time.Since(plot.CreatedAt) > time.Second {
+		t.Error("CreatedAt should be close to current time after reset")
+	}
+}
+
+func TestTimeProviderDeterminism(t *testing.T) {
+	defer ResetDefaultTimeProvider()
+
+	fixedTime := time.Date(2026, 6, 15, 10, 30, 0, 123456789, time.UTC)
+	SetDefaultTimeProvider(&MockTimeProvider{CurrentTime: fixedTime})
+
+	// Create two plots - they should have identical timestamps
+	plot1 := NewPlot("player1", Vector2{X: 100, Y: 100}, SizeMedium)
+	plot2 := NewPlot("player2", Vector2{X: 200, Y: 200}, SizeLarge)
+
+	if !plot1.CreatedAt.Equal(plot2.CreatedAt) {
+		t.Errorf("plot1.CreatedAt = %v, plot2.CreatedAt = %v, want equal", plot1.CreatedAt, plot2.CreatedAt)
+	}
+
+	// Create two blueprints - they should have identical timestamps
+	bp1 := NewBlueprint("Blueprint1", "Author1", "fantasy", nil)
+	bp2 := NewBlueprint("Blueprint2", "Author2", "sci-fi", nil)
+
+	if !bp1.CreatedAt.Equal(bp2.CreatedAt) {
+		t.Errorf("bp1.CreatedAt = %v, bp2.CreatedAt = %v, want equal", bp1.CreatedAt, bp2.CreatedAt)
+	}
+}
+
+func TestNewMockTimeProviderFromSeed(t *testing.T) {
+	tests := []struct {
+		seed     int64
+		expected time.Time
+	}{
+		{0, time.Unix(0, 0)},
+		{1234567890, time.Unix(1234567890, 0)},
+		{-1000, time.Unix(-1000, 0)},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.expected.String(), func(t *testing.T) {
+			mockTP := NewMockTimeProvider(tt.seed)
+			if !mockTP.Now().Equal(tt.expected) {
+				t.Errorf("NewMockTimeProvider(%d).Now() = %v, want %v", tt.seed, mockTP.Now(), tt.expected)
+			}
+		})
 	}
 }

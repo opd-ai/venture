@@ -53,7 +53,7 @@
 //
 //	err := manager.PlacePlot(plot)
 //	if err != nil {
-//	    log.Printf("Failed to place plot: %v", err)
+//	    logrus.WithError(err).WithField("plot_id", plot.ID).Error("Failed to place plot")
 //	}
 //
 //	// Save housing data

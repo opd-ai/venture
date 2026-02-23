@@ -48,6 +48,24 @@ func NewMockTimeProvider(seed int64) *MockTimeProvider {
 // defaultTimeProvider is the package-level time provider used when none is specified.
 var defaultTimeProvider TimeProvider = RealTimeProvider{}
 
+// SetDefaultTimeProvider sets the package-level time provider.
+// Use this to inject a MockTimeProvider for multiplayer synchronization or testing.
+// The time provider affects NewPlot() and NewBlueprint() timestamp generation.
+//
+// Example for multiplayer:
+//
+//	housing.SetDefaultTimeProvider(housing.NewMockTimeProvider(gameSeed))
+//	defer housing.ResetDefaultTimeProvider()
+func SetDefaultTimeProvider(tp TimeProvider) {
+	defaultTimeProvider = tp
+}
+
+// ResetDefaultTimeProvider restores the package-level time provider to RealTimeProvider.
+// Call this after multiplayer sessions or tests to restore normal time behavior.
+func ResetDefaultTimeProvider() {
+	defaultTimeProvider = RealTimeProvider{}
+}
+
 // BuildingSize represents the size tier of a building.
 type BuildingSize int
 

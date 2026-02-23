@@ -30,12 +30,12 @@ The housing package provides plot placement, guild halls, blueprints, persistenc
 
 ### Medium Severity
 - [x] **Missing Input Interface Integration** — Added `MenuInputProvider` interface and `SetInput()` method. `HousingUI` can now be tested with stub input providers and supports future controller/touch input sources via the `InputProvider` interface in `pkg/engine`.
-- [ ] **time.Now Usage in TimeProvider** — While `RealTimeProvider.Now()` correctly calls `time.Now()` (appropriate for production), tests and multiplayer sync must use `MockTimeProvider` to ensure determinism. Currently, `NewPlot()` and `NewBlueprint()` default to `RealTimeProvider`. (`types.go:26`)
+- [x] **time.Now Usage in TimeProvider** — **RESOLVED 2026-02-23**: Added `SetDefaultTimeProvider()` and `ResetDefaultTimeProvider()` functions to allow multiplayer synchronization and tests to inject deterministic time providers. `NewPlot()` and `NewBlueprint()` now use the configurable package-level default, enabling deterministic timestamps when needed. (`types.go`)
 
 ### Low Severity
 - [ ] **Missing Gamepad Navigation** — Gamepad can now be supported via `InputProvider.IsMenuUpJustPressed()` etc. methods added to `pkg/engine`. Housing UI uses abstract interface, enabling gamepad support when wired through InputProvider. (`ui.go`)
 - [ ] **Missing Touch Input Support** — Touch support can be added via the abstract `MenuInputProvider` interface. (`ui.go`)
-- [ ] **doc.go Example Uses log.Printf** — Documentation example shows `log.Printf` instead of `logrus.WithFields` for error logging. Should follow structured logging guidelines. (`doc.go:56`)
+- [x] **doc.go Example Uses log.Printf** — **RESOLVED 2026-02-23**: Updated doc.go example to use `logrus.WithError(err).WithField("plot_id", plot.ID).Error()` instead of `log.Printf`. (`doc.go:56`)
 
 ## Input Integration
 | Input Source | Status | Notes |
@@ -56,8 +56,9 @@ The housing package provides plot placement, guild halls, blueprints, persistenc
 | Guild Hall Menu | ✅ | ✅ | ✅ | Tab-switchable; displays construction progress |
 
 ## Test Coverage
-**Coverage**: 78.6% (target: 65%) ✅
+**Coverage**: 78.9% (target: 65%) ✅
 - `HousingUI.Update()` input handling is now fully testable with `StubMenuInput`
+- `SetDefaultTimeProvider()` and `ResetDefaultTimeProvider()` tested for determinism
 - Missing test areas: `Draw()` rendering (requires Ebiten screen)
 - Missing benchmarks: `SpatialGrid.Query` with large datasets (partially covered), `BlueprintLibrary.Filter` performance
 - Table-driven test compliance: ✅ (types_test.go, manager_test.go, blueprint_test.go, ui_test.go use table-driven patterns)
@@ -87,4 +88,4 @@ The housing package provides plot placement, guild halls, blueprints, persistenc
 2. ~~**[HIGH]** Create `StubHousingUI` or add input injection to enable unit testing.~~ ✅ DONE - Added `StubMenuInput`
 3. **[MED]** Wire gamepad D-pad to `InputProvider` menu navigation methods (already supported in interface).
 4. **[MED]** Wire touch tap events to `InputProvider` menu navigation methods (already supported in interface).
-5. **[LOW]** Update `doc.go` example to use `logrus.WithFields` instead of `log.Printf`.
+5. ~~**[LOW]** Update `doc.go` example to use `logrus.WithFields` instead of `log.Printf`.~~ ✅ DONE 2026-02-23

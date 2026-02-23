@@ -3,6 +3,8 @@ package visualtest
 
 import (
 	"fmt"
+	"io"
+	"os"
 	"runtime"
 	"time"
 )
@@ -156,39 +158,45 @@ func (p *MemoryProfile) GetObjectGrowth() int64 {
 	return int64(p.Snapshots[len(p.Snapshots)-1].LiveObjects) - int64(p.Snapshots[0].LiveObjects)
 }
 
-// PrintProfile prints a formatted memory profile report.
+// PrintProfile prints a formatted memory profile report to stdout.
 func (p *MemoryProfile) PrintProfile() {
-	fmt.Printf("\n=== Memory Profile: %s ===\n", p.Name)
-	fmt.Printf("Duration: %v\n", p.EndTime.Sub(p.StartTime))
-	fmt.Printf("Snapshots: %d\n\n", len(p.Snapshots))
+	p.PrintProfileTo(os.Stdout)
+}
+
+// PrintProfileTo prints a formatted memory profile report to the specified writer.
+// This allows for testable output and integration with logging systems or files.
+func (p *MemoryProfile) PrintProfileTo(w io.Writer) {
+	fmt.Fprintf(w, "\n=== Memory Profile: %s ===\n", p.Name)
+	fmt.Fprintf(w, "Duration: %v\n", p.EndTime.Sub(p.StartTime))
+	fmt.Fprintf(w, "Snapshots: %d\n\n", len(p.Snapshots))
 
 	if len(p.Snapshots) == 0 {
-		fmt.Println("No snapshots captured")
+		fmt.Fprintln(w, "No snapshots captured")
 		return
 	}
 
 	// Print summary statistics
-	fmt.Printf("Peak Allocation:    %s\n", formatBytes(p.GetPeakAllocation()))
-	fmt.Printf("Average Allocation: %s\n", formatBytes(p.GetAverageAllocation()))
-	fmt.Printf("Allocation Growth:  %s\n", formatBytesWithSign(p.GetAllocationGrowth()))
-	fmt.Printf("Object Growth:      %+d objects\n", p.GetObjectGrowth())
+	fmt.Fprintf(w, "Peak Allocation:    %s\n", formatBytes(p.GetPeakAllocation()))
+	fmt.Fprintf(w, "Average Allocation: %s\n", formatBytes(p.GetAverageAllocation()))
+	fmt.Fprintf(w, "Allocation Growth:  %s\n", formatBytesWithSign(p.GetAllocationGrowth()))
+	fmt.Fprintf(w, "Object Growth:      %+d objects\n", p.GetObjectGrowth())
 
 	if p.LeakDetected {
-		fmt.Printf("\n⚠ LEAK DETECTED: %.2f bytes/sec\n", p.LeakRate)
+		fmt.Fprintf(w, "\n⚠ LEAK DETECTED: %.2f bytes/sec\n", p.LeakRate)
 	} else {
-		fmt.Printf("\n✓ No leaks detected\n")
+		fmt.Fprintln(w, "\n✓ No leaks detected")
 	}
 
 	// Print snapshot table
-	fmt.Println("\nSnapshots:")
-	fmt.Printf("%-20s %15s %15s %15s\n", "Time", "Alloc", "Live Objects", "GC Runs")
+	fmt.Fprintln(w, "\nSnapshots:")
+	fmt.Fprintf(w, "%-20s %15s %15s %15s\n", "Time", "Alloc", "Live Objects", "GC Runs")
 	for i, snapshot := range p.Snapshots {
 		timestamp := "Initial"
 		if i > 0 {
 			duration := snapshot.Timestamp.Sub(p.Snapshots[0].Timestamp)
 			timestamp = fmt.Sprintf("+%v", duration)
 		}
-		fmt.Printf("%-20s %15s %15d %15d\n",
+		fmt.Fprintf(w, "%-20s %15s %15d %15d\n",
 			timestamp,
 			formatBytes(snapshot.Alloc),
 			snapshot.LiveObjects,

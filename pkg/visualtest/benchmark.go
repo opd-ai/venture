@@ -6,7 +6,9 @@ import (
 	"fmt"
 	"image"
 	"image/color"
+	"io"
 	"math/rand"
+	"os"
 	"runtime"
 	"time"
 
@@ -407,15 +409,21 @@ func RunAllBenchmarks(seed int64) *BenchmarkSuite {
 	return suite
 }
 
-// PrintResults prints benchmark results in a formatted table.
+// PrintResults prints benchmark results in a formatted table to stdout.
 func (suite *BenchmarkSuite) PrintResults() {
-	fmt.Println("\n=== Phase 15-20 Performance Benchmark Results ===")
-	fmt.Printf("Total Time: %v\n", suite.TotalTime)
-	fmt.Printf("Total Benchmarks: %d\n\n", len(suite.Results))
+	suite.PrintResultsTo(os.Stdout)
+}
 
-	fmt.Printf("%-40s %-12s %12s %12s %10s %10s\n",
+// PrintResultsTo prints benchmark results in a formatted table to the specified writer.
+// This allows for testable output and integration with logging systems or files.
+func (suite *BenchmarkSuite) PrintResultsTo(w io.Writer) {
+	fmt.Fprintln(w, "\n=== Phase 15-20 Performance Benchmark Results ===")
+	fmt.Fprintf(w, "Total Time: %v\n", suite.TotalTime)
+	fmt.Fprintf(w, "Total Benchmarks: %d\n\n", len(suite.Results))
+
+	fmt.Fprintf(w, "%-40s %-12s %12s %12s %10s %10s\n",
 		"Name", "Phase", "Time/Op", "Bytes/Op", "Allocs/Op", "Status")
-	fmt.Println(string(make([]byte, 110))) // separator
+	fmt.Fprintln(w, string(make([]byte, 110))) // separator
 
 	for _, result := range suite.Results {
 		status := "✓"
@@ -423,7 +431,7 @@ func (suite *BenchmarkSuite) PrintResults() {
 			status = "✗"
 		}
 
-		fmt.Printf("%-40s %-12s %12s %12d %10d %10s\n",
+		fmt.Fprintf(w, "%-40s %-12s %12s %12d %10d %10s\n",
 			truncate(result.Name, 40),
 			result.Phase,
 			formatDuration(result.NsPerOp),
@@ -444,7 +452,7 @@ func (suite *BenchmarkSuite) PrintResults() {
 	if len(suite.Results) > 0 {
 		passRate = float64(passed) * 100 / float64(len(suite.Results))
 	}
-	fmt.Printf("\nPassed: %d/%d (%.1f%%)\n", passed, len(suite.Results), passRate)
+	fmt.Fprintf(w, "\nPassed: %d/%d (%.1f%%)\n", passed, len(suite.Results), passRate)
 }
 
 // formatDuration formats nanoseconds into a human-readable string.

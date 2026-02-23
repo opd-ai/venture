@@ -13,11 +13,11 @@ This report consolidates 110 individual audit files across all packages in the V
 | Severity | Open Issues |
 |----------|-------------|
 | High     | 1           |
-| Medium   | ~21         |
+| Medium   | ~20         |
 | Low      | ~114        |
-| **Total**| **~136**    |
+| **Total**| **~135**    |
 
-**Historical totals (including fixed):** ~32 High, ~95 Medium, ~227 Low issues were identified across all audits. The vast majority have been resolved, resulting in an overall codebase health status of **Good**.
+**Historical totals (including fixed):** ~32 High, ~96 Medium, ~227 Low issues were identified across all audits. The vast majority have been resolved, resulting in an overall codebase health status of **Good**.
 
 **Strengths:** The codebase demonstrates high quality with average test coverage of 82.4% (target 65%), deterministic generation via seed-based RNG throughout, ECS architectural compliance, and comprehensive documentation. All critical runtime panics, data corruption risks, and non-determinism violations in production paths have been resolved.
 
@@ -978,9 +978,9 @@ This report consolidates 110 individual audit files across all packages in the V
 ### pkg/visualtest — Visual Testing (Benchmarks, Snapshots, Genre Tests)
 - **Source:** `pkg/visualtest/AUDIT.md`
 - **High Issues:** 0
-- **Medium Issues:** 1
+- **Medium Issues:** 0 (1 fixed)
 - **Low Issues:** 1
-- **Details:** 83.0% (main) / 88.1% (parity) coverage. `fmt.Printf`/`fmt.Println` used for output in `PrintProfile()` and `PrintResults()` instead of structured logrus logging. A configurable output writer would improve testability and CI integration.
+- **Details:** 83.8% (main) / 88.1% (parity) coverage. **RESOLVED 2026-02-23**: Added `PrintProfileTo(io.Writer)` and `PrintResultsTo(io.Writer)` methods for testable output with configurable writers. Original `PrintProfile()` and `PrintResults()` now delegate to these methods with `os.Stdout`. Tests added for both new methods.
 
 ---
 

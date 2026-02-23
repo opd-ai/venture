@@ -1,7 +1,10 @@
 package visualtest
 
 import (
+	"bytes"
+	"strings"
 	"testing"
+	"time"
 )
 
 // TestRunBenchmark tests the basic benchmark runner.
@@ -312,4 +315,115 @@ func BenchmarkRunAllBench(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		RunAllBenchmarks(12345)
 	}
+}
+
+// TestPrintResultsTo tests PrintResultsTo writes to the specified writer.
+func TestPrintResultsTo(t *testing.T) {
+tests := []struct {
+name         string
+suite        *BenchmarkSuite
+wantContains []string
+wantNotEmpty bool
+}{
+{
+name: "empty_suite",
+suite: &BenchmarkSuite{
+Results:   nil,
+TotalTime: time.Second,
+},
+wantContains: []string{
+"Performance Benchmark Results",
+"Total Benchmarks: 0",
+"Passed: 0/0",
+},
+wantNotEmpty: true,
+},
+{
+name: "suite_with_passing_results",
+suite: &BenchmarkSuite{
+Results: []BenchmarkResult{
+{
+Name:           "TestBench1",
+Phase:          "Phase 15",
+NsPerOp:        1000,
+BytesPerOp:     256,
+AllocsPerOp:    2,
+TargetMetNs:    true,
+TargetMetBytes: true,
+},
+{
+Name:           "TestBench2",
+Phase:          "Phase 16",
+NsPerOp:        2000,
+BytesPerOp:     512,
+AllocsPerOp:    4,
+TargetMetNs:    true,
+TargetMetBytes: true,
+},
+},
+TotalTime: 2 * time.Second,
+},
+wantContains: []string{
+"Performance Benchmark Results",
+"Total Benchmarks: 2",
+"TestBench1",
+"TestBench2",
+"Phase 15",
+"Phase 16",
+"Passed: 2/2 (100.0%)",
+},
+wantNotEmpty: true,
+},
+{
+name: "suite_with_failing_results",
+suite: &BenchmarkSuite{
+Results: []BenchmarkResult{
+{
+Name:           "PassingTest",
+Phase:          "Phase 17",
+NsPerOp:        500,
+BytesPerOp:     128,
+AllocsPerOp:    1,
+TargetMetNs:    true,
+TargetMetBytes: true,
+},
+{
+Name:           "FailingTest",
+Phase:          "Phase 18",
+NsPerOp:        5000000,
+BytesPerOp:     10000,
+AllocsPerOp:    100,
+TargetMetNs:    false,
+TargetMetBytes: false,
+},
+},
+TotalTime: time.Second,
+},
+wantContains: []string{
+"Total Benchmarks: 2",
+"PassingTest",
+"FailingTest",
+"Passed: 1/2 (50.0%)",
+},
+wantNotEmpty: true,
+},
+}
+
+for _, tt := range tests {
+t.Run(tt.name, func(t *testing.T) {
+var buf bytes.Buffer
+tt.suite.PrintResultsTo(&buf)
+output := buf.String()
+
+if tt.wantNotEmpty && output == "" {
+t.Error("Expected non-empty output")
+}
+
+for _, want := range tt.wantContains {
+if !strings.Contains(output, want) {
+t.Errorf("Output should contain %q, got:\n%s", want, output)
+}
+}
+})
+}
 }

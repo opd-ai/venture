@@ -1,6 +1,8 @@
 package visualtest
 
 import (
+	"bytes"
+	"strings"
 	"testing"
 	"time"
 )
@@ -339,4 +341,78 @@ func BenchmarkProfileFunction(b *testing.B) {
 			_ = make([]byte, 100)
 		})
 	}
+}
+
+// TestPrintProfileTo tests PrintProfileTo writes to the specified writer.
+func TestPrintProfileTo(t *testing.T) {
+tests := []struct {
+name          string
+profile       *MemoryProfile
+wantContains  []string
+wantNotEmpty  bool
+}{
+{
+name: "empty_profile",
+profile: &MemoryProfile{
+Name:      "empty",
+Snapshots: nil,
+},
+wantContains: []string{"Memory Profile: empty", "No snapshots captured"},
+wantNotEmpty: true,
+},
+{
+name: "profile_with_snapshots",
+profile: &MemoryProfile{
+Name:      "test_profile",
+StartTime: time.Now().Add(-time.Second),
+EndTime:   time.Now(),
+Snapshots: []MemorySnapshot{
+{Timestamp: time.Now(), Alloc: 1024, LiveObjects: 10, NumGC: 1},
+{Timestamp: time.Now(), Alloc: 2048, LiveObjects: 20, NumGC: 2},
+},
+LeakDetected: false,
+},
+wantContains: []string{
+"Memory Profile: test_profile",
+"Peak Allocation:",
+"Average Allocation:",
+"No leaks detected",
+"Snapshots:",
+},
+wantNotEmpty: true,
+},
+{
+name: "profile_with_leak",
+profile: &MemoryProfile{
+Name:      "leaky",
+StartTime: time.Now().Add(-time.Second),
+EndTime:   time.Now(),
+Snapshots: []MemorySnapshot{
+{Timestamp: time.Now(), Alloc: 1024, LiveObjects: 10, NumGC: 1},
+},
+LeakDetected: true,
+LeakRate:     512.0,
+},
+wantContains: []string{"LEAK DETECTED", "512.00"},
+wantNotEmpty: true,
+},
+}
+
+for _, tt := range tests {
+t.Run(tt.name, func(t *testing.T) {
+var buf bytes.Buffer
+tt.profile.PrintProfileTo(&buf)
+output := buf.String()
+
+if tt.wantNotEmpty && output == "" {
+t.Error("Expected non-empty output")
+}
+
+for _, want := range tt.wantContains {
+if !strings.Contains(output, want) {
+t.Errorf("Output should contain %q, got: %s", want, output)
+}
+}
+})
+}
 }

@@ -4,13 +4,13 @@
 **Status**: Complete
 
 ## Summary
-The `pkg/visualtest` package provides comprehensive visual regression testing, performance benchmarking, and memory profiling for Phases 15-20 visual enhancements. The package is well-implemented with 83.0% test coverage in the main package and 88.1% in the parity subpackage. No critical issues found; minor improvements possible for logging and documentation.
+The `pkg/visualtest` package provides comprehensive visual regression testing, performance benchmarking, and memory profiling for Phases 15-20 visual enhancements. The package is well-implemented with 83.8% test coverage in the main package and 88.1% in the parity subpackage. No critical issues found; minor improvements possible for documentation.
 
 ## Automated Check Results
 | Check | Result |
 |---|---|
 | `go vet` | ✅ Pass |
-| `go test -cover` | 83.0% (main), 88.1% (parity) — target: 65% ✅ |
+| `go test -cover` | 83.8% (main), 88.1% (parity) — target: 65% ✅ |
 | `go test -race` | ✅ Pass |
 | WASM vet | ✅ Pass |
 | TODO/FIXME count | 0 |
@@ -23,10 +23,10 @@ The `pkg/visualtest` package provides comprehensive visual regression testing, p
 None
 
 ### Medium Severity
-- [ ] **Unstructured logging** — Uses `fmt.Printf`/`fmt.Println` for output instead of structured logrus logging in `PrintProfile()` and `PrintResults()` (`memory.go:161-197`, `benchmark.go:411-448`). While acceptable for CLI output utilities, this pattern should use a configurable output writer for better testing and integration.
+- [x] **Unstructured logging** — **RESOLVED 2026-02-23**: Added `PrintProfileTo(io.Writer)` and `PrintResultsTo(io.Writer)` methods that accept configurable output writers. Original methods now delegate to these new methods with `os.Stdout`. Tests added for both methods verifying output content. (`memory.go:161-206`, `benchmark.go:412-457`)
 
 ### Low Severity
-- [ ] **time.Now() usage** — Uses `time.Now()` for performance measurement and profiling timestamps (`memory.go:39,58,77`, `benchmark.go:87,391,404`). This is acceptable for profiling tools (which need real-time measurements) but noted for completeness.
+- [ ] **time.Now() usage** — Uses `time.Now()` for performance measurement and profiling timestamps (`memory.go:39,58,77`, `benchmark.go:89,393,406`). This is acceptable for profiling tools (which need real-time measurements) but noted for completeness.
 - [ ] **Missing benchmark for genre validation** — `GenreValidator.Validate()` lacks a dedicated benchmark despite being CPU-intensive for large genre sets (`genre.go:69-91`).
 - [ ] **Missing test for empty snapshot edge case** — `GetAverageAllocation()` in memory.go correctly handles empty snapshots but this edge case isn't explicitly tested (`memory_test.go`).
 
@@ -74,7 +74,7 @@ This package is a testing infrastructure utility and integrates as a dependency 
 | Mobile | ✅ | No platform-specific code; uses standard Go image package |
 
 ## Recommendations
-1. **[MED]** Refactor `PrintProfile()` and `PrintResults()` to accept an `io.Writer` parameter for testability and integration flexibility. Consider adding structured logging option.
+1. ~~**[MED]** Refactor `PrintProfile()` and `PrintResults()` to accept an `io.Writer` parameter for testability and integration flexibility. Consider adding structured logging option.~~ **RESOLVED 2026-02-23**: Added `PrintProfileTo(io.Writer)` and `PrintResultsTo(io.Writer)` methods.
 2. **[LOW]** Add benchmark for `GenreValidator.Validate()` to track performance with large genre sets.
 3. **[LOW]** Add explicit test case for `GetAverageAllocation()` with empty snapshot slice.
 4. **[LOW]** Document that `time.Now()` usage is intentional for real-time profiling (vs. deterministic generation requirements that don't apply here).

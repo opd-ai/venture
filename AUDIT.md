@@ -13,9 +13,9 @@ This report consolidates 110 individual audit files across all packages in the V
 | Severity | Open Issues |
 |----------|-------------|
 | High     | 1           |
-| Medium   | ~13         |
-| Low      | ~108        |
-| **Total**| **~122**    |
+| Medium   | ~12         |
+| Low      | ~106        |
+| **Total**| **~119**    |
 
 **Historical totals (including fixed):** ~32 High, ~96 Medium, ~228 Low issues were identified across all audits. The vast majority have been resolved, resulting in an overall codebase health status of **Good**.
 
@@ -294,9 +294,9 @@ This report consolidates 110 individual audit files across all packages in the V
 ### pkg/hostplay — Host-and-Play Server Lifecycle
 - **Source:** `pkg/hostplay/AUDIT.md`
 - **High Issues:** 0
-- **Medium Issues:** 1
-- **Low Issues:** 1 (1 fixed)
-- **Details:** 89.3% coverage; security-first default localhost binding, automatic port fallback (8080–8089), `TimeProvider` abstraction for testable time-dependent code, context-based shutdown with 5-second timeout. `time.Now()` in `RealTimeProvider` is intentional production behavior; tests use `MockTimeProvider` correctly. **RESOLVED 2026-02-23**: `doc.go` examples already use `logrus.WithError(err).Fatal()` and `logrus.WithField(...).Info()` - audit item was outdated. No benchmarks for snapshot serialization hot paths.
+- **Medium Issues:** 0 (1 fixed)
+- **Low Issues:** 0 (2 fixed)
+- **Details:** 89.3% coverage; security-first default localhost binding, automatic port fallback (8080–8089), `TimeProvider` abstraction for testable time-dependent code, context-based shutdown with 5-second timeout. `time.Now()` in `RealTimeProvider` is intentional production behavior; tests use `MockTimeProvider` correctly. **RESOLVED 2026-02-23**: `doc.go` examples already use `logrus.WithError(err).Fatal()` and `logrus.WithField(...).Info()` - audit item was outdated. **RESOLVED 2026-02-23**: Added 16 comprehensive benchmarks in `benchmark_test.go` covering snapshot serialization, delta snapshots, state broadcast, entity serialization, JSON marshal/unmarshal, and rate limiting.
 
 ---
 

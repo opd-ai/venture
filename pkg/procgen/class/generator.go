@@ -36,13 +36,34 @@ type ClassPreset struct {
 
 // ClassGenerator generates character class configurations.
 type ClassGenerator struct {
+	// presets stores the base class configurations indexed by class type.
+	// Contains all 21 classes (6 base + 15 hybrid) initialized at construction.
 	presets map[engine.CharacterClass]ClassPreset
+	// logger is the logger instance used for error and debug logging.
+	// If nil, the package-level logrus logger is used.
+	logger *logrus.Entry
 }
 
-// NewClassGenerator creates a new class generator.
+// NewClassGenerator creates a new class generator with default logging.
 func NewClassGenerator() *ClassGenerator {
 	gen := &ClassGenerator{
 		presets: make(map[engine.CharacterClass]ClassPreset),
+		logger:  logrus.WithField("system_name", "class_generator"),
+	}
+	gen.initializePresets()
+	return gen
+}
+
+// NewClassGeneratorWithLogger creates a new class generator with a custom logger.
+// The provided logger entry is used for all logging operations, enabling
+// integration with custom logging pipelines and structured logging contexts.
+func NewClassGeneratorWithLogger(logger *logrus.Entry) *ClassGenerator {
+	gen := &ClassGenerator{
+		presets: make(map[engine.CharacterClass]ClassPreset),
+		logger:  logger,
+	}
+	if gen.logger == nil {
+		gen.logger = logrus.WithField("system_name", "class_generator")
 	}
 	gen.initializePresets()
 	return gen
@@ -344,7 +365,7 @@ func (g *ClassGenerator) Generate(seed int64, params procgen.GenerationParams) (
 	// Get base preset
 	preset, ok := g.presets[classType]
 	if !ok {
-		logrus.WithFields(logrus.Fields{
+		g.logger.WithFields(logrus.Fields{
 			"seed":       seed,
 			"class_type": classType,
 			"difficulty": params.Difficulty,

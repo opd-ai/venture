@@ -26,7 +26,7 @@ None
 - [ ] **Time abstraction** — `time.Now()` is used in `time_provider.go:19` (RealTimeProvider) which is intentional production behavior, but tests should verify mock injection is used consistently (`state_broadcaster_test.go` has good coverage with MockTimeProvider) (`time_provider.go:19`)
 
 ### Low Severity
-- [ ] **Doc example uses fmt.Printf/log.Fatal** — Package doc.go example code uses fmt.Printf and log.Fatal instead of logrus structured logging (acceptable for documentation examples as they demonstrate simple usage) (`doc.go:42,47,52`)
+- [x] **Doc example uses fmt.Printf/log.Fatal** — **RESOLVED 2026-02-23**: Package doc.go example code already uses logrus structured logging (`logrus.WithError(err).Fatal()`, `logrus.WithField(...).Info()`) as of 2026-02-22 (`doc.go:42,47,52`)
 - [ ] **Test-only time.Now usage** — Integration and server lifecycle tests use `time.Now()` directly for timing measurements, which is acceptable for test instrumentation but could use TimeProvider for consistency (`server_lifecycle_test.go:398,405`, `integration_test.go:49,142`)
 
 ## Input Integration

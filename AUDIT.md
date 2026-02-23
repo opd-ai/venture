@@ -13,9 +13,9 @@ This report consolidates 110 individual audit files across all packages in the V
 | Severity | Open Issues |
 |----------|-------------|
 | High     | 1           |
-| Medium   | ~34         |
-| Low      | ~134        |
-| **Total**| **~169**    |
+| Medium   | ~33         |
+| Low      | ~131        |
+| **Total**| **~165**    |
 
 **Historical totals (including fixed):** ~32 High, ~95 Medium, ~227 Low issues were identified across all audits. The vast majority have been resolved, resulting in an overall codebase health status of **Good**.
 
@@ -295,8 +295,8 @@ This report consolidates 110 individual audit files across all packages in the V
 - **Source:** `pkg/hostplay/AUDIT.md`
 - **High Issues:** 0
 - **Medium Issues:** 1
-- **Low Issues:** 2
-- **Details:** 89.3% coverage; security-first default localhost binding, automatic port fallback (8080–8089), `TimeProvider` abstraction for testable time-dependent code, context-based shutdown with 5-second timeout. `time.Now()` in `RealTimeProvider` is intentional production behavior; tests use `MockTimeProvider` correctly. `doc.go` examples use `fmt.Printf`/`log.Fatal` instead of logrus. No benchmarks for snapshot serialization hot paths.
+- **Low Issues:** 1 (1 fixed)
+- **Details:** 89.3% coverage; security-first default localhost binding, automatic port fallback (8080–8089), `TimeProvider` abstraction for testable time-dependent code, context-based shutdown with 5-second timeout. `time.Now()` in `RealTimeProvider` is intentional production behavior; tests use `MockTimeProvider` correctly. **RESOLVED 2026-02-23**: `doc.go` examples already use `logrus.WithError(err).Fatal()` and `logrus.WithField(...).Info()` - audit item was outdated. No benchmarks for snapshot serialization hot paths.
 
 ---
 
@@ -555,9 +555,9 @@ This report consolidates 110 individual audit files across all packages in the V
 ### pkg/procgen/class — Class Generation
 - **Source:** `pkg/procgen/class/AUDIT.md`
 - **High Issues:** 0
-- **Medium Issues:** 1
-- **Low Issues:** 1
-- **Details:** 93.0% coverage. Uses global `logrus` for error logging instead of injected logger; no `NewClassGeneratorWithLogger` constructor. Minor documentation gap.
+- **Medium Issues:** 0 (1 fixed)
+- **Low Issues:** 0 (1 fixed)
+- **Details:** 93.4% coverage. **RESOLVED 2026-02-23**: Added `NewClassGeneratorWithLogger(*logrus.Entry)` constructor for injectable logging. Generator struct now stores logger in `logger` field, replacing direct global `logrus` usage. Also added godoc comments to `ClassGenerator` struct fields explaining `presets` map and `logger` field purposes.
 
 ---
 
@@ -1087,8 +1087,8 @@ The following low-severity issues appear repeatedly across 30+ packages and repr
 **Missing Godoc Comments** (affects ~20 packages):
 - Exported functions/types without godoc in: `pkg/audit/features`, `pkg/narrative/branching`, `pkg/procgen/recipe`, `pkg/procgen/story`, `pkg/network/federation`, and others
 
-**Global Logger Instead of Injected Logger** (affects ~5 packages):
-- `pkg/companion/learning`, `pkg/procgen/class`, ~~`pkg/integration/companion_housing`~~ (**RESOLVED 2026-02-22**), ~~`pkg/integration/guild_vehicle`~~ (**RESOLVED 2026-02-22**)
+**Global Logger Instead of Injected Logger** (affects ~4 packages):
+- `pkg/companion/learning`, ~~`pkg/procgen/class`~~ (**RESOLVED 2026-02-23**), ~~`pkg/integration/companion_housing`~~ (**RESOLVED 2026-02-22**), ~~`pkg/integration/guild_vehicle`~~ (**RESOLVED 2026-02-22**)
 
 **`time.Now()` in Non-Production Paths** (affects ~10 packages):
 - Mostly for UI timing, cache access times, performance monitoring, or profiling—all documented as acceptable exceptions

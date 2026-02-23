@@ -23,10 +23,10 @@ The `pkg/procgen/class` package provides procedural character class generation w
 *(none)*
 
 ### Medium Severity
-- [ ] **API consistency** — Uses global `logrus` package for error logging instead of injected logger. No `NewClassGeneratorWithLogger` constructor exists for consistency with other generators (`generator.go:347-352`)
+- [x] **API consistency** — **RESOLVED 2026-02-23**: Added `NewClassGeneratorWithLogger(*logrus.Entry)` constructor for injectable logging. Generator struct now stores logger in `logger` field, which is used in `Generate()` for error logging instead of global `logrus`. Default constructor `NewClassGenerator()` uses package-level logger with `system_name: "class_generator"` field (`generator.go:43-62`)
 
 ### Low Severity
-- [ ] **Doc coverage** — Missing field-level godoc comments on `ClassGenerator` struct explaining `presets` map purpose (`generator.go:38-40`)
+- [x] **Doc coverage** — **RESOLVED 2026-02-23**: Added field-level godoc comments on `ClassGenerator` struct explaining `presets` map purpose and `logger` field (`generator.go:38-47`)
 - [ ] **Test coverage** — Test `TestGetAllPresets` only checks for 6 base classes but 21 classes exist in presets; should verify all hybrid classes (`generator_test.go:311-324`)
 - [ ] **API consistency** — `GetAllPresets()` iterates by numeric enum value but may skip gaps in enum; should iterate over map keys directly for completeness (`generator.go:437-445`)
 
@@ -46,7 +46,7 @@ The `pkg/procgen/class` package provides procedural character class generation w
 | Character Creation | N/A | N/A | ✅ | `ClassGenerator` used by `cmd/client/handlers.go` for class selection UI |
 
 ## Test Coverage
-**Coverage**: 93.0% (target: 65%)
+**Coverage**: 93.4% (target: 65%)
 - Missing test areas: Invalid enum value handling in `GetAllPresets()`
 - Missing benchmarks: None (benchmark exists)
 - Table-driven test compliance: ✅
@@ -79,7 +79,7 @@ The package integrates with the engine's class progression system and client's c
 | Mobile | ✅ | No platform-specific code |
 
 ## Recommendations
-1. **[MED]** Add `NewClassGeneratorWithLogger(*logrus.Logger)` constructor and store logger in struct to avoid global `logrus` usage in `Generate()` error path (`generator.go:347`)
+1. ~~**[MED]** Add `NewClassGeneratorWithLogger(*logrus.Logger)` constructor and store logger in struct to avoid global `logrus` usage in `Generate()` error path (`generator.go:347`)~~ **RESOLVED 2026-02-23**
 2. **[LOW]** Update `TestGetAllPresets` to verify all 21 classes (6 base + 15 hybrid) are present
 3. **[LOW]** Fix `GetAllPresets()` to iterate over map keys instead of assuming contiguous enum values
 4. **[LOW]** Consider adding GenreID-based class name/description variants (e.g., "Warrior" in fantasy vs "Soldier" in sci-fi)

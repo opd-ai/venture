@@ -5,6 +5,7 @@ import (
 
 	"github.com/opd-ai/venture/pkg/engine"
 	"github.com/opd-ai/venture/pkg/procgen"
+	"github.com/sirupsen/logrus"
 )
 
 func TestClassGenerator_Generate(t *testing.T) {
@@ -373,4 +374,39 @@ func BenchmarkClassGenerator_Generate(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		_, _ = gen.Generate(int64(i), params)
 	}
+}
+
+func TestNewClassGeneratorWithLogger(t *testing.T) {
+	t.Run("with custom logger", func(t *testing.T) {
+		logger := logrus.NewEntry(logrus.New())
+		gen := NewClassGeneratorWithLogger(logger)
+		if gen == nil {
+			t.Fatal("NewClassGeneratorWithLogger() returned nil")
+		}
+		if gen.logger != logger {
+			t.Error("NewClassGeneratorWithLogger() did not set provided logger")
+		}
+		// Verify generator works
+		params := procgen.GenerationParams{
+			Difficulty: 0.5,
+			Custom:     map[string]interface{}{"class_type": engine.ClassWarrior},
+		}
+		result, err := gen.Generate(12345, params)
+		if err != nil {
+			t.Fatalf("Generate() with custom logger failed: %v", err)
+		}
+		if result == nil {
+			t.Error("Generate() returned nil result")
+		}
+	})
+
+	t.Run("with nil logger falls back to default", func(t *testing.T) {
+		gen := NewClassGeneratorWithLogger(nil)
+		if gen == nil {
+			t.Fatal("NewClassGeneratorWithLogger(nil) returned nil")
+		}
+		if gen.logger == nil {
+			t.Error("NewClassGeneratorWithLogger(nil) should set default logger")
+		}
+	})
 }

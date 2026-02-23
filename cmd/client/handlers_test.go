@@ -2156,13 +2156,13 @@ func TestSerializeManaAndSpellsWrongSpellSlotType(t *testing.T) {
 // TestFindNearestNPC tests finding the nearest NPC with dialog component.
 func TestFindNearestNPC(t *testing.T) {
 	tests := []struct {
-		name           string
-		playerX        float64
-		playerY        float64
-		npcs           []struct{ x, y float64 }
-		expectedIdx    int // -1 means no NPC expected
-		noPlayer       bool
-		noPlayerPos    bool
+		name        string
+		playerX     float64
+		playerY     float64
+		npcs        []struct{ x, y float64 }
+		expectedIdx int // -1 means no NPC expected
+		noPlayer    bool
+		noPlayerPos bool
 	}{
 		{
 			name:        "single NPC in range",

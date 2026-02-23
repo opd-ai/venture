@@ -1,7 +1,3 @@
-// Package faction provides procedural generation of factions for the game world.
-// Factions are generated deterministically from world seeds and include kingdoms,
-// guilds, cults, corporations, and gangs with procedurally generated names,
-// relationships, and characteristics.
 package faction
 
 import (

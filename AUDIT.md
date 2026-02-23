@@ -1,6 +1,6 @@
 # Consolidated Audit Report
 
-**Generated:** 2026-02-22
+**Generated:** 2026-02-22 (Updated: 2026-02-23)
 **Total Audit Files Processed:** 110
 **Auditor:** GitHub Copilot (Consolidated)
 
@@ -13,9 +13,9 @@ This report consolidates 110 individual audit files across all packages in the V
 | Severity | Open Issues |
 |----------|-------------|
 | High     | 1           |
-| Medium   | ~32         |
+| Medium   | ~30         |
 | Low      | ~128        |
-| **Total**| **~161**    |
+| **Total**| **~159**    |
 
 **Historical totals (including fixed):** ~32 High, ~95 Medium, ~227 Low issues were identified across all audits. The vast majority have been resolved, resulting in an overall codebase health status of **Good**.
 
@@ -600,18 +600,18 @@ This report consolidates 110 individual audit files across all packages in the V
 ### pkg/procgen/faction — Faction Generation
 - **Source:** `pkg/procgen/faction/AUDIT.md`
 - **High Issues:** 0
-- **Medium Issues:** 1
+- **Medium Issues:** 0 (1 fixed)
 - **Low Issues:** 1
-- **Details:** 93.2% coverage. Package has duplicate package comment in both `doc.go` and `generator.go`, which can cause godoc to display both. Minor duplicate comment cleanup needed.
+- **Details:** 93.2% coverage. **RESOLVED 2026-02-23**: Removed duplicate package comment from `generator.go:1-5` that duplicated `doc.go` content. Package now has single canonical godoc in `doc.go`.
 
 ---
 
 ### pkg/procgen/furniture — Furniture Generation & Placement
 - **Source:** `pkg/procgen/furniture/AUDIT.md`
 - **High Issues:** 0
-- **Medium Issues:** 1
+- **Medium Issues:** 0 (1 fixed)
 - **Low Issues:** 1
-- **Details:** 92.5% coverage. `doc.go` examples use `log.Fatal` and `fmt.Printf` instead of logrus (acceptable for documentation but inconsistent with guidelines). No functional issues.
+- **Details:** 92.5% coverage. **RESOLVED 2026-02-23**: `doc.go` examples updated to use `logrus.WithError(err).Warn()` instead of `log.Printf` for placement validation errors. All examples now follow logrus structured logging guidelines.
 
 ---
 

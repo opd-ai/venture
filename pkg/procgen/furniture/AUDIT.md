@@ -24,7 +24,7 @@ The furniture package provides deterministic procedural generation of 30+ furnit
 None identified.
 
 ### Medium Severity
-- [ ] **Doc coverage** — `doc.go` contains example code using `log.Fatal` and `fmt.Printf` which is acceptable for documentation examples but deviates from logrus guideline (`doc.go:48,52,64,70,176,180`)
+- [x] **Doc coverage** — **RESOLVED 2026-02-23**: `doc.go` examples updated to use `logrus.WithError(err).Warn()` instead of `log.Printf` for placement validation errors. All examples now follow logrus structured logging guidelines.
 
 ### Low Severity
 - [ ] **Missing Serialize/Deserialize** — `Furniture` struct lacks `Serialize()` and `Deserialize()` methods for save/load persistence integration (`types.go:168-199`)

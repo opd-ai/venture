@@ -61,13 +61,13 @@ Validate furniture placement in rooms using PlacementValidator:
 	// Validate placement
 	err := validator.ValidatePlacement(furnitureItem, 2.0, 3.0, furniture.DirNorth)
 	if err != nil {
-		log.Printf("Invalid placement: %v", err)
+		logrus.WithError(err).Warn("invalid furniture placement")
 	}
 
 	// Place furniture
 	err = validator.PlaceFurniture(furnitureItem, 2.0, 3.0, furniture.DirNorth)
 	if err != nil {
-		log.Printf("Cannot place: %v", err)
+		logrus.WithError(err).Warn("cannot place furniture")
 	}
 
 	// Auto-find valid placement

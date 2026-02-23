@@ -23,7 +23,7 @@ The faction package is a well-implemented, high-quality procedural generator for
 None found.
 
 ### Medium Severity
-- [ ] **Documentation** — Package has duplicate package comment in `doc.go` and `generator.go:1-5`. The `generator.go` comment duplicates `doc.go` content, which can cause godoc to display both. (`generator.go:1-5`)
+- [x] **Documentation** — **RESOLVED 2026-02-23**: Removed duplicate package comment from `generator.go:1-5`. Package now has single canonical godoc in `doc.go`.
 
 ### Low Severity
 - [ ] **API consistency** — `NewGenerator()` constructor does not log system creation with `system_name` field as recommended by project guidelines. While this is a stateless generator (not a system), adding a debug log would be consistent. (`generator.go:27`)

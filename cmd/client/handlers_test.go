@@ -1487,3 +1487,113 @@ func TestCleanupNetworkClientStruct(t *testing.T) {
 	cleanupNetworkClient(&noMethodsStruct{value: 1}, logger)
 	// Should complete without panic
 }
+
+// TestConnectUIComponents tests the connectUIComponents helper function.
+func TestConnectUIComponents(t *testing.T) {
+	// Track which setters were called
+	var calledSetters []int
+
+	connections := []struct {
+		ui     interface{}
+		setter func(interface{})
+	}{
+		{ui: "ui1", setter: func(ui interface{}) { calledSetters = append(calledSetters, 0) }},
+		{ui: nil, setter: func(ui interface{}) { calledSetters = append(calledSetters, 1) }}, // nil should be skipped
+		{ui: "ui2", setter: func(ui interface{}) { calledSetters = append(calledSetters, 2) }},
+		{ui: nil, setter: func(ui interface{}) { calledSetters = append(calledSetters, 3) }}, // nil should be skipped
+	}
+
+	connectUIComponents(connections)
+
+	// Should only call setters for non-nil UIs (indices 0 and 2)
+	if len(calledSetters) != 2 {
+		t.Errorf("expected 2 setter calls, got %d", len(calledSetters))
+	}
+	if len(calledSetters) >= 1 && calledSetters[0] != 0 {
+		t.Errorf("expected first call to setter 0, got %d", calledSetters[0])
+	}
+	if len(calledSetters) >= 2 && calledSetters[1] != 2 {
+		t.Errorf("expected second call to setter 2, got %d", calledSetters[1])
+	}
+}
+
+// TestConnectUIComponentsEmpty tests with empty connections slice.
+func TestConnectUIComponentsEmpty(t *testing.T) {
+	connections := []struct {
+		ui     interface{}
+		setter func(interface{})
+	}{}
+
+	// Should not panic with empty slice
+	connectUIComponents(connections)
+}
+
+// TestConnectUIComponentsAllNil tests with all nil UIs.
+func TestConnectUIComponentsAllNil(t *testing.T) {
+	var calledCount int
+
+	connections := []struct {
+		ui     interface{}
+		setter func(interface{})
+	}{
+		{ui: nil, setter: func(ui interface{}) { calledCount++ }},
+		{ui: nil, setter: func(ui interface{}) { calledCount++ }},
+		{ui: nil, setter: func(ui interface{}) { calledCount++ }},
+	}
+
+	connectUIComponents(connections)
+
+	if calledCount != 0 {
+		t.Errorf("expected 0 setter calls for all nil UIs, got %d", calledCount)
+	}
+}
+
+// TestConnectUIComponentsCorrectValuePassed tests that correct UI value is passed to setter.
+func TestConnectUIComponentsCorrectValuePassed(t *testing.T) {
+	var receivedValues []interface{}
+
+	connections := []struct {
+		ui     interface{}
+		setter func(interface{})
+	}{
+		{ui: "first", setter: func(ui interface{}) { receivedValues = append(receivedValues, ui) }},
+		{ui: 42, setter: func(ui interface{}) { receivedValues = append(receivedValues, ui) }},
+		{ui: nil, setter: func(ui interface{}) { receivedValues = append(receivedValues, ui) }},
+		{ui: true, setter: func(ui interface{}) { receivedValues = append(receivedValues, ui) }},
+	}
+
+	connectUIComponents(connections)
+
+	if len(receivedValues) != 3 {
+		t.Fatalf("expected 3 values, got %d", len(receivedValues))
+	}
+
+	if receivedValues[0] != "first" {
+		t.Errorf("expected 'first', got %v", receivedValues[0])
+	}
+	if receivedValues[1] != 42 {
+		t.Errorf("expected 42, got %v", receivedValues[1])
+	}
+	if receivedValues[2] != true {
+		t.Errorf("expected true, got %v", receivedValues[2])
+	}
+}
+
+// BenchmarkConnectUIComponents benchmarks the connectUIComponents function.
+func BenchmarkConnectUIComponents(b *testing.B) {
+	connections := []struct {
+		ui     interface{}
+		setter func(interface{})
+	}{
+		{ui: "ui1", setter: func(ui interface{}) {}},
+		{ui: nil, setter: func(ui interface{}) {}},
+		{ui: "ui2", setter: func(ui interface{}) {}},
+		{ui: "ui3", setter: func(ui interface{}) {}},
+		{ui: nil, setter: func(ui interface{}) {}},
+	}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		connectUIComponents(connections)
+	}
+}

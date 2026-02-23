@@ -23,7 +23,7 @@ The destruction package implements building structural integrity simulation, dam
 _None identified._
 
 ### Medium Severity
-- [ ] **ECS compliance** — `DestructibleObjectComponent.TakeDamage()` method contains logic that mutates component state and returns a value; while acceptable for simple health tracking, this pattern could be moved to a system for stricter ECS compliance (`destructible_object_component.go:144` in `pkg/engine/`, not this package, but relevant to integration)
+- [x] **ECS compliance** — `DestructibleObjectComponent.TakeDamage()` method contains logic that mutates component state and returns a value; while acceptable for simple health tracking, this pattern could be moved to a system for stricter ECS compliance (`destructible_object_component.go:144` in `pkg/engine/`, not this package, but relevant to integration) — **RESOLVED 2026-02-22**: `TakeDamage()` deprecated; damage logic moved to `DestructibleObjectSystem.ApplyDamageToComponent()`; `LastDamageTime` changed from `time.Time` to `float64` game time for deterministic multiplayer
 
 ### Low Severity
 - [x] **Documentation** — Example code in `doc.go:42-47` uses `log.Fatalf`/`log.Printf` which contradicts the project's structured logging standard using `logrus.WithFields` (`doc.go:42-58`) — **RESOLVED 2026-02-22**: Updated examples to use `logrus.WithFields` pattern

@@ -13,9 +13,9 @@ This report consolidates 110 individual audit files across all packages in the V
 | Severity | Open Issues |
 |----------|-------------|
 | High     | 1           |
-| Medium   | ~35         |
+| Medium   | ~34         |
 | Low      | ~134        |
-| **Total**| **~170**    |
+| **Total**| **~169**    |
 
 **Historical totals (including fixed):** ~32 High, ~95 Medium, ~227 Low issues were identified across all audits. The vast majority have been resolved, resulting in an overall codebase health status of **Good**.
 
@@ -240,9 +240,9 @@ This report consolidates 110 individual audit files across all packages in the V
 ### pkg/engine/physics/destruction — Environmental Destruction Physics
 - **Source:** `pkg/engine/physics/destruction/AUDIT.md`
 - **High Issues:** 0
-- **Medium Issues:** 1
+- **Medium Issues:** 0 (1 fixed)
 - **Low Issues:** 1 (2 fixed)
-- **Details:** 96.3% coverage; deterministic debris generation with seeded RNG. `DestructibleObjectComponent.TakeDamage()` contains logic within the component (borderline ECS compliance). **RESOLVED 2026-02-22**: `doc.go` examples updated to use `logrus.WithFields` instead of `log.Fatalf`/`log.Printf`. **RESOLVED 2026-02-22**: Added `SpawnFallingObjectWithSeed(seed int64)` for deterministic initial velocity in network sync scenarios.
+- **Details:** 96.3% coverage; deterministic debris generation with seeded RNG. **RESOLVED 2026-02-22**: ECS compliance fixed—`DestructibleObjectComponent.TakeDamage()` deprecated, damage logic moved to `DestructibleObjectSystem.ApplyDamageToComponent()` method; `LastDamageTime` changed from `time.Time` to `float64` game time for deterministic multiplayer. **RESOLVED 2026-02-22**: `doc.go` examples updated to use `logrus.WithFields` instead of `log.Fatalf`/`log.Printf`. **RESOLVED 2026-02-22**: Added `SpawnFallingObjectWithSeed(seed int64)` for deterministic initial velocity in network sync scenarios.
 
 ---
 

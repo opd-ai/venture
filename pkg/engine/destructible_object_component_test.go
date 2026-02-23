@@ -2,7 +2,6 @@ package engine
 
 import (
 	"testing"
-	"time"
 )
 
 func TestObjectType_String(t *testing.T) {
@@ -166,10 +165,8 @@ func TestDestructibleObjectComponent_TakeDamage(t *testing.T) {
 				t.Errorf("IsDestroyed = %v, want %v", comp.IsDestroyed, tt.wantDestroyed)
 			}
 
-			// Check that LastDamageTime was updated
-			if time.Since(comp.LastDamageTime) > time.Second {
-				t.Error("LastDamageTime was not updated")
-			}
+			// Note: LastDamageTime is no longer updated by the deprecated TakeDamage method.
+			// Use DestructibleObjectSystem.ApplyDamageToComponent() for proper time tracking.
 		})
 	}
 }
@@ -358,5 +355,90 @@ func TestDebrisComponent_RemainingLifetimePercent(t *testing.T) {
 				t.Errorf("RemainingLifetimePercent() = %v, want %v", got, tt.want)
 			}
 		})
+	}
+}
+
+// TestDestructibleObjectSystem_ApplyDamageToComponent tests the ECS-compliant damage method.
+func TestDestructibleObjectSystem_ApplyDamageToComponent(t *testing.T) {
+	tests := []struct {
+		name          string
+		initialHealth float64
+		damage        float64
+		gameTime      float64
+		wantDestroyed bool
+		wantHealth    float64
+	}{
+		{"partial_damage", 30.0, 10.0, 5.0, false, 20.0},
+		{"exact_destroy", 30.0, 30.0, 10.0, true, 0.0},
+		{"overkill_damage", 30.0, 50.0, 15.0, true, 0.0},
+		{"no_damage", 30.0, 0.0, 1.0, false, 30.0},
+		{"small_damage", 30.0, 1.0, 2.5, false, 29.0},
+	}
+
+	sys := NewDestructibleObjectSystem(32, 12345)
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			comp := &DestructibleObjectComponent{
+				Health:    tt.initialHealth,
+				MaxHealth: 30.0,
+			}
+
+			destroyed := sys.ApplyDamageToComponent(comp, tt.damage, tt.gameTime)
+
+			if destroyed != tt.wantDestroyed {
+				t.Errorf("ApplyDamageToComponent() returned %v, want %v", destroyed, tt.wantDestroyed)
+			}
+			if comp.Health != tt.wantHealth {
+				t.Errorf("Health = %v, want %v", comp.Health, tt.wantHealth)
+			}
+			if comp.IsDestroyed != tt.wantDestroyed {
+				t.Errorf("IsDestroyed = %v, want %v", comp.IsDestroyed, tt.wantDestroyed)
+			}
+			if comp.LastDamageTime != tt.gameTime {
+				t.Errorf("LastDamageTime = %v, want %v", comp.LastDamageTime, tt.gameTime)
+			}
+		})
+	}
+}
+
+// TestDestructibleObjectSystem_ApplyDamageToComponent_NilAndDestroyed tests edge cases.
+func TestDestructibleObjectSystem_ApplyDamageToComponent_NilAndDestroyed(t *testing.T) {
+	sys := NewDestructibleObjectSystem(32, 12345)
+
+	// Test nil component
+	if sys.ApplyDamageToComponent(nil, 10.0, 1.0) {
+		t.Error("ApplyDamageToComponent(nil) should return false")
+	}
+
+	// Test already destroyed component
+	comp := &DestructibleObjectComponent{
+		Health:      0,
+		MaxHealth:   30.0,
+		IsDestroyed: true,
+	}
+	if sys.ApplyDamageToComponent(comp, 10.0, 1.0) {
+		t.Error("ApplyDamageToComponent(destroyed) should return false")
+	}
+}
+
+// TestDestructibleObjectSystem_GameTime tests game time accumulation.
+func TestDestructibleObjectSystem_GameTime(t *testing.T) {
+	sys := NewDestructibleObjectSystem(32, 12345)
+
+	// Initial game time should be 0
+	if sys.GetGameTime() != 0 {
+		t.Errorf("Initial GetGameTime() = %v, want 0", sys.GetGameTime())
+	}
+
+	// Update should accumulate game time
+	sys.Update([]*Entity{}, 1.5)
+	if sys.GetGameTime() != 1.5 {
+		t.Errorf("After 1.5s, GetGameTime() = %v, want 1.5", sys.GetGameTime())
+	}
+
+	sys.Update([]*Entity{}, 2.0)
+	if sys.GetGameTime() != 3.5 {
+		t.Errorf("After 3.5s total, GetGameTime() = %v, want 3.5", sys.GetGameTime())
 	}
 }

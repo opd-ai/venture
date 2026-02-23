@@ -10,11 +10,12 @@
 // - Destruction generates debris entities with physics
 // - Objects can be explosive (barrels) or emit hazards (poison containers)
 // - Server-authoritative for multiplayer synchronization
+//
+// ECS Compliance:
+// - Components are pure data structures with only Type() method
+// - All damage logic is handled by DestructibleObjectSystem
+// - Use ApplyDamageToComponent() system method instead of component.TakeDamage()
 package engine
-
-import (
-	"time"
-)
 
 // ObjectType represents the type of destructible object.
 type ObjectType int
@@ -72,8 +73,11 @@ type DestructibleObjectComponent struct {
 	// ParticlesSpawned tracks if destruction particles have been emitted
 	ParticlesSpawned bool
 
-	// LastDamageTime tracks when the object was last damaged
-	LastDamageTime time.Time
+	// LastDamageTime tracks when the object was last damaged (game time in seconds).
+	// This is set by DestructibleObjectSystem during damage processing.
+	// Use game time (from World.Clock or delta accumulator) rather than wall-clock time
+	// to ensure deterministic behavior in multiplayer.
+	LastDamageTime float64
 
 	// ExplosionRadius is the area damage radius for explosive objects (0 = not explosive)
 	ExplosionRadius float64
@@ -104,7 +108,7 @@ func NewDestructibleObjectComponent(objType ObjectType) *DestructibleObjectCompo
 	comp := &DestructibleObjectComponent{
 		ObjectType:     objType,
 		IsDestroyed:    false,
-		LastDamageTime: time.Now(),
+		LastDamageTime: 0, // Will be set by system when damage is applied
 		DebrisCount:    3, // Default: 3 debris pieces
 	}
 
@@ -141,9 +145,15 @@ func NewDestructibleObjectComponent(objType ObjectType) *DestructibleObjectCompo
 }
 
 // TakeDamage applies damage to the object and returns true if destroyed.
+//
+// Deprecated: This method violates ECS principles by containing logic in a component.
+// Use DestructibleObjectSystem.ApplyDamageToComponent() instead for new code.
+// This method is preserved for backward compatibility but the LastDamageTime field
+// will not be updated (it should be set by the system with game time).
 func (d *DestructibleObjectComponent) TakeDamage(damage float64) bool {
 	d.Health -= damage
-	d.LastDamageTime = time.Now()
+	// NOTE: LastDamageTime is not updated here to encourage using the system method
+	// which can properly track game time rather than wall-clock time.
 	if d.Health <= 0 {
 		d.Health = 0
 		d.IsDestroyed = true

@@ -27,6 +27,7 @@ type DestructibleObjectSystem struct {
 	tileSize       int
 	fireSystem     *FirePropagationSystem // For igniting tiles on explosions
 	debrisLifetime float64                // How long debris entities persist
+	gameTime       float64                // Accumulated game time for damage timestamps
 }
 
 // NewDestructibleObjectSystem creates a new destructible object system.
@@ -51,6 +52,7 @@ func NewDestructibleObjectSystemWithLogger(tileSize int, seed int64, logger *log
 		rng:            rand.New(rand.NewSource(seed)),
 		logger:         logEntry,
 		debrisLifetime: 5.0, // Default: debris lasts 5 seconds
+		gameTime:       0,   // Game time starts at 0
 	}
 }
 
@@ -64,9 +66,40 @@ func (s *DestructibleObjectSystem) SetFireSystem(fireSystem *FirePropagationSyst
 	s.fireSystem = fireSystem
 }
 
+// GetGameTime returns the accumulated game time in seconds.
+// This is useful for external systems that need to apply damage with consistent timing.
+func (s *DestructibleObjectSystem) GetGameTime() float64 {
+	return s.gameTime
+}
+
+// ApplyDamageToComponent applies damage to a destructible object component.
+// This is the ECS-compliant way to damage destructible objects, as it keeps
+// all logic in the system rather than in the component.
+// The gameTime parameter should be the current game time in seconds (from delta
+// accumulator or World.Clock) for deterministic multiplayer synchronization.
+// Returns true if the object was destroyed by this damage.
+func (s *DestructibleObjectSystem) ApplyDamageToComponent(comp *DestructibleObjectComponent, damage, gameTime float64) bool {
+	if comp == nil || comp.IsDestroyed {
+		return false
+	}
+
+	comp.Health -= damage
+	comp.LastDamageTime = gameTime
+
+	if comp.Health <= 0 {
+		comp.Health = 0
+		comp.IsDestroyed = true
+		return true
+	}
+	return false
+}
+
 // Update implements the System interface.
 // Processes destroyed objects and triggers their effects.
 func (s *DestructibleObjectSystem) Update(entities []*Entity, deltaTime float64) {
+	// Accumulate game time for damage timestamps
+	s.gameTime += deltaTime
+
 	// Find all destructible objects
 	for _, entity := range entities {
 		comp, ok := entity.GetComponent("destructibleObject")
@@ -333,7 +366,8 @@ func (s *DestructibleObjectSystem) tryDamageEntity(entity *Entity, x, y, damage,
 		return false
 	}
 
-	return destructibleObj.TakeDamage(damage)
+	// Use system method for ECS compliance with proper game time tracking
+	return s.ApplyDamageToComponent(destructibleObj, damage, s.gameTime)
 }
 
 // getDestructibleComponent extracts and validates the destructible object component.

@@ -18,10 +18,10 @@ import (
 // TestAnimationSystemWrapper tests the animation system wrapper Update method.
 func TestAnimationSystemWrapper(t *testing.T) {
 	tests := []struct {
-		name        string
-		entities    []*engine.Entity
-		deltaTime   float64
-		logLevel    logrus.Level
+		name      string
+		entities  []*engine.Entity
+		deltaTime float64
+		logLevel  logrus.Level
 	}{
 		{
 			name:      "nil entities",
@@ -70,14 +70,14 @@ func TestAnimationSystemWrapper(t *testing.T) {
 // TestRotationSystemWrapper tests the rotation system wrapper.
 func TestRotationSystemWrapper(t *testing.T) {
 	wrapper := &rotationSystemWrapper{system: nil}
-	
+
 	// Test that wrapper panics with nil (expected behavior)
 	defer func() {
 		if r := recover(); r == nil {
 			t.Log("wrapper with nil system panics as expected")
 		}
 	}()
-	
+
 	wrapper.Update([]*engine.Entity{}, 0.016)
 }
 
@@ -85,7 +85,7 @@ func TestRotationSystemWrapper(t *testing.T) {
 func TestPrestigeEntityAdapterMethods(t *testing.T) {
 	// Create a real entity for testing
 	entity := engine.NewEntity(42)
-	
+
 	// Add a test component
 	testComp := &engine.PositionComponent{X: 10, Y: 20}
 	entity.AddComponent(testComp)
@@ -137,9 +137,9 @@ func TestPrestigeEntityAdapterMethods(t *testing.T) {
 		if !adapter.HasComponent("position") {
 			t.Fatal("position component should exist before removal")
 		}
-		
+
 		adapter.RemoveComponent("position")
-		
+
 		if adapter.HasComponent("position") {
 			t.Error("position component should not exist after removal")
 		}
@@ -149,7 +149,7 @@ func TestPrestigeEntityAdapterMethods(t *testing.T) {
 		// Add a new component via adapter
 		healthComp := &engine.HealthComponent{Current: 100, Max: 100}
 		adapter.AddComponent(healthComp)
-		
+
 		if !adapter.HasComponent("health") {
 			t.Error("health component should exist after adding")
 		}
@@ -160,15 +160,15 @@ func TestPrestigeEntityAdapterMethods(t *testing.T) {
 func TestPrestigeSystemWrapperUpdate(t *testing.T) {
 	// Create real prestige system
 	sys := prestige.NewSystem()
-	
+
 	wrapper := &prestigeSystemWrapper{system: sys}
-	
+
 	// Create test entities
 	entities := []*engine.Entity{
 		engine.NewEntity(1),
 		engine.NewEntity(2),
 	}
-	
+
 	// Add prestige components
 	for _, e := range entities {
 		comp := &prestige.PrestigeComponent{
@@ -177,7 +177,7 @@ func TestPrestigeSystemWrapperUpdate(t *testing.T) {
 		}
 		e.AddComponent(comp)
 	}
-	
+
 	// Should not panic
 	wrapper.Update(entities, 0.016)
 }
@@ -185,12 +185,12 @@ func TestPrestigeSystemWrapperUpdate(t *testing.T) {
 // TestPrestigeSystemWrapperEmptyEntities tests wrapper with empty entity list.
 func TestPrestigeSystemWrapperEmptyEntities(t *testing.T) {
 	sys := prestige.NewSystem()
-	
+
 	wrapper := &prestigeSystemWrapper{system: sys}
-	
+
 	// Should not panic with empty slice
 	wrapper.Update([]*engine.Entity{}, 0.016)
-	
+
 	// Should not panic with nil slice
 	wrapper.Update(nil, 0.016)
 }
@@ -224,7 +224,7 @@ func BenchmarkPrestigeEntityAdapter(b *testing.B) {
 func BenchmarkPrestigeSystemWrapper(b *testing.B) {
 	sys := prestige.NewSystem()
 	wrapper := &prestigeSystemWrapper{system: sys}
-	
+
 	// Create test entities
 	entities := make([]*engine.Entity, 100)
 	for i := range entities {

@@ -2730,21 +2730,21 @@ func BenchmarkGenerateSingleBook(b *testing.B) {
 // TestSelectObjectTypeAllBranches tests each branch of selectObjectType deterministically.
 func TestSelectObjectTypeAllBranches(t *testing.T) {
 	tests := []struct {
-		name           string
-		config         objectConfig
-		seed           int64
-		wantType       engine.ObjectType
-		wantSelected   bool
-		findMatchSeed  bool // If true, find a seed that produces the expected result
+		name          string
+		config        objectConfig
+		seed          int64
+		wantType      engine.ObjectType
+		wantSelected  bool
+		findMatchSeed bool // If true, find a seed that produces the expected result
 	}{
 		{
 			name: "crate branch",
 			config: objectConfig{
-				crateChance:            1.0, // 100% crate
-				barrelChance:           0.0,
-				furnitureChance:        0.0,
-				poisonContainerChance:  0.0,
-				explosiveBarrelChance:  0.0,
+				crateChance:           1.0, // 100% crate
+				barrelChance:          0.0,
+				furnitureChance:       0.0,
+				poisonContainerChance: 0.0,
+				explosiveBarrelChance: 0.0,
 			},
 			seed:         12345,
 			wantType:     engine.ObjectCrate,
@@ -2753,11 +2753,11 @@ func TestSelectObjectTypeAllBranches(t *testing.T) {
 		{
 			name: "regular barrel branch",
 			config: objectConfig{
-				crateChance:            0.0,
-				barrelChance:           1.0, // 100% barrel
-				furnitureChance:        0.0,
-				poisonContainerChance:  0.0,
-				explosiveBarrelChance:  0.0, // No explosive barrels
+				crateChance:           0.0,
+				barrelChance:          1.0, // 100% barrel
+				furnitureChance:       0.0,
+				poisonContainerChance: 0.0,
+				explosiveBarrelChance: 0.0, // No explosive barrels
 			},
 			seed:         12345,
 			wantType:     engine.ObjectBarrel,
@@ -2766,11 +2766,11 @@ func TestSelectObjectTypeAllBranches(t *testing.T) {
 		{
 			name: "explosive barrel branch",
 			config: objectConfig{
-				crateChance:            0.0,
-				barrelChance:           1.0, // 100% barrel
-				furnitureChance:        0.0,
-				poisonContainerChance:  0.0,
-				explosiveBarrelChance:  1.0, // Always explosive when barrel selected
+				crateChance:           0.0,
+				barrelChance:          1.0, // 100% barrel
+				furnitureChance:       0.0,
+				poisonContainerChance: 0.0,
+				explosiveBarrelChance: 1.0, // Always explosive when barrel selected
 			},
 			seed:         12345,
 			wantType:     engine.ObjectExplosiveBarrel,
@@ -2779,11 +2779,11 @@ func TestSelectObjectTypeAllBranches(t *testing.T) {
 		{
 			name: "furniture branch",
 			config: objectConfig{
-				crateChance:            0.0,
-				barrelChance:           0.0,
-				furnitureChance:        1.0, // 100% furniture
-				poisonContainerChance:  0.0,
-				explosiveBarrelChance:  0.0,
+				crateChance:           0.0,
+				barrelChance:          0.0,
+				furnitureChance:       1.0, // 100% furniture
+				poisonContainerChance: 0.0,
+				explosiveBarrelChance: 0.0,
 			},
 			seed:         12345,
 			wantType:     engine.ObjectFurniture,
@@ -2792,11 +2792,11 @@ func TestSelectObjectTypeAllBranches(t *testing.T) {
 		{
 			name: "poison container branch",
 			config: objectConfig{
-				crateChance:            0.0,
-				barrelChance:           0.0,
-				furnitureChance:        0.0,
-				poisonContainerChance:  1.0, // 100% poison
-				explosiveBarrelChance:  0.0,
+				crateChance:           0.0,
+				barrelChance:          0.0,
+				furnitureChance:       0.0,
+				poisonContainerChance: 1.0, // 100% poison
+				explosiveBarrelChance: 0.0,
 			},
 			seed:         12345,
 			wantType:     engine.ObjectPoisonContainer,
@@ -2805,11 +2805,11 @@ func TestSelectObjectTypeAllBranches(t *testing.T) {
 		{
 			name: "no spawn branch",
 			config: objectConfig{
-				crateChance:            0.0,
-				barrelChance:           0.0,
-				furnitureChance:        0.0,
-				poisonContainerChance:  0.0,
-				explosiveBarrelChance:  0.0,
+				crateChance:           0.0,
+				barrelChance:          0.0,
+				furnitureChance:       0.0,
+				poisonContainerChance: 0.0,
+				explosiveBarrelChance: 0.0,
 			},
 			seed:         12345,
 			wantType:     engine.ObjectCrate, // Default return value
@@ -2836,11 +2836,11 @@ func TestSelectObjectTypeAllBranches(t *testing.T) {
 func TestSelectObjectTypePartialProbabilities(t *testing.T) {
 	// Config where only first 20% spawn crates, rest don't spawn
 	config := objectConfig{
-		crateChance:            0.2,
-		barrelChance:           0.0,
-		furnitureChance:        0.0,
-		poisonContainerChance:  0.0,
-		explosiveBarrelChance:  0.0,
+		crateChance:           0.2,
+		barrelChance:          0.0,
+		furnitureChance:       0.0,
+		poisonContainerChance: 0.0,
+		explosiveBarrelChance: 0.0,
 	}
 
 	spawnCount := 0
@@ -2863,11 +2863,11 @@ func TestSelectObjectTypePartialProbabilities(t *testing.T) {
 // TestSelectObjectTypeMixedBarrels tests explosive barrel probability.
 func TestSelectObjectTypeMixedBarrels(t *testing.T) {
 	config := objectConfig{
-		crateChance:            0.0,
-		barrelChance:           1.0,  // Always barrel
-		furnitureChance:        0.0,
-		poisonContainerChance:  0.0,
-		explosiveBarrelChance:  0.5,  // 50% explosive when barrel selected
+		crateChance:           0.0,
+		barrelChance:          1.0, // Always barrel
+		furnitureChance:       0.0,
+		poisonContainerChance: 0.0,
+		explosiveBarrelChance: 0.5, // 50% explosive when barrel selected
 	}
 
 	regularCount := 0

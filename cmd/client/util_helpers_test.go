@@ -15,6 +15,7 @@ import (
 	"github.com/opd-ai/venture/pkg/procgen/terrain"
 	"github.com/opd-ai/venture/pkg/procgen/vehicle"
 	"github.com/opd-ai/venture/pkg/rendering/palette"
+	"github.com/opd-ai/venture/pkg/saveload"
 )
 
 func TestGetLightConfig(t *testing.T) {
@@ -1846,5 +1847,425 @@ func TestAddHazardComponentsSpriteProperties(t *testing.T) {
 	}
 	if sprite.Layer != 3 {
 		t.Errorf("Sprite layer = %d, want 3", sprite.Layer)
+	}
+}
+
+// TestSerializeTutorialState tests tutorial state serialization.
+func TestSerializeTutorialState(t *testing.T) {
+	tests := []struct {
+		name           string
+		tutorialSystem *engine.EbitenTutorialSystem
+		wantNil        bool
+		wantEnabled    bool
+		wantShowUI     bool
+		wantStepIdx    int
+	}{
+		{
+			name:           "nil tutorial system",
+			tutorialSystem: nil,
+			wantNil:        true,
+		},
+		{
+			name:           "enabled tutorial at step 0",
+			tutorialSystem: engine.NewTutorialSystemWithSize(800, 600),
+			wantNil:        false,
+			wantEnabled:    true,
+			wantShowUI:     true,
+			wantStepIdx:    0,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			game := &engine.EbitenGame{
+				TutorialSystem: tt.tutorialSystem,
+			}
+			state := &saveload.PlayerState{}
+
+			serializeTutorialState(game, state)
+
+			if tt.wantNil {
+				if state.TutorialState != nil {
+					t.Error("Expected TutorialState to be nil")
+				}
+				return
+			}
+
+			if state.TutorialState == nil {
+				t.Fatal("Expected TutorialState to not be nil")
+			}
+			if state.TutorialState.Enabled != tt.wantEnabled {
+				t.Errorf("Enabled = %v, want %v", state.TutorialState.Enabled, tt.wantEnabled)
+			}
+			if state.TutorialState.ShowUI != tt.wantShowUI {
+				t.Errorf("ShowUI = %v, want %v", state.TutorialState.ShowUI, tt.wantShowUI)
+			}
+			if state.TutorialState.CurrentStepIdx != tt.wantStepIdx {
+				t.Errorf("CurrentStepIdx = %d, want %d", state.TutorialState.CurrentStepIdx, tt.wantStepIdx)
+			}
+		})
+	}
+}
+
+// TestSerializeTutorialStateCompletedSteps tests that completed steps are serialized.
+func TestSerializeTutorialStateCompletedSteps(t *testing.T) {
+	ts := engine.NewTutorialSystemWithSize(800, 600)
+	// Mark some steps as completed by advancing the tutorial
+	ts.AdvanceStep()
+
+	game := &engine.EbitenGame{TutorialSystem: ts}
+	state := &saveload.PlayerState{}
+
+	serializeTutorialState(game, state)
+
+	if state.TutorialState == nil {
+		t.Fatal("Expected TutorialState to not be nil")
+	}
+	if len(state.TutorialState.CompletedSteps) == 0 {
+		t.Error("Expected at least one completed step")
+	}
+}
+
+// TestDeserializeTutorialState tests tutorial state deserialization.
+func TestDeserializeTutorialState(t *testing.T) {
+	tests := []struct {
+		name           string
+		tutorialState  *saveload.TutorialStateData
+		tutorialSystem *engine.EbitenTutorialSystem
+		wantEnabled    bool
+		wantShowUI     bool
+	}{
+		{
+			name:           "nil state with valid system",
+			tutorialState:  nil,
+			tutorialSystem: engine.NewTutorialSystemWithSize(800, 600),
+			wantEnabled:    true, // default value
+			wantShowUI:     true, // default value
+		},
+		{
+			name:           "nil system with valid state",
+			tutorialState:  &saveload.TutorialStateData{Enabled: true, ShowUI: true},
+			tutorialSystem: nil,
+			wantEnabled:    true,
+			wantShowUI:     true,
+		},
+		{
+			name: "restore disabled tutorial",
+			tutorialState: &saveload.TutorialStateData{
+				Enabled:        false,
+				ShowUI:         false,
+				CurrentStepIdx: 3,
+				CompletedSteps: map[string]bool{"step1": true, "step2": true},
+			},
+			tutorialSystem: engine.NewTutorialSystemWithSize(800, 600),
+			wantEnabled:    false,
+			wantShowUI:     false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			game := &engine.EbitenGame{TutorialSystem: tt.tutorialSystem}
+			state := &saveload.PlayerState{TutorialState: tt.tutorialState}
+
+			deserializeTutorialState(game, state)
+
+			if tt.tutorialSystem != nil {
+				if tt.tutorialState != nil {
+					if tt.tutorialSystem.Enabled != tt.wantEnabled {
+						t.Errorf("Enabled = %v, want %v", tt.tutorialSystem.Enabled, tt.wantEnabled)
+					}
+					if tt.tutorialSystem.ShowUI != tt.wantShowUI {
+						t.Errorf("ShowUI = %v, want %v", tt.tutorialSystem.ShowUI, tt.wantShowUI)
+					}
+				}
+			}
+		})
+	}
+}
+
+// TestSerializeOnboardingState tests onboarding state serialization.
+func TestSerializeOnboardingState(t *testing.T) {
+	tests := []struct {
+		name              string
+		onboardingManager *engine.OnboardingManager
+		wantNil           bool
+	}{
+		{
+			name:              "nil onboarding manager",
+			onboardingManager: nil,
+			wantNil:           true,
+		},
+		{
+			name:              "valid onboarding manager",
+			onboardingManager: engine.NewOnboardingManager(nil),
+			wantNil:           false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			game := &engine.EbitenGame{
+				OnboardingManager: tt.onboardingManager,
+			}
+			state := &saveload.PlayerState{}
+
+			serializeOnboardingState(game, state)
+
+			if tt.wantNil {
+				if state.OnboardingState != nil {
+					t.Error("Expected OnboardingState to be nil")
+				}
+				return
+			}
+
+			if state.OnboardingState == nil {
+				t.Fatal("Expected OnboardingState to not be nil")
+			}
+			// Check that exported state has valid defaults
+			if !state.OnboardingState.Enabled {
+				t.Error("Expected Enabled to be true by default")
+			}
+		})
+	}
+}
+
+// TestDeserializeOnboardingState tests onboarding state deserialization.
+func TestDeserializeOnboardingState(t *testing.T) {
+	tests := []struct {
+		name              string
+		onboardingState   *saveload.OnboardingStateData
+		onboardingManager *engine.OnboardingManager
+	}{
+		{
+			name:              "nil state with valid manager",
+			onboardingState:   nil,
+			onboardingManager: engine.NewOnboardingManager(nil),
+		},
+		{
+			name:              "nil manager with valid state",
+			onboardingState:   &saveload.OnboardingStateData{Enabled: true},
+			onboardingManager: nil,
+		},
+		{
+			name: "restore skipped onboarding",
+			onboardingState: &saveload.OnboardingStateData{
+				CurrentState: 3, // StateComplete
+				Enabled:      false,
+				Skipped:      true,
+				PlayerClass:  1, // Mage
+			},
+			onboardingManager: engine.NewOnboardingManager(nil),
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			game := &engine.EbitenGame{OnboardingManager: tt.onboardingManager}
+			state := &saveload.PlayerState{OnboardingState: tt.onboardingState}
+
+			// Should not panic
+			deserializeOnboardingState(game, state)
+
+			// If both are valid, verify state was imported
+			if tt.onboardingManager != nil && tt.onboardingState != nil {
+				exported := tt.onboardingManager.ExportState()
+				if exported.Skipped != tt.onboardingState.Skipped {
+					t.Errorf("Skipped = %v, want %v", exported.Skipped, tt.onboardingState.Skipped)
+				}
+			}
+		})
+	}
+}
+
+// TestSerializeContextTutorialState tests context tutorial state serialization.
+func TestSerializeContextTutorialState(t *testing.T) {
+	tests := []struct {
+		name    string
+		ctProv  engine.ContextualTutorialProvider
+		wantNil bool
+	}{
+		{
+			name:    "nil context tutorial",
+			ctProv:  nil,
+			wantNil: true,
+		},
+		{
+			name:    "valid context tutorial",
+			ctProv:  &stubContextualTutorial{enabled: true},
+			wantNil: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			game := &engine.EbitenGame{
+				ContextualTutorial: tt.ctProv,
+			}
+			state := &saveload.PlayerState{}
+
+			serializeContextTutorialState(game, state)
+
+			if tt.wantNil {
+				if state.ContextTutorialState != nil {
+					t.Error("Expected ContextTutorialState to be nil")
+				}
+				return
+			}
+
+			if state.ContextTutorialState == nil {
+				t.Fatal("Expected ContextTutorialState to not be nil")
+			}
+		})
+	}
+}
+
+// TestDeserializeContextTutorialState tests context tutorial state deserialization.
+func TestDeserializeContextTutorialState(t *testing.T) {
+	tests := []struct {
+		name    string
+		ctState *saveload.ContextTutorialStateData
+		ctProv  engine.ContextualTutorialProvider
+	}{
+		{
+			name:    "nil state with valid provider",
+			ctState: nil,
+			ctProv:  &stubContextualTutorial{enabled: true},
+		},
+		{
+			name:    "nil provider with valid state",
+			ctState: &saveload.ContextTutorialStateData{Enabled: true},
+			ctProv:  nil,
+		},
+		{
+			name: "restore viewed topics",
+			ctState: &saveload.ContextTutorialStateData{
+				Enabled:      true,
+				ViewedTopics: map[string]int64{"movement": 1234567890, "combat": 1234567891},
+			},
+			ctProv: &stubContextualTutorial{enabled: true},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			game := &engine.EbitenGame{ContextualTutorial: tt.ctProv}
+			state := &saveload.PlayerState{ContextTutorialState: tt.ctState}
+
+			// Should not panic
+			deserializeContextTutorialState(game, state)
+		})
+	}
+}
+
+// stubContextualTutorial implements ContextualTutorialProvider for testing.
+type stubContextualTutorial struct {
+	enabled      bool
+	viewedTopics map[string]int64
+}
+
+func (s *stubContextualTutorial) Enable() {
+	s.enabled = true
+}
+
+func (s *stubContextualTutorial) Disable() {
+	s.enabled = false
+}
+
+func (s *stubContextualTutorial) IsEnabled() bool {
+	return s.enabled
+}
+
+func (s *stubContextualTutorial) ExportState() saveload.ContextTutorialStateData {
+	return saveload.ContextTutorialStateData{
+		Enabled:      s.enabled,
+		ViewedTopics: s.viewedTopics,
+	}
+}
+
+func (s *stubContextualTutorial) ImportState(data saveload.ContextTutorialStateData) {
+	s.enabled = data.Enabled
+	s.viewedTopics = data.ViewedTopics
+}
+
+// TestSerializeDeserializeRoundTrip tests round-trip serialization.
+func TestSerializeDeserializeTutorialRoundTrip(t *testing.T) {
+	// Setup original state
+	originalTS := engine.NewTutorialSystemWithSize(800, 600)
+	originalTS.AdvanceStep() // Complete step 0
+	originalTS.Enabled = true
+	originalTS.ShowUI = true
+
+	game1 := &engine.EbitenGame{TutorialSystem: originalTS}
+	state := &saveload.PlayerState{}
+
+	// Serialize
+	serializeTutorialState(game1, state)
+
+	// Create new game with fresh tutorial system
+	newTS := engine.NewTutorialSystemWithSize(800, 600)
+	game2 := &engine.EbitenGame{TutorialSystem: newTS}
+
+	// Deserialize
+	deserializeTutorialState(game2, state)
+
+	// Verify round-trip
+	if newTS.Enabled != originalTS.Enabled {
+		t.Errorf("Enabled mismatch: got %v, want %v", newTS.Enabled, originalTS.Enabled)
+	}
+	if newTS.ShowUI != originalTS.ShowUI {
+		t.Errorf("ShowUI mismatch: got %v, want %v", newTS.ShowUI, originalTS.ShowUI)
+	}
+}
+
+// TestSerializeDeserializeOnboardingRoundTrip tests onboarding round-trip.
+func TestSerializeDeserializeOnboardingRoundTrip(t *testing.T) {
+	// Setup original state
+	originalOM := engine.NewOnboardingManager(nil)
+	originalOM.TransitionToInGameTutorial()
+
+	game1 := &engine.EbitenGame{OnboardingManager: originalOM}
+	state := &saveload.PlayerState{}
+
+	// Serialize
+	serializeOnboardingState(game1, state)
+
+	// Create new manager
+	newOM := engine.NewOnboardingManager(nil)
+	game2 := &engine.EbitenGame{OnboardingManager: newOM}
+
+	// Deserialize
+	deserializeOnboardingState(game2, state)
+
+	// Verify round-trip
+	exportedOriginal := originalOM.ExportState()
+	exportedNew := newOM.ExportState()
+
+	if exportedNew.CurrentState != exportedOriginal.CurrentState {
+		t.Errorf("CurrentState mismatch: got %d, want %d", exportedNew.CurrentState, exportedOriginal.CurrentState)
+	}
+}
+
+// TestSerializeDeserializeContextTutorialRoundTrip tests context tutorial round-trip.
+func TestSerializeDeserializeContextTutorialRoundTrip(t *testing.T) {
+	// Setup original state
+	originalCT := &stubContextualTutorial{
+		enabled:      true,
+		viewedTopics: map[string]int64{"movement": 100, "combat": 200},
+	}
+
+	game1 := &engine.EbitenGame{ContextualTutorial: originalCT}
+	state := &saveload.PlayerState{}
+
+	// Serialize
+	serializeContextTutorialState(game1, state)
+
+	// Create new stub
+	newCT := &stubContextualTutorial{}
+	game2 := &engine.EbitenGame{ContextualTutorial: newCT}
+
+	// Deserialize
+	deserializeContextTutorialState(game2, state)
+
+	// Verify round-trip
+	if newCT.enabled != originalCT.enabled {
+		t.Errorf("enabled mismatch: got %v, want %v", newCT.enabled, originalCT.enabled)
+	}
+	if len(newCT.viewedTopics) != len(originalCT.viewedTopics) {
+		t.Errorf("viewedTopics length mismatch: got %d, want %d", len(newCT.viewedTopics), len(originalCT.viewedTopics))
 	}
 }

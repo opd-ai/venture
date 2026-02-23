@@ -35,7 +35,7 @@ This report consolidates 110 individual audit files across all packages in the V
 - **High Issues:** 1 (partially improved)
 - **Medium Issues:** 1
 - **Low Issues:** 4
-- **Details:** Test coverage improved from 43.5% to 44.7% (still below 65% target) due to Ebiten display server dependency; most code paths require `xvfb-run` in CI. Added unit tests for `createVehicleSpawnData`, `createCompanionSpawnData`, `initializeLogger`, `resolveSeedAndGenre`, `seededRandom`, `mapCharacterClassToAdvancedClass`, `createGenerationParams`, and serialization functions (`serializePosition`, `serializeHealth`, `serializeStats`, `serializeExperience`, `serializeInventory`, `serializeEquipment`, `serializeManaAndSpells`, `serializeQoLState`, and their deserialize counterparts). Added narrative helper tests (`setupNarrativeComponent`, `addInitialNarrativeEvent`, `addPlotPointsAsThreads`) and starter item tests (`generateStarterWeapon`, `generateStarterPotions`, `generateStarterArmor`, `addStarterItems`, `addTutorialQuest`) on 2026-02-23. Added additional deserialization tests (`deserializeEquipment`, `deserializeManaAndSpells`) and `addHazardComponents` tests on 2026-02-23. Three `time.Now()` usages in gameplay code were resolved via `TimeProvider` abstraction. `handlers.go` was split from 4,476 lines into `handlers.go` (3,894 lines) and `init_versions.go` (643 lines). Remaining low issues include save manager returning `nil` without a fallback on error and hard-coded doc version references.
+- **Details:** Test coverage improved from 43.5% to 45.2% (still below 65% target) due to Ebiten display server dependency; most code paths require `xvfb-run` in CI. Added unit tests for `createVehicleSpawnData`, `createCompanionSpawnData`, `initializeLogger`, `resolveSeedAndGenre`, `seededRandom`, `mapCharacterClassToAdvancedClass`, `createGenerationParams`, and serialization functions (`serializePosition`, `serializeHealth`, `serializeStats`, `serializeExperience`, `serializeInventory`, `serializeEquipment`, `serializeManaAndSpells`, `serializeQoLState`, and their deserialize counterparts). Added narrative helper tests (`setupNarrativeComponent`, `addInitialNarrativeEvent`, `addPlotPointsAsThreads`) and starter item tests (`generateStarterWeapon`, `generateStarterPotions`, `generateStarterArmor`, `addStarterItems`, `addTutorialQuest`) on 2026-02-23. Added additional deserialization tests (`deserializeEquipment`, `deserializeManaAndSpells`) and `addHazardComponents` tests on 2026-02-23. Added tutorial serialization tests (`serializeTutorialState`, `deserializeTutorialState`, `serializeOnboardingState`, `deserializeOnboardingState`, `serializeContextTutorialState`, `deserializeContextTutorialState`) on 2026-02-23. Three `time.Now()` usages in gameplay code were resolved via `TimeProvider` abstraction. `handlers.go` was split from 4,476 lines into `handlers.go` (3,894 lines) and `init_versions.go` (643 lines). Remaining low issues include save manager returning `nil` without a fallback on error and hard-coded doc version references.
 
 ---
 
@@ -1042,9 +1042,10 @@ This report consolidates 110 individual audit files across all packages in the V
 
 ### Priority 1: High Issues
 
-1. **cmd/client — Test Coverage (39.1% < 65% target) - PARTIALLY IMPROVED 2026-02-22**
+1. **cmd/client — Test Coverage (45.2% < 65% target) - PARTIALLY IMPROVED 2026-02-23**
    - Most paths require Ebiten display server; improvement constrained to helper functions not needing `xvfb-run`. Target: 50%+ coverage by adding unit tests for pure-Go helpers in `util.go`.
-   - **Progress 2026-02-22**: Added tests for `createVehicleSpawnData`, `createCompanionSpawnData`, `initializeLogger`, `resolveSeedAndGenre`, and `seededRandom`. Coverage improved from 38.4% to 39.1%. Additional tests require Ebiten display server (constrained by CI environment).
+   - **Progress 2026-02-22**: Added tests for `createVehicleSpawnData`, `createCompanionSpawnData`, `initializeLogger`, `resolveSeedAndGenre`, and `seededRandom`. Coverage improved from 38.4% to 39.1%.
+   - **Progress 2026-02-23**: Added tutorial serialization tests (`serializeTutorialState`, `deserializeTutorialState`, `serializeOnboardingState`, `deserializeOnboardingState`, `serializeContextTutorialState`, `deserializeContextTutorialState`). Coverage improved from 44.7% to 45.2%.
 
 2. **pkg/rendering (root) — Dead Code / Type Duplication (RESOLVED 2026-02-22)**
    - ~~`Palette` and `SpriteConfig` types are defined but have 0 imports.~~ Dead code removed. Package now serves as namespace documentation only. Users should import from `pkg/rendering/palette/` and `pkg/rendering/sprites/` directly.
@@ -1105,7 +1106,7 @@ The following patterns affect multiple packages and represent systemic concerns:
 
 ### 2. Test Environment Limitation (X11/Ebiten Dependency)
 **Affected:** `cmd/client`, `pkg/balance`, `pkg/engine` (all sub-audits), `pkg/world/housing`, integration packages
-**Pattern:** Packages with transitive Ebiten dependencies fail in headless CI without `xvfb-run`. Several packages cannot measure actual test coverage. The `cmd/client` package reports 38% coverage because Ebiten UI code cannot be unit-tested without a display server.
+**Pattern:** Packages with transitive Ebiten dependencies fail in headless CI without `xvfb-run`. Several packages cannot measure actual test coverage. The `cmd/client` package reports 45% coverage because Ebiten UI code cannot be unit-tested without a display server.
 
 ### 3. ECS Component Cache Not Updated for New Components (RESOLVED 2026-02-22)
 **Affected:** ~~`pkg/companion/learning`, `pkg/integration/guild_vehicle`~~
@@ -1136,7 +1137,7 @@ The following patterns affect multiple packages and represent systemic concerns:
 **Pattern:** The `modManager` is created at server startup but immediately discarded (`_ = modManager`), preventing any mod rules from being applied to running game systems. This is a silent integration failure that negates the entire modding subsystem on the server.
 
 ### 10. Coverage Below Target in Ebiten-Dependent Packages
-**Affected:** `cmd/client` (38%), `pkg/rendering/animation` (68.4%), `pkg/world/housing` (78.6%), `pkg/rendering/ui` (80.1%), `pkg/network` (82.6%), `pkg/rendering/sprites` (82.4%)
+**Affected:** `cmd/client` (45%), `pkg/rendering/animation` (68.4%), `pkg/world/housing` (78.6%), `pkg/rendering/ui` (80.1%), `pkg/network` (82.6%), `pkg/rendering/sprites` (82.4%)
 **Pattern:** Packages with Ebiten rendering code or complex integration surfaces have lower coverage than the 65% target or are just above it. All other packages substantially exceed the target (average 82.4%).
 
 ---

@@ -18,6 +18,7 @@ import (
 	"github.com/opd-ai/venture/pkg/config"
 	"github.com/opd-ai/venture/pkg/engine"
 	"github.com/opd-ai/venture/pkg/engine/prestige"
+	"github.com/opd-ai/venture/pkg/engine/qol"
 	"github.com/opd-ai/venture/pkg/logging"
 	"github.com/opd-ai/venture/pkg/modding"
 	"github.com/opd-ai/venture/pkg/network"
@@ -430,6 +431,19 @@ func createGameWorld(logger *logrus.Logger) (*engine.World, *engine.EnhancedChat
 	prestigeSystem := prestige.NewSystemWithLogger(logger)
 	world.AddSystem(&prestigeSystemWrapper{system: prestigeSystem})
 	worldLogger.Debug("prestige system initialized for multiplayer sync")
+
+	// INTEGRATION FIX [AUDIT.md]: QoL System Server Registration
+	// Gap: QoL system was client-only, causing craft queue validation issues in multiplayer
+	// Fix: Initialize and register QoL system on server for authoritative craft queue validation
+	// Impact: Craft queues, guild invitations, and other QoL features properly validated server-side
+	qolManager := qol.NewManager(qol.Config{
+		AutoLoot:     true,  // Server-side loot validation
+		AutoSort:     true,  // Storage sort validation
+		QuickDeposit: true,  // Quick deposit validation
+	})
+	qolSystem := engine.NewQoLSystem(qolManager)
+	world.AddSystem(qolSystem)
+	worldLogger.Debug("QoL system initialized for multiplayer validation")
 
 	if logger.GetLevel() >= logrus.DebugLevel {
 		worldLogger.Debug("game systems initialized")

@@ -181,7 +181,11 @@ func (m *StoryEventManager) Deserialize(data []byte) error {
 }
 
 // Helper functions for serialization
+// These unexported functions convert between domain types and JSON-serializable forms.
+// EventType/ConflictType/etc. are converted to int for stable JSON representation.
 
+// serializeMemoryEvent converts a MemoryEvent to its JSON-serializable form.
+// The Timestamp field is preserved as Unix seconds (int64).
 func serializeMemoryEvent(e MemoryEvent) SerializableMemoryEvent {
 	return SerializableMemoryEvent{
 		Timestamp:    e.Timestamp,
@@ -193,6 +197,8 @@ func serializeMemoryEvent(e MemoryEvent) SerializableMemoryEvent {
 	}
 }
 
+// deserializeMemoryEvent restores a MemoryEvent from its JSON-serializable form.
+// The int type field is converted back to EventType.
 func deserializeMemoryEvent(e SerializableMemoryEvent) MemoryEvent {
 	return MemoryEvent{
 		Timestamp:    e.Timestamp,
@@ -204,6 +210,8 @@ func deserializeMemoryEvent(e SerializableMemoryEvent) MemoryEvent {
 	}
 }
 
+// serializeCompanionMemory converts a CompanionMemory to its JSON-serializable form.
+// All contained MemoryEvents are recursively serialized.
 func serializeCompanionMemory(m *CompanionMemory) *SerializableCompanionMemory {
 	events := make([]SerializableMemoryEvent, len(m.Events))
 	for i, e := range m.Events {
@@ -217,6 +225,8 @@ func serializeCompanionMemory(m *CompanionMemory) *SerializableCompanionMemory {
 	}
 }
 
+// deserializeCompanionMemory restores a CompanionMemory from its JSON-serializable form.
+// All contained SerializableMemoryEvents are recursively deserialized.
 func deserializeCompanionMemory(m *SerializableCompanionMemory) *CompanionMemory {
 	events := make([]MemoryEvent, len(m.Events))
 	for i, e := range m.Events {
@@ -230,6 +240,8 @@ func deserializeCompanionMemory(m *SerializableCompanionMemory) *CompanionMemory
 	}
 }
 
+// serializeQuestObjective converts a QuestObjective to its JSON-serializable form.
+// ObjectiveType is converted to int for stable JSON representation.
 func serializeQuestObjective(o QuestObjective) SerializableQuestObjective {
 	return SerializableQuestObjective{
 		Description: o.Description,
@@ -241,6 +253,8 @@ func serializeQuestObjective(o QuestObjective) SerializableQuestObjective {
 	}
 }
 
+// deserializeQuestObjective restores a QuestObjective from its JSON-serializable form.
+// The int type field is converted back to ObjectiveType.
 func deserializeQuestObjective(o SerializableQuestObjective) QuestObjective {
 	return QuestObjective{
 		Description: o.Description,
@@ -252,6 +266,8 @@ func deserializeQuestObjective(o SerializableQuestObjective) QuestObjective {
 	}
 }
 
+// serializeConsequence converts a Consequence to its JSON-serializable form.
+// ConsequenceType is converted to int for stable JSON representation.
 func serializeConsequence(c Consequence) SerializableConsequence {
 	return SerializableConsequence{
 		Type:        int(c.Type),
@@ -261,6 +277,8 @@ func serializeConsequence(c Consequence) SerializableConsequence {
 	}
 }
 
+// deserializeConsequence restores a Consequence from its JSON-serializable form.
+// The int type field is converted back to ConsequenceType.
 func deserializeConsequence(c SerializableConsequence) Consequence {
 	return Consequence{
 		Type:        ConsequenceType(c.Type),
@@ -270,6 +288,8 @@ func deserializeConsequence(c SerializableConsequence) Consequence {
 	}
 }
 
+// serializePersonalQuest converts a PersonalQuest to its JSON-serializable form.
+// StoryBranches and PersonalityReqs are excluded as they are regenerated on demand.
 func serializePersonalQuest(q *PersonalQuest) *SerializablePersonalQuest {
 	objectives := make([]SerializableQuestObjective, len(q.Objectives))
 	for i, o := range q.Objectives {
@@ -293,6 +313,8 @@ func serializePersonalQuest(q *PersonalQuest) *SerializablePersonalQuest {
 	}
 }
 
+// deserializePersonalQuest restores a PersonalQuest from its JSON-serializable form.
+// StoryBranches and PersonalityReqs are not restored; regenerate if needed.
 func deserializePersonalQuest(q *SerializablePersonalQuest) *PersonalQuest {
 	objectives := make([]QuestObjective, len(q.Objectives))
 	for i, o := range q.Objectives {
@@ -317,6 +339,9 @@ func deserializePersonalQuest(q *SerializablePersonalQuest) *PersonalQuest {
 	}
 }
 
+// serializeCompanionConflict converts a CompanionConflict to its JSON-serializable form.
+// TimeSinceStart (time.Duration) is stored as nanoseconds (int64) for precise restoration.
+// ResolutionQuest is excluded; regenerate if needed.
 func serializeCompanionConflict(c CompanionConflict) SerializableCompanionConflict {
 	return SerializableCompanionConflict{
 		Companion1:       c.Companion1,
@@ -329,6 +354,9 @@ func serializeCompanionConflict(c CompanionConflict) SerializableCompanionConfli
 	}
 }
 
+// deserializeCompanionConflict restores a CompanionConflict from its JSON-serializable form.
+// TimeSinceStartNs (int64 nanoseconds) is converted back to time.Duration.
+// ResolutionQuest is not restored; regenerate if needed.
 func deserializeCompanionConflict(c SerializableCompanionConflict) CompanionConflict {
 	return CompanionConflict{
 		Companion1:     c.Companion1,
@@ -342,6 +370,8 @@ func deserializeCompanionConflict(c SerializableCompanionConflict) CompanionConf
 	}
 }
 
+// serializeCrossCompanionStory converts a CrossCompanionStory to its JSON-serializable form.
+// The Narrative field is excluded; regenerate if needed after deserialization.
 func serializeCrossCompanionStory(s *CrossCompanionStory) *SerializableCrossCompanionStory {
 	events := make([]SerializableMemoryEvent, len(s.Events))
 	for i, e := range s.Events {
@@ -358,6 +388,8 @@ func serializeCrossCompanionStory(s *CrossCompanionStory) *SerializableCrossComp
 	}
 }
 
+// deserializeCrossCompanionStory restores a CrossCompanionStory from its JSON-serializable form.
+// The Narrative field is not restored; regenerate if needed.
 func deserializeCrossCompanionStory(s *SerializableCrossCompanionStory) *CrossCompanionStory {
 	events := make([]MemoryEvent, len(s.Events))
 	for i, e := range s.Events {

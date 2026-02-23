@@ -59,13 +59,13 @@ func TestNewStoryEventManagerWithTimeProvider(t *testing.T) {
 	companionID := uint64(100)
 	manager.RecordMemory(companionID, EventTypeCombat, "Test event")
 
-	memories := manager.GetDialogueContext(companionID, 1)
-	if len(memories) == 0 {
+	context := manager.GetDialogueContext(companionID, 1)
+	if len(context.RecentEvents) == 0 {
 		t.Fatal("expected at least one memory")
 	}
 
-	if memories[0].Timestamp != fixedTime {
-		t.Errorf("expected timestamp %d, got %d", fixedTime, memories[0].Timestamp)
+	if context.RecentEvents[0].Timestamp != fixedTime {
+		t.Errorf("expected timestamp %d, got %d", fixedTime, context.RecentEvents[0].Timestamp)
 	}
 }
 

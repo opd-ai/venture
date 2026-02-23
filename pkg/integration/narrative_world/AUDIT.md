@@ -1,5 +1,5 @@
 # Audit: github.com/opd-ai/venture/pkg/integration/narrative_world
-**Date**: 2026-02-22
+**Date**: 2026-02-23 (updated)
 **Auditor**: GitHub Copilot (META_AUDIT v2)
 **Status**: Complete
 
@@ -26,8 +26,8 @@ None identified.
 - [x] **Deterministic procgen** — **RESOLVED 2026-02-22**: `StoryEventManager` now supports `WithTimeProvider(tp)` functional option in `NewStoryEventManager()`. Callers can inject a deterministic `TimeProvider` (e.g., game clock) for consistent memory event timestamps. The manager uses its own `TimeProvider` if set, otherwise falls back to package default.
 
 ### Low Severity
-- [ ] **Doc coverage** — `serialization.go`: Several helper functions (`serializeMemoryEvent`, `deserializeMemoryEvent`, etc.) lack godoc comments. While they are unexported and straightforward, adding brief comments would improve maintainability.
-- [ ] **Error handling** — `conflicts.go:8`: `time` import used only for `time.Duration` in struct; consider using explicit type alias or documentation to clarify time representation in `CompanionConflict.TimeSinceStart`.
+- [x] **Doc coverage** — **RESOLVED 2026-02-23**: All 14 unexported serialization helper functions (`serializeMemoryEvent`, `deserializeMemoryEvent`, `serializeCompanionMemory`, `deserializeCompanionMemory`, `serializeQuestObjective`, `deserializeQuestObjective`, `serializeConsequence`, `deserializeConsequence`, `serializePersonalQuest`, `deserializePersonalQuest`, `serializeCompanionConflict`, `deserializeCompanionConflict`, `serializeCrossCompanionStory`, `deserializeCrossCompanionStory`) now have godoc comments explaining their purpose and serialization behavior.
+- [x] **Error handling** — **RESOLVED 2026-02-23**: `CompanionConflict` struct now has godoc comment explaining the time representation difference between `MemoryEvent.Timestamp` (Unix seconds) and `CompanionConflict.TimeSinceStart` (time.Duration via deltaTime). Fixed test bug in `manager_test.go` where `GetDialogueContext` return value was incorrectly accessed.
 
 ## Input Integration
 | Input Source | Status | Notes |
@@ -76,5 +76,5 @@ The package properly integrates with the engine via ECS System pattern and depen
 
 ## Recommendations
 1. ~~**[MED]** Consider making the `TimeProvider` configurable at `StoryEventManager` level rather than package-global, to support multiple managers with different time sources in tests or federated multiplayer scenarios.~~ **DONE 2026-02-22**: `WithTimeProvider(tp)` functional option added to `NewStoryEventManager()`.
-2. **[LOW]** Add godoc comments to unexported serialization helper functions for code clarity.
-3. **[LOW]** Document the relationship between `MemoryEvent.Timestamp` (Unix seconds) and `CompanionConflict.TimeSinceStart` (Go Duration) to clarify time representation choices.
+2. ~~**[LOW]** Add godoc comments to unexported serialization helper functions for code clarity.~~ **DONE 2026-02-23**: All 14 helper functions documented.
+3. ~~**[LOW]** Document the relationship between `MemoryEvent.Timestamp` (Unix seconds) and `CompanionConflict.TimeSinceStart` (Go Duration) to clarify time representation choices.~~ **DONE 2026-02-23**: `CompanionConflict` struct has comprehensive godoc comment.

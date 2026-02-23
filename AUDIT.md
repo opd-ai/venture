@@ -13,9 +13,9 @@ This report consolidates 110 individual audit files across all packages in the V
 | Severity | Open Issues |
 |----------|-------------|
 | High     | 1           |
-| Medium   | ~27         |
-| Low      | ~123        |
-| **Total**| **~151**    |
+| Medium   | ~26         |
+| Low      | ~120        |
+| **Total**| **~147**    |
 
 **Historical totals (including fixed):** ~32 High, ~95 Medium, ~227 Low issues were identified across all audits. The vast majority have been resolved, resulting in an overall codebase health status of **Good**.
 
@@ -357,9 +357,9 @@ This report consolidates 110 individual audit files across all packages in the V
 ### pkg/integration/narrative_world — Narrative & World State Integration
 - **Source:** `pkg/integration/narrative_world/AUDIT.md`
 - **High Issues:** 0
-- **Medium Issues:** 1
-- **Low Issues:** 2
-- **Details:** 90.7% coverage. `RealTimeProvider.Now()` uses `time.Now().Unix()` for memory event timestamps—while the abstraction exists for testing, production timestamps vary across runs. Several serialization helper functions lack godoc comments. `conflicts.go` uses `time.Duration` in a struct where documentation could be clearer.
+- **Medium Issues:** 0 (1 fixed)
+- **Low Issues:** 0 (2 fixed)
+- **Details:** 90.7% coverage. **RESOLVED 2026-02-23**: All 14 unexported serialization helper functions now have godoc comments. `CompanionConflict` struct now has comprehensive godoc documenting the time representation difference between `MemoryEvent.Timestamp` (Unix seconds) and `TimeSinceStart` (time.Duration). Fixed test bug in `manager_test.go` where `GetDialogueContext` return value was incorrectly accessed.
 
 ---
 

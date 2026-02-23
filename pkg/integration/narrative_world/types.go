@@ -152,6 +152,11 @@ func (c ConsequenceType) String() string {
 }
 
 // CompanionConflict represents tension between companions
+// CompanionConflict represents an active or resolved conflict between two companions.
+// Note on time representation:
+//   - TimeSinceStart uses time.Duration for in-memory elapsed time tracking
+//   - This differs from MemoryEvent.Timestamp which uses Unix seconds (int64)
+//   - For serialization, TimeSinceStart is stored as nanoseconds to preserve precision
 type CompanionConflict struct {
 	Companion1      uint64
 	Companion2      uint64
@@ -160,7 +165,7 @@ type CompanionConflict struct {
 	Severity        float64        // 0.0-1.0
 	ResolutionQuest *PersonalQuest // Optional quest to resolve
 	Active          bool
-	TimeSinceStart  time.Duration
+	TimeSinceStart  time.Duration  // Elapsed time since conflict began (updated via deltaTime)
 }
 
 // ConflictType categorizes companion conflicts

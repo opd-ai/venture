@@ -5,6 +5,7 @@ package main
 
 import (
 	"image/color"
+	"io"
 	"math/rand"
 	"testing"
 
@@ -16,7 +17,16 @@ import (
 	"github.com/opd-ai/venture/pkg/procgen/vehicle"
 	"github.com/opd-ai/venture/pkg/rendering/palette"
 	"github.com/opd-ai/venture/pkg/saveload"
+	"github.com/sirupsen/logrus"
 )
+
+// createTestLogger creates a logrus logger configured for testing with suppressed output.
+func createTestLogger() *logrus.Logger {
+	logger := logrus.New()
+	logger.SetOutput(io.Discard)
+	logger.SetLevel(logrus.WarnLevel)
+	return logger
+}
 
 func TestGetLightConfig(t *testing.T) {
 	tests := []struct {
@@ -2267,5 +2277,224 @@ func TestSerializeDeserializeContextTutorialRoundTrip(t *testing.T) {
 	}
 	if len(newCT.viewedTopics) != len(originalCT.viewedTopics) {
 		t.Errorf("viewedTopics length mismatch: got %d, want %d", len(newCT.viewedTopics), len(originalCT.viewedTopics))
+	}
+}
+
+// TestCalculateLearningRate tests the companion learning rate calculation.
+func TestCalculateLearningRate(t *testing.T) {
+	tests := []struct {
+		name           string
+		companionCount int
+		expectedRate   float64
+	}{
+		{"zero companions", 0, 1.0},
+		{"one companion", 1, 1.1},
+		{"five companions", 5, 1.5},
+		{"ten companions (max cap)", 10, 2.0},
+		{"fifteen companions (capped at max)", 15, 2.0},
+		{"twenty companions (capped at max)", 20, 2.0},
+		{"hundred companions (capped at max)", 100, 2.0},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			rate := calculateLearningRate(tt.companionCount)
+			if rate != tt.expectedRate {
+				t.Errorf("calculateLearningRate(%d) = %f, want %f", tt.companionCount, rate, tt.expectedRate)
+			}
+		})
+	}
+}
+
+// TestCalculateLearningRateBoundary tests edge cases around the 2.0 cap boundary.
+func TestCalculateLearningRateBoundary(t *testing.T) {
+	// Test exact boundary: 10 companions = 1.0 + 1.0 = 2.0
+	rate10 := calculateLearningRate(10)
+	if rate10 != 2.0 {
+		t.Errorf("boundary at 10 companions: got %f, want 2.0", rate10)
+	}
+
+	// Test just below boundary: 9 companions = 1.0 + 0.9 = 1.9
+	rate9 := calculateLearningRate(9)
+	if rate9 != 1.9 {
+		t.Errorf("below boundary at 9 companions: got %f, want 1.9", rate9)
+	}
+
+	// Test just above boundary: 11 companions should still cap at 2.0
+	rate11 := calculateLearningRate(11)
+	if rate11 != 2.0 {
+		t.Errorf("above boundary at 11 companions: got %f, want 2.0", rate11)
+	}
+}
+
+// TestCalculateLearningRateNegativeInput tests behavior with negative input.
+func TestCalculateLearningRateNegativeInput(t *testing.T) {
+	// While negative companion counts shouldn't happen in practice,
+	// the function should handle them gracefully
+	rate := calculateLearningRate(-5)
+	expectedRate := 1.0 + (float64(-5) * 0.1) // = 0.5
+	if rate != expectedRate {
+		t.Errorf("calculateLearningRate(-5) = %f, want %f", rate, expectedRate)
+	}
+}
+
+// TestCalculatePlayerSpawnPosition tests player spawn position calculation.
+func TestCalculatePlayerSpawnPosition(t *testing.T) {
+	// Create a mock logger for testing
+	logger := createTestLogger()
+	clientLogger := logger.WithField("test", "spawn_position")
+
+	tests := []struct {
+		name       string
+		terrain    *terrain.Terrain
+		expectedX  float64
+		expectedY  float64
+		expectFail bool // true if should use fallback
+	}{
+		{
+			name: "single room at origin",
+			terrain: &terrain.Terrain{
+				Rooms: []*terrain.Room{
+					{X: 0, Y: 0, Width: 10, Height: 10},
+				},
+			},
+			expectedX: float64(5 * tileSize), // center = (0+10/2, 0+10/2) = (5, 5)
+			expectedY: float64(5 * tileSize),
+		},
+		{
+			name: "room offset from origin",
+			terrain: &terrain.Terrain{
+				Rooms: []*terrain.Room{
+					{X: 10, Y: 20, Width: 8, Height: 6},
+				},
+			},
+			expectedX: float64((10 + 4) * tileSize), // center = (10+8/2, 20+6/2) = (14, 23)
+			expectedY: float64((20 + 3) * tileSize),
+		},
+		{
+			name: "multiple rooms (uses first)",
+			terrain: &terrain.Terrain{
+				Rooms: []*terrain.Room{
+					{X: 5, Y: 5, Width: 4, Height: 4},
+					{X: 20, Y: 20, Width: 10, Height: 10},
+				},
+			},
+			expectedX: float64((5 + 2) * tileSize), // first room center = (7, 7)
+			expectedY: float64((5 + 2) * tileSize),
+		},
+		{
+			name: "empty terrain (fallback)",
+			terrain: &terrain.Terrain{
+				Rooms: []*terrain.Room{},
+			},
+			expectedX:  fallbackPlayerX,
+			expectedY:  fallbackPlayerY,
+			expectFail: true,
+		},
+		{
+			name: "nil rooms slice (fallback)",
+			terrain: &terrain.Terrain{
+				Rooms: nil,
+			},
+			expectedX:  fallbackPlayerX,
+			expectedY:  fallbackPlayerY,
+			expectFail: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			x, y := calculatePlayerSpawnPosition(tt.terrain, clientLogger)
+			if x != tt.expectedX {
+				t.Errorf("X position = %f, want %f", x, tt.expectedX)
+			}
+			if y != tt.expectedY {
+				t.Errorf("Y position = %f, want %f", y, tt.expectedY)
+			}
+		})
+	}
+}
+
+// TestCalculatePlayerSpawnPositionLargeRoom tests with unusually large rooms.
+func TestCalculatePlayerSpawnPositionLargeRoom(t *testing.T) {
+	logger := createTestLogger()
+	clientLogger := logger.WithField("test", "spawn_large_room")
+
+	largeRoom := &terrain.Room{
+		X:      0,
+		Y:      0,
+		Width:  1000,
+		Height: 500,
+	}
+	testTerrain := &terrain.Terrain{
+		Rooms: []*terrain.Room{largeRoom},
+	}
+
+	x, y := calculatePlayerSpawnPosition(testTerrain, clientLogger)
+
+	// Center of (0,0,1000,500) = (500, 250)
+	expectedX := float64(500 * tileSize)
+	expectedY := float64(250 * tileSize)
+
+	if x != expectedX {
+		t.Errorf("large room X = %f, want %f", x, expectedX)
+	}
+	if y != expectedY {
+		t.Errorf("large room Y = %f, want %f", y, expectedY)
+	}
+}
+
+// TestCalculatePlayerSpawnPositionOddDimensions tests rooms with odd dimensions.
+func TestCalculatePlayerSpawnPositionOddDimensions(t *testing.T) {
+	logger := createTestLogger()
+	clientLogger := logger.WithField("test", "spawn_odd_dims")
+
+	// Odd dimensions: 7x9 room at (3, 5)
+	oddRoom := &terrain.Room{
+		X:      3,
+		Y:      5,
+		Width:  7,
+		Height: 9,
+	}
+	testTerrain := &terrain.Terrain{
+		Rooms: []*terrain.Room{oddRoom},
+	}
+
+	x, y := calculatePlayerSpawnPosition(testTerrain, clientLogger)
+
+	// Center uses integer division: (3+7/2, 5+9/2) = (3+3, 5+4) = (6, 9)
+	expectedX := float64(6 * tileSize)
+	expectedY := float64(9 * tileSize)
+
+	if x != expectedX {
+		t.Errorf("odd dims X = %f, want %f", x, expectedX)
+	}
+	if y != expectedY {
+		t.Errorf("odd dims Y = %f, want %f", y, expectedY)
+	}
+}
+
+// BenchmarkCalculateLearningRate benchmarks the learning rate calculation.
+func BenchmarkCalculateLearningRate(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		_ = calculateLearningRate(i % 20) // vary companion count 0-19
+	}
+}
+
+// BenchmarkCalculatePlayerSpawnPosition benchmarks spawn position calculation.
+func BenchmarkCalculatePlayerSpawnPosition(b *testing.B) {
+	logger := createTestLogger()
+	clientLogger := logger.WithField("bench", "spawn_position")
+
+	testTerrain := &terrain.Terrain{
+		Rooms: []*terrain.Room{
+			{X: 10, Y: 10, Width: 20, Height: 20},
+			{X: 50, Y: 50, Width: 15, Height: 15},
+		},
+	}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_, _ = calculatePlayerSpawnPosition(testTerrain, clientLogger)
 	}
 }

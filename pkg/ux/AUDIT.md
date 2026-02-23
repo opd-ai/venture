@@ -26,7 +26,7 @@ _None identified_
 - [x] **time.Now usage** — `time.Now().UnixNano()` used for default seed when config seed is 0. This is documented and intentional for varied test runs, and `types.go:93` already clarifies this is for UX validation timing only, not game content generation. **RESOLVED**: Comment already present at `types.go:93`.
 
 ### Low Severity
-- [ ] **Documentation comment style** — Log examples in doc.go use `log.Printf` which differs from project standard of `logrus.WithFields`. Consider updating examples to use structured logging pattern. (`doc.go:50`, `journeys.go:30`)
+- [x] **Documentation comment style** — ~~Log examples in doc.go use `log.Printf` which differs from project standard of `logrus.WithFields`~~ **RESOLVED 2026-02-23**: Updated to use `logrus.WithFields(...).Warn()` and `logrus.WithFields(...).Info()` (`doc.go:50`, `journeys.go:30`)
 - [ ] **Exported function location** — `GetSummary()` is a free function in `validator.go` rather than a method on `JourneyValidator`, which is inconsistent with the package's OO design pattern. (`validator.go:217`)
 
 ## Input Integration

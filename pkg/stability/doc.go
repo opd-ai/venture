@@ -27,9 +27,12 @@
 //
 //	report, err := monitor.Run(serverInstance)
 //	if err != nil {
-//	    log.Fatalf("Stability test failed: %v", err)
+//	    logrus.WithError(err).Fatal("stability test failed")
 //	}
 //
-//	fmt.Printf("Uptime: %v, Crashes: %d, Memory Leaks: %d\n",
-//	    report.TotalUptime, report.CrashCount, report.MemoryLeakCount)
+//	logrus.WithFields(logrus.Fields{
+//	    "uptime":        report.TotalUptime,
+//	    "crash_count":   report.CrashCount,
+//	    "memory_leaks":  report.MemoryLeakCount,
+//	}).Info("stability test completed")
 package stability

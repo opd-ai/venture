@@ -385,8 +385,8 @@ This report consolidates 110 individual audit files across all packages in the V
 - **Source:** `pkg/integration/world_events/AUDIT.md`
 - **High Issues:** 0
 - **Medium Issues:** 0
-- **Low Issues:** 2
-- **Details:** 92.9% coverage; all 6 `time.Now()` calls converted to `TimeProvider`. `ShouldSpawnEvent` still uses `time.Since(lastEventTime)` (real clock); full determinism would require `TimeProvider` here too. `doc.go` example uses `log.Fatal(err)` instead of logrus.
+- **Low Issues:** 2 (1 fixed)
+- **Details:** 92.9% coverage; all 6 `time.Now()` calls converted to `TimeProvider`. `ShouldSpawnEvent` still uses `time.Since(lastEventTime)` (real clock); full determinism would require `TimeProvider` here too. **RESOLVED 2026-02-23**: `doc.go` example updated to use `logrus.WithError(err).Fatal()` instead of `log.Fatal(err)`.
 
 ---
 
@@ -943,8 +943,8 @@ This report consolidates 110 individual audit files across all packages in the V
 - **Source:** `pkg/stability/AUDIT.md`
 - **High Issues:** 0
 - **Medium Issues:** 0
-- **Low Issues:** 0
-- **Details:** 94.4% coverage; no issues found. Panic counters, uptime tracking, and health checks all correct and well-tested.
+- **Low Issues:** 0 (1 fixed)
+- **Details:** 94.4% coverage; no issues found. Panic counters, uptime tracking, and health checks all correct and well-tested. **RESOLVED 2026-02-23**: `doc.go` example updated to use `logrus.WithError(err).Fatal()` and `logrus.WithFields(...).Info()` instead of `log.Fatalf` and `fmt.Printf`.
 
 ---
 
@@ -952,8 +952,8 @@ This report consolidates 110 individual audit files across all packages in the V
 - **Source:** `pkg/ux/AUDIT.md`
 - **High Issues:** 0
 - **Medium Issues:** 0 (1 fixed)
-- **Low Issues:** 1
-- **Details:** 96.5% coverage. `time.Now().UnixNano()` used as default seed when config seed is 0—intentional for varied test runs. **RESOLVED 2026-02-23**: Upon review, `types.go:93` already contains clarifying comment that this controls UX validation timing only, not game content generation.
+- **Low Issues:** 1 (1 fixed)
+- **Details:** 96.5% coverage. `time.Now().UnixNano()` used as default seed when config seed is 0—intentional for varied test runs. **RESOLVED 2026-02-23**: Upon review, `types.go:93` already contains clarifying comment that this controls UX validation timing only, not game content generation. **RESOLVED 2026-02-23**: `doc.go` examples updated to use `logrus.WithFields(...).Warn()` and `logrus.WithFields(...).Info()` instead of `log.Printf` and `fmt.Printf`.
 
 ---
 

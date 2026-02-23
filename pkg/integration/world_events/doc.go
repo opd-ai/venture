@@ -18,7 +18,7 @@
 //	// Generate event from guild war
 //	event, err := manager.GenerateEvent(world_events.TriggerGuildWar, params)
 //	if err != nil {
-//	    log.Fatal(err)
+//	    logrus.WithError(err).Fatal("failed to generate event")
 //	}
 //
 //	// Process event impacts on world state

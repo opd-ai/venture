@@ -47,15 +47,20 @@
 //	results := validator.ValidateAll()
 //	for _, result := range results {
 //	    if !result.Passed {
-//	        log.Printf("Journey %s failed: %s", result.Name, result.Error)
+//	        logrus.WithFields(logrus.Fields{
+//	            "journey": result.Name,
+//	            "error":   result.Error,
+//	        }).Warn("journey validation failed")
 //	    }
 //	}
 //
 // Validate specific journey:
 //
 //	result := validator.ValidateJourney(ux.JourneyNewPlayer)
-//	fmt.Printf("Completion rate: %.1f%%\n", result.CompletionRate*100)
-//	fmt.Printf("Average duration: %v\n", result.AverageDuration)
+//	logrus.WithFields(logrus.Fields{
+//	    "completion_rate":  result.CompletionRate * 100,
+//	    "average_duration": result.AverageDuration,
+//	}).Info("journey validation complete")
 //
 // # Implementation
 //

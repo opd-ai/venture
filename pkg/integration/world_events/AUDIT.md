@@ -27,7 +27,7 @@ None
 
 ### Low Severity
 - [ ] **Documentation** — `ShouldSpawnEvent` function uses `time.Since(lastEventTime)` which relies on real clock; should use the TimeProvider pattern for full testability (`events.go:229`)
-- [ ] **Documentation** — Package doc.go example uses `log.Fatal(err)` which should use logrus for consistency, though it's only in a doc comment (`doc.go:21`)
+- [x] **Documentation** — ~~Package doc.go example uses `log.Fatal(err)` which should use logrus for consistency~~ **RESOLVED 2026-02-23**: Updated to use `logrus.WithError(err).Fatal()` (`doc.go:21`)
 - [ ] **API Consistency** — `PropagateEventCrossServer` returns `nil` for nil input rather than empty slice; documented but inconsistent with Go idioms (`events.go:169`)
 
 ## Input Integration

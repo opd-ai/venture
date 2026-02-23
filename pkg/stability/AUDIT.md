@@ -30,7 +30,7 @@ None.
 None.
 
 ### Low Severity
-- [ ] **Documentation** — The doc.go example uses `log.Fatalf` and `fmt.Printf` which don't match project logging standards (should use logrus); however, this is only in example code comments (`doc.go:30,33`)
+- [x] **Documentation** — ~~The doc.go example uses `log.Fatalf` and `fmt.Printf` which don't match project logging standards~~ **RESOLVED 2026-02-23**: Updated to use `logrus.WithError(err).Fatal()` and `logrus.WithFields(...).Info()` (`doc.go:30,33`)
 - [ ] **Code Style** — The `time.Now()` calls in `monitor.go:161,169,172,195` are appropriately documented with a NOTE comment explaining they are intentional for wall-clock monitoring, but a dedicated `TimeProvider` interface could improve testability further (`monitor.go:157-161`)
 - [ ] **API Consistency** — The `FPSProvider` interface is defined but there's no corresponding `SetClock`/`TimeProvider` interface for testing time-dependent behavior. The current implementation uses real time which is correct for production monitoring but limits unit test determinism (`monitor.go:72-76`)
 

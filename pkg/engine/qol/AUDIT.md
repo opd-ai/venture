@@ -26,7 +26,7 @@ _None identified._
 - [x] **Missing QoLComponent save/load registration** — QoLComponent implements Serialize/Deserialize but is not registered in save/load system for persistence (`types.go:144-170`). Player QoL preferences will not persist across sessions. **RESOLVED 2026-02-22**: Added `QoLStateData` to `pkg/saveload/types.go:PlayerState`, added `serializeQoLState`/`deserializeQoLState` functions to `cmd/client/util.go`, and QoLComponent is now added to player entities in `cmd/client/handlers.go:addPlayerComponents()`.
 
 ### Low Severity
-- [ ] **Benchmark log spam** — CraftQueueManager benchmark causes excessive "queue full" log warnings due to not clearing queue between iterations (`manager_test.go:634-640`). Consider adding queue clear or using unique player IDs.
+- [x] **Benchmark log spam** — ~~CraftQueueManager benchmark causes excessive "queue full" log warnings due to not clearing queue between iterations (`manager_test.go:634-640`). Consider adding queue clear or using unique player IDs.~~ **RESOLVED 2026-02-23**: Updated `BenchmarkCraftQueueManager_AddRecipe` to use unique player IDs per 50 iterations, avoiding queue full warnings while maintaining valid benchmark measurements.
 - [x] **QoL settings not exposed in Settings UI** — Auto-loot radius, crafting queue, and sorting preferences have no settings menu integration. Players cannot configure QoL options via UI. **RESOLVED 2026-02-22**: Added `QoLAutoLoot`, `QoLAutoLootRadius`, `QoLMountWhistle`, `QoLRecipeTracking`, and `QoLSortPreset` fields to `GameSettings` struct in `pkg/engine/settings.go`. Added corresponding `SettingsOption` constants and UI handling in `pkg/engine/settings_ui.go`. Settings persist to `~/.venture/settings.json` with proper validation.
 - [ ] **Missing server-side QoL system** — QoL system is client-only (`cmd/client/init_versions.go:306-312`). Server does not have QoL system registered, which may cause issues for authoritative craft queue validation.
 
@@ -75,7 +75,7 @@ _None identified._
 
 ## Recommendations
 1. ~~**[MED]** Register QoLComponent in save/load system to persist player preferences across sessions. Add to `pkg/saveload/` component registry.~~ **RESOLVED 2026-02-22**
-2. **[LOW]** Fix benchmark log spam by using unique player IDs per benchmark iteration or clearing queue state.
+2. ~~**[LOW]** Fix benchmark log spam by using unique player IDs per benchmark iteration or clearing queue state.~~ **RESOLVED 2026-02-23**
 3. ~~**[LOW]** Add QoL settings section to Settings UI for player-configurable auto-loot, sorting, and queue preferences.~~ **RESOLVED 2026-02-22**: Added QoL options (Auto-Loot, Loot Radius 5-10, Mount Whistle, Recipe Tracking, Sort Preset) to `GameSettings` and `SettingsUI`.
 4. **[LOW]** Consider adding QoL system to server for authoritative craft queue validation in multiplayer.
 

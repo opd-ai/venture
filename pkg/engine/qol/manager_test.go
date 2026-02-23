@@ -636,7 +636,10 @@ func BenchmarkCraftQueueManager_AddRecipe(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		mgr.AddRecipe(1, fmt.Sprintf("recipe_%d", i%10), 1)
+		// Use unique player IDs to avoid triggering "queue full" warnings
+		// (each player has a 50-recipe limit)
+		playerID := uint64(i/50 + 1)
+		mgr.AddRecipe(playerID, fmt.Sprintf("recipe_%d", i%10), 1)
 	}
 }
 

@@ -14,8 +14,8 @@ This report consolidates 110 individual audit files across all packages in the V
 |----------|-------------|
 | High     | 1           |
 | Medium   | ~13         |
-| Low      | ~110        |
-| **Total**| **~124**    |
+| Low      | ~109        |
+| **Total**| **~123**    |
 
 **Historical totals (including fixed):** ~32 High, ~96 Medium, ~227 Low issues were identified across all audits. The vast majority have been resolved, resulting in an overall codebase health status of **Good**.
 
@@ -277,8 +277,8 @@ This report consolidates 110 individual audit files across all packages in the V
 - **Source:** `pkg/engine/qol/AUDIT.md`
 - **High Issues:** 0
 - **Medium Issues:** 0 (1 fixed)
-- **Low Issues:** 2 (1 fixed)
-- **Details:** 94.0% coverage; auto-loot, craft queues, guild invitations, mount whistles, storage sorting, and recipe tracking are all thread-safe. **RESOLVED 2026-02-22**: `QoLComponent` save/load now wired via `QoLStateData` in `pkg/saveload/types.go:PlayerState`. Player QoL preferences now persist across sessions. **RESOLVED 2026-02-22**: QoL settings (Auto-Loot, Loot Radius, Mount Whistle, Recipe Tracking, Sort Preset) now integrated into Settings UI via `GameSettings` struct and `SettingsUI` options in `pkg/engine/settings.go` and `pkg/engine/settings_ui.go`. Remaining: Benchmark causes excessive "queue full" log warnings.
+- **Low Issues:** 1 (2 fixed)
+- **Details:** 94.0% coverage; auto-loot, craft queues, guild invitations, mount whistles, storage sorting, and recipe tracking are all thread-safe. **RESOLVED 2026-02-22**: `QoLComponent` save/load now wired via `QoLStateData` in `pkg/saveload/types.go:PlayerState`. Player QoL preferences now persist across sessions. **RESOLVED 2026-02-22**: QoL settings (Auto-Loot, Loot Radius, Mount Whistle, Recipe Tracking, Sort Preset) now integrated into Settings UI via `GameSettings` struct and `SettingsUI` options in `pkg/engine/settings.go` and `pkg/engine/settings_ui.go`. **RESOLVED 2026-02-23**: Benchmark log spam fixed by using unique player IDs per 50 iterations in `BenchmarkCraftQueueManager_AddRecipe`. Remaining: Missing server-side QoL system.
 
 ---
 

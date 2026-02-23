@@ -113,9 +113,12 @@ type LightingConfig struct {
 	// GammaCorrection applies gamma correction (typically 2.2)
 	GammaCorrection float64
 
-	// EnableShadows is reserved for future shadow casting support.
-	// This field is currently a no-op; setting it to true has no effect.
-	// Shadow casting may be implemented in a future release.
+	// EnableShadows is reserved for future shadow casting support and is
+	// currently a no-op. Setting this to true has no effect on rendering.
+	//
+	// Deprecated: This field exists for API forward-compatibility but has no
+	// implementation. Shadow casting may be added in a future release via
+	// pkg/engine/shadow_system.go. Do not rely on this field for any logic.
 	EnableShadows bool
 
 	// BloomConfig configures bloom/glow effects (Phase 17.1)

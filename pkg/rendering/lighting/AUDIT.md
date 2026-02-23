@@ -23,7 +23,7 @@ The lighting package provides dynamic lighting effects including multiple light 
 None.
 
 ### Medium Severity
-- [ ] **EnableShadows no-op** — `LightingConfig.EnableShadows` field is documented as a no-op but remains in the struct, which may confuse users expecting shadow support (`types.go:118-119`)
+- [x] **EnableShadows no-op** — `LightingConfig.EnableShadows` field now has explicit deprecation-style godoc warning users that the field is a no-op reserved for future API compatibility. References `pkg/engine/shadow_system.go` as future implementation location. **RESOLVED 2026-02-23**
 
 ### Low Severity
 - [ ] **Repeated package doc comment** — The package documentation comment is duplicated across doc.go, types.go, system.go, bloom.go, and ambient_occlusion.go. Each file should omit redundant package doc (`types.go:1-2`, `system.go:1-2`, `bloom.go:1-2`, `ambient_occlusion.go:1-2`)
@@ -74,6 +74,6 @@ The package is properly integrated into the game engine and client.
 | Mobile | ✅ | Headless build tag provides stub `GPUBloom` for no-GPU environments |
 
 ## Recommendations
-1. **[LOW]** Consider removing or clearly deprecating `EnableShadows` field if shadow support is not planned
+1. ~~**[LOW]** Consider removing or clearly deprecating `EnableShadows` field if shadow support is not planned~~ **DONE 2026-02-23**: Added deprecation-style godoc documentation
 2. **[LOW]** Consolidate package documentation to `doc.go` only; remove redundant comments from other files
 3. **[LOW]** Add GPU bloom benchmarks when Ebiten test harness with graphics context is available

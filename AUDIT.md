@@ -13,9 +13,9 @@ This report consolidates 110 individual audit files across all packages in the V
 | Severity | Open Issues |
 |----------|-------------|
 | High     | 1           |
-| Medium   | ~33         |
-| Low      | ~131        |
-| **Total**| **~165**    |
+| Medium   | ~32         |
+| Low      | ~128        |
+| **Total**| **~161**    |
 
 **Historical totals (including fixed):** ~32 High, ~95 Medium, ~227 Low issues were identified across all audits. The vast majority have been resolved, resulting in an overall codebase health status of **Good**.
 
@@ -474,9 +474,9 @@ This report consolidates 110 individual audit files across all packages in the V
 ### pkg/network/federation/guild — Guild Federation
 - **Source:** `pkg/network/federation/guild/AUDIT.md`
 - **High Issues:** 0
-- **Medium Issues:** 1
-- **Low Issues:** 1
-- **Details:** 88.0% coverage. `NewManager()` generates a random UUID-based server ID without logging; production usage should use `WithServerID()` for predictable identity. Test file for `time_provider_test.go` directly uses `time.Now()` (expected when testing `RealTimeProvider`).
+- **Medium Issues:** 0 (1 fixed)
+- **Low Issues:** 1 (3 fixed)
+- **Details:** 88.2% coverage. **RESOLVED 2026-02-23**: `NewManager()` now logs warning when using randomly generated server ID; logs info when using explicit `WithServerID()`. `doc.go` example updated to use `logrus.WithError(err).Fatal()` and recommend `WithServerID()` for production. Federation handlers (`handleMemberJoin`, `handleMemberLeave`, `handleTerritoryChange`) now log structured info messages on successful operations. Test file for `time_provider_test.go` directly uses `time.Now()` (expected when testing `RealTimeProvider`). Remaining: missing `BenchmarkHandleGuildMessage` benchmark.
 
 ---
 

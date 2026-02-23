@@ -77,12 +77,16 @@ func WithTimeProvider(tp TimeProvider) ManagerOption {
 //
 // If no serverID is provided, a random UUID-based server ID is generated.
 // If no TimeProvider is provided, RealTimeProvider (system clock) is used.
+//
+// Production deployments should use WithServerID() for predictable server identity
+// and consistent federation behavior across restarts.
 func NewManager(opts ...ManagerOption) *Manager {
+	defaultServerID := fmt.Sprintf("server-%s", uuid.New().String())
 	m := &Manager{
 		guilds:           make(map[string]*Guild),
 		federatedServers: make([]string, 0),
 		messageHandlers:  make(map[MessageType]func(msg GuildMessage) error),
-		serverID:         fmt.Sprintf("server-%s", uuid.New().String()),
+		serverID:         defaultServerID,
 		logger:           logrus.WithField("component", "guild_manager"),
 		guildCounter:     0,
 		timeProvider:     DefaultTimeProvider(),
@@ -91,6 +95,13 @@ func NewManager(opts ...ManagerOption) *Manager {
 	// Apply options
 	for _, opt := range opts {
 		opt(m)
+	}
+
+	// Warn if using randomly generated server ID (not recommended for production)
+	if m.serverID == defaultServerID {
+		m.logger.WithField("server_id", m.serverID).Warn("guild manager using randomly generated server ID; use WithServerID() for production deployments")
+	} else {
+		m.logger.WithField("server_id", m.serverID).Info("guild manager initialized with explicit server ID")
 	}
 
 	// Register message handlers

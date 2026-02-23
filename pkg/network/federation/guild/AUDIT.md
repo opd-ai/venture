@@ -25,11 +25,11 @@ _(None)_
 
 ### Medium Severity
 - [ ] **Doc coverage** — `time_provider_test.go` contains `time.Now()` calls directly, but this is expected in tests verifying `RealTimeProvider` (`time_provider_test.go:11-12`)
-- [ ] **API consistency** — `NewManager()` generates random UUID-based server ID by default without logging; production usage should use `WithServerID()` option for predictable server identity (`manager.go:85-86`)
+- [x] **API consistency** — `NewManager()` generates random UUID-based server ID by default without logging; production usage should use `WithServerID()` option for predictable server identity (`manager.go:85-86`) **RESOLVED 2026-02-23**: `NewManager()` now logs a warning when using randomly generated server ID; logs info when using explicit server ID via `WithServerID()`. Documentation updated to recommend `WithServerID()` for production.
 
 ### Low Severity
-- [ ] **Doc coverage** — Package `doc.go` references `log.Fatal(err)` in example code comment; should use `logrus.WithError(err).Fatal()` for consistency with codebase standards (`doc.go:59`)
-- [ ] **Logging** — `handleMemberJoin`, `handleMemberLeave`, `handleTerritoryChange` handlers lack structured logging for successful operations (`federation.go:162-282`)
+- [x] **Doc coverage** — Package `doc.go` references `log.Fatal(err)` in example code comment; should use `logrus.WithError(err).Fatal()` for consistency with codebase standards (`doc.go:59`) **RESOLVED 2026-02-23**: Updated to `logrus.WithError(err).Fatal("failed to create guild")` and example now uses `WithServerID()` for production best practices.
+- [x] **Logging** — `handleMemberJoin`, `handleMemberLeave`, `handleTerritoryChange` handlers lack structured logging for successful operations (`federation.go:162-282`) **RESOLVED 2026-02-23**: All three handlers now log structured info messages on successful operations with guild_id, player_id/zone_id, and server_id fields.
 - [ ] **Test coverage** — Missing benchmark for `HandleGuildMessage` which is a hot-path for federation message processing
 
 ## Input Integration
@@ -76,7 +76,7 @@ This package integrates with engine, client, and server for cross-server guild m
 | Mobile | N/A | Server-side only; mobile clients connect via network |
 
 ## Recommendations
-1. **[MED]** Add structured logging to federation message handlers (`handleMemberJoin`, `handleMemberLeave`, `handleTerritoryChange`) for operational visibility
-2. **[LOW]** Update `doc.go` example to use `logrus.WithError(err).Fatal()` instead of `log.Fatal(err)` for codebase consistency
+1. ~~**[MED]** Add structured logging to federation message handlers (`handleMemberJoin`, `handleMemberLeave`, `handleTerritoryChange`) for operational visibility~~ **RESOLVED 2026-02-23**
+2. ~~**[LOW]** Update `doc.go` example to use `logrus.WithError(err).Fatal()` instead of `log.Fatal(err)` for codebase consistency~~ **RESOLVED 2026-02-23**
 3. **[LOW]** Add `BenchmarkHandleGuildMessage` benchmark for federation hot-path performance tracking
-4. **[LOW]** Consider documenting the `WithServerID()` option requirement for production deployments in `doc.go`
+4. ~~**[LOW]** Consider documenting the `WithServerID()` option requirement for production deployments in `doc.go`~~ **RESOLVED 2026-02-23**

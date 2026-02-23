@@ -3,6 +3,8 @@ package guild
 import (
 	"encoding/json"
 	"fmt"
+
+	"github.com/sirupsen/logrus"
 )
 
 // Cross-server guild federation and synchronization.
@@ -200,6 +202,13 @@ func (m *Manager) handleMemberJoin(msg GuildMessage) error {
 	})
 	guild.UpdatedAt = msg.Timestamp
 
+	m.logger.WithFields(logrus.Fields{
+		"guild_id":  msg.GuildID,
+		"player_id": joinData.PlayerID,
+		"rank":      joinData.Rank,
+		"server_id": msg.ServerID,
+	}).Info("federation: member joined guild")
+
 	return nil
 }
 
@@ -235,6 +244,11 @@ func (m *Manager) handleMemberLeave(msg GuildMessage) error {
 		if member.PlayerID == leaveData.PlayerID {
 			guild.Members = append(guild.Members[:i], guild.Members[i+1:]...)
 			guild.UpdatedAt = msg.Timestamp
+			m.logger.WithFields(logrus.Fields{
+				"guild_id":  msg.GuildID,
+				"player_id": leaveData.PlayerID,
+				"server_id": msg.ServerID,
+			}).Info("federation: member left guild")
 			return nil
 		}
 	}
@@ -277,6 +291,13 @@ func (m *Manager) handleTerritoryChange(msg GuildMessage) error {
 	// Increase reputation for gaining territory
 	guild.Reputation[territoryData.ZoneID] = guild.Reputation[territoryData.ZoneID] + 10.0
 	guild.UpdatedAt = msg.Timestamp
+
+	m.logger.WithFields(logrus.Fields{
+		"guild_id":   msg.GuildID,
+		"zone_id":    territoryData.ZoneID,
+		"reputation": guild.Reputation[territoryData.ZoneID],
+		"server_id":  msg.ServerID,
+	}).Info("federation: territory change processed")
 
 	return nil
 }

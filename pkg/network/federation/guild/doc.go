@@ -50,13 +50,13 @@
 //
 // # Example Usage
 //
-//	// Create guild manager
-//	manager := guild.NewManager()
+//	// Create guild manager with explicit server ID for production
+//	manager := guild.NewManager(guild.WithServerID("production-server-01"))
 //
 //	// Create a new guild with procedural identity (seed ensures determinism)
 //	guildID, err := manager.CreateGuild("fantasy", "player-123", 12345)
 //	if err != nil {
-//	    log.Fatal(err)
+//	    logrus.WithError(err).Fatal("failed to create guild")
 //	}
 //
 //	// Add members

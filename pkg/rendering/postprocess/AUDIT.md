@@ -23,7 +23,7 @@ The `postprocess` package provides GPU-accelerated screen-space post-processing 
 None
 
 ### Medium Severity
-- [ ] **Documentation** — `gpu_processor_headless.go` lacks explanation of when headless build tag is used and implications for testing (`gpu_processor_headless.go:1-46`)
+- [x] **Documentation** — `gpu_processor_headless.go` now has comprehensive godoc documentation explaining when to use the headless build tag (CI/CD, server builds, automated testing), build examples, and implications. **RESOLVED 2026-02-23**
 
 ### Low Severity
 - [ ] **Test Coverage Gap** — `ApplyPrismaticAberration` function has minimal testing; edge cases not covered (`chromatic_aberration.go:91-148`, `effects_test.go:389-401`)

@@ -13,9 +13,9 @@ This report consolidates 110 individual audit files across all packages in the V
 | Severity | Open Issues |
 |----------|-------------|
 | High     | 1           |
-| Medium   | ~20         |
+| Medium   | ~19         |
 | Low      | ~114        |
-| **Total**| **~135**    |
+| **Total**| **~134**    |
 
 **Historical totals (including fixed):** ~32 High, ~96 Medium, ~227 Low issues were identified across all audits. The vast majority have been resolved, resulting in an overall codebase health status of **Good**.
 
@@ -861,9 +861,9 @@ This report consolidates 110 individual audit files across all packages in the V
 ### pkg/rendering/postprocess — Post-Processing Pipeline
 - **Source:** `pkg/rendering/postprocess/AUDIT.md`
 - **High Issues:** 0
-- **Medium Issues:** 1
+- **Medium Issues:** 0 (1 fixed)
 - **Low Issues:** 1
-- **Details:** 83.5% coverage. `gpu_processor_headless.go` lacks explanation of when the headless build tag is used and its implications for testing. All 7 post-processing presets (fantasy, sci-fi, horror, cyberpunk, post-apocalyptic, neutral, cinematic) are functional.
+- **Details:** 83.5% coverage. **RESOLVED 2026-02-23**: `gpu_processor_headless.go` now has comprehensive godoc documentation explaining when to use the headless build tag (CI/CD, server builds, automated testing), build examples, and implications (all effects become no-ops, returns input unchanged). All 7 post-processing presets (fantasy, sci-fi, horror, cyberpunk, post-apocalyptic, neutral, cinematic) are functional.
 
 ---
 

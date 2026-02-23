@@ -2152,3 +2152,408 @@ func TestSerializeManaAndSpellsWrongSpellSlotType(t *testing.T) {
 		t.Errorf("Spells should be nil, got %v", state.Spells)
 	}
 }
+
+// TestFindNearestNPC tests finding the nearest NPC with dialog component.
+func TestFindNearestNPC(t *testing.T) {
+	tests := []struct {
+		name           string
+		playerX        float64
+		playerY        float64
+		npcs           []struct{ x, y float64 }
+		expectedIdx    int // -1 means no NPC expected
+		noPlayer       bool
+		noPlayerPos    bool
+	}{
+		{
+			name:        "single NPC in range",
+			playerX:     100,
+			playerY:     100,
+			npcs:        []struct{ x, y float64 }{{120, 100}},
+			expectedIdx: 0,
+		},
+		{
+			name:        "multiple NPCs - returns nearest",
+			playerX:     100,
+			playerY:     100,
+			npcs:        []struct{ x, y float64 }{{200, 100}, {130, 100}, {150, 100}},
+			expectedIdx: 1, // 130,100 is closest
+		},
+		{
+			name:        "NPC out of range",
+			playerX:     0,
+			playerY:     0,
+			npcs:        []struct{ x, y float64 }{{500, 500}}, // > 5*32 = 160
+			expectedIdx: -1,
+		},
+		{
+			name:        "no NPCs",
+			playerX:     100,
+			playerY:     100,
+			npcs:        nil,
+			expectedIdx: -1,
+		},
+		{
+			name:        "nil player",
+			noPlayer:    true,
+			expectedIdx: -1,
+		},
+		{
+			name:        "player without position component",
+			playerX:     100,
+			playerY:     100,
+			noPlayerPos: true,
+			expectedIdx: -1,
+		},
+		{
+			name:        "NPC at exact max range boundary",
+			playerX:     0,
+			playerY:     0,
+			npcs:        []struct{ x, y float64 }{{159, 0}}, // just under 160
+			expectedIdx: 0,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			game := &engine.EbitenGame{
+				World: engine.NewWorld(),
+			}
+
+			var player *engine.Entity
+			if !tt.noPlayer {
+				player = game.World.CreateEntity()
+				if !tt.noPlayerPos {
+					player.AddComponent(&engine.PositionComponent{X: tt.playerX, Y: tt.playerY})
+				}
+			}
+
+			// Create NPCs with dialog components
+			var npcEntities []*engine.Entity
+			for _, npc := range tt.npcs {
+				entity := game.World.CreateEntity()
+				entity.AddComponent(&engine.PositionComponent{X: npc.x, Y: npc.y})
+				entity.AddComponent(&engine.DialogComponent{})
+				npcEntities = append(npcEntities, entity)
+			}
+
+			result := findNearestNPC(game, player)
+
+			if tt.expectedIdx == -1 {
+				if result != nil {
+					t.Errorf("expected nil, got entity %d", result.ID)
+				}
+			} else {
+				if result == nil {
+					t.Error("expected NPC, got nil")
+				} else if result.ID != npcEntities[tt.expectedIdx].ID {
+					t.Errorf("expected NPC %d, got NPC %d", npcEntities[tt.expectedIdx].ID, result.ID)
+				}
+			}
+		})
+	}
+}
+
+// TestFindNearestNPCSkipsSelf tests that player entity is not returned as nearest NPC.
+func TestFindNearestNPCSkipsSelf(t *testing.T) {
+	game := &engine.EbitenGame{
+		World: engine.NewWorld(),
+	}
+
+	player := game.World.CreateEntity()
+	player.AddComponent(&engine.PositionComponent{X: 100, Y: 100})
+	// Give player a dialog component (unusual but should still be skipped)
+	player.AddComponent(&engine.DialogComponent{})
+
+	result := findNearestNPC(game, player)
+
+	// Player should not be returned as nearest NPC (self)
+	if result != nil && result.ID == player.ID {
+		t.Error("findNearestNPC should not return the player entity itself")
+	}
+}
+
+// TestFindNearestNPCEntitiesWithoutDialogIgnored tests that entities without dialog are ignored.
+func TestFindNearestNPCEntitiesWithoutDialogIgnored(t *testing.T) {
+	game := &engine.EbitenGame{
+		World: engine.NewWorld(),
+	}
+
+	player := game.World.CreateEntity()
+	player.AddComponent(&engine.PositionComponent{X: 100, Y: 100})
+
+	// Create nearby entity without dialog (should be ignored)
+	nonNPC := game.World.CreateEntity()
+	nonNPC.AddComponent(&engine.PositionComponent{X: 101, Y: 100})
+
+	// Create farther entity with dialog (should be selected)
+	npc := game.World.CreateEntity()
+	npc.AddComponent(&engine.PositionComponent{X: 120, Y: 100})
+	npc.AddComponent(&engine.DialogComponent{})
+
+	result := findNearestNPC(game, player)
+
+	if result == nil {
+		t.Fatal("expected NPC, got nil")
+	}
+	if result.ID != npc.ID {
+		t.Errorf("expected NPC %d, got entity %d", npc.ID, result.ID)
+	}
+}
+
+// BenchmarkFindNearestNPC benchmarks NPC finding performance.
+func BenchmarkFindNearestNPC(b *testing.B) {
+	game := &engine.EbitenGame{
+		World: engine.NewWorld(),
+	}
+
+	player := game.World.CreateEntity()
+	player.AddComponent(&engine.PositionComponent{X: 500, Y: 500})
+
+	// Create 100 NPCs spread around
+	for i := 0; i < 100; i++ {
+		entity := game.World.CreateEntity()
+		entity.AddComponent(&engine.PositionComponent{X: float64(i * 10), Y: float64(i * 10)})
+		entity.AddComponent(&engine.DialogComponent{})
+	}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		findNearestNPC(game, player)
+	}
+}
+
+// TestSerializePlayerStateComplete tests full player state serialization.
+func TestSerializePlayerStateComplete(t *testing.T) {
+	player := engine.NewEntity(42)
+	player.AddComponent(&engine.PositionComponent{X: 100.5, Y: 200.5})
+	player.AddComponent(&engine.HealthComponent{Current: 75, Max: 100})
+	player.AddComponent(&engine.StatsComponent{Attack: 20, Defense: 15, MagicPower: 25})
+	player.AddComponent(&engine.ExperienceComponent{Level: 5, CurrentXP: 1500})
+	player.AddComponent(&engine.InventoryComponent{Gold: 500})
+	player.AddComponent(&engine.ManaComponent{Current: 50, Max: 100})
+	player.AddComponent(&engine.EquipmentComponent{
+		Slots: make(map[engine.EquipmentSlot]*item.Item),
+	})
+	player.AddComponent(&qol.QoLComponent{
+		AutoLootEnabled: true,
+		AutoLootRadius:  150.0,
+	})
+
+	game := &engine.EbitenGame{}
+
+	state := serializePlayerState(player, game)
+
+	// Verify all fields are serialized
+	if state.EntityID != 42 {
+		t.Errorf("EntityID = %d, want 42", state.EntityID)
+	}
+	if state.X != 100.5 || state.Y != 200.5 {
+		t.Errorf("Position = (%f, %f), want (100.5, 200.5)", state.X, state.Y)
+	}
+	if state.CurrentHealth != 75 || state.MaxHealth != 100 {
+		t.Errorf("Health = %f/%f, want 75/100", state.CurrentHealth, state.MaxHealth)
+	}
+	if state.Attack != 20 || state.Defense != 15 || state.MagicPower != 25 {
+		t.Errorf("Stats = (%f, %f, %f), want (20, 15, 25)", state.Attack, state.Defense, state.MagicPower)
+	}
+	if state.Level != 5 || state.Experience != 1500 {
+		t.Errorf("Experience = %d/%d, want 5/1500", state.Level, state.Experience)
+	}
+	if state.Gold != 500 {
+		t.Errorf("Gold = %d, want 500", state.Gold)
+	}
+	if state.CurrentMana != 50 || state.MaxMana != 100 {
+		t.Errorf("Mana = %d/%d, want 50/100", state.CurrentMana, state.MaxMana)
+	}
+	if state.Speed != 1.0 {
+		t.Errorf("Speed = %f, want 1.0", state.Speed)
+	}
+	if state.QoLData == nil {
+		t.Error("QoLData should not be nil")
+	} else {
+		if !state.QoLData.AutoLootEnabled {
+			t.Error("QoLData.AutoLootEnabled should be true")
+		}
+		if state.QoLData.AutoLootRadius != 150.0 {
+			t.Errorf("QoLData.AutoLootRadius = %f, want 150.0", state.QoLData.AutoLootRadius)
+		}
+	}
+}
+
+// TestSerializePlayerStateMinimal tests serialization with minimal components.
+func TestSerializePlayerStateMinimal(t *testing.T) {
+	player := engine.NewEntity(1)
+	game := &engine.EbitenGame{}
+
+	state := serializePlayerState(player, game)
+
+	// Should still return valid state with default values
+	if state == nil {
+		t.Fatal("state should not be nil")
+	}
+	if state.EntityID != 1 {
+		t.Errorf("EntityID = %d, want 1", state.EntityID)
+	}
+	// Speed should always be set to default
+	if state.Speed != 1.0 {
+		t.Errorf("Speed = %f, want 1.0", state.Speed)
+	}
+}
+
+// TestDeserializePlayerStateComplete tests full player state deserialization.
+func TestDeserializePlayerStateComplete(t *testing.T) {
+	player := engine.NewEntity(42)
+	player.AddComponent(&engine.PositionComponent{})
+	player.AddComponent(&engine.HealthComponent{})
+	player.AddComponent(&engine.StatsComponent{})
+	player.AddComponent(&engine.ExperienceComponent{})
+	player.AddComponent(&engine.InventoryComponent{})
+	player.AddComponent(&engine.ManaComponent{})
+	player.AddComponent(&engine.SpellSlotComponent{})
+	player.AddComponent(&engine.EquipmentComponent{
+		Slots: make(map[engine.EquipmentSlot]*item.Item),
+	})
+	player.AddComponent(&qol.QoLComponent{})
+
+	state := &saveload.PlayerState{
+		EntityID:      42,
+		X:             100.5,
+		Y:             200.5,
+		CurrentHealth: 75,
+		MaxHealth:     100,
+		Attack:        20,
+		Defense:       15,
+		MagicPower:    25,
+		Level:         5,
+		Experience:    1500,
+		Gold:          500,
+		CurrentMana:   50,
+		MaxMana:       100,
+		QoLData: &saveload.QoLStateData{
+			AutoLootEnabled: true,
+			AutoLootRadius:  150.0,
+		},
+	}
+
+	game := &engine.EbitenGame{}
+
+	deserializePlayerState(player, state, game)
+
+	// Verify position
+	if pos, ok := player.GetComponent("position"); ok {
+		p := pos.(*engine.PositionComponent)
+		if p.X != 100.5 || p.Y != 200.5 {
+			t.Errorf("Position = (%f, %f), want (100.5, 200.5)", p.X, p.Y)
+		}
+	} else {
+		t.Error("Position component not found")
+	}
+
+	// Verify health
+	if h, ok := player.GetComponent("health"); ok {
+		health := h.(*engine.HealthComponent)
+		if health.Current != 75 || health.Max != 100 {
+			t.Errorf("Health = %f/%f, want 75/100", health.Current, health.Max)
+		}
+	} else {
+		t.Error("Health component not found")
+	}
+
+	// Verify stats
+	if s, ok := player.GetComponent("stats"); ok {
+		stats := s.(*engine.StatsComponent)
+		if stats.Attack != 20 || stats.Defense != 15 || stats.MagicPower != 25 {
+			t.Errorf("Stats = (%f, %f, %f), want (20, 15, 25)", stats.Attack, stats.Defense, stats.MagicPower)
+		}
+	} else {
+		t.Error("Stats component not found")
+	}
+
+	// Verify QoL state
+	if q, ok := player.GetComponent("qol"); ok {
+		qolComp := q.(*qol.QoLComponent)
+		if !qolComp.AutoLootEnabled {
+			t.Error("QoL AutoLootEnabled should be true")
+		}
+		if qolComp.AutoLootRadius != 150.0 {
+			t.Errorf("QoL AutoLootRadius = %f, want 150.0", qolComp.AutoLootRadius)
+		}
+	} else {
+		t.Error("QoL component not found")
+	}
+}
+
+// TestSerializeDeserializePlayerStateRoundTrip tests that serialize/deserialize is a valid round-trip.
+func TestSerializeDeserializePlayerStateRoundTrip(t *testing.T) {
+	// Create player with full state
+	original := engine.NewEntity(99)
+	original.AddComponent(&engine.PositionComponent{X: 123.456, Y: 789.012})
+	original.AddComponent(&engine.HealthComponent{Current: 80, Max: 120})
+	original.AddComponent(&engine.StatsComponent{Attack: 30, Defense: 25, MagicPower: 40})
+	original.AddComponent(&engine.ExperienceComponent{Level: 10, CurrentXP: 5000})
+	original.AddComponent(&engine.InventoryComponent{Gold: 2500})
+	original.AddComponent(&engine.ManaComponent{Current: 80, Max: 150})
+	original.AddComponent(&engine.EquipmentComponent{
+		Slots: make(map[engine.EquipmentSlot]*item.Item),
+	})
+	original.AddComponent(&qol.QoLComponent{
+		AutoLootEnabled: true,
+		AutoLootRadius:  200.0,
+		MountWhistle:    true,
+		RecipeTracking:  true,
+	})
+
+	game := &engine.EbitenGame{}
+
+	// Serialize
+	state := serializePlayerState(original, game)
+
+	// Create new player and deserialize
+	restored := engine.NewEntity(99)
+	restored.AddComponent(&engine.PositionComponent{})
+	restored.AddComponent(&engine.HealthComponent{})
+	restored.AddComponent(&engine.StatsComponent{})
+	restored.AddComponent(&engine.ExperienceComponent{})
+	restored.AddComponent(&engine.InventoryComponent{})
+	restored.AddComponent(&engine.ManaComponent{})
+	restored.AddComponent(&engine.EquipmentComponent{
+		Slots: make(map[engine.EquipmentSlot]*item.Item),
+	})
+	restored.AddComponent(&qol.QoLComponent{})
+
+	deserializePlayerState(restored, state, game)
+
+	// Verify round-trip for position
+	origPosComp, _ := original.GetComponent("position")
+	origPos := origPosComp.(*engine.PositionComponent)
+	restoredPosComp, _ := restored.GetComponent("position")
+	restoredPos := restoredPosComp.(*engine.PositionComponent)
+	if origPos.X != restoredPos.X || origPos.Y != restoredPos.Y {
+		t.Errorf("Position mismatch: original (%f, %f), restored (%f, %f)",
+			origPos.X, origPos.Y, restoredPos.X, restoredPos.Y)
+	}
+
+	// Verify round-trip for health
+	origHealthComp, _ := original.GetComponent("health")
+	origHealth := origHealthComp.(*engine.HealthComponent)
+	restoredHealthComp, _ := restored.GetComponent("health")
+	restoredHealth := restoredHealthComp.(*engine.HealthComponent)
+	if origHealth.Current != restoredHealth.Current || origHealth.Max != restoredHealth.Max {
+		t.Errorf("Health mismatch: original %f/%f, restored %f/%f",
+			origHealth.Current, origHealth.Max, restoredHealth.Current, restoredHealth.Max)
+	}
+
+	// Verify round-trip for QoL
+	origQoLComp, _ := original.GetComponent("qol")
+	origQoL := origQoLComp.(*qol.QoLComponent)
+	restoredQoLComp, _ := restored.GetComponent("qol")
+	restoredQoL := restoredQoLComp.(*qol.QoLComponent)
+	if origQoL.AutoLootEnabled != restoredQoL.AutoLootEnabled {
+		t.Errorf("QoL AutoLootEnabled mismatch: original %v, restored %v",
+			origQoL.AutoLootEnabled, restoredQoL.AutoLootEnabled)
+	}
+	if origQoL.AutoLootRadius != restoredQoL.AutoLootRadius {
+		t.Errorf("QoL AutoLootRadius mismatch: original %f, restored %f",
+			origQoL.AutoLootRadius, restoredQoL.AutoLootRadius)
+	}
+}

@@ -275,3 +275,87 @@ func TestCorrelationID_Concurrency(t *testing.T) {
 		t.Errorf("Generated %d unique IDs, want %d", len(idMap), expectedCount)
 	}
 }
+
+// Benchmarks for correlation ID performance
+// These benchmarks verify the performance claim in README.md:
+// - UUID generation: ~500 ns/op
+
+func BenchmarkNewCorrelationID(b *testing.B) {
+	b.ReportAllocs()
+	for i := 0; i < b.N; i++ {
+		_ = NewCorrelationID()
+	}
+}
+
+func BenchmarkNewSequentialCorrelationID(b *testing.B) {
+	b.ReportAllocs()
+	for i := 0; i < b.N; i++ {
+		_ = NewSequentialCorrelationID()
+	}
+}
+
+func BenchmarkWithCorrelationID(b *testing.B) {
+	ctx := context.Background()
+	testID := "test-correlation-id"
+	b.ReportAllocs()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_ = WithCorrelationID(ctx, testID)
+	}
+}
+
+func BenchmarkGetCorrelationID(b *testing.B) {
+	ctx := context.Background()
+	testID := "test-correlation-id"
+	ctx = WithCorrelationID(ctx, testID)
+	b.ReportAllocs()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_ = GetCorrelationID(ctx)
+	}
+}
+
+func BenchmarkGetOrCreateCorrelationID(b *testing.B) {
+	b.Run("Existing", func(b *testing.B) {
+		ctx := context.Background()
+		testID := "test-correlation-id"
+		ctx = WithCorrelationID(ctx, testID)
+		b.ReportAllocs()
+		b.ResetTimer()
+		for i := 0; i < b.N; i++ {
+			_ = GetOrCreateCorrelationID(ctx)
+		}
+	})
+
+	b.Run("Create", func(b *testing.B) {
+		ctx := context.Background()
+		b.ReportAllocs()
+		b.ResetTimer()
+		for i := 0; i < b.N; i++ {
+			_ = GetOrCreateCorrelationID(ctx)
+		}
+	})
+}
+
+func BenchmarkWrapWithContext(b *testing.B) {
+	ctx := context.Background()
+	testID := "test-correlation-id"
+	ctx = WithCorrelationID(ctx, testID)
+	baseErr := fmt.Errorf("base error")
+	b.ReportAllocs()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_ = WrapWithContext(ctx, baseErr, ErrorTypeNetwork, "wrapped error")
+	}
+}
+
+func BenchmarkNewWithContext(b *testing.B) {
+	ctx := context.Background()
+	testID := "test-correlation-id"
+	ctx = WithCorrelationID(ctx, testID)
+	b.ReportAllocs()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_ = NewWithContext(ctx, ErrorTypeValidation, "validation error")
+	}
+}

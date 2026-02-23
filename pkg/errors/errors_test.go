@@ -547,3 +547,120 @@ func TestErrorChaining(t *testing.T) {
 		t.Error("Error chain should support errors.As")
 	}
 }
+
+// Benchmarks for performance validation
+// These benchmarks verify the performance claims in README.md:
+// - Error creation: ~100 ns/op
+// - Error wrapping: ~150 ns/op
+// - Context addition: ~50 ns/op per field
+// - UUID generation: ~500 ns/op
+
+func BenchmarkNew(b *testing.B) {
+	b.ReportAllocs()
+	for i := 0; i < b.N; i++ {
+		_ = New(ErrorTypeNetwork, "test error message")
+	}
+}
+
+func BenchmarkWrap(b *testing.B) {
+	baseErr := fmt.Errorf("base error")
+	b.ReportAllocs()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_ = Wrap(baseErr, ErrorTypeNetwork, "wrapped message")
+	}
+}
+
+func BenchmarkWrapf(b *testing.B) {
+	baseErr := fmt.Errorf("base error")
+	b.ReportAllocs()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_ = Wrapf(baseErr, ErrorTypeNetwork, "error code %d: %s", 500, "server error")
+	}
+}
+
+func BenchmarkWithContext(b *testing.B) {
+	err := New(ErrorTypeNetwork, "test error")
+	b.ReportAllocs()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_ = err.WithContext("key", "value")
+	}
+}
+
+func BenchmarkError(b *testing.B) {
+	err := New(ErrorTypeNetwork, "test error message")
+	err.CorrelationID = "test-correlation-id"
+	b.ReportAllocs()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_ = err.Error()
+	}
+}
+
+func BenchmarkIs(b *testing.B) {
+	err := Network("test error")
+	b.ReportAllocs()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_ = Is(err, ErrorTypeNetwork)
+	}
+}
+
+func BenchmarkAsVentureError(b *testing.B) {
+	err := Network("test error")
+	b.ReportAllocs()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_, _ = AsVentureError(err)
+	}
+}
+
+func BenchmarkHelperFunctions(b *testing.B) {
+	b.Run("Network", func(b *testing.B) {
+		b.ReportAllocs()
+		for i := 0; i < b.N; i++ {
+			_ = Network("test message")
+		}
+	})
+
+	b.Run("Validation", func(b *testing.B) {
+		b.ReportAllocs()
+		for i := 0; i < b.N; i++ {
+			_ = Validation("test message")
+		}
+	})
+
+	b.Run("Timeout", func(b *testing.B) {
+		b.ReportAllocs()
+		for i := 0; i < b.N; i++ {
+			_ = Timeout("test message")
+		}
+	})
+}
+
+func BenchmarkWrapHelperFunctions(b *testing.B) {
+	baseErr := fmt.Errorf("base error")
+
+	b.Run("NetworkWrap", func(b *testing.B) {
+		b.ReportAllocs()
+		for i := 0; i < b.N; i++ {
+			_ = NetworkWrap(baseErr, "wrapped")
+		}
+	})
+
+	b.Run("ValidationWrap", func(b *testing.B) {
+		b.ReportAllocs()
+		for i := 0; i < b.N; i++ {
+			_ = ValidationWrap(baseErr, "wrapped")
+		}
+	})
+
+	b.Run("TimeoutWrap", func(b *testing.B) {
+		b.ReportAllocs()
+		for i := 0; i < b.N; i++ {
+			_ = TimeoutWrap(baseErr, "wrapped")
+		}
+	})
+}

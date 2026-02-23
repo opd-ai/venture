@@ -11,6 +11,20 @@
 //   - Common VR installation directories (SteamVR, Oculus)
 //   - Platform restrictions (mobile and WASM always return false)
 //
+// # Controller Detection Strategy
+//
+// Controller detection is intentionally conservative: [IsControllerDetected] always returns
+// false unless VR mode is force-enabled via [Detector.SetForceEnable]. This design decision
+// ensures that VR controller systems are only initialized when a VR headset runtime is
+// explicitly detected or enabled. The rationale:
+//
+//  1. Controllers require a VR runtime (SteamVR, OpenVR, Oculus) to function properly
+//  2. Detecting controllers without a headset would result in non-functional VR input
+//  3. Users who want VR controller support should have a working headset setup first
+//  4. This prevents accidental VR system initialization on machines with generic HID devices
+//
+// To enable VR systems without physical hardware for testing, use SetForceEnable(true).
+//
 // # Usage
 //
 //	detector := vr.NewDetector()

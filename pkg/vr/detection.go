@@ -108,6 +108,12 @@ func (d *Detector) detectHeadset() bool {
 }
 
 // detectController checks for VR controller hardware.
+// This implementation is intentionally conservative: it returns false unless VR mode
+// is force-enabled. Controllers are detected through the VR runtime (SteamVR, Oculus)
+// rather than standalone, because:
+//   - Controllers require a VR runtime to provide tracking data
+//   - Standalone controller HID detection would not provide usable VR input
+//   - Headset detection implies controller support is available
 func (d *Detector) detectController() bool {
 	// Same platform restrictions as headset
 	if runtime.GOOS == "js" || runtime.GOOS == "android" || runtime.GOOS == "ios" {
@@ -206,6 +212,11 @@ func (d *Detector) IsHeadsetDetected() bool {
 
 // IsControllerDetected returns true if VR controllers were detected.
 // Returns false if DetectHardware() has not been called yet.
+//
+// Note: This function uses a conservative detection strategy and typically returns
+// false unless VR mode was force-enabled via SetForceEnable(true). Controllers are
+// considered available when a VR headset runtime is detected, as controllers require
+// the runtime for tracking data. See the package documentation for the design rationale.
 func (d *Detector) IsControllerDetected() bool {
 	d.mu.RLock()
 	defer d.mu.RUnlock()

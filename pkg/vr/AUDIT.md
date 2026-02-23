@@ -24,7 +24,7 @@ The `pkg/vr` package provides VR hardware detection and configuration utilities.
 (None)
 
 ### Medium Severity
-- [ ] **Documentation** — `detectController()` always returns `false` with comment "Conservative: require explicit headset detection" but this is not explained in the doc.go or public API documentation (`detection.go:119`)
+- [x] **Documentation** — `detectController()` always returns `false` with comment "Conservative: require explicit headset detection" but this is not explained in the doc.go or public API documentation (`detection.go:119`) — **RESOLVED 2026-02-23**: Added comprehensive documentation in `doc.go` under "Controller Detection Strategy" section explaining the conservative approach, rationale (4 points), and workaround. Added godoc comments to `detectController()` and `IsControllerDetected()` explaining the design decision.
 
 ### Low Severity
 - [ ] **Test coverage gap** — `checkVRRuntimePaths()` has limited path testing since it depends on actual filesystem state; could benefit from path mocking (`detection.go:122-168`, `detection_test.go:305-315`)
@@ -73,6 +73,6 @@ The `pkg/vr` package provides VR hardware detection and configuration utilities.
 | Mobile | ✅ | Correctly returns false for all VR detection (Android/iOS have no desktop VR support) |
 
 ## Recommendations
-1. **[MED]** Document that `detectController()` is intentionally conservative and always returns false in the public API
+1. **[MED]** ~~Document that `detectController()` is intentionally conservative and always returns false in the public API~~ **RESOLVED 2026-02-23**
 2. **[LOW]** Consider adding filesystem abstraction for path checking to enable more thorough unit tests
 3. **[LOW]** Document expected log levels in doc.go for users who want to enable debug logging

@@ -10,6 +10,7 @@ import (
 	"github.com/opd-ai/venture/pkg/engine"
 	"github.com/opd-ai/venture/pkg/engine/qol"
 	"github.com/opd-ai/venture/pkg/procgen/item"
+	"github.com/opd-ai/venture/pkg/procgen/magic"
 	"github.com/opd-ai/venture/pkg/saveload"
 )
 
@@ -466,6 +467,77 @@ func TestSerializeEquipment(t *testing.T) {
 	}
 }
 
+// TestSerializeEquipmentWithItems tests serialization with actual equipped items.
+func TestSerializeEquipmentWithItems(t *testing.T) {
+	player := engine.NewEntity(1)
+	equipment := &engine.EquipmentComponent{
+		Slots: make(map[engine.EquipmentSlot]*item.Item),
+	}
+
+	// Create test items
+	weapon := &item.Item{
+		ID:   "test-weapon-1",
+		Name: "Test Sword",
+		Type: item.TypeWeapon,
+		Stats: item.Stats{
+			Damage: 25,
+			Value:  100,
+		},
+	}
+	armor := &item.Item{
+		ID:   "test-armor-1",
+		Name: "Test Chestplate",
+		Type: item.TypeArmor,
+		Stats: item.Stats{
+			Defense: 15,
+			Value:   200,
+		},
+	}
+	accessory := &item.Item{
+		ID:   "test-accessory-1",
+		Name: "Test Ring",
+		Type: item.TypeAccessory,
+		Stats: item.Stats{
+			Value: 50,
+		},
+	}
+
+	equipment.Slots[engine.SlotMainHand] = weapon
+	equipment.Slots[engine.SlotChest] = armor
+	equipment.Slots[engine.SlotAccessory1] = accessory
+	player.AddComponent(equipment)
+
+	state := &saveload.PlayerState{}
+	serializeEquipment(player, state)
+
+	// Verify weapon was serialized
+	if state.EquippedItems.Weapon == nil {
+		t.Fatal("Weapon should not be nil")
+	}
+	if state.EquippedItems.Weapon.ID != weapon.ID {
+		t.Errorf("Weapon ID = %s, want %s", state.EquippedItems.Weapon.ID, weapon.ID)
+	}
+	if state.EquippedItems.Weapon.Name != weapon.Name {
+		t.Errorf("Weapon Name = %s, want %s", state.EquippedItems.Weapon.Name, weapon.Name)
+	}
+
+	// Verify armor was serialized
+	if state.EquippedItems.Armor == nil {
+		t.Fatal("Armor should not be nil")
+	}
+	if state.EquippedItems.Armor.ID != armor.ID {
+		t.Errorf("Armor ID = %s, want %s", state.EquippedItems.Armor.ID, armor.ID)
+	}
+
+	// Verify accessory was serialized
+	if state.EquippedItems.Accessory == nil {
+		t.Fatal("Accessory should not be nil")
+	}
+	if state.EquippedItems.Accessory.ID != accessory.ID {
+		t.Errorf("Accessory ID = %s, want %s", state.EquippedItems.Accessory.ID, accessory.ID)
+	}
+}
+
 // TestSerializeEquipmentNoComponent tests serialization without equipment component.
 func TestSerializeEquipmentNoComponent(t *testing.T) {
 	player := engine.NewEntity(1)
@@ -558,6 +630,77 @@ func TestSerializeManaAndSpells(t *testing.T) {
 	}
 	if state.MaxMana != 100 {
 		t.Errorf("MaxMana = %d, want 100", state.MaxMana)
+	}
+}
+
+// TestSerializeManaAndSpellsWithSpells tests mana and spell serialization with actual spells.
+func TestSerializeManaAndSpellsWithSpells(t *testing.T) {
+	player := engine.NewEntity(1)
+	player.AddComponent(&engine.ManaComponent{
+		Current: 80,
+		Max:     120,
+	})
+
+	spellSlots := &engine.SpellSlotComponent{}
+	spellSlots.Slots[0] = &magic.Spell{
+		Name:    "Fireball",
+		Type:    magic.TypeOffensive,
+		Element: magic.ElementFire,
+		Stats: magic.Stats{
+			Damage:   50,
+			ManaCost: 25,
+			CastTime: 1.5,
+			Cooldown: 3.0,
+			AreaSize: 100,
+			Range:    200,
+		},
+	}
+	spellSlots.Slots[1] = &magic.Spell{
+		Name:    "Heal",
+		Type:    magic.TypeHealing,
+		Element: magic.ElementLight,
+		Stats: magic.Stats{
+			Healing:  30,
+			ManaCost: 20,
+			CastTime: 2.0,
+			Cooldown: 5.0,
+		},
+	}
+	spellSlots.Slots[2] = &magic.Spell{
+		Name:    "Frost Nova",
+		Type:    magic.TypeOffensive,
+		Element: magic.ElementIce,
+		Stats: magic.Stats{
+			Damage:   35,
+			ManaCost: 30,
+		},
+	}
+	player.AddComponent(spellSlots)
+
+	state := &saveload.PlayerState{}
+	serializeManaAndSpells(player, state)
+
+	// Verify mana
+	if state.CurrentMana != 80 {
+		t.Errorf("CurrentMana = %d, want 80", state.CurrentMana)
+	}
+	if state.MaxMana != 120 {
+		t.Errorf("MaxMana = %d, want 120", state.MaxMana)
+	}
+
+	// Verify spells
+	if len(state.Spells) != 3 {
+		t.Fatalf("len(Spells) = %d, want 3", len(state.Spells))
+	}
+
+	if state.Spells[0].Name != "Fireball" {
+		t.Errorf("Spell 0 Name = %q, want %q", state.Spells[0].Name, "Fireball")
+	}
+	if state.Spells[1].Name != "Heal" {
+		t.Errorf("Spell 1 Name = %q, want %q", state.Spells[1].Name, "Heal")
+	}
+	if state.Spells[2].Name != "Frost Nova" {
+		t.Errorf("Spell 2 Name = %q, want %q", state.Spells[2].Name, "Frost Nova")
 	}
 }
 

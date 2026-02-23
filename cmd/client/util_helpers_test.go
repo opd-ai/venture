@@ -11,6 +11,7 @@ import (
 
 	"github.com/opd-ai/venture/pkg/engine"
 	"github.com/opd-ai/venture/pkg/procgen"
+	"github.com/opd-ai/venture/pkg/procgen/book"
 	"github.com/opd-ai/venture/pkg/procgen/companion"
 	"github.com/opd-ai/venture/pkg/procgen/environment"
 	"github.com/opd-ai/venture/pkg/procgen/terrain"
@@ -2496,5 +2497,232 @@ func BenchmarkCalculatePlayerSpawnPosition(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		_, _ = calculatePlayerSpawnPosition(testTerrain, clientLogger)
+	}
+}
+
+// TestGenerateBookshelves tests the bookshelf generation function.
+func TestGenerateBookshelves(t *testing.T) {
+	bookGen := book.NewGenerator()
+	logger := createTestLogger().WithField("test", "bookshelves")
+
+	tests := []struct {
+		name       string
+		count      int
+		seed       int64
+		genreID    string
+		wantMinLen int
+	}{
+		{"single bookshelf", 1, 12345, "fantasy", 1},
+		{"multiple bookshelves", 3, 12345, "scifi", 3},
+		{"zero count", 0, 12345, "horror", 0},
+		{"deterministic", 2, 99999, "cyberpunk", 2},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			params := procgen.GenerationParams{
+				Difficulty: 0.5,
+				Depth:      1,
+				GenreID:    tt.genreID,
+			}
+
+			result := generateBookshelves(bookGen, tt.count, tt.seed, params, logger)
+
+			if len(result) < tt.wantMinLen {
+				t.Errorf("generateBookshelves() returned %d bookshelves, want at least %d", len(result), tt.wantMinLen)
+			}
+
+			// Verify each bookshelf has valid data
+			for i, shelf := range result {
+				if len(shelf.Books) == 0 {
+					t.Errorf("shelf %d has no books", i)
+				}
+				if shelf.ShelfSize != 32 {
+					t.Errorf("shelf %d ShelfSize = %d, want 32", i, shelf.ShelfSize)
+				}
+				if shelf.ColliderSize != 28.0 {
+					t.Errorf("shelf %d ColliderSize = %f, want 28.0", i, shelf.ColliderSize)
+				}
+			}
+		})
+	}
+}
+
+// TestGenerateBookshelvesDeterminism tests that bookshelf generation is deterministic.
+func TestGenerateBookshelvesDeterminism(t *testing.T) {
+	bookGen := book.NewGenerator()
+	logger := createTestLogger().WithField("test", "bookshelves_determinism")
+	params := procgen.GenerationParams{
+		Difficulty: 0.5,
+		Depth:      2,
+		GenreID:    "fantasy",
+	}
+
+	result1 := generateBookshelves(bookGen, 2, 12345, params, logger)
+	result2 := generateBookshelves(bookGen, 2, 12345, params, logger)
+
+	if len(result1) != len(result2) {
+		t.Errorf("determinism failed: got %d vs %d bookshelves", len(result1), len(result2))
+		return
+	}
+
+	for i := range result1 {
+		if len(result1[i].Books) != len(result2[i].Books) {
+			t.Errorf("shelf %d: book count differs %d vs %d", i, len(result1[i].Books), len(result2[i].Books))
+		}
+		if result1[i].ShelfColor != result2[i].ShelfColor {
+			t.Errorf("shelf %d: color differs", i)
+		}
+	}
+}
+
+// TestGenerateBooksForShelf tests the book generation for a single shelf.
+func TestGenerateBooksForShelf(t *testing.T) {
+	bookGen := book.NewGenerator()
+	logger := createTestLogger().WithField("test", "books_for_shelf")
+
+	tests := []struct {
+		name           string
+		shelfIndex     int
+		seed           int64
+		genreID        string
+		wantBookCount  int // expected: 3 + (shelfIndex % 6)
+	}{
+		{"first shelf", 0, 12345, "fantasy", 3},
+		{"second shelf", 1, 12345, "scifi", 4},
+		{"third shelf", 2, 12345, "horror", 5},
+		{"sixth shelf wraps", 6, 12345, "cyberpunk", 3},
+		{"seventh shelf", 7, 12345, "postapoc", 4},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			params := procgen.GenerationParams{
+				Difficulty: 0.5,
+				Depth:      1,
+				GenreID:    tt.genreID,
+			}
+
+			books := generateBooksForShelf(bookGen, tt.shelfIndex, tt.seed, params, logger)
+
+			if len(books) != tt.wantBookCount {
+				t.Errorf("generateBooksForShelf() returned %d books, want %d", len(books), tt.wantBookCount)
+			}
+
+			// Verify each book has valid content
+			for i, b := range books {
+				if b.Title == "" {
+					t.Errorf("book %d has empty title", i)
+				}
+				if b.Author == "" {
+					t.Errorf("book %d has empty author", i)
+				}
+				if len(b.Content) == 0 {
+					t.Errorf("book %d has empty content", i)
+				}
+			}
+		})
+	}
+}
+
+// TestGenerateSingleBook tests single book generation.
+func TestGenerateSingleBook(t *testing.T) {
+	bookGen := book.NewGenerator()
+	logger := createTestLogger().WithField("test", "single_book")
+
+	tests := []struct {
+		name    string
+		seed    int64
+		genreID string
+	}{
+		{"fantasy book", 12345, "fantasy"},
+		{"scifi book", 67890, "scifi"},
+		{"horror book", 11111, "horror"},
+		{"cyberpunk book", 22222, "cyberpunk"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			params := procgen.GenerationParams{
+				Difficulty: 0.5,
+				Depth:      1,
+				GenreID:    tt.genreID,
+			}
+
+			book := generateSingleBook(bookGen, tt.seed, params, logger)
+
+			if book == nil {
+				t.Fatal("generateSingleBook() returned nil")
+			}
+			if book.Title == "" {
+				t.Error("book has empty title")
+			}
+			if book.Author == "" {
+				t.Error("book has empty author")
+			}
+			if len(book.Content) == 0 {
+				t.Error("book has empty content")
+			}
+		})
+	}
+}
+
+// TestGenerateSingleBookDeterminism tests that single book generation is deterministic.
+func TestGenerateSingleBookDeterminism(t *testing.T) {
+	bookGen := book.NewGenerator()
+	logger := createTestLogger().WithField("test", "single_book_determinism")
+	params := procgen.GenerationParams{
+		Difficulty: 0.5,
+		Depth:      1,
+		GenreID:    "fantasy",
+	}
+
+	book1 := generateSingleBook(bookGen, 12345, params, logger)
+	book2 := generateSingleBook(bookGen, 12345, params, logger)
+
+	if book1.Title != book2.Title {
+		t.Errorf("title differs: %q vs %q", book1.Title, book2.Title)
+	}
+	if book1.Author != book2.Author {
+		t.Errorf("author differs: %q vs %q", book1.Author, book2.Author)
+	}
+	if book1.BookType != book2.BookType {
+		t.Errorf("book type differs: %v vs %v", book1.BookType, book2.BookType)
+	}
+}
+
+// BenchmarkGenerateBookshelves benchmarks bookshelf generation.
+func BenchmarkGenerateBookshelves(b *testing.B) {
+	bookGen := book.NewGenerator()
+	logger := logrus.New()
+	logger.SetOutput(io.Discard)
+	clientLogger := logger.WithField("bench", "bookshelves")
+	params := procgen.GenerationParams{
+		Difficulty: 0.5,
+		Depth:      1,
+		GenreID:    "fantasy",
+	}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_ = generateBookshelves(bookGen, 2, int64(i), params, clientLogger)
+	}
+}
+
+// BenchmarkGenerateSingleBook benchmarks single book generation.
+func BenchmarkGenerateSingleBook(b *testing.B) {
+	bookGen := book.NewGenerator()
+	logger := logrus.New()
+	logger.SetOutput(io.Discard)
+	clientLogger := logger.WithField("bench", "single_book")
+	params := procgen.GenerationParams{
+		Difficulty: 0.5,
+		Depth:      1,
+		GenreID:    "fantasy",
+	}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_ = generateSingleBook(bookGen, int64(i), params, clientLogger)
 	}
 }

@@ -3,7 +3,7 @@
 **Status**: Needs Work
 
 ## Summary
-The cmd/client package serves as the desktop game client entry point with extremely high integration surface, coordinating 200+ systems across engine, rendering, network, audio, and procgen domains. Overall health is good with proper ECS architecture adherence and deterministic generation patterns, but test coverage is below target at 45.7% (below 65% target) due to Ebiten display server dependency. The package contains 7,191 lines of code across 16 files with 154 structured logging calls. The 3 non-deterministic time.Now() usages in gameplay code have been resolved via TimeProvider abstraction (time_provider.go). Remaining performance-measurement time.Now() calls (handlers.go:595, 691, 774) are acceptable non-procgen usage. Version-specific initialization functions (V4-V19, VR, Phase 3) have been extracted to init_versions.go, reducing handlers.go from 4,494 to 3,894 lines.
+The cmd/client package serves as the desktop game client entry point with extremely high integration surface, coordinating 200+ systems across engine, rendering, network, audio, and procgen domains. Overall health is good with proper ECS architecture adherence and deterministic generation patterns, but test coverage is below target at 46.8% (below 65% target) due to Ebiten display server dependency. The package contains 7,191 lines of code across 16 files with 154 structured logging calls. The 3 non-deterministic time.Now() usages in gameplay code have been resolved via TimeProvider abstraction (time_provider.go). Remaining performance-measurement time.Now() calls (handlers.go:595, 691, 774) are acceptable non-procgen usage. Version-specific initialization functions (V4-V19, VR, Phase 3) have been extracted to init_versions.go, reducing handlers.go from 4,494 to 3,894 lines.
 
 ## Issues Found
 - [x] **low** stub/incomplete — Save manager initialization returns nil on error without fallback (`handlers.go:3686`)
@@ -11,12 +11,12 @@ The cmd/client package serves as the desktop game client entry point with extrem
 - [x] **low** deterministic procgen — time.Now() used for death SFX seed in gameplay code (`util.go:1467`)
 - [x] **medium** deterministic procgen — time.Now() used for narrative event timestamp in gameplay code (`handlers.go:4381`)
 - [x] **low** error handling — Save manager init error logged as warning but functionality remains unavailable silently (`handlers.go:3685-3686`)
-- [x] **high** test coverage — 45.7% coverage significantly below 65% target (improved from 44.7% via calculateLearningRate and calculatePlayerSpawnPosition tests 2026-02-23)
+- [x] **high** test coverage — 46.8% coverage below 65% target (improved from 45.7% via book generation and serialization tests 2026-02-23)
 - [x] **low** doc coverage — Main package has excellent doc.go (159 lines) but no exported functions requiring docs
 - [x] **low** maintainability — ~~handlers.go is 4,476 lines with 60+ functions~~ Split into handlers.go (3,894 lines) and init_versions.go (643 lines)
 
 ## Test Coverage
-45.7% (target: 65%, improved from 44.7% via calculateLearningRate and calculatePlayerSpawnPosition tests 2026-02-23)
+46.8% (target: 65%, improved from 45.7% via book generation and serialization tests 2026-02-23)
 
 **Analysis**: Coverage is artificially low because most code paths require Ebiten display server initialization (runs with xvfb-run in CI). Core game logic in pkg/ packages averages 82.4%. Test suite includes 10 test files with comprehensive integration tests:
 - `integration_test.go` — Host-and-play flag integration, default behavior, port fallback (4 tests)
@@ -127,8 +127,10 @@ None identified. All systems are properly registered with the World and connecte
    - **[COMPLETED 2026-02-23]** Added `starter_items_test.go` with tests for `generateStarterWeapon`, `generateStarterPotions`, `generateStarterArmor`, `addStarterItems`, `addTutorialQuest` (13 tests, 3 benchmarks)
    - **[COMPLETED 2026-02-23]** Added tests for `deserializeEquipment`, `deserializeManaAndSpells`, and `addHazardComponents` (12 tests)
    - **[COMPLETED 2026-02-23]** Added tests for `calculateLearningRate` (boundary, edge cases, negative input) and `calculatePlayerSpawnPosition` (various room configurations, fallback) (8 tests, 2 benchmarks)
+   - **[COMPLETED 2026-02-23]** Added tests for `generateBookshelves`, `generateBooksForShelf`, `generateSingleBook` (7 tests, 2 benchmarks)
+   - **[COMPLETED 2026-02-23]** Added tests for `serializeEquipmentWithItems`, `serializeManaAndSpellsWithSpells` covering actual equipped items and spells (2 tests)
    - **[REMAINING]** Test remaining helper functions (spawnWallTorches, etc.) - requires mocked World
-   - **Coverage improved from 44.7% to 45.7%** (2026-02-23)
+   - **Coverage improved from 45.7% to 46.8%** (2026-02-23)
    - Note: Many functions in util.go require engine.World which has Ebiten dependencies, limiting unit test coverage without xvfb
 
 4. **[LOW PRIORITY]** Add fallback behavior when save manager fails to initialize

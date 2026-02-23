@@ -1,14 +1,15 @@
 # Audit: github.com/opd-ai/venture/pkg/balance
-**Date**: 2026-02-13
+**Date**: 2026-02-13 (Updated: 2026-02-23)
 **Status**: Complete
 
 ## Summary
-The balance package provides automated statistical validation of game balance across 8 gameplay domains through deterministic simulation. The package demonstrates excellent code quality with proper error handling, deterministic randomness using seeded RNGs, and clear separation of concerns. **All 8 planned validators are now implemented** (Combat, Economic, Progression, Social, Housing, Vehicle, Companion, Quest). The package is production-integrated in cmd/server startup validation and achieves strong statistical rigor. Structured logging with progress reporting was added on 2026-02-13.
+The balance package provides automated statistical validation of game balance across 8 gameplay domains through deterministic simulation. The package demonstrates excellent code quality with proper error handling, deterministic randomness using seeded RNGs, and clear separation of concerns. **All 8 planned validators are now implemented** (Combat, Economic, Progression, Social, Housing, Vehicle, Companion, Quest). The package is production-integrated in cmd/server startup validation and achieves strong statistical rigor. Structured logging with progress reporting was added on 2026-02-13. **Standalone CLI tool and CI/CD script added 2026-02-23.**
 
 ## Issues Found
 - [x] **high** Stub/incomplete — 6 validators documented but not implemented: ProgressionValidator, SocialValidator, HousingValidator, VehicleValidator, CompanionValidator, QuestValidator are referenced in `doc.go:3-12`, simulation counts defined in `types.go:58-67`, acceptance thresholds in `types.go:68-96`, but no implementation files exist (`combat.go` and `economic.go` exist, but `progression.go`, `social.go`, `housing.go`, `vehicle.go`, `companion.go`, `quest.go` do not) — **FIXED 2026-02-13**: All 6 validators implemented with full simulation logic, metrics collection, and structured logging
 - [x] **high** Missing functionality — No progress logging during 10K combat simulations which take ~30 seconds; long-running validations run silently without feedback — **FIXED 2026-02-13**: Added progress logging with logrus.WithFields in all simulation loops (combat class balance, weapon balance, boss difficulty, economic loot value, crafting profit, gold balance)
 - [x] **med** Logging — Zero usage of `logrus.WithFields` structured logging throughout package — **FIXED 2026-02-13**: Added logrus import and structured logging to both combat.go and economic.go with domain, test, progress, duration, and error fields
+- [x] **med** No standalone CLI tool for offline balance validation — **FIXED 2026-02-23**: Added `cmd/balance-validator` with JSON output, domain selection, configurable simulation counts. Added `scripts/validate-balance.sh` for CI/CD pipeline integration.
 - [x] **low** Documentation — Statistical helper functions lack detailed godoc explaining formulas: `calculateRSquared` (`combat.go:438-471`) and `calculateCorrelation` (`economic.go:177-206`) should document the mathematical formulas (coefficient of determination, Pearson correlation) for maintainability — **FIXED 2026-02-16**: Added comprehensive godoc with formulas, return value ranges, and edge case documentation
 
 ## Test Coverage
@@ -39,9 +40,9 @@ Target: 65% — **LIKELY EXCEEDS** (pending test infrastructure fix to avoid Ebi
 5. **Test coverage** — `cmd/server/validation_test.go` includes 4 test cases validating balance integration
 
 **Missing integrations**:
-- No standalone CLI tool for offline balance validation (`cmd/balance-validator` does not exist)
+- ~~No standalone CLI tool for offline balance validation (`cmd/balance-validator` does not exist)~~ **RESOLVED 2026-02-23**: `cmd/balance-validator` implemented with JSON output, domain selection, and configurable simulation counts
 - Not integrated with `pkg/procgen` generators for output validation (procgen generators don't call balance validators)
-- No CI/CD pipeline step (scripts/validate-balance.sh does not exist)
+- ~~No CI/CD pipeline step (scripts/validate-balance.sh does not exist)~~ **RESOLVED 2026-02-23**: `scripts/validate-balance.sh` implemented for CI/CD integration
 - No registration needed: Pure validation package, no system/component registration required
 
 **Serialization**: N/A — Validation package does not define components or persistent data structures.
@@ -54,11 +55,11 @@ Target: 65% — **LIKELY EXCEEDS** (pending test infrastructure fix to avoid Ebi
    - Use build tags to stub Ebiten imports in tests, OR
    - Document headless test workaround in README.md
 
-3. **Create standalone CLI tool** (LOW PRIORITY) — Implement `cmd/balance-validator` for offline validation:
-   ```bash
-   venture-balance-validator --seed 12345 --domain combat --simulations 10000
-   ```
-   Enables balance validation in CI/CD pipelines and during development.
+3. ~~**Create standalone CLI tool**~~ (LOW PRIORITY) — **DONE 2026-02-23**: `cmd/balance-validator` implemented with:
+   - All 8 validator domains (combat, economic, progression, social, housing, vehicle, companion, quest)
+   - JSON output mode for CI/CD parsing
+   - Configurable seed, simulation count, and timeout
+   - `scripts/validate-balance.sh` for pipeline integration
 
 4. **Add detailed statistical documentation** (LOW PRIORITY) — Expand godoc for `calculateRSquared` and `calculateCorrelation`:
    ```go

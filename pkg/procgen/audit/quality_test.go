@@ -203,24 +203,6 @@ func (v *EntityQualityValidator) Validate(result interface{}, params procgen.Gen
 	return nil
 }
 
-// getRarityMultiplier returns the stat multiplier for a rarity level
-func getRarityMultiplier(r entity.Rarity) float64 {
-	switch r {
-	case entity.RarityCommon:
-		return 1.0
-	case entity.RarityUncommon:
-		return 1.2
-	case entity.RarityRare:
-		return 1.5
-	case entity.RarityEpic:
-		return 2.0
-	case entity.RarityLegendary:
-		return 3.0
-	default:
-		return 1.0
-	}
-}
-
 // ItemQualityValidator validates item generation quality
 type ItemQualityValidator struct{}
 

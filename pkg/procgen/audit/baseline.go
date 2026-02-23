@@ -1,13 +1,3 @@
-// Package audit provides comprehensive validation tests for procedural generators.
-//
-// This file contains version stability baseline hashes for Phase 62.1 requirements.
-// Baseline hashes are SHA256 hashes of JSON-serialized generator output for a fixed seed.
-// If a generator's output changes (breaking change), the test will fail.
-//
-// Baseline Update Process:
-// 1. When a breaking change is intentional, regenerate baselines using GenerateBaseline test
-// 2. Update the baselineHashes map with new hashes
-// 3. Document the reason for the change in CHANGELOG.md
 package audit
 
 import (

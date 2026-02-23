@@ -23,12 +23,12 @@ The `pkg/procgen/audit` package provides production-readiness validation for all
 None
 
 ### Medium Severity
-- [ ] **Missing Benchmarks** — Package lacks performance benchmarks for baseline validation and hash generation which are hot-path operations during CI (`baseline.go:46-60`, `determinism_test.go:88-94`)
+- [x] **Missing Benchmarks** — Package lacks performance benchmarks for baseline validation and hash generation which are hot-path operations during CI (`baseline.go:46-60`, `determinism_test.go:88-94`) **RESOLVED 2026-02-23**: Added `benchmark_test.go` with `BenchmarkHashOutput`, `BenchmarkHashOutput_Item`, `BenchmarkCompareOutputs`, `BenchmarkCompareOutputs_Different`, `BenchmarkGetBaselinePrefix`, `BenchmarkGetBaselinePrefix_Miss`, and `BenchmarkHashMatchesBaseline`.
 
 ### Low Severity
-- [ ] **Documentation Duplication** — `doc.go` header comment is also duplicated in `baseline.go` header, creating maintenance burden for keeping synchronized (`doc.go:1-75`, `baseline.go:1-11`)
+- [x] **Documentation Duplication** — `doc.go` header comment is also duplicated in `baseline.go` header, creating maintenance burden for keeping synchronized (`doc.go:1-75`, `baseline.go:1-11`) **RESOLVED 2026-02-23**: Removed duplicate package documentation from `baseline.go`, keeping only `doc.go` as authoritative source.
 - [ ] **Missing TerrainGenerator baseline** — `baselineHashPrefixes` map includes "TerrainGenerator" but `TestBaselineHashPrefixesComplete` in test file only checks for generator without "Generator" suffix inconsistently (`baseline_test.go:176-205`)
-- [ ] **Unexported getRarityMultiplier unused** — Helper function `getRarityMultiplier` in `quality_test.go` is defined but never called (`quality_test.go:206-222`)
+- [x] **Unexported getRarityMultiplier unused** — Helper function `getRarityMultiplier` in `quality_test.go` is defined but never called (`quality_test.go:206-222`) **RESOLVED 2026-02-23**: Removed unused function.
 
 ## Input Integration
 | Input Source | Status | Notes |
@@ -48,10 +48,14 @@ None
 ## Test Coverage
 **Coverage**: 89.5% (target: 65%)
 - Missing test areas: None significant
-- Missing benchmarks:
-  - `BenchmarkHashOutput` for hot-path hash generation
-  - `BenchmarkCompareOutputs` for JSON comparison
-  - `BenchmarkGetBaselinePrefix` for baseline lookup
+- Benchmarks: ✅ All benchmarks present in `benchmark_test.go`:
+  - `BenchmarkHashOutput` for hot-path hash generation (~15µs/op)
+  - `BenchmarkHashOutput_Item` for item payload hashing (~29µs/op)
+  - `BenchmarkCompareOutputs` for JSON comparison (~19µs/op)
+  - `BenchmarkCompareOutputs_Different` for different outputs comparison
+  - `BenchmarkGetBaselinePrefix` for baseline lookup (~63ns/op)
+  - `BenchmarkGetBaselinePrefix_Miss` for missing keys (~10ns/op)
+  - `BenchmarkHashMatchesBaseline` for full comparison (~64ns/op)
 - Table-driven test compliance: ✅ All tests use table-driven patterns
 
 ## Documentation Coverage
@@ -95,7 +99,7 @@ None
 - Tests can run on all platforms without modification
 
 ## Recommendations
-1. **[MED]** Add `BenchmarkHashOutput` and `BenchmarkCompareOutputs` to track performance regressions in CI-critical hash operations
-2. **[LOW]** Remove duplicate package documentation header from `baseline.go:1-11` — keep only `doc.go` as authoritative source
-3. **[LOW]** Remove unused `getRarityMultiplier` function or add test coverage using it (`quality_test.go:206-222`)
+1. ~~**[MED]** Add `BenchmarkHashOutput` and `BenchmarkCompareOutputs` to track performance regressions in CI-critical hash operations~~ **DONE 2026-02-23**
+2. ~~**[LOW]** Remove duplicate package documentation header from `baseline.go:1-11` — keep only `doc.go` as authoritative source~~ **DONE 2026-02-23**
+3. ~~**[LOW]** Remove unused `getRarityMultiplier` function or add test coverage using it (`quality_test.go:206-222`)~~ **DONE 2026-02-23**
 4. **[LOW]** Standardize generator naming in `TestBaselineHashPrefixesComplete` to consistently use "Generator" suffix

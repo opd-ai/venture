@@ -528,9 +528,9 @@ This report consolidates 110 individual audit files across all packages in the V
 ### pkg/procgen/audit — Procgen Determinism Audit
 - **Source:** `pkg/procgen/audit/AUDIT.md`
 - **High Issues:** 0
-- **Medium Issues:** 1
-- **Low Issues:** 1
-- **Details:** 89.5% coverage. Package lacks performance benchmarks for baseline validation and hash generation (hot-path CI operations). Low coverage gap on some hash verification paths.
+- **Medium Issues:** 0 (1 fixed)
+- **Low Issues:** 0 (2 fixed)
+- **Details:** 89.5% coverage. **RESOLVED 2026-02-23**: Added performance benchmarks (`BenchmarkHashOutput`, `BenchmarkCompareOutputs`, `BenchmarkGetBaselinePrefix`, `BenchmarkHashMatchesBaseline`) for baseline validation and hash generation. Removed duplicate package documentation from `baseline.go` (doc.go is now authoritative source). Removed unused `getRarityMultiplier` helper function from `quality_test.go`.
 
 ---
 

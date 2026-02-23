@@ -437,9 +437,9 @@ func createGameWorld(logger *logrus.Logger) (*engine.World, *engine.EnhancedChat
 	// Fix: Initialize and register QoL system on server for authoritative craft queue validation
 	// Impact: Craft queues, guild invitations, and other QoL features properly validated server-side
 	qolManager := qol.NewManager(qol.Config{
-		AutoLoot:     true,  // Server-side loot validation
-		AutoSort:     true,  // Storage sort validation
-		QuickDeposit: true,  // Quick deposit validation
+		AutoLoot:     true, // Server-side loot validation
+		AutoSort:     true, // Storage sort validation
+		QuickDeposit: true, // Quick deposit validation
 	})
 	qolSystem := engine.NewQoLSystem(qolManager)
 	world.AddSystem(qolSystem)

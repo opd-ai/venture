@@ -326,7 +326,7 @@ func BenchmarkSerializeEntity(b *testing.B) {
 // used in delta snapshot generation.
 func BenchmarkEntityStateComparison(b *testing.B) {
 	prev := &EntityState{
-		ID: 1,
+		ID:       1,
 		Position: &PositionState{X: 100, Y: 200},
 		Velocity: &VelocityState{VX: 10, VY: 20},
 		Health:   &HealthState{Current: 75, Max: 100},
@@ -334,7 +334,7 @@ func BenchmarkEntityStateComparison(b *testing.B) {
 	}
 
 	current := &EntityState{
-		ID: 1,
+		ID:       1,
 		Position: &PositionState{X: 101, Y: 200}, // Position changed
 		Velocity: &VelocityState{VX: 10, VY: 20},
 		Health:   &HealthState{Current: 75, Max: 100},
@@ -352,7 +352,7 @@ func BenchmarkEntityStateComparison(b *testing.B) {
 // BenchmarkEntityStateComparison_NoChange measures comparison when nothing changed.
 func BenchmarkEntityStateComparison_NoChange(b *testing.B) {
 	prev := &EntityState{
-		ID: 1,
+		ID:       1,
 		Position: &PositionState{X: 100, Y: 200},
 		Velocity: &VelocityState{VX: 10, VY: 20},
 		Health:   &HealthState{Current: 75, Max: 100},
@@ -360,7 +360,7 @@ func BenchmarkEntityStateComparison_NoChange(b *testing.B) {
 	}
 
 	current := &EntityState{
-		ID: 1,
+		ID:       1,
 		Position: &PositionState{X: 100, Y: 200}, // Same
 		Velocity: &VelocityState{VX: 10, VY: 20},
 		Health:   &HealthState{Current: 75, Max: 100},
@@ -388,7 +388,7 @@ func BenchmarkWorldStateJSONMarshal(b *testing.B) {
 
 	for i := 0; i < 100; i++ {
 		snapshot.Entities[i] = EntityState{
-			ID: uint64(i),
+			ID:       uint64(i),
 			Position: &PositionState{X: float64(i * 10), Y: float64(i * 10)},
 			Velocity: &VelocityState{VX: float64(i % 10), VY: float64(i % 5)},
 			Health:   &HealthState{Current: 100, Max: 100},
@@ -416,7 +416,7 @@ func BenchmarkWorldStateJSONUnmarshal(b *testing.B) {
 
 	for i := 0; i < 100; i++ {
 		snapshot.Entities[i] = EntityState{
-			ID: uint64(i),
+			ID:       uint64(i),
 			Position: &PositionState{X: float64(i * 10), Y: float64(i * 10)},
 			Velocity: &VelocityState{VX: float64(i % 10), VY: float64(i % 5)},
 			Health:   &HealthState{Current: 100, Max: 100},

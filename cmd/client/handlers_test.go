@@ -992,3 +992,426 @@ func TestDeserializeManaAndSpellsMoreThanFiveSpells(t *testing.T) {
 		}
 	}
 }
+
+// TestApplyEquipmentLoadout tests that loadout bonuses are correctly applied to player stats.
+func TestApplyEquipmentLoadout(t *testing.T) {
+	logger, clientLogger := initializeLogger()
+
+	tests := []struct {
+		name            string
+		loadout         *engine.EquipmentLoadout
+		initialHP       float64
+		initialAttack   float64
+		initialDefense  float64
+		expectedHP      float64
+		expectedAttack  float64
+		expectedDefense float64
+	}{
+		{
+			name: "heavy armor loadout",
+			loadout: &engine.EquipmentLoadout{
+				Name:         "Heavy Armor",
+				BonusHP:      50,
+				BonusAttack:  10,
+				BonusDefense: 20,
+			},
+			initialHP: 100, initialAttack: 10, initialDefense: 5,
+			expectedHP: 150, expectedAttack: 20, expectedDefense: 25,
+		},
+		{
+			name: "berserker loadout",
+			loadout: &engine.EquipmentLoadout{
+				Name:         "Berserker",
+				BonusHP:      0,
+				BonusAttack:  30,
+				BonusDefense: -5,
+			},
+			initialHP: 100, initialAttack: 15, initialDefense: 10,
+			expectedHP: 100, expectedAttack: 45, expectedDefense: 5,
+		},
+		{
+			name: "balanced loadout",
+			loadout: &engine.EquipmentLoadout{
+				Name:         "Balanced",
+				BonusHP:      25,
+				BonusAttack:  15,
+				BonusDefense: 10,
+			},
+			initialHP: 80, initialAttack: 12, initialDefense: 8,
+			expectedHP: 105, expectedAttack: 27, expectedDefense: 18,
+		},
+		{
+			name: "zero bonus loadout",
+			loadout: &engine.EquipmentLoadout{
+				Name:         "Basic",
+				BonusHP:      0,
+				BonusAttack:  0,
+				BonusDefense: 0,
+			},
+			initialHP: 100, initialAttack: 10, initialDefense: 10,
+			expectedHP: 100, expectedAttack: 10, expectedDefense: 10,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			player := engine.NewEntity(1)
+			player.AddComponent(&engine.HealthComponent{
+				Current: tt.initialHP,
+				Max:     tt.initialHP,
+			})
+			player.AddComponent(&engine.StatsComponent{
+				Attack:  tt.initialAttack,
+				Defense: tt.initialDefense,
+			})
+
+			charData := &engine.CharacterData{
+				Name:            "TestPlayer",
+				Class:           engine.ClassWarrior,
+				StartingLoadout: tt.loadout,
+			}
+
+			applyEquipmentLoadout(player, charData, clientLogger)
+
+			// Verify health
+			healthComp, _ := player.GetComponent("health")
+			health := healthComp.(*engine.HealthComponent)
+			if health.Max != tt.expectedHP {
+				t.Errorf("Max HP = %v, want %v", health.Max, tt.expectedHP)
+			}
+			if health.Current != tt.expectedHP {
+				t.Errorf("Current HP = %v, want %v", health.Current, tt.expectedHP)
+			}
+
+			// Verify stats
+			statsComp, _ := player.GetComponent("stats")
+			stats := statsComp.(*engine.StatsComponent)
+			if stats.Attack != tt.expectedAttack {
+				t.Errorf("Attack = %v, want %v", stats.Attack, tt.expectedAttack)
+			}
+			if stats.Defense != tt.expectedDefense {
+				t.Errorf("Defense = %v, want %v", stats.Defense, tt.expectedDefense)
+			}
+		})
+	}
+	_ = logger // Suppress unused warning
+}
+
+// TestApplyEquipmentLoadoutNilLoadout tests that nil loadout is handled gracefully.
+func TestApplyEquipmentLoadoutNilLoadout(t *testing.T) {
+	logger, clientLogger := initializeLogger()
+
+	player := engine.NewEntity(1)
+	player.AddComponent(&engine.HealthComponent{Current: 100, Max: 100})
+	player.AddComponent(&engine.StatsComponent{Attack: 10, Defense: 10})
+
+	charData := &engine.CharacterData{
+		Name:            "TestPlayer",
+		Class:           engine.ClassWarrior,
+		StartingLoadout: nil, // No loadout selected
+	}
+
+	// Should not panic and not modify stats
+	applyEquipmentLoadout(player, charData, clientLogger)
+
+	healthComp, _ := player.GetComponent("health")
+	health := healthComp.(*engine.HealthComponent)
+	if health.Max != 100 {
+		t.Errorf("Max HP modified when loadout was nil: got %v, want 100", health.Max)
+	}
+
+	statsComp, _ := player.GetComponent("stats")
+	stats := statsComp.(*engine.StatsComponent)
+	if stats.Attack != 10 || stats.Defense != 10 {
+		t.Errorf("Stats modified when loadout was nil: attack=%v, defense=%v", stats.Attack, stats.Defense)
+	}
+	_ = logger
+}
+
+// TestApplyEquipmentLoadoutMissingComponents tests handling of missing components.
+func TestApplyEquipmentLoadoutMissingComponents(t *testing.T) {
+	logger, clientLogger := initializeLogger()
+
+	loadout := &engine.EquipmentLoadout{
+		Name:         "Test",
+		BonusHP:      50,
+		BonusAttack:  20,
+		BonusDefense: 15,
+	}
+	charData := &engine.CharacterData{
+		Name:            "TestPlayer",
+		Class:           engine.ClassWarrior,
+		StartingLoadout: loadout,
+	}
+
+	t.Run("missing health component", func(t *testing.T) {
+		player := engine.NewEntity(1)
+		player.AddComponent(&engine.StatsComponent{Attack: 10, Defense: 10})
+
+		// Should not panic
+		applyEquipmentLoadout(player, charData, clientLogger)
+
+		statsComp, _ := player.GetComponent("stats")
+		stats := statsComp.(*engine.StatsComponent)
+		if stats.Attack != 30 {
+			t.Errorf("Attack not applied: got %v, want 30", stats.Attack)
+		}
+	})
+
+	t.Run("missing stats component", func(t *testing.T) {
+		player := engine.NewEntity(2)
+		player.AddComponent(&engine.HealthComponent{Current: 100, Max: 100})
+
+		// Should not panic
+		applyEquipmentLoadout(player, charData, clientLogger)
+
+		healthComp, _ := player.GetComponent("health")
+		health := healthComp.(*engine.HealthComponent)
+		if health.Max != 150 {
+			t.Errorf("HP not applied: got %v, want 150", health.Max)
+		}
+	})
+
+	t.Run("no components at all", func(t *testing.T) {
+		player := engine.NewEntity(3)
+
+		// Should not panic
+		applyEquipmentLoadout(player, charData, clientLogger)
+	})
+	_ = logger
+}
+
+// TestApplyEquipmentLoadoutNegativeBonuses tests that negative bonuses work correctly.
+func TestApplyEquipmentLoadoutNegativeBonuses(t *testing.T) {
+	logger, clientLogger := initializeLogger()
+
+	player := engine.NewEntity(1)
+	player.AddComponent(&engine.HealthComponent{Current: 100, Max: 100})
+	player.AddComponent(&engine.StatsComponent{Attack: 20, Defense: 15})
+
+	charData := &engine.CharacterData{
+		Name:  "TestPlayer",
+		Class: engine.ClassWarrior,
+		StartingLoadout: &engine.EquipmentLoadout{
+			Name:         "Glass Cannon",
+			BonusHP:      -20,
+			BonusAttack:  40,
+			BonusDefense: -10,
+		},
+	}
+
+	applyEquipmentLoadout(player, charData, clientLogger)
+
+	healthComp, _ := player.GetComponent("health")
+	health := healthComp.(*engine.HealthComponent)
+	if health.Max != 80 {
+		t.Errorf("Max HP with negative bonus = %v, want 80", health.Max)
+	}
+
+	statsComp, _ := player.GetComponent("stats")
+	stats := statsComp.(*engine.StatsComponent)
+	if stats.Attack != 60 {
+		t.Errorf("Attack = %v, want 60", stats.Attack)
+	}
+	if stats.Defense != 5 {
+		t.Errorf("Defense with negative bonus = %v, want 5", stats.Defense)
+	}
+	_ = logger
+}
+
+// BenchmarkApplyEquipmentLoadout benchmarks loadout application performance.
+func BenchmarkApplyEquipmentLoadout(b *testing.B) {
+	logger, clientLogger := initializeLogger()
+
+	loadout := &engine.EquipmentLoadout{
+		Name:         "Heavy Armor",
+		BonusHP:      50,
+		BonusAttack:  10,
+		BonusDefense: 20,
+	}
+	charData := &engine.CharacterData{
+		Name:            "BenchmarkPlayer",
+		Class:           engine.ClassWarrior,
+		StartingLoadout: loadout,
+	}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		player := engine.NewEntity(uint64(i))
+		player.AddComponent(&engine.HealthComponent{Current: 100, Max: 100})
+		player.AddComponent(&engine.StatsComponent{Attack: 10, Defense: 10})
+		applyEquipmentLoadout(player, charData, clientLogger)
+	}
+	_ = logger
+}
+
+// TestPrestigeEntityAdapterGetID tests the GetID method of prestigeEntityAdapter.
+func TestPrestigeEntityAdapterGetID(t *testing.T) {
+	tests := []struct {
+		name     string
+		entityID uint64
+		expected string
+	}{
+		{"single digit", 1, "1"},
+		{"double digit", 42, "42"},
+		{"large id", 123456789, "123456789"},
+		{"zero", 0, "0"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			entity := engine.NewEntity(tt.entityID)
+			adapter := &prestigeEntityAdapter{entity: entity}
+
+			if got := adapter.GetID(); got != tt.expected {
+				t.Errorf("GetID() = %v, want %v", got, tt.expected)
+			}
+		})
+	}
+}
+
+// TestPrestigeEntityAdapterHasComponent tests the HasComponent method.
+func TestPrestigeEntityAdapterHasComponent(t *testing.T) {
+	entity := engine.NewEntity(1)
+	entity.AddComponent(&engine.PositionComponent{X: 100, Y: 200})
+	entity.AddComponent(&engine.HealthComponent{Current: 100, Max: 100})
+	adapter := &prestigeEntityAdapter{entity: entity}
+
+	tests := []struct {
+		name          string
+		componentType string
+		expected      bool
+	}{
+		{"has position", "position", true},
+		{"has health", "health", true},
+		{"no velocity", "velocity", false},
+		{"no stats", "stats", false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := adapter.HasComponent(tt.componentType); got != tt.expected {
+				t.Errorf("HasComponent(%q) = %v, want %v", tt.componentType, got, tt.expected)
+			}
+		})
+	}
+}
+
+// TestPrestigeEntityAdapterGetComponent tests the GetComponent method.
+func TestPrestigeEntityAdapterGetComponent(t *testing.T) {
+	entity := engine.NewEntity(1)
+	posComp := &engine.PositionComponent{X: 100, Y: 200}
+	entity.AddComponent(posComp)
+	adapter := &prestigeEntityAdapter{entity: entity}
+
+	t.Run("existing component", func(t *testing.T) {
+		comp := adapter.GetComponent("position")
+		if comp == nil {
+			t.Fatal("GetComponent returned nil for existing component")
+		}
+		pos, ok := comp.(*engine.PositionComponent)
+		if !ok {
+			t.Fatalf("Component type mismatch: got %T", comp)
+		}
+		if pos.X != 100 || pos.Y != 200 {
+			t.Errorf("Position = (%v, %v), want (100, 200)", pos.X, pos.Y)
+		}
+	})
+
+	t.Run("non-existing component", func(t *testing.T) {
+		comp := adapter.GetComponent("velocity")
+		if comp != nil {
+			t.Errorf("GetComponent returned non-nil for non-existing component: %v", comp)
+		}
+	})
+}
+
+// TestPrestigeEntityAdapterAddComponent tests the AddComponent method.
+func TestPrestigeEntityAdapterAddComponent(t *testing.T) {
+	entity := engine.NewEntity(1)
+	adapter := &prestigeEntityAdapter{entity: entity}
+
+	// Verify no velocity initially
+	if adapter.HasComponent("velocity") {
+		t.Fatal("Entity should not have velocity initially")
+	}
+
+	// Add component via adapter
+	velComp := &engine.VelocityComponent{VX: 10, VY: 20}
+	adapter.AddComponent(velComp)
+
+	// Verify component was added
+	if !adapter.HasComponent("velocity") {
+		t.Error("Component was not added")
+	}
+
+	comp := adapter.GetComponent("velocity")
+	if comp == nil {
+		t.Fatal("GetComponent returned nil after AddComponent")
+	}
+	vel, ok := comp.(*engine.VelocityComponent)
+	if !ok {
+		t.Fatalf("Component type mismatch: got %T", comp)
+	}
+	if vel.VX != 10 || vel.VY != 20 {
+		t.Errorf("Velocity = (%v, %v), want (10, 20)", vel.VX, vel.VY)
+	}
+}
+
+// TestPrestigeEntityAdapterRemoveComponent tests the RemoveComponent method.
+func TestPrestigeEntityAdapterRemoveComponent(t *testing.T) {
+	entity := engine.NewEntity(1)
+	entity.AddComponent(&engine.PositionComponent{X: 100, Y: 200})
+	entity.AddComponent(&engine.HealthComponent{Current: 100, Max: 100})
+	adapter := &prestigeEntityAdapter{entity: entity}
+
+	// Verify position exists
+	if !adapter.HasComponent("position") {
+		t.Fatal("Entity should have position initially")
+	}
+
+	// Remove position
+	adapter.RemoveComponent("position")
+
+	// Verify position was removed
+	if adapter.HasComponent("position") {
+		t.Error("Position component was not removed")
+	}
+
+	// Verify health is still there
+	if !adapter.HasComponent("health") {
+		t.Error("Health component should still exist")
+	}
+}
+
+// TestPrestigeEntityAdapterRemoveNonExistingComponent tests removing a non-existing component.
+func TestPrestigeEntityAdapterRemoveNonExistingComponent(t *testing.T) {
+	entity := engine.NewEntity(1)
+	adapter := &prestigeEntityAdapter{entity: entity}
+
+	// Should not panic when removing non-existing component
+	adapter.RemoveComponent("nonexistent")
+}
+
+// BenchmarkPrestigeEntityAdapterGetID benchmarks the GetID method.
+func BenchmarkPrestigeEntityAdapterGetID(b *testing.B) {
+	entity := engine.NewEntity(123456789)
+	adapter := &prestigeEntityAdapter{entity: entity}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_ = adapter.GetID()
+	}
+}
+
+// BenchmarkPrestigeEntityAdapterHasComponent benchmarks the HasComponent method.
+func BenchmarkPrestigeEntityAdapterHasComponent(b *testing.B) {
+	entity := engine.NewEntity(1)
+	entity.AddComponent(&engine.PositionComponent{X: 100, Y: 200})
+	adapter := &prestigeEntityAdapter{entity: entity}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_ = adapter.HasComponent("position")
+	}
+}

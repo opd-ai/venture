@@ -57,11 +57,14 @@
 //
 //	result, err := gen.Generate(12345, params)
 //	if err != nil {
-//	    log.Fatal(err)
+//	    logrus.WithError(err).Fatal("failed to generate raid dungeon")
 //	}
 //
 //	raid := result.(*raids.RaidDungeon)
-//	fmt.Printf("Raid: %s (%d bosses)\n", raid.Name, len(raid.Bosses))
+//	logrus.WithFields(logrus.Fields{
+//	    "raid_name": raid.Name,
+//	    "boss_count": len(raid.Bosses),
+//	}).Info("generated raid dungeon")
 //
 // # Performance
 //

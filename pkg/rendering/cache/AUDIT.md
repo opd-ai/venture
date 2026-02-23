@@ -26,7 +26,7 @@ None.
 - [ ] **time.Now usage** — `time.Now()` used for `LastCleanupAt` stats in `memory_monitor.go:142` and `memory_monitor.go:156`. This is acceptable for monitoring timestamps but noted for audit completeness.
 
 ### Low Severity
-- [ ] **Doc example style** — Documentation in `doc.go:37`, `doc.go:48`, `doc.go:65` uses `fmt.Printf` in example comments. Not actual code, but could suggest non-structured logging patterns.
+- [x] **Doc example style** — ~~Documentation in `doc.go:37`, `doc.go:48`, `doc.go:65` uses `fmt.Printf` in example comments. Not actual code, but could suggest non-structured logging patterns.~~ **RESOLVED 2026-02-23**: Updated all three doc.go examples to use `logrus.WithField()` for structured logging consistency.
 
 ## Input Integration
 | Input Source | Status | Notes |

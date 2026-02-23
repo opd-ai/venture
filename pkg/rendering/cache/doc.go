@@ -34,7 +34,7 @@
 //
 //	// Check statistics
 //	stats := cache.Stats()
-//	fmt.Printf("Hit rate: %.2f%%\n", stats.HitRate()*100)
+//	logrus.WithField("hit_rate", stats.HitRate()*100).Info("cache statistics")
 //
 // Memory Monitoring (Phase 44):
 //
@@ -45,7 +45,7 @@
 //
 //	// Check health
 //	if monitor.IsHealthy() {
-//	    fmt.Printf("Cache usage: %.1f%%\n", monitor.UsagePercentage())
+//	    logrus.WithField("usage_percent", monitor.UsagePercentage()).Info("cache health status")
 //	}
 //
 // Pre-Generation (Phase 44):
@@ -62,5 +62,5 @@
 //
 //	// Generate in batch
 //	count := pregen.Generate()
-//	fmt.Printf("Pre-generated %d sprites\n", count)
+//	logrus.WithField("sprite_count", count).Info("pre-generated sprites")
 package cache

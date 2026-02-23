@@ -62,7 +62,7 @@
 //	}
 //	result, err := gen.Generate(12345, params)
 //	if err != nil {
-//		log.Fatal(err)
+//		logrus.WithError(err).Fatal("failed to generate legendary quest")
 //	}
 //	quest := result.(*legendary.LegendaryQuest)
 //

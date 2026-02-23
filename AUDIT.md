@@ -14,8 +14,8 @@ This report consolidates 110 individual audit files across all packages in the V
 |----------|-------------|
 | High     | 1           |
 | Medium   | ~12         |
-| Low      | ~106        |
-| **Total**| **~119**    |
+| Low      | ~103        |
+| **Total**| **~116**    |
 
 **Historical totals (including fixed):** ~32 High, ~96 Medium, ~228 Low issues were identified across all audits. The vast majority have been resolved, resulting in an overall codebase health status of **Good**.
 
@@ -655,8 +655,8 @@ This report consolidates 110 individual audit files across all packages in the V
 - **Source:** `pkg/procgen/legendary/AUDIT.md`
 - **High Issues:** 0
 - **Medium Issues:** 1
-- **Low Issues:** 2
-- **Details:** 86.6% coverage. `RealTimeProvider.Now()` uses `time.Now()` in production; `TimeProvider` abstraction exists for testing but defaults to non-deterministic time for metadata timestamps. Minor documentation and API gap on some helper functions.
+- **Low Issues:** 2 (1 fixed)
+- **Details:** 86.6% coverage. `RealTimeProvider.Now()` uses `time.Now()` in production; `TimeProvider` abstraction exists for testing but defaults to non-deterministic time for metadata timestamps. **RESOLVED 2026-02-23**: `doc.go` example updated to use `logrus.WithError(err).Fatal()` instead of `log.Fatal(err)`. Minor documentation and API gap on some helper functions.
 
 ---
 
@@ -790,8 +790,8 @@ This report consolidates 110 individual audit files across all packages in the V
 - **Source:** `pkg/rendering/cache/AUDIT.md`
 - **High Issues:** 0
 - **Medium Issues:** 1
-- **Low Issues:** 2
-- **Details:** 98.2% coverage. `time.Now()` for `LastCleanupAt` stats in `memory_monitor.go` is acceptable for monitoring timestamps. Cache achieves documented 95.9% hit rate and 37x speedup. Minor documentation gaps.
+- **Low Issues:** 2 (1 fixed)
+- **Details:** 98.2% coverage. `time.Now()` for `LastCleanupAt` stats in `memory_monitor.go` is acceptable for monitoring timestamps. Cache achieves documented 95.9% hit rate and 37x speedup. **RESOLVED 2026-02-23**: `doc.go` examples updated to use `logrus.WithField()` instead of `fmt.Printf()`. Minor documentation gaps.
 
 ---
 
@@ -1024,8 +1024,8 @@ This report consolidates 110 individual audit files across all packages in the V
 - **Source:** `pkg/world/raids/AUDIT.md`
 - **High Issues:** 0
 - **Medium Issues:** 1
-- **Low Issues:** 1
-- **Details:** 90.4% coverage. Instance and lockout managers use `time.Now()` for expiration tracking without `GameClock` abstraction—appropriate for real-time game mechanics but limits deterministic testing. Design decision could be documented more explicitly.
+- **Low Issues:** 1 (1 fixed)
+- **Details:** 90.4% coverage. Instance and lockout managers use `time.Now()` for expiration tracking without `GameClock` abstraction—appropriate for real-time game mechanics but limits deterministic testing. **RESOLVED 2026-02-23**: `doc.go` example updated to use `logrus.WithError(err).Fatal()` and `logrus.WithFields()` instead of `log.Fatal()` and `fmt.Printf()`. Design decision could be documented more explicitly.
 
 ---
 

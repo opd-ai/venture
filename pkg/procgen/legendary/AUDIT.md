@@ -26,7 +26,7 @@ None.
 - [ ] **time.Now usage** — `RealTimeProvider.Now()` uses `time.Now()` directly (`types.go:22`). While properly abstracted via TimeProvider interface for testing, production code defaults to non-deterministic time. Consider injecting TimeProvider in more places for full determinism control.
 
 ### Low Severity
-- [ ] **Doc comment example** — Example in `doc.go:65` uses `log.Fatal(err)` in doc comment; while this is just documentation, using logrus would be more consistent with codebase standards (`doc.go:65`).
+- [x] **Doc comment example** — ~~Example in `doc.go:65` uses `log.Fatal(err)` in doc comment; while this is just documentation, using logrus would be more consistent with codebase standards (`doc.go:65`).~~ **RESOLVED 2026-02-23**: Updated to use `logrus.WithError(err).Fatal()` for consistency with codebase logging patterns.
 - [ ] **Missing benchmark for Save/Load** — Save/Load operations lack dedicated benchmarks for performance validation of serialization overhead (`manager.go:364-402`).
 - [ ] **getPlayerID implementation** — The `getPlayerID` function in `legendary_quest_system.go:288-291` uses a simplistic `string(rune(entity.ID))` conversion which may not uniquely identify players for IDs > 1,114,111. While this is in the engine package (not audited package), it affects legendary quest player tracking (`pkg/engine/legendary_quest_system.go:288-291`).
 

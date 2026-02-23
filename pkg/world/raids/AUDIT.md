@@ -26,7 +26,7 @@ The raids package provides procedural raid dungeon generation with instance and 
 - [ ] **time.Now() usage** — Instance and lockout managers use `time.Now()` for expiration tracking without GameClock abstraction, which is intentional for real-time game mechanics but limits deterministic testing. Consider documenting the design decision more explicitly. (`instance.go:65,70,99,113,161,180`, `lockout.go:47,55,128,164`)
 
 ### Low Severity
-- [ ] **doc.go example uses log.Fatal** — Example code in doc.go uses `log.Fatal()` rather than `logrus`. While acceptable in documentation examples, consider updating to match production logging patterns. (`doc.go:60,64`)
+- [x] **doc.go example uses log.Fatal** — ~~Example code in doc.go uses `log.Fatal()` rather than `logrus`. While acceptable in documentation examples, consider updating to match production logging patterns. (`doc.go:60,64`)~~ **RESOLVED 2026-02-23**: Updated doc.go example to use `logrus.WithError(err).Fatal()` and `logrus.WithFields()` for structured logging.
 - [ ] **README.md example uses fmt.Printf/log.Fatal** — Documentation examples use standard library logging rather than structured logrus logging. (`README.md:95,97,105,107,112,118,123,144,151,156-159,166,169-171`)
 
 ## Input Integration

@@ -23,7 +23,7 @@ The `pkg/ux` package implements a simulation-based user experience validation fr
 _None identified_
 
 ### Medium Severity
-- [ ] **time.Now usage** — `time.Now().UnixNano()` used for default seed when config seed is 0. This is documented and intentional for varied test runs, but the comment in `types.go:94-95` should clarify this is for UX validation timing only, not game content generation. (`validator.go:30`)
+- [x] **time.Now usage** — `time.Now().UnixNano()` used for default seed when config seed is 0. This is documented and intentional for varied test runs, and `types.go:93` already clarifies this is for UX validation timing only, not game content generation. **RESOLVED**: Comment already present at `types.go:93`.
 
 ### Low Severity
 - [ ] **Documentation comment style** — Log examples in doc.go use `log.Printf` which differs from project standard of `logrus.WithFields`. Consider updating examples to use structured logging pattern. (`doc.go:50`, `journeys.go:30`)
@@ -75,4 +75,4 @@ The package integrates with the server validation system for startup UX checks.
 ## Recommendations
 1. **[LOW]** Update doc.go examples to use `logrus.WithFields` pattern consistent with project logging guidelines
 2. **[LOW]** Consider making `GetSummary()` a method `(*JourneyValidator).GetSummary(results []JourneyResult)` for API consistency
-3. **[LOW]** Add a sentence to `types.go:94` clarifying that the time-based seed is for UX timing variation only and does not affect game content determinism
+3. ~~**[LOW]** Add a sentence to `types.go:94` clarifying that the time-based seed is for UX timing variation only and does not affect game content determinism~~ **ALREADY DONE**: Comment exists at `types.go:93`

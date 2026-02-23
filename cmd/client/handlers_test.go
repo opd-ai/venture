@@ -672,3 +672,180 @@ func TestDeserializeQoLStateNilData(t *testing.T) {
 		t.Error("QoL component should not be created with nil data")
 	}
 }
+
+// TestDeserializeEquipment tests equipment deserialization with all slots.
+func TestDeserializeEquipment(t *testing.T) {
+	player := engine.NewEntity(1)
+	player.AddComponent(engine.NewEquipmentComponent())
+
+	weaponData := saveload.ItemData{
+		ID:   "test-weapon",
+		Name: "Test Sword",
+		Type: "weapon",
+	}
+	armorData := saveload.ItemData{
+		ID:   "test-armor",
+		Name: "Test Plate",
+		Type: "armor",
+	}
+	accessoryData := saveload.ItemData{
+		ID:   "test-accessory",
+		Name: "Test Ring",
+		Type: "accessory",
+	}
+
+	state := &saveload.PlayerState{
+		EquippedItems: saveload.EquipmentData{
+			Weapon:    &weaponData,
+			Armor:     &armorData,
+			Accessory: &accessoryData,
+		},
+	}
+
+	deserializeEquipment(player, state)
+
+	equipComp, ok := player.GetComponent("equipment")
+	if !ok {
+		t.Fatal("Equipment component not found")
+	}
+	equipment := equipComp.(*engine.EquipmentComponent)
+
+	if weapon := equipment.Slots[engine.SlotMainHand]; weapon == nil || weapon.Name != "Test Sword" {
+		t.Error("Weapon not deserialized correctly")
+	}
+	if armor := equipment.Slots[engine.SlotChest]; armor == nil || armor.Name != "Test Plate" {
+		t.Error("Armor not deserialized correctly")
+	}
+	if accessory := equipment.Slots[engine.SlotAccessory1]; accessory == nil || accessory.Name != "Test Ring" {
+		t.Error("Accessory not deserialized correctly")
+	}
+	if !equipment.StatsDirty {
+		t.Error("StatsDirty should be true after deserialization")
+	}
+}
+
+// TestDeserializeEquipmentNoComponent tests equipment deserialization without component.
+func TestDeserializeEquipmentNoComponent(t *testing.T) {
+	player := engine.NewEntity(1)
+
+	weaponData := saveload.ItemData{ID: "test-weapon", Name: "Test Sword"}
+	state := &saveload.PlayerState{
+		EquippedItems: saveload.EquipmentData{
+			Weapon: &weaponData,
+		},
+	}
+
+	// Should not panic
+	deserializeEquipment(player, state)
+}
+
+// TestDeserializeEquipmentPartialSlots tests equipment deserialization with partial slots.
+func TestDeserializeEquipmentPartialSlots(t *testing.T) {
+	player := engine.NewEntity(1)
+	player.AddComponent(engine.NewEquipmentComponent())
+
+	weaponData := saveload.ItemData{ID: "test-weapon", Name: "Test Sword"}
+	state := &saveload.PlayerState{
+		EquippedItems: saveload.EquipmentData{
+			Weapon:    &weaponData,
+			Armor:     nil,
+			Accessory: nil,
+		},
+	}
+
+	deserializeEquipment(player, state)
+
+	equipComp, _ := player.GetComponent("equipment")
+	equipment := equipComp.(*engine.EquipmentComponent)
+
+	if weapon := equipment.Slots[engine.SlotMainHand]; weapon == nil || weapon.Name != "Test Sword" {
+		t.Error("Weapon not deserialized correctly")
+	}
+	if equipment.Slots[engine.SlotChest] != nil {
+		t.Error("Armor should be nil when not provided")
+	}
+	if equipment.Slots[engine.SlotAccessory1] != nil {
+		t.Error("Accessory should be nil when not provided")
+	}
+}
+
+// TestDeserializeManaAndSpells tests mana and spell deserialization.
+func TestDeserializeManaAndSpells(t *testing.T) {
+	player := engine.NewEntity(1)
+	player.AddComponent(&engine.ManaComponent{Current: 0, Max: 0})
+	player.AddComponent(&engine.SpellSlotComponent{})
+
+	spell1Data := saveload.SpellData{Name: "Fireball", ManaCost: 25}
+	spell2Data := saveload.SpellData{Name: "Ice Bolt", ManaCost: 20}
+
+	state := &saveload.PlayerState{
+		CurrentMana: 85,
+		MaxMana:     150,
+		Spells:      []saveload.SpellData{spell1Data, spell2Data},
+	}
+
+	deserializeManaAndSpells(player, state)
+
+	manaComp, ok := player.GetComponent("mana")
+	if !ok {
+		t.Fatal("Mana component not found")
+	}
+	mana := manaComp.(*engine.ManaComponent)
+
+	if mana.Current != 85 {
+		t.Errorf("Mana.Current = %d, want 85", mana.Current)
+	}
+	if mana.Max != 150 {
+		t.Errorf("Mana.Max = %d, want 150", mana.Max)
+	}
+
+	slotsComp, ok := player.GetComponent("spell_slots")
+	if !ok {
+		t.Fatal("Spell slots component not found")
+	}
+	slots := slotsComp.(*engine.SpellSlotComponent)
+
+	if slots.Slots[0] == nil || slots.Slots[0].Name != "Fireball" {
+		t.Error("Spell slot 0 not deserialized correctly")
+	}
+	if slots.Slots[1] == nil || slots.Slots[1].Name != "Ice Bolt" {
+		t.Error("Spell slot 1 not deserialized correctly")
+	}
+}
+
+// TestDeserializeManaAndSpellsNoComponent tests deserialization without components.
+func TestDeserializeManaAndSpellsNoComponent(t *testing.T) {
+	player := engine.NewEntity(1)
+	state := &saveload.PlayerState{CurrentMana: 100, MaxMana: 200}
+
+	// Should not panic
+	deserializeManaAndSpells(player, state)
+}
+
+// TestDeserializeManaAndSpellsMoreThanFiveSpells tests spell slot limit.
+func TestDeserializeManaAndSpellsMoreThanFiveSpells(t *testing.T) {
+	player := engine.NewEntity(1)
+	player.AddComponent(&engine.ManaComponent{})
+	player.AddComponent(&engine.SpellSlotComponent{})
+
+	// Create 7 spells
+	var spells []saveload.SpellData
+	for i := 0; i < 7; i++ {
+		spells = append(spells, saveload.SpellData{
+			Name: "Spell " + string(rune('A'+i)),
+		})
+	}
+
+	state := &saveload.PlayerState{Spells: spells}
+	deserializeManaAndSpells(player, state)
+
+	slotsComp, _ := player.GetComponent("spell_slots")
+	slots := slotsComp.(*engine.SpellSlotComponent)
+
+	// Only first 5 should be set
+	for i := 0; i < 5; i++ {
+		if slots.Slots[i] == nil {
+			t.Errorf("Spell slot %d should not be nil", i)
+		}
+	}
+}

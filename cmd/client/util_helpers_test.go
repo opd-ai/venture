@@ -1673,3 +1673,178 @@ func BenchmarkResolveSeedAndGenre(b *testing.B) {
 		resolveSeedAndGenre(seed, genre)
 	}
 }
+
+// TestAddHazardComponents tests adding hazard components to entity.
+func TestAddHazardComponents(t *testing.T) {
+	tests := []struct {
+		name                string
+		envObj              *environment.EnvironmentalObject
+		subType             environment.SubType
+		expectCollider      bool
+		expectHazard        bool
+		expectedHazardType  engine.HazardType
+		expectedDPS         float64
+	}{
+		{
+			name: "harmful collidable spikes",
+			envObj: &environment.EnvironmentalObject{
+				Width:      64,
+				Height:     64,
+				Collidable: true,
+				Harmful:    true,
+				Damage:     10,
+			},
+			subType:            environment.SubTypeSpikes,
+			expectCollider:     true,
+			expectHazard:       true,
+			expectedHazardType: engine.HazardPoison,
+			expectedDPS:        10.0,
+		},
+		{
+			name: "harmful non-collidable fire",
+			envObj: &environment.EnvironmentalObject{
+				Width:      48,
+				Height:     48,
+				Collidable: false,
+				Harmful:    true,
+				Damage:     15,
+			},
+			subType:            environment.SubTypeFirePit,
+			expectCollider:     false,
+			expectHazard:       true,
+			expectedHazardType: engine.HazardPoison,
+			expectedDPS:        15.0,
+		},
+		{
+			name: "non-harmful collidable barrier",
+			envObj: &environment.EnvironmentalObject{
+				Width:      32,
+				Height:     32,
+				Collidable: true,
+				Harmful:    false,
+				Damage:     0,
+			},
+			subType:        environment.SubTypeBarrel,
+			expectCollider: true,
+			expectHazard:   false,
+		},
+		{
+			name: "harmful but zero damage",
+			envObj: &environment.EnvironmentalObject{
+				Width:      64,
+				Height:     64,
+				Collidable: false,
+				Harmful:    true,
+				Damage:     0,
+			},
+			subType:        environment.SubTypeAcidPool,
+			expectCollider: false,
+			expectHazard:   false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			entity := engine.NewEntity(1)
+
+			addHazardComponents(entity, tt.envObj, tt.subType)
+
+			// Check sprite component (type is "sprite" not "ebitensprite")
+			if _, ok := entity.GetComponent("sprite"); !ok {
+				t.Error("Expected sprite component to be added")
+			}
+
+			// Check collider
+			_, hasCollider := entity.GetComponent("collider")
+			if hasCollider != tt.expectCollider {
+				t.Errorf("Collider present = %v, want %v", hasCollider, tt.expectCollider)
+			}
+
+			// Check hazard
+			hazardComp, hasHazard := entity.GetComponent("hazard")
+			if hasHazard != tt.expectHazard {
+				t.Errorf("Hazard present = %v, want %v", hasHazard, tt.expectHazard)
+			}
+
+			if tt.expectHazard && hasHazard {
+				hazard := hazardComp.(*engine.HazardComponent)
+				if hazard.HazardType != tt.expectedHazardType {
+					t.Errorf("HazardType = %v, want %v", hazard.HazardType, tt.expectedHazardType)
+				}
+				if hazard.DamagePerSecond != tt.expectedDPS {
+					t.Errorf("DamagePerSecond = %v, want %v", hazard.DamagePerSecond, tt.expectedDPS)
+				}
+			}
+		})
+	}
+}
+
+// TestAddHazardComponentsColliderDimensions verifies collider sizing.
+func TestAddHazardComponentsColliderDimensions(t *testing.T) {
+	entity := engine.NewEntity(1)
+	envObj := &environment.EnvironmentalObject{
+		Width:      80,
+		Height:     60,
+		Collidable: true,
+		Harmful:    false,
+	}
+
+	addHazardComponents(entity, envObj, environment.SubTypeBarrel)
+
+	colliderComp, ok := entity.GetComponent("collider")
+	if !ok {
+		t.Fatal("Collider component not found")
+	}
+	collider := colliderComp.(*engine.ColliderComponent)
+
+	if collider.Width != 80.0 {
+		t.Errorf("Collider width = %v, want 80", collider.Width)
+	}
+	if collider.Height != 60.0 {
+		t.Errorf("Collider height = %v, want 60", collider.Height)
+	}
+	if collider.OffsetX != -40.0 {
+		t.Errorf("Collider OffsetX = %v, want -40", collider.OffsetX)
+	}
+	if collider.OffsetY != -30.0 {
+		t.Errorf("Collider OffsetY = %v, want -30", collider.OffsetY)
+	}
+	if !collider.Solid {
+		t.Error("Collider should be solid")
+	}
+	if collider.IsTrigger {
+		t.Error("Collider should not be a trigger")
+	}
+}
+
+// TestAddHazardComponentsSpriteProperties verifies sprite setup.
+func TestAddHazardComponentsSpriteProperties(t *testing.T) {
+	entity := engine.NewEntity(1)
+	envObj := &environment.EnvironmentalObject{
+		Width:      64,
+		Height:     48,
+		Collidable: false,
+		Harmful:    false,
+	}
+
+	addHazardComponents(entity, envObj, environment.SubTypePlant)
+
+	spriteComp, ok := entity.GetComponent("sprite")
+	if !ok {
+		t.Fatal("Sprite component not found")
+	}
+	sprite := spriteComp.(*engine.EbitenSprite)
+
+	if sprite.Width != 64.0 {
+		t.Errorf("Sprite width = %v, want 64", sprite.Width)
+	}
+	if sprite.Height != 48.0 {
+		t.Errorf("Sprite height = %v, want 48", sprite.Height)
+	}
+	if !sprite.Visible {
+		t.Error("Sprite should be visible")
+	}
+	if sprite.Layer != 3 {
+		t.Errorf("Sprite layer = %d, want 3", sprite.Layer)
+	}
+}

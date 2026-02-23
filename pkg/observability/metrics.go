@@ -29,6 +29,10 @@ type MetricsExporter struct {
 
 	// Internal state
 	startTime time.Time
+
+	// serverWg tracks the server goroutine lifecycle to ensure clean shutdown.
+	// Stop() waits for this to ensure logging completes before returning.
+	serverWg sync.WaitGroup
 }
 
 // PerformanceMonitor provides performance metrics.
@@ -176,10 +180,18 @@ func (m *MetricsExporter) Start() error {
 		IdleTimeout:  60 * time.Second,
 	}
 
+	// Capture server reference before goroutine to prevent race with Stop().
+	// This ensures the goroutine has a stable reference even if Stop() is called immediately.
+	server := m.server
+	logger := m.logger
+	addr := m.addr
+
+	m.serverWg.Add(1)
 	go func() {
-		m.logger.WithField("address", m.addr).Info("Starting metrics HTTP server")
-		if err := m.server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			m.logger.WithError(err).Error("Metrics server error")
+		defer m.serverWg.Done()
+		logger.WithField("address", addr).Info("Starting metrics HTTP server")
+		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			logger.WithError(err).Error("Metrics server error")
 		}
 	}()
 
@@ -208,6 +220,10 @@ func (m *MetricsExporter) StopWithTimeout(timeout time.Duration) error {
 	if err := server.Shutdown(ctx); err != nil {
 		return fmt.Errorf("failed to shutdown metrics server: %w", err)
 	}
+
+	// Wait for the server goroutine to fully exit to ensure no logging occurs
+	// after Stop returns. This prevents log messages appearing after shutdown.
+	m.serverWg.Wait()
 
 	m.mu.Lock()
 	m.server = nil

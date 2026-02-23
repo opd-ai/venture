@@ -14,8 +14,8 @@ This report consolidates 110 individual audit files across all packages in the V
 |----------|-------------|
 | High     | 1           |
 | Medium   | ~27         |
-| Low      | ~125        |
-| **Total**| **~153**    |
+| Low      | ~123        |
+| **Total**| **~151**    |
 
 **Historical totals (including fixed):** ~32 High, ~95 Medium, ~227 Low issues were identified across all audits. The vast majority have been resolved, resulting in an overall codebase health status of **Good**.
 
@@ -520,8 +520,8 @@ This report consolidates 110 individual audit files across all packages in the V
 - **Source:** `pkg/observability/AUDIT.md`
 - **High Issues:** 0
 - **Medium Issues:** 0 (2 fixed)
-- **Low Issues:** 2
-- **Details:** 97.3% coverage. **RESOLVED 2026-02-22**: Removed false "distributed tracing support" claim from `doc.go`; documentation now accurately describes "readiness endpoints". Updated "player count" to "connected players" to match the `venture_players_connected` metric name. Remaining low-severity: edge case race in Start() and goroutine lifecycle in Stop().
+- **Low Issues:** 0 (2 fixed 2026-02-23)
+- **Details:** 97.4% coverage. **RESOLVED 2026-02-22**: Removed false "distributed tracing support" claim from `doc.go`; documentation now accurately describes "readiness endpoints". Updated "player count" to "connected players" to match the `venture_players_connected` metric name. **RESOLVED 2026-02-23**: Fixed edge case race in `Start()` by capturing server reference before goroutine launch; added `serverWg sync.WaitGroup` to `Stop()` to ensure goroutine exits before returning.
 
 ---
 

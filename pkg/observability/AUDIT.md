@@ -33,8 +33,8 @@ _(none)_
 - [x] **Naming Inconsistency** — Documentation says "player count" metric but implementation uses `venture_players_connected` measuring clients (`doc.go:8`, `metrics.go:258`) — **RESOLVED 2026-02-22**: Updated documentation to say "connected players" to match metric name
 
 ### Low Severity
-- [ ] **Edge Case Race** — Potential race between `Start()` goroutine launch and immediate `Stop()` call; server reference should be captured before goroutine (`metrics.go:179-184`)
-- [ ] **Goroutine Lifecycle** — `Stop()` does not wait for server goroutine to fully exit; logging may occur after Stop returns (`metrics.go:189-217`)
+- [x] **Edge Case Race** — Potential race between `Start()` goroutine launch and immediate `Stop()` call; server reference should be captured before goroutine (`metrics.go:179-184`) — **RESOLVED 2026-02-23**: Server reference now captured before goroutine starts, preventing race condition
+- [x] **Goroutine Lifecycle** — `Stop()` does not wait for server goroutine to fully exit; logging may occur after Stop returns (`metrics.go:189-217`) — **RESOLVED 2026-02-23**: Added `serverWg sync.WaitGroup` to ensure server goroutine exits before `Stop()` returns
 
 ## Input Integration
 | Input Source | Status | Notes |
@@ -82,8 +82,8 @@ Infrastructure package providing metrics export for server monitoring.
 ## Recommendations
 1. ~~**[MED]** Update `doc.go:2` to remove "distributed tracing support" claim or implement tracing (e.g., OpenTelemetry)~~ **RESOLVED 2026-02-22**
 2. ~~**[MED]** Rename metric to `venture_player_count` or update documentation to match `venture_players_connected`~~ **RESOLVED 2026-02-22**
-3. **[LOW]** Capture server reference before goroutine launch in `Start()` to prevent theoretical race
-4. **[LOW]** Add sync.WaitGroup to ensure server goroutine exits before `Stop()` returns
+3. ~~**[LOW]** Capture server reference before goroutine launch in `Start()` to prevent theoretical race~~ **RESOLVED 2026-02-23**
+4. ~~**[LOW]** Add sync.WaitGroup to ensure server goroutine exits before `Stop()` returns~~ **RESOLVED 2026-02-23**
 
 ---
 
@@ -106,12 +106,14 @@ Infrastructure package providing metrics export for server monitoring.
 **Severity:** Low
 **Description:** Goroutine captures `m.server` after mutex release; rapid Start/Stop could cause nil panic.
 **Impact:** Extremely rare; existing tests mask with 100ms sleep.
+**Status:** **RESOLVED 2026-02-23** — Server reference now captured before goroutine starts.
 
 ### EDGE CASE BUG: Stop() Does Not Join Goroutine
 **File:** metrics.go:189-217
 **Severity:** Low
 **Description:** Server.Shutdown() returns but goroutine may still be logging.
 **Impact:** Minor; log messages may appear after Stop() returns.
+**Status:** **RESOLVED 2026-02-23** — Added `serverWg sync.WaitGroup` to join goroutine before returning.
 
 ---
 

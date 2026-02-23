@@ -1799,6 +1799,46 @@ type wrongTypeComponent struct{}
 
 func (w *wrongTypeComponent) Type() string { return "qol" }
 
+// wrongPositionComponent returns "position" type but isn't PositionComponent.
+type wrongPositionComponent struct{}
+
+func (w *wrongPositionComponent) Type() string { return "position" }
+
+// wrongHealthComponent returns "health" type but isn't HealthComponent.
+type wrongHealthComponent struct{}
+
+func (w *wrongHealthComponent) Type() string { return "health" }
+
+// wrongStatsComponent returns "stats" type but isn't StatsComponent.
+type wrongStatsComponent struct{}
+
+func (w *wrongStatsComponent) Type() string { return "stats" }
+
+// wrongExperienceComponent returns "experience" type but isn't ExperienceComponent.
+type wrongExperienceComponent struct{}
+
+func (w *wrongExperienceComponent) Type() string { return "experience" }
+
+// wrongInventoryComponent returns "inventory" type but isn't InventoryComponent.
+type wrongInventoryComponent struct{}
+
+func (w *wrongInventoryComponent) Type() string { return "inventory" }
+
+// wrongEquipmentComponent returns "equipment" type but isn't EquipmentComponent.
+type wrongEquipmentComponent struct{}
+
+func (w *wrongEquipmentComponent) Type() string { return "equipment" }
+
+// wrongManaComponent returns "mana" type but isn't ManaComponent.
+type wrongManaComponent struct{}
+
+func (w *wrongManaComponent) Type() string { return "mana" }
+
+// wrongSpellSlotComponent returns "spell_slots" type but isn't SpellSlotComponent.
+type wrongSpellSlotComponent struct{}
+
+func (w *wrongSpellSlotComponent) Type() string { return "spell_slots" }
+
 // TestSerializeQoLStateWrongComponentType tests serialization with wrong component type.
 func TestSerializeQoLStateWrongComponentType(t *testing.T) {
 	player := engine.NewEntity(1)
@@ -1839,5 +1879,276 @@ func TestDeserializeQoLStateWrongComponentType(t *testing.T) {
 	_, isWrong := comp.(*wrongTypeComponent)
 	if !isWrong {
 		t.Error("Component should still be wrong type (not replaced)")
+	}
+}
+
+// TestDeserializePositionWrongComponentType tests position deserialization with wrong component type.
+func TestDeserializePositionWrongComponentType(t *testing.T) {
+	player := engine.NewEntity(1)
+	player.AddComponent(&wrongPositionComponent{})
+
+	state := &saveload.PlayerState{X: 100, Y: 200}
+
+	// Should not panic, just return early
+	deserializePosition(player, state)
+
+	// The wrong component should still be there (not replaced)
+	comp, ok := player.GetComponent("position")
+	if !ok {
+		t.Fatal("Component should still exist")
+	}
+	_, isWrong := comp.(*wrongPositionComponent)
+	if !isWrong {
+		t.Error("Component should still be wrong type (not replaced)")
+	}
+}
+
+// TestDeserializeHealthWrongComponentType tests health deserialization with wrong component type.
+func TestDeserializeHealthWrongComponentType(t *testing.T) {
+	player := engine.NewEntity(1)
+	player.AddComponent(&wrongHealthComponent{})
+
+	state := &saveload.PlayerState{CurrentHealth: 50, MaxHealth: 100}
+
+	// Should not panic, just return early
+	deserializeHealth(player, state)
+
+	// The wrong component should still be there (not replaced)
+	comp, ok := player.GetComponent("health")
+	if !ok {
+		t.Fatal("Component should still exist")
+	}
+	_, isWrong := comp.(*wrongHealthComponent)
+	if !isWrong {
+		t.Error("Component should still be wrong type (not replaced)")
+	}
+}
+
+// TestDeserializeStatsWrongComponentType tests stats deserialization with wrong component type.
+func TestDeserializeStatsWrongComponentType(t *testing.T) {
+	player := engine.NewEntity(1)
+	player.AddComponent(&wrongStatsComponent{})
+
+	state := &saveload.PlayerState{Attack: 10, Defense: 5, MagicPower: 8}
+
+	// Should not panic, just return early
+	deserializeStats(player, state)
+
+	// The wrong component should still be there (not replaced)
+	comp, ok := player.GetComponent("stats")
+	if !ok {
+		t.Fatal("Component should still exist")
+	}
+	_, isWrong := comp.(*wrongStatsComponent)
+	if !isWrong {
+		t.Error("Component should still be wrong type (not replaced)")
+	}
+}
+
+// TestDeserializeExperienceWrongComponentType tests experience deserialization with wrong component type.
+func TestDeserializeExperienceWrongComponentType(t *testing.T) {
+	player := engine.NewEntity(1)
+	player.AddComponent(&wrongExperienceComponent{})
+
+	state := &saveload.PlayerState{Level: 5, Experience: 1500}
+
+	// Should not panic, just return early
+	deserializeExperience(player, state)
+
+	// The wrong component should still be there (not replaced)
+	comp, ok := player.GetComponent("experience")
+	if !ok {
+		t.Fatal("Component should still exist")
+	}
+	_, isWrong := comp.(*wrongExperienceComponent)
+	if !isWrong {
+		t.Error("Component should still be wrong type (not replaced)")
+	}
+}
+
+// TestDeserializeInventoryWrongComponentType tests inventory deserialization with wrong component type.
+func TestDeserializeInventoryWrongComponentType(t *testing.T) {
+	player := engine.NewEntity(1)
+	player.AddComponent(&wrongInventoryComponent{})
+
+	state := &saveload.PlayerState{Gold: 500, Items: []saveload.ItemData{}}
+
+	// Should not panic, just return early
+	deserializeInventory(player, state)
+
+	// The wrong component should still be there (not replaced)
+	comp, ok := player.GetComponent("inventory")
+	if !ok {
+		t.Fatal("Component should still exist")
+	}
+	_, isWrong := comp.(*wrongInventoryComponent)
+	if !isWrong {
+		t.Error("Component should still be wrong type (not replaced)")
+	}
+}
+
+// TestDeserializeEquipmentWrongComponentType tests equipment deserialization with wrong component type.
+func TestDeserializeEquipmentWrongComponentType(t *testing.T) {
+	player := engine.NewEntity(1)
+	player.AddComponent(&wrongEquipmentComponent{})
+
+	weaponData := saveload.ItemData{ID: "test", Name: "Test", Type: "weapon"}
+	state := &saveload.PlayerState{
+		EquippedItems: saveload.EquipmentData{Weapon: &weaponData},
+	}
+
+	// Should not panic, just return early
+	deserializeEquipment(player, state)
+
+	// The wrong component should still be there (not replaced)
+	comp, ok := player.GetComponent("equipment")
+	if !ok {
+		t.Fatal("Component should still exist")
+	}
+	_, isWrong := comp.(*wrongEquipmentComponent)
+	if !isWrong {
+		t.Error("Component should still be wrong type (not replaced)")
+	}
+}
+
+// TestDeserializeManaAndSpellsWrongManaType tests mana deserialization with wrong component type.
+func TestDeserializeManaAndSpellsWrongManaType(t *testing.T) {
+	player := engine.NewEntity(1)
+	player.AddComponent(&wrongManaComponent{})
+
+	state := &saveload.PlayerState{CurrentMana: 50, MaxMana: 100}
+
+	// Should not panic, just return early
+	deserializeManaAndSpells(player, state)
+
+	// The wrong component should still be there (not replaced)
+	comp, ok := player.GetComponent("mana")
+	if !ok {
+		t.Fatal("Component should still exist")
+	}
+	_, isWrong := comp.(*wrongManaComponent)
+	if !isWrong {
+		t.Error("Component should still be wrong type (not replaced)")
+	}
+}
+
+// TestDeserializeManaAndSpellsWrongSpellSlotType tests spell slot deserialization with wrong component type.
+func TestDeserializeManaAndSpellsWrongSpellSlotType(t *testing.T) {
+	player := engine.NewEntity(1)
+	// Add correct mana component but wrong spell slots component
+	player.AddComponent(&engine.ManaComponent{Current: 0, Max: 100})
+	player.AddComponent(&wrongSpellSlotComponent{})
+
+	state := &saveload.PlayerState{
+		CurrentMana: 50,
+		MaxMana:     100,
+		Spells:      []saveload.SpellData{{Name: "Fireball", ManaCost: 25}},
+	}
+
+	// Should not panic, just return early when spell slots assertion fails
+	deserializeManaAndSpells(player, state)
+
+	// Mana should be updated (correct type)
+	manaComp, _ := player.GetComponent("mana")
+	mana := manaComp.(*engine.ManaComponent)
+	if mana.Current != 50 || mana.Max != 100 {
+		t.Errorf("Mana = %d/%d, want 50/100", mana.Current, mana.Max)
+	}
+
+	// Spell slots should still be wrong type (not replaced)
+	comp, ok := player.GetComponent("spell_slots")
+	if !ok {
+		t.Fatal("Spell slot component should still exist")
+	}
+	_, isWrong := comp.(*wrongSpellSlotComponent)
+	if !isWrong {
+		t.Error("Component should still be wrong type (not replaced)")
+	}
+}
+
+// TestSerializeExperienceWrongComponentType tests experience serialization with wrong component type.
+func TestSerializeExperienceWrongComponentType(t *testing.T) {
+	player := engine.NewEntity(1)
+	player.AddComponent(&wrongExperienceComponent{})
+
+	state := &saveload.PlayerState{}
+
+	// Should not panic, just return early
+	serializeExperience(player, state)
+
+	// Values should not be set (remain default)
+	if state.Level != 0 || state.Experience != 0 {
+		t.Errorf("Level/Experience = %d/%d, want 0/0", state.Level, state.Experience)
+	}
+}
+
+// TestSerializeInventoryWrongComponentType tests inventory serialization with wrong component type.
+func TestSerializeInventoryWrongComponentType(t *testing.T) {
+	player := engine.NewEntity(1)
+	player.AddComponent(&wrongInventoryComponent{})
+
+	state := &saveload.PlayerState{}
+
+	// Should not panic, just return early
+	serializeInventory(player, state)
+
+	// Values should not be set (remain default)
+	if state.Gold != 0 || state.Items != nil {
+		t.Errorf("Gold/Items = %d/%v, want 0/nil", state.Gold, state.Items)
+	}
+}
+
+// TestSerializeEquipmentWrongComponentType tests equipment serialization with wrong component type.
+func TestSerializeEquipmentWrongComponentType(t *testing.T) {
+	player := engine.NewEntity(1)
+	player.AddComponent(&wrongEquipmentComponent{})
+
+	state := &saveload.PlayerState{}
+
+	// Should not panic, just return early
+	serializeEquipment(player, state)
+
+	// Values should not be set (remain default)
+	if state.EquippedItems.Weapon != nil || state.EquippedItems.Armor != nil {
+		t.Error("EquippedItems should remain empty")
+	}
+}
+
+// TestSerializeManaAndSpellsWrongManaType tests mana serialization with wrong component type.
+func TestSerializeManaAndSpellsWrongManaType(t *testing.T) {
+	player := engine.NewEntity(1)
+	player.AddComponent(&wrongManaComponent{})
+
+	state := &saveload.PlayerState{}
+
+	// Should not panic, just return early
+	serializeManaAndSpells(player, state)
+
+	// Values should not be set (remain default)
+	if state.CurrentMana != 0 || state.MaxMana != 0 {
+		t.Errorf("Mana = %d/%d, want 0/0", state.CurrentMana, state.MaxMana)
+	}
+}
+
+// TestSerializeManaAndSpellsWrongSpellSlotType tests spell slot serialization with wrong component type.
+func TestSerializeManaAndSpellsWrongSpellSlotType(t *testing.T) {
+	player := engine.NewEntity(1)
+	// Add correct mana component but wrong spell slots component
+	player.AddComponent(&engine.ManaComponent{Current: 75, Max: 150})
+	player.AddComponent(&wrongSpellSlotComponent{})
+
+	state := &saveload.PlayerState{}
+
+	// Should not panic, mana should be serialized, spells should not
+	serializeManaAndSpells(player, state)
+
+	// Mana values should be set (correct type)
+	if state.CurrentMana != 75 || state.MaxMana != 150 {
+		t.Errorf("Mana = %d/%d, want 75/150", state.CurrentMana, state.MaxMana)
+	}
+
+	// Spells should not be set (wrong type)
+	if state.Spells != nil {
+		t.Errorf("Spells should be nil, got %v", state.Spells)
 	}
 }

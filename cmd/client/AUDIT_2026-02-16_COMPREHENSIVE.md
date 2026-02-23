@@ -11,12 +11,12 @@ The cmd/client package serves as the desktop game client entry point with extrem
 - [x] **low** deterministic procgen — time.Now() used for death SFX seed in gameplay code (`util.go:1467`)
 - [x] **medium** deterministic procgen — time.Now() used for narrative event timestamp in gameplay code (`handlers.go:4381`)
 - [x] **low** error handling — ~~Save manager init error logged as warning but functionality remains unavailable silently~~ **RESOLVED 2026-02-23**: Memory fallback prevents nil
-- [x] **high** test coverage — 49.0% coverage below 65% target (improved from 48.6% via selectObjectType and system wrapper tests 2026-02-23)
+- [x] **high** test coverage — 49.4% coverage below 65% target (improved from 49.0% via type assertion failure tests 2026-02-23)
 - [x] **low** doc coverage — Main package has excellent doc.go (159 lines) but no exported functions requiring docs
 - [x] **low** maintainability — ~~handlers.go is 4,476 lines with 60+ functions~~ Split into handlers.go (3,894 lines) and init_versions.go (643 lines)
 
 ## Test Coverage
-49.0% (target: 65%, improved from 48.6% via selectObjectType and system wrapper tests 2026-02-23)
+49.4% (target: 65%, improved from 49.0% via type assertion failure tests 2026-02-23)
 
 **Analysis**: Coverage is artificially low because most code paths require Ebiten display server initialization (runs with xvfb-run in CI). Core game logic in pkg/ packages averages 82.4%. Test suite includes 12 test files with comprehensive integration tests:
 - `integration_test.go` — Host-and-play flag integration, default behavior, port fallback (4 tests)
@@ -135,8 +135,9 @@ None identified. All systems are properly registered with the World and connecte
    - **[COMPLETED 2026-02-23]** Added tests for `prestigeEntityAdapter` methods (GetID, HasComponent, GetComponent, AddComponent, RemoveComponent) (6 tests, 2 benchmarks)
    - **[COMPLETED 2026-02-23]** Added tests for `cleanupNetworkClient` (nil, success, error, non-disconnector cases) (5 tests)
    - **[COMPLETED 2026-02-23]** Added tests for `findOrCreateWorldNarrativeEntity` (new, existing, skips player, multiple entities) (4 tests, 1 benchmark)
+   - **[COMPLETED 2026-02-23]** Added type assertion failure tests for all serialization/deserialization functions (15 tests), achieving 100% coverage for `serializeExperience`, `serializeEquipment`, `serializeManaAndSpells`, `deserializePosition`, `deserializeHealth`, `deserializeStats`, `deserializeExperience`, `deserializeEquipment`, and `deserializeManaAndSpells`
    - **[REMAINING]** Test remaining helper functions (spawnWallTorches, etc.) - requires mocked World
-   - **Coverage improved from 47.8% to 48.3%** (2026-02-23)
+   - **Coverage improved from 49.0% to 49.4%** (2026-02-23)
    - Note: Many functions in util.go require engine.World which has Ebiten dependencies, limiting unit test coverage without xvfb
 
 4. **[RESOLVED 2026-02-23]** ~~Add fallback behavior when save manager fails to initialize~~

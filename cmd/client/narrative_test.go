@@ -389,3 +389,128 @@ func BenchmarkAddPlotPointsAsThreads(b *testing.B) {
 		addPlotPointsAsThreads(comp, arc)
 	}
 }
+
+// testPlayerComp is a test player component for narrative tests.
+type testPlayerComp struct{}
+
+// Type returns the component type identifier.
+func (t *testPlayerComp) Type() string { return "player" }
+
+// TestFindOrCreateWorldNarrativeEntityNew tests creating a new narrative entity.
+func TestFindOrCreateWorldNarrativeEntityNew(t *testing.T) {
+	world := engine.NewWorld()
+
+	entity := findOrCreateWorldNarrativeEntity(world)
+
+	if entity == nil {
+		t.Fatal("findOrCreateWorldNarrativeEntity returned nil")
+	}
+
+	// Verify entity was added to world
+	entities := world.GetEntities()
+	found := false
+	for _, e := range entities {
+		if e.ID == entity.ID {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Error("created entity not found in world")
+	}
+}
+
+// TestFindOrCreateWorldNarrativeEntityExisting tests finding existing narrative entity.
+func TestFindOrCreateWorldNarrativeEntityExisting(t *testing.T) {
+	world := engine.NewWorld()
+
+	// Create entity with narrative component (no player component)
+	existing := world.CreateEntity()
+	existing.AddComponent(&engine.NarrativeComponent{
+		MainObjective: "Existing Story",
+	})
+
+	entity := findOrCreateWorldNarrativeEntity(world)
+
+	if entity == nil {
+		t.Fatal("findOrCreateWorldNarrativeEntity returned nil")
+	}
+	if entity.ID != existing.ID {
+		t.Errorf("expected existing entity ID %d, got %d", existing.ID, entity.ID)
+	}
+}
+
+// TestFindOrCreateWorldNarrativeEntitySkipsPlayerNarrative tests that player narrative is skipped.
+func TestFindOrCreateWorldNarrativeEntitySkipsPlayerNarrative(t *testing.T) {
+	world := engine.NewWorld()
+
+	// Create player entity with narrative component (should be skipped)
+	player := world.CreateEntity()
+	player.AddComponent(&engine.NarrativeComponent{
+		MainObjective: "Player Story",
+	})
+	player.AddComponent(&testPlayerComp{})
+
+	entity := findOrCreateWorldNarrativeEntity(world)
+
+	if entity == nil {
+		t.Fatal("findOrCreateWorldNarrativeEntity returned nil")
+	}
+	// Should NOT return the player entity
+	if entity.ID == player.ID {
+		t.Error("should not return player entity, expected new entity")
+	}
+}
+
+// TestFindOrCreateWorldNarrativeEntityMultipleEntities tests with multiple entities.
+func TestFindOrCreateWorldNarrativeEntityMultipleEntities(t *testing.T) {
+	world := engine.NewWorld()
+
+	// Create player entity (skipped)
+	player := world.CreateEntity()
+	player.AddComponent(&engine.NarrativeComponent{MainObjective: "Player"})
+	player.AddComponent(&testPlayerComp{})
+
+	// Create non-narrative entity
+	other := world.CreateEntity()
+	other.AddComponent(&engine.PositionComponent{X: 1, Y: 2})
+
+	// Create world narrative entity (should be found)
+	worldNarrative := world.CreateEntity()
+	worldNarrative.AddComponent(&engine.NarrativeComponent{
+		MainObjective: "World Story",
+	})
+
+	entity := findOrCreateWorldNarrativeEntity(world)
+
+	if entity == nil {
+		t.Fatal("findOrCreateWorldNarrativeEntity returned nil")
+	}
+	if entity.ID != worldNarrative.ID {
+		t.Errorf("expected world narrative entity ID %d, got %d", worldNarrative.ID, entity.ID)
+	}
+}
+
+// BenchmarkFindOrCreateWorldNarrativeEntity benchmarks finding/creating narrative entity.
+func BenchmarkFindOrCreateWorldNarrativeEntity(b *testing.B) {
+	world := engine.NewWorld()
+	// Pre-populate with some entities
+	for i := 0; i < 100; i++ {
+		e := world.CreateEntity()
+		e.AddComponent(&engine.PositionComponent{X: float64(i), Y: float64(i)})
+	}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		// Remove existing world narrative each iteration to test creation path
+		entities := world.GetEntities()
+		for _, e := range entities {
+			if _, ok := e.GetComponent("narrative"); ok {
+				if _, hasPlayer := e.GetComponent("player"); !hasPlayer {
+					world.RemoveEntity(e.ID)
+				}
+			}
+		}
+		_ = findOrCreateWorldNarrativeEntity(world)
+	}
+}

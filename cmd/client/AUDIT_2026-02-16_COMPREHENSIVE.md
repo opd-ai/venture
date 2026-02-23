@@ -3,20 +3,20 @@
 **Status**: Needs Work
 
 ## Summary
-The cmd/client package serves as the desktop game client entry point with extremely high integration surface, coordinating 200+ systems across engine, rendering, network, audio, and procgen domains. Overall health is good with proper ECS architecture adherence and deterministic generation patterns, but test coverage is below target at 46.8% (below 65% target) due to Ebiten display server dependency. The package contains 7,191 lines of code across 16 files with 154 structured logging calls. The 3 non-deterministic time.Now() usages in gameplay code have been resolved via TimeProvider abstraction (time_provider.go). Remaining performance-measurement time.Now() calls (handlers.go:595, 691, 774) are acceptable non-procgen usage. Version-specific initialization functions (V4-V19, VR, Phase 3) have been extracted to init_versions.go, reducing handlers.go from 4,494 to 3,894 lines.
+The cmd/client package serves as the desktop game client entry point with extremely high integration surface, coordinating 200+ systems across engine, rendering, network, audio, and procgen domains. Overall health is good with proper ECS architecture adherence and deterministic generation patterns, but test coverage is below target at 48.3% (below 65% target) due to Ebiten display server dependency. The package contains 7,191 lines of code across 16 files with 154 structured logging calls. The 3 non-deterministic time.Now() usages in gameplay code have been resolved via TimeProvider abstraction (time_provider.go). Remaining performance-measurement time.Now() calls (handlers.go:595, 691, 774) are acceptable non-procgen usage. Version-specific initialization functions (V4-V19, VR, Phase 3) have been extracted to init_versions.go, reducing handlers.go from 4,494 to 3,894 lines.
 
 ## Issues Found
-- [x] **low** stub/incomplete — Save manager initialization returns nil on error without fallback (`handlers.go:3686`)
+- [x] **low** stub/incomplete — ~~Save manager initialization returns nil on error without fallback~~ **RESOLVED 2026-02-23**: Now falls back to `saveload.NewMemorySaveManager()`
 - [x] **low** deterministic procgen — time.Now() used for DeadComponent timestamp in gameplay code (`util.go:1447`)
 - [x] **low** deterministic procgen — time.Now() used for death SFX seed in gameplay code (`util.go:1467`)
 - [x] **medium** deterministic procgen — time.Now() used for narrative event timestamp in gameplay code (`handlers.go:4381`)
-- [x] **low** error handling — Save manager init error logged as warning but functionality remains unavailable silently (`handlers.go:3685-3686`)
-- [x] **high** test coverage — 47.8% coverage below 65% target (improved from 46.8% via loadout, monitoring, and adapter tests 2026-02-23)
+- [x] **low** error handling — ~~Save manager init error logged as warning but functionality remains unavailable silently~~ **RESOLVED 2026-02-23**: Memory fallback prevents nil
+- [x] **high** test coverage — 48.3% coverage below 65% target (improved from 47.8% via cleanup and narrative entity tests 2026-02-23)
 - [x] **low** doc coverage — Main package has excellent doc.go (159 lines) but no exported functions requiring docs
 - [x] **low** maintainability — ~~handlers.go is 4,476 lines with 60+ functions~~ Split into handlers.go (3,894 lines) and init_versions.go (643 lines)
 
 ## Test Coverage
-47.8% (target: 65%, improved from 46.8% via loadout, monitoring, and adapter tests 2026-02-23)
+48.3% (target: 65%, improved from 47.8% via cleanup and narrative entity tests 2026-02-23)
 
 **Analysis**: Coverage is artificially low because most code paths require Ebiten display server initialization (runs with xvfb-run in CI). Core game logic in pkg/ packages averages 82.4%. Test suite includes 10 test files with comprehensive integration tests:
 - `integration_test.go` — Host-and-play flag integration, default behavior, port fallback (4 tests)
@@ -132,13 +132,15 @@ None identified. All systems are properly registered with the World and connecte
    - **[COMPLETED 2026-02-23]** Added tests for `applyEquipmentLoadout` (loadout bonuses, nil loadout, missing components, negative bonuses) (5 tests, 1 benchmark)
    - **[COMPLETED 2026-02-23]** Added tests for `buildPerformanceFields` and `logPerformanceStatus` (monitoring helpers) (7 tests, 1 benchmark)
    - **[COMPLETED 2026-02-23]** Added tests for `prestigeEntityAdapter` methods (GetID, HasComponent, GetComponent, AddComponent, RemoveComponent) (6 tests, 2 benchmarks)
+   - **[COMPLETED 2026-02-23]** Added tests for `cleanupNetworkClient` (nil, success, error, non-disconnector cases) (5 tests)
+   - **[COMPLETED 2026-02-23]** Added tests for `findOrCreateWorldNarrativeEntity` (new, existing, skips player, multiple entities) (4 tests, 1 benchmark)
    - **[REMAINING]** Test remaining helper functions (spawnWallTorches, etc.) - requires mocked World
-   - **Coverage improved from 46.8% to 47.8%** (2026-02-23)
+   - **Coverage improved from 47.8% to 48.3%** (2026-02-23)
    - Note: Many functions in util.go require engine.World which has Ebiten dependencies, limiting unit test coverage without xvfb
 
-4. **[LOW PRIORITY]** Add fallback behavior when save manager fails to initialize
-   - Current: returns nil and logs warning
-   - Better: return in-memory stub implementation that supports save/load in-memory only
+4. **[RESOLVED 2026-02-23]** ~~Add fallback behavior when save manager fails to initialize~~
+   - ~~Current: returns nil and logs warning~~
+   - **DONE**: Now falls back to `saveload.NewMemorySaveManager()` which provides in-memory save/load
    - Prevents nil pointer dereference if save callbacks are triggered
 
 5. **[LOW PRIORITY]** Update doc.go version references dynamically

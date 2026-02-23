@@ -4,6 +4,8 @@
 package main
 
 import (
+	"errors"
+	"io"
 	"testing"
 
 	"github.com/opd-ai/venture/pkg/class/advanced"
@@ -12,6 +14,7 @@ import (
 	"github.com/opd-ai/venture/pkg/procgen/item"
 	"github.com/opd-ai/venture/pkg/procgen/magic"
 	"github.com/opd-ai/venture/pkg/saveload"
+	"github.com/sirupsen/logrus"
 )
 
 // TestMapCharacterClassToAdvancedClass tests class mapping for all character classes.
@@ -1414,4 +1417,73 @@ func BenchmarkPrestigeEntityAdapterHasComponent(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		_ = adapter.HasComponent("position")
 	}
+}
+
+// mockDisconnector is a test mock for testing cleanupNetworkClient.
+type mockDisconnector struct {
+	disconnectCalled bool
+	disconnectErr    error
+}
+
+func (m *mockDisconnector) Disconnect() error {
+	m.disconnectCalled = true
+	return m.disconnectErr
+}
+
+// createHandlerTestLogger creates a logger for handler tests with suppressed output.
+func createHandlerTestLogger() *logrus.Entry {
+	logger := logrus.New()
+	logger.SetOutput(io.Discard)
+	logger.SetLevel(logrus.WarnLevel)
+	return logger.WithField("test", "handlers")
+}
+
+// TestCleanupNetworkClientNil tests cleanup with nil client.
+func TestCleanupNetworkClientNil(t *testing.T) {
+	logger := createHandlerTestLogger()
+	// Should not panic
+	cleanupNetworkClient(nil, logger)
+}
+
+// TestCleanupNetworkClientSuccess tests successful cleanup.
+func TestCleanupNetworkClientSuccess(t *testing.T) {
+	logger := createHandlerTestLogger()
+	mock := &mockDisconnector{}
+
+	cleanupNetworkClient(mock, logger)
+
+	if !mock.disconnectCalled {
+		t.Error("Disconnect() was not called")
+	}
+}
+
+// TestCleanupNetworkClientError tests cleanup with disconnect error.
+func TestCleanupNetworkClientError(t *testing.T) {
+	logger := createHandlerTestLogger()
+	mock := &mockDisconnector{disconnectErr: errors.New("disconnect failed")}
+
+	// Should not panic, just log warning
+	cleanupNetworkClient(mock, logger)
+
+	if !mock.disconnectCalled {
+		t.Error("Disconnect() was not called despite error")
+	}
+}
+
+// TestCleanupNetworkClientNoDisconnector tests cleanup with non-disconnector interface.
+func TestCleanupNetworkClientNoDisconnector(t *testing.T) {
+	logger := createHandlerTestLogger()
+	// Pass an int - it doesn't implement disconnector
+	cleanupNetworkClient(42, logger)
+	// Should complete without panic
+}
+
+// TestCleanupNetworkClientStruct tests cleanup with struct not implementing disconnector.
+func TestCleanupNetworkClientStruct(t *testing.T) {
+	logger := createHandlerTestLogger()
+	type noMethodsStruct struct {
+		value int
+	}
+	cleanupNetworkClient(&noMethodsStruct{value: 1}, logger)
+	// Should complete without panic
 }

@@ -1627,3 +1627,80 @@ func TestWithServerIDAndTimeProvider(t *testing.T) {
 		t.Errorf("timeProvider not set correctly")
 	}
 }
+
+// BenchmarkHandleGuildMessage benchmarks the federation hot-path for message processing.
+// This function is called frequently during cross-server guild synchronization.
+func BenchmarkHandleGuildMessage(b *testing.B) {
+	m := NewManager(WithServerID("bench-server"))
+	guildID, _ := m.CreateGuild("fantasy", "leader-1", 42)
+
+	// Pre-create join data message (most common federation message type)
+	joinData := MemberJoinData{
+		PlayerID: "bench-player",
+		Rank:     RankMember,
+	}
+	msg := GuildMessage{
+		Type:      MsgTypeMemberJoin,
+		GuildID:   guildID,
+		ServerID:  "remote-server",
+		Timestamp: time.Now(),
+		Data:      joinData,
+	}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		// Reset to allow repeated joins (otherwise duplicate is ignored)
+		m.mu.Lock()
+		guild := m.guilds[guildID]
+		if len(guild.Members) > 1 {
+			guild.Members = guild.Members[:1] // Keep only leader
+		}
+		m.mu.Unlock()
+
+		_ = m.HandleGuildMessage(msg)
+	}
+}
+
+// BenchmarkHandleGuildMessage_GuildSync benchmarks full guild state sync.
+func BenchmarkHandleGuildMessage_GuildSync(b *testing.B) {
+	m := NewManager(WithServerID("bench-server"))
+	guildID, _ := m.CreateGuild("fantasy", "leader-1", 42)
+
+	// Get the guild for sync data
+	guild, _ := m.GetGuild(guildID)
+	msg := GuildMessage{
+		Type:      MsgTypeGuildSync,
+		GuildID:   guildID,
+		ServerID:  "remote-server",
+		Timestamp: time.Now(),
+		Data:      guild,
+	}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_ = m.HandleGuildMessage(msg)
+	}
+}
+
+// BenchmarkHandleGuildMessage_TerritoryChange benchmarks territory update messages.
+func BenchmarkHandleGuildMessage_TerritoryChange(b *testing.B) {
+	m := NewManager(WithServerID("bench-server"))
+	guildID, _ := m.CreateGuild("fantasy", "leader-1", 42)
+
+	territoryData := TerritoryChangeData{
+		ZoneID:   "zone-123",
+		NewGuild: guildID,
+	}
+	msg := GuildMessage{
+		Type:      MsgTypeTerritoryChange,
+		GuildID:   guildID,
+		ServerID:  "remote-server",
+		Timestamp: time.Now(),
+		Data:      territoryData,
+	}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_ = m.HandleGuildMessage(msg)
+	}
+}

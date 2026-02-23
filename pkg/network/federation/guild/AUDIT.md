@@ -30,7 +30,7 @@ _(None)_
 ### Low Severity
 - [x] **Doc coverage** — Package `doc.go` references `log.Fatal(err)` in example code comment; should use `logrus.WithError(err).Fatal()` for consistency with codebase standards (`doc.go:59`) **RESOLVED 2026-02-23**: Updated to `logrus.WithError(err).Fatal("failed to create guild")` and example now uses `WithServerID()` for production best practices.
 - [x] **Logging** — `handleMemberJoin`, `handleMemberLeave`, `handleTerritoryChange` handlers lack structured logging for successful operations (`federation.go:162-282`) **RESOLVED 2026-02-23**: All three handlers now log structured info messages on successful operations with guild_id, player_id/zone_id, and server_id fields.
-- [ ] **Test coverage** — Missing benchmark for `HandleGuildMessage` which is a hot-path for federation message processing
+- [x] **Test coverage** — Missing benchmark for `HandleGuildMessage` which is a hot-path for federation message processing **RESOLVED 2026-02-23**: Added `BenchmarkHandleGuildMessage` (member join), `BenchmarkHandleGuildMessage_GuildSync` (full sync), and `BenchmarkHandleGuildMessage_TerritoryChange` (territory update) benchmarks for comprehensive hot-path coverage
 
 ## Input Integration
 | Input Source | Status | Notes |
@@ -50,7 +50,7 @@ _(None)_
 ## Test Coverage
 **Coverage**: 88.0% (target: 65%) ✅
 - Missing test areas: None significant; minor coverage gaps in error branches
-- Missing benchmarks: `BenchmarkHandleGuildMessage` for hot-path federation message handling
+- Missing benchmarks: None; `BenchmarkHandleGuildMessage*` added 2026-02-23
 - Table-driven test compliance: ✅ Excellent use of table-driven tests throughout
 
 ## Documentation Coverage
@@ -78,5 +78,5 @@ This package integrates with engine, client, and server for cross-server guild m
 ## Recommendations
 1. ~~**[MED]** Add structured logging to federation message handlers (`handleMemberJoin`, `handleMemberLeave`, `handleTerritoryChange`) for operational visibility~~ **RESOLVED 2026-02-23**
 2. ~~**[LOW]** Update `doc.go` example to use `logrus.WithError(err).Fatal()` instead of `log.Fatal(err)` for codebase consistency~~ **RESOLVED 2026-02-23**
-3. **[LOW]** Add `BenchmarkHandleGuildMessage` benchmark for federation hot-path performance tracking
+3. ~~**[LOW]** Add `BenchmarkHandleGuildMessage` benchmark for federation hot-path performance tracking~~ **RESOLVED 2026-02-23**: Added `BenchmarkHandleGuildMessage`, `BenchmarkHandleGuildMessage_GuildSync`, and `BenchmarkHandleGuildMessage_TerritoryChange` benchmarks
 4. ~~**[LOW]** Consider documenting the `WithServerID()` option requirement for production deployments in `doc.go`~~ **RESOLVED 2026-02-23**

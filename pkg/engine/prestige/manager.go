@@ -416,3 +416,58 @@ func (m *Manager) Load(compressedData []byte) error {
 
 	return nil
 }
+
+// GetPlayerPrestige returns a copy of the player's prestige data for UI display.
+// Returns nil if player not found.
+func (m *Manager) GetPlayerPrestige(playerID string) *PlayerPrestige {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
+	player, exists := m.players[playerID]
+	if !exists {
+		return nil
+	}
+
+	// Return a copy to avoid race conditions
+	copy := *player
+	copy.ParagonAllocations = make(map[ParagonStat]int)
+	for k, v := range player.ParagonAllocations {
+		copy.ParagonAllocations[k] = v
+	}
+	copy.UnlockedAbilities = make([]int, len(player.UnlockedAbilities))
+	for i := range player.UnlockedAbilities {
+		copy.UnlockedAbilities[i] = player.UnlockedAbilities[i]
+	}
+
+	return &copy
+}
+
+// GetXPProgress returns current XP and XP required for next level.
+func (m *Manager) GetXPProgress(playerID string) (currentXP, requiredXP int) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
+	player, exists := m.players[playerID]
+	if !exists {
+		return 0, m.calculateXPRequired(1)
+	}
+
+	return player.CurrentXP, m.calculateXPRequired(player.PrestigeLevel + 1)
+}
+
+// GetTotalAllocatedPoints returns the total paragon points allocated.
+func (m *Manager) GetTotalAllocatedPoints(playerID string) int {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
+	player, exists := m.players[playerID]
+	if !exists {
+		return 0
+	}
+
+	total := 0
+	for _, pts := range player.ParagonAllocations {
+		total += pts
+	}
+	return total
+}

@@ -3,7 +3,7 @@
 **Status**: Needs Work
 
 ## Summary
-The cmd/client package serves as the desktop game client entry point with extremely high integration surface, coordinating 200+ systems across engine, rendering, network, audio, and procgen domains. Overall health is good with proper ECS architecture adherence and deterministic generation patterns, but test coverage is below target at 48.6% (below 65% target) due to Ebiten display server dependency. The package contains 7,191 lines of code across 16 files with 154 structured logging calls. The 3 non-deterministic time.Now() usages in gameplay code have been resolved via TimeProvider abstraction (time_provider.go). Remaining performance-measurement time.Now() calls (handlers.go:595, 691, 774) are acceptable non-procgen usage. Version-specific initialization functions (V4-V19, VR, Phase 3) have been extracted to init_versions.go, reducing handlers.go from 4,494 to 3,894 lines.
+The cmd/client package serves as the desktop game client entry point with extremely high integration surface, coordinating 200+ systems across engine, rendering, network, audio, and procgen domains. Overall health is good with proper ECS architecture adherence and deterministic generation patterns, but test coverage is below target at 49.0% (below 65% target) due to Ebiten display server dependency. The package contains 7,191 lines of code across 17 files with 154 structured logging calls. The 3 non-deterministic time.Now() usages in gameplay code have been resolved via TimeProvider abstraction (time_provider.go). Remaining performance-measurement time.Now() calls (handlers.go:595, 691, 774) are acceptable non-procgen usage. Version-specific initialization functions (V4-V19, VR, Phase 3) have been extracted to init_versions.go, reducing handlers.go from 4,494 to 3,894 lines.
 
 ## Issues Found
 - [x] **low** stub/incomplete — ~~Save manager initialization returns nil on error without fallback~~ **RESOLVED 2026-02-23**: Now falls back to `saveload.NewMemorySaveManager()`
@@ -11,14 +11,14 @@ The cmd/client package serves as the desktop game client entry point with extrem
 - [x] **low** deterministic procgen — time.Now() used for death SFX seed in gameplay code (`util.go:1467`)
 - [x] **medium** deterministic procgen — time.Now() used for narrative event timestamp in gameplay code (`handlers.go:4381`)
 - [x] **low** error handling — ~~Save manager init error logged as warning but functionality remains unavailable silently~~ **RESOLVED 2026-02-23**: Memory fallback prevents nil
-- [x] **high** test coverage — 48.6% coverage below 65% target (improved from 48.3% via QoL serialization tests 2026-02-23)
+- [x] **high** test coverage — 49.0% coverage below 65% target (improved from 48.6% via selectObjectType and system wrapper tests 2026-02-23)
 - [x] **low** doc coverage — Main package has excellent doc.go (159 lines) but no exported functions requiring docs
 - [x] **low** maintainability — ~~handlers.go is 4,476 lines with 60+ functions~~ Split into handlers.go (3,894 lines) and init_versions.go (643 lines)
 
 ## Test Coverage
-48.6% (target: 65%, improved from 48.3% via QoL serialization tests 2026-02-23)
+49.0% (target: 65%, improved from 48.6% via selectObjectType and system wrapper tests 2026-02-23)
 
-**Analysis**: Coverage is artificially low because most code paths require Ebiten display server initialization (runs with xvfb-run in CI). Core game logic in pkg/ packages averages 82.4%. Test suite includes 10 test files with comprehensive integration tests:
+**Analysis**: Coverage is artificially low because most code paths require Ebiten display server initialization (runs with xvfb-run in CI). Core game logic in pkg/ packages averages 82.4%. Test suite includes 12 test files with comprehensive integration tests:
 - `integration_test.go` — Host-and-play flag integration, default behavior, port fallback (4 tests)
 - `high_latency_test.go` — High-latency config validation, server parity (4 tests)
 - `lazy_init_test.go` — Lazy initialization patterns, thread safety (3 tests + 1 benchmark)
@@ -29,7 +29,8 @@ The cmd/client package serves as the desktop game client entry point with extrem
 - `handlers_test.go` — Class mapping, generation params, serialization functions (59 tests, 3 benchmarks)
 - `narrative_test.go` — Narrative component setup, event handling, plot threads (12 tests, 2 benchmarks)
 - `starter_items_test.go` — Starter weapons/potions/armor generation, tutorial quests (13 tests, 3 benchmarks)
-- `util_helpers_test.go` — Light/object configs, hazard components, vehicle/companion spawn data, learning rate, spawn position (70+ tests, 7 benchmarks)
+- `util_helpers_test.go` — Light/object configs, hazard components, vehicle/companion spawn data, learning rate, spawn position, selectObjectType all branches (80+ tests, 9 benchmarks)
+- `system_wrappers_test.go` — System wrapper tests for prestige adapter, animation wrapper, coverage for wrapper delegate patterns (15+ tests, 3 benchmarks)
 
 **Recommendation**: Coverage is acceptable given Ebiten dependency constraints. Continued progress toward 50%+ by testing additional helper functions in util.go and handlers.go that don't require Ebiten context.
 

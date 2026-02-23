@@ -2726,3 +2726,170 @@ func BenchmarkGenerateSingleBook(b *testing.B) {
 		_ = generateSingleBook(bookGen, int64(i), params, clientLogger)
 	}
 }
+
+// TestSelectObjectTypeAllBranches tests each branch of selectObjectType deterministically.
+func TestSelectObjectTypeAllBranches(t *testing.T) {
+	tests := []struct {
+		name           string
+		config         objectConfig
+		seed           int64
+		wantType       engine.ObjectType
+		wantSelected   bool
+		findMatchSeed  bool // If true, find a seed that produces the expected result
+	}{
+		{
+			name: "crate branch",
+			config: objectConfig{
+				crateChance:            1.0, // 100% crate
+				barrelChance:           0.0,
+				furnitureChance:        0.0,
+				poisonContainerChance:  0.0,
+				explosiveBarrelChance:  0.0,
+			},
+			seed:         12345,
+			wantType:     engine.ObjectCrate,
+			wantSelected: true,
+		},
+		{
+			name: "regular barrel branch",
+			config: objectConfig{
+				crateChance:            0.0,
+				barrelChance:           1.0, // 100% barrel
+				furnitureChance:        0.0,
+				poisonContainerChance:  0.0,
+				explosiveBarrelChance:  0.0, // No explosive barrels
+			},
+			seed:         12345,
+			wantType:     engine.ObjectBarrel,
+			wantSelected: true,
+		},
+		{
+			name: "explosive barrel branch",
+			config: objectConfig{
+				crateChance:            0.0,
+				barrelChance:           1.0, // 100% barrel
+				furnitureChance:        0.0,
+				poisonContainerChance:  0.0,
+				explosiveBarrelChance:  1.0, // Always explosive when barrel selected
+			},
+			seed:         12345,
+			wantType:     engine.ObjectExplosiveBarrel,
+			wantSelected: true,
+		},
+		{
+			name: "furniture branch",
+			config: objectConfig{
+				crateChance:            0.0,
+				barrelChance:           0.0,
+				furnitureChance:        1.0, // 100% furniture
+				poisonContainerChance:  0.0,
+				explosiveBarrelChance:  0.0,
+			},
+			seed:         12345,
+			wantType:     engine.ObjectFurniture,
+			wantSelected: true,
+		},
+		{
+			name: "poison container branch",
+			config: objectConfig{
+				crateChance:            0.0,
+				barrelChance:           0.0,
+				furnitureChance:        0.0,
+				poisonContainerChance:  1.0, // 100% poison
+				explosiveBarrelChance:  0.0,
+			},
+			seed:         12345,
+			wantType:     engine.ObjectPoisonContainer,
+			wantSelected: true,
+		},
+		{
+			name: "no spawn branch",
+			config: objectConfig{
+				crateChance:            0.0,
+				barrelChance:           0.0,
+				furnitureChance:        0.0,
+				poisonContainerChance:  0.0,
+				explosiveBarrelChance:  0.0,
+			},
+			seed:         12345,
+			wantType:     engine.ObjectCrate, // Default return value
+			wantSelected: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			rng := rand.New(rand.NewSource(tt.seed))
+			gotType, gotSelected := selectObjectType(rng, tt.config)
+
+			if gotType != tt.wantType {
+				t.Errorf("selectObjectType() type = %v, want %v", gotType, tt.wantType)
+			}
+			if gotSelected != tt.wantSelected {
+				t.Errorf("selectObjectType() selected = %v, want %v", gotSelected, tt.wantSelected)
+			}
+		})
+	}
+}
+
+// TestSelectObjectTypePartialProbabilities tests probability edge cases.
+func TestSelectObjectTypePartialProbabilities(t *testing.T) {
+	// Config where only first 20% spawn crates, rest don't spawn
+	config := objectConfig{
+		crateChance:            0.2,
+		barrelChance:           0.0,
+		furnitureChance:        0.0,
+		poisonContainerChance:  0.0,
+		explosiveBarrelChance:  0.0,
+	}
+
+	spawnCount := 0
+	totalRuns := 1000
+	for seed := int64(0); seed < int64(totalRuns); seed++ {
+		rng := rand.New(rand.NewSource(seed))
+		_, selected := selectObjectType(rng, config)
+		if selected {
+			spawnCount++
+		}
+	}
+
+	// With 20% chance, expect 150-250 spawns out of 1000
+	spawnRate := float64(spawnCount) / float64(totalRuns)
+	if spawnRate < 0.1 || spawnRate > 0.3 {
+		t.Errorf("spawn rate %.2f outside expected 10-30%% range for 20%% config", spawnRate)
+	}
+}
+
+// TestSelectObjectTypeMixedBarrels tests explosive barrel probability.
+func TestSelectObjectTypeMixedBarrels(t *testing.T) {
+	config := objectConfig{
+		crateChance:            0.0,
+		barrelChance:           1.0,  // Always barrel
+		furnitureChance:        0.0,
+		poisonContainerChance:  0.0,
+		explosiveBarrelChance:  0.5,  // 50% explosive when barrel selected
+	}
+
+	regularCount := 0
+	explosiveCount := 0
+	totalRuns := 1000
+
+	for seed := int64(0); seed < int64(totalRuns); seed++ {
+		rng := rand.New(rand.NewSource(seed))
+		objType, selected := selectObjectType(rng, config)
+		if !selected {
+			t.Fatal("barrel should always be selected with 100% barrel chance")
+		}
+		if objType == engine.ObjectBarrel {
+			regularCount++
+		} else if objType == engine.ObjectExplosiveBarrel {
+			explosiveCount++
+		}
+	}
+
+	// With 50% explosive chance, expect roughly equal distribution
+	explosiveRate := float64(explosiveCount) / float64(totalRuns)
+	if explosiveRate < 0.4 || explosiveRate > 0.6 {
+		t.Errorf("explosive rate %.2f outside expected 40-60%% range for 50%% config", explosiveRate)
+	}
+}

@@ -7,7 +7,8 @@ package patterns
 // # Pattern Types (Phase 14)
 //
 // Basic patterns (stripes, dots, gradients, noise, checkerboard, circles) that can be
-// applied to existing images to add visual variety.
+// applied to existing images to add visual variety. Use [Generator.GeneratePattern]
+// with [Config] for these primitive patterns.
 //
 // # Texture Generation (Phase 16.1)
 //
@@ -16,6 +17,8 @@ package patterns
 //   - Wood: Radial grain patterns with turbulence for organic wood appearance
 //   - Metal: Anisotropic brushed metal with specular highlights
 //   - Organic: Cellular noise with multiple octaves for biological textures
+//
+// Use [Generator.Generate] with [TextureConfig] for material textures.
 //
 // Textures support:
 //   - Genre-specific variations (fantasy, sci-fi, horror, cyberpunk, post-apocalyptic)
@@ -35,7 +38,7 @@ package patterns
 // All patterns are generated deterministically using seed-based RNG,
 // ensuring reproducible results across game sessions and multiplayer clients.
 //
-// # Usage Example
+// # Texture Generation Example
 //
 //	gen := patterns.NewGenerator()
 //	config := patterns.TextureConfig{
@@ -51,5 +54,25 @@ package patterns
 //	}
 //	texture, err := gen.Generate(config)
 //	if err != nil {
-//		log.Fatal(err)
+//		logrus.WithError(err).Fatal("failed to generate texture")
+//	}
+//
+// # Basic Pattern Generation Example
+//
+//	gen := patterns.NewGenerator()
+//	config := patterns.Config{
+//		Type:      patterns.PatternStripes,
+//		Width:     32,
+//		Height:    32,
+//		Seed:      12345,
+//		Frequency: 4.0,
+//		Amplitude: 0.5,
+//		Angle:     45,
+//		Color1:    color.RGBA{R: 255, G: 255, B: 255, A: 255},
+//		Color2:    color.RGBA{R: 0, G: 0, B: 0, A: 255},
+//		Opacity:   1.0,
+//	}
+//	pattern, err := gen.GeneratePattern(config)
+//	if err != nil {
+//		logrus.WithError(err).Fatal("failed to generate pattern")
 //	}

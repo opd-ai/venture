@@ -495,6 +495,264 @@ func (g *Generator) luminance(c color.RGBA) float64 {
 	return 0.299*float64(c.R) + 0.587*float64(c.G) + 0.114*float64(c.B)
 }
 
+// GeneratePattern creates a basic pattern image from the configuration.
+// This method generates primitive patterns (stripes, dots, gradients, noise,
+// checkerboard, circles) as opposed to material textures from Generate().
+func (g *Generator) GeneratePattern(config Config) (*image.RGBA, error) {
+	if config.Width <= 0 || config.Height <= 0 {
+		return nil, fmt.Errorf("invalid dimensions: %dx%d", config.Width, config.Height)
+	}
+
+	if g.logger != nil && g.logger.Logger.GetLevel() >= logrus.DebugLevel {
+		g.logger.WithFields(logrus.Fields{
+			"pattern": config.Type.String(),
+			"size":    fmt.Sprintf("%dx%d", config.Width, config.Height),
+			"seed":    config.Seed,
+		}).Debug("generating pattern")
+	}
+
+	img := image.NewRGBA(image.Rect(0, 0, config.Width, config.Height))
+	rng := rand.New(rand.NewSource(config.Seed))
+
+	switch config.Type {
+	case PatternStripes:
+		g.generateStripesPattern(img, config, rng)
+	case PatternDots:
+		g.generateDotsPattern(img, config, rng)
+	case PatternGradient:
+		g.generateGradientPattern(img, config)
+	case PatternNoise:
+		g.generateNoisePattern(img, config, rng)
+	case PatternCheckerboard:
+		g.generateCheckerboardPattern(img, config)
+	case PatternCircles:
+		g.generateCirclesPattern(img, config)
+	default:
+		return nil, fmt.Errorf("unknown pattern type: %d", config.Type)
+	}
+
+	// Apply opacity if less than 1.0
+	if config.Opacity < 1.0 && config.Opacity > 0 {
+		g.applyOpacity(img, config.Opacity)
+	}
+
+	if g.logger != nil {
+		g.logger.WithFields(logrus.Fields{
+			"pattern": config.Type.String(),
+		}).Info("pattern generated")
+	}
+
+	return img, nil
+}
+
+// generateStripesPattern creates parallel line stripes.
+func (g *Generator) generateStripesPattern(img *image.RGBA, config Config, rng *rand.Rand) {
+	r1, g1, b1, a1 := config.Color1.RGBA()
+	r2, g2, b2, a2 := config.Color2.RGBA()
+
+	angleRad := config.Angle * math.Pi / 180.0
+	cosA, sinA := math.Cos(angleRad), math.Sin(angleRad)
+
+	for y := 0; y < config.Height; y++ {
+		for x := 0; x < config.Width; x++ {
+			// Rotate coordinates by angle
+			rotX := float64(x)*cosA - float64(y)*sinA
+
+			// Calculate stripe position
+			stripePos := rotX * config.Frequency / float64(config.Width)
+			stripeValue := math.Sin(stripePos*2*math.Pi)*0.5 + 0.5
+
+			// Blend colors
+			r := uint8(float64(r1>>8)*(1-stripeValue) + float64(r2>>8)*stripeValue)
+			gr := uint8(float64(g1>>8)*(1-stripeValue) + float64(g2>>8)*stripeValue)
+			b := uint8(float64(b1>>8)*(1-stripeValue) + float64(b2>>8)*stripeValue)
+			a := uint8(float64(a1>>8)*(1-stripeValue) + float64(a2>>8)*stripeValue)
+
+			img.SetRGBA(x, y, color.RGBA{R: r, G: gr, B: b, A: a})
+		}
+	}
+}
+
+// generateDotsPattern creates a dot grid pattern.
+func (g *Generator) generateDotsPattern(img *image.RGBA, config Config, rng *rand.Rand) {
+	r1, g1, b1, a1 := config.Color1.RGBA()
+	r2, g2, b2, a2 := config.Color2.RGBA()
+
+	spacing := float64(config.Width) / config.Frequency
+	if spacing < 1 {
+		spacing = 1
+	}
+	dotRadius := spacing * config.Amplitude * 0.4
+
+	// Fill with background color
+	for y := 0; y < config.Height; y++ {
+		for x := 0; x < config.Width; x++ {
+			img.SetRGBA(x, y, color.RGBA{
+				R: uint8(r2 >> 8), G: uint8(g2 >> 8), B: uint8(b2 >> 8), A: uint8(a2 >> 8),
+			})
+		}
+	}
+
+	// Draw dots
+	for cy := spacing / 2; cy < float64(config.Height); cy += spacing {
+		for cx := spacing / 2; cx < float64(config.Width); cx += spacing {
+			for y := int(cy - dotRadius); y <= int(cy+dotRadius); y++ {
+				for x := int(cx - dotRadius); x <= int(cx+dotRadius); x++ {
+					if x < 0 || x >= config.Width || y < 0 || y >= config.Height {
+						continue
+					}
+					dx, dy := float64(x)-cx, float64(y)-cy
+					dist := math.Sqrt(dx*dx + dy*dy)
+					if dist <= dotRadius {
+						img.SetRGBA(x, y, color.RGBA{
+							R: uint8(r1 >> 8), G: uint8(g1 >> 8), B: uint8(b1 >> 8), A: uint8(a1 >> 8),
+						})
+					}
+				}
+			}
+		}
+	}
+}
+
+// generateGradientPattern creates a smooth color gradient.
+func (g *Generator) generateGradientPattern(img *image.RGBA, config Config) {
+	r1, g1, b1, a1 := config.Color1.RGBA()
+	r2, g2, b2, a2 := config.Color2.RGBA()
+
+	angleRad := config.Angle * math.Pi / 180.0
+	cosA, sinA := math.Cos(angleRad), math.Sin(angleRad)
+
+	// Calculate gradient direction extents
+	maxDist := float64(config.Width)*math.Abs(cosA) + float64(config.Height)*math.Abs(sinA)
+	if maxDist == 0 {
+		maxDist = 1
+	}
+
+	for y := 0; y < config.Height; y++ {
+		for x := 0; x < config.Width; x++ {
+			// Project point onto gradient direction
+			proj := float64(x)*cosA + float64(y)*sinA
+			t := proj / maxDist
+			if t < 0 {
+				t = 0
+			}
+			if t > 1 {
+				t = 1
+			}
+
+			r := uint8(float64(r1>>8)*(1-t) + float64(r2>>8)*t)
+			gr := uint8(float64(g1>>8)*(1-t) + float64(g2>>8)*t)
+			b := uint8(float64(b1>>8)*(1-t) + float64(b2>>8)*t)
+			a := uint8(float64(a1>>8)*(1-t) + float64(a2>>8)*t)
+
+			img.SetRGBA(x, y, color.RGBA{R: r, G: gr, B: b, A: a})
+		}
+	}
+}
+
+// generateNoisePattern creates a Perlin noise pattern.
+func (g *Generator) generateNoisePattern(img *image.RGBA, config Config, rng *rand.Rand) {
+	r1, g1, b1, a1 := config.Color1.RGBA()
+	r2, g2, b2, a2 := config.Color2.RGBA()
+
+	scale := config.Frequency / 10.0
+	if scale <= 0 {
+		scale = 0.1
+	}
+
+	for y := 0; y < config.Height; y++ {
+		for x := 0; x < config.Width; x++ {
+			noise := g.perlinNoise(float64(x)*scale, float64(y)*scale, rng)
+			noise = noise*config.Amplitude + 0.5
+			if noise < 0 {
+				noise = 0
+			}
+			if noise > 1 {
+				noise = 1
+			}
+
+			r := uint8(float64(r1>>8)*(1-noise) + float64(r2>>8)*noise)
+			gr := uint8(float64(g1>>8)*(1-noise) + float64(g2>>8)*noise)
+			b := uint8(float64(b1>>8)*(1-noise) + float64(b2>>8)*noise)
+			a := uint8(float64(a1>>8)*(1-noise) + float64(a2>>8)*noise)
+
+			img.SetRGBA(x, y, color.RGBA{R: r, G: gr, B: b, A: a})
+		}
+	}
+}
+
+// generateCheckerboardPattern creates a checkerboard pattern.
+func (g *Generator) generateCheckerboardPattern(img *image.RGBA, config Config) {
+	r1, g1, b1, a1 := config.Color1.RGBA()
+	r2, g2, b2, a2 := config.Color2.RGBA()
+
+	squareSize := float64(config.Width) / config.Frequency
+	if squareSize < 1 {
+		squareSize = 1
+	}
+
+	for y := 0; y < config.Height; y++ {
+		for x := 0; x < config.Width; x++ {
+			// Calculate which square this pixel is in
+			sx := int(float64(x) / squareSize)
+			sy := int(float64(y) / squareSize)
+
+			// Alternate colors based on checkerboard pattern
+			if (sx+sy)%2 == 0 {
+				img.SetRGBA(x, y, color.RGBA{
+					R: uint8(r1 >> 8), G: uint8(g1 >> 8), B: uint8(b1 >> 8), A: uint8(a1 >> 8),
+				})
+			} else {
+				img.SetRGBA(x, y, color.RGBA{
+					R: uint8(r2 >> 8), G: uint8(g2 >> 8), B: uint8(b2 >> 8), A: uint8(a2 >> 8),
+				})
+			}
+		}
+	}
+}
+
+// generateCirclesPattern creates concentric circles pattern.
+func (g *Generator) generateCirclesPattern(img *image.RGBA, config Config) {
+	r1, g1, b1, a1 := config.Color1.RGBA()
+	r2, g2, b2, a2 := config.Color2.RGBA()
+
+	centerX := float64(config.Width) / 2.0
+	centerY := float64(config.Height) / 2.0
+	maxDist := math.Sqrt(centerX*centerX + centerY*centerY)
+
+	for y := 0; y < config.Height; y++ {
+		for x := 0; x < config.Width; x++ {
+			dx := float64(x) - centerX
+			dy := float64(y) - centerY
+			dist := math.Sqrt(dx*dx + dy*dy)
+
+			// Create concentric rings
+			ringValue := math.Sin(dist*config.Frequency*2*math.Pi/maxDist)*0.5 + 0.5
+			ringValue *= config.Amplitude
+			ringValue = ringValue*0.5 + 0.25 // Normalize to 0.25-0.75 range
+
+			r := uint8(float64(r1>>8)*(1-ringValue) + float64(r2>>8)*ringValue)
+			gr := uint8(float64(g1>>8)*(1-ringValue) + float64(g2>>8)*ringValue)
+			b := uint8(float64(b1>>8)*(1-ringValue) + float64(b2>>8)*ringValue)
+			a := uint8(float64(a1>>8)*(1-ringValue) + float64(a2>>8)*ringValue)
+
+			img.SetRGBA(x, y, color.RGBA{R: r, G: gr, B: b, A: a})
+		}
+	}
+}
+
+// applyOpacity reduces alpha channel by given opacity factor.
+func (g *Generator) applyOpacity(img *image.RGBA, opacity float64) {
+	bounds := img.Bounds()
+	for y := bounds.Min.Y; y < bounds.Max.Y; y++ {
+		for x := bounds.Min.X; x < bounds.Max.X; x++ {
+			c := img.RGBAAt(x, y)
+			c.A = uint8(float64(c.A) * opacity)
+			img.SetRGBA(x, y, c)
+		}
+	}
+}
+
 // Validate checks if the generated texture meets quality requirements.
 func (g *Generator) Validate(img *image.RGBA) error {
 	if err := g.validateImageBasics(img); err != nil {

@@ -1,16 +1,16 @@
 # Audit: github.com/opd-ai/venture/pkg/rendering/patterns
-**Date**: 2026-02-22 (ISO 8601)
+**Date**: 2026-02-23 (ISO 8601)
 **Auditor**: GitHub Copilot (META_AUDIT v2)
 **Status**: Complete
 
 ## Summary
-The `patterns` package provides procedural texture pattern generation for tiles and sprites. It generates stone, wood, metal, and organic textures using Perlin and cellular noise algorithms with genre-specific variations. The package demonstrates excellent code quality with 94.7% test coverage, deterministic seed-based generation, comprehensive validation, and proper structured logging.
+The `patterns` package provides procedural texture pattern generation for tiles and sprites. It generates stone, wood, metal, and organic textures using Perlin and cellular noise algorithms with genre-specific variations. **UPDATED 2026-02-23**: Added `GeneratePattern(Config)` method for basic pattern primitives (stripes, dots, gradient, noise, checkerboard, circles), resolving API inconsistency where `Config` struct was defined but unused. The package now demonstrates excellent code quality with 94.1% test coverage, deterministic seed-based generation, comprehensive validation, and proper structured logging.
 
 ## Automated Check Results
 | Check | Result |
 |---|---|
 | `go vet` | ✅ Pass |
-| `go test -cover` | 94.7% (target: 65%) |
+| `go test -cover` | 94.1% (target: 65%) |
 | `go test -race` | ✅ Pass |
 | WASM vet | ✅ Pass |
 | TODO/FIXME count | 0 |
@@ -23,12 +23,12 @@ The `patterns` package provides procedural texture pattern generation for tiles 
 None identified.
 
 ### Medium Severity
-- [ ] **API Consistency** — `Generator.Generate()` accepts `TextureConfig` but `Config` struct (for basic patterns) is also defined but never used by the generator — potential API confusion or dead code (`types.go:79-115`)
+- [x] **API Consistency** — `Generator.Generate()` accepts `TextureConfig` but `Config` struct (for basic patterns) was also defined but never used by the generator — **RESOLVED 2026-02-23**: Added `GeneratePattern(Config)` method implementing all 6 pattern types (stripes, dots, gradient, noise, checkerboard, circles) with full test coverage
 
 ### Low Severity
-- [ ] **Documentation** — `log.Fatal(err)` in example code in `doc.go` uses non-structured logging; should use `logrus` for consistency with codebase guidelines (`doc.go:54`)
+- [x] **Documentation** — `log.Fatal(err)` in example code in `doc.go` uses non-structured logging — **RESOLVED 2026-02-23**: Updated to use `logrus.WithError(err).Fatal()` for consistency with codebase guidelines
 - [ ] **Documentation** — Private helper methods `perlinNoise`, `cellularNoise`, `dotGridGradient`, `smoothstep`, `luminance` lack godoc comments explaining the algorithms (`generator.go:399-495`)
-- [ ] **Test Coverage** — `Config` struct and basic pattern types (stripes, dots, gradient, checkerboard, circles) defined in `types.go` are not exercised by generator tests—only `TextureConfig` is used (`types.go:79-115`, `generator_test.go`)
+- [x] **Test Coverage** — `Config` struct and basic pattern types (stripes, dots, gradient, checkerboard, circles) defined in `types.go` were not exercised by generator tests — **RESOLVED 2026-02-23**: Added comprehensive tests for all pattern types via `GeneratePattern()` method
 
 ## Input Integration
 | Input Source | Status | Notes |

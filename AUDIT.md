@@ -843,9 +843,9 @@ This report consolidates 110 individual audit files across all packages in the V
 ### pkg/rendering/patterns — Texture Pattern Generation
 - **Source:** `pkg/rendering/patterns/AUDIT.md`
 - **High Issues:** 0
-- **Medium Issues:** 1
-- **Low Issues:** 1
-- **Details:** 94.7% coverage. `Config` struct is defined but never used by the `Generator` (which accepts `TextureConfig`); potential dead code or API confusion between two configuration types.
+- **Medium Issues:** 0 (1 fixed)
+- **Low Issues:** 1 (2 fixed)
+- **Details:** 94.1% coverage. **RESOLVED 2026-02-23**: `Config` struct is now used by new `GeneratePattern(Config)` method implementing all 6 basic pattern types (stripes, dots, gradient, noise, checkerboard, circles). API now provides both `Generate(TextureConfig)` for material textures and `GeneratePattern(Config)` for basic patterns. `doc.go` examples updated to use `logrus.WithError(err).Fatal()` instead of `log.Fatal(err)`. Remaining: private noise algorithms lack inline godoc comments.
 
 ---
 

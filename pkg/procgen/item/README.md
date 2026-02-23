@@ -207,5 +207,13 @@ itemResult, _ := itemGen.Generate(seed+2, itemParams)
 - Enchantments and modifiers
 - Crafting system integration
 - Item quality levels beyond rarity
-- More genre templates (cyberpunk, horror, post-apocalyptic)
 - Unique/artifact items with special properties
+
+## Implemented Genre Templates
+
+All major genre templates are now implemented:
+- **Fantasy**: Traditional RPG weapons, armor, and potions
+- **Sci-Fi**: Energy weapons, force shields, nano-syringes
+- **Horror**: Occult weapons, cursed armor, sanity potions
+- **Cyberpunk**: Neural weapons, synth-armor, boosters
+- **Post-Apocalyptic**: Makeshift weapons, scrap armor, survival items

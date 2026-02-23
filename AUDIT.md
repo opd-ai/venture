@@ -628,8 +628,8 @@ This report consolidates 110 individual audit files across all packages in the V
 - **Source:** `pkg/procgen/item/AUDIT.md`
 - **High Issues:** 0
 - **Medium Issues:** 0
-- **Low Issues:** 1
-- **Details:** 92.2% coverage. README "Future Enhancements" section lists genre templates (cyberpunk, horror, post-apocalyptic) as planned but these have already been implemented—documentation is outdated.
+- **Low Issues:** 0 (1 fixed)
+- **Details:** 92.2% coverage. **RESOLVED 2026-02-23**: README "Future Enhancements" section updated—genre templates (cyberpunk, horror, post-apocalyptic) documented as implemented in new "Implemented Genre Templates" section.
 
 ---
 

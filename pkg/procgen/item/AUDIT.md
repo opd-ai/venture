@@ -1,5 +1,5 @@
 # Audit: github.com/opd-ai/venture/pkg/procgen/item
-**Date**: 2026-02-22 (ISO 8601)
+**Date**: 2026-02-23 (updated)
 **Auditor**: GitHub Copilot (META_AUDIT v2)
 **Status**: Complete
 <!--
@@ -32,7 +32,7 @@ The item package provides procedural generation for weapons, armor, consumables,
 - None
 
 ### Low Severity
-- [ ] **documentation** — README.md "Future Enhancements" section lists "More genre templates (cyberpunk, horror, post-apocalyptic)" but these are already implemented (`README.md:210`)
+- [x] **documentation** — **RESOLVED 2026-02-23**: README.md "Future Enhancements" section updated; genre templates moved to new "Implemented Genre Templates" section documenting all 5 genres
 
 ## Input Integration
 | Input Source | Status | Notes |
@@ -95,7 +95,7 @@ The package integrates with the engine as a pure data generator:
 | Mobile | ✅ Pass | No platform-specific imports |
 
 ## Recommendations
-1. **[LOW]** Update README.md "Future Enhancements" section to remove already-implemented genre templates
+1. ~~**[LOW]** Update README.md "Future Enhancements" section to remove already-implemented genre templates~~ **RESOLVED 2026-02-23**
 
 ## Verification Commands Run
 ```bash

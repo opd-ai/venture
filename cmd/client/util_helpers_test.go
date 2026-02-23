@@ -1677,13 +1677,13 @@ func BenchmarkResolveSeedAndGenre(b *testing.B) {
 // TestAddHazardComponents tests adding hazard components to entity.
 func TestAddHazardComponents(t *testing.T) {
 	tests := []struct {
-		name                string
-		envObj              *environment.EnvironmentalObject
-		subType             environment.SubType
-		expectCollider      bool
-		expectHazard        bool
-		expectedHazardType  engine.HazardType
-		expectedDPS         float64
+		name               string
+		envObj             *environment.EnvironmentalObject
+		subType            environment.SubType
+		expectCollider     bool
+		expectHazard       bool
+		expectedHazardType engine.HazardType
+		expectedDPS        float64
 	}{
 		{
 			name: "harmful collidable spikes",

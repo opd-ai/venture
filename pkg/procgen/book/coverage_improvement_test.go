@@ -1,6 +1,7 @@
 package book
 
 import (
+	"math/rand"
 	"strings"
 	"testing"
 
@@ -627,5 +628,53 @@ func TestGenerateLoreBookWithSeriesFloat64Volume(t *testing.T) {
 	expectedTitle := "The AI Chronicles - Volume 2"
 	if book.Title != expectedTitle {
 		t.Errorf("Title = %q, want %q", book.Title, expectedTitle)
+	}
+}
+
+// TestIntRandomizerInterface tests that IntRandomizer interface works correctly.
+func TestIntRandomizerInterface(t *testing.T) {
+	tests := []struct {
+		name    string
+		rng     IntRandomizer
+		rules   map[string][]string
+		symbol  string
+		wantLen int
+	}{
+		{
+			name: "basic expansion with IntRandomizer",
+			rng:  rand.New(rand.NewSource(42)),
+			rules: map[string][]string{
+				"greeting": {"Hello", "Hi", "Greetings"},
+			},
+			symbol:  "#greeting#",
+			wantLen: 2,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			g := NewGrammar(tt.rng)
+			for k, v := range tt.rules {
+				g.AddRule(k, v)
+			}
+			result := g.Expand(tt.symbol)
+			if len(result) < tt.wantLen {
+				t.Errorf("Expand() result len = %d, want at least %d", len(result), tt.wantLen)
+			}
+		})
+	}
+}
+
+// TestIntRandomizerTypeAssertion tests that various RNG types work with IntRandomizer.
+func TestIntRandomizerTypeAssertion(t *testing.T) {
+	// Verify *rand.Rand satisfies IntRandomizer
+	var rng IntRandomizer = rand.New(rand.NewSource(12345))
+
+	g := NewGrammar(rng)
+	g.AddRule("test", []string{"A", "B", "C"})
+
+	result := g.Expand("#test#")
+	if result != "A" && result != "B" && result != "C" {
+		t.Errorf("Expand() returned unexpected value: %s", result)
 	}
 }

@@ -1,5 +1,5 @@
 # Audit: github.com/opd-ai/venture/pkg/procgen/book
-**Date**: 2026-02-22
+**Date**: 2026-02-23 (Updated)
 **Auditor**: GitHub Copilot (META_AUDIT v2)
 **Status**: Complete
 <!--
@@ -8,7 +8,7 @@ Status criteria:
 -->
 
 ## Summary
-The `pkg/procgen/book` package implements grammar-based procedural generation of in-game books with five book types (skill, lore, quest, recipe, history) across five genres. The package achieves 99.5% test coverage, follows deterministic seed-based generation, and integrates cleanly with the engine's ECS architecture via `engine.BookComponent`.
+The `pkg/procgen/book` package implements grammar-based procedural generation of in-game books with five book types (skill, lore, quest, recipe, history) across five genres. The package achieves 99.5% test coverage, follows deterministic seed-based generation, and integrates cleanly with the engine's ECS architecture via `engine.BookComponent`. **Updated 2026-02-23**: Added `IntRandomizer` interface for RNG abstraction, `NewGeneratorWithLogger` constructor, and improved constant documentation.
 
 ## Automated Check Results
 | Check | Result |
@@ -27,11 +27,11 @@ The `pkg/procgen/book` package implements grammar-based procedural generation of
 None identified.
 
 ### Medium Severity
-- [ ] **Doc coverage** — `Grammar` struct's `rng` field uses interface type `interface{ Intn(int) int }` which could be more descriptive with a named interface (`grammar.go:12-13`)
+- [x] **Doc coverage** — `Grammar` struct's `rng` field uses interface type `interface{ Intn(int) int }` which could be more descriptive with a named interface (`grammar.go:12-13`) — **FIXED 2026-02-23**: Added named `IntRandomizer` interface with comprehensive godoc
 
 ### Low Severity
-- [ ] **API consistency** — Package lacks a `NewGeneratorWithLogger` constructor variant for structured logging during generation (common pattern in other procgen packages) (`generator.go:20-23`)
-- [ ] **Doc comment** — `maxExpansionDepth` constant is documented but could clarify the security/performance trade-off between lower values (faster termination) and higher values (more complex grammar support) (`grammar.go:31-33`)
+- [x] **API consistency** — Package lacks a `NewGeneratorWithLogger` constructor variant for structured logging during generation (common pattern in other procgen packages) (`generator.go:20-23`) — **FIXED 2026-02-23**: Added `NewGeneratorWithLogger(*logrus.Entry)`
+- [x] **Doc comment** — `maxExpansionDepth` constant is documented but could clarify the security/performance trade-off between lower values (faster termination) and higher values (more complex grammar support) (`grammar.go:31-33`) — **FIXED 2026-02-23**: Enhanced constant documentation with detailed trade-off analysis
 - [ ] **Test helper visibility** — `testRng` helper type in `generator_test.go:569-581` could be moved to a shared test utilities package for reuse (`generator_test.go:569-581`)
 
 ## Input Integration

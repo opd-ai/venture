@@ -13,9 +13,9 @@ This report consolidates 110 individual audit files across all packages in the V
 | Severity | Open Issues |
 |----------|-------------|
 | High     | 1           |
-| Medium   | ~22         |
-| Low      | ~115        |
-| **Total**| **~138**    |
+| Medium   | ~21         |
+| Low      | ~114        |
+| **Total**| **~136**    |
 
 **Historical totals (including fixed):** ~32 High, ~95 Medium, ~227 Low issues were identified across all audits. The vast majority have been resolved, resulting in an overall codebase health status of **Good**.
 
@@ -537,9 +537,9 @@ This report consolidates 110 individual audit files across all packages in the V
 ### pkg/procgen/book — In-Game Book Content Generation
 - **Source:** `pkg/procgen/book/AUDIT.md`
 - **High Issues:** 0
-- **Medium Issues:** 1
-- **Low Issues:** 1
-- **Details:** 99.5% coverage; near-perfect. `Grammar` struct's `rng` field uses `interface{ Intn(int) int }` which could be a named interface for clarity. Minor documentation gap.
+- **Medium Issues:** 0 (1 fixed)
+- **Low Issues:** 0 (1 fixed)
+- **Details:** 99.5% coverage; near-perfect. **RESOLVED 2026-02-23**: Added named `IntRandomizer` interface type for `Grammar.rng` field with comprehensive godoc documentation explaining RNG abstraction for deterministic testing. Added `NewGeneratorWithLogger(*logrus.Entry)` constructor for injectable structured logging. Enhanced `maxExpansionDepth` constant documentation with security/performance trade-off analysis.
 
 ---
 

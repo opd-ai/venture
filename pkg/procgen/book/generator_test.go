@@ -6,12 +6,45 @@ import (
 
 	"github.com/opd-ai/venture/pkg/engine"
 	"github.com/opd-ai/venture/pkg/procgen"
+	"github.com/sirupsen/logrus"
 )
 
 func TestNewGenerator(t *testing.T) {
 	gen := NewGenerator()
 	if gen == nil {
 		t.Fatal("NewGenerator() returned nil")
+	}
+}
+
+func TestNewGeneratorWithLogger(t *testing.T) {
+	tests := []struct {
+		name   string
+		logger *logrus.Entry
+	}{
+		{
+			name:   "with nil logger",
+			logger: nil,
+		},
+		{
+			name:   "with valid logger",
+			logger: logrus.NewEntry(logrus.New()),
+		},
+		{
+			name:   "with logger with fields",
+			logger: logrus.WithField("package", "book"),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			gen := NewGeneratorWithLogger(tt.logger)
+			if gen == nil {
+				t.Fatal("NewGeneratorWithLogger() returned nil")
+			}
+			if gen.logger != tt.logger {
+				t.Errorf("logger = %v, want %v", gen.logger, tt.logger)
+			}
+		})
 	}
 }
 

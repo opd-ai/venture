@@ -5,16 +5,26 @@ import (
 	"strings"
 )
 
+// IntRandomizer defines the interface for random integer generation used by Grammar.
+// This abstraction allows deterministic testing via seeded RNG implementations
+// and supports any RNG that implements Intn (including *rand.Rand and test mocks).
+type IntRandomizer interface {
+	// Intn returns a non-negative pseudo-random number in the half-open interval [0, n).
+	// It panics if n <= 0.
+	Intn(n int) int
+}
+
 // Grammar represents a text generation grammar with rules and expansions.
 // Originally from: content.go
 type Grammar struct {
 	Rules map[string][]string
-	rng   interface{ Intn(int) int }
+	rng   IntRandomizer
 }
 
 // NewGrammar creates a new grammar for text generation.
+// The rng parameter must implement IntRandomizer (e.g., *rand.Rand or a test mock).
 // Originally from: content.go
-func NewGrammar(rng interface{ Intn(int) int }) *Grammar {
+func NewGrammar(rng IntRandomizer) *Grammar {
 	return &Grammar{
 		Rules: make(map[string][]string),
 		rng:   rng,
@@ -28,7 +38,14 @@ func (g *Grammar) AddRule(symbol string, expansions []string) {
 }
 
 // maxExpansionDepth limits recursive grammar expansion to prevent stack overflow
-// from circular rule references.
+// from circular rule references. The value of 20 balances:
+//   - Security: Prevents denial-of-service from malicious/buggy grammar rules
+//   - Performance: Limits recursion depth to avoid excessive CPU/memory usage
+//   - Expressiveness: Supports complex multi-level grammar hierarchies typical
+//     in procedural text generation (nested chapters, sections, paragraphs)
+//
+// Lower values (5-10) offer faster termination but limit grammar complexity.
+// Higher values (50+) support deeper hierarchies but risk performance issues.
 const maxExpansionDepth = 20
 
 // Expand recursively expands a rule to generate text.

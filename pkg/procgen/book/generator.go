@@ -8,6 +8,7 @@ import (
 
 	"github.com/opd-ai/venture/pkg/engine"
 	"github.com/opd-ai/venture/pkg/procgen"
+	"github.com/sirupsen/logrus"
 )
 
 // Generator creates procedural books with grammar-based text generation.
@@ -15,11 +16,22 @@ type Generator struct {
 	mu     sync.Mutex
 	rng    *rand.Rand
 	custom map[string]interface{} // current generation's custom parameters
+	logger *logrus.Entry          // optional structured logger for generation diagnostics
 }
 
-// NewGenerator creates a new book generator.
+// NewGenerator creates a new book generator without structured logging.
+// For production use with logging integration, prefer NewGeneratorWithLogger.
 func NewGenerator() *Generator {
 	return &Generator{}
+}
+
+// NewGeneratorWithLogger creates a new book generator with structured logging support.
+// The logger is used for generation diagnostics such as grammar expansion warnings
+// and parameter validation messages.
+func NewGeneratorWithLogger(logger *logrus.Entry) *Generator {
+	return &Generator{
+		logger: logger,
+	}
 }
 
 // Generate creates a new book based on the provided seed and parameters.

@@ -1491,7 +1491,7 @@ func (cc *EbitenCharacterCreation) handleSkipButton() {
 // updateConfirmation handles final confirmation
 func (cc *EbitenCharacterCreation) updateConfirmation() {
 	// Handle mouse and touch input (Touch support for WASM/mobile)
-	if IsTouchOrMouseJustPressed() {
+	if IsTouchOrMouseJustPressed() && !cc.stepChangedThisFrame {
 		mouseX, mouseY, _ := GetTouchOrMousePosition()
 
 		// Define button areas (matching drawConfirmation layout)

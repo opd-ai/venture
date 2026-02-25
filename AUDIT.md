@@ -18,7 +18,8 @@ This file tracks package-level audits across the Venture codebase. Each entry in
 - [ ] `pkg/engine/` — Not audited
 - [ ] `pkg/procgen/` — Not audited
 - [ ] `pkg/rendering/` — Not audited
-- [ ] `pkg/network/` — Not audited
+- [x] `pkg/network/federation/AUDIT.md` — Complete — 4 issues (1 high, 2 med, 1 low) — Coverage: 85.8% (subpackages; parent requires X11)
+- [ ] `pkg/network/` (other subpackages) — Not audited
 - [ ] `pkg/world/` — Not audited
 - [ ] `pkg/audio/` — Not audited
 
@@ -61,14 +62,14 @@ This file tracks package-level audits across the Venture codebase. Each entry in
 - [ ] `pkg/integration/world_events/` — Not audited
 
 ## Audit Progress
-- **Completed**: 2/90+ packages
+- **Completed**: 3/90+ packages
 - **In Progress**: 0
-- **Not Started**: 88+
+- **Not Started**: 87+
 
 ## Next Priority
 Packages with high integration surface and platform-specific concerns:
-1. `pkg/mobile/` — Touch input, dual joystick, platform-specific controls
-2. `pkg/engine/` — Core ECS implementation, 400+ files
-3. `pkg/network/` — Multiplayer networking, federation
-4. `pkg/rendering/` — Graphics pipeline
-5. `pkg/world/` — World state and persistence
+1. `pkg/engine/` — Core ECS implementation, 400+ files (highest priority: all systems)
+2. `pkg/network/` — Remaining subpackages (chat, trade, resilience, core)
+3. `pkg/rendering/` — Graphics pipeline
+4. `pkg/world/` — World state and persistence
+5. `pkg/procgen/` — Procedural generation (terrain, entity, quest, etc.)

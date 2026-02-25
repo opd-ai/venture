@@ -18,6 +18,7 @@ This file tracks package-level audits across the Venture codebase. Each entry in
 - [x] `pkg/engine/AUDIT.md` — Needs Work — 9 issues (1 high, 4 med, 4 low) — Coverage: 94.0-96.3% (subpackages; main requires X11)
 - [x] `pkg/engine/qol/AUDIT.md` — Complete — 5 issues (0 high, 2 med, 3 low) — Coverage: 94.0%
 - [x] `pkg/engine/physics/AUDIT.md` — Needs Work — 9 issues (2 high, 5 med, 2 low) — Coverage: 95.4%
+- [x] `pkg/engine/prestige/AUDIT.md` — Needs Work — 8 issues (1 high, 3 med, 4 low) — Coverage: Unmeasurable (requires X11; 103.5% test-to-source ratio)
 - [ ] `pkg/procgen/` — Not audited (subdirectories audited separately)
 - [x] `pkg/procgen/terrain/AUDIT.md` — Complete — 3 issues (0 high, 0 med, 3 low) — Coverage: 94.0%
 - [x] `pkg/procgen/quest/AUDIT.md` — Complete — 4 issues (0 high, 1 med, 3 low) — Coverage: 92.3%
@@ -93,9 +94,9 @@ This file tracks package-level audits across the Venture codebase. Each entry in
 - [x] `pkg/integration/world_events/AUDIT.md` — Complete — 5 issues (0 high, 2 med, 3 low) — Coverage: 92.9%
 
 ## Audit Progress
-- **Completed**: 71/90+ packages
+- **Completed**: 72/90+ packages
 - **In Progress**: 0
-- **Not Started**: 19+
+- **Not Started**: 18+
 
 ## Next Priority
 Packages with high integration surface and platform-specific concerns:

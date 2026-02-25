@@ -95,12 +95,14 @@ This file tracks package-level audits across the Venture codebase. Each entry in
 - [x] `pkg/integration/world_events/AUDIT.md` — Complete — 5 issues (0 high, 2 med, 3 low) — Coverage: 92.9%
 
 ## Audit Progress
-- **Completed**: 73/90+ packages
+- **Completed**: 74/90+ packages
 - **In Progress**: 0
-- **Not Started**: 17+
+- **Not Started**: 16+
+
+### Supporting Packages (continued)
+- [x] `pkg/benchmark/AUDIT.md` — Complete — 3 issues (0 high, 0 med, 3 low) — Coverage: N/A (test-only; 513 test lines; fps requires X11)
 
 ## Next Priority
 Packages with high integration surface and platform-specific concerns:
-1. `pkg/benchmark/` — Performance benchmarking (FPS/memory monitoring)
-2. `pkg/rendering/` — Graphics pipeline (remaining subdirectories: display, palette, parallel, particles, patterns, quality, shapes, tiles)
-3. `pkg/procgen/` — Procedural generation (remaining subdirectories: book, class, environment, furniture, story)
+1. `pkg/rendering/` — Graphics pipeline (remaining subdirectories: display, palette, parallel, particles, patterns, quality, shapes, tiles)
+2. `pkg/procgen/` — Procedural generation (remaining subdirectories: book, class, environment, furniture, story)

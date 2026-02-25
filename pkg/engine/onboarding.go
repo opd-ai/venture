@@ -72,10 +72,29 @@ func NewOnboardingManager(logger *logrus.Entry) *OnboardingManager {
 }
 
 // SetTutorialSystem connects the in-game tutorial system.
+// Wires an OnCompleteCallback so the onboarding state machine advances
+// when the in-game tutorial completes or is skipped.
 func (om *OnboardingManager) SetTutorialSystem(ts *EbitenTutorialSystem) {
 	om.mu.Lock()
 	defer om.mu.Unlock()
 	om.tutorialSystem = ts
+
+	// Wire completion callback: when in-game tutorial finishes,
+	// transition through ContextHelp to Complete.
+	if ts != nil {
+		ts.OnCompleteCallback = func() {
+			if om.GetState() == StateInGameTutorial {
+				om.TransitionToContextHelp()
+				om.Complete()
+			} else if om.GetState() == StateCharacterCreation {
+				// Tutorial was skipped before character creation finished;
+				// advance the full chain so the state machine doesn't get stuck.
+				om.TransitionToInGameTutorial()
+				om.TransitionToContextHelp()
+				om.Complete()
+			}
+		}
+	}
 }
 
 // SetCreationTutorial connects the character creation tutorial.

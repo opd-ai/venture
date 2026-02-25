@@ -145,6 +145,17 @@ func setupAllGameSystems(game *engine.EbitenGame, logger *logrus.Logger, clientL
 	// Phase 3.3: Wire context-sensitive tutorial manager to game for settings propagation
 	game.SetContextualTutorial(contextualTutorial)
 
+	// Apply --no-tutorial flag to all tutorial layers (character creation tutorial and onboarding manager).
+	// The in-game tutorial and contextual tutorial are already handled in initializeTutorialAndHelp.
+	if *noTutorial {
+		if game.CharacterCreationTutorial != nil {
+			game.CharacterCreationTutorial.SetEnabled(false)
+		}
+		if game.OnboardingManager != nil {
+			game.OnboardingManager.SetEnabled(false)
+		}
+	}
+
 	configureSystemConnections(game, sys)
 
 	if *verbose {

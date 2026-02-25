@@ -1198,9 +1198,10 @@ func (g *EbitenGame) updateCoreUIScreens(deltaTime float64) {
 	g.SkillsUI.Update(nil, deltaTime)
 	g.MapUI.Update(nil, deltaTime)
 
-	if g.TutorialSystem != nil && g.TutorialSystem.Enabled {
-		g.TutorialSystem.Update(g.World.GetEntities(), deltaTime)
-	}
+	// Note: TutorialSystem.Update() is called via World.Update() since it is
+	// registered with World.AddSystem(). Calling it here as well would cause
+	// double-evaluation of step conditions per frame, leading to steps being
+	// skipped or appearing misordered.
 }
 
 // updateCommerceUIScreens updates shop, crafting, and trade UIs.

@@ -44,6 +44,10 @@ type EbitenTutorialSystem struct {
 
 	// Class-aware tutorial content (Phase 3.4)
 	PlayerClass CharacterClass
+
+	// OnCompleteCallback is called when all tutorial steps are completed or the tutorial is skipped.
+	// Used by OnboardingManager to transition to the next onboarding phase.
+	OnCompleteCallback func()
 }
 
 // NewTutorialSystem creates a new tutorial system with default steps.
@@ -436,6 +440,11 @@ func (ts *EbitenTutorialSystem) AdvanceStep() {
 			ts.ShowUI = false
 			ts.NotificationMsg = "Tutorial completed!"
 			ts.NotificationTTL = 3.0
+
+			// Notify OnboardingManager that in-game tutorial is complete
+			if ts.OnCompleteCallback != nil {
+				ts.OnCompleteCallback()
+			}
 		}
 	}
 }
@@ -489,6 +498,11 @@ func (ts *EbitenTutorialSystem) showCompletionNotification() {
 	ts.NotificationMsg = "Tutorial Complete! You're ready to adventure!"
 	ts.NotificationTTL = 5.0
 	ts.Enabled = false
+
+	// Notify OnboardingManager that in-game tutorial is complete
+	if ts.OnCompleteCallback != nil {
+		ts.OnCompleteCallback()
+	}
 }
 
 // GetCurrentStep returns the current tutorial step, or nil if complete
@@ -660,6 +674,11 @@ func (ts *EbitenTutorialSystem) advanceToNextStep() {
 			ts.NotificationMsg = "Tutorial Complete!"
 			ts.NotificationTTL = 3.0
 			ts.Enabled = false
+
+			// Notify OnboardingManager that in-game tutorial is complete
+			if ts.OnCompleteCallback != nil {
+				ts.OnCompleteCallback()
+			}
 		}
 	}
 }
@@ -671,6 +690,11 @@ func (ts *EbitenTutorialSystem) DisableTutorial() {
 	ts.ShowUI = false
 	ts.NotificationMsg = "Tutorial skipped"
 	ts.NotificationTTL = 2.0
+
+	// Notify OnboardingManager that in-game tutorial was skipped
+	if ts.OnCompleteCallback != nil {
+		ts.OnCompleteCallback()
+	}
 }
 
 // HideTutorialUI hides the tutorial overlay without disabling progression.

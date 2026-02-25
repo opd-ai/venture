@@ -2817,11 +2817,14 @@ func addPlayerComponents(player *engine.Entity, logger *logrus.Logger, clientLog
 // Phase 3.3: Also creates and configures TutorialManager for context-sensitive help.
 func initializeTutorialAndHelp(inputSystem *engine.InputSystem, cameraSystem *engine.CameraSystem, showTutorials bool, screenWidth, screenHeight int) (*engine.EbitenTutorialSystem, *engine.EbitenHelpSystem, *ui.TutorialManager) {
 	tutorialSystem := engine.NewTutorialSystemWithSize(screenWidth, screenHeight)
-	// Disable tutorials if either --no-tutorial flag is set OR ShowTutorials setting is false
-	if *noTutorial || !showTutorials {
-		tutorialSystem.Enabled = false
-		tutorialSystem.ShowUI = false
-	}
+	// Start the in-game tutorial disabled; OnboardingManager.TransitionToInGameTutorial()
+	// will enable it at the correct time (after character creation completes).
+	// For loaded games, deserializeTutorialState() restores the saved enabled/showUI state.
+	tutorialSystem.Enabled = false
+	tutorialSystem.ShowUI = false
+
+	// If --no-tutorial is set or ShowTutorials is off, tutorials stay permanently disabled
+	// (OnboardingManager.SetEnabled(false) handles this separately).
 	helpSystem := engine.NewHelpSystem()
 
 	// Phase 3.3: Create context-sensitive tutorial manager

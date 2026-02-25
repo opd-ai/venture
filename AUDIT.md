@@ -66,14 +66,14 @@ This file tracks package-level audits across the Venture codebase. Each entry in
 - [x] `pkg/integration/housing_crafting/AUDIT.md` — Complete — 3 issues (0 high, 0 med, 3 low) — Coverage: 96.3%
 - [x] `pkg/integration/choice_consequences/AUDIT.md` — Complete — 5 issues (0 high, 2 med, 3 low) — Coverage: 89.3%
 - [x] `pkg/integration/narrative_world/AUDIT.md` — Complete — 5 issues (0 high, 2 med, 3 low) — Coverage: Unmeasurable (86.7% test-to-source ratio)
-- [ ] `pkg/integration/political_warfare/` — Not audited
+- [x] `pkg/integration/political_warfare/AUDIT.md` — Complete — 4 issues (0 high, 1 med, 3 low) — Coverage: Unmeasurable (requires X11; 452% test-to-source ratio)
 - [ ] `pkg/integration/trade_routes/` — Not audited
 - [ ] `pkg/integration/world_events/` — Not audited
 
 ## Audit Progress
-- **Completed**: 42/90+ packages
+- **Completed**: 43/90+ packages
 - **In Progress**: 0
-- **Not Started**: 48+
+- **Not Started**: 47+
 
 ## Next Priority
 Packages with high integration surface and platform-specific concerns:

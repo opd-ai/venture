@@ -214,7 +214,7 @@ func (v *JourneyValidator) checkDurationWithinTolerance(actual, expected time.Du
 }
 
 // GetSummary returns a summary of validation results.
-func GetSummary(results []JourneyResult) Summary {
+func (v *JourneyValidator) GetSummary(results []JourneyResult) Summary {
 	total := len(results)
 
 	// Handle empty results to avoid division by zero

@@ -103,31 +103,102 @@ func TestValidateAll(t *testing.T) {
 }
 
 func TestGetSummary(t *testing.T) {
+	validator := NewJourneyValidator()
+
+	tests := []struct {
+		name                string
+		results             []JourneyResult
+		wantTotal           int
+		wantPassed          int
+		wantPassRate        float64
+		wantAvgCompletion   float64
+		wantAvgSatisfaction float64
+		wantAvgErrorRate    float64
+	}{
+		{
+			name: "mixed results",
+			results: []JourneyResult{
+				{Passed: true, CompletionRate: 1.0, Satisfaction: 0.95, ErrorRate: 0.0},
+				{Passed: true, CompletionRate: 0.95, Satisfaction: 0.90, ErrorRate: 0.02},
+				{Passed: false, CompletionRate: 0.80, Satisfaction: 0.75, ErrorRate: 0.10},
+			},
+			wantTotal:           3,
+			wantPassed:          2,
+			wantPassRate:        2.0 / 3.0,
+			wantAvgCompletion:   (1.0 + 0.95 + 0.80) / 3.0,
+			wantAvgSatisfaction: (0.95 + 0.90 + 0.75) / 3.0,
+			wantAvgErrorRate:    (0.0 + 0.02 + 0.10) / 3.0,
+		},
+		{
+			name:                "empty results",
+			results:             []JourneyResult{},
+			wantTotal:           0,
+			wantPassed:          0,
+			wantPassRate:        0.0,
+			wantAvgCompletion:   0.0,
+			wantAvgSatisfaction: 0.0,
+			wantAvgErrorRate:    0.0,
+		},
+		{
+			name: "all passed",
+			results: []JourneyResult{
+				{Passed: true, CompletionRate: 1.0, Satisfaction: 0.95, ErrorRate: 0.0},
+				{Passed: true, CompletionRate: 1.0, Satisfaction: 0.98, ErrorRate: 0.0},
+			},
+			wantTotal:           2,
+			wantPassed:          2,
+			wantPassRate:        1.0,
+			wantAvgCompletion:   1.0,
+			wantAvgSatisfaction: (0.95 + 0.98) / 2.0,
+			wantAvgErrorRate:    0.0,
+		},
+		{
+			name: "all failed",
+			results: []JourneyResult{
+				{Passed: false, CompletionRate: 0.5, Satisfaction: 0.4, ErrorRate: 0.3},
+				{Passed: false, CompletionRate: 0.6, Satisfaction: 0.5, ErrorRate: 0.2},
+			},
+			wantTotal:           2,
+			wantPassed:          0,
+			wantPassRate:        0.0,
+			wantAvgCompletion:   0.55,
+			wantAvgSatisfaction: 0.45,
+			wantAvgErrorRate:    0.25,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			summary := validator.GetSummary(tt.results)
+
+			if summary.TotalJourneys != tt.wantTotal {
+				t.Errorf("TotalJourneys = %d, want %d", summary.TotalJourneys, tt.wantTotal)
+			}
+			if summary.PassedJourneys != tt.wantPassed {
+				t.Errorf("PassedJourneys = %d, want %d", summary.PassedJourneys, tt.wantPassed)
+			}
+			if summary.PassRate != tt.wantPassRate {
+				t.Errorf("PassRate = %.4f, want %.4f", summary.PassRate, tt.wantPassRate)
+			}
+			if summary.AverageCompletionRate != tt.wantAvgCompletion {
+				t.Errorf("AverageCompletionRate = %.4f, want %.4f", summary.AverageCompletionRate, tt.wantAvgCompletion)
+			}
+			if summary.AverageSatisfaction != tt.wantAvgSatisfaction {
+				t.Errorf("AverageSatisfaction = %.4f, want %.4f", summary.AverageSatisfaction, tt.wantAvgSatisfaction)
+			}
+			if summary.AverageErrorRate != tt.wantAvgErrorRate {
+				t.Errorf("AverageErrorRate = %.4f, want %.4f", summary.AverageErrorRate, tt.wantAvgErrorRate)
+			}
+		})
+	}
+
+	// Legacy compatibility test - ensure basic behavior still works
 	results := []JourneyResult{
 		{Passed: true, CompletionRate: 1.0, Satisfaction: 0.95, ErrorRate: 0.0},
 		{Passed: true, CompletionRate: 0.95, Satisfaction: 0.90, ErrorRate: 0.02},
 		{Passed: false, CompletionRate: 0.80, Satisfaction: 0.75, ErrorRate: 0.10},
 	}
-
-	summary := GetSummary(results)
-
-	if summary.TotalJourneys != 3 {
-		t.Errorf("Expected 3 total journeys, got %d", summary.TotalJourneys)
-	}
-
-	if summary.PassedJourneys != 2 {
-		t.Errorf("Expected 2 passed journeys, got %d", summary.PassedJourneys)
-	}
-
-	expectedPassRate := 2.0 / 3.0
-	if summary.PassRate != expectedPassRate {
-		t.Errorf("Expected pass rate %.2f, got %.2f", expectedPassRate, summary.PassRate)
-	}
-
-	if summary.AverageCompletionRate < 0.90 || summary.AverageCompletionRate > 0.93 {
-		t.Errorf("Expected average completion ~0.92, got %.2f", summary.AverageCompletionRate)
-	}
-
+	summary := validator.GetSummary(results)
 	t.Logf("Summary: Pass rate=%.1f%%, Avg completion=%.1f%%, Avg satisfaction=%.1f%%",
 		summary.PassRate*100, summary.AverageCompletionRate*100, summary.AverageSatisfaction*100)
 }

@@ -19,6 +19,9 @@ type MenuInputProvider interface {
 	IsMenuConfirmJustPressed() bool
 	IsMenuBackJustPressed() bool
 	IsMenuTabJustPressed() bool
+	// Touch input support for menu item selection
+	IsTouchOrMouseJustPressed() bool
+	GetTouchOrMousePosition() (x, y int, hasActiveInput bool)
 }
 
 // HousingUI represents a player housing management interface.
@@ -142,6 +145,9 @@ func (h *HousingUI) Update() bool {
 
 		// Handle submenu navigation with Up/Down arrows
 		h.handleSubmenuInput()
+
+		// Handle touch/mouse input for spatial hit testing on menu items
+		h.handleTouchInput()
 	}
 
 	// Consume input when UI is visible
@@ -268,6 +274,77 @@ func (h *HousingUI) handleSubmenuInput() {
 			if h.selectedFurnitureType < 0 {
 				h.selectedFurnitureType = len(furnitureTypes) - 1
 			}
+		}
+	}
+}
+
+// handleTouchInput performs spatial hit testing for touch/mouse menu item selection.
+// This enables direct selection of menu items by tapping or clicking on them.
+func (h *HousingUI) handleTouchInput() {
+	if h.inputProvider == nil {
+		return
+	}
+
+	if !h.inputProvider.IsTouchOrMouseJustPressed() {
+		return
+	}
+
+	mouseX, mouseY, hasActive := h.inputProvider.GetTouchOrMousePosition()
+	if !hasActive {
+		return
+	}
+
+	// Spatial hit testing based on current menu state
+	switch h.menuState {
+	case "build":
+		h.handleBuildingMenuTouch(mouseX, mouseY)
+	case "furniture":
+		h.handleFurnitureMenuTouch(mouseX, mouseY)
+	case "guildhall":
+		// Guild hall menu is informational only, no interactive elements yet
+	}
+}
+
+// handleBuildingMenuTouch performs hit testing on building menu items.
+func (h *HousingUI) handleBuildingMenuTouch(mouseX, mouseY int) {
+	// Calculate menu item positions (matching drawBuildingMenu layout)
+	buildingTypes := h.getBuildingTypesList()
+	startY := h.Y + h.Height - 200 // Same as contentY in Draw()
+	itemStartY := startY + 20
+
+	for i := range buildingTypes {
+		itemY := itemStartY + (i * 15)
+		itemX := h.X + 10
+		itemHeight := 15
+		itemWidth := h.Width - 20 // Account for padding
+
+		// Check if touch/click is within item bounds
+		if mouseX >= itemX && mouseX < itemX+itemWidth &&
+			mouseY >= itemY && mouseY < itemY+itemHeight {
+			h.selectedBuildingType = i
+			return
+		}
+	}
+}
+
+// handleFurnitureMenuTouch performs hit testing on furniture menu items.
+func (h *HousingUI) handleFurnitureMenuTouch(mouseX, mouseY int) {
+	// Calculate menu item positions (matching drawFurnitureMenu layout)
+	furnitureTypes := h.getFurnitureTypesList()
+	startY := h.Y + h.Height - 200 // Same as contentY in Draw()
+	itemStartY := startY + 20
+
+	for i := range furnitureTypes {
+		itemY := itemStartY + (i * 15)
+		itemX := h.X + 10
+		itemHeight := 15
+		itemWidth := h.Width - 20 // Account for padding
+
+		// Check if touch/click is within item bounds
+		if mouseX >= itemX && mouseX < itemX+itemWidth &&
+			mouseY >= itemY && mouseY < itemY+itemHeight {
+			h.selectedFurnitureType = i
+			return
 		}
 	}
 }

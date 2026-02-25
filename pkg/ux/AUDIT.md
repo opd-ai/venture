@@ -27,7 +27,7 @@ _None identified_
 
 ### Low Severity
 - [x] **Documentation comment style** — ~~Log examples in doc.go use `log.Printf` which differs from project standard of `logrus.WithFields`~~ **RESOLVED 2026-02-23**: Updated to use `logrus.WithFields(...).Warn()` and `logrus.WithFields(...).Info()` (`doc.go:50`, `journeys.go:30`)
-- [ ] **Exported function location** — `GetSummary()` is a free function in `validator.go` rather than a method on `JourneyValidator`, which is inconsistent with the package's OO design pattern. (`validator.go:217`)
+- [x] **Exported function location** — `GetSummary()` converted from free function to method on `JourneyValidator` for API consistency. Updated tests to use table-driven pattern. Coverage improved to 96.9%. **RESOLVED 2026-02-25**
 
 ## Input Integration
 | Input Source | Status | Notes |

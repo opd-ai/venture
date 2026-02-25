@@ -297,6 +297,10 @@ type StubMenuInput struct {
 	MenuConfirmJustPressed bool
 	MenuBackJustPressed    bool
 	MenuTabJustPressed     bool
+	TouchJustPressed       bool
+	TouchX                 int
+	TouchY                 int
+	HasActiveInput         bool
 }
 
 func (s *StubMenuInput) IsMenuUpJustPressed() bool      { return s.MenuUpJustPressed }
@@ -304,6 +308,13 @@ func (s *StubMenuInput) IsMenuDownJustPressed() bool    { return s.MenuDownJustP
 func (s *StubMenuInput) IsMenuConfirmJustPressed() bool { return s.MenuConfirmJustPressed }
 func (s *StubMenuInput) IsMenuBackJustPressed() bool    { return s.MenuBackJustPressed }
 func (s *StubMenuInput) IsMenuTabJustPressed() bool     { return s.MenuTabJustPressed }
+func (s *StubMenuInput) IsTouchOrMouseJustPressed() bool {
+	return s.TouchJustPressed
+}
+
+func (s *StubMenuInput) GetTouchOrMousePosition() (x, y int, hasActiveInput bool) {
+	return s.TouchX, s.TouchY, s.HasActiveInput
+}
 
 func TestHousingUI_SetInput(t *testing.T) {
 	ui := NewHousingUI(800, 600)
@@ -431,5 +442,284 @@ func TestHousingUI_HandleSubmenuInput_NoInputProvider(t *testing.T) {
 	ui.handleSubmenuInput()
 	if ui.selectedBuildingType != 0 {
 		t.Errorf("selectedBuildingType changed without input provider")
+	}
+}
+
+// Touch input tests
+
+func TestHousingUI_HandleTouchInput_BuildingMenu_SelectFirst(t *testing.T) {
+	ui := NewHousingUI(800, 600)
+	ui.menuState = "build"
+	ui.selectedBuildingType = 2 // Start at index 2
+	ui.Show()
+
+	// Calculate the position of the first building item (House)
+	startY := ui.Y + ui.Height - 200 // contentY
+	itemStartY := startY + 20
+	itemX := ui.X + 10
+
+	input := &StubMenuInput{
+		TouchJustPressed: true,
+		TouchX:           itemX + 5, // Inside first item
+		TouchY:           itemStartY + 5,
+		HasActiveInput:   true,
+	}
+	ui.SetInput(input)
+
+	ui.Update()
+
+	if ui.selectedBuildingType != 0 {
+		t.Errorf("selectedBuildingType = %d, want 0 after touching first item", ui.selectedBuildingType)
+	}
+}
+
+func TestHousingUI_HandleTouchInput_BuildingMenu_SelectThird(t *testing.T) {
+	ui := NewHousingUI(800, 600)
+	ui.menuState = "build"
+	ui.selectedBuildingType = 0
+	ui.Show()
+
+	// Calculate the position of the third building item (Storage)
+	startY := ui.Y + ui.Height - 200
+	itemStartY := startY + 20
+	itemX := ui.X + 10
+	thirdItemY := itemStartY + (2 * 15) // Third item at index 2
+
+	input := &StubMenuInput{
+		TouchJustPressed: true,
+		TouchX:           itemX + 50,
+		TouchY:           thirdItemY + 7,
+		HasActiveInput:   true,
+	}
+	ui.SetInput(input)
+
+	ui.Update()
+
+	if ui.selectedBuildingType != 2 {
+		t.Errorf("selectedBuildingType = %d, want 2 after touching third item", ui.selectedBuildingType)
+	}
+}
+
+func TestHousingUI_HandleTouchInput_FurnitureMenu_SelectSecond(t *testing.T) {
+	ui := NewHousingUI(800, 600)
+	ui.menuState = "furniture"
+	ui.selectedFurnitureType = 0
+	ui.Show()
+
+	// Calculate the position of the second furniture item (Storage)
+	startY := ui.Y + ui.Height - 200
+	itemStartY := startY + 20
+	itemX := ui.X + 10
+	secondItemY := itemStartY + (1 * 15) // Second item at index 1
+
+	input := &StubMenuInput{
+		TouchJustPressed: true,
+		TouchX:           itemX + 50,
+		TouchY:           secondItemY + 7,
+		HasActiveInput:   true,
+	}
+	ui.SetInput(input)
+
+	ui.Update()
+
+	if ui.selectedFurnitureType != 1 {
+		t.Errorf("selectedFurnitureType = %d, want 1 after touching second item", ui.selectedFurnitureType)
+	}
+}
+
+func TestHousingUI_HandleTouchInput_OutOfBounds_NoChange(t *testing.T) {
+	ui := NewHousingUI(800, 600)
+	ui.menuState = "build"
+	ui.selectedBuildingType = 2
+	ui.Show()
+
+	// Touch outside the menu area
+	input := &StubMenuInput{
+		TouchJustPressed: true,
+		TouchX:           ui.X - 100, // Way outside the menu
+		TouchY:           ui.Y - 100,
+		HasActiveInput:   true,
+	}
+	ui.SetInput(input)
+
+	ui.Update()
+
+	if ui.selectedBuildingType != 2 {
+		t.Errorf("selectedBuildingType = %d, want 2 (unchanged) after touching outside bounds", ui.selectedBuildingType)
+	}
+}
+
+func TestHousingUI_HandleTouchInput_NoActiveInput(t *testing.T) {
+	ui := NewHousingUI(800, 600)
+	ui.menuState = "build"
+	ui.selectedBuildingType = 1
+	ui.Show()
+
+	// Touch position provided but not active (cursor hover without click)
+	input := &StubMenuInput{
+		TouchJustPressed: false,
+		TouchX:           ui.X + 20,
+		TouchY:           ui.Y + 100,
+		HasActiveInput:   false,
+	}
+	ui.SetInput(input)
+
+	ui.Update()
+
+	if ui.selectedBuildingType != 1 {
+		t.Errorf("selectedBuildingType = %d, want 1 (unchanged) without active input", ui.selectedBuildingType)
+	}
+}
+
+func TestHousingUI_HandleTouchInput_GuildHallMenu_NoInteraction(t *testing.T) {
+	ui := NewHousingUI(800, 600)
+	ui.menuState = "guildhall"
+	ui.Show()
+
+	// Touch on guildhall menu (which has no interactive elements)
+	input := &StubMenuInput{
+		TouchJustPressed: true,
+		TouchX:           ui.X + 50,
+		TouchY:           ui.Y + 100,
+		HasActiveInput:   true,
+	}
+	ui.SetInput(input)
+
+	// Should not panic
+	ui.Update()
+}
+
+func TestHousingUI_HandleTouchInput_NoInputProvider(t *testing.T) {
+	ui := NewHousingUI(800, 600)
+	ui.menuState = "build"
+	ui.selectedBuildingType = 1
+	ui.Show()
+	// No input provider set
+
+	// Should not panic
+	ui.Update()
+
+	if ui.selectedBuildingType != 1 {
+		t.Errorf("selectedBuildingType changed without input provider")
+	}
+}
+
+func TestHousingUI_HandleTouchInput_AllBuildingItems(t *testing.T) {
+	ui := NewHousingUI(800, 600)
+	ui.menuState = "build"
+	ui.Show()
+
+	buildingTypes := ui.getBuildingTypesList()
+	startY := ui.Y + ui.Height - 200
+	itemStartY := startY + 20
+	itemX := ui.X + 10
+
+	// Test touching each building item
+	for i := range buildingTypes {
+		t.Run(buildingTypes[i], func(t *testing.T) {
+			ui.selectedBuildingType = 0 // Reset to first item
+
+			itemY := itemStartY + (i * 15)
+			input := &StubMenuInput{
+				TouchJustPressed: true,
+				TouchX:           itemX + 50,
+				TouchY:           itemY + 7,
+				HasActiveInput:   true,
+			}
+			ui.SetInput(input)
+
+			ui.Update()
+
+			if ui.selectedBuildingType != i {
+				t.Errorf("selectedBuildingType = %d, want %d after touching item %s",
+					ui.selectedBuildingType, i, buildingTypes[i])
+			}
+		})
+	}
+}
+
+func TestHousingUI_HandleTouchInput_AllFurnitureItems(t *testing.T) {
+	ui := NewHousingUI(800, 600)
+	ui.menuState = "furniture"
+	ui.Show()
+
+	furnitureTypes := ui.getFurnitureTypesList()
+	startY := ui.Y + ui.Height - 200
+	itemStartY := startY + 20
+	itemX := ui.X + 10
+
+	// Test touching each furniture item
+	for i := range furnitureTypes {
+		t.Run(furnitureTypes[i], func(t *testing.T) {
+			ui.selectedFurnitureType = 0 // Reset to first item
+
+			itemY := itemStartY + (i * 15)
+			input := &StubMenuInput{
+				TouchJustPressed: true,
+				TouchX:           itemX + 50,
+				TouchY:           itemY + 7,
+				HasActiveInput:   true,
+			}
+			ui.SetInput(input)
+
+			ui.Update()
+
+			if ui.selectedFurnitureType != i {
+				t.Errorf("selectedFurnitureType = %d, want %d after touching item %s",
+					ui.selectedFurnitureType, i, furnitureTypes[i])
+			}
+		})
+	}
+}
+
+func TestHousingUI_HandleTouchInput_EdgeDetection_LeftBoundary(t *testing.T) {
+	ui := NewHousingUI(800, 600)
+	ui.menuState = "build"
+	ui.selectedBuildingType = 2
+	ui.Show()
+
+	startY := ui.Y + ui.Height - 200
+	itemStartY := startY + 20
+	itemX := ui.X + 10
+
+	// Touch exactly at the left boundary (should select)
+	input := &StubMenuInput{
+		TouchJustPressed: true,
+		TouchX:           itemX,
+		TouchY:           itemStartY + 5,
+		HasActiveInput:   true,
+	}
+	ui.SetInput(input)
+
+	ui.Update()
+
+	if ui.selectedBuildingType != 0 {
+		t.Errorf("selectedBuildingType = %d, want 0 at left boundary", ui.selectedBuildingType)
+	}
+}
+
+func TestHousingUI_HandleTouchInput_EdgeDetection_JustOutside(t *testing.T) {
+	ui := NewHousingUI(800, 600)
+	ui.menuState = "build"
+	ui.selectedBuildingType = 1
+	ui.Show()
+
+	startY := ui.Y + ui.Height - 200
+	itemStartY := startY + 20
+	itemX := ui.X + 10
+
+	// Touch just outside the left boundary (should not select)
+	input := &StubMenuInput{
+		TouchJustPressed: true,
+		TouchX:           itemX - 1,
+		TouchY:           itemStartY + 5,
+		HasActiveInput:   true,
+	}
+	ui.SetInput(input)
+
+	ui.Update()
+
+	if ui.selectedBuildingType != 1 {
+		t.Errorf("selectedBuildingType = %d, want 1 (unchanged) just outside boundary", ui.selectedBuildingType)
 	}
 }

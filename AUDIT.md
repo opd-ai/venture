@@ -952,8 +952,8 @@ This report consolidates 110 individual audit files across all packages in the V
 - **Source:** `pkg/ux/AUDIT.md`
 - **High Issues:** 0
 - **Medium Issues:** 0 (1 fixed)
-- **Low Issues:** 1 (1 fixed)
-- **Details:** 96.5% coverage. `time.Now().UnixNano()` used as default seed when config seed is 0—intentional for varied test runs. **RESOLVED 2026-02-23**: Upon review, `types.go:93` already contains clarifying comment that this controls UX validation timing only, not game content generation. **RESOLVED 2026-02-23**: `doc.go` examples updated to use `logrus.WithFields(...).Warn()` and `logrus.WithFields(...).Info()` instead of `log.Printf` and `fmt.Printf`.
+- **Low Issues:** 0 (2 fixed)
+- **Details:** 96.9% coverage (improved from 96.5%). `time.Now().UnixNano()` used as default seed when config seed is 0—intentional for varied test runs. **RESOLVED 2026-02-23**: Upon review, `types.go:93` already contains clarifying comment that this controls UX validation timing only, not game content generation. **RESOLVED 2026-02-23**: `doc.go` examples updated to use `logrus.WithFields(...).Warn()` and `logrus.WithFields(...).Info()` instead of `log.Printf` and `fmt.Printf`. **RESOLVED 2026-02-25**: `GetSummary()` converted from free function to method on `JourneyValidator` for API consistency; tests enhanced with table-driven pattern covering edge cases (empty results, all passed, all failed).
 
 ---
 
@@ -1015,8 +1015,8 @@ This report consolidates 110 individual audit files across all packages in the V
 - **Source:** `pkg/world/housing/AUDIT.md`
 - **High Issues:** 0 (1 fixed)
 - **Medium Issues:** 0 (1 fixed)
-- **Low Issues:** 1 (2 fixed - gamepad wiring done 2026-02-25, touch remaining)
-- **Details:** 78.9% coverage. `HousingUI` input abstraction fixed: now uses `MenuInputProvider` interface instead of direct `ebiten.IsKeyPressed()` calls. **RESOLVED 2026-02-23**: Added `SetDefaultTimeProvider()` and `ResetDefaultTimeProvider()` functions allowing multiplayer sync to use `MockTimeProvider` for deterministic timestamps. Updated `doc.go` example to use logrus structured logging. **RESOLVED 2026-02-25**: Gamepad D-pad menu navigation wired via `InputSystem.processGamepadMenuNavigation()` - D-pad Up/Down navigate menus, A confirms, B goes back, LB/RB switch tabs. Added D-pad helper methods to `GamepadInputHandler`. Remaining: touch tap spatial hit testing for menu item selection.
+- **Low Issues:** 0 (3 fixed - gamepad wiring done 2026-02-25, touch done 2026-02-25)
+- **Details:** 78.9% coverage. `HousingUI` input abstraction fixed: now uses `MenuInputProvider` interface instead of direct `ebiten.IsKeyPressed()` calls. **RESOLVED 2026-02-23**: Added `SetDefaultTimeProvider()` and `ResetDefaultTimeProvider()` functions allowing multiplayer sync to use `MockTimeProvider` for deterministic timestamps. Updated `doc.go` example to use logrus structured logging. **RESOLVED 2026-02-25**: Gamepad D-pad menu navigation wired via `InputSystem.processGamepadMenuNavigation()` - D-pad Up/Down navigate menus, A confirms, B goes back, LB/RB switch tabs. Added D-pad helper methods to `GamepadInputHandler`. **RESOLVED 2026-02-25**: Touch tap spatial hit testing implemented for menu item selection. Added `IsTouchOrMouseJustPressed()` and `GetTouchOrMousePosition()` methods to `MenuInputProvider` interface. Implemented `handleTouchInput()`, `handleBuildingMenuTouch()`, and `handleFurnitureMenuTouch()` methods for spatial hit detection on building and furniture menu items. Added 11 comprehensive tests covering all menu items, edge detection, and error conditions.
 
 ---
 

@@ -155,7 +155,7 @@ func runUXValidation(serverLogger *logrus.Entry) {
 
 	validator := ux.NewJourneyValidatorWithConfig(config)
 	results := validator.ValidateAll()
-	summary := ux.GetSummary(results)
+	summary := validator.GetSummary(results)
 
 	serverLogger.WithFields(logrus.Fields{
 		"total_journeys":   summary.TotalJourneys,

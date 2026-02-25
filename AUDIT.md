@@ -100,7 +100,6 @@ This file tracks package-level audits across the Venture codebase. Each entry in
 
 ## Next Priority
 Packages with high integration surface and platform-specific concerns:
-1. `pkg/engine/prestige/` — New Game+ progression system (5 files, high integration with progression systems)
+1. `pkg/benchmark/` — Performance benchmarking (FPS/memory monitoring)
 2. `pkg/rendering/` — Graphics pipeline (remaining subdirectories: display, palette, parallel, particles, patterns, quality, shapes, tiles)
 3. `pkg/procgen/` — Procedural generation (remaining subdirectories: book, class, environment, furniture, story)
-4. `pkg/benchmark/` — Performance benchmarking (FPS/memory monitoring)

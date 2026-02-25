@@ -28,8 +28,8 @@ The `pkg/audio` package provides procedural audio synthesis for music, sound eff
 
 ### Low Severity
 - [x] **Documentation** — `VoiceProcessor` missing godoc on `ProcessInput` explaining channelID semantic (`voice.go:242`) **FIXED 2026-02-22**: Added comprehensive godoc
-- [ ] **Code Organization** — `synthesis` sub-package already audited separately (2026-02-13) with all issues resolved; this audit covers parent package only
-- [ ] **Test Structure** — Some tests in `music/genre_consistency_test.go` could benefit from table-driven patterns for improved maintainability
+- [x] **Code Organization** — `synthesis` sub-package already audited separately (2026-02-13) with all issues resolved; this audit covers parent package only
+- [x] **Test Structure** — ~~Some tests in `music/genre_consistency_test.go` could benefit from table-driven patterns for improved maintainability~~ **RESOLVED 2026-02-24**: `TestGenreNamingCompatibility` refactored to table-driven pattern with `t.Run` subtests covering all 5 genres (fantasy, scifi, horror, cyberpunk, postapoc)
 
 ## Input Integration
 | Input Source | Status | Notes |

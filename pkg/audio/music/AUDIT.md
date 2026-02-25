@@ -27,8 +27,8 @@ None identified.
 - [x] **Documentation** — ~~Package has local `MusicLayer` struct shadowing `audio.MusicLayer` type~~ **RESOLVED 2026-02-22**: Struct is named `CompositionLayer` (not `MusicLayer`) with explicit godoc comment clarifying it is distinct from `audio.MusicLayer` enum type (`adaptive.go:29-33`)
 
 ### Low Severity
-- [ ] **Code Style** — Generator's `generateMelody` and `generateHarmony` use inline envelope parameters that could be extracted to constants for clarity (`generator.go:132-137`, `generator.go:183-188`)
-- [ ] **Performance** — `normalizeTrack` iterates twice over the track (once for max, once for scaling); could be combined or optimized for very long tracks (`adaptive.go:692-707`)
+- [x] **Code Style** — ~~Generator's `generateMelody` and `generateHarmony` use inline envelope parameters that could be extracted to constants for clarity~~ **RESOLVED 2026-02-24**: Inline ADSR values replaced with package-level constants `MelodyEnvAttack/Decay/Sustain/Release` and `HarmonyEnvAttack/Decay/Sustain/Release` (`generator.go:152-157`, `generator.go:202-207`)
+- [x] **Performance** — ~~`normalizeTrack` iterates twice over the track~~ **RESOLVED 2026-02-24**: Two-pass approach is mathematically unavoidable for correct peak normalization (must find max before scaling). Already documented with inline comment explaining design rationale and early-exit optimization when `maxAmp <= 1.0` (`adaptive.go:693-696`)
 - [x] **Documentation** — ~~Several exported helper functions lack godoc comments~~ **RESOLVED 2026-02-22**: `GetScaleForGenre`, `GetChordProgression`, `GetRhythmForContext`, `GetTempoForContext` all have comprehensive godoc comments explaining genre/context behavior and default values (`theory.go:46-54`, `87-95`, `134-142`, `173-181`)
 
 ## Input Integration

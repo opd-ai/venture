@@ -14,8 +14,8 @@ This report consolidates 110 individual audit files across all packages in the V
 |----------|-------------|
 | High     | 1           |
 | Medium   | ~12         |
-| Low      | ~101        |
-| **Total**| **~114**    |
+| Low      | ~97         |
+| **Total**| **~110**    |
 
 **Historical totals (including fixed):** ~32 High, ~96 Medium, ~230 Low issues were identified across all audits. The vast majority have been resolved, resulting in an overall codebase health status of **Good**.
 
@@ -52,8 +52,8 @@ This report consolidates 110 individual audit files across all packages in the V
 - **Source:** `pkg/audio/AUDIT.md`
 - **High Issues:** 0
 - **Medium Issues:** 0 (2 fixed)
-- **Low Issues:** 2 (1 fixed)
-- **Details:** Overall health is excellent (91.4% coverage), all sub-packages pass `go vet`, race detection, and WASM checks. **FIXED 2026-02-22**: `MusicTriggerSystem.Update()` now implements ECS `System` interface signature `Update(entities []*Entity, deltaTime float64)`. README example updated to use seed-based approach instead of `time.Now().UnixNano()`. Added comprehensive godoc to `VoiceProcessor.ProcessInput()` explaining channelID semantic.
+- **Low Issues:** 0 (3 fixed)
+- **Details:** Overall health is excellent (91.4% coverage), all sub-packages pass `go vet`, race detection, and WASM checks. **FIXED 2026-02-22**: `MusicTriggerSystem.Update()` now implements ECS `System` interface signature `Update(entities []*Entity, deltaTime float64)`. README example updated to use seed-based approach instead of `time.Now().UnixNano()`. Added comprehensive godoc to `VoiceProcessor.ProcessInput()` explaining channelID semantic. **RESOLVED 2026-02-24**: `TestGenreNamingCompatibility` refactored to table-driven pattern with `t.Run` subtests covering all 5 genres.
 
 ---
 
@@ -61,8 +61,8 @@ This report consolidates 110 individual audit files across all packages in the V
 - **Source:** `pkg/audio/music/AUDIT.md`
 - **High Issues:** 0
 - **Medium Issues:** 0 (1 fixed)
-- **Low Issues:** 2 (1 fixed)
-- **Details:** 94.6% test coverage with full genre support (fantasy, sci-fi, horror, cyberpunk, post-apocalyptic). **RESOLVED 2026-02-22**: Local struct is `CompositionLayer` (not `MusicLayer`) with explicit godoc comment clarifying distinction from `audio.MusicLayer` enum; `theory.go` helper functions (`GetScaleForGenre`, `GetChordProgression`, `GetRhythmForContext`, `GetTempoForContext`) all have comprehensive godoc comments. Remaining: inline envelope parameters in generator, `normalizeTrack` iterates twice.
+- **Low Issues:** 0 (3 fixed)
+- **Details:** 94.6% test coverage with full genre support (fantasy, sci-fi, horror, cyberpunk, post-apocalyptic). **RESOLVED 2026-02-22**: Local struct is `CompositionLayer` (not `MusicLayer`) with explicit godoc comment clarifying distinction from `audio.MusicLayer` enum; `theory.go` helper functions (`GetScaleForGenre`, `GetChordProgression`, `GetRhythmForContext`, `GetTempoForContext`) all have comprehensive godoc comments. **RESOLVED 2026-02-24**: Inline ADSR envelope magic numbers in `generateMelody` and `generateHarmony` replaced with package-level `MelodyEnv*`/`HarmonyEnv*` constants. `normalizeTrack` two-pass design documented as mathematically unavoidable for correct peak normalization.
 
 ---
 

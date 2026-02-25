@@ -65,39 +65,73 @@ func TestGenreConsistency(t *testing.T) {
 // This is a regression test for the bug where "scifi" worked in theory.go but "sci-fi" was
 // checked in adaptive.go, causing fallback behavior.
 func TestGenreNamingCompatibility(t *testing.T) {
-	// Create composer with short-form genre
-	composer := NewAdaptiveComposer(44100, 54321)
-	composer.Initialize("scifi", 60)
-
-	// Verify it gets chromatic scale (not default major scale)
-	scale := GetScaleForGenre("scifi")
-	if scale.Name != "Chromatic" {
-		t.Errorf("scifi genre should map to Chromatic scale, got %s", scale.Name)
+	tests := []struct {
+		name      string
+		genre     string
+		seed      int64
+		context   string
+		wantScale string
+	}{
+		{
+			name:      "scifi genre maps to chromatic scale",
+			genre:     "scifi",
+			seed:      54321,
+			context:   "combat",
+			wantScale: "Chromatic",
+		},
+		{
+			name:      "postapoc genre maps to pentatonic scale",
+			genre:     "postapoc",
+			seed:      54322,
+			context:   "exploration",
+			wantScale: "Pentatonic",
+		},
+		{
+			name:      "fantasy genre maps to major scale",
+			genre:     "fantasy",
+			seed:      54323,
+			context:   "exploration",
+			wantScale: "Major",
+		},
+		{
+			name:      "horror genre maps to minor scale",
+			genre:     "horror",
+			seed:      54324,
+			context:   "combat",
+			wantScale: "Minor",
+		},
+		{
+			name:      "cyberpunk genre maps to blues scale",
+			genre:     "cyberpunk",
+			seed:      54325,
+			context:   "exploration",
+			wantScale: "Blues",
+		},
 	}
 
-	// Generate a track to ensure no runtime errors with scifi genre
-	composer.SetContext("combat")
-	track := composer.GenerateAdaptiveTrack(1.0)
-	if track == nil {
-		t.Error("GenerateAdaptiveTrack() returned nil for scifi genre")
-	}
-	if track.SampleRate != 44100 {
-		t.Errorf("Track sample rate = %d, want 44100", track.SampleRate)
-	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Verify scale mapping
+			scale := GetScaleForGenre(tt.genre)
+			if scale.Name != tt.wantScale {
+				t.Errorf("GetScaleForGenre(%s).Name = %s, want %s",
+					tt.genre, scale.Name, tt.wantScale)
+			}
 
-	// Test postapoc genre as well
-	composer2 := NewAdaptiveComposer(44100, 54322)
-	composer2.Initialize("postapoc", 60)
+			// Create composer and verify track generation succeeds
+			composer := NewAdaptiveComposer(44100, tt.seed)
+			composer.Initialize(tt.genre, 60)
+			composer.SetContext(tt.context)
 
-	scale2 := GetScaleForGenre("postapoc")
-	if scale2.Name != "Pentatonic" {
-		t.Errorf("postapoc genre should map to Pentatonic scale, got %s", scale2.Name)
-	}
-
-	composer2.SetContext("exploration")
-	track2 := composer2.GenerateAdaptiveTrack(1.0)
-	if track2 == nil {
-		t.Error("GenerateAdaptiveTrack() returned nil for postapoc genre")
+			track := composer.GenerateAdaptiveTrack(1.0)
+			if track == nil {
+				t.Errorf("GenerateAdaptiveTrack() returned nil for %s genre", tt.genre)
+				return
+			}
+			if track.SampleRate != 44100 {
+				t.Errorf("Track sample rate = %d, want 44100", track.SampleRate)
+			}
+		})
 	}
 }
 

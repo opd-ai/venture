@@ -148,12 +148,12 @@ func (g *Generator) generateMelody(track []float64, scale Scale, rootNote int, r
 			// Generate the note
 			noteSample := g.osc.Generate(waveform, freq, noteDuration)
 
-			// Apply envelope
+			// Apply envelope using package-level ADSR constants
 			env := synthesis.Envelope{
-				Attack:  0.01,
-				Decay:   0.1,
-				Sustain: 0.6,
-				Release: 0.2,
+				Attack:  MelodyEnvAttack,
+				Decay:   MelodyEnvDecay,
+				Sustain: MelodyEnvSustain,
+				Release: MelodyEnvRelease,
 			}
 			env.Apply(noteSample.Data, noteSample.SampleRate)
 
@@ -200,10 +200,10 @@ func (g *Generator) generateHarmony(track []float64, chords []Chord, rhythm Rhyt
 			noteSample := g.osc.Generate(audio.WaveformSine, freq, chordDuration)
 
 			env := synthesis.Envelope{
-				Attack:  0.05,
-				Decay:   0.1,
-				Sustain: 0.7,
-				Release: 0.3,
+				Attack:  HarmonyEnvAttack,
+				Decay:   HarmonyEnvDecay,
+				Sustain: HarmonyEnvSustain,
+				Release: HarmonyEnvRelease,
 			}
 			env.Apply(noteSample.Data, noteSample.SampleRate)
 

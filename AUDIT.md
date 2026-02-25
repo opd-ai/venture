@@ -95,6 +95,7 @@ This file tracks package-level audits across the Venture codebase. Each entry in
 - [x] `pkg/audit/features/AUDIT.md` — Complete — 4 issues (0 high, 1 med, 3 low) — Coverage: 99.2%
 
 ### Integration Packages
+- [x] `pkg/integration/AUDIT.md` — Complete — 3 issues (0 high, 2 med, 1 low) — Coverage: [no statements] (meta-package; subdirs: 89.3-96.3%)
 - [x] `pkg/integration/companion_housing/AUDIT.md` — Complete — 3 issues (0 high, 1 med, 2 low) — Coverage: 93.2%
 - [x] `pkg/integration/guild_housing/AUDIT.md` — Complete — 5 issues (0 high, 2 med, 3 low) — Coverage: Unmeasurable (requires X11; 123% test-to-source ratio)
 - [x] `pkg/integration/guild_vehicle/AUDIT.md` — Complete — 4 issues (0 high, 2 med, 2 low) — Coverage: 94.0%
@@ -106,9 +107,9 @@ This file tracks package-level audits across the Venture codebase. Each entry in
 - [x] `pkg/integration/world_events/AUDIT.md` — Complete — 5 issues (0 high, 2 med, 3 low) — Coverage: 92.9%
 
 ## Audit Progress
-- **Completed**: 84/90+ packages
+- **Completed**: 85/90+ packages
 - **In Progress**: 0
-- **Not Started**: 6+
+- **Not Started**: 5+
 
 ### Supporting Packages (continued)
 - [x] `pkg/benchmark/AUDIT.md` — Complete — 3 issues (0 high, 0 med, 3 low) — Coverage: N/A (test-only; 513 test lines; fps requires X11)

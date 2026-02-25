@@ -99,8 +99,7 @@ This file tracks package-level audits across the Venture codebase. Each entry in
 
 ## Next Priority
 Packages with high integration surface and platform-specific concerns:
-1. `pkg/engine/` — Core ECS implementation, 400+ files (highest priority: all systems)
-2. `pkg/rendering/` — Graphics pipeline (subdirectories need auditing: cache, display, palette, parallel, particles, patterns, quality, shapes, tiles)
+1. `pkg/engine/prestige/` — New Game+ progression system (5 files, high integration with progression systems)
+2. `pkg/rendering/` — Graphics pipeline (remaining subdirectories: display, palette, parallel, particles, patterns, quality, shapes, tiles)
 3. `pkg/procgen/` — Procedural generation (remaining subdirectories: book, class, environment, furniture, story)
-4. `pkg/integration/world_events/` — World events integration
-5. `cmd/mobile/` — Mobile platform entry point
+4. `pkg/benchmark/` — Performance benchmarking (FPS/memory monitoring)

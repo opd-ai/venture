@@ -48,7 +48,7 @@ This file tracks package-level audits across the Venture codebase. Each entry in
 - [x] `pkg/ux/AUDIT.md` — Complete — 4 issues (0 high, 1 med, 3 low) — Coverage: 96.9%
 - [x] `pkg/balance/AUDIT.md` — Complete — 7 issues (1 high, 2 med, 4 low) — Coverage: Unmeasurable (requires X11; 228% test-to-source ratio)
 - [x] `pkg/class/advanced/AUDIT.md` — Complete — 5 issues (0 high, 2 med, 3 low) — Coverage: 91.8%
-- [ ] `pkg/companion/` — Not audited
+- [x] `pkg/companion/learning/AUDIT.md` — Complete — 4 issues (0 high, 1 med, 3 low) — Coverage: 92.5%
 - [x] `pkg/social/AUDIT.md` — Complete — 4 issues (0 high, 0 med, 4 low) — Coverage: 95.6% (98.0% social, 93.2% persistence)
 - [x] `pkg/hostplay/AUDIT.md` — Complete — 5 issues (0 high, 2 med, 3 low) — Coverage: Unmeasurable (requires X11; 70% test-to-source ratio)
 - [x] `pkg/mobile/AUDIT.md` — Complete — 5 issues (1 high, 2 med, 2 low) — Coverage: Unmeasurable (requires X11; 135% test-to-source ratio)
@@ -70,9 +70,9 @@ This file tracks package-level audits across the Venture codebase. Each entry in
 - [ ] `pkg/integration/world_events/` — Not audited
 
 ## Audit Progress
-- **Completed**: 35/90+ packages
+- **Completed**: 36/90+ packages
 - **In Progress**: 0
-- **Not Started**: 55+
+- **Not Started**: 54+
 
 ## Next Priority
 Packages with high integration surface and platform-specific concerns:

@@ -14,30 +14,39 @@
             box-sizing: border-box;
         }
         
-        body {
+        html, body {
             margin: 0;
             padding: 0;
+            width: 100%;
+            height: 100%;
             background: #000;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
             color: #fff;
             overflow: hidden;
         }
         
         #gameContainer {
-            position: relative;
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
             display: flex;
             justify-content: center;
             align-items: center;
-            width: 100%;
-            height: 100vh;
+            z-index: 10;
+            pointer-events: auto;
         }
         
-        #gameCanvas {
+        #gameContainer.hidden {
+            display: none;
+        }
+        
+        /* Ebiten creates a canvas element in the body - make it fill the viewport */
+        canvas {
+            display: block;
+            width: 100vw !important;
+            height: 100vh !important;
             image-rendering: pixelated;
             image-rendering: crisp-edges;
         }
@@ -221,9 +230,15 @@
                         showError('An error occurred while running the game: ' + err.message);
                     });
                     
-                    // Hide loading screen after a short delay to allow the game to initialize
+                    // Hide loading screen and gameContainer after a short delay to allow the game to initialize.
+                    // The gameContainer (loading/error overlays) must be hidden so it does not
+                    // consume layout space and push the Ebiten canvas out of the viewport.
                     setTimeout(() => {
                         loadingScreen.classList.add('hidden');
+                        const container = document.getElementById('gameContainer');
+                        if (container) {
+                            container.classList.add('hidden');
+                        }
                         controls.classList.add('visible');
                     }, 1000);
                 })

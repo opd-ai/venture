@@ -26,8 +26,8 @@ None.
 - [ ] **Documentation** — GetDelta heuristic-based delta sync is a known limitation documented but could cause over-sync on reconnects with large version gaps (`chat_history.go:192-238`)
 
 ### Low Severity
-- [ ] **API Consistency** — ImageGallery.AddImage computes hash twice (once for dedup check, once for storage) - minor performance inefficiency (`image_gallery.go:140-151`)
-- [ ] **API Consistency** — ReputationManager.ApplyDecay doesn't update LastUpdate timestamps after decay applied, which means subsequent decay calculations use original timestamps (`reputation_manager.go:146-177`)
+- [x] **API Consistency** — ImageGallery.AddImage computes hash twice (once for dedup check, once for storage) - minor performance inefficiency (`image_gallery.go:140-151`) **RESOLVED 2026-02-25**: `createStoredImage()` now accepts pre-computed hash parameter; hash computed once in `AddImage()` and passed to `createStoredImage()`.
+- [x] **API Consistency** — ReputationManager.ApplyDecay doesn't update LastUpdate timestamps after decay applied, which means subsequent decay calculations use original timestamps (`reputation_manager.go:146-177`) **RESOLVED 2026-02-25**: `ApplyDecay()` now updates `score.LastUpdate = currentTime` after applying decay, preventing compound decay on subsequent calls. Added `TestReputationDecayUpdatesLastUpdate` and `TestReputationDecayDoesNotCompound` tests to verify fix.
 
 ## Input Integration
 | Input Source | Status | Notes |

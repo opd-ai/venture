@@ -100,10 +100,9 @@ func (g *ImageGallery) evictImagesToFitSize(newImageSize int) {
 	}
 }
 
-// createStoredImage creates a new StoredImage record
-func (g *ImageGallery) createStoredImage(img image.Image, title string, imageData []byte, format ImageFormat, tags []string) *StoredImage {
+// createStoredImage creates a new StoredImage record using a pre-computed hash
+func (g *ImageGallery) createStoredImage(img image.Image, title string, imageData []byte, format ImageFormat, tags []string, hash string) *StoredImage {
 	bounds := img.Bounds()
-	hash := fmt.Sprintf("%x", sha256.Sum256(imageData))
 	sizeBytes := len(imageData)
 	now := g.timeProvider.Now()
 
@@ -159,7 +158,7 @@ func (g *ImageGallery) AddImage(img image.Image, title string, format ImageForma
 
 	g.evictImagesToFitSize(sizeBytes)
 
-	stored := g.createStoredImage(img, title, imageData, format, tags)
+	stored := g.createStoredImage(img, title, imageData, format, tags, hash)
 
 	g.Images = append(g.Images, stored)
 	g.TotalBytes += sizeBytes

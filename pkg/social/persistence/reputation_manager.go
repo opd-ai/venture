@@ -157,6 +157,8 @@ func (rm *ReputationManager) ApplyDecay(currentTime time.Time) int {
 				if score.Score < 0.0 {
 					score.Score = 0.0
 				}
+				// Update LastUpdate to prevent decay from compounding on subsequent calls
+				score.LastUpdate = currentTime
 				decayed++
 			}
 		}

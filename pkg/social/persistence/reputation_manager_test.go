@@ -212,6 +212,79 @@ func TestReputationDecayTotalRecalculation(t *testing.T) {
 	}
 }
 
+func TestReputationDecayUpdatesLastUpdate(t *testing.T) {
+	rm := NewReputationManager()
+	baseTime := time.Now()
+	oldTime := baseTime.Add(-10 * 24 * time.Hour)
+
+	// Create a record with old timestamp
+	rm.UpdateReputation("alice", ReputationTrade, 100.0, oldTime)
+
+	// Apply decay
+	rm.ApplyDecay(baseTime)
+
+	// Get the record to verify LastUpdate was updated
+	record := rm.GetReputationRecord("alice")
+	if record == nil {
+		t.Fatal("Expected record, got nil")
+	}
+
+	score := record.Scores[ReputationTrade]
+	if score == nil {
+		t.Fatal("Expected trade score, got nil")
+	}
+
+	// LastUpdate should have been updated to baseTime after decay
+	if !score.LastUpdate.Equal(baseTime) {
+		t.Errorf("Expected LastUpdate to be %v after decay, got %v", baseTime, score.LastUpdate)
+	}
+}
+
+func TestReputationDecayDoesNotCompound(t *testing.T) {
+	rm := NewReputationManager()
+	baseTime := time.Now()
+	oldTime := baseTime.Add(-10 * 24 * time.Hour)
+
+	// Create a record with old timestamp (100 reputation, 10 days old)
+	rm.UpdateReputation("alice", ReputationTrade, 100.0, oldTime)
+
+	// Apply decay first time (should decay 10 days worth)
+	decayed1 := rm.ApplyDecay(baseTime)
+	rep1 := rm.GetReputation("alice", ReputationTrade)
+	expectedAfterFirst := 100.0 - (DecayRatePerDay * 10) // 99.9
+
+	if decayed1 != 1 {
+		t.Errorf("Expected 1 decayed score on first decay, got %d", decayed1)
+	}
+	if rep1 != expectedAfterFirst {
+		t.Errorf("Expected reputation %f after first decay, got %f", expectedAfterFirst, rep1)
+	}
+
+	// Apply decay again immediately (should NOT decay since LastUpdate was updated)
+	decayed2 := rm.ApplyDecay(baseTime)
+	rep2 := rm.GetReputation("alice", ReputationTrade)
+
+	if decayed2 != 0 {
+		t.Errorf("Expected 0 decayed scores on second immediate decay, got %d", decayed2)
+	}
+	if rep2 != expectedAfterFirst {
+		t.Errorf("Expected reputation unchanged at %f, got %f (decay compounded)", expectedAfterFirst, rep2)
+	}
+
+	// Apply decay 2 days later (should decay again)
+	futureTime := baseTime.Add(2 * 24 * time.Hour)
+	decayed3 := rm.ApplyDecay(futureTime)
+	rep3 := rm.GetReputation("alice", ReputationTrade)
+	expectedAfterThird := expectedAfterFirst - (DecayRatePerDay * 2) // 99.9 - 0.02 = 99.88
+
+	if decayed3 != 1 {
+		t.Errorf("Expected 1 decayed score on third decay, got %d", decayed3)
+	}
+	if rep3 != expectedAfterThird {
+		t.Errorf("Expected reputation %f after third decay, got %f", expectedAfterThird, rep3)
+	}
+}
+
 func TestReputationGetRecordCount(t *testing.T) {
 	rm := NewReputationManager()
 	now := time.Now()

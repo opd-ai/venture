@@ -14,10 +14,10 @@ This report consolidates 110 individual audit files across all packages in the V
 |----------|-------------|
 | High     | 1           |
 | Medium   | ~12         |
-| Low      | ~103        |
-| **Total**| **~116**    |
+| Low      | ~101        |
+| **Total**| **~114**    |
 
-**Historical totals (including fixed):** ~32 High, ~96 Medium, ~228 Low issues were identified across all audits. The vast majority have been resolved, resulting in an overall codebase health status of **Good**.
+**Historical totals (including fixed):** ~32 High, ~96 Medium, ~230 Low issues were identified across all audits. The vast majority have been resolved, resulting in an overall codebase health status of **Good**.
 
 **Strengths:** The codebase demonstrates high quality with average test coverage of 82.4% (target 65%), deterministic generation via seed-based RNG throughout, ECS architectural compliance, and comprehensive documentation. All critical runtime panics, data corruption risks, and non-determinism violations in production paths have been resolved.
 
@@ -934,8 +934,8 @@ This report consolidates 110 individual audit files across all packages in the V
 - **Source:** `pkg/social/persistence/AUDIT.md`
 - **High Issues:** 0
 - **Medium Issues:** 1
-- **Low Issues:** 1
-- **Details:** 92.5% coverage. `GetDelta` uses a heuristic-based delta sync that can over-sync on reconnects with large version gaps—a known limitation documented but not yet addressed. Minor serialization helper documentation gaps.
+- **Low Issues:** 0 (2 fixed 2026-02-25)
+- **Details:** 92.5% coverage. `GetDelta` uses a heuristic-based delta sync that can over-sync on reconnects with large version gaps—a known limitation documented but not yet addressed. **RESOLVED 2026-02-25**: `ReputationManager.ApplyDecay()` now updates `LastUpdate` timestamps after decay, preventing compound decay on subsequent calls. **RESOLVED 2026-02-25**: `ImageGallery.AddImage()` no longer computes SHA256 hash twice; hash is now computed once and passed to `createStoredImage()`.
 
 ---
 

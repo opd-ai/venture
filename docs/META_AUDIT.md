@@ -22,6 +22,34 @@ Check each row and mark ✅ (on by default), ⚠️ (present but requires opt-in
 | **Character Creation** | New Game → Character Creation | Character creation screen reachable from main menu; class selection, appearance, name entry, and starting stat allocation wired; genre-specific creation options present; feeds correctly into ECS entity initialization |
 | **AI Systems** | Server/client startup | `ai_system.go`, `behavior_tree_system.go`, `squad_system.go`, `companion_ai_system.go` all registered in default system list; NPCs exhibit behavior on game start without manual enable; AI ticks correctly relative to movement and combat systems |
 | **Procedural Generation** | New Game / zone load | Terrain, entity, item, quest, dialog, and narrative generators all invoked on new game creation; all use seed from CLI/config (not hardcoded); genre parameter propagated to every generator; async terrain loading active by default |
+| **Networking (Client/Server)** | `cmd/server/` startup, `cmd/client/` join flow | Server starts and accepts connections by default on configured port; client multiplayer join flow reachable from main menu; high-latency mode activatable via `-high-latency` flag without code changes |
+| **Federation** | Server startup with federation config | Cross-server discovery, handshake, sync, and portal systems initialize when federation config present; circuit breaker and retry logic active; guild and market federation on by default when enabled |
+| **WebRTC** | WASM client build | WebRTC signaling path compiled and reachable in WASM build; peer connection initialized on multiplayer join; fallback to standard networking on non-WASM platforms |
+| **Housing System** | Interact with house entity | Housing UI (`HousingUIProvider`) registered and reachable in-game; blueprint selection, furniture placement, and permissions functional by default; guildhall tab present for guild officers |
+| **Guild System** | Social menu or guild NPC | Guild creation, member management, bank, log, and cross-server federation all reachable via default UI path; rank-gated controls enforced |
+| **Economy / Marketplace** | Shop NPC interaction | Pricing engine active; buy/sell UI reachable from vendor interaction; cross-server market available when federation enabled; transaction logging via structured logging |
+| **Weather & World Events** | Gameplay state | `weather_system.go` and `world_events_system.go` registered and ticking; weather visually present; world events trigger according to procedural schedule |
+| **Progression Systems** | Gameplay state | `progression_system.go`, `skill_progression_system.go`, `class_progression_system.go`, `reputation_system.go`, `achievement.go` all registered; XP gain, level-up, and skill unlock functional without manual wiring |
+| **Combat Systems** | Gameplay state | `combat_system.go`, `player_combat_system.go`, `spell_casting.go`, `status_effect_system.go` all registered; player can attack, cast, and receive status effects on game start |
+| **Crafting System** | Crafting station interaction | Recipe list populated from `pkg/procgen/recipe/`; craft queue (`pkg/engine/qol/`) active; station types from `pkg/procgen/station/` generated and placeable |
+| **Save / Load** | Pause menu → Save; Continue on main menu | Save writes all persistent components via `pkg/saveload/`; load restores full game state; WASM storage path used on browser builds; migration path active for version changes |
+| **Mod System** | Startup (if mods directory present) | `pkg/modding/` loader scans mod directory on startup; JSON rule mods applied before first generate call; sandboxing prevents executable code; invalid mods rejected with structured log error |
+| **Audio** | Gameplay state | Adaptive music (`audio/music/`) and sound effects (`audio/sfx/`) initialized on game start; genre-based motifs generated from seed; volume respects settings |
+| **Chat** | HUD / keybind | Chat system and network chat channels initialized; global, party, guild, and whisper channels selectable; validation (rate limit, profanity) active by default |
+| **QoL Systems** | Gameplay state | Auto-loot, craft queue, mount whistle, recipe tracker, and storage sorter (`pkg/engine/qol/`) all registered and active by default; togglable via settings |
+| **Physics Subsystems** | Gameplay state | Fluid simulation, vehicle physics, and environmental destruction systems registered when relevant entities exist; buoyancy and flooding active in appropriate terrain tiles |
+| **VR / Stereoscopic** | `-vr` flag or auto-detect | VR mode activates stereoscopic rendering and controller input when VR headset detected or flag set; no crash or undefined behavior when VR hardware absent |
+| **Prestige / New Game+** | Post-completion flow | Prestige and New Game+ systems (`pkg/engine/prestige/`) reachable after game completion; carry-over rules applied; not accessible before completion condition met |
+
+**Flag as High Severity if:**
+- Any subsystem in this table requires editing source code (not config/flags) to enable.
+- A subsystem is initialized but not connected to the ECS update loop (registered but never ticked).
+- A subsystem's UI is reachable but its backing system is not registered, causing silent no-ops.
+- Procedural generators are called without a genre parameter, producing genre-blind output.
+- Federation, WebRTC, or networking systems panic or log fatal errors on startup in single-player mode (non-fatal absence of peers must be handled gracefully).
+- Tutorial or character creation can be bypassed in a way that leaves required components uninitialized on the player entity.
+
+4. **Read `cmd/client/` entry point** to understand `EbitenGame` state machine, system initialization order, and lazy-init patterns.
 4. **Read `cmd/client/` entry point** to understand `EbitenGame` state machine, system initialization order, and lazy-init patterns.
 5. **Read `cmd/server/` entry point** to understand server-side system registration and validation layers.
 6. **Catalog all existing input providers and menu/UI systems** (see Phase 2 and Phase 3 below) so audits can verify integration.

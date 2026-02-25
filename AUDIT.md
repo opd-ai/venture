@@ -114,7 +114,9 @@ This file tracks package-level audits across the Venture codebase. Each entry in
 
 - [x] `pkg/rendering/quality/AUDIT.md` — Complete — 4 issues (0 high, 1 med, 3 low) — Coverage: 96.8%
 
+- [x] `pkg/rendering/patterns/AUDIT.md` — Complete — 4 issues (0 high, 1 med, 3 low) — Coverage: 94.1%
+
 ## Next Priority
 Packages with high integration surface and platform-specific concerns:
-1. `pkg/rendering/` — Graphics pipeline (remaining subdirectories: parallel, patterns, shapes)
+1. `pkg/rendering/` — Graphics pipeline (remaining subdirectories: parallel, shapes)
 2. `pkg/procgen/` — Procedural generation (remaining subdirectories: story, audit)

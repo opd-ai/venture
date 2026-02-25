@@ -368,10 +368,13 @@ type creationStep int
 const (
 	stepNameInput creationStep = iota
 	stepClassSelection
-	stepEquipmentSelection // New step between class and portrait
+	stepSubclassSelection
 	stepPortraitSelection
 	stepConfirmation
 )
+
+// noSubclassSelected is a sentinel value indicating no subclass has been chosen
+const noSubclassSelected CharacterClass = -1
 
 // EbitenCharacterCreation handles the character creation UI and flow
 type EbitenCharacterCreation struct {
@@ -426,20 +429,19 @@ type EbitenCharacterCreation struct {
 	// Class pagination - allows viewing hybrid classes via PageUp/PageDown or Tab
 	classPage int // 0 = base classes (1-6), 1+ = hybrid class pages
 
-	// Equipment selection - starting loadout options per class
-	equipmentLoadouts []EquipmentLoadout // Generated loadout options for current class
-	selectedLoadout   int                // Currently selected loadout index (0-2)
-	loadoutsGenerated bool               // Whether loadouts have been generated for current class
+	// selectedSubclass is the chosen hybrid class (-1 = none, use base class)
+	selectedSubclass CharacterClass
 }
 
 // NewCharacterCreation creates a new character creation system
 func NewCharacterCreation(screenWidth, screenHeight int) *EbitenCharacterCreation {
 	cc := &EbitenCharacterCreation{
-		currentStep:   stepNameInput,
-		selectedClass: ClassWarrior, // Default selection
-		screenWidth:   screenWidth,
-		screenHeight:  screenHeight,
-		inputBuffer:   make([]rune, 0),
+		currentStep:      stepNameInput,
+		selectedClass:    ClassWarrior, // Default selection
+		selectedSubclass: noSubclassSelected,
+		screenWidth:      screenWidth,
+		screenHeight:     screenHeight,
+		inputBuffer:      make([]rune, 0),
 		defaults: CharacterCreationDefaults{
 			DefaultName:  "", // No default initially
 			DefaultClass: ClassWarrior,
@@ -577,8 +579,8 @@ func (cc *EbitenCharacterCreation) processCurrentStep() {
 		cc.updateNameInput()
 	case stepClassSelection:
 		cc.updateClassSelection()
-	case stepEquipmentSelection:
-		cc.updateEquipmentSelection()
+	case stepSubclassSelection:
+		cc.updateSubclassSelection()
 	case stepPortraitSelection:
 		cc.updatePortraitSelection()
 	case stepConfirmation:
@@ -772,79 +774,64 @@ func getPageTitle(page int) string {
 	return "Advanced Classes"
 }
 
+// getSubclassesForBaseClass returns the hybrid class options available for the given base class.
+// Each hybrid class appears as a subclass for each of its parent base classes.
+func getSubclassesForBaseClass(base CharacterClass) []CharacterClass {
+	switch base {
+	case ClassWarrior:
+		return []CharacterClass{ClassBattlemage, ClassPaladin, ClassDeathKnight, ClassBeastlord, ClassBloodKnight}
+	case ClassMage:
+		return []CharacterClass{ClassBattlemage, ClassSpellblade, ClassArcaneArcher, ClassDruid, ClassMystic, ClassWarlock}
+	case ClassRogue:
+		return []CharacterClass{ClassSpellblade, ClassMonk, ClassShadowPriest, ClassInquisitor, ClassNinja}
+	case ClassRanger:
+		return []CharacterClass{ClassWitchHunter, ClassBeastlord, ClassArcaneArcher, ClassDruid, ClassNinja}
+	case ClassCleric:
+		return []CharacterClass{ClassPaladin, ClassMonk, ClassWitchHunter, ClassShadowPriest, ClassInquisitor, ClassMystic}
+	case ClassNecromancer:
+		return []CharacterClass{ClassDeathKnight, ClassBloodKnight, ClassShadowPriest, ClassWarlock}
+	default:
+		return nil
+	}
+}
+
 // handleArrowKeySelection processes arrow key navigation for class selection
-// Up/Down navigate within the current page, PageUp/PageDown or Tab switch pages
 func (cc *EbitenCharacterCreation) handleArrowKeySelection() {
-	currentClasses := getClassesForPage(cc.classPage)
-	if len(currentClasses) == 0 {
-		return
-	}
-
-	// Find current position in the page
-	currentIdx := -1
-	for i, class := range currentClasses {
-		if class == cc.selectedClass {
-			currentIdx = i
-			break
-		}
-	}
-
-	// Handle up/down within page
 	if inpututil.IsKeyJustPressed(ebiten.KeyArrowUp) {
-		if currentIdx <= 0 {
-			// Wrap to last item on this page
-			cc.selectedClass = currentClasses[len(currentClasses)-1]
+		idx := cc.selectedClassIndex()
+		if idx <= 0 {
+			cc.selectedClass = baseClasses[len(baseClasses)-1]
 		} else {
-			cc.selectedClass = currentClasses[currentIdx-1]
+			cc.selectedClass = baseClasses[idx-1]
 		}
 	}
 	if inpututil.IsKeyJustPressed(ebiten.KeyArrowDown) {
-		if currentIdx < 0 || currentIdx >= len(currentClasses)-1 {
-			// Wrap to first item on this page
-			cc.selectedClass = currentClasses[0]
+		idx := cc.selectedClassIndex()
+		if idx < 0 || idx >= len(baseClasses)-1 {
+			cc.selectedClass = baseClasses[0]
 		} else {
-			cc.selectedClass = currentClasses[currentIdx+1]
-		}
-	}
-
-	// Handle page navigation: Tab, PageUp, PageDown
-	if inpututil.IsKeyJustPressed(ebiten.KeyTab) ||
-		inpututil.IsKeyJustPressed(ebiten.KeyPageDown) {
-		cc.classPage++
-		if cc.classPage >= totalClassPages() {
-			cc.classPage = 0
-		}
-		// Select first class on new page
-		newClasses := getClassesForPage(cc.classPage)
-		if len(newClasses) > 0 {
-			cc.selectedClass = newClasses[0]
-		}
-	}
-	if inpututil.IsKeyJustPressed(ebiten.KeyPageUp) {
-		cc.classPage--
-		if cc.classPage < 0 {
-			cc.classPage = totalClassPages() - 1
-		}
-		// Select first class on new page
-		newClasses := getClassesForPage(cc.classPage)
-		if len(newClasses) > 0 {
-			cc.selectedClass = newClasses[0]
+			cc.selectedClass = baseClasses[idx+1]
 		}
 	}
 }
 
-// handleNumberKeySelection processes numeric key shortcuts for direct class selection
-// Numbers 1-6 select the corresponding class on the current page
-func (cc *EbitenCharacterCreation) handleNumberKeySelection() {
-	currentClasses := getClassesForPage(cc.classPage)
-	if len(currentClasses) == 0 {
-		return
+// selectedClassIndex returns the index of selectedClass in baseClasses, or -1 if not found
+func (cc *EbitenCharacterCreation) selectedClassIndex() int {
+	for i, class := range baseClasses {
+		if class == cc.selectedClass {
+			return i
+		}
 	}
+	return -1
+}
 
+// handleNumberKeySelection processes numeric key shortcuts for direct class selection
+// Numbers 1-6 select the corresponding base class
+func (cc *EbitenCharacterCreation) handleNumberKeySelection() {
 	keys := []ebiten.Key{ebiten.Key1, ebiten.Key2, ebiten.Key3, ebiten.Key4, ebiten.Key5, ebiten.Key6}
 	for i, key := range keys {
-		if inpututil.IsKeyJustPressed(key) && i < len(currentClasses) {
-			cc.selectedClass = currentClasses[i]
+		if inpututil.IsKeyJustPressed(key) && i < len(baseClasses) {
+			cc.selectedClass = baseClasses[i]
 			break
 		}
 	}
@@ -856,15 +843,14 @@ func (cc *EbitenCharacterCreation) handleTouchOrMouseClick() bool {
 		return false
 	}
 	mouseX, mouseY, _ := GetTouchOrMousePosition()
-	startY := cc.panelY + 160 // Adjusted for page indicator
+	startY := cc.panelY + 160
 
-	currentClasses := getClassesForPage(cc.classPage)
-	for i, class := range currentClasses {
+	for i, class := range baseClasses {
 		if cc.isClassBoxClicked(mouseX, mouseY, startY, i) {
 			cc.selectedClass = class
 			cc.characterData.Class = cc.selectedClass
-			cc.loadoutsGenerated = false // Force regeneration for new class
-			cc.currentStep = stepEquipmentSelection
+			cc.selectedSubclass = noSubclassSelected
+			cc.currentStep = stepSubclassSelection
 			return true
 		}
 	}
@@ -881,10 +867,9 @@ func (cc *EbitenCharacterCreation) isClassBoxClicked(mouseX, mouseY, startY, cla
 // handleTouchOrMouseHover updates selection based on mouse/touch hover position
 func (cc *EbitenCharacterCreation) handleTouchOrMouseHover() {
 	mouseX, mouseY, _ := GetTouchOrMousePosition()
-	startY := cc.panelY + 160 // Adjusted for page indicator
+	startY := cc.panelY + 160
 
-	currentClasses := getClassesForPage(cc.classPage)
-	for i, class := range currentClasses {
+	for i, class := range baseClasses {
 		if cc.isClassBoxClicked(mouseX, mouseY, startY, i) {
 			cc.selectedClass = class
 			break
@@ -896,8 +881,8 @@ func (cc *EbitenCharacterCreation) handleTouchOrMouseHover() {
 func (cc *EbitenCharacterCreation) handleConfirmationKeys() {
 	if inpututil.IsKeyJustPressed(ebiten.KeyEnter) && !cc.stepChangedThisFrame {
 		cc.characterData.Class = cc.selectedClass
-		cc.loadoutsGenerated = false // Force regeneration for new class
-		cc.currentStep = stepEquipmentSelection
+		cc.selectedSubclass = noSubclassSelected
+		cc.currentStep = stepSubclassSelection
 		cc.stepChangedThisFrame = true
 	}
 }
@@ -918,58 +903,71 @@ func (cc *EbitenCharacterCreation) handleDefaultSave() {
 	}
 }
 
-// updateEquipmentSelection handles the equipment loadout selection step.
-// Generates loadout options for the selected class and handles user input.
-func (cc *EbitenCharacterCreation) updateEquipmentSelection() {
-	// Generate loadouts on first entry or when class changes
-	if !cc.loadoutsGenerated {
-		cc.equipmentLoadouts = generateClassLoadouts(cc.selectedClass, cc.worldSeed)
-		cc.selectedLoadout = 0
-		cc.loadoutsGenerated = true
+// updateSubclassSelection handles the subclass (hybrid class) selection step.
+// Shows hybrid classes available for the chosen base class and allows "None" selection.
+func (cc *EbitenCharacterCreation) updateSubclassSelection() {
+	subclasses := getSubclassesForBaseClass(cc.selectedClass)
+
+	// Build full option list: None + subclasses
+	optionCount := len(subclasses) + 1 // +1 for "None"
+
+	// Find current selection index (0 = None, 1+ = subclass index)
+	currentIdx := 0
+	if cc.selectedSubclass != noSubclassSelected {
+		for i, sc := range subclasses {
+			if sc == cc.selectedSubclass {
+				currentIdx = i + 1
+				break
+			}
+		}
 	}
 
 	// Arrow key navigation
 	if inpututil.IsKeyJustPressed(ebiten.KeyUp) || inpututil.IsKeyJustPressed(ebiten.KeyW) {
-		cc.selectedLoadout--
-		if cc.selectedLoadout < 0 {
-			cc.selectedLoadout = len(cc.equipmentLoadouts) - 1
+		currentIdx--
+		if currentIdx < 0 {
+			currentIdx = optionCount - 1
 		}
 	}
 	if inpututil.IsKeyJustPressed(ebiten.KeyDown) || inpututil.IsKeyJustPressed(ebiten.KeyS) {
-		cc.selectedLoadout++
-		if cc.selectedLoadout >= len(cc.equipmentLoadouts) {
-			cc.selectedLoadout = 0
+		currentIdx++
+		if currentIdx >= optionCount {
+			currentIdx = 0
 		}
 	}
 
-	// Number key selection (1, 2, 3)
-	if inpututil.IsKeyJustPressed(ebiten.Key1) && len(cc.equipmentLoadouts) > 0 {
-		cc.selectedLoadout = 0
+	// Number key selection
+	keys := []ebiten.Key{ebiten.Key1, ebiten.Key2, ebiten.Key3, ebiten.Key4, ebiten.Key5, ebiten.Key6, ebiten.Key7}
+	for i, key := range keys {
+		if inpututil.IsKeyJustPressed(key) && i < optionCount {
+			currentIdx = i
+			break
+		}
 	}
-	if inpututil.IsKeyJustPressed(ebiten.Key2) && len(cc.equipmentLoadouts) > 1 {
-		cc.selectedLoadout = 1
-	}
-	if inpututil.IsKeyJustPressed(ebiten.Key3) && len(cc.equipmentLoadouts) > 2 {
-		cc.selectedLoadout = 2
+
+	// Update selectedSubclass from currentIdx
+	if currentIdx == 0 {
+		cc.selectedSubclass = noSubclassSelected
+	} else if currentIdx-1 < len(subclasses) {
+		cc.selectedSubclass = subclasses[currentIdx-1]
 	}
 
 	// Mouse/touch click selection
 	if IsTouchOrMouseJustPressed() {
 		mouseX, mouseY, _ := GetTouchOrMousePosition()
 		startY := cc.panelY + 130
-
-		for i := 0; i < len(cc.equipmentLoadouts); i++ {
-			loadoutY := startY + i*80
+		for i := 0; i < optionCount; i++ {
+			optionY := startY + i*55
 			if mouseX >= cc.panelX+40 && mouseX <= cc.panelX+cc.panelWidth-40 &&
-				mouseY >= loadoutY-5 && mouseY <= loadoutY+70 {
-				cc.selectedLoadout = i
-				// Double-click or tap to proceed
-				if cc.characterData.StartingLoadout != nil &&
-					cc.characterData.StartingLoadout.Name == cc.equipmentLoadouts[i].Name {
-					cc.handleNextButton()
-					return
+				mouseY >= optionY-5 && mouseY <= optionY+45 {
+				if i == 0 {
+					cc.selectedSubclass = noSubclassSelected
+				} else if i-1 < len(subclasses) {
+					cc.selectedSubclass = subclasses[i-1]
 				}
-				break
+				// Double-tap to proceed
+				cc.handleNextButton()
+				return
 			}
 		}
 	}
@@ -1337,9 +1335,9 @@ func (cc *EbitenCharacterCreation) skipPortrait() {
 	cc.hideKeyboardIfNeeded()
 }
 
-// returnToClassSelection navigates back to class selection step.
+// returnToSubclassSelection navigates back to subclass selection step from portrait.
 func (cc *EbitenCharacterCreation) returnToClassSelection() {
-	cc.currentStep = stepClassSelection
+	cc.currentStep = stepSubclassSelection
 	cc.hideKeyboardIfNeeded()
 }
 
@@ -1390,19 +1388,21 @@ func (cc *EbitenCharacterCreation) handleNextButton() {
 			cc.errorMsg = "Name cannot be empty"
 		}
 	case stepClassSelection:
-		// Proceed to equipment selection
+		// Proceed to subclass selection
 		cc.characterData.Class = cc.selectedClass
-		cc.loadoutsGenerated = false // Force regeneration for new class
-		cc.currentStep = stepEquipmentSelection
-		cc.stepChangedThisFrame = true // Mark that we changed steps this frame
+		cc.selectedSubclass = noSubclassSelected // Reset subclass selection
+		cc.currentStep = stepSubclassSelection
+		cc.stepChangedThisFrame = true
 		cc.errorMsg = ""
-	case stepEquipmentSelection:
-		// Store selected loadout and proceed to portrait selection
-		if len(cc.equipmentLoadouts) > cc.selectedLoadout {
-			cc.characterData.StartingLoadout = &cc.equipmentLoadouts[cc.selectedLoadout]
+	case stepSubclassSelection:
+		// Set final class (subclass if chosen, else base class) and proceed to portrait
+		if cc.selectedSubclass == noSubclassSelected {
+			cc.characterData.Class = cc.selectedClass
+		} else {
+			cc.characterData.Class = cc.selectedSubclass
 		}
 		cc.currentStep = stepPortraitSelection
-		cc.stepChangedThisFrame = true // Mark that we changed steps this frame
+		cc.stepChangedThisFrame = true
 		cc.errorMsg = ""
 	case stepPortraitSelection:
 		// Proceed to confirmation (same as Enter key)
@@ -1438,11 +1438,11 @@ func (cc *EbitenCharacterCreation) handleBackButton() {
 	case stepClassSelection:
 		cc.currentStep = stepNameInput
 		cc.keyboardShown = false // Will trigger keyboard on re-entry
-	case stepEquipmentSelection:
+	case stepSubclassSelection:
 		cc.currentStep = stepClassSelection
 		cc.hideKeyboardIfNeeded()
 	case stepPortraitSelection:
-		cc.currentStep = stepEquipmentSelection
+		cc.currentStep = stepSubclassSelection
 		cc.hideKeyboardIfNeeded()
 	case stepConfirmation:
 		cc.currentStep = stepPortraitSelection
@@ -1564,8 +1564,8 @@ func (cc *EbitenCharacterCreation) Draw(screen *ebiten.Image) {
 		cc.drawNameInput(screen, cc.panelX, cc.panelY, cc.panelWidth, cc.panelHeight)
 	case stepClassSelection:
 		cc.drawClassSelection(screen, cc.panelX, cc.panelY, cc.panelWidth, cc.panelHeight)
-	case stepEquipmentSelection:
-		cc.drawEquipmentSelection(screen, cc.panelX, cc.panelY, cc.panelWidth, cc.panelHeight)
+	case stepSubclassSelection:
+		cc.drawSubclassSelection(screen, cc.panelX, cc.panelY, cc.panelWidth, cc.panelHeight)
 	case stepPortraitSelection:
 		cc.drawPortraitSelection(screen, cc.panelX, cc.panelY, cc.panelWidth, cc.panelHeight)
 	case stepConfirmation:
@@ -1609,6 +1609,8 @@ func (cc *EbitenCharacterCreation) drawStepSpecificButtons(screen *ebiten.Image)
 	case stepNameInput:
 		cc.drawPresetNameButtons(screen)
 	case stepClassSelection:
+		cc.drawBackButton(screen)
+	case stepSubclassSelection:
 		cc.drawBackButton(screen)
 	case stepPortraitSelection:
 		cc.drawSkipAndBackButtons(screen)
@@ -1711,7 +1713,7 @@ func (cc *EbitenCharacterCreation) drawClassSelection(screen *ebiten.Image, x, y
 		color.RGBA{255, 255, 100, 255})
 
 	// Step indicator
-	stepText := "Step 2 of 5: Choose Your Class"
+	stepText := "Step 2 of 5: Choose Your Base Class"
 	stepX := x + w/2 - len(stepText)*3
 	text.Draw(screen, stepText, basicfont.Face7x13, stepX, y+70,
 		color.RGBA{200, 200, 200, 255})
@@ -1919,87 +1921,71 @@ func (cc *EbitenCharacterCreation) drawPortraitSelection(screen *ebiten.Image, x
 }
 
 // drawEquipmentSelection renders the equipment loadout selection screen.
-func (cc *EbitenCharacterCreation) drawEquipmentSelection(screen *ebiten.Image, x, y, w, h int) {
-	// Title
+// drawSubclassSelection renders the subclass selection screen.
+// Shows hybrid class options for the chosen base class, plus a "None" option.
+func (cc *EbitenCharacterCreation) drawSubclassSelection(screen *ebiten.Image, x, y, w, h int) {
 	title := "CHARACTER CREATION"
 	titleX := x + w/2 - len(title)*3
 	text.Draw(screen, title, basicfont.Face7x13, titleX, y+40,
 		color.RGBA{255, 255, 100, 255})
 
-	// Step indicator
-	stepText := "Step 3 of 5: Choose Starting Equipment"
+	stepText := "Step 3 of 5: Choose Your Subclass (Optional)"
 	stepX := x + w/2 - len(stepText)*3
-	text.Draw(screen, stepText, basicfont.Face7x13, stepX, y+70,
+	text.Draw(screen, stepText, basicfont.Face7x13, stepX, y+60,
 		color.RGBA{200, 200, 200, 255})
 
-	// Class label
-	classLabel := fmt.Sprintf("Loadouts for: %s", cc.selectedClass.String())
-	classX := x + w/2 - len(classLabel)*3
-	text.Draw(screen, classLabel, basicfont.Face7x13, classX, y+100,
-		color.RGBA{180, 200, 255, 255})
+	baseText := fmt.Sprintf("Base Class: %s", cc.selectedClass.String())
+	baseX := x + w/2 - len(baseText)*3
+	text.Draw(screen, baseText, basicfont.Face7x13, baseX, y+80,
+		color.RGBA{150, 200, 255, 255})
 
-	// Draw loadout options
+	subclasses := getSubclassesForBaseClass(cc.selectedClass)
 	startY := y + 130
-	loadoutHeight := 80
 
-	for i, loadout := range cc.equipmentLoadouts {
-		loadoutY := startY + i*loadoutHeight
-		isSelected := i == cc.selectedLoadout
+	// Draw "None" option first
+	noneSelected := cc.selectedSubclass == noSubclassSelected
+	noneColor := color.RGBA{150, 150, 150, 255}
+	if noneSelected {
+		noneColor = color.RGBA{255, 255, 100, 255}
+		vector.DrawFilledRect(screen, float32(x+35), float32(startY-5),
+			float32(w-70), 45, color.RGBA{40, 60, 40, 255}, false)
+	}
+	noneText := fmt.Sprintf("1. None (Stay as %s)", cc.selectedClass.String())
+	text.Draw(screen, noneText, basicfont.Face7x13, x+45, startY+15, noneColor)
 
-		// Background
-		bgColor := color.RGBA{40, 40, 50, 255}
+	// Draw subclass options
+	for i, sc := range subclasses {
+		optionY := startY + (i+1)*55
+		isSelected := cc.selectedSubclass == sc
+
+		bgColor := color.RGBA{20, 20, 30, 255}
+		nameColor := color.RGBA{200, 200, 200, 255}
 		if isSelected {
-			bgColor = color.RGBA{60, 80, 100, 255}
-		}
-		vector.DrawFilledRect(screen, float32(x+40), float32(loadoutY),
-			float32(w-80), float32(loadoutHeight-5), bgColor, false)
-
-		// Selection border
-		if isSelected {
-			vector.StrokeRect(screen, float32(x+40), float32(loadoutY),
-				float32(w-80), float32(loadoutHeight-5), 2,
-				color.RGBA{100, 200, 255, 255}, false)
-		}
-
-		// Number indicator
-		numText := fmt.Sprintf("%d.", i+1)
-		text.Draw(screen, numText, basicfont.Face7x13, x+50, loadoutY+20,
-			color.RGBA{150, 150, 150, 255})
-
-		// Loadout name
-		nameColor := color.RGBA{255, 255, 255, 255}
-		if isSelected {
+			bgColor = color.RGBA{40, 60, 80, 255}
 			nameColor = color.RGBA{255, 255, 100, 255}
 		}
-		text.Draw(screen, loadout.Name, basicfont.Face7x13, x+75, loadoutY+20, nameColor)
 
-		// Description
-		text.Draw(screen, loadout.Description, basicfont.Face7x13, x+75, loadoutY+38,
-			color.RGBA{180, 180, 180, 255})
+		vector.DrawFilledRect(screen, float32(x+35), float32(optionY-5),
+			float32(w-70), 45, bgColor, false)
+		vector.StrokeRect(screen, float32(x+35), float32(optionY-5),
+			float32(w-70), 45, 1, color.RGBA{80, 80, 120, 255}, false)
 
-		// Equipment list (abbreviated)
-		equipText := fmt.Sprintf("%s + %s", loadout.MainHand, loadout.Armor)
-		text.Draw(screen, equipText, basicfont.Face7x13, x+75, loadoutY+56,
-			color.RGBA{150, 200, 150, 255})
+		labelText := fmt.Sprintf("%d. %s", i+2, sc.String())
+		text.Draw(screen, labelText, basicfont.Face7x13, x+45, optionY+10, nameColor)
 
-		// Stat bonuses (right side)
-		bonusText := fmt.Sprintf("HP:%+d ATK:%+d DEF:%+d",
-			loadout.BonusHP, loadout.BonusAttack, loadout.BonusDefense)
-		bonusX := x + w - 150
-		text.Draw(screen, bonusText, basicfont.Face7x13, bonusX, loadoutY+38,
-			color.RGBA{200, 200, 100, 255})
+		descText := sc.Description()
+		if len(descText) > 60 {
+			descText = descText[:57] + "..."
+		}
+		text.Draw(screen, descText, basicfont.Face7x13, x+45, optionY+25,
+			color.RGBA{150, 150, 170, 255})
 	}
 
-	// Help text
-	helpY := y + h - 60
-	helpText := "Use UP/DOWN or 1-3 to select, ENTER to confirm"
-	helpX := x + w/2 - len(helpText)*3
-	text.Draw(screen, helpText, basicfont.Face7x13, helpX, helpY,
-		color.RGBA{150, 150, 150, 255})
-
-	helpText2 := "Press BACKSPACE to go back"
-	helpX2 := x + w/2 - len(helpText2)*3
-	text.Draw(screen, helpText2, basicfont.Face7x13, helpX2, helpY+20,
+	// Controls hint
+	hintY := y + h - 60
+	hintText := "Arrow Keys/WASD: Navigate | Enter: Confirm | ESC/Backspace: Back | 1-7: Quick Select"
+	hintX := x + w/2 - len(hintText)*3
+	text.Draw(screen, hintText, basicfont.Face7x13, hintX, hintY,
 		color.RGBA{150, 150, 150, 255})
 }
 
@@ -2198,10 +2184,8 @@ func (cc *EbitenCharacterCreation) Reset() {
 	cc.confirmed = false
 	cc.errorMsg = ""
 
-	// Reset equipment selection state
-	cc.equipmentLoadouts = nil
-	cc.selectedLoadout = 0
-	cc.loadoutsGenerated = false
+	// Reset subclass selection state
+	cc.selectedSubclass = noSubclassSelected
 
 	// MOBILE/WASM KEYBOARD FIX: Reset keyboard state flag to false.
 	// The keyboard will be shown automatically on the first Update() call

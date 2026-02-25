@@ -1454,7 +1454,7 @@ func TestEquipmentLoadout_Generation(t *testing.T) {
 
 // TestCharacterCreation_EquipmentStep verifies equipment step integration.
 func TestCharacterCreation_EquipmentStep(t *testing.T) {
-	t.Run("stepEquipmentSelection exists in enum", func(t *testing.T) {
+	t.Run("stepSubclassSelection exists in enum", func(t *testing.T) {
 		// Verify the enum order is correct
 		if stepNameInput != 0 {
 			t.Errorf("stepNameInput = %d, want 0", stepNameInput)
@@ -1462,8 +1462,8 @@ func TestCharacterCreation_EquipmentStep(t *testing.T) {
 		if stepClassSelection != 1 {
 			t.Errorf("stepClassSelection = %d, want 1", stepClassSelection)
 		}
-		if stepEquipmentSelection != 2 {
-			t.Errorf("stepEquipmentSelection = %d, want 2", stepEquipmentSelection)
+		if stepSubclassSelection != 2 {
+			t.Errorf("stepSubclassSelection = %d, want 2", stepSubclassSelection)
 		}
 		if stepPortraitSelection != 3 {
 			t.Errorf("stepPortraitSelection = %d, want 3", stepPortraitSelection)

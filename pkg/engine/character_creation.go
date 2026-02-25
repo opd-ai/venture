@@ -980,8 +980,9 @@ func (cc *EbitenCharacterCreation) updateSubclassSelection() {
 		cc.selectedSubclass = subclasses[currentIdx-1]
 	}
 
-	// Mouse/touch click selection
-	if IsTouchOrMouseJustPressed() {
+	// Mouse/touch click selection — select only, don't auto-advance.
+	// The player must press ENTER or click Next to confirm.
+	if IsTouchOrMouseJustPressed() && !cc.stepChangedThisFrame {
 		mouseX, mouseY, _ := GetTouchOrMousePosition()
 		startY := cc.panelY + 130
 		for i := 0; i < optionCount; i++ {
@@ -993,8 +994,6 @@ func (cc *EbitenCharacterCreation) updateSubclassSelection() {
 				} else if i-1 < len(subclasses) {
 					cc.selectedSubclass = subclasses[i-1]
 				}
-				// Double-tap to proceed
-				cc.handleNextButton()
 				return
 			}
 		}

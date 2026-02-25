@@ -315,3 +315,275 @@ func BenchmarkEnhancedVehicleSystem_ProcessVehicleCollision(b *testing.B) {
 		_, _, _ = sys.ProcessVehicleCollision(collision, state, -1.0, 0.0)
 	}
 }
+
+// --- ECS System Interface Tests ---
+
+// MockEntity implements the Entity interface for testing.
+type MockEntity struct {
+	components map[string]interface{}
+}
+
+func NewMockEntity() *MockEntity {
+	return &MockEntity{
+		components: make(map[string]interface{}),
+	}
+}
+
+func (e *MockEntity) HasComponent(componentType string) bool {
+	_, exists := e.components[componentType]
+	return exists
+}
+
+func (e *MockEntity) GetComponent(componentType string) interface{} {
+	return e.components[componentType]
+}
+
+func (e *MockEntity) AddComponent(componentType string, component interface{}) {
+	e.components[componentType] = component
+}
+
+// MockPositionComponent for testing.
+type MockPositionComponent struct {
+	X, Y float64
+}
+
+func (p *MockPositionComponent) GetX() float64 { return p.X }
+func (p *MockPositionComponent) GetY() float64 { return p.Y }
+
+// MockVelocityComponent for testing.
+type MockVelocityComponent struct {
+	VelX, VelY float64
+}
+
+func (v *MockVelocityComponent) GetVelX() float64 { return v.VelX }
+func (v *MockVelocityComponent) GetVelY() float64 { return v.VelY }
+
+func (v *MockVelocityComponent) SetVelocity(vx, vy float64) {
+	v.VelX = vx
+	v.VelY = vy
+}
+
+// MockRotationComponent for testing.
+type MockRotationComponent struct {
+	Angle float64
+}
+
+func (r *MockRotationComponent) GetAngle() float64 { return r.Angle }
+
+func TestEnhancedVehicleSystem_Update_NoVehicles(t *testing.T) {
+	sys := NewEnhancedVehicleSystem()
+
+	// Empty entity list
+	entities := []Entity{}
+	sys.Update(entities, 0.016)
+
+	// No crash, no errors - test passes
+}
+
+func TestEnhancedVehicleSystem_Update_NonVehicleEntity(t *testing.T) {
+	sys := NewEnhancedVehicleSystem()
+
+	// Entity without vehicle physics components
+	entity := NewMockEntity()
+	entity.AddComponent("position", &MockPositionComponent{X: 100, Y: 100})
+
+	entities := []Entity{entity}
+	sys.Update(entities, 0.016)
+
+	// Should skip entity without vehicle components
+}
+
+func TestEnhancedVehicleSystem_Update_WithSuspension(t *testing.T) {
+	sys := NewEnhancedVehicleSystem()
+
+	entity := NewMockEntity()
+	entity.AddComponent("position", &MockPositionComponent{X: 100, Y: 100})
+	entity.AddComponent("velocity", &MockVelocityComponent{VelX: 50, VelY: 0})
+	entity.AddComponent("rotation", &MockRotationComponent{Angle: 0})
+
+	suspension := NewSuspensionComponent(4) // 4 wheels
+	entity.AddComponent("suspension", suspension)
+
+	entities := []Entity{entity}
+	sys.Update(entities, 0.016)
+
+	// Verify suspension was updated
+	if suspension.LastUpdateTime == 0 {
+		t.Error("suspension LastUpdateTime should be updated")
+	}
+}
+
+func TestEnhancedVehicleSystem_Update_WithWeightTransfer(t *testing.T) {
+	sys := NewEnhancedVehicleSystem()
+
+	entity := NewMockEntity()
+	entity.AddComponent("position", &MockPositionComponent{X: 100, Y: 100})
+	entity.AddComponent("velocity", &MockVelocityComponent{VelX: 50, VelY: 0})
+
+	weightTransfer := NewWeightTransferComponent()
+	entity.AddComponent("weight_transfer", weightTransfer)
+
+	entities := []Entity{entity}
+
+	// First update to establish initial velocity
+	sys.Update(entities, 0.016)
+
+	// Change velocity to trigger weight transfer
+	vel := entity.GetComponent("velocity").(*MockVelocityComponent)
+	vel.VelX = 100 // Acceleration
+
+	// Second update should calculate weight transfer
+	sys.Update(entities, 0.016)
+
+	if weightTransfer.AccelerationX == 0 {
+		t.Error("weight transfer should calculate acceleration")
+	}
+}
+
+func TestEnhancedVehicleSystem_Update_WithDeformation(t *testing.T) {
+	sys := NewEnhancedVehicleSystem()
+
+	entity := NewMockEntity()
+	entity.AddComponent("position", &MockPositionComponent{X: 100, Y: 100})
+	entity.AddComponent("velocity", &MockVelocityComponent{VelX: 50, VelY: 0})
+	entity.AddComponent("rotation", &MockRotationComponent{Angle: 0})
+
+	suspension := NewSuspensionComponent(4) // 4 wheels
+	entity.AddComponent("suspension", suspension)
+
+	deformation := NewTerrainDeformationComponent(12345)
+	entity.AddComponent("terrain_deformation", deformation)
+
+	entities := []Entity{entity}
+	sys.Update(entities, 0.016)
+
+	// Deformation system should process (tracks added if moving fast enough)
+	// At 50 pixels/s, may not create tracks (threshold is 10.0 in updateTireTracks)
+}
+
+func TestEnhancedVehicleSystem_Update_WithCollision(t *testing.T) {
+	sys := NewEnhancedVehicleSystem()
+
+	entity := NewMockEntity()
+	entity.AddComponent("position", &MockPositionComponent{X: 100, Y: 100})
+	entity.AddComponent("velocity", &MockVelocityComponent{VelX: 50, VelY: 0})
+
+	collision := NewCollisionResponseComponent(1000.0)
+	collision.StructuralIntegrity = 0.5 // Damaged vehicle
+	entity.AddComponent("collision_response", collision)
+
+	entities := []Entity{entity}
+
+	originalVelX := entity.GetComponent("velocity").(*MockVelocityComponent).VelX
+
+	sys.Update(entities, 0.016)
+
+	// Velocity should be reduced by damage multiplier
+	newVelX := entity.GetComponent("velocity").(*MockVelocityComponent).VelX
+	if newVelX >= originalVelX {
+		t.Error("damaged vehicle should have reduced velocity")
+	}
+}
+
+func TestEnhancedVehicleSystem_Update_Disabled(t *testing.T) {
+	sys := NewEnhancedVehicleSystem()
+	sys.Disable()
+
+	entity := NewMockEntity()
+	entity.AddComponent("position", &MockPositionComponent{X: 100, Y: 100})
+	entity.AddComponent("velocity", &MockVelocityComponent{VelX: 50, VelY: 0})
+
+	suspension := NewSuspensionComponent(4) // 4 wheels
+	entity.AddComponent("suspension", suspension)
+
+	entities := []Entity{entity}
+
+	initialTime := suspension.LastUpdateTime
+	sys.Update(entities, 0.016)
+
+	// When disabled, no updates should occur
+	if suspension.LastUpdateTime != initialTime {
+		t.Error("disabled system should not update components")
+	}
+}
+
+func TestEnhancedVehicleSystem_Update_MultipleEntities(t *testing.T) {
+	sys := NewEnhancedVehicleSystem()
+
+	// Create 3 vehicle entities
+	entities := make([]Entity, 3)
+	for i := 0; i < 3; i++ {
+		entity := NewMockEntity()
+		entity.AddComponent("position", &MockPositionComponent{X: float64(i * 100), Y: 100})
+		entity.AddComponent("velocity", &MockVelocityComponent{VelX: float64(i * 10), VelY: 0})
+		suspension := NewSuspensionComponent(4) // 4 wheels
+		entity.AddComponent("suspension", suspension)
+		entities[i] = entity
+	}
+
+	sys.Update(entities, 0.016)
+
+	// Verify all entities were updated
+	for i, e := range entities {
+		entity := e.(*MockEntity)
+		suspension := entity.GetComponent("suspension").(*SuspensionComponent)
+		if suspension.LastUpdateTime == 0 {
+			t.Errorf("entity %d suspension was not updated", i)
+		}
+	}
+}
+
+func TestEnhancedVehicleSystem_Update_AllComponents(t *testing.T) {
+	sys := NewEnhancedVehicleSystem()
+
+	entity := NewMockEntity()
+	entity.AddComponent("position", &MockPositionComponent{X: 100, Y: 100})
+	entity.AddComponent("velocity", &MockVelocityComponent{VelX: 50, VelY: 0})
+	entity.AddComponent("rotation", &MockRotationComponent{Angle: 0})
+
+	suspension := NewSuspensionComponent(4) // 4 wheels
+	weightTransfer := NewWeightTransferComponent()
+	deformation := NewTerrainDeformationComponent(12345)
+	collision := NewCollisionResponseComponent(1000.0)
+
+	entity.AddComponent("suspension", suspension)
+	entity.AddComponent("weight_transfer", weightTransfer)
+	entity.AddComponent("terrain_deformation", deformation)
+	entity.AddComponent("collision_response", collision)
+
+	entities := []Entity{entity}
+
+	sys.Update(entities, 0.016)
+
+	// All components should be processed
+	if suspension.LastUpdateTime == 0 {
+		t.Error("suspension was not updated")
+	}
+}
+
+func BenchmarkEnhancedVehicleSystem_Update(b *testing.B) {
+	sys := NewEnhancedVehicleSystem()
+
+	// Create entity with all physics components
+	entity := NewMockEntity()
+	entity.AddComponent("position", &MockPositionComponent{X: 100, Y: 100})
+	entity.AddComponent("velocity", &MockVelocityComponent{VelX: 50, VelY: 0})
+	entity.AddComponent("rotation", &MockRotationComponent{Angle: 0})
+
+	suspension := NewSuspensionComponent(4) // 4 wheels
+	weightTransfer := NewWeightTransferComponent()
+	deformation := NewTerrainDeformationComponent(12345)
+	collision := NewCollisionResponseComponent(1000.0)
+
+	entity.AddComponent("suspension", suspension)
+	entity.AddComponent("weight_transfer", weightTransfer)
+	entity.AddComponent("terrain_deformation", deformation)
+	entity.AddComponent("collision_response", collision)
+
+	entities := []Entity{entity}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		sys.Update(entities, 0.016)
+	}
+}

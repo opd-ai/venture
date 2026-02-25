@@ -9,9 +9,144 @@ import (
 
 // EnhancedVehicleSystem integrates suspension, weight transfer, terrain deformation, and collision response.
 // All physics logic lives in this system; components are pure data structures.
+// Implements the engine.System interface for automatic ECS integration.
 type EnhancedVehicleSystem struct {
 	// System configuration
 	enabled bool
+}
+
+// Entity interface defines the minimal interface required from engine.Entity.
+// This allows the system to work without importing the full engine package.
+type Entity interface {
+	HasComponent(componentType string) bool
+	GetComponent(componentType string) interface{}
+}
+
+// Update implements the System interface, processing all entities with vehicle physics components.
+// Entities require PositionComponent, VelocityComponent, and at least one vehicle physics component
+// (SuspensionComponent, WeightTransferComponent, TerrainDeformationComponent, or CollisionResponseComponent).
+func (evs *EnhancedVehicleSystem) Update(entities []Entity, deltaTime float64) {
+	if !evs.enabled {
+		return
+	}
+
+	for _, entity := range entities {
+		// Only process entities that have at least one vehicle physics component
+		if !entity.HasComponent("suspension") &&
+			!entity.HasComponent("weight_transfer") &&
+			!entity.HasComponent("terrain_deformation") &&
+			!entity.HasComponent("collision_response") {
+			continue
+		}
+
+		evs.updateEntity(entity, deltaTime)
+	}
+}
+
+// updateEntity processes vehicle physics for a single entity.
+func (evs *EnhancedVehicleSystem) updateEntity(entity Entity, deltaTime float64) {
+	// Extract components (may be nil)
+	var suspension *SuspensionComponent
+	var weightTransfer *WeightTransferComponent
+	var deformation *TerrainDeformationComponent
+	var collision *CollisionResponseComponent
+
+	if comp := entity.GetComponent("suspension"); comp != nil {
+		if s, ok := comp.(*SuspensionComponent); ok {
+			suspension = s
+		}
+	}
+
+	if comp := entity.GetComponent("weight_transfer"); comp != nil {
+		if w, ok := comp.(*WeightTransferComponent); ok {
+			weightTransfer = w
+		}
+	}
+
+	if comp := entity.GetComponent("terrain_deformation"); comp != nil {
+		if t, ok := comp.(*TerrainDeformationComponent); ok {
+			deformation = t
+		}
+	}
+
+	if comp := entity.GetComponent("collision_response"); comp != nil {
+		if c, ok := comp.(*CollisionResponseComponent); ok {
+			collision = c
+		}
+	}
+
+	// Extract required position and velocity data
+	state := evs.extractVehicleState(entity)
+
+	// Run physics update
+	newState := evs.UpdateVehiclePhysics(suspension, weightTransfer, deformation, collision, state, deltaTime)
+
+	// Write results back to entity components
+	evs.applyVehicleState(entity, newState)
+}
+
+// extractVehicleState builds VehicleState from entity components.
+func (evs *EnhancedVehicleSystem) extractVehicleState(entity Entity) VehicleState {
+	state := VehicleState{
+		TerrainHeight: make([]float64, 4),
+		TerrainTypes:  make([]TerrainType, 4),
+	}
+
+	// Position
+	if comp := entity.GetComponent("position"); comp != nil {
+		type positionGetter interface {
+			GetX() float64
+			GetY() float64
+		}
+		if pos, ok := comp.(positionGetter); ok {
+			state.PositionX = pos.GetX()
+			state.PositionY = pos.GetY()
+		}
+	}
+
+	// Velocity
+	if comp := entity.GetComponent("velocity"); comp != nil {
+		type velocityGetter interface {
+			GetVelX() float64
+			GetVelY() float64
+		}
+		if vel, ok := comp.(velocityGetter); ok {
+			state.VelocityX = vel.GetVelX()
+			state.VelocityY = vel.GetVelY()
+			state.Speed = math.Sqrt(vel.GetVelX()*vel.GetVelX() + vel.GetVelY()*vel.GetVelY())
+		}
+	}
+
+	// Rotation (if available)
+	if comp := entity.GetComponent("rotation"); comp != nil {
+		type rotationGetter interface {
+			GetAngle() float64
+		}
+		if rot, ok := comp.(rotationGetter); ok {
+			state.Rotation = rot.GetAngle()
+		}
+	}
+
+	// Note: TerrainHeight and TerrainTypes would need to be provided by a terrain query system
+	// For now, default to firm terrain at ground level
+	for i := range state.TerrainTypes {
+		state.TerrainTypes[i] = TerrainFirm
+	}
+
+	return state
+}
+
+// applyVehicleState writes updated state back to entity components.
+func (evs *EnhancedVehicleSystem) applyVehicleState(entity Entity, state VehicleState) {
+	// Update velocity if changed
+	if comp := entity.GetComponent("velocity"); comp != nil {
+		type velocitySetter interface {
+			SetVelocity(vx, vy float64)
+		}
+		if vel, ok := comp.(velocitySetter); ok {
+			vel.SetVelocity(state.VelocityX, state.VelocityY)
+		}
+	}
 }
 
 // NewEnhancedVehicleSystem creates a new enhanced vehicle physics system.

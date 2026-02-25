@@ -1,5 +1,5 @@
 # Audit: github.com/opd-ai/venture/pkg/balance
-**Date**: 2026-02-13 (Updated: 2026-02-23)
+**Date**: 2026-02-13 (Updated: 2026-02-25)
 **Status**: Complete
 
 ## Summary
@@ -61,15 +61,11 @@ Target: 30% — **LIKELY EXCEEDS** (pending test infrastructure fix to avoid Ebi
    - Configurable seed, simulation count, and timeout
    - `scripts/validate-balance.sh` for pipeline integration
 
-4. **Add detailed statistical documentation** (LOW PRIORITY) — Expand godoc for `calculateRSquared` and `calculateCorrelation`:
-   ```go
-   // calculateRSquared computes the coefficient of determination (R²) for linear regression.
-   // R² = 1 - (SS_res / SS_tot) where:
-   //   SS_res = Σ(y_i - ŷ_i)² (residual sum of squares)
-   //   SS_tot = Σ(y_i - ȳ)² (total sum of squares)
-   //   ŷ_i = mx_i + b (predicted value from regression line)
-   // Returns value in [0, 1] where 1 = perfect fit, 0 = no correlation.
-   ```
+4. ~~**Add detailed statistical documentation**~~ (LOW PRIORITY) — **DONE 2026-02-25**: Enhanced godoc with comprehensive mathematical formulas for all statistical helper functions:
+   - `ProgressionValidator.calculateRSquared` — Added detailed R² formula, SS_res, SS_tot, regression line explanation
+   - `QuestValidator.calculateCorrelation` — Added Pearson r formula, return value range [-1, 1], edge case documentation
+   - `VehicleValidator.calculateCorrelation` — Added Pearson r formula, return value range [-1, 1], edge case documentation
+   - Note: `CombatValidator.calculateRSquared` and `EconomicValidator.calculateCorrelation` already had excellent documentation
 
 ## Files Audited
 - `doc.go` (108 lines) — Package documentation with validator specifications

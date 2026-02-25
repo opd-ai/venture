@@ -14,8 +14,8 @@ This report consolidates 110 individual audit files across all packages in the V
 |----------|-------------|
 | High     | 0           |
 | Medium   | ~11         |
-| Low      | ~94         |
-| **Total**| **~105**    |
+| Low      | ~93         |
+| **Total**| **~104**    |
 
 **Historical totals (including fixed):** ~32 High, ~97 Medium, ~230 Low issues were identified across all audits. The vast majority have been resolved, resulting in an overall codebase health status of **Good**.
 
@@ -97,8 +97,8 @@ This report consolidates 110 individual audit files across all packages in the V
 - **Source:** `pkg/balance/AUDIT_2026-02-13_COMPREHENSIVE.md`
 - **High Issues:** 0 (2 fixed)
 - **Medium Issues:** 0 (1 fixed)
-- **Low Issues:** 1
-- **Details:** All 8 validators implemented (Combat, Economic, Progression, Social, Housing, Vehicle, Companion, Quest) as of 2026-02-13. Integrated with `cmd/server/validation.go` at startup. **RESOLVED 2026-02-23**: Added standalone CLI tool `cmd/balance-validator` for offline balance validation with JSON output support, domain selection, and configurable simulation counts. Added `scripts/validate-balance.sh` for CI/CD pipeline integration. Remaining: test environment fails due to transitive Ebiten dependency via `pkg/engine` for `CharacterClass`—actual coverage cannot be measured but estimated >90%.
+- **Low Issues:** 0 (1 fixed)
+- **Details:** All 8 validators implemented (Combat, Economic, Progression, Social, Housing, Vehicle, Companion, Quest) as of 2026-02-13. Integrated with `cmd/server/validation.go` at startup. **RESOLVED 2026-02-23**: Added standalone CLI tool `cmd/balance-validator` for offline balance validation with JSON output support, domain selection, and configurable simulation counts. Added `scripts/validate-balance.sh` for CI/CD pipeline integration. **RESOLVED 2026-02-25**: Enhanced statistical helper function documentation—added comprehensive godoc with mathematical formulas to `ProgressionValidator.calculateRSquared`, `QuestValidator.calculateCorrelation`, and `VehicleValidator.calculateCorrelation` (R² formula with SS_res/SS_tot, Pearson r formula with covariance/variance). Remaining: test environment fails due to transitive Ebiten dependency via `pkg/engine` for `CharacterClass`—actual coverage cannot be measured but estimated >90%.
 
 ---
 

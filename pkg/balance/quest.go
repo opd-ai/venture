@@ -278,7 +278,20 @@ func (v *QuestValidator) validateCompletionTimes(ctx context.Context, result *Va
 	return nil
 }
 
-// calculateCorrelation computes the Pearson correlation coefficient.
+// calculateCorrelation computes the Pearson product-moment correlation
+// coefficient (r) between two data series. Pearson's r measures the
+// strength and direction of the linear relationship between x and y.
+//
+// Formula: r = Σ(xᵢ - x̄)(yᵢ - ȳ) / √(Σ(xᵢ - x̄)² · Σ(yᵢ - ȳ)²)
+//
+// Returns a value in [-1, 1] where:
+//
+//	 1 = perfect positive linear correlation
+//	 0 = no linear correlation
+//	-1 = perfect negative linear correlation
+//
+// Returns 0.0 if fewer than 2 data points are provided, if x and y
+// have different lengths, or if either series has zero variance.
 func (v *QuestValidator) calculateCorrelation(x, y []float64) float64 {
 	if len(x) != len(y) || len(x) < 2 {
 		return 0.0

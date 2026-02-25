@@ -79,11 +79,21 @@
 //
 // # Vehicle Physics System
 //
-// EnhancedVehicleSystem integrates all components for complete vehicle simulation:
+// EnhancedVehicleSystem integrates all components for complete vehicle simulation.
+// It implements the engine.System interface and can be registered with the ECS World
+// for automatic per-frame updates:
 //
 //	system := vehicle.NewEnhancedVehicleSystem()
+//	world.AddSystem(system)
 //
-//	// Update vehicle physics each frame
+// The system automatically processes all entities that have at least one vehicle
+// physics component (suspension, weight_transfer, terrain_deformation, or
+// collision_response), extracting position and velocity data to run physics
+// calculations.
+//
+// For manual control, the system can also be used directly:
+//
+//	// Manual per-frame update
 //	state := vehicle.VehicleState{
 //		PositionX:  100.0,
 //		PositionY:  50.0,

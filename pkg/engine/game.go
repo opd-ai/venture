@@ -1022,6 +1022,14 @@ func (g *EbitenGame) handleCharacterCreation() error {
 	g.pendingCharData = &charData
 	g.CharacterCreation.Cleanup()
 
+	// If terrain was already loaded (default startup path: Loading → CharacterCreation),
+	// finishLoadingToGameplay transitions to AppStateGameplay and fires the
+	// terrainLoadComplete callback that creates the player entity.
+	if g.terrainLoader != nil || g.terrainLoadComplete != nil {
+		return g.finishLoadingToGameplay()
+	}
+
+	// Menu-driven path: terrain hasn't loaded yet, transition directly.
 	if err := g.StateManager.TransitionTo(AppStateGameplay); err != nil {
 		if g.logger != nil {
 			g.logger.WithError(err).Error("failed to transition to gameplay after character creation")
@@ -1108,26 +1116,53 @@ func (g *EbitenGame) updateLoadingProgress(loader asyncLoader) error {
 	return nil
 }
 
-// handleLoadingComplete finalizes terrain loading and transitions to gameplay.
+// handleLoadingComplete finalizes terrain loading.
+// If the player hasn't been through character creation yet, transitions to
+// AppStateCharacterCreation so they can pick name/class/equipment.
+// Otherwise goes directly to gameplay (e.g. when loading a saved game).
 func (g *EbitenGame) handleLoadingComplete() error {
-	if g.logger != nil {
-		g.logger.Info("terrain loading complete, transitioning to gameplay")
+	// If character creation was already completed (e.g. via the menu new-game
+	// flow, or when loading a save), skip straight to gameplay.
+	if g.pendingCharData != nil || g.PlayerEntity != nil {
+		return g.finishLoadingToGameplay()
 	}
 
-	if err := g.StateManager.TransitionTo(AppStateGameplay); err != nil {
+	// Terrain is ready — now let the player create their character.
+	if g.logger != nil {
+		g.logger.Info("terrain loading complete, entering character creation")
+	}
+
+	if err := g.StateManager.TransitionTo(AppStateCharacterCreation); err != nil {
 		if g.logger != nil {
-			g.logger.WithError(err).Error("failed to transition to gameplay after terrain load")
+			g.logger.WithError(err).Error("failed to transition to character creation after terrain load")
 		}
 		return err
 	}
 
-	// When jumping directly from Loading → Gameplay (bypassing character
-	// creation), advance the OnboardingManager so the in-game tutorial
-	// activates. This covers the default startup path where terrain is
-	// generated without an explicit menu-driven new-game flow.
-	if g.OnboardingManager != nil && g.OnboardingManager.IsEnabled() &&
-		g.OnboardingManager.GetState() == StateCharacterCreation {
-		g.OnboardingManager.TransitionToInGameTutorial()
+	// Reset character creation UI for a fresh start.
+	g.CharacterCreation.Reset()
+	if g.CharacterCreationTutorial != nil {
+		g.CharacterCreationTutorial.Reset()
+	}
+	g.CharacterCreation.SetDefaultNameFromSeed(g.worldSeed)
+	g.isMultiplayerMode = false
+
+	return nil
+}
+
+// finishLoadingToGameplay transitions from loading (or character creation) to
+// active gameplay and fires the terrainLoadComplete callback that creates the
+// player entity and sets up the world.
+func (g *EbitenGame) finishLoadingToGameplay() error {
+	if g.logger != nil {
+		g.logger.Info("transitioning to gameplay")
+	}
+
+	if err := g.StateManager.TransitionTo(AppStateGameplay); err != nil {
+		if g.logger != nil {
+			g.logger.WithError(err).Error("failed to transition to gameplay")
+		}
+		return err
 	}
 
 	if g.terrainLoadComplete != nil {

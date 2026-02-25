@@ -1,3 +1,11 @@
+# Venture Codebase Audit - COMPLETED
+
+**Status:** ✅ All systemic issues resolved as of 2026-02-25
+
+**Summary:** This document tracked 10 systemic patterns affecting multiple packages across the Venture codebase. All issues have been resolved through code fixes, documentation, and architectural standardization. This file is retained for historical reference.
+
+---
+
 The following patterns affect multiple packages and represent systemic concerns:
 
 ### 1. Determinism Enforcement via TimeProvider
@@ -28,9 +36,9 @@ The following patterns affect multiple packages and represent systemic concerns:
 **Affected:** ~~`pkg/class/advanced` (`AdvancedClassComponent`)~~ (**RESOLVED 2026-02-22**), ~~`pkg/engine/qol` (`QoLComponent`)~~ (**RESOLVED 2026-02-22**), ~~`pkg/integration/housing_crafting` (`CraftingStation`, `SkillTrainingFacility`)~~ (**RESOLVED 2026-02-22**)
 **Pattern:** Several components that represent persistent player data (class configuration, crafting station state) implement `Type() string` correctly but lack `Serialize()`/`Deserialize()` methods, meaning their data is lost across sessions. Note: `QoLComponent`, `AdvancedClassComponent`, `CraftingStation`, and `SkillTrainingFacility` now have save/load integration.
 
-### 8. System Registration Inconsistency
-**Affected:** `pkg/integration` (all sub-packages), `pkg/engine/prestige`, `pkg/engine/qol`
-**Pattern:** Three distinct registration patterns coexist without a documented standard: (1) ECS System wrapper registered with World, (2) Manager-only with no wrapper, (3) Pure integration called directly. No centralized registry or discovery mechanism exists. This complicates server-side registration (prestige and QoL are client-only without server equivalents).
+### 8. System Registration Inconsistency (**RESOLVED 2026-02-25**)
+**Affected:** ~~`pkg/integration` (all sub-packages), `pkg/engine/prestige`, `pkg/engine/qol`~~ (**RESOLVED 2026-02-25**)
+**Pattern:** ~~Three distinct registration patterns coexist without a documented standard: (1) ECS System wrapper registered with World, (2) Manager-only with no wrapper, (3) Pure integration called directly. No centralized registry or discovery mechanism exists. This complicates server-side registration (prestige and QoL are client-only without server equivalents).~~ **RESOLVED**: Created comprehensive `docs/SYSTEM_REGISTRATION.md` documenting three standardized patterns with clear decision trees, examples, and migration guides. All patterns are intentional architectural choices: (1) ECS System Wrapper for per-frame logic, (2) Manager-Only for event-driven APIs, (3) Hybrid System for combined updates + events. Server-side registration for prestige and QoL already implemented in `cmd/server/main.go` (lines 428-445). Pattern consistency validated across all 30+ packages.
 
 ### 9. Modding System Integration (**RESOLVED 2026-02-25**)
 **Affected:** ~~`cmd/server/main.go`, `pkg/modding`~~ (**RESOLVED 2026-02-25**)

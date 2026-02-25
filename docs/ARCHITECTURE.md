@@ -447,6 +447,7 @@ For implementation details, development workflows, testing strategies, and code 
 - **[Development Guide](DEVELOPMENT.md)** - Complete development workflow and best practices
 - **[Contributing Guide](CONTRIBUTING.md)** - Contribution guidelines and code standards
 - **[Technical Specification](TECHNICAL_SPEC.md)** - Detailed technical architecture
+- **[System Registration Patterns](SYSTEM_REGISTRATION.md)** - ECS system integration patterns and decision trees
 - **[Changelog](CHANGELOG.md)** - Version history including V8.0 Housing & Guild Systems
 
 ---

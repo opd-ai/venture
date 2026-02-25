@@ -22,6 +22,7 @@ import (
 	"github.com/opd-ai/venture/pkg/procgen/building"
 	"github.com/opd-ai/venture/pkg/procgen/faction"
 	"github.com/opd-ai/venture/pkg/procgen/furniture"
+	genrepkg "github.com/opd-ai/venture/pkg/procgen/genre"
 	"github.com/opd-ai/venture/pkg/procgen/item"
 	"github.com/opd-ai/venture/pkg/procgen/quest"
 	"github.com/opd-ai/venture/pkg/procgen/recipe"
@@ -799,6 +800,7 @@ func warmCommonSprites(sys *systemsContainer, seed *int64, genre *string, logger
 }
 
 // resolveSeedAndGenre resolves the seed and genre values with defaults.
+// If genre is "random", it will be resolved to a concrete genre using the seed.
 func resolveSeedAndGenre(seed *int64, genre *string) (int64, string) {
 	seedVal := int64(12345)
 	if seed != nil {
@@ -807,6 +809,11 @@ func resolveSeedAndGenre(seed *int64, genre *string) (int64, string) {
 	genreVal := "fantasy"
 	if genre != nil {
 		genreVal = *genre
+	}
+	// Handle "random" genre by selecting a concrete genre using the seed
+	if genreVal == "random" {
+		selectedGenre := genrepkg.GetRandomTheme(seedVal)
+		genreVal = selectedGenre.ID
 	}
 	return seedVal, genreVal
 }

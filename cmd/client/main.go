@@ -13,6 +13,7 @@ import (
 
 	"github.com/opd-ai/venture/pkg/engine"
 	"github.com/opd-ai/venture/pkg/mobile"
+	"github.com/opd-ai/venture/pkg/procgen/genre"
 	"github.com/opd-ai/venture/pkg/procgen/terrain"
 	"github.com/opd-ai/venture/pkg/version"
 	"github.com/sirupsen/logrus"
@@ -23,6 +24,12 @@ var autoEnabledHostAndPlay bool
 
 func main() {
 	flag.Parse()
+
+	// Resolve "random" genre to concrete genre using seed for determinism
+	if *genreID == "random" {
+		selectedGenre := genre.GetRandomTheme(*seed)
+		*genreID = selectedGenre.ID
+	}
 
 	// Handle --version flag
 	if *showVersion {

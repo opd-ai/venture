@@ -1189,7 +1189,7 @@ func (cc *EbitenCharacterCreation) updatePortraitSelection() {
 
 // handlePortraitTouchInput processes mouse and touch input for portrait selection buttons.
 func (cc *EbitenCharacterCreation) handlePortraitTouchInput() bool {
-	if !IsTouchOrMouseJustPressed() {
+	if !IsTouchOrMouseJustPressed() || cc.stepChangedThisFrame {
 		return false
 	}
 

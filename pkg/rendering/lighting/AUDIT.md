@@ -10,7 +10,7 @@ The lighting package provides dynamic lighting effects including multiple light 
 | Check | Result |
 |---|---|
 | `go vet` | ✅ Pass |
-| `go test -cover` | 80.5% (target: 65%) |
+| `go test -cover` | 80.5% (target: 30%) |
 | `go test -race` | ✅ Pass |
 | WASM vet | ✅ Pass |
 | TODO/FIXME count | 0 |
@@ -45,7 +45,7 @@ None.
 | N/A | — | — | — | Package is a rendering utility, not a UI system |
 
 ## Test Coverage
-**Coverage**: 80.5% (target: 65%)
+**Coverage**: 80.5% (target: 30%)
 - Missing test areas: Full GPU shader tests require Ebiten graphics context (noted in gpu_bloom_test.go)
 - Missing benchmarks: GPU bloom path lacks isolated benchmarks
 - Table-driven test compliance: ✅ Tests use table-driven patterns consistently

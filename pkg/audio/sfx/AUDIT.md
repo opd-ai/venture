@@ -10,7 +10,7 @@ The `sfx` package provides procedural sound effect generation with 9 effect type
 | Check | Result |
 |---|---|
 | `go vet` | ✅ Pass |
-| `go test -cover` | 98.1% (target: 65%) ✅ |
+| `go test -cover` | 98.1% (target: 30%) ✅ |
 | `go test -race` | ✅ Pass |
 | WASM vet | ✅ Pass |
 | TODO/FIXME count | 0 |
@@ -46,7 +46,7 @@ None
 | N/A | N/A | N/A | N/A | Audio sfx package has no UI responsibilities |
 
 ## Test Coverage
-**Coverage**: 98.1% (target: 65%) ✅
+**Coverage**: 98.1% (target: 30%) ✅
 
 - Missing test areas: None significant; all public APIs well tested
 - Missing benchmarks: None; BenchmarkGenerator_GenerateImpact, BenchmarkGenerator_GenerateMagic, BenchmarkGenerator_GenerateExplosion, BenchmarkGenerateWithGenre, BenchmarkVarietyManager_Generate all present

@@ -10,7 +10,7 @@ The `trade_routes` package implements automated AI merchant caravan systems for 
 | Check | Result |
 |---|---|
 | `go vet` | ✅ Pass |
-| `go test -cover` | 92.5% (target: 65%) |
+| `go test -cover` | 92.5% (target: 40%) |
 | `go test -race` | ✅ Pass |
 | WASM vet | ✅ Pass |
 | TODO/FIXME count | 0 |
@@ -45,7 +45,7 @@ _None identified._
 | N/A | N/A | N/A | N/A | Package is server-side manager with no direct UI; UI integration would be in client escort mission UI (not part of this package) |
 
 ## Test Coverage
-**Coverage**: 92.5% (target: 65%)
+**Coverage**: 92.5% (target: 40%)
 - Missing test areas: None significant; all public API methods tested
 - Missing benchmarks: None; `BenchmarkCreateRoute`, `BenchmarkOptimizeRoute`, `BenchmarkUpdateRoutes` exist
 - Table-driven test compliance: ✅ Used extensively (`TestCreateRoute`, `TestStartRoute`, `TestCreateEscortMissionValidation`, etc.)

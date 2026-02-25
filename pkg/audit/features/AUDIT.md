@@ -10,7 +10,7 @@ The `pkg/audit/features` package provides feature completeness validation for Ph
 | Check | Result |
 |---|---|
 | `go vet` | ✅ Pass |
-| `go test -cover` | 99.2% (target: 65%) ✅ |
+| `go test -cover` | 99.2% (target: 40%) ✅ |
 | `go test -race` | ✅ Pass |
 | WASM vet | ✅ Pass |
 | TODO/FIXME count | 0 (only "not implemented" is a validation message, not a marker) |
@@ -46,7 +46,7 @@ _None_
 | N/A | — | — | — | Package is test/audit infrastructure with no UI |
 
 ## Test Coverage
-**Coverage**: 99.2% (target: 65%) ✅
+**Coverage**: 99.2% (target: 40%) ✅
 - Missing test areas: None significant
 - Missing benchmarks: None - package includes `BenchmarkFeatureValidation`, `BenchmarkRegistryValidateAll`, `BenchmarkRegistryGetFeature` (`feature_completeness_test.go:391-428`)
 - Table-driven test compliance: ✅ — Uses table-driven tests throughout (`feature_completeness_test.go:8-160`, `feature_completeness_test.go:353-388`)

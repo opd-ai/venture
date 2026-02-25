@@ -87,7 +87,7 @@ The determinism tests verify:
 - Multiple runs produce identical results
 - Backward compatibility with existing code
 
-Current test coverage: **95.3%** (exceeds 65% minimum requirement)
+Current test coverage: **95.3%** (exceeds 40% minimum requirement)
 
 ## Examples
 

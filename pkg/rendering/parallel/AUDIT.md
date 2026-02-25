@@ -10,7 +10,7 @@ The `pkg/rendering/parallel` package provides thread-safe parallel rendering inf
 | Check | Result |
 |---|---|
 | `go vet` | ✅ Pass |
-| `go test -cover` | 96.7% (target: 65%) ✅ |
+| `go test -cover` | 96.7% (target: 30%) ✅ |
 | `go test -race` | ✅ Pass |
 | WASM vet | ✅ Pass |
 | TODO/FIXME count | 0 |
@@ -46,7 +46,7 @@ The `pkg/rendering/parallel` package provides thread-safe parallel rendering inf
 | N/A | N/A | N/A | N/A | Package is infrastructure, no UI components |
 
 ## Test Coverage
-**Coverage**: 96.7% (target: 65%) ✅
+**Coverage**: 96.7% (target: 30%) ✅
 - Missing test areas: None significant
 - Missing benchmarks: None - comprehensive benchmarks exist for throughput, concurrent access, creation, and start/stop
 - Table-driven test compliance: ✅ Uses table-driven tests appropriately

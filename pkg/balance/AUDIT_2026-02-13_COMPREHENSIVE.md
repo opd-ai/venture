@@ -28,7 +28,7 @@ The balance package provides automated statistical validation of game balance ac
 - Covers loyalty progression, skill learning, combat effectiveness (companion)
 - Covers reward scaling, difficulty rating, completion times (quest)
 
-Target: 65% — **LIKELY EXCEEDS** (pending test infrastructure fix to avoid Ebiten initialization)
+Target: 30% — **LIKELY EXCEEDS** (pending test infrastructure fix to avoid Ebiten initialization)
 
 ## Integration Status
 **Successfully integrated** with server startup validation:

@@ -8,13 +8,13 @@ Status criteria:
 -->
 
 ## Summary
-Cross-server federation protocol for peer-to-peer server networking. Package implements LAN discovery, gossip protocol, secure handshake (ed25519), trust levels, state synchronization, circuit breaker, connection pooling, retry logic, and federated market with dynamic pricing. Total ~12,650 LOC with 87.3% test coverage (exceeds 65% target). Production-ready with comprehensive documentation.
+Cross-server federation protocol for peer-to-peer server networking. Package implements LAN discovery, gossip protocol, secure handshake (ed25519), trust levels, state synchronization, circuit breaker, connection pooling, retry logic, and federated market with dynamic pricing. Total ~12,650 LOC with 87.3% test coverage (exceeds 40% target). Production-ready with comprehensive documentation.
 
 ## Automated Check Results
 | Check | Result |
 |---|---|
 | `go vet` | ✅ Pass |
-| `go test -cover` | 87.3% (target: 65%) |
+| `go test -cover` | 87.3% (target: 40%) |
 | `go test -race` | ✅ Pass |
 | WASM vet | ✅ Pass |
 | TODO/FIXME count | 1 (in test file, not production code) |

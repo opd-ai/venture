@@ -10,7 +10,7 @@ The tiles package provides procedural tile image generation for terrain renderin
 | Check | Result |
 |---|---|
 | `go vet` | ✅ Pass |
-| `go test -cover` | 91.5% (target: 65%) |
+| `go test -cover` | 91.5% (target: 30%) |
 | `go test -race` | ✅ Pass |
 | WASM vet | ✅ Pass |
 | TODO/FIXME count | 0 |
@@ -45,7 +45,7 @@ The tiles package provides procedural tile image generation for terrain renderin
 | N/A | N/A | N/A | N/A | Package is a procedural generator, not a UI system |
 
 ## Test Coverage
-**Coverage**: 91.5% (target: 65%)
+**Coverage**: 91.5% (target: 30%)
 - Missing test areas: None significant — all major code paths tested
 - Missing benchmarks: None — package includes benchmarks for all performance-critical functions
 - Table-driven test compliance: ✅ All test files use table-driven patterns

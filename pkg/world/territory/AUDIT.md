@@ -14,7 +14,7 @@ The territory package provides guild territory control, warfare, and siege mecha
 | Check | Result |
 |---|---|
 | `go vet` | ✅ Pass |
-| `go test -cover` | 90.8% (target: 65%) ✅ |
+| `go test -cover` | 90.8% (target: 40%) ✅ |
 | `go test -race` | ✅ Pass |
 | WASM vet | ✅ Pass |
 | TODO/FIXME count | 0 |
@@ -48,7 +48,7 @@ _None identified._
 | Territory UI | ✅ | ✅ | ✅ | TerritoryUI in pkg/engine wired via cmd/client/init_versions.go:649-650 (Y key to open) |
 
 ## Test Coverage
-**Coverage**: 90.8% (target: 65%)
+**Coverage**: 90.8% (target: 40%)
 - Missing test areas: None significant; comprehensive table-driven tests present
 - Missing benchmarks: ✅ Present (BenchmarkCreateTerritory, BenchmarkUpdateCaptureProgress, BenchmarkBuildDefensiveStructure, BenchmarkGetResourceBonus, BenchmarkSiegeCreate, BenchmarkSiegeJoin, BenchmarkSiegeManagerUpdate, BenchmarkGenerateDefensiveStructures)
 - Table-driven test compliance: ✅ Fully compliant (manager_test.go:69-94, siege_test.go:9-70, types_test.go:5-85)

@@ -134,7 +134,7 @@ The name `component.go` was too generic. `quality_settings_component.go`:
 
 ## Performance Characteristics
 
-- **Test Coverage**: 96.6% (exceeds 65% requirement)
+- **Test Coverage**: 96.6% (exceeds 30% requirement)
 - **Thread Safety**: All mutable state protected by sync.RWMutex
 - **Memory**: Circular buffer size configurable (typically 60-120 samples)
 - **Overhead**: Minimal - frame recording is O(1), FPS calculation is O(n) where n = sample size

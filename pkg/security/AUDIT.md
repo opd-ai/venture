@@ -16,7 +16,7 @@ The `pkg/security` package provides a comprehensive security audit framework for
 | Check | Result |
 |---|---|
 | `go vet` | ✅ Pass |
-| `go test -cover` | 90.0% (target: 65%) |
+| `go test -cover` | 90.0% (target: 40%) |
 | `go test -race` | ✅ Pass |
 | WASM vet | ✅ Pass |
 | TODO/FIXME count | 0 |
@@ -51,7 +51,7 @@ The `pkg/security` package provides a comprehensive security audit framework for
 | N/A | N/A | N/A | N/A | Package is a non-UI utility for security validation |
 
 ## Test Coverage
-**Coverage**: 90.0% (target: 65%)
+**Coverage**: 90.0% (target: 40%)
 - Missing test areas: None significant; all 6 security domains and helper functions tested
 - Missing benchmarks: None; 3 benchmarks provided (`BenchmarkRunFullAudit`, `BenchmarkValidateIVRandomness`, `BenchmarkConstantTimeCompare`)
 - Table-driven test compliance: ✅ Multiple table-driven tests present (`TestAuditResults_AllPassed`, `TestAuditResults_HasCritical`, `TestSeverity_String`, `TestConstantTimeCompare`)

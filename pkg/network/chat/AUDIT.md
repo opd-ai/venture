@@ -10,7 +10,7 @@ The `pkg/network/chat` package is a thin network wrapper around `pkg/engine.Chat
 | Check | Result |
 |---|---|
 | `go vet` | ✅ Pass |
-| `go test -cover` | 79.4% (target: 65%) |
+| `go test -cover` | 79.4% (target: 40%) |
 | `go test -race` | ✅ Pass |
 | WASM vet | ✅ Pass |
 | TODO/FIXME count | 0 |
@@ -45,7 +45,7 @@ None identified.
 | Chat | N/A | N/A | ✅ | This package is infrastructure; UI is `pkg/rendering/ui/chat.go`; engine backing is `pkg/engine/chat_system.go` |
 
 ## Test Coverage
-**Coverage**: 79.4% (target: 65%)
+**Coverage**: 79.4% (target: 40%)
 - Missing test areas: Rate limit threshold testing
 - Missing benchmarks: None (4 benchmarks present: NewChatSystem, SendMessage, GenerateMessageID, SendMessageWithExistingComponent)
 - Table-driven test compliance: ✅

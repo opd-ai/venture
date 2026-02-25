@@ -10,7 +10,7 @@ The `pkg/visualtest` package provides comprehensive visual regression testing, p
 | Check | Result |
 |---|---|
 | `go vet` | ✅ Pass |
-| `go test -cover` | 83.8% (main), 88.1% (parity) — target: 65% ✅ |
+| `go test -cover` | 83.8% (main), 88.1% (parity) — target: 40% ✅ |
 | `go test -race` | ✅ Pass |
 | WASM vet | ✅ Pass |
 | TODO/FIXME count | 0 |
@@ -46,7 +46,7 @@ None
 | N/A | — | — | — | This is a testing infrastructure package, not a UI component |
 
 ## Test Coverage
-**Coverage**: 83.0% (main), 88.1% (parity) — target: 65% ✅
+**Coverage**: 83.0% (main), 88.1% (parity) — target: 40% ✅
 - Missing test areas: Genre validator benchmarks, edge case for empty profile snapshots
 - Missing benchmarks: `GenreValidator.Validate()`, `ValidateGenreSet()`
 - Table-driven test compliance: ✅ (tests in `memory_test.go` and `benchmark_test.go` use table-driven patterns)

@@ -10,7 +10,7 @@ The webrtc package provides WebRTC-based federation for browser-to-browser serve
 | Check | Result |
 |---|---|
 | `go vet` | ✅ Pass |
-| `go test -cover` | 86.0% (target: 65%) ✅ |
+| `go test -cover` | 86.0% (target: 40%) ✅ |
 | `go test -race` | ✅ Pass |
 | WASM vet | ✅ Pass |
 | TODO/FIXME count | 0 |
@@ -46,7 +46,7 @@ None
 | N/A | N/A | N/A | N/A | Network package does not provide UI components |
 
 ## Test Coverage
-**Coverage**: 86.0% (target: 65%) ✅
+**Coverage**: 86.0% (target: 40%) ✅
 - Missing test areas: None significant; edge cases in manager health check loop timing
 - Missing benchmarks: None; comprehensive benchmarks provided for all hot paths
 - Table-driven test compliance: ✅ Extensively used throughout

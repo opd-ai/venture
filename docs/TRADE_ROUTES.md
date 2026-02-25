@@ -737,7 +737,7 @@ Run the trade routes test suite:
 go test -v ./pkg/integration/trade_routes/
 ```
 
-**Coverage:** ≥65% (as of 2026-02-07)
+**Coverage:** ≥40% (as of 2026-02-07)
 
 ### Integration Testing
 

@@ -11,7 +11,7 @@ The `pkg/narrative/branching` package implements procedural branching narrative 
 | Check | Result |
 |---|---|
 | `go vet` | ✅ Pass |
-| `go test -cover` | 88.3% (target: 65%) ✅ |
+| `go test -cover` | 88.3% (target: 40%) ✅ |
 | `go test -race` | ✅ Pass |
 | WASM vet | ✅ Pass |
 | TODO/FIXME count | 0 |
@@ -47,7 +47,7 @@ None found.
 | Story Choice UI | ✅ | ✅ | ✅ | `pkg/engine/story_choice_ui.go` provides UI for branching choices |
 
 ## Test Coverage
-**Coverage**: 88.3% (target: 65%) ✅
+**Coverage**: 88.3% (target: 40%) ✅
 - Missing test areas: None significant
 - Missing benchmarks: None - benchmarks exist for Generate, Validate, StartArc, GetCurrentNode, GetAlignment
 - Table-driven test compliance: ✅ Excellent - all tests use table-driven patterns

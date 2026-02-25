@@ -14,7 +14,7 @@ The `pkg/rendering/sprites` package provides procedural sprite generation for ga
 | Check | Result |
 |---|---|
 | `go vet` | ✅ Pass |
-| `go test -cover` | 82.4% (target: 65%) ✅ |
+| `go test -cover` | 82.4% (target: 30%) ✅ |
 | `go test -race` | ✅ Pass |
 | WASM vet | ✅ Pass |
 | TODO/FIXME count | 0 |
@@ -48,7 +48,7 @@ The `pkg/rendering/sprites` package provides procedural sprite generation for ga
 | N/A | N/A | N/A | N/A | Pure rendering utility, not a UI system |
 
 ## Test Coverage
-**Coverage**: 82.4% (target: 65%) ✅
+**Coverage**: 82.4% (target: 30%) ✅
 - Missing test areas: None critical; 17.6% uncovered is primarily error paths and edge cases
 - Missing benchmarks: None - benchmarks present for cache, hash, and generation
 - Table-driven test compliance: ✅ Used throughout `_test.go` files
@@ -130,7 +130,7 @@ The sprites package is integrated as a utility library for procedural rendering:
 - **PASS**: `go test -race` passes with no data races
 
 ### Test Coverage ✅
-- **PASS**: 82.4% coverage exceeds 65% target
+- **PASS**: 82.4% coverage exceeds 30% target
 - **PASS**: Table-driven tests used throughout (see `*_test.go` files)
 - **PASS**: Benchmarks present: `cache_bench_test.go`, `cache_hash_bench_test.go`
 - **PASS**: 80+ test files covering all major functionality

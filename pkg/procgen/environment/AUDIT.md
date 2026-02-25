@@ -10,7 +10,7 @@ The `environment` package provides procedural generation of environmental object
 | Check | Result |
 |---|---|
 | `go vet` | ✅ Pass |
-| `go test -cover` | 95.5% (target: 65%) |
+| `go test -cover` | 95.5% (target: 40%) |
 | `go test -race` | ✅ Pass |
 | WASM vet | ✅ Pass |
 | TODO/FIXME count | 0 |
@@ -46,7 +46,7 @@ None identified.
 | N/A | N/A | N/A | N/A | Package generates content, not UI screens |
 
 ## Test Coverage
-**Coverage**: 95.3% (target: 65%)
+**Coverage**: 95.3% (target: 40%)
 - Missing test areas: None significant - excellent coverage
 - Missing benchmarks: None - comprehensive benchmarks present for all major operations
 - Table-driven test compliance: ✅ Exemplary use of table-driven tests throughout

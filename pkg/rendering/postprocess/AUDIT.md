@@ -10,7 +10,7 @@ The `postprocess` package provides GPU-accelerated screen-space post-processing 
 | Check | Result |
 |---|---|
 | `go vet` | ✅ Pass |
-| `go test -cover` | 83.5% (target: 65%) |
+| `go test -cover` | 83.5% (target: 30%) |
 | `go test -race` | ✅ Pass |
 | WASM vet | ✅ Pass |
 | TODO/FIXME count | 0 |
@@ -48,7 +48,7 @@ None
 Post-processing is wired to the engine via `PostProcessorAdapter` in `pkg/engine/post_processor.go`, which is integrated in `cmd/client/main.go` via `configurePostProcessing()`. Genre presets are applied automatically based on game genre.
 
 ## Test Coverage
-**Coverage**: 83.5% (target: 65%)
+**Coverage**: 83.5% (target: 30%)
 - Missing test areas: 
   - `ApplyPrismaticAberration` edge cases
   - `ApplyDepthBlur` with varied depth maps

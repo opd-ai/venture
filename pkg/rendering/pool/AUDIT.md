@@ -10,7 +10,7 @@ The `pool` package provides sync.Pool-based image pooling for Ebiten rendering r
 | Check | Result |
 |---|---|
 | `go vet` | ✅ Pass |
-| `go test -cover` | 96.4% (target: 65%) |
+| `go test -cover` | 96.4% (target: 30%) |
 | `go test -race` | ✅ Pass |
 | WASM vet | ✅ Pass |
 | TODO/FIXME count | 0 |
@@ -48,7 +48,7 @@ None
 The pool is wired to the engine via `ImagePoolAdapter` in `pkg/engine/rendering_optimization_adapters.go`, implementing the `ImagePoolProvider` interface defined in `pkg/engine/interfaces.go:590-594`. This adapter is used by `RenderSystem` for efficient image allocation.
 
 ## Test Coverage
-**Coverage**: 96.4% (target: 65%)
+**Coverage**: 96.4% (target: 30%)
 - Missing test areas:
   - Edge case: negative width/height beyond the 0 check (currently defaults to 1)
   - Stress test with very large pools (memory pressure scenarios)

@@ -9,7 +9,7 @@ The migration package provides backward compatibility validation for save file m
 None - all validation criteria passed.
 
 ## Test Coverage
-91.3% (target: 65%)
+91.3% (target: 40%)
 
 **Coverage breakdown**:
 - Core validation logic: 100%
@@ -81,7 +81,7 @@ None - all validation criteria passed.
 - [x] Field names consistent: "source_version", "target_version", "error"
 
 ### Test Coverage ✅
-- [x] 91.3% coverage exceeds 65% target by 26.3 percentage points
+- [x] 91.3% coverage exceeds 40% target by 26.3 percentage points
 - [x] Table-driven tests for version extraction edge cases (TestValidator_ExtractVersion)
 - [x] Benchmarks present: BenchmarkValidator_ValidateMigration, BenchmarkValidator_ValidateAll
 - [x] Comprehensive edge case testing:

@@ -10,13 +10,13 @@ Status criteria:
 -->
 
 ## Summary
-The terrain package provides comprehensive procedural terrain and dungeon generation with 8+ generator types (BSP, Cellular, Maze, Forest, City, Composite, Grammar, Multi-level). Package demonstrates excellent code quality with 94.0% test coverage (far exceeding 65% target), proper deterministic seed usage throughout, and zero critical issues. All generators follow the Generator interface pattern and properly use seed-based randomness.
+The terrain package provides comprehensive procedural terrain and dungeon generation with 8+ generator types (BSP, Cellular, Maze, Forest, City, Composite, Grammar, Multi-level). Package demonstrates excellent code quality with 94.0% test coverage (far exceeding 40% target), proper deterministic seed usage throughout, and zero critical issues. All generators follow the Generator interface pattern and properly use seed-based randomness.
 
 ## Automated Check Results
 | Check | Result |
 |---|---|
 | `go vet` | ✅ Pass |
-| `go test -cover` | 94.0% (target: 65%) ✅ |
+| `go test -cover` | 94.0% (target: 40%) ✅ |
 | `go test -race` | ✅ Pass |
 | WASM vet | ✅ Pass |
 | TODO/FIXME count | 0 |
@@ -51,7 +51,7 @@ None found.
 | N/A | N/A | N/A | N/A | Package is pure terrain generation, no UI components |
 
 ## Test Coverage
-**Coverage**: 94.0% (target: 65%) ✅ FAR EXCEEDS TARGET
+**Coverage**: 94.0% (target: 40%) ✅ FAR EXCEEDS TARGET
 
 - Missing test areas: None significant (all generators have comprehensive tests)
 - Missing benchmarks: `terrain_bench_test.go` exists with performance benchmarks
@@ -195,7 +195,7 @@ Package includes benchmarks in `terrain_bench_test.go`. Performance targets from
 
 ## Conclusion
 The `pkg/procgen/terrain` package is **production-ready** with:
-- ✅ 94.0% test coverage (far exceeds 65% target)
+- ✅ 94.0% test coverage (far exceeds 40% target)
 - ✅ Zero critical or high-severity issues
 - ✅ Full client, server, and mobile integration
 - ✅ All generators follow deterministic seed pattern

@@ -51,7 +51,7 @@
 // Generation performance (Phase 21.3 complete):
 //   - Generation time: ~0.019ms per vehicle (<5ms budget, 265x faster)
 //   - Memory usage: ~16KB per vehicle (<1MB budget, 62x better)
-//   - Test coverage: 84.2% (>65% requirement)
+//   - Test coverage: 84.2% (>40% requirement)
 //
 // Phase 21.1: Vehicle Foundation
 // Phase 21.2: Advanced Vehicle Features

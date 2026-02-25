@@ -10,7 +10,7 @@ The `narrative_world` package implements companion-driven story event management
 | Check | Result |
 |---|---|
 | `go vet` | ✅ Pass |
-| `go test -cover` | 90.7% (target: 65%) |
+| `go test -cover` | 90.7% (target: 40%) |
 | `go test -race` | ✅ Pass |
 | WASM vet | ✅ Pass |
 | TODO/FIXME count | 0 |
@@ -46,7 +46,7 @@ None identified.
 | Dialogue | N/A | N/A | ✅ | `GetDialogueContext()` provides memory-based context for dialogue system |
 
 ## Test Coverage
-**Coverage**: 90.7% (target: 65%)
+**Coverage**: 90.7% (target: 40%)
 - Missing test areas: None significant; edge cases for pruning algorithm fully covered
 - Missing benchmarks: None; `BenchmarkGeneratePersonalQuest`, `BenchmarkRecordMemory`, `BenchmarkCheckConflict`, `BenchmarkGetDialogueContext`, `BenchmarkSerialize`, `BenchmarkDeserialize` all present
 - Table-driven test compliance: ✅ Extensive use of table-driven tests in `manager_test.go`, `types_test.go`

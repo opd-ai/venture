@@ -10,7 +10,7 @@ Package provides housing-crafting integration for player-owned crafting stations
 | Check | Result |
 |---|---|
 | `go vet` | ✅ Pass |
-| `go test -cover` | 96.9% (target: 65%) |
+| `go test -cover` | 96.9% (target: 40%) |
 | `go test -race` | ✅ Pass |
 | WASM vet | ✅ Pass |
 | TODO/FIXME count | 0 |
@@ -46,7 +46,7 @@ None identified.
 | Housing UI | ✅ | ✅ | ✅ | `StationManager` initialized in `initializeV9Systems()` on both client and server |
 
 ## Test Coverage
-**Coverage**: 98.5% (target: 65%)
+**Coverage**: 98.5% (target: 40%)
 - Missing test areas: None significant
 - Missing benchmarks: None (4 benchmarks in station_manager_test.go, 3 in types_test.go, 4 in housing_crafting_system_test.go)
 - Table-driven test compliance: ✅ All tests use table-driven patterns

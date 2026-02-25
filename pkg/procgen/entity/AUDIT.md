@@ -11,7 +11,7 @@ The `pkg/procgen/entity` package provides procedural generation for game entitie
 | Check | Result |
 |---|---|
 | `go vet` | ✅ Pass |
-| `go test -cover` | 92.4% (target: 65%) |
+| `go test -cover` | 92.4% (target: 40%) |
 | `go test -race` | ✅ Pass |
 | WASM vet | ✅ Pass |
 | TODO/FIXME count | 0 |
@@ -46,7 +46,7 @@ _None identified_
 | N/A | N/A | N/A | N/A | Package generates entity data, not UI. Engine systems consume generated entities. |
 
 ## Test Coverage
-**Coverage**: 92.4% (target: 65%)
+**Coverage**: 92.4% (target: 40%)
 - Missing test areas: None significant
 - Missing benchmarks: ✅ BenchmarkEntityGeneration, BenchmarkGenerateMerchant, BenchmarkGenerateMerchantSpawnPoints all present
 - Table-driven test compliance: ✅ Tests use table-driven patterns (see entity_test.go, merchant_test.go)

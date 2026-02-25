@@ -16,7 +16,7 @@ The `pkg/world/economy` package implements cross-server federated marketplace an
 | Check | Result |
 |---|---|
 | `go vet` | ✅ Pass |
-| `go test -cover` | 88.4% (target: 65%) ✅ |
+| `go test -cover` | 88.4% (target: 40%) ✅ |
 | `go test -race` | ✅ Pass |
 | WASM vet | ✅ Pass |
 | TODO/FIXME count | 0 |
@@ -57,7 +57,7 @@ The economy package provides backend systems consumed by:
 - `cmd/client/init_versions.go` - Client references economy through engine
 
 ## Test Coverage
-**Coverage**: 88.4% (target: 65%) ✅
+**Coverage**: 88.4% (target: 40%) ✅
 - Missing test areas: None significant
 - Missing benchmarks: None - comprehensive benchmarks exist for all hot paths
 - Table-driven test compliance: ✅ All test files use table-driven patterns

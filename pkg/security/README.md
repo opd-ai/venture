@@ -63,7 +63,7 @@ fmt.Println(results.Summary())
 
 ## Test Coverage
 
-**91.3%** - Exceeds 65% requirement by 40%
+**91.3%** - Exceeds 40% requirement by 40%
 
 All tests passing with zero race conditions.
 

@@ -16,7 +16,7 @@ The guild_housing package provides a well-structured integration layer between V
 | Check | Result |
 |---|---|
 | `go vet` | ✅ Pass |
-| `go test -cover` | 93.2% (target: 65%) ✅ |
+| `go test -cover` | 93.2% (target: 40%) ✅ |
 | `go test -race` | ✅ Pass |
 | WASM vet | ✅ Pass |
 | TODO/FIXME count | 0 |
@@ -51,7 +51,7 @@ The guild_housing package provides a well-structured integration layer between V
 | Guild UI | N/A | N/A | ✅ | This package provides backend data; Guild UI in `pkg/engine/guild_ui.go` consumes Manager |
 
 ## Test Coverage
-**Coverage**: 93.7% (target: 65%) ✅
+**Coverage**: 93.7% (target: 40%) ✅
 - Missing test areas: None significant
 - Missing benchmarks: None (6 benchmarks present: CreateGuildHouse, CheckPermission, DepositItem, WithdrawItem, GetUpgradeBonus, AddMemberToHall)
 - Table-driven test compliance: ✅ Comprehensive table-driven tests throughout

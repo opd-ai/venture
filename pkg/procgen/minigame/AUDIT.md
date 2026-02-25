@@ -10,7 +10,7 @@ The minigame package provides procedural generation for 7 embedded mini-game typ
 | Check | Result |
 |---|---|
 | `go vet` | ✅ Pass |
-| `go test -cover` | 90.8% (minigame), 97.5% (games) — target: 65% |
+| `go test -cover` | 90.8% (minigame), 97.5% (games) — target: 40% |
 | `go test -race` | ✅ Pass |
 | WASM vet | ✅ Pass |
 | TODO/FIXME count | 0 |
@@ -45,7 +45,7 @@ The minigame package provides procedural generation for 7 embedded mini-game typ
 | Mini-Game UI | ✅ | ✅ | ✅ | Minigames integrate with `MiniGameSystem` (engine) which handles lifecycle; games emit `RenderOutput` for ECS rendering |
 
 ## Test Coverage
-**Coverage**: 90.8% (minigame), 97.5% (games) — exceeds 65% target
+**Coverage**: 90.8% (minigame), 97.5% (games) — exceeds 40% target
 - Missing test areas: None significant; all 7 game types tested
 - Missing benchmarks: ✅ Benchmarks present (`BenchmarkGenerate`, `BenchmarkValidate`, `BenchmarkGenerateAndCreateGame`)
 - Table-driven test compliance: ✅ All tests use table-driven patterns

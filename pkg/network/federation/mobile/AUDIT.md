@@ -10,7 +10,7 @@ Mobile federation package provides battery-aware federation sync for mobile devi
 | Check | Result |
 |---|---|
 | `go vet` | ✅ Pass |
-| `go test -cover` | 82.0% (target: 65%) |
+| `go test -cover` | 82.0% (target: 40%) |
 | `go test -race` | ✅ Pass |
 | WASM vet | ✅ Pass |
 | TODO/FIXME count | 0 |
@@ -45,7 +45,7 @@ None
 | N/A | N/A | N/A | N/A | Package is backend infrastructure, no UI |
 
 ## Test Coverage
-**Coverage**: 82.0% (target: 65%)
+**Coverage**: 82.0% (target: 40%)
 - Missing test areas: `executeSyncWithBandwidthLimit` full token bucket flow
 - Missing benchmarks: None (benchmarks present for all hot paths)
 - Table-driven test compliance: ✅

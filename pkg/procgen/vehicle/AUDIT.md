@@ -11,7 +11,7 @@ The `pkg/procgen/vehicle` package provides deterministic procedural vehicle gene
 | Check | Result |
 |---|---|
 | `go vet` | ✅ Pass |
-| `go test -cover` | 91.4% (target: 65%) |
+| `go test -cover` | 91.4% (target: 40%) |
 | `go test -race` | ✅ Pass |
 | WASM vet | ✅ Pass |
 | TODO/FIXME count | 0 |
@@ -46,7 +46,7 @@ None
 | N/A | N/A | N/A | N/A | This is a generation package, not a UI system |
 
 ## Test Coverage
-**Coverage**: 91.4% (target: 65%)
+**Coverage**: 91.4% (target: 40%)
 - Missing test areas: None significant
 - Missing benchmarks: None - `BenchmarkVehicleGenerator_Generate` and `BenchmarkVehicle_ToComponent` present
 - Table-driven test compliance: ✅ Tests use table-driven patterns

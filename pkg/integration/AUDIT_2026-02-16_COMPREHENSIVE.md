@@ -16,7 +16,7 @@ The integration package coordinates cross-system features across 10 sub-packages
 - [x] <severity:low> doc coverage — Root `doc.go` describes integration *tests* only but package contains production integration systems (8 sub-packages with Manager/System implementations) — misleading scope statement (`doc.go:1-12`) — **FIXED**: Rewrote doc.go to describe all 9 production sub-packages, registration patterns, determinism approach, and testing requirements.
 
 ## Test Coverage
-**Average**: 92.0% across testable packages (target: 65%) ✅
+**Average**: 92.0% across testable packages (target: 40%) ✅
 
 **Per-Package Coverage** (xvfb-run required for all):
 - `choice_consequences`: 87.1% — Excellent table-driven tests, TimeProvider-based determinism

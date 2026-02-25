@@ -10,7 +10,7 @@ The logging package provides centralized structured logging configuration and co
 | Check | Result |
 |---|---|
 | `go vet` | ✅ Pass |
-| `go test -cover` | 100.0% (target: 65%) |
+| `go test -cover` | 100.0% (target: 40%) |
 | `go test -race` | ✅ Pass |
 | WASM vet | ✅ Pass |
 | TODO/FIXME count | 0 |
@@ -44,7 +44,7 @@ _None identified._
 | N/A | N/A | N/A | N/A | Package is a support utility; no UI components |
 
 ## Test Coverage
-**Coverage**: 100.0% (target: 65%)
+**Coverage**: 100.0% (target: 40%)
 - Missing test areas: None - all code paths covered
 - Missing benchmarks: No hot-path code requiring benchmarks (logger creation is infrequent)
 - Table-driven test compliance: ✅ All tests use table-driven patterns

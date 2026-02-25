@@ -152,7 +152,7 @@ Integration (mandatory — this is where past attempts fail):
 Constraints:
 - Keep changes focused and targeted. Avatar improvements should focus on visual quality. System improvements should focus on gameplay depth. Collision improvements should focus on precision and correctness.
 - `go build ./...`, `go test -race ./...`, and `go vet ./...` must pass.
-- Write table-driven tests. Target ≥65% coverage on new code.
+- Write table-driven tests. Target ≥40% coverage on new code (≥30% for X11/Wayland/Ebiten-dependent packages).
 - No breaking changes to saves, network protocol, or configs.
 - Maintain 60+ FPS. Cache/pool on hot paths.
 

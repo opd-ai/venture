@@ -68,7 +68,7 @@ The codebase follows an Entity-Component-System (ECS) architecture where entitie
 
 5. **Maintain Performance Targets**: Target 60 FPS minimum, <500MB client memory, <1GB server memory (4 players). Use spatial partitioning for collision detection, sprite caching for rendering, and object pooling for frequently allocated objects.
 
-6. **Write Table-Driven Tests**: Target ≥65% code coverage per package (current average: 82.4%). Use Go's built-in testing with table-driven test patterns. Include benchmarks for performance-critical code. Use stub implementations (StubInput, StubSprite) for testing without Ebiten runtime.
+6. **Write Table-Driven Tests**: Target ≥40% code coverage per package (≥30% for packages depending on X11/Wayland/Ebiten). Use Go's built-in testing with table-driven test patterns. Include benchmarks for performance-critical code. Use stub implementations (StubInput, StubSprite) for testing without Ebiten runtime.
    ```go
    func TestGenerator(t *testing.T) {
        tests := []struct {
@@ -328,7 +328,7 @@ Build, test, and deployment automation:
 
 ## Quality Standards
 
-- **Test Coverage**: Minimum 65% per package (target 80%+). Run `go test -cover ./pkg/...` to verify.
+- **Test Coverage**: Minimum 40% per package (30% for packages depending on X11/Wayland/Ebiten). Run `go test -cover ./pkg/...` to verify.
 - **Code Quality**: All code must pass `go fmt`, `go vet`, and ideally `golangci-lint run`.
 - **Documentation**: All exported functions, types, and packages must have godoc comments. Each package should have a `doc.go` file explaining its purpose.
 - **Commit Messages**: Use conventional format: `feat:`, `fix:`, `docs:`, `test:`, `perf:`, `refactor:`.

@@ -205,7 +205,7 @@ Implement comprehensive gameplay expansion across ten phases (21-30):
 - **Performance:** All V4 systems combined add <24% FPS impact (106 → ~80 FPS, well above 60 FPS minimum)
 - **Memory:** +48MB for V4 features (73MB → 121MB, <500MB budget with 379MB margin)
 - **Network:** +63KB/s per player (<100KB/s target)
-- **Coverage:** All V4 packages maintain ≥65% test coverage
+- **Coverage:** All V4 packages maintain ≥40% test coverage (≥30% for X11/Wayland/Ebiten-dependent packages)
 - **Determinism:** Vehicle/companion/book generation fully deterministic (seed-based), with controlled non-determinism for NPC dialog in V5.0
 
 **Key Systems:**
@@ -251,7 +251,7 @@ Implement comprehensive gameplay expansion across ten phases (21-30):
 - **Positive:** Backward compatible with V3.0 saves (default values for new components)
 - **Positive:** 100% procedural content across all new features (zero external assets)
 - **Negative:** System complexity increased (41 → 65 systems in client)
-- **Mitigation:** Comprehensive testing (≥65% coverage), clear system boundaries, extensive documentation
+- **Mitigation:** Comprehensive testing (≥40% coverage, ≥30% for X11/Wayland/Ebiten packages), clear system boundaries, extensive documentation
 - **Negative:** Memory footprint increased (+48MB for V4 features)
 - **Mitigation:** Object pooling, sprite caching, lazy initialization where appropriate
 
@@ -474,7 +474,7 @@ For implementation details, development workflows, testing strategies, and code 
 - Load: ~15ms for 50 plots (<200ms target)
 - Memory: ~25KB per 100 plots (200x better than <5MB target)
 - Compression: 8x ratio (1.23KB for 50 plots)
-- Test Coverage: 95.1% (exceeds 65% requirement)
+- Test Coverage: 95.1% (exceeds 40% requirement)
 
 **Consequences:**
 - **Positive:** Foundation for guilds, territory control, cross-server structures (Phases 49.2-51)

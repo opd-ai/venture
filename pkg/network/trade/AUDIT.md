@@ -4,13 +4,13 @@
 **Status**: Complete
 
 ## Summary
-The `pkg/network/trade` package implements player-to-player item trading with two-phase commit protocol, proximity validation, trust mechanics, and atomic rollback. The package is well-designed with proper validation, rate limiting, and trust score mechanics. Coverage is 79.2% (above 65% target). All `time.Now()` calls replaced with injectable `TimeProvider` for deterministic testing.
+The `pkg/network/trade` package implements player-to-player item trading with two-phase commit protocol, proximity validation, trust mechanics, and atomic rollback. The package is well-designed with proper validation, rate limiting, and trust score mechanics. Coverage is 79.2% (above 40% target). All `time.Now()` calls replaced with injectable `TimeProvider` for deterministic testing.
 
 ## Automated Check Results
 | Check | Result |
 |---|---|
 | `go vet` | ✅ Pass |
-| `go test -cover` | 79.2% (target: 65%) |
+| `go test -cover` | 79.2% (target: 40%) |
 | `go test -race` | ✅ Pass |
 | WASM vet | ✅ Pass |
 | TODO/FIXME count | 0 |
@@ -45,7 +45,7 @@ The `pkg/network/trade` package implements player-to-player item trading with tw
 | Trade UI | ✅ | ✅ | ✅ | `pkg/engine/trade_ui.go` uses `engine.TradeSystem`; `pkg/network/trade.TradeSystem` registered via wrapper in `cmd/client/handlers.go:2125` |
 
 ## Test Coverage
-**Coverage**: 79.2% (target: 65%)
+**Coverage**: 79.2% (target: 40%)
 - Missing test areas: 
   - ~~Trade timeout during Update() loop~~ **RESOLVED 2026-02-22**: Added `TestTimeProvider_TimeoutDeterminism`
   - Proximity validation failure during active trade

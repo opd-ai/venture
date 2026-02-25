@@ -10,7 +10,7 @@ The `pkg/procgen/story` package provides procedural generation of environmental 
 | Check | Result |
 |---|---|
 | `go vet` | ✅ Pass |
-| `go test -cover` | 88.7% (target: 65%) |
+| `go test -cover` | 88.7% (target: 40%) |
 | `go test -race` | ✅ Pass |
 | WASM vet | ✅ Pass |
 | TODO/FIXME count | 0 |
@@ -45,7 +45,7 @@ None
 | Story Journal UI | ✅ | ✅ | ✅ | Wired via `pkg/rendering/ui/story_journal.go` |
 
 ## Test Coverage
-**Coverage**: 88.7% (target: 65%)
+**Coverage**: 88.7% (target: 40%)
 - Missing test areas: None significant
 - Missing benchmarks: All generators have benchmarks
 - Table-driven test compliance: ✅ All test files use table-driven patterns

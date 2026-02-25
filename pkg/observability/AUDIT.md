@@ -16,7 +16,7 @@ The `pkg/observability` package provides Prometheus-compatible metrics export, h
 | Check | Result |
 |---|---|
 | `go vet` | ✅ Pass |
-| `go test -cover` | 97.3% (target: 65%) ✅ |
+| `go test -cover` | 97.3% (target: 40%) ✅ |
 | `go test -race` | ✅ Pass |
 | WASM vet | ✅ Pass |
 | TODO/FIXME count | 0 |
@@ -52,7 +52,7 @@ _(none)_
 | N/A | N/A | N/A | N/A | Package is server-side infrastructure, no UI components |
 
 ## Test Coverage
-**Coverage**: 97.3% (target: 65%) ✅
+**Coverage**: 97.3% (target: 40%) ✅
 - Missing test areas: None significant; all endpoints and edge cases covered
 - Missing benchmarks: No benchmarks for concurrent access patterns
 - Table-driven test compliance: ✅ Uses table-driven tests in `TestMetricsEndpoint` and `TestStatusEndpoint`

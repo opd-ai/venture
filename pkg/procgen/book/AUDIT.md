@@ -14,7 +14,7 @@ The `pkg/procgen/book` package implements grammar-based procedural generation of
 | Check | Result |
 |---|---|
 | `go vet` | ✅ Pass |
-| `go test -cover` | 99.5% (target: 65%) |
+| `go test -cover` | 99.5% (target: 40%) |
 | `go test -race` | ✅ Pass |
 | WASM vet | ✅ Pass |
 | TODO/FIXME count | 0 |
@@ -50,7 +50,7 @@ None identified.
 | N/A | N/A | N/A | N/A | Package is pure procedural generation; UI integration handled by `pkg/engine/book_reading_system.go` |
 
 ## Test Coverage
-**Coverage**: 99.5% (target: 65%)
+**Coverage**: 99.5% (target: 40%)
 - Missing test areas: None significant - coverage is excellent
 - Missing benchmarks: None - benchmarks exist for all book types (`BenchmarkGenerateSkillBook`, `BenchmarkGenerateLoreBook`, `BenchmarkGenerateQuestBook`, `BenchmarkGenerateRecipeBook`, `BenchmarkGenerateHistoryBook`)
 - Table-driven test compliance: ✅ Extensively uses table-driven tests throughout

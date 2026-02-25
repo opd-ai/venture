@@ -24,7 +24,7 @@ Package has comprehensive test suite with 66 test files:
 
 **Note**: Tests cannot execute in current headless environment due to Ebiten GUI initialization requirement. Previous audit confirmed 82.6% coverage.
 
-Target: 65% — **EXCEEDS** (82.6% documented)
+Target: 40% — **EXCEEDS** (82.6% documented)
 
 ## Integration Status
 
@@ -63,7 +63,7 @@ Target: 65% — **EXCEEDS** (82.6% documented)
 - ✅ Design decisions documented inline (lock ordering, hot-path optimization, race condition handling)
 
 ## Recommendations
-1. Continue maintaining high test coverage (current 82.6% exceeds 65% target)
+1. Continue maintaining high test coverage (current 82.6% exceeds 40% target)
 2. Consider adding test execution guide for headless CI environments (document workarounds for Ebiten initialization)
 3. Monitor buffer stats in production to validate buffer sizing for high-latency scenarios (current monitoring infrastructure is excellent)
 

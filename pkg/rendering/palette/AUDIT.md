@@ -10,7 +10,7 @@ The `palette` package provides procedural color palette generation with genre th
 | Check | Result |
 |---|---|
 | `go vet` | ✅ Pass |
-| `go test -cover` | 97.0% (target: 65%) |
+| `go test -cover` | 97.0% (target: 30%) |
 | `go test -race` | ✅ Pass |
 | WASM vet | ✅ Pass |
 | TODO/FIXME count | 0 |
@@ -45,7 +45,7 @@ None identified.
 | N/A | N/A | N/A | N/A | Package generates content, not UI screens |
 
 ## Test Coverage
-**Coverage**: 97.0% (target: 65%)
+**Coverage**: 97.0% (target: 30%)
 - Missing test areas: None significant - excellent coverage
 - Missing benchmarks: None - comprehensive benchmarks present for all major operations (13 benchmarks total)
 - Table-driven test compliance: ✅ Exemplary use of table-driven tests throughout

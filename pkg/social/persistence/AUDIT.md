@@ -10,7 +10,7 @@ The `pkg/social/persistence` package provides persistent social data structures 
 | Check | Result |
 |---|---|
 | `go vet` | ✅ Pass |
-| `go test -cover` | 92.5% (target: 65%) |
+| `go test -cover` | 92.5% (target: 40%) |
 | `go test -race` | ✅ Pass |
 | WASM vet | ✅ Pass |
 | TODO/FIXME count | 0 |
@@ -46,7 +46,7 @@ None.
 | Gallery | ✅ | ✅ | ✅ | ImageGallery wired via GalleryUI (`pkg/engine/gallery_ui.go`) |
 
 ## Test Coverage
-**Coverage**: 92.5% (target: 65%)
+**Coverage**: 92.5% (target: 40%)
 - Missing test areas: None significant
 - Missing benchmarks: All major operations have benchmarks
 - Table-driven test compliance: ✅ Excellent use of table-driven tests throughout

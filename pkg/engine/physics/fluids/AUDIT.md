@@ -10,7 +10,7 @@ The fluids package provides a well-implemented, grid-based fluid dynamics simula
 | Check | Result |
 |---|---|
 | `go vet` | ✅ Pass |
-| `go test -cover` | 95.2% (target: 65%) |
+| `go test -cover` | 95.2% (target: 30%) |
 | `go test -race` | ✅ Pass |
 | WASM vet | ✅ Pass |
 | TODO/FIXME count | 0 |
@@ -45,7 +45,7 @@ None.
 | N/A | N/A | N/A | N/A | Package is physics-only, no UI components |
 
 ## Test Coverage
-**Coverage**: 95.2% (target: 65%)
+**Coverage**: 95.2% (target: 30%)
 - Missing test areas: None significant; excellent coverage
 - Missing benchmarks: All key operations have benchmarks (Serialize, Deserialize, Update, GetFluidProperties, CalculateBuoyancy, UpdateSwimming, GetNetForce)
 - Table-driven test compliance: ✅ Tests use table-driven patterns extensively

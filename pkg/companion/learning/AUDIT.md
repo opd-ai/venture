@@ -10,7 +10,7 @@ The companion learning package implements AI skill progression, personality evol
 | Check | Result |
 |---|---|
 | `go vet` | ✅ Pass |
-| `go test -cover` | 92.4% (target: 65%) |
+| `go test -cover` | 92.4% (target: 40%) |
 | `go test -race` | ✅ Pass |
 | WASM vet | ✅ Pass |
 | TODO/FIXME count | 0 |
@@ -45,7 +45,7 @@ None.
 | N/A | N/A | N/A | N/A | Package is backend AI system; UI handled by `pkg/engine/companion_learning_system.go` wrapper |
 
 ## Test Coverage
-**Coverage**: 92.4% (target: 65%)
+**Coverage**: 92.4% (target: 40%)
 - Missing test areas: None significant; edge cases well covered
 - Missing benchmarks: None; comprehensive benchmarks for `AddExperience`, `AdjustTrait`, `AddEvent`, `ProcessCombatAction`, `SystemUpdate`, `GetSkillBonus`, `CalculateLearningProgress`, `ShouldLearnNewSkill`
 - Table-driven test compliance: ✅ Excellent use of table-driven tests in `types_test.go` and `system_test.go`

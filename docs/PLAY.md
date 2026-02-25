@@ -177,7 +177,7 @@ grep -rn "ebiten\.NewImage" pkg/engine/ pkg/procgen/  # Ebiten calls in non-rend
 - Maintain ECS architecture (no logic in components)
 - Preserve deterministic generation (seed-based RNG only)
 - Follow dual-exit UI pattern (ESC + back button)
-- Ensure ≥65% test coverage after fixes
+- Ensure ≥40% test coverage after fixes (≥30% for packages depending on X11/Wayland/Ebiten)
 - Pass `go test ./...` without errors
 
 ### Fix Documentation

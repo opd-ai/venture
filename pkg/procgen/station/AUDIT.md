@@ -10,7 +10,7 @@ The station package provides procedural generation of crafting stations (alchemy
 | Check | Result |
 |---|---|
 | `go vet` | ✅ Pass |
-| `go test -cover` | 89.0% (target: 65%) |
+| `go test -cover` | 89.0% (target: 40%) |
 | `go test -race` | ✅ Pass |
 | WASM vet | ✅ Pass |
 | TODO/FIXME count | 0 |
@@ -45,7 +45,7 @@ None.
 | N/A | N/A | N/A | N/A | Generator package - no UI components |
 
 ## Test Coverage
-**Coverage**: 89.0% (target: 65%)
+**Coverage**: 89.0% (target: 40%)
 - Missing test areas: None significant - all public API tested
 - Missing benchmarks: None - BenchmarkGenerate and BenchmarkValidate present
 - Table-driven test compliance: ✅ All tests use table-driven pattern
@@ -169,7 +169,7 @@ grep -rn "rand\.Intn\|rand\.Float" ./pkg/procgen/station/*.go | grep -v "rng\.\|
 | Deterministic procgen | ✅ PASS | Seed-based RNG only |
 | Network interfaces | ✅ PASS | No network code |
 | Error handling | ✅ PASS | Comprehensive validation errors |
-| Test coverage ≥65% | ✅ PASS | 89.0% coverage |
+| Test coverage ≥40% | ✅ PASS | 89.0% coverage |
 | Documentation | ✅ GOOD | Complete but needs minor updates |
 | Integration | ✅ COMPLETE | Used by engine and client |
 | go vet clean | ✅ PASS | No issues |

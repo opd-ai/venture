@@ -14,7 +14,7 @@ The stability package provides production-ready long-running uptime monitoring w
 | Check | Result |
 |---|---|
 | `go vet` | ✅ Pass |
-| `go test -cover` | 94.4% (target: 65%) |
+| `go test -cover` | 94.4% (target: 40%) |
 | `go test -race` | ✅ Pass |
 | WASM vet | ✅ Pass |
 | TODO/FIXME count | 0 |
@@ -50,7 +50,7 @@ None.
 | N/A | N/A | N/A | N/A | Package provides backend monitoring only, no UI |
 
 ## Test Coverage
-**Coverage**: 94.4% (target: 65%)
+**Coverage**: 94.4% (target: 40%)
 - Missing test areas: None significant; excellent coverage
 - Missing benchmarks: None - BenchmarkMonitor_HealthCheck and BenchmarkMonitor_GenerateReport included
 - Table-driven test compliance: ✅ Tests follow project patterns

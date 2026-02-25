@@ -10,7 +10,7 @@ The prestige package implements post-max-level progression with paragon points a
 | Check | Result |
 |---|---|
 | `go vet` | ✅ Pass |
-| `go test -cover` | 85.9% (target: 65%) ✅ |
+| `go test -cover` | 85.9% (target: 30%) ✅ |
 | `go test -race` | ✅ Pass |
 | WASM vet | ✅ Pass |
 | TODO/FIXME count | 0 |
@@ -45,7 +45,7 @@ None
 | Prestige/Paragon UI | ✅ | ✅ | ✅ | `PrestigeUI` added 2026-02-23 with keyboard/touch support |
 
 ## Test Coverage
-**Coverage**: 70.4% (target: 65%) ✅
+**Coverage**: 70.4% (target: 30%) ✅
 - Missing test areas: None significant; edge cases well covered
 - Missing benchmarks: None; benchmarks exist for AddPrestigeXP, AllocateParagonPoint, GetStatBonus, CheckAbilityUnlock
 - Table-driven test compliance: ✅ Tests use table-driven patterns appropriately

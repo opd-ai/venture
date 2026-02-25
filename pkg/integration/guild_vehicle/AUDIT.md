@@ -10,7 +10,7 @@ The guild_vehicle package provides thread-safe guild fleet management with forma
 | Check | Result |
 |---|---|
 | `go vet` | ✅ Pass |
-| `go test -cover` | 93.9% (target: 65%) |
+| `go test -cover` | 93.9% (target: 40%) |
 | `go test -race` | ✅ Pass |
 | WASM vet | ✅ Pass |
 | TODO/FIXME count | 0 |
@@ -45,7 +45,7 @@ _None identified._
 | _N/A_ | — | — | — | Package is backend-only; UI integration via `pkg/engine/guild_vehicle_system.go` |
 
 ## Test Coverage
-**Coverage**: 93.9% (target: 65%)
+**Coverage**: 93.9% (target: 40%)
 - Missing test areas: None significant
 - Missing benchmarks: None (6 benchmarks present in fleet_manager_test.go, 5 in types_test.go)
 - Table-driven test compliance: ✅ (used extensively)

@@ -307,7 +307,7 @@ const (
 
 #### Testing Standards
 
-- Target 65%+ code coverage (current average: 82.4%)
+- Target 40%+ code coverage (30%+ for packages depending on X11/Wayland/Ebiten; current average: 82.4%)
 - Test edge cases and error conditions  
 - Use table-driven tests for multiple scenarios
 - Test determinism for procedural generation

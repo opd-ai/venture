@@ -16,7 +16,7 @@ Audio synthesis package provides deterministic waveform generation with oscillat
 - [x] **low** Documentation — DefaultEnvelope() lacks godoc explaining when/why to use defaults vs custom values (`envelope.go:22`) — **FIXED 2026-02-13**: Added detailed godoc explaining use cases for defaults vs custom values
 
 ## Test Coverage
-97.8% (target: 65%) ✅
+97.8% (target: 30%) ✅
 
 ## Integration Status
 **Integration points:**

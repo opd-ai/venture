@@ -10,7 +10,7 @@ The puzzle package provides procedural puzzle generation using CSP (Constraint S
 | Check | Result |
 |---|---|
 | `go vet` | ✅ Pass |
-| `go test -cover` | 94.3% (target: 65%) |
+| `go test -cover` | 94.3% (target: 40%) |
 | `go test -race` | ✅ Pass |
 | WASM vet | ✅ Pass |
 | TODO/FIXME count | 0 |
@@ -48,7 +48,7 @@ None
 This package does not provide UI/menus directly. Puzzle interaction is handled by `pkg/engine/puzzle_system.go` and `pkg/engine/interaction_system.go`.
 
 ## Test Coverage
-**Coverage**: 94.3% (target: 65%)
+**Coverage**: 94.3% (target: 40%)
 - Missing test areas: None significant - all puzzle types covered
 - Missing benchmarks: ✅ Has `BenchmarkGenerate` and `BenchmarkValidate`
 - Table-driven test compliance: ✅ Uses table-driven tests throughout
@@ -166,7 +166,7 @@ grep -rn "rand\.Intn\|rand\.Float" *.go | grep -v "rand\.New"
 | Deterministic procgen | ✅ PASS | All RNG seeded via `rand.New(rand.NewSource(seed))` |
 | Network interfaces | ✅ PASS | No network code |
 | Error handling | ✅ PASS | Comprehensive, no swallowed errors |
-| Test coverage ≥65% | ✅ PASS | 94.3% coverage |
+| Test coverage ≥40% | ✅ PASS | 94.3% coverage |
 | Documentation | ✅ PASS | All exports documented |
 | Integration | ✅ COMPLETE | Used by puzzle_spawner.go |
 | go vet clean | ✅ PASS | No issues |

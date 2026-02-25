@@ -10,7 +10,7 @@ The `pkg/rendering/cache` package provides high-quality LRU caching infrastructu
 | Check | Result |
 |---|---|
 | `go vet` | ✅ Pass |
-| `go test -cover` | 98.2% (target: 65%) ✅ |
+| `go test -cover` | 98.2% (target: 30%) ✅ |
 | `go test -race` | ✅ Pass |
 | WASM vet | ✅ Pass |
 | TODO/FIXME count | 0 |
@@ -44,7 +44,7 @@ None.
 | N/A | N/A | N/A | N/A | Package provides infrastructure only, no UI |
 
 ## Test Coverage
-**Coverage**: 98.2% (target: 65%) ✅
+**Coverage**: 98.2% (target: 30%) ✅
 
 - Missing test areas: None significant - excellent coverage across all files
 - Missing benchmarks: None - comprehensive benchmarks provided for all hot-path operations

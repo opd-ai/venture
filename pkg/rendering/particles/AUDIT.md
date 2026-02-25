@@ -11,7 +11,7 @@ The particles package provides procedural particle effect generation for visual 
 | Check | Result |
 |---|---|
 | `go vet` | ✅ Pass |
-| `go test -cover` | 91.8% (target: 65%) ✅ |
+| `go test -cover` | 91.8% (target: 30%) ✅ |
 | `go test -race` | ✅ Pass |
 | WASM vet | ✅ Pass |
 | TODO/FIXME count | 0 |
@@ -46,7 +46,7 @@ _None identified_
 | N/A | N/A | N/A | N/A | Package provides particle data only; no UI components |
 
 ## Test Coverage
-**Coverage**: 91.8% (target: 65%) ✅
+**Coverage**: 91.8% (target: 30%) ✅
 - Missing test areas: None significant; edge cases for LOD stagger and cache eviction well covered
 - Missing benchmarks: Visitor pattern benchmarks present (`visitor_bench_test.go`)
 - Table-driven test compliance: ✅ All test files use table-driven patterns

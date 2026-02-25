@@ -10,7 +10,7 @@ The `pkg/engine/qol` package provides Quality of Life features including auto-lo
 | Check | Result |
 |---|---|
 | `go vet` | ✅ Pass |
-| `go test -cover` | 94.0% (target: 65%) ✅ |
+| `go test -cover` | 94.0% (target: 30%) ✅ |
 | `go test -race` | ✅ Pass |
 | WASM vet | ✅ Pass |
 | TODO/FIXME count | 0 |
@@ -47,7 +47,7 @@ _None identified._
 | Settings UI | ✅ | ✅ | ✅ | QoL settings (Auto-Loot, Loot Radius, Mount Whistle, Recipe Tracking, Sort Preset) integrated via `GameSettings` and `SettingsUI` in `pkg/engine/settings*.go` (RESOLVED 2026-02-22) |
 
 ## Test Coverage
-**Coverage**: 94.0% (target: 65%)
+**Coverage**: 94.0% (target: 30%)
 - Missing test areas: None significant - all managers comprehensively tested
 - Missing benchmarks: None - 6 benchmark functions present
 - Table-driven test compliance: ✅ Extensive use of table-driven tests throughout

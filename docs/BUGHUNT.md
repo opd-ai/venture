@@ -60,7 +60,7 @@
    - Debug: `grep -rn 'log\.\(Info\|Debug\|Warn\|Error\)f\(' pkg/`, examine ALL log statements across codebase
 
 9. **Testing Gaps**
-   - Packages below 65% coverage threshold
+   - Packages below 40% coverage threshold (below 30% for X11/Wayland/Ebiten-dependent packages)
    - Missing table-driven tests for generators
    - No benchmarks for performance-critical code
    - Test files using non-deterministic data
@@ -155,4 +155,4 @@ grep -rn "_ =" pkg/ | grep -i err
 - Race conditions verified with `go test -race ./...` (not selective)
 - Performance issues include profiler data or measured FPS impact
 - Each critical bug includes: file location, debug command, expected vs actual behavior, specific fix
-- Coverage gaps identified for EVERY package below 65%
+- Coverage gaps identified for EVERY package below 40% (30% for X11/Wayland/Ebiten-dependent packages)

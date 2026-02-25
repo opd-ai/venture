@@ -136,7 +136,7 @@ func (s *LightingSystem) getCachedLightCircle(diameter int, falloff LightFalloff
 
 ### Test Coverage
 
-- Engine package: **65.2%** (meets minimum 65% requirement)
+- Engine package: **65.2%** (meets minimum 40% requirement; engine depends on X11/Wayland/Ebiten, minimum is 30%)
 - All existing tests pass (no regressions)
 - Lighting-specific tests: 100% pass rate
 
@@ -244,4 +244,4 @@ The radial gradient lighting implementation successfully addresses Gap F4 by pro
 **Status:** ✅ COMPLETED  
 **Quality:** Production-ready  
 **Performance:** Optimized (zero regression)  
-**Coverage:** 65.2% (exceeds 65% minimum)
+**Coverage:** 65.2% (exceeds 30% minimum for X11/Wayland/Ebiten-dependent packages)

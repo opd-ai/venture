@@ -11,7 +11,7 @@ The `pkg/vr` package provides VR hardware detection and configuration utilities.
 | Check | Result |
 |---|---|
 | `go vet` | ✅ Pass |
-| `go test -cover` | 76.8% (target: 65%) ✅ |
+| `go test -cover` | 76.8% (target: 30%) ✅ |
 | `go test -race` | ✅ Pass |
 | WASM vet | ✅ Pass |
 | TODO/FIXME count | 0 |
@@ -46,7 +46,7 @@ The `pkg/vr` package provides VR hardware detection and configuration utilities.
 | N/A | N/A | N/A | N/A | Package is a utility library, not a UI component |
 
 ## Test Coverage
-**Coverage**: 76.8% (target: 65%) ✅
+**Coverage**: 76.8% (target: 30%) ✅
 - Missing test areas: Filesystem path existence tests (depends on actual VR installation)
 - Missing benchmarks: None (has `BenchmarkDetectHardware` and `BenchmarkDetectHardwareCached`)
 - Table-driven test compliance: ✅ (see `TestDetectHeadsetEnvironmentVariables`, `TestParseEnableVRFlag`)

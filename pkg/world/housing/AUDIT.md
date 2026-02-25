@@ -10,13 +10,13 @@ Status criteria:
 -->
 
 ## Summary
-The housing package provides plot placement, guild halls, blueprints, persistence, and UI for player housing. Good overall quality with 78.6% test coverage exceeding the 65% target. Input abstraction has been implemented via `MenuInputProvider` interface, enabling testability without Ebiten runtime.
+The housing package provides plot placement, guild halls, blueprints, persistence, and UI for player housing. Good overall quality with 78.6% test coverage exceeding the 40% target. Input abstraction has been implemented via `MenuInputProvider` interface, enabling testability without Ebiten runtime.
 
 ## Automated Check Results
 | Check | Result |
 |---|---|
 | `go vet` | ✅ Pass |
-| `go test -cover` | 78.6% (target: 65%) ✅ |
+| `go test -cover` | 78.6% (target: 40%) ✅ |
 | `go test -race` | ✅ Pass |
 | WASM vet | ✅ Pass |
 | TODO/FIXME count | 0 |
@@ -56,7 +56,7 @@ The housing package provides plot placement, guild halls, blueprints, persistenc
 | Guild Hall Menu | ✅ | ✅ | ✅ | Tab-switchable; displays construction progress |
 
 ## Test Coverage
-**Coverage**: 78.9% (target: 65%) ✅
+**Coverage**: 78.9% (target: 40%) ✅
 - `HousingUI.Update()` input handling is now fully testable with `StubMenuInput`
 - `SetDefaultTimeProvider()` and `ResetDefaultTimeProvider()` tested for determinism
 - Missing test areas: `Draw()` rendering (requires Ebiten screen)

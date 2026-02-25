@@ -16,7 +16,7 @@ The `pkg/procgen/building` package provides procedural building generation with 
 | Check | Result |
 |---|---|
 | `go vet` | ✅ Pass |
-| `go test -cover` | 92.2% (target: 65%) |
+| `go test -cover` | 92.2% (target: 40%) |
 | `go test -race` | ✅ Pass |
 | WASM vet | ✅ Pass |
 | TODO/FIXME count | 0 |
@@ -52,7 +52,7 @@ None.
 | N/A | N/A | N/A | N/A | Procgen package does not implement any UI menus |
 
 ## Test Coverage
-**Coverage**: 92.2% (target: 65%) ✅ EXCEEDS TARGET
+**Coverage**: 92.2% (target: 40%) ✅ EXCEEDS TARGET
 - Missing test areas: None identified
 - Missing benchmarks: None - package includes BenchmarkGenerate, BenchmarkValidate, BenchmarkIsNavigable, BenchmarkGenerateGuildHall
 - Table-driven test compliance: ✅ All tests use table-driven patterns

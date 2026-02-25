@@ -71,6 +71,6 @@
 //
 // # Testing
 //
-// Target test coverage: ≥65%
+// Target test coverage: ≥40%
 // All functions are deterministic and thread-safe.
 package housing_crafting

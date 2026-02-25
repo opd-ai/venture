@@ -281,7 +281,7 @@ type Entity struct {
 
 ## Testing Strategy
 
-**Coverage:** 82.4% average (≥65% target)  
+**Coverage:** 82.4% average (≥40% target; ≥30% for X11/Wayland/Ebiten-dependent packages)  
 **Methodology:** Table-driven tests, stub implementations  
 **Benchmarks:** Performance regression detection  
 **Race Detection:** `-race` flag for concurrency issues

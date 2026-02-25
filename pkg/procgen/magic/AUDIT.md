@@ -10,7 +10,7 @@ The magic generation package provides deterministic procedural spell generation 
 | Check | Result |
 |---|---|
 | `go vet` | ✅ Pass |
-| `go test -cover` | 89.8% (target: 65%) |
+| `go test -cover` | 89.8% (target: 40%) |
 | `go test -race` | ✅ Pass |
 | WASM vet | ✅ Pass |
 | TODO/FIXME count | 0 |
@@ -46,7 +46,7 @@ _None identified_
 | N/A | N/A | N/A | N/A | Package is a procgen library with no UI components |
 
 ## Test Coverage
-**Coverage**: 89.8% (target: 65%)
+**Coverage**: 89.8% (target: 40%)
 - Missing test areas: None significant; all core functionality tested
 - Missing benchmarks: None; `BenchmarkSpellGenerator_Generate`, `BenchmarkSpellGenerator_Validate`, `BenchmarkBalanceStats`, `BenchmarkValidateDPS` all present
 - Table-driven test compliance: ✅ All tests use table-driven patterns

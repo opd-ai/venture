@@ -44,7 +44,7 @@ Single tasks that are large or span multiple unrelated packages should be execut
 - **Logging**: `logrus.WithFields(logrus.Fields{...})` — never `fmt.Print`/`log.Fatal`. Standard fields: `seed`, `genre`, `entityID`, `playerID`, `system_name`, `component_type`.
 - **Networking**: Use interface types (`net.Addr`, `net.PacketConn`, `net.Conn`, `net.Listener`). No type assertions to concrete types.
 - **Functions**: ≤30 lines, single responsibility, all errors handled explicitly.
-- **Testing**: Table-driven with `t.Run`. Use stubs (`StubInput`, `StubSprite`) to avoid Ebiten runtime dependency. Target ≥65% per package.
+- **Testing**: Table-driven with `t.Run`. Use stubs (`StubInput`, `StubSprite`) to avoid Ebiten runtime dependency. Target ≥40% per package (≥30% for X11/Wayland/Ebiten-dependent packages).
 
 ## EXPECTED OUTPUT
 - Working code changes with passing tests

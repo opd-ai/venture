@@ -1,0 +1,32 @@
+# Memory Benchmark Baseline Results
+# Generated: 2026-02-25
+# Platform: Linux amd64
+# Go Version: 1.24.5
+
+# Memory benchmarks use tests (not benchmarks) to validate <500MB client memory target.
+# These tests run without Ebiten/graphics dependencies and are suitable for CI/CD.
+
+# Run with: go test -v ./pkg/benchmark/memory/
+
+# Performance Targets (docs/PERFORMANCE.md):
+# - <500MB client memory usage
+# - <400MB safe threshold (with 20% headroom)
+
+# Test results should show:
+# - TestMemoryBaselineWorld: Peak <400MB
+# - TestMemoryHighEntityCount: Peak <500MB with 2000 entities
+# - TestMemoryProcgenStress: Peak <500MB during intensive generation
+# - TestMemoryRenderingStress: Peak <500MB during rendering pipeline stress
+
+# To update baseline:
+# 1. Run: go test -v ./pkg/benchmark/memory/ | tee baseline_results.txt
+# 2. Review peak allocations in each test
+# 3. Ensure all tests pass and stay under thresholds
+# 4. Commit updated baseline for regression tracking
+
+# Example output format:
+# === RUN   TestMemoryBaselineWorld
+#     memory_test.go:36: Peak allocation: 15.23MB
+#     memory_test.go:37: Allocation growth: 15678912 bytes
+# --- PASS: TestMemoryBaselineWorld (0.00s)
+

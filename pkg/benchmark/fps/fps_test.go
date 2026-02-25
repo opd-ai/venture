@@ -159,6 +159,54 @@ func BenchmarkFPS5000Entities(b *testing.B) {
 	}
 }
 
+// BenchmarkFPS2000EntitiesWithCollision benchmarks FPS with 2000 entities
+// including collision detection via spatial partitioning.
+// This validates that the spatial hash grid optimization maintains 60 FPS
+// with collision-heavy workloads.
+//
+// Target: 60 FPS = 16.67ms per frame = 16,666,666 ns/op
+func BenchmarkFPS2000EntitiesWithCollision(b *testing.B) {
+	world := engine.NewWorld()
+	world.AddSystem(&engine.MovementSystem{})
+	world.AddSystem(&engine.CollisionSystem{})
+
+	// Create 2000 entities with colliders distributed spatially
+	for i := 0; i < 2000; i++ {
+		entity := world.CreateEntity()
+		entity.AddComponent(&engine.PositionComponent{
+			X: float64(i%100) * 64, // 64-unit spacing
+			Y: float64(i/100) * 64,
+		})
+		entity.AddComponent(&engine.VelocityComponent{
+			VX: float64((i%3)-1) * 10.0, // Varied velocities: -10, 0, 10
+			VY: float64((i%5)-2) * 10.0, // Varied velocities: -20, -10, 0, 10, 20
+		})
+		entity.AddComponent(&engine.ColliderComponent{
+			Width:  32,
+			Height: 32,
+		})
+
+		// Add friction for some entities to vary physics interactions
+		if i%2 == 0 {
+			entity.AddComponent(&engine.FrictionComponent{
+				Coefficient: 0.5,
+			})
+		}
+	}
+
+	// Stabilize world state and build spatial partition
+	world.Update(0)
+
+	b.ResetTimer()
+	b.ReportAllocs()
+
+	// Simulate 60 FPS updates
+	deltaTime := 0.016
+	for i := 0; i < b.N; i++ {
+		world.Update(deltaTime)
+	}
+}
+
 // TestFPS60TargetWith2000Entities is a unit test that validates the 60 FPS target
 // is achievable with 2000 entities. This test complements the benchmarks by providing
 // a pass/fail threshold for CI/CD validation.

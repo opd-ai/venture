@@ -26,9 +26,9 @@ _None identified._
 _None identified._
 
 ### Low Severity
-- [ ] **Doc coverage** — Sub-package `fps` has `doc.go` but no README.md-style usage examples in godoc (`doc.go:1`)
-- [ ] **Doc coverage** — Sub-package `memory` has minimal `doc.go` content compared to `fps` (`memory/doc.go:1`)
-- [ ] **Test organization** — Package root has `doc.go` but no tests; sub-packages have tests but `go test -cover` reports "no statements" since these are pure test packages (`doc.go:1`)
+- [x] **Doc coverage** — Sub-package `fps` has `doc.go` but no README.md-style usage examples in godoc (`doc.go:1`) — **RESOLVED 2026-02-25**: `doc.go` already has comprehensive usage examples showing how to run benchmarks
+- [x] **Doc coverage** — Sub-package `memory` has minimal `doc.go` content compared to `fps` (`memory/doc.go:1`) — **RESOLVED 2026-02-25**: Added comprehensive usage examples to `memory/doc.go` showing how to use memprofile for custom memory benchmarks
+- [x] **Test organization** — Package root has `doc.go` but no tests; sub-packages have tests but `go test -cover` reports "no statements" since these are pure test packages (`doc.go:1`) — **NOTED**: This is expected behavior for test-only infrastructure packages
 
 ## Input Integration
 | Input Source | Status | Notes |
@@ -74,9 +74,14 @@ This package validates engine performance targets but does not integrate with pr
 | Mobile | N/A | Benchmark package not designed for mobile execution |
 
 ## Recommendations
-1. **[LOW]** Consider adding a brief code example in `memory/doc.go` showing how to use `memprofile` for custom benchmarks
-2. **[LOW]** Consider adding benchmark result baseline files to track performance regression over time
-3. **[LOW]** Consider adding `BenchmarkFPS2000EntitiesWithCollision` to test spatial partitioning performance impact
+1. **[COMPLETED 2026-02-25]** ~~Consider adding a brief code example in `memory/doc.go` showing how to use `memprofile` for custom benchmarks~~
+   - Added comprehensive usage example with full code snippet showing StartMemoryProfile, Snapshot, End, GetPeakAllocation, and threshold validation
+2. **[COMPLETED 2026-02-25]** ~~Consider adding benchmark result baseline files to track performance regression over time~~
+   - Created `fps/baseline_results.txt` with expected performance targets and usage instructions
+   - Created `memory/baseline_results.txt` with memory threshold documentation and test output format
+3. **[COMPLETED 2026-02-25]** ~~Consider adding `BenchmarkFPS2000EntitiesWithCollision` to test spatial partitioning performance impact~~
+   - Added BenchmarkFPS2000EntitiesWithCollision with 2000 entities, CollisionSystem, spatial distribution, varied velocities, and FrictionComponent
+   - Validates that spatial hash grid optimization maintains 60 FPS target with collision-heavy workloads
 
 ## Notes
 

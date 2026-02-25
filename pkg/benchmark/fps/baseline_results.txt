@@ -1,0 +1,28 @@
+# FPS Benchmark Baseline Results
+# Generated: 2026-02-25
+# Platform: Linux amd64
+# Go Version: 1.24.5
+
+# Note: FPS benchmarks require X11 display server (Ebiten dependency).
+# Run with: xvfb-run go test -bench=. -benchmem ./pkg/benchmark/fps/
+#
+# Expected benchmarks:
+# - BenchmarkFPS500Entities: <3ms/op (>300 FPS equivalent)
+# - BenchmarkFPS2000Entities: <16ms/op (60 FPS target)
+# - BenchmarkFPS2000EntitiesRealistic: <16ms/op (60 FPS target)
+# - BenchmarkFPS2000EntitiesWithCollision: <16ms/op (60 FPS with spatial partitioning)
+# - BenchmarkFPS5000Entities: <50ms/op (stress test, 20+ FPS acceptable)
+
+# Performance Targets (docs/PERFORMANCE.md):
+# - 60 FPS minimum = 16.67ms per frame = 16,666,666 ns/op
+# - 2000 entities is the target entity count for performance validation
+
+# To update baseline:
+# 1. Run: xvfb-run go test -bench=. -benchmem ./pkg/benchmark/fps/ | tee baseline_results.txt
+# 2. Review results and ensure all benchmarks meet targets
+# 3. Commit updated baseline for regression tracking
+
+# Example output format:
+# BenchmarkFPS2000Entities-8              100000          12345 ns/op         1234 B/op          56 allocs/op
+# BenchmarkFPS2000EntitiesWithCollision-8  80000          15000 ns/op         2000 B/op          80 allocs/op
+

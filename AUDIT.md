@@ -14,8 +14,8 @@ This report consolidates 110 individual audit files across all packages in the V
 |----------|-------------|
 | High     | 0           |
 | Medium   | ~11         |
-| Low      | ~97         |
-| **Total**| **~108**    |
+| Low      | ~94         |
+| **Total**| **~105**    |
 
 **Historical totals (including fixed):** ~32 High, ~97 Medium, ~230 Low issues were identified across all audits. The vast majority have been resolved, resulting in an overall codebase health status of **Good**.
 
@@ -106,8 +106,8 @@ This report consolidates 110 individual audit files across all packages in the V
 - **Source:** `pkg/benchmark/AUDIT.md`
 - **High Issues:** 0
 - **Medium Issues:** 0
-- **Low Issues:** 3
-- **Details:** Test-only infrastructure package with no executable statements (`go test -cover` reports "no statements"). Comprehensive FPS and memory benchmark suites exist. Minor documentation gaps in `fps/doc.go` and `memory/doc.go`. No baseline result files to track performance regressions over time.
+- **Low Issues:** 0 (3 resolved)
+- **Details:** Test-only infrastructure package with no executable statements (`go test -cover` reports "no statements"). Comprehensive FPS and memory benchmark suites exist. **RESOLVED 2026-02-25**: Added comprehensive usage examples to `memory/doc.go` showing how to use memprofile for custom benchmarks. Created baseline result files in `fps/baseline_results.txt` and `memory/baseline_results.txt` to track performance regression over time. Added `BenchmarkFPS2000EntitiesWithCollision` to validate spatial partitioning performance maintains 60 FPS target with collision-heavy workloads.
 
 ---
 

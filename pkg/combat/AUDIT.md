@@ -23,7 +23,7 @@ The `pkg/combat` package provides core combat mechanics including damage types, 
 None found.
 
 ### Medium Severity
-- [ ] **Documentation** — Package-level doc.go has duplicate/redundant package comments from file history (`interfaces.go` relocation left stale comments) (`doc.go:1-6`)
+- [ ] **Documentation** — File-level comment in `interfaces.go` has redundant/stale package description lines 6-8 from historical refactoring (types/constants relocated but old comments remain) (`interfaces.go:6-8`)
 
 ### Low Severity
 - [ ] **Code consistency** — `types.go:222` uses inline error creation `errors.New("MagicPower cannot be negative")` instead of predefined sentinel error like other stats (`types.go:222`)
@@ -74,7 +74,7 @@ Combat package integrates correctly as a foundational data layer consumed by `pk
 | Mobile | ✅ | No platform-specific code; fully compatible |
 
 ## Recommendations
-1. **[LOW]** Clean up redundant package comments in `doc.go` — Remove duplicate/stale comments from historical file reorganization
+1. **[MED]** Clean up redundant package comments in `interfaces.go:6-8` — Remove duplicate package description ("Package combat provides...") that duplicates doc.go; keep only file-specific description
 2. **[LOW]** Add predefined sentinel errors for `MagicPower` and `MagicDefense` validation to match pattern used for other stats (currently using inline `errors.New()`)
 3. **[LOW]** Add benchmarks for `Stats.Validate()` and stat manipulation methods (`ApplyDamage`, `ApplyHealing`) if they become hot-path during profiling
 4. **[INFO]** Consider adding a `combat.DamageEvent` type for richer combat logging (timestamps, modifiers applied) if future narrative/analytics needs arise

@@ -991,9 +991,17 @@ func (g *EbitenGame) handleCharacterCreation() error {
 	// Use the same fixed timestep as the rest of the game to keep tutorial timing consistent.
 	deltaTime := g.calculateDeltaTime()
 
-	// Update the character creation tutorial overlay alongside character creation
+	// Update the character creation tutorial overlay alongside character creation.
+	// The tutorial is updated FIRST so it can consume input (e.g., ENTER to dismiss
+	// the welcome overlay) before the underlying character creation processes it.
 	if g.CharacterCreationTutorial != nil && g.CharacterCreationTutorial.IsActive() {
 		g.CharacterCreationTutorial.Update(int(g.CharacterCreation.currentStep), deltaTime)
+	}
+
+	// If the tutorial consumed input this frame (e.g., welcome overlay dismissal),
+	// skip the character creation update to prevent double-advancement.
+	if g.CharacterCreationTutorial != nil && g.CharacterCreationTutorial.InputConsumed {
+		return nil
 	}
 
 	completed := g.CharacterCreation.Update()

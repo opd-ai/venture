@@ -284,10 +284,19 @@ func (om *OnboardingManager) TransitionToInGameTutorial() {
 	previousState := om.currentState
 	om.currentState = StateInGameTutorial
 
-	// Activate the in-game tutorial system
+	// Explicitly disable the character creation tutorial so it doesn't
+	// render after we leave the character creation screen.
+	if om.creationTutorial != nil {
+		om.creationTutorial.SetEnabled(false)
+	}
+
+	// Activate the in-game tutorial system with a grace period so that
+	// keys held from the character creation confirmation (e.g., ENTER)
+	// don't auto-complete the welcome step.
 	if om.tutorialSystem != nil {
 		om.tutorialSystem.Enabled = true
 		om.tutorialSystem.ShowUI = true
+		om.tutorialSystem.enableGraceFrames = 3
 	}
 
 	// Persist onboarding state to player entity (Phase 3.2)

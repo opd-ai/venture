@@ -44,6 +44,15 @@ type CharacterCreationTutorial struct {
 	// Notification state
 	NotificationMsg string
 	NotificationTTL float64
+
+	// Welcome step display timer — prevents auto-advancing the welcome
+	// overlay before the player has had time to read it.
+	welcomeTimer float64
+
+	// InputConsumed is set when the tutorial consumes an input event
+	// (e.g., ENTER to dismiss welcome). Callers can check this to avoid
+	// double-processing the same keypress.
+	InputConsumed bool
 }
 
 // NewCharacterCreationTutorial creates a new character creation tutorial.
@@ -113,13 +122,29 @@ func (cct *CharacterCreationTutorial) Update(currentCreationStep int, deltaTime 
 		return
 	}
 
+	// Reset per-frame flag so callers know whether tutorial consumed input.
+	cct.InputConsumed = false
+
 	cct.updateNotification(deltaTime)
 
 	if cct.handleSkipInput() {
 		return
 	}
 
-	if cct.handleWelcomeStep(currentCreationStep) {
+	// Show the welcome overlay for a short period before allowing
+	// synchronizeTutorialProgress to advance past it. This ensures
+	// new players see the welcome message without blocking character
+	// creation input (ENTER, SPACE, typed characters).
+	if cct.CurrentStepIdx == 0 && currentCreationStep == 0 {
+		cct.welcomeTimer += deltaTime
+		// After 2 seconds, auto-advance past the welcome step so
+		// synchronizeTutorialProgress can take over normally.
+		if cct.welcomeTimer >= 2.0 {
+			cct.advanceStep()
+		}
+		// Don't block — fall through to synchronizeTutorialProgress
+		// so that if the player already advanced character creation,
+		// the tutorial catches up without skipping steps.
 		return
 	}
 
@@ -145,27 +170,24 @@ func (cct *CharacterCreationTutorial) handleSkipInput() bool {
 	return false
 }
 
-// handleWelcomeStep manages auto-advance of the welcome screen on user input. Returns true if on welcome step.
+// handleWelcomeStep is no longer used — welcome step advancement is now
+// handled inline in Update() via a timer, avoiding input conflicts with
+// character creation (ENTER/SPACE/typed characters no longer consumed).
+// Retained as a no-op for reference.
 func (cct *CharacterCreationTutorial) handleWelcomeStep(currentCreationStep int) bool {
-	if cct.CurrentStepIdx == 0 && currentCreationStep == 0 {
-		chars := ebiten.AppendInputChars(nil)
-		if len(chars) > 0 || inpututil.IsKeyJustPressed(ebiten.KeyEnter) || inpututil.IsKeyJustPressed(ebiten.KeySpace) {
-			cct.advanceStep()
-		}
-		return true
-	}
 	return false
 }
 
 // synchronizeTutorialProgress advances tutorial steps to match character creation progress.
+// Advances at most one step per frame to prevent skipping intermediate tutorial hints.
 func (cct *CharacterCreationTutorial) synchronizeTutorialProgress(currentCreationStep int) {
 	targetTutorialStep := currentCreationStep + 1
 
+	// Advance at most ONE step per call so the player has at least one
+	// frame to see each tutorial hint before it is marked complete.
 	if targetTutorialStep > cct.CurrentStepIdx && cct.CurrentStepIdx < len(cct.Steps) {
-		for cct.CurrentStepIdx < targetTutorialStep && cct.CurrentStepIdx < len(cct.Steps) {
-			cct.Steps[cct.CurrentStepIdx].Completed = true
-			cct.CurrentStepIdx++
-		}
+		cct.Steps[cct.CurrentStepIdx].Completed = true
+		cct.CurrentStepIdx++
 
 		if cct.CurrentStepIdx < len(cct.Steps) {
 			cct.NotificationMsg = fmt.Sprintf("✓ Step complete! Now: %s", cct.Steps[cct.CurrentStepIdx].Title)
@@ -362,6 +384,8 @@ func (cct *CharacterCreationTutorial) Reset() {
 	cct.Skipped = false
 	cct.NotificationMsg = ""
 	cct.NotificationTTL = 0
+	cct.welcomeTimer = 0
+	cct.InputConsumed = false
 	for i := range cct.Steps {
 		cct.Steps[i].Completed = false
 	}

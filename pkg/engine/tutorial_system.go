@@ -48,6 +48,11 @@ type EbitenTutorialSystem struct {
 	// OnCompleteCallback is called when all tutorial steps are completed or the tutorial is skipped.
 	// Used by OnboardingManager to transition to the next onboarding phase.
 	OnCompleteCallback func()
+
+	// enableGraceFrames counts down after the tutorial is first enabled,
+	// preventing the welcome step from auto-completing due to held keys
+	// (e.g., ENTER still held from confirming character creation).
+	enableGraceFrames int
 }
 
 // NewTutorialSystem creates a new tutorial system with default steps.
@@ -377,6 +382,16 @@ func checkExplorationCondition(world *World) bool {
 // Update processes the tutorial system each frame
 func (ts *EbitenTutorialSystem) Update(entities []*Entity, deltaTime float64) {
 	if !ts.Enabled || ts.CurrentStepIdx >= len(ts.Steps) {
+		return
+	}
+
+	// Grace period: skip condition checks for a few frames after the
+	// tutorial is first enabled so that held keys from the previous
+	// game phase (e.g., ENTER from character creation) don't
+	// auto-complete the welcome step.
+	if ts.enableGraceFrames > 0 {
+		ts.enableGraceFrames--
+		ts.updateNotificationTTL(deltaTime)
 		return
 	}
 

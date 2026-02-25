@@ -644,7 +644,12 @@ func (s *InputSystem) handleEscapeKey() {
 // handleHighPriorityEscapeActions processes tutorial and help menu escape actions.
 func (s *InputSystem) handleHighPriorityEscapeActions() bool {
 	if s.tutorialSystem != nil && s.tutorialSystem.Enabled && s.tutorialSystem.ShowUI {
-		s.tutorialSystem.Skip()
+		// BUG FIX: ESC should minimize the tutorial overlay, not skip the
+		// current step.  Skip() was marking the current step complete which
+		// caused unintended step advancement.  HideTutorialUI() hides the
+		// panel but keeps progression tracking active so the player can
+		// still complete objectives organically.
+		s.tutorialSystem.HideTutorialUI()
 		return true
 	}
 

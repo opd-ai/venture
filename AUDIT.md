@@ -69,9 +69,9 @@ This file tracks package-level audits across the Venture codebase. Each entry in
 - [ ] `pkg/integration/world_events/` — Not audited
 
 ## Audit Progress
-- **Completed**: 28/90+ packages
+- **Completed**: 29/90+ packages
 - **In Progress**: 0
-- **Not Started**: 62+
+- **Not Started**: 61+
 
 ## Next Priority
 Packages with high integration surface and platform-specific concerns:

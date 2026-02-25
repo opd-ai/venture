@@ -23,7 +23,7 @@ This file tracks package-level audits across the Venture codebase. Each entry in
 - [x] `pkg/network/chat/AUDIT.md` — Complete — 4 issues (1 high, 2 med, 2 low) — Coverage: Unmeasurable (requires X11; 30% target)
 - [x] `pkg/network/trade/AUDIT.md` — Complete — 4 issues (0 high, 1 med, 3 low) — Coverage: Unmeasurable (requires X11; 145% test-to-source ratio)
 - [ ] `pkg/network/` (other subpackages) — Not audited
-- [ ] `pkg/world/` — Not audited
+- [x] `pkg/world/AUDIT.md` — Needs Work — 12 issues (1 high, 6 med, 5 low) — Coverage: 88.8% (core), 88.4% (economy), 90.4% (raids), 90.8% (territory), FAIL (housing)
 - [x] `pkg/audio/AUDIT.md` — Complete — 4 issues (0 high, 1 med, 3 low) — Coverage: 93.5%
 
 ### Supporting Packages
@@ -65,9 +65,9 @@ This file tracks package-level audits across the Venture codebase. Each entry in
 - [ ] `pkg/integration/world_events/` — Not audited
 
 ## Audit Progress
-- **Completed**: 15/90+ packages
+- **Completed**: 16/90+ packages
 - **In Progress**: 0
-- **Not Started**: 75+
+- **Not Started**: 74+
 
 ## Next Priority
 Packages with high integration surface and platform-specific concerns:

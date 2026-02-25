@@ -451,3 +451,172 @@ func TestJournalHelpersDeterministic(t *testing.T) {
 		t.Errorf("LastDiscoveryTime mismatch: %v vs %v", journal1.LastDiscoveryTime, journal2.LastDiscoveryTime)
 	}
 }
+
+// --- Tests for fragmentKey Function ---
+
+func TestFragmentKey(t *testing.T) {
+	tests := []struct {
+		name        string
+		seriesID    string
+		sequenceNum int
+		want        string
+	}{
+		{
+			name:        "single digit sequence zero",
+			seriesID:    "ancient-curse",
+			sequenceNum: 0,
+			want:        "ancient-curse:0",
+		},
+		{
+			name:        "single digit sequence",
+			seriesID:    "dragon-hoard",
+			sequenceNum: 5,
+			want:        "dragon-hoard:5",
+		},
+		{
+			name:        "single digit max",
+			seriesID:    "wizard-tower",
+			sequenceNum: 9,
+			want:        "wizard-tower:9",
+		},
+		{
+			name:        "double digit sequence",
+			seriesID:    "long-story",
+			sequenceNum: 10,
+			want:        "long-story:10",
+		},
+		{
+			name:        "double digit mid",
+			seriesID:    "epic-saga",
+			sequenceNum: 42,
+			want:        "epic-saga:42",
+		},
+		{
+			name:        "double digit max",
+			seriesID:    "century-tale",
+			sequenceNum: 99,
+			want:        "century-tale:99",
+		},
+		{
+			name:        "triple digit sequence",
+			seriesID:    "very-long-story",
+			sequenceNum: 100,
+			want:        "very-long-story:100",
+		},
+		{
+			name:        "large sequence number",
+			seriesID:    "infinite-saga",
+			sequenceNum: 999,
+			want:        "infinite-saga:999",
+		},
+		{
+			name:        "empty series id",
+			seriesID:    "",
+			sequenceNum: 7,
+			want:        ":7",
+		},
+		{
+			name:        "series with special chars",
+			seriesID:    "series-with-dashes_underscores",
+			sequenceNum: 15,
+			want:        "series-with-dashes_underscores:15",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := fragmentKey(tt.seriesID, tt.sequenceNum)
+			if got != tt.want {
+				t.Errorf("fragmentKey(%q, %d) = %q, want %q", tt.seriesID, tt.sequenceNum, got, tt.want)
+			}
+		})
+	}
+}
+
+func TestFragmentKey_Uniqueness(t *testing.T) {
+	// Verify that fragmentKey generates unique keys for different inputs
+	keys := make(map[string]bool)
+
+	testCases := []struct {
+		seriesID    string
+		sequenceNum int
+	}{
+		{"series1", 0},
+		{"series1", 1},
+		{"series1", 10},
+		{"series1", 100},
+		{"series2", 0},
+		{"series2", 1},
+		{"series10", 0},  // series10:0 must be different from series1:00
+		{"series100", 0}, // series100:0 must be different from series10:00
+	}
+
+	for _, tc := range testCases {
+		key := fragmentKey(tc.seriesID, tc.sequenceNum)
+		if keys[key] {
+			t.Errorf("fragmentKey(%q, %d) produced duplicate key %q", tc.seriesID, tc.sequenceNum, key)
+		}
+		keys[key] = true
+	}
+
+	expectedCount := len(testCases)
+	if len(keys) != expectedCount {
+		t.Errorf("Expected %d unique keys, got %d", expectedCount, len(keys))
+	}
+}
+
+func TestFragmentKey_LargeSequenceNumbers(t *testing.T) {
+	// Test that fragmentKey correctly handles large sequence numbers
+	journal := NewStoryJournalComponent()
+	fixedTime := time.Date(2026, 2, 25, 14, 0, 0, 0, time.UTC)
+	seriesID := "long-series"
+
+	// Add discoveries with large sequence numbers
+	testSequences := []int{0, 10, 50, 100, 500, 999, 1000}
+
+	for _, seq := range testSequences {
+		isNew := JournalAddDiscovery(journal, seriesID, seq, fixedTime)
+		if !isNew {
+			t.Errorf("JournalAddDiscovery(%q, %d) returned false for first discovery", seriesID, seq)
+		}
+	}
+
+	// Verify all discoveries are tracked
+	if journal.TotalDiscoveries != len(testSequences) {
+		t.Errorf("TotalDiscoveries = %d, want %d", journal.TotalDiscoveries, len(testSequences))
+	}
+
+	// Verify each fragment is discoverable
+	for _, seq := range testSequences {
+		if !JournalIsDiscovered(journal, seriesID, seq) {
+			t.Errorf("Fragment %d not discovered after adding", seq)
+		}
+	}
+
+	// Verify adding duplicate returns false
+	for _, seq := range testSequences {
+		isNew := JournalAddDiscovery(journal, seriesID, seq, fixedTime)
+		if isNew {
+			t.Errorf("JournalAddDiscovery(%q, %d) returned true for duplicate", seriesID, seq)
+		}
+	}
+
+	// Total discoveries should remain unchanged after duplicates
+	if journal.TotalDiscoveries != len(testSequences) {
+		t.Errorf("TotalDiscoveries = %d after duplicates, want %d", journal.TotalDiscoveries, len(testSequences))
+	}
+}
+
+func BenchmarkFragmentKey(b *testing.B) {
+	seriesID := "test-series"
+	for i := 0; i < b.N; i++ {
+		_ = fragmentKey(seriesID, i%1000)
+	}
+}
+
+func BenchmarkFragmentKey_LargeSequence(b *testing.B) {
+	seriesID := "long-series"
+	for i := 0; i < b.N; i++ {
+		_ = fragmentKey(seriesID, 99999)
+	}
+}

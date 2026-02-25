@@ -1,6 +1,7 @@
 package engine
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/opd-ai/venture/pkg/procgen/story"
@@ -160,8 +161,8 @@ func JournalGetDiscoveryCount(j *StoryJournalComponent, seriesID string, totalFr
 }
 
 // fragmentKey generates a unique key for fragment lookup.
+// Format: "seriesID:sequenceNum" where sequenceNum is formatted as a decimal integer.
+// This supports sequence numbers of any size (not limited to single digits 0-9).
 func fragmentKey(seriesID string, sequenceNum int) string {
-	// Use simple string concatenation with separator
-	// Format: "seriesID:sequenceNum"
-	return seriesID + ":" + string(rune('0'+sequenceNum))
+	return fmt.Sprintf("%s:%d", seriesID, sequenceNum)
 }

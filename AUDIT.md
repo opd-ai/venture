@@ -14,8 +14,8 @@ This report consolidates 110 individual audit files across all packages in the V
 |----------|-------------|
 | High     | 0           |
 | Medium   | ~11         |
-| Low      | ~93         |
-| **Total**| **~104**    |
+| Low      | ~92         |
+| **Total**| **~103**    |
 
 **Historical totals (including fixed):** ~32 High, ~97 Medium, ~230 Low issues were identified across all audits. The vast majority have been resolved, resulting in an overall codebase health status of **Good**.
 
@@ -736,8 +736,8 @@ This report consolidates 110 individual audit files across all packages in the V
 - **Source:** `pkg/procgen/story/AUDIT.md`
 - **High Issues:** 0
 - **Medium Issues:** 0 (1 was false positive)
-- **Low Issues:** 1
-- **Details:** 88.7% coverage. `FragmentType.String()` method already has godoc comment at line 11 - audit finding was incorrect. All generation algorithms are deterministic.
+- **Low Issues:** 0 (1 fixed 2026-02-25)
+- **Details:** 88.7% coverage. `FragmentType.String()` method already has godoc comment at line 11 - audit finding was incorrect. All generation algorithms are deterministic. **RESOLVED 2026-02-25**: `fragmentKey` helper function in `pkg/engine/story_fragment_component.go` fixed to use `fmt.Sprintf` instead of character arithmetic, correctly handling sequence numbers > 9. Added comprehensive unit tests and benchmarks.
 
 ---
 

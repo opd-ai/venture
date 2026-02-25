@@ -27,7 +27,7 @@ None
 
 ### Low Severity
 - [x] **Doc coverage** — ~~`Vector2` struct fields missing godoc comments~~ **RESOLVED 2026-02-25**: Added field-level godoc comments explaining X (horizontal axis) and Y (vertical axis) coordinates. (`types.go:20-24`)
-- [ ] **API consistency** — `fragmentKey` helper function uses character arithmetic that could fail for sequenceNum > 9 (`story_fragment_component.go:167` in engine package, uses this package)
+- [x] **API consistency** — ~~`fragmentKey` helper function uses character arithmetic that could fail for sequenceNum > 9~~ **RESOLVED 2026-02-25**: Replaced character arithmetic with `fmt.Sprintf("%s:%d", seriesID, sequenceNum)` to correctly handle all integer sequence numbers. Added comprehensive unit tests covering single-digit (0-9), double-digit (10-99), triple-digit (100+), and large (999+) sequence numbers. Added benchmarks showing ~130 ns/op performance. (`pkg/engine/story_fragment_component.go:166`)
 
 ## Input Integration
 | Input Source | Status | Notes |

@@ -10,7 +10,7 @@ This package provides dynamic world event generation based on player actions (gu
 | Check | Result |
 |---|---|
 | `go vet` | ✅ Pass |
-| `go test -cover` | 92.9% (target: 65%) |
+| `go test -cover` | 92.9% (target: 40%) |
 | `go test -race` | ✅ Pass |
 | WASM vet | ✅ Pass |
 | TODO/FIXME count | 0 |
@@ -46,7 +46,7 @@ None
 | N/A | N/A | N/A | N/A | Package provides backend event logic only; no direct UI components |
 
 ## Test Coverage
-**Coverage**: 92.9% (target: 65%)
+**Coverage**: 92.9% (target: 40%)
 - Missing test areas: None identified
 - Missing benchmarks: All critical paths have benchmarks (6 benchmarks present)
 - Table-driven test compliance: ✅ Tests follow table-driven patterns

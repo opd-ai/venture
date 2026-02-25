@@ -10,7 +10,7 @@ The recipe package provides deterministic procedural recipe generation for craft
 | Check | Result |
 |---|---|
 | `go vet` | ✅ Pass |
-| `go test -cover` | 90.2% (target: 65%) |
+| `go test -cover` | 90.2% (target: 40%) |
 | `go test -race` | ✅ Pass |
 | WASM vet | ✅ Pass |
 | TODO/FIXME count | 0 |
@@ -45,7 +45,7 @@ The recipe package provides deterministic procedural recipe generation for craft
 | Crafting UI | N/A | N/A | ✅ | Recipe generator is wired via `cmd/client/handlers.go:895` into `systemsContainer.recipeGen` |
 
 ## Test Coverage
-**Coverage**: 90.2% (target: 65%) ✅
+**Coverage**: 90.2% (target: 40%) ✅
 
 - Missing test areas: None significant
 - Missing benchmarks: None — `BenchmarkRecipeGenerator_Generate` and `BenchmarkGenerateNewRecipeTypes` present

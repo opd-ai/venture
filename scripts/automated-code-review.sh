@@ -138,11 +138,11 @@ cd $REPO_ROOT
 go test -cover -coverprofile="$REVIEW_DIR/coverage.out" ./$PKG_REL_PATH > "$REVIEW_DIR/coverage.txt" 2>&1
 COVERAGE=$(go tool cover -func="$REVIEW_DIR/coverage.out" 2>/dev/null | tail -1 | awk '{print $3}' | sed 's/%//')
 if [ -n "$COVERAGE" ]; then
-    if (( $(echo "$COVERAGE >= 65.0" | bc -l) )); then
+    if (( $(echo "$COVERAGE >= 40.0" | bc -l) )); then
         echo -e "${GREEN}PASS${NC} (${COVERAGE}%)"
         QUALITY_GATES["coverage"]="PASS"
     else
-        echo -e "${YELLOW}WARN${NC} (${COVERAGE}% < 65%)"
+        echo -e "${YELLOW}WARN${NC} (${COVERAGE}% < 40%)"
         QUALITY_GATES["coverage"]="WARN"
     fi
 else

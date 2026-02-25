@@ -55,7 +55,7 @@ SKIP_RACE=true SKIP_COVERAGE=true ./scripts/validate-code-review.sh
 - ✓ Build success (client + server)
 - ✓ Test pass (all tests pass)
 - ✓ Race freedom (no race conditions)
-- ✓ Code coverage (≥65% per package)
+- ✓ Code coverage (≥40% per package, ≥30% for X11/Wayland/Ebiten-dependent packages)
 - ✓ Static analysis (go vet)
   - _(... 4 more items ...)_
 
@@ -630,7 +630,7 @@ Running tests...
 - ✓ Build Success (`go build`)
 - ✓ Test Pass (`go test`)
 - ✓ Race Freedom (`go test -race`)
-- ✓ Coverage Analysis (≥65% threshold, with interface-only exceptions)
+- ✓ Coverage Analysis (≥40% threshold, ≥30% for X11/Wayland/Ebiten-dependent packages)
 - ✓ Package Structure (file counts, LOC)
 - ✓ Documentation Review (doc.go, godoc comments)
 - ✓ Dependency Analysis (internal imports)

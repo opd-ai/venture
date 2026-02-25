@@ -10,7 +10,7 @@ The `pkg/world` package provides world state management including map data, enti
 | Check | Result |
 |---|---|
 | `go vet` | ✅ Pass |
-| `go test -cover` | 88.8% (target: 65%) |
+| `go test -cover` | 88.8% (target: 40%) |
 | `go test -race` | ✅ Pass |
 | WASM vet | ✅ Pass |
 | TODO/FIXME count | 0 |
@@ -46,7 +46,7 @@ The `pkg/world` package provides world state management including map data, enti
 | N/A | N/A | N/A | N/A | Package provides data layer only, no UI |
 
 ## Test Coverage
-**Coverage**: 88.8% (target: 65%) — **EXCEEDS**
+**Coverage**: 88.8% (target: 40%) — **EXCEEDS**
 - Missing test areas: None significant
 - Missing benchmarks: None (11 benchmark functions present)
 - Table-driven test compliance: ✅ Used throughout (127 test functions)

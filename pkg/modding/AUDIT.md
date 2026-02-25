@@ -11,7 +11,7 @@ The modding package provides a secure, data-driven mod framework for server-side
 | Check | Result |
 |---|---|
 | `go vet` | ✅ Pass |
-| `go test -cover` | 90.4% (target: 65%) ✅ |
+| `go test -cover` | 90.4% (target: 40%) ✅ |
 | `go test -race` | ✅ Pass |
 | WASM vet | ✅ Pass |
 | TODO/FIXME count | 0 |
@@ -46,7 +46,7 @@ The modding package provides a secure, data-driven mod framework for server-side
 | Mod Browser | ✅ | ✅ | ✅ | Uses `ModBrowserSystem` in engine package; repository set via `SetRepository()` |
 
 ## Test Coverage
-**Coverage**: 90.4% (target: 65%) ✅
+**Coverage**: 90.4% (target: 40%) ✅
 - Missing test areas: None significant
 - Missing benchmarks: ✅ Present (`BenchmarkManager_ApplyRules`, `BenchmarkManager_GetRuleFloat64`, `BenchmarkLoader_LoadFromFile`, `BenchmarkSandbox_*`)
 - Table-driven test compliance: ✅ Extensive table-driven tests

@@ -10,7 +10,7 @@ The `pkg/audio` package provides procedural audio synthesis for music, sound eff
 | Check | Result |
 |---|---|
 | `go vet` | ✅ Pass |
-| `go test -cover` | 91.4% (root), 94.6% (music), 97.3% (sfx), 95.1% (synthesis) — all exceed 65% target |
+| `go test -cover` | 91.4% (root), 94.6% (music), 97.3% (sfx), 95.1% (synthesis) — all exceed 30% target |
 | `go test -race` | ✅ Pass (all sub-packages) |
 | WASM vet | ✅ Pass |
 | TODO/FIXME count | 0 |
@@ -47,7 +47,7 @@ The `pkg/audio` package provides procedural audio synthesis for music, sound eff
 | Settings (Audio Volume) | ✅ | ✅ | ✅ | `Manager.SetMusicVolume()`, `SetSFXVolume()`, `SetVoiceVolume()` wired to settings UI via `AudioManager` |
 
 ## Test Coverage
-**Coverage**: 91.4% root, 94.6% music, 97.3% sfx, 95.1% synthesis (target: 65%) ✅
+**Coverage**: 91.4% root, 94.6% music, 97.3% sfx, 95.1% synthesis (target: 30%) ✅
 - Missing test areas: Voice transport integration (mock transport tested, but no integration test)
 - Missing benchmarks: `Manager` operations (sub-packages have benchmarks)
 - Table-driven test compliance: ✅ Most tests use table-driven patterns

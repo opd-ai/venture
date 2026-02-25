@@ -11,7 +11,7 @@ The `pkg/audio/music` package provides procedural music composition with adaptiv
 | Check | Result |
 |---|---|
 | `go vet` | ✅ Pass |
-| `go test -cover` | 94.3% (target: 65%) ✅ |
+| `go test -cover` | 94.3% (target: 30%) ✅ |
 | `go test -race` | ✅ Pass |
 | WASM vet | ✅ Pass |
 | TODO/FIXME count | 0 |
@@ -47,7 +47,7 @@ None identified.
 | N/A | N/A | N/A | N/A | Package is audio generation only, no UI |
 
 ## Test Coverage
-**Coverage**: 94.3% (target: 65%) ✅
+**Coverage**: 94.3% (target: 30%) ✅
 - Missing test areas: None significant
 - Missing benchmarks: None - has `BenchmarkGenerator_GenerateTrack`, `BenchmarkNoteToFrequency`, `BenchmarkAdaptiveComposer_Update`, `BenchmarkAdaptiveComposer_GenerateTrack`, `BenchmarkGenreConsistency`
 - Table-driven test compliance: ✅ All tests use table-driven patterns

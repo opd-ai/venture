@@ -10,7 +10,7 @@ The hostplay package provides in-process server lifecycle management for host-an
 | Check | Result |
 |---|---|
 | `go vet` | ✅ Pass |
-| `go test -cover` | 89.3% (target: 65%) ✅ |
+| `go test -cover` | 89.3% (target: 30%) ✅ |
 | `go test -race` | ✅ Pass |
 | WASM vet | ✅ Pass |
 | TODO/FIXME count | 0 |
@@ -45,7 +45,7 @@ None
 | N/A | N/A | N/A | N/A | Package is server-side infrastructure, no UI components |
 
 ## Test Coverage
-**Coverage**: 89.3% (target: 65%) ✅
+**Coverage**: 89.3% (target: 30%) ✅
 - Missing test areas: None significant - comprehensive coverage of all public APIs
 - Missing benchmarks: ✅ **RESOLVED 2026-02-23**: Added `benchmark_test.go` with 16 benchmarks covering: `BenchmarkCreateSnapshot`, `BenchmarkCreateSnapshot_EntityCount`, `BenchmarkSerializeSnapshot`, `BenchmarkSerializeSnapshot_Size`, `BenchmarkCreateDeltaSnapshot`, `BenchmarkCreateDeltaSnapshot_ChangeRate`, `BenchmarkBroadcast`, `BenchmarkSerializeEntity`, `BenchmarkEntityStateComparison`, `BenchmarkEntityStateComparison_NoChange`, `BenchmarkWorldStateJSONMarshal`, `BenchmarkWorldStateJSONUnmarshal`, `BenchmarkShouldBroadcast`
 - Table-driven test compliance: ✅ Excellent use of table-driven tests throughout

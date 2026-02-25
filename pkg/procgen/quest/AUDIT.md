@@ -10,7 +10,7 @@ The quest package provides deterministic procedural quest generation with full g
 | Check | Result |
 |---|---|
 | `go vet` | ✅ Pass |
-| `go test -cover` | 92.3% (target: 65%) |
+| `go test -cover` | 92.3% (target: 40%) |
 | `go test -race` | ✅ Pass |
 | WASM vet | ✅ Pass |
 | TODO/FIXME count | 0 |
@@ -45,7 +45,7 @@ _None_
 | Quest Log | N/A | N/A | ✅ | Quest data consumed by `pkg/engine/quest_ui.go` and `quest_tracker.go` |
 
 ## Test Coverage
-**Coverage**: 92.3% (target: 65%)
+**Coverage**: 92.3% (target: 40%)
 - Missing test areas: None significant - comprehensive coverage
 - Missing benchmarks: None - includes `quest_bench_test.go` with single, batch, parallel, and validation benchmarks
 - Table-driven test compliance: ✅ All tests follow table-driven pattern

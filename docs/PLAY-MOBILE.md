@@ -327,7 +327,7 @@ grep -rn "DeviceOrientation\|ScreenOrientation" pkg/mobile/
 - Maintain ECS architecture (no logic in components)
 - Preserve deterministic generation (seed-based RNG only)
 - Follow dual-exit UI pattern (back button/swipe + close button)
-- Ensure ≥65% test coverage after fixes (pkg/mobile/ currently high coverage)
+- Ensure ≥40% test coverage after fixes (≥30% for packages depending on X11/Wayland/Ebiten; pkg/mobile/ currently high coverage)
 - Pass `go test ./...` without errors
 
 ### Fix Documentation

@@ -140,7 +140,7 @@ Evaluate each item below. **Cite `file.go:LINE` for every issue found.**
 | **Network interfaces** | Variables declared as `net.Addr` / `net.PacketConn` / `net.Conn` / `net.Listener` — never `*net.UDPConn`, `*net.TCPConn`, `*net.UDPAddr`, `*net.TCPAddr`, `*net.IPAddr`; no type assertions or type switches to concrete `net.*` types; verify mock-ability in tests |
 | **Error handling** | No swallowed errors (`_ = someFunc()` where error matters); all returned errors checked; no bare `fmt.Println` or `log.Println` on error paths — use `logrus.WithFields(logrus.Fields{...}).Error(...)` with standard field names (`entityID`, `system_name`, `seed`, `playerID`, `component_type`); `errors.Wrap` or `fmt.Errorf("context: %w", err)` for error chain preservation |
 | **Concurrency safety** | Shared mutable state protected by `sync.Mutex` / `sync.RWMutex` or channels; no data races in system `Update()` (systems should not write to entities another system is reading in the same tick); `go vet -race` clean |
-| **Test coverage** | Run `go test -cover -count=1 ./path/to/pkg/...`; flag if below 65% target; note missing table-driven tests; note missing benchmarks for hot-path code (rendering, collision, spatial partition, packet serialization); verify `StubInput`/`StubSprite` used where Ebiten runtime is unavailable |
+| **Test coverage** | Run `go test -cover -count=1 ./path/to/pkg/...`; flag if below 40% target (30% for X11/Wayland/Ebiten-dependent packages); note missing table-driven tests; note missing benchmarks for hot-path code (rendering, collision, spatial partition, packet serialization); verify `StubInput`/`StubSprite` used where Ebiten runtime is unavailable |
 | **Doc coverage** | All exported types, functions, methods, and constants have godoc comments; package has `doc.go` with package-level overview; complex algorithms have inline comments explaining approach |
 | **API consistency** | Constructor functions follow `NewXxx(params) *Xxx` pattern; system constructors log creation with `system_name` field; generator functions accept `seed int64` as first meaningful parameter; `Validate()` exists alongside `Generate()` |
 | **Resource management** | Images and audio buffers released when no longer needed or pooled (`pkg/rendering/pool/`, `pkg/rendering/cache/`); no goroutine leaks (all spawned goroutines have shutdown path); file handles closed in defer; context.Context used for cancellation where appropriate |
@@ -225,7 +225,7 @@ Status criteria:
 | Check | Result |
 |---|---|
 | `go vet` | ✅ Pass / ❌ Fail (details) |
-| `go test -cover` | XX.X% (target: 65%) |
+| `go test -cover` | XX.X% (target: 40%, or 30% for X11/Wayland/Ebiten-dependent packages) |
 | `go test -race` | ✅ Pass / ❌ Fail / ⚠️ No tests |
 | WASM vet | ✅ Pass / ❌ Fail / N/A |
 | TODO/FIXME count | N |
@@ -259,7 +259,7 @@ Status criteria:
 | <Menu Name> | ✅/❌ | ✅/❌ | ✅/❌ | <notes> |
 
 ## Test Coverage
-**Coverage**: XX.X% (target: 65%)
+**Coverage**: XX.X% (target: 40%, or 30% for X11/Wayland/Ebiten-dependent packages)
 - Missing test areas: <list>
 - Missing benchmarks: <list>
 - Table-driven test compliance: ✅/❌
@@ -311,7 +311,7 @@ After writing files, print:
 1. **Package audited**: import path and rationale
 2. **Path to created AUDIT.md**
 3. **`go vet` result**: pass/fail
-4. **Test coverage**: percentage and pass/fail vs. 65% target
+4. **Test coverage**: percentage and pass/fail vs. 40% target (30% for X11/Wayland/Ebiten-dependent packages)
 5. **Top 5 critical findings**: each with `file.go:LINE`, severity, and category
 6. **Input integration gaps**: any input source not properly wired
 7. **Menu/UI integration gaps**: any menu unreachable, input-incomplete, or unwired

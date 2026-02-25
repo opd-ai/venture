@@ -10,7 +10,7 @@ The saveload package provides comprehensive game state persistence with platform
 | Check | Result |
 |---|---|
 | `go vet` | ✅ Pass |
-| `go test -cover` | 83.8% (target: 65%) ✅ |
+| `go test -cover` | 83.8% (target: 40%) ✅ |
 | `go test -race` | ✅ Pass |
 | WASM vet | ✅ Pass (after fix) |
 | TODO/FIXME count | 0 |
@@ -46,7 +46,7 @@ The saveload package provides comprehensive game state persistence with platform
 | Settings (persistence) | ✅ | ✅ | ✅ | GameSettings persisted in save files |
 
 ## Test Coverage
-**Coverage**: 83.8% (target: 65%) ✅
+**Coverage**: 83.8% (target: 40%) ✅
 - Missing test areas: WASM-specific storage_wasm.go (requires browser environment)
 - Missing benchmarks: None (benchmarks present in `saveload_bench_test.go`)
 - Table-driven test compliance: ✅ (used throughout test files)

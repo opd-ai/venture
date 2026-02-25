@@ -10,7 +10,7 @@ The `patterns` package provides procedural texture pattern generation for tiles 
 | Check | Result |
 |---|---|
 | `go vet` | ✅ Pass |
-| `go test -cover` | 94.1% (target: 65%) |
+| `go test -cover` | 94.1% (target: 30%) |
 | `go test -race` | ✅ Pass |
 | WASM vet | ✅ Pass |
 | TODO/FIXME count | 0 |
@@ -46,7 +46,7 @@ None identified.
 | N/A | N/A | N/A | N/A | Package generates textures, not UI screens |
 
 ## Test Coverage
-**Coverage**: 94.7% (target: 65%)
+**Coverage**: 94.7% (target: 30%)
 - Missing test areas: Basic pattern generation using `Config` (stripes, dots, gradient, etc.)
 - Missing benchmarks: None — comprehensive benchmarks present for all texture types and sizes
 - Table-driven test compliance: ✅ Exemplary use of table-driven tests throughout

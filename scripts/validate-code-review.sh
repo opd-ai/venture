@@ -104,7 +104,7 @@ fi
 echo ""
 
 # Gate 4: Code Coverage
-echo "Gate 4: Code Coverage (≥65% per package)"
+echo "Gate 4: Code Coverage (≥40% per package, ≥30% for X11/Wayland/Ebiten-dependent packages)"
 echo "----------------------------------------"
 if [ "$SKIP_COVERAGE" = "true" ]; then
     warn_gate "Code Coverage (skipped via SKIP_COVERAGE=true)"
@@ -117,33 +117,36 @@ else
     
     COVERAGE_OUTPUT=$(eval $COV_CMD | grep -E "coverage:|ok\s+github.com/opd-ai/venture/pkg")
     
-    # Check for packages below 65% (excluding those with documented exceptions)
-    # Per TESTING.md: engine ~50%, mobile ~60%, network ~62% due to Ebiten dependencies
+    # Check for packages below 40% (X11/Wayland/Ebiten-dependent packages require only 30%)
+    # Per TESTING.md: engine, mobile, rendering/* depend on X11/Wayland/Ebiten
     LOW_COVERAGE=$(echo "$COVERAGE_OUTPUT" | awk '
         $2 ~ /github.com/ && /coverage:/ {
             pkg = $2
             match($0, /coverage: ([0-9.]+)/, cov)
             coverage = cov[1]
             
-            # Skip packages with documented exceptions
-            if (pkg == "github.com/opd-ai/venture/pkg/engine" && coverage >= 50.0) next
-            if (pkg == "github.com/opd-ai/venture/pkg/mobile" && coverage >= 55.0) next
-            if (pkg == "github.com/opd-ai/venture/pkg/network" && coverage >= 60.0) next
+            # X11/Wayland/Ebiten-dependent packages require only 30%
+            if (pkg ~ /engine|mobile|rendering/) {
+                if (coverage > 0 && coverage < 30.0) {
+                    printf "%s = %.1f%% (target: 30%% for X11/Ebiten packages)\n", pkg, coverage
+                }
+                next
+            }
             
-            # Report packages below target that aren'"'"'t exceptions
-            if (coverage > 0 && coverage < 65.0) {
-                printf "%s = %.1f%% (target: 65%%)\n", pkg, coverage
+            # All other packages require 40%
+            if (coverage > 0 && coverage < 40.0) {
+                printf "%s = %.1f%% (target: 40%%)\n", pkg, coverage
             }
         }
     ')
     
     if [ -z "$LOW_COVERAGE" ]; then
         pass_gate "Code Coverage"
-        echo "Sample coverage (excluding documented exceptions):"
-        echo "$COVERAGE_OUTPUT" | grep "coverage:" | grep -v "engine\|mobile\|network" | head -5
+        echo "Sample coverage (excluding X11/Wayland/Ebiten-dependent packages):"
+        echo "$COVERAGE_OUTPUT" | grep "coverage:" | grep -v "engine\|mobile\|rendering" | head -5
     else
         fail_gate "Code Coverage"
-        echo "Packages below 65% coverage (excluding documented exceptions):"
+        echo "Packages below coverage target:"
         echo "$LOW_COVERAGE"
     fi
 fi

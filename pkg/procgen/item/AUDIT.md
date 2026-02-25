@@ -16,7 +16,7 @@ The item package provides procedural generation for weapons, armor, consumables,
 | Check | Result |
 |---|---|
 | `go vet` | ✅ Pass |
-| `go test -cover` | 92.2% (target: 65%) |
+| `go test -cover` | 92.2% (target: 40%) |
 | `go test -race` | ✅ Pass |
 | WASM vet | ✅ Pass |
 | TODO/FIXME count | 0 (only in markdown audit files) |
@@ -50,7 +50,7 @@ The item package provides procedural generation for weapons, armor, consumables,
 | N/A | N/A | N/A | N/A | Package is a pure data generation library with no UI responsibilities |
 
 ## Test Coverage
-**Coverage**: 92.2% (target: 65%) ✅
+**Coverage**: 92.2% (target: 40%) ✅
 - Missing test areas: None identified
 - Missing benchmarks: None — comprehensive benchmarks present (`item_bench_test.go`)
 - Table-driven test compliance: ✅ — all tests use table-driven patterns

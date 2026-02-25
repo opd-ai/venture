@@ -10,7 +10,7 @@ The `pkg/procgen/audit` package provides production-readiness validation for all
 | Check | Result |
 |---|---|
 | `go vet` | ✅ Pass |
-| `go test -cover` | 89.5% (target: 65%) |
+| `go test -cover` | 89.5% (target: 40%) |
 | `go test -race` | ✅ Pass |
 | WASM vet | ✅ Pass |
 | TODO/FIXME count | 0 |
@@ -46,7 +46,7 @@ None
 | N/A | N/A | N/A | N/A | Package provides generator validation tests, not UI |
 
 ## Test Coverage
-**Coverage**: 89.5% (target: 65%)
+**Coverage**: 89.5% (target: 40%)
 - Missing test areas: None significant
 - Benchmarks: ✅ All benchmarks present in `benchmark_test.go`:
   - `BenchmarkHashOutput` for hot-path hash generation (~15µs/op)

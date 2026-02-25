@@ -10,7 +10,7 @@ The skills package provides deterministic procedural skill tree generation with 
 | Check | Result |
 |---|---|
 | `go vet` | ✅ Pass |
-| `go test -cover` | 87.0% (target: 65%) ✅ |
+| `go test -cover` | 87.0% (target: 40%) ✅ |
 | `go test -race` | ✅ Pass |
 | WASM vet | ✅ Pass |
 | TODO/FIXME count | 0 |
@@ -46,7 +46,7 @@ None.
 Note: The skills package is a pure data/generation package. The UI integration lives in `pkg/engine/skills_ui.go` (`EbitenSkillsUI`) which properly uses `skills.*` types. The SkillProgressionSystem in `pkg/engine/skill_progression_system.go` correctly applies skill effects to entity stats.
 
 ## Test Coverage
-**Coverage**: 87.0% (target: 65%) ✅
+**Coverage**: 87.0% (target: 40%) ✅
 - Missing test areas: None critical; edge cases for very large trees not explicitly tested
 - Missing benchmarks: No benchmarks present (would be useful for large tree generation)
 - Table-driven test compliance: ✅ Extensive table-driven tests in `skills_test.go` and `skills_helpers_test.go`

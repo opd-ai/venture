@@ -10,7 +10,7 @@ The `pkg/rendering/animation` package provides advanced animation fluidity featu
 | Check | Result |
 |---|---|
 | `go vet` | ✅ Pass |
-| `go test -cover` | 68.4% (target: 65%) ✅ |
+| `go test -cover` | 68.4% (target: 30%) ✅ |
 | `go test -race` | ✅ Pass |
 | WASM vet | ✅ Pass |
 | TODO/FIXME count | 0 |
@@ -42,7 +42,7 @@ The `pkg/rendering/animation` package provides advanced animation fluidity featu
 | N/A | N/A | N/A | N/A | Rendering package - no UI |
 
 ## Test Coverage
-**Coverage**: 68.4% (target: 65%) ✅
+**Coverage**: 68.4% (target: 30%) ✅
 - Missing test areas:
   - `Controller.InterpolateFrame()` - frame blending not directly tested
   - `Controller.applyArticulation()` - internal function, tested indirectly via `GenerateFrame`
@@ -132,7 +132,7 @@ Package integrates with engine via adapter pattern for clean separation.
 - **PASS**: `go test -race` passes
 
 ### Test Coverage ✅
-- **PASS**: 68.4% exceeds 65% target
+- **PASS**: 68.4% exceeds 30% target
 - **PASS**: Table-driven tests in all test files
 - **PASS**: Benchmarks for hot paths (cache Get/Put, articulation, direction)
 - **PASS**: Concurrent cache access tested in `TestCacheLRUEviction`

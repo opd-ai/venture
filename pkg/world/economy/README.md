@@ -300,7 +300,7 @@ Safe for concurrent access from multiple goroutines.
 
 ## Test Coverage
 
-**Coverage**: 87.3% (exceeds project minimum of 65%)
+**Coverage**: 87.3% (exceeds project minimum of 40%)
 
 Run tests:
 ```bash
@@ -364,7 +364,7 @@ if err != nil {
 
 When modifying this package:
 
-1. **Maintain test coverage** above 65% (currently 87.3%)
+1. **Maintain test coverage** above 40% (currently 87.3%)
 2. **Document all exports** with godoc comments
 3. **Add tests** for new functionality (table-driven preferred)
 4. **Update AUDIT.md** if adding incomplete features

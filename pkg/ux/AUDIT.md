@@ -10,7 +10,7 @@ The `pkg/ux` package implements a simulation-based user experience validation fr
 | Check | Result |
 |---|---|
 | `go vet` | ✅ Pass |
-| `go test -cover` | 96.5% (target: 65%) |
+| `go test -cover` | 96.5% (target: 40%) |
 | `go test -race` | ✅ Pass |
 | WASM vet | ✅ Pass |
 | TODO/FIXME count | 0 |
@@ -45,7 +45,7 @@ _None identified_
 | N/A | — | — | — | Package is server-side validation framework, not a UI component |
 
 ## Test Coverage
-**Coverage**: 96.5% (target: 65%)
+**Coverage**: 96.5% (target: 40%)
 - Missing test areas: None significant
 - Missing benchmarks: None - package includes `BenchmarkValidateJourney`, `BenchmarkValidateAll`, `BenchmarkStepExecution`
 - Table-driven test compliance: ✅ Yes - `TestDurationTolerance`, `TestSatisfactionCalculation` use table-driven patterns

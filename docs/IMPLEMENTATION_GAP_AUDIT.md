@@ -414,7 +414,7 @@ highLatency = flag.Bool("high-latency", false,
 
 ### Testing Recommendations
 
-1. Continue maintaining 65%+ test coverage per package
+1. Continue maintaining 40%+ test coverage per package (30%+ for X11/Wayland/Ebiten-dependent packages)
 2. Add integration tests for cross-package feature interactions
 3. Consider adding README claim verification tests
 

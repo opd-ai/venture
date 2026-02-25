@@ -16,7 +16,7 @@ The combat package provides core combat type definitions (Damage, Stats, DamageT
 | Check | Result |
 |---|---|
 | `go vet` | ✅ Pass |
-| `go test -cover` | 98.3% (target: 65%) |
+| `go test -cover` | 98.3% (target: 40%) |
 | `go test -race` | ✅ Pass |
 | WASM vet | ✅ Pass |
 | TODO/FIXME count | 0 |
@@ -50,7 +50,7 @@ None.
 | N/A | N/A | N/A | N/A | Package provides data types only, no UI |
 
 ## Test Coverage
-**Coverage**: 98.3% (target: 65%)
+**Coverage**: 98.3% (target: 40%)
 - Missing test areas: None significant
 - Missing benchmarks: None — `BenchmarkCalculateDamage` and `BenchmarkResolveCombat` present (`resolver_test.go:401-426`)
 - Table-driven test compliance: ✅ All tests use table-driven patterns

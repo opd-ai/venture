@@ -127,7 +127,7 @@ if len(mods) == 0 && len(loadErrors) > 0 {
 }
 ```
 
-**Testing:** Added `TestLoader_LoadAll_ErrorWrapping` test to verify error wrapping works correctly with `errors.Unwrap()`. All existing tests pass. Package coverage: 73.8% (exceeds 65% minimum).
+**Testing:** Added `TestLoader_LoadAll_ErrorWrapping` test to verify error wrapping works correctly with `errors.Unwrap()`. All existing tests pass. Package coverage: 73.8% (exceeds 40% minimum).
 
 **Verification:** The remaining 24 instances correctly use `%v` because they format non-error types:
 - Formatting custom types (msg.Type, bookType, roomType, gameType, symbol, class, CurrentAct)
@@ -212,7 +212,7 @@ func (rm *RouteManager) Stop() {
 }
 ```
 
-**Test Coverage:** Package coverage increased to 71.5% (exceeds 65% minimum). The new lifecycle tests provide comprehensive validation of the Start/Stop pattern and prevent future regressions.
+**Test Coverage:** Package coverage increased to 71.5% (exceeds 40% minimum). The new lifecycle tests provide comprehensive validation of the Start/Stop pattern and prevent future regressions.
 
 ### [MEDIUM-008] TODO/FIXME Comments Indicating Incomplete Implementation ✅ RESOLVED
 **File:** Multiple locations  
@@ -537,7 +537,7 @@ customLogger.SetLevel(logrus.WarnLevel)
 auditor := security.NewAuditor(customLogger)
 ```
 
-**Testing:** Added 3 new test functions covering custom logger, nil logger, and environment variable configuration. All tests pass. Package coverage: 90.4% (exceeds 65% minimum, achieves 80%+ target).
+**Testing:** Added 3 new test functions covering custom logger, nil logger, and environment variable configuration. All tests pass. Package coverage: 90.4% (exceeds 40% minimum, achieves 80%+ target).
 
 **Impact:** This change allows production deployments to control log verbosity via environment variables (reducing log spam from debug messages) while enabling fine-grained control for testing and debugging scenarios.
 

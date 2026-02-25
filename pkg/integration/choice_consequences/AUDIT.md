@@ -10,7 +10,7 @@ The choice_consequences package implements persistent player choice tracking and
 | Check | Result |
 |---|---|
 | `go vet` | ✅ Pass |
-| `go test -cover` | 88.1% (target: 65%) |
+| `go test -cover` | 88.1% (target: 40%) |
 | `go test -race` | ✅ Pass |
 | WASM vet | ✅ Pass |
 | TODO/FIXME count | 0 |
@@ -46,7 +46,7 @@ _None identified_
 | N/A | N/A | N/A | N/A | Package provides data/logic layer only; no UI components |
 
 ## Test Coverage
-**Coverage**: 89.3% (target: 65%)
+**Coverage**: 89.3% (target: 40%)
 - Missing test areas: None significant; WASM-compatible io-based save/load now tested
 - Missing benchmarks: None (BenchmarkRecordChoice, BenchmarkIsContentAvailable, BenchmarkGetNPCAttitude, BenchmarkGetAlignment, BenchmarkSerialize, BenchmarkDeserialize, BenchmarkSaveToLoadFrom all present)
 - Table-driven test compliance: ✅

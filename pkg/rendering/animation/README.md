@@ -159,7 +159,7 @@ Run with coverage:
 go test -cover ./pkg/rendering/animation/...
 ```
 
-Current coverage: **71.6%** (exceeds 65% minimum requirement)
+Current coverage: **71.6%** (exceeds 30% minimum requirement)
 
 ## Examples
 

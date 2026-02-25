@@ -10,7 +10,7 @@ The legendary package provides procedural generation of multi-phase legendary qu
 | Check | Result |
 |---|---|
 | `go vet` | ✅ Pass |
-| `go test -cover` | 86.6% (target: 65%) |
+| `go test -cover` | 86.6% (target: 40%) |
 | `go test -race` | ✅ Pass |
 | WASM vet | ✅ Pass |
 | TODO/FIXME count | 0 |
@@ -46,7 +46,7 @@ None.
 | Quest Log / Tracker | ✅ | ✅ | ✅ | Legendary quests integrate via `LegendaryQuestSystem` → `quest_ui.go` |
 
 ## Test Coverage
-**Coverage**: 86.6% (target: 65%) ✅
+**Coverage**: 86.6% (target: 40%) ✅
 - Missing test areas: None identified; all core paths covered
 - Missing benchmarks: Save/Load serialization benchmark
 - Table-driven test compliance: ✅ (see `quest_generator_test.go`)

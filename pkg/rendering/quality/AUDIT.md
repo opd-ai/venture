@@ -11,7 +11,7 @@ The `pkg/rendering/quality` package provides visual quality tier management for 
 | Check | Result |
 |---|---|
 | `go vet` | ✅ Pass |
-| `go test -cover` | 96.8% (target: 65%) |
+| `go test -cover` | 96.8% (target: 30%) |
 | `go test -race` | ✅ Pass |
 | WASM vet | ✅ Pass |
 | TODO/FIXME count | 0 |
@@ -47,7 +47,7 @@ The `pkg/rendering/quality` package provides visual quality tier management for 
 | Settings | ✅ | ✅ | ✅ | Quality settings accessible via `cmd/client/handlers.go` settings menu; `QualitySystem` in engine provides the backing |
 
 ## Test Coverage
-**Coverage**: 96.8% (target: 65%)
+**Coverage**: 96.8% (target: 30%)
 - Missing test areas: None significant (edge cases for extreme values could be added)
 - Missing benchmarks: ✅ All key benchmarks present (`BenchmarkConfig_Validate`, `BenchmarkConfig_ApplyLevel`, `BenchmarkPerformanceMonitor_RecordFrame`, `BenchmarkPerformanceMonitor_GetAverageFPS`, `BenchmarkAutoAdjuster_Update`, etc.)
 - Table-driven test compliance: ✅ All tests use table-driven patterns

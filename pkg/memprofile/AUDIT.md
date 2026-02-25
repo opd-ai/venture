@@ -10,7 +10,7 @@ The memprofile package provides memory profiling utilities for CI/CD environment
 | Check | Result |
 |---|---|
 | `go vet` | ✅ Pass |
-| `go test -cover` | 88.8% (target: 65%) |
+| `go test -cover` | 88.8% (target: 40%) |
 | `go test -race` | ✅ Pass |
 | WASM vet | ✅ Pass |
 | TODO/FIXME count | 0 |
@@ -47,7 +47,7 @@ None.
 | N/A | — | — | — | Utility package, no UI |
 
 ## Test Coverage
-**Coverage**: 88.8% (target: 65%)
+**Coverage**: 88.8% (target: 40%)
 - Missing test areas: `formatBytes()` edge cases (negative input, extreme values)
 - Missing benchmarks: `detectLeaks()` performance
 - Table-driven test compliance: ✅ Uses table-driven tests for `TestZeroInitialAllocationLeakDetection`
@@ -148,7 +148,7 @@ GOOS=js GOARCH=wasm go vet ./pkg/memprofile/...
 | Deterministic procgen | ✅ PASS | Not a content generator |
 | Network interfaces | ✅ PASS | No network code |
 | Error handling | ✅ PASS | Zero-division guards, edge case handling |
-| Test coverage ≥65% | ✅ PASS | 88.8% coverage |
+| Test coverage ≥40% | ✅ PASS | 88.8% coverage |
 | Documentation | ✅ GOOD | All exports documented |
 | Integration | ✅ COMPLETE | Used by benchmarks and tests |
 | go vet clean | ✅ PASS | No issues |

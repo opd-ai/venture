@@ -10,7 +10,7 @@ The `pkg/config` package provides configuration validation utilities for server 
 | Check | Result |
 |---|---|
 | `go vet` | ✅ Pass |
-| `go test -cover` | 100.0% (target: 65%) |
+| `go test -cover` | 100.0% (target: 40%) |
 | `go test -race` | ✅ Pass |
 | WASM vet | ✅ Pass |
 | TODO/FIXME count | 0 |
@@ -44,7 +44,7 @@ The `pkg/config` package provides configuration validation utilities for server 
 | N/A | N/A | N/A | N/A | Package provides validation utilities, not UI |
 
 ## Test Coverage
-**Coverage**: 100.0% (target: 65%)
+**Coverage**: 100.0% (target: 40%)
 - Missing test areas: None
 - Missing benchmarks: None (6 benchmark functions present)
 - Table-driven test compliance: ✅ All tests use table-driven patterns
@@ -122,7 +122,7 @@ The package is actively used by both `cmd/client/` and `cmd/server/` for startup
   - `validator.go:122` — Directory error includes path and wrapped underlying error
 
 ### Test Coverage ✅
-- **PASS**: 100.0% coverage exceeds 65% target
+- **PASS**: 100.0% coverage exceeds 40% target
 - **PASS**: Table-driven tests present in all test functions
 - **PASS**: 6 benchmark functions present for performance validation
 - **PASS**: Edge cases tested (boundary values, empty inputs, invalid inputs)

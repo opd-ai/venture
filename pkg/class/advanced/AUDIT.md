@@ -10,7 +10,7 @@ Multi-classing, prestige classes, and talent tree system for deep character cust
 | Check | Result |
 |---|---|
 | `go vet` | ✅ Pass |
-| `go test -cover` | 91.1% (target: 65%) |
+| `go test -cover` | 91.1% (target: 40%) |
 | `go test -race` | ✅ Pass |
 | WASM vet | ✅ Pass |
 | TODO/FIXME count | 0 |
@@ -45,7 +45,7 @@ None identified.
 | Skill Tree UI | ✅ | ✅ | ✅ | Via `pkg/engine/advanced_class_ui.go` → `AdvancedClassSystem` → Manager |
 
 ## Test Coverage
-**Coverage**: 91.1% (target: 65%)
+**Coverage**: 91.1% (target: 40%)
 - Missing test areas: None significant; all core functionality tested
 - Missing benchmarks: `initializeTalentTrees()` startup performance
 - Table-driven test compliance: ✅ Comprehensive table-driven tests throughout

@@ -16,7 +16,7 @@ The `political_warfare` package integrates V6 Politics, V8 Guilds, and V6 Federa
 | Check | Result |
 |---|---|
 | `go vet` | ✅ Pass |
-| `go test -cover` | 94.7% (target: 65%) |
+| `go test -cover` | 94.7% (target: 40%) |
 | `go test -race` | ✅ Pass |
 | WASM vet | ✅ Pass |
 | TODO/FIXME count | 0 |
@@ -51,7 +51,7 @@ The `political_warfare` package integrates V6 Politics, V8 Guilds, and V6 Federa
 | N/A | N/A | N/A | N/A | Package provides backend guild warfare logic; no direct UI components |
 
 ## Test Coverage
-**Coverage**: 94.7% (target: 65%)
+**Coverage**: 94.7% (target: 40%)
 - Missing test areas: None significant; all public APIs thoroughly tested
 - Missing benchmarks: ✅ Present - BenchmarkDeclareWar, BenchmarkImposeEmbargo, BenchmarkUpdate
 - Table-driven test compliance: ✅ - Uses table-driven tests for concession types, penalty ranges, victory types

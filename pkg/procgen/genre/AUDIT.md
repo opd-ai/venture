@@ -10,7 +10,7 @@ The genre package provides centralized genre definitions and blending for proced
 | Check | Result |
 |---|---|
 | `go vet` | ✅ Pass |
-| `go test -cover` | 94.8% (target: 65%) ✅ |
+| `go test -cover` | 94.8% (target: 40%) ✅ |
 | `go test -race` | ✅ Pass |
 | WASM vet | ✅ Pass |
 | TODO/FIXME count | 0 |
@@ -46,7 +46,7 @@ None.
 | Genre Selection Menu | ✅ | ✅ | ✅ | Uses `genre.DefaultRegistry()` in `pkg/engine/genre_selection_menu.go` |
 
 ## Test Coverage
-**Coverage**: 94.8% (target: 65%) ✅
+**Coverage**: 94.8% (target: 40%) ✅
 - Missing test areas: None significant (small edge cases in hex parsing with invalid input)
 - Missing benchmarks: None (BenchmarkBlend and BenchmarkCreatePresetBlend present)
 - Table-driven test compliance: ✅

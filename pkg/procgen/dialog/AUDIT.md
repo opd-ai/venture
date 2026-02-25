@@ -4,13 +4,13 @@
 **Status**: Complete
 
 ## Summary
-The `pkg/procgen/dialog` package provides runtime NPC dialog generation using Markov chains with excellent code quality. Test coverage is 87.5% (well above the 65% target), all automated checks pass, and the package follows deterministic generation patterns correctly. Minor documentation enhancement opportunities exist but no critical issues were found.
+The `pkg/procgen/dialog` package provides runtime NPC dialog generation using Markov chains with excellent code quality. Test coverage is 87.5% (well above the 40% target), all automated checks pass, and the package follows deterministic generation patterns correctly. Minor documentation enhancement opportunities exist but no critical issues were found.
 
 ## Automated Check Results
 | Check | Result |
 |---|---|
 | `go vet` | ✅ Pass |
-| `go test -cover` | 87.5% (target: 65%) |
+| `go test -cover` | 87.5% (target: 40%) |
 | `go test -race` | ✅ Pass |
 | WASM vet | ✅ Pass |
 | TODO/FIXME count | 0 |
@@ -46,7 +46,7 @@ _None identified._
 | Dialog UI | ✅ | ✅ | ✅ | `pkg/engine/dialog_ui.go` integrates with `NPCDialogSystem` using this package |
 
 ## Test Coverage
-**Coverage**: 87.5% (target: 65%)
+**Coverage**: 87.5% (target: 40%)
 - Missing test areas: `hash64()` direct testing (covered indirectly)
 - Missing benchmarks: None - benchmarks exist for all major operations
 - Table-driven test compliance: ✅ All tests follow table-driven patterns

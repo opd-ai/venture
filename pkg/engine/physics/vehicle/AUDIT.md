@@ -10,7 +10,7 @@ High-quality physics subsystem implementing suspension dynamics, weight transfer
 | Check | Result |
 |---|---|
 | `go vet` | ✅ Pass |
-| `go test -cover` | 94.1% (target: 65%) |
+| `go test -cover` | 94.1% (target: 30%) |
 | `go test -race` | ✅ Pass |
 | WASM vet | ✅ Pass |
 | TODO/FIXME count | 0 |
@@ -45,7 +45,7 @@ _None identified._
 | N/A | — | — | — | Package has no UI; provides vehicle physics data to rendering systems |
 
 ## Test Coverage
-**Coverage**: 94.1% (target: 65%)
+**Coverage**: 94.1% (target: 30%)
 - Missing test areas: None significant
 - Missing benchmarks: None; benchmarks provided for all major operations
 - Table-driven test compliance: ✅ Tests use table-driven patterns throughout

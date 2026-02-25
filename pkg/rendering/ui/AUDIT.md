@@ -10,7 +10,7 @@ The `pkg/rendering/ui` package provides procedural UI element generation, chat r
 | Check | Result |
 |---|---|
 | `go vet` | ✅ Pass |
-| `go test -cover` | 80.0% (target: 65%) ✅ |
+| `go test -cover` | 80.0% (target: 30%) ✅ |
 | `go test -race` | ✅ Pass |
 | WASM vet | ✅ Pass |
 | TODO/FIXME count | 0 |
@@ -53,7 +53,7 @@ _(None)_
 | QuickTravelManager | ✅ | N/A | ✅ | Data structure for quick travel destinations |
 
 ## Test Coverage
-**Coverage**: 80.1% (target: 65%) ✅
+**Coverage**: 80.1% (target: 30%) ✅
 - Missing test areas: `story_journal.go` and `image_preview.go` have lower coverage based on file names
 - Missing benchmarks: No benchmarks for UI generation performance (would be useful for `generator.go`)
 - Table-driven test compliance: ✅ Tests use table-driven patterns

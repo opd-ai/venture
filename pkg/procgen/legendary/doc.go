@@ -81,6 +81,6 @@
 //
 // # Testing
 //
-// Test coverage targets ≥65% with deterministic generation verification.
+// Test coverage targets ≥40% with deterministic generation verification.
 // Use same seed to verify identical quest chains and reward distributions.
 package legendary

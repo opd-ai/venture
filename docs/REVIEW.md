@@ -18,7 +18,7 @@ Conduct automated code review of recently changed files in the venture repositor
 2. **Structure:** Package docs, file organization, naming conventions
 3. **API Design:** Godoc coverage, error handling, interface compliance
 4. **Pattern Compliance:** ECS components (data-only), generators (determinism), systems (stateless queries)
-5. **Testing:** Coverage ≥65% (excluding Ebiten init functions), race detection
+5. **Testing:** Coverage ≥40% (≥30% for X11/Wayland/Ebiten-dependent packages), race detection
 6. **Concurrency:** Resource safety, proper cleanup, no leaks
 7. **Error Handling:** All returns checked, wrapped with context, validated inputs
 
@@ -49,7 +49,7 @@ For each finding:
 - [ ] Build success
 - [ ] All tests pass
 - [ ] Race-free
-- [ ] Coverage ≥65%
+- [ ] Coverage ≥40% (≥30% for X11/Wayland/Ebiten-dependent packages)
 [... remaining 14 gates from CODE_REVIEW_PLAN.md]
 
 ## Findings & Resolutions

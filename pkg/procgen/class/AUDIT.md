@@ -10,7 +10,7 @@ The `pkg/procgen/class` package provides procedural character class generation w
 | Check | Result |
 |---|---|
 | `go vet` | ✅ Pass |
-| `go test -cover` | 93.0% (target: 65%) |
+| `go test -cover` | 93.0% (target: 40%) |
 | `go test -race` | ✅ Pass |
 | WASM vet | ✅ Pass |
 | TODO/FIXME count | 0 |
@@ -46,7 +46,7 @@ The `pkg/procgen/class` package provides procedural character class generation w
 | Character Creation | N/A | N/A | ✅ | `ClassGenerator` used by `cmd/client/handlers.go` for class selection UI |
 
 ## Test Coverage
-**Coverage**: 93.4% (target: 65%)
+**Coverage**: 93.4% (target: 40%)
 - Missing test areas: Invalid enum value handling in `GetAllPresets()`
 - Missing benchmarks: None (benchmark exists)
 - Table-driven test compliance: ✅

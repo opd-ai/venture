@@ -11,7 +11,7 @@ The shapes package provides deterministic procedural geometric shape generation 
 | Check | Result |
 |---|---|
 | `go vet` | ✅ Pass |
-| `go test -cover` | 98.4% (target: 65%) |
+| `go test -cover` | 98.4% (target: 30%) |
 | `go test -race` | ✅ Pass |
 | WASM vet | ✅ Pass |
 | TODO/FIXME count | 0 |
@@ -47,7 +47,7 @@ None.
 | N/A | — | — | — | This is a rendering utility package with no UI screens |
 
 ## Test Coverage
-**Coverage**: 98.4% (target: 65%)
+**Coverage**: 98.4% (target: 30%)
 - Missing test areas: Edge cases for zero/negative dimensions
 - Missing benchmarks: Individual benchmarks for all 27 shape types
 - Table-driven test compliance: ✅ Uses table-driven tests throughout

@@ -10,7 +10,7 @@ The `pkg/recovery` package provides panic recovery utilities for goroutines with
 | Check | Result |
 |---|---|
 | `go vet` | ✅ Pass |
-| `go test -cover` | 100.0% (target: 65%) |
+| `go test -cover` | 100.0% (target: 40%) |
 | `go test -race` | ✅ Pass |
 | WASM vet | ✅ Pass |
 | TODO/FIXME count | 0 |
@@ -44,7 +44,7 @@ The `pkg/recovery` package provides panic recovery utilities for goroutines with
 | N/A | — | — | — | Package is infrastructure utility, not a UI system |
 
 ## Test Coverage
-**Coverage**: 100.0% (target: 65%)
+**Coverage**: 100.0% (target: 40%)
 - Missing test areas: None
 - Missing benchmarks: Could add benchmark for high-volume panic scenarios, but not critical path code
 - Table-driven test compliance: ✅ (see `TestRecoverPanic` in `panic_recovery_test.go`)

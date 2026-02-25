@@ -69,7 +69,7 @@ Phase 1 preparation steps have been successfully completed. All baseline metrics
 - `pkg/audio/synthesis`: 96.5%
 - `pkg/engine/physics/fluids`: 95.3%
 
-**Packages Below 65% Threshold:**
+**Packages Below 40% Threshold:**
 None identified in passing tests. Failed packages need investigation:
 - `pkg/balance` (FAIL)
 - `pkg/engine` (FAIL - likely Ebiten dependency)
@@ -160,7 +160,7 @@ Key files reviewed for initialization flow:
 | Interfaces | 32 | N/A | ✅ |
 | Client Registrations | 113 | 141 | 🟡 80.1% |
 | Server Registrations | 61 | N/A | ✅ |
-| Test Coverage (avg) | 82.4% | 65%+ | ✅ |
+| Test Coverage (avg) | 82.4% | 40%+ | ✅ |
 | Failed Tests | 8 | 0 | 🔴 |
 
 **Legend:** ✅ Pass | 🟡 Warning | 🔴 Needs Attention

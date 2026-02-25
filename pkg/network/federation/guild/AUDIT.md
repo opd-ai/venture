@@ -11,7 +11,7 @@ The `pkg/network/federation/guild` package provides cross-server guild managemen
 | Check | Result |
 |---|---|
 | `go vet` | ✅ Pass |
-| `go test -cover` | 88.0% (target: 65%) ✅ |
+| `go test -cover` | 88.0% (target: 40%) ✅ |
 | `go test -race` | ✅ Pass |
 | WASM vet | ✅ Pass |
 | TODO/FIXME count | 0 |
@@ -48,7 +48,7 @@ _(None)_
 | Guild UI | N/A | N/A | ✅ | This package provides the backing `guild.Manager`; UI is in `pkg/engine/guild_ui.go` |
 
 ## Test Coverage
-**Coverage**: 88.0% (target: 65%) ✅
+**Coverage**: 88.0% (target: 40%) ✅
 - Missing test areas: None significant; minor coverage gaps in error branches
 - Missing benchmarks: None; `BenchmarkHandleGuildMessage*` added 2026-02-23
 - Table-driven test compliance: ✅ Excellent use of table-driven tests throughout

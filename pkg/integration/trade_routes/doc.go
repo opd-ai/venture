@@ -103,5 +103,5 @@
 //   - Caravan speed: 1 region per 30 minutes real-time
 //   - Success rate: 70-90% (higher with player escorts)
 //   - Profit margin: 10-50% on successful deliveries
-//   - Test coverage: ≥65%
+//   - Test coverage: ≥40%
 package trade_routes

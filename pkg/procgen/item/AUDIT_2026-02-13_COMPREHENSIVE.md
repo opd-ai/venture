@@ -21,7 +21,7 @@ The item package provides procedural generation for weapons, armor, consumables,
 - [x] **low** error-handling — Silent fallback to fantasy templates when unknown genre requested; should log warning (`generator.go:203-207, 211-216, 220-225`) — **FIXED 2026-02-13**: Added logging in `getWeaponTemplates()`, `getArmorTemplates()`, `getConsumableTemplates()` for unknown genre fallback
 
 ## Test Coverage
-91.8% (target: 65%) ✅
+91.8% (target: 40%) ✅
 
 **Coverage Breakdown:**
 - Core generation: ✅ Excellent
@@ -57,7 +57,7 @@ The package is imported by 20+ engine systems:
 ✅ **Deterministic procgen** — All RNG uses `rand.New(rand.NewSource(seed))`, no global rand  
 ✅ **Network interfaces** — N/A (no network code)  
 ✅ **Error handling** — All errors checked and logged appropriately  
-✅ **Test coverage** — 91.8% exceeds 65% target  
+✅ **Test coverage** — 91.8% exceeds 40% target  
 ✅ **Doc coverage** — Has `doc.go` with comprehensive package docs; all exported types documented  
 ✅ **Integration points** — All integration points functional
 

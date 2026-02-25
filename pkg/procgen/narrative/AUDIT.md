@@ -10,7 +10,7 @@ The `pkg/procgen/narrative` package implements procedural story arc generation w
 | Check | Result |
 |---|---|
 | `go vet` | ✅ Pass |
-| `go test -cover` | 91.9% (target: 65%) |
+| `go test -cover` | 91.9% (target: 40%) |
 | `go test -race` | ✅ Pass |
 | WASM vet | ✅ Pass |
 | TODO/FIXME count | 0 |
@@ -44,7 +44,7 @@ The `pkg/procgen/narrative` package implements procedural story arc generation w
 | N/A | N/A | N/A | N/A | Package is a backend generator, not UI |
 
 ## Test Coverage
-**Coverage**: 91.9% (target: 65%)
+**Coverage**: 91.9% (target: 40%)
 - Missing test areas: None significant
 - Missing benchmarks: ✅ Benchmark present (`BenchmarkStoryArcGenerator_Generate`)
 - Table-driven test compliance: ✅ All tests are table-driven

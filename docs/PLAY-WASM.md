@@ -613,7 +613,7 @@ performance.memory.jsHeapSizeLimit / 1024 / 1024;  // Max MB limit
 - Maintain ECS architecture (no logic in components)
 - Preserve deterministic generation (seed-based RNG only)
 - Follow dual-exit UI pattern (ESC + back button/click)
-- Ensure ≥65% test coverage after fixes
+- Ensure ≥40% test coverage after fixes (≥30% for packages depending on X11/Wayland/Ebiten)
 - Pass `go test ./...` without errors (note: some tests may not run in WASM environment)
 
 ### Fix Documentation

@@ -152,7 +152,7 @@ Both functions support optional logger parameter for diagnostics.
 
 ## Testing
 
-Test coverage: 73.9% (exceeds 65% minimum requirement)
+Test coverage: 73.9% (exceeds 40% minimum requirement)
 
 Run tests:
 ```bash

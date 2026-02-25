@@ -9,7 +9,7 @@ Network resilience package provides comprehensive testing infrastructure for val
 None. All previously identified issues are either acceptable design decisions (time.Now() for metrics) or intentional architecture (minimal logging in testing infrastructure, metrics.go has package comment at line 1).
 
 ## Test Coverage
-88.8% (target: 65%) ✅
+88.8% (target: 40%) ✅
 
 **Coverage Breakdown:**
 - `resilience_test.go`: 857 LOC - comprehensive table-driven tests for simulator, metrics, scenarios
@@ -244,7 +244,7 @@ All 5 scenarios (`AllScenarios`) map to these tiers with specific acceptance cri
 | Deterministic procgen | ✅ PASS | Seed-based RNG, documented time.Now() exemption for metrics |
 | Network interfaces | N/A | No concrete network types used |
 | Error handling | ✅ PASS | Custom errors, proper propagation, structured logging in scenarios |
-| Test coverage | ✅ PASS | 88.8% (target 65%) |
+| Test coverage | ✅ PASS | 88.8% (target 40%) |
 | Doc coverage | ✅ PASS | Comprehensive godoc for all exports |
 | Integration points | ✅ PASS | Full server integration, optional logger pattern |
 | Thread safety | ✅ PASS | Multiple mutexes, proper locking |

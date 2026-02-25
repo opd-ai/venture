@@ -144,5 +144,5 @@
 //
 // # Test Coverage Target
 //
-// ≥65% coverage for all files in this package.
+// ≥40% coverage for all files in this package.
 package economy

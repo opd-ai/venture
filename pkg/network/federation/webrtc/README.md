@@ -173,7 +173,7 @@ See `AUDIT.md` for detailed implementation gap analysis.
 
 ## Test Coverage
 
-**Coverage**: 83.0% (exceeds project minimum of 65%)
+**Coverage**: 83.0% (exceeds project minimum of 40%)
 
 - 95 passing tests
 - Comprehensive table-driven tests
@@ -308,7 +308,7 @@ config := &webrtc.Config{
 
 When modifying this package:
 
-1. **Maintain test coverage** above 65% (currently 83%)
+1. **Maintain test coverage** above 40% (currently 83%)
 2. **Document all exports** with godoc comments
 3. **Add tests** for new functionality (table-driven preferred)
 4. **Update AUDIT.md** when adding stubs or incomplete features

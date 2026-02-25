@@ -10,7 +10,7 @@ The raids package provides procedural raid dungeon generation with instance and 
 | Check | Result |
 |---|---|
 | `go vet` | ✅ Pass |
-| `go test -cover` | 90.4% (target: 65%) ✅ |
+| `go test -cover` | 90.4% (target: 40%) ✅ |
 | `go test -race` | ✅ Pass |
 | WASM vet | ✅ Pass |
 | TODO/FIXME count | 0 |
@@ -45,7 +45,7 @@ The raids package provides procedural raid dungeon generation with instance and 
 | N/A | N/A | N/A | N/A | Package is backend generation/management; UI integration handled by `pkg/engine/raid_system.go` and client handlers |
 
 ## Test Coverage
-**Coverage**: 90.4% (target: 65%) ✅
+**Coverage**: 90.4% (target: 40%) ✅
 - Missing test areas: None significant; all core paths covered
 - Missing benchmarks: None; benchmarks present for generator, instance, lockout, manager, and names
 - Table-driven test compliance: ✅ All test files use table-driven patterns

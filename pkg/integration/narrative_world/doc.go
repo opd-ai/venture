@@ -50,5 +50,5 @@
 //
 // # Test Coverage
 //
-// Target: ≥65% (matches V9 requirement)
+// Target: ≥40% (matches V9 requirement)
 package narrative_world

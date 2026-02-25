@@ -91,10 +91,10 @@ func createCharacterCreationTutorialSteps() []CharacterCreationTutorialStep {
 			Completed:   false,
 		},
 		{
-			ID:          "equipment_selection",
-			Title:       "Choose Your Equipment",
-			Description: "Select a starting loadout for your class. Each loadout offers different gear suited to various playstyles.",
-			Hint:        "Use arrow keys or number keys 1-3 to select, then press ENTER to confirm",
+			ID:          "subclass_selection",
+			Title:       "Choose Your Subclass",
+			Description: "Select a hybrid subclass to specialize your base class, or choose None to keep the base class.",
+			Hint:        "Use arrow keys or number keys to select, then press ENTER to confirm",
 			Completed:   false,
 		},
 		{
@@ -131,20 +131,32 @@ func (cct *CharacterCreationTutorial) Update(currentCreationStep int, deltaTime 
 		return
 	}
 
-	// Show the welcome overlay for a short period before allowing
-	// synchronizeTutorialProgress to advance past it. This ensures
-	// new players see the welcome message without blocking character
-	// creation input (ENTER, SPACE, typed characters).
-	if cct.CurrentStepIdx == 0 && currentCreationStep == 0 {
+	// Handle the welcome overlay (tutorial step 0).
+	// The welcome step has no corresponding creationStep; it must be
+	// dismissed before the underlying character creation processes input.
+	if cct.CurrentStepIdx == 0 {
 		cct.welcomeTimer += deltaTime
-		// After 2 seconds, auto-advance past the welcome step so
-		// synchronizeTutorialProgress can take over normally.
-		if cct.welcomeTimer >= 2.0 {
+
+		// Allow manual dismissal via ENTER, SPACE, or touch/click.
+		manualDismiss := false
+		if cct.welcomeTimer >= 0.5 {
+			// After a short grace period, accept user input to dismiss.
+			if inpututil.IsKeyJustPressed(ebiten.KeyEnter) ||
+				inpututil.IsKeyJustPressed(ebiten.KeySpace) ||
+				IsTouchOrMouseJustPressed() {
+				manualDismiss = true
+				cct.InputConsumed = true
+			}
+		}
+
+		// Auto-advance after 3 seconds, or on manual dismissal.
+		if cct.welcomeTimer >= 3.0 || manualDismiss {
 			cct.advanceStep()
 		}
-		// Don't block — fall through to synchronizeTutorialProgress
-		// so that if the player already advanced character creation,
-		// the tutorial catches up without skipping steps.
+
+		// While on the welcome step, consume ALL key/touch input so the
+		// underlying character creation doesn't process it.
+		cct.InputConsumed = true
 		return
 	}
 

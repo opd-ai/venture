@@ -53,6 +53,7 @@ This file tracks package-level audits across the Venture codebase. Each entry in
 - [x] `pkg/rendering/lighting/AUDIT.md` — Complete — 5 issues (0 high, 2 med, 3 low) — Coverage: Unmeasurable (requires X11; 56.6% test-to-source ratio)
 - [x] `pkg/rendering/postprocess/AUDIT.md` — Complete — 2 issues (0 high, 0 med, 2 low) — Coverage: Unmeasurable (requires X11; 66% test-to-source ratio)
 - [x] `pkg/network/federation/AUDIT.md` — Complete — 4 issues (1 high, 2 med, 1 low) — Coverage: 85.8% (subpackages; parent requires X11)
+- [x] `pkg/network/federation/webrtc/AUDIT.md` — Complete — 4 issues (0 high, 2 med, 2 low) — Coverage: 85.7%
 - [x] `pkg/network/chat/AUDIT.md` — Complete — 4 issues (1 high, 2 med, 2 low) — Coverage: Unmeasurable (requires X11; 30% target)
 - [x] `pkg/network/trade/AUDIT.md` — Complete — 4 issues (0 high, 1 med, 3 low) — Coverage: Unmeasurable (requires X11; 145% test-to-source ratio)
 - [x] `pkg/network/resilience/AUDIT.md` — Complete — 4 issues (0 high, 2 med, 2 low) — Coverage: 89.3%

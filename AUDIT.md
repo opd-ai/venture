@@ -21,7 +21,7 @@ This file tracks package-level audits across the Venture codebase. Each entry in
 - [x] `pkg/network/federation/AUDIT.md` — Complete — 4 issues (1 high, 2 med, 1 low) — Coverage: 85.8% (subpackages; parent requires X11)
 - [ ] `pkg/network/` (other subpackages) — Not audited
 - [ ] `pkg/world/` — Not audited
-- [ ] `pkg/audio/` — Not audited
+- [x] `pkg/audio/AUDIT.md` — Complete — 4 issues (0 high, 1 med, 3 low) — Coverage: 93.5%
 
 ### Supporting Packages
 - [x] `pkg/saveload/AUDIT.md` — Complete — 4 issues (0 high, 1 med, 3 low) — Coverage: 85.5%
@@ -62,9 +62,9 @@ This file tracks package-level audits across the Venture codebase. Each entry in
 - [ ] `pkg/integration/world_events/` — Not audited
 
 ## Audit Progress
-- **Completed**: 6/90+ packages
+- **Completed**: 7/90+ packages
 - **In Progress**: 0
-- **Not Started**: 84+
+- **Not Started**: 83+
 
 ## Next Priority
 Packages with high integration surface and platform-specific concerns:

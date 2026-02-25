@@ -42,7 +42,7 @@ This file tracks package-level audits across the Venture codebase. Each entry in
 - [x] `pkg/version/AUDIT.md` — Complete — 5 issues (0 high, 2 med, 3 low) — Coverage: 100.0%
 - [x] `pkg/migration/AUDIT.md` — Complete — 2 issues (0 high, 0 med, 2 low) — Coverage: 91.3%
 - [x] `pkg/modding/AUDIT.md` — Complete — 4 issues (0 high, 1 med, 3 low) — Coverage: 90.6%
-- [ ] `pkg/narrative/` — Not audited
+- [x] `pkg/narrative/branching/AUDIT.md` — Complete — 3 issues (0 high, 2 med, 4 low) — Coverage: 88.3%
 - [ ] `pkg/ux/` — Not audited
 - [x] `pkg/balance/AUDIT.md` — Complete — 7 issues (1 high, 2 med, 4 low) — Coverage: Unmeasurable (requires X11; 228% test-to-source ratio)
 - [ ] `pkg/class/` — Not audited

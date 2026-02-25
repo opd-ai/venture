@@ -486,18 +486,10 @@ func NewCharacterCreation(screenWidth, screenHeight int) *EbitenCharacterCreatio
 	cc.skipButton.PressedColor = color.RGBA{150, 150, 70, 255}
 	cc.skipButton.BorderColor = color.RGBA{180, 180, 100, 255}
 
-	// Create preset name buttons (for WASM/mobile fallback)
-	presetNames := []string{"Warrior", "Mage", "Rogue", "Ranger", "Auto"}
-	cc.presetNameButtons = make([]*mobile.TouchButton, len(presetNames))
-	for i, name := range presetNames {
-		presetName := name // Capture for closure
-		cc.presetNameButtons[i] = mobile.NewTouchButton(
-			0, 0, // Position updated dynamically
-			100, 36,
-			presetName,
-			func() { cc.handlePresetName(presetName) },
-		)
-	}
+	// Preset name buttons are initialized lazily when the world seed is
+	// set via SetDefaultNameFromSeed, since we need the seed to generate
+	// deterministic random names. Start with a placeholder set.
+	cc.presetNameButtons = nil
 
 	return cc
 }
@@ -516,6 +508,7 @@ func (cc *EbitenCharacterCreation) SetDefaults(defaults CharacterCreationDefault
 
 // SetDefaultNameFromSeed sets the default character name based on world seed.
 // Uses deterministic selection to ensure the same seed always produces the same name.
+// Also generates preset name buttons with seed-derived random names.
 func (cc *EbitenCharacterCreation) SetDefaultNameFromSeed(seed int64) {
 	cc.worldSeed = seed // Store seed for generateRandomName
 	defaultName := procgen.SelectDefaultName(seed)
@@ -524,6 +517,47 @@ func (cc *EbitenCharacterCreation) SetDefaultNameFromSeed(seed int64) {
 	if cc.currentStep == stepNameInput {
 		cc.nameInput = defaultName
 	}
+
+	// Generate preset name buttons with deterministic random names.
+	// Uses the world seed offset by index to produce varied but reproducible names.
+	cc.generatePresetNameButtons(seed)
+}
+
+// generatePresetNameButtons creates touch buttons with seed-derived random names
+// plus an "Auto" button that generates a fresh random name each press.
+func (cc *EbitenCharacterCreation) generatePresetNameButtons(seed int64) {
+	const presetCount = 5
+	rng := rand.New(rand.NewSource(seed + 9999)) // Offset to differ from default name
+
+	// Pick presetCount-1 unique names, plus an "Auto" button
+	used := make(map[int]bool)
+	presetNames := make([]string, 0, presetCount-1)
+	for len(presetNames) < presetCount-1 {
+		idx := rng.Intn(len(procgen.DefaultNames))
+		if used[idx] {
+			continue
+		}
+		used[idx] = true
+		presetNames = append(presetNames, procgen.DefaultNames[idx])
+	}
+
+	cc.presetNameButtons = make([]*mobile.TouchButton, presetCount)
+	for i, name := range presetNames {
+		capturedName := name
+		cc.presetNameButtons[i] = mobile.NewTouchButton(
+			0, 0,
+			100, 36,
+			capturedName,
+			func() { cc.handlePresetName(capturedName) },
+		)
+	}
+	// Last button is "Random" to generate a fresh name
+	cc.presetNameButtons[presetCount-1] = mobile.NewTouchButton(
+		0, 0,
+		100, 36,
+		"Random",
+		func() { cc.handlePresetName("Auto") },
+	)
 }
 
 // GetDefaults returns the current default values
@@ -837,9 +871,11 @@ func (cc *EbitenCharacterCreation) handleNumberKeySelection() {
 	}
 }
 
-// handleTouchOrMouseClick processes touch and mouse click events for class selection
+// handleTouchOrMouseClick processes touch and mouse click events for class selection.
+// A click selects the class (highlights it) but does NOT advance to the next step.
+// The player must press ENTER or click Next to confirm their choice.
 func (cc *EbitenCharacterCreation) handleTouchOrMouseClick() bool {
-	if !IsTouchOrMouseJustPressed() {
+	if !IsTouchOrMouseJustPressed() || cc.stepChangedThisFrame {
 		return false
 	}
 	mouseX, mouseY, _ := GetTouchOrMousePosition()
@@ -848,10 +884,7 @@ func (cc *EbitenCharacterCreation) handleTouchOrMouseClick() bool {
 	for i, class := range baseClasses {
 		if cc.isClassBoxClicked(mouseX, mouseY, startY, i) {
 			cc.selectedClass = class
-			cc.characterData.Class = cc.selectedClass
-			cc.selectedSubclass = noSubclassSelected
-			cc.currentStep = stepSubclassSelection
-			return true
+			return false // Select only — don't advance step
 		}
 	}
 	return false
@@ -864,17 +897,12 @@ func (cc *EbitenCharacterCreation) isClassBoxClicked(mouseX, mouseY, startY, cla
 		mouseY >= classY-5 && mouseY <= classY+45
 }
 
-// handleTouchOrMouseHover updates selection based on mouse/touch hover position
+// handleTouchOrMouseHover is intentionally a no-op.
+// Mouse hover no longer changes the selected class because it was causing
+// unintentional class changes when the cursor rested over a different class box.
+// Selection is done only via arrow keys, number keys, or explicit clicks.
 func (cc *EbitenCharacterCreation) handleTouchOrMouseHover() {
-	mouseX, mouseY, _ := GetTouchOrMousePosition()
-	startY := cc.panelY + 160
-
-	for i, class := range baseClasses {
-		if cc.isClassBoxClicked(mouseX, mouseY, startY, i) {
-			cc.selectedClass = class
-			break
-		}
-	}
+	// No-op: hover selection removed to prevent accidental class changes.
 }
 
 // handleConfirmationKeys processes Enter key to confirm selection
@@ -1448,6 +1476,9 @@ func (cc *EbitenCharacterCreation) handleBackButton() {
 		cc.currentStep = stepPortraitSelection
 		cc.keyboardShown = false
 	}
+	// Mark step changed so the new step's click handlers don't consume
+	// the same mouse/touch event that triggered this back navigation.
+	cc.stepChangedThisFrame = true
 }
 
 // handleSkipButton processes the Skip touch button press

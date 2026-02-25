@@ -11,5 +11,5 @@ Preserve the original intent while eliminating ambiguity. If the execution mode 
 Avoid excessively long responses which will exceed github copilot length limits for claude-sonnet-4.5
 
 ~~~~
-The new combined onboarding tutorial and character customization system appears to be inaccessible. Instead, a partial tutorial which is presented out-of-order and skips steps is shown. We want the modern, fixed onboarding AND character creation tools exposed to new users. Carefully examine all tutorial systems, and ensure that the modern version with all specified features for tutorial guides and character development are included, enabled, added to the game, and bug-free. If you discover bugs while integrating, fix them.
+
 ~~~~

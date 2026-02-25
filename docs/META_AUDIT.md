@@ -8,7 +8,20 @@ EXECUTION MODE: Autonomous action — select package, audit, write files, report
 
 1. **Read root `AUDIT.md`** to identify already-audited packages.
 2. **Read `pkg/engine/interfaces.go`** to understand all defined `System`, `Component`, and `Input` interfaces.
-3. **Read `pkg/engine/ecs.go`** to understand `World`, `Entity`, component caching, and system registration.
+
+## Phase 0.5: Full-Stack Integration Baseline
+
+Before beginning the per-package audit, verify that every major subsystem is **on by default** — meaning it is initialized, registered, and reachable without requiring manual flags, hidden toggles, or developer-only configuration. A feature that exists in code but is not wired into the default startup path is treated as a **High Severity** integration gap.
+
+Check each row and mark ✅ (on by default), ⚠️ (present but requires opt-in), or ❌ (missing/dead code):
+
+| Subsystem | Default Entry Point | What to verify |
+|---|---|---|
+| **Main Menu** | `cmd/client/` startup | Main menu is the first screen shown; all sub-menus (New Game, Continue, Settings, Multiplayer, Quit) are reachable without code modification; seed entry and genre selector present at game start |
+| **Tutorial / Onboarding** | First launch or New Game flow | Tutorial system initialized and shown by default on first run; step progression, input-device-adaptive prompts, and dismiss/re-open all functional; not gated behind a debug flag |
+| **Character Creation** | New Game → Character Creation | Character creation screen reachable from main menu; class selection, appearance, name entry, and starting stat allocation wired; genre-specific creation options present; feeds correctly into ECS entity initialization |
+| **AI Systems** | Server/client startup | `ai_system.go`, `behavior_tree_system.go`, `squad_system.go`, `companion_ai_system.go` all registered in default system list; NPCs exhibit behavior on game start without manual enable; AI ticks correctly relative to movement and combat systems |
+| **Procedural Generation** | New Game / zone load | Terrain, entity, item, quest, dialog, and narrative generators all invoked on new game creation; all use seed from CLI/config (not hardcoded); genre parameter propagated to every generator; async terrain loading active by default |
 4. **Read `cmd/client/` entry point** to understand `EbitenGame` state machine, system initialization order, and lazy-init patterns.
 5. **Read `cmd/server/` entry point** to understand server-side system registration and validation layers.
 6. **Catalog all existing input providers and menu/UI systems** (see Phase 2 and Phase 3 below) so audits can verify integration.

@@ -27,7 +27,7 @@ The modding package provides a secure, data-driven mod framework for server-side
 - [x] **Integration gap (RESOLVED 2026-02-22)** — `modManager` was created in `cmd/server/main.go` but immediately discarded. Now wired to World via `ProviderAdapter` that implements `engine.ModRuleProvider`. Game systems can query mod rules through `world.GetModRuleFloat64()` and `world.GetModRuleBool()`.
 
 ### Low Severity
-- [ ] **Documentation duplication** — Determinism exemption section appears twice in `doc.go` (lines 113-120 and 141-148) (`doc.go:141`)
+- [x] **Documentation duplication** — ~~Determinism exemption section appears twice in `doc.go` (lines 113-120 and 141-148)~~ **RESOLVED 2026-02-25**: Removed duplicate section at lines 141-148, kept comprehensive version at lines 111-120. (`doc.go:141`)
 - [ ] **Rate limit test dependency** — `TestManager_RateLimit` uses `time.Sleep(1100ms)` which may cause flakiness on slow CI systems (`modding_test.go:519`)
 
 ## Input Integration

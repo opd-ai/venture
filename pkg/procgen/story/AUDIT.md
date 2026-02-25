@@ -26,7 +26,7 @@ None
 - [x] **Doc coverage** — `FragmentType.String()` method missing godoc comment (`generator.go:12`) **NOTE 2026-02-23**: Upon inspection, godoc comment already present at line 11: `// String returns the string representation of FragmentType`
 
 ### Low Severity
-- [ ] **Doc coverage** — `Vector2` struct fields missing godoc comments (`types.go:20-24`)
+- [x] **Doc coverage** — ~~`Vector2` struct fields missing godoc comments~~ **RESOLVED 2026-02-25**: Added field-level godoc comments explaining X (horizontal axis) and Y (vertical axis) coordinates. (`types.go:20-24`)
 - [ ] **API consistency** — `fragmentKey` helper function uses character arithmetic that could fail for sequenceNum > 9 (`story_fragment_component.go:167` in engine package, uses this package)
 
 ## Input Integration

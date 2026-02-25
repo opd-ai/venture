@@ -135,14 +135,4 @@
 //	if report.AllChecksPassed() {
 //	    log.Print("All 6 sandbox security checks passed")
 //	}
-//
-// # Determinism Exemption
-//
-// This package uses time.Now() for non-procgen metadata timestamps:
-//   - LoadedAt: Records when a mod was loaded (loader.go)
-//   - AppliedAt: Records when rules were applied (manager.go)
-//   - Rate limiting: Throttles rapid mod operations (manager.go)
-//
-// These usages are acceptable because they track operational metadata only
-// and do not affect procedural generation determinism or gameplay state.
 package modding

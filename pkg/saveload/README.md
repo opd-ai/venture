@@ -26,12 +26,15 @@ The save/load system allows players to save their progress and resume gameplay l
 ### Creating a Save Manager
 
 ```go
-import "github.com/opd-ai/venture/pkg/saveload"
+import (
+    "github.com/opd-ai/venture/pkg/saveload"
+    "github.com/sirupsen/logrus"
+)
 
 // Create manager with save directory
 manager, err := saveload.NewSaveManager("./saves")
 if err != nil {
-    log.Fatal(err)
+    logrus.WithError(err).Fatal("failed to create save manager")
 }
 ```
 
@@ -65,7 +68,7 @@ save.Settings.MasterVolume = 0.8
 // Save to file
 err = manager.SaveGame("quicksave", save)
 if err != nil {
-    log.Fatal(err)
+    logrus.WithError(err).Fatal("failed to save game")
 }
 ```
 
@@ -75,7 +78,7 @@ if err != nil {
 // Load save file
 save, err := manager.LoadGame("quicksave")
 if err != nil {
-    log.Fatal(err)
+    logrus.WithError(err).Fatal("failed to load game")
 }
 
 // Restore player state
@@ -105,16 +108,18 @@ regeneratedTerrain, _ := terrainGen.Generate(save.WorldState.Seed, params)
 // Get all save files
 saves, err := manager.ListSaves()
 if err != nil {
-    log.Fatal(err)
+    logrus.WithError(err).Fatal("failed to list saves")
 }
 
 // Display saves (sorted by timestamp, newest first)
 for _, save := range saves {
-    fmt.Printf("Save: %s\n", save.Name)
-    fmt.Printf("  Level: %d\n", save.PlayerLevel)
-    fmt.Printf("  Genre: %s\n", save.GenreID)
-    fmt.Printf("  Time: %.1f hours\n", save.GameTime/3600)
-    fmt.Printf("  Created: %s\n", save.Timestamp.Format("2006-01-02 15:04"))
+    logrus.WithFields(logrus.Fields{
+        "name":     save.Name,
+        "level":    save.PlayerLevel,
+        "genre":    save.GenreID,
+        "hours":    save.GameTime / 3600,
+        "created":  save.Timestamp.Format("2006-01-02 15:04"),
+    }).Info("save file")
 }
 ```
 
@@ -131,7 +136,7 @@ if manager.SaveExists("autosave") {
 ```go
 err = manager.DeleteSave("old-save")
 if err != nil {
-    log.Fatal(err)
+    logrus.WithError(err).Fatal("failed to delete save")
 }
 ```
 
@@ -141,11 +146,13 @@ if err != nil {
 // Get metadata without loading entire save
 metadata, err := manager.GetSaveMetadata("save1")
 if err != nil {
-    log.Fatal(err)
+    logrus.WithError(err).Fatal("failed to get metadata")
 }
 
-fmt.Printf("Player Level: %d\n", metadata.PlayerLevel)
-fmt.Printf("File Size: %d bytes\n", metadata.FileSize)
+logrus.WithFields(logrus.Fields{
+    "level":     metadata.PlayerLevel,
+    "file_size": metadata.FileSize,
+}).Info("save metadata")
 ```
 
 ## Corruption Recovery (Production Ready)
@@ -161,7 +168,7 @@ For production use, it's recommended to use `SaveGameWithBackup` instead of `Sav
 // Save with automatic backup and checksum (RECOMMENDED)
 err = manager.SaveGameWithBackup("savegame", save)
 if err != nil {
-    log.Fatal(err)
+    logrus.WithError(err).Fatal("failed to save game with backup")
 }
 // Files created:
 // - savegame.sav (current save)
@@ -177,7 +184,7 @@ Use `LoadGameWithRecovery` to enable automatic corruption detection and recovery
 // Load with automatic recovery (RECOMMENDED)
 save, err := manager.LoadGameWithRecovery("savegame")
 if err != nil {
-    log.Fatal(err)
+    logrus.WithError(err).Fatal("failed to load game with recovery")
 }
 // Recovery process:
 // 1. Validates checksum
@@ -225,14 +232,14 @@ save, err := manager.LoadGameWithRecovery("savegame")
 if err != nil {
     if strings.Contains(err.Error(), "no valid backup") {
         // Both save and backup are corrupted
-        log.Println("Cannot recover - save file lost")
+        logrus.Warn("cannot recover - save file lost")
         // Offer user to start new game
     } else if strings.Contains(err.Error(), "not found") {
         // Save doesn't exist
-        log.Println("No save file found")
+        logrus.Warn("no save file found")
     } else {
         // Other errors
-        log.Printf("Load error: %v", err)
+        logrus.WithError(err).Error("load error")
     }
     return
 }
@@ -523,9 +530,9 @@ Potential improvements for future versions:
 package main
 
 import (
-    "log"
     "github.com/opd-ai/venture/pkg/saveload"
     "github.com/opd-ai/venture/pkg/engine"
+    "github.com/sirupsen/logrus"
 )
 
 func saveGameState(game *engine.Game, saveName string) error {
@@ -577,18 +584,20 @@ func loadGameState(saveName string) (*saveload.GameSave, error) {
 func main() {
     // Save game
     if err := saveGameState(game, "quicksave"); err != nil {
-        log.Printf("Save failed: %v", err)
+        logrus.WithError(err).Error("save failed")
     } else {
-        log.Println("Game saved successfully")
+        logrus.Info("game saved successfully")
     }
 
     // Load game
     save, err := loadGameState("quicksave")
     if err != nil {
-        log.Printf("Load failed: %v", err)
+        logrus.WithError(err).Error("load failed")
     } else {
-        log.Printf("Game loaded: Level %d, Genre %s", 
-            save.PlayerState.Level, save.WorldState.GenreID)
+        logrus.WithFields(logrus.Fields{
+            "level": save.PlayerState.Level,
+            "genre": save.WorldState.GenreID,
+        }).Info("game loaded")
     }
 }
 ```

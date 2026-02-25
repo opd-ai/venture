@@ -71,14 +71,14 @@ This file tracks package-level audits across the Venture codebase. Each entry in
 - [ ] `pkg/integration/world_events/` — Not audited
 
 ## Audit Progress
-- **Completed**: 44/90+ packages
+- **Completed**: 45/90+ packages
 - **In Progress**: 0
-- **Not Started**: 46+
+- **Not Started**: 45+
 
 ## Next Priority
 Packages with high integration surface and platform-specific concerns:
 1. `pkg/engine/` — Core ECS implementation, 400+ files (highest priority: all systems)
-2. `pkg/network/` — Remaining subpackages (chat, trade, resilience, core)
-3. `pkg/rendering/` — Graphics pipeline
-4. `pkg/world/` — World state and persistence
-5. `pkg/procgen/` — Procedural generation (terrain, entity, quest, etc.)
+2. `pkg/rendering/` — Graphics pipeline (subdirectories need auditing)
+3. `pkg/procgen/` — Procedural generation (remaining subdirectories)
+4. `pkg/integration/world_events/` — World events integration
+5. `cmd/mobile/` — Mobile platform entry point

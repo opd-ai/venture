@@ -451,7 +451,7 @@ func (s *CombatSystem) executeMeleeAttack(attacker, target *Entity, attack *Atta
 	// Check for block - reduces damage by 50% if successful
 	blocked := s.checkBlock(attacker, target, targetStats)
 
-	finalDamage, baseDamage, isCrit := s.computeFinalDamage(attack, attackerStats, targetStats, target)
+	finalDamage, baseDamage, isCrit := s.computeFinalDamage(attacker, attack, attackerStats, targetStats, target)
 	if finalDamage <= 0 {
 		attack.ResetCooldown()
 		s.logDamageAbsorbed(attacker, target)
@@ -473,8 +473,12 @@ func (s *CombatSystem) executeMeleeAttack(attacker, target *Entity, attack *Atta
 
 // computeFinalDamage calculates the final damage after all modifiers.
 // Returns (finalDamage, baseDamage, isCrit) to avoid redundant RNG-consuming recalculation.
-func (s *CombatSystem) computeFinalDamage(attack *AttackComponent, attackerStats, targetStats *StatsComponent, target *Entity) (float64, float64, bool) {
+func (s *CombatSystem) computeFinalDamage(attacker *Entity, attack *AttackComponent, attackerStats, targetStats *StatsComponent, target *Entity) (float64, float64, bool) {
 	baseDamage, isCrit := s.calculateDamage(attack, attackerStats)
+
+	// Apply mod rule damage multipliers (Phase 6.3: Modding System Integration)
+	baseDamage = s.applyModDamageMultipliers(attacker, target, baseDamage)
+
 	damageAfterResist := s.applyDefenseAndResistance(baseDamage, attack.DamageType, targetStats)
 
 	// Check if significant damage was resisted and trigger callback
@@ -674,6 +678,44 @@ func (s *CombatSystem) calculateDamage(attack *AttackComponent, attackerStats *S
 	}
 
 	return baseDamage, isCrit
+}
+
+// applyModDamageMultipliers applies mod-defined damage multipliers to base damage.
+// Queries mod rules based on entity type (player vs NPC).
+// Phase 6.3 (PLAN.md): Modding System Integration
+func (s *CombatSystem) applyModDamageMultipliers(attacker, target *Entity, baseDamage float64) float64 {
+	if s.world == nil {
+		return baseDamage
+	}
+
+	modRules := s.world.GetModRules()
+	if modRules == nil {
+		return baseDamage
+	}
+
+	// Apply attacker damage multiplier
+	attackerMultiplier := 1.0
+	if attacker.HasComponent("input") {
+		// Player attacker: query player damage multiplier
+		attackerMultiplier = modRules.GetRuleFloat64("combat.player_damage_multiplier", 1.0)
+	} else if attacker.HasComponent("ai") || attacker.HasComponent("npc") {
+		// Enemy attacker: query enemy damage multiplier
+		attackerMultiplier = modRules.GetRuleFloat64("combat.enemy_damage_multiplier", 1.0)
+	}
+
+	finalDamage := baseDamage * attackerMultiplier
+
+	if s.logger != nil && attackerMultiplier != 1.0 {
+		s.logger.WithFields(logrus.Fields{
+			"attacker_id":        attacker.ID,
+			"base_damage":        baseDamage,
+			"final_damage":       finalDamage,
+			"damage_multiplier":  attackerMultiplier,
+			"is_player_attacker": attacker.HasComponent("input"),
+		}).Debug("mod damage multiplier applied")
+	}
+
+	return finalDamage
 }
 
 // applyDefenseAndResistance reduces damage based on target's defense and resistances.

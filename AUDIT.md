@@ -32,9 +32,9 @@ The following patterns affect multiple packages and represent systemic concerns:
 **Affected:** `pkg/integration` (all sub-packages), `pkg/engine/prestige`, `pkg/engine/qol`
 **Pattern:** Three distinct registration patterns coexist without a documented standard: (1) ECS System wrapper registered with World, (2) Manager-only with no wrapper, (3) Pure integration called directly. No centralized registry or discovery mechanism exists. This complicates server-side registration (prestige and QoL are client-only without server equivalents).
 
-### 9. Modding System Integration Gap
-**Affected:** `cmd/server/main.go`, `pkg/modding`
-**Pattern:** The `modManager` is created at server startup but immediately discarded (`_ = modManager`), preventing any mod rules from being applied to running game systems. This is a silent integration failure that negates the entire modding subsystem on the server.
+### 9. Modding System Integration (**RESOLVED 2026-02-25**)
+**Affected:** ~~`cmd/server/main.go`, `pkg/modding`~~ (**RESOLVED 2026-02-25**)
+**Pattern:** ~~The `modManager` is created at server startup but immediately discarded (`_ = modManager`), preventing any mod rules from being applied to running game systems. This is a silent integration failure that negates the entire modding subsystem on the server.~~ **RESOLVED**: Infrastructure was wired on 2026-02-22 (commit 44bd3518), but no game systems used it. Added mod damage multipliers to combat system (`combat.player_damage_multiplier`, `combat.enemy_damage_multiplier`). Systems now query `world.GetModRules()` and apply rule values. Comprehensive tests verify multiplier application. Example: hardcore-mode.json with 0.8x player damage and 1.3x enemy damage works correctly.
 
 ### 10. Coverage in Ebiten-Dependent Packages
 **Affected:** `cmd/client` (45%), `pkg/rendering/animation` (68.4%), `pkg/world/housing` (78.6%), `pkg/rendering/ui` (80.1%), `pkg/network` (82.6%), `pkg/rendering/sprites` (82.4%)

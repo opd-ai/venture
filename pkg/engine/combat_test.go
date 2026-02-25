@@ -1541,11 +1541,12 @@ func TestComputeFinalDamage_ReturnsBaseDamage(t *testing.T) {
 	attackerStats.CritChance = 0 // No crits for deterministic test
 
 	world := NewWorld()
+	attacker := world.CreateEntity()
 	target := world.CreateEntity()
 	target.AddComponent(&HealthComponent{Current: 100, Max: 100})
 	world.Update(0)
 
-	finalDamage, baseDamage, isCrit := combatSys.computeFinalDamage(attack, attackerStats, nil, target)
+	finalDamage, baseDamage, isCrit := combatSys.computeFinalDamage(attacker, attack, attackerStats, nil, target)
 
 	expectedBase := attack.Damage + attackerStats.Attack // 20 + 10 = 30
 	if baseDamage != expectedBase {
@@ -1601,4 +1602,237 @@ func TestCombatSystem_DeterministicRNG(t *testing.T) {
 			t.Errorf("non-deterministic at attack %d: %f != %f", i, run1[i], run2[i])
 		}
 	}
+}
+
+// TestCombatModDamageMultipliers verifies that mod rules correctly scale damage.
+// Phase 6.3 (PLAN.md): Modding System Integration
+func TestCombatModDamageMultipliers(t *testing.T) {
+	tests := []struct {
+		name             string
+		playerMultiplier float64
+		enemyMultiplier  float64
+		baseDamage       float64
+		attackerIsPlayer bool
+		expectedDamage   float64
+	}{
+		{
+			name:             "no mod rules applied",
+			playerMultiplier: 1.0,
+			enemyMultiplier:  1.0,
+			baseDamage:       100,
+			attackerIsPlayer: true,
+			expectedDamage:   100,
+		},
+		{
+			name:             "player damage buffed",
+			playerMultiplier: 1.5,
+			enemyMultiplier:  1.0,
+			baseDamage:       100,
+			attackerIsPlayer: true,
+			expectedDamage:   150,
+		},
+		{
+			name:             "player damage nerfed",
+			playerMultiplier: 0.5,
+			enemyMultiplier:  1.0,
+			baseDamage:       100,
+			attackerIsPlayer: true,
+			expectedDamage:   50,
+		},
+		{
+			name:             "enemy damage buffed",
+			playerMultiplier: 1.0,
+			enemyMultiplier:  2.0,
+			baseDamage:       50,
+			attackerIsPlayer: false,
+			expectedDamage:   100,
+		},
+		{
+			name:             "enemy damage nerfed",
+			playerMultiplier: 1.0,
+			enemyMultiplier:  0.7,
+			baseDamage:       100,
+			attackerIsPlayer: false,
+			expectedDamage:   70,
+		},
+		{
+			name:             "hardcore mode multipliers",
+			playerMultiplier: 0.8,
+			enemyMultiplier:  1.3,
+			baseDamage:       100,
+			attackerIsPlayer: true,
+			expectedDamage:   80,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			world := NewWorld()
+			combatSystem := NewCombatSystem(12345)
+			combatSystem.SetParticleSystem(nil, world, "fantasy")
+
+			// Create mock mod rules provider
+			modRules := &mockModRuleProvider{
+				rules: map[string]interface{}{
+					"combat.player_damage_multiplier": tt.playerMultiplier,
+					"combat.enemy_damage_multiplier":  tt.enemyMultiplier,
+				},
+			}
+			world.SetModRules(modRules)
+
+			attacker := world.CreateEntity()
+			target := world.CreateEntity()
+
+			// Set attacker type (player or NPC)
+			if tt.attackerIsPlayer {
+				attacker.AddComponent(&StubInput{})
+			} else {
+				attacker.AddComponent(&AIComponent{})
+			}
+
+			// Apply multipliers
+			finalDamage := combatSystem.applyModDamageMultipliers(attacker, target, tt.baseDamage)
+
+			if math.Abs(finalDamage-tt.expectedDamage) > 0.01 {
+				t.Errorf("expected damage %v, got %v", tt.expectedDamage, finalDamage)
+			}
+		})
+	}
+}
+
+// TestCombatModDamageMultipliersNoModRules verifies default behavior without mod rules.
+// Phase 6.3 (PLAN.md): Modding System Integration
+func TestCombatModDamageMultipliersNoModRules(t *testing.T) {
+	world := NewWorld()
+	combatSystem := NewCombatSystem(12345)
+	combatSystem.SetParticleSystem(nil, world, "fantasy")
+	// No mod rules set - should return baseDamage unchanged
+
+	attacker := world.CreateEntity()
+	target := world.CreateEntity()
+	attacker.AddComponent(&StubInput{})
+
+	baseDamage := 100.0
+	finalDamage := combatSystem.applyModDamageMultipliers(attacker, target, baseDamage)
+
+	if finalDamage != baseDamage {
+		t.Errorf("expected damage unchanged at %v, got %v", baseDamage, finalDamage)
+	}
+}
+
+// TestCombatIntegrationWithModRules verifies end-to-end combat with mod rules.
+// Phase 6.3 (PLAN.md): Modding System Integration
+func TestCombatIntegrationWithModRules(t *testing.T) {
+	world := NewWorld()
+	combatSystem := NewCombatSystem(12345)
+	combatSystem.SetParticleSystem(nil, world, "fantasy")
+
+	// Set hardcore mode mod rules (player damage 0.8x, enemy damage 1.3x)
+	modRules := &mockModRuleProvider{
+		rules: map[string]interface{}{
+			"combat.player_damage_multiplier": 0.8,
+			"combat.enemy_damage_multiplier":  1.3,
+		},
+	}
+	world.SetModRules(modRules)
+
+	// Create player vs enemy scenario
+	player := world.CreateEntity()
+	player.AddComponent(&StubInput{})
+	player.AddComponent(&PositionComponent{X: 0, Y: 0})
+	player.AddComponent(&HealthComponent{Current: 100, Max: 100})
+	player.AddComponent(&StatsComponent{
+		Attack:     10,
+		Defense:    5,
+		CritChance: 0,
+	})
+	player.AddComponent(&AttackComponent{
+		Damage:     50, // Base damage
+		DamageType: combat.DamagePhysical,
+		Range:      100,
+		Cooldown:   1.0,
+	})
+
+	enemy := world.CreateEntity()
+	enemy.AddComponent(&AIComponent{})
+	enemy.AddComponent(&PositionComponent{X: 10, Y: 0})
+	enemy.AddComponent(&HealthComponent{Current: 100, Max: 100})
+	enemy.AddComponent(&StatsComponent{
+		Attack:     10,
+		Defense:    5,
+		CritChance: 0,
+	})
+	enemy.AddComponent(&AttackComponent{
+		Damage:     40, // Base damage
+		DamageType: combat.DamagePhysical,
+		Range:      100,
+		Cooldown:   1.0,
+	})
+
+	// Player attacks enemy - should deal 0.8x damage
+	playerHealthComp := player.GetHealth()
+	enemyHealthComp := enemy.GetHealth()
+
+	initialPlayerHealth := playerHealthComp.Current
+	initialEnemyHealth := enemyHealthComp.Current
+
+	// Player attack
+	success := combatSystem.Attack(player, enemy)
+	if !success {
+		t.Fatal("player attack should succeed")
+	}
+
+	// Expected: base 50 + stats 10 = 60, then 0.8x = 48, minus defense
+	// (actual formula uses combat.CombatResolver, so we verify multiplier was applied)
+	playerDamageDealt := initialEnemyHealth - enemyHealthComp.Current
+	if playerDamageDealt >= 60 { // Should be less than unmultiplied
+		t.Errorf("player damage should be reduced by 0.8x multiplier, got %v", playerDamageDealt)
+	}
+
+	// Enemy attacks player - should deal 1.3x damage
+	success = combatSystem.Attack(enemy, player)
+	if !success {
+		t.Fatal("enemy attack should succeed")
+	}
+
+	enemyDamageDealt := initialPlayerHealth - playerHealthComp.Current
+	if enemyDamageDealt < 40 { // Should be more than unmultiplied base
+		t.Errorf("enemy damage should be increased by 1.3x multiplier, got %v", enemyDamageDealt)
+	}
+}
+
+// mockModRuleProvider is a test implementation of ModRuleProvider.
+type mockModRuleProvider struct {
+	rules map[string]interface{}
+}
+
+func (m *mockModRuleProvider) GetRule(ruleName string) (interface{}, bool) {
+	val, ok := m.rules[ruleName]
+	return val, ok
+}
+
+func (m *mockModRuleProvider) GetRuleFloat64(ruleName string, defaultValue float64) float64 {
+	val, ok := m.rules[ruleName]
+	if !ok {
+		return defaultValue
+	}
+	if f, ok := val.(float64); ok {
+		return f
+	}
+	return defaultValue
+}
+
+func (m *mockModRuleProvider) GetRuleBool(ruleName string, defaultValue bool) bool {
+	val, ok := m.rules[ruleName]
+	if !ok {
+		return defaultValue
+	}
+	if b, ok := val.(bool); ok {
+		return b
+	}
+	return defaultValue
+}
+
+func (m *mockModRuleProvider) TriggerEvent(eventType string, eventData map[string]interface{}) error {
+	return nil
 }

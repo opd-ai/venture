@@ -63,6 +63,9 @@ This file tracks package-level audits across the Venture codebase. Each entry in
 - [x] `pkg/world/AUDIT.md` — Needs Work — 12 issues (1 high, 6 med, 5 low) — Coverage: 88.8% (core), 88.4% (economy), 90.4% (raids), 90.8% (territory), FAIL (housing)
 - [x] `pkg/audio/AUDIT.md` — Complete — 4 issues (0 high, 1 med, 3 low) — Coverage: 93.5%
 
+### World Management Packages
+- [x] `pkg/world/economy/AUDIT.md` — Complete — 3 issues (0 high, 0 med, 3 low) — Coverage: 88.4%
+
 ### Supporting Packages
 - [x] `pkg/saveload/AUDIT.md` — Complete — 4 issues (0 high, 1 med, 3 low) — Coverage: 85.5%
 - [x] `pkg/config/AUDIT.md` — Complete — 3 issues (0 high, 0 med, 3 low) — Coverage: 100.0%

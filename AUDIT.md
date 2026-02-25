@@ -56,7 +56,7 @@ This file tracks package-level audits across the Venture codebase. Each entry in
 - [ ] `pkg/audit/` — Not audited
 - [ ] `pkg/visualtest/` — Not audited
 - [x] `pkg/vr/AUDIT.md` — Complete — 3 issues (0 high, 1 med, 2 low) — Coverage: 76.8%
-- [ ] `pkg/memprofile/` — Not audited
+- [x] `pkg/memprofile/AUDIT.md` — Complete — 3 issues (0 high, 0 med, 3 low) — Coverage: 88.8%
 - [x] `pkg/combat/AUDIT.md` — Complete — 4 issues (0 high, 1 med, 3 low) — Coverage: 98.3%
 
 ### Integration Packages
@@ -71,9 +71,9 @@ This file tracks package-level audits across the Venture codebase. Each entry in
 - [x] `pkg/integration/world_events/AUDIT.md` — Complete — 5 issues (0 high, 2 med, 3 low) — Coverage: 92.9%
 
 ## Audit Progress
-- **Completed**: 46/90+ packages
+- **Completed**: 47/90+ packages
 - **In Progress**: 0
-- **Not Started**: 44+
+- **Not Started**: 43+
 
 ## Next Priority
 Packages with high integration surface and platform-specific concerns:

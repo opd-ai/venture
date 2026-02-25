@@ -16,7 +16,8 @@ This file tracks package-level audits across the Venture codebase. Each entry in
 
 ### Core Packages
 - [ ] `pkg/engine/` — Not audited
-- [ ] `pkg/procgen/` — Not audited
+- [ ] `pkg/procgen/` — Not audited (subdirectories audited separately)
+- [x] `pkg/procgen/terrain/AUDIT.md` — Complete — 3 issues (0 high, 0 med, 3 low) — Coverage: 94.0%
 - [ ] `pkg/rendering/` — Not audited
 - [x] `pkg/network/federation/AUDIT.md` — Complete — 4 issues (1 high, 2 med, 1 low) — Coverage: 85.8% (subpackages; parent requires X11)
 - [x] `pkg/network/chat/AUDIT.md` — Complete — 4 issues (1 high, 2 med, 2 low) — Coverage: Unmeasurable (requires X11; 30% target)
@@ -64,9 +65,9 @@ This file tracks package-level audits across the Venture codebase. Each entry in
 - [ ] `pkg/integration/world_events/` — Not audited
 
 ## Audit Progress
-- **Completed**: 14/90+ packages
+- **Completed**: 15/90+ packages
 - **In Progress**: 0
-- **Not Started**: 76+
+- **Not Started**: 75+
 
 ## Next Priority
 Packages with high integration surface and platform-specific concerns:

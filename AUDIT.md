@@ -17,6 +17,7 @@ This file tracks package-level audits across the Venture codebase. Each entry in
 ### Core Packages
 - [x] `pkg/engine/AUDIT.md` — Needs Work — 9 issues (1 high, 4 med, 4 low) — Coverage: 94.0-96.3% (subpackages; main requires X11)
 - [x] `pkg/engine/qol/AUDIT.md` — Complete — 5 issues (0 high, 2 med, 3 low) — Coverage: 94.0%
+- [x] `pkg/engine/physics/AUDIT.md` — Needs Work — 9 issues (2 high, 5 med, 2 low) — Coverage: 95.4%
 - [ ] `pkg/procgen/` — Not audited (subdirectories audited separately)
 - [x] `pkg/procgen/terrain/AUDIT.md` — Complete — 3 issues (0 high, 0 med, 3 low) — Coverage: 94.0%
 - [x] `pkg/procgen/quest/AUDIT.md` — Complete — 4 issues (0 high, 1 med, 3 low) — Coverage: 92.3%

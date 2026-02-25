@@ -7,6 +7,14 @@
 *.dll
 *.so
 *.dylib
+*.a
+*.o
+*.pyc
+*.pyo
+*.class
+*.jar
+*.war
+*.ear
 
 # Test binary, built with `go test -c`
 *.test
@@ -18,8 +26,12 @@
 coverage.*
 *.coverprofile
 *.coverage
+.coverage
 *.tmp
 profile.cov
+htmlcov/
+.pytest_cache/
+test-results/
 
 # Dependency directories (remove the comment below to include it)
 # vendor/
@@ -94,6 +106,12 @@ go.work.sum
 **/refactored.json
 **/baseline.json
 /improvements.html
+
+# Build directories
+bin/
+target/
+out/
+__pycache__/
 
 # Build directory - ignore everything except WASM static files and Android build config
 build/

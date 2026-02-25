@@ -14,12 +14,20 @@ Many core systems need depth and integration. Consider addressing one or more of
 3. **MINIMAL GENRE VARIATION**: Procedural generation often ignores genre context. Fantasy dungeons shouldn't look like sci-fi stations. Horror factions shouldn't behave like cyberpunk corporations. Each genre needs distinct procgen rules, AI behaviors, quest structures, and world-building patterns.
 4. **PLACEHOLDER MECHANICS**: Core gameplay loops have stub implementations. AI behavior trees need more node types, combat needs tactical depth, crafting needs meaningful recipes, quests need better objective variety. Replace simple implementations with full-featured systems.
 
+KNOWN COLLISION & ACTION PROBLEMS (read this first — high priority precision improvements):
+The current collision and action/attack/spell systems lack pixel-level precision. Consider addressing one or more of these:
+1. **IMPRECISE HITBOXES**: Collision detection uses bounding boxes that don't match sprite shapes. A thin sword should not have the same hitbox as a broad axe. Irregular creature shapes (serpents, insects, amorphous blobs) need per-pixel or convex-hull hitboxes derived from their sprite masks, not rectangular approximations.
+2. **ATTACK AREA MISMATCH**: Attack, action, and spell effect areas do not match their visual representation. A sweeping sword arc should hit exactly the pixels its animation covers. A fireball explosion radius should match the rendered blast. A beam spell should use a precise line segment, not a wide rectangle. Derive hit areas from the actual rendered sprite/animation frame masks.
+3. **SPELL SHAPE IMPRECISION**: Spell projectiles, AoE zones, and beam effects use coarse geometric approximations (circles, rectangles). Replace with pixel-perfect or vector-accurate shapes: polygon hit areas for AoE blasts, capsule/swept-circle for projectiles, Bresenham line for beams, per-frame mask sampling for complex spells.
+4. **NO COLLISION LAYERS**: All entities collide with all other entities. Add collision layer/mask bitfields so projectiles pass through allies, spells can be set to affect only enemies or only terrain, environmental objects have their own layer, and ghost/ethereal entities bypass solid geometry.
+5. **TERRAIN COLLISION IMPRECISION**: Terrain collision uses tile-center checks rather than tile edge geometry. Entities can visually overlap walls. Use sub-tile edge detection and smooth sliding collision response so entities glide along wall edges rather than stopping dead or clipping through corners.
+
 STEP 1 — DISCOVER (spend ≤5 minutes here):
 - Run `git log --oneline -20` to avoid duplicating recent work.
 - Read pkg/engine/system_init.go to understand registered systems.
 - Grep for TODO, FIXME, stub, placeholder in pkg/engine/ and pkg/procgen/.
 - Pick ONE enhancement you have NOT seen in git history. Roll a d20 to decide the category:
-  - **System improvements (roll of 1–7 — address the KNOWN SYSTEM PROBLEMS above):**
+  - **System improvements (roll of 1–5 — address the KNOWN SYSTEM PROBLEMS above):**
     - **Progression depth** — skill tree branching, class synergies, reputation consequence systems, achievement chains, prestige mechanics
     - **System integration** — economy↔territory, faction↔quest, weather↔combat, housing↔crafting, companion↔skills, guild↔raids
     - **Genre variation** — genre-specific AI personalities, quest objective variety, loot table customization, dungeon layout algorithms, NPC behavior patterns
@@ -27,7 +35,7 @@ STEP 1 — DISCOVER (spend ≤5 minutes here):
     - **AI improvements** — squad tactics, companion learning, enemy adaptation, merchant pricing strategies, NPC schedules and routines
     - **World systems** — city evolution, economy simulation, faction warfare, territory sieges, world events, environmental destruction
     - **Social features** — guild progression, trade mechanics, mail system depth, chat channels, player housing interactions
-  - **Avatar improvements (roll of 8–14 — address the KNOWN AVATAR PROBLEMS above):**
+  - **Avatar improvements (roll of 6–10 — address the KNOWN AVATAR PROBLEMS above):**
     - **Perspective fixes** — convert any profile/side-view sprites to proper top-down aerial view. This is the single most impactful fix.
     - **Nonhumanoid templates** — build dedicated top-down anatomy templates for creature types that are not humanoid (quadrupeds, insects, serpents, flying creatures, amorphous entities, multi-limbed creatures). Every creature type deserves its own body plan.
     - **Player character visuals** — composite layering, anatomy detail, directional sprites, proportions, body shapes, facial features, skin/hair color variety, idle poses, shading, clothing detail
@@ -35,7 +43,13 @@ STEP 1 — DISCOVER (spend ≤5 minutes here):
     - **Equipment visuals** — material rendering fidelity, damage-state degradation, enchantment glow/particles, rarity-based detail scaling, weapon silhouettes, armor shaping
     - **Sprite detail** — sub-pixel shading, color gradients, dithering, material textures, highlight/shadow, edge definition, anti-aliasing
     - **Animation improvements** — smoother transitions, new states, expressive movement, attack/cast/hurt animations, idle breathing/fidget
-  - **Character Customization (roll of 15–20):**
+  - **Collision & Action precision (roll of 11–15 — address the KNOWN COLLISION & ACTION PROBLEMS above):**
+    - **Pixel-perfect hitboxes** — derive entity collision shapes from sprite pixel masks; generate convex hulls or polygon approximations per sprite frame; store in a HitboxComponent with per-frame mask data
+    - **Attack/action area accuracy** — compute hit areas from animation frame masks for melee sweeps, thrown weapons, and physical actions; ensure visual and gameplay areas match exactly
+    - **Spell shape precision** — replace coarse geometric approximations with polygon AoE zones, swept-circle projectiles, Bresenham beam lines, and per-frame mask sampling for complex spells
+    - **Collision layers & masks** — add layer/mask bitfields to ColliderComponent; define standard layers (Player, Enemy, Projectile, Terrain, Environment, Ethereal); enforce layer filtering in collision and damage systems
+    - **Terrain edge sliding** — sub-tile edge detection with smooth sliding response; entities glide along wall edges rather than stopping dead or clipping through corners
+  - **Character Customization (roll of 16–20 — address character build depth):**
     - **Custom equipment generation** — procedural unique weapon types, armor set bonuses, accessory effects, equipment mod systems, upgrade paths, legendary item properties
     - **Character class systems** — class specializations, multiclass combinations, class-specific abilities and resources, prestige class unlocks, hybrid class mechanics
     - **Skill customization** — custom skill creation, skill mutation systems, skill combination mechanics, passive skill effects, skill tree variations per class
@@ -43,7 +57,7 @@ STEP 1 — DISCOVER (spend ≤5 minutes here):
     - **Talent systems** — talent point allocation, talent tree branching, talent synergies, talent reset mechanics, talent specialization paths
     - **Loadout management** — quick-swap loadout systems, situational gear sets, ability bar customization, saved build configurations
     - **Character advancement** — alternative progression paths, mastery systems, prestige mechanics, respec options, character specialization choices
-- If multiple candidates exist within your category, pick the one that most improves the game experience. Within system work, integration and progression depth are highest-value. Within avatar work, perspective fixes and nonhumanoid templates are highest-value. Within character customization work, custom equipment generation and character class systems are highest-value.
+- If multiple candidates exist within your category, pick the one that most improves the game experience. Within system work, integration and progression depth are highest-value. Within avatar work, perspective fixes and nonhumanoid templates are highest-value. Within collision & action work, pixel-perfect hitboxes and collision layers are highest-value. Within character customization work, custom equipment generation and character class systems are highest-value.
 
 STEP 2 — IMPLEMENT (this is the bulk of the work):
 Follow these rules strictly. Violations are build failures.
@@ -90,6 +104,14 @@ Equipment (avatar improvements):
 - Higher rarity = more visual complexity and material fidelity. Legendary items should look unmistakably special.
 - Track equipment visuals via EquipmentVisualComponent with dirty flag for lazy regeneration. Visibility toggles per layer type.
 
+Collision & Action Precision (for collision/action improvements):
+- **PIXEL-PERFECT HITBOXES**: Generate collision masks from sprite pixel data at load/generation time. Store as a bitmask in HitboxComponent alongside a polygon approximation (convex hull or simplified contour) for fast broadphase + precise narrowphase checks. Update masks when sprites change (equipment swap, animation frame).
+- **ATTACK AREA DERIVATION**: For melee attacks, sweeping weapons, and physical actions, sample the animation frame mask at the moment of impact and use it as the hit area. Cache per-frame hit masks in the AnimationComponent. Never use a hardcoded rectangle for a curved or irregular attack shape.
+- **SPELL SHAPES**: Projectile spells use swept-circle (capsule) collision. Beam spells use Bresenham DDA line with configurable width. AoE spells use polygon zones defined by the spell's visual blast shape, not a uniform circle. Store spell hit shapes in SpellHitShapeComponent as a polygon + shape type enum.
+- **COLLISION LAYERS**: Add `Layer uint32` and `Mask uint32` bitfields to ColliderComponent. Define standard layer constants: LayerPlayer, LayerEnemy, LayerProjectile, LayerTerrain, LayerEnvironment, LayerEthereal. Collision and damage systems check `(a.Layer & b.Mask) != 0` before processing. Projectiles default to ignoring allies. Ethereal entities bypass terrain.
+- **TERRAIN EDGE SLIDING**: Replace tile-center collision with tile edge geometry. Compute overlap vector between entity and tile edge, apply minimum translation vector (MTV) for separation, then decompose velocity along the wall tangent to produce smooth sliding. No abrupt stops at corners.
+- All precision improvements must maintain 60+ FPS. Use spatial partitioning (existing `spatial_partition.go`) as broadphase before any pixel-level checks. Cache pixel masks; never recompute per frame unless the sprite changed.
+
 Progression Systems (system improvements):
 - Skill trees (`pkg/engine/skill_progression_system.go`) should offer meaningful branching choices. Each node should enable new playstyles or synergize with other skills. Avoid pure stat bonuses — prefer unlocking abilities, modifying existing abilities, or enabling cross-skill combos.
 - Class progression (`pkg/engine/class_progression_system.go`) needs depth beyond level-up bonuses. Implement specializations, prestige classes, multiclass synergies. Each class should feel mechanically distinct with unique abilities and resource management.
@@ -128,7 +150,7 @@ Integration (mandatory — this is where past attempts fail):
 - Persistent component data must integrate with SerializeEntity/DeserializeEntity, or be explicitly transient.
 
 Constraints:
-- Keep changes focused and targeted. Avatar improvements should focus on visual quality. System improvements should focus on gameplay depth.
+- Keep changes focused and targeted. Avatar improvements should focus on visual quality. System improvements should focus on gameplay depth. Collision improvements should focus on precision and correctness.
 - `go build ./...`, `go test -race ./...`, and `go vet ./...` must pass.
 - Write table-driven tests. Target ≥65% coverage on new code.
 - No breaking changes to saves, network protocol, or configs.
@@ -144,3 +166,4 @@ STEP 4 — REPORT (keep concise):
 4. **Verification**: How to observe the improvement in-game.
 
 STOP when the report is written and builds pass. Do not refactor unrelated code. Do not write documentation files. Do not suggest follow-up work.
+

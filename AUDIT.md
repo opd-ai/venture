@@ -35,7 +35,7 @@ This file tracks package-level audits across the Venture codebase. Each entry in
 - [ ] `pkg/security/` — Not audited
 - [ ] `pkg/version/` — Not audited
 - [ ] `pkg/migration/` — Not audited
-- [ ] `pkg/modding/` — Not audited
+- [x] `pkg/modding/AUDIT.md` — Complete — 4 issues (0 high, 1 med, 3 low) — Coverage: 90.6%
 - [ ] `pkg/narrative/` — Not audited
 - [ ] `pkg/ux/` — Not audited
 - [ ] `pkg/balance/` — Not audited
@@ -62,9 +62,9 @@ This file tracks package-level audits across the Venture codebase. Each entry in
 - [ ] `pkg/integration/world_events/` — Not audited
 
 ## Audit Progress
-- **Completed**: 4/90+ packages
+- **Completed**: 5/90+ packages
 - **In Progress**: 0
-- **Not Started**: 86+
+- **Not Started**: 85+
 
 ## Next Priority
 Packages with high integration surface and platform-specific concerns:

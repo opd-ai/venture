@@ -1121,6 +1121,15 @@ func (g *EbitenGame) handleLoadingComplete() error {
 		return err
 	}
 
+	// When jumping directly from Loading → Gameplay (bypassing character
+	// creation), advance the OnboardingManager so the in-game tutorial
+	// activates. This covers the default startup path where terrain is
+	// generated without an explicit menu-driven new-game flow.
+	if g.OnboardingManager != nil && g.OnboardingManager.IsEnabled() &&
+		g.OnboardingManager.GetState() == StateCharacterCreation {
+		g.OnboardingManager.TransitionToInGameTutorial()
+	}
+
 	if g.terrainLoadComplete != nil {
 		if err := g.terrainLoadComplete(g.PlayerEntity); err != nil {
 			if g.logger != nil {

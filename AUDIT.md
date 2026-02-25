@@ -35,6 +35,7 @@ This file tracks package-level audits across the Venture codebase. Each entry in
 - [x] `pkg/procgen/minigame/AUDIT.md` — Complete — 3 issues (0 high, 0 med, 3 low) — Coverage: Unmeasurable (requires X11; 127% test-to-source ratio)
 - [x] `pkg/procgen/recipe/AUDIT.md` — Complete — 5 issues (0 high, 1 med, 4 low) — Coverage: Unmeasurable (requires X11; 47.9% test-to-source ratio)
 - [x] `pkg/procgen/station/AUDIT.md` — Complete — 3 issues (0 high, 0 med, 3 low) — Coverage: 89.0%
+- [x] `pkg/procgen/puzzle/AUDIT.md` — Complete — 3 issues (0 high, 0 med, 3 low) — Coverage: 94.3%
 - [ ] `pkg/rendering/` — Not audited (subdirectories audited separately)
 - [x] `pkg/rendering/pool/AUDIT.md` — Complete — 3 issues (0 high, 0 med, 3 low) — Coverage: Unmeasurable (requires X11; 30% target; 452 lines tests)
 - [x] `pkg/rendering/sprites/AUDIT.md` — Complete — 4 issues (0 high, 1 med, 3 low) — Coverage: Unmeasurable (requires X11; 452% test-to-source ratio)
@@ -87,14 +88,14 @@ This file tracks package-level audits across the Venture codebase. Each entry in
 - [x] `pkg/integration/world_events/AUDIT.md` — Complete — 5 issues (0 high, 2 med, 3 low) — Coverage: 92.9%
 
 ## Audit Progress
-- **Completed**: 65/90+ packages
+- **Completed**: 66/90+ packages
 - **In Progress**: 0
-- **Not Started**: 25+
+- **Not Started**: 24+
 
 ## Next Priority
 Packages with high integration surface and platform-specific concerns:
 1. `pkg/engine/` — Core ECS implementation, 400+ files (highest priority: all systems)
-2. `pkg/rendering/` — Graphics pipeline (subdirectories need auditing)
-3. `pkg/procgen/` — Procedural generation (remaining subdirectories)
+2. `pkg/rendering/` — Graphics pipeline (subdirectories need auditing: animation, cache, display, lighting, palette, parallel, particles, patterns, postprocess, quality, shapes, tiles)
+3. `pkg/procgen/` — Procedural generation (remaining subdirectories: book, class, environment, furniture, story)
 4. `pkg/integration/world_events/` — World events integration
 5. `cmd/mobile/` — Mobile platform entry point

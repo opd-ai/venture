@@ -1,16 +1,16 @@
 # Audit: github.com/opd-ai/venture/pkg/social/persistence
-**Date**: 2026-02-22
+**Date**: 2026-02-25 (updated)
 **Auditor**: GitHub Copilot (META_AUDIT v2)
 **Status**: Complete
 
 ## Summary
-The `pkg/social/persistence` package provides persistent social data structures for Venture, including chat history, trust management, reputation tracking, and image gallery storage. The package is well-designed with strong thread safety (sync.RWMutex), gzip compression for storage efficiency, and deterministic testing support via TimeProvider interface injection. No critical issues found; code quality is excellent with 92.5% test coverage.
+The `pkg/social/persistence` package provides persistent social data structures for Venture, including chat history, trust management, reputation tracking, and image gallery storage. The package is well-designed with strong thread safety (sync.RWMutex), gzip compression for storage efficiency, and deterministic testing support via TimeProvider interface injection. All identified issues have been resolved. Code quality is excellent with 93.2% test coverage.
 
 ## Automated Check Results
 | Check | Result |
 |---|---|
 | `go vet` | ✅ Pass |
-| `go test -cover` | 92.5% (target: 40%) |
+| `go test -cover` | 93.2% (target: 40%, improved from 92.5%) |
 | `go test -race` | ✅ Pass |
 | WASM vet | ✅ Pass |
 | TODO/FIXME count | 0 |
@@ -23,7 +23,7 @@ The `pkg/social/persistence` package provides persistent social data structures 
 None.
 
 ### Medium Severity
-- [ ] **Documentation** — GetDelta heuristic-based delta sync is a known limitation documented but could cause over-sync on reconnects with large version gaps (`chat_history.go:192-238`)
+- [x] **Documentation** — GetDelta heuristic-based delta sync is a known limitation documented but could cause over-sync on reconnects with large version gaps (`chat_history.go:192-238`) **RESOLVED 2026-02-25**: Implemented proper changelog mechanism with `ChangelogEntry` structs tracking all message additions and deletions. `GetDelta()` now uses the changelog to accurately determine which messages have changed since a given version, eliminating over-sync issues. Changelog operates as a circular buffer (MaxChangelogSize=1000 entries). Added 5 comprehensive tests covering deletions, fallback behavior, multiple operations, circular buffer limits, and add-then-delete scenarios. Test coverage improved from 92.5% to 93.2%.
 
 ### Low Severity
 - [x] **API Consistency** — ImageGallery.AddImage computes hash twice (once for dedup check, once for storage) - minor performance inefficiency (`image_gallery.go:140-151`) **RESOLVED 2026-02-25**: `createStoredImage()` now accepts pre-computed hash parameter; hash computed once in `AddImage()` and passed to `createStoredImage()`.

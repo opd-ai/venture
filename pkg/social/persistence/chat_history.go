@@ -20,13 +20,31 @@ type Message struct {
 	Deleted   bool      `json:"deleted,omitempty"`
 }
 
+// ChangeType represents the type of change in the changelog
+type ChangeType string
+
+const (
+	// ChangeTypeAdd indicates a message was added
+	ChangeTypeAdd ChangeType = "add"
+	// ChangeTypeDelete indicates a message was deleted
+	ChangeTypeDelete ChangeType = "delete"
+)
+
+// ChangelogEntry records a single change to the chat history
+type ChangelogEntry struct {
+	Type      ChangeType `json:"type"`
+	MessageID string     `json:"message_id"`
+	Version   int        `json:"version"`
+}
+
 // ChatHistory manages persistent chat messages for a player
 type ChatHistory struct {
-	PlayerID     string       `json:"player_id"`
-	Messages     []*Message   `json:"messages"`
-	Version      int          `json:"version"`
-	mu           sync.RWMutex `json:"-"`
-	timeProvider TimeProvider `json:"-"` // TimeProvider for deterministic timestamps
+	PlayerID     string            `json:"player_id"`
+	Messages     []*Message        `json:"messages"`
+	Changelog    []*ChangelogEntry `json:"changelog"`
+	Version      int               `json:"version"`
+	mu           sync.RWMutex      `json:"-"`
+	timeProvider TimeProvider      `json:"-"` // TimeProvider for deterministic timestamps
 }
 
 // NewChatHistory creates a new chat history manager using real system time.
@@ -40,6 +58,7 @@ func NewChatHistoryWithTimeProvider(playerID string, tp TimeProvider) *ChatHisto
 	return &ChatHistory{
 		PlayerID:     playerID,
 		Messages:     make([]*Message, 0, MaxMessagesPerPlayer),
+		Changelog:    make([]*ChangelogEntry, 0, MaxChangelogSize),
 		Version:      1,
 		timeProvider: tp,
 	}
@@ -72,6 +91,13 @@ func (c *ChatHistory) AddMessage(msg *Message) error {
 
 	c.Messages = append(c.Messages, msg)
 	c.Version++
+
+	// Record change in changelog
+	c.appendToChangelog(&ChangelogEntry{
+		Type:      ChangeTypeAdd,
+		MessageID: msg.ID,
+		Version:   c.Version,
+	})
 
 	// Enforce max message limit (LRU)
 	if len(c.Messages) > MaxMessagesPerPlayer {
@@ -112,11 +138,14 @@ func (c *ChatHistory) DeleteOldMessages(now time.Time) int {
 	cutoff := now.Add(-MaxMessageAge)
 	originalCount := len(c.Messages)
 
-	// Filter out old messages
+	// Filter out old messages and record deletions in changelog
 	kept := make([]*Message, 0, len(c.Messages))
+	var deletedIDs []string
 	for _, msg := range c.Messages {
 		if msg.Timestamp.After(cutoff) {
 			kept = append(kept, msg)
+		} else {
+			deletedIDs = append(deletedIDs, msg.ID)
 		}
 	}
 
@@ -125,6 +154,14 @@ func (c *ChatHistory) DeleteOldMessages(now time.Time) int {
 
 	if deleted > 0 {
 		c.Version++
+		// Record deletions in changelog
+		for _, msgID := range deletedIDs {
+			c.appendToChangelog(&ChangelogEntry{
+				Type:      ChangeTypeDelete,
+				MessageID: msgID,
+				Version:   c.Version,
+			})
+		}
 	}
 
 	return deleted
@@ -189,16 +226,31 @@ func (c *ChatHistory) Load(data []byte) error {
 	return nil
 }
 
+// appendToChangelog adds an entry to the changelog, maintaining the circular buffer limit.
+// Must be called with c.mu held (Lock, not RLock).
+func (c *ChatHistory) appendToChangelog(entry *ChangelogEntry) {
+	c.Changelog = append(c.Changelog, entry)
+
+	// Trim changelog to MaxChangelogSize (circular buffer)
+	if len(c.Changelog) > MaxChangelogSize {
+		excess := len(c.Changelog) - MaxChangelogSize
+		c.Changelog = c.Changelog[excess:]
+	}
+}
+
 // GetDelta computes the delta between this history and a given version.
 //
-// This method uses a version-based heuristic: it estimates the number of new
-// messages as the difference between the current version and fromVersion, then
-// returns the last N messages. This is not a true changelog — message deletions
-// are not tracked, and the estimate may be imprecise if non-message operations
-// incremented the version counter. For version 0, all messages are returned.
+// This method uses a changelog-based approach to accurately track message additions
+// and deletions since fromVersion. Unlike the previous heuristic-based approach,
+// this implementation maintains an ordered log of changes (up to MaxChangelogSize
+// entries) and queries it to determine exactly which messages have been added or
+// deleted since the requested version.
+//
+// For version 0, all messages are returned (full sync). If fromVersion is older
+// than the oldest entry in the changelog, all messages are returned as a fallback.
 //
 // The caller should use [ApplyDelta] to merge results, which deduplicates by
-// message ID to handle over-estimation gracefully.
+// message ID to handle any edge cases gracefully.
 func (c *ChatHistory) GetDelta(fromVersion int) []*Message {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
@@ -208,32 +260,53 @@ func (c *ChatHistory) GetDelta(fromVersion int) []*Message {
 		return nil
 	}
 
-	// For simplicity, we return all messages if the version gap is too large
-	// In a production system, you'd maintain a changelog of added/deleted messages
-	// For now, we return messages that are likely new based on timestamp estimation
-
-	// If requesting from version 0, return all
+	// If requesting from version 0, return all messages (full sync)
 	if fromVersion == 0 {
 		delta := make([]*Message, len(c.Messages))
 		copy(delta, c.Messages)
 		return delta
 	}
 
-	// Estimate how many messages to return based on version difference
-	versionDiff := c.Version - fromVersion
-	if versionDiff <= 0 {
-		return nil
+	// Find the oldest version in the changelog
+	oldestVersion := c.Version
+	if len(c.Changelog) > 0 {
+		oldestVersion = c.Changelog[0].Version
 	}
 
-	// Return the last N messages where N = version difference
-	// This is a simple heuristic - real delta would track individual changes
-	startIdx := len(c.Messages) - versionDiff
-	if startIdx < 0 {
-		startIdx = 0
+	// If fromVersion is older than our changelog, fall back to full sync
+	if fromVersion < oldestVersion {
+		delta := make([]*Message, len(c.Messages))
+		copy(delta, c.Messages)
+		return delta
 	}
 
-	delta := make([]*Message, len(c.Messages[startIdx:]))
-	copy(delta, c.Messages[startIdx:])
+	// Collect message IDs from changelog entries after fromVersion
+	addedIDs := make(map[string]bool)
+	deletedIDs := make(map[string]bool)
+
+	for _, entry := range c.Changelog {
+		if entry.Version > fromVersion {
+			switch entry.Type {
+			case ChangeTypeAdd:
+				addedIDs[entry.MessageID] = true
+				// If a message was deleted and then re-added, remove from deleted set
+				delete(deletedIDs, entry.MessageID)
+			case ChangeTypeDelete:
+				deletedIDs[entry.MessageID] = true
+				// If a message was added and then deleted in this range, remove from added set
+				delete(addedIDs, entry.MessageID)
+			}
+		}
+	}
+
+	// Build delta from messages that were added and not subsequently deleted
+	delta := make([]*Message, 0, len(addedIDs))
+	for _, msg := range c.Messages {
+		if addedIDs[msg.ID] && !deletedIDs[msg.ID] {
+			delta = append(delta, msg)
+		}
+	}
+
 	return delta
 }
 

@@ -821,3 +821,267 @@ func TestChatHistoryDeleteOldMessagesDeterministic(t *testing.T) {
 		t.Errorf("Expected same message count: h1=%d, h2=%d", len(msgs1), len(msgs2))
 	}
 }
+
+// TestGetDelta_WithDeletions tests changelog-based delta sync with message deletions
+func TestGetDelta_WithDeletions(t *testing.T) {
+	history := NewChatHistory("player1")
+
+	// Add 10 messages
+	for i := 0; i < 10; i++ {
+		msg := &Message{
+			ID:        fmt.Sprintf("msg%d", i),
+			Sender:    "player1",
+			Content:   fmt.Sprintf("Message %d", i),
+			Timestamp: time.Now().Add(-time.Hour * 24 * time.Duration(40-i*2)),
+		}
+		history.AddMessage(msg)
+	}
+
+	versionAfterAdds := history.GetVersion()
+
+	// Delete old messages (should delete messages older than 30 days)
+	deletedCount := history.DeleteOldMessages(time.Now())
+	if deletedCount == 0 {
+		t.Fatal("expected some messages to be deleted")
+	}
+
+	versionAfterDeletes := history.GetVersion()
+
+	// Get delta from version after adds (should only include messages still present)
+	delta := history.GetDelta(versionAfterAdds)
+
+	// Delta should not include deleted messages
+	// It should be empty because no new messages were added after versionAfterAdds
+	if len(delta) != 0 {
+		t.Errorf("expected 0 messages in delta (deletions don't add messages), got %d", len(delta))
+	}
+
+	// Now add a new message
+	newMsg := &Message{
+		ID:        "msg_new",
+		Sender:    "player1",
+		Content:   "New message after deletions",
+		Timestamp: time.Now(),
+	}
+	history.AddMessage(newMsg)
+
+	// Get delta from version after deletions (should include the new message)
+	delta2 := history.GetDelta(versionAfterDeletes)
+	if len(delta2) != 1 {
+		t.Errorf("expected 1 message in delta, got %d", len(delta2))
+	}
+	if len(delta2) > 0 && delta2[0].ID != "msg_new" {
+		t.Errorf("expected delta to contain msg_new, got %s", delta2[0].ID)
+	}
+}
+
+// TestGetDelta_ChangelogFallback tests that GetDelta falls back to full sync when
+// fromVersion is older than the changelog
+func TestGetDelta_ChangelogFallback(t *testing.T) {
+	history := NewChatHistory("player1")
+
+	// Add a message to get version 2
+	msg1 := &Message{
+		ID:        "msg1",
+		Sender:    "player1",
+		Content:   "First message",
+		Timestamp: time.Now(),
+	}
+	history.AddMessage(msg1)
+	version2 := history.GetVersion()
+
+	// Add MaxChangelogSize + 100 more messages to overflow the changelog
+	for i := 0; i < MaxChangelogSize+100; i++ {
+		msg := &Message{
+			ID:        fmt.Sprintf("msg_overflow_%d", i),
+			Sender:    "player1",
+			Content:   fmt.Sprintf("Overflow message %d", i),
+			Timestamp: time.Now(),
+		}
+		history.AddMessage(msg)
+	}
+
+	// Request delta from version2 (which is now older than changelog)
+	delta := history.GetDelta(version2)
+
+	// Should fall back to returning all messages
+	allMessages := history.GetMessages(nil)
+	if len(delta) != len(allMessages) {
+		t.Errorf("expected fallback to full sync: delta=%d, all=%d", len(delta), len(allMessages))
+	}
+}
+
+// TestGetDelta_MultipleOperations tests delta sync across multiple add/delete operations
+func TestGetDelta_MultipleOperations(t *testing.T) {
+	history := NewChatHistory("player1")
+
+	// Add 5 messages
+	for i := 0; i < 5; i++ {
+		msg := &Message{
+			ID:        fmt.Sprintf("msg%d", i),
+			Sender:    "player1",
+			Content:   fmt.Sprintf("Message %d", i),
+			Timestamp: time.Now().Add(-time.Hour * 24 * time.Duration(10-i)),
+		}
+		history.AddMessage(msg)
+	}
+
+	checkpointVersion := history.GetVersion()
+
+	// Add 3 more messages
+	for i := 5; i < 8; i++ {
+		msg := &Message{
+			ID:        fmt.Sprintf("msg%d", i),
+			Sender:    "player1",
+			Content:   fmt.Sprintf("Message %d", i),
+			Timestamp: time.Now(),
+		}
+		history.AddMessage(msg)
+	}
+
+	// Delete old messages (should delete msg0, msg1, msg2)
+	cutoffTime := time.Now().Add(-time.Hour * 24 * 7)
+	history.DeleteOldMessages(cutoffTime)
+
+	// Add 2 more messages
+	for i := 8; i < 10; i++ {
+		msg := &Message{
+			ID:        fmt.Sprintf("msg%d", i),
+			Sender:    "player1",
+			Content:   fmt.Sprintf("Message %d", i),
+			Timestamp: time.Now(),
+		}
+		history.AddMessage(msg)
+	}
+
+	// Get delta from checkpoint (should include msg5, msg6, msg7, msg8, msg9)
+	// but NOT msg0, msg1, msg2 (deleted) or msg3, msg4 (added before checkpoint)
+	delta := history.GetDelta(checkpointVersion)
+
+	expectedIDs := map[string]bool{
+		"msg5": true,
+		"msg6": true,
+		"msg7": true,
+		"msg8": true,
+		"msg9": true,
+	}
+
+	if len(delta) != len(expectedIDs) {
+		t.Errorf("expected %d messages in delta, got %d", len(expectedIDs), len(delta))
+	}
+
+	for _, msg := range delta {
+		if !expectedIDs[msg.ID] {
+			t.Errorf("unexpected message in delta: %s", msg.ID)
+		}
+	}
+}
+
+// TestChangelog_CircularBuffer tests that changelog maintains size limit
+func TestChangelog_CircularBuffer(t *testing.T) {
+	history := NewChatHistory("player1")
+
+	// Add MaxChangelogSize + 50 messages
+	totalMessages := MaxChangelogSize + 50
+	for i := 0; i < totalMessages; i++ {
+		msg := &Message{
+			ID:        fmt.Sprintf("msg%d", i),
+			Sender:    "player1",
+			Content:   fmt.Sprintf("Message %d", i),
+			Timestamp: time.Now(),
+		}
+		history.AddMessage(msg)
+	}
+
+	// Changelog should be capped at MaxChangelogSize
+	if len(history.Changelog) > MaxChangelogSize {
+		t.Errorf("expected changelog size <= %d, got %d", MaxChangelogSize, len(history.Changelog))
+	}
+
+	// Verify oldest entries were discarded (first entry should not be for msg0)
+	if len(history.Changelog) > 0 {
+		firstEntry := history.Changelog[0]
+		if firstEntry.MessageID == "msg0" {
+			t.Error("expected oldest entry to be discarded")
+		}
+	}
+}
+
+// TestGetDelta_AddThenDelete tests a message added and then deleted in the same delta range
+func TestGetDelta_AddThenDelete(t *testing.T) {
+	history := NewChatHistory("player1")
+
+	// Add initial messages
+	for i := 0; i < 5; i++ {
+		msg := &Message{
+			ID:        fmt.Sprintf("msg%d", i),
+			Sender:    "player1",
+			Content:   fmt.Sprintf("Message %d", i),
+			Timestamp: time.Now().Add(-time.Hour * 24 * time.Duration(i)),
+		}
+		history.AddMessage(msg)
+	}
+
+	checkpointVersion := history.GetVersion()
+
+	// Add a message with old timestamp
+	tempMsg := &Message{
+		ID:        "temp_msg",
+		Sender:    "player1",
+		Content:   "Temporary message",
+		Timestamp: time.Now().Add(-time.Hour * 24 * 40), // Old timestamp
+	}
+	history.AddMessage(tempMsg)
+
+	// Delete old messages (should delete temp_msg and some others)
+	history.DeleteOldMessages(time.Now())
+
+	// Get delta from checkpoint
+	delta := history.GetDelta(checkpointVersion)
+
+	// temp_msg should NOT be in delta (added then deleted in this range)
+	for _, msg := range delta {
+		if msg.ID == "temp_msg" {
+			t.Error("expected temp_msg to not be in delta (added then deleted)")
+		}
+	}
+}
+
+// BenchmarkGetDelta_Changelog benchmarks the new changelog-based GetDelta
+func BenchmarkGetDelta_Changelog(b *testing.B) {
+	history := NewChatHistory("player1")
+
+	// Add 1000 messages
+	for i := 0; i < 1000; i++ {
+		msg := &Message{
+			ID:        fmt.Sprintf("msg%d", i),
+			Sender:    "player1",
+			Content:   "Hello",
+			Timestamp: time.Now(),
+		}
+		history.AddMessage(msg)
+	}
+
+	fromVersion := history.GetVersion() - 100
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		history.GetDelta(fromVersion)
+	}
+}
+
+// BenchmarkChangelog_Append benchmarks changelog append with circular buffer
+func BenchmarkChangelog_Append(b *testing.B) {
+	history := NewChatHistory("player1")
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		msg := &Message{
+			ID:        fmt.Sprintf("msg%d", i),
+			Sender:    "player1",
+			Content:   "Benchmark message",
+			Timestamp: time.Now(),
+		}
+		history.AddMessage(msg)
+	}
+}

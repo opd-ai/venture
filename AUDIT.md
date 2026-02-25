@@ -1,6 +1,6 @@
 # Consolidated Audit Report
 
-**Generated:** 2026-02-22 (Updated: 2026-02-23)
+**Generated:** 2026-02-22 (Updated: 2026-02-25)
 **Total Audit Files Processed:** 110
 **Auditor:** GitHub Copilot (Consolidated)
 
@@ -13,11 +13,11 @@ This report consolidates 110 individual audit files across all packages in the V
 | Severity | Open Issues |
 |----------|-------------|
 | High     | 0           |
-| Medium   | ~12         |
+| Medium   | ~11         |
 | Low      | ~97         |
-| **Total**| **~109**    |
+| **Total**| **~108**    |
 
-**Historical totals (including fixed):** ~32 High, ~96 Medium, ~230 Low issues were identified across all audits. The vast majority have been resolved, resulting in an overall codebase health status of **Good**.
+**Historical totals (including fixed):** ~32 High, ~97 Medium, ~230 Low issues were identified across all audits. The vast majority have been resolved, resulting in an overall codebase health status of **Good**.
 
 **Strengths:** The codebase demonstrates high quality with average test coverage of 82.4% (target 40%), deterministic generation via seed-based RNG throughout, ECS architectural compliance, and comprehensive documentation. All critical runtime panics, data corruption risks, and non-determinism violations in production paths have been resolved.
 
@@ -933,9 +933,9 @@ This report consolidates 110 individual audit files across all packages in the V
 ### pkg/social/persistence — Social System Persistence
 - **Source:** `pkg/social/persistence/AUDIT.md`
 - **High Issues:** 0
-- **Medium Issues:** 1
+- **Medium Issues:** 0 (1 fixed 2026-02-25)
 - **Low Issues:** 0 (2 fixed 2026-02-25)
-- **Details:** 92.5% coverage. `GetDelta` uses a heuristic-based delta sync that can over-sync on reconnects with large version gaps—a known limitation documented but not yet addressed. **RESOLVED 2026-02-25**: `ReputationManager.ApplyDecay()` now updates `LastUpdate` timestamps after decay, preventing compound decay on subsequent calls. **RESOLVED 2026-02-25**: `ImageGallery.AddImage()` no longer computes SHA256 hash twice; hash is now computed once and passed to `createStoredImage()`.
+- **Details:** 93.2% coverage (improved from 92.5%). **RESOLVED 2026-02-25**: `GetDelta` heuristic-based delta sync issue resolved by implementing proper changelog mechanism with `ChangelogEntry` structs tracking all message additions/deletions. `GetDelta()` now accurately determines which messages have changed since a given version, eliminating over-sync issues. Changelog operates as a circular buffer (MaxChangelogSize=1000). Added 5 comprehensive tests. **RESOLVED 2026-02-25**: `ReputationManager.ApplyDecay()` now updates `LastUpdate` timestamps after decay, preventing compound decay. **RESOLVED 2026-02-25**: `ImageGallery.AddImage()` no longer computes SHA256 hash twice; hash computed once and passed to `createStoredImage()`.
 
 ---
 

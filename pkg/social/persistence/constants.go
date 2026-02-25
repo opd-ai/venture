@@ -11,6 +11,11 @@ const MaxMessagesPerPlayer = 1000
 // MaxMessageAge is the maximum age for messages (30 days)
 const MaxMessageAge = 30 * 24 * time.Hour
 
+// MaxChangelogSize is the maximum number of changelog entries to retain.
+// The changelog is used for efficient delta synchronization and operates as
+// a circular buffer. When exceeded, oldest entries are discarded.
+const MaxChangelogSize = 1000
+
 // Image Gallery Configuration
 // Originally defined in: image_gallery.go
 

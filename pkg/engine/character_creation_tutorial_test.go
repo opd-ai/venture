@@ -27,7 +27,7 @@ func TestNewCharacterCreationTutorial(t *testing.T) {
 		t.Error("Tutorial should not be skipped initially")
 	}
 
-	expectedSteps := []string{"welcome_creation", "name_input", "class_selection", "equipment_selection", "portrait_selection", "confirmation"}
+	expectedSteps := []string{"welcome_creation", "name_input", "class_selection", "subclass_selection", "portrait_selection", "confirmation"}
 	if len(cct.Steps) != len(expectedSteps) {
 		t.Fatalf("Expected %d steps, got %d", len(expectedSteps), len(cct.Steps))
 	}
@@ -368,8 +368,8 @@ func TestCharacterCreationTutorial_CompleteTutorial(t *testing.T) {
 	cct.CurrentStepIdx = 1
 	cct.Steps[0].Completed = true
 
-	// Simulate progressing through all creation steps (0=name, 1=class, 2=equipment, 3=portrait, 4=confirmation)
-	// Tutorial steps are: 0=welcome, 1=name, 2=class, 3=equipment, 4=portrait, 5=confirmation
+	// Simulate progressing through all creation steps (0=name, 1=class, 2=subclass, 3=portrait, 4=confirmation)
+	// Tutorial steps are: 0=welcome, 1=name, 2=class, 3=subclass, 4=portrait, 5=confirmation
 	for step := 1; step <= 4; step++ {
 		cct.Update(step, 0.016)
 	}
@@ -671,7 +671,7 @@ func TestCharacterCreationTutorial_AllCharacterOptions(t *testing.T) {
 	requiredSteps := map[string]bool{
 		"name_input":          false, // stepNameInput
 		"class_selection":     false, // stepClassSelection
-		"equipment_selection": false, // stepEquipmentSelection
+		"subclass_selection":  false, // stepSubclassSelection
 		"portrait_selection":  false, // stepPortraitSelection
 		"confirmation":        false, // stepConfirmation
 	}
@@ -689,41 +689,41 @@ func TestCharacterCreationTutorial_AllCharacterOptions(t *testing.T) {
 	}
 }
 
-// TestCharacterCreationTutorial_EquipmentStep tests that the equipment tutorial step
+// TestCharacterCreationTutorial_SubclassStep tests that the subclass tutorial step
 // exists and syncs correctly with the character creation flow.
-func TestCharacterCreationTutorial_EquipmentStep(t *testing.T) {
+func TestCharacterCreationTutorial_SubclassStep(t *testing.T) {
 	cct := NewCharacterCreationTutorial()
 
-	// Verify equipment step exists at correct position (after class_selection)
-	equipmentStep := cct.GetStepByID("equipment_selection")
-	if equipmentStep == nil {
-		t.Fatal("equipment_selection step not found in tutorial")
+	// Verify subclass step exists at correct position (after class_selection)
+	subclassStep := cct.GetStepByID("subclass_selection")
+	if subclassStep == nil {
+		t.Fatal("subclass_selection step not found in tutorial")
 	}
 
-	// Verify step index (should be at index 3: welcome=0, name=1, class=2, equipment=3)
+	// Verify step index (should be at index 3: welcome=0, name=1, class=2, subclass=3)
 	expectedIndex := 3
 	for i, step := range cct.Steps {
-		if step.ID == "equipment_selection" {
+		if step.ID == "subclass_selection" {
 			if i != expectedIndex {
-				t.Errorf("equipment_selection at index %d, want %d", i, expectedIndex)
+				t.Errorf("subclass_selection at index %d, want %d", i, expectedIndex)
 			}
 			break
 		}
 	}
 
 	// Verify step has proper content
-	if equipmentStep.Title == "" {
-		t.Error("equipment_selection step has empty title")
+	if subclassStep.Title == "" {
+		t.Error("subclass_selection step has empty title")
 	}
-	if equipmentStep.Description == "" {
-		t.Error("equipment_selection step has empty description")
+	if subclassStep.Description == "" {
+		t.Error("subclass_selection step has empty description")
 	}
-	if equipmentStep.Hint == "" {
-		t.Error("equipment_selection step has empty hint")
+	if subclassStep.Hint == "" {
+		t.Error("subclass_selection step has empty hint")
 	}
 
-	// Test synchronization: when character creation reaches equipment step (step 2),
-	// tutorial should advance to equipment tutorial step (step 3)
+	// Test synchronization: when character creation reaches subclass step (step 2),
+	// tutorial should advance to subclass tutorial step (step 3)
 	cct.Reset()
 	cct.CurrentStepIdx = 1 // Start at name_input step
 	cct.Steps[0].Completed = true
@@ -734,16 +734,16 @@ func TestCharacterCreationTutorial_EquipmentStep(t *testing.T) {
 		t.Errorf("After class step, CurrentStepIdx = %d, want 2", cct.CurrentStepIdx)
 	}
 
-	// Simulate progression to equipment selection (creation step 2)
-	cct.Update(2, 0.016) // creation step 2 -> tutorial step 3 (equipment_selection)
+	// Simulate progression to subclass selection (creation step 2)
+	cct.Update(2, 0.016) // creation step 2 -> tutorial step 3 (subclass_selection)
 	if cct.CurrentStepIdx != 3 {
-		t.Errorf("After equipment step, CurrentStepIdx = %d, want 3", cct.CurrentStepIdx)
+		t.Errorf("After subclass step, CurrentStepIdx = %d, want 3", cct.CurrentStepIdx)
 	}
 
-	// Verify equipment step is now current
+	// Verify subclass step is now current
 	currentStep := cct.GetCurrentStep()
-	if currentStep == nil || currentStep.ID != "equipment_selection" {
-		t.Errorf("Current step should be equipment_selection, got %v", currentStep)
+	if currentStep == nil || currentStep.ID != "subclass_selection" {
+		t.Errorf("Current step should be subclass_selection, got %v", currentStep)
 	}
 }
 

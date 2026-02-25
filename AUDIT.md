@@ -43,6 +43,7 @@ This file tracks package-level audits across the Venture codebase. Each entry in
 - [x] `pkg/rendering/sprites/AUDIT.md` — Complete — 4 issues (0 high, 1 med, 3 low) — Coverage: Unmeasurable (requires X11; 452% test-to-source ratio)
 - [x] `pkg/rendering/ui/AUDIT.md` — Complete — 5 issues (0 high, 2 med, 3 low) — Coverage: Unmeasurable (requires X11; 91% test-to-source ratio)
 - [x] `pkg/rendering/lighting/AUDIT.md` — Complete — 5 issues (0 high, 2 med, 3 low) — Coverage: Unmeasurable (requires X11; 56.6% test-to-source ratio)
+- [x] `pkg/rendering/postprocess/AUDIT.md` — Complete — 2 issues (0 high, 0 med, 2 low) — Coverage: Unmeasurable (requires X11; 66% test-to-source ratio)
 - [x] `pkg/network/federation/AUDIT.md` — Complete — 4 issues (1 high, 2 med, 1 low) — Coverage: 85.8% (subpackages; parent requires X11)
 - [x] `pkg/network/chat/AUDIT.md` — Complete — 4 issues (1 high, 2 med, 2 low) — Coverage: Unmeasurable (requires X11; 30% target)
 - [x] `pkg/network/trade/AUDIT.md` — Complete — 4 issues (0 high, 1 med, 3 low) — Coverage: Unmeasurable (requires X11; 145% test-to-source ratio)
@@ -91,14 +92,14 @@ This file tracks package-level audits across the Venture codebase. Each entry in
 - [x] `pkg/integration/world_events/AUDIT.md` — Complete — 5 issues (0 high, 2 med, 3 low) — Coverage: 92.9%
 
 ## Audit Progress
-- **Completed**: 69/90+ packages
+- **Completed**: 70/90+ packages
 - **In Progress**: 0
-- **Not Started**: 21+
+- **Not Started**: 20+
 
 ## Next Priority
 Packages with high integration surface and platform-specific concerns:
 1. `pkg/engine/` — Core ECS implementation, 400+ files (highest priority: all systems)
-2. `pkg/rendering/` — Graphics pipeline (subdirectories need auditing: animation, cache, display, palette, parallel, particles, patterns, postprocess, quality, shapes, tiles)
+2. `pkg/rendering/` — Graphics pipeline (subdirectories need auditing: cache, display, palette, parallel, particles, patterns, quality, shapes, tiles)
 3. `pkg/procgen/` — Procedural generation (remaining subdirectories: book, class, environment, furniture, story)
 4. `pkg/integration/world_events/` — World events integration
 5. `cmd/mobile/` — Mobile platform entry point

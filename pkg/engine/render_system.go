@@ -1333,14 +1333,10 @@ func (r *EbitenRenderSystem) drawAimIndicator() {
 		return
 	}
 
-	// Convert player world position to screen coordinates (accounting for camera offset)
+	// Convert player world position to screen coordinates (accounting for camera offset).
+	// interpolatePosition returns the sprite center (drawSpriteImage translates by -Width/2, -Height/2
+	// then +screenX, +screenY), so no additional offset is needed.
 	centerX, centerY := r.interpolatePosition(pos)
-
-	// Offset to center of sprite if available
-	if sprite := r.aimPlayerEntity.GetSprite(); sprite != nil {
-		centerX += sprite.Width / 2
-		centerY += sprite.Height / 2
-	}
 
 	// Calculate endpoint 60 pixels away in aim direction
 	dirX, dirY := aim.GetAimDirection()

@@ -136,7 +136,7 @@ log.Printf("Completion: %.1f%%, Satisfaction: %.1f%%",
 validator := ux.NewJourneyValidator()
 results := validator.ValidateAll()
 
-summary := ux.GetSummary(results)
+summary := validator.GetSummary(results)
 log.Printf("Pass Rate: %.1f%%, Avg Completion: %.1f%%",
     summary.PassRate*100, summary.AverageCompletionRate*100)
 ```

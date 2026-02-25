@@ -221,6 +221,9 @@ type EbitenRenderSystem struct {
 	shadowCache    *dropShadowCache
 	shadowDrawOpts ebiten.DrawImageOptions
 
+	// Player entity reference for aim indicator rendering (drawn below player sprite)
+	aimPlayerEntity *Entity
+
 	// Render interpolation alpha (0.0 to 1.0) for smooth position interpolation
 	// between previous tick (PrevX/PrevY) and current tick (X/Y) positions.
 	// Set by the game loop each Draw() frame based on elapsed time since last Update().
@@ -353,6 +356,10 @@ func (r *EbitenRenderSystem) Draw(screen interface{}, entities []*Entity) {
 	r.resetFrameStats(len(entities))
 	visibleEntities := r.applyCulling(entities)
 	sortedEntities := r.sortEntitiesByLayer(visibleEntities)
+
+	// Draw aim indicator below entities (behind player sprite)
+	r.drawAimIndicator()
+
 	r.renderEntities(sortedEntities)
 	r.drawParticles(r.filterParticleEntities(entities))
 
@@ -1294,6 +1301,79 @@ func (r *EbitenRenderSystem) SetShowColliders(show bool) {
 // SetShowGrid implements RenderingSystem interface.
 func (r *EbitenRenderSystem) SetShowGrid(show bool) {
 	r.ShowGrid = show
+}
+
+// SetAimPlayerEntity sets the player entity used to draw the aim direction indicator
+// below the player sprite layer. Called from EbitenGame.SetPlayerEntity().
+func (r *EbitenRenderSystem) SetAimPlayerEntity(entity *Entity) {
+	r.aimPlayerEntity = entity
+}
+
+// drawAimIndicator draws the aim direction arrow originating from the player entity's
+// screen-space center, rendered before entities so it appears behind (below) the player sprite.
+// The arrow and arrowhead are drawn in black.
+func (r *EbitenRenderSystem) drawAimIndicator() {
+	if r.screen == nil || r.aimPlayerEntity == nil || r.cameraSystem == nil {
+		return
+	}
+
+	// Get player aim component
+	aimComp, ok := r.aimPlayerEntity.GetComponent("aim")
+	if !ok {
+		return
+	}
+	aim, ok := aimComp.(*AimComponent)
+	if !ok {
+		return
+	}
+
+	// Get player position in world coordinates
+	pos := r.aimPlayerEntity.GetPosition()
+	if pos == nil {
+		return
+	}
+
+	// Convert player world position to screen coordinates (accounting for camera offset)
+	centerX, centerY := r.interpolatePosition(pos)
+
+	// Offset to center of sprite if available
+	if sprite := r.aimPlayerEntity.GetSprite(); sprite != nil {
+		centerX += sprite.Width / 2
+		centerY += sprite.Height / 2
+	}
+
+	// Calculate endpoint 60 pixels away in aim direction
+	dirX, dirY := aim.GetAimDirection()
+	arrowLength := float32(60.0)
+
+	cx := float32(centerX)
+	cy := float32(centerY)
+	endX := cx + float32(dirX)*arrowLength
+	endY := cy + float32(dirY)*arrowLength
+
+	// Draw aim line (semi-transparent black)
+	vector.StrokeLine(r.screen, cx, cy, endX, endY, 2,
+		color.RGBA{0, 0, 0, 128}, false)
+
+	// Draw arrowhead
+	arrowSize := float32(8.0)
+	perpX := -float32(dirY) // Perpendicular vector
+	perpY := float32(dirX)
+
+	// Three points of the arrowhead triangle
+	tipX := endX
+	tipY := endY
+	left1X := tipX - float32(dirX)*arrowSize + perpX*arrowSize*0.5
+	left1Y := tipY - float32(dirY)*arrowSize + perpY*arrowSize*0.5
+	left2X := tipX - float32(dirX)*arrowSize - perpX*arrowSize*0.5
+	left2Y := tipY - float32(dirY)*arrowSize - perpY*arrowSize*0.5
+
+	// Draw filled circle at tip and arrowhead lines (black)
+	vector.DrawFilledCircle(r.screen, tipX, tipY, 3, color.RGBA{0, 0, 0, 180}, false)
+	vector.StrokeLine(r.screen, left1X, left1Y, tipX, tipY, 2,
+		color.RGBA{0, 0, 0, 180}, false)
+	vector.StrokeLine(r.screen, left2X, left2Y, tipX, tipY, 2,
+		color.RGBA{0, 0, 0, 180}, false)
 }
 
 // Compile-time interface check

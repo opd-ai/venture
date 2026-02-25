@@ -74,8 +74,7 @@ func (h *EbitenHUDSystem) Draw(screen interface{}) {
 	// Draw experience bar
 	h.drawExperienceBar()
 
-	// Phase 10.1: Draw aim direction indicator (crosshair)
-	h.drawAimIndicator()
+	// Note: Aim indicator is now drawn by EbitenRenderSystem (below player sprite layer)
 	// Draw network status if in multiplayer mode
 	h.drawNetworkStatus()
 }

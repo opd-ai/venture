@@ -1734,6 +1734,11 @@ func (g *EbitenGame) SetPlayerEntity(entity *Entity) {
 	if g.OnboardingManager != nil {
 		g.OnboardingManager.SetPlayerEntity(entity)
 	}
+
+	// Set player for render system aim indicator (drawn below player sprite)
+	if g.RenderSystem != nil {
+		g.RenderSystem.SetAimPlayerEntity(entity)
+	}
 }
 
 // SetAudioManager sets the audio manager for the game.

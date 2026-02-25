@@ -23,6 +23,7 @@ This file tracks package-level audits across the Venture codebase. Each entry in
 - [x] `pkg/procgen/item/AUDIT.md` — Complete — 5 issues (0 high, 2 med, 3 low) — Coverage: 92.2%
 - [x] `pkg/procgen/dialog/AUDIT.md` — Complete — 3 issues (0 high, 0 med, 3 low) — Coverage: 88.0%
 - [x] `pkg/procgen/entity/AUDIT.md` — Complete — 5 issues (0 high, 2 med, 3 low) — Coverage: 92.4%
+- [x] `pkg/procgen/legendary/AUDIT.md` — Complete — 3 issues (0 high, 0 med, 3 low) — Coverage: 86.6%
 - [x] `pkg/procgen/companion/AUDIT.md` — Complete — 4 issues (0 high, 1 med, 3 low) — Coverage: Unmeasurable (requires X11; 56% test-to-source ratio)
 - [x] `pkg/procgen/magic/AUDIT.md` — Complete — 4 issues (0 high, 1 med, 3 low) — Coverage: 89.8%
 - [x] `pkg/procgen/genre/AUDIT.md` — Complete — 4 issues (0 high, 0 med, 4 low) — Coverage: 94.8%
@@ -86,9 +87,9 @@ This file tracks package-level audits across the Venture codebase. Each entry in
 - [x] `pkg/integration/world_events/AUDIT.md` — Complete — 5 issues (0 high, 2 med, 3 low) — Coverage: 92.9%
 
 ## Audit Progress
-- **Completed**: 64/90+ packages
+- **Completed**: 65/90+ packages
 - **In Progress**: 0
-- **Not Started**: 26+
+- **Not Started**: 25+
 
 ## Next Priority
 Packages with high integration surface and platform-specific concerns:

@@ -11,7 +11,7 @@ This file tracks package-level audits across the Venture codebase. Each entry in
 
 ### Command Packages
 - [x] `cmd/client/AUDIT_2026-02-16_COMPREHENSIVE.md` — Pass — 7 issues (0 high, 1 med, 6 low) — Coverage: 49.4%
-- [ ] `cmd/server/` — Not audited
+- [x] `cmd/server/AUDIT.md` — Complete — 7 issues (0 high, 3 med, 4 low) — Coverage: Unmeasurable (requires X11; 184% test-to-source ratio)
 - [ ] `cmd/mobile/` — Not audited
 
 ### Core Packages
@@ -67,9 +67,9 @@ This file tracks package-level audits across the Venture codebase. Each entry in
 - [ ] `pkg/integration/world_events/` — Not audited
 
 ## Audit Progress
-- **Completed**: 23/90+ packages
+- **Completed**: 24/90+ packages
 - **In Progress**: 0
-- **Not Started**: 67+
+- **Not Started**: 66+
 
 ## Next Priority
 Packages with high integration surface and platform-specific concerns:

@@ -295,6 +295,46 @@ func (g *GamepadInputHandler) IsSkillsJustPressed() bool {
 	return g.IsButtonJustPressed(g.ButtonSkills)
 }
 
+// Menu navigation helpers - D-pad for UI navigation
+// Note: D-pad buttons are shared with spell casting. When UI is open,
+// systems should use these menu navigation methods instead of spell methods.
+
+// IsDPadUpJustPressed returns true on the frame when D-pad up is pressed.
+// Used for menu navigation when UI is active.
+func (g *GamepadInputHandler) IsDPadUpJustPressed() bool {
+	return g.IsButtonJustPressed(ebiten.StandardGamepadButtonLeftTop)
+}
+
+// IsDPadDownJustPressed returns true on the frame when D-pad down is pressed.
+// Used for menu navigation when UI is active.
+func (g *GamepadInputHandler) IsDPadDownJustPressed() bool {
+	return g.IsButtonJustPressed(ebiten.StandardGamepadButtonLeftBottom)
+}
+
+// IsDPadLeftJustPressed returns true on the frame when D-pad left is pressed.
+// Used for menu tab switching when UI is active.
+func (g *GamepadInputHandler) IsDPadLeftJustPressed() bool {
+	return g.IsButtonJustPressed(ebiten.StandardGamepadButtonLeftLeft)
+}
+
+// IsDPadRightJustPressed returns true on the frame when D-pad right is pressed.
+// Used for menu tab switching when UI is active.
+func (g *GamepadInputHandler) IsDPadRightJustPressed() bool {
+	return g.IsButtonJustPressed(ebiten.StandardGamepadButtonLeftRight)
+}
+
+// IsConfirmJustPressed returns true on the frame when A button (confirm) is pressed.
+// Alias for IsAttackJustPressed for menu context clarity.
+func (g *GamepadInputHandler) IsConfirmJustPressed() bool {
+	return g.IsButtonJustPressed(g.ButtonAttack)
+}
+
+// IsCancelJustPressed returns true on the frame when B button (cancel/back) is pressed.
+// Alias for IsSecondaryJustPressed for menu context clarity.
+func (g *GamepadInputHandler) IsCancelJustPressed() bool {
+	return g.IsButtonJustPressed(g.ButtonSecondary)
+}
+
 // Spell input helpers
 
 // IsSpellPressed returns true if the specified spell button (1-4) is pressed.

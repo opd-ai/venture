@@ -1112,6 +1112,10 @@ func (s *InputSystem) processTouchInput(input *EbitenInput) {
 // processGamepadInput handles gamepad input for movement and actions.
 // Platform parity fix: Full gamepad support for Desktop and WASM.
 func (s *InputSystem) processGamepadInput(input *EbitenInput) {
+	// Always process menu navigation regardless of movement state
+	// Housing UI Low-Priority Fix: D-pad menu navigation for all menu contexts
+	s.processGamepadMenuNavigation(input)
+
 	if !s.currentState.AllowsMovement() {
 		// Still process non-movement input
 		s.processGamepadActionKeys(input)
@@ -1179,6 +1183,10 @@ func (s *InputSystem) processGamepadActionKeys(input *EbitenInput) {
 // mergeGamepadInput merges gamepad input with existing keyboard input.
 // Platform parity fix: Allows simultaneous keyboard + gamepad on Desktop.
 func (s *InputSystem) mergeGamepadInput(input *EbitenInput) {
+	// Always merge menu navigation regardless of combat state
+	// Housing UI Low-Priority Fix: D-pad menu navigation when using keyboard + gamepad
+	s.processGamepadMenuNavigation(input)
+
 	// Only merge if no keyboard movement detected
 	if input.MoveX == 0 && input.MoveY == 0 {
 		moveX, moveY := s.gamepadHandler.GetMovementInput()
@@ -1348,6 +1356,47 @@ func (s *InputSystem) processMenuNavigationKeys(input *EbitenInput) {
 	}
 	if inpututil.IsKeyJustPressed(ebiten.KeyTab) {
 		input.MenuTabJustPressed = true
+	}
+}
+
+// processGamepadMenuNavigation handles gamepad D-pad for menu navigation.
+// Housing UI Low-Priority Fix: Wires gamepad D-pad to InputProvider menu navigation methods.
+// D-pad Up/Down navigate menus, A confirms, B goes back, LB/RB switch tabs.
+func (s *InputSystem) processGamepadMenuNavigation(input *EbitenInput) {
+	if s.gamepadHandler == nil || !s.gamepadHandler.HasGamepad() {
+		return
+	}
+
+	// D-pad for menu navigation
+	if s.gamepadHandler.IsDPadUpJustPressed() {
+		input.MenuUpJustPressed = true
+		input.AnyKeyPressed = true
+	}
+	if s.gamepadHandler.IsDPadDownJustPressed() {
+		input.MenuDownJustPressed = true
+		input.AnyKeyPressed = true
+	}
+
+	// A button for confirm (same as attack button)
+	if s.gamepadHandler.IsConfirmJustPressed() {
+		input.MenuConfirmJustPressed = true
+		input.AnyKeyPressed = true
+	}
+
+	// B button for back/cancel
+	if s.gamepadHandler.IsCancelJustPressed() {
+		input.MenuBackJustPressed = true
+		input.AnyKeyPressed = true
+	}
+
+	// Shoulder buttons (LB/RB) for tab switching
+	if s.gamepadHandler.IsButtonJustPressed(ebiten.StandardGamepadButtonFrontTopLeft) {
+		input.MenuTabJustPressed = true
+		input.AnyKeyPressed = true
+	}
+	if s.gamepadHandler.IsButtonJustPressed(ebiten.StandardGamepadButtonFrontTopRight) {
+		input.MenuTabJustPressed = true
+		input.AnyKeyPressed = true
 	}
 }
 

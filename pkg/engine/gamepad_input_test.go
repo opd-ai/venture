@@ -226,3 +226,42 @@ func TestGamepadInputHandler_Update_NoGamepad(t *testing.T) {
 		t.Error("HasGamepad() should still be false after Update() with no gamepad")
 	}
 }
+
+// TestGamepadInputHandler_DPadMenuNavigation_NoGamepad verifies D-pad menu navigation methods.
+// Housing UI Low-Priority Fix: Tests for D-pad menu navigation helper methods.
+func TestGamepadInputHandler_DPadMenuNavigation_NoGamepad(t *testing.T) {
+	handler := NewGamepadInputHandler()
+
+	tests := []struct {
+		name string
+		fn   func() bool
+	}{
+		{"IsDPadUpJustPressed", handler.IsDPadUpJustPressed},
+		{"IsDPadDownJustPressed", handler.IsDPadDownJustPressed},
+		{"IsDPadLeftJustPressed", handler.IsDPadLeftJustPressed},
+		{"IsDPadRightJustPressed", handler.IsDPadRightJustPressed},
+		{"IsConfirmJustPressed", handler.IsConfirmJustPressed},
+		{"IsCancelJustPressed", handler.IsCancelJustPressed},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if tt.fn() {
+				t.Errorf("%s() without gamepad should return false", tt.name)
+			}
+		})
+	}
+}
+
+// BenchmarkGamepadInputHandler_DPadMenuNavigation benchmarks D-pad menu navigation checks.
+func BenchmarkGamepadInputHandler_DPadMenuNavigation(b *testing.B) {
+	handler := NewGamepadInputHandler()
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_ = handler.IsDPadUpJustPressed()
+		_ = handler.IsDPadDownJustPressed()
+		_ = handler.IsConfirmJustPressed()
+		_ = handler.IsCancelJustPressed()
+	}
+}

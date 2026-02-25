@@ -1015,8 +1015,8 @@ This report consolidates 110 individual audit files across all packages in the V
 - **Source:** `pkg/world/housing/AUDIT.md`
 - **High Issues:** 0 (1 fixed)
 - **Medium Issues:** 0 (1 fixed)
-- **Low Issues:** 0 (1 fixed, 2 remaining - gamepad/touch wiring)
-- **Details:** 78.9% coverage. `HousingUI` input abstraction fixed: now uses `MenuInputProvider` interface instead of direct `ebiten.IsKeyPressed()` calls. **RESOLVED 2026-02-23**: Added `SetDefaultTimeProvider()` and `ResetDefaultTimeProvider()` functions allowing multiplayer sync to use `MockTimeProvider` for deterministic timestamps. Updated `doc.go` example to use logrus structured logging. Remaining: gamepad D-pad and touch tap wiring to `InputProvider` methods.
+- **Low Issues:** 1 (2 fixed - gamepad wiring done 2026-02-25, touch remaining)
+- **Details:** 78.9% coverage. `HousingUI` input abstraction fixed: now uses `MenuInputProvider` interface instead of direct `ebiten.IsKeyPressed()` calls. **RESOLVED 2026-02-23**: Added `SetDefaultTimeProvider()` and `ResetDefaultTimeProvider()` functions allowing multiplayer sync to use `MockTimeProvider` for deterministic timestamps. Updated `doc.go` example to use logrus structured logging. **RESOLVED 2026-02-25**: Gamepad D-pad menu navigation wired via `InputSystem.processGamepadMenuNavigation()` - D-pad Up/Down navigate menus, A confirms, B goes back, LB/RB switch tabs. Added D-pad helper methods to `GamepadInputHandler`. Remaining: touch tap spatial hit testing for menu item selection.
 
 ---
 

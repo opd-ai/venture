@@ -33,8 +33,8 @@ The housing package provides plot placement, guild halls, blueprints, persistenc
 - [x] **time.Now Usage in TimeProvider** — **RESOLVED 2026-02-23**: Added `SetDefaultTimeProvider()` and `ResetDefaultTimeProvider()` functions to allow multiplayer synchronization and tests to inject deterministic time providers. `NewPlot()` and `NewBlueprint()` now use the configurable package-level default, enabling deterministic timestamps when needed. (`types.go`)
 
 ### Low Severity
-- [ ] **Missing Gamepad Navigation** — Gamepad can now be supported via `InputProvider.IsMenuUpJustPressed()` etc. methods added to `pkg/engine`. Housing UI uses abstract interface, enabling gamepad support when wired through InputProvider. (`ui.go`)
-- [ ] **Missing Touch Input Support** — Touch support can be added via the abstract `MenuInputProvider` interface. (`ui.go`)
+- [x] **Missing Gamepad Navigation** — **RESOLVED 2026-02-25**: Gamepad D-pad now wired to `InputProvider.IsMenuUpJustPressed()` etc. methods. Added `IsDPadUpJustPressed()`, `IsDPadDownJustPressed()`, `IsConfirmJustPressed()`, `IsCancelJustPressed()` helpers to `GamepadInputHandler`. `InputSystem.processGamepadMenuNavigation()` maps D-pad Up/Down to menu navigation, A to confirm, B to back, LB/RB to tab switch. Housing UI uses `MenuInputProvider` interface which receives these inputs via `EbitenInput`. (`pkg/engine/gamepad_input.go`, `pkg/engine/input_system.go`)
+- [ ] **Missing Touch Input Support** — Touch support can be added via the abstract `MenuInputProvider` interface. Requires spatial hit testing for menu item selection. (`ui.go`)
 - [x] **doc.go Example Uses log.Printf** — **RESOLVED 2026-02-23**: Updated doc.go example to use `logrus.WithError(err).WithField("plot_id", plot.ID).Error()` instead of `log.Printf`. (`doc.go:56`)
 
 ## Input Integration
@@ -42,8 +42,8 @@ The housing package provides plot placement, guild halls, blueprints, persistenc
 |---|---|---|
 | Keyboard | ✅ | Uses `MenuInputProvider` interface abstraction |
 | Mouse | N/A | UI is keyboard-navigated, no mouse click handling needed |
-| Gamepad | ✅ | Supported via `InputProvider` menu navigation methods |
-| Touch | ✅ | Supported via abstract interface; needs UI wiring |
+| Gamepad | ✅ | D-pad wired to menu navigation via `InputSystem.processGamepadMenuNavigation()` |
+| Touch | ⚠️ | Abstract interface exists; needs spatial hit testing for menu items |
 | VR | N/A | Housing UI not VR-relevant |
 | Stub/Test | ✅ | Can use `StubMenuInput` for testing |
 
@@ -86,6 +86,6 @@ The housing package provides plot placement, guild halls, blueprints, persistenc
 ## Recommendations
 1. ~~**[HIGH]** Refactor `HousingUI` to accept `InputProvider` interface instead of calling `ebiten.IsKeyPressed()` directly.~~ ✅ DONE
 2. ~~**[HIGH]** Create `StubHousingUI` or add input injection to enable unit testing.~~ ✅ DONE - Added `StubMenuInput`
-3. **[MED]** Wire gamepad D-pad to `InputProvider` menu navigation methods (already supported in interface).
-4. **[MED]** Wire touch tap events to `InputProvider` menu navigation methods (already supported in interface).
+3. ~~**[MED]** Wire gamepad D-pad to `InputProvider` menu navigation methods (already supported in interface).~~ ✅ DONE 2026-02-25 - Added `processGamepadMenuNavigation()` to `InputSystem` and D-pad helpers to `GamepadInputHandler`
+4. **[MED]** Wire touch tap events to `InputProvider` menu navigation methods (requires spatial hit testing for menu items).
 5. ~~**[LOW]** Update `doc.go` example to use `logrus.WithFields` instead of `log.Printf`.~~ ✅ DONE 2026-02-23

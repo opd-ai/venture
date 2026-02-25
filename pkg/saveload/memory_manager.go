@@ -1,9 +1,7 @@
-//go:build !js
-// +build !js
-
 // Package saveload provides save/load manager for game state persistence.
 // This file implements MemorySaveManager, an in-memory fallback implementation
 // for when file system storage is unavailable.
+// Available on all platforms (including WASM) as a fallback save backend.
 package saveload
 
 import (

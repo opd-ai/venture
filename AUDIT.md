@@ -55,6 +55,7 @@ This file tracks package-level audits across the Venture codebase. Each entry in
 - [x] `pkg/network/federation/AUDIT.md` — Complete — 4 issues (1 high, 2 med, 1 low) — Coverage: 85.8% (subpackages; parent requires X11)
 - [x] `pkg/network/federation/webrtc/AUDIT.md` — Complete — 4 issues (0 high, 2 med, 2 low) — Coverage: 85.7%
 - [x] `pkg/network/federation/guild/AUDIT.md` — Complete — 4 issues (0 high, 0 med, 4 low) — Coverage: 88.2%
+- [x] `pkg/network/federation/mobile/AUDIT.md` — Complete — 6 issues (0 high, 3 med, 3 low) — Coverage: 82.4%
 - [x] `pkg/network/chat/AUDIT.md` — Complete — 4 issues (1 high, 2 med, 2 low) — Coverage: Unmeasurable (requires X11; 30% target)
 - [x] `pkg/network/trade/AUDIT.md` — Complete — 4 issues (0 high, 1 med, 3 low) — Coverage: Unmeasurable (requires X11; 145% test-to-source ratio)
 - [x] `pkg/network/resilience/AUDIT.md` — Complete — 4 issues (0 high, 2 med, 2 low) — Coverage: 89.3%
@@ -102,9 +103,9 @@ This file tracks package-level audits across the Venture codebase. Each entry in
 - [x] `pkg/integration/world_events/AUDIT.md` — Complete — 5 issues (0 high, 2 med, 3 low) — Coverage: 92.9%
 
 ## Audit Progress
-- **Completed**: 82/90+ packages
+- **Completed**: 83/90+ packages
 - **In Progress**: 0
-- **Not Started**: 8+
+- **Not Started**: 7+
 
 ### Supporting Packages (continued)
 - [x] `pkg/benchmark/AUDIT.md` — Complete — 3 issues (0 high, 0 med, 3 low) — Coverage: N/A (test-only; 513 test lines; fps requires X11)

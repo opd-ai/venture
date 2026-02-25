@@ -869,3 +869,124 @@ func TestCharacterCreationTutorial_OnboardingTransition(t *testing.T) {
 		t.Errorf("Player class = %v, want ClassMage", om.GetPlayerClass())
 	}
 }
+
+// TestCharacterCreationTutorial_WelcomeInputConsumed tests that during the welcome
+// step, InputConsumed is always true to prevent the underlying character creation
+// from processing input simultaneously.
+func TestCharacterCreationTutorial_WelcomeInputConsumed(t *testing.T) {
+	cct := NewCharacterCreationTutorial()
+
+	// During the welcome step, every Update should set InputConsumed = true
+	cct.Update(0, 0.016)
+
+	if !cct.InputConsumed {
+		t.Error("InputConsumed should be true during welcome step")
+	}
+
+	// Step should still be 0 (welcome) since timer hasn't expired
+	if cct.CurrentStepIdx != 0 {
+		t.Errorf("CurrentStepIdx = %d, want 0 (welcome should not auto-advance before 3s)", cct.CurrentStepIdx)
+	}
+}
+
+// TestCharacterCreationTutorial_WelcomeAutoAdvance tests that the welcome step
+// auto-advances after 3 seconds.
+func TestCharacterCreationTutorial_WelcomeAutoAdvance(t *testing.T) {
+	cct := NewCharacterCreationTutorial()
+
+	// Simulate enough time to auto-advance (3 seconds)
+	totalTime := 0.0
+	for totalTime < 3.5 {
+		cct.Update(0, 0.1)
+		totalTime += 0.1
+	}
+
+	// Should have advanced past welcome
+	if cct.CurrentStepIdx != 1 {
+		t.Errorf("After 3.5s, CurrentStepIdx = %d, want 1 (should auto-advance past welcome)", cct.CurrentStepIdx)
+	}
+}
+
+// TestCharacterCreationTutorial_StepOrderMatchesCreation tests that tutorial steps
+// correspond 1:1 with creation steps (offset by 1 for welcome step).
+func TestCharacterCreationTutorial_StepOrderMatchesCreation(t *testing.T) {
+	cct := NewCharacterCreationTutorial()
+
+	// Expected mapping:
+	// Tutorial index 0 = welcome_creation   (no creation step)
+	// Tutorial index 1 = name_input         -> creationStep 0 (stepNameInput)
+	// Tutorial index 2 = class_selection    -> creationStep 1 (stepClassSelection)
+	// Tutorial index 3 = subclass_selection -> creationStep 2 (stepSubclassSelection)
+	// Tutorial index 4 = portrait_selection -> creationStep 3 (stepPortraitSelection)
+	// Tutorial index 5 = confirmation       -> creationStep 4 (stepConfirmation)
+
+	expectedIDs := []string{
+		"welcome_creation",
+		"name_input",
+		"class_selection",
+		"subclass_selection",
+		"portrait_selection",
+		"confirmation",
+	}
+
+	if len(cct.Steps) != len(expectedIDs) {
+		t.Fatalf("Expected %d steps, got %d", len(expectedIDs), len(cct.Steps))
+	}
+
+	for i, id := range expectedIDs {
+		if cct.Steps[i].ID != id {
+			t.Errorf("Step %d: ID = %q, want %q", i, cct.Steps[i].ID, id)
+		}
+	}
+}
+
+// TestCharacterCreationTutorial_FullFlowSync tests the complete synchronization
+// between character creation steps and tutorial steps.
+func TestCharacterCreationTutorial_FullFlowSync(t *testing.T) {
+	cct := NewCharacterCreationTutorial()
+
+	// Advance past welcome (simulate 4s)
+	for i := 0; i < 40; i++ {
+		cct.Update(0, 0.1)
+	}
+	if cct.CurrentStepIdx != 1 {
+		t.Fatalf("After welcome, CurrentStepIdx = %d, want 1", cct.CurrentStepIdx)
+	}
+
+	// Step through creation steps and verify tutorial follows
+	creationSteps := []struct {
+		creationStep int
+		wantIdx      int
+		wantID       string
+	}{
+		{0, 1, "name_input"},         // stay on name_input
+		{1, 2, "class_selection"},    // advance to class
+		{2, 3, "subclass_selection"}, // advance to subclass
+		{3, 4, "portrait_selection"}, // advance to portrait
+		{4, 5, "confirmation"},       // advance to confirmation
+	}
+
+	for _, tc := range creationSteps {
+		cct.Update(tc.creationStep, 0.016)
+		if cct.CurrentStepIdx != tc.wantIdx {
+			t.Errorf("creationStep=%d: CurrentStepIdx = %d, want %d",
+				tc.creationStep, cct.CurrentStepIdx, tc.wantIdx)
+		}
+		step := cct.GetCurrentStep()
+		if step != nil && step.ID != tc.wantID {
+			t.Errorf("creationStep=%d: current step ID = %q, want %q",
+				tc.creationStep, step.ID, tc.wantID)
+		}
+	}
+
+	// Completing the tutorial should mark all steps done
+	cct.CompleteTutorial()
+	if !cct.Completed {
+		t.Error("Tutorial should be completed")
+	}
+	for i, s := range cct.Steps {
+		if !s.Completed {
+			t.Errorf("Step %d (%s) should be completed", i, s.ID)
+		}
+	}
+}

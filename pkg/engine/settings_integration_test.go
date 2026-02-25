@@ -566,6 +566,8 @@ func TestSetContextualTutorial(t *testing.T) {
 
 // TestApplySettings_AllTutorialSystems tests that all three tutorial layers are controlled together.
 // This is the comprehensive test for Phase 3.3 (PLAN.md).
+// ApplySettings delegates to OnboardingManager which activates only the child
+// systems appropriate for the current onboarding phase.
 func TestApplySettings_AllTutorialSystems(t *testing.T) {
 	tempDir := t.TempDir()
 	sm := &SettingsManager{
@@ -578,6 +580,10 @@ func TestApplySettings_AllTutorialSystems(t *testing.T) {
 	charCreationTutorial := NewCharacterCreationTutorial()
 	contextualTutorial := &stubContextualTutorial{enabled: true}
 	onboardingManager := NewOnboardingManager(nil)
+
+	// Wire child systems to onboarding manager so SetEnabled can control them.
+	onboardingManager.SetTutorialSystem(tutorialSystem)
+	onboardingManager.SetCreationTutorial(charCreationTutorial)
 
 	game := &EbitenGame{
 		SettingsManager:           sm,
@@ -624,7 +630,7 @@ func TestApplySettings_AllTutorialSystems(t *testing.T) {
 		t.Error("OnboardingManager should be disabled")
 	}
 
-	// Re-enable tutorials
+	// Re-enable tutorials while still in StateCharacterCreation
 	settings.ShowTutorials = true
 	sm.UpdateSettings(settings)
 	err = game.ApplySettings()
@@ -632,17 +638,36 @@ func TestApplySettings_AllTutorialSystems(t *testing.T) {
 		t.Fatalf("ApplySettings failed on re-enable: %v", err)
 	}
 
-	// Verify ALL systems were re-enabled
-	if !tutorialSystem.Enabled {
-		t.Error("TutorialSystem should be re-enabled")
+	// OnboardingManager is in StateCharacterCreation, so only the creation
+	// tutorial should be active; the in-game tutorial must stay disabled
+	// until TransitionToInGameTutorial() is called.
+	if tutorialSystem.Enabled {
+		t.Error("TutorialSystem should remain disabled during StateCharacterCreation")
 	}
 	if !charCreationTutorial.Enabled {
-		t.Error("CharacterCreationTutorial should be re-enabled")
+		t.Error("CharacterCreationTutorial should be re-enabled in StateCharacterCreation")
 	}
 	if !contextualTutorial.IsEnabled() {
-		t.Error("ContextualTutorial should be re-enabled")
+		t.Error("ContextualTutorial should be re-enabled (independent of onboarding phase)")
 	}
 	if !onboardingManager.IsEnabled() {
 		t.Error("OnboardingManager should be re-enabled")
+	}
+
+	// Now transition to InGameTutorial and re-apply
+	onboardingManager.TransitionToInGameTutorial()
+	settings.ShowTutorials = false
+	sm.UpdateSettings(settings)
+	_ = game.ApplySettings()
+	settings.ShowTutorials = true
+	sm.UpdateSettings(settings)
+	_ = game.ApplySettings()
+
+	// In InGameTutorial phase, the in-game tutorial should now be active
+	if !tutorialSystem.Enabled {
+		t.Error("TutorialSystem should be enabled in StateInGameTutorial")
+	}
+	if charCreationTutorial.Enabled {
+		t.Error("CharacterCreationTutorial should be disabled past StateCharacterCreation")
 	}
 }

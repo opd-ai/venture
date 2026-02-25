@@ -158,6 +158,9 @@ func (om *OnboardingManager) IsComplete() bool {
 
 // SetEnabled enables or disables the entire onboarding flow.
 // When disabled, all tutorial layers are disabled.
+// When re-enabled, child systems are restored to the correct state for the
+// current onboarding phase (e.g. in-game tutorial stays disabled during
+// character creation). Completed or skipped onboarding is never re-activated.
 func (om *OnboardingManager) SetEnabled(enabled bool) {
 	om.mu.Lock()
 	defer om.mu.Unlock()
@@ -173,7 +176,40 @@ func (om *OnboardingManager) SetEnabled(enabled bool) {
 			om.tutorialSystem.Enabled = false
 			om.tutorialSystem.ShowUI = false
 		}
+	} else if !om.skipped && om.currentState != StateComplete {
+		// Re-enable child systems appropriate for the current onboarding phase.
+		// This prevents premature activation of the in-game tutorial during
+		// character creation (fixes ApplySettings/SetAudioManager race).
+		switch om.currentState {
+		case StateCharacterCreation:
+			if om.creationTutorial != nil {
+				om.creationTutorial.SetEnabled(true)
+			}
+			// In-game tutorial is not yet active in this phase
+			if om.tutorialSystem != nil {
+				om.tutorialSystem.Enabled = false
+				om.tutorialSystem.ShowUI = false
+			}
+		case StateInGameTutorial:
+			if om.creationTutorial != nil {
+				om.creationTutorial.SetEnabled(false)
+			}
+			if om.tutorialSystem != nil {
+				om.tutorialSystem.Enabled = true
+				om.tutorialSystem.ShowUI = true
+			}
+		case StateContextHelp:
+			// Both tutorials are past; contextual help is independent
+			if om.creationTutorial != nil {
+				om.creationTutorial.SetEnabled(false)
+			}
+			if om.tutorialSystem != nil {
+				om.tutorialSystem.Enabled = false
+				om.tutorialSystem.ShowUI = false
+			}
+		}
 	}
+	// When skipped or complete, re-enabling does not re-activate finished tutorials.
 
 	if om.logger != nil {
 		om.logger.WithField("enabled", enabled).Debug("onboarding enabled state changed")
@@ -205,22 +241,33 @@ func (om *OnboardingManager) GetPlayerClass() CharacterClass {
 }
 
 // SkipAll skips the entire onboarding flow.
+// Child systems are disabled outside the lock to avoid a deadlock:
+// DisableTutorial() fires OnCompleteCallback → GetState() → RLock while
+// the write lock is already held by this method.
 func (om *OnboardingManager) SkipAll() {
 	om.mu.Lock()
-	defer om.mu.Unlock()
-
 	om.skipped = true
 	om.currentState = StateComplete
 
-	if om.creationTutorial != nil {
-		om.creationTutorial.SkipTutorial()
+	// Capture references before releasing the lock.
+	creationTutorial := om.creationTutorial
+	tutorialSystem := om.tutorialSystem
+	logger := om.logger
+	om.mu.Unlock()
+
+	// Disable child systems outside the lock.
+	if creationTutorial != nil {
+		creationTutorial.SkipTutorial()
 	}
-	if om.tutorialSystem != nil {
-		om.tutorialSystem.DisableTutorial()
+	if tutorialSystem != nil {
+		// Directly disable rather than calling DisableTutorial() to avoid
+		// re-entering the OnCompleteCallback (state is already Complete).
+		tutorialSystem.Enabled = false
+		tutorialSystem.ShowUI = false
 	}
 
-	if om.logger != nil {
-		om.logger.Debug("onboarding skipped entirely")
+	if logger != nil {
+		logger.Debug("onboarding skipped entirely")
 	}
 }
 

@@ -2,6 +2,7 @@ package engine
 
 import (
 	"testing"
+	"time"
 )
 
 // TestOnboardingManager_Creation tests basic OnboardingManager creation.
@@ -349,5 +350,111 @@ func TestOnboardingManager_SetPlayerEntityNil(t *testing.T) {
 	om.TransitionToInGameTutorial()
 	if om.GetState() != StateInGameTutorial {
 		t.Errorf("expected StateInGameTutorial, got %s", om.GetState())
+	}
+}
+
+// TestOnboardingManager_SetEnabled_ReEnablePhaseAware tests that re-enabling
+// restores the correct child system states for each onboarding phase.
+func TestOnboardingManager_SetEnabled_ReEnablePhaseAware(t *testing.T) {
+	tests := []struct {
+		name                string
+		setupState          func(om *OnboardingManager)
+		wantCreationEnabled bool
+		wantTutorialEnabled bool
+	}{
+		{
+			name:                "CharacterCreation phase enables creation tutorial only",
+			setupState:          func(om *OnboardingManager) { /* default: StateCharacterCreation */ },
+			wantCreationEnabled: true,
+			wantTutorialEnabled: false,
+		},
+		{
+			name:                "InGameTutorial phase enables tutorial system only",
+			setupState:          func(om *OnboardingManager) { om.TransitionToInGameTutorial() },
+			wantCreationEnabled: false,
+			wantTutorialEnabled: true,
+		},
+		{
+			name: "ContextHelp phase enables neither",
+			setupState: func(om *OnboardingManager) {
+				om.TransitionToInGameTutorial()
+				om.TransitionToContextHelp()
+			},
+			wantCreationEnabled: false,
+			wantTutorialEnabled: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			om := NewOnboardingManager(nil)
+			tutorialSystem := &EbitenTutorialSystem{Enabled: true, ShowUI: true}
+			creationTutorial := NewCharacterCreationTutorial()
+
+			om.SetTutorialSystem(tutorialSystem)
+			om.SetCreationTutorial(creationTutorial)
+			tt.setupState(om)
+
+			// Disable then re-enable
+			om.SetEnabled(false)
+			om.SetEnabled(true)
+
+			if creationTutorial.Enabled != tt.wantCreationEnabled {
+				t.Errorf("creationTutorial.Enabled = %v, want %v", creationTutorial.Enabled, tt.wantCreationEnabled)
+			}
+			if tutorialSystem.Enabled != tt.wantTutorialEnabled {
+				t.Errorf("tutorialSystem.Enabled = %v, want %v", tutorialSystem.Enabled, tt.wantTutorialEnabled)
+			}
+		})
+	}
+}
+
+// TestOnboardingManager_SetEnabled_SkippedNoReactivate tests that re-enabling
+// after SkipAll does not reactivate finished tutorials.
+func TestOnboardingManager_SetEnabled_SkippedNoReactivate(t *testing.T) {
+	om := NewOnboardingManager(nil)
+	tutorialSystem := &EbitenTutorialSystem{Enabled: true, ShowUI: true}
+	creationTutorial := NewCharacterCreationTutorial()
+
+	om.SetTutorialSystem(tutorialSystem)
+	om.SetCreationTutorial(creationTutorial)
+
+	om.SkipAll()
+
+	// Attempt to re-enable after skip
+	om.SetEnabled(true)
+
+	if creationTutorial.Enabled {
+		t.Error("creationTutorial should remain disabled after SkipAll + SetEnabled(true)")
+	}
+	if tutorialSystem.Enabled {
+		t.Error("tutorialSystem should remain disabled after SkipAll + SetEnabled(true)")
+	}
+}
+
+// TestOnboardingManager_SkipAll_NoDeadlock tests that SkipAll does not deadlock
+// when the tutorial system has an OnCompleteCallback wired.
+func TestOnboardingManager_SkipAll_NoDeadlock(t *testing.T) {
+	om := NewOnboardingManager(nil)
+	tutorialSystem := NewTutorialSystem() // creates default steps
+	om.SetTutorialSystem(tutorialSystem)  // wires OnCompleteCallback → om.GetState()
+
+	// This previously deadlocked because SkipAll held om.mu.Lock and
+	// DisableTutorial fired OnCompleteCallback which called om.GetState() → om.mu.RLock.
+	done := make(chan struct{})
+	go func() {
+		om.SkipAll()
+		close(done)
+	}()
+
+	select {
+	case <-done:
+		// Success — no deadlock
+	case <-time.After(2 * time.Second):
+		t.Fatal("SkipAll deadlocked")
+	}
+
+	if !om.IsComplete() {
+		t.Error("expected IsComplete() after SkipAll()")
 	}
 }

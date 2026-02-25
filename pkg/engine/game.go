@@ -1927,24 +1927,29 @@ func (g *EbitenGame) ApplySettings() error {
 	}
 
 	// Apply ShowTutorials setting to active tutorial systems (Task 3.3 from PLAN.md)
-	// Wire all three tutorial layers: EbitenTutorialSystem, CharacterCreationTutorial, ContextualTutorial
-	if g.TutorialSystem != nil {
-		g.TutorialSystem.Enabled = settings.ShowTutorials
-		g.TutorialSystem.ShowUI = settings.ShowTutorials
+	// When OnboardingManager exists, delegate to it so child systems are only
+	// enabled for the correct onboarding phase. This prevents premature
+	// activation of the in-game tutorial during character creation (e.g. when
+	// SetAudioManager triggers ApplySettings before character creation finishes).
+	if g.OnboardingManager != nil {
+		g.OnboardingManager.SetEnabled(settings.ShowTutorials)
+	} else {
+		// No onboarding manager: directly control individual systems
+		if g.TutorialSystem != nil {
+			g.TutorialSystem.Enabled = settings.ShowTutorials
+			g.TutorialSystem.ShowUI = settings.ShowTutorials
+		}
+		if g.CharacterCreationTutorial != nil {
+			g.CharacterCreationTutorial.SetEnabled(settings.ShowTutorials)
+		}
 	}
-	if g.CharacterCreationTutorial != nil {
-		g.CharacterCreationTutorial.SetEnabled(settings.ShowTutorials)
-	}
+	// ContextualTutorial is independent of the onboarding state machine
 	if g.ContextualTutorial != nil {
 		if settings.ShowTutorials {
 			g.ContextualTutorial.Enable()
 		} else {
 			g.ContextualTutorial.Disable()
 		}
-	}
-	// Wire OnboardingManager to coordinate all tutorial systems
-	if g.OnboardingManager != nil {
-		g.OnboardingManager.SetEnabled(settings.ShowTutorials)
 	}
 
 	// Graphics quality and ShowFPS are informational for now

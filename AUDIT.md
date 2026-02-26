@@ -95,6 +95,7 @@ This file tracks package-level audits across the Venture codebase. Each entry in
 - [x] `pkg/class/advanced/AUDIT.md` — Complete — 5 issues (0 high, 2 med, 3 low) — Coverage: 91.8%
 - [x] `pkg/companion/learning/AUDIT.md` — Complete — 4 issues (0 high, 1 med, 3 low) — Coverage: 92.5%
 - [x] `pkg/social/AUDIT.md` — Complete — 4 issues (0 high, 0 med, 4 low) — Coverage: 95.6% (98.0% social, 93.2% persistence)
+- [x] `pkg/social/persistence/AUDIT.md` — Complete — 6 issues (0 high, 3 med, 3 low) — Coverage: 93.2%
 - [x] `pkg/hostplay/AUDIT.md` — Complete — 5 issues (0 high, 2 med, 3 low) — Coverage: Unmeasurable (requires X11; 70% test-to-source ratio)
 - [x] `pkg/mobile/AUDIT.md` — Complete — 5 issues (1 high, 2 med, 2 low) — Coverage: Unmeasurable (requires X11; 135% test-to-source ratio)
 - [ ] `pkg/audit/` — Not audited (only contains `features/` subdir which is already audited)

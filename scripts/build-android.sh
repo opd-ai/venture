@@ -104,7 +104,10 @@ build_aar() {
         fi
     fi
     
-    # Build the AAR - Note: for CI builds, ebitenmobile bind creates the AAR with GoNativeActivity
+    # Build the AAR library.  ebitenmobile bind produces a library AAR containing
+    # the Ebiten mobile bridge classes (EbitenView, EbitenSurfaceView, Mobile) and
+    # native libgojni.so libraries for each target architecture.
+    # The Activity class lives in the Android application project, not in this AAR.
     echo_info "Running ebitenmobile bind..."
     ebitenmobile bind \
         -v \
@@ -120,56 +123,80 @@ build_aar() {
     fi
     
     echo_info "AAR built successfully: $BUILD_DIR/libs/mobile.aar"
-    
-    # Display AAR info and inspect the actual Activity class name inside classes.jar
-    if command -v unzip &> /dev/null && command -v jar &> /dev/null; then
+
+    # Validate the AAR contents.
+    # ebitenmobile bind produces a *library* AAR (not an application), so it never contains
+    # an Activity class.  The expected artifacts are:
+    #   - classes.jar  containing the Ebiten mobile bridge classes (EbitenView, etc.)
+    #   - libgojni.so  native library for each target architecture
+    if command -v unzip &> /dev/null; then
         echo_info "AAR contents:"
         unzip -l "$BUILD_DIR/libs/mobile.aar" | grep -E "\.class|\.so" | head -20
 
-        # Extract classes.jar and inspect actual Activity class names
-        AAR_TMP=$(mktemp -d)
-        unzip -q "$BUILD_DIR/libs/mobile.aar" classes.jar -d "$AAR_TMP" 2>/dev/null || true
-        if [ -f "$AAR_TMP/classes.jar" ]; then
-            ACTIVITY_CLASSES=$(jar tf "$AAR_TMP/classes.jar" 2>/dev/null | grep -iF 'Activity.class' || true)
-        else
-            ACTIVITY_CLASSES=""
-        fi
-        rm -rf "$AAR_TMP"
+        AAR_ERRORS=0
 
-        if [ -z "$ACTIVITY_CLASSES" ]; then
-            echo_error "✗ No Activity class found in AAR - ebitenmobile bind did not compile Java sources"
-            echo_error "Common causes: incompatible NDK version or gomobile version mismatch"
-            echo_error "Try re-initialising gomobile:"
-            echo_error "  go install golang.org/x/mobile/cmd/gomobile@latest"
-            echo_error "  gomobile init"
-            echo_error "Then reinstall ebitenmobile matching the project version:"
-            echo_error "  go install github.com/hajimehoshi/ebiten/v2/cmd/ebitenmobile@v2.9.3"
-            exit 1
-        elif echo "$ACTIVITY_CLASSES" | grep -qF 'GoNativeActivity.class'; then
-            echo_info "✓ GoNativeActivity found in AAR"
+        # 1. Check for native libraries
+        if unzip -l "$BUILD_DIR/libs/mobile.aar" | grep -q "libgojni.so"; then
+            echo_info "✓ Native libraries (libgojni.so) found in AAR"
         else
-            echo_error "✗ Activity class(es) found but none match expected 'GoNativeActivity':"
-            while IFS= read -r cls; do
-                [ -n "$cls" ] && echo_error "  Found: $(echo "$cls" | sed 's/\.class$//' | tr '/' '.')"
-            done <<< "$ACTIVITY_CLASSES"
-            echo_error "  Update AndroidManifest.xml android:name to match the actual class shown above"
-            echo_error "  This usually means ebitenmobile version does not match Ebiten v2.9.3"
-            echo_error "  Reinstall with: go install github.com/hajimehoshi/ebiten/v2/cmd/ebitenmobile@v2.9.3"
+            echo_error "✗ Native libraries (libgojni.so) missing from AAR"
+            AAR_ERRORS=$((AAR_ERRORS + 1))
+        fi
+
+        # 2. Check for classes.jar and expected Ebiten bridge classes inside it
+        if command -v jar &> /dev/null; then
+            AAR_TMP=$(mktemp -d)
+            unzip -q "$BUILD_DIR/libs/mobile.aar" classes.jar -d "$AAR_TMP" 2>/dev/null || true
+            if [ -f "$AAR_TMP/classes.jar" ]; then
+                JAR_CLASSES=$(jar tf "$AAR_TMP/classes.jar" 2>/tmp/jar_tf_stderr || true)
+                if [ -s /tmp/jar_tf_stderr ]; then
+                    echo_warn "jar tf reported errors: $(cat /tmp/jar_tf_stderr)"
+                fi
+                rm -f /tmp/jar_tf_stderr
+                echo_info "classes.jar present in AAR"
+                # Verify at least one of the known Ebiten mobile bridge classes is present
+                BRIDGE_FOUND=0
+                for BRIDGE_CLASS in "EbitenView.class" "EbitenSurfaceView.class" "Mobile.class"; do
+                    if echo "$JAR_CLASSES" | grep -qF "$BRIDGE_CLASS"; then
+                        echo_info "✓ Found Ebiten bridge class: $BRIDGE_CLASS"
+                        BRIDGE_FOUND=1
+                        break
+                    fi
+                done
+                if [ "$BRIDGE_FOUND" -eq 0 ]; then
+                    echo_error "✗ No Ebiten bridge classes found in classes.jar - Java sources may not have compiled"
+                    echo_error "Common causes: missing javac, JAVA_HOME not set, or gomobile not initialised"
+                    echo_error "Try re-initialising gomobile:"
+                    echo_error "  go install golang.org/x/mobile/cmd/gomobile@latest"
+                    echo_error "  gomobile init"
+                    echo_error "Then reinstall ebitenmobile matching the project version:"
+                    echo_error "  go install github.com/hajimehoshi/ebiten/v2/cmd/ebitenmobile@v2.9.3"
+                    AAR_ERRORS=$((AAR_ERRORS + 1))
+                fi
+            else
+                echo_error "✗ classes.jar missing from AAR - Java sources did not compile"
+                echo_error "Common causes: missing javac, JAVA_HOME not set, or gomobile not initialised"
+                echo_error "Try re-initialising gomobile:"
+                echo_error "  go install golang.org/x/mobile/cmd/gomobile@latest"
+                echo_error "  gomobile init"
+                AAR_ERRORS=$((AAR_ERRORS + 1))
+            fi
+            rm -rf "$AAR_TMP"
+        else
+            # Fallback when jar tool is unavailable: check for classes.jar entry in the archive index
+            if unzip -l "$BUILD_DIR/libs/mobile.aar" | grep -q "classes.jar"; then
+                echo_info "✓ classes.jar present in AAR"
+            else
+                echo_error "✗ classes.jar missing from AAR - Java sources did not compile"
+                AAR_ERRORS=$((AAR_ERRORS + 1))
+            fi
+        fi
+
+        if [ "$AAR_ERRORS" -gt 0 ]; then
+            echo_error "AAR validation failed with $AAR_ERRORS error(s)"
             exit 1
         fi
-    elif command -v unzip &> /dev/null; then
-        # Fallback: shallow check when jar tool is unavailable
-        echo_info "AAR contents:"
-        unzip -l "$BUILD_DIR/libs/mobile.aar" | grep -E "\.class|\.so" | head -20
-        if unzip -l "$BUILD_DIR/libs/mobile.aar" | grep -q "GoNativeActivity"; then
-            echo_info "✓ GoNativeActivity found in AAR"
-        else
-            echo_error "✗ GoNativeActivity NOT found in AAR - APK will crash on launch"
-            echo_error "This usually means ebitenmobile bind used an incompatible version"
-            echo_error "Ensure ebitenmobile matches the project Ebiten version (v2.9.3)"
-            echo_error "Reinstall with: go install github.com/hajimehoshi/ebiten/v2/cmd/ebitenmobile@v2.9.3"
-            exit 1
-        fi
+        echo_info "✓ AAR validation passed"
     fi
 }
 

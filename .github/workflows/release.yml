@@ -6,6 +6,7 @@ on:
     # Run nightly at 00:00 UTC
     - cron: '0 0 * * *'
   push:
+    branches: [main]
     tags:
       # Match semantic version tags like v1.2.3
       - 'v[0-9]+.[0-9]+.[0-9]+'
@@ -38,6 +39,11 @@ jobs:
             echo "tag=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
             echo "prerelease=false" >> $GITHUB_OUTPUT
             echo "name=Release ${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+          elif [[ "${{ github.ref }}" == "refs/heads/main" && "${{ github.event_name }}" == "push" ]]; then
+            echo "type=latest" >> $GITHUB_OUTPUT
+            echo "tag=latest" >> $GITHUB_OUTPUT
+            echo "prerelease=false" >> $GITHUB_OUTPUT
+            echo "name=Latest Build ($(date +'%Y-%m-%d'))" >> $GITHUB_OUTPUT
           else
             echo "type=nightly" >> $GITHUB_OUTPUT
             echo "tag=nightly" >> $GITHUB_OUTPUT
@@ -45,24 +51,26 @@ jobs:
             echo "name=Nightly Build $(date +'%Y-%m-%d')" >> $GITHUB_OUTPUT
           fi
 
-      - name: Delete existing nightly release
-        if: steps.release_type.outputs.type == 'nightly'
+      - name: Delete existing rolling release
+        if: steps.release_type.outputs.type != 'version'
         continue-on-error: true
         run: |
+          TAG="${{ steps.release_type.outputs.tag }}"
           # Delete the release first
-          gh release delete nightly --yes || true
+          gh release delete "$TAG" --yes || true
           # Delete the tag
-          git push --delete origin nightly || true
+          git push --delete origin "$TAG" || true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Create nightly tag
-        if: steps.release_type.outputs.type == 'nightly'
+      - name: Create rolling release tag
+        if: steps.release_type.outputs.type != 'version'
         run: |
+          TAG="${{ steps.release_type.outputs.tag }}"
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git tag -f nightly
-          git push -f origin nightly
+          git tag -f "$TAG"
+          git push -f origin "$TAG"
 
       - name: Generate release notes
         id: release_notes
@@ -77,6 +85,14 @@ jobs:
               echo "# Release ${{ steps.release_type.outputs.tag }}" > release_notes.md
               git log --pretty=format:"- %s (%h)" -10 >> release_notes.md
             fi
+          elif [ "${{ steps.release_type.outputs.type }}" = "latest" ]; then
+            # For latest, show recent commits
+            echo "# Latest Build - $(date +'%Y-%m-%d')" > release_notes.md
+            echo "" >> release_notes.md
+            echo "Latest build from the main branch. Updated on every push." >> release_notes.md
+            echo "" >> release_notes.md
+            echo "## Recent Changes" >> release_notes.md
+            git log --pretty=format:"- %s (%h)" -10 >> release_notes.md
           else
             # For nightly, show recent commits
             echo "# Nightly Build - $(date +'%Y-%m-%d')" > release_notes.md
@@ -155,7 +171,7 @@ jobs:
       - name: Generate SHA256 checksums
         run: |
           cd build
-          sha256sum * > SHA256SUMS.txt
+          find . -maxdepth 1 -type f ! -name SHA256SUMS.txt -exec sha256sum {} + > SHA256SUMS.txt
           cat SHA256SUMS.txt
           cd ..
 

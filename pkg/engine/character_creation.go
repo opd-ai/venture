@@ -1209,7 +1209,7 @@ func (cc *EbitenCharacterCreation) handlePortraitTouchInput() bool {
 	}
 
 	mouseX, mouseY, _ := GetTouchOrMousePosition()
-	helpY := cc.panelY + cc.panelHeight - 100
+	helpY := cc.panelY + cc.panelHeight - 160
 	buttonY := helpY - 10
 	buttonX := cc.panelX + 50
 	buttonW := cc.panelWidth - 100
@@ -1514,8 +1514,8 @@ func (cc *EbitenCharacterCreation) updateConfirmation() {
 		buttonW := cc.panelWidth - 100
 		buttonH := 30
 
-		// Confirm button area
-		confirmButtonY := cc.panelY + cc.panelHeight - 85
+		// Confirm button area (matches drawConfirmation layout)
+		confirmButtonY := cc.panelY + cc.panelHeight - 130
 
 		// Back button area
 		backButtonY := confirmButtonY + 40

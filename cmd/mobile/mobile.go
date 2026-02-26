@@ -18,7 +18,7 @@ const (
 	// DefaultScreenWidth is the default logical width for mobile devices (landscape)
 	DefaultScreenWidth = 1280
 	// DefaultScreenHeight is the default logical height for mobile devices (landscape)
-	DefaultScreenHeight = 72
+	DefaultScreenHeight = 720
 )
 
 // Game is the mobile game instance

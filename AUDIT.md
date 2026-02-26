@@ -121,11 +121,11 @@ This file tracks package-level audits across the Venture codebase. Each entry in
 - [x] `pkg/integration/world_events/AUDIT.md` — Complete — 5 issues (0 high, 2 med, 3 low) — Coverage: 92.9%
 
 ## Audit Progress
-- **Completed**: 94/94 packages
+- **Completed**: 95/95 packages
 - **In Progress**: 0
 - **Not Started**: 0
 
-**100% Audit Coverage Achieved**: All packages in cmd/ and pkg/ have completed audits (including cmd/mobile/config added 2026-02-26).
+**100% Audit Coverage Achieved**: All packages in cmd/, pkg/, and selected examples/ have completed audits (including cmd/mobile/config and examples/animation_timing_demo added 2026-02-26).
 
 ### Supporting Packages (continued)
 - [x] `pkg/benchmark/AUDIT.md` — Complete — 3 issues (0 high, 0 med, 3 low) — Coverage: N/A (test-only; 513 test lines; fps requires X11)
@@ -147,6 +147,7 @@ This file tracks package-level audits across the Venture codebase. Each entry in
 - [x] `pkg/procgen/story/AUDIT.md` — Needs Work — 12 issues (3 high, 4 med, 5 low) — Coverage: 88.7% — Re-audited 2026-02-26 (audit #2: corrected benchmark finding)
 
 ### Example Programs
+- [x] `examples/animation_timing_demo/AUDIT.md` — Complete — 2 issues (0 high, 0 med, 2 low) — Coverage: 0.0% (demo program; no tests)
 - [x] `examples/voice_integration_demo/AUDIT.md` — Needs Work — 7 issues (2 high, 3 med, 2 low) — Coverage: 0.0% (no tests)
 - [x] `pkg/procgen/audit/AUDIT.md` — Complete — 3 issues (0 high, 0 med, 3 low) — Coverage: Unmeasurable (requires X11; 1,342% test-to-source ratio)
 

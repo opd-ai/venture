@@ -11,7 +11,7 @@ env:
   GO_VERSION: '1.24.7'
   ANDROID_API_LEVEL: '34'
   ANDROID_BUILD_TOOLS: '34.0.0'
-  NDK_VERSION: '26.1.10909125'
+  NDK_VERSION: '25.2.9519653'
 
 jobs:
   build:
@@ -62,7 +62,9 @@ jobs:
           echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
 
       - name: Initialize gomobile
-        run: gomobile init
+        run: |
+          gomobile clean
+          gomobile init
 
       - name: Verify build environment
         run: |

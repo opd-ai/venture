@@ -69,6 +69,21 @@ check_prerequisites() {
         echo_error "ANDROID_NDK_HOME is not set"
         exit 1
     fi
+
+    # Verify Java compiler is available — ebitenmobile bind silently skips Java
+    # compilation if javac is missing, producing an AAR with only native .so files
+    # and no classes.jar. This causes ClassNotFoundException at runtime.
+    if ! command -v javac &> /dev/null; then
+        echo_error "javac is not installed or not on PATH"
+        echo_error "ebitenmobile bind requires a JDK to compile the Java bridge sources"
+        echo_error "Install a JDK and ensure JAVA_HOME is set, then retry"
+        exit 1
+    fi
+    if [ -z "$JAVA_HOME" ]; then
+        echo_warn "JAVA_HOME is not set — ebitenmobile bind may fail to locate the JDK"
+        echo_warn "Set JAVA_HOME to the root of your JDK installation and retry"
+    fi
+    echo_info "Java compiler: $(javac -version 2>&1)"
     
     echo_info "Prerequisites OK"
 }

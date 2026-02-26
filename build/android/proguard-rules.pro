@@ -14,7 +14,7 @@
 
 # Keep MainActivity and EbitenView
 -keep class com.venture.game.MainActivity { *; }
--keep class mobile.EbitenView { *; }
+-keep class com.venture.game.mobile.EbitenView { *; }
 
 # Suppress warnings for Go generated code
 -dontwarn go.**

@@ -24,15 +24,11 @@
         android:hasCode="true">
 
         <activity
-            android:name="org.ebitengine.gomobile.GoNativeActivity"
+            android:name="com.venture.game.MainActivity"
             android:configChanges="orientation|keyboardHidden|screenSize"
             android:exported="true"
             android:screenOrientation="portrait"
             android:launchMode="singleTask">
-
-            <meta-data
-                android:name="android.app.lib_name"
-                android:value="gojni" />
 
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />

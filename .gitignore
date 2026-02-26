@@ -117,6 +117,9 @@ build/
 !build/android/src/
 !build/android/src/main/
 !build/android/src/main/java/
+!build/android/src/main/java/com/
+!build/android/src/main/java/com/venture/
+!build/android/src/main/java/com/venture/game/
 !build/android/src/main/java/**
 !build/android/src/main/res/
 !build/android/src/main/res/values/

@@ -19,6 +19,7 @@ This file tracks package-level audits across the Venture codebase. Each entry in
 - [x] `pkg/engine/qol/AUDIT.md` — Complete — 5 issues (0 high, 2 med, 3 low) — Coverage: 94.0%
 - [x] `pkg/engine/physics/AUDIT.md` — Needs Work — 9 issues (2 high, 5 med, 2 low) — Coverage: 95.4%
 - [x] `pkg/engine/physics/fluids/AUDIT.md` — Complete — 4 issues (0 high, 1 med, 3 low) — Coverage: 95.2%
+- [x] `pkg/engine/physics/vehicle/AUDIT.md` — Needs Work — 8 issues (1 high, 4 med, 3 low) — Coverage: 94.8%
 - [x] `pkg/engine/prestige/AUDIT.md` — Needs Work — 8 issues (1 high, 3 med, 4 low) — Coverage: Unmeasurable (requires X11; 103.5% test-to-source ratio)
 - [x] `pkg/engine/performance/AUDIT.md` — Complete — 5 issues (0 high, 2 med, 3 low) — Coverage: 95.8%
 - [x] `pkg/procgen/AUDIT.md` — Complete — 3 issues (0 high, 0 med, 3 low) — Coverage: 100.0%

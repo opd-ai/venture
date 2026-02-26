@@ -68,6 +68,9 @@ const (
 	SeverityCritical
 )
 
+// String returns the string representation of the severity level.
+// Returns "Info", "Low", "Medium", "High", "Critical", or "Unknown" for
+// invalid severity values.
 func (s Severity) String() string {
 	switch s {
 	case SeverityInfo:
@@ -109,7 +112,8 @@ type AuditResults struct {
 	LowCount      int
 }
 
-// AllPassed returns true if all security checks passed
+// AllPassed returns true if all security checks passed with no failures (FailedChecks == 0),
+// false otherwise. This indicates a clean security audit with no vulnerabilities detected.
 func (r *AuditResults) AllPassed() bool {
 	log.WithFields(logrus.Fields{
 		"total_checks":   r.TotalChecks,
@@ -120,7 +124,9 @@ func (r *AuditResults) AllPassed() bool {
 	return r.FailedChecks == 0
 }
 
-// HasCritical returns true if any critical vulnerabilities were found
+// HasCritical returns true if any critical vulnerabilities were found during the audit,
+// false otherwise. Critical vulnerabilities are high-severity issues requiring immediate
+// attention before deployment.
 func (r *AuditResults) HasCritical() bool {
 	log.WithFields(logrus.Fields{
 		"critical_count": r.CriticalCount,

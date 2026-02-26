@@ -26,7 +26,7 @@ None found.
 - [ ] **Documentation** — 9 exported types/functions but only package-level doc.go exists; individual symbols lack inline documentation (`cache.go:10`, `cache.go:18`, `cache.go:86`, `worker_pool.go:18`, `worker_pool.go:40`, `worker_pool.go:57`, `worker_pool.go:64`, `worker_pool.go:196`, `worker_pool.go:207`)
 
 ### Low Severity
-- [ ] **Documentation** — Package doc.go is excellent but could benefit from troubleshooting section for deadlock avoidance patterns (submit + drain results concurrently)
+- [x] **Documentation** — Package doc.go is excellent but could benefit from troubleshooting section for deadlock avoidance patterns (submit + drain results concurrently) — **FIXED 2026-02-26**: Added comprehensive troubleshooting section with deadlock examples
 - [ ] **API naming** — `GetOrCompute` holds write lock during compute which may block other readers; consider renaming to `GetOrComputeExclusive` or documenting lock semantics more prominently (`cache.go:119`)
 - [ ] **Resource management** — No max capacity limit on ThreadSafeCache; unbounded growth risk in long-running games (`cache.go:10`)
 

@@ -65,5 +65,33 @@
 //   - Supports pkg/rendering/pool for object pooling
 //   - Maintains deterministic generation (seed-based)
 //
+// # Troubleshooting
+//
+// Common deadlock pattern when using worker pools:
+//
+//	// WRONG: Submitting tasks then collecting results sequentially
+//	for i := 0; i < 2000; i++ {
+//	    pool.Submit(task) // Fills result buffer after 1024 tasks
+//	}
+//	// Pool blocks because results buffer is full and no one is reading
+//	for result := range pool.Results() { // Deadlock!
+//	    processResult(result)
+//	}
+//
+//	// CORRECT: Drain results concurrently while submitting
+//	resultsChan := pool.Results()
+//	go func() {
+//	    for result := range resultsChan {
+//	        processResult(result)
+//	    }
+//	}()
+//	for i := 0; i < 2000; i++ {
+//	    pool.Submit(task) // Results are drained concurrently
+//	}
+//
+// Always drain Results() concurrently when submitting more than the buffer
+// size (1024 tasks). The worker pool uses buffered channels and will block
+// when buffers fill if results are not consumed.
+//
 // Package parallel is part of Venture's V9.0 performance optimization phase.
 package parallel

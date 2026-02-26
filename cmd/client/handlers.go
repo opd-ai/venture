@@ -586,6 +586,7 @@ type systemsContainer struct {
 	// Fix: Added voice channel and spatial voice systems for multiplayer voice chat
 	voiceChannelSystem *engine.VoiceChannelSystem // Voice channel lifecycle and participant synchronization
 	spatialVoiceSystem *engine.SpatialVoiceSystem // Distance-based volume and stereo panning for voice
+	voiceAudioSystem   *engine.VoiceAudioSystem   // Voice audio input/output processing
 
 	// VR Systems (AUDIT.md Task 7)
 	// Gap: VR systems implemented but never initialized with hardware detection
@@ -1044,7 +1045,9 @@ func initializeAudioSystem(game *engine.EbitenGame, sys *systemsContainer, clien
 	sys.voiceChannelSystem = engine.NewVoiceChannelSystem(game.World)
 	// Spatial voice system calculates distance-based volume and stereo panning
 	sys.spatialVoiceSystem = engine.NewSpatialVoiceSystem(game.World)
-	clientLogger.Debug("voice systems initialized (voice channels, spatial audio)")
+	// Voice audio system processes input/output audio streams
+	sys.voiceAudioSystem = engine.NewVoiceAudioSystem(game.World)
+	clientLogger.Debug("voice systems initialized (voice channels, spatial audio, audio I/O)")
 
 	if *verbose {
 		clientLogger.Info("adaptive music composition enabled with motif system, music triggers, positional audio, and reverb")
@@ -2200,6 +2203,7 @@ func registerNonCriticalSystems(game *engine.EbitenGame, sys *systemsContainer) 
 	// Voice Systems (PLAN.md Phase 1)
 	game.World.AddSystem(sys.voiceChannelSystem)
 	game.World.AddSystem(sys.spatialVoiceSystem)
+	game.World.AddSystem(sys.voiceAudioSystem)
 
 	// Phase 33-36: Trade, Terrain, and Merchant Systems
 	game.World.AddSystem(&tradeSystemWrapper{system: sys.tradeSystem})

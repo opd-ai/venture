@@ -29,7 +29,7 @@ None identified.
 - [ ] **Documentation** — `BlendedGenre` struct fields lack godoc comments (`blender.go:13-18`)
 - [ ] **Documentation** — `GenreBlender` struct field lacks godoc comment (`blender.go:21-23`)
 - [ ] **Documentation** — `PresetBlends()` return type could be extracted to named type for better godoc (`blender.go:95-104`)
-- [ ] **Documentation** — `DefaultRegistry()` could have more detailed godoc explaining panic behavior (`registry.go:78`)
+- [x] **Documentation** — `DefaultRegistry()` could have more detailed godoc explaining panic behavior (`registry.go:78`) — **FIXED 2026-02-26**: Enhanced godoc with detailed panic explanation and guarantees
 
 ## Input Integration
 | Input Source | Status | Notes |

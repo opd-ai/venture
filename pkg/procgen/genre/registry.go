@@ -73,8 +73,13 @@ func (r *Registry) Count() int {
 	return len(r.genres)
 }
 
-// DefaultRegistry returns a registry pre-populated with standard genres.
-// Panics if any predefined genre fails validation (indicates programmer error).
+// DefaultRegistry returns a registry pre-populated with standard genres
+// (fantasy, sci-fi, horror, cyberpunk, post-apocalyptic).
+//
+// Panics if any predefined genre fails validation, which indicates a programmer
+// error in the predefined genre definitions. This panic-on-error behavior is
+// intentional as the default registry must always be valid for the game to function.
+// All predefined genres are guaranteed to pass validation in normal operation.
 func DefaultRegistry() *Registry {
 	registry := NewRegistry()
 

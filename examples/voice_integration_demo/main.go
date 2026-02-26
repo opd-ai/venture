@@ -60,6 +60,8 @@ func main() {
 
 	// Step 1: Initialize audio manager
 	fmt.Println("\n1. Initializing audio manager...")
+	// Sample rate: 44100 Hz (CD quality, standard for voice chat)
+	// Seed: 12345 (fixed seed for reproducible audio synthesis demos)
 	audioManager := audio.NewManager(44100, 12345)
 	audioManager.SetMasterVolume(1.0)
 	audioManager.SetVoiceVolume(0.8)
@@ -101,11 +103,12 @@ func main() {
 	// Voice audio component (input/output settings)
 	voiceAudioComp := engine.NewVoiceAudioComponent()
 	voiceAudioComp.InputMode = engine.VoiceInputVoiceActivity
-	voiceAudioComp.VoiceThreshold = 0.1
+	voiceAudioComp.VoiceThreshold = 0.1 // 10% input level triggers voice activity
 	localPlayer.AddComponent(voiceAudioComp)
 
 	// Spatial voice component (for proximity chat)
 	spatialComp := engine.NewSpatialVoiceComponent()
+	// Min range: 50 units (clear audio), Max range: 500 units (barely audible)
 	spatialComp.SetRange(50.0, 500.0)
 	spatialComp.SetFalloffCurve(engine.VoiceFalloffLogarithmic)
 	localPlayer.AddComponent(spatialComp)
@@ -129,7 +132,7 @@ func main() {
 	frameSize := audioManager.GetVoiceCodec().GetFrameSize()
 	testSamples := make([]float64, frameSize)
 	for i := range testSamples {
-		testSamples[i] = 0.3 // 30% input level
+		testSamples[i] = 0.3 // 30% input level (above 10% threshold)
 	}
 
 	// Simulate voice activity detected

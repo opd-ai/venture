@@ -27,9 +27,9 @@ The `pkg/security` package provides comprehensive security auditing and validati
 - [ ] **Code Organization** — Helper validation functions (validateIVRandomness, validateChatMessageSafety, validateCoordinateBounds) are unexported but could be useful for other packages testing security properties (`audit.go:917-1021`)
 
 ### Low Severity
-- [ ] **Documentation** — Method `AllPassed()` on `AuditResults` could clarify return value in godoc comment (`audit.go:113`)
-- [ ] **Documentation** — Method `HasCritical()` on `AuditResults` could clarify return value in godoc comment (`audit.go:124`)
-- [ ] **Documentation** — `Severity.String()` could document "Unknown" return value for invalid severity levels (`audit.go:71`)
+- [x] **Documentation** — Method `AllPassed()` on `AuditResults` could clarify return value in godoc comment (`audit.go:113`) — **FIXED 2026-02-26**: Added detailed return value documentation
+- [x] **Documentation** — Method `HasCritical()` on `AuditResults` could clarify return value in godoc comment (`audit.go:124`) — **FIXED 2026-02-26**: Added detailed return value documentation
+- [x] **Documentation** — `Severity.String()` could document "Unknown" return value for invalid severity levels (`audit.go:71`) — **FIXED 2026-02-26**: Documented all return values including Unknown
 - [ ] **Test Coverage** — Missing test for `NewAuditor` with multiple concurrent calls (potential race in logger assignment, though current code is safe)
 
 ## Input Integration

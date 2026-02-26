@@ -27,7 +27,7 @@
             android:name="com.venture.game.MainActivity"
             android:configChanges="orientation|keyboardHidden|screenSize"
             android:exported="true"
-            android:screenOrientation="sensorLandscapendscape"
+            android:screenOrientation="sensorLandscape"
             android:launchMode="singleTask">
 
             <intent-filter>

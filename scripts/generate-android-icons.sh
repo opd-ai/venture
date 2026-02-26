@@ -6,7 +6,7 @@ set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
-RES_DIR="$PROJECT_ROOT/build/android/res"
+RES_DIR="$PROJECT_ROOT/build/android/src/main/res"
 
 # Colors
 GREEN='\033[0;32m'

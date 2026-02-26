@@ -33,7 +33,8 @@ _None found._
 - [ ] **Documentation in README/doc.go** — Example code in `README.md` and `doc.go` uses `log.Fatalf`/`log.Printf`/`fmt.Printf` instead of structured logging with logrus. While these are examples and not production code, they should demonstrate best practices. (`README.md:44,50,61,77-78,108,111`, `doc.go:68,71,100,106`)
 
 ### Low Severity
-- [ ] **Network Address Parsing** — `relay.go:449` uses `net.SplitHostPort(url[5:])` with fixed slice index without bounds checking. If URL format is invalid (missing "turn:" prefix), this could panic. Add validation before slicing. (`relay.go:449`)
+- [x] **Network Address Parsing** — `relay.go:449` uses `net.SplitHostPort(url[5:])` with fixed slice index without bounds checking. If URL format is invalid (missing "turn:" prefix), this could panic. Add validation before slicing. (`relay.go:449`)
+  - **Resolution (2026-02-26)**: Added proper URL validation before slicing to prevent panic on invalid formats. Now checks for "turn:" or "turns:" prefix and validates length. Added comprehensive test coverage with 8 edge cases in TestPingRelayInvalidURLs. All tests pass with 86.6% package coverage.
 - [ ] **Channel Capacity Overflow** — `signaling.go:367,374` round-robin counter could theoretically overflow on very long-lived servers (INT_MAX connections), though code at line 374-376 has overflow protection. Document the protection logic. (`signaling.go:367-377`)
 
 ## Input Integration

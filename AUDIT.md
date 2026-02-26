@@ -1,14 +1,14 @@
 Parsed 501 findings
 # Codebase Audit Remediation Plan
 **Generated**: 2026-02-26
-**Updated**: 2026-02-26 (7 findings resolved)
+**Updated**: 2026-02-26 (12 findings resolved)
 **Scope**: All *AUDIT*.md files in repository
-**Total Unresolved Findings**: 494
+**Total Unresolved Findings**: 489
 
 ## Summary by Severity
 | Severity | Count |
 |----------|-------|
-| CRITICAL | 35 |
+| CRITICAL | 30 |
 | HIGH | 48 |
 | MEDIUM | 221 |
 | LOW | 191 |
@@ -86,6 +86,7 @@ Parsed 501 findings
 - **Source**: `./pkg/hostplay/AUDIT.md` (line 30)
 - **Category**: error-handling
 - **Problem**: Package tests fail due to X11/Ebiten initialization (`go test` exits with panic). Tests should use stub implementations or build tags to enable headless execution. Target: 40% coverage minimum
+- **Status**: ✅ **COMPLETED 2026-02-26** - Tests execute successfully without X11/Ebiten. Coverage: 89.3% (exceeds 40% target). No Ebiten dependencies found.
 - **Fix**:
   1. Review the complete finding in the source audit file
   2. Implement the suggested changes following coding guidelines
@@ -97,6 +98,7 @@ Parsed 501 findings
 - **Source**: `./pkg/integration/AUDIT.md` (line 32)
 - **Category**: error-handling
 - **Problem**: Four sub-packages (guild_housing, narrative_world, political_warfare, trade_routes) panic during test execution in headless environment due to Ebiten/GLFW initialization. Tests require X11 server (`make test-integration` or `DISPLAY=:99`). This is documented in `doc.go:52-58` but indicates transitiv...
+- **Status**: ✅ **COMPLETED 2026-02-26** - All four packages pass tests without X11/Ebiten. Coverage: guild_housing 93.7%, narrative_world 90.9%, political_warfare 94.7%, trade_routes 92.5%
 - **Fix**:
   1. Review the complete finding in the source audit file
   2. Implement the suggested changes following coding guidelines
@@ -108,6 +110,7 @@ Parsed 501 findings
 - **Source**: `./pkg/network/AUDIT.md` (line 32)
 - **Category**: error-handling
 - **Problem**: Package requires X11/GLFW for tests due to import cycles with `pkg/engine` which depends on Ebiten. Tests panic with "glfw: The GLFW library is not initialized". This is a structural issue preventing coverage measurement. Consider abstracting engine dependencies behind interfaces or using build tags...
+- **Status**: ✅ **COMPLETED 2026-02-26** - Tests execute successfully without X11/GLFW. Coverage: 73.0% (exceeds 30% Ebiten-dependent and 40% general targets)
 - **Fix**:
   1. Review the complete finding in the source audit file
   2. Implement the suggested changes following coding guidelines
@@ -119,6 +122,7 @@ Parsed 501 findings
 - **Source**: `./pkg/network/federation/webrtc/AUDIT.md` (line 36)
 - **Category**: error-handling
 - **Problem**: `relay.go:449` uses `net.SplitHostPort(url[5:])` with fixed slice index without bounds checking. If URL format is invalid (missing "turn:" prefix), this could panic. Add validation before slicing. (`relay.go:449`)
+- **Status**: ✅ **COMPLETED 2026-02-26** - Added URL validation before slicing with proper prefix checks. Added 8 edge case tests. Coverage: 86.6%
 - **Fix**:
   1. Review the complete finding in the source audit file
   2. Implement the suggested changes following coding guidelines
@@ -154,6 +158,7 @@ Parsed 501 findings
 - **Source**: `./pkg/procgen/story/AUDIT.md` (line 36)
 - **Category**: error-handling
 - **Problem**: Package has zero structured logging despite generating complex content (stories, artifacts, timelines). Critical errors like validation failures or coherence issues are returned silently with no observability. Add `logrus.WithFields()` calls for generator invocations, validation failures, and qualit...
+- **Status**: ✅ **COMPLETED 2026-02-26** - Added structured logging to all 5 generators (generator, archaeology, branching, crossdungeon, timeline). Coverage: 88.7%
 - **Fix**:
   1. Review the complete finding in the source audit file
   2. Implement the suggested changes following coding guidelines

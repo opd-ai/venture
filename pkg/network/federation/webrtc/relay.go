@@ -446,8 +446,26 @@ func (rm *RelayManager) checkRelayHealth(node *RelayNode) {
 func (rm *RelayManager) pingRelay(ctx context.Context, url string) bool {
 	// Parse TURN URL to extract host:port
 	// Format: turn:host:port or turns:host:port
-	host, _, err := net.SplitHostPort(url[5:]) // Skip "turn:" or "turns"
+	// Validate URL has proper prefix before slicing
+	if len(url) < 5 || (url[:5] != "turn:" && url[:6] != "turns:") {
+		log.WithFields(log.Fields{
+			"url": url,
+		}).Warn("invalid TURN URL format")
+		return false
+	}
+
+	// Skip "turn:" (5 chars) or "turns:" (6 chars)
+	urlSuffix := url[5:]
+	if url[:6] == "turns:" {
+		urlSuffix = url[6:]
+	}
+
+	host, _, err := net.SplitHostPort(urlSuffix)
 	if err != nil {
+		log.WithFields(log.Fields{
+			"url":   url,
+			"error": err,
+		}).Debug("failed to parse TURN URL")
 		return false
 	}
 

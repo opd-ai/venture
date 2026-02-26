@@ -1,6 +1,7 @@
 package webrtc
 
 import (
+	"context"
 	"fmt"
 	"testing"
 	"time"
@@ -467,5 +468,68 @@ func TestRelayManagerSelectionSnapshotLocking(t *testing.T) {
 		case <-time.After(5 * time.Second):
 			t.Fatal("deadlock detected: concurrent selection and updates timed out")
 		}
+	}
+}
+
+// TestPingRelayInvalidURLs tests pingRelay with invalid URL formats to ensure no panic.
+func TestPingRelayInvalidURLs(t *testing.T) {
+	rm := NewRelayManager(StrategyLowestLatency)
+	ctx := context.Background()
+
+	tests := []struct {
+		name string
+		url  string
+		want bool
+	}{
+		{
+			name: "empty URL",
+			url:  "",
+			want: false,
+		},
+		{
+			name: "too short URL",
+			url:  "turn",
+			want: false,
+		},
+		{
+			name: "missing prefix",
+			url:  "relay.example.com:3478",
+			want: false,
+		},
+		{
+			name: "invalid prefix",
+			url:  "http:relay.example.com:3478",
+			want: false,
+		},
+		{
+			name: "valid turn prefix but missing port",
+			url:  "turn:relay.example.com",
+			want: false,
+		},
+		{
+			name: "valid turns prefix but missing port",
+			url:  "turns:relay.example.com",
+			want: false,
+		},
+		{
+			name: "turn with malformed host",
+			url:  "turn:::3478",
+			want: false,
+		},
+		{
+			name: "turns with malformed host",
+			url:  "turns:::3478",
+			want: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// This should not panic
+			got := rm.pingRelay(ctx, tt.url)
+			if got != tt.want {
+				t.Errorf("pingRelay() = %v, want %v", got, tt.want)
+			}
+		})
 	}
 }

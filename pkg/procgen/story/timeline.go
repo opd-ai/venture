@@ -5,6 +5,8 @@ import (
 	"math/rand"
 	"sort"
 
+	log "github.com/sirupsen/logrus"
+
 	"github.com/opd-ai/venture/pkg/procgen"
 )
 
@@ -74,8 +76,18 @@ func NewTimelineGenerator() *TimelineGenerator {
 // Generate creates a historical timeline for the world
 func (g *TimelineGenerator) Generate(seed int64, params procgen.GenerationParams) (interface{}, error) {
 	if params.Difficulty < 0 || params.Difficulty > 1.0 {
+		log.WithFields(log.Fields{
+			"seed":       seed,
+			"difficulty": params.Difficulty,
+		}).Error("invalid difficulty parameter for timeline generation")
 		return nil, fmt.Errorf("difficulty must be between 0 and 1, got %.2f", params.Difficulty)
 	}
+
+	log.WithFields(log.Fields{
+		"seed":  seed,
+		"genre": params.GenreID,
+		"depth": params.Depth,
+	}).Debug("generating timeline")
 
 	rng := rand.New(rand.NewSource(seed))
 

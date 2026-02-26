@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"math/rand"
 
+	log "github.com/sirupsen/logrus"
+
 	"github.com/opd-ai/venture/pkg/procgen"
 )
 
@@ -68,8 +70,19 @@ func NewArchaeologyGenerator() *ArchaeologyGenerator {
 // Generate creates an archaeological site with artifacts
 func (g *ArchaeologyGenerator) Generate(seed int64, params procgen.GenerationParams) (interface{}, error) {
 	if params.Difficulty < 0 || params.Difficulty > 1.0 {
+		log.WithFields(log.Fields{
+			"seed":       seed,
+			"difficulty": params.Difficulty,
+		}).Error("invalid difficulty parameter for archaeology generation")
 		return nil, fmt.Errorf("difficulty must be between 0 and 1, got %.2f", params.Difficulty)
 	}
+
+	log.WithFields(log.Fields{
+		"seed":       seed,
+		"genre":      params.GenreID,
+		"difficulty": params.Difficulty,
+		"depth":      params.Depth,
+	}).Debug("generating archaeological site")
 
 	rng := rand.New(rand.NewSource(seed))
 
@@ -108,6 +121,13 @@ func (g *ArchaeologyGenerator) Generate(seed int64, params procgen.GenerationPar
 		SpritePattern: g.generateSiteSpritePattern(params.GenreID, rng),
 	}
 
+	log.WithFields(log.Fields{
+		"site_name":     siteName,
+		"num_artifacts": numArtifacts,
+		"danger":        danger,
+		"era":           site.Era,
+	}).Info("archaeological site generated")
+
 	return site, nil
 }
 
@@ -115,28 +135,46 @@ func (g *ArchaeologyGenerator) Generate(seed int64, params procgen.GenerationPar
 func (g *ArchaeologyGenerator) Validate(result interface{}) error {
 	site, ok := result.(*ArchaeologicalSite)
 	if !ok {
+		log.Error("validation failed: result is not an *ArchaeologicalSite")
 		return fmt.Errorf("result is not an *ArchaeologicalSite")
 	}
 
 	if site.Name == "" {
+		log.Warn("validation failed: site name is empty")
 		return fmt.Errorf("site name is empty")
 	}
 
 	if len(site.Artifacts) < 2 {
+		log.WithFields(log.Fields{
+			"site_name":     site.Name,
+			"num_artifacts": len(site.Artifacts),
+		}).Warn("validation failed: too few artifacts")
 		return fmt.Errorf("too few artifacts: %d, minimum 2", len(site.Artifacts))
 	}
 
 	if len(site.Artifacts) > 6 {
+		log.WithFields(log.Fields{
+			"site_name":     site.Name,
+			"num_artifacts": len(site.Artifacts),
+		}).Warn("validation failed: too many artifacts")
 		return fmt.Errorf("too many artifacts: %d, maximum 6", len(site.Artifacts))
 	}
 
 	if site.Danger < 0 || site.Danger > 1.0 {
+		log.WithFields(log.Fields{
+			"site_name": site.Name,
+			"danger":    site.Danger,
+		}).Warn("validation failed: invalid danger level")
 		return fmt.Errorf("danger must be between 0 and 1, got %.2f", site.Danger)
 	}
 
 	// Validate all artifacts
 	for i, artifact := range site.Artifacts {
 		if artifact.Name == "" {
+			log.WithFields(log.Fields{
+				"site_name":    site.Name,
+				"artifact_num": i,
+			}).Warn("validation failed: artifact has empty name")
 			return fmt.Errorf("artifact %d has empty name", i)
 		}
 		if artifact.Condition < 0 || artifact.Condition > 1.0 {

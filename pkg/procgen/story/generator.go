@@ -5,6 +5,8 @@ import (
 	"math/rand"
 	"strings"
 
+	log "github.com/sirupsen/logrus"
+
 	"github.com/opd-ai/venture/pkg/procgen"
 )
 
@@ -60,8 +62,19 @@ func NewFragmentGenerator() *FragmentGenerator {
 // Generate creates a story sequence with fragments
 func (g *FragmentGenerator) Generate(seed int64, params procgen.GenerationParams) (interface{}, error) {
 	if params.Difficulty < 0 || params.Difficulty > 1.0 {
+		log.WithFields(log.Fields{
+			"seed":       seed,
+			"difficulty": params.Difficulty,
+		}).Error("invalid difficulty parameter for story generation")
 		return nil, fmt.Errorf("difficulty must be between 0 and 1, got %.2f", params.Difficulty)
 	}
+
+	log.WithFields(log.Fields{
+		"seed":       seed,
+		"genre":      params.GenreID,
+		"difficulty": params.Difficulty,
+		"depth":      params.Depth,
+	}).Debug("generating story sequence")
 
 	rng := rand.New(rand.NewSource(seed))
 
@@ -106,6 +119,13 @@ func (g *FragmentGenerator) Generate(seed int64, params procgen.GenerationParams
 		Coherence: g.calculateCoherence(storyContent),
 	}
 
+	log.WithFields(log.Fields{
+		"series_id":     seriesID,
+		"theme":         theme,
+		"num_fragments": numFragments,
+		"coherence":     sequence.Coherence,
+	}).Info("story sequence generated")
+
 	return sequence, nil
 }
 
@@ -113,34 +133,65 @@ func (g *FragmentGenerator) Generate(seed int64, params procgen.GenerationParams
 func (g *FragmentGenerator) Validate(result interface{}) error {
 	sequence, ok := result.(*StorySequence)
 	if !ok {
+		log.Error("validation failed: result is not a *StorySequence")
 		return fmt.Errorf("result is not a *StorySequence")
 	}
 
 	if sequence.Title == "" {
+		log.WithFields(log.Fields{
+			"series_id": sequence.SeriesID,
+		}).Warn("validation failed: story title is empty")
 		return fmt.Errorf("story title is empty")
 	}
 
 	if len(sequence.Fragments) < 5 {
+		log.WithFields(log.Fields{
+			"series_id":     sequence.SeriesID,
+			"num_fragments": len(sequence.Fragments),
+		}).Warn("validation failed: too few fragments")
 		return fmt.Errorf("too few fragments: %d, minimum 5", len(sequence.Fragments))
 	}
 
 	if len(sequence.Fragments) > 15 {
+		log.WithFields(log.Fields{
+			"series_id":     sequence.SeriesID,
+			"num_fragments": len(sequence.Fragments),
+		}).Warn("validation failed: too many fragments")
 		return fmt.Errorf("too many fragments: %d, maximum 15", len(sequence.Fragments))
 	}
 
 	if sequence.Coherence < 0.5 {
+		log.WithFields(log.Fields{
+			"series_id": sequence.SeriesID,
+			"coherence": sequence.Coherence,
+		}).Warn("validation failed: story coherence too low")
 		return fmt.Errorf("story coherence too low: %.2f, minimum 0.5", sequence.Coherence)
 	}
 
 	// Validate all fragments have content
 	for i, frag := range sequence.Fragments {
 		if frag.Content == "" {
+			log.WithFields(log.Fields{
+				"series_id":    sequence.SeriesID,
+				"fragment_num": i,
+			}).Warn("validation failed: fragment has empty content")
 			return fmt.Errorf("fragment %d has empty content", i)
 		}
 		if len(frag.Content) < 10 {
+			log.WithFields(log.Fields{
+				"series_id":      sequence.SeriesID,
+				"fragment_num":   i,
+				"content_length": len(frag.Content),
+			}).Warn("validation failed: fragment content too short")
 			return fmt.Errorf("fragment %d content too short: %d chars", i, len(frag.Content))
 		}
 	}
+
+	log.WithFields(log.Fields{
+		"series_id":     sequence.SeriesID,
+		"coherence":     sequence.Coherence,
+		"num_fragments": len(sequence.Fragments),
+	}).Debug("story sequence validation passed")
 
 	return nil
 }

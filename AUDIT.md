@@ -123,6 +123,7 @@ This file tracks package-level audits across the Venture codebase. Each entry in
 
 ### Supporting Packages (continued)
 - [x] `pkg/benchmark/AUDIT.md` — Complete — 3 issues (0 high, 0 med, 3 low) — Coverage: N/A (test-only; 513 test lines; fps requires X11)
+- [x] `pkg/benchmark/fps/AUDIT.md` — Complete — 3 issues (0 high, 0 med, 3 low) — Coverage: N/A (test-only; 295 test LOC; requires X11)
 
 - [x] `pkg/rendering/tiles/AUDIT.md` — Complete — 3 issues (0 high, 1 med, 2 low) — Coverage: 91.5%
 

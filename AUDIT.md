@@ -41,6 +41,7 @@ This file tracks package-level audits across the Venture codebase. Each entry in
 - [x] `pkg/procgen/vehicle/AUDIT.md` — Complete — 3 issues (0 high, 0 med, 3 low) — Coverage: Unmeasurable (requires X11; 62.8% test-to-source ratio)
 - [x] `pkg/procgen/faction/AUDIT.md` — Complete — 4 issues (0 high, 1 med, 3 low) — Coverage: Unmeasurable (requires X11; 122% test-to-source ratio)
 - [x] `pkg/procgen/minigame/AUDIT.md` — Complete — 3 issues (0 high, 0 med, 3 low) — Coverage: Unmeasurable (requires X11; 127% test-to-source ratio)
+- [x] `pkg/procgen/minigame/games/AUDIT.md` — Complete — 3 issues (0 high, 0 med, 3 low) — Coverage: Unmeasurable (requires X11; 55.1% test-to-source ratio)
 - [x] `pkg/procgen/recipe/AUDIT.md` — Complete — 5 issues (0 high, 1 med, 4 low) — Coverage: Unmeasurable (requires X11; 47.9% test-to-source ratio)
 - [x] `pkg/procgen/station/AUDIT.md` — Complete — 3 issues (0 high, 0 med, 3 low) — Coverage: 89.0%
 - [x] `pkg/procgen/puzzle/AUDIT.md` — Complete — 3 issues (0 high, 0 med, 3 low) — Coverage: 94.3%
@@ -114,9 +115,9 @@ This file tracks package-level audits across the Venture codebase. Each entry in
 - [x] `pkg/integration/world_events/AUDIT.md` — Complete — 5 issues (0 high, 2 med, 3 low) — Coverage: 92.9%
 
 ## Audit Progress
-- **Completed**: 89/90+ packages
+- **Completed**: 90/90+ packages
 - **In Progress**: 0
-- **Not Started**: 1 (pkg/procgen/minigame/games)
+- **Not Started**: 0
 
 ### Supporting Packages (continued)
 - [x] `pkg/benchmark/AUDIT.md` — Complete — 3 issues (0 high, 0 med, 3 low) — Coverage: N/A (test-only; 513 test lines; fps requires X11)

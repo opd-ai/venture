@@ -149,6 +149,7 @@ This file tracks package-level audits across the Venture codebase. Each entry in
 ### Example Programs
 - [x] `examples/animation_timing_demo/AUDIT.md` — Complete — 2 issues (0 high, 0 med, 2 low) — Coverage: 0.0% (demo program; no tests)
 - [x] `examples/voice_integration_demo/AUDIT.md` — Needs Work — 7 issues (2 high, 3 med, 2 low) — Coverage: 0.0% (no tests)
+- [x] `examples/virtual_controls_wasm_demo/AUDIT.md` — Needs Work — 8 issues (3 high, 1 med, 4 low) — Coverage: 0.0% (demo program; no tests) — Re-audited 2026-02-26 (audit #1: META_AUDIT v2 with Phase 0.5 baseline, input abstraction violations)
 - [x] `pkg/procgen/audit/AUDIT.md` — Complete — 3 issues (0 high, 0 med, 3 low) — Coverage: Unmeasurable (requires X11; 1,342% test-to-source ratio)
 
 - [x] `pkg/rendering/shapes/AUDIT.md` — Complete — 5 issues (0 high, 2 med, 3 low) — Coverage: Unmeasurable (requires X11; 120.5% test-to-source ratio)

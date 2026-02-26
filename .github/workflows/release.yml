@@ -146,6 +146,11 @@ jobs:
               cd - > /dev/null
             fi
           done
+          
+          # Include Android APK
+          if [ -d "artifacts/android-apk" ]; then
+            cp artifacts/android-apk/*.apk build/
+          fi
 
       - name: Generate SHA256 checksums
         run: |

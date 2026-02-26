@@ -36,7 +36,7 @@ public class MainActivity extends Activity {
     protected void onPause() {
         super.onPause();
         if (ebitenView != null) {
-            ebitenView.onPause();
+            ebitenView.suspendGame();
         }
     }
 
@@ -44,7 +44,7 @@ public class MainActivity extends Activity {
     protected void onResume() {
         super.onResume();
         if (ebitenView != null) {
-            ebitenView.onResume();
+            ebitenView.resumeGame();
         }
         hideSystemUI();
     }

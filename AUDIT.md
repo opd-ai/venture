@@ -135,7 +135,7 @@ This file tracks package-level audits across the Venture codebase. Each entry in
 
 - [x] `pkg/rendering/parallel/AUDIT.md` — Complete — 3 issues (0 high, 1 med, 2 low) — Coverage: 96.7%
 
-- [x] `pkg/procgen/story/AUDIT.md` — Needs Work — 11 issues (3 high, 4 med, 5 low) — Coverage: 88.7% — Re-audited 2026-02-26
+- [x] `pkg/procgen/story/AUDIT.md` — Needs Work — 12 issues (3 high, 4 med, 5 low) — Coverage: 88.7% — Re-audited 2026-02-26
 - [x] `pkg/procgen/audit/AUDIT.md` — Complete — 3 issues (0 high, 0 med, 3 low) — Coverage: Unmeasurable (requires X11; 1,342% test-to-source ratio)
 
 - [x] `pkg/rendering/shapes/AUDIT.md` — Complete — 5 issues (0 high, 2 med, 3 low) — Coverage: Unmeasurable (requires X11; 120.5% test-to-source ratio)

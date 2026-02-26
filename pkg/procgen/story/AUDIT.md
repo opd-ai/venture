@@ -72,7 +72,7 @@ Status criteria:
 ## Test Coverage
 **Coverage**: 88.7% (target: 40%)
 - Missing test areas: None significant; all generators, validators, and helper functions well-covered
-- Missing benchmarks: All `Generate()` methods lack performance benchmarks
+- Missing benchmarks: ❌ CORRECTION — Package HAS 10 comprehensive benchmarks covering all generators and key operations (archaeology excavation, branching choice, cross-dungeon accessibility, fragment generation, narrative validation, timeline generation, event queries). Previous audit error corrected.
 - Table-driven test compliance: ✅ — All `*_test.go` files use table-driven patterns
 
 ## Documentation Coverage
@@ -103,8 +103,8 @@ Package generates story content consumed by `DiscoverySystem` via `StoryFragment
 3. **[HIGH]** Add `Serialize()/Deserialize()` methods to all story types and register them with `pkg/saveload/`. Excavation progress, discovered timelines, and cross-dungeon story state must persist.
 4. **[MED]** Add structured logging with `logrus.WithFields(logrus.Fields{"seed": seed, "genre": params.GenreID, "generator": "story"})` to all `Generate()` methods. Log validation failures and coherence metrics at WARN level.
 5. **[MED]** Extract hard-coded story templates into JSON files under `mods/` directory, allowing mod authors to define custom narratives. Integrate with `pkg/modding/` for override support.
-6. **[MED]** Query actual terrain bounds from `pkg/procgen/terrain/` instead of assuming 100x100 in `generateLocation()`. Pass terrain metadata via `GenerationParams.Custom` map.
-7. **[LOW]** Add benchmark tests for all `Generate()` methods to validate the <20ms performance claim in package docs.
-8. **[LOW]** Replace local `Vector2` with engine's position type or extract to shared `pkg/math/` package.
-9. **[LOW]** Add godoc comments to all ECS-compliant helper functions in `story_fragment_component.go`.
-10. **[LOW]** Log warning when unknown genre is provided to theme/title selection functions so custom genres can be detected.
+6. **[MED]** Query actual terrain bounds from `pkg/procgen/terrain/` instead of assuming 100x100 in `generateLocation()`. Pass terrain metadata via `GenerationParams.Custom` map with keys `"terrain_width"` and `"terrain_height"`. Fallback to 100x100 if not provided for backward compatibility.
+7. **[LOW]** Document existing benchmarks in package `doc.go` (lines 134-147) and add CI/CD performance regression check with thresholds (e.g., <20ms per generate call, <50ms for cross-dungeon stories).
+8. **[LOW]** Replace local `Vector2` with engine's `PositionComponent` (X, Y fields) or extract to shared `pkg/math/` package to avoid duplication and conversion overhead.
+9. **[LOW]** Add godoc comments to all ECS-compliant helper functions in `story_fragment_component.go` (lines 97-161).
+10. **[LOW]** Log warning when unknown genre is provided to theme/title selection functions so custom genres can be detected (e.g., `log.WithFields(log.Fields{"genre": genreID}).Warn("unknown genre in story generation, using fallback themes")`).

@@ -6,7 +6,7 @@ import android.view.View;
 import android.view.WindowManager;
 
 import go.Seq;
-import mobile.EbitenView;
+import com.venture.game.mobile.EbitenView;
 
 public class MainActivity extends Activity {
     private EbitenView ebitenView;
@@ -29,7 +29,7 @@ public class MainActivity extends Activity {
         setContentView(ebitenView);
 
         // Start the game
-        mobile.Mobile.start();
+        com.venture.game.mobile.Mobile.start();
     }
 
     @Override

@@ -51,27 +51,12 @@ jobs:
             echo "name=Nightly Build $(date +'%Y-%m-%d')" >> $GITHUB_OUTPUT
           fi
 
-      - name: Delete existing rolling release and tag
+      - name: Delete existing rolling release
         if: steps.release_type.outputs.type != 'version'
         continue-on-error: true
         run: |
           TAG="${{ steps.release_type.outputs.tag }}"
-          # Delete the release and its associated tag atomically
-          gh release delete "$TAG" --yes --cleanup-tag 2>/dev/null || true
-          # Ensure the tag is deleted even if no release existed
-          gh api -X DELETE "repos/${{ github.repository }}/git/refs/tags/$TAG" 2>/dev/null || true
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Create rolling release tag
-        if: steps.release_type.outputs.type != 'version'
-        run: |
-          TAG="${{ steps.release_type.outputs.tag }}"
-          # Create the tag via the GitHub API (avoids git push credential issues)
-          gh api "repos/${{ github.repository }}/git/refs" \
-            -X POST \
-            -f ref="refs/tags/$TAG" \
-            -f sha="${{ github.sha }}"
+          gh release delete "$TAG" --cleanup-tag --yes || true
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 

@@ -132,6 +132,12 @@ func GetOrientation(width, height int) Orientation {
 	return OrientationUnknown
 }
 
+// RequiredOrientation returns the orientation required by the game.
+// Mobile platforms must be held in landscape mode for the game to be playable.
+func RequiredOrientation() Orientation {
+	return OrientationLandscape
+}
+
 // HapticFeedback represents haptic feedback intensity.
 // HapticFeedback type moved to types.go
 

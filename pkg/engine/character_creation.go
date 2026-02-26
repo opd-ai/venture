@@ -674,7 +674,18 @@ func (cc *EbitenCharacterCreation) updateTouchButtonPositions() {
 // Called from both Update (for hit detection) and Draw (for rendering)
 func (cc *EbitenCharacterCreation) updatePanelDimensions() {
 	cc.panelWidth = 600
-	cc.panelHeight = 400
+	cc.panelHeight = 600
+
+	// Clamp to screen size with margin so the panel is always fully visible
+	maxH := cc.screenHeight - 40 // 20px margin top+bottom
+	if cc.panelHeight > maxH {
+		cc.panelHeight = maxH
+	}
+	maxW := cc.screenWidth - 40
+	if cc.panelWidth > maxW {
+		cc.panelWidth = maxW
+	}
+
 	cc.panelX = cc.screenWidth/2 - cc.panelWidth/2
 	cc.panelY = cc.screenHeight/2 - cc.panelHeight/2
 }

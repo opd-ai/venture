@@ -44,7 +44,7 @@ check_prerequisites() {
     
     if ! command -v ebitenmobile &> /dev/null; then
         echo_warn "ebitenmobile not found, installing..."
-        go install github.com/hajimehoshi/ebiten/v2/cmd/ebitenmobile@latest
+        go install github.com/hajimehoshi/ebiten/v2/cmd/ebitenmobile@v2.9.3
     fi
     
     if [ -z "$ANDROID_HOME" ]; then
@@ -83,7 +83,7 @@ build_aar() {
     if ! command -v ebitenmobile &> /dev/null; then
         echo_error "ebitenmobile is not installed"
         echo_info "Installing ebitenmobile..."
-        go install github.com/hajimehoshi/ebiten/v2/cmd/ebitenmobile@latest
+        go install github.com/hajimehoshi/ebiten/v2/cmd/ebitenmobile@v2.9.3
         
         if ! command -v ebitenmobile &> /dev/null; then
             echo_error "Failed to install ebitenmobile. Please check your Go installation and PATH."
@@ -116,9 +116,11 @@ build_aar() {
         if unzip -l "$BUILD_DIR/libs/mobile.aar" | grep -q "GoNativeActivity"; then
             echo_info "✓ GoNativeActivity found in AAR"
         else
-            echo_warn "⚠ GoNativeActivity NOT found in AAR - APK may crash"
-            echo_warn "This usually means ebitenmobile bind didn't include it"
-            echo_warn "Check ebitenmobile version: $(ebitenmobile version 2>&1 || echo 'unknown')"
+            echo_error "✗ GoNativeActivity NOT found in AAR - APK will crash on launch"
+            echo_error "This usually means ebitenmobile bind used an incompatible version"
+            echo_error "Ensure ebitenmobile matches the project Ebiten version (v2.9.3)"
+            echo_error "Reinstall with: go install github.com/hajimehoshi/ebiten/v2/cmd/ebitenmobile@v2.9.3"
+            exit 1
         fi
     fi
 }

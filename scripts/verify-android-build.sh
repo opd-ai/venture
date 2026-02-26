@@ -35,7 +35,7 @@ if command -v ebitenmobile &> /dev/null; then
     pass "ebitenmobile installed"
 else
     fail "ebitenmobile not installed"
-    echo "  Install with: go install github.com/hajimehoshi/ebiten/v2/cmd/ebitenmobile@latest"
+    echo "  Install with: go install github.com/hajimehoshi/ebiten/v2/cmd/ebitenmobile@v2.9.3"
     exit 1
 fi
 

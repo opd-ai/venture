@@ -32,7 +32,7 @@
 
             <meta-data
                 android:name="android.app.lib_name"
-                android:value="mobile" />
+                android:value="gojni" />
 
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />

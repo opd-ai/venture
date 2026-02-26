@@ -63,6 +63,7 @@ This file tracks package-level audits across the Venture codebase. Each entry in
 - [x] `pkg/world/AUDIT.md` — Needs Work — 12 issues (1 high, 6 med, 5 low) — Coverage: 88.8% (core), 88.4% (economy), 90.4% (raids), 90.8% (territory), FAIL (housing)
 - [x] `pkg/world/housing/AUDIT.md` — Complete — 4 issues (0 high, 2 med, 2 low) — Coverage: Unmeasurable (requires X11; 139% test-to-source ratio)
 - [x] `pkg/world/raids/AUDIT.md` — Complete — 6 issues (1 high, 2 med, 3 low) — Coverage: 90.4%
+- [x] `pkg/world/territory/AUDIT.md` — Needs Work — 9 issues (3 high, 3 med, 3 low) — Coverage: 90.8%
 - [x] `pkg/audio/AUDIT.md` — Complete — 4 issues (0 high, 1 med, 3 low) — Coverage: 93.5%
 
 ### World Management Packages
@@ -109,9 +110,9 @@ This file tracks package-level audits across the Venture codebase. Each entry in
 - [x] `pkg/integration/world_events/AUDIT.md` — Complete — 5 issues (0 high, 2 med, 3 low) — Coverage: 92.9%
 
 ## Audit Progress
-- **Completed**: 85/90+ packages
+- **Completed**: 86/90+ packages
 - **In Progress**: 0
-- **Not Started**: 5+
+- **Not Started**: 4+
 
 ### Supporting Packages (continued)
 - [x] `pkg/benchmark/AUDIT.md` — Complete — 3 issues (0 high, 0 med, 3 low) — Coverage: N/A (test-only; 513 test lines; fps requires X11)

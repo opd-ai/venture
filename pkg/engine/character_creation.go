@@ -1916,8 +1916,9 @@ func (cc *EbitenCharacterCreation) drawPortraitSelection(screen *ebiten.Image, x
 			color.RGBA{200, 200, 100, 255})
 	}
 
-	// Help text
-	helpY := y + h - 100
+	// Help text — position drawn buttons well above the touch button row
+	// Touch buttons occupy the bottom 54px of the panel.
+	helpY := y + h - 160
 
 	// Draw clickable button areas for touch support
 	buttonY := helpY - 10

@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"math/rand"
 	"runtime"
+	"runtime/debug"
 	"sync"
 	"time"
 
@@ -357,7 +358,8 @@ type systemsContainer struct {
 	timeOfDaySpellDamageSystem                  *engine.TimeOfDaySpellDamageSystem    // Connects time-of-day lighting with spell damage modifiers
 	timeOfDayAttackSpeedSystem                  *engine.TimeOfDayAttackSpeedSystem    // Connects time-of-day lighting with attack speed modifiers
 	spriteGenerator                             *sprites.Generator
-	spriteCache                                 *cache.SpriteCache // Phase 1.2: Sprite caching for animation performance
+	spriteCache                                 *cache.SpriteCache   // Phase 1.2: Sprite caching for animation performance
+	memoryMonitor                               *cache.MemoryMonitor // Background cache eviction under memory pressure
 	itemGen                                     *item.ItemGenerator
 	recipeGen                                   *recipe.RecipeGenerator
 	statusEffectRNG                             *rand.Rand
@@ -636,31 +638,47 @@ func initializeCoreSystems(game *engine.EbitenGame, logger *logrus.Logger, clien
 	}()
 
 	// Group 2: Sprite & Animation systems
+	// WASM runs in a browser with ~1-2GB total heap. Use reduced cache
+	// and animation limits to prevent progressive memory exhaustion.
+	effectiveSpriteCacheMax := int64(spriteCacheMaxSize)
+	effectiveAnimCacheSize := animationCacheSize
+	if mobile.IsWASM() {
+		effectiveSpriteCacheMax = wasmSpriteCacheMaxSize
+		effectiveAnimCacheSize = wasmAnimationCacheSize
+	}
 	go func() {
 		defer wg.Done()
-		sys.spriteCache = cache.NewSpriteCache(spriteCacheMaxSize)
+		sys.spriteCache = cache.NewSpriteCache(effectiveSpriteCacheMax)
 		sys.spriteGenerator = sprites.NewGenerator()
 		sys.animationSystem = engine.NewAnimationSystem(sys.spriteGenerator)
-		sys.animationSystem.SetMaxCacheSize(animationCacheSize)
+		sys.animationSystem.SetMaxCacheSize(effectiveAnimCacheSize)
 		sys.animationSystem.SetSpriteCache(sys.spriteCache)
 		sys.equipmentVisualSystem = engine.NewEquipmentVisualSystem(sys.spriteGenerator)
-		clientLogger.WithField("maxSize", spriteCacheMaxSize).Debug("sprite & animation systems initialized")
+		clientLogger.WithField("maxSize", effectiveSpriteCacheMax).Debug("sprite & animation systems initialized")
 	}()
 
 	// Group 3: Rendering systems
+	// WASM uses Low quality to stay within browser resource constraints;
+	// desktop uses Medium with selective overrides.
 	go func() {
 		defer wg.Done()
-		qualityConfig := &quality.Config{
-			Level:                 quality.QualityMedium,
-			EnablePostProcessing:  true,
-			EnableBloom:           false,
-			EnableSoftShadows:     true,
-			SpriteDetailLevel:     0.7,
-			EnableAntiAliasing:    true,
-			AntiAliasingQuality:   1,
-			EnableSpriteCache:     true,
-			EnableDynamicLighting: true,
-			ShadowSampleCount:     2,
+		var qualityConfig *quality.Config
+		if mobile.IsWASM() {
+			wasmQuality := quality.LowQualityConfig()
+			qualityConfig = &wasmQuality
+		} else {
+			qualityConfig = &quality.Config{
+				Level:                 quality.QualityMedium,
+				EnablePostProcessing:  true,
+				EnableBloom:           false,
+				EnableSoftShadows:     true,
+				SpriteDetailLevel:     0.7,
+				EnableAntiAliasing:    true,
+				AntiAliasingQuality:   1,
+				EnableSpriteCache:     true,
+				EnableDynamicLighting: true,
+				ShadowSampleCount:     2,
+			}
 		}
 		sys.qualitySystem = engine.NewQualitySystem(qualityConfig, 60.0)
 		sys.lightingAdapter = engine.NewLightingAdapter(clientLogger.WithField("system", "lighting"))
@@ -681,6 +699,21 @@ func initializeCoreSystems(game *engine.EbitenGame, logger *logrus.Logger, clien
 	parallelAdapter := engine.NewParallelRendererAdapter(sys.parallelRenderer)
 	game.RenderSystem.SetPool(poolAdapter)
 	game.RenderSystem.SetParallelRenderer(parallelAdapter)
+
+	// Phase 3.1: WASM memory safety — start background memory monitor and
+	// tune GC to prevent progressive slowdown in the browser.
+	if mobile.IsWASM() {
+		sys.memoryMonitor = cache.NewMemoryMonitor(sys.spriteCache)
+		sys.memoryMonitor.SetLimits(wasmMemorySoftLimit, wasmMemoryHardLimit)
+		sys.memoryMonitor.Start()
+		debug.SetGCPercent(50)
+		clientLogger.WithFields(logrus.Fields{
+			"spriteCacheMB":      wasmSpriteCacheMaxSize / (1024 * 1024),
+			"animationCacheSize": wasmAnimationCacheSize,
+			"qualityLevel":       "Low",
+			"gcPercent":          50,
+		}).Info("WASM performance controls active")
+	}
 
 	elapsed := time.Since(startTime)
 	clientLogger.WithField("duration_ms", elapsed.Milliseconds()).Info("core systems initialized with parallel optimization")

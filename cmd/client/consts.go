@@ -26,6 +26,14 @@ const (
 	// Sprite cache (Phase 1.2)
 	spriteCacheMaxSize = 400 * 1024 * 1024 // 400MB limit for sprite cache
 
+	// WASM-specific performance limits.
+	// Browser WASM has ~1-2GB total heap; these keep the sprite/animation
+	// subsystems well within budget to prevent progressive slowdown.
+	wasmSpriteCacheMaxSize = 150 * 1024 * 1024 // 150MB (vs 400MB desktop)
+	wasmAnimationCacheSize = 150               // max cached animation sequences (vs 300 desktop)
+	wasmMemorySoftLimit    = 120 * 1024 * 1024 // soft eviction threshold
+	wasmMemoryHardLimit    = 150 * 1024 * 1024 // hard eviction threshold
+
 	// Player stats
 	playerStartHealth     = 100   // initial and max health
 	playerStartMana       = 100   // initial and max mana

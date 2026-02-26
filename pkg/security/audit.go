@@ -497,7 +497,7 @@ func (a *Auditor) auditChatEncryption(results *AuditResults) {
 	}).Debug("Key exchange check completed")
 
 	// Check 3: IV randomness
-	passed, msg := validateIVRandomness()
+	passed, msg := ValidateIVRandomness()
 	check = SecurityCheck{
 		Domain:      domain,
 		Name:        "IV Randomness",
@@ -709,7 +709,7 @@ func (a *Auditor) auditInputValidation(results *AuditResults) {
 	}).Debug("Auditing input validation")
 
 	// Check 1: Chat message validation
-	passed, msg := validateChatMessageSafety()
+	passed, msg := ValidateChatMessageSafety()
 	check := SecurityCheck{
 		Domain:      domain,
 		Name:        "Chat Sanitization",
@@ -762,7 +762,7 @@ func (a *Auditor) auditInputValidation(results *AuditResults) {
 	}).Debug("Command validation check completed")
 
 	// Check 4: Coordinate bounds checking
-	passed, msg = validateCoordinateBounds()
+	passed, msg = ValidateCoordinateBounds()
 	check = SecurityCheck{
 		Domain:      domain,
 		Name:        "Coordinate Bounds",
@@ -919,8 +919,13 @@ func (a *Auditor) auditPrivacy(results *AuditResults) {
 	}).Debug("Privacy audit completed")
 }
 
-// validateIVRandomness tests IV generation for proper randomness
-func validateIVRandomness() (bool, string) {
+// ValidateIVRandomness tests IV generation for proper randomness.
+// This function generates multiple IVs and checks for uniqueness to ensure
+// the random number generator is functioning correctly. It can be used by
+// other packages to verify cryptographic IV generation in their tests.
+//
+// Returns (passed, description) where passed indicates whether the test succeeded.
+func ValidateIVRandomness() (bool, string) {
 	log.Debug("Validating IV randomness")
 	const testCount = 100
 	ivs := make(map[string]bool, testCount)
@@ -953,8 +958,13 @@ func validateIVRandomness() (bool, string) {
 	return true, fmt.Sprintf("IV randomness validated (%d unique IVs)", testCount)
 }
 
-// validateChatMessageSafety tests chat message sanitization
-func validateChatMessageSafety() (bool, string) {
+// ValidateChatMessageSafety tests chat message sanitization rules.
+// This function verifies that basic security controls (length limits,
+// control character filtering) are operational. It can be used by other
+// packages to verify message sanitization in their tests.
+//
+// Returns (passed, description) where passed indicates whether the test succeeded.
+func ValidateChatMessageSafety() (bool, string) {
 	log.Debug("Validating chat message sanitization")
 	testCases := []string{
 		"<script>alert('xss')</script>",
@@ -991,8 +1001,13 @@ func validateChatMessageSafety() (bool, string) {
 	return true, "Chat sanitization functional (length + character validation)"
 }
 
-// validateCoordinateBounds tests position validation
-func validateCoordinateBounds() (bool, string) {
+// ValidateCoordinateBounds tests position validation for out-of-bounds detection.
+// This function verifies that coordinate validation properly rejects extremely
+// large or invalid position values. It can be used by other packages to verify
+// position validation in their tests.
+//
+// Returns (passed, description) where passed indicates whether the test succeeded.
+func ValidateCoordinateBounds() (bool, string) {
 	log.Debug("Validating coordinate bounds")
 	testPositions := [][2]float64{
 		{0, 0},

@@ -343,7 +343,7 @@ func TestPrivacyAudit(t *testing.T) {
 }
 
 func TestValidateIVRandomness(t *testing.T) {
-	passed, msg := validateIVRandomness()
+	passed, msg := ValidateIVRandomness()
 	if !passed {
 		t.Errorf("IV randomness validation failed: %s", msg)
 	}
@@ -353,7 +353,7 @@ func TestValidateIVRandomness(t *testing.T) {
 }
 
 func TestValidateChatMessageSafety(t *testing.T) {
-	passed, msg := validateChatMessageSafety()
+	passed, msg := ValidateChatMessageSafety()
 	if !passed {
 		t.Errorf("Chat message safety validation failed: %s", msg)
 	}
@@ -363,7 +363,7 @@ func TestValidateChatMessageSafety(t *testing.T) {
 }
 
 func TestValidateCoordinateBounds(t *testing.T) {
-	passed, msg := validateCoordinateBounds()
+	passed, msg := ValidateCoordinateBounds()
 	if !passed {
 		t.Errorf("Coordinate bounds validation failed: %s", msg)
 	}
@@ -405,7 +405,7 @@ func BenchmarkRunFullAudit(b *testing.B) {
 
 func BenchmarkValidateIVRandomness(b *testing.B) {
 	for i := 0; i < b.N; i++ {
-		_, _ = validateIVRandomness()
+		_, _ = ValidateIVRandomness()
 	}
 }
 

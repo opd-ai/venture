@@ -304,3 +304,102 @@ type testError struct {
 func (e *testError) Error() string {
 	return e.msg
 }
+
+// BenchmarkRecoverPanic_NoPanic measures overhead when no panic occurs (hot path)
+func BenchmarkRecoverPanic_NoPanic(b *testing.B) {
+	logger := logrus.New()
+	logger.SetOutput(&bytes.Buffer{})
+	entry := logger.WithField("component", "benchmark")
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		func() {
+			defer RecoverPanic(entry, "benchmark context", nil)()
+			// Normal execution path
+		}()
+	}
+}
+
+// BenchmarkRecoverPanic_WithCleanup measures overhead with cleanup function
+func BenchmarkRecoverPanic_WithCleanup(b *testing.B) {
+	logger := logrus.New()
+	logger.SetOutput(&bytes.Buffer{})
+	entry := logger.WithField("component", "benchmark")
+
+	cleanup := func() {
+		// Minimal cleanup work
+	}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		func() {
+			defer RecoverPanic(entry, "benchmark context", cleanup)()
+			// Normal execution path
+		}()
+	}
+}
+
+// BenchmarkRecoverPanic_WithPanic measures recovery overhead when panic occurs
+func BenchmarkRecoverPanic_WithPanic(b *testing.B) {
+	logger := logrus.New()
+	logger.SetOutput(&bytes.Buffer{})
+	entry := logger.WithField("component", "benchmark")
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		func() {
+			defer RecoverPanic(entry, "benchmark context", nil)()
+			panic("benchmark panic")
+		}()
+	}
+}
+
+// BenchmarkRecoverPanic_WithPanicAndCleanup measures full recovery path
+func BenchmarkRecoverPanic_WithPanicAndCleanup(b *testing.B) {
+	logger := logrus.New()
+	logger.SetOutput(&bytes.Buffer{})
+	entry := logger.WithField("component", "benchmark")
+
+	cleanup := func() {
+		// Minimal cleanup work
+	}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		func() {
+			defer RecoverPanic(entry, "benchmark context", cleanup)()
+			panic("benchmark panic")
+		}()
+	}
+}
+
+// BenchmarkRecoverPanicWithLogger measures convenience wrapper overhead
+func BenchmarkRecoverPanicWithLogger(b *testing.B) {
+	oldOutput := logrus.StandardLogger().Out
+	logrus.SetOutput(&bytes.Buffer{})
+	defer logrus.SetOutput(oldOutput)
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		func() {
+			defer RecoverPanicWithLogger("component", "context", nil)()
+			// Normal execution path
+		}()
+	}
+}
+
+// BenchmarkLogPanicAndCleanup_Direct measures direct logging function
+func BenchmarkLogPanicAndCleanup_Direct(b *testing.B) {
+	logger := logrus.New()
+	logger.SetOutput(&bytes.Buffer{})
+	entry := logger.WithField("component", "benchmark")
+
+	cleanup := func() {
+		// Minimal cleanup work
+	}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		LogPanicAndCleanup(entry, "benchmark context", "test panic", cleanup)
+	}
+}

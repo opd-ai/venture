@@ -47,7 +47,7 @@ This file tracks package-level audits across the Venture codebase. Each entry in
 - [x] `pkg/procgen/puzzle/AUDIT.md` — Complete — 3 issues (0 high, 0 med, 3 low) — Coverage: 94.3%
 - [x] `pkg/procgen/class/AUDIT.md` — Needs Work — 7 issues (2 high, 2 med, 3 low) — Coverage: Unmeasurable (requires X11; 87.4% test-to-source ratio)
 - [x] `pkg/procgen/furniture/AUDIT.md` — Complete — 4 issues (0 high, 1 med, 3 low) — Coverage: 92.5%
-- [ ] `pkg/rendering/` — Not audited (subdirectories audited separately)
+- [x] `pkg/rendering/AUDIT.md` — Complete — 1 issue (0 high, 0 med, 1 low) — Coverage: N/A (meta-package; subdirs: 30%-97%)
 - [x] `pkg/rendering/animation/AUDIT.md` — Complete — 1 issue (0 high, 0 med, 1 low) — Coverage: Unmeasurable (requires X11; 44.8% test-to-source ratio)
 - [x] `pkg/rendering/cache/AUDIT.md` — Complete — 4 issues (0 high, 0 med, 4 low) — Coverage: Unmeasurable (requires X11; 245% test-to-source ratio)
 - [x] `pkg/rendering/particles/AUDIT.md` — Complete — 3 issues (0 high, 0 med, 3 low) — Coverage: 91.8%

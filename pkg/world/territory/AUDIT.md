@@ -1,6 +1,6 @@
 # Audit: github.com/opd-ai/venture/pkg/world/territory
 **Date**: 2026-02-26
-**Auditor**: GitHub Copilot (META_AUDIT v2 — Re-audit)
+**Auditor**: GitHub Copilot (META_AUDIT v2 — Re-audit #2)
 **Status**: Needs Work
 <!--
 Status criteria:
@@ -10,7 +10,7 @@ Status criteria:
 -->
 
 ## Summary
-The `pkg/world/territory` package provides guild territory control and siege mechanics with thread-safe operations, deterministic time handling via `TimeProvider` interface, and excellent test coverage (90.8%). **UPDATED**: Territory UI now exists (`pkg/engine/territory_ui.go`, 451 LOC) with keyboard/touch navigation and is integrated into the client. However, critical integration gaps remain: the package lacks serialization/deserialization for persistence, TerritorySystem and TerritorySiegeSystem are **not registered on the server** (only in `cmd/client/`, not `cmd/server/v9_systems.go`), and there is no network snapshot encoding for territory/siege state. These gaps prevent server-authoritative territory warfare in multiplayer.
+The `pkg/world/territory` package provides guild territory control and siege mechanics with thread-safe operations, deterministic time handling via `TimeProvider` interface, and excellent test coverage (90.8%). Territory UI exists (`pkg/engine/territory_ui.go`, 451 LOC) with keyboard/touch navigation integrated into the client. **However, critical architecture violations prevent server-authoritative multiplayer**: TerritorySystem and TerritorySiegeSystem run **client-only** (not in `cmd/server/`), enabling client-side territory capture exploits. Package lacks serialization (territory state lost on restart), network snapshot encoding (no replication), and InputProvider abstraction (TerritoryUI violates Coding Guideline #2 with direct `ebiten.KeyUp` / `inpututil.IsKeyJustPressed` calls). These gaps make territory warfare a client-only feature despite appearing production-ready.
 
 ## Automated Check Results
 | Check | Result |

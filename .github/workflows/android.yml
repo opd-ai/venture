@@ -55,10 +55,23 @@ jobs:
       - name: Install ImageMagick
         run: sudo apt-get update && sudo apt-get install -y imagemagick
       
-      - name: Install ebitenmobile
+      - name: Install gomobile and ebitenmobile
         run: |
-          go install github.com/hajimehoshi/ebiten/v2/cmd/ebitenmobile@latest
+          go install golang.org/x/mobile/cmd/gomobile@latest
+          go install github.com/hajimehoshi/ebiten/v2/cmd/ebitenmobile@v2.9.3
           echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
+
+      - name: Initialize gomobile
+        run: gomobile init
+
+      - name: Verify build environment
+        run: |
+          echo "JAVA_HOME=$JAVA_HOME"
+          javac -version
+          echo "ANDROID_HOME=$ANDROID_HOME"
+          ls "$ANDROID_HOME/platforms/" || echo "Warning: No Android platforms found in $ANDROID_HOME/platforms/"
+          echo "ANDROID_NDK_HOME=$ANDROID_NDK_HOME"
+          which ebitenmobile
       
       - name: Build Android AAR
         run: ./scripts/build-android.sh aar

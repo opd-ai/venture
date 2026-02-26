@@ -107,6 +107,7 @@ build_aar() {
     # Build the AAR - Note: for CI builds, ebitenmobile bind creates the AAR with GoNativeActivity
     echo_info "Running ebitenmobile bind..."
     ebitenmobile bind \
+        -v \
         -target android \
         -javapkg $PACKAGE_NAME \
         -o "$BUILD_DIR/libs/mobile.aar" \

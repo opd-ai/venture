@@ -112,9 +112,9 @@ This file tracks package-level audits across the Venture codebase. Each entry in
 - [x] `pkg/integration/world_events/AUDIT.md` — Complete — 5 issues (0 high, 2 med, 3 low) — Coverage: 92.9%
 
 ## Audit Progress
-- **Completed**: 87/90+ packages
+- **Completed**: 88/90+ packages
 - **In Progress**: 0
-- **Not Started**: 3+ (pkg/engine/physics/destruction, pkg/engine/physics/vehicle, pkg/procgen/minigame/games)
+- **Not Started**: 2+ (pkg/engine/physics/destruction, pkg/procgen/minigame/games)
 
 ### Supporting Packages (continued)
 - [x] `pkg/benchmark/AUDIT.md` — Complete — 3 issues (0 high, 0 med, 3 low) — Coverage: N/A (test-only; 513 test lines; fps requires X11)

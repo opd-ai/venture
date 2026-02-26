@@ -2,6 +2,7 @@ package mobile
 
 import (
 	"math/rand"
+	"runtime/debug"
 
 	"github.com/hajimehoshi/ebiten/v2/mobile"
 	"github.com/opd-ai/venture/cmd/mobile/config"
@@ -10,6 +11,8 @@ import (
 	"github.com/opd-ai/venture/pkg/procgen"
 	"github.com/opd-ai/venture/pkg/procgen/item"
 	"github.com/opd-ai/venture/pkg/procgen/terrain"
+	"github.com/opd-ai/venture/pkg/rendering/cache"
+	"github.com/opd-ai/venture/pkg/rendering/quality"
 	"github.com/sirupsen/logrus"
 )
 
@@ -21,6 +24,25 @@ const (
 	DefaultScreenHeight = 720
 )
 
+// Mobile-specific performance limits.
+// These are significantly lower than the desktop defaults to prevent
+// memory exhaustion on RAM-constrained mobile devices.
+const (
+	// mobileSpriteCacheMaxSize is the hard cap for the sprite cache (100MB).
+	// Desktop uses 400MB; mobile devices typically have 2-4GB shared RAM.
+	mobileSpriteCacheMaxSize = 100 * 1024 * 1024
+
+	// mobileAnimationCacheSize is the max number of cached animation sequences.
+	// Desktop uses 300; reduced to prevent memory growth from diverse animations.
+	mobileAnimationCacheSize = 100
+
+	// mobileMemorySoftLimit is the sprite-cache soft limit that triggers LRU cleanup.
+	mobileMemorySoftLimit = 80 * 1024 * 1024 // 80MB
+
+	// mobileMemoryHardLimit is the sprite-cache hard limit that forces eviction.
+	mobileMemoryHardLimit = 100 * 1024 * 1024 // 100MB
+)
+
 // Game is the mobile game instance
 var (
 	gameInstance      *engine.EbitenGame
@@ -29,6 +51,11 @@ var (
 	playerEntity      *engine.Entity
 	worldSeed         int64
 	genreID           string
+
+	// Mobile performance management
+	spriteCache   *cache.SpriteCache
+	memoryMonitor *cache.MemoryMonitor
+	qualitySystem *engine.QualitySystem
 )
 
 func init() {
@@ -84,7 +111,41 @@ func initializeGameInstance() {
 		// Fatal exits the program, so this is unreachable
 	}
 
-	logger.WithField("systemCount", 43).Info("game systems initialized successfully")
+	// --- Mobile performance controls (not present in InitializeGameSystems) ---
+
+	// 1. Sprite cache with memory-safe limits
+	spriteCache = cache.NewSpriteCache(mobileSpriteCacheMaxSize)
+	systemsInitResult.AnimationSystem.SetMaxCacheSize(mobileAnimationCacheSize)
+	systemsInitResult.AnimationSystem.SetSpriteCache(spriteCache)
+
+	// 2. Memory monitor — runs a background goroutine that evicts sprites
+	//    when the cache exceeds soft/hard limits, preventing OOM crashes.
+	memoryMonitor = cache.NewMemoryMonitor(spriteCache)
+	memoryMonitor.SetLimits(mobileMemorySoftLimit, mobileMemoryHardLimit)
+	memoryMonitor.Start()
+
+	// 3. Quality system — uses Low preset for mobile with auto-adjustment.
+	//    This caps particle counts, disables expensive post-processing,
+	//    and scales back visual effects to keep frame rate stable.
+	lowQuality := quality.LowQualityConfig()
+	qualitySystem = engine.NewQualitySystem(&lowQuality, 60.0)
+	gameInstance.World.AddSystem(&mobileQualitySystemWrapper{system: qualitySystem})
+
+	// 4. Performance monitoring system — tracks frame times so the quality
+	//    auto-adjuster has data to react to.
+	perfSystem := engine.NewPerformanceMonitoringSystem()
+	gameInstance.World.AddSystem(perfSystem)
+
+	// 5. Aggressive GC tuning for mobile — lower the target percentage so the
+	//    garbage collector runs more often, keeping peak RSS in check.
+	debug.SetGCPercent(50)
+
+	logger.WithFields(logrus.Fields{
+		"systemCount":        43,
+		"spriteCacheMB":      mobileSpriteCacheMaxSize / (1024 * 1024),
+		"animationCacheSize": mobileAnimationCacheSize,
+		"qualityLevel":       "Low",
+	}).Info("game systems initialized with mobile performance controls")
 }
 
 // initializeTerrainAndSystems generates terrain and configures terrain-dependent systems.
@@ -406,4 +467,14 @@ func GetScreenHeight() int {
 		return 0
 	}
 	return DefaultScreenHeight
+}
+
+// mobileQualitySystemWrapper adapts QualitySystem to the ECS System interface
+// so it can be registered with World.AddSystem and updated each frame.
+type mobileQualitySystemWrapper struct {
+	system *engine.QualitySystem
+}
+
+func (w *mobileQualitySystemWrapper) Update(entities []*engine.Entity, deltaTime float64) {
+	w.system.Update(deltaTime)
 }

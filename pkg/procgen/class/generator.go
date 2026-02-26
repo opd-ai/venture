@@ -34,11 +34,20 @@ type ClassPreset struct {
 	Specializations []engine.SpecializationType
 }
 
+// genreTheming holds genre-specific class name/description mappings.
+type genreTheming struct {
+	name        string
+	description string
+}
+
 // ClassGenerator generates character class configurations.
 type ClassGenerator struct {
 	// presets stores the base class configurations indexed by class type.
 	// Contains all 21 classes (6 base + 15 hybrid) initialized at construction.
 	presets map[engine.CharacterClass]ClassPreset
+	// genreThemes stores genre-specific name/description overrides.
+	// Key format: "genreID:classType" (e.g., "scifi:0" for Warrior in sci-fi).
+	genreThemes map[string]genreTheming
 	// logger is the logger instance used for error and debug logging.
 	// If nil, the package-level logrus logger is used.
 	logger *logrus.Entry
@@ -47,10 +56,12 @@ type ClassGenerator struct {
 // NewClassGenerator creates a new class generator with default logging.
 func NewClassGenerator() *ClassGenerator {
 	gen := &ClassGenerator{
-		presets: make(map[engine.CharacterClass]ClassPreset),
-		logger:  logrus.WithField("system_name", "class_generator"),
+		presets:     make(map[engine.CharacterClass]ClassPreset),
+		genreThemes: make(map[string]genreTheming),
+		logger:      logrus.WithField("system_name", "class_generator"),
 	}
 	gen.initializePresets()
+	gen.initializeGenreThemes()
 	return gen
 }
 
@@ -59,13 +70,15 @@ func NewClassGenerator() *ClassGenerator {
 // integration with custom logging pipelines and structured logging contexts.
 func NewClassGeneratorWithLogger(logger *logrus.Entry) *ClassGenerator {
 	gen := &ClassGenerator{
-		presets: make(map[engine.CharacterClass]ClassPreset),
-		logger:  logger,
+		presets:     make(map[engine.CharacterClass]ClassPreset),
+		genreThemes: make(map[string]genreTheming),
+		logger:      logger,
 	}
 	if gen.logger == nil {
 		gen.logger = logrus.WithField("system_name", "class_generator")
 	}
 	gen.initializePresets()
+	gen.initializeGenreThemes()
 	return gen
 }
 
@@ -346,6 +359,74 @@ func (g *ClassGenerator) initializePresets() {
 	}
 }
 
+// initializeGenreThemes sets up genre-specific class name/description mappings.
+func (g *ClassGenerator) initializeGenreThemes() {
+	// Sci-Fi genre mappings
+	g.addGenreTheme("scifi", engine.ClassWarrior, "Shock Trooper", "Elite combat specialist with powered armor and energy weapons.")
+	g.addGenreTheme("scifi", engine.ClassRogue, "Infiltrator", "Stealth operative using cloaking tech and precision strikes.")
+	g.addGenreTheme("scifi", engine.ClassMage, "Psionic", "Psychic warrior wielding telekinetic and telepathic powers.")
+	g.addGenreTheme("scifi", engine.ClassCleric, "Medic", "Field surgeon with advanced healing nanobots and support drones.")
+	g.addGenreTheme("scifi", engine.ClassRanger, "Scout", "Recon specialist with tactical sensors and long-range weaponry.")
+	g.addGenreTheme("scifi", engine.ClassPaladin, "Vanguard", "Frontline defender in powered exo-armor with energy shields.")
+
+	// Horror genre mappings
+	g.addGenreTheme("horror", engine.ClassWarrior, "Survivor", "Hardened fighter who endures against overwhelming darkness.")
+	g.addGenreTheme("horror", engine.ClassRogue, "Stalker", "Silent predator who hunts from the shadows.")
+	g.addGenreTheme("horror", engine.ClassMage, "Occultist", "Dark ritualist channeling forbidden and cursed energies.")
+	g.addGenreTheme("horror", engine.ClassCleric, "Exorcist", "Holy warrior banishing undead and cleansing corruption.")
+	g.addGenreTheme("horror", engine.ClassRanger, "Hunter", "Monster slayer tracking supernatural threats.")
+	g.addGenreTheme("horror", engine.ClassPaladin, "Crusader", "Divine champion standing against the forces of evil.")
+
+	// Cyberpunk genre mappings
+	g.addGenreTheme("cyberpunk", engine.ClassWarrior, "Street Samurai", "Augmented mercenary with cybernetic combat implants.")
+	g.addGenreTheme("cyberpunk", engine.ClassRogue, "Netrunner", "Elite hacker infiltrating corporate systems and ICE.")
+	g.addGenreTheme("cyberpunk", engine.ClassMage, "Technomancer", "Digital sorcerer manipulating cyberspace with neural interface.")
+	g.addGenreTheme("cyberpunk", engine.ClassCleric, "Ripperdoc", "Black market surgeon installing illegal cyberware upgrades.")
+	g.addGenreTheme("cyberpunk", engine.ClassRanger, "Drone Rigger", "Tactical operator controlling combat drones remotely.")
+	g.addGenreTheme("cyberpunk", engine.ClassPaladin, "Corporate Enforcer", "Heavily augmented security operative protecting corporate assets.")
+
+	// Post-Apocalyptic genre mappings
+	g.addGenreTheme("postapocalyptic", engine.ClassWarrior, "Raider", "Wasteland warrior scavenging for survival.")
+	g.addGenreTheme("postapocalyptic", engine.ClassRogue, "Scavenger", "Resourceful survivor finding treasures in the ruins.")
+	g.addGenreTheme("postapocalyptic", engine.ClassMage, "Mutant", "Radiation-touched individual with strange powers.")
+	g.addGenreTheme("postapocalyptic", engine.ClassCleric, "Healer", "Medic keeping communities alive in the wasteland.")
+	g.addGenreTheme("postapocalyptic", engine.ClassRanger, "Outrider", "Nomadic scout navigating the dangerous wastes.")
+	g.addGenreTheme("postapocalyptic", engine.ClassPaladin, "Protector", "Guardian defending settlements from threats.")
+}
+
+// addGenreTheme adds a genre-specific name/description override for a class.
+func (g *ClassGenerator) addGenreTheme(genreID string, classType engine.CharacterClass, name, description string) {
+	key := fmt.Sprintf("%s:%d", genreID, classType)
+	g.genreThemes[key] = genreTheming{
+		name:        name,
+		description: description,
+	}
+}
+
+// getThemedName returns the genre-specific name for a class, or the default if no theme exists.
+func (g *ClassGenerator) getThemedName(genreID string, classType engine.CharacterClass, defaultName string) string {
+	if genreID == "" || genreID == "fantasy" {
+		return defaultName
+	}
+	key := fmt.Sprintf("%s:%d", genreID, classType)
+	if theme, ok := g.genreThemes[key]; ok {
+		return theme.name
+	}
+	return defaultName
+}
+
+// getThemedDescription returns the genre-specific description for a class, or the default if no theme exists.
+func (g *ClassGenerator) getThemedDescription(genreID string, classType engine.CharacterClass, defaultDesc string) string {
+	if genreID == "" || genreID == "fantasy" {
+		return defaultDesc
+	}
+	key := fmt.Sprintf("%s:%d", genreID, classType)
+	if theme, ok := g.genreThemes[key]; ok {
+		return theme.description
+	}
+	return defaultDesc
+}
+
 // Generate creates a class configuration with optional variation.
 func (g *ClassGenerator) Generate(seed int64, params procgen.GenerationParams) (interface{}, error) {
 	rng := rand.New(rand.NewSource(seed))
@@ -377,10 +458,14 @@ func (g *ClassGenerator) Generate(seed int64, params procgen.GenerationParams) (
 	// Apply difficulty-based variation (±10% for stats)
 	variation := 1.0 + (rng.Float64()-0.5)*0.2*params.Difficulty
 
+	// Apply genre theming to name and description
+	themedName := g.getThemedName(params.GenreID, preset.Type, preset.Name)
+	themedDesc := g.getThemedDescription(params.GenreID, preset.Type, preset.Description)
+
 	result := ClassPreset{
 		Type:              preset.Type,
-		Name:              preset.Name,
-		Description:       preset.Description,
+		Name:              themedName,
+		Description:       themedDesc,
 		StartingHP:        preset.StartingHP * variation,
 		StartingMana:      preset.StartingMana * variation,
 		StartingAttack:    preset.StartingAttack * variation,
@@ -457,10 +542,26 @@ func (g *ClassGenerator) randomClassType(rng *rand.Rand) engine.CharacterClass {
 // GetAllPresets returns all available class presets in enum order.
 func (g *ClassGenerator) GetAllPresets() []ClassPreset {
 	presets := make([]ClassPreset, 0, len(g.presets))
-	for i := 0; i < len(g.presets); i++ {
+
+	// Iterate through all possible enum values up to a reasonable maximum
+	// This handles potential gaps in the enum sequence
+	const maxClassEnum = 100 // Safety limit to prevent infinite loops
+	foundCount := 0
+
+	for i := 0; i < maxClassEnum && foundCount < len(g.presets); i++ {
 		if preset, ok := g.presets[engine.CharacterClass(i)]; ok {
 			presets = append(presets, preset)
+			foundCount++
 		}
 	}
+
+	// Log warning if we didn't find all expected presets
+	if foundCount < len(g.presets) {
+		g.logger.WithFields(logrus.Fields{
+			"expected": len(g.presets),
+			"found":    foundCount,
+		}).Warn("GetAllPresets did not find all registered presets - enum may have gaps")
+	}
+
 	return presets
 }

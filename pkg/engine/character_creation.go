@@ -18,6 +18,7 @@ import (
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
 	"github.com/hajimehoshi/ebiten/v2/text"
 	"github.com/hajimehoshi/ebiten/v2/vector"
+	"github.com/opd-ai/venture/pkg/config"
 	"github.com/opd-ai/venture/pkg/mobile"
 	"github.com/opd-ai/venture/pkg/procgen"
 	"github.com/opd-ai/venture/pkg/recovery"
@@ -52,210 +53,34 @@ func GetDefaultPicturesDirectory() string {
 	}
 }
 
-// CharacterClass represents a player archetype with specific stat distributions
-type CharacterClass int
+// CharacterClass represents a player archetype with specific stat distributions.
+// This is a type alias to config.CharacterClass to avoid circular dependencies.
+type CharacterClass = config.CharacterClass
 
+// Class constants are re-exported from config package for convenience
 const (
-	// Base Classes (6 original)
-	// ClassWarrior is a high HP, melee-focused class
-	ClassWarrior CharacterClass = iota
-	// ClassMage is a high mana, magic-focused class
-	ClassMage
-	// ClassRogue is a balanced, agility-focused class
-	ClassRogue
-	// ClassRanger is a ranged combat class with pet bonding abilities (V4 Phase 25)
-	ClassRanger
-	// ClassCleric is a support class with healing and buffs (V4 Phase 25)
-	ClassCleric
-	// ClassNecromancer is a summoning class with life drain and debuffs (V4 Phase 25)
-	ClassNecromancer
-
-	// Hybrid Classes (15 combinations) - Phase 25.2 Extension
-	// ClassBattlemage combines Warrior melee prowess with Mage spellcasting
-	ClassBattlemage
-	// ClassSpellblade combines Rogue agility with Mage magic
-	ClassSpellblade
-	// ClassPaladin combines Warrior strength with Cleric holy powers
-	ClassPaladin
-	// ClassMonk combines Rogue speed with Cleric spiritual discipline
-	ClassMonk
-	// ClassDeathKnight combines Warrior combat with Necromancer dark magic
-	ClassDeathKnight
-	// ClassWitchHunter combines Ranger precision with Cleric divine power
-	ClassWitchHunter
-	// ClassBeastlord combines Warrior might with Ranger beast mastery
-	ClassBeastlord
-	// ClassArcaneArcher combines Ranger marksmanship with Mage arcane arts
-	ClassArcaneArcher
-	// ClassShadowPriest combines Rogue shadows with Necromancer dark arts
-	ClassShadowPriest
-	// ClassDruid combines Ranger nature affinity with Mage elemental magic
-	ClassDruid
-	// ClassInquisitor combines Cleric faith with Rogue investigation
-	ClassInquisitor
-	// ClassBloodKnight combines Warrior combat with Necromancer blood magic
-	ClassBloodKnight
-	// ClassMystic combines Mage arcane knowledge with Cleric divine wisdom
-	ClassMystic
-	// ClassWarlock combines Mage magic with Necromancer dark pacts
-	ClassWarlock
-	// ClassNinja combines Rogue stealth with Ranger precision strikes
-	ClassNinja
+	ClassWarrior      = config.ClassWarrior
+	ClassMage         = config.ClassMage
+	ClassRogue        = config.ClassRogue
+	ClassRanger       = config.ClassRanger
+	ClassCleric       = config.ClassCleric
+	ClassNecromancer  = config.ClassNecromancer
+	ClassBattlemage   = config.ClassBattlemage
+	ClassSpellblade   = config.ClassSpellblade
+	ClassPaladin      = config.ClassPaladin
+	ClassMonk         = config.ClassMonk
+	ClassDeathKnight  = config.ClassDeathKnight
+	ClassWitchHunter  = config.ClassWitchHunter
+	ClassBeastlord    = config.ClassBeastlord
+	ClassArcaneArcher = config.ClassArcaneArcher
+	ClassShadowPriest = config.ClassShadowPriest
+	ClassDruid        = config.ClassDruid
+	ClassInquisitor   = config.ClassInquisitor
+	ClassBloodKnight  = config.ClassBloodKnight
+	ClassMystic       = config.ClassMystic
+	ClassWarlock      = config.ClassWarlock
+	ClassNinja        = config.ClassNinja
 )
-
-// String returns the human-readable class name
-func (c CharacterClass) String() string {
-	switch c {
-	case ClassWarrior:
-		return "Warrior"
-	case ClassMage:
-		return "Mage"
-	case ClassRogue:
-		return "Rogue"
-	case ClassRanger:
-		return "Ranger"
-	case ClassCleric:
-		return "Cleric"
-	case ClassNecromancer:
-		return "Necromancer"
-	// Hybrid classes
-	case ClassBattlemage:
-		return "Battlemage"
-	case ClassSpellblade:
-		return "Spellblade"
-	case ClassPaladin:
-		return "Paladin"
-	case ClassMonk:
-		return "Monk"
-	case ClassDeathKnight:
-		return "Death Knight"
-	case ClassWitchHunter:
-		return "Witch Hunter"
-	case ClassBeastlord:
-		return "Beastlord"
-	case ClassArcaneArcher:
-		return "Arcane Archer"
-	case ClassShadowPriest:
-		return "Shadow Priest"
-	case ClassDruid:
-		return "Druid"
-	case ClassInquisitor:
-		return "Inquisitor"
-	case ClassBloodKnight:
-		return "Blood Knight"
-	case ClassMystic:
-		return "Mystic"
-	case ClassWarlock:
-		return "Warlock"
-	case ClassNinja:
-		return "Ninja"
-	default:
-		return "Unknown"
-	}
-}
-
-// Description returns a short description of the class
-func (c CharacterClass) Description() string {
-	switch c {
-	case ClassWarrior:
-		return "Masters of melee combat with high HP and defense. Use WASD to move and SPACE to attack."
-	case ClassMage:
-		return "Wielders of arcane magic with powerful spells. Press 1-5 to cast spells. Low HP, high mana."
-	case ClassRogue:
-		return "Agile fighters with balanced stats and critical strikes. Quick attacks and evasion."
-	case ClassRanger:
-		return "Skilled archer and beast tamer. Excels at ranged combat and can bond with companions."
-	case ClassCleric:
-		return "Divine caster who heals allies and smites enemies. Balances support with holy combat."
-	case ClassNecromancer:
-		return "Dark mage who commands the undead. Summons minions and drains life force."
-	// Hybrid classes
-	case ClassBattlemage:
-		return "Armored spellcaster combining martial prowess with destructive magic. High versatility."
-	case ClassSpellblade:
-		return "Agile warrior-mage weaving spells between swift strikes. Magic enhances combat."
-	case ClassPaladin:
-		return "Holy warrior blending heavy armor with divine healing. Protects allies with faith."
-	case ClassMonk:
-		return "Unarmed combatant using spiritual energy and incredible speed. Discipline over equipment."
-	case ClassDeathKnight:
-		return "Fallen warrior wielding dark necromantic powers. Life drain sustains in battle."
-	case ClassWitchHunter:
-		return "Divine marksman specializing in hunting supernatural threats. Faith guides arrows."
-	case ClassBeastlord:
-		return "Savage warrior commanding powerful beasts. Fights alongside animal companions."
-	case ClassArcaneArcher:
-		return "Ranger infusing arrows with arcane energy. Magic projectiles pierce defenses."
-	case ClassShadowPriest:
-		return "Stealthy cleric wielding shadow magic and forbidden knowledge. Darkness heals."
-	case ClassDruid:
-		return "Nature guardian shapeshifting between forms. Controls elements and beasts."
-	case ClassInquisitor:
-		return "Holy investigator rooting out corruption with divine judgment. Truth through faith."
-	case ClassBloodKnight:
-		return "Warrior sacrificing health for devastating blood magic attacks. Pain fuels power."
-	case ClassMystic:
-		return "Enlightened caster balancing arcane and divine magic. Wisdom guides spells."
-	case ClassWarlock:
-		return "Pact-bound mage wielding eldritch powers. Dark bargains grant forbidden magic."
-	case ClassNinja:
-		return "Master assassin combining stealth with precise strikes. Shadows are allies."
-	default:
-		return ""
-	}
-}
-
-// LowerName returns the lowercase name of the class for matching with item restrictions.
-// Phase 25.2: Used for class-specific equipment restrictions.
-func (c CharacterClass) LowerName() string {
-	switch c {
-	case ClassWarrior:
-		return "warrior"
-	case ClassMage:
-		return "mage"
-	case ClassRogue:
-		return "rogue"
-	case ClassRanger:
-		return "ranger"
-	case ClassCleric:
-		return "cleric"
-	case ClassNecromancer:
-		return "necromancer"
-	// Hybrid classes
-	case ClassBattlemage:
-		return "battlemage"
-	case ClassSpellblade:
-		return "spellblade"
-	case ClassPaladin:
-		return "paladin"
-	case ClassMonk:
-		return "monk"
-	case ClassDeathKnight:
-		return "deathknight"
-	case ClassWitchHunter:
-		return "witchhunter"
-	case ClassBeastlord:
-		return "beastlord"
-	case ClassArcaneArcher:
-		return "arcanearcher"
-	case ClassShadowPriest:
-		return "shadowpriest"
-	case ClassDruid:
-		return "druid"
-	case ClassInquisitor:
-		return "inquisitor"
-	case ClassBloodKnight:
-		return "bloodknight"
-	case ClassMystic:
-		return "mystic"
-	case ClassWarlock:
-		return "warlock"
-	case ClassNinja:
-		return "ninja"
-	default:
-		return "unknown"
-	}
-}
 
 // CharacterData holds the player's character creation choices
 type CharacterData struct {

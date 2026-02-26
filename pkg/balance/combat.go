@@ -7,7 +7,7 @@ import (
 	"math/rand"
 	"time"
 
-	"github.com/opd-ai/venture/pkg/engine"
+	"github.com/opd-ai/venture/pkg/config"
 	"github.com/sirupsen/logrus"
 )
 
@@ -102,13 +102,13 @@ func (v *CombatValidator) Validate(ctx context.Context) (*ValidationResult, erro
 
 // validateClassBalance simulates PvP battles between all class pairs.
 func (v *CombatValidator) validateClassBalance(ctx context.Context, result *ValidationResult) error {
-	classTypes := []engine.CharacterClass{
-		engine.ClassWarrior,
-		engine.ClassRogue,
-		engine.ClassMage,
-		engine.ClassRanger,
-		engine.ClassCleric,
-		engine.ClassNecromancer,
+	classTypes := []config.CharacterClass{
+		config.ClassWarrior,
+		config.ClassRogue,
+		config.ClassMage,
+		config.ClassRanger,
+		config.ClassCleric,
+		config.ClassNecromancer,
 	}
 	classNames := []string{"Warrior", "Rogue", "Mage", "Ranger", "Cleric", "Necromancer"}
 
@@ -120,7 +120,7 @@ func (v *CombatValidator) validateClassBalance(ctx context.Context, result *Vali
 }
 
 // runClassBattleSimulations executes all class vs class battle simulations.
-func (v *CombatValidator) runClassBattleSimulations(ctx context.Context, classTypes []engine.CharacterClass, classNames []string, totalSims int) (wins, battles map[string]int) {
+func (v *CombatValidator) runClassBattleSimulations(ctx context.Context, classTypes []config.CharacterClass, classNames []string, totalSims int) (wins, battles map[string]int) {
 	wins = make(map[string]int)
 	battles = make(map[string]int)
 	rng := rand.New(rand.NewSource(v.config.Seed))
@@ -139,7 +139,7 @@ func (v *CombatValidator) runClassBattleSimulations(ctx context.Context, classTy
 }
 
 // runBattlesForClass runs all battle simulations for a single class against all other classes.
-func (v *CombatValidator) runBattlesForClass(ctx context.Context, classIndex int, class1 engine.CharacterClass, classTypes []engine.CharacterClass, classNames []string, simCount int, rng *rand.Rand, wins, battles map[string]int) {
+func (v *CombatValidator) runBattlesForClass(ctx context.Context, classIndex int, class1 config.CharacterClass, classTypes []config.CharacterClass, classNames []string, simCount int, rng *rand.Rand, wins, battles map[string]int) {
 	for j, class2 := range classTypes {
 		if v.shouldSkipBattle(ctx, classIndex, j) {
 			return
@@ -163,7 +163,7 @@ func (v *CombatValidator) shouldSkipBattle(ctx context.Context, i, j int) bool {
 }
 
 // runClassVsClassBattles runs multiple simulations of one class versus another.
-func (v *CombatValidator) runClassVsClassBattles(i, j int, class1, class2 engine.CharacterClass, classNames []string, simCount, classTypeCount int, rng *rand.Rand, wins, battles map[string]int) {
+func (v *CombatValidator) runClassVsClassBattles(i, j int, class1, class2 config.CharacterClass, classNames []string, simCount, classTypeCount int, rng *rand.Rand, wins, battles map[string]int) {
 	numBattles := simCount / classTypeCount
 	for k := 0; k < numBattles; k++ {
 		v.recordBattleOutcome(i, class1, class2, classNames, rng, wins, battles)
@@ -171,7 +171,7 @@ func (v *CombatValidator) runClassVsClassBattles(i, j int, class1, class2 engine
 }
 
 // recordBattleOutcome simulates a single battle and records the result.
-func (v *CombatValidator) recordBattleOutcome(classIndex int, class1, class2 engine.CharacterClass, classNames []string, rng *rand.Rand, wins, battles map[string]int) {
+func (v *CombatValidator) recordBattleOutcome(classIndex int, class1, class2 config.CharacterClass, classNames []string, rng *rand.Rand, wins, battles map[string]int) {
 	winner := v.simulateBattle(class1, class2, rng)
 	battles[classNames[classIndex]]++
 	if winner == 1 {
@@ -226,7 +226,7 @@ func (v *CombatValidator) checkBalanceThresholds(minWinRate, maxWinRate float64,
 }
 
 // simulateBattle simulates a battle between two classes, returns 1 if class1 wins, 2 if class2 wins.
-func (v *CombatValidator) simulateBattle(class1, class2 engine.CharacterClass, rng *rand.Rand) int {
+func (v *CombatValidator) simulateBattle(class1, class2 config.CharacterClass, rng *rand.Rand) int {
 	// Get class-specific stats
 	stats1 := v.getClassStats(class1)
 	stats2 := v.getClassStats(class2)
@@ -258,19 +258,19 @@ func (v *CombatValidator) simulateBattle(class1, class2 engine.CharacterClass, r
 }
 
 // getClassStats returns baseline stats for a class type.
-func (v *CombatValidator) getClassStats(classType engine.CharacterClass) struct {
+func (v *CombatValidator) getClassStats(classType config.CharacterClass) struct {
 	Attack, Defense, MaxHP float64
 } {
 	// Baseline stats from V4.0 Phase 25 class definitions
 	// Balanced to ensure win rates fall within 45-55% range
 	// Total stat budget ~165 per class for balanced gameplay
-	stats := map[engine.CharacterClass]struct{ Attack, Defense, MaxHP float64 }{
-		engine.ClassWarrior:     {Attack: 17, Defense: 13, MaxHP: 135},
-		engine.ClassRogue:       {Attack: 18, Defense: 12, MaxHP: 132},
-		engine.ClassMage:        {Attack: 20, Defense: 10, MaxHP: 125},
-		engine.ClassRanger:      {Attack: 18, Defense: 12, MaxHP: 130},
-		engine.ClassCleric:      {Attack: 16, Defense: 14, MaxHP: 140},
-		engine.ClassNecromancer: {Attack: 18, Defense: 11, MaxHP: 130},
+	stats := map[config.CharacterClass]struct{ Attack, Defense, MaxHP float64 }{
+		config.ClassWarrior:     {Attack: 17, Defense: 13, MaxHP: 135},
+		config.ClassRogue:       {Attack: 18, Defense: 12, MaxHP: 132},
+		config.ClassMage:        {Attack: 20, Defense: 10, MaxHP: 125},
+		config.ClassRanger:      {Attack: 18, Defense: 12, MaxHP: 130},
+		config.ClassCleric:      {Attack: 16, Defense: 14, MaxHP: 140},
+		config.ClassNecromancer: {Attack: 18, Defense: 11, MaxHP: 130},
 	}
 	return stats[classType]
 }
@@ -447,7 +447,7 @@ func (v *CombatValidator) validateBossDifficulty(ctx context.Context, result *Va
 		}
 
 		// Simulate player fighting boss (baseline player stats)
-		playerStats := v.getClassStats(engine.ClassWarrior) // Average player
+		playerStats := v.getClassStats(config.ClassWarrior) // Average player
 		if !v.playerDefeatsBoss(playerStats, boss, rng) {
 			failures++
 		}

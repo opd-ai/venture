@@ -38,13 +38,46 @@ go.work.sum
 # Code review artifacts
 .code_review_results
 
-# Built binaries (in project root)
-/client*
-/server*
+# ---- Built binaries ----
+
+# cmd/ binaries (client, server, mobile, balance-validator)
+/client
+/server
+/mobile
+/balance-validator
 /venture-client*
 /venture-server*
 
-# Test tool binaries
+# Cross-compiled / platform-suffixed binaries
+/venture-*-linux-*
+/venture-*-darwin-*
+/venture-*-windows-*
+
+# Example binaries (built from examples/)
+/animation_timing_demo
+/bloom_demo
+/file_watcher_demo
+/genre_ui_palettes_demo
+/mod_repository_fs_integration
+/momentum_scrolling_demo
+/mouse_delta_demo
+/soft_shadow_demo
+/sprite_antialiasing_demo
+/virtual_controls_wasm_demo
+/voice_integration_demo
+/weather_cli_demo
+
+# Phantom / historical example binaries referenced in scripts/docs
+/featureaudit
+/visualregressiontest
+/paritytest
+/loadtest
+/keyboardtest
+/lighting_demo
+/perfprofile*
+/auditrunner
+
+# Ad-hoc test tool binaries (legacy names)
 /terraintest*
 /entitytest*
 /itemtest*
@@ -59,18 +92,22 @@ go.work.sum
 /questtest*
 /inventorytest*
 /perftest*
+/complete_dungeon_generation
+/terrain_entity_integration
+
+# Catch-all: any demo or test binary in project root
 /*demo*
 /*test*
+
+# ---- Distribution / build outputs ----
 /dist
+
+# ---- Misc generated / temp files ----
 /run.sh
 /validate_build.sh
 /l.sh
 /loop.sh
 /cmd.sh
-/perfprofile*
-/complete_dungeon_generation
-/terrain_entity_integration
-/mod_repository_fs_integration
 *.backup
 *.gz
 /*.md
@@ -87,8 +124,6 @@ go.work.sum
 .DS_Store
 .idea/
 .vscode/
-/auditrunner
-/featureaudit
 /baseline.json
 /refactored.json
 **/refactored.json

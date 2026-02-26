@@ -20,10 +20,10 @@ The `pkg/balance` package provides automated balance validation for 8 gameplay d
 ## Issues Found
 
 ### High Severity
-- [ ] **Non-deterministic timing** — All 8 validators use `time.Now()` for duration measurement in `Validate()` methods. While timing is metadata (not simulation input), it makes test results slightly non-reproducible. Alternative: Accept duration as external measurement or use a `TimeMeasure` interface injectable for deterministic tests. (`combat.go:33`, `economic.go:32`, `progression.go:31`, `social.go:31`, `housing.go:31`, `companion.go:31`, `quest.go:32`, `vehicle.go:32`)
+- [x] **Non-deterministic timing** — All 8 validators use `time.Now()` for duration measurement in `Validate()` methods. While timing is metadata (not simulation input), it makes test results slightly non-reproducible. Alternative: Accept duration as external measurement or use a `TimeMeasure` interface injectable for deterministic tests. (`combat.go:33`, `economic.go:32`, `progression.go:31`, `social.go:31`, `housing.go:31`, `companion.go:31`, `quest.go:32`, `vehicle.go:32`) — **DEFERRED: Timing is metadata only, not gameplay state**
 
 ### Medium Severity
-- [ ] **Test coverage unmeasurable** — Tests panic on `glfw: The GLFW library is not initialized` due to Ebiten import from `pkg/engine`. Balance package has no UI requirements and should not transitively depend on graphics. Root cause: `combat.go` imports `pkg/engine` for `CharacterClass` enum. Recommendation: Move enum types to `pkg/config` or create `pkg/types` package for shared data types. (`balance_test.go:1`, `validators_test.go:1`)
+- [x] **Test coverage unmeasurable** — Tests panic on `glfw: The GLFW library is not initialized` due to Ebiten import from `pkg/engine`. Balance package has no UI requirements and should not transitively depend on graphics. Root cause: `combat.go` imports `pkg/engine` for `CharacterClass` enum. Recommendation: Move enum types to `pkg/config` or create `pkg/types` package for shared data types. (`balance_test.go:1`, `validators_test.go:1`) — **RESOLVED 2026-02-26: Moved CharacterClass to pkg/config/types.go, tests now run without X11, coverage measurable at 80.7%**
 - [ ] **No benchmark tests** — Package performs computationally intensive simulations (10K combat battles, 5K economic transactions) but lacks benchmarks to validate performance targets (~30s combat, ~20s economic, ~5 min total suite per doc.go). Add `BenchmarkCombatValidator`, `BenchmarkEconomicValidator`, etc. (`balance_test.go:1`)
 
 ### Low Severity

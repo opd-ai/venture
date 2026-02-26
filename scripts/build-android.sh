@@ -46,6 +46,19 @@ check_prerequisites() {
         echo_warn "ebitenmobile not found, installing..."
         go install github.com/hajimehoshi/ebiten/v2/cmd/ebitenmobile@v2.9.3
     fi
+
+    # Warn if multiple ebitenmobile binaries are on PATH (stale copies cause version mismatches)
+    EBITENMOBILE_PATHS=$(IFS=:; for dir in $PATH; do [ -x "$dir/ebitenmobile" ] && echo "$dir/ebitenmobile"; done || true)
+    if [ -n "$EBITENMOBILE_PATHS" ]; then
+        EBITENMOBILE_COUNT=$(echo "$EBITENMOBILE_PATHS" | wc -l | tr -d ' ')
+    else
+        EBITENMOBILE_COUNT=0
+    fi
+    if [ "$EBITENMOBILE_COUNT" -gt 1 ]; then
+        echo_warn "Multiple ebitenmobile binaries found on PATH:"
+        while IFS= read -r p; do [ -n "$p" ] && echo_warn "  $p"; done <<< "$EBITENMOBILE_PATHS"
+        echo_warn "A stale copy may shadow the correct version. Ensure \$GOBIN or \$GOPATH/bin is first in PATH."
+    fi
     
     if [ -z "$ANDROID_HOME" ]; then
         echo_error "ANDROID_HOME is not set"
@@ -107,12 +120,46 @@ build_aar() {
     
     echo_info "AAR built successfully: $BUILD_DIR/libs/mobile.aar"
     
-    # Display AAR info
-    if command -v unzip &> /dev/null; then
+    # Display AAR info and inspect the actual Activity class name inside classes.jar
+    if command -v unzip &> /dev/null && command -v jar &> /dev/null; then
         echo_info "AAR contents:"
         unzip -l "$BUILD_DIR/libs/mobile.aar" | grep -E "\.class|\.so" | head -20
-        
-        # Verify GoNativeActivity exists
+
+        # Extract classes.jar and inspect actual Activity class names
+        AAR_TMP=$(mktemp -d)
+        unzip -q "$BUILD_DIR/libs/mobile.aar" classes.jar -d "$AAR_TMP" 2>/dev/null || true
+        if [ -f "$AAR_TMP/classes.jar" ]; then
+            ACTIVITY_CLASSES=$(jar tf "$AAR_TMP/classes.jar" 2>/dev/null | grep -iF 'Activity.class' || true)
+        else
+            ACTIVITY_CLASSES=""
+        fi
+        rm -rf "$AAR_TMP"
+
+        if [ -z "$ACTIVITY_CLASSES" ]; then
+            echo_error "✗ No Activity class found in AAR - ebitenmobile bind did not compile Java sources"
+            echo_error "Common causes: incompatible NDK version or gomobile version mismatch"
+            echo_error "Try re-initialising gomobile:"
+            echo_error "  go install golang.org/x/mobile/cmd/gomobile@latest"
+            echo_error "  gomobile init"
+            echo_error "Then reinstall ebitenmobile matching the project version:"
+            echo_error "  go install github.com/hajimehoshi/ebiten/v2/cmd/ebitenmobile@v2.9.3"
+            exit 1
+        elif echo "$ACTIVITY_CLASSES" | grep -qF 'GoNativeActivity.class'; then
+            echo_info "✓ GoNativeActivity found in AAR"
+        else
+            echo_error "✗ Activity class(es) found but none match expected 'GoNativeActivity':"
+            while IFS= read -r cls; do
+                [ -n "$cls" ] && echo_error "  Found: $(echo "$cls" | sed 's/\.class$//' | tr '/' '.')"
+            done <<< "$ACTIVITY_CLASSES"
+            echo_error "  Update AndroidManifest.xml android:name to match the actual class shown above"
+            echo_error "  This usually means ebitenmobile version does not match Ebiten v2.9.3"
+            echo_error "  Reinstall with: go install github.com/hajimehoshi/ebiten/v2/cmd/ebitenmobile@v2.9.3"
+            exit 1
+        fi
+    elif command -v unzip &> /dev/null; then
+        # Fallback: shallow check when jar tool is unavailable
+        echo_info "AAR contents:"
+        unzip -l "$BUILD_DIR/libs/mobile.aar" | grep -E "\.class|\.so" | head -20
         if unzip -l "$BUILD_DIR/libs/mobile.aar" | grep -q "GoNativeActivity"; then
             echo_info "✓ GoNativeActivity found in AAR"
         else

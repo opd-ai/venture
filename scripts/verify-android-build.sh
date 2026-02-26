@@ -69,12 +69,13 @@ fi
 if [ -f "$BUILD_DIR/AndroidManifest.xml" ]; then
     pass "AndroidManifest.xml found"
     
-    # Verify meta-data element exists
-    if grep -q '<meta-data android:name="android.app.lib_name" android:value="mobile"' "$BUILD_DIR/AndroidManifest.xml"; then
-        pass "AndroidManifest.xml contains required meta-data element"
+    # Verify meta-data element exists (ebitenmobile generates libgojni.so, so lib_name must be "gojni")
+    if grep -q '<meta-data android:name="android.app.lib_name" android:value="gojni"' "$BUILD_DIR/AndroidManifest.xml"; then
+        pass "AndroidManifest.xml contains required meta-data element (lib_name=gojni)"
     else
         fail "AndroidManifest.xml missing required meta-data element"
-        echo "  The activity must contain: <meta-data android:name=\"android.app.lib_name\" android:value=\"mobile\" />"
+        echo "  The activity must contain: <meta-data android:name=\"android.app.lib_name\" android:value=\"gojni\" />"
+        echo "  Note: ebitenmobile bind generates libgojni.so, not libmobile.so"
         exit 1
     fi
 else

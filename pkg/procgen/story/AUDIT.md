@@ -98,12 +98,12 @@ Package generates story content consumed by `DiscoverySystem` via `StoryFragment
 | Mobile | ✅ | No mobile-specific concerns; generator is stateless |
 
 ## Recommendations
-1. **[HIGH]** Implement ECS components and spawning logic for `ArchaeologicalSite`, `Timeline`, and `CrossDungeonStory` in `pkg/engine/` (following `StoryFragmentComponent` pattern). Add client-side calls to spawn these in `cmd/client/util.go` alongside `spawnStoryFragments()`.
-2. **[HIGH]** Add `Serialize()/Deserialize()` methods to all story types and register them with `pkg/saveload/`. Excavation progress, discovered timelines, and cross-dungeon story state must persist.
-3. **[HIGH]** Remove deprecated methods from `StoryJournalComponent` (set removal target: v2.0) or keep them permanently if backward compatibility is required. Deprecation warnings without timelines create technical debt.
+1. **[HIGH]** Wire up `StoryJournalUI` in `cmd/client/handlers.go` with keybind (suggest `L` for Lore) and register in game state machine. Add to HUD with "Journal" button. This is the highest-impact fix as it makes existing discovered fragments visible to players.
+2. **[HIGH]** Implement ECS components and spawning logic for `ArchaeologicalSite`, `Timeline`, and `CrossDungeonStory` in `pkg/engine/` (following `StoryFragmentComponent` pattern). Add client-side calls to spawn these in `cmd/client/util.go` alongside `spawnStoryFragments()`.
+3. **[HIGH]** Add `Serialize()/Deserialize()` methods to all story types and register them with `pkg/saveload/`. Excavation progress, discovered timelines, and cross-dungeon story state must persist.
 4. **[MED]** Add structured logging with `logrus.WithFields(logrus.Fields{"seed": seed, "genre": params.GenreID, "generator": "story"})` to all `Generate()` methods. Log validation failures and coherence metrics at WARN level.
 5. **[MED]** Extract hard-coded story templates into JSON files under `mods/` directory, allowing mod authors to define custom narratives. Integrate with `pkg/modding/` for override support.
-6. **[MED]** Query actual terrain bounds from `pkg/procgen/terrain/` instead of assuming 100x100 in `generateLocation()`.
+6. **[MED]** Query actual terrain bounds from `pkg/procgen/terrain/` instead of assuming 100x100 in `generateLocation()`. Pass terrain metadata via `GenerationParams.Custom` map.
 7. **[LOW]** Add benchmark tests for all `Generate()` methods to validate the <20ms performance claim in package docs.
 8. **[LOW]** Replace local `Vector2` with engine's position type or extract to shared `pkg/math/` package.
 9. **[LOW]** Add godoc comments to all ECS-compliant helper functions in `story_fragment_component.go`.

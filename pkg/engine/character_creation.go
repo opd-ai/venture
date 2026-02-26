@@ -622,15 +622,19 @@ func (cc *EbitenCharacterCreation) processCurrentStep() {
 	}
 }
 
-// updateTouchButtonPositions positions touch buttons based on panel layout
+// updateTouchButtonPositions positions touch buttons based on panel layout.
+// Touch buttons are placed at the very bottom of the panel, below all drawn
+// content, so they never overlap with in-panel buttons or help text.
 func (cc *EbitenCharacterCreation) updateTouchButtonPositions() {
+	// All navigation buttons sit in a row at the panel's bottom edge.
+	buttonRowY := cc.panelY + cc.panelHeight - 54 // 44px button + 10px bottom padding
+
 	// Next button (bottom-right of panel)
 	if cc.nextButton != nil {
 		nextX := cc.panelX + cc.panelWidth - 140
-		nextY := cc.panelY + cc.panelHeight - 60
 		cc.nextButton.SetPosition(
 			float64(nextX),
-			float64(nextY),
+			float64(buttonRowY),
 		)
 	}
 
@@ -638,7 +642,7 @@ func (cc *EbitenCharacterCreation) updateTouchButtonPositions() {
 	if cc.backButton != nil {
 		cc.backButton.SetPosition(
 			float64(cc.panelX+20),
-			float64(cc.panelY+cc.panelHeight-60),
+			float64(buttonRowY),
 		)
 	}
 
@@ -646,7 +650,7 @@ func (cc *EbitenCharacterCreation) updateTouchButtonPositions() {
 	if cc.skipButton != nil {
 		cc.skipButton.SetPosition(
 			float64(cc.panelX+cc.panelWidth/2-60),
-			float64(cc.panelY+cc.panelHeight-60),
+			float64(buttonRowY),
 		)
 	}
 
@@ -673,7 +677,7 @@ func (cc *EbitenCharacterCreation) updateTouchButtonPositions() {
 // updatePanelDimensions calculates the panel layout
 // Called from both Update (for hit detection) and Draw (for rendering)
 func (cc *EbitenCharacterCreation) updatePanelDimensions() {
-	cc.panelWidth = 600
+	cc.panelWidth = 660
 	cc.panelHeight = 600
 
 	// Clamp to screen size with margin so the panel is always fully visible
@@ -2110,13 +2114,14 @@ func (cc *EbitenCharacterCreation) drawConfirmation(screen *ebiten.Image, x, y, 
 		statY += 20
 	}
 
-	// Draw clickable buttons for touch support
+	// Draw clickable buttons for touch support — above the touch button row
+	// Touch buttons occupy the bottom 54px of the panel.
 	buttonX := x + 50
 	buttonW := w - 100
 	buttonH := 30
 
 	// Confirm button (green/positive action)
-	confirmButtonY := y + h - 85
+	confirmButtonY := y + h - 130
 	vector.DrawFilledRect(screen, float32(buttonX), float32(confirmButtonY),
 		float32(buttonW), float32(buttonH),
 		color.RGBA{50, 120, 50, 255}, false)

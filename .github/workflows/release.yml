@@ -16,167 +16,81 @@ permissions:
   contents: write
 
 jobs:
-  prepare-release:
-    name: Prepare Release
+  build:
+    name: Build All Platforms
+    uses: ./.github/workflows/build.yml
+
+  release:
+    name: Publish Release
+    needs: build
     runs-on: ubuntu-latest
-    outputs:
-      release_type: ${{ steps.release_type.outputs.type }}
-      release_tag: ${{ steps.release_type.outputs.tag }}
-      release_name: ${{ steps.release_type.outputs.name }}
-      prerelease: ${{ steps.release_type.outputs.prerelease }}
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # Fetch all history for changelog generation
+          fetch-depth: 0
 
-      - name: Determine release type
-        id: release_type
+      - name: Determine release info
+        id: info
         run: |
           if [[ "${{ github.ref }}" == refs/tags/v* ]]; then
-            echo "type=version" >> $GITHUB_OUTPUT
             echo "tag=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
-            echo "prerelease=false" >> $GITHUB_OUTPUT
             echo "name=Release ${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
-          elif [[ "${{ github.ref }}" == "refs/heads/main" && "${{ github.event_name }}" == "push" ]]; then
-            echo "type=latest" >> $GITHUB_OUTPUT
-            echo "tag=latest" >> $GITHUB_OUTPUT
             echo "prerelease=false" >> $GITHUB_OUTPUT
+          elif [[ "${{ github.event_name }}" == "push" ]]; then
+            echo "tag=latest" >> $GITHUB_OUTPUT
             echo "name=Latest Build ($(date +'%Y-%m-%d'))" >> $GITHUB_OUTPUT
+            echo "prerelease=false" >> $GITHUB_OUTPUT
           else
-            echo "type=nightly" >> $GITHUB_OUTPUT
             echo "tag=nightly" >> $GITHUB_OUTPUT
-            echo "prerelease=true" >> $GITHUB_OUTPUT
             echo "name=Nightly Build $(date +'%Y-%m-%d')" >> $GITHUB_OUTPUT
+            echo "prerelease=true" >> $GITHUB_OUTPUT
           fi
 
       - name: Delete existing rolling release
-        if: steps.release_type.outputs.type != 'version'
+        if: "!startsWith(github.ref, 'refs/tags/v')"
         continue-on-error: true
-        run: |
-          TAG="${{ steps.release_type.outputs.tag }}"
-          gh release delete "$TAG" --cleanup-tag --yes || true
+        run: gh release delete "${{ steps.info.outputs.tag }}" --cleanup-tag --yes
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Generate release notes
-        id: release_notes
-        run: |
-          if [ "${{ steps.release_type.outputs.type }}" = "version" ]; then
-            # For version releases, generate changelog from git log
-            PREVIOUS_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
-            if [ -n "$PREVIOUS_TAG" ]; then
-              echo "# Changes since $PREVIOUS_TAG" > release_notes.md
-              git log ${PREVIOUS_TAG}..HEAD --pretty=format:"- %s (%h)" >> release_notes.md
-            else
-              echo "# Release ${{ steps.release_type.outputs.tag }}" > release_notes.md
-              git log --pretty=format:"- %s (%h)" -10 >> release_notes.md
-            fi
-          elif [ "${{ steps.release_type.outputs.type }}" = "latest" ]; then
-            # For latest, show recent commits
-            echo "# Latest Build - $(date +'%Y-%m-%d')" > release_notes.md
-            echo "" >> release_notes.md
-            echo "Latest build from the main branch. Updated on every push." >> release_notes.md
-            echo "" >> release_notes.md
-            echo "## Recent Changes" >> release_notes.md
-            git log --pretty=format:"- %s (%h)" -10 >> release_notes.md
-          else
-            # For nightly, show recent commits
-            echo "# Nightly Build - $(date +'%Y-%m-%d')" > release_notes.md
-            echo "" >> release_notes.md
-            echo "Automated nightly build from the main branch." >> release_notes.md
-            echo "" >> release_notes.md
-            echo "## Recent Changes" >> release_notes.md
-            git log --pretty=format:"- %s (%h)" -10 >> release_notes.md
-          fi
-
-      - name: Upload release notes
-        uses: actions/upload-artifact@v4
-        with:
-          name: release-notes
-          path: release_notes.md
-          retention-days: 1
-
-  # Call the build workflow to generate all artifacts
-  build:
-    name: Build All Platforms
-    needs: prepare-release
-    uses: ./.github/workflows/build.yml
-
-  publish-release:
-    name: Publish Release
-    needs: [prepare-release, build]
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
 
       - name: Download all artifacts
         uses: actions/download-artifact@v4
         with:
           path: artifacts
 
-      - name: Create archives from build.yml artifacts
+      - name: Create archives
         run: |
           mkdir -p build
-          
-          # Process artifacts from build.yml (uncompressed binaries)
-          # Now includes arm64 support
           for dir in artifacts/linux-amd64 artifacts/linux-arm64 artifacts/windows-amd64 artifacts/darwin-amd64 artifacts/darwin-arm64 artifacts/wasm; do
-            if [ -d "$dir" ]; then
-              cd "$dir"
-              
-              # Handle WASM separately (tar.gz)
-              if [[ "$dir" == *"wasm"* ]]; then
-                tar czf venture-wasm.tar.gz *
-                mv venture-wasm.tar.gz ../../build/
-              else
-                # Handle regular binaries
-                for file in venture-server-* venture-client-*; do
-                  if [ -f "$file" ]; then
-                    # Determine the appropriate archive format
-                    if [[ "$file" == *.exe ]]; then
-                      zip "${file%.exe}.zip" "$file"
-                      mv "${file%.exe}.zip" ../../build/
-                    else
-                      tar czf "${file}.tar.gz" "$file"
-                      mv "${file}.tar.gz" ../../build/
-                    fi
-                  fi
-                done
-              fi
-              cd - > /dev/null
+            [ -d "$dir" ] || continue
+            cd "$dir"
+            if [[ "$dir" == *"wasm"* ]]; then
+              tar czf ../../build/venture-wasm.tar.gz *
+            else
+              for file in venture-server-* venture-client-*; do
+                [ -f "$file" ] || continue
+                if [[ "$file" == *.exe ]]; then
+                  zip "../../build/${file%.exe}.zip" "$file"
+                else
+                  tar czf "../../build/${file}.tar.gz" "$file"
+                fi
+              done
             fi
+            cd - > /dev/null
           done
-          
-          # Include Android APK
-          if [ -d "artifacts/android-apk" ]; then
-            cp artifacts/android-apk/*.apk build/
-          fi
-
-      - name: Generate SHA256 checksums
-        run: |
-          cd build
-          find . -maxdepth 1 -type f ! -name SHA256SUMS.txt -exec sha256sum {} + > SHA256SUMS.txt
-          cat SHA256SUMS.txt
-          cd ..
-
-      - name: Download release notes
-        uses: actions/download-artifact@v4
-        with:
-          name: release-notes
-          path: .
+          [ -d artifacts/android-apk ] && cp artifacts/android-apk/*.apk build/ || true
+          cd build && sha256sum * > SHA256SUMS.txt
 
       - name: Create release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ needs.prepare-release.outputs.release_tag }}
+          tag_name: ${{ steps.info.outputs.tag }}
           target_commitish: ${{ github.sha }}
-          name: ${{ needs.prepare-release.outputs.release_name }}
-          body_path: release_notes.md
-          prerelease: ${{ needs.prepare-release.outputs.prerelease }}
+          name: ${{ steps.info.outputs.name }}
+          prerelease: ${{ steps.info.outputs.prerelease }}
+          generate_release_notes: true
           files: build/*
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

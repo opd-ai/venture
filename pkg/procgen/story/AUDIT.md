@@ -1,6 +1,6 @@
 # Audit: github.com/opd-ai/venture/pkg/procgen/story
 **Date**: 2026-02-26
-**Auditor**: GitHub Copilot (META_AUDIT v2)
+**Auditor**: GitHub Copilot (META_AUDIT v2 - Re-audit)
 **Status**: Needs Work
 <!--
 Status criteria:
@@ -10,7 +10,7 @@ Status criteria:
 -->
 
 ## Summary
-`pkg/procgen/story` generates environmental story fragments and advanced narrative systems (branching narratives, cross-dungeon stories, historical timelines, archaeology). The package is well-implemented with deterministic generation, clean ECS integration via `StoryFragmentComponent`, and strong test coverage (88.7%). However, **three of four major generators (archaeology, timeline, cross-dungeon) are not integrated** into the main game loop despite being fully implemented, tested, and documented. This represents a significant feature gap where implemented code exists but is unreachable from gameplay.
+`pkg/procgen/story` generates environmental story fragments and advanced narrative systems (branching narratives, cross-dungeon stories, historical timelines, archaeology). The package is well-implemented with deterministic generation, clean ECS integration via `StoryFragmentComponent`, and strong test coverage (88.7%). However, **three of four major generators (archaeology, timeline, cross-dungeon) are not integrated** into the main game loop despite being fully implemented, tested, and documented. Additionally, **StoryJournalUI exists but is never instantiated or rendered**, leaving discovered fragments invisible to players. This represents significant feature gaps where ~60% of implemented code (4809 LOC) exists but is unreachable from gameplay.
 
 ## Automated Check Results
 | Check | Result |

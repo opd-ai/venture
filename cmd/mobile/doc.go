@@ -18,7 +18,7 @@
 //  1. Logger configuration for mobile (text format, info level)
 //  2. Seed generation (from VENTURE_SEED env var or time-based)
 //  3. Genre selection (from VENTURE_GENRE env var or random)
-//  4. Game instance creation with mobile-optimized dimensions (720x1280)
+//  4. Game instance creation with mobile-optimized dimensions (1280x720 landscape landscape)
 //  5. Terrain generation using BSP dungeon algorithm
 //  6. Enemy spawning based on difficulty and genre
 //  7. Player entity creation with all necessary components
@@ -38,8 +38,8 @@
 // The package exports functions for the mobile platform binding:
 //   - Start(): Called by mobile platform to start the game loop
 //   - Update(): Called each frame, returns false to quit
-//   - GetScreenWidth(): Returns the screen width (720)
-//   - GetScreenHeight(): Returns the screen height (1280)
+//   - GetScreenWidth(): Returns the screen width (1280)
+//   - GetScreenHeight(): Returns the screen height (72)
 //
 // # Build Instructions
 //

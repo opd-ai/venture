@@ -13,12 +13,12 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-// Default mobile screen dimensions (portrait orientation)
+// Default mobile screen dimensions (landscape orientation)
 const (
-	// DefaultScreenWidth is the default logical width for mobile devices (portrait)
-	DefaultScreenWidth = 720
-	// DefaultScreenHeight is the default logical height for mobile devices (portrait)
-	DefaultScreenHeight = 1280
+	// DefaultScreenWidth is the default logical width for mobile devices (landscape)
+	DefaultScreenWidth = 1280
+	// DefaultScreenHeight is the default logical height for mobile devices (landscape)
+	DefaultScreenHeight = 72
 )
 
 // Game is the mobile game instance
@@ -389,7 +389,7 @@ func Update() bool {
 }
 
 // GetScreenWidth returns the game's logical screen width in pixels.
-// For mobile, this defaults to DefaultScreenWidth (portrait orientation).
+// For mobile, this defaults to DefaultScreenWidth (landscapee orientation).
 // Returns 0 if the game instance has not been initialized.
 func GetScreenWidth() int {
 	if gameInstance == nil {
@@ -399,7 +399,7 @@ func GetScreenWidth() int {
 }
 
 // GetScreenHeight returns the game's logical screen height in pixels.
-// For mobile, this defaults to DefaultScreenHeight (portrait orientation).
+// For mobile, this defaults to DefaultScreenHeight (landscapee orientation).
 // Returns 0 if the game instance has not been initialized.
 func GetScreenHeight() int {
 	if gameInstance == nil {

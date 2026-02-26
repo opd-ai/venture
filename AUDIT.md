@@ -13,6 +13,7 @@ This file tracks package-level audits across the Venture codebase. Each entry in
 - [x] `cmd/client/AUDIT_2026-02-16_COMPREHENSIVE.md` — Pass — 7 issues (0 high, 1 med, 6 low) — Coverage: 49.4%
 - [x] `cmd/server/AUDIT.md` — Complete — 7 issues (0 high, 3 med, 4 low) — Coverage: Unmeasurable (requires X11; 184% test-to-source ratio)
 - [x] `cmd/mobile/AUDIT.md` — Needs Work — 13 issues (3 high, 5 med, 5 low) — Coverage: 36.9% (0.0% mobile.go, 73.9% config/)
+- [x] `cmd/mobile/config/AUDIT.md` — Needs Work — 5 issues (1 high, 2 med, 2 low) — Coverage: 73.9%
 
 ### Core Packages
 - [x] `pkg/engine/AUDIT.md` — Needs Work — 9 issues (1 high, 4 med, 4 low) — Coverage: 94.0-96.3% (subpackages; main requires X11)

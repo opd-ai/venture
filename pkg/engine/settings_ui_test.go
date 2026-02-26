@@ -58,7 +58,7 @@ func TestNewSettingsUI(t *testing.T) {
 		t.Errorf("Expected selectedIdx 0, got %d", ui.selectedIdx)
 	}
 
-	if len(ui.options) != 9 {
+	if len(ui.options) != 14 {
 		t.Errorf("Expected 9 options (including tutorials and back), got %d", len(ui.options))
 	}
 

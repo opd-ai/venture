@@ -100,6 +100,7 @@ This file tracks package-level audits across the Venture codebase. Each entry in
 - [x] `pkg/mobile/AUDIT.md` — Complete — 5 issues (1 high, 2 med, 2 low) — Coverage: Unmeasurable (requires X11; 135% test-to-source ratio)
 - [x] `pkg/audit/` — N/A (meta-package; only contains `features/` subdir which is already audited; no direct Go files)
 - [x] `pkg/visualtest/AUDIT.md` — Complete — 3 issues (0 high, 0 med, 3 low) — Coverage: 88.1% (parity); 113% test-to-source ratio
+- [x] `pkg/visualtest/parity/AUDIT.md` — Complete — 3 issues (0 high, 0 med, 3 low) — Coverage: 88.1%
 - [x] `pkg/vr/AUDIT.md` — Complete — 3 issues (0 high, 1 med, 2 low) — Coverage: 76.8%
 - [x] `pkg/memprofile/AUDIT.md` — Complete — 3 issues (0 high, 0 med, 3 low) — Coverage: 88.8%
 - [x] `pkg/combat/AUDIT.md` — Complete — 4 issues (0 high, 1 med, 3 low) — Coverage: 98.3%
@@ -118,7 +119,7 @@ This file tracks package-level audits across the Venture codebase. Each entry in
 - [x] `pkg/integration/world_events/AUDIT.md` — Complete — 5 issues (0 high, 2 med, 3 low) — Coverage: 92.9%
 
 ## Audit Progress
-- **Completed**: 91/91 packages
+- **Completed**: 92/92 packages
 - **In Progress**: 0
 - **Not Started**: 0
 

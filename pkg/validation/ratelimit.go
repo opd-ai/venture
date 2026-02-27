@@ -33,7 +33,11 @@ type RateLimiter struct {
 	lastCleanup time.Time
 }
 
-// clientBucket tracks request timestamps for a single client
+// clientBucket tracks request timestamps for a single client in the rate limiter.
+//
+// This is an internal type used by RateLimiter to maintain per-client state.
+// It stores recent request timestamps within the rate limit window and tracks
+// the most recent request time for cleanup purposes.
 type clientBucket struct {
 	// timestamps of recent requests (within the interval window)
 	timestamps []time.Time
@@ -138,10 +142,19 @@ func (rl *RateLimiter) GetStats() map[string]int {
 
 // cleanup removes client entries that haven't made requests recently
 // Must be called with mu locked
+//
+// Note: This function deletes from the rl.clients map while iterating over it.
+// In Go, deletion during range iteration is explicitly safe (the range loop
+// continues over the snapshot of keys taken at loop start, so deleting the
+// current key does not affect iteration). This is documented in the Go spec:
+// "If a map entry is created during iteration, it may be produced during the
+// iteration or may be skipped. The choice may vary for each entry created and
+// from one iteration to the next."
 func (rl *RateLimiter) cleanup(now time.Time) {
 	// Remove clients inactive for 10 minutes
 	inactiveThreshold := now.Add(-10 * time.Minute)
 
+	// Safe to delete during range iteration in Go
 	for clientID, bucket := range rl.clients {
 		if bucket.lastRequest.Before(inactiveThreshold) {
 			delete(rl.clients, clientID)

@@ -65,10 +65,10 @@
 //	// Attempt connection (tries Direct → STUN → TURN automatically)
 //	result, err := nt.EstablishConnection(ctx)
 //	if err != nil {
-//	    log.Fatalf("NAT traversal failed: %v", err)
+//	    logrus.WithError(err).Fatal("NAT traversal failed")
 //	}
 //
-//	log.Printf("Connected via %s (setup time: %v)", result.Method, result.SetupTime)
+//	logrus.WithFields(logrus.Fields{"method": result.Method, "setup_time": result.SetupTime}).Info("Connection established")
 //
 // NAT type detection helps optimize connection strategy:
 //   - Full Cone / Restricted Cone: STUN usually sufficient
@@ -97,13 +97,13 @@
 //
 //	peer, err := webrtc.NewPeer("peer-alice", config)
 //	if err != nil {
-//	    log.Fatalf("failed to create peer: %v", err)
+//	    logrus.WithError(err).Fatal("failed to create peer")
 //	}
 //	defer peer.Close()
 //
 //	// Connect to remote peer
 //	if err := peer.Connect("peer-bob"); err != nil {
-//	    log.Fatalf("connection failed: %v", err)
+//	    logrus.WithError(err).Fatal("connection failed")
 //	}
 //
 //	// Send federation message

@@ -456,6 +456,14 @@ func createGameWorld(logger *logrus.Logger) (*engine.World, *engine.EnhancedChat
 	world.AddSystem(qolSystem)
 	worldLogger.Debug("QoL system initialized for multiplayer validation")
 
+	// INTEGRATION FIX [pkg/engine/performance/AUDIT.md]: Performance Monitoring Server Integration
+	// Gap: Performance monitoring was client-only, preventing production observability on servers
+	// Fix: Initialize and register PerformanceMonitoringSystem on server for production metrics
+	// Impact: Server memory usage, tick rate, and network stats now observable for production monitoring
+	performanceSystem := engine.NewPerformanceMonitoringSystem()
+	world.AddSystem(performanceSystem)
+	worldLogger.Debug("performance monitoring system initialized for production observability")
+
 	if logger.GetLevel() >= logrus.DebugLevel {
 		worldLogger.Debug("game systems initialized")
 	}
@@ -771,6 +779,15 @@ func handleInputCommands(server *network.TCPServer, playerEntities map[uint64]*e
 
 // runGameLoop executes the authoritative server game loop.
 func runGameLoop(world *engine.World, server *network.TCPServer, snapshotManager *network.SnapshotManager, lagCompensator *network.LagCompensator, ticker *time.Ticker, logger *logrus.Logger, serverLogger *logrus.Entry, lastUpdate *time.Time) {
+	var performanceSystem *engine.PerformanceMonitoringSystem
+	// Extract performance system from world for metrics logging
+	for _, system := range world.GetSystems() {
+		if perfSys, ok := system.(*engine.PerformanceMonitoringSystem); ok {
+			performanceSystem = perfSys
+			break
+		}
+	}
+
 	for {
 		select {
 		case <-ticker.C:
@@ -789,12 +806,22 @@ func runGameLoop(world *engine.World, server *network.TCPServer, snapshotManager
 				server.BroadcastStateUpdate(update)
 			}
 
+			// Log server metrics periodically (every 10 seconds)
 			if logger.GetLevel() >= logrus.DebugLevel && int(now.Unix())%10 == 0 {
 				playerCount := server.GetPlayerCount()
-				serverLogger.WithFields(logrus.Fields{
+				logFields := logrus.Fields{
 					"entityCount": len(world.GetEntities()),
 					"playerCount": playerCount,
-				}).Debug("server tick metrics")
+				}
+
+				// Add performance metrics if available
+				if performanceSystem != nil {
+					logFields["tick_rate"] = performanceSystem.GetFPS()
+					logFields["tick_time_ms"] = performanceSystem.GetFrameTime()
+					logFields["memory_mb"] = performanceSystem.GetMemoryUsageMB()
+				}
+
+				serverLogger.WithFields(logFields).Debug("server tick metrics")
 			}
 		}
 	}

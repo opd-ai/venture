@@ -26,7 +26,7 @@ None
 None
 
 ### Low Severity
-- [ ] **Documentation** — Example code in doc.go uses `fmt.Printf` and `log.Fatal` (generator.go:43, 47, 49), but this is acceptable practice for documentation examples showing user-facing code patterns.
+- [x] **Documentation** — Example code in doc.go uses `fmt.Printf` and `log.Fatal` (generator.go:43, 47, 49), but this is acceptable practice for documentation examples showing user-facing code patterns. — **COMPLETED 2026-02-27**: Added note clarifying examples are simplified for clarity; production code should use logrus
 
 ## Input Integration
 | Input Source | Status | Notes |

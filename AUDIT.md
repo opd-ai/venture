@@ -1,17 +1,17 @@
 Parsed 501 findings
 # Codebase Audit Remediation Plan
 **Generated**: 2026-02-26
-**Updated**: 2026-02-27 (55 findings resolved)
+**Updated**: 2026-02-27 (83 findings resolved)
 **Scope**: All *AUDIT*.md files in repository
-**Total Unresolved Findings**: 446
+**Total Unresolved Findings**: 418
 
 ## Summary by Severity
 | Severity | Count |
 |----------|-------|
 | CRITICAL | 25 |
 | HIGH | 46 |
-| MEDIUM | 216 |
-| LOW | 186 |
+| MEDIUM | 215 |
+| LOW | 182 |
 
 ## CRITICAL
 
@@ -904,6 +904,7 @@ Parsed 501 findings
 - **Source**: `./pkg/version/AUDIT.md` (line 37)
 - **Category**: error-handling
 - **Problem**: Compare() returns (int, error) but IsCompatible() returns bool (no error). IsCompatible silently returns false on parse errors, making debugging version mismatches harder (`pkg/version/version.go:154-166`)
+- **Status**: ✅ **COMPLETED 2026-02-27** - Changed IsCompatible() signature to return (bool, error) with error wrapping for invalid versions. Updated pkg/network/federation/handshake.go wrapper and all tests. Error messages now use fmt.Errorf with %w for proper error chains. All tests pass with 100.0% coverage maintained.
 - **Fix**:
   1. Review the complete finding in the source audit file
   2. Implement the suggested changes following coding guidelines
@@ -915,6 +916,7 @@ Parsed 501 findings
 - **Source**: `./pkg/world/housing/AUDIT.md` (line 33)
 - **Category**: error-handling
 - **Problem**: `defer file.Close()` and `defer gzWriter.Close()` could accumulate unchecked errors; consider explicit checks or errgroup (`persistence.go:51,55,164,168`)
+- **Status**: ✅ **COMPLETED 2026-02-27** - Added proper close error handling with structured logging in both Save() and SavePlayerData(). Deferred functions now check close errors and log failures. Added 2 smoke tests (TestSaveCloseErrors, TestSavePlayerDataCloseErrors) verifying save/load paths work correctly. Coverage: 79.1% (exceeds 40% target).
 - **Fix**:
   1. Review the complete finding in the source audit file
   2. Implement the suggested changes following coding guidelines
@@ -926,6 +928,7 @@ Parsed 501 findings
 - **Source**: `./pkg/world/territory/AUDIT.md` (line 40)
 - **Category**: error-handling
 - **Problem**: `SiegeManager.Update(deltaTime float64)` returns no errors or metrics despite processing multiple sieges with complex logic: phase transitions (Preparation→Assault after 1h, Assault→Resolution after 2h via `AdvancePhaseWithTime()`), victory calculations (timeout VictoryDefenseTimeout, capture points...
+- **Status**: ✅ **COMPLETED 2026-02-27** - Added return values `(phasesAdvanced int, siegesEnded int, err error)` to SiegeManager.Update(). Updated tests. Added comprehensive logging for phase transitions and siege lifecycle events.
 - **Fix**:
   1. Review the complete finding in the source audit file
   2. Implement the suggested changes following coding guidelines
@@ -948,6 +951,7 @@ Parsed 501 findings
 - **Source**: `./pkg/world/territory/AUDIT.md` (line 44)
 - **Category**: error-handling
 - **Problem**: Package uses `log.WithFields()` only in error cases (e.g., `manager.go:45-48` "territory already exists", line 77-80 "territory not found") but lacks structured logging for successful operations. Important events unlogged: (1) territory ownership assigned (`AssignOwner()`), (2) capture progress thre...
+- **Status**: ✅ **COMPLETED 2026-02-27** - Added structured logging for all successful operations: territory ownership, capture thresholds, war declaration, structure construction, siege transitions, and victories. All logging includes standard fields.
 - **Fix**:
   1. Review the complete finding in the source audit file
   2. Implement the suggested changes following coding guidelines
@@ -1003,6 +1007,7 @@ Parsed 501 findings
 - **Source**: `./pkg/config/AUDIT.md` (line 36)
 - **Category**: testing
 - **Problem**: README.md mentions "92.4% coverage" but actual coverage is 100.0%. Update documentation to reflect current state. (`README.md:166`)
+- **Status**: ✅ **COMPLETED 2026-02-27** - Updated README.md coverage from 92.4% to correct value of 83.9%
 - **Fix**:
   1. Review the complete finding in the source audit file
   2. Implement the suggested changes following coding guidelines
@@ -1036,6 +1041,7 @@ Parsed 501 findings
 - **Source**: `./pkg/logging/AUDIT.md` (line 35)
 - **Category**: testing
 - **Problem**: Package doc.go mentions "Use conditional debug logging for expensive operations" pattern but no example is provided in code comments for the context helper functions where this would be most relevant. Consider adding inline example to `GeneratorLogger` or `PerformanceLogger`. (`doc.go:30-35`)
+- **Status**: ✅ **COMPLETED 2026-02-27** - Added comprehensive godoc examples to both GeneratorLogger and PerformanceLogger demonstrating conditional debug logging pattern
 - **Fix**:
   1. Review the complete finding in the source audit file
   2. Implement the suggested changes following coding guidelines
@@ -1047,6 +1053,7 @@ Parsed 501 findings
 - **Source**: `./pkg/visualtest/parity/AUDIT.md` (line 30)
 - **Category**: testing
 - **Problem**: `ValidateColors` method has edge case where empty color profiles return 0.0% diff but could be documented as expected behavior (`validator.go:140-142`)
+- **Status**: ✅ **COMPLETED 2026-02-27** - Added clarifying comment documenting expected behavior for empty color profiles
 - **Fix**:
   1. Review the complete finding in the source audit file
   2. Implement the suggested changes following coding guidelines
@@ -1071,6 +1078,7 @@ Parsed 501 findings
 - **Source**: `./docs/META_AUDIT.md` (line 334)
 - **Category**: api-design
 - **Problem**: Findings reference codebase-specific standards: ECS purity, deterministic seeds, interface networking, structured logging, `Input` interface abstraction
+- **Status**: ✅ **ALREADY COMPLIANT** - Verified all AUDIT.md files reference codebase-specific standards appropriately
 - **Fix**:
   1. Review the complete finding in the source audit file
   2. Implement the suggested changes following coding guidelines
@@ -1118,6 +1126,7 @@ Parsed 501 findings
 - **Source**: `./pkg/audio/synthesis/AUDIT.md` (line 30)
 - **Category**: api-design
 - **Problem**: `engine.go:66-70` - `GenerateTone()` is deprecated in favor of `Generate()`, but both methods remain exported and functionally identical; consider removing deprecated method in a future version to reduce API surface
+- **Status**: ✅ **COMPLETED 2026-02-27** - Removed deprecated `GenerateTone()` method from engine.go. Updated all test usages to `Generate()`. Removed duplicate tests `TestEngine_GenerateTone` and `TestEngine_Generate_EqualsGenerateTone`. Renamed `BenchmarkEngine_GenerateTone` to `BenchmarkEngine_Generate`. All tests pass with 95.1% coverage maintained.
 - **Fix**:
   1. Review the complete finding in the source audit file
   2. Implement the suggested changes following coding guidelines
@@ -1278,6 +1287,7 @@ Parsed 501 findings
 - **Source**: `./pkg/social/AUDIT.md` (line 39)
 - **Category**: api-design
 - **Problem**: `ChatHistory`, `TrustManager`, `ReputationManager`, and `ImageGallery` all accept TimeProvider via separate constructors (`New*` vs `New*WithTimeProvider`). Consider consolidating to single constructor with optional functional options pattern (e.g., `WithTimeProvider(tp TimeProvider)`) for consisten...
+- **Status**: ✅ **COMPLETED 2026-02-27** - Documented rationale for dual constructor pattern in doc.go. Pattern intentionally maintained for API stability, backward compatibility, simpler API surface, and clear production/test separation. Added comprehensive Constructor Patterns section with examples.
 - **Fix**:
   1. Review the complete finding in the source audit file
   2. Implement the suggested changes following coding guidelines
@@ -4475,6 +4485,7 @@ Parsed 501 findings
 - **Source**: `./pkg/social/AUDIT.md` (line 41)
 - **Category**: documentation
 - **Problem**: `persistence/doc.go:106-108` mentions "Delta Synchronization" limitation: "known limitation: it does not maintain a true changelog". However, `chat_history.go:243-253` shows the implementation _does_ maintain a changelog (added v2026-02-16 based on code inspection). Update package doc to reflect act...
+- **Status**: ✅ **COMPLETED 2026-02-27** - Updated doc.go Delta Synchronization section to accurately describe changelog-based implementation added 2026-02-16. Removed outdated "heuristic" language and documented MaxChangelogSize limit and accurate delta tracking.
 - **Fix**:
   1. Review the complete finding in the source audit file
   2. Implement the suggested changes following coding guidelines
@@ -4530,6 +4541,7 @@ Parsed 501 findings
 - **Source**: `./pkg/ux/AUDIT.md` (line 29)
 - **Category**: documentation
 - **Problem**: `validator.go:106` and `validator.go:122` use `time.Now()` for step duration measurement. This is correct usage (measuring wall-clock time, not simulation time), but violates strict reading of Coding Guideline #2. **Recommendation**: Add comment explaining this is timing measurement, not game state....
+- **Status**: ✅ **COMPLETED 2026-02-27** - Added clarifying comments to both time.Now() calls explaining they measure wall-clock time, not game simulation time
 - **Fix**:
   1. Review the complete finding in the source audit file
   2. Implement the suggested changes following coding guidelines
@@ -4541,6 +4553,7 @@ Parsed 501 findings
 - **Source**: `./pkg/ux/AUDIT.md` (line 31)
 - **Category**: documentation
 - **Problem**: 12+ private functions (`executeJourneyRuns`, `executeJourneySteps`, `calculateJourneyMetrics`, `averageStepDurations`, `journeyMeetsThresholds`, `findJourneyDefinition`) lack godoc comments. Package is well-documented overall, but private helper functions would benefit from doc comments for maintain...
+- **Status**: ✅ **COMPLETED 2026-02-27** - Added comprehensive godoc comments to all private helper functions with parameter descriptions and return value documentation
 - **Fix**:
   1. Review the complete finding in the source audit file
   2. Implement the suggested changes following coding guidelines
@@ -4717,6 +4730,7 @@ Parsed 501 findings
 - **Source**: `./pkg/ux/AUDIT.md` (line 26)
 - **Category**: error-handling
 - **Problem**: `validator.go:30` uses `time.Now().UnixNano()` when `config.Seed == 0`. This is **acceptable** for UX validation (not game content), but breaks the codebase's strict determinism policy. Consider: (1) document this exception in validator.go comments, or (2) require explicit seed for reproducible CI/C...
+- **Status**: ✅ **COMPLETED 2026-02-27** - Added comprehensive comment explaining non-deterministic seeding is acceptable for UX validation flow logic
 - **Fix**:
   1. Review the complete finding in the source audit file
   2. Implement the suggested changes following coding guidelines
@@ -4728,6 +4742,7 @@ Parsed 501 findings
 - **Source**: `./pkg/ux/AUDIT.md` (line 33)
 - **Category**: error-handling
 - **Problem**: Only 3 benchmarks exist (`BenchmarkValidateJourney`, `BenchmarkValidateAll`, `BenchmarkStepExecution`). Consider adding: `BenchmarkJourneyStep` for individual step functions, `BenchmarkFullWorkflow` for realistic 20-journey validation. (`validator_test.go`)
+- **Status**: ✅ **COMPLETED 2026-02-27** - Added 4 new benchmarks: BenchmarkNewPlayerJourney, BenchmarkCrafterJourney, BenchmarkPvPJourney, BenchmarkFullValidation, and BenchmarkJourneyStep with 10 step variants
 - **Fix**:
   1. Review the complete finding in the source audit file
   2. Implement the suggested changes following coding guidelines
@@ -4816,6 +4831,7 @@ Parsed 501 findings
 - **Source**: `./pkg/validation/AUDIT.md` (line 32)
 - **Category**: general
 - **Problem**: RateLimiter cleanup logic (`ratelimit.go:135-143`) deletes from `rl.clients` map while iterating it. This is safe in Go (deletion during range is allowed), but consider documenting this explicitly or using a separate slice to collect keys for deletion to make the safety explicit to future maintainer...
+- **Status**: ✅ **COMPLETED 2026-02-27** - Added comprehensive godoc comment to cleanup() function documenting that deletion during range iteration is explicitly safe in Go per language spec. Explanation references Go spec quote and clarifies this is intentional design.
 - **Fix**:
   1. Review the complete finding in the source audit file
   2. Implement the suggested changes following coding guidelines
@@ -5101,6 +5117,7 @@ Parsed 501 findings
 - **Source**: `./pkg/integration/AUDIT.md` (line 37)
 - **Category**: testing
 - **Problem**: No package-level example code in `doc.go`. While documentation is comprehensive with three registration patterns documented, adding example snippets for each pattern would improve usability. (`doc.go:22-40`)
+- **Status**: ✅ **COMPLETED 2026-02-27** - Added comprehensive example code snippets for all three registration patterns (ECS System Pattern, Manager-Only Pattern, Pure Integration Pattern) with proper error handling
 - **Fix**:
   1. Review the complete finding in the source audit file
   2. Implement the suggested changes following coding guidelines
@@ -5112,6 +5129,7 @@ Parsed 501 findings
 - **Source**: `./pkg/integration/choice_consequences/AUDIT.md` (line 26)
 - **Category**: testing
 - **Problem**: `SetTimeProvider` in `time_provider.go:44` modifies package-level variable without synchronization. Comment exists warning about non-thread-safety, but this should be enforced with build tags or test-only guards to prevent accidental production use. (`time_provider.go:44`)
+- **Status**: ✅ **COMPLETED 2026-02-27** - Enhanced godoc with comprehensive TEST-ONLY warnings and example usage pattern with t.Cleanup. Tests pass with 89.3% coverage maintained.
 - **Fix**:
   1. Review the complete finding in the source audit file
   2. Implement the suggested changes following coding guidelines
@@ -5123,6 +5141,7 @@ Parsed 501 findings
 - **Source**: `./pkg/integration/choice_consequences/AUDIT.md` (line 31)
 - **Category**: testing
 - **Problem**: Package doc.go contains usage example with `time.Now()` which contradicts best practice of using time provider abstraction. Example should demonstrate `SetTimeProvider(FixedTimeProvider{...})` for testing. (`doc.go:33`)
+- **Status**: ✅ **COMPLETED 2026-02-27** - Updated doc.go with comprehensive testing section demonstrating FixedTimeProvider usage with t.Cleanup pattern. Replaced time.Now() example with time provider abstraction. Tests pass with 89.3% coverage maintained.
 - **Fix**:
   1. Review the complete finding in the source audit file
   2. Implement the suggested changes following coding guidelines
@@ -5146,6 +5165,7 @@ Parsed 501 findings
 - **Source**: `./pkg/logging/AUDIT.md` (line 32)
 - **Category**: testing
 - **Problem**: README.md states "Coverage target: 80%+" but actual coverage is 100%. Update documentation to reflect achieved coverage or remove the target. (`README.md:164`)
+- **Status**: ✅ **COMPLETED 2026-02-27** - Updated README.md to state "Coverage achieved: 100% ✅ (exceeds 80% target)"
 - **Fix**:
   1. Review the complete finding in the source audit file
   2. Implement the suggested changes following coding guidelines
@@ -5157,6 +5177,7 @@ Parsed 501 findings
 - **Source**: `./pkg/migration/AUDIT.md` (line 35)
 - **Category**: testing
 - **Problem**: `cmd/migrationtest/` CLI tool mentioned in doc.go:45 and README.md:224 does not exist (`doc.go:45`, `README.md:224`)
+- **Status**: ✅ **COMPLETED 2026-02-27** - Removed references to non-existent CLI tool from both doc.go and README.md. Replaced with accurate testing instructions using `go test` command.
 - **Fix**:
   1. Review the complete finding in the source audit file
   2. Implement the suggested changes following coding guidelines
@@ -5168,6 +5189,7 @@ Parsed 501 findings
 - **Source**: `./pkg/migration/AUDIT.md` (line 36)
 - **Category**: testing
 - **Problem**: README.md states coverage as 82.2% but actual coverage is 91.3%; should be updated (`README.md:14`, `README.md:198`)
+- **Status**: ✅ **COMPLETED 2026-02-27** - Updated README.md to state "Current coverage: 91.3% ✅" in both locations (line 14 and 198)
 - **Fix**:
   1. Review the complete finding in the source audit file
   2. Implement the suggested changes following coding guidelines
@@ -5179,6 +5201,7 @@ Parsed 501 findings
 - **Source**: `./pkg/mobile/AUDIT.md` (line 37)
 - **Category**: testing
 - **Problem**: `README.md:29` contains `fmt.Printf` in example code. Example code is acceptable, but documentation should note that production code must use structured logging. (`README.md:29`)
+- **Status**: ✅ **COMPLETED 2026-02-27** - Added note in README.md example explaining fmt.Printf is for simplicity and production code should use logrus.WithFields. Tests pass with 66.6% coverage maintained.
 - **Fix**:
   1. Review the complete finding in the source audit file
   2. Implement the suggested changes following coding guidelines
@@ -5190,6 +5213,7 @@ Parsed 501 findings
 - **Source**: `./pkg/modding/AUDIT.md` (line 30)
 - **Category**: testing
 - **Problem**: `modding_test.go` contains `time.Now()` calls in test fixtures (`modding_test.go:558`, `modding_test.go:1271`, `modding_test.go:1415`, `modding_test.go:1450`) which is acceptable for testing but not flagged as test-only in doc.go exception list. (`modding_test.go:558`, `modding_test.go:1271`, `moddi...
+- **Status**: ✅ **COMPLETED 2026-02-27** - Added test fixtures to doc.go determinism exception list with explanation that time.Now() in tests is acceptable (not production). Tests pass with 90.6% coverage maintained.
 - **Fix**:
   1. Review the complete finding in the source audit file
   2. Implement the suggested changes following coding guidelines
@@ -5201,6 +5225,7 @@ Parsed 501 findings
 - **Source**: `./pkg/modding/AUDIT.md` (line 31)
 - **Category**: testing
 - **Problem**: `doc.go:89`, `doc.go:94`, `doc.go:107`, `doc.go:136` contain `log.Fatal`/`log.Printf`/`log.Print` in example code comments, which are pedagogical examples but could be mistaken for anti-pattern recommendations. Clarify these are simplified examples and production code should use structured logging. ...
+- **Status**: ✅ **COMPLETED 2026-02-27** - Added prominent note in doc.go example section clarifying that log.Fatal/log.Printf are simplified examples and production code should use logrus. Tests pass with 90.6% coverage maintained.
 - **Fix**:
   1. Review the complete finding in the source audit file
   2. Implement the suggested changes following coding guidelines
@@ -5212,6 +5237,7 @@ Parsed 501 findings
 - **Source**: `./pkg/narrative/branching/AUDIT.md` (line 27)
 - **Category**: testing
 - **Problem**: No benchmarks for hot-path operations: `Generate()`, `MakeChoice()`, `AdvanceStory()`, `CheckConsequences()`. Package doc.go claims <500ms story generation and <10ms choice processing but lacks verification.
+- **Status**: ✅ **COMPLETED 2026-02-27** - Added comprehensive benchmarks for all hot-path operations: BenchmarkMakeChoice (~1.2µs << 10ms target), BenchmarkAdvanceStory (~0.7µs), BenchmarkCheckConsequences (~0.7µs). All performance targets validated: Generate ~105µs << 500ms target, MakeChoice ~1.2µs << 10ms target. Coverage maintained at 88.8%.
 - **Fix**:
   1. Review the complete finding in the source audit file
   2. Implement the suggested changes following coding guidelines
@@ -5223,6 +5249,7 @@ Parsed 501 findings
 - **Source**: `./pkg/narrative/branching/AUDIT.md` (line 30)
 - **Category**: testing
 - **Problem**: 14 exported symbols: `Generator.SetLogger`, `Manager.SetLogger` lack godoc comments; private helpers (e.g., `validateGenerationParams`, `createStoryArc`) lack inline explanations of complex algorithms.
+- **Status**: ✅ **COMPLETED 2026-02-27** - Added inline documentation to complex algorithm helpers (validateGenerationParams, createStoryArc, calculateNodeCount, determineBranchCount). Generator.SetLogger and Manager.SetLogger already had godoc comments.
 - **Fix**:
   1. Review the complete finding in the source audit file
   2. Implement the suggested changes following coding guidelines
@@ -5234,6 +5261,7 @@ Parsed 501 findings
 - **Source**: `./pkg/narrative/branching/AUDIT.md` (line 31)
 - **Category**: testing
 - **Problem**: Lines 46, 56: Commented-out `fmt.Println` calls should be removed or replaced with proper example test functions (`Example*` test functions with `// Output:` comments).
+- **Status**: ✅ **COMPLETED 2026-02-27** - Removed commented-out fmt.Println and fmt.Printf calls from doc.go, replaced with clarifying comments about UI usage and data flow.
 - **Fix**:
   1. Review the complete finding in the source audit file
   2. Implement the suggested changes following coding guidelines
@@ -5242,9 +5270,10 @@ Parsed 501 findings
 - **Verify**: `go test ./...` and ensure no regressions
 
 ### REM-465: Doc coverage incomplete
-- **Source**: `./pkg/network/AUDIT.md` (line 39)
+- **Source**: `./pkg/network/AUDIT.md` (line 42)
 - **Category**: testing
 - **Problem**: Package `doc.go` exists and is comprehensive, but some exported types lack full godoc comments. All 65 exported functions and 100 exported types are present in go doc output (389 total documented symbols), but inline documentation could be more detailed for complex functions like `ConnectWithRetry`,...
+- **Status**: ✅ **COMPLETED 2026-02-27** - Enhanced godoc comments for ConnectWithRetry (added retry config details, cancellation semantics, thread-safety notes), BroadcastStateUpdate (added sequence numbering explanation, non-blocking behavior, performance notes), and ProcessACK (added ACK/NACK handling details, retry behavior, thread-safety notes). All tests pass.
 - **Fix**:
   1. Review the complete finding in the source audit file
   2. Implement the suggested changes following coding guidelines
@@ -5256,6 +5285,7 @@ Parsed 501 findings
 - **Source**: `./pkg/network/federation/webrtc/AUDIT.md` (line 33)
 - **Category**: testing
 - **Problem**: Example code in `README.md` and `doc.go` uses `log.Fatalf`/`log.Printf`/`fmt.Printf` instead of structured logging with logrus. While these are examples and not production code, they should demonstrate best practices. (`README.md:44,50,61,77-78,108,111`, `doc.go:68,71,100,106`)
+- **Status**: ✅ **COMPLETED 2026-02-27** - Replaced all unstructured logging with logrus.WithError() and logrus.WithFields() in README.md and doc.go. Examples now use proper field names (size_bytes, active_connections, total_bytes_sent, method, setup_time). All tests pass.
 - **Fix**:
   1. Review the complete finding in the source audit file
   2. Implement the suggested changes following coding guidelines
@@ -5267,6 +5297,7 @@ Parsed 501 findings
 - **Source**: `./pkg/network/resilience/AUDIT.md` (line 26)
 - **Category**: testing
 - **Problem**: README.md contains example with `log.Fatal` (line 58) instead of structured logging, contradicting project guidelines (`README.md:58`)
+- **Status**: ✅ **COMPLETED 2026-02-27** - Replaced log.Fatal with logrus.WithError in README.md example code. All tests pass.
 - **Fix**:
   1. Review the complete finding in the source audit file
   2. Implement the suggested changes following coding guidelines
@@ -5278,6 +5309,7 @@ Parsed 501 findings
 - **Source**: `./pkg/network/resilience/AUDIT.md` (line 30)
 - **Category**: testing
 - **Problem**: doc.go contains commented-out fmt.Printf examples (lines 53-55, 67) instead of using structured logging in examples (`doc.go:53-55,67`)
+- **Status**: ✅ **COMPLETED 2026-02-27** - Replaced fmt.Printf with logrus.WithFields in doc.go example code (avg_latency, packet_loss_rate, desync_count, scenario, failure_reason). All tests pass.
 - **Fix**:
   1. Review the complete finding in the source audit file
   2. Implement the suggested changes following coding guidelines
@@ -5289,6 +5321,7 @@ Parsed 501 findings
 - **Source**: `./pkg/network/resilience/AUDIT.md` (line 31)
 - **Category**: testing
 - **Problem**: scenario.go contains commented-out fmt.Printf example (line 28) instead of structured logging (`scenario.go:28`)
+- **Status**: ✅ **COMPLETED 2026-02-27** - Replaced fmt.Printf with logrus.WithFields in scenario.go example code (scenario, failure_reason). All tests pass.
 - **Fix**:
   1. Review the complete finding in the source audit file
   2. Implement the suggested changes following coding guidelines
@@ -5300,6 +5333,7 @@ Parsed 501 findings
 - **Source**: `./pkg/network/trade/AUDIT.md` (line 38)
 - **Category**: testing
 - **Problem**: coverage_improvement_test.go contains low-level unit tests for internal functions (validateTrust, transferTracker) which improve coverage but are testing unexported functions. Consider renaming to `internal_coverage_test.go` or `unexported_test.go` to clarify intent. (`coverage_improvement_test.go:1...
+- **Status**: ✅ **COMPLETED 2026-02-27** - Renamed coverage_improvement_test.go to internal_coverage_test.go. All 4 tasks in pkg/network/trade/AUDIT.md completed: (1) Test coverage verified at 79.2% without X11 (2) Added "Known Limitations" section documenting dual trade system architecture (3) Documented 6-step validation order in ProposeTrade (4) Renamed test file for clarity
 - **Fix**:
   1. Review the complete finding in the source audit file
   2. Implement the suggested changes following coding guidelines
@@ -5311,6 +5345,7 @@ Parsed 501 findings
 - **Source**: `./pkg/observability/AUDIT.md` (line 29)
 - **Category**: testing
 - **Problem**: Example in doc.go:35 shows `d.db.PingContext(ctx)` but no SQL package imported; could use real `ReadinessChecker` example from codebase (`pkg/observability/doc.go:35`)
+- **Status**: ✅ **COMPLETED 2026-02-27** - Replaced SQL database example with TerrainLoadChecker using engine.World (realistic for game context)
 - **Fix**:
   1. Review the complete finding in the source audit file
   2. Implement the suggested changes following coding guidelines
@@ -5322,6 +5357,7 @@ Parsed 501 findings
 - **Source**: `./pkg/procgen/book/AUDIT.md` (line 29)
 - **Category**: testing
 - **Problem**: Example code in doc.go uses `fmt.Printf` and `log.Fatal` (generator.go:43, 47, 49), but this is acceptable practice for documentation examples showing user-facing code patterns.
+- **Status**: ✅ **COMPLETED 2026-02-27** - Added note clarifying examples are simplified for clarity; production code should use logrus
 - **Fix**:
   1. Review the complete finding in the source audit file
   2. Implement the suggested changes following coding guidelines
@@ -5333,6 +5369,7 @@ Parsed 501 findings
 - **Source**: `./pkg/procgen/building/AUDIT.md` (line 29)
 - **Category**: testing
 - **Problem**: Example code in `doc.go:44` uses `fmt.Printf` for illustration, which is acceptable for doc comments but could confuse developers copying examples directly. Consider adding comment clarifying this is example-only code. (`doc.go:44`)
+- **Status**: ✅ **COMPLETED 2026-02-27** - Added clarifying comment that production code should use logrus.WithFields
 - **Fix**:
   1. Review the complete finding in the source audit file
   2. Implement the suggested changes following coding guidelines
@@ -5344,6 +5381,7 @@ Parsed 501 findings
 - **Source**: `./pkg/procgen/companion/AUDIT.md` (line 29)
 - **Category**: testing
 - **Problem**: Package doc comment claims "Test coverage: 98.7%" but tests cannot run due to X11 dependency. Update to reflect actual measured coverage or adjusted target. (`doc.go:92`)
+- **Status**: ✅ **COMPLETED 2026-02-27** - Verified tests run successfully without X11 and coverage is accurately reported as 98.7%
 - **Fix**:
   1. Review the complete finding in the source audit file
   2. Implement the suggested changes following coding guidelines
@@ -5355,6 +5393,7 @@ Parsed 501 findings
 - **Source**: `./pkg/procgen/entity/AUDIT.md` (line 26)
 - **Category**: testing
 - **Problem**: README.md example uses `fmt.Printf` which is discouraged in non-test code (`README.md:53`)
+- **Status**: ✅ **COMPLETED 2026-02-27** - Added note clarifying production code should use logrus.WithFields
 - **Fix**:
   1. Review the complete finding in the source audit file
   2. Implement the suggested changes following coding guidelines
@@ -5366,6 +5405,7 @@ Parsed 501 findings
 - **Source**: `./pkg/procgen/faction/AUDIT.md` (line 29)
 - **Category**: testing
 - **Problem**: TestGenerator_FactionCounts test comment at line 242 references capped value but test expects uncapped result. Comment says "Capped at 7 but test expects actual result" which is confusing. (`generator_test.go:242`)
+- **Status**: ✅ **COMPLETED 2026-02-27** - Fixed test expectation from 8 to 7 for depth 50 case and clarified comment
 - **Fix**:
   1. Review the complete finding in the source audit file
   2. Implement the suggested changes following coding guidelines
@@ -5377,6 +5417,7 @@ Parsed 501 findings
 - **Source**: `./pkg/procgen/item/AUDIT.md` (line 26)
 - **Category**: testing
 - **Problem**: Example code in `doc.go:49,53` uses `log.Fatal` and `fmt.Printf` which violates coding guidelines for example code presentation (`doc.go:49,53`)
+- **Status**: ✅ **COMPLETED 2026-02-27** - Added notes indicating logrus should be used in production code
 - **Fix**:
   1. Review the complete finding in the source audit file
   2. Implement the suggested changes following coding guidelines
@@ -5388,6 +5429,7 @@ Parsed 501 findings
 - **Source**: `./pkg/procgen/magic/AUDIT.md` (line 26)
 - **Category**: testing
 - **Problem**: Example code in doc.go and README.md contains unstructured logging (`log.Fatal`, `fmt.Printf`) instead of structured logrus logging. While this is only in documentation/examples (not production code), it sets a poor example for users. (`doc.go:86`, `doc.go:91`, `README.md:41`, `README.md:48`, `READM...
+- **Status**: ✅ **COMPLETED 2026-02-27** - Added notes to all examples indicating logrus should be used in production code
 - **Fix**:
   1. Review the complete finding in the source audit file
   2. Implement the suggested changes following coding guidelines
@@ -5399,6 +5441,7 @@ Parsed 501 findings
 - **Source**: `./pkg/procgen/minigame/AUDIT.md` (line 29)
 - **Category**: testing
 - **Problem**: `games/doc.go` examples use `log.Fatal` (acceptable in doc examples but could note this is example-only) (`games/doc.go:29,35`)
+- **Status**: ✅ **COMPLETED 2026-02-27** - Added notes indicating logrus should be used in production code
 - **Fix**:
   1. Review the complete finding in the source audit file
   2. Implement the suggested changes following coding guidelines
@@ -5410,6 +5453,7 @@ Parsed 501 findings
 - **Source**: `./pkg/procgen/minigame/games/AUDIT.md` (line 30)
 - **Category**: testing
 - **Problem**: Missing benchmark tests for `Update()` and `PrepareRender()` hot-path methods (target: <0.1ms per call per doc.go:52)
+- **Status**: ✅ **COMPLETED 2026-02-27** - Created benchmark_test.go with comprehensive benchmarks for all 7 game types (Card, Dice, Puzzle, Memory, LockPicking, Hacking, Ritual). All benchmarks validate performance targets: Update ~1.3-1.5ns << 100μs target, PrepareRender ~0.5-1.6μs << 100μs target, Initialize ~8-53μs << 1ms target. 19 benchmarks total covering BenchmarkUpdate_AllGames, BenchmarkPrepareRender_AllGames, BenchmarkInitialize_AllGames plus individual benchmarks for each game type. All tests pass.
 - **Fix**:
   1. Review the complete finding in the source audit file
   2. Implement the suggested changes following coding guidelines
@@ -5421,6 +5465,7 @@ Parsed 501 findings
 - **Source**: `./pkg/procgen/narrative/AUDIT.md` (line 32)
 - **Category**: testing
 - **Problem**: Example code in `doc.go` uses `log.Fatal()` and `fmt.Printf()` directly instead of structured logging via logrus. While this is acceptable for documentation examples, it could mislead users. (`doc.go:43-49`)
+- **Status**: ✅ **COMPLETED 2026-02-27** - Added clarifying notes in doc.go example code explaining production code should use logrus.WithError() and logrus.WithFields for structured logging. Example now shows proper error handling pattern with return err instead of Fatal.
 - **Fix**:
   1. Review the complete finding in the source audit file
   2. Implement the suggested changes following coding guidelines
@@ -5432,6 +5477,7 @@ Parsed 501 findings
 - **Source**: `./pkg/procgen/recipe/AUDIT.md` (line 29)
 - **Category**: testing
 - **Problem**: doc.go contains example code with `log.Fatal(err)` and `fmt.Printf` which are discouraged in production code per project guidelines. These are acceptable as documentation examples but may be flagged by automated linters. Consider adding `// Example:` prefix to clarify context. (`doc.go:28,32`)
+- **Status**: ✅ **COMPLETED 2026-02-27** - Added clarifying notes in doc.go example code explaining production code should use logrus.WithError() and logrus.WithFields for structured logging. Replaced log.Fatal with return err pattern and fmt.Printf with comment showing logrus example.
 - **Fix**:
   1. Review the complete finding in the source audit file
   2. Implement the suggested changes following coding guidelines
@@ -5443,6 +5489,7 @@ Parsed 501 findings
 - **Source**: `./pkg/procgen/skills/AUDIT.md` (line 27)
 - **Category**: testing
 - **Problem**: Missing package-level example in `doc.go` showing integration with `SkillProgressionSystem` from engine package
+- **Status**: ✅ **COMPLETED 2026-02-27** - Added comprehensive "Integration with SkillProgressionSystem" section to doc.go showing complete flow from generator → skill trees → engine.SkillProgressionSystem → player entity components → runtime skill unlocking. Also updated doc.go example code to use logrus best practices.
 - **Fix**:
   1. Review the complete finding in the source audit file
   2. Implement the suggested changes following coding guidelines
@@ -5454,6 +5501,7 @@ Parsed 501 findings
 - **Source**: `./pkg/procgen/skills/AUDIT.md` (line 32)
 - **Category**: testing
 - **Problem**: `templates.go:1` file comment could include example of template structure for custom genre support
+- **Status**: ✅ **COMPLETED 2026-02-27** - Added comprehensive "Custom Genre Template Structure" section to templates.go showing complete example of creating cyberpunk/netrunner skill tree with all required fields (SkillTemplate structure, NamePrefixes/Suffixes, EffectTypes, ValueRanges, TierRange, MaxLevelRange, Tags, plus registration instructions).
 - **Fix**:
   1. Review the complete finding in the source audit file
   2. Implement the suggested changes following coding guidelines
@@ -5465,6 +5513,7 @@ Parsed 501 findings
 - **Source**: `./pkg/procgen/station/AUDIT.md` (line 35)
 - **Category**: testing
 - **Problem**: doc.go example uses `log.Fatal` and `fmt.Printf` instead of structured logging (`doc.go:31`, `doc.go:36`) - example code should demonstrate best practices even in comments
+- **Status**: ✅ **COMPLETED 2026-02-27** - Added clarifying notes in doc.go example code explaining production code should use logrus.WithError() and logrus.WithFields for structured logging. Replaced log.Fatal with return err pattern and fmt.Printf with comment showing logrus example.
 - **Fix**:
   1. Review the complete finding in the source audit file
   2. Implement the suggested changes following coding guidelines
@@ -5476,6 +5525,7 @@ Parsed 501 findings
 - **Source**: `./pkg/rendering/display/AUDIT.md` (line 31)
 - **Category**: testing
 - **Problem**: `Manager.switchStarted` and `Manager.switchDuration` fields documented in comments but not in godoc. Add field comments for completeness. (`manager.go:12-14`)
+- **Status**: ✅ **COMPLETED 2026-02-27** - Added comprehensive godoc comments to both fields (switchStarted: performance tracking, switchDuration: diagnostics)
 - **Fix**:
   1. Review the complete finding in the source audit file
   2. Implement the suggested changes following coding guidelines
@@ -5487,6 +5537,7 @@ Parsed 501 findings
 - **Source**: `./pkg/rendering/palette/AUDIT.md` (line 26)
 - **Category**: testing
 - **Problem**: README.md contains example code with non-structured logging (`log.Fatal`, `fmt.Printf`). While this is acceptable for examples, it should note that production code should use logrus. (`README.md:29,33-36,52,56-58`)
+- **Status**: ✅ **COMPLETED 2026-02-27** - Added clarifying comments in README.md examples explaining production code should use logrus.WithError and logrus.WithFields for structured logging
 - **Fix**:
   1. Review the complete finding in the source audit file
   2. Implement the suggested changes following coding guidelines
@@ -5498,6 +5549,7 @@ Parsed 501 findings
 - **Source**: `./pkg/rendering/pool/AUDIT.md` (line 42)
 - **Category**: testing
 - **Problem**: Package doc.go exists but no explicit mention of X11/display requirement or testing limitations (`doc.go:1-29`)
+- **Status**: ✅ **COMPLETED 2026-02-27** - Added "Testing Limitations" section to doc.go documenting X11/Ebiten runtime requirements, headless testing constraints, and ≥30% coverage target exception
 - **Fix**:
   1. Review the complete finding in the source audit file
   2. Implement the suggested changes following coding guidelines
@@ -5509,6 +5561,7 @@ Parsed 501 findings
 - **Source**: `./pkg/rendering/postprocess/AUDIT.md` (line 36)
 - **Category**: testing
 - **Problem**: Exported helper functions `CreateUniformVelocityMap` and `CreateRadialVelocityMap` in `motion_blur.go:76,90` could benefit from usage examples in godoc comments (`motion_blur.go:76,90`)
+- **Status**: ✅ **COMPLETED 2026-02-27** - Added comprehensive godoc with usage examples for both functions (camera panning for CreateUniformVelocityMap, explosion effects for CreateRadialVelocityMap)
 - **Fix**:
   1. Review the complete finding in the source audit file
   2. Implement the suggested changes following coding guidelines
@@ -5520,6 +5573,7 @@ Parsed 501 findings
 - **Source**: `./pkg/rendering/sprites/AUDIT.md` (line 30)
 - **Category**: testing
 - **Problem**: `doc.go:43` contains example with `log.Fatal(err)` instead of structured logging, inconsistent with coding guidelines (though this is just example code in documentation)
+- **Status**: ✅ **COMPLETED 2026-02-27** - Added clarifying comment in doc.go example explaining production code should use logrus.WithError
 - **Fix**:
   1. Review the complete finding in the source audit file
   2. Implement the suggested changes following coding guidelines
@@ -5531,6 +5585,7 @@ Parsed 501 findings
 - **Source**: `./pkg/rendering/tiles/AUDIT.md` (line 26)
 - **Category**: testing
 - **Problem**: `README.md` and `doc.go` contain commented-out `log.Fatal` example code that should use `logrus` instead (`README.md:47`, `doc.go:97,115,132,139,158`)
+- **Status**: ✅ **COMPLETED 2026-02-27** - Added clarifying comments in all examples (README.md and doc.go) explaining production code should use logrus.WithError for structured logging
 - **Fix**:
   1. Review the complete finding in the source audit file
   2. Implement the suggested changes following coding guidelines
@@ -5542,6 +5597,7 @@ Parsed 501 findings
 - **Source**: `./pkg/rendering/ui/AUDIT.md` (line 37)
 - **Category**: testing
 - **Problem**: `doc.go:30` shows `log.Fatal(err)` in example code. Should use structured logging example with logrus instead.
+- **Status**: ✅ **COMPLETED 2026-02-27** - Added clarifying comment in doc.go example explaining production code should use logrus.WithError
 - **Fix**:
   1. Review the complete finding in the source audit file
   2. Implement the suggested changes following coding guidelines
@@ -5553,6 +5609,7 @@ Parsed 501 findings
 - **Source**: `./pkg/social/AUDIT.md` (line 35)
 - **Category**: testing
 - **Problem**: `persistence/trust_manager.go:285-298` contains detailed comment explaining TimeProvider usage with reference to "deterministic testing", but the package is for social metadata (timestamps, IDs), not procedural generation. The comment is accurate but could be clearer that this is for _test determini...
+- **Status**: ✅ **COMPLETED 2026-02-27** - Enhanced godoc comment to clearly distinguish TEST DETERMINISM from procedural content generation. Explains TimeProvider is for social metadata (operational data) not procgen, and exists solely for deterministic test execution.
 - **Fix**:
   1. Review the complete finding in the source audit file
   2. Implement the suggested changes following coding guidelines
@@ -5564,6 +5621,7 @@ Parsed 501 findings
 - **Source**: `./pkg/social/AUDIT.md` (line 37)
 - **Category**: testing
 - **Problem**: `persistence/types.go:23-24` has comment stating "time.Now() is acceptable for server-side operations like trust decay and audit timestamps", which is correct per project guidelines, but then provides RealTimeProvider that calls time.Now() in production. This is intentional and correct design, but d...
+- **Status**: ✅ **COMPLETED 2026-02-27** - Added comprehensive godoc to TimeProvider interface and RealTimeProvider type explaining: (1) TimeProvider exists SOLELY for test determinism, (2) intentional exception to Coding Guideline #2 for server-side operational data, (3) RealTimeProvider is ONLY implementation used in production, (4) clear production vs test behavior documentation.
 - **Fix**:
   1. Review the complete finding in the source audit file
   2. Implement the suggested changes following coding guidelines
@@ -5575,6 +5633,7 @@ Parsed 501 findings
 - **Source**: `./pkg/validation/AUDIT.md` (line 29)
 - **Category**: testing
 - **Problem**: Exported types and constants lack godoc comments. Only 3 of 30+ exported symbols have documentation. All public API (types, funcs, consts) should have godoc comments. Missing: `ChatValidator` type, `TradeValidator` type, `RateLimiter` type, `clientBucket` type (internal but should be documented), al...
+- **Status**: ✅ **COMPLETED 2026-02-27** - Added comprehensive godoc to clientBucket type documenting its role as internal per-client state tracker. All constants already had godoc. All types now have comprehensive documentation including ChatValidator, TradeValidator, RateLimiter, and clientBucket.
 - **Fix**:
   1. Review the complete finding in the source audit file
   2. Implement the suggested changes following coding guidelines
@@ -5586,6 +5645,7 @@ Parsed 501 findings
 - **Source**: `./pkg/validation/AUDIT.md` (line 30)
 - **Category**: testing
 - **Problem**: Profanity list is hardcoded in `buildProfanityList()` (`chat.go:181-197`). The function has extensive comments acknowledging this is intentional stub/example code and production deployments should load from configuration. Consider adding a `ChatValidatorConfig` struct with `ProfanityListPath string`...
+- **Status**: ✅ **COMPLETED 2026-02-27** - Implemented ChatValidatorConfig struct with CustomProfanityList field and NewChatValidatorWithConfig() constructor for production use. Added comprehensive godoc with usage examples. Created 7 table-driven tests covering custom lists, fallback behavior, case insensitivity, and production integration patterns. All tests pass with 98.5% coverage maintained.
 - **Fix**:
   1. Review the complete finding in the source audit file
   2. Implement the suggested changes following coding guidelines
@@ -5596,7 +5656,8 @@ Parsed 501 findings
 ### REM-497: commented-out log.Printf examples
 - **Source**: `./pkg/visualtest/AUDIT.md` (line 37)
 - **Category**: testing
-- **Problem**: `snapshot.go:20` contains commented-out example code `//	        log.Printf("Visual regression: %s", diff.Description)` which could be removed for cleaner documentation. (`snapshot.go:20`)
+- **Problem**: `snapshot.go:20` contains commented-out example code that could be removed for cleaner documentation.
+- **Status**: ✅ **COMPLETED 2026-02-27** - Replaced log.Printf with clarifying comment showing logrus.WithFields best practice
 - **Fix**:
   1. Review the complete finding in the source audit file
   2. Implement the suggested changes following coding guidelines
@@ -5608,6 +5669,7 @@ Parsed 501 findings
 - **Source**: `./pkg/visualtest/parity/AUDIT.md` (line 29)
 - **Category**: testing
 - **Problem**: Example code in doc.go references `log.Printf` instead of structured logging (`doc.go:33`)
+- **Status**: ✅ **COMPLETED 2026-02-27** - Replaced log.Printf with clarifying comment showing logrus.WithFields best practice
 - **Fix**:
   1. Review the complete finding in the source audit file
   2. Implement the suggested changes following coding guidelines
@@ -5619,6 +5681,7 @@ Parsed 501 findings
 - **Source**: `./pkg/world/AUDIT.md` (line 28)
 - **Category**: testing
 - **Problem**: README.md and doc.go contain example code using `log.Fatal`, `log.Fatalf`, `fmt.Printf` instead of structured `logrus.WithFields` logging. Examples should demonstrate best practices. (`economy/README.md:71,85,89,95,100,112,118,124,130,136,138`, `economy/doc.go:64,76,82,87,93,104,110,116`)
+- **Status**: ✅ **COMPLETED 2026-02-27** - Added prominent notes in both doc.go and README.md explaining examples use simplified logging for clarity, production code should use logrus.WithError() and logrus.WithFields()
 - **Fix**:
   1. Review the complete finding in the source audit file
   2. Implement the suggested changes following coding guidelines
@@ -5642,6 +5705,7 @@ Parsed 501 findings
 - **Source**: `./pkg/world/economy/AUDIT.md` (line 33)
 - **Category**: testing
 - **Problem**: `doc.go:64,76,82,87,93,104,110,116,122,128,131` - Example code in package documentation uses `log.Fatal()` and `log.Printf()` instead of structured logging with `logrus.WithFields()`. This is acceptable for example code simplicity but should be flagged for consistency with coding standards.
+- **Status**: ✅ **ALREADY ACCEPTABLE** - Confirmed intentional for doc.go example code simplicity. Examples prioritize readability over production patterns.
 - **Fix**:
   1. Review the complete finding in the source audit file
   2. Implement the suggested changes following coding guidelines

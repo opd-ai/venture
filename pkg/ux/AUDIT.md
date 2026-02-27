@@ -23,14 +23,18 @@ The `pkg/ux` package provides simulation-based user experience journey validatio
 *None*
 
 ### Medium Severity
-- [ ] **Non-deterministic time seeding** — `validator.go:30` uses `time.Now().UnixNano()` when `config.Seed == 0`. This is **acceptable** for UX validation (not game content), but breaks the codebase's strict determinism policy. Consider: (1) document this exception in validator.go comments, or (2) require explicit seed for reproducible CI/CD runs. (`validator.go:30`)
+- [x] **Non-deterministic time seeding** — `validator.go:30` uses `time.Now().UnixNano()` when `config.Seed == 0`. This is **acceptable** for UX validation (not game content), but breaks the codebase's strict determinism policy. Consider: (1) document this exception in validator.go comments, or (2) require explicit seed for reproducible CI/CD runs. (`validator.go:30`)
+  - **COMPLETED 2026-02-27**: Added comprehensive comment explaining non-deterministic seeding is acceptable for UX validation flow logic.
 
 ### Low Severity
-- [ ] **time.Now() for timing** — `validator.go:106` and `validator.go:122` use `time.Now()` for step duration measurement. This is correct usage (measuring wall-clock time, not simulation time), but violates strict reading of Coding Guideline #2. **Recommendation**: Add comment explaining this is timing measurement, not game state. (`validator.go:106`, `validator.go:122`)
+- [x] **time.Now() for timing** — `validator.go:106` and `validator.go:122` use `time.Now()` for step duration measurement. This is correct usage (measuring wall-clock time, not simulation time), but violates strict reading of Coding Guideline #2. **Recommendation**: Add comment explaining this is timing measurement, not game state. (`validator.go:106`, `validator.go:122`)
+  - **COMPLETED 2026-02-27**: Added clarifying comments to both time.Now() calls explaining they measure wall-clock time, not game simulation time.
 
-- [ ] **Missing godoc on private functions** — 12+ private functions (`executeJourneyRuns`, `executeJourneySteps`, `calculateJourneyMetrics`, `averageStepDurations`, `journeyMeetsThresholds`, `findJourneyDefinition`) lack godoc comments. Package is well-documented overall, but private helper functions would benefit from doc comments for maintainability. (`validator.go:92-214`)
+- [x] **Missing godoc on private functions** — 12+ private functions (`executeJourneyRuns`, `executeJourneySteps`, `calculateJourneyMetrics`, `averageStepDurations`, `journeyMeetsThresholds`, `findJourneyDefinition`) lack godoc comments. Package is well-documented overall, but private helper functions would benefit from doc comments for maintainability. (`validator.go:92-214`)
+  - **COMPLETED 2026-02-27**: Added comprehensive godoc comments to all private helper functions with parameter descriptions and return value documentation.
 
-- [ ] **No benchmarks for journey execution** — Only 3 benchmarks exist (`BenchmarkValidateJourney`, `BenchmarkValidateAll`, `BenchmarkStepExecution`). Consider adding: `BenchmarkJourneyStep` for individual step functions, `BenchmarkFullWorkflow` for realistic 20-journey validation. (`validator_test.go`)
+- [x] **No benchmarks for journey execution** — Only 3 benchmarks exist (`BenchmarkValidateJourney`, `BenchmarkValidateAll`, `BenchmarkStepExecution`). Consider adding: `BenchmarkJourneyStep` for individual step functions, `BenchmarkFullWorkflow` for realistic 20-journey validation. (`validator_test.go`)
+  - **COMPLETED 2026-02-27**: Added 4 new benchmarks: `BenchmarkNewPlayerJourney`, `BenchmarkCrafterJourney`, `BenchmarkPvPJourney`, `BenchmarkFullValidation`, and `BenchmarkJourneyStep` with 10 step variants.
 
 ## Input Integration
 | Input Source | Status | Notes |

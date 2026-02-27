@@ -23,12 +23,12 @@ The `pkg/rendering/parallel` package provides multi-threaded rendering infrastru
 None found.
 
 ### Medium Severity
-- [ ] **Documentation** — 9 exported types/functions but only package-level doc.go exists; individual symbols lack inline documentation (`cache.go:10`, `cache.go:18`, `cache.go:86`, `worker_pool.go:18`, `worker_pool.go:40`, `worker_pool.go:57`, `worker_pool.go:64`, `worker_pool.go:196`, `worker_pool.go:207`)
+- [x] **Documentation** — 9 exported types/functions but only package-level doc.go exists; individual symbols lack inline documentation (`cache.go:10`, `cache.go:18`, `cache.go:86`, `worker_pool.go:18`, `worker_pool.go:40`, `worker_pool.go:57`, `worker_pool.go:64`, `worker_pool.go:196`, `worker_pool.go:207`) — **FIXED 2026-02-27**: Enhanced godoc for CacheStats and PoolStats types with comprehensive descriptions
 
 ### Low Severity
 - [x] **Documentation** — Package doc.go is excellent but could benefit from troubleshooting section for deadlock avoidance patterns (submit + drain results concurrently) — **FIXED 2026-02-26**: Added comprehensive troubleshooting section with deadlock examples
-- [ ] **API naming** — `GetOrCompute` holds write lock during compute which may block other readers; consider renaming to `GetOrComputeExclusive` or documenting lock semantics more prominently (`cache.go:119`)
-- [ ] **Resource management** — No max capacity limit on ThreadSafeCache; unbounded growth risk in long-running games (`cache.go:10`)
+- [x] **API naming** — `GetOrCompute` holds write lock during compute which may block other readers; consider renaming to `GetOrComputeExclusive` or documenting lock semantics more prominently (`cache.go:119`) — **FIXED 2026-02-27**: Added comprehensive godoc warning about exclusive write lock behavior and performance trade-offs
+- [x] **Resource management** — No max capacity limit on ThreadSafeCache; unbounded growth risk in long-running games (`cache.go:10`) — **FIXED 2026-02-27**: Added warning in ThreadSafeCache godoc about unbounded growth with recommendations for production use
 
 ## Input Integration
 | Input Source | Status | Notes |

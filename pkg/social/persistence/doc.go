@@ -102,8 +102,38 @@
 //
 // # Delta Synchronization
 //
-// [ChatHistory.GetDelta] uses a version-based heuristic to estimate which messages
-// are new since a given version. This is a known limitation: it does not maintain
-// a true changelog. For large version gaps, it returns all messages. This approach
-// trades perfect accuracy for lower memory overhead and simpler implementation.
+// [ChatHistory.GetDelta] uses a changelog-based approach to accurately track message
+// additions and deletions since a given version. The implementation maintains an
+// ordered log of changes (up to MaxChangelogSize entries) and queries it to determine
+// exactly which messages have been added or deleted since the requested version.
+//
+// For version 0, all messages are returned (full sync). If fromVersion is older
+// than the oldest entry in the changelog, all messages are returned as a fallback.
+// This changelog-based implementation (added 2026-02-16) replaced the previous
+// heuristic approach to provide accurate delta synchronization for multiplayer
+// chat federation.
+//
+// # Constructor Patterns
+//
+// All managers in this package follow a dual constructor pattern:
+//   - New<Type>(): Default constructor using RealTimeProvider (production)
+//   - New<Type>WithTimeProvider(tp): Test constructor for injecting mock time
+//
+// This pattern is intentionally maintained for API stability rather than using
+// functional options. The dual constructor approach provides:
+//   - Clear separation between production and test usage
+//   - Simpler API surface (no variadic options)
+//   - Type-safe TimeProvider injection
+//   - Backward compatibility with existing code
+//
+// Example production usage:
+//
+//	manager := persistence.NewTrustManager()  // Uses real time
+//	history := persistence.NewChatHistory(playerID)
+//
+// Example test usage:
+//
+//	mockTime := &FixedTimeProvider{Time: time.Unix(1234567890, 0)}
+//	manager := persistence.NewTrustManagerWithTimeProvider(mockTime)
+//	history := persistence.NewChatHistoryWithTimeProvider(playerID, mockTime)
 package persistence

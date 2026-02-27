@@ -23,12 +23,15 @@ Network resilience testing and simulation package for validating multiplayer beh
 *None*
 
 ### Medium Severity
-- [ ] **Documentation** — README.md contains example with `log.Fatal` (line 58) instead of structured logging, contradicting project guidelines (`README.md:58`)
+- [x] **Documentation** — README.md contains example with `log.Fatal` (line 58) instead of structured logging, contradicting project guidelines (`README.md:58`)
+  - **Resolution (2026-02-27)**: Replaced log.Fatal with logrus.WithError in README.md example code.
 - [ ] **API consistency** — `formatInt()` and `trimTrailingZeros()` in scenario.go (lines 240-270) are custom string formatting implementations that could use standard library `strconv.FormatInt()` and `strconv.FormatFloat()` for maintainability (`scenario.go:240-270`)
 
 ### Low Severity
-- [ ] **Documentation** — doc.go contains commented-out fmt.Printf examples (lines 53-55, 67) instead of using structured logging in examples (`doc.go:53-55,67`)
-- [ ] **Documentation** — scenario.go contains commented-out fmt.Printf example (line 28) instead of structured logging (`scenario.go:28`)
+- [x] **Documentation** — doc.go contains commented-out fmt.Printf examples (lines 53-55, 67) instead of using structured logging in examples (`doc.go:53-55,67`)
+  - **Resolution (2026-02-27)**: Replaced fmt.Printf with logrus.WithFields in doc.go example code demonstrating network metrics (avg_latency, packet_loss_rate, desync_count) and scenario failures (scenario, failure_reason).
+- [x] **Documentation** — scenario.go contains commented-out fmt.Printf example (line 28) instead of structured logging (`scenario.go:28`)
+  - **Resolution (2026-02-27)**: Replaced fmt.Printf with logrus.WithFields in scenario.go example code with proper field names (scenario, failure_reason).
 
 ## Input Integration
 | Input Source | Status | Notes |

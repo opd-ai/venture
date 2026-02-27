@@ -48,6 +48,10 @@
 //
 // # Example Usage
 //
+// Note: Examples use log.Fatal and log.Printf for simplicity.
+// Production code should use logrus.WithError() and logrus.WithFields()
+// for structured logging per project guidelines.
+//
 //	// Create marketplace
 //	marketplace := economy.NewFederatedMarketplace(federation, mailSystem)
 //

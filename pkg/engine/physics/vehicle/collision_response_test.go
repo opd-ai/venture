@@ -100,14 +100,14 @@ func TestCollisionResponseComponent_GetDamageMultiplier(t *testing.T) {
 	comp := NewCollisionResponseComponent(1000.0)
 
 	// At full integrity
-	mult := comp.GetDamageMultiplier()
+	mult := GetDamageMultiplier(comp)
 	if mult != 1.0 {
 		t.Errorf("at full integrity, multiplier should be 1.0, got %f", mult)
 	}
 
 	// Damage vehicle to 50% integrity
 	comp.StructuralIntegrity = 0.5
-	mult = comp.GetDamageMultiplier()
+	mult = GetDamageMultiplier(comp)
 	expected := 0.5 + (0.5 * 0.5) // 0.75
 	if math.Abs(mult-expected) > 0.01 {
 		t.Errorf("at 50%% integrity, multiplier should be ~%f, got %f", expected, mult)
@@ -115,7 +115,7 @@ func TestCollisionResponseComponent_GetDamageMultiplier(t *testing.T) {
 
 	// Damage vehicle to 0% integrity
 	comp.StructuralIntegrity = 0.0
-	mult = comp.GetDamageMultiplier()
+	mult = GetDamageMultiplier(comp)
 	if mult != 0.5 {
 		t.Errorf("at 0%% integrity, multiplier should be 0.5, got %f", mult)
 	}
@@ -124,17 +124,17 @@ func TestCollisionResponseComponent_GetDamageMultiplier(t *testing.T) {
 func TestCollisionResponseComponent_IsDestroyed(t *testing.T) {
 	comp := NewCollisionResponseComponent(1000.0)
 
-	if comp.IsDestroyed() {
+	if IsDestroyed(comp) {
 		t.Error("new component should not be destroyed")
 	}
 
 	comp.StructuralIntegrity = 0.5
-	if comp.IsDestroyed() {
+	if IsDestroyed(comp) {
 		t.Error("50% integrity should not be destroyed")
 	}
 
 	comp.StructuralIntegrity = 0.0
-	if !comp.IsDestroyed() {
+	if !IsDestroyed(comp) {
 		t.Error("0% integrity should be destroyed")
 	}
 }
@@ -146,13 +146,13 @@ func TestCollisionResponseComponent_Repair(t *testing.T) {
 	comp.StructuralIntegrity = 0.5
 
 	// Repair partially
-	comp.Repair(0.3)
+	RepairVehicle(comp, 0.3)
 	if math.Abs(comp.StructuralIntegrity-0.8) > 0.01 {
 		t.Errorf("after repair, integrity should be ~0.8, got %f", comp.StructuralIntegrity)
 	}
 
 	// Over-repair (should clamp to 1.0)
-	comp.Repair(1.0)
+	RepairVehicle(comp, 1.0)
 	if comp.StructuralIntegrity != 1.0 {
 		t.Errorf("integrity should be clamped to 1.0, got %f", comp.StructuralIntegrity)
 	}
@@ -294,6 +294,6 @@ func BenchmarkCollisionResponseComponent_GetDamageMultiplier(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		_ = comp.GetDamageMultiplier()
+		_ = GetDamageMultiplier(comp)
 	}
 }

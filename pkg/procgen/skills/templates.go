@@ -1,6 +1,39 @@
 // Package skills provides skill tree templates.
 // This file defines genre-specific skill tree template data used by the skill generator
 // to create structured progression systems. Type definitions have been moved to types.go.
+//
+// # Custom Genre Template Structure
+//
+// To add custom genre support, create a template function returning []SkillTreeTemplate:
+//
+//	func GetCyberpunkTreeTemplates() []SkillTreeTemplate {
+//	    return []SkillTreeTemplate{
+//	        {
+//	            Name:        "Netrunner",
+//	            Description: "Master of digital infiltration and hacking",
+//	            Category:    CategoryMagic, // Repurposed for hacking
+//	            SkillTemplates: []SkillTemplate{
+//	                {
+//	                    BaseType:          TypeActive,
+//	                    BaseCategory:      CategoryMagic,
+//	                    NamePrefixes:      []string{"Neural", "Cyber", "Digital"},
+//	                    NameSuffixes:      []string{"Breach", "Exploit", "Override"},
+//	                    DescriptionFormat: "Hack %s systems remotely",
+//	                    EffectTypes:       []string{"hack_power", "ice_break"},
+//	                    ValueRanges: map[string][2]float64{
+//	                        "hack_power": {10.0, 50.0},
+//	                        "ice_break":  {0.1, 0.4},
+//	                    },
+//	                    Tags:          []string{"hacking", "netrunner"},
+//	                    TierRange:     [2]int{0, 6},
+//	                    MaxLevelRange: [2]int{1, 5},
+//	                },
+//	            },
+//	        },
+//	    }
+//	}
+//
+// Then register in generator.go's getTemplates() switch statement.
 package skills
 
 // GetFantasyTreeTemplates returns skill tree templates for fantasy genre.

@@ -23,7 +23,7 @@ The `pkg/rendering/tiles` package provides procedural tile image generation for 
 None
 
 ### Medium Severity
-- [ ] **Documentation** — `README.md` and `doc.go` contain commented-out `log.Fatal` example code that should use `logrus` instead (`README.md:47`, `doc.go:97,115,132,139,158`)
+- [x] **Documentation** — `README.md` and `doc.go` contain commented-out `log.Fatal` example code that should use `logrus` instead (`README.md:47`, `doc.go:97,115,132,139,158`) **FIXED 2026-02-27**: Added clarifying comments in all examples explaining production code should use logrus.WithError and logrus.WithFields for structured logging
 
 ### Low Severity
 - [ ] **Documentation** — Package-level comments reference "Phase 16.2", "Phase 16.3", "Phase 47" which lack context for new developers (`doc.go:13,17,22,28,44,56`)

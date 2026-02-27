@@ -38,13 +38,14 @@ params := procgen.GenerationParams{
 // Generate spells
 result, err := gen.Generate(12345, params)
 if err != nil {
-    log.Fatal(err)
+    log.Fatal(err) // Note: Use logrus.WithError in production
 }
 
 spells := result.([]*magic.Spell)
 
 // Use the spells
 for _, spell := range spells {
+    // Note: Use logrus.WithFields for structured logging in production
     fmt.Printf("%s: %s (Power: %d)\n", 
         spell.Name, spell.Description, spell.GetPowerLevel())
 }
@@ -330,6 +331,7 @@ spells, _ := gen.Generate(seed, params)
 ```go
 for _, spell := range spells {
     if spell.GetPowerLevel() >= 80 && spell.Rarity >= magic.RarityEpic {
+        // Note: Use logrus.WithFields for structured logging in production
         fmt.Printf("Found powerful spell: %s\n", spell.Name)
     }
 }

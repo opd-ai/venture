@@ -48,11 +48,26 @@ func (m *Manager) Save(filename string) error {
 		}).Error("failed to create housing save file")
 		return fmt.Errorf("failed to create file: %w", err)
 	}
-	defer file.Close()
+	defer func() {
+		if closeErr := file.Close(); closeErr != nil {
+			log.WithFields(log.Fields{
+				"filename": filename,
+				"error":    closeErr.Error(),
+			}).Error("failed to close housing save file")
+		}
+	}()
 
 	// Create gzip writer
 	gzWriter := gzip.NewWriter(file)
-	defer gzWriter.Close()
+	defer func() {
+		if closeErr := gzWriter.Close(); closeErr != nil && err == nil {
+			err = fmt.Errorf("failed to close gzip writer: %w", closeErr)
+			log.WithFields(log.Fields{
+				"filename": filename,
+				"error":    closeErr.Error(),
+			}).Error("failed to close gzip writer for housing save")
+		}
+	}()
 
 	// Encode JSON
 	encoder := json.NewEncoder(gzWriter)
@@ -161,11 +176,28 @@ func (m *Manager) SavePlayerData(playerID, filename string) error {
 		}).Error("failed to create player housing save file")
 		return fmt.Errorf("failed to create file: %w", err)
 	}
-	defer file.Close()
+	defer func() {
+		if closeErr := file.Close(); closeErr != nil {
+			log.WithFields(log.Fields{
+				"playerID": playerID,
+				"filename": filename,
+				"error":    closeErr.Error(),
+			}).Error("failed to close player housing save file")
+		}
+	}()
 
 	// Create gzip writer
 	gzWriter := gzip.NewWriter(file)
-	defer gzWriter.Close()
+	defer func() {
+		if closeErr := gzWriter.Close(); closeErr != nil && err == nil {
+			err = fmt.Errorf("failed to close gzip writer: %w", closeErr)
+			log.WithFields(log.Fields{
+				"playerID": playerID,
+				"filename": filename,
+				"error":    closeErr.Error(),
+			}).Error("failed to close gzip writer for player housing save")
+		}
+	}()
 
 	// Encode JSON
 	encoder := json.NewEncoder(gzWriter)

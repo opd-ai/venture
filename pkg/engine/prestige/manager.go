@@ -9,7 +9,9 @@ import (
 	"io"
 	"math"
 	"sync"
-	"time"
+
+	"github.com/opd-ai/venture/pkg/engine"
+	"github.com/sirupsen/logrus"
 )
 
 // Sentinel errors for prestige operations.
@@ -22,23 +24,51 @@ var (
 )
 
 // Manager handles prestige system operations.
-// NOTE: Uses time.Now() for LastUpdated metadata timestamps on PlayerPrestige and
-// AccountPrestige records. These timestamps are for audit/debugging purposes only
-// and do not affect gameplay logic or deterministic generation.
+// Uses GameClock for LastUpdated metadata timestamps on PlayerPrestige and
+// AccountPrestige records to maintain determinism. Timestamps are for
+// audit/debugging purposes only and do not affect gameplay logic.
 type Manager struct {
 	mu       sync.RWMutex
 	players  map[string]*PlayerPrestige
 	accounts map[string]*AccountPrestige
 	// classToAccount maps playerID to accountID for lookups
 	classToAccount map[string]string
+	logger         *logrus.Entry
+	clock          engine.GameClock
 }
 
-// NewManager creates a new prestige manager.
+// NewManager creates a new prestige manager with a RealTimeClock.
 func NewManager() *Manager {
+	return NewManagerWithLogger(nil)
+}
+
+// NewManagerWithLogger creates a new prestige manager with a logger and RealTimeClock.
+func NewManagerWithLogger(logger *logrus.Logger) *Manager {
+	return NewManagerWithClock(logger, engine.NewRealTimeClock())
+}
+
+// NewManagerWithClock creates a new prestige manager with a logger and custom clock.
+// This constructor enables deterministic testing with SimulationClock.
+func NewManagerWithClock(logger *logrus.Logger, clock engine.GameClock) *Manager {
+	var logEntry *logrus.Entry
+	if logger != nil {
+		logEntry = logger.WithFields(logrus.Fields{
+			"component": "prestige_manager",
+		})
+	} else {
+		logEntry = logrus.WithFields(logrus.Fields{
+			"component": "prestige_manager",
+		})
+	}
+
+	logEntry.Debug("prestige manager created")
+
 	return &Manager{
 		players:        make(map[string]*PlayerPrestige),
 		accounts:       make(map[string]*AccountPrestige),
 		classToAccount: make(map[string]string),
+		logger:         logEntry,
+		clock:          clock,
 	}
 }
 
@@ -46,6 +76,12 @@ func NewManager() *Manager {
 func (m *Manager) CreatePlayer(playerID, className, accountID string) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
+
+	m.logger.WithFields(logrus.Fields{
+		"playerID":  playerID,
+		"className": className,
+		"accountID": accountID,
+	}).Debug("creating player prestige")
 
 	m.players[playerID] = &PlayerPrestige{
 		PlayerID:           playerID,
@@ -56,7 +92,7 @@ func (m *Manager) CreatePlayer(playerID, className, accountID string) {
 		ParagonPoints:      0,
 		ParagonAllocations: make(map[ParagonStat]int),
 		UnlockedAbilities:  []int{},
-		LastUpdated:        time.Now(),
+		LastUpdated:        m.clock.Now(),
 	}
 
 	m.classToAccount[playerID] = accountID
@@ -68,7 +104,7 @@ func (m *Manager) CreatePlayer(playerID, className, accountID string) {
 			Prestige100Count: 0,
 			XPBonus:          0.0,
 			CharacterIDs:     []string{},
-			LastUpdated:      time.Now(),
+			LastUpdated:      m.clock.Now(),
 		}
 	}
 
@@ -98,7 +134,7 @@ func (m *Manager) AddPrestigeXP(playerID, className string, xp int) int {
 
 	player.CurrentXP += xp
 	player.TotalXP += xp
-	player.LastUpdated = time.Now()
+	player.LastUpdated = m.clock.Now()
 
 	levelsGained := 0
 	for {
@@ -131,7 +167,7 @@ func (m *Manager) AddParagonPoints(playerID string, points int) {
 	}
 
 	player.ParagonPoints += points
-	player.LastUpdated = time.Now()
+	player.LastUpdated = m.clock.Now()
 }
 
 // AllocateParagonPoint allocates a paragon point to a stat.
@@ -154,7 +190,7 @@ func (m *Manager) AllocateParagonPoint(playerID string, stat ParagonStat) error 
 
 	player.ParagonPoints--
 	player.ParagonAllocations[stat]++
-	player.LastUpdated = time.Now()
+	player.LastUpdated = m.clock.Now()
 
 	return nil
 }
@@ -181,7 +217,7 @@ func (m *Manager) RespecParagonPoints(playerID string) (int, error) {
 	// Clear allocations
 	player.ParagonAllocations = make(map[ParagonStat]int)
 	player.ParagonPoints += totalPoints
-	player.LastUpdated = time.Now()
+	player.LastUpdated = m.clock.Now()
 
 	cost := totalPoints * RespecCostPerPoint
 	return cost, nil
@@ -276,7 +312,7 @@ func (m *Manager) CheckAbilityUnlock(playerID string) *PrestigeAbility {
 
 			if !alreadyUnlocked {
 				player.UnlockedAbilities = append(player.UnlockedAbilities, milestone)
-				player.LastUpdated = time.Now()
+				player.LastUpdated = m.clock.Now()
 				return m.GetPrestigeAbility(player.ClassName, milestone)
 			}
 		}
@@ -313,7 +349,7 @@ func (m *Manager) updateAccountBonus(playerID string, delta int) {
 	account.Prestige100Count += delta
 	// XP bonus stacks multiplicatively: 1 char = 5%, 2 chars = 10.25%, etc.
 	account.XPBonus = math.Pow(1.0+AccountXPBonus, float64(account.Prestige100Count)) - 1.0
-	account.LastUpdated = time.Now()
+	account.LastUpdated = m.clock.Now()
 }
 
 // calculateXPRequired calculates XP needed for a prestige level.

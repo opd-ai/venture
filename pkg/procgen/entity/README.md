@@ -49,6 +49,7 @@ func main() {
     entities := result.([]*entity.Entity)
     
     // Use the entities
+    // Note: Production code should use logrus.WithFields for structured logging
     for _, e := range entities {
         fmt.Printf("%s (Lv.%d): HP=%d, DMG=%d\n", 
             e.Name, e.Stats.Level, e.Stats.MaxHealth, e.Stats.Damage)

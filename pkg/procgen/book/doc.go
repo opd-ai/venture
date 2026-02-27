@@ -27,6 +27,9 @@
 //
 // # Example Usage
 //
+// Note: Example uses simplified logging for clarity.
+// Production code should use logrus.WithFields for structured logging.
+//
 //	generator := book.NewGenerator()
 //	params := procgen.GenerationParams{
 //	    Difficulty: 0.5,

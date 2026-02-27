@@ -350,10 +350,11 @@ func TestEventMemory(t *testing.T) {
 func TestAddEvent(t *testing.T) {
 	em := NewEventMemory(1000)
 
+	mockTime := &MockTimeProvider{CurrentTime: time.Unix(1000000, 0)}
 	event := MemorableEvent{
 		Type:        EventCombat,
 		Description: "test combat",
-		Timestamp:   time.Now(),
+		Timestamp:   mockTime.Now(),
 		Importance:  0.5,
 	}
 
@@ -370,11 +371,12 @@ func TestAddEvent(t *testing.T) {
 func TestAddEventLRUEviction(t *testing.T) {
 	em := NewEventMemory(10)
 
+	mockTime := &MockTimeProvider{CurrentTime: time.Unix(1000000, 0)}
 	for i := 0; i < 15; i++ {
 		event := MemorableEvent{
 			Type:        EventCombat,
 			Description: "test event",
-			Timestamp:   time.Now(),
+			Timestamp:   mockTime.Now(),
 			Importance:  0.5,
 		}
 		em.AddEvent(event)
@@ -391,11 +393,12 @@ func TestAddEventLRUEviction(t *testing.T) {
 func TestGetRecentEvents(t *testing.T) {
 	em := NewEventMemory(1000)
 
+	mockTime := &MockTimeProvider{CurrentTime: time.Unix(1000000, 0)}
 	for i := 0; i < 10; i++ {
 		event := MemorableEvent{
 			Type:        EventCombat,
 			Description: "test event",
-			Timestamp:   time.Now(),
+			Timestamp:   mockTime.Now(),
 			Importance:  0.5,
 		}
 		em.AddEvent(event)
@@ -410,9 +413,10 @@ func TestGetRecentEvents(t *testing.T) {
 func TestGetEventsByType(t *testing.T) {
 	em := NewEventMemory(1000)
 
-	em.AddEvent(MemorableEvent{Type: EventCombat, Timestamp: time.Now()})
-	em.AddEvent(MemorableEvent{Type: EventDialog, Timestamp: time.Now()})
-	em.AddEvent(MemorableEvent{Type: EventCombat, Timestamp: time.Now()})
+	mockTime := &MockTimeProvider{CurrentTime: time.Unix(1000000, 0)}
+	em.AddEvent(MemorableEvent{Type: EventCombat, Timestamp: mockTime.Now()})
+	em.AddEvent(MemorableEvent{Type: EventDialog, Timestamp: mockTime.Now()})
+	em.AddEvent(MemorableEvent{Type: EventCombat, Timestamp: mockTime.Now()})
 
 	combatEvents := em.GetEventsByType(EventCombat)
 	if len(combatEvents) != 2 {
@@ -477,10 +481,11 @@ func TestAdaptBehaviorToCombatStyle(t *testing.T) {
 	comp := manager.AddCompanion("test", 1.0)
 
 	// Add some combat events
+	mockTime := &MockTimeProvider{CurrentTime: time.Unix(1000000, 0)}
 	for i := 0; i < 10; i++ {
 		comp.Memory.AddEvent(MemorableEvent{
 			Type:      EventCombat,
-			Timestamp: time.Now(),
+			Timestamp: mockTime.Now(),
 		})
 	}
 
@@ -517,10 +522,11 @@ func BenchmarkAdjustTrait(b *testing.B) {
 
 func BenchmarkAddEvent(b *testing.B) {
 	em := NewEventMemory(1000)
+	mockTime := &MockTimeProvider{CurrentTime: time.Unix(1000000, 0)}
 	event := MemorableEvent{
 		Type:        EventCombat,
 		Description: "benchmark event",
-		Timestamp:   time.Now(),
+		Timestamp:   mockTime.Now(),
 		Importance:  0.5,
 	}
 	b.ResetTimer()
@@ -574,14 +580,20 @@ func TestGeneratePersonalityDescription_NilPersonality(t *testing.T) {
 
 // TestConcurrentUpdateAndModify verifies Update is safe during concurrent Add/Remove.
 func TestConcurrentUpdateAndModify(t *testing.T) {
-	system := NewCompanionLearningSystem(time.Millisecond)
-	manager := system.GetManager()
+	mockTime := &MockTimeProvider{CurrentTime: time.Unix(1000000, 0)}
+	manager := NewManagerWithOptions(mockTime, nil)
+	system := &CompanionLearningSystem{
+		manager:        manager,
+		updateInterval: time.Millisecond,
+		timeProvider:   mockTime,
+		lastUpdate:     time.Time{},
+	}
 
 	// Pre-populate some companions
 	for i := 0; i < 5; i++ {
 		comp := manager.AddCompanion(string(rune('A'+i)), 1.0)
 		_ = comp.SkillTree.AddExperience("Basic Attack", 50.0, 1.0)
-		comp.LastSkillUse["Basic Attack"] = time.Now().Add(-48 * time.Hour)
+		comp.LastSkillUse["Basic Attack"] = mockTime.Now().Add(-48 * time.Hour)
 	}
 
 	done := make(chan struct{})

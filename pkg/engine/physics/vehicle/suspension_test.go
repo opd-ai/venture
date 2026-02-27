@@ -106,7 +106,7 @@ func TestSuspensionComponent_GetWheelLoad(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			load := comp.GetWheelLoad(tt.wheelIndex)
+			load := GetWheelLoad(comp, tt.wheelIndex)
 			isZero := load == 0.0
 			if isZero != tt.wantZero {
 				t.Errorf("wheel %d: got load=%f, wantZero=%v", tt.wheelIndex, load, tt.wantZero)
@@ -194,7 +194,7 @@ func TestSuspensionComponent_SetWheelLoad(t *testing.T) {
 			comp.SetWheelLoad(tt.wheelIndex, tt.load)
 
 			if tt.wantSet {
-				actualLoad := comp.GetWheelLoad(tt.wheelIndex)
+				actualLoad := GetWheelLoad(comp, tt.wheelIndex)
 				if math.Abs(actualLoad-tt.load) > 0.01 {
 					t.Errorf("wheel %d: got load=%f, want=%f", tt.wheelIndex, actualLoad, tt.load)
 				}
@@ -224,6 +224,6 @@ func BenchmarkSuspensionComponent_GetWheelLoad(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		_ = comp.GetWheelLoad(i % 4)
+		_ = GetWheelLoad(comp, i%4)
 	}
 }

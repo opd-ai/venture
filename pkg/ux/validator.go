@@ -27,6 +27,8 @@ func NewJourneyValidatorWithConfig(config ValidationConfig) *JourneyValidator {
 func newValidatorWithConfig(config ValidationConfig) *JourneyValidator {
 	seed := config.Seed
 	if seed == 0 {
+		// UX validation timing uses non-deterministic seed when Seed==0. This is acceptable
+		// because journeys validate flow logic, not game content generation.
 		seed = time.Now().UnixNano()
 	}
 	return &JourneyValidator{
@@ -90,6 +92,7 @@ func (v *JourneyValidator) findJourneyDefinition(journeyType JourneyType) (Journ
 }
 
 // executeJourneyRuns runs the journey multiple times and collects results.
+// Returns: completions count, total duration, error count, step results.
 func (v *JourneyValidator) executeJourneyRuns(journey JourneyDefinition) (int, time.Duration, int, []StepResult) {
 	completions := 0
 	totalDuration := time.Duration(0)
@@ -103,6 +106,7 @@ func (v *JourneyValidator) executeJourneyRuns(journey JourneyDefinition) (int, t
 			Data:      make(map[string]interface{}),
 		}
 
+		// Using time.Now() for wall-clock timing measurement (not game simulation time)
 		runStart := time.Now()
 		runCompleted := v.executeJourneySteps(ctx, journey.Steps, stepResults, &errors)
 
@@ -116,9 +120,11 @@ func (v *JourneyValidator) executeJourneyRuns(journey JourneyDefinition) (int, t
 }
 
 // executeJourneySteps executes all steps in a single journey run.
+// Returns true if all steps completed successfully, false if any step failed.
 func (v *JourneyValidator) executeJourneySteps(ctx *JourneyContext, steps []JourneyStep, stepResults []StepResult, errors *int) bool {
 	for i, step := range steps {
 		ctx.StepIndex = i
+		// Using time.Now() for wall-clock timing measurement (not game simulation time)
 		ctx.StepStartTime = time.Now()
 
 		err := step.Action(ctx)
@@ -138,6 +144,7 @@ func (v *JourneyValidator) executeJourneySteps(ctx *JourneyContext, steps []Jour
 }
 
 // calculateJourneyMetrics computes completion rate, average duration, error rate, and satisfaction.
+// Returns: completion rate, average duration, error rate, satisfaction score.
 func (v *JourneyValidator) calculateJourneyMetrics(completions int, totalDuration time.Duration, errors, totalSteps int, expectedDuration time.Duration) (float64, time.Duration, float64, float64) {
 	completionRate := float64(completions) / float64(v.config.Runs)
 
@@ -158,6 +165,7 @@ func (v *JourneyValidator) calculateJourneyMetrics(completions int, totalDuratio
 }
 
 // averageStepDurations normalizes step durations by number of completions.
+// Modifies stepResults in-place to contain average durations across all runs.
 func (v *JourneyValidator) averageStepDurations(stepResults []StepResult, completions int) {
 	if completions > 0 {
 		for i := range stepResults {
@@ -167,6 +175,7 @@ func (v *JourneyValidator) averageStepDurations(stepResults []StepResult, comple
 }
 
 // journeyMeetsThresholds checks if journey results meet validation criteria.
+// Returns true if all thresholds (completion, error, satisfaction, duration) are met.
 func (v *JourneyValidator) journeyMeetsThresholds(completionRate, errorRate, satisfaction float64, averageDuration, expectedDuration time.Duration) bool {
 	return completionRate >= v.config.MinCompletionRate &&
 		errorRate <= v.config.MaxErrorRate &&

@@ -215,6 +215,7 @@ func (s *Siege) AddReinforcements(guildID string, playerIDs []string) error {
 // AdvancePhaseWithTime moves the siege to the next phase using a specified time.
 // This enables deterministic phase transitions for testing and state replication.
 func (s *Siege) AdvancePhaseWithTime(now time.Time) error {
+	oldPhase := s.Phase
 	switch s.Phase {
 	case PhasePreparation:
 		// Check if 1 hour has passed
@@ -228,6 +229,12 @@ func (s *Siege) AdvancePhaseWithTime(now time.Time) error {
 		}
 		s.Phase = PhaseAssault
 		s.PhaseStartTime = now
+		log.WithFields(log.Fields{
+			"siege_id":    s.ID,
+			"old_phase":   oldPhase.String(),
+			"new_phase":   s.Phase.String(),
+			"system_name": "territory",
+		}).Info("siege phase advanced")
 
 	case PhaseAssault:
 		// Check if 2 hours have passed or victory condition met
@@ -241,10 +248,22 @@ func (s *Siege) AdvancePhaseWithTime(now time.Time) error {
 		}
 		s.Phase = PhaseResolution
 		s.PhaseStartTime = now
+		log.WithFields(log.Fields{
+			"siege_id":    s.ID,
+			"old_phase":   oldPhase.String(),
+			"new_phase":   s.Phase.String(),
+			"system_name": "territory",
+		}).Info("siege phase advanced")
 
 	case PhaseResolution:
 		s.Phase = PhaseEnded
 		s.EndTime = now
+		log.WithFields(log.Fields{
+			"siege_id":    s.ID,
+			"old_phase":   oldPhase.String(),
+			"new_phase":   s.Phase.String(),
+			"system_name": "territory",
+		}).Info("siege phase advanced")
 
 	default:
 		log.WithFields(log.Fields{
@@ -273,6 +292,13 @@ func (s *Siege) CaptureControlPoint() error {
 	if s.ControlPointsCaptured >= s.TotalControlPoints {
 		s.VictoryCondition = VictoryCapturePoints
 		s.WinnerGuildID = s.AttackerGuildID
+		log.WithFields(log.Fields{
+			"siege_id":          s.ID,
+			"victory_condition": s.VictoryCondition.String(),
+			"winner_guild":      s.WinnerGuildID,
+			"control_points":    s.ControlPointsCaptured,
+			"system_name":       "territory",
+		}).Info("siege victory condition met")
 	}
 
 	return nil
@@ -297,6 +323,13 @@ func (s *Siege) DamageGuildHall(damage float64) error {
 	if s.GuildHallHP <= 0 {
 		s.VictoryCondition = VictoryDestroyHall
 		s.WinnerGuildID = s.AttackerGuildID
+		log.WithFields(log.Fields{
+			"siege_id":          s.ID,
+			"victory_condition": s.VictoryCondition.String(),
+			"winner_guild":      s.WinnerGuildID,
+			"guild_hall_hp":     s.GuildHallHP,
+			"system_name":       "territory",
+		}).Info("siege victory condition met")
 	}
 
 	return nil
@@ -445,7 +478,10 @@ func copySiege(s *Siege) *Siege {
 }
 
 // Update processes all active sieges and advances phases as needed.
-func (sm *SiegeManager) Update(deltaTime float64) {
+// Update advances siege states and checks for phase transitions and victory conditions.
+// Returns the number of phases advanced, sieges ended, and any errors encountered.
+// This enables observability for monitoring siege progression and debugging.
+func (sm *SiegeManager) Update(deltaTime float64) (phasesAdvanced, siegesEnded int, err error) {
 	sm.mu.Lock()
 	defer sm.mu.Unlock()
 
@@ -460,7 +496,16 @@ func (sm *SiegeManager) Update(deltaTime float64) {
 		switch siege.Phase {
 		case PhasePreparation:
 			if now.Sub(siege.PhaseStartTime) >= time.Hour {
-				siege.AdvancePhaseWithTime(now)
+				oldPhase := siege.Phase
+				if advErr := siege.AdvancePhaseWithTime(now); advErr == nil {
+					phasesAdvanced++
+					log.WithFields(log.Fields{
+						"siege_id":    siege.ID,
+						"old_phase":   oldPhase.String(),
+						"new_phase":   siege.Phase.String(),
+						"system_name": "territory",
+					}).Info("siege phase transition")
+				}
 			}
 
 		case PhaseAssault:
@@ -469,17 +514,54 @@ func (sm *SiegeManager) Update(deltaTime float64) {
 				if siege.WinnerGuildID == "" {
 					siege.VictoryCondition = VictoryDefenseTimeout
 					siege.WinnerGuildID = siege.DefenderGuildID
+					log.WithFields(log.Fields{
+						"siege_id":          siege.ID,
+						"victory_condition": siege.VictoryCondition.String(),
+						"winner_guild":      siege.WinnerGuildID,
+						"system_name":       "territory",
+					}).Info("siege victory")
 				}
-				siege.AdvancePhaseWithTime(now)
+				oldPhase := siege.Phase
+				if advErr := siege.AdvancePhaseWithTime(now); advErr == nil {
+					phasesAdvanced++
+					log.WithFields(log.Fields{
+						"siege_id":    siege.ID,
+						"old_phase":   oldPhase.String(),
+						"new_phase":   siege.Phase.String(),
+						"system_name": "territory",
+					}).Info("siege phase transition")
+				}
 			}
 
 		case PhaseResolution:
 			// Auto-advance after resolution calculations
 			if now.Sub(siege.PhaseStartTime) >= 5*time.Minute {
-				siege.AdvancePhaseWithTime(now)
+				oldPhase := siege.Phase
+				if advErr := siege.AdvancePhaseWithTime(now); advErr == nil {
+					phasesAdvanced++
+					siegesEnded++
+					lootAmount := int(float64(siege.DefenderTreasury) * siege.LootPercentage)
+					log.WithFields(log.Fields{
+						"siege_id":          siege.ID,
+						"old_phase":         oldPhase.String(),
+						"new_phase":         siege.Phase.String(),
+						"victory_condition": siege.VictoryCondition.String(),
+						"winner_guild":      siege.WinnerGuildID,
+						"loot_amount":       lootAmount,
+						"system_name":       "territory",
+					}).Info("siege ended")
+				}
 			}
 		}
 	}
+
+	log.WithFields(log.Fields{
+		"phases_advanced": phasesAdvanced,
+		"sieges_ended":    siegesEnded,
+		"system_name":     "territory",
+	}).Debug("siege manager update completed")
+
+	return phasesAdvanced, siegesEnded, nil
 }
 
 // GenerateDefensiveStructuresWithTime procedurally generates defensive structures with a specified construction time.

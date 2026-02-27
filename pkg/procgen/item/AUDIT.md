@@ -23,7 +23,7 @@ The `pkg/procgen/item` package provides deterministic procedural item generation
 _None_
 
 ### Medium Severity
-- [ ] **Documentation** — Example code in `doc.go:49,53` uses `log.Fatal` and `fmt.Printf` which violates coding guidelines for example code presentation (`doc.go:49,53`)
+- [x] **Documentation** — Example code in `doc.go:49,53` uses `log.Fatal` and `fmt.Printf` which violates coding guidelines for example code presentation (`doc.go:49,53`) — **COMPLETED 2026-02-27**: Added notes indicating logrus should be used in production code
 - [x] **API Design** — `ItemGenerator.generateSingleItem()` accepts both `seed` and `rng *rand.Rand` parameters; passing both is redundant and can cause confusion (`generator.go:143`) **COMPLETED 2026-02-27** - Renamed seed parameter to baseSeed (used only for Item.Seed field), clarified in godoc that rng is the primary randomness source. All randomization now uses rng exclusively. Coverage: 92.2%
 
 ### Low Severity

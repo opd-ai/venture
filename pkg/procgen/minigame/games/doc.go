@@ -26,13 +26,13 @@
 //	// Create and initialize a card game
 //	game := games.NewCardGame()
 //	if err := game.Initialize(12345, 0.5); err != nil {
-//	    log.Fatal(err)
+//	    log.Fatal(err) // Note: Use logrus.WithError in production
 //	}
 //
 //	// Game loop
 //	for !game.IsComplete() {
 //	    if err := game.Update(deltaTime); err != nil {
-//	        log.Fatal(err)
+//	        log.Fatal(err) // Note: Use logrus.WithError in production
 //	    }
 //	    game.Render(screen)
 //	}

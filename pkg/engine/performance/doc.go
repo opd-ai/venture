@@ -68,5 +68,22 @@
 //   - Load time: <3s for raid instances
 //   - Frame time: <16.67ms (60 FPS maintained)
 //
+// # Determinism and time.Now()
+//
+// IMPORTANT: This package uses time.Now() for real-time performance monitoring
+// and timestamp tracking. This is an INTENTIONAL EXCEPTION to Coding Guideline #2
+// (Deterministic Generation). Unlike procedural content generation which must be
+// seed-based and deterministic, performance monitoring requires actual wall-clock
+// time to measure latency, frame times, and batching windows.
+//
+// The time.Now() calls in this package:
+//   - Do NOT affect procedural generation (terrain, items, quests, NPCs)
+//   - Do NOT affect gameplay state or entity behavior
+//   - Are used ONLY for observability, metrics, and optimization
+//
+// Game state remains fully deterministic - only performance measurements are
+// time-dependent. This allows server replays and testing with fixed seeds while
+// still providing production monitoring capabilities.
+//
 // All systems are thread-safe and designed for concurrent use.
 package performance

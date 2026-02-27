@@ -18,20 +18,36 @@ import (
 // - ReputationManager: Supports TimeProvider for consistency (via constructor injection)
 // - ChatHistory: Supports TimeProvider for deterministic testing (via constructor injection)
 //
-// Note: This is intentionally used for non-procgen metadata (timestamps, IDs, decay)
-// rather than procedural content generation. Per the project's determinism guidelines,
-// time.Now() is acceptable for server-side operations like trust decay and audit
-// timestamps, but the TimeProvider abstraction allows deterministic testing.
+// IMPORTANT: TimeProvider exists SOLELY FOR TEST DETERMINISM, not for procedural content
+// generation (Coding Guideline #2). This package manages social metadata (trust scores,
+// timestamps, chat history IDs, image upload times) which are server-side operational
+// data that do not affect procedurally generated game content (terrain, items, quests).
+//
+// Production behavior: All managers use RealTimeProvider (real wall-clock time) by default
+// for operational timestamps and decay scheduling.
+//
+// Test behavior: Tests inject a fixed or mock TimeProvider to eliminate time-dependent
+// test flakiness and enable reproducible test execution.
+//
+// This is an intentional exception to strict determinism guidelines because social
+// metadata timestamps are not part of the seed-based procedural generation system.
 type TimeProvider interface {
 	// Now returns the current time
 	Now() time.Time
 }
 
 // RealTimeProvider implements TimeProvider using the actual system clock.
-// This is the default implementation used in production.
+//
+// This is the ONLY implementation used in production. The time.Now() call here
+// is an intentional exception to Coding Guideline #2 because social metadata
+// (trust decay, timestamps, IDs) are server-side operational data, not procedural
+// content generation.
 type RealTimeProvider struct{}
 
-// Now returns the current system time.
+// Now returns the current system time for production use.
+//
+// This method intentionally calls time.Now() for server-side operational timestamps.
+// See TimeProvider interface godoc for rationale on determinism exception.
 func (RealTimeProvider) Now() time.Time {
 	return time.Now()
 }

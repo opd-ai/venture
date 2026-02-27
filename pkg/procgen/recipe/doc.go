@@ -25,12 +25,13 @@
 //	}
 //	result, err := gen.Generate(12345, params)
 //	if err != nil {
-//	    log.Fatal(err)
+//	    // Note: Production code should use logrus.WithError(err).Fatal()
+//	    return err
 //	}
 //	recipes := result.([]*engine.Recipe)
+//	// Note: Production code should use logrus.WithFields for structured logging
 //	for _, recipe := range recipes {
-//	    fmt.Printf("Recipe: %s (Skill %d, Success %.0f%%)\n",
-//	        recipe.Name, recipe.SkillRequired, recipe.BaseSuccessChance*100)
+//	    // Example: logrus.WithFields(logrus.Fields{"name": recipe.Name, "skill_required": recipe.SkillRequired}).Info("Generated recipe")
 //	}
 //
 // Recipe Types:

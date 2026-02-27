@@ -29,16 +29,68 @@ var (
 	urlPattern = regexp.MustCompile(`https?://[^\s]+`)
 )
 
-// ChatValidator validates and sanitizes chat messages
+// ChatValidatorConfig provides configuration options for ChatValidator.
+//
+// This is intended for production deployments where profanity lists should be
+// loaded from external configuration rather than hardcoded. The default
+// NewChatValidator() uses a minimal stub list suitable for development only.
+//
+// Example production usage:
+//
+//	profanityWords, err := loadProfanityFromFile("config/profanity_en.txt")
+//	if err != nil {
+//	    return err
+//	}
+//	config := ChatValidatorConfig{
+//	    CustomProfanityList: profanityWords,
+//	}
+//	validator := NewChatValidatorWithConfig(config)
+type ChatValidatorConfig struct {
+	// CustomProfanityList allows injection of production profanity filtering.
+	// If nil or empty, falls back to buildProfanityList() stub.
+	// Map keys are lowercase profanity words to filter.
+	CustomProfanityList map[string]bool
+}
+
+// ChatValidator validates and sanitizes chat messages.
+//
+// For production use with custom profanity filtering, see NewChatValidatorWithConfig.
 type ChatValidator struct {
 	// profanityList contains words to filter out
 	profanityList map[string]bool
 }
 
-// NewChatValidator creates a new chat validator with default settings
+// NewChatValidator creates a new chat validator with default settings.
+//
+// This uses a minimal stub profanity list suitable for development/testing only.
+// For production deployments, use NewChatValidatorWithConfig with a custom
+// profanity list loaded from configuration.
 func NewChatValidator() *ChatValidator {
 	return &ChatValidator{
 		profanityList: buildProfanityList(),
+	}
+}
+
+// NewChatValidatorWithConfig creates a new chat validator with custom configuration.
+//
+// This constructor allows production deployments to inject profanity lists loaded
+// from external sources (files, databases, configuration services) rather than
+// relying on the hardcoded stub in buildProfanityList().
+//
+// Example:
+//
+//	config := ChatValidatorConfig{
+//	    CustomProfanityList: loadedProfanityMap,
+//	}
+//	validator := NewChatValidatorWithConfig(config)
+func NewChatValidatorWithConfig(config ChatValidatorConfig) *ChatValidator {
+	profanityList := config.CustomProfanityList
+	if profanityList == nil || len(profanityList) == 0 {
+		// Fall back to stub if no custom list provided
+		profanityList = buildProfanityList()
+	}
+	return &ChatValidator{
+		profanityList: profanityList,
 	}
 }
 

@@ -402,20 +402,25 @@ func TestIsCompatibleVersion(t *testing.T) {
 		ourVersion   string
 		theirVersion string
 		compatible   bool
+		wantErr      bool
 	}{
-		{"6.0.0", "6.0.0", true},
-		{"6.0.0", "6.1.0", true},
-		{"6.0.0", "6.0.1", true},
-		{"6.0.0", "5.0.0", false},
-		{"6.0.0", "7.0.0", false},
-		{"", "6.0.0", false},
-		{"6.0.0", "", false},
-		{"", "", false},
-		{"invalid", "6.0.0", false},
+		{"6.0.0", "6.0.0", true, false},
+		{"6.0.0", "6.1.0", true, false},
+		{"6.0.0", "6.0.1", true, false},
+		{"6.0.0", "5.0.0", false, false},
+		{"6.0.0", "7.0.0", false, false},
+		{"", "6.0.0", false, true},
+		{"6.0.0", "", false, true},
+		{"", "", false, true},
+		{"invalid", "6.0.0", false, true},
 	}
 
 	for _, tt := range tests {
-		got := IsCompatibleVersion(tt.ourVersion, tt.theirVersion)
+		got, err := IsCompatibleVersion(tt.ourVersion, tt.theirVersion)
+		if (err != nil) != tt.wantErr {
+			t.Errorf("IsCompatibleVersion(%q, %q) error = %v, wantErr %v", tt.ourVersion, tt.theirVersion, err, tt.wantErr)
+			continue
+		}
 		if got != tt.compatible {
 			t.Errorf("IsCompatibleVersion(%q, %q) = %v, want %v", tt.ourVersion, tt.theirVersion, got, tt.compatible)
 		}

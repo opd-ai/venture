@@ -374,82 +374,99 @@ func TestCompare(t *testing.T) {
 
 func TestIsCompatible(t *testing.T) {
 	tests := []struct {
-		name string
-		v1   string
-		v2   string
-		want bool
+		name    string
+		v1      string
+		v2      string
+		want    bool
+		wantErr bool
 	}{
 		{
-			name: "same version",
-			v1:   "6.0.0",
-			v2:   "6.0.0",
-			want: true,
+			name:    "same version",
+			v1:      "6.0.0",
+			v2:      "6.0.0",
+			want:    true,
+			wantErr: false,
 		},
 		{
-			name: "same major different minor",
-			v1:   "6.0.0",
-			v2:   "6.1.0",
-			want: true,
+			name:    "same major different minor",
+			v1:      "6.0.0",
+			v2:      "6.1.0",
+			want:    true,
+			wantErr: false,
 		},
 		{
-			name: "same major different patch",
-			v1:   "6.0.0",
-			v2:   "6.0.1",
-			want: true,
+			name:    "same major different patch",
+			v1:      "6.0.0",
+			v2:      "6.0.1",
+			want:    true,
+			wantErr: false,
 		},
 		{
-			name: "same major different minor and patch",
-			v1:   "6.0.0",
-			v2:   "6.5.3",
-			want: true,
+			name:    "same major different minor and patch",
+			v1:      "6.0.0",
+			v2:      "6.5.3",
+			want:    true,
+			wantErr: false,
 		},
 		{
-			name: "different major versions",
-			v1:   "5.0.0",
-			v2:   "6.0.0",
-			want: false,
+			name:    "different major versions",
+			v1:      "5.0.0",
+			v2:      "6.0.0",
+			want:    false,
+			wantErr: false,
 		},
 		{
-			name: "application version compatible with itself",
-			v1:   Version,
-			v2:   Version,
-			want: true,
+			name:    "application version compatible with itself",
+			v1:      Version,
+			v2:      Version,
+			want:    true,
+			wantErr: false,
 		},
 		{
-			name: "protocol version compatible with itself",
-			v1:   ProtocolVersion,
-			v2:   ProtocolVersion,
-			want: true,
+			name:    "protocol version compatible with itself",
+			v1:      ProtocolVersion,
+			v2:      ProtocolVersion,
+			want:    true,
+			wantErr: false,
 		},
 		{
-			name: "invalid first version",
-			v1:   "invalid",
-			v2:   "1.0.0",
-			want: false,
+			name:    "invalid first version",
+			v1:      "invalid",
+			v2:      "1.0.0",
+			want:    false,
+			wantErr: true,
 		},
 		{
-			name: "invalid second version",
-			v1:   "1.0.0",
-			v2:   "invalid",
-			want: false,
+			name:    "invalid second version",
+			v1:      "1.0.0",
+			v2:      "invalid",
+			want:    false,
+			wantErr: true,
 		},
 		{
-			name: "empty first version",
-			v1:   "",
-			v2:   "1.0.0",
-			want: false,
+			name:    "empty first version",
+			v1:      "",
+			v2:      "1.0.0",
+			want:    false,
+			wantErr: true,
 		},
 		{
-			name: "empty second version",
-			v1:   "1.0.0",
-			v2:   "",
-			want: false,
+			name:    "empty second version",
+			v1:      "1.0.0",
+			v2:      "",
+			want:    false,
+			wantErr: true,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := IsCompatible(tt.v1, tt.v2); got != tt.want {
+			got, err := IsCompatible(tt.v1, tt.v2)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("IsCompatible(%q, %q) error = %v, wantErr %v", tt.v1, tt.v2, err, tt.wantErr)
+				return
+			}
+			if got != tt.want {
 				t.Errorf("IsCompatible(%q, %q) = %v, want %v", tt.v1, tt.v2, got, tt.want)
 			}
 		})

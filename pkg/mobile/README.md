@@ -25,6 +25,8 @@ touchIDs := ebiten.AppendTouchIDs(nil)
 handler.Update(touchIDs)
 
 // Query active touches
+// Note: Example uses fmt.Printf for simplicity.
+// Production code should use structured logging via logrus.WithFields.
 for _, touch := range handler.GetActiveTouches() {
     fmt.Printf("Touch %d at (%d, %d)\n", touch.ID, touch.X, touch.Y)
 }

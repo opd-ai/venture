@@ -325,7 +325,8 @@ func (hm *HandshakeManager) CreateResponse(peerHandshake *FederationHandshake, t
 // IsCompatibleVersion checks if protocol versions are compatible.
 // Compatible versions share the same major version number.
 // This is a convenience wrapper around version.IsCompatible for federation protocol use.
-func IsCompatibleVersion(ourVersion, theirVersion string) bool {
+// Returns an error if either version string is invalid.
+func IsCompatibleVersion(ourVersion, theirVersion string) (bool, error) {
 	return version.IsCompatible(ourVersion, theirVersion)
 }
 

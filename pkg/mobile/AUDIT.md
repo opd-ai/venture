@@ -34,7 +34,7 @@ The pkg/mobile package provides touch input handling and mobile-optimized UI com
 
 ### Low Severity
 - [ ] **Stub implementation note** — `keyboard_default.go:18` contains "not implemented in this build" comment for native mobile keyboard APIs. This is acceptable for non-WASM builds but should be tracked for future native integration. (`keyboard_default.go:18`)
-- [ ] **Unstructured logging in README** — `README.md:29` contains `fmt.Printf` in example code. Example code is acceptable, but documentation should note that production code must use structured logging. (`README.md:29`)
+- [x] **Unstructured logging in README** — `README.md:29` contains `fmt.Printf` in example code. Example code is acceptable, but documentation should note that production code must use structured logging. (`README.md:29`) — **COMPLETED 2026-02-27**: Added note in README.md example explaining fmt.Printf is for simplicity and production code should use logrus.WithFields
 
 ## Input Integration
 | Input Source | Status | Notes |

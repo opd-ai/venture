@@ -201,13 +201,13 @@ func (evs *EnhancedVehicleSystem) updateWeightTransfer(
 
 // applyWeightToSuspension distributes mass to wheels based on weight transfer.
 func (evs *EnhancedVehicleSystem) applyWeightToSuspension(suspension *SuspensionComponent, weightTransfer *WeightTransferComponent) {
-	weights := weightTransfer.GetWheelWeights()
+	weights := GetWheelWeights(weightTransfer)
 	totalMass := suspension.TotalMass
 
 	for i := 0; i < len(suspension.Wheels) && i < 4; i++ {
 		wheelMass := totalMass * weights[i]
 		wheelLoad := wheelMass * 9.81
-		suspension.SetWheelLoad(i, wheelLoad)
+		SetWheelLoad(suspension, i, wheelLoad)
 	}
 }
 
@@ -220,7 +220,7 @@ func (evs *EnhancedVehicleSystem) updateSuspension(
 ) VehicleState {
 	if suspension != nil && len(state.TerrainHeight) == len(suspension.Wheels) {
 		_ = evs.UpdateSuspensionPhysics(suspension, deltaTime, state.TerrainHeight)
-		groundedCount := suspension.GetGroundedWheelCount()
+		groundedCount := GetGroundedWheelCount(suspension)
 		state.IsGrounded = groundedCount >= 2
 	}
 	return state
@@ -239,7 +239,7 @@ func (evs *EnhancedVehicleSystem) updateTireTracks(
 
 	if suspension != nil {
 		for i := range suspension.Wheels {
-			if suspension.IsWheelGrounded(i) {
+			if IsWheelGrounded(suspension, i) {
 				evs.addWheelTrack(suspension, deformation, state, i)
 			}
 		}
@@ -265,14 +265,14 @@ func (evs *EnhancedVehicleSystem) addWheelTrack(
 		terrainType = state.TerrainTypes[wheelIndex]
 	}
 
-	wheelLoad := suspension.GetWheelLoad(wheelIndex)
+	wheelLoad := GetWheelLoad(suspension, wheelIndex)
 	evs.AddTerrainTrack(deformation, wheelWorldX, wheelWorldY, state.Rotation, wheelLoad, terrainType)
 }
 
 // applyCollisionDamage applies damage multiplier to vehicle performance.
 func (evs *EnhancedVehicleSystem) applyCollisionDamage(collision *CollisionResponseComponent, state VehicleState) VehicleState {
-	if collision != nil && !collision.IsDestroyed() {
-		damageMultiplier := collision.GetDamageMultiplier()
+	if collision != nil && !IsDestroyed(collision) {
+		damageMultiplier := GetDamageMultiplier(collision)
 
 		if damageMultiplier < 1.0 {
 			state.Speed *= damageMultiplier

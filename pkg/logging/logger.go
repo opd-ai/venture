@@ -177,6 +177,16 @@ func EntityLogger(logger *logrus.Logger, entityID int) *logrus.Entry {
 
 // GeneratorLogger creates a logger with procedural generation context.
 // Returns nil if logger is nil to prevent panics.
+//
+// Example with conditional debug logging for expensive operations:
+//
+//	log := GeneratorLogger(logger, "terrain", seed, "fantasy")
+//	if log.Logger.GetLevel() >= logrus.DebugLevel {
+//	    log.WithFields(logrus.Fields{
+//	        "noiseParams": expensiveNoiseParamString(),
+//	        "chunkCount": len(chunks),
+//	    }).Debug("detailed generation state")
+//	}
 func GeneratorLogger(logger *logrus.Logger, generatorType string, seed int64, genreID string) *logrus.Entry {
 	if logger == nil {
 		return nil
@@ -202,6 +212,16 @@ func NetworkLogger(logger *logrus.Logger, playerID, connectionState string) *log
 
 // PerformanceLogger creates a logger with performance metrics context.
 // Returns nil if logger is nil to prevent panics.
+//
+// Example with conditional debug logging for expensive operations:
+//
+//	log := PerformanceLogger(logger, "renderFrame")
+//	if log.Logger.GetLevel() >= logrus.DebugLevel {
+//	    log.WithFields(logrus.Fields{
+//	        "vertexCount": countVertices(),
+//	        "drawCalls": countDrawCalls(),
+//	    }).Debug("detailed performance metrics")
+//	}
 func PerformanceLogger(logger *logrus.Logger, operation string) *logrus.Entry {
 	if logger == nil {
 		return nil

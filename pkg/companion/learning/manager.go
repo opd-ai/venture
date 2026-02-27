@@ -695,8 +695,8 @@ func ProcessCombatAction(comp *CompanionLearningComponent, aggressive, successfu
 				"error":        err.Error(),
 			}).Warn("Failed to add combat XP")
 		}
-		comp.Personality.AdjustTrait(TraitAggressive, 0.01, "engaged in aggressive combat")
-		comp.Personality.AdjustTrait(TraitPacifist, -0.01, "engaged in aggressive combat")
+		comp.Personality.AdjustTrait(TraitAggressive, TraitSmallDelta, "engaged in aggressive combat")
+		comp.Personality.AdjustTrait(TraitPacifist, -TraitSmallDelta, "engaged in aggressive combat")
 	} else {
 		err := comp.SkillTree.AddExperience("Block", xp, comp.LearningRate)
 		if err != nil {
@@ -706,7 +706,7 @@ func ProcessCombatAction(comp *CompanionLearningComponent, aggressive, successfu
 				"error":        err.Error(),
 			}).Warn("Failed to add defense XP")
 		}
-		comp.Personality.AdjustTrait(TraitCautious, 0.01, "used defensive tactics")
+		comp.Personality.AdjustTrait(TraitCautious, TraitSmallDelta, "used defensive tactics")
 	}
 
 	// Use personality's time provider for deterministic timestamps
@@ -758,12 +758,12 @@ func ProcessSocialInteraction(comp *CompanionLearningComponent, playerID string,
 				"error":        err.Error(),
 			}).Warn("Failed to add persuasion XP")
 		}
-		comp.Personality.AdjustTrait(TraitOutgoing, 0.02, "positive social interaction")
-		comp.Personality.AdjustTrait(TraitShy, -0.02, "positive social interaction")
-		comp.Personality.AdjustTrait(TraitLoyal, 0.01, "bonded with player")
+		comp.Personality.AdjustTrait(TraitOutgoing, TraitMediumDelta, "positive social interaction")
+		comp.Personality.AdjustTrait(TraitShy, -TraitMediumDelta, "positive social interaction")
+		comp.Personality.AdjustTrait(TraitLoyal, TraitSmallDelta, "bonded with player")
 	} else {
-		comp.Personality.AdjustTrait(TraitShy, 0.01, "negative social interaction")
-		comp.Personality.AdjustTrait(TraitOutgoing, -0.01, "negative social interaction")
+		comp.Personality.AdjustTrait(TraitShy, TraitSmallDelta, "negative social interaction")
+		comp.Personality.AdjustTrait(TraitOutgoing, -TraitSmallDelta, "negative social interaction")
 	}
 
 	// Use personality's time provider for deterministic timestamps
@@ -809,8 +809,8 @@ func ProcessExploration(comp *CompanionLearningComponent, discovered bool) {
 			"error":        err.Error(),
 		}).Warn("Failed to add scout XP")
 	}
-	comp.Personality.AdjustTrait(TraitCurious, 0.015, "explored new area")
-	comp.Personality.AdjustTrait(TraitPractical, -0.005, "took exploratory risk")
+	comp.Personality.AdjustTrait(TraitCurious, ExplorationCuriosityDelta, "explored new area")
+	comp.Personality.AdjustTrait(TraitPractical, ExplorationPracticalDelta, "took exploratory risk")
 
 	// Use personality's time provider for deterministic timestamps
 	tp := getTimeProviderFromPersonality(comp.Personality)
@@ -892,7 +892,7 @@ func AdaptBehaviorToCombatStyle(comp *CompanionLearningComponent, seed int64) {
 			"total_events":     len(recentCombat),
 			"adaptation":       "aggressive",
 		}).Info("Adapting to aggressive combat style")
-		comp.Personality.AdjustTrait(TraitAggressive, 0.05, "learned aggressive combat style")
+		comp.Personality.AdjustTrait(TraitAggressive, TraitLargeDelta, "learned aggressive combat style")
 		comp.Personality.AdjustTrait(TraitBrave, 0.03, "learned aggressive combat style")
 	} else {
 		defaultLogger.WithFields(logrus.Fields{
@@ -901,7 +901,7 @@ func AdaptBehaviorToCombatStyle(comp *CompanionLearningComponent, seed int64) {
 			"total_events":     len(recentCombat),
 			"adaptation":       "defensive",
 		}).Info("Adapting to defensive combat style")
-		comp.Personality.AdjustTrait(TraitCautious, 0.05, "learned defensive combat style")
-		comp.Personality.AdjustTrait(TraitPacifist, 0.02, "learned defensive combat style")
+		comp.Personality.AdjustTrait(TraitCautious, TraitLargeDelta, "learned defensive combat style")
+		comp.Personality.AdjustTrait(TraitPacifist, TraitMediumDelta, "learned defensive combat style")
 	}
 }

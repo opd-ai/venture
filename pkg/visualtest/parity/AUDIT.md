@@ -26,8 +26,8 @@ This package provides cross-platform visual parity testing for Venture's procedu
 *None*
 
 ### Low Severity
-- [ ] **Documentation** — Example code in doc.go references `log.Printf` instead of structured logging (`doc.go:33`)
-- [ ] **Test Coverage** — `ValidateColors` method has edge case where empty color profiles return 0.0% diff but could be documented as expected behavior (`validator.go:140-142`)
+- [x] **Documentation** — Example code in doc.go references `log.Printf` instead of structured logging (`doc.go:33`) [FIXED 2026-02-27: Replaced log.Printf with clarifying comment showing logrus.WithFields best practice]
+- [x] **Test Coverage** — `ValidateColors` method has edge case where empty color profiles return 0.0% diff but could be documented as expected behavior (`validator.go:140-142`) [FIXED 2026-02-27: Added comment documenting that empty color profiles are considered identical with 0.0% difference as expected behavior]
 - [ ] **Code Quality** — `maxUint8` helper function could be made more generic or moved to a utility package for reuse (`validator.go:329-337`)
 
 ## Input Integration

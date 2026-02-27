@@ -55,7 +55,7 @@ config := resilience.NetworkConfig{
 
 sim, err := resilience.NewNetworkSimulatorWithConfigAndSeed(config, 54321)
 if err != nil {
-    log.Fatal(err)
+    logrus.WithError(err).Fatal("failed to create network simulator")
 }
 
 // Reproducible behavior with configured impairments

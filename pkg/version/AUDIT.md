@@ -34,7 +34,7 @@ The `pkg/version` package provides centralized version management for Venture, i
 
 ### Low Severity
 - [ ] **Unstructured Logging** — PrintVersion() uses `fmt.Println` instead of structured logging with logrus. This prevents version checks from being logged with correlation IDs or filtered by log level (`pkg/version/version.go:71`)
-- [ ] **API Inconsistency** — Compare() returns (int, error) but IsCompatible() returns bool (no error). IsCompatible silently returns false on parse errors, making debugging version mismatches harder (`pkg/version/version.go:154-166`)
+- [x] **API Inconsistency** — Compare() returns (int, error) but IsCompatible() returns bool (no error). IsCompatible silently returns false on parse errors, making debugging version mismatches harder. **FIXED 2026-02-27**: Changed IsCompatible() to return (bool, error) with error wrapping for invalid versions. Updated all callers (pkg/network/federation/handshake.go) and tests. (`pkg/version/version.go:154-166`)
 - [ ] **Missing Godoc** — Constants Major, Minor, Patch lack individual godoc comments explaining when to increment each (only Version constant is documented) (`pkg/version/version.go:22-29`)
 
 ## Input Integration

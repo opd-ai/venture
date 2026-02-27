@@ -11,7 +11,7 @@ pkg/migration/
 ├── doc.go            - Comprehensive package documentation with examples
 ├── types.go          - Configuration and result types
 ├── validator.go      - Migration validation logic
-└── validator_test.go - Test suite (82.2% coverage)
+└── validator_test.go - Test suite (91.3% coverage)
 ```
 
 ## Core Types
@@ -195,7 +195,7 @@ go test -coverprofile=coverage.out ./pkg/migration/...
 go tool cover -html=coverage.out
 ```
 
-Current coverage: **82.2%**
+**Current coverage: 91.3%** ✅
 
 ## Implementation Status
 
@@ -217,13 +217,15 @@ Validates migrations from these source versions to 1.0.0:
 
 Matches `pkg/saveload.DefaultMigrator.SupportedVersions()`.
 
-## CLI Tool
+## Testing
 
-For standalone migration validation, see:
+Run migration validation tests:
 ```bash
-# Mentioned in doc.go
-cmd/migrationtest/
+go test -v ./pkg/migration/...
 ```
+
+This package provides programmatic migration validation used by the game's
+save/load system. No standalone CLI tool is provided.
 
 ## Design Philosophy
 

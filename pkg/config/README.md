@@ -163,7 +163,7 @@ Run package tests:
 go test ./pkg/config/...
 ```
 
-Current test coverage: **92.4%**
+Current test coverage: **83.9%**
 
 View coverage report:
 ```bash

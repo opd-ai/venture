@@ -66,50 +66,28 @@ func NewTerrainDeformationComponent(seed int64) *TerrainDeformationComponent {
 }
 
 // GetVisibleTracks returns all tracks that should be rendered.
+// Deprecated: Use vehicle.GetVisibleTracks(deformation, minX, minY, maxX, maxY) instead to maintain ECS purity.
 // minX, minY, maxX, maxY: viewport bounds for culling
 // Uses internal buffer to avoid allocations per call.
 func (t *TerrainDeformationComponent) GetVisibleTracks(minX, minY, maxX, maxY float64) []TrackMark {
-	// Reuse buffer if available, otherwise allocate
-	if t.visibleBuffer == nil {
-		t.visibleBuffer = make([]TrackMark, 0, t.MaxTracks)
-	}
-	// Reset buffer length while preserving capacity
-	t.visibleBuffer = t.visibleBuffer[:0]
-
-	for i := range t.Tracks {
-		track := &t.Tracks[i]
-
-		// Simple AABB culling
-		if track.X >= minX && track.X <= maxX && track.Y >= minY && track.Y <= maxY {
-			t.visibleBuffer = append(t.visibleBuffer, *track)
-		}
-	}
-
-	return t.visibleBuffer
+	return GetVisibleTracks(t, minX, minY, maxX, maxY)
 }
 
 // GetTrackAlpha calculates the opacity of a track based on age and fade time.
 // Returns value in range [0.0, 1.0] where 0.0 is fully faded, 1.0 is fresh.
+// Deprecated: Use vehicle.GetTrackAlpha(track) instead to maintain ECS purity.
 func (t *TerrainDeformationComponent) GetTrackAlpha(track *TrackMark) float64 {
-	if track.FadeTime <= 0 {
-		return 0.0
-	}
-
-	// Linear fade
-	alpha := 1.0 - (track.Age / track.FadeTime)
-	if alpha < 0.0 {
-		alpha = 0.0
-	}
-
-	return alpha
+	return GetTrackAlpha(track)
 }
 
 // Clear removes all track marks.
+// Deprecated: Use vehicle.ClearTracks(deformation) instead to maintain ECS purity.
 func (t *TerrainDeformationComponent) Clear() {
-	t.Tracks = t.Tracks[:0]
+	ClearTracks(t)
 }
 
 // GetTrackCount returns the current number of track marks.
+// Deprecated: Use len(deformation.Tracks) instead to maintain ECS purity.
 func (t *TerrainDeformationComponent) GetTrackCount() int {
 	return len(t.Tracks)
 }

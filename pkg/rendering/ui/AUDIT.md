@@ -34,7 +34,7 @@ The `pkg/rendering/ui` package provides procedural UI element generation and man
 
 ### Low Severity
 - [ ] **Package scope** — Package does not implement ECS `System` or `Component` interfaces. This is intentional (utility library design), but docs should clarify that this package provides helpers used *by* systems, not systems themselves.
-- [ ] **log.Fatal in doc.go example** — `doc.go:30` shows `log.Fatal(err)` in example code. Should use structured logging example with logrus instead.
+- [x] **log.Fatal in doc.go example** — `doc.go:30` shows `log.Fatal(err)` in example code. Should use structured logging example with logrus instead. **FIXED 2026-02-27**: Added clarifying comment explaining production code should use logrus.WithError
 - [ ] **Test coverage unmeasurable** — Tests require X11/Ebiten initialization, making coverage percentage unmeasurable. However, test-to-source ratio of 91% (6072/6648 LOC) exceeds the 30% target for Ebiten-dependent packages, indicating comprehensive test coverage.
 
 ## Input Integration

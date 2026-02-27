@@ -204,12 +204,13 @@ func (p *WorkerPool) IsRunning() bool {
 	return p.running
 }
 
-// Stats returns current worker pool statistics.
+// PoolStats contains worker pool performance and state metrics.
+// Useful for monitoring pool utilization and detecting bottlenecks.
 type PoolStats struct {
-	WorkerCount     int // Number of worker goroutines
-	Running         bool
-	TaskQueueSize   int // Current number of queued tasks
-	ResultQueueSize int // Current number of pending results
+	WorkerCount     int  // Number of worker goroutines
+	Running         bool // Whether the pool is actively processing tasks
+	TaskQueueSize   int  // Current number of queued tasks
+	ResultQueueSize int  // Current number of pending results
 }
 
 // GetStats returns current pool statistics.

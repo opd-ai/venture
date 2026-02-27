@@ -28,12 +28,14 @@
 //
 //	result, err := gen.Generate(12345, params)
 //	if err != nil {
-//	    log.Fatal(err)
+//	    // Note: Production code should use logrus.WithError(err).Fatal()
+//	    return err
 //	}
 //
 //	stations := result.([]*station.StationData)
+//	// Note: Production code should use logrus.WithFields for structured logging
 //	for _, s := range stations {
-//	    fmt.Printf("%s: %s\n", s.StationType, s.Name)
+//	    // Example: logrus.WithFields(logrus.Fields{"type": s.StationType, "name": s.Name}).Info("Generated crafting station")
 //	}
 //
 // # Genre Support

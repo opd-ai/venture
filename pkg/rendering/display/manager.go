@@ -9,8 +9,8 @@ import (
 // Manager handles resolution changes and window management.
 type Manager struct {
 	config         *Config
-	switchStarted  time.Time
-	switchDuration time.Duration
+	switchStarted  time.Time     // Time when the most recent resolution switch started (for performance tracking)
+	switchDuration time.Duration // Duration of the most recent resolution switch operation (for diagnostics)
 }
 
 // NewManager creates a display manager.

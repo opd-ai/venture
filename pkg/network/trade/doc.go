@@ -80,6 +80,19 @@
 // - All validation (proximity, trust, ownership) happens server-side
 // - Rollback mechanism handles disconnect and concurrent modification
 //
+// ## Validation Order in ProposeTrade
+//
+// Trade proposals follow a strict validation sequence for performance and security:
+//
+// 1. **Rate Limiting** (system.go:137): Check if proposer exceeds 10 requests/second - fail fast
+// 2. **Format Validation** (system.go:142): Validate item ID formats via pkg/validation
+// 3. **Entity Validation**: Verify proposer and recipient exist with required components
+// 4. **Proximity Validation**: Ensure players are within 5 tiles
+// 5. **Trust Validation**: Check trust score allows proposed items
+// 6. **Inventory Validation**: Verify ownership and space availability
+//
+// This order minimizes wasted computation by rejecting invalid requests early.
+//
 // # Performance Considerations
 //
 // - Trade proposals: <10ms validation time
@@ -92,4 +105,31 @@
 // The trade system is NOT thread-safe. It is designed to be used from a single
 // game loop thread. For multiplayer servers, ensure all trade operations are
 // executed on the main server thread.
+//
+// # Known Limitations
+//
+// ## Dual Trade System Architecture
+//
+// The Venture codebase contains TWO separate trade system implementations:
+//
+// 1. **pkg/network/trade** (this package): Network layer implementation
+//   - Provides validation, rate limiting, and time abstraction (TimeProvider)
+//   - Focuses on multiplayer synchronization and security
+//   - Registered in cmd/client as networkTradeSystemWrapper
+//
+// 2. **pkg/engine/trade_system.go**: Engine layer implementation
+//   - Provides social integration and single-player functionality
+//   - Handles trade UI interactions (pkg/engine/trade_ui.go)
+//   - Registered in cmd/client as tradeSystemWrapper
+//
+// Both systems are registered as separate ECS systems in the client (cmd/client/handlers.go:2132, :2172).
+// The engine layer system delegates validation and rate limiting to this network layer in multiplayer
+// scenarios. This separation enables:
+//
+// - Testable network validation logic independent of game engine
+// - Reusable validation rules across single-player and multiplayer
+// - Clear separation of concerns (network vs gameplay)
+//
+// For server integration, the authoritative server uses pkg/engine/trade_system.go directly rather than
+// this network layer package.
 package trade

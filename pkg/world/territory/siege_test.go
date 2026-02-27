@@ -428,7 +428,16 @@ func TestSiegeManagerUpdate(t *testing.T) {
 	siege.PhaseStartTime = time.Now().Add(-61 * time.Minute)
 
 	// Update should advance to assault
-	sm.Update(0.016)
+	phasesAdvanced, siegesEnded, err := sm.Update(0.016)
+	if err != nil {
+		t.Errorf("Update() error = %v", err)
+	}
+	if phasesAdvanced != 1 {
+		t.Errorf("phasesAdvanced = %d, want 1", phasesAdvanced)
+	}
+	if siegesEnded != 0 {
+		t.Errorf("siegesEnded = %d, want 0", siegesEnded)
+	}
 
 	if siege.Phase != PhaseAssault {
 		t.Errorf("Phase = %v, want %v", siege.Phase, PhaseAssault)
@@ -438,7 +447,16 @@ func TestSiegeManagerUpdate(t *testing.T) {
 	siege.PhaseStartTime = time.Now().Add(-121 * time.Minute)
 
 	// Update should set defender victory and advance to resolution
-	sm.Update(0.016)
+	phasesAdvanced, siegesEnded, err = sm.Update(0.016)
+	if err != nil {
+		t.Errorf("Update() error = %v", err)
+	}
+	if phasesAdvanced != 1 {
+		t.Errorf("phasesAdvanced = %d, want 1", phasesAdvanced)
+	}
+	if siegesEnded != 0 {
+		t.Errorf("siegesEnded = %d, want 0", siegesEnded)
+	}
 
 	if siege.VictoryCondition != VictoryDefenseTimeout {
 		t.Errorf("VictoryCondition = %v, want %v", siege.VictoryCondition, VictoryDefenseTimeout)
@@ -663,7 +681,16 @@ func TestSiegeManagerUpdateWithTimeProvider(t *testing.T) {
 
 	// Advance time by 1 hour and update
 	tp.SetTime(initialTime.Add(61 * time.Minute))
-	sm.Update(0.016)
+	phasesAdvanced, siegesEnded, err := sm.Update(0.016)
+	if err != nil {
+		t.Errorf("Update() error = %v", err)
+	}
+	if phasesAdvanced != 1 {
+		t.Errorf("phasesAdvanced = %d, want 1", phasesAdvanced)
+	}
+	if siegesEnded != 0 {
+		t.Errorf("siegesEnded = %d, want 0", siegesEnded)
+	}
 
 	// Should advance to assault
 	if siege.Phase != PhaseAssault {
@@ -743,5 +770,153 @@ func TestGenerateDefensiveStructuresWithTimeDeterminism(t *testing.T) {
 		if !structures1[i].ConstructedAt.Equal(structures2[i].ConstructedAt) {
 			t.Errorf("Structure %d ConstructedAt mismatch", i)
 		}
+	}
+}
+
+// TestSiegeManagerUpdate_CompleteLifecycle tests the full siege lifecycle with return values.
+func TestSiegeManagerUpdate_CompleteLifecycle(t *testing.T) {
+	initialTime := time.Date(2026, 1, 1, 12, 0, 0, 0, time.UTC)
+	tp := &MockTimeProvider{fixedTime: initialTime}
+	sm := NewSiegeManagerWithTimeProvider(tp)
+
+	siege, err := sm.CreateSiege("territory1", "guild_attack", "guild_defend", 10000)
+	if err != nil {
+		t.Fatalf("CreateSiege() error = %v", err)
+	}
+
+	tests := []struct {
+		name            string
+		advanceTime     time.Duration
+		wantPhasesAdv   int
+		wantSiegesEnded int
+		wantPhase       SiegePhase
+		wantVictoryCond VictoryCondition
+		wantWinner      string
+	}{
+		{
+			name:            "no advancement before 1 hour",
+			advanceTime:     30 * time.Minute,
+			wantPhasesAdv:   0,
+			wantSiegesEnded: 0,
+			wantPhase:       PhasePreparation,
+		},
+		{
+			name:            "advance to assault after 1 hour",
+			advanceTime:     31 * time.Minute,
+			wantPhasesAdv:   1,
+			wantSiegesEnded: 0,
+			wantPhase:       PhaseAssault,
+		},
+		{
+			name:            "no advancement before 2 hours in assault",
+			advanceTime:     60 * time.Minute,
+			wantPhasesAdv:   0,
+			wantSiegesEnded: 0,
+			wantPhase:       PhaseAssault,
+		},
+		{
+			name:            "advance to resolution with defender victory",
+			advanceTime:     61 * time.Minute,
+			wantPhasesAdv:   1,
+			wantSiegesEnded: 0,
+			wantPhase:       PhaseResolution,
+			wantVictoryCond: VictoryDefenseTimeout,
+			wantWinner:      "guild_defend",
+		},
+		{
+			name:            "no advancement before 5 minutes in resolution",
+			advanceTime:     2 * time.Minute,
+			wantPhasesAdv:   0,
+			wantSiegesEnded: 0,
+			wantPhase:       PhaseResolution,
+		},
+		{
+			name:            "end siege after 5 minutes in resolution",
+			advanceTime:     4 * time.Minute,
+			wantPhasesAdv:   1,
+			wantSiegesEnded: 1,
+			wantPhase:       PhaseEnded,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tp.SetTime(tp.Now().Add(tt.advanceTime))
+			phasesAdvanced, siegesEnded, err := sm.Update(0.016)
+			if err != nil {
+				t.Errorf("Update() error = %v", err)
+			}
+			if phasesAdvanced != tt.wantPhasesAdv {
+				t.Errorf("phasesAdvanced = %d, want %d", phasesAdvanced, tt.wantPhasesAdv)
+			}
+			if siegesEnded != tt.wantSiegesEnded {
+				t.Errorf("siegesEnded = %d, want %d", siegesEnded, tt.wantSiegesEnded)
+			}
+			if siege.Phase != tt.wantPhase {
+				t.Errorf("phase = %v, want %v", siege.Phase, tt.wantPhase)
+			}
+			if tt.wantVictoryCond != 0 && siege.VictoryCondition != tt.wantVictoryCond {
+				t.Errorf("victoryCondition = %v, want %v", siege.VictoryCondition, tt.wantVictoryCond)
+			}
+			if tt.wantWinner != "" && siege.WinnerGuildID != tt.wantWinner {
+				t.Errorf("winnerGuildID = %v, want %v", siege.WinnerGuildID, tt.wantWinner)
+			}
+		})
+	}
+}
+
+// TestSiegeManagerUpdate_MultipleSieges tests update with multiple concurrent sieges.
+func TestSiegeManagerUpdate_MultipleSieges(t *testing.T) {
+	initialTime := time.Date(2026, 1, 1, 12, 0, 0, 0, time.UTC)
+	tp := &MockTimeProvider{fixedTime: initialTime}
+	sm := NewSiegeManagerWithTimeProvider(tp)
+
+	// Create 3 sieges at different times
+	siege1, _ := sm.CreateSiege("territory1", "guild_a", "guild_b", 10000)
+	tp.SetTime(initialTime.Add(10 * time.Minute))
+	siege2, _ := sm.CreateSiege("territory2", "guild_c", "guild_d", 10000)
+	tp.SetTime(initialTime.Add(20 * time.Minute))
+	siege3, _ := sm.CreateSiege("territory3", "guild_e", "guild_f", 10000)
+
+	// Advance time by 1 hour from first siege start
+	tp.SetTime(initialTime.Add(61 * time.Minute))
+	phasesAdvanced, siegesEnded, err := sm.Update(0.016)
+	if err != nil {
+		t.Errorf("Update() error = %v", err)
+	}
+
+	// Only siege1 should advance (51 minutes for siege2, 41 for siege3)
+	if phasesAdvanced != 1 {
+		t.Errorf("phasesAdvanced = %d, want 1", phasesAdvanced)
+	}
+	if siegesEnded != 0 {
+		t.Errorf("siegesEnded = %d, want 0", siegesEnded)
+	}
+	if siege1.Phase != PhaseAssault {
+		t.Errorf("siege1 phase = %v, want %v", siege1.Phase, PhaseAssault)
+	}
+	if siege2.Phase != PhasePreparation {
+		t.Errorf("siege2 phase = %v, want %v", siege2.Phase, PhasePreparation)
+	}
+	if siege3.Phase != PhasePreparation {
+		t.Errorf("siege3 phase = %v, want %v", siege3.Phase, PhasePreparation)
+	}
+
+	// Advance another 20 minutes
+	tp.SetTime(initialTime.Add(81 * time.Minute))
+	phasesAdvanced, siegesEnded, err = sm.Update(0.016)
+	if err != nil {
+		t.Errorf("Update() error = %v", err)
+	}
+
+	// Now siege2 and siege3 should also advance
+	if phasesAdvanced != 2 {
+		t.Errorf("phasesAdvanced = %d, want 2", phasesAdvanced)
+	}
+	if siege2.Phase != PhaseAssault {
+		t.Errorf("siege2 phase = %v, want %v", siege2.Phase, PhaseAssault)
+	}
+	if siege3.Phase != PhaseAssault {
+		t.Errorf("siege3 phase = %v, want %v", siege3.Phase, PhaseAssault)
 	}
 }

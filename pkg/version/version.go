@@ -151,16 +151,17 @@ func Compare(v1, v2 string) (int, error) {
 // IsCompatible checks if two semantic version strings are compatible.
 // Two versions are compatible if they share the same major version number.
 // This is used for network protocol version negotiation.
-func IsCompatible(v1, v2 string) bool {
-	maj1, _, _, err1 := ParseVersion(v1)
-	if err1 != nil {
-		return false
+// Returns an error if either version string is invalid.
+func IsCompatible(v1, v2 string) (bool, error) {
+	maj1, _, _, err := ParseVersion(v1)
+	if err != nil {
+		return false, fmt.Errorf("invalid first version: %w", err)
 	}
 
-	maj2, _, _, err2 := ParseVersion(v2)
-	if err2 != nil {
-		return false
+	maj2, _, _, err := ParseVersion(v2)
+	if err != nil {
+		return false, fmt.Errorf("invalid second version: %w", err)
 	}
 
-	return maj1 == maj2
+	return maj1 == maj2, nil
 }

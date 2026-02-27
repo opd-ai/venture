@@ -27,7 +27,7 @@ The `pkg/audio/synthesis` package provides low-level deterministic audio wavefor
 
 ### Low Severity
 - [ ] **Documentation** — `envelope.go:32` - `Apply()` method modifies `data []float64` in-place but lacks comment documenting this mutation; callers must be aware that the input slice is modified (`engine.go:188` correctly documents this in `ApplyEnvelope()` but not in `Envelope.Apply()` itself)
-- [ ] **API consistency** — `engine.go:66-70` - `GenerateTone()` is deprecated in favor of `Generate()`, but both methods remain exported and functionally identical; consider removing deprecated method in a future version to reduce API surface
+- [x] **API consistency** — `engine.go:66-70` - `GenerateTone()` is deprecated in favor of `Generate()`, but both methods remain exported and functionally identical; consider removing deprecated method in a future version to reduce API surface — **RESOLVED 2026-02-27**: Removed deprecated `GenerateTone()` method and updated all test usages to `Generate()`. Removed duplicate tests `TestEngine_GenerateTone` and `TestEngine_Generate_EqualsGenerateTone`. Renamed `BenchmarkEngine_GenerateTone` to `BenchmarkEngine_Generate`. Coverage maintained at 95.1%
 - [ ] **Test coverage** — `oscillator.go:131-148` - `WaveformName()` helper function is well-implemented but has no dedicated unit test validating all 6 waveform types (Sine, Square, Sawtooth, Triangle, Noise, unknown default)
 
 ## Input Integration

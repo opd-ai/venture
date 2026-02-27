@@ -32,8 +32,8 @@ The `pkg/migration` package provides backward compatibility validation for save 
 *No medium severity issues found.*
 
 ### Low Severity
-- [ ] **Documentation** — `cmd/migrationtest/` CLI tool mentioned in doc.go:45 and README.md:224 does not exist (`doc.go:45`, `README.md:224`)
-- [ ] **Documentation** — README.md states coverage as 82.2% but actual coverage is 91.3%; should be updated (`README.md:14`, `README.md:198`)
+- [x] **Documentation** — `cmd/migrationtest/` CLI tool mentioned in doc.go:45 and README.md:224 does not exist (`doc.go:45`, `README.md:224`) — **COMPLETED 2026-02-27**: Removed references to non-existent CLI tool from both doc.go and README.md. Replaced with accurate testing instructions using `go test` command.
+- [x] **Documentation** — README.md states coverage as 82.2% but actual coverage is 91.3%; should be updated (`README.md:14`, `README.md:198`) — **COMPLETED 2026-02-27**: Updated README.md to state "Current coverage: 91.3% ✅" in both locations (line 14 and 198)
 
 ## Input Integration
 | Input Source | Status | Notes |

@@ -26,10 +26,12 @@ gen := palette.NewGenerator()
 // Generate a fantasy-themed palette (uses default options)
 pal, err := gen.Generate("fantasy", 12345)
 if err != nil {
+    // Production code should use logrus.WithError(err).Error("failed to generate palette")
     log.Fatal(err)
 }
 
 // Access named colors
+// Production code should use logrus.WithFields for structured logging
 fmt.Printf("Primary: %v\n", pal.Primary)
 fmt.Printf("Secondary: %v\n", pal.Secondary)
 fmt.Printf("Accent3: %v\n", pal.Accent3)
@@ -49,10 +51,12 @@ opts := palette.GenerationOptions{
 
 pal, err := gen.GenerateWithOptions("scifi", 54321, opts)
 if err != nil {
+    // Production code should use logrus.WithError(err).Error("failed to generate palette")
     log.Fatal(err)
 }
 
 // Use the enhanced palette
+// Production code should use logrus.WithFields for structured logging
 fmt.Printf("Shadow1: %v\n", pal.Shadow1)
 fmt.Printf("Warning: %v\n", pal.Warning)
 fmt.Printf("Total colors: %d\n", len(pal.Colors))

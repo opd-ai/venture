@@ -7,6 +7,12 @@ import (
 
 // ThreadSafeCache wraps any cache with RWMutex for concurrent access.
 // Provides thread-safe get/set operations with minimal lock contention.
+//
+// WARNING: This cache has no size limit and will grow unbounded.
+// For production use with long-running games, consider implementing
+// eviction policies (LRU, TTL) or periodic cache clearing based on
+// memory pressure. Monitor cache size with GetStats() to prevent
+// excessive memory usage.
 type ThreadSafeCache struct {
 	mu     sync.RWMutex
 	cache  map[string]interface{}
@@ -82,12 +88,13 @@ func (c *ThreadSafeCache) HitRate() float64 {
 	return float64(hits) / float64(total) * 100.0
 }
 
-// Stats returns cache statistics.
+// CacheStats contains cache performance metrics.
+// Provides visibility into cache efficiency through hit/miss tracking.
 type CacheStats struct {
 	Size    int     // Number of entries
 	Hits    int64   // Number of cache hits
 	Misses  int64   // Number of cache misses
-	HitRate float64 // Hit rate percentage
+	HitRate float64 // Hit rate percentage (0.0-100.0)
 }
 
 // GetStats returns current cache statistics.
@@ -116,6 +123,13 @@ func (c *ThreadSafeCache) GetStats() CacheStats {
 // GetOrCompute retrieves a value from cache or computes it if missing.
 // The compute function is only called if the key is not found (cache miss).
 // This is thread-safe and prevents redundant computation.
+//
+// IMPORTANT: This method holds an EXCLUSIVE WRITE LOCK during compute(),
+// blocking ALL cache operations (reads and writes) until compute completes.
+// If compute() is expensive, consider pre-computing values or using a
+// separate lock-free approach. This trade-off ensures only one goroutine
+// computes the value, preventing redundant work at the cost of temporarily
+// blocking concurrent cache access.
 func (c *ThreadSafeCache) GetOrCompute(key string, compute func() interface{}) interface{} {
 	// Try read-only access first (fast path)
 	c.mu.RLock()

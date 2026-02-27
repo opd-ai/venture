@@ -41,24 +41,24 @@ import "github.com/opd-ai/venture/pkg/network/federation/webrtc"
 config := webrtc.DefaultConfig()
 peer, err := webrtc.NewPeer("peer-alice", config)
 if err != nil {
-    log.Fatalf("failed to create peer: %v", err)
+    logrus.WithError(err).Fatal("failed to create peer")
 }
 defer peer.Close()
 
 // Connect to remote peer
 if err := peer.Connect("peer-bob"); err != nil {
-    log.Fatalf("connection failed: %v", err)
+    logrus.WithError(err).Fatal("connection failed")
 }
 
 // Send message
 msg := []byte("Hello, Bob!")
 if err := peer.Send(msg); err != nil {
-    log.Errorf("send failed: %v", err)
+    logrus.WithError(err).Error("send failed")
 }
 
 // Receive messages
 for data := range peer.Receive() {
-    log.Printf("Received: %s", string(data))
+    logrus.WithFields(logrus.Fields{"size_bytes": len(data)}).Info("Received message")
 }
 ```
 
@@ -74,8 +74,10 @@ peer2, _ := manager.CreatePeer("peer-2")
 
 // Get metrics
 metrics := manager.GetMetrics()
-fmt.Printf("Active connections: %d\n", metrics.ActiveConnections)
-fmt.Printf("Total bytes sent: %d\n", metrics.TotalBytesSent)
+logrus.WithFields(logrus.Fields{
+    "active_connections": metrics.ActiveConnections,
+    "total_bytes_sent": metrics.TotalBytesSent,
+}).Info("WebRTC metrics")
 
 // Cleanup
 manager.CloseAll()
@@ -105,11 +107,13 @@ nt := webrtc.NewNATTraversal(
 // Attempt connection (tries Direct → STUN → TURN)
 result, err := nt.EstablishConnection(context.Background())
 if err != nil {
-    log.Fatalf("NAT traversal failed: %v", err)
+    logrus.WithError(err).Fatal("NAT traversal failed")
 }
 
-fmt.Printf("Connected via %s (setup time: %v)\n",
-    result.Method, result.SetupTime)
+logrus.WithFields(logrus.Fields{
+    "method": result.Method,
+    "setup_time": result.SetupTime,
+}).Info("Connection established")
 ```
 
 ## Architecture

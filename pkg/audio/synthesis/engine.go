@@ -63,12 +63,6 @@ func (e *Engine) Generate(waveform audio.WaveformType, frequency, duration float
 	return e.osc.Generate(waveform, frequency, duration)
 }
 
-// GenerateTone is an alias for Generate for backward compatibility.
-// Deprecated: Use Generate instead.
-func (e *Engine) GenerateTone(waveform audio.WaveformType, frequency, duration float64) *audio.AudioSample {
-	return e.Generate(waveform, frequency, duration)
-}
-
 // GenerateToneWithEnvelope generates a tone shaped by an ADSR envelope.
 func (e *Engine) GenerateToneWithEnvelope(waveform audio.WaveformType, frequency, duration float64, env Envelope) *audio.AudioSample {
 	e.mu.Lock()

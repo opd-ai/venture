@@ -38,7 +38,12 @@
 //
 // For network protocol negotiation:
 //
-//	if version.IsCompatible(ourVersion, theirVersion) {
+//	compatible, err := version.IsCompatible(ourVersion, theirVersion)
+//	if err != nil {
+//	    logger.WithError(err).Error("invalid version format")
+//	    return
+//	}
+//	if compatible {
 //	    // Versions are compatible, proceed with connection
 //	}
 package version

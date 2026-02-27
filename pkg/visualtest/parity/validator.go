@@ -138,6 +138,8 @@ func (v *Validator) CompareColors(colors1, colors2 []color.RGBA) (float64, []str
 	}
 
 	if len(colors1) == 0 {
+		// Empty color profiles are considered identical (0.0% difference).
+		// This is expected behavior: no colors to compare means no difference.
 		return 0.0, nil
 	}
 

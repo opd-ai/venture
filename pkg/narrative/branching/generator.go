@@ -60,6 +60,8 @@ func (g *Generator) Generate(seed int64, params procgen.GenerationParams) (inter
 	return arc, nil
 }
 
+// validateGenerationParams verifies depth is at least 1 to ensure minimum story complexity.
+// Depth controls node count: nodeCount = 10 + depth*2 (capped at 20).
 func validateGenerationParams(params procgen.GenerationParams) error {
 	if params.Depth < 1 {
 		return fmt.Errorf("depth must be at least 1, got %d", params.Depth)
@@ -67,6 +69,8 @@ func validateGenerationParams(params procgen.GenerationParams) error {
 	return nil
 }
 
+// createStoryArc initializes a new StoryArc with genre-specific procedural content.
+// All fields are deterministically generated from the provided RNG.
 func createStoryArc(seed int64, rng *rand.Rand, params procgen.GenerationParams) *StoryArc {
 	return &StoryArc{
 		ID:          generateID(rng, "arc"),
@@ -79,6 +83,8 @@ func createStoryArc(seed int64, rng *rand.Rand, params procgen.GenerationParams)
 	}
 }
 
+// calculateNodeCount determines target node count from depth parameter.
+// Formula: 10 + depth*2, capped at 20 nodes maximum to prevent overly complex graphs.
 func calculateNodeCount(depth int) int {
 	nodeCount := 10 + int(float64(depth)*2)
 	if nodeCount > 20 {
@@ -133,6 +139,8 @@ func (g *Generator) processNodeBranches(arc *StoryArc, rng *rand.Rand, nodeID st
 	return nextLayer, endingNodes
 }
 
+// determineBranchCount calculates how many child nodes to create based on parent node type.
+// Choice nodes create 2-3 branches for meaningful player agency; other types create single continuation.
 func determineBranchCount(rng *rand.Rand, nodeType NodeType) int {
 	if nodeType == NodeTypeChoice {
 		return 2 + rng.Intn(2)

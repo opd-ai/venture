@@ -243,6 +243,18 @@ func (cm *ChatManager) queueMessage(packet *ChatMessagePacket) {
 }
 
 // ProcessACK processes an acknowledgment for a message.
+// Handles both positive ACKs (message delivered) and NACKs (delivery failed).
+//
+// Behavior:
+//   - On ACK (Success=true): Removes message from pending queue, no retry
+//   - On NACK (Success=false): Retries up to maxRetries times with exponential backoff
+//   - After maxRetries: Marks message as failed and removes from queue
+//
+// Thread-safety: Safe to call concurrently. Uses internal mutex for pending message map.
+//
+// The ACK/NACK mechanism ensures reliable delivery even with packet loss or
+// high-latency networks (Tor, satellite). Retry intervals are configurable
+// via ChatManager.maxRetries and resend interval.
 func (cm *ChatManager) ProcessACK(ack *MessageACK) {
 	cm.mu.Lock()
 	defer cm.mu.Unlock()

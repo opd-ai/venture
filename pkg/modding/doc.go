@@ -83,15 +83,20 @@
 //
 // Example loading and applying mods:
 //
+// # Example Usage
+//
+// Note: Examples below use log.Fatal/log.Printf for simplicity.
+// Production code should use structured logging via logrus.WithFields.
+//
 //	loader := modding.NewLoader()
 //	mod, err := loader.LoadFromFile("mods/hardcore.json")
 //	if err != nil {
-//	    log.Fatal(err)
+//	    log.Fatal(err) // Example only - use logrus in production
 //	}
 //
 //	manager := modding.NewManager()
 //	if err := manager.AddMod(mod); err != nil {
-//	    log.Fatal(err)
+//	    log.Fatal(err) // Example only - use logrus in production
 //	}
 //
 //	manager.ApplyRules(world)
@@ -104,7 +109,7 @@
 //	result := sandbox.ValidateMod(mod)
 //	if !result.Valid {
 //	    for _, err := range result.Errors {
-//	        log.Printf("Sandbox violation: %v", err)
+//	        log.Printf("Sandbox violation: %v", err) // Example only
 //	    }
 //	}
 //
@@ -114,6 +119,7 @@
 //   - LoadedAt timestamp when loading mods (loader.go) — metadata for debugging
 //   - AppliedAt timestamp when applying rules (manager.go) — audit trail
 //   - Rate limiting for mod application (manager.go) — server-side throttling
+//   - Test fixtures in modding_test.go — acceptable for testing (not production)
 //
 // These usages are acceptable because they affect only metadata and operational
 // behavior, not procedural content generation. Game content remains fully
@@ -133,6 +139,6 @@
 //	sandbox := modding.NewSandbox()
 //	report := sandbox.GenerateSecurityReport()
 //	if report.AllChecksPassed() {
-//	    log.Print("All 6 sandbox security checks passed")
+//	    log.Print("All 6 sandbox security checks passed") // Example only
 //	}
 package modding

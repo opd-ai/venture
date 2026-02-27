@@ -38,58 +38,56 @@ func NewCollisionResponseComponent(mass float64) *CollisionResponseComponent {
 }
 
 // GetDamageMultiplier returns a multiplier based on structural integrity.
+// Deprecated: Use vehicle.GetDamageMultiplier(collision) instead to maintain ECS purity.
 // Used to reduce vehicle performance as it gets damaged.
 func (c *CollisionResponseComponent) GetDamageMultiplier() float64 {
-	// At 100% integrity: 1.0x performance
-	// At 50% integrity: 0.75x performance
-	// At 0% integrity: 0.5x performance (minimum)
-	return 0.5 + (c.StructuralIntegrity * 0.5)
+	return GetDamageMultiplier(c)
 }
 
 // IsDestroyed checks if structural integrity is depleted.
+// Deprecated: Use vehicle.IsDestroyed(collision) instead to maintain ECS purity.
 func (c *CollisionResponseComponent) IsDestroyed() bool {
-	return c.StructuralIntegrity <= 0.0
+	return IsDestroyed(c)
 }
 
 // GetIntegrity returns the current structural integrity [0.0, 1.0].
+// Deprecated: Use direct field access (collision.StructuralIntegrity) instead to maintain ECS purity.
 func (c *CollisionResponseComponent) GetIntegrity() float64 {
 	return c.StructuralIntegrity
 }
 
 // Repair increases structural integrity.
+// Deprecated: Use vehicle.RepairVehicle(collision, amount) instead to maintain ECS purity.
 func (c *CollisionResponseComponent) Repair(amount float64) {
-	c.StructuralIntegrity += amount
-	if c.StructuralIntegrity > 1.0 {
-		c.StructuralIntegrity = 1.0
-	}
+	RepairVehicle(c, amount)
 }
 
 // Reset resets collision tracking (used when respawning vehicle).
+// Deprecated: Use vehicle.ResetCollisionResponse(collision) instead to maintain ECS purity.
 func (c *CollisionResponseComponent) Reset() {
-	c.LastImpactVelocity = 0.0
-	c.LastImpactForce = 0.0
-	c.LastImpactAngle = 0.0
-	c.TotalImpactDamage = 0.0
-	c.StructuralIntegrity = 1.0
-	c.CollisionCount = 0
+	ResetCollisionResponse(c)
 }
 
 // GetCollisionCount returns the number of collisions processed.
+// Deprecated: Use direct field access (collision.CollisionCount) instead to maintain ECS purity.
 func (c *CollisionResponseComponent) GetCollisionCount() int {
 	return c.CollisionCount
 }
 
 // GetLastImpactForce returns the force of the most recent impact.
+// Deprecated: Use direct field access (collision.LastImpactForce) instead to maintain ECS purity.
 func (c *CollisionResponseComponent) GetLastImpactForce() float64 {
 	return c.LastImpactForce
 }
 
 // GetLastImpactVelocity returns the velocity of the most recent impact.
+// Deprecated: Use direct field access (collision.LastImpactVelocity) instead to maintain ECS purity.
 func (c *CollisionResponseComponent) GetLastImpactVelocity() float64 {
 	return c.LastImpactVelocity
 }
 
 // ShouldCauseDamage checks if the given impact speed exceeds the damage threshold.
+// Deprecated: Use vehicle.ShouldCauseDamage(collision, impactSpeed) instead to maintain ECS purity.
 func (c *CollisionResponseComponent) ShouldCauseDamage(impactSpeed float64) bool {
-	return impactSpeed >= c.DamageThreshold
+	return ShouldCauseDamage(c, impactSpeed)
 }

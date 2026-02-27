@@ -20,15 +20,21 @@ func TestNewCompanionLearningSystem(t *testing.T) {
 }
 
 func TestSystemUpdate(t *testing.T) {
-	system := NewCompanionLearningSystem(10 * time.Millisecond)
-	manager := system.GetManager()
+	mockTime := &MockTimeProvider{CurrentTime: time.Unix(1000000, 0)}
+	manager := NewManagerWithOptions(mockTime, nil)
+	system := &CompanionLearningSystem{
+		manager:        manager,
+		updateInterval: 10 * time.Millisecond,
+		timeProvider:   mockTime,
+		lastUpdate:     time.Time{},
+	}
 	comp := manager.AddCompanion("test", 1.0)
 
 	// Add some XP to a skill
 	_ = comp.SkillTree.AddExperience("Basic Attack", 50.0, 1.0)
 
 	// Mark skill as used recently
-	comp.LastSkillUse["Basic Attack"] = time.Now()
+	comp.LastSkillUse["Basic Attack"] = mockTime.Now()
 
 	// Update system
 	time.Sleep(15 * time.Millisecond)
@@ -42,15 +48,21 @@ func TestSystemUpdate(t *testing.T) {
 }
 
 func TestSystemUpdateSkillDecay(t *testing.T) {
-	system := NewCompanionLearningSystem(10 * time.Millisecond)
-	manager := system.GetManager()
+	mockTime := &MockTimeProvider{CurrentTime: time.Unix(1000000, 0)}
+	manager := NewManagerWithOptions(mockTime, nil)
+	system := &CompanionLearningSystem{
+		manager:        manager,
+		updateInterval: 10 * time.Millisecond,
+		timeProvider:   mockTime,
+		lastUpdate:     time.Time{},
+	}
 	comp := manager.AddCompanion("test", 1.0)
 
 	// Add some XP to a skill
 	_ = comp.SkillTree.AddExperience("Basic Attack", 50.0, 1.0)
 
 	// Mark skill as used long ago
-	comp.LastSkillUse["Basic Attack"] = time.Now().Add(-48 * time.Hour)
+	comp.LastSkillUse["Basic Attack"] = mockTime.Now().Add(-48 * time.Hour)
 
 	// Update system
 	time.Sleep(15 * time.Millisecond)
@@ -76,12 +88,13 @@ func TestGetManager(t *testing.T) {
 }
 
 func TestRecordSkillUse(t *testing.T) {
-	manager := NewManager()
+	mockTime := &MockTimeProvider{CurrentTime: time.Unix(1000000, 0)}
+	manager := NewManagerWithOptions(mockTime, nil)
 	comp := manager.AddCompanion("test", 1.0)
 
-	before := time.Now()
-	RecordSkillUse(comp, "Basic Attack", nil) // nil uses default time provider
-	after := time.Now()
+	before := mockTime.Now()
+	RecordSkillUse(comp, "Basic Attack", mockTime)
+	after := mockTime.Now()
 
 	lastUse, ok := comp.LastSkillUse["Basic Attack"]
 	if !ok {
@@ -199,9 +212,10 @@ func TestGetMemorySummary(t *testing.T) {
 		t.Error("expected non-empty summary")
 	}
 
+	mockTime := &MockTimeProvider{CurrentTime: time.Unix(1000000, 0)}
 	comp.Memory.AddEvent(MemorableEvent{
 		Type:      EventCombat,
-		Timestamp: time.Now(),
+		Timestamp: mockTime.Now(),
 	})
 
 	summary = GetMemorySummary(comp)

@@ -263,14 +263,26 @@ func (c *TCPClient) startConnectionHandlers() {
 
 // ConnectWithRetry establishes connection to the server with automatic retry on failure.
 // Uses exponential backoff to handle transient network issues gracefully.
+//
+// Retry behavior is controlled by ReconnectConfig:
+//   - MaxRetries: Maximum number of connection attempts (0 = infinite retries)
+//   - InitialDelay: Starting delay between retries (e.g., 1s)
+//   - MaxDelay: Maximum delay cap for exponential backoff (e.g., 30s)
+//   - BackoffMultiplier: Factor to multiply delay after each failure (typically 2.0)
+//
 // Returns nil on successful connection, or an error if all retries are exhausted.
-// The function can be cancelled gracefully by calling Disconnect() on the client.
+// The function can be cancelled gracefully by calling Disconnect() on the client,
+// which will interrupt the retry loop immediately.
+//
+// Thread-safety: Safe to call concurrently with Disconnect(). Uses internal
+// cancellation channel to coordinate shutdown.
 //
 // Example usage:
 //
 //	client := NewClient(TorClientConfig())
 //	if err := client.ConnectWithRetry(TorReconnectConfig()); err != nil {
-//	    log.Fatalf("Failed to connect after retries: %v", err)
+//	    log.WithError(err).Error("Failed to connect after retries")
+//	    return err
 //	}
 func (c *TCPClient) ConnectWithRetry(reconnectConfig ReconnectConfig) error {
 	attempt := 0

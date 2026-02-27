@@ -27,22 +27,26 @@ type System struct {
 
 // NewSystem creates a new prestige system.
 func NewSystem() *System {
-	return &System{
-		manager: NewManager(),
-		logger:  logrus.WithField("system", "prestige"),
-	}
+	return NewSystemWithLogger(nil)
 }
 
 // NewSystemWithLogger creates a new prestige system with a logger.
 func NewSystemWithLogger(logger *logrus.Logger) *System {
 	var logEntry *logrus.Entry
 	if logger != nil {
-		logEntry = logger.WithField("system", "prestige")
+		logEntry = logger.WithFields(logrus.Fields{
+			"system": "prestige",
+		})
 	} else {
-		logEntry = logrus.WithField("system", "prestige")
+		logEntry = logrus.WithFields(logrus.Fields{
+			"system": "prestige",
+		})
 	}
+
+	logEntry.Debug("prestige system created")
+
 	return &System{
-		manager: NewManager(),
+		manager: NewManagerWithLogger(logger),
 		logger:  logEntry,
 	}
 }

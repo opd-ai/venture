@@ -23,7 +23,7 @@ The entity package provides procedural generation for game entities (monsters, N
 None identified.
 
 ### Medium Severity
-- [ ] **Documentation** — README.md example uses `fmt.Printf` which is discouraged in non-test code (`README.md:53`)
+- [x] **Documentation** — README.md example uses `fmt.Printf` which is discouraged in non-test code (`README.md:53`) — **COMPLETED 2026-02-27**: Added note clarifying production code should use logrus.WithFields
 - [x] **Error handling** — `generateMerchantInventory` continues on item generation failure with only a warning log, potentially resulting in sparse inventory (`merchant.go:196-202`) — FIXED 2026-02-27: Added failureCount tracking and 50% error threshold; returns error if >50% of items fail to generate. Added comprehensive tests for error threshold and partial failure handling. Coverage: 91.4%
 
 ### Low Severity

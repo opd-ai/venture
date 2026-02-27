@@ -30,7 +30,7 @@
 //	choice := &choice_consequences.PlayerChoice{
 //	    ChoiceID:    "quest_village_burned_spare_bandit",
 //	    StoryNodeID: "village_burned_confrontation",
-//	    Timestamp:   time.Now().Unix(),
+//	    Timestamp:   tracker.Now(), // Use the tracker's time provider
 //	    MoralAlignment: &choice_consequences.AlignmentShift{
 //	        GoodEvil: 0.2,  // Good action
 //	        LawChaos: -0.1, // Chaotic mercy
@@ -42,6 +42,18 @@
 //	// Check if content is available
 //	available := tracker.IsContentAvailable("player123", "quest_bandit_redemption")
 //	// true if player spared bandit, false if they executed them
+//
+// # Testing with Deterministic Time
+//
+// For deterministic testing, use SetTimeProvider with FixedTimeProvider:
+//
+//	func TestMyFeature(t *testing.T) {
+//	    choice_consequences.SetTimeProvider(choice_consequences.FixedTimeProvider{
+//	        Timestamp: 1640000000,
+//	    })
+//	    t.Cleanup(choice_consequences.ResetTimeProvider)
+//	    // ... test code with deterministic timestamps ...
+//	}
 //
 //	// Get NPC attitude
 //	attitude := tracker.GetNPCAttitude("player123", "villager_elder")

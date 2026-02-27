@@ -40,13 +40,13 @@
 //	// Generate a story arc
 //	arc, err := gen.Generate(params.Seed, params)
 //	if err != nil {
-//		log.Fatal(err)
+//		// Note: Production code should use logrus.WithError(err).Fatal()
+//		return err
 //	}
 //
 //	storyArc := arc.(*StoryArc)
-//	fmt.Printf("Title: %s\n", storyArc.Title)
-//	fmt.Printf("Main Conflict: %s\n", storyArc.MainConflict)
-//	fmt.Printf("Plot Points: %d\n", len(storyArc.PlotPoints))
+//	// Note: Production code should use logrus.WithFields for structured logging
+//	// Example: logrus.WithFields(logrus.Fields{"title": storyArc.Title, "plot_points": len(storyArc.PlotPoints)}).Info("Generated story arc")
 //
 // # Architecture
 //

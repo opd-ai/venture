@@ -29,13 +29,14 @@
 //
 //	result, err := generator.Generate(12345, params)
 //	if err != nil {
-//	    log.Fatal(err)
+//	    // Note: Production code should use logrus.WithError(err).Fatal()
+//	    return err
 //	}
 //
 //	trees := result.([]*skills.SkillTree)
+//	// Note: Production code should use logrus.WithFields for structured logging
 //	for _, tree := range trees {
-//	    fmt.Printf("Tree: %s (%s)\n", tree.Name, tree.Description)
-//	    fmt.Printf("Skills: %d, Max Points: %d\n", len(tree.Nodes), tree.MaxPoints)
+//	    // Example: logrus.WithFields(logrus.Fields{"name": tree.Name, "skill_count": len(tree.Nodes), "max_points": tree.MaxPoints}).Info("Generated skill tree")
 //	}
 //
 // # Skill Types
@@ -75,4 +76,29 @@
 //
 // This package follows the procgen.Generator interface and integrates
 // seamlessly with other procedural generation systems in the Venture project.
+//
+// # Integration with SkillProgressionSystem
+//
+// The generated skill trees integrate with engine.SkillProgressionSystem for
+// runtime progression tracking:
+//
+//	// Generate skill trees
+//	gen := skills.NewSkillTreeGenerator()
+//	result, _ := gen.Generate(seed, params)
+//	trees := result.([]*skills.SkillTree)
+//
+//	// Initialize progression system with generated trees
+//	world := engine.NewWorld()
+//	progressionSys := engine.NewSkillProgressionSystem(world, trees)
+//	world.AddSystem(progressionSys)
+//
+//	// Track player progression
+//	playerEntity := world.CreateEntity()
+//	playerEntity.AddComponent(&engine.SkillProgressionComponent{
+//	    AvailablePoints: 5,
+//	    UnlockedSkills: make(map[string]bool),
+//	})
+//
+//	// Unlock skills at runtime
+//	progressionSys.UnlockSkill(playerEntity, "fireball")
 package skills

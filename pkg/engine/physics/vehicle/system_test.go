@@ -111,7 +111,7 @@ func TestEnhancedVehicleSystem_UpdateVehiclePhysics_WithWeightTransfer(t *testin
 
 	// During acceleration, rear wheels should have more weight
 	rearWeight := weightTransfer.GetRearAxleWeight()
-	frontWeight := weightTransfer.GetFrontAxleWeight()
+	frontWeight := GetFrontAxleWeight(weightTransfer)
 	if rearWeight <= frontWeight {
 		t.Errorf("during acceleration, rear weight (%f) should exceed front weight (%f)", rearWeight, frontWeight)
 	}
@@ -139,7 +139,7 @@ func TestEnhancedVehicleSystem_UpdateVehiclePhysics_WithDeformation(t *testing.T
 	// Update should create tracks
 	sys.UpdateVehiclePhysics(suspension, nil, deformation, nil, state, 0.016)
 
-	trackCount := deformation.GetTrackCount()
+	trackCount := len(deformation.Tracks)
 	if trackCount == 0 {
 		t.Error("moving vehicle on soft terrain should create tracks")
 	}
@@ -168,7 +168,7 @@ func TestEnhancedVehicleSystem_UpdateVehiclePhysics_WithDamage(t *testing.T) {
 	}
 
 	// Velocity should also be scaled
-	expectedVelX := state.VelocityX * collision.GetDamageMultiplier()
+	expectedVelX := state.VelocityX * GetDamageMultiplier(collision)
 	if math.Abs(newState.VelocityX-expectedVelX) > 0.1 {
 		t.Errorf("velocity X: got %f, want ~%f", newState.VelocityX, expectedVelX)
 	}
@@ -258,12 +258,12 @@ func TestEnhancedVehicleSystem_IntegratedPhysics(t *testing.T) {
 	}
 
 	// Check results
-	if deformation.GetTrackCount() == 0 {
+	if len(deformation.Tracks) == 0 {
 		t.Error("accelerating vehicle should leave tracks")
 	}
 
 	rearWeight := weightTransfer.GetRearAxleWeight()
-	frontWeight := weightTransfer.GetFrontAxleWeight()
+	frontWeight := GetFrontAxleWeight(weightTransfer)
 	if rearWeight <= frontWeight {
 		t.Error("accelerating vehicle should have more weight on rear")
 	}

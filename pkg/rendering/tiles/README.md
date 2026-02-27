@@ -44,6 +44,7 @@ config := tiles.Config{
 // Generate the tile
 img, err := gen.Generate(config)
 if err != nil {
+    // Production code should use: logrus.WithError(err).Error("failed to generate tile")
     log.Fatal(err)
 }
 

@@ -50,9 +50,11 @@
 //
 //	// Get statistics
 //	stats := collector.GetStats()
-//	fmt.Printf("Avg latency: %v\n", stats.AvgLatency)
-//	fmt.Printf("Packet loss rate: %.2f%%\n", stats.PacketLossRate * 100)
-//	fmt.Printf("Desync count: %d\n", stats.DesyncCount)
+//	logrus.WithFields(logrus.Fields{
+//	    "avg_latency": stats.AvgLatency,
+//	    "packet_loss_rate": stats.PacketLossRate * 100,
+//	    "desync_count": stats.DesyncCount,
+//	}).Info("Network resilience metrics")
 //
 // # Test Scenarios
 //
@@ -64,7 +66,10 @@
 //	result := resilience.RunScenario(context.Background(), scenario, sim, collector)
 //
 //	if result.Failed() {
-//	    fmt.Printf("Scenario failed: %s\n", result.FailureReason)
+//	    logrus.WithFields(logrus.Fields{
+//	        "scenario": scenario.Name,
+//	        "failure_reason": result.FailureReason,
+//	    }).Error("Scenario failed")
 //	}
 //
 // # Performance Targets

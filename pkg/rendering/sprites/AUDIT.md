@@ -27,7 +27,7 @@ None
 
 ### Low Severity
 - [x] **Test execution** — ✅ RESOLVED (2026-02-26): Tests execute successfully without X11/DISPLAY. Coverage measurable at 82.4% (exceeds both 30% Ebiten-dependent and 40% general targets). The `safeReadPixels` recovery pattern successfully enables headless test execution.
-- [ ] **Package doc** — `doc.go:43` contains example with `log.Fatal(err)` instead of structured logging, inconsistent with coding guidelines (though this is just example code in documentation)
+- [x] **Package doc** — `doc.go:43` contains example with `log.Fatal(err)` instead of structured logging, inconsistent with coding guidelines (though this is just example code in documentation) **FIXED 2026-02-27**: Added clarifying comment explaining production code should use logrus.WithError
 - [ ] **Documentation verbosity** — `doc.go` is 285 lines, very comprehensive but may benefit from splitting into separate markdown docs for maintainability
 
 ## Input Integration

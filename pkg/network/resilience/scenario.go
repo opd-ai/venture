@@ -25,7 +25,10 @@ import (
 //	collector := resilience.NewMetricsCollector()
 //	result := resilience.RunScenario(context.Background(), &resilience.HighLatencyScenario, sim, collector)
 //	if result.Failed() {
-//	    fmt.Printf("Scenario failed: %s\n", result.FailureReason)
+//	    logrus.WithFields(logrus.Fields{
+//	        "scenario": "HighLatencyScenario",
+//	        "failure_reason": result.FailureReason,
+//	    }).Error("Scenario failed")
 //	}
 func RunScenario(ctx context.Context, scenario *TestScenario, sim *NetworkSimulator, collector *MetricsCollector) *ScenarioResult {
 	return RunScenarioWithOptions(ctx, scenario, sim, collector, DefaultScenarioOptions())

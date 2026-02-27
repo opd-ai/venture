@@ -41,6 +41,7 @@
 //	}
 //
 //	building := result.(*building.Building)
+//	// Note: Production code should use logrus.WithFields instead of fmt.Printf
 //	fmt.Printf("Generated %s with %d rooms\n", building.Type, len(building.Rooms))
 //
 // # Floor Plan Generation

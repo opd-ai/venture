@@ -43,7 +43,7 @@
 //
 //	// Get current node
 //	node, _ := manager.GetCurrentNode("player1", arc.ID)
-//	fmt.Println(node.Title, node.Description)
+//	// Use node.Title and node.Description in your UI
 //
 //	// Make a choice
 //	if node.Type == branching.NodeTypeChoice {
@@ -53,7 +53,7 @@
 //
 //	// Check alignment
 //	alignment, _ := manager.GetAlignment("player1", arc.ID)
-//	fmt.Printf("Good/Evil: %.2f\n", alignment[branching.AlignmentGoodEvil])
+//	// Use alignment values for narrative branching
 //
 // # Story Arc Structure
 //

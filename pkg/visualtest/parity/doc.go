@@ -30,7 +30,8 @@
 //	validator := parity.NewValidator()
 //	result := validator.ValidateSprites(seed, genreID)
 //	if !result.Passed {
-//	    log.Printf("Sprite parity failed: %v", result.Errors)
+//	    // Production code should use structured logging:
+//	    // logrus.WithFields(logrus.Fields{"errors": result.Errors}).Error("Sprite parity failed")
 //	}
 //
 // # Acceptance Criteria

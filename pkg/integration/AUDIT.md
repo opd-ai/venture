@@ -36,7 +36,8 @@ None
   - **Resolution (2026-02-27)**: Replaced all `time.Now()` calls in test fixtures with `testTimestamp` constant (1640000000) for deterministic testing. Added `setupTestTime(t)` helper that configures `FixedTimeProvider` for all tests. Kept `time.Now()` only in `TestRealTimeProvider` which specifically tests real-time behavior. All tests pass with deterministic timestamps.
 
 ### Low Severity
-- [ ] **Doc Coverage** — No package-level example code in `doc.go`. While documentation is comprehensive with three registration patterns documented, adding example snippets for each pattern would improve usability. (`doc.go:22-40`)
+- [x] **Doc Coverage** — No package-level example code in `doc.go`. While documentation is comprehensive with three registration patterns documented, adding example snippets for each pattern would improve usability. (`doc.go:22-40`)
+  - **Resolution (2026-02-27)**: Added comprehensive example code snippets to doc.go for all three registration patterns: (1) ECS System Pattern with political_warfare example showing initialization, registration, and per-frame updates; (2) Manager-Only Pattern with guild_housing example showing direct handler calls and network updates; (3) Pure Integration Pattern with quest system integration showing choice_consequences and narrative_world usage. Examples demonstrate proper error handling with logrus. All tests pass.
 
 ## Input Integration
 | Input Source | Status | Notes |

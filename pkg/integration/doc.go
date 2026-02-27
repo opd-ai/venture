@@ -21,23 +21,75 @@
 // Integration systems follow three registration patterns. Choose based on
 // whether the system needs per-frame updates:
 //
-// ECS System Pattern (narrative_world, political_warfare, world_events):
+// # ECS System Pattern
+//
 // The system wraps a Manager and is registered with the engine World for
-// per-frame Update() calls.
+// per-frame Update() calls. Used by narrative_world, political_warfare, and
+// world_events packages.
 //
-//	sys := political_warfare.NewSystem(world, guildMgr, seed)
-//	world.AddSystem(sys)
+// Example:
 //
-// Manager-Only Pattern (guild_housing, trade_routes, guild_vehicle):
+//	// Initialize guild manager (required dependency)
+//	guildMgr := engine.NewGuildSystem(world)
+//
+//	// Create political warfare system with seed for deterministic events
+//	warSys := political_warfare.NewSystem(world, guildMgr, 12345)
+//
+//	// Register with engine for per-frame updates
+//	world.AddSystem(warSys)
+//
+//	// System will now receive Update(entities, deltaTime) calls each frame
+//	// and process war mechanics, treaty timers, siege progress, etc.
+//
+// # Manager-Only Pattern
+//
 // A Manager is created and stored in the client's systemsContainer. It is
 // called directly from handlers rather than through the ECS update loop.
+// Used by guild_housing, trade_routes, and guild_vehicle packages.
 //
-//	mgr := guild_housing.NewManager()
-//	container.guildHousingManager = mgr
+// Example:
 //
-// Pure Integration Pattern (choice_consequences, companion_housing, housing_crafting):
+//	// Create housing manager with world reference
+//	housingMgr := guild_housing.NewManager()
+//
+//	// Store in systems container for handler access
+//	container.guildHousingManager = housingMgr
+//
+//	// Call directly from handlers (not through ECS loop)
+//	err := housingMgr.PurchaseRoom(guildID, "barracks")
+//	if err != nil {
+//	    logrus.WithError(err).Error("failed to purchase room")
+//	}
+//
+//	// For networked updates
+//	housingMgr.ProcessRoomUpdate(guildID, roomData)
+//
+// # Pure Integration Pattern
+//
 // No registration needed. Functions are called directly from other systems
-// that already participate in the ECS loop.
+// that already participate in the ECS loop. Used by choice_consequences,
+// companion_housing, and housing_crafting packages.
+//
+// Example:
+//
+//	// In your quest system's Update() method:
+//	func (s *QuestSystem) Update(entities []*engine.Entity, deltaTime float64) {
+//	    for _, entity := range entities {
+//	        quest, ok := entity.GetComponent("quest").(*QuestComponent)
+//	        if !ok || !quest.JustCompleted {
+//	            continue
+//	        }
+//
+//	        // Apply narrative consequences directly
+//	        choice_consequences.RecordChoice(entity.ID, quest.ChoiceID)
+//	        choice_consequences.ApplyConsequences(entity.ID, world)
+//
+//	        // Update companion memory if player has companion
+//	        if entity.HasComponent("companion") {
+//	            narrative_world.UpdateCompanionMemory(entity.ID, quest.Outcome)
+//	        }
+//	    }
+//	}
 //
 // # Determinism
 //

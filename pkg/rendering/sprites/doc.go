@@ -40,6 +40,7 @@
 //
 //	sprites, err := gen.GenerateDirectionalSprites(config)
 //	if err != nil {
+//	    // Production code should use: logrus.WithError(err).Error("failed to generate sprites")
 //	    log.Fatal(err)
 //	}
 //

@@ -29,7 +29,7 @@ The `pkg/procgen/narrative` package provides procedural generation of story arcs
 None identified.
 
 ### Medium Severity
-- [ ] **Doc coverage** — Example code in `doc.go` uses `log.Fatal()` and `fmt.Printf()` directly instead of structured logging via logrus. While this is acceptable for documentation examples, it could mislead users. (`doc.go:43-49`)
+- [x] **Doc coverage** — Example code in `doc.go` uses `log.Fatal()` and `fmt.Printf()` directly instead of structured logging via logrus. While this is acceptable for documentation examples, it could mislead users. (`doc.go:43-49`) — **FIXED 2026-02-27**: Added clarifying notes in doc.go example code explaining production code should use logrus.WithError() and logrus.WithFields for structured logging. Example now shows proper error handling pattern with return err instead of Fatal.
 
 ### Low Severity
 - [ ] **Missing godoc** — `StoryArc` struct fields lack individual field documentation comments (`generator.go:12-39`)

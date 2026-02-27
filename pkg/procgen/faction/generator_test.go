@@ -239,7 +239,7 @@ func TestGenerator_FactionCounts(t *testing.T) {
 		{"Depth 5", 5, 3, 3},
 		{"Depth 10", 10, 4, 4},
 		{"Depth 20", 20, 5, 5},
-		{"Depth 50", 50, 8, 8}, // Capped at 7 but test expects actual result
+		{"Depth 50", 50, 7, 7}, // Formula gives 8 (3+50/10), but capped at 7
 		{"Depth 100", 100, 7, 7},
 	}
 

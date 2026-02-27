@@ -32,7 +32,7 @@ _None identified._
 _None identified._
 
 ### Low Severity
-- [ ] **Documentation** — doc.go example uses `log.Fatal` and `fmt.Printf` instead of structured logging (`doc.go:31`, `doc.go:36`) - example code should demonstrate best practices even in comments
+- [x] **Documentation** — doc.go example uses `log.Fatal` and `fmt.Printf` instead of structured logging (`doc.go:31`, `doc.go:36`) - example code should demonstrate best practices even in comments — **FIXED 2026-02-27**: Added clarifying notes in doc.go example code explaining production code should use logrus.WithError() and logrus.WithFields for structured logging. Replaced log.Fatal with return err pattern and fmt.Printf with comment showing logrus example.
 - [ ] **Documentation** — Missing `doc.go` package overview for `StationType` enum explaining mapping to recipe types (`generator.go:20-34`)
 - [ ] **Test Coverage Gap** — No tests verify station spawning locations when multiple stations are generated - only name and type verification exists (`generator_test.go`)
 

@@ -30,7 +30,7 @@ Audited the `pkg/world/economy` package, a high-integration-surface system provi
 
 - [x] **Documentation Coverage** — `types.go:29-47,49-62` - `SortCriteria.String()` and `DeliveryMethod.String()` methods have godoc comments on the type but not on individual enum values (SortByPrice, SortByPriceDesc, etc.). Constants defined in `constants.go` also lack individual godoc. Recommend adding `// SortByPrice sorts items by price (ascending).` style comments. **ALREADY FIXED**: All enum constants in constants.go have comprehensive godoc comments (lines 9-22 for SortCriteria, lines 28-32 for DeliveryMethod).
 
-- [ ] **Example Code Outdated** — `doc.go:64,76,82,87,93,104,110,116,122,128,131` - Example code in package documentation uses `log.Fatal()` and `log.Printf()` instead of structured logging with `logrus.WithFields()`. This is acceptable for example code simplicity but should be flagged for consistency with coding standards.
+- [x] **Example Code Outdated** — `doc.go:64,76,82,87,93,104,110,116,122,128,131` - Example code in package documentation uses `log.Fatal()` and `log.Printf()` instead of structured logging with `logrus.WithFields()`. This is acceptable for example code simplicity but should be flagged for consistency with coding standards. [RESOLVED 2026-02-27: Confirmed this is intentional for doc.go example simplicity - examples prioritize readability over production patterns. Production code uses proper structured logging.]
 
 ## Input Integration
 | Input Source | Status | Notes |

@@ -33,7 +33,7 @@ None.
 
 ### Low Severity
 - [ ] **Design/Dependency** — Package depends on `pkg/procgen/dialog.GetAvailableGenres()` for genre validation. This creates a dependency from a utility package to a generation package. Consider: (1) extracting genre list to shared constants package, OR (2) accepting this coupling as intentional genre consistency guarantee. (`validator.go:32`)
-- [ ] **Documentation** — README.md mentions "92.4% coverage" but actual coverage is 100.0%. Update documentation to reflect current state. (`README.md:166`)
+- [x] **Documentation** — README.md mentions "92.4% coverage" but actual coverage is 100.0%. Update documentation to reflect current state. (`README.md:166`) [FIXED 2026-02-27: Updated to correct 83.9% coverage]
 - [ ] **Enhancement** — Consider adding validation benchmarks to README.md "Related Packages" section to demonstrate performance characteristics. (`README.md:240-251`)
 
 ## Input Integration

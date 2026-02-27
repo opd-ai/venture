@@ -35,17 +35,27 @@ var defaultTimeProvider TimeProvider = RealTimeProvider{}
 
 // SetTimeProvider sets the package-level time provider for testing.
 //
-// WARNING: This function is NOT thread-safe. It modifies a package-level
-// variable without synchronization. Callers must ensure this function is
-// only invoked during test setup (before any concurrent goroutines access
-// the time provider) or within a single-threaded initialization context.
-// Using this function concurrently with other package functions may cause
-// data races.
+// WARNING: This function is TEST-ONLY and NOT thread-safe. It modifies a
+// package-level variable without synchronization. This function should only
+// be called from test files during test setup (before any concurrent goroutines
+// access the time provider) via t.Cleanup(ResetTimeProvider).
+//
+// Production code should NEVER call this function. The default RealTimeProvider
+// is initialized at package load time and should remain unchanged in production.
+//
+// Example test usage:
+//
+//	func TestMyFeature(t *testing.T) {
+//	    SetTimeProvider(FixedTimeProvider{Timestamp: 1640000000})
+//	    t.Cleanup(ResetTimeProvider)
+//	    // ... test code ...
+//	}
 func SetTimeProvider(tp TimeProvider) {
 	defaultTimeProvider = tp
 }
 
 // ResetTimeProvider resets to the default real time provider.
+// This function is TEST-ONLY and should be used with t.Cleanup() in tests.
 func ResetTimeProvider() {
 	defaultTimeProvider = RealTimeProvider{}
 }

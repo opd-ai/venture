@@ -44,7 +44,7 @@ func TestTerrainDeformationComponent_AddTrack(t *testing.T) {
 			// Add track
 			sys.AddTerrainTrack(comp, 100.0, 100.0, 0.0, tt.wheelLoad, tt.terrainType)
 
-			trackCount := comp.GetTrackCount()
+			trackCount := len(comp.Tracks)
 			if tt.shouldCreate && trackCount == 0 {
 				t.Error("expected track to be created, but count is 0")
 			}
@@ -61,19 +61,19 @@ func TestTerrainDeformationComponent_TrackSpacing(t *testing.T) {
 
 	// Add first track
 	sys.AddTerrainTrack(comp, 100.0, 100.0, 0.0, 1000.0, TerrainSoft)
-	if comp.GetTrackCount() != 1 {
+	if len(comp.Tracks) != 1 {
 		t.Fatalf("first track not created")
 	}
 
 	// Try to add track too close (should be rejected)
 	sys.AddTerrainTrack(comp, 101.0, 101.0, 0.0, 1000.0, TerrainSoft) // Distance ~1.4 pixels
-	if comp.GetTrackCount() != 1 {
+	if len(comp.Tracks) != 1 {
 		t.Error("track should not be created when too close to previous track")
 	}
 
 	// Add track far enough away (should succeed)
 	sys.AddTerrainTrack(comp, 110.0, 110.0, 0.0, 1000.0, TerrainSoft) // Distance ~14.1 pixels
-	if comp.GetTrackCount() != 2 {
+	if len(comp.Tracks) != 2 {
 		t.Error("track should be created when far enough from previous track")
 	}
 }
@@ -86,7 +86,7 @@ func TestTerrainDeformationComponent_Update(t *testing.T) {
 	sys.AddTerrainTrack(comp, 100.0, 100.0, 0.0, 1000.0, TerrainFirm) // 30s fade
 	sys.AddTerrainTrack(comp, 200.0, 200.0, 0.0, 1000.0, TerrainSoft) // 120s fade
 
-	initialCount := comp.GetTrackCount()
+	initialCount := len(comp.Tracks)
 	if initialCount != 2 {
 		t.Fatalf("expected 2 tracks, got %d", initialCount)
 	}
@@ -105,8 +105,8 @@ func TestTerrainDeformationComponent_Update(t *testing.T) {
 	sys.UpdateTerrainTracks(comp, 30.0)
 
 	// Firm track should be removed, soft track should remain
-	if comp.GetTrackCount() != 1 {
-		t.Errorf("expected 1 track after fading, got %d", comp.GetTrackCount())
+	if len(comp.Tracks) != 1 {
+		t.Errorf("expected 1 track after fading, got %d", len(comp.Tracks))
 	}
 }
 
@@ -120,7 +120,7 @@ func TestTerrainDeformationComponent_GetVisibleTracks(t *testing.T) {
 	sys.AddTerrainTrack(comp, 250.0, 250.0, 0.0, 1000.0, TerrainSoft)
 
 	// Query viewport (100, 100) to (200, 200)
-	visible := comp.GetVisibleTracks(100.0, 100.0, 200.0, 200.0)
+	visible := GetVisibleTracks(comp, 100.0, 100.0, 200.0, 200.0)
 
 	// Only middle track should be visible
 	if len(visible) != 1 {
@@ -132,14 +132,12 @@ func TestTerrainDeformationComponent_GetVisibleTracks(t *testing.T) {
 }
 
 func TestTerrainDeformationComponent_GetTrackAlpha(t *testing.T) {
-	comp := NewTerrainDeformationComponent(12345)
-
 	track := TrackMark{
 		Age:      10.0,
 		FadeTime: 30.0,
 	}
 
-	alpha := comp.GetTrackAlpha(&track)
+	alpha := GetTrackAlpha(&track)
 	expected := 1.0 - (10.0 / 30.0) // ~0.667
 
 	if alpha < expected-0.01 || alpha > expected+0.01 {
@@ -148,7 +146,7 @@ func TestTerrainDeformationComponent_GetTrackAlpha(t *testing.T) {
 
 	// Test fully faded track
 	track.Age = 30.0
-	alpha = comp.GetTrackAlpha(&track)
+	alpha = GetTrackAlpha(&track)
 	if alpha != 0.0 {
 		t.Errorf("fully faded track should have alpha=0.0, got %f", alpha)
 	}
@@ -162,15 +160,15 @@ func TestTerrainDeformationComponent_Clear(t *testing.T) {
 	sys.AddTerrainTrack(comp, 100.0, 100.0, 0.0, 1000.0, TerrainSoft)
 	sys.AddTerrainTrack(comp, 200.0, 200.0, 0.0, 1000.0, TerrainSoft)
 
-	if comp.GetTrackCount() != 2 {
-		t.Fatalf("expected 2 tracks, got %d", comp.GetTrackCount())
+	if len(comp.Tracks) != 2 {
+		t.Fatalf("expected 2 tracks, got %d", len(comp.Tracks))
 	}
 
 	// Clear
 	comp.Clear()
 
-	if comp.GetTrackCount() != 0 {
-		t.Errorf("after clear, expected 0 tracks, got %d", comp.GetTrackCount())
+	if len(comp.Tracks) != 0 {
+		t.Errorf("after clear, expected 0 tracks, got %d", len(comp.Tracks))
 	}
 }
 
@@ -186,8 +184,8 @@ func TestTerrainDeformationComponent_MaxTracksLimit(t *testing.T) {
 	}
 
 	// Should not exceed max
-	if comp.GetTrackCount() > comp.MaxTracks {
-		t.Errorf("track count %d exceeds MaxTracks %d", comp.GetTrackCount(), comp.MaxTracks)
+	if len(comp.Tracks) > comp.MaxTracks {
+		t.Errorf("track count %d exceeds MaxTracks %d", len(comp.Tracks), comp.MaxTracks)
 	}
 }
 
@@ -294,6 +292,6 @@ func BenchmarkTerrainDeformationComponent_GetVisibleTracks(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		_ = comp.GetVisibleTracks(500.0, 500.0, 700.0, 700.0)
+		_ = GetVisibleTracks(comp, 500.0, 500.0, 700.0, 700.0)
 	}
 }

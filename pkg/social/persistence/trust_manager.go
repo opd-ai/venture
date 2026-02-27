@@ -282,10 +282,16 @@ func (tm *TrustManager) IsAutomaticDecayRunning() bool {
 }
 
 // runDecayLoop is the background goroutine that applies decay at regular intervals.
-// NOTE: Uses TimeProvider instead of raw time.Now() for deterministic testing.
-// In production, DefaultTimeProvider() returns real wall-clock time.
-// The ApplyDecay method accepts a currentTime parameter for deterministic testing,
-// and the background loop uses the injected TimeProvider for consistency.
+//
+// NOTE: Uses TimeProvider instead of raw time.Now() for TEST DETERMINISM ONLY (not
+// procedural content generation per Coding Guideline #2). This package manages
+// social metadata (trust scores, timestamps, decay) which are server-side operational
+// data, not procedurally generated game content.
+//
+// In production, DefaultTimeProvider() returns real wall-clock time for trust decay
+// scheduling. In tests, a fixed or mock TimeProvider can be injected via
+// NewTrustManagerWithTimeProvider() to enable deterministic test execution without
+// relying on real time passage.
 func (tm *TrustManager) runDecayLoop() {
 	for {
 		select {

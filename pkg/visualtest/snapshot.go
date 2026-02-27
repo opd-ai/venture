@@ -17,7 +17,8 @@
 //	result := visualtest.Compare(baseline, snapshot)
 //	if !result.Passed {
 //	    for _, diff := range result.Differences {
-//	        log.Printf("Visual regression: %s", diff.Description)
+//	        // Production code should use structured logging:
+//	        // logrus.WithFields(logrus.Fields{"description": diff.Description}).Warn("Visual regression detected")
 //	    }
 //	}
 //

@@ -30,6 +30,8 @@ This package implements a complete in-game economy with federated marketplace an
 
 ## Quick Start
 
+**Note**: Examples use `log.Fatal` and `fmt.Printf` for simplicity. Production code should use `logrus.WithError()` and `logrus.WithFields()` for structured logging per project guidelines.
+
 ### Creating the Economy System
 
 ```go

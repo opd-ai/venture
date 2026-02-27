@@ -30,7 +30,7 @@ The `pkg/world/housing` package provides comprehensive player housing functional
 - [ ] **Documentation** — `BuildingSize` type and constants lack godoc comments (`types.go:~52-62`)
 - [ ] **Documentation** — `Vector2` type lacks godoc comment (`types.go:~64-68`)
 - [ ] **API Consistency** — `CreateHouse` method accepts `interface{}` for buildingData instead of typed struct (`manager.go:177`)
-- [ ] **Resource Management** — `defer file.Close()` and `defer gzWriter.Close()` could accumulate unchecked errors; consider explicit checks or errgroup (`persistence.go:51,55,164,168`)
+- [x] **Resource Management** — `defer file.Close()` and `defer gzWriter.Close()` now check errors; structured logging on close failures (`persistence.go:51,55,164,168`) — COMPLETED 2026-02-27: Added deferred close error handling with structured logging for both Save() and SavePlayerData(). Tests added to verify close path works correctly.
 
 ## Input Integration
 | Input Source | Status | Notes |

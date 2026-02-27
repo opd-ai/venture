@@ -411,3 +411,123 @@ func TestChatValidator_ContainsURL(t *testing.T) {
 		})
 	}
 }
+
+func TestNewChatValidatorWithConfig(t *testing.T) {
+	tests := []struct {
+		name         string
+		config       ChatValidatorConfig
+		testMessage  string
+		wantFiltered bool
+		description  string
+	}{
+		{
+			name: "custom profanity list",
+			config: ChatValidatorConfig{
+				CustomProfanityList: map[string]bool{
+					"customword": true,
+					"testbad":    true,
+				},
+			},
+			testMessage:  "This contains customword which is filtered",
+			wantFiltered: true,
+			description:  "should filter custom profanity",
+		},
+		{
+			name: "empty custom list falls back to default",
+			config: ChatValidatorConfig{
+				CustomProfanityList: map[string]bool{},
+			},
+			testMessage:  "This contains badword1 from default list",
+			wantFiltered: true,
+			description:  "should fall back to default profanity list",
+		},
+		{
+			name: "nil custom list falls back to default",
+			config: ChatValidatorConfig{
+				CustomProfanityList: nil,
+			},
+			testMessage:  "This contains badword1 from default list",
+			wantFiltered: true,
+			description:  "should fall back to default profanity list",
+		},
+		{
+			name: "custom list does not filter default words",
+			config: ChatValidatorConfig{
+				CustomProfanityList: map[string]bool{
+					"onlythisword": true,
+				},
+			},
+			testMessage:  "This contains badword1 but not in custom list",
+			wantFiltered: false,
+			description:  "should only filter custom words, not default",
+		},
+		{
+			name: "case insensitive custom filtering",
+			config: ChatValidatorConfig{
+				CustomProfanityList: map[string]bool{
+					"testword": true,
+				},
+			},
+			testMessage:  "This contains TESTWORD in uppercase",
+			wantFiltered: true,
+			description:  "should be case insensitive",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			validator := NewChatValidatorWithConfig(tt.config)
+
+			err := validator.ValidateMessage(tt.testMessage)
+			hasError := err != nil
+
+			if tt.wantFiltered && !hasError {
+				t.Errorf("%s: expected profanity to be filtered but validation passed", tt.description)
+			}
+			if !tt.wantFiltered && hasError {
+				t.Errorf("%s: expected validation to pass but got error: %v", tt.description, err)
+			}
+		})
+	}
+}
+
+func TestChatValidatorConfig_Integration(t *testing.T) {
+	// Test production-like usage pattern
+	productionProfanity := map[string]bool{
+		"spam":      true,
+		"scam":      true,
+		"phishing":  true,
+		"malicious": true,
+	}
+
+	config := ChatValidatorConfig{
+		CustomProfanityList: productionProfanity,
+	}
+
+	validator := NewChatValidatorWithConfig(config)
+
+	// Should filter production words
+	tests := []struct {
+		message string
+		blocked bool
+	}{
+		{"Click this spam link", true},
+		{"This is a scam offer", true},
+		{"Phishing attempt here", true},
+		{"Normal message", false},
+		{"Clean conversation", false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.message, func(t *testing.T) {
+			err := validator.ValidateMessage(tt.message)
+			hasError := err != nil
+			if tt.blocked && !hasError {
+				t.Errorf("expected message to be blocked: %s", tt.message)
+			}
+			if !tt.blocked && hasError {
+				t.Errorf("expected message to pass but got error: %v", err)
+			}
+		})
+	}
+}

@@ -40,7 +40,12 @@
 //
 // The migration rules mirror pkg/saveload.DefaultMigrator.registerDefaultHooks().
 //
-// # CLI Tool
+// # Testing
 //
-// See cmd/migrationtest/ for standalone migration validation tool.
+// Run migration validation tests:
+//
+//	go test -v ./pkg/migration/...
+//
+// This package provides programmatic migration validation used by the game's
+// save/load system. No standalone CLI tool is provided.
 package migration

@@ -94,6 +94,7 @@
 //	}
 //	tileImg, err := gen.Generate(config)
 //	if err != nil {
+//	    // Production code should use: logrus.WithError(err).Error("failed to generate tile")
 //	    log.Fatal(err)
 //	}
 //
@@ -112,6 +113,7 @@
 //	}
 //	transitionTile, err := gen.GenerateWithTransition(transConfig)
 //	if err != nil {
+//	    // Production code should use: logrus.WithError(err).Error("failed to generate transition")
 //	    log.Fatal(err)
 //	}
 //
@@ -129,6 +131,7 @@
 //	}
 //	parallaxTile, err := gen.GenerateWithParallax(parallaxConfig)
 //	if err != nil {
+//	    // Production code should use: logrus.WithError(err).Error("failed to generate parallax tile")
 //	    log.Fatal(err)
 //	}
 //
@@ -136,6 +139,7 @@
 //
 //	bg, base, fg, err := gen.GenerateLayeredTile(config, cameraX, cameraY)
 //	if err != nil {
+//	    // Production code should use: logrus.WithError(err).Error("failed to generate layered tile")
 //	    log.Fatal(err)
 //	}
 //	// Render layers separately with parallax offsets, or composite:
@@ -155,6 +159,7 @@
 //
 //	wallTile, err := gen.GenerateEnhancedWall(wallConfig)
 //	if err != nil {
+//	    // Production code should use: logrus.WithError(err).Error("failed to generate wall")
 //	    log.Fatal(err)
 //	}
 package tiles

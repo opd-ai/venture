@@ -23,7 +23,7 @@ The palette package provides procedural color palette generation for genre-based
 *None identified.*
 
 ### Medium Severity
-- [ ] **Documentation** — README.md contains example code with non-structured logging (`log.Fatal`, `fmt.Printf`). While this is acceptable for examples, it should note that production code should use logrus. (`README.md:29,33-36,52,56-58`)
+- [x] **Documentation** — README.md contains example code with non-structured logging (`log.Fatal`, `fmt.Printf`). While this is acceptable for examples, it should note that production code should use logrus. (`README.md:29,33-36,52,56-58`) **FIXED 2026-02-27**: Added clarifying comments in README.md examples explaining production code should use logrus.WithError and logrus.WithFields for structured logging
 
 ### Low Severity
 - [ ] **Code organization** — `utils.go` contains helper functions (`clamp`, `max`, `min`) that could be shared across packages. Consider moving to a shared `pkg/utils` or `pkg/math` package to reduce duplication. (`utils.go:8-36`)

@@ -73,6 +73,13 @@ func (p *Processor) ApplyMotionBlur(img *image.RGBA, velocityMap *VelocityMap) *
 }
 
 // CreateUniformVelocityMap creates a velocity map with uniform velocity across all pixels.
+// Useful for camera panning effects or constant-direction motion.
+//
+// Example:
+//
+//	// Camera panning right with 5 pixel/frame velocity
+//	velMap := CreateUniformVelocityMap(image.Rect(0, 0, 800, 600), 5.0, 0.0)
+//	blurred := ApplyMotionBlur(srcImage, velMap, 8)
 func CreateUniformVelocityMap(bounds image.Rectangle, vx, vy float64) *VelocityMap {
 	velMap := NewVelocityMap(bounds)
 
@@ -87,6 +94,13 @@ func CreateUniformVelocityMap(bounds image.Rectangle, vx, vy float64) *VelocityM
 
 // CreateRadialVelocityMap creates a velocity map with radial velocity from a center point.
 // Useful for explosion effects or radial camera motion.
+//
+// Example:
+//
+//	// Explosion at center of screen with strength 10.0
+//	centerX, centerY := 400, 300
+//	velMap := CreateRadialVelocityMap(image.Rect(0, 0, 800, 600), centerX, centerY, 10.0)
+//	blurred := ApplyMotionBlur(explosionImage, velMap, 16)
 func CreateRadialVelocityMap(bounds image.Rectangle, centerX, centerY int, strength float64) *VelocityMap {
 	velMap := NewVelocityMap(bounds)
 

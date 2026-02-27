@@ -46,10 +46,11 @@
 //	}
 //	result, err := generator.Generate(12345, params)
 //	if err != nil {
-//		log.Fatal(err)
+//		log.Fatal(err) // Note: Use logrus.WithError in production
 //	}
 //	items := result.([]*item.Item)
 //	for _, item := range items {
+//		// Note: Use logrus.WithFields for structured logging in production
 //		fmt.Printf("%s (%s): Damage=%d, Value=%d\n",
 //			item.Name, item.Rarity, item.Stats.Damage, item.Stats.Value)
 //	}

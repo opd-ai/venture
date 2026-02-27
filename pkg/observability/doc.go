@@ -28,21 +28,23 @@
 //
 // Custom readiness checks can be added by implementing the ReadinessChecker interface:
 //
-//	type DatabaseChecker struct {
-//	    db *sql.DB
+//	type TerrainLoadChecker struct {
+//	    world *engine.World
 //	}
 //
-//	func (d *DatabaseChecker) Check() (componentName string, err error) {
-//	    ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-//	    defer cancel()
-//	    if err := d.db.PingContext(ctx); err != nil {
-//	        return "database", fmt.Errorf("database ping failed: %w", err)
+//	func (t *TerrainLoadChecker) Check() (componentName string, err error) {
+//	    if t.world == nil {
+//	        return "terrain", fmt.Errorf("world not initialized")
 //	    }
-//	    return "database", nil
+//	    // Check if initial terrain chunks are loaded
+//	    if t.world.GetEntityCount() == 0 {
+//	        return "terrain", fmt.Errorf("no entities loaded")
+//	    }
+//	    return "terrain", nil
 //	}
 //
 //	// Register with the exporter
-//	exporter.RegisterReadinessChecker(&DatabaseChecker{db: db})
+//	exporter.RegisterReadinessChecker(&TerrainLoadChecker{world: world})
 //
 // The /ready endpoint will include all registered checkers in its response.
 package observability

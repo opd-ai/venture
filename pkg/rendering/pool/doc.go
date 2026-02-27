@@ -10,6 +10,12 @@
 //   - Automatic cleanup and reset on return
 //   - Thread-safe operations via sync.Pool
 //
+// Testing Limitations:
+//   - This package requires Ebiten runtime (X11/display on Linux)
+//   - Tests cannot run in headless environments
+//   - Test coverage target: ≥30% (Ebiten-dependent package exception)
+//   - Use DISPLAY=:99 or Xvfb for CI/CD testing
+//
 // Usage:
 //
 //	// Get an image from the pool

@@ -433,6 +433,19 @@ func (s *TCPServer) GetPlayers() []uint64 {
 }
 
 // BroadcastStateUpdate sends a state update to all connected clients.
+// Automatically assigns a monotonically increasing sequence number to the update
+// before broadcasting, enabling clients to detect out-of-order or missing updates.
+//
+// The function is non-blocking: updates are queued for async transmission per client.
+// If a client's send queue is full, that client will skip this update (client-side
+// interpolation and server reconciliation handle missing updates).
+//
+// Thread-safety: Safe to call concurrently. Uses RLock for client iteration and
+// separate lock for sequence number assignment.
+//
+// Performance: O(n) where n is number of connected clients. For high player counts
+// (>100), consider using interest management or spatial partitioning to reduce
+// broadcast scope.
 func (s *TCPServer) BroadcastStateUpdate(update *StateUpdate) {
 	s.clientsMu.RLock()
 	defer s.clientsMu.RUnlock()

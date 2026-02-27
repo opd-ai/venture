@@ -624,3 +624,20 @@ func BenchmarkManager_CheckAbilityUnlock(b *testing.B) {
 		mgr.CheckAbilityUnlock("player1")
 	}
 }
+
+func BenchmarkManager_GetAccountXPBonus(b *testing.B) {
+	mgr := NewManager()
+	mgr.CreatePlayer("player1", "Warrior", "account1")
+	mgr.CreatePlayer("player2", "Mage", "account1")
+	
+	// Simulate 3 prestige 100 characters for account bonus
+	mgr.mu.Lock()
+	mgr.accounts["account1"].Prestige100Count = 3
+	mgr.accounts["account1"].XPBonus = 0.157625 // (1.05^3 - 1)
+	mgr.mu.Unlock()
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		mgr.GetAccountXPBonus("account1")
+	}
+}

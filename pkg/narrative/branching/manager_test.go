@@ -1,6 +1,7 @@
 package branching
 
 import (
+	"fmt"
 	"math"
 	"testing"
 
@@ -1077,6 +1078,120 @@ func BenchmarkGetAlignment(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		manager.GetAlignment("player1", arc.ID)
+	}
+}
+
+func BenchmarkMakeChoice(b *testing.B) {
+	manager := NewManager()
+	gen := NewGenerator()
+
+	result, _ := gen.Generate(12345, procgen.GenerationParams{
+		Difficulty: 0.5,
+		Depth:      5,
+		GenreID:    "fantasy",
+	})
+
+	arc := result.(*StoryArc)
+	manager.RegisterArc(arc)
+	manager.StartArc("player1", arc.ID)
+
+	// Find a choice node with choices
+	var choiceNode *StoryNode
+	var choiceID string
+	for _, node := range arc.Nodes {
+		if node.Type == NodeTypeChoice && len(node.Choices) > 0 {
+			choiceNode = node
+			choiceID = node.Choices[0].ID
+			break
+		}
+	}
+
+	if choiceNode == nil {
+		b.Skip("No choice nodes in generated arc")
+	}
+
+	// Set current node to choice node
+	progress, _ := manager.GetProgress("player1", arc.ID)
+	progress.CurrentNodeID = choiceNode.ID
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		manager.MakeChoice("player1", arc.ID, choiceID)
+		// Reset to choice node for next iteration
+		progress.CurrentNodeID = choiceNode.ID
+	}
+}
+
+func BenchmarkAdvanceStory(b *testing.B) {
+	manager := NewManager()
+	gen := NewGenerator()
+
+	result, _ := gen.Generate(12345, procgen.GenerationParams{
+		Difficulty: 0.5,
+		Depth:      5,
+		GenreID:    "fantasy",
+	})
+
+	arc := result.(*StoryArc)
+	manager.RegisterArc(arc)
+	manager.StartArc("player1", arc.ID)
+
+	// Find a non-choice node with next node
+	var eventNode *StoryNode
+	for _, node := range arc.Nodes {
+		if node.Type != NodeTypeChoice && node.NextNodeID != "" {
+			eventNode = node
+			break
+		}
+	}
+
+	if eventNode == nil {
+		b.Skip("No event nodes with next node in generated arc")
+	}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		// Reset to event node
+		progress, _ := manager.GetProgress("player1", arc.ID)
+		progress.CurrentNodeID = eventNode.ID
+		progress.Completed = false
+
+		manager.AdvanceStory("player1", arc.ID)
+	}
+}
+
+func BenchmarkCheckConsequences(b *testing.B) {
+	manager := NewManager()
+	gen := NewGenerator()
+
+	result, _ := gen.Generate(12345, procgen.GenerationParams{
+		Difficulty: 0.5,
+		Depth:      5,
+		GenreID:    "fantasy",
+	})
+
+	arc := result.(*StoryArc)
+	manager.RegisterArc(arc)
+	manager.StartArc("player1", arc.ID)
+
+	// Register test consequences
+	for i := 0; i < 10; i++ {
+		consequence := &Consequence{
+			ID:          fmt.Sprintf("consequence_%d", i),
+			Description: fmt.Sprintf("Test consequence %d", i),
+			TriggerConditions: map[string]interface{}{
+				"alignment_good_evil": float64(i) * 0.1,
+			},
+			Effects: map[string]interface{}{
+				fmt.Sprintf("effect_%d", i): true,
+			},
+		}
+		manager.RegisterConsequence(consequence)
+	}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		manager.CheckConsequences("player1", arc.ID)
 	}
 }
 

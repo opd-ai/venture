@@ -466,3 +466,89 @@ func TestValidationConfig(t *testing.T) {
 		t.Errorf("Expected 20.0%% time tolerance, got %f", config.TimeTolerancePercent)
 	}
 }
+
+// BenchmarkNewPlayerJourney benchmarks the complete new player journey workflow.
+func BenchmarkNewPlayerJourney(b *testing.B) {
+	v := NewJourneyValidator()
+	v.config.Runs = 1
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		v.ValidateJourney(JourneyNewPlayer)
+	}
+}
+
+// BenchmarkCrafterJourney benchmarks the crafter journey workflow.
+func BenchmarkCrafterJourney(b *testing.B) {
+	v := NewJourneyValidator()
+	v.config.Runs = 1
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		v.ValidateJourney(JourneyCrafter)
+	}
+}
+
+// BenchmarkPvPJourney benchmarks the PvP journey workflow.
+func BenchmarkPvPJourney(b *testing.B) {
+	v := NewJourneyValidator()
+	v.config.Runs = 1
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		v.ValidateJourney(JourneyPvPer)
+	}
+}
+
+// BenchmarkFullValidation benchmarks validation of all 20 journeys.
+func BenchmarkFullValidation(b *testing.B) {
+	v := NewJourneyValidator()
+	v.config.Runs = 1
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		results := v.ValidateAll()
+		_ = v.GetSummary(results)
+	}
+}
+
+// BenchmarkJourneyStep benchmarks individual journey step execution.
+func BenchmarkJourneyStep(b *testing.B) {
+	steps := map[string]func(*JourneyContext) error{
+		"createCharacter":       createCharacter,
+		"completeTutorial":      completeTutorial,
+		"gatherMaterials":       gatherMaterials,
+		"findRecipe":            findRecipe,
+		"accessCraftingStation": accessCraftingStation,
+		"craftItem":             craftItem,
+		"equipItem":             equipItem,
+		"acceptQuest":           acceptQuest,
+		"completeObjectives":    completeObjectives,
+		"returnToNPC":           returnToNPC,
+	}
+
+	ctx := &JourneyContext{
+		PlayerID:  1,
+		WorldSeed: 1,
+		Data:      make(map[string]interface{}),
+	}
+
+	for name, step := range steps {
+		b.Run(name, func(b *testing.B) {
+			b.ResetTimer()
+			for i := 0; i < b.N; i++ {
+				// Reset context for clean execution
+				ctx.Data = make(map[string]interface{})
+				// Set common dependencies
+				ctx.Data["character_created"] = true
+				ctx.Data["tutorial_complete"] = true
+				ctx.Data["materials"] = 10
+				ctx.Data["recipe_known"] = true
+				ctx.Data["crafting_station_found"] = true
+				ctx.Data["item_crafted"] = true
+
+				step(ctx)
+			}
+		})
+	}
+}

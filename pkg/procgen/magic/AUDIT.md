@@ -23,7 +23,7 @@ The magic package provides deterministic procedural spell generation with genre-
 None identified.
 
 ### Medium Severity
-- [ ] **Documentation** — Example code in doc.go and README.md contains unstructured logging (`log.Fatal`, `fmt.Printf`) instead of structured logrus logging. While this is only in documentation/examples (not production code), it sets a poor example for users. (`doc.go:86`, `doc.go:91`, `README.md:41`, `README.md:48`, `README.md:333`)
+- [x] **Documentation** — Example code in doc.go and README.md contains unstructured logging (`log.Fatal`, `fmt.Printf`) instead of structured logrus logging. While this is only in documentation/examples (not production code), it sets a poor example for users. (`doc.go:86`, `doc.go:91`, `README.md:41`, `README.md:48`, `README.md:333`) — **COMPLETED 2026-02-27**: Added notes to all examples indicating logrus should be used in production code
 
 ### Low Severity
 - [ ] **Documentation** — Package-level godoc in `doc.go` lacks a "See Also" section linking to related packages (`pkg/engine/spell_casting.go`, `pkg/engine/spell_effect_system.go`, `pkg/engine/spell_combination_system.go`) that consume this generator

@@ -98,8 +98,8 @@ func TestWeightTransferComponent_GetAxleWeights(t *testing.T) {
 	comp := NewWeightTransferComponent()
 	sys.UpdateWeightDistribution(comp, 0, 0, 0, 0.016)
 
-	frontWeight := comp.GetFrontAxleWeight()
-	rearWeight := comp.GetRearAxleWeight()
+	frontWeight := GetFrontAxleWeight(comp)
+	rearWeight := GetRearAxleWeight(comp)
 
 	// Sum should equal 1.0
 	sum := frontWeight + rearWeight
@@ -121,7 +121,7 @@ func TestWeightTransferComponent_GetSideWeights(t *testing.T) {
 	comp := NewWeightTransferComponent()
 	sys.UpdateWeightDistribution(comp, 0, 0, 0, 0.016)
 
-	leftWeight := comp.GetLeftSideWeight()
+	leftWeight := GetLeftSideWeight(comp)
 	rightWeight := comp.GetRightSideWeight()
 
 	// Sum should equal 1.0
@@ -148,8 +148,8 @@ func TestWeightTransferComponent_Acceleration(t *testing.T) {
 	sys.UpdateWeightDistribution(comp, 100, 0, 0, 0.016) // Accelerate to 100 px/s
 
 	// During acceleration, weight should shift rearward
-	rearWeight := comp.GetRearAxleWeight()
-	frontWeight := comp.GetFrontAxleWeight()
+	rearWeight := GetRearAxleWeight(comp)
+	frontWeight := GetFrontAxleWeight(comp)
 
 	if rearWeight <= frontWeight {
 		t.Errorf("during acceleration, rear weight (%f) should exceed front weight (%f)", rearWeight, frontWeight)
@@ -165,8 +165,8 @@ func TestWeightTransferComponent_Braking(t *testing.T) {
 	sys.UpdateWeightDistribution(comp, 50, 0, 0, 0.016)  // Decelerate to 50 px/s
 
 	// During braking, weight should shift forward
-	frontWeight := comp.GetFrontAxleWeight()
-	rearWeight := comp.GetRearAxleWeight()
+	frontWeight := GetFrontAxleWeight(comp)
+	rearWeight := GetRearAxleWeight(comp)
 
 	if frontWeight <= rearWeight {
 		t.Errorf("during braking, front weight (%f) should exceed rear weight (%f)", frontWeight, rearWeight)
@@ -183,10 +183,10 @@ func TestWeightTransferComponent_Turning(t *testing.T) {
 
 	// During left turn, weight should shift right
 	_ = comp.GetRightSideWeight()
-	_ = comp.GetLeftSideWeight()
+	_ = GetLeftSideWeight(comp)
 
 	// Note: The shift might be subtle, so we check it's not exactly balanced
-	transferMag := comp.GetTransferMagnitude()
+	transferMag := GetTransferMagnitude(comp)
 	if transferMag <= 0 {
 		t.Error("turning should produce non-zero transfer magnitude")
 	}

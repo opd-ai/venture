@@ -28,7 +28,7 @@ None
 ### Low Severity
 - [x] **Settings Menu Integration** — Display resolution picker not exposed in settings menu UI. Settings persistence exists (`pkg/engine/settings.go` has `WindowWidth`, `WindowHeight`, `Fullscreen` fields), but no menu UI allows runtime resolution changes from in-game settings screen. F11 fullscreen toggle works, but resolution dropdown missing. (`cmd/client/init_versions.go:362-397`) **FIXED 2026-02-27**: Added settings menu with resolution picker, graphics quality, and VSync options accessible from main menu.
 - [ ] **Mobile Platform Support** — No mobile-specific DPI scaling or safe area inset handling. Package supports 4 standard 16:9 resolutions but lacks custom resolution support for non-standard aspect ratios (common on mobile). Consider adding `GetNearestValidResolution(width, height)` helper for mobile device screens. (`config.go:38-49`)
-- [ ] **Doc Coverage - Display Manager State** — `Manager.switchStarted` and `Manager.switchDuration` fields documented in comments but not in godoc. Add field comments for completeness. (`manager.go:12-14`)
+- [x] **Doc Coverage - Display Manager State** — `Manager.switchStarted` and `Manager.switchDuration` fields documented in comments but not in godoc. Add field comments for completeness. (`manager.go:12-14`) **FIXED 2026-02-27**: Added comprehensive godoc comments to both fields explaining their purpose (performance tracking for switchStarted, diagnostics for switchDuration)
 
 ## Input Integration
 | Input Source | Status | Notes |

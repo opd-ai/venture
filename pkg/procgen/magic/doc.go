@@ -83,11 +83,12 @@
 //
 //	result, err := gen.Generate(12345, params)
 //	if err != nil {
-//		log.Fatal(err)
+//		log.Fatal(err) // Note: Use logrus.WithError in production
 //	}
 //
 //	spells := result.([]*magic.Spell)
 //	for _, spell := range spells {
+//		// Note: Use logrus.WithFields for structured logging in production
 //		fmt.Printf("%s (%s): %s\n",
 //			spell.Name, spell.Rarity, spell.Description)
 //	}

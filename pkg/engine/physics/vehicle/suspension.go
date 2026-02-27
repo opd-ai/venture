@@ -82,44 +82,32 @@ func NewSuspensionComponent(wheelCount int) *SuspensionComponent {
 }
 
 // GetWheelLoad returns the load (force) on a specific wheel.
+// Deprecated: Use vehicle.GetWheelLoad(suspension, wheelIndex) instead to maintain ECS purity.
 func (s *SuspensionComponent) GetWheelLoad(wheelIndex int) float64 {
-	if wheelIndex < 0 || wheelIndex >= len(s.Wheels) {
-		return 0.0
-	}
-	return s.Wheels[wheelIndex].Load
+	return GetWheelLoad(s, wheelIndex)
 }
 
 // GetWheelCompression returns the compression ratio [0.0, 1.0] for a specific wheel.
+// Deprecated: Use vehicle.GetWheelCompression(suspension, wheelIndex) instead to maintain ECS purity.
 func (s *SuspensionComponent) GetWheelCompression(wheelIndex int) float64 {
-	if wheelIndex < 0 || wheelIndex >= len(s.Wheels) {
-		return 0.0
-	}
-	return s.Wheels[wheelIndex].Compression
+	return GetWheelCompression(s, wheelIndex)
 }
 
 // IsWheelGrounded checks if a specific wheel is in contact with terrain.
+// Deprecated: Use vehicle.IsWheelGrounded(suspension, wheelIndex) instead to maintain ECS purity.
 func (s *SuspensionComponent) IsWheelGrounded(wheelIndex int) bool {
-	if wheelIndex < 0 || wheelIndex >= len(s.Wheels) {
-		return false
-	}
-	return s.Wheels[wheelIndex].IsGrounded
+	return IsWheelGrounded(s, wheelIndex)
 }
 
 // GetGroundedWheelCount returns the number of wheels currently touching terrain.
+// Deprecated: Use vehicle.GetGroundedWheelCount(suspension) instead to maintain ECS purity.
 func (s *SuspensionComponent) GetGroundedWheelCount() int {
-	count := 0
-	for i := range s.Wheels {
-		if s.Wheels[i].IsGrounded {
-			count++
-		}
-	}
-	return count
+	return GetGroundedWheelCount(s)
 }
 
 // SetWheelLoad sets the load force on a specific wheel.
 // Used by the weight transfer system to modify individual wheel loading.
+// Deprecated: Use vehicle.SetWheelLoad(suspension, wheelIndex, load) instead to maintain ECS purity.
 func (s *SuspensionComponent) SetWheelLoad(wheelIndex int, load float64) {
-	if wheelIndex >= 0 && wheelIndex < len(s.Wheels) {
-		s.Wheels[wheelIndex].Load = load
-	}
+	SetWheelLoad(s, wheelIndex, load)
 }

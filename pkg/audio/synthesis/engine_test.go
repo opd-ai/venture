@@ -93,48 +93,12 @@ func TestNewEngineWithSampleRate_InvalidInput(t *testing.T) {
 			}
 
 			// Verify oscillator was created with corrected sample rate
-			sample := engine.GenerateTone(audio.WaveformSine, 440.0, 0.1)
+			sample := engine.Generate(audio.WaveformSine, 440.0, 0.1)
 			if sample == nil {
 				t.Fatal("Engine with corrected sample rate failed to generate tone")
 			}
 			if sample.SampleRate != tt.expectedRate {
 				t.Errorf("Generated sample has rate %d, expected %d", sample.SampleRate, tt.expectedRate)
-			}
-		})
-	}
-}
-
-func TestEngine_GenerateTone(t *testing.T) {
-	engine := NewEngine(12345)
-
-	tests := []struct {
-		name      string
-		waveform  audio.WaveformType
-		frequency float64
-		duration  float64
-	}{
-		{"sine_440hz", audio.WaveformSine, 440.0, 0.5},
-		{"square_880hz", audio.WaveformSquare, 880.0, 0.25},
-		{"sawtooth_220hz", audio.WaveformSawtooth, 220.0, 1.0},
-		{"triangle_330hz", audio.WaveformTriangle, 330.0, 0.1},
-		{"noise_short", audio.WaveformNoise, 0.0, 0.2},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			sample := engine.GenerateTone(tt.waveform, tt.frequency, tt.duration)
-
-			if sample == nil {
-				t.Fatal("GenerateTone returned nil")
-			}
-
-			expectedSamples := int(float64(engine.GetSampleRate()) * tt.duration)
-			if len(sample.Data) != expectedSamples {
-				t.Errorf("Expected %d samples, got %d", expectedSamples, len(sample.Data))
-			}
-
-			if sample.SampleRate != engine.GetSampleRate() {
-				t.Errorf("Expected sample rate %d, got %d", engine.GetSampleRate(), sample.SampleRate)
 			}
 		})
 	}
@@ -173,26 +137,6 @@ func TestEngine_Generate(t *testing.T) {
 				t.Errorf("Expected sample rate %d, got %d", engine.GetSampleRate(), sample.SampleRate)
 			}
 		})
-	}
-}
-
-func TestEngine_Generate_EqualsGenerateTone(t *testing.T) {
-	// Verify Generate and GenerateTone produce identical results
-	engine1 := NewEngine(12345)
-	engine2 := NewEngine(12345)
-
-	sample1 := engine1.Generate(audio.WaveformSine, 440.0, 0.5)
-	sample2 := engine2.GenerateTone(audio.WaveformSine, 440.0, 0.5)
-
-	if len(sample1.Data) != len(sample2.Data) {
-		t.Fatalf("Samples have different lengths: %d vs %d", len(sample1.Data), len(sample2.Data))
-	}
-
-	for i := range sample1.Data {
-		if sample1.Data[i] != sample2.Data[i] {
-			t.Errorf("Sample %d differs: %f vs %f", i, sample1.Data[i], sample2.Data[i])
-			break
-		}
 	}
 }
 
@@ -323,8 +267,8 @@ func TestEngine_GenerateChordWithEnvelope(t *testing.T) {
 func TestEngine_MixSamples(t *testing.T) {
 	engine := NewEngine(12345)
 
-	sample1 := engine.GenerateTone(audio.WaveformSine, 440.0, 0.5)
-	sample2 := engine.GenerateTone(audio.WaveformSquare, 880.0, 0.3)
+	sample1 := engine.Generate(audio.WaveformSine, 440.0, 0.5)
+	sample2 := engine.Generate(audio.WaveformSquare, 880.0, 0.3)
 
 	mixed := engine.MixSamples([]*audio.AudioSample{sample1, sample2})
 
@@ -356,7 +300,7 @@ func TestEngine_ApplyEnvelope(t *testing.T) {
 	engine := NewEngine(12345)
 	env := DefaultEnvelope()
 
-	sample := engine.GenerateTone(audio.WaveformSine, 440.0, 1.0)
+	sample := engine.Generate(audio.WaveformSine, 440.0, 1.0)
 	originalFirst := sample.Data[0]
 
 	engine.ApplyEnvelope(sample, env)
@@ -371,8 +315,8 @@ func TestEngine_Determinism(t *testing.T) {
 	engine1 := NewEngine(12345)
 	engine2 := NewEngine(12345)
 
-	sample1 := engine1.GenerateTone(audio.WaveformSine, 440.0, 0.5)
-	sample2 := engine2.GenerateTone(audio.WaveformSine, 440.0, 0.5)
+	sample1 := engine1.Generate(audio.WaveformSine, 440.0, 0.5)
+	sample2 := engine2.Generate(audio.WaveformSine, 440.0, 0.5)
 
 	if len(sample1.Data) != len(sample2.Data) {
 		t.Fatalf("Samples have different lengths: %d vs %d", len(sample1.Data), len(sample2.Data))
@@ -395,7 +339,7 @@ func TestEngine_ConcurrentAccess(t *testing.T) {
 	for i := 0; i < 10; i++ {
 		go func() {
 			for j := 0; j < 100; j++ {
-				_ = engine.GenerateTone(audio.WaveformSine, 440.0, 0.01)
+				_ = engine.Generate(audio.WaveformSine, 440.0, 0.01)
 				_ = engine.GetSampleRate()
 				_ = engine.GetSeed()
 			}
@@ -440,12 +384,12 @@ func TestEngine_ConcurrentEnvelopeMethods(t *testing.T) {
 	}
 }
 
-func BenchmarkEngine_GenerateTone(b *testing.B) {
+func BenchmarkEngine_Generate(b *testing.B) {
 	engine := NewEngine(12345)
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		_ = engine.GenerateTone(audio.WaveformSine, 440.0, 0.1)
+		_ = engine.Generate(audio.WaveformSine, 440.0, 0.1)
 	}
 }
 

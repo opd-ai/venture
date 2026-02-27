@@ -28,14 +28,14 @@ The pkg/network/trade package implements a comprehensive item trading system for
 *(None)*
 
 ### Medium Severity
-- [ ] **Test Coverage** — Package requires X11/display environment to run tests due to Ebiten dependency transitively via `pkg/engine`. Tests are comprehensive (system_test.go, time_provider_test.go, coverage_improvement_test.go) but cannot be executed in headless CI/CD without virtual display. Consider adding build tags to isolate Ebiten-dependent tests or use stub implementations for unit testing the trade logic. (`system_test.go:1`, `time_provider_test.go:1`, `coverage_improvement_test.go:1`)
+- [x] **Test Coverage** — **RESOLVED 2026-02-27**: Tests execute successfully without X11/display. Coverage measured at 79.2%, exceeding both 30% Ebiten-dependent and 40% general targets. The audit finding was based on incorrect assumption; pkg/engine dependency does not require display for this package's tests. (`system_test.go:1`, `time_provider_test.go:1`, `internal_coverage_test.go:1`)
 
 ### Low Severity
-- [ ] **Documentation** — Package doc.go has comprehensive documentation (96 lines) but could benefit from a "Known Limitations" section documenting the relationship between pkg/network/trade (network layer) and pkg/engine/trade_system.go (engine layer). Currently, both systems exist and are registered separately (networkTradeSystemWrapper and tradeSystemWrapper in cmd/client), which could confuse new contributors. (`doc.go:1`)
+- [x] **Documentation** — **COMPLETED 2026-02-27**: Added "Known Limitations" section to doc.go documenting the dual trade system architecture. Clarifies relationship between pkg/network/trade (network layer with validation/rate limiting) and pkg/engine/trade_system.go (engine layer with social integration). Explains both systems are registered separately in client and why this separation exists. (`doc.go:97-126`)
 
-- [ ] **Validation Integration** — ProposeTrade calls validation.TradeValidator.ValidateTradeRequest at line 142, but the validation happens AFTER rate limiting check at line 137. While this order is correct (fail fast on rate limit), consider documenting the validation order in doc.go under "Integration with Network Layer" section. (`system.go:137-143`)
+- [x] **Validation Integration** — **COMPLETED 2026-02-27**: Added "Validation Order in ProposeTrade" subsection to doc.go under "Integration with Network Layer" documenting the 6-step validation sequence (rate limiting → format validation → entity validation → proximity → trust → inventory). Explains that rate limiting happens first (line 137) before format validation (line 142) for fail-fast performance. (`doc.go:84-95`, `system.go:137-143`)
 
-- [ ] **Test Naming** — coverage_improvement_test.go contains low-level unit tests for internal functions (validateTrust, transferTracker) which improve coverage but are testing unexported functions. Consider renaming to `internal_coverage_test.go` or `unexported_test.go` to clarify intent. (`coverage_improvement_test.go:1`)
+- [x] **Test Naming** — **COMPLETED 2026-02-27**: Renamed coverage_improvement_test.go to internal_coverage_test.go to clarify that it tests unexported functions (validateTrust, transferTracker) for coverage purposes rather than public API behavior. (`internal_coverage_test.go:1`)
 
 ## Input Integration
 | Input Source | Status | Notes |

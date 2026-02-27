@@ -102,6 +102,12 @@ func (m *Manager) AssignOwner(territoryID, guildID string) error {
 	territory.CapturingGuild = ""
 	territory.LastUpdate = m.timeProvider.Now()
 
+	log.WithFields(log.Fields{
+		"territory_id": territoryID,
+		"guild_id":     guildID,
+		"system_name":  "territory",
+	}).Info("territory ownership assigned")
+
 	return nil
 }
 
@@ -153,12 +159,16 @@ func validateAttackingGuild(attackingGuild string, attackers int) error {
 func (m *Manager) applyAttackerProgress(territory *Territory, attackingGuild string, defenders int, elapsed float64) {
 	captureTime := float64(BaseCaptureTime + (defenders * DefenderTimeBonus))
 	progressPerSecond := 1.0 / captureTime
+	oldProgress := territory.CaptureProgress
 	territory.CaptureProgress += progressPerSecond * elapsed
 	territory.CapturingGuild = attackingGuild
 
 	if territory.Status == StatusOwned && territory.OwnerGuildID != attackingGuild {
 		territory.Status = StatusContested
 	}
+
+	// Log capture progress thresholds crossed
+	m.logCaptureThresholdsCrossed(territory.ID, attackingGuild, oldProgress, territory.CaptureProgress)
 
 	if territory.CaptureProgress >= 1.0 {
 		m.completeCapture(territory, attackingGuild)
@@ -181,6 +191,21 @@ func (m *Manager) applyDefenderProgress(territory *Territory, defenders int, ela
 
 	if territory.CaptureProgress < 0.0 {
 		m.resetCaptureProgress(territory)
+	}
+}
+
+// logCaptureThresholdsCrossed logs when capture progress crosses 25%, 50%, 75%, or 100% thresholds.
+func (m *Manager) logCaptureThresholdsCrossed(territoryID, attackingGuild string, oldProgress, newProgress float64) {
+	thresholds := []float64{0.25, 0.50, 0.75, 1.00}
+	for _, threshold := range thresholds {
+		if oldProgress < threshold && newProgress >= threshold {
+			log.WithFields(log.Fields{
+				"territory_id":    territoryID,
+				"attacking_guild": attackingGuild,
+				"progress":        int(threshold * 100),
+				"system_name":     "territory",
+			}).Info("capture progress threshold crossed")
+		}
 	}
 }
 
@@ -254,6 +279,16 @@ func (m *Manager) BuildDefensiveStructure(territoryID string, structureType Stru
 	}
 
 	territory.Structures = append(territory.Structures, structure)
+
+	log.WithFields(log.Fields{
+		"territory_id":   territoryID,
+		"structure_id":   structure.ID,
+		"structure_type": structureType.String(),
+		"max_hp":         maxHP,
+		"damage":         damage,
+		"system_name":    "territory",
+	}).Info("defensive structure built")
+
 	return structure, nil
 }
 
@@ -335,6 +370,14 @@ func (m *Manager) DeclareWar(attackerGuild, defenderGuild string) (*WarDeclarati
 
 	m.guildWars[attackerGuild] = append(m.guildWars[attackerGuild], warID)
 	m.guildWars[defenderGuild] = append(m.guildWars[defenderGuild], warID)
+
+	log.WithFields(log.Fields{
+		"war_id":         warID,
+		"attacker_guild": attackerGuild,
+		"defender_guild": defenderGuild,
+		"cost":           WarDeclarationCost,
+		"system_name":    "territory",
+	}).Info("war declared")
 
 	return war, nil
 }

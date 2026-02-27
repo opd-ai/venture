@@ -57,53 +57,45 @@ func NewWeightTransferComponent() *WeightTransferComponent {
 }
 
 // GetWheelWeights returns the current weight distribution for all wheels.
+// Deprecated: Use vehicle.GetWheelWeights(weightTransfer) instead to maintain ECS purity.
 // Returns: [frontLeft, frontRight, rearLeft, rearRight] as percentages [0.0, 1.0]
 func (w *WeightTransferComponent) GetWheelWeights() [4]float64 {
-	return [4]float64{
-		w.FrontLeftWeight,
-		w.FrontRightWeight,
-		w.RearLeftWeight,
-		w.RearRightWeight,
-	}
+	return GetWheelWeights(w)
 }
 
 // GetFrontAxleWeight returns the percentage of weight on the front axle.
+// Deprecated: Use vehicle.GetFrontAxleWeight(weightTransfer) instead to maintain ECS purity.
 func (w *WeightTransferComponent) GetFrontAxleWeight() float64 {
-	return w.FrontLeftWeight + w.FrontRightWeight
+	return GetFrontAxleWeight(w)
 }
 
 // GetRearAxleWeight returns the percentage of weight on the rear axle.
+// Deprecated: Use vehicle.GetRearAxleWeight(weightTransfer) instead to maintain ECS purity.
 func (w *WeightTransferComponent) GetRearAxleWeight() float64 {
-	return w.RearLeftWeight + w.RearRightWeight
+	return GetRearAxleWeight(w)
 }
 
 // GetLeftSideWeight returns the percentage of weight on the left side.
+// Deprecated: Use vehicle.GetLeftSideWeight(weightTransfer) instead to maintain ECS purity.
 func (w *WeightTransferComponent) GetLeftSideWeight() float64 {
-	return w.FrontLeftWeight + w.RearLeftWeight
+	return GetLeftSideWeight(w)
 }
 
 // GetRightSideWeight returns the percentage of weight on the right side.
+// Deprecated: Use vehicle.GetRightSideWeight(weightTransfer) instead to maintain ECS purity.
 func (w *WeightTransferComponent) GetRightSideWeight() float64 {
-	return w.FrontRightWeight + w.RearRightWeight
+	return GetRightSideWeight(w)
 }
 
 // GetTransferMagnitude returns the magnitude of the last weight transfer.
 // Useful for visual feedback (vehicle leaning in turns, nose-diving during braking).
+// Deprecated: Use vehicle.GetTransferMagnitude(weightTransfer) instead to maintain ECS purity.
 func (w *WeightTransferComponent) GetTransferMagnitude() float64 {
-	return w.LastTransferMagnitude
+	return GetTransferMagnitude(w)
 }
 
 // Reset resets the component to static weight distribution.
+// Deprecated: Use vehicle.ResetWeightTransfer(weightTransfer) instead to maintain ECS purity.
 func (w *WeightTransferComponent) Reset() {
-	w.AccelerationX = 0.0
-	w.AccelerationY = 0.0
-	w.AngularAccel = 0.0
-	w.PrevVelocityX = 0.0
-	w.PrevVelocityY = 0.0
-	w.PrevAngularVel = 0.0
-	w.FrontLeftWeight = 0.25
-	w.FrontRightWeight = 0.25
-	w.RearLeftWeight = 0.25
-	w.RearRightWeight = 0.25
-	w.LastTransferMagnitude = 0.0
+	ResetWeightTransfer(w)
 }

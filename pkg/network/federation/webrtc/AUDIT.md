@@ -30,7 +30,8 @@ _None found._
 
 ### Medium Severity
 - [ ] **Stub Implementation Boundary** — `time.Now()` usage in tests (`stun_test.go:221`, `stun_test.go:261`, `signaling_test.go:162-163`, `signaling_test.go:346`, `time_provider_test.go:10-12`) uses real system clock instead of `MockTimeProvider`. This is acceptable for production tests but should be noted as non-deterministic test behavior. (`*_test.go:multiple`)
-- [ ] **Documentation in README/doc.go** — Example code in `README.md` and `doc.go` uses `log.Fatalf`/`log.Printf`/`fmt.Printf` instead of structured logging with logrus. While these are examples and not production code, they should demonstrate best practices. (`README.md:44,50,61,77-78,108,111`, `doc.go:68,71,100,106`)
+- [x] **Documentation in README/doc.go** — Example code in `README.md` and `doc.go` uses `log.Fatalf`/`log.Printf`/`fmt.Printf` instead of structured logging with logrus. While these are examples and not production code, they should demonstrate best practices. (`README.md:44,50,61,77-78,108,111`, `doc.go:68,71,100,106`)
+  - **Resolution (2026-02-27)**: Replaced all unstructured logging with logrus.WithError() and logrus.WithFields() in both README.md and doc.go example code. Examples now demonstrate structured logging best practices with proper field names (size_bytes, active_connections, total_bytes_sent, method, setup_time).
 
 ### Low Severity
 - [x] **Network Address Parsing** — `relay.go:449` uses `net.SplitHostPort(url[5:])` with fixed slice index without bounds checking. If URL format is invalid (missing "turn:" prefix), this could panic. Add validation before slicing. (`relay.go:449`)

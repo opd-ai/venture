@@ -386,3 +386,56 @@ func BenchmarkTradeValidator_ValidateTradeRequest(b *testing.B) {
 		_ = validator.ValidateTradeRequest(offered, requested)
 	}
 }
+
+func TestTradeValidator_ValidateTradeQuantity(t *testing.T) {
+	validator := NewTradeValidator()
+
+	tests := []struct {
+		name     string
+		quantity int
+		wantErr  bool
+		errMsg   string
+	}{
+		{
+			name:     "valid quantity - 1",
+			quantity: 1,
+			wantErr:  false,
+		},
+		{
+			name:     "valid quantity - large",
+			quantity: 999999,
+			wantErr:  false,
+		},
+		{
+			name:     "zero quantity",
+			quantity: 0,
+			wantErr:  true,
+			errMsg:   "must be positive",
+		},
+		{
+			name:     "negative quantity",
+			quantity: -1,
+			wantErr:  true,
+			errMsg:   "must be positive",
+		},
+		{
+			name:     "large negative quantity",
+			quantity: -999,
+			wantErr:  true,
+			errMsg:   "must be positive",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := validator.ValidateTradeQuantity(tt.quantity)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("ValidateTradeQuantity(%d) error = %v, wantErr %v", tt.quantity, err, tt.wantErr)
+				return
+			}
+			if err != nil && tt.errMsg != "" && !strings.Contains(err.Error(), tt.errMsg) {
+				t.Errorf("ValidateTradeQuantity(%d) error = %v, want error containing %q", tt.quantity, err, tt.errMsg)
+			}
+		})
+	}
+}

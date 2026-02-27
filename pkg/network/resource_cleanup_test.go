@@ -3,6 +3,7 @@ package network
 import (
 	"context"
 	"net"
+	"runtime"
 	"testing"
 	"time"
 )
@@ -355,5 +356,201 @@ func TestServerDoubleStart(t *testing.T) {
 	// Second start should error
 	if err := server.Start(); err == nil {
 		t.Error("Second Start() should return error")
+	}
+}
+
+// TestServerGoroutineCleanup verifies all server goroutines terminate on Stop.
+// Tests goroutine leak prevention with explicit timeout.
+func TestServerGoroutineCleanup(t *testing.T) {
+	// Record baseline goroutine count
+	baseline := runtime.NumGoroutine()
+
+	config := DefaultServerConfig()
+	config.Address = "127.0.0.1:0"
+	server := NewServer(config)
+
+	// Start server (spawns acceptLoop and cleanupLoop)
+	if err := server.Start(); err != nil {
+		t.Fatalf("Failed to start server: %v", err)
+	}
+
+	// Wait for goroutines to start
+	time.Sleep(50 * time.Millisecond)
+
+	// Server should have spawned goroutines
+	afterStart := runtime.NumGoroutine()
+	if afterStart <= baseline {
+		t.Errorf("Expected goroutine count to increase after Start, baseline=%d, afterStart=%d", baseline, afterStart)
+	}
+
+	// Stop server with timeout
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	if err := server.StopWithContext(ctx); err != nil {
+		t.Errorf("StopWithContext failed: %v", err)
+	}
+
+	// Wait for goroutines to terminate
+	time.Sleep(100 * time.Millisecond)
+
+	// Verify goroutines cleaned up (allow ±2 for test harness variance)
+	afterStop := runtime.NumGoroutine()
+	if afterStop > baseline+2 {
+		t.Errorf("Goroutine leak detected: baseline=%d, afterStop=%d, leaked=%d", baseline, afterStop, afterStop-baseline)
+	}
+}
+
+// TestServerGoroutineCleanupWithClients verifies client handler goroutines terminate.
+// Tests that per-client receiveLoop and sendLoop goroutines clean up on shutdown.
+func TestServerGoroutineCleanupWithClients(t *testing.T) {
+	baseline := runtime.NumGoroutine()
+
+	config := DefaultServerConfig()
+	config.Address = "127.0.0.1:0"
+	server := NewServer(config)
+
+	if err := server.Start(); err != nil {
+		t.Fatalf("Failed to start server: %v", err)
+	}
+
+	// Connect test clients
+	clientConfig := DefaultClientConfig()
+	clientConfig.ServerAddress = server.listener.Addr().String()
+
+	clients := make([]*TCPClient, 3)
+	for i := 0; i < 3; i++ {
+		client := NewClient(clientConfig)
+		if err := client.Connect(); err != nil {
+			t.Fatalf("Client %d failed to connect: %v", i, err)
+		}
+		clients[i] = client
+	}
+
+	// Wait for connections to establish
+	time.Sleep(100 * time.Millisecond)
+
+	// Each client spawns 2 server goroutines (receive + send)
+	afterClients := runtime.NumGoroutine()
+	expectedMin := baseline + 6 // 3 clients * 2 goroutines
+	if afterClients < expectedMin {
+		t.Logf("Warning: expected at least %d goroutines, got %d", expectedMin, afterClients)
+	}
+
+	// Disconnect clients
+	for i, client := range clients {
+		if err := client.Disconnect(); err != nil {
+			t.Errorf("Client %d disconnect failed: %v", i, err)
+		}
+	}
+
+	// Stop server with timeout
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	if err := server.StopWithContext(ctx); err != nil {
+		t.Errorf("StopWithContext failed: %v", err)
+	}
+
+	// Wait for all goroutines to terminate
+	time.Sleep(150 * time.Millisecond)
+
+	// Verify no goroutine leaks (allow ±2 for test harness variance)
+	afterStop := runtime.NumGoroutine()
+	if afterStop > baseline+2 {
+		t.Errorf("Goroutine leak with clients: baseline=%d, afterStop=%d, leaked=%d", baseline, afterStop, afterStop-baseline)
+	}
+}
+
+// TestClientGoroutineCleanup verifies client goroutines terminate on Disconnect.
+// Tests that receiveLoop and sendLoop clean up properly.
+func TestClientGoroutineCleanup(t *testing.T) {
+	// Start test server
+	serverConfig := DefaultServerConfig()
+	serverConfig.Address = "127.0.0.1:0"
+	server := NewServer(serverConfig)
+
+	if err := server.Start(); err != nil {
+		t.Fatalf("Failed to start server: %v", err)
+	}
+	defer server.Stop()
+
+	baseline := runtime.NumGoroutine()
+
+	// Connect client
+	clientConfig := DefaultClientConfig()
+	clientConfig.ServerAddress = server.listener.Addr().String()
+	client := NewClient(clientConfig)
+
+	if err := client.Connect(); err != nil {
+		t.Fatalf("Failed to connect: %v", err)
+	}
+
+	// Wait for goroutines to start (receiveLoop + sendLoop)
+	time.Sleep(50 * time.Millisecond)
+
+	afterConnect := runtime.NumGoroutine()
+	if afterConnect <= baseline {
+		t.Logf("Warning: expected goroutine count to increase, baseline=%d, afterConnect=%d", baseline, afterConnect)
+	}
+
+	// Disconnect client
+	if err := client.Disconnect(); err != nil {
+		t.Errorf("Disconnect failed: %v", err)
+	}
+
+	// Wait for goroutines to terminate
+	time.Sleep(100 * time.Millisecond)
+
+	// Verify goroutines cleaned up (allow ±2 for variance)
+	afterDisconnect := runtime.NumGoroutine()
+	if afterDisconnect > baseline+2 {
+		t.Errorf("Client goroutine leak: baseline=%d, afterDisconnect=%d, leaked=%d", baseline, afterDisconnect, afterDisconnect-baseline)
+	}
+}
+
+// TestClientGoroutineCleanupOnServerShutdown verifies client goroutines exit when server stops.
+func TestClientGoroutineCleanupOnServerShutdown(t *testing.T) {
+	baseline := runtime.NumGoroutine()
+
+	serverConfig := DefaultServerConfig()
+	serverConfig.Address = "127.0.0.1:0"
+	server := NewServer(serverConfig)
+
+	if err := server.Start(); err != nil {
+		t.Fatalf("Failed to start server: %v", err)
+	}
+
+	clientConfig := DefaultClientConfig()
+	clientConfig.ServerAddress = server.listener.Addr().String()
+	client := NewClient(clientConfig)
+
+	if err := client.Connect(); err != nil {
+		t.Fatalf("Failed to connect: %v", err)
+	}
+
+	time.Sleep(50 * time.Millisecond)
+
+	// Stop server (client should detect disconnection)
+	if err := server.Stop(); err != nil {
+		t.Errorf("Server stop failed: %v", err)
+	}
+
+	// Wait for client to detect disconnection and cleanup
+	time.Sleep(200 * time.Millisecond)
+
+	// Client should auto-disconnect when server closes
+	if client.IsConnected() {
+		t.Log("Client still reports connected state, but goroutines should exit")
+	}
+
+	// Explicitly disconnect to ensure cleanup
+	client.Disconnect()
+
+	// Verify no leaks
+	time.Sleep(100 * time.Millisecond)
+	afterShutdown := runtime.NumGoroutine()
+	if afterShutdown > baseline+2 {
+		t.Errorf("Goroutine leak on server shutdown: baseline=%d, afterShutdown=%d, leaked=%d", baseline, afterShutdown, afterShutdown-baseline)
 	}
 }

@@ -190,7 +190,10 @@ func (p *MemoryProfile) GetObjectGrowth() int64 {
 	return int64(p.Snapshots[len(p.Snapshots)-1].LiveObjects) - int64(p.Snapshots[0].LiveObjects)
 }
 
-// PrintProfile prints a formatted memory profile report.
+// PrintProfile prints a formatted memory profile report to stdout.
+// NOTE: This function intentionally uses fmt.Printf for CLI/debug output.
+// It is exempt from the structured logging guideline (Coding Guideline #3)
+// as it's designed for human-readable console output in testing and debugging tools.
 func (p *MemoryProfile) PrintProfile() {
 	fmt.Printf("\n=== Memory Profile: %s ===\n", p.Name)
 	fmt.Printf("Duration: %v\n", p.EndTime.Sub(p.StartTime))

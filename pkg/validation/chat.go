@@ -13,6 +13,11 @@ const (
 
 	// MinChatMessageLength is the minimum length of a chat message in characters
 	MinChatMessageLength = 1
+
+	// MaxChatMessageBytes is the maximum size of a chat message in bytes.
+	// This prevents oversized UTF-8 payloads (e.g., 500 4-byte emoji = 2000 bytes).
+	// Enforced before rune-length check to avoid allocation overhead.
+	MaxChatMessageBytes = 2000
 )
 
 var (
@@ -100,6 +105,12 @@ func (v *ChatValidator) ValidateMessage(message string) error {
 	// Check for empty message
 	if len(strings.TrimSpace(message)) == 0 {
 		return fmt.Errorf("message cannot be empty")
+	}
+
+	// Check byte length first (no allocation, prevents oversized UTF-8 payloads)
+	byteLen := len(message)
+	if byteLen > MaxChatMessageBytes {
+		return fmt.Errorf("message too large (maximum %d bytes, got %d)", MaxChatMessageBytes, byteLen)
 	}
 
 	// Count characters (Unicode-aware)

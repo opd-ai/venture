@@ -70,6 +70,23 @@ func TestChatValidator_ValidateMessage(t *testing.T) {
 			wantErr: true,
 			errMsg:  "too long",
 		},
+		{
+			name:    "oversized UTF-8 payload - 4-byte emoji under rune limit",
+			message: strings.Repeat("🎮", 500), // 500 runes × 4 bytes = 2000 bytes
+			wantErr: false,                    // Exactly at byte limit
+		},
+		{
+			name:    "oversized UTF-8 payload - exceeds byte limit",
+			message: strings.Repeat("🎮", 501), // 501 runes × 4 bytes = 2004 bytes
+			wantErr: true,
+			errMsg:  "too large",
+		},
+		{
+			name:    "max byte length with 1-byte chars",
+			message: strings.Repeat("a", MaxChatMessageBytes),
+			wantErr: true, // Exceeds rune limit (2000 > 500)
+			errMsg:  "too long",
+		},
 	}
 
 	for _, tt := range tests {

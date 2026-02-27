@@ -67,6 +67,9 @@ func ShortVersion() string {
 }
 
 // PrintVersion prints version information to stdout.
+// NOTE: This function intentionally uses fmt.Println for CLI output.
+// It is exempt from the structured logging guideline (Coding Guideline #3)
+// as it's designed for human-readable console output in CLI tools (e.g., --version flags).
 func PrintVersion() {
 	fmt.Println(BuildInfo())
 }

@@ -92,6 +92,15 @@ func (v *TradeValidator) ValidateItemCount(count int) error {
 	return nil
 }
 
+// ValidateTradeQuantity validates the quantity of a single item in a trade.
+// Rejects zero-quantity and negative-quantity trades.
+func (v *TradeValidator) ValidateTradeQuantity(quantity int) error {
+	if quantity <= 0 {
+		return fmt.Errorf("trade quantity must be positive (got %d)", quantity)
+	}
+	return nil
+}
+
 // ValidateTradeRequest validates a complete trade request
 // Checks both offered and requested item lists
 func (v *TradeValidator) ValidateTradeRequest(offeredItems, requestedItems []string) error {

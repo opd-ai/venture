@@ -14,13 +14,13 @@ package main
 import (
 	"fmt"
 	"image/color"
-	"log"
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 	"github.com/hajimehoshi/ebiten/v2/vector"
 	"github.com/opd-ai/venture/pkg/engine"
 	"github.com/opd-ai/venture/pkg/mobile"
+	"github.com/sirupsen/logrus"
 )
 
 const (
@@ -47,8 +47,11 @@ func NewGame() *Game {
 	// Simulate WASM platform behavior
 	// On actual WASM with touch capability, controls are pre-initialized hidden
 	if mobile.IsWASM() && mobile.IsTouchCapable() {
-		log.Println("WASM platform detected with touch capability")
-		log.Println("Virtual controls pre-initialized (hidden until first touch)")
+		logrus.WithFields(logrus.Fields{
+			"platform": "wasm",
+			"touch":    "capable",
+		}).Info("WASM platform detected with touch capability")
+		logrus.Info("Virtual controls pre-initialized (hidden until first touch)")
 	}
 
 	return g
@@ -63,7 +66,9 @@ func (g *Game) Update() error {
 	if len(touchIDs) > 0 && !g.touchDetected {
 		g.touchDetected = true
 		g.firstTouchFrame = g.frameCount
-		log.Printf("First touch detected at frame %d", g.frameCount)
+		logrus.WithFields(logrus.Fields{
+			"frame": g.frameCount,
+		}).Info("First touch detected")
 	}
 
 	// Check if virtual controls are visible
@@ -72,7 +77,10 @@ func (g *Game) Update() error {
 		// For demo purposes, we'll simulate the visibility check
 		if g.touchDetected && !g.controlsVisible {
 			g.controlsVisible = true
-			log.Printf("Virtual controls became visible at frame %d (0-frame delay!)", g.frameCount)
+			logrus.WithFields(logrus.Fields{
+				"frame": g.frameCount,
+				"delay": "0-frame",
+			}).Info("Virtual controls became visible")
 		}
 	}
 
@@ -180,11 +188,14 @@ func main() {
 
 	game := NewGame()
 
-	log.Println("Starting WASM Virtual Controls Demo")
-	log.Println("This demonstrates the Gap #3 fix from AUDIT.md")
-	log.Println("Touch the screen to see instant virtual controls (0-frame delay)")
+	logrus.WithFields(logrus.Fields{
+		"demo": "wasm_virtual_controls",
+		"gap":  "3",
+	}).Info("Starting WASM Virtual Controls Demo")
+	logrus.Info("This demonstrates the Gap #3 fix from AUDIT.md")
+	logrus.Info("Touch the screen to see instant virtual controls (0-frame delay)")
 
 	if err := ebiten.RunGame(game); err != nil {
-		log.Fatal(err)
+		logrus.WithError(err).Fatal("Failed to run game")
 	}
 }

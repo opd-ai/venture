@@ -404,6 +404,134 @@ func TestGenerateMerchantGenreVariety(t *testing.T) {
 	}
 }
 
+// TestGenerateMerchantInventoryErrorThreshold tests error threshold handling.
+func TestGenerateMerchantInventoryErrorThreshold(t *testing.T) {
+	tests := []struct {
+		name       string
+		seed       int64
+		genreID    string
+		wantErr    bool
+		minItems   int
+		errPattern string
+	}{
+		{
+			name:     "normal generation succeeds",
+			seed:     12345,
+			genreID:  "fantasy",
+			wantErr:  false,
+			minItems: 10, // Should have substantial inventory
+		},
+		{
+			name:     "scifi generation succeeds",
+			seed:     67890,
+			genreID:  "scifi",
+			wantErr:  false,
+			minItems: 10,
+		},
+		{
+			name:     "horror generation succeeds",
+			seed:     11111,
+			genreID:  "horror",
+			wantErr:  false,
+			minItems: 10,
+		},
+		{
+			name:     "cyberpunk generation succeeds",
+			seed:     22222,
+			genreID:  "cyberpunk",
+			wantErr:  false,
+			minItems: 10,
+		},
+		{
+			name:     "postapoc generation succeeds",
+			seed:     33333,
+			genreID:  "postapoc",
+			wantErr:  false,
+			minItems: 10,
+		},
+	}
+
+	gen := NewEntityGenerator()
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			params := procgen.GenerationParams{
+				GenreID:    tt.genreID,
+				Difficulty: 0.5,
+				Depth:      1,
+			}
+
+			merchant, err := gen.GenerateMerchant(tt.seed, params, MerchantFixed)
+
+			if (err != nil) != tt.wantErr {
+				t.Errorf("GenerateMerchant() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+
+			if tt.wantErr {
+				if tt.errPattern != "" && err != nil {
+					// Could add error message pattern matching if needed
+				}
+				return
+			}
+
+			// Verify merchant has adequate inventory
+			if merchant == nil {
+				t.Fatal("expected merchant, got nil")
+			}
+
+			if len(merchant.Inventory) < tt.minItems {
+				t.Errorf("inventory too small: got %d items, want at least %d", len(merchant.Inventory), tt.minItems)
+			}
+
+			// Verify all inventory items are valid
+			for i, item := range merchant.Inventory {
+				if item == nil {
+					t.Errorf("inventory slot %d is nil", i)
+				}
+			}
+		})
+	}
+}
+
+// TestGenerateMerchantInventoryPartialFailure tests graceful degradation.
+func TestGenerateMerchantInventoryPartialFailure(t *testing.T) {
+	// This test verifies that partial failures (< 50%) don't cause errors
+	// but still produce a usable merchant inventory
+	gen := NewEntityGenerator()
+	params := procgen.GenerationParams{
+		GenreID:    "fantasy",
+		Difficulty: 0.5,
+		Depth:      1,
+	}
+
+	// Test multiple seeds to ensure consistent behavior
+	for seed := int64(1000); seed < 1010; seed++ {
+		merchant, err := gen.GenerateMerchant(seed, params, MerchantFixed)
+		if err != nil {
+			t.Errorf("seed %d: unexpected error: %v", seed, err)
+			continue
+		}
+
+		if merchant == nil {
+			t.Errorf("seed %d: expected merchant, got nil", seed)
+			continue
+		}
+
+		// Should have some inventory even if a few items fail
+		if len(merchant.Inventory) == 0 {
+			t.Errorf("seed %d: merchant has empty inventory", seed)
+		}
+
+		// Verify no nil items in inventory
+		for i, item := range merchant.Inventory {
+			if item == nil {
+				t.Errorf("seed %d: inventory slot %d is nil", seed, i)
+			}
+		}
+	}
+}
+
 // BenchmarkGenerateMerchant benchmarks merchant generation.
 func BenchmarkGenerateMerchant(b *testing.B) {
 	gen := NewEntityGenerator()

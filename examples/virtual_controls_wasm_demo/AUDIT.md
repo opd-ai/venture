@@ -34,8 +34,8 @@ This is a 190-line example program demonstrating the WASM virtual controls pre-i
 - [ ] **Test Coverage** — Demo program has 0% test coverage. While demo programs are typically untested, this program demonstrates a specific bug fix (Gap #3) and would benefit from a test validating the fix (e.g., test that controls are pre-initialized on WASM+touch platforms, test that first touch is not missed). (`main.go:1-191`)
 
 ### Low Severity
-- [ ] **Logging** — Uses standard library `log.Println` and `log.Printf` instead of structured logging with `logrus.WithFields`. Demo programs typically use simple logging, but structured logging would align with project standards. (`main.go:50,51,66,75,183,184,185,188`)
-- [ ] **Error Handling** — `log.Fatal(err)` terminates program without cleanup or structured error context. Should use logrus.WithError(err).Fatal() for consistency. (`main.go:188`)
+- [x] **Logging** — Uses standard library `log.Println` and `log.Printf` instead of structured logging with `logrus.WithFields`. Demo programs typically use simple logging, but structured logging would align with project standards. (`main.go:50,51,66,75,183,184,185,188`) - **FIXED 2026-02-27**: Replaced all log.Println/Printf with logrus.WithFields for structured logging
+- [x] **Error Handling** — `log.Fatal(err)` terminates program without cleanup or structured error context. Should use logrus.WithError(err).Fatal() for consistency. (`main.go:188`) - **FIXED 2026-02-27**: Replaced log.Fatal with logrus.WithError
 - [ ] **Doc Coverage** — Package doc comment is present but exported `Game` type (line 32) and exported `NewGame` function (line 41) lack godoc comments. Demo programs typically have less strict doc requirements. (`main.go:32,41`)
 - [ ] **Magic Numbers** — Screen dimensions (800x600) and UI layout coordinates are hardcoded literals. Consider defining as named constants for clarity, especially for the complex UI layout box calculations. (`main.go:27,28,131-157`)
 

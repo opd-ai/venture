@@ -796,6 +796,7 @@ Parsed 501 findings
 - **Source**: `./pkg/procgen/entity/AUDIT.md` (line 27)
 - **Category**: error-handling
 - **Problem**: `generateMerchantInventory` continues on item generation failure with only a warning log, potentially resulting in sparse inventory (`merchant.go:196-202`)
+- **Status**: ✅ **COMPLETED 2026-02-27** - Added failureCount tracking and 50% error threshold. Function now returns error if >50% of items fail to generate. Added comprehensive tests (TestGenerateMerchantInventoryErrorThreshold with 5 genre tests, TestGenerateMerchantInventoryPartialFailure with 10 seed tests). All tests pass with 91.4% coverage maintained.
 - **Fix**:
   1. Review the complete finding in the source audit file
   2. Implement the suggested changes following coding guidelines

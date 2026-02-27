@@ -165,6 +165,7 @@ func (g *EntityGenerator) generateMerchantInventory(seed int64, params procgen.G
 	// Pre-allocate inventory to exact size and use direct index assignment
 	inventory := make([]*item.Item, count)
 	actualCount := 0
+	failureCount := 0
 
 	for i := 0; i < count; i++ {
 		// Use different seed for each item
@@ -195,6 +196,7 @@ func (g *EntityGenerator) generateMerchantInventory(seed int64, params procgen.G
 
 		result, err := itemGen.Generate(itemSeed, itemParams)
 		if err != nil {
+			failureCount++
 			if g.logger != nil {
 				g.logger.WithError(err).Warn("failed to generate merchant item, skipping")
 			}
@@ -203,11 +205,18 @@ func (g *EntityGenerator) generateMerchantInventory(seed int64, params procgen.G
 
 		items, ok := result.([]*item.Item)
 		if !ok || len(items) == 0 {
+			failureCount++
 			continue
 		}
 
 		inventory[actualCount] = items[0]
 		actualCount++
+	}
+
+	// If more than 50% of items failed to generate, return error
+	failureRate := float64(failureCount) / float64(count)
+	if failureRate > 0.5 {
+		return nil, fmt.Errorf("merchant inventory generation failed: %d/%d items failed (%.1f%% failure rate)", failureCount, count, failureRate*100)
 	}
 
 	// Trim to actual count if some items failed to generate

@@ -30,7 +30,8 @@ None
 - [x] **Test Execution** — Package tests fail due to X11/Ebiten initialization (`go test` exits with panic). Tests should use stub implementations or build tags to enable headless execution. Target: 40% coverage minimum
   - **Resolution (2026-02-26)**: Tests now execute successfully without X11/Ebiten dependencies. Coverage is 89.3%, exceeding the 40% minimum target. Package has no direct Ebiten imports and tests run cleanly in headless environment.
 - [ ] **Context Timeout** — `Stop()` method uses hardcoded 5-second timeout (`server_manager.go:624`). Consider making this configurable or documenting rationale for 5s choice
-- [ ] **Error Handling** — Network errors use string matching for detection (`server_manager.go:322-323`: `strings.Contains(err.Error(), "use of closed")`). Prefer typed errors or `errors.Is()` for more robust error classification
+- [x] **Error Handling** — Network errors use string matching for detection (`server_manager.go:322-323`: `strings.Contains(err.Error(), "use of closed")`). Prefer typed errors or `errors.Is()` for more robust error classification
+  - **Resolution (2026-02-27)**: Added `isNormalDisconnection()` helper function using `errors.Is()` and `errors.As()` for robust typed error checking. Replaced fragile string matching with proper error classification for EOF, net.ErrClosed, and timeout errors. Added 9 comprehensive tests covering all error types including wrapped errors. Coverage increased to 89.5%.
 
 ## Input Integration
 | Input Source | Status | Notes |

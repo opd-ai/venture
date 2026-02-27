@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"io"
 	"net"
-	"strings"
 	"sync"
 	"time"
 
@@ -17,6 +16,25 @@ import (
 	"github.com/opd-ai/venture/pkg/procgen/terrain"
 	"github.com/sirupsen/logrus"
 )
+
+// isNormalDisconnection checks if the error represents a normal client disconnection.
+// It uses typed error checking with errors.Is() for EOF and net.ErrClosed,
+// avoiding fragile string matching.
+func isNormalDisconnection(err error) bool {
+	if err == nil {
+		return false
+	}
+	// Check for standard disconnection errors
+	if errors.Is(err, io.EOF) || errors.Is(err, net.ErrClosed) {
+		return true
+	}
+	// Check for timeout errors during shutdown
+	var netErr net.Error
+	if errors.As(err, &netErr) && netErr.Timeout() {
+		return true
+	}
+	return false
+}
 
 // ServerConfig contains configuration for the embedded server.
 type ServerConfig struct {
@@ -319,7 +337,7 @@ func (sm *ServerManager) serverLoop(ctx context.Context) {
 
 		case err := <-errorChan:
 			// Check if error is due to normal disconnection (EOF, connection closed, timeout during shutdown)
-			if errors.Is(err, io.EOF) || strings.Contains(err.Error(), "use of closed") || strings.Contains(err.Error(), "i/o timeout") {
+			if isNormalDisconnection(err) {
 				sm.logger.WithField("error", err).Debug("client disconnected")
 			} else {
 				sm.logger.WithField("error", err).Error("Network error")

@@ -1,6 +1,9 @@
 package hostplay
 
 import (
+	"fmt"
+	"io"
+	"net"
 	"testing"
 	"time"
 
@@ -425,3 +428,81 @@ func TestServerManagerReadySynchronization(t *testing.T) {
 		t.Error("server port should be set after Start() completes")
 	}
 }
+
+// TestIsNormalDisconnection verifies error classification for network disconnections
+func TestIsNormalDisconnection(t *testing.T) {
+	tests := []struct {
+		name     string
+		err      error
+		expected bool
+	}{
+		{
+			name:     "nil error",
+			err:      nil,
+			expected: false,
+		},
+		{
+			name:     "EOF error",
+			err:      io.EOF,
+			expected: true,
+		},
+		{
+			name:     "wrapped EOF error",
+			err:      fmt.Errorf("connection failed: %w", io.EOF),
+			expected: true,
+		},
+		{
+			name:     "net.ErrClosed error",
+			err:      net.ErrClosed,
+			expected: true,
+		},
+		{
+			name:     "wrapped net.ErrClosed error",
+			err:      fmt.Errorf("read error: %w", net.ErrClosed),
+			expected: true,
+		},
+		{
+			name:     "timeout error",
+			err:      &timeoutError{},
+			expected: true,
+		},
+		{
+			name:     "wrapped timeout error",
+			err:      fmt.Errorf("operation failed: %w", &timeoutError{}),
+			expected: true,
+		},
+		{
+			name:     "generic error",
+			err:      fmt.Errorf("database connection failed"),
+			expected: false,
+		},
+		{
+			name:     "network error without timeout",
+			err:      &nonTimeoutNetError{},
+			expected: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := isNormalDisconnection(tt.err)
+			if result != tt.expected {
+				t.Errorf("isNormalDisconnection(%v) = %v, want %v", tt.err, result, tt.expected)
+			}
+		})
+	}
+}
+
+// timeoutError is a test implementation of net.Error with timeout
+type timeoutError struct{}
+
+func (e *timeoutError) Error() string   { return "i/o timeout" }
+func (e *timeoutError) Timeout() bool   { return true }
+func (e *timeoutError) Temporary() bool { return false }
+
+// nonTimeoutNetError is a test implementation of net.Error without timeout
+type nonTimeoutNetError struct{}
+
+func (e *nonTimeoutNetError) Error() string   { return "connection refused" }
+func (e *nonTimeoutNetError) Timeout() bool   { return false }
+func (e *nonTimeoutNetError) Temporary() bool { return true }

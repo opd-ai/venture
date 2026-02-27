@@ -26,11 +26,24 @@ import (
 const (
 	screenWidth  = 800
 	screenHeight = 600
+
+	// UI layout constants
+	uiMargin       = 20.0
+	lineHeight     = 25.0
+	sectionSpacing = 30.0
+	boxPadding     = 10.0
+	boxMargin      = 20.0
+	boxWidth       = 760.0
+	boxHeight      = 250.0
+
+	// Touch indicator constants
+	touchCircleRadius      = 30.0
+	touchCircleBorderWidth = 3.0
 )
 
 // Game demonstrates the virtual controls pre-initialization fix.
 type Game struct {
-	inputSystem     *engine.InputSystem
+	inputProvider   engine.InputProvider
 	firstTouchFrame int
 	frameCount      int
 	touchDetected   bool
@@ -40,7 +53,7 @@ type Game struct {
 // NewGame creates a new game demonstrating the WASM fix.
 func NewGame() *Game {
 	g := &Game{
-		inputSystem:     engine.NewInputSystem(),
+		inputProvider:   &engine.EbitenInput{},
 		firstTouchFrame: -1,
 	}
 
@@ -61,8 +74,8 @@ func NewGame() *Game {
 func (g *Game) Update() error {
 	g.frameCount++
 
-	// Detect first touch
-	touchIDs := ebiten.TouchIDs()
+	// Detect first touch using InputProvider interface
+	touchIDs := g.inputProvider.GetTouchIDs()
 	if len(touchIDs) > 0 && !g.touchDetected {
 		g.touchDetected = true
 		g.firstTouchFrame = g.frameCount
@@ -72,7 +85,7 @@ func (g *Game) Update() error {
 	}
 
 	// Check if virtual controls are visible
-	if g.inputSystem != nil {
+	if g.inputProvider != nil {
 		// Access virtual controls through reflection or public API
 		// For demo purposes, we'll simulate the visibility check
 		if g.touchDetected && !g.controlsVisible {
@@ -92,11 +105,11 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	screen.Fill(color.RGBA{20, 20, 30, 255})
 
 	// Draw info panel
-	y := 20.0
+	y := uiMargin
 
 	msg := fmt.Sprintf("WASM Virtual Controls Demo - Gap #3 Fix")
-	ebitenutil.DebugPrintAt(screen, msg, 20, int(y))
-	y += 30
+	ebitenutil.DebugPrintAt(screen, msg, int(uiMargin), int(y))
+	y += sectionSpacing
 
 	// Platform detection
 	platformMsg := "Platform: "
@@ -105,75 +118,74 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	} else {
 		platformMsg += "Desktop (WASM simulation)"
 	}
-	ebitenutil.DebugPrintAt(screen, platformMsg, 20, int(y))
-	y += 25
+	ebitenutil.DebugPrintAt(screen, platformMsg, int(uiMargin), int(y))
+	y += lineHeight
 
 	// Touch capability
 	touchCapable := mobile.IsTouchCapable()
 	touchMsg := fmt.Sprintf("Touch Capable: %v", touchCapable)
-	ebitenutil.DebugPrintAt(screen, touchMsg, 20, int(y))
-	y += 25
+	ebitenutil.DebugPrintAt(screen, touchMsg, int(uiMargin), int(y))
+	y += lineHeight
 
 	// Frame count
 	frameMsg := fmt.Sprintf("Frame: %d", g.frameCount)
-	ebitenutil.DebugPrintAt(screen, frameMsg, 20, int(y))
-	y += 25
+	ebitenutil.DebugPrintAt(screen, frameMsg, int(uiMargin), int(y))
+	y += lineHeight
 
 	// Touch detection
 	if g.touchDetected {
 		touchInfoMsg := fmt.Sprintf("First touch detected at frame %d", g.firstTouchFrame)
-		ebitenutil.DebugPrintAt(screen, touchInfoMsg, 20, int(y))
-		y += 25
+		ebitenutil.DebugPrintAt(screen, touchInfoMsg, int(uiMargin), int(y))
+		y += lineHeight
 
 		if g.controlsVisible {
 			visibleMsg := fmt.Sprintf("Controls visible at frame %d (same frame!)", g.firstTouchFrame)
-			ebitenutil.DebugPrintAt(screen, visibleMsg, 20, int(y))
+			ebitenutil.DebugPrintAt(screen, visibleMsg, int(uiMargin), int(y))
 		}
 	} else {
-		ebitenutil.DebugPrintAt(screen, "Waiting for first touch...", 20, int(y))
+		ebitenutil.DebugPrintAt(screen, "Waiting for first touch...", int(uiMargin), int(y))
 	}
 	y += 40
 
 	// Draw explanation box
-	boxX, boxY := 20.0, y
-	boxW, boxH := 760.0, 250.0
-	vector.DrawFilledRect(screen, float32(boxX), float32(boxY), float32(boxW), float32(boxH), color.RGBA{40, 40, 50, 200}, false)
-	vector.StrokeRect(screen, float32(boxX), float32(boxY), float32(boxW), float32(boxH), 2, color.RGBA{100, 100, 150, 255}, false)
+	boxX, boxY := boxMargin, y
+	vector.DrawFilledRect(screen, float32(boxX), float32(boxY), float32(boxWidth), float32(boxHeight), color.RGBA{40, 40, 50, 200}, false)
+	vector.StrokeRect(screen, float32(boxX), float32(boxY), float32(boxWidth), float32(boxHeight), 2, color.RGBA{100, 100, 150, 255}, false)
 
 	y += 15
-	ebitenutil.DebugPrintAt(screen, "Gap #3 Fix Explanation:", int(boxX+10), int(y))
+	ebitenutil.DebugPrintAt(screen, "Gap #3 Fix Explanation:", int(boxX+boxPadding), int(y))
 	y += 20
-	ebitenutil.DebugPrintAt(screen, "BEFORE FIX:", int(boxX+10), int(y))
+	ebitenutil.DebugPrintAt(screen, "BEFORE FIX:", int(boxX+boxPadding), int(y))
 	y += 15
-	ebitenutil.DebugPrintAt(screen, "- Frame 1: User touches screen", int(boxX+20), int(y))
+	ebitenutil.DebugPrintAt(screen, "- Frame 1: User touches screen", int(boxX+boxPadding+10), int(y))
 	y += 15
-	ebitenutil.DebugPrintAt(screen, "- Frame 1: Touch detected, controls initialized", int(boxX+20), int(y))
+	ebitenutil.DebugPrintAt(screen, "- Frame 1: Touch detected, controls initialized", int(boxX+boxPadding+10), int(y))
 	y += 15
-	ebitenutil.DebugPrintAt(screen, "- Frame 2: Controls rendered (1-frame delay)", int(boxX+20), int(y))
+	ebitenutil.DebugPrintAt(screen, "- Frame 2: Controls rendered (1-frame delay)", int(boxX+boxPadding+10), int(y))
 	y += 15
-	ebitenutil.DebugPrintAt(screen, "- Result: First touch may be missed", int(boxX+20), int(y))
+	ebitenutil.DebugPrintAt(screen, "- Result: First touch may be missed", int(boxX+boxPadding+10), int(y))
 	y += 25
 
-	ebitenutil.DebugPrintAt(screen, "AFTER FIX:", int(boxX+10), int(y))
+	ebitenutil.DebugPrintAt(screen, "AFTER FIX:", int(boxX+boxPadding), int(y))
 	y += 15
-	ebitenutil.DebugPrintAt(screen, "- Frame 0: Controls pre-initialized (hidden)", int(boxX+20), int(y))
+	ebitenutil.DebugPrintAt(screen, "- Frame 0: Controls pre-initialized (hidden)", int(boxX+boxPadding+10), int(y))
 	y += 15
-	ebitenutil.DebugPrintAt(screen, "- Frame 1: User touches screen", int(boxX+20), int(y))
+	ebitenutil.DebugPrintAt(screen, "- Frame 1: User touches screen", int(boxX+boxPadding+10), int(y))
 	y += 15
-	ebitenutil.DebugPrintAt(screen, "- Frame 1: Controls shown immediately (0-frame delay)", int(boxX+20), int(y))
+	ebitenutil.DebugPrintAt(screen, "- Frame 1: Controls shown immediately (0-frame delay)", int(boxX+boxPadding+10), int(y))
 	y += 15
-	ebitenutil.DebugPrintAt(screen, "- Result: First touch captured successfully!", int(boxX+20), int(y))
+	ebitenutil.DebugPrintAt(screen, "- Result: First touch captured successfully!", int(boxX+boxPadding+10), int(y))
 
-	// Draw touch indicator
-	for _, id := range ebiten.TouchIDs() {
-		x, y := ebiten.TouchPosition(id)
-		vector.DrawFilledCircle(screen, float32(x), float32(y), 30, color.RGBA{255, 100, 100, 200}, true)
-		vector.StrokeCircle(screen, float32(x), float32(y), 30, 3, color.RGBA{255, 200, 200, 255}, true)
+	// Draw touch indicator using InputProvider interface
+	for _, id := range g.inputProvider.GetTouchIDs() {
+		x, y := g.inputProvider.GetTouchPosition(id)
+		vector.DrawFilledCircle(screen, float32(x), float32(y), float32(touchCircleRadius), color.RGBA{255, 100, 100, 200}, true)
+		vector.StrokeCircle(screen, float32(x), float32(y), float32(touchCircleRadius), float32(touchCircleBorderWidth), color.RGBA{255, 200, 200, 255}, true)
 	}
 
 	// Draw performance note
-	y = float64(screenHeight) - 25
-	ebitenutil.DebugPrintAt(screen, "Performance: Pre-initialization adds <1ms startup time, eliminates 16ms first-touch delay", 20, int(y))
+	y = float64(screenHeight) - lineHeight
+	ebitenutil.DebugPrintAt(screen, "Performance: Pre-initialization adds <1ms startup time, eliminates 16ms first-touch delay", int(uiMargin), int(y))
 }
 
 // Layout returns the game screen size.

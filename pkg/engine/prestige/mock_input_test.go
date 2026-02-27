@@ -1,6 +1,9 @@
 package prestige
 
-import "github.com/opd-ai/venture/pkg/engine"
+import (
+	"github.com/hajimehoshi/ebiten/v2"
+	"github.com/opd-ai/venture/pkg/engine"
+)
 
 // mockInputProvider implements engine.InputProvider for testing prestige UI.
 // It maps conceptual actions (menu up/down/confirm/back) to the interface methods.
@@ -68,6 +71,13 @@ func (m *mockInputProvider) IsMenuDownJustPressed() bool    { return m.menuDown 
 func (m *mockInputProvider) IsMenuConfirmJustPressed() bool { return m.menuConfirm }
 func (m *mockInputProvider) IsMenuBackJustPressed() bool    { return m.menuBack }
 func (m *mockInputProvider) IsMenuTabJustPressed() bool     { return false }
+
+// Touch input methods (unused in prestige UI but required by interface)
+func (m *mockInputProvider) GetTouchIDs() []ebiten.TouchID { return nil }
+
+func (m *mockInputProvider) GetTouchPosition(id ebiten.TouchID) (int, int) {
+	return 0, 0
+}
 
 // Compile-time interface check
 var _ engine.InputProvider = (*mockInputProvider)(nil)

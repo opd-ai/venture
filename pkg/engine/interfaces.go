@@ -233,6 +233,16 @@ type InputProvider interface {
 
 	// IsMenuTabJustPressed returns whether the menu tab key was just pressed
 	IsMenuTabJustPressed() bool
+
+	// GetTouchIDs returns the list of current active touch IDs
+	// Returns empty slice if no touches are active
+	// Used for multi-touch input detection on mobile and touch-capable devices
+	GetTouchIDs() []ebiten.TouchID
+
+	// GetTouchPosition returns the screen position of the touch with the given ID
+	// Returns (0, 0) if the touch ID is not found
+	// x, y are in screen coordinates
+	GetTouchPosition(id ebiten.TouchID) (x, y int)
 }
 
 // RenderingSystem handles visual rendering of entities.

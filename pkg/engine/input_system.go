@@ -259,6 +259,18 @@ func (i *EbitenInput) IsMenuTabJustPressed() bool {
 	return i.MenuTabJustPressed
 }
 
+// GetTouchIDs implements InputProvider interface.
+// Returns the list of current active touch IDs.
+func (i *EbitenInput) GetTouchIDs() []ebiten.TouchID {
+	return ebiten.TouchIDs()
+}
+
+// GetTouchPosition implements InputProvider interface.
+// Returns the screen position of the touch with the given ID.
+func (i *EbitenInput) GetTouchPosition(id ebiten.TouchID) (x, y int) {
+	return ebiten.TouchPosition(id)
+}
+
 // Compile-time interface check
 var _ InputProvider = (*EbitenInput)(nil)
 

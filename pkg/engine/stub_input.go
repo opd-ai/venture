@@ -1,7 +1,12 @@
 package engine
 
+import (
+	"github.com/hajimehoshi/ebiten/v2"
+)
+
 // StubInput is a test input component without Ebiten dependencies.
 // Implements InputProvider interface for testing.
+// This stub allows tests to simulate input without requiring Ebiten runtime.
 type StubInput struct {
 	// Movement input
 	MoveX, MoveY float64
@@ -33,6 +38,10 @@ type StubInput struct {
 	MenuConfirmJustPressed bool
 	MenuBackJustPressed    bool
 	MenuTabJustPressed     bool
+
+	// Touch input (for mobile/WASM testing)
+	// Map of touch ID to position
+	TouchPositions map[ebiten.TouchID]struct{ X, Y int }
 }
 
 // Type implements Component interface.
@@ -93,6 +102,11 @@ func (i *StubInput) GetMousePosition() (x, y int) {
 	return i.MouseX, i.MouseY
 }
 
+// GetMouseDelta implements InputProvider interface.
+func (i *StubInput) GetMouseDelta() (dx, dy int) {
+	return i.MouseDeltaX, i.MouseDeltaY
+}
+
 // IsMousePressed implements InputProvider interface.
 func (i *StubInput) IsMousePressed() bool {
 	return i.MousePressed
@@ -106,11 +120,6 @@ func (i *StubInput) SetMovement(x, y float64) {
 // SetActionPressed implements InputProvider interface.
 func (i *StubInput) SetActionPressed(pressed bool) {
 	i.ActionPressed = pressed
-}
-
-// GetMouseDelta implements InputProvider interface (Gap #8 fix).
-func (i *StubInput) GetMouseDelta() (dx, dy int) {
-	return i.MouseDeltaX, i.MouseDeltaY
 }
 
 // IsMenuUpJustPressed implements InputProvider interface.
@@ -136,6 +145,31 @@ func (i *StubInput) IsMenuBackJustPressed() bool {
 // IsMenuTabJustPressed implements InputProvider interface.
 func (i *StubInput) IsMenuTabJustPressed() bool {
 	return i.MenuTabJustPressed
+}
+
+// GetTouchIDs implements InputProvider interface.
+// Returns the list of current active touch IDs for testing.
+func (i *StubInput) GetTouchIDs() []ebiten.TouchID {
+	if i.TouchPositions == nil {
+		return nil
+	}
+	ids := make([]ebiten.TouchID, 0, len(i.TouchPositions))
+	for id := range i.TouchPositions {
+		ids = append(ids, id)
+	}
+	return ids
+}
+
+// GetTouchPosition implements InputProvider interface.
+// Returns the screen position of the touch with the given ID for testing.
+func (i *StubInput) GetTouchPosition(id ebiten.TouchID) (x, y int) {
+	if i.TouchPositions == nil {
+		return 0, 0
+	}
+	if pos, ok := i.TouchPositions[id]; ok {
+		return pos.X, pos.Y
+	}
+	return 0, 0
 }
 
 // NewStubInput creates a new test input component.

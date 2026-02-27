@@ -8,6 +8,8 @@ import (
 	"runtime"
 	"sync"
 	"time"
+
+	"github.com/opd-ai/venture/pkg/errors"
 )
 
 // Config defines stability test parameters.
@@ -284,7 +286,7 @@ func getCurrentMemory() uint64 {
 func (m *Monitor) WriteReport(report *Report) error {
 	data, err := json.MarshalIndent(report, "", "  ")
 	if err != nil {
-		return fmt.Errorf("failed to marshal report: %w", err)
+		return errors.SerializationWrap(err, "failed to marshal stability report")
 	}
 
 	m.mu.RLock()
@@ -295,14 +297,14 @@ func (m *Monitor) WriteReport(report *Report) error {
 	if reportPath == "" || reportPath == "-" {
 		_, err = os.Stdout.Write(append(data, '\n'))
 		if err != nil {
-			return fmt.Errorf("failed to write report to stdout: %w", err)
+			return errors.FileSystemWrap(err, "failed to write stability report to stdout")
 		}
 		return nil
 	}
 
 	// Write to file
 	if err := os.WriteFile(reportPath, data, 0o644); err != nil {
-		return fmt.Errorf("failed to write report to %s: %w", reportPath, err)
+		return errors.FileSystemWrap(err, fmt.Sprintf("failed to write stability report to %s", reportPath))
 	}
 
 	return nil

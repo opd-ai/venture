@@ -35,7 +35,7 @@ The `pkg/engine/physics/vehicle` package provides advanced vehicle physics simul
 - [ ] **ECS Purity** — `TerrainDeformationComponent` contains methods with logic (`GetVisibleTracks`, `GetTrackAlpha`, `Clear`, `GetTrackCount` in `terrain_deformation.go:71-115`) violating ECS guideline — should be pure data + system methods handle logic
 
 ### Low Severity
-- [ ] **Documentation** — Package doc.go is comprehensive but `GetTerrainTypeFromTile()` helper function in `terrain_deformation.go:119-134` lacks usage examples in doc
+- [x] **Documentation** — ✅ RESOLVED (2026-02-27): Added comprehensive godoc to GetTerrainTypeFromTile() with terrain type mappings and example usage. Added terrain integration example to doc.go showing how to use GetTerrainTypeFromTile() with world tiles.
 - [ ] **Performance** — `GetVisibleTracks()` uses AABB culling (`terrain_deformation.go:82-86`) but could benefit from spatial partitioning for >1000 tracks (current max is 200, acceptable for now)
 - [ ] **Integration Gap** — No integration with `pkg/procgen/vehicle` generator to automatically add physics components to generated vehicles — vehicle entities created without physics components
 - [ ] **Test Gap** — No integration test verifying all four components work together in a real ECS World with actual entity lifecycle (current tests use mock entities)

@@ -34,14 +34,6 @@ func (m *Manager) SetTransport(transport GuildTransport) {
 	m.transport = transport
 }
 
-// SetServerID sets this manager's server ID for federation
-// Originally defined in: manager.go
-func (m *Manager) SetServerID(serverID string) {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	m.serverID = serverID
-}
-
 // AddFederatedServer registers a federated server for guild synchronization
 // Originally defined in: manager.go
 func (m *Manager) AddFederatedServer(serverID string) {

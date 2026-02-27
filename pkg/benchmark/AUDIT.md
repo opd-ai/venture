@@ -32,9 +32,12 @@ The `pkg/benchmark` package provides performance validation infrastructure for F
 (None identified)
 
 ### Low Severity
-- [ ] **Documentation** — `pkg/benchmark/fps/README.md` and `pkg/benchmark/memory/README.md` exist but are not referenced in root `AUDIT.md` or primary docs. Consider consolidating redundant documentation or adding cross-references to avoid drift. (N/A — files exist)
-- [ ] **Missing CI workflow** — `docs/BENCHMARK_WORKFLOW.md` references `.github/workflows/benchmark.yml`, but the workflow file does not exist in the repository. The benchmark infrastructure is only partially automated via `scripts/benchmark-memory.sh`. (`docs/BENCHMARK_WORKFLOW.md:10`, `scripts/benchmark-memory.sh:1`)
-- [ ] **Test organization** — The parent `pkg/benchmark/` directory contains only `doc.go` and no actual code or test files. Consider clarifying that this is a pure test-infrastructure package in the root documentation or adding a note in `pkg/benchmark/doc.go` that all functionality is in subdirectories. (`pkg/benchmark/doc.go:1`)
+- [x] **Documentation** — `pkg/benchmark/fps/README.md` and `pkg/benchmark/memory/README.md` exist but are not referenced in root `AUDIT.md` or primary docs. Consider consolidating redundant documentation or adding cross-references to avoid drift. (N/A — files exist)
+  - **FIXED 2026-02-27**: Added cross-references to fps/README.md and memory/README.md in pkg/benchmark/doc.go lines 15, 21
+- [x] **Missing CI workflow** — `docs/BENCHMARK_WORKFLOW.md` references `.github/workflows/benchmark.yml`, but the workflow file does not exist in the repository. The benchmark infrastructure is only partially automated via `scripts/benchmark-memory.sh`. (`docs/BENCHMARK_WORKFLOW.md:10`, `scripts/benchmark-memory.sh:1`)
+  - **FIXED 2026-02-27**: Updated docs/BENCHMARK_WORKFLOW.md to accurately reflect shell script-based infrastructure instead of GitHub Actions workflow. Documented scripts/benchmark-memory.sh, scripts/benchmark-regression.sh, and manual benchmark execution. Added note that workflow creation is a future enhancement.
+- [x] **Test organization** — The parent `pkg/benchmark/` directory contains only `doc.go` and no actual code or test files. Consider clarifying that this is a pure test-infrastructure package in the root documentation or adding a note in `pkg/benchmark/doc.go` that all functionality is in subdirectories. (`pkg/benchmark/doc.go:1`)
+  - **FIXED 2026-02-27**: Added prominent clarification in pkg/benchmark/doc.go lines 3-5: "This is a pure test infrastructure package containing only test files and documentation. No runtime production code exists in this package."
 
 ## Input Integration
 | Input Source | Status | Notes |

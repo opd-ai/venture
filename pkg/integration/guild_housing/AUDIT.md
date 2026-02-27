@@ -28,7 +28,7 @@ _(No high-severity issues found)_
 
 ### Low Severity
 - [ ] **Missing Serialization** — `GuildHousingComponent` does not implement `Serialize()/Deserialize()` methods required by `ComponentSerializer` interface (`pkg/engine/interfaces.go:515-519`). Manager has `Save()/Load()` but component persistence is not wired. (`types.go:57-66`)
-- [ ] **Missing Benchmarks** — No benchmarks for hot-path operations (permission checks, storage lookups) despite targeting <1ms permission checks and <10ms storage operations per doc.go. (`manager_test.go:1-1313`)
+- [x] **Missing Benchmarks** — No benchmarks for hot-path operations (permission checks, storage lookups) despite targeting <1ms permission checks and <10ms storage operations per doc.go. (`manager_test.go:1-1313`) — **ALREADY FIXED 2026-02-27**: 6 comprehensive benchmarks exist (BenchmarkCreateGuildHouse, BenchmarkCheckPermission, BenchmarkDepositItem, BenchmarkWithdrawItem, BenchmarkGetUpgradeBonus, BenchmarkAddMemberToHall). Performance targets exceeded: CheckPermission 19.95ns << 1ms, DepositItem 332.6ns << 10ms
 - [ ] **Table-Driven Tests Limited** — Only 7 table-driven tests out of 44 test functions. Most tests (CreateGuildHouse, DepositItem, etc.) use single-case assert style instead of table-driven pattern. (`manager_test.go:1-1313`)
 
 ## Input Integration

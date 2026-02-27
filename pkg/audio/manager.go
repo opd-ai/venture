@@ -85,18 +85,28 @@ func (m *Manager) SetMasterVolume(volume float64) {
 }
 
 // SetMusicVolume sets the music volume (0.0-1.0).
+// Note: Setting volume to 0.0 implicitly disables music playback.
+// This is intentional to prevent silent music generation overhead.
+// Use GetMusicVolume() to check current volume.
 func (m *Manager) SetMusicVolume(volume float64) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	m.musicVolume = clampVolume(volume)
+	// Intentionally disable subsystem when volume is 0.0 to avoid
+	// CPU overhead of generating silent audio samples
 	m.musicEnabled = volume > 0.0
 }
 
 // SetSFXVolume sets the sound effects volume (0.0-1.0).
+// Note: Setting volume to 0.0 implicitly disables SFX playback.
+// This is intentional to prevent silent sound generation overhead.
+// Use GetSFXVolume() to check current volume.
 func (m *Manager) SetSFXVolume(volume float64) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	m.sfxVolume = clampVolume(volume)
+	// Intentionally disable subsystem when volume is 0.0 to avoid
+	// CPU overhead of generating silent audio samples
 	m.sfxEnabled = volume > 0.0
 }
 
@@ -292,6 +302,14 @@ func (m *Manager) IsVoiceEnabled() bool {
 }
 
 // InitializeVoice sets up voice codec with the specified quality.
+// The transport parameter may be nil for testing or when voice chat
+// is not yet integrated with the network layer. Production deployments
+// should provide a concrete VoiceTransport implementation that integrates
+// with pkg/network/chat for proximity/guild/party voice channels.
+//
+// TODO(integration): Wire VoiceTransport to network/chat subsystem
+// for proximity/guild/party voice channels. Current implementation accepts
+// nil transport for future integration.
 func (m *Manager) InitializeVoice(quality VoiceQuality, transport VoiceTransport) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()

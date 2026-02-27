@@ -32,8 +32,8 @@ None.
 None.
 
 ### Low Severity
-- [ ] **Test Coverage** — No test file exists for this demo. While it's a demonstration program, adding `main_test.go` with table-driven tests for calculation functions would validate correctness and serve as example of testing best practices. (`N/A:0`)
-- [ ] **Dead Code** — `init()` function at line 170-173 records `time.Now()` but discards result with `_`. Function serves no purpose and should be removed. (`main.go:170`)
+- [x] **Test Coverage** — No test file exists for this demo. While it's a demonstration program, adding `main_test.go` with table-driven tests for calculation functions would validate correctness and serve as example of testing best practices. (`N/A:0`) — **COMPLETED 2026-02-27**: Added comprehensive main_test.go with 7 table-driven tests and 2 benchmarks covering all calculation functions
+- [x] **Dead Code** — `init()` function at line 170-173 records `time.Now()` but discards result with `_`. Function serves no purpose and should be removed. (`main.go:170`) — **COMPLETED 2026-02-27**: Removed dead init() function and unused time import
 
 ## Input Integration
 | Input Source | Status | Notes |

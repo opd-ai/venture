@@ -27,7 +27,7 @@ _(None)_
 
 ### Low Severity
 - [ ] **Code Organization** — Large `generateName()` and `generateDescription()` functions (100+ lines with nested switch statements) could be refactored into lookup tables for genre-specific prefixes/suffixes to improve maintainability (`generator.go:573-737`)
-- [ ] **API Consistency** — `PlacementValidator.GetOccupancy()` returns percentage (0-100) but lacks unit suffix in name; consider `GetOccupancyPercent()` for clarity (`placement.go:104`)
+- [x] **API Consistency** — `PlacementValidator.GetOccupancy()` returns percentage (0-100) but lacks unit suffix in name; consider `GetOccupancyPercent()` for clarity (`placement.go:104`) **COMPLETED 2026-02-27** - Renamed GetOccupancy() to GetOccupancyPercent() with enhanced godoc. Updated all usages in tests and doc.go. Coverage: 92.5%
 - [x] **Test Coverage** — Missing benchmark tests for performance-critical path: `Generate()` with target <10ms per item, `FindValidPlacement()` with target <5ms (mentioned in doc.go but not validated) — **ALREADY FIXED**: Benchmarks exist (BenchmarkGenerate, BenchmarkFindValidPlacement) and validate performance targets. BenchmarkGenerate: ~13µs (<<10ms), BenchmarkFindValidPlacement: ~6ns (<<5ms)
 
 ## Input Integration

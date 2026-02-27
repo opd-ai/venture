@@ -61,7 +61,10 @@
 //	    // Check integrity
 //	    integrity, _ := sys.GetIntegrity("house1")
 //	    if integrity.State == destruction.IntegrityCollapsed {
-//	        log.Println("Building collapsed!")
+//	        logrus.WithFields(logrus.Fields{
+//	            "building_id": "house1",
+//	            "state":       "collapsed",
+//	        }).Info("building collapsed")
 //	    }
 //
 //	    // Render debris

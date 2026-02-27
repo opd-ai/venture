@@ -700,3 +700,37 @@ func TestSimpleVoiceCodec_OddLengthRoundTrip(t *testing.T) {
 		})
 	}
 }
+
+func TestVoiceProcessor_ProcessInputEmptyChannelID(t *testing.T) {
+	tests := []struct {
+		name    string
+		samples []float64
+		wantErr bool
+	}{
+		{
+			name:    "empty channelID with samples",
+			samples: []float64{0.1, 0.2, 0.3},
+			wantErr: true,
+		},
+		{
+			name:    "empty channelID with no samples",
+			samples: []float64{},
+			wantErr: false, // No error because len(samples) == 0 returns early
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			codec := NewSimpleVoiceCodec(48000, VoiceQualityHigh)
+			processor := NewVoiceProcessor(codec, nil)
+
+			err := processor.ProcessInput("", tt.samples)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("ProcessInput() error = %v, wantErr %v", err, tt.wantErr)
+			}
+			if tt.wantErr && err != nil && err.Error() != "channelID cannot be empty" {
+				t.Errorf("ProcessInput() error = %v, want 'channelID cannot be empty'", err)
+			}
+		})
+	}
+}

@@ -51,6 +51,16 @@ func (b *BuoyancyCalculator) GetNetForce(component *BuoyancyComponent) float64 {
 }
 
 // UpdateDensity recalculates entity density from mass and volume
+func (b *BuoyancyCalculator) UpdateDensity(component *BuoyancyComponent) {
+	if component.Volume > 0 {
+		component.Density = component.Mass / component.Volume
+	}
+}
+
+// UpdateDensity recalculates entity density from mass and volume.
+// This is a package-level convenience function that doesn't require a BuoyancyCalculator instance.
+// For consistency with other methods, prefer using BuoyancyCalculator.UpdateDensity() when
+// a calculator instance is already available.
 func UpdateDensity(component *BuoyancyComponent) {
 	if component.Volume > 0 {
 		component.Density = component.Mass / component.Volume

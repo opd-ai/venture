@@ -6,38 +6,92 @@ import (
 	"time"
 )
 
-func TestProgressionValidator(t *testing.T) {
-	config := NewDefaultConfig()
-	config.SimulationCounts["Progression"] = 100
-	validator := NewProgressionValidator(config)
-
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-	defer cancel()
-
-	result, err := validator.Validate(ctx)
-	if err != nil {
-		t.Fatalf("Progression validation failed: %v", err)
+// TestAllValidatorsExtended uses table-driven pattern to test validators 3-8
+func TestAllValidatorsExtended(t *testing.T) {
+	tests := []struct {
+		name            string
+		domain          string
+		simulationCount int
+		createValidator func(*BalanceConfig) BalanceValidator
+		expectedMetrics []string
+	}{
+		{
+			name:            "Progression",
+			domain:          "Progression",
+			simulationCount: 100,
+			createValidator: func(c *BalanceConfig) BalanceValidator { return NewProgressionValidator(c) },
+			expectedMetrics: []string{"xp_curve_r_squared", "skill_power_increase_avg", "stat_scaling_r_squared"},
+		},
+		{
+			name:            "Social",
+			domain:          "Social",
+			simulationCount: 200,
+			createValidator: func(c *BalanceConfig) BalanceValidator { return NewSocialValidator(c) },
+			expectedMetrics: []string{"defender_advantage", "fraud_rate", "chat_reject_rate"},
+		},
+		{
+			name:            "Housing",
+			domain:          "Housing",
+			simulationCount: 100,
+			createValidator: func(c *BalanceConfig) BalanceValidator { return NewHousingValidator(c) },
+			expectedMetrics: []string{"housing_affordability_rate", "upgrade_benefit_avg", "storage_adequacy_rate"},
+		},
+		{
+			name:            "Vehicle",
+			domain:          "Vehicle",
+			simulationCount: 200,
+			createValidator: func(c *BalanceConfig) BalanceValidator { return NewVehicleValidator(c) },
+			expectedMetrics: []string{"speed_durability_correlation", "trip_completion_rate", "terrain_choice_rate"},
+		},
+		{
+			name:            "Companion",
+			domain:          "Companion",
+			simulationCount: 100,
+			createValidator: func(c *BalanceConfig) BalanceValidator { return NewCompanionValidator(c) },
+			expectedMetrics: []string{"max_loyalty_rate", "avg_skills_learned", "companion_combat_contribution"},
+		},
+		{
+			name:            "Quest",
+			domain:          "Quest",
+			simulationCount: 200,
+			createValidator: func(c *BalanceConfig) BalanceValidator { return NewQuestValidator(c) },
+			expectedMetrics: []string{"reward_difficulty_correlation", "difficulty_rating_accuracy", "completion_time_accuracy"},
+		},
 	}
 
-	if result.Domain != "Progression" {
-		t.Errorf("Expected domain 'Progression', got '%s'", result.Domain)
-	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			config := NewDefaultConfig()
+			config.SimulationCounts[tt.domain] = tt.simulationCount
+			validator := tt.createValidator(config)
 
-	expectedMetrics := []string{
-		"xp_curve_r_squared",
-		"skill_power_increase_avg",
-		"stat_scaling_r_squared",
-	}
-	for _, metric := range expectedMetrics {
-		if _, ok := result.Metrics[metric]; !ok {
-			t.Errorf("Missing metric: %s", metric)
-		}
-	}
+			ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+			defer cancel()
 
-	t.Logf("Progression Balance: Passed=%v, Issues=%d, Duration=%.2fs",
-		result.Passed, len(result.Issues), result.Duration)
-	for key, value := range result.Metrics {
-		t.Logf("  %s: %.4f", key, value)
+			result, err := validator.Validate(ctx)
+			if err != nil {
+				t.Fatalf("%s validation failed: %v", tt.name, err)
+			}
+
+			// Verify result structure
+			if result.Domain != tt.domain {
+				t.Errorf("Expected domain '%s', got '%s'", tt.domain, result.Domain)
+			}
+
+			// Verify expected metrics exist
+			for _, metric := range tt.expectedMetrics {
+				if _, ok := result.Metrics[metric]; !ok {
+					t.Errorf("Missing metric: %s", metric)
+				}
+			}
+
+			// Log results
+			t.Logf("%s Balance: Passed=%v, Issues=%d, Duration=%.2fs",
+				tt.name, result.Passed, len(result.Issues), result.Duration)
+			for key, value := range result.Metrics {
+				t.Logf("  %s: %.4f", key, value)
+			}
+		})
 	}
 }
 
@@ -92,41 +146,6 @@ func TestProgressionStatScaling(t *testing.T) {
 	}
 }
 
-func TestSocialValidator(t *testing.T) {
-	config := NewDefaultConfig()
-	config.SimulationCounts["Social"] = 200
-	validator := NewSocialValidator(config)
-
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-	defer cancel()
-
-	result, err := validator.Validate(ctx)
-	if err != nil {
-		t.Fatalf("Social validation failed: %v", err)
-	}
-
-	if result.Domain != "Social" {
-		t.Errorf("Expected domain 'Social', got '%s'", result.Domain)
-	}
-
-	expectedMetrics := []string{
-		"defender_advantage",
-		"fraud_rate",
-		"chat_reject_rate",
-	}
-	for _, metric := range expectedMetrics {
-		if _, ok := result.Metrics[metric]; !ok {
-			t.Errorf("Missing metric: %s", metric)
-		}
-	}
-
-	t.Logf("Social Balance: Passed=%v, Issues=%d, Duration=%.2fs",
-		result.Passed, len(result.Issues), result.Duration)
-	for key, value := range result.Metrics {
-		t.Logf("  %s: %.4f", key, value)
-	}
-}
-
 func TestSocialTerritoryControl(t *testing.T) {
 	config := NewDefaultConfig()
 	config.SimulationCounts["Social"] = 1000
@@ -152,41 +171,6 @@ func TestSocialTerritoryControl(t *testing.T) {
 	// Defender should have some advantage but not overwhelming
 	if advantage < 0.45 || advantage > 0.70 {
 		t.Logf("WARNING: Defender advantage outside expected range: %.1f%%", advantage*100)
-	}
-}
-
-func TestHousingValidator(t *testing.T) {
-	config := NewDefaultConfig()
-	config.SimulationCounts["Housing"] = 100
-	validator := NewHousingValidator(config)
-
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-	defer cancel()
-
-	result, err := validator.Validate(ctx)
-	if err != nil {
-		t.Fatalf("Housing validation failed: %v", err)
-	}
-
-	if result.Domain != "Housing" {
-		t.Errorf("Expected domain 'Housing', got '%s'", result.Domain)
-	}
-
-	expectedMetrics := []string{
-		"housing_affordability_rate",
-		"upgrade_benefit_avg",
-		"storage_adequacy_rate",
-	}
-	for _, metric := range expectedMetrics {
-		if _, ok := result.Metrics[metric]; !ok {
-			t.Errorf("Missing metric: %s", metric)
-		}
-	}
-
-	t.Logf("Housing Balance: Passed=%v, Issues=%d, Duration=%.2fs",
-		result.Passed, len(result.Issues), result.Duration)
-	for key, value := range result.Metrics {
-		t.Logf("  %s: %.4f", key, value)
 	}
 }
 
@@ -217,41 +201,6 @@ func TestHousingAffordability(t *testing.T) {
 	}
 }
 
-func TestVehicleValidator(t *testing.T) {
-	config := NewDefaultConfig()
-	config.SimulationCounts["Vehicle"] = 200
-	validator := NewVehicleValidator(config)
-
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-	defer cancel()
-
-	result, err := validator.Validate(ctx)
-	if err != nil {
-		t.Fatalf("Vehicle validation failed: %v", err)
-	}
-
-	if result.Domain != "Vehicle" {
-		t.Errorf("Expected domain 'Vehicle', got '%s'", result.Domain)
-	}
-
-	expectedMetrics := []string{
-		"speed_durability_correlation",
-		"trip_completion_rate",
-		"terrain_choice_rate",
-	}
-	for _, metric := range expectedMetrics {
-		if _, ok := result.Metrics[metric]; !ok {
-			t.Errorf("Missing metric: %s", metric)
-		}
-	}
-
-	t.Logf("Vehicle Balance: Passed=%v, Issues=%d, Duration=%.2fs",
-		result.Passed, len(result.Issues), result.Duration)
-	for key, value := range result.Metrics {
-		t.Logf("  %s: %.4f", key, value)
-	}
-}
-
 func TestVehicleSpeedDurabilityTradeoff(t *testing.T) {
 	config := NewDefaultConfig()
 	validator := NewVehicleValidator(config)
@@ -275,41 +224,6 @@ func TestVehicleSpeedDurabilityTradeoff(t *testing.T) {
 	// Should be negative (fast = fragile)
 	if correlation > 0 {
 		t.Errorf("Speed-durability correlation should be negative: %.4f", correlation)
-	}
-}
-
-func TestCompanionValidator(t *testing.T) {
-	config := NewDefaultConfig()
-	config.SimulationCounts["Companion"] = 100
-	validator := NewCompanionValidator(config)
-
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-	defer cancel()
-
-	result, err := validator.Validate(ctx)
-	if err != nil {
-		t.Fatalf("Companion validation failed: %v", err)
-	}
-
-	if result.Domain != "Companion" {
-		t.Errorf("Expected domain 'Companion', got '%s'", result.Domain)
-	}
-
-	expectedMetrics := []string{
-		"max_loyalty_rate",
-		"avg_skills_learned",
-		"companion_combat_contribution",
-	}
-	for _, metric := range expectedMetrics {
-		if _, ok := result.Metrics[metric]; !ok {
-			t.Errorf("Missing metric: %s", metric)
-		}
-	}
-
-	t.Logf("Companion Balance: Passed=%v, Issues=%d, Duration=%.2fs",
-		result.Passed, len(result.Issues), result.Duration)
-	for key, value := range result.Metrics {
-		t.Logf("  %s: %.4f", key, value)
 	}
 }
 
@@ -338,41 +252,6 @@ func TestCompanionLoyaltyProgression(t *testing.T) {
 
 	if maxLoyaltyRate < 0.40 {
 		t.Logf("WARNING: Low max loyalty rate: %.1f%%", maxLoyaltyRate*100)
-	}
-}
-
-func TestQuestValidator(t *testing.T) {
-	config := NewDefaultConfig()
-	config.SimulationCounts["Quest"] = 200
-	validator := NewQuestValidator(config)
-
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-	defer cancel()
-
-	result, err := validator.Validate(ctx)
-	if err != nil {
-		t.Fatalf("Quest validation failed: %v", err)
-	}
-
-	if result.Domain != "Quest" {
-		t.Errorf("Expected domain 'Quest', got '%s'", result.Domain)
-	}
-
-	expectedMetrics := []string{
-		"reward_difficulty_correlation",
-		"difficulty_rating_accuracy",
-		"completion_time_accuracy",
-	}
-	for _, metric := range expectedMetrics {
-		if _, ok := result.Metrics[metric]; !ok {
-			t.Errorf("Missing metric: %s", metric)
-		}
-	}
-
-	t.Logf("Quest Balance: Passed=%v, Issues=%d, Duration=%.2fs",
-		result.Passed, len(result.Issues), result.Duration)
-	for key, value := range result.Metrics {
-		t.Logf("  %s: %.4f", key, value)
 	}
 }
 

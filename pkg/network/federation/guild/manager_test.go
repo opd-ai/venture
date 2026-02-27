@@ -722,10 +722,8 @@ func TestGenreSpecificNames(t *testing.T) {
 // Cross-Server Synchronization Tests
 
 func TestSetServerID(t *testing.T) {
-	m := NewManager()
 	serverID := "test-server-123"
-
-	m.SetServerID(serverID)
+	m := NewManager(WithServerID(serverID))
 
 	if m.serverID != serverID {
 		t.Errorf("serverID = %s, want %s", m.serverID, serverID)
@@ -1176,11 +1174,9 @@ func TestHandleGuildMessage_NonExistentMemberLeave(t *testing.T) {
 
 func TestCrossFederationScenario(t *testing.T) {
 	// Create two managers representing different servers
-	server1 := NewManager()
-	server1.SetServerID("server-1")
+	server1 := NewManager(WithServerID("server-1"))
 
-	server2 := NewManager()
-	server2.SetServerID("server-2")
+	server2 := NewManager(WithServerID("server-2"))
 
 	// Register each other as federated servers
 	server1.AddFederatedServer("server-2")

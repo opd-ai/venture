@@ -6,83 +6,71 @@ import (
 	"time"
 )
 
-func TestCombatValidator(t *testing.T) {
-	config := NewDefaultConfig()
-	config.SimulationCounts["Combat"] = 100 // Reduced for faster tests
-	validator := NewCombatValidator(config)
-
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-	defer cancel()
-
-	result, err := validator.Validate(ctx)
-	if err != nil {
-		t.Fatalf("Combat validation failed: %v", err)
+// TestAllValidators uses table-driven pattern to test all 8 validators
+func TestAllValidators(t *testing.T) {
+	tests := []struct {
+		name            string
+		domain          string
+		simulationCount int
+		createValidator func(*BalanceConfig) BalanceValidator
+		expectedMetrics []string
+	}{
+		{
+			name:            "Combat",
+			domain:          "Combat",
+			simulationCount: 100,
+			createValidator: func(c *BalanceConfig) BalanceValidator { return NewCombatValidator(c) },
+			expectedMetrics: []string{"class_win_rate_variance", "enemy_scaling_r_squared", "boss_failure_rate"},
+		},
+		{
+			name:            "Economic",
+			domain:          "Economic",
+			simulationCount: 100,
+			createValidator: func(c *BalanceConfig) BalanceValidator { return NewEconomicValidator(c) },
+			expectedMetrics: []string{"loot_value_correlation", "crafting_profit_margin", "gold_sink_ratio"},
+		},
 	}
 
-	// Verify result structure
-	if result.Domain != "Combat" {
-		t.Errorf("Expected domain 'Combat', got '%s'", result.Domain)
-	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			config := NewDefaultConfig()
+			config.SimulationCounts[tt.domain] = tt.simulationCount
+			validator := tt.createValidator(config)
 
-	if result.SimulationCount != 100 {
-		t.Errorf("Expected 100 simulations, got %d", result.SimulationCount)
-	}
+			ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+			defer cancel()
 
-	// Verify metrics exist
-	expectedMetrics := []string{
-		"class_win_rate_variance",
-		"enemy_scaling_r_squared",
-		"boss_failure_rate",
-	}
-	for _, metric := range expectedMetrics {
-		if _, ok := result.Metrics[metric]; !ok {
-			t.Errorf("Missing metric: %s", metric)
-		}
-	}
+			result, err := validator.Validate(ctx)
+			if err != nil {
+				t.Fatalf("%s validation failed: %v", tt.name, err)
+			}
 
-	// Log results
-	t.Logf("Combat Balance: Passed=%v, Issues=%d, Duration=%.2fs",
-		result.Passed, len(result.Issues), result.Duration)
-	for key, value := range result.Metrics {
-		t.Logf("  %s: %.4f", key, value)
-	}
-	for _, issue := range result.Issues {
-		t.Logf("  ISSUE: %s", issue)
-	}
-}
+			// Verify result structure
+			if result.Domain != tt.domain {
+				t.Errorf("Expected domain '%s', got '%s'", tt.domain, result.Domain)
+			}
 
-func TestEconomicValidator(t *testing.T) {
-	config := NewDefaultConfig()
-	config.SimulationCounts["Economic"] = 100
-	validator := NewEconomicValidator(config)
+			if result.SimulationCount != tt.simulationCount {
+				t.Errorf("Expected %d simulations, got %d", tt.simulationCount, result.SimulationCount)
+			}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-	defer cancel()
+			// Verify expected metrics exist
+			for _, metric := range tt.expectedMetrics {
+				if _, ok := result.Metrics[metric]; !ok {
+					t.Errorf("Missing metric: %s", metric)
+				}
+			}
 
-	result, err := validator.Validate(ctx)
-	if err != nil {
-		t.Fatalf("Economic validation failed: %v", err)
-	}
-
-	if result.Domain != "Economic" {
-		t.Errorf("Expected domain 'Economic', got '%s'", result.Domain)
-	}
-
-	expectedMetrics := []string{
-		"loot_value_correlation",
-		"crafting_profit_margin",
-		"gold_sink_ratio",
-	}
-	for _, metric := range expectedMetrics {
-		if _, ok := result.Metrics[metric]; !ok {
-			t.Errorf("Missing metric: %s", metric)
-		}
-	}
-
-	t.Logf("Economic Balance: Passed=%v, Issues=%d, Duration=%.2fs",
-		result.Passed, len(result.Issues), result.Duration)
-	for key, value := range result.Metrics {
-		t.Logf("  %s: %.4f", key, value)
+			// Log results
+			t.Logf("%s Balance: Passed=%v, Issues=%d, Duration=%.2fs",
+				tt.name, result.Passed, len(result.Issues), result.Duration)
+			for key, value := range result.Metrics {
+				t.Logf("  %s: %.4f", key, value)
+			}
+			for _, issue := range result.Issues {
+				t.Logf("  ISSUE: %s", issue)
+			}
+		})
 	}
 }
 

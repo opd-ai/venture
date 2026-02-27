@@ -104,16 +104,23 @@ Buoyancy calculation for an entity:
 		Mass:   500.0,  // 500 kg
 		Volume: 2.0,    // 2 m³
 	}
-	fluids.UpdateDensity(buoyancy)  // Density = 250 kg/m³
 
 	// Calculate buoyancy in water
 	calc := fluids.NewBuoyancyCalculator(9.81)
+	calc.UpdateDensity(buoyancy)  // Density = 250 kg/m³ (new method)
 	calc.CalculateBuoyancy(buoyancy, 1.0, fluids.FluidWater)
 
 	if buoyancy.Buoyant {
 		// Boat floats (water density 1000 kg/m³ > boat density 250 kg/m³)
 		logrus.Info("Floating!")
 	}
+
+	// Alternative: Use package-level function for convenience
+	buoyancy2 := &fluids.BuoyancyComponent{
+		Mass:   500.0,
+		Volume: 2.0,
+	}
+	fluids.UpdateDensity(buoyancy2)  // Package-level function
 
 Swimming mechanics:
 
@@ -158,6 +165,43 @@ Flooding system:
 	// Check flood status
 	if floodMgr.IsFullyFlooded(flooding) {
 		logrus.Info("Room completely flooded!")
+	}
+
+# Safe Grid Inspection
+
+GetGrid() returns a shallow copy of the simulation grid for read-only inspection.
+To safely access grid data, copy the cells you need immediately:
+
+	grid := simulator.GetGrid()
+
+	// Safe: Copy cells for later use
+	cellsCopy := make([]fluids.Cell, len(grid.Cells))
+	copy(cellsCopy, grid.Cells)
+
+	// Now iterate over the copy safely
+	for y := 0; y < grid.Height; y++ {
+		for x := 0; x < grid.Width; x++ {
+			cell := cellsCopy[y*grid.Width+x]
+			if cell.Amount > 0.5 {
+				logrus.WithFields(logrus.Fields{
+					"x": x, "y": y,
+					"fluid_type": cell.Type,
+					"amount": cell.Amount,
+				}).Debug("High fluid level detected")
+			}
+		}
+	}
+
+For single cell queries, use GetFluidAt() which provides proper locking:
+
+	// Safe: Single cell access with locking
+	amount, fluidType := simulator.GetFluidAt(50, 10)
+	if amount > 0 {
+		logrus.WithFields(logrus.Fields{
+			"x": 50, "y": 10,
+			"amount": amount,
+			"fluid_type": fluidType,
+		}).Info("Fluid present at location")
 	}
 
 # Integration with ECS

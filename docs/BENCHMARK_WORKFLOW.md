@@ -4,18 +4,18 @@ This document describes the automated performance validation workflow that ensur
 
 ## Overview
 
-The `benchmark.yml` workflow validates two critical performance targets documented in `docs/ARCHITECTURE.md`:
+The benchmark infrastructure uses shell scripts to validate two critical performance targets documented in `docs/ARCHITECTURE.md`:
 
 1. **60 FPS minimum framerate** with 2000 entities
 2. **<500MB client memory** usage
 
-## Workflow Jobs
+## Benchmark Scripts
 
-### 1. FPS Target Validation (`fps-validation`)
+### 1. FPS Target Validation
 
-**Purpose:** Validates that the ECS framework can update 2000 entities at 60+ FPS.
+**Script:** Run manually or integrate into CI
 
-**Benchmark:** `BenchmarkWorldUpdateWith2000Entities`
+**Benchmark:** `BenchmarkFPS2000Entities` in `pkg/benchmark/fps/`
 - Creates 2000 entities with Position, Velocity, Health, and Stats components
 - Uses MovementSystem for realistic update overhead
 - Measures nanoseconds per frame update
@@ -23,13 +23,18 @@ The `benchmark.yml` workflow validates two critical performance targets document
 **Target:** ≤16,666,666 ns/op (60 FPS)
 **Current Performance:** ~130,000 ns/op (~7,800 FPS) ✅
 
+**Execution:**
+```bash
+go test -bench=BenchmarkFPS2000Entities ./pkg/benchmark/fps/
+```
+
 **Failure Condition:** If ns/op exceeds 16,666,666 (below 60 FPS)
 
-### 2. Memory Target Validation (`memory-validation`)
+### 2. Memory Target Validation
 
-**Purpose:** Validates that 2000 entities stay within the 500MB memory budget.
+**Script:** `scripts/benchmark-memory.sh`
 
-**Test:** `TestMemoryBounds2000Entities`
+**Test:** `TestMemoryBounds2000Entities` in `pkg/benchmark/memory/`
 - Creates 2000 entities with multiple components
 - Measures heap allocation after stabilization
 - Compares against 500MB target
@@ -37,32 +42,42 @@ The `benchmark.yml` workflow validates two critical performance targets document
 **Target:** <500MB heap allocation
 **Current Performance:** ~2.5MB (0.5% of budget) ✅
 
+**Execution:**
+```bash
+./scripts/benchmark-memory.sh
+```
+
 **Failure Condition:** If heap allocation ≥500MB
 
-### 3. Comprehensive Benchmarks (`comprehensive-benchmarks`)
+### 3. Regression Detection
 
-**Purpose:** Runs all engine benchmarks for regression tracking.
+**Script:** `scripts/benchmark-regression.sh`
 
-**Action:** Executes `go test -bench=. -benchmem ./pkg/engine/`
+**Purpose:** Detects performance regressions across all benchmarks.
+
+**Action:** Compares current benchmarks against baseline stored in `scripts/benchmark-baseline.json`
 - Captures all benchmark results for historical comparison
-- Uploads results as artifacts (30-day retention)
-- Helps identify performance regressions across all systems
+- Detects regressions >10% slower than baseline
+- Helps identify performance degradation across all systems
 
-## Trigger Conditions
+**Execution:**
+```bash
+./scripts/benchmark-regression.sh
+```
 
-The workflow runs on:
-- Pull requests to `main` branch
-- Pushes to `main` branch
-- Manual trigger via `workflow_dispatch`
+## CI/CD Integration
 
-## Artifacts
+The benchmark infrastructure can be integrated into CI/CD pipelines:
 
-All jobs upload their results as GitHub Actions artifacts:
-- `fps-benchmark-results` - FPS validation output
-- `memory-test-results` - Memory test output
-- `comprehensive-benchmark-results` - All benchmark results
+**Recommended Approach:**
+1. Run `scripts/benchmark-memory.sh` on each PR to validate memory targets
+2. Run FPS benchmarks periodically (weekly/monthly) due to X11 display requirement
+3. Use `scripts/benchmark-regression.sh` to detect gradual performance degradation
 
-Artifacts are retained for 30 days for historical analysis.
+**Display Server Requirement:**
+- FPS benchmarks require X11/Wayland display (Ebiten dependency)
+- Memory benchmarks are headless-compatible and suitable for standard CI
+- For headless FPS testing, use Xvfb: `xvfb-run go test -bench=. ./pkg/benchmark/fps/`
 
 ## Interpreting Results
 
@@ -133,34 +148,37 @@ Contains three key functions:
 
 ## Related Files
 
-- `.github/workflows/benchmark.yml` - Workflow definition
-- `pkg/engine/performance_targets_test.go` - Test implementation
+- `pkg/benchmark/fps/` - FPS benchmark tests (see fps/README.md)
+- `pkg/benchmark/memory/` - Memory validation tests (see memory/README.md)
 - `docs/ARCHITECTURE.md` - Performance target documentation
-- `scripts/benchmark-baseline.json` - Additional benchmark baselines
+- `scripts/benchmark-memory.sh` - Memory validation script
+- `scripts/benchmark-baseline.json` - Benchmark baselines for regression detection
 - `scripts/benchmark-regression.sh` - Regression detection script
 
 ## Future Enhancements
 
-Potential improvements to the benchmark workflow:
+Potential improvements to the benchmark infrastructure:
 
-1. **Trend Analysis:** Compare against previous runs to detect gradual regressions
-2. **Platform Matrix:** Run on multiple OS/architectures
-3. **Collision Benchmarks:** Add optimized collision system benchmarks
-4. **Rendering Benchmarks:** Add sprite generation/rendering performance tests
-5. **Network Benchmarks:** Add packet serialization performance tests
+1. **GitHub Actions Workflow:** Create `.github/workflows/benchmark.yml` to automate benchmark execution on PR/push events
+2. **Trend Analysis:** Enhanced historical comparison beyond current baseline approach
+3. **Platform Matrix:** Run on multiple OS/architectures
+4. **Collision Benchmarks:** Add optimized collision system benchmarks
+5. **Rendering Benchmarks:** Add sprite generation/rendering performance tests
+6. **Network Benchmarks:** Add packet serialization performance tests
 
 ## Maintenance
 
 When updating performance targets:
 
 1. Update targets in `docs/ARCHITECTURE.md`
-2. Update `MAX_NS_PER_FRAME` in workflow (line 62)
-3. Update memory target check in workflow (line 147)
-4. Update this documentation
+2. Update constants in `pkg/benchmark/fps/fps_test.go` (MAX_NS_PER_FRAME)
+3. Update threshold in `pkg/benchmark/memory/memory_test.go`
+4. Update `scripts/benchmark-baseline.json` baseline values
+5. Update this documentation
 
 When adding new benchmarks:
 
-1. Add to `pkg/engine/*_test.go` with `Benchmark` prefix
-2. Consider adding to `scripts/benchmark-baseline.json`
-3. Update workflow if specific validation is needed
+1. Add to `pkg/benchmark/fps/` or `pkg/benchmark/memory/` with appropriate prefix
+2. Update `scripts/benchmark-baseline.json` with new baseline
+3. Document in respective README.md files
 4. Update this documentation

@@ -187,6 +187,9 @@ func (s *Simulator) advect(deltaTime float64) {
 	}
 
 	// Copy current grid to target buffer
+	// Note: Using copy() row-by-row ensures correctness during double-buffering.
+	// While pointer swapping would be faster, it would be unsafe as it could
+	// expose partially-updated state to concurrent readers of the grid.
 	for y := 0; y < s.grid.Height; y++ {
 		copy(targetBuffer[y], s.grid.Cells[y])
 	}

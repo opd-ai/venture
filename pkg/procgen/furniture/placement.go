@@ -100,8 +100,8 @@ func (pv *PlacementValidator) GetPlacementCount() int {
 	return len(pv.Placements)
 }
 
-// GetOccupancy returns the percentage of room floor space occupied
-func (pv *PlacementValidator) GetOccupancy() float64 {
+// GetOccupancyPercent returns the percentage of room floor space occupied (0-100)
+func (pv *PlacementValidator) GetOccupancyPercent() float64 {
 	totalArea := pv.RoomWidth * pv.RoomHeight
 	if totalArea == 0 {
 		return 0

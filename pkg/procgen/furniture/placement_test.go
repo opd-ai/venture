@@ -200,7 +200,7 @@ func TestClear(t *testing.T) {
 	}
 }
 
-func TestGetOccupancy(t *testing.T) {
+func TestGetOccupancyPercent(t *testing.T) {
 	validator := NewPlacementValidator(10.0, 10.0) // 100 tiles
 
 	gen := NewGenerator()
@@ -215,7 +215,7 @@ func TestGetOccupancy(t *testing.T) {
 	furniture := result.(*Furniture)
 
 	// Initial occupancy should be 0
-	occupancy := validator.GetOccupancy()
+	occupancy := validator.GetOccupancyPercent()
 	if occupancy != 0.0 {
 		t.Errorf("Initial occupancy = %.1f%%, want 0%%", occupancy)
 	}
@@ -223,7 +223,7 @@ func TestGetOccupancy(t *testing.T) {
 	// Place furniture
 	validator.PlaceFurniture(furniture, 2.0, 2.0, DirNorth)
 
-	occupancy = validator.GetOccupancy()
+	occupancy = validator.GetOccupancyPercent()
 	if occupancy <= 0.0 || occupancy > 100.0 {
 		t.Errorf("Occupancy = %.1f%%, want >0 and <=100", occupancy)
 	}

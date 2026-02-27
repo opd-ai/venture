@@ -181,7 +181,7 @@ This package integrates with:
 		}
 	}
 
-	logrus.WithField("occupancy_percent", validator.GetOccupancy()).Info("room furnishing complete")
+	logrus.WithField("occupancy_percent", validator.GetOccupancyPercent()).Info("room furnishing complete")
 
 # Future Enhancements
 

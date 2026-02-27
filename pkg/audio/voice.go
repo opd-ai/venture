@@ -243,9 +243,16 @@ func (p *VoiceProcessor) IsEnabled() bool {
 // that the encoded audio will be transmitted to via the transport layer.
 // Samples are accumulated in an internal buffer and encoded into frames
 // when enough data is available.
+//
+// Returns an error if channelID is empty or if transport transmission fails.
 func (p *VoiceProcessor) ProcessInput(channelID string, samples []float64) error {
 	if !p.enabled || len(samples) == 0 {
 		return nil
+	}
+
+	// Validate channelID is non-empty
+	if channelID == "" {
+		return fmt.Errorf("channelID cannot be empty")
 	}
 
 	// Accumulate samples in buffer

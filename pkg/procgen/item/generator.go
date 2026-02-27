@@ -95,8 +95,7 @@ func (g *ItemGenerator) Generate(seed int64, params procgen.GenerationParams) (i
 
 	items := make([]*Item, count)
 	for i := 0; i < count; i++ {
-		itemSeed := seed + int64(i)*1000
-		items[i] = g.generateSingleItem(itemSeed, params, itemTypeFilter, i, rng)
+		items[i] = g.generateSingleItem(seed, params, itemTypeFilter, i, rng)
 	}
 
 	typeFilter := "all"
@@ -139,8 +138,10 @@ func (g *ItemGenerator) getItemTypeFilter(params procgen.GenerationParams) *Item
 	return &itemType
 }
 
-// generateSingleItem creates one item.
-func (g *ItemGenerator) generateSingleItem(seed int64, params procgen.GenerationParams, itemTypeFilter *ItemType, index int, rng *rand.Rand) *Item {
+// generateSingleItem creates one item using the provided random number generator.
+// The rng parameter should be initialized with the desired seed for deterministic generation.
+// baseSeed is used for the Item.Seed field to enable reproducibility.
+func (g *ItemGenerator) generateSingleItem(baseSeed int64, params procgen.GenerationParams, itemTypeFilter *ItemType, index int, rng *rand.Rand) *Item {
 	// Determine item type
 	itemType := g.determineItemType(itemTypeFilter, rng)
 
@@ -174,7 +175,7 @@ func (g *ItemGenerator) generateSingleItem(seed int64, params procgen.Generation
 		WeaponType:     template.WeaponType,
 		ArmorType:      template.ArmorType,
 		ConsumableType: template.ConsumableType,
-		Seed:           seed,
+		Seed:           baseSeed + int64(index)*1000, // Unique seed per item
 		Tags:           make([]string, len(template.Tags)),
 	}
 	copy(item.Tags, template.Tags)

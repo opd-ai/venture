@@ -135,6 +135,50 @@ func TestGetNetForce(t *testing.T) {
 	}
 }
 
+func TestBuoyancyCalculator_UpdateDensity(t *testing.T) {
+	calc := NewBuoyancyCalculator(9.81)
+
+	tests := []struct {
+		name            string
+		mass            float64
+		volume          float64
+		expectedDensity float64
+	}{
+		{"Wood", 500.0, 2.0, 250.0},
+		{"Water", 1000.0, 1.0, 1000.0},
+		{"Steel", 7850.0, 1.0, 7850.0},
+		{"Cork", 240.0, 1.0, 240.0},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			component := &BuoyancyComponent{
+				Mass:   tt.mass,
+				Volume: tt.volume,
+			}
+			calc.UpdateDensity(component)
+
+			if component.Density != tt.expectedDensity {
+				t.Errorf("Density = %v, want %v", component.Density, tt.expectedDensity)
+			}
+		})
+	}
+}
+
+func TestBuoyancyCalculator_UpdateDensity_ZeroVolume(t *testing.T) {
+	calc := NewBuoyancyCalculator(9.81)
+	component := &BuoyancyComponent{
+		Mass:   100.0,
+		Volume: 0.0,
+	}
+	calc.UpdateDensity(component)
+
+	// Should not panic, density should remain 0
+	if component.Density != 0.0 {
+		t.Errorf("Density = %v, want 0.0 for zero volume", component.Density)
+	}
+}
+
 func TestNewSwimmingManager(t *testing.T) {
 	mgr := NewSwimmingManager(9.81)
 
@@ -499,5 +543,18 @@ func BenchmarkGetNetForce(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		_ = calc.GetNetForce(component)
+	}
+}
+
+func BenchmarkBuoyancyCalculator_UpdateDensity(b *testing.B) {
+	calc := NewBuoyancyCalculator(9.81)
+	component := &BuoyancyComponent{
+		Mass:   500.0,
+		Volume: 2.0,
+	}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		calc.UpdateDensity(component)
 	}
 }

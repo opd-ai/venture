@@ -23,7 +23,7 @@ The destruction package provides building structural integrity tracking, damage 
 None
 
 ### Medium Severity
-- [ ] **Documentation** — `doc.go:64` contains example code with `log.Println` instead of structured logging with logrus.WithFields (violates coding guideline for structured logging in examples)
+- [x] **Documentation** — `doc.go:64` contains example code with `log.Println` instead of structured logging with logrus.WithFields (violates coding guideline for structured logging in examples) — **RESOLVED 2026-02-27: Replaced log.Println with logrus.WithFields example showing structured logging with building_id and state fields**
 
 ### Low Severity
 - [ ] **API Consistency** — `types.go:21-34` String() method for IntegrityState has no doc comment (should document the String() method explicitly even though it's standard)

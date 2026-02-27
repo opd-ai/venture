@@ -77,6 +77,11 @@
 //   - Track fade over time
 //   - Performance impact on soft surfaces
 //
+// Use GetTerrainTypeFromTile() to map terrain tile types to deformation types:
+//
+//	tileType := world.GetTile(int(vehicleX/tileSize), int(vehicleY/tileSize))
+//	deformation.TerrainType = vehicle.GetTerrainTypeFromTile(tileType)
+//
 // # Vehicle Physics System
 //
 // EnhancedVehicleSystem integrates all components for complete vehicle simulation.

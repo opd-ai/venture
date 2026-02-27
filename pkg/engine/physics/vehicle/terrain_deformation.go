@@ -116,6 +116,33 @@ func (t *TerrainDeformationComponent) GetTrackCount() int {
 
 // GetTerrainTypeFromTile converts a tile type to terrain type for deformation.
 // This is a helper function for integration with the terrain system.
+//
+// The function maps pkg/procgen/terrain.TileType constants to TerrainType values
+// used by the vehicle physics system. This allows vehicles to respond appropriately
+// to different terrain surfaces.
+//
+// Terrain type mappings:
+//   - Hard (concrete, metal): TileWall (0), TileFloor (1) - minimal deformation, no track marks
+//   - Firm (packed dirt, stone): TileCorridor (2), TileDoor (3), default - slight deformation
+//   - Soft (mud, sand, snow): TileTree (11) - deep track marks, performance impact
+//   - Water: TileWaterShallow (4), TileWaterDeep (5) - buoyancy effects, no tracks
+//
+// Example usage in a terrain interaction system:
+//
+//	// Get tile type from world at vehicle position
+//	tileX, tileY := int(vehicleX/tileSize), int(vehicleY/tileSize)
+//	tileType := world.GetTile(tileX, tileY)
+//
+//	// Convert to terrain type for vehicle physics
+//	terrainType := vehicle.GetTerrainTypeFromTile(tileType)
+//
+//	// Apply terrain-specific effects
+//	deformationComp.TerrainType = terrainType
+//	if terrainType == vehicle.TerrainSoft {
+//		// Reduce vehicle speed on soft terrain
+//		velocityComp.X *= 0.7
+//		velocityComp.Y *= 0.7
+//	}
 func GetTerrainTypeFromTile(tileType int) TerrainType {
 	// Map terrain tile types to deformation types
 	// These constants should match pkg/procgen/terrain.TileType

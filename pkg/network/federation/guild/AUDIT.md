@@ -34,7 +34,7 @@ None found.
 ### Low Severity
 - [ ] **Documentation** — Package-level `doc.go` exists but individual files lack file-level comments explaining their purpose in the larger architecture (`constants.go:1`, `treasury.go:1`, `persistence.go:1`)
 - [ ] **Time Dependency** — `time_provider.go:23` uses `time.Now()` in production RealTimeProvider, which is non-deterministic. This is acceptable for timestamps but documented here for awareness. The package correctly provides MockTimeProvider for deterministic testing.
-- [ ] **API Consistency** — `Manager.SetServerID()` method exists (`federation.go:39`) but is redundant with `WithServerID()` constructor option; prefer single initialization path via functional options to avoid runtime ID changes
+- [x] **API Consistency** — `Manager.SetServerID()` method exists (`federation.go:39`) but is redundant with `WithServerID()` constructor option; prefer single initialization path via functional options to avoid runtime ID changes **COMPLETED 2026-02-27** - Removed SetServerID() method, updated all test usages to use WithServerID() functional option. Coverage: 93.5%
 - [x] **Test Coverage Gap** — No tests for `HandleGuildMessage()` with invalid/malformed JSON payloads to verify error handling robustness; current tests focus on happy paths **COMPLETED 2026-02-27** - Added comprehensive tests for malformed JSON payloads: TestHandleGuildMessage_MalformedJSON (9 test cases covering unmarshalable channels, incompatible types, invalid structures for all message types), TestHandleGuildMessage_JSONEdgeCases (deeply nested invalid JSON), and TestHandleGuildMessage_NilData (4 test cases for nil data payloads). All 14 new tests pass.
 
 ## Input Integration

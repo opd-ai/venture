@@ -15,7 +15,10 @@
 //	profiler := performance.NewMemoryProfiler()
 //	profiler.TrackAllocation("raid_dungeons", 1024*1024*50) // 50MB
 //	stats := profiler.GetStats()
-//	fmt.Printf("Total Memory: %d MB\n", stats.TotalMB)
+//	logrus.WithFields(logrus.Fields{
+//	    "total_mb": stats.TotalMB,
+//	    "peak_mb": stats.PeakMB,
+//	}).Info("memory profiler stats")
 //
 // # Network Batching
 //

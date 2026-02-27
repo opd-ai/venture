@@ -26,7 +26,7 @@ None
 None
 
 ### Low Severity
-- [ ] **Documentation** — doc.go line 76 contains example code using `fmt.Println` which could be misleading; suggest wrapping in `// Example:` comment or code block (`doc.go:76`)
+- [x] **Documentation** — doc.go line 76 contains example code using `fmt.Println` which could be misleading; suggest wrapping in `// Example:` comment or code block (`doc.go:76`) — **RESOLVED 2026-02-27: Replaced fmt.Println with clarifying comment explaining this is example code for UI display, with logrus example for production logging**
 
 ## Input Integration
 | Input Source | Status | Notes |

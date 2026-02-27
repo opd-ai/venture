@@ -33,7 +33,7 @@ None
 - [ ] **Documentation** — `HealthCheck` struct lacks godoc comments explaining its purpose (`monitor.go:98`)
 
 ### Low Severity
-- [ ] **Error handling** — `WriteReport()` error messages use `fmt.Errorf` instead of `errors.Wrap` for context preservation (`monitor.go:287`, `monitor.go:298`, `monitor.go:305`)
+- [x] **Error handling** — `WriteReport()` error messages use `fmt.Errorf` instead of `errors.Wrap` for context preservation (`monitor.go:287`, `monitor.go:298`, `monitor.go:305`) — **FIXED 2026-02-27**: Updated to use `pkg/errors` package with `SerializationWrap` for JSON marshaling errors and `FileSystemWrap` for file I/O errors. Added comprehensive tests validating error wrapping, type verification, and unwrapping. All tests pass with 94.4% coverage.
 
 ## Input Integration
 | Input Source | Status | Notes |

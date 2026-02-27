@@ -72,10 +72,11 @@ Errors can provide both technical and user-friendly messages:
 	err := errors.Network("TCP connection refused on 127.0.0.1:8080")
 	err.UserMessage = "Cannot connect to game server. Please check your network."
 
-	// For display to users
-	fmt.Println(err.GetUserMessage()) // "Cannot connect to game server..."
+	// For display to users:
+	// In production UI code, use err.GetUserMessage() for user-facing error dialogs.
+	// Example (simplified): userMsg := err.GetUserMessage()
 
-	// For logs (using logrus structured logging)
+	// For logs (using logrus structured logging):
 	logrus.WithError(err).Error("network connection failed") // "[Network] TCP connection refused..."
 
 # Retryability

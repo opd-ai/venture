@@ -26,9 +26,9 @@ None found.
 - [ ] **ECS Integration** — Package defines components but does not register them in ECS World or expose registration function. Components must be manually registered by consuming code. Consider adding `RegisterComponents(world *World)` helper. (`types.go:74-188`)
 
 ### Low Severity
-- [ ] **Documentation** — `GetGrid()` docstring warning about shallow copy and concurrent access is thorough but could be complemented by example of safe usage pattern in `doc.go`. (`simulator.go:325-348`)
-- [ ] **Performance Note** — `advect()` uses `copy()` on each row during double-buffering. Consider documenting that this is intentional for correctness vs. using pointers which would be faster but unsafe. (`simulator.go:190-192`)
-- [ ] **API Consistency** — `UpdateDensity()` is a package-level function rather than a method on `BuoyancyCalculator`. Consider moving it to `BuoyancyCalculator.UpdateDensity(component)` for API consistency. (`buoyancy_calculator.go:54-58`)
+- [x] **Documentation** — `GetGrid()` docstring warning about shallow copy and concurrent access is thorough but could be complemented by example of safe usage pattern in `doc.go`. (`simulator.go:325-348`) — FIXED: Added "Safe Grid Inspection" section to doc.go with two usage patterns: (1) copying cells for iteration and (2) using GetFluidAt() for single-cell queries with proper locking
+- [x] **Performance Note** — `advect()` uses `copy()` on each row during double-buffering. Consider documenting that this is intentional for correctness vs. using pointers which would be faster but unsafe. (`simulator.go:190-192`) — FIXED: Added comment explaining copy() is intentional for correctness (prevents exposing partially-updated state to concurrent readers)
+- [x] **API Consistency** — `UpdateDensity()` is a package-level function rather than a method on `BuoyancyCalculator`. Consider moving it to `BuoyancyCalculator.UpdateDensity(component)` for API consistency. (`buoyancy_calculator.go:54-58`) — FIXED: Added BuoyancyCalculator.UpdateDensity() method with comprehensive tests and benchmark. Package-level function retained for backward compatibility with clear godoc guidance
 
 ## Input Integration
 | Input Source | Status | Notes |

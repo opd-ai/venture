@@ -7,11 +7,22 @@ import (
 	"time"
 )
 
+// testTimestamp is a fixed timestamp for deterministic testing
+const testTimestamp = int64(1640000000)
+
+// setupTestTime configures a fixed time provider for deterministic tests
+func setupTestTime(t *testing.T) {
+	t.Helper()
+	SetTimeProvider(FixedTimeProvider{Timestamp: testTimestamp})
+	t.Cleanup(ResetTimeProvider)
+}
+
 func TestPlayerChoiceBasics(t *testing.T) {
+	setupTestTime(t)
 	choice := &PlayerChoice{
 		ChoiceID:    "test_choice_1",
 		StoryNodeID: "node_1",
-		Timestamp:   time.Now().Unix(),
+		Timestamp:   testTimestamp,
 		MoralAlignment: &AlignmentShift{
 			GoodEvil: 0.5,
 			LawChaos: -0.2,
@@ -194,13 +205,14 @@ func TestNewChoiceTracker(t *testing.T) {
 }
 
 func TestRecordChoice(t *testing.T) {
+	setupTestTime(t)
 	tracker := NewChoiceTracker()
 	playerID := "player_1"
 
 	choice := &PlayerChoice{
 		ChoiceID:    "choice_save_village",
 		StoryNodeID: "village_attack",
-		Timestamp:   time.Now().Unix(),
+		Timestamp:   testTimestamp,
 		MoralAlignment: &AlignmentShift{
 			GoodEvil:      0.3,
 			LawChaos:      0.1,
@@ -235,6 +247,7 @@ func TestRecordChoice(t *testing.T) {
 }
 
 func TestRecordChoiceErrors(t *testing.T) {
+	setupTestTime(t)
 	tracker := NewChoiceTracker()
 
 	tests := []struct {
@@ -259,7 +272,7 @@ func TestRecordChoiceErrors(t *testing.T) {
 			choice: &PlayerChoice{
 				ChoiceID:    "test",
 				StoryNodeID: "node",
-				Timestamp:   time.Now().Unix(),
+				Timestamp:   testTimestamp,
 			},
 			wantErr: false,
 		},
@@ -276,6 +289,7 @@ func TestRecordChoiceErrors(t *testing.T) {
 }
 
 func TestChoiceLimitEnforcement(t *testing.T) {
+	setupTestTime(t)
 	tracker := NewChoiceTracker()
 	tracker.choiceLimit = 10 // Set low limit for testing
 	playerID := "player_test"
@@ -285,7 +299,7 @@ func TestChoiceLimitEnforcement(t *testing.T) {
 		choice := &PlayerChoice{
 			ChoiceID:     "choice_" + string(rune('a'+i)),
 			StoryNodeID:  "node",
-			Timestamp:    time.Now().Unix(),
+			Timestamp:    testTimestamp,
 			Irreversible: i%2 == 0, // Half are irreversible
 		}
 		tracker.RecordChoice(playerID, choice)
@@ -298,6 +312,7 @@ func TestChoiceLimitEnforcement(t *testing.T) {
 }
 
 func TestIsContentAvailable(t *testing.T) {
+	setupTestTime(t)
 	tracker := NewChoiceTracker()
 	playerID := "player_1"
 
@@ -310,7 +325,7 @@ func TestIsContentAvailable(t *testing.T) {
 	choice := &PlayerChoice{
 		ChoiceID:     "choice_betray_guild",
 		StoryNodeID:  "guild_confrontation",
-		Timestamp:    time.Now().Unix(),
+		Timestamp:    testTimestamp,
 		Irreversible: true,
 		Consequences: []string{"lock_quest_forbidden"},
 	}
@@ -383,7 +398,7 @@ func TestAllLockTypes(t *testing.T) {
 			choice := &PlayerChoice{
 				ChoiceID:     "test_choice",
 				StoryNodeID:  "test_node",
-				Timestamp:    time.Now().Unix(),
+				Timestamp:    testTimestamp,
 				Irreversible: true,
 				Consequences: []string{tt.consequence},
 			}
@@ -417,6 +432,7 @@ func TestAllLockTypes(t *testing.T) {
 }
 
 func TestGetNPCAttitude(t *testing.T) {
+	setupTestTime(t)
 	tracker := NewChoiceTracker()
 	playerID := "player_1"
 	npcID := "merchant_john"
@@ -431,7 +447,7 @@ func TestGetNPCAttitude(t *testing.T) {
 	choice := &PlayerChoice{
 		ChoiceID:    "help_merchant",
 		StoryNodeID: "merchant_trouble",
-		Timestamp:   time.Now().Unix(),
+		Timestamp:   testTimestamp,
 		MoralAlignment: &AlignmentShift{
 			GoodEvil:      0.5,
 			HonorDishonor: 0.3,
@@ -473,6 +489,7 @@ func TestRegisterQuestBranch(t *testing.T) {
 }
 
 func TestIsQuestBranchAvailable(t *testing.T) {
+	setupTestTime(t)
 	tracker := NewChoiceTracker()
 	playerID := "player_1"
 
@@ -493,7 +510,7 @@ func TestIsQuestBranchAvailable(t *testing.T) {
 	tracker.RecordChoice(playerID, &PlayerChoice{
 		ChoiceID:    "choice_study_magic",
 		StoryNodeID: "magic_academy",
-		Timestamp:   time.Now().Unix(),
+		Timestamp:   testTimestamp,
 	})
 
 	// Still missing one prerequisite
@@ -505,7 +522,7 @@ func TestIsQuestBranchAvailable(t *testing.T) {
 	tracker.RecordChoice(playerID, &PlayerChoice{
 		ChoiceID:    "choice_reject_warriors",
 		StoryNodeID: "warrior_guild",
-		Timestamp:   time.Now().Unix(),
+		Timestamp:   testTimestamp,
 	})
 
 	// Now branch should be available
@@ -612,7 +629,7 @@ func TestIsClassQuestAvailable(t *testing.T) {
 				choice := &PlayerChoice{
 					ChoiceID:       "setup",
 					StoryNodeID:    "test",
-					Timestamp:      time.Now().Unix(),
+					Timestamp:      testTimestamp,
 					MoralAlignment: tt.alignment,
 				}
 				tracker.RecordChoice(testPlayerID, choice)
@@ -681,6 +698,7 @@ func TestCompanionReactionLimit(t *testing.T) {
 }
 
 func TestSaveLoad(t *testing.T) {
+	setupTestTime(t)
 	tracker := NewChoiceTracker()
 	playerID := "player_save_test"
 
@@ -689,7 +707,7 @@ func TestSaveLoad(t *testing.T) {
 		choice := &PlayerChoice{
 			ChoiceID:    "choice_" + string(rune('a'+i)),
 			StoryNodeID: "node",
-			Timestamp:   time.Now().Unix(),
+			Timestamp:   testTimestamp,
 			MoralAlignment: &AlignmentShift{
 				GoodEvil: 0.1 * float64(i),
 			},
@@ -742,6 +760,7 @@ func TestGetAlignment(t *testing.T) {
 }
 
 func TestGetCompanionReactionsEmpty(t *testing.T) {
+	setupTestTime(t)
 	tracker := NewChoiceTracker()
 
 	reactions := tracker.GetCompanionReactions("nonexistent", "companion")
@@ -760,7 +779,7 @@ func BenchmarkRecordChoice(b *testing.B) {
 		choice := &PlayerChoice{
 			ChoiceID:    "choice_bench",
 			StoryNodeID: "node",
-			Timestamp:   time.Now().Unix(),
+			Timestamp:   testTimestamp,
 			MoralAlignment: &AlignmentShift{
 				GoodEvil: 0.1,
 			},
@@ -778,7 +797,7 @@ func BenchmarkIsContentAvailable(b *testing.B) {
 		choice := &PlayerChoice{
 			ChoiceID:     "choice_" + string(rune('a'+i)),
 			StoryNodeID:  "node",
-			Timestamp:    time.Now().Unix(),
+			Timestamp:    testTimestamp,
 			Irreversible: true,
 			Consequences: []string{"lock_quest_" + string(rune('a'+i))},
 		}
@@ -800,7 +819,7 @@ func BenchmarkGetNPCAttitude(b *testing.B) {
 	choice := &PlayerChoice{
 		ChoiceID:     "choice_test",
 		StoryNodeID:  "node",
-		Timestamp:    time.Now().Unix(),
+		Timestamp:    testTimestamp,
 		NPCsAffected: []string{npcID},
 	}
 	tracker.RecordChoice(playerID, choice)
@@ -819,7 +838,7 @@ func BenchmarkGetAlignment(b *testing.B) {
 	choice := &PlayerChoice{
 		ChoiceID:    "choice_test",
 		StoryNodeID: "node",
-		Timestamp:   time.Now().Unix(),
+		Timestamp:   testTimestamp,
 		MoralAlignment: &AlignmentShift{
 			GoodEvil: 0.5,
 		},
@@ -882,6 +901,7 @@ func TestRealTimeProvider(t *testing.T) {
 }
 
 func TestIsContentAvailableThreadSafety(t *testing.T) {
+	setupTestTime(t)
 	// Test that IsContentAvailable properly handles the unlock path
 	// without data races (uses write lock when deleting)
 	tracker := NewChoiceTracker()
@@ -891,7 +911,7 @@ func TestIsContentAvailableThreadSafety(t *testing.T) {
 	choice := &PlayerChoice{
 		ChoiceID:     "initial_choice",
 		StoryNodeID:  "test_node",
-		Timestamp:    time.Now().Unix(),
+		Timestamp:    testTimestamp,
 		Irreversible: true,
 		Consequences: []string{"lock_quest_test_content"},
 	}
@@ -914,7 +934,7 @@ func TestIsContentAvailableThreadSafety(t *testing.T) {
 	unlockChoice := &PlayerChoice{
 		ChoiceID:    "unlock_choice",
 		StoryNodeID: "test_node",
-		Timestamp:   time.Now().Unix(),
+		Timestamp:   testTimestamp,
 	}
 	tracker.RecordChoice(playerID, unlockChoice)
 

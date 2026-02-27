@@ -13,7 +13,6 @@ package main
 
 import (
 	"fmt"
-	"time"
 )
 
 func main() {
@@ -164,10 +163,4 @@ func demonstrateFrameProgression() {
 	fmt.Printf("Note: At 60 FPS, animation frame changes approximately every %.0f game frames\n",
 		frameTime/(1.0/60.0))
 	fmt.Println()
-}
-
-// init demonstrates initialization timing
-func init() {
-	// Record start time for demonstration
-	_ = time.Now()
 }

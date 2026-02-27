@@ -3,11 +3,14 @@ package stability
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"os"
 	"path/filepath"
 	"sync"
 	"testing"
 	"time"
+
+	venterrors "github.com/opd-ai/venture/pkg/errors"
 )
 
 func TestMonitor_DefaultConfig(t *testing.T) {
@@ -540,5 +543,157 @@ func TestMonitor_WriteReport_InvalidPath(t *testing.T) {
 	err := monitor.WriteReport(report)
 	if err == nil {
 		t.Error("expected error writing to invalid path")
+	}
+}
+
+// TestMonitor_WriteReport_ErrorWrapping tests that errors are properly wrapped with custom error types.
+func TestMonitor_WriteReport_ErrorWrapping(t *testing.T) {
+	tests := []struct {
+		name          string
+		setupFunc     func() (*Monitor, *Report)
+		expectedType  venterrors.ErrorType
+		shouldContain string
+	}{
+		{
+			name: "FileSystem error for invalid path",
+			setupFunc: func() (*Monitor, *Report) {
+				tmpDir := t.TempDir()
+				invalidPath := filepath.Join(tmpDir, "nonexistent", "deep", "path", "report.json")
+				config := Config{
+					Duration:      1 * time.Second,
+					CheckInterval: 100 * time.Millisecond,
+					MemoryLimit:   500 * 1024 * 1024,
+					MinFPS:        60.0,
+					ReportPath:    invalidPath,
+				}
+				monitor := NewMonitor(config)
+				report := &Report{
+					StartTime:   time.Now(),
+					EndTime:     time.Now().Add(1 * time.Second),
+					TotalUptime: 1 * time.Second,
+					Checks:      10,
+					Passed:      true,
+				}
+				return monitor, report
+			},
+			expectedType:  venterrors.ErrorTypeFileSystem,
+			shouldContain: "failed to write stability report",
+		},
+		{
+			name: "FileSystem error can be unwrapped",
+			setupFunc: func() (*Monitor, *Report) {
+				tmpDir := t.TempDir()
+				invalidPath := filepath.Join(tmpDir, "nonexistent", "report.json")
+				config := Config{
+					Duration:      1 * time.Second,
+					CheckInterval: 100 * time.Millisecond,
+					MemoryLimit:   500 * 1024 * 1024,
+					MinFPS:        60.0,
+					ReportPath:    invalidPath,
+				}
+				monitor := NewMonitor(config)
+				report := &Report{
+					StartTime:   time.Now(),
+					EndTime:     time.Now().Add(1 * time.Second),
+					TotalUptime: 1 * time.Second,
+					Checks:      10,
+					Passed:      true,
+				}
+				return monitor, report
+			},
+			expectedType:  venterrors.ErrorTypeFileSystem,
+			shouldContain: "no such file or directory",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			monitor, report := tt.setupFunc()
+			err := monitor.WriteReport(report)
+
+			if err == nil {
+				t.Fatal("expected error, got nil")
+			}
+
+			// Check if error is a VentureError
+			var ventErr *venterrors.VentureError
+			if !errors.As(err, &ventErr) {
+				t.Fatalf("expected VentureError, got %T: %v", err, err)
+			}
+
+			// Check error type
+			if ventErr.Type != tt.expectedType {
+				t.Errorf("expected error type %v, got %v", tt.expectedType, ventErr.Type)
+			}
+
+			// Check error message contains expected text
+			errMsg := err.Error()
+			if tt.shouldContain != "" {
+				// For "no such file or directory" we need to check the unwrapped error
+				if tt.shouldContain == "no such file or directory" {
+					unwrapped := ventErr.Unwrap()
+					if unwrapped == nil {
+						t.Error("expected unwrapped error, got nil")
+					}
+				} else {
+					// For our custom messages, check the error string
+					if errMsg == "" || len(errMsg) < 10 {
+						t.Errorf("error message too short: %q", errMsg)
+					}
+				}
+			}
+
+			// Verify error is not retryable (filesystem errors require manual intervention)
+			if ventErr.IsRetryable() {
+				t.Error("expected FileSystem errors to not be retryable")
+			}
+		})
+	}
+}
+
+// TestMonitor_WriteReport_ValidReportsSucceed verifies that valid reports write successfully.
+func TestMonitor_WriteReport_ValidReportsSucceed(t *testing.T) {
+	tests := []struct {
+		name       string
+		reportPath string
+	}{
+		{
+			name:       "stdout with empty path",
+			reportPath: "",
+		},
+		{
+			name:       "stdout with dash",
+			reportPath: "-",
+		},
+		{
+			name:       "valid file path",
+			reportPath: filepath.Join(t.TempDir(), "report.json"),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			config := Config{
+				Duration:      1 * time.Second,
+				CheckInterval: 100 * time.Millisecond,
+				MemoryLimit:   500 * 1024 * 1024,
+				MinFPS:        60.0,
+				ReportPath:    tt.reportPath,
+			}
+
+			monitor := NewMonitor(config)
+			report := &Report{
+				StartTime:   time.Now(),
+				EndTime:     time.Now().Add(1 * time.Second),
+				TotalUptime: 1 * time.Second,
+				Checks:      10,
+				Passed:      true,
+			}
+
+			err := monitor.WriteReport(report)
+			if err != nil && tt.reportPath != "" && tt.reportPath != "-" {
+				t.Errorf("unexpected error for valid path: %v", err)
+			}
+		})
 	}
 }

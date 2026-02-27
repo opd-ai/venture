@@ -16,21 +16,20 @@
 // ECS component that tracks a companion's housing integration state:
 //
 //	component := &companion_housing.CompanionHousingComponent{
-//		CompanionID:       companionEntityID,
-//		HouseID:           playerHouseID,
-//		AssignedBeddingID: "bedding_001",
+//		OwnerHouseID:      playerHouseID,
+//		BeddingID:         "bedding_001",
 //		LastRestTime:      gameTime, // Use game time from TimeProvider for determinism
-//		TrainingAreaID:    "training_001",
-//		IsTraining:        true,
-//		SharedStorageIDs:  []string{"chest_001", "chest_002"},
+//		ActiveTraining:    "training_001",
+//		TrainingBonus:     1.5,
+//		SharedChestAccess: []string{"chest_001", "chest_002"},
 //	}
 //
-// The component provides convenience methods:
-//   - IsInHouse(): Check if companion is assigned to a house
-//   - HasBedding(): Check if companion has a bed
-//   - IsTraining(): Check if currently in training session
-//   - HasSharedStorage(): Check if companion can access chests
-//   - DaysSinceRest(): Calculate rest recency for loyalty calculation
+// The component stores pure data. Use CompanionHousingSystem methods to:
+//   - Check if companion is assigned to a house (OwnerHouseID != "")
+//   - Check if companion has bedding (BeddingID != "")
+//   - Check if companion is training (ActiveTraining != "")
+//   - Check if companion has storage access (len(SharedChestAccess) > 0)
+//   - Calculate days since rest using LastRestTime
 //
 // ## PetHomeManager
 //

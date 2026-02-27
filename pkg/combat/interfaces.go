@@ -1,10 +1,4 @@
-// interfaces.go defines the combat resolution interface.
-// This file contains the CombatResolver interface which defines the contract
-// for combat calculation implementations. Concrete implementations of this
-// interface should be provided by game systems that handle combat logic.
-//
 // Package combat provides combat system interfaces and types.
-// This file defines the damage calculation interface.
 // Types have been relocated to types.go, constants to constants.go.
 package combat
 

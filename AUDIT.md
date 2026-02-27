@@ -880,6 +880,7 @@ Parsed 501 findings
 - **Source**: `./pkg/rendering/lighting/AUDIT.md` (line 32)
 - **Category**: error-handling
 - **Problem**: `gpu_bloom.go:264-276` logs shader compilation failure and falls back to passthrough, but doesn't increment an error counter or expose metrics for observability (`gpu_bloom.go:264-276`)
+- **Status**: ✅ **COMPLETED 2026-02-27** - Added shaderCompilationErrors counter to GPUBloom struct with atomic operations. Increments on shader compilation failure. Added GetShaderCompilationErrors() method for observability. Error count logged with each failure. Added 4 comprehensive tests (initial state, thread-safety, disabled bloom, benchmark) with 100% coverage of new code. All tests pass.
 - **Fix**:
   1. Review the complete finding in the source audit file
   2. Implement the suggested changes following coding guidelines

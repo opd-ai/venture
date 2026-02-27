@@ -7,6 +7,7 @@ package lighting
 
 import (
 	"sync"
+	"sync/atomic"
 
 	"github.com/hajimehoshi/ebiten/v2"
 	log "github.com/sirupsen/logrus"
@@ -158,6 +159,9 @@ type GPUBloom struct {
 	bufferWidth  int
 	bufferHeight int
 
+	// Metrics
+	shaderCompilationErrors uint64 // Count of shader compilation failures for observability
+
 	// Shader compilation mutex
 	mu sync.Mutex
 }
@@ -262,11 +266,13 @@ func (b *GPUBloom) Apply(input, dst *ebiten.Image) {
 
 	// Ensure shaders are compiled
 	if err := b.ensureShaders(); err != nil {
+		atomic.AddUint64(&b.shaderCompilationErrors, 1)
 		log.WithFields(log.Fields{
-			"system":  "lighting",
-			"subsys":  "gpu_bloom",
-			"error":   err.Error(),
-			"context": "shader_compilation",
+			"system":      "lighting",
+			"subsys":      "gpu_bloom",
+			"error":       err.Error(),
+			"context":     "shader_compilation",
+			"error_count": atomic.LoadUint64(&b.shaderCompilationErrors),
 		}).Error("Shader compilation failed, falling back to passthrough")
 		// Fallback: copy input to dst unchanged if shader compilation fails
 		if dst != nil && dst != input {
@@ -371,4 +377,11 @@ func (b *GPUBloom) Dispose() {
 		b.blurVBuffer = nil
 	}
 	// Note: Shaders don't have Dispose() in Ebiten - they're managed by runtime
+}
+
+// GetShaderCompilationErrors returns the total number of shader compilation failures.
+// This metric is useful for monitoring graphics driver compatibility issues.
+// Thread-safe via atomic operations.
+func (b *GPUBloom) GetShaderCompilationErrors() uint64 {
+	return atomic.LoadUint64(&b.shaderCompilationErrors)
 }

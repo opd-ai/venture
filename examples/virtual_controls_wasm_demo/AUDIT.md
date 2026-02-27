@@ -36,7 +36,7 @@ This is a 190-line example program demonstrating the WASM virtual controls pre-i
 ### Low Severity
 - [x] **Logging** — Uses standard library `log.Println` and `log.Printf` instead of structured logging with `logrus.WithFields`. Demo programs typically use simple logging, but structured logging would align with project standards. (`main.go:50,51,66,75,183,184,185,188`) - **FIXED 2026-02-27**: Replaced all log.Println/Printf with logrus.WithFields for structured logging
 - [x] **Error Handling** — `log.Fatal(err)` terminates program without cleanup or structured error context. Should use logrus.WithError(err).Fatal() for consistency. (`main.go:188`) - **FIXED 2026-02-27**: Replaced log.Fatal with logrus.WithError
-- [ ] **Doc Coverage** — Package doc comment is present but exported `Game` type (line 32) and exported `NewGame` function (line 41) lack godoc comments. Demo programs typically have less strict doc requirements. (`main.go:32,41`)
+- [x] **Doc Coverage** — Package doc comment is present but exported `Game` type (line 32) and exported `NewGame` function (line 41) lack godoc comments. Demo programs typically have less strict doc requirements. (`main.go:32,41`) - **ALREADY FIXED**: Godoc comments exist on lines 31 and 40 and are recognized by go doc
 - [ ] **Magic Numbers** — Screen dimensions (800x600) and UI layout coordinates are hardcoded literals. Consider defining as named constants for clarity, especially for the complex UI layout box calculations. (`main.go:27,28,131-157`)
 
 ## Input Integration
@@ -68,9 +68,9 @@ This is a 190-line example program demonstrating the WASM virtual controls pre-i
 
 ## Documentation Coverage
 - Package `doc.go`: ❌ (no separate doc.go file; package comment is in main.go)
-- Exported symbols documented: 0/2 (0%)
-  - `Game` type (line 32): ❌ Missing godoc comment
-  - `NewGame` function (line 41): ❌ Missing godoc comment
+- Exported symbols documented: 2/2 (100%)
+  - `Game` type (line 32): ✅ Godoc comment on line 31
+  - `NewGame` function (line 41): ✅ Godoc comment on line 40
 - Complex algorithms commented: ✅ (UI layout and fix explanation have inline comments)
 
 ## Integration Status

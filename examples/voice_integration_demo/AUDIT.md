@@ -34,7 +34,7 @@ Audited the `examples/voice_integration_demo` example program demonstrating voic
 ### Low Severity
 - [x] **Hardcoded Magic Numbers** — `main.go:63,65,104,109` - Hardcoded values for sample rate (44100), seed (12345), voice threshold (0.1), range (50.0, 500.0) without explanation. Add comments explaining why these values were chosen for the demo. **FIXED 2026-02-26**: Added inline comments explaining all magic numbers (44100 Hz = CD quality, seed for reproducible synthesis, 10% threshold for voice activity, 50-500 unit range for proximity chat).
 
-- [ ] **Incomplete Type** — `main.go:16-26,35-55` - `ExampleVoiceTransport` implements send/receive but `SetSpatialParams()` (line 53) is a no-op. Comment says "Optional" but spatial voice system likely needs this for volume/pan adjustment. Either implement it or document why it's omitted in this simplified example.
+- [x] **Incomplete Type** — `main.go:16-26,35-55` - `ExampleVoiceTransport` implements send/receive but `SetSpatialParams()` (line 53) is a no-op. Comment says "Optional" but spatial voice system likely needs this for volume/pan adjustment. Either implement it or document why it's omitted in this simplified example. **FIXED 2026-02-27**: Added comprehensive godoc explaining why SetSpatialParams is intentionally empty (spatial params applied client-side during playback, not during encoding). References doc.go for production requirements.
 
 ## Input Integration
 | Input Source | Status | Notes |

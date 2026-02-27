@@ -227,3 +227,65 @@ func BenchmarkGPUBloom_SetConfig(b *testing.B) {
 // Note: Full GPU tests require an Ebiten graphics context.
 // These are tested implicitly through the lighting system integration tests.
 // The shader source is validated at compile time by Ebiten's Kage compiler.
+
+// TestGPUBloom_GetShaderCompilationErrors tests the error counter metric.
+func TestGPUBloom_GetShaderCompilationErrors(t *testing.T) {
+	bloom := NewGPUBloom()
+	defer bloom.Dispose()
+
+	// Initial error count should be zero
+	initialErrors := bloom.GetShaderCompilationErrors()
+	if initialErrors != 0 {
+		t.Errorf("Initial shader compilation errors = %d, want 0", initialErrors)
+	}
+}
+
+// TestGPUBloom_GetShaderCompilationErrors_ThreadSafe tests concurrent access to error counter.
+func TestGPUBloom_GetShaderCompilationErrors_ThreadSafe(t *testing.T) {
+	bloom := NewGPUBloom()
+	defer bloom.Dispose()
+
+	// Verify the counter can be read concurrently
+	done := make(chan bool, 10)
+	for i := 0; i < 10; i++ {
+		go func() {
+			_ = bloom.GetShaderCompilationErrors()
+			done <- true
+		}()
+	}
+
+	// Wait for all goroutines
+	for i := 0; i < 10; i++ {
+		<-done
+	}
+}
+
+// TestGPUBloom_ShaderCompilationErrors_Disabled tests that no errors are counted when bloom is disabled.
+func TestGPUBloom_ShaderCompilationErrors_Disabled(t *testing.T) {
+	bloom := NewGPUBloom()
+	defer bloom.Dispose()
+
+	config := bloom.GetConfig()
+	config.Enabled = false
+	bloom.SetConfig(config)
+
+	// Apply with disabled bloom (should not try to compile shaders)
+	bloom.Apply(nil, nil)
+
+	// Error count should still be zero
+	errors := bloom.GetShaderCompilationErrors()
+	if errors != 0 {
+		t.Errorf("Shader compilation errors = %d, want 0 (bloom was disabled)", errors)
+	}
+}
+
+// BenchmarkGPUBloom_GetShaderCompilationErrors benchmarks the error counter getter.
+func BenchmarkGPUBloom_GetShaderCompilationErrors(b *testing.B) {
+	bloom := NewGPUBloom()
+	defer bloom.Dispose()
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_ = bloom.GetShaderCompilationErrors()
+	}
+}

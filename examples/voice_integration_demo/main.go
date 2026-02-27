@@ -50,8 +50,18 @@ func (t *ExampleVoiceTransport) ReceiveVoice() (string, string, []byte, bool) {
 	return packet.channelID, packet.senderID, packet.data, true
 }
 
+// SetSpatialParams is a no-op in this simplified example.
+//
+// In a real implementation, spatial parameters would be used for:
+//   - Adjusting voice quality based on distance (lower bitrate for distant players)
+//   - Implementing voice priority queues (important speakers get more bandwidth)
+//   - Client-side volume/pan adjustment before playback (not during encoding)
+//
+// This example focuses on the encoding/transmission side only. See doc.go
+// "What Real Implementation Needs" section for production requirements.
 func (t *ExampleVoiceTransport) SetSpatialParams(volume, pan float64) {
-	// Optional: use spatial parameters to adjust transmission quality
+	// Intentionally empty - spatial params are applied client-side during playback,
+	// not during encoding/transmission in this simplified example.
 }
 
 func main() {

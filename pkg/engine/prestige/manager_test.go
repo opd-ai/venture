@@ -629,7 +629,7 @@ func BenchmarkManager_GetAccountXPBonus(b *testing.B) {
 	mgr := NewManager()
 	mgr.CreatePlayer("player1", "Warrior", "account1")
 	mgr.CreatePlayer("player2", "Mage", "account1")
-	
+
 	// Simulate 3 prestige 100 characters for account bonus
 	mgr.mu.Lock()
 	mgr.accounts["account1"].Prestige100Count = 3

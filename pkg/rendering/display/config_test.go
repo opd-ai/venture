@@ -44,7 +44,10 @@ func TestNewConfig(t *testing.T) {
 }
 
 func TestNewConfigDefault(t *testing.T) {
-	cfg := NewConfigDefault()
+	cfg, err := NewConfigDefault()
+	if err != nil {
+		t.Fatalf("NewConfigDefault() returned error: %v", err)
+	}
 	if cfg.Width != 1920 {
 		t.Errorf("default Width = %d, want 1920", cfg.Width)
 	}

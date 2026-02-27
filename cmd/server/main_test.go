@@ -5,6 +5,7 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"encoding/binary"
 	"math"
 	"os"
@@ -586,7 +587,8 @@ func TestStartStabilityMonitoring(t *testing.T) {
 	serverLogger := logger.WithFields(logrus.Fields{"component": "test"})
 
 	// Start the stability monitor
-	monitor := startStabilityMonitoring(serverLogger)
+	ctx := context.Background()
+	monitor := startStabilityMonitoring(ctx, serverLogger)
 
 	// Should return a non-nil monitor
 	if monitor == nil {
@@ -603,7 +605,8 @@ func TestStartStabilityMonitoring_ConfigValues(t *testing.T) {
 	logger.SetOutput(&bytes.Buffer{})
 	serverLogger := logger.WithFields(logrus.Fields{"component": "test"})
 
-	monitor := startStabilityMonitoring(serverLogger)
+	ctx := context.Background()
+	monitor := startStabilityMonitoring(ctx, serverLogger)
 
 	if monitor == nil {
 		t.Fatal("Expected monitor to be initialized")

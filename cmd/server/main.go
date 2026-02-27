@@ -12,7 +12,9 @@ import (
 	"fmt"
 	"math"
 	"os"
+	"os/signal"
 	"sync"
+	"syscall"
 	"time"
 
 	"github.com/opd-ai/venture/pkg/config"
@@ -100,10 +102,14 @@ func main() {
 		"genre":     *genreID,
 	})
 
+	// Create root context with signal handling for graceful shutdown
+	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	defer stop()
+
 	logServerStartup(serverLogger)
 	runStartupValidations(serverLogger)
 
-	modManager, stabilityMon, networkSim, metricsCollector := initializeOptionalSystems(serverLogger)
+	modManager, stabilityMon, networkSim, metricsCollector := initializeOptionalSystems(ctx, serverLogger)
 
 	world, enhancedChatSystem := createGameWorld(logger)
 
@@ -134,9 +140,26 @@ func main() {
 	startNetworkServer(server, serverLogger)
 	logServerReady(serverLogger, world)
 
-	defer shutdownServer(serverLogger, metricsExporter, stabilityMon, metricsCollector, networkSim, server)
+	// Execute game loop and wait for shutdown signal
+	executeGameLoop(ctx, world, enhancedChatSystem, server, snapshotManager, lagCompensator, logger, serverLogger)
 
-	executeGameLoop(world, enhancedChatSystem, server, snapshotManager, lagCompensator, logger, serverLogger)
+	// Graceful shutdown with deadline
+	serverLogger.Info("shutdown signal received, initiating graceful shutdown")
+	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer shutdownCancel()
+
+	shutdownComplete := make(chan struct{})
+	go func() {
+		shutdownServer(serverLogger, metricsExporter, stabilityMon, metricsCollector, networkSim, server)
+		close(shutdownComplete)
+	}()
+
+	select {
+	case <-shutdownComplete:
+		serverLogger.Info("graceful shutdown completed")
+	case <-shutdownCtx.Done():
+		serverLogger.Error("shutdown deadline exceeded, forcing exit")
+	}
 }
 
 // validateConfiguration validates server configuration before startup.
@@ -194,7 +217,7 @@ func runStartupValidations(serverLogger *logrus.Entry) {
 }
 
 // initializeOptionalSystems initializes optional server systems based on configuration.
-func initializeOptionalSystems(serverLogger *logrus.Entry) (*modding.Manager, *stability.Monitor, *resilience.NetworkSimulator, *resilience.MetricsCollector) {
+func initializeOptionalSystems(ctx context.Context, serverLogger *logrus.Entry) (*modding.Manager, *stability.Monitor, *resilience.NetworkSimulator, *resilience.MetricsCollector) {
 	var modManager *modding.Manager
 	if *enableMods {
 		modManager = initializeModSystem(serverLogger)
@@ -202,7 +225,7 @@ func initializeOptionalSystems(serverLogger *logrus.Entry) (*modding.Manager, *s
 
 	var stabilityMon *stability.Monitor
 	if *stabilityMonitor {
-		stabilityMon = startStabilityMonitoring(serverLogger)
+		stabilityMon = startStabilityMonitoring(ctx, serverLogger)
 	}
 
 	var networkSim *resilience.NetworkSimulator
@@ -294,7 +317,7 @@ func logNetworkSimulationStats(networkSim *resilience.NetworkSimulator, serverLo
 }
 
 // executeGameLoop sets up and runs the main server game loop.
-func executeGameLoop(world *engine.World, enhancedChatSystem *engine.EnhancedChatSystem, server *network.TCPServer, snapshotManager *network.SnapshotManager, lagCompensator *network.LagCompensator, logger *logrus.Logger, serverLogger *logrus.Entry) {
+func executeGameLoop(ctx context.Context, world *engine.World, enhancedChatSystem *engine.EnhancedChatSystem, server *network.TCPServer, snapshotManager *network.SnapshotManager, lagCompensator *network.LagCompensator, logger *logrus.Logger, serverLogger *logrus.Entry) {
 	tickDuration := time.Duration(1000000000 / *tickRate)
 	ticker := time.NewTicker(tickDuration)
 	defer ticker.Stop()
@@ -306,7 +329,7 @@ func executeGameLoop(world *engine.World, enhancedChatSystem *engine.EnhancedCha
 	startErrorHandler(server, logger)
 	startPlayerManagementHandlers(server, world, nil, enhancedChatSystem, logger)
 
-	runGameLoop(world, server, snapshotManager, lagCompensator, ticker, logger, serverLogger, &lastUpdate)
+	runGameLoop(ctx, world, server, snapshotManager, lagCompensator, ticker, logger, serverLogger, &lastUpdate)
 }
 
 // initializeLogger creates and configures the server logger with appropriate settings.
@@ -778,7 +801,7 @@ func handleInputCommands(server *network.TCPServer, playerEntities map[uint64]*e
 }
 
 // runGameLoop executes the authoritative server game loop.
-func runGameLoop(world *engine.World, server *network.TCPServer, snapshotManager *network.SnapshotManager, lagCompensator *network.LagCompensator, ticker *time.Ticker, logger *logrus.Logger, serverLogger *logrus.Entry, lastUpdate *time.Time) {
+func runGameLoop(ctx context.Context, world *engine.World, server *network.TCPServer, snapshotManager *network.SnapshotManager, lagCompensator *network.LagCompensator, ticker *time.Ticker, logger *logrus.Logger, serverLogger *logrus.Entry, lastUpdate *time.Time) {
 	var performanceSystem *engine.PerformanceMonitoringSystem
 	// Extract performance system from world for metrics logging
 	for _, system := range world.GetSystems() {
@@ -790,6 +813,9 @@ func runGameLoop(world *engine.World, server *network.TCPServer, snapshotManager
 
 	for {
 		select {
+		case <-ctx.Done():
+			serverLogger.Info("game loop stopping due to shutdown signal")
+			return
 		case <-ticker.C:
 			now := time.Now()
 			deltaTime := now.Sub(*lastUpdate).Seconds()
@@ -959,7 +985,7 @@ func putFloat64(b []byte, v float64) {
 
 // startStabilityMonitoring initializes and starts the stability monitor for production validation.
 // Phase 2.3 (PLAN.md): Unconditional stability package integration
-func startStabilityMonitoring(serverLogger *logrus.Entry) *stability.Monitor {
+func startStabilityMonitoring(ctx context.Context, serverLogger *logrus.Entry) *stability.Monitor {
 	config := stability.DefaultConfig()
 	// Use shorter duration for non-production testing
 	config.Duration = 24 * time.Hour
@@ -969,7 +995,7 @@ func startStabilityMonitoring(serverLogger *logrus.Entry) *stability.Monitor {
 
 	// Start the monitor in a background goroutine to perform actual health checks
 	go func() {
-		report, err := monitor.Run(context.Background())
+		report, err := monitor.Run(ctx)
 		if err != nil {
 			serverLogger.WithError(err).Error("stability monitor encountered error")
 		}

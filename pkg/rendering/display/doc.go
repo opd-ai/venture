@@ -34,7 +34,10 @@
 //	displayConfig, err := display.NewConfig(*width, *height, *fullscreen)
 //	if err != nil {
 //	    // Fall back to default resolution
-//	    displayConfig = display.NewConfigDefault()
+//	    displayConfig, err = display.NewConfigDefault()
+//	    if err != nil {
+//	        logger.WithError(err).Fatal("failed to create display config")
+//	    }
 //	}
 //	displayManager := display.NewManager(displayConfig)
 //

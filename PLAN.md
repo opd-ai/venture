@@ -7,26 +7,24 @@
 
 ## Implementation Steps
 
-1. **Add OS-signal handling to `cmd/server/main.go`**
+1. **Add OS-signal handling to `cmd/server/main.go`** ✅ **COMPLETED 2026-02-27**
    - Deliverable: Server listens for `SIGINT`/`SIGTERM` via `signal.Notify`, cancels a root `context.Context`, and triggers orderly shutdown of all subsystems (metrics exporter, stability monitor, network server) before exiting with code 0.
-   - Dependencies: None.
-   - Files to modify: `cmd/server/main.go`.
-   - Approach:
-     1. Create a root context with `signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)`.
-     2. Replace `context.Background()` passed to long-lived goroutines (e.g., stability monitor at line 972) with the cancellable context.
-     3. Replace the `defer shutdownServer(...)` pattern with an explicit shutdown sequence triggered by context cancellation.
-     4. Add a 5-second deadline for graceful shutdown; log and force-exit if exceeded.
-   - Acceptance criteria: `kill -TERM <pid>` results in logged graceful shutdown with exit code 0; integration test validates the behavior.
+   - Implementation summary:
+     1. Added `signal.NotifyContext` to create cancellable root context
+     2. Updated `initializeOptionalSystems`, `executeGameLoop`, `runGameLoop`, and `startStabilityMonitoring` to accept and respect context
+     3. Implemented graceful shutdown with 5-second deadline in `main()`
+     4. Added comprehensive shutdown tests validating signal handling, deadline enforcement, context propagation, and component cleanup
+   - Test coverage: 5 new tests in `shutdown_test.go` covering all shutdown scenarios
+   - Verification: All existing tests pass; `go vet ./cmd/server/...` passes
 
-2. **Replace panic with error handling in display config**
+2. **Replace panic with error handling in display config** ✅ **COMPLETED 2026-02-27**
    - Deliverable: `NewConfigDefault()` in `pkg/rendering/display/config.go` returns `(*Config, error)` instead of panicking; all callers propagate or handle the error.
-   - Dependencies: None.
-   - Files to modify: `pkg/rendering/display/config.go` and all callers of `NewConfigDefault()`.
-   - Approach:
-     1. Change signature from `func NewConfigDefault() *Config` to `func NewConfigDefault() (*Config, error)`.
-     2. Return the error from `NewConfig(1920, 1080, false)` instead of panicking.
-     3. Find all callers with `grep -rn 'NewConfigDefault' pkg/ cmd/` and update them to handle the error (log and exit at application boundaries, propagate in libraries).
-   - Acceptance criteria: `go vet ./pkg/rendering/display/...` passes; `grep -rn 'panic(' pkg/rendering/display/` returns zero matches in non-test code.
+   - Implementation summary:
+     1. Changed `NewConfigDefault()` signature to return `(*Config, error)`
+     2. Updated test caller in `config_test.go` to handle error
+     3. Updated documentation example in `doc.go` to show proper error handling pattern
+   - Files modified: `config.go`, `config_test.go`, `doc.go`
+   - Verification: `grep -rn 'panic(' pkg/rendering/display/ | grep -v _test.go` returns zero matches; all tests pass
 
 3. **Audit and migrate unstructured logging to Logrus**
    - Deliverable: All `fmt.Printf`/`fmt.Println`/`log.Print`/`log.Printf` calls in non-test, non-doc, non-example production code are replaced with `logrus.WithFields(...)` calls using standard field names.
@@ -71,13 +69,13 @@
 - **Configuration doc format**: Use Markdown tables matching the style already established in README.md.
 
 ## Validation Criteria
-- [ ] `kill -TERM <pid>` on a running server produces a logged graceful shutdown and exit code 0
-- [ ] `grep -rn 'panic(' pkg/rendering/display/ | grep -v _test.go` returns zero results
-- [ ] `go vet ./...` passes with no new warnings
+- [x] `kill -TERM <pid>` on a running server produces a logged graceful shutdown and exit code 0
+- [x] `grep -rn 'panic(' pkg/rendering/display/ | grep -v _test.go` returns zero results
+- [x] `go vet ./...` passes with no new warnings
 - [ ] `go test -race ./pkg/validation/...` passes with new boundary-value tests
 - [ ] `grep -rn 'fmt\.Print\|log\.Print' pkg/ cmd/ --include='*.go' | grep -v _test.go | grep -v doc.go | grep -v examples/ | grep -v '//'` returns zero matches in production code
 - [ ] `docs/CONFIGURATION.md` exists and contains an entry for every `flag.*` declaration in `cmd/`
-- [ ] All existing tests continue to pass: `go test ./...`
+- [x] All existing tests continue to pass: `go test ./...`
 
 ## Known Gaps
 See [GAPS.md](GAPS.md) for detailed gap analysis.

@@ -212,6 +212,27 @@ The package defines three component types for ECS integration:
 	SwimmingComponent: Attach to entities that can swim
 	FloodingComponent: Attach to areas that can flood
 
+Component Registration (optional convenience):
+
+	import "github.com/opd-ai/venture/pkg/engine/physics/fluids"
+
+	// Optional: Call once during initialization for documentation clarity
+	fluids.RegisterComponentFactories()
+
+	// Components are then added to entities normally:
+	entity.AddComponent(&fluids.BuoyancyComponent{
+		Mass:   100.0,
+		Volume: 0.2,
+	})
+	entity.AddComponent(&fluids.SwimmingComponent{
+		Stamina:    100.0,
+		MaxStamina: 100.0,
+	})
+
+Note: Component registration is currently automatic via AddComponent().
+The RegisterComponentFactories() function is provided for future-proofing
+and as a documentation aid to clearly identify all fluid components.
+
 Use the Simulator, BuoyancyCalculator, SwimmingManager, and FloodingManager
 in corresponding systems to update entity state based on fluid interactions.
 

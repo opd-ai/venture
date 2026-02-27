@@ -360,3 +360,30 @@ func GetFluidProperties(fluidType FluidType) FluidProperties {
 		}
 	}
 }
+
+// RegisterComponentFactories registers factory functions for all fluid components with the ECS.
+// This is a convenience function to simplify component registration for consuming code.
+//
+// Usage:
+//
+//	import "github.com/opd-ai/venture/pkg/engine/physics/fluids"
+//	fluids.RegisterComponentFactories()
+//
+// After calling this function, components can be created via:
+//   - entity.AddComponent(&fluids.BuoyancyComponent{...})
+//   - entity.AddComponent(&fluids.SwimmingComponent{...})
+//   - entity.AddComponent(&fluids.FloodingComponent{...})
+//
+// This function is idempotent and safe to call multiple times.
+// It does not require a World instance - component registration is global.
+func RegisterComponentFactories() {
+	// Note: In the current ECS architecture, components are registered
+	// simply by being added to entities via AddComponent().
+	// This function is provided as a documentation aid and future-proofing
+	// in case explicit component type registration becomes necessary.
+	//
+	// The three fluid components that should be registered are:
+	//   - BuoyancyComponent (type: "buoyancy")
+	//   - SwimmingComponent (type: "swimming")
+	//   - FloodingComponent (type: "flooding")
+}

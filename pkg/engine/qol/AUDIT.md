@@ -23,12 +23,12 @@ Quality of Life (QoL) package provides 6 major convenience features (auto-loot, 
 None
 
 ### Medium Severity
-- [ ] **Documentation** — Missing package-level overview in doc.go explaining integration with ECS world and system update order (`doc.go:1`)
+- [x] **Documentation** — Missing package-level overview in doc.go explaining integration with ECS world and system update order (`doc.go:1`) - **COMPLETED 2026-02-27**: Added comprehensive "ECS Integration" section to doc.go documenting QoLSystemWrapper mechanism, Component attachment, system update order, and cross-system interaction flow. Explains how QoL integrates with companion AI, crafting, vehicle, inventory, guild, and UI systems.
 - [x] **API consistency** — QoLComponent lacks structured logging on serialize/deserialize errors; should use logrus.WithFields (`types.go:145-171`) - **COMPLETED 2026-02-27**: Added structured logging with logrus.WithFields to both Serialize() and Deserialize() methods. Error cases log with component_type, playerID, size_bytes, and error fields. Debug logs added for successful operations. Coverage maintained at 93.4%.
 
 ### Low Severity
-- [ ] **Documentation** — EstimateArrivalTime function could document the 1 second per tile formula more explicitly (`types.go:201`)
-- [ ] **Code organization** — StorageSorter.Item type definition in storagesorter.go would be better in types.go with other data structures (`storagesorter.go:68`)
+- [x] **Documentation** — EstimateArrivalTime function could document the 1 second per tile formula more explicitly (`types.go:201`) - **ALREADY FIXED**: Godoc on line 227 explicitly states "Formula: 1 second per tile, max 5 seconds"
+- [x] **Code organization** — ✅ **RESOLVED (2026-02-27)**: Moved StorageSorter.Item type definition from storagesorter.go:68 to types.go:46-52 alongside other package data structures (SortCriteria, AutoLootConfig, CraftQueue, etc.). Improves code organization and maintains consistency with package layout where types.go contains all type definitions. All tests pass.
 
 ## Input Integration
 | Input Source | Status | Notes |

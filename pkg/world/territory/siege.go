@@ -335,6 +335,59 @@ func (s *Siege) DamageGuildHall(damage float64) error {
 	return nil
 }
 
+// Surrender allows a guild to surrender during a siege.
+// The surrendering guild must pay SurrenderCost (250g).
+// Surrender is only allowed during Preparation or Assault phases.
+// The guildID must be either the attacker or defender in the siege.
+// This method does NOT deduct the cost; the caller must handle gold deduction
+// after validating the guild has sufficient funds.
+func (s *Siege) Surrender(guildID string, now time.Time) error {
+	// Validate guild is a participant
+	if guildID != s.AttackerGuildID && guildID != s.DefenderGuildID {
+		log.WithFields(log.Fields{
+			"siege_id": s.ID,
+			"guild_id": guildID,
+		}).Debug("guild is not a participant in this siege")
+		return fmt.Errorf("guild %s is not a participant in siege %s", guildID, s.ID)
+	}
+
+	// Validate phase allows surrender
+	if s.Phase != PhasePreparation && s.Phase != PhaseAssault {
+		log.WithFields(log.Fields{
+			"siege_id":       s.ID,
+			"guild_id":       guildID,
+			"phase":          s.Phase.String(),
+			"allowed_phases": "Preparation, Assault",
+		}).Debug("surrender not allowed in current phase")
+		return fmt.Errorf("cannot surrender during %s phase; only Preparation or Assault phases allow surrender", s.Phase.String())
+	}
+
+	// Determine winner (opposite of surrendering guild)
+	var winnerGuildID string
+	if guildID == s.AttackerGuildID {
+		winnerGuildID = s.DefenderGuildID
+	} else {
+		winnerGuildID = s.AttackerGuildID
+	}
+
+	// Set surrender victory condition
+	s.VictoryCondition = VictorySurrender
+	s.WinnerGuildID = winnerGuildID
+	s.Phase = PhaseResolution
+	s.PhaseStartTime = now
+	s.EndTime = now
+
+	log.WithFields(log.Fields{
+		"siege_id":           s.ID,
+		"surrendering_guild": guildID,
+		"winner_guild":       winnerGuildID,
+		"victory_condition":  s.VictoryCondition.String(),
+		"system_name":        "territory",
+	}).Info("siege ended by surrender")
+
+	return nil
+}
+
 // DistributeLoot calculates and distributes loot to winners.
 func (s *Siege) DistributeLoot() (int, error) {
 	if s.Phase != PhaseResolution {

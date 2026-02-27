@@ -29,8 +29,8 @@ The `pkg/stability` package provides long-running stability testing for server u
 None
 
 ### Medium Severity
-- [ ] **Documentation** — `FPSProvider` interface and `defaultFPSProvider` struct lack godoc comments (`monitor.go:72`, `monitor.go:78`)
-- [ ] **Documentation** — `HealthCheck` struct lacks godoc comments explaining its purpose (`monitor.go:98`)
+- [x] **Documentation** — `FPSProvider` interface and `defaultFPSProvider` struct lack godoc comments (`monitor.go:72`, `monitor.go:78`) - **ALREADY FIXED**: FPSProvider has godoc on line 74-77, defaultFPSProvider has godoc on line 80
+- [x] **Documentation** — `HealthCheck` struct lacks godoc comments explaining its purpose (`monitor.go:98`) - **ALREADY FIXED**: HealthCheck has godoc on line 99
 
 ### Low Severity
 - [x] **Error handling** — `WriteReport()` error messages use `fmt.Errorf` instead of `errors.Wrap` for context preservation (`monitor.go:287`, `monitor.go:298`, `monitor.go:305`) — **FIXED 2026-02-27**: Updated to use `pkg/errors` package with `SerializationWrap` for JSON marshaling errors and `FileSystemWrap` for file I/O errors. Added comprehensive tests validating error wrapping, type verification, and unwrapping. All tests pass with 94.4% coverage.

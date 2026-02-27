@@ -1,15 +1,15 @@
 Parsed 501 findings
 # Codebase Audit Remediation Plan
 **Generated**: 2026-02-26
-**Updated**: 2026-02-27 (86 findings resolved)
+**Updated**: 2026-02-27 (87 findings resolved)
 **Scope**: All *AUDIT*.md files in repository
-**Total Unresolved Findings**: 415
+**Total Unresolved Findings**: 414
 
 ## Summary by Severity
 | Severity | Count |
 |----------|-------|
 | CRITICAL | 25 |
-| HIGH | 46 |
+| HIGH | 45 |
 | MEDIUM | 214 |
 | LOW | 180 |
 
@@ -820,6 +820,7 @@ Parsed 501 findings
 - **Source**: `./pkg/world/territory/AUDIT.md` (line 42)
 - **Category**: error-handling
 - **Problem**: `VictorySurrender` enum value defined at line 53 with `String()` implementation at line 65-66 ("Surrender") but **never set by any code path**. No `Surrender()` method exists on Siege struct. No surrender cost definition (should be `PeaceDeclarationCost/2 = 250g` analogous to peace declaration). No ...
+- **Status**: ✅ **COMPLETED 2026-02-27** - Implemented Siege.Surrender(guildID, now) method with comprehensive validation (participant check, phase validation, victory condition setting). Added SurrenderCost=250 constant. Created 3 comprehensive tests (7 table-driven cases, integration workflow, cost validation). Coverage increased 90.8%→92.3%.
 - **Fix**:
   1. Review the complete finding in the source audit file
   2. Implement the suggested changes following coding guidelines

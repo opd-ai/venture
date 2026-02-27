@@ -28,7 +28,7 @@ None
 ### Low Severity
 - [ ] **Non-deterministic time usage** — Package uses `time.Now()` for real-time profiling, which is acceptable for this use case but violates general guideline. This is intentional for profiling real execution time. (`profile.go:40,59,84`)
 - [ ] **fmt.Printf usage** — `PrintProfile()` uses `fmt.Printf` instead of structured logging. This is intentional for human-readable report output, but could optionally provide a structured JSON export method. (`profile.go:195-225`)
-- [ ] **Missing doc comments** — `formatBytes` and `formatBytesWithSign` helper functions lack godoc comments. (`profile.go:234,254`)
+- [x] **Missing doc comments** — `formatBytes` and `formatBytesWithSign` helper functions lack godoc comments. (`profile.go:234,254`) - **ALREADY FIXED**: Both functions have godoc comments on lines 234 and 254
 
 ## Input Integration
 | Input Source | Status | Notes |

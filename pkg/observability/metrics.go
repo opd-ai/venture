@@ -233,6 +233,12 @@ func (m *MetricsExporter) StopWithTimeout(timeout time.Duration) error {
 }
 
 // handleMetrics serves Prometheus-compatible metrics in text format.
+// Implements the Prometheus exposition format (v0.0.4):
+// https://prometheus.io/docs/instrumenting/exposition_formats/
+// Format: # HELP <metric_name> <description>
+//
+//	# TYPE <metric_name> <type>
+//	<metric_name> <value>
 func (m *MetricsExporter) handleMetrics(w http.ResponseWriter, r *http.Request) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()

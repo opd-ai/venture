@@ -17,7 +17,8 @@ const (
 	IntegrityCollapsed                       // 0% structural integrity (destroyed)
 )
 
-// String returns the string representation of IntegrityState
+// String returns the string representation of IntegrityState.
+// Returns "Pristine", "Damaged", "Critical", "Collapsed", or "Unknown" for invalid states.
 func (s IntegrityState) String() string {
 	switch s {
 	case IntegrityPristine:
@@ -67,7 +68,8 @@ const (
 	SupportFoundation
 )
 
-// String returns the string representation of SupportType
+// String returns the string representation of SupportType.
+// Returns "Wall", "Column", "Beam", "Foundation", or "Unknown" for invalid types.
 func (s SupportType) String() string {
 	switch s {
 	case SupportWall:
@@ -120,7 +122,8 @@ const (
 	MaterialBrick
 )
 
-// String returns the string representation of MaterialType
+// String returns the string representation of MaterialType.
+// Returns "Wood", "Stone", "Metal", "Glass", "Concrete", "Brick", or "Unknown" for invalid types.
 func (m MaterialType) String() string {
 	switch m {
 	case MaterialWood:

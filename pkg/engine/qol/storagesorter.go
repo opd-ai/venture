@@ -64,16 +64,6 @@ func (s *StorageSorter) GetPreset(name string) *StorageSortPreset {
 	return s.presets[name]
 }
 
-// Item represents an inventory item for sorting operations.
-type Item struct {
-	ID       string
-	Name     string
-	Type     string
-	Rarity   int
-	Value    int
-	Quantity int
-}
-
 // SortItems sorts a slice of items in-place using the specified criteria.
 // Uses stable sort to preserve relative order of equal elements.
 func (s *StorageSorter) SortItems(items []*Item, criteria SortCriteria) {

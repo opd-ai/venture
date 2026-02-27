@@ -43,6 +43,17 @@ func (s SortCriteria) String() string {
 	}
 }
 
+// Item represents an inventory item for sorting operations.
+// Used by StorageSorter to organize player inventory and storage containers.
+type Item struct {
+	ID       string
+	Name     string
+	Type     string
+	Rarity   int
+	Value    int
+	Quantity int
+}
+
 // AutoLootConfig defines auto-loot behavior per companion
 type AutoLootConfig struct {
 	CompanionID    uint64

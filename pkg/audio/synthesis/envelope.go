@@ -29,6 +29,8 @@ func DefaultEnvelope() Envelope {
 }
 
 // Apply applies the ADSR envelope to an audio sample.
+// The data slice is modified in-place. Callers should pass a copy if the original is needed.
+// The envelope is applied over the entire sample duration, divided into ADSR phases.
 func (e *Envelope) Apply(data []float64, sampleRate int) {
 	numSamples := len(data)
 	if numSamples == 0 {

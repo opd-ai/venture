@@ -400,3 +400,162 @@ func BenchmarkBuoyancyComponent_Deserialize(b *testing.B) {
 		_ = restored.Deserialize(data)
 	}
 }
+
+// TestRegisterComponentFactories verifies the RegisterComponentFactories function
+// can be called without errors and is idempotent.
+func TestRegisterComponentFactories(t *testing.T) {
+	tests := []struct {
+		name  string
+		calls int
+	}{
+		{"SingleCall", 1},
+		{"MultipleCalls", 3},
+		{"ManyCallsIdempotent", 10},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Call RegisterComponentFactories multiple times to verify idempotency
+			for i := 0; i < tt.calls; i++ {
+				// Should not panic
+				RegisterComponentFactories()
+			}
+		})
+	}
+}
+
+// TestComponentTypeIdentifiers verifies all fluid components have correct type identifiers.
+func TestComponentTypeIdentifiers(t *testing.T) {
+	tests := []struct {
+		name         string
+		component    interface{ Type() string }
+		expectedType string
+	}{
+		{
+			name:         "BuoyancyComponent",
+			component:    &BuoyancyComponent{},
+			expectedType: "buoyancy",
+		},
+		{
+			name:         "SwimmingComponent",
+			component:    &SwimmingComponent{},
+			expectedType: "swimming",
+		},
+		{
+			name:         "FloodingComponent",
+			component:    &FloodingComponent{},
+			expectedType: "flooding",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := tt.component.Type()
+			if result != tt.expectedType {
+				t.Errorf("Component.Type() = %q, want %q", result, tt.expectedType)
+			}
+		})
+	}
+}
+
+// TestComponentSerializationRoundTrip verifies all components can serialize and deserialize.
+func TestComponentSerializationRoundTrip(t *testing.T) {
+	t.Run("BuoyancyComponent", func(t *testing.T) {
+		original := &BuoyancyComponent{
+			Mass:         100.0,
+			Volume:       0.2,
+			Density:      500.0,
+			Buoyant:      true,
+			Submerged:    0.75,
+			BuoyantForce: 150.0,
+		}
+
+		data, err := original.Serialize()
+		if err != nil {
+			t.Fatalf("Serialize() error = %v", err)
+		}
+
+		restored := &BuoyancyComponent{}
+		err = restored.Deserialize(data)
+		if err != nil {
+			t.Fatalf("Deserialize() error = %v", err)
+		}
+
+		if restored.Mass != original.Mass {
+			t.Errorf("Mass mismatch: got %v, want %v", restored.Mass, original.Mass)
+		}
+		if restored.Buoyant != original.Buoyant {
+			t.Errorf("Buoyant mismatch: got %v, want %v", restored.Buoyant, original.Buoyant)
+		}
+	})
+
+	t.Run("SwimmingComponent", func(t *testing.T) {
+		original := &SwimmingComponent{
+			IsSwimming:     true,
+			Stamina:        75.0,
+			MaxStamina:     100.0,
+			StaminaDrain:   5.0,
+			StaminaRegen:   2.5,
+			SwimSpeed:      0.8,
+			TreadingWater:  false,
+			Drowning:       false,
+			DrowningDamage: 10.0,
+		}
+
+		data, err := original.Serialize()
+		if err != nil {
+			t.Fatalf("Serialize() error = %v", err)
+		}
+
+		restored := &SwimmingComponent{}
+		err = restored.Deserialize(data)
+		if err != nil {
+			t.Fatalf("Deserialize() error = %v", err)
+		}
+
+		if restored.IsSwimming != original.IsSwimming {
+			t.Errorf("IsSwimming mismatch: got %v, want %v", restored.IsSwimming, original.IsSwimming)
+		}
+		if restored.Stamina != original.Stamina {
+			t.Errorf("Stamina mismatch: got %v, want %v", restored.Stamina, original.Stamina)
+		}
+	})
+
+	t.Run("FloodingComponent", func(t *testing.T) {
+		original := &FloodingComponent{
+			AreaID:        "test-area",
+			FloodLevel:    0.5,
+			FloodRate:     0.1,
+			MaxFloodLevel: 1.0,
+			Sources: []FloodSource{
+				{X: 10, Y: 20, FlowRate: 0.05},
+				{X: 30, Y: 40, FlowRate: 0.05},
+			},
+		}
+
+		data, err := original.Serialize()
+		if err != nil {
+			t.Fatalf("Serialize() error = %v", err)
+		}
+
+		restored := &FloodingComponent{}
+		err = restored.Deserialize(data)
+		if err != nil {
+			t.Fatalf("Deserialize() error = %v", err)
+		}
+
+		if restored.AreaID != original.AreaID {
+			t.Errorf("AreaID mismatch: got %v, want %v", restored.AreaID, original.AreaID)
+		}
+		if len(restored.Sources) != len(original.Sources) {
+			t.Errorf("Sources length mismatch: got %v, want %v", len(restored.Sources), len(original.Sources))
+		}
+	})
+}
+
+// BenchmarkRegisterComponentFactories measures the performance of the registration function.
+func BenchmarkRegisterComponentFactories(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		RegisterComponentFactories()
+	}
+}

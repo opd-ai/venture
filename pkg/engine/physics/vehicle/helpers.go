@@ -149,7 +149,8 @@ func ShouldCauseDamage(c *CollisionResponseComponent, impactSpeed float64) bool 
 // Terrain deformation helpers
 
 // GetVisibleTracks returns all tracks that should be rendered within the given bounds.
-// Uses AABB culling to filter tracks outside the viewport.
+// Uses AABB culling for small track counts (<= 200).
+// For large track counts (> 200), uses spatial hash grid for O(k) instead of O(n) culling.
 func GetVisibleTracks(t *TerrainDeformationComponent, minX, minY, maxX, maxY float64) []TrackMark {
 	// Reuse buffer if available, otherwise allocate
 	if t.visibleBuffer == nil {
@@ -158,12 +159,57 @@ func GetVisibleTracks(t *TerrainDeformationComponent, minX, minY, maxX, maxY flo
 	// Reset buffer length while preserving capacity
 	t.visibleBuffer = t.visibleBuffer[:0]
 
+	// For small track counts, simple AABB culling is optimal
+	if len(t.Tracks) <= 200 {
+		for i := range t.Tracks {
+			track := &t.Tracks[i]
+
+			// Simple AABB culling
+			if track.X >= minX && track.X <= maxX && track.Y >= minY && track.Y <= maxY {
+				t.visibleBuffer = append(t.visibleBuffer, *track)
+			}
+		}
+		return t.visibleBuffer
+	}
+
+	// For large track counts, use spatial partitioning
+	// Grid cell size in pixels (larger cells = fewer buckets to check)
+	const cellSize = 64.0
+
+	// Calculate grid bounds
+	minGridX := int(minX / cellSize)
+	maxGridX := int(maxX / cellSize)
+	minGridY := int(minY / cellSize)
+	maxGridY := int(maxY / cellSize)
+
+	// Build spatial hash on-demand (track positions don't change after creation)
+	grid := make(map[[2]int][]int) // grid cell -> track indices
 	for i := range t.Tracks {
 		track := &t.Tracks[i]
+		gx := int(track.X / cellSize)
+		gy := int(track.Y / cellSize)
+		key := [2]int{gx, gy}
+		grid[key] = append(grid[key], i)
+	}
 
-		// Simple AABB culling
-		if track.X >= minX && track.X <= maxX && track.Y >= minY && track.Y <= maxY {
-			t.visibleBuffer = append(t.visibleBuffer, *track)
+	// Query only cells intersecting the viewport
+	checked := make(map[int]bool, len(t.Tracks)/4) // dedup tracks at cell boundaries
+	for gx := minGridX; gx <= maxGridX; gx++ {
+		for gy := minGridY; gy <= maxGridY; gy++ {
+			key := [2]int{gx, gy}
+			indices := grid[key]
+			for _, idx := range indices {
+				if checked[idx] {
+					continue
+				}
+				checked[idx] = true
+
+				track := &t.Tracks[idx]
+				// Final AABB check (grid cells may partially overlap viewport)
+				if track.X >= minX && track.X <= maxX && track.Y >= minY && track.Y <= maxY {
+					t.visibleBuffer = append(t.visibleBuffer, *track)
+				}
+			}
 		}
 	}
 

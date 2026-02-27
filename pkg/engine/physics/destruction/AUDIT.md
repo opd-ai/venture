@@ -26,9 +26,9 @@ None
 - [x] **Documentation** — `doc.go:64` contains example code with `log.Println` instead of structured logging with logrus.WithFields (violates coding guideline for structured logging in examples) — **RESOLVED 2026-02-27: Replaced log.Println with logrus.WithFields example showing structured logging with building_id and state fields**
 
 ### Low Severity
-- [ ] **API Consistency** — `types.go:21-34` String() method for IntegrityState has no doc comment (should document the String() method explicitly even though it's standard)
-- [ ] **API Consistency** — `types.go:71-84` String() method for SupportType has no doc comment
-- [ ] **API Consistency** — `types.go:124-141` String() method for MaterialType has no doc comment
+- [x] **API Consistency** — `types.go:21-34` String() method for IntegrityState has no doc comment (should document the String() method explicitly even though it's standard) - **COMPLETED 2026-02-27**: Added comprehensive godoc explaining return values for all states including Unknown case
+- [x] **API Consistency** — `types.go:71-84` String() method for SupportType has no doc comment - **COMPLETED 2026-02-27**: Added comprehensive godoc explaining return values for all support types including Unknown case
+- [x] **API Consistency** — `types.go:124-141` String() method for MaterialType has no doc comment - **COMPLETED 2026-02-27**: Added comprehensive godoc explaining return values for all material types including Unknown case
 
 ## Input Integration
 | Input Source | Status | Notes |

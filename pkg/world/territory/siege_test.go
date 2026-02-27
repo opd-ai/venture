@@ -920,3 +920,185 @@ func TestSiegeManagerUpdate_MultipleSieges(t *testing.T) {
 		t.Errorf("siege3 phase = %v, want %v", siege3.Phase, PhaseAssault)
 	}
 }
+
+func TestSiegeSurrender(t *testing.T) {
+	fixedTime := time.Date(2026, 1, 1, 12, 0, 0, 0, time.UTC)
+
+	tests := []struct {
+		name        string
+		setupPhase  SiegePhase
+		guildID     string
+		wantErr     bool
+		errContains string
+		wantWinner  string
+		wantVictory VictoryCondition
+		wantPhase   SiegePhase
+	}{
+		{
+			name:        "attacker surrenders during preparation",
+			setupPhase:  PhasePreparation,
+			guildID:     "guild_attack",
+			wantErr:     false,
+			wantWinner:  "guild_defend",
+			wantVictory: VictorySurrender,
+			wantPhase:   PhaseResolution,
+		},
+		{
+			name:        "defender surrenders during preparation",
+			setupPhase:  PhasePreparation,
+			guildID:     "guild_defend",
+			wantErr:     false,
+			wantWinner:  "guild_attack",
+			wantVictory: VictorySurrender,
+			wantPhase:   PhaseResolution,
+		},
+		{
+			name:        "attacker surrenders during assault",
+			setupPhase:  PhaseAssault,
+			guildID:     "guild_attack",
+			wantErr:     false,
+			wantWinner:  "guild_defend",
+			wantVictory: VictorySurrender,
+			wantPhase:   PhaseResolution,
+		},
+		{
+			name:        "defender surrenders during assault",
+			setupPhase:  PhaseAssault,
+			guildID:     "guild_defend",
+			wantErr:     false,
+			wantWinner:  "guild_attack",
+			wantVictory: VictorySurrender,
+			wantPhase:   PhaseResolution,
+		},
+		{
+			name:        "cannot surrender during resolution",
+			setupPhase:  PhaseResolution,
+			guildID:     "guild_attack",
+			wantErr:     true,
+			errContains: "cannot surrender during Resolution phase",
+		},
+		{
+			name:        "cannot surrender during ended",
+			setupPhase:  PhaseEnded,
+			guildID:     "guild_attack",
+			wantErr:     true,
+			errContains: "cannot surrender during Ended phase",
+		},
+		{
+			name:        "non-participant cannot surrender",
+			setupPhase:  PhasePreparation,
+			guildID:     "guild_other",
+			wantErr:     true,
+			errContains: "is not a participant",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			siege := NewSiegeWithTime("territory1", "guild_attack", "guild_defend", 10000, fixedTime)
+			siege.Phase = tt.setupPhase
+			siege.PhaseStartTime = fixedTime
+
+			err := siege.Surrender(tt.guildID, fixedTime)
+
+			if tt.wantErr {
+				if err == nil {
+					t.Errorf("Surrender() error = nil, wantErr = true")
+					return
+				}
+				if tt.errContains != "" && !contains(err.Error(), tt.errContains) {
+					t.Errorf("Surrender() error = %v, want to contain %v", err.Error(), tt.errContains)
+				}
+				return
+			}
+
+			if err != nil {
+				t.Errorf("Surrender() unexpected error = %v", err)
+				return
+			}
+
+			if siege.WinnerGuildID != tt.wantWinner {
+				t.Errorf("WinnerGuildID = %v, want %v", siege.WinnerGuildID, tt.wantWinner)
+			}
+
+			if siege.VictoryCondition != tt.wantVictory {
+				t.Errorf("VictoryCondition = %v, want %v", siege.VictoryCondition, tt.wantVictory)
+			}
+
+			if siege.Phase != tt.wantPhase {
+				t.Errorf("Phase = %v, want %v", siege.Phase, tt.wantPhase)
+			}
+
+			if siege.EndTime != fixedTime {
+				t.Errorf("EndTime = %v, want %v", siege.EndTime, fixedTime)
+			}
+		})
+	}
+}
+
+func TestSiegeSurrenderIntegration(t *testing.T) {
+	fixedTime := time.Date(2026, 1, 1, 12, 0, 0, 0, time.UTC)
+	siege := NewSiegeWithTime("territory1", "guild_attack", "guild_defend", 10000, fixedTime)
+
+	// Join some players
+	if err := siege.JoinSiege("player1", true); err != nil {
+		t.Fatalf("JoinSiege() error = %v", err)
+	}
+	if err := siege.JoinSiege("player2", false); err != nil {
+		t.Fatalf("JoinSiege() error = %v", err)
+	}
+
+	// Attacker surrenders
+	if err := siege.Surrender("guild_attack", fixedTime); err != nil {
+		t.Fatalf("Surrender() error = %v", err)
+	}
+
+	// Verify siege is in resolution phase
+	if siege.Phase != PhaseResolution {
+		t.Errorf("Phase = %v, want %v", siege.Phase, PhaseResolution)
+	}
+
+	// Verify loot can be distributed
+	loot, err := siege.DistributeLoot()
+	if err != nil {
+		t.Errorf("DistributeLoot() error = %v", err)
+	}
+
+	expectedLoot := int(float64(10000) * 0.15) // 15% of 10000 = 1500
+	if loot != expectedLoot {
+		t.Errorf("DistributeLoot() = %d, want %d", loot, expectedLoot)
+	}
+
+	// Verify loot was marked as distributed
+	if !siege.LootDistributed {
+		t.Error("LootDistributed should be true after distribution")
+	}
+}
+
+func TestSurrenderCostConstant(t *testing.T) {
+	// Verify surrender cost is half of peace declaration cost as specified
+	expectedSurrenderCost := PeaceDeclarationCost / 2
+	if SurrenderCost != expectedSurrenderCost {
+		t.Errorf("SurrenderCost = %d, want %d (half of PeaceDeclarationCost)", SurrenderCost, expectedSurrenderCost)
+	}
+
+	// Verify it equals the documented value of 250
+	if SurrenderCost != 250 {
+		t.Errorf("SurrenderCost = %d, want 250", SurrenderCost)
+	}
+}
+
+// Helper function for string containment checks
+func contains(s, substr string) bool {
+	return len(s) >= len(substr) && (s == substr || len(substr) == 0 ||
+		(len(s) > 0 && len(substr) > 0 && findSubstring(s, substr)))
+}
+
+func findSubstring(s, substr string) bool {
+	for i := 0; i <= len(s)-len(substr); i++ {
+		if s[i:i+len(substr)] == substr {
+			return true
+		}
+	}
+	return false
+}

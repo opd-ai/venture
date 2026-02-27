@@ -26,7 +26,7 @@ The `pkg/audio/synthesis` package provides low-level deterministic audio wavefor
 *None identified*
 
 ### Low Severity
-- [ ] **Documentation** — `envelope.go:32` - `Apply()` method modifies `data []float64` in-place but lacks comment documenting this mutation; callers must be aware that the input slice is modified (`engine.go:188` correctly documents this in `ApplyEnvelope()` but not in `Envelope.Apply()` itself)
+- [x] **Documentation** — `envelope.go:32` - `Apply()` method modifies `data []float64` in-place but lacks comment documenting this mutation; callers must be aware that the input slice is modified (`engine.go:188` correctly documents this in `ApplyEnvelope()` but not in `Envelope.Apply()` itself) - **COMPLETED 2026-02-27**: Added comprehensive godoc documenting in-place modification and recommending callers pass a copy if original is needed
 - [x] **API consistency** — `engine.go:66-70` - `GenerateTone()` is deprecated in favor of `Generate()`, but both methods remain exported and functionally identical; consider removing deprecated method in a future version to reduce API surface — **RESOLVED 2026-02-27**: Removed deprecated `GenerateTone()` method and updated all test usages to `Generate()`. Removed duplicate tests `TestEngine_GenerateTone` and `TestEngine_Generate_EqualsGenerateTone`. Renamed `BenchmarkEngine_GenerateTone` to `BenchmarkEngine_Generate`. Coverage maintained at 95.1%
 
 ## Input Integration

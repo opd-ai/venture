@@ -139,6 +139,7 @@ const (
 	BaseXPBonus          = 0.05
 	WarDeclarationCost   = 1000
 	PeaceDeclarationCost = 500
+	SurrenderCost        = 250 // Half of peace declaration cost
 	WarDurationDays      = 7
 
 	WallBaseHP  = 1000.0

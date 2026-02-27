@@ -66,6 +66,34 @@
 //   - Storage sort: <10ms for 100 items
 //   - Mount summon: <100ms pathfinding
 //
+// ECS Integration:
+//
+// The QoL package integrates with the ECS architecture through two mechanisms:
+//
+//  1. QoLSystemWrapper (pkg/engine/qol_system_wrapper.go):
+//     - Implements engine.System interface for ECS world integration
+//     - Registered in cmd/client/handlers.go:1422 via World.AddSystem()
+//     - Update() runs every frame for periodic maintenance:
+//     * Cleans up expired guild invitations every 5 minutes
+//     * Other features (auto-loot, craft queue, mount whistle) are
+//     triggered by their respective systems (companion AI, crafting, vehicles)
+//     - System update order: QoL cleanup runs after gameplay systems
+//
+//  2. QoLComponent (types.go):
+//     - Pure data component implementing Component interface
+//     - Attached to player entities in cmd/client/handlers.go:2841
+//     - Persisted via Serialize()/Deserialize() for save/load
+//     - Stores player-specific QoL preferences (auto-loot radius, queue size, etc.)
+//
+// System Interaction Flow:
+//
+//   - Companion AI System → queries Manager.AutoLoot() to determine collection behavior
+//   - Crafting System → queries Manager.CraftQueue() for queued recipes
+//   - Vehicle System → queries Manager.MountWhistle() for summon requests
+//   - Inventory System → queries Manager.RecipeTracker() for material tracking
+//   - Guild System → queries Manager.GuildInvites() for offline invitations
+//   - UI Systems → access Manager methods directly for player-initiated actions
+//
 // Integration:
 //
 //   - V4 Companions: Auto-loot collection behavior

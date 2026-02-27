@@ -101,6 +101,8 @@ func (l *Loader) parseModJSON(path string, data []byte) (*Mod, error) {
 		return nil, &LoadError{ModID: path, Err: fmt.Errorf("invalid JSON: %w", err)}
 	}
 
+	// INTENTIONAL time.Now() EXCEPTION: LoadedAt is metadata for debugging/audit only.
+	// Does not affect procedural content generation. See doc.go:113-120.
 	mod.LoadedAt = time.Now()
 
 	if err := mod.Validate(); err != nil {

@@ -81,9 +81,13 @@ func (m *Manager) StartArc(playerID, arcID string) (*PlayerProgress, error) {
 		Alignment:     make(map[AlignmentAxis]float64),
 		Faction:       make(map[string]float64),
 		Variables:     make(map[string]interface{}),
-		StartTime:     time.Now(),
-		LastUpdate:    time.Now(),
-		Completed:     false,
+		// INTENTIONAL time.Now() EXCEPTION: StartTime and LastUpdate are metadata
+		// for analytics/debugging only. They do NOT affect story generation or
+		// choice outcomes. All narrative generation logic is deterministic and
+		// seed-based. These timestamps are for observability, not game state.
+		StartTime:  time.Now(),
+		LastUpdate: time.Now(),
+		Completed:  false,
 	}
 
 	// Initialize alignment to neutral
@@ -479,6 +483,7 @@ func (m *Manager) advanceToNode(progress *PlayerProgress, arc *StoryArc, nextNod
 	// Update progress
 	progress.CurrentNodeID = nextNodeID
 	progress.VisitedNodes = append(progress.VisitedNodes, nextNodeID)
+	// INTENTIONAL time.Now() EXCEPTION: LastUpdate is metadata for observability only
 	progress.LastUpdate = time.Now()
 
 	// Check if we reached an ending

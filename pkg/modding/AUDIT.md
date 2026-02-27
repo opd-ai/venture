@@ -23,7 +23,7 @@ The `pkg/modding` package provides a server-side mod framework with sandboxed JS
 _None identified_
 
 ### Medium Severity
-- [ ] **Determinism Context** — `time.Now()` used for metadata/audit trail (`loader.go:104`, `adapter.go:50`, `manager.go:249`, `manager.go:349`). Documented as acceptable in `doc.go:113-120` but still technically violates strict determinism guideline. Audit trail timestamps affect operational behavior (rate limiting) rather than just debugging metadata. This is borderline acceptable but should be clearly flagged. (`loader.go:104`, `adapter.go:50`, `manager.go:249`, `manager.go:349`)
+- [x] **Determinism Context** — ✅ **RESOLVED 2026-02-27**: Added clarifying comments at all four time.Now() call sites (loader.go:104, adapter.go:50, manager.go:249, manager.go:349) explaining these are intentional exceptions. Comments reference doc.go:113-120 which documents that these timestamps are for metadata/audit trail and server-side operational behavior (rate limiting), not procedural content generation. Tests pass with 90.6% coverage maintained.
 
 ### Low Severity
 - [ ] **Documentation Clarity** — `doc.go:113-120` states "This package uses time.Now() in the following non-procgen contexts" but the exception rationale could be clearer about why rate limiting is acceptable as non-deterministic server-side behavior. Consider explicitly stating "server-side operational behavior (not replicated to clients)". (`doc.go:113-120`)

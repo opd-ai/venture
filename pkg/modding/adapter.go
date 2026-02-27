@@ -45,8 +45,10 @@ func (p *ProviderAdapter) GetRuleBool(ruleName string, defaultValue bool) bool {
 // Phase 6.3 (PLAN.md): Modding System Integration
 func (p *ProviderAdapter) TriggerEvent(eventType string, eventData map[string]interface{}) error {
 	event := Event{
-		Type:      eventType,
-		Data:      eventData,
+		Type: eventType,
+		Data: eventData,
+		// INTENTIONAL time.Now() EXCEPTION: Event timestamp for audit trail only.
+		// Does not affect procedural content generation. See doc.go:113-120.
 		Timestamp: time.Now(),
 	}
 	return p.manager.TriggerEvent(event)

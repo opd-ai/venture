@@ -11,9 +11,26 @@ type TimeProvider interface {
 }
 
 // RealTimeProvider implements TimeProvider using the actual system clock.
+//
+// INTENTIONAL time.Now() EXCEPTION: This type is specifically designed for
+// territory/siege time management (war durations, capture progress timestamps,
+// siege phase transitions) and does NOT affect procedural content generation.
+// The time.Now() usage here is acceptable because:
+//
+//  1. Territory mechanics are server-side operations with authoritative time sources
+//  2. The TimeProvider interface allows injection of deterministic mocks for testing
+//  3. For deterministic server-to-server sync in federated scenarios, servers should
+//     use a synchronized time source (NTP, consensus clock) rather than deterministic
+//     generation seeds
+//
+// This differs from procedural generation (terrain, quests, NPCs) which must use
+// seed-based RNGs for determinism. Territory state determinism is achieved through
+// server authority and network replication, not through seed-based generation.
 type RealTimeProvider struct{}
 
 // Now returns the current system time.
+//
+// See RealTimeProvider godoc for explanation of time.Now() usage.
 func (RealTimeProvider) Now() time.Time {
 	return time.Now()
 }

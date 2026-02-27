@@ -242,10 +242,12 @@ func (m *Manager) ApplyRules() error {
 		for ruleName, value := range mod.Rules {
 			// Log rule change
 			ctx := RuleContext{
-				ModID:     mod.ID,
-				RuleName:  ruleName,
-				OldValue:  m.activeRules[ruleName],
-				NewValue:  value,
+				ModID:    mod.ID,
+				RuleName: ruleName,
+				OldValue: m.activeRules[ruleName],
+				NewValue: value,
+				// INTENTIONAL time.Now() EXCEPTION: AppliedAt for audit trail only.
+				// Does not affect procedural content. See doc.go:113-120.
 				AppliedAt: time.Now(),
 			}
 			m.ruleChangeLog = append(m.ruleChangeLog, ctx)
@@ -346,6 +348,8 @@ func (m *Manager) GetRuleChangeLog() []RuleContext {
 
 // checkRateLimit checks if the rate limit for rule changes has been exceeded.
 func (m *Manager) checkRateLimit() error {
+	// INTENTIONAL time.Now() EXCEPTION: Rate limiting is server-side operational
+	// behavior, not replicated to clients. See doc.go:113-120.
 	now := time.Now()
 
 	// Reset counter if more than 1 second has passed

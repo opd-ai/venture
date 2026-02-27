@@ -8,7 +8,7 @@ import (
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
-	"github.com/hajimehoshi/ebiten/v2/inpututil"
+	"github.com/opd-ai/venture/pkg/engine"
 	"github.com/opd-ai/venture/pkg/mobile"
 )
 
@@ -73,18 +73,6 @@ func (o PrestigeMenuOption) toParagonStat() ParagonStat {
 	}
 }
 
-// MenuInputProvider abstracts keyboard input for testing.
-type MenuInputProvider interface {
-	IsKeyJustPressed(key ebiten.Key) bool
-}
-
-// realInputProvider implements MenuInputProvider using Ebiten.
-type realInputProvider struct{}
-
-func (r *realInputProvider) IsKeyJustPressed(key ebiten.Key) bool {
-	return inpututil.IsKeyJustPressed(key)
-}
-
 // PrestigeUI renders and handles input for the prestige menu.
 // Provides paragon point allocation and prestige progress visualization.
 type PrestigeUI struct {
@@ -107,8 +95,8 @@ type PrestigeUI struct {
 	// Visibility flag
 	visible bool
 
-	// Input provider for testing
-	inputProvider MenuInputProvider
+	// Input provider for testing - uses standard engine.InputProvider interface
+	inputProvider engine.InputProvider
 
 	// Touch support
 	touchHandler *mobile.TouchInputHandler
@@ -134,9 +122,8 @@ func NewPrestigeUI(screenWidth, screenHeight int, manager *Manager) *PrestigeUI 
 			PrestigeOptionRespec,
 			PrestigeOptionBack,
 		},
-		visible:       false,
-		inputProvider: &realInputProvider{},
-		touchHandler:  mobile.NewTouchInputHandler(),
+		visible:      false,
+		touchHandler: mobile.NewTouchInputHandler(),
 	}
 
 	// Create close button (top-right)
@@ -185,7 +172,8 @@ func NewPrestigeUI(screenWidth, screenHeight int, manager *Manager) *PrestigeUI 
 }
 
 // SetInputProvider sets the input provider for testing.
-func (p *PrestigeUI) SetInputProvider(provider MenuInputProvider) {
+// Accepts the standard engine.InputProvider interface from pkg/engine/interfaces.go.
+func (p *PrestigeUI) SetInputProvider(provider engine.InputProvider) {
 	p.inputProvider = provider
 }
 
@@ -254,13 +242,13 @@ func (p *PrestigeUI) updateButtons() {
 
 // handleNavigation processes up/down keyboard navigation.
 func (p *PrestigeUI) handleNavigation() {
-	if p.inputProvider.IsKeyJustPressed(ebiten.KeyUp) || p.inputProvider.IsKeyJustPressed(ebiten.KeyW) {
+	if p.inputProvider != nil && p.inputProvider.IsMenuUpJustPressed() {
 		p.selectedIdx--
 		if p.selectedIdx < 0 {
 			p.selectedIdx = len(p.options) - 1
 		}
 	}
-	if p.inputProvider.IsKeyJustPressed(ebiten.KeyDown) || p.inputProvider.IsKeyJustPressed(ebiten.KeyS) {
+	if p.inputProvider != nil && p.inputProvider.IsMenuDownJustPressed() {
 		p.selectedIdx++
 		if p.selectedIdx >= len(p.options) {
 			p.selectedIdx = 0
@@ -270,7 +258,7 @@ func (p *PrestigeUI) handleNavigation() {
 
 // handleActivation processes Enter/Space key to activate options.
 func (p *PrestigeUI) handleActivation() {
-	if p.inputProvider.IsKeyJustPressed(ebiten.KeyEnter) || p.inputProvider.IsKeyJustPressed(ebiten.KeySpace) {
+	if p.inputProvider != nil && p.inputProvider.IsMenuConfirmJustPressed() {
 		selectedOption := p.options[p.selectedIdx]
 		p.activateOption(selectedOption)
 	}
@@ -278,7 +266,7 @@ func (p *PrestigeUI) handleActivation() {
 
 // handleEscapeKey processes the ESC key for closing the menu.
 func (p *PrestigeUI) handleEscapeKey() bool {
-	if p.inputProvider.IsKeyJustPressed(ebiten.KeyEscape) {
+	if p.inputProvider != nil && p.inputProvider.IsMenuBackJustPressed() {
 		p.Hide()
 		if p.onBack != nil {
 			p.onBack()

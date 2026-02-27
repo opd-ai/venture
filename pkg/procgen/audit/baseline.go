@@ -17,20 +17,20 @@ const BaselineSeed int64 = 99999
 // Full hashes are stored in baseline_hashes.json for complete validation.
 // These prefixes are used for quick validation without file I/O.
 var baselineHashPrefixes = map[string]string{
-	"BookGenerator":      "7e632693e8468f7d",
-	"BuildingGenerator":  "00e9ff14a9fe39ff",
-	"CompanionGenerator": "4dda1e3a6cd24740",
-	"EntityGenerator":    "f0302eb430a7d0cd",
-	"FurnitureGenerator": "25ee7a0f0e519996",
-	"ItemGenerator":      "2b36ce659bf7c7b6",
-	"LegendaryGenerator": "bc3b12fd01179b64",
-	"MagicGenerator":     "67956a60c3646731",
-	"QuestGenerator":     "0235ef4b824e6040",
-	"RecipeGenerator":    "547f0b59015c7510",
-	"SkillGenerator":     "cef103c9c0f578e7",
-	"StationGenerator":   "9f3cbfe6094f8491",
-	"TerrainGenerator":   "8ddd8234ec8a966f",
-	"VehicleGenerator":   "202dac42c53e9d2a",
+	"Book":      "7e632693e8468f7d",
+	"Building":  "00e9ff14a9fe39ff",
+	"Companion": "4dda1e3a6cd24740",
+	"Entity":    "f0302eb430a7d0cd",
+	"Furniture": "25ee7a0f0e519996",
+	"Item":      "2b36ce659bf7c7b6",
+	"Legendary": "bc3b12fd01179b64",
+	"Magic":     "67956a60c3646731",
+	"Quest":     "0235ef4b824e6040",
+	"Recipe":    "547f0b59015c7510",
+	"Skills":    "cef103c9c0f578e7",
+	"Station":   "9f3cbfe6094f8491",
+	"Terrain":   "8ddd8234ec8a966f",
+	"Vehicle":   "202dac42c53e9d2a",
 }
 
 // GetBaselinePrefix returns the baseline hash prefix for a generator.

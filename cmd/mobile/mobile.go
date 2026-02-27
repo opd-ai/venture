@@ -4,6 +4,7 @@ import (
 	"math/rand"
 	"os"
 	"runtime/debug"
+	"strings"
 
 	"github.com/hajimehoshi/ebiten/v2/mobile"
 	"github.com/opd-ai/venture/cmd/mobile/config"
@@ -78,10 +79,22 @@ func init() {
 
 	// Skip game initialization during testing (mobile.SetGame panics in non-mobile env)
 	// Tests set VENTURE_SKIP_MOBILE_INIT=1 to prevent this
-	if os.Getenv("VENTURE_SKIP_MOBILE_INIT") == "" {
+	// Also auto-detect Go test binaries to avoid panics
+	if os.Getenv("VENTURE_SKIP_MOBILE_INIT") == "" && !isTestBinary() {
 		// Initialize the game immediately for ebitenmobile
 		initializeGame()
 	}
+}
+
+// isTestBinary detects if the current binary is a Go test binary
+// by checking for -test.* flags that go test always passes.
+func isTestBinary() bool {
+	for _, arg := range os.Args {
+		if strings.HasPrefix(arg, "-test.") {
+			return true
+		}
+	}
+	return false
 }
 
 // initializeGame initializes the game for mobile platforms.

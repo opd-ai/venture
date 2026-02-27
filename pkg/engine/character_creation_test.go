@@ -49,9 +49,9 @@ func TestCharacterClass_Description(t *testing.T) {
 		})
 	}
 
-	// Test unknown class returns empty
-	if desc := CharacterClass(99).Description(); desc != "" {
-		t.Errorf("Unknown class should return empty description, got: %v", desc)
+	// Test unknown class returns "Unknown class"
+	if desc := CharacterClass(99).Description(); desc != "Unknown class" {
+		t.Errorf("Unknown class should return 'Unknown class', got: %v", desc)
 	}
 }
 

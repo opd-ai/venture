@@ -15,14 +15,14 @@ func TestGetBaselinePrefix(t *testing.T) {
 		wantEmpty  bool
 	}{
 		{
-			name:       "EntityGenerator exists",
-			generator:  "EntityGenerator",
+			name:       "Entity exists",
+			generator:  "Entity",
 			wantPrefix: "f0302eb430a7d0cd",
 			wantEmpty:  false,
 		},
 		{
-			name:       "ItemGenerator exists",
-			generator:  "ItemGenerator",
+			name:       "Item exists",
+			generator:  "Item",
 			wantPrefix: "2b36ce659bf7c7b6",
 			wantEmpty:  false,
 		},
@@ -54,7 +54,7 @@ func TestGetBaselinePrefix(t *testing.T) {
 }
 
 func TestHashMatchesBaseline(t *testing.T) {
-	// Create a test hash that matches EntityGenerator baseline
+	// Create a test hash that matches Entity baseline
 	entityHash := [32]byte{}
 	entityPrefix, _ := hex.DecodeString("f0302eb430a7d0cd")
 	copy(entityHash[:8], entityPrefix)
@@ -72,13 +72,13 @@ func TestHashMatchesBaseline(t *testing.T) {
 	}{
 		{
 			name:      "matching hash",
-			generator: "EntityGenerator",
+			generator: "Entity",
 			hash:      entityHash,
 			want:      true,
 		},
 		{
 			name:      "non-matching hash",
-			generator: "EntityGenerator",
+			generator: "Entity",
 			hash:      wrongHash,
 			want:      false,
 		},
@@ -174,19 +174,20 @@ func TestBaselineConstants(t *testing.T) {
 func TestBaselineHashPrefixesComplete(t *testing.T) {
 	// Verify all expected generators have baseline entries
 	expectedGenerators := []string{
-		"BookGenerator",
-		"BuildingGenerator",
-		"CompanionGenerator",
-		"EntityGenerator",
-		"FurnitureGenerator",
-		"ItemGenerator",
-		"LegendaryGenerator",
-		"MagicGenerator",
-		"QuestGenerator",
-		"RecipeGenerator",
-		"SkillGenerator",
-		"StationGenerator",
-		"VehicleGenerator",
+		"Book",
+		"Building",
+		"Companion",
+		"Entity",
+		"Furniture",
+		"Item",
+		"Legendary",
+		"Magic",
+		"Quest",
+		"Recipe",
+		"Skills",
+		"Station",
+		"Terrain",
+		"Vehicle",
 	}
 
 	for _, gen := range expectedGenerators {

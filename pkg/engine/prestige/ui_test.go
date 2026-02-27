@@ -2,32 +2,7 @@ package prestige
 
 import (
 	"testing"
-
-	"github.com/hajimehoshi/ebiten/v2"
 )
-
-// mockInputProvider implements MenuInputProvider for testing.
-type mockInputProvider struct {
-	pressedKeys map[ebiten.Key]bool
-}
-
-func newMockInputProvider() *mockInputProvider {
-	return &mockInputProvider{
-		pressedKeys: make(map[ebiten.Key]bool),
-	}
-}
-
-func (m *mockInputProvider) IsKeyJustPressed(key ebiten.Key) bool {
-	return m.pressedKeys[key]
-}
-
-func (m *mockInputProvider) setKeyPressed(key ebiten.Key) {
-	m.pressedKeys[key] = true
-}
-
-func (m *mockInputProvider) clearKeys() {
-	m.pressedKeys = make(map[ebiten.Key]bool)
-}
 
 func TestPrestigeMenuOption_String(t *testing.T) {
 	tests := []struct {
@@ -176,7 +151,7 @@ func TestPrestigeUI_Navigation(t *testing.T) {
 	}
 
 	// Navigate down
-	mock.setKeyPressed(ebiten.KeyDown)
+	mock.setMenuDown()
 	ui.Update()
 	if ui.selectedIdx != 1 {
 		t.Errorf("after down, selectedIdx = %d, want 1", ui.selectedIdx)
@@ -184,7 +159,7 @@ func TestPrestigeUI_Navigation(t *testing.T) {
 	mock.clearKeys()
 
 	// Navigate down with S key
-	mock.setKeyPressed(ebiten.KeyS)
+	mock.setMenuDown()
 	ui.Update()
 	if ui.selectedIdx != 2 {
 		t.Errorf("after S, selectedIdx = %d, want 2", ui.selectedIdx)
@@ -192,7 +167,7 @@ func TestPrestigeUI_Navigation(t *testing.T) {
 	mock.clearKeys()
 
 	// Navigate up
-	mock.setKeyPressed(ebiten.KeyUp)
+	mock.setMenuUp()
 	ui.Update()
 	if ui.selectedIdx != 1 {
 		t.Errorf("after up, selectedIdx = %d, want 1", ui.selectedIdx)
@@ -200,7 +175,7 @@ func TestPrestigeUI_Navigation(t *testing.T) {
 	mock.clearKeys()
 
 	// Navigate up with W key
-	mock.setKeyPressed(ebiten.KeyW)
+	mock.setMenuUp()
 	ui.Update()
 	if ui.selectedIdx != 0 {
 		t.Errorf("after W, selectedIdx = %d, want 0", ui.selectedIdx)
@@ -208,7 +183,7 @@ func TestPrestigeUI_Navigation(t *testing.T) {
 	mock.clearKeys()
 
 	// Wrap around at top
-	mock.setKeyPressed(ebiten.KeyUp)
+	mock.setMenuUp()
 	ui.Update()
 	if ui.selectedIdx != len(ui.options)-1 {
 		t.Errorf("after wrap up, selectedIdx = %d, want %d", ui.selectedIdx, len(ui.options)-1)
@@ -216,7 +191,7 @@ func TestPrestigeUI_Navigation(t *testing.T) {
 	mock.clearKeys()
 
 	// Wrap around at bottom
-	mock.setKeyPressed(ebiten.KeyDown)
+	mock.setMenuDown()
 	ui.Update()
 	if ui.selectedIdx != 0 {
 		t.Errorf("after wrap down, selectedIdx = %d, want 0", ui.selectedIdx)
@@ -234,7 +209,7 @@ func TestPrestigeUI_AllocatePoint(t *testing.T) {
 	ui.Show("player1", "Warrior")
 
 	// Select Health (index 0) and allocate
-	mock.setKeyPressed(ebiten.KeyEnter)
+	mock.setMenuConfirm()
 	ui.Update()
 	mock.clearKeys()
 
@@ -247,11 +222,11 @@ func TestPrestigeUI_AllocatePoint(t *testing.T) {
 	}
 
 	// Navigate to damage and allocate with Space
-	mock.setKeyPressed(ebiten.KeyDown)
+	mock.setMenuDown()
 	ui.Update()
 	mock.clearKeys()
 
-	mock.setKeyPressed(ebiten.KeySpace)
+	mock.setMenuConfirm()
 	ui.Update()
 	mock.clearKeys()
 
@@ -289,7 +264,7 @@ func TestPrestigeUI_Respec(t *testing.T) {
 
 	// Navigate to respec option (index 5)
 	for i := 0; i < 5; i++ {
-		mock.setKeyPressed(ebiten.KeyDown)
+		mock.setMenuDown()
 		ui.Update()
 		mock.clearKeys()
 	}
@@ -299,7 +274,7 @@ func TestPrestigeUI_Respec(t *testing.T) {
 	}
 
 	// Activate respec
-	mock.setKeyPressed(ebiten.KeyEnter)
+	mock.setMenuConfirm()
 	ui.Update()
 	mock.clearKeys()
 
@@ -341,13 +316,13 @@ func TestPrestigeUI_RespecDenied(t *testing.T) {
 
 	// Navigate to respec
 	for i := 0; i < 5; i++ {
-		mock.setKeyPressed(ebiten.KeyDown)
+		mock.setMenuDown()
 		ui.Update()
 		mock.clearKeys()
 	}
 
 	// Try to respec
-	mock.setKeyPressed(ebiten.KeyEnter)
+	mock.setMenuConfirm()
 	ui.Update()
 	mock.clearKeys()
 
@@ -375,13 +350,13 @@ func TestPrestigeUI_Back(t *testing.T) {
 
 	// Navigate to back option (last option)
 	for i := 0; i < len(ui.options)-1; i++ {
-		mock.setKeyPressed(ebiten.KeyDown)
+		mock.setMenuDown()
 		ui.Update()
 		mock.clearKeys()
 	}
 
 	// Activate back
-	mock.setKeyPressed(ebiten.KeyEnter)
+	mock.setMenuConfirm()
 	ui.Update()
 	mock.clearKeys()
 
@@ -405,7 +380,7 @@ func TestPrestigeUI_EscapeKey(t *testing.T) {
 	ui.Show("player1", "Warrior")
 
 	// Press escape
-	mock.setKeyPressed(ebiten.KeyEscape)
+	mock.setMenuBack()
 	result := ui.Update()
 	mock.clearKeys()
 
@@ -441,7 +416,7 @@ func TestPrestigeUI_AllocateWithNoPoints(t *testing.T) {
 	ui.Show("player1", "Warrior")
 
 	// Try to allocate (should fail silently)
-	mock.setKeyPressed(ebiten.KeyEnter)
+	mock.setMenuConfirm()
 	ui.Update()
 	mock.clearKeys()
 
@@ -470,13 +445,13 @@ func TestPrestigeUI_RespecWithNoAllocations(t *testing.T) {
 
 	// Navigate to respec
 	for i := 0; i < 5; i++ {
-		mock.setKeyPressed(ebiten.KeyDown)
+		mock.setMenuDown()
 		ui.Update()
 		mock.clearKeys()
 	}
 
 	// Try to respec with no allocations
-	mock.setKeyPressed(ebiten.KeyEnter)
+	mock.setMenuConfirm()
 	ui.Update()
 	mock.clearKeys()
 

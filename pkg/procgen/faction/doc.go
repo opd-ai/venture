@@ -43,14 +43,16 @@
 //
 //	result, err := gen.Generate(worldSeed, params)
 //	if err != nil {
-//	    log.Fatal(err)
+//	    logger.WithError(err).Fatal("faction generation failed")
 //	}
 //
 //	factions := result.([]*engine.Faction)
 //	for _, faction := range factions {
-//	    fmt.Printf("Faction: %s (%s)\n", faction.Name, faction.Type)
-//	    fmt.Printf("  Description: %s\n", faction.Description)
-//	    fmt.Printf("  Members: %d\n", faction.MemberCount)
+//	    logger.WithFields(logrus.Fields{
+//	        "faction": faction.Name,
+//	        "type":    faction.Type,
+//	        "members": faction.MemberCount,
+//	    }).Info("generated faction")
 //	}
 //
 // # Faction Relationships

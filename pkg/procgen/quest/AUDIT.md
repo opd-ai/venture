@@ -23,7 +23,7 @@ The `pkg/procgen/quest` package provides deterministic procedural quest generati
 (None found)
 
 ### Medium Severity
-- [ ] **Documentation** — Example code in `doc.go:25` uses `log.Fatal` instead of proper error handling pattern (`doc.go:25`)
+- [x] **Documentation** — Example code in `doc.go:25` uses `log.Fatal` instead of proper error handling pattern (`doc.go:25`) — **COMPLETED 2026-02-27**: Replaced log.Fatal with logger.WithError for structured logging
 
 ### Low Severity
 - [ ] **API Consistency** — Quest methods have both procedural function variants (e.g., `QuestIsComplete(q *Quest)`) and receiver methods (e.g., `q.IsComplete()`), creating API duplication. Recommend deprecating one pattern in favor of the other for consistency (`types.go:217-249`)

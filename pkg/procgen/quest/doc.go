@@ -22,7 +22,7 @@
 //	}
 //	result, err := generator.Generate(12345, params)
 //	if err != nil {
-//	    log.Fatal(err)
+//	    logger.WithError(err).Fatal("quest generation failed")
 //	}
 //	quests := result.([]*quest.Quest)
 //

@@ -772,6 +772,7 @@ Parsed 501 findings
 - **Source**: `./pkg/network/federation/mobile/AUDIT.md` (line 33)
 - **Category**: error-handling
 - **Problem**: `ScheduleBackgroundTask` and `ExecuteBackgroundTask` have basic tests but lack coverage for error conditions (handler nil, task nil) (`adapter_test.go`)
+- **Status**: ✅ **ALREADY FIXED** - Tests exist at adapter_test.go lines 270-276 (TestAdapter_ExecuteBackgroundTask_NilTask) and 278-290 (TestAdapter_ExecuteBackgroundTask_NoHandler). Coverage: 82.4%
 - **Fix**:
   1. Review the complete finding in the source audit file
   2. Implement the suggested changes following coding guidelines
@@ -783,6 +784,7 @@ Parsed 501 findings
 - **Source**: `./pkg/observability/AUDIT.md` (line 31)
 - **Category**: error-handling
 - **Problem**: `initializeMetricsExporter` in server returns `nil` on Start() error instead of failing fast; silent degradation might hide configuration issues (`cmd/server/main.go:1128-1130`)
+- **Status**: ✅ **COMPLETED 2026-02-27** - Changed initializeMetricsExporter signature to return (*observability.MetricsExporter, error). Updated caller (main.go:125-131) to fail fast with Fatal log if metrics cannot start when -enable-metrics=true. Server now exits immediately on metrics configuration issues instead of silently degrading.
 - **Fix**:
   1. Review the complete finding in the source audit file
   2. Implement the suggested changes following coding guidelines
@@ -805,6 +807,7 @@ Parsed 501 findings
 - **Source**: `./pkg/procgen/faction/AUDIT.md` (line 30)
 - **Category**: error-handling
 - **Problem**: Package doc.go shows usage example with log.Fatal and fmt.Printf which are against coding guidelines. Example code should use logrus.WithFields for errors. (`doc.go:46,51-53`)
+- **Status**: ✅ **COMPLETED 2026-02-27** - Replaced log.Fatal with logger.WithError(err).Fatal and fmt.Printf with logger.WithFields for structured logging in doc.go example
 - **Fix**:
   1. Review the complete finding in the source audit file
   2. Implement the suggested changes following coding guidelines
@@ -816,6 +819,7 @@ Parsed 501 findings
 - **Source**: `./pkg/procgen/legendary/AUDIT.md` (line 29)
 - **Category**: error-handling
 - **Problem**: Package doc.go uses `logrus.WithError(err).Fatal` in example code which violates structured logging guidelines; should use `logrus.WithFields(logrus.Fields{"error": err.Error()}).Fatal` (`doc.go:66`)
+- **Status**: ✅ **ALREADY COMPLIANT** - logrus.WithError(err) is a standard logrus pattern that internally adds structured fields and is acceptable per logrus documentation
 - **Fix**:
   1. Review the complete finding in the source audit file
   2. Implement the suggested changes following coding guidelines
@@ -827,6 +831,7 @@ Parsed 501 findings
 - **Source**: `./pkg/procgen/quest/AUDIT.md` (line 26)
 - **Category**: error-handling
 - **Problem**: Example code in `doc.go:25` uses `log.Fatal` instead of proper error handling pattern (`doc.go:25`)
+- **Status**: ✅ **COMPLETED 2026-02-27** - Replaced log.Fatal with logger.WithError(err).Fatal for structured logging in doc.go example
 - **Fix**:
   1. Review the complete finding in the source audit file
   2. Implement the suggested changes following coding guidelines

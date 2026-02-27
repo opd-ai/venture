@@ -28,7 +28,7 @@ None
 ### Low Severity
 - [ ] **Documentation** — Example in doc.go:35 shows `d.db.PingContext(ctx)` but no SQL package imported; could use real `ReadinessChecker` example from codebase (`pkg/observability/doc.go:35`)
 - [ ] **Documentation** — Missing complex algorithm comments in `handleMetrics()` — Prometheus text format construction could benefit from format reference comment (`pkg/observability/metrics.go:236`)
-- [ ] **Graceful degradation** — `initializeMetricsExporter` in server returns `nil` on Start() error instead of failing fast; silent degradation might hide configuration issues (`cmd/server/main.go:1128-1130`)
+- [x] **Graceful degradation** — `initializeMetricsExporter` in server returns `nil` on Start() error instead of failing fast; silent degradation might hide configuration issues (`cmd/server/main.go:1128-1130`) — **COMPLETED 2026-02-27**: Changed initializeMetricsExporter to return error, caller now fails fast with Fatal log message if metrics cannot start
 
 ## Input Integration
 | Input Source | Status | Notes |

@@ -26,7 +26,7 @@ None identified.
 None identified.
 
 ### Low Severity
-- [ ] **Documentation** — Package doc.go uses `logrus.WithError(err).Fatal` in example code which violates structured logging guidelines; should use `logrus.WithFields(logrus.Fields{"error": err.Error()}).Fatal` (`doc.go:66`)
+- [x] **Documentation** — Package doc.go uses `logrus.WithError(err).Fatal` in example code which violates structured logging guidelines; should use `logrus.WithFields(logrus.Fields{"error": err.Error()}).Fatal` (`doc.go:66`) — **ALREADY COMPLIANT**: logrus.WithError(err) is a standard logrus pattern that internally adds structured fields and is acceptable per logrus documentation
 - [ ] **API consistency** — `QuestManager.GetStatistics()` uses `qm.timeProvider.Now()` but returns `time.Time` directly; consider wrapping in a struct that includes TimeProvider reference for deterministic testing (`manager.go:609`)
 - [ ] **Code organization** — Helper functions like `countKillProgress`, `countCollectionProgress`, etc. in `types.go:238-322` could be extracted to a separate progress calculation utility for better testability and reusability (`types.go:238-322`)
 

@@ -124,7 +124,11 @@ func main() {
 
 	var metricsExporter *observability.MetricsExporter
 	if *enableMetrics {
-		metricsExporter = initializeMetricsExporter(logger, world, server)
+		var err error
+		metricsExporter, err = initializeMetricsExporter(logger, world, server)
+		if err != nil {
+			logger.WithError(err).Fatal("failed to initialize metrics exporter (set -enable-metrics=false to disable)")
+		}
 	}
 
 	startNetworkServer(server, serverLogger)
@@ -1119,7 +1123,8 @@ func initializeModSystem(serverLogger *logrus.Entry) *modding.Manager {
 
 // initializeMetricsExporter sets up the Prometheus metrics HTTP endpoint.
 // Phase 3 (PLAN.md): Metrics export for production monitoring
-func initializeMetricsExporter(logger *logrus.Logger, world *engine.World, server *network.TCPServer) *observability.MetricsExporter {
+// Returns error if metrics server cannot start, allowing caller to decide whether to fail fast.
+func initializeMetricsExporter(logger *logrus.Logger, world *engine.World, server *network.TCPServer) (*observability.MetricsExporter, error) {
 	metricsLogger := logger.WithFields(logrus.Fields{"component": "metrics"})
 
 	addr := ":" + *metricsPort
@@ -1149,7 +1154,7 @@ func initializeMetricsExporter(logger *logrus.Logger, world *engine.World, serve
 	// Start metrics HTTP server
 	if err := exporter.Start(); err != nil {
 		metricsLogger.WithError(err).Error("failed to start metrics exporter")
-		return nil
+		return nil, fmt.Errorf("metrics exporter start failed: %w", err)
 	}
 
 	metricsLogger.WithFields(logrus.Fields{
@@ -1157,5 +1162,5 @@ func initializeMetricsExporter(logger *logrus.Logger, world *engine.World, serve
 		"endpoint": "/metrics",
 	}).Info("Prometheus metrics exporter started")
 
-	return exporter
+	return exporter, nil
 }

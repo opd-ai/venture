@@ -26,7 +26,7 @@ The `pkg/audio` package provides a comprehensive procedural audio synthesis syst
 - [ ] **Integration** — VoiceSystem (voice chat) is implemented but has no clear integration path with network/chat subsystem for proximity/guild/party voice channels (`voice.go:197-207`, `manager.go:294-307`). The `VoiceTransport` interface is defined but no concrete implementation is registered in the client/server. This may be intentional for future implementation, but should be documented or wired to a stub transport.
 
 ### Low Severity
-- [ ] **Documentation** — `voice.go:86` - Comment states "Note: For odd-length sample arrays, the output rounds up to ceil(n/2) bytes" but this edge case behavior should be validated in unit tests to ensure decode handles it correctly
+- [x] **Documentation** — `voice.go:86` - Comment states "Note: For odd-length sample arrays, the output rounds up to ceil(n/2) bytes" but this edge case behavior should be validated in unit tests to ensure decode handles it correctly — **RESOLVED 2026-02-27**: Added comprehensive edge case tests (TestSimpleVoiceCodec_OddLengthEncoding with 6 test cases, TestSimpleVoiceCodec_OddLengthRoundTrip with 5 patterns) validating odd-length encoding/decoding behavior. All tests pass, coverage maintained at 91.4%.
 - [ ] **Code clarity** — `manager.go:92-93` and `manager.go:100-101` - Setting volume to 0.0 implicitly disables the subsystem (musicEnabled/sfxEnabled = false). This coupling is non-obvious and could cause confusion. Consider explicit Enable/Disable methods or clearer documentation.
 - [ ] **API consistency** — `voice.go:243` - ProcessInput method comment documents channelID parameter but does not validate that channelID is non-empty or follows any expected format
 

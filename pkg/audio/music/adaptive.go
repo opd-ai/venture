@@ -111,6 +111,12 @@ func (amm *AdaptiveMusicManager) GenerateTrack(duration float64) *audio.AudioSam
 	return amm.composer.GenerateTrack(duration)
 }
 
+// GenerateReproducible creates a fully deterministic audio track using a fresh
+// composer instance. See AdaptiveComposer.GenerateReproducible for details.
+func (amm *AdaptiveMusicManager) GenerateReproducible(duration float64, freshSeed int64) *audio.AudioSample {
+	return amm.composer.GenerateReproducible(duration, freshSeed)
+}
+
 // GetActiveLayerCount returns the number of active layers.
 func (amm *AdaptiveMusicManager) GetActiveLayerCount() int {
 	return amm.composer.GetActiveLayerCount()
@@ -867,4 +873,48 @@ func (ac *AdaptiveComposer) Update(deltaTime float64) {
 // This implements the audio.AdaptiveMusicSystem interface.
 func (ac *AdaptiveComposer) GenerateTrack(duration float64) *audio.AudioSample {
 	return ac.GenerateAdaptiveTrack(duration)
+}
+
+// GenerateReproducible creates a fully deterministic audio track by generating
+// with a fresh AdaptiveComposer instance. This ensures the same seed always
+// produces identical output, regardless of previous RNG state.
+//
+// This method is useful for:
+//   - Testing: Verify exact audio output matches expectations
+//   - Replay systems: Reproduce exact music heard during recorded gameplay
+//   - Debugging: Compare audio output across different runs
+//
+// For normal gameplay, use GenerateTrack() which provides variety while
+// maintaining consistent musical structure.
+//
+// Parameters:
+//   - duration: Length of track in seconds
+//   - freshSeed: Seed for deterministic generation (same seed = same output)
+//
+// Returns:
+//   - AudioSample with deterministically generated music
+func (ac *AdaptiveComposer) GenerateReproducible(duration float64, freshSeed int64) *audio.AudioSample {
+	// Create temporary composer with fresh RNG state
+	tempComposer := NewAdaptiveComposer(ac.sampleRate, freshSeed)
+
+	// Copy current state to temporary composer
+	tempComposer.currentGenre = ac.currentGenre
+	tempComposer.currentContext = ac.currentContext
+	tempComposer.tempo = ac.tempo
+	tempComposer.rootNote = ac.rootNote
+
+	// Deep copy layers to preserve activation state and volumes
+	for name, layer := range ac.layers {
+		tempComposer.layers[name] = &CompositionLayer{
+			Name:         layer.Name,
+			Active:       layer.Active,
+			Volume:       layer.Volume,
+			TargetVolume: layer.TargetVolume,
+			Waveform:     layer.Waveform,
+			Frequency:    layer.Frequency,
+		}
+	}
+
+	// Generate with fresh state
+	return tempComposer.GenerateAdaptiveTrack(duration)
 }

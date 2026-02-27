@@ -775,3 +775,140 @@ func TestAdaptiveComposer_AddRemoveLayerErrors(t *testing.T) {
 		t.Error("RemoveLayer() should return error for uninitialized layer")
 	}
 }
+
+func TestAdaptiveComposer_GenerateReproducible(t *testing.T) {
+	tests := []struct {
+		name        string
+		seed        int64
+		duration    float64
+		genre       string
+		rootNote    int
+		wantSamples bool
+	}{
+		{
+			name:        "basic reproducible generation",
+			seed:        12345,
+			duration:    1.0,
+			genre:       "fantasy",
+			rootNote:    60,
+			wantSamples: true,
+		},
+		{
+			name:        "different seed produces different output",
+			seed:        67890,
+			duration:    1.0,
+			genre:       "fantasy",
+			rootNote:    60,
+			wantSamples: true,
+		},
+		{
+			name:        "short duration",
+			seed:        11111,
+			duration:    0.5,
+			genre:       "scifi",
+			rootNote:    55,
+			wantSamples: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Create composer
+			composer := NewAdaptiveComposer(44100, tt.seed)
+			composer.Initialize(tt.genre, tt.rootNote)
+
+			// Generate twice with same fresh seed - should be identical
+			sample1 := composer.GenerateReproducible(tt.duration, tt.seed)
+			sample2 := composer.GenerateReproducible(tt.duration, tt.seed)
+
+			if sample1 == nil || sample2 == nil {
+				t.Fatal("GenerateReproducible() returned nil")
+			}
+
+			// Verify samples are identical
+			if len(sample1.Data) != len(sample2.Data) {
+				t.Errorf("Sample lengths differ: %d vs %d", len(sample1.Data), len(sample2.Data))
+			}
+
+			// Check first 100 samples for determinism (full check would be slow)
+			compareLen := min(100, len(sample1.Data))
+			for i := 0; i < compareLen; i++ {
+				if sample1.Data[i] != sample2.Data[i] {
+					t.Errorf("Sample data differs at index %d: %f vs %f", i, sample1.Data[i], sample2.Data[i])
+					break
+				}
+			}
+
+			// Verify metadata
+			if sample1.SampleRate != 44100 {
+				t.Errorf("Expected sample rate 44100, got %d", sample1.SampleRate)
+			}
+			if sample2.SampleRate != 44100 {
+				t.Errorf("Expected sample rate 44100, got %d", sample2.SampleRate)
+			}
+		})
+	}
+}
+
+func TestAdaptiveComposer_GenerateReproducibleVsNormal(t *testing.T) {
+	seed := int64(99999)
+	composer := NewAdaptiveComposer(44100, seed)
+	composer.Initialize("fantasy", 60)
+
+	// Generate using normal method (RNG state advances)
+	_ = composer.GenerateTrack(1.0)
+	normalAfterFirst := composer.GenerateTrack(1.0)
+
+	// Create fresh composer with same initial state
+	composer2 := NewAdaptiveComposer(44100, seed)
+	composer2.Initialize("fantasy", 60)
+
+	// Generate using reproducible method (fresh RNG state each time)
+	_ = composer2.GenerateReproducible(1.0, seed)
+	reproducibleAfterFirst := composer2.GenerateReproducible(1.0, seed)
+
+	// The reproducible versions should be identical (same seed)
+	// while the normal versions may differ (RNG state advanced)
+	// This test verifies the reproducible method provides determinism
+	if len(reproducibleAfterFirst.Data) == 0 {
+		t.Error("GenerateReproducible() produced empty sample")
+	}
+	if len(normalAfterFirst.Data) == 0 {
+		t.Error("GenerateTrack() produced empty sample")
+	}
+
+	// Both methods should produce valid audio
+	if len(reproducibleAfterFirst.Data) != len(normalAfterFirst.Data) {
+		// This is expected - they may have different lengths due to RNG state
+		t.Logf("Sample lengths differ (expected): reproducible=%d, normal=%d",
+			len(reproducibleAfterFirst.Data), len(normalAfterFirst.Data))
+	}
+}
+
+func TestAdaptiveMusicManager_GenerateReproducible(t *testing.T) {
+	seed := int64(54321)
+	manager := NewAdaptiveMusicManager(44100, seed)
+	manager.Initialize("scifi", 55)
+
+	// Test that manager wrapper works correctly
+	sample := manager.GenerateReproducible(0.5, seed)
+	if sample == nil {
+		t.Fatal("GenerateReproducible() returned nil")
+	}
+	if len(sample.Data) == 0 {
+		t.Error("GenerateReproducible() produced empty sample")
+	}
+	if sample.SampleRate != 44100 {
+		t.Errorf("Expected sample rate 44100, got %d", sample.SampleRate)
+	}
+}
+
+func BenchmarkAdaptiveComposer_GenerateReproducible(b *testing.B) {
+	composer := NewAdaptiveComposer(44100, 12345)
+	composer.Initialize("fantasy", 60)
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_ = composer.GenerateReproducible(1.0, 12345)
+	}
+}

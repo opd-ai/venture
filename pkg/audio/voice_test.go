@@ -512,3 +512,191 @@ func BenchmarkVoiceProcessor_ProcessInput(b *testing.B) {
 		_ = processor.ProcessInput("test-channel", samples)
 	}
 }
+
+// TestSimpleVoiceCodec_OddLengthEncoding tests the edge case behavior documented in Encode():
+// "For odd-length sample arrays, the output rounds up to ceil(n/2) bytes.
+// During decoding, this produces an extra sample (decode always produces even count)."
+func TestSimpleVoiceCodec_OddLengthEncoding(t *testing.T) {
+	codec := NewSimpleVoiceCodec(48000, VoiceQualityMedium)
+
+	tests := []struct {
+		name            string
+		inputLen        int
+		wantEncodedLen  int
+		wantDecodedLen  int
+		wantExtraSample bool
+	}{
+		{
+			name:            "odd length 1",
+			inputLen:        1,
+			wantEncodedLen:  1, // ceil(1/2) = 1
+			wantDecodedLen:  2, // always even
+			wantExtraSample: true,
+		},
+		{
+			name:            "odd length 3",
+			inputLen:        3,
+			wantEncodedLen:  2, // ceil(3/2) = 2
+			wantDecodedLen:  4, // always even
+			wantExtraSample: true,
+		},
+		{
+			name:            "odd length 5",
+			inputLen:        5,
+			wantEncodedLen:  3, // ceil(5/2) = 3
+			wantDecodedLen:  6, // always even
+			wantExtraSample: true,
+		},
+		{
+			name:            "odd length 101",
+			inputLen:        101,
+			wantEncodedLen:  51,  // ceil(101/2) = 51
+			wantDecodedLen:  102, // always even
+			wantExtraSample: true,
+		},
+		{
+			name:            "even length 2",
+			inputLen:        2,
+			wantEncodedLen:  1, // 2/2 = 1
+			wantDecodedLen:  2, // always even
+			wantExtraSample: false,
+		},
+		{
+			name:            "even length 100",
+			inputLen:        100,
+			wantEncodedLen:  50,  // 100/2 = 50
+			wantDecodedLen:  100, // always even
+			wantExtraSample: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Create input samples with distinct values
+			samples := make([]float64, tt.inputLen)
+			for i := range samples {
+				samples[i] = float64(i%10) / 10.0 // Values 0.0, 0.1, ..., 0.9
+			}
+
+			// Test encoding
+			encoded, err := codec.Encode(samples)
+			if err != nil {
+				t.Fatalf("Encode() error = %v", err)
+			}
+			if len(encoded) != tt.wantEncodedLen {
+				t.Errorf("Encode() len = %d, want %d (ceil(%d/2) = %d)",
+					len(encoded), tt.wantEncodedLen, tt.inputLen, tt.wantEncodedLen)
+			}
+
+			// Test decoding
+			decoded, err := codec.Decode(encoded)
+			if err != nil {
+				t.Fatalf("Decode() error = %v", err)
+			}
+			if len(decoded) != tt.wantDecodedLen {
+				t.Errorf("Decode() len = %d, want %d (always even, 2 samples per byte)",
+					len(decoded), tt.wantDecodedLen)
+			}
+
+			// Verify decode always produces even count
+			if len(decoded)%2 != 0 {
+				t.Errorf("Decode() len = %d, should always be even", len(decoded))
+			}
+
+			// For odd-length inputs, verify extra sample exists
+			if tt.wantExtraSample {
+				if len(decoded) != tt.inputLen+1 {
+					t.Errorf("Decode() len = %d, want %d (input + 1 extra sample)",
+						len(decoded), tt.inputLen+1)
+				}
+				// Extra sample should be valid (clamped to [-1.0, 1.0])
+				extraSample := decoded[len(decoded)-1]
+				if extraSample < -1.0 || extraSample > 1.0 {
+					t.Errorf("extra sample = %f, should be in [-1.0, 1.0]", extraSample)
+				}
+			}
+
+			// Verify original samples are reasonably reconstructed (lossy codec)
+			maxError := 0.2 // 20% tolerance for simple codec
+			for i := 0; i < tt.inputLen; i++ {
+				diff := samples[i] - decoded[i]
+				if diff < 0 {
+					diff = -diff
+				}
+				if diff > maxError {
+					t.Errorf("sample[%d] error = %f, want < %f (input=%f, decoded=%f)",
+						i, diff, maxError, samples[i], decoded[i])
+					break
+				}
+			}
+		})
+	}
+}
+
+// TestSimpleVoiceCodec_OddLengthRoundTrip tests that odd-length encoding/decoding maintains
+// reasonable data integrity despite the extra sample.
+func TestSimpleVoiceCodec_OddLengthRoundTrip(t *testing.T) {
+	codec := NewSimpleVoiceCodec(48000, VoiceQualityMedium)
+
+	// Test various odd-length sample patterns
+	patterns := []struct {
+		name    string
+		samples []float64
+	}{
+		{
+			name:    "single sample silence",
+			samples: []float64{0.0},
+		},
+		{
+			name:    "single sample tone",
+			samples: []float64{0.5},
+		},
+		{
+			name:    "three samples varying",
+			samples: []float64{0.0, 0.5, 1.0},
+		},
+		{
+			name:    "five samples sawtooth",
+			samples: []float64{0.0, 0.25, 0.5, 0.75, 1.0},
+		},
+		{
+			name:    "seven samples alternating",
+			samples: []float64{-0.5, 0.5, -0.5, 0.5, -0.5, 0.5, -0.5},
+		},
+	}
+
+	for _, p := range patterns {
+		t.Run(p.name, func(t *testing.T) {
+			encoded, err := codec.Encode(p.samples)
+			if err != nil {
+				t.Fatalf("Encode() error = %v", err)
+			}
+
+			decoded, err := codec.Decode(encoded)
+			if err != nil {
+				t.Fatalf("Decode() error = %v", err)
+			}
+
+			// Verify decoded length is always even and input + 1
+			if len(decoded)%2 != 0 {
+				t.Errorf("decoded len = %d, should be even", len(decoded))
+			}
+			if len(decoded) != len(p.samples)+1 {
+				t.Errorf("decoded len = %d, want %d (input + 1)", len(decoded), len(p.samples)+1)
+			}
+
+			// Verify original samples are reconstructed within tolerance
+			maxError := 0.2
+			for i := 0; i < len(p.samples); i++ {
+				diff := p.samples[i] - decoded[i]
+				if diff < 0 {
+					diff = -diff
+				}
+				if diff > maxError {
+					t.Errorf("sample[%d] error = %f, input=%f, decoded=%f",
+						i, diff, p.samples[i], decoded[i])
+				}
+			}
+		})
+	}
+}

@@ -28,7 +28,6 @@ The pkg/network/trade package implements a comprehensive item trading system for
 *(None)*
 
 ### Medium Severity
-- [x] **Test Coverage** — **RESOLVED 2026-02-27**: Tests execute successfully without X11/display. Coverage measured at 79.2%, exceeding both 30% Ebiten-dependent and 40% general targets. The audit finding was based on incorrect assumption; pkg/engine dependency does not require display for this package's tests. (`system_test.go:1`, `time_provider_test.go:1`, `internal_coverage_test.go:1`)
 
 ### Low Severity
 - [x] **Documentation** — **COMPLETED 2026-02-27**: Added "Known Limitations" section to doc.go documenting the dual trade system architecture. Clarifies relationship between pkg/network/trade (network layer with validation/rate limiting) and pkg/engine/trade_system.go (engine layer with social integration). Explains both systems are registered separately in client and why this separation exists. (`doc.go:97-126`)
@@ -65,19 +64,6 @@ The pkg/network/trade package implements a comprehensive item trading system for
 - Both are registered as separate ECS systems in the client (cmd/client/init_versions.go:302, handlers.go:2132,2172)
 - Trade UI (pkg/engine/trade_ui.go) uses engine layer system
 - Network layer system handles multiplayer synchronization and validation
-
-## Test Coverage
-**Coverage**: Unmeasurable (requires X11; 30% target applies per audit guidelines)
-- **Test Files**: 3 test files (system_test.go: 645 LOC, time_provider_test.go: 230 LOC, coverage_improvement_test.go: 486 LOC) = 1361 LOC tests for 935 LOC production code
-- **Test-to-Source Ratio**: 145% (excellent ratio despite unmeasurable line coverage)
-- Missing test areas: 
-  - Integration tests with pkg/validation rate limiter (unit tests exist but no integration test verifying rate limit enforcement in realistic scenarios)
-  - Concurrency tests (verifying thread-safety claims in doc.go line 92: "NOT thread-safe. It is designed to be used from a single game loop thread")
-  - Multiplayer desync scenarios (what happens if proposer disconnects mid-trade?)
-- Missing benchmarks: 
-  - BenchmarkCommitTrade (most complex operation with rollback logic)
-  - BenchmarkUpdateWithManyActiveTrades (performance with 100+ simultaneous trades)
-- Table-driven test compliance: ✅ Excellent (TestProposeTrade, TestValidateTrust_*, TestTransferTracker_* all use table-driven pattern)
 
 ## Documentation Coverage
 - Package `doc.go`: ✅ (96 lines of comprehensive documentation including workflow, trust mechanics, proximity rules, example usage, integration notes, performance considerations, thread safety warning)
@@ -128,12 +114,6 @@ The pkg/network/trade package implements a comprehensive item trading system for
 **Build Tags**: No build tag files (*_wasm.go, *_mobile.go, *_desktop.go) — package is platform-agnostic
 
 ## Recommendations
-1. **[MED]** Add virtual display setup to CI/CD (e.g., Xvfb) or refactor tests to use stub implementations for Ebiten-independent unit testing. Currently, tests cannot run in headless environments despite having comprehensive test coverage.
-
-2. **[LOW]** Document the relationship between pkg/network/trade and pkg/engine/trade_system.go in package doc.go. New contributors may be confused by two trade systems. Clarify that network layer handles validation/rate limiting/time abstraction while engine layer handles social integration and UI.
-
-3. **[LOW]** Add integration test verifying rate limiter behavior under realistic load (e.g., 20 rapid trade requests, verify only 10 succeed per second). Currently, rate limiting is unit-tested but no integration test exists.
-
-4. **[LOW]** Add concurrency test with race detector explicitly testing the documented thread-safety claim ("NOT thread-safe... single game loop thread"). Add test case attempting concurrent ProposeTrade calls from multiple goroutines and verify failure or data corruption.
-
-5. **[LOW]** Rename coverage_improvement_test.go to internal_coverage_test.go to clarify that it tests unexported functions for coverage purposes rather than public API behavior.
+1. **[LOW]** Document the relationship between pkg/network/trade and pkg/engine/trade_system.go in package doc.go. New contributors may be confused by two trade systems. Clarify that network layer handles validation/rate limiting/time abstraction while engine layer handles social integration and UI.
+2. **[LOW]** Add integration test verifying rate limiter behavior under realistic load (e.g., 20 rapid trade requests, verify only 10 succeed per second). Currently, rate limiting is unit-tested but no integration test exists.
+3. **[LOW]** Add concurrency test with race detector explicitly testing the documented thread-safety claim ("NOT thread-safe... single game loop thread"). Add test case attempting concurrent ProposeTrade calls from multiple goroutines and verify failure or data corruption.

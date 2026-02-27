@@ -27,7 +27,6 @@ Audited the cross-server federation protocol package including 39 non-test files
 - [x] **Swallowed Error** — guild/federation.go:96 silently ignores error with `_ = msg` and comment "Guild message prepared but transport not configured". Should log warning or return error to caller instead of silent no-op. (`guild/federation.go:96`)
 
 ### Low Severity
-- [x] **Parent Package Test Coverage** — Parent pkg/network/federation tests fail due to X11/GLFW dependency (not a code issue, expected per guidelines for packages with Ebiten). Subpackages (guild/, mobile/, webrtc/) have excellent coverage (82-88%).
 - [x] **Example Code in Doc** — doc.go contains example code with log.Fatal and fmt.Println in comments (lines 48-192). While technically not production code, consider using proper godoc Example functions for testable examples. (`doc.go:48-192`)
 
 ## Input Integration
@@ -44,12 +43,6 @@ Audited the cross-server federation protocol package including 39 non-test files
 | Menu | Reachable | Input-Complete | Backing System Wired | Notes |
 |---|---|---|---|---|
 | N/A | N/A | N/A | N/A | This is a network protocol package with no UI components |
-
-## Test Coverage
-**Coverage**: 85.8% aggregate (guild: 88.2%, mobile: 82.0%, webrtc: 86.0%)
-- Missing test areas: Parent package tests require X11 (expected per guidelines for Ebiten-dependent packages)
-- Missing benchmarks: protocol.go has BenchmarkPortalSystemUpdate but lacks benchmarks for handshake, crypto, serialization hot paths
-- Table-driven test compliance: ✅ Excellent use of table-driven tests throughout (auth_test.go, circuitbreaker_test.go, discovery_test.go, handshake_test.go, market_test.go, protocol_test.go, sync_test.go, transfer_test.go)
 
 ## Documentation Coverage
 - Package `doc.go`: ✅ Present in parent and all 3 subdirectories (guild/, mobile/, webrtc/)

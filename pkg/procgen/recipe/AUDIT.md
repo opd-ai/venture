@@ -47,34 +47,6 @@ The recipe package provides deterministic, seed-based generation of crafting rec
 | Crafting UI | ✅ | ✅ | ✅ | Recipe generation wired via `cmd/client/handlers.go:initializeGenerators()`, crafting UI (`pkg/engine/crafting_ui.go`) displays generated recipes, craft queue (`pkg/engine/qol/craftqueue.go`) consumes recipes |
 | Recipe Tracker | ✅ | ✅ | ✅ | QoL system (`pkg/engine/qol/recipetracker.go`) tracks discovered recipes |
 
-## Test Coverage
-**Coverage**: Unmeasurable (requires X11; 47.9% test-to-source ratio: 765 test lines / 1598 total lines)  
-**Target**: 30% (X11/Ebiten-dependent packages)  
-**Assessment**: ✅ Exceeds target via test-to-source ratio proxy
-
-- **Missing test areas**: None - comprehensive coverage including:
-  - Determinism verification (same seed → same output)
-  - All 5 recipe types (potion, enchanting, magic_item, cooking, smithing)
-  - All 5 genres (fantasy, scifi, horror, cyberpunk, postapoc)
-  - Rarity distribution and scaling with depth/difficulty
-  - Material quantity bounds
-  - Skill scaling with depth/difficulty
-  - Craft time validation
-  - Success chance clamping at extreme parameters
-  - Zero/negative count fallback to default
-  - Unknown genre graceful fallback
-  - Recipe property validation per type (cooking → consumables, smithing → weapons/armor)
-
-- **Missing benchmarks**: 
-  - ✅ Present: `BenchmarkRecipeGenerator_Generate` (general)
-  - ✅ Present: `BenchmarkGenerateNewRecipeTypes` (cooking/smithing specific)
-  - All expected benchmarks present
-
-- **Table-driven test compliance**: ✅ Excellent
-  - 14 table-driven tests covering all major scenarios
-  - Consistent structure with `name`, `seed`, `params`, `wantCount`, `wantErr` fields
-  - Each table includes multiple test cases per function
-
 ## Documentation Coverage
 - **Package `doc.go`**: ✅ Comprehensive 69-line package documentation with usage examples, recipe type descriptions, template system explanation, rarity progression table, and design philosophy
 - **Exported symbols documented**: 6/6 (100%)

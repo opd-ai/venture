@@ -39,7 +39,6 @@ The `pkg/engine/physics/vehicle` package provides advanced vehicle physics simul
 - [x] **Documentation** — ✅ RESOLVED (2026-02-27): Added comprehensive godoc to GetTerrainTypeFromTile() with terrain type mappings and example usage. Added terrain integration example to doc.go showing how to use GetTerrainTypeFromTile() with world tiles.
 - [ ] **Performance** — `GetVisibleTracks()` uses AABB culling (`terrain_deformation.go:82-86`) but could benefit from spatial partitioning for >1000 tracks (current max is 200, acceptable for now)
 - [ ] **Integration Gap** — No integration with `pkg/procgen/vehicle` generator to automatically add physics components to generated vehicles — vehicle entities created without physics components
-- [ ] **Test Gap** — No integration test verifying all four components work together in a real ECS World with actual entity lifecycle (current tests use mock entities)
 
 ## Input Integration
 | Input Source | Status | Notes |
@@ -55,12 +54,6 @@ The `pkg/engine/physics/vehicle` package provides advanced vehicle physics simul
 | Menu | Reachable | Input-Complete | Backing System Wired | Notes |
 |---|---|---|---|---|
 | N/A | N/A | N/A | N/A | Vehicle physics system has no UI — visual feedback handled by render system showing suspension compression and track marks |
-
-## Test Coverage
-**Coverage**: 94.8% (target: 40%, or 30% for X11/Wayland/Ebiten-dependent packages)
-- Missing test areas: None significant — all major code paths covered
-- Missing benchmarks: Benchmarks exist for all hot-path functions (suspension, weight transfer, collision, terrain)
-- Table-driven test compliance: ✅ — All tests use table-driven patterns (e.g., `system_test.go:14-47`, `suspension_test.go:14-54`, `weight_transfer_test.go:14-62`)
 
 ## Documentation Coverage
 - Package `doc.go`: ✅ — Comprehensive 210-line package documentation with usage examples, component descriptions, terrain types, performance considerations

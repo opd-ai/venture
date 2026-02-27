@@ -50,12 +50,6 @@ None identified.
 |---|---|---|---|---|
 | Settings | ✅ | ✅ | ✅ | Post-processing effects are configurable via `PostProcessorAdapter` in `pkg/engine/post_processor.go`; genre presets applied automatically from `pkg/engine/ecs.go` ECS world initialization |
 
-## Test Coverage
-**Coverage**: Unmeasurable (requires X11; 66% test-to-source ratio, exceeds 30% target)
-- Missing test areas: None identified (comprehensive test suite covering all effect types, presets, validation, GPU processor)
-- Missing benchmarks: None identified (performance targets documented in `doc.go:86-91`)
-- Table-driven test compliance: ✅ (see `effects_test.go`, `presets_test.go`, `types_test.go`)
-
 ## Documentation Coverage
 - Package `doc.go`: ✅ (comprehensive 100-line documentation with usage examples)
 - Exported symbols documented: 56/58 (97%)

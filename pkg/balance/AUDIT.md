@@ -23,7 +23,6 @@ The `pkg/balance` package provides automated balance validation for 8 gameplay d
 - [x] **Non-deterministic timing** — All 8 validators use `time.Now()` for duration measurement in `Validate()` methods. While timing is metadata (not simulation input), it makes test results slightly non-reproducible. Alternative: Accept duration as external measurement or use a `TimeMeasure` interface injectable for deterministic tests. (`combat.go:33`, `economic.go:32`, `progression.go:31`, `social.go:31`, `housing.go:31`, `companion.go:31`, `quest.go:32`, `vehicle.go:32`) — **DEFERRED: Timing is metadata only, not gameplay state**
 
 ### Medium Severity
-- [x] **Test coverage unmeasurable** — Tests panic on `glfw: The GLFW library is not initialized` due to Ebiten import from `pkg/engine`. Balance package has no UI requirements and should not transitively depend on graphics. Root cause: `combat.go` imports `pkg/engine` for `CharacterClass` enum. Recommendation: Move enum types to `pkg/config` or create `pkg/types` package for shared data types. (`balance_test.go:1`, `validators_test.go:1`) — **RESOLVED 2026-02-26: Moved CharacterClass to pkg/config/types.go, tests now run without X11, coverage measurable at 80.7%**
 - [ ] **No benchmark tests** — Package performs computationally intensive simulations (10K combat battles, 5K economic transactions) but lacks benchmarks to validate performance targets (~30s combat, ~20s economic, ~5 min total suite per doc.go). Add `BenchmarkCombatValidator`, `BenchmarkEconomicValidator`, etc. (`balance_test.go:1`)
 
 ### Low Severity
@@ -46,13 +45,6 @@ The `pkg/balance` package provides automated balance validation for 8 gameplay d
 | Menu | Reachable | Input-Complete | Backing System Wired | Notes |
 |---|---|---|---|---|
 | N/A | N/A | N/A | N/A | Package is non-interactive validation tool; no UI components |
-
-## Test Coverage
-**Coverage**: Unmeasurable (requires X11 due to transitive `pkg/engine` → `ebiten` dependency)
-**Test-to-Source Ratio**: 228% (863 test LOC / 3788 source LOC — meets 30% X11 target with significant margin)
-- Missing test areas: Individual validator sub-methods (e.g., `runClassBattleSimulations`, `calculateWinRateMetrics`), context cancellation behavior mid-simulation, threshold override in `BalanceConfig`
-- Missing benchmarks: All 8 validators lack performance benchmarks to validate doc.go claims (~30s combat, ~20s economic)
-- Table-driven test compliance: ❌ (tests follow similar pattern but not parameterized)
 
 ## Documentation Coverage
 - Package `doc.go`: ✅ (comprehensive 108-line overview with usage examples, statistical methods, acceptance criteria)
@@ -83,7 +75,6 @@ The balance package integrates with the server startup validation flow via `cmd/
 | Mobile | ✅ | No mobile-specific concerns; server package not deployed to mobile |
 
 ## Recommendations
-1. **[HIGH]** Remove transitive Ebiten dependency: Refactor `combat.go` to not import `pkg/engine` for `CharacterClass` enum. Move enum to `pkg/config` or `pkg/types` to enable test coverage measurement and eliminate graphics library dependency from balance validation code.
 2. **[HIGH]** Wire remaining 6 validators: Add Progression, Social, Housing, Vehicle, Companion, and Quest validators to `cmd/server/validation.go::runBalanceValidation()` so all 8 domains are validated when `--balance-validate` flag is set.
 3. **[MED]** Add benchmark tests: Create `BenchmarkCombatValidator`, `BenchmarkEconomicValidator`, etc. to validate performance claims in `doc.go` (30s combat, 20s economic, 5min total).
 4. **[MED]** Replace `time.Now()` with injectable clock: Create `TimeMeasure` interface and use `RealClock` (production) / `StubClock` (tests) to make validation duration deterministic for exact reproducibility.

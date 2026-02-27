@@ -27,7 +27,6 @@ Status criteria:
 
 ### High Severity
 - [x] **COMPLETED 2026-02-26** — Input Integration fixed with MobileInputAdapter
-- [x] **COMPLETED 2026-02-27** — Test coverage added: 15 tests + 2 benchmarks achieving 23.7% coverage (acceptable for cmd/ package)
 - [x] **COMPLETED 2026-02-26** — Touch input integration complete with DualJoystickLayout
 
 ### Medium Severity
@@ -64,21 +63,6 @@ Status criteria:
 | All Other Menus | ✅ | ❌ | ✅ | All UI systems use desktop input abstraction |
 
 **Critical Gap**: All UI is reachable and backing systems are wired, but **no touch-optimized input**. Mobile players must use physical keyboard/mouse or cannot play.
-
-## Test Coverage
-**Coverage**: 36.9% overall (0.0% mobile.go, 73.9% config/)
-- **Missing test areas**: 
-  - Entire mobile.go initialization flow (0.0% coverage)
-  - System registration and wiring
-  - Player spawn position calculation
-  - Starter item generation
-  - All helper functions (initializeGameInstance, setupTerrainSystems, etc.)
-- **Missing benchmarks**: 
-  - Mobile initialization time
-  - Terrain generation performance on mobile
-  - Memory usage with mobile constraints
-- **Table-driven test compliance**: ✅ (config package uses table-driven tests)
-- **Strong areas**: Config package has excellent test coverage with table-driven tests, benchmarks, and integration tests
 
 ## Documentation Coverage
 - Package `doc.go`: ✅ (comprehensive, includes build instructions)
@@ -118,14 +102,13 @@ Mobile package integrates with engine and procgen but **lacks mobile-specific su
 
 ## Recommendations
 1. **[HIGH]** Integrate `pkg/mobile` dual joystick and touch controls in mobile.go initialization. Replace `&engine.EbitenInput{}` with mobile-aware input provider.
-2. **[HIGH]** Add test coverage for mobile.go initialization flow. Target 40% minimum; use table-driven tests for spawn position, item generation, and system wiring.
-3. **[HIGH]** Initialize virtual on-screen controls via `mobile.DualJoystickOverlay` or equivalent. Wire to player entity input component.
-4. **[MED]** Add mobile-specific performance targets and monitoring (target: 30+ FPS on mid-range devices, <300MB memory).
-5. **[MED]** Implement platform detection (iOS vs Android) for platform-specific input mapping and optimizations.
-6. **[MED]** Add orientation change handling and safe area insets support (iOS notch, Android nav bar).
-7. **[MED]** Document time-based seed fallback in UI (show seed value on screen for player reproducibility).
-8. **[LOW]** Refactor package-level globals to struct-based game state for better testability.
-9. **[LOW]** Add mobile-specific documentation: touch gestures, battery optimization, screen size adaptation.
-10. **[LOW]** Investigate mod support on mobile: file system permissions, mod directory location, sandboxing.
+2. **[HIGH]** Initialize virtual on-screen controls via `mobile.DualJoystickOverlay` or equivalent. Wire to player entity input component.
+3. **[MED]** Add mobile-specific performance targets and monitoring (target: 30+ FPS on mid-range devices, <300MB memory).
+4. **[MED]** Implement platform detection (iOS vs Android) for platform-specific input mapping and optimizations.
+5. **[MED]** Add orientation change handling and safe area insets support (iOS notch, Android nav bar).
+6. **[MED]** Document time-based seed fallback in UI (show seed value on screen for player reproducibility).
+7. **[LOW]** Refactor package-level globals to struct-based game state for better testability.
+8. **[LOW]** Add mobile-specific documentation: touch gestures, battery optimization, screen size adaptation.
+9. **[LOW]** Investigate mod support on mobile: file system permissions, mod directory location, sandboxing.
 11. **[LOW]** Add mobile federation initialization if multiplayer on mobile is supported.
 12. **[LOW]** Export config test helpers for use by other packages needing deterministic seed/genre selection.

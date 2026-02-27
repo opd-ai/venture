@@ -28,7 +28,6 @@ None found.
 ### Low Severity
 - [x] **Code consistency** — ✅ **RESOLVED** — Added `ErrNegativeMagicPower` sentinel error and updated `types.go:222` to use `fmt.Errorf("%w: got %f", ErrNegativeMagicPower, s.MagicPower)` pattern.
 - [x] **Code consistency** — ✅ **RESOLVED** — Added `ErrNegativeMagicDefense` sentinel error and updated `types.go:239` to use `fmt.Errorf("%w: got %f", ErrNegativeMagicDefense, s.MagicDefense)` pattern.
-- [ ] **Test coverage** — No benchmark for `Stats.Validate()` and helper methods (only `CalculateDamage` and `ResolveCombat` are benchmarked)
 
 ## Input Integration
 | Input Source | Status | Notes |
@@ -44,12 +43,6 @@ None found.
 | Menu | Reachable | Input-Complete | Backing System Wired | Notes |
 |---|---|---|---|---|
 | N/A | N/A | N/A | N/A | Combat package is data-only; no UI responsibilities |
-
-## Test Coverage
-**Coverage**: 98.3% (target: 40%)
-- Missing test areas: None significant. Coverage is excellent.
-- Missing benchmarks: `Stats.Validate()`, `Stats.ApplyDamage()`, `Stats.ApplyHealing()`, `Stats.GetResistance()`
-- Table-driven test compliance: ✅ All tests use table-driven patterns
 
 ## Documentation Coverage
 - Package `doc.go`: ✅ Present, but has redundant historical comments

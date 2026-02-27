@@ -34,7 +34,6 @@ The `pkg/audit/features` package provides feature completeness validation for Ph
 ### Low Severity
 - [ ] **Documentation** — `GetDefaultRegistry()` function lacks godoc comment explaining its purpose and usage (`meta_features.go:250`). This is the primary public API entry point and should be documented.
 - [ ] **Code Organization** — `Register()` method silently ignores nil features without logging (`feature_completeness.go:106-109`). Consider using structured logging with `logrus.WithFields(logrus.Fields{"operation": "register_feature"}).Warn("attempted to register nil feature")` for better observability in test/audit runs.
-- [ ] **Test Coverage** — No test case for `Register(nil)` behavior, even though the code explicitly handles this case (`feature_completeness_test.go`). Add test: `TestFeatureRegistryNilHandling`.
 
 ## Input Integration
 | Input Source | Status | Notes |
@@ -50,12 +49,6 @@ The `pkg/audit/features` package provides feature completeness validation for Ph
 | Menu | Reachable | Input-Complete | Backing System Wired | Notes |
 |---|---|---|---|---|
 | N/A | N/A | N/A | N/A | This package provides audit/test infrastructure only. It validates feature metadata but does not implement any UI systems. |
-
-## Test Coverage
-**Coverage**: 99.2% (target: 40%, or 30% for X11/Wayland/Ebiten-dependent packages)
-- Missing test areas: Nil feature registration edge case
-- Missing benchmarks: None (3 benchmarks present: validation, ValidateAll, GetFeature lookup)
-- Table-driven test compliance: ✅ (TestFeatureValidation, TestCategoryPassRate use comprehensive table-driven pattern)
 
 ## Documentation Coverage
 - Package `doc.go`: ✅ (comprehensive 116-line documentation with usage examples, acceptance criteria, and feature categories)

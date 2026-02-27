@@ -46,12 +46,6 @@ _(No high-severity issues found)_
 |---|---|---|---|---|
 | Guild UI (Housing Tab) | ❌ | ❌ | ❌ | `pkg/engine/guild_ui.go` exists with 3 tabs (info, members, treasury) but no housing tab. No calls to guild_housing.Manager methods for displaying guild houses, permissions, storage, or meeting halls. UI shows guild metadata only. |
 
-## Test Coverage
-**Coverage**: Unmeasurable (requires X11; test-to-source ratio: 123% = 1313 test LOC / 1070 source LOC)
-- Missing test areas: None (44 test functions cover all Manager methods, types, and validation)
-- Missing benchmarks: Permission checks, storage lookups, concurrent access
-- Table-driven test compliance: ⚠️ Partial (7 table-driven tests out of 44 total; most use single-case style)
-
 ## Documentation Coverage
 - Package `doc.go`: ✅ (84 lines with comprehensive overview, features, usage example, integration points, performance targets)
 - Exported symbols documented: 17/17 (100%)

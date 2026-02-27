@@ -47,12 +47,6 @@ The companion learning subsystem implements AI skill progression, personality ev
 | Companion Personality UI | ⚠️ | ⚠️ | ✅ | No dedicated UI system found for personality trait display. Backend fully functional with `GetDominantTrait`, `GeneratePersonalityDescription`. May be integrated into existing companion info panels. |
 | Companion Memory UI | ⚠️ | ⚠️ | ✅ | No dedicated UI for viewing companion memories. Backend provides `GetRecentEvents`, `GetEventsByType`, `GetMemorySummary`. May be accessible through dialog or companion info. |
 
-## Test Coverage
-**Coverage**: 92.5% (target: 40%)
-- Missing test areas: None significant. Edge cases like concurrent Manager operations under extreme load, personality trait normalization edge values (exactly 0.8/1.2), and skill decay at frame-rate extremes are minor gaps.
-- Missing benchmarks: Hot-path operations (AddExperience, AdjustTrait, AddEvent) lack benchmarks. Given doc.go claims <10µs, <5µs, <2µs performance, benchmarks would validate these assertions.
-- Table-driven test compliance: ✅ All tests use table-driven patterns where appropriate
-
 ## Documentation Coverage
 - Package `doc.go`: ✅ Comprehensive 124-line package documentation with usage examples, performance characteristics, determinism guarantees
 - Exported symbols documented: 62/62 (100%)

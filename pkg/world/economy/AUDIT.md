@@ -49,12 +49,6 @@ Audited the `pkg/world/economy` package, a high-integration-surface system provi
 | Guild Bank UI | ✅ | ✅ | ✅ | `pkg/engine/economy_system.go` exposes `GetGuildBank()` for vault operations; guild UI can call deposit/withdraw methods |
 | Shop/Vendor | ✅ | ✅ | ✅ | Shop UI uses marketplace search and pricing engine for NPC vendor integration |
 
-## Test Coverage
-**Coverage**: 88.4% (target: 40%, or 30% for X11/Wayland/Ebiten-dependent packages)
-- Missing test areas: None identified; all major code paths covered
-- Missing benchmarks: No performance benchmarks for search/sort operations (acceptable given O(n) complexity is well-understood)
-- Table-driven test compliance: ✅ All tests follow table-driven pattern (59 test functions across 6 test files)
-
 ## Documentation Coverage
 - Package `doc.go`: ✅ (comprehensive with 130+ lines covering architecture, usage, examples)
 - Exported symbols documented: 45/48 (94%)

@@ -70,12 +70,6 @@ Status criteria:
 | Archaeology UI | ❌ | N/A | ❌ | No UI exists for excavation sites despite `ArchaeologicalSite.Excavation` progress field. Generator and data structures exist but are unused. |
 | Timeline Viewer | ❌ | N/A | ❌ | `Timeline` with historical events and eras has no in-game viewer UI. Would integrate with lore/codex system if one existed. |
 
-## Test Coverage
-**Coverage**: 88.7% (target: 40%)
-- Missing test areas: None significant; all generators, validators, and helper functions well-covered
-- Missing benchmarks: ❌ CORRECTION — Package HAS 10 comprehensive benchmarks covering all generators and key operations (archaeology excavation, branching choice, cross-dungeon accessibility, fragment generation, narrative validation, timeline generation, event queries). Previous audit error corrected.
-- Table-driven test compliance: ✅ — All `*_test.go` files use table-driven patterns
-
 ## Documentation Coverage
 - Package `doc.go`: ✅ — Comprehensive 147-line package doc with usage examples
 - Exported symbols documented: 47/47 (100%)

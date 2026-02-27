@@ -49,24 +49,6 @@ The `pkg/audio` package provides a comprehensive procedural audio synthesis syst
 
 **Notes**: Audio system has no dedicated UI beyond volume sliders in settings. Audio.Manager is passive - it generates samples on demand but does not drive any UI directly. Integration with settings UI is complete via volume setter methods.
 
-## Test Coverage
-**Coverage**: 93.5% aggregate (exceeds 40% target)
-- **pkg/audio**: 91.4% (17/20 exported symbols covered)
-- **pkg/audio/music**: 94.6% (adaptive composition, motif generation, genre scales)
-- **pkg/audio/sfx**: 98.1% (all effect types, variety manager)
-- **pkg/audio/synthesis**: 95.1% (waveform generation, envelopes, oscillators)
-
-**Missing test areas**:
-- Voice codec edge cases (odd-length sample arrays, empty data validation)
-- VoiceProcessor integration with actual network transport (only tested with nil transport)
-- Manager concurrency stress tests (high-frequency concurrent volume changes)
-
-**Missing benchmarks**:
-- VoiceCodec Encode/Decode (ADPCM compression performance)
-- VoiceProcessor frame accumulation overhead
-
-**Table-driven test compliance**: ✅ All tests use table-driven patterns with seed-based determinism validation
-
 ## Documentation Coverage
 - Package `doc.go`: ✅ Present with comprehensive overview, architecture, usage examples
 - Exported symbols documented: 50/53 (94%)

@@ -51,12 +51,6 @@ The terrain package implements deterministic procedural terrain and dungeon gene
 |---|---|---|---|---|
 | N/A | N/A | N/A | N/A | Package is pure procedural generation, no UI components |
 
-## Test Coverage
-**Coverage**: 94.0% (target: 40%)
-- Missing test areas: None significant - coverage exceeds target by 135%
-- Missing benchmarks: terrain_bench_test.go exists with benchmarks for all major generators
-- Table-driven test compliance: ✅ - All test files use proper table-driven patterns
-
 ## Documentation Coverage
 - Package `doc.go`: ✅ - Comprehensive 125-line package documentation with usage examples, tile types, genre system, and performance targets
 - Exported symbols documented: 386/389 (99.2%) - 3 minor method godoc comments missing (Point.Equals, Room.Center, Room.Overlaps)

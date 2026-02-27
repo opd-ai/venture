@@ -46,12 +46,6 @@ The `pkg/world/raids` package implements complete procedural raid dungeon genera
 |---|---|---|---|---|
 | N/A | N/A | N/A | N/A | Server-side package with no UI components. Raid portals and lockout UI handled by client-side engine systems. |
 
-## Test Coverage
-**Coverage**: 90.4% (target: 40%)
-- Missing test areas: None - comprehensive table-driven tests for all public APIs
-- Missing benchmarks: Generation performance, cleanup operations, concurrent access patterns
-- Table-driven test compliance: ✅ All tests use table-driven patterns with named test cases
-
 ## Documentation Coverage
 - Package `doc.go`: ✅ Comprehensive 77-line documentation with usage examples
 - Exported symbols documented: 100% (all types, constants, functions have godoc comments)

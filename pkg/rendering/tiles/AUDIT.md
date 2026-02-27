@@ -45,12 +45,6 @@ None
 |---|---|---|---|---|
 | N/A | N/A | N/A | N/A | Package is pure tile generation; no UI components |
 
-## Test Coverage
-**Coverage**: 91.5% (target: 40%, or 30% for X11/Wayland/Ebiten-dependent packages)
-- Missing test areas: None - all major code paths covered
-- Missing benchmarks: Generator.Generate(), GenerateWithParallax(), GenerateWithTransition(), GenerateEnhancedWall()
-- Table-driven test compliance: ✅ All tests use table-driven patterns
-
 ## Documentation Coverage
 - Package `doc.go`: ✅ Present with comprehensive overview
 - Exported symbols documented: 68/68 (100%)

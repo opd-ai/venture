@@ -27,7 +27,6 @@ _(None)_
 
 ### Low Severity
 - [x] **Documentation** — Example code in `doc.go:44` uses `fmt.Printf` for illustration, which is acceptable for doc comments but could confuse developers copying examples directly. Consider adding comment clarifying this is example-only code. (`doc.go:44`) — **COMPLETED 2026-02-27**: Added clarifying comment that production code should use logrus.WithFields
-- [ ] **Test Coverage** — `generator.go:586-625` helper functions (`calculateWindowCount`, `selectWallPosition`, `selectHorizontalWallPosition`, `selectVerticalWallPosition`, `determineWindowType`) have implicit coverage through integration tests but lack dedicated unit tests. Adding table-driven tests for edge cases (e.g., minimum/maximum dimensions, all window types) would improve maintainability. (`generator.go:586-625`)
 - [ ] **Code Organization** — `generator.go:447-533` guild hall layout generation methods (`calculateGuildHallLayout`, `generateFloorRooms`, `determineGuildRoomType`, `addFloorDoors`) could be extracted into a separate file `guild_hall_layout.go` for better navigability given guild halls are a distinct feature with 5 dedicated methods. (`generator.go:447-533`)
 
 ## Input Integration
@@ -44,12 +43,6 @@ _(None)_
 | Menu | Reachable | Input-Complete | Backing System Wired | Notes |
 |---|---|---|---|---|
 | N/A | N/A | N/A | N/A | Procgen package provides data generation only; UI integration is handled by consuming systems (housing, guild) |
-
-## Test Coverage
-**Coverage**: 92.2% (target: 40%)
-- Missing test areas: Window placement helper functions have implicit coverage but lack dedicated unit tests
-- Missing benchmarks: None (4 benchmarks present: Generate, Validate, IsNavigable, GenerateGuildHall)
-- Table-driven test compliance: ✅ Excellent — 13 table-driven tests covering all enum types, building types, genres, validation cases, and generation parameters
 
 ## Documentation Coverage
 - Package `doc.go`: ✅ Comprehensive — 96 lines covering overview, building types, architectural styles, usage examples, floor plan generation, layout algorithms, validation, performance targets, determinism guarantees, and integration points

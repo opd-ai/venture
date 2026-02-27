@@ -46,12 +46,6 @@ The `pkg/audio/music` package provides procedural music composition with adaptiv
 | Settings (Audio) | ✅ | ✅ | ✅ | Volume controls exist in `pkg/config/`; music system respects volume settings via `AudioManager` |
 | N/A | N/A | N/A | N/A | This package provides no UI; all UI is handled by `pkg/engine/audio_manager.go` |
 
-## Test Coverage
-**Coverage**: 94.6% (target: 40%, or 30% for X11/Wayland/Ebiten-dependent packages)
-- Missing test areas: None significant; coverage exceeds target by 136%
-- Missing benchmarks: Performance benchmarks for `GenerateAdaptiveTrack` (typical 10-second generation) and `normalizeTrack` could quantify claims in `doc.go` (line 91: "<50ms for 10 seconds of music")
-- Table-driven test compliance: ✅ All tests use table-driven patterns (`generator_test.go`, `adaptive_test.go`, `motif_test.go`)
-
 ## Documentation Coverage
 - Package `doc.go`: ✅ Comprehensive (127 lines covering API, theory, performance, usage examples)
 - Exported symbols documented: 28/28 (100%)

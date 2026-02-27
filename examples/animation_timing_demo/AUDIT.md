@@ -32,7 +32,6 @@ None.
 None.
 
 ### Low Severity
-- [x] **Test Coverage** — No test file exists for this demo. While it's a demonstration program, adding `main_test.go` with table-driven tests for calculation functions would validate correctness and serve as example of testing best practices. (`N/A:0`) — **COMPLETED 2026-02-27**: Added comprehensive main_test.go with 7 table-driven tests and 2 benchmarks covering all calculation functions
 - [x] **Dead Code** — `init()` function at line 170-173 records `time.Now()` but discards result with `_`. Function serves no purpose and should be removed. (`main.go:170`) — **COMPLETED 2026-02-27**: Removed dead init() function and unused time import
 
 ## Input Integration
@@ -49,12 +48,6 @@ None.
 | Menu | Reachable | Input-Complete | Backing System Wired | Notes |
 |---|---|---|---|---|
 | N/A | N/A | N/A | N/A | Demo prints to stdout; no UI systems |
-
-## Test Coverage
-**Coverage**: 0.0% (target: N/A for demo programs, but tests would improve maintainability)
-- Missing test areas: All calculation functions (`demonstrateDefaultTiming`, `demonstrateLODTiming`, `demonstrateCustomTiming`, `demonstrateFrameProgression`) are untested
-- Missing benchmarks: Frame progression simulation (`demonstrateFrameProgression`) would benefit from benchmark to ensure performance
-- Table-driven test compliance: N/A (no tests exist)
 
 ## Documentation Coverage
 - Package `doc.go`: ❌ (package comment exists in `main.go:1-12` but no separate `doc.go` file)

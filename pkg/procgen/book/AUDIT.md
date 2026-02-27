@@ -43,12 +43,6 @@ None
 |---|---|---|---|---|
 | N/A | N/A | N/A | N/A | Content generation package has no UI surfaces |
 
-## Test Coverage
-**Coverage**: Unmeasurable (requires X11 for ebiten initialization; 35.6% test-to-source ratio indicates comprehensive testing)
-- Missing test areas: None identified (34 test functions cover 33 source functions)
-- Missing benchmarks: Present for quest, recipe, and history books
-- Table-driven test compliance: ✅ (TestNewGeneratorWithLogger, TestGetVolumeNumber, TestGetSeriesName, TestIntRandomizerInterface)
-
 ## Documentation Coverage
 - Package `doc.go`: ✅
 - Exported symbols documented: 6/6 (100%) — `Generator`, `NewGenerator`, `NewGeneratorWithLogger`, `Grammar`, `NewGrammar`, `IntRandomizer`

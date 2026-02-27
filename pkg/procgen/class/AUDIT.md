@@ -53,12 +53,6 @@ The class package provides procedural character class generation with 21 presets
 |---|---|---|---|---|
 | Character Creation | ✅ | ✅ | ❌ | Character creation UI exists in `pkg/engine/character_creation.go` and is reachable from main menu. UI displays hardcoded classes from `GetClassAbilities()` switch statements, **not** from ClassGenerator. Generator is instantiated but unused. |
 
-## Test Coverage
-**Coverage**: Unmeasurable (requires X11; 30% target accepted; 87.4% test-to-source ratio)
-- Missing test areas: None (comprehensive table-driven tests for all 21 classes)
-- Missing benchmarks: `Validate()` performance, `GetAllPresets()` performance
-- Table-driven test compliance: ✅
-
 ## Documentation Coverage
 - Package `doc.go`: ✅ (concise summary)
 - Exported symbols documented: 6/6 (100%)

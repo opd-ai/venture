@@ -51,12 +51,6 @@ None identified.
 |---|---|---|---|---|
 | N/A | N/A | N/A | N/A | Procedural generation package - no UI components |
 
-## Test Coverage
-**Coverage**: Unmeasurable (requires X11; 62.8% test-to-source ratio, exceeds 30% target for Ebiten-dependent packages)
-- Missing test areas: None - all major code paths covered including visual variation, combat generation, cargo/upgrade slots, determinism, stat scaling, validation
-- Missing benchmarks: None - `BenchmarkVehicleGenerator_Generate` and `BenchmarkVehicle_ToComponent` exist
-- Table-driven test compliance: ✅ Excellent - `TestRarity_GetMultiplier`, `TestVehicleType_String`, `TestRarity_String`, `TestVehicle_ToComponents` all use table-driven patterns
-
 ## Documentation Coverage
 - Package `doc.go`: ✅ Comprehensive with usage examples, genre adaptation, visual variation, performance metrics
 - Exported symbols documented: 22/30 (73%)

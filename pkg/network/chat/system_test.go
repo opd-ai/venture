@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/opd-ai/venture/pkg/engine"
+	"github.com/opd-ai/venture/pkg/errors"
 )
 
 // TestNewChatSystem tests creation of chat system
@@ -111,7 +112,7 @@ func TestSendMessage(t *testing.T) {
 			channel: engine.ChatGlobal,
 			content: "",
 			wantErr: true, // Empty messages are now rejected by validation
-			errMsg:  "message validation failed: message cannot be empty",
+			errMsg:  "message validation failed",
 		},
 		{
 			name: "long message",
@@ -372,5 +373,153 @@ func BenchmarkSendMessageWithExistingComponent(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		cs.SendMessage(sender.ID, engine.ChatGlobal, "test")
+	}
+}
+
+// TestStructuredErrors tests that errors include correlation IDs and context
+func TestStructuredErrors(t *testing.T) {
+	tests := []struct {
+		name           string
+		setup          func(*engine.World) uint64
+		content        string
+		expectedType   string
+		expectedFields []string
+	}{
+		{
+			name: "rate limit error includes correlation ID",
+			setup: func(w *engine.World) uint64 {
+				sender := w.CreateEntity()
+				return sender.ID
+			},
+			content:        "test",
+			expectedType:   "RateLimit",
+			expectedFields: []string{"playerID", "channel", "limit"},
+		},
+		{
+			name: "validation error includes correlation ID",
+			setup: func(w *engine.World) uint64 {
+				sender := w.CreateEntity()
+				return sender.ID
+			},
+			content:        "", // empty message triggers validation error
+			expectedType:   "Validation",
+			expectedFields: []string{"playerID", "channel", "contentLength"},
+		},
+		{
+			name: "entity not found error includes correlation ID",
+			setup: func(w *engine.World) uint64 {
+				return 99999 // non-existent entity
+			},
+			content:        "test",
+			expectedType:   "Network",
+			expectedFields: []string{"playerID"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			world := engine.NewWorld()
+			cs := NewChatSystem(world)
+			senderID := tt.setup(world)
+			world.Update(0)
+
+			// For rate limit test, send many messages to trigger rate limit
+			if tt.expectedType == "RateLimit" {
+				for i := 0; i < ChatRateLimit+1; i++ {
+					cs.SendMessage(senderID, engine.ChatGlobal, tt.content)
+				}
+			}
+
+			err := cs.SendMessage(senderID, engine.ChatGlobal, tt.content)
+			if err == nil {
+				t.Fatal("expected error, got nil")
+			}
+
+			// Verify error message contains type
+			if !strings.Contains(err.Error(), tt.expectedType) {
+				t.Errorf("error message %q does not contain type %q", err.Error(), tt.expectedType)
+			}
+
+			// Verify error message contains correlation ID pattern
+			if !strings.Contains(err.Error(), "[") || !strings.Contains(err.Error(), "]") {
+				t.Errorf("error message %q does not contain correlation ID brackets", err.Error())
+			}
+		})
+	}
+}
+
+// TestErrorCorrelationIDUniqueness tests that each error gets a unique correlation ID
+func TestErrorCorrelationIDUniqueness(t *testing.T) {
+	world := engine.NewWorld()
+	cs := NewChatSystem(world)
+
+	// Create sender that doesn't exist to trigger errors
+	senderID := uint64(99999)
+
+	errors := make([]error, 10)
+	for i := 0; i < 10; i++ {
+		errors[i] = cs.SendMessage(senderID, engine.ChatGlobal, "test")
+	}
+
+	// Extract correlation IDs from error messages
+	correlationIDs := make(map[string]bool)
+	for _, err := range errors {
+		if err == nil {
+			t.Fatal("expected error, got nil")
+		}
+		// Extract correlation ID from error message (format: [Type][CorrelationID] message)
+		msg := err.Error()
+		start := strings.Index(msg, "][")
+		end := strings.Index(msg[start+2:], "]")
+		if start == -1 || end == -1 {
+			t.Fatalf("error message %q does not contain correlation ID", msg)
+		}
+		correlationID := msg[start+2 : start+2+end]
+		correlationIDs[correlationID] = true
+	}
+
+	// Verify all correlation IDs are unique
+	if len(correlationIDs) != 10 {
+		t.Errorf("expected 10 unique correlation IDs, got %d", len(correlationIDs))
+	}
+}
+
+// TestErrorContextPreservation tests that error context is preserved
+func TestErrorContextPreservation(t *testing.T) {
+	world := engine.NewWorld()
+	cs := NewChatSystem(world)
+
+	// Test validation error with context
+	sender := world.CreateEntity()
+	world.Update(0)
+
+	// Send empty message to trigger validation error
+	err := cs.SendMessage(sender.ID, engine.ChatGlobal, "")
+	if err == nil {
+		t.Fatal("expected validation error, got nil")
+	}
+
+	// Verify error is a VentureError with context
+	ventureErr, ok := err.(*errors.VentureError)
+	if !ok {
+		t.Fatalf("expected *errors.VentureError, got %T", err)
+	}
+
+	// Verify context fields
+	if ventureErr.Context["playerID"] != sender.ID {
+		t.Errorf("context playerID = %v, want %v", ventureErr.Context["playerID"], sender.ID)
+	}
+
+	if ventureErr.Context["channel"] == "" {
+		t.Error("context channel is empty")
+	}
+
+	if _, ok := ventureErr.Context["contentLength"]; !ok {
+		t.Error("context contentLength is missing")
+	}
+
+	// Verify correlation ID
+	if ventureErr.CorrelationID == "" {
+		t.Error("correlation ID is empty")
 	}
 }

@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/opd-ai/venture/pkg/engine"
+	"github.com/opd-ai/venture/pkg/errors"
 	"github.com/opd-ai/venture/pkg/validation"
 	log "github.com/sirupsen/logrus"
 )
@@ -53,35 +54,51 @@ func (s *ChatSystem) Update(deltaTime float64) {
 
 // SendMessage sends a chat message with validation and rate limiting
 func (s *ChatSystem) SendMessage(senderID uint64, channel engine.ChatChannel, content string) error {
+	// Generate correlation ID for tracing this message send operation
+	correlationID := errors.NewCorrelationID()
+
 	// Check rate limit
 	if !s.limiter.Allow(senderID) {
 		log.WithFields(log.Fields{
-			"playerID": senderID,
-			"channel":  channel,
-			"limit":    ChatRateLimit,
+			"playerID":      senderID,
+			"channel":       channel,
+			"limit":         ChatRateLimit,
+			"correlationID": correlationID,
 		}).Warn("chat rate limit exceeded")
-		return fmt.Errorf("rate limit exceeded (maximum %d messages per second)", ChatRateLimit)
+		return errors.RateLimit(fmt.Sprintf("rate limit exceeded (maximum %d messages per second)", ChatRateLimit)).
+			WithCorrelationID(correlationID).
+			WithContext("playerID", senderID).
+			WithContext("channel", channel.String()).
+			WithContext("limit", ChatRateLimit)
 	}
 
 	// Validate and sanitize message
 	sanitized, err := s.validator.ValidateAndSanitize(content)
 	if err != nil {
 		log.WithFields(log.Fields{
-			"playerID": senderID,
-			"channel":  channel,
-			"error":    err.Error(),
+			"playerID":      senderID,
+			"channel":       channel,
+			"error":         err.Error(),
+			"correlationID": correlationID,
 		}).Warn("chat message validation failed")
-		return fmt.Errorf("message validation failed: %w", err)
+		return errors.ValidationWrap(err, "message validation failed").
+			WithCorrelationID(correlationID).
+			WithContext("playerID", senderID).
+			WithContext("channel", channel.String()).
+			WithContext("contentLength", len(content))
 	}
 
 	// Generate message ID
 	msgID, err := generateMessageID()
 	if err != nil {
 		log.WithFields(log.Fields{
-			"playerID": senderID,
-			"error":    err.Error(),
+			"playerID":      senderID,
+			"error":         err.Error(),
+			"correlationID": correlationID,
 		}).Error("failed to generate message ID")
-		return fmt.Errorf("failed to generate message ID: %w", err)
+		return errors.NetworkWrap(err, "failed to generate message ID").
+			WithCorrelationID(correlationID).
+			WithContext("playerID", senderID)
 	}
 
 	// Create message with sanitized content
@@ -99,9 +116,12 @@ func (s *ChatSystem) SendMessage(senderID uint64, channel engine.ChatChannel, co
 	sender, ok := s.world.GetEntity(senderID)
 	if !ok || sender == nil {
 		log.WithFields(log.Fields{
-			"playerID": senderID,
+			"playerID":      senderID,
+			"correlationID": correlationID,
 		}).Error("chat sender entity not found")
-		return fmt.Errorf("sender entity not found")
+		return errors.Network("sender entity not found").
+			WithCorrelationID(correlationID).
+			WithContext("playerID", senderID)
 	}
 
 	chatCompRaw, ok := sender.GetComponent("chat")
@@ -115,9 +135,12 @@ func (s *ChatSystem) SendMessage(senderID uint64, channel engine.ChatChannel, co
 		chatComp, ok = chatCompRaw.(*engine.ChatComponent)
 		if !ok {
 			log.WithFields(log.Fields{
-				"playerID": senderID,
+				"playerID":      senderID,
+				"correlationID": correlationID,
 			}).Error("chat component type assertion failed")
-			return fmt.Errorf("invalid chat component type")
+			return errors.Network("invalid chat component type").
+				WithCorrelationID(correlationID).
+				WithContext("playerID", senderID)
 		}
 	}
 

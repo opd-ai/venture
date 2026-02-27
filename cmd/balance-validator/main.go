@@ -184,6 +184,8 @@ func main() {
 			os.Exit(1)
 		}
 	} else if !*quiet {
+		// NOTE: fmt.Printf usage below is intentional for CLI tool output.
+		// CLI tools (cmd/*) are exempt from structured logging requirements.
 		fmt.Println()
 		fmt.Printf("=== Balance Validation Summary ===\n")
 		fmt.Printf("Seed:      %d\n", summary.Seed)

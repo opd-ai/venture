@@ -79,12 +79,87 @@ type StorySequence struct {
 	Coherence float64 // Quality metric (0.0-1.0)
 }
 
-// FragmentGenerator generates environmental story fragments
-type FragmentGenerator struct{}
+// StoryTemplates holds configurable templates for story content generation
+type StoryTemplates struct {
+	BeginningTemplates []string
+	BeginningAdjectives []string
+	BeginningCounts []int
+	BeginningDiscoveries []string
+	
+	MiddleTemplates []string
+	MiddleLosses []string
+	MiddleThreats []string
+	MiddleRevelations []string
+	MiddleAttackers []string
+	MiddleSurvivors []int
+	
+	EndTemplates []string
+	EndWarnings []string
+	EndGoals []string
+	EndThreats []string
+	EndFates []string
+	EndMessages []string
+}
 
-// NewFragmentGenerator creates a new fragment generator
+// DefaultStoryTemplates returns the default template set
+func DefaultStoryTemplates() *StoryTemplates {
+	return &StoryTemplates{
+		BeginningTemplates: []string{
+			"Day %d: We arrived at this place. Everything seems %s.",
+			"Entry %d: The expedition begins. We are %d strong.",
+			"Log %d: First signs of %s. Should we continue?",
+			"Note %d: Found evidence of %s. This changes everything.",
+		},
+		BeginningAdjectives: []string{"normal", "quiet", "strange", "peaceful", "ominous"},
+		BeginningCounts: []int{5, 7, 10, 12, 15},
+		BeginningDiscoveries: []string{"danger", "treasure", "secrets", "life", "death"},
+		
+		MiddleTemplates: []string{
+			"Day %d: Things are getting worse. We lost %s today.",
+			"Entry %d: The %s is spreading. No one is safe.",
+			"Log %d: Discovered the truth about %s. We were wrong.",
+			"Note %d: %s attacked us. Only %d survived.",
+		},
+		MiddleLosses: []string{"contact", "hope", "supplies", "three people", "our leader"},
+		MiddleThreats: []string{"infection", "madness", "corruption", "fear", "darkness"},
+		MiddleRevelations: []string{"the ruins", "the source", "their plan", "the curse", "this place"},
+		MiddleAttackers: []string{"They", "The creatures", "Something", "Unknown forces", "The enemy"},
+		MiddleSurvivors: []int{3, 5, 7, 4, 2},
+		
+		EndTemplates: []string{
+			"Final entry: If you find this, %s. Don't make our mistakes.",
+			"Last words: We failed to %s. May you succeed where we couldn't.",
+			"Warning: %s is coming. Run while you still can.",
+			"Goodbye: We're %s. Tell our families %s.",
+		},
+		EndWarnings: []string{"leave immediately", "destroy it", "seal the entrance", "warn the others"},
+		EndGoals: []string{"stop it", "find the cure", "escape", "understand the truth"},
+		EndThreats: []string{"The end", "Darkness", "They", "Death", "Doom"},
+		EndFates: []string{"trapped", "infected", "lost", "dying", "gone"},
+		EndMessages: []string{"we tried", "we loved them", "we're sorry", "it wasn't their fault", "goodbye"},
+	}
+}
+
+// FragmentGenerator generates environmental story fragments
+type FragmentGenerator struct{
+	templates *StoryTemplates
+}
+
+// NewFragmentGenerator creates a new fragment generator with default templates
 func NewFragmentGenerator() *FragmentGenerator {
-	return &FragmentGenerator{}
+	return &FragmentGenerator{
+		templates: DefaultStoryTemplates(),
+	}
+}
+
+// NewFragmentGeneratorWithTemplates creates a new fragment generator with custom templates
+func NewFragmentGeneratorWithTemplates(templates *StoryTemplates) *FragmentGenerator {
+	if templates == nil {
+		templates = DefaultStoryTemplates()
+	}
+	return &FragmentGenerator{
+		templates: templates,
+	}
 }
 
 // Generate creates a story sequence with fragments
@@ -271,58 +346,34 @@ func (g *FragmentGenerator) generateStoryContent(rng *rand.Rand, theme, genreID 
 }
 
 func (g *FragmentGenerator) generateBeginningFragment(rng *rand.Rand, theme, genreID string, index int) string {
-	templates := []string{
-		"Day %d: We arrived at this place. Everything seems %s.",
-		"Entry %d: The expedition begins. We are %d strong.",
-		"Log %d: First signs of %s. Should we continue?",
-		"Note %d: Found evidence of %s. This changes everything.",
-	}
+	template := g.templates.BeginningTemplates[rng.Intn(len(g.templates.BeginningTemplates))]
+	adjective := g.templates.BeginningAdjectives[rng.Intn(len(g.templates.BeginningAdjectives))]
+	count := g.templates.BeginningCounts[rng.Intn(len(g.templates.BeginningCounts))]
+	discovery := g.templates.BeginningDiscoveries[rng.Intn(len(g.templates.BeginningDiscoveries))]
 
-	template := templates[rng.Intn(len(templates))]
-
-	adjectives := []string{"normal", "quiet", "strange", "peaceful", "ominous"}
-	counts := []int{5, 7, 10, 12, 15}
-	discoveries := []string{"danger", "treasure", "secrets", "life", "death"}
-
-	return fmt.Sprintf(template, index+1, adjectives[rng.Intn(len(adjectives))], counts[rng.Intn(len(counts))], discoveries[rng.Intn(len(discoveries))])
+	return fmt.Sprintf(template, index+1, adjective, count, discovery)
 }
 
 func (g *FragmentGenerator) generateMiddleFragment(rng *rand.Rand, theme, genreID string, index int) string {
-	templates := []string{
-		"Day %d: Things are getting worse. We lost %s today.",
-		"Entry %d: The %s is spreading. No one is safe.",
-		"Log %d: Discovered the truth about %s. We were wrong.",
-		"Note %d: %s attacked us. Only %d survived.",
-	}
+	template := g.templates.MiddleTemplates[rng.Intn(len(g.templates.MiddleTemplates))]
+	loss := g.templates.MiddleLosses[rng.Intn(len(g.templates.MiddleLosses))]
+	threat := g.templates.MiddleThreats[rng.Intn(len(g.templates.MiddleThreats))]
+	revelation := g.templates.MiddleRevelations[rng.Intn(len(g.templates.MiddleRevelations))]
+	attacker := g.templates.MiddleAttackers[rng.Intn(len(g.templates.MiddleAttackers))]
+	survivor := g.templates.MiddleSurvivors[rng.Intn(len(g.templates.MiddleSurvivors))]
 
-	template := templates[rng.Intn(len(templates))]
-
-	losses := []string{"contact", "hope", "supplies", "three people", "our leader"}
-	threats := []string{"infection", "madness", "corruption", "fear", "darkness"}
-	revelations := []string{"the ruins", "the source", "their plan", "the curse", "this place"}
-	attackers := []string{"They", "The creatures", "Something", "Unknown forces", "The enemy"}
-	survivors := []int{3, 5, 7, 4, 2}
-
-	return fmt.Sprintf(template, index+5, losses[rng.Intn(len(losses))], threats[rng.Intn(len(threats))], revelations[rng.Intn(len(revelations))], attackers[rng.Intn(len(attackers))], survivors[rng.Intn(len(survivors))])
+	return fmt.Sprintf(template, index+5, loss, threat, revelation, attacker, survivor)
 }
 
 func (g *FragmentGenerator) generateEndFragment(rng *rand.Rand, theme, genreID string, index int) string {
-	templates := []string{
-		"Final entry: If you find this, %s. Don't make our mistakes.",
-		"Last words: We failed to %s. May you succeed where we couldn't.",
-		"Warning: %s is coming. Run while you still can.",
-		"Goodbye: We're %s. Tell our families %s.",
-	}
+	template := g.templates.EndTemplates[rng.Intn(len(g.templates.EndTemplates))]
+	warning := g.templates.EndWarnings[rng.Intn(len(g.templates.EndWarnings))]
+	goal := g.templates.EndGoals[rng.Intn(len(g.templates.EndGoals))]
+	threat := g.templates.EndThreats[rng.Intn(len(g.templates.EndThreats))]
+	fate := g.templates.EndFates[rng.Intn(len(g.templates.EndFates))]
+	message := g.templates.EndMessages[rng.Intn(len(g.templates.EndMessages))]
 
-	template := templates[rng.Intn(len(templates))]
-
-	warnings := []string{"leave immediately", "destroy it", "seal the entrance", "warn the others"}
-	goals := []string{"stop it", "find the cure", "escape", "understand the truth"}
-	threats := []string{"The end", "Darkness", "They", "Death", "Doom"}
-	fates := []string{"trapped", "infected", "lost", "dying", "gone"}
-	messages := []string{"we tried", "we loved them", "we're sorry", "it wasn't their fault", "goodbye"}
-
-	return fmt.Sprintf(template, warnings[rng.Intn(len(warnings))], goals[rng.Intn(len(goals))], threats[rng.Intn(len(threats))], fates[rng.Intn(len(fates))], messages[rng.Intn(len(messages))])
+	return fmt.Sprintf(template, warning, goal, threat, fate, message)
 }
 
 func (g *FragmentGenerator) selectFragmentType(rng *rand.Rand, genreID string, index, total int) FragmentType {

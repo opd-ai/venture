@@ -49,29 +49,6 @@ _None identified._
 |---|---|---|---|---|
 | N/A | N/A | N/A | N/A | Meta-package defines no UI; `ui/` subdir provides UI implementations |
 
-## Test Coverage
-**Coverage**: N/A (meta-package with only doc.go; no executable code)
-- Missing test areas: None (meta-package has no logic to test)
-- Missing benchmarks: None (meta-package has no performance-critical code)
-- Table-driven test compliance: N/A
-
-**Subdirectory Coverage Summary** (from existing audits):
-- animation: Unmeasurable (requires X11; 44.8% test-to-source ratio)
-- cache: Unmeasurable (requires X11; 245% test-to-source ratio)
-- display: Unmeasurable (requires X11; 64% test-to-source ratio)
-- lighting: Unmeasurable (requires X11; 56.6% test-to-source ratio)
-- palette: 97.0%
-- parallel: 96.7%
-- particles: 91.8%
-- patterns: 94.1%
-- pool: Unmeasurable (requires X11; 30% target; 452 test lines)
-- postprocess: Unmeasurable (requires X11; 66% test-to-source ratio)
-- quality: 96.8%
-- shapes: Unmeasurable (requires X11; 120.5% test-to-source ratio)
-- sprites: Unmeasurable (requires X11; 452% test-to-source ratio)
-- tiles: 91.5%
-- ui: Unmeasurable (requires X11; 91% test-to-source ratio)
-
 ## Documentation Coverage
 - Package `doc.go`: ✅ (24 lines; comprehensive subdirectory listing)
 - Exported symbols documented: 0/0 (100%; no exported symbols beyond package)

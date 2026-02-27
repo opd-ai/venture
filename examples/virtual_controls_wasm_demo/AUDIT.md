@@ -33,7 +33,6 @@ This is a 200-line example program demonstrating the WASM virtual controls pre-i
 - [x] **Input Abstraction** — Direct `ebiten.TouchPosition()` call in Draw() without interface abstraction. (`main.go:161`) - **FIXED 2026-02-27**: Same fix as above.
 
 ### Medium Severity
-- [x] **Test Coverage** — Demo program has 0% test coverage. While demo programs are typically untested, this program demonstrates a specific bug fix (Gap #3) and would benefit from a test validating the fix (e.g., test that controls are pre-initialized on WASM+touch platforms, test that first touch is not missed). (`main.go:1-191`) - **FIXED 2026-02-27**: Created comprehensive main_test.go with 9 table-driven tests and 2 benchmarks. Tests validate: NewGame initialization, Update with/without touch, first touch detection (Gap #3 fix), 0-frame delay for controls visibility, multiple touches, touch release, Layout, and touch position retrieval. Coverage: 17.6%.
 
 ### Low Severity
 - [x] **Logging** — Uses standard library `log.Println` and `log.Printf` instead of structured logging with `logrus.WithFields`. Demo programs typically use simple logging, but structured logging would align with project standards. (`main.go:50,51,66,75,183,184,185,188`) - **FIXED 2026-02-27**: Replaced all log.Println/Printf with logrus.WithFields for structured logging
@@ -55,18 +54,6 @@ This is a 200-line example program demonstrating the WASM virtual controls pre-i
 | Menu | Reachable | Input-Complete | Backing System Wired | Notes |
 |---|---|---|---|---|
 | Demo Screen | ✅ | ✅ | ✅ | Single screen demo - no menu navigation required. Touch visualization works. Virtual controls visibility state is simulated (not actually wired to InputSystem virtual controls). |
-
-## Test Coverage
-**Coverage**: 17.6% (target: N/A - demo program)
-- Test areas covered: Game initialization, Update with/without touch, first touch detection (Gap #3 fix), 0-frame delay validation, multiple touches, touch release, Layout function, touch position retrieval
-- Benchmarks: 2 benchmarks for Update (with/without touch)
-- Table-driven test compliance: ✅ All 9 tests use table-driven approach
-
-**Note**: This demo now includes comprehensive integration tests that validate the Gap #3 fix:
-1. ✅ Controls are pre-initialized (validated via NewGame test)
-2. ✅ Controls become visible on first touch (validated via TestUpdate_FirstTouch)
-3. ✅ First touch is captured with 0-frame delay (validated in all touch tests)
-4. ✅ Graceful degradation on non-touch platforms (validated via TestUpdate_NoTouch)
 
 ## Documentation Coverage
 - Package `doc.go`: ❌ (no separate doc.go file; package comment is in main.go)

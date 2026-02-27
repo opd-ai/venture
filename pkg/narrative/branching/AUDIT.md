@@ -30,7 +30,6 @@ This package implements complex procedural storytelling with branching narrative
 - [x] **Documentation** — ✅ **RESOLVED 2026-02-27**: Added inline documentation to complex algorithm helpers (validateGenerationParams, createStoryArc, calculateNodeCount, determineBranchCount) explaining their purpose and behavior. Generator.SetLogger and Manager.SetLogger already had godoc comments.
 - [x] **Example code in doc.go** — ✅ **RESOLVED 2026-02-27**: Removed commented-out `fmt.Println` and `fmt.Printf` calls (lines 46, 56), replaced with clarifying comments about UI usage and data flow.
 - [x] **Component purity** — types.go:112: `NarrativeComponent.Type()` correctly implements Component interface with no logic beyond returning a string. ✅ ECS compliant. (VERIFIED 2026-02-27: No action needed)
-- [ ] **Test coverage gaps** — manager.go:463 (`advanceToNode`) at 64.3%, manager.go:449 (`getProgress`) at 85.7%, manager.go:540 (`checkFloatRequirement`) at 71.4%, manager.go:615 (`evaluateFloatCondition`) at 75.0%. Missing edge cases for type coercion paths (int to float64).
 
 ## Input Integration
 | Input Source | Status | Notes |
@@ -46,18 +45,6 @@ This package implements complex procedural storytelling with branching narrative
 | Menu | Reachable | Input-Complete | Backing System Wired | Notes |
 |---|---|---|---|---|
 | N/A | N/A | N/A | N/A | Narrative package is backend-only; UI integration handled by `pkg/engine/branching_narrative_system.go` and integration packages (`choice_consequences`, `narrative_world`). |
-
-## Test Coverage
-**Coverage**: 88.3% (target: 40%)
-- Missing test areas: 
-  - Edge cases for type coercion in requirement/condition checks (int vs. float64 cross-type comparisons)
-  - Complex multi-branch story arc validation (deeply nested choice trees)
-  - Concurrent manager access stress testing (high player count scenarios)
-- Missing benchmarks:
-  - `BenchmarkGenerate` for story arc generation (target: <500ms)
-  - `BenchmarkMakeChoice` for choice processing (target: <10ms)
-  - `BenchmarkCheckConsequences` for consequence evaluation
-- Table-driven test compliance: ✅ Both test files use table-driven patterns correctly
 
 ## Documentation Coverage
 - Package `doc.go`: ✅ Comprehensive 122-line overview with examples, architecture, alignment system, faction system, performance targets
@@ -85,5 +72,4 @@ This package connects to the engine via ECS components and integration packages:
 2. **[MED]** Consider injecting a time provider (similar to `pkg/integration/choice_consequences/time_provider.go`) for `StartTime` and `LastUpdate` timestamps to enable deterministic testing of timestamp-dependent logic (e.g., progress tracking, analytics queries).
 3. **[LOW]** Add godoc comments to `SetLogger` methods for `Generator` and `Manager`.
 4. **[LOW]** Refactor doc.go example code (lines 46, 56) into proper `Example*` test functions (e.g., `ExampleGenerator_Generate`, `ExampleManager_MakeChoice`) with `// Output:` comments for testable documentation.
-5. **[LOW]** Increase test coverage for type coercion edge cases in `checkIntRequirement`, `checkFloatRequirement`, `evaluateIntCondition`, `evaluateFloatCondition` (currently 71.4%-75.0% coverage).
 6. **[LOW]** Implement explicit `Serialize()/Deserialize()` methods for `PlayerProgress`, `StoryArc`, and `Consequence` to formalize save/load contract with `pkg/saveload/`.

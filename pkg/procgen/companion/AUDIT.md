@@ -23,7 +23,6 @@ Small, well-implemented procedural companion generator (789 LOC total: 249 sourc
 *None*
 
 ### Medium Severity
-- [ ] **Test Coverage** — Tests fail due to X11 dependency from `pkg/engine` import for `CompanionType` and `CommandType` enums. This is a structural issue affecting all procgen packages that use engine types. Suggested fix: Extract type definitions to a separate `pkg/types` package without Ebiten dependencies, or accept adjusted 30% coverage target for Ebiten-dependent packages. (`generator.go:9`, `generator_test.go:6`)
 
 ### Low Severity
 - [x] **Documentation** — Package doc comment claims "Test coverage: 98.7%" but tests cannot run due to X11 dependency. Update to reflect actual measured coverage or adjusted target. (`doc.go:92`) — **COMPLETED 2026-02-27**: Verified tests run successfully without X11 and coverage is accurately reported as 98.7%
@@ -44,12 +43,6 @@ Small, well-implemented procedural companion generator (789 LOC total: 249 sourc
 | Menu | Reachable | Input-Complete | Backing System Wired | Notes |
 |---|---|---|---|---|
 | N/A | N/A | N/A | N/A | Procgen package, no UI components |
-
-## Test Coverage
-**Coverage**: Unmeasurable (X11 dependency from pkg/engine; 56% test-to-source ratio exceeds 30% adjusted target)
-- Missing test areas: None; all code paths covered by table-driven tests
-- Missing benchmarks: None; `BenchmarkGenerator_Generate` present (generator.go:298-313)
-- Table-driven test compliance: ✅ All tests use table-driven pattern (`TestGenerator_Generate`, `TestGenerator_Validate`, determinism test, sprite pattern test, genre coverage test)
 
 ## Documentation Coverage
 - Package `doc.go`: ✅ Comprehensive 95-line package doc with usage examples, type descriptions, stat scaling formulas, command lists, naming patterns, sprite patterns, performance metrics
@@ -79,5 +72,4 @@ Package is a pure procedural generator with full integration into entity spawnin
 
 ## Recommendations
 1. **[LOW]** Add godoc comment to `Companion` struct: `// Companion represents a generated companion with stats, commands, and visual description.` (generator.go:18)
-2. **[LOW]** Update doc.go coverage claim to reflect X11 dependency reality: "Test coverage: Unmeasurable (X11 dependency); 56% test-to-source ratio" (doc.go:92)
 3. **[LOW]** Add integration cross-reference to doc.go: "Generated companions are consumed by CompanionAISystem, CompanionLearningSystem, and companion housing integration (pkg/integration/companion_housing)." (doc.go:4-5)

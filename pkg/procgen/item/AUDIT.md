@@ -29,7 +29,6 @@ _None_
 ### Low Severity
 - [ ] **Code Organization** — Accessory templates use armor templates as fallback (comment "For now, accessories use armor templates"); should have dedicated accessory templates for completeness (`generator.go:156-159`)
 - [ ] **Documentation** — Template file `templates.go` is 34KB and too large to view at once; consider splitting into genre-specific files for maintainability (`templates.go`)
-- [ ] **Test Coverage** — No benchmark for `generateDescription()` or `generateName()` despite being called on every item generation (`generator.go:192,196`)
 
 ## Input Integration
 | Input Source | Status | Notes |
@@ -45,19 +44,6 @@ _None_
 | Menu | Reachable | Input-Complete | Backing System Wired | Notes |
 |---|---|---|---|---|
 | N/A | N/A | N/A | N/A | Package has no UI components; consumed by inventory, shop, and loot systems |
-
-## Test Coverage
-**Coverage**: 92.2% (target: 40%)
-- Missing test areas: None identified; coverage is excellent
-- Missing benchmarks: `generateDescription()`, `generateName()` (low priority)
-- Table-driven test compliance: ✅ Excellent use of table-driven tests in `item_test.go`, `determinism_test.go`, `class_restrictions_test.go`
-
-**Test Files**:
-- `item_test.go` (1,256 lines): Core functionality, determinism, validation
-- `determinism_test.go` (170 lines): Seed-based reproducibility across runs
-- `class_restrictions_test.go` (123 lines): Class restriction logic
-- `rarity_value_test.go` (47 lines): Rarity scaling validation
-- `item_bench_test.go` (190 lines): Performance benchmarks
 
 ## Documentation Coverage
 - Package `doc.go`: ✅ Comprehensive package-level documentation

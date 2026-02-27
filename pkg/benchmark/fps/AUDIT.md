@@ -33,7 +33,6 @@ None.
 
 ### Low Severity
 - [x] **Documentation** — README.md references `pkg/engine/performance_targets_test.go` as "legacy" but does not explain migration path or deprecation timeline (`README.md:74`)
-- [x] **Test Coverage** — Unit tests `TestFPS60TargetWith2000Entities` and `TestFPS60TargetLightWeight` use `testing.Benchmark()` which provides less granular control than direct timing measurements; consider explicit timing for CI threshold validation (`fps_test.go:235`, `fps_test.go:278`)
 - [x] **Benchmark Design** — `BenchmarkFPS2000EntitiesWithCollision` uses `CollisionSystem` which depends on spatial partitioning configuration not validated in this benchmark; missing `SpatialPartition` initialization check (`fps_test.go:171`)
 
 ## Input Integration
@@ -50,12 +49,6 @@ None.
 | Menu | Reachable | Input-Complete | Backing System Wired | Notes |
 |---|---|---|---|---|
 | N/A | N/A | N/A | N/A | Test-only package with no UI |
-
-## Test Coverage
-**Coverage**: N/A (Test-only package; 30% target exemption for X11/Ebiten-dependent packages; 295 test LOC)
-- Missing test areas: N/A (comprehensive benchmark coverage)
-- Missing benchmarks: N/A (all key scenarios covered: 500, 2000, 5000 entities with/without collision)
-- Table-driven test compliance: ⚠️ Not applicable (benchmarks use parametric entity counts, not table-driven pattern)
 
 ## Documentation Coverage
 - Package `doc.go`: ✅ Present (15 LOC, clear purpose statement, usage examples)

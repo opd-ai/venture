@@ -34,7 +34,6 @@ Package `pkg/procgen/environment` provides procedural generation of environmenta
 ### Low Severity
 - [ ] **Documentation** — Package-level doc.go has triple package comment (lines 1, 43, 45) (`doc.go:1-45`)
 - [ ] **Code organization** — Generator.go is large (1296 LOC) and could benefit from splitting drawing functions into a separate file (`generator.go:1-1296`)
-- [ ] **Test coverage** — Missing explicit test for `Generate()` interface method with invalid `Custom` parameter types (`generator_test.go`)
 
 ## Input Integration
 | Input Source | Status | Notes |
@@ -50,12 +49,6 @@ Package `pkg/procgen/environment` provides procedural generation of environmenta
 | Menu | Reachable | Input-Complete | Backing System Wired | Notes |
 |---|---|---|---|---|
 | N/A | N/A | N/A | N/A | Procgen package generates content; no UI components |
-
-## Test Coverage
-**Coverage**: 95.5% (target: 40%)
-- Missing test areas: None critical; main generation paths well-covered
-- Missing benchmarks: Could add benchmarks for `GenerateFromConfig()`, `PlaceDecorations()`, and `ApplyVariation()` for performance validation
-- Table-driven test compliance: ✅ All tests use table-driven pattern
 
 ## Documentation Coverage
 - Package `doc.go`: ✅ Present (minor issue: triple package comment)

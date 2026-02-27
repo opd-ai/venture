@@ -28,7 +28,6 @@ The `pkg/procgen/quest` package provides deterministic procedural quest generati
 ### Low Severity
 - [ ] **API Consistency** — Quest methods have both procedural function variants (e.g., `QuestIsComplete(q *Quest)`) and receiver methods (e.g., `q.IsComplete()`), creating API duplication. Recommend deprecating one pattern in favor of the other for consistency (`types.go:217-249`)
 - [ ] **Code Organization** — Large genre template functions (200+ lines) could be refactored into data-driven template tables loaded from constants or embedded JSON (`types.go:281-635`)
-- [ ] **Test Coverage** — Missing edge case tests for quest validation with zero objectives, negative rewards, or malformed template data (tests exist but could be more comprehensive)
 
 ## Input Integration
 | Input Source | Status | Notes |
@@ -45,12 +44,6 @@ The `pkg/procgen/quest` package provides deterministic procedural quest generati
 |---|---|---|---|---|
 | Quest Log UI | ✅ | ✅ | ✅ | Integrated via `pkg/engine/quest_ui.go` and `quest_tracker.go` |
 | NPC Quest Dialog | ✅ | ✅ | ✅ | Integrated via `pkg/engine/npcdialog_system.go` |
-
-## Test Coverage
-**Coverage**: 92.3% (target: 40%)
-- Missing test areas: None identified (coverage exceeds target significantly)
-- Missing benchmarks: Generator performance benchmarks exist (`quest_bench_test.go`)
-- Table-driven test compliance: ✅ (tests use table-driven patterns)
 
 ## Documentation Coverage
 - Package `doc.go`: ✅ (comprehensive package documentation with usage examples)

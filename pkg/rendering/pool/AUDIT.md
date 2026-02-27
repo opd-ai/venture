@@ -58,20 +58,6 @@ The `pkg/rendering/pool` package provides sync.Pool-based object pooling for Ebi
 |---|---|---|---|---|
 | N/A | N/A | N/A | N/A | Package is a low-level pooling utility with no UI components |
 
-## Test Coverage
-**Coverage**: Unmeasurable (requires X11; target: 30% for X11/Wayland/Ebiten-dependent packages)
-- Missing test areas: None (all APIs tested, but cannot run in headless CI)
-- Missing benchmarks: None (9 benchmarks covering all size variants and concurrent access)
-- Table-driven test compliance: ✅ (TestImagePool_GetImage_StandardSizes uses table-driven pattern)
-
-**Test Quality Assessment**:
-- ✅ 452 lines of comprehensive test code
-- ✅ Tests cover: standard sizes, non-standard sizes, non-square, nil handling, reuse, clearing, statistics, concurrency, global API
-- ✅ Benchmarks documented with performance analysis (BENCHMARKS.md, 180 lines)
-- ✅ Concurrent access tested with 100 goroutines
-- ✅ Statistics validation includes reuse rate calculations
-- ⚠️ Cannot verify with `-race` flag due to X11 requirement, but concurrent test design is sound
-
 ## Documentation Coverage
 - Package `doc.go`: ✅ (29 lines, explains purpose, usage pattern, performance considerations)
 - Exported symbols documented: 13/13 (100%)

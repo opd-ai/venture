@@ -43,41 +43,6 @@ None
 |---|---|---|---|---|
 | N/A | N/A | N/A | N/A | Package provides error handling infrastructure only; no UI components |
 
-## Test Coverage
-**Coverage**: 100.0% (target: 40%, or 30% for X11/Wayland/Ebiten-dependent packages) ✅ **EXCEEDS TARGET**
-
-- Missing test areas: None — all code paths covered
-- Missing benchmarks: None — comprehensive benchmarks present for all critical paths
-- Table-driven test compliance: ✅ All tests use table-driven patterns
-
-**Test Structure:**
-- `errors_test.go`: 667 lines, 34 test functions covering:
-  - ErrorType.String() with all 13 error types + invalid type
-  - VentureError.Error() formatting with/without correlation IDs
-  - Error wrapping and unwrapping (errors.Is, errors.As)
-  - Context enrichment (WithContext, WithCorrelationID)
-  - User-friendly messages for all error types
-  - Retryability logic for all error types
-  - All 12 helper functions (Network, Validation, etc.) and their Wrap variants
-  - Error chaining across multiple levels
-  - 8 benchmarks validating performance claims in README.md
-
-- `correlation_test.go`: 362 lines, 13 test functions covering:
-  - UUID-based correlation ID generation with uniqueness checks
-  - Sequential correlation ID generation
-  - Context operations (WithCorrelationID, GetCorrelationID, GetOrCreateCorrelationID)
-  - WrapWithContext preserving correlation IDs through error chains
-  - NewWithContext integration
-  - Integration test simulating multi-layer request flow
-  - Concurrency test with 100 goroutines × 100 IDs ensuring no collisions
-  - 6 benchmarks for correlation ID operations
-
-**Benchmark Results (from README.md):**
-- Error creation: ~100 ns/op ✅
-- Error wrapping: ~150 ns/op ✅
-- Context addition: ~50 ns/op per field ✅
-- UUID generation: ~500 ns/op ✅
-
 ## Documentation Coverage
 - Package `doc.go`: ✅ Comprehensive 158-line package documentation with:
   - Overview of all features

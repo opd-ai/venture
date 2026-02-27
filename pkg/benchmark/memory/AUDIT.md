@@ -49,26 +49,6 @@ The `pkg/benchmark/memory` package provides memory usage validation tests for th
 |---|---|---|---|---|
 | N/A | N/A | N/A | N/A | Test-only package; no UI |
 
-## Test Coverage
-**Coverage**: N/A (test-only package; 218 test lines + 43 doc lines = 261 total)
-- Missing test areas: N/A (package only contains test files)
-- Missing benchmarks: N/A (package is dedicated to benchmarks)
-- Table-driven test compliance: ✅ (four distinct test functions with clear naming and realistic scenarios)
-
-**Test Files**:
-- `memory_test.go`: 218 lines
-  - `TestMemoryBaselineWorld`: Basic world generation (10MB world data + 500 entities + 100 sprites)
-  - `TestMemoryHighEntityCount`: 2000 entities with full components (position, velocity, health, sprite, inventory)
-  - `TestMemoryProcgenStress`: Intensive procedural generation (500 items, 200 quests, 300 spells, 10 terrain chunks)
-  - `TestMemoryRenderingStress`: Rendering pipeline stress (50 sprite types × 8 frames, 1000 particles, 200 lights, triple buffering)
-
-**Test Quality**:
-- All tests use `pkg/memprofile.StartMemoryProfile()` for structured allocation tracking
-- Snapshot taken at key allocation points for incremental profiling
-- All tests validate against 500MB threshold with clear error messages
-- Test setup is realistic and mirrors actual game component allocations
-- Unused variables explicitly marked with `_ = variable` to prevent warnings
-
 ## Documentation Coverage
 - Package `doc.go`: ✅ (43 lines; comprehensive package-level documentation)
 - Exported symbols documented: N/A (test-only package; all test functions have clear names and inline comments)

@@ -30,7 +30,6 @@ The pkg/mobile package provides touch input handling and mobile-optimized UI com
 
 ### Medium Severity
 - [ ] **time.Now() usage** — 31 `time.Now()` calls in production code for touch timing, gesture detection, and rate limiting. These are acceptable non-procgen usage (input debouncing, gesture timing), but should be documented as intentional exceptions to deterministic generation guideline. Affects: `touch.go:71,85,469`, `controls.go:49,76,86,133`, and others. (`touch.go:71,85,469`, `controls.go:49,76,86,133`)
-- [ ] **Test coverage unmeasurable** — Package requires X11/GLFW display server for Ebiten initialization. CI should use `xvfb-run` for headless testing. Test suite is comprehensive (6,221 lines vs 4,611 source lines = 135% test-to-source ratio), but coverage percentage is not measurable without display. (N/A)
 
 ### Low Severity
 - [ ] **Stub implementation note** — `keyboard_default.go:18` contains "not implemented in this build" comment for native mobile keyboard APIs. This is acceptable for non-WASM builds but should be tracked for future native integration. (`keyboard_default.go:18`)
@@ -55,26 +54,6 @@ The pkg/mobile package provides touch input handling and mobile-optimized UI com
 | DualJoystickLayout | ✅ | ✅ | ✅ | Dual virtual joysticks (movement + aim) with action buttons. Supports 360° rotation for Phase 10.1. |
 | TouchButton | ✅ | ✅ | ✅ | Generic touch button UI component with press feedback and rate limiting. |
 | SafeAreaLayout | ✅ | ✅ | ✅ | Layout manager respecting device safe areas (notches, rounded corners). |
-
-## Test Coverage
-**Coverage**: Unmeasurable (requires X11/GLFW display server)
-**Test-to-Source Ratio**: 135% (6,221 test lines / 4,611 source lines)
-
-- **Test files**: 13 files with 281+ test functions and 18+ benchmarks
-- **Test quality**: Comprehensive table-driven tests covering:
-  - Touch input lifecycle (start/move/end/cancel)
-  - Gesture detection (tap, double-tap, swipe, pinch, long-press)
-  - Virtual controls (joysticks, buttons, D-pad)
-  - Platform detection (iOS, Android, WASM)
-  - Accessibility (VoiceOver/TalkBack hints)
-  - Keyboard bridging (WASM)
-  - Rate limiting and debouncing
-  - Safe area handling
-  - Momentum scrolling
-  - Multi-touch simultaneous input
-- **Missing test areas**: None identified; coverage is comprehensive
-- **Missing benchmarks**: None identified; performance-critical paths (touch processing, gesture detection, virtual control updates) all have benchmarks
-- **Table-driven test compliance**: ✅ All tests use table-driven patterns with clear test case names
 
 ## Documentation Coverage
 - **Package `doc.go`**: ✅ Excellent (54 lines with usage examples for touch input, virtual controls, and gestures)
@@ -126,6 +105,5 @@ The mobile package is a foundational input and UI abstraction layer used extensi
 1. **[HIGH]** Refactor `IsBackButtonPressed()`, `IsBackButtonDown()` (keyboard_default.go:54-62, keyboard_wasm.go:526-532) to accept `InputProvider` parameter instead of calling `ebiten.IsKeyPressed` and `inpututil.IsKeyJustPressed` directly. This restores Input interface abstraction for testability.
 2. **[HIGH]** Refactor `ConfirmationDialog.Update()` (ui.go:839) to accept `InputProvider` parameter instead of calling `ebiten.IsMouseButtonPressed` directly.
 3. **[MED]** Add godoc comment to all `time.Now()` usages explaining they are intentional non-procgen timing (input debouncing, gesture detection, rate limiting) and not affecting game state determinism.
-4. **[MED]** Configure CI to run tests with `xvfb-run go test` to measure actual coverage percentage. Target: ≥40% (standard target).
-5. **[LOW]** Track native mobile keyboard API integration as future work (currently marked "not implemented" in keyboard_default.go:18).
-6. **[LOW]** Add note in README.md that example code uses `fmt.Printf` for clarity but production code must use structured logging.
+4. **[LOW]** Track native mobile keyboard API integration as future work (currently marked "not implemented" in keyboard_default.go:18).
+5. **[LOW]** Add note in README.md that example code uses `fmt.Printf` for clarity but production code must use structured logging.

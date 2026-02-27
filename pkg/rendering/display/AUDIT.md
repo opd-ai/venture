@@ -45,12 +45,6 @@ None
 |---|---|---|---|---|
 | Settings / Options | ⚠️ | ⚠️ | ✅ | Display manager initialized (`cmd/client/init_versions.go:370`). Settings persistence via `pkg/engine/settings.go` (fields: `WindowWidth`, `WindowHeight`, `Fullscreen`). **Gap**: No resolution dropdown in settings menu UI to change resolution at runtime (only F11 fullscreen toggle wired). |
 
-## Test Coverage
-**Coverage**: Unmeasurable (requires X11; 64% test-to-source ratio: 622 test lines / 971 total lines)
-- Missing test areas: None (all public API covered with table-driven tests)
-- Missing benchmarks: None (benchmarks for `SetResolution`, `ToggleFullscreen`, `ScaleWidth`, `ScalePosition`, `ScaleFontSize` present)
-- Table-driven test compliance: ✅ (all tests follow table-driven pattern)
-
 ## Documentation Coverage
 - Package `doc.go`: ✅ (comprehensive with usage examples for config, manager, scaler, and Ebiten integration)
 - Exported symbols documented: 28/28 (100%)

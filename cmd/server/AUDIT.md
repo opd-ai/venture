@@ -48,23 +48,6 @@ The cmd/server package provides the dedicated multiplayer server for Venture, im
 |---|---|---|---|---|
 | N/A | N/A | N/A | N/A | Server is headless; no UI |
 
-## Test Coverage
-**Coverage**: Unmeasurable (requires X11/Ebiten display; target: 30%)
-**Test-to-Source Ratio**: 184% (6,027 test LOC / 3,437 prod LOC)
-- Missing test areas: None - comprehensive test suite exists but cannot execute without display
-- Missing benchmarks: No performance benchmarks for snapshot building, lag compensation, or entity spawning (hot paths)
-- Table-driven test compliance: ✅ (all tests use table-driven pattern: `main_test.go`, `entity_spawning_test.go`, `player_management_test.go`, etc.)
-
-**Test File Coverage:**
-- `main_test.go` - 516 LOC - Server startup, world creation, terrain generation tests
-- `entity_spawning_test.go` - 522 LOC - Vehicle, companion, NPC spawning validation
-- `player_management_test.go` - 446 LOC - Player entity creation, input handling, network sync
-- `v4_competitive_systems_test.go` - 562 LOC - V4 system initialization and integration
-- `v9_validation_test.go` - 525 LOC - V9 validation service tests (crafting, housing, guild)
-- `validation_test.go` - 441 LOC - Config validation tests
-- `system_init_test.go` - 351 LOC - System initialization order validation
-- Integration tests (7 files, 2,664 LOC total): companion housing, fleet manager, political warfare, trade routes, world events, snapshot conversion, minigame systems
-
 ## Documentation Coverage
 - Package `doc.go`: ✅ (105 LOC, comprehensive coverage of architecture, systems, network protocol, configuration, performance targets)
 - Exported symbols documented: 100% (all exported functions have doc comments)

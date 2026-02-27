@@ -207,4 +207,8 @@ balancers, or container orchestration platforms as documented in
   correctly for application-level packet encryption.
 - The mod system (`pkg/modding/sandbox.go`) is secure by design — JSON-only data mods
   with no executable code paths.
+
+## PLAN LOG
+
+- 2026-02-27 PLAN.md created for Phase 1: Foundation (archived to docs/PLAN-20260227.md)
 ~~~~

@@ -29,7 +29,6 @@ pkg/vr is a small, well-tested utility package providing VR hardware detection v
 None
 
 ### Medium Severity
-- [ ] **Test coverage gap** — `checkVRRuntimePaths()` logic not fully exercised with mocked filesystem paths; test at line 305 only logs result without assertions for each platform branch (`detection.go:128-175`, `detection_test.go:305-315`)
 
 ### Low Severity
 - [ ] **Documentation completeness** — ParseEnableVRFlag lacks a godoc comment; only package-level doc mentions it (`detection.go:240`)
@@ -49,15 +48,6 @@ None
 | Menu | Reachable | Input-Complete | Backing System Wired | Notes |
 |---|---|---|---|---|
 | N/A | N/A | N/A | N/A | pkg/vr is a detection utility only; no UI components |
-
-## Test Coverage
-**Coverage**: 76.8% (target: 40%) ✅
-- Missing test areas:
-  - Platform-specific `checkVRRuntimePaths()` branches not fully covered (Windows/Linux/macOS paths require mocked filesystem or integration tests)
-  - Environment variable restoration edge cases (test cleanup is correct but doesn't verify state isolation between parallel tests)
-- Missing benchmarks:
-  - `IsHeadsetDetected()` / `IsControllerDetected()` read-heavy operations
-- Table-driven test compliance: ✅ (see `TestDetectHeadsetEnvironmentVariables` line 144, `TestParseEnableVRFlag` line 230)
 
 ## Documentation Coverage
 - Package `doc.go`: ✅ (58 lines, comprehensive package overview with usage examples)

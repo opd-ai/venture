@@ -29,7 +29,6 @@ The `pkg/integration/narrative_world` package implements V9.0 companion-driven s
 None
 
 ### Medium Severity
-- [ ] **Test Coverage** — Tests require X11/Ebiten runtime, preventing coverage measurement. Test-to-source ratio 86.7% suggests strong coverage but cannot be verified quantitatively. (`*_test.go`)
 - [ ] **Network Sync** — No evidence of network sync integration for cross-server companion state. StoryEventManager has Serialize/Deserialize but no network snapshot system integration. (`manager.go`, `serialization.go`)
 
 ### Low Severity
@@ -51,13 +50,6 @@ None
 | Menu | Reachable | Input-Complete | Backing System Wired | Notes |
 |---|---|---|---|---|
 | N/A | N/A | N/A | N/A | Package provides backend logic only, no UI components |
-
-## Test Coverage
-**Coverage**: Unmeasurable (requires X11; 30% target for X11-dependent packages)
-**Test-to-source ratio**: 86.7% (1741 test lines / 2007 production lines)
-- Missing test areas: None identified - comprehensive table-driven tests present
-- Missing benchmarks: BenchmarkRecordMemory, BenchmarkCheckConflict, BenchmarkGeneratePersonalQuest, BenchmarkSerialize, BenchmarkDeserialize (performance-critical operations)
-- Table-driven test compliance: ✅ All test functions use table-driven patterns
 
 ## Documentation Coverage
 - Package `doc.go`: ✅ Comprehensive package-level documentation with usage examples

@@ -29,7 +29,6 @@ None identified.
 ### Low Severity
 - [ ] **Code organization** — `queries.go` uses nil safety checks in all functions but the pattern could be extracted to a helper (`queries.go:9-27`)
 - [ ] **Documentation** — Package-level godoc in `doc.go` could mention integration with `pkg/engine/entity_spawning.go` and `merchant_spawn.go` (`doc.go:1-40`)
-- [ ] **Test coverage** — Missing benchmark for `generateMerchantInventory` which is a potentially expensive operation with multiple item generations (`merchant.go:162-217`)
 
 ## Input Integration
 | Input Source | Status | Notes |
@@ -45,12 +44,6 @@ None identified.
 | Menu | Reachable | Input-Complete | Backing System Wired | Notes |
 |---|---|---|---|---|
 | N/A | N/A | N/A | N/A | Package is a data generator with no UI components |
-
-## Test Coverage
-**Coverage**: 92.4% (target: 40%)
-- Missing test areas: None identified; coverage exceeds target
-- Missing benchmarks: `generateMerchantInventory` could benefit from benchmark
-- Table-driven test compliance: ✅ — Excellent use of table-driven tests in both `entity_test.go` and `merchant_test.go`
 
 ## Documentation Coverage
 - Package `doc.go`: ✅

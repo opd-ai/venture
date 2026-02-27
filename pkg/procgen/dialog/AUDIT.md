@@ -34,7 +34,6 @@ The `pkg/procgen/dialog` package provides runtime NPC dialog generation using Ma
 ### Low Severity
 - [ ] **Documentation** — `GetGreeting()` method comment could clarify backward compatibility behavior vs. `GetGreetingWithSeed()` for better API discoverability (`personality.go:205`)
 - [ ] **Code clarity** — `calculateTemperatureWeights()` has complex temperature scaling logic that would benefit from inline comments explaining the mathematical transformation (`utils.go:136-147`)
-- [ ] **Test coverage** — `utils.go` weighted word selection has edge cases (empty candidates, zero total weight) that are covered but could use explicit test cases documenting expected behavior (`utils.go:68-101`)
 
 ## Input Integration
 | Input Source | Status | Notes |
@@ -56,39 +55,6 @@ The `pkg/procgen/dialog` package provides runtime NPC dialog generation using Ma
 - UI rendering for NPC conversations handled by `pkg/engine/dialog_ui.go` (✅ confirmed)
 - Dialog system registered in `cmd/server/v4_systems.go` via `NewNPCDialogSystem(world, seed)` (✅ confirmed)
 - Client-side dialog UI tested in `pkg/engine/dialog_ui_test.go` (✅ confirmed)
-
-## Test Coverage
-**Coverage**: 88.0% (target: 40%, **EXCEEDS TARGET BY 48 PERCENTAGE POINTS**)
-
-**Well-Covered Areas:**
-- Markov chain generation and training (`markov.go`: 90%+)
-- Corpus retrieval for all 5 genres (`corpus.go`: 100%)
-- Personality trait application (`personality.go`: 85%+)
-- Deterministic vs. non-deterministic generation modes
-- Seed derivation and reproducibility
-- procgen.Generator interface implementation
-
-**Coverage Details:**
-- `corpus.go`: 100% (all genre corpora tested)
-- `markov.go`: ~90% (generation, training, validation)
-- `personality.go`: ~85% (trait application, greeting selection)
-- `utils.go`: ~75% (weighted selection, temperature scaling)
-- `doc.go`: N/A (documentation only)
-
-**Missing test areas:**
-- Edge case: `calculateTemperatureWeights()` with temperature = 1.0 exactly (line 138 condition)
-- Edge case: `selectWeightedWord()` fallback to last word when cumulative weight rounding issues occur (line 100)
-- Stress test: Very large corpora (>10,000 sentences) to validate memory and performance
-
-**Missing benchmarks:**
-- `BenchmarkGenerateText` to measure response generation latency (target: <50ms)
-- `BenchmarkTrainFromCorpus` to measure corpus training time (target: <100ms)
-- `BenchmarkDeriveRuntimeSeed` to measure seed derivation overhead
-
-**Table-driven test compliance**: ✅ Full compliance
-- All tests use table-driven patterns with named test cases
-- Subtests properly scoped with `t.Run()`
-- All 5 genres tested with parameterized cases
 
 ## Documentation Coverage
 - Package `doc.go`: ✅ Present (117 lines, comprehensive architecture overview)

@@ -54,21 +54,6 @@ The `pkg/benchmark` package provides performance validation infrastructure for F
 |---|---|---|---|---|
 | N/A | N/A | N/A | N/A | Benchmark package does not provide UI |
 
-## Test Coverage
-**Coverage**: N/A (test-only package; 513 total test lines across fps and memory subdirectories)
-- Missing test areas: N/A (package only contains test files)
-- Missing benchmarks: N/A (package is dedicated to benchmarks)
-- Table-driven test compliance: ✅ (both `fps_test.go` and `memory_test.go` contain multiple benchmark and test functions with clear naming and structure)
-
-**Test-to-Source Ratio**: N/A (no production source; pure test infrastructure)
-- `fps/fps_test.go`: 295 lines
-- `memory/memory_test.go`: 218 lines
-- `fps/doc.go`: 16 lines
-- `memory/doc.go`: 44 lines
-- `pkg/benchmark/doc.go`: 44 lines
-
-**Note**: The `fps` subdirectory tests require X11/Wayland display server (Ebiten dependency) and cannot run in headless CI environments. The `memory` subdirectory tests run successfully without graphics dependencies.
-
 ## Documentation Coverage
 - Package `doc.go`: ✅ (`pkg/benchmark/doc.go`, `pkg/benchmark/fps/doc.go`, `pkg/benchmark/memory/doc.go`)
 - Exported symbols documented: N/A (test-only package; all test functions have godoc comments)

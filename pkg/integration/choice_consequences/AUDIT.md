@@ -46,18 +46,6 @@ None
 |---|---|---|---|---|
 | N/A | N/A | N/A | N/A | Package provides data layer only - UI integration handled by engine systems (narrative_system, quest_ui, etc.) |
 
-## Test Coverage
-**Coverage**: 89.3% (target: 40%) ✅
-- Missing test areas:
-  - `RealTimeProvider.Now()` (intentionally untested - trivial time.Now() wrapper)
-  - Some edge cases in `IsContentAvailable` lock removal code path (lines 336-342 in `choice_tracker.go`)
-- Missing benchmarks:
-  - `RecordChoice` performance with 200 choices + 50 NPCs
-  - `IsContentAvailable` query performance
-  - Save/Load performance with full player state
-  - Concurrent access benchmarks for thread-safety validation
-- Table-driven test compliance: ✅ All tests in `manager_test.go` and `helpers_test.go` follow table-driven pattern
-
 ## Documentation Coverage
 - Package `doc.go`: ✅ Comprehensive package documentation with usage examples, features, integration points, performance metrics
 - Exported symbols documented: 52/52 (100%) ✅

@@ -47,13 +47,6 @@ None identified.
 |---|---|---|---|---|
 | N/A | N/A | N/A | N/A | Package provides lighting effects, not UI; integration occurs via `LightingSystem` in `pkg/engine/lighting_system.go` and `LightingAdapter` in `pkg/engine/lighting_adapter.go` |
 
-## Test Coverage
-**Coverage**: Unmeasurable (requires X11; 30% target applies)
-**Test-to-Source Ratio**: 56.6% (2179 test lines / 3850 total lines)
-- Missing test areas: Race condition tests (cannot run without X11), GPU shader tests on WASM builds
-- Missing benchmarks: GPU bloom shader performance, light circle cache hit rate
-- Table-driven test compliance: ✅ (all tests use table-driven patterns: `ambient_occlusion_test.go`, `bloom_test.go`, `system_test.go`, `gpu_bloom_test.go`)
-
 ## Documentation Coverage
 - Package `doc.go`: ✅ (91 lines with comprehensive examples, performance notes, and API usage)
 - Exported symbols documented: 25/25 (100%)

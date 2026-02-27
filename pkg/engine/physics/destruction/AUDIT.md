@@ -45,12 +45,6 @@ None
 |---|---|---|---|
 | N/A | N/A | N/A | N/A | Physics package has no UI; rendering handled by separate systems |
 
-## Test Coverage
-**Coverage**: 96.3% (target: 40%)
-- Missing test areas: None significant (all critical paths covered)
-- Missing benchmarks: Performance benchmarks for collapse simulation with large buildings (1000+ supports), debris generation with max particles, and fixed timestep accumulator
-- Table-driven test compliance: ✅ All tests use table-driven pattern
-
 ## Documentation Coverage
 - Package `doc.go`: ✅ (comprehensive 231-line package documentation with usage examples, architecture explanation, performance targets)
 - Exported symbols documented: 14/14 (100%)

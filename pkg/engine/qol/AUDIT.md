@@ -29,7 +29,6 @@ None
 ### Low Severity
 - [ ] **Documentation** — EstimateArrivalTime function could document the 1 second per tile formula more explicitly (`types.go:201`)
 - [ ] **Code organization** — StorageSorter.Item type definition in storagesorter.go would be better in types.go with other data structures (`storagesorter.go:68`)
-- [x] **Test coverage** — Missing benchmark for SortItems() which is performance-critical for large inventories (`storagesorter.go:79`) - **ALREADY FIXED**: BenchmarkStorageSorter_SortItems exists in manager_test.go:646-663 and runs successfully (~427ns/op for 100 items)
 
 ## Input Integration
 | Input Source | Status | Notes |
@@ -51,12 +50,6 @@ None
 | Mount Whistle | ✅ | ✅ | ✅ | UI triggers summon via Manager.MountWhistle().SummonMount() |
 | Storage Sorter | ✅ | ✅ | ✅ | UI calls Manager.StorageSorter().SortItems() with presets |
 | Recipe Tracker | ✅ | ✅ | ✅ | UI displays tracked recipes from Manager.RecipeTracker().GetTrackedRecipes() |
-
-## Test Coverage
-**Coverage**: 94.0% (target: 40%, or 30% for X11/Wayland/Ebiten-dependent packages)
-- Missing test areas: None (excellent coverage across all subsystems)
-- Missing benchmarks: SortItems() for performance validation of large inventories
-- Table-driven test compliance: ✅ (AutoLootManager, CraftQueueManager tests use table-driven patterns)
 
 ## Documentation Coverage
 - Package `doc.go`: ✅ (75 lines with feature descriptions, examples, integration notes)

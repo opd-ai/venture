@@ -54,20 +54,6 @@ None
 - `cmd/server/v9_systems.go` — Initializes StationManager and wires into validation layer
 - `cmd/client/handlers.go` — Client-side StationManager for local bonus preview
 
-## Test Coverage
-**Coverage**: 96.3% (target: 40%)
-- Missing test areas: None — comprehensive table-driven tests for all major paths
-- Missing benchmarks: Station lookup performance, recipe unlock generation (hot-path for crafting UI)
-- Table-driven test compliance: ✅ — All tests use table-driven pattern with subtests
-
-**Coverage Breakdown**:
-- `types.go`: Enum String() and Multiplier() methods — 100%
-- `station_manager.go`: Registration, lookup, bonus calculation — 95%+
-- `crafting_station.go`: Serialize/Deserialize, recipe/skill queries — 100%
-- `skill_training_facility.go`: Training checks, XP calculation — 100%
-- `housing_crafting_system.go`: Unexported ECS adapter system — 100%
-- `recipe_helpers.go`: Deterministic recipe generation — 100%
-
 ## Documentation Coverage
 - Package `doc.go`: ✅ — Comprehensive (77 lines with usage examples, performance targets, integration points)
 - Exported symbols documented: 23/23 (100%)

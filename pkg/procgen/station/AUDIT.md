@@ -34,7 +34,6 @@ _None identified._
 ### Low Severity
 - [x] **Documentation** — doc.go example uses `log.Fatal` and `fmt.Printf` instead of structured logging (`doc.go:31`, `doc.go:36`) - example code should demonstrate best practices even in comments — **FIXED 2026-02-27**: Added clarifying notes in doc.go example code explaining production code should use logrus.WithError() and logrus.WithFields for structured logging. Replaced log.Fatal with return err pattern and fmt.Printf with comment showing logrus example.
 - [ ] **Documentation** — Missing `doc.go` package overview for `StationType` enum explaining mapping to recipe types (`generator.go:20-34`)
-- [ ] **Test Coverage Gap** — No tests verify station spawning locations when multiple stations are generated - only name and type verification exists (`generator_test.go`)
 
 ## Input Integration
 | Input Source | Status | Notes |
@@ -51,12 +50,6 @@ _None identified._
 |---|---|---|---|---|
 | Crafting UI | ✅ | ✅ | ✅ | Station types correctly mapped to RecipeType in `pkg/engine/crafting_system.go`; UI displays station name and type from StationData |
 | Housing Placement | N/A | N/A | N/A | Stations are spawned procedurally in terrain, not player-placeable furniture |
-
-## Test Coverage
-**Coverage**: 89.0% (target: 40%, or 30% for X11/Wayland/Ebiten-dependent packages)
-- Missing test areas: None significant - core generation and validation fully covered
-- Missing benchmarks: Benchmarks for `Generate()` and `Validate()` already present
-- Table-driven test compliance: ✅ All test functions use table-driven patterns
 
 ## Documentation Coverage
 - Package `doc.go`: ✅ Present with comprehensive overview including usage examples, genre support, integration guide, determinism guarantees, and performance notes

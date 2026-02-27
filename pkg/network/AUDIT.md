@@ -29,8 +29,6 @@ Core networking package providing TCP client/server, protocol serialization, cha
 - [ ] **Non-deterministic timing** — Extensive use of `time.Now()` in bandwidth monitoring, chat, and client/server state (~20+ occurrences) makes networking non-deterministic and prevents time-controlled testing. Networking systems should accept injectable time providers (e.g., `GameClock` interface already exists in `pkg/engine/interfaces.go`) to enable deterministic simulation and testing. (`bandwidth.go:41,54,67,101,132,158,169,177`, `chat.go:18,189,200,231,232,257,271,318,355`, `client.go:253,254,495`, `server.go`: multiple occurrences in ping/timeout logic)
 
 ### Medium Severity
-- [x] **Test coverage unmeasurable** — Package requires X11/GLFW for tests due to import cycles with `pkg/engine` which depends on Ebiten. Tests panic with "glfw: The GLFW library is not initialized". This is a structural issue preventing coverage measurement. Consider abstracting engine dependencies behind interfaces or using build tags to separate test infrastructure. (all `*_test.go` files)
-  - **Resolution (2026-02-26)**: Tests now execute successfully without X11/GLFW dependencies. Coverage: 73.0%, exceeding the 30% target for Ebiten-dependent packages and the 40% general target.
 - [x] **Incomplete structured logging** — Only 5 of 27 source files use `logrus.WithFields` for structured logging. Many networking operations (protocol encoding/decoding, packet handling, serialization) lack contextual logging with standard field names. (`component_serialization.go`, `compression.go`, `crypto.go`, `desync.go`, `helpers.go`, `images.go`, `lag_compensation.go`, `packets.go`, `prediction.go`, `priority_queue.go`, `profanity.go`, `projectile_sync.go`, `protocol.go`, `serialization.go`, `snapshot.go`, `snapshot_builder.go`, and others lack structured logging)
   - **Resolution (2026-02-27)**: Added structured logging with `logrus.WithFields` to critical network operations in 4 core files: desync detection and recovery (desync.go), image upload/validation/expiry (images.go), lag compensation hit validation (lag_compensation.go), and system clock validation (helpers.go). All error paths and critical operations now log with contextual fields (entityID, desync_type, playerID, imageID, attackerID, targetID, latency_ms, distance, hit_radius, format, size_bytes, error messages). This completes structured logging for all high-priority network operations.
 - [ ] **No GameClock injection** — `TCPClient`, `TCPServer`, `ChatManager`, and `BandwidthMonitor` hardcode `time.Now()` instead of accepting injectable `GameClock` interface (defined in `pkg/engine/interfaces.go`). This prevents deterministic testing and replay. Refactor to accept `GameClock` in constructors. (`client.go`, `server.go`, `chat.go`, `bandwidth.go`)
@@ -41,7 +39,6 @@ Core networking package providing TCP client/server, protocol serialization, cha
 ### Low Severity
 - [x] **Doc coverage incomplete** — Package `doc.go` exists and is comprehensive, but some exported types lack full godoc comments. All 65 exported functions and 100 exported types are present in go doc output (389 total documented symbols), but inline documentation could be more detailed for complex functions like `ConnectWithRetry`, `BroadcastStateUpdate`, `ProcessACK`. (various files)
   - **Resolution (2026-02-27)**: Enhanced godoc comments for three complex functions with detailed behavior, parameters, thread-safety notes, and performance considerations: (1) ConnectWithRetry - added retry config details, cancellation semantics, thread-safety notes; (2) BroadcastStateUpdate - added sequence numbering explanation, non-blocking behavior, performance notes for high player counts; (3) ProcessACK - added ACK/NACK handling details, retry behavior, thread-safety notes.
-- [ ] **Test-to-source ratio** — 17718 test lines vs. 26900 source lines = 65.9% ratio. Good coverage by line count but actual coverage percentage unmeasurable due to GLFW dependency. Target: ≥30% for X11/Wayland/Ebiten-dependent packages. (N/A - cannot measure)
 - [x] **Network interface compliance** — ✅ ALREADY COMPLIANT: All network types use interface types (`net.Conn`, `net.Listener`, `net.Addr`) with zero concrete type violations. Perfect compliance with networking best practices guideline. (verified across all files)
 
 ## Input Integration
@@ -58,12 +55,6 @@ Core networking package providing TCP client/server, protocol serialization, cha
 | Menu | Reachable | Input-Complete | Backing System Wired | Notes |
 |---|---|---|---|---|
 | N/A | N/A | N/A | N/A | Package is network infrastructure; no UI components |
-
-## Test Coverage
-**Coverage**: Unmeasurable (requires X11/GLFW; target: 30% for Ebiten-dependent packages)
-- Missing test areas: Cannot verify - tests panic on GLFW init
-- Missing benchmarks: Benchmark exists for packet encoding (`packets_bench_test.go`) but other hot paths (compression, crypto, serialization) lack benchmarks
-- Table-driven test compliance: ✅ Multiple table-driven tests observed in `*_test.go` files (e.g., `protocol_test.go`, `packets_test.go`, `compression_test.go`)
 
 ## Documentation Coverage
 - Package `doc.go`: ✅ Comprehensive 139-line doc with usage examples, configuration presets, chat system, image sharing, and feature overview
@@ -89,8 +80,7 @@ Core networking package providing client/server TCP infrastructure, protocol ser
 
 ## Recommendations
 1. **[HIGH]** Replace all `time.Now()` calls with injectable `GameClock` interface. Refactor `TCPClient`, `TCPServer`, `ChatManager`, `BandwidthMonitor` to accept `clock GameClock` in constructors. This enables deterministic testing, replay, and time-controlled simulation. Use `pkg/engine/interfaces.go` `GameClock` interface which supports `Now()`, `Advance(deltaTime)`, `Reset(startTime)`. Estimated impact: ~30 files need minor refactoring. (`bandwidth.go`, `chat.go`, `client.go`, `server.go`, and consumers)
-2. **[HIGH]** Fix test infrastructure to avoid GLFW dependency. Separate test-only code into `*_test.go` files with stub implementations, or use build tags to conditionally compile Ebiten-dependent code. This will enable coverage measurement and CI/CD testing. (all `*_test.go` files)
-3. **[MED]** Add structured logging with `logrus.WithFields` to all networking operations. Include standard field names: `playerID`, `messageID`, `connection_type`, `packet_type`, `bytes_sent`, `bytes_received`, `latency_ms`, `sequence_number`. (22 files without structured logging)
-4. **[MED]** Add benchmarks for hot-path operations: compression, crypto, serialization, snapshot building, packet encoding/decoding. Use `b.ReportAllocs()` and `b.SetBytes()` for memory profiling. (missing benchmarks)
-5. **[LOW]** Add goroutine leak detection tests. Use `goleak` library or manual goroutine counting to verify all spawned goroutines terminate on `Stop()/Disconnect()`. (all files with goroutines)
-6. **[LOW]** Add inline comments for complex algorithms: ACK/NACK retry logic, exponential backoff calculation, delta compression algorithm, lag compensation interpolation. (various files)
+2. **[MED]** Add structured logging with `logrus.WithFields` to all networking operations. Include standard field names: `playerID`, `messageID`, `connection_type`, `packet_type`, `bytes_sent`, `bytes_received`, `latency_ms`, `sequence_number`. (22 files without structured logging)
+3. **[MED]** Add benchmarks for hot-path operations: compression, crypto, serialization, snapshot building, packet encoding/decoding. Use `b.ReportAllocs()` and `b.SetBytes()` for memory profiling. (missing benchmarks)
+4. **[LOW]** Add goroutine leak detection tests. Use `goleak` library or manual goroutine counting to verify all spawned goroutines terminate on `Stop()/Disconnect()`. (all files with goroutines)
+5. **[LOW]** Add inline comments for complex algorithms: ACK/NACK retry logic, exponential backoff calculation, delta compression algorithm, lag compensation interpolation. (various files)

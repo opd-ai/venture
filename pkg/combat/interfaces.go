@@ -1,5 +1,4 @@
-// Package combat provides combat system interfaces and types.
-// Types have been relocated to types.go, constants to constants.go.
+// Package combat provides combat system interfaces and types for the Venture game engine.
 package combat
 
 // CombatResolver handles combat calculations.

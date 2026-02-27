@@ -37,7 +37,7 @@ make lint
 ```
 
 ### validate-code-review.sh
-**Purpose:** Automated validation of code review quality gates as defined in `docs/CODE_REVIEW_PLAN.md`.
+**Purpose:** Automated validation of code review quality gates as defined in DEVELOPMENT.md and CONTRIBUTING.md.
 
 **Usage:**
 ```bash
@@ -242,7 +242,6 @@ These scripts are designed to work in CI/CD environments:
 
 ## See Also
 
-- [CODE_REVIEW_PLAN.md](../docs/CODE_REVIEW_PLAN.md) - Detailed code review methodology
 - [DEVELOPMENT.md](../docs/DEVELOPMENT.md) - Development setup and workflow
 - [CROSS_PLATFORM_BUILDS.md](../docs/CROSS_PLATFORM_BUILDS.md) - Cross-platform build guide
 - [MOBILE_BUILD.md](../docs/MOBILE_BUILD.md) - Mobile build guide
@@ -563,7 +562,6 @@ git push origin v10.0.0
 - Generate GPG key with `gpg --full-generate-key`
 
 ### See Also
-- [ROADMAP_V10.md](../docs/ROADMAP_V10.md) - Phase 66.1 details
 - [.github/workflows/](../.github/workflows/) - CI/CD workflows
 - [Makefile](../Makefile) - Build targets reference
 - [Dockerfile](../Dockerfile) - Docker containerization

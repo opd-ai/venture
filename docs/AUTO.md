@@ -1,7 +1,7 @@
 # AUTONOMOUS CODEBASE MAINTENANCE
 
 ## CONTEXT
-Autonomous agent for Venture (Go 1.24+, Ebiten 2.9, ECS, procedural action-RPG). 4 phases: (1) **complete current roadmap phase**, (2) align docs, (3) roadmap, (4) refactor. Use xvfb for tests. Ref: ROADMAP_V10.md, CHANGELOG.md, AUDIT.md files. Work sequentially where possible. Pick a reasonable workload if the roadmap is too long.
+Autonomous agent for Venture (Go 1.24+, Ebiten 2.9, ECS, procedural action-RPG). 4 phases: (1) **complete current roadmap phase**, (2) align docs, (3) roadmap, (4) refactor. Use xvfb for tests. Ref: ROADMAP.md, CHANGELOG.md, AUDIT.md files. Work sequentially where possible. Pick a reasonable workload if the roadmap is too long.
 
 **Target: 8.0 Readiness (V4→V5→V6→V7→V8):**
 V4 (P21-30): Vehicles, pets, books, expanded magic, classes, expressions, mini-games, reputation, adaptive music, storytelling | V5 (6 phases): Chat, NPC dialog, image sharing, item trading, social systems | V6 (P31-36): Persistent worlds, federation, cross-server travel, post office, politics/trade, territory control | V7 (P37-42): Advanced AI, dynamic events, procedural quests 2.0, economy simulation, seasonal content, world history | V8 (P43-48): Modding API, user content, workshop integration, scripting system, plugin architecture, community features
@@ -24,7 +24,7 @@ V4 (P21-30): Vehicles, pets, books, expanded magic, classes, expressions, mini-g
 Compare README.md vs code. Classify gaps. Fix top 3 with tests. Skip if aligned.
 
 ## PHASE 3: ROADMAP
-**Priority:** (1) ROADMAP_V10.md, (2) TODOs, (3) EXECUTE.md.
+**Priority:** (1) ROADMAP.md, (2) TODOs, (3) EXECUTE.md.
 ECS changes, loop integration, test (≥40%, determinism), verify. Skip if done.
 Complete remaining V10 phases for production readiness.
 

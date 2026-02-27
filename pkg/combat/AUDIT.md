@@ -23,7 +23,7 @@ The `pkg/combat` package provides core combat mechanics including damage types, 
 None found.
 
 ### Medium Severity
-- [ ] **Documentation** — File-level comment in `interfaces.go` has redundant/stale package description lines 6-8 from historical refactoring (types/constants relocated but old comments remain) (`interfaces.go:6-8`)
+- [x] **Documentation** — ✅ **RESOLVED** — Removed stale comment about types/constants relocation from `interfaces.go` (`interfaces.go:2`)
 
 ### Low Severity
 - [x] **Code consistency** — ✅ **RESOLVED** — Added `ErrNegativeMagicPower` sentinel error and updated `types.go:222` to use `fmt.Errorf("%w: got %f", ErrNegativeMagicPower, s.MagicPower)` pattern.

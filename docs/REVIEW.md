@@ -13,7 +13,7 @@ Conduct automated code review of recently changed files in the venture repositor
 - Install build dependencies from README.md and tests.yml using `sudo apt install`
 - Install xvfb using `sudo apt install`
 
-**Review Process (per CODE_REVIEW_PLAN.md):**
+**Review Process (per DEVELOPMENT.md and CONTRIBUTING.md):**
 1. **Static Analysis:** `go vet`, `gofmt -l`, compilation check on changed file
 2. **Structure:** Package docs, file organization, naming conventions
 3. **API Design:** Godoc coverage, error handling, interface compliance
@@ -50,7 +50,7 @@ For each finding:
 - [ ] All tests pass
 - [ ] Race-free
 - [ ] Coverage ≥40% (≥30% for X11/Wayland/Ebiten-dependent packages)
-[... remaining 14 gates from CODE_REVIEW_PLAN.md]
+[... remaining quality gates per DEVELOPMENT.md]
 
 ## Findings & Resolutions
 ### Critical (blocks merge)

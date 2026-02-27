@@ -58,7 +58,7 @@ All completed roadmaps (V8, V11-V23) were deleted. V8 content is preserved in CH
 
 | File | Status | Reason |
 |------|--------|--------|
-| docs/ROADMAP_V10.md | 95% Complete | Still in progress, production readiness audit |
+| ROADMAP.md | Current | Active roadmap in repository root |
 
 ## Previous Cleanups
 
@@ -104,15 +104,13 @@ docs/
   │   └── USER_MANUAL.md, CONTROLS.md, FAQ.md
   │
   ├── Current Roadmap
-  │   └── ROADMAP_V10.md (133 lines) - 95% Complete (in progress)
+  │   └── ROADMAP.md (in repository root)
   │
   ├── LLM Automation Prompts (DO NOT DELETE)
   │   └── [14 files listed above]
   │
   ├── Release Documentation
-  │   ├── CHANGELOG.md - Complete version history (V1-V10)
-  │   ├── RELEASE_NOTES_V8.0.md - V8.0 release details
-  │   └── V10_COMPLETION_REPORT.md - Production readiness
+  │   └── CHANGELOG.md - Complete version history (V1-V10)
   │
   └── Specialized Documentation
       └── System guides, platform guides, etc.
@@ -125,9 +123,9 @@ pkg/
 ## Success Metrics
 
 ✅ **Significant storage recovered:** ~37.7 MB total (binaries/JSON + doc deletions)  
-✅ **Completed roadmaps removed:** 14 roadmap files deleted (V8 content in CHANGELOG.md, V11-V23 in git history)  
-✅ **Clear, simplified structure:** One in-progress roadmap (V10)  
-✅ **Only active materials retained:** V10 in progress  
+✅ **Completed roadmaps removed:** 14 roadmap files deleted (V8 content in CHANGELOG.md)  
+✅ **Clear, simplified structure:** Active roadmap in repository root (ROADMAP.md)  
+✅ **Only active materials retained:** Current roadmap in progress  
 ✅ **LLM prompts preserved:** All 14 automation files intact  
 ✅ **Documentation streamlined:** ~5,800+ lines removed across all phases  
 ✅ **Technical accuracy maintained:** V8 content preserved in CHANGELOG.md, V11-V23 in git history  

@@ -23,12 +23,20 @@ make serve-wasm
 
 ```
 web/
-├── README.md           # This file (documentation)
-├── .gitignore         # Ignores generated files
+├── README.md           # Migration notice
+├── QUICKREF.md         # This file (quick reference)
+└── .gitignore         # Ignores generated files
+```
+
+The WebAssembly build artifacts are now located in **`build/wasm/`**:
+
+```
+build/wasm/
+├── README.md           # Build documentation
+├── index.html          # Landing page
+├── game.html           # Game container
 ├── venture.wasm       # Generated: Compiled game (10-20 MB)
-├── wasm_exec.js       # Generated: Go WASM runtime
-├── game.html          # Generated: Game container
-└── index.html         # Generated: Landing page
+└── wasm_exec.js       # Generated: Go WASM runtime
 ```
 
 ## GitHub Actions Deployment

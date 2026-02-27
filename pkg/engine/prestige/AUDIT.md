@@ -54,12 +54,6 @@ The prestige package provides post-max-level progression with prestige levels, p
 |---|---|---|---|---|
 | Prestige Menu | ❌ | ✅ | ✅ | **HIGH SEVERITY**: UI is fully implemented (`ui.go`) with keyboard (Up/Down/Enter/ESC) and touch controls, but is NOT registered in client entry point. No keybind or menu option exists to open it. System is active via `prestigeSystemWrapper` in `handlers.go:1323`. |
 
-## Test Coverage
-**Coverage**: Unmeasurable (requires X11; 103.5% test-to-source ratio: 1564 test LOC / 1511 source LOC)
-- Missing test areas: None — manager_test.go (626 LOC), system_test.go (373 LOC), ui_test.go (565 LOC) provide comprehensive coverage
-- Missing benchmarks: AddPrestigeXP, AllocateParagonPoint, GetStatBonus, GetAccountXPBonus (doc.go specifies performance targets but no validation)
-- Table-driven test compliance: ✅ (manager_test.go uses table-driven tests extensively; see TestAddPrestigeXP, TestAllocateParagonPoint, TestRespecParagonPoints)
-
 ## Documentation Coverage
 - Package `doc.go`: ✅ (104 lines with usage examples, integration notes, performance targets, testing section)
 - Exported symbols documented: 100% (all types, methods, constants, and functions have godoc comments)

@@ -45,29 +45,6 @@ None
 |---|---|---|---|---|
 | N/A | N/A | N/A | N/A | Package is pure procedural generation library with no UI |
 
-## Test Coverage
-**Coverage**: Unmeasurable (requires X11; 30% target applies to Ebiten-dependent packages)
-- Test-to-source ratio: 452% (17,244 test LOC / 23,568 production LOC)
-- Missing test areas: Coverage metrics cannot be obtained due to Ebiten initialization requirement
-- Missing benchmarks: Comprehensive benchmarks exist (`cache_bench_test.go`, `cache_hash_bench_test.go`)
-- Table-driven test compliance: ✅ (46 test files covering all subsystems)
-
-**Test file coverage by domain:**
-- Aerial templates: `aerial_nonhumanoid_templates_test.go`, `aerial_validation_test.go`, `role_aerial_templates_test.go`
-- Anatomy: `anatomy_phase45_test.go`, `anatomy_template_test.go`, `size_anatomy_test.go`, `frame_body_offsets_test.go`
-- Animation: `animation_test.go`, `creature_frame_offsets_test.go`
-- Rendering quality: `antialiasing_test.go`, `depth_enhance_test.go`, `body_part_shading_test.go`
-- Equipment overlays: `equipment_renderer_test.go`, `equipment_test.go`, `template_equipment_overlay_test.go`, `elemental_weapon_effects_test.go`
-- Visual details: `back_accessory_renderer_test.go`, `creature_detail_renderer_test.go`, `creature_eye_renderer_test.go`, `face_detail_renderer_test.go`, `hair_style_renderer_test.go`, `headgear_renderer_test.go`, `role_detail_renderer_test.go`
-- Patterns and textures: `clothing_patterns_test.go`, `creature_markings_test.go`, `garment_detail_test.go`, `humanoid_textures_test.go`, `surface_patterns_test.go`
-- Performance: `cache_bench_test.go`, `cache_hash_bench_test.go`, `cache_test.go`, `pool_test.go`
-- Core generation: `generator_test.go`, `generator_directional_test.go`, `projectile_test.go`, `silhouette_test.go`, `composite_test.go`, `item_template_test.go`
-- Integration: `visual_pipeline_integration_test.go`, `phase45_validation_test.go`, `interface_test.go`
-- Color systems: `color_temperature_test.go`
-- Variety: `seed_variety_test.go`, `body_type_test.go`
-- Template selection: `selecttemplate64_test.go`
-- Finalization: `sprite_finalizer_test.go`
-
 ## Documentation Coverage
 - Package `doc.go`: ✅ (285 lines of comprehensive documentation)
 - Exported symbols documented: ~500/883 (~57%)
@@ -224,9 +201,8 @@ func (g *Generator) Generate(config Config) (*ebiten.Image, error)
 
 **Weaknesses**:
 1. ~43% of exported symbols lack godoc comments (mainly helper functions)
-2. Test coverage cannot be measured due to X11 dependency (acceptable for rendering packages)
-3. No mod system integration for sprite generation overrides
-4. Uses custom `Config` instead of standard `procgen.GenerationParams` (minor inconsistency)
+2. No mod system integration for sprite generation overrides
+3. Uses custom `Config` instead of standard `procgen.GenerationParams` (minor inconsistency)
 
 ## Security & Stability
 

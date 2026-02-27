@@ -28,7 +28,6 @@ _(None)_
 ### Low Severity
 - [ ] **Code Organization** — Large `generateName()` and `generateDescription()` functions (100+ lines with nested switch statements) could be refactored into lookup tables for genre-specific prefixes/suffixes to improve maintainability (`generator.go:573-737`)
 - [x] **API Consistency** — `PlacementValidator.GetOccupancy()` returns percentage (0-100) but lacks unit suffix in name; consider `GetOccupancyPercent()` for clarity (`placement.go:104`) **COMPLETED 2026-02-27** - Renamed GetOccupancy() to GetOccupancyPercent() with enhanced godoc. Updated all usages in tests and doc.go. Coverage: 92.5%
-- [x] **Test Coverage** — Missing benchmark tests for performance-critical path: `Generate()` with target <10ms per item, `FindValidPlacement()` with target <5ms (mentioned in doc.go but not validated) — **ALREADY FIXED**: Benchmarks exist (BenchmarkGenerate, BenchmarkFindValidPlacement) and validate performance targets. BenchmarkGenerate: ~13µs (<<10ms), BenchmarkFindValidPlacement: ~6ns (<<5ms)
 
 ## Input Integration
 | Input Source | Status | Notes |
@@ -44,24 +43,6 @@ _(None)_
 | Menu | Reachable | Input-Complete | Backing System Wired | Notes |
 |---|---|---|---|---|
 | Housing UI (Furniture Placement) | ✅ | ✅ | ✅ | Integrated via `pkg/world/housing/ui.go`; furniture generator initialized in `cmd/client/init_versions.go`; category selection and placement functional |
-
-## Test Coverage
-**Coverage**: 92.5% (target: 40%)
-- Missing test areas: None critical; all major code paths tested
-- Missing benchmarks: Performance benchmarks for `Generate()` and `FindValidPlacement()` (targets documented in doc.go but not validated)
-- Table-driven test compliance: ✅ (all tests follow table-driven pattern)
-
-**Test Statistics**:
-- Total test lines: 1,502
-- Test-to-source ratio: ~47% (1502 test lines / 3190 total lines)
-- Test files: 3 (`generator_test.go`, `placement_test.go`, `coverage_improvement_test.go`)
-
-**Test Quality**:
-- Determinism validation: ✅ (`TestGenerateDeterminism` validates same seed → same output)
-- All 30+ furniture templates tested: ✅ (`TestGenerateAllSubTypes`)
-- Material and rarity distribution: ✅ (covered in `coverage_improvement_test.go`)
-- Placement collision detection: ✅ (comprehensive AABB collision tests in `placement_test.go`)
-- Rotation logic: ✅ (4-way and 8-way rotation tested)
 
 ## Documentation Coverage
 - Package `doc.go`: ✅ (194 lines with comprehensive examples, feature list, integration points)

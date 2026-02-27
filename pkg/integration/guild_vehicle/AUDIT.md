@@ -34,7 +34,6 @@ The `pkg/integration/guild_vehicle` package provides guild vehicle fleet combat 
 
 ### Low Severity
 - [ ] **Documentation** — `doc.go` states "PLANNED (not yet implemented)" integrations but does not specify timeline or tracking issue. Consider adding GitHub issue links or removing stale PLANNED section if integrations are deferred indefinitely. (`doc.go:64-68`)
-- [ ] **Test Coverage** — No tests for `GuildVehicleSystem` methods in `pkg/engine/guild_vehicle_system.go`. While integration tests exist in `cmd/server/fleet_manager_integration_test.go`, unit tests for `applyFormationBonuses`, `AddVehicleToFleet`, `SetFormation`, etc. would improve isolation and debuggability. (No tests in `pkg/engine/guild_vehicle_system_test.go` — file does not exist)
 
 ## Input Integration
 | Input Source | Status | Notes |
@@ -50,12 +49,6 @@ The `pkg/integration/guild_vehicle` package provides guild vehicle fleet combat 
 | Menu | Reachable | Input-Complete | Backing System Wired | Notes |
 |---|---|---|---|
 | Guild Fleet UI | ⚠️ Planned | ⚠️ Planned | ✅ | Backend `GuildVehicleSystem` and `FleetManager` fully functional; UI layer planned per `doc.go:64-68` (pkg/network/federation/guild integration, UI for fleet commands). Backend supports all operations (create fleet, add vehicle, set formation, grant access, calculate bonuses/costs). |
-
-## Test Coverage
-**Coverage**: 94.0% (target: 40%)
-- Missing test areas: None — excellent coverage across all package files
-- Missing benchmarks: All hot-path operations benchmarked (CreateFleet, AddVehicle, CheckAccess, GetFleetBonuses, CalculateMaintenanceCost, GetFleet)
-- Table-driven test compliance: ✅ — All type methods (`FormationType.String`, `SiegeEngineType.String`, `GetSiegeDamageMultiplier`, `GetFormationBonus`) use table-driven tests; other tests use descriptive test names and comprehensive edge case coverage
 
 ## Documentation Coverage
 - Package `doc.go`: ✅ — Comprehensive package documentation with usage examples, integration status, thread safety notes, and persistence guidance

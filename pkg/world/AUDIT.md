@@ -26,7 +26,6 @@ The world package provides world state management, chunk streaming, persistence,
 - [ ] **ECS System interface non-compliance** — `economy.System.Update(deltaTime float64)` does not match `engine.System.Update(entities []*Entity, deltaTime float64)` signature from `pkg/engine/interfaces.go:35`. Economy system cannot be registered in standard ECS world without adapter. (`economy/system.go:44`)
 - [ ] **Menu/UI direct Ebiten coupling** — `HousingUI.Draw(screen *ebiten.Image)` takes concrete `*ebiten.Image` instead of `Renderer` interface or `interface{}` with type assertion like other UISystem implementations. Makes testing without Ebiten runtime harder. (`housing/ui.go:158`)
 - [x] **Unstructured logging in examples** — README.md and doc.go contain example code using `log.Fatal`, `log.Fatalf`, `fmt.Printf` instead of structured `logrus.WithFields` logging. Examples should demonstrate best practices. (`economy/README.md:71,85,89,95,100,112,118,124,130,136,138`, `economy/doc.go:64,76,82,87,93,104,110,116`) [FIXED 2026-02-27: Added prominent notes in both doc.go and README.md explaining examples use simplified logging for clarity, production code should use logrus.WithError() and logrus.WithFields()]
-- [ ] **Housing tests X11 dependency** — Housing package tests fail with "DISPLAY environment variable is missing" because they initialize Ebiten. Tests should use stub implementations or build tag guards for X11/Ebiten dependencies to reach 30% coverage target.
 - [ ] **Missing system registration** — No evidence of `ChunkLoaderSystem`, `ChunkModificationSystem`, `ChunkCompressionSystem`, or `economy.System` being registered in `cmd/client/` or `cmd/server/` system initialization. Systems defined but may not be wired into game loop. (Integration gap)
 - [ ] **HousingUI input abstraction incomplete** — `MenuInputProvider` interface defined but `IsTouchOrMouseJustPressed()` and `GetTouchOrMousePosition()` methods not present in `pkg/engine/interfaces.go:InputProvider`. Mismatched interface definition creates integration gap. (`housing/ui.go:16-25`)
 
@@ -55,12 +54,6 @@ The world package provides world state management, chunk streaming, persistence,
 | Guild Bank | N/A | N/A | ⚠️ | `GuildBankManager` defined but no dedicated UI in world package. Expected to integrate with guild UI in `pkg/engine/guild_ui.go`. No evidence of integration wiring. |
 | Territory Control | N/A | N/A | ❌ | `TerritoryManager` defines `BorderZone` and `ControlPoint` types but no UI representation. No HUD indicator for contested zones, no map overlay for controlled territory, no capture progress bar. System exists but invisible to players. |
 | Raids | N/A | N/A | ❌ | `raids.Manager`, `raids.Instance` exist but no UI for raid browser, lockout display, mechanic warnings, or completion rewards. Raids exist but players have no visibility into system. |
-
-## Test Coverage
-**Coverage**: 88.8% (core world), 88.4% (economy), 90.4% (raids), 90.8% (territory), FAIL (housing); Aggregate: ~89% for testable packages, 0% for housing
-- Missing test areas: Housing UI rendering, HousingUI input handling, housing manager-UI integration, territory manager concurrency scenarios, raid instance cleanup, chunk loader async behavior with concurrent player movement
-- Missing benchmarks: Chunk compression/decompression, persistence save/load, chunk loader Update(), territory UpdateControlPoint(), pricing engine CalculateSuggestedPrice()
-- Table-driven test compliance: ✅ (most tests use table-driven pattern; examples: `chunk_compression_test.go`, `persistence_test.go`, `territory_test.go`)
 
 ## Documentation Coverage
 - Package `doc.go`: ✅ (world, economy, housing, raids), ❌ (territory)
@@ -94,9 +87,8 @@ The world package provides core persistence, economy, housing, raids, and territ
 2. **[HIGH]** Fix `economy.System` ECS compliance — Change `economy.System.Update(deltaTime float64)` to `Update(entities []*Entity, deltaTime float64)` to match `engine.System` interface, or add adapter wrapper. Register system in `cmd/server/system_init.go` or `cmd/client/lazy_init.go` so economy cleanup actually runs.
 3. **[MED]** Fix housing UI integration gaps — (a) Add `IsTouchOrMouseJustPressed()`, `GetTouchOrMousePosition()` to `engine.InputProvider` interface or remove from `MenuInputProvider` interface, (b) Add `SetHousingManager()`, `SetGuildHallManager()`, `SetGenerators()` methods to `HousingUI` and call from `cmd/client/` before showing UI, (c) Add keybind registration (e.g., `H` key) to show/hide housing UI.
 4. **[MED]** Add territory and raid UI visibility — Create HUD overlays for contested zones (capture progress bars), raid lockout timers, and completion rewards. Territory control is invisible without UI feedback.
-5. **[MED]** Fix housing test X11 dependency — Refactor `housing/ui_test.go` to use stub image provider instead of `*ebiten.Image`, or add `//go:build !ci` tag to tests that require Ebiten. Current 0% coverage on housing is blocker for quality gate.
-6. **[MED]** Add concurrency safety to `TerritoryManager` — Add `sync.RWMutex` to protect `zones` map and control point updates. Current implementation has data race potential when called from network handlers and game systems concurrently.
-7. **[LOW]** Add benchmarks for hot paths — Add `BenchmarkChunkCompress`, `BenchmarkPersistenceSave`, `BenchmarkTerritoryUpdate`, `BenchmarkPricingEngine` to catch performance regressions in chunk streaming and persistence.
-8. **[LOW]** Add `pkg/world/territory/doc.go` — Document territory system package with border zone mechanics, capture formulas, resource bonus calculations.
-9. **[LOW]** Document raid instance lifecycle — Add lifecycle diagram and cleanup process to `pkg/world/raids/doc.go`. Clarify how completed instances are removed (manual call, automatic expiry, gc).
-10. **[LOW]** Update example logging — Replace `log.Fatal`, `fmt.Printf` in README.md and doc.go examples with `logrus.WithFields` structured logging to demonstrate best practices.
+5. **[MED]** Add concurrency safety to `TerritoryManager` — Add `sync.RWMutex` to protect `zones` map and control point updates. Current implementation has data race potential when called from network handlers and game systems concurrently.
+6. **[LOW]** Add benchmarks for hot paths — Add `BenchmarkChunkCompress`, `BenchmarkPersistenceSave`, `BenchmarkTerritoryUpdate`, `BenchmarkPricingEngine` to catch performance regressions in chunk streaming and persistence.
+7. **[LOW]** Add `pkg/world/territory/doc.go` — Document territory system package with border zone mechanics, capture formulas, resource bonus calculations.
+8. **[LOW]** Document raid instance lifecycle — Add lifecycle diagram and cleanup process to `pkg/world/raids/doc.go`. Clarify how completed instances are removed (manual call, automatic expiry, gc).
+9. **[LOW]** Update example logging — Replace `log.Fatal`, `fmt.Printf` in README.md and doc.go examples with `logrus.WithFields` structured logging to demonstrate best practices.

@@ -29,7 +29,6 @@ None
 ### Low Severity
 - [ ] **Documentation** — ShapeEllipse, ShapeCapsule, ShapeBean, ShapeWedge, ShapeShield, ShapeBlade, ShapeSkull type comments missing in String() switch cases (types.go:107-120), reducing discoverability (`types.go:107-120`)
 - [ ] **Performance** — Some shape algorithms use repeated math.Sqrt/math.Pow which could be cached for hot-path optimization (e.g., inCircle, inEllipse, inBean) (`generator.go:216, 371, 446`)
-- [ ] **Test coverage** — No benchmark tests for new Phase 45 shapes (ShapeFootprint, ShapeShoulders, ShapeArmReach) added in generator.go; existing benchmarks only cover Phase 3 shapes (`generator_test.go:708-754`)
 
 ## Input Integration
 | Input Source | Status | Notes |
@@ -45,13 +44,6 @@ None
 | Menu | Reachable | Input-Complete | Backing System Wired | Notes |
 |---|---|---|---|---|
 | N/A | N/A | N/A | N/A | Package has no UI screens (utility library) |
-
-## Test Coverage
-**Coverage**: Unmeasurable (requires X11; 30% target for X11-dependent packages)
-- Test-to-Source Ratio: 120.5% (1514 test LOC / 1256 source LOC)
-- Missing test areas: Benchmarks for Phase 45 shapes (ShapeFootprint, ShapeShoulders, ShapeArmReach)
-- Missing benchmarks: Performance tests for new Phase 45 shapes
-- Table-driven test compliance: ✅ (TestShapeType_String, TestQualityFieldBehavior, TestGenerateAllShapes use table-driven pattern)
 
 ## Documentation Coverage
 - Package `doc.go`: ✅ (Comprehensive with Phase 15.1 anti-aliasing docs, usage examples, performance metrics)

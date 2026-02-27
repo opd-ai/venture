@@ -29,8 +29,6 @@ Audited the `examples/voice_integration_demo` example program demonstrating voic
 
 - [x] **No Package Documentation** — Missing `doc.go` explaining what the example demonstrates, prerequisites (audio dependencies?), expected output, and how it relates to actual game voice chat implementation. Examples should be self-documenting for educational value. **FIXED 2026-02-26**: Created comprehensive doc.go with example overview, usage, platform compatibility notes, and related documentation links.
 
-- [x] **Zero Test Coverage** — No test file exists. While examples don't require full coverage, a basic `main_test.go` with `TestExampleRuns()` that verifies setup doesn't panic would catch API drift (e.g., the VoiceAudioSystem issue above). **FIXED 2026-02-26**: Created main_test.go with 7 table-driven tests covering all API interactions (audio manager, voice codec, systems, components, channels, input simulation, spatial audio).
-
 ### Low Severity
 - [x] **Hardcoded Magic Numbers** — `main.go:63,65,104,109` - Hardcoded values for sample rate (44100), seed (12345), voice threshold (0.1), range (50.0, 500.0) without explanation. Add comments explaining why these values were chosen for the demo. **FIXED 2026-02-26**: Added inline comments explaining all magic numbers (44100 Hz = CD quality, seed for reproducible synthesis, 10% threshold for voice activity, 50-500 unit range for proximity chat).
 
@@ -50,12 +48,6 @@ Audited the `examples/voice_integration_demo` example program demonstrating voic
 | Menu | Reachable | Input-Complete | Backing System Wired | Notes |
 |---|---|---|---|---|
 | N/A | N/A | N/A | N/A | This is a CLI example demonstrating API usage, not an interactive UI component |
-
-## Test Coverage
-**Coverage**: 0.0% (target: 40%, or 30% for X11/Wayland/Ebiten-dependent packages; examples are exempt but should have basic smoke tests)
-- Missing test areas: All (no tests exist)
-- Missing benchmarks: N/A (examples don't require benchmarks)
-- Table-driven test compliance: N/A (no tests)
 
 ## Documentation Coverage
 - Package `doc.go`: ❌ (does not exist; examples should have doc.go explaining purpose and usage)

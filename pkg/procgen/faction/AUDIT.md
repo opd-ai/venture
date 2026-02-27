@@ -45,26 +45,6 @@ None identified.
 |---|---|---|---|---|
 | N/A | N/A | N/A | N/A | Generator package has no UI components |
 
-## Test Coverage
-**Coverage**: Unmeasurable (requires X11; 122% test-to-source ratio)
-**Source Lines**: 490 (generator.go: 379, doc.go: 111)
-**Test Lines**: 600 (generator_test.go: 600)
-
-The test suite exceeds the 30% target for X11/Ebiten-dependent packages by a significant margin, providing comprehensive coverage including:
-- Parameter validation (valid/invalid cases)
-- Deterministic generation verification (same seed → same output)
-- Faction count scaling with depth (3-7 factions)
-- Genre-specific faction type distribution (fantasy/sci-fi/horror/cyberpunk/post-apocalyptic)
-- Relationship generation and bidirectionality
-- Special relationships (corp vs rebels)
-- Name and description generation for all genres
-- Territory color generation
-- Performance benchmarks for small/medium/large worlds and all genres
-
-Missing test areas: None identified
-Missing benchmarks: None identified
-Table-driven test compliance: ✅ Excellent — all tests use table-driven approach
-
 ## Documentation Coverage
 - Package `doc.go`: ✅ Present — comprehensive 111-line package documentation
 - Exported symbols documented: 2/2 (100%) — Generator type and NewGenerator function

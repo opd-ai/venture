@@ -51,13 +51,6 @@ The `pkg/visualtest` package provides comprehensive visual testing, benchmarking
 |---|---|---|---|---|
 | N/A | N/A | N/A | N/A | Package provides test infrastructure, no UI components |
 
-## Test Coverage
-**Coverage**: 88.1% (parity subpackage; parent package unmeasurable due to X11 dependency; target: 30% for X11/Wayland/Ebiten-dependent packages)
-- **Test-to-source ratio**: 113% (3591 test lines / 3180 source lines)
-- Missing test areas: None identified - all core subsystems have test coverage
-- Missing benchmarks: All Phase 15-20 benchmarks present (`benchmark.go`)
-- Table-driven test compliance: ✅ (tests use table-driven patterns in `*_test.go` files)
-
 ## Documentation Coverage
 - Package `doc.go`: ✅ (comprehensive 100-line overview with usage examples)
 - Exported symbols documented: High coverage - all major types/functions documented

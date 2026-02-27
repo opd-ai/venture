@@ -45,13 +45,6 @@ None identified.
 |---|---|---|---|---|
 | Guild UI (Wars/Treaties/Embargoes) | ✅ | N/A | ✅ | System registered in `cmd/client/init_versions.go:628`, accessible via `politicalWarfareSystem.GetManager()` for guild UI integration |
 
-## Test Coverage
-**Coverage**: Unmeasurable (X11/Ebiten dependency; target: 30% for X11-dependent packages)
-- Test-to-source ratio: 452% (1809 test LOC / 400 production LOC excluding tests)
-- Missing test areas: None identified; comprehensive table-driven tests cover all public methods
-- Missing benchmarks: None identified; performance claims in doc.go (<1ms operations) should be validated with benchmarks for war declaration, embargo application, and reputation updates
-- Table-driven test compliance: ✅ (see `TestNewManagerWithSeed`, `TestConcessionValueConstants`, etc.)
-
 ## Documentation Coverage
 - Package `doc.go`: ✅ (comprehensive with usage examples, performance metrics, integration dependencies)
 - Exported symbols documented: 100% (all exported types, constants, functions have godoc comments)

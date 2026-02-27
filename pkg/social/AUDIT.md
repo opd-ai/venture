@@ -68,20 +68,6 @@ None
 
 All consuming systems are registered in `cmd/client/` and `cmd/server/` entry points. No dead code detected.
 
-## Test Coverage
-**Coverage**: 98.0% (social), 93.2% (persistence) — exceeds 40% target by 2.5x
-- Missing test areas: None identified - all exported functions have tests
-- Missing benchmarks: None critical - CRUD operations are not hot-path
-- Table-driven test compliance: ✅ All test files use table-driven patterns
-
-**Test file inventory**:
-- `errors_test.go`: Tests all 13 error types, user messages, retryability, context
-- `persistence/chat_history_test.go`: Tests AddMessage, GetDelta, ApplyDelta, Save/Load, compression
-- `persistence/trust_manager_test.go`: Tests UpdateTrust, GetTrust, ApplyDecay, Save/Load, automatic decay scheduling
-- `persistence/reputation_manager_test.go`: Tests UpdateReputation, GetReputation, ApplyDecay, Save/Load
-- `persistence/image_gallery_test.go`: Tests AddImage, GetImage, DeleteImage, deduplication, LRU eviction, Save/Load
-- `persistence/types_test.go`: Tests GetTrustLevel, CanTradeRarity, TimeProvider abstraction
-
 ## Documentation Coverage
 - Package `doc.go`: ✅ Both `social/doc.go` and `persistence/doc.go` present with comprehensive overviews
 - Exported symbols documented: 100% (all exported types, functions, constants have godoc comments)

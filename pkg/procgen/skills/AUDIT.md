@@ -28,7 +28,6 @@ None
 
 ### Low Severity
 - [ ] **Code Style** — `normalizeGenre` function at `generator.go:125` is unexported but could be extracted to a validation helper in `pkg/procgen` for reuse by other generators
-- [ ] **Test Coverage** — Missing table-driven test for `normalizeGenre` edge cases (empty string, unknown genres)
 - [x] **Documentation** — `templates.go:1` file comment could include example of template structure for custom genre support — **FIXED 2026-02-27**: Added comprehensive "Custom Genre Template Structure" section to templates.go showing complete example of creating cyberpunk/netrunner skill tree with all required fields (SkillTemplate structure, NamePrefixes/Suffixes, EffectTypes, ValueRanges, TierRange, MaxLevelRange, Tags).
 
 ## Input Integration
@@ -45,12 +44,6 @@ None
 | Menu | Reachable | Input-Complete | Backing System Wired | Notes |
 |---|---|---|---|---|
 | Skills UI | ✅ | ✅ | ✅ | `EbitenSkillsUI` in `pkg/engine/skills_ui.go` renders skill trees. Uses `SkillTreeComponent` which contains `*skills.SkillTree` from this package. |
-
-## Test Coverage
-**Coverage**: 87.0% (target: 40%)
-- Missing test areas: None significant (coverage exceeds target)
-- Missing benchmarks: No performance-critical loops warranting dedicated benchmarks
-- Table-driven test compliance: ✅ (see `skills_test.go`)
 
 ## Documentation Coverage
 - Package `doc.go`: ✅ (comprehensive package documentation with usage examples)

@@ -45,18 +45,6 @@ The `pkg/procgen/audit` package provides comprehensive production-readiness vali
 |---|---|---|---|---|
 | *N/A* | N/A | N/A | N/A | Test-only package, no UI components |
 
-## Test Coverage
-**Coverage**: Unmeasurable (requires X11; 30% target applies, 1,342% test-to-source ratio)
-- Missing test areas: None; package is entirely test infrastructure
-- Missing benchmarks: Comprehensive benchmarks present in `benchmark_test.go` (hash operations, baseline lookups, comparison operations)
-- Table-driven test compliance: ✅ All tests use proper table-driven patterns with `t.Run()` subtests
-
-**Test Statistics**:
-- Total source lines: 161 (baseline.go: 86, doc.go: 75)
-- Total test lines: 2,162 (across 4 test files)
-- Test-to-source ratio: 1,342%
-- Coverage targets: 30% (X11/Ebiten-dependent), achieved via comprehensive integration tests
-
 ## Documentation Coverage
 - Package `doc.go`: ✅ Comprehensive documentation covering Phase 62.1-62.5 requirements, usage examples, acceptance criteria, test organization
 - Exported symbols documented: 9/9 (100%) — All exported functions and types have godoc comments

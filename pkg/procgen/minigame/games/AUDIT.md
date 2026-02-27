@@ -27,7 +27,6 @@ The `pkg/procgen/minigame/games` package implements 7 concrete mini-game types (
 
 ### Low Severity
 - [ ] **Documentation** — `dice.go`, `puzzle.go` lack detailed godoc for reward calculation formulas (`dice.go:202`, `puzzle.go:231`)
-- [x] **Test Coverage** — Missing benchmark tests for `Update()` and `PrepareRender()` hot-path methods (target: <0.1ms per call per doc.go:52) — ✅ **COMPLETED 2026-02-27** - Created benchmark_test.go with comprehensive benchmarks for all 7 game types (Card, Dice, Puzzle, Memory, LockPicking, Hacking, Ritual). All benchmarks validate performance targets: Update ~1.3-1.5ns << 100μs target, PrepareRender ~0.5-1.6μs << 100μs target, Initialize ~8-53μs << 1ms target. 19 benchmarks total covering BenchmarkUpdate_AllGames, BenchmarkPrepareRender_AllGames, BenchmarkInitialize_AllGames plus individual benchmarks for each game type. All tests pass.
 - [ ] **API Consistency** — `Render()` deprecated but still present for backward compatibility; consider removal in V5.0 to reduce API surface (`memory.go:142`, `hacking.go:224`, etc.)
 
 ## Input Integration
@@ -44,12 +43,6 @@ The `pkg/procgen/minigame/games` package implements 7 concrete mini-game types (
 | Menu | Reachable | Input-Complete | Backing System Wired | Notes |
 |---|---|---|---|---|
 | Mini-Game UI | ✅ | ✅ | ✅ | Integrated via `engine.MiniGameSystem`; games invoked from merchant/tavern NPC interaction; render output consumed by ECS render system |
-
-## Test Coverage
-**Coverage**: Unmeasurable (requires X11; 55.1% test-to-source ratio: 2,468 test LOC / 4,478 production LOC)
-- Missing test areas: None critical; comprehensive tests exist for Initialize, Update, determinism, difficulty scaling, reward calculation, interface compliance, render validation
-- Missing benchmarks: Update() and PrepareRender() performance benchmarks (doc.go:52 claims <0.1ms/frame but no benchmarks verify)
-- Table-driven test compliance: ✅ (excellent coverage in `games_test.go`, `interface_alignment_test.go`, `coverage_test.go`, `loss_condition_test.go`, `render_test.go`)
 
 ## Documentation Coverage
 - Package `doc.go`: ✅ (74 lines; comprehensive overview with design philosophy, performance characteristics, usage examples)

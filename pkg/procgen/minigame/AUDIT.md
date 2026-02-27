@@ -45,12 +45,6 @@ The minigame package implements procedural generation for 7 types of embedded mi
 |---|---|---|---|---|
 | Mini-Game UI | ✅ | ✅ | ✅ | Games triggered via InteractionSystem with MiniGameStationComponent; render output consumed by MiniGameSystem; PrepareRender/GetRenderOutput pattern enables data-driven rendering without circular imports |
 
-## Test Coverage
-**Coverage**: 127% test-to-source ratio (3360 test lines / 2643 source lines; exceeds 30% target for Ebiten-dependent packages)
-- Missing test areas: None (comprehensive coverage with 13 test files covering generator, factory, all 7 game types, interface alignment, loss conditions, rendering, system integration)
-- Missing benchmarks: None found; package is not hot-path code
-- Table-driven test compliance: ✅ All tests follow table-driven pattern
-
 ## Documentation Coverage
 - Package `doc.go`: ✅ (2 doc.go files: root and games/)
 - Exported symbols documented: 46/46 (100%)

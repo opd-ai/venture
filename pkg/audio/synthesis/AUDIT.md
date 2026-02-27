@@ -28,7 +28,6 @@ The `pkg/audio/synthesis` package provides low-level deterministic audio wavefor
 ### Low Severity
 - [ ] **Documentation** — `envelope.go:32` - `Apply()` method modifies `data []float64` in-place but lacks comment documenting this mutation; callers must be aware that the input slice is modified (`engine.go:188` correctly documents this in `ApplyEnvelope()` but not in `Envelope.Apply()` itself)
 - [x] **API consistency** — `engine.go:66-70` - `GenerateTone()` is deprecated in favor of `Generate()`, but both methods remain exported and functionally identical; consider removing deprecated method in a future version to reduce API surface — **RESOLVED 2026-02-27**: Removed deprecated `GenerateTone()` method and updated all test usages to `Generate()`. Removed duplicate tests `TestEngine_GenerateTone` and `TestEngine_Generate_EqualsGenerateTone`. Renamed `BenchmarkEngine_GenerateTone` to `BenchmarkEngine_Generate`. Coverage maintained at 95.1%
-- [ ] **Test coverage** — `oscillator.go:131-148` - `WaveformName()` helper function is well-implemented but has no dedicated unit test validating all 6 waveform types (Sine, Square, Sawtooth, Triangle, Noise, unknown default)
 
 ## Input Integration
 | Input Source | Status | Notes |
@@ -48,23 +47,6 @@ The `pkg/audio/synthesis` package provides low-level deterministic audio wavefor
 | N/A | N/A | N/A | N/A | Synthesis package has no UI components; volume controls are in parent `audio.Manager` |
 
 **Notes**: This package operates below the UI layer. Audio samples generated here are consumed by `audio.Manager` which exposes volume controls to the settings UI.
-
-## Test Coverage
-**Coverage**: 95.1% (exceeds 40% target)
-- **Lines covered**: 200/210 statements across `engine.go`, `oscillator.go`, `envelope.go`
-- **Uncovered paths**: 
-  - `engine.go:34-36` - Sample rate validation branch when sampleRate > 0 (default path always taken in production)
-  - `envelope.go:57-59` - Sustain phase clamp when attack+decay+release exceed total samples (edge case)
-  - `oscillator.go:28-30` - Sample rate validation branch when sampleRate > 0 (default path)
-
-**Missing test areas**:
-- `WaveformName()` helper function lacks dedicated unit test (used in logging but never validated)
-- Edge case: Envelope with total ADSR duration exceeding audio sample duration (triggers clamp at `envelope.go:57-59`)
-- Edge case: Zero-duration audio sample generation (numSamples = 0)
-
-**Missing benchmarks**: None (5 benchmarks present covering hot paths: GenerateTone, GenerateChord, waveform generation, envelope application)
-
-**Table-driven test compliance**: ✅ All 26 tests use table-driven patterns with explicit test names, seed-based determinism validation, and waveform characteristic assertions
 
 ## Documentation Coverage
 - Package `doc.go`: ✅ Present with clear description, deterministic generation guarantee

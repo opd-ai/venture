@@ -62,12 +62,6 @@ The `pkg/world/territory` package provides guild territory control and siege mec
 | Siege Participation | ⚠️ | ⚠️ | ✅ | **UPDATED**: Siege viewing exists in `TerritoryUI` but joining workflow unclear. No "Join Siege" prompt when player enters contested territory. `Siege.JoinSiege()` requires isAttacker boolean but UI does not distinguish attacker/defender sides. (`pkg/engine/territory_ui.go:1-451`, `siege.go:160-173`) |
 | Territory Benefits Display | ❌ | ❌ | ⚠️ | **UNCHANGED**: No HUD element showing +10% resource / +5% XP bonuses. `Manager.GetResourceBonus()` and `GetXPBonus()` exist but are not called by HUD system. Bonuses are calculable but invisible to players. (`manager.go:392-418`, `pkg/engine/hud_system.go:1-500`) |
 
-## Test Coverage
-**Coverage**: 90.8% (target: 40%)
-- Missing test areas: None identified; coverage exceeds target by 50.8 percentage points
-- Missing benchmarks: None; package focuses on correctness over performance optimization
-- Table-driven test compliance: ✅ (manager_test.go, siege_test.go, types_test.go use table-driven patterns)
-
 ## Documentation Coverage
 - Package `doc.go`: ✅ (106 lines with comprehensive overview, examples, and performance targets)
 - Exported symbols documented: 20/20 (100%)

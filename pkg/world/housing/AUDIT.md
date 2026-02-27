@@ -50,12 +50,6 @@ The `pkg/world/housing` package provides comprehensive player housing functional
 | Furniture Menu | ✅ | ✅ | ✅ | Submenu of Housing Management; furniture placement selection functional |
 | Guild Hall Menu | ✅ | ✅ | ✅ | Submenu of Housing Management; guild construction accessible when player has guild |
 
-## Test Coverage
-**Coverage**: Unmeasurable (requires X11 runtime; 139% test-to-source ratio indicates comprehensive test suite)
-- Missing test areas: None identified (112 test functions cover all major code paths)
-- Missing benchmarks: None required (housing operations are not hot-path)
-- Table-driven test compliance: ✅ (observed in `blueprint_test.go`, `manager_test.go`, `ui_test.go`)
-
 ## Documentation Coverage
 - Package `doc.go`: ✅ (101 lines with usage examples, key concepts, persistence strategy)
 - Exported symbols documented: 87/92 (~95%)

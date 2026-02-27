@@ -54,12 +54,6 @@ None
 |---|---|---|---|---|
 | N/A | N/A | N/A | N/A | Meta-package with no UI systems |
 
-## Test Coverage
-**Coverage**: [no statements] root package (507 lines of doc + tests), 89.3-96.3% for sub-packages (target: 40%, or 30% for X11/Wayland/Ebiten-dependent packages)
-- Missing test areas: None (root package is doc + integration tests only; all sub-packages have individual test suites)
-- Missing benchmarks: None required (integration coordination layer)
-- Table-driven test compliance: ✅ — `multiplayer_test.go` uses comprehensive table-driven pattern for determinism verification across 7 generators and 5 genres
-
 ## Documentation Coverage
 - Package `doc.go`: ✅ — Comprehensive 62-line documentation with sub-package catalog, three registration patterns, determinism guidelines, and testing instructions
 - Exported symbols documented: N/A (no exported symbols in root package)

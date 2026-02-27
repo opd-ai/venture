@@ -29,7 +29,6 @@ None identified.
 - [x] **Doc coverage** — Exported types and constants lack godoc comments. Only 3 of 30+ exported symbols have documentation. All public API (types, funcs, consts) should have godoc comments. Missing: `ChatValidator` type, `TradeValidator` type, `RateLimiter` type, `clientBucket` type (internal but should be documented), all constants (`MaxChatMessageLength`, `MinChatMessageLength`, `MaxTradeItems`, etc.), and regex patterns (`htmlTagPattern`, `controlCharPattern`, `urlPattern`, `itemIDPattern`). Current: Only package-level `doc.go` and function implementations have comments. — **COMPLETED 2026-02-27**: Added comprehensive godoc to clientBucket type documenting its role as internal per-client state tracker. All constants already had godoc. All types now have comprehensive documentation including ChatValidator, TradeValidator, RateLimiter, and clientBucket.
 
 - [x] **API consistency** — Profanity list is hardcoded in `buildProfanityList()` (`chat.go:181-197`). The function has extensive comments acknowledging this is intentional stub/example code and production deployments should load from configuration. Consider adding a `ChatValidatorConfig` struct with `ProfanityListPath string` field and `NewChatValidatorWithConfig(config ChatValidatorConfig)` constructor for production use. Current stub is acceptable for MVP but should be flagged for production hardening. — **COMPLETED 2026-02-27**: Implemented ChatValidatorConfig struct with CustomProfanityList field and NewChatValidatorWithConfig() constructor for production use. Added comprehensive godoc with usage examples. Created 7 table-driven tests covering custom lists, fallback behavior, case insensitivity, and production integration patterns. All tests pass with 98.5% coverage maintained.
-- [x] **Test coverage** — Missing benchmark tests for performance-critical hot paths: `ChatValidator.ValidateMessage`, `ChatValidator.SanitizeMessage`, `RateLimiter.Allow`, `TradeValidator.ValidateItemIDs`. Package claims <1ms validation times in `doc.go:54-57` but no benchmarks verify this. Add benchmarks to validate performance claims and detect regressions. — **ALREADY FIXED**: All 9 benchmarks exist covering all hot paths: ValidateMessage (656ns), SanitizeMessage (1.99µs), ValidateAndSanitize (1.37µs), RateLimiter.Allow (54.8µs), ValidateItemID (280ns), ValidateItemIDs (592ns), ValidateTradeRequest (611ns). All under 1ms except RateLimiter which is acceptable for security.
 - [x] **Concurrency safety** — RateLimiter cleanup logic (`ratelimit.go:135-143`) deletes from `rl.clients` map while iterating it. This is safe in Go (deletion during range is allowed), but consider documenting this explicitly or using a separate slice to collect keys for deletion to make the safety explicit to future maintainers. — **COMPLETED 2026-02-27**: Added comprehensive godoc comment to cleanup() function documenting that deletion during range iteration is explicitly safe in Go per language spec. Explanation references Go spec quote and clarifies this is intentional design, not an oversight.
 
 ## Input Integration
@@ -49,17 +48,6 @@ None identified.
 | Trade | N/A | N/A | ✅ | Validation used by `pkg/network/trade/system.go` and `pkg/engine/trade_system.go` - confirmed via grep |
 
 **Note**: This package provides validation primitives, not UI. Integration status verified via usage in chat and trade systems.
-
-## Test Coverage
-**Coverage**: 98.5% (target: 40%, exceeds by 146%)
-- Missing test areas: None - all critical paths covered with table-driven tests
-- Missing benchmarks: Performance benchmarks for `ValidateMessage`, `SanitizeMessage`, `Allow`, `ValidateItemIDs` (see Low Severity issue)
-- Table-driven test compliance: ✅ All tests follow table-driven pattern with named test cases
-
-**Test file breakdown**:
-- `chat_test.go`: Comprehensive validation, sanitization, profanity, URL filtering tests (20+ cases)
-- `ratelimit_test.go`: Rate limiting, cleanup, concurrency tests (15+ cases)
-- `trade_test.go`: Item ID validation, duplicate detection, format validation tests (18+ cases)
 
 ## Documentation Coverage
 - Package `doc.go`: ✅ Comprehensive package documentation with usage examples and integration guidance

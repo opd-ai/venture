@@ -38,7 +38,6 @@ Status criteria:
 
 ### Low Severity
 - [x] **Exit Implementation** — `menu_system.go:582` returns `fmt.Errorf("exit not implemented (close window manually)")`. This is acceptable as platform exit varies, but could document why. **Fix:** Add doc comment explaining platform-specific window closure.
-- [x] **Test Coverage Gap** — Main `pkg/engine/` package tests require X11/GLFW and cannot run in headless CI. Target coverage: 30% (Ebiten-dependent). **Fix:** Extract more logic into testable subpackages or use stub implementations to achieve 30% coverage without X11.
 - [x] **Missing Doc Coverage** — Large files like `system_init.go` (2252 LOC) lack package-level documentation explaining initialization order and lazy-init patterns. **Fix:** Add comprehensive doc.go or expand system_init.go header.
 - [x] **Component Cache Documentation** — `ecs.go` Entity struct has excellent hot-path caching (position, velocity, health, collider, sprite, rotation, etc.) but lacks doc comments explaining the ~93x perf gain and cache invalidation rules. **Fix:** Document cache benefits and update rules.
 
@@ -84,21 +83,6 @@ Status criteria:
 | Single Player Menu | ✅ | ✅ | ✅ | `single_player_menu.go` shows New Game / Load Game options. Genre selection via `genre_selection_menu.go` |
 | Story Choice | ✅ | ✅ | ✅ | `story_choice_ui.go` for branching narrative decisions. Backed by `branching_narrative_system.go`, `narrative_system.go`, `choice_consequences_system.go` |
 
-## Test Coverage
-**Coverage**: Unmeasurable for main package (requires X11/GLFW). Subpackages: 94.0-96.3% (target: 30% for X11-dependent packages, 40% for others).
-- **Passing Subpackages**:
-  - `performance`: 95.8%
-  - `physics/destruction`: 96.3%
-  - `physics/fluids`: 95.2%
-  - `physics/vehicle`: 94.8%
-  - `qol`: 94.0%
-- **Failing Subpackages** (X11/GLFW required):
-  - Main `pkg/engine/` package
-  - `prestige` subpackage
-- Missing test areas: Full integration tests with real Ebiten runtime (requires X11/Wayland)
-- Missing benchmarks: None notable - excellent benchmark coverage across 30+ *_bench_test.go files covering hot paths (collision, animation, lighting, AI, spatial partition, rendering, projectiles, status effects)
-- Table-driven test compliance: ✅ Extensive use of table-driven tests throughout test files
-
 ## Documentation Coverage
 - Package `doc.go`: ✅ Present with comprehensive ECS overview, usage examples, and architecture explanation
 - Exported symbols documented: ~580/615 files have godoc-compliant comments (~94%)
@@ -130,7 +114,6 @@ This **IS** the engine. It provides the core ECS implementation used by both `cm
 3. **[MED]** Add comprehensive header documentation to `system_init.go` explaining initialization phases, lazy-init patterns, and system dependency order.
 4. **[MED]** Document cache invalidation rules for Entity hot-path component cache (position, velocity, health, collider, sprite, rotation) to prevent stale reads.
 5. **[MED]** Review all `time.Now()` usage in `hot_reload_system.go`, `mod_browser_component.go`, and `lighting_system.go` and add doc comments clarifying non-deterministic dev-time features vs gameplay-critical systems.
-6. **[LOW]** Extract more game logic from files requiring X11/GLFW to achieve 30% test coverage target for main `pkg/engine/` package in headless CI.
 7. **[LOW]** Verify gamepad/touch navigation in Main Menu and Settings UI - code comments suggest support but implementation not visibly confirmed in `main_menu_ui.go` and `settings_ui.go`.
 
 ## Full-Stack Integration Baseline (Phase 0.5)

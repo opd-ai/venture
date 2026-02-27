@@ -30,25 +30,20 @@ fmt.Println(results.Summary())
 // Output: Security Audit: 30/30 passed (100.0%) - Critical: 0, High: 0, Medium: 0, Low: 0
 ```
 
-### CLI Tool
+### Testing
 ```bash
-# Run full audit
-./securitytest
+# Run security audit tests
+go test ./pkg/security/
 
 # Show all check details
-./securitytest -verbose
+go test -v ./pkg/security/
 
-# Filter by domain
-./securitytest -domain="Chat & Encryption"
+# Run only audit tests
+go test -run TestAudit ./pkg/security/
 
-# JSON output
-./securitytest -json > audit.json
+# Check test coverage
+go test -cover ./pkg/security/
 ```
-
-## Exit Codes
-- `0`: All checks passed
-- `1`: Non-critical issues found
-- `2`: Critical vulnerabilities detected
 
 ## Current Results
 

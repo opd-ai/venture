@@ -28,7 +28,7 @@ The palette package provides procedural color palette generation for genre-based
 ### Low Severity
 - [ ] **Code organization** — `utils.go` contains helper functions (`clamp`, `max`, `min`) that could be shared across packages. Consider moving to a shared `pkg/utils` or `pkg/math` package to reduce duplication. (`utils.go:8-36`)
 - [ ] **API consistency** — `CreateGradientPalette` function (gradient.go:217) does not follow the Generator pattern used by the rest of the package. Consider adding a method `(g *Generator) GenerateFromGradient(colors []color.Color, steps int) *Palette` for consistency. (`gradient.go:217`)
-- [ ] **Test completeness** — While test coverage is excellent (97.0%), the package lacks benchmarks for performance-critical gradient generation functions. Given doc.go cites specific performance numbers, benchmarks should be present to verify regression. (Missing benchmarks for `GenerateGradient`, `interpolateColors`, `ApplyTimeModulation`)
+- [x] **Test completeness** — While test coverage is excellent (97.0%), the package lacks benchmarks for performance-critical gradient generation functions. Given doc.go cites specific performance numbers, benchmarks should be present to verify regression. (Missing benchmarks for `GenerateGradient`, `interpolateColors`, `ApplyTimeModulation`) — **ALREADY FIXED**: All benchmarks exist (BenchmarkGenerateGradient_Linear/Radial/Angular ~2-3ms, BenchmarkInterpolateColors ~17ns, BenchmarkApplyTimeModulation ~622ns) validating documented performance targets
 
 ## Input Integration
 | Input Source | Status | Notes |

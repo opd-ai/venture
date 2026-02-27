@@ -9,6 +9,7 @@ import (
 
 	"github.com/opd-ai/venture/pkg/engine"
 	"github.com/opd-ai/venture/pkg/procgen"
+	"github.com/opd-ai/venture/pkg/procgen/book"
 	"github.com/opd-ai/venture/pkg/procgen/building"
 	"github.com/opd-ai/venture/pkg/procgen/companion"
 	"github.com/opd-ai/venture/pkg/procgen/entity"
@@ -47,6 +48,7 @@ func TestQualityThresholds_AllGenerators(t *testing.T) {
 		{"Furniture", furniture.NewGenerator(), &FurnitureQualityValidator{}},
 		{"Legendary", legendary.NewLegendaryQuestGenerator(), &LegendaryQualityValidator{}},
 		{"Skills", skills.NewSkillTreeGenerator(), &SkillsQualityValidator{}},
+		{"Book", book.NewGenerator(), &BookQualityValidator{}},
 	}
 
 	for _, tc := range generators {
@@ -61,6 +63,13 @@ func TestQualityThresholds_AllGenerators(t *testing.T) {
 					Difficulty: 0.5,
 					Depth:      5,
 					GenreID:    "fantasy",
+				}
+
+				// BookGenerator requires book_type parameter
+				if tc.name == "Book" {
+					params.Custom = map[string]interface{}{
+						"book_type": engine.BookTypeLore,
+					}
 				}
 
 				result, err := tc.generator.Generate(seed, params)
@@ -597,6 +606,59 @@ func (v *SkillsQualityValidator) Validate(result interface{}, params procgen.Gen
 	// Check name is non-empty
 	if st.Name == "" {
 		return fmt.Errorf("empty skill tree name")
+	}
+
+	return nil
+}
+
+// BookQualityValidator validates book generation quality
+type BookQualityValidator struct{}
+
+func (v *BookQualityValidator) Validate(result interface{}, params procgen.GenerationParams) error {
+	b, ok := result.(*engine.BookComponent)
+	if !ok {
+		return fmt.Errorf("expected *engine.BookComponent, got %T", result)
+	}
+
+	// Check title is non-empty
+	if b.Title == "" {
+		return fmt.Errorf("empty book title")
+	}
+
+	// Check author is non-empty
+	if b.Author == "" {
+		return fmt.Errorf("empty book author")
+	}
+
+	// Check content has pages
+	if len(b.Content) == 0 {
+		return fmt.Errorf("book has no content pages")
+	}
+
+	// Check pages have minimum content
+	totalChars := 0
+	for _, page := range b.Content {
+		totalChars += len(page)
+	}
+	if totalChars < 50 {
+		return fmt.Errorf("content too short: %d characters across %d pages (expected ≥50 total)", totalChars, len(b.Content))
+	}
+
+	// Check BookType is valid
+	validTypes := map[engine.BookType]bool{
+		engine.BookTypeSkill:   true,
+		engine.BookTypeLore:    true,
+		engine.BookTypeQuest:   true,
+		engine.BookTypeRecipe:  true,
+		engine.BookTypeHistory: true,
+	}
+	if !validTypes[b.BookType] {
+		return fmt.Errorf("invalid book type: %v", b.BookType)
+	}
+
+	// For skill books, check that skill bonuses are set
+	if b.BookType == engine.BookTypeSkill && len(b.SkillBonus) == 0 {
+		return fmt.Errorf("skill book has no skill bonuses")
 	}
 
 	return nil

@@ -1,17 +1,17 @@
 Parsed 501 findings
 # Codebase Audit Remediation Plan
 **Generated**: 2026-02-26
-**Updated**: 2026-02-27 (26 findings resolved)
+**Updated**: 2026-02-27 (33 findings resolved)
 **Scope**: All *AUDIT*.md files in repository
-**Total Unresolved Findings**: 475
+**Total Unresolved Findings**: 468
 
 ## Summary by Severity
 | Severity | Count |
 |----------|-------|
-| CRITICAL | 26 |
+| CRITICAL | 25 |
 | HIGH | 48 |
-| MEDIUM | 219 |
-| LOW | 191 |
+| MEDIUM | 218 |
+| LOW | 186 |
 
 ## CRITICAL
 
@@ -386,6 +386,7 @@ Parsed 501 findings
 - **Source**: `./pkg/procgen/audit/AUDIT.md` (line 30)
 - **Category**: testing
 - **Problem**: EdgeCase tests use `getAllGenerators()` helper which duplicates generator list from `determinism_test.go:getGenerators()`, risking desync if new generators added (`edgecase_test.go:450`, `determinism_test.go:52`)
+- **Status**: ✅ **COMPLETED 2026-02-27** - Created shared generators.go with GetAllGenerators() as single source of truth for all audit tests
 - **Fix**:
   1. Review the complete finding in the source audit file
   2. Implement the suggested changes following coding guidelines
@@ -397,6 +398,7 @@ Parsed 501 findings
 - **Source**: `./pkg/procgen/audit/AUDIT.md` (line 31)
 - **Category**: testing
 - **Problem**: Quality validators exist for 13/14 generators; missing validator for BookGenerator (not critical as built-in `Validate()` is tested) (`quality_test.go:36-48`)
+- **Status**: ✅ **COMPLETED 2026-02-27** - Added BookQualityValidator validating title, author, content pages, valid BookType, and skill bonuses
 - **Fix**:
   1. Review the complete finding in the source audit file
   2. Implement the suggested changes following coding guidelines
@@ -408,6 +410,7 @@ Parsed 501 findings
 - **Source**: `./pkg/procgen/furniture/AUDIT.md` (line 31)
 - **Category**: testing
 - **Problem**: Missing benchmark tests for performance-critical path: `Generate()` with target <10ms per item, `FindValidPlacement()` with target <5ms (mentioned in doc.go but not validated)
+- **Status**: ✅ **ALREADY FIXED** - Benchmarks exist and validate performance targets: BenchmarkGenerate (~13µs << 10ms), BenchmarkValidate (~3ns), BenchmarkValidatePlacement (~3ns), BenchmarkFindValidPlacement (~6ns << 5ms)
 - **Fix**:
   1. Review the complete finding in the source audit file
   2. Implement the suggested changes following coding guidelines
@@ -419,6 +422,7 @@ Parsed 501 findings
 - **Source**: `./pkg/rendering/palette/AUDIT.md` (line 31)
 - **Category**: testing
 - **Problem**: While test coverage is excellent (97.0%), the package lacks benchmarks for performance-critical gradient generation functions. Given doc.go cites specific performance numbers, benchmarks should be present to verify regression. (Missing benchmarks for `GenerateGradient`, `interpolateColors`, `ApplyTi...
+- **Status**: ✅ **ALREADY FIXED** - All benchmarks exist: BenchmarkGenerateGradient_Linear/Radial/Angular (~2-3ms for 256×256), BenchmarkInterpolateColors (~17ns), BenchmarkApplyTimeModulation (~622ns), plus 11 additional benchmarks covering all performance-critical paths
 - **Fix**:
   1. Review the complete finding in the source audit file
   2. Implement the suggested changes following coding guidelines
@@ -430,6 +434,7 @@ Parsed 501 findings
 - **Source**: `./pkg/rendering/tiles/AUDIT.md` (line 30)
 - **Category**: testing
 - **Problem**: No benchmarks for performance-critical rendering code (generator, parallax, transitions, walls)
+- **Status**: ✅ **ALREADY FIXED** - 19 comprehensive benchmarks exist: BenchmarkGenerator_Generate/GenerateAllTypes, BenchmarkGenerateWithParallax/CompositeLayers/GenerateAOMap, BenchmarkGenerateWithTransition/DetermineTransition, BenchmarkGenerateEnhancedWall_* (NoAA/WithAA/LargeWithAA), BenchmarkDownsample2x2, BenchmarkBlendCircularArea, plus variations and phase45 benchmarks
 - **Fix**:
   1. Review the complete finding in the source audit file
   2. Implement the suggested changes following coding guidelines
@@ -441,6 +446,7 @@ Parsed 501 findings
 - **Source**: `./pkg/security/AUDIT.md` (line 26)
 - **Category**: testing
 - **Problem**: CLI tool `securitytest` referenced in doc.go and README.md but not found in repository (`doc.go:74`, `README.md:46`)
+- **Status**: ✅ **COMPLETED 2026-02-27** - Removed references to non-existent CLI tool from doc.go and README.md. Replaced with accurate testing documentation using `go test` commands for running security audit tests
 - **Fix**:
   1. Review the complete finding in the source audit file
   2. Implement the suggested changes following coding guidelines
@@ -452,6 +458,7 @@ Parsed 501 findings
 - **Source**: `./pkg/validation/AUDIT.md` (line 26)
 - **Category**: testing
 - **Problem**: RateLimiter uses `time.Now()` in three locations (`ratelimit.go:56`, `ratelimit.go:63`, `ratelimit.go:158`), violating Coding Guideline #2 for deterministic generation. **MITIGATION**: This is intentional and acceptable because RateLimiter is a security mechanism, not procedural content generation. ...
+- **Status**: ✅ **COMPLETED 2026-02-27** - Added comprehensive godoc comment to RateLimiter type explaining that time.Now() usage is an intentional exception for security/rate limiting purposes (not procedural generation), clearly documenting the acceptable violation
 - **Fix**:
   1. Review the complete finding in the source audit file
   2. Implement the suggested changes following coding guidelines
@@ -463,6 +470,7 @@ Parsed 501 findings
 - **Source**: `./pkg/world/AUDIT.md` (line 34)
 - **Category**: testing
 - **Problem**: No benchmarks found for hot-path code: chunk compression/decompression, persistence save/load, territory control point updates, pricing engine calculations. Performance-critical code should include benchmarks to prevent regressions.
+- **Status**: ✅ **ALREADY FIXED** - 37 comprehensive benchmarks exist: BenchmarkCompress*/Decompress (chunk compression), BenchmarkSave*/Load*/IncrementalSave (persistence), BenchmarkUpdateCaptureProgress/CreateTerritory/SiegeManagerUpdate (territory), BenchmarkPricingEngine_* (pricing), plus 24 additional benchmarks for economy, chunk loading, and modifications
 - **Fix**:
   1. Review the complete finding in the source audit file
   2. Implement the suggested changes following coding guidelines
@@ -474,6 +482,7 @@ Parsed 501 findings
 - **Source**: `./pkg/world/housing/AUDIT.md` (line 27)
 - **Category**: testing
 - **Problem**: Unable to verify race condition safety due to X11 dependency; add race detector CI for integration tests (`*_test.go:*`)
+- **Status**: ✅ **COMPLETED 2026-02-27** - Added race detector step to .github/workflows/test.yml running integration tests with -race flag under Xvfb. All pkg/world/housing and pkg/integration tests pass with race detector.
 - **Fix**:
   1. Review the complete finding in the source audit file
   2. Implement the suggested changes following coding guidelines

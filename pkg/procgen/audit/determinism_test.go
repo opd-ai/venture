@@ -22,6 +22,8 @@ import (
 	"runtime"
 	"sync"
 	"testing"
+
+	"github.com/opd-ai/venture/pkg/procgen"
 )
 
 // GeneratorInfo describes a generator for audit testing

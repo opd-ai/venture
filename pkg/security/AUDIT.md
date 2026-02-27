@@ -23,7 +23,7 @@ The `pkg/security` package provides comprehensive security auditing and validati
 *(None)*
 
 ### Medium Severity
-- [ ] **Documentation** — CLI tool `securitytest` referenced in doc.go and README.md but not found in repository (`doc.go:74`, `README.md:46`)
+- [x] **Documentation** — CLI tool `securitytest` referenced in doc.go and README.md but not found in repository (`doc.go:74`, `README.md:46`) — **FIXED 2026-02-27**: Removed references to non-existent CLI tool and replaced with accurate testing documentation using `go test` commands
 - [x] **Code Organization** — Helper validation functions (validateIVRandomness, validateChatMessageSafety, validateCoordinateBounds) are unexported but could be useful for other packages testing security properties (`audit.go:917-1021`) — **FIXED 2026-02-26**: Exported functions as ValidateIVRandomness, ValidateChatMessageSafety, and ValidateCoordinateBounds with comprehensive godoc comments explaining their purpose and usage for testing security properties in other packages. All tests pass with 90.0% coverage.
 
 ### Low Severity

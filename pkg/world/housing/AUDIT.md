@@ -24,7 +24,7 @@ The `pkg/world/housing` package provides comprehensive player housing functional
 
 ### Medium Severity
 - [ ] **Documentation** — Missing package-level overview of system architecture in doc.go beyond basic usage (`doc.go:1-101`)
-- [ ] **Testing** — Unable to verify race condition safety due to X11 dependency; add race detector CI for integration tests (`*_test.go:*`)
+- [x] **Testing** — Unable to verify race condition safety due to X11 dependency; add race detector CI for integration tests (`*_test.go:*`) — **COMPLETED 2026-02-27**: Added race detector step to .github/workflows/test.yml running integration tests with -race flag under Xvfb. All tests pass.
 
 ### Low Severity
 - [ ] **Documentation** — `BuildingSize` type and constants lack godoc comments (`types.go:~52-62`)

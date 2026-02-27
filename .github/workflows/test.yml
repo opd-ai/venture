@@ -34,6 +34,10 @@ jobs:
         run: |
            xvfb-run -s "-screen 0 1920x1080x24" go test -v ./pkg/...
 
+      - name: Run integration tests with race detector
+        run: |
+           xvfb-run -s "-screen 0 1920x1080x24" go test -race -v ./pkg/world/housing/... ./pkg/integration/...
+
       - name: Run go vet
         run: go vet ./pkg/...
 

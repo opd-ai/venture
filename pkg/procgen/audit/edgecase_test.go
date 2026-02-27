@@ -8,20 +8,6 @@ import (
 
 	"github.com/opd-ai/venture/pkg/engine"
 	"github.com/opd-ai/venture/pkg/procgen"
-	"github.com/opd-ai/venture/pkg/procgen/book"
-	"github.com/opd-ai/venture/pkg/procgen/building"
-	"github.com/opd-ai/venture/pkg/procgen/companion"
-	"github.com/opd-ai/venture/pkg/procgen/entity"
-	"github.com/opd-ai/venture/pkg/procgen/furniture"
-	"github.com/opd-ai/venture/pkg/procgen/item"
-	"github.com/opd-ai/venture/pkg/procgen/legendary"
-	"github.com/opd-ai/venture/pkg/procgen/magic"
-	"github.com/opd-ai/venture/pkg/procgen/quest"
-	"github.com/opd-ai/venture/pkg/procgen/recipe"
-	"github.com/opd-ai/venture/pkg/procgen/skills"
-	"github.com/opd-ai/venture/pkg/procgen/station"
-	"github.com/opd-ai/venture/pkg/procgen/terrain"
-	"github.com/opd-ai/venture/pkg/procgen/vehicle"
 )
 
 // TestEdgeCases_ExtremeSeed tests generators with extreme seed values
@@ -467,7 +453,7 @@ func getBaseParams(generatorName string) procgen.GenerationParams {
 			return entry.Params
 		}
 	}
-	
+
 	// Fallback for unknown generators
 	return procgen.GenerationParams{
 		Difficulty: 0.5,

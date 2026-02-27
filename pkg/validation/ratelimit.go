@@ -5,8 +5,14 @@ import (
 	"time"
 )
 
-// RateLimiter implements token bucket rate limiting per client
-// Safe for concurrent use
+// RateLimiter implements token bucket rate limiting per client.
+// Safe for concurrent use.
+//
+// Note: This package intentionally uses time.Now() for security/rate limiting purposes,
+// which is an acceptable exception to the deterministic generation guideline (Coding Guideline #2).
+// Rate limiting MUST use real time to be effective against actual network attacks.
+// The determinism requirement applies to procedural generation (terrain, items, quests),
+// not security/network infrastructure.
 type RateLimiter struct {
 	// rate is the number of requests allowed per interval
 	rate int

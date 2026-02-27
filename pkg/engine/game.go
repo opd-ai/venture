@@ -320,15 +320,14 @@ func initializeUIComponents(world *World, screenWidth, screenHeight int, setting
 		ui.housingUI = housing.NewHousingUI(screenWidth, screenHeight)
 	}()
 
-	// Group 3: World-dependent with additional dependencies (2 components)
-	wg.Add(2)
+	// Group 3: World-dependent with additional dependencies (1 component)
+	// Note: PrestigeUI initialization happens in handlers.go to avoid circular imports
+	// with pkg/engine/prestige. The PrestigeUI field will be set later during wiring.
+	wg.Add(1)
 	go func() {
 		defer wg.Done()
 		ui.guildUI = NewGuildUI(world, nil, screenWidth, screenHeight)
 	}()
-
-	// Note: PrestigeUI initialization happens in handlers.go to avoid circular imports
-	// with pkg/engine/prestige. The PrestigeUI field will be set later during wiring.
 
 	wg.Wait()
 	return ui

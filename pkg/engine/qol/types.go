@@ -10,6 +10,8 @@ package qol
 import (
 	"encoding/json"
 	"time"
+
+	"github.com/sirupsen/logrus"
 )
 
 // SortCriteria defines how items should be sorted
@@ -151,13 +153,32 @@ func (q *QoLComponent) Serialize() ([]byte, error) {
 		MountWhistle:    q.MountWhistle,
 		RecipeTracking:  q.RecipeTracking,
 	}
-	return json.Marshal(data)
+	bytes, err := json.Marshal(data)
+	if err != nil {
+		logrus.WithFields(logrus.Fields{
+			"playerID":       q.PlayerID,
+			"component_type": "qol",
+			"error":          err.Error(),
+		}).Error("Failed to serialize QoLComponent")
+		return nil, err
+	}
+	logrus.WithFields(logrus.Fields{
+		"playerID":       q.PlayerID,
+		"component_type": "qol",
+		"size_bytes":     len(bytes),
+	}).Debug("Serialized QoLComponent")
+	return bytes, nil
 }
 
 // Deserialize restores the QoLComponent from JSON bytes.
 func (q *QoLComponent) Deserialize(data []byte) error {
 	var d qolComponentData
 	if err := json.Unmarshal(data, &d); err != nil {
+		logrus.WithFields(logrus.Fields{
+			"component_type": "qol",
+			"size_bytes":     len(data),
+			"error":          err.Error(),
+		}).Error("Failed to deserialize QoLComponent")
 		return err
 	}
 	q.PlayerID = d.PlayerID
@@ -167,6 +188,11 @@ func (q *QoLComponent) Deserialize(data []byte) error {
 	q.SortPreset = d.SortPreset
 	q.MountWhistle = d.MountWhistle
 	q.RecipeTracking = d.RecipeTracking
+	logrus.WithFields(logrus.Fields{
+		"playerID":       q.PlayerID,
+		"component_type": "qol",
+		"size_bytes":     len(data),
+	}).Debug("Deserialized QoLComponent")
 	return nil
 }
 

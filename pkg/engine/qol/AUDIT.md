@@ -24,7 +24,7 @@ None
 
 ### Medium Severity
 - [ ] **Documentation** — Missing package-level overview in doc.go explaining integration with ECS world and system update order (`doc.go:1`)
-- [ ] **API consistency** — QoLComponent lacks structured logging on serialize/deserialize errors; should use logrus.WithFields (`types.go:145-171`)
+- [x] **API consistency** — QoLComponent lacks structured logging on serialize/deserialize errors; should use logrus.WithFields (`types.go:145-171`) - **COMPLETED 2026-02-27**: Added structured logging with logrus.WithFields to both Serialize() and Deserialize() methods. Error cases log with component_type, playerID, size_bytes, and error fields. Debug logs added for successful operations. Coverage maintained at 93.4%.
 
 ### Low Severity
 - [ ] **Documentation** — EstimateArrivalTime function could document the 1 second per tile formula more explicitly (`types.go:201`)

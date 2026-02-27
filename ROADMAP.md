@@ -97,13 +97,13 @@
    - Add a `--sprite-cache-mb` flag (default 64, max 300) to the client.
    - Add cache-pressure metrics to the observability exporter: hit rate, eviction rate,
      current size.
-   - *Acceptance criteria:* Under 2 000-entity benchmark, cache hit rate ≥ 90 %; metrics
+   - *Acceptance criteria:* Under 2,000-entity benchmark, cache hit rate ≥ 90 %; metrics
      visible at `/metrics` endpoint.
 
 3. **Enhance rate-limiter adaptive cleanup**
-   - When tracked-client count exceeds a configurable high-water mark (e.g., 10 000),
+   - When tracked-client count exceeds a configurable high-water mark (e.g., 10,000),
      trigger an immediate sweep rather than waiting for the next 10-minute interval.
-   - *Acceptance criteria:* Unit test simulates 20 000 clients; memory does not grow
+   - *Acceptance criteria:* Unit test simulates 20,000 clients; memory does not grow
      unbounded; cleanup fires before the scheduled interval.
 
 4. **Add integration tests for federation resilience**

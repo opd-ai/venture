@@ -48,7 +48,7 @@
      - `pkg/validation/trade.go` — add `ValidateTradeQuantity(quantity int)` method rejecting quantity ≤ 0.
      - Corresponding `_test.go` files for table-driven boundary tests.
    - Approach:
-     1. In `chat.go`, add `const MaxChatMessageBytes = 2000` and check `len([]byte(message)) > MaxChatMessageBytes` before the rune-length check.
+     1. In `chat.go`, add `const MaxChatMessageBytes = 2000` and check `len(message) > MaxChatMessageBytes` before the rune-length check (in Go, `len(string)` returns byte length directly without allocation).
      2. In `trade.go`, add a `ValidateTradeQuantity` method: reject `quantity <= 0` with descriptive errors.
      3. Write table-driven tests covering: empty message, max-rune message, oversized UTF-8 message (e.g., 500 4-byte emoji = 2000 bytes but 500 runes), zero quantity, negative quantity, valid quantity.
    - Acceptance criteria: `go test -race ./pkg/validation/...` passes; new tests cover boundary values.

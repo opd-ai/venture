@@ -65,9 +65,11 @@ func NewTouchInputHandler() *TouchInputHandler {
 		gestureDetector: NewGestureDetector(),
 		// Platform parity fix: Default input buffering configuration
 		// 16ms debounce (~60 FPS frame time) prevents duplicate processing
-		inputBuffer:     make([]*Touch, 0, 32),
-		bufferMaxSize:   32,
-		debounceTime:    16 * time.Millisecond,
+		inputBuffer:   make([]*Touch, 0, 32),
+		bufferMaxSize: 32,
+		debounceTime:  16 * time.Millisecond,
+		// INTENTIONAL time.Now() usage: Input debouncing timestamp (non-procgen operational timing).
+		// This is NOT part of procedural content generation and does not affect determinism.
 		lastProcessTime: time.Now(),
 		focusState:      FocusStateNormal,
 		inTransition:    false,
@@ -82,6 +84,8 @@ func (h *TouchInputHandler) Update() {
 		return
 	}
 
+	// INTENTIONAL time.Now() usage: Input debouncing timestamp (non-procgen operational timing).
+	// This is NOT part of procedural content generation and does not affect determinism.
 	now := time.Now()
 	if !h.shouldProcessNow(now) {
 		return
@@ -466,6 +470,8 @@ func (g *GestureDetector) detectSingleTouchGestures(touch *Touch) {
 		} else {
 			g.tapCount = 1
 		}
+		// INTENTIONAL time.Now() usage: Gesture timing detection (non-procgen operational timing).
+		// This is NOT part of procedural content generation and does not affect determinism.
 		g.lastTapTime = time.Now()
 	}
 

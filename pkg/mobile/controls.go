@@ -46,6 +46,8 @@ func (l *InputRateLimiter) SetCooldown(actionID string, cooldown time.Duration) 
 // CanExecute checks if an action can be executed (not on cooldown).
 // Platform parity fix: Returns false if action is on cooldown or exceeds spam threshold
 func (l *InputRateLimiter) CanExecute(actionID string) bool {
+	// INTENTIONAL time.Now() usage: Input rate limiting timestamp (non-procgen operational timing).
+	// This is NOT part of procedural content generation and does not affect determinism.
 	now := time.Now()
 
 	// Platform parity fix: Check cooldown
@@ -73,6 +75,8 @@ func (l *InputRateLimiter) CanExecute(actionID string) bool {
 // RecordInput records that an action was executed.
 // Platform parity fix: Updates cooldown and spam counter
 func (l *InputRateLimiter) RecordInput(actionID string) {
+	// INTENTIONAL time.Now() usage: Input rate limiting timestamp (non-procgen operational timing).
+	// This is NOT part of procedural content generation and does not affect determinism.
 	now := time.Now()
 	l.lastInputTime[actionID] = now
 
@@ -83,6 +87,8 @@ func (l *InputRateLimiter) RecordInput(actionID string) {
 // Update cleans up old input counts from spam detection.
 // Platform parity fix: Call every frame to reset spam counters after time window
 func (l *InputRateLimiter) Update() {
+	// INTENTIONAL time.Now() usage: Input rate limiting cleanup (non-procgen operational timing).
+	// This is NOT part of procedural content generation and does not affect determinism.
 	now := time.Now()
 
 	// Platform parity fix: Reset spam counters for actions outside time window
@@ -130,6 +136,8 @@ const (
 // triggerHaptic triggers device vibration with rate limiting.
 // lastHaptic should be a pointer to the last haptic time (0 for first call).
 func triggerHaptic(duration time.Duration, magnitude float64, lastHaptic *time.Time) {
+	// INTENTIONAL time.Now() usage: Haptic feedback rate limiting (non-procgen operational timing).
+	// This is NOT part of procedural content generation and does not affect determinism.
 	now := time.Now()
 
 	// Rate limiting: only trigger if enough time has passed since last haptic

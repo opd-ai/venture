@@ -16,6 +16,8 @@ func ShowKeyboard() {
 	// No-op on desktop/native mobile platforms
 	// Desktop: Keyboard always available
 	// Native mobile: Handled by OS keyboard APIs (not implemented in this build)
+	// TODO: Integrate native mobile keyboard APIs (UIKeyboard on iOS, InputMethodManager on Android)
+	// for better on-screen keyboard control. This is tracked as future work for native mobile builds.
 }
 
 // HideKeyboard is a no-op on non-WASM platforms.

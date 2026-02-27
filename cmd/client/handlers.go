@@ -3341,19 +3341,20 @@ func initializeCraftingAndMailboxUI(game *engine.EbitenGame, player *engine.Enti
 func initializePrestigeUI(game *engine.EbitenGame, player *engine.Entity, sys *systemsContainer, clientLogger *logrus.Entry) {
 	// Create prestige UI if not already initialized
 	if game.PrestigeUI == nil {
-		game.PrestigeUI = prestige.NewPrestigeUI(*width, *height, sys.prestigeManager)
+		prestigeUI := prestige.NewPrestigeUI(*width, *height, sys.prestigeManager)
 
 		// Set UI callbacks
-		game.PrestigeUI.SetBackCallback(func() {
+		prestigeUI.SetBackCallback(func() {
 			// Hide prestige UI when back is pressed
-			game.PrestigeUI.Hide()
+			prestigeUI.Hide()
 		})
-		game.PrestigeUI.SetRespecCallback(func(cost int) bool {
+		prestigeUI.SetRespecCallback(func(cost int) bool {
 			// TODO: Check if player has enough gold for respec
 			// For now, always allow respec (will be wired to inventory system)
 			return true
 		})
 
+		game.PrestigeUI = prestigeUI
 		clientLogger.Debug("created prestige UI with callbacks")
 	}
 
@@ -3368,16 +3369,13 @@ func initializePrestigeUI(game *engine.EbitenGame, player *engine.Entity, sys *s
 
 	// Initialize prestige data for player if not exists
 	if sys.prestigeManager != nil {
-		if _, err := sys.prestigeManager.GetPlayer(playerID); err != nil {
+		if playerPrestige := sys.prestigeManager.GetPlayerPrestige(playerID); playerPrestige == nil {
 			// Create prestige data for new player
-			if err := sys.prestigeManager.CreatePlayer(playerID, className, "default-account"); err != nil {
-				clientLogger.WithError(err).Warn("failed to create prestige data for player")
-			} else {
-				clientLogger.WithFields(logrus.Fields{
-					"playerID":  playerID,
-					"className": className,
-				}).Debug("created prestige data for player")
-			}
+			sys.prestigeManager.CreatePlayer(playerID, className, "default-account")
+			clientLogger.WithFields(logrus.Fields{
+				"playerID":  playerID,
+				"className": className,
+			}).Debug("created prestige data for player")
 		}
 	}
 

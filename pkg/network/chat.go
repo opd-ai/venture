@@ -7,6 +7,8 @@ import (
 	"io"
 	"sync"
 	"time"
+
+	"github.com/sirupsen/logrus"
 )
 
 // generateMessageID generates a unique message ID (UUID v4 format).
@@ -15,6 +17,9 @@ func generateMessageID() string {
 	_, err := io.ReadFull(rand.Reader, uuid)
 	if err != nil {
 		// Fallback to timestamp-based ID
+		logrus.WithFields(logrus.Fields{
+			"error": err.Error(),
+		}).Warn("crypto rand failed, using timestamp-based message ID fallback")
 		return fmt.Sprintf("%d", time.Now().UnixNano())
 	}
 

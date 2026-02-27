@@ -1,16 +1,16 @@
 Parsed 501 findings
 # Codebase Audit Remediation Plan
 **Generated**: 2026-02-26
-**Updated**: 2026-02-26 (16 findings resolved)
+**Updated**: 2026-02-27 (20 findings resolved)
 **Scope**: All *AUDIT*.md files in repository
-**Total Unresolved Findings**: 485
+**Total Unresolved Findings**: 481
 
 ## Summary by Severity
 | Severity | Count |
 |----------|-------|
-| CRITICAL | 29 |
+| CRITICAL | 28 |
 | HIGH | 48 |
-| MEDIUM | 221 |
+| MEDIUM | 219 |
 | LOW | 191 |
 
 ## CRITICAL
@@ -278,6 +278,7 @@ Parsed 501 findings
 - **Source**: `./pkg/rendering/animation/AUDIT.md` (line 29)
 - **Category**: performance
 - **Problem**: `time.Now()` used for non-critical performance tracking; acceptable for metrics collection (`controller.go:63`)
+- **Status**: ✅ **COMPLETED 2026-02-27** - Added clarifying comment explaining intentional use for observability metrics only (does not affect determinism)
 - **Fix**:
   1. Review the complete finding in the source audit file
   2. Implement the suggested changes following coding guidelines
@@ -300,6 +301,7 @@ Parsed 501 findings
 - **Source**: `./pkg/procgen/faction/AUDIT.md` (line 26)
 - **Category**: security
 - **Problem**: Faction generator not called by server; only client generates factions. In multiplayer mode, server should be authoritative source of faction data to prevent desync when clients join mid-game or have mod conflicts. (`cmd/server/entity_spawning.go:MISSING`)
+- **Status**: ✅ **COMPLETED 2026-02-27** - Added generateWorldFactions() to entity_spawning.go and integrated into server spawning flow. Includes determinism tests and benchmarks. Server now generates factions authoritatively with seed offset 3000.
 - **Fix**:
   1. Review the complete finding in the source audit file
   2. Implement the suggested changes following coding guidelines
@@ -699,6 +701,7 @@ Parsed 501 findings
 - **Source**: `./pkg/network/AUDIT.md` (line 35)
 - **Category**: error-handling
 - **Problem**: `generateMessageID()` falls back to timestamp-based ID on crypto rand failure but logs nothing. Should use structured logging to report fallback. (`chat.go:18`)
+- **Status**: ✅ **COMPLETED 2026-02-27** - Added structured logging to generateMessageID() with error context when crypto rand fails
 - **Fix**:
   1. Review the complete finding in the source audit file
   2. Implement the suggested changes following coding guidelines

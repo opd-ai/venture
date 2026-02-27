@@ -4,6 +4,8 @@ import (
 	"encoding/binary"
 	"fmt"
 	"time"
+
+	"github.com/sirupsen/logrus"
 )
 
 // PacketType represents the type of network packet.
@@ -131,6 +133,11 @@ func SerializeChatPacket(pkt *ChatPacket) ([]byte, error) {
 // DeserializeChatPacket deserializes a chat packet from bytes.
 func DeserializeChatPacket(data []byte) (*ChatPacket, error) {
 	if len(data) < 37 {
+		logrus.WithFields(logrus.Fields{
+			"packet_type": "chat",
+			"data_length": len(data),
+			"min_size":    37,
+		}).Warn("packet too short")
 		return nil, fmt.Errorf("packet too short: %d bytes", len(data))
 	}
 
@@ -154,6 +161,11 @@ func DeserializeChatPacket(data []byte) (*ChatPacket, error) {
 
 	// Validate payload length
 	if len(data) < int(37+payloadLen) {
+		logrus.WithFields(logrus.Fields{
+			"packet_type":      "chat",
+			"expected_payload": payloadLen,
+			"actual_payload":   len(data) - 37,
+		}).Warn("invalid payload length")
 		return nil, fmt.Errorf("invalid payload length: expected %d, got %d", payloadLen, len(data)-37)
 	}
 
@@ -167,6 +179,11 @@ func DeserializeChatPacket(data []byte) (*ChatPacket, error) {
 // SerializeTradeProposal serializes a trade proposal packet to bytes.
 func SerializeTradeProposal(pkt *TradeProposalPacket) ([]byte, error) {
 	if len(pkt.Items) > 20 {
+		logrus.WithFields(logrus.Fields{
+			"packet_type": "trade_proposal",
+			"item_count":  len(pkt.Items),
+			"max_items":   20,
+		}).Warn("too many items in trade proposal")
 		return nil, fmt.Errorf("too many items: %d (max 20)", len(pkt.Items))
 	}
 

@@ -555,6 +555,7 @@ func spawnV4Entities(world *engine.World, generatedTerrain *terrain.Terrain, log
 	spawnVehicles(world, generatedTerrain, params, logger, v4Logger)
 	spawnCompanions(world, generatedTerrain, params, logger, v4Logger)
 	spawnBookshelves(world, generatedTerrain, params, logger, v4Logger)
+	spawnFactions(world, params, v4Logger)
 }
 
 // createGenerationParams creates standard generation parameters for entity spawning.
@@ -618,6 +619,20 @@ func spawnBookshelves(world *engine.World, generatedTerrain *terrain.Terrain, pa
 		v4Logger.WithError(err).Warn("failed to spawn bookshelves")
 	} else if bookshelfCount > 0 {
 		v4Logger.WithField("count", bookshelfCount).Info("bookshelves spawned")
+	}
+}
+
+// spawnFactions generates and registers world factions on the server.
+// Factions must be generated server-side to ensure authoritative state
+// and prevent desync when clients join mid-game or have mod conflicts.
+func spawnFactions(world *engine.World, params procgen.GenerationParams, v4Logger *logrus.Entry) {
+	// Use faction-specific seed offset for deterministic generation
+	const seedOffsetFaction = 3000
+	factionCount, err := generateWorldFactions(world, *seed+seedOffsetFaction, params, v4Logger)
+	if err != nil {
+		v4Logger.WithError(err).Warn("failed to generate factions")
+	} else if factionCount > 0 {
+		v4Logger.WithField("count", factionCount).Info("factions registered")
 	}
 }
 

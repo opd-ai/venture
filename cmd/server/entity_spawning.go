@@ -13,6 +13,7 @@ import (
 	"github.com/opd-ai/venture/pkg/engine"
 	"github.com/opd-ai/venture/pkg/procgen"
 	"github.com/opd-ai/venture/pkg/procgen/companion"
+	"github.com/opd-ai/venture/pkg/procgen/faction"
 	"github.com/opd-ai/venture/pkg/procgen/terrain"
 	"github.com/opd-ai/venture/pkg/procgen/vehicle"
 	"github.com/sirupsen/logrus"
@@ -345,4 +346,49 @@ func spawnBookshelvesInTerrain(world *engine.World, terrainMap *terrain.Terrain,
 	}
 
 	return spawned, nil
+}
+
+// generateWorldFactions creates and registers all world factions on the server.
+// Returns the number of factions registered and any error encountered.
+func generateWorldFactions(world *engine.World, seed int64, params procgen.GenerationParams, logger *logrus.Entry) (int, error) {
+	logger.Info("generating world factions")
+
+	factionGen := faction.NewGenerator()
+	factionResult, err := factionGen.Generate(seed, params)
+	if err != nil {
+		return 0, fmt.Errorf("failed to generate factions: %w", err)
+	}
+
+	worldFactions, ok := factionResult.([]*engine.Faction)
+	if !ok {
+		return 0, fmt.Errorf("faction generator returned invalid result")
+	}
+
+	logger.WithFields(logrus.Fields{
+		"count": len(worldFactions),
+		"genre": params.GenreID,
+		"seed":  seed,
+	}).Info("factions generated")
+
+	// Register factions with FactionSystem
+	registered := 0
+	for _, fac := range worldFactions {
+		for _, system := range world.GetSystems() {
+			if facSys, ok := system.(*engine.FactionSystem); ok {
+				facSys.AddFaction(fac)
+				registered++
+				if logger.Logger.GetLevel() >= logrus.DebugLevel {
+					logger.WithFields(logrus.Fields{
+						"factionID":   fac.ID,
+						"factionName": fac.Name,
+						"factionType": fac.Type,
+					}).Debug("faction registered")
+				}
+				break
+			}
+		}
+	}
+
+	logger.WithField("registered", registered).Info("factions registered with FactionSystem")
+	return registered, nil
 }

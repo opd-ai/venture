@@ -7,6 +7,8 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
+
+	"github.com/sirupsen/logrus"
 )
 
 // BinaryProtocol implements the Protocol interface using binary encoding.
@@ -32,22 +34,42 @@ func NewBinaryProtocol() *BinaryProtocol {
 //   - Data: variable (byte array)
 func (p *BinaryProtocol) EncodeStateUpdate(update *StateUpdate) ([]byte, error) {
 	if update == nil {
+		logrus.Warn("cannot encode nil state update")
 		return nil, fmt.Errorf("cannot encode nil state update")
 	}
 
 	buf := new(bytes.Buffer)
 
 	if err := encodeStateUpdateHeader(buf, update); err != nil {
+		logrus.WithFields(logrus.Fields{
+			"entityID": update.EntityID,
+			"error":    err.Error(),
+		}).Error("failed to encode state update header")
 		return nil, err
 	}
 
 	if err := encodeComponentCount(buf, update.Components); err != nil {
+		logrus.WithFields(logrus.Fields{
+			"entityID": update.EntityID,
+			"error":    err.Error(),
+		}).Error("failed to encode component count")
 		return nil, err
 	}
 
 	if err := encodeComponents(buf, update.Components); err != nil {
+		logrus.WithFields(logrus.Fields{
+			"entityID": update.EntityID,
+			"error":    err.Error(),
+		}).Error("failed to encode components")
 		return nil, err
 	}
+
+	logrus.WithFields(logrus.Fields{
+		"entityID":        update.EntityID,
+		"bytes_encoded":   buf.Len(),
+		"component_count": len(update.Components),
+		"sequence_number": update.SequenceNumber,
+	}).Debug("state update encoded")
 
 	return buf.Bytes(), nil
 }

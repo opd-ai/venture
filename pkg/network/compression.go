@@ -6,6 +6,8 @@ import (
 	"errors"
 	"fmt"
 	"io"
+
+	"github.com/sirupsen/logrus"
 )
 
 // CompressionThreshold is the minimum message size (in bytes) for compression.
@@ -34,11 +36,19 @@ func CompressMessage(data []byte) ([]byte, bool, error) {
 
 	_, err := writer.Write(data)
 	if err != nil {
+		logrus.WithFields(logrus.Fields{
+			"bytes_original": len(data),
+			"error":          err.Error(),
+		}).Error("compression write failed")
 		return nil, false, fmt.Errorf("compression write failed: %w", err)
 	}
 
 	err = writer.Close()
 	if err != nil {
+		logrus.WithFields(logrus.Fields{
+			"bytes_original": len(data),
+			"error":          err.Error(),
+		}).Error("compression close failed")
 		return nil, false, fmt.Errorf("compression close failed: %w", err)
 	}
 
@@ -47,6 +57,11 @@ func CompressMessage(data []byte) ([]byte, bool, error) {
 	// Only use compression if it actually reduces size
 	// (Some data may not compress well, e.g., already encrypted data)
 	if len(compressed) < len(data) {
+		logrus.WithFields(logrus.Fields{
+			"bytes_original":   len(data),
+			"bytes_compressed": len(compressed),
+			"ratio":            float64(len(compressed)) / float64(len(data)),
+		}).Debug("message compressed")
 		return compressed, true, nil
 	}
 
@@ -58,6 +73,10 @@ func CompressMessage(data []byte) ([]byte, bool, error) {
 func DecompressMessage(data []byte) ([]byte, error) {
 	reader, err := zlib.NewReader(bytes.NewReader(data))
 	if err != nil {
+		logrus.WithFields(logrus.Fields{
+			"bytes_compressed": len(data),
+			"error":            err.Error(),
+		}).Error("failed to create zlib reader")
 		return nil, fmt.Errorf("failed to create zlib reader: %w", err)
 	}
 	defer reader.Close()
@@ -69,13 +88,28 @@ func DecompressMessage(data []byte) ([]byte, error) {
 	var buf bytes.Buffer
 	n, err := io.Copy(&buf, limitedReader)
 	if err != nil {
+		logrus.WithFields(logrus.Fields{
+			"bytes_compressed": len(data),
+			"error":            err.Error(),
+		}).Error("decompression failed")
 		return nil, fmt.Errorf("decompression failed: %w", err)
 	}
 
 	// If we read exactly MaxDecompressedSize+1, the data exceeded the limit
 	if n > MaxDecompressedSize {
+		logrus.WithFields(logrus.Fields{
+			"bytes_compressed":   len(data),
+			"bytes_decompressed": n,
+			"max_size":           MaxDecompressedSize,
+		}).Warn("decompressed data exceeds maximum allowed size")
 		return nil, ErrDecompressedSizeExceeded
 	}
+
+	logrus.WithFields(logrus.Fields{
+		"bytes_compressed":   len(data),
+		"bytes_decompressed": n,
+		"ratio":              float64(len(data)) / float64(n),
+	}).Debug("message decompressed")
 
 	return buf.Bytes(), nil
 }

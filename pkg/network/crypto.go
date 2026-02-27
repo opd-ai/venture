@@ -9,6 +9,8 @@ import (
 	"fmt"
 	"io"
 	"math/big"
+
+	"github.com/sirupsen/logrus"
 )
 
 // DiffieHellmanParams holds the DH key exchange parameters.
@@ -40,12 +42,16 @@ func GenerateKeyPair(params *DiffieHellmanParams) (*DiffieHellmanKeyPair, error)
 	// Generate random private key (256 bits)
 	privateKey, err := rand.Int(rand.Reader, new(big.Int).Sub(params.P, big.NewInt(1)))
 	if err != nil {
+		logrus.WithFields(logrus.Fields{
+			"error": err.Error(),
+		}).Error("failed to generate DH private key")
 		return nil, fmt.Errorf("failed to generate private key: %w", err)
 	}
 
 	// Compute public key: g^privateKey mod p
 	publicKey := new(big.Int).Exp(params.G, privateKey, params.P)
 
+	logrus.Debug("DH key pair generated")
 	return &DiffieHellmanKeyPair{
 		PrivateKey: privateKey,
 		PublicKey:  publicKey,
@@ -55,6 +61,7 @@ func GenerateKeyPair(params *DiffieHellmanParams) (*DiffieHellmanKeyPair, error)
 // ComputeSharedSecret computes the DH shared secret from our private key and peer's public key.
 func ComputeSharedSecret(privateKey, peerPublicKey *big.Int, params *DiffieHellmanParams) (*big.Int, error) {
 	if privateKey == nil || peerPublicKey == nil || params == nil {
+		logrus.Warn("invalid DH parameters: nil key or params")
 		return nil, fmt.Errorf("invalid parameters: nil key or params")
 	}
 
@@ -62,11 +69,13 @@ func ComputeSharedSecret(privateKey, peerPublicKey *big.Int, params *DiffieHellm
 	two := big.NewInt(2)
 	pMinus2 := new(big.Int).Sub(params.P, two)
 	if peerPublicKey.Cmp(two) < 0 || peerPublicKey.Cmp(pMinus2) > 0 {
+		logrus.Warn("invalid peer public key: out of range")
 		return nil, fmt.Errorf("invalid peer public key: out of range")
 	}
 
 	// Compute shared secret: peerPublicKey^privateKey mod p
 	sharedSecret := new(big.Int).Exp(peerPublicKey, privateKey, params.P)
+	logrus.Debug("DH shared secret computed")
 	return sharedSecret, nil
 }
 
@@ -81,22 +90,35 @@ func DeriveAESKey(sharedSecret *big.Int) AESKey {
 func EncryptMessage(key AESKey, plaintext []byte) ([]byte, error) {
 	block, err := aes.NewCipher(key[:])
 	if err != nil {
+		logrus.WithFields(logrus.Fields{
+			"error": err.Error(),
+		}).Error("failed to create AES cipher")
 		return nil, fmt.Errorf("failed to create cipher: %w", err)
 	}
 
 	gcm, err := cipher.NewGCM(block)
 	if err != nil {
+		logrus.WithFields(logrus.Fields{
+			"error": err.Error(),
+		}).Error("failed to create GCM")
 		return nil, fmt.Errorf("failed to create GCM: %w", err)
 	}
 
 	// Generate random IV (12 bytes for GCM)
 	iv := make([]byte, gcm.NonceSize())
 	if _, err := io.ReadFull(rand.Reader, iv); err != nil {
+		logrus.WithFields(logrus.Fields{
+			"error": err.Error(),
+		}).Error("failed to generate IV")
 		return nil, fmt.Errorf("failed to generate IV: %w", err)
 	}
 
 	// Encrypt: prepend IV to ciphertext
 	ciphertext := gcm.Seal(iv, iv, plaintext, nil)
+	logrus.WithFields(logrus.Fields{
+		"bytes_plaintext":  len(plaintext),
+		"bytes_ciphertext": len(ciphertext),
+	}).Debug("message encrypted")
 	return ciphertext, nil
 }
 
@@ -105,16 +127,26 @@ func EncryptMessage(key AESKey, plaintext []byte) ([]byte, error) {
 func DecryptMessage(key AESKey, ciphertext []byte) ([]byte, error) {
 	block, err := aes.NewCipher(key[:])
 	if err != nil {
+		logrus.WithFields(logrus.Fields{
+			"error": err.Error(),
+		}).Error("failed to create AES cipher")
 		return nil, fmt.Errorf("failed to create cipher: %w", err)
 	}
 
 	gcm, err := cipher.NewGCM(block)
 	if err != nil {
+		logrus.WithFields(logrus.Fields{
+			"error": err.Error(),
+		}).Error("failed to create GCM")
 		return nil, fmt.Errorf("failed to create GCM: %w", err)
 	}
 
 	// Check minimum length (IV + tag)
 	if len(ciphertext) < gcm.NonceSize()+gcm.Overhead() {
+		logrus.WithFields(logrus.Fields{
+			"bytes_ciphertext": len(ciphertext),
+			"min_size":         gcm.NonceSize() + gcm.Overhead(),
+		}).Warn("ciphertext too short")
 		return nil, fmt.Errorf("ciphertext too short")
 	}
 
@@ -125,8 +157,16 @@ func DecryptMessage(key AESKey, ciphertext []byte) ([]byte, error) {
 	// Decrypt
 	plaintext, err := gcm.Open(nil, iv, actualCiphertext, nil)
 	if err != nil {
+		logrus.WithFields(logrus.Fields{
+			"error": err.Error(),
+		}).Error("decryption failed")
 		return nil, fmt.Errorf("decryption failed: %w", err)
 	}
+
+	logrus.WithFields(logrus.Fields{
+		"bytes_ciphertext": len(ciphertext),
+		"bytes_plaintext":  len(plaintext),
+	}).Debug("message decrypted")
 
 	return plaintext, nil
 }

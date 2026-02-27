@@ -60,6 +60,9 @@ func (c *Controller) GenerateFrame(seed int64, state string, frameIndex, frameCo
 	}
 
 	// Generate frame
+	// NOTE: time.Now() used here for non-critical performance metrics only.
+	// This does not affect animation determinism (all generation is seed-based).
+	// Metrics are for monitoring/observability, not gameplay logic.
 	startTime := time.Now()
 	frame, err := c.generateFrameInternal(seed, state, frameIndex, frameCount, direction, spriteConfig)
 	c.frameGenerationTime = time.Since(startTime)

@@ -556,3 +556,127 @@ func BenchmarkGetCompanionSizeForType(b *testing.B) {
 		getCompanionSizeForType(types[i%len(types)])
 	}
 }
+
+// TestGenerateWorldFactions tests faction generation and registration.
+func TestGenerateWorldFactions(t *testing.T) {
+	tests := []struct {
+		name      string
+		seed      int64
+		genreID   string
+		expectErr bool
+		minCount  int
+	}{
+		{
+			name:      "fantasy factions",
+			seed:      12345,
+			genreID:   "fantasy",
+			expectErr: false,
+			minCount:  1,
+		},
+		{
+			name:      "sci-fi factions",
+			seed:      67890,
+			genreID:   "sci-fi",
+			expectErr: false,
+			minCount:  1,
+		},
+		{
+			name:      "zero seed",
+			seed:      0,
+			genreID:   "fantasy",
+			expectErr: false,
+			minCount:  1,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			world := createTestWorld()
+			logger := createTestLogger()
+
+			// Add FactionSystem to world for registration
+			factionSys := engine.NewFactionSystem(world, logger)
+			world.AddSystem(factionSys)
+
+			params := procgen.GenerationParams{
+				Difficulty: 0.5,
+				Depth:      1,
+				GenreID:    tt.genreID,
+				Custom:     map[string]interface{}{},
+			}
+
+			logEntry := logger.WithField("test", "faction_generation")
+
+			count, err := generateWorldFactions(world, tt.seed, params, logEntry)
+
+			if tt.expectErr && err == nil {
+				t.Error("expected error, got nil")
+			}
+			if !tt.expectErr && err != nil {
+				t.Errorf("unexpected error: %v", err)
+			}
+
+			if !tt.expectErr && count < tt.minCount {
+				t.Errorf("expected at least %d factions, got %d", tt.minCount, count)
+			}
+		})
+	}
+}
+
+// TestGenerateWorldFactions_Deterministic verifies faction generation is deterministic.
+func TestGenerateWorldFactions_Deterministic(t *testing.T) {
+	const seed int64 = 42
+	const genreID = "fantasy"
+
+	logger := createTestLogger()
+
+	world1 := createTestWorld()
+	factionSys1 := engine.NewFactionSystem(world1, logger)
+	world1.AddSystem(factionSys1)
+
+	world2 := createTestWorld()
+	factionSys2 := engine.NewFactionSystem(world2, logger)
+	world2.AddSystem(factionSys2)
+
+	params := procgen.GenerationParams{
+		Difficulty: 0.5,
+		Depth:      1,
+		GenreID:    genreID,
+		Custom:     map[string]interface{}{},
+	}
+
+	logEntry := logger.WithField("test", "faction_determinism")
+
+	count1, err1 := generateWorldFactions(world1, seed, params, logEntry)
+	count2, err2 := generateWorldFactions(world2, seed, params, logEntry)
+
+	if err1 != nil || err2 != nil {
+		t.Fatalf("unexpected errors: err1=%v, err2=%v", err1, err2)
+	}
+
+	if count1 != count2 {
+		t.Errorf("faction counts differ: %d vs %d (expected deterministic generation)", count1, count2)
+	}
+}
+
+// Benchmark faction generation performance.
+func BenchmarkGenerateWorldFactions(b *testing.B) {
+	logger := createTestLogger()
+	world := createTestWorld()
+	factionSys := engine.NewFactionSystem(world, logger)
+	world.AddSystem(factionSys)
+
+	params := procgen.GenerationParams{
+		Difficulty: 0.5,
+		Depth:      1,
+		GenreID:    "fantasy",
+		Custom:     map[string]interface{}{},
+	}
+
+	logEntry := logger.WithField("bench", "faction_generation")
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_, _ = generateWorldFactions(world, int64(i), params, logEntry)
+	}
+}

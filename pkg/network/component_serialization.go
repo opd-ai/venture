@@ -7,6 +7,8 @@ import (
 	"encoding/binary"
 	"fmt"
 	"math"
+
+	"github.com/sirupsen/logrus"
 )
 
 // ComponentSerializer provides methods for serializing ECS components to/from bytes.
@@ -28,6 +30,11 @@ func (s *ComponentSerializer) SerializePosition(x, y float64) []byte {
 // DeserializePosition deserializes a position component.
 func (s *ComponentSerializer) DeserializePosition(data []byte) (x, y float64, err error) {
 	if len(data) != 16 {
+		logrus.WithFields(logrus.Fields{
+			"component_type": "position",
+			"data_length":    len(data),
+			"expected":       16,
+		}).Warn("invalid position data length")
 		return 0, 0, fmt.Errorf("invalid position data length: %d (expected 16)", len(data))
 	}
 	x = math.Float64frombits(binary.LittleEndian.Uint64(data[0:8]))
@@ -46,6 +53,11 @@ func (s *ComponentSerializer) SerializeVelocity(vx, vy float64) []byte {
 // DeserializeVelocity deserializes a velocity component.
 func (s *ComponentSerializer) DeserializeVelocity(data []byte) (vx, vy float64, err error) {
 	if len(data) != 16 {
+		logrus.WithFields(logrus.Fields{
+			"component_type": "velocity",
+			"data_length":    len(data),
+			"expected":       16,
+		}).Warn("invalid velocity data length")
 		return 0, 0, fmt.Errorf("invalid velocity data length: %d (expected 16)", len(data))
 	}
 	vx = math.Float64frombits(binary.LittleEndian.Uint64(data[0:8]))
@@ -64,6 +76,11 @@ func (s *ComponentSerializer) SerializeHealth(current, max float64) []byte {
 // DeserializeHealth deserializes a health component.
 func (s *ComponentSerializer) DeserializeHealth(data []byte) (current, max float64, err error) {
 	if len(data) != 16 {
+		logrus.WithFields(logrus.Fields{
+			"component_type": "health",
+			"data_length":    len(data),
+			"expected":       16,
+		}).Warn("invalid health data length")
 		return 0, 0, fmt.Errorf("invalid health data length: %d (expected 16)", len(data))
 	}
 	current = math.Float64frombits(binary.LittleEndian.Uint64(data[0:8]))
@@ -83,6 +100,11 @@ func (s *ComponentSerializer) SerializeStats(attack, defense, magicPower float64
 // DeserializeStats deserializes basic stats.
 func (s *ComponentSerializer) DeserializeStats(data []byte) (attack, defense, magicPower float64, err error) {
 	if len(data) != 24 {
+		logrus.WithFields(logrus.Fields{
+			"component_type": "stats",
+			"data_length":    len(data),
+			"expected":       24,
+		}).Warn("invalid stats data length")
 		return 0, 0, 0, fmt.Errorf("invalid stats data length: %d (expected 24)", len(data))
 	}
 	attack = math.Float64frombits(binary.LittleEndian.Uint64(data[0:8]))

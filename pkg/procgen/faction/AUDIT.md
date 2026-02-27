@@ -23,7 +23,7 @@ The faction package provides deterministic procedural generation of faction syst
 None identified.
 
 ### Medium Severity
-- [ ] **Integration Gap** — Faction generator not called by server; only client generates factions. In multiplayer mode, server should be authoritative source of faction data to prevent desync when clients join mid-game or have mod conflicts. (`cmd/server/entity_spawning.go:MISSING`)
+- [x] **Integration Gap** — Faction generator not called by server; only client generates factions. In multiplayer mode, server should be authoritative source of faction data to prevent desync when clients join mid-game or have mod conflicts. (`cmd/server/entity_spawning.go:MISSING`) — **RESOLVED 2026-02-27**: Added generateWorldFactions() function in entity_spawning.go and spawnFactions() caller in main.go. Factions now generated server-side with deterministic seed offset (3000). Includes comprehensive tests for determinism and generation.
 
 ### Low Severity
 - [ ] **Test Enhancement** — TestGenerator_FactionCounts test comment at line 242 references capped value but test expects uncapped result. Comment says "Capped at 7 but test expects actual result" which is confusing. (`generator_test.go:242`)

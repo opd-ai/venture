@@ -1,3 +1,6 @@
+//go:build !js
+// +build !js
+
 // validator.go implements save file migration validation logic.
 // This file contains the Validator type and all migration validation methods
 // for testing backward compatibility of save files across game versions.

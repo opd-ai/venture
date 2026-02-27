@@ -81,24 +81,24 @@ type StorySequence struct {
 
 // StoryTemplates holds configurable templates for story content generation
 type StoryTemplates struct {
-	BeginningTemplates []string
-	BeginningAdjectives []string
-	BeginningCounts []int
+	BeginningTemplates   []string
+	BeginningAdjectives  []string
+	BeginningCounts      []int
 	BeginningDiscoveries []string
-	
-	MiddleTemplates []string
-	MiddleLosses []string
-	MiddleThreats []string
+
+	MiddleTemplates   []string
+	MiddleLosses      []string
+	MiddleThreats     []string
 	MiddleRevelations []string
-	MiddleAttackers []string
-	MiddleSurvivors []int
-	
+	MiddleAttackers   []string
+	MiddleSurvivors   []int
+
 	EndTemplates []string
-	EndWarnings []string
-	EndGoals []string
-	EndThreats []string
-	EndFates []string
-	EndMessages []string
+	EndWarnings  []string
+	EndGoals     []string
+	EndThreats   []string
+	EndFates     []string
+	EndMessages  []string
 }
 
 // DefaultStoryTemplates returns the default template set
@@ -110,22 +110,22 @@ func DefaultStoryTemplates() *StoryTemplates {
 			"Log %d: First signs of %s. Should we continue?",
 			"Note %d: Found evidence of %s. This changes everything.",
 		},
-		BeginningAdjectives: []string{"normal", "quiet", "strange", "peaceful", "ominous"},
-		BeginningCounts: []int{5, 7, 10, 12, 15},
+		BeginningAdjectives:  []string{"normal", "quiet", "strange", "peaceful", "ominous"},
+		BeginningCounts:      []int{5, 7, 10, 12, 15},
 		BeginningDiscoveries: []string{"danger", "treasure", "secrets", "life", "death"},
-		
+
 		MiddleTemplates: []string{
 			"Day %d: Things are getting worse. We lost %s today.",
 			"Entry %d: The %s is spreading. No one is safe.",
 			"Log %d: Discovered the truth about %s. We were wrong.",
 			"Note %d: %s attacked us. Only %d survived.",
 		},
-		MiddleLosses: []string{"contact", "hope", "supplies", "three people", "our leader"},
-		MiddleThreats: []string{"infection", "madness", "corruption", "fear", "darkness"},
+		MiddleLosses:      []string{"contact", "hope", "supplies", "three people", "our leader"},
+		MiddleThreats:     []string{"infection", "madness", "corruption", "fear", "darkness"},
 		MiddleRevelations: []string{"the ruins", "the source", "their plan", "the curse", "this place"},
-		MiddleAttackers: []string{"They", "The creatures", "Something", "Unknown forces", "The enemy"},
-		MiddleSurvivors: []int{3, 5, 7, 4, 2},
-		
+		MiddleAttackers:   []string{"They", "The creatures", "Something", "Unknown forces", "The enemy"},
+		MiddleSurvivors:   []int{3, 5, 7, 4, 2},
+
 		EndTemplates: []string{
 			"Final entry: If you find this, %s. Don't make our mistakes.",
 			"Last words: We failed to %s. May you succeed where we couldn't.",
@@ -133,15 +133,15 @@ func DefaultStoryTemplates() *StoryTemplates {
 			"Goodbye: We're %s. Tell our families %s.",
 		},
 		EndWarnings: []string{"leave immediately", "destroy it", "seal the entrance", "warn the others"},
-		EndGoals: []string{"stop it", "find the cure", "escape", "understand the truth"},
-		EndThreats: []string{"The end", "Darkness", "They", "Death", "Doom"},
-		EndFates: []string{"trapped", "infected", "lost", "dying", "gone"},
+		EndGoals:    []string{"stop it", "find the cure", "escape", "understand the truth"},
+		EndThreats:  []string{"The end", "Darkness", "They", "Death", "Doom"},
+		EndFates:    []string{"trapped", "infected", "lost", "dying", "gone"},
 		EndMessages: []string{"we tried", "we loved them", "we're sorry", "it wasn't their fault", "goodbye"},
 	}
 }
 
 // FragmentGenerator generates environmental story fragments
-type FragmentGenerator struct{
+type FragmentGenerator struct {
 	templates *StoryTemplates
 }
 

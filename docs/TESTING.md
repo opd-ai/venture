@@ -196,6 +196,48 @@ go test -bench=BenchmarkGenerate -benchmem ./pkg/procgen/terrain
 go test -race ./...
 ```
 
+### Headless Testing (X11/Display Required Packages)
+
+Some packages (`cmd/server`, `pkg/world/housing`, `pkg/integration/*`) require a display due to Ebiten dependencies. On headless systems (CI, Docker, SSH sessions), use Xvfb (virtual framebuffer):
+
+**Install Xvfb:**
+```bash
+# Ubuntu/Debian
+sudo apt-get install xvfb
+
+# Fedora/RHEL
+sudo dnf install xorg-x11-server-Xvfb
+
+# macOS (not typically needed - has native display)
+brew install --cask xquartz
+```
+
+**Run tests with Xvfb:**
+```bash
+# Single package
+xvfb-run -s "-screen 0 1920x1080x24" go test -v ./cmd/server/...
+
+# All packages
+xvfb-run -s "-screen 0 1920x1080x24" go test ./...
+
+# With race detector and coverage
+xvfb-run -s "-screen 0 1920x1080x24" go test -race -cover ./pkg/world/housing/... ./pkg/integration/...
+```
+
+**Configure persistent Xvfb (for interactive development):**
+```bash
+# Start virtual display on :99
+Xvfb :99 -screen 0 1920x1080x24 &
+
+# Set environment variable
+export DISPLAY=:99
+
+# Now run tests normally
+go test ./cmd/server/...
+```
+
+**Note:** The CI pipeline (`.github/workflows/test.yml`) automatically uses `xvfb-run` for all test executions on Linux runners.
+
 ### Makefile Targets
 
 ```bash

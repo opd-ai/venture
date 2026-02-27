@@ -439,3 +439,209 @@ func BenchmarkValidate(b *testing.B) {
 		}
 	}
 }
+
+// TestDefaultStoryTemplates validates the default template configuration
+func TestDefaultStoryTemplates(t *testing.T) {
+	templates := DefaultStoryTemplates()
+
+	// Validate beginning templates
+	if len(templates.BeginningTemplates) == 0 {
+		t.Error("BeginningTemplates is empty")
+	}
+	if len(templates.BeginningAdjectives) == 0 {
+		t.Error("BeginningAdjectives is empty")
+	}
+	if len(templates.BeginningCounts) == 0 {
+		t.Error("BeginningCounts is empty")
+	}
+	if len(templates.BeginningDiscoveries) == 0 {
+		t.Error("BeginningDiscoveries is empty")
+	}
+
+	// Validate middle templates
+	if len(templates.MiddleTemplates) == 0 {
+		t.Error("MiddleTemplates is empty")
+	}
+	if len(templates.MiddleLosses) == 0 {
+		t.Error("MiddleLosses is empty")
+	}
+	if len(templates.MiddleThreats) == 0 {
+		t.Error("MiddleThreats is empty")
+	}
+	if len(templates.MiddleRevelations) == 0 {
+		t.Error("MiddleRevelations is empty")
+	}
+	if len(templates.MiddleAttackers) == 0 {
+		t.Error("MiddleAttackers is empty")
+	}
+	if len(templates.MiddleSurvivors) == 0 {
+		t.Error("MiddleSurvivors is empty")
+	}
+
+	// Validate end templates
+	if len(templates.EndTemplates) == 0 {
+		t.Error("EndTemplates is empty")
+	}
+	if len(templates.EndWarnings) == 0 {
+		t.Error("EndWarnings is empty")
+	}
+	if len(templates.EndGoals) == 0 {
+		t.Error("EndGoals is empty")
+	}
+	if len(templates.EndThreats) == 0 {
+		t.Error("EndThreats is empty")
+	}
+	if len(templates.EndFates) == 0 {
+		t.Error("EndFates is empty")
+	}
+	if len(templates.EndMessages) == 0 {
+		t.Error("EndMessages is empty")
+	}
+}
+
+// TestNewFragmentGeneratorWithTemplates validates custom template injection
+func TestNewFragmentGeneratorWithTemplates(t *testing.T) {
+	tests := []struct {
+		name      string
+		templates *StoryTemplates
+		wantNil   bool
+	}{
+		{
+			name: "custom templates",
+			templates: &StoryTemplates{
+				BeginningTemplates:   []string{"Custom beginning: %d"},
+				BeginningAdjectives:  []string{"custom"},
+				BeginningCounts:      []int{1},
+				BeginningDiscoveries: []string{"custom discovery"},
+				MiddleTemplates:      []string{"Custom middle: %d"},
+				MiddleLosses:         []string{"custom loss"},
+				MiddleThreats:        []string{"custom threat"},
+				MiddleRevelations:    []string{"custom revelation"},
+				MiddleAttackers:      []string{"custom attacker"},
+				MiddleSurvivors:      []int{1},
+				EndTemplates:         []string{"Custom end: %s"},
+				EndWarnings:          []string{"custom warning"},
+				EndGoals:             []string{"custom goal"},
+				EndThreats:           []string{"custom threat"},
+				EndFates:             []string{"custom fate"},
+				EndMessages:          []string{"custom message"},
+			},
+			wantNil: false,
+		},
+		{
+			name:      "nil templates should use defaults",
+			templates: nil,
+			wantNil:   false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			gen := NewFragmentGeneratorWithTemplates(tt.templates)
+			if gen == nil {
+				t.Fatal("NewFragmentGeneratorWithTemplates returned nil")
+			}
+			if gen.templates == nil {
+				t.Fatal("generator templates field is nil")
+			}
+
+			// Verify defaults are used when nil is passed
+			if tt.templates == nil {
+				defaults := DefaultStoryTemplates()
+				if len(gen.templates.BeginningTemplates) != len(defaults.BeginningTemplates) {
+					t.Error("nil templates did not default to DefaultStoryTemplates")
+				}
+			}
+		})
+	}
+}
+
+// TestCustomTemplateGeneration validates that custom templates are used
+func TestCustomTemplateGeneration(t *testing.T) {
+	customTemplates := &StoryTemplates{
+		BeginningTemplates:   []string{"CUSTOM_BEGINNING_%d_%s_%d_%s"},
+		BeginningAdjectives:  []string{"TEST_ADJ"},
+		BeginningCounts:      []int{99},
+		BeginningDiscoveries: []string{"TEST_DISC"},
+		MiddleTemplates:      []string{"CUSTOM_MIDDLE_%d_%s_%s_%s_%s_%d"},
+		MiddleLosses:         []string{"TEST_LOSS"},
+		MiddleThreats:        []string{"TEST_THREAT"},
+		MiddleRevelations:    []string{"TEST_REV"},
+		MiddleAttackers:      []string{"TEST_ATK"},
+		MiddleSurvivors:      []int{88},
+		EndTemplates:         []string{"CUSTOM_END_%s_%s_%s_%s_%s"},
+		EndWarnings:          []string{"TEST_WARN"},
+		EndGoals:             []string{"TEST_GOAL"},
+		EndThreats:           []string{"TEST_THREAT"},
+		EndFates:             []string{"TEST_FATE"},
+		EndMessages:          []string{"TEST_MSG"},
+	}
+
+	gen := NewFragmentGeneratorWithTemplates(customTemplates)
+
+	seed := int64(12345)
+	params := procgen.GenerationParams{
+		Difficulty: 0.5,
+		Depth:      5,
+		GenreID:    "fantasy",
+	}
+
+	result, err := gen.Generate(seed, params)
+	if err != nil {
+		t.Fatalf("Generate failed: %v", err)
+	}
+
+	sequence := result.(*StorySequence)
+
+	// Verify at least one fragment uses custom templates
+	foundCustom := false
+	for _, frag := range sequence.Fragments {
+		if len(frag.Content) > 6 && frag.Content[:6] == "CUSTOM" {
+			foundCustom = true
+			break
+		}
+	}
+
+	if !foundCustom {
+		t.Error("custom templates were not used in generation")
+	}
+}
+
+// TestTemplateDeterminism validates same seed produces same templates
+func TestTemplateDeterminism(t *testing.T) {
+	seed := int64(99999)
+	params := procgen.GenerationParams{
+		Difficulty: 0.6,
+		Depth:      7,
+		GenreID:    "scifi",
+	}
+
+	// Generate twice with same seed
+	gen1 := NewFragmentGenerator()
+	result1, err1 := gen1.Generate(seed, params)
+	if err1 != nil {
+		t.Fatalf("Generate 1 failed: %v", err1)
+	}
+
+	gen2 := NewFragmentGenerator()
+	result2, err2 := gen2.Generate(seed, params)
+	if err2 != nil {
+		t.Fatalf("Generate 2 failed: %v", err2)
+	}
+
+	seq1 := result1.(*StorySequence)
+	seq2 := result2.(*StorySequence)
+
+	// Verify same number of fragments
+	if len(seq1.Fragments) != len(seq2.Fragments) {
+		t.Fatalf("fragment count differs: %d vs %d", len(seq1.Fragments), len(seq2.Fragments))
+	}
+
+	// Verify each fragment is identical
+	for i := range seq1.Fragments {
+		if seq1.Fragments[i].Content != seq2.Fragments[i].Content {
+			t.Errorf("fragment %d content differs:\n  got: %s\n want: %s",
+				i, seq1.Fragments[i].Content, seq2.Fragments[i].Content)
+		}
+	}
+}

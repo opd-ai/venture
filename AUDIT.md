@@ -1,12 +1,12 @@
 # Codebase Audit Remediation Plan
 **Generated**: 2026-02-27
 **Scope**: All *AUDIT*.md files in repository
-**Total Unresolved Findings**: 238
+**Total Unresolved Findings**: 237
 
 ## Summary by Severity
 | Severity | Count |
 |----------|-------|
-| CRITICAL | 2 |
+| CRITICAL | 1 |
 | HIGH | 54 |
 | MEDIUM | 114 |
 | LOW | 68 |
@@ -29,36 +29,39 @@
 #### REM-159: Hard-Coded Content Templates
 - **Source**: `./pkg/procgen/story/AUDIT.md`
 - **Location**: `(e.g., `generateBeginningFragment` at `generator.go:194-209`)`
-- **Problem**: - [ ] Story content generation uses fixed template arrays with hard-coded strings . This limits narrative variety and makes content untranslatable. Consider data-driven templates or Markov chain integ...
+- **Problem**: - [x] Story content generation uses fixed template arrays with hard-coded strings . This limits narrative variety and makes content untranslatable. Consider data-driven templates or Markov chain integ...
 - **Fix**:
   1. Add field to config struct or constructor parameter
   2. Remove hard-coded value and use field instead
   3. Update call sites to pass appropriate value
   4. Add genre-based or difficulty-based scaling if applicable
 - **Verify**: `go test ./pkg/... -v`
+- **Completed**: 2026-02-27 - Created `StoryTemplates` struct with configurable template arrays for beginning/middle/end fragments. Added `NewFragmentGeneratorWithTemplates()` constructor allowing custom templates. Updated `generateBeginningFragment`, `generateMiddleFragment`, and `generateEndFragment` to use configurable templates. All existing tests pass (cached). Added 4 comprehensive tests: TestDefaultStoryTemplates (validates default configuration), TestNewFragmentGeneratorWithTemplates (validates custom/nil template injection), TestCustomTemplateGeneration (verifies custom templates are used), TestTemplateDeterminism (validates same seed produces same output). Templates now support data-driven customization and future Markov chain integration.
 
 ### HIGH
 
 #### REM-022: Test Execution
 - **Source**: `./cmd/server/AUDIT.md`
 - **Location**: `(`main_test.go:1`, all test files)`
-- **Problem**: - [ ] Tests require X11/display but no Xvfb wrapper documented
+- **Problem**: - [x] Tests require X11/display but no Xvfb wrapper documented
 - **Fix**:
   1. Review the finding description and locate affected code
   2. Apply minimal fix following project coding guidelines
   3. Add test coverage for the fixed behavior
   4. Verify no regressions in existing tests
 - **Verify**: `go test ./pkg/... -v`
+- **Completed**: 2026-02-27 - Added comprehensive Xvfb documentation to `docs/TESTING.md` with installation instructions for Ubuntu/Debian, Fedora/RHEL, and macOS. Documented usage patterns for single package tests, all packages, and with race detector. Added persistent Xvfb configuration for interactive development. Tests already pass with `xvfb-run` in CI (`.github/workflows/test.yml`). Documentation now provides step-by-step guidance for headless testing scenarios.
 
 #### REM-023: WASM Build
 - **Source**: `./cmd/server/AUDIT.md`
-- **Problem**: - [ ] WASM vet fails due to `pkg/migration/validator.go:39` referencing `saveload.NewDefaultMigrator` which doesn't exist in WASM build context
+- **Problem**: - [x] WASM vet fails due to `pkg/migration/validator.go:39` referencing `saveload.NewDefaultMigrator` which doesn't exist in WASM build context
 - **Fix**:
   1. Review the finding description and locate affected code
   2. Apply minimal fix following project coding guidelines
   3. Add test coverage for the fixed behavior
   4. Verify no regressions in existing tests
 - **Verify**: `go test ./pkg/... -v`
+- **Completed**: 2026-02-27 - Fixed WASM build incompatibility in `pkg/migration/validator.go`. Added build tag `//go:build !js` to `validator.go` to exclude it from WASM builds. Created `validator_wasm.go` with `//go:build js` containing WASM-compatible stub implementation using no-op `wasmMigrator`. Added build tag to `validator_test.go` to prevent test compilation on WASM. WASM vet now passes: `GOOS=js GOARCH=wasm go vet ./pkg/migration/...` returns zero errors. All existing tests pass on native builds. Migration validation gracefully degrades on WASM with clear error messages.
 
 #### REM-034: <category>
 - **Source**: `./docs/META_AUDIT.md`

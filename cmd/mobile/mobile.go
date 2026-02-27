@@ -72,10 +72,21 @@ func init() {
 	logger = logging.NewLogger(logConfig)
 
 	// Generate seed (check environment variable first for testing/debugging)
-	worldSeed = config.GetSeedFromEnv(logger)
+	var err error
+	worldSeed, err = config.GetSeedFromEnv(logger)
+	if err != nil {
+		logger.WithFields(logrus.Fields{
+			"error": err.Error(),
+		}).Warn("configuration error reading seed, using fallback value")
+	}
 	genres := []string{"fantasy", "scifi", "horror", "cyberpunk", "postapoc"}
 	rng := rand.New(rand.NewSource(worldSeed))
-	genreID = config.GetGenreFromEnv(genres, rng, logger)
+	genreID, err = config.GetGenreFromEnv(genres, rng, logger)
+	if err != nil {
+		logger.WithFields(logrus.Fields{
+			"error": err.Error(),
+		}).Warn("configuration error reading genre, using fallback value")
+	}
 
 	// Skip game initialization during testing (mobile.SetGame panics in non-mobile env)
 	// Tests set VENTURE_SKIP_MOBILE_INIT=1 to prevent this

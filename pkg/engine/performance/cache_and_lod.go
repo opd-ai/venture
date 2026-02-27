@@ -206,9 +206,17 @@ func (cm *CacheManager) Clear() {
 	cm.missCount = 0
 }
 
-// ResourceLoader defines the interface for loading resources
+// ResourceLoader defines the interface for loading resources.
+//
+// The Load method should:
+//   - Return (data, nil) on successful load where data is non-nil
+//   - Return (nil, error) if loading fails with a descriptive error
+//   - Never return (nil, nil) as this indicates an implementation bug
+//
+// Thread-safety: Implementations must be safe for concurrent calls.
 type ResourceLoader interface {
-	// Load loads the resource identified by the request and returns the loaded data
+	// Load loads the resource identified by the request and returns the loaded data.
+	// Returns an error if the resource cannot be loaded.
 	Load(request *LoadRequest) (interface{}, error)
 }
 

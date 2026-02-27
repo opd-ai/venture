@@ -99,8 +99,14 @@ var (
 	// ErrNegativeAttack indicates Attack is negative.
 	ErrNegativeAttack = errors.New("Attack cannot be negative")
 
+	// ErrNegativeMagicPower indicates MagicPower is negative.
+	ErrNegativeMagicPower = errors.New("MagicPower cannot be negative")
+
 	// ErrNegativeDefense indicates Defense is negative.
 	ErrNegativeDefense = errors.New("Defense cannot be negative")
+
+	// ErrNegativeMagicDefense indicates MagicDefense is negative.
+	ErrNegativeMagicDefense = errors.New("MagicDefense cannot be negative")
 
 	// ErrNegativeSpeed indicates Speed is negative.
 	ErrNegativeSpeed = errors.New("Speed cannot be negative")
@@ -219,7 +225,7 @@ func (s *Stats) validateOffensiveStats() error {
 		return fmt.Errorf("%w: got %f", ErrNegativeAttack, s.Attack)
 	}
 	if s.MagicPower < 0 {
-		return errors.New("MagicPower cannot be negative")
+		return fmt.Errorf("%w: got %f", ErrNegativeMagicPower, s.MagicPower)
 	}
 	if s.Speed < 0 {
 		return fmt.Errorf("%w: got %f", ErrNegativeSpeed, s.Speed)
@@ -236,7 +242,7 @@ func (s *Stats) validateDefensiveStats() error {
 		return fmt.Errorf("%w: got %f", ErrNegativeDefense, s.Defense)
 	}
 	if s.MagicDefense < 0 {
-		return errors.New("MagicDefense cannot be negative")
+		return fmt.Errorf("%w: got %f", ErrNegativeMagicDefense, s.MagicDefense)
 	}
 	if s.Evasion < 0 || s.Evasion > 1.0 {
 		return fmt.Errorf("%w: got %f", ErrInvalidEvasion, s.Evasion)

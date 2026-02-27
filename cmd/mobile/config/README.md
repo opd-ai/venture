@@ -18,6 +18,12 @@ Controls the world generation seed for deterministic procedural generation.
 
 **Format:** Integer (int64)  
 **Default:** Random time-based seed  
+
+⚠️ **Determinism Exception:** The time-based fallback is an INTENTIONAL exception to 
+the project's deterministic generation principle (Coding Guideline #2). This provides 
+casual mobile players with a unique world each launch. For reproducible worlds 
+(bug reports, testing, multiplayer coordination), always set VENTURE_SEED explicitly.
+
 **Examples:**
 ```bash
 # Set a specific seed for testing

@@ -4,11 +4,21 @@ import (
 	"bytes"
 	"compress/gzip"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"math"
 	"sync"
 	"time"
+)
+
+// Sentinel errors for prestige operations.
+var (
+	ErrPlayerNotFound         = errors.New("player not found")
+	ErrNoParagonPoints        = errors.New("no paragon points available")
+	ErrInvalidStat            = errors.New("invalid stat")
+	ErrAccountNotFound        = errors.New("account not found")
+	ErrUnknownParagonCategory = errors.New("unknown paragon category")
 )
 
 // Manager handles prestige system operations.
@@ -131,15 +141,15 @@ func (m *Manager) AllocateParagonPoint(playerID string, stat ParagonStat) error 
 
 	player, exists := m.players[playerID]
 	if !exists {
-		return fmt.Errorf("player not found: %s", playerID)
+		return fmt.Errorf("%w: %s", ErrPlayerNotFound, playerID)
 	}
 
 	if player.ParagonPoints <= 0 {
-		return fmt.Errorf("no paragon points available")
+		return fmt.Errorf("%w: player %s", ErrNoParagonPoints, playerID)
 	}
 
 	if stat < StatHealth || stat > StatCritical {
-		return fmt.Errorf("invalid stat: %d", stat)
+		return fmt.Errorf("%w: %d for player %s", ErrInvalidStat, stat, playerID)
 	}
 
 	player.ParagonPoints--
@@ -156,7 +166,7 @@ func (m *Manager) RespecParagonPoints(playerID string) (int, error) {
 
 	player, exists := m.players[playerID]
 	if !exists {
-		return 0, fmt.Errorf("player not found: %s", playerID)
+		return 0, fmt.Errorf("%w: %s", ErrPlayerNotFound, playerID)
 	}
 
 	totalPoints := 0

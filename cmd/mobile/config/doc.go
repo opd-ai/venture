@@ -4,6 +4,14 @@
 // including seed generation and genre selection. It provides a clean separation
 // between configuration parsing and game logic.
 //
+// # Determinism Exception
+//
+// IMPORTANT: This package contains a documented exception to Coding Guideline #2
+// (Deterministic Generation). GetSeedFromEnv() uses time.Now() as a fallback seed
+// when VENTURE_SEED is unset. This is INTENTIONAL for mobile UX - casual players
+// get a unique world each launch. For reproducible gameplay (bug reports, testing,
+// multiplayer), always set VENTURE_SEED to a specific value.
+//
 // # Seed Configuration
 //
 // The world seed controls all procedural generation (terrain, items, enemies).

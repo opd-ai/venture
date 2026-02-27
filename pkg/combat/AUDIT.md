@@ -26,8 +26,8 @@ None found.
 - [ ] **Documentation** — File-level comment in `interfaces.go` has redundant/stale package description lines 6-8 from historical refactoring (types/constants relocated but old comments remain) (`interfaces.go:6-8`)
 
 ### Low Severity
-- [ ] **Code consistency** — `types.go:222` uses inline error creation `errors.New("MagicPower cannot be negative")` instead of predefined sentinel error like other stats (`types.go:222`)
-- [ ] **Code consistency** — `types.go:239` uses inline error creation `errors.New("MagicDefense cannot be negative")` instead of predefined sentinel error like other stats (`types.go:239`)
+- [x] **Code consistency** — ✅ **RESOLVED** — Added `ErrNegativeMagicPower` sentinel error and updated `types.go:222` to use `fmt.Errorf("%w: got %f", ErrNegativeMagicPower, s.MagicPower)` pattern.
+- [x] **Code consistency** — ✅ **RESOLVED** — Added `ErrNegativeMagicDefense` sentinel error and updated `types.go:239` to use `fmt.Errorf("%w: got %f", ErrNegativeMagicDefense, s.MagicDefense)` pattern.
 - [ ] **Test coverage** — No benchmark for `Stats.Validate()` and helper methods (only `CalculateDamage` and `ResolveCombat` are benchmarked)
 
 ## Input Integration

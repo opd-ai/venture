@@ -28,7 +28,7 @@ The companion learning subsystem implements AI skill progression, personality ev
 ### Low Severity
 - [ ] **Documentation** — `time_provider.go:23` contains only implementation (`time.Now()`). While acceptable for RealTimeProvider, adding a comment explaining this is intentional production behavior vs. test mocks would improve clarity for maintainers.
 - [ ] **Constants** — Several "magic numbers" exist in `manager.go` without named constants: `0.01` (trait adjustment), `0.02` (social interaction), `0.05` (combat style adaptation). These are defined in `constants.go` but not consistently used. Suggest refactoring to use constants for all personality deltas.
-- [ ] **Error Messages** — Functions `AddExperience`, `CanLearnSkill`, `LearnSkill` return errors with simple strings. Consider using wrapped errors with `fmt.Errorf(...%w...)` for better error chain preservation, matching error handling guideline in custom instructions.
+- [x] **Error Messages** — Functions `AddExperience`, `CanLearnSkill`, `LearnSkill` return errors with simple strings. Consider using wrapped errors with `fmt.Errorf(...%w...)` for better error chain preservation, matching error handling guideline in custom instructions. - **FIXED 2026-02-27**: Added sentinel errors (ErrSkillNotFound, ErrInsufficientSkillPoints, ErrPrerequisiteNotFound, ErrPrerequisiteNotMet) to types.go and updated all error returns to use fmt.Errorf with %w wrapping
 
 ## Input Integration
 | Input Source | Status | Notes |

@@ -14,10 +14,16 @@ func TestIntegration_SeedAndGenreFromEnv(t *testing.T) {
 
 	// Test 1: Default behavior (time-based seed, random genre)
 	t.Run("default_configuration", func(t *testing.T) {
-		seed1 := GetSeedFromEnv(nil)
+		seed1, err := GetSeedFromEnv(nil)
+		if err != nil {
+			t.Errorf("unexpected error: %v", err)
+		}
 		genres := []string{"fantasy", "scifi", "horror", "cyberpunk", "postapoc"}
 		rng := rand.New(rand.NewSource(seed1))
-		genre1 := GetGenreFromEnv(genres, rng, nil)
+		genre1, err := GetGenreFromEnv(genres, rng, nil)
+		if err != nil {
+			t.Errorf("unexpected error: %v", err)
+		}
 
 		// Verify seed is positive (time-based)
 		if seed1 <= 0 {
@@ -44,14 +50,20 @@ func TestIntegration_SeedAndGenreFromEnv(t *testing.T) {
 		defer os.Unsetenv("VENTURE_SEED")
 		defer os.Unsetenv("VENTURE_GENRE")
 
-		seed := GetSeedFromEnv(nil)
+		seed, err := GetSeedFromEnv(nil)
+		if err != nil {
+			t.Errorf("unexpected error: %v", err)
+		}
 		if seed != 99999 {
 			t.Errorf("expected seed 99999, got %d", seed)
 		}
 
 		genres := []string{"fantasy", "scifi", "horror", "cyberpunk", "postapoc"}
 		rng := rand.New(rand.NewSource(seed))
-		genre := GetGenreFromEnv(genres, rng, nil)
+		genre, err := GetGenreFromEnv(genres, rng, nil)
+		if err != nil {
+			t.Errorf("unexpected error: %v", err)
+		}
 
 		if genre != "horror" {
 			t.Errorf("expected genre horror, got %q", genre)
@@ -64,18 +76,27 @@ func TestIntegration_SeedAndGenreFromEnv(t *testing.T) {
 		os.Unsetenv("VENTURE_GENRE")
 		defer os.Unsetenv("VENTURE_SEED")
 
-		seed := GetSeedFromEnv(nil)
+		seed, err := GetSeedFromEnv(nil)
+		if err != nil {
+			t.Errorf("unexpected error: %v", err)
+		}
 		if seed != 55555 {
 			t.Errorf("expected seed 55555, got %d", seed)
 		}
 
 		genres := []string{"fantasy", "scifi", "horror", "cyberpunk", "postapoc"}
 		rng := rand.New(rand.NewSource(seed))
-		genre := GetGenreFromEnv(genres, rng, nil)
+		genre, err := GetGenreFromEnv(genres, rng, nil)
+		if err != nil {
+			t.Errorf("unexpected error: %v", err)
+		}
 
 		// Genre should be deterministic based on seed
 		rng2 := rand.New(rand.NewSource(seed))
-		genre2 := GetGenreFromEnv(genres, rng2, nil)
+		genre2, err := GetGenreFromEnv(genres, rng2, nil)
+		if err != nil {
+			t.Errorf("unexpected error: %v", err)
+		}
 
 		if genre != genre2 {
 			t.Errorf("genre not deterministic: %q != %q", genre, genre2)
@@ -88,14 +109,20 @@ func TestIntegration_SeedAndGenreFromEnv(t *testing.T) {
 		os.Setenv("VENTURE_GENRE", "cyberpunk")
 		defer os.Unsetenv("VENTURE_GENRE")
 
-		seed := GetSeedFromEnv(nil)
+		seed, err := GetSeedFromEnv(nil)
+		if err != nil {
+			t.Errorf("unexpected error: %v", err)
+		}
 		if seed <= 0 {
 			t.Errorf("expected positive time-based seed, got %d", seed)
 		}
 
 		genres := []string{"fantasy", "scifi", "horror", "cyberpunk", "postapoc"}
 		rng := rand.New(rand.NewSource(seed))
-		genre := GetGenreFromEnv(genres, rng, nil)
+		genre, err := GetGenreFromEnv(genres, rng, nil)
+		if err != nil {
+			t.Errorf("unexpected error: %v", err)
+		}
 
 		if genre != "cyberpunk" {
 			t.Errorf("expected genre cyberpunk, got %q", genre)
@@ -109,16 +136,22 @@ func TestIntegration_SeedAndGenreFromEnv(t *testing.T) {
 		defer os.Unsetenv("VENTURE_SEED")
 		defer os.Unsetenv("VENTURE_GENRE")
 
-		// Should fall back to time-based seed
-		seed := GetSeedFromEnv(nil)
+		// Should fall back to time-based seed but return error
+		seed, err := GetSeedFromEnv(nil)
+		if err == nil {
+			t.Errorf("expected error for invalid seed")
+		}
 		if seed <= 0 {
 			t.Errorf("expected positive fallback seed, got %d", seed)
 		}
 
-		// Should fall back to random genre
+		// Should fall back to random genre but return error
 		genres := []string{"fantasy", "scifi", "horror", "cyberpunk", "postapoc"}
 		rng := rand.New(rand.NewSource(seed))
-		genre := GetGenreFromEnv(genres, rng, nil)
+		genre, err := GetGenreFromEnv(genres, rng, nil)
+		if err == nil {
+			t.Errorf("expected error for invalid genre")
+		}
 
 		validGenre := false
 		for _, g := range genres {
@@ -144,14 +177,26 @@ func TestIntegration_Determinism(t *testing.T) {
 	genres := []string{"fantasy", "scifi", "horror", "cyberpunk", "postapoc"}
 
 	// First run
-	seed1 := GetSeedFromEnv(nil)
+	seed1, err := GetSeedFromEnv(nil)
+	if err != nil {
+		t.Errorf("unexpected error: %v", err)
+	}
 	rng1 := rand.New(rand.NewSource(seed1))
-	genre1 := GetGenreFromEnv(genres, rng1, nil)
+	genre1, err := GetGenreFromEnv(genres, rng1, nil)
+	if err != nil {
+		t.Errorf("unexpected error: %v", err)
+	}
 
 	// Second run (should be identical)
-	seed2 := GetSeedFromEnv(nil)
+	seed2, err := GetSeedFromEnv(nil)
+	if err != nil {
+		t.Errorf("unexpected error: %v", err)
+	}
 	rng2 := rand.New(rand.NewSource(seed2))
-	genre2 := GetGenreFromEnv(genres, rng2, nil)
+	genre2, err := GetGenreFromEnv(genres, rng2, nil)
+	if err != nil {
+		t.Errorf("unexpected error: %v", err)
+	}
 
 	if seed1 != seed2 {
 		t.Errorf("seeds not identical: %d != %d", seed1, seed2)

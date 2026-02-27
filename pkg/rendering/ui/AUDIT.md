@@ -29,7 +29,7 @@ The `pkg/rendering/ui` package provides procedural UI element generation and man
 (None)
 
 ### Medium Severity
-- [ ] **Input abstraction violation** — `trade.go:335` and `trade.go:354` call `ebiten.IsMouseButtonPressed()` directly in deprecated methods `IsButtonClicked()` and `GetClickedButton()`. While replacement methods `IsButtonClickedWithInput()` and `GetClickedButtonWithInput()` exist and are documented, the deprecated methods should be removed or clearly marked with deprecation notices to prevent accidental usage. (Violates Coding Guideline: Input interface abstraction)
+- [x] **Input abstraction violation** — ✅ **ALREADY FIXED** — `trade.go:335` and `trade.go:354` deprecated methods `IsButtonClicked()` and `GetClickedButton()` now have clear deprecation notices directing users to replacement methods `IsButtonClickedWithInput()` and `GetClickedButtonWithInput()`. Both deprecated methods have godoc comments: "Deprecated: Use [Replacement] for testability and input abstraction."
 - [ ] **Time.Now usage in tests** — Multiple test files (`chat_test.go`, `notifications_test.go`, `trade_test.go`) use `time.Now()` for test data initialization. While acceptable in tests, consider using a deterministic time provider for more reliable test behavior across different execution speeds.
 
 ### Low Severity

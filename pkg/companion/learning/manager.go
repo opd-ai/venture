@@ -294,7 +294,7 @@ func (sp *SkillProgression) AddExperience(skillName string, xp, learningRate flo
 		defaultLogger.WithFields(logrus.Fields{
 			"skill_name": skillName,
 		}).Warn("Skill not found when adding experience")
-		return fmt.Errorf("skill not found: %s", skillName)
+		return fmt.Errorf("%w: %s", ErrSkillNotFound, skillName)
 	}
 
 	adjustedXP := xp * learningRate
@@ -359,7 +359,7 @@ func (sp *SkillProgression) CanLearnSkill(skillName string) (bool, error) {
 		defaultLogger.WithFields(logrus.Fields{
 			"skill_name": skillName,
 		}).Warn("Skill not found in tree")
-		return false, fmt.Errorf("skill not found: %s", skillName)
+		return false, fmt.Errorf("%w: %s", ErrSkillNotFound, skillName)
 	}
 
 	if sp.AvailablePoints < node.Cost {
@@ -368,7 +368,7 @@ func (sp *SkillProgression) CanLearnSkill(skillName string) (bool, error) {
 			"available_points": sp.AvailablePoints,
 			"cost":             node.Cost,
 		}).Debug("Insufficient skill points")
-		return false, fmt.Errorf("insufficient skill points: have %d, need %d", sp.AvailablePoints, node.Cost)
+		return false, fmt.Errorf("%w: have %d, need %d", ErrInsufficientSkillPoints, sp.AvailablePoints, node.Cost)
 	}
 
 	for _, prereq := range node.Prerequisites {
@@ -378,7 +378,7 @@ func (sp *SkillProgression) CanLearnSkill(skillName string) (bool, error) {
 				"skill_name":   skillName,
 				"prerequisite": prereq,
 			}).Error("Prerequisite skill not found")
-			return false, fmt.Errorf("prerequisite not found: %s", prereq)
+			return false, fmt.Errorf("%w: %s", ErrPrerequisiteNotFound, prereq)
 		}
 		if prereqSkill.Level < 1 {
 			defaultLogger.WithFields(logrus.Fields{
@@ -386,7 +386,7 @@ func (sp *SkillProgression) CanLearnSkill(skillName string) (bool, error) {
 				"prerequisite":       prereq,
 				"prerequisite_level": prereqSkill.Level,
 			}).Debug("Prerequisite not met")
-			return false, fmt.Errorf("prerequisite not met: %s", prereq)
+			return false, fmt.Errorf("%w: %s", ErrPrerequisiteNotMet, prereq)
 		}
 	}
 

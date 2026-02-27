@@ -2,7 +2,16 @@ package learning
 
 import (
 	"encoding/json"
+	"errors"
 	"time"
+)
+
+// Sentinel errors for companion learning operations.
+var (
+	ErrSkillNotFound           = errors.New("skill not found")
+	ErrInsufficientSkillPoints = errors.New("insufficient skill points")
+	ErrPrerequisiteNotFound    = errors.New("prerequisite not found")
+	ErrPrerequisiteNotMet      = errors.New("prerequisite not met")
 )
 
 // SkillType represents different companion skill categories.

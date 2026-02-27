@@ -472,6 +472,19 @@ type HousingUIProvider interface {
 	Toggle()
 }
 
+// PrestigeUIProvider provides a subset of prestige UI methods for input system integration.
+// This interface avoids circular dependencies between pkg/engine and pkg/engine/prestige.
+type PrestigeUIProvider interface {
+	// IsVisible returns true if the prestige UI is currently visible
+	IsVisible() bool
+
+	// Hide hides the prestige UI
+	Hide()
+
+	// Show displays the prestige UI for a specific player
+	Show(playerID, className string)
+}
+
 // BehaviorNode is the interface that all behavior tree nodes must implement.
 // Originally from: behavior_tree_nodes.go
 type BehaviorNode interface {

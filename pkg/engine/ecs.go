@@ -40,6 +40,7 @@ type Entity struct {
 	dropShadow        *DropShadowComponent        // Cached for render system drop shadow hot path
 	weatherTint       *WeatherSpriteTintComponent // Cached for render system tint composition hot path
 	creatureGenreTint *CreatureGenreTintComponent // Cached for render system tint composition hot path
+	prestigeComp      Component                   // Cached for prestige visual tier checks (Phase 4.2) - stored as Component to avoid import cycle
 
 	// Integration component caches for cross-system hot paths
 	companionLearning *learning.CompanionLearningComponent      // Cached for companion AI learning system hot path
@@ -99,6 +100,8 @@ func (e *Entity) updateComponentCache(c Component) {
 		e.cacheWeatherSpriteTint(c)
 	case "creature_genre_tint":
 		e.cacheCreatureGenreTint(c)
+	case "prestige":
+		e.cachePrestige(c)
 	case "companion_learning":
 		e.cacheCompanionLearning(c)
 	case "guild_vehicle_fleet":
@@ -223,6 +226,13 @@ func (e *Entity) cacheCreatureGenreTint(c Component) {
 	if ct, ok := c.(*CreatureGenreTintComponent); ok {
 		e.creatureGenreTint = ct
 	}
+}
+
+// cachePrestige updates the prestige component cache.
+// Stores as Component interface to avoid circular import with pkg/engine/prestige.
+func (e *Entity) cachePrestige(c Component) {
+	// Store prestige component directly (type checking happens at runtime via component Type() method)
+	e.prestigeComp = c
 }
 
 // cacheCompanionLearning updates the companion learning component cache.
@@ -451,6 +461,14 @@ func (e *Entity) GetCompanionLearning() *learning.CompanionLearningComponent {
 // Uses cached pointer for zero-overhead access in guild vehicle fleet hot path (~93x faster than map lookup).
 func (e *Entity) GetGuildVehicleFleet() *guild_vehicle.GuildVehicleFleetComponent {
 	return e.guildVehicleFleet
+}
+
+// GetPrestige retrieves the prestige Component if present.
+// Uses cached reference for zero-overhead access in prestige visual tier rendering hot path (~93x faster than map lookup).
+// Returns Component interface to avoid circular imports with pkg/engine/prestige.
+// Callers should use type assertion to access prestige-specific fields.
+func (e *Entity) GetPrestige() Component {
+	return e.prestigeComp
 }
 
 // World manages all entities and systems in the game.

@@ -92,6 +92,9 @@ type EbitenGame struct {
 	// Phase 6.2 (PLAN.md): Dialog System
 	DialogUI *DialogUI // NPC dialog UI (conversations, dialog choices)
 
+	// Phase 4.2 (PLAN.md): Prestige System
+	PrestigeUI PrestigeUIProvider // Prestige and paragon point allocation UI - stored as interface to avoid import cycle
+
 	// Audio system (for settings integration)
 	AudioManager *AudioManager
 
@@ -245,6 +248,7 @@ type uiComponents struct {
 	galleryUI          *GalleryUI         // V8.0 Gallery UI (Phase 49.4)
 	housingUI          *housing.HousingUI // V8.0 Housing UI (Phase 49.1) - INTEGRATION FIX [Category B]
 	guildUI            *GuildUI           // Phase 3.2 Guild UI (PLAN.md)
+	prestigeUI         PrestigeUIProvider // Phase 4.2 Prestige UI (PLAN.md) - stored as interface to avoid import cycle
 }
 
 // initializeUIComponents creates all UI systems in parallel for faster startup.
@@ -316,12 +320,15 @@ func initializeUIComponents(world *World, screenWidth, screenHeight int, setting
 		ui.housingUI = housing.NewHousingUI(screenWidth, screenHeight)
 	}()
 
-	// Group 3: World-dependent with additional dependencies (1 component)
-	wg.Add(1)
+	// Group 3: World-dependent with additional dependencies (2 components)
+	wg.Add(2)
 	go func() {
 		defer wg.Done()
 		ui.guildUI = NewGuildUI(world, nil, screenWidth, screenHeight)
 	}()
+
+	// Note: PrestigeUI initialization happens in handlers.go to avoid circular imports
+	// with pkg/engine/prestige. The PrestigeUI field will be set later during wiring.
 
 	wg.Wait()
 	return ui
@@ -358,8 +365,9 @@ func buildGameInstance(screenWidth, screenHeight int, world *World, logEntry *lo
 		SkillsUI:                  ui.skillsUI,
 		MapUI:                     ui.mapUI,
 		GalleryUI:                 ui.galleryUI,
-		HousingUI:                 ui.housingUI, // V8.0 Housing UI (Phase 49.1) - INTEGRATION FIX [Category B]
-		GuildUI:                   ui.guildUI,   // Phase 3.2 Guild UI (PLAN.md)
+		HousingUI:                 ui.housingUI,  // V8.0 Housing UI (Phase 49.1) - INTEGRATION FIX [Category B]
+		GuildUI:                   ui.guildUI,    // Phase 3.2 Guild UI (PLAN.md)
+		PrestigeUI:                ui.prestigeUI, // Phase 4.2 Prestige UI (PLAN.md)
 		logger:                    logEntry,
 		frameTimeTracker:          core.frameTimeTracker,
 		frameCount:                0,

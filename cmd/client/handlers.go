@@ -531,7 +531,8 @@ type systemsContainer struct {
 	qolSystem  *engine.QoLSystemWrapper // QoL system wrapper for ECS integration
 
 	// Phase 1.3: Prestige System (PLAN.md)
-	prestigeSystem *prestige.System // Post-max-level progression with paragon points and prestige abilities
+	prestigeSystem  *prestige.System  // Post-max-level progression with paragon points and prestige abilities
+	prestigeManager *prestige.Manager // Prestige data manager for paragon allocation and XP tracking
 
 	// Phase 2.1: Economy System (PLAN.md)
 	economySystem *engine.EconomySystem // Cross-server marketplace and guild bank management
@@ -977,7 +978,10 @@ func initializeProgressionSystems(game *engine.EbitenGame, sys *systemsContainer
 
 	// Phase 1.3: Prestige system
 	sys.prestigeSystem = prestige.NewSystemWithLogger(logger)
-	logging.ComponentLogger(logger, "prestige").Debug("Created prestige system")
+	sys.prestigeManager = prestige.NewManagerWithLogger(logger)
+	logging.ComponentLogger(logger, "prestige").Debug("Created prestige system and manager")
+
+	// Note: Prestige UI creation and wiring happens in initializePrestigeUI() to avoid timing issues
 
 	// Phase 2.1: Economy system
 	// Note: serverID is "local" for client-side economy tracking. In multiplayer mode,
@@ -3021,6 +3025,25 @@ func connectAdvancedUIComponents(game *engine.EbitenGame, inputSystem *engine.In
 			game.TerritoryUI.Toggle()
 		})
 	}
+	if game.PrestigeUI != nil {
+		inputSystem.SetPrestigeUI(game.PrestigeUI)
+		inputSystem.SetPrestigeCallback(func() {
+			// Toggle prestige UI visibility
+			if game.PrestigeUI.IsVisible() {
+				game.PrestigeUI.Hide()
+			} else {
+				// Show UI for current player
+				if game.PlayerEntity != nil {
+					playerID := fmt.Sprintf("%d", game.PlayerEntity.ID)
+					className := "Unknown"
+					if charData := game.GetPendingCharacterData(); charData != nil {
+						className = charData.Class.String()
+					}
+					game.PrestigeUI.Show(playerID, className)
+				}
+			}
+		})
+	}
 	// INTEGRATION FIX [Category B]: V8.0 Housing UI ESC key handling (Phase 49.1)
 	// Gap: SetHousingUI was defined but never called, so ESC key couldn't close HousingUI
 	// Fix: Wire HousingUI to InputSystem for ESC key dual-exit pattern
@@ -3188,6 +3211,7 @@ func initializeUIIntegration(game *engine.EbitenGame, player *engine.Entity, com
 	initializeGuildAndTradeUI(game, player, sys, clientLogger)
 	initializeAdvancedAndTerritoryUI(game, player, sys, clientLogger)
 	initializeStoryAndDialogUI(game, player, sys, clientLogger)
+	initializePrestigeUI(game, player, sys, clientLogger)
 	craftingUI := initializeCraftingAndMailboxUI(game, player, craftingSystem, inventorySystem, clientLogger)
 
 	return shopUI, craftingUI
@@ -3311,6 +3335,56 @@ func initializeCraftingAndMailboxUI(game *engine.EbitenGame, player *engine.Enti
 	game.SetInventorySystem(inventorySystem)
 
 	return craftingUI
+}
+
+// initializePrestigeUI wires the prestige UI to the player entity.
+func initializePrestigeUI(game *engine.EbitenGame, player *engine.Entity, sys *systemsContainer, clientLogger *logrus.Entry) {
+	// Create prestige UI if not already initialized
+	if game.PrestigeUI == nil {
+		game.PrestigeUI = prestige.NewPrestigeUI(*width, *height, sys.prestigeManager)
+
+		// Set UI callbacks
+		game.PrestigeUI.SetBackCallback(func() {
+			// Hide prestige UI when back is pressed
+			game.PrestigeUI.Hide()
+		})
+		game.PrestigeUI.SetRespecCallback(func(cost int) bool {
+			// TODO: Check if player has enough gold for respec
+			// For now, always allow respec (will be wired to inventory system)
+			return true
+		})
+
+		clientLogger.Debug("created prestige UI with callbacks")
+	}
+
+	// Get player ID from player entity
+	playerID := fmt.Sprintf("%d", player.ID)
+
+	// Get player class from character data
+	className := "Unknown"
+	if charData := game.GetPendingCharacterData(); charData != nil {
+		className = charData.Class.String()
+	}
+
+	// Initialize prestige data for player if not exists
+	if sys.prestigeManager != nil {
+		if _, err := sys.prestigeManager.GetPlayer(playerID); err != nil {
+			// Create prestige data for new player
+			if err := sys.prestigeManager.CreatePlayer(playerID, className, "default-account"); err != nil {
+				clientLogger.WithError(err).Warn("failed to create prestige data for player")
+			} else {
+				clientLogger.WithFields(logrus.Fields{
+					"playerID":  playerID,
+					"className": className,
+				}).Debug("created prestige data for player")
+			}
+		}
+	}
+
+	// Wire prestige UI input via input system (will be called in input system handler)
+	if *verbose {
+		clientLogger.Info("prestige UI initialized (P key to open)")
+	}
 }
 
 // applyCharacterClass applies character class stats if character data is pending.

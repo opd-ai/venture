@@ -177,6 +177,11 @@ func (p *PrestigeUI) SetInputProvider(provider engine.InputProvider) {
 	p.inputProvider = provider
 }
 
+// SetManager sets the prestige manager for data operations.
+func (p *PrestigeUI) SetManager(manager *Manager) {
+	p.manager = manager
+}
+
 // SetBackCallback sets the callback function called when "Back" is selected.
 func (p *PrestigeUI) SetBackCallback(callback func()) {
 	p.onBack = callback

@@ -309,6 +309,7 @@ type InputSystem struct {
 	KeyClasses   ebiten.Key // X key for advanced classes (Phase 4.2) - Changed from A to avoid WASD conflict
 	KeyTerritory ebiten.Key // Y key for territory control (Phase 4.3)
 	KeyGuild     ebiten.Key // O key for guild management (Phase 3.2) - Changed from U to avoid Achievements conflict
+	KeyPrestige  ebiten.Key // P key for prestige and paragon points (Phase 1.3)
 
 	// INTEGRATION FIX [Category B]: V8.0 UI key bindings
 	// Gap: Housing and Gallery UIs created but no key binding fields
@@ -340,11 +341,12 @@ type InputSystem struct {
 	mapUI           *EbitenMapUI
 	craftingUI      *CraftingUI
 	shopUI          *ShopUI
-	tradeUI         *TradeUI          // Phase 3.3 (PLAN.md): Trade UI for T key toggle
-	advancedClassUI *AdvancedClassUI  // Phase 4.2 (PLAN.md): Advanced class UI for A key toggle
-	territoryUI     *TerritoryUI      // Phase 4.3 (PLAN.md): Territory UI for Y key toggle
-	dialogUI        *DialogUI         // Phase 6.2 (PLAN.md): Dialog UI for D key toggle
-	housingUI       HousingUIProvider // INTEGRATION FIX [Category B]: V8.0 Housing UI ESC key handling (Phase 49.1)
+	tradeUI         *TradeUI           // Phase 3.3 (PLAN.md): Trade UI for T key toggle
+	advancedClassUI *AdvancedClassUI   // Phase 4.2 (PLAN.md): Advanced class UI for A key toggle
+	territoryUI     *TerritoryUI       // Phase 4.3 (PLAN.md): Territory UI for Y key toggle
+	dialogUI        *DialogUI          // Phase 6.2 (PLAN.md): Dialog UI for D key toggle
+	prestigeUI      PrestigeUIProvider // Phase 1.3 (PLAN.md): Prestige UI for P key toggle
+	housingUI       HousingUIProvider  // INTEGRATION FIX [Category B]: V8.0 Housing UI ESC key handling (Phase 49.1)
 
 	// Mobile input support
 	touchHandler    *mobile.TouchInputHandler
@@ -376,6 +378,7 @@ type InputSystem struct {
 	onTerritoryOpen    func() // Callback for territory UI toggle (Phase 4.3)
 	onGuildOpen        func() // Callback for guild UI toggle (Phase 3.2)
 	onDialogOpen       func() // Callback for dialog UI toggle (Phase 6.2)
+	onPrestigeOpen     func() // Callback for prestige UI toggle (Phase 1.3)
 	onCycleTargets     func()
 	onMenuToggle       func() // Callback for ESC menu toggle
 	onInteract         func() // Callback for F key NPC/merchant interaction
@@ -434,6 +437,7 @@ func NewInputSystem() *InputSystem {
 		KeyClasses:   ebiten.KeyX, // Phase 4.2: Advanced Classes UI - Changed from A to avoid WASD conflict
 		KeyTerritory: ebiten.KeyY, // Phase 4.3: Territory UI
 		KeyGuild:     ebiten.KeyO, // Phase 3.2: Guild UI - Changed from U to avoid Achievements conflict
+		KeyPrestige:  ebiten.KeyP, // Phase 1.3: Prestige UI
 		KeyHousing:   ebiten.KeyH, // Phase 49.1: Housing UI (V8.0)
 		KeyGallery:   ebiten.KeyG, // Phase 49.4: Gallery UI (V8.0)
 
@@ -739,6 +743,12 @@ func (s *InputSystem) handleShopUIEscapeActions() bool {
 		return true
 	}
 
+	// Phase 1.3 (PLAN.md): Close prestige UI on ESC
+	if s.prestigeUI != nil && s.prestigeUI.IsVisible() {
+		s.prestigeUI.Hide()
+		return true
+	}
+
 	if s.mailboxUI != nil && s.mailboxUI.IsOpen() {
 		s.mailboxUI.Close()
 		return true
@@ -867,6 +877,9 @@ func (s *InputSystem) handlePhaseUIShortcuts() {
 	}
 	if inpututil.IsKeyJustPressed(s.KeyGuild) && s.onGuildOpen != nil {
 		s.onGuildOpen()
+	}
+	if inpututil.IsKeyJustPressed(s.KeyPrestige) && s.onPrestigeOpen != nil {
+		s.onPrestigeOpen()
 	}
 	if inpututil.IsKeyJustPressed(s.KeyHousing) && s.onHousingOpen != nil {
 		s.onHousingOpen()
@@ -1596,6 +1609,11 @@ func (s *InputSystem) SetDialogUI(dialogUI *DialogUI) {
 	s.dialogUI = dialogUI
 }
 
+// SetPrestigeUI sets the prestige UI reference for P key toggle and ESC key handling (Phase 1.3)
+func (s *InputSystem) SetPrestigeUI(prestigeUI PrestigeUIProvider) {
+	s.prestigeUI = prestigeUI
+}
+
 // SetHousingUI sets the housing UI reference for H key toggle and ESC key handling
 // INTEGRATION FIX [Category B]: V8.0 Housing UI ESC key handling (Phase 49.1)
 // Gap: InputSystem had no way to close HousingUI with ESC key
@@ -1726,6 +1744,16 @@ func (s *InputSystem) SetGuildCallback(callback func()) error {
 		return fmt.Errorf("guild callback cannot be nil")
 	}
 	s.onGuildOpen = callback
+	return nil
+}
+
+// SetPrestigeCallback sets the callback function for opening prestige UI (P key).
+// Phase 1.3 (PLAN.md): Prestige system UI integration for paragon point allocation.
+func (s *InputSystem) SetPrestigeCallback(callback func()) error {
+	if callback == nil {
+		return fmt.Errorf("prestige callback cannot be nil")
+	}
+	s.onPrestigeOpen = callback
 	return nil
 }
 

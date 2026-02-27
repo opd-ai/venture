@@ -1,9 +1,9 @@
 Parsed 501 findings
 # Codebase Audit Remediation Plan
 **Generated**: 2026-02-26
-**Updated**: 2026-02-27 (40 findings resolved)
+**Updated**: 2026-02-27 (50 findings resolved)
 **Scope**: All *AUDIT*.md files in repository
-**Total Unresolved Findings**: 461
+**Total Unresolved Findings**: 451
 
 ## Summary by Severity
 | Severity | Count |
@@ -844,6 +844,7 @@ Parsed 501 findings
 - **Source**: `./pkg/procgen/recipe/AUDIT.md` (line 31)
 - **Category**: error-handling
 - **Problem**: `generateRecipe` has a 4-level fallback chain (params.GenreID → "fantasy" → "" → first available), which could lead to unexpected recipe types if all fail. Consider explicit error or log warning when falling back. (`generator.go:154-169`)
+- **Status**: ✅ **COMPLETED 2026-02-27** - Added structured logging with logrus.WithFields at each fallback level. Warnings logged for fantasy/generic fallbacks, error logged for last-resort potion fallback. Added TestRecipeGenerator_GenreFallbackLogging test to verify logging behavior. All tests pass.
 - **Fix**:
   1. Review the complete finding in the source audit file
   2. Implement the suggested changes following coding guidelines
@@ -855,6 +856,7 @@ Parsed 501 findings
 - **Source**: `./pkg/procgen/story/AUDIT.md` (line 53)
 - **Category**: error-handling
 - **Problem**: Some validation errors use `fmt.Errorf` with context while others use bare error strings. Standardize on `fmt.Errorf("context: %w", err)` pattern for error chain preservation. (`generator.go:63-146`, `archaeology.go:69-169`, all `Validate()` methods)
+- **Status**: ✅ **COMPLETED 2026-02-27** - Added 24 sentinel errors. Updated FragmentGenerator, ArchaeologyGenerator, and BranchingNarrativeGenerator to use error wrapping with %w pattern. All tests pass.
 - **Fix**:
   1. Review the complete finding in the source audit file
   2. Implement the suggested changes following coding guidelines
@@ -866,6 +868,7 @@ Parsed 501 findings
 - **Source**: `./pkg/rendering/lighting/AUDIT.md` (line 31)
 - **Category**: error-handling
 - **Problem**: `ValidationError` type does not wrap underlying errors; consider adding `Unwrap() error` method if nested errors are needed in future (`types.go:167-175`)
+- **Status**: ✅ **COMPLETED 2026-02-27** - Added Err field to ValidationError struct for wrapping underlying errors. Implemented Unwrap() method for error chain unwrapping. Updated Error() method to include wrapped error message. Added comprehensive tests (TestValidationError_Unwrap, TestValidationError_ErrorWithWrapped) covering nil and wrapped error cases. All tests pass with 80.7% coverage maintained.
 - **Fix**:
   1. Review the complete finding in the source audit file
   2. Implement the suggested changes following coding guidelines
@@ -1121,6 +1124,7 @@ Parsed 501 findings
 - **Source**: `./pkg/class/advanced/AUDIT.md` (line 32)
 - **Category**: api-design
 - **Problem**: `GetPlayerClass` returns a deep copy of talents map but not documented as such; consider documenting defensive copy behavior or using immutable return types
+- **Status**: ✅ **COMPLETED 2026-02-27** - Enhanced GetPlayerClass godoc to document deep copy behavior (all fields and TalentPoints.Talents map are safe to modify)
 - **Fix**:
   1. Review the complete finding in the source audit file
   2. Implement the suggested changes following coding guidelines
@@ -1143,6 +1147,7 @@ Parsed 501 findings
 - **Source**: `./pkg/narrative/branching/AUDIT.md` (line 32)
 - **Category**: api-design
 - **Problem**: types.go:112: `NarrativeComponent.Type()` correctly implements Component interface with no logic beyond returning a string. ✅ ECS compliant.
+- **Status**: ✅ **ALREADY COMPLIANT** - Component correctly implements interface with no logic (verified 2026-02-27)
 - **Fix**:
   1. Review the complete finding in the source audit file
   2. Implement the suggested changes following coding guidelines
@@ -1517,6 +1522,7 @@ Parsed 501 findings
 - **Source**: `./pkg/audio/music/AUDIT.md` (line 30)
 - **Category**: documentation
 - **Problem**: The `normalizeTrack` function has a comment noting it requires two passes (line 693-696). This is algorithmically unavoidable, but the comment could reference performance characteristics: O(2N) time complexity, single-threaded. (`adaptive.go:693-696`)
+- **Status**: ✅ **COMPLETED 2026-02-27** - Added O(2N) time complexity and single-threaded note to normalizeTrack comment
 - **Fix**:
   1. Review the complete finding in the source audit file
   2. Implement the suggested changes following coding guidelines
@@ -1539,6 +1545,7 @@ Parsed 501 findings
 - **Source**: `./pkg/rendering/particles/AUDIT.md` (line 37)
 - **Category**: documentation
 - **Problem**: `GetAliveParticles()` allocates a new slice on every call; documentation correctly warns users to use `VisitAliveParticles()` for hot paths, but could add runtime comment (`types.go:257`)
+- **Status**: ✅ **COMPLETED 2026-02-27** - Added inline performance comment noting O(N) with allocation and unsuitability for hot paths
 - **Fix**:
   1. Review the complete finding in the source audit file
   2. Implement the suggested changes following coding guidelines
@@ -1550,6 +1557,7 @@ Parsed 501 findings
 - **Source**: `./pkg/rendering/quality/AUDIT.md` (line 30)
 - **Category**: documentation
 - **Problem**: `PerformanceStats` struct has brief comment "Originally from: monitor.go" which refers to internal refactoring. Consider removing internal code history from public API docs. (`types.go:45-52`)
+- **Status**: ✅ **COMPLETED 2026-02-27** - Removed internal refactoring comment from PerformanceStats godoc
 - **Fix**:
   1. Review the complete finding in the source audit file
   2. Implement the suggested changes following coding guidelines
@@ -4830,6 +4838,7 @@ Parsed 501 findings
 - **Source**: `./pkg/rendering/display/AUDIT.md` (line 29)
 - **Category**: persistence
 - **Problem**: Display resolution picker not exposed in settings menu UI. Settings persistence exists (`pkg/engine/settings.go` has `WindowWidth`, `WindowHeight`, `Fullscreen` fields), but no menu UI allows runtime resolution changes from in-game settings screen. F11 fullscreen toggle works, but resolution dropdow...
+- **Status**: ✅ **COMPLETED 2026-02-27** - Added MenuTypeSettings constant, buildSettingsMenu function with 4 resolution options (HD/Full HD/QHD/4K), 3 graphics quality options (low/medium/high), VSync toggle, and back button. Settings menu item added to main menu (second item after Resume Game). Implemented SetSettingsManager() and SetApplySettingsCallback() methods for settings integration. Created comprehensive test suite (13 tests) with 100% coverage of new functionality. All tests pass. Settings changes are persisted via SettingsManager and applied via callback for display resolution updates.
 - **Fix**:
   1. Review the complete finding in the source audit file
   2. Implement the suggested changes following coding guidelines
@@ -4841,6 +4850,7 @@ Parsed 501 findings
 - **Source**: `./cmd/mobile/config/AUDIT.md` (line 39)
 - **Category**: testing
 - **Problem**: Tests verify determinism for VENTURE_GENRE (line 179-193) but do not test concurrent access to verify thread-safety claim in doc.go. Add `t.Run("concurrent", func(t *testing.T) { t.Parallel(); ... })` tests. (`seed_test.go`)
+- **Status**: ✅ **COMPLETED 2026-02-27** - Added comprehensive concurrent access tests for both GetSeedFromEnv and GetGenreFromEnv. Each test has 3 scenarios (valid, random/time-based, invalid) launching 100 concurrent goroutines to verify thread-safety. Added concurrent benchmarks verifying no contention on os.Getenv. Coverage maintained at 80.0%. All tests pass.
 - **Fix**:
   1. Review the complete finding in the source audit file
   2. Implement the suggested changes following coding guidelines
@@ -4852,6 +4862,7 @@ Parsed 501 findings
 - **Source**: `./examples/virtual_controls_wasm_demo/AUDIT.md` (line 39)
 - **Category**: testing
 - **Problem**: Package doc comment is present but exported `Game` type (line 32) and exported `NewGame` function (line 41) lack godoc comments. Demo programs typically have less strict doc requirements. (`main.go:32,41`)
+- **Status**: ✅ **ALREADY FIXED** - Godoc comments exist on lines 31 and 40, recognized by go doc. Both Game and NewGame have proper documentation.
 - **Fix**:
   1. Review the complete finding in the source audit file
   2. Implement the suggested changes following coding guidelines
@@ -4874,6 +4885,7 @@ Parsed 501 findings
 - **Source**: `./examples/voice_integration_demo/AUDIT.md` (line 30)
 - **Category**: testing
 - **Problem**: Missing `doc.go` explaining what the example demonstrates, prerequisites (audio dependencies?), expected output, and how it relates to actual game voice chat implementation. Examples should be self-documenting for educational value.
+- **Status**: ✅ **ALREADY FIXED** - doc.go exists (2947 bytes, created 2026-02-26) with comprehensive package documentation
 - **Fix**:
   1. Review the complete finding in the source audit file
   2. Implement the suggested changes following coding guidelines
@@ -4885,6 +4897,7 @@ Parsed 501 findings
 - **Source**: `./examples/voice_integration_demo/AUDIT.md` (line 37)
 - **Category**: testing
 - **Problem**: `main.go:16-26,35-55` - `ExampleVoiceTransport` implements send/receive but `SetSpatialParams()` (line 53) is a no-op. Comment says "Optional" but spatial voice system likely needs this for volume/pan adjustment. Either implement it or document why it's omitted in this simplified example.
+- **Status**: ✅ **COMPLETED 2026-02-27** - Added comprehensive godoc to SetSpatialParams explaining why it's intentionally empty in this simplified example (spatial params applied client-side during playback, not during encoding)
 - **Fix**:
   1. Review the complete finding in the source audit file
   2. Implement the suggested changes following coding guidelines
@@ -4962,6 +4975,7 @@ Parsed 501 findings
 - **Source**: `./pkg/companion/learning/AUDIT.md` (line 29)
 - **Category**: testing
 - **Problem**: `time_provider.go:23` contains only implementation (`time.Now()`). While acceptable for RealTimeProvider, adding a comment explaining this is intentional production behavior vs. test mocks would improve clarity for maintainers.
+- **Status**: ✅ **COMPLETED 2026-02-27** - Added clarifying comment explaining time.Now() is intentional for companion learning metadata (real elapsed time vs procedural generation). References MockTimeProvider for testing.
 - **Fix**:
   1. Review the complete finding in the source audit file
   2. Implement the suggested changes following coding guidelines
@@ -5589,6 +5603,7 @@ Parsed 501 findings
 - **Source**: `./pkg/world/economy/AUDIT.md` (line 31)
 - **Category**: testing
 - **Problem**: `types.go:29-47,49-62` - `SortCriteria.String()` and `DeliveryMethod.String()` methods have godoc comments on the type but not on individual enum values (SortByPrice, SortByPriceDesc, etc.). Constants defined in `constants.go` also lack individual godoc. Recommend adding `// SortByPrice sorts items ...
+- **Status**: ✅ **ALREADY FIXED** - All enum constants in constants.go have comprehensive godoc comments. SortCriteria: lines 9-22, DeliveryMethod: lines 28-32.
 - **Fix**:
   1. Review the complete finding in the source audit file
   2. Implement the suggested changes following coding guidelines

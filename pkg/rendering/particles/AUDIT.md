@@ -34,7 +34,7 @@ None identified.
 ### Low Severity
 - [ ] **Documentation** — Package-level doc.go is comprehensive (218 lines) but individual complex functions like `ApplyPhysics` could benefit from inline algorithm comments explaining the physics formulas (`behaviors.go:92`)
 - [ ] **Documentation** — Weather system puddle accumulation and snow drift algorithms lack inline comments explaining the mathematical approach (`weather.go:300-400` range)
-- [ ] **Performance** — `GetAliveParticles()` allocates a new slice on every call; documentation correctly warns users to use `VisitAliveParticles()` for hot paths, but could add runtime comment (`types.go:257`)
+- [x] **Performance** — `GetAliveParticles()` allocates a new slice on every call; documentation correctly warns users to use `VisitAliveParticles()` for hot paths, but could add runtime comment (`types.go:257`) (FIXED 2026-02-27: Added inline performance comment noting O(N) with allocation)
 
 ## Input Integration
 | Input Source | Status | Notes |

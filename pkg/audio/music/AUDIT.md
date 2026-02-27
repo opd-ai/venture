@@ -27,7 +27,7 @@ The `pkg/audio/music` package provides procedural music composition with adaptiv
 
 ### Low Severity
 - [ ] **Documentation** — The `adaptive.go` file has a comment about RNG state affecting reproducibility (line 4-17). While this is intentional and documented, consider adding a `GenerateReproducible(duration float64, freshSeed int64)` helper method that creates a temporary composer for fully deterministic output if needed for testing or replay features. (`adaptive.go:4-17`)
-- [ ] **Code organization** — The `normalizeTrack` function has a comment noting it requires two passes (line 693-696). This is algorithmically unavoidable, but the comment could reference performance characteristics: O(2N) time complexity, single-threaded. (`adaptive.go:693-696`)
+- [x] **Code organization** — The `normalizeTrack` function has a comment noting it requires two passes (line 693-696). This is algorithmically unavoidable, but the comment could reference performance characteristics: O(2N) time complexity, single-threaded. (`adaptive.go:693-696`) (FIXED 2026-02-27: Added O(2N) performance characteristic to comment)
 - [ ] **Testing** — The genre consistency test (`genre_consistency_test.go`) could be expanded to verify scale intervals match expected music theory values (e.g., Major = Ionian mode intervals 0,2,4,5,7,9,11). Current test only verifies scale names. (`genre_consistency_test.go:1-87`)
 
 ## Input Integration

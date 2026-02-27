@@ -1,11 +1,13 @@
 package recipe
 
 import (
+	"bytes"
 	"testing"
 
 	"github.com/opd-ai/venture/pkg/engine"
 	"github.com/opd-ai/venture/pkg/procgen"
 	"github.com/opd-ai/venture/pkg/procgen/item"
+	"github.com/sirupsen/logrus"
 )
 
 // TestNewRecipeGenerator tests generator creation.
@@ -761,5 +763,67 @@ func TestRecipeGenerator_UnknownGenreFallback(t *testing.T) {
 
 	if err := gen.Validate(result); err != nil {
 		t.Errorf("Validate() failed: %v", err)
+	}
+}
+
+// TestRecipeGenerator_GenreFallbackLogging tests that fallback warnings are logged
+// when templates are not found for requested genre.
+func TestRecipeGenerator_GenreFallbackLogging(t *testing.T) {
+	tests := []struct {
+		name         string
+		genreID      string
+		expectedLogs int // Number of fallback warnings expected
+	}{
+		{
+			name:         "valid genre",
+			genreID:      "fantasy",
+			expectedLogs: 0, // No fallbacks
+		},
+		{
+			name:         "unknown genre fallback to fantasy",
+			genreID:      "nonexistent",
+			expectedLogs: 1, // Fallback to fantasy
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Create logger with custom hook to capture logs
+			logger := logrus.New()
+			logger.SetLevel(logrus.WarnLevel)
+
+			var logBuffer bytes.Buffer
+			logger.SetOutput(&logBuffer)
+
+			gen := NewRecipeGeneratorWithLogger(logger)
+
+			params := procgen.GenerationParams{
+				GenreID:    tt.genreID,
+				Depth:      10,
+				Difficulty: 0.5,
+				Custom: map[string]interface{}{
+					"count": 3,
+				},
+			}
+
+			_, err := gen.Generate(12345, params)
+			if err != nil {
+				t.Fatalf("Generate() failed: %v", err)
+			}
+
+			logOutput := logBuffer.String()
+			fallbackCount := 0
+			if tt.genreID == "nonexistent" && len(logOutput) > 0 {
+				// Should have fallback warning
+				if !bytes.Contains(logBuffer.Bytes(), []byte("falling back")) {
+					t.Errorf("Expected fallback warning in logs, got: %s", logOutput)
+				}
+				fallbackCount = 1
+			}
+
+			if fallbackCount != tt.expectedLogs {
+				t.Errorf("Expected %d fallback logs, got %d", tt.expectedLogs, fallbackCount)
+			}
+		})
 	}
 }

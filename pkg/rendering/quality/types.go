@@ -42,7 +42,6 @@ func (q QualityLevel) String() string {
 }
 
 // PerformanceStats contains detailed performance metrics.
-// Originally from: monitor.go
 type PerformanceStats struct {
 	AverageFPS     float64
 	MinFPS         float64

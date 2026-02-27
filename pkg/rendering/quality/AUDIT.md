@@ -27,7 +27,7 @@ None
 
 ### Low Severity
 - [ ] **Component Serialization** — `QualitySettingsComponent` lacks `Serialize()/Deserialize()` methods. If quality overrides should persist across save/load, implement ComponentSerializer interface. Current design treats quality as runtime-only configuration which may be intentional. (`quality_settings_component.go:8-33`)
-- [ ] **Documentation** — `PerformanceStats` struct has brief comment "Originally from: monitor.go" which refers to internal refactoring. Consider removing internal code history from public API docs. (`types.go:45-52`)
+- [x] **Documentation** — `PerformanceStats` struct has brief comment "Originally from: monitor.go" which refers to internal refactoring. Consider removing internal code history from public API docs. (`types.go:45-52`) (FIXED 2026-02-27: Removed internal refactoring comment)
 - [ ] **Concurrency** — `AutoAdjuster.Update()` holds write lock during entire update including callback invocation. If callback is slow, this could block updates. Consider releasing lock before callback or document that callbacks must be fast. (`auto_adjuster.go:56-82`)
 
 ## Input Integration

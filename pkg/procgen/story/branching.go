@@ -53,7 +53,7 @@ func (g *BranchingNarrativeGenerator) Generate(seed int64, params procgen.Genera
 			"seed":       seed,
 			"difficulty": params.Difficulty,
 		}).Error("invalid difficulty parameter for branching narrative generation")
-		return nil, fmt.Errorf("difficulty must be between 0 and 1, got %.2f", params.Difficulty)
+		return nil, fmt.Errorf("%w, got %.2f", ErrInvalidDifficulty, params.Difficulty)
 	}
 
 	log.WithFields(log.Fields{
@@ -110,7 +110,7 @@ func (g *BranchingNarrativeGenerator) Generate(seed int64, params procgen.Genera
 func (g *BranchingNarrativeGenerator) Validate(result interface{}) error {
 	narrative, ok := result.(*BranchingNarrative)
 	if !ok {
-		return fmt.Errorf("result is not a *BranchingNarrative")
+		return ErrInvalidType
 	}
 
 	if err := validateChoicePoints(narrative); err != nil {
@@ -135,10 +135,10 @@ func (g *BranchingNarrativeGenerator) Validate(result interface{}) error {
 // validateChoicePoints checks that narrative has valid number of choice points.
 func validateChoicePoints(narrative *BranchingNarrative) error {
 	if len(narrative.ChoicePoints) < 1 {
-		return fmt.Errorf("no choice points in branching narrative")
+		return ErrNoChoicePoints
 	}
 	if len(narrative.ChoicePoints) > 3 {
-		return fmt.Errorf("too many choice points: %d, maximum 3", len(narrative.ChoicePoints))
+		return fmt.Errorf("%w: %d, maximum 3", ErrTooManyChoicePoints, len(narrative.ChoicePoints))
 	}
 	return nil
 }
@@ -146,10 +146,10 @@ func validateChoicePoints(narrative *BranchingNarrative) error {
 // validatePaths checks that narrative has valid number of paths.
 func validatePaths(narrative *BranchingNarrative) error {
 	if len(narrative.Paths) < 2 {
-		return fmt.Errorf("too few paths: %d, minimum 2", len(narrative.Paths))
+		return fmt.Errorf("%w: %d, minimum 2", ErrTooFewPaths, len(narrative.Paths))
 	}
 	if len(narrative.Paths) > 8 {
-		return fmt.Errorf("too many paths: %d, maximum 8", len(narrative.Paths))
+		return fmt.Errorf("%w: %d, maximum 8", ErrTooManyPaths, len(narrative.Paths))
 	}
 	return nil
 }
@@ -157,7 +157,7 @@ func validatePaths(narrative *BranchingNarrative) error {
 // validateCommonFragments checks that narrative has common fragments.
 func validateCommonFragments(narrative *BranchingNarrative) error {
 	if len(narrative.CommonFrags) < 1 {
-		return fmt.Errorf("no common fragments")
+		return ErrNoCommonFragments
 	}
 	return nil
 }
@@ -165,7 +165,7 @@ func validateCommonFragments(narrative *BranchingNarrative) error {
 // validateCoherence checks that narrative has acceptable coherence score.
 func validateCoherence(narrative *BranchingNarrative) error {
 	if narrative.Coherence < 0.5 {
-		return fmt.Errorf("narrative coherence too low: %.2f, minimum 0.5", narrative.Coherence)
+		return fmt.Errorf("%w: %.2f, minimum 0.5", ErrLowCoherence, narrative.Coherence)
 	}
 	return nil
 }
@@ -174,10 +174,10 @@ func validateCoherence(narrative *BranchingNarrative) error {
 func validatePathContents(narrative *BranchingNarrative) error {
 	for i, path := range narrative.Paths {
 		if len(path.Fragments) < 2 {
-			return fmt.Errorf("path %d has too few fragments: %d", i, len(path.Fragments))
+			return fmt.Errorf("%w: path %d has %d fragments", ErrPathTooFewFragments, i, len(path.Fragments))
 		}
 		if path.Outcome == "" {
-			return fmt.Errorf("path %d has no outcome", i)
+			return fmt.Errorf("%w: path %d", ErrPathNoOutcome, i)
 		}
 	}
 	return nil

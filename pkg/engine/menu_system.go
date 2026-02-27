@@ -24,6 +24,7 @@ const (
 	MenuTypeSave
 	MenuTypeLoad
 	MenuTypeConfirm
+	MenuTypeSettings
 )
 
 // MenuItem represents a single menu option.
@@ -62,6 +63,10 @@ type EbitenMenuSystem struct {
 	// Callbacks for save/load operations
 	onSave func(name string) error
 	onLoad func(name string) error
+
+	// Settings and display management
+	settingsManager *SettingsManager
+	onApplySettings func(GameSettings) error
 
 	// Menu component reference (stored on a dedicated menu entity)
 	menuEntity *Entity
@@ -126,6 +131,22 @@ func (ms *EbitenMenuSystem) SetLoadCallback(callback func(name string) error) {
 	if ms.logger != nil {
 		ms.logger.Debug("Load callback configured")
 	}
+}
+
+// SetSettingsManager sets the settings manager reference for settings menu.
+func (ms *EbitenMenuSystem) SetSettingsManager(manager *SettingsManager) {
+	if ms.logger != nil {
+		ms.logger.WithField("manager_set", manager != nil).Debug("Setting settings manager")
+	}
+	ms.settingsManager = manager
+}
+
+// SetApplySettingsCallback sets the callback for applying settings changes.
+func (ms *EbitenMenuSystem) SetApplySettingsCallback(callback func(GameSettings) error) {
+	if ms.logger != nil {
+		ms.logger.WithField("callback_set", callback != nil).Debug("Setting apply settings callback")
+	}
+	ms.onApplySettings = callback
 }
 
 // Toggle opens or closes the main menu.
@@ -542,6 +563,24 @@ func (ms *EbitenMenuSystem) buildMainMenu(menu *MenuComponent) {
 	}
 	menu.Items = []MenuItem{
 		{
+			Label:   "Resume Game",
+			Enabled: true,
+			Action: func() error {
+				menu.Active = false
+				return nil
+			},
+		},
+		{
+			Label:   "Settings",
+			Enabled: true,
+			Action: func() error {
+				menu.MenuStack = append(menu.MenuStack, menu.CurrentMenu)
+				menu.CurrentMenu = MenuTypeSettings
+				ms.buildSettingsMenu(menu)
+				return nil
+			},
+		},
+		{
 			Label:   "Save Game",
 			Enabled: true,
 			Action: func() error {
@@ -558,14 +597,6 @@ func (ms *EbitenMenuSystem) buildMainMenu(menu *MenuComponent) {
 				menu.MenuStack = append(menu.MenuStack, menu.CurrentMenu)
 				menu.CurrentMenu = MenuTypeLoad
 				ms.buildLoadMenu(menu)
-				return nil
-			},
-		},
-		{
-			Label:   "Resume Game",
-			Enabled: true,
-			Action: func() error {
-				menu.Active = false
 				return nil
 			},
 		},
@@ -922,6 +953,198 @@ func (ms *EbitenMenuSystem) buildConfirmMenu(menu *MenuComponent) {
 	}
 }
 
+// buildSettingsMenu constructs the settings menu with resolution and graphics options.
+func (ms *EbitenMenuSystem) buildSettingsMenu(menu *MenuComponent) {
+	if ms.logger != nil {
+		ms.logger.Debug("Building settings menu")
+	}
+
+	// Get current settings
+	var currentSettings GameSettings
+	if ms.settingsManager != nil {
+		currentSettings = ms.settingsManager.GetSettings()
+	} else {
+		currentSettings = DefaultSettings()
+	}
+
+	menu.Items = []MenuItem{
+		ms.createResolutionMenuItem(&currentSettings, 1280, 720, "HD (1280x720)", menu),
+		ms.createResolutionMenuItem(&currentSettings, 1920, 1080, "Full HD (1920x1080)", menu),
+		ms.createResolutionMenuItem(&currentSettings, 2560, 1440, "QHD (2560x1440)", menu),
+		ms.createResolutionMenuItem(&currentSettings, 3840, 2160, "4K UHD (3840x2160)", menu),
+		ms.createGraphicsQualityMenuItem(&currentSettings, "low", menu),
+		ms.createGraphicsQualityMenuItem(&currentSettings, "medium", menu),
+		ms.createGraphicsQualityMenuItem(&currentSettings, "high", menu),
+		ms.createVSyncToggleMenuItem(&currentSettings, menu),
+		{
+			Label:   "< Back",
+			Enabled: true,
+			Action: func() error {
+				if len(menu.MenuStack) > 0 {
+					menu.CurrentMenu = menu.MenuStack[len(menu.MenuStack)-1]
+					menu.MenuStack = menu.MenuStack[:len(menu.MenuStack)-1]
+					ms.rebuildMenu(menu)
+				}
+				return nil
+			},
+		},
+	}
+
+	menu.SelectedIndex = 0
+	if ms.logger != nil {
+		ms.logger.WithFields(logrus.Fields{
+			"item_count":     len(menu.Items),
+			"selected_index": menu.SelectedIndex,
+		}).Debug("Settings menu built")
+	}
+}
+
+// createResolutionMenuItem creates a menu item for changing resolution.
+func (ms *EbitenMenuSystem) createResolutionMenuItem(currentSettings *GameSettings, width, height int, label string, menu *MenuComponent) MenuItem {
+	isCurrentRes := currentSettings.WindowWidth == width && currentSettings.WindowHeight == height
+	displayLabel := label
+	if isCurrentRes {
+		displayLabel = "* " + label
+	}
+
+	return MenuItem{
+		Label:   displayLabel,
+		Enabled: true,
+		Action: func() error {
+			if ms.settingsManager == nil {
+				return fmt.Errorf("settings manager not initialized")
+			}
+
+			// Update settings
+			newSettings := ms.settingsManager.GetSettings()
+			newSettings.WindowWidth = width
+			newSettings.WindowHeight = height
+
+			// Apply settings via callback
+			if ms.onApplySettings != nil {
+				if err := ms.onApplySettings(newSettings); err != nil {
+					if ms.logger != nil {
+						ms.logger.WithFields(logrus.Fields{
+							"width":  width,
+							"height": height,
+							"error":  err.Error(),
+						}).Error("Failed to apply resolution settings")
+					}
+					return err
+				}
+			}
+
+			// Save settings
+			if err := ms.settingsManager.UpdateSettings(newSettings); err != nil {
+				if ms.logger != nil {
+					ms.logger.WithError(err).Error("Failed to save settings")
+				}
+				return err
+			}
+
+			if ms.logger != nil {
+				ms.logger.WithFields(logrus.Fields{
+					"width":  width,
+					"height": height,
+				}).Info("Resolution changed")
+			}
+
+			// Rebuild menu to show updated selection
+			ms.buildSettingsMenu(menu)
+			return nil
+		},
+	}
+}
+
+// createGraphicsQualityMenuItem creates a menu item for changing graphics quality.
+func (ms *EbitenMenuSystem) createGraphicsQualityMenuItem(currentSettings *GameSettings, quality string, menu *MenuComponent) MenuItem {
+	isCurrent := currentSettings.GraphicsQuality == quality
+	displayLabel := fmt.Sprintf("Graphics: %s", quality)
+	if isCurrent {
+		displayLabel = "* " + displayLabel
+	}
+
+	return MenuItem{
+		Label:   displayLabel,
+		Enabled: true,
+		Action: func() error {
+			if ms.settingsManager == nil {
+				return fmt.Errorf("settings manager not initialized")
+			}
+
+			newSettings := ms.settingsManager.GetSettings()
+			newSettings.GraphicsQuality = quality
+
+			if ms.onApplySettings != nil {
+				if err := ms.onApplySettings(newSettings); err != nil {
+					if ms.logger != nil {
+						ms.logger.WithError(err).Error("Failed to apply graphics settings")
+					}
+					return err
+				}
+			}
+
+			if err := ms.settingsManager.UpdateSettings(newSettings); err != nil {
+				if ms.logger != nil {
+					ms.logger.WithError(err).Error("Failed to save settings")
+				}
+				return err
+			}
+
+			if ms.logger != nil {
+				ms.logger.WithField("quality", quality).Info("Graphics quality changed")
+			}
+
+			ms.buildSettingsMenu(menu)
+			return nil
+		},
+	}
+}
+
+// createVSyncToggleMenuItem creates a menu item for toggling VSync.
+func (ms *EbitenMenuSystem) createVSyncToggleMenuItem(currentSettings *GameSettings, menu *MenuComponent) MenuItem {
+	vsyncStatus := "Off"
+	if currentSettings.VSync {
+		vsyncStatus = "On"
+	}
+
+	return MenuItem{
+		Label:   fmt.Sprintf("VSync: %s", vsyncStatus),
+		Enabled: true,
+		Action: func() error {
+			if ms.settingsManager == nil {
+				return fmt.Errorf("settings manager not initialized")
+			}
+
+			newSettings := ms.settingsManager.GetSettings()
+			newSettings.VSync = !newSettings.VSync
+
+			if ms.onApplySettings != nil {
+				if err := ms.onApplySettings(newSettings); err != nil {
+					if ms.logger != nil {
+						ms.logger.WithError(err).Error("Failed to apply VSync settings")
+					}
+					return err
+				}
+			}
+
+			if err := ms.settingsManager.UpdateSettings(newSettings); err != nil {
+				if ms.logger != nil {
+					ms.logger.WithError(err).Error("Failed to save settings")
+				}
+				return err
+			}
+
+			if ms.logger != nil {
+				ms.logger.WithField("vsync", newSettings.VSync).Info("VSync toggled")
+			}
+
+			ms.buildSettingsMenu(menu)
+			return nil
+		},
+	}
+}
+
 // rebuildMenu reconstructs the menu based on current menu type.
 func (ms *EbitenMenuSystem) rebuildMenu(menu *MenuComponent) {
 	if ms.logger != nil {
@@ -939,6 +1162,8 @@ func (ms *EbitenMenuSystem) rebuildMenu(menu *MenuComponent) {
 		ms.buildLoadMenu(menu)
 	case MenuTypeConfirm:
 		ms.buildConfirmMenu(menu)
+	case MenuTypeSettings:
+		ms.buildSettingsMenu(menu)
 	default:
 		if ms.logger != nil {
 			ms.logger.WithField("menu_type", menu.CurrentMenu).Warn("Unknown menu type in rebuildMenu")
@@ -1037,6 +1262,8 @@ func getMenuTitle(menuType MenuType) string {
 		return "LOAD GAME"
 	case MenuTypeConfirm:
 		return "CONFIRM"
+	case MenuTypeSettings:
+		return "SETTINGS"
 	default:
 		return ""
 	}

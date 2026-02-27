@@ -691,8 +691,9 @@ func (ac *AdaptiveComposer) generateIntensityLayer(data []float64, beatDuration 
 }
 
 // normalizeTrack prevents clipping by scaling amplitude.
+// Performance: O(2N) time complexity, single-threaded.
 // Note: This requires two passes when normalization is needed:
-// one to find max amplitude, one to scale. This is unavoidable
+// one to find max amplitude, one to scale. This is algorithmically unavoidable
 // for correct peak detection. When maxAmp <= 1.0, we skip scaling.
 func (ac *AdaptiveComposer) normalizeTrack(track []float64) {
 	maxAmp := 0.0

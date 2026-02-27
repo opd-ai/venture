@@ -29,7 +29,7 @@ The `pkg/class/advanced` package provides multi-classing, prestige classes, and 
 ### Low Severity
 - [ ] **Code Organization** — Large talent tree definitions (1760 LOC across talents.go and talents_extended.go) could benefit from splitting into per-class files for maintainability
 - [ ] **Test Coverage** — Missing benchmark for `CalculateTotalStats` which is a hot-path operation called every frame by `AdvancedClassSystem.Update`
-- [ ] **API Consistency** — `GetPlayerClass` returns a deep copy of talents map but not documented as such; consider documenting defensive copy behavior or using immutable return types
+- [x] **API Consistency** — `GetPlayerClass` returns a deep copy of talents map but not documented as such; consider documenting defensive copy behavior or using immutable return types (FIXED 2026-02-27: Enhanced godoc to document deep copy behavior)
 
 ## Input Integration
 | Input Source | Status | Notes |

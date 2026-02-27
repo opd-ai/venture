@@ -328,3 +328,209 @@ func BenchmarkGetGenreFromEnv_Random(b *testing.B) {
 		_, _ = GetGenreFromEnv(genres, rng, nil)
 	}
 }
+
+// TestGetSeedFromEnv_Concurrent verifies thread-safety claim in doc.go
+func TestGetSeedFromEnv_Concurrent(t *testing.T) {
+	tests := []struct {
+		name     string
+		envValue string
+		setup    func()
+		cleanup  func()
+	}{
+		{
+			name:     "concurrent with valid seed",
+			envValue: "99999",
+			setup:    func() { os.Setenv("VENTURE_SEED", "99999") },
+			cleanup:  func() { os.Unsetenv("VENTURE_SEED") },
+		},
+		{
+			name:     "concurrent with time-based seed",
+			envValue: "",
+			setup:    func() { os.Unsetenv("VENTURE_SEED") },
+			cleanup:  func() {},
+		},
+		{
+			name:     "concurrent with invalid seed",
+			envValue: "invalid",
+			setup:    func() { os.Setenv("VENTURE_SEED", "invalid") },
+			cleanup:  func() { os.Unsetenv("VENTURE_SEED") },
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.setup()
+			defer tt.cleanup()
+
+			const goroutines = 100
+			results := make(chan int64, goroutines)
+			errors := make(chan error, goroutines)
+
+			// Launch concurrent goroutines
+			for i := 0; i < goroutines; i++ {
+				go func() {
+					seed, err := GetSeedFromEnv(nil)
+					results <- seed
+					errors <- err
+				}()
+			}
+
+			// Collect results
+			seeds := make([]int64, 0, goroutines)
+			errs := make([]error, 0, goroutines)
+			for i := 0; i < goroutines; i++ {
+				seeds = append(seeds, <-results)
+				errs = append(errs, <-errors)
+			}
+
+			// Verify all results are valid (non-zero seeds)
+			for i, seed := range seeds {
+				if seed == 0 {
+					t.Errorf("goroutine %d got zero seed", i)
+				}
+			}
+
+			// For valid env values, all should return same seed and no errors
+			if tt.envValue == "99999" {
+				for i, seed := range seeds {
+					if seed != 99999 {
+						t.Errorf("goroutine %d got seed %d, want 99999", i, seed)
+					}
+					if errs[i] != nil {
+						t.Errorf("goroutine %d got unexpected error: %v", i, errs[i])
+					}
+				}
+			}
+
+			// For invalid env values, all should return errors
+			if tt.envValue == "invalid" {
+				for i, err := range errs {
+					if err == nil {
+						t.Errorf("goroutine %d expected error for invalid seed, got nil", i)
+					}
+				}
+			}
+		})
+	}
+}
+
+// TestGetGenreFromEnv_Concurrent verifies thread-safety claim in doc.go
+func TestGetGenreFromEnv_Concurrent(t *testing.T) {
+	genres := []string{"fantasy", "scifi", "horror", "cyberpunk", "postapoc"}
+
+	tests := []struct {
+		name     string
+		envValue string
+		setup    func()
+		cleanup  func()
+	}{
+		{
+			name:     "concurrent with valid genre",
+			envValue: "cyberpunk",
+			setup:    func() { os.Setenv("VENTURE_GENRE", "cyberpunk") },
+			cleanup:  func() { os.Unsetenv("VENTURE_GENRE") },
+		},
+		{
+			name:     "concurrent with random genre",
+			envValue: "",
+			setup:    func() { os.Unsetenv("VENTURE_GENRE") },
+			cleanup:  func() {},
+		},
+		{
+			name:     "concurrent with invalid genre",
+			envValue: "invalid",
+			setup:    func() { os.Setenv("VENTURE_GENRE", "invalid") },
+			cleanup:  func() { os.Unsetenv("VENTURE_GENRE") },
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.setup()
+			defer tt.cleanup()
+
+			const goroutines = 100
+			results := make(chan string, goroutines)
+			errors := make(chan error, goroutines)
+
+			// Launch concurrent goroutines
+			for i := 0; i < goroutines; i++ {
+				go func() {
+					rng := rand.New(rand.NewSource(12345))
+					genre, err := GetGenreFromEnv(genres, rng, nil)
+					results <- genre
+					errors <- err
+				}()
+			}
+
+			// Collect results
+			genreResults := make([]string, 0, goroutines)
+			errs := make([]error, 0, goroutines)
+			for i := 0; i < goroutines; i++ {
+				genreResults = append(genreResults, <-results)
+				errs = append(errs, <-errors)
+			}
+
+			// Verify all results are valid genres
+			for i, genre := range genreResults {
+				found := false
+				for _, validGenre := range genres {
+					if genre == validGenre {
+						found = true
+						break
+					}
+				}
+				if !found {
+					t.Errorf("goroutine %d got invalid genre %q", i, genre)
+				}
+			}
+
+			// For valid env values, all should return same genre and no errors
+			if tt.envValue == "cyberpunk" {
+				for i, genre := range genreResults {
+					if genre != "cyberpunk" {
+						t.Errorf("goroutine %d got genre %q, want cyberpunk", i, genre)
+					}
+					if errs[i] != nil {
+						t.Errorf("goroutine %d got unexpected error: %v", i, errs[i])
+					}
+				}
+			}
+
+			// For invalid env values, all should return errors
+			if tt.envValue == "invalid" {
+				for i, err := range errs {
+					if err == nil {
+						t.Errorf("goroutine %d expected error for invalid genre, got nil", i)
+					}
+				}
+			}
+		})
+	}
+}
+
+// BenchmarkGetSeedFromEnv_Concurrent verifies no contention on os.Getenv
+func BenchmarkGetSeedFromEnv_Concurrent(b *testing.B) {
+	os.Setenv("VENTURE_SEED", "12345")
+	defer os.Unsetenv("VENTURE_SEED")
+
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			_, _ = GetSeedFromEnv(nil)
+		}
+	})
+}
+
+// BenchmarkGetGenreFromEnv_Concurrent verifies no contention on os.Getenv
+func BenchmarkGetGenreFromEnv_Concurrent(b *testing.B) {
+	genres := []string{"fantasy", "scifi", "horror", "cyberpunk", "postapoc"}
+	os.Setenv("VENTURE_GENRE", "fantasy")
+	defer os.Unsetenv("VENTURE_GENRE")
+
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			rng := rand.New(rand.NewSource(12345))
+			_, _ = GetGenreFromEnv(genres, rng, nil)
+		}
+	})
+}

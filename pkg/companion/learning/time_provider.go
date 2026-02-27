@@ -19,8 +19,11 @@ type TimeProvider interface {
 type RealTimeProvider struct{}
 
 // Now returns the current system time.
+// This uses time.Now() intentionally for production behavior - companion learning
+// progression is based on real elapsed time, not procedural generation seeds.
+// For deterministic testing, use MockTimeProvider instead.
 func (RealTimeProvider) Now() time.Time {
-	return time.Now()
+	return time.Now() // Intentional exception to determinism guideline - companion metadata, not procgen
 }
 
 // DefaultTimeProvider returns the default TimeProvider (real system time).

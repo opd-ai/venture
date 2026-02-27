@@ -74,7 +74,7 @@ func (g *ArchaeologyGenerator) Generate(seed int64, params procgen.GenerationPar
 			"seed":       seed,
 			"difficulty": params.Difficulty,
 		}).Error("invalid difficulty parameter for archaeology generation")
-		return nil, fmt.Errorf("difficulty must be between 0 and 1, got %.2f", params.Difficulty)
+		return nil, fmt.Errorf("%w, got %.2f", ErrInvalidDifficulty, params.Difficulty)
 	}
 
 	log.WithFields(log.Fields{
@@ -136,12 +136,12 @@ func (g *ArchaeologyGenerator) Validate(result interface{}) error {
 	site, ok := result.(*ArchaeologicalSite)
 	if !ok {
 		log.Error("validation failed: result is not an *ArchaeologicalSite")
-		return fmt.Errorf("result is not an *ArchaeologicalSite")
+		return ErrInvalidType
 	}
 
 	if site.Name == "" {
 		log.Warn("validation failed: site name is empty")
-		return fmt.Errorf("site name is empty")
+		return ErrEmptySiteName
 	}
 
 	if len(site.Artifacts) < 2 {
@@ -149,7 +149,7 @@ func (g *ArchaeologyGenerator) Validate(result interface{}) error {
 			"site_name":     site.Name,
 			"num_artifacts": len(site.Artifacts),
 		}).Warn("validation failed: too few artifacts")
-		return fmt.Errorf("too few artifacts: %d, minimum 2", len(site.Artifacts))
+		return fmt.Errorf("%w: %d, minimum 2", ErrTooFewArtifacts, len(site.Artifacts))
 	}
 
 	if len(site.Artifacts) > 6 {
@@ -157,7 +157,7 @@ func (g *ArchaeologyGenerator) Validate(result interface{}) error {
 			"site_name":     site.Name,
 			"num_artifacts": len(site.Artifacts),
 		}).Warn("validation failed: too many artifacts")
-		return fmt.Errorf("too many artifacts: %d, maximum 6", len(site.Artifacts))
+		return fmt.Errorf("%w: %d, maximum 6", ErrTooManyArtifacts, len(site.Artifacts))
 	}
 
 	if site.Danger < 0 || site.Danger > 1.0 {
@@ -165,7 +165,7 @@ func (g *ArchaeologyGenerator) Validate(result interface{}) error {
 			"site_name": site.Name,
 			"danger":    site.Danger,
 		}).Warn("validation failed: invalid danger level")
-		return fmt.Errorf("danger must be between 0 and 1, got %.2f", site.Danger)
+		return fmt.Errorf("%w, got %.2f", ErrInvalidDanger, site.Danger)
 	}
 
 	// Validate all artifacts
@@ -175,10 +175,10 @@ func (g *ArchaeologyGenerator) Validate(result interface{}) error {
 				"site_name":    site.Name,
 				"artifact_num": i,
 			}).Warn("validation failed: artifact has empty name")
-			return fmt.Errorf("artifact %d has empty name", i)
+			return fmt.Errorf("%w at artifact %d", ErrEmptyArtifactName, i)
 		}
 		if artifact.Condition < 0 || artifact.Condition > 1.0 {
-			return fmt.Errorf("artifact %d condition out of range: %.2f", i, artifact.Condition)
+			return fmt.Errorf("%w: artifact %d has condition %.2f", ErrArtifactCondition, i, artifact.Condition)
 		}
 	}
 

@@ -29,7 +29,7 @@ This package implements complex procedural storytelling with branching narrative
 ### Low Severity
 - [ ] **Documentation** — 14 exported symbols: `Generator.SetLogger`, `Manager.SetLogger` lack godoc comments; private helpers (e.g., `validateGenerationParams`, `createStoryArc`) lack inline explanations of complex algorithms.
 - [ ] **Example code in doc.go** — Lines 46, 56: Commented-out `fmt.Println` calls should be removed or replaced with proper example test functions (`Example*` test functions with `// Output:` comments).
-- [ ] **Component purity** — types.go:112: `NarrativeComponent.Type()` correctly implements Component interface with no logic beyond returning a string. ✅ ECS compliant.
+- [x] **Component purity** — types.go:112: `NarrativeComponent.Type()` correctly implements Component interface with no logic beyond returning a string. ✅ ECS compliant. (VERIFIED 2026-02-27: No action needed)
 - [ ] **Test coverage gaps** — manager.go:463 (`advanceToNode`) at 64.3%, manager.go:449 (`getProgress`) at 85.7%, manager.go:540 (`checkFloatRequirement`) at 71.4%, manager.go:615 (`evaluateFloatCondition`) at 75.0%. Missing edge cases for type coercion paths (int to float64).
 
 ## Input Integration

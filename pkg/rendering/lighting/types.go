@@ -165,11 +165,23 @@ func (l *Light) Validate() error {
 }
 
 // ValidationError represents a lighting configuration validation error.
+// It supports error wrapping via the Unwrap method, allowing nested
+// error chains for better error context preservation.
 type ValidationError struct {
 	Field   string
 	Message string
+	Err     error // Wrapped error (optional)
 }
 
 func (e *ValidationError) Error() string {
-	return "lighting: " + e.Field + " " + e.Message
+	msg := "lighting: " + e.Field + " " + e.Message
+	if e.Err != nil {
+		msg += ": " + e.Err.Error()
+	}
+	return msg
+}
+
+// Unwrap returns the wrapped error, enabling error unwrapping with errors.Is and errors.As.
+func (e *ValidationError) Unwrap() error {
+	return e.Err
 }

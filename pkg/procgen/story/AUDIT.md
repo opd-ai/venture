@@ -51,7 +51,7 @@ Status criteria:
 
 - [ ] **No Genre Fallback Warning** — Genre-specific functions like `getThemesForGenre()` default to generic themes for unknown genres, but this happens silently. Should log a warning when an unsupported genre is provided so mod authors know their custom genres need theme definitions. (`generator.go:153-168`)
 
-- [ ] **Inconsistent Error Messages** — Some validation errors use `fmt.Errorf` with context while others use bare error strings. Standardize on `fmt.Errorf("context: %w", err)` pattern for error chain preservation. (`generator.go:63-146`, `archaeology.go:69-169`, all `Validate()` methods)
+- [x] **Inconsistent Error Messages** — Some validation errors use `fmt.Errorf` with context while others use bare error strings. Standardize on `fmt.Errorf("context: %w", err)` pattern for error chain preservation. (`generator.go:63-146`, `archaeology.go:69-169`, all `Validate()` methods) — **FIXED 2026-02-27**: Added 24 sentinel errors to generator.go (ErrInvalidDifficulty, ErrInvalidType, ErrEmptyTitle, ErrTooFewFragments, ErrTooManyFragments, ErrLowCoherence, ErrEmptyFragmentContent, ErrShortFragmentContent, ErrEmptySiteName, ErrTooFewArtifacts, ErrTooManyArtifacts, ErrInvalidDanger, ErrEmptyArtifactName, ErrArtifactCondition, ErrNoChoicePoints, ErrTooManyChoicePoints, ErrTooFewPaths, ErrTooManyPaths, ErrNoCommonFragments, ErrPathTooFewFragments, ErrPathNoOutcome, ErrInvalidChoiceIndex, ErrInvalidOptionIndex). Updated all error returns in FragmentGenerator, ArchaeologyGenerator, and BranchingNarrativeGenerator to use fmt.Errorf("%w, context", sentinel) pattern with proper error wrapping. All tests pass.
 
 ## Input Integration
 | Input Source | Status | Notes |

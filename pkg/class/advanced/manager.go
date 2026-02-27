@@ -398,7 +398,9 @@ func (m *Manager) getSynergyBonus(primary, secondary ClassID) *SynergyBonus {
 	return nil
 }
 
-// GetPlayerClass returns a player's class configuration
+// GetPlayerClass returns a player's class configuration.
+// Returns a deep copy of the player's class data to prevent external mutation.
+// The returned AdvancedClassComponent and its TalentPoints.Talents map are safe to modify.
 func (m *Manager) GetPlayerClass(playerID string) (*AdvancedClassComponent, error) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()

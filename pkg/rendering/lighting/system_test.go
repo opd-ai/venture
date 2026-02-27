@@ -773,6 +773,80 @@ func TestValidationError_Error(t *testing.T) {
 	}
 }
 
+// TestValidationError_Unwrap tests error unwrapping functionality.
+func TestValidationError_Unwrap(t *testing.T) {
+	tests := []struct {
+		name        string
+		err         *ValidationError
+		wantWrapped error
+	}{
+		{
+			name:        "no wrapped error",
+			err:         &ValidationError{Field: "intensity", Message: "must be non-negative"},
+			wantWrapped: nil,
+		},
+		{
+			name: "with wrapped error",
+			err: &ValidationError{
+				Field:   "radius",
+				Message: "validation failed",
+				Err:     &ValidationError{Field: "inner", Message: "nested error"},
+			},
+			wantWrapped: &ValidationError{Field: "inner", Message: "nested error"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := tt.err.Unwrap()
+			if tt.wantWrapped == nil {
+				if got != nil {
+					t.Errorf("ValidationError.Unwrap() = %v, want nil", got)
+				}
+			} else {
+				if got == nil {
+					t.Errorf("ValidationError.Unwrap() = nil, want non-nil")
+				} else if got.Error() != tt.wantWrapped.Error() {
+					t.Errorf("ValidationError.Unwrap() = %q, want %q", got.Error(), tt.wantWrapped.Error())
+				}
+			}
+		})
+	}
+}
+
+// TestValidationError_ErrorWithWrapped tests error message with wrapped errors.
+func TestValidationError_ErrorWithWrapped(t *testing.T) {
+	tests := []struct {
+		name     string
+		err      *ValidationError
+		expected string
+	}{
+		{
+			name:     "no wrapped error",
+			err:      &ValidationError{Field: "intensity", Message: "must be non-negative"},
+			expected: "lighting: intensity must be non-negative",
+		},
+		{
+			name: "with wrapped error",
+			err: &ValidationError{
+				Field:   "radius",
+				Message: "validation failed",
+				Err:     &ValidationError{Field: "inner", Message: "nested error"},
+			},
+			expected: "lighting: radius validation failed: lighting: inner nested error",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := tt.err.Error()
+			if got != tt.expected {
+				t.Errorf("ValidationError.Error() = %q, want %q", got, tt.expected)
+			}
+		})
+	}
+}
+
 // TestSystem_DirectionalLight tests directional light calculation.
 func TestSystem_DirectionalLight(t *testing.T) {
 	system := NewSystem()

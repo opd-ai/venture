@@ -1,6 +1,7 @@
 package story
 
 import (
+	"errors"
 	"fmt"
 	"math/rand"
 	"strings"
@@ -8,6 +9,33 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/opd-ai/venture/pkg/procgen"
+)
+
+// Sentinel errors for validation failures
+var (
+	ErrInvalidDifficulty    = errors.New("difficulty must be between 0 and 1")
+	ErrInvalidType          = errors.New("result type mismatch")
+	ErrEmptyTitle           = errors.New("story title is empty")
+	ErrTooFewFragments      = errors.New("too few fragments")
+	ErrTooManyFragments     = errors.New("too many fragments")
+	ErrLowCoherence         = errors.New("story coherence too low")
+	ErrEmptyFragmentContent = errors.New("fragment has empty content")
+	ErrShortFragmentContent = errors.New("fragment content too short")
+	ErrEmptySiteName        = errors.New("site name is empty")
+	ErrTooFewArtifacts      = errors.New("too few artifacts")
+	ErrTooManyArtifacts     = errors.New("too many artifacts")
+	ErrInvalidDanger        = errors.New("danger must be between 0 and 1")
+	ErrEmptyArtifactName    = errors.New("artifact has empty name")
+	ErrArtifactCondition    = errors.New("artifact condition out of range")
+	ErrNoChoicePoints       = errors.New("no choice points in branching narrative")
+	ErrTooManyChoicePoints  = errors.New("too many choice points")
+	ErrTooFewPaths          = errors.New("too few paths")
+	ErrTooManyPaths         = errors.New("too many paths")
+	ErrNoCommonFragments    = errors.New("no common fragments")
+	ErrPathTooFewFragments  = errors.New("path has too few fragments")
+	ErrPathNoOutcome        = errors.New("path has no outcome")
+	ErrInvalidChoiceIndex   = errors.New("invalid choice index")
+	ErrInvalidOptionIndex   = errors.New("invalid option index")
 )
 
 // String returns the string representation of FragmentType
@@ -66,7 +94,7 @@ func (g *FragmentGenerator) Generate(seed int64, params procgen.GenerationParams
 			"seed":       seed,
 			"difficulty": params.Difficulty,
 		}).Error("invalid difficulty parameter for story generation")
-		return nil, fmt.Errorf("difficulty must be between 0 and 1, got %.2f", params.Difficulty)
+		return nil, fmt.Errorf("%w, got %.2f", ErrInvalidDifficulty, params.Difficulty)
 	}
 
 	log.WithFields(log.Fields{
@@ -134,14 +162,14 @@ func (g *FragmentGenerator) Validate(result interface{}) error {
 	sequence, ok := result.(*StorySequence)
 	if !ok {
 		log.Error("validation failed: result is not a *StorySequence")
-		return fmt.Errorf("result is not a *StorySequence")
+		return ErrInvalidType
 	}
 
 	if sequence.Title == "" {
 		log.WithFields(log.Fields{
 			"series_id": sequence.SeriesID,
 		}).Warn("validation failed: story title is empty")
-		return fmt.Errorf("story title is empty")
+		return ErrEmptyTitle
 	}
 
 	if len(sequence.Fragments) < 5 {
@@ -149,7 +177,7 @@ func (g *FragmentGenerator) Validate(result interface{}) error {
 			"series_id":     sequence.SeriesID,
 			"num_fragments": len(sequence.Fragments),
 		}).Warn("validation failed: too few fragments")
-		return fmt.Errorf("too few fragments: %d, minimum 5", len(sequence.Fragments))
+		return fmt.Errorf("%w: %d, minimum 5", ErrTooFewFragments, len(sequence.Fragments))
 	}
 
 	if len(sequence.Fragments) > 15 {
@@ -157,7 +185,7 @@ func (g *FragmentGenerator) Validate(result interface{}) error {
 			"series_id":     sequence.SeriesID,
 			"num_fragments": len(sequence.Fragments),
 		}).Warn("validation failed: too many fragments")
-		return fmt.Errorf("too many fragments: %d, maximum 15", len(sequence.Fragments))
+		return fmt.Errorf("%w: %d, maximum 15", ErrTooManyFragments, len(sequence.Fragments))
 	}
 
 	if sequence.Coherence < 0.5 {
@@ -165,7 +193,7 @@ func (g *FragmentGenerator) Validate(result interface{}) error {
 			"series_id": sequence.SeriesID,
 			"coherence": sequence.Coherence,
 		}).Warn("validation failed: story coherence too low")
-		return fmt.Errorf("story coherence too low: %.2f, minimum 0.5", sequence.Coherence)
+		return fmt.Errorf("%w: %.2f, minimum 0.5", ErrLowCoherence, sequence.Coherence)
 	}
 
 	// Validate all fragments have content
@@ -175,7 +203,7 @@ func (g *FragmentGenerator) Validate(result interface{}) error {
 				"series_id":    sequence.SeriesID,
 				"fragment_num": i,
 			}).Warn("validation failed: fragment has empty content")
-			return fmt.Errorf("fragment %d has empty content", i)
+			return fmt.Errorf("%w at fragment %d", ErrEmptyFragmentContent, i)
 		}
 		if len(frag.Content) < 10 {
 			log.WithFields(log.Fields{
@@ -183,7 +211,7 @@ func (g *FragmentGenerator) Validate(result interface{}) error {
 				"fragment_num":   i,
 				"content_length": len(frag.Content),
 			}).Warn("validation failed: fragment content too short")
-			return fmt.Errorf("fragment %d content too short: %d chars", i, len(frag.Content))
+			return fmt.Errorf("%w: fragment %d has %d chars", ErrShortFragmentContent, i, len(frag.Content))
 		}
 	}
 

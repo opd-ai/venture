@@ -153,12 +153,33 @@ func (g *RecipeGenerator) generateRecipe(rng *rand.Rand, params procgen.Generati
 	// Get templates for genre and recipe type, with fantasy fallback
 	templates := g.getTemplatesForType(params.GenreID, recipeType)
 	if len(templates) == 0 {
+		if g.logger != nil {
+			g.logger.WithFields(logrus.Fields{
+				"requested_genre": params.GenreID,
+				"recipe_type":     recipeType,
+				"fallback_to":     "fantasy",
+			}).Warn("No templates found for requested genre, falling back to fantasy")
+		}
 		templates = g.getTemplatesForType("fantasy", recipeType)
 	}
 	if len(templates) == 0 {
+		if g.logger != nil {
+			g.logger.WithFields(logrus.Fields{
+				"requested_genre": params.GenreID,
+				"recipe_type":     recipeType,
+				"fallback_to":     "generic",
+			}).Warn("No fantasy templates found, falling back to generic templates")
+		}
 		templates = g.getTemplatesForType("", recipeType)
 	}
 	if len(templates) == 0 {
+		if g.logger != nil {
+			g.logger.WithFields(logrus.Fields{
+				"requested_genre": params.GenreID,
+				"recipe_type":     recipeType,
+				"fallback_to":     "any_potion",
+			}).Error("No templates found for any genre, using first available potion template")
+		}
 		// Last resort: use any available potion template to avoid panic
 		for _, tmplList := range g.potionTemplates {
 			if len(tmplList) > 0 {

@@ -28,7 +28,7 @@ None identified.
 
 ### Low Severity
 - [ ] **Test race detector** — No race detector tests run due to X11 dependency; recommend adding integration tests using `StubInput`/`StubSprite` patterns where possible to achieve partial race coverage (`*_test.go` files)
-- [ ] **Error wrapping** — `ValidationError` type does not wrap underlying errors; consider adding `Unwrap() error` method if nested errors are needed in future (`types.go:167-175`)
+- [x] **Error wrapping** — `ValidationError` type does not wrap underlying errors; consider adding `Unwrap() error` method if nested errors are needed in future (`types.go:167-175`)
 - [ ] **Shader compilation fallback** — `gpu_bloom.go:264-276` logs shader compilation failure and falls back to passthrough, but doesn't increment an error counter or expose metrics for observability (`gpu_bloom.go:264-276`)
 
 ## Input Integration

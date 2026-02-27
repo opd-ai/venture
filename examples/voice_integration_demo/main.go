@@ -163,6 +163,28 @@ func main() {
 		fmt.Println("   ✓ Local player is transmitting")
 	}
 
+	// Step 7b: Demonstrate receiving and decoding voice (output side)
+	fmt.Println("   Simulating voice reception...")
+
+	// In a real implementation, this would be called in your game loop
+	// to process incoming voice packets from the network and decode them
+	outputSamples, err := processor.ProcessOutput()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// Display received audio for each channel
+	for channelID, samples := range outputSamples {
+		fmt.Printf("   Received %d samples from channel: %s\n", len(samples), channelID)
+		// In production: mix these samples with spatial audio parameters (volume, pan)
+		// and write to audio output device or Web Audio API
+	}
+
+	if len(outputSamples) == 0 {
+		fmt.Println("   No incoming voice packets (expected in this demo)")
+		fmt.Println("   In production: ProcessOutput() retrieves decoded samples from network")
+	}
+
 	// Step 8: Demonstrate spatial audio
 	fmt.Println("8. Testing spatial audio...")
 

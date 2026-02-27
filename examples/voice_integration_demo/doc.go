@@ -18,6 +18,7 @@
 //   - Voice system registration pattern
 //   - Component wiring (VoiceAudioComponent, SpatialVoiceComponent)
 //   - Voice channel lifecycle management
+//   - Voice input processing (ProcessInput) and output retrieval (ProcessOutput)
 //   - Spatial audio parameters (volume, pan, distance)
 //   - Voice activity detection simulation
 //
@@ -45,9 +46,10 @@
 //  2. Voice system creation and configuration
 //  3. Player entity setup with voice components
 //  4. Voice channel join confirmation
-//  5. Voice input simulation and encoding
-//  6. Spatial audio calculations (distance, volume, pan)
-//  7. Channel information display
+//  5. Voice input simulation and encoding (ProcessInput)
+//  6. Voice output retrieval and decoding (ProcessOutput)
+//  7. Spatial audio calculations (distance, volume, pan)
+//  8. Channel information display
 //
 // # Prerequisites
 //

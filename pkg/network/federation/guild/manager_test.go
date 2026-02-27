@@ -1704,3 +1704,170 @@ func BenchmarkHandleGuildMessage_TerritoryChange(b *testing.B) {
 		_ = m.HandleGuildMessage(msg)
 	}
 }
+
+// TestHandleGuildMessage_MalformedJSON tests error handling for malformed JSON payloads
+func TestHandleGuildMessage_MalformedJSON(t *testing.T) {
+	tests := []struct {
+		name          string
+		msgType       MessageType
+		data          interface{}
+		wantErrSubstr string
+	}{
+		{
+			name:          "GuildSync with invalid JSON structure",
+			msgType:       MsgTypeGuildSync,
+			data:          map[string]interface{}{"invalid": make(chan int)}, // Channels cannot be marshaled to JSON
+			wantErrSubstr: "failed to marshal guild data",
+		},
+		{
+			name:          "GuildSync with incompatible type",
+			msgType:       MsgTypeGuildSync,
+			data:          "not_a_guild_object",
+			wantErrSubstr: "invalid guild data type",
+		},
+		{
+			name:    "MemberJoin with incomplete data",
+			msgType: MsgTypeMemberJoin,
+			data: map[string]interface{}{
+				"player_id": 12345, // Wrong type - should be string
+				"rank":      nil,   // Missing rank
+			},
+			wantErrSubstr: "", // Should not error - Unmarshal handles type coercion
+		},
+		{
+			name:          "MemberJoin with unmarshalable channel",
+			msgType:       MsgTypeMemberJoin,
+			data:          map[string]interface{}{"invalid": make(chan int)},
+			wantErrSubstr: "failed to marshal join data",
+		},
+		{
+			name:          "MemberJoin with incompatible type",
+			msgType:       MsgTypeMemberJoin,
+			data:          12345, // Not a map or struct
+			wantErrSubstr: "invalid member join data type",
+		},
+		{
+			name:          "MemberLeave with unmarshalable channel",
+			msgType:       MsgTypeMemberLeave,
+			data:          map[string]interface{}{"invalid": make(chan int)},
+			wantErrSubstr: "failed to marshal leave data",
+		},
+		{
+			name:          "MemberLeave with incompatible type",
+			msgType:       MsgTypeMemberLeave,
+			data:          []int{1, 2, 3}, // Not a map or struct
+			wantErrSubstr: "invalid member leave data type",
+		},
+		{
+			name:          "TerritoryChange with unmarshalable channel",
+			msgType:       MsgTypeTerritoryChange,
+			data:          map[string]interface{}{"invalid": make(chan int)},
+			wantErrSubstr: "failed to marshal territory data",
+		},
+		{
+			name:          "TerritoryChange with incompatible type",
+			msgType:       MsgTypeTerritoryChange,
+			data:          true, // Not a map or struct
+			wantErrSubstr: "invalid territory change data type",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			m := NewManager()
+			guildID, _ := m.CreateGuild("fantasy", "leader", 12345)
+
+			msg := GuildMessage{
+				Type:      tt.msgType,
+				GuildID:   guildID,
+				ServerID:  "test-server",
+				Timestamp: time.Now(),
+				Data:      tt.data,
+			}
+
+			err := m.HandleGuildMessage(msg)
+			if tt.wantErrSubstr != "" {
+				if err == nil {
+					t.Errorf("Expected error containing %q, got nil", tt.wantErrSubstr)
+				} else if !contains(err.Error(), tt.wantErrSubstr) {
+					t.Errorf("Expected error containing %q, got %q", tt.wantErrSubstr, err.Error())
+				}
+			}
+		})
+	}
+}
+
+// TestHandleGuildMessage_JSONEdgeCases tests edge cases in JSON deserialization
+func TestHandleGuildMessage_JSONEdgeCases(t *testing.T) {
+	m := NewManager()
+	guildID, _ := m.CreateGuild("fantasy", "leader", 12345)
+
+	// Test with deeply nested invalid JSON that would cause stack overflow if not handled
+	deeplyNested := map[string]interface{}{
+		"level1": map[string]interface{}{
+			"level2": map[string]interface{}{
+				"level3": make(chan int), // Unmarshalable
+			},
+		},
+	}
+
+	msg := GuildMessage{
+		Type:      MsgTypeGuildSync,
+		GuildID:   guildID,
+		ServerID:  "test-server",
+		Timestamp: time.Now(),
+		Data:      deeplyNested,
+	}
+
+	err := m.HandleGuildMessage(msg)
+	if err == nil {
+		t.Error("Expected error for deeply nested invalid JSON")
+	}
+}
+
+// TestHandleGuildMessage_NilData tests handling of nil data payloads
+func TestHandleGuildMessage_NilData(t *testing.T) {
+	tests := []struct {
+		name    string
+		msgType MessageType
+	}{
+		{"GuildSync with nil data", MsgTypeGuildSync},
+		{"MemberJoin with nil data", MsgTypeMemberJoin},
+		{"MemberLeave with nil data", MsgTypeMemberLeave},
+		{"TerritoryChange with nil data", MsgTypeTerritoryChange},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			m := NewManager()
+			guildID, _ := m.CreateGuild("fantasy", "leader", 12345)
+
+			msg := GuildMessage{
+				Type:      tt.msgType,
+				GuildID:   guildID,
+				ServerID:  "test-server",
+				Timestamp: time.Now(),
+				Data:      nil,
+			}
+
+			err := m.HandleGuildMessage(msg)
+			if err == nil {
+				t.Error("Expected error for nil data")
+			}
+		})
+	}
+}
+
+// contains checks if a string contains a substring
+func contains(s, substr string) bool {
+	return len(substr) == 0 || (len(s) >= len(substr) && containsAt(s, substr))
+}
+
+func containsAt(s, substr string) bool {
+	for i := 0; i <= len(s)-len(substr); i++ {
+		if s[i:i+len(substr)] == substr {
+			return true
+		}
+	}
+	return false
+}

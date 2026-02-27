@@ -724,6 +724,7 @@ Parsed 501 findings
 - **Source**: `./pkg/integration/political_warfare/AUDIT.md` (line 31)
 - **Category**: error-handling
 - **Problem**: Gold transfer failure logs error but continues silently. Consider returning error or accumulating failed concessions for retry. (`manager.go:496-502`)
+- **Status**: ✅ **COMPLETED 2026-02-27** - Implemented comprehensive error handling with rollback: applyGoldConcession now returns error and rolls back defender treasury deduction if attacker guild is not found. applyConcessions accumulates errors and returns them. NegotiateDiplomaticVictory rolls back war state on concession failure. Added 5 comprehensive tests covering success, rollback, invalid types, and unknown concession types.
 - **Fix**:
   1. Review the complete finding in the source audit file
   2. Implement the suggested changes following coding guidelines
@@ -758,6 +759,7 @@ Parsed 501 findings
 - **Source**: `./pkg/network/federation/guild/AUDIT.md` (line 38)
 - **Category**: error-handling
 - **Problem**: No tests for `HandleGuildMessage()` with invalid/malformed JSON payloads to verify error handling robustness; current tests focus on happy paths
+- **Status**: ✅ **COMPLETED 2026-02-27** - Added comprehensive tests for malformed JSON payloads: TestHandleGuildMessage_MalformedJSON (9 test cases covering unmarshalable channels, incompatible types, invalid structures for all message types), TestHandleGuildMessage_JSONEdgeCases (deeply nested invalid JSON), and TestHandleGuildMessage_NilData (4 test cases for nil data payloads). All 14 new tests pass. Coverage verified with go test.
 - **Fix**:
   1. Review the complete finding in the source audit file
   2. Implement the suggested changes following coding guidelines

@@ -340,7 +340,15 @@ func (m *Manager) NegotiateDiplomaticVictory(attackerGuildID, defenderGuildID st
 		war.VictoryType = VictoryTypeDiplomatic
 
 		// Apply concessions
-		m.applyConcessions(attackerGuildID, defenderGuildID, concessions, defenderGuild)
+		if err := m.applyConcessions(attackerGuildID, defenderGuildID, concessions, defenderGuild); err != nil {
+			// Rollback war end state on concession failure
+			war.Ended = false
+			war.EndedAt = time.Time{}
+			war.Active = true
+			war.Victor = ""
+			war.VictoryType = ""
+			return false, fmt.Errorf("diplomatic victory failed: concessions could not be applied: %w", err)
+		}
 	}
 
 	return success, nil
@@ -450,13 +458,21 @@ func (m *Manager) calculateConcessionValue(concessions []DiplomaticConcession, d
 	return totalValue
 }
 
-func (m *Manager) applyConcessions(attackerGuildID, defenderGuildID string, concessions []DiplomaticConcession, defenderGuild *guild.Guild) {
+func (m *Manager) applyConcessions(attackerGuildID, defenderGuildID string, concessions []DiplomaticConcession, defenderGuild *guild.Guild) error {
 	currentTime := now()
+	var errs []error
 	for _, concession := range concessions {
 		applied := m.createAppliedConcession(concession, attackerGuildID, defenderGuildID, currentTime)
-		m.processConcessionType(concession, &applied, defenderGuild, attackerGuildID, currentTime)
+		if err := m.processConcessionType(concession, &applied, defenderGuild, attackerGuildID, currentTime); err != nil {
+			errs = append(errs, fmt.Errorf("failed to apply %s concession: %w", concession.Type, err))
+			continue
+		}
 		m.appliedConcessions = append(m.appliedConcessions, applied)
 	}
+	if len(errs) > 0 {
+		return fmt.Errorf("failed to apply %d concession(s): %v", len(errs), errs)
+	}
+	return nil
 }
 
 // createAppliedConcession initializes a new applied concession record.
@@ -470,38 +486,55 @@ func (m *Manager) createAppliedConcession(concession DiplomaticConcession, attac
 }
 
 // processConcessionType applies the concession based on its type.
-func (m *Manager) processConcessionType(concession DiplomaticConcession, applied *AppliedConcession, defenderGuild *guild.Guild, attackerGuildID string, now time.Time) {
+func (m *Manager) processConcessionType(concession DiplomaticConcession, applied *AppliedConcession, defenderGuild *guild.Guild, attackerGuildID string, now time.Time) error {
 	switch concession.Type {
 	case ConcessionGold:
-		m.applyGoldConcession(concession, applied, defenderGuild, attackerGuildID)
+		return m.applyGoldConcession(concession, applied, defenderGuild, attackerGuildID)
 	case ConcessionTerritory:
 		m.applyTerritoryConcession(concession, applied)
+		return nil
 	case ConcessionApology:
 		m.applyApologyConcession(concession, applied, attackerGuildID)
+		return nil
 	case ConcessionTribute:
 		m.applyTributeConcession(concession, applied)
+		return nil
 	case ConcessionTrade:
 		m.applyTradeConcession(concession, applied, now)
+		return nil
+	default:
+		return fmt.Errorf("unknown concession type: %s", concession.Type)
 	}
 }
 
 // applyGoldConcession transfers gold from defender to attacker.
-func (m *Manager) applyGoldConcession(concession DiplomaticConcession, applied *AppliedConcession, defenderGuild *guild.Guild, attackerGuildID string) {
-	if goldAmount, ok := concession.Value.(int); ok {
-		defenderGuild.Treasury -= goldAmount
-		if attackerGuild, err := m.guildManager.GetGuild(attackerGuildID); err == nil {
-			attackerGuild.Treasury += goldAmount
-		} else {
-			// Log error - gold deducted from defender but not added to attacker
-			logrus.WithFields(logrus.Fields{
-				"attacker_guild_id": attackerGuildID,
-				"defender_guild_id": defenderGuild.ID,
-				"gold_amount":       goldAmount,
-				"error":             err.Error(),
-			}).Error("Failed to add gold to attacker guild during concession")
-		}
-		applied.GoldAmount = goldAmount
+// Returns error if attacker guild is not found, and rolls back defender deduction.
+func (m *Manager) applyGoldConcession(concession DiplomaticConcession, applied *AppliedConcession, defenderGuild *guild.Guild, attackerGuildID string) error {
+	goldAmount, ok := concession.Value.(int)
+	if !ok {
+		return nil // Invalid type, skip silently
 	}
+
+	// Deduct from defender
+	defenderGuild.Treasury -= goldAmount
+
+	// Add to attacker
+	attackerGuild, err := m.guildManager.GetGuild(attackerGuildID)
+	if err != nil {
+		// Rollback defender deduction
+		defenderGuild.Treasury += goldAmount
+		logrus.WithFields(logrus.Fields{
+			"attacker_guild_id": attackerGuildID,
+			"defender_guild_id": defenderGuild.ID,
+			"gold_amount":       goldAmount,
+			"error":             err.Error(),
+		}).Error("Failed to add gold to attacker guild during concession, rolled back defender deduction")
+		return fmt.Errorf("attacker guild not found: %w", err)
+	}
+
+	attackerGuild.Treasury += goldAmount
+	applied.GoldAmount = goldAmount
+	return nil
 }
 
 // applyTerritoryConcession records territory transfer for external processing.

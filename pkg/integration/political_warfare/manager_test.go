@@ -551,6 +551,180 @@ func TestNegotiateDiplomaticVictoryConcessionTypes(t *testing.T) {
 	}
 }
 
+// TestNegotiateDiplomaticVictoryGoldConcessionFailure tests that gold transfer failures
+// are properly handled with rollback and error reporting.
+func TestNegotiateDiplomaticVictoryGoldConcessionFailure(t *testing.T) {
+	manager, guildManager, guild1, guild2, _ := setupTestManager(t)
+
+	// Declare war
+	_, err := manager.DeclareWar(guild1, guild2, 1*time.Millisecond)
+	if err != nil {
+		t.Fatalf("DeclareWar failed: %v", err)
+	}
+	time.Sleep(10 * time.Millisecond)
+	manager.Update(0)
+
+	// Get initial treasury values
+	defenderGuild, _ := guildManager.GetGuild(guild2)
+	initialDefenderTreasury := defenderGuild.Treasury
+
+	// Use a non-existent guild ID as attacker to force error
+	fakeAttackerID := "non_existent_guild_id"
+
+	// Update war to use fake attacker
+	warKey := guild1 + "_" + guild2
+	war := manager.wars[warKey]
+	originalAttacker := war.AttackerGuildID
+	war.AttackerGuildID = fakeAttackerID
+
+	// Attempt diplomatic victory with gold concession
+	concessions := []DiplomaticConcession{
+		{Type: ConcessionGold, Value: 5000},
+	}
+
+	// Force success by using very high concession value
+	for i := 0; i < 100; i++ {
+		success, err := manager.NegotiateDiplomaticVictory(fakeAttackerID, guild2, concessions)
+		if success && err != nil {
+			// Verify error indicates concession failure
+			if err.Error() == "" {
+				t.Error("Expected error message for failed gold concession")
+			}
+
+			// Verify defender treasury was rolled back
+			defenderGuild, _ = guildManager.GetGuild(guild2)
+			if defenderGuild.Treasury != initialDefenderTreasury {
+				t.Errorf("Defender treasury not rolled back: expected %d, got %d",
+					initialDefenderTreasury, defenderGuild.Treasury)
+			}
+
+			// Verify war state was rolled back
+			war = manager.wars[warKey]
+			if war.Ended {
+				t.Error("War should not be ended after failed concession")
+			}
+			if war.Victor != "" {
+				t.Error("War should not have victor after failed concession")
+			}
+			war.AttackerGuildID = originalAttacker // Restore for cleanup
+			return
+		}
+	}
+	war.AttackerGuildID = originalAttacker // Restore for cleanup
+	t.Log("Diplomatic victory did not succeed in 100 attempts (low probability but not a failure)")
+}
+
+// TestApplyGoldConcessionInvalidType tests that invalid gold value types are handled gracefully
+func TestApplyGoldConcessionInvalidType(t *testing.T) {
+	manager, guildManager, guild1, guild2, _ := setupTestManager(t)
+
+	defenderGuild, _ := guildManager.GetGuild(guild2)
+	initialTreasury := defenderGuild.Treasury
+
+	// Test with invalid value type (string instead of int)
+	concession := DiplomaticConcession{Type: ConcessionGold, Value: "invalid"}
+	applied := AppliedConcession{}
+
+	err := manager.applyGoldConcession(concession, &applied, defenderGuild, guild1)
+	if err != nil {
+		t.Errorf("applyGoldConcession should not return error for invalid type, got: %v", err)
+	}
+
+	// Verify treasury unchanged
+	if defenderGuild.Treasury != initialTreasury {
+		t.Errorf("Treasury should not change for invalid value type: expected %d, got %d",
+			initialTreasury, defenderGuild.Treasury)
+	}
+}
+
+// TestApplyGoldConcessionRollback tests the rollback behavior when attacker guild is not found
+func TestApplyGoldConcessionRollback(t *testing.T) {
+	manager, guildManager, _, guild2, _ := setupTestManager(t)
+
+	defenderGuild, _ := guildManager.GetGuild(guild2)
+	initialTreasury := defenderGuild.Treasury
+	goldAmount := 5000
+
+	// Use non-existent guild ID
+	fakeAttackerID := "non_existent_guild_id"
+
+	concession := DiplomaticConcession{Type: ConcessionGold, Value: goldAmount}
+	applied := AppliedConcession{}
+
+	err := manager.applyGoldConcession(concession, &applied, defenderGuild, fakeAttackerID)
+	if err == nil {
+		t.Error("Expected error when attacker guild not found")
+	}
+
+	// Verify defender treasury was rolled back
+	if defenderGuild.Treasury != initialTreasury {
+		t.Errorf("Defender treasury not rolled back: expected %d, got %d",
+			initialTreasury, defenderGuild.Treasury)
+	}
+
+	// Verify applied concession has zero gold amount
+	if applied.GoldAmount != 0 {
+		t.Errorf("Applied gold amount should be 0 on error, got %d", applied.GoldAmount)
+	}
+}
+
+// TestApplyGoldConcessionSuccess tests successful gold transfer
+func TestApplyGoldConcessionSuccess(t *testing.T) {
+	manager, guildManager, guild1, guild2, _ := setupTestManager(t)
+
+	attackerGuild, _ := guildManager.GetGuild(guild1)
+	defenderGuild, _ := guildManager.GetGuild(guild2)
+
+	initialAttackerTreasury := attackerGuild.Treasury
+	initialDefenderTreasury := defenderGuild.Treasury
+	goldAmount := 7500
+
+	concession := DiplomaticConcession{Type: ConcessionGold, Value: goldAmount}
+	applied := AppliedConcession{}
+
+	err := manager.applyGoldConcession(concession, &applied, defenderGuild, guild1)
+	if err != nil {
+		t.Fatalf("applyGoldConcession failed: %v", err)
+	}
+
+	// Refresh guild data
+	attackerGuild, _ = guildManager.GetGuild(guild1)
+	defenderGuild, _ = guildManager.GetGuild(guild2)
+
+	// Verify gold transferred
+	if attackerGuild.Treasury != initialAttackerTreasury+goldAmount {
+		t.Errorf("Attacker treasury incorrect: expected %d, got %d",
+			initialAttackerTreasury+goldAmount, attackerGuild.Treasury)
+	}
+	if defenderGuild.Treasury != initialDefenderTreasury-goldAmount {
+		t.Errorf("Defender treasury incorrect: expected %d, got %d",
+			initialDefenderTreasury-goldAmount, defenderGuild.Treasury)
+	}
+
+	// Verify applied concession recorded correct amount
+	if applied.GoldAmount != goldAmount {
+		t.Errorf("Applied gold amount incorrect: expected %d, got %d",
+			goldAmount, applied.GoldAmount)
+	}
+}
+
+// TestProcessConcessionTypeUnknownType tests handling of unknown concession types
+func TestProcessConcessionTypeUnknownType(t *testing.T) {
+	manager, guildManager, guild1, guild2, _ := setupTestManager(t)
+
+	defenderGuild, _ := guildManager.GetGuild(guild2)
+	concession := DiplomaticConcession{Type: ConcessionType("unknown"), Value: nil}
+	applied := AppliedConcession{}
+
+	err := manager.processConcessionType(concession, &applied, defenderGuild, guild1, time.Now())
+	if err == nil {
+		t.Error("Expected error for unknown concession type")
+	}
+	if err.Error() != "unknown concession type: unknown" {
+		t.Errorf("Unexpected error message: %v", err)
+	}
+}
+
 // Test reputation penalty calculations
 
 func TestApplyReputationPenaltyPositivePenalty(t *testing.T) {

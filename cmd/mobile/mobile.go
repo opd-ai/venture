@@ -8,6 +8,7 @@ import (
 	"github.com/opd-ai/venture/cmd/mobile/config"
 	"github.com/opd-ai/venture/pkg/engine"
 	"github.com/opd-ai/venture/pkg/logging"
+	mobilepkg "github.com/opd-ai/venture/pkg/mobile"
 	"github.com/opd-ai/venture/pkg/procgen"
 	"github.com/opd-ai/venture/pkg/procgen/item"
 	"github.com/opd-ai/venture/pkg/procgen/terrain"
@@ -56,6 +57,9 @@ var (
 	spriteCache   *cache.SpriteCache
 	memoryMonitor *cache.MemoryMonitor
 	qualitySystem *engine.QualitySystem
+
+	// Mobile input controls
+	mobileInput *mobilepkg.MobileInputAdapter
 )
 
 func init() {
@@ -247,9 +251,19 @@ func addBasicPlayerComponents(playerX, playerY float64) {
 	playerEntity.AddComponent(&engine.VelocityComponent{VX: 0, VY: 0})
 	playerEntity.AddComponent(&engine.HealthComponent{Current: 100, Max: 100})
 	playerEntity.AddComponent(&engine.TeamComponent{TeamID: 1})
-	playerEntity.AddComponent(&engine.EbitenInput{})
+
+	// Create mobile touch input adapter instead of desktop keyboard/mouse input
+	mobileInput = mobilepkg.NewMobileInputAdapter(DefaultScreenWidth, DefaultScreenHeight)
+	playerEntity.AddComponent(mobileInput)
+
 	playerEntity.AddComponent(engine.NewRotationComponent(0, 3.0))
 	playerEntity.AddComponent(engine.NewAimComponent(0))
+
+	logger.WithFields(logrus.Fields{
+		"input_type":    "mobile_touch",
+		"screen_width":  DefaultScreenWidth,
+		"screen_height": DefaultScreenHeight,
+	}).Info("configured mobile touch input")
 }
 
 // addVisualPlayerComponents adds sprite, animation, camera, and visual effect components.

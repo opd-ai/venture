@@ -421,6 +421,7 @@ func initializeV8Systems(game *engine.EbitenGame, sys *systemsContainer, clientL
 
 	// Phase 50.3: Enhanced Vehicle Physics
 	sys.enhancedVehicleSys = vehicle.NewEnhancedVehicleSystem()
+	game.World.AddSystem(&enhancedVehicleSystemWrapper{system: sys.enhancedVehicleSys}) // AUDIT.md REM-019: Register vehicle physics system
 
 	// Phase 50.4: Fluid Dynamics & Swimming
 	fluidConfig := fluids.SimulationConfig{

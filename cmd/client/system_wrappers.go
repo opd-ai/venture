@@ -23,6 +23,7 @@ import (
 	"github.com/opd-ai/venture/pkg/engine"
 	"github.com/opd-ai/venture/pkg/engine/physics/destruction"
 	"github.com/opd-ai/venture/pkg/engine/physics/fluids"
+	"github.com/opd-ai/venture/pkg/engine/physics/vehicle"
 	"github.com/opd-ai/venture/pkg/engine/prestige"
 	"github.com/opd-ai/venture/pkg/integration/world_events"
 	"github.com/opd-ai/venture/pkg/network/chat"
@@ -501,4 +502,40 @@ type worldEventManagerWrapper struct {
 
 func (w *worldEventManagerWrapper) Update(entities []*engine.Entity, deltaTime float64) {
 	w.system.Update(deltaTime)
+}
+
+// =============================================================================
+// Vehicle Physics System Wrapper (Phase 50.3)
+// =============================================================================
+
+// vehicleEntityAdapter adapts engine.Entity to vehicle.Entity interface.
+// The vehicle package defines a minimal Entity interface requiring only
+// HasComponent and GetComponent, which engine.Entity already implements.
+type vehicleEntityAdapter struct {
+	entity *engine.Entity
+}
+
+func (a *vehicleEntityAdapter) HasComponent(componentType string) bool {
+	return a.entity.HasComponent(componentType)
+}
+
+func (a *vehicleEntityAdapter) GetComponent(componentType string) interface{} {
+	comp, _ := a.entity.GetComponent(componentType)
+	return comp
+}
+
+// enhancedVehicleSystemWrapper adapts vehicle.EnhancedVehicleSystem to the System interface.
+// AUDIT.md REM-019: EnhancedVehicleSystem was initialized but never registered in World.
+// This wrapper converts []*engine.Entity to []vehicle.Entity for the system.
+type enhancedVehicleSystemWrapper struct {
+	system *vehicle.EnhancedVehicleSystem
+}
+
+func (w *enhancedVehicleSystemWrapper) Update(entities []*engine.Entity, deltaTime float64) {
+	// Convert []*engine.Entity to []vehicle.Entity
+	vehicleEntities := make([]vehicle.Entity, len(entities))
+	for i, e := range entities {
+		vehicleEntities[i] = &vehicleEntityAdapter{entity: e}
+	}
+	w.system.Update(vehicleEntities, deltaTime)
 }

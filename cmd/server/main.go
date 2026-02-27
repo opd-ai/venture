@@ -385,6 +385,13 @@ func createGameWorld(logger *logrus.Logger) (*engine.World, *engine.EnhancedChat
 	stationMgr, petHomeMgr, guildHousingMgr, narrativeWorldSys, politicalWarfareSys := initializeV9SystemsServer(world, *seed, guildManager, logger)
 	SetV9ValidationService(NewV9ValidationService(stationMgr, petHomeMgr, guildHousingMgr, logger))
 
+	// INTEGRATION FIX [AUDIT.md REM-018]: Territory Systems Server Integration
+	// Gap: TerritorySystem and TerritorySiegeSystem were client-only, enabling exploits
+	// Fix: Initialize territory systems on server for authoritative validation
+	// Impact: Prevents fake capture progress, war cost bypass, phantom sieges, multiplayer desync
+	territoryMgr, territorySys, siegeMgr, siegeSys := initializeTerritorySystemsServer(world, logger)
+	_, _, _, _ = territoryMgr, territorySys, siegeMgr, siegeSys // Systems registered via AddSystem in init function
+
 	// INTEGRATION FIX [AUDIT.md Task #6]: Wire HousingCraftingSystem into CraftingSystem
 	// Gap: Station bonuses required manual registration, no auto-discovery
 	// Fix: Inject StationManager into CraftingSystem for automatic bonus calculation

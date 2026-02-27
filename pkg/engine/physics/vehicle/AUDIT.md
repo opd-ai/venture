@@ -26,7 +26,7 @@ The `pkg/engine/physics/vehicle` package provides advanced vehicle physics simul
 ## Issues Found
 
 ### High Severity
-- [ ] **Integration** — `EnhancedVehicleSystem` initialized but never registered in World (`cmd/client/handlers.go:457` declares field, `cmd/client/init_versions.go:423` initializes it, but no `game.World.AddSystem(sys.enhancedVehicleSys)` call exists anywhere in `cmd/client/`) — **CRITICAL: Entire vehicle physics subsystem is dead code, system Update() never ticks**
+- [x] **Integration** — ✅ RESOLVED (2026-02-26): `EnhancedVehicleSystem` now registered in World via enhancedVehicleSystemWrapper in cmd/client/init_versions.go line 424. Created vehicleEntityAdapter and enhancedVehicleSystemWrapper in cmd/client/system_wrappers.go to bridge interface differences. System Update() now ticks. All tests pass.
 
 ### Medium Severity
 - [ ] **ECS Purity** — `SuspensionComponent` contains getter/setter methods (`GetWheelLoad`, `GetWheelCompression`, `IsWheelGrounded`, `GetGroundedWheelCount`, `SetWheelLoad` in `suspension.go:85-125`) violating ECS guideline that components must be pure data structures — should be direct field access or system methods

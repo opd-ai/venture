@@ -17,6 +17,7 @@ import (
 	narrativeworld "github.com/opd-ai/venture/pkg/integration/narrative_world"
 	politicalwarfare "github.com/opd-ai/venture/pkg/integration/political_warfare"
 	"github.com/opd-ai/venture/pkg/network/federation/guild"
+	"github.com/opd-ai/venture/pkg/world/territory"
 	"github.com/sirupsen/logrus"
 )
 
@@ -80,4 +81,38 @@ func initializeV9SystemsServer(world *engine.World, seed int64, guildManager *gu
 	}
 
 	return stationManager, petHomeManager, guildHousingManager, narrativeWorldSystem, politicalWarfareSystem
+}
+
+// initializeTerritorySystemsServer initializes territory control and siege systems on the server.
+// AUDIT.md REM-018: Territory systems must be server-authoritative to prevent exploits:
+//   - Territory capture progress validation
+//   - Guild war declaration cost enforcement (1000g)
+//   - Siege phase progression (Preparation 1h → Assault 2h → Resolution → Ended)
+//   - Prevents clients from sending fake capture progress packets
+//   - Prevents bypassing war declaration costs via client manipulation
+//   - Ensures multiplayer sync of territory state
+func initializeTerritorySystemsServer(world *engine.World, logger *logrus.Logger) (*territory.Manager, *engine.TerritorySystem, *territory.SiegeManager, *engine.TerritorySiegeSystem) {
+	serverLogger := logger.WithField("component", "territory_systems")
+
+	// Phase 4.3: Territory Control
+	// Server manages authoritative territory state
+	territoryManager := territory.NewManager()
+	territorySystem := engine.NewTerritorySystem(territoryManager, serverLogger.WithField("system", "territory"))
+	world.AddSystem(territorySystem)
+
+	// Phase 4.5: Territory Siege System
+	// Server validates siege phase transitions and participant eligibility
+	siegeManager := territory.NewSiegeManager()
+	siegeSystem := engine.NewTerritorySiegeSystem(siegeManager)
+	world.AddSystem(siegeSystem)
+
+	if logger.GetLevel() >= logrus.DebugLevel {
+		serverLogger.WithFields(logrus.Fields{
+			"territorySystem": "initialized",
+			"siegeSystem":     "initialized",
+			"note":            "Server-authoritative territory control prevents client exploits",
+		}).Info("Territory systems initialized on server")
+	}
+
+	return territoryManager, territorySystem, siegeManager, siegeSystem
 }

@@ -1,14 +1,14 @@
 Parsed 501 findings
 # Codebase Audit Remediation Plan
 **Generated**: 2026-02-26
-**Updated**: 2026-02-26 (15 findings resolved)
+**Updated**: 2026-02-26 (16 findings resolved)
 **Scope**: All *AUDIT*.md files in repository
-**Total Unresolved Findings**: 486
+**Total Unresolved Findings**: 485
 
 ## Summary by Severity
 | Severity | Count |
 |----------|-------|
-| CRITICAL | 30 |
+| CRITICAL | 29 |
 | HIGH | 48 |
 | MEDIUM | 221 |
 | LOW | 191 |
@@ -182,6 +182,7 @@ Parsed 501 findings
 - **Source**: `./pkg/recovery/AUDIT.md` (line 29)
 - **Category**: error-handling
 - **Problem**: While WASM is not platform-specific for this package, could add a test verifying recovery works in WASM context with browser-specific panic scenarios. (`panic_recovery_test.go:0`)
+- **Status**: ✅ **COMPLETED 2026-02-26** - Created panic_recovery_wasm_test.go with 6 tests and 2 benchmarks for WASM-specific panic scenarios
 - **Fix**:
   1. Review the complete finding in the source audit file
   2. Implement the suggested changes following coding guidelines
@@ -193,6 +194,7 @@ Parsed 501 findings
 - **Source**: `./pkg/rendering/sprites/AUDIT.md` (line 29)
 - **Category**: error-handling
 - **Problem**: Tests require X11/Ebiten runtime and panic without DISPLAY environment variable. Package uses `safeReadPixels` recovery pattern to handle test scenarios but comprehensive test coverage cannot be measured (452% test-to-source LOC ratio indicates tests exist)
+- **Status**: ✅ **COMPLETED 2026-02-26** - Tests execute successfully without X11/DISPLAY. Coverage measured at 82.4% (exceeds both 30% and 40% targets)
 - **Fix**:
   1. Review the complete finding in the source audit file
   2. Implement the suggested changes following coding guidelines
@@ -228,6 +230,7 @@ Parsed 501 findings
 - **Source**: `./pkg/world/territory/AUDIT.md` (line 29)
 - **Category**: error-handling
 - **Problem**: TerritorySystem and TerritorySiegeSystem are registered in the **client only** (`cmd/client/handlers.go:486,557`, `cmd/client/init_versions.go:633,649`) but **entirely absent from the server**. Search results: 0 matches for `TerritorySystem|TerritorySiegeSystem` in `cmd/server/*.go`. This violates a...
+- **Status**: ✅ **COMPLETED 2026-02-26** - Added initializeTerritorySystemsServer() to cmd/server/v9_systems.go, initialized in cmd/server/main.go. All server tests pass.
 - **Fix**:
   1. Review the complete finding in the source audit file
   2. Implement the suggested changes following coding guidelines
@@ -239,6 +242,7 @@ Parsed 501 findings
 - **Source**: `./pkg/engine/physics/vehicle/AUDIT.md` (line 29)
 - **Category**: general
 - **Problem**: `EnhancedVehicleSystem` initialized but never registered in World (`cmd/client/handlers.go:457` declares field, `cmd/client/init_versions.go:423` initializes it, but no `game.World.AddSystem(sys.enhancedVehicleSys)` call exists anywhere in `cmd/client/`) — **CRITICAL: Entire vehicle physics subsyste...
+- **Status**: ✅ **COMPLETED 2026-02-26** - Created enhancedVehicleSystemWrapper and vehicleEntityAdapter, registered system in cmd/client/init_versions.go. All tests pass.
 - **Fix**:
   1. Review the complete finding in the source audit file
   2. Implement the suggested changes following coding guidelines

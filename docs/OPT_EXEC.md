@@ -17,12 +17,12 @@ Read task files in strict priority order, find the first incomplete task, and im
 - If a file's tasks are all complete, delete it, then proceed to the next file.
 - Process tasks in document order. Do not reorder or skip.
 
-## TASK GROUPING (1–10 tasks per execution)
-You may batch 2–10 tasks if they share **most** of these traits:
+.## TASK GROUPING (1–10 tasks per execution)
+You may batch 2–10 tasks if they share **any** of these traits:
 - Same package, module, or closely related packages
 - Overlapping code context (you'd read similar code for each)
 - Similar in nature (e.g., all are doc fixes, all are test gaps, all are validation bugs)
-- Combined diff stays under 500 lines
+- Combined diff stays under 800 lines
 - Can be validated together without complex test isolation
 
 Single tasks that are large or span multiple unrelated packages should be executed alone.

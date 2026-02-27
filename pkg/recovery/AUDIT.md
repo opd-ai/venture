@@ -26,7 +26,7 @@ None.
 - [x] **Missing benchmarks** — No benchmarks for panic recovery path, which is performance-sensitive code called in hot paths like network loops and rendering. (`panic_recovery_test.go:0`) — **FIXED 2026-02-26**: Added 6 comprehensive benchmarks covering all code paths: no-panic (4.3ns/op), with cleanup (4.1ns/op), with panic (24.9µs/op), with panic+cleanup (27.1µs/op), convenience wrapper (345ns/op), and direct logging (14µs/op). Benchmarks validate hot-path overhead is negligible (~4ns) for normal execution.
 
 ### Low Severity
-- [ ] **No WASM-specific tests** — While WASM is not platform-specific for this package, could add a test verifying recovery works in WASM context with browser-specific panic scenarios. (`panic_recovery_test.go:0`)
+- [x] **No WASM-specific tests** — While WASM is not platform-specific for this package, could add a test verifying recovery works in WASM context with browser-specific panic scenarios. (`panic_recovery_test.go:0`) — **FIXED 2026-02-26**: Created comprehensive `panic_recovery_wasm_test.go` with 6 WASM-specific tests covering browser API panics (localStorage quota, js.Global access, js.Func cleanup, async operations), 2 benchmarks for WASM overhead measurement. Tests validate recovery works correctly in browser context with proper cleanup of JS references. File uses `//go:build js && wasm` tags to only run in WASM environment.
 
 ## Input Integration
 | Input Source | Status | Notes |

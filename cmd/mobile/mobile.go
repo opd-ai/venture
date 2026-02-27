@@ -2,6 +2,7 @@ package mobile
 
 import (
 	"math/rand"
+	"os"
 	"runtime/debug"
 
 	"github.com/hajimehoshi/ebiten/v2/mobile"
@@ -75,8 +76,12 @@ func init() {
 	rng := rand.New(rand.NewSource(worldSeed))
 	genreID = config.GetGenreFromEnv(genres, rng, logger)
 
-	// Initialize the game immediately for ebitenmobile
-	initializeGame()
+	// Skip game initialization during testing (mobile.SetGame panics in non-mobile env)
+	// Tests set VENTURE_SKIP_MOBILE_INIT=1 to prevent this
+	if os.Getenv("VENTURE_SKIP_MOBILE_INIT") == "" {
+		// Initialize the game immediately for ebitenmobile
+		initializeGame()
+	}
 }
 
 // initializeGame initializes the game for mobile platforms.

@@ -22,15 +22,29 @@ type CacheManager struct {
 	missCount uint64 // Total cache misses
 }
 
-// NewCacheManager creates a new cache manager
+// NewCacheManager creates a new cache manager with the specified maximum size.
+// maxSizeBytes must be at least 1MB (1048576 bytes); values below this will be
+// rounded up to 1MB to ensure the cache can store at least one entry.
+//
+// Zero or very small maxSizeBytes values would cause immediate eviction of all
+// entries, making the cache non-functional. This minimum prevents such behavior.
 func NewCacheManager(maxSizeBytes uint64) *CacheManager {
+	maxSizeMB := maxSizeBytes / (1024 * 1024)
+	if maxSizeMB == 0 {
+		maxSizeMB = 1
+		log.WithFields(log.Fields{
+			"requested_bytes": maxSizeBytes,
+			"enforced_mb":     maxSizeMB,
+		}).Warn("cache size too small, enforcing 1MB minimum")
+	}
+
 	return &CacheManager{
-		maxSizeMB: maxSizeBytes / (1024 * 1024),
+		maxSizeMB: maxSizeMB,
 		entries:   make(map[string]*CacheEntry),
 		lruList:   list.New(),
 		lruMap:    make(map[string]*list.Element),
 		stats: &CacheStats{
-			MaxSizeMB: maxSizeBytes / (1024 * 1024),
+			MaxSizeMB: maxSizeMB,
 		},
 	}
 }

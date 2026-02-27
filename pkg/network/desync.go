@@ -161,6 +161,17 @@ func (d *DesyncDetector) DetectDesync(desyncType DesyncType, entityID uint64, cl
 	}
 
 	d.events = append(d.events, event)
+
+	logrus.WithFields(logrus.Fields{
+		"system_name":   "desync_detector",
+		"desync_type":   string(desyncType),
+		"entityID":      entityID,
+		"details":       details,
+		"server_hash":   fmt.Sprintf("%x", serverHash[:8]),
+		"client_hash":   fmt.Sprintf("%x", clientHash[:8]),
+		"total_desyncs": len(d.events),
+	}).Warn("desync detected")
+
 	return true
 }
 
@@ -176,6 +187,13 @@ func (d *DesyncDetector) RecordRecovery(desyncType DesyncType, entityID uint64, 
 			!d.events[i].Recovered {
 			d.events[i].Recovered = true
 			d.events[i].RecoveryTime = recoveryTime
+
+			logrus.WithFields(logrus.Fields{
+				"system_name":   "desync_detector",
+				"desync_type":   string(desyncType),
+				"entityID":      entityID,
+				"recovery_time": recoveryTime.String(),
+			}).Info("desync recovered")
 			break
 		}
 	}
@@ -280,17 +298,41 @@ func NewRollbackRecovery(
 // Recover reverts client to server state.
 func (r *RollbackRecovery) Recover(event DesyncEvent) error {
 	if r.serverState == nil || r.applyState == nil {
+		logrus.WithFields(logrus.Fields{
+			"system_name": "rollback_recovery",
+			"entityID":    event.EntityID,
+			"desync_type": string(event.Type),
+		}).Error("recovery functions not configured")
 		return fmt.Errorf("recovery functions not configured")
 	}
 
 	components, err := r.serverState(event.EntityID)
 	if err != nil {
+		logrus.WithFields(logrus.Fields{
+			"system_name": "rollback_recovery",
+			"entityID":    event.EntityID,
+			"desync_type": string(event.Type),
+			"error":       err.Error(),
+		}).Error("failed to get server state")
 		return fmt.Errorf("failed to get server state: %w", err)
 	}
 
 	if err := r.applyState(event.EntityID, components); err != nil {
+		logrus.WithFields(logrus.Fields{
+			"system_name": "rollback_recovery",
+			"entityID":    event.EntityID,
+			"desync_type": string(event.Type),
+			"error":       err.Error(),
+		}).Error("failed to apply server state")
 		return fmt.Errorf("failed to apply server state: %w", err)
 	}
+
+	logrus.WithFields(logrus.Fields{
+		"system_name":     "rollback_recovery",
+		"entityID":        event.EntityID,
+		"desync_type":     string(event.Type),
+		"component_count": len(components),
+	}).Info("rollback recovery completed")
 
 	return nil
 }

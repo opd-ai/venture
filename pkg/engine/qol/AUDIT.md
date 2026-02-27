@@ -29,7 +29,7 @@ None
 ### Low Severity
 - [ ] **Documentation** — EstimateArrivalTime function could document the 1 second per tile formula more explicitly (`types.go:201`)
 - [ ] **Code organization** — StorageSorter.Item type definition in storagesorter.go would be better in types.go with other data structures (`storagesorter.go:68`)
-- [ ] **Test coverage** — Missing benchmark for SortItems() which is performance-critical for large inventories (`storagesorter.go:79`)
+- [x] **Test coverage** — Missing benchmark for SortItems() which is performance-critical for large inventories (`storagesorter.go:79`) - **ALREADY FIXED**: BenchmarkStorageSorter_SortItems exists in manager_test.go:646-663 and runs successfully (~427ns/op for 100 items)
 
 ## Input Integration
 | Input Source | Status | Notes |

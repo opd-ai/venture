@@ -447,41 +447,33 @@ func TestEdgeCases_ZeroDifficulty(t *testing.T) {
 
 // Helper functions
 
+// getAllGenerators returns generators as a map for edge case testing.
+// Delegates to GetAllGenerators() for consistency.
 func getAllGenerators() map[string]procgen.Generator {
-	return map[string]procgen.Generator{
-		"Entity":    entity.NewEntityGenerator(),
-		"Item":      item.NewItemGenerator(),
-		"Magic":     magic.NewSpellGenerator(),
-		"Quest":     quest.NewQuestGenerator(),
-		"Recipe":    recipe.NewRecipeGenerator(),
-		"Station":   station.NewStationGenerator(),
-		"Terrain":   terrain.NewBSPGenerator(),
-		"Vehicle":   vehicle.NewVehicleGenerator(),
-		"Companion": companion.NewGenerator(),
-		"Building":  building.NewGenerator(),
-		"Furniture": furniture.NewGenerator(),
-		"Legendary": legendary.NewLegendaryQuestGenerator(),
-		"Book":      book.NewGenerator(),
-		"Skills":    skills.NewSkillTreeGenerator(),
+	entries := GetAllGenerators()
+	result := make(map[string]procgen.Generator, len(entries))
+	for _, entry := range entries {
+		result[entry.Name] = entry.Generator
 	}
+	return result
 }
 
-// getBaseParams returns appropriate base parameters for each generator
+// getBaseParams returns appropriate base parameters for each generator.
+// Delegates to GetAllGenerators() for consistency.
 func getBaseParams(generatorName string) procgen.GenerationParams {
-	params := procgen.GenerationParams{
+	entries := GetAllGenerators()
+	for _, entry := range entries {
+		if entry.Name == generatorName {
+			return entry.Params
+		}
+	}
+	
+	// Fallback for unknown generators
+	return procgen.GenerationParams{
 		Difficulty: 0.5,
 		Depth:      5,
 		GenreID:    "fantasy",
 	}
-
-	// Book generator requires book_type parameter
-	if generatorName == "Book" {
-		params.Custom = map[string]interface{}{
-			"book_type": engine.BookTypeLore,
-		}
-	}
-
-	return params
 }
 
 func formatSeed(seed int64) string {

@@ -7,6 +7,41 @@ import (
 	"github.com/opd-ai/venture/pkg/procgen/terrain"
 )
 
+// TimeProvider is an interface for obtaining the current time.
+// This enables deterministic timestamps for testing and networked multiplayer.
+// In production, use RealTimeProvider; in tests, use FixedTimeProvider.
+//
+// Note: This abstraction is necessary for multiplayer to prevent time drift
+// between federated servers, which would cause lockout/instance desync.
+type TimeProvider interface {
+	// Now returns the current time
+	Now() time.Time
+}
+
+// RealTimeProvider implements TimeProvider using the actual system clock.
+// This is the default implementation for production use.
+type RealTimeProvider struct{}
+
+// Now returns the current system time.
+func (RealTimeProvider) Now() time.Time {
+	return time.Now()
+}
+
+// FixedTimeProvider implements TimeProvider with a fixed time for testing.
+type FixedTimeProvider struct {
+	FixedTime time.Time
+}
+
+// Now returns the fixed time.
+func (f FixedTimeProvider) Now() time.Time {
+	return f.FixedTime
+}
+
+// DefaultTimeProvider returns the default TimeProvider (real system time).
+func DefaultTimeProvider() TimeProvider {
+	return RealTimeProvider{}
+}
+
 // RaidTier represents the difficulty level of a raid.
 type RaidTier int
 

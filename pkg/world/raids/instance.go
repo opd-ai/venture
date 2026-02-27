@@ -15,6 +15,7 @@ import (
 type InstanceManager struct {
 	instances       map[string]*RaidInstance
 	instanceTimeout time.Duration
+	timeProvider    TimeProvider
 	mu              sync.RWMutex
 }
 
@@ -23,6 +24,7 @@ func NewInstanceManager() *InstanceManager {
 	return &InstanceManager{
 		instances:       make(map[string]*RaidInstance),
 		instanceTimeout: 4 * time.Hour,
+		timeProvider:    DefaultTimeProvider(),
 	}
 }
 
@@ -31,6 +33,17 @@ func NewInstanceManagerWithTimeout(timeout time.Duration) *InstanceManager {
 	return &InstanceManager{
 		instances:       make(map[string]*RaidInstance),
 		instanceTimeout: timeout,
+		timeProvider:    DefaultTimeProvider(),
+	}
+}
+
+// NewInstanceManagerWithProvider creates an instance manager with custom timeout and time provider.
+// This constructor is primarily for testing with deterministic time.
+func NewInstanceManagerWithProvider(timeout time.Duration, provider TimeProvider) *InstanceManager {
+	return &InstanceManager{
+		instances:       make(map[string]*RaidInstance),
+		instanceTimeout: timeout,
+		timeProvider:    provider,
 	}
 }
 
@@ -62,12 +75,12 @@ func (im *InstanceManager) CreateInstance(raid *RaidDungeon, groupID string, pla
 	// Check if group already has an active instance
 	existingKey := instanceKeyByGroup(groupID, raid.Tier)
 	if existing, exists := im.instances[existingKey]; exists {
-		if !existing.Completed && time.Now().Before(existing.ExpiresAt) {
+		if !existing.Completed && im.timeProvider.Now().Before(existing.ExpiresAt) {
 			return nil, fmt.Errorf("group already has active instance")
 		}
 	}
 
-	now := time.Now()
+	now := im.timeProvider.Now()
 	instanceID := fmt.Sprintf("instance-%s-%d", groupID, now.Unix())
 
 	instance := &RaidInstance{
@@ -96,7 +109,7 @@ func (im *InstanceManager) GetInstance(instanceID string) (*RaidInstance, bool) 
 	}
 
 	// Check if instance expired
-	if time.Now().After(instance.ExpiresAt) {
+	if im.timeProvider.Now().After(instance.ExpiresAt) {
 		return nil, false
 	}
 
@@ -110,7 +123,7 @@ func (im *InstanceManager) GetGroupInstance(groupID string, tier RaidTier) (*Rai
 
 	for _, instance := range im.instances {
 		if instance.GroupID == groupID && instance.Dungeon.Tier == tier {
-			if !instance.Completed && time.Now().Before(instance.ExpiresAt) {
+			if !instance.Completed && im.timeProvider.Now().Before(instance.ExpiresAt) {
 				return instance, true
 			}
 		}
@@ -158,7 +171,7 @@ func (im *InstanceManager) CleanupExpired() int {
 	im.mu.Lock()
 	defer im.mu.Unlock()
 
-	now := time.Now()
+	now := im.timeProvider.Now()
 	removed := 0
 
 	for id, instance := range im.instances {
@@ -177,7 +190,7 @@ func (im *InstanceManager) GetActiveInstanceCount() int {
 	defer im.mu.RUnlock()
 
 	count := 0
-	now := time.Now()
+	now := im.timeProvider.Now()
 
 	for _, instance := range im.instances {
 		if !instance.Completed && now.Before(instance.ExpiresAt) {

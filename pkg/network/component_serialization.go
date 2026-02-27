@@ -4,7 +4,9 @@
 package network
 
 import (
+	"bytes"
 	"encoding/binary"
+	"encoding/gob"
 	"fmt"
 	"math"
 
@@ -340,4 +342,137 @@ func (s *ComponentSerializer) DeserializeAchievement(data []byte) (unlockedCount
 	unlockedCount = binary.LittleEndian.Uint32(data[0:4])
 	totalPoints = binary.LittleEndian.Uint32(data[4:8])
 	return unlockedCount, totalPoints, nil
+}
+
+// TerritoryData represents serializable territory data for network replication.
+type TerritoryData struct {
+	ID              string
+	ChunkX          int
+	ChunkZ          int
+	OwnerGuildID    string
+	Status          int // TerritoryStatus as int
+	CaptureProgress float64
+	CapturingGuild  string
+	LastUpdateUnix  int64 // Unix timestamp
+	ResourceBonus   float64
+	XPBonus         float64
+}
+
+// SerializeTerritory serializes territory state using gob encoding for complex data.
+// Returns serialized bytes or error. Used for territory ownership sync.
+func (s *ComponentSerializer) SerializeTerritory(data TerritoryData) ([]byte, error) {
+	var buf bytes.Buffer
+	enc := gob.NewEncoder(&buf)
+	if err := enc.Encode(data); err != nil {
+		logrus.WithFields(logrus.Fields{
+			"component_type": "territory",
+			"territory_id":   data.ID,
+			"error":          err.Error(),
+		}).Error("failed to serialize territory")
+		return nil, fmt.Errorf("serialize territory: %w", err)
+	}
+	logrus.WithFields(logrus.Fields{
+		"component_type":   "territory",
+		"territory_id":     data.ID,
+		"owner_guild_id":   data.OwnerGuildID,
+		"capture_progress": data.CaptureProgress,
+		"size_bytes":       buf.Len(),
+	}).Debug("serialized territory")
+	return buf.Bytes(), nil
+}
+
+// DeserializeTerritory deserializes territory state from gob-encoded bytes.
+func (s *ComponentSerializer) DeserializeTerritory(data []byte) (TerritoryData, error) {
+	var territory TerritoryData
+	buf := bytes.NewReader(data)
+	dec := gob.NewDecoder(buf)
+	if err := dec.Decode(&territory); err != nil {
+		logrus.WithFields(logrus.Fields{
+			"component_type": "territory",
+			"data_length":    len(data),
+			"error":          err.Error(),
+		}).Error("failed to deserialize territory")
+		return TerritoryData{}, fmt.Errorf("deserialize territory: %w", err)
+	}
+	logrus.WithFields(logrus.Fields{
+		"component_type":   "territory",
+		"territory_id":     territory.ID,
+		"owner_guild_id":   territory.OwnerGuildID,
+		"capture_progress": territory.CaptureProgress,
+	}).Debug("deserialized territory")
+	return territory, nil
+}
+
+// SiegeData represents serializable siege data for network replication.
+type SiegeData struct {
+	ID                    string
+	TerritoryID           string
+	AttackerGuildID       string
+	DefenderGuildID       string
+	Phase                 int   // SiegePhase as int
+	StartTimeUnix         int64 // Unix timestamp
+	PhaseStartTimeUnix    int64 // Unix timestamp
+	EndTimeUnix           int64 // Unix timestamp
+	VictoryCondition      int   // VictoryCondition as int
+	WinnerGuildID         string
+	Attackers             []string // Player IDs
+	Defenders             []string // Player IDs
+	ControlPointsCaptured int
+	TotalControlPoints    int
+	GuildHallHP           float64
+	GuildHallMaxHP        float64
+	DefenderTreasury      int
+	LootPercentage        float64
+	LootDistributed       bool
+}
+
+// SerializeSiege serializes siege state using gob encoding for complex data.
+// Returns serialized bytes or error. Used for siege phase and participant sync.
+func (s *ComponentSerializer) SerializeSiege(data SiegeData) ([]byte, error) {
+	var buf bytes.Buffer
+	enc := gob.NewEncoder(&buf)
+	if err := enc.Encode(data); err != nil {
+		logrus.WithFields(logrus.Fields{
+			"component_type": "siege",
+			"siege_id":       data.ID,
+			"error":          err.Error(),
+		}).Error("failed to serialize siege")
+		return nil, fmt.Errorf("serialize siege: %w", err)
+	}
+	logrus.WithFields(logrus.Fields{
+		"component_type":          "siege",
+		"siege_id":                data.ID,
+		"territory_id":            data.TerritoryID,
+		"phase":                   data.Phase,
+		"control_points_captured": data.ControlPointsCaptured,
+		"attackers_count":         len(data.Attackers),
+		"defenders_count":         len(data.Defenders),
+		"size_bytes":              buf.Len(),
+	}).Debug("serialized siege")
+	return buf.Bytes(), nil
+}
+
+// DeserializeSiege deserializes siege state from gob-encoded bytes.
+func (s *ComponentSerializer) DeserializeSiege(data []byte) (SiegeData, error) {
+	var siege SiegeData
+	buf := bytes.NewReader(data)
+	dec := gob.NewDecoder(buf)
+	if err := dec.Decode(&siege); err != nil {
+		logrus.WithFields(logrus.Fields{
+			"component_type": "siege",
+			"data_length":    len(data),
+			"error":          err.Error(),
+		}).Error("failed to deserialize siege")
+		return SiegeData{}, fmt.Errorf("deserialize siege: %w", err)
+	}
+	logrus.WithFields(logrus.Fields{
+		"component_type":          "siege",
+		"siege_id":                siege.ID,
+		"territory_id":            siege.TerritoryID,
+		"phase":                   siege.Phase,
+		"control_points_captured": siege.ControlPointsCaptured,
+		"attackers_count":         len(siege.Attackers),
+		"defenders_count":         len(siege.Defenders),
+	}).Debug("deserialized siege")
+	return siege, nil
 }

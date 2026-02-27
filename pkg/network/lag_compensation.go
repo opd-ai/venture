@@ -8,6 +8,8 @@ import (
 	"math"
 	"sync"
 	"time"
+
+	"github.com/sirupsen/logrus"
 )
 
 // LagCompensator provides server-side lag compensation for hit detection
@@ -189,18 +191,36 @@ func (lc *LagCompensator) ValidateHit(
 	// GAP-002 FIX: Use internal unlocked version to avoid recursive lock
 	rewind := lc.rewindToPlayerTimeUnlocked(playerLatency)
 	if !rewind.Success {
+		logrus.WithFields(logrus.Fields{
+			"system_name":    "lag_compensator",
+			"attackerID":     attackerID,
+			"targetID":       targetID,
+			"player_latency": playerLatency.String(),
+		}).Warn("failed to rewind to player time")
 		return false, fmt.Errorf("failed to rewind to player time: no snapshot available")
 	}
 
 	// Check if target existed at that time
 	targetSnapshot, exists := rewind.Snapshot.Entities[targetID]
 	if !exists {
+		logrus.WithFields(logrus.Fields{
+			"system_name":      "lag_compensator",
+			"attackerID":       attackerID,
+			"targetID":         targetID,
+			"compensated_time": rewind.CompensatedTime.Format(time.RFC3339Nano),
+		}).Debug("target entity did not exist at compensated time")
 		return false, fmt.Errorf("target entity %d did not exist at compensated time", targetID)
 	}
 
 	// Check if attacker existed at that time
 	_, exists = rewind.Snapshot.Entities[attackerID]
 	if !exists {
+		logrus.WithFields(logrus.Fields{
+			"system_name":      "lag_compensator",
+			"attackerID":       attackerID,
+			"targetID":         targetID,
+			"compensated_time": rewind.CompensatedTime.Format(time.RFC3339Nano),
+		}).Debug("attacker entity did not exist at compensated time")
 		return false, fmt.Errorf("attacker entity %d did not exist at compensated time", attackerID)
 	}
 
@@ -211,8 +231,27 @@ func (lc *LagCompensator) ValidateHit(
 
 	// Hit is valid if within radius
 	if distance <= hitRadius {
+		logrus.WithFields(logrus.Fields{
+			"system_name":      "lag_compensator",
+			"attackerID":       attackerID,
+			"targetID":         targetID,
+			"distance":         distance,
+			"hit_radius":       hitRadius,
+			"compensated_time": rewind.CompensatedTime.Format(time.RFC3339Nano),
+			"latency_ms":       playerLatency.Milliseconds(),
+		}).Debug("hit validated")
 		return true, nil
 	}
+
+	logrus.WithFields(logrus.Fields{
+		"system_name":      "lag_compensator",
+		"attackerID":       attackerID,
+		"targetID":         targetID,
+		"distance":         distance,
+		"hit_radius":       hitRadius,
+		"compensated_time": rewind.CompensatedTime.Format(time.RFC3339Nano),
+		"latency_ms":       playerLatency.Milliseconds(),
+	}).Debug("hit rejected: outside radius")
 
 	return false, nil
 }

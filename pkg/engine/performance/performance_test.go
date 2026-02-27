@@ -864,14 +864,30 @@ func TestNetworkBatcherGetStats(t *testing.T) {
 
 // TestCacheEdgeCases tests edge cases in cache management
 func TestCacheEdgeCases(t *testing.T) {
-	t.Run("zero size cache", func(t *testing.T) {
+	t.Run("zero size cache enforces minimum", func(t *testing.T) {
 		cm := NewCacheManager(0)
-		cm.Set("entry", "data", 1024)
-
-		// Should still work but evict immediately
 		stats := cm.GetStats()
-		// Behavior depends on implementation - either 0 items or immediate eviction
-		_ = stats // Just verify no panic
+
+		// Zero size should be enforced to 1MB minimum
+		if stats.MaxSizeMB != 1 {
+			t.Errorf("Expected 1MB minimum, got %d MB", stats.MaxSizeMB)
+		}
+
+		// Should be able to cache small entries
+		cm.Set("entry", "data", 1024)
+		if _, ok := cm.Get("entry"); !ok {
+			t.Error("Small entry should be cacheable with 1MB minimum")
+		}
+	})
+
+	t.Run("very small size cache enforces minimum", func(t *testing.T) {
+		cm := NewCacheManager(512 * 1024) // 512KB, below 1MB
+		stats := cm.GetStats()
+
+		// Should be enforced to 1MB minimum
+		if stats.MaxSizeMB != 1 {
+			t.Errorf("Expected 1MB minimum for 512KB input, got %d MB", stats.MaxSizeMB)
+		}
 	})
 
 	t.Run("remove from empty cache", func(t *testing.T) {

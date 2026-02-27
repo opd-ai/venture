@@ -3,6 +3,8 @@ package network
 import (
 	"errors"
 	"time"
+
+	"github.com/sirupsen/logrus"
 )
 
 // ErrSystemClockInvalid is returned when the system clock reports a time before the Unix epoch.
@@ -129,6 +131,10 @@ func NowTimestamp() (uint64, error) {
 	// Defensive check: ensure timestamp is positive (should always be true for current dates)
 	// If this fails, it indicates a system clock issue or date before 1970
 	if nanos < 0 {
+		logrus.WithFields(logrus.Fields{
+			"system_name": "network_helpers",
+			"nanos":       nanos,
+		}).Error("system clock returned timestamp before Unix epoch")
 		return 0, ErrSystemClockInvalid
 	}
 

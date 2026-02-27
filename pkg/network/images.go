@@ -14,6 +14,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/sirupsen/logrus"
 	"golang.org/x/image/draw"
 )
 
@@ -58,6 +59,10 @@ func generateImageID() string {
 	_, err := io.ReadFull(rand.Reader, uuid)
 	if err != nil {
 		// Fallback to timestamp-based ID
+		logrus.WithFields(logrus.Fields{
+			"system_name": "image_manager",
+			"error":       err.Error(),
+		}).Warn("crypto rand failed, using timestamp fallback for image ID")
 		return fmt.Sprintf("img-%d", time.Now().UnixNano())
 	}
 
@@ -187,6 +192,12 @@ func (im *ImageManager) SetExpiryCallback(callback func(string)) {
 func ValidateImageData(data []byte, format string) (image.Image, string, error) {
 	// Check size limit
 	if len(data) > MaxImageSize {
+		logrus.WithFields(logrus.Fields{
+			"system_name": "image_manager",
+			"size_bytes":  len(data),
+			"max_bytes":   MaxImageSize,
+			"format":      format,
+		}).Warn("image exceeds size limit")
 		return nil, "", ErrImageTooLarge
 	}
 
@@ -208,10 +219,20 @@ func ValidateImageData(data []byte, format string) (image.Image, string, error) 
 		img, err = gif.Decode(reader)
 		detectedFormat = ImageFormatGIF
 	default:
+		logrus.WithFields(logrus.Fields{
+			"system_name": "image_manager",
+			"format":      format,
+		}).Warn("invalid image format")
 		return nil, "", ErrInvalidImageType
 	}
 
 	if err != nil {
+		logrus.WithFields(logrus.Fields{
+			"system_name": "image_manager",
+			"format":      format,
+			"size_bytes":  len(data),
+			"error":       err.Error(),
+		}).Error("failed to decode image")
 		return nil, "", fmt.Errorf("failed to decode %s image: %w", format, err)
 	}
 
@@ -221,6 +242,13 @@ func ValidateImageData(data []byte, format string) (image.Image, string, error) 
 	height := bounds.Dy()
 
 	if width > MaxImageDimension || height > MaxImageDimension {
+		logrus.WithFields(logrus.Fields{
+			"system_name":   "image_manager",
+			"width":         width,
+			"height":        height,
+			"max_dimension": MaxImageDimension,
+			"format":        format,
+		}).Warn("image dimensions exceed limit")
 		return nil, "", ErrImageTooWide
 	}
 
@@ -294,6 +322,11 @@ func (im *ImageManager) CheckRateLimit(playerID uint64) bool {
 func (im *ImageManager) UploadImage(req *ImageUploadRequest) (*ImageMetadata, error) {
 	// Check rate limit
 	if !im.CheckRateLimit(req.SenderID) {
+		logrus.WithFields(logrus.Fields{
+			"system_name": "image_manager",
+			"playerID":    req.SenderID,
+			"channel":     req.Channel,
+		}).Warn("image upload rate limit exceeded")
 		return nil, ErrRateLimitExceeded
 	}
 
@@ -306,6 +339,12 @@ func (im *ImageManager) UploadImage(req *ImageUploadRequest) (*ImageMetadata, er
 	// Generate thumbnail
 	thumbnail, err := GenerateThumbnail(img)
 	if err != nil {
+		logrus.WithFields(logrus.Fields{
+			"system_name": "image_manager",
+			"playerID":    req.SenderID,
+			"format":      format,
+			"error":       err.Error(),
+		}).Error("failed to generate thumbnail")
 		return nil, fmt.Errorf("failed to generate thumbnail: %w", err)
 	}
 
@@ -331,6 +370,12 @@ func (im *ImageManager) UploadImage(req *ImageUploadRequest) (*ImageMetadata, er
 
 	if hook != nil {
 		if err := hook(&metadata, req.Data); err != nil {
+			logrus.WithFields(logrus.Fields{
+				"system_name": "image_manager",
+				"playerID":    req.SenderID,
+				"imageID":     imageID,
+				"error":       err.Error(),
+			}).Warn("image rejected by moderation")
 			return nil, fmt.Errorf("image rejected by moderation: %w", err)
 		}
 	}
@@ -366,6 +411,18 @@ func (im *ImageManager) UploadImage(req *ImageUploadRequest) (*ImageMetadata, er
 	relayCallback := im.onThumbnailRelay
 
 	im.mu.Unlock()
+
+	logrus.WithFields(logrus.Fields{
+		"system_name":     "image_manager",
+		"playerID":        req.SenderID,
+		"imageID":         imageID,
+		"format":          format,
+		"width":           metadata.Width,
+		"height":          metadata.Height,
+		"size_bytes":      metadata.Size,
+		"thumbnail_bytes": len(thumbnail),
+		"channel":         req.Channel,
+	}).Info("image uploaded successfully")
 
 	// Relay thumbnail to recipients (if callback set)
 	if relayCallback != nil {
@@ -412,6 +469,12 @@ func (im *ImageManager) expireImage(imageID string) {
 	callback := im.onImageExpiry
 
 	im.mu.Unlock()
+
+	logrus.WithFields(logrus.Fields{
+		"system_name": "image_manager",
+		"imageID":     imageID,
+		"playerID":    senderID,
+	}).Debug("image expired")
 
 	// Notify via callback
 	if callback != nil {

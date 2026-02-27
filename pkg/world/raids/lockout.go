@@ -13,6 +13,7 @@ import (
 type LockoutManager struct {
 	lockouts      map[string]*PlayerLockout // key: playerID-tier
 	lockoutPeriod time.Duration
+	timeProvider  TimeProvider
 	mu            sync.RWMutex
 }
 
@@ -21,6 +22,7 @@ func NewLockoutManager() *LockoutManager {
 	return &LockoutManager{
 		lockouts:      make(map[string]*PlayerLockout),
 		lockoutPeriod: 7 * 24 * time.Hour, // 1 week
+		timeProvider:  DefaultTimeProvider(),
 	}
 }
 
@@ -29,6 +31,17 @@ func NewLockoutManagerWithPeriod(period time.Duration) *LockoutManager {
 	return &LockoutManager{
 		lockouts:      make(map[string]*PlayerLockout),
 		lockoutPeriod: period,
+		timeProvider:  DefaultTimeProvider(),
+	}
+}
+
+// NewLockoutManagerWithProvider creates a lockout manager with custom period and time provider.
+// This constructor is primarily for testing with deterministic time.
+func NewLockoutManagerWithProvider(period time.Duration, provider TimeProvider) *LockoutManager {
+	return &LockoutManager{
+		lockouts:      make(map[string]*PlayerLockout),
+		lockoutPeriod: period,
+		timeProvider:  provider,
 	}
 }
 
@@ -44,7 +57,7 @@ func (lm *LockoutManager) IsLockedOut(playerID string, tier RaidTier) bool {
 	}
 
 	// Check if lockout has expired
-	return time.Now().Before(lockout.NextReset)
+	return lm.timeProvider.Now().Before(lockout.NextReset)
 }
 
 // RecordClear records that a player cleared a raid tier.
@@ -52,7 +65,7 @@ func (lm *LockoutManager) RecordClear(playerID string, tier RaidTier) {
 	lm.mu.Lock()
 	defer lm.mu.Unlock()
 
-	now := time.Now()
+	now := lm.timeProvider.Now()
 	key := lockoutKey(playerID, tier)
 
 	lockout := &PlayerLockout{
@@ -125,7 +138,7 @@ func (lm *LockoutManager) ResetExpiredLockouts() int {
 	lm.mu.Lock()
 	defer lm.mu.Unlock()
 
-	now := time.Now()
+	now := lm.timeProvider.Now()
 	removed := 0
 
 	for key, lockout := range lm.lockouts {
@@ -161,7 +174,7 @@ func (lm *LockoutManager) GetActiveLockoutCount() int {
 	defer lm.mu.RUnlock()
 
 	count := 0
-	now := time.Now()
+	now := lm.timeProvider.Now()
 
 	for _, lockout := range lm.lockouts {
 		if now.Before(lockout.NextReset) {

@@ -20,7 +20,7 @@ The `pkg/world/raids` package implements complete procedural raid dungeon genera
 ## Issues Found
 
 ### High Severity
-- [ ] **Non-deterministic time** — `time.Now()` used in lockout and instance management (`lockout.go:47,55,128,164`, `instance.go:65,70,99,113,161,180`) violates deterministic requirements for networked multiplayer. Server time drift between federated servers will cause lockout/instance desync. Use `engine.GameClock` interface or server-authoritative timestamp from network packets instead.
+- [x] **Non-deterministic time** — FIXED 2026-02-27: Added TimeProvider interface with RealTimeProvider and FixedTimeProvider implementations. Updated LockoutManager and InstanceManager to use TimeProvider instead of direct time.Now() calls. Added comprehensive tests validating determinism. Coverage maintained at 90.6%.
 
 ### Medium Severity
 - [ ] **Missing persistence** — RaidInstance and PlayerLockout types do not implement `Serialize()`/`Deserialize()` methods for save/load support. Instances and lockouts lost on server restart. Add ComponentSerializer interface implementation for `pkg/saveload` integration.

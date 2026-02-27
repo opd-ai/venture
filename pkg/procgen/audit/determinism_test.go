@@ -22,66 +22,16 @@ import (
 	"runtime"
 	"sync"
 	"testing"
-
-	"github.com/opd-ai/venture/pkg/engine"
-	"github.com/opd-ai/venture/pkg/procgen"
-	"github.com/opd-ai/venture/pkg/procgen/book"
-	"github.com/opd-ai/venture/pkg/procgen/building"
-	"github.com/opd-ai/venture/pkg/procgen/companion"
-	"github.com/opd-ai/venture/pkg/procgen/entity"
-	"github.com/opd-ai/venture/pkg/procgen/furniture"
-	"github.com/opd-ai/venture/pkg/procgen/item"
-	"github.com/opd-ai/venture/pkg/procgen/legendary"
-	"github.com/opd-ai/venture/pkg/procgen/magic"
-	"github.com/opd-ai/venture/pkg/procgen/quest"
-	"github.com/opd-ai/venture/pkg/procgen/recipe"
-	"github.com/opd-ai/venture/pkg/procgen/skills"
-	"github.com/opd-ai/venture/pkg/procgen/station"
-	"github.com/opd-ai/venture/pkg/procgen/terrain"
-	"github.com/opd-ai/venture/pkg/procgen/vehicle"
 )
 
 // GeneratorInfo describes a generator for audit testing
-type GeneratorInfo struct {
-	Name      string
-	Generator procgen.Generator
-	Params    procgen.GenerationParams
-}
+// Deprecated: Use GeneratorEntry from generators.go instead
+type GeneratorInfo = GeneratorEntry
 
 // getGenerators returns all generators to audit for Phase 62.1
+// Delegates to GetAllGenerators() for consistency across tests
 func getGenerators() []GeneratorInfo {
-	baseParams := procgen.GenerationParams{
-		Difficulty: 0.5,
-		Depth:      5,
-		GenreID:    "fantasy",
-	}
-
-	// BookGenerator requires book_type parameter
-	bookParams := procgen.GenerationParams{
-		Difficulty: 0.5,
-		Depth:      5,
-		GenreID:    "fantasy",
-		Custom: map[string]interface{}{
-			"book_type": engine.BookTypeLore,
-		},
-	}
-
-	return []GeneratorInfo{
-		{"EntityGenerator", entity.NewEntityGenerator(), baseParams},
-		{"ItemGenerator", item.NewItemGenerator(), baseParams},
-		{"MagicGenerator", magic.NewSpellGenerator(), baseParams},
-		{"SkillGenerator", skills.NewSkillTreeGenerator(), baseParams},
-		{"QuestGenerator", quest.NewQuestGenerator(), baseParams},
-		{"RecipeGenerator", recipe.NewRecipeGenerator(), baseParams},
-		{"StationGenerator", station.NewStationGenerator(), baseParams},
-		{"TerrainGenerator", terrain.NewBSPGenerator(), baseParams},
-		{"VehicleGenerator", vehicle.NewVehicleGenerator(), baseParams},
-		{"CompanionGenerator", companion.NewGenerator(), baseParams},
-		{"BuildingGenerator", building.NewGenerator(), baseParams},
-		{"FurnitureGenerator", furniture.NewGenerator(), baseParams},
-		{"LegendaryGenerator", legendary.NewLegendaryQuestGenerator(), baseParams},
-		{"BookGenerator", book.NewGenerator(), bookParams},
-	}
+	return GetAllGenerators()
 }
 
 // hashOutput creates a deterministic hash of generator output

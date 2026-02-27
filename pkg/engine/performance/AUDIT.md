@@ -34,7 +34,7 @@ _None_
 
 ### Low Severity
 - [ ] **Documentation** — `doc.go:18` contains example with `fmt.Printf` in documentation comment, which could mislead users to use unstructured logging. Should use `log.WithFields` example instead. (`doc.go:18`)
-- [ ] **Edge case handling** — `CacheManager.Set()` with zero `maxSizeMB` has undefined behavior (tested in `TestCacheEdgeCases` but not documented). Consider documenting or rejecting zero-size cache. (`cache_and_lod.go:26`)
+- [x] **Edge case handling** — `CacheManager.Set()` with zero `maxSizeMB` has undefined behavior (tested in `TestCacheEdgeCases` but not documented). Consider documenting or rejecting zero-size cache. (`cache_and_lod.go:26`) - **FIXED 2026-02-27**: Added 1MB minimum enforcement in NewCacheManager with structured logging warning. Updated tests to verify minimum enforcement. Zero/small values now rounded up to 1MB to ensure cache functionality.
 - [ ] **Interface documentation** — `ResourceLoader` interface lacks godoc explaining when `Load()` should return nil vs error vs data. Default implementation always returns `(nil, nil)`. (`cache_and_lod.go:195-209`)
 
 ## Input Integration

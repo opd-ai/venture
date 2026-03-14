@@ -5,7 +5,6 @@ import (
 	"image/color"
 
 	"github.com/hajimehoshi/ebiten/v2"
-	"github.com/hajimehoshi/ebiten/v2/inpututil"
 	"github.com/hajimehoshi/ebiten/v2/text/v2"
 	"github.com/opd-ai/venture/pkg/mobile"
 	"github.com/opd-ai/venture/pkg/world/territory"
@@ -22,6 +21,7 @@ type TerritoryUI struct {
 	selectedTerritory *territory.Territory
 	scrollOffset      int
 	touchHandler      *mobile.TouchInputHandler
+	input             InputProvider
 
 	// PERF: Cached images to avoid per-frame allocations (Critical Issue #2)
 	cachedOverlay *ebiten.Image // Semi-transparent background overlay
@@ -37,6 +37,12 @@ func NewTerritoryUI(territorySystem *TerritorySystem, screenWidth, screenHeight 
 		scrollOffset:    0,
 		touchHandler:    mobile.NewTouchInputHandler(),
 	}
+}
+
+// SetInputProvider sets the InputProvider used for keyboard navigation.
+// Call this after creation to enable testable, rebindable input handling.
+func (tui *TerritoryUI) SetInputProvider(input InputProvider) {
+	tui.input = input
 }
 
 // SetPlayerEntity sets the player entity for context.
@@ -89,25 +95,30 @@ func (tui *TerritoryUI) Update() error {
 }
 
 // handleKeyboardInput processes keyboard navigation and actions.
+// Uses InputProvider if set, enabling testability and input rebinding.
 func (tui *TerritoryUI) handleKeyboardInput() {
+	if tui.input == nil {
+		return
+	}
+
 	// Keyboard navigation
-	if inpututil.IsKeyJustPressed(ebiten.KeyUp) {
+	if tui.input.IsMenuUpJustPressed() {
 		tui.scrollOffset--
 		if tui.scrollOffset < 0 {
 			tui.scrollOffset = 0
 		}
 	}
-	if inpututil.IsKeyJustPressed(ebiten.KeyDown) {
+	if tui.input.IsMenuDownJustPressed() {
 		tui.scrollOffset++
 	}
 
-	// Declare war (W key)
-	if inpututil.IsKeyJustPressed(ebiten.KeyW) && tui.selectedTerritory != nil {
+	// Declare war (confirm action)
+	if tui.input.IsMenuConfirmJustPressed() && tui.selectedTerritory != nil {
 		tui.handleDeclareWar()
 	}
 
-	// Build structure (B key)
-	if inpututil.IsKeyJustPressed(ebiten.KeyB) && tui.selectedTerritory != nil {
+	// Build structure (back/alternate action)
+	if tui.input.IsMenuBackJustPressed() && tui.selectedTerritory != nil {
 		tui.handleBuildStructure()
 	}
 }

@@ -225,7 +225,10 @@ func (s *Spell) IsSupport() bool {
 	return s.Type == TypeHealing || s.Type == TypeBuff || s.Type == TypeDefensive
 }
 
-// GetPowerLevel returns a numerical power assessment (0-100).
+// GetPowerLevel returns a simplified power rating (0-100) for display in the UI.
+// This differs from BalanceConfig.calculatePower, which uses a more complex formula
+// for balance validation during generation. GetPowerLevel is for human-readable
+// display; calculatePower is the authoritative measure used by balance checking.
 func (s *Spell) GetPowerLevel() int {
 	// Calculate power based on stats
 	basePower := 0

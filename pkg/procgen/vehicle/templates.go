@@ -4,7 +4,8 @@
 // Phase 21.1: Vehicle Foundation
 package vehicle
 
-// GetFantasyTemplates returns fantasy genre vehicle templates.
+// GetFantasyTemplates returns vehicle templates themed for fantasy genre settings,
+// including mounts (horses, griffins), wagons, chariots, and magical flying vehicles.
 func GetFantasyTemplates() []VehicleTemplate {
 	return []VehicleTemplate{
 		// Mounts
@@ -83,7 +84,8 @@ func GetFantasyTemplates() []VehicleTemplate {
 	}
 }
 
-// GetSciFiTemplates returns sci-fi genre vehicle templates.
+// GetSciFiTemplates returns vehicle templates themed for sci-fi genre settings,
+// including spacecraft, hover vehicles, mechs, and advanced transporters.
 func GetSciFiTemplates() []VehicleTemplate {
 	return []VehicleTemplate{
 		// Mechs
@@ -164,7 +166,8 @@ func GetSciFiTemplates() []VehicleTemplate {
 	}
 }
 
-// GetHorrorTemplates returns horror genre vehicle templates.
+// GetHorrorTemplates returns vehicle templates themed for horror genre settings,
+// including cursed carriages, hearse vehicles, and eerie transportation.
 func GetHorrorTemplates() []VehicleTemplate {
 	return []VehicleTemplate{
 		{
@@ -198,7 +201,8 @@ func GetHorrorTemplates() []VehicleTemplate {
 	}
 }
 
-// GetCyberpunkTemplates returns cyberpunk genre vehicle templates.
+// GetCyberpunkTemplates returns vehicle templates themed for cyberpunk genre settings,
+// including motorcycles, armored cars, drones, and neon-lit street racers.
 func GetCyberpunkTemplates() []VehicleTemplate {
 	return []VehicleTemplate{
 		{
@@ -232,7 +236,8 @@ func GetCyberpunkTemplates() []VehicleTemplate {
 	}
 }
 
-// GetPostApocTemplates returns post-apocalyptic genre vehicle templates.
+// GetPostApocTemplates returns vehicle templates themed for post-apocalyptic settings,
+// including scavenged war rigs, dune buggies, and makeshift armored vehicles.
 func GetPostApocTemplates() []VehicleTemplate {
 	return []VehicleTemplate{
 		{

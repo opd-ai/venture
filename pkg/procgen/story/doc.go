@@ -135,6 +135,12 @@
 // - Memory: <50KB per fragment (actual: <20KB for all systems)
 // - Coherence: Validated via grammar rules and consistency checks
 //
+// # Benchmarks
+//
+// Run story benchmarks with:
+//
+//	go test -bench=. -benchmem ./pkg/procgen/story/...
+//
 // # Genre Support
 //
 // All systems support five core genres with themed content:

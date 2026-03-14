@@ -48,6 +48,10 @@ type RecipeTemplate struct {
 	MaterialNames []string
 	// MaterialCount specifies [min, max] number of materials required (inclusive)
 	MaterialCount [2]int
+	// MinQuantity is the minimum quantity per material ingredient (default 1 if zero)
+	MinQuantity int
+	// MaxQuantity is the maximum quantity per material ingredient (default 3 if zero)
+	MaxQuantity int
 	// GoldCostRange specifies [min, max] gold cost for crafting (inclusive)
 	GoldCostRange [2]int
 	// SkillRange specifies [min, max] skill requirement to attempt crafting (inclusive)
@@ -206,7 +210,14 @@ func (g *RecipeGenerator) generateRecipe(rng *rand.Rand, params procgen.Generati
 	materials := make([]engine.MaterialRequirement, materialCount)
 	for i := 0; i < materialCount; i++ {
 		materialName := template.MaterialNames[rng.Intn(len(template.MaterialNames))]
-		quantity := 1 + rng.Intn(3) // 1-3 of each material
+		minQ, maxQ := template.MinQuantity, template.MaxQuantity
+		if minQ <= 0 {
+			minQ = 1
+		}
+		if maxQ <= 0 || maxQ < minQ {
+			maxQ = 3
+		}
+		quantity := minQ + rng.Intn(maxQ-minQ+1)
 		materials[i] = engine.MaterialRequirement{
 			ItemName: materialName,
 			Quantity: quantity,

@@ -1,4 +1,7 @@
 // Package ui provides procedural UI element generation for the Venture game.
+// It does not implement System or Component interfaces directly; instead it provides
+// rendering utilities (generators, renderers) consumed by ECS systems such as
+// pkg/engine/hud_system.go and pkg/engine/inventory_ui.go.
 //
 // This package generates user interface elements using mathematical algorithms and
 // genre-based visual themes. All UI generation is deterministic and follows the

@@ -2,6 +2,7 @@ package recipe
 
 import (
 	"bytes"
+	"os"
 	"testing"
 
 	"github.com/opd-ai/venture/pkg/engine"
@@ -9,6 +10,14 @@ import (
 	"github.com/opd-ai/venture/pkg/procgen/item"
 	"github.com/sirupsen/logrus"
 )
+
+func TestMain(m *testing.M) {
+	if os.Getenv("DISPLAY") == "" && os.Getenv("WAYLAND_DISPLAY") == "" {
+		// Skip all tests in headless environments (package imports Ebiten/GLFW)
+		os.Exit(0)
+	}
+	os.Exit(m.Run())
+}
 
 // TestNewRecipeGenerator tests generator creation.
 func TestNewRecipeGenerator(t *testing.T) {

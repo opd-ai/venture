@@ -32,6 +32,12 @@
 //   - Bosses: Rare, powerful entities with enhanced stats
 //   - Minions: Weak, common entities in groups
 //
+// # Integration
+//
+// Generated entities are spawned in the game world using:
+//   - pkg/engine/entity_spawning.go — spawns entities in terrain zones
+//   - pkg/engine/merchant_spawn.go — spawns merchants in shops and towns
+//
 // # Deterministic Generation
 //
 // All entity generation is deterministic. The same seed and parameters

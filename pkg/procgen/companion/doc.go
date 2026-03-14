@@ -81,6 +81,13 @@
 // This description can be used by the rendering system to generate
 // appropriate sprites procedurally.
 //
+// # Integration
+//
+// Generated companions are used by the following systems:
+//   - pkg/engine/companion_ai_system.go — AI behavior and decision making
+//   - pkg/engine/skill_progression_system.go — Companion skill development (via CompanionLearningSystem)
+//   - pkg/integration/companion_housing/ — Companion home management (bedding, training areas)
+//
 // # Performance
 //
 // Generation time: ~11 microseconds per companion (0.011ms)

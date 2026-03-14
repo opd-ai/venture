@@ -143,4 +143,10 @@
 // All generation is deterministic based on the seed value.
 // The same seed and parameters will always produce identical spells,
 // which is critical for multiplayer synchronization.
+//
+// # See Also
+//
+//   - pkg/engine/spell_casting.go — Spell execution system
+//   - pkg/engine/spell_effect_system.go — Spell effect resolution
+//   - pkg/engine/spell_combination_system.go — Spell combination mechanics
 package magic

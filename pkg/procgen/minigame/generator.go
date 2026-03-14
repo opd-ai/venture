@@ -321,6 +321,18 @@ func (g *Generator) generateRitualGame(rng *rand.Rand, params procgen.Generation
 	}
 }
 
+// generateGenreName selects a random name from nameMap[genreID], falling back
+// to nameMap["default"] if the genre is not found or has no entries.
+func generateGenreName(rng *rand.Rand, genreID string, nameMap map[string][]string) string {
+	if names, ok := nameMap[genreID]; ok && len(names) > 0 {
+		return names[rng.Intn(len(names))]
+	}
+	if names, ok := nameMap["default"]; ok && len(names) > 0 {
+		return names[rng.Intn(len(names))]
+	}
+	return "Unknown Game"
+}
+
 // Name generation functions
 func (g *Generator) generateCardGameName(rng *rand.Rand, genreID string) string {
 	prefixes := []string{"Dragon", "Shadow", "Ancient", "Royal", "Mystic"}
@@ -335,49 +347,43 @@ func (g *Generator) generateCardGameName(rng *rand.Rand, genreID string) string 
 }
 
 func (g *Generator) generateDiceGameName(rng *rand.Rand, genreID string) string {
-	names := []string{"Bones", "Fortune's Favor", "Luck's Roll", "Fate's Dice", "Gambler's Choice"}
-	if genreID == "scifi" {
-		names = []string{"Probability Core", "Random Gen", "Chaos Dice", "Entropy Roll", "Quantum Luck"}
-	}
-	return names[rng.Intn(len(names))]
+	return generateGenreName(rng, genreID, map[string][]string{
+		"scifi":   {"Probability Core", "Random Gen", "Chaos Dice", "Entropy Roll", "Quantum Luck"},
+		"default": {"Bones", "Fortune's Favor", "Luck's Roll", "Fate's Dice", "Gambler's Choice"},
+	})
 }
 
 func (g *Generator) generatePuzzleGameName(rng *rand.Rand, genreID string) string {
-	names := []string{"Sliding Stones", "Ancient Tiles", "Mystic Grid", "Rune Puzzle", "Maze of Mind"}
-	if genreID == "scifi" {
-		names = []string{"Circuit Solver", "Data Grid", "Matrix Puzzle", "Logic Gate", "Neural Net"}
-	}
-	return names[rng.Intn(len(names))]
+	return generateGenreName(rng, genreID, map[string][]string{
+		"scifi":   {"Circuit Solver", "Data Grid", "Matrix Puzzle", "Logic Gate", "Neural Net"},
+		"default": {"Sliding Stones", "Ancient Tiles", "Mystic Grid", "Rune Puzzle", "Maze of Mind"},
+	})
 }
 
 func (g *Generator) generateMemoryGameName(rng *rand.Rand, genreID string) string {
-	names := []string{"Memory Match", "Recall Challenge", "Mind Game", "Pattern Memory", "Symbol Sequence"}
-	if genreID == "scifi" {
-		names = []string{"Memory Buffer", "Data Recall", "Cache Match", "Pattern Scan", "Neural Link"}
-	}
-	return names[rng.Intn(len(names))]
+	return generateGenreName(rng, genreID, map[string][]string{
+		"scifi":   {"Memory Buffer", "Data Recall", "Cache Match", "Pattern Scan", "Neural Link"},
+		"default": {"Memory Match", "Recall Challenge", "Mind Game", "Pattern Memory", "Symbol Sequence"},
+	})
 }
 
 func (g *Generator) generateLockPickingGameName(rng *rand.Rand, genreID string) string {
-	names := []string{"Lock Pick", "Tumbler Trial", "Key Master", "Pin Puzzle", "Lock Breaker"}
-	if genreID == "scifi" {
-		names = []string{"Firewall Breach", "Security Override", "Encryption Crack", "Access Hack", "Code Break"}
-	}
-	return names[rng.Intn(len(names))]
+	return generateGenreName(rng, genreID, map[string][]string{
+		"scifi":   {"Firewall Breach", "Security Override", "Encryption Crack", "Access Hack", "Code Break"},
+		"default": {"Lock Pick", "Tumbler Trial", "Key Master", "Pin Puzzle", "Lock Breaker"},
+	})
 }
 
 func (g *Generator) generateHackingGameName(rng *rand.Rand, genreID string) string {
-	names := []string{"Code Breaker", "System Hack", "Terminal Access", "Network Infiltration", "Data Breach"}
-	if genreID == "cyberpunk" {
-		names = []string{"ICE Breaker", "Netrun Protocol", "Black ICE Bypass", "Cortex Hack", "Data Heist"}
-	}
-	return names[rng.Intn(len(names))]
+	return generateGenreName(rng, genreID, map[string][]string{
+		"cyberpunk": {"ICE Breaker", "Netrun Protocol", "Black ICE Bypass", "Cortex Hack", "Data Heist"},
+		"default":   {"Code Breaker", "System Hack", "Terminal Access", "Network Infiltration", "Data Breach"},
+	})
 }
 
 func (g *Generator) generateRitualGameName(rng *rand.Rand, genreID string) string {
-	names := []string{"Mystic Ritual", "Spell Weaving", "Rune Casting", "Arcane Ceremony", "Magic Circle"}
-	if genreID == "horror" {
-		names = []string{"Dark Ritual", "Blood Rite", "Cursed Ceremony", "Unholy Pact", "Shadow Binding"}
-	}
-	return names[rng.Intn(len(names))]
+	return generateGenreName(rng, genreID, map[string][]string{
+		"horror":  {"Dark Ritual", "Blood Rite", "Cursed Ceremony", "Unholy Pact", "Shadow Binding"},
+		"default": {"Mystic Ritual", "Spell Weaving", "Rune Casting", "Arcane Ceremony", "Magic Circle"},
+	})
 }

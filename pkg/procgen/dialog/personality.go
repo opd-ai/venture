@@ -197,11 +197,9 @@ func (p *Personality) ApplyToGenerator(params *GenerateParams) {
 	}
 }
 
-// GetGreeting returns a personality-appropriate greeting.
-//
-// This provides template-based greetings that can be used as fallback
-// or starting points for Markov generation. Always returns the first
-// greeting for consistency. Use GetGreetingWithSeed for randomized selection.
+// GetGreeting returns a personality-appropriate greeting using a fixed deterministic
+// selection (always the first greeting). Maintained for backward compatibility.
+// For randomized greetings, use GetGreetingWithSeed instead.
 func (p *Personality) GetGreeting(genreID string) string {
 	greetings := p.buildGreetingsMap()
 

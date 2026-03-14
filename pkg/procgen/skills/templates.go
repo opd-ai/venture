@@ -36,7 +36,8 @@
 // Then register in generator.go's getTemplates() switch statement.
 package skills
 
-// GetFantasyTreeTemplates returns skill tree templates for fantasy genre.
+// GetFantasyTreeTemplates returns skill tree templates themed for fantasy genre worlds,
+// including warrior, mage, ranger, and healer trees with magic and combat abilities.
 func GetFantasyTreeTemplates() []SkillTreeTemplate {
 	return []SkillTreeTemplate{
 		{

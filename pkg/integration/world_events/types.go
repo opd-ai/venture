@@ -177,8 +177,8 @@ type EventManagerConfig struct {
 	ResponseTimeMax      time.Duration
 }
 
-// DefaultEventManagerConfig returns default configuration.
-func DefaultEventManagerConfig() EventManagerConfig {
+// NewDefaultEventManagerConfig returns default configuration.
+func NewDefaultEventManagerConfig() EventManagerConfig {
 	return EventManagerConfig{
 		MaxActiveEvents:      50,
 		EventFrequency:       2.0,

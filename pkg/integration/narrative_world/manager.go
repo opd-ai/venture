@@ -13,6 +13,7 @@ import (
 // StoryEventManager manages companion-driven narrative events
 type StoryEventManager struct {
 	seed            int64
+	genreID         string
 	memories        map[uint64]*CompanionMemory // CompanionID -> Memory
 	activeQuests    map[uint64][]*PersonalQuest // CompanionID -> Quests
 	conflicts       []CompanionConflict
@@ -48,6 +49,15 @@ func WithTimeProvider(tp TimeProvider) ManagerOption {
 	}
 }
 
+// WithGenreID sets the genre for story content generation.
+func WithGenreID(genreID string) ManagerOption {
+	return func(m *StoryEventManager) {
+		if genreID != "" {
+			m.genreID = genreID
+		}
+	}
+}
+
 // NewStoryEventManager creates a new story event manager.
 // Optional ManagerOption functions may be provided to customize behavior:
 //   - WithTimeProvider(tp): sets a custom TimeProvider for deterministic timestamps
@@ -65,6 +75,7 @@ func NewStoryEventManager(seed int64, opts ...ManagerOption) *StoryEventManager 
 		conflictChance:  0.15, // 15% default
 		maxMemoryEvents: 75,   // Default 75 events
 		timeProvider:    nil,  // Use package default if not set
+		genreID:         "fantasy",
 	}
 
 	// Apply options
@@ -399,7 +410,7 @@ func (m *StoryEventManager) GeneratePersonalQuest(companionID uint64, companion 
 	params := procgen.GenerationParams{
 		Difficulty: companion.Loyalty, // Higher loyalty = harder quest
 		Depth:      companion.Level,
-		GenreID:    "fantasy", // Default genre
+		GenreID:    m.genreID,
 	}
 
 	narrative, err := m.narrativeGen.Generate(seed+int64(companionID), params)

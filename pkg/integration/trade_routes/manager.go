@@ -722,29 +722,23 @@ func (rm *RouteManager) resolveDestroyedEncounter(encounter *BanditEncounter) {
 }
 
 func (rm *RouteManager) completeRoute(route *TradeRoute) {
-	// Calculate final profit
+	// Calculate final profit and apply price impacts in a single pass.
 	totalProfit := 0.0
 	for _, item := range route.Cargo {
 		totalProfit += item.Profit * float64(item.Quantity)
+		if rm.priceHandler != nil && item.Quantity > 0 {
+			// Successful delivery increases supply, reduces price.
+			// Impact: 0.95-0.99 (1-5% price reduction) based on quantity.
+			priceImpact := 1.0 - (float64(item.Quantity) / 1000.0 * 0.05)
+			if priceImpact < 0.95 {
+				priceImpact = 0.95 // Max 5% price reduction per route
+			}
+			rm.priceHandler.ApplyTradeImpact(item.ItemName, priceImpact, item.Quantity)
+		}
 	}
 
 	// Update success rate
 	route.SuccessRate = route.SuccessRate*0.9 + 0.1 // EWMA with 10% weight
-
-	// Apply price impacts to economy system (supply increases = price decreases)
-	if rm.priceHandler != nil {
-		for _, item := range route.Cargo {
-			if item.Quantity > 0 {
-				// Successful delivery increases supply, reduces price
-				// Impact: 0.95-0.99 (1-5% price reduction) based on quantity
-				priceImpact := 1.0 - (float64(item.Quantity) / 1000.0 * 0.05)
-				if priceImpact < 0.95 {
-					priceImpact = 0.95 // Max 5% price reduction per route
-				}
-				rm.priceHandler.ApplyTradeImpact(item.ItemName, priceImpact, item.Quantity)
-			}
-		}
-	}
 
 	// Clean up caravan mapping
 	delete(rm.activeCaravans, route.CaravanID)

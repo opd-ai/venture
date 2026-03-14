@@ -26,20 +26,6 @@ const (
 	maxLocalStorageSize = 5 * 1024 * 1024
 )
 
-// Migrator handles save file version migrations.
-// On WASM, migration is not supported - this interface exists only for API parity.
-type Migrator interface {
-	// CanMigrate returns true if the migrator can handle the given source version.
-	CanMigrate(sourceVersion string) bool
-
-	// Migrate transforms a save from sourceVersion to the current SaveVersion.
-	// Returns the migrated save or an error if migration fails.
-	Migrate(save *GameSave, sourceVersion string) (*GameSave, error)
-
-	// SupportedVersions returns the list of versions this migrator can upgrade from.
-	SupportedVersions() []string
-}
-
 // SaveManager is the WASM implementation using localStorage.
 // On WASM, SaveManager is type-aliased to the localStorage implementation.
 // This allows the same API across desktop and WASM platforms.

@@ -4,6 +4,7 @@ package resilience
 
 import (
 	"context"
+	"strconv"
 	"time"
 
 	"github.com/sirupsen/logrus"
@@ -234,42 +235,14 @@ func formatFloat(v float64) string {
 		return "0.00"
 	}
 	if v >= 1000 {
-		return formatInt(int64(v))
+		return strconv.FormatInt(int64(v), 10)
 	}
-	// Use %g for compact representation
-	return trimTrailingZeros(v)
+	return strconv.FormatFloat(v, 'f', 2, 64)
 }
 
-// formatInt formats an int64 without importing strconv.
+// formatInt formats an int64 as a decimal string.
 func formatInt(v int64) string {
-	if v == 0 {
-		return "0"
-	}
-	if v < 0 {
-		return "-" + formatInt(-v)
-	}
-	result := ""
-	for v > 0 {
-		result = string('0'+byte(v%10)) + result
-		v /= 10
-	}
-	return result
-}
-
-// trimTrailingZeros formats float with 2 decimal places.
-func trimTrailingZeros(v float64) string {
-	// Simple implementation: multiply by 100, round, format
-	i := int64(v*100 + 0.5)
-	whole := i / 100
-	frac := i % 100
-
-	if frac == 0 {
-		return formatInt(whole)
-	}
-	if frac%10 == 0 {
-		return formatInt(whole) + "." + string('0'+byte(frac/10))
-	}
-	return formatInt(whole) + "." + string('0'+byte(frac/10)) + string('0'+byte(frac%10))
+	return strconv.FormatInt(v, 10)
 }
 
 // logFailure logs a scenario failure with structured fields.

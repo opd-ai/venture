@@ -189,7 +189,7 @@ func TestCallReinforcementAllies(t *testing.T) {
 
 	// guild3 has 0.7 reputation with guild1, should be called
 	found := false
-	for _, response := range call.ResponingAllies {
+	for _, response := range call.RespondingAllies {
 		if response.AllyGuildID == guild3 {
 			found = true
 			if response.SuccessRate < 0.6 || response.SuccessRate > 0.8 {
@@ -444,7 +444,7 @@ func TestCallReinforcementAlliesNoAllies(t *testing.T) {
 		t.Fatalf("CallReinforcementAllies failed: %v", err)
 	}
 
-	if len(call.ResponingAllies) > 0 {
+	if len(call.RespondingAllies) > 0 {
 		t.Error("Expected no responding allies for guild with no allies")
 	}
 }

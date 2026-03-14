@@ -26,7 +26,7 @@ func NewEventManager(seed int64) *EventManager {
 	return &EventManager{
 		seed:          seed,
 		rng:           rand.New(rand.NewSource(seed)),
-		config:        DefaultEventManagerConfig(),
+		config:        NewDefaultEventManagerConfig(),
 		activeEvents:  make(map[string]*WorldEvent),
 		eventChains:   make(map[string]*EventChain),
 		lastEventTime: now(),

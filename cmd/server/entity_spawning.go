@@ -1,7 +1,9 @@
 //go:build !android && !ios
 // +build !android,!ios
 
-// Package main provides server-side entity spawning for V4.0 entities.
+// entity_spawning.go handles server-authoritative entity spawning.
+// Unlike client-side spawning which is prediction-based, server spawning
+// is authoritative and broadcasts entity creation to all connected clients.
 // This file ports spawning logic from cmd/client/util.go for server use.
 package main
 

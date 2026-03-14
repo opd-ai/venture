@@ -247,6 +247,11 @@ func (v *EconomicValidator) validateGoldBalance(ctx context.Context, result *Val
 	logrus.Debug("simulating gold sources")
 	// Sources: loot from killing enemies
 	for i := 0; i < totalIterations; i++ {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		default:
+		}
 		itemValue := 5 + rng.Intn(50) // 5-55 gold per item
 		goldSources += float64(itemValue)
 	}
@@ -254,6 +259,11 @@ func (v *EconomicValidator) validateGoldBalance(ctx context.Context, result *Val
 	logrus.Debug("simulating gold sinks")
 	// Sinks: equipment repairs (10% of value per use), housing costs, consumables
 	for i := 0; i < totalIterations; i++ {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		default:
+		}
 		itemValue := 5 + rng.Intn(50) // Same as sources
 		// Repairs: 10% of item value per 100 uses
 		goldSinks += float64(itemValue) * 0.1

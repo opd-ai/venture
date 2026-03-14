@@ -246,11 +246,11 @@ func (m *Manager) CallReinforcementAllies(callingGuildID, targetGuildID string) 
 
 	// Create alliance call
 	call := &AllianceCall{
-		CallingGuildID:  callingGuildID,
-		TargetGuildID:   targetGuildID,
-		CalledAt:        now(),
-		ResponingAllies: make([]AllianceResponse, 0),
-		Completed:       false,
+		CallingGuildID:   callingGuildID,
+		TargetGuildID:    targetGuildID,
+		CalledAt:         now(),
+		RespondingAllies: make([]AllianceResponse, 0),
+		Completed:        false,
 	}
 
 	// Find allied guilds (guilds with high reputation)
@@ -284,7 +284,7 @@ func (m *Manager) CallReinforcementAllies(callingGuildID, targetGuildID string) 
 			SuccessRate: successRate,
 		}
 
-		call.ResponingAllies = append(call.ResponingAllies, response)
+		call.RespondingAllies = append(call.RespondingAllies, response)
 	}
 
 	// Store alliance call

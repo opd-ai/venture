@@ -48,11 +48,11 @@ type TradeEmbargo struct {
 
 // AllianceCall represents a request for siege reinforcements
 type AllianceCall struct {
-	CallingGuildID  string             `json:"calling_guild_id"`
-	TargetGuildID   string             `json:"target_guild_id"` // Guild being attacked
-	CalledAt        time.Time          `json:"called_at"`
-	ResponingAllies []AllianceResponse `json:"responding_allies"`
-	Completed       bool               `json:"completed"`
+	CallingGuildID   string             `json:"calling_guild_id"`
+	TargetGuildID    string             `json:"target_guild_id"` // Guild being attacked
+	CalledAt         time.Time          `json:"called_at"`
+	RespondingAllies []AllianceResponse `json:"responding_allies"`
+	Completed        bool               `json:"completed"`
 }
 
 // AllianceResponse represents an ally's response to a reinforcement call

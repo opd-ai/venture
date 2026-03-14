@@ -131,7 +131,7 @@ func TestEventManagerCreation(t *testing.T) {
 		{
 			name:   "default config",
 			seed:   12345,
-			config: DefaultEventManagerConfig(),
+			config: NewDefaultEventManagerConfig(),
 		},
 		{
 			name: "custom config",

@@ -55,13 +55,13 @@ func (aa *AutoAdjuster) SetOnChange(callback func(QualityLevel)) {
 // Returns true if quality was adjusted.
 func (aa *AutoAdjuster) Update(frameTimeMS float64) bool {
 	aa.mu.Lock()
-	defer aa.mu.Unlock()
 
 	// Record performance
 	aa.monitor.RecordFrame(frameTimeMS)
 
 	// Check if adjustment is needed
 	if !aa.enabled {
+		aa.mu.Unlock()
 		return false
 	}
 
@@ -69,15 +69,18 @@ func (aa *AutoAdjuster) Update(frameTimeMS float64) bool {
 	if shouldChange {
 		// Update config to match new quality level
 		aa.config.ApplyLevel(newQuality)
+		cb := aa.onChange
+		aa.mu.Unlock()
 
-		// Call callback if set
-		if aa.onChange != nil {
-			aa.onChange(newQuality)
+		// Invoke callback outside the lock to avoid blocking updates.
+		if cb != nil {
+			cb(newQuality)
 		}
 
 		return true
 	}
 
+	aa.mu.Unlock()
 	return false
 }
 

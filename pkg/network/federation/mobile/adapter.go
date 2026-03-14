@@ -39,6 +39,9 @@ func NewAdapterWithTimeProvider(config *Config, tp TimeProvider) *Adapter {
 	if tp == nil {
 		tp = DefaultTimeProvider()
 	}
+	if config.MaxBandwidth < 0 {
+		config.MaxBandwidth = 0
+	}
 
 	ctx, cancel := context.WithCancel(context.Background())
 
@@ -103,6 +106,12 @@ func (a *Adapter) RegisterSyncHandler(handler SyncHandler) {
 
 // UpdateBatteryLevel updates battery level and adjusts sync mode
 func (a *Adapter) UpdateBatteryLevel(level float64) {
+	if level < 0.0 {
+		level = 0.0
+	}
+	if level > 1.0 {
+		level = 1.0
+	}
 	a.state.SetBatteryLevel(level)
 
 	// Determine battery mode

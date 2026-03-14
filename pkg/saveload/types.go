@@ -5,10 +5,13 @@ package saveload
 
 import (
 	"time"
+
+	"github.com/opd-ai/venture/pkg/version"
 )
 
 // SaveVersion represents the save file format version.
-const SaveVersion = "1.0.0"
+// It mirrors version.Version to ensure a single source of truth.
+var SaveVersion = version.Version
 
 // Manager defines the interface for save/load operations.
 // Both SaveManager (file-based) and MemorySaveManager (in-memory fallback)

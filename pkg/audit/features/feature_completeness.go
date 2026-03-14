@@ -14,6 +14,8 @@ package features
 import (
 	"fmt"
 	"time"
+
+	logrus "github.com/sirupsen/logrus"
 )
 
 // Validation thresholds for feature completeness criteria.
@@ -105,6 +107,9 @@ func NewFeatureRegistry() *FeatureRegistry {
 // Nil features are silently ignored to prevent panics.
 func (r *FeatureRegistry) Register(f *Feature) {
 	if f == nil {
+		logrus.WithFields(logrus.Fields{
+			"operation": "register_feature",
+		}).Warn("attempted to register nil feature")
 		return
 	}
 	r.features[f.ID] = f

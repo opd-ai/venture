@@ -229,7 +229,7 @@ func formatFailure(msg string, actual, max float64, unit string) string {
 	return msg + ": " + formatFloat(actual) + " > " + formatFloat(max) + " " + unit
 }
 
-// formatFloat formats a float64 to a reasonable precision.
+// formatFloat formats a float64 to a reasonable precision, trimming trailing zeros.
 func formatFloat(v float64) string {
 	if v < 0.01 {
 		return "0.00"
@@ -237,7 +237,18 @@ func formatFloat(v float64) string {
 	if v >= 1000 {
 		return strconv.FormatInt(int64(v), 10)
 	}
-	return strconv.FormatFloat(v, 'f', 2, 64)
+	s := strconv.FormatFloat(v, 'f', 2, 64)
+	// Trim trailing zeros after decimal point.
+	if len(s) > 2 && s[len(s)-2] == '.' {
+		return s[:len(s)-1]
+	}
+	if len(s) > 1 && s[len(s)-1] == '0' && s[len(s)-2] != '.' {
+		s = s[:len(s)-1]
+	}
+	if len(s) > 1 && s[len(s)-1] == '0' && s[len(s)-2] == '.' {
+		s = s[:len(s)-2]
+	}
+	return s
 }
 
 // formatInt formats an int64 as a decimal string.

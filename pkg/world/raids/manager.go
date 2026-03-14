@@ -17,15 +17,22 @@ type Manager struct {
 	generator       *Generator
 	instanceManager *InstanceManager
 	lockoutManager  *LockoutManager
+	genreID         string
 	mu              sync.RWMutex
 }
 
 // NewManager creates a new raid manager with default settings.
-func NewManager(seed int64) *Manager {
+// genreID sets the genre for raid content generation (e.g., "fantasy", "sci-fi").
+// Pass an empty string to use the default "fantasy" genre.
+func NewManager(seed int64, genreID string) *Manager {
+	if genreID == "" {
+		genreID = "fantasy"
+	}
 	return &Manager{
 		generator:       NewGenerator(seed),
 		instanceManager: NewInstanceManager(),
 		lockoutManager:  NewLockoutManager(),
+		genreID:         genreID,
 	}
 }
 
@@ -37,7 +44,7 @@ func (m *Manager) GenerateRaid(tier RaidTier, depth int) (*RaidDungeon, error) {
 	params := procgen.GenerationParams{
 		Difficulty: tier.DifficultyMultiplier() / 10.0, // Scale to 0.0-1.0 range
 		Depth:      depth,
-		GenreID:    "fantasy",
+		GenreID:    m.genreID,
 		Custom: map[string]interface{}{
 			"tier": tier,
 		},
@@ -86,7 +93,7 @@ func (m *Manager) CreateInstance(tier RaidTier, depth int, groupID string, playe
 	params := procgen.GenerationParams{
 		Difficulty: tier.DifficultyMultiplier() / 10.0, // Scale to 0.0-1.0 range
 		Depth:      depth,
-		GenreID:    "fantasy",
+		GenreID:    m.genreID,
 		Custom: map[string]interface{}{
 			"tier":       tier,
 			"group_id":   groupID,

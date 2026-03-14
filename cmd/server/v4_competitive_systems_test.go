@@ -18,7 +18,7 @@ func TestCompetitiveSystemsInitialization(t *testing.T) {
 	initialSystemCount := len(world.GetSystems())
 
 	// Initialize V4 systems which includes competitive systems
-	_, _ = initializeV4Systems(world, seed, logger, nil)
+	_, _ = initializeV4Systems(world, seed, "fantasy", logger, nil)
 
 	finalSystemCount := len(world.GetSystems())
 	addedSystems := finalSystemCount - initialSystemCount
@@ -76,10 +76,10 @@ func TestCompetitiveSystemsDeterminism(t *testing.T) {
 
 	// Initialize two worlds with same seed
 	world1 := engine.NewWorld()
-	initializeV4Systems(world1, seed, logger, nil)
+	initializeV4Systems(world1, seed, "fantasy", logger, nil)
 
 	world2 := engine.NewWorld()
-	initializeV4Systems(world2, seed, logger, nil)
+	initializeV4Systems(world2, seed, "fantasy", logger, nil)
 
 	// Both worlds should have the same number of systems
 	systems1 := world1.GetSystems()
@@ -127,7 +127,7 @@ func TestCompetitiveSystemsWithDifferentSeeds(t *testing.T) {
 
 	for i, seed := range seeds {
 		world := engine.NewWorld()
-		initializeV4Systems(world, seed, logger, nil)
+		initializeV4Systems(world, seed, "fantasy", logger, nil)
 		systemCounts[i] = len(world.GetSystems())
 	}
 
@@ -148,7 +148,7 @@ func TestCompetitiveSystemsNoDuplicates(t *testing.T) {
 	seed := int64(77777)
 	logger := createTestLogger()
 
-	initializeV4Systems(world, seed, logger, nil)
+	initializeV4Systems(world, seed, "fantasy", logger, nil)
 
 	systems := world.GetSystems()
 

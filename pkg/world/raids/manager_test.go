@@ -7,7 +7,7 @@ import (
 )
 
 func TestNewManager(t *testing.T) {
-	manager := NewManager(12345)
+	manager := NewManager(12345, "fantasy")
 
 	if manager == nil {
 		t.Fatal("NewManager returned nil")
@@ -27,7 +27,7 @@ func TestNewManager(t *testing.T) {
 }
 
 func TestManager_GenerateRaid(t *testing.T) {
-	manager := NewManager(12345)
+	manager := NewManager(12345, "fantasy")
 
 	tests := []struct {
 		name    string
@@ -88,7 +88,7 @@ func TestManager_GenerateRaid(t *testing.T) {
 }
 
 func TestManager_CreateInstance(t *testing.T) {
-	manager := NewManager(12345)
+	manager := NewManager(12345, "fantasy")
 
 	tests := []struct {
 		name      string
@@ -159,7 +159,7 @@ func TestManager_CreateInstance(t *testing.T) {
 }
 
 func TestManager_CompleteRaid(t *testing.T) {
-	manager := NewManager(12345)
+	manager := NewManager(12345, "fantasy")
 
 	// Create instance
 	playerIDs := []string{"p1", "p2", "p3", "p4", "p5"}
@@ -200,7 +200,7 @@ func TestManager_CompleteRaid(t *testing.T) {
 }
 
 func TestManager_CanParticipate(t *testing.T) {
-	manager := NewManager(12345)
+	manager := NewManager(12345, "fantasy")
 
 	playerIDs := []string{"p1", "p2", "p3", "p4", "p5"}
 
@@ -243,7 +243,7 @@ func TestManager_CanParticipate(t *testing.T) {
 }
 
 func TestManager_GetPlayerLockouts(t *testing.T) {
-	manager := NewManager(12345)
+	manager := NewManager(12345, "fantasy")
 
 	playerID := "player1"
 
@@ -296,7 +296,7 @@ func TestManager_GetPlayerLockouts(t *testing.T) {
 
 func TestManager_CleanupExpired(t *testing.T) {
 	// Use short lockout period for testing
-	manager := NewManager(12345)
+	manager := NewManager(12345, "fantasy")
 	manager.lockoutManager = NewLockoutManagerWithPeriod(100 * time.Millisecond)
 	manager.instanceManager = NewInstanceManagerWithTimeout(100 * time.Millisecond)
 
@@ -346,7 +346,7 @@ func TestManager_CleanupExpired(t *testing.T) {
 }
 
 func TestManager_GetGroupInstance(t *testing.T) {
-	manager := NewManager(12345)
+	manager := NewManager(12345, "fantasy")
 
 	groupID := "group1"
 	playerIDs := []string{"p1", "p2", "p3", "p4", "p5"}
@@ -381,7 +381,7 @@ func TestManager_GetGroupInstance(t *testing.T) {
 }
 
 func TestManager_ConcurrentAccess(t *testing.T) {
-	manager := NewManager(12345)
+	manager := NewManager(12345, "fantasy")
 
 	done := make(chan bool)
 
@@ -413,7 +413,7 @@ func TestManager_ConcurrentAccess(t *testing.T) {
 // Benchmarks
 
 func BenchmarkManager_GenerateRaid(b *testing.B) {
-	manager := NewManager(12345)
+	manager := NewManager(12345, "fantasy")
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
@@ -422,7 +422,7 @@ func BenchmarkManager_GenerateRaid(b *testing.B) {
 }
 
 func BenchmarkManager_CreateInstance(b *testing.B) {
-	manager := NewManager(12345)
+	manager := NewManager(12345, "fantasy")
 	playerIDs := []string{"p1", "p2", "p3", "p4", "p5"}
 
 	b.ResetTimer()
@@ -433,7 +433,7 @@ func BenchmarkManager_CreateInstance(b *testing.B) {
 }
 
 func BenchmarkManager_CanParticipate(b *testing.B) {
-	manager := NewManager(12345)
+	manager := NewManager(12345, "fantasy")
 	playerIDs := []string{"p1", "p2", "p3", "p4", "p5"}
 
 	b.ResetTimer()
@@ -443,7 +443,7 @@ func BenchmarkManager_CanParticipate(b *testing.B) {
 }
 
 func BenchmarkManager_GetPlayerLockouts(b *testing.B) {
-	manager := NewManager(12345)
+	manager := NewManager(12345, "fantasy")
 
 	// Create some lockouts
 	playerIDs := []string{"player1", "p2", "p3", "p4", "p5"}

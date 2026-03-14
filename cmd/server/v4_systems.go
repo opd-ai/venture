@@ -40,7 +40,7 @@ import (
 // Phase 31: NPC Dialog (1 system)
 //
 // Returns: CompanionLoyaltySystem for housing integration wiring
-func initializeV4Systems(world *engine.World, seed int64, logger *logrus.Logger, economySystem *engine.EconomySystem) (*engine.CompanionLoyaltySystem, *engine.NarrativeSystem) {
+func initializeV4Systems(world *engine.World, seed int64, genreID string, logger *logrus.Logger, economySystem *engine.EconomySystem) (*engine.CompanionLoyaltySystem, *engine.NarrativeSystem) {
 	serverLogger := logger.WithField("component", "v4_systems")
 
 	// INTEGRATION FIX: Phase 21 - Complete Vehicle Systems (was: 1/4, now: 4/4)
@@ -183,7 +183,7 @@ func initializeV4Systems(world *engine.World, seed int64, logger *logrus.Logger,
 	world.AddSystem(pvpRatingSystem)
 
 	// Legendary quest system requires raids.Manager for raid-based quest phases
-	raidManager := raids.NewManager(seed)
+	raidManager := raids.NewManager(seed, genreID)
 	legendaryQuestSystem := engine.NewLegendaryQuestSystem(world, seed, raidManager)
 	world.AddSystem(legendaryQuestSystem)
 

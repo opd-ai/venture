@@ -1,6 +1,7 @@
 package guild_housing
 
 import (
+	"encoding/json"
 	"time"
 
 	"github.com/opd-ai/venture/pkg/network/federation/guild"
@@ -63,4 +64,14 @@ type GuildHousingComponent struct {
 // Type returns the component type identifier.
 func (c GuildHousingComponent) Type() string {
 	return "guild_housing"
+}
+
+// Serialize encodes the GuildHousingComponent to JSON bytes.
+func (c *GuildHousingComponent) Serialize() ([]byte, error) {
+	return json.Marshal(c)
+}
+
+// Deserialize decodes JSON bytes into the GuildHousingComponent.
+func (c *GuildHousingComponent) Deserialize(data []byte) error {
+	return json.Unmarshal(data, c)
 }

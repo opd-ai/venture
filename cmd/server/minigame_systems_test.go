@@ -20,7 +20,7 @@ func TestServerMinigameSystemsInitialized(t *testing.T) {
 	seed := int64(12345)
 
 	// Initialize V4 systems (which should include fishing and gathering)
-	_, _ = initializeV4Systems(world, seed, logger, nil)
+	_, _ = initializeV4Systems(world, seed, "fantasy", logger, nil)
 
 	// Verify systems were added to the world
 	// We can't directly access the systems list, but we can verify no panic occurred
@@ -37,7 +37,7 @@ func TestServerFishingGatheringMultiplayerSync(t *testing.T) {
 	serverWorld := engine.NewWorld()
 	serverLogger := logrus.New()
 	serverLogger.SetLevel(logrus.ErrorLevel)
-	_, _ = initializeV4Systems(serverWorld, seed, serverLogger, nil)
+	_, _ = initializeV4Systems(serverWorld, seed, "fantasy", serverLogger, nil)
 
 	// Create client world (simulated)
 	clientWorld := engine.NewWorld()
@@ -62,7 +62,7 @@ func TestServerV4SystemCount(t *testing.T) {
 	seed := int64(12345)
 
 	// Initialize V4 systems - should complete without errors
-	_, _ = initializeV4Systems(world, seed, logger, nil)
+	_, _ = initializeV4Systems(world, seed, "fantasy", logger, nil)
 
 	// Verify world can update without panicking
 	world.Update(0.016)
@@ -77,7 +77,7 @@ func TestServerFishingSystemAuthoritative(t *testing.T) {
 	logger.SetLevel(logrus.ErrorLevel)
 
 	// Initialize V4 systems
-	_, _ = initializeV4Systems(world, seed, logger, nil)
+	_, _ = initializeV4Systems(world, seed, "fantasy", logger, nil)
 
 	// Create fishing spot entity
 	spot := world.CreateEntity()
@@ -110,7 +110,7 @@ func TestServerGatheringSystemAuthoritative(t *testing.T) {
 	logger.SetLevel(logrus.ErrorLevel)
 
 	// Initialize V4 systems
-	_, _ = initializeV4Systems(world, seed, logger, nil)
+	_, _ = initializeV4Systems(world, seed, "fantasy", logger, nil)
 
 	// Create resource node entity
 	node := world.CreateEntity()
@@ -142,7 +142,7 @@ func TestServerCompetitivePvPSystemsWithMinigames(t *testing.T) {
 	logger.SetLevel(logrus.ErrorLevel)
 
 	// Initialize V4 systems (includes both competitive PvP and minigames)
-	_, _ = initializeV4Systems(world, seed, logger, nil)
+	_, _ = initializeV4Systems(world, seed, "fantasy", logger, nil)
 
 	// Create entities for different system types
 	// Raid entity

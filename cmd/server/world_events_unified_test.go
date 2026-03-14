@@ -19,7 +19,7 @@ func TestWorldEventsSystemUnification(t *testing.T) {
 	initialSystemCount := len(world.GetSystems())
 
 	// Initialize V4 systems which includes WorldEventsSystem
-	initializeV4Systems(world, seed, logger, nil)
+	initializeV4Systems(world, seed, "fantasy", logger, nil)
 	initializeV6SystemsServer(world, seed, logger, nil)
 
 	finalSystemCount := len(world.GetSystems())
@@ -76,7 +76,7 @@ func TestWorldEventsSystemServerClientParity(t *testing.T) {
 	// Server world
 	serverWorld := engine.NewWorld()
 	serverLogger := createTestLoggerForSystems()
-	initializeV4Systems(serverWorld, seed, serverLogger, nil)
+	initializeV4Systems(serverWorld, seed, "fantasy", serverLogger, nil)
 	initializeV6SystemsServer(serverWorld, seed, serverLogger, nil)
 
 	// Client world simulation

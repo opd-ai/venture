@@ -188,7 +188,7 @@ func TestServerIdentityWithMultipleSystems(t *testing.T) {
 	serverName := "full-stack-server"
 
 	// Initialize all server systems
-	initializeV4Systems(world, seed, logger, nil)
+	initializeV4Systems(world, seed, "fantasy", logger, nil)
 	initializeV5SystemsServer(world, logger)
 	initializeV6SystemsServer(world, seed, logger, nil)
 	guildManager, _, _ := initializeV8SystemsServer(world, seed, serverName, logger)

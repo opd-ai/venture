@@ -389,7 +389,7 @@ func createGameWorld(logger *logrus.Logger) (*engine.World, *engine.EnhancedChat
 	// Roadmap: Multiple phases (V3-V6) - complete multiplayer parity
 	craftingSystem, narrativeSystem := initializeCoreGameplaySystems(world, *seed, logger, inventorySystem, itemGen)
 
-	companionLoyaltySystem, _ := initializeV4Systems(world, *seed, logger, economySystem)
+	companionLoyaltySystem, _ := initializeV4Systems(world, *seed, *genreID, logger, economySystem)
 	enhancedChatSystem := initializeV5SystemsServer(world, logger)
 	initializeV6SystemsServer(world, *seed, logger, economySystem)
 

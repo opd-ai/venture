@@ -996,7 +996,7 @@ func initializeProgressionSystems(game *engine.EbitenGame, sys *systemsContainer
 	logging.ComponentLogger(logger, "raids").Debug("Created raid system")
 
 	// Phase 3.3: Legendary quest system (requires raid manager)
-	raidManager := raids.NewManager(game.GetWorldSeed())
+	raidManager := raids.NewManager(game.GetWorldSeed(), *genreID)
 	sys.legendaryQuestSystem = engine.NewLegendaryQuestSystem(game.World, game.GetWorldSeed(), raidManager)
 	logging.ComponentLogger(logger, "legendary").Debug("Created legendary quest system")
 

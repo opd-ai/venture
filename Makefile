@@ -72,17 +72,17 @@ build-macos: ## Build for macOS (amd64 and arm64)
 
 test: ## Run tests
 	@echo "Running tests..."
-	go test -v ./...
+	@DISPLAY=$${DISPLAY:-:99} go test -v ./...
 
 test-coverage: ## Run tests with coverage report
 	@echo "Running tests with coverage..."
-	go test -cover -coverprofile=coverage.out ./...
+	@DISPLAY=$${DISPLAY:-:99} go test -cover -coverprofile=coverage.out ./...
 	go tool cover -html=coverage.out -o coverage.html
 	@echo "Coverage report generated: coverage.html"
 
 test-race: ## Run tests with race detection
 	@echo "Running tests with race detection..."
-	go test -race ./...
+	@DISPLAY=$${DISPLAY:-:99} go test -race ./...
 
 bench: ## Run benchmarks
 	@echo "Running benchmarks..."

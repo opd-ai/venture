@@ -615,6 +615,7 @@ func (w *World) GetEntity(entityID uint64) (*Entity, bool) {
 }
 
 // AddSystem adds a system to the world.
+// It is safe to call concurrently from multiple goroutines.
 func (w *World) AddSystem(system System) {
 	// Defensive check: prevent nil systems from being added
 	// This should not happen in normal operation, but provides safety
@@ -625,6 +626,9 @@ func (w *World) AddSystem(system System) {
 		}
 		return
 	}
+
+	w.mu.Lock()
+	defer w.mu.Unlock()
 
 	w.systems = append(w.systems, system)
 

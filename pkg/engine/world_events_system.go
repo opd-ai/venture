@@ -2,6 +2,7 @@ package engine
 
 import (
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/opd-ai/venture/pkg/integration/world_events"
@@ -16,6 +17,7 @@ type WorldEventsSystem struct {
 	logger         *logrus.Entry
 	updateTimer    float64
 	updateInterval float64 // Check for events every N seconds
+	mu             sync.Mutex
 }
 
 // NewWorldEventsSystem creates a new world events system.
@@ -41,6 +43,9 @@ func NewWorldEventsSystemWithLogger(world *World, seed int64, logger *logrus.Log
 
 // Update processes world events based on game state.
 func (s *WorldEventsSystem) Update(entities []*Entity, deltaTime float64) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
 	s.updateTimer += deltaTime
 
 	if s.updateTimer < s.updateInterval {

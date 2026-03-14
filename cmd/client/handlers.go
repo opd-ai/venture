@@ -626,6 +626,10 @@ func initializeCoreSystems(game *engine.EbitenGame, logger *logrus.Logger, clien
 	sys.movementSystem.SetCollisionSystem(sys.collisionSystem)
 	sys.movementSystem.SetStatisticsSystem(sys.statisticsSystem)
 
+	// Create the sprite generator before parallel groups so Group 3 can safely
+	// read sys.spriteGenerator without a data race against Group 2's write.
+	sys.spriteGenerator = sprites.NewGenerator()
+
 	// Phase 2: Parallel initialization of independent systems
 	var wg sync.WaitGroup
 	wg.Add(3)
@@ -651,7 +655,6 @@ func initializeCoreSystems(game *engine.EbitenGame, logger *logrus.Logger, clien
 	go func() {
 		defer wg.Done()
 		sys.spriteCache = cache.NewSpriteCache(effectiveSpriteCacheMax)
-		sys.spriteGenerator = sprites.NewGenerator()
 		sys.animationSystem = engine.NewAnimationSystem(sys.spriteGenerator)
 		sys.animationSystem.SetMaxCacheSize(effectiveAnimCacheSize)
 		sys.animationSystem.SetSpriteCache(sys.spriteCache)

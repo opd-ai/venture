@@ -138,14 +138,15 @@ func TestLegendaryQuestSystem_CreateRewardItemByID(t *testing.T) {
 	// Flush pending entities so the item appears in GetEntities()
 	world.FlushPendingEntities()
 
-	// Find the spawned item entity (should be the second entity after player)
-	entities := world.GetEntities()
-	if len(entities) < 2 {
-		t.Fatalf("Expected at least 2 entities (player + spawned item), got %d", len(entities))
+	// Find the spawned item entity by its legendary_item component, not by
+	// positional index — GetEntities() iterates a map and is non-deterministic.
+	itemEntities := world.GetEntitiesWith("legendary_item")
+	if len(itemEntities) == 0 {
+		t.Fatal("Expected at least one entity with legendary_item component, got none")
 	}
 
 	// Check the item entity
-	itemEntity := entities[1]
+	itemEntity := itemEntities[0]
 
 	// Verify position component
 	if !itemEntity.HasComponent("position") {

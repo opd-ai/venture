@@ -450,15 +450,15 @@ func (ws *WeatherSystem) handleParticleImpact(p *Particle) {
 
 	switch ws.Config.Type {
 	case WeatherRain, WeatherBloodRain:
-		// Accumulate puddles
+		// Puddle accumulation: each raindrop impact adds 0.001 depth (capped at 1.0).
+		// Full puddle (1.0) represents ~1000 raindrop impacts per tile.
 		current := ws.Effects.Puddles[tileKey]
-		// Each impact adds a small amount, capped at 1.0
 		ws.Effects.Puddles[tileKey] = math.Min(current+0.001, 1.0)
 
 	case WeatherSnow:
-		// Accumulate snow
+		// Snow accumulation: each snowflake adds 0.0005 depth (half the rain rate).
+		// Full snow cover (1.0) represents ~2000 snowflake impacts per tile.
 		current := ws.Effects.SnowLevel[tileKey]
-		// Snow accumulates more slowly than rain
 		ws.Effects.SnowLevel[tileKey] = math.Min(current+0.0005, 1.0)
 	}
 }

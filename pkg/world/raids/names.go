@@ -29,6 +29,45 @@ func (b *BossNameGenerator) GenerateRaidName(rng *rand.Rand, genreID string, tie
 	return fmt.Sprintf("%s %s (%s)", prefix, suffix, tierName)
 }
 
+// GenerateBlendedRaidName creates a raid name that blends two genres.
+// primaryID and secondaryID are genre identifiers; blendWeight (0.0–1.0) controls
+// how much influence the secondary genre has. At blendWeight=0.0 the result is
+// equivalent to GenerateRaidName(primaryID); at 1.0 it is equivalent to
+// GenerateRaidName(secondaryID). Intermediate values draw prefixes from the
+// primary genre and suffixes from the secondary genre (or vice-versa depending
+// on rng), creating hybrid names that reflect the blended theme.
+func (b *BossNameGenerator) GenerateBlendedRaidName(rng *rand.Rand, primaryID, secondaryID string, blendWeight float64, tier RaidTier) string {
+	// Clamp blend weight to valid range.
+	if blendWeight < 0 {
+		blendWeight = 0
+	}
+	if blendWeight > 1 {
+		blendWeight = 1
+	}
+
+	// Choose prefix pool: primary unless rng exceeds (1 - blendWeight).
+	var prefix string
+	prefPrimary := b.getPrefixesByGenre(primaryID)
+	prefSecondary := b.getPrefixesByGenre(secondaryID)
+	if rng.Float64() < blendWeight {
+		prefix = prefSecondary[rng.Intn(len(prefSecondary))]
+	} else {
+		prefix = prefPrimary[rng.Intn(len(prefPrimary))]
+	}
+
+	// Choose suffix pool: secondary unless rng falls below (1 - blendWeight).
+	var suffix string
+	sufPrimary := b.getSuffixesByGenre(primaryID)
+	sufSecondary := b.getSuffixesByGenre(secondaryID)
+	if rng.Float64() < blendWeight {
+		suffix = sufSecondary[rng.Intn(len(sufSecondary))]
+	} else {
+		suffix = sufPrimary[rng.Intn(len(sufPrimary))]
+	}
+
+	return fmt.Sprintf("%s %s (%s)", prefix, suffix, tier.String())
+}
+
 // getPrefixesByGenre returns genre-specific name prefixes.
 func (b *BossNameGenerator) getPrefixesByGenre(genreID string) []string {
 	switch genreID {

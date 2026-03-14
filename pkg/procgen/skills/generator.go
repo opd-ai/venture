@@ -122,6 +122,8 @@ func (g *SkillTreeGenerator) selectTemplates(genreID string) ([]SkillTreeTemplat
 
 // normalizeGenre returns the actual genre used for template selection.
 // Empty or unknown genres default to "fantasy".
+// This function is intentionally package-local; genre normalization may
+// differ between generators. For a shared implementation, see pkg/procgen/genre.
 func normalizeGenre(genreID string) string {
 	switch genreID {
 	case "scifi", "fantasy", "horror", "cyberpunk", "postapocalyptic":

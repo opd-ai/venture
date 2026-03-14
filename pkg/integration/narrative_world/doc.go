@@ -51,4 +51,20 @@
 // # Test Coverage
 //
 // Target: ≥40% (matches V9 requirement)
+//
+// # Future Mod Integration
+//
+// This package does not currently expose a ModRuleProvider interface.
+// A future ModRuleProvider could allow mod authors to register custom
+// story templates, conflict rules, and consequence types without modifying
+// engine code. See pkg/modding for the sandboxed mod execution framework.
+//
+// # Network Synchronization
+//
+// Story event state is not synchronized across servers in the current
+// implementation. Cross-server companion narrative support is planned as
+// part of the federation layer (pkg/network/federation). For now,
+// companion narratives are local to the originating server session.
+// See serialization.go for the persist-and-restore strategy that will
+// support future federation handoff.
 package narrative_world

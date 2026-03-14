@@ -217,6 +217,8 @@ func calculatePaletteSimilarity(palette1, palette2 *image.RGBA) float64 {
 }
 
 // extractDominantColors extracts the N most dominant colors from an image.
+// Algorithm: uniform grid sampling across the image bounds (not histogram-based).
+// Samples are taken at regular stepX × stepY intervals to approximate spatial distribution.
 func extractDominantColors(img *image.RGBA, count int) []color.RGBA {
 	if img == nil {
 		return nil

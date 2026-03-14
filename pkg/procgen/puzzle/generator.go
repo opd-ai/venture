@@ -604,6 +604,8 @@ func (g *Generator) generateColorMatchingPuzzle(rng *rand.Rand, template PuzzleT
 	}, nil
 }
 
+// Helper functions for generateColorMatchingPuzzle.
+
 // calculateElementCount determines element count based on difficulty.
 func (g *Generator) calculateElementCount(template PuzzleTemplate, difficulty int) int {
 	return template.MinElements + int(float64(template.MaxElements-template.MinElements)*float64(difficulty)/10.0)

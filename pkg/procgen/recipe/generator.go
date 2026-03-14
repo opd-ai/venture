@@ -7,6 +7,15 @@
 // - Genre-themed: recipes use genre-specific materials and naming
 // - Balanced: recipes scale with skill requirements and rarity
 // - Extensible: template-based system allows adding new recipe types
+//
+// # Extending Templates
+//
+// Recipe templates are registered in initializeTemplates (called from NewGenerator).
+// To add new recipe types or materials for a genre, add entries to
+// potionTemplates, enchantingTemplates, or magicItemTemplates in that method.
+// Mod authors using the JSON mod system (pkg/modding) can contribute new
+// recipe templates via code contributions to this file — the mod system
+// does not currently support runtime recipe template injection.
 package recipe
 
 import (

@@ -125,6 +125,8 @@ func hashImage(img *image.RGBA) string {
 
 // calculateSimilarity computes perceptual similarity between two images.
 // Returns a value from 0.0 (completely different) to 1.0 (identical).
+// Algorithm: pixel-wise Euclidean distance in RGBA space, normalized to [0,1]
+// and averaged across all pixels. Similarity = 1 - (avgDiff / maxDiff).
 func calculateSimilarity(img1, img2 *image.RGBA) float64 {
 	if img1 == nil || img2 == nil {
 		if img1 == nil && img2 == nil {

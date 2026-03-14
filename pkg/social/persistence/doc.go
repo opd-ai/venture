@@ -1,5 +1,12 @@
 // Package persistence provides persistent social data structures for Venture.
 //
+// # See Also
+//
+//   - pkg/engine/chat_system.go — Chat message dispatch and ECS integration
+//   - pkg/network/chat/ — Network chat channel management
+//   - pkg/validation/ — Input validation for chat messages and trade
+//   - pkg/social/ — Social system coordination layer
+//
 // This package implements:
 //   - Persistent trust scores that survive server restarts
 //   - Reputation tracking with automatic decay over time

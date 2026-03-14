@@ -98,6 +98,8 @@ func ApplyPhysics(p *Particle, behavior ParticleBehavior, config PhysicsConfig, 
 }
 
 // applyGravityForces applies gravity, air resistance, rising, and sinking forces.
+// Physics: v = v₀ + g·Δt (Euler integration for gravity and buoyancy).
+// Air resistance uses exponential damping: v *= (1 - drag·Δt).
 func applyGravityForces(p *Particle, behavior ParticleBehavior, config PhysicsConfig, deltaTime float64) {
 	if behavior.Has(BehaviorGravity) {
 		p.VY += config.Gravity * deltaTime
@@ -122,6 +124,7 @@ func applyGravityForces(p *Particle, behavior ParticleBehavior, config PhysicsCo
 }
 
 // applyAttractorPhysics applies attraction force toward a point.
+// Physics: F = strength/r² (inverse-square gravity law), v += (F·Δt)·direction.
 func applyAttractorPhysics(p *Particle, behavior ParticleBehavior, config PhysicsConfig, deltaTime float64) {
 	if !behavior.Has(BehaviorAttract) {
 		return

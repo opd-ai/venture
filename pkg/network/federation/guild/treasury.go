@@ -1,3 +1,5 @@
+// treasury.go implements federated guild treasury operations including
+// deposits, withdrawals, and transaction history for cross-server guilds.
 package guild
 
 import (

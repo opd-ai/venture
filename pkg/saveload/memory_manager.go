@@ -195,5 +195,5 @@ func (m *MemorySaveManager) SaveExists(name string) bool {
 
 // SetMigrator is a no-op for memory manager since no migration is needed.
 func (m *MemorySaveManager) SetMigrator(_ Migrator) {
-	// No-op: in-memory saves don't need migration
+	logrus.Warn("MemorySaveManager.SetMigrator: in-memory storage does not support migration, migrator ignored")
 }

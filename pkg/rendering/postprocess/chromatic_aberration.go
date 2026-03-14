@@ -84,8 +84,10 @@ func (p *Processor) ApplyChromaticAberration(img *image.RGBA) *image.RGBA {
 	return result
 }
 
-// ApplyPrismaticAberration applies prismatic aberration with rainbow-like color separation.
-// This creates a more artistic effect than standard chromatic aberration.
+// ApplyPrismaticAberration applies angle-based chromatic separation creating
+// a rainbow-like prismatic color split. angle is in radians [0, 2π] and
+// controls the direction of color channel displacement. intensity controls
+// the magnitude of displacement [0.0, 1.0] where 0 is a no-op.
 // This is a standalone utility function rather than a Processor method since it
 // uses custom parameters not part of the standard ChromaticAberrationConfig.
 func ApplyPrismaticAberration(img *image.RGBA, intensity, angle float64) *image.RGBA {

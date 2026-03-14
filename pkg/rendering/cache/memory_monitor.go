@@ -139,7 +139,7 @@ func (m *MemoryMonitor) forceEviction() {
 	m.cache.SetMaxSize(targetSize)
 
 	m.stats.EvictionCount++
-	m.stats.LastCleanupAt = time.Now()
+	m.stats.LastCleanupAt = time.Now() // time.Now() is acceptable for non-deterministic performance monitoring.
 }
 
 // softCleanup gradually reduces cache to soft limit.
@@ -153,7 +153,7 @@ func (m *MemoryMonitor) softCleanup() {
 	}
 
 	m.stats.CleanupCount++
-	m.stats.LastCleanupAt = time.Now()
+	m.stats.LastCleanupAt = time.Now() // time.Now() is acceptable for non-deterministic performance monitoring.
 }
 
 // Stats returns current monitoring statistics.

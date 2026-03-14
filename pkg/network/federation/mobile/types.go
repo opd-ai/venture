@@ -217,14 +217,14 @@ func (s *State) GetLastSyncTime() time.Time {
 	return s.LastSyncTime
 }
 
-// GetBytesAvailable returns available bandwidth tokens (thread-safe)
+// GetBytesAvailable returns the current token bucket bandwidth allowance in bytes (thread-safe).
 func (s *State) GetBytesAvailable() int64 {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	return s.bytesAvailable
 }
 
-// SetBytesAvailable updates available bandwidth tokens (thread-safe)
+// SetBytesAvailable updates the token bucket bandwidth allowance in bytes (thread-safe).
 func (s *State) SetBytesAvailable(bytes int64) {
 	s.mu.Lock()
 	defer s.mu.Unlock()

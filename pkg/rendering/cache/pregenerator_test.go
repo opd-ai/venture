@@ -1,6 +1,7 @@
 package cache
 
 import (
+	"context"
 	"errors"
 	"testing"
 
@@ -229,7 +230,7 @@ func TestGenerateAsync(t *testing.T) {
 
 	// Generate async
 	doneCh := make(chan int, 1)
-	pregen.GenerateAsync(doneCh)
+	pregen.GenerateAsync(context.Background(), doneCh)
 
 	// Wait for completion
 	count := <-doneCh

@@ -10,22 +10,22 @@
 //   - Pattern variations for visual diversity
 //   - Integration with terrain generation
 //   - Configurable tile sizes
-//   - Phase 16.2: Smooth terrain transitions with auto-tiling (Marching Squares)
+//   - Terrain transition system: Smooth terrain transitions with auto-tiling (Marching Squares)
 //   - Edge blending between different tile types
 //   - Corner rounding for organic feel
 //   - Edge smoothing for visual polish
-//   - Phase 16.3: Parallax depth effects for 3D perception
+//   - Parallax depth system: Parallax depth effects for 3D perception
 //   - Multi-layer rendering (background, base, foreground)
 //   - Parallax scrolling based on camera position
 //   - Ambient occlusion for corners and edges
 //   - Height-based shadow casting
-//   - Phase 47: Enhanced wall rendering for 1920x1080 resolution
+//   - Enhanced wall rendering: High-quality wall rendering for 1920x1080 resolution
 //   - 2x2 super-sampling anti-aliasing for smooth edges
 //   - Seamless corner blending (L/T/Cross junctions)
 //   - Wall/floor boundary blending (50/50 color mix)
 //   - Directional shadow gradients for depth
 //
-// Phase 16.2 Transition System:
+// Terrain Transition System:
 //
 // The transition system implements Marching Squares algorithm for seamless
 // tile connections. It analyzes 8-directional neighbors and generates
@@ -41,7 +41,7 @@
 // for walls, and edge smoothing for organic appearance. All transitions are
 // deterministic and maintain performance targets (<3% frame time increase).
 //
-// Phase 16.3 Parallax Depth System:
+// Parallax Depth System:
 //
 // The parallax system creates depth perception through multi-layer rendering.
 // Three layers are supported:
@@ -53,7 +53,7 @@
 // and height-based shadows for enhanced 3D effect. Parallax offset is calculated
 // based on camera position and layer-specific depth multipliers.
 //
-// Phase 47 Enhanced Wall Rendering:
+// Enhanced Wall Rendering System:
 //
 // The enhanced wall system provides high-quality wall rendering optimized for
 // 1920x1080 resolution. Key features include:
@@ -145,7 +145,7 @@
 //	// Render layers separately with parallax offsets, or composite:
 //	composite := tiles.CompositeLayers(bg, base, fg)
 //
-// Example with Enhanced Wall Rendering (Phase 47):
+// Example with Enhanced Wall Rendering:
 //
 //	wallConfig := tiles.DefaultEnhancedWallConfig()
 //	wallConfig.Config.Width = 64

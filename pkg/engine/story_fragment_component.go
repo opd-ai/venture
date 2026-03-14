@@ -147,6 +147,8 @@ func JournalMarkSeriesComplete(j *StoryJournalComponent, seriesID string) {
 }
 
 // JournalGetDiscoveryCount returns the number of discovered fragments in a series.
+// totalFragments must match the total number of fragments in the series; only
+// fragments with sequence numbers in [0, totalFragments) are counted.
 func JournalGetDiscoveryCount(j *StoryJournalComponent, seriesID string, totalFragments int) int {
 	if j == nil {
 		return 0

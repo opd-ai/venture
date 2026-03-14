@@ -131,6 +131,8 @@ func (s ShapeType) String() string {
 
 // Shape represents a procedurally generated geometric shape.
 type Shape struct {
+	// Deprecated: Use Config.Type instead. This field duplicates Config.Type
+	// and will be removed in a future version.
 	Type   ShapeType
 	Width  int
 	Height int

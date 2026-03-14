@@ -95,7 +95,8 @@ func (g *Generator) Generate(config TextureConfig) (*image.RGBA, error) {
 	return img, nil
 }
 
-// applyGenreVariations applies genre-specific style variations to the configuration.
+// applyGenreVariations modifies config.Scale and config.DetailLevel in-place
+// based on the specified genre, then returns the modified config.
 func (g *Generator) applyGenreVariations(config TextureConfig, rng *rand.Rand) TextureConfig {
 	switch config.GenreID {
 	case "fantasy":

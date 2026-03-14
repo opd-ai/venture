@@ -1,6 +1,7 @@
 package cache
 
 import (
+	"context"
 	"sync"
 
 	"github.com/hajimehoshi/ebiten/v2"
@@ -129,15 +130,67 @@ func (p *PreGenerator) Generate() int {
 	return generated
 }
 
-// GenerateAsync processes queued requests in background.
-// Returns immediately, generation happens in goroutine.
-func (p *PreGenerator) GenerateAsync(doneCh chan<- int) {
+// GenerateAsync processes queued requests in background with cancellation support.
+// Returns immediately; generation happens in a goroutine.
+// The provided ctx can be used to cancel the operation early.
+func (p *PreGenerator) GenerateAsync(ctx context.Context, doneCh chan<- int) {
 	go func() {
-		count := p.Generate()
+		count := p.GenerateWithContext(ctx)
 		if doneCh != nil {
 			doneCh <- count
 		}
 	}()
+}
+
+// GenerateWithContext processes all queued requests, respecting ctx cancellation.
+// Returns number of sprites generated before ctx was cancelled or queue was empty.
+func (p *PreGenerator) GenerateWithContext(ctx context.Context) int {
+	p.mu.Lock()
+	queue := p.queue
+	p.queue = make([]PreGenRequest, 0, 100)
+	p.mu.Unlock()
+
+	generated := 0
+
+	for _, req := range queue {
+		select {
+		case <-ctx.Done():
+			return generated
+		default:
+		}
+
+		if p.cache.Contains(req.Key) {
+			p.mu.Lock()
+			p.stats.CacheHits++
+			p.mu.Unlock()
+			continue
+		}
+
+		img, err := req.Generator()
+		if err != nil {
+			p.mu.Lock()
+			p.stats.RequestsFailed++
+			failCount := p.stats.RequestsFailed
+			p.mu.Unlock()
+			log.WithFields(log.Fields{
+				"system_name":  "pregenerator",
+				"cache_key":    string(req.Key),
+				"failed_count": failCount,
+				"error":        err.Error(),
+			}).Warn("sprite pre-generation failed")
+			continue
+		}
+
+		p.cache.Put(req.Key, img)
+
+		p.mu.Lock()
+		p.stats.RequestsComplete++
+		p.mu.Unlock()
+
+		generated++
+	}
+
+	return generated
 }
 
 // QueueSize returns number of pending requests.

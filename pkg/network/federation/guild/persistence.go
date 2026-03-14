@@ -1,3 +1,5 @@
+// persistence.go handles guild federation state persistence including
+// serialization and deserialization of cross-server guild data.
 package guild
 
 import (

@@ -1,3 +1,7 @@
+// placement.go implements AABB (Axis-Aligned Bounding Box) collision detection
+// for furniture placement within rooms. Uses a grid-based auto-placement strategy
+// that divides available floor space into cells and assigns furniture positions
+// using greedy bin-packing to avoid overlaps.
 package furniture
 
 import (

@@ -135,6 +135,8 @@ type Objective struct {
 
 // ObjectiveIsComplete returns true if the objective's current progress
 // meets or exceeds its required amount.
+//
+// Deprecated: Use o.IsComplete() instead.
 func ObjectiveIsComplete(o *Objective) bool {
 	return o.Current >= o.Required
 }
@@ -214,6 +216,8 @@ type Quest struct {
 }
 
 // QuestIsComplete returns true if all objectives in the quest are met.
+//
+// Deprecated: Use q.IsComplete() instead.
 func QuestIsComplete(q *Quest) bool {
 	for i := range q.Objectives {
 		if !ObjectiveIsComplete(&q.Objectives[i]) {

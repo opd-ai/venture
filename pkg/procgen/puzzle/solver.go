@@ -7,6 +7,7 @@ package puzzle
 
 import (
 	"fmt"
+	"math/rand"
 )
 
 // Variable represents a decision point in the puzzle.
@@ -37,13 +38,18 @@ type CSP struct {
 
 	// Constraints on variables
 	Constraints []*Constraint
+
+	// rng is used for tie-breaking during constraint solving.
+	rng *rand.Rand
 }
 
 // NewCSP creates a new constraint satisfaction problem.
+// The seed is used for deterministic tie-breaking during backtracking search.
 func NewCSP(seed int64) *CSP {
 	return &CSP{
 		Variables:   make(map[string]*Variable),
 		Constraints: []*Constraint{},
+		rng:         rand.New(rand.NewSource(seed)),
 	}
 }
 

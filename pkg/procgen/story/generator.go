@@ -317,6 +317,7 @@ func (g *FragmentGenerator) getThemesForGenre(genreID string) []string {
 	case "postapocalyptic":
 		return []string{"last_survivors", "resource_war", "mutant_origin", "bunker_secrets", "radiation_zone"}
 	default:
+		log.WithField("genre", genreID).Warn("unknown genre, using default story themes")
 		return []string{"mystery", "tragedy", "adventure", "discovery", "conflict"}
 	}
 }

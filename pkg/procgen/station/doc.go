@@ -1,4 +1,7 @@
 // Package station provides procedural generation of crafting stations for the Venture game.
+// StationType enum maps to recipe categories: Alchemy→potions/consumables,
+// Forge→enchanted equipment, Workbench→magic items, Kitchen→food/buffs,
+// Anvil→weapons and armor.
 //
 // # Overview
 //

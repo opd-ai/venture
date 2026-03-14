@@ -273,6 +273,7 @@ func (g *StoryArcGenerator) generateTitle(genre string) string {
 		return fmt.Sprintf("%s %s", prefixes[g.rng.Intn(len(prefixes))], subjects[g.rng.Intn(len(subjects))])
 
 	default:
+		logrus.WithField("genre", genre).Warn("unknown genre, falling back to default title")
 		return "Untitled Story"
 	}
 }

@@ -139,3 +139,18 @@ func CanTradeRarity(level TrustLevel, rarity string) bool {
 
 	return itemLevel <= maxLevel
 }
+
+
+// ImageThumbnail is lightweight metadata about a stored image, without the image data itself.
+// Returned by ImageGallery.GetThumbnails for efficient listing without memory overhead.
+type ImageThumbnail struct {
+ID        string      `json:"id"`
+OwnerID   string      `json:"owner_id"`
+Title     string      `json:"title,omitempty"`
+Format    ImageFormat `json:"format"`
+Width     int         `json:"width"`
+Height    int         `json:"height"`
+SizeBytes int         `json:"size_bytes"`
+Timestamp time.Time   `json:"timestamp"`
+Tags      []string    `json:"tags,omitempty"`
+}

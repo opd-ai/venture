@@ -155,7 +155,7 @@ func (v *Validator) CompareColors(colors1, colors2 []color.RGBA) (float64, []str
 		deltaB := absDiff(c1.B, c2.B)
 		deltaA := absDiff(c1.A, c2.A)
 
-		maxDelta := maxUint8(deltaR, deltaG, deltaB, deltaA)
+		maxDelta := max(max(deltaR, deltaG), max(deltaB, deltaA))
 		if maxDelta > v.tolerance.MaxRGBDelta {
 			totalDiff += float64(maxDelta)
 			errors = append(errors, fmt.Sprintf(
@@ -329,11 +329,10 @@ func absDiff(a, b uint8) uint8 {
 }
 
 func maxUint8(values ...uint8) uint8 {
-	max := values[0]
+	// maxUint8 is package-local to avoid external dependencies in test infrastructure.
+	result := values[0]
 	for _, v := range values[1:] {
-		if v > max {
-			max = v
-		}
+		result = max(result, v)
 	}
-	return max
+	return result
 }

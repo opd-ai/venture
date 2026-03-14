@@ -36,6 +36,14 @@ func NewManagerWithTimeProvider(tp TimeProvider) *Manager {
 	}
 }
 
+// SetCaptureRadius updates the radius within which a player can capture territory.
+// The default is 50.0 units. Must be called before any capture attempts.
+func (m *Manager) SetCaptureRadius(radius float64) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.captureRadius = radius
+}
+
 // CreateTerritory creates a new territory zone at the specified chunk coordinates.
 func (m *Manager) CreateTerritory(id string, coords TerritoryCoords) (*Territory, error) {
 	m.mu.Lock()
@@ -521,6 +529,25 @@ func (m *Manager) GetGuildWars(guildID string) []*WarDeclaration {
 		}
 	}
 	return wars
+}
+
+// GetTerritoriesSnapshot returns a snapshot of all territories for per-frame read-only access.
+// Use this instead of calling GetAllTerritories in hot loops to reduce GC pressure.
+// The caller must not mutate the returned territories; they are live references.
+// For safe mutation, use GetAllTerritories which returns defensive copies.
+//
+// Performance note: GetAllTerritories creates ~N allocations per call (one per territory).
+// At 60 FPS with 100 territories, that is ~6000 allocations/second. Use GetTerritoriesSnapshot
+// when read-only iteration is sufficient.
+func (m *Manager) GetTerritoriesSnapshot() map[string]*Territory {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
+	snapshot := make(map[string]*Territory, len(m.territories))
+	for k, v := range m.territories {
+		snapshot[k] = v
+	}
+	return snapshot
 }
 
 // copyTerritory returns a deep copy of a Territory.

@@ -59,6 +59,22 @@ func NewConfigDefault() (*Config, error) {
 	return cfg, nil
 }
 
+// GetNearestValidResolution returns the nearest standard resolution for non-standard
+// aspect ratios or mobile screen sizes. Uses Euclidean distance in pixel space.
+func GetNearestValidResolution(width, height int) Resolution {
+	best := standardResolutions[0]
+	bestDist := (width-best.Width)*(width-best.Width) + (height-best.Height)*(height-best.Height)
+
+	for _, res := range standardResolutions[1:] {
+		dist := (width-res.Width)*(width-res.Width) + (height-res.Height)*(height-res.Height)
+		if dist < bestDist {
+			bestDist = dist
+			best = res
+		}
+	}
+	return best
+}
+
 // IsValidResolution checks if resolution is supported.
 func IsValidResolution(width, height int) bool {
 	for _, res := range standardResolutions {

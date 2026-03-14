@@ -367,16 +367,3 @@ func (g *ImageGallery) GetThumbnails() []ImageThumbnail {
 
 	return result
 }
-
-// ImageThumbnail is lightweight metadata without image data
-type ImageThumbnail struct {
-	ID        string      `json:"id"`
-	OwnerID   string      `json:"owner_id"`
-	Title     string      `json:"title,omitempty"`
-	Format    ImageFormat `json:"format"`
-	Width     int         `json:"width"`
-	Height    int         `json:"height"`
-	SizeBytes int         `json:"size_bytes"`
-	Timestamp time.Time   `json:"timestamp"`
-	Tags      []string    `json:"tags,omitempty"`
-}

@@ -283,6 +283,9 @@ type QuestTemplate struct {
 }
 
 // GetFantasyKillTemplates returns kill quest templates for fantasy genre.
+// TODO(REM-144): These genre template functions (200+ lines each) could be
+// replaced with data-driven tables: var questTemplates = map[string][]QuestTemplate{}.
+// The current approach requires modifying function bodies to add new templates.
 func GetFantasyKillTemplates() []QuestTemplate {
 	return []QuestTemplate{
 		{

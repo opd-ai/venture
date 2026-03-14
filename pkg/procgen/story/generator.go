@@ -299,6 +299,11 @@ func (g *FragmentGenerator) Validate(result interface{}) error {
 	return nil
 }
 
+// selectTheme returns a genre-specific story theme for a fragment sequence.
+// TODO(REM-096): Extract genre→theme maps to package-level var tables
+// (e.g., var genreThemes = map[string][]string{...}) to enable data-driven
+// extension without modifying function bodies. Currently the switch cases
+// are duplicated across selectTheme, getThemesForGenre, and other helpers.
 func (g *FragmentGenerator) selectTheme(rng *rand.Rand, genreID string) string {
 	themes := g.getThemesForGenre(genreID)
 	return themes[rng.Intn(len(themes))]

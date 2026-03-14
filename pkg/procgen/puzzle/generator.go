@@ -57,14 +57,14 @@ type Puzzle struct {
 
 // PuzzleElement represents an interactive puzzle element.
 type PuzzleElement struct {
-	ID           string      // Element identifier
-	ElementType  string      // Type (plate, lever, block, etc.)
-	Position     [2]int      // Grid position (x, y)
-	State        interface{} // Element-specific state. Valid types per ElementType:
+	ID          string      // Element identifier
+	ElementType string      // Type (plate, lever, block, etc.)
+	Position    [2]int      // Grid position (x, y)
+	State       interface{} // Element-specific state. Valid types per ElementType:
 	// pressure_plate → bool (activated), lever → bool (pulled),
 	// door → string (open/closed/locked), pushable_block → map[string]interface{}{},
 	// rotating_tile → int (rotation degrees 0/90/180/270).
-	Interactable bool        // Whether player can interact
+	Interactable bool // Whether player can interact
 }
 
 // Generator creates procedural puzzles using constraint solving.

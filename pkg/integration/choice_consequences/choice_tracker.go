@@ -26,12 +26,13 @@ var trackerLogger = log.WithField("system", "choice_tracker")
 
 // ChoiceTracker manages player choice tracking and consequence application.
 type ChoiceTracker struct {
-	mu             sync.RWMutex
-	players        map[string]*PlayerState // Player ID -> state
-	questBranches  map[string]*QuestBranch // Quest ID -> branch info
-	classQuests    []*ClassSpecificQuest   // Class-specific quests
-	npcMemoryLimit int                     // Max events per NPC (default 50)
-	choiceLimit    int                     // Max choices tracked per player (default 200)
+	mu                     sync.RWMutex
+	players                map[string]*PlayerState // Player ID -> state
+	questBranches          map[string]*QuestBranch // Quest ID -> branch info
+	classQuests            []*ClassSpecificQuest   // Class-specific quests
+	npcMemoryLimit         int                     // Max events per NPC (default 50)
+	choiceLimit            int                     // Max choices tracked per player (default 200)
+	companionReactionLimit int                     // Max companion reactions tracked per player (default 20)
 }
 
 // PlayerState tracks all choice-related state for a player.
@@ -48,11 +49,12 @@ type PlayerState struct {
 // NewChoiceTracker creates a new choice tracker.
 func NewChoiceTracker() *ChoiceTracker {
 	return &ChoiceTracker{
-		players:        make(map[string]*PlayerState),
-		questBranches:  make(map[string]*QuestBranch),
-		classQuests:    make([]*ClassSpecificQuest, 0),
-		npcMemoryLimit: 50,
-		choiceLimit:    200,
+		players:                make(map[string]*PlayerState),
+		questBranches:          make(map[string]*QuestBranch),
+		classQuests:            make([]*ClassSpecificQuest, 0),
+		npcMemoryLimit:         50,
+		choiceLimit:            200,
+		companionReactionLimit: 20,
 	}
 }
 
@@ -541,9 +543,9 @@ func (ct *ChoiceTracker) RecordCompanionReaction(playerID string, reaction *Comp
 	state := ct.getOrCreateState(playerID)
 	state.CompanionReactions = append(state.CompanionReactions, reaction)
 
-	// Keep last 20 reactions
-	if len(state.CompanionReactions) > 20 {
-		state.CompanionReactions = state.CompanionReactions[len(state.CompanionReactions)-20:]
+	// Keep last companionReactionLimit reactions
+	if len(state.CompanionReactions) > ct.companionReactionLimit {
+		state.CompanionReactions = state.CompanionReactions[len(state.CompanionReactions)-ct.companionReactionLimit:]
 	}
 
 	trackerLogger.WithFields(log.Fields{

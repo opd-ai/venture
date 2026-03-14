@@ -10,11 +10,16 @@ import (
 )
 
 // BlendedGenre represents a genre created by blending two base genres.
+// BlendedGenre represents a genre formed by blending two base genres.
 type BlendedGenre struct {
+	// Genre is the fully merged genre with combined properties.
 	*Genre
-	PrimaryBase   *Genre
+	// PrimaryBase is the dominant base genre (contributes 1-BlendWeight of properties).
+	PrimaryBase *Genre
+	// SecondaryBase is the secondary base genre (contributes BlendWeight of properties).
 	SecondaryBase *Genre
-	BlendWeight   float64 // 0.0 (all primary) to 1.0 (all secondary)
+	// BlendWeight controls the mix ratio: 0.0 means all primary, 1.0 means all secondary.
+	BlendWeight float64 // 0.0 (all primary) to 1.0 (all secondary)
 }
 
 // GenreBlender creates blended genres from two base genres.

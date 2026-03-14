@@ -14,7 +14,8 @@ import (
 // logger is the package-level logger for companion generation
 var logger = logrus.WithField("package", "procgen/companion")
 
-// Companion represents a generated companion
+// Companion represents a generated companion with stats, commands, abilities,
+// and visual description derived from genre-specific templates.
 type Companion struct {
 	Name          string
 	Type          engine.CompanionType

@@ -31,7 +31,10 @@
 //   - BookGenerator: In-game books with procedural content
 //
 // Note: EnvironmentGenerator (pkg/procgen/environment) uses a different API
-// (Config-based instead of seed/params) and is not part of this audit suite.
+// (Config-based via GenerateFromConfig(config Config) instead of the standard
+// seed/params pattern Generate(seed int64, params GenerationParams)), making it
+// incompatible with the generic generator audit framework used here.
+// It is therefore excluded from this audit suite.
 //
 // # Usage Example
 //

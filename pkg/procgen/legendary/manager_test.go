@@ -9,7 +9,7 @@ import (
 )
 
 func TestNewQuestManager(t *testing.T) {
-	raidMgr := raids.NewManager(12345)
+	raidMgr := raids.NewManager(12345, "fantasy")
 	mgr := NewQuestManager(raidMgr)
 
 	if mgr == nil {
@@ -30,7 +30,7 @@ func TestNewQuestManager(t *testing.T) {
 }
 
 func TestQuestManager_GenerateQuest(t *testing.T) {
-	raidMgr := raids.NewManager(12345)
+	raidMgr := raids.NewManager(12345, "fantasy")
 	mgr := NewQuestManager(raidMgr)
 
 	params := procgen.GenerationParams{
@@ -68,7 +68,7 @@ func TestQuestManager_GenerateQuest(t *testing.T) {
 }
 
 func TestQuestManager_UpdatePhaseProgress(t *testing.T) {
-	raidMgr := raids.NewManager(12345)
+	raidMgr := raids.NewManager(12345, "fantasy")
 	mgr := NewQuestManager(raidMgr)
 
 	params := procgen.GenerationParams{
@@ -100,7 +100,7 @@ func TestQuestManager_UpdatePhaseProgress(t *testing.T) {
 }
 
 func TestQuestManager_UpdatePhaseProgress_InvalidQuest(t *testing.T) {
-	raidMgr := raids.NewManager(12345)
+	raidMgr := raids.NewManager(12345, "fantasy")
 	mgr := NewQuestManager(raidMgr)
 
 	err := mgr.UpdatePhaseProgress("player1", "invalid_quest", 0, 0.5)
@@ -110,7 +110,7 @@ func TestQuestManager_UpdatePhaseProgress_InvalidQuest(t *testing.T) {
 }
 
 func TestQuestManager_UpdatePhaseProgress_InvalidPhase(t *testing.T) {
-	raidMgr := raids.NewManager(12345)
+	raidMgr := raids.NewManager(12345, "fantasy")
 	mgr := NewQuestManager(raidMgr)
 
 	params := procgen.GenerationParams{
@@ -128,7 +128,7 @@ func TestQuestManager_UpdatePhaseProgress_InvalidPhase(t *testing.T) {
 }
 
 func TestQuestManager_ValidateServerVisit(t *testing.T) {
-	raidMgr := raids.NewManager(12345)
+	raidMgr := raids.NewManager(12345, "fantasy")
 	mgr := NewQuestManager(raidMgr)
 
 	params := procgen.GenerationParams{
@@ -169,7 +169,7 @@ func TestQuestManager_ValidateServerVisit(t *testing.T) {
 }
 
 func TestQuestManager_ValidateServerVisit_InvalidServer(t *testing.T) {
-	raidMgr := raids.NewManager(12345)
+	raidMgr := raids.NewManager(12345, "fantasy")
 	mgr := NewQuestManager(raidMgr)
 
 	params := procgen.GenerationParams{
@@ -187,7 +187,7 @@ func TestQuestManager_ValidateServerVisit_InvalidServer(t *testing.T) {
 }
 
 func TestQuestManager_ValidateRaidCompletion(t *testing.T) {
-	raidMgr := raids.NewManager(12345)
+	raidMgr := raids.NewManager(12345, "fantasy")
 	mgr := NewQuestManager(raidMgr)
 
 	params := procgen.GenerationParams{
@@ -230,7 +230,7 @@ func TestQuestManager_ValidateRaidCompletion(t *testing.T) {
 }
 
 func TestQuestManager_ValidateCraftingCompletion(t *testing.T) {
-	raidMgr := raids.NewManager(12345)
+	raidMgr := raids.NewManager(12345, "fantasy")
 	mgr := NewQuestManager(raidMgr)
 
 	params := procgen.GenerationParams{
@@ -271,7 +271,7 @@ func TestQuestManager_ValidateCraftingCompletion(t *testing.T) {
 }
 
 func TestQuestManager_ValidateCraftingCompletion_InsufficientQuality(t *testing.T) {
-	raidMgr := raids.NewManager(12345)
+	raidMgr := raids.NewManager(12345, "fantasy")
 	mgr := NewQuestManager(raidMgr)
 
 	params := procgen.GenerationParams{
@@ -306,7 +306,7 @@ func TestQuestManager_ValidateCraftingCompletion_InsufficientQuality(t *testing.
 }
 
 func TestQuestManager_CompleteQuest(t *testing.T) {
-	raidMgr := raids.NewManager(12345)
+	raidMgr := raids.NewManager(12345, "fantasy")
 	mgr := NewQuestManager(raidMgr)
 
 	params := procgen.GenerationParams{
@@ -344,7 +344,7 @@ func TestQuestManager_CompleteQuest(t *testing.T) {
 }
 
 func TestQuestManager_CompleteQuest_Incomplete(t *testing.T) {
-	raidMgr := raids.NewManager(12345)
+	raidMgr := raids.NewManager(12345, "fantasy")
 	mgr := NewQuestManager(raidMgr)
 
 	params := procgen.GenerationParams{
@@ -363,7 +363,7 @@ func TestQuestManager_CompleteQuest_Incomplete(t *testing.T) {
 }
 
 func TestQuestManager_SaveLoad(t *testing.T) {
-	raidMgr := raids.NewManager(12345)
+	raidMgr := raids.NewManager(12345, "fantasy")
 	mgr := NewQuestManager(raidMgr)
 
 	params := procgen.GenerationParams{
@@ -500,7 +500,7 @@ func TestRewardCatalog_GeneratedRewards(t *testing.T) {
 }
 
 func TestQuestManager_GetStatistics(t *testing.T) {
-	raidMgr := raids.NewManager(12345)
+	raidMgr := raids.NewManager(12345, "fantasy")
 	mgr := NewQuestManager(raidMgr)
 
 	params := procgen.GenerationParams{
@@ -540,7 +540,7 @@ func contains(slice []string, item string) bool {
 // Benchmarks
 
 func BenchmarkQuestManager_GenerateQuest(b *testing.B) {
-	raidMgr := raids.NewManager(12345)
+	raidMgr := raids.NewManager(12345, "fantasy")
 	mgr := NewQuestManager(raidMgr)
 
 	params := procgen.GenerationParams{
@@ -556,7 +556,7 @@ func BenchmarkQuestManager_GenerateQuest(b *testing.B) {
 }
 
 func BenchmarkQuestManager_UpdatePhaseProgress(b *testing.B) {
-	raidMgr := raids.NewManager(12345)
+	raidMgr := raids.NewManager(12345, "fantasy")
 	mgr := NewQuestManager(raidMgr)
 
 	params := procgen.GenerationParams{
@@ -574,7 +574,7 @@ func BenchmarkQuestManager_UpdatePhaseProgress(b *testing.B) {
 }
 
 func BenchmarkQuestManager_ValidateServerVisit(b *testing.B) {
-	raidMgr := raids.NewManager(12345)
+	raidMgr := raids.NewManager(12345, "fantasy")
 	mgr := NewQuestManager(raidMgr)
 
 	params := procgen.GenerationParams{

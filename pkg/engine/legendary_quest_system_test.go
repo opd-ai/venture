@@ -8,7 +8,7 @@ import (
 
 func TestNewLegendaryQuestSystem(t *testing.T) {
 	world := NewWorld()
-	raidManager := raids.NewManager(12345)
+	raidManager := raids.NewManager(12345, "fantasy")
 	seed := int64(12345)
 
 	system := NewLegendaryQuestSystem(world, seed, raidManager)
@@ -32,7 +32,7 @@ func TestNewLegendaryQuestSystem(t *testing.T) {
 
 func TestLegendaryQuestSystem_StartQuest(t *testing.T) {
 	world := NewWorld()
-	raidManager := raids.NewManager(12345)
+	raidManager := raids.NewManager(12345, "fantasy")
 	system := NewLegendaryQuestSystem(world, 12345, raidManager)
 
 	player := world.CreateEntity()
@@ -63,7 +63,7 @@ func TestLegendaryQuestSystem_StartQuest(t *testing.T) {
 
 func TestLegendaryQuestSystem_StartQuest_InvalidPlayer(t *testing.T) {
 	world := NewWorld()
-	raidManager := raids.NewManager(12345)
+	raidManager := raids.NewManager(12345, "fantasy")
 	system := NewLegendaryQuestSystem(world, 12345, raidManager)
 
 	player := world.CreateEntity()
@@ -78,7 +78,7 @@ func TestLegendaryQuestSystem_StartQuest_InvalidPlayer(t *testing.T) {
 
 func TestLegendaryQuestSystem_Update(t *testing.T) {
 	world := NewWorld()
-	raidManager := raids.NewManager(12345)
+	raidManager := raids.NewManager(12345, "fantasy")
 	system := NewLegendaryQuestSystem(world, 12345, raidManager)
 
 	player := world.CreateEntity()
@@ -97,7 +97,7 @@ func TestLegendaryQuestSystem_Update(t *testing.T) {
 
 func TestLegendaryQuestSystem_CompletePhase(t *testing.T) {
 	world := NewWorld()
-	raidManager := raids.NewManager(12345)
+	raidManager := raids.NewManager(12345, "fantasy")
 	system := NewLegendaryQuestSystem(world, 12345, raidManager)
 
 	player := world.CreateEntity()
@@ -129,7 +129,7 @@ func TestLegendaryQuestSystem_CompletePhase(t *testing.T) {
 
 func TestLegendaryQuestSystem_CompletePhase_NoQuest(t *testing.T) {
 	world := NewWorld()
-	raidManager := raids.NewManager(12345)
+	raidManager := raids.NewManager(12345, "fantasy")
 	system := NewLegendaryQuestSystem(world, 12345, raidManager)
 
 	player := world.CreateEntity()
@@ -163,7 +163,7 @@ func TestLegendaryQuestComponent_Type(t *testing.T) {
 
 func TestLegendaryQuestSystem_GrantReward(t *testing.T) {
 	world := NewWorld()
-	raidManager := raids.NewManager(12345)
+	raidManager := raids.NewManager(12345, "fantasy")
 	system := NewLegendaryQuestSystem(world, 12345, raidManager)
 
 	player := world.CreateEntity()

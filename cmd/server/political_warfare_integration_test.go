@@ -261,12 +261,12 @@ func TestPoliticalWarfareSystem_AllianceCall(t *testing.T) {
 
 	// With high reputation, ally should respond (60-80% chance, deterministic with seed)
 	// We can't guarantee a specific result, but we can verify the call completed
-	t.Logf("Alliance call returned %d allies", len(allianceCall.ResponingAllies))
+	t.Logf("Alliance call returned %d allies", len(allianceCall.RespondingAllies))
 
 	// Verify the call was tracked
-	if len(allianceCall.ResponingAllies) > 0 {
-		if allianceCall.ResponingAllies[0].AllyGuildID != guildID3 {
-			t.Errorf("Expected ally %s, got %s", guildID3, allianceCall.ResponingAllies[0].AllyGuildID)
+	if len(allianceCall.RespondingAllies) > 0 {
+		if allianceCall.RespondingAllies[0].AllyGuildID != guildID3 {
+			t.Errorf("Expected ally %s, got %s", guildID3, allianceCall.RespondingAllies[0].AllyGuildID)
 		}
 	}
 

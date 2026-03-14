@@ -10,7 +10,7 @@ import (
 func TestLegendaryQuestSystem_GenerateLegendaryItem(t *testing.T) {
 	world := NewWorld()
 	seed := int64(12345)
-	raidManager := raids.NewManager(seed)
+	raidManager := raids.NewManager(seed, "fantasy")
 	system := NewLegendaryQuestSystem(world, seed, raidManager)
 
 	// Test item generation
@@ -54,7 +54,7 @@ func TestLegendaryQuestSystem_GenerateLegendaryItem(t *testing.T) {
 func TestLegendaryQuestSystem_GenerateLegendaryItem_Determinism(t *testing.T) {
 	world := NewWorld()
 	seed := int64(42)
-	raidManager := raids.NewManager(seed)
+	raidManager := raids.NewManager(seed, "fantasy")
 	system := NewLegendaryQuestSystem(world, seed, raidManager)
 
 	itemID := "legendary_item_determinism_test"
@@ -85,7 +85,7 @@ func TestLegendaryQuestSystem_GenerateLegendaryItem_Determinism(t *testing.T) {
 func TestLegendaryQuestSystem_GenerateLegendaryItem_DifferentGenres(t *testing.T) {
 	world := NewWorld()
 	seed := int64(99999)
-	raidManager := raids.NewManager(seed)
+	raidManager := raids.NewManager(seed, "fantasy")
 	system := NewLegendaryQuestSystem(world, seed, raidManager)
 
 	genres := []string{"fantasy", "scifi", "horror", "cyberpunk", "post-apocalyptic"}
@@ -115,7 +115,7 @@ func TestLegendaryQuestSystem_GenerateLegendaryItem_DifferentGenres(t *testing.T
 func TestLegendaryQuestSystem_CreateRewardItemByID(t *testing.T) {
 	world := NewWorld()
 	seed := int64(54321)
-	raidManager := raids.NewManager(seed)
+	raidManager := raids.NewManager(seed, "fantasy")
 	system := NewLegendaryQuestSystem(world, seed, raidManager)
 
 	// Create player entity with position
@@ -189,7 +189,7 @@ func TestLegendaryQuestSystem_CreateRewardItemByID(t *testing.T) {
 func TestLegendaryQuestSystem_CreateRewardItemByID_NoPosition(t *testing.T) {
 	world := NewWorld()
 	seed := int64(11111)
-	raidManager := raids.NewManager(seed)
+	raidManager := raids.NewManager(seed, "fantasy")
 	system := NewLegendaryQuestSystem(world, seed, raidManager)
 
 	// Create player entity WITHOUT position
@@ -289,7 +289,7 @@ func TestHashString(t *testing.T) {
 func TestLegendaryQuestSystem_ItemGeneratorInitialized(t *testing.T) {
 	world := NewWorld()
 	seed := int64(77777)
-	raidManager := raids.NewManager(seed)
+	raidManager := raids.NewManager(seed, "fantasy")
 	system := NewLegendaryQuestSystem(world, seed, raidManager)
 
 	if system.itemGen == nil {
@@ -317,7 +317,7 @@ func TestLegendaryQuestComponent_WithGenreID(t *testing.T) {
 func BenchmarkGenerateLegendaryItem(b *testing.B) {
 	world := NewWorld()
 	seed := int64(88888)
-	raidManager := raids.NewManager(seed)
+	raidManager := raids.NewManager(seed, "fantasy")
 	system := NewLegendaryQuestSystem(world, seed, raidManager)
 
 	b.ResetTimer()
@@ -330,7 +330,7 @@ func BenchmarkGenerateLegendaryItem(b *testing.B) {
 func BenchmarkCreateRewardItemByID(b *testing.B) {
 	world := NewWorld()
 	seed := int64(99999)
-	raidManager := raids.NewManager(seed)
+	raidManager := raids.NewManager(seed, "fantasy")
 	system := NewLegendaryQuestSystem(world, seed, raidManager)
 
 	player := world.CreateEntity()

@@ -80,7 +80,18 @@
 //	    },
 //	}
 //
-//	// Add to library
+// # Architecture
+//
+// The housing package is composed of four primary components:
+//   - Manager: Core housing lifecycle (CreateHouse, PlacePlot, furniture CRUD)
+//   - BlueprintManager: Save/load/share building blueprints (compressed JSON)
+//   - SpatialManager: Overlap detection and spatial queries for plot placement
+//   - GuildhallManager: Multi-plot guild headquarters with permission levels
+//
+// Manager and GuildhallManager delegate spatial queries to SpatialManager to
+// prevent overlapping placements. BlueprintManager is independent and provides
+// export/import functionality for sharing designs between players.
+//
 //	library.Add(bp)
 //
 //	// Export blueprint

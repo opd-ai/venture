@@ -1,25 +1,5 @@
-// Package companion_housing integrates V8 housing with V4 companions, enabling
-// companions to rest in player houses, gain loyalty bonuses, train skills, and
-// access shared storage. This creates a home-base mechanic for companions that
-// deepens the player-companion bond.
-//
-// Key Features:
-//   - Companion bedding furniture grants daily loyalty bonuses
-//   - Training areas accelerate companion skill progression
-//   - Shared storage chests accessible by both player and companions
-//   - Visual idle states when companions rest in houses
-//
-// Integration Points:
-//   - V8 Housing: pkg/world/housing/ (ownership, furniture placement)
-//   - V4 Companions: pkg/engine/companion_component.go (loyalty, skills)
-//   - V8 Companion Learning: pkg/companion/learning/ (skill progression)
-//
-// Example:
-//
-//	manager := companion_housing.NewPetHomeManager()
-//	manager.AddBedding(houseID, "companion_bed_1", 1.0) // Quality 1.0
-//	bonus := manager.GetLoyaltyBonus(companionID, houseID)
-//	// bonus = 0.1 per day (vs 0.05 without housing)
+// types.go defines data types for the companion housing integration.
+// See doc.go for the full package overview and usage examples.
 package companion_housing
 
 // Shared type definitions for the companion_housing package.

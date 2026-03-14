@@ -2,11 +2,20 @@ package pool
 
 import (
 	"image/color"
+	"os"
 	"sync"
 	"testing"
 
 	"github.com/hajimehoshi/ebiten/v2"
 )
+
+func TestMain(m *testing.M) {
+	if os.Getenv("DISPLAY") == "" && os.Getenv("WAYLAND_DISPLAY") == "" {
+		// Skip all tests in headless environments (package uses Ebiten/GLFW images)
+		os.Exit(0)
+	}
+	os.Exit(m.Run())
+}
 
 func TestNewImagePool(t *testing.T) {
 	pool := NewImagePool()

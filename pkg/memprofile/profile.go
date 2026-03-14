@@ -1,6 +1,7 @@
 package memprofile
 
 import (
+	"encoding/json"
 	"fmt"
 	"runtime"
 	"time"
@@ -318,4 +319,53 @@ func RunMemoryTest(test MemoryTest, fn func()) (bool, *MemoryProfile) {
 	passed := !profile.LeakDetected && (test.MaxGrowth == 0 || growth <= test.MaxGrowth)
 
 	return passed, profile
+}
+
+// ExportJSON encodes the memory profile as a JSON byte slice for structured export.
+// This is the machine-readable alternative to PrintProfile which writes to stdout.
+func (p *MemoryProfile) ExportJSON() ([]byte, error) {
+	type snapshotExport struct {
+		TimestampNs int64  `json:"timestamp_ns"`
+		AllocBytes  uint64 `json:"alloc_bytes"`
+		Objects     uint64 `json:"objects"`
+		GCRuns      uint32 `json:"gc_runs"`
+	}
+	type profileExport struct {
+		Name          string           `json:"name"`
+		DurationNs    int64            `json:"duration_ns"`
+		PeakAlloc     uint64           `json:"peak_alloc_bytes"`
+		AvgAlloc      uint64           `json:"avg_alloc_bytes"`
+		AllocGrowth   int64            `json:"alloc_growth_bytes"`
+		ObjectGrowth  int64            `json:"object_growth"`
+		LeakDetected  bool             `json:"leak_detected"`
+		LeakRate      float64          `json:"leak_rate_bytes_per_sec"`
+		SnapshotCount int              `json:"snapshot_count"`
+		Snapshots     []snapshotExport `json:"snapshots"`
+	}
+	snapshots := make([]snapshotExport, len(p.Snapshots))
+	for i, s := range p.Snapshots {
+		var ts int64
+		if i > 0 {
+			ts = s.Timestamp.Sub(p.Snapshots[0].Timestamp).Nanoseconds()
+		}
+		snapshots[i] = snapshotExport{
+			TimestampNs: ts,
+			AllocBytes:  s.Alloc,
+			Objects:     s.LiveObjects,
+			GCRuns:      s.NumGC,
+		}
+	}
+	export := profileExport{
+		Name:          p.Name,
+		DurationNs:    p.EndTime.Sub(p.StartTime).Nanoseconds(),
+		PeakAlloc:     p.GetPeakAllocation(),
+		AvgAlloc:      p.GetAverageAllocation(),
+		AllocGrowth:   p.GetAllocationGrowth(),
+		ObjectGrowth:  p.GetObjectGrowth(),
+		LeakDetected:  p.LeakDetected,
+		LeakRate:      p.LeakRate,
+		SnapshotCount: len(p.Snapshots),
+		Snapshots:     snapshots,
+	}
+	return json.Marshal(export)
 }

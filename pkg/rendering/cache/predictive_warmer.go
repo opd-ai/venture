@@ -63,13 +63,13 @@ func DefaultWarmerConfig() PredictiveWarmerConfig {
 // NewPredictiveCacheWarmer creates a predictive cache warmer.
 func NewPredictiveCacheWarmer(cache *SpriteCache, pregen *PreGenerator, config PredictiveWarmerConfig) *PredictiveCacheWarmer {
 	if config.WindowSize <= 0 {
-		config.WindowSize = 1000
+		config.WindowSize = 1000 // Default: track last 1000 accesses.
 	}
 	if config.HotThreshold <= 0 {
-		config.HotThreshold = 5
+		config.HotThreshold = 5 // Default: 5 accesses makes a key "hot".
 	}
 	if config.MaxPredictions <= 0 {
-		config.MaxPredictions = 50
+		config.MaxPredictions = 50 // Default: pre-warm up to 50 sprites per cycle.
 	}
 
 	return &PredictiveCacheWarmer{

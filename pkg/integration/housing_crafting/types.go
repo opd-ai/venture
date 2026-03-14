@@ -19,7 +19,8 @@ const (
 	StationTypeEngineering
 )
 
-// String returns the human-readable name of the station type
+// String returns the human-readable name of the station type.
+// Returns "unknown" for invalid or unrecognized values.
 func (st StationType) String() string {
 	switch st {
 	case StationTypeForge:
@@ -53,7 +54,8 @@ const (
 	QualityMaster
 )
 
-// String returns the human-readable name of the quality tier
+// String returns the human-readable name of the quality tier.
+// Returns "unknown" for invalid or unrecognized values.
 func (qt QualityTier) String() string {
 	switch qt {
 	case QualityBasic:

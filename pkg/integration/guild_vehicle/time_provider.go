@@ -5,6 +5,8 @@ package guild_vehicle
 import "time"
 
 // TimeProvider is an interface for obtaining timestamps, enabling deterministic testing.
+// This interface is package-local by design to avoid coupling with other packages.
+// The same pattern exists in cmd/client/, cmd/server/, and several other packages.
 type TimeProvider interface {
 	Now() time.Time
 }

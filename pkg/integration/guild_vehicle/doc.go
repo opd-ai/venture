@@ -59,9 +59,9 @@
 // # Integration Status
 //
 // This package provides standalone fleet management functionality. The following
-// integrations are planned for future development:
+// integrations are deferred pending further architecture work:
 //
-// PLANNED (not yet implemented):
+// FUTURE (not yet implemented):
 //   - pkg/network/federation/guild: Guild membership validation and permissions
 //   - pkg/engine: VehicleComponent and VehicleCombatComponent synchronization
 //   - pkg/engine/physics/vehicle: Formation-based physics behavior

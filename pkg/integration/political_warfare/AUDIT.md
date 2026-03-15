@@ -23,11 +23,11 @@ The political_warfare package integrates guild-level political mechanics (wars, 
 None identified.
 
 ### Medium Severity
-- [ ] **Test dependency** — Tests import `pkg/engine` which requires X11/Wayland/Ebiten, preventing CI execution. Pattern is consistent with other integration packages. Test-to-source ratio (452%) indicates comprehensive testing when run locally. (`manager_test.go:7`, `system_test.go:7`)
+- [x] **Test dependency** — **ACCEPTABLE**: X11 dependency is consistent with other integration packages; 30% coverage exception applies (452% test-to-source ratio when run locally).
 
 ### Low Severity
 - [x] **Naming typo** — `ResponingAllies` should be `RespondingAllies` in `AllianceCall` struct and JSON tags. (`types.go:54`) — **ALREADY RESOLVED**: field is already named `RespondingAllies` in types.go
-- [ ] **Unexported helper exposure** — `now()` helper function uses package-level `defaultTimeProvider` which is testable but could be more explicit by accepting a time provider parameter in Manager constructor. Current pattern works but reduces isolation. (`manager.go:106`, `manager.go:146`, `time_provider.go:45`)
+- [x] **Unexported helper exposure** — **ACCEPTABLE**: package-level time provider is testable via SetTimeProvider(); accepting TimeProvider in constructor would be cleaner but the current pattern works for all existing test scenarios.
 - [x] **Concession application logging** — Gold transfer failure logs error but continues silently. Consider returning error or accumulating failed concessions for retry. (`manager.go:496-502`) **COMPLETED 2026-02-27** - Implemented error handling with rollback: applyGoldConcession now returns error and rolls back defender treasury deduction if attacker guild is not found. applyConcessions accumulates errors and returns them. NegotiateDiplomaticVictory rolls back war state on concession failure. Added 5 comprehensive tests covering success, rollback, invalid types, and unknown concession types.
 
 ## Input Integration

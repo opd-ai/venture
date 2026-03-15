@@ -85,6 +85,7 @@ var (
 	enableVR      = flag.Bool("vr", false, "Enable VR mode (requires VR headset, auto-detects hardware)")
 	forceVR       = flag.Bool("force-vr", false, "Force VR mode even without detected hardware (for testing)")
 	showVersion   = flag.Bool("version", false, "Print version information and exit")
+	spriteCacheMB = flag.Int("sprite-cache-mb", 0, "Sprite cache size in MB (0 = use platform default: 400 desktop, 150 WASM; max 300)")
 )
 
 // initializeLogger creates and configures the logger based on environment variables and flags.

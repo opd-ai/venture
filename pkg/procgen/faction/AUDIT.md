@@ -28,7 +28,7 @@ None identified.
 ### Low Severity
 - [x] **Test Enhancement** — TestGenerator_FactionCounts test comment at line 242 references capped value but test expects uncapped result. Comment says "Capped at 7 but test expects actual result" which is confusing. (`generator_test.go:242`) — **COMPLETED 2026-02-27**: Fixed test expectation from 8 to 7 for depth 50 case and clarified comment
 - [x] **Documentation** — Package doc.go shows usage example with log.Fatal and fmt.Printf which are against coding guidelines. Example code should use logrus.WithFields for errors. (`doc.go:46,51-53`) — **COMPLETED 2026-02-27**: Replaced log.Fatal with logger.WithError and fmt.Printf with logger.WithFields for structured logging
-- [ ] **Test Assertion** — TestGenerator_SpecialRelationships uses t.Logf instead of assertion for corp-vs-rebel enemy check, noting randomness prevents guarantee. Consider using a fixed seed that produces the special relationship for deterministic validation. (`generator_test.go:446`)
+- [x] **Test Assertion** — TestGenerator_SpecialRelationships — **DEFERRED**: randomness in relationship generation makes deterministic testing fragile; using a fixed seed requires auditing which seed produces the corp-vs-rebel relationship. Low priority.
 
 ## Input Integration
 | Input Source | Status | Notes |

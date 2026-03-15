@@ -32,8 +32,8 @@ The `pkg/procgen/dialog` package provides runtime NPC dialog generation using Ma
 *None identified.*
 
 ### Low Severity
-- [ ] **Documentation** — `GetGreeting()` method comment could clarify backward compatibility behavior vs. `GetGreetingWithSeed()` for better API discoverability (`personality.go:205`)
-- [ ] **Code clarity** — `calculateTemperatureWeights()` has complex temperature scaling logic that would benefit from inline comments explaining the mathematical transformation (`utils.go:136-147`)
+- [x] **Documentation** — GetGreeting() backward compatibility — **ALREADY RESOLVED**: personality.go:205 has godoc "Maintained for backward compatibility. For randomized greetings, use GetGreetingWithSeed instead."
+- [x] **Code clarity** — calculateTemperatureWeights() — **ALREADY RESOLVED**: utils.go:135-137 already has "Apply temperature scaling: weight^(1/temperature) / This transforms the distribution" and per-word explanation.
 
 ## Input Integration
 | Input Source | Status | Notes |

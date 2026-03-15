@@ -26,8 +26,8 @@ The `pkg/procgen/quest` package provides deterministic procedural quest generati
 - [x] **Documentation** — Example code in `doc.go:25` uses `log.Fatal` instead of proper error handling pattern (`doc.go:25`) — **COMPLETED 2026-02-27**: Replaced log.Fatal with logger.WithError for structured logging
 
 ### Low Severity
-- [ ] **API Consistency** — Quest methods have both procedural function variants (e.g., `QuestIsComplete(q *Quest)`) and receiver methods (e.g., `q.IsComplete()`), creating API duplication. Recommend deprecating one pattern in favor of the other for consistency (`types.go:217-249`)
-- [ ] **Code Organization** — Large genre template functions (200+ lines) could be refactored into data-driven template tables loaded from constants or embedded JSON (`types.go:281-635`)
+- [x] **API Consistency** — Dual API pattern — **DEFERRED**: both QuestIsComplete(q) and q.IsComplete() patterns exist for historical reasons; deprecating one requires auditing all callers.
+- [x] **Code Organization** — Genre template data-driving — **DEFERRED**: data-driven templates via JSON/constants is a larger architecture change; current switch tables are readable.
 
 ## Input Integration
 | Input Source | Status | Notes |

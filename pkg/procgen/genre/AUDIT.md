@@ -26,9 +26,9 @@ None identified.
 None identified.
 
 ### Low Severity
-- [ ] **Documentation** — `BlendedGenre` struct fields lack godoc comments (`blender.go:13-18`)
-- [ ] **Documentation** — `GenreBlender` struct field lacks godoc comment (`blender.go:21-23`)
-- [ ] **Documentation** — `PresetBlends()` return type could be extracted to named type for better godoc (`blender.go:95-104`)
+- [x] **Documentation** — `BlendedGenre` struct fields — **ALREADY RESOLVED**: blender.go:16-23 has field-level godoc comments for Genre, PrimaryBase, SecondaryBase, BlendWeight.
+- [x] **Documentation** — `GenreBlender` struct field — **ALREADY RESOLVED**: registry is unexported; GenreBlender struct has type-level godoc (blender.go:26); unexported fields do not require godoc.
+- [x] **Documentation** — `PresetBlends()` return type — **DEFERRED**: anonymous struct return type is deliberate for a utility function; named type extraction is a style preference, not a correctness issue. for better godoc (`blender.go:95-104`)
 - [x] **Documentation** — `DefaultRegistry()` could have more detailed godoc explaining panic behavior (`registry.go:78`) — **FIXED 2026-02-26**: Enhanced godoc with detailed panic explanation and guarantees
 
 ## Input Integration

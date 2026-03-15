@@ -2,6 +2,8 @@
 // This file defines the QualitySettingsComponent for per-entity quality overrides.
 package quality
 
+import "encoding/json"
+
 // QualitySettingsComponent is an ECS component that allows per-entity
 // quality overrides. This enables specific entities to use different
 // quality settings than the global configuration.
@@ -70,4 +72,14 @@ func WithoutEffects() QualitySettingsComponent {
 	return QualitySettingsComponent{
 		DisableEffects: true,
 	}
+}
+
+// Serialize encodes the component to JSON bytes for persistence across save/load cycles.
+func (q *QualitySettingsComponent) Serialize() ([]byte, error) {
+	return json.Marshal(q)
+}
+
+// Deserialize decodes JSON bytes into the component.
+func (q *QualitySettingsComponent) Deserialize(data []byte) error {
+	return json.Unmarshal(data, q)
 }

@@ -23,12 +23,12 @@ The `pkg/rendering/quality` package provides comprehensive visual quality tier m
 None
 
 ### Medium Severity
-- [ ] **Determinism** — PerformanceMonitor uses `time.Now()` for `lastAdjustment` tracking (`performance_monitor.go:48`, `performance_monitor.go:125`, `performance_monitor.go:138`). This is acceptable for UI performance monitoring but violates Coding Guideline #2 for deterministic systems. Consider using game clock abstraction via `GameClock` interface if performance tracking needs to be deterministic.
+- [x] **Determinism** — PerformanceMonitor time.Now() — **RESOLVED**: Added godoc comment to NewPerformanceMonitor explaining time.Now() is intentional for frame timing (real-time concern, not procedural generation).
 
 ### Low Severity
-- [ ] **Component Serialization** — `QualitySettingsComponent` lacks `Serialize()/Deserialize()` methods. If quality overrides should persist across save/load, implement ComponentSerializer interface. Current design treats quality as runtime-only configuration which may be intentional. (`quality_settings_component.go:8-33`)
+- [x] **Component Serialization** — **RESOLVED**: Added Serialize()/Deserialize() methods using encoding/json to quality_settings_component.go.
 - [x] **Documentation** — `PerformanceStats` struct has brief comment "Originally from: monitor.go" which refers to internal refactoring. Consider removing internal code history from public API docs. (`types.go:45-52`) (FIXED 2026-02-27: Removed internal refactoring comment)
-- [ ] **Concurrency** — `AutoAdjuster.Update()` holds write lock during entire update including callback invocation. If callback is slow, this could block updates. Consider releasing lock before callback or document that callbacks must be fast. (`auto_adjuster.go:56-82`)
+- [x] **Concurrency** — AutoAdjuster callback lock — **ALREADY RESOLVED**: auto_adjuster.go:71-77 already stores callback in cb, unlocks with aa.mu.Unlock(), then invokes cb outside the lock with comment "Invoke callback outside the lock to avoid blocking updates."
 
 ## Input Integration
 | Input Source | Status | Notes |

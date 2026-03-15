@@ -30,7 +30,7 @@ The `pkg/rendering/ui` package provides procedural UI element generation and man
 
 ### Medium Severity
 - [x] **Input abstraction violation** — ✅ **ALREADY FIXED** — `trade.go:335` and `trade.go:354` deprecated methods `IsButtonClicked()` and `GetClickedButton()` now have clear deprecation notices directing users to replacement methods `IsButtonClickedWithInput()` and `GetClickedButtonWithInput()`. Both deprecated methods have godoc comments: "Deprecated: Use [Replacement] for testability and input abstraction."
-- [ ] **Time.Now usage in tests** — Multiple test files (`chat_test.go`, `notifications_test.go`, `trade_test.go`) use `time.Now()` for test data initialization. While acceptable in tests, consider using a deterministic time provider for more reliable test behavior across different execution speeds.
+- [x] **Time.Now usage in tests** — **ACCEPTABLE**: time.Now() in test data initialization is standard Go testing practice; deterministic time providers are only required in production code for procedural generation.
 
 ### Low Severity
 - [x] **Package scope** — Package does not implement ECS `System` or `Component` interfaces. This is intentional (utility library design), but docs should clarify that this package provides helpers used *by* systems, not systems themselves. — **ALREADY RESOLVED**: doc.go already states "It does not implement System or Component interfaces directly; instead it provides..."

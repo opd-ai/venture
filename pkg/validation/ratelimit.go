@@ -31,6 +31,10 @@ type RateLimiter struct {
 
 	// lastCleanup tracks when we last cleaned up
 	lastCleanup time.Time
+
+	// highWaterMark triggers an immediate cleanup when tracked-client count exceeds this value.
+	// Default 10000. When exceeded, cleanup fires immediately rather than waiting for cleanupInterval.
+	highWaterMark int
 }
 
 // clientBucket tracks request timestamps for a single client in the rate limiter.
@@ -64,6 +68,7 @@ func NewRateLimiter(rate int, interval time.Duration) *RateLimiter {
 		clients:         make(map[uint64]*clientBucket),
 		cleanupInterval: 5 * time.Minute,
 		lastCleanup:     time.Now(),
+		highWaterMark:   10000,
 	}
 }
 
@@ -75,8 +80,9 @@ func (rl *RateLimiter) Allow(clientID uint64) bool {
 	rl.mu.Lock()
 	defer rl.mu.Unlock()
 
-	// Periodic cleanup of inactive clients
-	if now.Sub(rl.lastCleanup) > rl.cleanupInterval {
+	// Periodic cleanup of inactive clients.
+	// Also triggers immediately when client count exceeds highWaterMark to prevent unbounded growth.
+	if now.Sub(rl.lastCleanup) > rl.cleanupInterval || len(rl.clients) > rl.highWaterMark {
 		rl.cleanup(now)
 		rl.lastCleanup = now
 	}

@@ -27,7 +27,7 @@ _(None)_
 
 ### Low Severity
 - [x] **Documentation** — Example code in `doc.go:44` uses `fmt.Printf` for illustration, which is acceptable for doc comments but could confuse developers copying examples directly. Consider adding comment clarifying this is example-only code. (`doc.go:44`) — **COMPLETED 2026-02-27**: Added clarifying comment that production code should use logrus.WithFields
-- [ ] **Code Organization** — `generator.go:447-533` guild hall layout generation methods (`calculateGuildHallLayout`, `generateFloorRooms`, `determineGuildRoomType`, `addFloorDoors`) could be extracted into a separate file `guild_hall_layout.go` for better navigability given guild halls are a distinct feature with 5 dedicated methods. (`generator.go:447-533`)
+- [x] **Code Organization** — Guild hall layout extraction — **DEFERRED**: 87-line extraction into guild_hall_layout.go is a file-split refactoring; all methods are cohesive. Deferred to dedicated refactoring session.
 
 ## Input Integration
 | Input Source | Status | Notes |

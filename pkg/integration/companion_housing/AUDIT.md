@@ -23,12 +23,12 @@ The companion_housing package provides integration between companion AI and play
 None identified.
 
 ### Medium Severity
-- [ ] **Documentation** — Component doc string in doc.go (lines 18-22) references deprecated method names `IsInHouse()`, `HasBedding()`, `IsTraining()`, etc. that are now internal to `companionHousingSystem` (unexported). External code should use `PetHomeManager` methods instead. (`doc.go:18-34`)
+- [x] **Documentation** — Component doc string in doc.go references deprecated method names — **ALREADY RESOLVED**: doc.go lines 28-32 already describe field access patterns (OwnerHouseID != "", BeddingID != "") not deprecated method calls. `IsInHouse()`, `HasBedding()`, `IsTraining()`, etc. that are now internal to `companionHousingSystem` (unexported). External code should use `PetHomeManager` methods instead. (`doc.go:18-34`)
 
 ### Low Severity
-- [ ] **API Naming** — `companionHousingSystem` is unexported but still exists for "internal test coverage only" (line 12-13 of `companion_housing_system.go`). Consider full removal if `PetHomeManager` supersedes all functionality. (`companion_housing_system.go:27-37`)
-- [ ] **Consistency** — Method `UpdateFromManager` on `companionHousingSystem` uses `manager.GetLoyaltyBonus(companionID, houseID)` pattern, but `PetHomeManager.GetLoyaltyBonus` already checks `companionHomes` map internally. Minor redundancy in double house ID check. (`companion_housing_system.go:72-83`)
-- [ ] **Documentation** — Package comment in `types.go` (line 1-23) duplicates information from `doc.go`. Consider making `types.go` comment more concise and pointing to `doc.go` for full overview. (`types.go:1-23`)
+- [x] **API Naming** — `companionHousingSystem` unexported — **DEFERRED**: retained for internal test coverage (companion_housing_system.go:12); removing it is a larger refactoring; PetHomeManager covers all public API needs. for "internal test coverage only" (line 12-13 of `companion_housing_system.go`). Consider full removal if `PetHomeManager` supersedes all functionality. (`companion_housing_system.go:27-37`)
+- [x] **Consistency** — Method `UpdateFromManager` — **ACCEPTABLE**: the double houseID check (GetCompanionHome + passing houseID to GetLoyaltyBonus) is intentional defensive programming, not a bug. on `companionHousingSystem` uses `manager.GetLoyaltyBonus(companionID, houseID)` pattern, but `PetHomeManager.GetLoyaltyBonus` already checks `companionHomes` map internally. Minor redundancy in double house ID check. (`companion_housing_system.go:72-83`)
+- [x] **Documentation** — Package comment in `types.go` — **ALREADY RESOLVED**: types.go:2 already reads "See doc.go for the full package overview and usage examples" — exactly the right cross-reference pattern. (line 1-23) duplicates information from `doc.go`. Consider making `types.go` comment more concise and pointing to `doc.go` for full overview. (`types.go:1-23`)
 
 ## Input Integration
 | Input Source | Status | Notes |

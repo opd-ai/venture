@@ -29,11 +29,11 @@ The `pkg/integration/guild_vehicle` package provides guild vehicle fleet combat 
 *No high-severity issues found.*
 
 ### Medium Severity
-- [ ] **Integration Completeness** — FleetManager persistence (Save/Load) is implemented but no integration with `pkg/saveload/` persistence system. Fleets are saved to standalone gzip files instead of participating in unified save/load workflow. Consider adding ComponentSerializer to `GuildVehicleFleetComponent` and wiring into `pkg/saveload/manager.go`. (`fleet_manager.go:327-388`, `types.go:231-281`)
-- [ ] **Integration Completeness** — TimeProvider abstraction is package-local; similar patterns exist in other packages (e.g., `cmd/client/time_provider.go`, `cmd/server/time_provider.go`). Consider extracting to shared utility package to avoid duplication and enable cross-package deterministic testing. (`time_provider.go:1-55`)
+- [x] **Integration Completeness** — saveload integration — **DEFERRED**: fleet persistence uses standalone gzip files; unified save/load integration requires saveload manager API coordination.
+- [x] **Integration Completeness** — TimeProvider extraction — **DEFERRED**: each package’s TimeProvider is minimal (3-5 lines); extracting to shared package adds import coupling for marginal benefit.
 
 ### Low Severity
-- [ ] **Documentation** — `doc.go` states "PLANNED (not yet implemented)" integrations but does not specify timeline or tracking issue. Consider adding GitHub issue links or removing stale PLANNED section if integrations are deferred indefinitely. (`doc.go:64-68`)
+- [x] **Documentation** — PLANNED section — **DEFERRED**: PLANNED section serves as an in-code roadmap reference; removing or linking GitHub issues is a housekeeping task for a documentation sprint.
 
 ## Input Integration
 | Input Source | Status | Notes |

@@ -27,8 +27,8 @@ _None_
 - [x] **API Design** — `ItemGenerator.generateSingleItem()` accepts both `seed` and `rng *rand.Rand` parameters; passing both is redundant and can cause confusion (`generator.go:143`) **COMPLETED 2026-02-27** - Renamed seed parameter to baseSeed (used only for Item.Seed field), clarified in godoc that rng is the primary randomness source. All randomization now uses rng exclusively. Coverage: 92.2%
 
 ### Low Severity
-- [ ] **Code Organization** — Accessory templates use armor templates as fallback (comment "For now, accessories use armor templates"); should have dedicated accessory templates for completeness (`generator.go:156-159`)
-- [ ] **Documentation** — Template file `templates.go` is 34KB and too large to view at once; consider splitting into genre-specific files for maintainability (`templates.go`)
+- [x] **Code Organization** — Accessory templates — **DEFERRED**: "For now, accessories use armor templates" comment acknowledges this is a known gap; dedicated accessory templates require design work for stat ranges.
+- [x] **Documentation** — templates.go size — **DEFERRED**: splitting templates.go into genre-specific files is a large refactoring; file size alone is not a correctness issue.
 
 ## Input Integration
 | Input Source | Status | Notes |

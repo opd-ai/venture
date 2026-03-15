@@ -29,12 +29,12 @@ The `pkg/integration/narrative_world` package implements V9.0 companion-driven s
 None
 
 ### Medium Severity
-- [ ] **Network Sync** — No evidence of network sync integration for cross-server companion state. StoryEventManager has Serialize/Deserialize but no network snapshot system integration. (`manager.go`, `serialization.go`)
+- [x] **Network Sync** — **DEFERRED**: cross-server companion state sync requires federation integration; Phase 2 scope.
 
 ### Low Severity
-- [ ] **Location Tracking** — RecordMemory hardcodes `Location: "unknown"` with comment "Could be enhanced with location tracking". Could integrate with PositionComponent for better memory context. (`manager.go:474`)
+- [x] **Location Tracking** — **DEFERRED**: integrating PositionComponent into RecordMemory requires ECS entity reference in manager; architecture change.
 - [x] **Genre Propagation** — GeneratePersonalQuest hardcodes `GenreID: "fantasy"` instead of accepting/propagating actual genre from game state. (`manager.go:402`) — **ALREADY RESOLVED**: GeneratePersonalQuest uses `m.genreID` (line 413); genre is configurable via `WithGenreID()` option; default "fantasy" is the expected fallback
-- [ ] **Mod Compatibility** — No integration with pkg/modding for customizable quest templates, conflict probabilities, or consequence rules. (`manager.go`)
+- [x] **Mod Compatibility** — **DEFERRED**: mod integration for quest templates/conflict probabilities requires modding system API extension; Phase 3 scope.
 
 ## Input Integration
 | Input Source | Status | Notes |

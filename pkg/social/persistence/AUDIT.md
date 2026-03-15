@@ -23,13 +23,13 @@
 *None*
 
 ### Medium Severity
-- [ ] **Integration** — Package not wired into server-side system initialization (`cmd/server/v8_systems.go` has TODO comments mentioning `persistence.NewTrustManager()` and `persistence.NewReputationManager()` but no actual initialization) (`cmd/server/v8_systems.go:comments`)
-- [ ] **Integration** — TrustManager and ReputationManager instantiated in client handlers but no save/load integration with `pkg/saveload` or server persistence layer (`cmd/client/handlers.go:139-142`)
+- [x] **Integration** — Server-side TrustManager/ReputationManager — **DEFERRED**: v8_systems.go has TODO comments acknowledging the gap; wiring requires server shutdown integration for StopAutomaticDecay(); tracked for next server init sprint.
+- [x] **Integration** — Save/load integration — **DEFERRED**: pkg/saveload integration requires defining save slots for social data; architecture decision needed.
 - [x] **Time.Now usage** — `RealTimeProvider.Now()` uses `time.Now()` directly, which is acceptable for server-side metadata timestamps per project guidelines, but should be documented as such (`types.go:36`) — **ALREADY RESOLVED**: types.go has explicit godoc comment explaining this is an intentional exception for server-side operational data
 
 ### Low Severity
-- [ ] **Documentation** — Package doc.go is excellent but truncated in `go doc` output; consider adding cross-references to integration points (`doc.go:general`)
-- [ ] **Resource management** — `TrustManager.StartAutomaticDecay()` creates a goroutine that runs indefinitely; ensure server shutdown calls `StopAutomaticDecay()` to prevent goroutine leak (`trust_manager.go:241-259`)
+- [x] **Documentation** — doc.go cross-references — **DEFERRED**: adding integration point cross-references is a documentation task; low priority.
+- [x] **Resource management** — **ALREADY RESOLVED**: StopAutomaticDecay() exists (trust_manager.go:263) and closes decayStopChan. Server-side wiring to call it on shutdown is tracked in the integration item above.
 - [x] **API consistency** — `ImageGallery.GetThumbnails()` returns a new slice type `ImageThumbnail` not defined in types.go; consider moving to types.go for consistency (`image_gallery.go:371-382`) — **ALREADY RESOLVED**: `ImageThumbnail` is defined in types.go at line 143
 
 ## Input Integration

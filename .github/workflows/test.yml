@@ -55,3 +55,8 @@ jobs:
       - name: Build client
         run: go build -ldflags="-s -w" -o /tmp/venture-client ./cmd/client
 
+      - name: Run vulnerability scan
+        run: |
+          go install golang.org/x/vuln/cmd/govulncheck@latest
+          govulncheck ./...
+

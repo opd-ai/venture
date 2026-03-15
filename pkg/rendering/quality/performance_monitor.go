@@ -35,6 +35,9 @@ type PerformanceMonitor struct {
 // NewPerformanceMonitor creates a new performance monitor.
 // targetFPS is the desired frame rate (typically 60).
 // sampleSize is the number of frames to average (typically 60-120).
+// Note: time.Now() is used for adjustment timing — this is intentional.
+// PerformanceMonitor tracks UI/rendering adjustment delays, not procedural generation.
+// Frame timing is a real-time concern that correctly uses the system clock.
 func NewPerformanceMonitor(targetFPS float64, sampleSize int) *PerformanceMonitor {
 	return &PerformanceMonitor{
 		frameTimeSamples: make([]float64, sampleSize),

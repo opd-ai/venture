@@ -26,9 +26,9 @@ None identified.
 None identified.
 
 ### Low Severity
-- [ ] **Documentation** — CSP.NewCSP accepts seed parameter but does not use it for any deterministic behavior; either remove unused parameter or document why it exists (`solver.go:43`)
-- [ ] **Documentation** — PuzzleElement.State uses interface{} type without documented valid types; add godoc listing expected types per ElementType (e.g., bool for pressure_plate, string for lever, map[string]interface{} for pushable_block) (`generator.go:63`)
-- [ ] **Code Style** — Multiple helper functions (calculateElementCount, createColoredElements, selectTargetColors, buildColorMatchSolution) are only used by generateColorMatchingPuzzle; consider inlining or moving to closure for locality (`generator.go:604-663`)
+- [x] **Documentation** — CSP.NewCSP seed parameter — **ALREADY RESOLVED**: solver.go:47 has "The seed is used for deterministic tie-breaking during backtracking search" and NewCSP passes it to rand.New(rand.NewSource(seed)).
+- [x] **Documentation** — PuzzleElement.State valid types — **ALREADY RESOLVED**: generator.go:63 comment lists valid types per ElementType (pressure_plate→bool, lever→bool, door→string, pushable_block→map, rotating_tile→int).
+- [x] **Code Style** — generateColorMatchingPuzzle helpers — **DEFERRED**: local helpers are co-located for readability; inlining 50+ lines into one function would reduce clarity.
 
 ## Input Integration
 | Input Source | Status | Notes |

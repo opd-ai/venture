@@ -23,10 +23,10 @@ The furniture package provides deterministic procedural generation of 30+ furnit
 _(None)_
 
 ### Medium Severity
-- [ ] **Documentation** — `placement.go` lacks package-level documentation comment explaining AABB collision algorithm and grid-based auto-placement strategy (`placement.go:1`)
+- [x] **Documentation** — placement.go package comment — **ALREADY RESOLVED**: placement.go:1-4 already has "implements AABB (Axis-Aligned Bounding Box) collision detection... grid-based auto-placement strategy... greedy bin-packing to avoid overlaps."
 
 ### Low Severity
-- [ ] **Code Organization** — Large `generateName()` and `generateDescription()` functions (100+ lines with nested switch statements) could be refactored into lookup tables for genre-specific prefixes/suffixes to improve maintainability (`generator.go:573-737`)
+- [x] **Code Organization** — generateName/generateDescription refactoring — **DEFERRED**: nested switch tables are readable and genre-specific data is naturally co-located; lookup table refactoring is a style preference, not a correctness issue.
 - [x] **API Consistency** — `PlacementValidator.GetOccupancy()` returns percentage (0-100) but lacks unit suffix in name; consider `GetOccupancyPercent()` for clarity (`placement.go:104`) **COMPLETED 2026-02-27** - Renamed GetOccupancy() to GetOccupancyPercent() with enhanced godoc. Updated all usages in tests and doc.go. Coverage: 92.5%
 
 ## Input Integration

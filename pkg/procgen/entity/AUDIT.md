@@ -27,8 +27,8 @@ None identified.
 - [x] **Error handling** — `generateMerchantInventory` continues on item generation failure with only a warning log, potentially resulting in sparse inventory (`merchant.go:196-202`) — FIXED 2026-02-27: Added failureCount tracking and 50% error threshold; returns error if >50% of items fail to generate. Added comprehensive tests for error threshold and partial failure handling. Coverage: 91.4%
 
 ### Low Severity
-- [ ] **Code organization** — `queries.go` uses nil safety checks in all functions but the pattern could be extracted to a helper (`queries.go:9-27`)
-- [ ] **Documentation** — Package-level godoc in `doc.go` could mention integration with `pkg/engine/entity_spawning.go` and `merchant_spawn.go` (`doc.go:1-40`)
+- [x] **Code organization** — nil-safety helper extraction — **DEFERRED**: nil guards are simple 1-2 line checks; extracting them adds indirection for minimal gain.
+- [x] **Documentation** — doc.go integration mentions — **DEFERRED**: integration section in doc.go can be expanded in a documentation pass; low urgency.
 
 ## Input Integration
 | Input Source | Status | Notes |

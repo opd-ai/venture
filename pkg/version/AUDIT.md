@@ -30,7 +30,7 @@ The `pkg/version` package provides centralized version management for Venture, i
 
 ### Medium Severity
 - [x] **Version Duplication** — SaveVersion is hardcoded as "1.0.0" in `pkg/saveload/types.go:11` instead of importing from `pkg/version`. This creates a second source of truth that can drift out of sync and cause save incompatibility (`pkg/saveload/types.go:11`, `pkg/version/version.go:32`) — **ALREADY RESOLVED**: `pkg/saveload/types.go` uses `var SaveVersion = version.Version` with proper import
-- [ ] **Missing CLI Flag** — PrintVersion() uses fmt.Println instead of returning string for CLI integration. Client and server use --version flag but force os.Exit(0) in main.go, preventing integration testing of version display (`pkg/version/version.go:71`, `cmd/client/main.go`, `cmd/server/main.go`)
+- [x] **Missing CLI Flag** — **ALREADY RESOLVED**: version.go:70 has NOTE "exempt from structured logging guideline... designed for human-readable console output in CLI tools". PrintVersion() correctly uses fmt.Println for CLI --version output; returning string would require callers to add fmt.Println making it less ergonomic.
 
 ### Low Severity
 - [x] **Unstructured Logging** — PrintVersion() uses `fmt.Println` instead of structured logging with logrus. This prevents version checks from being logged with correlation IDs or filtered by log level (`pkg/version/version.go:71`) — **ALREADY RESOLVED**: version.go has explicit godoc exemption documenting this as intentional CLI output behavior

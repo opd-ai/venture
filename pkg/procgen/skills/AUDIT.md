@@ -23,11 +23,11 @@ The skills package provides procedural generation of skill trees for character p
 None
 
 ### Medium Severity
-- [ ] **Documentation** — `GetFantasyTreeTemplates`, `GetSciFiTreeTemplates`, `GetHorrorTreeTemplates`, `GetCyberpunkTreeTemplates`, `GetPostApocalypticTreeTemplates` in `templates.go` lack godoc comments (exported functions)
+- [x] **Documentation** — template function godoc — **ALREADY RESOLVED**: all five functions have godoc at their declaration sites (templates.go:38, 270, 580, 887, 1193).
 - [x] **Documentation** — Missing package-level example in `doc.go` showing integration with `SkillProgressionSystem` from engine package — **FIXED 2026-02-27**: Added comprehensive "Integration with SkillProgressionSystem" section to doc.go showing complete flow from generator → skill trees → engine.SkillProgressionSystem → player entity components → runtime skill unlocking.
 
 ### Low Severity
-- [ ] **Code Style** — `normalizeGenre` function at `generator.go:125` is unexported but could be extracted to a validation helper in `pkg/procgen` for reuse by other generators
+- [x] **Code Style** — normalizeGenre extraction — **DEFERRED**: package-private helpers are idiomatic Go; cross-package reuse would require a separate utils package which adds indirection.
 - [x] **Documentation** — `templates.go:1` file comment could include example of template structure for custom genre support — **FIXED 2026-02-27**: Added comprehensive "Custom Genre Template Structure" section to templates.go showing complete example of creating cyberpunk/netrunner skill tree with all required fields (SkillTemplate structure, NamePrefixes/Suffixes, EffectTypes, ValueRanges, TierRange, MaxLevelRange, Tags).
 
 ## Input Integration

@@ -33,7 +33,7 @@ _None identified._
 
 ### Low Severity
 - [x] **Documentation** — doc.go example uses `log.Fatal` and `fmt.Printf` instead of structured logging (`doc.go:31`, `doc.go:36`) - example code should demonstrate best practices even in comments — **FIXED 2026-02-27**: Added clarifying notes in doc.go example code explaining production code should use logrus.WithError() and logrus.WithFields for structured logging. Replaced log.Fatal with return err pattern and fmt.Printf with comment showing logrus example.
-- [ ] **Documentation** — Missing `doc.go` package overview for `StationType` enum explaining mapping to recipe types (`generator.go:20-34`)
+- [x] **Documentation** — doc.go StationType overview — **ALREADY RESOLVED**: doc.go:2-3 already maps StationType enum to recipe categories ("StationType enum maps to recipe categories: Alchemy→potions/consumables, Forge→enchanted equipment, Workbench→magic items, Kitchen→food/buffs, Anvil→weapons and armor.").
 
 ## Input Integration
 | Input Source | Status | Notes |

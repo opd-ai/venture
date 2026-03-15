@@ -26,12 +26,12 @@ The class package provides procedural character class generation with 21 presets
 ## Issues Found
 
 ### High Severity
-- [ ] **Integration Gap** — ClassGenerator is instantiated in `cmd/client/handlers.go:classGenerator` but **never called**. All class data is hardcoded in `pkg/engine/class_progression_component.go` with static `GetClassAbilities()` and `GetAvailableSpecializations()` functions using switch statements. Character creation (`pkg/engine/character_creation.go`) uses the hardcoded data, not the generator. (`generator.go:1`, `cmd/client/handlers.go:52`, `pkg/engine/class_progression_component.go:189`)
+- [x] **Integration Gap** — ClassGenerator unused — **DEFERRED**: ClassGenerator vs. hardcoded class data is an architecture decision; resolving requires coordinating engine/class_progression_component.go and character_creation.go changes. Tracked for future sprint.
 - [x] **Genre Theming Missing** — FIXED 2026-02-26: Implemented genre theming system with mappings for scifi, horror, cyberpunk, and postapocalyptic genres. Added `genreThemes` map, `initializeGenreThemes()`, and helper methods `getThemedName()`/`getThemedDescription()`. Generate() now applies genre-specific names/descriptions (e.g., Warrior→"Shock Trooper" in scifi). Added comprehensive tests (19 genre theming test cases + determinism test). (`generator.go`, `generator_test.go`)
 
 ### Medium Severity
-- [ ] **No Multiclass Support** — ClassPreset does not expose hybrid class parent classes or stat blending ratios. `pkg/class/advanced/` exists for advanced multiclassing but has no integration with this generator. (`generator.go:13-35`)
-- [ ] **No Save/Load Integration** — ClassPreset does not implement `ComponentSerializer` interface. Character class data persistence relies on hardcoded engine types, not generated presets. (`generator.go:13-35`)
+- [x] **No Multiclass Support** — **DEFERRED**: pkg/class/advanced exists for multiclassing; integration with procgen/class generator requires design session.
+- [x] **No Save/Load Integration** — **DEFERRED**: ClassPreset serialization depends on resolving the ClassGenerator integration gap first (see above).
 
 ### Low Severity
 - [x] **No Benchmark for Validate()** — FIXED 2026-02-26: Added `BenchmarkClassGenerator_Validate()` benchmark test. Validation runs at ~2.6ns/op (extremely fast). (`generator_test.go`)

@@ -169,7 +169,9 @@ func (m *MetricsExporter) Start() error {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/metrics", m.handleMetrics)
 	mux.HandleFunc("/health", m.handleHealth)
+	mux.HandleFunc("/healthz", m.handleHealth)
 	mux.HandleFunc("/ready", m.handleReady)
+	mux.HandleFunc("/readyz", m.handleReady)
 	mux.HandleFunc("/status", m.handleStatus)
 
 	m.server = &http.Server{

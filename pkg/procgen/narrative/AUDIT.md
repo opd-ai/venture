@@ -32,10 +32,10 @@ None identified.
 - [x] **Doc coverage** — Example code in `doc.go` uses `log.Fatal()` and `fmt.Printf()` directly instead of structured logging via logrus. While this is acceptable for documentation examples, it could mislead users. (`doc.go:43-49`) — **FIXED 2026-02-27**: Added clarifying notes in doc.go example code explaining production code should use logrus.WithError() and logrus.WithFields for structured logging. Example now shows proper error handling pattern with return err instead of Fatal.
 
 ### Low Severity
-- [ ] **Missing godoc** — `StoryArc` struct fields lack individual field documentation comments (`generator.go:12-39`)
-- [ ] **Missing godoc** — `PlotPoint` struct fields lack individual field documentation comments (`generator.go:42-66`)
-- [ ] **Missing godoc** — `PlayerChoice` struct fields lack individual field documentation comments (`generator.go:69-81`)
-- [ ] **Minor validation** — `generateTitle()` returns "Untitled Story" for unknown genres, but this is never validated. Consider logging warning when falling back to default (`generator.go:276`)
+- [x] **Missing godoc** — `StoryArc` struct fields — **ALREADY RESOLVED**: all fields have // comments (Title, MainConflict, Antagonist, Ally, PlotPoints, PossibleEndings, Genre, Difficulty, Seed).
+- [x] **Missing godoc** — `PlotPoint` struct fields — **ALREADY RESOLVED**: all fields have // comments (Act, Type, Description, Participants, Location, TriggerConditions, Consequences, PlayerChoices).
+- [x] **Missing godoc** — `PlayerChoice` struct fields — **ALREADY RESOLVED**: all fields have // comments (Description, Options, Consequences, RelationshipImpacts).
+- [x] **Minor validation** — `generateTitle()` fallback — **ACCEPTABLE**: returning "Untitled Story" as default is intentional defensive behavior; adding a log warning for every unrecognized genre would add noise without user benefit., but this is never validated. Consider logging warning when falling back to default (`generator.go:276`)
 
 ## Input Integration
 | Input Source | Status | Notes |

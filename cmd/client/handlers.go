@@ -652,6 +652,14 @@ func initializeCoreSystems(game *engine.EbitenGame, logger *logrus.Logger, clien
 		effectiveSpriteCacheMax = wasmSpriteCacheMaxSize
 		effectiveAnimCacheSize = wasmAnimationCacheSize
 	}
+	if v := *spriteCacheMB; v > 0 {
+		const maxAllowed = 300 * 1024 * 1024
+		clamped := int64(v) * 1024 * 1024
+		if clamped > maxAllowed {
+			clamped = maxAllowed
+		}
+		effectiveSpriteCacheMax = clamped
+	}
 	go func() {
 		defer wg.Done()
 		sys.spriteCache = cache.NewSpriteCache(effectiveSpriteCacheMax)

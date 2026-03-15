@@ -26,8 +26,8 @@ None identified.
 None identified.
 
 ### Low Severity
-- [ ] **Documentation** — Missing inline algorithm explanation for polynomial rolling hash in `SeedGenerator.GetSeed` (`generator.go:47-53`) - While the function has a godoc comment mentioning the algorithm, an inline comment explaining why base 31 was chosen and the collision characteristics would improve maintainability.
-- [ ] **Optimization** — `ValidateDimensions` performs 6 comparisons which could be reduced to 4 by checking ranges together (`generator.go:89-99`)
+- [x] **Documentation** — Polynomial rolling hash — **ALREADY RESOLVED**: generator.go:45-46 already has comment "Uses polynomial rolling hash (base 31) which provides good distribution...with ~10^18 unique values before collision becomes statistically significant."
+- [x] **Optimization** — ValidateDimensions comparisons — **DEFERRED**: 6 comparisons are clear and readable; micro-optimization not worth the readability trade-off.
 
 ## Input Integration
 | Input Source | Status | Notes |

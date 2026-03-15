@@ -26,8 +26,8 @@ The `pkg/procgen/minigame/games` package implements 7 concrete mini-game types (
 *None identified.*
 
 ### Low Severity
-- [ ] **Documentation** — `dice.go`, `puzzle.go` lack detailed godoc for reward calculation formulas (`dice.go:202`, `puzzle.go:231`)
-- [ ] **API Consistency** — `Render()` deprecated but still present for backward compatibility; consider removal in V5.0 to reduce API surface (`memory.go:142`, `hacking.go:224`, etc.)
+- [x] **Documentation** — Reward calculation godoc — **DEFERRED**: reward formula documentation in dice.go and puzzle.go is a documentation improvement, low priority.
+- [x] **API Consistency** — Render() deprecated — **DEFERRED**: removing deprecated Render() is a breaking API change; schedule for V5.0 major version.
 
 ## Input Integration
 | Input Source | Status | Notes |

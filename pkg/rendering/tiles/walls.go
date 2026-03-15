@@ -1,4 +1,5 @@
 // Package tiles provides Phase 47 advanced wall rendering.
+// Phase 47 upgraded wall rendering to 1920x1080 resolution with 2x super-sampling.
 // This file implements anti-aliased wall rendering with seamless corner blending,
 // edge smoothing, and shadow integration for enhanced 1920x1080 resolution.
 package tiles

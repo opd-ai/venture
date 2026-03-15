@@ -1,4 +1,5 @@
 // Package tiles provides Phase 16.3 parallax depth effects.
+// Phase 16.3 added multi-layer parallax rendering for 3D depth perception.
 // This file implements multi-layer tile rendering with parallax scrolling,
 // ambient occlusion, and height-based shadows for depth perception.
 package tiles

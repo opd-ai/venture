@@ -32,4 +32,9 @@
 //   - Prefer pooled sizes (28x28, 32x32, 64x64) for best performance
 //   - Non-standard sizes create new images (not pooled)
 //   - Pool automatically grows/shrinks based on demand
+//
+// Initialization model:
+//   - ImagePool is NOT a package-level singleton; create one per render system instance
+//   - cmd/client/handlers.go creates the pool during lazy system initialization
+//   - This design allows per-world or per-scene pool lifetime management
 package pool

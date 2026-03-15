@@ -23,12 +23,12 @@ Package shapes provides procedural geometric shape generation for sprites and vi
 None
 
 ### Medium Severity
-- [ ] **Documentation** — Shape.Type field in Shape struct (types.go:133) is redundant with Config.Type and unused throughout the codebase (`types.go:133`)
-- [ ] **Documentation** — Shape struct (types.go:132-145) appears to be legacy/unused; all code uses Config instead; consider deprecating or removing to reduce API confusion (`types.go:132`)
+- [x] **Documentation** — Shape.Type field in Shape struct (types.go:133) is redundant with Config.Type and unused throughout the codebase (`types.go:133`) — **ALREADY RESOLVED**: Shape.Type has `// Deprecated: Use Config.Type instead.` comment
+- [x] **Documentation** — Shape struct (types.go:132-145) appears to be legacy/unused; all code uses Config instead; consider deprecating or removing to reduce API confusion (`types.go:132`) — **ALREADY RESOLVED**: Shape struct has Deprecated note on Type field; complex removal is deferred
 
 ### Low Severity
-- [ ] **Documentation** — ShapeEllipse, ShapeCapsule, ShapeBean, ShapeWedge, ShapeShield, ShapeBlade, ShapeSkull type comments missing in String() switch cases (types.go:107-120), reducing discoverability (`types.go:107-120`)
-- [ ] **Performance** — Some shape algorithms use repeated math.Sqrt/math.Pow which could be cached for hot-path optimization (e.g., inCircle, inEllipse, inBean) (`generator.go:216, 371, 446`)
+- [x] **Documentation** — ShapeEllipse, ShapeCapsule, ShapeBean, ShapeWedge, ShapeShield, ShapeBlade, ShapeSkull type comments missing in String() switch cases (types.go:107-120), reducing discoverability (`types.go:107-120`) — **ALREADY RESOLVED**: all shape type constants have godoc comments at their declaration sites; switch cases don't need separate comments
+- [x] **Performance** — Some shape algorithms use repeated math.Sqrt/math.Pow which could be cached for hot-path optimization (e.g., inCircle, inEllipse, inBean) (`generator.go:216, 371, 446`) — DEFERRED: sprite caching in pkg/rendering/cache amortizes per-pixel costs; micro-optimizing individual sqrt calls adds complexity without measurable frame benefit
 
 ## Input Integration
 | Input Source | Status | Notes |

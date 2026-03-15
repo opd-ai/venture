@@ -1,4 +1,5 @@
 // Package tiles provides Phase 16.2 smooth terrain transitions.
+// Phase 16.2 introduced Marching Squares auto-tiling for seamless tile connections.
 // This file implements auto-tiling using Marching Squares algorithm,
 // gradient blending between floor types, edge softening, and corner rounding.
 package tiles

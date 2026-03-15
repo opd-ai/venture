@@ -23,13 +23,13 @@ Integration package connecting V6 Federation, V6 Politics, and V3 Weather system
 None
 
 ### Medium Severity
-- [ ] **Documentation** — Package `doc.go` exists but some exported types lack godoc comments (`FactionResponse`, `EconomicEvent`, `WeatherDisaster`, `EventChain` in `types.go:96-133`)
-- [ ] **Documentation** — Several exported functions in `events.go` have minimal or missing parameter documentation (`GenerateFactionResponse`, `GenerateEconomicEvent`, `GenerateWeatherDisaster` lack parameter/return value godoc)
+- [x] **Documentation** — Package `doc.go` exists but some exported types lack godoc comments (`FactionResponse`, `EconomicEvent`, `WeatherDisaster`, `EventChain` in `types.go:96-133`) — **ALREADY RESOLVED**: all four types have godoc comments in types.go
+- [x] **Documentation** — Several exported functions in `events.go` have minimal or missing parameter documentation (`GenerateFactionResponse`, `GenerateEconomicEvent`, `GenerateWeatherDisaster` lack parameter/return value godoc) — **ALREADY RESOLVED**: all three functions have godoc comments with parameter descriptions in events.go
 
 ### Low Severity
 - [ ] **Testing** — Tests use `time.Now()` directly instead of package's `TimeProvider` abstraction (`events_test.go:206,299,492,655,674`, `manager_test.go:55,57,332,353,356,405,410,414,415,420,683,702,711,715`). While this works, it's inconsistent with package design.
-- [ ] **Code Style** — `EventManagerConfig.DefaultEventManagerConfig()` should be `NewDefaultEventManagerConfig()` to follow Go naming conventions for constructor functions (`types.go:181`)
-- [ ] **Documentation** — `WorldEvent.CenterX` and `WorldEvent.CenterY` fields have inline comments but should be promoted to full godoc format for consistency (`types.go:68-71`)
+- [x] **Code Style** — `EventManagerConfig.DefaultEventManagerConfig()` should be `NewDefaultEventManagerConfig()` to follow Go naming conventions for constructor functions (`types.go:181`) — **ALREADY RESOLVED**: function is already named `NewDefaultEventManagerConfig()` in types.go
+- [x] **Documentation** — `WorldEvent.CenterX` and `WorldEvent.CenterY` fields have inline comments but should be promoted to full godoc format for consistency (`types.go:68-71`) — **ALREADY RESOLVED**: CenterX and CenterY have proper `// CenterX is...` godoc comments in types.go
 
 ## Input Integration
 | Input Source | Status | Notes |

@@ -26,7 +26,7 @@ None
 - [x] **Documentation** — `README.md` and `doc.go` contain commented-out `log.Fatal` example code that should use `logrus` instead (`README.md:47`, `doc.go:97,115,132,139,158`) **FIXED 2026-02-27**: Added clarifying comments in all examples explaining production code should use logrus.WithError and logrus.WithFields for structured logging
 
 ### Low Severity
-- [ ] **Documentation** — Package-level comments reference "Phase 16.2", "Phase 16.3", "Phase 47" which lack context for new developers (`doc.go:13,17,22,28,44,56`)
+- [x] **Documentation** — Package-level comments reference "Phase 16.2", "Phase 16.3", "Phase 47" which lack context for new developers (`doc.go:13,17,22,28,44,56`) — **RESOLVED**: Added "Phase 16.2 introduced Marching Squares auto-tiling", "Phase 16.3 added multi-layer parallax rendering", "Phase 47 upgraded wall rendering to 1920x1080 with 2x super-sampling" context lines to transitions.go:1, parallax.go:1, walls.go:1
 - [x] **Testing** — No benchmarks for performance-critical rendering code (generator, parallax, transitions, walls) — **ALREADY FIXED**: 19 benchmarks exist covering all critical paths (BenchmarkGenerator_Generate, BenchmarkGenerateWithParallax, BenchmarkGenerateWithTransition, BenchmarkGenerateEnhancedWall_*, etc.)
 - [x] **Integration** — Package is not imported by any engine, client, or server files - appears to be unused dead code or awaiting integration — **ALREADY RESOLVED**: package is imported by `pkg/engine/terrain_render_system.go` and `pkg/engine/tile_cache.go`
 

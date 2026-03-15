@@ -26,7 +26,7 @@ None identified.
 - [ ] **Test dependency** — Tests import `pkg/engine` which requires X11/Wayland/Ebiten, preventing CI execution. Pattern is consistent with other integration packages. Test-to-source ratio (452%) indicates comprehensive testing when run locally. (`manager_test.go:7`, `system_test.go:7`)
 
 ### Low Severity
-- [ ] **Naming typo** — `ResponingAllies` should be `RespondingAllies` in `AllianceCall` struct and JSON tags. (`types.go:54`)
+- [x] **Naming typo** — `ResponingAllies` should be `RespondingAllies` in `AllianceCall` struct and JSON tags. (`types.go:54`) — **ALREADY RESOLVED**: field is already named `RespondingAllies` in types.go
 - [ ] **Unexported helper exposure** — `now()` helper function uses package-level `defaultTimeProvider` which is testable but could be more explicit by accepting a time provider parameter in Manager constructor. Current pattern works but reduces isolation. (`manager.go:106`, `manager.go:146`, `time_provider.go:45`)
 - [x] **Concession application logging** — Gold transfer failure logs error but continues silently. Consider returning error or accumulating failed concessions for retry. (`manager.go:496-502`) **COMPLETED 2026-02-27** - Implemented error handling with rollback: applyGoldConcession now returns error and rolls back defender treasury deduction if attacker guild is not found. applyConcessions accumulates errors and returns them. NegotiateDiplomaticVictory rolls back war state on concession failure. Added 5 comprehensive tests covering success, rollback, invalid types, and unknown concession types.
 

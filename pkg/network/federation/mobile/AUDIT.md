@@ -23,13 +23,13 @@ The mobile federation package provides battery-aware federation support for mobi
 None identified.
 
 ### Medium Severity
-- [ ] **Documentation** — Exported symbols `GetBytesAvailable` and `SetBytesAvailable` in types.go lack godoc comments (`types.go:221-232`)
-- [ ] **Edge Case** — `UpdateBatteryLevel` accepts values outside 0.0-1.0 range without validation; could lead to incorrect BatteryMode calculation (`adapter.go:105`)
-- [ ] **Edge Case** — `Config.MaxBandwidth` can be negative which breaks token bucket algorithm in `executeSyncWithBandwidthLimit` (`types.go:89`, `adapter.go:210`)
+- [x] **Documentation** — Exported symbols `GetBytesAvailable` and `SetBytesAvailable` in types.go lack godoc comments (`types.go:221-232`) — **ALREADY RESOLVED**: both methods have godoc comments in types.go
+- [x] **Edge Case** — `UpdateBatteryLevel` accepts values outside 0.0-1.0 range without validation; could lead to incorrect BatteryMode calculation (`adapter.go:105`) — **ALREADY RESOLVED**: UpdateBatteryLevel clamps level to [0.0, 1.0] before use
+- [x] **Edge Case** — `Config.MaxBandwidth` can be negative which breaks token bucket algorithm in `executeSyncWithBandwidthLimit` (`types.go:89`, `adapter.go:210`) — **ALREADY RESOLVED**: adapter.go lines 42-43 clamp MaxBandwidth to 0 when negative
 
 ### Low Severity
-- [ ] **Documentation** — `State.bytesAvailable` is unexported but used for public bandwidth limiting; consider adding comment explaining it's internal token bucket state (`types.go:119`)
-- [ ] **Code Style** — `State.timeProvider` field comment could mention it defaults to real system time if nil (`types.go:119`)
+- [x] **Documentation** — `State.bytesAvailable` is unexported but used for public bandwidth limiting; consider adding comment explaining it's internal token bucket state (`types.go:119`) — **ALREADY RESOLVED**: field has inline comment "Token bucket: available bandwidth tokens"
+- [x] **Code Style** — `State.timeProvider` field comment could mention it defaults to real system time if nil (`types.go:119`) — **ALREADY RESOLVED**: field comment says "injected time source for deterministic timestamps" and NewState() godoc says "For deterministic behavior, use NewStateWithTimeProvider instead"
 
 ## Input Integration
 | Input Source | Status | Notes |

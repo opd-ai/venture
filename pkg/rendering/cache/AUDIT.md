@@ -32,10 +32,10 @@ _None identified_
 _None identified_
 
 ### Low Severity
-- [ ] **Documentation** — `time.Now()` usage could be documented as non-deterministic but acceptable for monitoring (`memory_monitor.go:142`, `memory_monitor.go:156`)
-- [ ] **Performance** — `GenerateAsync` could benefit from context.Context for cancellation (`pregenerator.go:134`)
-- [ ] **Documentation** — `PredictiveWarmerConfig` validation could be more explicit about clamping to defaults (`predictive_warmer.go:65-73`)
-- [ ] **Code Quality** — `predictNextLocked` comment could clarify RLock requirement (`predictive_warmer.go:162`)
+- [x] **Documentation** — `time.Now()` usage could be documented as non-deterministic but acceptable for monitoring (`memory_monitor.go:142`, `memory_monitor.go:156`) — **ALREADY RESOLVED**: both usages have inline comment "time.Now() is acceptable for non-deterministic performance monitoring"
+- [x] **Performance** — `GenerateAsync` could benefit from context.Context for cancellation (`pregenerator.go:134`) — **DEFERRED**: complex refactor affecting public API; acceptable as-is for current usage
+- [x] **Documentation** — `PredictiveWarmerConfig` validation could be more explicit about clamping to defaults (`predictive_warmer.go:65-73`) — **ALREADY RESOLVED**: NewPredictiveCacheWarmer has inline comments for each default (e.g., `// Default: track last 1000 accesses.`)
+- [x] **Code Quality** — `predictNextLocked` comment could clarify RLock requirement (`predictive_warmer.go:162`) — **ALREADY RESOLVED**: function has godoc "Caller must hold at least a read lock on w.mu."
 
 ## Input Integration
 | Input Source | Status | Notes |

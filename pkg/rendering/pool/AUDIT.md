@@ -40,8 +40,8 @@ The `pkg/rendering/pool` package provides sync.Pool-based object pooling for Ebi
 
 ### Low Severity
 - [x] **Documentation** — Package doc.go exists but no explicit mention of X11/display requirement or testing limitations (`doc.go:1-29`) **FIXED 2026-02-27**: Added "Testing Limitations" section to doc.go documenting X11/Ebiten runtime requirements, headless testing constraints, and ≥30% coverage target exception
-- [ ] **Integration** — Package not explicitly initialized in `cmd/client/main.go` startup path; only created on-demand in `handlers.go:671` during lazy system init. Consider documenting that pool is created per-render-system instance rather than as a global singleton (`image_pool.go:36-37`)
-- [ ] **Testing** — Tests require X11/Wayland but lack build tags or skip logic for headless environments. Consider adding `//go:build !headless` or environment-based skip in `TestMain` (`image_pool_test.go:1`)
+- [x] **Integration** — Package not explicitly initialized in `cmd/client/main.go` startup path; only created on-demand in `handlers.go:671` during lazy system init. Consider documenting that pool is created per-render-system instance rather than as a global singleton (`image_pool.go:36-37`) — **RESOLVED**: Added "Initialization model" section to doc.go explaining per-instance design and cmd/client/handlers.go creation pattern
+- [x] **Testing** — Tests require X11/Wayland but lack build tags or skip logic for headless environments. Consider adding `//go:build !headless` or environment-based skip in `TestMain` (`image_pool_test.go:1`) — **ALREADY RESOLVED**: TestMain checks `os.Getenv("DISPLAY") == "" && os.Getenv("WAYLAND_DISPLAY") == ""` and exits 0 in headless environments (image_pool_test.go:12-16)
 
 ## Input Integration
 | Input Source | Status | Notes |

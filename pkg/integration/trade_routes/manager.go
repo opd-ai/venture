@@ -66,10 +66,13 @@ type RouteManager struct {
 	nextMissionID   int
 	rng             *rand.Rand
 	updateTicker    *time.Ticker
-	stopChan        chan struct{}      // Closed by Stop() to signal goroutine termination
-	startOnce       sync.Once          // Ensures Start() is idempotent
-	stopOnce        sync.Once          // Ensures Stop() is idempotent
-	priceHandler    PriceUpdateHandler // Optional: economy system for price updates
+	stopChan        chan struct{} // Closed by Stop() to signal goroutine termination
+	startOnce       sync.Once     // Ensures Start() is idempotent
+	stopOnce        sync.Once     // Ensures Stop() is idempotent
+	// priceHandler is an optional economy system reference for propagating trade
+	// outcomes into the marketplace. When set, completing a route applies supply
+	// pressure (price reduction) proportional to cargo quantity delivered.
+	priceHandler PriceUpdateHandler
 }
 
 // NewRouteManager creates a new route manager instance.

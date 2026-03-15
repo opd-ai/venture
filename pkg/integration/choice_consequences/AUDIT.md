@@ -27,9 +27,9 @@ None
 - [x] **Test Determinism** — Tests use `time.Now()` extensively in test fixtures instead of using `FixedTimeProvider` for deterministic timestamps. While acceptable for test code, this violates Coding Guideline #2 spirit (deterministic generation) even in test context. (`manager_test.go:14,203,262,288,313,386,434,496,508,615,692,763,781,803,822,875,877,894,917`) — **COMPLETED 2026-02-27**: All tests now use setupTestTime(t) helper with fixed timestamp constant (completed earlier)
 
 ### Low Severity
-- [ ] **Code Organization** — `abs` and `clamp` helper functions in `helpers.go` could be replaced with `math.Abs` and a standard `math` library clamp once Go 1.21+ is adopted. Current implementation is correct but duplicates standard library functionality. (`helpers.go:9,20`)
+- [x] **Code Organization** — `abs` and `clamp` helpers — **ALREADY RESOLVED**: Go 1.24.5 is used; `clamp` uses built-in `max(minimum, min(maximum, value))` and `abs` delegates to `math.Abs(x)`. Readable wrappers with dedicated tests; no change needed.
 - [x] **Documentation** — Package doc.go contains usage example with `time.Now()` which contradicts best practice of using time provider abstraction. Example should demonstrate `SetTimeProvider(FixedTimeProvider{...})` for testing. (`doc.go:33`) — **COMPLETED 2026-02-27**: Updated doc.go with testing section demonstrating FixedTimeProvider usage with t.Cleanup pattern
-- [ ] **Memory Management** — `CompanionReactions` slice in `PlayerState` hard-coded to keep last 20 reactions. Consider making this configurable via constructor option similar to `npcMemoryLimit` and `choiceLimit`. (`choice_tracker.go:545`)
+- [x] **Memory Management** — CompanionReactions limit — **ALREADY RESOLVED**: `companionReactionLimit` field (choice_tracker.go:35) defaults to 20 and is used at line 547; matches `npcMemoryLimit`/`choiceLimit` configurability pattern exactly.
 
 ## Input Integration
 | Input Source | Status | Notes |

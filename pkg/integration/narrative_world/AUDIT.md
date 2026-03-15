@@ -33,7 +33,7 @@ None
 
 ### Low Severity
 - [ ] **Location Tracking** — RecordMemory hardcodes `Location: "unknown"` with comment "Could be enhanced with location tracking". Could integrate with PositionComponent for better memory context. (`manager.go:474`)
-- [ ] **Genre Propagation** — GeneratePersonalQuest hardcodes `GenreID: "fantasy"` instead of accepting/propagating actual genre from game state. (`manager.go:402`)
+- [x] **Genre Propagation** — GeneratePersonalQuest hardcodes `GenreID: "fantasy"` instead of accepting/propagating actual genre from game state. (`manager.go:402`) — **ALREADY RESOLVED**: GeneratePersonalQuest uses `m.genreID` (line 413); genre is configurable via `WithGenreID()` option; default "fantasy" is the expected fallback
 - [ ] **Mod Compatibility** — No integration with pkg/modding for customizable quest templates, conflict probabilities, or consequence rules. (`manager.go`)
 
 ## Input Integration

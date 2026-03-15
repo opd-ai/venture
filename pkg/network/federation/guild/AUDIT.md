@@ -32,8 +32,8 @@ None found.
 None found.
 
 ### Low Severity
-- [ ] **Documentation** — Package-level `doc.go` exists but individual files lack file-level comments explaining their purpose in the larger architecture (`constants.go:1`, `treasury.go:1`, `persistence.go:1`)
-- [ ] **Time Dependency** — `time_provider.go:23` uses `time.Now()` in production RealTimeProvider, which is non-deterministic. This is acceptable for timestamps but documented here for awareness. The package correctly provides MockTimeProvider for deterministic testing.
+- [x] **Documentation** — Package-level `doc.go` exists but individual files lack file-level comments explaining their purpose in the larger architecture (`constants.go:1`, `treasury.go:1`, `persistence.go:1`) — **ALREADY RESOLVED**: constants.go, treasury.go, and persistence.go all have file-level comments explaining their purpose
+- [x] **Time Dependency** — `time_provider.go:23` uses `time.Now()` in production RealTimeProvider, which is non-deterministic. This is acceptable for timestamps but documented here for awareness. The package correctly provides MockTimeProvider for deterministic testing. — **ACCEPTABLE**: documented, MockTimeProvider provided for testing
 - [x] **API Consistency** — `Manager.SetServerID()` method exists (`federation.go:39`) but is redundant with `WithServerID()` constructor option; prefer single initialization path via functional options to avoid runtime ID changes **COMPLETED 2026-02-27** - Removed SetServerID() method, updated all test usages to use WithServerID() functional option. Coverage: 93.5%
 
 ## Input Integration

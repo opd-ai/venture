@@ -32,8 +32,8 @@ None identified.
 None identified.
 
 ### Low Severity
-- [ ] **Documentation** — Package-level doc.go is comprehensive (218 lines) but individual complex functions like `ApplyPhysics` could benefit from inline algorithm comments explaining the physics formulas (`behaviors.go:92`)
-- [ ] **Documentation** — Weather system puddle accumulation and snow drift algorithms lack inline comments explaining the mathematical approach (`weather.go:300-400` range)
+- [x] **Documentation** — Package-level doc.go is comprehensive (218 lines) but individual complex functions like `ApplyPhysics` could benefit from inline algorithm comments explaining the physics formulas (`behaviors.go:92`) — **ALREADY RESOLVED**: `applyGravityForces` has "v = v₀ + g·Δt" and "v *= (1 - drag·Δt)" formulas; `ApplyPhysics` delegates to well-commented sub-functions
+- [x] **Documentation** — Weather system puddle accumulation and snow drift algorithms lack inline comments explaining the mathematical approach (`weather.go:300-400` range) — **ALREADY RESOLVED**: `handleParticleImpact` (weather.go:453-462) has explicit inline comments: "each raindrop adds 0.001 depth (capped at 1.0); full puddle = ~1000 impacts" and "each snowflake adds 0.0005 depth; full cover = ~2000 impacts"
 - [x] **Performance** — `GetAliveParticles()` allocates a new slice on every call; documentation correctly warns users to use `VisitAliveParticles()` for hot paths, but could add runtime comment (`types.go:257`) (FIXED 2026-02-27: Added inline performance comment noting O(N) with allocation)
 
 ## Input Integration

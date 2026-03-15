@@ -121,9 +121,11 @@
 //   - Rate limiting for mod application (manager.go) — server-side throttling
 //   - Test fixtures in modding_test.go — acceptable for testing (not production)
 //
-// These usages are acceptable because they affect only metadata and operational
-// behavior, not procedural content generation. Game content remains fully
-// deterministic regardless of when mods are loaded or applied.
+// These usages are acceptable because they affect only metadata and server-side
+// operational behavior (not replicated to clients), not procedural content generation.
+// Rate limiting in particular is a server-side throttle applied after mod validation;
+// it never influences the deterministic generation of game content. Game content remains
+// fully deterministic regardless of when mods are loaded or applied.
 //
 // # Performance
 //

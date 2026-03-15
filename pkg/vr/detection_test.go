@@ -355,3 +355,38 @@ func BenchmarkDetectHardwareCached(b *testing.B) {
 		d.DetectHardware()
 	}
 }
+
+// BenchmarkIsHeadsetDetected benchmarks the IsHeadsetDetected read-path under RWMutex.
+func BenchmarkIsHeadsetDetected(b *testing.B) {
+	d := NewDetector()
+	d.DetectHardware() // Prime the cache so read-path is exercised
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		d.IsHeadsetDetected()
+	}
+}
+
+// BenchmarkIsControllerDetected benchmarks the IsControllerDetected read-path under RWMutex.
+func BenchmarkIsControllerDetected(b *testing.B) {
+	d := NewDetector()
+	d.DetectHardware() // Prime the cache so read-path is exercised
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		d.IsControllerDetected()
+	}
+}
+
+// BenchmarkIsHeadsetDetectedParallel benchmarks concurrent read contention on RWMutex.
+func BenchmarkIsHeadsetDetectedParallel(b *testing.B) {
+	d := NewDetector()
+	d.DetectHardware() // Prime the cache
+
+	b.ResetTimer()
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			d.IsHeadsetDetected()
+		}
+	})
+}

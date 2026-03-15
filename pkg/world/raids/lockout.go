@@ -189,3 +189,11 @@ func (lm *LockoutManager) GetActiveLockoutCount() int {
 func lockoutKey(playerID string, tier RaidTier) string {
 	return fmt.Sprintf("%s-%d", playerID, tier)
 }
+
+// SetLockoutPeriod updates the lockout period for future lockout recordings.
+// Existing lockouts are not affected. Thread-safe.
+func (lm *LockoutManager) SetLockoutPeriod(period time.Duration) {
+	lm.mu.Lock()
+	defer lm.mu.Unlock()
+	lm.lockoutPeriod = period
+}

@@ -23,13 +23,13 @@ The `pkg/world/housing` package provides comprehensive player housing functional
 *None*
 
 ### Medium Severity
-- [ ] **Documentation** — Missing package-level overview of system architecture in doc.go beyond basic usage (`doc.go:1-101`)
+- [x] **Documentation** — Missing package-level overview of system architecture in doc.go beyond basic usage (`doc.go:1-101`) — **RESOLVED: Added "System Architecture" section to doc.go documenting the 5 subsystems and data flow for building placement**
 - [x] **Testing** — Unable to verify race condition safety due to X11 dependency; add race detector CI for integration tests (`*_test.go:*`) — **COMPLETED 2026-02-27**: Added race detector step to .github/workflows/test.yml running integration tests with -race flag under Xvfb. All tests pass.
 
 ### Low Severity
-- [ ] **Documentation** — `BuildingSize` type and constants lack godoc comments (`types.go:~52-62`)
-- [ ] **Documentation** — `Vector2` type lacks godoc comment (`types.go:~64-68`)
-- [ ] **API Consistency** — `CreateHouse` method accepts `interface{}` for buildingData instead of typed struct (`manager.go:177`)
+- [x] **Documentation** — `BuildingSize` type and constants lack godoc comments (`types.go:~52-62`) — **ALREADY RESOLVED: `// BuildingSize represents the size tier of a building.` is present; constants have inline comments**
+- [x] **Documentation** — `Vector2` type lacks godoc comment (`types.go:~64-68`) — **ALREADY RESOLVED: `// Vector2 represents a 2D position or offset.` is present on the preceding line**
+- [x] **API Consistency** — `CreateHouse` method accepts `interface{}` for buildingData instead of typed struct (`manager.go:177`) — **RESOLVED**: Changed signature to `*HousingBuildingData`; added typed struct with Width/Height/Position fields; updated integration tests and all call sites.
 - [x] **Resource Management** — `defer file.Close()` and `defer gzWriter.Close()` now check errors; structured logging on close failures (`persistence.go:51,55,164,168`) — COMPLETED 2026-02-27: Added deferred close error handling with structured logging for both Save() and SavePlayerData(). Tests added to verify close path works correctly.
 
 ## Input Integration

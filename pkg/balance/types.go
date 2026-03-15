@@ -49,12 +49,18 @@ type BalanceConfig struct {
 	// AcceptanceThresholds override default thresholds (optional).
 	// Example: {"class_win_rate_min": 0.40, "class_win_rate_max": 0.60}
 	AcceptanceThresholds map[string]float64
+
+	// ProgressLogInterval controls how often progress is logged as a percentage
+	// of total iterations (e.g., 10 = log every 10%). Zero or negative values
+	// use the default of 10.
+	ProgressLogInterval int
 }
 
 // NewDefaultConfig returns a BalanceConfig with standard settings.
 func NewDefaultConfig() *BalanceConfig {
 	return &BalanceConfig{
-		Seed: 12345,
+		Seed:                12345,
+		ProgressLogInterval: 10, // log every 10% by default
 		SimulationCounts: map[string]int{
 			"Combat":      10000, // 10k simulated battles
 			"Economic":    5000,  // 5k transactions
@@ -119,4 +125,18 @@ func (c *BalanceConfig) GetSimulationCount(domain string) int {
 		return count
 	}
 	return 1000 // Default
+}
+
+// GetProgressInterval returns the number of iterations between progress log entries
+// for a loop of totalIterations. Uses ProgressLogInterval as a percentage.
+func (c *BalanceConfig) GetProgressInterval(totalIterations int) int {
+	pct := c.ProgressLogInterval
+	if pct <= 0 {
+		pct = 10
+	}
+	interval := totalIterations * pct / 100
+	if interval <= 0 {
+		interval = 1
+	}
+	return interval
 }

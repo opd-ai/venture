@@ -455,3 +455,18 @@ func BenchmarkManager_GetPlayerLockouts(b *testing.B) {
 		manager.GetPlayerLockouts("player1")
 	}
 }
+
+func BenchmarkManager_CleanupExpired(b *testing.B) {
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		b.StopTimer()
+		manager := NewManager(12345, "fantasy")
+		playerIDs := []string{"p1", "p2", "p3", "p4", "p5"}
+		inst, err := manager.CreateInstance(TierNormal, 5, "grp", playerIDs)
+		if err == nil {
+			manager.CompleteRaid(inst.InstanceID)
+		}
+		b.StartTimer()
+		manager.CleanupExpired()
+	}
+}

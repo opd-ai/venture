@@ -24,7 +24,7 @@ None identified.
 
 ### Medium Severity
 - [ ] **Build tag coverage** — `gpu_bloom.go` has `//go:build !headless` and `gpu_bloom_headless.go` has `//go:build headless`, but no automated test verifies the headless stub compiles and provides no-op behavior correctly (`gpu_bloom_headless.go:1-39`)
-- [ ] **Deprecated field** — `LightingConfig.EnableShadows` is marked deprecated with clear documentation, but there's no linter annotation (e.g., `// Deprecated:` godoc convention) to trigger static analysis warnings when used (`types.go:117-122`)
+- [x] **Deprecated field** — `LightingConfig.EnableShadows` is marked deprecated with clear documentation, but there's no linter annotation (e.g., `// Deprecated:` godoc convention) to trigger static analysis warnings when used (`types.go:117-122`) — **ALREADY RESOLVED**: `EnableShadows` has a proper `// Deprecated:` godoc annotation in types.go
 
 ### Low Severity
 - [ ] **Test race detector** — No race detector tests run due to X11 dependency; recommend adding integration tests using `StubInput`/`StubInput` patterns where possible to achieve partial race coverage (`*_test.go` files)

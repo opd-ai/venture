@@ -32,9 +32,9 @@ None identified.
 None identified.
 
 ### Low Severity
-- [ ] **Documentation** — `GetFantasyTemplates()` and other genre template functions lack godoc comments (`templates.go:8, :87, :168, :202, :237`)
-- [ ] **Documentation** — Helper functions in `generator_helpers.go` lack individual godoc comments (e.g., `determineRarity`, `generateName`, `generateCargoSlots`)
-- [ ] **Documentation** — Combat generation functions in `generator_combat.go` lack individual godoc comments (e.g., `generateWeaponType`, `generateSpecialAbility`)
+- [x] **Documentation** — `GetFantasyTemplates()` and other genre template functions lack godoc comments (`templates.go:8, :87, :168, :202, :237`) — **ALREADY RESOLVED**: all template functions (GetFantasyTemplates, GetSciFiTemplates, GetHorrorTemplates, GetCyberpunkTemplates, GetPostApocTemplates) have godoc comments in templates.go
+- [x] **Documentation** — Helper functions in `generator_helpers.go` lack individual godoc comments (e.g., `determineRarity`, `generateName`, `generateCargoSlots`) — **RESOLVED**: Added comprehensive godoc to determineRarity, generateName, generateCargoSlots, generateCargoWeight in generator_helpers.go
+- [x] **Documentation** — Combat generation functions in `generator_combat.go` lack individual godoc comments (e.g., `generateWeaponType`, `generateSpecialAbility`) — **ALREADY RESOLVED**: both functions have godoc comments in generator_combat.go
 
 ## Input Integration
 | Input Source | Status | Notes |

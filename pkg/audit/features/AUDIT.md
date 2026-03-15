@@ -29,11 +29,11 @@ The `pkg/audit/features` package provides feature completeness validation for Ph
 *None*
 
 ### Medium Severity
-- [ ] **Documentation** — Feature category constants (CategoryCore, etc.) are exported but lack individual godoc comments (`constants.go:10-20`). While the file has a package-level doc, each constant should document which feature domains it covers.
+- [x] **Documentation** — Feature category constants (CategoryCore, etc.) are exported but lack individual godoc comments (`constants.go:10-20`). While the file has a package-level doc, each constant should document which feature domains it covers. — **ALREADY RESOLVED**: All category constants have godoc comments in constants.go
 
 ### Low Severity
-- [ ] **Documentation** — `GetDefaultRegistry()` function lacks godoc comment explaining its purpose and usage (`meta_features.go:250`). This is the primary public API entry point and should be documented.
-- [ ] **Code Organization** — `Register()` method silently ignores nil features without logging (`feature_completeness.go:106-109`). Consider using structured logging with `logrus.WithFields(logrus.Fields{"operation": "register_feature"}).Warn("attempted to register nil feature")` for better observability in test/audit runs.
+- [x] **Documentation** — `GetDefaultRegistry()` function lacks godoc comment explaining its purpose and usage (`meta_features.go:250`). This is the primary public API entry point and should be documented. — **RESOLVED**: Updated godoc to explain purpose, usage context, and entry-point role for feature auditing
+- [x] **Code Organization** — `Register()` method silently ignores nil features without logging (`feature_completeness.go:106-109`). Consider using structured logging with `logrus.WithFields(logrus.Fields{"operation": "register_feature"}).Warn("attempted to register nil feature")` for better observability in test/audit runs. — **ALREADY RESOLVED**: Register() already uses structured logrus logging for nil features
 
 ## Input Integration
 | Input Source | Status | Notes |

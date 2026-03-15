@@ -32,8 +32,8 @@ The `pkg/visualtest` package provides comprehensive visual testing, benchmarking
 *(None)*
 
 ### Low Severity
-- [ ] **time.Now usage in benchmarking/profiling** — Package uses `time.Now()` extensively in `benchmark.go:89, 393, 406` and `memory.go:41, 60, 79`. This is **acceptable** for benchmarking/profiling infrastructure where wall-clock time measurement is required, but noted for completeness. No action needed. (`benchmark.go:89`, `memory.go:41,60,79`, `memory_test.go:267,272,282,287,304,309,317,322,367-371,388-391`)
-- [ ] **documentation completeness** — While package-level `doc.go` is comprehensive (100 lines), some internal helper functions lack inline comments explaining their algorithms (e.g., `calculateSimilarity` in `snapshot.go`, `extractDominantColors` in `genre.go:220-250`). (`snapshot.go:various`, `genre.go:220-250`)
+- [x] **time.Now usage in benchmarking/profiling** — Package uses `time.Now()` extensively in `benchmark.go:89, 393, 406` and `memory.go:41, 60, 79`. This is **acceptable** for benchmarking/profiling infrastructure where wall-clock time measurement is required, but noted for completeness. No action needed. (`benchmark.go:89`, `memory.go:41,60,79`, `memory_test.go:267,272,282,287,304,309,317,322,367-371,388-391`) — **ACCEPTABLE: Intentional for benchmarking infrastructure**
+- [x] **documentation completeness** — While package-level `doc.go` is comprehensive (100 lines), some internal helper functions lack inline comments explaining their algorithms (e.g., `calculateSimilarity` in `snapshot.go`, `extractDominantColors` in `genre.go:220-250`). (`snapshot.go:various`, `genre.go:220-250`) — **ALREADY RESOLVED: Both functions have algorithm comments explaining their approach**
 - [x] **commented-out log.Printf examples** — `snapshot.go:20` contains commented-out example code `//	        log.Printf("Visual regression: %s", diff.Description)` which could be removed for cleaner documentation. (`snapshot.go:20`) [FIXED 2026-02-27: Replaced log.Printf with clarifying comment showing logrus.WithFields best practice]
 
 ## Input Integration

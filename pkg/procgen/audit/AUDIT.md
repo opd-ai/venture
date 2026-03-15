@@ -26,7 +26,7 @@ The `pkg/procgen/audit` package provides comprehensive production-readiness vali
 *None*
 
 ### Low Severity
-- [ ] **Documentation** — Package doc.go mentions "EnvironmentGenerator" exclusion but doesn't explain why Config-based API is incompatible with seed/params audit pattern (`doc.go:34`)
+- [x] **Documentation** — Package doc.go mentions "EnvironmentGenerator" exclusion but doesn't explain why Config-based API is incompatible with seed/params audit pattern (`doc.go:34`) — **ALREADY RESOLVED**: doc.go already explains "Config-based via GenerateFromConfig(config Config) instead of the standard seed/params pattern, making it incompatible with the generic generator audit framework used here"
 - [x] **Test Organization** — EdgeCase tests use `getAllGenerators()` helper which duplicates generator list from `determinism_test.go:getGenerators()`, risking desync if new generators added (`edgecase_test.go:450`, `determinism_test.go:52`) - **FIXED 2026-02-27**: Created shared generators.go with GetAllGenerators() as single source of truth. Both determinism_test.go and edgecase_test.go now delegate to this shared function, eliminating duplication.
 - [x] **Test Completeness** — Quality validators exist for 13/14 generators; missing validator for BookGenerator (not critical as built-in `Validate()` is tested) (`quality_test.go:36-48`) - **FIXED 2026-02-27**: Added BookQualityValidator with validation for title, author, content pages (≥50 chars total), valid BookType, and skill bonuses for skill books. All 14 generators now have quality validators. Coverage: 90.9%.
 

@@ -14,7 +14,9 @@ import (
 	"math/rand"
 )
 
-// determineRarity calculates vehicle rarity based on depth.
+// determineRarity calculates vehicle rarity based on depth progression and a random roll.
+// At depth 0, distribution is ~70% Common, 20% Uncommon, 8% Rare, 2% Epic/Legendary.
+// Each depth level adds +2% to rare+ chances via depthBonus.
 // Originally from: generator.go
 func (g *VehicleGenerator) determineRarity(depth int, rng *rand.Rand) Rarity {
 	// Base probabilities
@@ -47,7 +49,8 @@ func (g *VehicleGenerator) determineRarity(depth int, rng *rand.Rand) Rarity {
 	return RarityLegendary
 }
 
-// generateName creates a name from template and rarity.
+// generateName creates a vehicle name from template prefix/suffix combined with
+// a rarity-based title. Legendary vehicles get a special unique title.
 // Originally from: generator.go
 func (g *VehicleGenerator) generateName(template VehicleTemplate, rarity Rarity, rng *rand.Rand) string {
 	prefix := template.NamePrefix
@@ -63,8 +66,9 @@ func (g *VehicleGenerator) generateName(template VehicleTemplate, rarity Rarity,
 }
 
 // generateCargoSlots determines cargo capacity based on vehicle type and rarity.
+// generateCargoSlots returns the number of cargo slots for a vehicle based on type and rarity.
+// Mounts start with 2 (saddlebags), cargo vehicles scale up to 20+ for legendary tier.
 // Phase 21.2: Cargo/Passenger System
-// Originally from: generator.go
 func (g *VehicleGenerator) generateCargoSlots(vehicleType VehicleType, rarity Rarity, rng *rand.Rand) int {
 	baseSlots := 0
 	switch vehicleType {
@@ -96,8 +100,8 @@ func (g *VehicleGenerator) generateCargoSlots(vehicleType VehicleType, rarity Ra
 }
 
 // generateCargoWeight determines weight capacity based on vehicle type and rarity.
+// generateCargoWeight returns the maximum cargo weight capacity in kg for a vehicle.
 // Phase 21.2: Cargo/Passenger System
-// Originally from: generator.go
 func (g *VehicleGenerator) generateCargoWeight(vehicleType VehicleType, rarity Rarity) float64 {
 	baseWeight := 0.0
 	switch vehicleType {

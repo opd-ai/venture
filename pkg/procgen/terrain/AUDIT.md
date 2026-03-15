@@ -32,9 +32,9 @@ The terrain package implements deterministic procedural terrain and dungeon gene
 *None identified*
 
 ### Low Severity
-- [ ] **Documentation** — cache.go uses time.Now() for LRU tracking (lines 153, 208), but this is explicitly documented as non-deterministic cache management only and does not affect terrain generation determinism (acceptable use case with clear justification in file header)
-- [ ] **Documentation** — Point.Equals() method at point.go:20 lacks godoc comment explaining the equality comparison logic
-- [ ] **Documentation** — Room.Center() and Room.Overlaps() methods (types.go:310, 315) lack godoc comments
+- [x] **Documentation** — cache.go uses time.Now() for LRU tracking (lines 153, 208), but this is explicitly documented as non-deterministic cache management only and does not affect terrain generation determinism (acceptable use case with clear justification in file header) — **ACCEPTABLE**: documented use case, no action needed
+- [x] **Documentation** — Point.Equals() method at point.go:20 lacks godoc comment explaining the equality comparison logic — **ALREADY RESOLVED**: `// Equals checks if two points have the same coordinates.` is present at point.go:44
+- [x] **Documentation** — Room.Center() and Room.Overlaps() methods (types.go:310, 315) lack godoc comments — **ALREADY RESOLVED**: both methods have godoc comments in types.go
 
 ## Input Integration
 | Input Source | Status | Notes |

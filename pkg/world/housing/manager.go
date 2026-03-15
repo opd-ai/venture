@@ -169,19 +169,16 @@ func (m *Manager) Clear() {
 }
 
 // CreateHouse creates a new housing plot from building data.
-// This is a convenience method for creating plots from procedurally generated buildings.
-// The building parameter should be of type *building.Building, but we use interface{} to avoid import cycles.
-// CreateHouse creates a new house plot for a player with deterministic positioning.
-// The seed parameter is used to generate a deterministic position if none is specified in buildingData.
-// Position can also be extracted from buildingData if it implements a GetPosition() method.
-func (m *Manager) CreateHouse(ownerID string, buildingData interface{}, seed int64) (string, error) {
+// buildingData provides optional width/height dimensions and position override.
+// Pass nil to use default sizing (SizeMedium) and seed-based positioning.
+func (m *Manager) CreateHouse(ownerID string, buildingData *HousingBuildingData, seed int64) (string, error) {
 	if !m.enabled {
 		return "", fmt.Errorf("housing is disabled")
 	}
 
 	plotID := fmt.Sprintf("house_%s_%d", ownerID, len(m.playerPlots[ownerID]))
-	size := m.determinePlotSize(buildingData)
-	position := m.generatePlotPosition(ownerID, seed, size)
+	size := m.determinePlotSizeFromData(buildingData)
+	position := m.resolvePlotPosition(ownerID, seed, size, buildingData)
 
 	plot := &Plot{
 		ID:       plotID,
@@ -199,32 +196,28 @@ func (m *Manager) CreateHouse(ownerID string, buildingData interface{}, seed int
 
 // determinePlotSize determines the plot size based on building dimensions.
 // Returns SizeMedium if buildingData is nil or doesn't implement BuildingInterface.
-func (m *Manager) determinePlotSize(buildingData interface{}) BuildingSize {
-	if buildingData == nil {
+// determinePlotSizeFromData determines the plot size from a HousingBuildingData.
+func (m *Manager) determinePlotSizeFromData(data *HousingBuildingData) BuildingSize {
+	if data == nil || (data.Width == 0 && data.Height == 0) {
 		return SizeMedium
 	}
-
-	type BuildingInterface interface {
-		GetWidth() int
-		GetHeight() int
-	}
-
-	b, ok := buildingData.(BuildingInterface)
-	if !ok {
+	if data.Width <= 8 && data.Height <= 8 {
+		return SizeSmall
+	} else if data.Width <= 16 && data.Height <= 16 {
 		return SizeMedium
+	} else if data.Width <= 24 && data.Height <= 24 {
+		return SizeLarge
 	}
+	return SizeEstate
+}
 
-	width := b.GetWidth()
-	height := b.GetHeight()
-
-	if width <= 8 && height <= 8 {
-		return SizeSmall // 8x8
-	} else if width <= 16 && height <= 16 {
-		return SizeMedium // 16x16
-	} else if width <= 24 && height <= 24 {
-		return SizeLarge // 24x24
+// resolvePlotPosition returns either the explicit position from buildingData or
+// a deterministically generated one based on seed.
+func (m *Manager) resolvePlotPosition(ownerID string, seed int64, size BuildingSize, data *HousingBuildingData) Vector2 {
+	if data != nil && data.Position != nil {
+		return *data.Position
 	}
-	return SizeEstate // 32x32
+	return m.generatePlotPosition(ownerID, seed, size)
 }
 
 // generatePlotPosition generates a deterministic position for a house plot.

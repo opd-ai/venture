@@ -26,7 +26,7 @@ None
 - [ ] **Integration** — Pattern generator initialized but not actively called in game loop (`cmd/client/handlers.go:260`) — While the generator is correctly initialized, there's no evidence of active usage in terrain/tile generation systems. Verify if tile texture generation uses this generator or if it's a feature awaiting integration.
 
 ### Low Severity
-- [ ] **Documentation** — `applyGenreVariations` modifies config but doesn't document mutation (`generator.go:99`) — The function mutates the input config's `Scale` and `DetailLevel` fields. Should document this side effect or return a modified copy instead.
+- [x] **Documentation** — `applyGenreVariations` modifies config but doesn't document mutation (`generator.go:99`) — **ALREADY RESOLVED**: function has godoc comment explaining it "modifies config.Scale and config.DetailLevel in-place based on the specified genre, then returns the modified config"
 - [ ] **Code Organization** — Helper methods in generator.go could be grouped by concern (`generator.go:281-397`) — The pixel/color manipulation helpers (`applyDetailToPixel`, `calculatePixelDetail`, `applyDetailToChannels`, `clampColorValue`, etc.) are interspersed. Consider grouping them together with a comment block for easier navigation.
 - [ ] **Performance** — `cellularNoise` calculates hash twice per cell (`generator.go:465-468`) — The hash calculation `(cx*73856093 + cy*19349663) & 0x7FFFFFFF` is done once, then bit-shifted twice. Could be micro-optimized by pre-computing both offsets in one pass, though current performance (1-2ms per 32x32 texture) is already excellent.
 

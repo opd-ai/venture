@@ -32,7 +32,7 @@ None identified.
 None identified.
 
 ### Low Severity
-- [ ] **Documentation** — Package `doc.go` is comprehensive, but exported functions in `chromatic_aberration.go:91` (`ApplyPrismaticAberration`) lack detailed parameter documentation describing angle range and expected visual output (`chromatic_aberration.go:91`)
+- [x] **Documentation** — Package `doc.go` is comprehensive, but exported functions in `chromatic_aberration.go:91` (`ApplyPrismaticAberration`) lack detailed parameter documentation describing angle range and expected visual output (`chromatic_aberration.go:91`) — **ALREADY RESOLVED**: `ApplyPrismaticAberration` has godoc explaining `angle is in radians [0, 2π]` and `intensity controls magnitude [0.0, 1.0]`
 - [x] **Documentation** — Exported helper functions `CreateUniformVelocityMap` and `CreateRadialVelocityMap` in `motion_blur.go:76,90` could benefit from usage examples in godoc comments (`motion_blur.go:76,90`) **FIXED 2026-02-27**: Added comprehensive godoc with usage examples for both functions (camera panning and explosion effects)
 
 ## Input Integration

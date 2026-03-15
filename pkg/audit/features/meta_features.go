@@ -247,7 +247,10 @@ func RegisterMetaFeatures(r *FeatureRegistry) {
 	})
 }
 
-// GetDefaultRegistry returns a registry with all features registered
+// GetDefaultRegistry returns a fully populated registry with all game features registered
+// across all categories (core, advanced, social, housing, guild, and meta systems).
+// It is the primary entry point for feature auditing and completeness checks.
+// Use this in tests and audit tools to verify feature coverage.
 func GetDefaultRegistry() *FeatureRegistry {
 	r := NewFeatureRegistry()
 	RegisterCoreFeatures(r)

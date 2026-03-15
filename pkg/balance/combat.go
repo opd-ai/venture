@@ -263,7 +263,6 @@ func (v *CombatValidator) getClassStats(classType config.CharacterClass) struct 
 } {
 	// Baseline stats from V4.0 Phase 25 class definitions
 	// Balanced to ensure win rates fall within 45-55% range
-	// Total stat budget ~165 per class for balanced gameplay
 	stats := map[config.CharacterClass]struct{ Attack, Defense, MaxHP float64 }{
 		config.ClassWarrior:     {Attack: 17, Defense: 13, MaxHP: 135},
 		config.ClassRogue:       {Attack: 18, Defense: 12, MaxHP: 132},
@@ -302,10 +301,7 @@ func (v *CombatValidator) validateWeaponBalance(ctx context.Context, result *Val
 func (v *CombatValidator) simulateWeaponUsage(ctx context.Context, weaponTypes []string, simCount int) map[string]int {
 	usage := make(map[string]int)
 	rng := rand.New(rand.NewSource(v.config.Seed + 1))
-	progressInterval := simCount / 10 // Log every 10%
-	if progressInterval == 0 {
-		progressInterval = 1
-	}
+	progressInterval := v.config.GetProgressInterval(simCount)
 
 	for i := 0; i < simCount; i++ {
 		select {
@@ -418,10 +414,7 @@ func (v *CombatValidator) validateBossDifficulty(ctx context.Context, result *Va
 
 	// Simulate boss battles
 	bossCount := result.SimulationCount / 5 // ~2000 boss battles
-	progressInterval := bossCount / 10      // Log every 10%
-	if progressInterval == 0 {
-		progressInterval = 1
-	}
+	progressInterval := v.config.GetProgressInterval(bossCount)
 
 	for i := 0; i < bossCount; i++ {
 		select {

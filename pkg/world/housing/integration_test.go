@@ -46,7 +46,8 @@ func TestV6FederationIntegration(t *testing.T) {
 		t.Fatalf("Failed to generate building: %v", err)
 	}
 
-	houseID, err := hm1.CreateHouse(ownerID, buildingData.(*building.Building), 12345)
+	b1 := buildingData.(*building.Building)
+	houseID, err := hm1.CreateHouse(ownerID, &housing.HousingBuildingData{Width: b1.Width, Height: b1.Height}, 12345)
 	if err != nil {
 		t.Fatalf("Failed to create house: %v", err)
 	}
@@ -156,7 +157,8 @@ func TestQuestSystemIntegration(t *testing.T) {
 	}
 
 	playerID := "player1"
-	houseID, err := hm.CreateHouse(playerID, buildingData.(*building.Building), 12345)
+	b2 := buildingData.(*building.Building)
+	houseID, err := hm.CreateHouse(playerID, &housing.HousingBuildingData{Width: b2.Width, Height: b2.Height}, 12345)
 	if err != nil {
 		t.Fatalf("Failed to create house: %v", err)
 	}
@@ -212,7 +214,8 @@ func TestPerformanceBenchmark(t *testing.T) {
 			// Use a single player with unique seeds to test performance
 			// This avoids overlap issues when houses are placed in the same grid cells
 			playerID := "player1"
-			_, err = hm.CreateHouse(playerID, buildingData.(*building.Building), int64(i*1000))
+			b3 := buildingData.(*building.Building)
+			_, err = hm.CreateHouse(playerID, &housing.HousingBuildingData{Width: b3.Width, Height: b3.Height}, int64(i*1000))
 			if err != nil {
 				t.Fatalf("Failed to create house %d: %v", i, err)
 			}

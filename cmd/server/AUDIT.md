@@ -28,8 +28,8 @@ The cmd/server package provides the dedicated multiplayer server for Venture, im
 - [ ] **Time.Now Usage** — `time.Now()` used for server timing is legitimate but not deterministic for save/load replay; consider using GameClock abstraction (`main.go:298`, `main.go:751`)
 
 ### Low Severity
-- [ ] **Documentation** — `entity_spawning.go` lacks package-level doc comment explaining server-side vs client-side spawning differences
-- [ ] **Documentation** — `system_wrappers.go` lacks explanation of why wrappers are needed (signature mismatch pattern)
+- [x] **Documentation** — `entity_spawning.go` lacks package-level doc comment explaining server-side vs client-side spawning differences — **ALREADY RESOLVED**: file has comprehensive godoc comment explaining server-side vs client-side spawning differences (lines 4-7)
+- [x] **Documentation** — `system_wrappers.go` lacks explanation of why wrappers are needed (signature mismatch pattern) — **ALREADY RESOLVED**: file has doc comment explaining adapter pattern and signature mismatch (lines 4-8)
 - [ ] **Documentation** — `v9_validation.go` has good doc comments but could benefit from examples of validation scenarios
 - [ ] **Code Organization** — `main.go` is 1,139 LOC; consider extracting initialization functions to `init_*.go` files following the pattern used in cmd/client
 

@@ -4,6 +4,34 @@
 // with support for procedural generation, persistence, cross-server synchronization,
 // and blueprint sharing.
 //
+// # System Architecture
+//
+// The housing package is organized around five collaborating subsystems:
+//
+//   - Manager — central coordinator that owns all plots and their state.
+//     Delegates spatial queries to SpatialGrid, persistence to SaveData,
+//     and guild-hall state to GuildHallManager.
+//
+//   - SpatialGrid — uniform grid for O(1) overlap detection.
+//     Indexes plots by their bounding rectangle so placement validation
+//     does not require a full scan of all plots.
+//
+//   - GuildHallManager — manages multi-player guild halls with construction
+//     phases, material contributions, and upgrades separate from private houses.
+//
+//   - BlueprintLibrary — stores, filters, sorts, and serializes building and
+//     furniture layout blueprints for player sharing and import/export.
+//
+//   - Persistence (SaveData) — marshals housing state to/from JSON and integrates
+//     with pkg/saveload for save-file versioning.
+//
+// Data flow for building placement:
+//
+//	Client input → Manager.CreateHouse()
+//	  → SpatialGrid.IsValidPlacement()   (overlap + margin check)
+//	  → plot created, SpatialGrid updated
+//	  → SaveData marshalled, pkg/saveload written
+//
 // # Key Concepts
 //
 // Building Size Tiers:

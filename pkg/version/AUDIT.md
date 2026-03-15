@@ -29,13 +29,13 @@ The `pkg/version` package provides centralized version management for Venture, i
 *None*
 
 ### Medium Severity
-- [ ] **Version Duplication** — SaveVersion is hardcoded as "1.0.0" in `pkg/saveload/types.go:11` instead of importing from `pkg/version`. This creates a second source of truth that can drift out of sync and cause save incompatibility (`pkg/saveload/types.go:11`, `pkg/version/version.go:32`)
+- [x] **Version Duplication** — SaveVersion is hardcoded as "1.0.0" in `pkg/saveload/types.go:11` instead of importing from `pkg/version`. This creates a second source of truth that can drift out of sync and cause save incompatibility (`pkg/saveload/types.go:11`, `pkg/version/version.go:32`) — **ALREADY RESOLVED**: `pkg/saveload/types.go` uses `var SaveVersion = version.Version` with proper import
 - [ ] **Missing CLI Flag** — PrintVersion() uses fmt.Println instead of returning string for CLI integration. Client and server use --version flag but force os.Exit(0) in main.go, preventing integration testing of version display (`pkg/version/version.go:71`, `cmd/client/main.go`, `cmd/server/main.go`)
 
 ### Low Severity
-- [ ] **Unstructured Logging** — PrintVersion() uses `fmt.Println` instead of structured logging with logrus. This prevents version checks from being logged with correlation IDs or filtered by log level (`pkg/version/version.go:71`)
+- [x] **Unstructured Logging** — PrintVersion() uses `fmt.Println` instead of structured logging with logrus. This prevents version checks from being logged with correlation IDs or filtered by log level (`pkg/version/version.go:71`) — **ALREADY RESOLVED**: version.go has explicit godoc exemption documenting this as intentional CLI output behavior
 - [x] **API Inconsistency** — Compare() returns (int, error) but IsCompatible() returns bool (no error). IsCompatible silently returns false on parse errors, making debugging version mismatches harder. **FIXED 2026-02-27**: Changed IsCompatible() to return (bool, error) with error wrapping for invalid versions. Updated all callers (pkg/network/federation/handshake.go) and tests. (`pkg/version/version.go:154-166`)
-- [ ] **Missing Godoc** — Constants Major, Minor, Patch lack individual godoc comments explaining when to increment each (only Version constant is documented) (`pkg/version/version.go:22-29`)
+- [x] **Missing Godoc** — Constants Major, Minor, Patch lack individual godoc comments explaining when to increment each (only Version constant is documented) (`pkg/version/version.go:22-29`) — **ALREADY RESOLVED**: Major/Minor/Patch all have godoc comments in version.go
 
 ## Input Integration
 | Input Source | Status | Notes |

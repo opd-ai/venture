@@ -33,7 +33,7 @@ The `pkg/rendering/ui` package provides procedural UI element generation and man
 - [ ] **Time.Now usage in tests** — Multiple test files (`chat_test.go`, `notifications_test.go`, `trade_test.go`) use `time.Now()` for test data initialization. While acceptable in tests, consider using a deterministic time provider for more reliable test behavior across different execution speeds.
 
 ### Low Severity
-- [ ] **Package scope** — Package does not implement ECS `System` or `Component` interfaces. This is intentional (utility library design), but docs should clarify that this package provides helpers used *by* systems, not systems themselves.
+- [x] **Package scope** — Package does not implement ECS `System` or `Component` interfaces. This is intentional (utility library design), but docs should clarify that this package provides helpers used *by* systems, not systems themselves. — **ALREADY RESOLVED**: doc.go already states "It does not implement System or Component interfaces directly; instead it provides..."
 - [x] **log.Fatal in doc.go example** — `doc.go:30` shows `log.Fatal(err)` in example code. Should use structured logging example with logrus instead. **FIXED 2026-02-27**: Added clarifying comment explaining production code should use logrus.WithError
 
 ## Input Integration

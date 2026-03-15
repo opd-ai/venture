@@ -4,6 +4,7 @@ package world
 import (
 	"fmt"
 	"math"
+	"sync"
 	"time"
 )
 
@@ -32,6 +33,7 @@ type ControlPoint struct {
 
 // TerritoryManager manages border zones and control points.
 type TerritoryManager struct {
+	mu                sync.RWMutex
 	zones             map[string]*BorderZone
 	captureRadius     float64
 	captureTimeBase   int64
@@ -52,6 +54,9 @@ func NewTerritoryManager() *TerritoryManager {
 
 // CreateBorderZone creates a new contested zone between two servers.
 func (tm *TerritoryManager) CreateBorderZone(zoneID, serverA, serverB string, controlPointCount int) *BorderZone {
+	tm.mu.Lock()
+	defer tm.mu.Unlock()
+
 	zone := &BorderZone{
 		ZoneID:           zoneID,
 		ServerA:          serverA,
@@ -80,8 +85,9 @@ func (tm *TerritoryManager) CreateBorderZone(zoneID, serverA, serverB string, co
 	return zone
 }
 
-// GetZone retrieves a border zone by ID.
-func (tm *TerritoryManager) GetZone(zoneID string) (*BorderZone, error) {
+// getZone retrieves a border zone by ID without acquiring a lock.
+// Callers must hold at least tm.mu.RLock() before calling this method.
+func (tm *TerritoryManager) getZone(zoneID string) (*BorderZone, error) {
 	zone, exists := tm.zones[zoneID]
 	if !exists {
 		return nil, fmt.Errorf("zone not found: %s", zoneID)
@@ -89,9 +95,20 @@ func (tm *TerritoryManager) GetZone(zoneID string) (*BorderZone, error) {
 	return zone, nil
 }
 
+// GetZone retrieves a border zone by ID.
+func (tm *TerritoryManager) GetZone(zoneID string) (*BorderZone, error) {
+	tm.mu.RLock()
+	defer tm.mu.RUnlock()
+
+	return tm.getZone(zoneID)
+}
+
 // UpdateControlPoint updates capture progress for a control point.
 func (tm *TerritoryManager) UpdateControlPoint(zoneID string, cpIndex, attackers, defenders int, faction string) error {
-	zone, err := tm.GetZone(zoneID)
+	tm.mu.Lock()
+	defer tm.mu.Unlock()
+
+	zone, err := tm.getZone(zoneID)
 	if err != nil {
 		return err
 	}
@@ -148,6 +165,9 @@ func (tm *TerritoryManager) IsPlayerInCaptureRange(playerX, playerY, cpX, cpY fl
 
 // GetControlledZones returns zones controlled by a faction.
 func (tm *TerritoryManager) GetControlledZones(faction string) []*BorderZone {
+	tm.mu.RLock()
+	defer tm.mu.RUnlock()
+
 	controlled := make([]*BorderZone, 0)
 	for _, zone := range tm.zones {
 		if zone.OwnerFaction == faction {
@@ -159,6 +179,9 @@ func (tm *TerritoryManager) GetControlledZones(faction string) []*BorderZone {
 
 // GetContestedZones returns zones that are currently being contested.
 func (tm *TerritoryManager) GetContestedZones() []*BorderZone {
+	tm.mu.RLock()
+	defer tm.mu.RUnlock()
+
 	contested := make([]*BorderZone, 0)
 	for _, zone := range tm.zones {
 		for _, cp := range zone.ControlPoints {
@@ -173,13 +196,23 @@ func (tm *TerritoryManager) GetContestedZones() []*BorderZone {
 
 // GetResourceBonus returns the resource spawn bonus for a faction in controlled zones.
 func (tm *TerritoryManager) GetResourceBonus(faction string) float64 {
-	controlledCount := len(tm.GetControlledZones(faction))
+	tm.mu.RLock()
+	controlledCount := 0
+	for _, zone := range tm.zones {
+		if zone.OwnerFaction == faction {
+			controlledCount++
+		}
+	}
+	tm.mu.RUnlock()
 	return float64(controlledCount) * tm.resourceBonus
 }
 
 // ResetControlPoint resets a control point to neutral state.
 func (tm *TerritoryManager) ResetControlPoint(zoneID string, cpIndex int) error {
-	zone, err := tm.GetZone(zoneID)
+	tm.mu.Lock()
+	defer tm.mu.Unlock()
+
+	zone, err := tm.getZone(zoneID)
 	if err != nil {
 		return err
 	}
@@ -200,6 +233,9 @@ func (tm *TerritoryManager) ResetControlPoint(zoneID string, cpIndex int) error 
 
 // GetAllZones returns all border zones.
 func (tm *TerritoryManager) GetAllZones() []*BorderZone {
+	tm.mu.RLock()
+	defer tm.mu.RUnlock()
+
 	zones := make([]*BorderZone, 0, len(tm.zones))
 	for _, zone := range tm.zones {
 		zones = append(zones, zone)

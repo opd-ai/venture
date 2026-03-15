@@ -25,7 +25,7 @@ Network resilience testing and simulation package for validating multiplayer beh
 ### Medium Severity
 - [x] **Documentation** — README.md contains example with `log.Fatal` (line 58) instead of structured logging, contradicting project guidelines (`README.md:58`)
   - **Resolution (2026-02-27)**: Replaced log.Fatal with logrus.WithError in README.md example code.
-- [ ] **API consistency** — `formatInt()` and `trimTrailingZeros()` in scenario.go (lines 240-270) are custom string formatting implementations that could use standard library `strconv.FormatInt()` and `strconv.FormatFloat()` for maintainability (`scenario.go:240-270`)
+- [x] **API consistency** — `formatInt()` and `trimTrailingZeros()` in scenario.go (lines 240-270) are custom string formatting implementations that could use standard library `strconv.FormatInt()` and `strconv.FormatFloat()` for maintainability (`scenario.go:240-270`) — **ALREADY RESOLVED**: both functions already use `strconv.FormatInt` and `strconv.FormatFloat` internally; custom trim logic is needed because stdlib has no "trim trailing zeros" function
 
 ### Low Severity
 - [x] **Documentation** — doc.go contains commented-out fmt.Printf examples (lines 53-55, 67) instead of using structured logging in examples (`doc.go:53-55,67`)

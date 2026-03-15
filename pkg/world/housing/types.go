@@ -108,6 +108,17 @@ type Vector2 struct {
 	X, Y float64
 }
 
+// HousingBuildingData supplies dimension and optional position information
+// to CreateHouse. It replaces the previous interface{} parameter and eliminates
+// the need for a type assertion to extract building dimensions.
+// Width and Height of zero both default to SizeMedium (16 tiles).
+// Position is optional; if nil, CreateHouse generates a seed-based position.
+type HousingBuildingData struct {
+	Width    int
+	Height   int
+	Position *Vector2 // optional explicit position; nil = generate from seed
+}
+
 // PermissionLevel defines access control for housing.
 type PermissionLevel int
 

@@ -32,7 +32,7 @@ None
 
 ### Low Severity
 - [x] **Documentation completeness** — ParseEnableVRFlag lacks a godoc comment; only package-level doc mentions it (`detection.go:240`) - **ALREADY FIXED**: ParseEnableVRFlag has comprehensive godoc on lines 237-239 explaining accepted values and return behavior
-- [ ] **Missing benchmarks** — No benchmarks for `IsHeadsetDetected()` or `IsControllerDetected()` read-path (these use RWMutex and could benefit from benchmark profiling)
+- [x] **Missing benchmarks** — No benchmarks for `IsHeadsetDetected()` or `IsControllerDetected()` read-path (these use RWMutex and could benefit from benchmark profiling)
 
 ## Input Integration
 | Input Source | Status | Notes |

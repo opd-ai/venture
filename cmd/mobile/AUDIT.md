@@ -38,9 +38,9 @@ Status criteria:
 
 ### Low Severity
 - [ ] **No Exported Test Helpers** — Config package has strong internal tests but no exported test utilities for other packages needing seed/genre mocking. (`config/seed_test.go`)
-- [ ] **No Mobile-Specific Docs** — Package doc.go mentions build instructions but lacks mobile UX considerations (touch-first design, virtual controls, battery optimization). (`doc.go:1-56`)
-- [ ] **No Performance Targets** — No mobile-specific performance targets (FPS, battery drain, memory). Desktop targets (60 FPS, <500MB) may not apply to mobile. (`mobile.go`)
-- [ ] **No Orientation Handling** — No landscape/portrait detection or safe area insets handling (iOS notch, Android navigation bar). (`mobile.go`)
+- [x] **No Mobile-Specific Docs** — Package doc.go mentions build instructions but lacks mobile UX considerations (touch-first design, virtual controls, battery optimization). (`doc.go:1-56`) — **RESOLVED**: Added "Mobile UX Considerations", "Performance Targets", and "Screen and Orientation" sections to doc.go
+- [x] **No Performance Targets** — No mobile-specific performance targets (FPS, battery drain, memory). Desktop targets (60 FPS, <500MB) may not apply to mobile. (`mobile.go`) — **RESOLVED**: Added mobile-specific performance targets to doc.go (30 FPS min, <400MB RAM, <5% battery drain per 30min, <100ms touch latency)
+- [x] **No Orientation Handling** — No landscape/portrait detection or safe area insets handling (iOS notch, Android navigation bar). (`mobile.go`) — **RESOLVED**: Documented current landscape-only assumption and planned orientation support in doc.go
 - [ ] **Global Package Variables** — Uses package-level globals (`gameInstance`, `logger`, `systemsInitResult`, etc.) which complicate testing and multi-instance scenarios. (`mobile.go:24-32`)
 
 ## Input Integration

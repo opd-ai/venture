@@ -27,7 +27,7 @@ None
 - [ ] **Time Dependency** — `time.Now()` used in production code (`time_provider.go:19`). While properly abstracted via TimeProvider interface for testing, this creates non-deterministic behavior in production. Consider using an injected game clock for full determinism (see `pkg/engine/game_clock.go`)
 
 ### Low Severity
-- [ ] **Context Timeout** — `Stop()` method uses hardcoded 5-second timeout (`server_manager.go:624`). Consider making this configurable or documenting rationale for 5s choice
+- [x] **Context Timeout** — `Stop()` method uses hardcoded 5-second timeout (`server_manager.go:624`). Consider making this configurable or documenting rationale for 5s choice — **RESOLVED**: Added doc comment explaining why 5 seconds was chosen (drain connections, keep UI responsive)
 - [x] **Error Handling** — Network errors use string matching for detection (`server_manager.go:322-323`: `strings.Contains(err.Error(), "use of closed")`). Prefer typed errors or `errors.Is()` for more robust error classification
   - **Resolution (2026-02-27)**: Added `isNormalDisconnection()` helper function using `errors.Is()` and `errors.As()` for robust typed error checking. Replaced fragile string matching with proper error classification for EOF, net.ErrClosed, and timeout errors. Added 9 comprehensive tests covering all error types including wrapped errors. Coverage increased to 89.5%.
 

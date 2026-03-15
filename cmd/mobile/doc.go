@@ -51,5 +51,29 @@
 //
 //	gomobile bind -target=ios -o Venture.xcframework github.com/opd-ai/venture/cmd/mobile
 //
+// # Mobile UX Considerations
+//
+// This package targets touch-first devices. Key design principles:
+//   - Virtual dual-joystick controls: use pkg/mobile for on-screen joystick
+//     and action buttons (not yet initialized; planned for future releases)
+//   - Battery optimization: avoid per-frame allocations; prefer object pools
+//     from pkg/rendering/pool and pkg/engine ECS batch processing
+//   - Memory: target < 400MB total (lower than desktop target of < 500MB)
+//
+// # Performance Targets
+//
+// Mobile-specific performance targets:
+//   - Minimum 30 FPS (compared to 60 FPS desktop target)
+//   - < 400MB RAM (iOS/Android memory limits are stricter than desktop)
+//   - < 5% battery drain per 30 minutes of gameplay
+//   - No > 100ms input latency for touch events
+//
+// # Screen and Orientation
+//
+// The game initializes at 1280x720 (landscape). Portrait mode and
+// safe area insets (iOS notch, Android navigation bar) are not yet
+// handled; all content assumes a standard landscape viewport.
+// See docs/MOBILE.md for planned orientation support.
+//
 // See docs/MOBILE.md for detailed build and deployment instructions.
 package mobile

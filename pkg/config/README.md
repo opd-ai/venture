@@ -239,9 +239,24 @@ func validateConfigFile(path string) error {
 
 ## Related Packages
 
-- `pkg/procgen/dialog` - Provides available genre list
+- `pkg/procgen/dialog` - Provides available genre list (coupling is intentional: genre consistency guaranteed by single source of truth)
 - `cmd/server` - Uses validator for server configuration
 - `cmd/client` - Uses validator for client configuration
+
+## Benchmarks
+
+The validator package includes benchmarks for performance-critical paths:
+
+| Benchmark | Typical ns/op |
+|-----------|--------------|
+| `BenchmarkValidatePort` | validates port range |
+| `BenchmarkValidateMaxPlayers` | validates player count |
+| `BenchmarkValidateTickRate` | validates tick rate |
+| `BenchmarkValidateGenre` | validates genre string |
+| `BenchmarkValidateAll` | full config validation |
+| `BenchmarkNewValidator` | validator construction |
+
+Run with: `go test -bench=. ./pkg/config/`
 
 ## Future Enhancements
 

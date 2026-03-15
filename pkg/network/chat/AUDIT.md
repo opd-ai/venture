@@ -29,11 +29,11 @@ The `pkg/network/chat` package provides player-to-player chat with message valid
 _None identified._
 
 ### Medium Severity
-- [ ] **Documentation** — `generateMessageID()` function is unexported but lacks internal documentation explaining collision resistance properties and why 128 bits is sufficient (`system.go:132`)
+- [x] **Documentation** — `generateMessageID()` function is unexported but lacks internal documentation explaining collision resistance properties and why 128 bits is sufficient (`system.go:132`) — **ALREADY RESOLVED**: function has godoc comment explaining "128 bits of cryptographic randomness encoded as URL-safe base64"
 - [x] **Error Handling** — Error wrapping uses `fmt.Errorf` with `%w` correctly, but does not use `pkg/errors` for correlation IDs or structured error context that would aid in distributed tracing (`system.go:74,84,104`) — **FIXED 2026-02-27**: Implemented structured error handling with correlation IDs. All error returns now use pkg/errors types (RateLimit, ValidationWrap, NetworkWrap, Network) with correlation ID and context. Added 3 comprehensive tests (TestStructuredErrors, TestErrorCorrelationIDUniqueness, TestErrorContextPreservation) verifying error types, correlation ID uniqueness, and context preservation. Coverage: 85.7%.
 
 ### Low Severity
-- [ ] **Component Type Assertion** — Uses direct type assertion without logging the actual type received when assertion fails, making debugging harder (`system.go:115-121`)
+- [x] **Component Type Assertion** — Uses direct type assertion without logging the actual type received when assertion fails, making debugging harder (`system.go:115-121`) — **ALREADY RESOLVED**: type assertion failure logs playerID and correlationID via logrus and returns structured error with context
 
 ## Input Integration
 | Input Source | Status | Notes |

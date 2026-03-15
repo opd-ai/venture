@@ -102,7 +102,7 @@ func (v *EconomicValidator) validateLootValue(ctx context.Context, result *Valid
 		}
 
 		// Log progress every 10 depths
-		if depth%10 == 0 {
+		if depth%v.config.GetProgressInterval(totalDepths) == 0 {
 			logrus.WithFields(logrus.Fields{
 				"progress": depth,
 				"total":    totalDepths,
@@ -161,8 +161,8 @@ func (v *EconomicValidator) simulateRecipeProfits(ctx context.Context) []float64
 		default:
 		}
 
-		// Log progress every 25 recipes
-		if (i+1)%25 == 0 {
+		// Log progress at the configured interval
+		if (i+1)%v.config.GetProgressInterval(totalRecipes) == 0 {
 			logrus.WithFields(logrus.Fields{
 				"progress": i + 1,
 				"total":    totalRecipes,

@@ -610,7 +610,10 @@ func (sm *ServerManager) addRotationComponent(update *network.StateUpdate, rotat
 //	}
 //	defer sm.Stop() // Ensures cleanup even on panic
 //
-// Returns an error if shutdown does not complete within 5 seconds.
+// Returns an error if shutdown does not complete within 5 seconds. The 5-second
+// timeout is chosen to be long enough for active network connections to drain and
+// goroutines to finish current operations, while short enough to keep the host
+// application responsive during shutdown (e.g., not blocking UI close events).
 func (sm *ServerManager) Stop() error {
 	sm.mu.Lock()
 	if !sm.running {

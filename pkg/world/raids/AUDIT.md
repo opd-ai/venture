@@ -23,13 +23,13 @@ The `pkg/world/raids` package implements complete procedural raid dungeon genera
 - [x] **Non-deterministic time** — FIXED 2026-02-27: Added TimeProvider interface with RealTimeProvider and FixedTimeProvider implementations. Updated LockoutManager and InstanceManager to use TimeProvider instead of direct time.Now() calls. Added comprehensive tests validating determinism. Coverage maintained at 90.6%.
 
 ### Medium Severity
-- [ ] **Missing persistence** — RaidInstance and PlayerLockout types do not implement `Serialize()`/`Deserialize()` methods for save/load support. Instances and lockouts lost on server restart. Add ComponentSerializer interface implementation for `pkg/saveload` integration.
-- [ ] **Missing mod support** — No integration with `pkg/modding` for adjusting raid difficulty multipliers, lockout periods, or boss mechanic parameters. Add ModRuleProvider integration to allow data-driven balance tuning.
+- [x] **Missing persistence** — RaidInstance and PlayerLockout types do not implement `Serialize()`/`Deserialize()` methods for save/load support. Instances and lockouts lost on server restart. Add ComponentSerializer interface implementation for `pkg/saveload` integration. — **ALREADY RESOLVED: `persistence.go` provides `Serialize()`/`Deserialize()` for both `RaidInstance` and `PlayerLockout`**
+- [x] **Missing mod support** — No integration with `pkg/modding` for adjusting raid difficulty multipliers, lockout periods, or boss mechanic parameters. Add ModRuleProvider integration to allow data-driven balance tuning. — **RESOLVED: Added `ModParams` struct and `Manager.SetModParams()` method in `mod_params.go`; difficulty multipliers, lockout period, and boss stat multipliers are now overridable at runtime; `LockoutManager.SetLockoutPeriod()` added to `lockout.go`**
 
 ### Low Severity
-- [ ] **Missing genre blending** — Boss name generation supports single genres but not genre blending from `pkg/procgen/genre`. Add genre weight parameter to `BossNameGenerator` for hybrid themes (e.g., 70% fantasy + 30% horror).
-- [ ] **Missing benchmarks** — No benchmarks for `Generate()`, `CreateInstance()`, or `CleanupExpired()` hot paths. Add benchmarks to verify <5s generation target and cleanup performance under load.
-- [ ] **Hardcoded genre fallback** — `Manager.GenerateRaid()` and `Manager.CreateInstance()` hardcode `GenreID: "fantasy"` instead of reading from world config (`manager.go:40,89`). Pass genre as parameter or store in Manager struct.
+- [x] **Missing genre blending** — Boss name generation supports single genres but not genre blending from `pkg/procgen/genre`. Add genre weight parameter to `BossNameGenerator` for hybrid themes (e.g., 70% fantasy + 30% horror). — **ALREADY RESOLVED: `GenerateBlendedRaidName(rng, primaryID, secondaryID string, blendWeight float64, tier)` is implemented in `names.go:32`**
+- [x] **Missing benchmarks** — No benchmarks for `Generate()`, `CreateInstance()`, or `CleanupExpired()` hot paths. Add benchmarks to verify <5s generation target and cleanup performance under load. — **RESOLVED: `BenchmarkManager_GenerateRaid`, `BenchmarkManager_CreateInstance`, `BenchmarkManager_CleanupExpired` added to manager_test.go; generator and instance benchmarks were already present**
+- [x] **Hardcoded genre fallback** — `Manager.GenerateRaid()` and `Manager.CreateInstance()` hardcode `GenreID: "fantasy"` instead of reading from world config (`manager.go:40,89`). Pass genre as parameter or store in Manager struct. — **ALREADY RESOLVED: `Manager.genreID` field is set via `NewManager(seed, genreID)` and used in both `GenerateRaid` and `CreateInstance`; "fantasy" is only the empty-string default**
 
 ## Input Integration
 | Input Source | Status | Notes |

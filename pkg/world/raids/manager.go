@@ -18,6 +18,7 @@ type Manager struct {
 	instanceManager *InstanceManager
 	lockoutManager  *LockoutManager
 	genreID         string
+	modParams       ModParams
 	mu              sync.RWMutex
 }
 
@@ -42,7 +43,7 @@ func (m *Manager) GenerateRaid(tier RaidTier, depth int) (*RaidDungeon, error) {
 	defer m.mu.RUnlock()
 
 	params := procgen.GenerationParams{
-		Difficulty: tier.DifficultyMultiplier() / 10.0, // Scale to 0.0-1.0 range
+		Difficulty: m.applyModDifficulty(tier, tier.DifficultyMultiplier()/10.0),
 		Depth:      depth,
 		GenreID:    m.genreID,
 		Custom: map[string]interface{}{
@@ -91,7 +92,7 @@ func (m *Manager) CreateInstance(tier RaidTier, depth int, groupID string, playe
 
 	// Generate raid dungeon
 	params := procgen.GenerationParams{
-		Difficulty: tier.DifficultyMultiplier() / 10.0, // Scale to 0.0-1.0 range
+		Difficulty: m.applyModDifficulty(tier, tier.DifficultyMultiplier()/10.0),
 		Depth:      depth,
 		GenreID:    m.genreID,
 		Custom: map[string]interface{}{

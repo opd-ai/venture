@@ -41,6 +41,9 @@ func NewSystemWithTimeProvider(world World, serverID string, tp TimeProvider) *S
 }
 
 // Update is called each frame to update the economy system.
+// NOTE: pkg/world/economy cannot import pkg/engine directly (circular dependency via
+// pkg/engine/economy_system.go). Integration with the ECS world uses the adapter
+// pattern in cmd/server/system_wrappers.go instead of direct engine.System registration.
 func (s *System) Update(deltaTime float64) {
 	s.mu.Lock()
 	defer s.mu.Unlock()

@@ -23,11 +23,11 @@ The `pkg/class/advanced` package provides multi-classing, prestige classes, and 
 *None*
 
 ### Medium Severity
-- [ ] **Documentation** — `initializeTalentTrees` method lacks godoc comment (`talents.go:713`)
-- [ ] **Documentation** — `buildSynergies` function lacks godoc comment (`talents.go:4`)
+- [x] **Documentation** — `initializeTalentTrees` method lacks godoc comment (`talents.go:713`) — **ALREADY RESOLVED: `// initializeTalentTrees creates talent trees for all base classes` is present on line 712**
+- [x] **Documentation** — `buildSynergies` function lacks godoc comment (`talents.go:4`) — **ALREADY RESOLVED: `// buildSynergies creates all valid multi-class synergy bonuses` is present on line 3**
 
 ### Low Severity
-- [ ] **Code Organization** — Large talent tree definitions (1760 LOC across talents.go and talents_extended.go) could benefit from splitting into per-class files for maintainability
+- [x] **Code Organization** — Large talent tree definitions (1760 LOC across talents.go and talents_extended.go) could benefit from splitting into per-class files for maintainability — **DEFERRED: Low priority; large refactoring with no behavioral change; tracked for future sprint**
 - [x] **API Consistency** — `GetPlayerClass` returns a deep copy of talents map but not documented as such; consider documenting defensive copy behavior or using immutable return types (FIXED 2026-02-27: Enhanced godoc to document deep copy behavior)
 
 ## Input Integration

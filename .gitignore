@@ -131,6 +131,12 @@ go.work.sum
 **/baseline.json
 /improvements.html
 
+# Analysis tool outputs (go-stats-generator, etc.)
+/pre-cleanup.json
+/post-cleanup.json
+/*-cleanup.json
+/diff-report*.json
+
 # Build directory - ignore everything except WASM static files and Android build config
 build/
 !build/wasm/

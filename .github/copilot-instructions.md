@@ -1,435 +1,868 @@
 # Project Overview
 
-Venture is a fully procedural multiplayer action-RPG built with Go and Ebiten. Every aspect of the game—graphics, audio, and gameplay content—is generated at runtime with no external asset files, resulting in a single binary distribution. The game combines deep procedural generation inspired by roguelikes (Dungeon Crawl Stone Soup, Cataclysm DDA) with real-time action gameplay inspired by classics like The Legend of Zelda.
+Venture is a fully procedural multiplayer action-RPG built with Go and Ebiten where **every aspect of the game—graphics, audio, and gameplay content—is generated at runtime from a single binary with no external asset files**. This "zero-asset" philosophy enables infinite content variety, single-binary distribution, and cross-platform consistency.
 
-The project targets game developers, contributors, and hobbyists interested in procedural content generation, ECS architecture, and multiplayer game networking. It supports desktop (Linux, macOS, Windows), WebAssembly (browser), and mobile (iOS, Android) platforms.
+The game combines deep procedural generation inspired by roguelikes (Dungeon Crawl Stone Soup, Cataclysm DDA) with real-time action gameplay inspired by The Legend of Zelda. It targets game developers, contributors, and hobbyists interested in procedural content generation, ECS architecture, and high-latency multiplayer game networking. Platforms: Linux, macOS, Windows, WebAssembly (browser), iOS, and Android.
 
-## Key Features
+Key features include: 100% procedural content (graphics, audio, terrain, items, quests, NPCs), player housing & guild systems with furniture placement and guildhalls, advanced physics (vehicle suspension/collision/weight transfer, fluid buoyancy/flooding/swimming, environmental destruction), cross-server federation with WebRTC/portal systems/cross-server guilds, high-latency multiplayer designed for 200–5000ms latency supporting Tor/onion services, genre-based theming (fantasy, sci-fi, horror, cyberpunk, post-apocalyptic), experimental VR/stereoscopic support, and a sandboxed JSON-based modding system.
 
-- **100% Procedural Content**: All graphics, audio, terrain, items, quests, and NPCs generated at runtime
-- **Player Housing & Guild Systems**: Persistent housing with furniture placement, guildhalls, and guild management
-- **Advanced Physics**: Vehicle physics (suspension, collision, weight transfer), fluid simulation (buoyancy, flooding, swimming), and environmental destruction
-- **Cross-Server Federation**: Federated server architecture with WebRTC support, portal systems, and cross-server guilds
-- **High-Latency Multiplayer**: Designed for 200-5000ms latency (supports Tor/onion services)
-- **Genre-Based Theming**: Dynamic content generation based on genre (fantasy, sci-fi, horror, cyberpunk)
-- **VR/Stereoscopic Support**: VR controller integration and stereoscopic rendering
-- **Modding System**: Sandboxed, JSON-based rule mods for data-driven balance/content tweaks (validated with no executable code)
+## Sibling Repository Context
 
-The codebase follows an Entity-Component-System (ECS) architecture where entities are unique identifiers with component collections, components are pure data structures with no behavior, and systems contain all logic operating on entities with specific components. This separation enables data-oriented design, efficient caching, and easy testing.
+Venture is part of the **opd-ai Procedural Game Suite**—8 sibling repositories sharing the same architectural patterns, conventions, and eventually shared library packages. All repos follow the zero-asset philosophy where every game generates all graphics, audio, and content at runtime from a single binary.
+
+| Repo | Genre | Ebiten Version | Description |
+|------|-------|----------------|-------------|
+| `opd-ai/venture` | Co-op action-RPG | v2.9.3 | Top-down multiplayer action-RPG (this repo) |
+| `opd-ai/vania` | Metroidvania | v2.6.3 | Procedural platformer with exploration |
+| `opd-ai/velocity` | Galaga-like shooter | v2.9.8 | Vertical scrolling space shooter |
+| `opd-ai/violence` | Raycasting FPS | v2.8.8 | First-person shooter with multiplayer |
+| `opd-ai/way` | Battle-cart racer | v2.x | Racing game with combat |
+| `opd-ai/wyrm` | Survival RPG | v2.x | First-person survival RPG |
+| `opd-ai/where` | Wilderness survival | v2.x | Open-world survival game |
+| `opd-ai/whack` | Arena battle | v2.x | Arena combat game |
+
+When implementing features, follow patterns compatible with all sibling repos so code can eventually be extracted into shared libraries. The repositories share: ECS architecture patterns, deterministic seed-based generation, interface-only networking, structured logging with logrus, and the same naming conventions.
 
 ## Technical Stack
 
 - **Primary Language**: Go 1.24.5+
-- **Game Framework**: Ebiten v2.9.3 (2D game engine with cross-platform support including WASM)
-- **Logging**: Logrus v1.9.3 (structured logging with JSON/text output)
-- **UUID Generation**: google/uuid v1.6.0 (entity and network IDs)
-- **Image Processing**: golang.org/x/image v0.32.0 (procedural sprite generation)
-- **Dialogs**: ncruces/zenity v0.10.14 (native dialogs)
-- **Testing**: Go's built-in testing package with table-driven tests and benchmarks
-- **Build/Deploy**: Go build, GitHub Actions CI/CD, WebAssembly deployment to GitHub Pages
+- **Game Framework**: Ebiten v2.9.3 — 2D game engine with cross-platform + WASM support
+- **Structured Logging**: Logrus v1.9.3 — JSON/text output with contextual fields
+- **UUID Generation**: google/uuid v1.6.0 — entity and network identifiers
+- **Image Processing**: golang.org/x/image v0.32.0 — procedural sprite generation
+- **Text Rendering**: golang.org/x/text v0.30.0 — internationalization support
+- **Native Dialogs**: ncruces/zenity v0.10.14 — file dialogs and notifications
+- **Testing**: Go standard `testing` package with table-driven tests and benchmarks
+- **Build/Deploy**: GNU Make, GitHub Actions CI/CD, WASM deployment to GitHub Pages
 
-## Code Assistance Guidelines
+## Project Structure
 
-1. **Maintain ECS Architecture Strictly**: Components must be pure data structures with only a `Type() string` method. Never add behavior/logic to components. All game logic belongs in Systems that operate on entities with specific components.
-   ```go
-   // ✅ GOOD: Component is pure data
-   type PositionComponent struct {
-       X, Y float64
-   }
-   func (p *PositionComponent) Type() string { return "position" }
-   
-   // ❌ BAD: Logic in component
-   func (p *PositionComponent) Move(dx, dy float64) { p.X += dx; p.Y += dy }
-   ```
-
-2. **Enforce Deterministic Generation**: All procedural generation MUST use seed-based deterministic algorithms. Never use `time.Now()`, global `math/rand` functions, or system-dependent randomness. Always use `rand.New(rand.NewSource(seed))` to ensure same seed = same output.
-   ```go
-   // ✅ GOOD: Deterministic
-   func Generate(seed int64) {
-       rng := rand.New(rand.NewSource(seed))
-       value := rng.Intn(100)
-   }
-   
-   // ❌ BAD: Non-deterministic
-   func Generate() {
-       value := rand.Intn(100) // Uses global random state
-   }
-   ```
-
-3. **Use Structured Logging with Logrus**: Always use `logrus.Fields` for contextual logging instead of string formatting. Use standard field names: `seed`, `genre`, `entityID`, `playerID`, `system_name`, `component_type`.
-   ```go
-   logger.WithFields(logrus.Fields{
-       "entityID": id,
-       "x": x, "y": y,
-   }).Info("player moved")
-   ```
-
-4. **Follow Interface-Based Network Design**: Use interface types for network variables to enhance testability. Use `net.Addr` (not `net.UDPAddr`/`net.TCPAddr`), `net.PacketConn` (not `net.UDPConn`), `net.Conn` (not `net.TCPConn`), and `net.Listener` (not specific listener types). Avoid type switches/assertions to concrete types.
-
-5. **Maintain Performance Targets**: Target 60 FPS minimum, <500MB client memory, <1GB server memory (4 players). Use spatial partitioning for collision detection, sprite caching for rendering, and object pooling for frequently allocated objects.
-
-6. **Write Table-Driven Tests**: Target ≥40% code coverage per package (≥30% for packages depending on X11/Wayland/Ebiten). Use Go's built-in testing with table-driven test patterns. Include benchmarks for performance-critical code. Use stub implementations (StubInput, StubSprite) for testing without Ebiten runtime.
-   ```go
-   func TestGenerator(t *testing.T) {
-       tests := []struct {
-           name    string
-           seed    int64
-           wantErr bool
-       }{
-           {"valid", 12345, false},
-           {"edge case", 0, false},
-       }
-       for _, tt := range tests {
-           t.Run(tt.name, func(t *testing.T) {
-               // Test implementation
-           })
-       }
-   }
-   ```
-
-7. **No External Assets Allowed**: All visual and audio content must be generated at runtime using procedural algorithms. This ensures single binary distribution and infinite content variety within generation rules.
-
-## Project Context
-
-- **Domain**: Procedural action-RPG with multiplayer support. Key concepts include ECS entities/components/systems, deterministic procedural generation with seeds, genre-based theming (fantasy, sci-fi, horror, cyberpunk), and authoritative server networking with client-side prediction.
-
-- **Architecture**: Entity-Component-System (ECS) pattern with:
-  - `World`: Central ECS container managing entities and systems
-  - `Entity`: Lightweight containers with unique IDs and component collections (with hot-path caching for position, velocity, health, collider, sprite, rotation, etc.)
-  - `Component`: Pure data structures implementing `Type() string`
-  - `System`: Logic processors with `Update(entities []*Entity, deltaTime float64)`
-
-- **Configuration**: Use CLI flags for runtime configuration (`-width`, `-height`, `-seed`, `-genre`, `-port`, `-high-latency`). Environment variables for logging: `LOG_LEVEL` (debug/info/warn/error), `LOG_FORMAT` (json/text).
-
-## Directory Architecture
-
-### Root Structure
+This repo uses **venture-style layout**: `cmd/client`, `cmd/server`, `cmd/mobile` entry points with `pkg/` containing 30+ public library packages.
 
 ```
 venture/
-├── cmd/           # Application entry points
-├── pkg/           # Core packages (30+ domains)
-├── docs/          # Documentation (60+ guides)
-├── examples/      # Demo programs
-├── scripts/       # Build & deployment scripts
-├── mods/          # Example mod configurations
-├── web/           # WASM deployment assets
-├── build/         # Platform-specific build configs
-└── Formula/       # Homebrew formula
+├── cmd/                    # Application entry points
+│   ├── client/             # Desktop game client with UI systems
+│   │                       # - main.go: Entry point, flag parsing, EbitenGame
+│   │                       # - handlers.go: Game event handlers
+│   │                       # - webrtc_wasm.go: WASM-specific WebRTC
+│   ├── server/             # Dedicated multiplayer server
+│   │                       # - main.go: Server initialization, system registration
+│   └── mobile/             # iOS/Android entry point (thin wrapper)
+├── pkg/                    # Core library packages (30+ domains)
+│   ├── engine/             # ECS core, 100+ systems, 400+ files
+│   │   ├── ecs.go          # Entity, World, component management
+│   │   ├── components.go   # Core components (Position, Velocity, Health, etc.)
+│   │   ├── interfaces.go   # Component, System, GameRunner interfaces
+│   │   ├── system_init.go  # InitializeGameSystems() — critical integration point
+│   │   ├── spatial_partition.go  # Spatial hash grid for entity queries
+│   │   ├── physics/        # Vehicle, fluid, destruction subsystems
+│   │   ├── prestige/       # New Game+ progression
+│   │   └── qol/            # Quality-of-life (auto-loot, craft queue, etc.)
+│   ├── procgen/            # Procedural generators (25+ subdirs)
+│   │   ├── terrain/        # BSP, cellular, L-system, Voronoi, city, composite
+│   │   ├── entity/         # NPC/creature generation with templates
+│   │   ├── item/           # Item generation with rarity tiers
+│   │   ├── quest/          # Quest generation with objectives/rewards
+│   │   ├── dialog/         # Markov chain dialog generation
+│   │   ├── narrative/      # Story beat and narrative arc generation
+│   │   ├── genre/          # Genre blending, registry, predefined genres
+│   │   ├── magic/          # Spell generation with balance calculations
+│   │   ├── skills/         # Skill tree generation
+│   │   └── ...             # building, furniture, vehicle, faction, legendary, etc.
+│   ├── rendering/          # Runtime graphics pipeline
+│   │   ├── sprites/        # Sprite generation, anatomy, equipment overlays
+│   │   ├── animation/      # Articulation, caching, directional variants
+│   │   ├── tiles/          # Tile transitions, parallax, wall variants
+│   │   ├── lighting/       # Bloom, ambient occlusion, dynamic lights
+│   │   ├── particles/      # Particle physics, weather, LOD, pooling
+│   │   ├── postprocess/    # Color grading, vignette, chromatic aberration
+│   │   ├── ui/             # Chat, notifications, tutorials, transitions
+│   │   ├── cache/          # Sprite caching, predictive warming, memory monitor
+│   │   └── pool/           # Resource pooling for sprites/images
+│   ├── audio/              # Procedural audio synthesis
+│   │   ├── music/          # Adaptive soundtrack, motifs, theory-based
+│   │   ├── sfx/            # Sound effect generation and processing
+│   │   ├── synthesis/      # Oscillators, envelopes, synthesis engine
+│   │   └── voice.go        # Voice codec (ADPCM) for multiplayer
+│   ├── network/            # Multiplayer networking
+│   │   ├── client.go       # Game client networking
+│   │   ├── server.go       # Authoritative server
+│   │   ├── prediction.go   # Client-side prediction
+│   │   ├── lag_compensation.go  # High-latency compensation
+│   │   ├── federation/     # Cross-server discovery, auth, WebRTC, portals
+│   │   ├── chat/           # Chat channels
+│   │   ├── trade/          # Player trade system
+│   │   └── resilience/     # Network resilience metrics/simulation
+│   ├── world/              # Persistent world state
+│   │   ├── housing/        # Player housing, blueprints, guildhalls
+│   │   ├── economy/        # Marketplace, pricing engine, guild bank
+│   │   ├── territory/      # Territory control and siege mechanics
+│   │   └── raids/          # Raid generation, instances, lockouts
+│   ├── integration/        # Cross-system integrations (10 subdirs)
+│   │   ├── companion_housing/   # Companion home system
+│   │   ├── guild_housing/       # Guild housing permissions/upgrades
+│   │   ├── housing_crafting/    # Housing + crafting integration
+│   │   ├── choice_consequences/ # Narrative choice tracking
+│   │   └── ...
+│   ├── combat/             # Damage calculation, resolver, validation
+│   ├── saveload/           # Save/load with migration, WASM storage
+│   ├── config/             # Configuration types and validation
+│   ├── validation/         # Input validation, chat filter, rate limiting
+│   ├── modding/            # JSON mod loader, sandbox execution
+│   ├── security/           # Security audit (30 checks), persistence
+│   └── observability/      # Prometheus metrics at /metrics endpoint
+├── docs/                   # 60+ documentation files
+├── examples/               # Demo programs (bloom, weather, sprites, controls)
+├── scripts/                # Build, test, deployment automation
+│   ├── build-*.sh          # Platform builds (Linux, macOS, Windows, mobile)
+│   ├── validate-network-types.sh  # CI: Network interface enforcement
+│   └── test-integration.sh # Integration test runner
+├── mods/                   # Example mod configurations (JSON)
+├── web/                    # WebAssembly deployment assets
+└── build/                  # Platform-specific build configs
 ```
 
-### Command Packages (`cmd/`)
+---
 
-| Directory | Description |
-|-----------|-------------|
-| `cmd/client/` | Desktop game client entry point. Implements `EbitenGame`, state management (main menu, gameplay, settings), all UI systems (inventory, quest, map, housing, guild, crafting, trade, mail). Handles lazy initialization of systems and WASM-specific WebRTC. |
-| `cmd/server/` | Dedicated multiplayer server. Manages player connections, entity spawning, authoritative game state, network snapshots. Supports V4-V9 system architectures with validation layers. |
-| `cmd/mobile/` | Mobile platform entry point for iOS/Android. Thin wrapper using Ebiten's mobile build support. |
+## ⚠️ CRITICAL: Complete Feature Integration (Zero Dangling Features)
 
-### Engine Package (`pkg/engine/`)
+**This is the single most important rule for this codebase.** Every feature, system, component, generator, and integration MUST be fully wired into the runtime. Dangling features are a maintenance nightmare, a source of deep frustration, and actively degrade code quality.
 
-The core game engine containing 400+ files with ECS implementation, all game systems, and components.
+### The Dangling Feature Problem
 
-#### Core ECS
-- `ecs.go` - Entity/World management with component caching for hot-path optimization
-- `components.go` - Core component definitions (Position, Velocity, Health, Collider, Stats, etc.)
-- `interfaces.go` - System, Component, and Input interfaces
-- `spatial_partition.go` - Spatial hash grid for efficient collision/range queries
+In complex procedural game codebases with 100+ systems and 25+ generators, it is extremely common for features to be:
 
-#### Game Systems (100+ systems)
-| System Category | Key Systems |
-|-----------------|-------------|
-| **Movement & Physics** | `movement.go`, `collision.go`, `collision_precise.go`, `projectile_system.go`, `vehicle_system.go`, `mounting_system.go` |
-| **Combat** | `combat_system.go`, `player_combat_system.go`, `spell_casting.go`, `spell_effect_system.go`, `spell_combination_system.go`, `status_effect_system.go` |
-| **AI & Behavior** | `ai_system.go`, `behavior_tree_system.go`, `behavior_tree_nodes.go`, `squad_system.go`, `companion_ai_system.go` |
-| **Rendering** | `render_system.go`, `animation_system.go`, `particle_system.go`, `lighting_system.go`, `shadow_system.go`, `post_processor.go` |
-| **UI Systems** | `menu_system.go`, `hud_system.go`, `inventory_ui.go`, `quest_ui.go`, `shop_ui.go`, `crafting_ui.go`, `trade_ui.go`, `guild_ui.go`, housing UI (`pkg/world/housing/ui.go` via `HousingUIProvider` in `interfaces.go`) |
-| **Progression** | `progression_system.go`, `skill_progression_system.go`, `achievement.go`, `class_progression_system.go`, `reputation_system.go` |
-| **Social** | `chat_system.go`, `mail_system.go`, `trade_system.go`, `guild_system.go`, `faction_system.go` |
-| **World** | `weather_system.go`, `terrain_modification_system.go`, `world_events_system.go`, `city_evolution_system.go`, `economy_system.go` |
-| **Narrative** | `narrative_system.go`, `dialog_system.go`, `branching_narrative_system.go`, `quest_tracker.go`, `investigation_system.go` |
-| **Multiplayer** | `network_components.go`, `matchmaking_system.go`, `pvp_rating_system.go`, `tournament_system.go` |
-| **Quality of Life** | `qol/` - Auto-loot, craft queue, mount whistle, recipe tracker, storage sorter |
-| **Prestige** | `prestige/` - New Game+ and prestige progression systems |
+1. **Defined but never instantiated** — A system struct exists but `NewXxxSystem()` is never called in `cmd/client/main.go`, `cmd/server/main.go`, or `pkg/engine/system_init.go`
 
-#### Physics Subsystems (`pkg/engine/physics/`)
-| Subsystem | Description |
-|-----------|-------------|
-| `physics/fluids/` | Fluid simulation with buoyancy calculator, flooding mechanics, swimming system |
-| `physics/destruction/` | Environmental destruction system with debris and damage propagation |
-| `physics/vehicle/` | Vehicle physics: suspension, weight transfer, terrain deformation, collision response |
+2. **Instantiated but never integrated** — A system runs but its output is never consumed by other systems. Example: A weather system updates internal state but no render system reads weather to apply visual effects.
 
-### Procedural Generation (`pkg/procgen/`)
+3. **Partially integrated** — A system works for fantasy genre but silently no-ops for cyberpunk or horror. The generator exists but the genre dispatch table doesn't include it.
 
-Deterministic content generation with seed-based algorithms.
+4. **Tested in isolation but broken in context** — Unit tests pass because they test the system in isolation, but the system was never wired into the actual game loop or the component it depends on is never attached to entities.
 
-| Subdirectory | Description |
-|--------------|-------------|
-| `procgen/terrain/` | Terrain generation: BSP dungeons, cellular automata caves, L-system forests, Voronoi biomes, city generation, composite multi-level dungeons, async loading |
-| `procgen/entity/` | NPC and creature generation with templates, merchants, and genre-specific variants |
-| `procgen/item/` | Item generation with class restrictions, rarity tiers, stat scaling |
-| `procgen/quest/` | Quest generation with objectives, rewards, and progression curves |
-| `procgen/magic/` | Spell and magic system generation with balance calculations |
-| `procgen/skills/` | Skill tree generation with templates and progression |
-| `procgen/building/` | Building and structure generation |
-| `procgen/furniture/` | Furniture generation with placement algorithms |
-| `procgen/genre/` | Genre system: blending, predefined genres, registry |
-| `procgen/dialog/` | Dialog generation with Markov chains, personality, corpus management |
-| `procgen/narrative/` | Story beat and narrative arc generation |
-| `procgen/story/` | Story generators: archaeology, branching paths, cross-dungeon stories, timelines |
-| `procgen/faction/` | Faction generation with relationships |
-| `procgen/companion/` | Companion/pet generation |
-| `procgen/environment/` | Environmental detail generation and placement |
-| `procgen/vehicle/` | Vehicle generation with combat and visual variants |
-| `procgen/legendary/` | Legendary item and quest generation |
-| `procgen/minigame/` | Mini-game generation (games/, factory, state machine) |
-| `procgen/puzzle/` | Puzzle generation with solver |
-| `procgen/class/` | Class and multiclass generation |
-| `procgen/book/` | In-game book content generation |
-| `procgen/station/` | Crafting station generation |
-| `procgen/recipe/` | Recipe generation |
+5. **Events emitted with no listeners** — An event bus emits "player.crafted_item" but no system ever registered a handler for it.
 
-### Rendering Pipeline (`pkg/rendering/`)
+6. **Seeds not propagated** — A parent generator accepts a seed but calls sub-generators with `rand.Int63()` instead of derived deterministic seeds.
 
-Runtime procedural graphics generation.
+### The Integration Chain: Six Links That Must All Connect
 
-| Subdirectory | Description |
-|--------------|-------------|
-| `rendering/sprites/` | Sprite generation: anatomy templates, equipment overlays, silhouettes, projectiles, animation, caching, pooling |
-| `rendering/animation/` | Animation system: articulation, caching, controller, directional variants |
-| `rendering/tiles/` | Tile generation: parallax, wall variants, transitions |
-| `rendering/lighting/` | Lighting system: bloom, ambient occlusion, dynamic lights |
-| `rendering/postprocess/` | Post-processing: chromatic aberration, color grading, depth blur, motion blur, vignette |
-| `rendering/particles/` | Particle system: behaviors, physics, LOD, weather effects, pooling |
-| `rendering/ui/` | UI generation: chat, decorations, hierarchy, notifications, quick travel, transitions, tutorial |
-| `rendering/palette/` | Color palette generation: gradients, time-of-day |
-| `rendering/patterns/` | Pattern generation for textures |
-| `rendering/cache/` | Sprite caching, predictive warming, pre-generation, memory monitoring |
-| `rendering/pool/` | Resource pooling for sprites and images |
-| `rendering/parallel/` | Parallel rendering utilities |
-| `rendering/quality/` | Quality settings and LOD management |
-| `rendering/display/` | Display configuration |
+**Before writing ANY new code, verify the full integration chain:**
 
-### Audio Pipeline (`pkg/audio/`)
-
-Runtime procedural audio synthesis.
-
-| Subdirectory | Description |
-|--------------|-------------|
-| `audio/music/` | Music generation: adaptive soundtrack, motifs, theory-based composition |
-| `audio/sfx/` | Sound effects: generator, variety manager, processing |
-| `audio/synthesis/` | Audio synthesis: oscillators, envelopes, engine |
-
-### Network Layer (`pkg/network/`)
-
-Multiplayer networking with high-latency support.
-
-| Subdirectory | Description |
-|--------------|-------------|
-| `network/` | Core: client/server, protocol, packets, compression, crypto, lag compensation, prediction, snapshot system, desync detection |
-| `network/federation/` | Cross-server federation: discovery, auth, handshake, sync, transfer, portal, circuit breaker, connection pooling, retry logic |
-| `network/federation/guild/` | Cross-server guild management |
-| `network/federation/mobile/` | Mobile-specific federation |
-| `network/federation/webrtc/` | WebRTC peer connections |
-| `network/federation/market/` | Cross-server marketplace |
-| `network/chat/` | Chat system with channels |
-| `network/trade/` | Trade system between players |
-| `network/resilience/` | Network resilience: metrics, simulator |
-
-### World Management (`pkg/world/`)
-
-Persistent world state and territory.
-
-| Subdirectory | Description |
-|--------------|-------------|
-| `world/` | Core: state, persistence, chunk loading/compression/modification, metagame, ranking |
-| `world/housing/` | Housing system: blueprints, guildhalls, spatial management, persistence, UI |
-| `world/economy/` | Economy: marketplace, pricing engine, guild bank |
-| `world/territory/` | Territory control: manager, siege mechanics |
-| `world/raids/` | Raid system: generator, instances, lockouts, mechanics, manager |
-
-### Integration Packages (`pkg/integration/`)
-
-Cross-system feature integrations.
-
-| Subdirectory | Description |
-|--------------|-------------|
-| `integration/companion_housing/` | Companion/pet home system: bedding, training areas, storage |
-| `integration/guild_housing/` | Guild housing: permissions, transactions, upgrades |
-| `integration/guild_vehicle/` | Guild fleet management |
-| `integration/housing_crafting/` | Housing + crafting integration |
-| `integration/choice_consequences/` | Narrative choice tracking and consequences |
-| `integration/narrative_world/` | Narrative + world state integration |
-| `integration/political_warfare/` | Political and faction warfare |
-| `integration/trade_routes/` | Trade route management |
-| `integration/world_events/` | World event management |
-
-### Supporting Packages
-
-| Package | Description |
-|---------|-------------|
-| `pkg/combat/` | Combat resolver: damage calculation, interfaces, validation |
-| `pkg/saveload/` | Save/load system: manager, migrator, recovery, WASM storage support |
-| `pkg/config/` | Configuration types and validation |
-| `pkg/validation/` | Input validation: chat, rate limiting, trade |
-| `pkg/errors/` | Error types, correlation IDs, helpers |
-| `pkg/logging/` | Structured logging utilities |
-| `pkg/recovery/` | Panic recovery handlers |
-| `pkg/stability/` | Stability monitoring |
-| `pkg/observability/` | Metrics and observability |
-| `pkg/security/` | Security audit and persistence |
-| `pkg/version/` | Version management |
-| `pkg/migration/` | Data migration validation |
-| `pkg/modding/` | Mod system: loader, manager, sandboxed execution |
-| `pkg/narrative/` | Branching narrative types |
-| `pkg/ux/` | UX validation and user journeys |
-| `pkg/balance/` | Game balance: combat, economic |
-| `pkg/class/` | Class system: advanced multiclassing |
-| `pkg/companion/` | Companion: learning system |
-| `pkg/social/` | Social system persistence |
-| `pkg/hostplay/` | Host-and-play (local server + client) |
-| `pkg/mobile/` | Mobile platform: controls, touch input, dual joystick, keyboard |
-| `pkg/audit/` | Code audit utilities |
-| `pkg/visualtest/` | Visual testing: benchmarks, snapshots, genre tests, regression |
-
-### Examples (`examples/`)
-
-Demo programs for testing individual systems:
-- `animation_timing_demo.go` - Animation timing showcase
-- `bloom_demo.go` - Bloom effect demonstration
-- `genre_ui_palettes_demo.go` - Genre-based UI palette testing
-- `momentum_scrolling_demo.go` - Touch scrolling demo
-- `mouse_delta_demo.go` - Mouse input testing
-- `soft_shadow_demo.go` - Shadow system demo
-- `sprite_antialiasing_demo.go` - Sprite antialiasing
-- `weather_cli_demo.go` - Weather system CLI
-- `virtual_controls_wasm_demo/` - WASM virtual controls
-
-### Scripts (`scripts/`)
-
-Build, test, and deployment automation:
-- `build-*.sh` - Platform-specific builds (Linux, macOS, Windows, Android, iOS)
-- `package-*.sh` - Packaging (deb, rpm, Docker, Windows, release)
-- `test-*.sh` - Platform testing scripts
-- `validate-*.sh` - Validation scripts
-- `benchmark-*.sh` - Performance benchmarking
-- `profile_cpu.sh` - CPU profiling
-- `sign-binaries.sh` - Binary signing
-
-### Documentation (`docs/`)
-
-60+ documentation files covering:
-- Architecture and technical specs
-- Platform-specific builds (Android, iOS, WASM)
-- System documentation (lighting, shadows, magic, rotation, post-processing)
-- Deployment guides (GitHub Pages, production, Tor)
-- Performance optimization guides
-- Runbooks for operations
-
-## Quality Standards
-
-- **Test Coverage**: Minimum 40% per package (30% for packages depending on X11/Wayland/Ebiten). Run `go test -cover ./pkg/...` to verify.
-- **Code Quality**: All code must pass `go fmt`, `go vet`, and ideally `golangci-lint run`.
-- **Documentation**: All exported functions, types, and packages must have godoc comments. Each package should have a `doc.go` file explaining its purpose.
-- **Commit Messages**: Use conventional format: `feat:`, `fix:`, `docs:`, `test:`, `perf:`, `refactor:`.
-- **Performance Validation**: Run benchmarks for performance-critical changes. Maintain 60+ FPS with 2000 entities.
-
-## Networking Best Practices
-
-When declaring network variables, always use interface types:
-- Never use `net.UDPAddr`, `net.IPAddr`, or `net.TCPAddr`. Use `net.Addr` only instead.
-- Never use `net.UDPConn`, use `net.PacketConn` instead.
-- Never use `net.TCPConn`, use `net.Conn` instead.
-- Never use `net.UDPListener` or `net.TCPListener`, use `net.Listener` instead.
-- Never use a type switch or type assertion to convert from an interface type to a concrete type. Use the interface methods instead.
-
-This approach enhances testability and flexibility when working with different network implementations or mocks.
-
-## Generator Pattern
-
-All procedural generators implement the `Generator` interface:
-```go
-type Generator interface {
-    Generate(seed int64, params GenerationParams) (interface{}, error)
-    Validate(result interface{}) error
-}
+```
+Definition → Instantiation → Registration → Update Loop → Output → Consumer → Player Effect
 ```
 
-Use `GenerationParams` with `Difficulty` (0.0-1.0), `Depth` (game progression), `GenreID` (theme), and `Custom` map for additional parameters. Validate parameters before generation using `ValidateParams()`.
+1. **Definition → Instantiation**: Is the struct/system created at runtime?
+   - Check: `grep -rn 'NewYourSystem' cmd/ pkg/engine/system_init.go`
+   - Bad: Constructor exists in `your_system.go` but is never called
 
-## System Pattern
+2. **Instantiation → Registration**: Is the system registered with the World?
+   - Check: Look for `world.AddSystem(yourSystem)` in `InitializeGameSystems()`
+   - Bad: System is created but `world.AddSystem()` is never called
 
-Systems follow this structure:
+3. **Registration → Update Loop**: Does `Update()` actually get called each frame?
+   - Check: Add a log statement in `Update()` and verify it fires 60x/sec
+   - Bad: System is registered but World.Update() doesn't iterate over it
+
+4. **Update → Output**: Does the system produce observable outputs?
+   - Check: Does `Update()` modify entity components, emit events, or change world state?
+   - Bad: `Update()` calculates values but stores them in private fields nobody reads
+
+5. **Output → Consumer**: Is there at least one other system that reads this output?
+   - Check: `grep -rn 'GetYourComponent\|yourSystem\.' pkg/engine/`
+   - Bad: System sets `WeatherComponent.RainIntensity` but no system reads it
+
+6. **Consumer → Player Effect**: Does the chain produce something the player perceives?
+   - Check: Trace from consumer to render/audio/input effect
+   - Bad: Consumer reads the value but only logs it; player never sees/hears anything
+
+**If ANY link in this chain is missing, the feature is dangling. Do not submit dangling features.**
+
+### Specific Anti-Patterns to Reject
+
+#### Anti-Pattern 1: System Defined But Never Instantiated
+
 ```go
-type MySystem struct {
+// ❌ BAD: System defined but never added to the game world
+// File: pkg/engine/weather_system.go
+type WeatherSystem struct {
     world *World
-    // Optional dependencies
+    seed  int64
 }
 
-func NewMySystem(params) *MySystem {
-    log.WithFields(log.Fields{"system_name": "mysystem"}).Debug("Creating system")
-    return &MySystem{...}
+func NewWeatherSystem(seed int64) *WeatherSystem {
+    return &WeatherSystem{seed: seed}
 }
 
-func (s *MySystem) Update(entities []*Entity, deltaTime float64) {
+func (w *WeatherSystem) Update(entities []*Entity, dt float64) {
+    // This code NEVER runs because NewWeatherSystem is never called!
+}
+
+// ✅ GOOD: System instantiated and registered in system_init.go
+// File: pkg/engine/system_init.go
+func InitializeGameSystems(world *World, seed int64) {
+    // ...other systems...
+    weatherSystem := NewWeatherSystem(seed)
+    world.AddSystem(weatherSystem)
+    
+    // AND other systems consume weather state:
+    renderSystem.SetWeatherProvider(weatherSystem)
+    audioSystem.SetAmbientProvider(weatherSystem)
+}
+```
+
+#### Anti-Pattern 2: Generator Never Called Outside Tests
+
+```go
+// ❌ BAD: Generator implements interface but is never called in runtime
+// File: pkg/procgen/terrain/cyberpunk.go
+type CyberpunkTerrainGen struct{}
+
+func (g *CyberpunkTerrainGen) Generate(seed int64, params GenParams) *Terrain {
+    // Great implementation...but only called in cyberpunk_test.go
+}
+
+// File: pkg/procgen/terrain/generator.go - Genre dispatch
+var terrainGenerators = map[string]TerrainGenerator{
+    "fantasy": &FantasyTerrainGen{},
+    "scifi":   &SciFiTerrainGen{},
+    // MISSING: "cyberpunk": &CyberpunkTerrainGen{},  // Dangling!
+}
+
+// ✅ GOOD: Generator registered in dispatch table
+var terrainGenerators = map[string]TerrainGenerator{
+    "fantasy":   &FantasyTerrainGen{},
+    "scifi":     &SciFiTerrainGen{},
+    "cyberpunk": &CyberpunkTerrainGen{},  // Properly registered
+    "horror":    &HorrorTerrainGen{},
+    "postapoc":  &PostApocTerrainGen{},
+}
+```
+
+#### Anti-Pattern 3: Events Emitted Without Handlers
+
+```go
+// ❌ BAD: Event emitted but no listener handles it
+// File: pkg/engine/progression_system.go
+func (s *ProgressionSystem) OnLevelUp(entity *Entity, newLevel int) {
+    s.eventBus.Emit("player.levelup", entity.ID, newLevel)
+    // No system ever calls eventBus.On("player.levelup", ...)
+}
+
+// ✅ GOOD: Event has both emitter and handler
+// File: pkg/engine/progression_system.go
+func (s *ProgressionSystem) OnLevelUp(entity *Entity, newLevel int) {
+    s.eventBus.Emit("player.levelup", entity.ID, newLevel)
+}
+
+// File: pkg/engine/achievement_system.go
+func (s *AchievementSystem) init() {
+    s.eventBus.On("player.levelup", func(entityID uint64, level int) {
+        s.CheckLevelAchievements(entityID, level)
+    })
+}
+
+// File: pkg/engine/hud_system.go
+func (s *HUDSystem) init() {
+    s.eventBus.On("player.levelup", func(entityID uint64, level int) {
+        s.ShowLevelUpAnimation(entityID, level)
+    })
+}
+```
+
+#### Anti-Pattern 4: Seed Not Propagated
+
+```go
+// ❌ BAD: Seed accepted but not forwarded (causes non-determinism)
+func GenerateWorld(seed int64) *World {
+    terrain := generateTerrain(rand.Int63())  // BUG: Ignores input seed!
+    items := generateItems(rand.Int63())      // BUG: Different every run!
+    return &World{terrain, items}
+}
+
+// ✅ GOOD: Derived seeds for deterministic hierarchy
+func GenerateWorld(seed int64) *World {
+    // XOR with magic bytes creates unique but deterministic sub-seeds
+    terrainSeed := seed ^ 0x54455252  // "TERR" in hex
+    itemSeed := seed ^ 0x4954454D     // "ITEM" in hex
+    entitySeed := seed ^ 0x454E5459   // "ENTY" in hex
+    questSeed := seed ^ 0x51554553    // "QUES" in hex
+    
+    terrain := generateTerrain(terrainSeed)
+    items := generateItems(itemSeed)
+    entities := generateEntities(entitySeed, terrain)
+    quests := generateQuests(questSeed, entities)
+    
+    return &World{terrain, items, entities, quests}
+}
+```
+
+### Integration Verification Checklist
+
+Run these checks before every PR:
+
+```bash
+# 1. Every constructor has at least one non-test caller
+grep -rn 'func New' --include='*.go' pkg/ | grep -v _test.go | \
+  while read line; do
+    func=$(echo "$line" | sed 's/.*func \(New[^(]*\).*/\1/')
+    callers=$(grep -rn "$func" --include='*.go' pkg/ cmd/ | grep -v _test.go | grep -v "func $func" | wc -l)
+    if [ "$callers" -eq 0 ]; then echo "DANGLING: $func"; fi
+  done
+
+# 2. All TODOs are tracked in GAPS.md or ROADMAP.md
+grep -rn 'TODO\|FIXME\|HACK\|XXX' --include='*.go' pkg/
+
+# 3. No empty method bodies in non-test files
+grep -Pzo 'func.*\{\s*\}' --include='*.go' pkg/ | grep -v _test.go
+
+# 4. Run feature audit
+make feature-audit
+
+# 5. Verify system registration
+grep -c 'world.AddSystem' pkg/engine/system_init.go
+# Should match number of systems in codebase
+
+# 6. Check for seeds not propagated
+grep -rn 'rand.Int63()' --include='*.go' pkg/procgen/
+# Each hit should be reviewed for determinism
+```
+
+### Known Gaps (see GAPS.md and ROADMAP.md)
+
+Current documented gaps that need resolution:
+
+- **Gap 1**: Signal handler integration test infrastructure missing — no test validates graceful shutdown on SIGTERM
+- **Gap 3**: Trade validation lacks per-item quantity concept — `TradeValidator` exists but trade model has no quantity field
+- **Gap 4**: `pkg/memprofile/profile.go` uses `fmt.Printf` — decision needed on exemption from structured logging
+- **Gap 5**: No automated flag-to-documentation sync — new CLI flags can be added without updating docs
+- **ROADMAP Priority 3**: No automated FPS regression testing in CI
+- **ROADMAP Priority 4**: No automated memory budget validation in CI
+- **ROADMAP Priority 2**: Health check endpoints (`/healthz`, `/readyz`) not implemented
+
+---
+
+## Networking Best Practices (MANDATORY)
+
+### Interface-Only Network Types (Hard Constraint)
+
+When declaring network variables, **ALWAYS** use interface types. This is a **non-negotiable project rule** enforced by `scripts/validate-network-types.sh` in CI.
+
+| ❌ Never Use (Concrete Type) | ✅ Always Use (Interface Type) |
+|------------------------------|-------------------------------|
+| `*net.UDPAddr` | `net.Addr` |
+| `*net.IPAddr` | `net.Addr` |
+| `*net.TCPAddr` | `net.Addr` |
+| `*net.UDPConn` | `net.PacketConn` |
+| `*net.TCPConn` | `net.Conn` |
+| `*net.UDPListener` | `net.Listener` |
+| `*net.TCPListener` | `net.Listener` |
+| `*net.UnixAddr` | `net.Addr` |
+| `*net.UnixConn` | `net.Conn` |
+| `*net.UnixListener` | `net.Listener` |
+
+```go
+// ✅ GOOD: Interface types throughout
+func handleConnection(conn net.Conn, remoteAddr net.Addr) error {
+    // Works with TCP, Unix, or any net.Conn implementation
+    buf := make([]byte, 1024)
+    n, err := conn.Read(buf)
+    if err != nil {
+        return fmt.Errorf("read from %v: %w", remoteAddr, err)
+    }
+    return nil
+}
+
+func handlePacket(conn net.PacketConn) error {
+    buf := make([]byte, 1024)
+    n, addr, err := conn.ReadFrom(buf)  // Interface method
+    if err != nil {
+        return err
+    }
+    logrus.WithField("from", addr.String()).Debug("received packet")
+    return nil
+}
+
+// ❌ BAD: Concrete types — will fail CI validation
+func handleUDP(conn *net.UDPConn, addr *net.UDPAddr) {
+    conn.ReadFromUDP(buf)  // Tied to UDP implementation
+}
+```
+
+**Never use type switches or type assertions to access concrete network methods:**
+
+```go
+// ❌ BAD: Type assertion breaks interface abstraction and testability
+if udpConn, ok := conn.(*net.UDPConn); ok {
+    udpConn.ReadFromUDP(buf)
+    udpConn.SetReadBuffer(256 * 1024)
+}
+
+// ✅ GOOD: Use interface methods; configure at creation time
+n, addr, err := conn.ReadFrom(buf)  // PacketConn interface
+```
+
+This constraint enables:
+- Mock implementations for unit testing without real network I/O
+- Future transport swaps (WebRTC, QUIC) without code changes
+- Consistent error handling across transport types
+
+### High-Latency Network Design (200–5000ms)
+
+All multiplayer networking code MUST function correctly under **200–5000ms round-trip latency**. The game explicitly targets Tor/onion services, satellite internet, and intercontinental connections.
+
+#### Mandatory Design Principles
+
+1. **Client-Side Prediction**: The client simulates game state locally and reconciles with server authoritative state when it arrives. Never block the game loop waiting for a server response.
+
+2. **State Interpolation/Extrapolation**: Remote entity positions interpolate between known server states. When packets are delayed beyond the interpolation window, extrapolate using last-known velocity. See `pkg/network/prediction.go`.
+
+3. **Jitter Buffers**: Incoming state updates buffer and play back at consistent rate, absorbing latency variance. Design for ±500ms jitter tolerance minimum.
+
+4. **Idempotent Messages**: Every network message must be safe to process multiple times. Retransmission is expected, not exceptional. Use sequence numbers to detect/ignore duplicates.
+
+5. **No Synchronous RPC in Game Loops**: Never issue a blocking network call inside `Update()` or `Draw()`. All network I/O is asynchronous via channels or callbacks.
+
+6. **Graceful Degradation**: At 5000ms latency the game must remain playable—reduce update frequency, increase prediction windows, hide latency with animations.
+
+7. **Timeout Tolerance**: Connection timeouts ≥10 seconds. Disconnect detection uses heartbeat absence over sliding window (≥3 missed heartbeats at expected interval), never a single missed packet.
+
+```go
+// ❌ BAD: Tight timeout drops players on satellite connections
+conn.SetReadDeadline(time.Now().Add(1 * time.Second))
+
+// ✅ GOOD: Generous timeout for high-latency environments
+conn.SetReadDeadline(time.Now().Add(10 * time.Second))
+
+// ❌ BAD: Blocking RPC in game loop freezes entire game
+func (g *Game) Update() error {
+    state, err := g.server.GetWorldState()  // BLOCKS until response!
+    g.world = state
+    return nil
+}
+
+// ✅ GOOD: Async receive with interpolation
+func (g *Game) Update() error {
+    // Non-blocking check for new server state
+    select {
+    case state := <-g.stateChannel:
+        g.interpolator.PushServerState(state)
+    default:
+        // No new state this frame — continue with local prediction
+    }
+    
+    // Always use interpolated/predicted state, never wait
+    g.world = g.interpolator.GetInterpolatedState(time.Now())
+    return nil
+}
+```
+
+#### Latency Budget Allocation (60 FPS = 16.6ms per frame)
+
+- Input processing: ≤1ms
+- Local simulation/prediction: ≤4ms
+- State interpolation: ≤1ms
+- Network send (non-blocking enqueue): ≤0.5ms
+- Rendering: ≤10ms
+- Network I/O goroutines: Run independently, never counted against frame budget
+
+---
+
+## Code Assistance Guidelines
+
+### 1. ECS Architecture Discipline
+
+Components are **pure data structures** with only a `Type() string` method. **NO behavior or logic in components.**
+
+```go
+// ✅ GOOD: Component is pure data
+type PositionComponent struct {
+    X, Y         float64
+    PrevX, PrevY float64  // Previous tick for render interpolation
+}
+
+func (p *PositionComponent) Type() string { return "position" }
+
+// Optional: Serialize/Deserialize for save/load
+func (p *PositionComponent) Serialize() ([]byte, error) { /* ... */ }
+func (p *PositionComponent) Deserialize(data []byte) error { /* ... */ }
+
+// ❌ BAD: Logic in component (violates ECS principle)
+func (p *PositionComponent) Move(dx, dy float64) { 
+    p.X += dx; p.Y += dy  // This belongs in MovementSystem!
+}
+```
+
+Systems contain ALL game logic and operate on entity collections:
+
+```go
+type MovementSystem struct {
+    world        *World
+    spatialGrid  *SpatialPartition
+}
+
+func NewMovementSystem(world *World) *MovementSystem {
+    logrus.WithField("system", "movement").Debug("Creating movement system")
+    return &MovementSystem{
+        world:       world,
+        spatialGrid: NewSpatialPartition(64), // 64px cell size
+    }
+}
+
+func (s *MovementSystem) Update(entities []*Entity, deltaTime float64) {
     for _, entity := range entities {
-        if !entity.HasComponent("required_component") {
+        // Use hot-path cached accessors (~93x faster than map lookup)
+        pos := entity.GetPosition()
+        vel := entity.GetVelocity()
+        if pos == nil || vel == nil {
             continue
         }
-        // Process entity
+        
+        // Store previous position for render interpolation
+        pos.PrevX, pos.PrevY = pos.X, pos.Y
+        
+        // Apply velocity
+        pos.X += vel.VX * deltaTime
+        pos.Y += vel.VY * deltaTime
+        
+        // Update spatial partition for collision queries
+        s.spatialGrid.Update(entity)
     }
 }
 ```
 
-## Component Pattern
+Entity hot-path caching provides ~93x faster component access for critical paths:
 
-Components are pure data with Type() method:
 ```go
-type MyComponent struct {
-    Field1 float64
-    Field2 string
-}
+// Cached accessors (use these in hot paths)
+entity.GetPosition()       // *PositionComponent
+entity.GetVelocity()       // *VelocityComponent
+entity.GetHealth()         // *HealthComponent
+entity.GetCollider()       // *ColliderComponent
+entity.GetSprite()         // *EbitenSprite
+entity.GetRotation()       // *RotationComponent
+entity.GetAnimation()      // *AnimationComponent
+entity.GetVisualFeedback() // *VisualFeedbackComponent
 
-func (c *MyComponent) Type() string { return "mycomponent" }
-
-// Optional: Serialize/Deserialize for persistence
-func (c *MyComponent) Serialize() ([]byte, error) { ... }
-func (c *MyComponent) Deserialize(data []byte) error { ... }
+// Generic accessor (use when cached version unavailable)
+comp := entity.GetComponent("custom_component")
 ```
 
-## Package Integration Status
+### 2. Deterministic Procedural Generation
 
-The project has 90+ active packages organized into 30 domain areas. All packages are fully integrated as of the latest version.
+All content generation MUST be deterministic and seed-based. **Same seed = identical output** across all platforms and runs.
 
-### Package Statistics by Domain
+```go
+// ✅ GOOD: Explicit seed-based RNG, never global
+func GenerateTerrain(seed int64, params TerrainParams) *Terrain {
+    rng := rand.New(rand.NewSource(seed))
+    
+    tiles := make([][]Tile, params.Width)
+    for x := 0; x < params.Width; x++ {
+        tiles[x] = make([]Tile, params.Height)
+        for y := 0; y < params.Height; y++ {
+            tiles[x][y] = generateTile(rng, x, y, params.Biome)
+        }
+    }
+    
+    logrus.WithFields(logrus.Fields{
+        "seed":   seed,
+        "width":  params.Width,
+        "height": params.Height,
+        "biome":  params.Biome,
+    }).Debug("Terrain generated")
+    
+    return &Terrain{Tiles: tiles, Seed: seed}
+}
 
-| Domain | Packages | LOC (approx) | Description |
-|--------|----------|--------------|-------------|
-| `engine/` | 1 (400+ files) | 240K+ | Core ECS, all game systems, components |
-| `procgen/` | 25+ subdirs | 50K+ | Procedural content generators |
-| `rendering/` | 15+ subdirs | 30K+ | Graphics pipeline and sprite generation |
-| `network/` | 10+ subdirs | 25K+ | Multiplayer networking |
-| `world/` | 5+ subdirs | 15K+ | World state and persistence |
-| `integration/` | 10+ subdirs | 10K+ | Cross-system integrations |
-| `audio/` | 4 subdirs | 8K+ | Audio synthesis |
-| Supporting | 20+ packages | 15K+ | Utilities, validation, security |
+// ✅ GOOD: Derived seeds for sub-generators (deterministic hierarchy)
+func GenerateWorld(seed int64, genre string) *World {
+    // XOR with magic bytes creates unique but deterministic sub-seeds
+    terrainSeed := seed ^ 0x54455252  // "TERR"
+    entitySeed := seed ^ 0x454E5459   // "ENTY"
+    itemSeed := seed ^ 0x4954454D     // "ITEM"
+    questSeed := seed ^ 0x51554553    // "QUES"
+    
+    terrain := GenerateTerrain(terrainSeed, getTerrainParams(genre))
+    entities := GenerateEntities(entitySeed, terrain, genre)
+    items := GenerateItems(itemSeed, terrain, genre)
+    quests := GenerateQuests(questSeed, entities, genre)
+    
+    return &World{
+        Seed:     seed,
+        Genre:    genre,
+        Terrain:  terrain,
+        Entities: entities,
+        Items:    items,
+        Quests:   quests,
+    }
+}
 
-### Key Active Systems
+// ❌ BAD: Global rand (non-deterministic, not thread-safe)
+func Generate() int {
+    return rand.Intn(100)  // Uses global state — different each run!
+}
 
-**Engine Systems (100+)**: All ECS systems fully operational including combat, AI, rendering, physics, UI, progression, social, narrative, and multiplayer systems.
+// ❌ BAD: Time-based seeding breaks reproducibility
+func GenerateBad() *World {
+    rng := rand.New(rand.NewSource(time.Now().UnixNano()))
+    // Cannot reproduce this world later!
+}
+```
 
-**Procedural Generators (25+)**: Terrain (BSP, cellular, L-system, Voronoi, city), entities, items, quests, magic, skills, dialog, narrative, factions, companions, vehicles, legendary items, minigames, puzzles.
+### 3. Structured Logging with Logrus
 
-**Rendering Pipeline**: Sprites with equipment overlays, animations with articulation, tiles with transitions, lighting with bloom/AO, post-processing effects, particles with physics, UI generation.
+Always use `logrus.WithFields()` for contextual, searchable logs:
 
-**Network Layer**: Client-server architecture, federation with discovery/sync, WebRTC support, chat/trade systems, resilience patterns.
+```go
+// ✅ GOOD: Structured logging with standard field names
+logrus.WithFields(logrus.Fields{
+    "system":       "terrain",
+    "seed":         seed,
+    "genre":        genre,
+    "width":        width,
+    "height":       height,
+    "duration_ms":  elapsed.Milliseconds(),
+}).Info("Terrain generation complete")
 
-**World Systems**: Chunk-based persistence, housing with guildhalls, economy with marketplace, territory control with siege mechanics, raid generation.
+logrus.WithFields(logrus.Fields{
+    "entity":         entity.ID,
+    "component_type": "position",
+    "x":              pos.X,
+    "y":              pos.Y,
+}).Debug("Entity moved")
 
-### Test/Infrastructure Packages
+logrus.WithFields(logrus.Fields{
+    "player":  playerID,
+    "item":    itemID,
+    "slot":    slotIndex,
+}).Info("Item equipped")
 
-Used by CI/CD for quality validation:
-- `pkg/audit/features/` - Feature audit tests
-- `pkg/procgen/audit/` - Procgen audit tests
-- `pkg/visualtest/` - Visual regression testing
-- `pkg/visualtest/parity/` - Cross-platform parity tests
+// ❌ BAD: Unstructured logging (hard to search, inconsistent format)
+fmt.Printf("Generated terrain with seed %d in %dms\n", seed, elapsed)
+log.Println("terrain done")
+```
+
+**Standard field names** (use consistently):
+- `system` — system name (e.g., "terrain", "combat", "network")
+- `entity` — entity ID
+- `player` — player ID/name
+- `seed` — generation seed
+- `genre` — genre identifier
+- `error` — error value
+- `duration` / `duration_ms` — timing
+- `count` — quantity
+- `component_type` — component identifier
+
+### 4. Performance Requirements
+
+- **Target**: 60 FPS minimum on mid-range hardware
+- **Memory**: <500MB client, <1GB server (8 players)
+- **Entity queries**: Use `pkg/engine/spatial_partition.go` for collections >100 entities
+- **Sprite caching**: Never regenerate the same sprite twice per session (see `pkg/rendering/cache/`)
+- **Object pooling**: Use pools for bullets, particles, status effects (see `pkg/engine/projectile_pool.go`, `status_effect_pool.go`)
+- **Benchmarks**: Run `go test -bench=. -benchmem` for hot paths before submitting performance-sensitive code
+
+### 5. Zero External Assets
+
+**ALL content is generated at runtime.** Never add asset files.
+
+- **Graphics**: Procedurally generated via `pkg/rendering/sprites/`, `tiles/`, `particles/`
+- **Audio**: Synthesized via `pkg/audio/synthesis/` oscillators, envelopes, effects
+- **Levels/Maps**: Generated via `pkg/procgen/terrain/` (BSP, cellular, L-systems, Voronoi)
+- **Items/NPCs/Quests**: Generated via `pkg/procgen/entity/`, `item/`, `quest/`
+- **UI**: Built from code via `pkg/rendering/ui/`
+
+### 6. Error Handling
+
+Return errors up the call stack. **Never panic in game/library code.**
+
+```go
+// ✅ GOOD: Return errors with context
+func GenerateTerrain(seed int64, params TerrainParams) (*Terrain, error) {
+    if params.Width <= 0 || params.Height <= 0 {
+        return nil, fmt.Errorf("invalid terrain dimensions: %dx%d", params.Width, params.Height)
+    }
+    if seed == 0 {
+        return nil, errors.New("terrain generation requires non-zero seed")
+    }
+    // ... generation logic
+    return terrain, nil
+}
+
+// ✅ GOOD: Handle errors gracefully with fallback
+func (s *TerrainSystem) Update(entities []*Entity, dt float64) {
+    if s.terrain == nil {
+        terrain, err := GenerateTerrain(s.seed, s.params)
+        if err != nil {
+            logrus.WithError(err).Error("Terrain generation failed, using fallback")
+            s.terrain = s.createFallbackTerrain()
+            return
+        }
+        s.terrain = terrain
+    }
+}
+
+// ❌ BAD: Panic in library code crashes the game
+func GenerateTerrain(seed int64) *Terrain {
+    if seed == 0 {
+        panic("zero seed")  // NEVER panic in game logic!
+    }
+}
+```
+
+Panics are acceptable ONLY in `main()` for unrecoverable startup failures (missing required config, etc.).
+
+### 7. Table-Driven Tests
+
+Target ≥40% coverage per package (≥30% for Ebiten-dependent packages requiring xvfb):
+
+```go
+func TestGenerateTerrain(t *testing.T) {
+    tests := []struct {
+        name    string
+        seed    int64
+        width   int
+        height  int
+        wantErr bool
+    }{
+        {"valid params", 12345, 100, 100, false},
+        {"zero seed", 0, 100, 100, true},
+        {"negative seed allowed", -1, 100, 100, false},
+        {"large world", 99999, 1000, 1000, false},
+        {"zero width", 12345, 0, 100, true},
+        {"zero height", 12345, 100, 0, true},
+    }
+    
+    for _, tt := range tests {
+        t.Run(tt.name, func(t *testing.T) {
+            terrain, err := GenerateTerrain(tt.seed, TerrainParams{
+                Width: tt.width, Height: tt.height,
+            })
+            
+            if (err != nil) != tt.wantErr {
+                t.Errorf("GenerateTerrain() error = %v, wantErr %v", err, tt.wantErr)
+                return
+            }
+            
+            if !tt.wantErr {
+                if terrain == nil {
+                    t.Error("GenerateTerrain() returned nil without error")
+                }
+                if len(terrain.Tiles) != tt.width {
+                    t.Errorf("terrain width = %d, want %d", len(terrain.Tiles), tt.width)
+                }
+            }
+        })
+    }
+}
+
+// Test determinism: same seed must produce identical output
+func TestGenerateTerrain_Deterministic(t *testing.T) {
+    seed := int64(42)
+    params := TerrainParams{Width: 50, Height: 50}
+    
+    terrain1, _ := GenerateTerrain(seed, params)
+    terrain2, _ := GenerateTerrain(seed, params)
+    
+    for x := 0; x < params.Width; x++ {
+        for y := 0; y < params.Height; y++ {
+            if terrain1.Tiles[x][y] != terrain2.Tiles[x][y] {
+                t.Fatalf("Non-deterministic at (%d,%d): %v vs %v", 
+                    x, y, terrain1.Tiles[x][y], terrain2.Tiles[x][y])
+            }
+        }
+    }
+}
+```
+
+Use stub implementations for testing without Ebiten runtime:
+- `StubInput` — mock input provider
+- `StubSprite` — mock sprite without *ebiten.Image
+- `StubImage` — mock image provider
+
+---
+
+## Cross-Repository Code Sharing Patterns
+
+### Shared Pattern Catalog
+
+When implementing features, follow these patterns for future extraction into shared libraries:
+
+| Pattern | Package Location | Used By |
+|---------|-----------------|---------|
+| ECS core (World, Entity, Component, System) | `pkg/engine/ecs.go`, `interfaces.go` | All 8 repos |
+| Procedural generation framework | `pkg/procgen/generator.go` | All 8 repos |
+| Seed management & derivation | XOR patterns inline | All 8 repos |
+| Sprite/tile generation | `pkg/rendering/sprites/`, `tiles/` | All 8 repos |
+| Audio synthesis | `pkg/audio/synthesis/` | All 8 repos |
+| Input handling | `pkg/engine/input_system.go` | All 8 repos |
+| Camera systems | `pkg/engine/camera_system.go` | All 8 repos |
+| Particle systems | `pkg/rendering/particles/` | venture, vania, violence |
+| Save/load persistence | `pkg/saveload/` | All 8 repos |
+| Configuration (CLI flags) | `pkg/config/` | venture, violence, velocity |
+| Networking (multiplayer) | `pkg/network/` | venture, violence |
+
+### Guidelines for Shareable Code
+
+1. **Minimal dependencies**: Shared packages depend only on stdlib + Ebiten
+2. **Interfaces at boundaries**: Define interfaces for game-specific behavior
+3. **Parameterize, don't specialize**: Generators accept parameters for any genre
+4. **Identical interfaces across repos**:
+   - Component: `Type() string`
+   - System: `Update(entities []*Entity, deltaTime float64)`
+
+---
+
+## Quality Standards
+
+### Testing Requirements
+- **Coverage**: ≥40% per package (≥30% for display-dependent packages needing xvfb)
+- **Race detection**: `go test -race ./...` must pass
+- **Benchmarks**: Required for rendering, physics, generation hot paths
+
+### Code Review Quality Gates
+- Build success (`make build`)
+- All tests pass (`make test`)
+- Race-free (`make test-race`)
+- Static analysis (`go vet ./...`)
+- Network type validation (`scripts/validate-network-types.sh`)
+- No new TODO/FIXME without GAPS.md entry
+
+### Makefile Targets
+| Target | Description |
+|--------|-------------|
+| `make build` | Build client and server |
+| `make test` | Run all tests |
+| `make test-coverage` | Tests with coverage report |
+| `make test-race` | Tests with race detection |
+| `make lint` | `go vet` + network validation |
+| `make bench` | Run benchmarks |
+| `make quality` | All quality validations |
+| `make feature-audit` | Check for instantiation gaps |
+| `make visual-regression` | Visual regression tests |
+| `make balance-validate` | Combat/economic balance check |
+
+---
+
+## Naming Conventions
+
+- **Packages**: lowercase, single-word when possible (`engine`, `procgen`, `audio`, `render`)
+- **Files**: snake_case (`terrain_generator.go`, `combat_system.go`)
+- **Types**: PascalCase (`TerrainGenerator`, `CombatSystem`, `HealthComponent`)
+- **Interfaces**: PascalCase, often ending in `-er` (`Generator`, `Renderer`, `Provider`)
+- **Components**: PascalCase + "Component" suffix (`HealthComponent`, `PositionComponent`)
+- **Systems**: PascalCase + "System" suffix (`CombatSystem`, `RenderSystem`, `MovementSystem`)
+- **Constants**: PascalCase for exported, camelCase for unexported
+- **Seeds**: Always `int64`, always named `seed` in function parameters
+
+## GAPS.md Protocol
+
+When identifying potential gaps during development:
+1. Note it in your response with severity assessment
+2. Suggest adding to GAPS.md with severity (Critical/High/Medium/Low)
+3. Include file path and line number if applicable
+4. Propose actionable fix or investigation steps
+
+Always reference `GAPS.md` and `ROADMAP.md` for known issues before implementing related features.

@@ -70,19 +70,40 @@ build-macos: ## Build for macOS (amd64 and arm64)
 	./scripts/build-macos.sh amd64
 	./scripts/build-macos.sh arm64
 
-test: ## Run tests
+test: ## Run tests (uses xvfb-run if no display available)
 	@echo "Running tests..."
-	@DISPLAY=$${DISPLAY:-:99} go test -v ./...
+	@if [ -n "$$DISPLAY" ] || [ -n "$$WAYLAND_DISPLAY" ]; then \
+		go test -v ./...; \
+	elif command -v xvfb-run >/dev/null 2>&1; then \
+		xvfb-run -a go test -v ./...; \
+	else \
+		echo "Warning: No display and xvfb-run not found. Install xvfb: apt-get install xvfb"; \
+		exit 1; \
+	fi
 
-test-coverage: ## Run tests with coverage report
+test-coverage: ## Run tests with coverage report (uses xvfb-run if no display available)
 	@echo "Running tests with coverage..."
-	@DISPLAY=$${DISPLAY:-:99} go test -cover -coverprofile=coverage.out ./...
+	@if [ -n "$$DISPLAY" ] || [ -n "$$WAYLAND_DISPLAY" ]; then \
+		go test -cover -coverprofile=coverage.out ./...; \
+	elif command -v xvfb-run >/dev/null 2>&1; then \
+		xvfb-run -a go test -cover -coverprofile=coverage.out ./...; \
+	else \
+		echo "Warning: No display and xvfb-run not found. Install xvfb: apt-get install xvfb"; \
+		exit 1; \
+	fi
 	go tool cover -html=coverage.out -o coverage.html
 	@echo "Coverage report generated: coverage.html"
 
-test-race: ## Run tests with race detection
+test-race: ## Run tests with race detection (uses xvfb-run if no display available)
 	@echo "Running tests with race detection..."
-	@DISPLAY=$${DISPLAY:-:99} go test -race ./...
+	@if [ -n "$$DISPLAY" ] || [ -n "$$WAYLAND_DISPLAY" ]; then \
+		go test -race ./...; \
+	elif command -v xvfb-run >/dev/null 2>&1; then \
+		xvfb-run -a go test -race ./...; \
+	else \
+		echo "Warning: No display and xvfb-run not found. Install xvfb: apt-get install xvfb"; \
+		exit 1; \
+	fi
 
 bench: ## Run benchmarks
 	@echo "Running benchmarks..."

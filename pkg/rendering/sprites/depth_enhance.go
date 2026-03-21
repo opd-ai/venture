@@ -83,7 +83,17 @@ func InferDepthZones(img *image.RGBA, seed int64) []DepthZone {
 		return nil
 	}
 
-	// Find bounding box of opaque pixels
+	opaqueBox := findOpaqueBounds(img, w, h)
+	if opaqueBox.W == 0 || opaqueBox.H == 0 {
+		return nil
+	}
+
+	headEnd, torsoEnd := calculateBodySegments(opaqueBox.H)
+	return buildDepthZones(img, opaqueBox, headEnd, torsoEnd, w)
+}
+
+// findOpaqueBounds finds the bounding box of all opaque pixels (for InferDepthZones).
+func findOpaqueBounds(img *image.RGBA, w, h int) rect {
 	minX, minY, maxX, maxY := w, h, 0, 0
 	for y := 0; y < h; y++ {
 		for x := 0; x < w; x++ {
@@ -104,60 +114,45 @@ func InferDepthZones(img *image.RGBA, seed int64) []DepthZone {
 		}
 	}
 	if maxX < minX || maxY < minY {
-		return nil
+		return rect{}
 	}
+	return rect{X: minX, Y: minY, W: maxX - minX + 1, H: maxY - minY + 1}
+}
 
-	bw := maxX - minX + 1
-	bh := maxY - minY + 1
-
-	// Compute horizontal density per row to detect major body segments
-	rowDensity := make([]float64, bh)
-	for y := 0; y < bh; y++ {
-		count := 0
-		for x := 0; x < bw; x++ {
-			if img.Pix[((minY+y)*w+(minX+x))*4+3] > 20 {
-				count++
-			}
-		}
-		rowDensity[y] = float64(count) / float64(bw)
-	}
-
-	// Split into top (head ~35%), middle (torso ~50%), bottom (legs ~15%)
-	headEnd := bh * 35 / 100
-	torsoEnd := bh * 85 / 100
+// calculateBodySegments computes segment boundaries for head/torso/legs.
+func calculateBodySegments(bh int) (headEnd, torsoEnd int) {
+	headEnd = bh * 35 / 100
+	torsoEnd = bh * 85 / 100
 	if headEnd < 2 {
 		headEnd = 2
 	}
 	if torsoEnd <= headEnd {
 		torsoEnd = headEnd + 1
 	}
+	return headEnd, torsoEnd
+}
 
-	// Find per-zone horizontal extent
-	headBounds := zoneBounds(img, minX, minY, minX+bw, minY+headEnd, w)
-	torsoBounds := zoneBounds(img, minX, minY+headEnd, minX+bw, minY+torsoEnd, w)
-	legsBounds := zoneBounds(img, minX, minY+torsoEnd, minX+bw, minY+bh, w)
+// buildDepthZones creates depth zones for each body segment.
+func buildDepthZones(img *image.RGBA, box rect, headEnd, torsoEnd, stride int) []DepthZone {
+	headBounds := zoneBounds(img, box.X, box.Y, box.X+box.W, box.Y+headEnd, stride)
+	torsoBounds := zoneBounds(img, box.X, box.Y+headEnd, box.X+box.W, box.Y+torsoEnd, stride)
+	legsBounds := zoneBounds(img, box.X, box.Y+torsoEnd, box.X+box.W, box.Y+box.H, stride)
 
 	zones := make([]DepthZone, 0, 3)
+	zones = appendZoneIfValid(zones, headBounds, FormSphere, 0.9)
+	zones = appendZoneIfValid(zones, torsoBounds, FormCylinder, 0.5)
+	zones = appendZoneIfValid(zones, legsBounds, FormTube, 0.15)
+	return zones
+}
 
-	if headBounds.W > 0 && headBounds.H > 0 {
+// appendZoneIfValid adds a zone to the slice if it has positive dimensions.
+func appendZoneIfValid(zones []DepthZone, bounds rect, form DepthFormType, baseHeight float64) []DepthZone {
+	if bounds.W > 0 && bounds.H > 0 {
 		zones = append(zones, DepthZone{
-			X: headBounds.X, Y: headBounds.Y, W: headBounds.W, H: headBounds.H,
-			Form: FormSphere, BaseHeight: 0.9,
+			X: bounds.X, Y: bounds.Y, W: bounds.W, H: bounds.H,
+			Form: form, BaseHeight: baseHeight,
 		})
 	}
-	if torsoBounds.W > 0 && torsoBounds.H > 0 {
-		zones = append(zones, DepthZone{
-			X: torsoBounds.X, Y: torsoBounds.Y, W: torsoBounds.W, H: torsoBounds.H,
-			Form: FormCylinder, BaseHeight: 0.5,
-		})
-	}
-	if legsBounds.W > 0 && legsBounds.H > 0 {
-		zones = append(zones, DepthZone{
-			X: legsBounds.X, Y: legsBounds.Y, W: legsBounds.W, H: legsBounds.H,
-			Form: FormTube, BaseHeight: 0.15,
-		})
-	}
-
 	return zones
 }
 
@@ -237,73 +232,80 @@ func ApplyDepthEnhancement(img *image.RGBA, cfg DepthEnhanceConfig) int {
 			// Compute surface normal for this pixel based on zone form
 			normal := computeFormNormal(zone, px, py)
 
-			// Diffuse: N · L
-			diffuse := normal[0]*lightDir[0] + normal[1]*lightDir[1] + normal[2]*lightDir[2]
-			if diffuse < 0 {
-				diffuse = 0
-			}
-
-			// Specular: (R · V)^power where V = (0,0,1) (camera is straight down)
-			// R = 2*(N·L)*N - L
-			ndotl := normal[0]*lightDir[0] + normal[1]*lightDir[1] + normal[2]*lightDir[2]
-			if ndotl < 0 {
-				ndotl = 0
-			}
-			reflZ := 2*ndotl*normal[2] - lightDir[2]
-			specular := 0.0
-			if reflZ > 0 {
-				specular = math.Pow(reflZ, cfg.SpecularPower)
-			}
-
 			// Contact shadow: darken pixels near zone boundaries where higher zones overlap
 			contactShadow := computeContactShadow(zones, zone, x, y, heightMap, w)
 
-			// Subsurface scattering approximation: warm glow at edges of skin-like parts
-			sss := 0.0
-			if zone.Form == FormSphere || zone.Form == FormCylinder {
-				edgeness := 1.0 - normal[2] // how much the surface faces sideways
-				sss = edgeness * cfg.SubsurfaceStrength
-			}
-
-			// Apply to pixel color
-			r := float64(img.Pix[idx])
-			g := float64(img.Pix[idx+1])
-			b := float64(img.Pix[idx+2])
-
-			// Diffuse contribution
-			diffFactor := cfg.DiffuseStrength * diffuse
-			r += diffFactor * 40.0
-			g += diffFactor * 38.0
-			b += diffFactor * 35.0
-
-			// Specular highlight (white)
-			specFactor := cfg.SpecularIntensity * specular
-			r += specFactor * 200.0
-			g += specFactor * 195.0
-			b += specFactor * 185.0
-
-			// Contact shadow (darken)
-			if contactShadow > 0 {
-				shadowFactor := 1.0 - contactShadow*cfg.ContactShadowStrength
-				r *= shadowFactor
-				g *= shadowFactor
-				b *= shadowFactor
-			}
-
-			// Subsurface scattering (warm reddish glow at edges)
-			if sss > 0 {
-				r += sss * 30.0
-				g += sss * 8.0
-				b += sss * 3.0
-			}
-
-			img.Pix[idx] = depthClamp(r)
-			img.Pix[idx+1] = depthClamp(g)
-			img.Pix[idx+2] = depthClamp(b)
+			// Apply lighting (sphere and cylinder forms get subsurface scattering)
+			applyPixelLighting(img, idx, normal, lightDir, zone, contactShadow, cfg,
+				[]DepthFormType{FormSphere, FormCylinder})
 		}
 	}
 
 	return len(zones)
+}
+
+// applyPixelLighting computes and applies lighting to a single pixel.
+// sssFormMask determines which form types receive subsurface scattering.
+func applyPixelLighting(img *image.RGBA, idx int, normal, lightDir [3]float64, zone *DepthZone,
+	contactShadow float64, cfg DepthEnhanceConfig, sssFormMask []DepthFormType,
+) {
+	// Specular: (R · V)^power where V = (0,0,1) (camera is straight down)
+	// R = 2*(N·L)*N - L
+	ndotl := normal[0]*lightDir[0] + normal[1]*lightDir[1] + normal[2]*lightDir[2]
+	if ndotl < 0 {
+		ndotl = 0
+	}
+	reflZ := 2*ndotl*normal[2] - lightDir[2]
+	specular := 0.0
+	if reflZ > 0 {
+		specular = math.Pow(reflZ, cfg.SpecularPower)
+	}
+
+	// Subsurface scattering approximation: warm glow at edges of skin-like parts
+	sss := 0.0
+	for _, form := range sssFormMask {
+		if zone.Form == form {
+			edgeness := 1.0 - normal[2] // how much the surface faces sideways
+			sss = edgeness * cfg.SubsurfaceStrength
+			break
+		}
+	}
+
+	// Read pixel color
+	r := float64(img.Pix[idx])
+	g := float64(img.Pix[idx+1])
+	b := float64(img.Pix[idx+2])
+
+	// Diffuse contribution
+	diffFactor := cfg.DiffuseStrength * ndotl
+	r += diffFactor * 40.0
+	g += diffFactor * 38.0
+	b += diffFactor * 35.0
+
+	// Specular highlight (white)
+	specFactor := cfg.SpecularIntensity * specular
+	r += specFactor * 200.0
+	g += specFactor * 195.0
+	b += specFactor * 185.0
+
+	// Contact shadow (darken)
+	if contactShadow > 0 {
+		shadowFactor := 1.0 - contactShadow*cfg.ContactShadowStrength
+		r *= shadowFactor
+		g *= shadowFactor
+		b *= shadowFactor
+	}
+
+	// Subsurface scattering (warm reddish glow at edges)
+	if sss > 0 {
+		r += sss * 30.0
+		g += sss * 8.0
+		b += sss * 3.0
+	}
+
+	img.Pix[idx] = depthClamp(r)
+	img.Pix[idx+1] = depthClamp(g)
+	img.Pix[idx+2] = depthClamp(b)
 }
 
 // applyZoneHeightMap fills the height map for pixels in a zone.
@@ -724,56 +726,11 @@ func applyZonedDepth(img *image.RGBA, zones []DepthZone, cfg DepthEnhanceConfig,
 			}
 
 			normal := computeFormNormal(zone, float64(x), float64(y))
-
-			ndotl := normal[0]*lightDir[0] + normal[1]*lightDir[1] + normal[2]*lightDir[2]
-			if ndotl < 0 {
-				ndotl = 0
-			}
-
-			reflZ := 2*ndotl*normal[2] - lightDir[2]
-			specular := 0.0
-			if reflZ > 0 {
-				specular = math.Pow(reflZ, cfg.SpecularPower)
-			}
-
 			contactShadow := computeContactShadow(zones, zone, x, y, heightMap, w)
 
-			sss := 0.0
-			if zone.Form == FormSphere || zone.Form == FormDome {
-				edgeness := 1.0 - normal[2]
-				sss = edgeness * cfg.SubsurfaceStrength
-			}
-
-			r := float64(img.Pix[idx])
-			g := float64(img.Pix[idx+1])
-			b := float64(img.Pix[idx+2])
-
-			diffFactor := cfg.DiffuseStrength * ndotl
-			r += diffFactor * 40.0
-			g += diffFactor * 38.0
-			b += diffFactor * 35.0
-
-			specFactor := cfg.SpecularIntensity * specular
-			r += specFactor * 200.0
-			g += specFactor * 195.0
-			b += specFactor * 185.0
-
-			if contactShadow > 0 {
-				sf := 1.0 - contactShadow*cfg.ContactShadowStrength
-				r *= sf
-				g *= sf
-				b *= sf
-			}
-
-			if sss > 0 {
-				r += sss * 30.0
-				g += sss * 8.0
-				b += sss * 3.0
-			}
-
-			img.Pix[idx] = depthClamp(r)
-			img.Pix[idx+1] = depthClamp(g)
-			img.Pix[idx+2] = depthClamp(b)
+			// Apply lighting (sphere and dome forms get subsurface scattering)
+			applyPixelLighting(img, idx, normal, lightDir, zone, contactShadow, cfg,
+				[]DepthFormType{FormSphere, FormDome})
 		}
 	}
 	return len(zones)

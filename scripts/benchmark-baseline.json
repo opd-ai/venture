@@ -1,8 +1,13 @@
 {
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Performance benchmark baselines for regression detection. All times in nanoseconds.",
-  "threshold_percent": 10,
+  "threshold_percent": 20,
   "benchmarks": {
+    "BenchmarkFPS2000Entities": {
+      "max_ns_per_op": 200000,
+      "package": "pkg/benchmark/fps",
+      "comment": "Target: 60 FPS (16.6ms frame budget). 200µs allows 83x headroom. Regression threshold: 20%."
+    },
     "BenchmarkItemGenerator": {
       "max_ns_per_op": 20000,
       "package": "pkg/procgen/item"

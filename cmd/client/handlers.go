@@ -2190,6 +2190,10 @@ func registerNonCriticalSystems(game *engine.EbitenGame, sys *systemsContainer) 
 	// Phase 4.3 (PLAN.md): Territory Control - Guild warfare and territory capture
 	if sys.territorySystem != nil {
 		game.World.AddSystem(&territorySystemWrapper{system: sys.territorySystem})
+		// Wire territory bonuses to HUD for player feedback on guild territory control
+		if game.HUDSystem != nil {
+			game.HUDSystem.SetTerritoryBonusProvider(sys.territorySystem)
+		}
 	}
 
 	// V6.0 System Registrations (Persistent Worlds & Federation)
@@ -2434,124 +2438,17 @@ func initializeTerrainCollision(game *engine.EbitenGame, sys *systemsContainer, 
 	terrainChecker := engine.NewTerrainCollisionChecker(tileSize, tileSize)
 	terrainChecker.SetTerrain(generatedTerrain)
 
+	connector := &terrainSystemConnector{
+		terrain:        generatedTerrain,
+		terrainChecker: terrainChecker,
+		sys:            sys,
+	}
+
 	for _, system := range game.World.GetSystems() {
-		if collisionSys, ok := system.(*engine.CollisionSystem); ok {
-			collisionSys.SetTerrainChecker(terrainChecker)
-		}
-		if projSys, ok := system.(*engine.ProjectileSystem); ok {
-			projSys.SetTerrainChecker(terrainChecker)
-		}
-		if terrainMoveSys, ok := system.(*engine.TerrainMovementSpeedSystem); ok {
-			terrainMoveSys.SetTerrain(generatedTerrain)
-			sys.terrainMovementSpeedSystem = terrainMoveSys
-		}
-		if terrainCombatSys, ok := system.(*engine.TerrainCombatBonusSystem); ok {
-			terrainCombatSys.SetTerrain(generatedTerrain)
-			sys.terrainCombatBonusSystem = terrainCombatSys
-		}
-		if terrainCombatParticleSys, ok := system.(*engine.TerrainCombatBonusParticleSystem); ok {
-			// Connect to terrain combat bonus system for bonus lookups
-			if sys.terrainCombatBonusSystem != nil {
-				terrainCombatParticleSys.SetTerrainCombatBonusSystem(sys.terrainCombatBonusSystem)
-			}
-			sys.terrainCombatBonusParticleSystem = terrainCombatParticleSys
-		}
-		if terrainStealthSys, ok := system.(*engine.TerrainStealthSystem); ok {
-			terrainStealthSys.SetTerrain(generatedTerrain)
-			sys.terrainStealthSystem = terrainStealthSys
-		}
-		if stealthIndicatorParticleSys, ok := system.(*engine.StealthIndicatorParticleSystem); ok {
-			// Connect to terrain stealth system for stealth multiplier lookups
-			if sys.terrainStealthSystem != nil {
-				stealthIndicatorParticleSys.SetTerrainStealthSystem(sys.terrainStealthSystem)
-			}
-			sys.stealthIndicatorParticleSystem = stealthIndicatorParticleSys
-		}
-		if terrainAmbushCritSys, ok := system.(*engine.TerrainAmbushCritSystem); ok {
-			// Connect to terrain stealth system for stealth multiplier lookups
-			if sys.terrainStealthSystem != nil {
-				terrainAmbushCritSys.SetTerrainStealthSystem(sys.terrainStealthSystem)
-			}
-			sys.terrainAmbushCritSystem = terrainAmbushCritSys
-		}
-		if terrainStatusSys, ok := system.(*engine.TerrainStatusEffectSystem); ok {
-			terrainStatusSys.SetTerrain(generatedTerrain)
-			sys.terrainStatusEffectSystem = terrainStatusSys
-		}
-		if terrainManaRegenSys, ok := system.(*engine.TerrainManaRegenSystem); ok {
-			terrainManaRegenSys.SetTerrain(generatedTerrain)
-			sys.terrainManaRegenSystem = terrainManaRegenSys
-		}
-		if terrainSpellDamageSys, ok := system.(*engine.TerrainSpellDamageSystem); ok {
-			terrainSpellDamageSys.SetTerrain(generatedTerrain)
-			sys.terrainSpellDamageSystem = terrainSpellDamageSys
-		}
-		if terrainEquipDurabilitySys, ok := system.(*engine.TerrainEquipmentDurabilitySystem); ok {
-			terrainEquipDurabilitySys.SetTerrain(generatedTerrain)
-			sys.terrainEquipmentDurabilitySys = terrainEquipDurabilitySys
-		}
-		if terrainRangedAccSys, ok := system.(*engine.TerrainRangedAccuracySystem); ok {
-			terrainRangedAccSys.SetTerrain(generatedTerrain)
-			sys.terrainRangedAccuracySys = terrainRangedAccSys
-		}
-		if terrainReflectionTintSys, ok := system.(*engine.TerrainReflectionTintSystem); ok {
-			terrainReflectionTintSys.SetTerrain(generatedTerrain)
-			sys.terrainReflectionTintSystem = terrainReflectionTintSys
-		}
-		if terrainCompanionBonusSys, ok := system.(*engine.TerrainCompanionBonusSystem); ok {
-			terrainCompanionBonusSys.SetTerrain(generatedTerrain)
-			sys.terrainCompanionBonusSystem = terrainCompanionBonusSys
-		}
-		if footstepParticleSys, ok := system.(*engine.FootstepParticleSystem); ok {
-			footstepParticleSys.SetTerrain(generatedTerrain)
-		}
-		if ambientEnvSys, ok := system.(*engine.AmbientEnvironmentParticleSystem); ok {
-			ambientEnvSys.SetTerrain(generatedTerrain)
-		}
-		if timeOfDayLightingSys, ok := system.(*engine.TimeOfDayLightingSystem); ok {
-			sys.timeOfDayLightingSystem = timeOfDayLightingSys
-		}
-		if timeOfDayStealthSys, ok := system.(*engine.TimeOfDayStealthSystem); ok {
-			sys.timeOfDayStealthSystem = timeOfDayStealthSys
-		}
-		if timeOfDayXPBonusSys, ok := system.(*engine.TimeOfDayXPBonusSystem); ok {
-			sys.timeOfDayXPBonusSystem = timeOfDayXPBonusSys
-		}
-		if timeOfDayManaCostSys, ok := system.(*engine.TimeOfDayManaCostSystem); ok {
-			sys.timeOfDayManaCostSystem = timeOfDayManaCostSys
-		}
-		if timeOfDayCritChanceSys, ok := system.(*engine.TimeOfDayCriticalChanceSystem); ok {
-			sys.timeOfDayCriticalChanceSystem = timeOfDayCritChanceSys
-		}
-		if timeOfDayCompanionBonusSys, ok := system.(*engine.TimeOfDayCompanionBonusSystem); ok {
-			sys.timeOfDayCompanionBonusSystem = timeOfDayCompanionBonusSys
-		}
-		if timeOfDayManaRegenSys, ok := system.(*engine.TimeOfDayManaRegenSystem); ok {
-			sys.timeOfDayManaRegenSystem = timeOfDayManaRegenSys
-		}
-		if timeOfDayBlockChanceSys, ok := system.(*engine.TimeOfDayBlockChanceSystem); ok {
-			sys.timeOfDayBlockChanceSystem = timeOfDayBlockChanceSys
-		}
-		if timeOfDayEvasionSys, ok := system.(*engine.TimeOfDayEvasionSystem); ok {
-			sys.timeOfDayEvasionSystem = timeOfDayEvasionSys
-		}
-		if timeOfDayAttackSpeedSys, ok := system.(*engine.TimeOfDayAttackSpeedSystem); ok {
-			sys.timeOfDayAttackSpeedSystem = timeOfDayAttackSpeedSys
-		}
-		if timeOfDayShadowDirSys, ok := system.(*engine.TimeOfDayShadowDirectionSystem); ok {
-			sys.timeOfDayShadowDirectionSystem = timeOfDayShadowDirSys
-		}
+		connector.connectAllSystems(system)
 	}
 
-	// Connect TimeOfDayFishingBonusSystem to extracted TimeOfDayLightingSystem
-	if sys.timeOfDayFishingBonusSystem != nil && sys.timeOfDayLightingSystem != nil {
-		sys.timeOfDayFishingBonusSystem.SetLightingSystem(sys.timeOfDayLightingSystem)
-	}
-
-	// Connect TimeOfDayShadowDirectionSystem to extracted TimeOfDayLightingSystem
-	if sys.timeOfDayShadowDirectionSystem != nil && sys.timeOfDayLightingSystem != nil {
-		sys.timeOfDayShadowDirectionSystem.SetLightingSystem(sys.timeOfDayLightingSystem)
-	}
+	connector.finalizeTimeOfDayConnections()
 
 	if *verbose {
 		clientLogger.Info("terrain collision system initialized (efficient mode)")

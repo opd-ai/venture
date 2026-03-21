@@ -60,3 +60,11 @@ jobs:
           go install golang.org/x/vuln/cmd/govulncheck@latest
           govulncheck ./...
 
+      - name: Run FPS benchmark regression check
+        run: |
+          xvfb-run -s "-screen 0 1920x1080x24" ./scripts/benchmark-regression.sh
+
+      - name: Run memory budget validation
+        run: |
+          xvfb-run -s "-screen 0 1920x1080x24" ./scripts/benchmark-memory.sh
+

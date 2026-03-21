@@ -108,15 +108,25 @@ func isTestBinary() bool {
 	return false
 }
 
+// currentPlatform stores the detected platform for use during initialization.
+var currentPlatform mobilepkg.Platform
+
 // initializeGame initializes the game for mobile platforms.
 func initializeGame() {
 	if gameInstance != nil {
 		return
 	}
 
+	// Detect and log platform before game initialization
+	currentPlatform = mobilepkg.GetPlatform()
 	logger.WithFields(logrus.Fields{
-		"seed":  worldSeed,
-		"genre": genreID,
+		"seed":               worldSeed,
+		"genre":              genreID,
+		"platform":           currentPlatform.String(),
+		"isIOS":              mobilepkg.IsIOS(),
+		"isAndroid":          mobilepkg.IsAndroid(),
+		"isTouchCapable":     mobilepkg.IsTouchCapable(),
+		"supportsBackButton": mobilepkg.SupportsBackButton(),
 	}).Info("initializing mobile game with Version 2.0 systems")
 
 	initializeGameInstance()
@@ -132,7 +142,20 @@ func initializeGame() {
 
 // initializeGameInstance creates the game instance and initializes all game systems.
 func initializeGameInstance() {
-	gameInstance = engine.NewEbitenGameWithLogger(DefaultScreenWidth, DefaultScreenHeight, logger)
+	// Get platform-specific configuration
+	platformCfg := getPlatformConfig()
+	logger.WithFields(logrus.Fields{
+		"platform":        platformCfg.platformName,
+		"screenWidth":     platformCfg.screenWidth,
+		"screenHeight":    platformCfg.screenHeight,
+		"safeAreaTop":     platformCfg.safeAreaTop,
+		"safeAreaBottom":  platformCfg.safeAreaBottom,
+		"minTouchTarget":  platformCfg.minTouchTarget,
+		"supportsHaptic":  platformCfg.supportsHaptic,
+		"supportsBackBtn": platformCfg.supportsBackBtn,
+	}).Info("detected platform configuration")
+
+	gameInstance = engine.NewEbitenGameWithLogger(platformCfg.screenWidth, platformCfg.screenHeight, logger)
 
 	config := engine.DefaultSystemInitConfig(worldSeed, genreID, logger)
 	config.EnableVerboseLogging = true
@@ -520,4 +543,69 @@ type mobileQualitySystemWrapper struct {
 
 func (w *mobileQualitySystemWrapper) Update(entities []*engine.Entity, deltaTime float64) {
 	w.system.Update(deltaTime)
+}
+
+// getPlatformConfig returns platform-specific configuration values.
+// This function provides runtime platform detection and returns appropriate
+// settings for iOS, Android, or fallback defaults.
+func getPlatformConfig() platformConfig {
+	cfg := platformConfig{
+		screenWidth:     DefaultScreenWidth,
+		screenHeight:    DefaultScreenHeight,
+		minTouchTarget:  mobilepkg.GetMinimumTouchTargetSize(),
+		supportsHaptic:  mobilepkg.IsMobilePlatform(),
+		supportsBackBtn: mobilepkg.SupportsBackButton(),
+		keyboardHeight:  mobilepkg.KeyboardObscuresUI(),
+		platformName:    currentPlatform.String(),
+	}
+
+	// Platform-specific adjustments
+	switch currentPlatform {
+	case mobilepkg.PlatformIOS:
+		// iOS devices have notch/Dynamic Island on newer models
+		// Standard safe area insets: top 44-59pt, bottom 34pt on notched devices
+		cfg.safeAreaTop = 50
+		cfg.safeAreaBottom = 34
+		cfg.supportsHaptic = true // iOS has Core Haptics
+	case mobilepkg.PlatformAndroid:
+		// Android has navigation bar (gesture or 3-button) at bottom
+		// Typical height: 48dp for gesture bar, 56dp for 3-button
+		cfg.safeAreaTop = 24      // Status bar
+		cfg.safeAreaBottom = 48   // Navigation bar
+		cfg.supportsHaptic = true // Android has Vibrator API
+	default:
+		// Desktop or unknown platform - no safe area adjustments
+		cfg.safeAreaTop = 0
+		cfg.safeAreaBottom = 0
+	}
+
+	return cfg
+}
+
+// platformConfig holds platform-specific settings for mobile initialization.
+type platformConfig struct {
+	screenWidth     int
+	screenHeight    int
+	safeAreaTop     int
+	safeAreaBottom  int
+	minTouchTarget  int
+	supportsHaptic  bool
+	supportsBackBtn bool
+	keyboardHeight  int
+	platformName    string
+}
+
+// GetPlatformInfo returns information about the current platform.
+// This is useful for debugging and logging platform-specific behavior.
+func GetPlatformInfo() map[string]interface{} {
+	return map[string]interface{}{
+		"platform":           currentPlatform.String(),
+		"isIOS":              mobilepkg.IsIOS(),
+		"isAndroid":          mobilepkg.IsAndroid(),
+		"isTouchCapable":     mobilepkg.IsTouchCapable(),
+		"supportsBackButton": mobilepkg.SupportsBackButton(),
+		"supportsGestures":   mobilepkg.SupportsSystemGestures(),
+		"minTouchTarget":     mobilepkg.GetMinimumTouchTargetSize(),
+		"keyboardHeight":     mobilepkg.KeyboardObscuresUI(),
+	}
 }

@@ -775,22 +775,31 @@ func (cc *EbitenCharacterCreation) handleDefaultSave() {
 // Shows hybrid classes available for the chosen base class and allows "None" selection.
 func (cc *EbitenCharacterCreation) updateSubclassSelection() {
 	subclasses := getSubclassesForBaseClass(cc.selectedClass)
-
-	// Build full option list: None + subclasses
 	optionCount := len(subclasses) + 1 // +1 for "None"
 
-	// Find current selection index (0 = None, 1+ = subclass index)
-	currentIdx := 0
-	if cc.selectedSubclass != noSubclassSelected {
-		for i, sc := range subclasses {
-			if sc == cc.selectedSubclass {
-				currentIdx = i + 1
-				break
-			}
+	currentIdx := cc.findCurrentSubclassIndex(subclasses)
+	currentIdx = cc.handleSubclassKeyboardNavigation(currentIdx, optionCount)
+	currentIdx = cc.handleSubclassNumberKeySelection(currentIdx, optionCount)
+	cc.updateSelectedSubclassFromIndex(currentIdx, subclasses)
+	cc.handleSubclassMouseSelection(subclasses, optionCount)
+	cc.handleSubclassConfirmation()
+}
+
+// findCurrentSubclassIndex returns the index of the currently selected subclass.
+func (cc *EbitenCharacterCreation) findCurrentSubclassIndex(subclasses []CharacterClass) int {
+	if cc.selectedSubclass == noSubclassSelected {
+		return 0
+	}
+	for i, sc := range subclasses {
+		if sc == cc.selectedSubclass {
+			return i + 1
 		}
 	}
+	return 0
+}
 
-	// Arrow key navigation
+// handleSubclassKeyboardNavigation processes up/down navigation.
+func (cc *EbitenCharacterCreation) handleSubclassKeyboardNavigation(currentIdx, optionCount int) int {
 	if inpututil.IsKeyJustPressed(ebiten.KeyUp) || inpututil.IsKeyJustPressed(ebiten.KeyW) {
 		currentIdx--
 		if currentIdx < 0 {
@@ -803,48 +812,60 @@ func (cc *EbitenCharacterCreation) updateSubclassSelection() {
 			currentIdx = 0
 		}
 	}
+	return currentIdx
+}
 
-	// Number key selection
+// handleSubclassNumberKeySelection processes number key direct selection.
+func (cc *EbitenCharacterCreation) handleSubclassNumberKeySelection(currentIdx, optionCount int) int {
 	keys := []ebiten.Key{ebiten.Key1, ebiten.Key2, ebiten.Key3, ebiten.Key4, ebiten.Key5, ebiten.Key6, ebiten.Key7}
 	for i, key := range keys {
 		if inpututil.IsKeyJustPressed(key) && i < optionCount {
-			currentIdx = i
-			break
+			return i
 		}
 	}
+	return currentIdx
+}
 
-	// Update selectedSubclass from currentIdx
-	if currentIdx == 0 {
+// updateSelectedSubclassFromIndex updates the selected subclass based on index.
+func (cc *EbitenCharacterCreation) updateSelectedSubclassFromIndex(idx int, subclasses []CharacterClass) {
+	if idx == 0 {
 		cc.selectedSubclass = noSubclassSelected
-	} else if currentIdx-1 < len(subclasses) {
-		cc.selectedSubclass = subclasses[currentIdx-1]
+	} else if idx-1 < len(subclasses) {
+		cc.selectedSubclass = subclasses[idx-1]
 	}
+}
 
-	// Mouse/touch click selection — select only, don't auto-advance.
-	// The player must press ENTER or click Next to confirm.
-	if IsTouchOrMouseJustPressed() && !cc.stepChangedThisFrame {
-		mouseX, mouseY, _ := GetTouchOrMousePosition()
-		startY := cc.panelY + 130
-		for i := 0; i < optionCount; i++ {
-			optionY := startY + i*55
-			if mouseX >= cc.panelX+40 && mouseX <= cc.panelX+cc.panelWidth-40 &&
-				mouseY >= optionY-5 && mouseY <= optionY+45 {
-				if i == 0 {
-					cc.selectedSubclass = noSubclassSelected
-				} else if i-1 < len(subclasses) {
-					cc.selectedSubclass = subclasses[i-1]
-				}
-				return
+// handleSubclassMouseSelection processes mouse/touch click selection.
+func (cc *EbitenCharacterCreation) handleSubclassMouseSelection(subclasses []CharacterClass, optionCount int) {
+	if !IsTouchOrMouseJustPressed() || cc.stepChangedThisFrame {
+		return
+	}
+	mouseX, mouseY, _ := GetTouchOrMousePosition()
+	startY := cc.panelY + 130
+	for i := 0; i < optionCount; i++ {
+		optionY := startY + i*55
+		if cc.isWithinSubclassOption(mouseX, mouseY, optionY) {
+			if i == 0 {
+				cc.selectedSubclass = noSubclassSelected
+			} else if i-1 < len(subclasses) {
+				cc.selectedSubclass = subclasses[i-1]
 			}
+			return
 		}
 	}
+}
 
-	// Enter to proceed
+// isWithinSubclassOption checks if coordinates are within an option's bounds.
+func (cc *EbitenCharacterCreation) isWithinSubclassOption(mouseX, mouseY, optionY int) bool {
+	return mouseX >= cc.panelX+40 && mouseX <= cc.panelX+cc.panelWidth-40 &&
+		mouseY >= optionY-5 && mouseY <= optionY+45
+}
+
+// handleSubclassConfirmation processes enter/escape key actions.
+func (cc *EbitenCharacterCreation) handleSubclassConfirmation() {
 	if inpututil.IsKeyJustPressed(ebiten.KeyEnter) && !cc.stepChangedThisFrame {
 		cc.handleNextButton()
 	}
-
-	// Backspace/Escape to go back
 	if inpututil.IsKeyJustPressed(ebiten.KeyBackspace) || inpututil.IsKeyJustPressed(ebiten.KeyEscape) {
 		cc.currentStep = stepClassSelection
 	}

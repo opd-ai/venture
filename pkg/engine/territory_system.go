@@ -213,3 +213,15 @@ func (ts *TerritorySystem) EnsureTerritoryExists(x, y float64) (*territory.Terri
 
 	return terr, nil
 }
+
+// GetBonusesForGuild returns the resource and XP bonuses for a guild.
+// Implements TerritoryBonusProvider interface for HUD display.
+func (ts *TerritorySystem) GetBonusesForGuild(guildID string) (resourceBonus, xpBonus float64) {
+	if guildID == "" {
+		return 0, 0
+	}
+	return ts.manager.GetBonusesForGuild(guildID)
+}
+
+// Compile-time check that TerritorySystem implements TerritoryBonusProvider
+var _ TerritoryBonusProvider = (*TerritorySystem)(nil)

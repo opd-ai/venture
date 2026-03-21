@@ -204,6 +204,11 @@ func (s *CreatureElementalAuraSystem) inferElement(entity *Entity) magic.Element
 }
 
 // elementFromKeywords maps name/tag keywords to element types.
+//
+// COMPLEXITY JUSTIFICATION: High cyclomatic complexity (60) is intentional—this is
+// a keyword matching table that must check many genre-appropriate keywords for each
+// element type. The if-chain structure is clearer than alternatives (regex, maps)
+// and the complexity is purely from the number of keywords, not control flow depth.
 func (s *CreatureElementalAuraSystem) elementFromKeywords(text string) magic.ElementType {
 	lower := strings.ToLower(text)
 

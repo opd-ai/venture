@@ -482,6 +482,35 @@ func TestGetXPBonus(t *testing.T) {
 	}
 }
 
+// TestGetBonusesForGuild verifies that GetBonusesForGuild returns both resource and XP bonuses.
+// This method implements the engine.TerritoryBonusProvider interface for HUD display.
+func TestGetBonusesForGuild(t *testing.T) {
+	m := NewManager()
+	m.CreateTerritory("terr-1", TerritoryCoords{ChunkX: 10, ChunkZ: 10})
+	m.CreateTerritory("terr-2", TerritoryCoords{ChunkX: 20, ChunkZ: 20})
+
+	m.AssignOwner("terr-1", "guild-hud-test")
+	m.AssignOwner("terr-2", "guild-hud-test")
+
+	resourceBonus, xpBonus := m.GetBonusesForGuild("guild-hud-test")
+	expectedResource := 2 * BaseResourceBonus
+	expectedXP := 2 * BaseXPBonus
+	tolerance := 0.0001
+
+	if resourceBonus < expectedResource-tolerance || resourceBonus > expectedResource+tolerance {
+		t.Errorf("expected resource bonus %f, got %f", expectedResource, resourceBonus)
+	}
+	if xpBonus < expectedXP-tolerance || xpBonus > expectedXP+tolerance {
+		t.Errorf("expected XP bonus %f, got %f", expectedXP, xpBonus)
+	}
+
+	// Test guild with no territories
+	resourceBonus, xpBonus = m.GetBonusesForGuild("unknown-guild")
+	if resourceBonus != 0.0 || xpBonus != 0.0 {
+		t.Errorf("expected 0 bonuses for unknown guild, got resource=%f xp=%f", resourceBonus, xpBonus)
+	}
+}
+
 func TestGetContestedTerritories(t *testing.T) {
 	m := NewManager()
 	territory1, _ := m.CreateTerritory("terr-1", TerritoryCoords{ChunkX: 10, ChunkZ: 10})
@@ -643,5 +672,75 @@ func BenchmarkGetResourceBonus(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		m.GetResourceBonus("guild-123")
+	}
+}
+
+func TestManager_SetConfig(t *testing.T) {
+	m := NewManager()
+
+	// Verify default config is set
+	if m.GetConfig() == nil {
+		t.Fatal("expected default config")
+	}
+	if m.GetConfig().BaseCaptureTime != BaseCaptureTime {
+		t.Errorf("expected default BaseCaptureTime %d, got %d", BaseCaptureTime, m.GetConfig().BaseCaptureTime)
+	}
+
+	// Set custom config
+	customConfig := &TerritoryConfig{
+		BaseCaptureTime:   120,
+		DefenderTimeBonus: 60,
+		BaseResourceBonus: 0.20,
+		BaseXPBonus:       0.10,
+		WallBaseHP:        2000.0,
+		TowerBaseHP:       1000.0,
+		GuardBaseHP:       1000.0,
+		TowerDamage:       200.0,
+		GuardLevel:        50,
+		GuildHallMaxHP:    20000.0,
+	}
+	m.SetConfig(customConfig)
+
+	if m.GetConfig().BaseCaptureTime != 120 {
+		t.Errorf("expected custom BaseCaptureTime 120, got %d", m.GetConfig().BaseCaptureTime)
+	}
+	if m.GetConfig().BaseResourceBonus != 0.20 {
+		t.Errorf("expected custom BaseResourceBonus 0.20, got %f", m.GetConfig().BaseResourceBonus)
+	}
+
+	// Reset to nil restores defaults
+	m.SetConfig(nil)
+	if m.GetConfig().BaseCaptureTime != BaseCaptureTime {
+		t.Errorf("expected default BaseCaptureTime after nil set, got %d", m.GetConfig().BaseCaptureTime)
+	}
+}
+
+func TestManager_ConfigAffectsBonuses(t *testing.T) {
+	m := NewManager()
+
+	// Create territory and assign to guild
+	m.CreateTerritory("terr-1", TerritoryCoords{ChunkX: 10, ChunkZ: 20})
+	m.AssignOwner("terr-1", "guild-123")
+
+	// Check default bonuses
+	defaultResourceBonus := m.GetResourceBonus("guild-123")
+	if defaultResourceBonus != BaseResourceBonus {
+		t.Errorf("expected default resource bonus %f, got %f", BaseResourceBonus, defaultResourceBonus)
+	}
+
+	// Set custom config with higher bonuses
+	customConfig := DefaultTerritoryConfig()
+	customConfig.BaseResourceBonus = 0.25
+	customConfig.BaseXPBonus = 0.15
+	m.SetConfig(customConfig)
+
+	// Check custom bonuses
+	customResourceBonus := m.GetResourceBonus("guild-123")
+	if customResourceBonus != 0.25 {
+		t.Errorf("expected custom resource bonus 0.25, got %f", customResourceBonus)
+	}
+	customXPBonus := m.GetXPBonus("guild-123")
+	if customXPBonus != 0.15 {
+		t.Errorf("expected custom XP bonus 0.15, got %f", customXPBonus)
 	}
 }

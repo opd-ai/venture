@@ -240,212 +240,59 @@ func (g *Generator) generateEntityWithTemplate(config Config, entityType string,
 		template = applyBossModifications(template, bossScale, config.Complexity)
 	}
 
-	// Generate seed-based avatar traits for visual variety
 	var traits *AvatarTraits
 	if useAerial {
-		t := generateTraitsForEntity(config.Seed, entityType)
-		traits = &t
-		template = applyTraitProportions(template, traits)
-
-		// Apply body type modifiers for dramatic silhouette variety.
-		// Check Config.Custom for engine-assigned body type first, fall back to trait.
-		bodyType := traits.BodyBuild
-		if config.Custom != nil {
-			if btVal, ok := config.Custom["bodyType"].(int); ok {
-				bodyType = BodyType(btVal)
-			}
-		}
-		template = ApplyBodyTypeToTemplate(template, bodyType)
-
-		// Apply size-based anatomy scaling (Tiny→chibi, Huge→massive torso).
-		// Must run after body type so size and build stack correctly.
-		sizeClass := extractSizeClass(config)
-		template = ApplySizeScaling(template, sizeClass)
+		traits = g.configureAerialTraits(config, entityType, &template)
 	}
 
 	g.renderTemplatePartsWithTraits(img, template, config, rng, traits)
 
-	// Render creature-specific details for nonhumanoid entities
-	if useAerial && !IsHumanoidEntity(entityType) {
-		detailBuf := image.NewRGBA(image.Rect(0, 0, config.Width, config.Height))
-		RenderCreatureDetails(detailBuf, CreatureDetailParams{
-			Width:     config.Width,
-			Height:    config.Height,
-			Form:      entityType,
-			Direction: string(direction),
-			Seed:      config.Seed,
-			SizeClass: extractSizeClass(config),
-			Genre:     genre,
-		})
-		detailImg := ebiten.NewImageFromImage(detailBuf)
-		img.DrawImage(detailImg, nil)
-
-		// Apply seed-based creature markings (spots, stripes, patches, etc.)
-		// to make each creature visually unique and immediately distinguishable.
-		creatureForm := EntityTypeToCreatureForm(entityType)
-		markings := GenerateCreatureMarkings(config.Seed, creatureForm)
-		if markings.Type != MarkingNone {
-			// Read current sprite pixels to apply markings on existing content
-			markingBuf := image.NewRGBA(image.Rect(0, 0, config.Width, config.Height))
-			if safeReadPixels(img, markingBuf.Pix) {
-				RenderCreatureMarkings(markingBuf, CreatureMarkingParams{
-					Width:     config.Width,
-					Height:    config.Height,
-					Form:      creatureForm,
-					Direction: string(direction),
-					Seed:      config.Seed,
-					Markings:  markings,
-				})
-				markingImg := ebiten.NewImageFromImage(markingBuf)
-				img.Clear()
-				img.DrawImage(markingImg, nil)
-			}
-		}
+	ctx := &entityRenderContext{
+		img:        img,
+		config:     config,
+		entityType: entityType,
+		direction:  direction,
+		genre:      genre,
+		useAerial:  useAerial,
+		template:   &template,
+		traits:     traits,
 	}
 
-	// Render garment structure lines for humanoid entities (collars, belts,
-	// hems, seams, fasteners) to make clothing look like actual garments.
-	if useAerial && IsHumanoidEntity(entityType) {
-		readBuf := image.NewRGBA(image.Rect(0, 0, config.Width, config.Height))
-		if safeReadPixels(img, readBuf.Pix) {
-			RenderGarmentDetail(readBuf, GarmentDetailParams{
-				Width:     config.Width,
-				Height:    config.Height,
-				Seed:      config.Seed,
-				Genre:     genre,
-				Direction: string(direction),
-			})
-			garmentImg := ebiten.NewImageFromImage(readBuf)
-			img.Clear()
-			img.DrawImage(garmentImg, nil)
-		}
-	}
+	ctx.renderCreatureDetails()
+	ctx.renderGarmentDetails()
+	ctx.renderRoleDetails()
 
-	// Render role-specific details for humanoid entities (arcane runes,
-	// weapon belts, shoulder plates, etc.) to make roles visually distinct.
-	if useAerial && IsHumanoidEntity(entityType) {
-		role := MapEntityTypeToRole(entityType)
-		if role != "" {
-			roleBuf := image.NewRGBA(image.Rect(0, 0, config.Width, config.Height))
-			RenderRoleDetails(roleBuf, RoleDetailParams{
-				Width:     config.Width,
-				Height:    config.Height,
-				Role:      role,
-				Direction: string(direction),
-				Seed:      config.Seed,
-				Genre:     genre,
-			})
-			roleImg := ebiten.NewImageFromImage(roleBuf)
-			img.DrawImage(roleImg, nil)
-		}
-	}
-
-	// Overlay equipment visuals (weapon, armor, helmet, shield, accessories)
-	// from config.Custom onto the template-rendered body before finalization.
 	if useAerial {
 		overlayEquipmentVisuals(img, config)
 	}
 
-	// Render seed-based back accessory overlay for humanoid entities (capes,
-	// cloaks, quivers, backpacks, banners, scarves, wing-capes) visible from
-	// above, draped over shoulders and extending behind the body.
-	if useAerial && IsHumanoidEntity(entityType) {
-		torsoSpec, hasTorso := template.BodyPartLayout[PartTorso]
-		if hasTorso {
-			baType := resolveBackAccessoryType(config)
-			if baType != BackAccessoryNone {
-				baParams := ComputeBackAccessoryParams(
-					config.Width, config.Height, torsoSpec,
-					baType, direction, config.Seed, genre,
-				)
-				baBuf := image.NewRGBA(image.Rect(0, 0, config.Width, config.Height))
-				RenderBackAccessoryOverlay(baBuf, baParams)
-				baImg := ebiten.NewImageFromImage(baBuf)
-				img.DrawImage(baImg, nil)
-			}
-		}
-	}
-
-	// Render seed-based headgear overlay for humanoid entities that don't have
-	// an explicit equipment helmet. Headgear is role- and genre-aware, producing
-	// crowns, hoods, wizard hats, circlets, etc. visible from above.
-	if useAerial && IsHumanoidEntity(entityType) && !hasEquipmentHelmet(config) {
-		headSpec, hasHead := template.BodyPartLayout[PartHead]
-		if hasHead {
-			hgType := resolveHeadgearType(config)
-			if hgType != HeadgearNone {
-				hgParams := ComputeHeadgearParams(
-					config.Width, config.Height, headSpec,
-					hgType, direction, config.Seed, genre,
-				)
-				hgBuf := image.NewRGBA(image.Rect(0, 0, config.Width, config.Height))
-				RenderHeadgearOverlay(hgBuf, hgParams)
-				hgImg := ebiten.NewImageFromImage(hgBuf)
-				img.DrawImage(hgImg, nil)
-			}
-		}
-	}
-
-	// Apply surface textures to nonhumanoid creatures (fur, scales, chitin, etc.).
-	// This runs after all detail overlays so textures cover the full body.
-	if useAerial && !IsHumanoidEntity(entityType) {
-		form := EntityTypeToCreatureForm(entityType)
-		texSet := GenerateSurfaceTextureSet(config.Seed, form, genre)
-		if texSet.TorsoTexture.Type != TexNone {
-			texBuf := image.NewRGBA(image.Rect(0, 0, config.Width, config.Height))
-			if safeReadPixels(img, texBuf.Pix) {
-				ApplySurfaceTexture(texBuf, texBuf.Bounds(), texSet.TorsoTexture, config.Seed)
-				texImg := ebiten.NewImageFromImage(texBuf)
-				img.Clear()
-				img.DrawImage(texImg, nil)
-			}
-		}
-	}
-
-	// Apply volumetric depth enhancement (form-aware shading, specular, contact shadows).
-	// Must run after surface textures and before color temperature grading.
-	if useAerial {
-		depthBuf := image.NewRGBA(image.Rect(0, 0, config.Width, config.Height))
-		if safeReadPixels(img, depthBuf.Pix) {
-			depthCfg := DefaultDepthEnhanceConfig(config.Seed)
-			if !IsHumanoidEntity(entityType) {
-				form := EntityTypeToCreatureForm(entityType)
-				ApplyDepthEnhancementForCreature(depthBuf, form, depthCfg)
-			} else {
-				ApplyDepthEnhancement(depthBuf, depthCfg)
-			}
-			depthImg := ebiten.NewImageFromImage(depthBuf)
-			img.Clear()
-			img.DrawImage(depthImg, nil)
-		}
-	}
-
-	// Apply genre-aware color temperature grading and specular highlights.
-	// Must run after depth enhancement and before sprite finalization.
-	if useAerial {
-		ctBuf := image.NewRGBA(image.Rect(0, 0, config.Width, config.Height))
-		if safeReadPixels(img, ctBuf.Pix) {
-			ctCfg := GenreColorTemperatureConfig(genre, config.Seed)
-			ApplyColorTemperature(ctBuf, ctCfg)
-			ctImg := ebiten.NewImageFromImage(ctBuf)
-			img.Clear()
-			img.DrawImage(ctImg, nil)
-		}
-	}
-
-	// Apply sprite finalization: adaptive outline, rim lighting, edge shadow
-	if useAerial {
-		// Convert ebiten image to RGBA first to avoid ReadPixels panic in tests
-		rgbaBuf := image.NewRGBA(image.Rect(0, 0, config.Width, config.Height))
-		if safeReadPixels(img, rgbaBuf.Pix) {
-			finalized := FinalizeEntitySprite(rgbaBuf, DefaultFinalizerConfig(config.Seed))
-			finalImg := ebiten.NewImageFromImage(finalized)
-			img.Clear()
-			img.DrawImage(finalImg, nil)
-		}
-	}
+	ctx.renderBackAccessory()
+	ctx.renderHeadgear()
+	ctx.applySurfaceTextures()
+	ctx.applyDepthEnhancement()
+	ctx.applyColorTemperature()
+	ctx.finalizeSprite()
 
 	return img, nil
+}
+
+// configureAerialTraits generates and applies traits for aerial view rendering.
+func (g *Generator) configureAerialTraits(config Config, entityType string, template *AnatomicalTemplate) *AvatarTraits {
+	t := generateTraitsForEntity(config.Seed, entityType)
+	*template = applyTraitProportions(*template, &t)
+
+	bodyType := t.BodyBuild
+	if config.Custom != nil {
+		if btVal, ok := config.Custom["bodyType"].(int); ok {
+			bodyType = BodyType(btVal)
+		}
+	}
+	*template = ApplyBodyTypeToTemplate(*template, bodyType)
+
+	sizeClass := extractSizeClass(config)
+	*template = ApplySizeScaling(*template, sizeClass)
+
+	return &t
 }
 
 // extractSizeClass extracts the size class from config custom data.

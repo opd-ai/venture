@@ -17,9 +17,10 @@ type Manager struct {
 	guildWars     map[string][]string
 	captureRadius float64
 	timeProvider  TimeProvider
+	config        *TerritoryConfig
 }
 
-// NewManager creates a new territory manager with the default time provider.
+// NewManager creates a new territory manager with the default time provider and config.
 func NewManager() *Manager {
 	return NewManagerWithTimeProvider(DefaultTimeProvider())
 }
@@ -33,7 +34,34 @@ func NewManagerWithTimeProvider(tp TimeProvider) *Manager {
 		guildWars:     make(map[string][]string),
 		captureRadius: 50.0,
 		timeProvider:  tp,
+		config:        DefaultTerritoryConfig(),
 	}
+}
+
+// SetConfig sets the territory configuration, allowing mod customization.
+// Pass nil to reset to default configuration.
+func (m *Manager) SetConfig(config *TerritoryConfig) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if config == nil {
+		m.config = DefaultTerritoryConfig()
+	} else {
+		m.config = config
+	}
+	log.WithFields(log.Fields{
+		"base_capture_time": m.config.BaseCaptureTime,
+		"defender_bonus":    m.config.DefenderTimeBonus,
+		"resource_bonus":    m.config.BaseResourceBonus,
+		"xp_bonus":          m.config.BaseXPBonus,
+		"system_name":       "territory",
+	}).Info("territory configuration updated")
+}
+
+// GetConfig returns the current territory configuration.
+func (m *Manager) GetConfig() *TerritoryConfig {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	return m.config
 }
 
 // SetCaptureRadius updates the radius within which a player can capture territory.
@@ -165,7 +193,7 @@ func validateAttackingGuild(attackingGuild string, attackers int) error {
 
 // applyAttackerProgress updates territory progress when attackers outnumber defenders.
 func (m *Manager) applyAttackerProgress(territory *Territory, attackingGuild string, defenders int, elapsed float64) {
-	captureTime := float64(BaseCaptureTime + (defenders * DefenderTimeBonus))
+	captureTime := float64(m.config.BaseCaptureTime + (defenders * m.config.DefenderTimeBonus))
 	progressPerSecond := 1.0 / captureTime
 	oldProgress := territory.CaptureProgress
 	territory.CaptureProgress += progressPerSecond * elapsed
@@ -193,7 +221,7 @@ func (m *Manager) completeCapture(territory *Territory, attackingGuild string) {
 
 // applyDefenderProgress reduces capture progress when defenders hold the line.
 func (m *Manager) applyDefenderProgress(territory *Territory, defenders int, elapsed float64) {
-	decayTime := float64(BaseCaptureTime + (defenders * DefenderTimeBonus))
+	decayTime := float64(m.config.BaseCaptureTime + (defenders * m.config.DefenderTimeBonus))
 	decayPerSecond := 1.0 / decayTime
 	territory.CaptureProgress -= decayPerSecond * elapsed
 
@@ -255,17 +283,17 @@ func (m *Manager) BuildDefensiveStructure(territoryID string, structureType Stru
 
 	switch structureType {
 	case StructureTypeWall:
-		maxHP = WallBaseHP
+		maxHP = m.config.WallBaseHP
 		damage = 0.0
 		level = 1
 	case StructureTypeTower:
-		maxHP = TowerBaseHP
-		damage = TowerDamage
+		maxHP = m.config.TowerBaseHP
+		damage = m.config.TowerDamage
 		level = 1
 	case StructureTypeGuard:
-		maxHP = GuardBaseHP
+		maxHP = m.config.GuardBaseHP
 		damage = 0.0
-		level = GuardLevel
+		level = m.config.GuardLevel
 	default:
 		log.WithFields(log.Fields{
 			"territory_id":   territoryID,
@@ -451,7 +479,7 @@ func (m *Manager) GetResourceBonus(guildID string) float64 {
 			count++
 		}
 	}
-	return float64(count) * BaseResourceBonus
+	return float64(count) * m.config.BaseResourceBonus
 }
 
 // GetXPBonus returns the total XP gain bonus for a guild based on controlled territories.
@@ -465,7 +493,25 @@ func (m *Manager) GetXPBonus(guildID string) float64 {
 			count++
 		}
 	}
-	return float64(count) * BaseXPBonus
+	return float64(count) * m.config.BaseXPBonus
+}
+
+// GetBonusesForGuild returns the resource and XP bonuses for a guild based on controlled territories.
+// This method implements the engine.TerritoryBonusProvider interface, enabling the HUD system
+// to display territory bonuses to players.
+func (m *Manager) GetBonusesForGuild(guildID string) (resourceBonus, xpBonus float64) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
+	count := 0
+	for _, territory := range m.territories {
+		if territory.OwnerGuildID == guildID && territory.Status == StatusOwned {
+			count++
+		}
+	}
+	resourceBonus = float64(count) * m.config.BaseResourceBonus
+	xpBonus = float64(count) * m.config.BaseXPBonus
+	return resourceBonus, xpBonus
 }
 
 // GetContestedTerritories returns all territories that are currently being contested.

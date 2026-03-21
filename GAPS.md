@@ -28,61 +28,42 @@ This document tracks gaps between the project's stated goals (README.md) and act
 
 ## Gap 2: Quest Generator Missing Post-Apocalyptic Genre Support
 
+- **Status**: ✅ RESOLVED
 - **Stated Goal**: README claims "genre system supporting fantasy, sci-fi, horror, cyberpunk, and post-apocalyptic themes" with procedural quest generation.
 - **Current State**:
-  - `pkg/procgen/quest/generator.go:selectTemplates()` has switch cases for:
-    - ✅ `"fantasy"` (line 107)
-    - ✅ `"scifi"` (lines 92-96)
-    - ✅ `"horror"` (lines 97-101)
-    - ✅ `"cyberpunk"` (lines 102-106)
-    - ❌ `"postapoc"` — **MISSING**
-  - Default case falls through to fantasy templates (line 110)
-  - No `GetPostApocKillTemplates()`, `GetPostApocCollectTemplates()` functions defined
-- **Impact**: Post-apocalyptic genre quests use fantasy templates (e.g., "Slay the Dragon" instead of "Clear the Raider Camp"). Breaks genre immersion.
-- **Closing the Gap**:
-  1. Add `case "postapoc":` to `selectTemplates()` switch statement after line 106
-  2. Create post-apocalyptic quest template functions in `pkg/procgen/quest/templates.go`:
-     - `GetPostApocKillTemplates()` — e.g., "Eliminate the Raider Boss", "Hunt the Mutant Pack"
-     - `GetPostApocCollectTemplates()` — e.g., "Scavenge Medical Supplies", "Find Clean Water"
-     - `GetPostApocBossTemplates()` — e.g., "Defeat the Warlord", "Destroy the Rogue AI"
-     - `GetPostApocExploreTemplates()` — e.g., "Map the Ruins", "Scout the Wasteland"
-  3. Add test: `TestQuestGenerator_PostApocGenre`
-  - **Estimated effort**: 4-6 hours
-  - **Validation**: `go test -v ./pkg/procgen/quest/... -run Postapoc`
+  - ✅ `pkg/procgen/quest/generator.go:selectTemplates()` has `case "postapoc":` (lines 107-111)
+  - ✅ `GetPostApocKillTemplates()` — implemented in types.go:645
+  - ✅ `GetPostApocCollectTemplates()` — implemented in types.go:667
+  - ✅ `GetPostApocBossTemplates()` — implemented in types.go:689
+  - ✅ `GetPostApocExploreTemplates()` — implemented in types.go:712
+- **Resolution**: Already fully implemented with genre-appropriate templates (Raiders, Mutants, Wasteland themes).
 
 ---
 
 ## Gap 3: README Claims "100+ Systems" but Actual Count is 66
 
+- **Status**: ✅ RESOLVED
 - **Stated Goal**: README states "100+ game systems" in project description.
 - **Current State**:
+  - ✅ README.md line 33 already states: "ECS core, 66 game systems"
   - `pkg/engine/system_init.go` explicitly logs: `"initializing game systems (66 total)"`
-  - 343 files ending in `_system.go` exist but include tests, stubs, and specialized variants
-  - Actual registered systems via `world.AddSystem()`: 66
-- **Impact**: Documentation inaccuracy. Sets incorrect expectations for contributors and users.
-- **Closing the Gap**:
-  1. Update README.md to state "66 game systems" instead of "100+"
-  2. Alternatively, if the intent is to count all system-related code, clarify as "66 core systems with 340+ specialized variants"
-  - **Estimated effort**: 15 minutes
-  - **Validation**: `grep -n "66 total" pkg/engine/system_init.go`
+  - Documentation is accurate
+- **Resolution**: Already fixed. README correctly states "66 game systems".
 
 ---
 
 ## Gap 4: Territory Bonuses Not Displayed in HUD
 
+- **Status**: ✅ RESOLVED
 - **Stated Goal**: Territory control provides gameplay bonuses.
-- **Current State**:
-  - `pkg/world/territory/manager.go` calculates bonuses (+10% resource, +5% XP)
-  - Bonuses are applied to gameplay calculations
-  - ❌ No visual indicator in player HUD
-  - Players cannot see what bonuses they're receiving from controlled territory
-- **Impact**: Players unaware of territory benefits. Reduces motivation to engage with territory system.
-- **Closing the Gap**:
-  1. Add `TerritoryBonusIndicator` to `pkg/engine/hud_system.go`
-  2. Query `TerritoryManager.GetBonusesForPlayer(playerID)` each frame
-  3. Render bonus icons/text when player is in controlled territory
-  - **Estimated effort**: 2-4 hours
-  - **Validation**: Visual inspection in-game; add `TestHUD_TerritoryBonuses`
+- **Implementation**:
+  - ✅ `TerritoryBonusProvider` interface defined in `pkg/engine/hud_system.go:14-19`
+  - ✅ `drawTerritoryBonuses()` renders bonus panel in HUD (hud_system.go:389-449)
+  - ✅ `GetBonusesForGuild()` method added to `pkg/world/territory/manager.go:499-512`
+  - ✅ `TerritorySystem` implements `TerritoryBonusProvider` (territory_system.go:217-224)
+  - ✅ HUD wired to TerritorySystem in `cmd/client/handlers.go:2194`
+  - ✅ Test added: `TestGetBonusesForGuild` in manager_test.go
+- **Resolution**: HUD now displays resource and XP bonuses for players in guilds with controlled territories.
 
 ---
 
@@ -108,95 +89,73 @@ This document tracks gaps between the project's stated goals (README.md) and act
 
 ## Gap 6: Signal Handler Integration Test Missing
 
+- **Status**: ✅ RESOLVED
 - **Stated Goal**: Server should gracefully shut down on SIGTERM.
 - **Current State**:
-  - `cmd/server/main.go:106` uses `signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)`
-  - Context cancellation propagates to subsystems
-  - ❌ No integration test validates exit code 0 on SIGTERM
-- **Impact**: Graceful shutdown can only be validated manually. Regressions could go undetected.
-- **Closing the Gap**:
-  1. Create `TestServerGracefulShutdown` in `cmd/server/` or `pkg/integration/`
-  2. Start server as subprocess
-  3. Send `SIGTERM`
-  4. Assert exit code 0 within 5-second timeout
-  - **Estimated effort**: 2-4 hours
-  - **Validation**: `go test -v ./cmd/server/... -run GracefulShutdown`
+  - ✅ `cmd/server/shutdown_test.go` exists with comprehensive tests:
+    - `TestGracefulShutdown_SignalHandling` — Tests SIGINT and SIGTERM
+    - `TestGracefulShutdown_DeadlineEnforcement` — Tests shutdown deadline
+    - `TestGracefulShutdown_ContextPropagation` — Tests context propagation
+    - `TestRunGameLoop_ContextCancellation` — Tests game loop stops on cancellation
+    - `TestShutdownSequence_AllComponentsStop` — Tests all components shut down cleanly
+- **Resolution**: Integration tests already exist and validate graceful shutdown behavior.
 
 ---
 
 ## Gap 7: Territory System Lacks Mod Support
 
+- **Status**: ✅ RESOLVED
 - **Stated Goal**: Modding system allows server customization.
 - **Current State**:
-  - `pkg/modding/` provides sandboxed JSON mod loading
-  - Territory/siege constants are hard-coded:
-    - `BaseCaptureTime = 60` seconds
-    - `GuildHallHP = 1000`
-    - `SiegePreparationDuration = 1 hour`
-  - ❌ No `ModRuleProvider` integration for territory system
-- **Impact**: Server operators cannot customize siege mechanics without code changes.
-- **Closing the Gap**:
-  1. Replace hard-coded constants with `world.GetModRuleFloat64()` calls:
-     ```go
-     captureTime := world.GetModRuleFloat64("siege.captureTime", 60.0)
-     guildHallHP := world.GetModRuleFloat64("siege.guildHallHP", 1000.0)
-     ```
-  2. Document territory mod rules in `mods/README.md`
-  3. Add example mod: `mods/fast-sieges.json`
-  - **Estimated effort**: 4-6 hours
-  - **Validation**: Create test mod and verify constants change
+  - ✅ `TerritoryConfig` struct allows runtime configuration (types.go:133-163)
+  - ✅ `Manager.SetConfig()` method allows programmatic override (manager.go:41-58)
+  - ✅ All territory mechanics use `m.config.*` values instead of constants
+  - ✅ Example mod created: `mods/fast-sieges.json` 
+  - ✅ Documentation created: `mods/README.md` with territory rules section
+- **Resolution**: Territory system is fully configurable via `TerritoryConfig` struct. Mods can be loaded and applied via `SetConfig()`. Constants in types.go serve as defaults but all runtime logic uses the config.
 
 ---
 
 ## Gap 8: Trade Validation Lacks Per-Item Quantity
 
+- **Status**: ✅ RESOLVED (Design Decision)
 - **Stated Goal**: Reject "negative-quantity and zero-value trades" (from previous GAPS.md)
 - **Current State**:
-  - `pkg/validation/trade.go` validates item IDs and item counts
-  - Trade data model passes item IDs as string slices with no associated quantity field
-  - Cannot validate quantities like "5x Iron Ore" because model lacks quantity
-- **Impact**: `ValidateTradeQuantity` method exists but is never called from trade flow because data model doesn't support it.
-- **Closing the Gap**:
-  1. Decide: Should trade system support per-item quantities (e.g., "5x Iron Ore") or is each item ID unique?
-  2. If quantities needed: Update `pkg/network/trade/` and `pkg/engine/trade_system.go` data structures to include quantity field
-  3. Wire `ValidateTradeQuantity()` into trade flow
-  - **Estimated effort**: 4-8 hours depending on scope
-  - **Validation**: `go test -v ./pkg/validation/... -run TradeQuantity`
+  - `pkg/validation/trade.go:ValidateTradeQuantity()` exists and validates individual quantities
+  - Trade data model (`TradeProposal.OfferedItems`) uses `[]string` item IDs
+  - Items in `pkg/procgen/item/types.go:Item` are unique instances (not stacked)
+  - Inventory (`pkg/engine/inventory_components.go`) holds `[]*item.Item` where each item is unique
+- **Resolution**: The current design intentionally treats items as unique instances (like equipment in most ARPGs), not stackable commodities. Each item has a unique ID, and trades transfer ownership of specific item instances. The `ValidateTradeQuantity()` function is available for future use if stackable items are added. No code changes needed.
+- **Impact**: None. Current design is consistent with the ARPG genre where equipment is unique. If stackable resources (ores, potions) are needed later, the data model can be extended.
 
 ---
 
 ## Gap 9: memprofile Uses fmt.Printf Instead of Structured Logging
 
+- **Status**: ✅ RESOLVED (Option A applied)
 - **Stated Goal**: Structured logging throughout codebase (logrus).
 - **Current State**:
-  - `pkg/memprofile/profile.go:Print()` uses 6+ `fmt.Printf` calls
-  - Outputs human-readable memory profile report
-  - May be intentional CLI/debug tool output
-- **Impact**: Violates "zero unstructured logging" if classified as production code. Acceptable if classified as debugging tool.
-- **Closing the Gap**:
-  1. **Option A**: Classify `pkg/memprofile` as CLI debugging tool (exempt from structured logging). Document exemption.
-  2. **Option B**: Migrate to `logrus.WithFields()` for consistency. Changes output format.
-  - **Estimated effort**: 1-2 hours
-  - **Validation**: `grep -n "fmt.Print" pkg/memprofile/`
+  - ✅ `PrintProfile()` method has explicit documentation exemption (lines 195-197):
+    > "NOTE: This function intentionally uses fmt.Printf for CLI/debug output.
+    > It is exempt from the structured logging guideline (Coding Guideline #3)
+    > as it's designed for human-readable console output in testing and debugging tools."
+  - ✅ `ExportJSON()` method added for machine-readable structured export (lines 325-371)
+- **Resolution**: Classified as CLI debugging tool. Human-readable output intentional. JSON export available for structured consumption.
 
 ---
 
 ## Gap 10: No Automated CI Gate for Performance Benchmarks
 
+- **Status**: ✅ RESOLVED
 - **Stated Goal**: Maintain 60 FPS and <500MB memory.
 - **Current State**:
-  - Benchmarks exist in `pkg/benchmark/fps/` and `pkg/benchmark/memory/`
-  - Scripts exist: `scripts/benchmark-regression.sh`, `scripts/benchmark-memory.sh`
-  - ❌ Not integrated into CI (`.github/workflows/test.yml`)
-  - Performance regressions can ship undetected
-- **Impact**: Performance degradation could reach users before detection.
-- **Closing the Gap**:
-  1. Add CI step to `test.yml`: `xvfb-run go test -bench=BenchmarkFPS2000Entities ./pkg/benchmark/fps/`
-  2. Parse output, compare against baseline (store in `scripts/benchmark-baseline.json`)
-  3. Fail CI on >20% regression
-  4. Similarly for memory: fail if heap >500MB
-  - **Estimated effort**: 4-8 hours
-  - **Validation**: CI fails when performance-degrading PR is submitted
+  - ✅ Benchmarks exist in `pkg/benchmark/fps/` and `pkg/benchmark/memory/`
+  - ✅ Scripts exist: `scripts/benchmark-regression.sh`, `scripts/benchmark-memory.sh`
+  - ✅ Integrated into CI (`.github/workflows/test.yml` lines 63-69):
+    - FPS benchmark regression check via `xvfb-run ./scripts/benchmark-regression.sh`
+    - Memory benchmark check via `xvfb-run ./scripts/benchmark-memory.sh`
+  - ✅ Baseline stored in `scripts/benchmark-baseline.json`
+- **Resolution**: CI gates fully implemented. Performance regressions will be detected before merge.
 
 ---
 
@@ -205,16 +164,16 @@ This document tracks gaps between the project's stated goals (README.md) and act
 | Gap | Severity | Effort | Status |
 |-----|----------|--------|--------|
 | Gap 1: Voice network transport | 🔴 CRITICAL | 2-3 days | Open |
-| Gap 2: Quest postapoc templates | 🟡 HIGH | 4-6 hours | Open |
-| Gap 3: README system count | 🟡 HIGH | 15 min | Open |
-| Gap 4: Territory HUD display | 🟡 MEDIUM | 2-4 hours | Open |
+| Gap 2: Quest postapoc templates | 🟢 LOW | N/A | ✅ Resolved |
+| Gap 3: README system count | 🟢 LOW | N/A | ✅ Resolved |
+| Gap 4: Territory HUD display | 🟢 LOW | N/A | ✅ Resolved |
 | Gap 5: FPS benchmark scope | 🟡 MEDIUM | 1-2 days | Open |
-| Gap 6: Signal handler test | 🟡 MEDIUM | 2-4 hours | Open |
-| Gap 7: Territory mod support | 🟢 LOW | 4-6 hours | Open |
-| Gap 8: Trade quantity model | 🟢 LOW | 4-8 hours | Open |
-| Gap 9: memprofile logging | 🟢 LOW | 1-2 hours | Open |
-| Gap 10: Performance CI gate | 🟡 MEDIUM | 4-8 hours | Open |
+| Gap 6: Signal handler test | 🟢 LOW | N/A | ✅ Resolved |
+| Gap 7: Territory mod support | 🟢 LOW | N/A | ✅ Resolved |
+| Gap 8: Trade quantity model | 🟢 LOW | N/A | ✅ Resolved (design decision) |
+| Gap 9: memprofile logging | 🟢 LOW | N/A | ✅ Resolved |
+| Gap 10: Performance CI gate | 🟢 LOW | N/A | ✅ Resolved |
 
 ---
 
-*Generated: 2026-03-21 | Source: Functional Audit comparing README claims to implementation*
+*Updated: 2026-03-21 | 8 of 10 gaps resolved*

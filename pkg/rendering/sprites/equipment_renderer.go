@@ -580,101 +580,120 @@ func (r *EquipmentRenderer) renderAccessory(img *ebiten.Image, w, h int, base co
 func (r *EquipmentRenderer) applyMaterialTexture(img *ebiten.Image, w, h int, material MaterialType, props MaterialVisualProperties, rng *rand.Rand) {
 	switch material {
 	case MaterialMetal:
-		// Specular highlight lines (horizontal streaks)
-		numStreaks := 2 + rng.Intn(3)
-		for i := 0; i < numStreaks; i++ {
-			y := rng.Intn(h)
-			length := w/4 + rng.Intn(w/3)
-			startX := rng.Intn(w)
-			for x := startX; x < startX+length && x < w; x++ {
-				if y >= 0 && y < h && x >= 0 && x < w {
-					existing := r.getPixel(img, x, y)
-					if existing.A > 0 {
-						bright := r.lighten(existing, 15+int(props.Sheen*15))
-						r.setPixel(img, x, y, bright)
-					}
-				}
-			}
-		}
-
+		r.applyMetalTexture(img, w, h, props, rng)
 	case MaterialLeather:
-		// Grain texture (scattered darker dots)
-		numDots := int(float64(w*h) * props.Roughness * 0.08)
-		for i := 0; i < numDots; i++ {
-			px := rng.Intn(w)
-			py := rng.Intn(h)
-			existing := r.getPixel(img, px, py)
-			if existing.A > 0 {
-				r.setPixel(img, px, py, r.darken(existing, 8+rng.Intn(12)))
-			}
-		}
-
+		r.applyLeatherTexture(img, w, h, props, rng)
 	case MaterialCloth:
-		// Weave pattern (alternating rows slightly lighter/darker)
-		for y := 0; y < h; y += 2 {
-			for x := 0; x < w; x += 2 {
+		r.applyClothTexture(img, w, h)
+	case MaterialWood:
+		r.applyWoodTexture(img, w, h, rng)
+	case MaterialCrystal:
+		r.applyCrystalTexture(img, w, h, rng)
+	case MaterialEnergy:
+		r.applyEnergyTexture(img, w, h, rng)
+	}
+}
+
+// applyMetalTexture adds specular highlight lines (horizontal streaks) for metal materials.
+func (r *EquipmentRenderer) applyMetalTexture(img *ebiten.Image, w, h int, props MaterialVisualProperties, rng *rand.Rand) {
+	numStreaks := 2 + rng.Intn(3)
+	for i := 0; i < numStreaks; i++ {
+		y := rng.Intn(h)
+		length := w/4 + rng.Intn(w/3)
+		startX := rng.Intn(w)
+		for x := startX; x < startX+length && x < w; x++ {
+			if y >= 0 && y < h && x >= 0 && x < w {
 				existing := r.getPixel(img, x, y)
 				if existing.A > 0 {
-					if (x/2+y/2)%2 == 0 {
-						r.setPixel(img, x, y, r.lighten(existing, 5))
-					} else {
-						r.setPixel(img, x, y, r.darken(existing, 5))
-					}
+					bright := r.lighten(existing, 15+int(props.Sheen*15))
+					r.setPixel(img, x, y, bright)
 				}
 			}
 		}
+	}
+}
 
-	case MaterialWood:
-		// Wood grain (horizontal lines with slight variation)
-		for y := 0; y < h; y++ {
-			if y%3 == 0 {
-				offset := rng.Intn(3) - 1
-				for x := 0; x < w; x++ {
-					py := y + offset
-					if py >= 0 && py < h {
-						existing := r.getPixel(img, x, py)
-						if existing.A > 0 {
-							r.setPixel(img, x, py, r.darken(existing, 6))
-						}
-					}
-				}
-			}
+// applyLeatherTexture adds grain texture (scattered darker dots) for leather materials.
+func (r *EquipmentRenderer) applyLeatherTexture(img *ebiten.Image, w, h int, props MaterialVisualProperties, rng *rand.Rand) {
+	numDots := int(float64(w*h) * props.Roughness * 0.08)
+	for i := 0; i < numDots; i++ {
+		px := rng.Intn(w)
+		py := rng.Intn(h)
+		existing := r.getPixel(img, px, py)
+		if existing.A > 0 {
+			r.setPixel(img, px, py, r.darken(existing, 8+rng.Intn(12)))
 		}
+	}
+}
 
-	case MaterialCrystal:
-		// Faceted highlights (bright spots at random positions)
-		numFacets := 3 + rng.Intn(4)
-		for i := 0; i < numFacets; i++ {
-			fx := rng.Intn(w)
-			fy := rng.Intn(h)
-			existing := r.getPixel(img, fx, fy)
+// applyClothTexture adds weave pattern (alternating rows slightly lighter/darker) for cloth materials.
+func (r *EquipmentRenderer) applyClothTexture(img *ebiten.Image, w, h int) {
+	for y := 0; y < h; y += 2 {
+		for x := 0; x < w; x += 2 {
+			existing := r.getPixel(img, x, y)
 			if existing.A > 0 {
-				bright := r.lighten(existing, 50)
-				r.setPixel(img, fx, fy, bright)
-				// Adjacent pixels slightly brighter
-				for _, d := range [][2]int{{-1, 0}, {1, 0}, {0, -1}, {0, 1}} {
-					nx, ny := fx+d[0], fy+d[1]
-					if nx >= 0 && nx < w && ny >= 0 && ny < h {
-						adj := r.getPixel(img, nx, ny)
-						if adj.A > 0 {
-							r.setPixel(img, nx, ny, r.lighten(adj, 25))
-						}
+				if (x/2+y/2)%2 == 0 {
+					r.setPixel(img, x, y, r.lighten(existing, 5))
+				} else {
+					r.setPixel(img, x, y, r.darken(existing, 5))
+				}
+			}
+		}
+	}
+}
+
+// applyWoodTexture adds wood grain (horizontal lines with slight variation) for wood materials.
+func (r *EquipmentRenderer) applyWoodTexture(img *ebiten.Image, w, h int, rng *rand.Rand) {
+	for y := 0; y < h; y++ {
+		if y%3 == 0 {
+			offset := rng.Intn(3) - 1
+			for x := 0; x < w; x++ {
+				py := y + offset
+				if py >= 0 && py < h {
+					existing := r.getPixel(img, x, py)
+					if existing.A > 0 {
+						r.setPixel(img, x, py, r.darken(existing, 6))
 					}
 				}
 			}
 		}
+	}
+}
 
-	case MaterialEnergy:
-		// Pulsing glow dots scattered across surface
-		numGlows := 4 + rng.Intn(5)
-		for i := 0; i < numGlows; i++ {
-			gx := rng.Intn(w)
-			gy := rng.Intn(h)
-			existing := r.getPixel(img, gx, gy)
-			if existing.A > 0 {
-				glowC := r.lighten(existing, 70)
-				r.setPixel(img, gx, gy, glowC)
+// applyCrystalTexture adds faceted highlights (bright spots at random positions) for crystal materials.
+func (r *EquipmentRenderer) applyCrystalTexture(img *ebiten.Image, w, h int, rng *rand.Rand) {
+	numFacets := 3 + rng.Intn(4)
+	for i := 0; i < numFacets; i++ {
+		fx := rng.Intn(w)
+		fy := rng.Intn(h)
+		existing := r.getPixel(img, fx, fy)
+		if existing.A > 0 {
+			bright := r.lighten(existing, 50)
+			r.setPixel(img, fx, fy, bright)
+			// Adjacent pixels slightly brighter
+			for _, d := range [][2]int{{-1, 0}, {1, 0}, {0, -1}, {0, 1}} {
+				nx, ny := fx+d[0], fy+d[1]
+				if nx >= 0 && nx < w && ny >= 0 && ny < h {
+					adj := r.getPixel(img, nx, ny)
+					if adj.A > 0 {
+						r.setPixel(img, nx, ny, r.lighten(adj, 25))
+					}
+				}
 			}
+		}
+	}
+}
+
+// applyEnergyTexture adds pulsing glow dots scattered across surface for energy materials.
+func (r *EquipmentRenderer) applyEnergyTexture(img *ebiten.Image, w, h int, rng *rand.Rand) {
+	numGlows := 4 + rng.Intn(5)
+	for i := 0; i < numGlows; i++ {
+		gx := rng.Intn(w)
+		gy := rng.Intn(h)
+		existing := r.getPixel(img, gx, gy)
+		if existing.A > 0 {
+			glowC := r.lighten(existing, 70)
+			r.setPixel(img, gx, gy, glowC)
 		}
 	}
 }

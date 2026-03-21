@@ -105,79 +105,102 @@ func (s *SkillMutationSystem) applySpellSlotMutations(entity *Entity, mutComp *S
 // GenerateMutation creates a random mutation with the given seed and parameters.
 func (s *SkillMutationSystem) GenerateMutation(seed int64, rarity MutationRarity, playerLevel int) *SkillMutation {
 	rng := rand.New(rand.NewSource(seed))
+	mutationType := s.selectMutationType(rng, rarity)
+	return s.generateMutationValues(rng, mutationType, rarity, playerLevel, seed)
+}
 
-	// Select mutation type based on rarity - rarer mutations unlock better types
-	var mutationType MutationType
+// selectMutationType determines the mutation type based on rarity and random roll.
+func (s *SkillMutationSystem) selectMutationType(rng *rand.Rand, rarity MutationRarity) MutationType {
 	typeRoll := rng.Intn(100)
 
 	switch rarity {
 	case MutationRarityCommon:
-		// Common: mostly basic stat mods
-		if typeRoll < 40 {
-			mutationType = MutationDamage
-		} else if typeRoll < 70 {
-			mutationType = MutationCooldown
-		} else {
-			mutationType = MutationManaCost
-		}
+		return s.selectCommonMutation(typeRoll)
 	case MutationRarityUncommon:
-		// Uncommon: add range/area options
-		if typeRoll < 25 {
-			mutationType = MutationDamage
-		} else if typeRoll < 45 {
-			mutationType = MutationCooldown
-		} else if typeRoll < 60 {
-			mutationType = MutationRange
-		} else if typeRoll < 75 {
-			mutationType = MutationArea
-		} else {
-			mutationType = MutationDuration
-		}
+		return s.selectUncommonMutation(typeRoll)
 	case MutationRarityRare:
-		// Rare: add special effects
-		if typeRoll < 20 {
-			mutationType = MutationDamage
-		} else if typeRoll < 35 {
-			mutationType = MutationChain
-		} else if typeRoll < 50 {
-			mutationType = MutationLifesteal
-		} else if typeRoll < 65 {
-			mutationType = MutationElemental
-		} else if typeRoll < 80 {
-			mutationType = MutationPierce
-		} else {
-			mutationType = MutationRange
-		}
+		return s.selectRareMutation(typeRoll)
 	case MutationRarityEpic:
-		// Epic: powerful effects
-		if typeRoll < 25 {
-			mutationType = MutationChain
-		} else if typeRoll < 45 {
-			mutationType = MutationLifesteal
-		} else if typeRoll < 60 {
-			mutationType = MutationSplit
-		} else if typeRoll < 75 {
-			mutationType = MutationEcho
-		} else {
-			mutationType = MutationPierce
-		}
+		return s.selectEpicMutation(typeRoll)
 	case MutationRarityLegendary:
-		// Legendary: best effects
-		if typeRoll < 30 {
-			mutationType = MutationEcho
-		} else if typeRoll < 55 {
-			mutationType = MutationSplit
-		} else if typeRoll < 75 {
-			mutationType = MutationChain
-		} else {
-			mutationType = MutationLifesteal
-		}
+		return s.selectLegendaryMutation(typeRoll)
+	default:
+		return MutationDamage
 	}
+}
 
-	// Generate values based on type and rarity
-	mutation := s.generateMutationValues(rng, mutationType, rarity, playerLevel, seed)
+// selectCommonMutation returns mutation type for common rarity.
+func (s *SkillMutationSystem) selectCommonMutation(roll int) MutationType {
+	if roll < 40 {
+		return MutationDamage
+	} else if roll < 70 {
+		return MutationCooldown
+	}
+	return MutationManaCost
+}
 
-	return mutation
+// selectUncommonMutation returns mutation type for uncommon rarity.
+func (s *SkillMutationSystem) selectUncommonMutation(roll int) MutationType {
+	switch {
+	case roll < 25:
+		return MutationDamage
+	case roll < 45:
+		return MutationCooldown
+	case roll < 60:
+		return MutationRange
+	case roll < 75:
+		return MutationArea
+	default:
+		return MutationDuration
+	}
+}
+
+// selectRareMutation returns mutation type for rare rarity.
+func (s *SkillMutationSystem) selectRareMutation(roll int) MutationType {
+	switch {
+	case roll < 20:
+		return MutationDamage
+	case roll < 35:
+		return MutationChain
+	case roll < 50:
+		return MutationLifesteal
+	case roll < 65:
+		return MutationElemental
+	case roll < 80:
+		return MutationPierce
+	default:
+		return MutationRange
+	}
+}
+
+// selectEpicMutation returns mutation type for epic rarity.
+func (s *SkillMutationSystem) selectEpicMutation(roll int) MutationType {
+	switch {
+	case roll < 25:
+		return MutationChain
+	case roll < 45:
+		return MutationLifesteal
+	case roll < 60:
+		return MutationSplit
+	case roll < 75:
+		return MutationEcho
+	default:
+		return MutationPierce
+	}
+}
+
+// selectLegendaryMutation returns mutation type for legendary rarity.
+func (s *SkillMutationSystem) selectLegendaryMutation(roll int) MutationType {
+	switch {
+	case roll < 30:
+		return MutationEcho
+	case roll < 55:
+		return MutationSplit
+	case roll < 75:
+		return MutationChain
+	default:
+		return MutationLifesteal
+	}
 }
 
 // generateMutationValues creates the specific values for a mutation.

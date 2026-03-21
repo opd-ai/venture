@@ -1,0 +1,18 @@
+{
+  "id": "fast-sieges",
+  "name": "Fast Sieges",
+  "version": "1.0.0",
+  "author": "Venture Team",
+  "description": "Reduces capture time and war costs for faster territory conquest",
+  "type": "rule",
+  "rules": {
+    "territory.capture_time_seconds": 30,
+    "territory.defender_time_bonus_seconds": 15,
+    "territory.war_declaration_cost": 500,
+    "territory.peace_declaration_cost": 250,
+    "territory.war_duration_days": 3,
+    "territory.resource_bonus_percent": 15,
+    "territory.xp_bonus_percent": 10
+  },
+  "enabled": false
+}

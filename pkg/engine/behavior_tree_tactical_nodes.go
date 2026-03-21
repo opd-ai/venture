@@ -11,6 +11,63 @@ import (
 )
 
 // ==============================================================================
+// HELPER FUNCTIONS - Common patterns for behavior tree nodes
+// ==============================================================================
+
+// TargetPositions holds the extracted position data for entity and target.
+type TargetPositions struct {
+	MyPos     *PositionComponent
+	TargetPos *PositionComponent
+	Target    *Entity
+	Dist      float64
+	Dx, Dy    float64
+}
+
+// GetTargetPositions extracts target from blackboard and returns both positions.
+// Returns nil if target or positions are unavailable.
+func GetTargetPositions(entity *Entity, blackboard *Blackboard) *TargetPositions {
+	targetVal, ok := blackboard.Get("target")
+	if !ok || targetVal == nil {
+		return nil
+	}
+	targetEntity, ok := targetVal.(*Entity)
+	if !ok || targetEntity == nil {
+		return nil
+	}
+
+	myPos, ok := entity.GetComponent("position")
+	if !ok {
+		return nil
+	}
+	myPosComp, ok := myPos.(*PositionComponent)
+	if !ok {
+		return nil
+	}
+
+	targetPos, ok := targetEntity.GetComponent("position")
+	if !ok {
+		return nil
+	}
+	targetPosComp, ok := targetPos.(*PositionComponent)
+	if !ok {
+		return nil
+	}
+
+	dx := targetPosComp.X - myPosComp.X
+	dy := targetPosComp.Y - myPosComp.Y
+	dist := math.Sqrt(dx*dx + dy*dy)
+
+	return &TargetPositions{
+		MyPos:     myPosComp,
+		TargetPos: targetPosComp,
+		Target:    targetEntity,
+		Dist:      dist,
+		Dx:        dx,
+		Dy:        dy,
+	}
+}
+
+// ==============================================================================
 // CONDITION NODES - Check entity state or world conditions
 // ==============================================================================
 
@@ -101,40 +158,13 @@ func NewInRangeNode(name string, distance float64) *InRangeNode {
 
 // Tick checks if target is within range.
 func (n *InRangeNode) Tick(entity *Entity, blackboard *Blackboard, deltaTime float64) NodeStatus {
-	targetVal, ok := blackboard.Get("target")
-	if !ok || targetVal == nil {
-		return NodeFailure
-	}
-	targetEntity, ok := targetVal.(*Entity)
-	if !ok || targetEntity == nil {
+	tp := GetTargetPositions(entity, blackboard)
+	if tp == nil {
 		return NodeFailure
 	}
 
-	// Get positions
-	myPos, ok := entity.GetComponent("position")
-	if !ok {
-		return NodeFailure
-	}
-	myPosComp, ok := myPos.(*PositionComponent)
-	if !ok {
-		return NodeFailure
-	}
-
-	targetPos, ok := targetEntity.GetComponent("position")
-	if !ok {
-		return NodeFailure
-	}
-	targetPosComp, ok := targetPos.(*PositionComponent)
-	if !ok {
-		return NodeFailure
-	}
-
-	dx := targetPosComp.X - myPosComp.X
-	dy := targetPosComp.Y - myPosComp.Y
-	dist := math.Sqrt(dx*dx + dy*dy)
-
-	if dist <= n.distance {
-		blackboard.Set("target_distance", dist)
+	if tp.Dist <= n.distance {
+		blackboard.Set("target_distance", tp.Dist)
 		return NodeSuccess
 	}
 	return NodeFailure
@@ -268,59 +298,31 @@ func NewMoveToTargetNode(name string, speed, stopDist float64) *MoveToTargetNode
 
 // Tick moves entity toward target each frame.
 func (n *MoveToTargetNode) Tick(entity *Entity, blackboard *Blackboard, deltaTime float64) NodeStatus {
-	targetVal, ok := blackboard.Get("target")
-	if !ok || targetVal == nil {
+	tp := GetTargetPositions(entity, blackboard)
+	if tp == nil {
 		return NodeFailure
 	}
-	targetEntity, ok := targetVal.(*Entity)
-	if !ok || targetEntity == nil {
-		return NodeFailure
-	}
-
-	// Get positions
-	myPos, ok := entity.GetComponent("position")
-	if !ok {
-		return NodeFailure
-	}
-	myPosComp, ok := myPos.(*PositionComponent)
-	if !ok {
-		return NodeFailure
-	}
-
-	targetPos, ok := targetEntity.GetComponent("position")
-	if !ok {
-		return NodeFailure
-	}
-	targetPosComp, ok := targetPos.(*PositionComponent)
-	if !ok {
-		return NodeFailure
-	}
-
-	// Calculate direction to target
-	dx := targetPosComp.X - myPosComp.X
-	dy := targetPosComp.Y - myPosComp.Y
-	dist := math.Sqrt(dx*dx + dy*dy)
 
 	// Check if close enough
-	if dist <= n.stopDist {
+	if tp.Dist <= n.stopDist {
 		n.timeMoving = 0
 		return NodeSuccess
 	}
 
 	// Normalize and move
-	if dist > 0 {
-		nx := dx / dist
-		ny := dy / dist
-		myPosComp.X += nx * n.speed * deltaTime
-		myPosComp.Y += ny * n.speed * deltaTime
+	if tp.Dist > 0 {
+		nx := tp.Dx / tp.Dist
+		ny := tp.Dy / tp.Dist
+		tp.MyPos.X += nx * n.speed * deltaTime
+		tp.MyPos.Y += ny * n.speed * deltaTime
 	}
 
 	// Update velocity component if present for animation
 	if velComp, ok := entity.GetComponent("velocity"); ok {
 		if vel, ok := velComp.(*VelocityComponent); ok {
-			if dist > 0 {
-				vel.VX = dx / dist * n.speed
-				vel.VY = dy / dist * n.speed
+			if tp.Dist > 0 {
+				vel.VX = tp.Dx / tp.Dist * n.speed
+				vel.VY = tp.Dy / tp.Dist * n.speed
 			}
 		}
 	}
@@ -358,56 +360,28 @@ func NewFleeFromTargetNode(name string, speed, safeDist float64) *FleeFromTarget
 
 // Tick moves entity away from target each frame.
 func (n *FleeFromTargetNode) Tick(entity *Entity, blackboard *Blackboard, deltaTime float64) NodeStatus {
-	targetVal, ok := blackboard.Get("target")
-	if !ok || targetVal == nil {
-		return NodeFailure
-	}
-	targetEntity, ok := targetVal.(*Entity)
-	if !ok || targetEntity == nil {
+	tp := GetTargetPositions(entity, blackboard)
+	if tp == nil {
 		return NodeFailure
 	}
 
-	// Get positions
-	myPos, ok := entity.GetComponent("position")
-	if !ok {
-		return NodeFailure
-	}
-	myPosComp, ok := myPos.(*PositionComponent)
-	if !ok {
-		return NodeFailure
-	}
-
-	targetPos, ok := targetEntity.GetComponent("position")
-	if !ok {
-		return NodeFailure
-	}
-	targetPosComp, ok := targetPos.(*PositionComponent)
-	if !ok {
-		return NodeFailure
-	}
-
-	// Calculate direction away from target
-	dx := myPosComp.X - targetPosComp.X
-	dy := myPosComp.Y - targetPosComp.Y
-	dist := math.Sqrt(dx*dx + dy*dy)
-
-	// Check if far enough
-	if dist >= n.safeDist {
+	// Check if far enough (note: for fleeing, we want distance AWAY from target)
+	if tp.Dist >= n.safeDist {
 		n.timeMoving = 0
 		return NodeSuccess
 	}
 
-	// Normalize and move away
-	if dist > 0 {
-		nx := dx / dist
-		ny := dy / dist
-		myPosComp.X += nx * n.speed * deltaTime
-		myPosComp.Y += ny * n.speed * deltaTime
+	// Normalize and move away (reverse direction)
+	if tp.Dist > 0 {
+		nx := -tp.Dx / tp.Dist
+		ny := -tp.Dy / tp.Dist
+		tp.MyPos.X += nx * n.speed * deltaTime
+		tp.MyPos.Y += ny * n.speed * deltaTime
 	} else {
 		// If exactly on top, pick random direction
 		angle := blackboard.GetRNG().Float64() * 2 * math.Pi
-		myPosComp.X += math.Cos(angle) * n.speed * deltaTime
-		myPosComp.Y += math.Sin(angle) * n.speed * deltaTime
+		tp.MyPos.X += math.Cos(angle) * n.speed * deltaTime
+		tp.MyPos.Y += math.Sin(angle) * n.speed * deltaTime
 	}
 
 	n.timeMoving += deltaTime
@@ -775,44 +749,17 @@ func (n *AttackTargetNode) Tick(entity *Entity, blackboard *Blackboard, deltaTim
 		return NodeRunning
 	}
 
-	targetVal, ok := blackboard.Get("target")
-	if !ok || targetVal == nil {
-		return NodeFailure
-	}
-	targetEntity, ok := targetVal.(*Entity)
-	if !ok || targetEntity == nil {
+	tp := GetTargetPositions(entity, blackboard)
+	if tp == nil {
 		return NodeFailure
 	}
 
-	// Check distance
-	myPos, ok := entity.GetComponent("position")
-	if !ok {
-		return NodeFailure
-	}
-	myPosComp, ok := myPos.(*PositionComponent)
-	if !ok {
-		return NodeFailure
-	}
-
-	targetPos, ok := targetEntity.GetComponent("position")
-	if !ok {
-		return NodeFailure
-	}
-	targetPosComp, ok := targetPos.(*PositionComponent)
-	if !ok {
-		return NodeFailure
-	}
-
-	dx := targetPosComp.X - myPosComp.X
-	dy := targetPosComp.Y - myPosComp.Y
-	dist := math.Sqrt(dx*dx + dy*dy)
-
-	if dist > n.attackRange {
+	if tp.Dist > n.attackRange {
 		return NodeFailure // Out of range
 	}
 
 	// Deal damage to target
-	targetHealth, ok := targetEntity.GetComponent("health")
+	targetHealth, ok := tp.Target.GetComponent("health")
 	if !ok {
 		return NodeFailure
 	}
@@ -829,7 +776,7 @@ func (n *AttackTargetNode) Tick(entity *Entity, blackboard *Blackboard, deltaTim
 	// Set attack event in blackboard for visual feedback
 	blackboard.Set("last_attack", map[string]interface{}{
 		"attacker":    entity.ID,
-		"target":      targetEntity.ID,
+		"target":      tp.Target.ID,
 		"damage":      n.damage,
 		"attack_type": n.attackType,
 	})

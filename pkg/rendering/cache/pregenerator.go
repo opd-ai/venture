@@ -82,6 +82,43 @@ func (p *PreGenerator) QueueBatch(requests []PreGenRequest) {
 	}
 }
 
+// processRequest generates a single sprite and updates stats.
+// Returns true if sprite was generated, false if skipped or failed.
+func (p *PreGenerator) processRequest(req PreGenRequest) bool {
+	// Double-check cache (another goroutine might have generated it)
+	if p.cache.Contains(req.Key) {
+		p.mu.Lock()
+		p.stats.CacheHits++
+		p.mu.Unlock()
+		return false
+	}
+
+	// Generate sprite
+	img, err := req.Generator()
+	if err != nil {
+		p.mu.Lock()
+		p.stats.RequestsFailed++
+		failCount := p.stats.RequestsFailed
+		p.mu.Unlock()
+		log.WithFields(log.Fields{
+			"system_name":  "pregenerator",
+			"cache_key":    string(req.Key),
+			"failed_count": failCount,
+			"error":        err.Error(),
+		}).Warn("sprite pre-generation failed")
+		return false
+	}
+
+	// Store in cache
+	p.cache.Put(req.Key, img)
+
+	p.mu.Lock()
+	p.stats.RequestsComplete++
+	p.mu.Unlock()
+
+	return true
+}
+
 // Generate processes all queued requests.
 // Returns number of sprites generated.
 func (p *PreGenerator) Generate() int {
@@ -91,42 +128,11 @@ func (p *PreGenerator) Generate() int {
 	p.mu.Unlock()
 
 	generated := 0
-
 	for _, req := range queue {
-		// Double-check cache (another goroutine might have generated it)
-		if p.cache.Contains(req.Key) {
-			p.mu.Lock()
-			p.stats.CacheHits++
-			p.mu.Unlock()
-			continue
+		if p.processRequest(req) {
+			generated++
 		}
-
-		// Generate sprite
-		img, err := req.Generator()
-		if err != nil {
-			p.mu.Lock()
-			p.stats.RequestsFailed++
-			failCount := p.stats.RequestsFailed
-			p.mu.Unlock()
-			log.WithFields(log.Fields{
-				"system_name":  "pregenerator",
-				"cache_key":    string(req.Key),
-				"failed_count": failCount,
-				"error":        err.Error(),
-			}).Warn("sprite pre-generation failed")
-			continue
-		}
-
-		// Store in cache
-		p.cache.Put(req.Key, img)
-
-		p.mu.Lock()
-		p.stats.RequestsComplete++
-		p.mu.Unlock()
-
-		generated++
 	}
-
 	return generated
 }
 
@@ -151,7 +157,6 @@ func (p *PreGenerator) GenerateWithContext(ctx context.Context) int {
 	p.mu.Unlock()
 
 	generated := 0
-
 	for _, req := range queue {
 		select {
 		case <-ctx.Done():
@@ -159,37 +164,10 @@ func (p *PreGenerator) GenerateWithContext(ctx context.Context) int {
 		default:
 		}
 
-		if p.cache.Contains(req.Key) {
-			p.mu.Lock()
-			p.stats.CacheHits++
-			p.mu.Unlock()
-			continue
+		if p.processRequest(req) {
+			generated++
 		}
-
-		img, err := req.Generator()
-		if err != nil {
-			p.mu.Lock()
-			p.stats.RequestsFailed++
-			failCount := p.stats.RequestsFailed
-			p.mu.Unlock()
-			log.WithFields(log.Fields{
-				"system_name":  "pregenerator",
-				"cache_key":    string(req.Key),
-				"failed_count": failCount,
-				"error":        err.Error(),
-			}).Warn("sprite pre-generation failed")
-			continue
-		}
-
-		p.cache.Put(req.Key, img)
-
-		p.mu.Lock()
-		p.stats.RequestsComplete++
-		p.mu.Unlock()
-
-		generated++
 	}
-
 	return generated
 }
 

@@ -104,6 +104,11 @@ func (g *QuestGenerator) selectTemplates(genreID string) ([]QuestTemplate, error
 		templates = append(templates, GetCyberpunkCollectTemplates()...)
 		templates = append(templates, GetCyberpunkBossTemplates()...)
 		templates = append(templates, GetCyberpunkExploreTemplates()...)
+	case "postapoc":
+		templates = append(templates, GetPostApocKillTemplates()...)
+		templates = append(templates, GetPostApocCollectTemplates()...)
+		templates = append(templates, GetPostApocBossTemplates()...)
+		templates = append(templates, GetPostApocExploreTemplates()...)
 	case "fantasy":
 		fallthrough
 	default:

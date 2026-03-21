@@ -283,6 +283,12 @@ type SystemInitResult struct {
 // The 44th system (SpatialPartitionSystem) must be initialized separately after
 // terrain generation using InitializeSpatialPartitionSystem().
 //
+// COMPLEXITY JUSTIFICATION: High cyclomatic complexity (19) comes from validating
+// multiple required config fields at function start. The function body is actually
+// linear—sequentially creating and registering 66 systems with no nested conditionals.
+// The 1884-line length is justified by keeping all system initialization in one location
+// for discoverability and consistent initialization order.
+//
 // Returns: SystemInitResult containing references to systems that may need
 // further configuration (callbacks, connections, etc.).
 //

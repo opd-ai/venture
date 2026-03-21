@@ -83,3 +83,53 @@ func TestTerritoryCoords(t *testing.T) {
 		t.Errorf("expected ChunkZ 20, got %d", coords.ChunkZ)
 	}
 }
+
+func TestDefaultTerritoryConfig(t *testing.T) {
+	config := DefaultTerritoryConfig()
+
+	if config == nil {
+		t.Fatal("DefaultTerritoryConfig returned nil")
+	}
+
+	// Verify key values match constants
+	if config.BaseCaptureTime != BaseCaptureTime {
+		t.Errorf("BaseCaptureTime mismatch: got %d, want %d", config.BaseCaptureTime, BaseCaptureTime)
+	}
+	if config.DefenderTimeBonus != DefenderTimeBonus {
+		t.Errorf("DefenderTimeBonus mismatch: got %d, want %d", config.DefenderTimeBonus, DefenderTimeBonus)
+	}
+	if config.BaseResourceBonus != BaseResourceBonus {
+		t.Errorf("BaseResourceBonus mismatch: got %f, want %f", config.BaseResourceBonus, BaseResourceBonus)
+	}
+	if config.BaseXPBonus != BaseXPBonus {
+		t.Errorf("BaseXPBonus mismatch: got %f, want %f", config.BaseXPBonus, BaseXPBonus)
+	}
+	if config.WallBaseHP != WallBaseHP {
+		t.Errorf("WallBaseHP mismatch: got %f, want %f", config.WallBaseHP, WallBaseHP)
+	}
+	if config.GuildHallMaxHP != 10000.0 {
+		t.Errorf("GuildHallMaxHP mismatch: got %f, want %f", config.GuildHallMaxHP, 10000.0)
+	}
+}
+
+func TestTerritoryConfig_CustomValues(t *testing.T) {
+	config := &TerritoryConfig{
+		BaseCaptureTime:   120, // Double capture time
+		DefenderTimeBonus: 60,  // Double defender bonus
+		BaseResourceBonus: 0.20,
+		BaseXPBonus:       0.10,
+		WallBaseHP:        2000.0,
+		TowerBaseHP:       1000.0,
+		GuardBaseHP:       1000.0,
+		TowerDamage:       200.0,
+		GuardLevel:        50,
+	}
+
+	// Verify custom values are stored correctly
+	if config.BaseCaptureTime != 120 {
+		t.Errorf("expected BaseCaptureTime 120, got %d", config.BaseCaptureTime)
+	}
+	if config.BaseResourceBonus != 0.20 {
+		t.Errorf("expected BaseResourceBonus 0.20, got %f", config.BaseResourceBonus)
+	}
+}

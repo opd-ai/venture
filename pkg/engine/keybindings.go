@@ -215,6 +215,11 @@ func (r *KeyBindingRegistry) ResetToDefaults() {
 
 // KeyName returns a human-readable name for a keyboard key.
 // Handles special keys and provides UI-friendly labels.
+//
+// COMPLEXITY JUSTIFICATION: High cyclomatic complexity (61) is intentional—this is
+// an exhaustive lookup table mapping every Ebiten keyboard constant to a display name.
+// The switch statement provides type safety and compile-time exhaustiveness checking.
+// Refactoring to a map would lose these benefits without reducing actual complexity.
 func KeyName(key ebiten.Key) string {
 	switch key {
 	// Letter keys

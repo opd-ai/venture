@@ -72,58 +72,93 @@ func RunScenarioWithOptions(ctx context.Context, scenario *TestScenario, sim *Ne
 		Passed:    true,
 	}
 
-	// Validate inputs
-	if scenario == nil {
+	if err := validateScenarioInputs(scenario, sim, collector); err != nil {
 		result.Passed = false
-		result.FailureReason = "scenario is nil"
+		result.FailureReason = err.Error()
 		return result
+	}
+
+	if err := initializeScenario(scenario, sim, collector, opts); err != nil {
+		result.Passed = false
+		result.FailureReason = err.Error()
+		return result
+	}
+
+	duration, tickInterval := calculateScenarioTiming(scenario, opts)
+	execCtx, cancel := context.WithTimeout(ctx, duration)
+	defer cancel()
+
+	runScenarioLoop(execCtx, sim, collector, opts, scenario, tickInterval)
+
+	result.Stats = collector.GetStats()
+	evaluateResult(result, scenario, opts.Logger)
+
+	return result
+}
+
+// validateScenarioInputs checks that all required inputs are non-nil.
+func validateScenarioInputs(scenario *TestScenario, sim *NetworkSimulator, collector *MetricsCollector) error {
+	if scenario == nil {
+		return errScenarioNil
 	}
 	if sim == nil {
-		result.Passed = false
-		result.FailureReason = "simulator is nil"
-		return result
+		return errSimulatorNil
 	}
 	if collector == nil {
-		result.Passed = false
-		result.FailureReason = "collector is nil"
-		return result
+		return errCollectorNil
 	}
+	return nil
+}
 
-	// Configure simulator with scenario settings
+// Sentinel errors for input validation.
+var (
+	errScenarioNil  = scenarioError("scenario is nil")
+	errSimulatorNil = scenarioError("simulator is nil")
+	errCollectorNil = scenarioError("collector is nil")
+)
+
+type scenarioError string
+
+func (e scenarioError) Error() string { return string(e) }
+
+// initializeScenario configures the simulator and resets the collector.
+func initializeScenario(scenario *TestScenario, sim *NetworkSimulator, collector *MetricsCollector, opts ScenarioOptions) error {
 	if err := sim.SetConfig(scenario.Config); err != nil {
-		result.Passed = false
-		result.FailureReason = "failed to configure simulator: " + err.Error()
-		return result
+		return scenarioError("failed to configure simulator: " + err.Error())
 	}
-
-	// Reset collector for fresh metrics
 	collector.Reset()
+	logScenarioStart(scenario, opts.Logger)
+	return nil
+}
 
-	// Log scenario start
-	if opts.Logger != nil {
-		opts.Logger.WithFields(logrus.Fields{
-			"scenario":    scenario.Name,
-			"latency":     scenario.Config.Latency,
-			"packet_loss": scenario.Config.PacketLossRate,
-			"duration":    scenario.Duration,
-		}).Info("Starting scenario execution")
+// logScenarioStart logs the start of scenario execution.
+func logScenarioStart(scenario *TestScenario, logger *logrus.Logger) {
+	if logger == nil {
+		return
 	}
+	logger.WithFields(logrus.Fields{
+		"scenario":    scenario.Name,
+		"latency":     scenario.Config.Latency,
+		"packet_loss": scenario.Config.PacketLossRate,
+		"duration":    scenario.Duration,
+	}).Info("Starting scenario execution")
+}
 
-	// Calculate timing
+// calculateScenarioTiming returns the duration and tick interval for the scenario.
+func calculateScenarioTiming(scenario *TestScenario, opts ScenarioOptions) (time.Duration, time.Duration) {
 	duration := scenario.Duration
 	if duration == 0 {
-		duration = 5 * time.Second // Default duration for testing
+		duration = 5 * time.Second
 	}
 	tickInterval := time.Second / time.Duration(opts.PacketsPerSecond)
 	if tickInterval < time.Millisecond {
 		tickInterval = time.Millisecond
 	}
+	return duration, tickInterval
+}
 
-	// Create cancellable context with timeout
-	execCtx, cancel := context.WithTimeout(ctx, duration)
-	defer cancel()
-
-	// Run scenario execution loop
+// runScenarioLoop sends packets and collects metrics until context expires.
+func runScenarioLoop(ctx context.Context, sim *NetworkSimulator, collector *MetricsCollector, opts ScenarioOptions, scenario *TestScenario, tickInterval time.Duration) {
 	ticker := time.NewTicker(tickInterval)
 	defer ticker.Stop()
 
@@ -131,45 +166,33 @@ func RunScenarioWithOptions(ctx context.Context, scenario *TestScenario, sim *Ne
 
 	for {
 		select {
-		case <-execCtx.Done():
-			// Duration complete or context cancelled
-			goto evaluate
+		case <-ctx.Done():
+			return
 		case <-ticker.C:
-			// Send synthetic packet
-			err := sim.Send(packetData)
-			if err == ErrPacketDropped {
-				collector.RecordPacketLoss()
-				if opts.SimulateDesyncs {
-					// Simulate desync on high packet loss
-					if sim.GetConfig().PacketLossRate > 0.15 {
-						collector.RecordDesync()
-					}
-				}
-			} else if err == ErrBandwidthExceeded {
-				// Bandwidth exceeded - record but don't count as loss
-				collector.RecordPacketSent(opts.PacketSize)
-			} else if err == nil {
-				collector.RecordPacketSent(opts.PacketSize)
-				collector.RecordLatency(scenario.Config.Latency)
-
-				// Simulate predictions
-				if opts.SimulatePredictions {
-					// Higher latency = higher misprediction rate
-					mispredicted := scenario.Config.Latency > 500*time.Millisecond
-					collector.RecordPrediction(mispredicted)
-				}
-			}
+			processPacketSend(sim, collector, opts, scenario, packetData)
 		}
 	}
+}
 
-evaluate:
-	// Collect final stats
-	result.Stats = collector.GetStats()
-
-	// Evaluate acceptance criteria
-	evaluateResult(result, scenario, opts.Logger)
-
-	return result
+// processPacketSend handles sending a packet and recording the appropriate metric.
+func processPacketSend(sim *NetworkSimulator, collector *MetricsCollector, opts ScenarioOptions, scenario *TestScenario, packetData []byte) {
+	err := sim.Send(packetData)
+	switch err {
+	case ErrPacketDropped:
+		collector.RecordPacketLoss()
+		if opts.SimulateDesyncs && sim.GetConfig().PacketLossRate > 0.15 {
+			collector.RecordDesync()
+		}
+	case ErrBandwidthExceeded:
+		collector.RecordPacketSent(opts.PacketSize)
+	case nil:
+		collector.RecordPacketSent(opts.PacketSize)
+		collector.RecordLatency(scenario.Config.Latency)
+		if opts.SimulatePredictions {
+			mispredicted := scenario.Config.Latency > 500*time.Millisecond
+			collector.RecordPrediction(mispredicted)
+		}
+	}
 }
 
 // evaluateResult checks the collected stats against scenario acceptance criteria.

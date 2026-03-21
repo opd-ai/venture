@@ -215,6 +215,57 @@ func TestTerritorySystem_GetManager(t *testing.T) {
 	}
 }
 
+func TestTerritorySystem_GetBonusesForGuild(t *testing.T) {
+	manager := territory.NewManager()
+	sys := NewTerritorySystem(manager, nil)
+
+	// Test with empty guild ID
+	resourceBonus, xpBonus := sys.GetBonusesForGuild("")
+	if resourceBonus != 0 || xpBonus != 0 {
+		t.Errorf("expected no bonuses for empty guild, got resource=%f xp=%f", resourceBonus, xpBonus)
+	}
+
+	// Test with guild that has no territories
+	resourceBonus, xpBonus = sys.GetBonusesForGuild("guild_a")
+	if resourceBonus != 0 || xpBonus != 0 {
+		t.Errorf("expected no bonuses for guild with no territories, got resource=%f xp=%f", resourceBonus, xpBonus)
+	}
+
+	// Create territory and assign to guild
+	terr, err := sys.EnsureTerritoryExists(250, 250)
+	if err != nil {
+		t.Fatalf("failed to create territory: %v", err)
+	}
+	err = manager.AssignOwner(terr.ID, "guild_a")
+	if err != nil {
+		t.Fatalf("failed to assign owner: %v", err)
+	}
+
+	// Now guild_a should have bonuses
+	resourceBonus, xpBonus = sys.GetBonusesForGuild("guild_a")
+	if resourceBonus == 0 || xpBonus == 0 {
+		t.Errorf("expected bonuses for guild with territory, got resource=%f xp=%f", resourceBonus, xpBonus)
+	}
+
+	// Guild B still has no territories
+	resourceBonus, xpBonus = sys.GetBonusesForGuild("guild_b")
+	if resourceBonus != 0 || xpBonus != 0 {
+		t.Errorf("expected no bonuses for guild_b, got resource=%f xp=%f", resourceBonus, xpBonus)
+	}
+}
+
+// TestTerritorySystem_ImplementsBonusProvider verifies TerritorySystem implements TerritoryBonusProvider.
+func TestTerritorySystem_ImplementsBonusProvider(t *testing.T) {
+	manager := territory.NewManager()
+	sys := NewTerritorySystem(manager, nil)
+
+	// This should compile if TerritorySystem implements TerritoryBonusProvider
+	var provider TerritoryBonusProvider = sys
+	if provider == nil {
+		t.Error("TerritorySystem should implement TerritoryBonusProvider")
+	}
+}
+
 // Helper function to create entity at position with guild
 func createEntityAtPosition(x, y float64, guildID string) *Entity {
 	entity := &Entity{

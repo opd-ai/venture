@@ -640,3 +640,92 @@ func GetCyberpunkExploreTemplates() []QuestTemplate {
 		},
 	}
 }
+
+// GetPostApocKillTemplates returns kill quest templates for post-apocalyptic genre.
+func GetPostApocKillTemplates() []QuestTemplate {
+	return []QuestTemplate{
+		{
+			BaseType:     TypeKill,
+			NamePrefixes: []string{"Clear", "Purge", "Eliminate", "Scour", "Hunt"},
+			NameSuffixes: []string{"the Mutants", "the Raiders", "the Ferals", "the Scavengers", "the Wasteland Horrors"},
+			DescTemplates: []string{
+				"A pack of %s has been spotted near the settlement. Kill %d of them before they attack.",
+				"The %s have grown too bold. Take out %d to secure the perimeter.",
+				"Survivors report %s activity in the ruins. Eliminate %d to make the area safe.",
+			},
+			Tags:             []string{"combat", "wasteland"},
+			TargetTypes:      []string{"Mutant", "Raider", "Feral Ghoul", "Scavenger Gang", "Wasteland Beast", "Irradiated Creature"},
+			RequiredRange:    [2]int{4, 18},
+			XPRewardRange:    [2]int{50, 200},
+			GoldRewardRange:  [2]int{10, 50},
+			ItemRewardChance: 0.3,
+		},
+	}
+}
+
+// GetPostApocCollectTemplates returns collect quest templates for post-apocalyptic genre.
+func GetPostApocCollectTemplates() []QuestTemplate {
+	return []QuestTemplate{
+		{
+			BaseType:     TypeCollect,
+			NamePrefixes: []string{"Scavenge", "Salvage", "Recover", "Retrieve", "Stockpile"},
+			NameSuffixes: []string{"Clean Water", "Medical Supplies", "Fuel Canisters", "Pre-War Tech", "Food Rations"},
+			DescTemplates: []string{
+				"The settlement is running low on %s. Scavenge %d units from the wastes.",
+				"A trader needs %d %s for the caravan. Good caps for fast work.",
+				"Rumor has it there's %s in the old ruins. Bring back %d for the community.",
+			},
+			Tags:             []string{"gather", "survival"},
+			TargetTypes:      []string{"Clean Water Jug", "Med Kit", "Fuel Canister", "Pre-War Tech Component", "Food Ration", "Radiation Medicine"},
+			RequiredRange:    [2]int{3, 14},
+			XPRewardRange:    [2]int{35, 150},
+			GoldRewardRange:  [2]int{15, 65},
+			ItemRewardChance: 0.35,
+		},
+	}
+}
+
+// GetPostApocBossTemplates returns boss quest templates for post-apocalyptic genre.
+func GetPostApocBossTemplates() []QuestTemplate {
+	return []QuestTemplate{
+		{
+			BaseType:     TypeBoss,
+			NamePrefixes: []string{"Overthrow", "Dethrone", "End", "Destroy", "Topple"},
+			NameSuffixes: []string{"the Warlord", "the Mutant Alpha", "the Raider King", "the Wasteland Tyrant", "the Deathclaw Matriarch"},
+			DescTemplates: []string{
+				"The settlements will never be safe while %s lives. Take them down.",
+				"%s has terrorized the wastes long enough. It's time to end their reign.",
+				"A coalition of survivors has put a bounty on %s. The reward is substantial.",
+			},
+			Tags:             []string{"boss", "wasteland", "liberation"},
+			TargetTypes:      []string{"Wasteland Warlord", "Mutant Alpha", "Raider King", "Ghoul Overlord", "Deathclaw Matriarch"},
+			RequiredRange:    [2]int{1, 1},
+			XPRewardRange:    [2]int{450, 1800},
+			GoldRewardRange:  [2]int{200, 1000},
+			ItemRewardChance: 0.85,
+			SkillPointChance: 0.45,
+		},
+	}
+}
+
+// GetPostApocExploreTemplates returns explore quest templates for post-apocalyptic genre.
+func GetPostApocExploreTemplates() []QuestTemplate {
+	return []QuestTemplate{
+		{
+			BaseType:     TypeExplore,
+			NamePrefixes: []string{"Scout", "Survey", "Map", "Investigate", "Reclaim"},
+			NameSuffixes: []string{"the Bunker", "the Ruined City", "the Fallout Zone", "the Pre-War Facility", "the Dead Zone"},
+			DescTemplates: []string{
+				"Scouts report an unexplored %s. Map the area and report any threats.",
+				"The %s may contain valuable salvage. Explore and mark points of interest.",
+				"A survivor claims to have seen lights in %s. Investigate the location.",
+			},
+			Tags:             []string{"exploration", "salvage"},
+			TargetTypes:      []string{"Abandoned Bunker", "Ruined City Block", "Fallout Zone", "Pre-War Military Base", "Collapsed Vault"},
+			RequiredRange:    [2]int{1, 1},
+			XPRewardRange:    [2]int{40, 175},
+			GoldRewardRange:  [2]int{20, 80},
+			ItemRewardChance: 0.45,
+		},
+	}
+}

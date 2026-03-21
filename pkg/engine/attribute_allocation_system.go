@@ -202,64 +202,101 @@ func (s *AttributeAllocationSystem) applyAttributeBonuses(entity *Entity, attrCo
 
 // removeAppliedBonuses removes previously applied attribute bonuses from stats.
 func (s *AttributeAllocationSystem) removeAppliedBonuses(entity *Entity, stats *StatsComponent, attrComp *AttributeAllocationComponent, hasHealth, hasMana bool) {
-	// Remove strength bonus
-	if stats != nil {
-		if bonus, ok := attrComp.AppliedBonuses[AttrStrength]; ok {
-			stats.Attack -= bonus
-		}
-	}
+	s.removeStrengthBonus(stats, attrComp)
+	s.removeAgilityBonus(stats, attrComp)
+	s.removeIntelligenceBonus(stats, attrComp)
+	s.removeManaBonus(entity, attrComp, hasMana)
+	s.removeVitalityBonus(entity, attrComp, hasHealth)
+	s.removeEnduranceBonus(stats, attrComp)
+	s.removeLuckBonus(stats, attrComp)
+}
 
-	// Remove agility bonus (evasion)
-	if stats != nil {
-		if bonus, ok := attrComp.AppliedBonuses[AttrAgility]; ok {
-			stats.Evasion -= bonus
-		}
+// removeStrengthBonus removes the attack bonus from strength.
+func (s *AttributeAllocationSystem) removeStrengthBonus(stats *StatsComponent, attrComp *AttributeAllocationComponent) {
+	if stats == nil {
+		return
 	}
+	if bonus, ok := attrComp.AppliedBonuses[AttrStrength]; ok {
+		stats.Attack -= bonus
+	}
+}
 
-	// Remove intelligence bonuses
-	if stats != nil {
-		if bonus, ok := attrComp.AppliedBonuses[AttrIntelligence]; ok {
-			stats.MagicPower -= bonus
-		}
+// removeAgilityBonus removes the evasion bonus from agility.
+func (s *AttributeAllocationSystem) removeAgilityBonus(stats *StatsComponent, attrComp *AttributeAllocationComponent) {
+	if stats == nil {
+		return
 	}
-	// Remove mana bonus (stored at offset 100+INT)
-	if hasMana {
-		if manaComp, ok := entity.GetComponent("mana"); ok {
-			if mana, ok := manaComp.(*ManaComponent); ok {
-				if manaBonus, ok := attrComp.AppliedBonuses[CoreAttribute(100+AttrIntelligence)]; ok {
-					mana.Max -= int(manaBonus)
-				}
-			}
-		}
+	if bonus, ok := attrComp.AppliedBonuses[AttrAgility]; ok {
+		stats.Evasion -= bonus
 	}
+}
 
-	// Remove vitality bonus
-	if hasHealth {
-		if healthComp, ok := entity.GetComponent("health"); ok {
-			if health, ok := healthComp.(*HealthComponent); ok {
-				if bonus, ok := attrComp.AppliedBonuses[AttrVitality]; ok {
-					health.Max -= bonus
-				}
-			}
-		}
+// removeIntelligenceBonus removes the magic power bonus from intelligence.
+func (s *AttributeAllocationSystem) removeIntelligenceBonus(stats *StatsComponent, attrComp *AttributeAllocationComponent) {
+	if stats == nil {
+		return
 	}
-
-	// Remove endurance bonuses
-	if stats != nil {
-		if bonus, ok := attrComp.AppliedBonuses[AttrEndurance]; ok {
-			stats.Defense -= bonus
-			// Also remove block bonus
-			endTotal := float64(attrComp.GetTotal(AttrEndurance))
-			blockBonus := endTotal * s.effects.BlockChancePerEnd / 100.0 * s.genreMultiplier
-			stats.BlockChance -= blockBonus
-		}
+	if bonus, ok := attrComp.AppliedBonuses[AttrIntelligence]; ok {
+		stats.MagicPower -= bonus
 	}
+}
 
-	// Remove luck bonus
-	if stats != nil {
-		if bonus, ok := attrComp.AppliedBonuses[AttrLuck]; ok {
-			stats.CritChance -= bonus
-		}
+// removeManaBonus removes the mana bonus from intelligence.
+func (s *AttributeAllocationSystem) removeManaBonus(entity *Entity, attrComp *AttributeAllocationComponent, hasMana bool) {
+	if !hasMana {
+		return
+	}
+	manaComp, ok := entity.GetComponent("mana")
+	if !ok {
+		return
+	}
+	mana, ok := manaComp.(*ManaComponent)
+	if !ok {
+		return
+	}
+	if manaBonus, ok := attrComp.AppliedBonuses[CoreAttribute(100+AttrIntelligence)]; ok {
+		mana.Max -= int(manaBonus)
+	}
+}
+
+// removeVitalityBonus removes the health bonus from vitality.
+func (s *AttributeAllocationSystem) removeVitalityBonus(entity *Entity, attrComp *AttributeAllocationComponent, hasHealth bool) {
+	if !hasHealth {
+		return
+	}
+	healthComp, ok := entity.GetComponent("health")
+	if !ok {
+		return
+	}
+	health, ok := healthComp.(*HealthComponent)
+	if !ok {
+		return
+	}
+	if bonus, ok := attrComp.AppliedBonuses[AttrVitality]; ok {
+		health.Max -= bonus
+	}
+}
+
+// removeEnduranceBonus removes the defense and block bonuses from endurance.
+func (s *AttributeAllocationSystem) removeEnduranceBonus(stats *StatsComponent, attrComp *AttributeAllocationComponent) {
+	if stats == nil {
+		return
+	}
+	if bonus, ok := attrComp.AppliedBonuses[AttrEndurance]; ok {
+		stats.Defense -= bonus
+		endTotal := float64(attrComp.GetTotal(AttrEndurance))
+		blockBonus := endTotal * s.effects.BlockChancePerEnd / 100.0 * s.genreMultiplier
+		stats.BlockChance -= blockBonus
+	}
+}
+
+// removeLuckBonus removes the crit chance bonus from luck.
+func (s *AttributeAllocationSystem) removeLuckBonus(stats *StatsComponent, attrComp *AttributeAllocationComponent) {
+	if stats == nil {
+		return
+	}
+	if bonus, ok := attrComp.AppliedBonuses[AttrLuck]; ok {
+		stats.CritChance -= bonus
 	}
 }
 

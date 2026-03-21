@@ -4,7 +4,7 @@ A fully procedural multiplayer action-RPG built with Go and Ebiten where all gra
 
 ## Description
 
-Venture is a top-down action-RPG that uses deterministic, seed-based procedural generation to create all game content at runtime. The game uses an Entity-Component-System (ECS) architecture where entities are unique identifiers with component collections, components are pure data structures, and systems contain all game logic. Terrain is generated using BSP dungeons, cellular automata caves, L-system forests, and Voronoi biomes. Items, quests, NPCs, spells, and dialog are all procedurally generated based on a genre system supporting fantasy, sci-fi, horror, cyberpunk, and post-apocalyptic themes.
+Venture is a top-down action-RPG that uses deterministic, seed-based procedural generation to create all game content at runtime. The game uses an Entity-Component-System (ECS) architecture where entities are unique identifiers with component collections, components are primarily data structures with convenience accessors for common queries, and systems contain all game logic. Terrain is generated using BSP dungeons, cellular automata caves, L-system forests, and Voronoi biomes. Items, quests, NPCs, spells, and dialog are all procedurally generated based on a genre system supporting fantasy, sci-fi, horror, cyberpunk, and post-apocalyptic themes.
 
 The multiplayer networking layer supports high-latency connections (200–5000ms) suitable for Tor/onion service routing, with client-side prediction, lag compensation, and snapshot synchronization. Voice chat is integrated with party, guild, proximity, and private channels using a built-in codec with spatial audio support. A federation system enables cross-server travel, shared marketplaces, and multi-server guilds. On desktop/native builds, the client automatically starts a localhost server for solo play, requiring no manual server setup; on WebAssembly builds, embedded server/host-and-play is disabled and the client must connect to an existing server.
 
@@ -30,7 +30,7 @@ venture/
 │   ├── server/             # Dedicated multiplayer server (main.go)
 │   └── mobile/             # Mobile entry point for iOS/Android (mobile.go)
 ├── pkg/                    # Core library packages
-│   ├── engine/             # ECS core, 100+ game systems, components, spatial partitioning
+│   ├── engine/             # ECS core, 66 game systems, components, spatial partitioning
 │   │   ├── physics/        # Vehicle physics, fluid simulation, environmental destruction
 │   │   ├── prestige/       # New Game+ and prestige progression
 │   │   └── qol/            # Quality-of-life systems (auto-loot, craft queue, etc.)
@@ -215,6 +215,8 @@ make ios-simulator    # Build for iOS Simulator
 See [Mobile Build Guide](docs/MOBILE_BUILD.md) for full instructions.
 
 ## Configuration
+
+For detailed performance optimization, see **[Performance Tuning Guide](docs/PERFORMANCE_TUNING.md)**.
 
 ### Client Flags
 

@@ -130,7 +130,64 @@ type WarDeclaration struct {
 	Cost          int
 }
 
-// Constants for territory mechanics
+// TerritoryConfig holds configurable values for territory mechanics.
+// These can be modified by mods to customize gameplay.
+type TerritoryConfig struct {
+	// Capture timing
+	BaseCaptureTime   int // Seconds to capture a territory (default: 60)
+	DefenderTimeBonus int // Additional seconds per defender (default: 30)
+
+	// Bonuses
+	BaseResourceBonus float64 // Resource bonus per territory (default: 0.10 = 10%)
+	BaseXPBonus       float64 // XP bonus per territory (default: 0.05 = 5%)
+
+	// War costs
+	WarDeclarationCost   int // Gold to declare war (default: 1000)
+	PeaceDeclarationCost int // Gold to declare peace (default: 500)
+	SurrenderCost        int // Gold to surrender (default: 250)
+	WarDurationDays      int // Duration of war in days (default: 7)
+
+	// Structure stats
+	WallBaseHP  float64 // Wall HP (default: 1000)
+	TowerBaseHP float64 // Tower HP (default: 500)
+	GuardBaseHP float64 // Guard HP (default: 500)
+	TowerDamage float64 // Tower damage (default: 100)
+	GuardLevel  int     // Guard NPC level (default: 30)
+
+	// Siege settings
+	GuildHallMaxHP         float64 // Guild hall max HP (default: 10000)
+	TotalControlPoints     int     // Control points in a siege (default: 5)
+	LootPercentage         float64 // Percentage of treasury looted (default: 0.15 = 15%)
+	MaxSiegeParticipants   int     // Max players per siege (default: 100)
+	MaxReinforcementGuilds int     // Max allied guilds (default: 5)
+}
+
+// DefaultTerritoryConfig returns the default configuration values.
+// These match the original constant values for backward compatibility.
+func DefaultTerritoryConfig() *TerritoryConfig {
+	return &TerritoryConfig{
+		BaseCaptureTime:        BaseCaptureTime,
+		DefenderTimeBonus:      DefenderTimeBonus,
+		BaseResourceBonus:      BaseResourceBonus,
+		BaseXPBonus:            BaseXPBonus,
+		WarDeclarationCost:     WarDeclarationCost,
+		PeaceDeclarationCost:   PeaceDeclarationCost,
+		SurrenderCost:          SurrenderCost,
+		WarDurationDays:        WarDurationDays,
+		WallBaseHP:             WallBaseHP,
+		TowerBaseHP:            TowerBaseHP,
+		GuardBaseHP:            GuardBaseHP,
+		TowerDamage:            TowerDamage,
+		GuardLevel:             GuardLevel,
+		GuildHallMaxHP:         10000.0,
+		TotalControlPoints:     5,
+		LootPercentage:         0.15,
+		MaxSiegeParticipants:   100,
+		MaxReinforcementGuilds: 5,
+	}
+}
+
+// Constants for territory mechanics (default values, can be overridden via TerritoryConfig)
 const (
 	TerritoryChunkSize   = 5
 	BaseCaptureTime      = 60

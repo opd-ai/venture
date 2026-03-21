@@ -2428,6 +2428,10 @@ func spawnStoryFragments(world *engine.World, terrainMap *terrain.Terrain, seed 
 }
 
 // parsePaletteOptions parses command-line flags into palette.GenerationOptions (Phase 5.4).
+//
+// COMPLEXITY JUSTIFICATION: High cyclomatic complexity (36) is intentional—exhaustively
+// validates and maps CLI flag strings to typed enum values for harmony (6), mood (24),
+// and rarity (5) options. The switch provides compile-time enum coverage and clear error messages.
 func parsePaletteOptions() (*palette.GenerationOptions, error) {
 	opts := &palette.GenerationOptions{}
 

@@ -147,40 +147,7 @@ func (s *TimeOfDayCriticalChanceSystem) Update(entities []*Entity, deltaTime flo
 
 	// Update crit chance for all entities with stats
 	modifier := s.getCritModifier(currentTime)
-	for _, entity := range entities {
-		if !entity.HasComponent("stats") {
-			continue
-		}
-
-		statsComp, ok := entity.GetComponent("stats")
-		if !ok {
-			continue
-		}
-
-		stats, ok := statsComp.(*StatsComponent)
-		if !ok {
-			continue
-		}
-
-		// Store original crit chance if not already stored
-		if _, exists := s.originalCritChance[entity.ID]; !exists {
-			s.originalCritChance[entity.ID] = stats.CritChance
-		}
-
-		// Apply time-of-day modified crit chance
-		originalCrit := s.originalCritChance[entity.ID]
-		newCrit := originalCrit + modifier
-
-		// Clamp to valid range (0.0 to 1.0)
-		if newCrit < 0.0 {
-			newCrit = 0.0
-		}
-		if newCrit > 1.0 {
-			newCrit = 1.0
-		}
-
-		stats.CritChance = newCrit
-	}
+	ApplyTimeOfDayStatModifier(entities, modifier, s.originalCritChance, CritChanceAccessor)
 }
 
 // getCritModifier calculates the total crit chance modifier for the current time.

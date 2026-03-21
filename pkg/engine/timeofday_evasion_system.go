@@ -150,40 +150,7 @@ func (s *TimeOfDayEvasionSystem) Update(entities []*Entity, deltaTime float64) {
 
 	// Update evasion for all entities with stats
 	modifier := s.getEvasionModifier(currentTime)
-	for _, entity := range entities {
-		if !entity.HasComponent("stats") {
-			continue
-		}
-
-		statsComp, ok := entity.GetComponent("stats")
-		if !ok {
-			continue
-		}
-
-		stats, ok := statsComp.(*StatsComponent)
-		if !ok {
-			continue
-		}
-
-		// Store original evasion if not already stored
-		if _, exists := s.originalEvasion[entity.ID]; !exists {
-			s.originalEvasion[entity.ID] = stats.Evasion
-		}
-
-		// Apply time-of-day modified evasion
-		originalEvasion := s.originalEvasion[entity.ID]
-		newEvasion := originalEvasion + modifier
-
-		// Clamp to valid range (0.0 to 1.0)
-		if newEvasion < 0.0 {
-			newEvasion = 0.0
-		}
-		if newEvasion > 1.0 {
-			newEvasion = 1.0
-		}
-
-		stats.Evasion = newEvasion
-	}
+	ApplyTimeOfDayStatModifier(entities, modifier, s.originalEvasion, EvasionAccessor)
 }
 
 // getEvasionModifier calculates the total evasion modifier for the current time.

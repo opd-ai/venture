@@ -156,3 +156,122 @@ func TestHudDrawHealthBar_MissingHealthComponent(t *testing.T) {
 	// drawHealthBar should safely return with no health component
 	hud.drawHealthBar()
 }
+
+// mockTerritoryBonusProvider implements TerritoryBonusProvider for testing.
+type mockTerritoryBonusProvider struct {
+	resourceBonus float64
+	xpBonus       float64
+}
+
+func (m *mockTerritoryBonusProvider) GetBonusesForGuild(guildID string) (float64, float64) {
+	if guildID == "" {
+		return 0, 0
+	}
+	return m.resourceBonus, m.xpBonus
+}
+
+// TestSetTerritoryBonusProvider verifies that territory bonus provider can be set.
+func TestSetTerritoryBonusProvider(t *testing.T) {
+	hud := NewEbitenHUDSystem(800, 600)
+
+	// Initially no territory bonus provider
+	if hud.territoryBonusProvider != nil {
+		t.Error("Expected no territory bonus provider initially")
+	}
+
+	// Set territory bonus provider
+	provider := &mockTerritoryBonusProvider{
+		resourceBonus: 0.10, // 10% bonus
+		xpBonus:       0.15, // 15% bonus
+	}
+	hud.SetTerritoryBonusProvider(provider)
+
+	if hud.territoryBonusProvider == nil {
+		t.Fatal("Expected territory bonus provider to be set")
+	}
+
+	resourceBonus, xpBonus := hud.territoryBonusProvider.GetBonusesForGuild("test_guild")
+	if resourceBonus != 0.10 {
+		t.Errorf("Expected resource bonus 0.10, got %v", resourceBonus)
+	}
+	if xpBonus != 0.15 {
+		t.Errorf("Expected XP bonus 0.15, got %v", xpBonus)
+	}
+
+	// Clear territory bonus provider
+	hud.SetTerritoryBonusProvider(nil)
+	if hud.territoryBonusProvider != nil {
+		t.Error("Expected territory bonus provider to be cleared")
+	}
+}
+
+// TestTerritoryBonusesDisplay verifies territory bonuses are only shown with guild membership.
+func TestTerritoryBonusesDisplay(t *testing.T) {
+	hud := NewEbitenHUDSystem(800, 600)
+
+	// Create a player entity
+	world := NewWorld()
+	player := world.CreateEntity()
+	player.AddComponent(&HealthComponent{Current: 100, Max: 100})
+	hud.SetPlayerEntity(player)
+
+	// Without territory provider, drawTerritoryBonuses should be safe to call
+	hud.drawTerritoryBonuses() // Should not panic
+
+	// With provider but no guild component
+	provider := &mockTerritoryBonusProvider{
+		resourceBonus: 0.10,
+		xpBonus:       0.15,
+	}
+	hud.SetTerritoryBonusProvider(provider)
+	hud.drawTerritoryBonuses() // Should not panic (no guild)
+
+	// Add guild component
+	player.AddComponent(&GuildComponent{GuildID: "test_guild"})
+	// Note: We can't actually test rendering without Ebiten initialization,
+	// but we can verify the method doesn't panic
+	hud.drawTerritoryBonuses() // Should not panic
+}
+
+// TestTerritoryBonusesDisplay_NoBonuses verifies no display when bonuses are zero.
+func TestTerritoryBonusesDisplay_NoBonuses(t *testing.T) {
+	hud := NewEbitenHUDSystem(800, 600)
+
+	// Create a player entity with guild
+	world := NewWorld()
+	player := world.CreateEntity()
+	player.AddComponent(&HealthComponent{Current: 100, Max: 100})
+	player.AddComponent(&GuildComponent{GuildID: "test_guild"})
+	hud.SetPlayerEntity(player)
+
+	// Provider with zero bonuses
+	provider := &mockTerritoryBonusProvider{
+		resourceBonus: 0,
+		xpBonus:       0,
+	}
+	hud.SetTerritoryBonusProvider(provider)
+
+	// Should safely return (no bonuses to display)
+	hud.drawTerritoryBonuses() // Should not panic
+}
+
+// TestTerritoryBonusesDisplay_EmptyGuildID verifies no display for empty guild.
+func TestTerritoryBonusesDisplay_EmptyGuildID(t *testing.T) {
+	hud := NewEbitenHUDSystem(800, 600)
+
+	// Create a player entity with empty guild ID
+	world := NewWorld()
+	player := world.CreateEntity()
+	player.AddComponent(&HealthComponent{Current: 100, Max: 100})
+	player.AddComponent(&GuildComponent{GuildID: ""})
+	hud.SetPlayerEntity(player)
+
+	provider := &mockTerritoryBonusProvider{
+		resourceBonus: 0.10,
+		xpBonus:       0.15,
+	}
+	hud.SetTerritoryBonusProvider(provider)
+
+	// Should safely return (empty guild ID)
+	hud.drawTerritoryBonuses() // Should not panic
+}

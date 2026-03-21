@@ -484,3 +484,129 @@ func BenchmarkAddStarterItems(b *testing.B) {
 		addStarterItems(inventory, seed, genreID)
 	}
 }
+
+// TestGetPlatformConfig verifies platform configuration is returned correctly
+func TestGetPlatformConfig(t *testing.T) {
+	cfg := getPlatformConfig()
+
+	// Verify basic config values are valid
+	if cfg.screenWidth <= 0 {
+		t.Errorf("screenWidth = %d, want > 0", cfg.screenWidth)
+	}
+	if cfg.screenHeight <= 0 {
+		t.Errorf("screenHeight = %d, want > 0", cfg.screenHeight)
+	}
+	if cfg.minTouchTarget <= 0 {
+		t.Errorf("minTouchTarget = %d, want > 0", cfg.minTouchTarget)
+	}
+	if cfg.platformName == "" {
+		t.Error("platformName is empty")
+	}
+
+	// Safe area values should be non-negative
+	if cfg.safeAreaTop < 0 {
+		t.Errorf("safeAreaTop = %d, want >= 0", cfg.safeAreaTop)
+	}
+	if cfg.safeAreaBottom < 0 {
+		t.Errorf("safeAreaBottom = %d, want >= 0", cfg.safeAreaBottom)
+	}
+}
+
+// TestGetPlatformConfigValues tests specific platform config value ranges
+func TestGetPlatformConfigValues(t *testing.T) {
+	cfg := getPlatformConfig()
+
+	tests := []struct {
+		name  string
+		value int
+		min   int
+		max   int
+	}{
+		{"screenWidth", cfg.screenWidth, 640, 2560},
+		{"screenHeight", cfg.screenHeight, 480, 1440},
+		{"minTouchTarget", cfg.minTouchTarget, 24, 64},
+		{"safeAreaTop", cfg.safeAreaTop, 0, 100},
+		{"safeAreaBottom", cfg.safeAreaBottom, 0, 100},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if tt.value < tt.min || tt.value > tt.max {
+				t.Errorf("%s = %d, want between %d and %d", tt.name, tt.value, tt.min, tt.max)
+			}
+		})
+	}
+}
+
+// TestGetPlatformInfo verifies platform info map is complete
+func TestGetPlatformInfo(t *testing.T) {
+	info := GetPlatformInfo()
+
+	requiredKeys := []string{
+		"platform",
+		"isIOS",
+		"isAndroid",
+		"isTouchCapable",
+		"supportsBackButton",
+		"supportsGestures",
+		"minTouchTarget",
+		"keyboardHeight",
+	}
+
+	for _, key := range requiredKeys {
+		if _, exists := info[key]; !exists {
+			t.Errorf("GetPlatformInfo() missing key %q", key)
+		}
+	}
+
+	// Verify types are correct
+	if _, ok := info["platform"].(string); !ok {
+		t.Error("platform should be a string")
+	}
+	if _, ok := info["isIOS"].(bool); !ok {
+		t.Error("isIOS should be a bool")
+	}
+	if _, ok := info["isAndroid"].(bool); !ok {
+		t.Error("isAndroid should be a bool")
+	}
+}
+
+// TestPlatformConfigStruct verifies platformConfig struct has correct field types
+func TestPlatformConfigStruct(t *testing.T) {
+	cfg := platformConfig{
+		screenWidth:     1280,
+		screenHeight:    720,
+		safeAreaTop:     50,
+		safeAreaBottom:  34,
+		minTouchTarget:  44,
+		supportsHaptic:  true,
+		supportsBackBtn: false,
+		keyboardHeight:  250,
+		platformName:    "test",
+	}
+
+	// Verify struct fields can be accessed
+	if cfg.screenWidth != 1280 {
+		t.Errorf("screenWidth = %d, want 1280", cfg.screenWidth)
+	}
+	if !cfg.supportsHaptic {
+		t.Error("supportsHaptic should be true")
+	}
+	if cfg.platformName != "test" {
+		t.Errorf("platformName = %q, want %q", cfg.platformName, "test")
+	}
+}
+
+// BenchmarkGetPlatformConfig benchmarks platform config retrieval
+func BenchmarkGetPlatformConfig(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		_ = getPlatformConfig()
+	}
+}
+
+// BenchmarkGetPlatformInfo benchmarks platform info retrieval
+func BenchmarkGetPlatformInfo(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		_ = GetPlatformInfo()
+	}
+}

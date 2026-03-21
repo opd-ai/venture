@@ -153,106 +153,129 @@ func (s *EntityTargetLockIndicatorSystem) Update(entities []*Entity, deltaTime f
 
 // acquireTargets finds the closest hostile to each player and assigns reticle components.
 func (s *EntityTargetLockIndicatorSystem) acquireTargets(entities []*Entity, genreChanged bool) {
-	// Partition into players and hostiles
-	var players []*Entity
-	var hostiles []*Entity
+	players, hostiles := s.partitionEntities(entities)
+	s.clearStaleIndicators(entities, players)
+	s.assignTargetsToPlayers(players, hostiles, genreChanged)
+}
 
+// partitionEntities separates entities into players and hostiles.
+func (s *EntityTargetLockIndicatorSystem) partitionEntities(entities []*Entity) ([]*Entity, []*Entity) {
+	var players, hostiles []*Entity
 	for _, e := range entities {
 		if e == nil {
 			continue
 		}
 		if _, ok := e.GetComponent("input"); ok {
 			players = append(players, e)
-			continue
-		}
-		if _, ok := e.GetComponent("ai"); ok {
+		} else if _, ok := e.GetComponent("ai"); ok {
 			hostiles = append(hostiles, e)
 		}
 	}
+	return players, hostiles
+}
 
-	// Clear stale indicators on entities no longer targeted
+// clearStaleIndicators disables indicators for entities no longer in range.
+func (s *EntityTargetLockIndicatorSystem) clearStaleIndicators(entities, players []*Entity) {
 	for _, e := range entities {
 		if e == nil {
 			continue
 		}
-		comp, ok := e.GetComponent("target_lock_indicator")
-		if !ok {
+		tlc := s.getIndicatorComponent(e)
+		if tlc == nil || !tlc.Enabled {
 			continue
 		}
-		tlc, ok := comp.(*TargetLockIndicatorComponent)
-		if !ok || !tlc.Enabled {
-			continue
-		}
-		// Check if the locking player still exists and is in range
-		stillValid := false
-		for _, p := range players {
-			if p.ID == tlc.LockedByPlayerID {
-				dist := s.entityDistance(p, e)
-				if dist <= s.acquireRange*1.2 {
-					stillValid = true
-				}
-				break
-			}
-		}
-		if !stillValid {
+		if !s.isTargetStillValid(tlc, players, e) {
 			tlc.Enabled = false
 			tlc.CurrentOpacity = 0
 		}
 	}
+}
 
-	// For each player, find closest hostile
+// getIndicatorComponent retrieves the target lock indicator component if present.
+func (s *EntityTargetLockIndicatorSystem) getIndicatorComponent(e *Entity) *TargetLockIndicatorComponent {
+	comp, ok := e.GetComponent("target_lock_indicator")
+	if !ok {
+		return nil
+	}
+	tlc, ok := comp.(*TargetLockIndicatorComponent)
+	if !ok {
+		return nil
+	}
+	return tlc
+}
+
+// isTargetStillValid checks if the locking player still exists and is in range.
+func (s *EntityTargetLockIndicatorSystem) isTargetStillValid(tlc *TargetLockIndicatorComponent, players []*Entity, target *Entity) bool {
+	for _, p := range players {
+		if p.ID == tlc.LockedByPlayerID {
+			return s.entityDistance(p, target) <= s.acquireRange*1.2
+		}
+	}
+	return false
+}
+
+// assignTargetsToPlayers finds and assigns the closest hostile for each player.
+func (s *EntityTargetLockIndicatorSystem) assignTargetsToPlayers(players, hostiles []*Entity, genreChanged bool) {
 	palette := s.getCurrentPalette()
 	for _, player := range players {
 		px, py := s.getPosition(player)
 		if px == 0 && py == 0 {
 			continue
 		}
-
-		var bestTarget *Entity
-		bestDist := s.acquireRange + 1
-
-		for _, hostile := range hostiles {
-			hx, hy := s.getPosition(hostile)
-			if hx == 0 && hy == 0 {
-				continue
-			}
-			// Check if hostile has health > 0
-			if comp, ok := hostile.GetComponent("health"); ok {
-				if hc, ok := comp.(*HealthComponent); ok && hc.Current <= 0 {
-					continue
-				}
-			}
-			dx := px - hx
-			dy := py - hy
-			dist := math.Sqrt(dx*dx + dy*dy)
-			if dist < bestDist {
-				bestDist = dist
-				bestTarget = hostile
-			}
-		}
-
+		bestTarget := s.findClosestHostile(px, py, hostiles)
 		if bestTarget == nil {
 			continue
 		}
+		s.configureTargetIndicator(bestTarget, player.ID, palette, genreChanged)
+	}
+}
 
-		tlc := s.getOrCreateComponent(bestTarget)
-		tlc.Enabled = true
-		tlc.LockedByPlayerID = player.ID
-		tlc.ReticleR = palette.R
-		tlc.ReticleG = palette.G
-		tlc.ReticleB = palette.B
-		tlc.BaseOpacity = palette.Opacity
-		tlc.RotationSpeed = palette.RotationSpeed
-		tlc.PulseSpeed = palette.PulseSpeed
-
-		// Scale reticle radius based on entity size
-		tlc.ReticleRadius = s.computeReticleRadius(bestTarget)
-
-		if genreChanged {
-			// Reset phase on genre change for consistent look
-			tlc.PulsePhase = 0
-			tlc.RotationAngle = 0
+// findClosestHostile returns the nearest living hostile within acquisition range.
+func (s *EntityTargetLockIndicatorSystem) findClosestHostile(px, py float64, hostiles []*Entity) *Entity {
+	var bestTarget *Entity
+	bestDist := s.acquireRange + 1
+	for _, hostile := range hostiles {
+		hx, hy := s.getPosition(hostile)
+		if hx == 0 && hy == 0 {
+			continue
 		}
+		if !s.isHostileAlive(hostile) {
+			continue
+		}
+		dist := math.Sqrt((px-hx)*(px-hx) + (py-hy)*(py-hy))
+		if dist < bestDist {
+			bestDist = dist
+			bestTarget = hostile
+		}
+	}
+	return bestTarget
+}
+
+// isHostileAlive checks if the hostile entity has health > 0.
+func (s *EntityTargetLockIndicatorSystem) isHostileAlive(hostile *Entity) bool {
+	comp, ok := hostile.GetComponent("health")
+	if !ok {
+		return true
+	}
+	hc, ok := comp.(*HealthComponent)
+	return !ok || hc.Current > 0
+}
+
+// configureTargetIndicator sets up the indicator component with palette and positioning.
+func (s *EntityTargetLockIndicatorSystem) configureTargetIndicator(target *Entity, playerID uint64, palette genreReticlePalette, genreChanged bool) {
+	tlc := s.getOrCreateComponent(target)
+	tlc.Enabled = true
+	tlc.LockedByPlayerID = playerID
+	tlc.ReticleR = palette.R
+	tlc.ReticleG = palette.G
+	tlc.ReticleB = palette.B
+	tlc.BaseOpacity = palette.Opacity
+	tlc.RotationSpeed = palette.RotationSpeed
+	tlc.PulseSpeed = palette.PulseSpeed
+	tlc.ReticleRadius = s.computeReticleRadius(target)
+	if genreChanged {
+		tlc.PulsePhase = 0
+		tlc.RotationAngle = 0
 	}
 }
 

@@ -293,20 +293,39 @@ func (s *BuildTemplateSystem) resetAndApplyTalents(entity *Entity, template *Bui
 
 // resetAndApplySkills resets skills and applies template values.
 func (s *BuildTemplateSystem) resetAndApplySkills(entity *Entity, template *BuildTemplate) bool {
-	treeComp, hasTree := entity.GetComponent("skill_tree")
-	if !hasTree {
-		// Skills are optional - if no skill tree, skip this step
-		if len(template.Skills) == 0 {
-			return true
-		}
-		return false
-	}
-	skillTree, ok := treeComp.(*SkillTreeComponent)
+	skillTree, ok := s.validateSkillTree(entity, template)
 	if !ok {
+		return len(template.Skills) == 0
+	}
+
+	if !s.validateSkillTreeCompatibility(entity.ID, skillTree, template) {
 		return false
 	}
 
-	// Check if skill tree matches template
+	totalAvailable := s.getTotalSkillPoints(entity, skillTree)
+	if !s.validateSkillPoints(entity.ID, totalAvailable, template.TotalSkillPoints()) {
+		return false
+	}
+
+	s.clearSkillTree(skillTree)
+	s.applySkillsFromTemplate(skillTree, template, totalAvailable)
+
+	RecalculateSkillBonuses(entity)
+	return true
+}
+
+// validateSkillTree retrieves and validates the skill tree component.
+func (s *BuildTemplateSystem) validateSkillTree(entity *Entity, template *BuildTemplate) (*SkillTreeComponent, bool) {
+	treeComp, hasTree := entity.GetComponent("skill_tree")
+	if !hasTree {
+		return nil, false
+	}
+	skillTree, ok := treeComp.(*SkillTreeComponent)
+	return skillTree, ok
+}
+
+// validateSkillTreeCompatibility checks if the skill tree ID matches the template.
+func (s *BuildTemplateSystem) validateSkillTreeCompatibility(entityID uint64, skillTree *SkillTreeComponent, template *BuildTemplate) bool {
 	treeID := ""
 	if skillTree.Tree != nil {
 		treeID = skillTree.Tree.ID
@@ -314,27 +333,31 @@ func (s *BuildTemplateSystem) resetAndApplySkills(entity *Entity, template *Buil
 	if template.SkillTreeID != "" && treeID != template.SkillTreeID {
 		log.WithFields(log.Fields{
 			"system_name":   "build_template",
-			"entity_id":     entity.ID,
+			"entity_id":     entityID,
 			"template_tree": template.SkillTreeID,
 			"entity_tree":   treeID,
 		}).Debug("Skill tree mismatch for template")
 		return false
 	}
+	return true
+}
 
-	// Calculate total available points
-	totalAvailable := s.getTotalSkillPoints(entity, skillTree)
-	totalNeeded := template.TotalSkillPoints()
-	if totalNeeded > totalAvailable {
+// validateSkillPoints checks if there are enough points available.
+func (s *BuildTemplateSystem) validateSkillPoints(entityID uint64, available, needed int) bool {
+	if needed > available {
 		log.WithFields(log.Fields{
 			"system_name":      "build_template",
-			"entity_id":        entity.ID,
-			"points_needed":    totalNeeded,
-			"points_available": totalAvailable,
+			"entity_id":        entityID,
+			"points_needed":    needed,
+			"points_available": available,
 		}).Debug("Not enough skill points for template")
 		return false
 	}
+	return true
+}
 
-	// Reset all skills
+// clearSkillTree resets all skills to their initial state.
+func (s *BuildTemplateSystem) clearSkillTree(skillTree *SkillTreeComponent) {
 	skillTree.LearnedSkills = make(map[string]bool)
 	skillTree.SkillLevels = make(map[string]int)
 	skillTree.TotalPointsUsed = 0
@@ -345,8 +368,10 @@ func (s *BuildTemplateSystem) resetAndApplySkills(entity *Entity, template *Buil
 			}
 		}
 	}
+}
 
-	// Apply skills from template (respecting dependencies)
+// applySkillsFromTemplate applies skills respecting prerequisites via iterative resolution.
+func (s *BuildTemplateSystem) applySkillsFromTemplate(skillTree *SkillTreeComponent, template *BuildTemplate, totalAvailable int) {
 	applied := make(map[string]bool)
 	remaining := make(map[string]int)
 	for skillID, level := range template.Skills {
@@ -355,56 +380,66 @@ func (s *BuildTemplateSystem) resetAndApplySkills(entity *Entity, template *Buil
 
 	maxIterations := len(remaining) * 10
 	for iterations := 0; len(remaining) > 0 && iterations < maxIterations; iterations++ {
-		madeProgress := false
-		for skillID, targetLevel := range remaining {
-			if applied[skillID] {
-				delete(remaining, skillID)
-				continue
-			}
-
-			// Check prerequisites
-			if skillTree.Tree != nil {
-				skill := skillTree.Tree.GetSkillByID(skillID)
-				if skill == nil {
-					delete(remaining, skillID)
-					continue
-				}
-
-				prereqsMet := true
-				for _, prereqID := range skill.Requirements.PrerequisiteIDs {
-					if !skillTree.LearnedSkills[prereqID] {
-						prereqsMet = false
-						break
-					}
-				}
-				if !prereqsMet {
-					continue
-				}
-			}
-
-			// Apply skill levels
-			for lvl := 0; lvl < targetLevel; lvl++ {
-				pointsRemaining := totalAvailable - skillTree.TotalPointsUsed
-				if skillTree.LearnSkill(skillID, pointsRemaining) {
-					madeProgress = true
-				} else {
-					break
-				}
-			}
-
-			if skillTree.SkillLevels[skillID] >= targetLevel {
-				applied[skillID] = true
-				delete(remaining, skillID)
-			}
-		}
-		if !madeProgress {
+		if !s.applySkillIteration(skillTree, remaining, applied, totalAvailable) {
 			break
 		}
 	}
+}
 
-	// Trigger recalculation
-	RecalculateSkillBonuses(entity)
+// applySkillIteration processes one pass of skill application, returning true if progress was made.
+func (s *BuildTemplateSystem) applySkillIteration(skillTree *SkillTreeComponent, remaining map[string]int, applied map[string]bool, totalAvailable int) bool {
+	madeProgress := false
+	for skillID, targetLevel := range remaining {
+		if applied[skillID] {
+			delete(remaining, skillID)
+			continue
+		}
+
+		if !s.checkSkillPrerequisites(skillTree, skillID) {
+			continue
+		}
+
+		if s.applySkillLevels(skillTree, skillID, targetLevel, totalAvailable) {
+			madeProgress = true
+		}
+
+		if skillTree.SkillLevels[skillID] >= targetLevel {
+			applied[skillID] = true
+			delete(remaining, skillID)
+		}
+	}
+	return madeProgress
+}
+
+// checkSkillPrerequisites verifies all prerequisites for a skill are met.
+func (s *BuildTemplateSystem) checkSkillPrerequisites(skillTree *SkillTreeComponent, skillID string) bool {
+	if skillTree.Tree == nil {
+		return true
+	}
+	skill := skillTree.Tree.GetSkillByID(skillID)
+	if skill == nil {
+		return false
+	}
+	for _, prereqID := range skill.Requirements.PrerequisiteIDs {
+		if !skillTree.LearnedSkills[prereqID] {
+			return false
+		}
+	}
 	return true
+}
+
+// applySkillLevels attempts to learn skill levels up to the target.
+func (s *BuildTemplateSystem) applySkillLevels(skillTree *SkillTreeComponent, skillID string, targetLevel, totalAvailable int) bool {
+	madeProgress := false
+	for lvl := 0; lvl < targetLevel; lvl++ {
+		pointsRemaining := totalAvailable - skillTree.TotalPointsUsed
+		if skillTree.LearnSkill(skillID, pointsRemaining) {
+			madeProgress = true
+		} else {
+			break
+		}
+	}
+	return madeProgress
 }
 
 // getTotalSkillPoints calculates available skill points for an entity.
@@ -442,71 +477,13 @@ func (s *BuildTemplateSystem) SaveCurrentBuild(entity *Entity, name, description
 		return nil, fmt.Errorf("no available template slots")
 	}
 
-	template := &BuildTemplate{
-		ID:          fmt.Sprintf("user_%d_%d", entity.ID, time.Now().UnixNano()),
-		Name:        name,
-		Description: description,
-		Archetype:   BuildArchetypeCustom,
-		Attributes:  make(map[int]int),
-		Talents:     make(map[string]int),
-		Skills:      make(map[string]int),
-		CreatedAt:   time.Now().Unix(),
-		UpdatedAt:   time.Now().Unix(),
-		IsPreset:    false,
-	}
-
-	// Capture current attributes
-	if attrComp, hasAttr := entity.GetComponent("attribute_allocation"); hasAttr {
-		if attr, ok := attrComp.(*AttributeAllocationComponent); ok {
-			for i := 0; i < int(NumCoreAttributes); i++ {
-				if attr.AllocatedPoints[i] > 0 {
-					template.Attributes[i] = attr.AllocatedPoints[i]
-				}
-			}
-		}
-	}
-
-	// Capture current talents
-	if talentComp, hasTalent := entity.GetComponent("talent"); hasTalent {
-		if talent, ok := talentComp.(*TalentComponent); ok {
-			for talentID, ranks := range talent.Allocations {
-				if ranks > 0 {
-					template.Talents[talentID] = ranks
-				}
-			}
-		}
-	}
-
-	// Capture current skills
-	if treeComp, hasTree := entity.GetComponent("skill_tree"); hasTree {
-		if skillTree, ok := treeComp.(*SkillTreeComponent); ok {
-			for skillID, level := range skillTree.SkillLevels {
-				if level > 0 {
-					template.Skills[skillID] = level
-				}
-			}
-			if skillTree.Tree != nil {
-				template.SkillTreeID = skillTree.Tree.ID
-			}
-		}
-	}
-
-	// Capture class info
-	if classComp, hasClass := entity.GetComponent("class_progression"); hasClass {
-		if progression, ok := classComp.(*ClassProgressionComponent); ok {
-			template.Class = progression.Class
-			template.Specialization = progression.Specialization
-			if progression.SecondaryClass != nil {
-				template.SecondaryClass = progression.SecondaryClass
-				template.SecondarySpec = progression.SecondarySpec
-			}
-		}
-	}
-
-	// Set required level based on points used
+	template := s.createEmptyTemplate(entity.ID, name, description)
+	s.captureEntityAttributes(entity, template)
+	s.captureEntityTalents(entity, template)
+	s.captureEntitySkills(entity, template)
+	s.captureEntityClassInfo(entity, template)
 	template.RequiredLevel = s.calculateRequiredLevel(template)
 
-	// Add to component
 	index := buildComp.AddTemplate(template)
 	if index < 0 {
 		return nil, fmt.Errorf("failed to add template")
@@ -524,6 +501,94 @@ func (s *BuildTemplateSystem) SaveCurrentBuild(entity *Entity, name, description
 	}).Info("Build template saved")
 
 	return template, nil
+}
+
+// createEmptyTemplate initializes a new build template with metadata.
+func (s *BuildTemplateSystem) createEmptyTemplate(entityID uint64, name, description string) *BuildTemplate {
+	return &BuildTemplate{
+		ID:          fmt.Sprintf("user_%d_%d", entityID, time.Now().UnixNano()),
+		Name:        name,
+		Description: description,
+		Archetype:   BuildArchetypeCustom,
+		Attributes:  make(map[int]int),
+		Talents:     make(map[string]int),
+		Skills:      make(map[string]int),
+		CreatedAt:   time.Now().Unix(),
+		UpdatedAt:   time.Now().Unix(),
+		IsPreset:    false,
+	}
+}
+
+// captureEntityAttributes copies allocated attribute points to the template.
+func (s *BuildTemplateSystem) captureEntityAttributes(entity *Entity, template *BuildTemplate) {
+	attrComp, hasAttr := entity.GetComponent("attribute_allocation")
+	if !hasAttr {
+		return
+	}
+	attr, ok := attrComp.(*AttributeAllocationComponent)
+	if !ok {
+		return
+	}
+	for i := 0; i < int(NumCoreAttributes); i++ {
+		if attr.AllocatedPoints[i] > 0 {
+			template.Attributes[i] = attr.AllocatedPoints[i]
+		}
+	}
+}
+
+// captureEntityTalents copies talent allocations to the template.
+func (s *BuildTemplateSystem) captureEntityTalents(entity *Entity, template *BuildTemplate) {
+	talentComp, hasTalent := entity.GetComponent("talent")
+	if !hasTalent {
+		return
+	}
+	talent, ok := talentComp.(*TalentComponent)
+	if !ok {
+		return
+	}
+	for talentID, ranks := range talent.Allocations {
+		if ranks > 0 {
+			template.Talents[talentID] = ranks
+		}
+	}
+}
+
+// captureEntitySkills copies skill levels and tree ID to the template.
+func (s *BuildTemplateSystem) captureEntitySkills(entity *Entity, template *BuildTemplate) {
+	treeComp, hasTree := entity.GetComponent("skill_tree")
+	if !hasTree {
+		return
+	}
+	skillTree, ok := treeComp.(*SkillTreeComponent)
+	if !ok {
+		return
+	}
+	for skillID, level := range skillTree.SkillLevels {
+		if level > 0 {
+			template.Skills[skillID] = level
+		}
+	}
+	if skillTree.Tree != nil {
+		template.SkillTreeID = skillTree.Tree.ID
+	}
+}
+
+// captureEntityClassInfo copies class and specialization info to the template.
+func (s *BuildTemplateSystem) captureEntityClassInfo(entity *Entity, template *BuildTemplate) {
+	classComp, hasClass := entity.GetComponent("class_progression")
+	if !hasClass {
+		return
+	}
+	progression, ok := classComp.(*ClassProgressionComponent)
+	if !ok {
+		return
+	}
+	template.Class = progression.Class
+	template.Specialization = progression.Specialization
+	if progression.SecondaryClass != nil {
+		template.SecondaryClass = progression.SecondaryClass
+		template.SecondarySpec = progression.SecondarySpec
+	}
 }
 
 // calculateRequiredLevel estimates the minimum level for a build.

@@ -24,6 +24,8 @@ const (
 	PacketTypeTradeAccept PacketType = 54
 	// PacketTypeMessageACK represents a message acknowledgment
 	PacketTypeMessageACK PacketType = 55
+	// PacketTypeVoice represents a voice data packet
+	PacketTypeVoice PacketType = 56
 )
 
 // PacketHeader represents the common header for all packets (16 bytes).
@@ -414,4 +416,138 @@ func EstimatePacketSize(messageLen int, compressed bool) int {
 	payloadSize += 12 + 16
 
 	return baseSize + payloadSize
+}
+
+// VoicePacket represents voice data for transmission.
+// Layout:
+// - Header (16 bytes): Message ID
+// - SenderID (8 bytes): Entity that sent the voice data
+// - ChannelID length (1 byte): Length of channel ID string
+// - ChannelID (variable): Voice channel identifier
+// - SequenceNumber (4 bytes): Monotonically increasing for ordering
+// - Timestamp (8 bytes): When the voice frame was captured
+// - DataLen (2 bytes): Length of voice data
+// - Data (variable): Encoded voice data (ADPCM)
+type VoicePacket struct {
+	Header         PacketHeader
+	SenderID       uint64
+	ChannelID      string
+	SequenceNumber uint32
+	Timestamp      uint64
+	Data           []byte
+}
+
+// VoicePacketHeaderSize is the minimum size of a voice packet (excluding variable fields).
+const VoicePacketHeaderSize = 16 + 8 + 1 + 4 + 8 + 2 // 39 bytes minimum
+
+// SerializeVoicePacket serializes a voice packet to bytes.
+func SerializeVoicePacket(pkt *VoicePacket) ([]byte, error) {
+	if len(pkt.ChannelID) > 255 {
+		return nil, fmt.Errorf("channel ID too long: %d bytes (max 255)", len(pkt.ChannelID))
+	}
+	if len(pkt.Data) > 65535 {
+		return nil, fmt.Errorf("voice data too large: %d bytes (max 65535)", len(pkt.Data))
+	}
+
+	// Calculate total size
+	totalSize := VoicePacketHeaderSize + len(pkt.ChannelID) + len(pkt.Data)
+	buf := make([]byte, totalSize)
+
+	offset := 0
+
+	// Write header (message ID)
+	copy(buf[offset:offset+16], pkt.Header.MessageID[:])
+	offset += 16
+
+	// Write sender ID
+	binary.LittleEndian.PutUint64(buf[offset:offset+8], pkt.SenderID)
+	offset += 8
+
+	// Write channel ID length and data
+	buf[offset] = byte(len(pkt.ChannelID))
+	offset++
+	copy(buf[offset:offset+len(pkt.ChannelID)], pkt.ChannelID)
+	offset += len(pkt.ChannelID)
+
+	// Write sequence number
+	binary.LittleEndian.PutUint32(buf[offset:offset+4], pkt.SequenceNumber)
+	offset += 4
+
+	// Write timestamp
+	binary.LittleEndian.PutUint64(buf[offset:offset+8], pkt.Timestamp)
+	offset += 8
+
+	// Write data length and data
+	binary.LittleEndian.PutUint16(buf[offset:offset+2], uint16(len(pkt.Data)))
+	offset += 2
+	copy(buf[offset:], pkt.Data)
+
+	logrus.WithFields(logrus.Fields{
+		"packet_type":     "voice",
+		"sender_id":       pkt.SenderID,
+		"channel_id":      pkt.ChannelID,
+		"sequence_number": pkt.SequenceNumber,
+		"data_len":        len(pkt.Data),
+		"total_size":      totalSize,
+	}).Debug("Serialized voice packet")
+
+	return buf, nil
+}
+
+// DeserializeVoicePacket deserializes a voice packet from bytes.
+func DeserializeVoicePacket(data []byte) (*VoicePacket, error) {
+	if len(data) < VoicePacketHeaderSize {
+		return nil, fmt.Errorf("voice packet too short: %d bytes (min %d)", len(data), VoicePacketHeaderSize)
+	}
+
+	pkt := &VoicePacket{}
+	offset := 0
+
+	// Read header
+	copy(pkt.Header.MessageID[:], data[offset:offset+16])
+	offset += 16
+
+	// Read sender ID
+	pkt.SenderID = binary.LittleEndian.Uint64(data[offset : offset+8])
+	offset += 8
+
+	// Read channel ID length and data
+	channelIDLen := int(data[offset])
+	offset++
+
+	if len(data) < offset+channelIDLen+4+8+2 {
+		return nil, fmt.Errorf("voice packet truncated: expected %d bytes for channel ID", channelIDLen)
+	}
+
+	pkt.ChannelID = string(data[offset : offset+channelIDLen])
+	offset += channelIDLen
+
+	// Read sequence number
+	pkt.SequenceNumber = binary.LittleEndian.Uint32(data[offset : offset+4])
+	offset += 4
+
+	// Read timestamp
+	pkt.Timestamp = binary.LittleEndian.Uint64(data[offset : offset+8])
+	offset += 8
+
+	// Read data length and data
+	dataLen := int(binary.LittleEndian.Uint16(data[offset : offset+2]))
+	offset += 2
+
+	if len(data) < offset+dataLen {
+		return nil, fmt.Errorf("voice packet data truncated: expected %d bytes, got %d", dataLen, len(data)-offset)
+	}
+
+	pkt.Data = make([]byte, dataLen)
+	copy(pkt.Data, data[offset:offset+dataLen])
+
+	logrus.WithFields(logrus.Fields{
+		"packet_type":     "voice",
+		"sender_id":       pkt.SenderID,
+		"channel_id":      pkt.ChannelID,
+		"sequence_number": pkt.SequenceNumber,
+		"data_len":        dataLen,
+	}).Debug("Deserialized voice packet")
+
+	return pkt, nil
 }

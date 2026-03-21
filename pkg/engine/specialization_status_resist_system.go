@@ -194,6 +194,10 @@ func (s *SpecializationStatusResistSystem) calculateBaseClassModifier(class Char
 
 // getSpecializationResistance returns the base resistance value for a specialization.
 // Higher values = more resistance = shorter debuff duration.
+//
+// COMPLEXITY JUSTIFICATION: High cyclomatic complexity (43) is intentional—maps each
+// of 43 specialization types to a balance-tuned resistance value. The switch provides
+// exhaustiveness checking and clear per-specialization documentation.
 func (s *SpecializationStatusResistSystem) getSpecializationResistance(spec SpecializationType) float64 {
 	switch spec {
 	// Pure tank specializations - highest resistance

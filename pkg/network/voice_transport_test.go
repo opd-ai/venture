@@ -1,0 +1,678 @@
+package network
+
+import (
+	"fmt"
+	"sync"
+	"testing"
+	"time"
+
+	"github.com/google/uuid"
+)
+
+func TestNewTCPVoiceTransport(t *testing.T) {
+	config := DefaultVoiceTransportConfig()
+	transport := NewTCPVoiceTransport(config, 12345, nil)
+	defer transport.Close()
+
+	if transport == nil {
+		t.Fatal("NewTCPVoiceTransport returned nil")
+	}
+
+	if transport.playerID != 12345 {
+		t.Errorf("playerID = %d, want 12345", transport.playerID)
+	}
+
+	stats := transport.GetStats()
+	if stats.PacketsSent != 0 {
+		t.Errorf("initial PacketsSent = %d, want 0", stats.PacketsSent)
+	}
+}
+
+func TestVoiceTransportSendVoice(t *testing.T) {
+	tests := []struct {
+		name      string
+		channelID string
+		data      []byte
+		wantErr   bool
+	}{
+		{
+			name:      "valid send",
+			channelID: "party:test",
+			data:      []byte{0x01, 0x02, 0x03, 0x04},
+			wantErr:   false,
+		},
+		{
+			name:      "empty channel ID",
+			channelID: "",
+			data:      []byte{0x01},
+			wantErr:   true,
+		},
+		{
+			name:      "empty data",
+			channelID: "party:test",
+			data:      []byte{},
+			wantErr:   true,
+		},
+		{
+			name:      "nil data",
+			channelID: "party:test",
+			data:      nil,
+			wantErr:   true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var sentData []byte
+			sendFunc := func(data []byte) error {
+				sentData = make([]byte, len(data))
+				copy(sentData, data)
+				return nil
+			}
+
+			config := DefaultVoiceTransportConfig()
+			transport := NewTCPVoiceTransport(config, 12345, sendFunc)
+			defer transport.Close()
+
+			err := transport.SendVoice(tt.channelID, tt.data)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("SendVoice() error = %v, wantErr %v", err, tt.wantErr)
+			}
+
+			if !tt.wantErr && len(sentData) == 0 {
+				t.Error("SendVoice() did not send any data")
+			}
+
+			if !tt.wantErr && sentData[0] != byte(PacketTypeVoice) {
+				t.Errorf("packet type = %d, want %d", sentData[0], PacketTypeVoice)
+			}
+		})
+	}
+}
+
+func TestVoiceTransportSequenceNumbers(t *testing.T) {
+	var packets [][]byte
+	var mu sync.Mutex
+
+	sendFunc := func(data []byte) error {
+		mu.Lock()
+		defer mu.Unlock()
+		copied := make([]byte, len(data))
+		copy(copied, data)
+		packets = append(packets, copied)
+		return nil
+	}
+
+	config := DefaultVoiceTransportConfig()
+	transport := NewTCPVoiceTransport(config, 12345, sendFunc)
+	defer transport.Close()
+
+	// Send multiple packets
+	for i := 0; i < 5; i++ {
+		err := transport.SendVoice("party:test", []byte{byte(i)})
+		if err != nil {
+			t.Fatalf("SendVoice() error = %v", err)
+		}
+	}
+
+	// Verify sequence numbers are incrementing
+	if len(packets) != 5 {
+		t.Fatalf("expected 5 packets, got %d", len(packets))
+	}
+
+	lastSeq := uint32(0)
+	for i, pktData := range packets {
+		// Skip packet type byte
+		pkt, err := DeserializeVoicePacket(pktData[1:])
+		if err != nil {
+			t.Fatalf("DeserializeVoicePacket() error = %v", err)
+		}
+
+		if i > 0 && pkt.SequenceNumber <= lastSeq {
+			t.Errorf("sequence number not increasing: got %d, previous was %d", pkt.SequenceNumber, lastSeq)
+		}
+		lastSeq = pkt.SequenceNumber
+	}
+}
+
+func TestVoiceTransportChannelMembership(t *testing.T) {
+	config := DefaultVoiceTransportConfig()
+	transport := NewTCPVoiceTransport(config, 12345, nil)
+	defer transport.Close()
+
+	// Initially not in any channel
+	if transport.IsInChannel("party:test") {
+		t.Error("IsInChannel() = true, want false")
+	}
+
+	// Join channel
+	transport.JoinChannel("party:test")
+	if !transport.IsInChannel("party:test") {
+		t.Error("IsInChannel() = false after JoinChannel, want true")
+	}
+
+	// Leave channel
+	transport.LeaveChannel("party:test")
+	if transport.IsInChannel("party:test") {
+		t.Error("IsInChannel() = true after LeaveChannel, want false")
+	}
+}
+
+func TestVoiceTransportSpatialParams(t *testing.T) {
+	config := DefaultVoiceTransportConfig()
+	transport := NewTCPVoiceTransport(config, 12345, nil)
+	defer transport.Close()
+
+	// Default values
+	volume, pan := transport.GetSpatialParams()
+	if volume != 1.0 {
+		t.Errorf("initial volume = %f, want 1.0", volume)
+	}
+	if pan != 0.0 {
+		t.Errorf("initial pan = %f, want 0.0", pan)
+	}
+
+	// Set new values
+	transport.SetSpatialParams(0.5, -0.3)
+	volume, pan = transport.GetSpatialParams()
+	if volume != 0.5 {
+		t.Errorf("volume = %f, want 0.5", volume)
+	}
+	if pan != -0.3 {
+		t.Errorf("pan = %f, want -0.3", pan)
+	}
+}
+
+func TestVoiceTransportReceiveVoice(t *testing.T) {
+	config := DefaultVoiceTransportConfig()
+	config.JitterBufferDelayMs = 10 // Short delay for testing
+	transport := NewTCPVoiceTransport(config, 12345, nil)
+	defer transport.Close()
+
+	// Join the channel first
+	transport.JoinChannel("party:test")
+
+	// Create and inject a voice packet
+	pkt := &VoicePacket{
+		Header:         PacketHeader{MessageID: uuid.New()},
+		SenderID:       99999, // Different sender
+		ChannelID:      "party:test",
+		SequenceNumber: 1,
+		Timestamp:      uint64(time.Now().UnixMilli()),
+		Data:           []byte{0xAA, 0xBB, 0xCC},
+	}
+
+	// Handle received packet
+	err := transport.HandleReceivedPacket(pkt)
+	if err != nil {
+		t.Fatalf("HandleReceivedPacket() error = %v", err)
+	}
+
+	// Wait for jitter buffer to deliver
+	time.Sleep(50 * time.Millisecond)
+
+	// Should be able to receive
+	channelID, senderID, data, ok := transport.ReceiveVoice()
+	if !ok {
+		t.Fatal("ReceiveVoice() returned ok=false, expected data")
+	}
+
+	if channelID != "party:test" {
+		t.Errorf("channelID = %s, want party:test", channelID)
+	}
+
+	if senderID != "99999" {
+		t.Errorf("senderID = %s, want 99999", senderID)
+	}
+
+	if len(data) != 3 || data[0] != 0xAA || data[1] != 0xBB || data[2] != 0xCC {
+		t.Errorf("data = %v, want [0xAA 0xBB 0xCC]", data)
+	}
+}
+
+func TestVoiceTransportDropsOwnPackets(t *testing.T) {
+	config := DefaultVoiceTransportConfig()
+	config.JitterBufferDelayMs = 10
+	transport := NewTCPVoiceTransport(config, 12345, nil)
+	defer transport.Close()
+
+	transport.JoinChannel("party:test")
+
+	// Inject a packet from ourselves
+	pkt := &VoicePacket{
+		Header:         PacketHeader{MessageID: uuid.New()},
+		SenderID:       12345, // Same as transport playerID
+		ChannelID:      "party:test",
+		SequenceNumber: 1,
+		Timestamp:      uint64(time.Now().UnixMilli()),
+		Data:           []byte{0x01},
+	}
+
+	err := transport.HandleReceivedPacket(pkt)
+	if err != nil {
+		t.Fatalf("HandleReceivedPacket() error = %v", err)
+	}
+
+	// Wait and check - should not receive our own packet
+	time.Sleep(50 * time.Millisecond)
+
+	_, _, _, ok := transport.ReceiveVoice()
+	if ok {
+		t.Error("ReceiveVoice() returned ok=true for own packet, should be filtered")
+	}
+}
+
+func TestVoiceTransportDropsUnsubscribedChannels(t *testing.T) {
+	config := DefaultVoiceTransportConfig()
+	config.JitterBufferDelayMs = 10
+	transport := NewTCPVoiceTransport(config, 12345, nil)
+	defer transport.Close()
+
+	// NOT joining the channel
+
+	pkt := &VoicePacket{
+		Header:         PacketHeader{MessageID: uuid.New()},
+		SenderID:       99999,
+		ChannelID:      "party:test", // Not subscribed
+		SequenceNumber: 1,
+		Timestamp:      uint64(time.Now().UnixMilli()),
+		Data:           []byte{0x01},
+	}
+
+	err := transport.HandleReceivedPacket(pkt)
+	if err != nil {
+		t.Fatalf("HandleReceivedPacket() error = %v", err)
+	}
+
+	time.Sleep(50 * time.Millisecond)
+
+	_, _, _, ok := transport.ReceiveVoice()
+	if ok {
+		t.Error("ReceiveVoice() returned ok=true for unsubscribed channel")
+	}
+}
+
+func TestVoiceTransportJitterBufferOrdering(t *testing.T) {
+	config := DefaultVoiceTransportConfig()
+	config.JitterBufferDelayMs = 20
+	transport := NewTCPVoiceTransport(config, 12345, nil)
+	defer transport.Close()
+
+	transport.JoinChannel("party:test")
+
+	// Send packets out of order: 3, 1, 2
+	for _, seq := range []uint32{3, 1, 2} {
+		pkt := &VoicePacket{
+			Header:         PacketHeader{MessageID: uuid.New()},
+			SenderID:       99999,
+			ChannelID:      "party:test",
+			SequenceNumber: seq,
+			Timestamp:      uint64(time.Now().UnixMilli()),
+			Data:           []byte{byte(seq)},
+		}
+		err := transport.HandleReceivedPacket(pkt)
+		if err != nil {
+			t.Fatalf("HandleReceivedPacket() error = %v", err)
+		}
+		// Small delay between packets
+		time.Sleep(5 * time.Millisecond)
+	}
+
+	// Wait for jitter buffer
+	time.Sleep(100 * time.Millisecond)
+
+	// Should receive in order: 1, 2, 3
+	expectedOrder := []uint32{1, 2, 3}
+	for i, expected := range expectedOrder {
+		_, _, data, ok := transport.ReceiveVoice()
+		if !ok {
+			t.Fatalf("packet %d: ReceiveVoice() returned ok=false", i)
+		}
+		if len(data) != 1 || uint32(data[0]) != expected {
+			t.Errorf("packet %d: data[0] = %d, want %d", i, data[0], expected)
+		}
+	}
+}
+
+func TestVoiceTransportClose(t *testing.T) {
+	config := DefaultVoiceTransportConfig()
+	transport := NewTCPVoiceTransport(config, 12345, nil)
+
+	// Close should work
+	err := transport.Close()
+	if err != nil {
+		t.Errorf("Close() error = %v", err)
+	}
+
+	// Second close should be idempotent
+	err = transport.Close()
+	if err != nil {
+		t.Errorf("second Close() error = %v", err)
+	}
+
+	// Send should fail after close
+	err = transport.SendVoice("party:test", []byte{0x01})
+	if err == nil {
+		t.Error("SendVoice() after Close() should return error")
+	}
+}
+
+func TestVoiceTransportStats(t *testing.T) {
+	sendCount := 0
+	sendFunc := func(data []byte) error {
+		sendCount++
+		return nil
+	}
+
+	config := DefaultVoiceTransportConfig()
+	transport := NewTCPVoiceTransport(config, 12345, sendFunc)
+	defer transport.Close()
+
+	// Send some packets
+	for i := 0; i < 10; i++ {
+		transport.SendVoice("party:test", []byte{byte(i)})
+	}
+
+	// Join a channel
+	transport.JoinChannel("party:test")
+	transport.JoinChannel("guild:test")
+
+	stats := transport.GetStats()
+	if stats.PacketsSent != 10 {
+		t.Errorf("PacketsSent = %d, want 10", stats.PacketsSent)
+	}
+	if stats.ChannelCount != 2 {
+		t.Errorf("ChannelCount = %d, want 2", stats.ChannelCount)
+	}
+}
+
+func TestVoicePacketSerialization(t *testing.T) {
+	tests := []struct {
+		name    string
+		packet  *VoicePacket
+		wantErr bool
+	}{
+		{
+			name: "valid packet",
+			packet: &VoicePacket{
+				Header:         PacketHeader{MessageID: uuid.New()},
+				SenderID:       12345,
+				ChannelID:      "party:test",
+				SequenceNumber: 42,
+				Timestamp:      1234567890,
+				Data:           []byte{0x01, 0x02, 0x03, 0x04},
+			},
+			wantErr: false,
+		},
+		{
+			name: "empty channel ID",
+			packet: &VoicePacket{
+				Header:         PacketHeader{MessageID: uuid.New()},
+				SenderID:       12345,
+				ChannelID:      "",
+				SequenceNumber: 1,
+				Timestamp:      1234567890,
+				Data:           []byte{0x01},
+			},
+			wantErr: false,
+		},
+		{
+			name: "long channel ID",
+			packet: &VoicePacket{
+				Header:         PacketHeader{MessageID: uuid.New()},
+				SenderID:       12345,
+				ChannelID:      string(make([]byte, 255)), // Max length
+				SequenceNumber: 1,
+				Timestamp:      1234567890,
+				Data:           []byte{0x01},
+			},
+			wantErr: false,
+		},
+		{
+			name: "channel ID too long",
+			packet: &VoicePacket{
+				Header:         PacketHeader{MessageID: uuid.New()},
+				SenderID:       12345,
+				ChannelID:      string(make([]byte, 256)), // Too long
+				SequenceNumber: 1,
+				Timestamp:      1234567890,
+				Data:           []byte{0x01},
+			},
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			serialized, err := SerializeVoicePacket(tt.packet)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("SerializeVoicePacket() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+
+			if tt.wantErr {
+				return
+			}
+
+			// Deserialize and verify
+			deserialized, err := DeserializeVoicePacket(serialized)
+			if err != nil {
+				t.Fatalf("DeserializeVoicePacket() error = %v", err)
+			}
+
+			if deserialized.SenderID != tt.packet.SenderID {
+				t.Errorf("SenderID = %d, want %d", deserialized.SenderID, tt.packet.SenderID)
+			}
+			if deserialized.ChannelID != tt.packet.ChannelID {
+				t.Errorf("ChannelID = %s, want %s", deserialized.ChannelID, tt.packet.ChannelID)
+			}
+			if deserialized.SequenceNumber != tt.packet.SequenceNumber {
+				t.Errorf("SequenceNumber = %d, want %d", deserialized.SequenceNumber, tt.packet.SequenceNumber)
+			}
+			if deserialized.Timestamp != tt.packet.Timestamp {
+				t.Errorf("Timestamp = %d, want %d", deserialized.Timestamp, tt.packet.Timestamp)
+			}
+			if len(deserialized.Data) != len(tt.packet.Data) {
+				t.Errorf("Data length = %d, want %d", len(deserialized.Data), len(tt.packet.Data))
+			}
+			for i := range deserialized.Data {
+				if deserialized.Data[i] != tt.packet.Data[i] {
+					t.Errorf("Data[%d] = %d, want %d", i, deserialized.Data[i], tt.packet.Data[i])
+				}
+			}
+		})
+	}
+}
+
+func TestVoicePacketDeserializeErrors(t *testing.T) {
+	tests := []struct {
+		name    string
+		data    []byte
+		wantErr bool
+	}{
+		{
+			name:    "empty data",
+			data:    []byte{},
+			wantErr: true,
+		},
+		{
+			name:    "too short",
+			data:    make([]byte, VoicePacketHeaderSize-1),
+			wantErr: true,
+		},
+		{
+			name:    "truncated channel ID",
+			data:    append(make([]byte, 25), 50), // Claims 50-byte channel ID but not enough data
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := DeserializeVoicePacket(tt.data)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("DeserializeVoicePacket() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func TestVoiceTransportConcurrency(t *testing.T) {
+	config := DefaultVoiceTransportConfig()
+	config.JitterBufferDelayMs = 10
+
+	sentCount := 0
+	var mu sync.Mutex
+	sendFunc := func(data []byte) error {
+		mu.Lock()
+		defer mu.Unlock()
+		sentCount++
+		return nil
+	}
+
+	transport := NewTCPVoiceTransport(config, 12345, sendFunc)
+	defer transport.Close()
+
+	transport.JoinChannel("party:test")
+
+	// Concurrent sends
+	var wg sync.WaitGroup
+	for i := 0; i < 10; i++ {
+		wg.Add(1)
+		go func(id int) {
+			defer wg.Done()
+			for j := 0; j < 10; j++ {
+				transport.SendVoice("party:test", []byte{byte(id), byte(j)})
+			}
+		}(i)
+	}
+
+	// Concurrent receives
+	for i := 0; i < 5; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for j := 0; j < 20; j++ {
+				pkt := &VoicePacket{
+					Header:         PacketHeader{MessageID: uuid.New()},
+					SenderID:       uint64(99999 + j),
+					ChannelID:      "party:test",
+					SequenceNumber: uint32(j),
+					Timestamp:      uint64(time.Now().UnixMilli()),
+					Data:           []byte{byte(j)},
+				}
+				transport.HandleReceivedPacket(pkt)
+			}
+		}()
+	}
+
+	wg.Wait()
+
+	mu.Lock()
+	if sentCount != 100 {
+		t.Errorf("sentCount = %d, want 100", sentCount)
+	}
+	mu.Unlock()
+}
+
+func TestHighLatencyVoiceTransportConfig(t *testing.T) {
+	config := HighLatencyVoiceTransportConfig()
+
+	if config.JitterBufferSize != 64 {
+		t.Errorf("JitterBufferSize = %d, want 64", config.JitterBufferSize)
+	}
+	if config.JitterBufferDelayMs != 200 {
+		t.Errorf("JitterBufferDelayMs = %d, want 200", config.JitterBufferDelayMs)
+	}
+	if config.DropOldPackets != 200 {
+		t.Errorf("DropOldPackets = %d, want 200", config.DropOldPackets)
+	}
+}
+
+func BenchmarkVoicePacketSerialization(b *testing.B) {
+	pkt := &VoicePacket{
+		Header:         PacketHeader{MessageID: uuid.New()},
+		SenderID:       12345,
+		ChannelID:      "party:test123",
+		SequenceNumber: 42,
+		Timestamp:      1234567890,
+		Data:           make([]byte, 480), // Typical voice frame size
+	}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		SerializeVoicePacket(pkt)
+	}
+}
+
+func BenchmarkVoicePacketDeserialization(b *testing.B) {
+	pkt := &VoicePacket{
+		Header:         PacketHeader{MessageID: uuid.New()},
+		SenderID:       12345,
+		ChannelID:      "party:test123",
+		SequenceNumber: 42,
+		Timestamp:      1234567890,
+		Data:           make([]byte, 480),
+	}
+	serialized, _ := SerializeVoicePacket(pkt)
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		DeserializeVoicePacket(serialized)
+	}
+}
+
+func BenchmarkVoiceTransportSend(b *testing.B) {
+	sendFunc := func(data []byte) error {
+		return nil
+	}
+
+	config := DefaultVoiceTransportConfig()
+	transport := NewTCPVoiceTransport(config, 12345, sendFunc)
+	defer transport.Close()
+
+	data := make([]byte, 480) // Typical voice frame
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		transport.SendVoice("party:test", data)
+	}
+}
+
+// Helper to verify interface compliance
+func TestVoiceTransportInterfaceCompliance(t *testing.T) {
+	config := DefaultVoiceTransportConfig()
+	transport := NewTCPVoiceTransport(config, 12345, nil)
+	defer transport.Close()
+
+	// This test verifies that TCPVoiceTransport implements audio.VoiceTransport
+	// The compile-time check in voice_transport.go handles this, but this test
+	// exercises the interface methods directly.
+
+	// SendVoice
+	_ = transport.SendVoice("test", []byte{0x01})
+
+	// ReceiveVoice
+	_, _, _, _ = transport.ReceiveVoice()
+
+	// SetSpatialParams
+	transport.SetSpatialParams(0.5, 0.5)
+
+	t.Log("Interface compliance verified")
+}
+
+// TestVoiceTransportSendError tests error handling in send function
+func TestVoiceTransportSendError(t *testing.T) {
+	sendFunc := func(data []byte) error {
+		return fmt.Errorf("network error")
+	}
+
+	config := DefaultVoiceTransportConfig()
+	transport := NewTCPVoiceTransport(config, 12345, sendFunc)
+	defer transport.Close()
+
+	err := transport.SendVoice("party:test", []byte{0x01})
+	if err == nil {
+		t.Error("SendVoice() should return error when send function fails")
+	}
+}

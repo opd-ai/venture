@@ -11,6 +11,13 @@ import (
 	"golang.org/x/image/font/basicfont"
 )
 
+// TerritoryBonusProvider provides territory bonus information for display.
+// Implemented by TerritorySystem to allow HUD to show bonuses.
+type TerritoryBonusProvider interface {
+	// GetBonusesForGuild returns resource and XP bonuses for a guild.
+	GetBonusesForGuild(guildID string) (resourceBonus, xpBonus float64)
+}
+
 // HUDSystem renders the heads-up display (health bars, stats, etc).
 type EbitenHUDSystem struct {
 	screen       *ebiten.Image
@@ -25,6 +32,9 @@ type EbitenHUDSystem struct {
 
 	// Network client for displaying latency (optional, only in multiplayer)
 	networkClient NetworkClient
+
+	// Territory bonus provider for displaying guild territory bonuses
+	territoryBonusProvider TerritoryBonusProvider
 }
 
 // NewEbitenHUDSystem creates a new HUD system.
@@ -45,6 +55,12 @@ func (h *EbitenHUDSystem) SetPlayerEntity(entity *Entity) {
 // Pass nil to disable network status display.
 func (h *EbitenHUDSystem) SetNetworkClient(client NetworkClient) {
 	h.networkClient = client
+}
+
+// SetTerritoryBonusProvider sets the territory bonus provider for displaying guild bonuses.
+// Pass nil to disable territory bonus display.
+func (h *EbitenHUDSystem) SetTerritoryBonusProvider(provider TerritoryBonusProvider) {
+	h.territoryBonusProvider = provider
 }
 
 // Update is called every frame but HUD doesn't need to update entities.
@@ -77,6 +93,9 @@ func (h *EbitenHUDSystem) Draw(screen interface{}) {
 	// Note: Aim indicator is now drawn by EbitenRenderSystem (below player sprite layer)
 	// Draw network status if in multiplayer mode
 	h.drawNetworkStatus()
+
+	// Draw territory bonuses if available
+	h.drawTerritoryBonuses()
 }
 
 // drawHealthBar draws the player's health bar at the top left.
@@ -365,6 +384,68 @@ func (h *EbitenHUDSystem) drawNetworkStatus() {
 	// Draw latency with quality indicator
 	latencyText := fmt.Sprintf("%dms (%s)", latencyMs, qualityText)
 	h.drawText(latencyText, x, y, qualityColor)
+}
+
+// drawTerritoryBonuses displays the player's guild territory bonuses.
+// Shown below network status in top-right corner (or below stats if no network status).
+// Displays resource and XP multiplier bonuses from controlled territories.
+func (h *EbitenHUDSystem) drawTerritoryBonuses() {
+	// Only draw if territory bonus provider is configured
+	if h.territoryBonusProvider == nil {
+		return
+	}
+
+	// Only draw if screen is initialized (not in test environment)
+	if h.screen == nil {
+		return
+	}
+
+	// Get player's guild ID from guild component
+	guildComp, ok := h.playerEntity.GetComponent("guild")
+	if !ok {
+		return // Player not in a guild
+	}
+	guild, ok := guildComp.(*GuildComponent)
+	if !ok || guild.GuildID == "" {
+		return // No valid guild
+	}
+
+	// Get bonuses from the provider
+	resourceBonus, xpBonus := h.territoryBonusProvider.GetBonusesForGuild(guild.GuildID)
+
+	// Don't show if no bonuses
+	if resourceBonus == 0 && xpBonus == 0 {
+		return
+	}
+
+	// Position below network status (or below stats if no network)
+	x := h.screenWidth - 200
+	y := 180 // Below network status panel
+	if h.networkClient == nil || !h.networkClient.IsConnected() {
+		y = 130 // Position at network status location if no network
+	}
+	lineHeight := 18
+
+	// Draw background panel
+	panelWidth := float32(180)
+	panelHeight := float32(55)
+	vector.DrawFilledRect(h.screen, float32(x-10), float32(y-5),
+		panelWidth, panelHeight, color.RGBA{20, 40, 20, 200}, false)
+	vector.StrokeRect(h.screen, float32(x-10), float32(y-5),
+		panelWidth, panelHeight, 2, color.RGBA{100, 200, 100, 128}, false)
+
+	// Draw "Territory Bonuses" label
+	h.drawText("Territory Bonuses:", x, y, color.RGBA{100, 255, 100, 255})
+	y += lineHeight
+
+	// Draw resource bonus (gold/green tint)
+	resourceText := fmt.Sprintf("Resources: +%.0f%%", resourceBonus*100)
+	h.drawText(resourceText, x, y, color.RGBA{255, 215, 0, 255})
+	y += lineHeight
+
+	// Draw XP bonus (blue/cyan tint)
+	xpText := fmt.Sprintf("XP: +%.0f%%", xpBonus*100)
+	h.drawText(xpText, x, y, color.RGBA{100, 200, 255, 255})
 }
 
 // Compile-time check that EbitenHUDSystem implements UISystem

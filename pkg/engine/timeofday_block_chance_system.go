@@ -150,40 +150,7 @@ func (s *TimeOfDayBlockChanceSystem) Update(entities []*Entity, deltaTime float6
 
 	// Update block chance for all entities with stats
 	modifier := s.getBlockModifier(currentTime)
-	for _, entity := range entities {
-		if !entity.HasComponent("stats") {
-			continue
-		}
-
-		statsComp, ok := entity.GetComponent("stats")
-		if !ok {
-			continue
-		}
-
-		stats, ok := statsComp.(*StatsComponent)
-		if !ok {
-			continue
-		}
-
-		// Store original block chance if not already stored
-		if _, exists := s.originalBlockChance[entity.ID]; !exists {
-			s.originalBlockChance[entity.ID] = stats.BlockChance
-		}
-
-		// Apply time-of-day modified block chance
-		originalBlock := s.originalBlockChance[entity.ID]
-		newBlock := originalBlock + modifier
-
-		// Clamp to valid range (0.0 to 1.0)
-		if newBlock < 0.0 {
-			newBlock = 0.0
-		}
-		if newBlock > 1.0 {
-			newBlock = 1.0
-		}
-
-		stats.BlockChance = newBlock
-	}
+	ApplyTimeOfDayStatModifier(entities, modifier, s.originalBlockChance, BlockChanceAccessor)
 }
 
 // getBlockModifier calculates the total block chance modifier for the current time.

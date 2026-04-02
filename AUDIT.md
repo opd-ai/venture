@@ -76,7 +76,7 @@ Generated: 2026-04-02T02:21Z
   2. Call `Intersects()` — returns `false` even though edges touch
   3. A moving entity at x=31.99 won't collide with the wall at x=32.0
 - **Root Cause**: Standard AABB uses strict `<` for separation test, not `<=`. The `<=` variant creates an infinitesimally thin gap at boundaries.
-- **Suggested Fix**: Change line 348 to `return !(maxX1 < minX2 || maxX2 < minX1 || maxY1 < minY2 || maxY2 < minY1)`. Apply same fix to line 378.
+- **Suggested Fix**: Change the separation test from `<=` to `<` on line 348: `return !(maxX1 < minX2 || maxX2 < minX1 || maxY1 < minY2 || maxY2 < minY1)`. The standard AABB overlap test uses strict less-than (`<`) for the separation condition — when no axis is separated, the boxes overlap. With `<`, the case `maxX1 == minX2` is NOT separated, meaning touching edges DO collide. Apply the same fix to line 378.
 
 ---
 
@@ -161,7 +161,7 @@ Generated: 2026-04-02T02:21Z
 - **Category**: Logic
 - **Description**: Boundary clamping uses `pos.X <= bounds.MinX || pos.X >= bounds.MaxX` and zeros velocity. An entity positioned exactly at `MinX` or `MaxX` has its velocity permanently zeroed, even if it's trying to move away from the boundary.
 - **Impact**: Entities that spawn at or are pushed to exact boundary coordinates become permanently stuck — they can't move in any direction because velocity is zeroed unconditionally regardless of movement direction.
-- **Suggested Fix**: Only zero velocity when moving toward the boundary: `if pos.X <= bounds.MinX && vel.VX < 0 { vel.VX = 0 }`.
+- **Suggested Fix**: Only zero velocity when moving toward the boundary. Check all four directions: `if pos.X <= bounds.MinX && vel.VX < 0 { vel.VX = 0 }`, `if pos.X >= bounds.MaxX && vel.VX > 0 { vel.VX = 0 }`, `if pos.Y <= bounds.MinY && vel.VY < 0 { vel.VY = 0 }`, `if pos.Y >= bounds.MaxY && vel.VY > 0 { vel.VY = 0 }`.
 
 ### [M-003] Touch vs Mouse Button State Inconsistency
 - **Location**: `pkg/mobile/ui.go:823-835`
@@ -399,7 +399,7 @@ Generated: 2026-04-02T02:21Z
 1. `BenchmarkCreateEntity_Concurrent` — parallel entity creation under load
 2. `BenchmarkCollisionSystem_1000Entities` — with spatial partitioning
 3. `BenchmarkUIRender_AllPanelsOpen` — measure string allocation overhead
-4. `BenchmarkFullSystemSuite` — all 66 systems with 500 entities (addresses GAPS.md Gap 5)
+4. `BenchmarkFullSystemSuite` — all 66 systems with 500 entities (addresses the narrow FPS benchmark scope documented in GAPS.md Gap 5, which notes the current benchmark only tests MovementSystem with 2000 entities and does not cover all systems, collision detection, or the rendering pipeline)
 
 ---
 

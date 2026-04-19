@@ -2,11 +2,19 @@
 // This file contains all available talents organized by category.
 package engine
 
+import "sync"
+
 // talentRegistry holds all defined talents.
 var talentRegistry = make(map[string]*TalentDefinition)
 
 // categoryTalents groups talents by category for UI.
 var categoryTalents = make(map[TalentCategory][]*TalentDefinition)
+
+// talentMu protects talentRegistry and categoryTalents from concurrent
+// access. The maps are populated once in init() and are effectively
+// read-only during normal gameplay, but the mod system may call
+// registerTalent() at runtime, so all accesses must hold the lock.
+var talentMu sync.RWMutex
 
 // init initializes the talent registry with all defined talents.
 func init() {
@@ -18,27 +26,35 @@ func init() {
 
 // GetTalentDefinition returns a talent by ID.
 func GetTalentDefinition(id string) *TalentDefinition {
+	talentMu.RLock()
+	defer talentMu.RUnlock()
 	return talentRegistry[id]
 }
 
 // GetAllTalentDefinitions returns all defined talents.
 func GetAllTalentDefinitions() []*TalentDefinition {
+	talentMu.RLock()
 	result := make([]*TalentDefinition, 0, len(talentRegistry))
 	for _, def := range talentRegistry {
 		result = append(result, def)
 	}
+	talentMu.RUnlock()
 	return result
 }
 
 // GetTalentsByCategory returns all talents in a category.
 func GetTalentsByCategory(category TalentCategory) []*TalentDefinition {
+	talentMu.RLock()
+	defer talentMu.RUnlock()
 	return categoryTalents[category]
 }
 
 // registerTalent adds a talent to the registry.
 func registerTalent(talent *TalentDefinition) {
+	talentMu.Lock()
 	talentRegistry[talent.ID] = talent
 	categoryTalents[talent.Category] = append(categoryTalents[talent.Category], talent)
+	talentMu.Unlock()
 }
 
 // registerOffenseTalents defines all offense talents.

@@ -1,4 +1,4 @@
-# Implementation Gaps — 2026-03-21
+# Implementation Gaps — 2026-04-19
 
 This document tracks gaps between the project's stated goals (README.md) and actual implementation.
 
@@ -159,6 +159,44 @@ This document tracks gaps between the project's stated goals (README.md) and act
 
 ---
 
+## Gap 11: ECS Race Conditions on Entity Staging Buffers (C-001/C-002)
+
+- **Status**: ✅ RESOLVED
+- **Stated Goal**: Thread-safe ECS for concurrent server-join and game-loop operations.
+- **Root Cause**:
+  - `World.CreateEntity()` read/incremented `nextEntityID` and appended to `entitiesToAdd` without any synchronization.
+  - `World.AddEntity()` and `World.RemoveEntity()` appended to staging slices without synchronization.
+  - `World.Update()` read and drained staging slices on the game-loop goroutine without locking, racing with concurrent writers.
+- **Fix Applied** (`pkg/engine/ecs.go`):
+  - Added `entityMu sync.Mutex` field to `World` struct (separate from `mu sync.RWMutex` used for system-list and metrics access).
+  - `CreateEntity()`, `AddEntity()`, `RemoveEntity()` lock `entityMu` around all staging-buffer mutations.
+  - `Update()` and `processPendingEntityAdditions()` snapshot the staging slices under `entityMu` (swap with `nil`) then process the snapshot outside the lock, keeping the critical section minimal.
+- **Test Added**: `TestCreateEntityConcurrentSafety` in `pkg/engine/ecs_test.go` — spawns 20 goroutines each creating 50 entities; passes cleanly under `go test -race`.
+
+---
+
+## Gap 12: Unprotected Global Talent Registry Maps (H-008)
+
+- **Status**: ✅ RESOLVED
+- **Root Cause**: Package-level `talentRegistry` (`map[string]*TalentDefinition`) and `categoryTalents` (`map[TalentCategory][]*TalentDefinition`) had no mutex protection. Concurrent reads from the game loop and writes from the mod system (which can call `registerTalent()` at runtime) would cause a fatal Go map-concurrency panic.
+- **Fix Applied** (`pkg/engine/talent_definitions.go`):
+  - Added `talentMu sync.RWMutex` package-level variable.
+  - `GetTalentDefinition()`, `GetAllTalentDefinitions()`, `GetTalentsByCategory()` acquire `talentMu.RLock()`.
+  - `registerTalent()` acquires `talentMu.Lock()`.
+  - `init()` is single-threaded by Go's runtime guarantee, so no lock needed there.
+
+---
+
+## Gap 13: ChatUI HandleClick Double-Activation on Overlapping Regions (H-009)
+
+- **Status**: ✅ RESOLVED
+- **Root Cause**: `ChatUI.HandleClick()` in `pkg/rendering/ui/chat.go` used two independent `if` statements for the tab row and input field regions. On a small window where the regions overlap, both handlers fired for a single click, simultaneously switching the channel and activating text input.
+- **Fix Applied** (`pkg/rendering/ui/chat.go`):
+  - Changed the second `if` to `else` — input field click is only tested when the tab row check did not match.
+  - Added comment explaining the mutual-exclusion intent.
+
+---
+
 ## Summary
 
 | Gap | Severity | Effort | Status |
@@ -173,7 +211,10 @@ This document tracks gaps between the project's stated goals (README.md) and act
 | Gap 8: Trade quantity model | 🟢 LOW | N/A | ✅ Resolved (design decision) |
 | Gap 9: memprofile logging | 🟢 LOW | N/A | ✅ Resolved |
 | Gap 10: Performance CI gate | 🟢 LOW | N/A | ✅ Resolved |
+| Gap 11: ECS entity staging races | 🔴 CRITICAL | Fixed | ✅ Resolved |
+| Gap 12: Talent registry unprotected | 🟡 MEDIUM | Fixed | ✅ Resolved |
+| Gap 13: ChatUI double-activation | 🟡 MEDIUM | Fixed | ✅ Resolved |
 
 ---
 
-*Updated: 2026-03-21 | 8 of 10 gaps resolved*
+*Updated: 2026-04-19 | 11 of 13 gaps resolved*

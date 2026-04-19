@@ -375,11 +375,12 @@ func (ui *ChatUI) HandleClick(x, y int) {
 				break
 			}
 		}
-	}
-
-	// Check input field click
-	inputY := ui.Y + ui.Height - ui.InputHeight - ui.Padding
-	if y >= inputY && y <= inputY+ui.InputHeight {
-		ui.SetInputActive(true)
+	} else {
+		// Check input field click — only if the tab row was not hit, so that
+		// overlapping regions (small window) do not activate both at once.
+		inputY := ui.Y + ui.Height - ui.InputHeight - ui.Padding
+		if y >= inputY && y <= inputY+ui.InputHeight {
+			ui.SetInputActive(true)
+		}
 	}
 }

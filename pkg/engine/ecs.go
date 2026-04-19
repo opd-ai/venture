@@ -518,6 +518,12 @@ type World struct {
 
 	// Mutex for thread-safe access to entities and metrics
 	mu sync.RWMutex
+
+	// entityMu protects the entity staging buffers (entitiesToAdd,
+	// entityIDsToRemove, nextEntityID) which can be written from any
+	// goroutine (e.g. server player-join handlers) while Update() reads
+	// and drains them on the game-loop goroutine.
+	entityMu sync.Mutex
 }
 
 // NewWorld creates a new game world.
@@ -569,10 +575,12 @@ func NewWorldWithLogger(logger *logrus.Logger) *World {
 
 // CreateEntity creates a new entity and adds it to the world.
 func (w *World) CreateEntity() *Entity {
+	w.entityMu.Lock()
 	id := w.nextEntityID
 	w.nextEntityID++
 	entity := NewEntity(id)
 	w.entitiesToAdd = append(w.entitiesToAdd, entity)
+	w.entityMu.Unlock()
 
 	if w.logger != nil && w.logger.Logger.GetLevel() >= logrus.DebugLevel {
 		w.logger.WithField("entityID", id).Debug("entity created")
@@ -583,14 +591,18 @@ func (w *World) CreateEntity() *Entity {
 
 // AddEntity adds an existing entity to the world.
 func (w *World) AddEntity(entity *Entity) {
+	w.entityMu.Lock()
 	w.entitiesToAdd = append(w.entitiesToAdd, entity)
+	w.entityMu.Unlock()
 	w.entityListDirty = true
 	w.invalidateQueryCache()
 }
 
 // RemoveEntity marks an entity for removal from the world.
 func (w *World) RemoveEntity(entityID uint64) {
+	w.entityMu.Lock()
 	w.entityIDsToRemove = append(w.entityIDsToRemove, entityID)
+	w.entityMu.Unlock()
 	w.entityListDirty = true
 	w.invalidateQueryCache()
 
@@ -647,22 +659,34 @@ func (w *World) Update(deltaTime float64) {
 	// Advance game clock for deterministic time tracking
 	w.Clock.Advance(deltaTime)
 
+	// Snapshot pending additions and removals under the entity mutex so that
+	// concurrent calls to CreateEntity/AddEntity/RemoveEntity from other
+	// goroutines do not race with the iteration below.
+	w.entityMu.Lock()
+	pendingToAdd := w.entitiesToAdd
+	pendingToRemove := w.entityIDsToRemove
+	// Setting the fields to nil detaches the staging slices.  Any subsequent
+	// append(nil, elem) call by another goroutine always allocates a fresh
+	// backing array, so there is no risk of the old slice being modified while
+	// we iterate over pendingToAdd / pendingToRemove outside the lock.
+	w.entitiesToAdd = nil
+	w.entityIDsToRemove = nil
+	w.entityMu.Unlock()
+
 	// Process pending additions
-	if len(w.entitiesToAdd) > 0 {
-		for _, entity := range w.entitiesToAdd {
+	if len(pendingToAdd) > 0 {
+		for _, entity := range pendingToAdd {
 			w.entities[entity.ID] = entity
 		}
-		w.entitiesToAdd = w.entitiesToAdd[:0]
 		w.entityListDirty = true
 		w.invalidateQueryCache() // Invalidate query cache when entities are added
 	}
 
 	// Process pending removals
-	if len(w.entityIDsToRemove) > 0 {
-		for _, id := range w.entityIDsToRemove {
+	if len(pendingToRemove) > 0 {
+		for _, id := range pendingToRemove {
 			delete(w.entities, id)
 		}
-		w.entityIDsToRemove = w.entityIDsToRemove[:0]
 		w.entityListDirty = true
 	}
 
@@ -754,13 +778,18 @@ func (w *World) generateQueryKey(componentTypes []string) string {
 // processPendingEntityAdditions adds pending entities to the world.
 // This ensures newly created entities are included in queries.
 func (w *World) processPendingEntityAdditions() {
+	w.entityMu.Lock()
 	if len(w.entitiesToAdd) == 0 {
+		w.entityMu.Unlock()
 		return
 	}
-	for _, entity := range w.entitiesToAdd {
+	pending := w.entitiesToAdd
+	w.entitiesToAdd = nil // detach; concurrent appends will use a new backing array
+	w.entityMu.Unlock()
+
+	for _, entity := range pending {
 		w.entities[entity.ID] = entity
 	}
-	w.entitiesToAdd = w.entitiesToAdd[:0]
 	w.entityListDirty = true
 	w.invalidateQueryCache()
 }

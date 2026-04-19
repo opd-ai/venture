@@ -34,11 +34,11 @@ func GetTalentDefinition(id string) *TalentDefinition {
 // GetAllTalentDefinitions returns all defined talents.
 func GetAllTalentDefinitions() []*TalentDefinition {
 	talentMu.RLock()
+	defer talentMu.RUnlock()
 	result := make([]*TalentDefinition, 0, len(talentRegistry))
 	for _, def := range talentRegistry {
 		result = append(result, def)
 	}
-	talentMu.RUnlock()
 	return result
 }
 

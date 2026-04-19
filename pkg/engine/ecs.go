@@ -665,8 +665,12 @@ func (w *World) Update(deltaTime float64) {
 	w.entityMu.Lock()
 	pendingToAdd := w.entitiesToAdd
 	pendingToRemove := w.entityIDsToRemove
-	w.entitiesToAdd = nil      // detach; concurrent appends will use a new backing array
-	w.entityIDsToRemove = nil  // detach; concurrent appends will use a new backing array
+	// Setting the fields to nil detaches the staging slices.  Any subsequent
+	// append(nil, elem) call by another goroutine always allocates a fresh
+	// backing array, so there is no risk of the old slice being modified while
+	// we iterate over pendingToAdd / pendingToRemove outside the lock.
+	w.entitiesToAdd = nil
+	w.entityIDsToRemove = nil
 	w.entityMu.Unlock()
 
 	// Process pending additions

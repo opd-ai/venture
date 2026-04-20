@@ -3257,8 +3257,19 @@ func initializePrestigeUI(game *engine.EbitenGame, player *engine.Entity, sys *s
 			prestigeUI.Hide()
 		})
 		prestigeUI.SetRespecCallback(func(cost int) bool {
-			// TODO: Check if player has enough gold for respec
-			// For now, always allow respec (will be wired to inventory system)
+			// Check if player has enough gold for respec
+			invComp, hasInv := player.GetComponent("inventory")
+			if !hasInv {
+				return false
+			}
+			inv, ok := invComp.(*engine.InventoryComponent)
+			if !ok {
+				return false
+			}
+			if inv.Gold < cost {
+				return false
+			}
+			inv.Gold -= cost
 			return true
 		})
 

@@ -182,6 +182,10 @@ func initializeV4Systems(world *engine.World, seed int64, genreID string, logger
 	pvpRatingSystem := engine.NewPvPRatingSystem(world)
 	world.AddSystem(pvpRatingSystem)
 
+	// PvP reward system for honor points, seasonal rewards, and tournament prizes
+	pvpRewardSystem := engine.NewPvPRewardSystem(world, seed)
+	world.AddSystem(pvpRewardSystem)
+
 	// Legendary quest system requires raids.Manager for raid-based quest phases
 	raidManager := raids.NewManager(seed, genreID)
 	legendaryQuestSystem := engine.NewLegendaryQuestSystem(world, seed, raidManager)

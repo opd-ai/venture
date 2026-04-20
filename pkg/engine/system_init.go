@@ -1180,6 +1180,11 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 	result.InteractionSystem = NewInteractionSystem(game.World)
 	game.World.AddSystem(result.InteractionSystem)
 
+	// 30b. ScriptingSystem - ECS-integrated sandbox for mod script execution
+	// Evaluates Script components on entities for the sandboxed modding system
+	scriptingSystem := NewScriptingSystem(game.World)
+	game.World.AddSystem(scriptingSystem)
+
 	// 30a. MiniGameSystem - manages mini-game lifecycle (Phase 27.1)
 	// Note: This is NOT added as a System because it has a custom Update signature.
 	// It will be called manually from the game loop.
@@ -2160,6 +2165,30 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 
 	// Wire audio manager to game
 	game.SetAudioManager(result.AudioManager)
+
+	// ========================================================================
+	// ADDITIONAL SYSTEMS (previously uninstantiated)
+	// ========================================================================
+
+	// WorldPersistenceSystem - manages world state persistence across sessions
+	worldPersistenceSystem := NewWorldPersistenceSystem()
+	game.World.AddSystem(worldPersistenceSystem)
+
+	// ChallengeSystem - manages daily/weekly challenge lifecycle and reset
+	challengeSystem := NewChallengeSystem(game.World)
+	game.World.AddSystem(challengeSystem)
+
+	// CollectionSystem - tracks collectible discovery and completion
+	collectionSystem := NewCollectionSystem(game.World)
+	game.World.AddSystem(collectionSystem)
+
+	// EconomyTerritoryIntegrationSystem - bridges territory control with marketplace pricing
+	economyTerritorySystem := NewEconomyTerritoryIntegrationSystem(game.World, EconomyTerritoryConfig{})
+	game.World.AddSystem(economyTerritorySystem)
+
+	// VoiceSettingsSystem - applies voice settings (volume, codec quality) at runtime
+	voiceSettingsSystem := NewVoiceSettingsSystem(game.World)
+	game.World.AddSystem(voiceSettingsSystem)
 
 	if config.EnableVerboseLogging {
 		logger.WithFields(logrus.Fields{

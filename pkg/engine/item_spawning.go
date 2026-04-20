@@ -712,8 +712,7 @@ func (s *ItemPickupSystem) getItemEntityData(itemEntity *Entity) *ItemEntityComp
 
 // attemptItemPickup tries to add item to inventory and handles feedback.
 func (s *ItemPickupSystem) attemptItemPickup(player *Entity, inventory *InventoryComponent, itemEntity *Entity, itemData *ItemEntityComponent) {
-	if inventory.CanAddItem(itemData.Item) {
-		inventory.Items = append(inventory.Items, itemData.Item)
+	if inventory.AddItem(itemData.Item) {
 		s.world.RemoveEntity(itemEntity.ID)
 		s.playItemPickupFeedback(itemEntity, itemData)
 	} else {

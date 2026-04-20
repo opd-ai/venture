@@ -14,19 +14,19 @@
 ## High Priority (Degrades Experience)
 
 ### Division by Zero Risk in Terrain Renderer
-- [ ] No validation that tileWidth/tileHeight are non-zero before division - Location: `pkg/engine/terrain_render_system.go:109-112` - Impact: `NewTerrainRenderSystem()` (line 36) accepts `tileWidth, tileHeight int` without validating they are positive. Lines 109-112 divide viewport coordinates by `float64(t.tileWidth)` and `float64(t.tileHeight)`. If either is 0 (e.g., from misconfiguration or default zero-value struct), this produces `+Inf`/`-Inf`; converting those values to `int` is implementation-dependent and can yield invalid render bounds. In practice this is more likely to break tile culling, render nothing, or trigger a downstream panic than to cause an actual infinite loop. Fix: add `if t.tileWidth <= 0 || t.tileHeight <= 0 { return }` guard at start of `Draw()`.
+- [x] No validation that tileWidth/tileHeight are non-zero before division - Location: `pkg/engine/terrain_render_system.go:109-112` — **FIXED:** Added `if t.tileWidth <= 0 || t.tileHeight <= 0 { return }` guard at start of `Draw()`.
 
 ### Scene Buffer Size Mismatch on Window Resize
-- [ ] `litBuffer` not disposed/recreated in `Layout()` on resize - Location: `pkg/engine/game.go:1723-1742` - Impact: When the window is resized, `Layout()` properly disposes and recreates `sceneBuffer` (line 1733-1736) but does NOT handle `litBuffer`. The `litBuffer` is only recreated inside `drawLitScene()` (lines 1546-1551) when a size mismatch is detected. This means the first frame after resize renders lighting to a stale-sized buffer, causing visual clipping or misalignment. Fix: set `g.litBuffer = nil` in `Layout()` after screen dimension change, so `drawLitScene()` recreates it with correct dimensions.
+- [x] `litBuffer` not disposed/recreated in `Layout()` on resize — **FIXED:** Added `litBuffer.Dispose()` and nil reset in `Layout()` resize branch.
 
 ### Voice Chat Network Transport Not Implemented
 - [ ] Voice network packets never sent over network - Location: `pkg/audio/voice.go` (entire file), documented in `GAPS.md` Gap 1 - Impact: Voice codec (ADPCM) exists and can encode/decode audio, but the `VoiceTransport` interface that would send voice packets over the network is not implemented. `TODO(integration)` at `pkg/audio/manager.go:310` confirms this. Voice chat is completely non-functional in multiplayer.
 
 ### UI Visibility Checks Inconsistent for World Pause
-- [ ] Different UI elements checked in different code paths - Location: `pkg/engine/game.go:1320,1354-1370` - Impact: `shouldUpdateWorld()` and the virtual controls visibility check (`anyUIOpen`) do not consistently check all open UI panels. Some UIs (e.g., QuestUI, ShopUI) may not properly pause world updates when opened, allowing enemies to attack the player while browsing menus. Related comments in the code say "BUG FIX" indicating this has been a recurring issue.
+- [x] Different UI elements checked in different code paths — **FIXED:** Added HousingUI check to both `shouldUpdateWorld()` and `updateVirtualControlsVisibility()`.
 
 ### Item Pickup Bypasses Inventory System
-- [ ] Direct array append instead of using `InventorySystem.AddItemToInventory()` - Location: `pkg/engine/item_spawning.go:714-716` - Impact: `ItemPickupSystem.attemptItemPickup()` directly appends to `inventory.Items` instead of going through the normal inventory add path (`InventorySystem.AddItemToInventory()` / `InventoryComponent.AddItem`). Today this creates duplicated item-insertion logic and risks diverging behavior if capacity checks, stacking rules, logging, or error handling are centralized in the inventory add path. Result: pickups can behave inconsistently with other inventory additions and are harder to maintain safely.
+- [x] Direct array append instead of using `InventorySystem.AddItemToInventory()` — **FIXED:** Replaced `CanAddItem`+direct append with `inventory.AddItem()` which enforces capacity and weight checks.
 
 ## Medium Priority (Polish/Optimization)
 
@@ -46,7 +46,7 @@
 - [ ] Native mobile keyboard APIs not integrated - Location: `pkg/mobile/keyboard_default.go:19` - Impact: `TODO: Integrate native mobile keyboard APIs (UIKeyboard on iOS, InputMethodManager on Android)`. Text input on mobile likely falls back to virtual keyboard which may not work correctly for all input scenarios (chat, character naming).
 
 ### Missing Gold Check for Respec
-- [ ] Respec operation doesn't verify player has sufficient gold - Location: `cmd/client/handlers.go:3260` - Impact: `TODO: Check if player has enough gold for respec`. Players may be able to respec skills/attributes for free, bypassing intended gold sink.
+- [x] Respec operation doesn't verify player has sufficient gold — **FIXED:** Implemented gold check in respec callback using InventoryComponent.Gold field.
 
 ## Resolution Notes
 

@@ -271,6 +271,8 @@ type SystemInitResult struct {
 	SpriteColorTemperatureSystem                *SpriteColorTemperatureSystem
 	SpriteFinalizerSystem                       *SpriteFinalizerSystem
 	CompanionQuestSynergySystem                 *CompanionQuestSynergySystem
+	AchievementNotificationSystem               *AchievementNotificationSystem
+	AvailabilitySystem                          *AvailabilitySystem
 
 	// System wrappers
 	AnimationSystemWrapper            System
@@ -409,6 +411,15 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 	progressionSystem := NewProgressionSystem(game.World)
 	result.ProgressionSystem = progressionSystem
 	game.World.AddSystem(progressionSystem)
+
+	// 17ai. AchievementNotificationSystem - distributes rewards and fires UI/audio
+	// callbacks when achievements are unlocked. Wired here alongside ProgressionSystem
+	// because achievement rewards are denominated in XP and gold that ProgressionSystem
+	// also manages. Callers set OnRewardGranted/OnPlayUnlockSound callbacks after init.
+	achievementNotificationSystem := NewAchievementNotificationSystem(game.World)
+	achievementNotificationSystem.SetRewardSeed(config.Seed ^ 0x4143484E) // "ACHN"
+	result.AchievementNotificationSystem = achievementNotificationSystem
+	game.World.AddSystem(achievementNotificationSystem)
 
 	// 17a. FactionXPBonusSystem - awards bonus XP for killing enemies of allied factions
 	// Connects FactionComponent reputation with ProgressionSystem XP rewards
@@ -2203,6 +2214,12 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 	// CityEvolutionSystem - processes city evolution triggers over time
 	cityEvolutionSystem := NewCityEvolutionSystem(game.World, game.World.Clock)
 	game.World.AddSystem(cityEvolutionSystem)
+
+	// AvailabilitySystem - enforces operating-hours gating on shops, NPCs, and services.
+	// Wired after Clock initialisation so game.World.Clock is guaranteed non-nil.
+	availabilitySystem := NewAvailabilitySystem(game.World, game.World.Clock)
+	result.AvailabilitySystem = availabilitySystem
+	game.World.AddSystem(availabilitySystem)
 
 	if config.EnableVerboseLogging {
 		logger.WithFields(logrus.Fields{

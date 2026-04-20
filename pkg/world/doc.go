@@ -59,12 +59,12 @@
 //	}
 //	loader.Update(playerPositions)
 //
-//	// Track terrain modifications
+//	// Track terrain modifications (wired in cmd/server/main.go after loader init)
 //	modSystem := world.NewChunkModificationSystem(state)
 //	modSystem.ModifyTerrain(100, 100, world.TileWall)
 //	modSystem.AddModification("explosion", 100, 100, 5.0)
 //
-//	// Compress chunk for storage
+//	// Compress chunk on eviction (wired via loader.SetOnEvict in cmd/server/main.go)
 //	compressor := world.NewChunkCompressionSystem()
 //	chunk, _ := loader.GetChunk(0, 0)
 //	compressed, ratio, _ := compressor.CompressChunk(chunk)

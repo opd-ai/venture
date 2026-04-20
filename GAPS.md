@@ -1,199 +1,244 @@
-# Implementation Gaps — 2026-04-19
+# Implementation Gaps — 2026-05-02
 
-This document tracks gaps between the project's stated goals (README.md) and actual implementation.
+This document tracks open implementation gaps between stated project goals and actual runtime
+behavior. Resolved gaps are retained for history; new gaps are appended.
 
 ---
 
-## Gap 1: Voice Chat Network Transport Not Implemented
+## Gap 1: Voice Chat Network Transport Not Wired
 
-- **Stated Goal**: README claims "Voice chat is integrated with party, guild, proximity, and private channels using a built-in codec with spatial audio support."
-- **Current State**: 
-  - ✅ Voice codec exists (`pkg/audio/voice.go` — ADPCM, 3 quality presets)
-  - ✅ Channel management exists (`pkg/engine/voice_channel_system.go` — 4 channel types with moderation)
-  - ✅ Spatial audio exists (`pkg/engine/spatial_voice_system.go` — distance-based volume/panning)
-  - ❌ `VoiceTransport` interface has no TCP/WebRTC implementation
-  - ❌ Voice packets are never sent over the network
-  - ❌ No jitter buffer or packet loss concealment
-- **Impact**: Voice chat is **non-functional in multiplayer**. Players cannot hear each other. The feature is advertised but does not work over the network.
-- **Closing the Gap**:
-  1. Implement `VoiceTransport` in `pkg/network/client.go` that serializes voice frames with sequence numbers and channel IDs
-  2. Add voice packet routing in `pkg/network/server.go` that forwards to channel members
-  3. Implement jitter buffer (50-100ms) in `VoiceProcessor.ProcessOutput()`
-  4. Wire `VoiceProcessor` to network client in `cmd/client/main.go`
+- **Intended Behavior**: README claims "Voice chat is integrated with party, guild, proximity, and
+  private channels using a built-in codec with spatial audio support."
+- **Current State**:
+  - ✅ ADPCM voice codec — `pkg/audio/voice.go`
+  - ✅ `TCPVoiceTransport` implementing `audio.VoiceTransport` — `pkg/network/voice_transport.go:94`
+  - ✅ Jitter buffer with heap-ordered packet reordering — `pkg/network/voice_transport.go:57`
+  - ✅ `VoiceChannelSystem` (moderation, 4 channel types) — `pkg/engine/voice_channel_system.go`
+  - ✅ `SpatialVoiceSystem` (distance-based volume/pan) — `pkg/engine/spatial_voice_system.go`
+  - ✅ `VoiceAudioSystem`, `VoiceChannelSystem` wired in `cmd/client/handlers.go:2215`
+  - ❌ `InitializeVoice()` never called from `cmd/client/` or `cmd/server/`
+  - ❌ `NewTCPVoiceTransport` has zero non-test, non-self-file callers
+  - ❌ `VoiceSettingsSystem` not instantiated (see Gap 14)
+  - ❌ Server-side voice routing (forward packets to channel members) not implemented
+- **Blocked Goal**: Multiplayer voice chat is completely non-functional. Players cannot hear each other.
+- **Implementation Path**:
+  1. In `cmd/client/handlers.go`, after network client connects, create transport:
+     `transport := network.NewTCPVoiceTransport(network.DefaultVoiceTransportConfig(), playerID, sendFunc)`
+  2. Call `sys.audioManager.InitializeVoice(audio.VoiceQualityMedium, transport)` 
+  3. Add server-side handler in `pkg/network/server.go` to decode VoicePacket type and broadcast to channel members
+  4. Instantiate `VoiceSettingsSystem` in `cmd/client/handlers.go` alongside `VoiceAudioSystem`
   5. Add integration tests: `TestVoiceEndToEnd`, `TestSpatialVoiceRouting`
-  - **Estimated effort**: 2-3 days
-  - **Validation**: `go test -v ./pkg/network/... -run Voice && go test -v ./pkg/engine/... -run Voice`
+- **Dependencies**: Network client connection must be established before voice initialization
+- **Effort**: medium (2–3 days)
 
 ---
 
-## Gap 2: Quest Generator Missing Post-Apocalyptic Genre Support
+## Gap 2: Quest Generator Post-Apocalyptic Templates
 
-- **Status**: ✅ RESOLVED
-- **Stated Goal**: README claims "genre system supporting fantasy, sci-fi, horror, cyberpunk, and post-apocalyptic themes" with procedural quest generation.
-- **Current State**:
-  - ✅ `pkg/procgen/quest/generator.go:selectTemplates()` has `case "postapoc":` (lines 107-111)
-  - ✅ `GetPostApocKillTemplates()` — implemented in types.go:645
-  - ✅ `GetPostApocCollectTemplates()` — implemented in types.go:667
-  - ✅ `GetPostApocBossTemplates()` — implemented in types.go:689
-  - ✅ `GetPostApocExploreTemplates()` — implemented in types.go:712
-- **Resolution**: Already fully implemented with genre-appropriate templates (Raiders, Mutants, Wasteland themes).
+- **Status**: ✅ RESOLVED — `pkg/procgen/quest/types.go` has full `postapoc` case with all template functions.
 
 ---
 
-## Gap 3: README Claims "100+ Systems" but Actual Count is 66
+## Gap 3: README System Count Mismatch
 
-- **Status**: ✅ RESOLVED
-- **Stated Goal**: README states "100+ game systems" in project description.
-- **Current State**:
-  - ✅ README.md line 33 already states: "ECS core, 66 game systems"
-  - `pkg/engine/system_init.go` explicitly logs: `"initializing game systems (66 total)"`
-  - Documentation is accurate
-- **Resolution**: Already fixed. README correctly states "66 game systems".
+- **Status**: ✅ RESOLVED — README correctly states 66 game systems; `system_init.go` logs this value.
 
 ---
 
 ## Gap 4: Territory Bonuses Not Displayed in HUD
 
-- **Status**: ✅ RESOLVED
-- **Stated Goal**: Territory control provides gameplay bonuses.
-- **Implementation**:
-  - ✅ `TerritoryBonusProvider` interface defined in `pkg/engine/hud_system.go:14-19`
-  - ✅ `drawTerritoryBonuses()` renders bonus panel in HUD (hud_system.go:389-449)
-  - ✅ `GetBonusesForGuild()` method added to `pkg/world/territory/manager.go:499-512`
-  - ✅ `TerritorySystem` implements `TerritoryBonusProvider` (territory_system.go:217-224)
-  - ✅ HUD wired to TerritorySystem in `cmd/client/handlers.go:2194`
-  - ✅ Test added: `TestGetBonusesForGuild` in manager_test.go
-- **Resolution**: HUD now displays resource and XP bonuses for players in guilds with controlled territories.
+- **Status**: ✅ RESOLVED — `drawTerritoryBonuses()` in `pkg/engine/hud_system.go:389`; wired at `cmd/client/handlers.go:2194`.
 
 ---
 
 ## Gap 5: FPS Benchmark Scope Too Narrow
 
-- **Stated Goal**: "60 FPS minimum on mid-range hardware"
+- **Intended Behavior**: "60 FPS minimum on mid-range hardware" validated by CI.
 - **Current State**:
-  - `pkg/benchmark/fps/benchmark_test.go` tests MovementSystem with 2000 entities
-  - Results show ~16,234 ns/op (well under 16.67ms target)
-  - ❌ Does not test all 66 systems together
-  - ❌ Does not include collision detection
-  - ❌ Does not include rendering pipeline
-- **Impact**: Benchmark validates ECS overhead but not real-world gameplay performance. Performance regressions in other systems could go undetected.
-- **Closing the Gap**:
-  1. Create `BenchmarkFullSystemSuite` that calls `InitializeGameSystems()` with all systems
-  2. Add `BenchmarkCollisionSystem` with realistic entity density
-  3. Add `BenchmarkRenderPipeline` (requires xvfb or headless mode)
-  4. Add CI gate that fails on >20% regression from baseline
-  - **Estimated effort**: 1-2 days
-  - **Validation**: `go test -bench=BenchmarkFull ./pkg/benchmark/fps/`
+  - `pkg/benchmark/fps/benchmark_test.go` tests `MovementSystem` with 2,000 entities only
+  - CI gate using `scripts/benchmark-regression.sh` validates this single benchmark
+  - Collision, rendering, and 64 other systems are unrepresented
+- **Blocked Goal**: CI cannot detect FPS regressions introduced by any system other than movement.
+- **Implementation Path**:
+  1. Create `BenchmarkFullSystemSuite` calling `InitializeGameSystems()` with all 66 systems active
+  2. Add `BenchmarkCollisionSystem` with realistic entity density (100–500 entities)
+  3. Add `BenchmarkRenderPipeline` (requires xvfb or headless guard)
+  4. Update `scripts/benchmark-baseline.json` with new baseline entries
+- **Dependencies**: Requires xvfb in CI for rendering benchmarks
+- **Effort**: small (1–2 days)
 
 ---
 
 ## Gap 6: Signal Handler Integration Test Missing
 
-- **Status**: ✅ RESOLVED
-- **Stated Goal**: Server should gracefully shut down on SIGTERM.
-- **Current State**:
-  - ✅ `cmd/server/shutdown_test.go` exists with comprehensive tests:
-    - `TestGracefulShutdown_SignalHandling` — Tests SIGINT and SIGTERM
-    - `TestGracefulShutdown_DeadlineEnforcement` — Tests shutdown deadline
-    - `TestGracefulShutdown_ContextPropagation` — Tests context propagation
-    - `TestRunGameLoop_ContextCancellation` — Tests game loop stops on cancellation
-    - `TestShutdownSequence_AllComponentsStop` — Tests all components shut down cleanly
-- **Resolution**: Integration tests already exist and validate graceful shutdown behavior.
+- **Status**: ✅ RESOLVED — `cmd/server/shutdown_test.go` contains five comprehensive tests including SIGINT/SIGTERM.
 
 ---
 
 ## Gap 7: Territory System Lacks Mod Support
 
-- **Status**: ✅ RESOLVED
-- **Stated Goal**: Modding system allows server customization.
+- **Status**: ✅ RESOLVED — `TerritoryConfig` struct; `Manager.SetConfig()` allows runtime override.
+
+---
+
+## Gap 8: Trade Validation Per-Item Quantity
+
+- **Status**: ✅ RESOLVED (Design Decision) — Items are unique instances, not stackable commodities.
+
+---
+
+## Gap 9: memprofile Uses fmt.Printf
+
+- **Status**: ✅ RESOLVED — Exempt with documentation comment; `ExportJSON()` available for structured output.
+
+---
+
+## Gap 10: No Automated CI Performance Benchmark Gates
+
+- **Status**: ✅ RESOLVED — `scripts/benchmark-regression.sh` and `scripts/benchmark-memory.sh` integrated into `.github/workflows/test.yml`.
+
+---
+
+## Gap 11: ECS Race Conditions on Entity Staging Buffers
+
+- **Status**: ✅ RESOLVED — `entityMu sync.Mutex` added to `pkg/engine/ecs.go`; `TestCreateEntityConcurrentSafety` passes under `-race`.
+
+---
+
+## Gap 12: Unprotected Global Talent Registry Maps
+
+- **Status**: ✅ RESOLVED — `talentMu sync.RWMutex` added to `pkg/engine/talent_definitions.go`.
+
+---
+
+## Gap 13: ChatUI HandleClick Double-Activation
+
+- **Status**: ✅ RESOLVED — Second `if` changed to `else if` in `pkg/rendering/ui/chat.go`.
+
+---
+
+## Gap 14: XP Never Awarded on Enemy Death
+
+- **Intended Behavior**: Players earn experience points for killing enemies and progress through levels.
 - **Current State**:
-  - ✅ `TerritoryConfig` struct allows runtime configuration (types.go:133-163)
-  - ✅ `Manager.SetConfig()` method allows programmatic override (manager.go:41-58)
-  - ✅ All territory mechanics use `m.config.*` values instead of constants
-  - ✅ Example mod created: `mods/fast-sieges.json` 
-  - ✅ Documentation created: `mods/README.md` with territory rules section
-- **Resolution**: Territory system is fully configurable via `TerritoryConfig` struct. Mods can be loaded and applied via `SetConfig()`. Constants in types.go serve as defaults but all runtime logic uses the config.
+  - ✅ `ProgressionSystem.AwardXP()` fully implemented at `pkg/engine/progression_system.go:97`
+  - ✅ `FactionXPBonusSystem` calls `AwardXP` for faction bonuses at `pkg/engine/faction_xp_bonus_system.go:81`
+  - ❌ `createDeathCallback` in `cmd/client/util.go:1444` does NOT call `AwardXP`
+  - ❌ `progressionSystem` is not a parameter of `createDeathCallback` (5 parameters; none is progression)
+  - ❌ `system_init.go:971` `SetKillCallback` awards weapon mastery and class affinity XP but not base combat XP
+- **Blocked Goal**: Players cannot level up from combat. Character progression is broken.
+- **Implementation Path**:
+  1. Add `progressionSystem *engine.ProgressionSystem` as a parameter to `createDeathCallback` signature at `cmd/client/util.go:1430`
+  2. After the entity is marked dead (after `enemy.AddComponent(deadComp)` at line ~1460), call:
+     `if progressionSystem != nil && playerEntity != nil { _ = progressionSystem.AwardXP(*playerEntity, calculateXP(enemy)) }`
+  3. Implement `calculateXP(enemy *engine.Entity) int` using enemy stats or a `BaseXPReward` component
+  4. Thread `sys.progressionSystem` into `configureDeathCallback` call at `cmd/client/handlers.go:3482`
+- **Dependencies**: None; `AwardXP` is already thread-safe
+- **Effort**: small (< 1 day)
 
 ---
 
-## Gap 8: Trade Validation Lacks Per-Item Quantity
+## Gap 15: GPU Memory Leak in LoadingUI
 
-- **Status**: ✅ RESOLVED (Design Decision)
-- **Stated Goal**: Reject "negative-quantity and zero-value trades" (from previous GAPS.md)
+- **Intended Behavior**: Loading screen renders without accumulating GPU memory.
 - **Current State**:
-  - `pkg/validation/trade.go:ValidateTradeQuantity()` exists and validates individual quantities
-  - Trade data model (`TradeProposal.OfferedItems`) uses `[]string` item IDs
-  - Items in `pkg/procgen/item/types.go:Item` are unique instances (not stacked)
-  - Inventory (`pkg/engine/inventory_components.go`) holds `[]*item.Item` where each item is unique
-- **Resolution**: The current design intentionally treats items as unique instances (like equipment in most ARPGs), not stackable commodities. Each item has a unique ID, and trades transfer ownership of specific item instances. The `ValidateTradeQuantity()` function is available for future use if stackable items are added. No code changes needed.
-- **Impact**: None. Current design is consistent with the ARPG genre where equipment is unique. If stackable resources (ores, potions) are needed later, the data model can be extended.
+  - `pkg/engine/loading_ui.go:87` — `drawRect()` calls `ebiten.NewImage(width, height)` and immediately discards the reference after `screen.DrawImage`
+  - Called 3× per frame (lines 75, 76, 81) for the full duration of async terrain generation (5–30 s)
+  - No `defer img.Dispose()` call; Ebiten GPU images are not GC'd by Go's runtime without explicit disposal
+- **Blocked Goal**: "<500 MB client memory target" and "Mobile support" (mobile OOM crashes before gameplay).
+- **Implementation Path**:
+  Option A (preferred — zero per-frame allocation): Add three `*ebiten.Image` fields to `LoadingUI` (`bgRect`, `borderRect`, `fillRect`). Initialize lazily in `Draw()` if nil. Reuse each frame, calling `img.Fill(c)` before draw.
+  Option B (minimal change): Add `defer img.Dispose()` at line 88 in `drawRect()`. Correct but allocates per frame.
+- **Dependencies**: None
+- **Effort**: small (< 1 day)
 
 ---
 
-## Gap 9: memprofile Uses fmt.Printf Instead of Structured Logging
+## Gap 16: Mobile CraftingSystem Initialized with nil itemGenerator
 
-- **Status**: ✅ RESOLVED (Option A applied)
-- **Stated Goal**: Structured logging throughout codebase (logrus).
+- **Intended Behavior**: Crafting works on all platforms including iOS/Android.
 - **Current State**:
-  - ✅ `PrintProfile()` method has explicit documentation exemption (lines 195-197):
-    > "NOTE: This function intentionally uses fmt.Printf for CLI/debug output.
-    > It is exempt from the structured logging guideline (Coding Guideline #3)
-    > as it's designed for human-readable console output in testing and debugging tools."
-  - ✅ `ExportJSON()` method added for machine-readable structured export (lines 325-371)
-- **Resolution**: Classified as CLI debugging tool. Human-readable output intentional. JSON export available for structured consumption.
+  - `pkg/engine/system_init.go:1168` — `NewCraftingSystem(game.World, inventorySystem, nil)` with comment `// itemGen set later`
+  - No exported setter exists on `CraftingSystem` for `itemGenerator` (only `SetStationManager` at line 75)
+  - `pkg/engine/crafting_system.go:579` dereferences `s.itemGenerator.Generate(...)` without a nil guard
+  - `cmd/mobile/mobile.go:449` creates `itemGen := item.NewItemGenerator()` but never assigns it to the CraftingSystem
+- **Blocked Goal**: "Mobile support" — crafting panics on iOS/Android.
+- **Implementation Path**:
+  1. Add to `pkg/engine/crafting_system.go`: `func (s *CraftingSystem) SetItemGenerator(gen *item.ItemGenerator) { s.itemGenerator = gen }`
+  2. Add nil guard in `CraftingSystem.Craft()` at line 579: `if s.itemGenerator == nil { return nil, errors.New("item generator not configured") }`
+  3. In `cmd/mobile/mobile.go` after `InitializeGameSystems()` returns, call: `systemsInitResult.CraftingSystem.SetItemGenerator(item.NewItemGenerator())`
+- **Dependencies**: None
+- **Effort**: small (< 1 day)
 
 ---
 
-## Gap 10: No Automated CI Gate for Performance Benchmarks
+## Gap 17: ScriptingSystem Not Instantiated — Mod Scripts Cannot Execute
 
-- **Status**: ✅ RESOLVED
-- **Stated Goal**: Maintain 60 FPS and <500MB memory.
+- **Intended Behavior**: JSON mods that attach `ScriptingComponent` to entities can run sandboxed scripts via the ECS update loop.
 - **Current State**:
-  - ✅ Benchmarks exist in `pkg/benchmark/fps/` and `pkg/benchmark/memory/`
-  - ✅ Scripts exist: `scripts/benchmark-regression.sh`, `scripts/benchmark-memory.sh`
-  - ✅ Integrated into CI (`.github/workflows/test.yml` lines 63-69):
-    - FPS benchmark regression check via `xvfb-run ./scripts/benchmark-regression.sh`
-    - Memory benchmark check via `xvfb-run ./scripts/benchmark-memory.sh`
-  - ✅ Baseline stored in `scripts/benchmark-baseline.json`
-- **Resolution**: CI gates fully implemented. Performance regressions will be detected before merge.
+  - `pkg/engine/scripting_system.go:52` — Full implementation with builtins, execution limits, statistics
+  - Zero callers of `NewScriptingSystem` outside the definition file
+  - `pkg/modding/` manager loads and validates mods but has no path to execute entity scripts
+- **Blocked Goal**: "Sandboxed JSON-based modding system" — entity scripts silently do nothing.
+- **Implementation Path**:
+  1. Add `scriptingSystem := NewScriptingSystem(game.World); game.World.AddSystem(scriptingSystem)` to `pkg/engine/system_init.go` in the modding/scripting section
+  2. Expose via `SystemInitResult.ScriptingSystem *ScriptingSystem`
+  3. In `cmd/client/handlers.go`, after mod loading, call `scriptingSystem.RegisterBuiltin(...)` for any game-specific builtins
+- **Dependencies**: Modding manager must be initialized first
+- **Effort**: small (< 1 day)
 
 ---
 
-## Gap 11: ECS Race Conditions on Entity Staging Buffers (C-001/C-002)
+## Gap 18: WorldPersistenceSystem Not Instantiated
 
-- **Status**: ✅ RESOLVED
-- **Stated Goal**: Thread-safe ECS for concurrent server-join and game-loop operations.
-- **Root Cause**:
-  - `World.CreateEntity()` read/incremented `nextEntityID` and appended to `entitiesToAdd` without any synchronization.
-  - `World.AddEntity()` and `World.RemoveEntity()` appended to staging slices without synchronization.
-  - `World.Update()` read and drained staging slices on the game-loop goroutine without locking, racing with concurrent writers.
-- **Fix Applied** (`pkg/engine/ecs.go`):
-  - Added `entityMu sync.Mutex` field to `World` struct (separate from `mu sync.RWMutex` used for system-list and metrics access).
-  - `CreateEntity()`, `AddEntity()`, `RemoveEntity()` lock `entityMu` around all staging-buffer mutations.
-  - `Update()` and `processPendingEntityAdditions()` snapshot the staging slices under `entityMu` (swap with `nil`) then process the snapshot outside the lock, keeping the critical section minimal.
-- **Test Added**: `TestCreateEntityConcurrentSafety` in `pkg/engine/ecs_test.go` — spawns 20 goroutines each creating 50 entities; passes cleanly under `go test -race`.
-
----
-
-## Gap 12: Unprotected Global Talent Registry Maps (H-008)
-
-- **Status**: ✅ RESOLVED
-- **Root Cause**: Package-level `talentRegistry` (`map[string]*TalentDefinition`) and `categoryTalents` (`map[TalentCategory][]*TalentDefinition`) had no mutex protection. Concurrent reads from the game loop and writes from the mod system (which can call `registerTalent()` at runtime) would cause a fatal Go map-concurrency panic.
-- **Fix Applied** (`pkg/engine/talent_definitions.go`):
-  - Added `talentMu sync.RWMutex` package-level variable.
-  - `GetTalentDefinition()`, `GetAllTalentDefinitions()`, `GetTalentsByCategory()` acquire `talentMu.RLock()`.
-  - `registerTalent()` acquires `talentMu.Lock()`.
-  - `init()` is single-threaded by Go's runtime guarantee, so no lock needed there.
+- **Intended Behavior**: NPC state, city state, world events, and player reputation persist across sessions without full world regeneration.
+- **Current State**:
+  - `pkg/engine/world_persistence_system.go:22` — Complete implementation with `SaveWorldState`, `LoadWorldState`, city/NPC state serialization
+  - Zero callers of `NewWorldPersistenceSystem` outside the definition file
+  - Save/load infrastructure in `pkg/saveload/` saves player state but not world state
+- **Blocked Goal**: Persistent world state — NPCs and cities reset to generated state on every session.
+- **Implementation Path**:
+  1. Instantiate in `pkg/engine/system_init.go` and expose via `SystemInitResult`
+  2. In `cmd/server/main.go`, call `persistenceSystem.LoadWorldState(ctx, worldID)` after terrain generation
+  3. On graceful shutdown (SIGTERM handler), call `persistenceSystem.SaveWorldState(ctx, worldID)`
+- **Dependencies**: Requires `WorldMemoryComponent` to be attached to relevant entities during generation
+- **Effort**: medium (2–3 days)
 
 ---
 
-## Gap 13: ChatUI HandleClick Double-Activation on Overlapping Regions (H-009)
+## Gap 19: HousingUI Missing from shouldUpdateWorld
 
-- **Status**: ✅ RESOLVED
-- **Root Cause**: `ChatUI.HandleClick()` in `pkg/rendering/ui/chat.go` used two independent `if` statements for the tab row and input field regions. On a small window where the regions overlap, both handlers fired for a single click, simultaneously switching the channel and activating text input.
-- **Fix Applied** (`pkg/rendering/ui/chat.go`):
-  - Changed the second `if` to `else` — input field click is only tested when the tab row check did not match.
-  - Added comment explaining the mutual-exclusion intent.
+- **Intended Behavior**: World simulation pauses (enemies freeze, time stops) while the player interacts with the housing UI, consistent with all other gameplay UIs.
+- **Current State**:
+  - `pkg/engine/game.go:1358` — `shouldUpdateWorld()` checks 14 UIs; `HousingUI` is absent
+  - `pkg/engine/game.go:1323` — `updateVirtualControlsVisibility()`'s `anyUIOpen` also omits `HousingUI`
+  - `pkg/world/housing/ui.go:101` — `HousingUI.IsVisible() bool` exists
+  - `HousingUI` is stored as `g.HousingUI` (game.go:77) and updated/drawn each frame
+- **Blocked Goal**: Player safety during housing management; consistent pause behavior across all UIs.
+- **Implementation Path**:
+  1. In `shouldUpdateWorld()` (game.go:1358), add: `(g.HousingUI == nil || !g.HousingUI.IsVisible()) &&`
+  2. In `updateVirtualControlsVisibility()` (game.go:1323), add `(g.HousingUI != nil && g.HousingUI.IsVisible())` to the `anyUIOpen` expression
+- **Dependencies**: None
+- **Effort**: trivial (< 30 minutes)
+
+---
+
+## Gap 20: Chunk World Systems Never Instantiated
+
+- **Intended Behavior**: Large worlds are streamed in chunks; chunk state is compressed and persisted; player modifications to the world are tracked by chunk.
+- **Current State**:
+  - `pkg/world/chunk_loader.go:33` — `NewChunkLoaderSystem` — zero non-world-pkg callers
+  - `pkg/world/chunk_compression.go:14` — `NewChunkCompressionSystem` — zero non-world-pkg callers
+  - `pkg/world/chunk_modification.go:15` — `NewChunkModificationSystem` — zero non-world-pkg callers
+  - Only referenced in `pkg/world/doc.go` code examples
+- **Blocked Goal**: Persistent world; memory-efficient large worlds. Without chunking, entire terrain is held in RAM.
+- **Implementation Path**:
+  1. Fix Gap 18 (WorldPersistenceSystem) first to provide the `WorldPersistence` dependency
+  2. In `cmd/server/main.go` world initialization: `loader := world.NewChunkLoaderSystem(seed, persistence, generator)`; register with the game loop
+  3. Add `NewChunkCompressionSystem()` to compress chunks on eviction
+  4. Add `NewChunkModificationSystem(state)` to track and dirty-flag modified chunks
+- **Dependencies**: Gap 18 (WorldPersistenceSystem), `ChunkGenerator` interface implementation
+- **Effort**: large (1–2 weeks — requires chunk boundary handling and streaming integration)
 
 ---
 
@@ -201,20 +246,27 @@ This document tracks gaps between the project's stated goals (README.md) and act
 
 | Gap | Severity | Effort | Status |
 |-----|----------|--------|--------|
-| Gap 1: Voice network transport | 🔴 CRITICAL | 2-3 days | Open |
+| Gap 1: Voice network transport | 🔴 CRITICAL | medium | Open |
 | Gap 2: Quest postapoc templates | 🟢 LOW | N/A | ✅ Resolved |
 | Gap 3: README system count | 🟢 LOW | N/A | ✅ Resolved |
 | Gap 4: Territory HUD display | 🟢 LOW | N/A | ✅ Resolved |
-| Gap 5: FPS benchmark scope | 🟡 MEDIUM | 1-2 days | Open |
+| Gap 5: FPS benchmark scope | 🟡 MEDIUM | small | Open |
 | Gap 6: Signal handler test | 🟢 LOW | N/A | ✅ Resolved |
 | Gap 7: Territory mod support | 🟢 LOW | N/A | ✅ Resolved |
-| Gap 8: Trade quantity model | 🟢 LOW | N/A | ✅ Resolved (design decision) |
+| Gap 8: Trade quantity model | 🟢 LOW | N/A | ✅ Resolved |
 | Gap 9: memprofile logging | 🟢 LOW | N/A | ✅ Resolved |
 | Gap 10: Performance CI gate | 🟢 LOW | N/A | ✅ Resolved |
-| Gap 11: ECS entity staging races | 🔴 CRITICAL | Fixed | ✅ Resolved |
-| Gap 12: Talent registry unprotected | 🟡 MEDIUM | Fixed | ✅ Resolved |
-| Gap 13: ChatUI double-activation | 🟡 MEDIUM | Fixed | ✅ Resolved |
+| Gap 11: ECS entity staging races | 🔴 CRITICAL | N/A | ✅ Resolved |
+| Gap 12: Talent registry unprotected | 🟡 MEDIUM | N/A | ✅ Resolved |
+| Gap 13: ChatUI double-activation | 🟡 MEDIUM | N/A | ✅ Resolved |
+| Gap 14: XP never awarded on kill | 🔴 CRITICAL | small | Open |
+| Gap 15: GPU memory leak (LoadingUI) | 🔴 CRITICAL | small | Open |
+| Gap 16: Mobile nil itemGenerator | 🔴 CRITICAL | small | Open |
+| Gap 17: ScriptingSystem not wired | 🔴 CRITICAL | small | Open |
+| Gap 18: WorldPersistenceSystem not wired | 🟠 HIGH | medium | Open |
+| Gap 19: HousingUI missing from pause | 🟠 HIGH | trivial | Open |
+| Gap 20: Chunk systems not wired | 🟠 HIGH | large | Open |
 
 ---
 
-*Updated: 2026-04-19 | 11 of 13 gaps resolved*
+*Updated: 2026-05-02 | 10 of 20 gaps resolved*

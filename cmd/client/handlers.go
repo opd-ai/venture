@@ -2212,8 +2212,8 @@ func registerNonCriticalSystems(game *engine.EbitenGame, sys *systemsContainer) 
 	// INTEGRATION FIX [Category A]: Phase 28 - MoralChoiceSystem registration
 	game.World.AddSystem(&moralChoiceSystemWrapper{system: sys.moralChoiceSystem})
 
-	// Phase 27: Mini-game system (use wrapper)
-	game.World.AddSystem(&miniGameSystemWrapper{system: sys.miniGameSystem})
+	// Phase 27: Mini-game system (standard ECS interface - no wrapper needed)
+	game.World.AddSystem(sys.miniGameSystem)
 
 	// Phase 3.4: Minigame implementations
 	game.World.AddSystem(sys.minigameGamesSystem)

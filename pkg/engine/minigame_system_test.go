@@ -131,7 +131,7 @@ func TestMiniGameSystem_Update_TimeElapsed(t *testing.T) {
 	}
 
 	// Update with deltaTime
-	sys.Update(1.0)
+	sys.Update(nil, 1.0)
 
 	comp, _ := entity.GetComponent("minigame")
 	gameComp := comp.(*MiniGameComponent)
@@ -141,7 +141,7 @@ func TestMiniGameSystem_Update_TimeElapsed(t *testing.T) {
 	}
 
 	// Update again
-	sys.Update(0.5)
+	sys.Update(nil, 0.5)
 	if gameComp.TimeElapsed != 1.5 {
 		t.Errorf("TimeElapsed = %v, want 1.5", gameComp.TimeElapsed)
 	}
@@ -163,7 +163,7 @@ func TestMiniGameSystem_Update_Timeout(t *testing.T) {
 	entity.AddComponent(&InventoryComponent{Gold: 0})
 
 	// Update to just before timeout
-	sys.Update(119.0)
+	sys.Update(nil, 119.0)
 
 	comp, _ := entity.GetComponent("minigame")
 	gameComp := comp.(*MiniGameComponent)
@@ -172,7 +172,7 @@ func TestMiniGameSystem_Update_Timeout(t *testing.T) {
 	}
 
 	// Update past timeout
-	sys.Update(2.0) // Total: 121 seconds > 120 second limit
+	sys.Update(nil, 2.0) // Total: 121 seconds > 120 second limit
 
 	if gameComp.Active {
 		t.Error("Game should be inactive after timeout")
@@ -215,7 +215,7 @@ func TestMiniGameSystem_Update_WithGameInstance(t *testing.T) {
 	entity.AddComponent(&ExperienceComponent{CurrentXP: 0})
 
 	// Update should call the game instance
-	sys.Update(1.0)
+	sys.Update(nil, 1.0)
 
 	comp, _ := entity.GetComponent("minigame")
 	gameComp := comp.(*MiniGameComponent)
@@ -227,7 +227,7 @@ func TestMiniGameSystem_Update_WithGameInstance(t *testing.T) {
 	stub.isComplete = true
 
 	// Update again
-	sys.Update(1.0)
+	sys.Update(nil, 1.0)
 
 	// Game should be ended and reward awarded
 	if gameComp.Active {
@@ -269,7 +269,7 @@ func TestMiniGameSystem_Update_WithGameInstanceError(t *testing.T) {
 	}
 
 	// Update should handle the error and end the game
-	sys.Update(1.0)
+	sys.Update(nil, 1.0)
 
 	comp, _ := entity.GetComponent("minigame")
 	gameComp := comp.(*MiniGameComponent)
@@ -568,7 +568,7 @@ func TestMiniGameSystem_Update_InactiveGames(t *testing.T) {
 	initialTime := gameComp.TimeElapsed
 
 	// Update should not change inactive games
-	sys.Update(1.0)
+	sys.Update(nil, 1.0)
 
 	if gameComp.TimeElapsed != initialTime {
 		t.Error("Inactive game time should not update")
@@ -590,7 +590,7 @@ func TestMiniGameSystem_Update_MultipleEntities(t *testing.T) {
 	sys.StartGame(entity3.ID, MiniGameDice, 0.3)
 
 	// Update all
-	sys.Update(1.0)
+	sys.Update(nil, 1.0)
 
 	// All should have time updated
 	comp1, ok := entity1.GetComponent("minigame")
@@ -921,7 +921,7 @@ func BenchmarkMiniGameSystem_Update(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		sys.Update(0.016) // ~60 FPS
+		sys.Update(nil, 0.016) // ~60 FPS
 	}
 }
 

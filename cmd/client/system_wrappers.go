@@ -163,15 +163,6 @@ func (w *expressionComboSystemWrapper) Update(entities []*engine.Entity, deltaTi
 	w.system.Update(deltaTime)
 }
 
-// miniGameSystemWrapper adapts MiniGameSystem to System interface
-type miniGameSystemWrapper struct {
-	system *engine.MiniGameSystem
-}
-
-func (w *miniGameSystemWrapper) Update(entities []*engine.Entity, deltaTime float64) {
-	w.system.Update(deltaTime)
-}
-
 // achievementSystemWrapper adapts AchievementSystem to System interface
 type achievementSystemWrapper struct {
 	system *engine.AchievementSystem

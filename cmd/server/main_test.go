@@ -665,14 +665,13 @@ func TestSystemWrappers_SkillInheritanceSystemWrapper(t *testing.T) {
 	wrapper.Update([]*engine.Entity{}, 0.016)
 }
 
-// TestSystemWrappers_MiniGameSystemWrapper tests mini game wrapper.
-func TestSystemWrappers_MiniGameSystemWrapper(t *testing.T) {
+// TestMiniGameSystem_DirectUpdate tests that MiniGameSystem now conforms to System interface.
+func TestMiniGameSystem_DirectUpdate(t *testing.T) {
 	world := engine.NewWorld()
 	system := engine.NewMiniGameSystem(world)
-	wrapper := &miniGameSystemWrapper{system: system}
 
-	// Should not panic when called
-	wrapper.Update([]*engine.Entity{}, 0.016)
+	// Should not panic when called directly — no wrapper needed
+	system.Update([]*engine.Entity{}, 0.016)
 }
 
 // TestSystemWrappers_AlignmentSystemWrapper tests alignment wrapper.

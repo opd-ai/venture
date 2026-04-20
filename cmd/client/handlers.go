@@ -671,6 +671,9 @@ func initializeCoreSystems(game *engine.EbitenGame, logger *logrus.Logger, clien
 		sys.animationSystem = engine.NewAnimationSystem(sys.spriteGenerator)
 		sys.animationSystem.SetMaxCacheSize(effectiveAnimCacheSize)
 		sys.animationSystem.SetSpriteCache(sys.spriteCache)
+		// Wire animation sync manager for multiplayer delta-compressed state
+		// synchronisation (AUDIT.md HIGH: AnimationSyncManager never instantiated).
+		sys.animationSystem.SetSyncManager(network.NewAnimationSyncManager())
 		sys.equipmentVisualSystem = engine.NewEquipmentVisualSystem(sys.spriteGenerator)
 		clientLogger.WithField("maxSize", effectiveSpriteCacheMax).Debug("sprite & animation systems initialized")
 	}()

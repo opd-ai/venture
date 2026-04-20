@@ -2,7 +2,7 @@
 
 This document catalogs verified implementation gaps between Venture's stated goals and its current runtime behavior. Each gap was confirmed by direct file inspection and `grep` verification across `cmd/` and `pkg/` (excluding `_test.go` files) on 2026-04-20.
 
-For the executive summary and false-positive log, see `AUDIT.md`.
+For the executive summary and false-positive log, see `GAPS.md` (this file). The root `AUDIT.md` has been retired after all findings were resolved.
 
 ---
 

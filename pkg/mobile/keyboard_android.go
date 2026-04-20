@@ -88,10 +88,13 @@ func HideKeyboard() {
 	C.hideAndroidKeyboard()
 }
 
-// IsKeyboardSupported returns true on Android ebitenmobilebind builds where
-// native InputMethodManager keyboard control is available.
+// IsKeyboardSupported reports whether programmatic native soft keyboard control
+// is functionally available on this Android ebitenmobilebind build.
+//
+// The JNI bridge is not yet implemented, so ShowKeyboard and HideKeyboard are
+// currently no-ops. This returns false until the JNI integration is complete.
 func IsKeyboardSupported() bool {
-	return true
+	return false
 }
 
 // GetBackButtonKey returns the Android system back button key.

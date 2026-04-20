@@ -241,13 +241,13 @@ build-wasm: ## Build WebAssembly version for web browsers
 	@echo "Optimizations enabled: viewport culling, batch rendering, sprite caching (300 sequences)"
 	@echo "Run 'make serve-wasm' to test locally"
 
-build-vr: ## Build client with experimental VR support (-tags vr) — requires OpenXR SDK
-	@echo "Building with experimental VR support (OpenXR)..."
-	@echo "Requirements: OpenXR loader installed (libopenxr-loader1 libopenxr-dev on Ubuntu)"
+build-vr: ## Build client with experimental VR adapter support (-tags vr)
+	@echo "Building client with experimental VR adapter support (-tags vr)..."
+	@echo "Note: OpenXR SDK / loader is not required today; it will be needed once OpenXR cgo is enabled."
 	@mkdir -p build/vr
 	go build -tags vr -ldflags="-s -w" -o build/vr/venture-vr ./cmd/client
 	@echo "VR build complete: build/vr/venture-vr"
-	@echo "NOTE: VR SDK integration is experimental. Use --force-vr to test without hardware."
+	@echo "NOTE: VR runtime/SDK integration is experimental. Use --force-vr to test without hardware."
 
 serve-wasm: build-wasm ## Build and serve WebAssembly version locally
 	@echo "Starting local server at http://localhost:8080"

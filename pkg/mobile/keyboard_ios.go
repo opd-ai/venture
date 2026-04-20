@@ -77,10 +77,13 @@ func HideKeyboard() {
 	C.hideIOSKeyboard()
 }
 
-// IsKeyboardSupported returns true on iOS ebitenmobilebind builds where
-// native UIKit keyboard control is available.
+// IsKeyboardSupported returns false until the iOS UIKit bridge is fully wired.
+//
+// Although this file is only built for ios+cgo+ebitenmobilebind, the underlying
+// C keyboard bridge functions are currently placeholders with no runtime effect.
+// This returns true once the UIKit first-responder integration is complete.
 func IsKeyboardSupported() bool {
-	return true
+	return false
 }
 
 // GetBackButtonKey returns the iOS back navigation key (ESC).

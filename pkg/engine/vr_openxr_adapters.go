@@ -1,8 +1,12 @@
-//go:build vr
+//go:build vr && !js
 
 // Package engine provides the conditional-compilation framework for real VR hardware
-// SDK integration. This file is compiled only when building with -tags vr and
-// establishes the adapter types and cgo integration points for OpenXR.
+// SDK integration. This file is compiled only when building with -tags vr on
+// non-WASM (non-js) targets and establishes the adapter types and cgo integration
+// points for OpenXR.
+//
+// The !js constraint prevents this cgo-based file from being compiled for
+// WebAssembly targets, where VR uses the WebXR Device API instead.
 //
 // # OpenXR SDK Integration Research (ROADMAP item 1)
 //

@@ -64,8 +64,13 @@
 //   - Install the Khronos OpenXR Loader (libopenxr-dev or equivalent)
 //   - Build with: go build -tags vr ./...
 //   - The framework adapter types are in pkg/engine/vr_openxr_adapters.go
-//   - Replace stub adapter instantiation in cmd/client/init_versions.go with
-//     engine.NewOpenXRHeadsetAdapter() and engine.NewOpenXRControllerAdapter()
+//   - Do NOT directly replace stub adapter instantiation in the default-build
+//     file cmd/client/init_versions.go, because engine.NewOpenXRHeadsetAdapter()
+//     and engine.NewOpenXRControllerAdapter() are only available in -tags vr builds.
+//   - Instead, add a build-tagged file such as cmd/client/init_versions_vr.go
+//     (with //go:build vr) that selects the OpenXR adapters, while the existing
+//     init_versions.go (with //go:build !vr, or no tag) keeps the stub adapters.
+//     This preserves default builds without any SDK dependency.
 //
 // WASM (browser): WebXR Device API
 //   - Use syscall/js to call navigator.xr.requestSession("immersive-vr")

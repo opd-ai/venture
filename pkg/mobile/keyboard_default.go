@@ -28,13 +28,13 @@ func HideKeyboard() {
 	// No-op on desktop/native mobile platforms
 }
 
-// IsKeyboardSupported returns false on non-WASM, non-mobile platforms to indicate that
-// the JavaScript keyboard bridge is not available. Desktop platforms have
-// keyboard support through the OS, but this function specifically refers to
-// programmatic keyboard show/hide control.
-// On Android (ebitenmobilebind) and iOS (ebitenmobilebind) builds,
-// keyboard_android.go and keyboard_ios.go provide platform-specific
-// implementations that return true.
+// IsKeyboardSupported returns false on builds without programmatic keyboard
+// show/hide support. This covers desktop platforms (Linux, macOS, Windows) and
+// Android/iOS builds that do not use the ebitenmobilebind toolchain.
+//
+// Returns true only on WASM builds (keyboard_wasm.go) where the JS bridge is
+// active, or on future ebitenmobilebind builds once the JNI/UIKit integration
+// is complete (keyboard_android.go, keyboard_ios.go).
 func IsKeyboardSupported() bool {
 	return false // Programmatic keyboard control not available on desktop/generic builds
 }

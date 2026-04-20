@@ -79,6 +79,15 @@ func (s *CraftingSystem) SetStationManager(manager StationBonusProvider) {
 	}
 }
 
+// SetItemGenerator configures the item generator used for crafting output.
+// This allows deferred initialization when the generator is not available at construction time.
+func (s *CraftingSystem) SetItemGenerator(gen *item.ItemGenerator) {
+	s.itemGenerator = gen
+	if s.logger != nil && s.logger.Logger.GetLevel() >= logrus.InfoLevel {
+		s.logger.Info("item generator configured for crafting system")
+	}
+}
+
 // Update processes crafting progress for all entities with CraftingProgressComponent.
 // Call this each game tick with deltaTime in seconds.
 func (s *CraftingSystem) Update(entities []*Entity, deltaTime float64) {
@@ -576,6 +585,12 @@ func (s *CraftingSystem) generateOutputItem(recipe *Recipe, rng *rand.Rand) *ite
 	}
 
 	// Generate item using recipe's output seed
+	if s.itemGenerator == nil {
+		if s.logger != nil {
+			s.logger.Warn("item generator not configured, using fallback for crafted item")
+		}
+		return s.createFallbackItem(recipe)
+	}
 	result, err := s.itemGenerator.Generate(recipe.OutputItemSeed, params)
 	if err != nil {
 		// Fallback: create basic item

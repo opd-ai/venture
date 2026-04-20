@@ -95,6 +95,9 @@ func (t *TerrainRenderSystem) Draw(screen *ebiten.Image, camera *CameraSystem) {
 	if t.terrain == nil {
 		return
 	}
+	if t.tileWidth <= 0 || t.tileHeight <= 0 {
+		return
+	}
 
 	// Update camera position for parallax calculations
 	camX, camY := camera.GetPosition()

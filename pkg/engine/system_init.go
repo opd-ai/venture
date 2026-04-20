@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"math/rand"
 
+	"github.com/opd-ai/venture/pkg/procgen/item"
 	"github.com/opd-ai/venture/pkg/rendering/sprites"
 	"github.com/sirupsen/logrus"
 )
@@ -977,6 +978,18 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 		if classAffinitySystem != nil {
 			classAffinitySystem.OnKill(attacker, "power_strike")
 		}
+		// Award base combat XP to the attacker based on target's level/stats
+		if progressionSystem != nil {
+			xp := progressionSystem.CalculateXPReward(target)
+			if xp > 0 {
+				if err := progressionSystem.AwardXP(attacker, xp); err != nil {
+					logrus.WithFields(logrus.Fields{
+						"system": "progression",
+						"xp":     xp,
+					}).WithError(err).Warn("Failed to award kill XP")
+				}
+			}
+		}
 	})
 
 	// 18c. AttributeAllocationSystem - manages core attribute point allocation
@@ -1165,12 +1178,17 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 	result.DialogSystem = NewDialogSystemWithLogger(game.World, logger)
 	game.World.AddSystem(result.DialogSystem)
 
-	result.CraftingSystem = NewCraftingSystem(game.World, inventorySystem, nil) // itemGen set later
+	result.CraftingSystem = NewCraftingSystem(game.World, inventorySystem, item.NewItemGenerator())
 	game.World.AddSystem(result.CraftingSystem)
 
 	// 30. InteractionSystem - puzzle element interactions (Phase 11.2)
 	result.InteractionSystem = NewInteractionSystem(game.World)
 	game.World.AddSystem(result.InteractionSystem)
+
+	// 30b. ScriptingSystem - ECS-integrated sandbox for mod script execution
+	// Evaluates Script components on entities for the sandboxed modding system
+	scriptingSystem := NewScriptingSystem(game.World)
+	game.World.AddSystem(scriptingSystem)
 
 	// 30a. MiniGameSystem - manages mini-game lifecycle (Phase 27.1)
 	// Note: This is NOT added as a System because it has a custom Update signature.
@@ -2153,12 +2171,45 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 	// Wire audio manager to game
 	game.SetAudioManager(result.AudioManager)
 
+	// ========================================================================
+	// ADDITIONAL SYSTEMS (previously uninstantiated)
+	// ========================================================================
+
+	// WorldPersistenceSystem - manages world state persistence across sessions
+	worldPersistenceSystem := NewWorldPersistenceSystem()
+	game.World.AddSystem(worldPersistenceSystem)
+
+	// ChallengeSystem - manages daily/weekly challenge lifecycle and reset
+	challengeSystem := NewChallengeSystem(game.World)
+	game.World.AddSystem(challengeSystem)
+
+	// CollectionSystem - tracks collectible discovery and completion
+	collectionSystem := NewCollectionSystem(game.World)
+	game.World.AddSystem(collectionSystem)
+
+	// EconomyTerritoryIntegrationSystem - bridges territory control with marketplace pricing
+	economyTerritorySystem := NewEconomyTerritoryIntegrationSystem(game.World, EconomyTerritoryConfig{})
+	game.World.AddSystem(economyTerritorySystem)
+
+	// VoiceSettingsSystem - applies voice settings (volume, codec quality) at runtime
+	voiceSettingsSystem := NewVoiceSettingsSystem(game.World)
+	game.World.AddSystem(voiceSettingsSystem)
+
+	// Provide a shared game clock for scheduled systems
+	if game.World.Clock == nil {
+		game.World.Clock = NewRealTimeClock()
+	}
+
+	// CityEvolutionSystem - processes city evolution triggers over time
+	cityEvolutionSystem := NewCityEvolutionSystem(game.World, game.World.Clock)
+	game.World.AddSystem(cityEvolutionSystem)
+
 	if config.EnableVerboseLogging {
 		logger.WithFields(logrus.Fields{
-			"systemCount": 65,
+			"systemCount": len(game.World.GetSystems()),
 			"seed":        config.Seed,
 			"genre":       config.GenreID,
-		}).Info("game systems initialized successfully (65th system requires terrain)")
+		}).Info("game systems initialized successfully (spatial partition system requires terrain)")
 	}
 
 	return result, nil
@@ -2215,6 +2266,8 @@ func InitializeSpatialPartitionSystem(
 
 	return spatialSystem
 }
+
+
 
 // animationSystemWrapper adapts AnimationSystem (returns error) to System interface (no return)
 type animationSystemWrapper struct {

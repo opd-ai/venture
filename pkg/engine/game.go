@@ -1334,6 +1334,7 @@ func (g *EbitenGame) updateVirtualControlsVisibility() {
 		(g.TerritoryUI != nil && g.TerritoryUI.IsVisible()) ||
 		(g.StoryChoiceUI != nil && g.StoryChoiceUI.IsVisible()) ||
 		(g.DialogUI != nil && g.DialogUI.IsVisible()) ||
+		(g.HousingUI != nil && g.HousingUI.IsVisible()) ||
 		(g.MenuSystem != nil && g.MenuSystem.IsActive())
 
 	// Virtual controls should be hidden if:
@@ -1369,7 +1370,8 @@ func (g *EbitenGame) shouldUpdateWorld() bool {
 		(g.AdvancedClassUI == nil || !g.AdvancedClassUI.IsVisible()) &&
 		(g.TerritoryUI == nil || !g.TerritoryUI.IsVisible()) &&
 		(g.StoryChoiceUI == nil || !g.StoryChoiceUI.IsVisible()) &&
-		(g.DialogUI == nil || !g.DialogUI.IsVisible())
+		(g.DialogUI == nil || !g.DialogUI.IsVisible()) &&
+		(g.HousingUI == nil || !g.HousingUI.IsVisible())
 }
 
 func (g *EbitenGame) Update() error {
@@ -1733,6 +1735,13 @@ func (g *EbitenGame) Layout(outsideWidth, outsideHeight int) (int, int) {
 			if g.sceneBuffer != nil {
 				g.sceneBuffer.Dispose()
 				g.sceneBuffer = ebiten.NewImage(g.ScreenWidth, g.ScreenHeight)
+			}
+
+			// Reset litBuffer so drawLitScene recreates it at the correct size
+			// on the very first frame after resize (avoids one-frame misalignment).
+			if g.litBuffer != nil {
+				g.litBuffer.Dispose()
+				g.litBuffer = nil
 			}
 
 			g.propagateScreenResize()

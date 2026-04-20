@@ -86,38 +86,9 @@ func (g *QuestGenerator) extractQuestCount(params procgen.GenerationParams) int 
 }
 
 // selectTemplates selects quest templates based on genre.
+// Uses the data-driven genreQuestTemplates table (TODO REM-144 resolved).
 func (g *QuestGenerator) selectTemplates(genreID string) ([]QuestTemplate, error) {
-	var templates []QuestTemplate
-	switch genreID {
-	case "scifi":
-		templates = append(templates, GetSciFiKillTemplates()...)
-		templates = append(templates, GetSciFiCollectTemplates()...)
-		templates = append(templates, GetSciFiBossTemplates()...)
-		templates = append(templates, GetSciFiExploreTemplates()...)
-	case "horror":
-		templates = append(templates, GetHorrorKillTemplates()...)
-		templates = append(templates, GetHorrorCollectTemplates()...)
-		templates = append(templates, GetHorrorBossTemplates()...)
-		templates = append(templates, GetHorrorExploreTemplates()...)
-	case "cyberpunk":
-		templates = append(templates, GetCyberpunkKillTemplates()...)
-		templates = append(templates, GetCyberpunkCollectTemplates()...)
-		templates = append(templates, GetCyberpunkBossTemplates()...)
-		templates = append(templates, GetCyberpunkExploreTemplates()...)
-	case "postapoc":
-		templates = append(templates, GetPostApocKillTemplates()...)
-		templates = append(templates, GetPostApocCollectTemplates()...)
-		templates = append(templates, GetPostApocBossTemplates()...)
-		templates = append(templates, GetPostApocExploreTemplates()...)
-	case "fantasy":
-		fallthrough
-	default:
-		templates = append(templates, GetFantasyKillTemplates()...)
-		templates = append(templates, GetFantasyCollectTemplates()...)
-		templates = append(templates, GetFantasyBossTemplates()...)
-		templates = append(templates, GetFantasyExploreTemplates()...)
-	}
-
+	templates := GetQuestTemplates(genreID)
 	if len(templates) == 0 {
 		err := fmt.Errorf("no templates available for genre: %s", genreID)
 		if g.logger != nil {

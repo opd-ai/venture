@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"math/rand"
 
+	"github.com/opd-ai/venture/pkg/procgen/item"
 	"github.com/opd-ai/venture/pkg/rendering/sprites"
 	"github.com/sirupsen/logrus"
 )
@@ -977,6 +978,13 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 		if classAffinitySystem != nil {
 			classAffinitySystem.OnKill(attacker, "power_strike")
 		}
+		// Award base combat XP to the attacker based on target's max health
+		if progressionSystem != nil {
+			xp := calculateKillXP(target)
+			if xp > 0 {
+				_ = progressionSystem.AwardXP(attacker, xp)
+			}
+		}
 	})
 
 	// 18c. AttributeAllocationSystem - manages core attribute point allocation
@@ -1165,7 +1173,7 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 	result.DialogSystem = NewDialogSystemWithLogger(game.World, logger)
 	game.World.AddSystem(result.DialogSystem)
 
-	result.CraftingSystem = NewCraftingSystem(game.World, inventorySystem, nil) // itemGen set later
+	result.CraftingSystem = NewCraftingSystem(game.World, inventorySystem, item.NewItemGenerator())
 	game.World.AddSystem(result.CraftingSystem)
 
 	// 30. InteractionSystem - puzzle element interactions (Phase 11.2)
@@ -2214,6 +2222,27 @@ func InitializeSpatialPartitionSystem(
 	}
 
 	return spatialSystem
+}
+
+// calculateKillXP derives a base XP reward from the target entity's max health.
+// The formula yields ~10 XP per basic enemy (100 HP), scaling with difficulty.
+func calculateKillXP(target *Entity) int {
+	if target == nil {
+		return 0
+	}
+	healthComp, ok := target.GetComponent("health")
+	if !ok {
+		return 10 // default minimum XP if no health component
+	}
+	health, ok := healthComp.(*HealthComponent)
+	if !ok {
+		return 10
+	}
+	xp := int(health.Max / 10)
+	if xp < 1 {
+		xp = 1
+	}
+	return xp
 }
 
 // animationSystemWrapper adapts AnimationSystem (returns error) to System interface (no return)

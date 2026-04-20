@@ -85,6 +85,7 @@ func (l *LoadingUI) Draw(screen *ebiten.Image) {
 // drawRect is a helper to draw a filled rectangle.
 func (l *LoadingUI) drawRect(screen *ebiten.Image, x, y, width, height int, c color.Color) {
 	img := ebiten.NewImage(width, height)
+	defer img.Dispose()
 	img.Fill(c)
 	opts := &ebiten.DrawImageOptions{}
 	opts.GeoM.Translate(float64(x), float64(y))

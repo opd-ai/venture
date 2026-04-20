@@ -512,17 +512,27 @@ func createGameWorld(logger *logrus.Logger) (*engine.World, *engine.EnhancedChat
 	worldLogger.Debug("chunk loader system initialized")
 
 	// AUDIT.md MEDIUM: ChunkCompressionSystem and ChunkModificationSystem never
-	// instantiated. Wire compression into the eviction callback so chunks are RLE
-	// encoded before leaving memory, and wire modification tracking so dirty chunks
-	// are identified for incremental saves.
+	// AUDIT.md MEDIUM: Wire compression and modification tracking on chunk eviction.
+	// CompressChunk returns compressed bytes for use when a per-chunk persistence
+	// layer is added (see WorldPersistence). Until then we call it to validate that
+	// chunks are compressible and log the ratio for memory observability.
 	chunkCompressor := worldpkg.NewChunkCompressionSystem()
 	chunkMods := worldpkg.NewChunkModificationSystem(persistentState)
 	chunkLoader.SetOnEvict(func(chunk *worldpkg.Chunk) {
 		if chunk == nil {
 			return
 		}
-		if _, _, err := chunkCompressor.CompressChunk(chunk); err != nil {
+		_, ratio, err := chunkCompressor.CompressChunk(chunk)
+		if err != nil {
 			worldLogger.WithError(err).Warn("chunk compression on evict failed")
+			return
+		}
+		if ratio > 1 {
+			worldLogger.WithFields(logrus.Fields{
+				"chunk_x": chunk.X,
+				"chunk_y": chunk.Y,
+				"ratio":   ratio,
+			}).Debug("chunk compressed on evict")
 		}
 		chunkMods.MarkDirty(chunk.X, chunk.Y)
 	})

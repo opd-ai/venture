@@ -210,7 +210,7 @@ func (s *PostOfficeSpawner) SpawnInTerrain(t *terrain.Terrain, genreID string, s
 		return nil, fmt.Errorf("no room large enough for post office (need %d area)", minRoomArea)
 	}
 
-	rng := rand.New(rand.NewSource(seed ^ 0x504F5354)) // "POST"
+	rng := rand.New(rand.NewSource(seed ^ 0x504F5354)) // XOR with "POST" (big-endian ASCII: P=0x50, O=0x4F, S=0x53, T=0x54)
 	clerkName := s.generateClerkName(rng, genreID)
 
 	cx, cy := best.Center()

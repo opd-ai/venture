@@ -1090,9 +1090,14 @@ func initializeVoiceTransport(sys *systemsContainer, networkClient interface{}, 
 		return
 	}
 
+	if networkClient == nil {
+		clientLogger.Debug("voice transport: no network client, voice chat disabled")
+		return
+	}
+
 	conn, ok := networkClient.(network.ClientConnection)
 	if !ok || conn == nil {
-		clientLogger.Debug("voice transport: no network client, voice chat disabled")
+		clientLogger.Debug("voice transport: network client does not implement ClientConnection")
 		return
 	}
 

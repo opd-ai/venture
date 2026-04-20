@@ -1134,12 +1134,9 @@ func initializeVoiceTransport(sys *systemsContainer, networkClient interface{}, 
 	transport := network.NewTCPVoiceTransport(transportConfig, playerID, sendFunc)
 
 	// Wire inbound voice packets from the network layer into the transport's
-	// jitter buffer. The optional voiceReceiver interface is implemented by
-	// *network.TCPClient; mock connections (tests) typically omit it.
-	type voiceReceiver interface {
-		SetVoiceHandler(h func(*network.VoicePacket))
-	}
-	if vr, ok := networkClient.(voiceReceiver); ok {
+	// jitter buffer. *network.TCPClient implements network.VoiceReceiver;
+	// mock connections (tests) typically omit it.
+	if vr, ok := networkClient.(network.VoiceReceiver); ok {
 		vr.SetVoiceHandler(func(pkt *network.VoicePacket) {
 			if err := transport.HandleReceivedPacket(pkt); err != nil {
 				clientLogger.WithError(err).Debug("voice transport: failed to handle inbound packet")

@@ -781,12 +781,22 @@ func (s *TCPServer) sendCommandToGameLogic(cmd *InputCommand) {
 // filtering by querying engine.VoiceChannelSystem.
 func (s *TCPServer) routeVoiceCommand(cmd *InputCommand, senderID uint64) {
 	if cmd == nil || len(cmd.Data) < 1 {
+		if s.logger != nil {
+			s.logger.WithField("sender_id", senderID).Debug("voice routing: dropping empty voice command")
+		}
 		return
 	}
 	// Strip the leading packet-type byte. The remaining bytes are the
 	// serialized VoicePacket as understood by DeserializeVoicePacket.
 	payload := cmd.Data[1:]
 	if len(payload) < VoicePacketHeaderSize {
+		if s.logger != nil {
+			s.logger.WithFields(logrus.Fields{
+				"sender_id":   senderID,
+				"payload_len": len(payload),
+				"min_len":     VoicePacketHeaderSize,
+			}).Warn("voice routing: dropping undersized voice payload")
+		}
 		return
 	}
 

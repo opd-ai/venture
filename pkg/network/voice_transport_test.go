@@ -697,9 +697,11 @@ func TestVoiceEndToEnd(t *testing.T) {
 		t.Fatal("server Address() returned empty after Start()")
 	}
 
-	// Drain join/leave/error/input channels so the server doesn't block on
-	// unconsumed events. (Voice commands are routed before they reach the
-	// inputCommands channel, but other input types might be enqueued.)
+	// Drain join/leave/error/input channels for the lifetime of the test so
+	// the server doesn't block on unconsumed events. Voice commands are
+	// routed before they reach inputCommands but other events still arrive.
+	drainStop := make(chan struct{})
+	defer close(drainStop)
 	go func() {
 		for {
 			select {
@@ -707,7 +709,7 @@ func TestVoiceEndToEnd(t *testing.T) {
 			case <-server.ReceivePlayerLeave():
 			case <-server.ReceiveError():
 			case <-server.ReceiveInputCommand():
-			case <-time.After(2 * time.Second):
+			case <-drainStop:
 				return
 			}
 		}
@@ -766,8 +768,7 @@ func TestVoiceEndToEnd(t *testing.T) {
 	defer transportB.Close()
 	transportB.JoinChannel(channelID)
 
-	// Override B's voice handler to feed transportB and signal arrival.
-	signal := make(chan struct{}, 1)
+	// Override B's voice handler to feed transportB and capture the packet.
 	clientB.SetVoiceHandler(func(pkt *VoicePacket) {
 		// Verify the packet was authored by A and addressed to the channel.
 		if pkt.SenderID != idA {
@@ -778,13 +779,15 @@ func TestVoiceEndToEnd(t *testing.T) {
 		}
 		_ = transportB.HandleReceivedPacket(pkt)
 		select {
-		case signal <- struct{}{}:
-		default:
-		}
-		select {
 		case received <- pkt:
 		default:
 		}
+	})
+
+	// Sanity check: client A must NOT receive its own voice. Register a
+	// handler on A that fails the test if any voice packet ever arrives.
+	clientA.SetVoiceHandler(func(pkt *VoicePacket) {
+		t.Errorf("client A received own voice packet (SenderID=%d, ChannelID=%q)", pkt.SenderID, pkt.ChannelID)
 	})
 
 	// Send a voice packet from A.
@@ -801,14 +804,6 @@ func TestVoiceEndToEnd(t *testing.T) {
 		}
 	case <-time.After(3 * time.Second):
 		t.Fatal("client B did not receive voice packet within 3s — server-side voice routing missing")
-	}
-
-	// Sanity check: client A must NOT receive its own voice (sender filtering).
-	select {
-	case <-signal:
-		// signal fires from B's handler; we don't actually use it here, but
-		// receiving it confirms the chain ran.
-	default:
 	}
 }
 

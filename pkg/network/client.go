@@ -616,31 +616,36 @@ func (c *TCPClient) SetVoiceHandler(h func(*VoicePacket)) {
 // VoiceComponentType component. If found, it deserializes the embedded
 // VoicePacket, dispatches it to the registered voice handler, and returns
 // true so the caller skips game-state enqueueing. Returns false otherwise.
+//
+// The server currently constructs voice updates with exactly one component,
+// but this scan tolerates additional metadata components that may be added
+// alongside the voice payload in the future.
 func (c *TCPClient) routeVoiceComponent(update *StateUpdate) bool {
-	if update == nil || len(update.Components) != 1 {
+	if update == nil {
 		return false
 	}
-	comp := update.Components[0]
-	if comp.Type != VoiceComponentType {
-		return false
-	}
+	for _, comp := range update.Components {
+		if comp.Type != VoiceComponentType {
+			continue
+		}
+		pkt, err := DeserializeVoicePacket(comp.Data)
+		if err != nil {
+			if c.logger != nil {
+				c.logger.WithError(err).Warn("failed to deserialize inbound voice packet")
+			}
+			return true
+		}
 
-	pkt, err := DeserializeVoicePacket(comp.Data)
-	if err != nil {
-		if c.logger != nil {
-			c.logger.WithError(err).Warn("failed to deserialize inbound voice packet")
+		c.voiceHandlerMu.RLock()
+		handler := c.voiceHandler
+		c.voiceHandlerMu.RUnlock()
+
+		if handler != nil {
+			handler(pkt)
 		}
 		return true
 	}
-
-	c.voiceHandlerMu.RLock()
-	handler := c.voiceHandler
-	c.voiceHandlerMu.RUnlock()
-
-	if handler != nil {
-		handler(pkt)
-	}
-	return true
+	return false
 }
 
 // sendNonBlockingError sends an error to the error channel without blocking.

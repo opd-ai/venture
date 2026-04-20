@@ -15,6 +15,14 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+// VoiceReceiver is implemented by network clients that can deliver inbound
+// voice packets to a registered handler. *TCPClient implements this; mock
+// clients used in tests typically do not. Type-assert to this interface when
+// wiring inbound voice packets into an audio pipeline.
+type VoiceReceiver interface {
+	SetVoiceHandler(h func(*VoicePacket))
+}
+
 // VoiceComponentType is the reserved ComponentData.Type value used to wrap a
 // serialized VoicePacket inside a StateUpdate when the server fans the packet
 // out to channel members. The leading underscore prevents collision with

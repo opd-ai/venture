@@ -55,4 +55,26 @@
 //
 // Detection results are cached for performance. Use Reset() to clear the cache
 // and force re-detection.
+//
+// # SDK Integration Roadmap
+//
+// Real VR hardware support requires a native SDK. The recommended path:
+//
+// Desktop (Linux/Windows/macOS): OpenXR 1.x via cgo
+//   - Install the Khronos OpenXR Loader (libopenxr-dev or equivalent)
+//   - Build with: go build -tags vr ./...
+//   - The framework adapter types are in pkg/engine/vr_openxr_adapters.go
+//   - Replace stub adapter instantiation in cmd/client/init_versions.go with
+//     engine.NewOpenXRHeadsetAdapter() and engine.NewOpenXRControllerAdapter()
+//
+// WASM (browser): WebXR Device API
+//   - Use syscall/js to call navigator.xr.requestSession("immersive-vr")
+//   - No additional Go dependencies needed; integrated via JS bridge
+//   - Reference: https://developer.mozilla.org/en-US/docs/Web/API/WebXR_Device_API
+//   - Implementation: pkg/engine/vr_webxr_adapters.go (to be created with //go:build js)
+//
+// Conditional compilation isolates SDK dependencies from default builds:
+//   - Default (no tags):  stub adapters in pkg/engine/vr_stub_adapters.go
+//   - -tags vr:           OpenXR adapters in pkg/engine/vr_openxr_adapters.go
+//   - //go:build js (vr): WebXR adapters (future pkg/engine/vr_webxr_adapters.go)
 package vr

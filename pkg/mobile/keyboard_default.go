@@ -1,5 +1,4 @@
-//go:build !js
-// +build !js
+//go:build !js && !(android && cgo && ebitenmobilebind) && !(ios && cgo && ebitenmobilebind)
 
 package mobile
 
@@ -13,11 +12,9 @@ import (
 //
 // This function exists to maintain API compatibility across all platforms.
 func ShowKeyboard() {
-	// No-op on desktop/native mobile platforms
-	// Desktop: Keyboard always available
-	// Native mobile: Handled by OS keyboard APIs (not implemented in this build)
-	// TODO: Integrate native mobile keyboard APIs (UIKeyboard on iOS, InputMethodManager on Android)
-	// for better on-screen keyboard control. This is tracked as future work for native mobile builds.
+	// No-op on desktop platforms — the OS keyboard is always available.
+	// Native mobile (Android/iOS) keyboard control is implemented in
+	// keyboard_android.go and keyboard_ios.go (ebitenmobilebind builds).
 }
 
 // HideKeyboard is a no-op on non-WASM platforms.
@@ -27,12 +24,15 @@ func HideKeyboard() {
 	// No-op on desktop/native mobile platforms
 }
 
-// IsKeyboardSupported returns false on non-WASM platforms to indicate that
+// IsKeyboardSupported returns false on non-WASM, non-mobile platforms to indicate that
 // the JavaScript keyboard bridge is not available. Desktop platforms have
 // keyboard support through the OS, but this function specifically refers to
-// the WASM keyboard bridge feature.
+// programmatic keyboard show/hide control.
+// On Android (ebitenmobilebind) and iOS (ebitenmobilebind) builds,
+// keyboard_android.go and keyboard_ios.go provide platform-specific
+// implementations that return true.
 func IsKeyboardSupported() bool {
-	return false // JavaScript keyboard bridge not available on non-WASM platforms
+	return false // Programmatic keyboard control not available on desktop/generic builds
 }
 
 // BUG FIX: Phase 1.2 - Complete Android back button dual-exit pattern

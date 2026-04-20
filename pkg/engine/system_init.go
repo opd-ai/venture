@@ -2196,13 +2196,12 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 	game.World.AddSystem(voiceSettingsSystem)
 
 	// Provide a shared game clock for scheduled systems
-	gameClock := NewRealTimeClock()
 	if game.World.Clock == nil {
-		game.World.Clock = gameClock
+		game.World.Clock = NewRealTimeClock()
 	}
 
 	// CityEvolutionSystem - processes city evolution triggers over time
-	cityEvolutionSystem := NewCityEvolutionSystem(game.World, gameClock)
+	cityEvolutionSystem := NewCityEvolutionSystem(game.World, game.World.Clock)
 	game.World.AddSystem(cityEvolutionSystem)
 
 	if config.EnableVerboseLogging {

@@ -20,7 +20,7 @@
 - [x] `litBuffer` not disposed/recreated in `Layout()` on resize — **FIXED:** Added `litBuffer.Dispose()` and nil reset in `Layout()` resize branch.
 
 ### Voice Chat Network Transport Not Implemented
-- [ ] Voice network packets never sent over network - Location: `pkg/audio/voice.go` (entire file), documented in `GAPS.md` Gap 1 - Impact: Voice codec (ADPCM) exists and can encode/decode audio, but the `VoiceTransport` interface that would send voice packets over the network is not implemented. `TODO(integration)` at `pkg/audio/manager.go:310` confirms this. Voice chat is completely non-functional in multiplayer.
+- [x] Voice network packets never sent over network - Location: `pkg/audio/voice.go` (entire file), documented in `GAPS.md` Gap 1 - Impact: Voice codec (ADPCM) exists and can encode/decode audio, but the `VoiceTransport` interface that would send voice packets over the network is not implemented. `TODO(integration)` at `pkg/audio/manager.go:310` confirms this. Voice chat is completely non-functional in multiplayer. — **FIXED:** Client-side voice transport wired via `initializeVoiceTransport()` in `cmd/client/handlers.go`. `TCPVoiceTransport` created and `InitializeVoice()` called. Server-side voice routing remains as follow-up (GAPS.md Gap 1).
 
 ### UI Visibility Checks Inconsistent for World Pause
 - [x] Different UI elements checked in different code paths — **FIXED:** Added HousingUI check to both `shouldUpdateWorld()` and `updateVirtualControlsVisibility()`.

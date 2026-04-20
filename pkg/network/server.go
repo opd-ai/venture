@@ -738,8 +738,9 @@ func (s *TCPServer) readMessageData(client *clientConnection, buf []byte, msgLen
 		}
 		return err
 	}
-	// Record bytes received for metrics
-	s.recordBytesReceived(uint64(n))
+	// Record bytes received for metrics; include the 4-byte length prefix that
+	// was consumed by readMessageLength so totals match client-side accounting.
+	s.recordBytesReceived(uint64(n) + 4)
 	return nil
 }
 

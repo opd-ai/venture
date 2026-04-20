@@ -1437,7 +1437,7 @@ func createDeathCallback(
 	magicGen *magic.SpellGenerator,
 	skillGen *skills.SkillTreeGenerator,
 	deathParticleSystem *engine.DeathParticleSystem,
-	progressionSystem *engine.ProgressionSystem,
+	progressionSystem **engine.ProgressionSystem,
 	seed int64,
 	genreID string,
 	logger *logrus.Logger,
@@ -1463,9 +1463,13 @@ func createDeathCallback(
 
 		// AUDIT.md MEDIUM: Award XP to the player for killing the enemy.
 		// XP is derived from enemy max HP (1 XP per max-HP point, minimum 10).
-		if progressionSystem != nil && playerEntity != nil && *playerEntity != nil {
+		// Guard: skip if the dead entity is a player-controlled entity (has an
+		// input component) or if it is the player entity itself.
+		if progressionSystem != nil && *progressionSystem != nil &&
+			playerEntity != nil && *playerEntity != nil &&
+			!enemy.HasComponent("input") && enemy != *playerEntity {
 			xpAmount := calculateEnemyXP(enemy)
-			if err := progressionSystem.AwardXP(*playerEntity, xpAmount); err != nil {
+			if err := (*progressionSystem).AwardXP(*playerEntity, xpAmount); err != nil {
 				if logger.GetLevel() >= logrus.DebugLevel {
 					logging.ComponentLogger(logger, "progression").WithError(err).Debug("failed to award kill XP")
 				}

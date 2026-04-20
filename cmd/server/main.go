@@ -600,7 +600,6 @@ func spawnPostOffices(world *engine.World, generatedTerrain *terrain.Terrain, co
 			"rooms":  len(generatedTerrain.Rooms),
 			"error":  err,
 		}).Fatal("post office spawning failed; courier system requires at least one post office")
-		return
 	}
 	logger.WithFields(logrus.Fields{
 		"building_id": result.BuildingID,

@@ -127,6 +127,13 @@ type TCPClient struct {
 	doneClosed bool       // Tracks if current done channel is closed
 	wg         sync.WaitGroup
 
+	// voiceHandler is invoked for inbound voice packets demultiplexed from
+	// StateUpdate messages carrying a VoiceComponentType component. Set via
+	// SetVoiceHandler. When nil, voice packets are silently dropped (no game
+	// state side-effects).
+	voiceHandler   func(*VoicePacket)
+	voiceHandlerMu sync.RWMutex
+
 	// Logger for network operations
 	logger *logrus.Entry
 }
@@ -573,6 +580,14 @@ func (c *TCPClient) processStateUpdate(data []byte) bool {
 		return false
 	}
 
+	// Demultiplex voice packets out of the state-update stream before they
+	// reach game logic (AUDIT.md CRITICAL: voice chat server-side packet
+	// routing). Voice updates carry a single reserved VoiceComponentType
+	// component and have no gameplay side effects.
+	if c.routeVoiceComponent(update) {
+		return true
+	}
+
 	c.mu.Lock()
 	c.stateSeq = update.SequenceNumber
 	c.mu.Unlock()
@@ -586,6 +601,45 @@ func (c *TCPClient) processStateUpdate(data []byte) bool {
 		c.stateUpdateStats.RecordDrop()
 	}
 
+	return true
+}
+
+// SetVoiceHandler registers a callback invoked for inbound voice packets.
+// Pass nil to clear. Safe to call concurrently with the receive loop.
+func (c *TCPClient) SetVoiceHandler(h func(*VoicePacket)) {
+	c.voiceHandlerMu.Lock()
+	c.voiceHandler = h
+	c.voiceHandlerMu.Unlock()
+}
+
+// routeVoiceComponent inspects a decoded StateUpdate for a reserved
+// VoiceComponentType component. If found, it deserializes the embedded
+// VoicePacket, dispatches it to the registered voice handler, and returns
+// true so the caller skips game-state enqueueing. Returns false otherwise.
+func (c *TCPClient) routeVoiceComponent(update *StateUpdate) bool {
+	if update == nil || len(update.Components) != 1 {
+		return false
+	}
+	comp := update.Components[0]
+	if comp.Type != VoiceComponentType {
+		return false
+	}
+
+	pkt, err := DeserializeVoicePacket(comp.Data)
+	if err != nil {
+		if c.logger != nil {
+			c.logger.WithError(err).Warn("failed to deserialize inbound voice packet")
+		}
+		return true
+	}
+
+	c.voiceHandlerMu.RLock()
+	handler := c.voiceHandler
+	c.voiceHandlerMu.RUnlock()
+
+	if handler != nil {
+		handler(pkt)
+	}
 	return true
 }
 

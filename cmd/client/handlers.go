@@ -3577,7 +3577,8 @@ func configureDeathCallback(sys *systemsContainer, game *engine.EbitenGame, logg
 	var playerEntity *engine.Entity
 	sys.combatSystem.SetDeathCallback(createDeathCallback(
 		game, &playerEntity, sys.objectiveTracker, &sys.audioManager,
-		sys.recipeGen, sys.magicGenerator, sys.skillGenerator, sys.deathParticleSystem, *seed, *genreID, logger, sys.timeProvider,
+		sys.recipeGen, sys.magicGenerator, sys.skillGenerator, sys.deathParticleSystem,
+		sys.progressionSystem, *seed, *genreID, logger, sys.timeProvider,
 	))
 }
 

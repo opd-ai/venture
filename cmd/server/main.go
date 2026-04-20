@@ -493,29 +493,20 @@ func createGameWorld(logger *logrus.Logger) (*engine.World, *engine.EnhancedChat
 	world.AddSystem(performanceSystem)
 	worldLogger.Debug("performance monitoring system initialized for production observability")
 
-	// AUDIT.md: Wire Chunk world systems (Loader/Compression/Modification)
-	// Gap: ChunkLoaderSystem, ChunkCompressionSystem, ChunkModificationSystem defined
-	// in pkg/world/ but never instantiated — persistent world chunking not active
-	// Fix: Instantiate all three systems using the persistence layer
+	// AUDIT.md: Wire Chunk world systems (Loader)
+	// Gap: ChunkLoaderSystem defined in pkg/world/ but never instantiated — persistent world chunking not active
+	// Fix: Instantiate ChunkLoaderSystem with the persistence layer.
+	// Note: ChunkCompressionSystem and ChunkModificationSystem are not yet connected to a real
+	// persistence pipeline, so they are not constructed here to avoid dangling initialization code.
 	worldPersistence := worldpkg.NewWorldPersistence("world_save.json")
-	persistentState, err := worldPersistence.LoadWorld(*seed)
-	if err != nil {
-		// No saved state yet — create fresh state
-		persistentState = &worldpkg.PersistentWorldState{
-			Version:        worldpkg.CurrentSchemaVersion,
-			WorldSeed:      *seed,
-			ChunkData:      make(map[string]*worldpkg.Chunk),
-			Entities:       []*worldpkg.EntityState{},
-			WorldEvents:    []worldpkg.WorldEvent{},
-			ModifiedChunks: make(map[string]bool),
-		}
-		worldLogger.Debug("no saved world state found, starting fresh")
+	if _, err := worldPersistence.LoadWorld(*seed); err != nil {
+		// LoadWorld returns nil error when save file is missing (fresh state).
+		// An error here indicates a real load failure (corrupt gzip/JSON, incompatible schema, etc.).
+		worldLogger.WithError(err).Warn("failed to load saved world state, starting fresh")
 	}
 	chunkLoader := worldpkg.NewChunkLoaderSystem(*seed, worldPersistence, nil)
 	world.AddSystem(&chunkLoaderSystemWrapper{loader: chunkLoader})
-	_ = worldpkg.NewChunkCompressionSystem() // available for chunk persistence pipeline
-	_ = worldpkg.NewChunkModificationSystem(persistentState)
-	worldLogger.Debug("chunk world systems initialized (loader, compression, modification)")
+	worldLogger.Debug("chunk loader system initialized")
 
 	if logger.GetLevel() >= logrus.DebugLevel {
 		worldLogger.Debug("game systems initialized")

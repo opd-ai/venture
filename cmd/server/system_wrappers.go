@@ -17,6 +17,7 @@ import (
 	"github.com/opd-ai/venture/pkg/integration/trade_routes"
 	"github.com/opd-ai/venture/pkg/network/federation"
 	"github.com/opd-ai/venture/pkg/world"
+	"github.com/sirupsen/logrus"
 )
 
 // V4.0 System Wrappers (originally from v4_systems.go)
@@ -329,9 +330,11 @@ func (a *prestigeEntityAdapter) RemoveComponent(componentType string) {
 	a.entity.RemoveComponent(componentType)
 }
 
-// Chunk system wrappers — adapt world.ChunkLoaderSystem to ECS System interface.
-// ChunkLoaderSystem.Update requires player positions; the wrapper extracts
-// positions from entities that have both "player"/"input" and position components.
+// Chunk system wrapper — adapts world.ChunkLoaderSystem to ECS System interface.
+// ChunkLoaderSystem.Update requires player positions in tile coordinates;
+// the wrapper converts pixel positions from entities with "input" component.
+// The default tile size is 32 pixels (matching pkg/engine terrain rendering).
+const chunkTilePixelSize = 32.0
 
 type chunkLoaderSystemWrapper struct {
 	loader *world.ChunkLoaderSystem
@@ -347,9 +350,18 @@ func (w *chunkLoaderSystemWrapper) Update(entities []*engine.Entity, _ float64) 
 		if pos == nil {
 			continue
 		}
-		positions[e.ID] = struct{ X, Y float64 }{pos.X, pos.Y}
+		// Convert pixel coordinates to tile coordinates before passing to chunk loader
+		positions[e.ID] = struct{ X, Y float64 }{
+			pos.X / chunkTilePixelSize,
+			pos.Y / chunkTilePixelSize,
+		}
 	}
-	if len(positions) > 0 {
-		_ = w.loader.Update(positions)
+	// Always forward the current frame's tracked player positions, including
+	// the empty set, so the chunk loader can reconcile disconnects/removals.
+	if err := w.loader.Update(positions); err != nil {
+		logrus.WithFields(logrus.Fields{
+			"system":       "chunk_loader",
+			"player_count": len(positions),
+		}).WithError(err).Error("chunk loading failed")
 	}
 }

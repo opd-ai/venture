@@ -334,6 +334,10 @@ func initializeV6Systems(game *engine.EbitenGame, sys *systemsContainer, clientL
 
 	// Phase 39: Portal system for cross-server travel
 	sys.portalSystem = federation.NewPortalSystem(game.World, sys.federationProtocol)
+	// AUDIT.md MEDIUM: AuthManager and TransferManager never instantiated.
+	// Wire them into the portal system so cross-server player transfers can
+	// create and validate session tokens on the client side.
+	sys.portalSystem.SetManagers(federation.NewAuthManager(), federation.NewTransferManager())
 
 	// Phase 40: Bounty system for cross-server quests
 	sys.bountySystem = engine.NewBountySystem(game.World, game.World.GetLogger().Logger)

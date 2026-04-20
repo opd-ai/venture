@@ -260,6 +260,12 @@ func initializeV6SystemsServer(world *engine.World, seed int64, logger *logrus.L
 
 	// Phase 39: Portal system for cross-server travel (server-authoritative)
 	portalSystem := federation.NewPortalSystem(world, federationProtocol)
+	// AUDIT.md MEDIUM: AuthManager and TransferManager never instantiated.
+	// Wire them into the portal system so cross-server player transfers can
+	// create and validate session tokens.
+	portalAuthMgr := federation.NewAuthManager()
+	portalTransferMgr := federation.NewTransferManager()
+	portalSystem.SetManagers(portalAuthMgr, portalTransferMgr)
 	world.AddSystem(&portalSystemWrapper{system: portalSystem})
 
 	// Phase 40: Bounty system for cross-server quests (server-authoritative)

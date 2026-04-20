@@ -978,9 +978,9 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 		if classAffinitySystem != nil {
 			classAffinitySystem.OnKill(attacker, "power_strike")
 		}
-		// Award base combat XP to the attacker based on target's max health
+		// Award base combat XP to the attacker based on target's level/stats
 		if progressionSystem != nil {
-			xp := calculateKillXP(target)
+			xp := progressionSystem.CalculateXPReward(target)
 			if xp > 0 {
 				if err := progressionSystem.AwardXP(attacker, xp); err != nil {
 					logrus.WithFields(logrus.Fields{
@@ -2206,10 +2206,10 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 
 	if config.EnableVerboseLogging {
 		logger.WithFields(logrus.Fields{
-			"systemCount": 65,
+			"systemCount": len(game.World.GetSystems()),
 			"seed":        config.Seed,
 			"genre":       config.GenreID,
-		}).Info("game systems initialized successfully (65th system requires terrain)")
+		}).Info("game systems initialized successfully (spatial partition system requires terrain)")
 	}
 
 	return result, nil
@@ -2267,26 +2267,7 @@ func InitializeSpatialPartitionSystem(
 	return spatialSystem
 }
 
-// calculateKillXP derives a base XP reward from the target entity's max health.
-// The formula yields ~10 XP per basic enemy (100 HP), scaling with difficulty.
-func calculateKillXP(target *Entity) int {
-	if target == nil {
-		return 0
-	}
-	healthComp, ok := target.GetComponent("health")
-	if !ok {
-		return 10 // default minimum XP if no health component
-	}
-	health, ok := healthComp.(*HealthComponent)
-	if !ok {
-		return 10
-	}
-	xp := int(health.Max / 10)
-	if xp < 1 {
-		xp = 1
-	}
-	return xp
-}
+
 
 // animationSystemWrapper adapts AnimationSystem (returns error) to System interface (no return)
 type animationSystemWrapper struct {

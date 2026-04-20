@@ -1,5 +1,9 @@
 //go:build !js && !(android && cgo && ebitenmobilebind) && !(ios && cgo && ebitenmobilebind)
-
+// This file is compiled for desktop platforms (Linux, macOS, Windows) and for
+// Android/iOS builds that do NOT use the ebitenmobile bind toolchain.
+// - WASM (js) builds use keyboard_wasm.go instead.
+// - Android ebitenmobile builds use keyboard_android.go instead.
+// - iOS ebitenmobile builds use keyboard_ios.go instead.
 package mobile
 
 import (

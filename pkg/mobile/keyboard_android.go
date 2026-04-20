@@ -63,13 +63,17 @@ import "C"
 import (
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
+	log "github.com/sirupsen/logrus"
 )
 
 // ShowKeyboard shows the native Android soft keyboard by calling
 // InputMethodManager.showSoftInput via JNI.
 //
 // This function requires ebitenmobile bind toolchain and Android NDK.
+// SDK integration is pending: the underlying C function has no effect
+// until the JNI implementation is complete.
 func ShowKeyboard() {
+	log.WithField("platform", "android").Debug("ShowKeyboard called (ebitenmobilebind build — JNI SDK integration pending)")
 	C.showAndroidKeyboard()
 }
 
@@ -77,7 +81,10 @@ func ShowKeyboard() {
 // InputMethodManager.hideSoftInputFromWindow via JNI.
 //
 // This function requires ebitenmobile bind toolchain and Android NDK.
+// SDK integration is pending: the underlying C function has no effect
+// until the JNI implementation is complete.
 func HideKeyboard() {
+	log.WithField("platform", "android").Debug("HideKeyboard called (ebitenmobilebind build — JNI SDK integration pending)")
 	C.hideAndroidKeyboard()
 }
 

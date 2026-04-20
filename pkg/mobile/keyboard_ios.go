@@ -23,42 +23,28 @@ package mobile
 //
 // Keyboard dismissal via hideIOSKeyboard calls [textField resignFirstResponder].
 //
-// The current implementation documents the UIKit pattern; full integration
-// requires the ebitenmobile Objective-C bridge and access to the UIViewController.
+// The current implementation is a placeholder; full integration requires
+// the ebitenmobile Objective-C bridge and access to the UIViewController.
 void showIOSKeyboard() {
-    dispatch_async(dispatch_get_main_queue(), ^{
-        // Full UIKit implementation:
-        //
-        // UIWindow *window = [UIApplication sharedApplication].keyWindow;
-        // UIViewController *rootVC = window.rootViewController;
-        //
-        // Create or reuse a transparent off-screen UITextField:
-        // UITextField *hiddenField = [[UITextField alloc] initWithFrame:
-        //     CGRectMake(-1, -1, 1, 1)];
-        // hiddenField.alpha = 0.01;
-        // hiddenField.keyboardType = UIKeyboardTypeDefault;
-        // [rootVC.view addSubview:hiddenField];
-        //
-        // Make it first responder to trigger keyboard display:
-        // [hiddenField becomeFirstResponder];
-        //
-        // Requires runtime access to the UIViewController from Ebiten's
-        // ebitenmobile binding layer.
-    });
+    // Placeholder: SDK integration pending.
+    // When implemented, this will call dispatch_async(dispatch_get_main_queue(), ^{
+    //   UIWindow *window = [UIApplication sharedApplication].keyWindow;
+    //   UIViewController *rootVC = window.rootViewController;
+    //   UITextField *hiddenField = [[UITextField alloc] initWithFrame:CGRectMake(-1,-1,1,1)];
+    //   hiddenField.alpha = 0.01;
+    //   [rootVC.view addSubview:hiddenField];
+    //   [hiddenField becomeFirstResponder];
+    // });
 }
 
 // hideIOSKeyboard dismisses the iOS on-screen keyboard by resigning first responder.
 void hideIOSKeyboard() {
-    dispatch_async(dispatch_get_main_queue(), ^{
-        // Full UIKit implementation:
-        //
-        // UIWindow *window = [UIApplication sharedApplication].keyWindow;
-        // UIView *firstResponder = [window performSelector:@selector(firstResponder)];
-        // [firstResponder resignFirstResponder];
-        //
-        // Alternatively, for the hidden UITextField approach:
-        // [hiddenField resignFirstResponder];
-    });
+    // Placeholder: SDK integration pending.
+    // When implemented, this will call dispatch_async(dispatch_get_main_queue(), ^{
+    //   UIWindow *window = [UIApplication sharedApplication].keyWindow;
+    //   UIView *firstResponder = [window performSelector:@selector(firstResponder)];
+    //   [firstResponder resignFirstResponder];
+    // });
 }
 */
 import "C"
@@ -66,13 +52,17 @@ import "C"
 import (
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
+	log "github.com/sirupsen/logrus"
 )
 
 // ShowKeyboard shows the native iOS on-screen keyboard by calling
 // UIResponder.becomeFirstResponder via the UIKit bridge.
 //
 // This function requires ebitenmobile bind toolchain and Xcode/iOS SDK.
+// SDK integration is pending: the underlying C function has no effect
+// until the UIKit implementation is complete.
 func ShowKeyboard() {
+	log.WithField("platform", "ios").Debug("ShowKeyboard called (ebitenmobilebind build — UIKit SDK integration pending)")
 	C.showIOSKeyboard()
 }
 
@@ -80,7 +70,10 @@ func ShowKeyboard() {
 // UIResponder.resignFirstResponder via the UIKit bridge.
 //
 // This function requires ebitenmobile bind toolchain and Xcode/iOS SDK.
+// SDK integration is pending: the underlying C function has no effect
+// until the UIKit implementation is complete.
 func HideKeyboard() {
+	log.WithField("platform", "ios").Debug("HideKeyboard called (ebitenmobilebind build — UIKit SDK integration pending)")
 	C.hideIOSKeyboard()
 }
 

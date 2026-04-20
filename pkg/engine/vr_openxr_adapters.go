@@ -85,7 +85,7 @@ type OpenXRHeadsetAdapter struct {
 // OpenXR runtime. Returns the adapter regardless of whether hardware is detected;
 // call IsConnected() to determine availability.
 func NewOpenXRHeadsetAdapter() *OpenXRHeadsetAdapter {
-	a := &OpenXRHeadsetAdapter{ipd: 63.0} // Default IPD until runtime provides it
+	a := &OpenXRHeadsetAdapter{ipd: 63.0} // Default IPD (mm) until runtime provides it
 
 	// TODO(vr-sdk): Call xrCreateInstance, xrGetSystem, xrCreateSession here.
 	// Example flow:
@@ -220,8 +220,7 @@ func (a *OpenXRControllerAdapter) GetButton(hand, button string) bool {
 // TODO(vr-sdk): Call xrApplyHapticFeedback with XrHapticVibration:
 //   amplitude = intensity, duration (ns), frequency (Hz, 0 = default).
 func (a *OpenXRControllerAdapter) SetHaptic(hand string, intensity, duration float64) {
-	// No-op: SDK not yet integrated
-	_ = hand
-	_ = intensity
-	_ = duration
+	// No-op: OpenXR SDK not yet integrated.
+	// TODO(vr-sdk): Call xrApplyHapticFeedback with XrHapticVibration:
+	//   amplitude = intensity, duration (ns), frequency (Hz, 0 = default).
 }

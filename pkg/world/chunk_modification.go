@@ -141,3 +141,12 @@ func (c *ChunkModificationSystem) HasModifications(chunkX, chunkY int) bool {
 	chunkID := chunkCoordsToID(chunkX, chunkY)
 	return c.dirtyChunks[chunkID]
 }
+
+// MarkDirty flags the chunk at (chunkX, chunkY) as modified without applying
+// any terrain change. Use this when a chunk is being evicted to ensure it is
+// included in the next incremental save pass.
+func (c *ChunkModificationSystem) MarkDirty(chunkX, chunkY int) {
+	chunkID := chunkCoordsToID(chunkX, chunkY)
+	c.dirtyChunks[chunkID] = true
+	c.state.ModifiedChunks[chunkID] = true
+}

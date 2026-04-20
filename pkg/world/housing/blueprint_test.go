@@ -17,7 +17,7 @@ func TestNewBlueprint(t *testing.T) {
 		Seed:   12345,
 	}
 
-	bp := NewBlueprint("Test House", "player1", "fantasy", buildingDef)
+	bp := NewBlueprintWithTime("Test House", "player1", "fantasy", buildingDef, defaultTimeProvider)
 
 	if bp.ID == "" {
 		t.Error("Blueprint ID should not be empty")
@@ -87,7 +87,7 @@ func TestBlueprintAddRating(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			bp := NewBlueprint("Test", "author", "fantasy", nil)
+			bp := NewBlueprintWithTime("Test", "author", "fantasy", nil, defaultTimeProvider)
 			var err error
 			for _, rating := range tt.ratings {
 				err = bp.AddRating(rating)
@@ -117,7 +117,7 @@ func TestBlueprintAddRating(t *testing.T) {
 }
 
 func TestBlueprintIncrementDownloads(t *testing.T) {
-	bp := NewBlueprint("Test", "author", "fantasy", nil)
+	bp := NewBlueprintWithTime("Test", "author", "fantasy", nil, defaultTimeProvider)
 
 	if bp.GetDownloads() != 0 {
 		t.Errorf("Initial downloads = %v, want 0", bp.GetDownloads())
@@ -149,7 +149,7 @@ func TestBlueprintExportImport(t *testing.T) {
 		Seed:   67890,
 	}
 
-	original := NewBlueprint("Test Manor", "player123", "fantasy", buildingDef)
+	original := NewBlueprintWithTime("Test Manor", "player123", "fantasy", buildingDef, defaultTimeProvider)
 	original.Description = "A beautiful test manor"
 	original.Tags = []string{"medieval", "manor", "large"}
 	original.AddRating(4.5)
@@ -253,8 +253,8 @@ func TestNewBlueprintLibrary(t *testing.T) {
 
 func TestBlueprintLibraryAdd(t *testing.T) {
 	library := NewBlueprintLibrary()
-	bp1 := NewBlueprint("House 1", "player1", "fantasy", nil)
-	bp2 := NewBlueprint("House 2", "player2", "scifi", nil)
+	bp1 := NewBlueprintWithTime("House 1", "player1", "fantasy", nil, defaultTimeProvider)
+	bp2 := NewBlueprintWithTime("House 2", "player2", "scifi", nil, defaultTimeProvider)
 
 	library.Add(bp1)
 	if library.Count() != 1 {
@@ -281,7 +281,7 @@ func TestBlueprintLibraryAdd(t *testing.T) {
 
 func TestBlueprintLibraryGet(t *testing.T) {
 	library := NewBlueprintLibrary()
-	bp := NewBlueprint("Test", "player1", "fantasy", nil)
+	bp := NewBlueprintWithTime("Test", "player1", "fantasy", nil, defaultTimeProvider)
 	library.Add(bp)
 
 	retrieved := library.Get(bp.ID)
@@ -300,7 +300,7 @@ func TestBlueprintLibraryGet(t *testing.T) {
 
 func TestBlueprintLibraryRemove(t *testing.T) {
 	library := NewBlueprintLibrary()
-	bp := NewBlueprint("Test", "player1", "fantasy", nil)
+	bp := NewBlueprintWithTime("Test", "player1", "fantasy", nil, defaultTimeProvider)
 	library.Add(bp)
 
 	// Remove existing
@@ -329,9 +329,9 @@ func TestBlueprintLibraryList(t *testing.T) {
 	}
 
 	// Add blueprints
-	bp1 := NewBlueprint("House 1", "player1", "fantasy", nil)
-	bp2 := NewBlueprint("House 2", "player2", "scifi", nil)
-	bp3 := NewBlueprint("House 3", "player3", "horror", nil)
+	bp1 := NewBlueprintWithTime("House 1", "player1", "fantasy", nil, defaultTimeProvider)
+	bp2 := NewBlueprintWithTime("House 2", "player2", "scifi", nil, defaultTimeProvider)
+	bp3 := NewBlueprintWithTime("House 3", "player3", "horror", nil, defaultTimeProvider)
 
 	library.Add(bp1)
 	library.Add(bp2)
@@ -356,17 +356,17 @@ func TestBlueprintLibraryFilter(t *testing.T) {
 	library := NewBlueprintLibrary()
 
 	// Create test blueprints
-	bp1 := NewBlueprint("Medieval Manor", "player1", "fantasy", &BuildingDefinition{Width: 24, Height: 24})
+	bp1 := NewBlueprintWithTime("Medieval Manor", "player1", "fantasy", &BuildingDefinition{Width: 24, Height: 24}, defaultTimeProvider)
 	bp1.Tags = []string{"medieval", "manor"}
 	bp1.AddRating(4.5)
 	library.Add(bp1)
 
-	bp2 := NewBlueprint("Sci-Fi Station", "player2", "scifi", &BuildingDefinition{Width: 32, Height: 32})
+	bp2 := NewBlueprintWithTime("Sci-Fi Station", "player2", "scifi", &BuildingDefinition{Width: 32, Height: 32}, defaultTimeProvider)
 	bp2.Tags = []string{"scifi", "station"}
 	bp2.AddRating(3.5)
 	library.Add(bp2)
 
-	bp3 := NewBlueprint("Medieval Castle", "player1", "fantasy", &BuildingDefinition{Width: 48, Height: 48})
+	bp3 := NewBlueprintWithTime("Medieval Castle", "player1", "fantasy", &BuildingDefinition{Width: 48, Height: 48}, defaultTimeProvider)
 	bp3.Tags = []string{"medieval", "castle"}
 	bp3.AddRating(4.8)
 	library.Add(bp3)
@@ -459,7 +459,7 @@ func TestBlueprintLibrarySort(t *testing.T) {
 
 	// Create blueprints with different values
 	now := time.Now()
-	bp1 := NewBlueprint("Alpha", "player1", "fantasy", nil)
+	bp1 := NewBlueprintWithTime("Alpha", "player1", "fantasy", nil, defaultTimeProvider)
 	bp1.AddRating(3.0)
 	for i := 0; i < 100; i++ {
 		bp1.IncrementDownloads()
@@ -467,7 +467,7 @@ func TestBlueprintLibrarySort(t *testing.T) {
 	bp1.CreatedAt = now.Add(-3 * time.Hour)
 	bp1.ModifiedAt = now.Add(-1 * time.Hour)
 
-	bp2 := NewBlueprint("Beta", "player2", "scifi", nil)
+	bp2 := NewBlueprintWithTime("Beta", "player2", "scifi", nil, defaultTimeProvider)
 	bp2.AddRating(5.0)
 	for i := 0; i < 50; i++ {
 		bp2.IncrementDownloads()
@@ -475,7 +475,7 @@ func TestBlueprintLibrarySort(t *testing.T) {
 	bp2.CreatedAt = now.Add(-2 * time.Hour)
 	bp2.ModifiedAt = now.Add(-2 * time.Hour)
 
-	bp3 := NewBlueprint("Gamma", "player3", "horror", nil)
+	bp3 := NewBlueprintWithTime("Gamma", "player3", "horror", nil, defaultTimeProvider)
 	bp3.AddRating(4.0)
 	for i := 0; i < 150; i++ {
 		bp3.IncrementDownloads()
@@ -565,7 +565,7 @@ func TestBlueprintLibraryConcurrency(t *testing.T) {
 	done := make(chan bool)
 	for i := 0; i < 10; i++ {
 		go func(n int) {
-			bp := NewBlueprint("Concurrent", "player1", "fantasy", nil)
+			bp := NewBlueprintWithTime("Concurrent", "player1", "fantasy", nil, defaultTimeProvider)
 			library.Add(bp)
 			done <- true
 		}(i)
@@ -580,7 +580,7 @@ func TestBlueprintLibraryConcurrency(t *testing.T) {
 	}
 
 	// Test concurrent reads
-	bp := NewBlueprint("Read Test", "player1", "fantasy", nil)
+	bp := NewBlueprintWithTime("Read Test", "player1", "fantasy", nil, defaultTimeProvider)
 	library.Add(bp)
 
 	for i := 0; i < 10; i++ {

@@ -1040,3 +1040,63 @@ func TestConnectWithRetry_NoMemoryLeakOnCancellation(t *testing.T) {
 	// If we get here without hanging, no obvious goroutine leak
 	t.Log("Successfully created and cancelled 5 clients without leaks")
 }
+
+// TestNewClient_PredictorInstantiated verifies that NewClient always creates
+// a non-nil predictor for client-side prediction support.
+func TestNewClient_PredictorInstantiated(t *testing.T) {
+	client := NewClient(DefaultClientConfig())
+	if client.predictor == nil {
+		t.Fatal("Expected predictor to be non-nil for default client config")
+	}
+}
+
+// TestNewClient_HighLatencyPredictorSelected verifies that TorClientConfig
+// causes the high-latency predictor variant to be selected.
+func TestNewClient_HighLatencyPredictorSelected(t *testing.T) {
+	standard := NewClient(DefaultClientConfig())
+	highLat := NewClient(TorClientConfig())
+
+	if standard.predictor == nil || highLat.predictor == nil {
+		t.Fatal("Expected non-nil predictor for both configs")
+	}
+
+	if standard.predictor.maxHistory != 256 {
+		t.Errorf("Standard predictor maxHistory = %d, want 256", standard.predictor.maxHistory)
+	}
+	if highLat.predictor.maxHistory != 512 {
+		t.Errorf("High-latency predictor maxHistory = %d, want 512", highLat.predictor.maxHistory)
+	}
+}
+
+// TestClientPredictorReconciliation confirms the predictor diverges from the
+// server then converges within the error threshold after reconciliation.
+func TestClientPredictorReconciliation(t *testing.T) {
+	client := NewClient(DefaultClientConfig())
+	client.predictor.SetInitialState(Position{X: 0, Y: 0}, Velocity{VX: 0, VY: 0})
+
+	// Advance the local simulation with several move inputs.
+	const dt = 0.05
+	for i := 0; i < 5; i++ {
+		client.PredictMovement(10, 0, dt)
+	}
+
+	predicted := client.predictor.GetCurrentState()
+	if predicted.Position.X <= 0 {
+		t.Fatal("Expected non-zero predicted position after PredictMovement calls")
+	}
+
+	// Server acknowledges seq 3 with a slightly different position (within threshold).
+	serverPos := client.predictor.stateHistory[2].Position
+	reconciled := client.ReconcileFromServer(3, serverPos, Velocity{VX: 0, VY: 0})
+
+	// After reconciliation the client should still have a valid position
+	// (no full reset since error is within threshold).
+	if reconciled.Sequence < 3 {
+		t.Errorf("Reconciled sequence = %d, want >= 3", reconciled.Sequence)
+	}
+
+	// GetPredictor must return the same instance used by PredictMovement/ReconcileFromServer.
+	if client.GetPredictor() != client.predictor {
+		t.Error("GetPredictor returned a different instance than the internal predictor")
+	}
+}

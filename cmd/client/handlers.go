@@ -671,6 +671,8 @@ func initializeCoreSystems(game *engine.EbitenGame, logger *logrus.Logger, clien
 		sys.animationSystem = engine.NewAnimationSystem(sys.spriteGenerator)
 		sys.animationSystem.SetMaxCacheSize(effectiveAnimCacheSize)
 		sys.animationSystem.SetSpriteCache(sys.spriteCache)
+		// AnimationSyncManager is instantiated when the animation-state network
+		// send/receive path is ready to consume it.
 		sys.equipmentVisualSystem = engine.NewEquipmentVisualSystem(sys.spriteGenerator)
 		clientLogger.WithField("maxSize", effectiveSpriteCacheMax).Debug("sprite & animation systems initialized")
 	}()
@@ -3574,7 +3576,8 @@ func configureDeathCallback(sys *systemsContainer, game *engine.EbitenGame, logg
 	var playerEntity *engine.Entity
 	sys.combatSystem.SetDeathCallback(createDeathCallback(
 		game, &playerEntity, sys.objectiveTracker, &sys.audioManager,
-		sys.recipeGen, sys.magicGenerator, sys.skillGenerator, sys.deathParticleSystem, *seed, *genreID, logger, sys.timeProvider,
+		sys.recipeGen, sys.magicGenerator, sys.skillGenerator, sys.deathParticleSystem,
+		&sys.progressionSystem, *seed, *genreID, logger, sys.timeProvider,
 	))
 }
 

@@ -645,3 +645,21 @@ func TestTemplateDeterminism(t *testing.T) {
 		}
 	}
 }
+
+// TestSelectTheme_AllGenresCovered verifies that genreThemes and genreTitleSuffixes
+// contain entries for every known genre and that each produces non-empty results.
+func TestSelectTheme_AllGenresCovered(t *testing.T) {
+	genres := []string{"fantasy", "scifi", "horror", "cyberpunk", "postapocalyptic"}
+	for _, g := range genres {
+		t.Run(g, func(t *testing.T) {
+			themes, ok := genreThemes[g]
+			if !ok || len(themes) == 0 {
+				t.Errorf("genreThemes[%q] is missing or empty", g)
+			}
+			suffixes, ok := genreTitleSuffixes[g]
+			if !ok || len(suffixes) == 0 {
+				t.Errorf("genreTitleSuffixes[%q] is missing or empty", g)
+			}
+		})
+	}
+}

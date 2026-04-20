@@ -1427,6 +1427,7 @@ func spawnProceduralLoot(
 // - Playing death sound effects
 // - Spawning death particle effects
 // - Tracking quest objectives
+// - Awarding XP to the player (AUDIT.md MEDIUM fix)
 func createDeathCallback(
 	game *engine.EbitenGame,
 	playerEntity **engine.Entity,
@@ -1436,6 +1437,7 @@ func createDeathCallback(
 	magicGen *magic.SpellGenerator,
 	skillGen *skills.SkillTreeGenerator,
 	deathParticleSystem *engine.DeathParticleSystem,
+	progressionSystem **engine.ProgressionSystem,
 	seed int64,
 	genreID string,
 	logger *logrus.Logger,
@@ -1458,6 +1460,21 @@ func createDeathCallback(
 		gameTime := float64(tp.Now().Unix())
 		deadComp := engine.NewDeadComponent(gameTime)
 		enemy.AddComponent(deadComp)
+
+		// AUDIT.md MEDIUM: Award XP to the player for killing the enemy.
+		// XP is derived from enemy max HP (1 XP per max-HP point, minimum 10).
+		// Guard: skip if the dead entity is a player-controlled entity (has an
+		// input component) or if it is the player entity itself.
+		if progressionSystem != nil && *progressionSystem != nil &&
+			playerEntity != nil && *playerEntity != nil &&
+			!enemy.HasComponent("input") && enemy != *playerEntity {
+			xpAmount := calculateEnemyXP(enemy)
+			if err := (*progressionSystem).AwardXP(*playerEntity, xpAmount); err != nil {
+				if logger.GetLevel() >= logrus.DebugLevel {
+					logging.ComponentLogger(logger, "progression").WithError(err).Debug("failed to award kill XP")
+				}
+			}
+		}
 
 		// Spawn death particle effects for visual feedback
 		if deathParticleSystem != nil {
@@ -1482,6 +1499,30 @@ func createDeathCallback(
 			}
 		}
 	}
+}
+
+// calculateEnemyXP returns the XP reward for killing an enemy.
+// Derives the amount from the enemy's max HP (1 XP per HP point) with a minimum
+// of 10 and a maximum of 10 000 to prevent degenerate values.
+func calculateEnemyXP(enemy *engine.Entity) int {
+	const minXP = 10
+	const maxXP = 10_000
+	healthComp, ok := enemy.GetComponent("health")
+	if !ok {
+		return minXP
+	}
+	hc, ok := healthComp.(*engine.HealthComponent)
+	if !ok {
+		return minXP
+	}
+	xp := int(hc.Max)
+	if xp < minXP {
+		return minXP
+	}
+	if xp > maxXP {
+		return maxXP
+	}
+	return xp
 }
 
 // serializePlayerState extracts all player state for saving.

@@ -50,7 +50,7 @@ var defaultTimeProvider TimeProvider = RealTimeProvider{}
 
 // SetDefaultTimeProvider sets the package-level time provider.
 // Use this to inject a MockTimeProvider for multiplayer synchronization or testing.
-// The time provider affects NewPlot() and NewBlueprint() timestamp generation.
+// The time provider affects NewPlot() and NewBlueprintWithTime() timestamp generation.
 //
 // Example for multiplayer:
 //
@@ -384,12 +384,6 @@ func (bp *Blueprint) UnmarshalJSON(data []byte) error {
 	bp.BuildingDef = helper.BuildingDef
 
 	return nil
-}
-
-// NewBlueprint creates a new blueprint with default metadata.
-// Uses the default time provider for timestamps.
-func NewBlueprint(name, author, genreID string, buildingDef *BuildingDefinition) *Blueprint {
-	return NewBlueprintWithTime(name, author, genreID, buildingDef, defaultTimeProvider)
 }
 
 // NewBlueprintWithTime creates a new blueprint with timestamps from the provided TimeProvider.

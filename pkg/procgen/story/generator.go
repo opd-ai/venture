@@ -11,6 +11,31 @@ import (
 	"github.com/opd-ai/venture/pkg/procgen"
 )
 
+// genreThemes is the authoritative table of story themes per genre (TODO REM-096 resolved).
+// Adding a new genre requires only a new entry here; no function bodies need editing.
+var genreThemes = map[string][]string{
+	"fantasy":        {"ancient_curse", "fallen_kingdom", "lost_artifact", "dragon_slayer", "wizard_betrayal"},
+	"scifi":          {"abandoned_colony", "ai_uprising", "alien_contact", "experiment_gone_wrong", "time_loop"},
+	"horror":         {"haunted_mansion", "cult_ritual", "plague_outbreak", "entity_awakening", "descent_madness"},
+	"cyberpunk":      {"corporate_conspiracy", "hacker_revenge", "memory_theft", "underground_resistance", "ai_consciousness"},
+	"postapocalyptic": {"last_survivors", "resource_war", "mutant_origin", "bunker_secrets", "radiation_zone"},
+}
+
+// genreTitleSuffixes is the authoritative table of title suffixes per genre (TODO REM-096 resolved).
+var genreTitleSuffixes = map[string][]string{
+	"fantasy":        {"Lost Kingdom", "Fallen Hero", "Ancient Curse", "Hidden Temple", "Dark Forest"},
+	"scifi":          {"Colony Alpha", "Last Signal", "Derelict Station", "Failed Experiment", "AI Core"},
+	"horror":         {"Haunted Manor", "Cursed Ground", "Dark Ritual", "Final Scream", "Blood Moon"},
+	"cyberpunk":      {"Data Heist", "Corporate Fall", "Neon Shadows", "Memory Dump", "System Breach"},
+	"postapocalyptic": {"Last Stand", "Wasteland", "Dead Zone", "Bunker 13", "Final Days"},
+}
+
+// defaultThemes is used when no genre-specific themes are found.
+var defaultThemes = []string{"mystery", "tragedy", "adventure", "discovery", "conflict"}
+
+// defaultTitleSuffixes is used when no genre-specific title suffixes are found.
+var defaultTitleSuffixes = []string{"Unknown Place", "Forgotten Story", "Lost Tale", "Hidden Truth", "Dark Secret"}
+
 // Sentinel errors for validation failures
 var (
 	ErrInvalidDifficulty    = errors.New("difficulty must be between 0 and 1")
@@ -300,31 +325,18 @@ func (g *FragmentGenerator) Validate(result interface{}) error {
 }
 
 // selectTheme returns a genre-specific story theme for a fragment sequence.
-// TODO(REM-096): Extract genre→theme maps to package-level var tables
-// (e.g., var genreThemes = map[string][]string{...}) to enable data-driven
-// extension without modifying function bodies. Currently the switch cases
-// are duplicated across selectTheme, getThemesForGenre, and other helpers.
+// Theme data is sourced from genreThemes table (TODO REM-096 resolved).
 func (g *FragmentGenerator) selectTheme(rng *rand.Rand, genreID string) string {
 	themes := g.getThemesForGenre(genreID)
 	return themes[rng.Intn(len(themes))]
 }
 
 func (g *FragmentGenerator) getThemesForGenre(genreID string) []string {
-	switch genreID {
-	case "fantasy":
-		return []string{"ancient_curse", "fallen_kingdom", "lost_artifact", "dragon_slayer", "wizard_betrayal"}
-	case "scifi":
-		return []string{"abandoned_colony", "ai_uprising", "alien_contact", "experiment_gone_wrong", "time_loop"}
-	case "horror":
-		return []string{"haunted_mansion", "cult_ritual", "plague_outbreak", "entity_awakening", "descent_madness"}
-	case "cyberpunk":
-		return []string{"corporate_conspiracy", "hacker_revenge", "memory_theft", "underground_resistance", "ai_consciousness"}
-	case "postapocalyptic":
-		return []string{"last_survivors", "resource_war", "mutant_origin", "bunker_secrets", "radiation_zone"}
-	default:
-		log.WithField("genre", genreID).Warn("unknown genre, using default story themes")
-		return []string{"mystery", "tragedy", "adventure", "discovery", "conflict"}
+	if themes, ok := genreThemes[genreID]; ok {
+		return themes
 	}
+	log.WithField("genre", genreID).Warn("unknown genre, using default story themes")
+	return defaultThemes
 }
 
 func (g *FragmentGenerator) generateStoryContent(rng *rand.Rand, theme, genreID string, numFragments int) []string {
@@ -422,20 +434,10 @@ func (g *FragmentGenerator) generateTitle(rng *rand.Rand, theme, genreID string)
 }
 
 func (g *FragmentGenerator) getTitleSuffixes(genreID string) []string {
-	switch genreID {
-	case "fantasy":
-		return []string{"Lost Kingdom", "Fallen Hero", "Ancient Curse", "Hidden Temple", "Dark Forest"}
-	case "scifi":
-		return []string{"Colony Alpha", "Last Signal", "Derelict Station", "Failed Experiment", "AI Core"}
-	case "horror":
-		return []string{"Haunted Manor", "Cursed Ground", "Dark Ritual", "Final Scream", "Blood Moon"}
-	case "cyberpunk":
-		return []string{"Data Heist", "Corporate Fall", "Neon Shadows", "Memory Dump", "System Breach"}
-	case "postapocalyptic":
-		return []string{"Last Stand", "Wasteland", "Dead Zone", "Bunker 13", "Final Days"}
-	default:
-		return []string{"Unknown Place", "Forgotten Story", "Lost Tale", "Hidden Truth", "Dark Secret"}
+	if suffixes, ok := genreTitleSuffixes[genreID]; ok {
+		return suffixes
 	}
+	return defaultTitleSuffixes
 }
 
 func (g *FragmentGenerator) calculateCoherence(storyContent []string) float64 {

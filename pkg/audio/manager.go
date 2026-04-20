@@ -307,9 +307,12 @@ func (m *Manager) IsVoiceEnabled() bool {
 // should provide a concrete VoiceTransport implementation that integrates
 // with pkg/network/chat for proximity/guild/party voice channels.
 //
-// TODO(integration): Wire VoiceTransport to network/chat subsystem
-// for proximity/guild/party voice channels. Current implementation accepts
-// nil transport for future integration.
+// Server-side voice broadcast is handled by TCPServer.routeVoiceCommand in
+// pkg/network/server.go, which fans out VoicePackets (serialised as
+// StateUpdate.ComponentData with Type="_voice") to all connected peers.
+// Client-side demultiplexing is performed by TCPVoiceTransport.HandleReceivedPacket
+// in pkg/network/voice_transport.go. See cmd/client/handlers.go (initializeVoiceTransport)
+// for the wiring call site.
 func (m *Manager) InitializeVoice(quality VoiceQuality, transport VoiceTransport) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()

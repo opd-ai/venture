@@ -15,7 +15,23 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-// AnimationSystem updates animation components and manages frame transitions.
+// AnimationSyncer is implemented by network-layer managers (e.g.
+// *network.AnimationSyncManager) that provide delta-compressed, jitter-buffered
+// animation state synchronisation for multiplayer. When set on AnimationSystem
+// via SetSyncManager, game code can call ShouldSync before transmitting a state
+// change and RecordSync after confirming the packet was queued.
+//
+// The interface uses only engine-package types to avoid a circular import with
+// pkg/network. Set nil to disable multiplayer animation sync (offline/singleplayer).
+type AnimationSyncer interface {
+	// ShouldSync returns true if the state change for entityID should be
+	// transmitted (i.e. the state actually changed since the last sync).
+	ShouldSync(entityID uint64, newState AnimationState) bool
+	// RecordSync records that a state packet of bytesSent bytes was queued for
+	// entityID so that ShouldSync can correctly detect the next delta.
+	RecordSync(entityID uint64, state AnimationState, bytesSent int)
+}
+
 // Integrates with sprite generator to create procedural animation frames.
 //
 // Animation Timing:
@@ -98,6 +114,10 @@ type AnimationSystem struct {
 	// The pool uses bucketed sizes (64, 80, 96, 128) to maximize reuse while minimizing wasted space
 	frameImagePool    *animationImagePool
 	transformDrawOpts ebiten.DrawImageOptions // Reusable DrawImageOptions for frame generation
+
+	// syncManager provides delta-compressed animation state synchronisation for
+	// multiplayer. Nil in offline/singleplayer mode. Set via SetSyncManager.
+	syncManager AnimationSyncer
 }
 
 // AnimationStats holds performance statistics for the animation system.
@@ -208,6 +228,19 @@ func (s *AnimationSystem) SetSpriteCache(spriteCache *cache.SpriteCache) {
 // GetSpriteCache returns the current sprite cache, or nil if not set.
 func (s *AnimationSystem) GetSpriteCache() *cache.SpriteCache {
 	return s.spriteCache
+}
+
+// SetSyncManager wires a network-layer AnimationSyncer for multiplayer animation
+// delta compression. Pass nil to disable (offline / singleplayer mode).
+// The manager is used by game code to determine when to transmit a state change
+// (ShouldSync) and to record confirmed transmissions (RecordSync).
+func (s *AnimationSystem) SetSyncManager(mgr AnimationSyncer) {
+	s.syncManager = mgr
+}
+
+// GetSyncManager returns the current AnimationSyncer, or nil if not set.
+func (s *AnimationSystem) GetSyncManager() AnimationSyncer {
+	return s.syncManager
 }
 
 // SetPaletteOptions sets custom palette generation options for all sprites (Phase 5.4).

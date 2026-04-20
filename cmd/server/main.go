@@ -496,17 +496,47 @@ func createGameWorld(logger *logrus.Logger) (*engine.World, *engine.EnhancedChat
 	// AUDIT.md: Wire Chunk world systems (Loader)
 	// Gap: ChunkLoaderSystem defined in pkg/world/ but never instantiated — persistent world chunking not active
 	// Fix: Instantiate ChunkLoaderSystem with the persistence layer.
-	// Note: ChunkCompressionSystem and ChunkModificationSystem are not yet connected to a real
-	// persistence pipeline, so they are not constructed here to avoid dangling initialization code.
 	worldPersistence := worldpkg.NewWorldPersistence("world_save.json")
-	if _, err := worldPersistence.LoadWorld(*seed); err != nil {
+	persistentState, loadErr := worldPersistence.LoadWorld(*seed)
+	if loadErr != nil {
 		// LoadWorld returns nil error when save file is missing (fresh state).
 		// An error here indicates a real load failure (corrupt gzip/JSON, incompatible schema, etc.).
-		worldLogger.WithError(err).Warn("failed to load saved world state, starting fresh")
+		worldLogger.WithError(loadErr).Warn("failed to load saved world state, starting fresh")
+		persistentState = &worldpkg.PersistentWorldState{
+			ChunkData:      make(map[string]*worldpkg.Chunk),
+			ModifiedChunks: make(map[string]bool),
+		}
 	}
 	chunkLoader := worldpkg.NewChunkLoaderSystem(*seed, worldPersistence, nil)
 	world.AddSystem(&chunkLoaderSystemWrapper{loader: chunkLoader})
 	worldLogger.Debug("chunk loader system initialized")
+
+	// AUDIT.md MEDIUM: ChunkCompressionSystem and ChunkModificationSystem never
+	// AUDIT.md MEDIUM: Wire compression and modification tracking on chunk eviction.
+	// CompressChunk returns compressed bytes for use when a per-chunk persistence
+	// layer is added (see WorldPersistence). Until then we call it to validate that
+	// chunks are compressible and log the ratio for memory observability.
+	chunkCompressor := worldpkg.NewChunkCompressionSystem()
+	chunkMods := worldpkg.NewChunkModificationSystem(persistentState)
+	chunkLoader.SetOnEvict(func(chunk *worldpkg.Chunk) {
+		if chunk == nil {
+			return
+		}
+		_, ratio, err := chunkCompressor.CompressChunk(chunk)
+		if err != nil {
+			worldLogger.WithError(err).Warn("chunk compression on evict failed")
+			return
+		}
+		if ratio > 1 {
+			worldLogger.WithFields(logrus.Fields{
+				"chunk_x": chunk.X,
+				"chunk_y": chunk.Y,
+				"ratio":   ratio,
+			}).Debug("chunk compressed on evict")
+		}
+		chunkMods.MarkDirty(chunk.X, chunk.Y)
+	})
+	worldLogger.Debug("chunk compression and modification tracking initialized")
 
 	if logger.GetLevel() >= logrus.DebugLevel {
 		worldLogger.Debug("game systems initialized")

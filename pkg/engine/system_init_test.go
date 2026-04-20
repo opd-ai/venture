@@ -80,8 +80,8 @@ func TestInitializeGameSystems(t *testing.T) {
 
 	// Verify systems are registered with world (63 systems, not including SpatialPartitionSystem)
 	systems := game.World.GetSystems()
-	if len(systems) != 249 {
-		t.Errorf("Expected 249 systems registered, got %d", len(systems))
+	if len(systems) != 256 {
+		t.Errorf("Expected 256 systems registered, got %d", len(systems))
 	}
 
 	// Verify game references are set
@@ -210,8 +210,8 @@ func TestInitializeGameSystems_MultipleGenres(t *testing.T) {
 			}
 
 			systems := game.World.GetSystems()
-			if len(systems) != 249 {
-				t.Errorf("Genre %s: expected 249 systems (250th requires terrain), got %d", genre, len(systems))
+			if len(systems) != 256 {
+				t.Errorf("Genre %s: expected 256 systems (257th requires terrain), got %d", genre, len(systems))
 			}
 		})
 	}
@@ -323,8 +323,8 @@ func TestInitializeSpatialPartitionSystem(t *testing.T) {
 
 	// Verify it was added to world (should now have 64 systems)
 	systems := game.World.GetSystems()
-	if len(systems) != 250 {
-		t.Errorf("Expected 250 systems after spatial partition init, got %d", len(systems))
+	if len(systems) != 257 {
+		t.Errorf("Expected 257 systems after spatial partition init, got %d", len(systems))
 	}
 }
 

@@ -982,7 +982,12 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 		if progressionSystem != nil {
 			xp := calculateKillXP(target)
 			if xp > 0 {
-				_ = progressionSystem.AwardXP(attacker, xp)
+				if err := progressionSystem.AwardXP(attacker, xp); err != nil {
+					logrus.WithFields(logrus.Fields{
+						"system": "progression",
+						"xp":     xp,
+					}).WithError(err).Warn("Failed to award kill XP")
+				}
 			}
 		}
 	})

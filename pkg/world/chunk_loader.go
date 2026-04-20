@@ -16,6 +16,7 @@ type ChunkLoaderSystem struct {
 	persistence  *WorldPersistence      // For loading persisted chunks
 	generator    ChunkGenerator         // For generating new chunks
 	playerPos    map[uint64]ChunkCoords // Track player positions
+	onEvict      func(*Chunk)           // Called when a chunk is evicted from memory
 }
 
 // ChunkCoords represents chunk coordinates
@@ -133,10 +134,17 @@ func (c *ChunkLoaderSystem) loadChunk(chunkX, chunkY int) (*Chunk, error) {
 	}, nil
 }
 
+// SetOnEvict registers a callback that is called with the evicted chunk just
+// before it is removed from memory. Use this to compress or persist the chunk.
+func (c *ChunkLoaderSystem) SetOnEvict(fn func(*Chunk)) {
+	c.onEvict = fn
+}
+
 // unloadChunk handles cleanup before unloading
 func (c *ChunkLoaderSystem) unloadChunk(chunk *Chunk) {
-	// Cleanup resources if needed
-	// For now, chunk is just removed from memory
+	if c.onEvict != nil {
+		c.onEvict(chunk)
+	}
 }
 
 // GetChunk returns a loaded chunk by coordinates

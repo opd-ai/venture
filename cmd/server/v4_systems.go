@@ -108,7 +108,7 @@ func initializeV4Systems(world *engine.World, seed int64, genreID string, logger
 
 	// Phase 27: Mini-Game Systems (already complete: 1/1)
 	miniGameSystem := engine.NewMiniGameSystem(world)
-	world.AddSystem(&miniGameSystemWrapper{system: miniGameSystem})
+	world.AddSystem(miniGameSystem) // Standard ECS System interface - no wrapper needed
 
 	// AUDIT FIX: Phase 95-96 - Fishing and Gathering Systems
 	// Gap: FishingSystem and GatheringSystem implemented but never initialized on server

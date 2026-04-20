@@ -145,7 +145,7 @@ func BenchmarkMiniGameSystem(b *testing.B) {
 	b.ReportAllocs()
 
 	for i := 0; i < b.N; i++ {
-		system.Update(0.016)
+		system.Update(nil, 0.016)
 	}
 }
 
@@ -257,7 +257,7 @@ func BenchmarkV4IntegratedScenario(b *testing.B) {
 		vehicleCombat.Update(vehicleEntities, 0.016)
 		companionAI.Update(0.016)
 		companionProgression.Update(0.016)
-		miniGame.Update(0.016)
+		miniGame.Update(nil, 0.016)
 		expression.Update(0.016)
 	}
 }

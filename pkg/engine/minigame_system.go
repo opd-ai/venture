@@ -50,8 +50,9 @@ func (s *MiniGameSystem) SetGenreID(genreID string) {
 }
 
 // Update processes active mini-games, updating their state and checking for timeouts.
-// This method should be called every frame with the time elapsed since last update.
-func (s *MiniGameSystem) Update(deltaTime float64) {
+// Conforms to the standard ECS System interface: Update([]*Entity, float64).
+// Entities with the "minigame" component are queried internally for targeted processing.
+func (s *MiniGameSystem) Update(_ []*Entity, deltaTime float64) {
 	entities := s.world.GetEntitiesWith("minigame")
 
 	for _, entity := range entities {

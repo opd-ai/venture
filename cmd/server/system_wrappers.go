@@ -78,14 +78,6 @@ func (w *expressionComboSystemWrapper) Update(entities []*engine.Entity, deltaTi
 	w.system.Update(deltaTime)
 }
 
-type miniGameSystemWrapper struct {
-	system *engine.MiniGameSystem
-}
-
-func (w *miniGameSystemWrapper) Update(entities []*engine.Entity, deltaTime float64) {
-	w.system.Update(deltaTime)
-}
-
 type reputationSystemWrapper struct {
 	system *engine.ReputationSystem
 }

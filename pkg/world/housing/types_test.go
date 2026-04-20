@@ -245,7 +245,7 @@ func TestSetDefaultTimeProvider(t *testing.T) {
 	}
 
 	// NewBlueprint should also use the mock time provider
-	bp := NewBlueprint("Test Blueprint", "Author", "fantasy", nil)
+	bp := NewBlueprintWithTime("Test Blueprint", "Author", "fantasy", nil, defaultTimeProvider)
 	if !bp.CreatedAt.Equal(fixedTime) {
 		t.Errorf("Blueprint CreatedAt = %v, want %v", bp.CreatedAt, fixedTime)
 	}
@@ -289,8 +289,8 @@ func TestTimeProviderDeterminism(t *testing.T) {
 	}
 
 	// Create two blueprints - they should have identical timestamps
-	bp1 := NewBlueprint("Blueprint1", "Author1", "fantasy", nil)
-	bp2 := NewBlueprint("Blueprint2", "Author2", "sci-fi", nil)
+	bp1 := NewBlueprintWithTime("Blueprint1", "Author1", "fantasy", nil, defaultTimeProvider)
+	bp2 := NewBlueprintWithTime("Blueprint2", "Author2", "sci-fi", nil, defaultTimeProvider)
 
 	if !bp1.CreatedAt.Equal(bp2.CreatedAt) {
 		t.Errorf("bp1.CreatedAt = %v, bp2.CreatedAt = %v, want equal", bp1.CreatedAt, bp2.CreatedAt)

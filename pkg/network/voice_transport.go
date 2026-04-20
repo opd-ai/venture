@@ -15,6 +15,26 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+// VoiceReceiver is implemented by network clients that can deliver inbound
+// voice packets to a registered handler. *TCPClient implements this; mock
+// clients used in tests typically do not. Type-assert to this interface when
+// wiring inbound voice packets into an audio pipeline.
+type VoiceReceiver interface {
+	SetVoiceHandler(h func(*VoicePacket))
+}
+
+// VoiceComponentType is the reserved ComponentData.Type value used to wrap a
+// serialized VoicePacket inside a StateUpdate when the server fans the packet
+// out to channel members. The leading underscore prevents collision with
+// gameplay ECS component type names. Clients route any StateUpdate carrying
+// this component to the voice handler instead of to game state.
+const VoiceComponentType = "_voice"
+
+// VoiceInputType is the InputCommand.InputType value used by clients to send
+// voice packets to the server. The InputCommand.Data carries a single byte
+// (PacketTypeVoice) followed by the serialized VoicePacket bytes.
+const VoiceInputType = "voice"
+
 // VoiceTransportConfig configures voice transport behavior.
 type VoiceTransportConfig struct {
 	// JitterBufferSize is the number of packets to buffer for reordering.

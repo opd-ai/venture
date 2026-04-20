@@ -1106,9 +1106,12 @@ func initializeVoiceTransport(sys *systemsContainer, networkClient interface{}, 
 		return
 	}
 
-	// Create send function that routes voice data through the network client
+	// Create send function that routes voice data through the network client.
+	// The data already begins with a PacketTypeVoice byte (added by
+	// TCPVoiceTransport.SendVoice), and the server identifies these inputs by
+	// network.VoiceInputType to route them to channel members.
 	sendFunc := func(data []byte) error {
-		return conn.SendInput("voice", data)
+		return conn.SendInput(network.VoiceInputType, data)
 	}
 
 	// Choose transport config based on latency mode
@@ -1129,6 +1132,17 @@ func initializeVoiceTransport(sys *systemsContainer, networkClient interface{}, 
 	}
 
 	transport := network.NewTCPVoiceTransport(transportConfig, playerID, sendFunc)
+
+	// Wire inbound voice packets from the network layer into the transport's
+	// jitter buffer. *network.TCPClient implements network.VoiceReceiver;
+	// mock connections (tests) typically omit it.
+	if vr, ok := networkClient.(network.VoiceReceiver); ok {
+		vr.SetVoiceHandler(func(pkt *network.VoicePacket) {
+			if err := transport.HandleReceivedPacket(pkt); err != nil {
+				clientLogger.WithError(err).Debug("voice transport: failed to handle inbound packet")
+			}
+		})
+	}
 
 	if err := sys.baseAudioManager.InitializeVoice(audio.VoiceQualityMedium, transport); err != nil {
 		clientLogger.WithError(err).Warn("failed to initialize voice transport")

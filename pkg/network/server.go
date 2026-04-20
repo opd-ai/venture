@@ -344,6 +344,18 @@ func (s *TCPServer) IsRunning() bool {
 	return s.running
 }
 
+// Address returns the actual network address the server is listening on, or
+// an empty string if the server has not started. Useful for tests that bind
+// to ":0" (an OS-assigned ephemeral port) and need to discover the port.
+func (s *TCPServer) Address() string {
+	s.clientsMu.RLock()
+	defer s.clientsMu.RUnlock()
+	if s.listener == nil {
+		return ""
+	}
+	return s.listener.Addr().String()
+}
+
 // cleanupLoop periodically checks for and disconnects idle clients.
 // This prevents resource leaks from abandoned connections.
 func (s *TCPServer) cleanupLoop() {
@@ -680,6 +692,14 @@ func (s *TCPServer) handleClientReceive(client *clientConnection) {
 			continue
 		}
 
+		// Voice packets are routed by connection-bound playerID rather than
+		// the client-supplied cmd.PlayerID (which may be 0 or spoofed). All
+		// other inputs are forwarded to game logic unchanged.
+		if cmd != nil && cmd.InputType == VoiceInputType {
+			s.routeVoiceCommand(cmd, client.playerID)
+			continue
+		}
+
 		s.sendCommandToGameLogic(cmd)
 	}
 }
@@ -740,6 +760,115 @@ func (s *TCPServer) sendCommandToGameLogic(cmd *InputCommand) {
 		return
 	default:
 		s.inputCommandStats.RecordDrop()
+	}
+}
+
+// routeVoiceCommand forwards a voice InputCommand to all connected clients
+// except the sender by wrapping the voice payload in a StateUpdate carrying a
+// reserved VoiceComponentType component.
+//
+// The cmd.Data field is expected to begin with a single PacketTypeVoice byte
+// (added by TCPVoiceTransport.SendVoice) followed by a serialized VoicePacket;
+// the leading byte is stripped before wrapping so the receiving client only
+// sees the bytes that DeserializeVoicePacket understands.
+//
+// senderID is the connection-bound player ID of the client that sent the
+// packet; it is authoritative regardless of the (potentially spoofed or zero)
+// cmd.PlayerID field. The packet is fanned out to every other connected
+// client; channel-membership filtering is performed client-side by
+// TCPVoiceTransport.HandleReceivedPacket (which checks IsInChannel for the
+// embedded ChannelID). A future enhancement may add server-side membership
+// filtering by querying engine.VoiceChannelSystem.
+func (s *TCPServer) routeVoiceCommand(cmd *InputCommand, senderID uint64) {
+	if cmd == nil || len(cmd.Data) < 1 {
+		if s.logger != nil {
+			s.logger.WithField("sender_id", senderID).Debug("voice routing: dropping empty voice command")
+		}
+		return
+	}
+	// Validate the leading packet-type byte before trusting the rest of the
+	// payload. Anything other than PacketTypeVoice is a protocol violation.
+	if cmd.Data[0] != byte(PacketTypeVoice) {
+		if s.logger != nil {
+			s.logger.WithFields(logrus.Fields{
+				"sender_id":   senderID,
+				"packet_type": cmd.Data[0],
+				"want":        byte(PacketTypeVoice),
+			}).Warn("voice routing: dropping packet with wrong leading byte")
+		}
+		return
+	}
+	// Strip the leading packet-type byte. The remaining bytes must
+	// deserialize as a VoicePacket; we decode here so we can authoritatively
+	// stamp SenderID with the connection-bound ID before re-serializing for
+	// broadcast. This prevents a malicious client from spoofing the SenderID
+	// field and attributing voice to another player.
+	rawPayload := cmd.Data[1:]
+	if len(rawPayload) < VoicePacketHeaderSize {
+		if s.logger != nil {
+			s.logger.WithFields(logrus.Fields{
+				"sender_id":   senderID,
+				"payload_len": len(rawPayload),
+				"min_len":     VoicePacketHeaderSize,
+			}).Warn("voice routing: dropping undersized voice payload")
+		}
+		return
+	}
+
+	pkt, err := DeserializeVoicePacket(rawPayload)
+	if err != nil {
+		if s.logger != nil {
+			s.logger.WithError(err).WithField("sender_id", senderID).Warn("voice routing: dropping undecodable voice packet")
+		}
+		return
+	}
+
+	// Log when a client tries to spoof the SenderID; this is suspicious
+	// behavior worth surfacing during incident review. Always overwrite
+	// with the authoritative connection-bound ID.
+	if pkt.SenderID != senderID && s.logger != nil {
+		s.logger.WithFields(logrus.Fields{
+			"connection_sender_id": senderID,
+			"claimed_sender_id":    pkt.SenderID,
+		}).Warn("voice routing: client attempted to spoof SenderID")
+	}
+	pkt.SenderID = senderID
+
+	payload, err := SerializeVoicePacket(pkt)
+	if err != nil {
+		if s.logger != nil {
+			s.logger.WithError(err).WithField("sender_id", senderID).Warn("voice routing: failed to re-serialize voice packet")
+		}
+		return
+	}
+
+	// Wrap in a StateUpdate so the existing per-client priority queue,
+	// batching, framing, and write paths handle delivery uniformly. EntityID
+	// is set to the sender's player ID for diagnostic correlation; the
+	// payload's own SenderID field is now authoritative (server-stamped).
+	update := &StateUpdate{
+		EntityID: senderID,
+		Priority: PriorityHigh,
+		Components: []ComponentData{{
+			Type: VoiceComponentType,
+			Data: payload,
+		}},
+	}
+
+	s.clientsMu.RLock()
+	defer s.clientsMu.RUnlock()
+
+	// Assign sequence number once for the broadcast.
+	s.stateMu.Lock()
+	update.SequenceNumber = s.stateSeq
+	s.stateSeq++
+	s.stateMu.Unlock()
+
+	for playerID, client := range s.clients {
+		if playerID == senderID {
+			continue
+		}
+		client.sendStateUpdate(update)
 	}
 }
 

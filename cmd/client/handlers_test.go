@@ -2620,3 +2620,20 @@ func TestInitializeVoiceTransportSuccess(t *testing.T) {
 		t.Error("voice should be enabled after transport initialization")
 	}
 }
+
+// TestInitializeVoiceTransportZeroPlayerID verifies that voice is skipped when
+// the server hasn't assigned a player ID yet.
+func TestInitializeVoiceTransportZeroPlayerID(t *testing.T) {
+	sys := &systemsContainer{
+		baseAudioManager: audio.NewManager(44100, 42),
+	}
+	logger := logrus.NewEntry(logrus.StandardLogger())
+	mock := &mockClientConnection{playerID: 0, connected: true}
+
+	initializeVoiceTransport(sys, mock, logger)
+
+	// Voice should NOT be enabled when player ID is 0
+	if sys.baseAudioManager.IsVoiceEnabled() {
+		t.Error("voice should not be enabled when player ID is 0")
+	}
+}

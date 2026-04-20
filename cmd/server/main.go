@@ -591,7 +591,15 @@ func spawnPostOffices(world *engine.World, generatedTerrain *terrain.Terrain, co
 	spawner := engine.NewPostOfficeSpawner(world, courierSystem)
 	result, err := spawner.SpawnInTerrain(generatedTerrain, *genreID, *seed)
 	if err != nil {
-		logger.WithError(err).Warn("post office spawning skipped")
+		logger.WithFields(logrus.Fields{
+			"system": "post_office_spawning",
+			"seed":   *seed,
+			"genre":  *genreID,
+			"width":  generatedTerrain.Width,
+			"height": generatedTerrain.Height,
+			"rooms":  len(generatedTerrain.Rooms),
+			"error":  err,
+		}).Fatal("post office spawning failed; courier system requires at least one post office")
 		return
 	}
 	logger.WithFields(logrus.Fields{

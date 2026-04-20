@@ -85,10 +85,8 @@ func main() {
 
 	game := createGameInstance(logger, clientLogger)
 	sys := setupAllGameSystems(game, logger, clientLogger)
+	sys.networkClient = networkClient // Store for deferred voice transport wiring after audio init
 	startPerformanceMonitoring(game, clientLogger)
-
-	// Wire voice transport to network client (AUDIT.md Gap 1: VoiceTransport never wired)
-	initializeVoiceTransport(sys, networkClient, clientLogger)
 
 	// Performance Audit Fix: Start async terrain generation and show loading screen
 	// instead of blocking main thread. This prevents 2-8s freeze for large terrains.

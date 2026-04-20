@@ -592,6 +592,7 @@ type systemsContainer struct {
 	spatialVoiceSystem *engine.SpatialVoiceSystem // Distance-based volume and stereo panning for voice
 	voiceAudioSystem   *engine.VoiceAudioSystem   // Voice audio input/output processing
 	baseAudioManager   *audio.Manager             // Core audio manager with voice initialization support
+	networkClient      interface{}                 // Network client reference for deferred voice transport wiring
 
 	// VR Systems (AUDIT.md Task 7)
 	// Gap: VR systems implemented but never initialized with hardware detection
@@ -759,6 +760,10 @@ func (sys *systemsContainer) scheduleLazyInit(game *engine.EbitenGame, logger *l
 
 		// Phase 1: Audio system (can be initialized in background)
 		initializeAudioSystem(game, sys, clientLogger)
+
+		// Wire voice transport after audio is ready (AUDIT.md Gap 1: VoiceTransport never wired)
+		// Must happen after initializeAudioSystem sets sys.baseAudioManager
+		initializeVoiceTransport(sys, sys.networkClient, clientLogger)
 
 		// Phase 2: Environmental systems (parallel - weather, hazards, etc.)
 		var wg sync.WaitGroup
@@ -1115,6 +1120,14 @@ func initializeVoiceTransport(sys *systemsContainer, networkClient interface{}, 
 	}
 
 	playerID := conn.GetPlayerID()
+	if playerID == 0 {
+		clientLogger.WithFields(logrus.Fields{
+			"player_id":    playerID,
+			"high_latency": *highLatency,
+		}).Warn("voice transport: client player ID is not assigned yet, skipping voice initialization")
+		return
+	}
+
 	transport := network.NewTCPVoiceTransport(transportConfig, playerID, sendFunc)
 
 	if err := sys.baseAudioManager.InitializeVoice(audio.VoiceQualityMedium, transport); err != nil {

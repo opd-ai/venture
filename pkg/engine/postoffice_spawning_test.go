@@ -514,10 +514,23 @@ func TestPostOfficeSpawner_SpawnInTerrainNoRooms(t *testing.T) {
 	spawner := NewPostOfficeSpawner(world, courierSystem)
 
 	ter := terrain.NewTerrain(50, 50, 42)
-	// No rooms added
-	_, err := spawner.SpawnInTerrain(ter, "fantasy", 42)
-	if err == nil {
-		t.Error("SpawnInTerrain() with no rooms should return error")
+	// No rooms added — should fall back to terrain center
+	result, err := spawner.SpawnInTerrain(ter, "fantasy", 42)
+	if err != nil {
+		t.Fatalf("SpawnInTerrain() with no rooms should use center fallback, got error: %v", err)
+	}
+
+	// Verify placement at terrain center (50/2=25, 50/2=25)
+	if result.X != 25.0 || result.Y != 25.0 {
+		t.Errorf("Expected placement at terrain center (25, 25), got (%v, %v)", result.X, result.Y)
+	}
+
+	if result.ClerkName == "" {
+		t.Error("clerk name should not be empty")
+	}
+
+	if result.BuildingID == 0 {
+		t.Error("building ID should not be zero")
 	}
 }
 

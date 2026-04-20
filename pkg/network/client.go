@@ -127,6 +127,14 @@ type TCPClient struct {
 	doneClosed bool       // Tracks if current done channel is closed
 	wg         sync.WaitGroup
 
+	// predictor performs client-side prediction and server reconciliation to
+	// keep gameplay responsive under the 200-5000ms latency target. The
+	// high-latency variant is selected when MaxLatency >= 1s (TorClientConfig).
+	// Game systems call PredictMovement to predict local inputs and
+	// ReconcileFromServer when a server state update carries authoritative
+	// position data.
+	predictor *ClientPredictor
+
 	// voiceHandler is invoked for inbound voice packets demultiplexed from
 	// StateUpdate messages carrying a VoiceComponentType component. Set via
 	// SetVoiceHandler. When nil, voice packets are silently dropped (no game
@@ -153,6 +161,15 @@ func NewClientWithLogger(config ClientConfig, logger *logrus.Logger) *TCPClient 
 		})
 	}
 
+	// Choose predictor variant: high-latency (MaxLatency >= 1s, e.g. TorClientConfig)
+	// uses larger history and relaxed error threshold for Tor/onion service connections.
+	var predictor *ClientPredictor
+	if config.MaxLatency >= time.Second {
+		predictor = NewHighLatencyClientPredictor()
+	} else {
+		predictor = NewClientPredictor()
+	}
+
 	client := &TCPClient{
 		config:       config,
 		protocol:     NewBinaryProtocol(),
@@ -160,6 +177,7 @@ func NewClientWithLogger(config ClientConfig, logger *logrus.Logger) *TCPClient 
 		inputQueue:   make(chan *InputCommand, config.BufferSize),
 		errors:       make(chan error, 16),
 		done:         make(chan struct{}),
+		predictor:    predictor,
 		logger:       logEntry,
 	}
 
@@ -745,6 +763,30 @@ func (c *TCPClient) GetBufferStats() map[string]BufferSnapshot {
 		"input_queue":   c.inputQueueStats.Snapshot(),
 		"errors":        c.errorStats.Snapshot(),
 	}
+}
+
+// PredictMovement records a client-side movement prediction for input (dx, dy)
+// over deltaTime seconds. Game systems call this immediately after dispatching a
+// move input so the local player position advances without waiting for a server
+// round-trip. The returned PredictedState can be used to render the player's
+// expected position until the server confirms or corrects it.
+func (c *TCPClient) PredictMovement(dx, dy, deltaTime float64) PredictedState {
+	return c.predictor.PredictInput(dx, dy, deltaTime)
+}
+
+// ReconcileFromServer reconciles the client's predicted state with an
+// authoritative server state update. Game systems call this when a StateUpdate
+// carries the player's confirmed position and velocity. If the prediction error
+// exceeds the predictor's threshold, unacknowledged inputs are replayed from the
+// corrected state so the client smoothly converges to the authoritative position.
+func (c *TCPClient) ReconcileFromServer(serverSeq uint32, serverPos Position, serverVel Velocity) PredictedState {
+	return c.predictor.ReconcileServerState(serverSeq, serverPos, serverVel)
+}
+
+// GetPredictor returns the underlying ClientPredictor for advanced use cases
+// such as setting an initial position on spawn or reading prediction error metrics.
+func (c *TCPClient) GetPredictor() *ClientPredictor {
+	return c.predictor
 }
 
 // Compile-time interface check

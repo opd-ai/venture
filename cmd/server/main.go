@@ -111,7 +111,7 @@ func main() {
 
 	modManager, stabilityMon, networkSim, metricsCollector := initializeOptionalSystems(ctx, serverLogger)
 
-	world, enhancedChatSystem := createGameWorld(logger)
+	world, enhancedChatSystem, courierSystem := createGameWorld(logger)
 
 	// Wire mod system to world for game system access
 	// Phase 6.3 (PLAN.md): Modding System Integration
@@ -125,6 +125,11 @@ func main() {
 
 	generatedTerrain := generateWorldTerrain(logger, serverLogger)
 	spawnV4Entities(world, generatedTerrain, logger)
+
+	// AUDIT.md Task 4: Wire PostOfficeSpawner after CourierSystem
+	// PostOfficeSpawner places post office buildings with clerk NPCs in the terrain.
+	// Without this, CourierSystem runs but has no post offices for mail delivery.
+	spawnPostOffices(world, generatedTerrain, courierSystem, logger)
 
 	server, snapshotManager, lagCompensator := initializeNetworkSystems(logger)
 
@@ -351,8 +356,8 @@ func initializeLogger() *logrus.Logger {
 }
 
 // createGameWorld initializes the game world with all required systems.
-// Returns the world and the enhanced chat system for player registration.
-func createGameWorld(logger *logrus.Logger) (*engine.World, *engine.EnhancedChatSystem) {
+// Returns the world, the enhanced chat system for player registration, and the courier system for post office spawning.
+func createGameWorld(logger *logrus.Logger) (*engine.World, *engine.EnhancedChatSystem, *engine.CourierSystem) {
 	worldLogger := logger.WithFields(logrus.Fields{"system": "world"})
 	if logger.GetLevel() >= logrus.DebugLevel {
 		worldLogger.Debug("creating game world")
@@ -390,7 +395,7 @@ func createGameWorld(logger *logrus.Logger) (*engine.World, *engine.EnhancedChat
 	craftingSystem, narrativeSystem := initializeCoreGameplaySystems(world, *seed, logger, inventorySystem, itemGen)
 
 	companionLoyaltySystem, _ := initializeV4Systems(world, *seed, *genreID, logger, economySystem)
-	enhancedChatSystem := initializeV5SystemsServer(world, logger)
+	enhancedChatSystem, courierSystem := initializeV5SystemsServer(world, logger)
 	initializeV6SystemsServer(world, *seed, logger, economySystem)
 
 	// AUDIT.md Task 3: Wire EnhancedChatSystem Player Registration
@@ -491,7 +496,7 @@ func createGameWorld(logger *logrus.Logger) (*engine.World, *engine.EnhancedChat
 		worldLogger.Debug("game systems initialized")
 	}
 
-	return world, enhancedChatSystem
+	return world, enhancedChatSystem, courierSystem
 }
 
 // generateWorldTerrain creates the initial terrain and spawns V4 entities.
@@ -578,6 +583,23 @@ func generateWorldTerrain(logger *logrus.Logger, serverLogger *logrus.Entry) *te
 	}).Info("world terrain generated")
 
 	return generatedTerrain
+}
+
+// spawnPostOffices instantiates PostOfficeSpawner and places a post office
+// in the terrain so the courier system can deliver mail (AUDIT.md Task 4).
+func spawnPostOffices(world *engine.World, generatedTerrain *terrain.Terrain, courierSystem *engine.CourierSystem, logger *logrus.Logger) {
+	spawner := engine.NewPostOfficeSpawner(world, courierSystem)
+	result, err := spawner.SpawnInTerrain(generatedTerrain, *genreID, *seed)
+	if err != nil {
+		logger.WithError(err).Warn("post office spawning skipped")
+		return
+	}
+	logger.WithFields(logrus.Fields{
+		"building_id": result.BuildingID,
+		"clerk_name":  result.ClerkName,
+		"x":           result.X,
+		"y":           result.Y,
+	}).Info("post office spawned")
 }
 
 // spawnV4Entities spawns vehicles, companions, and bookshelves in the terrain.

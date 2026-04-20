@@ -66,7 +66,7 @@ func TestInitializeV5SystemsServer(t *testing.T) {
 
 	initialSystemCount := len(world.GetSystems())
 
-	enhancedChat := initializeV5SystemsServer(world, logger)
+	enhancedChat, courier := initializeV5SystemsServer(world, logger)
 
 	finalSystemCount := len(world.GetSystems())
 	addedSystems := finalSystemCount - initialSystemCount
@@ -82,7 +82,12 @@ func TestInitializeV5SystemsServer(t *testing.T) {
 		t.Error("initializeV5SystemsServer should return non-nil EnhancedChatSystem")
 	}
 
-	t.Logf("V5 systems initialized: %d systems added (returned EnhancedChatSystem)", addedSystems)
+	// Verify CourierSystem is returned for PostOfficeSpawner wiring
+	if courier == nil {
+		t.Error("initializeV5SystemsServer should return non-nil CourierSystem")
+	}
+
+	t.Logf("V5 systems initialized: %d systems added (returned EnhancedChatSystem, CourierSystem)", addedSystems)
 }
 
 // TestInitializeV6SystemsServer verifies V6.0 federation systems are added

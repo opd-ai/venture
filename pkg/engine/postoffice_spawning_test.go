@@ -466,3 +466,94 @@ func BenchmarkPostOfficeSpawner_FindSuitableBlocks(b *testing.B) {
 		spawner.findSuitableBlocks(blocks, cityTerrain)
 	}
 }
+
+// Tests for SpawnInTerrain (generic fallback for non-city terrains)
+
+func TestPostOfficeSpawner_SpawnInTerrain(t *testing.T) {
+	world := NewWorld()
+	mailSystem := NewMailSystem(world)
+	courierSystem := NewCourierSystem(world, mailSystem)
+	spawner := NewPostOfficeSpawner(world, courierSystem)
+
+	// Create terrain with rooms
+	ter := terrain.NewTerrain(100, 100, 42)
+	ter.Rooms = []*terrain.Room{
+		{X: 10, Y: 10, Width: 8, Height: 8},
+	}
+
+	result, err := spawner.SpawnInTerrain(ter, "fantasy", 42)
+	if err != nil {
+		t.Fatalf("SpawnInTerrain() error = %v", err)
+	}
+
+	if result.ClerkName == "" {
+		t.Error("clerk name should not be empty")
+	}
+
+	if result.BuildingID == 0 {
+		t.Error("building ID should not be zero")
+	}
+}
+
+func TestPostOfficeSpawner_SpawnInTerrainNilTerrain(t *testing.T) {
+	world := NewWorld()
+	mailSystem := NewMailSystem(world)
+	courierSystem := NewCourierSystem(world, mailSystem)
+	spawner := NewPostOfficeSpawner(world, courierSystem)
+
+	_, err := spawner.SpawnInTerrain(nil, "fantasy", 42)
+	if err == nil {
+		t.Error("SpawnInTerrain(nil) should return error")
+	}
+}
+
+func TestPostOfficeSpawner_SpawnInTerrainNoRooms(t *testing.T) {
+	world := NewWorld()
+	mailSystem := NewMailSystem(world)
+	courierSystem := NewCourierSystem(world, mailSystem)
+	spawner := NewPostOfficeSpawner(world, courierSystem)
+
+	ter := terrain.NewTerrain(50, 50, 42)
+	// No rooms added
+	_, err := spawner.SpawnInTerrain(ter, "fantasy", 42)
+	if err == nil {
+		t.Error("SpawnInTerrain() with no rooms should return error")
+	}
+}
+
+func TestPostOfficeSpawner_SpawnInTerrainTooSmallRooms(t *testing.T) {
+	world := NewWorld()
+	mailSystem := NewMailSystem(world)
+	courierSystem := NewCourierSystem(world, mailSystem)
+	spawner := NewPostOfficeSpawner(world, courierSystem)
+
+	ter := terrain.NewTerrain(50, 50, 42)
+	ter.Rooms = []*terrain.Room{
+		{X: 5, Y: 5, Width: 3, Height: 3}, // area 9, too small (need >= 36)
+	}
+
+	_, err := spawner.SpawnInTerrain(ter, "fantasy", 42)
+	if err == nil {
+		t.Error("SpawnInTerrain() with only small rooms should return error")
+	}
+}
+
+func TestPostOfficeSpawner_SpawnInTerrainDeterministic(t *testing.T) {
+	ter := terrain.NewTerrain(100, 100, 42)
+	ter.Rooms = []*terrain.Room{
+		{X: 10, Y: 10, Width: 10, Height: 10},
+	}
+
+	// Same seed should produce same clerk name
+	world1 := NewWorld()
+	spawner1 := NewPostOfficeSpawner(world1, NewCourierSystem(world1, NewMailSystem(world1)))
+	result1, _ := spawner1.SpawnInTerrain(ter, "fantasy", 42)
+
+	world2 := NewWorld()
+	spawner2 := NewPostOfficeSpawner(world2, NewCourierSystem(world2, NewMailSystem(world2)))
+	result2, _ := spawner2.SpawnInTerrain(ter, "fantasy", 42)
+
+	if result1.ClerkName != result2.ClerkName {
+		t.Errorf("determinism failed: %q != %q", result1.ClerkName, result2.ClerkName)
+	}
+}

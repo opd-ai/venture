@@ -112,6 +112,9 @@ import (
 	// Phase 4.1: Chat System (PLAN.md)
 	"github.com/opd-ai/venture/pkg/network/chat"
 
+	// Voice Transport Wiring (AUDIT.md Gap 1)
+	"github.com/opd-ai/venture/pkg/network"
+
 	// Phase 4.2: Trade System (PLAN.md)
 	"github.com/opd-ai/venture/pkg/network/trade"
 
@@ -588,6 +591,8 @@ type systemsContainer struct {
 	voiceChannelSystem *engine.VoiceChannelSystem // Voice channel lifecycle and participant synchronization
 	spatialVoiceSystem *engine.SpatialVoiceSystem // Distance-based volume and stereo panning for voice
 	voiceAudioSystem   *engine.VoiceAudioSystem   // Voice audio input/output processing
+	baseAudioManager   *audio.Manager             // Core audio manager with voice initialization support
+	networkClient      interface{}                 // Network client reference for deferred voice transport wiring
 
 	// VR Systems (AUDIT.md Task 7)
 	// Gap: VR systems implemented but never initialized with hardware detection
@@ -755,6 +760,10 @@ func (sys *systemsContainer) scheduleLazyInit(game *engine.EbitenGame, logger *l
 
 		// Phase 1: Audio system (can be initialized in background)
 		initializeAudioSystem(game, sys, clientLogger)
+
+		// Wire voice transport after audio is ready (AUDIT.md Gap 1: VoiceTransport never wired)
+		// Must happen after initializeAudioSystem sets sys.baseAudioManager
+		initializeVoiceTransport(sys, sys.networkClient, clientLogger)
 
 		// Phase 2: Environmental systems (parallel - weather, hazards, etc.)
 		var wg sync.WaitGroup
@@ -1027,6 +1036,7 @@ func initializeAudioSystem(game *engine.EbitenGame, sys *systemsContainer, clien
 
 	// Create base audio manager
 	audioManager := audio.NewManager(sampleRate, audioSeed)
+	sys.baseAudioManager = audioManager // Retain reference for voice transport wiring
 
 	// Create adaptive music manager
 	musicManager := music.NewAdaptiveMusicManager(sampleRate, audioSeed)
@@ -1073,6 +1083,62 @@ func initializeAudioSystem(game *engine.EbitenGame, sys *systemsContainer, clien
 	}
 
 	logging.ComponentLogger(clientLogger.Logger, "audio").Info("audio system initialized (synthesis engine, music and SFX generators, triggers, 3D audio, reverb)")
+}
+
+// initializeVoiceTransport wires the voice transport to the network client.
+// This connects the audio voice codec/processor to the network layer so voice
+// packets are actually transmitted. Without this, voice systems run but produce
+// no network traffic (AUDIT.md Gap 1, GAPS.md Gap 1).
+func initializeVoiceTransport(sys *systemsContainer, networkClient interface{}, clientLogger *logrus.Entry) {
+	if sys.baseAudioManager == nil {
+		clientLogger.Debug("voice transport: no audio manager, skipping")
+		return
+	}
+
+	if networkClient == nil {
+		clientLogger.Debug("voice transport: no network client, voice chat disabled")
+		return
+	}
+
+	conn, ok := networkClient.(network.ClientConnection)
+	if !ok || conn == nil {
+		clientLogger.Debug("voice transport: network client does not implement ClientConnection")
+		return
+	}
+
+	// Create send function that routes voice data through the network client
+	sendFunc := func(data []byte) error {
+		return conn.SendInput("voice", data)
+	}
+
+	// Choose transport config based on latency mode
+	var transportConfig network.VoiceTransportConfig
+	if *highLatency {
+		transportConfig = network.HighLatencyVoiceTransportConfig()
+	} else {
+		transportConfig = network.DefaultVoiceTransportConfig()
+	}
+
+	playerID := conn.GetPlayerID()
+	if playerID == 0 {
+		clientLogger.WithFields(logrus.Fields{
+			"player_id":    playerID,
+			"high_latency": *highLatency,
+		}).Warn("voice transport: client player ID is not assigned yet, skipping voice initialization")
+		return
+	}
+
+	transport := network.NewTCPVoiceTransport(transportConfig, playerID, sendFunc)
+
+	if err := sys.baseAudioManager.InitializeVoice(audio.VoiceQualityMedium, transport); err != nil {
+		clientLogger.WithError(err).Warn("failed to initialize voice transport")
+		return
+	}
+
+	clientLogger.WithFields(logrus.Fields{
+		"player_id":    playerID,
+		"high_latency": *highLatency,
+	}).Info("voice transport initialized — voice chat active")
 }
 
 // initializeCombatSystems creates spell casting and player combat systems.

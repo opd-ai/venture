@@ -180,6 +180,74 @@ func (s *PostOfficeSpawner) selectCentralBlock(blocks []*terrain.CityBlock, city
 	return best
 }
 
+// fallbackTerrainSpawnPosition returns a deterministic fallback location for
+// terrains that do not provide room metadata. It uses the terrain center so
+// post office spawning still succeeds on generators such as cellular or
+// composite maps that may omit Terrain.Rooms.
+func (s *PostOfficeSpawner) fallbackTerrainSpawnPosition(t *terrain.Terrain) (int, int, error) {
+	if t == nil {
+		return 0, 0, fmt.Errorf("terrain is nil")
+	}
+	if t.Width <= 0 || t.Height <= 0 {
+		return 0, 0, fmt.Errorf("invalid terrain dimensions: %dx%d", t.Width, t.Height)
+	}
+
+	return t.Width / 2, t.Height / 2, nil
+}
+
+// SpawnInTerrain spawns a post office in the largest suitable room.
+// This is a generic fallback for terrains without city blocks. It picks
+// the largest room that meets a minimum area threshold and places the
+// post office at the room center. If the terrain has no rooms, it falls
+// back to a deterministic position near the map center.
+func (s *PostOfficeSpawner) SpawnInTerrain(t *terrain.Terrain, genreID string, seed int64) (*PostOfficeResult, error) {
+	if t == nil {
+		return nil, fmt.Errorf("terrain is nil")
+	}
+
+	const minRoomArea = 36 // 6x6 minimum for a post office
+
+	var cx, cy int
+
+	if len(t.Rooms) == 0 {
+		var err error
+		cx, cy, err = s.fallbackTerrainSpawnPosition(t)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		// Find the largest room meeting the threshold
+		var best *terrain.Room
+		bestArea := 0
+		for _, room := range t.Rooms {
+			area := room.Width * room.Height
+			if area >= minRoomArea && area > bestArea {
+				best = room
+				bestArea = area
+			}
+		}
+
+		if best == nil {
+			return nil, fmt.Errorf("no room large enough for post office (need %d area)", minRoomArea)
+		}
+
+		cx, cy = best.Center()
+	}
+
+	rng := rand.New(rand.NewSource(seed ^ 0x504F5354)) // XOR with "POST" (big-endian ASCII: P=0x50, O=0x4F, S=0x53, T=0x54)
+	clerkName := s.generateClerkName(rng, genreID)
+
+	buildingID, clerkID := s.courierSystem.SpawnPostOffice(float64(cx), float64(cy), clerkName)
+
+	return &PostOfficeResult{
+		BuildingID: buildingID,
+		ClerkID:    clerkID,
+		ClerkName:  clerkName,
+		X:          float64(cx),
+		Y:          float64(cy),
+	}, nil
+}
+
 // generateClerkName generates a procedural name for a post office clerk
 func (s *PostOfficeSpawner) generateClerkName(rng *rand.Rand, genreID string) string {
 	var firstNames []string

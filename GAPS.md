@@ -16,20 +16,16 @@ behavior. Resolved gaps are retained for history; new gaps are appended.
   - ✅ `VoiceChannelSystem` (moderation, 4 channel types) — `pkg/engine/voice_channel_system.go`
   - ✅ `SpatialVoiceSystem` (distance-based volume/pan) — `pkg/engine/spatial_voice_system.go`
   - ✅ `VoiceAudioSystem`, `VoiceChannelSystem` wired in `cmd/client/handlers.go:2215`
-  - ❌ `InitializeVoice()` never called from `cmd/client/` or `cmd/server/`
-  - ❌ `NewTCPVoiceTransport` has zero non-test, non-self-file callers
-  - ❌ `VoiceSettingsSystem` not instantiated (see Gap 14)
+  - ✅ `InitializeVoice()` called from `cmd/client/handlers.go:initializeVoiceTransport()`
+  - ✅ `NewTCPVoiceTransport` instantiated in `cmd/client/handlers.go:initializeVoiceTransport()`
+  - ✅ `VoiceSettingsSystem` instantiated in `pkg/engine/system_init.go:2194`
   - ❌ Server-side voice routing (forward packets to channel members) not implemented
-- **Blocked Goal**: Multiplayer voice chat is completely non-functional. Players cannot hear each other.
-- **Implementation Path**:
-  1. In `cmd/client/handlers.go`, after network client connects, create transport:
-     `transport := network.NewTCPVoiceTransport(network.DefaultVoiceTransportConfig(), playerID, sendFunc)`
-  2. Call `sys.audioManager.InitializeVoice(audio.VoiceQualityMedium, transport)` 
-  3. Add server-side handler in `pkg/network/server.go` to decode VoicePacket type and broadcast to channel members
-  4. Instantiate `VoiceSettingsSystem` in `cmd/client/handlers.go` alongside `VoiceAudioSystem`
-  5. Add integration tests: `TestVoiceEndToEnd`, `TestSpatialVoiceRouting`
-- **Dependencies**: Network client connection must be established before voice initialization
-- **Effort**: medium (2–3 days)
+- **Remaining Work**: Server-side voice packet routing. Client can now encode, send, and decode voice
+  packets, but the server does not yet broadcast received voice packets to other channel members.
+- **Implementation Path** (remaining):
+  1. Add server-side handler in `pkg/network/server.go` to detect `InputType=="voice"` and broadcast to channel members
+  2. Add integration tests: `TestVoiceEndToEnd`, `TestSpatialVoiceRouting`
+- **Effort**: small (1 day)
 
 ---
 

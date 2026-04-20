@@ -43,7 +43,7 @@ func TestPerformanceSystemIntegration(t *testing.T) {
 				EnableColor: false,
 			})
 
-			world, _ := createGameWorld(logger)
+			world, _, _ := createGameWorld(logger)
 
 			// Verify performance system is registered
 			systems := world.GetSystems()
@@ -104,7 +104,7 @@ func TestPerformanceSystemMemoryTracking(t *testing.T) {
 		Format: logging.TextFormat,
 	})
 
-	world, _ := createGameWorld(logger)
+	world, _, _ := createGameWorld(logger)
 
 	// Extract performance system
 	var performanceSystem *engine.PerformanceMonitoringSystem
@@ -153,7 +153,7 @@ func TestPerformanceSystemTickRateTracking(t *testing.T) {
 		Format: logging.TextFormat,
 	})
 
-	world, _ := createGameWorld(logger)
+	world, _, _ := createGameWorld(logger)
 
 	// Extract performance system
 	var performanceSystem *engine.PerformanceMonitoringSystem
@@ -195,7 +195,7 @@ func TestPerformanceSystemMultipleUpdates(t *testing.T) {
 		Format: logging.TextFormat,
 	})
 
-	world, _ := createGameWorld(logger)
+	world, _, _ := createGameWorld(logger)
 
 	// Run many update cycles to test buffer handling
 	for i := 0; i < 200; i++ {
@@ -228,7 +228,7 @@ func BenchmarkServerWithPerformanceMonitoring(b *testing.B) {
 		Format: logging.TextFormat,
 	})
 
-	world, _ := createGameWorld(logger)
+	world, _, _ := createGameWorld(logger)
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
@@ -243,7 +243,7 @@ func BenchmarkPerformanceSystemExtraction(b *testing.B) {
 		Format: logging.TextFormat,
 	})
 
-	world, _ := createGameWorld(logger)
+	world, _, _ := createGameWorld(logger)
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {

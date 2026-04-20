@@ -85,6 +85,7 @@ func main() {
 
 	game := createGameInstance(logger, clientLogger)
 	sys := setupAllGameSystems(game, logger, clientLogger)
+	sys.networkClient = networkClient // Store for deferred voice transport wiring after audio init
 	startPerformanceMonitoring(game, clientLogger)
 
 	// Performance Audit Fix: Start async terrain generation and show loading screen

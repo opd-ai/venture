@@ -132,6 +132,11 @@ type TCPServer struct {
 	totalPacketsSent uint64
 	totalPacketsRecv uint64
 
+	// bandwidthMonitor provides sliding-window per-player and global bandwidth
+	// metrics. Wired into recordBytesSent/recordBytesReceived so every packet
+	// automatically contributes to the rolling rate visible via observability.
+	bandwidthMonitor *BandwidthMonitor
+
 	// Logger for network operations
 	logger *logrus.Entry
 }
@@ -188,9 +193,10 @@ func NewServerWithLogger(config ServerConfig, logger *logrus.Logger) *TCPServer 
 		done:          make(chan struct{}),
 		logger:        logEntry,
 		// Resource management defaults
-		idleTimeout:     5 * time.Minute,  // Disconnect clients idle for 5 minutes
-		cleanupInterval: 30 * time.Second, // Check for idle clients every 30 seconds
-		shutdownTimeout: 30 * time.Second, // Wait up to 30 seconds for graceful shutdown
+		idleTimeout:      5 * time.Minute,  // Disconnect clients idle for 5 minutes
+		cleanupInterval:  30 * time.Second, // Check for idle clients every 30 seconds
+		shutdownTimeout:  30 * time.Second, // Wait up to 30 seconds for graceful shutdown
+		bandwidthMonitor: NewBandwidthMonitor(time.Second),
 	}
 
 	// Initialize buffer monitoring
@@ -1130,6 +1136,7 @@ func (s *TCPServer) recordBytesSent(bytes uint64) {
 	defer s.metricsMu.Unlock()
 	s.totalBytesSent += bytes
 	s.totalPacketsSent++
+	s.bandwidthMonitor.RecordSent(0, bytes) // 0 = aggregate; per-player tracked separately
 }
 
 // recordBytesReceived increments the total bytes received counter.
@@ -1138,6 +1145,12 @@ func (s *TCPServer) recordBytesReceived(bytes uint64) {
 	defer s.metricsMu.Unlock()
 	s.totalBytesRecv += bytes
 	s.totalPacketsRecv++
+	s.bandwidthMonitor.RecordReceived(0, bytes) // 0 = aggregate; per-player tracked separately
+}
+
+// GetBandwidthMonitor returns the server's bandwidth monitor for observability.
+func (s *TCPServer) GetBandwidthMonitor() *BandwidthMonitor {
+	return s.bandwidthMonitor
 }
 
 // Compile-time interface check

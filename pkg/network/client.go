@@ -135,6 +135,12 @@ type TCPClient struct {
 	// position data.
 	predictor *ClientPredictor
 
+	// bandwidthMonitor provides sliding-window bandwidth measurement for the
+	// client connection. RecordSent is called from writeMessageWithLength and
+	// RecordReceived from readMessageData so every packet is automatically
+	// accounted for. Expose via GetBandwidthMonitor for observability.
+	bandwidthMonitor *BandwidthMonitor
+
 	// voiceHandler is invoked for inbound voice packets demultiplexed from
 	// StateUpdate messages carrying a VoiceComponentType component. Set via
 	// SetVoiceHandler. When nil, voice packets are silently dropped (no game
@@ -171,14 +177,15 @@ func NewClientWithLogger(config ClientConfig, logger *logrus.Logger) *TCPClient 
 	}
 
 	client := &TCPClient{
-		config:       config,
-		protocol:     NewBinaryProtocol(),
-		stateUpdates: make(chan *StateUpdate, config.BufferSize),
-		inputQueue:   make(chan *InputCommand, config.BufferSize),
-		errors:       make(chan error, 16),
-		done:         make(chan struct{}),
-		predictor:    predictor,
-		logger:       logEntry,
+		config:           config,
+		protocol:         NewBinaryProtocol(),
+		stateUpdates:     make(chan *StateUpdate, config.BufferSize),
+		inputQueue:       make(chan *InputCommand, config.BufferSize),
+		errors:           make(chan error, 16),
+		done:             make(chan struct{}),
+		predictor:        predictor,
+		bandwidthMonitor: NewBandwidthMonitor(time.Second),
+		logger:           logEntry,
 	}
 
 	// Initialize buffer monitoring
@@ -586,6 +593,10 @@ func (c *TCPClient) readMessageData(buf []byte, msgLen uint32) bool {
 		c.sendNonBlockingError(fmt.Errorf("read data error: %w", err), true)
 		return false
 	}
+
+	// Record bytes received (4-byte length prefix already read + payload)
+	c.bandwidthMonitor.RecordReceived(c.playerID, uint64(4+msgLen))
+
 	return true
 }
 
@@ -752,6 +763,9 @@ func (c *TCPClient) writeMessageWithLength(data []byte) error {
 		return err
 	}
 
+	// Record bytes sent (4-byte length prefix + payload)
+	c.bandwidthMonitor.RecordSent(c.playerID, uint64(4+len(data)))
+
 	return nil
 }
 
@@ -763,6 +777,13 @@ func (c *TCPClient) GetBufferStats() map[string]BufferSnapshot {
 		"input_queue":   c.inputQueueStats.Snapshot(),
 		"errors":        c.errorStats.Snapshot(),
 	}
+}
+
+// GetBandwidthMonitor returns the client's bandwidth monitor for observability.
+// Callers can read per-player and aggregate rolling rates to surface network
+// health metrics without adding separate instrumentation.
+func (c *TCPClient) GetBandwidthMonitor() *BandwidthMonitor {
+	return c.bandwidthMonitor
 }
 
 // PredictMovement records a client-side movement prediction for input (dx, dy)

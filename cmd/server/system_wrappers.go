@@ -16,6 +16,7 @@ import (
 	"github.com/opd-ai/venture/pkg/engine/prestige"
 	"github.com/opd-ai/venture/pkg/integration/trade_routes"
 	"github.com/opd-ai/venture/pkg/network/federation"
+	"github.com/opd-ai/venture/pkg/world"
 )
 
 // V4.0 System Wrappers (originally from v4_systems.go)
@@ -334,4 +335,29 @@ func (a *prestigeEntityAdapter) AddComponent(component interface{ Type() string 
 
 func (a *prestigeEntityAdapter) RemoveComponent(componentType string) {
 	a.entity.RemoveComponent(componentType)
+}
+
+// Chunk system wrappers — adapt world.ChunkLoaderSystem to ECS System interface.
+// ChunkLoaderSystem.Update requires player positions; the wrapper extracts
+// positions from entities that have both "player"/"input" and position components.
+
+type chunkLoaderSystemWrapper struct {
+	loader *world.ChunkLoaderSystem
+}
+
+func (w *chunkLoaderSystemWrapper) Update(entities []*engine.Entity, _ float64) {
+	positions := make(map[uint64]struct{ X, Y float64 })
+	for _, e := range entities {
+		if !e.HasComponent("input") {
+			continue
+		}
+		pos := e.GetPosition()
+		if pos == nil {
+			continue
+		}
+		positions[e.ID] = struct{ X, Y float64 }{pos.X, pos.Y}
+	}
+	if len(positions) > 0 {
+		_ = w.loader.Update(positions)
+	}
 }

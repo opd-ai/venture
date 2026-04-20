@@ -153,11 +153,11 @@ VR mode is explicitly documented as "experimental" with mock adapters. Real VR h
 - `pkg/vr/AUDIT.md` documents complete integration status
 
 **Implementation** (when prioritized):
-- [ ] Research OpenVR (SteamVR) and OpenXR SDK integration for Go via cgo
+- [x] Research OpenVR (SteamVR) and OpenXR SDK integration for Go via cgo — **COMPLETED**: Research documented in `pkg/engine/vr_openxr_adapters.go` and `pkg/vr/doc.go`; OpenXR 1.x via cgo is the recommended path for desktop; WebXR via syscall/js for WASM; framework adapter types created.
 - [ ] Implement real head tracking adapter replacing mock in `pkg/vr/`
 - [ ] Implement real controller input adapter
-- [ ] Add conditional compilation (`//go:build vr`) to avoid SDK dependency in normal builds
-- [ ] Consider WebXR for WASM builds as alternative
+- [x] Add conditional compilation (`//go:build vr`) to avoid SDK dependency in normal builds — **COMPLETED**: `pkg/engine/vr_openxr_adapters.go` uses `//go:build vr`; `make build-vr` target added to Makefile; normal builds continue to use stub adapters.
+- [x] Consider WebXR for WASM builds as alternative — **COMPLETED**: Documented in `pkg/vr/doc.go` SDK Integration Roadmap section; WebXR via syscall/js identified as the approach for `//go:build js` (WASM) builds, referencing the W3C WebXR Device API; placeholder file path `pkg/engine/vr_webxr_adapters.go` documented.
 - [ ] Update README VR section to remove "experimental" label once functional
 - [ ] **Validation**: VR mode works with actual SteamVR/Oculus headset
 

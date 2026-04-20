@@ -2,7 +2,7 @@
 
 .PHONY: help all build test test-integration clean deps lint fmt build-all \
         build-linux build-windows build-macos \
-        build-server build-client build-wasm \
+        build-server build-client build-wasm build-vr \
         android ios mobile-deps \
         run-client run-server serve-wasm \
         validate-code-review release package checksums sign \
@@ -240,6 +240,14 @@ build-wasm: ## Build WebAssembly version for web browsers
 	@echo "WebAssembly build complete: build/wasm/venture.wasm"
 	@echo "Optimizations enabled: viewport culling, batch rendering, sprite caching (300 sequences)"
 	@echo "Run 'make serve-wasm' to test locally"
+
+build-vr: ## Build client with experimental VR adapter support (-tags vr)
+	@echo "Building client with experimental VR adapter support (-tags vr)..."
+	@echo "Note: OpenXR SDK / loader is not required today; it will be needed once OpenXR cgo is enabled."
+	@mkdir -p build/vr
+	go build -tags vr -ldflags="-s -w" -o build/vr/venture-vr ./cmd/client
+	@echo "VR build complete: build/vr/venture-vr"
+	@echo "NOTE: VR runtime/SDK integration is experimental. Use --force-vr to test without hardware."
 
 serve-wasm: build-wasm ## Build and serve WebAssembly version locally
 	@echo "Starting local server at http://localhost:8080"

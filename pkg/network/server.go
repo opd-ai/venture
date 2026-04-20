@@ -786,16 +786,58 @@ func (s *TCPServer) routeVoiceCommand(cmd *InputCommand, senderID uint64) {
 		}
 		return
 	}
-	// Strip the leading packet-type byte. The remaining bytes are the
-	// serialized VoicePacket as understood by DeserializeVoicePacket.
-	payload := cmd.Data[1:]
-	if len(payload) < VoicePacketHeaderSize {
+	// Validate the leading packet-type byte before trusting the rest of the
+	// payload. Anything other than PacketTypeVoice is a protocol violation.
+	if cmd.Data[0] != byte(PacketTypeVoice) {
 		if s.logger != nil {
 			s.logger.WithFields(logrus.Fields{
 				"sender_id":   senderID,
-				"payload_len": len(payload),
+				"packet_type": cmd.Data[0],
+				"want":        byte(PacketTypeVoice),
+			}).Warn("voice routing: dropping packet with wrong leading byte")
+		}
+		return
+	}
+	// Strip the leading packet-type byte. The remaining bytes must
+	// deserialize as a VoicePacket; we decode here so we can authoritatively
+	// stamp SenderID with the connection-bound ID before re-serializing for
+	// broadcast. This prevents a malicious client from spoofing the SenderID
+	// field and attributing voice to another player.
+	rawPayload := cmd.Data[1:]
+	if len(rawPayload) < VoicePacketHeaderSize {
+		if s.logger != nil {
+			s.logger.WithFields(logrus.Fields{
+				"sender_id":   senderID,
+				"payload_len": len(rawPayload),
 				"min_len":     VoicePacketHeaderSize,
 			}).Warn("voice routing: dropping undersized voice payload")
+		}
+		return
+	}
+
+	pkt, err := DeserializeVoicePacket(rawPayload)
+	if err != nil {
+		if s.logger != nil {
+			s.logger.WithError(err).WithField("sender_id", senderID).Warn("voice routing: dropping undecodable voice packet")
+		}
+		return
+	}
+
+	// Log when a client tries to spoof the SenderID; this is suspicious
+	// behavior worth surfacing during incident review. Always overwrite
+	// with the authoritative connection-bound ID.
+	if pkt.SenderID != senderID && s.logger != nil {
+		s.logger.WithFields(logrus.Fields{
+			"connection_sender_id": senderID,
+			"claimed_sender_id":    pkt.SenderID,
+		}).Warn("voice routing: client attempted to spoof SenderID")
+	}
+	pkt.SenderID = senderID
+
+	payload, err := SerializeVoicePacket(pkt)
+	if err != nil {
+		if s.logger != nil {
+			s.logger.WithError(err).WithField("sender_id", senderID).Warn("voice routing: failed to re-serialize voice packet")
 		}
 		return
 	}
@@ -803,8 +845,7 @@ func (s *TCPServer) routeVoiceCommand(cmd *InputCommand, senderID uint64) {
 	// Wrap in a StateUpdate so the existing per-client priority queue,
 	// batching, framing, and write paths handle delivery uniformly. EntityID
 	// is set to the sender's player ID for diagnostic correlation; the
-	// payload's own SenderID field is the authoritative source for the
-	// receiving voice transport.
+	// payload's own SenderID field is now authoritative (server-stamped).
 	update := &StateUpdate{
 		EntityID: senderID,
 		Priority: PriorityHigh,

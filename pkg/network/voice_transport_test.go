@@ -745,6 +745,8 @@ func TestVoiceEndToEnd(t *testing.T) {
 	clientB.SetPlayerID(idB)
 
 	// Register a voice handler on client B that captures the inbound packet.
+	// All assertions are made from the main test goroutine to avoid races
+	// between t.Errorf calls and test teardown.
 	received := make(chan *VoicePacket, 1)
 	clientB.SetVoiceHandler(func(pkt *VoicePacket) {
 		select {
@@ -763,32 +765,40 @@ func TestVoiceEndToEnd(t *testing.T) {
 	defer transportA.Close()
 
 	// On client B, instead of constructing a full audio.Manager, route inbound
-	// voice directly to a transport whose receiveQueue we observe.
+	// voice directly to a transport whose receiveQueue we observe. The
+	// handler above is replaced with one that also forwards to transportB
+	// for buffer integration coverage. Errors and validation results are
+	// reported on channels and asserted from the main test goroutine.
 	transportB := NewTCPVoiceTransport(DefaultVoiceTransportConfig(), idB, nil)
 	defer transportB.Close()
 	transportB.JoinChannel(channelID)
 
-	// Override B's voice handler to feed transportB and capture the packet.
+	handleErrCh := make(chan error, 1)
 	clientB.SetVoiceHandler(func(pkt *VoicePacket) {
-		// Verify the packet was authored by A and addressed to the channel.
-		if pkt.SenderID != idA {
-			t.Errorf("inbound voice SenderID = %d, want %d", pkt.SenderID, idA)
+		err := transportB.HandleReceivedPacket(pkt)
+		select {
+		case handleErrCh <- err:
+		default:
 		}
-		if pkt.ChannelID != channelID {
-			t.Errorf("inbound voice ChannelID = %q, want %q", pkt.ChannelID, channelID)
-		}
-		_ = transportB.HandleReceivedPacket(pkt)
 		select {
 		case received <- pkt:
 		default:
 		}
 	})
 
-	// Sanity check: client A must NOT receive its own voice. Register a
-	// handler on A that fails the test if any voice packet ever arrives.
+	// Sanity check: client A must NOT receive its own voice. Capture any
+	// such packet on a channel; the main goroutine asserts after the test
+	// completes the round-trip on B. Clear the handler before disconnect to
+	// avoid late callbacks racing with teardown.
+	clientASelfRecv := make(chan *VoicePacket, 1)
 	clientA.SetVoiceHandler(func(pkt *VoicePacket) {
-		t.Errorf("client A received own voice packet (SenderID=%d, ChannelID=%q)", pkt.SenderID, pkt.ChannelID)
+		select {
+		case clientASelfRecv <- pkt:
+		default:
+		}
 	})
+	defer clientA.SetVoiceHandler(nil)
+	defer clientB.SetVoiceHandler(nil)
 
 	// Send a voice packet from A.
 	payload := []byte{0xDE, 0xAD, 0xBE, 0xEF, 0xCA, 0xFE}
@@ -799,11 +809,37 @@ func TestVoiceEndToEnd(t *testing.T) {
 	// Wait for B to receive the packet via the network round-trip.
 	select {
 	case pkt := <-received:
+		if pkt.SenderID != idA {
+			t.Errorf("inbound voice SenderID = %d, want %d (server should stamp the authoritative connection-bound ID)", pkt.SenderID, idA)
+		}
+		if pkt.ChannelID != channelID {
+			t.Errorf("inbound voice ChannelID = %q, want %q", pkt.ChannelID, channelID)
+		}
 		if string(pkt.Data) != string(payload) {
 			t.Errorf("voice payload mismatch: got %x, want %x", pkt.Data, payload)
 		}
 	case <-time.After(3 * time.Second):
 		t.Fatal("client B did not receive voice packet within 3s — server-side voice routing missing")
+	}
+
+	// HandleReceivedPacket must not error for a packet on a joined channel;
+	// future regressions in membership/jitter logic will surface here.
+	select {
+	case err := <-handleErrCh:
+		if err != nil {
+			t.Errorf("transportB.HandleReceivedPacket returned error: %v", err)
+		}
+	case <-time.After(500 * time.Millisecond):
+		t.Error("HandleReceivedPacket result not reported within 500ms")
+	}
+
+	// Sender exclusion: give the server a brief window to (incorrectly)
+	// echo the packet back to A, then assert nothing arrived.
+	select {
+	case pkt := <-clientASelfRecv:
+		t.Errorf("client A received its own voice packet (SenderID=%d, ChannelID=%q) — server sender-exclusion broken", pkt.SenderID, pkt.ChannelID)
+	case <-time.After(200 * time.Millisecond):
+		// Expected: no echo to sender.
 	}
 }
 

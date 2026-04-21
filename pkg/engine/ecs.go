@@ -14,8 +14,17 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+// budgetWarn* constants control rate-limiting of per-system frame-budget exceeded warnings.
+// Warnings are emitted on the 1st, 10th, 100th, and every 1000th occurrence.
+const (
+	budgetWarnFirst  = 1
+	budgetWarnSecond = 10
+	budgetWarnThird  = 100
+	budgetWarnPeriod = 1000
+)
+
 // Entity represents a game object composed of components.
-// Entities are identified by a unique ID and contain a collection of components.
+// Entity is identified by a unique ID and contains a collection of components.
 type Entity struct {
 	ID         uint64
 	Components map[string]Component
@@ -490,6 +499,10 @@ type World struct {
 	queryCache      map[string][]*Entity
 	queryCacheDirty map[string]bool
 
+	// queryComponents maps each cache key to the component types that query requires.
+	// Used by selective cache invalidation to avoid dirtying unrelated queries.
+	queryComponents map[string][]string
+
 	// Pool for strings.Builder instances to reduce query key allocations
 	builderPool sync.Pool
 
@@ -513,8 +526,23 @@ type World struct {
 	// Performance metrics for frame time tracking
 	performanceMetrics *PerformanceMetrics
 
+	// systemBudget is the per-system frame time budget. Systems that exceed this
+	// budget trigger a rate-limited logrus.Warn. Default: 2 ms. Zero disables enforcement.
+	systemBudget time.Duration
+
+	// budgetWarnCount tracks how many times a given system has exceeded its budget
+	// this session. Used for rate-limiting budget-exceeded warnings.
+	budgetWarnCount map[string]int
+
 	// Cache of system names to avoid per-frame reflection (eliminates 2,640 reflection calls/sec at 60 FPS with 44 systems)
 	systemNameCache map[System]string
+
+	// entityRemovalHooks are called on the game-loop goroutine for each entity ID
+	// that is drained from entityIDsToRemove during World.Update. Systems that
+	// maintain per-entity state (e.g. MovementSystem.visitedCells) register a hook
+	// here so that state is reclaimed when the entity is removed.
+	// Hooks are invoked without holding any mutex and must not call RemoveEntity.
+	entityRemovalHooks []func(entityID uint64)
 
 	// Mutex for thread-safe access to entities and metrics
 	mu sync.RWMutex
@@ -548,11 +576,14 @@ func NewWorldWithLogger(logger *logrus.Logger) *World {
 		queryBuffer:        make([]*Entity, 0, 256), // Pre-allocate query buffer
 		queryCache:         make(map[string][]*Entity),
 		queryCacheDirty:    make(map[string]bool),
+		queryComponents:    make(map[string][]string), // Selective query invalidation index
 		entityListDirty:    true,
 		Clock:              NewSimulationClock(0), // Default to deterministic simulation clock
 		logger:             logEntry,
 		performanceMetrics: NewPerformanceMetrics(), // Initialize performance metrics
 		systemNameCache:    make(map[System]string), // Initialize system name cache for reflection avoidance
+		systemBudget:       2 * time.Millisecond,   // Default 2 ms per-system frame budget
+		budgetWarnCount:    make(map[string]int),
 		builderPool: sync.Pool{
 			New: func() interface{} {
 				return &strings.Builder{}
@@ -590,21 +621,43 @@ func (w *World) CreateEntity() *Entity {
 }
 
 // AddEntity adds an existing entity to the world.
+// Selective query cache invalidation happens in processPendingEntityAdditions
+// when the entity is actually moved from the pending queue to the active world.
 func (w *World) AddEntity(entity *Entity) {
 	w.entityMu.Lock()
 	w.entitiesToAdd = append(w.entitiesToAdd, entity)
 	w.entityMu.Unlock()
 	w.entityListDirty = true
-	w.invalidateQueryCache()
+	// Selective invalidation deferred to processPendingEntityAdditions.
 }
 
 // RemoveEntity marks an entity for removal from the world.
+// Selectively invalidates only queries that could contain the entity,
+// based on the entity's current component types.
 func (w *World) RemoveEntity(entityID uint64) {
+	// Look up the entity's component types before queuing removal so we can
+	// selectively invalidate only the relevant cached queries. Copy the keys
+	// while holding w.mu.RLock() to avoid racing on the world/entity maps when
+	// RemoveEntity is called from another goroutine.
+	var entityComponents map[string]Component
+	w.mu.RLock()
+	entity, exists := w.entities[entityID]
+	if exists && len(entity.Components) > 0 {
+		entityComponents = make(map[string]Component, len(entity.Components))
+		for componentType := range entity.Components {
+			// Only the component type keys are required for selective cache
+			// invalidation; store nil values in the copied map to avoid retaining
+			// references to live component instances after unlocking.
+			entityComponents[componentType] = nil
+		}
+	}
+	w.mu.RUnlock()
+
 	w.entityMu.Lock()
 	w.entityIDsToRemove = append(w.entityIDsToRemove, entityID)
 	w.entityMu.Unlock()
 	w.entityListDirty = true
-	w.invalidateQueryCache()
+	w.invalidateQueryCacheForComponents(entityComponents)
 
 	if w.logger != nil && w.logger.Logger.GetLevel() >= logrus.DebugLevel {
 		w.logger.WithField("entityID", entityID).Debug("entity marked for removal")
@@ -677,15 +730,21 @@ func (w *World) Update(deltaTime float64) {
 	if len(pendingToAdd) > 0 {
 		for _, entity := range pendingToAdd {
 			w.entities[entity.ID] = entity
+			// Selectively invalidate only queries whose required component types
+			// overlap with this entity's components.
+			w.invalidateQueryCacheForComponents(entity.Components)
 		}
 		w.entityListDirty = true
-		w.invalidateQueryCache() // Invalidate query cache when entities are added
 	}
 
 	// Process pending removals
 	if len(pendingToRemove) > 0 {
 		for _, id := range pendingToRemove {
 			delete(w.entities, id)
+			// Notify registered hooks so systems can reclaim per-entity state.
+			for _, hook := range w.entityRemovalHooks {
+				hook(id)
+			}
 		}
 		w.entityListDirty = true
 	}
@@ -702,10 +761,43 @@ func (w *World) Update(deltaTime float64) {
 		startTime := time.Now()
 		system.Update(w.cachedEntityList, deltaTime)
 
+		elapsed := time.Since(startTime)
 		// Use cached system name (eliminates per-frame reflection)
 		systemName := w.systemNameCache[system]
-		w.performanceMetrics.RecordSystemTime(systemName, time.Since(startTime))
+		w.performanceMetrics.RecordSystemTime(systemName, elapsed)
+
+		// Per-system frame-budget enforcement: emit a rate-limited warning when a
+		// system exceeds its configured budget (default 2 ms). Warnings are emitted
+		// on the 1st, 10th, 100th, and every 1000th occurrence to avoid log flooding.
+		if w.logger != nil && w.systemBudget > 0 && elapsed > w.systemBudget {
+			w.budgetWarnCount[systemName]++
+			count := w.budgetWarnCount[systemName]
+			if count == budgetWarnFirst || count == budgetWarnSecond ||
+				count == budgetWarnThird || count%budgetWarnPeriod == 0 {
+				w.logger.WithFields(logrus.Fields{
+					"system":       systemName,
+					"elapsed_ms":   elapsed.Milliseconds(),
+					"budget_ms":    w.systemBudget.Milliseconds(),
+					"excess_count": count,
+				}).Warn("system exceeded per-frame budget")
+			}
+		}
 	}
+}
+
+// SetSystemBudget configures the per-system frame-time budget for World.Update.
+// Systems that exceed the budget emit a rate-limited logrus.Warn.
+// Set to 0 to disable budget enforcement. Default: 2 ms.
+func (w *World) SetSystemBudget(budget time.Duration) {
+	w.systemBudget = budget
+}
+
+// AddEntityRemovalHook registers a function that is called on the game-loop
+// goroutine for each entity ID that is drained during World.Update.
+// Use this to let systems reclaim per-entity state (e.g. visited-cell maps)
+// when an entity is removed. Hooks must not call RemoveEntity.
+func (w *World) AddEntityRemovalHook(hook func(entityID uint64)) {
+	w.entityRemovalHooks = append(w.entityRemovalHooks, hook)
 }
 
 // rebuildEntityCache rebuilds the cached entity list.
@@ -777,6 +869,8 @@ func (w *World) generateQueryKey(componentTypes []string) string {
 
 // processPendingEntityAdditions adds pending entities to the world.
 // This ensures newly created entities are included in queries.
+// Uses selective cache invalidation so only queries relevant to the
+// added entities' component types are marked dirty.
 func (w *World) processPendingEntityAdditions() {
 	w.entityMu.Lock()
 	if len(w.entitiesToAdd) == 0 {
@@ -789,9 +883,11 @@ func (w *World) processPendingEntityAdditions() {
 
 	for _, entity := range pending {
 		w.entities[entity.ID] = entity
+		// Selectively invalidate only queries whose required component types
+		// overlap with this entity's components (entity.Components is the component map).
+		w.invalidateQueryCacheForComponents(entity.Components)
 	}
 	w.entityListDirty = true
-	w.invalidateQueryCache()
 }
 
 // filterEntitiesByComponents filters entities that have all specified components.
@@ -837,6 +933,7 @@ func entityHasAllComponents(entity *Entity, componentTypes []string) bool {
 // GetEntitiesWith returns all entities that have all of the specified component types.
 // Uses a query cache to avoid repeated filtering. Cache is invalidated when entities are added/removed.
 // Fast-path optimization for common queries eliminates all allocations on cache hits.
+// Records the query's required component types on first call for selective cache invalidation.
 func (w *World) GetEntitiesWith(componentTypes ...string) []*Entity {
 	key := w.generateQueryKey(componentTypes)
 	w.processPendingEntityAdditions()
@@ -851,11 +948,49 @@ func (w *World) GetEntitiesWith(componentTypes ...string) []*Entity {
 	w.queryCache[key] = result
 	w.queryCacheDirty[key] = false
 
+	// Record the component types for this query key so selective invalidation
+	// can avoid dirtying unrelated queries on entity add/remove.
+	if _, known := w.queryComponents[key]; !known {
+		types := make([]string, len(componentTypes))
+		copy(types, componentTypes)
+		w.queryComponents[key] = types
+	}
+
 	return result
 }
 
+// invalidateQueryCacheForComponents marks only cached queries dirty if their
+// required component set intersects with the provided component types.
+// This reduces cascading O(q) invalidation to O(q × overlap) in the common case.
+// Falls back to full invalidation when entityComponents is nil (unknown components).
+func (w *World) invalidateQueryCacheForComponents(entityComponents map[string]Component) {
+	if entityComponents == nil {
+		// Unknown components — invalidate all queries conservatively.
+		for key := range w.queryCache {
+			w.queryCacheDirty[key] = true
+		}
+		return
+	}
+
+	for key, required := range w.queryComponents {
+		for _, compType := range required {
+			if _, has := entityComponents[compType]; has {
+				w.queryCacheDirty[key] = true
+				break
+			}
+		}
+	}
+	// Invalidate queries that have not been registered in queryComponents yet
+	// (they were built from the pre-computed key fast path before queryComponents was populated).
+	for key := range w.queryCache {
+		if _, known := w.queryComponents[key]; !known {
+			w.queryCacheDirty[key] = true
+		}
+	}
+}
+
 // invalidateQueryCache marks all cached queries as dirty.
-// Called when entities are added or removed from the world.
+// Called when entities are added or removed from the world without known component context.
 func (w *World) invalidateQueryCache() {
 	for key := range w.queryCache {
 		w.queryCacheDirty[key] = true

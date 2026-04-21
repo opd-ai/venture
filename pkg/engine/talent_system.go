@@ -50,7 +50,7 @@ func (s *TalentSystem) Update(entities []*Entity, deltaTime float64) {
 		}
 	}
 
-	if processed > 0 {
+	if processed > 0 && log.GetLevel() >= log.DebugLevel {
 		log.WithFields(log.Fields{
 			"system_name":        "talent",
 			"entities_processed": processed,

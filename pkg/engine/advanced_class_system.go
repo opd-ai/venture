@@ -1,7 +1,7 @@
 package engine
 
 import (
-	"fmt"
+	"strconv"
 
 	"github.com/opd-ai/venture/pkg/class/advanced"
 )
@@ -22,14 +22,22 @@ func NewAdvancedClassSystem(world *World) *AdvancedClassSystem {
 }
 
 // Update applies stat bonuses from classes and talents to entities
+// Pre-filters entities with "advanced_class" using the world query cache to avoid
+// O(n) uncached map lookups across all entities every frame.
 func (acs *AdvancedClassSystem) Update(entities []*Entity, deltaTime float64) {
-	for _, entity := range entities {
+	// Use the world query cache to skip non-advanced-class entities.
+	classEntities := entities
+	if acs.world != nil {
+		classEntities = acs.world.GetEntitiesWith("advanced_class")
+	}
+
+	for _, entity := range classEntities {
 		comp, ok := entity.GetComponent("advanced_class")
 		if !ok || comp == nil {
 			continue
 		}
 
-		playerID := fmt.Sprintf("%d", entity.ID)
+		playerID := strconv.FormatUint(entity.ID, 10)
 
 		stats, err := acs.manager.CalculateTotalStats(playerID)
 		if err != nil {
@@ -98,7 +106,7 @@ func (acs *AdvancedClassSystem) applyStatsBonuses(entity *Entity, bonuses advanc
 
 // InitializePlayerClass sets up a player's advanced class configuration
 func (acs *AdvancedClassSystem) InitializePlayerClass(entity *Entity, primary advanced.ClassID, level int) error {
-	playerID := fmt.Sprintf("%d", entity.ID)
+	playerID := strconv.FormatUint(entity.ID, 10)
 
 	if err := acs.manager.SetPrimaryClass(playerID, primary); err != nil {
 		return err
@@ -122,7 +130,7 @@ func (acs *AdvancedClassSystem) InitializePlayerClass(entity *Entity, primary ad
 
 // SetSecondaryClass enables multi-classing for a player
 func (acs *AdvancedClassSystem) SetSecondaryClass(entity *Entity, secondary advanced.ClassID) error {
-	playerID := fmt.Sprintf("%d", entity.ID)
+	playerID := strconv.FormatUint(entity.ID, 10)
 
 	if err := acs.manager.SetSecondaryClass(playerID, secondary); err != nil {
 		return err
@@ -139,7 +147,7 @@ func (acs *AdvancedClassSystem) SetSecondaryClass(entity *Entity, secondary adva
 
 // SetPrestigeClass assigns a prestige class if requirements are met
 func (acs *AdvancedClassSystem) SetPrestigeClass(entity *Entity, prestige advanced.PrestigeClassID) error {
-	playerID := fmt.Sprintf("%d", entity.ID)
+	playerID := strconv.FormatUint(entity.ID, 10)
 
 	if err := acs.manager.SetPrestigeClass(playerID, prestige); err != nil {
 		return err
@@ -156,7 +164,7 @@ func (acs *AdvancedClassSystem) SetPrestigeClass(entity *Entity, prestige advanc
 
 // AllocateTalent adds a point to a talent
 func (acs *AdvancedClassSystem) AllocateTalent(entity *Entity, talentID advanced.TalentID) error {
-	playerID := fmt.Sprintf("%d", entity.ID)
+	playerID := strconv.FormatUint(entity.ID, 10)
 
 	if err := acs.manager.AllocateTalent(playerID, talentID); err != nil {
 		return err
@@ -174,7 +182,7 @@ func (acs *AdvancedClassSystem) AllocateTalent(entity *Entity, talentID advanced
 
 // RespecTalents resets all talent points for a gold cost
 func (acs *AdvancedClassSystem) RespecTalents(entity *Entity, gold int) error {
-	playerID := fmt.Sprintf("%d", entity.ID)
+	playerID := strconv.FormatUint(entity.ID, 10)
 
 	if err := acs.manager.RespecTalents(playerID, gold); err != nil {
 		return err
@@ -193,7 +201,7 @@ func (acs *AdvancedClassSystem) RespecTalents(entity *Entity, gold int) error {
 
 // GetRespecCost returns the gold cost for a player's next respec
 func (acs *AdvancedClassSystem) GetRespecCost(entity *Entity) int {
-	playerID := fmt.Sprintf("%d", entity.ID)
+	playerID := strconv.FormatUint(entity.ID, 10)
 	return acs.manager.GetRespecCost(playerID)
 }
 
@@ -204,13 +212,13 @@ func (acs *AdvancedClassSystem) GetTalentTree(classID advanced.ClassID) (*advanc
 
 // GetPlayerClass returns a player's class configuration
 func (acs *AdvancedClassSystem) GetPlayerClass(entity *Entity) (*advanced.AdvancedClassComponent, error) {
-	playerID := fmt.Sprintf("%d", entity.ID)
+	playerID := strconv.FormatUint(entity.ID, 10)
 	return acs.manager.GetPlayerClass(playerID)
 }
 
 // LevelUp increases the player's level and awards talent points
 func (acs *AdvancedClassSystem) LevelUp(entity *Entity) error {
-	playerID := fmt.Sprintf("%d", entity.ID)
+	playerID := strconv.FormatUint(entity.ID, 10)
 
 	comp, ok := entity.GetComponent("advanced_class")
 	if !ok || comp == nil {

@@ -46,6 +46,8 @@ func (s *SpatialVoiceSystem) SetListener(entity *Entity) {
 }
 
 // Update processes spatial audio for all entities with spatial voice components.
+// Uses the world query cache to pre-filter entities, avoiding the HasComponent+GetComponent
+// double map-lookup per entity per frame.
 func (s *SpatialVoiceSystem) Update(entities []*Entity, deltaTime float64) {
 	// Get listener position
 	listenerX, listenerY, listenerOK := s.getListenerPosition(entities)
@@ -53,13 +55,15 @@ func (s *SpatialVoiceSystem) Update(entities []*Entity, deltaTime float64) {
 		return
 	}
 
-	for _, entity := range entities {
+	// Pre-filter using the world query cache so we only iterate spatial_voice entities.
+	voiceEntities := entities
+	if s.world != nil {
+		voiceEntities = s.world.GetEntitiesWith("spatial_voice", "position")
+	}
+
+	for _, entity := range voiceEntities {
 		// Skip the listener entity
 		if entity.ID == s.listenerEntityID {
-			continue
-		}
-
-		if !entity.HasComponent("spatial_voice") {
 			continue
 		}
 
@@ -247,7 +251,7 @@ func (s *SpatialVoiceSystem) EnableSpatialAudio(entity *Entity, enabled bool) er
 
 // GetAudibleEntities returns all entities with voice that are within audible range.
 func (s *SpatialVoiceSystem) GetAudibleEntities(entities []*Entity) []*Entity {
-	audible := make([]*Entity, 0)
+	audible := make([]*Entity, 0, 16)
 
 	for _, entity := range entities {
 		if entity.ID == s.listenerEntityID {

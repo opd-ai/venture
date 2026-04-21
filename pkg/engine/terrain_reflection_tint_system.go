@@ -138,12 +138,9 @@ func (s *TerrainReflectionTintSystem) Update(entities []*Entity, _ float64) {
 			continue
 		}
 
-		posComp, ok := entity.GetComponent("position")
-		if !ok {
-			continue
-		}
-		pos, ok := posComp.(*PositionComponent)
-		if !ok {
+		// Use the hot-path cached position accessor instead of the generic map lookup.
+		pos := entity.GetPosition()
+		if pos == nil {
 			continue
 		}
 

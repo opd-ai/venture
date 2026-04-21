@@ -62,9 +62,9 @@ func GenerateGradient(width, height int, config GradientConfig) *image.RGBA {
 				t = 1.0 - t
 			}
 
-			// Interpolate color from palette
+			// Interpolate color from palette — returns color.RGBA to avoid interface boxing.
 			c := interpolateColors(config.Colors, t)
-			img.Set(x, y, c)
+			img.SetRGBA(x, y, c)
 		}
 	}
 
@@ -171,12 +171,15 @@ func applySmoothness(t, smoothness float64) float64 {
 }
 
 // interpolateColors interpolates between multiple colors based on position t (0.0-1.0).
-func interpolateColors(colors []color.Color, t float64) color.Color {
+// Returns color.RGBA directly (concrete type) to avoid interface boxing and heap escape.
+func interpolateColors(colors []color.Color, t float64) color.RGBA {
 	if len(colors) == 0 {
-		return color.Black
+		r, g, b, a := color.Black.RGBA()
+		return color.RGBA{R: uint8(r >> 8), G: uint8(g >> 8), B: uint8(b >> 8), A: uint8(a >> 8)}
 	}
 	if len(colors) == 1 {
-		return colors[0]
+		r, g, b, a := colors[0].RGBA()
+		return color.RGBA{R: uint8(r >> 8), G: uint8(g >> 8), B: uint8(b >> 8), A: uint8(a >> 8)}
 	}
 
 	// Clamp t to [0, 1]
@@ -192,7 +195,8 @@ func interpolateColors(colors []color.Color, t float64) color.Color {
 	pos := t * float64(n)
 	idx := int(pos)
 	if idx >= n {
-		return colors[n]
+		r, g, b, a := colors[n].RGBA()
+		return color.RGBA{R: uint8(r >> 8), G: uint8(g >> 8), B: uint8(b >> 8), A: uint8(a >> 8)}
 	}
 
 	// Calculate interpolation factor within this segment

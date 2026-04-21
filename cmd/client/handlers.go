@@ -1475,6 +1475,9 @@ func registerCriticalSystems(game *engine.EbitenGame, sys *systemsContainer) {
 	game.World.AddSystem(sys.movementSystem)
 	game.World.AddSystem(sys.collisionSystem)
 	game.World.AddSystem(sys.statisticsSystem) // Track player movement and exploration statistics
+	// Register per-entity cleanup hook so visitedCells entries are reclaimed
+	// when an entity despawns, preventing unbounded per-session memory growth.
+	sys.movementSystem.RegisterRemovalHook(game.World)
 
 	sys.projectileSystem = engine.NewProjectileSystem(game.World)
 	game.World.AddSystem(sys.projectileSystem)

@@ -69,16 +69,27 @@ func (ai *AISystem) SetQuadtree(quadtree *Quadtree) {
 }
 
 // Update processes AI behavior for all entities with AI components.
+// Pre-filters entities using the world query cache to avoid iterating non-AI entities.
 func (ai *AISystem) Update(entities []*Entity, deltaTime float64) {
+	// Use the world query cache to get only entities with AI components,
+	// avoiding O(n) map lookups across all entities for non-AI entities.
+	aiEntities := entities
+	if ai.world != nil {
+		aiEntities = ai.world.GetEntitiesWith("ai")
+	}
+
 	if ai.logger != nil && aiDebugEnabled {
 		ai.logger.WithFields(logrus.Fields{
-			"entity_count": len(entities),
-			"delta_time":   deltaTime,
+			"entity_count":    len(entities),
+			"ai_entity_count": len(aiEntities),
+			"delta_time":      deltaTime,
 		}).Debug("AI system update started")
 	}
 
-	for _, entity := range entities {
-		// Check if entity has AI component
+	for _, entity := range aiEntities {
+		// Retrieve the AI component. GetEntitiesWith guarantees the "ai" key is present,
+		// but the type assertion below can still fail if the component was added with a
+		// non-*AIComponent value, so both checks are retained for safety.
 		aiComp, ok := entity.GetComponent("ai")
 		if !ok {
 			continue

@@ -379,6 +379,9 @@ func createGameWorld(logger *logrus.Logger) (*engine.World, *engine.EnhancedChat
 	world.AddSystem(aiSystem)
 	world.AddSystem(progressionSystem)
 	world.AddSystem(inventorySystem)
+	// Register per-entity cleanup hook so visitedCells entries are reclaimed
+	// when an entity despawns, preventing unbounded per-session memory growth.
+	movementSystem.RegisterRemovalHook(world)
 
 	// Phase 1.2 (PLAN.md): Economy system for marketplace and guild banking
 	serverID := "server-" + *port // Generate server ID from port for uniqueness

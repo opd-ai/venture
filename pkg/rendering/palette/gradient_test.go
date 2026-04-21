@@ -456,8 +456,11 @@ func TestInterpolateColors_ThreeColors(t *testing.T) {
 
 func TestInterpolateColors_EmptyColors(t *testing.T) {
 	c := interpolateColors([]color.Color{}, 0.5)
-	if c == nil {
-		t.Error("interpolateColors with empty array returned nil")
+	// interpolateColors with empty slice returns color.Black (0,0,0,255 in alpha-premultiplied form).
+	// color.Black.RGBA() returns (0, 0, 0, 0xffff); >> 8 gives (0, 0, 0, 255).
+	r, g, b, _ := c.RGBA()
+	if r>>8 != 0 || g>>8 != 0 || b>>8 != 0 {
+		t.Errorf("interpolateColors with empty array = (%d,%d,%d), want (0,0,0)", r>>8, g>>8, b>>8)
 	}
 }
 

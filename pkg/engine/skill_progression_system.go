@@ -37,19 +37,23 @@ func (s *SkillProgressionSystem) Update(entities []*Entity, deltaTime float64) {
 		return
 	}
 
-	log.WithFields(log.Fields{
-		"system_name":   "skill_progression",
-		"entity_count":  len(entities),
-		"frame_counter": s.frameCounter,
-	}).Debug("Starting skill progression update cycle")
+	if log.GetLevel() >= log.DebugLevel {
+		log.WithFields(log.Fields{
+			"system_name":   "skill_progression",
+			"entity_count":  len(entities),
+			"frame_counter": s.frameCounter,
+		}).Debug("Starting skill progression update cycle")
+	}
 
 	entitiesProcessed := s.processSkillEntities(entities)
 
-	log.WithFields(log.Fields{
-		"system_name":        "skill_progression",
-		"entities_processed": entitiesProcessed,
-		"total_entities":     len(entities),
-	}).Debug("Completed skill progression update cycle")
+	if log.GetLevel() >= log.DebugLevel {
+		log.WithFields(log.Fields{
+			"system_name":        "skill_progression",
+			"entities_processed": entitiesProcessed,
+			"total_entities":     len(entities),
+		}).Debug("Completed skill progression update cycle")
+	}
 }
 
 // shouldUpdateThisFrame checks if enough frames have passed for an update.

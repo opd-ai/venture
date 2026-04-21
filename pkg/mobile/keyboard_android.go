@@ -29,9 +29,11 @@ JNIEXPORT jint JNI_OnLoad(JavaVM *vm, void *reserved) {
 }
 
 // setAndroidActivity stores the Android Activity as a global JNI reference.
-// Must be called from the Java ebitenmobile wrapper (via SetAndroidActivity)
-// before ShowKeyboard or HideKeyboard is used.
+// envPtr and activityPtr are validated non-nil before use. Must be called from
+// the Java ebitenmobile wrapper (via SetAndroidActivity) before ShowKeyboard or
+// HideKeyboard is used.
 void setAndroidActivity(void *envPtr, void *activityPtr) {
+	if (!envPtr || !activityPtr) return;
 	JNIEnv *env = (JNIEnv *)envPtr;
 	jobject activity = (jobject)activityPtr;
 	if (gActivity) {
@@ -44,94 +46,131 @@ void setAndroidActivity(void *envPtr, void *activityPtr) {
 	}
 }
 
-// getJNIEnv attaches the calling thread to the JVM and returns its JNIEnv.
-// Threads attached via AttachCurrentThread are detached when the goroutine
-// exits or when DetachCurrentThread is called explicitly. For keyboard
-// operations invoked from stable long-lived goroutines (e.g., the game loop),
-// attaching once and reusing the JNIEnv across calls is acceptable.
-static JNIEnv *getJNIEnv(void) {
+// hasAndroidActivity returns JNI_TRUE when the Activity global ref is set,
+// i.e. SetAndroidActivity has been called successfully. Used by Go-side
+// IsKeyboardSupported to report readiness accurately.
+jboolean hasAndroidActivity(void) {
+	return gActivity != NULL ? JNI_TRUE : JNI_FALSE;
+}
+
+// getJNIEnv returns the JNIEnv for the current thread. If the thread was not
+// already attached to the JVM it calls AttachCurrentThread and sets *didAttach
+// to JNI_TRUE; the caller is then responsible for calling DetachCurrentThread
+// when the JNI work is done to prevent unbounded thread-attachment leaks.
+static JNIEnv *getJNIEnv(jboolean *didAttach) {
+	*didAttach = JNI_FALSE;
 	if (!gJVM) return NULL;
 	JNIEnv *env = NULL;
-	if ((*gJVM)->AttachCurrentThread(gJVM, &env, NULL) != JNI_OK) return NULL;
-	return env;
+	jint res = (*gJVM)->GetEnv(gJVM, (void **)&env, JNI_VERSION_1_6);
+	if (res == JNI_OK) return env;
+	if (res == JNI_EDETACHED) {
+		if ((*gJVM)->AttachCurrentThread(gJVM, &env, NULL) != JNI_OK) return NULL;
+		*didAttach = JNI_TRUE;
+		return env;
+	}
+	return NULL;
 }
 
 // showAndroidKeyboard calls InputMethodManager.showSoftInput on the Activity's
 // DecorView to display the Android on-screen keyboard.
+//
+// All JNI local references are managed inside a PushLocalFrame/PopLocalFrame
+// scope to prevent the local reference table from overflowing on repeated calls.
 void showAndroidKeyboard(void) {
-	JNIEnv *env = getJNIEnv();
-	if (!env || !gActivity) return;
+	jboolean didAttach = JNI_FALSE;
+	JNIEnv *env = getJNIEnv(&didAttach);
+	if (!env || !gActivity) goto cleanup_show;
+	if ((*env)->PushLocalFrame(env, 16) < 0) {
+		(*env)->ExceptionClear(env);
+		goto cleanup_show;
+	}
+	do {
+		jclass ctxClass = (*env)->FindClass(env, "android/content/Context");
+		if (!ctxClass) { (*env)->ExceptionClear(env); break; }
+		jfieldID imsFld = (*env)->GetStaticFieldID(env, ctxClass, "INPUT_METHOD_SERVICE", "Ljava/lang/String;");
+		if (!imsFld) { (*env)->ExceptionClear(env); break; }
+		jstring imsStr = (jstring)(*env)->GetStaticObjectField(env, ctxClass, imsFld);
 
-	jclass ctxClass = (*env)->FindClass(env, "android/content/Context");
-	if (!ctxClass) { (*env)->ExceptionClear(env); return; }
-	jfieldID imsFld = (*env)->GetStaticFieldID(env, ctxClass, "INPUT_METHOD_SERVICE", "Ljava/lang/String;");
-	if (!imsFld) { (*env)->ExceptionClear(env); return; }
-	jstring imsStr = (jstring)(*env)->GetStaticObjectField(env, ctxClass, imsFld);
+		jmethodID getSvc = (*env)->GetMethodID(env, ctxClass, "getSystemService", "(Ljava/lang/String;)Ljava/lang/Object;");
+		if (!getSvc) { (*env)->ExceptionClear(env); break; }
+		jobject imm = (*env)->CallObjectMethod(env, gActivity, getSvc, imsStr);
+		if (!imm) { (*env)->ExceptionClear(env); break; }
 
-	jmethodID getSvc = (*env)->GetMethodID(env, ctxClass, "getSystemService", "(Ljava/lang/String;)Ljava/lang/Object;");
-	if (!getSvc) { (*env)->ExceptionClear(env); return; }
-	jobject imm = (*env)->CallObjectMethod(env, gActivity, getSvc, imsStr);
-	if (!imm) { (*env)->ExceptionClear(env); return; }
+		jclass actClass = (*env)->GetObjectClass(env, gActivity);
+		jmethodID getWin = (*env)->GetMethodID(env, actClass, "getWindow", "()Landroid/view/Window;");
+		if (!getWin) { (*env)->ExceptionClear(env); break; }
+		jobject win = (*env)->CallObjectMethod(env, gActivity, getWin);
+		if (!win) { (*env)->ExceptionClear(env); break; }
 
-	jclass actClass = (*env)->GetObjectClass(env, gActivity);
-	jmethodID getWin = (*env)->GetMethodID(env, actClass, "getWindow", "()Landroid/view/Window;");
-	if (!getWin) { (*env)->ExceptionClear(env); return; }
-	jobject win = (*env)->CallObjectMethod(env, gActivity, getWin);
-	if (!win) { (*env)->ExceptionClear(env); return; }
+		jclass winClass = (*env)->GetObjectClass(env, win);
+		jmethodID getDecor = (*env)->GetMethodID(env, winClass, "getDecorView", "()Landroid/view/View;");
+		if (!getDecor) { (*env)->ExceptionClear(env); break; }
+		jobject decorView = (*env)->CallObjectMethod(env, win, getDecor);
+		if (!decorView) { (*env)->ExceptionClear(env); break; }
 
-	jclass winClass = (*env)->GetObjectClass(env, win);
-	jmethodID getDecor = (*env)->GetMethodID(env, winClass, "getDecorView", "()Landroid/view/View;");
-	if (!getDecor) { (*env)->ExceptionClear(env); return; }
-	jobject decorView = (*env)->CallObjectMethod(env, win, getDecor);
-	if (!decorView) { (*env)->ExceptionClear(env); return; }
-
-	jclass immClass = (*env)->GetObjectClass(env, imm);
-	jmethodID showSoftInput = (*env)->GetMethodID(env, immClass, "showSoftInput", "(Landroid/view/View;I)Z");
-	if (!showSoftInput) { (*env)->ExceptionClear(env); return; }
-	(*env)->CallBooleanMethod(env, imm, showSoftInput, decorView, SHOW_IMPLICIT);
-	(*env)->ExceptionClear(env);
+		jclass immClass = (*env)->GetObjectClass(env, imm);
+		jmethodID showSoftInput = (*env)->GetMethodID(env, immClass, "showSoftInput", "(Landroid/view/View;I)Z");
+		if (!showSoftInput) { (*env)->ExceptionClear(env); break; }
+		(*env)->CallBooleanMethod(env, imm, showSoftInput, decorView, SHOW_IMPLICIT);
+		(*env)->ExceptionClear(env);
+	} while (0);
+	(*env)->PopLocalFrame(env, NULL);
+cleanup_show:
+	if (didAttach && gJVM) (*gJVM)->DetachCurrentThread(gJVM);
 }
 
 // hideAndroidKeyboard calls InputMethodManager.hideSoftInputFromWindow on the
 // Activity's DecorView to dismiss the Android on-screen keyboard.
+//
+// All JNI local references are managed inside a PushLocalFrame/PopLocalFrame
+// scope to prevent the local reference table from overflowing on repeated calls.
 void hideAndroidKeyboard(void) {
-	JNIEnv *env = getJNIEnv();
-	if (!env || !gActivity) return;
+	jboolean didAttach = JNI_FALSE;
+	JNIEnv *env = getJNIEnv(&didAttach);
+	if (!env || !gActivity) goto cleanup_hide;
+	if ((*env)->PushLocalFrame(env, 16) < 0) {
+		(*env)->ExceptionClear(env);
+		goto cleanup_hide;
+	}
+	do {
+		jclass ctxClass = (*env)->FindClass(env, "android/content/Context");
+		if (!ctxClass) { (*env)->ExceptionClear(env); break; }
+		jfieldID imsFld = (*env)->GetStaticFieldID(env, ctxClass, "INPUT_METHOD_SERVICE", "Ljava/lang/String;");
+		if (!imsFld) { (*env)->ExceptionClear(env); break; }
+		jstring imsStr = (jstring)(*env)->GetStaticObjectField(env, ctxClass, imsFld);
 
-	jclass ctxClass = (*env)->FindClass(env, "android/content/Context");
-	if (!ctxClass) { (*env)->ExceptionClear(env); return; }
-	jfieldID imsFld = (*env)->GetStaticFieldID(env, ctxClass, "INPUT_METHOD_SERVICE", "Ljava/lang/String;");
-	if (!imsFld) { (*env)->ExceptionClear(env); return; }
-	jstring imsStr = (jstring)(*env)->GetStaticObjectField(env, ctxClass, imsFld);
+		jmethodID getSvc = (*env)->GetMethodID(env, ctxClass, "getSystemService", "(Ljava/lang/String;)Ljava/lang/Object;");
+		if (!getSvc) { (*env)->ExceptionClear(env); break; }
+		jobject imm = (*env)->CallObjectMethod(env, gActivity, getSvc, imsStr);
+		if (!imm) { (*env)->ExceptionClear(env); break; }
 
-	jmethodID getSvc = (*env)->GetMethodID(env, ctxClass, "getSystemService", "(Ljava/lang/String;)Ljava/lang/Object;");
-	if (!getSvc) { (*env)->ExceptionClear(env); return; }
-	jobject imm = (*env)->CallObjectMethod(env, gActivity, getSvc, imsStr);
-	if (!imm) { (*env)->ExceptionClear(env); return; }
+		jclass actClass = (*env)->GetObjectClass(env, gActivity);
+		jmethodID getWin = (*env)->GetMethodID(env, actClass, "getWindow", "()Landroid/view/Window;");
+		if (!getWin) { (*env)->ExceptionClear(env); break; }
+		jobject win = (*env)->CallObjectMethod(env, gActivity, getWin);
+		if (!win) { (*env)->ExceptionClear(env); break; }
 
-	jclass actClass = (*env)->GetObjectClass(env, gActivity);
-	jmethodID getWin = (*env)->GetMethodID(env, actClass, "getWindow", "()Landroid/view/Window;");
-	if (!getWin) { (*env)->ExceptionClear(env); return; }
-	jobject win = (*env)->CallObjectMethod(env, gActivity, getWin);
-	if (!win) { (*env)->ExceptionClear(env); return; }
+		jclass winClass = (*env)->GetObjectClass(env, win);
+		jmethodID getDecor = (*env)->GetMethodID(env, winClass, "getDecorView", "()Landroid/view/View;");
+		if (!getDecor) { (*env)->ExceptionClear(env); break; }
+		jobject decorView = (*env)->CallObjectMethod(env, win, getDecor);
+		if (!decorView) { (*env)->ExceptionClear(env); break; }
 
-	jclass winClass = (*env)->GetObjectClass(env, win);
-	jmethodID getDecor = (*env)->GetMethodID(env, winClass, "getDecorView", "()Landroid/view/View;");
-	if (!getDecor) { (*env)->ExceptionClear(env); return; }
-	jobject decorView = (*env)->CallObjectMethod(env, win, getDecor);
-	if (!decorView) { (*env)->ExceptionClear(env); return; }
+		jclass viewClass = (*env)->GetObjectClass(env, decorView);
+		jmethodID getWinTok = (*env)->GetMethodID(env, viewClass, "getWindowToken", "()Landroid/os/IBinder;");
+		if (!getWinTok) { (*env)->ExceptionClear(env); break; }
+		jobject winTok = (*env)->CallObjectMethod(env, decorView, getWinTok);
+		if (!winTok) { (*env)->ExceptionClear(env); break; }
 
-	jclass viewClass = (*env)->GetObjectClass(env, decorView);
-	jmethodID getWinTok = (*env)->GetMethodID(env, viewClass, "getWindowToken", "()Landroid/os/IBinder;");
-	if (!getWinTok) { (*env)->ExceptionClear(env); return; }
-	jobject winTok = (*env)->CallObjectMethod(env, decorView, getWinTok);
-	if (!winTok) { (*env)->ExceptionClear(env); return; }
-
-	jclass immClass = (*env)->GetObjectClass(env, imm);
-	jmethodID hideSoftInput = (*env)->GetMethodID(env, immClass, "hideSoftInputFromWindow", "(Landroid/os/IBinder;I)Z");
-	if (!hideSoftInput) { (*env)->ExceptionClear(env); return; }
-	(*env)->CallBooleanMethod(env, imm, hideSoftInput, winTok, HIDE_NO_FLAGS);
-	(*env)->ExceptionClear(env);
+		jclass immClass = (*env)->GetObjectClass(env, imm);
+		jmethodID hideSoftInput = (*env)->GetMethodID(env, immClass, "hideSoftInputFromWindow", "(Landroid/os/IBinder;I)Z");
+		if (!hideSoftInput) { (*env)->ExceptionClear(env); break; }
+		(*env)->CallBooleanMethod(env, imm, hideSoftInput, winTok, HIDE_NO_FLAGS);
+		(*env)->ExceptionClear(env);
+	} while (0);
+	(*env)->PopLocalFrame(env, NULL);
+cleanup_hide:
+	if (didAttach && gJVM) (*gJVM)->DetachCurrentThread(gJVM);
 }
 */
 import "C"
@@ -148,7 +187,12 @@ import (
 // This must be called from the Java ebitenmobile wrapper before ShowKeyboard
 // or HideKeyboard is used. envPtr is a JNIEnv* and activityPtr is a jobject,
 // both cast to uintptr by the calling Java-side JNI glue.
+// Zero values are rejected to prevent null-pointer dereferences in C.
 func SetAndroidActivity(envPtr, activityPtr uintptr) {
+	if envPtr == 0 || activityPtr == 0 {
+		log.WithField("platform", "android").Warn("SetAndroidActivity called with nil pointer; ignoring")
+		return
+	}
 	C.setAndroidActivity(unsafe.Pointer(envPtr), unsafe.Pointer(activityPtr))
 }
 
@@ -169,10 +213,10 @@ func HideKeyboard() {
 }
 
 // IsKeyboardSupported reports whether programmatic native soft keyboard control
-// is available on this Android ebitenmobilebind build.
-// Returns true once the JNI bridge is wired via SetAndroidActivity.
+// is available. Returns true only after SetAndroidActivity has been called
+// successfully and the Activity global reference is held.
 func IsKeyboardSupported() bool {
-	return true
+	return C.hasAndroidActivity() == C.JNI_TRUE
 }
 
 // GetBackButtonKey returns the Android system back button key.

@@ -781,6 +781,27 @@ func (sys *systemsContainer) scheduleLazyInit(game *engine.EbitenGame, logger *l
 			}
 		}
 
+		// Wire animation state send path: when the local player's animation state
+		// changes, encode the packet and send to the server for relay to other clients.
+		if sys.animationSystem != nil && sys.networkClient != nil {
+			if netClient, ok := sys.networkClient.(network.ClientConnection); ok {
+				sys.animationSystem.SetStateSender(func(entityID uint64, state engine.AnimationState, frameIdx int) {
+					pkt := network.AnimationStatePacket{
+						EntityID:   entityID,
+						State:      state,
+						FrameIndex: frameIdx,
+					}
+					data, err := pkt.Encode()
+					if err != nil {
+						clientLogger.WithError(err).Warn("animation send: failed to encode state packet")
+						return
+					}
+					_ = netClient.SendInput(network.AnimationInputType, data)
+				})
+				clientLogger.Debug("animation sync send path wired to network client")
+			}
+		}
+
 		// Phase 2: Environmental systems (parallel - weather, hazards, etc.)
 		var wg sync.WaitGroup
 		wg.Add(8)
@@ -3074,8 +3095,10 @@ func connectAdvancedUIComponents(game *engine.EbitenGame, inputSystem *engine.In
 			}
 			game.StoryJournalUI.Toggle(journal, game.World)
 		}); err != nil {
-			// Should not occur; logged defensively.
-			_ = err
+			logrus.WithFields(logrus.Fields{
+				"system": "input",
+				"error":  err,
+			}).Warn("failed to set story journal callback")
 		}
 	}
 }

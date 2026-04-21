@@ -68,6 +68,9 @@ func (s *GuildVehicleSystem) Update(entities []*Entity, deltaTime float64) {
 	}
 
 	// Pass 2: apply formation bonuses and steer followers toward their slots.
+	// Cache GetFormationOffsets per fleet key to avoid O(fleetSize²) calls.
+	offsetCache := make(map[string][]guild_vehicle.FormationOffset)
+
 	for _, m := range members {
 		s.applyFormationBonuses(m.entity, m.fleetComp)
 
@@ -78,7 +81,11 @@ func (s *GuildVehicleSystem) Update(entities []*Entity, deltaTime float64) {
 		if !hasLeader {
 			continue
 		}
-		offsets := s.manager.GetFormationOffsets(m.fleetComp.GuildID, m.fleetComp.FleetID)
+		offsets, cached := offsetCache[m.fleetKey]
+		if !cached {
+			offsets = s.manager.GetFormationOffsets(m.fleetComp.GuildID, m.fleetComp.FleetID)
+			offsetCache[m.fleetKey] = offsets
+		}
 		slot := m.fleetComp.FormationPosition
 		if slot >= len(offsets) {
 			continue

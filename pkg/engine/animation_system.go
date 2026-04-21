@@ -127,6 +127,11 @@ type AnimationSystem struct {
 	// syncManager provides delta-compressed animation state synchronisation for
 	// multiplayer. Nil in offline/singleplayer mode. Set via SetSyncManager.
 	syncManager AnimationSyncer
+
+	// stateSender is an optional callback invoked when ShouldSync decides a local
+	// animation state change must be transmitted to the server. Set via
+	// SetStateSender; nil in offline/singleplayer mode.
+	stateSender func(entityID uint64, state AnimationState, frameIdx int)
 }
 
 // AnimationStats holds performance statistics for the animation system.
@@ -250,6 +255,14 @@ func (s *AnimationSystem) SetSyncManager(mgr AnimationSyncer) {
 // GetSyncManager returns the current AnimationSyncer, or nil if not set.
 func (s *AnimationSystem) GetSyncManager() AnimationSyncer {
 	return s.syncManager
+}
+
+// SetStateSender wires the outgoing animation-state send path for multiplayer.
+// fn is called whenever ShouldSync decides a local animation state change must be
+// transmitted; it should encode the packet and call TCPClient.SendInput. Pass nil
+// to disable (offline / singleplayer mode).
+func (s *AnimationSystem) SetStateSender(fn func(entityID uint64, state AnimationState, frameIdx int)) {
+	s.stateSender = fn
 }
 
 // SetPaletteOptions sets custom palette generation options for all sprites (Phase 5.4).
@@ -820,7 +833,7 @@ func (s *AnimationSystem) regenerateFramesIfDirty(entity *Entity, animComp *Anim
 	s.regenCount++
 	s.stats.CompletedRegen++
 	s.logGenerationResult(entity, animComp)
-	s.notifyStateChange(entity.ID, animComp.CurrentState)
+	s.notifyStateChange(entity.ID, animComp.CurrentState, animComp.FrameIndex)
 
 	return nil
 }
@@ -838,21 +851,29 @@ func (s *AnimationSystem) drainRemoteBuffer(entity *Entity, animComp *AnimationC
 	if !ok {
 		return
 	}
+	// Update state and frame independently so a same-state packet can still
+	// advance the frame index (reviewer suggestion: separate conditionals).
 	if state != animComp.CurrentState {
 		animComp.CurrentState = state
-		animComp.FrameIndex = frameIdx
 		animComp.Dirty = true
+	}
+	if frameIdx != animComp.FrameIndex {
+		animComp.FrameIndex = frameIdx
 	}
 }
 
-// notifyStateChange calls the sync manager when an animation state is confirmed.
-// If syncManager is nil (offline/singleplayer), the call is a no-op.
-func (s *AnimationSystem) notifyStateChange(entityID uint64, state AnimationState) {
+// notifyStateChange calls the sync manager and (when a stateSender is wired)
+// dispatches an outgoing animation-state packet to the server so other clients
+// receive remote-player animation updates. No-op when syncManager is nil.
+func (s *AnimationSystem) notifyStateChange(entityID uint64, state AnimationState, frameIdx int) {
 	if s.syncManager == nil {
 		return
 	}
 	if s.syncManager.ShouldSync(entityID, state) {
 		s.syncManager.RecordSync(entityID, state, animStatePacketBytes)
+		if s.stateSender != nil {
+			s.stateSender(entityID, state, frameIdx)
+		}
 	}
 }
 

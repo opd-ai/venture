@@ -476,7 +476,7 @@ type HousingUIProvider interface {
 // This interface avoids circular dependencies between pkg/engine and pkg/engine/prestige.
 // StoryJournalProvider is the interface for the story journal UI.
 // Stored on EbitenGame to avoid a circular import with pkg/rendering/ui
-// (which imports pkg/engine). Implemented by *ui.StoryJournalUIWrapper.
+// (which imports pkg/engine). Implemented by storyJournalWrapper in cmd/client.
 type StoryJournalProvider interface {
 	// Toggle shows or hides the journal UI.
 	Toggle(journal *StoryJournalComponent, world *World)

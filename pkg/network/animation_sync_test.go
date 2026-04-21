@@ -704,3 +704,49 @@ func TestAnimationStatePacket_WireSize(t *testing.T) {
 		t.Errorf("AnimationStatePacket wire size = %d bytes, want %d; update engine.animStatePacketBytes", len(data), wantBytes)
 	}
 }
+
+// TestAnimationSyncManager_DrainRemoteState verifies FIFO ordering and the
+
+// TestAnimationSyncManager_DrainRemoteState verifies that DrainRemoteState
+// drains packets in FIFO order and returns ok=false when the buffer is empty.
+func TestAnimationSyncManager_DrainRemoteState(t *testing.T) {
+manager := NewAnimationSyncManager()
+const entityID = uint64(99)
+
+// Empty buffer must return ok=false.
+if _, _, ok := manager.DrainRemoteState(entityID); ok {
+t.Fatal("DrainRemoteState on empty buffer should return ok=false")
+}
+
+// Buffer three state packets.
+manager.BufferState(AnimationStatePacket{EntityID: entityID, State: engine.AnimationStateWalk, FrameIndex: 1})
+manager.BufferState(AnimationStatePacket{EntityID: entityID, State: engine.AnimationStateRun, FrameIndex: 5})
+manager.BufferState(AnimationStatePacket{EntityID: entityID, State: engine.AnimationStateIdle, FrameIndex: 0})
+
+// Drain and verify FIFO ordering: Walk(1) → Run(5) → Idle(0).
+wants := []struct {
+state    engine.AnimationState
+frameIdx int
+}{
+{engine.AnimationStateWalk, 1},
+{engine.AnimationStateRun, 5},
+{engine.AnimationStateIdle, 0},
+}
+for i, w := range wants {
+state, frameIdx, ok := manager.DrainRemoteState(entityID)
+if !ok {
+t.Fatalf("drain #%d: expected ok=true, got ok=false", i+1)
+}
+if state != w.state {
+t.Errorf("drain #%d: state = %v, want %v", i+1, state, w.state)
+}
+if frameIdx != w.frameIdx {
+t.Errorf("drain #%d: frameIdx = %d, want %d", i+1, frameIdx, w.frameIdx)
+}
+}
+
+// Buffer exhausted – must return ok=false.
+if _, _, ok := manager.DrainRemoteState(entityID); ok {
+t.Fatal("DrainRemoteState on exhausted buffer should return ok=false")
+}
+}

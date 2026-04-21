@@ -5,6 +5,10 @@ package network
 // underscore prevents collision with gameplay ECS component type names.
 const AnimationComponentType = "_animation"
 
+// AnimationInputType is the InputCommand.InputType value used by clients to send
+// a local animation state change to the server for relay to other players.
+const AnimationInputType = "animation"
+
 // AnimationReceiver is implemented by network clients that accept a wired
 // AnimationSyncManager for jitter-buffered remote animation state delivery.
 // *TCPClient implements this; type-assert to wire after creating the manager.

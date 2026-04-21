@@ -258,7 +258,10 @@ func (bp *Blueprint) Export(filepath string) (err error) {
 	// Encode as JSON
 	encoder := json.NewEncoder(gzipWriter)
 	encoder.SetIndent("", "  ")
-	return encoder.Encode(bp)
+	if encErr := encoder.Encode(bp); encErr != nil {
+		return fmt.Errorf("failed to encode blueprint: %w", encErr)
+	}
+	return nil
 }
 
 // ImportBlueprint imports a blueprint from a gzip-compressed JSON file.

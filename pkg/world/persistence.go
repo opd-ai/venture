@@ -279,8 +279,8 @@ func copyFile(src, dst string) (err error) {
 	defer func() {
 		if closeErr := dstFile.Close(); closeErr != nil && err == nil {
 			err = fmt.Errorf("failed to close destination: %w", closeErr)
-			os.Remove(dst)
-		} else if err != nil {
+		}
+		if err != nil {
 			os.Remove(dst)
 		}
 	}()

@@ -21,6 +21,7 @@ import (
 	"encoding/binary"
 	"encoding/gob"
 	"fmt"
+	"hash"
 	"os"
 	"path/filepath"
 	"sort"
@@ -30,6 +31,11 @@ import (
 	"github.com/opd-ai/venture/pkg/procgen"
 	"github.com/sirupsen/logrus"
 )
+
+// hasherPool pools sha256 hash instances to avoid per-call allocations in GenerateCacheKey.
+var hasherPool = sync.Pool{
+	New: func() any { return sha256.New() },
+}
 
 // TerrainCache provides caching for generated terrain with disk persistence.
 // It uses a combination of in-memory LRU cache and disk storage for fast restarts.
@@ -99,22 +105,24 @@ func NewTerrainCache(maxMemory int, cacheDir string) *TerrainCache {
 // GenerateCacheKey creates a deterministic cache key from seed and params.
 // The key is a SHA256 hash of the seed and relevant parameters.
 func GenerateCacheKey(seed int64, params procgen.GenerationParams) string {
-	h := sha256.New()
+	h := hasherPool.Get().(hash.Hash)
+	h.Reset()
+	defer hasherPool.Put(h)
+
+	// Reusable stack-allocated buffer for fixed-width binary writes.
+	var buf [8]byte
 
 	// Write seed
-	seedBytes := make([]byte, 8)
-	binary.BigEndian.PutUint64(seedBytes, uint64(seed))
-	h.Write(seedBytes)
+	binary.BigEndian.PutUint64(buf[:], uint64(seed))
+	h.Write(buf[:])
 
-	// Write difficulty
-	diffBytes := make([]byte, 8)
-	binary.BigEndian.PutUint64(diffBytes, uint64(params.Difficulty*1000000))
-	h.Write(diffBytes)
+	// Write difficulty (scaled to integer to avoid float formatting)
+	binary.BigEndian.PutUint64(buf[:], uint64(params.Difficulty*1000000))
+	h.Write(buf[:])
 
 	// Write depth
-	depthBytes := make([]byte, 4)
-	binary.BigEndian.PutUint32(depthBytes, uint32(params.Depth))
-	h.Write(depthBytes)
+	binary.BigEndian.PutUint32(buf[:4], uint32(params.Depth))
+	h.Write(buf[:4])
 
 	// Write genre
 	h.Write([]byte(params.GenreID))
@@ -148,7 +156,9 @@ func (c *TerrainCache) Get(seed int64, params procgen.GenerationParams) *Terrain
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
-	// Check memory cache first
+	// Check memory cache first — return a clone to prevent callers from corrupting the cache.
+	// Put() stores an internal clone; Get() returns another clone so callers may safely modify
+	// their copy without affecting subsequent Get() calls.
 	if cached, ok := c.memoryCache[key]; ok {
 		cached.AccessTime = time.Now()
 		c.updateAccessOrder(key)
@@ -156,7 +166,8 @@ func (c *TerrainCache) Get(seed int64, params procgen.GenerationParams) *Terrain
 		return c.cloneTerrain(cached.Terrain)
 	}
 
-	// Check disk cache
+	// Check disk cache — loadFromDisk returns a freshly allocated terrain.
+	// Clone before adding to the memory cache so the cache owns an unshared copy.
 	if c.cacheDir != "" {
 		if terrain := c.loadFromDisk(key); terrain != nil {
 			// Add to memory cache

@@ -66,7 +66,7 @@ func (s *BuildTemplateSystem) Update(entities []*Entity, deltaTime float64) {
 		}
 	}
 
-	if entitiesProcessed > 0 {
+	if entitiesProcessed > 0 && log.GetLevel() >= log.DebugLevel {
 		log.WithFields(log.Fields{
 			"system_name":        "build_template",
 			"entities_processed": entitiesProcessed,

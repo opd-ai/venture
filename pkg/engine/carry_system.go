@@ -71,13 +71,9 @@ func (s *CarrySystem) Update(entities []*Entity, deltaTime float64) {
 			continue
 		}
 
-		// Get player position
-		playerPosComp, ok := player.GetComponent("position")
-		if !ok {
-			continue
-		}
-		playerPos, ok := playerPosComp.(*PositionComponent)
-		if !ok {
+		// Get player position using the hot-path cached accessor.
+		playerPos := player.GetPosition()
+		if playerPos == nil {
 			continue
 		}
 
@@ -89,13 +85,9 @@ func (s *CarrySystem) Update(entities []*Entity, deltaTime float64) {
 			continue
 		}
 
-		// Get object position
-		objPosComp, ok := object.GetComponent("position")
-		if !ok {
-			continue
-		}
-		objPos, ok := objPosComp.(*PositionComponent)
-		if !ok {
+		// Get object position using the hot-path cached accessor.
+		objPos := object.GetPosition()
+		if objPos == nil {
 			continue
 		}
 

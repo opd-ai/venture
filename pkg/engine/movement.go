@@ -46,8 +46,9 @@ type MovementSystem struct {
 	// Reusable buffer for nearby entity queries (reduces allocations)
 	nearbyBuffer []*Entity
 
-	// Track visited grid cells per entity for area exploration (grid cell size: 200x200)
-	visitedCells map[uint64]map[int64]bool
+	// Track visited grid cells per entity for area exploration (grid cell size: 200x200).
+	// Uses struct{} value to save one byte per entry compared to bool.
+	visitedCells map[uint64]map[int64]struct{}
 }
 
 // NewMovementSystem creates a new movement system.
@@ -65,7 +66,7 @@ func NewMovementSystem(maxSpeed float64) *MovementSystem {
 	return &MovementSystem{
 		MaxSpeed:     maxSpeed,
 		nearbyBuffer: make([]*Entity, 0, 64), // Pre-allocate for typical nearby count
-		visitedCells: make(map[uint64]map[int64]bool),
+		visitedCells: make(map[uint64]map[int64]struct{}),
 	}
 }
 
@@ -282,14 +283,17 @@ func (s *MovementSystem) trackAreaVisit(entity *Entity, x, y float64) {
 	cellY := int64(y / areaCellSize)
 	cellKey := cellX<<32 | (cellY & 0xFFFFFFFF)
 
-	// Get or create visited cells map for this entity
-	if s.visitedCells[entity.ID] == nil {
-		s.visitedCells[entity.ID] = make(map[int64]bool)
+	// Get or create visited cells map for this entity.
+	// Pre-allocate with a reasonable capacity to amortize future insertions.
+	cells, exists := s.visitedCells[entity.ID]
+	if !exists {
+		cells = make(map[int64]struct{}, 64)
+		s.visitedCells[entity.ID] = cells
 	}
 
 	// Check if this is a new cell
-	if !s.visitedCells[entity.ID][cellKey] {
-		s.visitedCells[entity.ID][cellKey] = true
+	if _, visited := cells[cellKey]; !visited {
+		cells[cellKey] = struct{}{}
 		s.statisticsSystem.OnAreaVisited(entity.ID)
 
 		if movementDebugEnabled {
@@ -297,7 +301,7 @@ func (s *MovementSystem) trackAreaVisit(entity *Entity, x, y float64) {
 				"entity_id":   entity.ID,
 				"cell_x":      cellX,
 				"cell_y":      cellY,
-				"total_areas": len(s.visitedCells[entity.ID]),
+				"total_areas": len(cells),
 			}).Debug("New area visited")
 		}
 	}

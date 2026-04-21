@@ -871,6 +871,12 @@ func (ac *AdaptiveComposer) Update(deltaTime float64) {
 
 // GenerateTrack creates an audio sample with current settings.
 // This implements the audio.AdaptiveMusicSystem interface.
+//
+// Performance note: GenerateTrack is a one-shot generation call (~3.1 ms,
+// ~1.84 MB per call as measured in BenchmarkAdaptiveComposer_GenerateTrack).
+// It must NOT be called every frame. Use Update() for the per-frame fast path
+// (zero-alloc, ~66 ns), and call GenerateTrack only when a new track is needed
+// (e.g., on zone transition or when the current track ends).
 func (ac *AdaptiveComposer) GenerateTrack(duration float64) *audio.AudioSample {
 	return ac.GenerateAdaptiveTrack(duration)
 }

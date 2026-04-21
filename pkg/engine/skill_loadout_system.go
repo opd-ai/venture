@@ -47,7 +47,7 @@ func (s *SkillLoadoutSystem) Update(entities []*Entity, deltaTime float64) {
 		}
 	}
 
-	if entitiesProcessed > 0 {
+	if entitiesProcessed > 0 && log.GetLevel() >= log.DebugLevel {
 		log.WithFields(log.Fields{
 			"system_name":        "skill_loadout",
 			"entities_processed": entitiesProcessed,

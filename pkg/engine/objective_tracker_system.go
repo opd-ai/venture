@@ -60,11 +60,14 @@ func (s *ObjectiveTrackerSystem) SetQuestCompleteCallback(callback func(entity *
 
 // Update processes quest objectives based on game state.
 func (s *ObjectiveTrackerSystem) Update(entities []*Entity, deltaTime float64) {
-	log.WithFields(log.Fields{
-		"system_name":   "objective_tracker",
-		"entity_count":  len(entities),
-		"delta_time_ms": deltaTime * 1000,
-	}).Debug("Updating objective tracker system")
+	debugLog := log.GetLevel() >= log.DebugLevel
+	if debugLog {
+		log.WithFields(log.Fields{
+			"system_name":   "objective_tracker",
+			"entity_count":  len(entities),
+			"delta_time_ms": deltaTime * 1000,
+		}).Debug("Updating objective tracker system")
+	}
 
 	entitiesProcessed := 0
 
@@ -76,10 +79,12 @@ func (s *ObjectiveTrackerSystem) Update(entities []*Entity, deltaTime float64) {
 
 		entitiesProcessed++
 
-		log.WithFields(log.Fields{
-			"system_name": "objective_tracker",
-			"entity_id":   entity.ID,
-		}).Debug("Processing entity objectives")
+		if debugLog {
+			log.WithFields(log.Fields{
+				"system_name": "objective_tracker",
+				"entity_id":   entity.ID,
+			}).Debug("Processing entity objectives")
+		}
 
 		// Track exploration
 		s.updateExplorationObjectives(entity)
@@ -88,10 +93,12 @@ func (s *ObjectiveTrackerSystem) Update(entities []*Entity, deltaTime float64) {
 		s.checkQuestCompletion(entity)
 	}
 
-	log.WithFields(log.Fields{
-		"system_name":        "objective_tracker",
-		"entities_processed": entitiesProcessed,
-	}).Debug("Objective tracker system update complete")
+	if debugLog {
+		log.WithFields(log.Fields{
+			"system_name":        "objective_tracker",
+			"entities_processed": entitiesProcessed,
+		}).Debug("Objective tracker system update complete")
+	}
 }
 
 // OnEnemyKilled should be called by combat system when an enemy dies.

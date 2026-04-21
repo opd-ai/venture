@@ -147,6 +147,50 @@ func TestVehicleSyncer_SiegeType(t *testing.T) {
 	}
 }
 
+// TestVehicleSyncer_StableFormationSlot verifies that formation slots are stable
+// after a vehicle is removed and a new vehicle is added.
+// Prior to this fix, len(fleet.Vehicles)-1 produced duplicate/shifting indices.
+func TestVehicleSyncer_StableFormationSlot(t *testing.T) {
+	m := NewFleetManager()
+	syncer := newStubVehicleSyncer()
+	m.SetVehicleSyncer(syncer)
+
+	// Add three vehicles; expected slots 0, 1, 2
+	for _, id := range []uint64{10, 11, 12} {
+		if err := m.AddVehicle("g", id, "f"); err != nil {
+			t.Fatalf("AddVehicle %d: %v", id, err)
+		}
+	}
+	slot10 := syncer.synced[10].FormationPosition
+	slot11 := syncer.synced[11].FormationPosition
+	slot12 := syncer.synced[12].FormationPosition
+	if slot10 != 0 || slot11 != 1 || slot12 != 2 {
+		t.Fatalf("initial slots = %d,%d,%d; want 0,1,2", slot10, slot11, slot12)
+	}
+
+	// Remove vehicle 11; add vehicle 13
+	if err := m.RemoveVehicle("g", 11, "f"); err != nil {
+		t.Fatalf("RemoveVehicle: %v", err)
+	}
+	if err := m.AddVehicle("g", 13, "f"); err != nil {
+		t.Fatalf("AddVehicle 13: %v", err)
+	}
+
+	// Slot for 13 must be 3 (not 1, which was vehicle 11's old slot)
+	slot13 := syncer.synced[13].FormationPosition
+	if slot13 != 3 {
+		t.Errorf("slot for vehicle 13 = %d; want 3 (stable, non-reused)", slot13)
+	}
+
+	// Slots for 10 and 12 must remain unchanged
+	if syncer.synced[10].FormationPosition != 0 {
+		t.Errorf("slot for vehicle 10 changed to %d after re-add; want 0", syncer.synced[10].FormationPosition)
+	}
+	if syncer.synced[12].FormationPosition != 2 {
+		t.Errorf("slot for vehicle 12 changed to %d after re-add; want 2", syncer.synced[12].FormationPosition)
+	}
+}
+
 // TestGetFormationOffsets_Line checks that line formation spreads laterally.
 func TestGetFormationOffsets_Line(t *testing.T) {
 	m := NewFleetManager()

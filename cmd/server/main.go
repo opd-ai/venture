@@ -423,7 +423,7 @@ func createGameWorld(logger *logrus.Logger) (*engine.World, *engine.EnhancedChat
 	// Fix: Initialize territory systems on server for authoritative validation
 	// Impact: Prevents fake capture progress, war cost bypass, phantom sieges, multiplayer desync
 	territoryMgr, territorySys, siegeMgr, siegeSys := initializeTerritorySystemsServer(world, logger)
-	_, _, _, _ = territoryMgr, territorySys, siegeMgr, siegeSys // Systems registered via AddSystem in init function
+	_, _, _ = territorySys, siegeMgr, siegeSys // Systems registered via AddSystem in init function; territoryMgr used below
 
 	// INTEGRATION FIX [AUDIT.md Task #6]: Wire HousingCraftingSystem into CraftingSystem
 	// Gap: Station bonuses required manual registration, no auto-discovery
@@ -454,8 +454,11 @@ func createGameWorld(logger *logrus.Logger) (*engine.World, *engine.EnhancedChat
 	// Gap: FleetManager defined but never instantiated for guild vehicle coordination
 	// Fix: Initialize FleetManager in v8_systems.go for server-authoritative fleet management
 	// Impact: Guild fleet formations, siege engines, and vehicle maintenance enabled server-side
-	// Note: Available for VehicleSystem integration and network packet handling
-	_ = fleetManager // Manager available for future vehicle fleet coordination features
+	// Wire MembershipValidator so GrantAccess enforces guild membership (guildManager satisfies the interface).
+	// Wire StructureDamager so ApplySiegeDamage delegates to territory structure HP (territoryMgr satisfies the interface).
+	fleetManager.SetMembershipValidator(guildManager)
+	fleetManager.SetStructureDamager(territoryMgr)
+	worldLogger.Debug("FleetManager integration hooks wired (membership validator, structure damager)")
 
 	// INTEGRATION FIX [AUDIT.md]: Trade Route Manager for multiplayer caravan sync
 	// Gap: Server did not call Start() on RouteManager, unlike client pattern

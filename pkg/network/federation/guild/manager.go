@@ -181,6 +181,20 @@ func (m *Manager) GetGuild(guildID string) (*Guild, error) {
 	return guild, nil
 }
 
+// IsMember returns true if the player is an active member of the given guild.
+// This method satisfies the guild_vehicle.MembershipValidator interface, enabling
+// FleetManager.SetMembershipValidator(guildManager) to enforce guild membership on
+// vehicle access grants.
+func (m *Manager) IsMember(guildID, playerID string) bool {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	guild, exists := m.guilds[guildID]
+	if !exists {
+		return false
+	}
+	return GetMember(guild, playerID) != nil
+}
+
 // AddMember adds a member to a guild
 func (m *Manager) AddMember(guildID, playerID string, rank Rank) error {
 	m.mu.Lock()

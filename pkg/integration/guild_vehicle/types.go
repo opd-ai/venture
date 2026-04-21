@@ -151,6 +151,9 @@ type GuildVehicle struct {
 	SharedAccess map[string]bool
 	// MaintenanceCost is daily gold cost from guild treasury
 	MaintenanceCost int
+	// FormationSlot is the stable slot index assigned at add time; never changes after assignment.
+	// Slot 0 is the fleet commander (leader); higher slots are followers in formation order.
+	FormationSlot int
 	// AddedAt tracks when vehicle was added to fleet
 	AddedAt time.Time
 	// LastMaintenance tracks last maintenance payment
@@ -169,6 +172,9 @@ type Fleet struct {
 	Formation FormationType
 	// CommanderID is the player ID of fleet commander (can issue formation commands)
 	CommanderID string
+	// nextSlot is the monotonically increasing slot counter for stable FormationSlot assignment.
+	// It is never decremented on removal, so slots remain unique and stable across the vehicle lifecycle.
+	nextSlot int
 	// CreatedAt tracks fleet creation time
 	CreatedAt time.Time
 	// UpdatedAt tracks last fleet modification

@@ -196,7 +196,7 @@ func (m *FleetManager) ApplySiegeDamage(vehicleID uint64, territoryID, structure
 
 	totalDamage := weaponDamage * siegeType.GetSiegeDamageMultiplier()
 	log.WithFields(log.Fields{
-		"system_name":  "fleet_manager",
+		"system":       "fleet_manager",
 		"vehicle_id":   vehicleID,
 		"siege_type":   siegeType.String(),
 		"weapon_dmg":   weaponDamage,

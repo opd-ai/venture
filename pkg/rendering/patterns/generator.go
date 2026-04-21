@@ -115,7 +115,7 @@ func (g *Generator) applyGenreVariations(config TextureConfig, rng *rand.Rand) T
 		// Cyberpunk: angular, tech-augmented, neon accents
 		config.Scale = config.Scale * (0.9 + rng.Float64()*0.4) // 0.9-1.3x
 		config.DetailLevel = config.DetailLevel * 1.0           // Standard detail
-	case "postapocalyptic":
+	case "postapoc", "postapocalyptic":
 		// Post-apocalyptic: weathered, damaged, decayed
 		config.Scale = config.Scale * (0.7 + rng.Float64()*0.5) // 0.7-1.2x
 		config.DetailLevel = config.DetailLevel * 1.15          // More weathering detail

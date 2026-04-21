@@ -86,6 +86,15 @@ func main() {
 	game := createGameInstance(logger, clientLogger)
 	sys := setupAllGameSystems(game, logger, clientLogger)
 	sys.networkClient = networkClient // Store for deferred voice transport wiring after audio init
+
+	// Stop the trade route background goroutine on exit.
+	// tradeRouteManager is started in initializeV19Systems (lazy init) via Start();
+	// this defer ensures the goroutine is cleaned up when the game exits.
+	defer func() {
+		if sys.tradeRouteManager != nil {
+			sys.tradeRouteManager.Stop()
+		}
+	}()
 	startPerformanceMonitoring(game, clientLogger)
 
 	// Performance Audit Fix: Start async terrain generation and show loading screen

@@ -113,6 +113,11 @@ func SpawnMerchantFromData(world *World, merchantData *procgenEntity.MerchantDat
 	npcDialogComp := NewNPCDialogComponent(params.GenreID, merchantPersonality, seed+int64(merchantData.Entity.Seed))
 	merchant.AddComponent(npcDialogComp)
 
+	// Add genre component so genre-aware systems (e.g., quest reward scaling) can
+	// read the active genre from this entity. Mirrors the same component added to
+	// enemy entities in addAdvancedComponents.
+	merchant.AddComponent(NewGenreComponent(params.GenreID))
+
 	return merchant
 }
 

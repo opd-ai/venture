@@ -137,8 +137,6 @@ import (
 	"github.com/opd-ai/venture/pkg/world/economy"
 
 	// Phase 101: Integration Package Activation
-	"github.com/opd-ai/venture/pkg/integration/choice_consequences"
-	"github.com/opd-ai/venture/pkg/integration/guild_vehicle"
 	"github.com/opd-ai/venture/pkg/integration/world_events"
 )
 
@@ -581,9 +579,7 @@ type systemsContainer struct {
 	worldEconomySystem *economy.System         // Federated marketplace and dynamic economy
 
 	// Phase 101: Integration Package Activation
-	choiceTracker     *choice_consequences.ChoiceTracker // Persistent choice tracking and consequences
-	guildFleetManager *guild_vehicle.FleetManager        // Guild vehicle fleet management
-	worldEventManager *world_events.EventManager         // World-responsive event generation
+	worldEventManager *world_events.EventManager // World-responsive event generation
 
 	// Voice Systems (PLAN.md Phase 1)
 	// Gap: Voice systems implemented in pkg/engine but never initialized or registered
@@ -840,6 +836,16 @@ func (sys *systemsContainer) scheduleLazyInit(game *engine.EbitenGame, logger *l
 			initializeV19Systems(game, sys, clientLogger)
 		}()
 		wg.Wait()
+
+		// Wire V9 integration managers into consuming systems now that both
+		// craftingSystem (from initializeProgressionSystems) and stationManager
+		// (from initializeV9Systems above) are available.
+		if sys.craftingSystem != nil && sys.stationManager != nil {
+			sys.craftingSystem.SetStationManager(sys.stationManager)
+		}
+		if sys.companionLoyaltySys != nil && sys.petHomeManager != nil {
+			sys.companionLoyaltySys.SetPetHomeProvider(sys.petHomeManager)
+		}
 
 		// Phase 3: Guild Federation and advanced systems
 		initializePhase3Systems(game, sys, clientLogger)

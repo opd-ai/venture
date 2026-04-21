@@ -165,6 +165,15 @@ func initializeNetworkClient(logger *logrus.Logger, clientLogger *logrus.Entry) 
 	return networkClient
 }
 
+// canonicalGenreID normalizes genre ID aliases to the canonical form used in map keys.
+// The CLI flag uses "postapoc" as the canonical ID; some older code used "postapocalyptic".
+func canonicalGenreID(genreID string) string {
+	if genreID == "postapocalyptic" {
+		return "postapoc"
+	}
+	return genreID
+}
+
 // seededRandom returns a random seed based on time for CLI flag default values.
 //
 // IMPORTANT: This function is called ONLY at program initialization time via
@@ -618,7 +627,7 @@ func selectHazardSubType(genreID string, rng *rand.Rand) environment.SubType {
 			environment.SubTypeAcidPool,
 			environment.SubTypePoisonGas,
 		},
-		"postapocalyptic": {
+		"postapoc": {
 			environment.SubTypeFirePit,
 			environment.SubTypeAcidPool,
 			environment.SubTypeSpikes,
@@ -628,7 +637,7 @@ func selectHazardSubType(genreID string, rng *rand.Rand) environment.SubType {
 
 	// Default to fantasy hazards if genre not found
 	hazards := genreHazards["fantasy"]
-	if genrePool, ok := genreHazards[genreID]; ok {
+	if genrePool, ok := genreHazards[canonicalGenreID(genreID)]; ok {
 		hazards = genrePool
 	}
 
@@ -745,7 +754,7 @@ func getObjectConfig(genreID string) objectConfig {
 			poisonContainerChance: 0.08,
 			objectsPerRoom:        3,
 		},
-		"postapocalyptic": {
+		"postapoc": {
 			crateChance:           0.5,
 			barrelChance:          0.7,
 			furnitureChance:       0.6,
@@ -757,7 +766,7 @@ func getObjectConfig(genreID string) objectConfig {
 
 	// Default configuration if genre not found
 	config := configs["fantasy"]
-	if genreConfig, ok := configs[genreID]; ok {
+	if genreConfig, ok := configs[canonicalGenreID(genreID)]; ok {
 		config = genreConfig
 	}
 	return config

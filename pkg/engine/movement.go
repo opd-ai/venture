@@ -47,7 +47,7 @@ type MovementSystem struct {
 	nearbyBuffer []*Entity
 
 	// Track visited grid cells per entity for area exploration (grid cell size: 200x200).
-	// Uses struct{} value to save one byte per entry compared to bool.
+	// Uses struct{} value to avoid storing a bool for set membership.
 	visitedCells map[uint64]map[int64]struct{}
 }
 
@@ -308,9 +308,19 @@ func (s *MovementSystem) trackAreaVisit(entity *Entity, x, y float64) {
 }
 
 // ClearVisitedCells clears the visited cells tracking for an entity.
-// Call this when starting a new session or when the tutorial is reset.
+// Called automatically via the World entity-removal hook registered by
+// RegisterRemovalHook; can also be called directly to reset exploration
+// state (e.g. when starting a new session or resetting the tutorial).
 func (s *MovementSystem) ClearVisitedCells(entityID uint64) {
 	delete(s.visitedCells, entityID)
+}
+
+// RegisterRemovalHook registers a World entity-removal hook so that visitedCells
+// entries are reclaimed when an entity is removed. Call this once after
+// AddSystem(movementSystem) so that the hook fires on the game-loop goroutine
+// whenever an entity is drained from the removal queue.
+func (s *MovementSystem) RegisterRemovalHook(world *World) {
+	world.AddEntityRemovalHook(s.ClearVisitedCells)
 }
 
 // handlePostMovement applies bounds, friction, and animation updates after movement.

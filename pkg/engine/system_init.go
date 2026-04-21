@@ -357,6 +357,9 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 	movementSystem.SetCollisionSystem(result.CollisionSystem)
 	game.World.AddSystem(movementSystem)
 	game.World.AddSystem(result.CollisionSystem)
+	// Register per-entity cleanup hook so that visitedCells entries are reclaimed
+	// when an entity is removed, preventing unbounded per-session memory growth.
+	movementSystem.RegisterRemovalHook(game.World)
 
 	// 9. ProjectileSystem - ranged weapon physics (Phase 10.2)
 	result.ProjectileSystem = NewProjectileSystem(game.World)

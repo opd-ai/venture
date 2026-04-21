@@ -537,6 +537,13 @@ type World struct {
 	// Cache of system names to avoid per-frame reflection (eliminates 2,640 reflection calls/sec at 60 FPS with 44 systems)
 	systemNameCache map[System]string
 
+	// entityRemovalHooks are called on the game-loop goroutine for each entity ID
+	// that is drained from entityIDsToRemove during World.Update. Systems that
+	// maintain per-entity state (e.g. MovementSystem.visitedCells) register a hook
+	// here so that state is reclaimed when the entity is removed.
+	// Hooks are invoked without holding any mutex and must not call RemoveEntity.
+	entityRemovalHooks []func(entityID uint64)
+
 	// Mutex for thread-safe access to entities and metrics
 	mu sync.RWMutex
 
@@ -628,13 +635,23 @@ func (w *World) AddEntity(entity *Entity) {
 // Selectively invalidates only queries that could contain the entity,
 // based on the entity's current component types.
 func (w *World) RemoveEntity(entityID uint64) {
-	// Look up the entity's components before queuing removal so we can
-	// selectively invalidate only the relevant cached queries.
-	entity, exists := w.entities[entityID]
+	// Look up the entity's component types before queuing removal so we can
+	// selectively invalidate only the relevant cached queries. Copy the keys
+	// while holding w.mu.RLock() to avoid racing on the world/entity maps when
+	// RemoveEntity is called from another goroutine.
 	var entityComponents map[string]Component
-	if exists {
-		entityComponents = entity.Components
+	w.mu.RLock()
+	entity, exists := w.entities[entityID]
+	if exists && len(entity.Components) > 0 {
+		entityComponents = make(map[string]Component, len(entity.Components))
+		for componentType := range entity.Components {
+			// Only the component type keys are required for selective cache
+			// invalidation; store nil values in the copied map to avoid retaining
+			// references to live component instances after unlocking.
+			entityComponents[componentType] = nil
+		}
 	}
+	w.mu.RUnlock()
 
 	w.entityMu.Lock()
 	w.entityIDsToRemove = append(w.entityIDsToRemove, entityID)
@@ -713,15 +730,21 @@ func (w *World) Update(deltaTime float64) {
 	if len(pendingToAdd) > 0 {
 		for _, entity := range pendingToAdd {
 			w.entities[entity.ID] = entity
+			// Selectively invalidate only queries whose required component types
+			// overlap with this entity's components.
+			w.invalidateQueryCacheForComponents(entity.Components)
 		}
 		w.entityListDirty = true
-		w.invalidateQueryCache() // Invalidate query cache when entities are added
 	}
 
 	// Process pending removals
 	if len(pendingToRemove) > 0 {
 		for _, id := range pendingToRemove {
 			delete(w.entities, id)
+			// Notify registered hooks so systems can reclaim per-entity state.
+			for _, hook := range w.entityRemovalHooks {
+				hook(id)
+			}
 		}
 		w.entityListDirty = true
 	}
@@ -767,6 +790,14 @@ func (w *World) Update(deltaTime float64) {
 // Set to 0 to disable budget enforcement. Default: 2 ms.
 func (w *World) SetSystemBudget(budget time.Duration) {
 	w.systemBudget = budget
+}
+
+// AddEntityRemovalHook registers a function that is called on the game-loop
+// goroutine for each entity ID that is drained during World.Update.
+// Use this to let systems reclaim per-entity state (e.g. visited-cell maps)
+// when an entity is removed. Hooks must not call RemoveEntity.
+func (w *World) AddEntityRemovalHook(hook func(entityID uint64)) {
+	w.entityRemovalHooks = append(w.entityRemovalHooks, hook)
 }
 
 // rebuildEntityCache rebuilds the cached entity list.

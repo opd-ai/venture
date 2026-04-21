@@ -232,11 +232,19 @@ func (m *GuildHallManager) Save(w io.Writer) error {
 
 	// Create gzip writer
 	gzWriter := gzip.NewWriter(w)
-	defer gzWriter.Close()
 
 	// Encode guild halls
 	encoder := json.NewEncoder(gzWriter)
-	return encoder.Encode(m.guildHalls)
+	if err := encoder.Encode(m.guildHalls); err != nil {
+		gzWriter.Close()
+		return fmt.Errorf("encode guild halls: %w", err)
+	}
+
+	if err := gzWriter.Close(); err != nil {
+		return fmt.Errorf("flush gzip writer: %w", err)
+	}
+
+	return nil
 }
 
 // Load deserializes guild halls from gzip-compressed JSON.

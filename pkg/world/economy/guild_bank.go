@@ -540,14 +540,22 @@ func (m *GuildBankManager) Save(filename string) error {
 	if err != nil {
 		return fmt.Errorf("failed to create file: %w", err)
 	}
-	defer file.Close()
 
 	gzipWriter := gzip.NewWriter(file)
-	defer gzipWriter.Close()
-
 	encoder := json.NewEncoder(gzipWriter)
 	if err := encoder.Encode(m.vaults); err != nil {
+		gzipWriter.Close()
+		file.Close()
 		return fmt.Errorf("failed to encode vaults: %w", err)
+	}
+
+	if err := gzipWriter.Close(); err != nil {
+		file.Close()
+		return fmt.Errorf("failed to flush gzip writer: %w", err)
+	}
+
+	if err := file.Close(); err != nil {
+		return fmt.Errorf("failed to close file: %w", err)
 	}
 
 	return nil

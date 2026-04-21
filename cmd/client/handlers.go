@@ -2741,6 +2741,10 @@ func addPlayerComponents(player *engine.Entity, logger *logrus.Logger, clientLog
 	playerStats.Evasion = 0.05
 	player.AddComponent(playerStats)
 
+	// Capture the unmodified starting stats so buff/debuff and class-progression
+	// systems can reference original values without searching component history.
+	player.AddComponent(engine.NewBaseStatsFromEntity(player))
+
 	// Add player experience/progression
 	player.AddComponent(engine.NewExperienceComponent())
 

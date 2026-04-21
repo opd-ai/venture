@@ -18,11 +18,7 @@ type LightingAdapter struct {
 
 // NewLightingAdapter creates a lighting adapter with default configuration.
 func NewLightingAdapter(logger *logrus.Entry) *LightingAdapter {
-	return &LightingAdapter{
-		system:  lighting.NewSystem(),
-		enabled: true,
-		logger:  logger,
-	}
+	return NewLightingAdapterWithConfig(lighting.DefaultConfig(), logger)
 }
 
 // NewLightingAdapterWithConfig creates a lighting adapter with custom configuration.

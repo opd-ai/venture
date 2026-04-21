@@ -43,11 +43,14 @@ type EbitenHelpSystem struct {
 
 // NewHelpSystem creates a new help system with default topics.
 func NewHelpSystem() *EbitenHelpSystem {
-	return NewHelpSystemWithSize(800, 600) // Default screen size
+	return newHelpSystemWithSize(800, 600) // Default screen size
 }
 
-// NewHelpSystemWithSize creates a new help system with specified screen dimensions.
-func NewHelpSystemWithSize(screenWidth, screenHeight int) *EbitenHelpSystem {
+// newHelpSystemWithSize creates a new help system with specified screen dimensions.
+// It is unexported because the only current caller is NewHelpSystem; when the
+// renderer exposes its window dimensions, promote this to exported and pass the
+// real size here.
+func newHelpSystemWithSize(screenWidth, screenHeight int) *EbitenHelpSystem {
 	hs := &EbitenHelpSystem{
 		Enabled:      true,
 		Visible:      false,

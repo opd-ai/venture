@@ -216,8 +216,10 @@ func buildSupportBehaviorTree(world *World) BehaviorNode {
 		// Search for threats
 		NewFindTargetAction(detectionRange, world),
 
-		// Idle - wander cautiously
+		// Idle - wander and interact with the environment (e.g. resource nodes,
+		// allies in need) when no threat is detected.
 		NewSequenceNode("IdleSequence",
+			NewInteractWithEnvironmentNode("EnvironmentInteract", "resource", 60.0, 3.0),
 			NewWanderAction(moveSpeed*0.6),
 			NewWaitAction(2.5),
 		),

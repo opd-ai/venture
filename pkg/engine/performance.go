@@ -336,10 +336,7 @@ type Timer struct {
 
 // NewTimer creates a new timer with the given name.
 func NewTimer(name string) *Timer {
-	return &Timer{
-		start: time.Now(),
-		name:  name,
-	}
+	return NewTimerWithLogger(name, nil)
 }
 
 // NewTimerWithLogger creates a new timer with the given name and logger.

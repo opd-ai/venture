@@ -30,6 +30,10 @@ type AnimationSyncer interface {
 	// RecordSync records that a state packet of bytesSent bytes was queued for
 	// entityID so that ShouldSync can correctly detect the next delta.
 	RecordSync(entityID uint64, state AnimationState, bytesSent int)
+	// DrainRemoteState pops the next buffered animation state for entityID from
+	// the jitter buffer. Returns false when the buffer is empty.
+	// state is the new AnimationState; frameIdx is the frame number to resume from.
+	DrainRemoteState(entityID uint64) (state AnimationState, frameIdx int, ok bool)
 }
 
 // animStatePacketBytes is the fixed wire size of one animation state packet.
@@ -612,6 +616,10 @@ func (s *AnimationSystem) updateEntityAnimation(entity *Entity, deltaTime, playe
 	}
 	s.stats.AnimatedEntities++
 
+	// Apply any buffered remote animation state before local processing so
+	// that jitter-buffered packets from remote players are consumed each tick.
+	s.drainRemoteBuffer(entity, animComp)
+
 	spriteComp, pos, shouldContinue := s.validateAnimationComponents(entity)
 	if !shouldContinue {
 		return nil
@@ -815,6 +823,26 @@ func (s *AnimationSystem) regenerateFramesIfDirty(entity *Entity, animComp *Anim
 	s.notifyStateChange(entity.ID, animComp.CurrentState)
 
 	return nil
+}
+
+// drainRemoteBuffer pops the next buffered animation state for a remote entity
+// (an entity without a local "input" component) and applies it to animComp.
+// This gives jitter-buffered, delta-compressed playback of remote-player
+// animations received via the network layer. No-op when syncManager is nil or
+// the buffer is empty.
+func (s *AnimationSystem) drainRemoteBuffer(entity *Entity, animComp *AnimationComponent) {
+	if s.syncManager == nil || entity.HasComponent("input") {
+		return
+	}
+	state, frameIdx, ok := s.syncManager.DrainRemoteState(entity.ID)
+	if !ok {
+		return
+	}
+	if state != animComp.CurrentState {
+		animComp.CurrentState = state
+		animComp.FrameIndex = frameIdx
+		animComp.Dirty = true
+	}
 }
 
 // notifyStateChange calls the sync manager when an animation state is confirmed.

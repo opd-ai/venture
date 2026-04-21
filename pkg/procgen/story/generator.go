@@ -18,7 +18,7 @@ var genreThemes = map[string][]string{
 	"scifi":          {"abandoned_colony", "ai_uprising", "alien_contact", "experiment_gone_wrong", "time_loop"},
 	"horror":         {"haunted_mansion", "cult_ritual", "plague_outbreak", "entity_awakening", "descent_madness"},
 	"cyberpunk":      {"corporate_conspiracy", "hacker_revenge", "memory_theft", "underground_resistance", "ai_consciousness"},
-	"postapocalyptic": {"last_survivors", "resource_war", "mutant_origin", "bunker_secrets", "radiation_zone"},
+	"postapoc": {"last_survivors", "resource_war", "mutant_origin", "bunker_secrets", "radiation_zone"},
 }
 
 // genreTitleSuffixes is the authoritative table of title suffixes per genre (TODO REM-096 resolved).
@@ -27,7 +27,7 @@ var genreTitleSuffixes = map[string][]string{
 	"scifi":          {"Colony Alpha", "Last Signal", "Derelict Station", "Failed Experiment", "AI Core"},
 	"horror":         {"Haunted Manor", "Cursed Ground", "Dark Ritual", "Final Scream", "Blood Moon"},
 	"cyberpunk":      {"Data Heist", "Corporate Fall", "Neon Shadows", "Memory Dump", "System Breach"},
-	"postapocalyptic": {"Last Stand", "Wasteland", "Dead Zone", "Bunker 13", "Final Days"},
+	"postapoc": {"Last Stand", "Wasteland", "Dead Zone", "Bunker 13", "Final Days"},
 }
 
 // defaultThemes is used when no genre-specific themes are found.

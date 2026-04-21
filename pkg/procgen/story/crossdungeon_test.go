@@ -262,7 +262,7 @@ func TestCrossDungeonDeterminism(t *testing.T) {
 	params := procgen.GenerationParams{
 		Difficulty: 0.7,
 		Depth:      4,
-		GenreID:    "postapocalyptic",
+		GenreID:    "postapoc",
 	}
 
 	// Generate twice with same seed

@@ -84,6 +84,9 @@ const (
 	seedOffsetCompanion          = 5000  // offset for companion generation (V4.0)
 	seedOffsetBook               = 6000  // offset for book/bookshelf generation (V4.0)
 	seedOffsetStory              = 7000  // offset for story fragment generation (Phase 30)
+	seedOffsetArchaeo            = 7010  // offset for archaeological site generation
+	seedOffsetTimeline           = 7020  // offset for historical timeline generation
+	seedOffsetCrossDungeon       = 7030  // offset for cross-dungeon narrative generation
 	seedOffsetReverb             = 8000  // offset for reverb system (Phase 14.4)
 	seedOffsetInvestigation      = 9000  // offset for investigation system (Phase 30)
 	seedOffsetNPCDialog          = 10000 // offset for NPC dialog system (Phase 31)

@@ -217,6 +217,17 @@ func spawnStoryFragmentsWithLogging(w *engine.World, generatedTerrain *terrain.T
 	} else if *verbose {
 		clientLogger.WithField("fragmentCount", fragmentCount).Info("spawned story fragments")
 	}
+
+	// Phase 30: Wire additional story generators (G4 AUDIT.md)
+	if _, err := spawnArchaeologicalSites(w, generatedTerrain, *seed+seedOffsetArchaeo, params, clientLogger); err != nil {
+		clientLogger.WithError(err).Warn("failed to spawn archaeological sites")
+	}
+	if _, err := spawnTimelines(w, generatedTerrain, *seed+seedOffsetTimeline, params, clientLogger); err != nil {
+		clientLogger.WithError(err).Warn("failed to spawn world timeline")
+	}
+	if _, err := spawnCrossDungeonStories(w, generatedTerrain, *seed+seedOffsetCrossDungeon, params, clientLogger); err != nil {
+		clientLogger.WithError(err).Warn("failed to spawn cross-dungeon story")
+	}
 }
 
 // spawnEnvironmentalEffects spawns lights, weather effects, and environmental hazards (unconditionally enabled).

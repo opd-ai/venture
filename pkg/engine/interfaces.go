@@ -474,6 +474,18 @@ type HousingUIProvider interface {
 
 // PrestigeUIProvider provides a subset of prestige UI methods for input system integration.
 // This interface avoids circular dependencies between pkg/engine and pkg/engine/prestige.
+// StoryJournalProvider is the interface for the story journal UI.
+// Stored on EbitenGame to avoid a circular import with pkg/rendering/ui
+// (which imports pkg/engine). Implemented by *ui.StoryJournalUIWrapper.
+type StoryJournalProvider interface {
+	// Toggle shows or hides the journal UI.
+	Toggle(journal *StoryJournalComponent, world *World)
+	// IsVisible returns true when the journal is currently visible.
+	IsVisible() bool
+	// Draw renders the journal onto the screen.
+	Draw(screen interface{})
+}
+
 type PrestigeUIProvider interface {
 	// IsVisible returns true if the prestige UI is currently visible
 	IsVisible() bool

@@ -272,7 +272,7 @@ func TestAllGenres(t *testing.T) {
 		Depth:      5,
 	}
 
-	genres := []string{"fantasy", "scifi", "horror", "cyberpunk", "postapocalyptic"}
+	genres := []string{"fantasy", "scifi", "horror", "cyberpunk", "postapoc"}
 
 	for _, genre := range genres {
 		t.Run(genre, func(t *testing.T) {
@@ -649,7 +649,7 @@ func TestTemplateDeterminism(t *testing.T) {
 // TestSelectTheme_AllGenresCovered verifies that genreThemes and genreTitleSuffixes
 // contain entries for every known genre and that each produces non-empty results.
 func TestSelectTheme_AllGenresCovered(t *testing.T) {
-	genres := []string{"fantasy", "scifi", "horror", "cyberpunk", "postapocalyptic"}
+	genres := []string{"fantasy", "scifi", "horror", "cyberpunk", "postapoc"}
 	for _, g := range genres {
 		t.Run(g, func(t *testing.T) {
 			themes, ok := genreThemes[g]

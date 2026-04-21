@@ -95,6 +95,10 @@ type EbitenGame struct {
 	// Phase 4.2 (PLAN.md): Prestige System
 	PrestigeUI PrestigeUIProvider // Prestige and paragon point allocation UI - stored as interface to avoid import cycle
 
+	// Phase 30 (AUDIT.md G5): Story Journal UI
+	// Stored as StoryJournalProvider interface to avoid import cycle with pkg/rendering/ui.
+	StoryJournalUI StoryJournalProvider
+
 	// Audio system (for settings integration)
 	AudioManager *AudioManager
 
@@ -1678,6 +1682,10 @@ func (g *EbitenGame) drawPhaseUIOverlays(screen *ebiten.Image) {
 
 	if g.GuildUI != nil {
 		g.GuildUI.Draw(screen)
+	}
+
+	if g.StoryJournalUI != nil && g.StoryJournalUI.IsVisible() {
+		g.StoryJournalUI.Draw(screen)
 	}
 }
 

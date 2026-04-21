@@ -235,7 +235,7 @@ func TestArchaeologyDeterminism(t *testing.T) {
 	params := procgen.GenerationParams{
 		Difficulty: 0.6,
 		Depth:      5,
-		GenreID:    "postapocalyptic",
+		GenreID:    "postapoc",
 	}
 
 	// Generate twice with same seed

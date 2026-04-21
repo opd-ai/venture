@@ -148,6 +148,13 @@ type TCPClient struct {
 	voiceHandler   func(*VoicePacket)
 	voiceHandlerMu sync.RWMutex
 
+	// animSyncMgr receives inbound animation state packets demultiplexed from
+	// StateUpdate messages carrying an AnimationComponentType component. Set via
+	// SetAnimationSyncManager. When nil, animation packets flow through as normal
+	// game-state updates.
+	animSyncMgr   *AnimationSyncManager
+	animSyncMgrMu sync.RWMutex
+
 	// Logger for network operations
 	logger *logrus.Entry
 }
@@ -617,6 +624,11 @@ func (c *TCPClient) processStateUpdate(data []byte) bool {
 		return true
 	}
 
+	// Demultiplex animation state packets before game logic sees the update.
+	if c.routeAnimationComponent(update) {
+		return true
+	}
+
 	c.mu.Lock()
 	c.stateSeq = update.SequenceNumber
 	c.mu.Unlock()
@@ -672,6 +684,46 @@ func (c *TCPClient) routeVoiceComponent(update *StateUpdate) bool {
 		if handler != nil {
 			handler(pkt)
 		}
+		return true
+	}
+	return false
+}
+
+// SetAnimationSyncManager wires the jitter-buffer manager for inbound animation
+// state packets. Pass nil to disable. Safe to call before Connect.
+func (c *TCPClient) SetAnimationSyncManager(mgr *AnimationSyncManager) {
+	c.animSyncMgrMu.Lock()
+	c.animSyncMgr = mgr
+	c.animSyncMgrMu.Unlock()
+}
+
+// routeAnimationComponent checks whether a decoded StateUpdate carries a reserved
+// AnimationComponentType component. If found, it decodes the AnimationStatePacket
+// and calls mgr.BufferState so the animation system can play it back with jitter
+// compensation. Returns true when the animation component was consumed.
+func (c *TCPClient) routeAnimationComponent(update *StateUpdate) bool {
+	if update == nil {
+		return false
+	}
+	c.animSyncMgrMu.RLock()
+	mgr := c.animSyncMgr
+	c.animSyncMgrMu.RUnlock()
+	if mgr == nil {
+		return false
+	}
+	for _, comp := range update.Components {
+		if comp.Type != AnimationComponentType {
+			continue
+		}
+		var pkt AnimationStatePacket
+		if err := pkt.Decode(comp.Data); err != nil {
+			if c.logger != nil {
+				c.logger.WithError(err).Warn("failed to decode inbound animation packet")
+			}
+			return true
+		}
+		pkt.EntityID = update.EntityID
+		mgr.BufferState(pkt)
 		return true
 	}
 	return false

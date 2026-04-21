@@ -207,7 +207,7 @@ func (g *ArchaeologyGenerator) getSiteNamePrefixes(genreID string) []string {
 		return []string{"Haunted", "Cursed", "Unholy", "Damned", "Twisted", "Corrupted", "Forbidden"}
 	case "cyberpunk":
 		return []string{"Obsolete", "Abandoned", "Underground", "Hidden", "Encrypted", "Lost", "Buried"}
-	case "postapocalyptic":
+	case "postapoc":
 		return []string{"Pre-War", "Ruined", "Abandoned", "Collapsed", "Irradiated", "Lost", "Buried"}
 	default:
 		return []string{"Ancient", "Forgotten", "Lost", "Hidden", "Buried", "Old"}
@@ -224,7 +224,7 @@ func (g *ArchaeologyGenerator) getSiteNameSuffixes(genreID string) []string {
 		return []string{"Asylum", "Mansion", "Chapel", "Shrine", "Lair", "Catacombs", "Ossuary"}
 	case "cyberpunk":
 		return []string{"Server Farm", "Data Center", "Facility", "Archive", "Vault", "Network Node"}
-	case "postapocalyptic":
+	case "postapoc":
 		return []string{"Bunker", "Vault", "Shelter", "Facility", "Complex", "Installation", "Repository"}
 	default:
 		return []string{"Site", "Ruins", "Structure", "Building", "Complex", "Location"}
@@ -289,7 +289,7 @@ func (g *ArchaeologyGenerator) selectArtifactType(genreID string) ArtifactType {
 		return ArtifactRitual
 	case "cyberpunk":
 		return ArtifactData
-	case "postapocalyptic":
+	case "postapoc":
 		return ArtifactPreWar
 	default:
 		return ArtifactRelic
@@ -326,7 +326,7 @@ func (g *ArchaeologyGenerator) generateArtifactName(rng *rand.Rand, genreID stri
 		prefixes := []string{"Encrypted", "Corporate", "Military", "Prototype", "Black Market", "Hacked", "Classified"}
 		return fmt.Sprintf("%s Data %s", prefixes[rng.Intn(len(prefixes))], items[rng.Intn(len(items))])
 
-	case "postapocalyptic":
+	case "postapoc":
 		items := []string{"Manual", "Tool", "Medicine", "Tech", "Weapon", "Supply Cache", "Blueprint", "Generator"}
 		prefixes := []string{"Pre-War", "Military", "Medical", "Industrial", "Civilian", "Government", "Emergency"}
 		return fmt.Sprintf("%s %s", prefixes[rng.Intn(len(prefixes))], items[rng.Intn(len(items))])
@@ -348,7 +348,7 @@ func (g *ArchaeologyGenerator) generateArtifactDescription(rng *rand.Rand, genre
 		return "An unsettling object that seems to whisper in the darkness."
 	case "cyberpunk":
 		return "Encrypted data from before the corporate wars, potentially valuable."
-	case "postapocalyptic":
+	case "postapoc":
 		return "A relic from before the fall, surprisingly well-preserved."
 	default:
 		return "An artifact of historical significance, its origins mysterious."
@@ -411,7 +411,7 @@ func (g *ArchaeologyGenerator) generateSiteSpritePattern(genreID string, rng *ra
 	case "cyberpunk":
 		patterns := []string{"old_server_room", "data_vault", "abandoned_terminal", "hidden_archive"}
 		return patterns[rng.Intn(len(patterns))]
-	case "postapocalyptic":
+	case "postapoc":
 		patterns := []string{"collapsed_bunker", "ruined_facility", "buried_vault", "destroyed_complex"}
 		return patterns[rng.Intn(len(patterns))]
 	default:

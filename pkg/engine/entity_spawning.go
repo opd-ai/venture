@@ -35,7 +35,7 @@ func SpawnEnemiesInTerrain(world *World, terr *terrain.Terrain, seed int64, para
 		return 0, nil
 	}
 
-	return spawnEntitiesInRooms(world, spawnRooms, generatedEntities, seed, rng), nil
+	return spawnEntitiesInRooms(world, spawnRooms, generatedEntities, seed, rng, params.GenreID), nil
 }
 
 // selectSpawnRooms returns rooms for enemy spawning, excluding the first room (player spawn).
@@ -72,7 +72,7 @@ func calculateTotalEnemies(rooms []*terrain.Room, rng *rand.Rand) int {
 }
 
 // spawnEntitiesInRooms creates and configures ECS entities in each room.
-func spawnEntitiesInRooms(world *World, rooms []*terrain.Room, entities []*entity.Entity, seed int64, rng *rand.Rand) int {
+func spawnEntitiesInRooms(world *World, rooms []*terrain.Room, entities []*entity.Entity, seed int64, rng *rand.Rand, genreID string) int {
 	entityIndex := 0
 	spawned := 0
 
@@ -92,7 +92,7 @@ func spawnEntitiesInRooms(world *World, rooms []*terrain.Room, entities []*entit
 			entityIndex++
 
 			spawnX, spawnY := calculateSpawnPosition(room, rng)
-			enemy := createConfiguredEnemy(world, genEntity, spawnX, spawnY, seed, roomIdx, i, len(rooms), rng)
+			enemy := createConfiguredEnemy(world, genEntity, spawnX, spawnY, seed, roomIdx, i, len(rooms), rng, genreID)
 
 			if enemy != nil {
 				spawned++
@@ -121,13 +121,13 @@ func calculateSpawnPosition(room *terrain.Room, rng *rand.Rand) (float64, float6
 }
 
 // createConfiguredEnemy creates an ECS entity with all necessary components for an enemy.
-func createConfiguredEnemy(world *World, genEntity *entity.Entity, x, y float64, seed int64, roomIdx, enemyIdx, totalRooms int, rng *rand.Rand) *Entity {
+func createConfiguredEnemy(world *World, genEntity *entity.Entity, x, y float64, seed int64, roomIdx, enemyIdx, totalRooms int, rng *rand.Rand, genreID string) *Entity {
 	enemy := world.CreateEntity()
 
 	addCoreComponents(enemy, genEntity, x, y)
 	addCombatComponents(enemy, genEntity, x, y)
 	enemySize := addVisualComponents(enemy, genEntity, seed)
-	addAdvancedComponents(enemy, genEntity, enemySize, seed, roomIdx, enemyIdx, totalRooms, rng, world)
+	addAdvancedComponents(enemy, genEntity, enemySize, seed, roomIdx, enemyIdx, totalRooms, rng, world, genreID)
 
 	return enemy
 }
@@ -234,8 +234,8 @@ func calculateEnemySize(size entity.EntitySize) float64 {
 	}
 }
 
-// addAdvancedComponents adds feedback, rotation, layer, shadow, behavior, squad, and faction components.
-func addAdvancedComponents(enemy *Entity, genEntity *entity.Entity, enemySize float64, seed int64, roomIdx, enemyIdx, totalRooms int, rng *rand.Rand, world *World) {
+// addAdvancedComponents adds feedback, rotation, layer, shadow, behavior, squad, faction, and genre components.
+func addAdvancedComponents(enemy *Entity, genEntity *entity.Entity, enemySize float64, seed int64, roomIdx, enemyIdx, totalRooms int, rng *rand.Rand, world *World, genreID string) {
 	enemy.AddComponent(NewVisualFeedbackComponent())
 	enemy.AddComponent(NewRotationComponent(0, 2.0))
 
@@ -269,6 +269,11 @@ func addAdvancedComponents(enemy *Entity, genEntity *entity.Entity, enemySize fl
 		SizeClass:  genEntity.Size.String(),
 		VisualTags: genEntity.Tags,
 	})
+
+	// Genre component for genre-based reward scaling and theming (AUDIT.md G6).
+	if genreID != "" {
+		enemy.AddComponent(NewGenreComponent(genreID))
+	}
 }
 
 // selectEnemyArchetype determines the AI archetype based on entity properties.

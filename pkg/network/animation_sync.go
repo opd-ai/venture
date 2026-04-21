@@ -270,6 +270,17 @@ func (m *AnimationSyncManager) SetBufferSize(n int) {
 	}
 }
 
+// DrainRemoteState pops the next buffered animation state for entityID and
+// returns it in the form expected by the engine.AnimationSyncer interface.
+// Returns ok=false when the jitter buffer is empty.
+func (m *AnimationSyncManager) DrainRemoteState(entityID uint64) (state engine.AnimationState, frameIdx int, ok bool) {
+	pkt := m.GetNextState(entityID)
+	if pkt == nil {
+		return engine.AnimationStateIdle, 0, false
+	}
+	return pkt.State, pkt.FrameIndex, true
+}
+
 // ClearEntity removes tracking data for an entity (when entity destroyed).
 func (m *AnimationSyncManager) ClearEntity(entityID uint64) {
 	delete(m.lastState, entityID)

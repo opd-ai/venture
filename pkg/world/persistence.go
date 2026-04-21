@@ -419,14 +419,17 @@ func (w *WorldPersistence) decodeState(gz *gzip.Reader) (*PersistentWorldState, 
 }
 
 // chunkFilePath returns the filesystem path for a compressed chunk file.
+// Chunks are stored alongside the main save file in a "chunks" subdirectory.
 func (w *WorldPersistence) chunkFilePath(x, y int) string {
-	return filepath.Join(w.SavePath, "chunks", fmt.Sprintf("%d_%d.bin", x, y))
+	return filepath.Join(filepath.Dir(w.SavePath), "chunks", fmt.Sprintf("%d_%d.bin", x, y))
 }
 
-// SaveChunk writes RLE-compressed chunk bytes to {SavePath}/chunks/{x}_{y}.bin.
+// SaveChunk writes RLE-compressed chunk bytes alongside the main save file.
+// Chunks are stored under {dir(SavePath)}/chunks/{x}_{y}.bin where
+// dir(SavePath) is the directory containing the world save file.
 // The data is the raw output of ChunkCompressionSystem.CompressChunk.
 func (w *WorldPersistence) SaveChunk(x, y int, data []byte) error {
-	dir := filepath.Join(w.SavePath, "chunks")
+	dir := filepath.Join(filepath.Dir(w.SavePath), "chunks")
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		return fmt.Errorf("creating chunk directory: %w", err)
 	}

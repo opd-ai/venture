@@ -522,6 +522,10 @@ func createGameWorld(logger *logrus.Logger) (*engine.World, *engine.EnhancedChat
 		if chunk == nil {
 			return
 		}
+		// Always mark dirty so the chunk is included in the next full world-state
+		// save sweep, regardless of whether the per-chunk file write succeeds.
+		defer chunkMods.MarkDirty(chunk.X, chunk.Y)
+
 		data, ratio, err := chunkCompressor.CompressChunk(chunk)
 		if err != nil {
 			worldLogger.WithError(err).Warn("chunk compression on evict failed")
@@ -540,10 +544,6 @@ func createGameWorld(logger *logrus.Logger) (*engine.World, *engine.EnhancedChat
 				"chunk_y": chunk.Y,
 			}).Warn("failed to persist compressed chunk; full world-state save will retry this chunk")
 		}
-		// Mark dirty in all cases — on success this registers the chunk for the
-		// next incremental world-state save; on failure it ensures the chunk is
-		// retried by the next full save cycle rather than silently dropped.
-		chunkMods.MarkDirty(chunk.X, chunk.Y)
 	})
 	worldLogger.Debug("chunk compression and modification tracking initialized")
 

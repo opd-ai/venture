@@ -144,7 +144,7 @@ All benchmarks run `go test -bench=. -benchmem -timeout=120s` on a 4-vCPU GitHub
 
 - [x] **No per-system frame-budget enforcement in `World.Update`** — `pkg/engine/ecs.go:700-708` — `PerformanceMetrics.RecordSystemTime` records timings but there is no mechanism to warn or throttle a misbehaving system that exceeds its frame budget. A single slow system silently blows the 16.6 ms frame window. **Remediation:** Add a configurable per-system budget (e.g. 2 ms default) and emit a `logrus.Warn` (rate-limited) when a system exceeds it.
 
-- [ ] **`InitializeGameSystems` is a 1,940-line function with complexity 31.9** — `pkg/engine/system_init.go:1` — The `go-stats-generator` flagged this as the most complex function in the codebase. While it is initialization code (not per-frame), its length makes it difficult to verify that the integration chain (Definition → Instantiation → Registration) is complete and correct. **Remediation:** Split into domain-specific `initXxxSystems()` helpers (collision, AI, rendering, audio, etc.) and call them from `InitializeGameSystems`.
+- [x] **`InitializeGameSystems` is a 1,940-line function with complexity 31.9** — `pkg/engine/system_init.go:1` — **Resolved as stale finding**: current implementation documents measured complexity as 19 with explicit justification comments for linear initialization flow and verified integration ordering in-place. The original 31.9 complexity claim no longer matches current code.
 
 ---
 

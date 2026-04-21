@@ -535,7 +535,10 @@ func createGameWorld(logger *logrus.Logger) (*engine.World, *engine.EnhancedChat
 			}).Debug("chunk compressed on evict")
 		}
 		if saveErr := worldPersistence.SaveChunk(chunk.X, chunk.Y, data); saveErr != nil {
-			worldLogger.WithError(saveErr).Warn("failed to persist compressed chunk")
+			worldLogger.WithError(saveErr).WithFields(logrus.Fields{
+				"chunk_x": chunk.X,
+				"chunk_y": chunk.Y,
+			}).Warn("failed to persist compressed chunk")
 		}
 		chunkMods.MarkDirty(chunk.X, chunk.Y)
 	})

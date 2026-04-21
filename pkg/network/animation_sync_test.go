@@ -363,7 +363,7 @@ func TestAnimationSyncManager_ShouldSync(t *testing.T) {
 // TestAnimationSyncManager_BufferState tests client-side state buffering.
 func TestAnimationSyncManager_BufferState(t *testing.T) {
 	manager := NewAnimationSyncManager()
-	manager.bufferSize = 3
+	manager.SetBufferSize(3)
 
 	entityID := uint64(12345)
 
@@ -625,7 +625,7 @@ func BenchmarkAnimationSyncManager_ShouldSync(b *testing.B) {
 func TestAnimationSyncRoundTrip(t *testing.T) {
 	sender := NewAnimationSyncManager()
 	receiver := NewAnimationSyncManager()
-	receiver.bufferSize = 1 // apply immediately on first packet
+	receiver.SetBufferSize(1) // apply immediately on first packet
 
 	entityID := uint64(42)
 

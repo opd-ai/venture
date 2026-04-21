@@ -17,6 +17,7 @@ type ChunkLoaderSystem struct {
 	generator    ChunkGenerator         // For generating new chunks
 	playerPos    map[uint64]ChunkCoords // Track player positions
 	onEvict      func(*Chunk)           // Called when a chunk is evicted from memory
+	compressor   *ChunkCompressionSystem // Shared compressor (avoid re-allocation per load)
 }
 
 // ChunkCoords represents chunk coordinates
@@ -39,6 +40,7 @@ func NewChunkLoaderSystem(worldSeed int64, persistence *WorldPersistence, genera
 		persistence:  persistence,
 		generator:    generator,
 		playerPos:    make(map[uint64]ChunkCoords),
+		compressor:   NewChunkCompressionSystem(),
 	}
 }
 
@@ -110,8 +112,7 @@ func (c *ChunkLoaderSystem) loadChunk(chunkX, chunkY int) (*Chunk, error) {
 	if c.persistence != nil {
 		// Fast path: check for a previously compressed chunk file first.
 		if data, err := c.persistence.LoadChunk(chunkX, chunkY); err == nil {
-			compressor := &ChunkCompressionSystem{}
-			if chunk, decErr := compressor.DecompressChunk(data); decErr == nil {
+			if chunk, decErr := c.compressor.DecompressChunk(data); decErr == nil {
 				return chunk, nil
 			}
 		}

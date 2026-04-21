@@ -32,7 +32,12 @@ type AnimationSyncer interface {
 	RecordSync(entityID uint64, state AnimationState, bytesSent int)
 }
 
-// Integrates with sprite generator to create procedural animation frames.
+// animStatePacketBytes is the fixed wire size of one animation state packet.
+// Format: [EntityID:8][State:1][FrameIndex:2][Timestamp:8][Loop:1] = 20 bytes.
+// Defined here because AnimationSystem cannot import pkg/network without
+// creating a circular dependency. Keep in sync with AnimationStatePacket.Encode
+// in pkg/network/animation_sync.go whenever the packet layout changes.
+const animStatePacketBytes = 20
 //
 // Animation Timing:
 //   - Default FPS: 12 FPS for close-range entities (0.083s per frame)
@@ -819,8 +824,7 @@ func (s *AnimationSystem) notifyStateChange(entityID uint64, state AnimationStat
 		return
 	}
 	if s.syncManager.ShouldSync(entityID, state) {
-		const animPacketBytes = 20 // fixed size per AnimationStatePacket (see animation_sync.go)
-		s.syncManager.RecordSync(entityID, state, animPacketBytes)
+		s.syncManager.RecordSync(entityID, state, animStatePacketBytes)
 	}
 }
 

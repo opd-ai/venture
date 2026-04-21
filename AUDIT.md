@@ -1,59 +1,53 @@
-# IMPLEMENTATION GAP AUDIT — 2026-04-21
+# SECURITY AUDIT — 2026-04-21
 
-Audited commit: HEAD on branch `copilot/audit-implementation-gaps-again`.  
-Build baseline: `go build ./...` — clean for all pure-Go packages; Ebiten requires X11 headers not present in this CI environment, so the game binaries themselves are not compiled here but the package graph is intact.  
-`go vet ./...` — clean on all pure-Go packages.  
-Prior gap file (GAPS.md, dated 2026-04-21) reviewed; prior findings re-verified and updated below.
+## Project Security Profile
 
----
-
-## Project Architecture Overview
-
-**Venture** is a fully procedural multiplayer action-RPG distributed as a single binary with zero external asset files. All graphics, audio, terrain, items, quests, NPCs, and UI are generated at runtime from seed-based deterministic algorithms.
-
-- **ECS core** (`pkg/engine/`) — 100+ systems, ~2 206 struct types, 355 `New*System` constructors, 105 interfaces, ≈386 000 non-test LOC.
-- **Procedural generators** (`pkg/procgen/`) — 25 sub-packages: terrain (BSP/cellular/city/forest/composite/grammar/maze/L-system), entity, item, quest, magic, dialog, narrative (fragment, branching, archaeology, timeline, cross-dungeon), story, minigame, puzzle, book, and more.
-- **Rendering pipeline** (`pkg/rendering/`) — sprites, tiles, lighting, particles, post-processing, UI, animation, cache.
-- **Audio synthesis** (`pkg/audio/`) — adaptive music, SFX, voice (ADPCM), synthesis engine.
-- **Multiplayer networking** (`pkg/network/`) — authoritative server, client-side prediction, lag compensation, federation, voice chat.
-- **Persistent world** (`pkg/world/`) — housing, economy, territory, raids, chunk-based persistence.
-- **Integration layer** (`pkg/integration/`) — 9 cross-package integration adapters.
-
-**Stated platforms**: Linux, macOS, Windows, WebAssembly, iOS, Android.  
-**Stated multiplayer design**: 200–5000 ms latency tolerance (Tor/onion services).
+- **Deployment model**: Authoritative Go TCP server (`cmd/server`) + Go/Ebiten game client (`cmd/client`). Single-binary, zero-asset, cross-platform.
+- **Trust boundaries**: Server is authoritative; clients are untrusted. Federation connects multiple servers peer-to-peer. Metrics/observability served on a separate HTTP port.
+- **Auth model**: Connection-bound player ID (server-stamped, not client-supplied). Federation uses ed25519-signed handshakes + session tokens. Chat/trade use per-client rate limiting.
+- **Data sensitivity**: Player entity state, voice audio (ADPCM), chat messages, save files, guild/economy data. No PII collection beyond player IDs.
+- **Stated security goals** (from `pkg/security/doc.go` and `pkg/security/audit.go`): federation certificate validation, E2E chat encryption, mod sandbox, input validation, anti-cheat, privacy/data minimization.
+- **Crypto in use**: DH-2048 (RFC 3526 Group 14) + AES-256-GCM for game traffic; ed25519 for federation server identity; SHA-256 for checksums and key derivation; `crypto/rand` for all security-sensitive randomness.
+- **No SQL / no templating / no exec calls** found in production code.
 
 ---
 
-## Gap Summary
+## Security Surface Inventory
 
-| Category           | Count | Critical | High | Medium | Low |
-|--------------------|-------|----------|------|--------|-----|
-| Stubs / TODOs      |     1 |        0 |    0 |      0 |   1 |
-| Dead Code          |     2 |        0 |    0 |      2 |   0 |
-| Partially Wired    |     4 |        0 |    1 |      2 |   1 |
-| Interface Gaps     |     1 |        0 |    0 |      1 |   0 |
-| Genre Key Mismatch |     1 |        0 |    1 |      0 |   0 |
-| **TOTAL**          | **9** |      **0**| **2**|    **5**| **2**|
+| Package | HTTP Handlers | DB Queries | Exec Calls | File I/O | Crypto | Auth |
+|---------|:---:|:---:|:---:|:---:|:---:|:---:|
+| `pkg/observability` | 6 (unauthenticated) | — | — | — | — | **None** |
+| `pkg/network` | — | — | — | — | DH+AES-GCM, SHA-256 | Player ID |
+| `pkg/network/federation` | — | — | — | — | ed25519, SHA-256, crypto/rand | Token + nonce |
+| `pkg/network/chat` | — | — | — | — | crypto/rand (msg IDs) | Rate limit |
+| `pkg/network/trade` | — | — | — | — | — | Rate limit |
+| `pkg/modding` | — | — | — | R/W `.json` files | — | Sandbox |
+| `pkg/validation` | — | — | — | — | — | Rate limit |
+| `pkg/security` | — | — | — | — | crypto/subtle | Audit only |
+| `pkg/saveload` | — | — | — | R/W save files | SHA-256 checksum | — |
+| `pkg/world/persistence` | — | — | — | R/W world files | — | — |
+| `pkg/engine` | — | — | — | R/W settings/mods | — | — |
+| `cmd/server` | — | — | — | — | — | Player ID |
+| `cmd/client` | — | — | — | R/W settings | — | — |
 
 ---
 
-## Implementation Completeness by Package
+## Dependency Vulnerability Check
 
-Key packages audited. Coverage percentages from existing per-package `AUDIT.md` files where present; otherwise estimated from code review.
+Direct dependencies from `go.mod`:
 
-| Package                          | Exported Fns | Impl. | Stubs | Dead | Notes |
-|----------------------------------|-------------|-------|-------|------|-------|
-| `pkg/engine`                     | ~2 800      | ✅    | 0     | 2    | N3, N4 (dead objects in systemsContainer) |
-| `pkg/procgen/story`              | 47          | ✅    | 0     | 0    | All generators now wired in client |
-| `pkg/procgen/skills`             | ~40         | ⚠️    | 0     | 0    | N1: `normalizeGenre` misses `"postapoc"` |
-| `pkg/procgen/class`              | ~30         | ⚠️    | 0     | 0    | N1: genre theme keys use `"postapocalyptic"` |
-| `pkg/procgen/terrain`            | ~80         | ⚠️    | 0     | 0    | N1: composite.go map key mismatch |
-| `pkg/network`                    | ~180        | ✅    | 0     | 0    | G2 receive path now wired |
-| `pkg/rendering/ui`               | ~160        | ✅    | 0     | 0    | StoryJournalUI now instantiated |
-| `pkg/integration/guild_vehicle`  | 12          | ✅    | 0     | 0    | Formation + VehicleSyncer now wired |
-| `pkg/engine/merchant_spawn`      | 5           | ⚠️    | 0     | 0    | N5: No `GenreComponent` on merchants |
-| `cmd/client`                     | ~120        | ⚠️    | 0     | 2    | N2, N3, N4, N7 |
-| `pkg/vr`                         | ~30         | ⚠️    | 16    | 0    | Explicitly experimental (OpenXR TODO stubs) |
+| Dependency | Version | Known CVEs |
+|-----------|---------|-----------|
+| `github.com/hajimehoshi/ebiten/v2` | v2.9.3 | None known |
+| `github.com/sirupsen/logrus` | v1.9.3 | None known |
+| `github.com/google/uuid` | v1.6.0 | None known |
+| `github.com/ncruces/zenity` | v0.10.14 | None known |
+| `golang.org/x/image` | v0.32.0 | None known |
+| `golang.org/x/text` | v0.30.0 | None known |
+| `golang.org/x/sys` | v0.37.0 | None known |
+| `github.com/stretchr/testify` | v1.11.1 | None known (test-only) |
+
+No known CVEs found in any direct or indirect dependency as of the audit date. The dependency surface is small and focused. Note: `golang.org/x/text` versions below v0.3.8 had a vulnerability (CVE-2021-38561) — v0.30.0 is not affected.
 
 ---
 
@@ -61,63 +55,70 @@ Key packages audited. Coverage percentages from existing per-package `AUDIT.md` 
 
 ### HIGH
 
-- [ ] **N1 — Multi-package `"postapocalyptic"` key inconsistency breaks post-apocalyptic genre at runtime** — Multiple files — When the game is started with `-genre=postapoc` (the canonical genre ID from `pkg/procgen/genre/predefined.go:86` and the CLI flag), at least five packages use `"postapocalyptic"` as map keys or case labels and therefore silently fall back to fantasy/generic content instead of generating post-apocalyptic content. Specifically: (a) `pkg/procgen/terrain/composite.go:227` — `genrePrefs["postapocalyptic"]` is never hit; composite terrain falls back to generic `{"bsp", "cellular", "maze", "forest", "city"}`; (b) `pkg/procgen/skills/generator.go:129` — `normalizeGenre("postapoc")` falls to the default case and returns `"fantasy"`, so all post-apocalyptic skill trees are generated as fantasy trees; (c) `pkg/procgen/class/generator.go:389-394` — six `addGenreTheme("postapocalyptic", …)` calls are never matched for `"postapoc"`, so character classes spawn with fantasy names instead of Raider/Scavenger/Mutant etc.; (d) `cmd/client/util.go:621` and `:748` — environment hazard pools and spawn-prop tables keyed by `"postapocalyptic"` are not populated; rooms spawn with fantasy props; (e) `pkg/rendering/patterns/generator.go:118` — pattern case `"postapocalyptic"` is unreachable. — **Blocked goal**: Genre-based theming for the post-apocalyptic genre (one of five stated genres). — **Remediation**: In each of the five files, add `"postapoc"` as an alias or replace `"postapocalyptic"` with `"postapoc"`. (1) `pkg/procgen/terrain/composite.go:227` — change map key. (2) `pkg/procgen/skills/generator.go:129` — add `"postapoc"` to the switch case beside `"postapocalyptic"`, or normalise the key before the switch. (3) `pkg/procgen/class/generator.go:389-394` — change all six `addGenreTheme` calls to use `"postapoc"`. (4) `cmd/client/util.go:621,748` — change map keys. (5) `pkg/rendering/patterns/generator.go:118` — change the case label. Add cross-genre coverage tests that pass `"postapoc"` (not `"postapocalyptic"`) and assert non-default output. Validate with `go test ./pkg/procgen/... ./cmd/client/...`.
+- [ ] **H1 — Observability HTTP Endpoints Have No Authentication** — `pkg/observability/metrics.go:170–175` — The metrics exporter registers six HTTP handlers (`/metrics`, `/health`, `/healthz`, `/ready`, `/readyz`, `/status`) on a port bound to all interfaces (default `:9090`) with zero authentication middleware. The `/status` handler at `metrics.go:263` returns a `statusResponse` JSON body containing `goroutines`, `heap_alloc_bytes`, `gc_runs`, FPS, frame time, memory usage MB, connected player count, active quest count, trade volume, entity count, and server uptime. Any network-reachable host can retrieve this data without credentials. The `/metrics` handler (`metrics.go:246`) emits Prometheus text format exposing the same fields. **Data flow**: `cmd/server/main.go:1270` → `observability.NewMetricsExporter(":" + *metricsPort)` → `m.server.ListenAndServe()` → unauthenticated mux. **Impact**: External reconnaissance of server internals; timing information useful for attack planning; confirmation of player activity. **Remediation**: Add a `Bearer`-token middleware or bind to `localhost` only by default; add a `--metrics-bind` flag that defaults to `127.0.0.1:9090`.
+
+- [ ] **H2 — DH Key Exchange Is Susceptible to MITM (No Server Certificate)** — `pkg/network/server.go:221`, `pkg/network/crypto.go:40–60` — The game server creates a plain `net.Listen("tcp", address)` listener with no TLS wrapper. Application-layer encryption uses Diffie-Hellman (RFC 3526 Group 14, 2048-bit) + AES-256-GCM implemented in `pkg/network/crypto.go`. While message confidentiality is achieved after key agreement, the DH handshake itself occurs over an unauthenticated TCP channel: neither the server nor the client presents a certificate or performs signature verification of the DH public key. A network-position attacker can intercept the initial `PublicKey` exchange, substitute their own DH public key, and establish two independent encrypted sessions — one with the server and one with the client — transparently relaying and decrypting all traffic. The federation handshake (`pkg/network/federation/handshake.go`) does use ed25519 signatures for server-to-server authentication, but no equivalent protection exists for client-to-server connections. **Impact**: Full plaintext access to all game traffic, including voice (ADPCM), chat, player positions, and session tokens. **Remediation**: Wrap the TCP listener with TLS (`tls.NewListener`) using a self-signed or operator-provided certificate; or perform a signed DH exchange where the server's DH public key is signed with an ed25519 key whose public key is pinned on the client.
+
+- [ ] **H3 — Nonce TOCTOU Race Enables Federation Replay Attacks** — `pkg/network/federation/auth.go:119–149` — `ValidateNonce` acquires a read lock (`am.mu.RLock`) to check nonce existence. `MarkNonceUsed` acquires a separate write lock (`am.mu.Lock`) to delete the nonce. These are two separate operations with no atomicity guarantee. If two goroutines concurrently call `ValidateNonce` with the same nonce before either calls `MarkNonceUsed`, both return success — the nonce is replayed. **Data flow**: Any caller that does `ValidateNonce(n)` → [context switch] → `MarkNonceUsed(n)` is vulnerable. **Impact**: Replayed federation handshakes; potential for duplicate player transfers; undermines the replay-prevention mechanism that nonces are intended to provide. **Remediation**: Combine validate-and-delete into a single method under a write lock:
+  ```go
+  func (am *AuthManager) ConsumeNonce(nonce string) error {
+      am.mu.Lock()
+      defer am.mu.Unlock()
+      timestamp, exists := am.nonces[nonce]
+      if !exists { return fmt.Errorf("nonce not found") }
+      if time.Now().Unix()-timestamp > int64(am.nonceTTL.Seconds()) {
+          delete(am.nonces, nonce)
+          return fmt.Errorf("nonce expired")
+      }
+      delete(am.nonces, nonce)
+      return nil
+  }
+  ```
 
 ---
 
 ### MEDIUM
 
-- [ ] **N2 — Client-side V9 integration managers instantiated but not wired into consuming systems** — `cmd/client/init_versions.go:469-479` — `initializeV9SystemsClient()` creates three managers: `sys.stationManager` (housing crafting), `sys.petHomeManager` (companion housing), and `sys.guildHousingManager` (guild housing). The dedicated server correctly wires these at `cmd/server/main.go:432` (`craftingSystem.SetStationManager(stationMgr)`) and `cmd/server/main.go:438` (`companionLoyaltySystem.SetPetHomeProvider(petHomeMgr)`) and sets up a `V9ValidationService`. No equivalent wiring exists in the client path. Consequently, in solo-play mode (client auto-starts an embedded server), housing-based crafting bonuses and companion loyalty bonuses are silently zero, even when the player owns a house with crafting stations or companion bedding. — **Blocked goal**: Player housing benefits in solo play. — **Remediation**: After the crafting and companion loyalty systems are created in the client init path, add the two missing calls: `sys.craftingSystem.SetStationManager(sys.stationManager)` (immediately after `sys.craftingSystem` is constructed at `cmd/client/handlers.go:1036`) and `sys.companionLoyaltySys.SetPetHomeProvider(sys.petHomeManager)` (after `sys.companionLoyaltySys` is constructed at `cmd/client/init_versions.go:63`). For `guildHousingManager`, either create a client-local `V9ValidationService` or expose the housing permission check directly. Validate with `go build ./cmd/client/ && go test ./pkg/integration/housing_crafting/ ./pkg/integration/companion_housing/`.
+- [ ] **M1 — Session Token Comparison Is Not Constant-Time** — `pkg/network/federation/auth.go:80` — `ValidateToken` looks up tokens via Go map access: `sessionToken, exists := am.tokens[token]`. Go map string key lookup performs hashing followed by equality comparison (`==`), which is not guaranteed to be constant-time — particularly the equality step after hash collision. A remote attacker making many requests can exploit timing variance to enumerate valid token prefixes. The project already implements `security.ConstantTimeCompare` (`pkg/security/audit.go:1048`) using `crypto/subtle.ConstantTimeCompare`, but it is never called in the token validation path. **Impact**: Token oracle that could accelerate brute-force of short-lived tokens. Low practical risk given 128-bit token entropy, but the existing `ConstantTimeCompare` infrastructure means the fix is trivial. **Remediation**: Store tokens as `HMAC-SHA256(secret, token)` as the map key, so lookup itself is constant-time; or iterate the token map with `subtle.ConstantTimeCompare` for final equality.
 
-- [ ] **N3 — `sys.choiceTracker` dead object: duplicate of `choiceConsequencesSystem`'s internal tracker** — `cmd/client/init_versions.go:523` — `sys.choiceTracker = choice_consequences.NewChoiceTracker()` creates a standalone `ChoiceTracker` that is never accessed after this line. The active tracker is the one created internally by `engine.NewChoiceConsequencesSystem()` at `pkg/engine/choice_consequences_system.go:21`. Any code calling through `sys.choiceConsequencesSystem.RecordChoice()` writes to the system's internal tracker; `sys.choiceTracker` is permanently empty and orphaned. — **Blocked goal**: None directly blocked, but the duplicate creates confusion and maintenance debt (future developers may attempt to wire systems to the wrong tracker). — **Remediation**: Remove `sys.choiceTracker` from `systemsContainer` and delete the initialization at `cmd/client/init_versions.go:523`. If external code needs direct tracker access, expose `sys.choiceConsequencesSystem.GetTracker()` (add this accessor if not present). Validate with `go build ./cmd/client/ && go vet ./cmd/client/`.
+- [ ] **M2 — No Per-IP Connection Rate Limiting on TCP Acceptor** — `pkg/network/server.go:524–570` — `acceptLoop()` calls `s.listener.Accept()` in a tight loop with no per-IP throttling, SYN backlog tuning, or connection cost. The only gate is `MaxPlayers` (default 32). An attacker from a single IP can open 32 TCP connections, exhausting all player slots and preventing legitimate players from joining. The connections need not be authenticated — simply connecting and holding the TCP session is sufficient. The `validation.RateLimiter` (`pkg/validation/ratelimit.go`) exists but is wired only to chat (`pkg/network/chat/system.go:61`) and trade (`pkg/network/trade/system.go:137`), not to connection establishment. **Impact**: Single-source DoS that denies service to all legitimate players until the attacker's connections are evicted by the idle timeout (default indeterminate). **Remediation**: Track connections per remote IP; reject new connections from IPs that already hold more than N slots (e.g., 2–3 for home users). Add a TCP handshake timeout to evict non-talking connections quickly.
 
-- [ ] **N4 — `sys.guildFleetManager` dead object: duplicate of `guildVehicleSystem`'s internal manager** — `cmd/client/init_versions.go:527` — `sys.guildFleetManager = guild_vehicle.NewFleetManager()` creates a standalone `FleetManager` that is never accessed after this line. The active manager is the one owned by `sys.guildVehicleSystem`, created inside `engine.NewGuildVehicleSystem()` at `pkg/engine/guild_vehicle_system.go:20-26`. `GuildVehicleSystem` already exposes `GetFleetManager()` for external access. The standalone `sys.guildFleetManager` has no fleets, no vehicles, and no membership validator; it is permanently empty. — **Blocked goal**: None directly blocked, but any code that accidentally wires against `sys.guildFleetManager` instead of `sys.guildVehicleSystem.GetFleetManager()` will observe empty state. — **Remediation**: Remove `sys.guildFleetManager` from `systemsContainer` and delete the initialization at `cmd/client/init_versions.go:527`. Update any references to use `sys.guildVehicleSystem.GetFleetManager()`. Validate with `go build ./cmd/client/ && go vet ./cmd/client/`.
+- [ ] **M3 — Federation Session Tokens Transmitted Over Potentially Unencrypted Channel** — `pkg/network/federation/protocol.go:266–289` — `executeTransferRequest` serializes the full transfer request (including `"token"` field) as JSON onto a raw `net.Conn` parameter: `json.NewEncoder(conn).Encode(transferReq)`. The federation handshake (`pkg/network/federation/handshake.go`) uses ed25519 for server identity verification but does not establish an encrypted session. The `net.Conn` passed to `executeTransferRequest` is the raw TCP connection from `net.Dial`. No TLS or AES-GCM wrapper is applied to federation connections after the handshake. **Data flow**: `cmd/server/v4_systems.go:266` → `protocol.TransferPlayer(...)` → `buildTransferRequest(playerID, token, ...)` → `json.NewEncoder(conn).Encode(...)` over plain TCP. **Impact**: A network observer on a peering link between federated servers can capture session tokens and impersonate players on the target server during the token's 1-hour TTL. **Remediation**: Apply TLS or the existing AES-256-GCM layer to federation connections after the ed25519 handshake completes.
 
-- [ ] **N5 — Merchant entities do not receive `GenreComponent`, breaking genre-aware quest reward scaling for merchants** — `pkg/engine/merchant_spawn.go` (entire file) — `SpawnMerchantFromData()` assembles a merchant entity with position, sprite, health, collider, merchant, dialog, and NPC dialog components but never calls `entity.AddComponent(NewGenreComponent(...))`. Enemy entities correctly receive a `GenreComponent` via `addAdvancedComponents()` at `pkg/engine/entity_spawning.go:273-275`. The `objectiveTracker` at `pkg/engine/objective_tracker_system.go:761` reads `entity.GetComponent("genre")` for any entity type when computing quest reward scaling; for merchant entities this call always returns nil and the genre-scaling branch is dead. — **Blocked goal**: Consistent genre-based reward scaling for quest objectives involving merchants. — **Remediation**: Near the end of `SpawnMerchantFromData()` in `pkg/engine/merchant_spawn.go`, add `merchant.AddComponent(NewGenreComponent(params.GenreID))`. Use the `params.GenreID` value already available at the call site. Validate with `go test ./pkg/engine/`.
+- [ ] **M4 — Stub Profanity List Active in Production** — `pkg/validation/chat.go:196–205` — `NewChatValidator()` (the default constructor called at `pkg/network/chat/system.go:45`) loads a 3-word stub list: `["badword1", "badword2", "offensive"]`. This list provides effectively no content moderation. The code and its documentation acknowledge this explicitly, but no startup check, warning log at `Warn` level or above, nor configuration enforcement distinguishes a production deployment from a development one. **Impact**: Players can send any harmful or abusive language through the chat system without server-side filtering. **Remediation**: Log a `logrus.Warn` at startup if `len(profanityList) < threshold` (e.g., < 50 words); provide a `--profanity-list` server flag; consider refusing to start in production without an explicit override acknowledging the stub list.
+
+- [ ] **M5 — `LoadWordListFromFile` Has No Path Boundary Check** — `pkg/network/profanity.go:203–204` — `LoadWordListFromFile(filepath string)` calls `os.Open(filepath)` directly with the caller-supplied path. No validation that the path resides within an expected configuration directory is performed. If this function is ever wired to a network-accessible config option (e.g., a server admin API or mod parameter), a directory traversal (`../../etc/passwd`) would allow arbitrary file read. Currently called only from trusted operator context, making this a LOW-MEDIUM latent risk. **Remediation**: Apply `filepath.Abs` + prefix check against an expected config directory before calling `os.Open`, mirroring the pattern in `pkg/modding/sandbox.go:100–117`.
 
 ---
 
 ### LOW
 
-- [ ] **N6 — `NewBlendedGenreComponent` defined and exported but has zero callers** — `pkg/engine/genre_component.go:36` — `NewBlendedGenreComponent(primaryGenre string, secondaryGenres []string, blendRatio float64)` is exported and fully implemented but is never called in `cmd/`, `pkg/`, or any example. The multi-genre blending data model exists (fields `SecondaryGenres []string` and `BlendRatio float64` on `GenreComponent`), but the feature is never activated at runtime. — **Blocked goal**: None at this scope; planned multi-genre worlds (e.g., horror + cyberpunk blend) are not yet connected. — **Remediation**: Either (a) wire `NewBlendedGenreComponent` where multi-genre `GenerationParams` are detected (check `params.Custom["secondary_genres"]` in spawn helpers), or (b) lower-case to `newBlendedGenreComponent` to signal it is internal API awaiting future integration. Validate with `go build ./... && go vet ./...`.
+- [ ] **L1 — Internal Error Details Pushed to Error Channel** — `pkg/network/server.go:732–734` — `readMessageLength` pushes `fmt.Errorf("player %d message too large: %d bytes", client.playerID, msgLen)` onto the `s.errors` channel. If the consumer of this channel logs errors verbosely and those logs are accessible to players (e.g., via the unauthenticated `/status` endpoint or exposed log aggregation), internal message sizes and player IDs are disclosed. **Remediation**: Use structured error types that separate internal diagnostic fields from user-visible messages; avoid embedding raw byte counts in error strings pushed to observable channels.
 
-- [ ] **N7 — `tradeRouteManager.Stop()` never called on client shutdown** — `cmd/client/init_versions.go:644-645` — `sys.tradeRouteManager.Start()` launches a background goroutine (via `sync.Once`) with a `10 * time.Second` ticker. The goroutine runs until `Stop()` is called. No `Stop()` call exists in the client's shutdown or cleanup path (`cmd/client/handlers.go:3576-3602`). On clean exit this goroutine is leaked; on test runs with `t.Cleanup` it can cause `go test -race` false positives. The server correctly stops the manager (per `cmd/server/main.go:468`). — **Blocked goal**: None at stated goal level; this is a resource management issue. — **Remediation**: Do not add `defer sys.tradeRouteManager.Stop()` inside the short-lived initialization helper that calls `Start()`, because that would run as soon as setup returns and stop trade routes during gameplay. Instead, stop the manager from a long-lived shutdown scope (for example, defer it from `main()` after the full client setup succeeds) or register `sys.tradeRouteManager.Stop` in the explicit client cleanup/shutdown hook, such as the cleanup function returned by `startEmbeddedServer()`. `Stop()` is idempotent. Validate with `go test -race ./cmd/client/... ./pkg/integration/trade_routes/`.
+- [ ] **L2 — Default World Seed is Hardcoded and Predictable** — `cmd/server/main.go:60` — The default `--seed` flag is `12345`. Every server launched without explicitly setting a seed generates an identical world. While seed sharing is intentional for reproducibility, operators may not realize their "default" server shares a layout with every other default deployment, potentially enabling map-based exploits if terrain is strategically valuable (resource locations, choke points). **Remediation**: Document this in the server startup help text; consider defaulting to `0` which triggers a `crypto/rand`-seeded world, with an explicit flag required to use a fixed seed.
 
-- [ ] **N8 — OpenXR VR adapters remain documented stubs** — `pkg/engine/vr_openxr_adapters.go:56-230` (build tag `//go:build vr && !js`) — 16 `TODO(vr-sdk):` markers describe the OpenXR SDK calls needed. All methods return zero values or mock responses. `cmd/client/init_versions.go:582,594` unconditionally uses `NewStubHeadsetAdapter`/`NewStubControllerAdapter` regardless of whether the `vr` build tag is set. README explicitly states "experimental with mock adapters only; no hardware SDK integration." — **Blocked goal**: None at stated goal level — README marks VR as explicitly experimental. — **Remediation**: Tracked in ROADMAP.md Priority 4. When a stable Go OpenXR binding becomes available, implement each `TODO(vr-sdk)` stub per the inline pseudocode and switch `init_versions.go:582,594` to construct OpenXR adapters when `--vr` is set without `--force-stub`. No action required until SDK is available.
+- [ ] **L3 — `math/rand` Seeded from `time.Now().UnixNano()` in Client** — `cmd/client/util.go:185` — When no explicit seed is provided, the client generates one via `rand.New(rand.NewSource(nowNano)).Int63()` where `nowNano = time.Now().UnixNano()`. This is used only for world generation (non-security), but the pattern of `time`-seeded `math/rand` adjacent to security-sensitive code (tokens, nonces) warrants documentation to prevent accidental reuse. **Remediation**: Add a comment at the call site confirming this RNG is exclusively for world generation, not for security tokens.
 
----
+- [ ] **L4 — Settings and Save Files Written with World-Readable Permissions** — `pkg/engine/settings.go:187`, `pkg/world/persistence.go:437`, `pkg/rendering/ui/settings.go:637` — Files are created with `0o644`, making them readable by all local users. On multi-user systems, settings files may contain server addresses, keybindings, and world state. **Remediation**: Use `0o600` for user-specific configuration and save files; use `0o640` if group access is required.
 
-## Re-verification of Prior GAPS.md Findings
-
-All gaps from the prior `GAPS.md` (dated 2026-04-21) were re-verified against the current HEAD. Status:
-
-| Prior Gap | Prior Severity | Current Status | Evidence |
-|-----------|---------------|----------------|----------|
-| G1 — Story generator `"postapocalyptic"` key | HIGH | **CLOSED** | `generator.go:21,30` and all `timeline.go` case labels now use `"postapoc"`. Story tests updated. |
-| G2 — `AnimationSyncManager` receive path unwired | HIGH | **CLOSED** | `pkg/network/client.go:726` calls `mgr.BufferState(pkt)`; `pkg/engine/animation_system.go:853` calls `DrainRemoteState`. Both paths fully wired. |
-| G3 — Guild vehicle formation physics + `FleetID` sync | MEDIUM | **CLOSED** | `GuildVehicleSystem.Update()` (engine/guild_vehicle_system.go:35–105) runs two-pass formation steering; `SetVehicleSyncer(sys)` wired at construction. |
-| G4 — `ArchaeologyGenerator` etc. never called | MEDIUM | **CLOSED** | `cmd/client/util.go:2474,2505,2535` now calls all three generators. |
-| G5 — `StoryJournalUI` never instantiated | MEDIUM | **CLOSED** | `cmd/client/handlers.go:3371-3372` instantiates `NewStoryJournalUI`; keybind toggle and draw path wired. |
-| G6 — `GenreComponent` only on player | MEDIUM | **PARTIALLY CLOSED** | Enemies now get `GenreComponent` via `entity_spawning.go:275`. Merchants still excluded → see **N5** above. |
-| G7 — `equipment_durability_particle_system.go` (`//go:build ignore`) | LOW | **CLOSED** | File deleted; specialised variants fully cover the use case. |
-| G8 — `InteractWithEnvironmentNode` orphan | LOW | **CLOSED** | `behavior_tree_archetypes.go:222` now composes the node in crafter/gatherer behavior trees. |
-| G9 — `NewHelpSystemWithSize` effectively private API | LOW | **CLOSED** | Renamed to unexported `newHelpSystemWithSize` (`help_system.go:53`). |
-| G10 — OpenXR VR stubs | LOW | **OPEN → N8** | Unchanged; ROADMAP Priority 4. |
+- [ ] **L5 — `security.ConstantTimeCompare` Logs at Debug Level** — `pkg/security/doc.go:129–140`, `pkg/security/audit.go:1048–1053` — The documentation acknowledges that `ConstantTimeCompare` adds a `logrus.Debug` log call. The comment correctly notes that `crypto/subtle.ConstantTimeCompare` handles the comparison before the log is reached, so the constant-time property is preserved. However, the debug log emitting comparison metadata could aid an attacker who has log access in confirming which comparison branch executed. **Remediation**: Remove the log statement from `ConstantTimeCompare` entirely, or restrict it to trace-level output that is never enabled in production builds.
 
 ---
 
 ## False Positives Considered and Rejected
 
 | Candidate Finding | Reason Rejected |
-|-------------------|----------------|
-| `memprofile.PrintProfile` uses `fmt.Printf` | Intentional CLI/debug output per comment at `profile.go:195`. Correct channel for a profiling utility. |
-| `NewMockHeadset`/`NewMockController` in VR files | Production fallback path for offline/CI use; intentionally used by `init_versions.go:582,594`. Not dead code. |
-| `choiceConsequencesSystem` ECS system fields | Fully registered at `handlers.go:2282` and wired. Not a gap. |
-| `guildVehicleSystem` ECS system | Registered at `handlers.go:2283`; internal FleetManager is active. Not a gap. |
-| `tradeRouteManager` on server (Start + AddSystem) | The wrapper calls `UpdateRoutes()` on every ECS tick _in addition_ to the background timer goroutine. Client lacks the wrapper; its routes are updated only on the 10s timer. The gap is the missing `Stop()`, not the missing wrapper (background timer is sufficient for solo play). |
-| `RouteManager.SetPriceUpdateHandler` not called on client | The federated market pricing system (`worldEconomySystem`) is registered via `AddSystem` on the client. Cross-checking prices between solo-play caravans and the local economy is not a stated goal for the single-player path. |
-| Interfaces with single implementations | The ECS component / adapter interface pattern intentionally uses one real + one mock implementation. Not a gap. |
-| Terrain `genre_mapping.go:128` uses `"postapoc"` | The genre_mapping file is correct. Only `composite.go`, `grammar.go` (which accepts both), and `lsystem.go` (which accepts both) deviate. `grammar.go` and `lsystem.go` accept multi-alias cases so they are not broken. Only `composite.go:227` is a pure single-key map that silently misses `"postapoc"`. |
-| `pkg/procgen/terrain/grammar.go:250` and `lsystem.go:476` | Both use compound case labels (`"post-apocalyptic", "postapocalyptic"`) that cover multiple spellings. They do NOT include `"postapoc"`, but the grammar generator is invoked via `CompositeGenerator.selectGenerators`, which itself falls back for `"postapoc"`. The root miss is `composite.go:227`. Flagged as part of N1 rather than separate findings. |
-| `sys.stationManager` fields not in `AddSystem` | `StationManager` is not an ECS system; it is a service object injected into ECS systems. Not being added to `World.AddSystem()` is correct by design. The gap is the missing injection call. |
-| `pkg/procgen/dialog/corpus.go:29` accepts both keys | `case "postapoc", "postapocalyptic"`: — this file correctly handles both spellings. Not a gap. |
+|-------------------|-----------------|
+| `math/rand` in `pkg/engine/*`, `pkg/audio/*`, `pkg/rendering/*`, `pkg/procgen/*` | All uses are for deterministic procedural generation seeded from the world seed. Not security-relevant. |
+| `math/rand` in `pkg/network/federation/retry.go` | Seeded from `cryptoRandSeed()` (uses `crypto/rand`, falls back to time only on `crypto/rand` failure). Used for retry jitter, not security tokens. |
+| `math/rand` in `cmd/client/util.go` | Used for world seed generation only, not for cryptographic purposes. |
+| `os.Getenv("LOG_LEVEL")` etc. | Reads only logging configuration; no secret values expected or used. |
+| `filepath.Join` in `pkg/world/persistence.go`, `pkg/saveload/`, `pkg/engine/settings.go` | Paths are composed from server-controlled base directories + sanitized subcomponents. No user-supplied path components reach these calls directly. |
+| `json:"-"` tagged fields (e.g., `pkg/world/persistence.go:27`) | Correctly excludes non-serializable types (mutexes, function values, runtime images) from JSON. Not a finding. |
+| DH private key in `pkg/network/crypto.go` | Key is ephemeral (`crypto/rand`-generated per session), held only in memory, never written to disk. |
+| `pkg/security/audit.go` running a self-audit at startup | The audit is informational and does not gate execution on results unless the operator enables the `--security-audit` flag. This is by design. |
+| Token lookup via map in `ValidateToken` | Listed as M1 — not rejected, but severity assessed as MEDIUM given 128-bit entropy tokens make brute-force impractical; timing attack would require many requests measurable against network jitter. |
+| Federation `generateToken()` (UUID v4) | Uses `crypto/rand` correctly; UUID format is applied after random byte generation. Entropy is 128 bits before version/variant nibble masking (122 bits effective). Adequate for session tokens. |
+| Compression `LimitReader` in `pkg/network/compression.go:86` | Decompression bomb protection is correctly implemented with `io.LimitReader(reader, MaxDecompressedSize+1)`. Not a finding. |
+| Modding sandbox `validateStringValue` pattern list | The mod system is JSON-only (no executable code). The pattern list (`eval(`, `<script`, etc.) is defense-in-depth; the real isolation is the absence of any script interpreter. |
+| `os.MkdirAll(l.config.ModsDirectory, 0o755)` | Creates a server-controlled directory path, not a user-supplied path. |

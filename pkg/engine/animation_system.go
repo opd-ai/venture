@@ -833,6 +833,9 @@ func (s *AnimationSystem) regenerateFramesIfDirty(entity *Entity, animComp *Anim
 	s.regenCount++
 	s.stats.CompletedRegen++
 	s.logGenerationResult(entity, animComp)
+	// animComp.FrameIndex is the correct value here: regenerateSprite always
+	// regenerates from FrameIndex 0 when a state transition occurs, so it
+	// reflects the first frame of the newly-generated state.
 	s.notifyStateChange(entity.ID, animComp.CurrentState, animComp.FrameIndex)
 
 	return nil

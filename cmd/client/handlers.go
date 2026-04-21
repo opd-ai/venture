@@ -796,7 +796,9 @@ func (sys *systemsContainer) scheduleLazyInit(game *engine.EbitenGame, logger *l
 						clientLogger.WithError(err).Warn("animation send: failed to encode state packet")
 						return
 					}
-					_ = netClient.SendInput(network.AnimationInputType, data)
+					if err := netClient.SendInput(network.AnimationInputType, data); err != nil {
+						clientLogger.WithError(err).Warn("animation send: failed to send animation state to server")
+					}
 				})
 				clientLogger.Debug("animation sync send path wired to network client")
 			}

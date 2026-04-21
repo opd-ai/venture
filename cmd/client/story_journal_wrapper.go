@@ -12,9 +12,8 @@ import (
 //
 // Rendering strategy: Render() on *ui.StoryJournalUI allocates a fresh *image.RGBA
 // on every call, so pointer-equality caching would never hit. Instead, we track a
-// dirty flag that is set whenever the journal is first shown (Toggle) or when
-// MarkDirty is called externally (e.g., after navigation key input). Draw only
-// re-uploads to the GPU when dirty is true, keeping per-frame cost to a blitI.
+// dirty flag that is set whenever the journal is first shown (Toggle). Draw only
+// re-uploads to the GPU when dirty is true, keeping per-frame cost to a blit.
 type storyJournalWrapper struct {
 	inner     *ui.StoryJournalUI
 	visible   bool
@@ -38,11 +37,6 @@ func (w *storyJournalWrapper) Toggle(journal *engine.StoryJournalComponent, worl
 
 // IsVisible reports whether the journal is currently shown.
 func (w *storyJournalWrapper) IsVisible() bool { return w.visible }
-
-// MarkDirty signals that the journal content has changed and the cached texture
-// must be rebuilt on the next Draw call. Call this after navigation key events
-// (NavigateUp, NavigateDown, Back) to keep the display in sync.
-func (w *storyJournalWrapper) MarkDirty() { w.dirty = true }
 
 // Draw renders the journal. screen must be *ebiten.Image; mismatched types are silently ignored.
 // Only re-renders from CPU when dirty is true; otherwise blits the cached texture, keeping

@@ -18,6 +18,11 @@ static UITextField *gHiddenTextField = nil;
 // showIOSKeyboard creates a hidden UITextField (if not yet present), attaches it
 // to the root view controller's view, and calls becomeFirstResponder to trigger
 // the UIKit on-screen keyboard. Runs on the main queue for thread safety.
+//
+// The text field is positioned far off-screen (−10000, −10000) to avoid any
+// hit-testing or layout side effects. Alpha is set to 0.01 instead of 0.0 because
+// UIKit skips firstResponder handling for views with alpha==0, which would prevent
+// the keyboard from appearing.
 void showIOSKeyboard(void) {
     dispatch_async(dispatch_get_main_queue(), ^{
         UIWindow *window = [UIApplication sharedApplication].keyWindow;
@@ -25,7 +30,9 @@ void showIOSKeyboard(void) {
         UIViewController *rootVC = window.rootViewController;
         if (!rootVC) return;
         if (!gHiddenTextField) {
-            gHiddenTextField = [[UITextField alloc] initWithFrame:CGRectMake(-1, -1, 1, 1)];
+            // Position far off-screen to avoid interfering with layout/hit-testing.
+            gHiddenTextField = [[UITextField alloc] initWithFrame:CGRectMake(-10000, -10000, 1, 1)];
+            // 0.01 (not 0.0): UIKit skips firstResponder for fully-transparent views.
             gHiddenTextField.alpha = 0.01;
             gHiddenTextField.autocorrectionType = UITextAutocorrectionTypeNo;
             gHiddenTextField.autocapitalizationType = UITextAutocapitalizationTypeNone;

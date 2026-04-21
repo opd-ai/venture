@@ -593,6 +593,7 @@ type systemsContainer struct {
 	voiceAudioSystem   *engine.VoiceAudioSystem   // Voice audio input/output processing
 	baseAudioManager   *audio.Manager             // Core audio manager with voice initialization support
 	networkClient      interface{}                 // Network client reference for deferred voice transport wiring
+	animSyncMgr        *network.AnimationSyncManager // AnimationSyncManager for deferred network wiring
 
 	// VR Systems (AUDIT.md Task 7)
 	// Gap: VR systems implemented but never initialized with hardware detection
@@ -675,6 +676,7 @@ func initializeCoreSystems(game *engine.EbitenGame, logger *logrus.Logger, clien
 		// animation state synchronisation in multiplayer mode.
 		animSyncMgr := network.NewAnimationSyncManager()
 		sys.animationSystem.SetSyncManager(animSyncMgr)
+		sys.animSyncMgr = animSyncMgr
 		sys.equipmentVisualSystem = engine.NewEquipmentVisualSystem(sys.spriteGenerator)
 		clientLogger.WithField("maxSize", effectiveSpriteCacheMax).Debug("sprite & animation systems initialized")
 	}()
@@ -768,6 +770,39 @@ func (sys *systemsContainer) scheduleLazyInit(game *engine.EbitenGame, logger *l
 		// Wire voice transport after audio is ready (AUDIT.md Gap 1: VoiceTransport never wired)
 		// Must happen after initializeAudioSystem sets sys.baseAudioManager
 		initializeVoiceTransport(sys, sys.networkClient, clientLogger)
+
+		// Wire animation sync receive path: feed inbound animation packets from the
+		// network client into the jitter buffer so remote-player animations play back
+		// smoothly under high-latency conditions.
+		if sys.animSyncMgr != nil {
+			if ar, ok := sys.networkClient.(network.AnimationReceiver); ok {
+				ar.SetAnimationSyncManager(sys.animSyncMgr)
+				clientLogger.Debug("animation sync receive path wired to network client")
+			}
+		}
+
+		// Wire animation state send path: when the local player's animation state
+		// changes, encode the packet and send to the server for relay to other clients.
+		if sys.animationSystem != nil && sys.networkClient != nil {
+			if netClient, ok := sys.networkClient.(network.ClientConnection); ok {
+				sys.animationSystem.SetStateSender(func(entityID uint64, state engine.AnimationState, frameIdx int) {
+					pkt := network.AnimationStatePacket{
+						EntityID:   entityID,
+						State:      state,
+						FrameIndex: frameIdx,
+					}
+					data, err := pkt.Encode()
+					if err != nil {
+						clientLogger.WithError(err).Warn("animation send: failed to encode state packet")
+						return
+					}
+					if err := netClient.SendInput(network.AnimationInputType, data); err != nil {
+						clientLogger.WithError(err).Warn("animation send: failed to send animation state to server")
+					}
+				})
+				clientLogger.Debug("animation sync send path wired to network client")
+			}
+		}
 
 		// Phase 2: Environmental systems (parallel - weather, hazards, etc.)
 		var wg sync.WaitGroup
@@ -3050,6 +3085,24 @@ func connectAdvancedUIComponents(game *engine.EbitenGame, inputSystem *engine.In
 	if game.HousingUI != nil {
 		inputSystem.SetHousingUI(game.HousingUI)
 	}
+
+	// Phase 30 (AUDIT.md G5): Wire story journal toggle to N key.
+	if game.StoryJournalUI != nil {
+		if err := inputSystem.SetJournalCallback(func() {
+			var journal *engine.StoryJournalComponent
+			if game.PlayerEntity != nil {
+				if raw, ok := game.PlayerEntity.GetComponent("storyjournal"); ok {
+					journal, _ = raw.(*engine.StoryJournalComponent)
+				}
+			}
+			game.StoryJournalUI.Toggle(journal, game.World)
+		}); err != nil {
+			logrus.WithFields(logrus.Fields{
+				"system": "input",
+				"error":  err,
+			}).Warn("failed to set story journal callback")
+		}
+	}
 }
 
 func connectDialogUI(game *engine.EbitenGame, inputSystem *engine.InputSystem, player *engine.Entity, clientLogger *logrus.Entry) {
@@ -3312,6 +3365,13 @@ func initializeStoryAndDialogUI(game *engine.EbitenGame, player *engine.Entity, 
 
 	if *verbose {
 		clientLogger.Info("dialog UI initialized (D key to toggle with NPCs)")
+	}
+
+	// Phase 30 (AUDIT.md G5): Instantiate story journal UI (N key to toggle).
+	journalInner := ui.NewStoryJournalUI(0, 0, *width, *height, *genreID)
+	game.StoryJournalUI = &storyJournalWrapper{inner: journalInner}
+	if *verbose {
+		clientLogger.Info("story journal UI initialized (N key to toggle)")
 	}
 }
 

@@ -2468,6 +2468,98 @@ func spawnStoryFragments(world *engine.World, terrainMap *terrain.Terrain, seed 
 	return spawned, nil
 }
 
+// spawnArchaeologicalSites generates and spawns an archaeological site entity (Phase 30).
+// The site is positioned in the terrain using the percentile location from the generator.
+func spawnArchaeologicalSites(world *engine.World, terrainMap *terrain.Terrain, seed int64, params procgen.GenerationParams, logger *logrus.Entry) (int, error) {
+	gen := story.NewArchaeologyGenerator()
+	result, err := gen.Generate(seed, params)
+	if err != nil {
+		return 0, fmt.Errorf("archaeological site generation failed: %w", err)
+	}
+	site, ok := result.(*story.ArchaeologicalSite)
+	if !ok {
+		return 0, fmt.Errorf("archaeological site generator returned invalid type")
+	}
+
+	entity := world.CreateEntity()
+	entity.AddComponent(&engine.PositionComponent{
+		X: site.Location.X * float64(terrainMap.Width) / 100.0,
+		Y: site.Location.Y * float64(terrainMap.Height) / 100.0,
+	})
+	entity.AddComponent(&engine.ArchaeologicalSiteComponent{Site: site})
+	entity.AddComponent(&engine.EbitenSprite{Width: 16, Height: 16, Visible: true, Layer: 4})
+	entity.AddComponent(&engine.ColliderComponent{Width: 16.0, Height: 16.0})
+
+	logger.WithFields(logrus.Fields{
+		"name":  site.Name,
+		"genre": site.Genre,
+		"depth": site.Depth,
+	}).Debug("spawned archaeological site")
+
+	return 1, nil
+}
+
+// spawnTimelines generates and spawns a world-history timeline entity (Phase 30).
+// One entity is placed at the centre of the map to represent the world's history.
+func spawnTimelines(world *engine.World, terrainMap *terrain.Terrain, seed int64, params procgen.GenerationParams, logger *logrus.Entry) (int, error) {
+	gen := story.NewTimelineGenerator()
+	result, err := gen.Generate(seed, params)
+	if err != nil {
+		return 0, fmt.Errorf("timeline generation failed: %w", err)
+	}
+	timeline, ok := result.(*story.Timeline)
+	if !ok {
+		return 0, fmt.Errorf("timeline generator returned invalid type")
+	}
+
+	entity := world.CreateEntity()
+	entity.AddComponent(&engine.PositionComponent{
+		X: float64(terrainMap.Width) / 2.0,
+		Y: float64(terrainMap.Height) / 2.0,
+	})
+	entity.AddComponent(&engine.TimelineComponent{Timeline: timeline})
+	entity.AddComponent(&engine.EbitenSprite{Width: 16, Height: 16, Visible: false, Layer: 4})
+	entity.AddComponent(&engine.ColliderComponent{Width: 16.0, Height: 16.0})
+
+	logger.WithFields(logrus.Fields{
+		"eraCount": len(timeline.Eras),
+	}).Debug("spawned world timeline")
+
+	return 1, nil
+}
+
+// spawnCrossDungeonStories generates and spawns a cross-dungeon narrative entity (Phase 30).
+// One story entity is placed at the centre of the map; its fragments are distributed
+// across dungeon levels through the CrossDungeonStory.Levels slice.
+func spawnCrossDungeonStories(world *engine.World, terrainMap *terrain.Terrain, seed int64, params procgen.GenerationParams, logger *logrus.Entry) (int, error) {
+	gen := story.NewCrossDungeonGenerator()
+	result, err := gen.Generate(seed, params)
+	if err != nil {
+		return 0, fmt.Errorf("cross-dungeon story generation failed: %w", err)
+	}
+	cdStory, ok := result.(*story.CrossDungeonStory)
+	if !ok {
+		return 0, fmt.Errorf("cross-dungeon story generator returned invalid type")
+	}
+
+	entity := world.CreateEntity()
+	entity.AddComponent(&engine.PositionComponent{
+		X: float64(terrainMap.Width) / 2.0,
+		Y: float64(terrainMap.Height) / 2.0,
+	})
+	entity.AddComponent(&engine.CrossDungeonStoryComponent{Story: cdStory})
+	entity.AddComponent(&engine.EbitenSprite{Width: 16, Height: 16, Visible: false, Layer: 4})
+	entity.AddComponent(&engine.ColliderComponent{Width: 16.0, Height: 16.0})
+
+	logger.WithFields(logrus.Fields{
+		"theme":     cdStory.Theme,
+		"fragments": len(cdStory.Fragments),
+		"levelSpan": cdStory.LevelSpan,
+	}).Debug("spawned cross-dungeon story")
+
+	return 1, nil
+}
+
 // parsePaletteOptions parses command-line flags into palette.GenerationOptions (Phase 5.4).
 //
 // COMPLEXITY JUSTIFICATION: High cyclomatic complexity (36) is intentional—exhaustively

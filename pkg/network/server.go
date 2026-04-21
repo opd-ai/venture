@@ -706,6 +706,13 @@ func (s *TCPServer) handleClientReceive(client *clientConnection) {
 			continue
 		}
 
+		// Animation state packets are relayed to all other clients so remote
+		// entities play back jitter-buffered animation via AnimationSyncManager.
+		if cmd != nil && cmd.InputType == AnimationInputType {
+			s.routeAnimationCommand(cmd, client.playerID)
+			continue
+		}
+
 		s.sendCommandToGameLogic(cmd)
 	}
 }
@@ -866,6 +873,54 @@ func (s *TCPServer) routeVoiceCommand(cmd *InputCommand, senderID uint64) {
 	defer s.clientsMu.RUnlock()
 
 	// Assign sequence number once for the broadcast.
+	s.stateMu.Lock()
+	update.SequenceNumber = s.stateSeq
+	s.stateSeq++
+	s.stateMu.Unlock()
+
+	for playerID, client := range s.clients {
+		if playerID == senderID {
+			continue
+		}
+		client.sendStateUpdate(update)
+	}
+}
+
+// routeAnimationCommand relays an animation-state InputCommand to all connected
+// clients except the sender, wrapping the encoded AnimationStatePacket in a
+// StateUpdate carrying an AnimationComponentType component. The server does not
+// decode the packet; it validates the minimum wire size and stamps the EntityID
+// with the connection-bound senderID to prevent spoofing.
+func (s *TCPServer) routeAnimationCommand(cmd *InputCommand, senderID uint64) {
+	if cmd == nil || len(cmd.Data) == 0 {
+		return
+	}
+	// Minimum wire size for an AnimationStatePacket is 20 bytes.
+	// Drop undersized payloads to guard against malformed / exploited messages.
+	const animPacketMinBytes = 20
+	if len(cmd.Data) < animPacketMinBytes {
+		if s.logger != nil {
+			s.logger.WithFields(logrus.Fields{
+				"sender_id":   senderID,
+				"payload_len": len(cmd.Data),
+				"min_len":     animPacketMinBytes,
+			}).Warn("animation routing: dropping undersized animation payload")
+		}
+		return
+	}
+
+	update := &StateUpdate{
+		EntityID: senderID,
+		Priority: PriorityNormal,
+		Components: []ComponentData{{
+			Type: AnimationComponentType,
+			Data: cmd.Data,
+		}},
+	}
+
+	s.clientsMu.RLock()
+	defer s.clientsMu.RUnlock()
+
 	s.stateMu.Lock()
 	update.SequenceNumber = s.stateSeq
 	s.stateSeq++

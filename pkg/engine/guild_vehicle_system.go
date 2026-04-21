@@ -16,20 +16,35 @@ type GuildVehicleSystem struct {
 // NewGuildVehicleSystem creates a new guild vehicle system.
 func NewGuildVehicleSystem(world *World) *GuildVehicleSystem {
 	logger := logrus.WithField("system", "guild_vehicle")
-	return &GuildVehicleSystem{
+	sys := &GuildVehicleSystem{
 		world:   world,
 		manager: guild_vehicle.NewFleetManager(),
 		logger:  logger,
 	}
+	// Wire self as VehicleSyncer so ECS fleet components stay in sync
+	// whenever FleetManager.AddVehicle or RemoveVehicle is called.
+	sys.manager.SetVehicleSyncer(sys)
+	return sys
 }
 
 // Update processes entities with guild vehicle fleet components.
+// Two-pass: first collects leader positions, then applies formation bonuses
+// and proportional steering toward formation target positions.
 func (s *GuildVehicleSystem) Update(entities []*Entity, deltaTime float64) {
+	type member struct {
+		entity    *Entity
+		fleetKey  string
+		fleetComp *guild_vehicle.GuildVehicleFleetComponent
+	}
+
+	// Pass 1: collect leader (slot 0) positions keyed by "guildID/fleetID".
+	leaderPos := make(map[string]*PositionComponent)
+	members := make([]member, 0, len(entities))
+
 	for _, entity := range entities {
 		if !entity.HasComponent("guild_vehicle_fleet") {
 			continue
 		}
-
 		comp, ok := entity.GetComponent("guild_vehicle_fleet")
 		if !ok {
 			continue
@@ -43,8 +58,91 @@ func (s *GuildVehicleSystem) Update(entities []*Entity, deltaTime float64) {
 			continue
 		}
 
-		s.applyFormationBonuses(entity, fleetComp)
+		key := fleetComp.GuildID + "/" + fleetComp.FleetID
+		if fleetComp.FormationPosition == 0 {
+			if pos := entity.GetPosition(); pos != nil {
+				leaderPos[key] = pos
+			}
+		}
+		members = append(members, member{entity, key, fleetComp})
 	}
+
+	// Pass 2: apply formation bonuses and steer followers toward their slots.
+	// Cache GetFormationOffsets per fleet key to avoid O(fleetSize²) calls.
+	offsetCache := make(map[string][]guild_vehicle.FormationOffset)
+
+	for _, m := range members {
+		s.applyFormationBonuses(m.entity, m.fleetComp)
+
+		if m.fleetComp.FormationPosition <= 0 {
+			continue // leader needs no steering
+		}
+		lp, hasLeader := leaderPos[m.fleetKey]
+		if !hasLeader {
+			continue
+		}
+		offsets, cached := offsetCache[m.fleetKey]
+		if !cached {
+			offsets = s.manager.GetFormationOffsets(m.fleetComp.GuildID, m.fleetComp.FleetID)
+			offsetCache[m.fleetKey] = offsets
+		}
+		slot := m.fleetComp.FormationPosition
+		if slot >= len(offsets) {
+			continue
+		}
+		off := offsets[slot]
+		targetX := lp.X + off.OffsetX
+		targetY := lp.Y + off.OffsetY
+
+		vel := m.entity.GetVelocity()
+		currPos := m.entity.GetPosition()
+		if vel == nil || currPos == nil {
+			continue
+		}
+		// Use additive, deltaTime-scaled steering so formation forces blend with
+		// existing momentum instead of overriding it abruptly.
+		const steerStrength = 4.0
+		vel.VX += (targetX - currPos.X) * steerStrength * deltaTime
+		vel.VY += (targetY - currPos.Y) * steerStrength * deltaTime
+	}
+}
+
+// SyncVehicleFleetComponent attaches or updates the GuildVehicleFleetComponent on
+// the entity identified by vehicleID and mirrors FleetID onto VehicleComponent.
+// Implements guild_vehicle.VehicleSyncer.
+func (s *GuildVehicleSystem) SyncVehicleFleetComponent(vehicleID uint64, comp *guild_vehicle.GuildVehicleFleetComponent) {
+	entity, ok := s.world.GetEntity(vehicleID)
+	if !ok {
+		s.logger.WithField("vehicleID", vehicleID).Warn("SyncVehicleFleetComponent: entity not found")
+		return
+	}
+	entity.AddComponent(comp)
+	if raw, exists := entity.GetComponent("vehicle"); exists {
+		if v, ok := raw.(*VehicleComponent); ok {
+			v.FleetID = comp.FleetID
+		}
+	}
+	s.logger.WithFields(logrus.Fields{
+		"vehicleID": vehicleID,
+		"guildID":   comp.GuildID,
+		"fleetID":   comp.FleetID,
+	}).Debug("fleet component synced to vehicle entity")
+}
+
+// ClearVehicleFleetComponent removes the GuildVehicleFleetComponent from the entity
+// and clears VehicleComponent.FleetID. Implements guild_vehicle.VehicleSyncer.
+func (s *GuildVehicleSystem) ClearVehicleFleetComponent(vehicleID uint64) {
+	entity, ok := s.world.GetEntity(vehicleID)
+	if !ok {
+		return
+	}
+	entity.RemoveComponent("guild_vehicle_fleet")
+	if raw, exists := entity.GetComponent("vehicle"); exists {
+		if v, ok := raw.(*VehicleComponent); ok {
+			v.FleetID = ""
+		}
+	}
+	s.logger.WithField("vehicleID", vehicleID).Debug("fleet component cleared from vehicle entity")
 }
 
 // applyFormationBonuses applies fleet formation bonuses to vehicle combat stats.

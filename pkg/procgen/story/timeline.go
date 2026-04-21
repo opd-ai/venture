@@ -237,7 +237,7 @@ func (g *TimelineGenerator) getEraTemplates(genreID string) []string {
 			"Digital Divide",
 			"Neo-Feudalism",
 		}
-	case "postapocalyptic":
+	case "postapoc":
 		return []string{
 			"Before the Fall",
 			"The Cataclysm",
@@ -358,7 +358,7 @@ func (g *TimelineGenerator) getFoundationSubjects(genreID string) []string {
 		return []string{"the Cult", "the Dark Temple", "the Cursed Monastery", "the Blood Circle"}
 	case "cyberpunk":
 		return []string{"the Corporation", "the Underground Network", "the Mega-City", "the Data Collective"}
-	case "postapocalyptic":
+	case "postapoc":
 		return []string{"the Settlement", "the Trading Post", "the Survivor Enclave", "the Bunker City"}
 	default:
 		return []string{"the City", "the Empire", "the Alliance", "the Federation"}
@@ -375,7 +375,7 @@ func (g *TimelineGenerator) getWarNames(genreID string) []string {
 		return []string{"The Purge", "Night of Blood", "The Cleansing", "War Against Darkness"}
 	case "cyberpunk":
 		return []string{"The Network War", "Corporate Takeover", "Data Revolution", "The Great Hack"}
-	case "postapocalyptic":
+	case "postapoc":
 		return []string{"The Resource War", "Wasteland Conflict", "Battle for Water", "Survivor's War"}
 	default:
 		return []string{"The Great War", "Civil Conflict", "The Rebellion", "Border Wars"}
@@ -392,7 +392,7 @@ func (g *TimelineGenerator) getDiscoveries(genreID string) []string {
 		return []string{"The Book of Shadows", "Gateway to Beyond", "Forbidden Knowledge", "Dark Ritual"}
 	case "cyberpunk":
 		return []string{"Neural Interface", "Digital Consciousness", "Quantum Encryption", "Nanotech"}
-	case "postapocalyptic":
+	case "postapoc":
 		return []string{"Clean Water Source", "Functional Technology", "Radiation Cure", "Safe Zone"}
 	default:
 		return []string{"New Technology", "Lost Knowledge", "Ancient Artifact", "Hidden Truth"}
@@ -409,7 +409,7 @@ func (g *TimelineGenerator) getCatastrophes(genreID string) []string {
 		return []string{"The Awakening", "Outbreak of Madness", "The Possession", "Portal Opening"}
 	case "cyberpunk":
 		return []string{"Grid Collapse", "Corporate Massacre", "System Virus", "Mass Data Loss"}
-	case "postapocalyptic":
+	case "postapoc":
 		return []string{"Nuclear Holocaust", "Biological Plague", "Environmental Collapse", "Solar Flare"}
 	default:
 		return []string{"Natural Disaster", "Economic Collapse", "Epidemic", "Invasion"}
@@ -426,7 +426,7 @@ func (g *TimelineGenerator) getRenaissances(genreID string) []string {
 		return []string{"Brief Peace", "Period of Recovery", "Temporary Sanctuary", "False Dawn"}
 	case "cyberpunk":
 		return []string{"Digital Renaissance", "Network Boom", "Tech Revolution", "Cultural Awakening"}
-	case "postapocalyptic":
+	case "postapoc":
 		return []string{"Rebuilding Era", "New Growth", "Hope Returns", "Reconstruction Period"}
 	default:
 		return []string{"Renaissance", "Cultural Revolution", "Age of Progress", "Enlightenment"}
@@ -443,7 +443,7 @@ func (g *TimelineGenerator) getCollapses(genreID string) []string {
 		return []string{"Final Descent", "Lost to Darkness", "End of Hope", "Complete Corruption"}
 	case "cyberpunk":
 		return []string{"Corporate Fall", "Network Shutdown", "System Failure", "City Abandonment"}
-	case "postapocalyptic":
+	case "postapoc":
 		return []string{"Settlement Lost", "Enclave Overrun", "Resource Depletion", "Final Exodus"}
 	default:
 		return []string{"Civilization Fall", "Empire Collapse", "Social Breakdown", "System Failure"}
@@ -460,7 +460,7 @@ func (g *TimelineGenerator) getContactEvents(genreID string) []string {
 		return []string{"First Sighting", "Contact with Beyond", "Entity Appearance", "Otherworldly Encounter"}
 	case "cyberpunk":
 		return []string{"AI First Communication", "Network Connection", "Corporate Contact", "Underground Alliance"}
-	case "postapocalyptic":
+	case "postapoc":
 		return []string{"Survivor Contact", "Trader Discovery", "Settlement Found", "Radio Contact"}
 	default:
 		return []string{"First Meeting", "New Alliance", "Discovery", "Initial Contact"}
@@ -477,7 +477,7 @@ func (g *TimelineGenerator) getRituals(genreID string) []string {
 		return []string{"Blood Ritual", "Dark Ceremony", "Summoning Circle", "Unholy Rite"}
 	case "cyberpunk":
 		return []string{"System Initialization", "Network Baptism", "Corporate Merger", "Data Ceremony"}
-	case "postapocalyptic":
+	case "postapoc":
 		return []string{"Remembrance Day", "Founding Ceremony", "Hope Festival", "Survivor's Oath"}
 	default:
 		return []string{"Grand Ceremony", "Sacred Rite", "Royal Coronation", "Religious Festival"}
@@ -529,7 +529,7 @@ func (g *TimelineGenerator) getFactionPrefixes(genreID string) []string {
 		return []string{"Cursed", "Blood", "Shadow", "Twisted", "Damned", "Forsaken"}
 	case "cyberpunk":
 		return []string{"Mega", "Cyber", "Neo", "Digital", "Corporate", "Underground"}
-	case "postapocalyptic":
+	case "postapoc":
 		return []string{"Wasteland", "Survivor", "Raider", "Bunker", "Scavenger", "Nomad"}
 	default:
 		return []string{"First", "Grand", "High", "Imperial", "Free", "United"}
@@ -546,7 +546,7 @@ func (g *TimelineGenerator) getFactionSuffixes(genreID string) []string {
 		return []string{"Cult", "Circle", "Coven", "Sect", "Order", "Brotherhood"}
 	case "cyberpunk":
 		return []string{"Corporation", "Syndicate", "Network", "Collective", "Coalition", "Cartel"}
-	case "postapocalyptic":
+	case "postapoc":
 		return []string{"Tribe", "Gang", "Enclave", "Settlement", "Clan", "Band"}
 	default:
 		return []string{"Nation", "State", "Republic", "Kingdom", "Alliance", "Coalition"}
@@ -574,7 +574,7 @@ func (g *TimelineGenerator) getLocationNames(genreID string) []string {
 		return []string{"Manor", "Asylum", "Cemetery", "Mansion", "Catacombs", "Ruins"}
 	case "cyberpunk":
 		return []string{"District", "Level", "Sector", "Block", "Zone", "Quarter"}
-	case "postapocalyptic":
+	case "postapoc":
 		return []string{"Ruins", "Wasteland", "Bunker", "Settlement", "Deadzone", "Shelter"}
 	default:
 		return []string{"City", "Town", "Village", "Port", "Capital", "Fortress"}

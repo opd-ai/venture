@@ -324,7 +324,7 @@ func (g *CrossDungeonGenerator) getZonePrefixes(genreID string) []string {
 		return []string{"Haunted", "Cursed", "Twisted", "Forsaken", "Damned", "Corrupted"}
 	case "cyberpunk":
 		return []string{"Sub-Level", "Underground", "Lower", "Deep", "Hidden", "Secret"}
-	case "postapocalyptic":
+	case "postapoc":
 		return []string{"Ruined", "Abandoned", "Desolate", "Collapsed", "Irradiated", "Dead"}
 	default:
 		return []string{"Lower", "Deep", "Unknown", "Hidden", "Forgotten", "Lost"}
@@ -355,7 +355,7 @@ func (g *CrossDungeonGenerator) getCrossDungeonTitleSuffixes(genreID string) []s
 		return []string{"Madness", "the Damned", "Terror", "Nightmares", "the Void"}
 	case "cyberpunk":
 		return []string{"the Grid", "Data", "the Network", "Secrets", "the System"}
-	case "postapocalyptic":
+	case "postapoc":
 		return []string{"Ruin", "the Wasteland", "Survival", "the Dead World", "Despair"}
 	default:
 		return []string{"Mystery", "the Unknown", "Secrets", "the Past", "Truth"}

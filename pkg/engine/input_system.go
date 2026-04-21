@@ -317,6 +317,7 @@ type InputSystem struct {
 	// Roadmap: ROADMAP_V8.md Phase 49.1, 49.4
 	KeyHousing ebiten.Key // H key for housing management (Phase 49.1)
 	KeyGallery ebiten.Key // G key for image gallery (Phase 49.4)
+	KeyJournal ebiten.Key // N key for story journal (Phase 30, AUDIT.md G5)
 
 	// Key bindings - System
 	KeyHelp         ebiten.Key // ESC key for help menu
@@ -389,6 +390,7 @@ type InputSystem struct {
 	// Roadmap: ROADMAP_V8.md Phase 49.1, 49.4
 	onHousingOpen func() // Callback for housing UI toggle (H key) - Phase 49.1
 	onGalleryOpen func() // Callback for gallery UI toggle (G key) - Phase 49.4
+	onJournalOpen func() // Callback for story journal toggle (N key) - Phase 30 AUDIT.md G5
 
 	// Priority 2.3: Game state for input filtering
 	currentState GameState
@@ -440,6 +442,7 @@ func NewInputSystem() *InputSystem {
 		KeyPrestige:  ebiten.KeyP, // Phase 1.3: Prestige UI
 		KeyHousing:   ebiten.KeyH, // Phase 49.1: Housing UI (V8.0)
 		KeyGallery:   ebiten.KeyG, // Phase 49.4: Gallery UI (V8.0)
+		KeyJournal:   ebiten.KeyN, // Phase 30: Story Journal UI (AUDIT.md G5)
 
 		// System keys
 		KeyHelp:         ebiten.KeyEscape,
@@ -886,6 +889,9 @@ func (s *InputSystem) handlePhaseUIShortcuts() {
 	}
 	if inpututil.IsKeyJustPressed(s.KeyGallery) && s.onGalleryOpen != nil {
 		s.onGalleryOpen()
+	}
+	if inpututil.IsKeyJustPressed(s.KeyJournal) && s.onJournalOpen != nil {
+		s.onJournalOpen()
 	}
 }
 
@@ -1787,6 +1793,15 @@ func (s *InputSystem) SetGalleryCallback(callback func()) error {
 		return fmt.Errorf("gallery callback cannot be nil")
 	}
 	s.onGalleryOpen = callback
+	return nil
+}
+
+// SetJournalCallback sets the callback function for toggling the story journal UI (N key).
+func (s *InputSystem) SetJournalCallback(callback func()) error {
+	if callback == nil {
+		return fmt.Errorf("journal callback cannot be nil")
+	}
+	s.onJournalOpen = callback
 	return nil
 }
 

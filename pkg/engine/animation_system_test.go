@@ -751,3 +751,108 @@ func TestAnimationImagePool_BucketSelection(t *testing.T) {
 		}
 	}
 }
+
+// stubSyncer is a minimal AnimationSyncer for testing drainRemoteBuffer.
+type stubSyncer struct {
+	queue map[uint64][]stubSyncerState
+}
+
+type stubSyncerState struct {
+	state    AnimationState
+	frameIdx int
+}
+
+func newStubSyncer() *stubSyncer {
+	return &stubSyncer{queue: make(map[uint64][]stubSyncerState)}
+}
+
+func (s *stubSyncer) ShouldSync(entityID uint64, newState AnimationState) bool        { return false }
+func (s *stubSyncer) RecordSync(entityID uint64, state AnimationState, bytesSent int) {}
+func (s *stubSyncer) DrainRemoteState(entityID uint64) (AnimationState, int, bool) {
+	q := s.queue[entityID]
+	if len(q) == 0 {
+		return AnimationStateIdle, 0, false
+	}
+	v := q[0]
+	s.queue[entityID] = q[1:]
+	return v.state, v.frameIdx, true
+}
+
+func (s *stubSyncer) push(entityID uint64, state AnimationState, frameIdx int) {
+	s.queue[entityID] = append(s.queue[entityID], stubSyncerState{state, frameIdx})
+}
+
+// animTestInputTag is a Component whose Type() returns "input", used to simulate a
+// locally-controlled player entity in drainRemoteBuffer tests.
+type animTestInputTag struct{}
+
+func (s *animTestInputTag) Type() string { return "input" }
+
+// TestAnimationSystem_DrainRemoteBuffer verifies that:
+//  1. A buffered remote state is applied to a remote entity's AnimationComponent.
+//  2. State and frameIdx are updated independently (reviewer suggestion).
+//  3. A local entity (has "input" component) is excluded from draining.
+func TestAnimationSystem_DrainRemoteBuffer(t *testing.T) {
+	spriteGen := sprites.NewGenerator()
+	sys := NewAnimationSystem(spriteGen)
+	stub := newStubSyncer()
+	sys.SetSyncManager(stub)
+
+	world := NewWorld()
+
+	// ---- Remote entity (no "input" component) ----
+	remoteEntity := world.CreateEntity()
+	remoteComp := &AnimationComponent{
+		CurrentState: AnimationStateIdle,
+		FrameIndex:   0,
+	}
+	stub.push(remoteEntity.ID, AnimationStateWalk, 3)
+
+	sys.drainRemoteBuffer(remoteEntity, remoteComp)
+
+	if remoteComp.CurrentState != AnimationStateWalk {
+		t.Errorf("remote entity CurrentState = %v, want Walk", remoteComp.CurrentState)
+	}
+	if remoteComp.FrameIndex != 3 {
+		t.Errorf("remote entity FrameIndex = %d, want 3", remoteComp.FrameIndex)
+	}
+	if !remoteComp.Dirty {
+		t.Error("Dirty should be true after remote state change")
+	}
+
+	// Empty buffer: no further change.
+	remoteComp.Dirty = false
+	sys.drainRemoteBuffer(remoteEntity, remoteComp)
+	if remoteComp.Dirty {
+		t.Error("Dirty should remain false when buffer is empty")
+	}
+
+	// frameIdx updates independently even when state is unchanged.
+	stub.push(remoteEntity.ID, AnimationStateWalk, 7)
+	sys.drainRemoteBuffer(remoteEntity, remoteComp)
+	if remoteComp.FrameIndex != 7 {
+		t.Errorf("remote entity FrameIndex = %d, want 7 (independent update)", remoteComp.FrameIndex)
+	}
+	// State is the same so Dirty should NOT be set again.
+	if remoteComp.Dirty {
+		t.Error("Dirty should not be set when only frameIdx changes")
+	}
+
+	// ---- Local entity (has "input" component) – must NOT be drained ----
+	localEntity := world.CreateEntity()
+	localEntity.AddComponent(&animTestInputTag{})
+	localComp := &AnimationComponent{
+		CurrentState: AnimationStateIdle,
+		FrameIndex:   0,
+	}
+	stub.push(localEntity.ID, AnimationStateRun, 9)
+
+	sys.drainRemoteBuffer(localEntity, localComp)
+
+	if localComp.CurrentState != AnimationStateIdle {
+		t.Errorf("local entity state should be unchanged, got %v", localComp.CurrentState)
+	}
+	if localComp.FrameIndex != 0 {
+		t.Errorf("local entity frameIdx should be unchanged, got %d", localComp.FrameIndex)
+	}
+}

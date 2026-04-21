@@ -217,6 +217,21 @@ func spawnStoryFragmentsWithLogging(w *engine.World, generatedTerrain *terrain.T
 	} else if *verbose {
 		clientLogger.WithField("fragmentCount", fragmentCount).Info("spawned story fragments")
 	}
+
+	// Phase 30 / AUDIT.md G4: ArchaeologicalSiteComponent, TimelineComponent, and
+	// CrossDungeonStoryComponent are defined but no engine system currently queries
+	// or updates them. Spawning inert entities would silently create dead content.
+	// These spawners will be re-enabled once a runtime consumer (DiscoverySystem
+	// integration, excavation progression, or UI hook) is wired.
+	clientLogger.WithFields(logrus.Fields{
+		"system": "spawn_init",
+		"gated": []string{
+			"archaeological_sites",
+			"timelines",
+			"cross_dungeon_stories",
+		},
+		"reason": "runtime consumers for ArchaeologicalSiteComponent, TimelineComponent, and CrossDungeonStoryComponent are not yet wired",
+	}).Debug("skipping inert story-content spawns until engine integration exists")
 }
 
 // spawnEnvironmentalEffects spawns lights, weather effects, and environmental hazards (unconditionally enabled).

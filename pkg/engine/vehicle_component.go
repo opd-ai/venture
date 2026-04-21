@@ -85,6 +85,10 @@ type VehicleComponent struct {
 
 	// CurrentPassengers tracks the number of mounted riders
 	CurrentPassengers int
+
+	// FleetID is the guild fleet this vehicle belongs to. Empty when not in a fleet.
+	// Set by GuildVehicleSystem.SyncVehicleFleetComponent when joining a fleet.
+	FleetID string
 }
 
 // Type returns the component type identifier.

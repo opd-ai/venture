@@ -35,7 +35,7 @@ func checksumFile(filepath string) (string, error) {
 
 // createBackup creates a backup copy of a save file.
 // Returns the backup file path or error.
-func (m *SaveManager) createBackup(name string) (string, error) {
+func (m *SaveManager) createBackup(name string) (backupPath string, err error) {
 	sourcePath := m.getFilePath(name)
 
 	// Check if source file exists
@@ -45,7 +45,7 @@ func (m *SaveManager) createBackup(name string) (string, error) {
 	}
 
 	// Create backup filename (.bak extension)
-	backupPath := sourcePath + ".bak"
+	backupPath = sourcePath + ".bak"
 
 	// Copy file to backup
 	source, err := os.Open(sourcePath)
@@ -60,7 +60,12 @@ func (m *SaveManager) createBackup(name string) (string, error) {
 		return "", errors.FileSystemWrap(err, "failed to create backup file").
 			WithContext("backupPath", backupPath)
 	}
-	defer backup.Close()
+	defer func() {
+		if closeErr := backup.Close(); closeErr != nil && err == nil {
+			err = errors.FileSystemWrap(closeErr, "failed to close backup file").
+				WithContext("backupPath", backupPath)
+		}
+	}()
 
 	if _, err := io.Copy(backup, source); err != nil {
 		return "", errors.FileSystemWrap(err, "failed to copy to backup").

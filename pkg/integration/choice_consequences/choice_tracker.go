@@ -592,14 +592,18 @@ func (ct *ChoiceTracker) SaveTo(w io.Writer) error {
 	}).Debug("Saving choice tracker data to writer")
 
 	gzWriter := gzip.NewWriter(w)
-	defer gzWriter.Close()
 
 	encoder := json.NewEncoder(gzWriter)
 	if err := encoder.Encode(ct.players); err != nil {
+		gzWriter.Close()
 		trackerLogger.WithFields(log.Fields{
 			"error": err.Error(),
 		}).Error("Failed to encode choice tracker data")
 		return fmt.Errorf("failed to encode data: %w", err)
+	}
+
+	if err := gzWriter.Close(); err != nil {
+		return fmt.Errorf("failed to flush gzip writer: %w", err)
 	}
 
 	trackerLogger.WithFields(log.Fields{

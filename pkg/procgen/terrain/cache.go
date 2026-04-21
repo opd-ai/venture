@@ -285,7 +285,15 @@ func (c *TerrainCache) saveToDisk(key string, terrain *Terrain) {
 	if err != nil {
 		return
 	}
-	defer file.Close()
+	defer func() {
+		if err := file.Close(); err != nil {
+			logrus.WithFields(logrus.Fields{
+				"key":      key,
+				"filename": filename,
+				"error":    err.Error(),
+			}).Warn("Failed to close terrain cache file; cache entry may be corrupt")
+		}
+	}()
 
 	encoder := gob.NewEncoder(file)
 	if err := encoder.Encode(entry); err != nil {

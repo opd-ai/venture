@@ -235,26 +235,30 @@ func (bl *BlueprintLibrary) Sort(blueprints []*Blueprint, field SortField, desce
 }
 
 // Export exports a blueprint to a gzip-compressed JSON file.
-func (bp *Blueprint) Export(filepath string) error {
+func (bp *Blueprint) Export(filepath string) (err error) {
 	// Create the file
 	file, err := os.Create(filepath)
 	if err != nil {
 		return fmt.Errorf("failed to create file: %w", err)
 	}
-	defer file.Close()
+	defer func() {
+		if closeErr := file.Close(); closeErr != nil && err == nil {
+			err = fmt.Errorf("failed to close blueprint file: %w", closeErr)
+		}
+	}()
 
 	// Create gzip writer
 	gzipWriter := gzip.NewWriter(file)
-	defer gzipWriter.Close()
+	defer func() {
+		if closeErr := gzipWriter.Close(); closeErr != nil && err == nil {
+			err = fmt.Errorf("failed to flush gzip writer: %w", closeErr)
+		}
+	}()
 
 	// Encode as JSON
 	encoder := json.NewEncoder(gzipWriter)
 	encoder.SetIndent("", "  ")
-	if err := encoder.Encode(bp); err != nil {
-		return fmt.Errorf("failed to encode blueprint: %w", err)
-	}
-
-	return nil
+	return encoder.Encode(bp)
 }
 
 // ImportBlueprint imports a blueprint from a gzip-compressed JSON file.

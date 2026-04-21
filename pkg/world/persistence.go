@@ -131,47 +131,41 @@ func (w *WorldPersistence) prepareSaveDirectory() error {
 }
 
 // writeWorldData writes compressed world state to temporary file.
-func (w *WorldPersistence) writeWorldData(ctx context.Context, tempPath string, state *PersistentWorldState) error {
-	f, err := os.Create(tempPath)
-	if err != nil {
-		return fmt.Errorf("failed to create temp file: %w", err)
+func (w *WorldPersistence) writeWorldData(ctx context.Context, tempPath string, state *PersistentWorldState) (err error) {
+	f, openErr := os.Create(tempPath)
+	if openErr != nil {
+		return fmt.Errorf("failed to create temp file: %w", openErr)
 	}
-
-	var saveErr error
 	defer func() {
-		f.Close()
-		if saveErr != nil {
+		if closeErr := f.Close(); closeErr != nil && err == nil {
+			err = fmt.Errorf("failed to close temp file: %w", closeErr)
+		}
+		if err != nil {
 			os.Remove(tempPath)
 		}
 	}()
 
-	if err := w.checkContextCancellation(ctx); err != nil {
-		saveErr = err
-		return saveErr
+	if err = w.checkContextCancellation(ctx); err != nil {
+		return err
 	}
 
 	gz := gzip.NewWriter(f)
 	encoder := json.NewEncoder(gz)
-	if err := encoder.Encode(state); err != nil {
-		saveErr = fmt.Errorf("failed to encode state: %w", err)
+	if encErr := encoder.Encode(state); encErr != nil {
 		gz.Close()
-		return saveErr
+		err = fmt.Errorf("failed to encode state: %w", encErr)
+		return err
 	}
 
-	if err := w.checkContextCancellation(ctx); err != nil {
-		saveErr = fmt.Errorf("save cancelled before finalize: %w", err)
+	if err = w.checkContextCancellation(ctx); err != nil {
 		gz.Close()
-		return saveErr
+		err = fmt.Errorf("save cancelled before finalize: %w", err)
+		return err
 	}
 
-	if err := gz.Close(); err != nil {
-		saveErr = fmt.Errorf("failed to flush gzip: %w", err)
-		return saveErr
-	}
-
-	if err := f.Close(); err != nil {
-		saveErr = fmt.Errorf("failed to close temp file: %w", err)
-		return saveErr
+	if gzErr := gz.Close(); gzErr != nil {
+		err = fmt.Errorf("failed to flush gzip: %w", gzErr)
+		return err
 	}
 
 	return nil
@@ -271,38 +265,36 @@ func (w *WorldPersistence) rotateBackups() error {
 
 // copyFile copies a file from src to dst with proper error handling.
 // Uses io.Copy to handle partial reads/writes and large files efficiently.
-func copyFile(src, dst string) error {
+func copyFile(src, dst string) (err error) {
 	srcFile, err := os.Open(src)
 	if err != nil {
 		return fmt.Errorf("failed to open source: %w", err)
 	}
 	defer srcFile.Close()
 
-	dstFile, err := os.Create(dst)
-	if err != nil {
-		return fmt.Errorf("failed to create destination: %w", err)
+	dstFile, createErr := os.Create(dst)
+	if createErr != nil {
+		return fmt.Errorf("failed to create destination: %w", createErr)
 	}
-
-	// Ensure cleanup on error
-	var copyErr error
 	defer func() {
-		dstFile.Close()
-		if copyErr != nil {
-			// Remove incomplete destination file on error
+		if closeErr := dstFile.Close(); closeErr != nil && err == nil {
+			err = fmt.Errorf("failed to close destination: %w", closeErr)
+			os.Remove(dst)
+		} else if err != nil {
 			os.Remove(dst)
 		}
 	}()
 
 	// Copy with proper handling of partial writes
-	if _, err := io.Copy(dstFile, srcFile); err != nil {
-		copyErr = fmt.Errorf("failed to copy data: %w", err)
-		return copyErr
+	if _, copyErr := io.Copy(dstFile, srcFile); copyErr != nil {
+		err = fmt.Errorf("failed to copy data: %w", copyErr)
+		return err
 	}
 
 	// Sync to ensure data is written to disk
-	if err := dstFile.Sync(); err != nil {
-		copyErr = fmt.Errorf("failed to sync destination: %w", err)
-		return copyErr
+	if syncErr := dstFile.Sync(); syncErr != nil {
+		err = fmt.Errorf("failed to sync destination: %w", syncErr)
+		return err
 	}
 
 	return nil

@@ -224,7 +224,7 @@ func (g *CompositeGenerator) selectGenerators(genreID string, count int, rng *ra
 		"scifi":           {"city", "maze", "bsp"},
 		"horror":          {"cellular", "maze", "bsp"},
 		"cyberpunk":       {"city", "maze", "bsp"},
-		"postapocalyptic": {"cellular", "city", "forest"},
+		"postapoc": {"cellular", "city", "forest"},
 	}
 
 	// Get preferred generators for this genre

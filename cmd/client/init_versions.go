@@ -17,10 +17,8 @@ import (
 	"github.com/opd-ai/venture/pkg/engine/physics/fluids"
 	"github.com/opd-ai/venture/pkg/engine/physics/vehicle"
 	"github.com/opd-ai/venture/pkg/engine/qol"
-	"github.com/opd-ai/venture/pkg/integration/choice_consequences"
 	companionhousing "github.com/opd-ai/venture/pkg/integration/companion_housing"
 	guildhousing "github.com/opd-ai/venture/pkg/integration/guild_housing"
-	"github.com/opd-ai/venture/pkg/integration/guild_vehicle"
 	housingcrafting "github.com/opd-ai/venture/pkg/integration/housing_crafting"
 	"github.com/opd-ai/venture/pkg/integration/narrative_world"
 	"github.com/opd-ai/venture/pkg/integration/political_warfare"
@@ -519,14 +517,6 @@ func initializeV19Systems(game *engine.EbitenGame, sys *systemsContainer, client
 	clientLogger.Debug("world economy system initialized")
 
 	// Phase 101: Integration Package Activation
-	// Choice tracker for persistent choice tracking and consequences
-	sys.choiceTracker = choice_consequences.NewChoiceTracker()
-	clientLogger.Debug("choice tracker initialized")
-
-	// Guild fleet manager for vehicle fleet combat with formation bonuses
-	sys.guildFleetManager = guild_vehicle.NewFleetManager()
-	clientLogger.Debug("guild fleet manager initialized")
-
 	// World event manager for responsive world events
 	sys.worldEventManager = world_events.NewEventManager(*seed + seedOffsetWorldEvents)
 	clientLogger.Debug("world event manager initialized")

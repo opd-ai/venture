@@ -31,9 +31,10 @@ func NewGenreComponent(genreID string) *GenreComponent {
 	}
 }
 
-// NewBlendedGenreComponent creates a genre component with genre blending.
+// newBlendedGenreComponent creates a genre component with genre blending.
 // blendRatio controls how much secondary genres influence (0.0 = none, 1.0 = equal).
-func NewBlendedGenreComponent(primaryGenre string, secondaryGenres []string, blendRatio float64) *GenreComponent {
+// This is unexported pending future multi-genre world integration.
+func newBlendedGenreComponent(primaryGenre string, secondaryGenres []string, blendRatio float64) *GenreComponent {
 	if blendRatio < 0 {
 		blendRatio = 0
 	}

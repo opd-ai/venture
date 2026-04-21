@@ -386,12 +386,12 @@ func (g *ClassGenerator) initializeGenreThemes() {
 	g.addGenreTheme("cyberpunk", engine.ClassPaladin, "Corporate Enforcer", "Heavily augmented security operative protecting corporate assets.")
 
 	// Post-Apocalyptic genre mappings
-	g.addGenreTheme("postapocalyptic", engine.ClassWarrior, "Raider", "Wasteland warrior scavenging for survival.")
-	g.addGenreTheme("postapocalyptic", engine.ClassRogue, "Scavenger", "Resourceful survivor finding treasures in the ruins.")
-	g.addGenreTheme("postapocalyptic", engine.ClassMage, "Mutant", "Radiation-touched individual with strange powers.")
-	g.addGenreTheme("postapocalyptic", engine.ClassCleric, "Healer", "Medic keeping communities alive in the wasteland.")
-	g.addGenreTheme("postapocalyptic", engine.ClassRanger, "Outrider", "Nomadic scout navigating the dangerous wastes.")
-	g.addGenreTheme("postapocalyptic", engine.ClassPaladin, "Protector", "Guardian defending settlements from threats.")
+	g.addGenreTheme("postapoc", engine.ClassWarrior, "Raider", "Wasteland warrior scavenging for survival.")
+	g.addGenreTheme("postapoc", engine.ClassRogue, "Scavenger", "Resourceful survivor finding treasures in the ruins.")
+	g.addGenreTheme("postapoc", engine.ClassMage, "Mutant", "Radiation-touched individual with strange powers.")
+	g.addGenreTheme("postapoc", engine.ClassCleric, "Healer", "Medic keeping communities alive in the wasteland.")
+	g.addGenreTheme("postapoc", engine.ClassRanger, "Outrider", "Nomadic scout navigating the dangerous wastes.")
+	g.addGenreTheme("postapoc", engine.ClassPaladin, "Protector", "Guardian defending settlements from threats.")
 }
 
 // addGenreTheme adds a genre-specific name/description override for a class.
@@ -403,12 +403,21 @@ func (g *ClassGenerator) addGenreTheme(genreID string, classType engine.Characte
 	}
 }
 
+// canonicalGenreID normalizes genre ID aliases to the canonical form used in map keys.
+// The CLI flag and predefined genres use "postapoc"; some older code used "postapocalyptic".
+func canonicalGenreID(genreID string) string {
+	if genreID == "postapocalyptic" {
+		return "postapoc"
+	}
+	return genreID
+}
+
 // getThemedName returns the genre-specific name for a class, or the default if no theme exists.
 func (g *ClassGenerator) getThemedName(genreID string, classType engine.CharacterClass, defaultName string) string {
 	if genreID == "" || genreID == "fantasy" {
 		return defaultName
 	}
-	key := fmt.Sprintf("%s:%d", genreID, classType)
+	key := fmt.Sprintf("%s:%d", canonicalGenreID(genreID), classType)
 	if theme, ok := g.genreThemes[key]; ok {
 		return theme.name
 	}
@@ -420,7 +429,7 @@ func (g *ClassGenerator) getThemedDescription(genreID string, classType engine.C
 	if genreID == "" || genreID == "fantasy" {
 		return defaultDesc
 	}
-	key := fmt.Sprintf("%s:%d", genreID, classType)
+	key := fmt.Sprintf("%s:%d", canonicalGenreID(genreID), classType)
 	if theme, ok := g.genreThemes[key]; ok {
 		return theme.description
 	}

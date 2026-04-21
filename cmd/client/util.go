@@ -165,6 +165,15 @@ func initializeNetworkClient(logger *logrus.Logger, clientLogger *logrus.Entry) 
 	return networkClient
 }
 
+// canonicalGenreID normalizes genre ID aliases to the canonical form used in map keys.
+// The CLI flag uses "postapoc" as the canonical ID; some older code used "postapocalyptic".
+func canonicalGenreID(genreID string) string {
+	if genreID == "postapocalyptic" {
+		return "postapoc"
+	}
+	return genreID
+}
+
 // seededRandom returns a random seed based on time for CLI flag default values.
 //
 // IMPORTANT: This function is called ONLY at program initialization time via
@@ -180,15 +189,6 @@ func initializeNetworkClient(logger *logrus.Logger, clientLogger *logrus.Entry) 
 // The time.Now() usage here is explicitly EXEMPT from the "no time.Now() in
 // procgen" rule because it's for CLI initialization, not for procedural content
 // generation during gameplay.
-// canonicalGenreID normalizes genre ID aliases to the canonical form used in map keys.
-// The CLI flag uses "postapoc" as the canonical ID; some older code used "postapocalyptic".
-func canonicalGenreID(genreID string) string {
-	if genreID == "postapocalyptic" {
-		return "postapoc"
-	}
-	return genreID
-}
-
 func seededRandom() int64 {
 	nowNano := time.Now().UnixNano()
 	rng := rand.New(rand.NewSource(nowNano))

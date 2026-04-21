@@ -261,6 +261,15 @@ func (m *AnimationSyncManager) GetNextState(entityID uint64) *AnimationStatePack
 	return &state
 }
 
+// SetBufferSize sets the number of state packets to buffer before applying.
+// Lower values reduce latency; higher values improve smoothness under jitter.
+// The default is 3 (≈150 ms at 20 updates/sec).
+func (m *AnimationSyncManager) SetBufferSize(n int) {
+	if n > 0 {
+		m.bufferSize = n
+	}
+}
+
 // ClearEntity removes tracking data for an entity (when entity destroyed).
 func (m *AnimationSyncManager) ClearEntity(entityID uint64) {
 	delete(m.lastState, entityID)

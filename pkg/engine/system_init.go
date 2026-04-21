@@ -273,6 +273,7 @@ type SystemInitResult struct {
 	CompanionQuestSynergySystem                 *CompanionQuestSynergySystem
 	AchievementNotificationSystem               *AchievementNotificationSystem
 	AvailabilitySystem                          *AvailabilitySystem
+	SkillPointGainParticleSystem                *SkillPointGainParticleSystem
 
 	// System wrappers
 	AnimationSystemWrapper            System
@@ -1493,6 +1494,14 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 	result.ProgressionSystem.AddLevelUpCallback(levelUpParticleSystem.OnLevelUp)
 	result.LevelUpParticleSystem = levelUpParticleSystem
 	game.World.AddSystem(levelUpParticleSystem)
+
+	// 36d1. SkillPointGainParticleSystem - celebratory particles when a skill point is awarded
+	skillPointGainParticleSystem := NewSkillPointGainParticleSystem(game.World, config.Seed+4050)
+	skillPointGainParticleSystem.SetParticleSystem(result.ParticleSystem)
+	skillPointGainParticleSystem.SetGenre(config.GenreID)
+	result.ProgressionSystem.AddSkillPointCallback(skillPointGainParticleSystem.OnSkillPointGain)
+	result.SkillPointGainParticleSystem = skillPointGainParticleSystem
+	game.World.AddSystem(skillPointGainParticleSystem)
 
 	// 36d2. CompanionProgressionSystem - companion XP and leveling
 	companionProgressionSystem := NewCompanionProgressionSystem(game.World)

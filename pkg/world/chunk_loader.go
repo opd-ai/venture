@@ -1,8 +1,12 @@
 package world
 
 import (
+	"errors"
 	"fmt"
 	"math"
+	"os"
+
+	"github.com/sirupsen/logrus"
 )
 
 // ChunkSize is the size of a chunk in tiles
@@ -17,6 +21,7 @@ type ChunkLoaderSystem struct {
 	generator    ChunkGenerator         // For generating new chunks
 	playerPos    map[uint64]ChunkCoords // Track player positions
 	onEvict      func(*Chunk)           // Called when a chunk is evicted from memory
+	compressor   *ChunkCompressionSystem // Shared compressor (avoid re-allocation per load)
 }
 
 // ChunkCoords represents chunk coordinates
@@ -39,6 +44,7 @@ func NewChunkLoaderSystem(worldSeed int64, persistence *WorldPersistence, genera
 		persistence:  persistence,
 		generator:    generator,
 		playerPos:    make(map[uint64]ChunkCoords),
+		compressor:   NewChunkCompressionSystem(),
 	}
 }
 
@@ -108,6 +114,36 @@ func (c *ChunkLoaderSystem) loadChunk(chunkX, chunkY int) (*Chunk, error) {
 
 	// Try loading from persistence
 	if c.persistence != nil {
+		// Fast path: check for a previously compressed chunk file first.
+		data, loadErr := c.persistence.LoadChunk(chunkX, chunkY)
+		switch {
+		case loadErr == nil:
+			// File found — attempt decompression.
+			if chunk, decErr := c.compressor.DecompressChunk(data); decErr == nil {
+				// The compressed format doesn't include coordinates; fill them in.
+				chunk.X = chunkX
+				chunk.Y = chunkY
+				return chunk, nil
+			} else {
+				// Corrupted/incompatible file: log and fall through to regenerate.
+				logrus.WithFields(logrus.Fields{
+					"chunk_x": chunkX,
+					"chunk_y": chunkY,
+					"error":   decErr,
+				}).Warn("decompressing persisted chunk failed; regenerating")
+			}
+		case errors.Is(loadErr, os.ErrNotExist):
+			// No persisted file yet — normal for new chunks, fall through silently.
+		default:
+			// Real I/O or permission error: log with context before falling through.
+			logrus.WithFields(logrus.Fields{
+				"chunk_x": chunkX,
+				"chunk_y": chunkY,
+				"error":   loadErr,
+			}).Warn("reading persisted chunk file failed; falling back to legacy load")
+		}
+
+		// Fallback: full world-state save (legacy path).
 		state, err := c.persistence.LoadWorld(c.worldSeed)
 		if err == nil && state.ChunkData != nil {
 			if chunk, exists := state.ChunkData[chunkID]; exists {

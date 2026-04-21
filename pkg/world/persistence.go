@@ -418,6 +418,38 @@ func (w *WorldPersistence) decodeState(gz *gzip.Reader) (*PersistentWorldState, 
 	return &state, nil
 }
 
+// chunkFilePath returns the filesystem path for a compressed chunk file.
+// Chunks are stored alongside the main save file in a "chunks" subdirectory.
+func (w *WorldPersistence) chunkFilePath(x, y int) string {
+	return filepath.Join(filepath.Dir(w.SavePath), "chunks", fmt.Sprintf("%d_%d.bin", x, y))
+}
+
+// SaveChunk writes RLE-compressed chunk bytes alongside the main save file.
+// Chunks are stored under {dir(SavePath)}/chunks/{x}_{y}.bin where
+// dir(SavePath) is the directory containing the world save file.
+// The data is the raw output of ChunkCompressionSystem.CompressChunk.
+func (w *WorldPersistence) SaveChunk(x, y int, data []byte) error {
+	dir := filepath.Join(filepath.Dir(w.SavePath), "chunks")
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		return fmt.Errorf("creating chunk directory: %w", err)
+	}
+	path := w.chunkFilePath(x, y)
+	if err := os.WriteFile(path, data, 0o644); err != nil {
+		return fmt.Errorf("writing chunk (%d,%d): %w", x, y, err)
+	}
+	return nil
+}
+
+// LoadChunk reads and returns previously saved compressed chunk bytes.
+// Returns os.ErrNotExist (wrapped) when no file exists for those coordinates.
+func (w *WorldPersistence) LoadChunk(x, y int) ([]byte, error) {
+	data, err := os.ReadFile(w.chunkFilePath(x, y))
+	if err != nil {
+		return nil, fmt.Errorf("reading chunk (%d,%d): %w", x, y, err)
+	}
+	return data, nil
+}
+
 // validateStateVersion validates that the loaded state version matches current schema.
 func (w *WorldPersistence) validateStateVersion(state *PersistentWorldState) error {
 	if state.Version != CurrentSchemaVersion {

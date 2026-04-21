@@ -14,13 +14,18 @@ import (
 // It receives the entity and the new level.
 type LevelUpCallback func(entity *Entity, newLevel int)
 
+// SkillPointCallback is called when an entity gains one or more skill points.
+// It receives the entity and the number of points gained.
+type SkillPointCallback func(entity *Entity, pointsGained int)
+
 // ProgressionSystem manages character progression, experience gain, and leveling.
 // It handles XP distribution, level-ups, and stat scaling.
 type ProgressionSystem struct {
-	world            *World
-	levelUpCallbacks []LevelUpCallback
-	xpCurve          XPCurveFunc
-	logger           *logrus.Entry
+	world                *World
+	levelUpCallbacks     []LevelUpCallback
+	skillPointCallbacks  []SkillPointCallback
+	xpCurve              XPCurveFunc
+	logger               *logrus.Entry
 }
 
 // XPCurveFunc defines how much XP is required for each level.
@@ -39,10 +44,11 @@ func NewProgressionSystemWithLogger(world *World, logger *logrus.Logger) *Progre
 		logEntry = logger.WithField("system", "progression")
 	}
 	return &ProgressionSystem{
-		world:            world,
-		levelUpCallbacks: make([]LevelUpCallback, 0),
-		xpCurve:          DefaultXPCurve,
-		logger:           logEntry,
+		world:               world,
+		levelUpCallbacks:    make([]LevelUpCallback, 0),
+		skillPointCallbacks: make([]SkillPointCallback, 0),
+		xpCurve:             DefaultXPCurve,
+		logger:              logEntry,
 	}
 }
 
@@ -89,6 +95,13 @@ func (ps *ProgressionSystem) SetXPCurve(curve XPCurveFunc) {
 func (ps *ProgressionSystem) AddLevelUpCallback(callback LevelUpCallback) {
 	if callback != nil {
 		ps.levelUpCallbacks = append(ps.levelUpCallbacks, callback)
+	}
+}
+
+// AddSkillPointCallback adds a callback invoked whenever an entity gains skill points.
+func (ps *ProgressionSystem) AddSkillPointCallback(callback SkillPointCallback) {
+	if callback != nil {
+		ps.skillPointCallbacks = append(ps.skillPointCallbacks, callback)
 	}
 }
 
@@ -161,6 +174,11 @@ func (ps *ProgressionSystem) processLevelUps(entity *Entity, exp *ExperienceComp
 		// Trigger callbacks
 		for _, callback := range ps.levelUpCallbacks {
 			callback(entity, exp.Level)
+		}
+
+		// Notify skill-point gain callbacks (1 point per level-up).
+		for _, callback := range ps.skillPointCallbacks {
+			callback(entity, 1)
 		}
 	}
 }

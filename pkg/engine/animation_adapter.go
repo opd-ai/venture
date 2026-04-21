@@ -17,19 +17,22 @@ type AnimationAdapter struct {
 	logger     *logrus.Entry
 }
 
-// NewAnimationAdapter creates an animation adapter with a sprite generator.
+// NewAnimationAdapter creates an animation adapter with the default cache.
 func NewAnimationAdapter(generator *sprites.Generator, logger *logrus.Entry) *AnimationAdapter {
-	return &AnimationAdapter{
-		controller: animation.NewController(generator),
-		enabled:    true,
-		logger:     logger,
-	}
+	return NewAnimationAdapterWithCache(generator, nil, logger)
 }
 
 // NewAnimationAdapterWithCache creates an animation adapter with a custom cache.
+// Pass nil to use the default 50 MB / 1000-entry cache.
 func NewAnimationAdapterWithCache(generator *sprites.Generator, cache *animation.AnimationCache, logger *logrus.Entry) *AnimationAdapter {
+	var ctrl *animation.Controller
+	if cache == nil {
+		ctrl = animation.NewController(generator)
+	} else {
+		ctrl = animation.NewControllerWithCache(generator, cache)
+	}
 	return &AnimationAdapter{
-		controller: animation.NewControllerWithCache(generator, cache),
+		controller: ctrl,
 		enabled:    true,
 		logger:     logger,
 	}

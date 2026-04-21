@@ -671,8 +671,10 @@ func initializeCoreSystems(game *engine.EbitenGame, logger *logrus.Logger, clien
 		sys.animationSystem = engine.NewAnimationSystem(sys.spriteGenerator)
 		sys.animationSystem.SetMaxCacheSize(effectiveAnimCacheSize)
 		sys.animationSystem.SetSpriteCache(sys.spriteCache)
-		// AnimationSyncManager is instantiated when the animation-state network
-		// send/receive path is ready to consume it.
+		// Wire the AnimationSyncManager for delta-compressed, jitter-buffered
+		// animation state synchronisation in multiplayer mode.
+		animSyncMgr := network.NewAnimationSyncManager()
+		sys.animationSystem.SetSyncManager(animSyncMgr)
 		sys.equipmentVisualSystem = engine.NewEquipmentVisualSystem(sys.spriteGenerator)
 		clientLogger.WithField("maxSize", effectiveSpriteCacheMax).Debug("sprite & animation systems initialized")
 	}()
@@ -2739,8 +2741,16 @@ func addPlayerComponents(player *engine.Entity, logger *logrus.Logger, clientLog
 	playerStats.Evasion = 0.05
 	player.AddComponent(playerStats)
 
+	// Capture the unmodified starting stats so buff/debuff and class-progression
+	// systems can reference original values without searching component history.
+	player.AddComponent(engine.NewBaseStatsFromEntity(player))
+
 	// Add player experience/progression
 	player.AddComponent(engine.NewExperienceComponent())
+
+	// Attach genre component so genre-aware systems (e.g. objective reward scaling)
+	// can read the active theme from the player entity at runtime.
+	player.AddComponent(engine.NewGenreComponent(*genreID))
 
 	// Add player inventory
 	playerInventory := engine.NewInventoryComponent(20, 100.0)

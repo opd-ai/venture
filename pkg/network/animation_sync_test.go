@@ -363,7 +363,7 @@ func TestAnimationSyncManager_ShouldSync(t *testing.T) {
 // TestAnimationSyncManager_BufferState tests client-side state buffering.
 func TestAnimationSyncManager_BufferState(t *testing.T) {
 	manager := NewAnimationSyncManager()
-	manager.bufferSize = 3
+	manager.SetBufferSize(3)
 
 	entityID := uint64(12345)
 
@@ -614,5 +614,93 @@ func BenchmarkAnimationSyncManager_ShouldSync(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		_ = manager.ShouldSync(entityID, engine.AnimationStateIdle)
+	}
+}
+
+// TestAnimationSyncRoundTrip validates the full send→buffer→apply cycle used
+// by multiplayer animation synchronisation:
+//  1. Server side: ShouldSync gates encoding; RecordSync records the delta.
+//  2. Wire: packet is encoded then decoded.
+//  3. Client side: BufferState queues the decoded packet; GetNextState delivers it.
+func TestAnimationSyncRoundTrip(t *testing.T) {
+	sender := NewAnimationSyncManager()
+	receiver := NewAnimationSyncManager()
+	receiver.SetBufferSize(1) // apply immediately on first packet
+
+	entityID := uint64(42)
+
+	// --- Server side: encode and track the state change ---
+	newState := engine.AnimationStateWalk
+	if !sender.ShouldSync(entityID, newState) {
+		t.Fatal("first sync for new entity should return true")
+	}
+
+	pkt := AnimationStatePacket{
+		EntityID:   entityID,
+		State:      newState,
+		FrameIndex: 3,
+		Timestamp:  1_000_000,
+		Loop:       true,
+	}
+	data, err := pkt.Encode()
+	if err != nil {
+		t.Fatalf("Encode() error: %v", err)
+	}
+	sender.RecordSync(entityID, newState, len(data))
+
+	// Sending same state again should be suppressed (delta compression).
+	if sender.ShouldSync(entityID, newState) {
+		t.Error("duplicate state should not pass ShouldSync after RecordSync")
+	}
+
+	// --- Wire: decode on the receiver side ---
+	var received AnimationStatePacket
+	if err := received.Decode(data); err != nil {
+		t.Fatalf("Decode() error: %v", err)
+	}
+	if received.EntityID != pkt.EntityID || received.State != pkt.State {
+		t.Errorf("decoded packet mismatch: got %+v, want %+v", received, pkt)
+	}
+
+	// --- Client side: buffer then apply ---
+	ready := receiver.BufferState(received) // bufferSize=1, so buffer fills immediately
+	if !ready {
+		t.Error("BufferState should signal ready when buffer is full")
+	}
+
+	applied := receiver.GetNextState(entityID)
+	if applied == nil {
+		t.Fatal("GetNextState returned nil, expected buffered packet")
+	}
+	if applied.State != newState {
+		t.Errorf("applied state = %v, want %v", applied.State, newState)
+	}
+
+	// Buffer should be drained.
+	if receiver.GetNextState(entityID) != nil {
+		t.Error("GetNextState should return nil after buffer is drained")
+	}
+}
+
+// TestAnimationStatePacket_WireSize validates that the encoded wire size of
+// AnimationStatePacket stays at 20 bytes. engine.animStatePacketBytes is
+// hardcoded to this value for bandwidth accounting; if the packet layout
+// changes and this test fails, update animStatePacketBytes in
+// pkg/engine/animation_system.go to match.
+func TestAnimationStatePacket_WireSize(t *testing.T) {
+	pkt := AnimationStatePacket{
+		EntityID:   42,
+		State:      engine.AnimationStateIdle,
+		FrameIndex: 3,
+		Timestamp:  1_000_000,
+		Loop:       true,
+	}
+	data, err := pkt.Encode()
+	if err != nil {
+		t.Fatalf("Encode() error: %v", err)
+	}
+	const wantBytes = 20 // must match engine.animStatePacketBytes
+	if len(data) != wantBytes {
+		t.Errorf("AnimationStatePacket wire size = %d bytes, want %d; update engine.animStatePacketBytes", len(data), wantBytes)
 	}
 }

@@ -62,8 +62,8 @@ func (m *FleetManager) SetMembershipValidator(v MembershipValidator) {
 	defer m.mu.Unlock()
 	m.membershipValidator = v
 	log.WithFields(log.Fields{
-		"system_name": "fleet_manager",
-		"validator":   v != nil,
+		"system":    "fleet_manager",
+		"validator": v != nil,
 	}).Debug("fleet manager membership validator updated")
 }
 
@@ -76,8 +76,8 @@ func (m *FleetManager) SetVehicleSyncer(s VehicleSyncer) {
 	defer m.mu.Unlock()
 	m.vehicleSyncer = s
 	log.WithFields(log.Fields{
-		"system_name": "fleet_manager",
-		"syncer":      s != nil,
+		"system": "fleet_manager",
+		"syncer": s != nil,
 	}).Debug("fleet manager vehicle syncer updated")
 }
 
@@ -89,8 +89,8 @@ func (m *FleetManager) SetStructureDamager(d StructureDamager) {
 	defer m.mu.Unlock()
 	m.structureDamager = d
 	log.WithFields(log.Fields{
-		"system_name": "fleet_manager",
-		"damager":     d != nil,
+		"system":  "fleet_manager",
+		"damager": d != nil,
 	}).Debug("fleet manager structure damager updated")
 }
 
@@ -147,6 +147,8 @@ func slotOffset(f FormationType, slot, total int) FormationOffset {
 }
 
 func lineOffset(slot int) FormationOffset {
+	// Alternate right/left: slot 1 → right, slot 2 → left, slot 3 → right, …
+	// Integer division of (slot+1)/2 gives the row distance (1, 1, 2, 2, 3, 3, …).
 	side := float64((slot+1)/2) * formationSpacing
 	if slot%2 == 1 {
 		return FormationOffset{SlotIndex: slot, OffsetX: side}

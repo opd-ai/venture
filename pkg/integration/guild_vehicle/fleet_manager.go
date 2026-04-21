@@ -157,8 +157,12 @@ func (m *FleetManager) RemoveVehicle(guildID string, vehicleID uint64, fleetID s
 // If a MembershipValidator has been set via SetMembershipValidator, the player must
 // be an active member of the guild; otherwise the request is rejected.
 func (m *FleetManager) GrantAccess(guildID string, vehicleID uint64, playerID string) error {
-	// Validate guild membership before acquiring the write lock.
-	if validator := m.membershipValidator; validator != nil {
+	// Read validator under RLock to avoid a data race with SetMembershipValidator.
+	m.mu.RLock()
+	validator := m.membershipValidator
+	m.mu.RUnlock()
+
+	if validator != nil {
 		if !validator.IsMember(guildID, playerID) {
 			return fmt.Errorf("player %s is not a member of guild %s", playerID, guildID)
 		}

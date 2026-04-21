@@ -215,6 +215,73 @@ func TestGetFormationOffsets_NonExistentFleet(t *testing.T) {
 	}
 }
 
+// TestGetFormationOffsets_SingleVehicle verifies leader-only fleet returns one zero offset.
+func TestGetFormationOffsets_SingleVehicle(t *testing.T) {
+	m := NewFleetManager()
+	if err := m.CreateFleet("g", "f", "cmd"); err != nil {
+		t.Fatalf("CreateFleet: %v", err)
+	}
+	if err := m.AddVehicle("g", 1, "f"); err != nil {
+		t.Fatalf("AddVehicle: %v", err)
+	}
+	_ = m.SetFormation("g", "f", FormationLine)
+
+	offsets := m.GetFormationOffsets("g", "f")
+	if len(offsets) != 1 {
+		t.Fatalf("len(offsets) = %d; want 1", len(offsets))
+	}
+	if offsets[0].OffsetX != 0 || offsets[0].OffsetY != 0 {
+		t.Errorf("single-vehicle offset = (%f,%f); want (0,0)", offsets[0].OffsetX, offsets[0].OffsetY)
+	}
+}
+
+// TestGetFormationOffsets_TwoVehicles verifies minimal follower placement.
+func TestGetFormationOffsets_TwoVehicles(t *testing.T) {
+	formations := []FormationType{FormationLine, FormationWedge, FormationColumn, FormationCircle, FormationNone}
+	for _, f := range formations {
+		m := NewFleetManager()
+		_ = m.CreateFleet("g", "f", "cmd")
+		for i := uint64(1); i <= 2; i++ {
+			_ = m.AddVehicle("g", i, "f")
+		}
+		_ = m.SetFormation("g", "f", f)
+
+		offsets := m.GetFormationOffsets("g", "f")
+		if len(offsets) != 2 {
+			t.Errorf("formation %v: len(offsets) = %d; want 2", f, len(offsets))
+			continue
+		}
+		if offsets[0].OffsetX != 0 || offsets[0].OffsetY != 0 {
+			t.Errorf("formation %v: leader offset = (%f,%f); want (0,0)", f, offsets[0].OffsetX, offsets[0].OffsetY)
+		}
+	}
+}
+
+// TestGetFormationOffsets_LargeFleet verifies geometry scales for 8 vehicles.
+func TestGetFormationOffsets_LargeFleet(t *testing.T) {
+	const count = 8
+	formations := []FormationType{FormationLine, FormationWedge, FormationColumn, FormationCircle}
+	for _, f := range formations {
+		m := NewFleetManager()
+		_ = m.CreateFleet("g", "f", "cmd")
+		for i := uint64(1); i <= count; i++ {
+			_ = m.AddVehicle("g", i, "f")
+		}
+		_ = m.SetFormation("g", "f", f)
+
+		offsets := m.GetFormationOffsets("g", "f")
+		if len(offsets) != count {
+			t.Errorf("formation %v: len(offsets) = %d; want %d", f, len(offsets), count)
+			continue
+		}
+		for i, o := range offsets {
+			if o.SlotIndex != i {
+				t.Errorf("formation %v: offsets[%d].SlotIndex = %d; want %d", f, i, o.SlotIndex, i)
+			}
+		}
+	}
+}
+
 // TestApplySiegeDamage_Basic verifies damage multiplier is applied.
 func TestApplySiegeDamage_Basic(t *testing.T) {
 	m := NewFleetManager()
@@ -225,7 +292,8 @@ func TestApplySiegeDamage_Basic(t *testing.T) {
 		t.Fatalf("AddVehicleWithType: %v", err)
 	}
 
-	if err := m.ApplySiegeDamage(77, "territory1", "wall1", 100.0); err != nil {
+	const weaponDamage = 100.0
+	if err := m.ApplySiegeDamage(77, "territory1", "wall1", weaponDamage); err != nil {
 		t.Fatalf("ApplySiegeDamage: %v", err)
 	}
 
@@ -233,10 +301,9 @@ func TestApplySiegeDamage_Basic(t *testing.T) {
 		t.Fatalf("expected 1 damage call, got %d", len(damager.calls))
 	}
 	call := damager.calls[0]
-	// SiegeCatapult multiplier = 5.0
-	want := 100.0 * 5.0
+	want := weaponDamage * SiegeCatapult.GetSiegeDamageMultiplier()
 	if call.damage != want {
-		t.Errorf("damage = %f; want %f (catapult x5)", call.damage, want)
+		t.Errorf("damage = %f; want %f (catapult multiplier)", call.damage, want)
 	}
 	if call.territoryID != "territory1" || call.structureID != "wall1" {
 		t.Errorf("wrong target: got %s/%s", call.territoryID, call.structureID)

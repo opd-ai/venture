@@ -92,9 +92,11 @@ func (s *GuildVehicleSystem) Update(entities []*Entity, deltaTime float64) {
 		if vel == nil || currPos == nil {
 			continue
 		}
-		const steerStrength = 2.0
-		vel.VX = (targetX - currPos.X) * steerStrength
-		vel.VY = (targetY - currPos.Y) * steerStrength
+		// Use additive, deltaTime-scaled steering so formation forces blend with
+		// existing momentum instead of overriding it abruptly.
+		const steerStrength = 4.0
+		vel.VX += (targetX - currPos.X) * steerStrength * deltaTime
+		vel.VY += (targetY - currPos.Y) * steerStrength * deltaTime
 	}
 }
 

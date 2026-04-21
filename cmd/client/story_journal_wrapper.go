@@ -1,6 +1,8 @@
 package main
 
 import (
+	"image"
+
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/opd-ai/venture/pkg/engine"
 	"github.com/opd-ai/venture/pkg/rendering/ui"
@@ -10,8 +12,10 @@ import (
 // This bridges the rendering/ui package (which imports engine) to EbitenGame without
 // creating a circular import.
 type storyJournalWrapper struct {
-	inner   *ui.StoryJournalUI
-	visible bool
+	inner      *ui.StoryJournalUI
+	visible    bool
+	cachedTex  *ebiten.Image // GPU-resident texture for the last rendered frame
+	cachedRGBA *image.RGBA   // Raw pixels corresponding to cachedTex (identity comparison)
 }
 
 // Toggle shows or hides the journal, refreshing data from the player's journal component.
@@ -23,6 +27,8 @@ func (w *storyJournalWrapper) Toggle(journal *engine.StoryJournalComponent, worl
 	if journal != nil {
 		w.inner.LoadFromJournal(journal, world)
 	}
+	w.cachedTex = nil  // Invalidate cache so the next Draw re-renders
+	w.cachedRGBA = nil
 	w.visible = true
 }
 
@@ -30,6 +36,8 @@ func (w *storyJournalWrapper) Toggle(journal *engine.StoryJournalComponent, worl
 func (w *storyJournalWrapper) IsVisible() bool { return w.visible }
 
 // Draw renders the journal. screen must be *ebiten.Image; mismatched types are silently ignored.
+// The rendered texture is cached so repeated calls within the same frame or across frames
+// where content did not change avoid repeated CPU→GPU uploads.
 func (w *storyJournalWrapper) Draw(screen interface{}) {
 	ebitenScreen, ok := screen.(*ebiten.Image)
 	if !ok || ebitenScreen == nil {
@@ -39,7 +47,12 @@ func (w *storyJournalWrapper) Draw(screen interface{}) {
 	if img == nil {
 		return
 	}
-	jTex := ebiten.NewImageFromImage(img)
+	// Only upload a new texture when the pixel buffer pointer changes (i.e. the
+	// journal has produced a new frame).
+	if img != w.cachedRGBA || w.cachedTex == nil {
+		w.cachedTex = ebiten.NewImageFromImage(img)
+		w.cachedRGBA = img
+	}
 	op := &ebiten.DrawImageOptions{}
-	ebitenScreen.DrawImage(jTex, op)
+	ebitenScreen.DrawImage(w.cachedTex, op)
 }

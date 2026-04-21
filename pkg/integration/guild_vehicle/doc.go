@@ -58,15 +58,6 @@
 //
 // # Integration Status
 //
-// This package provides standalone fleet management functionality. The following
-// integrations are deferred pending further architecture work:
-//
-// FUTURE (not yet implemented):
-//   - pkg/network/federation/guild: Guild membership validation and permissions
-//   - pkg/engine: VehicleComponent and VehicleCombatComponent synchronization
-//   - pkg/engine/physics/vehicle: Formation-based physics behavior
-//   - pkg/world/territory: Siege damage application to territory structures
-//
 // IMPLEMENTED:
 //   - Thread-safe fleet and vehicle management
 //   - Formation bonus calculations
@@ -74,6 +65,14 @@
 //   - Maintenance cost calculations
 //   - Gzip-compressed persistence (save/load)
 //   - Access control for shared vehicle access
+//   - pkg/network/federation/guild: Guild membership validation via MembershipValidator
+//     interface; inject with SetMembershipValidator(guildManager).
+//   - pkg/engine: VehicleComponent sync via VehicleSyncer interface; inject with
+//     SetVehicleSyncer; engine receives GuildVehicleFleetComponent on AddVehicle/RemoveVehicle.
+//   - pkg/engine/physics/vehicle: Formation target offsets via GetFormationOffsets;
+//     feed per-slot FormationOffset values into vehicle physics target positions.
+//   - pkg/world/territory: Siege damage via StructureDamager interface; inject with
+//     SetStructureDamager(territoryManager); call ApplySiegeDamage on vehicle fire.
 //
 // # Thread Safety
 //

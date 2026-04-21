@@ -14,8 +14,11 @@ import (
 
 // FleetManager manages guild vehicle fleets with thread-safe operations
 type FleetManager struct {
-	fleets map[string]*Fleet // GuildID -> Fleet map
-	mu     sync.RWMutex
+	fleets              map[string]*Fleet // GuildID -> Fleet map
+	mu                  sync.RWMutex
+	membershipValidator MembershipValidator // optional; validates guild membership on GrantAccess
+	vehicleSyncer       VehicleSyncer       // optional; propagates fleet component to ECS entities
+	structureDamager    StructureDamager    // optional; applies siege damage to territory structures
 }
 
 // NewFleetManager creates a new fleet manager instance
@@ -108,6 +111,18 @@ func (m *FleetManager) AddVehicleWithType(guildID string, vehicleID uint64, flee
 	fleet.Vehicles[vehicleID] = vehicle
 	fleet.UpdatedAt = now()
 
+	// Notify ECS syncer so the vehicle entity receives a GuildVehicleFleetComponent.
+	syncer := m.vehicleSyncer
+	if syncer != nil {
+		comp := &GuildVehicleFleetComponent{
+			GuildID:           guildID,
+			FleetID:           fleetID,
+			SiegeType:         siegeType,
+			FormationPosition: len(fleet.Vehicles) - 1,
+		}
+		syncer.SyncVehicleFleetComponent(vehicleID, comp)
+	}
+
 	return nil
 }
 
@@ -129,11 +144,26 @@ func (m *FleetManager) RemoveVehicle(guildID string, vehicleID uint64, fleetID s
 	delete(fleet.Vehicles, vehicleID)
 	fleet.UpdatedAt = now()
 
+	// Notify ECS syncer so the vehicle entity loses its GuildVehicleFleetComponent.
+	syncer := m.vehicleSyncer
+	if syncer != nil {
+		syncer.ClearVehicleFleetComponent(vehicleID)
+	}
+
 	return nil
 }
 
-// GrantAccess grants a player access to a vehicle
+// GrantAccess grants a player access to a vehicle.
+// If a MembershipValidator has been set via SetMembershipValidator, the player must
+// be an active member of the guild; otherwise the request is rejected.
 func (m *FleetManager) GrantAccess(guildID string, vehicleID uint64, playerID string) error {
+	// Validate guild membership before acquiring the write lock.
+	if validator := m.membershipValidator; validator != nil {
+		if !validator.IsMember(guildID, playerID) {
+			return fmt.Errorf("player %s is not a member of guild %s", playerID, guildID)
+		}
+	}
+
 	m.mu.Lock()
 	defer m.mu.Unlock()
 

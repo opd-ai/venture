@@ -2,99 +2,221 @@
 // +build android,cgo,ebitenmobilebind
 
 // Package mobile provides Android-specific keyboard integration.
-// This file implements native soft keyboard control via Android's InputMethodManager.
-// This file is only included when building with the ebitenmobile bind tool.
+// This file implements native soft keyboard control via Android's InputMethodManager
+// using JNI. The JNI bridge is activated by calling SetAndroidActivity from the
+// ebitenmobile Java wrapper, which provides the Activity reference required to
+// access InputMethodManager. This file is only included when building with the
+// ebitenmobile bind tool.
 package mobile
 
 /*
 #cgo LDFLAGS: -landroid
 #include <jni.h>
 #include <stdlib.h>
+#include <string.h>
 
-// showAndroidKeyboard requests the Android InputMethodManager to show the soft keyboard.
-//
-// IMPLEMENTATION NOTE: Full JNI integration requires Android NDK environment,
-// access to JNIEnv* and the current Activity from the Ebiten mobile runtime.
-// When integrated with the gomobile/ebitenmobile build process, this function would:
-//
-//  1. Receive JNIEnv* and Activity from the ebitenmobile binding layer.
-//  2. Call Activity.getSystemService(Context.INPUT_METHOD_SERVICE) via JNI to
-//     obtain an InputMethodManager instance.
-//  3. Obtain the focused View's IBinder via View.getWindowToken().
-//  4. Call InputMethodManager.showSoftInput(view, InputMethodManager.SHOW_IMPLICIT)
-//     to display the on-screen keyboard.
-//
-// The current implementation provides the C function signature for use with the
-// JNI bridging infrastructure once it is available from the gomobile runtime.
-void showAndroidKeyboard() {
-	// Full JNI implementation:
-	// JNIEnv *env and jobject activity provided by ebitenmobile binding.
-	//
-	// jclass contextClass = (*env)->FindClass(env, "android/content/Context");
-	// jstring imService = (*env)->NewStringUTF(env, "input_method");
-	// jmethodID getSysService = (*env)->GetMethodID(env, contextClass,
-	//     "getSystemService", "(Ljava/lang/String;)Ljava/lang/Object;");
-	// jobject imm = (*env)->CallObjectMethod(env, activity, getSysService, imService);
-	// jclass immClass = (*env)->GetObjectClass(env, imm);
-	// jmethodID showSoftInput = (*env)->GetMethodID(env, immClass,
-	//     "showSoftInput", "(Landroid/view/View;I)Z");
-	// (*env)->CallBooleanMethod(env, imm, showSoftInput, view, 1 /* SHOW_IMPLICIT */);
-	//
-	// Requires Android NDK environment and runtime JNIEnv* from Ebiten.
+#define SHOW_IMPLICIT 1
+#define HIDE_NO_FLAGS 0
+
+static JavaVM *gJVM = NULL;
+static jobject gActivity = NULL;
+
+// JNI_OnLoad caches the JavaVM pointer when the shared library is loaded.
+// This provides the JVM reference needed to attach goroutine threads later.
+JNIEXPORT jint JNI_OnLoad(JavaVM *vm, void *reserved) {
+	gJVM = vm;
+	return JNI_VERSION_1_6;
 }
 
-// hideAndroidKeyboard requests the Android InputMethodManager to hide the soft keyboard.
+// setAndroidActivity stores the Android Activity as a global JNI reference.
+// envPtr and activityPtr are validated non-nil before use. Must be called from
+// the Java ebitenmobile wrapper (via SetAndroidActivity) before ShowKeyboard or
+// HideKeyboard is used.
+void setAndroidActivity(void *envPtr, void *activityPtr) {
+	if (!envPtr || !activityPtr) return;
+	JNIEnv *env = (JNIEnv *)envPtr;
+	jobject activity = (jobject)activityPtr;
+	if (gActivity) {
+		(*env)->DeleteGlobalRef(env, gActivity);
+		gActivity = NULL;
+	}
+	gActivity = (*env)->NewGlobalRef(env, activity);
+	if (!gActivity) {
+		(*env)->ExceptionClear(env);
+	}
+}
+
+// hasAndroidActivity returns JNI_TRUE when the Activity global ref is set,
+// i.e. SetAndroidActivity has been called successfully. Used by Go-side
+// IsKeyboardSupported to report readiness accurately.
+jboolean hasAndroidActivity(void) {
+	return gActivity != NULL ? JNI_TRUE : JNI_FALSE;
+}
+
+// getJNIEnv returns the JNIEnv for the current thread. If the thread was not
+// already attached to the JVM it calls AttachCurrentThread and sets *didAttach
+// to JNI_TRUE; the caller is then responsible for calling DetachCurrentThread
+// when the JNI work is done to prevent unbounded thread-attachment leaks.
+static JNIEnv *getJNIEnv(jboolean *didAttach) {
+	*didAttach = JNI_FALSE;
+	if (!gJVM) return NULL;
+	JNIEnv *env = NULL;
+	jint res = (*gJVM)->GetEnv(gJVM, (void **)&env, JNI_VERSION_1_6);
+	if (res == JNI_OK) return env;
+	if (res == JNI_EDETACHED) {
+		if ((*gJVM)->AttachCurrentThread(gJVM, &env, NULL) != JNI_OK) return NULL;
+		*didAttach = JNI_TRUE;
+		return env;
+	}
+	return NULL;
+}
+
+// showAndroidKeyboard calls InputMethodManager.showSoftInput on the Activity's
+// DecorView to display the Android on-screen keyboard.
 //
-// IMPLEMENTATION NOTE: Requires the same JNI environment as showAndroidKeyboard.
-// When integrated, this calls:
-//   InputMethodManager.hideSoftInputFromWindow(view.getWindowToken(), 0)
-void hideAndroidKeyboard() {
-	// Full JNI implementation:
-	// jmethodID hideSoftInput = (*env)->GetMethodID(env, immClass,
-	//     "hideSoftInputFromWindow", "(Landroid/os/IBinder;I)Z");
-	// jobject windowToken = ... view.getWindowToken() ...;
-	// (*env)->CallBooleanMethod(env, imm, hideSoftInput, windowToken, 0);
-	//
-	// Requires Android NDK environment and runtime JNIEnv* from Ebiten.
+// All JNI local references are managed inside a PushLocalFrame/PopLocalFrame
+// scope to prevent the local reference table from overflowing on repeated calls.
+void showAndroidKeyboard(void) {
+	jboolean didAttach = JNI_FALSE;
+	JNIEnv *env = getJNIEnv(&didAttach);
+	if (!env || !gActivity) goto cleanup_show;
+	if ((*env)->PushLocalFrame(env, 16) < 0) {
+		(*env)->ExceptionClear(env);
+		goto cleanup_show;
+	}
+	do {
+		jclass ctxClass = (*env)->FindClass(env, "android/content/Context");
+		if (!ctxClass) { (*env)->ExceptionClear(env); break; }
+		jfieldID imsFld = (*env)->GetStaticFieldID(env, ctxClass, "INPUT_METHOD_SERVICE", "Ljava/lang/String;");
+		if (!imsFld) { (*env)->ExceptionClear(env); break; }
+		jstring imsStr = (jstring)(*env)->GetStaticObjectField(env, ctxClass, imsFld);
+
+		jmethodID getSvc = (*env)->GetMethodID(env, ctxClass, "getSystemService", "(Ljava/lang/String;)Ljava/lang/Object;");
+		if (!getSvc) { (*env)->ExceptionClear(env); break; }
+		jobject imm = (*env)->CallObjectMethod(env, gActivity, getSvc, imsStr);
+		if (!imm) { (*env)->ExceptionClear(env); break; }
+
+		jclass actClass = (*env)->GetObjectClass(env, gActivity);
+		jmethodID getWin = (*env)->GetMethodID(env, actClass, "getWindow", "()Landroid/view/Window;");
+		if (!getWin) { (*env)->ExceptionClear(env); break; }
+		jobject win = (*env)->CallObjectMethod(env, gActivity, getWin);
+		if (!win) { (*env)->ExceptionClear(env); break; }
+
+		jclass winClass = (*env)->GetObjectClass(env, win);
+		jmethodID getDecor = (*env)->GetMethodID(env, winClass, "getDecorView", "()Landroid/view/View;");
+		if (!getDecor) { (*env)->ExceptionClear(env); break; }
+		jobject decorView = (*env)->CallObjectMethod(env, win, getDecor);
+		if (!decorView) { (*env)->ExceptionClear(env); break; }
+
+		jclass immClass = (*env)->GetObjectClass(env, imm);
+		jmethodID showSoftInput = (*env)->GetMethodID(env, immClass, "showSoftInput", "(Landroid/view/View;I)Z");
+		if (!showSoftInput) { (*env)->ExceptionClear(env); break; }
+		(*env)->CallBooleanMethod(env, imm, showSoftInput, decorView, SHOW_IMPLICIT);
+		(*env)->ExceptionClear(env);
+	} while (0);
+	(*env)->PopLocalFrame(env, NULL);
+cleanup_show:
+	if (didAttach && gJVM) (*gJVM)->DetachCurrentThread(gJVM);
+}
+
+// hideAndroidKeyboard calls InputMethodManager.hideSoftInputFromWindow on the
+// Activity's DecorView to dismiss the Android on-screen keyboard.
+//
+// All JNI local references are managed inside a PushLocalFrame/PopLocalFrame
+// scope to prevent the local reference table from overflowing on repeated calls.
+void hideAndroidKeyboard(void) {
+	jboolean didAttach = JNI_FALSE;
+	JNIEnv *env = getJNIEnv(&didAttach);
+	if (!env || !gActivity) goto cleanup_hide;
+	if ((*env)->PushLocalFrame(env, 16) < 0) {
+		(*env)->ExceptionClear(env);
+		goto cleanup_hide;
+	}
+	do {
+		jclass ctxClass = (*env)->FindClass(env, "android/content/Context");
+		if (!ctxClass) { (*env)->ExceptionClear(env); break; }
+		jfieldID imsFld = (*env)->GetStaticFieldID(env, ctxClass, "INPUT_METHOD_SERVICE", "Ljava/lang/String;");
+		if (!imsFld) { (*env)->ExceptionClear(env); break; }
+		jstring imsStr = (jstring)(*env)->GetStaticObjectField(env, ctxClass, imsFld);
+
+		jmethodID getSvc = (*env)->GetMethodID(env, ctxClass, "getSystemService", "(Ljava/lang/String;)Ljava/lang/Object;");
+		if (!getSvc) { (*env)->ExceptionClear(env); break; }
+		jobject imm = (*env)->CallObjectMethod(env, gActivity, getSvc, imsStr);
+		if (!imm) { (*env)->ExceptionClear(env); break; }
+
+		jclass actClass = (*env)->GetObjectClass(env, gActivity);
+		jmethodID getWin = (*env)->GetMethodID(env, actClass, "getWindow", "()Landroid/view/Window;");
+		if (!getWin) { (*env)->ExceptionClear(env); break; }
+		jobject win = (*env)->CallObjectMethod(env, gActivity, getWin);
+		if (!win) { (*env)->ExceptionClear(env); break; }
+
+		jclass winClass = (*env)->GetObjectClass(env, win);
+		jmethodID getDecor = (*env)->GetMethodID(env, winClass, "getDecorView", "()Landroid/view/View;");
+		if (!getDecor) { (*env)->ExceptionClear(env); break; }
+		jobject decorView = (*env)->CallObjectMethod(env, win, getDecor);
+		if (!decorView) { (*env)->ExceptionClear(env); break; }
+
+		jclass viewClass = (*env)->GetObjectClass(env, decorView);
+		jmethodID getWinTok = (*env)->GetMethodID(env, viewClass, "getWindowToken", "()Landroid/os/IBinder;");
+		if (!getWinTok) { (*env)->ExceptionClear(env); break; }
+		jobject winTok = (*env)->CallObjectMethod(env, decorView, getWinTok);
+		if (!winTok) { (*env)->ExceptionClear(env); break; }
+
+		jclass immClass = (*env)->GetObjectClass(env, imm);
+		jmethodID hideSoftInput = (*env)->GetMethodID(env, immClass, "hideSoftInputFromWindow", "(Landroid/os/IBinder;I)Z");
+		if (!hideSoftInput) { (*env)->ExceptionClear(env); break; }
+		(*env)->CallBooleanMethod(env, imm, hideSoftInput, winTok, HIDE_NO_FLAGS);
+		(*env)->ExceptionClear(env);
+	} while (0);
+	(*env)->PopLocalFrame(env, NULL);
+cleanup_hide:
+	if (didAttach && gJVM) (*gJVM)->DetachCurrentThread(gJVM);
 }
 */
 import "C"
 
 import (
+	"unsafe"
+
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
 	log "github.com/sirupsen/logrus"
 )
 
-// ShowKeyboard shows the native Android soft keyboard by calling
-// InputMethodManager.showSoftInput via JNI.
-//
-// This function requires ebitenmobile bind toolchain and Android NDK.
-// SDK integration is pending: the underlying C function has no effect
-// until the JNI implementation is complete.
+// SetAndroidActivity stores the Android Activity for keyboard control.
+// This must be called from the Java ebitenmobile wrapper before ShowKeyboard
+// or HideKeyboard is used. envPtr is a JNIEnv* and activityPtr is a jobject,
+// both cast to uintptr by the calling Java-side JNI glue.
+// Zero values are rejected to prevent null-pointer dereferences in C.
+func SetAndroidActivity(envPtr, activityPtr uintptr) {
+	if envPtr == 0 || activityPtr == 0 {
+		log.WithField("platform", "android").Warn("SetAndroidActivity called with nil pointer; ignoring")
+		return
+	}
+	C.setAndroidActivity(unsafe.Pointer(envPtr), unsafe.Pointer(activityPtr))
+}
+
+// ShowKeyboard shows the native Android soft keyboard via
+// InputMethodManager.showSoftInput on the Activity's DecorView.
+// Requires SetAndroidActivity to have been called by the Java wrapper first.
 func ShowKeyboard() {
-	log.WithField("platform", "android").Debug("ShowKeyboard called (ebitenmobilebind build — JNI SDK integration pending)")
+	log.WithField("platform", "android").Debug("ShowKeyboard called")
 	C.showAndroidKeyboard()
 }
 
-// HideKeyboard hides the native Android soft keyboard by calling
-// InputMethodManager.hideSoftInputFromWindow via JNI.
-//
-// This function requires ebitenmobile bind toolchain and Android NDK.
-// SDK integration is pending: the underlying C function has no effect
-// until the JNI implementation is complete.
+// HideKeyboard hides the native Android soft keyboard via
+// InputMethodManager.hideSoftInputFromWindow on the Activity's DecorView.
+// Requires SetAndroidActivity to have been called by the Java wrapper first.
 func HideKeyboard() {
-	log.WithField("platform", "android").Debug("HideKeyboard called (ebitenmobilebind build — JNI SDK integration pending)")
+	log.WithField("platform", "android").Debug("HideKeyboard called")
 	C.hideAndroidKeyboard()
 }
 
 // IsKeyboardSupported reports whether programmatic native soft keyboard control
-// is functionally available on this Android ebitenmobilebind build.
-//
-// The JNI bridge is not yet implemented, so ShowKeyboard and HideKeyboard are
-// currently no-ops. This returns false until the JNI integration is complete.
+// is available. Returns true only after SetAndroidActivity has been called
+// successfully and the Activity global reference is held.
 func IsKeyboardSupported() bool {
-	return false
+	return C.hasAndroidActivity() == C.JNI_TRUE
 }
 
 // GetBackButtonKey returns the Android system back button key.

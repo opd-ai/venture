@@ -3,6 +3,11 @@
 
 // Package mobile provides iOS-specific keyboard integration.
 // This file implements native soft keyboard control via UIKit's UIResponder API.
+// A hidden UITextField is maintained and re-attached to the current root
+// UIViewController's view whenever the view hierarchy changes; ShowKeyboard
+// calls becomeFirstResponder and HideKeyboard calls resignFirstResponder.
+// Key-window lookup uses the iOS 13+ connectedScenes API with a fallback to the
+// deprecated UIApplication.keyWindow for older OS versions.
 // This file is only included when building with the ebitenmobile bind tool.
 package mobile
 
@@ -10,41 +15,73 @@ package mobile
 #cgo LDFLAGS: -framework UIKit
 #import <UIKit/UIKit.h>
 
-// showIOSKeyboard requests the first responder to become active, which causes
-// UIKit to display the on-screen keyboard.
-//
-// IMPLEMENTATION NOTE: On iOS, the keyboard is shown automatically when a
-// UIResponder (such as UITextField or UITextView) becomes the first responder.
-// Integrating with Ebiten's Metal/OpenGL view requires:
-//
-//  1. Creating a UITextField with alpha=0 positioned outside the visible area.
-//  2. Calling [textField becomeFirstResponder] to make it the first responder.
-//  3. UIKit then automatically shows the on-screen keyboard.
-//
-// Keyboard dismissal via hideIOSKeyboard calls [textField resignFirstResponder].
-//
-// The current implementation is a placeholder; full integration requires
-// the ebitenmobile Objective-C bridge and access to the UIViewController.
-void showIOSKeyboard() {
-    // Placeholder: SDK integration pending.
-    // When implemented, this will call dispatch_async(dispatch_get_main_queue(), ^{
-    //   UIWindow *window = [UIApplication sharedApplication].keyWindow;
-    //   UIViewController *rootVC = window.rootViewController;
-    //   UITextField *hiddenField = [[UITextField alloc] initWithFrame:CGRectMake(-1,-1,1,1)];
-    //   hiddenField.alpha = 0.01;
-    //   [rootVC.view addSubview:hiddenField];
-    //   [hiddenField becomeFirstResponder];
-    // });
+static UITextField *gHiddenTextField = nil;
+
+// getKeyWindow returns the application's key window, compatible with iOS 13+.
+// On iOS 13+ UIApplication.keyWindow is deprecated; the modern approach
+// enumerates connectedScenes to find the foreground-active UIWindowScene's
+// key window. Falls back to the deprecated API on iOS < 13.
+static UIWindow *getKeyWindow(void) {
+    if (@available(iOS 13, *)) {
+        for (UIScene *scene in [UIApplication sharedApplication].connectedScenes) {
+            if (scene.activationState != UISceneActivationStateForegroundActive) continue;
+            UIWindowScene *ws = (UIWindowScene *)scene;
+            for (UIWindow *window in ws.windows) {
+                if (window.isKeyWindow) return window;
+            }
+            if (ws.windows.count > 0) return ws.windows[0];
+        }
+    }
+    // Fallback for iOS < 13.
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+    return [UIApplication sharedApplication].keyWindow;
+#pragma clang diagnostic pop
 }
 
-// hideIOSKeyboard dismisses the iOS on-screen keyboard by resigning first responder.
-void hideIOSKeyboard() {
-    // Placeholder: SDK integration pending.
-    // When implemented, this will call dispatch_async(dispatch_get_main_queue(), ^{
-    //   UIWindow *window = [UIApplication sharedApplication].keyWindow;
-    //   UIView *firstResponder = [window performSelector:@selector(firstResponder)];
-    //   [firstResponder resignFirstResponder];
-    // });
+// ensureTextField creates the hidden UITextField if it doesn't exist yet,
+// or re-attaches it to rootVC.view if the view hierarchy changed (e.g. after
+// a root-view-controller swap). Alpha is 0.01, not 0.0: UIKit skips
+// firstResponder handling for fully-transparent views, which would prevent
+// the keyboard from appearing.
+static void ensureTextField(UIViewController *rootVC) {
+    if (gHiddenTextField && gHiddenTextField.superview == rootVC.view) return;
+    if (gHiddenTextField) {
+        [gHiddenTextField removeFromSuperview];
+        gHiddenTextField = nil;
+    }
+    // Position far off-screen (-10000,-10000) to avoid layout/hit-testing effects.
+    gHiddenTextField = [[UITextField alloc] initWithFrame:CGRectMake(-10000, -10000, 1, 1)];
+    gHiddenTextField.alpha = 0.01;
+    gHiddenTextField.autocorrectionType = UITextAutocorrectionTypeNo;
+    gHiddenTextField.autocapitalizationType = UITextAutocapitalizationTypeNone;
+    gHiddenTextField.spellCheckingType = UITextSpellCheckingTypeNo;
+    [rootVC.view addSubview:gHiddenTextField];
+}
+
+// showIOSKeyboard obtains the key window (iOS 13+ compatible), ensures the
+// hidden UITextField is attached to the current root-VC view, and calls
+// becomeFirstResponder to trigger the UIKit on-screen keyboard.
+// Runs on the main queue for UIKit thread safety.
+void showIOSKeyboard(void) {
+    dispatch_async(dispatch_get_main_queue(), ^{
+        UIWindow *window = getKeyWindow();
+        if (!window) return;
+        UIViewController *rootVC = window.rootViewController;
+        if (!rootVC) return;
+        ensureTextField(rootVC);
+        [gHiddenTextField becomeFirstResponder];
+    });
+}
+
+// hideIOSKeyboard dismisses the iOS on-screen keyboard by calling
+// resignFirstResponder on the hidden UITextField. Runs on the main queue.
+void hideIOSKeyboard(void) {
+    dispatch_async(dispatch_get_main_queue(), ^{
+        if (gHiddenTextField) {
+            [gHiddenTextField resignFirstResponder];
+        }
+    });
 }
 */
 import "C"
@@ -56,34 +93,23 @@ import (
 )
 
 // ShowKeyboard shows the native iOS on-screen keyboard by calling
-// UIResponder.becomeFirstResponder via the UIKit bridge.
-//
-// This function requires ebitenmobile bind toolchain and Xcode/iOS SDK.
-// SDK integration is pending: the underlying C function has no effect
-// until the UIKit implementation is complete.
+// UIResponder.becomeFirstResponder on a hidden UITextField via the UIKit bridge.
 func ShowKeyboard() {
-	log.WithField("platform", "ios").Debug("ShowKeyboard called (ebitenmobilebind build — UIKit SDK integration pending)")
+	log.WithField("platform", "ios").Debug("ShowKeyboard called")
 	C.showIOSKeyboard()
 }
 
 // HideKeyboard dismisses the native iOS on-screen keyboard by calling
-// UIResponder.resignFirstResponder via the UIKit bridge.
-//
-// This function requires ebitenmobile bind toolchain and Xcode/iOS SDK.
-// SDK integration is pending: the underlying C function has no effect
-// until the UIKit implementation is complete.
+// UIResponder.resignFirstResponder on the hidden UITextField.
 func HideKeyboard() {
-	log.WithField("platform", "ios").Debug("HideKeyboard called (ebitenmobilebind build — UIKit SDK integration pending)")
+	log.WithField("platform", "ios").Debug("HideKeyboard called")
 	C.hideIOSKeyboard()
 }
 
-// IsKeyboardSupported returns false until the iOS UIKit bridge is fully wired.
-//
-// Although this file is only built for ios+cgo+ebitenmobilebind, the underlying
-// C keyboard bridge functions are currently placeholders with no runtime effect.
-// This returns true once the UIKit first-responder integration is complete.
+// IsKeyboardSupported returns true now that the UIKit hidden-UITextField
+// bridge is implemented via showIOSKeyboard/hideIOSKeyboard.
 func IsKeyboardSupported() bool {
-	return false
+	return true
 }
 
 // GetBackButtonKey returns the iOS back navigation key (ESC).

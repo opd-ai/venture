@@ -1854,6 +1854,47 @@ func TestHandleGuildMessage_NilData(t *testing.T) {
 	}
 }
 
+
+// TestIsMember verifies the MembershipValidator-satisfying method.
+func TestIsMember(t *testing.T) {
+	m := NewManager()
+	guildID, err := m.CreateGuild("fantasy", "leader1", 12345)
+	if err != nil {
+		t.Fatalf("CreateGuild: %v", err)
+	}
+
+	// Leader is a member
+	if !m.IsMember(guildID, "leader1") {
+		t.Error("IsMember: leader1 should be a member")
+	}
+
+	// Non-member returns false
+	if m.IsMember(guildID, "stranger") {
+		t.Error("IsMember: stranger should not be a member")
+	}
+
+	// Add a regular member
+	if err := m.AddMember(guildID, "player2", RankMember); err != nil {
+		t.Fatalf("AddMember: %v", err)
+	}
+	if !m.IsMember(guildID, "player2") {
+		t.Error("IsMember: player2 should be a member after AddMember")
+	}
+
+	// After removal, no longer a member
+	if err := m.RemoveMember(guildID, "player2"); err != nil {
+		t.Fatalf("RemoveMember: %v", err)
+	}
+	if m.IsMember(guildID, "player2") {
+		t.Error("IsMember: player2 should not be a member after RemoveMember")
+	}
+
+	// Non-existent guild returns false
+	if m.IsMember("no-such-guild", "anyone") {
+		t.Error("IsMember: non-existent guild should return false")
+	}
+}
+
 // contains checks if a string contains a substring
 func contains(s, substr string) bool {
 	return len(substr) == 0 || (len(s) >= len(substr) && containsAt(s, substr))

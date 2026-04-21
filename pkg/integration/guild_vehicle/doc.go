@@ -58,15 +58,6 @@
 //
 // # Integration Status
 //
-// This package provides standalone fleet management functionality. The following
-// integrations are deferred pending further architecture work:
-//
-// FUTURE (not yet implemented):
-//   - pkg/network/federation/guild: Guild membership validation and permissions
-//   - pkg/engine: VehicleComponent and VehicleCombatComponent synchronization
-//   - pkg/engine/physics/vehicle: Formation-based physics behavior
-//   - pkg/world/territory: Siege damage application to territory structures
-//
 // IMPLEMENTED:
 //   - Thread-safe fleet and vehicle management
 //   - Formation bonus calculations
@@ -74,6 +65,23 @@
 //   - Maintenance cost calculations
 //   - Gzip-compressed persistence (save/load)
 //   - Access control for shared vehicle access
+//
+// OPTIONAL INTEGRATION HOOKS (injectable via setter methods; active only when wired by caller):
+//
+//   - MembershipValidator (SetMembershipValidator): validates guild membership before
+//     granting vehicle access. Wired in cmd/server/main.go using guild.Manager.
+//     Call SetMembershipValidator(nil) to disable (default; useful for tests).
+//
+//   - VehicleSyncer (SetVehicleSyncer): propagates GuildVehicleFleetComponent to ECS
+//     vehicle entities on add/remove. Not wired by default; intended for pkg/engine
+//     layer integration (import cycle prevents guild_vehicle from importing engine).
+//
+//   - StructureDamager (SetStructureDamager + ApplySiegeDamage): routes siege vehicle
+//     damage with type multiplier to territory defensive structures. Wired in
+//     cmd/server/main.go using territory.Manager.
+//
+//   - GetFormationOffsets: returns per-slot (X, Y, angle) offsets for all formation
+//     types; consume in pkg/engine/physics/vehicle per-frame target-position steering.
 //
 // # Thread Safety
 //

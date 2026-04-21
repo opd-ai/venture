@@ -14,8 +14,11 @@ import (
 
 // FleetManager manages guild vehicle fleets with thread-safe operations
 type FleetManager struct {
-	fleets map[string]*Fleet // GuildID -> Fleet map
-	mu     sync.RWMutex
+	fleets              map[string]*Fleet // GuildID -> Fleet map
+	mu                  sync.RWMutex
+	membershipValidator MembershipValidator // optional; validates guild membership on GrantAccess
+	vehicleSyncer       VehicleSyncer       // optional; propagates fleet component to ECS entities
+	structureDamager    StructureDamager    // optional; applies siege damage to territory structures
 }
 
 // NewFleetManager creates a new fleet manager instance
@@ -70,7 +73,6 @@ func (m *FleetManager) AddVehicleWithType(guildID string, vehicleID uint64, flee
 	}
 
 	m.mu.Lock()
-	defer m.mu.Unlock()
 
 	// Get or create fleet
 	key := m.getFleetKey(guildID, fleetID)
@@ -90,8 +92,15 @@ func (m *FleetManager) AddVehicleWithType(guildID string, vehicleID uint64, flee
 
 	// Check if vehicle already in fleet
 	if _, exists := fleet.Vehicles[vehicleID]; exists {
+		m.mu.Unlock()
 		return fmt.Errorf("vehicle %d already in fleet %s", vehicleID, fleetID)
 	}
+
+	// Assign a stable formation slot using the monotonic counter.
+	// The counter never decrements, so slot indices remain unique and stable
+	// across removals and re-adds.
+	formationSlot := fleet.nextSlot
+	fleet.nextSlot++
 
 	// Add vehicle
 	vehicle := &GuildVehicle{
@@ -101,6 +110,7 @@ func (m *FleetManager) AddVehicleWithType(guildID string, vehicleID uint64, flee
 		SiegeType:       siegeType,
 		SharedAccess:    make(map[string]bool),
 		MaintenanceCost: maintenanceCost,
+		FormationSlot:   formationSlot,
 		AddedAt:         now(),
 		LastMaintenance: now(),
 	}
@@ -108,32 +118,77 @@ func (m *FleetManager) AddVehicleWithType(guildID string, vehicleID uint64, flee
 	fleet.Vehicles[vehicleID] = vehicle
 	fleet.UpdatedAt = now()
 
+	// Capture syncer pointer and component data before releasing the lock.
+	// Calling an injected syncer while holding the mutex risks deadlock if the
+	// syncer re-enters FleetManager (e.g. ECS engine calling back into fleet ops).
+	syncer := m.vehicleSyncer
+	var syncComp *GuildVehicleFleetComponent
+	if syncer != nil {
+		syncComp = &GuildVehicleFleetComponent{
+			GuildID:           guildID,
+			FleetID:           fleetID,
+			SiegeType:         siegeType,
+			FormationPosition: formationSlot,
+		}
+	}
+
+	m.mu.Unlock()
+
+	// Notify ECS syncer outside the lock to avoid deadlock.
+	if syncer != nil {
+		syncer.SyncVehicleFleetComponent(vehicleID, syncComp)
+	}
+
 	return nil
 }
 
 // RemoveVehicle removes a vehicle from a fleet
 func (m *FleetManager) RemoveVehicle(guildID string, vehicleID uint64, fleetID string) error {
 	m.mu.Lock()
-	defer m.mu.Unlock()
 
 	key := m.getFleetKey(guildID, fleetID)
 	fleet, exists := m.fleets[key]
 	if !exists {
+		m.mu.Unlock()
 		return fmt.Errorf("fleet %s not found for guild %s", fleetID, guildID)
 	}
 
 	if _, exists := fleet.Vehicles[vehicleID]; !exists {
+		m.mu.Unlock()
 		return fmt.Errorf("vehicle %d not found in fleet %s", vehicleID, fleetID)
 	}
 
 	delete(fleet.Vehicles, vehicleID)
 	fleet.UpdatedAt = now()
 
+	// Capture syncer before releasing the lock (same deadlock-avoidance pattern as AddVehicleWithType).
+	syncer := m.vehicleSyncer
+
+	m.mu.Unlock()
+
+	// Notify ECS syncer outside the lock to avoid deadlock.
+	if syncer != nil {
+		syncer.ClearVehicleFleetComponent(vehicleID)
+	}
+
 	return nil
 }
 
-// GrantAccess grants a player access to a vehicle
+// GrantAccess grants a player access to a vehicle.
+// If a MembershipValidator has been set via SetMembershipValidator, the player must
+// be an active member of the guild; otherwise the request is rejected.
 func (m *FleetManager) GrantAccess(guildID string, vehicleID uint64, playerID string) error {
+	// Read validator under RLock to avoid a data race with SetMembershipValidator.
+	m.mu.RLock()
+	validator := m.membershipValidator
+	m.mu.RUnlock()
+
+	if validator != nil {
+		if !validator.IsMember(guildID, playerID) {
+			return fmt.Errorf("player %s is not a member of guild %s", playerID, guildID)
+		}
+	}
+
 	m.mu.Lock()
 	defer m.mu.Unlock()
 

@@ -538,8 +538,11 @@ func createGameWorld(logger *logrus.Logger) (*engine.World, *engine.EnhancedChat
 			worldLogger.WithError(saveErr).WithFields(logrus.Fields{
 				"chunk_x": chunk.X,
 				"chunk_y": chunk.Y,
-			}).Warn("failed to persist compressed chunk")
+			}).Warn("failed to persist compressed chunk; full world-state save will retry this chunk")
 		}
+		// Mark dirty in all cases — on success this registers the chunk for the
+		// next incremental world-state save; on failure it ensures the chunk is
+		// retried by the next full save cycle rather than silently dropped.
 		chunkMods.MarkDirty(chunk.X, chunk.Y)
 	})
 	worldLogger.Debug("chunk compression and modification tracking initialized")

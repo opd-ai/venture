@@ -681,3 +681,26 @@ func TestAnimationSyncRoundTrip(t *testing.T) {
 		t.Error("GetNextState should return nil after buffer is drained")
 	}
 }
+
+// TestAnimationStatePacket_WireSize validates that the encoded wire size of
+// AnimationStatePacket stays at 20 bytes. engine.animStatePacketBytes is
+// hardcoded to this value for bandwidth accounting; if the packet layout
+// changes and this test fails, update animStatePacketBytes in
+// pkg/engine/animation_system.go to match.
+func TestAnimationStatePacket_WireSize(t *testing.T) {
+	pkt := AnimationStatePacket{
+		EntityID:   42,
+		State:      engine.AnimationStateIdle,
+		FrameIndex: 3,
+		Timestamp:  1_000_000,
+		Loop:       true,
+	}
+	data, err := pkt.Encode()
+	if err != nil {
+		t.Fatalf("Encode() error: %v", err)
+	}
+	const wantBytes = 20 // must match engine.animStatePacketBytes
+	if len(data) != wantBytes {
+		t.Errorf("AnimationStatePacket wire size = %d bytes, want %d; update engine.animStatePacketBytes", len(data), wantBytes)
+	}
+}

@@ -11,6 +11,14 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+// spellIDFormat is the stable format string used to produce a carryover key for
+// each learned spell. The format encodes the slot index and the generation seed,
+// both of which are deterministic for a given world seed and spell parameters.
+//
+// WARNING: this string is part of the prestige/new-game-plus save schema.
+// Changing it will silently break carryover saves written by older versions.
+const spellIDFormat = "slot_%d_seed_%d"
+
 // ManaComponent tracks entity's magical energy.
 type ManaComponent struct {
 	Current int
@@ -3067,7 +3075,7 @@ func LoadPlayerSpells(player *Entity, seed int64, genreID string, depth int) err
 		// Build a stable spell ID from slot index and the generation seed.
 		// Using spell.Seed (which is deterministic for a given world-seed + spell
 		// parameters) keeps the carryover mapping stable across sessions.
-		spellID := fmt.Sprintf("slot_%d_seed_%d", i, spell.Seed)
+		spellID := fmt.Sprintf(spellIDFormat, i, spell.Seed)
 		known := &KnownSpell{
 			Name:     spell.Name,
 			Type:     spell.Element.String(),

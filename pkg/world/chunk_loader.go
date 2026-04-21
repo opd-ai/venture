@@ -3,6 +3,8 @@ package world
 import (
 	"fmt"
 	"math"
+
+	"github.com/sirupsen/logrus"
 )
 
 // ChunkSize is the size of a chunk in tiles
@@ -114,6 +116,13 @@ func (c *ChunkLoaderSystem) loadChunk(chunkX, chunkY int) (*Chunk, error) {
 		if data, err := c.persistence.LoadChunk(chunkX, chunkY); err == nil {
 			if chunk, decErr := c.compressor.DecompressChunk(data); decErr == nil {
 				return chunk, nil
+			} else {
+				// Log but fall through so we can still regenerate the chunk.
+				logrus.WithFields(logrus.Fields{
+					"chunk_x": chunkX,
+					"chunk_y": chunkY,
+					"error":   decErr,
+				}).Warn("decompressing persisted chunk failed; regenerating")
 			}
 		}
 

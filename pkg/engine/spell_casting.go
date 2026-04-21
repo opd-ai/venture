@@ -1,6 +1,7 @@
 package engine
 
 import (
+	"fmt"
 	"image/color"
 	"math"
 
@@ -3047,6 +3048,33 @@ func LoadPlayerSpells(player *Entity, seed int64, genreID string, depth int) err
 			"mana_cost":  spells[i].Stats.ManaCost,
 		}).Debug("Spell equipped to slot")
 		equippedCount++
+	}
+
+	// Populate SpellComponent so prestige/new-game-plus carryover can persist
+	// the player's learned spells across runs.
+	var spellComp *SpellComponent
+	if comp, ok := player.GetComponent("spell"); ok {
+		spellComp, _ = comp.(*SpellComponent)
+	}
+	if spellComp == nil {
+		spellComp = NewSpellComponent()
+		player.AddComponent(spellComp)
+	}
+	for i, spell := range spells {
+		if i >= 5 {
+			break
+		}
+		spellID := fmt.Sprintf("slot_%d_%s_%d", i, spell.Type.String(), spell.Seed)
+		known := &KnownSpell{
+			Name:     spell.Name,
+			Type:     spell.Element.String(),
+			ManaCost: spell.Stats.ManaCost,
+			CastTime: spell.Stats.CastTime,
+			Cooldown: spell.Stats.Cooldown,
+			Damage:   spell.Stats.Damage,
+			Healing:  spell.Stats.Healing,
+		}
+		spellComp.LearnSpell(spellID, known)
 	}
 
 	log.WithFields(logrus.Fields{

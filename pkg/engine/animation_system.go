@@ -807,8 +807,21 @@ func (s *AnimationSystem) regenerateFramesIfDirty(entity *Entity, animComp *Anim
 	s.regenCount++
 	s.stats.CompletedRegen++
 	s.logGenerationResult(entity, animComp)
+	s.notifyStateChange(entity.ID, animComp.CurrentState)
 
 	return nil
+}
+
+// notifyStateChange calls the sync manager when an animation state is confirmed.
+// If syncManager is nil (offline/singleplayer), the call is a no-op.
+func (s *AnimationSystem) notifyStateChange(entityID uint64, state AnimationState) {
+	if s.syncManager == nil {
+		return
+	}
+	if s.syncManager.ShouldSync(entityID, state) {
+		const animPacketBytes = 20 // fixed size per AnimationStatePacket (see animation_sync.go)
+		s.syncManager.RecordSync(entityID, state, animPacketBytes)
+	}
 }
 
 // logFrameGeneration logs animation frame generation at debug level.

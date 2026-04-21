@@ -108,6 +108,15 @@ func (c *ChunkLoaderSystem) loadChunk(chunkX, chunkY int) (*Chunk, error) {
 
 	// Try loading from persistence
 	if c.persistence != nil {
+		// Fast path: check for a previously compressed chunk file first.
+		if data, err := c.persistence.LoadChunk(chunkX, chunkY); err == nil {
+			compressor := &ChunkCompressionSystem{}
+			if chunk, decErr := compressor.DecompressChunk(data); decErr == nil {
+				return chunk, nil
+			}
+		}
+
+		// Fallback: full world-state save (legacy path).
 		state, err := c.persistence.LoadWorld(c.worldSeed)
 		if err == nil && state.ChunkData != nil {
 			if chunk, exists := state.ChunkData[chunkID]; exists {

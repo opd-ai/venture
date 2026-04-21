@@ -522,7 +522,7 @@ func createGameWorld(logger *logrus.Logger) (*engine.World, *engine.EnhancedChat
 		if chunk == nil {
 			return
 		}
-		_, ratio, err := chunkCompressor.CompressChunk(chunk)
+		data, ratio, err := chunkCompressor.CompressChunk(chunk)
 		if err != nil {
 			worldLogger.WithError(err).Warn("chunk compression on evict failed")
 			return
@@ -533,6 +533,9 @@ func createGameWorld(logger *logrus.Logger) (*engine.World, *engine.EnhancedChat
 				"chunk_y": chunk.Y,
 				"ratio":   ratio,
 			}).Debug("chunk compressed on evict")
+		}
+		if saveErr := worldPersistence.SaveChunk(chunk.X, chunk.Y, data); saveErr != nil {
+			worldLogger.WithError(saveErr).Warn("failed to persist compressed chunk")
 		}
 		chunkMods.MarkDirty(chunk.X, chunk.Y)
 	})

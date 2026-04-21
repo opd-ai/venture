@@ -379,13 +379,13 @@ func (g *CellularGenerator) findRegions(terrain *Terrain) [][]*Tile {
 // floodFill performs flood fill to find all connected floor tiles.
 // Pre-allocates region and stack buffers to reduce slice growth allocations.
 func (g *CellularGenerator) floodFill(terrain *Terrain, startX, startY int, visited [][]bool) []*Tile {
-	// Estimate capacity: sqrt of total tiles is a reasonable typical region size.
-	estimatedSize := terrain.Width * terrain.Height / 4
-	if estimatedSize < 32 {
-		estimatedSize = 32
+	// Estimate capacity: one-quarter of total tiles is a reasonable typical region size.
+	estimatedRegionSize := terrain.Width * terrain.Height / 4
+	if estimatedRegionSize < 32 {
+		estimatedRegionSize = 32
 	}
-	region := make([]*Tile, 0, estimatedSize)
-	stack := make([]struct{ x, y int }, 0, estimatedSize)
+	region := make([]*Tile, 0, estimatedRegionSize)
+	stack := make([]struct{ x, y int }, 0, estimatedRegionSize)
 	stack = append(stack, struct{ x, y int }{startX, startY})
 
 	for len(stack) > 0 {

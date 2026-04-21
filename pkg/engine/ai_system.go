@@ -87,7 +87,9 @@ func (ai *AISystem) Update(entities []*Entity, deltaTime float64) {
 	}
 
 	for _, entity := range aiEntities {
-		// Retrieve the AI component — already guaranteed present by GetEntitiesWith.
+		// Retrieve the AI component. GetEntitiesWith guarantees the "ai" key is present,
+		// but the type assertion below can still fail if the component was added with a
+		// non-*AIComponent value, so both checks are retained for safety.
 		aiComp, ok := entity.GetComponent("ai")
 		if !ok {
 			continue

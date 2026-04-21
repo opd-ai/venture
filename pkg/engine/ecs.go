@@ -14,8 +14,17 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+// budgetWarn* constants control rate-limiting of per-system frame-budget exceeded warnings.
+// Warnings are emitted on the 1st, 10th, 100th, and every 1000th occurrence.
+const (
+	budgetWarnFirst  = 1
+	budgetWarnSecond = 10
+	budgetWarnThird  = 100
+	budgetWarnPeriod = 1000
+)
+
 // Entity represents a game object composed of components.
-// Entities are identified by a unique ID and contain a collection of components.
+// Entity is identified by a unique ID and contains a collection of components.
 type Entity struct {
 	ID         uint64
 	Components map[string]Component
@@ -736,16 +745,17 @@ func (w *World) Update(deltaTime float64) {
 
 		// Per-system frame-budget enforcement: emit a rate-limited warning when a
 		// system exceeds its configured budget (default 2 ms). Warnings are emitted
-		// on the 1st, 10th, 100th, 1000th, ... excess to avoid log flooding.
+		// on the 1st, 10th, 100th, and every 1000th occurrence to avoid log flooding.
 		if w.logger != nil && w.systemBudget > 0 && elapsed > w.systemBudget {
 			w.budgetWarnCount[systemName]++
 			count := w.budgetWarnCount[systemName]
-			if count == 1 || count == 10 || count == 100 || count%1000 == 0 {
+			if count == budgetWarnFirst || count == budgetWarnSecond ||
+				count == budgetWarnThird || count%budgetWarnPeriod == 0 {
 				w.logger.WithFields(logrus.Fields{
-					"system":        systemName,
-					"elapsed_ms":    elapsed.Milliseconds(),
-					"budget_ms":     w.systemBudget.Milliseconds(),
-					"excess_count":  count,
+					"system":       systemName,
+					"elapsed_ms":   elapsed.Milliseconds(),
+					"budget_ms":    w.systemBudget.Milliseconds(),
+					"excess_count": count,
 				}).Warn("system exceeded per-frame budget")
 			}
 		}

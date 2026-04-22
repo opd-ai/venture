@@ -33,11 +33,16 @@ import (
 	"image"
 	"image/color"
 	"image/png"
+	"io"
 	"os"
 	"path/filepath"
 )
 
 // Snapshot represents captured visual output at a specific point in time.
+var createSnapshotFile = func(path string) (io.WriteCloser, error) {
+	return os.Create(path)
+}
+
 type Snapshot struct {
 	// Generation parameters
 	Seed    int64  `json:"seed"`
@@ -213,12 +218,16 @@ func SaveSnapshot(snapshot *Snapshot, options SnapshotOptions) error {
 }
 
 // saveImage saves an image to a PNG file.
-func saveImage(img *image.RGBA, path string) error {
-	file, err := os.Create(path)
+func saveImage(img *image.RGBA, path string) (err error) {
+	file, err := createSnapshotFile(path)
 	if err != nil {
 		return err
 	}
-	defer file.Close()
+	defer func() {
+		if closeErr := file.Close(); closeErr != nil && err == nil {
+			err = fmt.Errorf("failed to close snapshot image file: %w", closeErr)
+		}
+	}()
 
 	return png.Encode(file, img)
 }

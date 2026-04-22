@@ -384,12 +384,12 @@ func (g *BranchingNarrativeGenerator) generatePathTitle(rng *rand.Rand, theme, g
 // MakeChoice records a player's choice in the narrative
 func (n *BranchingNarrative) MakeChoice(choiceIndex, optionIndex int) error {
 	if choiceIndex < 0 || choiceIndex >= len(n.ChoicePoints) {
-		return fmt.Errorf("invalid choice index: %d", choiceIndex)
+		return fmt.Errorf("%w: %d", ErrInvalidChoiceIndex, choiceIndex)
 	}
 
 	choice := &n.ChoicePoints[choiceIndex]
 	if optionIndex < 0 || optionIndex >= len(choice.Options) {
-		return fmt.Errorf("invalid option index: %d for choice %d", optionIndex, choiceIndex)
+		return fmt.Errorf("%w: %d for choice %d", ErrInvalidOptionIndex, optionIndex, choiceIndex)
 	}
 
 	choice.Chosen = optionIndex

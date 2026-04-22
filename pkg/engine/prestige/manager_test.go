@@ -1,6 +1,7 @@
 package prestige
 
 import (
+	"errors"
 	"testing"
 	"time"
 )
@@ -184,6 +185,21 @@ func TestManager_AllocateParagonPoint_InvalidStat(t *testing.T) {
 	err := mgr.AllocateParagonPoint(playerID, ParagonStat(999))
 	if err == nil {
 		t.Error("expected error for invalid stat, got nil")
+	}
+	if !errors.Is(err, ErrUnknownParagonCategory) {
+		t.Errorf("expected ErrUnknownParagonCategory, got %v", err)
+	}
+}
+
+func TestManager_GetAccountXPBonusWithError_AccountNotFound(t *testing.T) {
+	mgr := NewManager()
+
+	_, err := mgr.GetAccountXPBonusWithError("missing-account")
+	if err == nil {
+		t.Fatal("expected account not found error")
+	}
+	if !errors.Is(err, ErrAccountNotFound) {
+		t.Fatalf("expected ErrAccountNotFound, got %v", err)
 	}
 }
 

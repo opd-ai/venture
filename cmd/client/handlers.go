@@ -1935,9 +1935,7 @@ func registerNonCriticalSystems(game *engine.EbitenGame, sys *systemsContainer) 
 	sys.damageTypeColorFlashSystem = engine.NewDamageTypeColorFlashSystem(game.World, *seed+10250)
 	sys.damageTypeColorFlashSystem.SetGenre(*genreID)
 	if sys.combatSystem != nil {
-		if sys.weaponMaterialImpactParticleSystem != nil {
-			sys.combatSystem.AddDamageCallback(sys.weaponMaterialImpactParticleSystem.OnMeleeImpact)
-		}
+		sys.combatSystem.AddDamageCallback(sys.weaponMaterialImpactParticleSystem.OnMeleeImpact)
 		sys.combatSystem.AddDamageCallback(sys.damageTypeColorFlashSystem.OnDamageDealt)
 	}
 	game.World.AddSystem(sys.damageTypeColorFlashSystem)

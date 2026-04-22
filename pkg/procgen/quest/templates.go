@@ -3,7 +3,7 @@ package quest
 // genreQuestTemplates is the authoritative data table for all quest templates,
 // keyed by genre ID. Adding a new genre requires only adding an entry here;
 // no per-function edits are needed. This replaces the previous pattern of
-// 20 per-genre/per-type functions (TODO REM-144).
+// 20 per-genre/per-type functions (TODO REM-144 resolved).
 //
 // Genre keys: "fantasy", "scifi", "horror", "cyberpunk", "postapoc".
 var genreQuestTemplates = map[string][]QuestTemplate{

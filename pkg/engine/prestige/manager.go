@@ -184,8 +184,8 @@ func (m *Manager) AllocateParagonPoint(playerID string, stat ParagonStat) error 
 		return fmt.Errorf("%w: player %s", ErrNoParagonPoints, playerID)
 	}
 
-	if stat < StatHealth || stat > StatCritical {
-		return fmt.Errorf("%w: %d for player %s", ErrInvalidStat, stat, playerID)
+	if _, err := getParagonCategory(stat); err != nil {
+		return fmt.Errorf("%w: %d for player %s", ErrUnknownParagonCategory, stat, playerID)
 	}
 
 	player.ParagonPoints--
@@ -193,6 +193,19 @@ func (m *Manager) AllocateParagonPoint(playerID string, stat ParagonStat) error 
 	player.LastUpdated = m.clock.Now()
 
 	return nil
+}
+
+func getParagonCategory(stat ParagonStat) (string, error) {
+	switch stat {
+	case StatHealth, StatDefense:
+		return "survival", nil
+	case StatDamage, StatSpeed:
+		return "offense", nil
+	case StatCritical:
+		return "precision", nil
+	default:
+		return "", fmt.Errorf("%w: %d", ErrUnknownParagonCategory, stat)
+	}
 }
 
 // RespecParagonPoints resets all allocations and returns points (costs gold).
@@ -323,15 +336,24 @@ func (m *Manager) CheckAbilityUnlock(playerID string) *PrestigeAbility {
 
 // GetAccountXPBonus returns the account-wide XP bonus.
 func (m *Manager) GetAccountXPBonus(accountID string) float64 {
+	bonus, err := m.GetAccountXPBonusWithError(accountID)
+	if err != nil {
+		return 0.0
+	}
+	return bonus
+}
+
+// GetAccountXPBonusWithError returns the account-wide XP bonus and reports unknown accounts as errors.
+func (m *Manager) GetAccountXPBonusWithError(accountID string) (float64, error) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
 	account, exists := m.accounts[accountID]
 	if !exists {
-		return 0.0
+		return 0.0, fmt.Errorf("%w: %s", ErrAccountNotFound, accountID)
 	}
 
-	return account.XPBonus
+	return account.XPBonus, nil
 }
 
 // updateAccountBonus updates account bonus when character hits prestige 100.

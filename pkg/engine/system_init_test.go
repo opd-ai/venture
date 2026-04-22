@@ -4,6 +4,7 @@
 package engine
 
 import (
+	"reflect"
 	"testing"
 
 	"github.com/opd-ai/venture/pkg/logging"
@@ -249,6 +250,32 @@ func TestInitializeGameSystems_SystemConnections(t *testing.T) {
 	}
 	if game.HelpSystem != result.HelpSystem {
 		t.Error("game.HelpSystem not set to result.HelpSystem")
+	}
+}
+
+func TestInitializeGameSystems_WeaponMaterialImpactCallback(t *testing.T) {
+	logger := logging.TestUtilityLogger("system_init_test")
+	game := NewEbitenGameWithLogger(800, 600, logger)
+	config := DefaultSystemInitConfig(12345, "fantasy", logger)
+
+	result, err := InitializeGameSystems(game, config)
+	if err != nil {
+		t.Fatalf("InitializeGameSystems failed: %v", err)
+	}
+	if result.CombatSystem == nil || result.ParticleSystem == nil || result.WeaponMaterialImpactParticleSystem == nil {
+		t.Fatal("expected combat, particle, and weapon material impact systems to be initialized")
+	}
+
+	expectedPtr := reflect.ValueOf(result.WeaponMaterialImpactParticleSystem.OnMeleeImpact).Pointer()
+	found := false
+	for _, callback := range result.CombatSystem.additionalDamageCallbacks {
+		if reflect.ValueOf(callback).Pointer() == expectedPtr {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Fatal("expected WeaponMaterialImpactParticleSystem.OnMeleeImpact to be registered as a combat damage callback")
 	}
 }
 

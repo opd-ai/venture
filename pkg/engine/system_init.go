@@ -684,6 +684,7 @@ func InitializeGameSystems(game *EbitenGame, config *SystemInitConfig) (*SystemI
 	weaponMaterialImpactParticleSystem := NewWeaponMaterialImpactParticleSystem(game.World, config.Seed+9150)
 	weaponMaterialImpactParticleSystem.SetParticleSystem(result.ParticleSystem)
 	weaponMaterialImpactParticleSystem.SetGenre(config.GenreID)
+	result.CombatSystem.AddDamageCallback(weaponMaterialImpactParticleSystem.OnMeleeImpact)
 	result.WeaponMaterialImpactParticleSystem = weaponMaterialImpactParticleSystem
 	game.World.AddSystem(weaponMaterialImpactParticleSystem)
 
@@ -2295,8 +2296,6 @@ func InitializeSpatialPartitionSystem(
 
 	return spatialSystem
 }
-
-
 
 // animationSystemWrapper adapts AnimationSystem (returns error) to System interface (no return)
 type animationSystemWrapper struct {

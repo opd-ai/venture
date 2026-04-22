@@ -129,6 +129,16 @@ func (s *TradeSystem) Update(deltaTime float64) {
 
 // ProposeTrade proposes a trade between two players with validation and rate limiting
 func (s *TradeSystem) ProposeTrade(proposerID, recipientID uint64, offeredItemIDs, requestedItemIDs []string) error {
+	return s.ProposeTradeWithQuantities(
+		proposerID,
+		recipientID,
+		lineItemsFromIDs(offeredItemIDs),
+		lineItemsFromIDs(requestedItemIDs),
+	)
+}
+
+// ProposeTradeWithQuantities proposes a trade using quantity-bearing line items.
+func (s *TradeSystem) ProposeTradeWithQuantities(proposerID, recipientID uint64, offeredLineItems, requestedLineItems []engine.TradeLineItem) error {
 	if s.world == nil {
 		return fmt.Errorf("world is nil")
 	}
@@ -138,9 +148,18 @@ func (s *TradeSystem) ProposeTrade(proposerID, recipientID uint64, offeredItemID
 		return fmt.Errorf("rate limit exceeded (maximum 10 trade requests per second)")
 	}
 
-	// Validate item IDs format before processing
-	if err := s.validator.ValidateTradeRequest(offeredItemIDs, requestedItemIDs); err != nil {
-		return fmt.Errorf("trade validation failed: %w", err)
+	offeredItemIDs, err := s.normalizeTradeLineItems(offeredLineItems, "offered")
+	if err != nil {
+		return err
+	}
+
+	requestedItemIDs, err := s.normalizeTradeLineItems(requestedLineItems, "requested")
+	if err != nil {
+		return err
+	}
+
+	if len(offeredItemIDs) == 0 && len(requestedItemIDs) == 0 {
+		return fmt.Errorf("trade validation failed: trade must include at least one item")
 	}
 
 	proposer, recipient, err := s.getTradeEntities(proposerID, recipientID)
@@ -169,11 +188,59 @@ func (s *TradeSystem) ProposeTrade(proposerID, recipientID uint64, offeredItemID
 		return err
 	}
 
-	proposal := s.createTradeProposal(proposerID, recipientID, offeredItemIDs, requestedItemIDs)
+	proposal := s.createTradeProposal(proposerID, recipientID, offeredItemIDs, requestedItemIDs, offeredLineItems, requestedLineItems)
 	proposerTradeComp.ActiveTrade = proposal
 	recipientTradeComp.ActiveTrade = proposal
 
 	return nil
+}
+
+func lineItemsFromIDs(itemIDs []string) []engine.TradeLineItem {
+	if len(itemIDs) == 0 {
+		return nil
+	}
+	lineItems := make([]engine.TradeLineItem, 0, len(itemIDs))
+	for _, itemID := range itemIDs {
+		lineItems = append(lineItems, engine.TradeLineItem{ItemID: itemID, Quantity: 1})
+	}
+	return lineItems
+}
+
+func (s *TradeSystem) normalizeTradeLineItems(lineItems []engine.TradeLineItem, side string) ([]string, error) {
+	if len(lineItems) == 0 {
+		return nil, nil
+	}
+
+	uniqueItemIDs := make([]string, 0, len(lineItems))
+	expandedItemIDs := make([]string, 0, len(lineItems))
+	seen := make(map[string]struct{}, len(lineItems))
+
+	for i, lineItem := range lineItems {
+		if err := s.validator.ValidateItemID(lineItem.ItemID); err != nil {
+			return nil, fmt.Errorf("%s line item %d item ID validation failed: %w", side, i, err)
+		}
+		if err := s.validator.ValidateTradeQuantity(lineItem.Quantity); err != nil {
+			return nil, fmt.Errorf("%s line item %d quantity validation failed: %w", side, i, err)
+		}
+		if _, exists := seen[lineItem.ItemID]; exists {
+			return nil, fmt.Errorf("duplicate %s line item ID: %s", side, lineItem.ItemID)
+		}
+
+		seen[lineItem.ItemID] = struct{}{}
+		uniqueItemIDs = append(uniqueItemIDs, lineItem.ItemID)
+		for j := 0; j < lineItem.Quantity; j++ {
+			expandedItemIDs = append(expandedItemIDs, lineItem.ItemID)
+		}
+	}
+
+	if err := s.validator.ValidateItemIDs(uniqueItemIDs); err != nil {
+		return nil, fmt.Errorf("%s line item validation failed: %w", side, err)
+	}
+	if err := s.validator.ValidateItemCount(len(expandedItemIDs)); err != nil {
+		return nil, fmt.Errorf("%s line item quantity validation failed: %w", side, err)
+	}
+
+	return expandedItemIDs, nil
 }
 
 // getTradeEntities retrieves and validates proposer and recipient entities.
@@ -240,16 +307,22 @@ func (s *TradeSystem) resolveAndValidateTradeItems(proposerInv, recipientInv *en
 }
 
 // createTradeProposal creates a new trade proposal with current timestamp.
-func (s *TradeSystem) createTradeProposal(proposerID, recipientID uint64, offeredItems, requestedItems []string) *engine.TradeProposal {
+func (s *TradeSystem) createTradeProposal(
+	proposerID, recipientID uint64,
+	offeredItems, requestedItems []string,
+	offeredLineItems, requestedLineItems []engine.TradeLineItem,
+) *engine.TradeProposal {
 	now := s.clock.Now()
 	return &engine.TradeProposal{
-		ProposerID:     proposerID,
-		RecipientID:    recipientID,
-		OfferedItems:   offeredItems,
-		RequestedItems: requestedItems,
-		Status:         string(TradeStatusPending),
-		ProposalTime:   now.Unix(),
-		FailureReason:  "",
+		ProposerID:         proposerID,
+		RecipientID:        recipientID,
+		OfferedItems:       offeredItems,
+		RequestedItems:     requestedItems,
+		OfferedLineItems:   append([]engine.TradeLineItem(nil), offeredLineItems...),
+		RequestedLineItems: append([]engine.TradeLineItem(nil), requestedLineItems...),
+		Status:             string(TradeStatusPending),
+		ProposalTime:       now.Unix(),
+		FailureReason:      "",
 	}
 }
 
@@ -637,27 +710,23 @@ func (s *TradeSystem) getInventoryComponent(entity *engine.Entity) *engine.Inven
 }
 
 func (s *TradeSystem) resolveItems(inventory *engine.InventoryComponent, itemIDs []string) ([]*item.Item, error) {
-	// Check for duplicate item IDs to prevent double-trading the same item
-	seenIDs := make(map[string]bool)
-	for _, id := range itemIDs {
-		if seenIDs[id] {
-			return nil, fmt.Errorf("duplicate item ID in trade request: %s", id)
-		}
-		seenIDs[id] = true
-	}
-
 	var items []*item.Item
+	used := make([]bool, len(inventory.Items))
 	for _, id := range itemIDs {
 		found := false
-		for _, itm := range inventory.Items {
+		for idx, itm := range inventory.Items {
+			if used[idx] {
+				continue
+			}
 			if itm.ID == id {
 				items = append(items, itm)
+				used[idx] = true
 				found = true
 				break
 			}
 		}
 		if !found {
-			return nil, fmt.Errorf("item %s not found in inventory", id)
+			return nil, fmt.Errorf("item %s not found in inventory or insufficient quantity", id)
 		}
 	}
 	return items, nil

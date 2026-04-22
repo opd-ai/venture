@@ -263,17 +263,27 @@ func (c *ChatComponent) GetEffectiveRadius() float64 {
 //   - RecipientID: Entity ID of the player receiving the trade offer
 //   - OfferedItems: Item IDs that the proposer will give to the recipient
 //   - RequestedItems: Item IDs that the proposer wants from the recipient
+//   - OfferedLineItems: Quantity-bearing offered trade line items
+//   - RequestedLineItems: Quantity-bearing requested trade line items
 //   - Status: Current trade state ("pending", "accepted", "rejected", "committed", "cancelled", "failed")
 //   - ProposalTime: Unix timestamp when the trade was proposed (for timeout checks)
 //   - FailureReason: Human-readable explanation when Status is "failed" or "cancelled"
 type TradeProposal struct {
-	ProposerID     uint64
-	RecipientID    uint64
-	OfferedItems   []string // Item IDs (strings, not uint64)
-	RequestedItems []string // Item IDs (strings, not uint64)
-	Status         string   // "pending", "accepted", "rejected", "committed", "cancelled", "failed"
-	ProposalTime   int64    // Unix timestamp when proposed
-	FailureReason  string   // Reason for failure/cancellation
+	ProposerID         uint64
+	RecipientID        uint64
+	OfferedItems       []string        // Expanded item IDs (legacy compatibility path)
+	RequestedItems     []string        // Expanded item IDs (legacy compatibility path)
+	OfferedLineItems   []TradeLineItem // Quantity-bearing offered line items
+	RequestedLineItems []TradeLineItem // Quantity-bearing requested line items
+	Status             string          // "pending", "accepted", "rejected", "committed", "cancelled", "failed"
+	ProposalTime       int64           // Unix timestamp when proposed
+	FailureReason      string          // Reason for failure/cancellation
+}
+
+// TradeLineItem represents one item reference and quantity in a trade proposal.
+type TradeLineItem struct {
+	ItemID   string
+	Quantity int
 }
 
 // TradeRecord represents a completed trade in a player's trade history.

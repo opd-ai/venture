@@ -83,6 +83,16 @@ func createTestItem(id, name string, rarity item.Rarity) *item.Item {
 	}
 }
 
+func countItemsByID(items []*item.Item, itemID string) int {
+	count := 0
+	for _, itm := range items {
+		if itm.ID == itemID {
+			count++
+		}
+	}
+	return count
+}
+
 // TestProposeTrade tests trade proposal
 func TestProposeTrade(t *testing.T) {
 	tests := []struct {
@@ -209,6 +219,79 @@ func TestProposeTrade(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+func TestProposeTradeWithQuantities(t *testing.T) {
+	world := engine.NewWorld()
+	ts := NewTradeSystem(world)
+
+	proposer := createTestPlayer(world, 0, 0, []*item.Item{
+		createTestItem("stack_potion", "Potion A", item.RarityCommon),
+		createTestItem("stack_potion", "Potion B", item.RarityCommon),
+	})
+	recipient := createTestPlayer(world, 1, 1, []*item.Item{
+		createTestItem("stack_herb", "Herb A", item.RarityCommon),
+		createTestItem("stack_herb", "Herb B", item.RarityCommon),
+	})
+	world.Update(0)
+
+	err := ts.ProposeTradeWithQuantities(
+		proposer,
+		recipient,
+		[]engine.TradeLineItem{{ItemID: "stack_potion", Quantity: 2}},
+		[]engine.TradeLineItem{{ItemID: "stack_herb", Quantity: 2}},
+	)
+	if err != nil {
+		t.Fatalf("ProposeTradeWithQuantities() failed: %v", err)
+	}
+
+	proposal := ts.GetActiveTrade(proposer)
+	if proposal == nil {
+		t.Fatal("expected active trade proposal")
+	}
+	if len(proposal.OfferedLineItems) != 1 || proposal.OfferedLineItems[0].Quantity != 2 {
+		t.Fatalf("unexpected offered line items: %+v", proposal.OfferedLineItems)
+	}
+	if len(proposal.RequestedLineItems) != 1 || proposal.RequestedLineItems[0].Quantity != 2 {
+		t.Fatalf("unexpected requested line items: %+v", proposal.RequestedLineItems)
+	}
+
+	if err := ts.AcceptTrade(recipient); err != nil {
+		t.Fatalf("AcceptTrade() failed: %v", err)
+	}
+
+	proposerEntity, _ := world.GetEntity(proposer)
+	proposerInvRaw, _ := proposerEntity.GetComponent("inventory")
+	proposerInv := proposerInvRaw.(*engine.InventoryComponent)
+	if got := countItemsByID(proposerInv.Items, "stack_herb"); got != 2 {
+		t.Fatalf("proposer received %d stack_herb items, want 2", got)
+	}
+}
+
+func TestProposeTradeWithQuantities_RejectsInvalidQuantity(t *testing.T) {
+	world := engine.NewWorld()
+	ts := NewTradeSystem(world)
+
+	proposer := createTestPlayer(world, 0, 0, []*item.Item{
+		createTestItem("item1", "Sword", item.RarityCommon),
+	})
+	recipient := createTestPlayer(world, 1, 1, []*item.Item{
+		createTestItem("item2", "Shield", item.RarityCommon),
+	})
+	world.Update(0)
+
+	err := ts.ProposeTradeWithQuantities(
+		proposer,
+		recipient,
+		[]engine.TradeLineItem{{ItemID: "item1", Quantity: 0}},
+		[]engine.TradeLineItem{{ItemID: "item2", Quantity: 1}},
+	)
+	if err == nil {
+		t.Fatal("expected quantity validation error")
+	}
+	if !strings.Contains(err.Error(), "quantity") {
+		t.Fatalf("expected quantity error, got: %v", err)
 	}
 }
 
